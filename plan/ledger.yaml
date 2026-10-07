@@ -1,0 +1,48 @@
+# 循环台账 — schema 见 docs/loop.md §1；状态只允许 pending/in_progress/blocked/verified
+# verified 必须带 evidence；deps 全 verified 才可取用本任务
+version: 1
+tasks:
+  # S0 地基
+  - { id: S0.1, title: "建 cargo workspace + rustfmt/clippy/gate.sh + target 安装", status: pending, deps: [], dod: "scripts/gate.sh 全绿（Android 行禁用）+ 回写 AGENTS.md 命令", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S0.2, title: "IDA headless 批量导出伪代码与 functions.csv", status: pending, deps: [S0.1], dod: "伪代码文件数 == IDA 函数数，0 缺失", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S0.3, title: "函数分类打标 classify → ref/classify.json", status: pending, deps: [S0.2], dod: "覆盖率 100%（允许 pending 类目）", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S0.4, title: "116 个导入 API 名恢复 → ref/imports.json", status: pending, deps: [S0.2], dod: "116/116 有名字 + 调用点证据", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S0.5, title: "define_format!/parse_err!/roundtrip_all! 三个宏", status: pending, deps: [S0.1], dod: "宏单测全绿（0 未知字节 + roundtrip 断言生效）", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S0.6, title: "ledger 全量任务登记", status: pending, deps: [S0.1], dod: "gate 第 8 项台账校验通过", evidence: null, blocked_by: null, rounds: 0 }
+  # S1 资源逆向（统一 DoD 见 docs/plan-s0-s2.md）
+  - { id: S1.1, title: "LucencyPackage 头/索引规格 + name→key 哈希逆出", status: pending, deps: [S0.1, S0.5], dod: "P1-2：119 资源名命中 100%", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.2, title: "unpak 解包器（pak/lpk）+ repack", status: pending, deps: [S1.1], dod: "P0-1 提取 100% + P0-3 repack sha256 相等", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.3, title: "pcx2png + 独立 python 参考解码器", status: pending, deps: [S0.5], dod: "P0-4 逐像素一致", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.4, title: "UI 场景 map2json + ref/event_ids.json + ids.rs 生成", status: pending, deps: [S1.2], dod: "0 未知字节 + roundtrip 逐字节 + P1-3 计数吻合", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.5, title: "font2bmfont（GoldLand.Fnt + font.dat）", status: pending, deps: [S1.3], dod: "P4-3 字形逐位图一致", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.6, title: "ini2json（lpk 内 UTF-16 INI）", status: pending, deps: [S1.2], dod: "键值 100% 解析 + 往返无损", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.7, title: "audiotrans（WAV + MOD→OGG）", status: pending, deps: [S1.2], dod: "每条音轨可播放且元数据一致", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.8, title: "地形 map2json（glmapm01/02/03）", status: pending, deps: [S1.4], dod: "0 未知字节 + roundtrip + 尺寸吻合", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.9, title: "存档格式规格 + 读写（settings.dat/gl*.sav/gl.rec）", status: pending, deps: [S1.2], dod: "roundtrip 逐字节 + 字段文档", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.10, title: "build_assets + preview + assets_out/manifest", status: pending, deps: [S1.2, S1.3, S1.4, S1.5, S1.6, S1.7, S1.8, S1.9], dod: "幂等 + manifest 校验 + preview 打开 21 场景 3 地图（P0/P1 阶段门禁）", evidence: null, blocked_by: null, rounds: 0 }
+  # S2 三端骨架
+  - { id: S2.1, title: "gfx：176×220 逻辑帧缓冲 + 缩放", status: pending, deps: [S0.1], dod: "P4-2 坐标互逆单测", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S2.2, title: "input：触摸/键/拖拽统一事件 + 虚拟按键", status: pending, deps: [S2.1], dod: "坐标反变换单测 + 手动清单", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S2.3, title: "audio：混音/BGM 循环/音量", status: pending, deps: [S2.1], dod: "桌面播 WAV/OGG 无爆音 + 通道测试", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S2.4, title: "storage：文件/IndexedDB/Android 三实现", status: pending, deps: [S2.1], dod: "三端存读档往返测试", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S2.5, title: "wasm 构建链 + html 壳", status: pending, deps: [S2.1, S2.2, S2.3, S2.4], dod: "浏览器显示主菜单 + 真实资源 + 中文 + 音效", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S2.6, title: "Android 构建链（无 Docker → cargo-apk/cargo-ndk 本机）", status: pending, deps: [S2.1, S2.2, S2.3, S2.4], dod: "APK 装机显示主菜单 + gate Android 行解锁", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S2.7, title: "scripts/smoke.sh 三端冒烟", status: pending, deps: [S1.10, S2.5, S2.6], dod: "三端全绿（S2 阶段门禁）", evidence: null, blocked_by: null, rounds: 0 }
+  # S3 玩法模块（每模块 8 子步，见 docs/plan-s3.md）
+  - { id: S3.1, title: "主循环/场景管理", status: pending, deps: [S2.7], dod: "diff 测试 + 场景切换图与 ref 一致", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.2, title: "资源/渲染核心", status: pending, deps: [S1.10, S3.1], dod: "P4-1 渲染逐像素一致", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.3, title: "index/intro 主菜单", status: pending, deps: [S3.2], dod: "场景可达 + 事件覆盖 100%", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.4, title: "selectrole/selectmap", status: pending, deps: [S3.3], dod: "流程脚本 + 差分全绿", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.5, title: "主地图（glmapm0x/移动/据点）", status: pending, deps: [S3.4, S1.8], dod: "地图数据对齐 + 移动规则差分", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.6, title: "贸易系统", status: pending, deps: [S3.5, S1.6], dod: "固定价格表逐笔结算差分一致", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.7, title: "建造/城堡系统", status: pending, deps: [S3.5], dod: "差分 + 事件覆盖", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.8, title: "战斗系统（vs/兵种/BOSS 档）", status: pending, deps: [S3.5], dod: "固定种子整场战斗输出一致", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.9, title: "卡牌/事件系统", status: pending, deps: [S3.6, S1.6], dod: "P3-1 全部 event id 有处理路径", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.10, title: "存读档/设置", status: pending, deps: [S1.9, S3.1], dod: "v1 兼容读写 + 迁移测试", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.11, title: "消息/帮助/信息界面", status: pending, deps: [S3.2], dod: "文本渲染对齐 + 场景可达", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.12, title: "RNG 与全局规则（pending 类目清零）", status: pending, deps: [S3.1], dod: "RNG 序列与 oracle 一致 + classify pending=0", evidence: null, blocked_by: null, rounds: 0 }
+  # S4 收尾（全部 S3 需先 verified，见 docs/plan-s3.md §3）
+  - { id: S4.1, title: "缩放/虚拟按键/手势/横竖屏设置", status: pending, deps: [S3.12], dod: "P4-2 + 三端手动清单", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S4.2, title: "存档 v2 + v1 迁移", status: pending, deps: [S3.10, S3.12], dod: "save_migration 往返 + 迁移用例通过", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S4.3, title: "性能与体积（脏矩形/批处理/wasm 分包）", status: pending, deps: [S4.1], dod: "桌面 60fps + wasm 体积记录进 evidence", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S4.4, title: "全流程回归 + 三端产物 + release.md", status: pending, deps: [S4.2, S4.3], dod: "P3-3 三端各跑通 + gate 全绿 + 产物 sha256 入 evidence（项目 DoD）", evidence: null, blocked_by: null, rounds: 0 }
