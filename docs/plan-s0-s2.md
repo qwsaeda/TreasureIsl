@@ -1,13 +1,13 @@
 # 执行计划 S0–S2：地基 / 资源逆向 / 三端骨架
 
-任务 ID 即台账 ID。**每个任务必须同时满足：产出物落地 + 验收命令通过 + `evidence/<id>.log` 存档 + `scripts/gate.sh` 全绿**，缺一不可 `verified`。
+任务 ID 即台账 ID。**每个任务必须同时满足：产出物落地 + 验收命令通过 + `evidence/<id>.log` 存档 + `scripts/gate.ps1` 全绿**，缺一不可 `verified`。
 全局标准见 `docs/parity.md`，循环机制见 `docs/loop.md`。
 
 ## S0 — 地基与反编译导出（0.5~1 天）
 
 | ID | 产出物 | 验收命令 / DoD | deps |
 |---|---|---|---|
-| S0.1 | cargo workspace（§5.1 六 crate 骨架）；`rustfmt.toml`/`clippy.toml`/`[workspace.lints]`；`rustup target add wasm32-unknown-unknown aarch64-linux-android armv7-linux-androideabi x86_64-linux-android`；`scripts/gate.sh`（8 项，Android 构建行先注释） | `scripts/gate.sh` 全绿（gate 第 4 项只跑 native+wasm）；占位扫描 0 命中；**完成后回写 AGENTS.md 命令一节** | — |
+| S0.1 | cargo workspace（§5.1 **5 crate** 骨架）；`rustfmt.toml`/`clippy.toml`/`[workspace.lints]`；`scripts/gate.ps1`（8 项；构建项本期只含 native，wasm/android 行按阶段解锁） | `scripts/gate.ps1` 全绿（gate 第 4 项本期只跑 native）；占位扫描 0 命中；**完成后回写 AGENTS.md 命令一节** | — |
 | S0.2 | `scripts/ida_dump.py` + `idat64 -A -S` 批处理；产出 `ref/pseudocode/*.c`、`ref/functions.csv`（addr/size/name/caller/callee/字符串 xref） | 伪代码文件数 == IDA 函数数；`functions.csv` 行数与 `.i64` 函数表一致（0 缺失） | S0.1 |
 | S0.3 | `cargo run -p ti-tools -- classify`：按库特征（zlib 字符串/HMSS/PCX/gx 调用/UI 事件串）分类 → `ref/classify.json` + 覆盖率报告 | 覆盖率 100%（允许类目 `pending`，S3.12 前清零） | S0.2 |
 | S0.4 | `ref/imports.json`：105+9+2=116 个导入序号/名字 → API 名 100% 恢复（WinCE 序号表 + 调用点特征双向校验） | 116/116 有名字；每条至少 1 处调用点证据 | S0.2 |
@@ -39,10 +39,11 @@
 | S2.2 | `ti-platform/input`：触摸/鼠标/键盘 → 统一事件（down/up/drag）+ 虚拟按键映射 | 坐标反变换单测；桌面手动清单 |
 | S2.3 | `ti-platform/audio`：多通道混音、BGM 循环、音量 | 桌面播 WAV/OGG 无爆音；通道测试 |
 | S2.4 | `ti-platform/storage`：桌面文件 / wasm IndexedDB / Android 内部存储 三实现 | 三端存读档往返测试 |
-| S2.5 | wasm 构建链：`build_wasm` 脚本 + html 壳 + 资源加载 | 浏览器打开主菜单场景，真实资源 + 中文 + 音效 |
-| S2.6 | Android 构建链：**无 Docker** → 装 Android SDK/NDK + `cargo-apk` 或 `cargo-ndk` 本机链路（Java 17 已备）；manifest 配置 orientation/exported | APK 装到设备/模拟器，显示同一主菜单；**gate 第 4 项 Android 行解锁** |
+| S2.5 | wasm 构建链：`rustup target add wasm32-unknown-unknown` + `build_wasm` 脚本 + html 壳 + 资源加载；解锁 gate 第 4 项 wasm 行 | 浏览器打开主菜单场景，真实资源 + 中文 + 音效 |
+| S2.6 | Android 构建链：**无 Docker** → `rustup target add` 三个 android triple + 装 Android SDK/NDK + `cargo-apk` 或 `cargo-ndk` 本机链路（Java 17 已备）；manifest 配置 orientation/exported；解锁 gate 第 4 项 android 行 | APK 装到设备/模拟器，显示同一主菜单 |
 | S2.7 | `scripts/smoke.sh`：native/wasm/apk 各跑资源加载 + 场景渲染 | 三端全绿。**→ 阶段 S2 门禁（同时消化 macroquad Android 风险）** |
 
 ## 修订记录
 
-- 2026-10 环境探测后修订：S2.6 由 docker `quad-apk` 改为本机 `cargo-apk`/`cargo-ndk`（无 Docker）；S0.1 增加 target 安装；新增 S0.5/S0.6。
+- 2026-10 环境探测后修订：S2.6 由 docker `quad-apk` 改为本机 `cargo-apk`/`cargo-ndk`（无 Docker）；新增 S0.5/S0.6。
+- 2026-10（迭代 0，按用户决策）：**编译工具链整体后置** —— S0.1 不再安装 wasm/android target（移入 S2.5/S2.6），gate 构建项按阶段解锁；门禁由 `gate.sh` 改为本机可执行的 `scripts/gate.ps1`（无 `rg`，占位扫描用 `Select-String`）；「六 crate」笔误修正为 5。

@@ -82,3 +82,19 @@
 - 现象：`python -c` 报错时 PowerShell 追加大量红色 `CategoryInfo`，掩盖真实堆栈。
 - 解法：脚本落盘用 `python -X utf8 file.py` 执行，或重定向 `2>$null` 后单独取 stderr；Windows 下统一 `-X utf8` 避免编码错。
 - 验证：后续脚本执行输出可读。
+
+### EXP-011 构建：本机无 `rg`、`bash` 是 WSL 版，门禁必须用 PowerShell
+- 现象：按计划写 `gate.sh`（含 `rg` 扫描），探测发现 `rg` 不存在、`bash.exe` 是 `system32` 的 WSL 入口而非 Git Bash。
+- 根因：计划里的门禁形态默认了 Linux 工具链，没先探测本机。
+- 解法：门禁改 `scripts/gate.ps1`；占位扫描用 `Select-String`；不依赖 bash。已同步改 `AGENTS.md`/`parity`/`loop`/`style`/`plan-*`/`ledger` 中全部 `gate.sh` 引用。
+- 验证：`git grep gate.sh` 0 命中；gate.ps1 实际跑通。
+
+### EXP-012 流程：文档与环境冲突时，先改文档再开工
+- 现象：规范写 `gate.sh`+`rg`，环境不支持；若直接按文档硬做会产出跑不起来的脚本。
+- 解法：把「文档 → 环境」的适配作为迭代 0 的独立动作，连同笔误（六 crate→5）一起修，并在计划文件写修订记录，避免规范与现实长期背离。
+- 验证：修订记录与提交历史对应。
+
+### EXP-013 流程：编译工具链后置（用户决策）
+- 现象：原计划把 `rustup target add`（wasm/android，数百 MB 下载）放在 S0.1，阻塞真正的代码开发。
+- 解法：**先代码、后工具链** —— S0.1 只建 workspace + native 构建；wasm/android target 分别移入 S2.5/S2.6，gate 第 4 项按阶段解锁（脚本里用 SKIP 标注未解锁项）。
+- 验证：S0.1 全程不装 target 即可 gate 全绿。

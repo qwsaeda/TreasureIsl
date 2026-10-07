@@ -3,7 +3,7 @@
 version: 1
 tasks:
   # S0 地基
-  - { id: S0.1, title: "建 cargo workspace + rustfmt/clippy/gate.sh + target 安装", status: pending, deps: [], dod: "scripts/gate.sh 全绿（Android 行禁用）+ 回写 AGENTS.md 命令", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S0.1, title: "建 cargo workspace + fmt/clippy + gate.ps1（native 构建起步）", status: pending, deps: [], dod: "scripts/gate.ps1 全绿（构建仅 native）+ 回写 AGENTS.md 命令", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S0.2, title: "IDA headless 批量导出伪代码与 functions.csv", status: pending, deps: [S0.1], dod: "伪代码文件数 == IDA 函数数，0 缺失", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S0.3, title: "函数分类打标 classify → ref/classify.json", status: pending, deps: [S0.2], dod: "覆盖率 100%（允许 pending 类目）", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S0.4, title: "116 个导入 API 名恢复 → ref/imports.json", status: pending, deps: [S0.2], dod: "116/116 有名字 + 调用点证据", evidence: null, blocked_by: null, rounds: 0 }
@@ -25,8 +25,8 @@ tasks:
   - { id: S2.2, title: "input：触摸/键/拖拽统一事件 + 虚拟按键", status: pending, deps: [S2.1], dod: "坐标反变换单测 + 手动清单", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S2.3, title: "audio：混音/BGM 循环/音量", status: pending, deps: [S2.1], dod: "桌面播 WAV/OGG 无爆音 + 通道测试", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S2.4, title: "storage：文件/IndexedDB/Android 三实现", status: pending, deps: [S2.1], dod: "三端存读档往返测试", evidence: null, blocked_by: null, rounds: 0 }
-  - { id: S2.5, title: "wasm 构建链 + html 壳", status: pending, deps: [S2.1, S2.2, S2.3, S2.4], dod: "浏览器显示主菜单 + 真实资源 + 中文 + 音效", evidence: null, blocked_by: null, rounds: 0 }
-  - { id: S2.6, title: "Android 构建链（无 Docker → cargo-apk/cargo-ndk 本机）", status: pending, deps: [S2.1, S2.2, S2.3, S2.4], dod: "APK 装机显示主菜单 + gate Android 行解锁", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S2.5, title: "wasm 构建链（含 rustup target add wasm32 + html 壳）", status: pending, deps: [S2.1, S2.2, S2.3, S2.4], dod: "浏览器显示主菜单 + 真实资源 + 中文 + 音效 + gate wasm 行解锁", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S2.6, title: "Android 构建链（含 android target + SDK/NDK + cargo-apk/cargo-ndk 本机）", status: pending, deps: [S2.1, S2.2, S2.3, S2.4], dod: "APK 装机显示主菜单 + gate android 行解锁", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S2.7, title: "scripts/smoke.sh 三端冒烟", status: pending, deps: [S1.10, S2.5, S2.6], dod: "三端全绿（S2 阶段门禁）", evidence: null, blocked_by: null, rounds: 0 }
   # S3 玩法模块（每模块 8 子步，见 docs/plan-s3.md）
   - { id: S3.1, title: "主循环/场景管理", status: pending, deps: [S2.7], dod: "diff 测试 + 场景切换图与 ref 一致", evidence: null, blocked_by: null, rounds: 0 }

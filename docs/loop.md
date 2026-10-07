@@ -11,7 +11,7 @@ tasks:
     title: 建 cargo workspace + 门禁
     status: pending       # pending | in_progress | blocked | verified
     deps: []              # 依赖任务 ID，全部 verified 才可取用
-    dod: "scripts/gate.sh 全绿"        # 验收判据（抄自 WBS）
+    dod: "scripts/gate.ps1 全绿"       # 验收判据（抄自 WBS）
     evidence: null        # verified 后填 evidence/<id>.log 相对路径
     blocked_by: null      # blocked 时填原因
     rounds: 0             # 已失败验收轮数，>=3 必须拆子任务
@@ -28,7 +28,7 @@ tasks:
 1. 读 ledger → 选第一个 deps 全部 verified 且 status != verified 的任务
 2. 实现（按 WBS 产出物落地，禁止留占位实现）
 3. 跑该任务的验收命令 → 输出存 evidence/<id>.log
-4. 跑 scripts/gate.sh（全局门禁，8 项）
+4. 跑 scripts/gate.ps1（全局门禁，8 项）
 5. gate 全绿 → ledger 置 verified + evidence；否则 rounds+=1，按规则拆解/标记 blocked
 6. 输出进度报告：verified/total、阻塞项、下一轮目标
 7. 回到 1
@@ -39,7 +39,7 @@ tasks:
 1. ledger 中全部任务 `verified`；
 2. `docs/parity.md` 的 P0~P4 五级标准全部 pass（各自校验命令产出报告存 `evidence/`）;
 3. 三端产物生成：桌面 exe、wasm 站点、APK；
-4. `scripts/gate.sh` 8 项全绿，占位扫描 0 命中。
+4. `scripts/gate.ps1` 8 项全绿，占位扫描 0 命中。
 
 ## 4. 卡死与回退
 

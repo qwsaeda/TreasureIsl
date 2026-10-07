@@ -22,9 +22,9 @@
 
 ## 硬规则（违反 = 返工）
 
-1. **不许留占位**：`TODO/FIXME/unimplemented!/todo!/panic!` 及库代码中的 `unwrap/expect` 一律为 0 命中（测试代码除外），门禁在 `scripts/gate.sh`。
+1. **不许留占位**：`TODO/FIXME/unimplemented!/todo!/panic!` 及库代码中的 `unwrap/expect` 一律为 0 命中（测试代码除外），门禁在 `scripts/gate.ps1`。
 2. **验收才算完成**：任务的验收命令跑过、日志写入 `evidence/<task>.log` 后，才在 `plan/ledger.yaml` 置 `verified`。卡住 3 轮 → 拆子任务，禁止带病标绿。
-3. **进度只由台账驱动**：循环 = 取下一个非 `verified` 任务 → 实现 → 验收 → `scripts/gate.sh` → 更新台账 → 终止条件见 `docs/loop.md`（推进至 S4.4）。
+3. **进度只由台账驱动**：循环 = 取下一个非 `verified` 任务 → 实现 → 验收 → `scripts/gate.ps1` → 更新台账 → 终止条件见 `docs/loop.md`（推进至 S4.4）。
 4. **结论必须实测**：二进制/格式相关结论写进 `docs/reverse-facts.md` 前必须有脚本证据；推测一律标注 `推测`。
 5. **选型已定案**：Rust edition 2024 + macroquad（见 `docs/style.md`）。不要重新讨论语言/框架。
 6. **文档拆分**：细节进 `docs/`，本文件只做路由与硬规则；新增文档必须登记进路由表。
@@ -38,5 +38,6 @@
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test  --workspace
-scripts/gate.sh        # 上述三项 + 三 target 构建 + 占位扫描 + 格式校验，全绿才算过
+scripts/gate.ps1       # 上述三项 + 构建 + 占位扫描 + 零未知字节 + 台账校验，全绿才算过
+                       # 构建范围随阶段解锁：native（S0.1 起）→ wasm（S2.5）→ android（S2.6）
 ```

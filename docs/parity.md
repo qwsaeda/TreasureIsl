@@ -49,19 +49,21 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-2 | 176×220 逻辑坐标命中判定在任意整数/非整数缩放下不偏移 | `cargo test -p ti-platform -- test coordinate_roundtrip` |
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
 
-## 代码质量门禁 `scripts/gate.sh`（8 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（8 项，循环每轮强制）
 
 ```
 1  cargo fmt --all -- --check
 2  cargo clippy --workspace --all-targets -- -D warnings
 3  cargo test  --workspace
-4  cargo build --workspace --target x86_64-pc-windows-msvc
-   cargo build --workspace --target wasm32-unknown-unknown
-   cargo build -p ti-app --target aarch64-linux-android    # S2.6 之前禁用该行
-5  rg -n "TODO|FIXME|unimplemented!|todo!|panic!\(" crates/ → 0 命中
-6  rg -n "\.unwrap\(\)|\.expect\(" crates/ --glob '!**/tests/**' → 0 命中
-7  cargo run -p ti-tools -- verify --zero-unknown           # 全格式 0 未知字节
-8  ledger 校验：verified 任务必须带 evidence 文件；rounds<3；状态合法
+4  构建（范围随阶段解锁，未解锁的行在脚本里跳过并打印 SKIP）：
+   cargo build --workspace --target x86_64-pc-windows-msvc          # S0.1 起
+   cargo build --workspace --target wasm32-unknown-unknown          # S2.5 解锁（需先 rustup target add）
+   cargo build -p ti-app --target aarch64-linux-android             # S2.6 解锁（需 NDK）
+5  占位扫描：Select-String -Path crates/**/*.rs -Pattern 'TODO|FIXME|unimplemented!|todo!|panic!\(' → 0 命中
+6  unwrap 扫描：同上 Pattern '\.unwrap\(\)|\.expect\('，排除 tests/ → 0 命中
+   （本机无 ripgrep，扫描一律用 PowerShell Select-String，见 EXP-011）
+7  cargo run -p ti-tools -- verify --zero-unknown      # 全格式 0 未知字节（S1.3 起才有输出，之前 SKIP）
+8  ledger 校验：verified 任务必须带 evidence 文件；rounds<3；状态/依赖合法（python 脚本校验）
 ```
 
 任一项红灯 = 本轮不可标 verified，不可推进下一任务。
