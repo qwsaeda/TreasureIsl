@@ -5,7 +5,7 @@
 
 ## 当前状态
 
-- 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA 7.5 数据库，已自动分析、**无自定义命名**）、`data/`（原始资源）、`Cargo.toml`（5 crate workspace）、`scripts/`、`docs/`、`plan/ledger.yaml`。
+- 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA Professional 9.4 数据库，已自动分析、**无自定义命名**）、`data/`（原始资源）、`Cargo.toml`（5 crate workspace）、`scripts/`、`docs/`、`plan/ledger.yaml`。
 - 工程已 bootstrap：`crates/{ti-formats,ti-core,ti-platform,ti-app,ti-tools}`，阶段进度看台账（`plan/ledger.yaml`）。
 
 ## 路由表
@@ -42,8 +42,8 @@ cargo test  --workspace
 cargo test  -p ti-tools                       # 台账解析器单测
 cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml   # 台账校验（= gate 第 8 项）
 
-# 反编译导出（S0.2）
-"D:\soft\IDA_Pro_v7.5_Portable\idat64.exe" -A -Sscripts\ida_dump.py TreasureIsl.exe
+# 反编译导出（S0.2）；IDA 9.x 把 7.5 的 idat64.exe 合并为 idat.exe（32/64 同一程序）
+"D:\soft\IDA Professional 9.4\idat.exe" -A -Lref\ida_run.log -Sscripts\ida_dump.py TreasureIsl.exe
 ```
 
 - 构建范围随阶段解锁：native（已解锁）→ wasm（**S2.5 已解锁**，target 已装，产物走 `scripts/build_wasm.ps1`）→ android（S2.6 装 SDK/NDK）；gate 自动按已装 target 判定并打印 SKIP。
@@ -54,4 +54,13 @@ powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
 
 # 本地预览（wasm 需 HTTP，不能 file://）
 cargo run -q -p ti-tools --bin serve -- --dir web --port 8080
+
+# S1.4b：控件记录全量导出（20 UI 场景 → ref/controls.json，44 种 f5 控件类型）
+cargo run -q -p ti-tools --bin controls -- --out ref
 ```
+
+## REA 逆向 MCP（2026-10 接入，见 docs/reverse-facts.md F-313/F-314）
+
+- 注册：OpenCode `mcp.rea`（`~/.config/opencode/opencode.json`），`environment` 带 `REA_ANALYSIS_PROVIDER=ida` + `REA_IDA_MCP_CONFIG=C:\Users\Administrator\.rea\ida-mcp.json`；headless supervisor = `D:\ProgramData\miniconda3\Scripts\idalib-mcp.exe`（IDA 9.4 + idapro 0.0.9 + ida-pro-mcp 2.0.0）。
+- 深度分析走 IDA（不需要 Hopper/Ghidra）。`rea doctor --provider ida` 应 healthy。
+- 已知缺陷（F-314）：无 Evidence 的工具会撞 `-32602`，改本地脚本；`callers` 恒空，调用方靠 `ref/pseudocode/` grep。

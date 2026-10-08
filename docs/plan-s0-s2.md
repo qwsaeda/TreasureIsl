@@ -8,7 +8,7 @@
 | ID | 产出物 | 验收命令 / DoD | deps |
 |---|---|---|---|
 | S0.1 | cargo workspace（§5.1 **5 crate** 骨架）；`rustfmt.toml`/`clippy.toml`/`[workspace.lints]`；`scripts/gate.ps1`（8 项；构建项本期只含 native，wasm/android 行按阶段解锁） | `scripts/gate.ps1` 全绿（gate 第 4 项本期只跑 native）；占位扫描 0 命中；**完成后回写 AGENTS.md 命令一节** | — |
-| S0.2 | `scripts/ida_dump.py` + `idat64 -A -S` 批处理；产出 `ref/pseudocode/*.c`、`ref/functions.csv`（addr/size/name/caller/callee/字符串 xref） | 伪代码文件数 == IDA 函数数；`functions.csv` 行数与 `.i64` 函数表一致（0 缺失） | S0.1 |
+| S0.2 | `scripts/ida_dump.py` + `idat -A -S` 批处理；产出 `ref/pseudocode/*.c`、`ref/functions.csv`（addr/size/name/caller/callee/字符串 xref） | 伪代码文件数 == IDA 函数数；`functions.csv` 行数与 `.i64` 函数表一致（0 缺失） | S0.1 |
 | S0.3 | `cargo run -p ti-tools -- classify`：按库特征（zlib 字符串/HMSS/PCX/gx 调用/UI 事件串）分类 → `ref/classify.json` + 覆盖率报告 | 覆盖率 100%（允许类目 `pending`，S3.12 前清零） | S0.2 |
 | S0.4 | `ref/imports.json`：105+9+2=116 个导入序号/名字 → API 名 100% 恢复（WinCE 序号表 + 调用点特征双向校验） | 116/116 有名字；每条至少 1 处调用点证据 | S0.2 |
 | S0.5 | `ti-formats/src/macros.rs` 落地 `define_format!`/`parse_err!`/`roundtrip_all!` 三个宏 + 单测 | 宏的单测全绿（用一个玩具格式验证 0 未知字节 + roundtrip 断言生效） | S0.1 |
@@ -23,7 +23,8 @@
 | S1.1 | `docs/formats/lucencypackage.md`：头部全字段（含 F-201 非对齐偏移）+ **`name→key` 哈希算法逆出** | P1-2：119 个 exe 资源名命中率 100%（`cargo test -p ti-tools --test pak_key`） |
 | S1.2 | `ti-tools` 的 `unpak`：通吃 `.pak`/`.lpk`（两者结构差异写入文档） | P0-1 提取率 100%；P0-3 `--repack` sha256 相等 |
 | S1.3 | `pcx2png` + 独立 python 参考解码器（交叉验证用）：PCX 全变体（调色板/RLE/多平面） | P0-4 逐像素一致 |
-| S1.4 | `map2json`：21 个 UI 场景 `.Map` → JSON；同时产出 `ref/event_ids.json`；build.rs 据此生成 `ti-formats/src/ids.rs` | 0 未知字节；roundtrip 逐字节一致；P1-3 事件 id 计数吻合 |
+| S1.4 | `map2json`：21 个 UI 场景 `.Map` → JSON（记录级语义解析在 S1.4b） | 0 未知字节；roundtrip 逐字节一致 |
+| S1.4b | `controls` bin 全量导出控件记录（`ref/controls.json`，20 场景 2041 条）+ `ti-formats/src/ids.rs` 控件类型枚举（f5） | P1-3：`ref/controls.json` 记录数 == 控件总数（2041）；20/20 UI 场景整除吻合；字段语义 exe 侧确认（F-311：f3=Y 坐标，非事件 id） |
 | S1.5 | `font2bmfont`：`GoldLand.Fnt` + `font.dat` → BMFont/引擎字模 | P4-3 抽样字形逐位图一致 |
 | S1.6 | `ini2json`：`.lpk` 内 UTF-16 INI（cards/event/goods catalog） | 键值解析率 100%；JSON→INI 语义无损 |
 | S1.7 | `audiotrans`：WAV 直取 + `glmusic.mod` 离线转 OGG 入 `assets_out` | 每条音轨可播放，时长/采样率与源一致 |

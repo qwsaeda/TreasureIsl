@@ -118,8 +118,9 @@
 - 规约已写入 `docs/style.md` §5.10。
 
 ### EXP-016 环境：IDA 7.5 portable headless 执行要点（S0.2 重试参考）
-- **Python 路径**：`idat64.exe` 自带的 python38 在 `IDA\python38\` 子目录，但 `idat64.exe` 的 `_base_executable` = IDA 根 → `sys.prefix` 算成根 → `encodings` 模块找不到。修复：设 `$env:PYTHONHOME = "$p\python38"; $env:PYTHONPATH = "$p\python38\python38.zip"`。
-- **插件 DLL**：`idapython3_64.dll` 的依赖 `python3.dll` 在 IDA 根不默认搜索 → 复制 `python38\python3.dll` 和 `python38\python38.dll` 到 IDA 根目录。
+- **适用范围（2026-10 更新）**：本条为 **7.5 portable 专属**，9.4 正式版已装回。前两条（python38 路径 / 复制 python3.dll）**已作废**；后四条（UTF-8 无 BOM / `-L` 日志 / 进程管理 / `SCRIPT_TIMEOUT`）**在 9.4 仍成立**——实测 `D:\soft\IDA Professional 9.4\cfg\idapython.cfg` 仍是 `SCRIPT_TIMEOUT = 3`。详见 EXP-031。
+- **Python 路径（仅 7.5）**：`idat64.exe` 自带的 python38 在 `IDA\python38\` 子目录，但 `idat64.exe` 的 `_base_executable` = IDA 根 → `sys.prefix` 算成根 → `encodings` 模块找不到。修复：设 `$env:PYTHONHOME = "$p\python38"; $env:PYTHONPATH = "$p\python38\python38.zip"`。
+- **插件 DLL（仅 7.5）**：`idapython3_64.dll` 的依赖 `python3.dll` 在 IDA 根不默认搜索 → 复制 `python38\python3.dll` 和 `python38\python38.dll` 到 IDA 根目录。
 - **脚本编码**：Python 脚本必须是 **UTF-8 无 BOM**（BOM → `SyntaxError: invalid character in identifier`，`compile()` 报错）。opencode 的 Write 工具写出的文件无 BOM ✓；PowerShell `Set-Content -Encoding UTF8` **有 BOM** ✗。
 - **输出去向**：IDA 把脚本编译/运行错误写到 `-L` 日志文件，**不写 stdout** → 表现为"静默 exit 1、零输出"。排障时必须读 `-L` 日志（GBK 编码，用 `Get-Content -Encoding UTF8` 或 `[Text.Encoding]::GetEncoding('GBK')` 解码）。
 - **进程管理**：PowerShell `& idat64 ... | Select-Object -First N` 可能**不终止子进程**（管道关闭 ≠ 进程退出）→ 留下僵尸占 IDB/session 锁 → 后续实例秒退 exit 1。正确做法：`Start-Process -PassThru -NoNewWindow -RedirectStandardOutput ...` + `$pr.WaitForExit()`。杀僵尸用 WMI `Invoke-CimMethod Terminate`（`Stop-Process` 有时无效）。
@@ -225,3 +226,30 @@
 - 解法：`present_framebuffer(fb: &Framebuf, vp: &Viewport)`，四角改用 `vp.logical_to_screen(0,0)` / `vp.logical_to_screen(LW,LH)`。调用点 `treasure_wasm.rs` 传 `&self.vp`。只有一个调用点，签名变更零扩散。
 - 验证：重建 wasm 重抓，blue bbox → x0-1392 y0-1416（≈全画布），white 文本 19,843→35,671。
 - 教训：**文档注释与实现必须一致**——文档声称的契约（"由 Viewport 算偏移"）若实现没兑现，在 scale=1 的环境里不会暴露，换了尺寸就翻车。验收时别只看「画了什么」，要看「画在画布的哪个 bbox」。
+
+### EXP-031 环境：IDA Professional 9.4 正式版 Hex-Rays ARM 正常 → EXP-014 阻塞解除（作废 EXP-016）
+- 起因：7.5 **portable 破解版**被删除，改装 `D:\soft\IDA Professional 9.4\` 正式版后重新验证 EXP-014 的结论。
+- 证据：`ref/ida_run.log` 首段 `Loading processor module D:\soft\IDA Professional 9.4\procs\arm.dll for ARM...OK`；`evidence/S0.2.log` 记 `functions=1827 files=1827 csv_rows=1827 hexrays_ok=1823 hexrays_failed=4`（1823 个函数产出真实 Hex-Rays ARM 伪代码，非反汇编回退）。
+- 抽查复核：`ref/pseudocode/00011000_sub_11000.c` 是真伪代码（`_DWORD *__fastcall sub_11000(...)`，含 `&off_6B000` 全局初始化），与 9.4 + idalib 无头重跑结果逐字一致。
+- 结论：**不需要 Ghidra**。EXP-014 是 portable 破解版的问题，正式版不存在；台账 S0.2 已是 `verified` / `blocked_by: null`。
+- 连带作废：EXP-016 记的 `PYTHONHOME=...\python38` / `python38.zip` 补丁、`idat64.exe` 进程管理等**只适用于 7.5 portable**，9.4 无需；headless 文本模式统一为 `idat.exe`（9.x 已把 `idat64.exe` 合并进去，32/64 同一程序，`-A`/`-S`/`-L` 开关不变）。
+- 联动修正：`AGENTS.md`、`docs/reverse-facts.md`、`docs/plan-s0-s2.md`、`scripts/ida_dump.py` 中的 `IDA_Pro_v7.5_Portable\idat64.exe` 全部改为 `D:\soft\IDA Professional 9.4\idat.exe`。
+- 附：REA 逆向 MCP 走同一条 IDA 路径（`idapro 0.0.9` + `ida-pro-mcp 2.0.0` 的 `idalib-mcp` headless supervisor，注册见 `~/.rea/ida-mcp.json`）。注意 `idapro` 必须装 IDA 自带版本（9.4 = 0.0.9），PyPI 上的 0.0.11 对应更新版 IDA。
+- 教训：**环境类阻塞先分清「portable/破解版」与「正式版」**。EXP-014 花了 4 条排除项才定位到破解版授权校验失败，而正确答案只是换正式版；下次遇到「某功能在破解版上不可用」应优先怀疑授权链，而不是继续挖 DLL 签名/版本匹配。
+
+### EXP-032 工具：通用解析器别夹带特定布局校验，否则误伤同家族其他成员
+- 现象：`MapScene::parse` 被 `terrain.rs` 与 `build_assets.rs` 共用（UI 场景与地形图同族）。给它加「记录级整除校验（`5+6*count`，F-306）」后，`terrain_records` 13 项与 `build_assets` 3 项测试全挂——地形图字流 `words[4]=0` 但后跟 4278 字，按 UI 布局必报 `TrailingBytes`。
+- 根因：**记录级语义属于 UI 族，不是字流通用语义**。校验位置放错层级。
+- 修法：`MapScene::parse` 回退为纯「头 + u32 字流」透传；`MapControl::parse_words` 独立承担 UI 记录校验，`terrain::TerrainMap` 走自己的 stride=9 布局。消费方各取所需：`controls` bin 对 `MapControl::parse_words` 失败的文件**记为 skipped**（地形），不再整体报错。
+- 教训：**同一家族多个子布局共用通用解析器时，子布局校验放「视图方法」而非「解析入口」**；通用层只保证「消费完每个字节」，不保证「语义结构」。改解析器前先 grep 它的全部调用方。
+
+### EXP-033 工具：REA 6.0.0 ↔ OpenCode 互操作缺陷（headless 已验证可用，但有两坑）
+- 实测配置：`rea-agents 6.0.0` 全局 + `idapro 0.0.9`（IDA 9.4 自带 wheel，**不是 PyPI 的 0.0.11**）+ `ida-pro-mcp 2.0.0`（GitHub main，PyPI 只有 1.4.0 无 supervisor API）的 `idalib-mcp --stdio` headless。注册 `~/.rea/ida-mcp.json`，OpenCode `mcp.rea.environment` 设 `REA_ANALYSIS_PROVIDER=ida` + `REA_IDA_MCP_CONFIG`。`rea doctor --provider ida` healthy。
+- 坑 1：REA 里**不产出 Evidence 的工具**（`read_bytes`、无会话时的 `analyze_function` 等）声明的 outputSchema 要求 `result/evidence_id/evidence` 且 `additionalProperties:false`，实际不返回这些键 → OpenCode 报 `-32602`。替代：读内存数据用本地脚本（`scripts/pe_rva.py`），出证据走 `analyze_function`/`search_strings` 等带 Evidence 的工具。
+- 坑 2：modern supervisor profile 下 `callers` 恒空（REA 自注 "Direct callers are unavailable in this profile"）。找调用方靠本地 1827 份伪代码 grep，REA 负责单函数权威证据（伪代码 + 汇编 + 证据包）。
+- 性能事实：`open_binary` 2.6s 返回，首次分析请求 ~19s（IDA 自动分析在首个工具调用时执行）；supervisor worker idle TTL 1h 会驻留一个 python 进程（~70MB），是上游设计。
+- 教训：接新 MCP 先 `open_binary` + 一个小 `analyze_function` 冒烟，再决定哪些工具可信；**声明的 schema 不等于实际输出**，撞 `-32602` 就降级到本地脚本。
+
+### EXP-034 流程：并行会话工作树里先 git status 再动手，台账计数会「漂移」
+- 现象：开工时台账 23 verified，几分钟后变 26；`ref/classify.json`、`evidence/S0.3.log` 等凭空出现；`ti-core/src/oracle` 编译坏（`RenderPlan` 重复定义）——都是并行会话（S0.3 / S3.2）的进行中状态。
+- 教训：loop.md §5 的「先 git status + 读 ledger」不是仪式：**每开一轮、每个大动作前都重读一次**；别人未提交的半成品不属于你的文件域，编译坏了先确认是不是别人正在写（`git status` 看 untracked 目录 + 最近 mtime），不是就修，是就绕开/上报。

@@ -26,6 +26,10 @@ path = "src/bin/map2json.rs"
 name = "serve"
 path = "src/bin/serve.rs"
 
+[[bin]]
+name = "controls"
+path = "src/bin/controls.rs"
+
 [dependencies]
 ti-formats.workspace = true
 ti-platform.workspace = true

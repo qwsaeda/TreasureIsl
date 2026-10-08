@@ -11,7 +11,7 @@
 //!    解包 → `parse_wav` → `Mixer` → `macroquad::audio` 输出链）。
 //!
 //! ⚠️ 玩法场景（S3.x）接入前，此处只呈现主菜单骨架，不伪造任何玩法逻辑；
-//! 菜单 `event_id` 为**占位猜测值**（真实事件 id 属 S3.3，见 `ti_app::shell_ui`）。
+//! 菜单 `event_id` 为**占位猜测值**（S1.4b 实测 `.Map` 控件 f3 是屏幕 Y 坐标而非事件 id，见 F-311；事件语义属 S3.3，见 `ti_app::shell_ui`）。
 
 use macroquad::audio::{PlaySoundParams, Sound, load_sound_from_bytes, play_sound};
 use macroquad::prelude::*;

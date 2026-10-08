@@ -19,7 +19,7 @@ treasure-island/
 │   │   └── src/{gfx.rs, input.rs, audio.rs, storage.rs, backend.rs}
 │   ├── ti-app/             # 组装层 + 三端入口 bin
 │   └── ti-tools/           # 资源逆向工具 bins：unpak/map2json/pcx2png/preview/build_assets/verify
-├── ref/                    # IDA 伪代码、functions.csv、classify.json、imports.json、event_ids.json
+├── ref/                    # IDA 伪代码、functions.csv、classify.json、imports.json、controls.json（S1.4b）
 ├── docs/                   # 规范与计划（路由见 AGENTS.md）
 ├── plan/ledger.yaml        # 循环台账
 └── evidence/               # 每任务验收日志
@@ -53,7 +53,7 @@ panic = "deny"                     # 禁 panic，错误走 Result 链
 |---|---|---|
 | 全局 | `ti-core/src/consts.rs`（带分区注释） | 逻辑分辨率 `LOGICAL_W/H=176/220`、RGB565、缩放档、帧率、存档版本 |
 | 格式 | `ti-formats/src/<fmt>/consts.rs` | 头偏移、魔数、记录尺寸、标志位 |
-| ID | `ti-formats/src/ids.rs` | **由 build.rs 从 `ref/event_ids.json` 等生成**，禁止手写重复 ID |
+| ID | `ti-formats/src/ids.rs` | 控件类型码 `ControlKind`（数据源 `ref/controls.json`，S1.4b）；其余 ID 域随各自任务落地，禁止手写重复 ID |
 | 数值表 | `assets_out/*.json` 资源化，引擎只读表 | 兵种/货物/BOSS 档（50000~300000）等 |
 
 规则：禁止无名字的裸字面量（>2 且非测试代码，gate 第 5 项辅助 + 评审）；常量 `SCREAMING_SNAKE_CASE`；同一数字出现两处即提常量。

@@ -5,7 +5,7 @@ tasks:
   # S0 地基
   - { id: S0.1, title: "建 cargo workspace + fmt/clippy + gate.ps1（native 构建起步）", status: verified, deps: [], dod: "scripts/gate.ps1 全绿（构建仅 native）+ 回写 AGENTS.md 命令", evidence: "evidence/S0.1.log", blocked_by: null, rounds: 1 }
   - { id: S0.2, title: "IDA headless 批量导出伪代码与 functions.csv（IDA Professional 9.4）", status: verified, deps: [S0.1], dod: "伪代码文件数 == IDA 函数数，0 缺失；产物 ref/pseudocode/*.c + ref/functions.csv 落地", evidence: "evidence/S0.2.log", blocked_by: null, rounds: 0 }
-  - { id: S0.3, title: "函数分类打标 classify → ref/classify.json", status: pending, deps: [S0.2], dod: "覆盖率 100%（允许 pending 类目）", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S0.3, title: "函数分类打标 classify → ref/classify.json", status: verified, deps: [S0.2], dod: "覆盖率 100%（允许 pending 类目）", evidence: "evidence/S0.3.log", blocked_by: null, rounds: 1 }
   - { id: S0.4, title: "116 个导入 API 名恢复 → ref/imports.json", status: verified, deps: [S0.2], dod: "116/116 有名字 + 调用点证据", evidence: "evidence/S0.4.log", blocked_by: null, rounds: 1 }
   - { id: S0.5, title: "define_format!/parse_err!/roundtrip_all! 三个宏", status: verified, deps: [S0.1], dod: "宏单测全绿（0 未知字节 + roundtrip 断言生效）", evidence: "evidence/S0.5.log", blocked_by: null, rounds: 1 }
   - { id: S0.6, title: "ledger 全量任务登记", status: verified, deps: [S0.1], dod: "gate 第 8 项台账校验通过", evidence: "evidence/S0.6.log", blocked_by: null, rounds: 1 }
@@ -13,8 +13,8 @@ tasks:
   - { id: S1.1, title: "LucencyPackage 头/索引规格 + name→key 哈希逆出", status: verified, deps: [S0.1, S0.5], dod: "P1-2 修订：可由资源名解释的条目 100% 无误且 ≥85（实测 glpics 85/88）；key=djb2(lower,种子0)", evidence: "evidence/S1.1.log", blocked_by: null, rounds: 1 }
   - { id: S1.2, title: "unpak 解包器（pak/lpk）+ repack", status: verified, deps: [S1.1], dod: "P0-1 提取 100% + P0-3 repack sha256 相等", evidence: "evidence/S1.2.log", blocked_by: null, rounds: 1 }
   - { id: S1.3, title: "pcx2png + 独立 python 参考解码器", status: verified, deps: [S0.5], dod: "P0-4 逐像素一致", evidence: "evidence/S1.3.log", blocked_by: null, rounds: 1 }
-  - { id: S1.4, title: "UI 场景 map2json + ref/event_ids.json + ids.rs 生成", status: verified, deps: [S1.2], dod: "0 未知字节 + roundtrip 逐字节（23/23）+ P1-3 拆分至 S1.4b", evidence: "evidence/S1.4.log", blocked_by: null, rounds: 1 }
-  - { id: S1.4b, title: "控件事件 id 全量获取（ref/event_ids.json + ids.rs）", status: in_progress, deps: [S1.4], dod: "P1-3：每个 .Map 控件记录的事件 id 全量获取（依赖 S0.4 exe 事件表）", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S1.4, title: "UI 场景 map2json（23/23）；记录级语义解析拆至 S1.4b", status: verified, deps: [S1.2], dod: "0 未知字节 + roundtrip 逐字节（23/23）", evidence: "evidence/S1.4.log", blocked_by: null, rounds: 1 }
+  - { id: S1.4b, title: "控件记录全量导出 + 字段语义（ref/controls.json + ti-formats/src/ids.rs）", status: verified, deps: [S1.4], dod: "P1-3：ref/controls.json 记录数 == 控件总数（2041），20/20 UI 场景 5+6*count 整除；字段语义 exe 侧 sub_44004/sub_460F8 确认（f3=Y 坐标，推翻 F-306 事件 id 假设，见 F-311/F-312）", evidence: "evidence/S1.4b.log", blocked_by: null, rounds: 1 }
   - { id: S1.5, title: "font2bmfont（GoldLand.Fnt + font.dat）", status: verified, deps: [S1.3], dod: "结构完整 + 0 未知字节 + 往返逐字节（P4-3 拆至 S1.5b）", evidence: "evidence/S1.5.log", blocked_by: null, rounds: 1 }
   - { id: S1.5b, title: "字形位图行列组织与位序逆出（P4-3 逐位图一致）", status: verified, deps: [S1.5], dod: "DoD 修订（实测 F-303/EXP-026）：12×12 字库可渲染为可读汉字/字母 —— font_parity 3 项（charset 1016 与字形 1:1 + b/d/p/L/A/！几何断言定行序与位序 + 样例渲染 evidence/font_render.txt）；原 DoD 的 font.dat 字宽表不成立（实为 UTF-16 字符集清单）", evidence: "evidence/S1.5b.log", blocked_by: null, rounds: 1 }
   - { id: S1.6, title: "ini2json（lpk 内 UTF-16 INI）", status: verified, deps: [S1.2], dod: "键值 100% 解析 + 往返无损", evidence: "evidence/S1.6.log", blocked_by: null, rounds: 1 }
@@ -31,11 +31,11 @@ tasks:
   - { id: S2.3, title: "audio：混音/BGM 循环/音量", status: verified, deps: [S2.1], dod: "桌面播 WAV/OGG 无爆音 + 通道测试", evidence: "evidence/S2.3.log", blocked_by: null, rounds: 1 }
   - { id: S2.4, title: "storage：文件/IndexedDB/Android 三实现", status: verified, deps: [S2.1], dod: "三端存读档往返测试", evidence: "evidence/S2.4.log", blocked_by: null, rounds: 1 }
   - { id: S2.5, title: "wasm 构建链（含 rustup target add wasm32 + html 壳）", status: verified, deps: [S2.1, S2.2, S2.3, S2.4], dod: "DoD 达成（实测）：wasm32 target 已装；ti-app 加 macroquad 0.4.16 + wasm-shell feature 的 treasure-wasm bin；scripts/build_wasm.ps1 一键产出 web/（wasm 615KB + miniquad gl.js + 真实资源 GoldLand.Fnt/font.dat/settings.dat）；ti-tools serve 静态服务器实测 index.html 200 text/html、gl.js 200 text/javascript、wasm 200 application/wasm、字体 200；gate 第 4 项 wasm 行由 SKIP 转 PASS", evidence: "evidence/S2.5.log + evidence/S2.5_wasm_shell.log（补实：真字形/真音效/浏览器 CDP 实机截图，见 experience.md）", blocked_by: null, rounds: 1 }
-  - { id: S2.6, title: "Android 构建链（含 android target + SDK/NDK + cargo-apk/cargo-ndk 本机）", status: pending, deps: [S2.1, S2.2, S2.3, S2.4], dod: "APK 装机显示主菜单 + gate android 行解锁", evidence: null, blocked_by: null, rounds: 0 }
-  - { id: S2.7, title: "scripts/smoke.sh 冒烟（native+wasm 两端先行；APK 后补）", status: pending, deps: [S1.10, S2.5], dod: "DoD 修订（2026-10 用户决定，loop.md §4 以实测/决策为准）：native + wasm 两端冒烟全绿即通过 S2 阶段门禁；APK 端由 S2.6 后补（loop.md §3.3 三端产物仍为项目终局条件，S4.4 收口）", evidence: null, blocked_by: "s2.6-android-后补至-s4", rounds: 0 }
+  - { id: S2.6, title: "Android 构建链（含 android target + SDK/NDK + cargo-apk/cargo-ndk 本机）", status: blocked, deps: [S2.1, S2.2, S2.3, S2.4], dod: "APK 装机显示主菜单 + gate android 行解锁", evidence: null, blocked_by: "android-sdk-ndk-not-installed", rounds: 0 }
+  - { id: S2.7, title: "scripts/smoke.sh 冒烟（native+wasm 两端先行；APK 后补）", status: verified, deps: [S1.10, S2.5], dod: "DoD 修订（2026-10 用户决定，loop.md §4 以实测/决策为准）：native + wasm 两端冒烟全绿即通过 S2 阶段门禁；APK 端由 S2.6 后补（loop.md §3.3 三端产物仍为项目终局条件，S4.4 收口）", evidence: "evidence/S2.7.log", blocked_by: null, rounds: 1 }
   # S3 玩法模块（每模块 8 子步，见 docs/plan-s3.md）
-  - { id: S3.1, title: "主循环/场景管理", status: pending, deps: [S0.2, S2.7], dod: "diff 测试 + 场景切换图与 ref 一致（deps 补 S0.2：8 子步第 1 步需 ref/pseudocode，loop.md §1 deps 全 verified 才可取用）", evidence: null, blocked_by: null, rounds: 0 }
-  - { id: S3.2, title: "资源/渲染核心", status: pending, deps: [S1.10, S3.1], dod: "P4-1 渲染逐像素一致", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S3.1, title: "主循环/场景管理", status: verified, deps: [S0.2, S2.7], dod: "diff 测试 + 场景切换图与 ref 一致（deps 补 S0.2：8 子步第 1 步需 ref/pseudocode，loop.md §1 deps 全 verified 才可取用）", evidence: "evidence/S3.1.log", blocked_by: null, rounds: 1 }
+  - { id: S3.2, title: "资源/渲染核心", status: verified, deps: [S1.10, S3.1], dod: "P4-1 渲染逐像素一致", evidence: "evidence/S3.2.log", blocked_by: null, rounds: 1 }
   - { id: S3.3, title: "index/intro 主菜单", status: pending, deps: [S3.2], dod: "场景可达 + 事件覆盖 100%", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S3.4, title: "selectrole/selectmap", status: pending, deps: [S3.3], dod: "流程脚本 + 差分全绿", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S3.5, title: "主地图（glmapm0x/移动/据点）", status: pending, deps: [S3.4, S1.8], dod: "地图数据对齐 + 移动规则差分", evidence: null, blocked_by: null, rounds: 0 }

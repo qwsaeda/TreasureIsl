@@ -6,7 +6,7 @@
 
 ```
 1 analyzed    读 ref/pseudocode/ 对应函数 → 在 ref/functions.csv 标注模块归属
-2 specified   写 docs/spec/<module>.md：输入/状态机/输出/数值公式/事件 id 清单
+2 specified   写 docs/spec/<module>.md：输入/状态机/输出/数值公式/控件字段（f5 类型码，见 ref/controls.json）/事件语义
 3 oracle      ti-core/src/oracle/<module>.rs 直译伪代码（测试专用，允许与正式实现重复）
 4 implemented ti-core/src/rules|<module>.rs 正式实现（实现 §5.6 的 trait，非 dyn）
 5 diff        diff_test!(oracle, impl, cases) → cargo test -p ti-core --test diff_<module> 全绿
@@ -21,13 +21,13 @@
 |---|---|---|---|---|
 | S3.1 | 主循环/场景管理 | `WinMain`→消息泵→GX 绘制→场景栈；帧率/定时 | S2.7 | 场景切换图与 ref 一致；`define_scene!` 接入 |
 | S3.2 | 资源/渲染核心 | pak 装载、句柄缓存、图层 blt、字体、调色 | S1.10, S3.1 | P4-1 渲染逐像素一致 |
-| S3.3 | index/intro 主菜单 | 菜单事件 id、进入各子场景 | S3.2 | 场景可达 + 事件覆盖 |
+| S3.3 | index/intro 主菜单 | 菜单控件（ref/controls.json index.Map 31 条，f5 类型码）→ 各子场景进入逻辑 | S3.2 | 场景可达 + 控件类型逐档解释（F-311） |
 | S3.4 | selectrole/selectmap | 5 角色（panda/tichy/kidd/drake/katharina）、3 地图选择 | S3.3 | 流程脚本 + 差分 |
 | S3.5 | 主地图 | `glmapm0x` 加载、移动、据点/地标、探索 | S3.4, S1.8 | 地图数据对齐 + 移动规则差分 |
 | S3.6 | 贸易 | goods 数值、行情、买卖结算、利润公式 | S3.5, S1.6 | 固定价格表逐笔结算差分 |
 | S3.7 | 建造/城堡 | 建筑、投资、银行 | S3.5 | 差分 + 事件覆盖 |
 | S3.8 | 战斗 | vs 场景、兵种 troop/ship、BOSS 档（exe 内 50000~300000）、胜负判定 | S3.5 | 固定种子整场战斗输出一致 |
-| S3.9 | 卡牌/事件 | cards/event/catalog 规则、`event%d` 触发 | S3.6, S1.6 | 全部 event id 有处理路径（P3-1） |
+| S3.9 | 卡牌/事件 | cards/event/catalog 规则、`event%d` 触发 | S3.6, S1.6 | 全部 event 有处理路径（P3-1）；event 与 f5 控件类型的关系在此定论 |
 | S3.10 | 存读档/设置 | saveload/option/settings、字段编解码 | S1.9 | v1 兼容读写 + 迁移测试 |
 | S3.11 | 消息/帮助/信息 | msgs/msgl/msgm/help/information 界面 | S3.2 | 文本渲染对齐 + 场景可达 |
 | S3.12 | RNG 与全局规则 | 随机数发生器、全局常量表、RNG 序列对齐 | S3.1 | RNG 序列与 oracle 一致；**`ref/classify.json` 中 `pending = 0`** |

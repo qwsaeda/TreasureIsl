@@ -9,8 +9,9 @@
 pub struct MenuItem {
     /// 中文标签（逐字过字库，缺字时画豆腐块）。
     pub label: &'static str,
-    /// ⚠️ **占位值**：1..6 未实测，真实事件 id 由 S3.3 从 `ref/event_ids.json`
-    /// 解出（`docs/plan-s3.md`），在此之前不得当作原版事实使用。
+    /// ⚠️ **占位值**：1..6 未实测。S1.4b 已实测推翻「`.Map` 控件 f3 = 事件 id」
+    /// （f3 实为屏幕 Y 坐标，见 `docs/reverse-facts.md` F-311）；菜单项与 exe 控件
+    /// 记录的对应关系属 S3.3，届时以 `ref/controls.json` + 场景逻辑为准。
     pub event_id: u32,
 }
 
