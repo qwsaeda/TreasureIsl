@@ -1,0 +1,814 @@
+[
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 170,
+  "hint": null,
+  "name": null,
+  "iat_va": 512012
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1041,
+  "hint": null,
+  "name": null,
+  "iat_va": 512016
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 6,
+  "hint": null,
+  "name": null,
+  "iat_va": 512020
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 858,
+  "hint": null,
+  "name": null,
+  "iat_va": 512024
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 171,
+  "hint": null,
+  "name": null,
+  "iat_va": 512028
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1097,
+  "hint": null,
+  "name": null,
+  "iat_va": 512032
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1047,
+  "hint": null,
+  "name": null,
+  "iat_va": 512036
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1018,
+  "hint": null,
+  "name": null,
+  "iat_va": 512040
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1094,
+  "hint": null,
+  "name": null,
+  "iat_va": 512044
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1095,
+  "hint": null,
+  "name": null,
+  "iat_va": 512048
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1044,
+  "hint": null,
+  "name": null,
+  "iat_va": 512052
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 544,
+  "hint": null,
+  "name": null,
+  "iat_va": 512056
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1053,
+  "hint": null,
+  "name": null,
+  "iat_va": 512060
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 2005,
+  "hint": null,
+  "name": null,
+  "iat_va": 512064
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 2008,
+  "hint": null,
+  "name": null,
+  "iat_va": 512068
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1090,
+  "hint": null,
+  "name": null,
+  "iat_va": 512072
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 172,
+  "hint": null,
+  "name": null,
+  "iat_va": 512076
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 553,
+  "hint": null,
+  "name": null,
+  "iat_va": 512080
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 173,
+  "hint": null,
+  "name": null,
+  "iat_va": 512084
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 537,
+  "hint": null,
+  "name": null,
+  "iat_va": 512088
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1046,
+  "hint": null,
+  "name": null,
+  "iat_va": 512092
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1061,
+  "hint": null,
+  "name": null,
+  "iat_va": 512096
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 23,
+  "hint": null,
+  "name": null,
+  "iat_va": 512100
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1025,
+  "hint": null,
+  "name": null,
+  "iat_va": 512104
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1068,
+  "hint": null,
+  "name": null,
+  "iat_va": 512108
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 258,
+  "hint": null,
+  "name": null,
+  "iat_va": 512112
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 168,
+  "hint": null,
+  "name": null,
+  "iat_va": 512116
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 259,
+  "hint": null,
+  "name": null,
+  "iat_va": 512120
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 285,
+  "hint": null,
+  "name": null,
+  "iat_va": 512124
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 2,
+  "hint": null,
+  "name": null,
+  "iat_va": 512128
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 45,
+  "hint": null,
+  "name": null,
+  "iat_va": 512132
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 3,
+  "hint": null,
+  "name": null,
+  "iat_va": 512136
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 884,
+  "hint": null,
+  "name": null,
+  "iat_va": 512140
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 875,
+  "hint": null,
+  "name": null,
+  "iat_va": 512144
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 876,
+  "hint": null,
+  "name": null,
+  "iat_va": 512148
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 837,
+  "hint": null,
+  "name": null,
+  "iat_va": 512152
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 535,
+  "hint": null,
+  "name": null,
+  "iat_va": 512156
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 496,
+  "hint": null,
+  "name": null,
+  "iat_va": 512160
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 2000,
+  "hint": null,
+  "name": null,
+  "iat_va": 512164
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 2026,
+  "hint": null,
+  "name": null,
+  "iat_va": 512168
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 2020,
+  "hint": null,
+  "name": null,
+  "iat_va": 512172
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1026,
+  "hint": null,
+  "name": null,
+  "iat_va": 512176
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 264,
+  "hint": null,
+  "name": null,
+  "iat_va": 512180
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 389,
+  "hint": null,
+  "name": null,
+  "iat_va": 512184
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 500,
+  "hint": null,
+  "name": null,
+  "iat_va": 512188
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 514,
+  "hint": null,
+  "name": null,
+  "iat_va": 512192
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 387,
+  "hint": null,
+  "name": null,
+  "iat_va": 512196
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 385,
+  "hint": null,
+  "name": null,
+  "iat_va": 512200
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 388,
+  "hint": null,
+  "name": null,
+  "iat_va": 512204
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 399,
+  "hint": null,
+  "name": null,
+  "iat_va": 512208
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 379,
+  "hint": null,
+  "name": null,
+  "iat_va": 512212
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 495,
+  "hint": null,
+  "name": null,
+  "iat_va": 512216
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1092,
+  "hint": null,
+  "name": null,
+  "iat_va": 512220
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 384,
+  "hint": null,
+  "name": null,
+  "iat_va": 512224
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 386,
+  "hint": null,
+  "name": null,
+  "iat_va": 512228
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 390,
+  "hint": null,
+  "name": null,
+  "iat_va": 512232
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 497,
+  "hint": null,
+  "name": null,
+  "iat_va": 512236
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 494,
+  "hint": null,
+  "name": null,
+  "iat_va": 512240
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 5,
+  "hint": null,
+  "name": null,
+  "iat_va": 512244
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 4,
+  "hint": null,
+  "name": null,
+  "iat_va": 512248
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 864,
+  "hint": null,
+  "name": null,
+  "iat_va": 512252
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 499,
+  "hint": null,
+  "name": null,
+  "iat_va": 512256
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 2002,
+  "hint": null,
+  "name": null,
+  "iat_va": 512260
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 165,
+  "hint": null,
+  "name": null,
+  "iat_va": 512264
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 78,
+  "hint": null,
+  "name": null,
+  "iat_va": 512268
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 549,
+  "hint": null,
+  "name": null,
+  "iat_va": 512272
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 548,
+  "hint": null,
+  "name": null,
+  "iat_va": 512276
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1167,
+  "hint": null,
+  "name": null,
+  "iat_va": 512280
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 550,
+  "hint": null,
+  "name": null,
+  "iat_va": 512284
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 267,
+  "hint": null,
+  "name": null,
+  "iat_va": 512288
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 266,
+  "hint": null,
+  "name": null,
+  "iat_va": 512292
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 272,
+  "hint": null,
+  "name": null,
+  "iat_va": 512296
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 271,
+  "hint": null,
+  "name": null,
+  "iat_va": 512300
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 866,
+  "hint": null,
+  "name": null,
+  "iat_va": 512304
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 265,
+  "hint": null,
+  "name": null,
+  "iat_va": 512308
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 861,
+  "hint": null,
+  "name": null,
+  "iat_va": 512312
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 859,
+  "hint": null,
+  "name": null,
+  "iat_va": 512316
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 702,
+  "hint": null,
+  "name": null,
+  "iat_va": 512320
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 286,
+  "hint": null,
+  "name": null,
+  "iat_va": 512324
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 246,
+  "hint": null,
+  "name": null,
+  "iat_va": 512328
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 508,
+  "hint": null,
+  "name": null,
+  "iat_va": 512332
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1781,
+  "hint": null,
+  "name": null,
+  "iat_va": 512336
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 95,
+  "hint": null,
+  "name": null,
+  "iat_va": 512340
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 56,
+  "hint": null,
+  "name": null,
+  "iat_va": 512344
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 683,
+  "hint": null,
+  "name": null,
+  "iat_va": 512348
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 878,
+  "hint": null,
+  "name": null,
+  "iat_va": 512352
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1054,
+  "hint": null,
+  "name": null,
+  "iat_va": 512356
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 249,
+  "hint": null,
+  "name": null,
+  "iat_va": 512360
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 912,
+  "hint": null,
+  "name": null,
+  "iat_va": 512364
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 263,
+  "hint": null,
+  "name": null,
+  "iat_va": 512368
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 911,
+  "hint": null,
+  "name": null,
+  "iat_va": 512372
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 903,
+  "hint": null,
+  "name": null,
+  "iat_va": 512376
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 921,
+  "hint": null,
+  "name": null,
+  "iat_va": 512380
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 910,
+  "hint": null,
+  "name": null,
+  "iat_va": 512384
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 262,
+  "hint": null,
+  "name": null,
+  "iat_va": 512388
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 918,
+  "hint": null,
+  "name": null,
+  "iat_va": 512392
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 90,
+  "hint": null,
+  "name": null,
+  "iat_va": 512396
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1070,
+  "hint": null,
+  "name": null,
+  "iat_va": 512400
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 1645,
+  "hint": null,
+  "name": null,
+  "iat_va": 512404
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 87,
+  "hint": null,
+  "name": null,
+  "iat_va": 512408
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 34,
+  "hint": null,
+  "name": null,
+  "iat_va": 512412
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 33,
+  "hint": null,
+  "name": null,
+  "iat_va": 512416
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 35,
+  "hint": null,
+  "name": null,
+  "iat_va": 512420
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 36,
+  "hint": null,
+  "name": null,
+  "iat_va": 512424
+ },
+ {
+  "dll": "COREDLL.dll",
+  "ordinal": 492,
+  "hint": null,
+  "name": null,
+  "iat_va": 512428
+ },
+ {
+  "dll": "AYGSHELL.dll",
+  "ordinal": 2006,
+  "hint": null,
+  "name": null,
+  "iat_va": 512000
+ },
+ {
+  "dll": "AYGSHELL.dll",
+  "ordinal": 65,
+  "hint": null,
+  "name": null,
+  "iat_va": 512004
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 3,
+  "name": "?GXEndDraw@@YAHXZ",
+  "iat_va": 512436
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 2,
+  "name": "?GXCloseInput@@YAHXZ",
+  "iat_va": 512440
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 5,
+  "name": "?GXGetDisplayProperties@@YA?AUGXDisplayProperties@@XZ",
+  "iat_va": 512444
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 7,
+  "name": "?GXOpenDisplay@@YAHPAUHWND__@@K@Z",
+  "iat_va": 512448
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 1,
+  "name": "?GXCloseDisplay@@YAHXZ",
+  "iat_va": 512452
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 8,
+  "name": "?GXOpenInput@@YAHXZ",
+  "iat_va": 512456
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 0,
+  "name": "?GXBeginDraw@@YAPAXXZ",
+  "iat_va": 512460
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 11,
+  "name": "?GXSuspend@@YAHXZ",
+  "iat_va": 512464
+ },
+ {
+  "dll": "gx.dll",
+  "ordinal": null,
+  "hint": 9,
+  "name": "?GXResume@@YAHXZ",
+  "iat_va": 512468
+ }
+]

@@ -124,13 +124,17 @@ pub fn validate(text: &str) -> Report {
 }
 
 /// 返回 `verified` 但证据文件缺失的任务 ID（`evidence` 为空也计入）。
+/// `evidence` 字段允许「路径 + 自由说明」，取第一个空白分词作为主路径。
 #[must_use]
 pub fn missing_evidence(tasks: &[Task], base: &Path) -> Vec<String> {
     tasks
         .iter()
         .filter(|t| t.is_verified())
         .filter(|t| match t.evidence.as_deref() {
-            Some(path) if !path.is_empty() => !base.join(path).is_file(),
+            Some(path) if !path.is_empty() => {
+                let first = path.split_whitespace().next().unwrap_or(path);
+                !base.join(first).is_file()
+            }
             _ => true,
         })
         .map(|t| t.id.clone())

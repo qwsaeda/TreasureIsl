@@ -166,7 +166,7 @@ impl Shell {
 
     /// 帧缓冲上屏。
     fn present(&self) {
-        ti_platform::gfx::present_framebuffer(&self.fb);
+        ti_platform::gfx::present_framebuffer(&self.fb, &self.vp);
     }
 }
 

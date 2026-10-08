@@ -1,0 +1,3355 @@
+[
+ {
+  "dll": "COREDLL",
+  "entries": [
+   {
+    "ea": 512128,
+    "name": "__imp_InitializeCriticalSection",
+    "ordinal": 2,
+    "xrefs": [
+     {
+      "frm": 362132,
+      "type": 1,
+      "func_ea": 362132,
+      "func_name": "InitializeCriticalSection"
+     },
+     {
+      "frm": 362140,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512136,
+    "name": "__imp_DeleteCriticalSection",
+    "ordinal": 3,
+    "xrefs": [
+     {
+      "frm": 362156,
+      "type": 1,
+      "func_ea": 362156,
+      "func_name": "DeleteCriticalSection"
+     },
+     {
+      "frm": 362164,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512248,
+    "name": "__imp_EnterCriticalSection",
+    "ordinal": 4,
+    "xrefs": [
+     {
+      "frm": 434908,
+      "type": 1,
+      "func_ea": 434908,
+      "func_name": "EnterCriticalSection"
+     },
+     {
+      "frm": 434916,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512244,
+    "name": "__imp_LeaveCriticalSection",
+    "ordinal": 5,
+    "xrefs": [
+     {
+      "frm": 434896,
+      "type": 1,
+      "func_ea": 434896,
+      "func_name": "LeaveCriticalSection"
+     },
+     {
+      "frm": 434904,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512020,
+    "name": "__imp_ExitThread",
+    "ordinal": 6,
+    "xrefs": [
+     {
+      "frm": 361844,
+      "type": 1,
+      "func_ea": 361844,
+      "func_name": "ExitThread"
+     },
+     {
+      "frm": 361852,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512100,
+    "name": "__imp_GetLocalTime",
+    "ordinal": 23,
+    "xrefs": [
+     {
+      "frm": 362048,
+      "type": 1,
+      "func_ea": 362048,
+      "func_name": "GetLocalTime"
+     },
+     {
+      "frm": 362056,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512416,
+    "name": "__imp_LocalAlloc",
+    "ordinal": 33,
+    "xrefs": [
+     {
+      "frm": 435400,
+      "type": 1,
+      "func_ea": 435400,
+      "func_name": "LocalAlloc"
+     },
+     {
+      "frm": 435408,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512412,
+    "name": "__imp_LocalReAlloc",
+    "ordinal": 34,
+    "xrefs": [
+     {
+      "frm": 435388,
+      "type": 1,
+      "func_ea": 435388,
+      "func_name": "LocalReAlloc"
+     },
+     {
+      "frm": 435396,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512420,
+    "name": "__imp_LocalSize",
+    "ordinal": 35,
+    "xrefs": [
+     {
+      "frm": 435412,
+      "type": 1,
+      "func_ea": 435412,
+      "func_name": "LocalSize"
+     },
+     {
+      "frm": 435420,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512424,
+    "name": "__imp_LocalFree",
+    "ordinal": 36,
+    "xrefs": [
+     {
+      "frm": 435424,
+      "type": 1,
+      "func_ea": 435424,
+      "func_name": "LocalFree"
+     },
+     {
+      "frm": 435432,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512132,
+    "name": "__imp_HeapDestroy",
+    "ordinal": 45,
+    "xrefs": [
+     {
+      "frm": 362144,
+      "type": 1,
+      "func_ea": 362144,
+      "func_name": "HeapDestroy"
+     },
+     {
+      "frm": 362152,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512344,
+    "name": "__imp_wsprintfW",
+    "ordinal": 56,
+    "xrefs": [
+     {
+      "frm": 435184,
+      "type": 1,
+      "func_ea": 435184,
+      "func_name": "wsprintfW"
+     },
+     {
+      "frm": 435192,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512268,
+    "name": "__imp_wtol",
+    "ordinal": 78,
+    "xrefs": [
+     {
+      "frm": 434956,
+      "type": 1,
+      "func_ea": 434956,
+      "func_name": "wtol"
+     },
+     {
+      "frm": 434964,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512408,
+    "name": "__imp__C_specific_handler",
+    "ordinal": 87,
+    "xrefs": [
+     {
+      "frm": 435376,
+      "type": 1,
+      "func_ea": 435376,
+      "func_name": "_C_specific_handler"
+     },
+     {
+      "frm": 435384,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512396,
+    "name": "__imp_CreateDIBSection",
+    "ordinal": 90,
+    "xrefs": [
+     {
+      "frm": 435340,
+      "type": 1,
+      "func_ea": 435340,
+      "func_name": "CreateDIBSection"
+     },
+     {
+      "frm": 435348,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512340,
+    "name": "__imp_RegisterClassW",
+    "ordinal": 95,
+    "xrefs": [
+     {
+      "frm": 435172,
+      "type": 1,
+      "func_ea": 435172,
+      "func_name": "RegisterClassW"
+     },
+     {
+      "frm": 435180,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512264,
+    "name": "__imp_DeleteFileW",
+    "ordinal": 165,
+    "xrefs": [
+     {
+      "frm": 434944,
+      "type": 1,
+      "func_ea": 434944,
+      "func_name": "DeleteFileW"
+     },
+     {
+      "frm": 434952,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512116,
+    "name": "__imp_CreateFileW",
+    "ordinal": 168,
+    "xrefs": [
+     {
+      "frm": 362012,
+      "type": 1,
+      "func_ea": 362012,
+      "func_name": "CreateFileW"
+     },
+     {
+      "frm": 362020,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512012,
+    "name": "__imp_ReadFile",
+    "ordinal": 170,
+    "xrefs": [
+     {
+      "frm": 361820,
+      "type": 1,
+      "func_ea": 361820,
+      "func_name": "ReadFile"
+     },
+     {
+      "frm": 361828,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     },
+     {
+      "frm": 507908,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512028,
+    "name": "__imp_WriteFile",
+    "ordinal": 171,
+    "xrefs": [
+     {
+      "frm": 361808,
+      "type": 1,
+      "func_ea": 361808,
+      "func_name": "WriteFile"
+     },
+     {
+      "frm": 361816,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512076,
+    "name": "__imp_GetFileSize",
+    "ordinal": 172,
+    "xrefs": [
+     {
+      "frm": 361976,
+      "type": 1,
+      "func_ea": 361976,
+      "func_name": "GetFileSize"
+     },
+     {
+      "frm": 361984,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512084,
+    "name": "__imp_SetFilePointer",
+    "ordinal": 173,
+    "xrefs": [
+     {
+      "frm": 362000,
+      "type": 1,
+      "func_ea": 362000,
+      "func_name": "SetFilePointer"
+     },
+     {
+      "frm": 362008,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512328,
+    "name": "__imp_CreateWindowExW",
+    "ordinal": 246,
+    "xrefs": [
+     {
+      "frm": 435136,
+      "type": 1,
+      "func_ea": 435136,
+      "func_name": "CreateWindowExW"
+     },
+     {
+      "frm": 435144,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512360,
+    "name": "__imp_GetClientRect",
+    "ordinal": 249,
+    "xrefs": [
+     {
+      "frm": 435232,
+      "type": 1,
+      "func_ea": 435232,
+      "func_name": "GetClientRect"
+     },
+     {
+      "frm": 435240,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512112,
+    "name": "__imp_SetWindowLongW",
+    "ordinal": 258,
+    "xrefs": [
+     {
+      "frm": 362084,
+      "type": 1,
+      "func_ea": 362084,
+      "func_name": "SetWindowLongW"
+     },
+     {
+      "frm": 362092,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512120,
+    "name": "__imp_GetWindowLongW",
+    "ordinal": 259,
+    "xrefs": [
+     {
+      "frm": 362108,
+      "type": 1,
+      "func_ea": 362108,
+      "func_name": "GetWindowLongW"
+     },
+     {
+      "frm": 362116,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512388,
+    "name": "__imp_GetDC",
+    "ordinal": 262,
+    "xrefs": [
+     {
+      "frm": 435316,
+      "type": 1,
+      "func_ea": 435316,
+      "func_name": "GetDC"
+     },
+     {
+      "frm": 435324,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512368,
+    "name": "__imp_ReleaseDC",
+    "ordinal": 263,
+    "xrefs": [
+     {
+      "frm": 435256,
+      "type": 1,
+      "func_ea": 435256,
+      "func_name": "ReleaseDC"
+     },
+     {
+      "frm": 435264,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512180,
+    "name": "__imp_DefWindowProcW",
+    "ordinal": 264,
+    "xrefs": [
+     {
+      "frm": 362096,
+      "type": 1,
+      "func_ea": 362096,
+      "func_name": "DefWindowProcW"
+     },
+     {
+      "frm": 362104,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512308,
+    "name": "__imp_DestroyWindow",
+    "ordinal": 265,
+    "xrefs": [
+     {
+      "frm": 435076,
+      "type": 1,
+      "func_ea": 435076,
+      "func_name": "DestroyWindow"
+     },
+     {
+      "frm": 435084,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512292,
+    "name": "__imp_ShowWindow",
+    "ordinal": 266,
+    "xrefs": [
+     {
+      "frm": 435028,
+      "type": 1,
+      "func_ea": 435028,
+      "func_name": "ShowWindow"
+     },
+     {
+      "frm": 435036,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512288,
+    "name": "__imp_UpdateWindow",
+    "ordinal": 267,
+    "xrefs": [
+     {
+      "frm": 435016,
+      "type": 1,
+      "func_ea": 435016,
+      "func_name": "UpdateWindow"
+     },
+     {
+      "frm": 435024,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512300,
+    "name": "__imp_IsWindow",
+    "ordinal": 271,
+    "xrefs": [
+     {
+      "frm": 435052,
+      "type": 1,
+      "func_ea": 435052,
+      "func_name": "IsWindow"
+     },
+     {
+      "frm": 435060,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512296,
+    "name": "__imp_MoveWindow",
+    "ordinal": 272,
+    "xrefs": [
+     {
+      "frm": 435040,
+      "type": 1,
+      "func_ea": 435040,
+      "func_name": "MoveWindow"
+     },
+     {
+      "frm": 435048,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512124,
+    "name": "__imp_CallWindowProcW",
+    "ordinal": 285,
+    "xrefs": [
+     {
+      "frm": 362120,
+      "type": 1,
+      "func_ea": 362120,
+      "func_name": "CallWindowProcW"
+     },
+     {
+      "frm": 362128,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512324,
+    "name": "__imp_FindWindowW",
+    "ordinal": 286,
+    "xrefs": [
+     {
+      "frm": 435124,
+      "type": 1,
+      "func_ea": 435124,
+      "func_name": "FindWindowW"
+     },
+     {
+      "frm": 435132,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512212,
+    "name": "__imp_waveOutGetNumDevs",
+    "ordinal": 379,
+    "xrefs": [
+     {
+      "frm": 434800,
+      "type": 1,
+      "func_ea": 434800,
+      "func_name": "waveOutGetNumDevs"
+     },
+     {
+      "frm": 434808,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512224,
+    "name": "__imp_waveOutClose",
+    "ordinal": 384,
+    "xrefs": [
+     {
+      "frm": 434836,
+      "type": 1,
+      "func_ea": 434836,
+      "func_name": "waveOutClose"
+     },
+     {
+      "frm": 434844,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512200,
+    "name": "__imp_waveOutPrepareHeader",
+    "ordinal": 385,
+    "xrefs": [
+     {
+      "frm": 434764,
+      "type": 1,
+      "func_ea": 434764,
+      "func_name": "waveOutPrepareHeader"
+     },
+     {
+      "frm": 434772,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512228,
+    "name": "__imp_waveOutUnprepareHeader",
+    "ordinal": 386,
+    "xrefs": [
+     {
+      "frm": 434848,
+      "type": 1,
+      "func_ea": 434848,
+      "func_name": "waveOutUnprepareHeader"
+     },
+     {
+      "frm": 434856,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512196,
+    "name": "__imp_waveOutWrite",
+    "ordinal": 387,
+    "xrefs": [
+     {
+      "frm": 434752,
+      "type": 1,
+      "func_ea": 434752,
+      "func_name": "waveOutWrite"
+     },
+     {
+      "frm": 434760,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512204,
+    "name": "__imp_waveOutPause",
+    "ordinal": 388,
+    "xrefs": [
+     {
+      "frm": 434776,
+      "type": 1,
+      "func_ea": 434776,
+      "func_name": "waveOutPause"
+     },
+     {
+      "frm": 434784,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512184,
+    "name": "__imp_waveOutRestart",
+    "ordinal": 389,
+    "xrefs": [
+     {
+      "frm": 434716,
+      "type": 1,
+      "func_ea": 434716,
+      "func_name": "waveOutRestart"
+     },
+     {
+      "frm": 434724,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512232,
+    "name": "__imp_waveOutReset",
+    "ordinal": 390,
+    "xrefs": [
+     {
+      "frm": 434860,
+      "type": 1,
+      "func_ea": 434860,
+      "func_name": "waveOutReset"
+     },
+     {
+      "frm": 434868,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512208,
+    "name": "__imp_waveOutOpen",
+    "ordinal": 399,
+    "xrefs": [
+     {
+      "frm": 434788,
+      "type": 1,
+      "func_ea": 434788,
+      "func_name": "waveOutOpen"
+     },
+     {
+      "frm": 434796,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512428,
+    "name": "__imp_CreateThread",
+    "ordinal": 492,
+    "xrefs": [
+     {
+      "frm": 434824,
+      "type": 1,
+      "func_ea": 434824,
+      "func_name": "CreateThread"
+     },
+     {
+      "frm": 434832,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512240,
+    "name": "__imp_EventModify",
+    "ordinal": 494,
+    "xrefs": [
+     {
+      "frm": 434884,
+      "type": 1,
+      "func_ea": 434884,
+      "func_name": "EventModify"
+     },
+     {
+      "frm": 434892,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512216,
+    "name": "__imp_CreateEventW",
+    "ordinal": 495,
+    "xrefs": [
+     {
+      "frm": 434812,
+      "type": 1,
+      "func_ea": 434812,
+      "func_name": "CreateEventW"
+     },
+     {
+      "frm": 434820,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512160,
+    "name": "__imp_Sleep",
+    "ordinal": 496,
+    "xrefs": [
+     {
+      "frm": 362228,
+      "type": 1,
+      "func_ea": 362228,
+      "func_name": "Sleep"
+     },
+     {
+      "frm": 362236,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512236,
+    "name": "__imp_WaitForSingleObject",
+    "ordinal": 497,
+    "xrefs": [
+     {
+      "frm": 434872,
+      "type": 1,
+      "func_ea": 434872,
+      "func_name": "WaitForSingleObject"
+     },
+     {
+      "frm": 434880,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512256,
+    "name": "__imp_SuspendThread",
+    "ordinal": 499,
+    "xrefs": [
+     {
+      "frm": 434932,
+      "type": 1,
+      "func_ea": 434932,
+      "func_name": "SuspendThread"
+     },
+     {
+      "frm": 434940,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512188,
+    "name": "__imp_ResumeThread",
+    "ordinal": 500,
+    "xrefs": [
+     {
+      "frm": 434728,
+      "type": 1,
+      "func_ea": 434728,
+      "func_name": "ResumeThread"
+     },
+     {
+      "frm": 434736,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512332,
+    "name": "__imp_FlushInstructionCache",
+    "ordinal": 508,
+    "xrefs": [
+     {
+      "frm": 435148,
+      "type": 1,
+      "func_ea": 435148,
+      "func_name": "FlushInstructionCache"
+     },
+     {
+      "frm": 435156,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512192,
+    "name": "__imp_SetThreadPriority",
+    "ordinal": 514,
+    "xrefs": [
+     {
+      "frm": 434740,
+      "type": 1,
+      "func_ea": 434740,
+      "func_name": "SetThreadPriority"
+     },
+     {
+      "frm": 434748,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512156,
+    "name": "__imp_GetTickCount",
+    "ordinal": 535,
+    "xrefs": [
+     {
+      "frm": 362216,
+      "type": 1,
+      "func_ea": 362216,
+      "func_name": "GetTickCount"
+     },
+     {
+      "frm": 362224,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512088,
+    "name": "__imp_GetModuleFileNameW",
+    "ordinal": 537,
+    "xrefs": [
+     {
+      "frm": 361904,
+      "type": 1,
+      "func_ea": 361904,
+      "func_name": "GetModuleFileNameW"
+     },
+     {
+      "frm": 361912,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512056,
+    "name": "__imp_TerminateProcess",
+    "ordinal": 544,
+    "xrefs": [
+     {
+      "frm": 361916,
+      "type": 1,
+      "func_ea": 361916,
+      "func_name": "TerminateProcess"
+     },
+     {
+      "frm": 361924,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512276,
+    "name": "__imp_CreateFileMappingW",
+    "ordinal": 548,
+    "xrefs": [
+     {
+      "frm": 434980,
+      "type": 1,
+      "func_ea": 434980,
+      "func_name": "CreateFileMappingW"
+     },
+     {
+      "frm": 434988,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512272,
+    "name": "__imp_MapViewOfFile",
+    "ordinal": 549,
+    "xrefs": [
+     {
+      "frm": 434968,
+      "type": 1,
+      "func_ea": 434968,
+      "func_name": "MapViewOfFile"
+     },
+     {
+      "frm": 434976,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512284,
+    "name": "__imp_UnmapViewOfFile",
+    "ordinal": 550,
+    "xrefs": [
+     {
+      "frm": 435004,
+      "type": 1,
+      "func_ea": 435004,
+      "func_name": "UnmapViewOfFile"
+     },
+     {
+      "frm": 435012,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512080,
+    "name": "__imp_CloseHandle",
+    "ordinal": 553,
+    "xrefs": [
+     {
+      "frm": 361988,
+      "type": 1,
+      "func_ea": 361988,
+      "func_name": "CloseHandle"
+     },
+     {
+      "frm": 361996,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512348,
+    "name": "__imp_LoadCursorW",
+    "ordinal": 683,
+    "xrefs": [
+     {
+      "frm": 435196,
+      "type": 1,
+      "func_ea": 435196,
+      "func_name": "LoadCursorW"
+     },
+     {
+      "frm": 435204,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512320,
+    "name": "__imp_SetForegroundWindow",
+    "ordinal": 702,
+    "xrefs": [
+     {
+      "frm": 435112,
+      "type": 1,
+      "func_ea": 435112,
+      "func_name": "SetForegroundWindow"
+     },
+     {
+      "frm": 435120,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512152,
+    "name": "__imp_SystemIdleTimerReset",
+    "ordinal": 837,
+    "xrefs": [
+     {
+      "frm": 362204,
+      "type": 1,
+      "func_ea": 362204,
+      "func_name": "SystemIdleTimerReset"
+     },
+     {
+      "frm": 362212,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512024,
+    "name": "__imp_MessageBoxW",
+    "ordinal": 858,
+    "xrefs": [
+     {
+      "frm": 361856,
+      "type": 1,
+      "func_ea": 361856,
+      "func_name": "MessageBoxW"
+     },
+     {
+      "frm": 361864,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512316,
+    "name": "__imp_DispatchMessageW",
+    "ordinal": 859,
+    "xrefs": [
+     {
+      "frm": 435100,
+      "type": 1,
+      "func_ea": 435100,
+      "func_name": "DispatchMessageW"
+     },
+     {
+      "frm": 435108,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512312,
+    "name": "__imp_GetMessageW",
+    "ordinal": 861,
+    "xrefs": [
+     {
+      "frm": 435088,
+      "type": 1,
+      "func_ea": 435088,
+      "func_name": "GetMessageW"
+     },
+     {
+      "frm": 435096,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512252,
+    "name": "__imp_PeekMessageW",
+    "ordinal": 864,
+    "xrefs": [
+     {
+      "frm": 434920,
+      "type": 1,
+      "func_ea": 434920,
+      "func_name": "PeekMessageW"
+     },
+     {
+      "frm": 434928,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512304,
+    "name": "__imp_PostQuitMessage",
+    "ordinal": 866,
+    "xrefs": [
+     {
+      "frm": 435064,
+      "type": 1,
+      "func_ea": 435064,
+      "func_name": "PostQuitMessage"
+     },
+     {
+      "frm": 435072,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512144,
+    "name": "__imp_SetTimer",
+    "ordinal": 875,
+    "xrefs": [
+     {
+      "frm": 362180,
+      "type": 1,
+      "func_ea": 362180,
+      "func_name": "SetTimer"
+     },
+     {
+      "frm": 362188,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512148,
+    "name": "__imp_KillTimer",
+    "ordinal": 876,
+    "xrefs": [
+     {
+      "frm": 362192,
+      "type": 1,
+      "func_ea": 362192,
+      "func_name": "KillTimer"
+     },
+     {
+      "frm": 362200,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512352,
+    "name": "__imp_GetClassInfoW",
+    "ordinal": 878,
+    "xrefs": [
+     {
+      "frm": 435208,
+      "type": 1,
+      "func_ea": 435208,
+      "func_name": "GetClassInfoW"
+     },
+     {
+      "frm": 435216,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512140,
+    "name": "__imp_UnregisterClassW",
+    "ordinal": 884,
+    "xrefs": [
+     {
+      "frm": 362168,
+      "type": 1,
+      "func_ea": 362168,
+      "func_name": "UnregisterClassW"
+     },
+     {
+      "frm": 362176,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512376,
+    "name": "__imp_BitBlt",
+    "ordinal": 903,
+    "xrefs": [
+     {
+      "frm": 435280,
+      "type": 1,
+      "func_ea": 435280,
+      "func_name": "BitBlt"
+     },
+     {
+      "frm": 435288,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512384,
+    "name": "__imp_CreateCompatibleDC",
+    "ordinal": 910,
+    "xrefs": [
+     {
+      "frm": 435304,
+      "type": 1,
+      "func_ea": 435304,
+      "func_name": "CreateCompatibleDC"
+     },
+     {
+      "frm": 435312,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512372,
+    "name": "__imp_DeleteDC",
+    "ordinal": 911,
+    "xrefs": [
+     {
+      "frm": 435268,
+      "type": 1,
+      "func_ea": 435268,
+      "func_name": "DeleteDC"
+     },
+     {
+      "frm": 435276,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512364,
+    "name": "__imp_DeleteObject",
+    "ordinal": 912,
+    "xrefs": [
+     {
+      "frm": 435244,
+      "type": 1,
+      "func_ea": 435244,
+      "func_name": "DeleteObject"
+     },
+     {
+      "frm": 435252,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512392,
+    "name": "__imp_GetObjectW",
+    "ordinal": 918,
+    "xrefs": [
+     {
+      "frm": 435328,
+      "type": 1,
+      "func_ea": 435328,
+      "func_name": "GetObjectW"
+     },
+     {
+      "frm": 435336,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512380,
+    "name": "__imp_SelectObject",
+    "ordinal": 921,
+    "xrefs": [
+     {
+      "frm": 435292,
+      "type": 1,
+      "func_ea": 435292,
+      "func_name": "SelectObject"
+     },
+     {
+      "frm": 435300,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512040,
+    "name": "__imp_free",
+    "ordinal": 1018,
+    "xrefs": [
+     {
+      "frm": 361892,
+      "type": 1,
+      "func_ea": 361892,
+      "func_name": "free"
+     },
+     {
+      "frm": 361900,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512104,
+    "name": "__imp_itoa",
+    "ordinal": 1025,
+    "xrefs": [
+     {
+      "frm": 362060,
+      "type": 1,
+      "func_ea": 362060,
+      "func_name": "itoa"
+     },
+     {
+      "frm": 362068,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512176,
+    "name": "__imp_itow",
+    "ordinal": 1026,
+    "xrefs": [
+     {
+      "frm": 362024,
+      "type": 1,
+      "func_ea": 362024,
+      "func_name": "itow"
+     },
+     {
+      "frm": 362032,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512016,
+    "name": "__imp_malloc",
+    "ordinal": 1041,
+    "xrefs": [
+     {
+      "frm": 361832,
+      "type": 1,
+      "func_ea": 361832,
+      "func_name": "malloc"
+     },
+     {
+      "frm": 361840,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512052,
+    "name": "__imp_memcpy",
+    "ordinal": 1044,
+    "xrefs": [
+     {
+      "frm": 361928,
+      "type": 1,
+      "func_ea": 361928,
+      "func_name": "memcpy"
+     },
+     {
+      "frm": 361936,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512092,
+    "name": "__imp_memmove",
+    "ordinal": 1046,
+    "xrefs": [
+     {
+      "frm": 361940,
+      "type": 1,
+      "func_ea": 361940,
+      "func_name": "memmove"
+     },
+     {
+      "frm": 361948,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512036,
+    "name": "__imp_memset",
+    "ordinal": 1047,
+    "xrefs": [
+     {
+      "frm": 361880,
+      "type": 1,
+      "func_ea": 361880,
+      "func_name": "memset"
+     },
+     {
+      "frm": 361888,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512060,
+    "name": "__imp_rand",
+    "ordinal": 1053,
+    "xrefs": [
+     {
+      "frm": 361952,
+      "type": 1,
+      "func_ea": 361952,
+      "func_name": "rand"
+     },
+     {
+      "frm": 361960,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512356,
+    "name": "__imp_realloc",
+    "ordinal": 1054,
+    "xrefs": [
+     {
+      "frm": 435220,
+      "type": 1,
+      "func_ea": 435220,
+      "func_name": "realloc"
+     },
+     {
+      "frm": 435228,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512096,
+    "name": "__imp_srand",
+    "ordinal": 1061,
+    "xrefs": [
+     {
+      "frm": 362036,
+      "type": 1,
+      "func_ea": 362036,
+      "func_name": "srand"
+     },
+     {
+      "frm": 362044,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512108,
+    "name": "__imp_strlen",
+    "ordinal": 1068,
+    "xrefs": [
+     {
+      "frm": 362072,
+      "type": 1,
+      "func_ea": 362072,
+      "func_name": "strlen"
+     },
+     {
+      "frm": 362080,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512400,
+    "name": "__imp_strncmp",
+    "ordinal": 1070,
+    "xrefs": [
+     {
+      "frm": 435352,
+      "type": 1,
+      "func_ea": 435352,
+      "func_name": "strncmp"
+     },
+     {
+      "frm": 435360,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512072,
+    "name": "__imp_tolower",
+    "ordinal": 1090,
+    "xrefs": [
+     {
+      "frm": 361964,
+      "type": 1,
+      "func_ea": 361964,
+      "func_name": "tolower"
+     },
+     {
+      "frm": 361972,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512220,
+    "name": "__imp_purecall",
+    "ordinal": 1092,
+    "xrefs": [
+     {
+      "frm": 361772,
+      "type": 1,
+      "func_ea": 361772,
+      "func_name": "purecall"
+     },
+     {
+      "frm": 361780,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512044,
+    "name": "__imp_??3@YAXPAX@Z",
+    "ordinal": 1094,
+    "xrefs": [
+     {
+      "frm": 361784,
+      "type": 1,
+      "func_ea": 361784,
+      "func_name": "??3@YAXPAX@Z"
+     },
+     {
+      "frm": 361792,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512048,
+    "name": "__imp_??2@YAPAXI@Z",
+    "ordinal": 1095,
+    "xrefs": [
+     {
+      "frm": 361796,
+      "type": 1,
+      "func_ea": 361796,
+      "func_name": "??2@YAPAXI@Z"
+     },
+     {
+      "frm": 361804,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512032,
+    "name": "__imp_swprintf",
+    "ordinal": 1097,
+    "xrefs": [
+     {
+      "frm": 361868,
+      "type": 1,
+      "func_ea": 361868,
+      "func_name": "swprintf"
+     },
+     {
+      "frm": 361876,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512280,
+    "name": "__imp_CreateFileForMappingW",
+    "ordinal": 1167,
+    "xrefs": [
+     {
+      "frm": 434992,
+      "type": 1,
+      "func_ea": 434992,
+      "func_name": "CreateFileForMappingW"
+     },
+     {
+      "frm": 435000,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512404,
+    "name": "__imp_XcptFilter",
+    "ordinal": 1645,
+    "xrefs": [
+     {
+      "frm": 435364,
+      "type": 1,
+      "func_ea": 435364,
+      "func_name": "XcptFilter"
+     },
+     {
+      "frm": 435372,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512336,
+    "name": "__imp_CeZeroPointer",
+    "ordinal": 1781,
+    "xrefs": [
+     {
+      "frm": 435160,
+      "type": 1,
+      "func_ea": 435160,
+      "func_name": "CeZeroPointer"
+     },
+     {
+      "frm": 435168,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512164,
+    "name": "_rt_sdiv64by64",
+    "ordinal": 2000,
+    "xrefs": [
+     {
+      "frm": 342868,
+      "type": 1,
+      "func_ea": 342604,
+      "func_name": "sub_53A4C"
+     },
+     {
+      "frm": 342880,
+      "type": 3,
+      "func_ea": 342604,
+      "func_name": "sub_53A4C"
+     },
+     {
+      "frm": 342972,
+      "type": 1,
+      "func_ea": 342604,
+      "func_name": "sub_53A4C"
+     },
+     {
+      "frm": 343276,
+      "type": 1,
+      "func_ea": 342980,
+      "func_name": "sub_53BC4"
+     },
+     {
+      "frm": 343284,
+      "type": 3,
+      "func_ea": 342980,
+      "func_name": "sub_53BC4"
+     },
+     {
+      "frm": 343360,
+      "type": 1,
+      "func_ea": 342980,
+      "func_name": "sub_53BC4"
+     },
+     {
+      "frm": 367804,
+      "type": 1,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     },
+     {
+      "frm": 367808,
+      "type": 3,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     },
+     {
+      "frm": 367872,
+      "type": 1,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     },
+     {
+      "frm": 368588,
+      "type": 1,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     },
+     {
+      "frm": 368596,
+      "type": 3,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     },
+     {
+      "frm": 371656,
+      "type": 1,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     }
+    ]
+   },
+   {
+    "ea": 512260,
+    "name": "_rt_udiv64by64",
+    "ordinal": 2002,
+    "xrefs": [
+     {
+      "frm": 372520,
+      "type": 1,
+      "func_ea": 372456,
+      "func_name": "sub_5AEE8"
+     },
+     {
+      "frm": 372532,
+      "type": 3,
+      "func_ea": 372456,
+      "func_name": "sub_5AEE8"
+     },
+     {
+      "frm": 372584,
+      "type": 1,
+      "func_ea": 372456,
+      "func_name": "sub_5AEE8"
+     }
+    ]
+   },
+   {
+    "ea": 512064,
+    "name": "_rt_sdiv",
+    "ordinal": 2005,
+    "xrefs": [
+     {
+      "frm": 86064,
+      "type": 1,
+      "func_ea": 85904,
+      "func_name": "sub_14F90"
+     },
+     {
+      "frm": 86072,
+      "type": 3,
+      "func_ea": 85904,
+      "func_name": "sub_14F90"
+     },
+     {
+      "frm": 86516,
+      "type": 1,
+      "func_ea": 85904,
+      "func_name": "sub_14F90"
+     },
+     {
+      "frm": 117788,
+      "type": 1,
+      "func_ea": 117752,
+      "func_name": "sub_1CBF8"
+     },
+     {
+      "frm": 117804,
+      "type": 3,
+      "func_ea": 117752,
+      "func_name": "sub_1CBF8"
+     },
+     {
+      "frm": 117840,
+      "type": 1,
+      "func_ea": 117752,
+      "func_name": "sub_1CBF8"
+     },
+     {
+      "frm": 117852,
+      "type": 3,
+      "func_ea": 117752,
+      "func_name": "sub_1CBF8"
+     },
+     {
+      "frm": 117924,
+      "type": 1,
+      "func_ea": 117752,
+      "func_name": "sub_1CBF8"
+     },
+     {
+      "frm": 205472,
+      "type": 1,
+      "func_ea": 205176,
+      "func_name": "sub_32178"
+     },
+     {
+      "frm": 205484,
+      "type": 3,
+      "func_ea": 205176,
+      "func_name": "sub_32178"
+     },
+     {
+      "frm": 205836,
+      "type": 1,
+      "func_ea": 205176,
+      "func_name": "sub_32178"
+     },
+     {
+      "frm": 206368,
+      "type": 1,
+      "func_ea": 206044,
+      "func_name": "sub_324DC"
+     },
+     {
+      "frm": 206380,
+      "type": 3,
+      "func_ea": 206044,
+      "func_name": "sub_324DC"
+     },
+     {
+      "frm": 206764,
+      "type": 1,
+      "func_ea": 206044,
+      "func_name": "sub_324DC"
+     },
+     {
+      "frm": 206916,
+      "type": 1,
+      "func_ea": 206800,
+      "func_name": "sub_327D0"
+     },
+     {
+      "frm": 206924,
+      "type": 3,
+      "func_ea": 206800,
+      "func_name": "sub_327D0"
+     },
+     {
+      "frm": 207000,
+      "type": 1,
+      "func_ea": 206800,
+      "func_name": "sub_327D0"
+     },
+     {
+      "frm": 207112,
+      "type": 1,
+      "func_ea": 207004,
+      "func_name": "sub_3289C"
+     },
+     {
+      "frm": 207120,
+      "type": 3,
+      "func_ea": 207004,
+      "func_name": "sub_3289C"
+     },
+     {
+      "frm": 207196,
+      "type": 1,
+      "func_ea": 207004,
+      "func_name": "sub_3289C"
+     },
+     {
+      "frm": 245008,
+      "type": 1,
+      "func_ea": 244788,
+      "func_name": "sub_3BC34"
+     },
+     {
+      "frm": 245016,
+      "type": 3,
+      "func_ea": 244788,
+      "func_name": "sub_3BC34"
+     },
+     {
+      "frm": 245248,
+      "type": 1,
+      "func_ea": 244788,
+      "func_name": "sub_3BC34"
+     },
+     {
+      "frm": 247736,
+      "type": 1,
+      "func_ea": 247684,
+      "func_name": "sub_3C784"
+     },
+     {
+      "frm": 247744,
+      "type": 3,
+      "func_ea": 247684,
+      "func_name": "sub_3C784"
+     },
+     {
+      "frm": 247896,
+      "type": 1,
+      "func_ea": 247684,
+      "func_name": "sub_3C784"
+     },
+     {
+      "frm": 281524,
+      "type": 1,
+      "func_ea": 281472,
+      "func_name": "sub_44B80"
+     },
+     {
+      "frm": 281536,
+      "type": 3,
+      "func_ea": 281472,
+      "func_name": "sub_44B80"
+     },
+     {
+      "frm": 281700,
+      "type": 1,
+      "func_ea": 281472,
+      "func_name": "sub_44B80"
+     },
+     {
+      "frm": 294984,
+      "type": 1,
+      "func_ea": 294208,
+      "func_name": "sub_47D40"
+     },
+     {
+      "frm": 294996,
+      "type": 3,
+      "func_ea": 294208,
+      "func_name": "sub_47D40"
+     },
+     {
+      "frm": 296524,
+      "type": 1,
+      "func_ea": 294208,
+      "func_name": "sub_47D40"
+     },
+     {
+      "frm": 303000,
+      "type": 1,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303012,
+      "type": 3,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303776,
+      "type": 1,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 328964,
+      "type": 1,
+      "func_ea": 328688,
+      "func_name": "sub_503F0"
+     },
+     {
+      "frm": 328972,
+      "type": 3,
+      "func_ea": 328688,
+      "func_name": "sub_503F0"
+     },
+     {
+      "frm": 328996,
+      "type": 1,
+      "func_ea": 328688,
+      "func_name": "sub_503F0"
+     },
+     {
+      "frm": 329008,
+      "type": 3,
+      "func_ea": 328688,
+      "func_name": "sub_503F0"
+     },
+     {
+      "frm": 329780,
+      "type": 1,
+      "func_ea": 328688,
+      "func_name": "sub_503F0"
+     },
+     {
+      "frm": 331444,
+      "type": 1,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 331476,
+      "type": 3,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 331544,
+      "type": 1,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 331556,
+      "type": 3,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 331616,
+      "type": 1,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 331628,
+      "type": 3,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 331688,
+      "type": 1,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 331700,
+      "type": 3,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 332076,
+      "type": 1,
+      "func_ea": 331124,
+      "func_name": "sub_50D74"
+     },
+     {
+      "frm": 335704,
+      "type": 1,
+      "func_ea": 335652,
+      "func_name": "sub_51F24"
+     },
+     {
+      "frm": 335728,
+      "type": 3,
+      "func_ea": 335652,
+      "func_name": "sub_51F24"
+     },
+     {
+      "frm": 335752,
+      "type": 1,
+      "func_ea": 335652,
+      "func_name": "sub_51F24"
+     },
+     {
+      "frm": 335764,
+      "type": 3,
+      "func_ea": 335652,
+      "func_name": "sub_51F24"
+     },
+     {
+      "frm": 335996,
+      "type": 1,
+      "func_ea": 335652,
+      "func_name": "sub_51F24"
+     },
+     {
+      "frm": 336068,
+      "type": 1,
+      "func_ea": 336000,
+      "func_name": "sub_52080"
+     },
+     {
+      "frm": 336080,
+      "type": 3,
+      "func_ea": 336000,
+      "func_name": "sub_52080"
+     },
+     {
+      "frm": 336100,
+      "type": 1,
+      "func_ea": 336000,
+      "func_name": "sub_52080"
+     },
+     {
+      "frm": 336112,
+      "type": 3,
+      "func_ea": 336000,
+      "func_name": "sub_52080"
+     },
+     {
+      "frm": 336664,
+      "type": 1,
+      "func_ea": 336000,
+      "func_name": "sub_52080"
+     },
+     {
+      "frm": 342112,
+      "type": 1,
+      "func_ea": 342076,
+      "func_name": "sub_5383C"
+     },
+     {
+      "frm": 342120,
+      "type": 3,
+      "func_ea": 342076,
+      "func_name": "sub_5383C"
+     },
+     {
+      "frm": 342156,
+      "type": 1,
+      "func_ea": 342076,
+      "func_name": "sub_5383C"
+     },
+     {
+      "frm": 350400,
+      "type": 1,
+      "func_ea": 350148,
+      "func_name": "sub_557C4"
+     },
+     {
+      "frm": 350408,
+      "type": 3,
+      "func_ea": 350148,
+      "func_name": "sub_557C4"
+     },
+     {
+      "frm": 350432,
+      "type": 1,
+      "func_ea": 350148,
+      "func_name": "sub_557C4"
+     },
+     {
+      "frm": 350444,
+      "type": 3,
+      "func_ea": 350148,
+      "func_name": "sub_557C4"
+     },
+     {
+      "frm": 350732,
+      "type": 1,
+      "func_ea": 350148,
+      "func_name": "sub_557C4"
+     },
+     {
+      "frm": 363084,
+      "type": 1,
+      "func_ea": 363020,
+      "func_name": "sub_58A0C"
+     },
+     {
+      "frm": 363088,
+      "type": 3,
+      "func_ea": 363020,
+      "func_name": "sub_58A0C"
+     },
+     {
+      "frm": 363796,
+      "type": 1,
+      "func_ea": 363020,
+      "func_name": "sub_58A0C"
+     }
+    ]
+   },
+   {
+    "ea": 512068,
+    "name": "_rt_udiv",
+    "ordinal": 2008,
+    "xrefs": [
+     {
+      "frm": 87448,
+      "type": 1,
+      "func_ea": 87352,
+      "func_name": "sub_15538"
+     },
+     {
+      "frm": 87464,
+      "type": 3,
+      "func_ea": 87352,
+      "func_name": "sub_15538"
+     },
+     {
+      "frm": 87880,
+      "type": 1,
+      "func_ea": 87352,
+      "func_name": "sub_15538"
+     },
+     {
+      "frm": 108500,
+      "type": 1,
+      "func_ea": 108148,
+      "func_name": "sub_1A674"
+     },
+     {
+      "frm": 108512,
+      "type": 3,
+      "func_ea": 108148,
+      "func_name": "sub_1A674"
+     },
+     {
+      "frm": 108560,
+      "type": 1,
+      "func_ea": 108148,
+      "func_name": "sub_1A674"
+     },
+     {
+      "frm": 112904,
+      "type": 1,
+      "func_ea": 112676,
+      "func_name": "sub_1B824"
+     },
+     {
+      "frm": 112916,
+      "type": 3,
+      "func_ea": 112676,
+      "func_name": "sub_1B824"
+     },
+     {
+      "frm": 112956,
+      "type": 1,
+      "func_ea": 112676,
+      "func_name": "sub_1B824"
+     },
+     {
+      "frm": 277004,
+      "type": 1,
+      "func_ea": 276784,
+      "func_name": "sub_43930"
+     },
+     {
+      "frm": 277016,
+      "type": 3,
+      "func_ea": 276784,
+      "func_name": "sub_43930"
+     },
+     {
+      "frm": 277056,
+      "type": 1,
+      "func_ea": 276784,
+      "func_name": "sub_43930"
+     },
+     {
+      "frm": 278832,
+      "type": 1,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 278844,
+      "type": 3,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 278880,
+      "type": 1,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 278892,
+      "type": 3,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 278928,
+      "type": 1,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 278940,
+      "type": 3,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 279128,
+      "type": 1,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 279136,
+      "type": 3,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 279316,
+      "type": 1,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 279328,
+      "type": 3,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 279476,
+      "type": 1,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 279488,
+      "type": 3,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 279544,
+      "type": 1,
+      "func_ea": 278532,
+      "func_name": "sub_44004"
+     },
+     {
+      "frm": 279608,
+      "type": 1,
+      "func_ea": 279548,
+      "func_name": "sub_443FC"
+     },
+     {
+      "frm": 279612,
+      "type": 3,
+      "func_ea": 279548,
+      "func_name": "sub_443FC"
+     },
+     {
+      "frm": 280020,
+      "type": 1,
+      "func_ea": 279548,
+      "func_name": "sub_443FC"
+     },
+     {
+      "frm": 300540,
+      "type": 1,
+      "func_ea": 299296,
+      "func_name": "sub_49120"
+     },
+     {
+      "frm": 300548,
+      "type": 3,
+      "func_ea": 299296,
+      "func_name": "sub_49120"
+     },
+     {
+      "frm": 301100,
+      "type": 1,
+      "func_ea": 299296,
+      "func_name": "sub_49120"
+     },
+     {
+      "frm": 302276,
+      "type": 1,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 302292,
+      "type": 3,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303296,
+      "type": 1,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303312,
+      "type": 3,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303488,
+      "type": 1,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303504,
+      "type": 3,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303688,
+      "type": 1,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303704,
+      "type": 3,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 303772,
+      "type": 1,
+      "func_ea": 301972,
+      "func_name": "sub_49B94"
+     },
+     {
+      "frm": 317704,
+      "type": 1,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 317720,
+      "type": 3,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318076,
+      "type": 1,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318092,
+      "type": 3,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318272,
+      "type": 1,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318288,
+      "type": 3,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318340,
+      "type": 1,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318352,
+      "type": 3,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318580,
+      "type": 1,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318596,
+      "type": 3,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 318676,
+      "type": 1,
+      "func_ea": 317512,
+      "func_name": "sub_4D848"
+     },
+     {
+      "frm": 320016,
+      "type": 1,
+      "func_ea": 319924,
+      "func_name": "sub_4E1B4"
+     },
+     {
+      "frm": 320028,
+      "type": 3,
+      "func_ea": 319924,
+      "func_name": "sub_4E1B4"
+     },
+     {
+      "frm": 320272,
+      "type": 1,
+      "func_ea": 319924,
+      "func_name": "sub_4E1B4"
+     },
+     {
+      "frm": 320600,
+      "type": 1,
+      "func_ea": 320524,
+      "func_name": "sub_4E40C"
+     },
+     {
+      "frm": 320612,
+      "type": 3,
+      "func_ea": 320524,
+      "func_name": "sub_4E40C"
+     },
+     {
+      "frm": 320868,
+      "type": 1,
+      "func_ea": 320524,
+      "func_name": "sub_4E40C"
+     },
+     {
+      "frm": 324672,
+      "type": 1,
+      "func_ea": 324596,
+      "func_name": "sub_4F3F4"
+     },
+     {
+      "frm": 324684,
+      "type": 3,
+      "func_ea": 324596,
+      "func_name": "sub_4F3F4"
+     },
+     {
+      "frm": 324992,
+      "type": 1,
+      "func_ea": 324596,
+      "func_name": "sub_4F3F4"
+     },
+     {
+      "frm": 325160,
+      "type": 1,
+      "func_ea": 325100,
+      "func_name": "sub_4F5EC"
+     },
+     {
+      "frm": 325172,
+      "type": 3,
+      "func_ea": 325100,
+      "func_name": "sub_4F5EC"
+     },
+     {
+      "frm": 325428,
+      "type": 1,
+      "func_ea": 325100,
+      "func_name": "sub_4F5EC"
+     },
+     {
+      "frm": 329140,
+      "type": 1,
+      "func_ea": 328688,
+      "func_name": "sub_503F0"
+     },
+     {
+      "frm": 329152,
+      "type": 3,
+      "func_ea": 328688,
+      "func_name": "sub_503F0"
+     },
+     {
+      "frm": 329772,
+      "type": 1,
+      "func_ea": 328688,
+      "func_name": "sub_503F0"
+     },
+     {
+      "frm": 347232,
+      "type": 1,
+      "func_ea": 347004,
+      "func_name": "sub_54B7C"
+     },
+     {
+      "frm": 347244,
+      "type": 3,
+      "func_ea": 347004,
+      "func_name": "sub_54B7C"
+     },
+     {
+      "frm": 347284,
+      "type": 1,
+      "func_ea": 347004,
+      "func_name": "sub_54B7C"
+     },
+     {
+      "frm": 347952,
+      "type": 1,
+      "func_ea": 347420,
+      "func_name": "sub_54D1C"
+     },
+     {
+      "frm": 347960,
+      "type": 3,
+      "func_ea": 347420,
+      "func_name": "sub_54D1C"
+     },
+     {
+      "frm": 348500,
+      "type": 1,
+      "func_ea": 347420,
+      "func_name": "sub_54D1C"
+     },
+     {
+      "frm": 348508,
+      "type": 3,
+      "func_ea": 347420,
+      "func_name": "sub_54D1C"
+     },
+     {
+      "frm": 348684,
+      "type": 1,
+      "func_ea": 347420,
+      "func_name": "sub_54D1C"
+     },
+     {
+      "frm": 360204,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360216,
+      "type": 3,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360364,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360376,
+      "type": 3,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360524,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360536,
+      "type": 3,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360684,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360696,
+      "type": 3,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360868,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 360880,
+      "type": 3,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 361044,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 361056,
+      "type": 3,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 361220,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 361232,
+      "type": 3,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 361380,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 361392,
+      "type": 3,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 361432,
+      "type": 1,
+      "func_ea": 359972,
+      "func_name": "sub_57E24"
+     },
+     {
+      "frm": 370968,
+      "type": 1,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     },
+     {
+      "frm": 370980,
+      "type": 3,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     },
+     {
+      "frm": 371648,
+      "type": 1,
+      "func_ea": 367616,
+      "func_name": "sub_59C00"
+     }
+    ]
+   },
+   {
+    "ea": 512172,
+    "name": "_stoi",
+    "ordinal": 2020,
+    "xrefs": [
+     {
+      "frm": 343728,
+      "type": 1,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     },
+     {
+      "frm": 343732,
+      "type": 3,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     },
+     {
+      "frm": 343852,
+      "type": 1,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     },
+     {
+      "frm": 343856,
+      "type": 3,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     },
+     {
+      "frm": 344012,
+      "type": 1,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     }
+    ]
+   },
+   {
+    "ea": 512168,
+    "name": "_muls",
+    "ordinal": 2026,
+    "xrefs": [
+     {
+      "frm": 343700,
+      "type": 1,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     },
+     {
+      "frm": 343712,
+      "type": 3,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     },
+     {
+      "frm": 343824,
+      "type": 1,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     },
+     {
+      "frm": 343836,
+      "type": 3,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     },
+     {
+      "frm": 344016,
+      "type": 1,
+      "func_ea": 343368,
+      "func_name": "sub_53D48"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "dll": "AYGSHELL",
+  "entries": [
+   {
+    "ea": 512004,
+    "name": "__imp_SHFullScreen",
+    "ordinal": 65,
+    "xrefs": [
+     {
+      "frm": 435436,
+      "type": 1,
+      "func_ea": 435436,
+      "func_name": "SHFullScreen"
+     },
+     {
+      "frm": 435444,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512000,
+    "name": "__imp_SHIdleTimerReset",
+    "ordinal": 2006,
+    "xrefs": [
+     {
+      "frm": 362240,
+      "type": 1,
+      "func_ea": 362240,
+      "func_name": "SHIdleTimerReset"
+     },
+     {
+      "frm": 362248,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     },
+     {
+      "frm": 507928,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "dll": "gx",
+  "entries": [
+   {
+    "ea": 512436,
+    "name": "?GXEndDraw@@YAHXZ",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 407244,
+      "type": 1,
+      "func_ea": 407176,
+      "func_name": "sub_63688"
+     },
+     {
+      "frm": 407248,
+      "type": 3,
+      "func_ea": 407176,
+      "func_name": "sub_63688"
+     },
+     {
+      "frm": 407264,
+      "type": 1,
+      "func_ea": 407176,
+      "func_name": "sub_63688"
+     },
+     {
+      "frm": 507948,
+      "type": 1,
+      "func_ea": null,
+      "func_name": null
+     }
+    ]
+   },
+   {
+    "ea": 512440,
+    "name": "?GXCloseInput@@YAHXZ",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 404316,
+      "type": 1,
+      "func_ea": 404260,
+      "func_name": "sub_62B24"
+     },
+     {
+      "frm": 404320,
+      "type": 3,
+      "func_ea": 404260,
+      "func_name": "sub_62B24"
+     },
+     {
+      "frm": 404352,
+      "type": 1,
+      "func_ea": 404260,
+      "func_name": "sub_62B24"
+     }
+    ]
+   },
+   {
+    "ea": 512444,
+    "name": "?GXGetDisplayProperties@@YA?AUGXDisplayProperties@@XZ",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 406548,
+      "type": 1,
+      "func_ea": 406456,
+      "func_name": "sub_633B8"
+     },
+     {
+      "frm": 406556,
+      "type": 3,
+      "func_ea": 406456,
+      "func_name": "sub_633B8"
+     },
+     {
+      "frm": 406772,
+      "type": 1,
+      "func_ea": 406456,
+      "func_name": "sub_633B8"
+     }
+    ]
+   },
+   {
+    "ea": 512448,
+    "name": "?GXOpenDisplay@@YAHPAUHWND__@@K@Z",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 406516,
+      "type": 1,
+      "func_ea": 406456,
+      "func_name": "sub_633B8"
+     },
+     {
+      "frm": 406528,
+      "type": 3,
+      "func_ea": 406456,
+      "func_name": "sub_633B8"
+     },
+     {
+      "frm": 406776,
+      "type": 1,
+      "func_ea": 406456,
+      "func_name": "sub_633B8"
+     }
+    ]
+   },
+   {
+    "ea": 512452,
+    "name": "?GXCloseDisplay@@YAHXZ",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 406824,
+      "type": 1,
+      "func_ea": 406780,
+      "func_name": "sub_634FC"
+     },
+     {
+      "frm": 406828,
+      "type": 3,
+      "func_ea": 406780,
+      "func_name": "sub_634FC"
+     },
+     {
+      "frm": 406848,
+      "type": 1,
+      "func_ea": 406780,
+      "func_name": "sub_634FC"
+     }
+    ]
+   },
+   {
+    "ea": 512456,
+    "name": "?GXOpenInput@@YAHXZ",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 404152,
+      "type": 1,
+      "func_ea": 403988,
+      "func_name": "sub_62A14"
+     },
+     {
+      "frm": 404156,
+      "type": 3,
+      "func_ea": 403988,
+      "func_name": "sub_62A14"
+     },
+     {
+      "frm": 404248,
+      "type": 1,
+      "func_ea": 403988,
+      "func_name": "sub_62A14"
+     }
+    ]
+   },
+   {
+    "ea": 512460,
+    "name": "?GXBeginDraw@@YAPAXXZ",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 407200,
+      "type": 1,
+      "func_ea": 407176,
+      "func_name": "sub_63688"
+     },
+     {
+      "frm": 407204,
+      "type": 3,
+      "func_ea": 407176,
+      "func_name": "sub_63688"
+     },
+     {
+      "frm": 407268,
+      "type": 1,
+      "func_ea": 407176,
+      "func_name": "sub_63688"
+     }
+    ]
+   },
+   {
+    "ea": 512464,
+    "name": "?GXSuspend@@YAHXZ",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 407300,
+      "type": 1,
+      "func_ea": 407272,
+      "func_name": "sub_636E8"
+     },
+     {
+      "frm": 407304,
+      "type": 3,
+      "func_ea": 407272,
+      "func_name": "sub_636E8"
+     },
+     {
+      "frm": 407320,
+      "type": 1,
+      "func_ea": 407272,
+      "func_name": "sub_636E8"
+     }
+    ]
+   },
+   {
+    "ea": 512468,
+    "name": "?GXResume@@YAHXZ",
+    "ordinal": null,
+    "xrefs": [
+     {
+      "frm": 407348,
+      "type": 1,
+      "func_ea": 407324,
+      "func_name": "sub_6371C"
+     },
+     {
+      "frm": 407352,
+      "type": 3,
+      "func_ea": 407324,
+      "func_name": "sub_6371C"
+     },
+     {
+      "frm": 407368,
+      "type": 1,
+      "func_ea": 407324,
+      "func_name": "sub_6371C"
+     }
+    ]
+   }
+  ]
+ }
+]

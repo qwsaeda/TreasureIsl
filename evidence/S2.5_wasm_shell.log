@@ -1,0 +1,122 @@
+S2.5 补实：把浏览器 wasm 壳里的「假」字形、「假」音效、「假」验收换成真的。
+================================================================================================
+
+子代理完成核心代码（glyph_raster.rs / audio_prep.rs / shell_ui.rs + tests），主线程验收时发现并修复一个关键渲染缺陷（Viewport 没接入 present_framebuffer），最终用真实浏览器 CDP 抓图取证。
+
+一、三项「假」各自修到什么程度
+------------------------------------------------------------------------------------------------
+
+【假 1：字形是伪随机噪点 → 真】  ✅ 真达成
+  - crates/ti-app/src/glyph_raster.rs（145 行）：Raster::for_char(font, ch) →
+    font.glyph_for(charset, ch) → Glyph::pixel(x,y) 逐像素上墨。
+    字体缺失/缺字 → 豆腐块（空心方框），绝不静默空白。
+  - 旧版 seed = ch.wrapping_mul(2_654_435_761) 播种伪随机 已彻底删除（grep 无命中）。
+  - 关键测试 draw_path_is_bit_identical_to_glyph_pixel：断言 draw 路径与 Glyph::pixel 逐位一致，
+    即「画出来的是真字形」。
+  - 几何断言 geometric_shapes_stem_from_real_glyphs：b 竖笔在左、d 竖笔在右（朝向正确）。
+  - 测试输出：
+    test draw_path_is_bit_identical_to_glyph_pixel ... ok
+    test blit_writes_exactly_the_glyph_pixels_to_the_framebuffer ... ok
+    test geometric_shapes_stem_from_real_glyphs ... ok
+    test ink_density_is_plausible_and_not_legacy_noise ... ok
+    test missing_chars_fall_back_to_visible_tofu ... ok
+    test shell_strings_render_with_known_fallback_only ... ok
+    test result: ok. 6 passed; 0 failed
+
+【假 2：音效是 6 个硬编码字符串、从没播放 → 真】  ✅ 真达成
+  - crates/ti-app/src/audio_prep.rs：prepare_music(buf) 解包 music.lpk →
+    parse_wav 每条 → Mixer 混音 → MixedTrack{sample_rate, pcm:i16, frames}。
+    wav_pcm16(sr, &pcm) 再封回 WAV 字节，交给 macroquad::audio。
+  - crates/ti-app/src/bin/treasure_wasm.rs：
+    use macroquad::audio::{PlaySoundParams, Sound, load_sound_from_bytes, play_sound};
+    load_audio_bank() 逐曲 load_sound_from_bytes(wav).await →
+    bank.bgm = 最长曲（play_sound looped=true, volume=0.5）
+    bank.se  = 最短曲（on_confirm 触发 play_sound looped=false, volume=1.0）
+    启动即 start_bgm()。
+  - music.lpk 实测解包：5 条 WAV + 1 条 MOD（MOD 播放器属 S1.7b，当前阻塞，状态行可见「MOD1」）。
+  - 测试输出：
+    test music_lpk_unpacks_five_wav_tracks_and_one_mod ... ok
+    test mixer_output_equals_original_pcm_at_full_volume ... ok
+    test bgm_and_se_selection_match_measured_track_lengths ... ok
+    test prepare_music_is_deterministic ... ok
+    test wav_pcm16_round_trips_through_parse_wav ... ok
+    test result: ok. 5 passed; 0 failed
+  - 浏览器侧 CONSOLE：[warning] The AudioContext was not allowed to start.
+    It must be resumed (or created) after a user gesture on the page.
+    （浏览器自动播放策略；audio.js 已挂 mousedown/keydown/touchstart resume 修复，首次交互即出声。）
+
+【假 3：从未在真实浏览器里验证过 → 真】  ✅ 真达成（用 CDP 真实时间取证）
+  - headless 截图 + --virtual-time-budget 不可用：rAF 在虚拟时间下几乎不跑
+    （20 秒虚拟时间仅 4 帧），macroquad::file::load_file 的 future 要靠帧轮询才能 resolve，
+    导致 Shell::new() 卡在字体加载后、music.lpk 从未 fetch → 画布永黑。
+    （这是截图环境限制，不是真 bug：真实浏览器 rAF 60fps，毫秒级完成。）
+  - 改用 Node v24 全局 WebSocket 直连 CDP（零依赖脚本 cdp_shot.mjs）：
+    Emulation.setDeviceMetricsOverride 1408x1760 → Page.navigate → 真实时间等 9 秒 →
+    Page.captureScreenshot(fromSurface=true)。
+  - 浏览器实机证据（PROBE 输出，真实时间）：
+    viewport=1408x1760 backing=1408x1760 css=1408pxx1760px rect=1408x1760 @-7,-19
+    resources=gl.js,audio.js,treasure_wasm.wasm,favicon.ico,GoldLand.Fnt,font.dat,music.lpk
+    wasmExports=object
+    → wasm 实例化成功、6 个资源全 fetch（含 music.lpk）、零运行时异常。
+  - 截图 evidence/S2.5_browser.png 1408x1760 104164 B。
+    像素分析（PIL）：blue-bg count 1,596,391（修复前 23,667），覆盖 x 0-1392 y 0-1416；
+    white-text count 35,671（修复前 19,843）→ 内容铺满画布、字形可见。
+
+二、主线程验收时发现并修复的渲染缺陷
+------------------------------------------------------------------------------------------------
+
+  缺陷：crates/ti-platform/src/gfx.rs 的 present_framebuffer(fb) 文档声称
+  「窗口比例差异由 Viewport 计算 letterbox/pillarbox 偏移」，但实现根本没接收 Viewport，
+  四个角点写死 (0,0)-(176,220)。浏览器侧 canvas 被拉伸到 1408x1760 后，
+  画面只缩在左上角 168x160 px（实测 blue bbox）。
+  修复：present_framebuffer(fb, &Viewport) —— 四角经 vp.logical_to_screen 映射；
+  调用点 treasure_wasm.rs:169 传 &self.vp。
+  桌面 native（window 176x220）Viewport::fit(176,220)→scale 1/offset 0，行为不变。
+  修复后像素分析：blue 覆盖 0-1392 x 0-1416（≈全画布），white 35,671。
+
+三、改了哪些文件
+------------------------------------------------------------------------------------------------
+
+  crates/ti-app/src/bin/treasure_wasm.rs   主循环、真字形/真音效接线、Viewport 接入
+  crates/ti-app/src/glyph_raster.rs        新增：真字形光栅（lib 层，测试可断言）
+  crates/ti-app/src/audio_prep.rs          新增：music.lpk 解包→混音→WAV 字节
+  crates/ti-app/src/shell_ui.rs            新增：MENU / status_texts
+  crates/ti-app/src/lib.rs                 导出上述模块
+  crates/ti-app/Cargo.toml                 macroquad features=["audio"]、wasm-shell bin
+  crates/ti-app/tests/glyph_raster.rs      新增：6 个真字形断言
+  crates/ti-app/tests/audio_prep.rs         新增：5 个真音效断言
+  crates/ti-platform/src/gfx.rs            present_framebuffer 接入 Viewport（修复渲染缺陷）
+  scripts/build_wasm.ps1                   出 web/ 产物（含 music.lpk / audio.js）
+  web/index.html                           canvas + gl.js + audio.js + 整数倍放大
+  evidence/S2.5_browser.png                浏览器实机截图（1408x1760）
+  evidence/S2.5_wasm_shell.log             本文件
+
+四、验证命令与结果
+------------------------------------------------------------------------------------------------
+
+  cargo fmt --all -- --check                 FMT OK
+  cargo clippy --workspace --all-targets -- -D warnings   Finished, 0 warning
+  cargo clippy -p ti-app --features wasm-shell --all-targets -- -D warnings  Finished
+  cargo test --workspace                     全绿（含新增 11 测试）
+  cargo test -p ti-app --test glyph_raster --test audio_prep   11 passed
+  powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1   web/treasure_wasm.wasm 669815 B
+  HTTP（serve --dir web --port 8091）8/8 端点 200：
+    / 200 2262 B text/html
+    /gl.js 200 67252 B text/javascript
+    /audio.js 200 6139 B text/javascript
+    /treasure_wasm.wasm 200 669815 B application/wasm
+    /assets/GoldLand.Fnt 200 24384 B
+    /assets/font.dat 200 2034 B
+    /assets/music.lpk 200 67737 B
+    /assets/settings.dat 200 8 B
+  浏览器实机（CDP 真实时间）：wasmExports=object，资源全 fetch，0 异常，截图 1408x1760 104164 B。
+
+五、诚实的 DoD 判断
+------------------------------------------------------------------------------------------------
+
+  ✅ 浏览器显示主菜单       —— 蓝底+绿标题条+6 项菜单+绿色选中高亮+底部状态行，铺满画布
+  ✅ 真实资源              —— GoldLand.Fnt + font.dat + music.lpk 全部真实 fetch 并使用
+  ✅ 中文                  —— 真字形（Glyph::pixel，MSB-first，S1.5b parity 已验朝向）
+  ✅ 音效                  —— music.lpk 5 曲 WAV 经 macroquad::audio 接入；MOD1 条阻塞于 S1.7b（状态行可见）
+  ⚠️ 菜单 event_id 1..6 是占位猜测值 —— 真实事件 id 属 S3.3（ref/event_ids.json），代码注释已标注，非伪造玩法逻辑
+  ⚠️ AudioContext 自动播放策略 —— 非阻塞，audio.js 已挂手势 resume，首次交互即出声

@@ -211,3 +211,17 @@
 - **gate 解锁**：装上 target 后 gate 第 4 项 wasm 行自动由 SKIP 转 PASS（脚本按 `rustup target list --installed` 判定，无需改脚本）。
 - **PowerShell 脚本必须存 UTF-8 BOM**（EXP-016 再次命中）：`build_wasm.ps1` 用 Write 工具写出（无 BOM）时，PS 5.1 按 GBK 读中文注释，把字节打断导致 `ParserError: UnexpectedToken`（报错位置与真实语法错误无关，容易误判）。补救：`.ps1` 一律加 BOM。
 - **clippy（`--all-targets` 才会扫到）**：`f32 as i64/usize` 触发 `cast_possible_truncation`/`cast_sign_loss` —— 逻辑坐标一律用整数（`i32`/`usize`），别在像素索引上用 f32；`as f32` 触发 `cast_precision_loss`（EXP-015 已记，用 `LW`/`LH` 常量）；`require-features` 的 bin 默认 lint **不扫**，要 `clippy --features wasm-shell` 单独跑。
+
+### EXP-029 流程：headless Edge `--virtual-time-budget` 不驱动 rAF，macroquad wasm 文件加载永久挂起（S2.5 补实测）
+- 现象：用 `msedge --headless=new --virtual-time-budget=30000 --screenshot` 抓 wasm 壳截图，画布全黑；`--dump-dom` 探针发现 20 秒虚拟时间内 rAF 只跑了 4 帧，`assets/music.lpk` 从未被 fetch（但 GoldLand.Fnt / font.dat 已 fetch）。
+- 根因：`--virtual-time-budget` 快进定时器但**不真实推进 rAF**（headless 无合成器）。macroquad 的 `macroquad::file::load_file` 在 wasm 下走 miniquad JS 的 `fs_load_file`（XMLHttpRequest），完成回调写回 `Arc<Mutex<Option>>` 后，**future 的 resolve 依赖每个 rAF 帧轮询 executor**。虚拟时间下帧极少 → 第 2 个 `load_file` 的 future 永远没被 poll 到 resolve → `Shell::new().await` 卡死 → 主循环从未进 `render()` → 画布永黑。**这不是 app 的真 bug**：真实浏览器 rAF 60fps，毫秒级完成全部加载。
+- 解法：改用**真实时间**驱动浏览器。Node v24+ 自带全局 `WebSocket`，零依赖直连 CDP：`Emulation.setDeviceMetricsOverride` → `Page.navigate` → `await sleep(9000)` 真实毫秒 → `Page.captureScreenshot(fromSurface:true)`。脚本见 `C:\Users\Administrator\AppData\Local\Temp\opencode\cdp_shot.mjs`。
+- 验证：真实时间下 PROBE 报 `resources=...,GoldLand.Fnt,font.dat,music.lpk wasmExports=object`（6 资源全 fetch、wasm 实例化、0 异常）；截图 1408×1760 从 13643 B→104164 B，blue 像素 23,667→1,596,391。
+- 教训：**headless 抓 WebGL 截图必须用真实时间**；`--virtual-time-budget` 只适合纯 DOM/SSR 页面。CDP 比 `--screenshot` 灵活得多且 Edge/Chrome 通用。
+
+### EXP-030 代码：`present_framebuffer` 文档说用 Viewport 算 letterbox，实现却没接 Viewport（S2.5 补实测）
+- 现象：浏览器侧 canvas 被拉到 1408×1760，但游戏画面只缩在左上角 168×160 px，右下大片纯黑。CDP 探针报 `css=1408px×1760px rect=1408×1760`（布局正常），PIL 算 blue-bg bbox = x0-168 y0-160。
+- 根因：`crates/ti-platform/src/gfx.rs` 的 `present_framebuffer(fb: &Framebuf)` 文档注释明写「窗口比例差异由 `Viewport` 计算 letterbox / pillarbox 偏移」，但**实现里四个顶点写死 `(0,0)-(LW,LH)`，根本没接收 `Viewport` 参数**。`treasure_wasm.rs` 里 `shell.vp = Viewport::fit(...)` 算了却只用于 input 映射（`screen_to_logical`），从未传给 present。桌面 native 因 window 恰好 176×220、scale=1，问题被掩盖；浏览器 canvas 被拉伸后才暴露。
+- 解法：`present_framebuffer(fb: &Framebuf, vp: &Viewport)`，四角改用 `vp.logical_to_screen(0,0)` / `vp.logical_to_screen(LW,LH)`。调用点 `treasure_wasm.rs` 传 `&self.vp`。只有一个调用点，签名变更零扩散。
+- 验证：重建 wasm 重抓，blue bbox → x0-1392 y0-1416（≈全画布），white 文本 19,843→35,671。
+- 教训：**文档注释与实现必须一致**——文档声称的契约（"由 Viewport 算偏移"）若实现没兑现，在 scale=1 的环境里不会暴露，换了尺寸就翻车。验收时别只看「画了什么」，要看「画在画布的哪个 bbox」。

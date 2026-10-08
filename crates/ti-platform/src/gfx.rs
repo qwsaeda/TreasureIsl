@@ -79,11 +79,13 @@ pub fn rgb565_to_rgba8(p: u16) -> [u8; 4] {
     [(r5 << 3) | (r5 >> 2), (g6 << 2) | (g6 >> 4), (b5 << 3) | (b5 >> 2), 255]
 }
 
-/// 用 [`Framebuf`] 的像素整屏绘制到 macroquad 窗口。
+/// 用 [`Framebuf`] 的像素绘制到 macroquad 窗口。
 ///
 /// 每帧一次纹理上传；逻辑分辨率 `LOGICAL_W × LOGICAL_H` 与窗口尺寸解耦，
-/// 窗口比例差异由 [`Viewport`] 计算 letterbox / pillarbox 偏移。
-pub fn present_framebuffer(fb: &Framebuf) {
+/// 四个角点经 [`Viewport::logical_to_screen`] 映射，窗口比例差异体现为
+/// letterbox / pillarbox。**必须传入视口**：浏览器侧 canvas 会被拉伸到窗口
+/// 尺寸，若仍按 176×220 直接绘制，画面只会缩在左上角。
+pub fn present_framebuffer(fb: &Framebuf, vp: &Viewport) {
     use macroquad::models::{Vertex, draw_mesh};
     use macroquad::texture::Texture2D;
 
@@ -91,17 +93,17 @@ pub fn present_framebuffer(fb: &Framebuf) {
     for &p in fb.as_slice() {
         bytes.extend_from_slice(&rgb565_to_rgba8(p));
     }
-    let fw = LW;
-    let fh = LH;
     let white = macroquad::color::WHITE;
     let width_u16 = u16::try_from(LOGICAL_WIDTH).unwrap_or(0);
     let height_u16 = u16::try_from(LOGICAL_HEIGHT).unwrap_or(0);
     let texture = Texture2D::from_rgba8(width_u16, height_u16, &bytes);
+    let (x0, y0) = vp.logical_to_screen(0.0, 0.0);
+    let (x1, y1) = vp.logical_to_screen(LW, LH);
     let vertices = vec![
-        Vertex::new(0.0, 0.0, 0.0, 0.0, 1.0, white),
-        Vertex::new(fw, 0.0, 0.0, 1.0, 1.0, white),
-        Vertex::new(fw, fh, 0.0, 1.0, 0.0, white),
-        Vertex::new(0.0, fh, 0.0, 0.0, 0.0, white),
+        Vertex::new(x0, y0, 0.0, 0.0, 1.0, white),
+        Vertex::new(x1, y0, 0.0, 1.0, 1.0, white),
+        Vertex::new(x1, y1, 0.0, 1.0, 0.0, white),
+        Vertex::new(x0, y1, 0.0, 0.0, 0.0, white),
     ];
     let mesh = macroquad::models::Mesh {
         vertices,

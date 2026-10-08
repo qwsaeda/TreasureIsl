@@ -1,0 +1,26 @@
+=== S0.4 验收：116 个导入 API 名恢复 ===
+数据源: PE导入表(s0_4_imports.py) x IDA导入表(ida_imports.py) x coredll.def(metarutaiga/WINCE600, 独立外部表) x functions.csv/pseudocode(S0.2)
+
+  PASS  导入总数 == 116 (PE == IDA: 116 == 116)
+        AYGSHELL.dll: 2
+        COREDLL.dll: 105
+        gx.dll: 9
+  PASS  116/116 有名字 (116)
+  PASS  每条 >=1 调用/引用证据 (116/116)
+        证据类型分布: {"direct": 98, "mention": 2, "text_call": 12, "xref_only": 4}
+        弱证据 6 条（地址取用/运行时桩，无直接游戏调用点，逐条列名）:
+          [xref_only] COREDLL.dll ord=2005  _rt_sdiv
+          [mention] COREDLL.dll ord=2008  _rt_udiv
+          [mention] COREDLL.dll ord=264  DefWindowProcW
+          [xref_only] COREDLL.dll ord=1092  purecall
+          [xref_only] COREDLL.dll ord=2002  _rt_udiv64by64
+          [xref_only] COREDLL.dll ord=87  _C_specific_handler
+  PASS  COREDLL def 对照 105/105 吻合 (0 不符; 其中前导下划线归一 12)
+        注: gx.dll 名字来自 PE 命名导入（非序号，无需对照）；AYGSHELL.dll 2 条为按序号导入，无外部 def 表可对照（仅 IDB 名+调用/引用证据）
+
+  证据示例（前 3 条）:
+    COREDLL.dll ord=170 api=ReadFile -> direct call from 000114D4:sub_114D4
+    COREDLL.dll ord=1041 api=malloc -> direct call from 000115A0:sub_115A0
+    COREDLL.dll ord=6 api=ExitThread -> direct call from 000115D8:sub_115D8
+
+RESULT: PASS
