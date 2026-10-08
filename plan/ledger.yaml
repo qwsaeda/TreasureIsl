@@ -4,7 +4,7 @@ version: 1
 tasks:
   # S0 地基
   - { id: S0.1, title: "建 cargo workspace + fmt/clippy + gate.ps1（native 构建起步）", status: verified, deps: [], dod: "scripts/gate.ps1 全绿（构建仅 native）+ 回写 AGENTS.md 命令", evidence: "evidence/S0.1.log", blocked_by: null, rounds: 1 }
-  - { id: S0.2, title: "IDA headless 批量导出伪代码与 functions.csv（IDA Professional 9.4）", status: in_progress, deps: [S0.1], dod: "伪代码文件数 == IDA 函数数，0 缺失；产物 ref/pseudocode/*.c + ref/functions.csv 落地", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S0.2, title: "IDA headless 批量导出伪代码与 functions.csv（IDA Professional 9.4）", status: verified, deps: [S0.1], dod: "伪代码文件数 == IDA 函数数，0 缺失；产物 ref/pseudocode/*.c + ref/functions.csv 落地", evidence: "evidence/S0.2.log", blocked_by: null, rounds: 0 }
   - { id: S0.3, title: "函数分类打标 classify → ref/classify.json", status: pending, deps: [S0.2], dod: "覆盖率 100%（允许 pending 类目）", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S0.4, title: "116 个导入 API 名恢复 → ref/imports.json", status: pending, deps: [S0.2], dod: "116/116 有名字 + 调用点证据", evidence: null, blocked_by: null, rounds: 0 }
   - { id: S0.5, title: "define_format!/parse_err!/roundtrip_all! 三个宏", status: verified, deps: [S0.1], dod: "宏单测全绿（0 未知字节 + roundtrip 断言生效）", evidence: "evidence/S0.5.log", blocked_by: null, rounds: 1 }
