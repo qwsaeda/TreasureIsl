@@ -53,4 +53,29 @@ tasks:
 ## 5. 会话交接
 
 - 会话结束前：ledger 合法、`evidence/` 无缺失、经验库已回写。
-- 会话开始时：先 `git status`（如已 init）+ 读 ledger + 读 `docs/experience.md` 最近条目，避免重复踩坑。
+- 会话开始时：先 `git status` + 读 ledger + 读 `docs/experience.md` 最近条目，避免重复踩坑。
+
+## 6. 多会话并行规则（2026-10 起）
+
+多会话可同时推进**文件域不相交**的任务。基线提交：`b07353b`（各会话从该点开分支）。
+
+### 6.1 分波次与文件域（当前波次）
+
+| 波次 | 会话 | 任务 | 独占文件域（其他会话不得改） |
+|---|---|---|---|
+| 1 | A | S0.2 → S0.4 → S1.4b | `scripts/ida_dump.py`、`ref/`、`docs/reverse-facts.md` |
+| 1 | B | S2.6 | `scripts/` 中 android 相关新文件、`scripts/gate.ps1` 的 android 行 |
+| 1 | C | S2.7 | `scripts/smoke.sh`（新建） |
+| 2 | D | S0.3（等 S0.2 verified） | `ref/classify.json`、`crates/ti-tools` 的 classify bin |
+| 3 | 按 S3 裂变 | S3.1 后：主链 / S3.10 / S3.12 三路并行，S3.6/7/8 三模块并行 | 每模块独立的 `docs/spec/<m>.md`、`oracle/<m>.rs`、`rules|<m>.rs`、`tests/diff_<m>.rs` |
+
+波次推进以 ledger 为准：deps 未全 `verified` 的任务不许开工（loop 第 1 步）。
+
+### 6.2 硬规则
+
+1. **分支模型**：每会话开工前 `git checkout -b task/<id>`（从基线或最新 main 切出）；完成任务、gate 全绿后合回 `main`（fast-forward 或普通 merge，不许 `--force`）。合并冲突由发起合并的会话解决。
+2. **ledger 只改自己任务的行**：状态流转、`evidence`、`rounds`、`blocked_by` 仅限本会话认领的任务 ID；不重排文件、不改他人条目。合并时 ledger 冲突按「两边各保留自己任务行的最终态」处理，必要时合并后跑 `cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 校验。
+3. **gate 的归属判定**：gate 8 项是全 workspace 检查，别人半成品代码可能导致 FAIL。工作途中可随时跑 gate 自检；**但只有当你任务的产出物已落地、且 FAIL 项与你文件域无关时，才可忽略该 FAIL**。置 `verified` 前必须：已合并（或 rebase 到最新 main）且 gate 8 项全绿。
+4. **共享文件按「最后合并者负责对齐」**：`crates/*/src/lib.rs`、`mod.rs`、`Cargo.toml`、`AGENTS.md` 等不可避免的注册点，改动最小化（只加自己的一行注册），合并冲突就地解决后必须重跑受影响的测试。
+5. **cargo 并发**：`target/` 目录锁会让并行构建排队，属正常现象，不要杀掉对方的 cargo 进程。
+6. **经验与事实库**：`docs/experience.md`、`docs/reverse-facts.md` 可能被多方追加——只在文件**末尾追加**自己的条目（不改动既有行），冲突概率最低；已有的坑不许静默绕过。
