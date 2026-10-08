@@ -1,0 +1,21 @@
+﻿cargo :   ui.pak           repack 閫愬瓧鑺備竴鑷?(102369 瀛楄妭)
+所在位置 行:1 字符: 37
++ ... h 'C:\金银岛'; cargo run -q -p ti-tools --bin unpak -- --repack --check- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  ui.pak       ...竴鑷?(102369 瀛楄妭):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[unpak] ui.pak           鏉＄洰  122
+  glpics.pak       repack 閫愬瓧鑺備竴鑷?(87027 瀛楄妭)
+[unpak] glpics.pak       鏉＄洰   88
+  glmap_m01.pak    repack 閫愬瓧鑺備竴鑷?(39609 瀛楄妭)
+[unpak] glmap_m01.pak    鏉＄洰   47
+  glmap_m02.pak    repack 閫愬瓧鑺備竴鑷?(30315 瀛楄妭)
+[unpak] glmap_m02.pak    鏉＄洰   37
+  cards.lpk        repack 閫愬瓧鑺備竴鑷?(34000 瀛楄妭)
+[unpak] cards.lpk        鏉＄洰    4
+  music.lpk        repack 閫愬瓧鑺備竴鑷?(67737 瀛楄妭)
+[unpak] music.lpk        鏉＄洰    6
+  goods.lpk        repack 閫愬瓧鑺備竴鑷?(469 瀛楄妭)
+[unpak] goods.lpk        鏉＄洰    1
+[unpak] 鍚堣 305 鏉★紝鎴愬姛瑙ｅ帇 305 鏉★紙100.0%锛?

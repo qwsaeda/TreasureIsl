@@ -1,0 +1,1228 @@
+{
+ "cards.lpk": [
+  {
+   "idx": 0,
+   "name": "event.ini"
+  },
+  {
+   "idx": 1,
+   "name": "x_6r96.fnt"
+  },
+  {
+   "idx": 2,
+   "name": "x_6r97.fnt"
+  },
+  {
+   "idx": 3,
+   "name": "cards.ini"
+  }
+ ],
+ "glmap_m01.pak": [
+  {
+   "idx": 0,
+   "name": "0.pcx"
+  },
+  {
+   "idx": 1,
+   "name": "s00.pcx"
+  },
+  {
+   "idx": 2,
+   "name": "gr_001.pcx"
+  },
+  {
+   "idx": 3,
+   "name": "gr_010.pcx"
+  },
+  {
+   "idx": 4,
+   "name": "dmer85.png"
+  },
+  {
+   "idx": 5,
+   "name": "mapinfo.ini"
+  },
+  {
+   "idx": 6,
+   "name": "event.pcx"
+  },
+  {
+   "idx": 7,
+   "name": "dmeo82.png"
+  },
+  {
+   "idx": 8,
+   "name": "B-03.pcx"
+  },
+  {
+   "idx": 9,
+   "name": "b-04.pcx"
+  },
+  {
+   "idx": 10,
+   "name": "B-05.pcx"
+  },
+  {
+   "idx": 11,
+   "name": "B-06.pcx"
+  },
+  {
+   "idx": 12,
+   "name": "b-07.pcx"
+  },
+  {
+   "idx": 13,
+   "name": "B-08.pcx"
+  },
+  {
+   "idx": 14,
+   "name": "B-09.pcx"
+  },
+  {
+   "idx": 15,
+   "name": "B-10.pcx"
+  },
+  {
+   "idx": 16,
+   "name": "shui.pcx"
+  },
+  {
+   "idx": 17,
+   "name": "ice.pcx"
+  },
+  {
+   "idx": 18,
+   "name": "shui_5.pcx"
+  },
+  {
+   "idx": 19,
+   "name": "shui_6.pcx"
+  },
+  {
+   "idx": 20,
+   "name": "shui_7.pcx"
+  },
+  {
+   "idx": 21,
+   "name": "grqr61.ani"
+  },
+  {
+   "idx": 22,
+   "name": "grqr62.ani"
+  },
+  {
+   "idx": 23,
+   "name": "dmep83.png"
+  },
+  {
+   "idx": 24,
+   "name": "card.pcx"
+  },
+  {
+   "idx": 25,
+   "name": "bd_001.pcx"
+  },
+  {
+   "idx": 26,
+   "name": "bd_003.pcx"
+  },
+  {
+   "idx": 27,
+   "name": "bd_004.pcx"
+  },
+  {
+   "idx": 28,
+   "name": "bd_009.pcx"
+  },
+  {
+   "idx": 29,
+   "name": "diji_1.pcx"
+  },
+  {
+   "idx": 30,
+   "name": "diji_10001.pcx"
+  },
+  {
+   "idx": 31,
+   "name": "diji_10002.pcx"
+  },
+  {
+   "idx": 32,
+   "name": "diji_10003.pcx"
+  },
+  {
+   "idx": 33,
+   "name": "war.pcx"
+  },
+  {
+   "idx": 34,
+   "name": "shui_01.pcx"
+  },
+  {
+   "idx": 35,
+   "name": "shui_02.pcx"
+  },
+  {
+   "idx": 36,
+   "name": "shui_03.pcx"
+  },
+  {
+   "idx": 37,
+   "name": "shui_04.pcx"
+  },
+  {
+   "idx": 38,
+   "name": "Castle.pcx"
+  },
+  {
+   "idx": 39,
+   "name": "pool.pcx"
+  },
+  {
+   "idx": 40,
+   "name": "dmeq84.png"
+  },
+  {
+   "idx": 41,
+   "name": "fag_81.sav"
+  },
+  {
+   "idx": 42,
+   "name": "fag_82.sav"
+  },
+  {
+   "idx": 43,
+   "name": "fag_83.sav"
+  },
+  {
+   "idx": 44,
+   "name": "bq31.pcx"
+  },
+  {
+   "idx": 45,
+   "name": "MAZE.pcx"
+  },
+  {
+   "idx": 46,
+   "name": "ng51.pcx"
+  }
+ ],
+ "glmap_m02.pak": [
+  {
+   "idx": 0,
+   "name": "0.pcx"
+  },
+  {
+   "idx": 1,
+   "name": "bo_c88.ini"
+  },
+  {
+   "idx": 2,
+   "name": "s01.pcx"
+  },
+  {
+   "idx": 3,
+   "name": "gr_002.pcx"
+  },
+  {
+   "idx": 4,
+   "name": "mapinfo.ini"
+  },
+  {
+   "idx": 5,
+   "name": "B24_2.pcx"
+  },
+  {
+   "idx": 6,
+   "name": "g01.pcx"
+  },
+  {
+   "idx": 7,
+   "name": "g02.pcx"
+  },
+  {
+   "idx": 8,
+   "name": "B-10.pcx"
+  },
+  {
+   "idx": 9,
+   "name": "B25_2.pcx"
+  },
+  {
+   "idx": 10,
+   "name": "huo_4.pcx"
+  },
+  {
+   "idx": 11,
+   "name": "B32_2.pcx"
+  },
+  {
+   "idx": 12,
+   "name": "evep20.pcx"
+  },
+  {
+   "idx": 13,
+   "name": "appo01.pcx"
+  },
+  {
+   "idx": 14,
+   "name": "appo02.pcx"
+  },
+  {
+   "idx": 15,
+   "name": "appo03.pcx"
+  },
+  {
+   "idx": 16,
+   "name": "appo04.pcx"
+  },
+  {
+   "idx": 17,
+   "name": "war.pcx"
+  },
+  {
+   "idx": 18,
+   "name": "Castle.pcx"
+  },
+  {
+   "idx": 19,
+   "name": "b2_11.pcx"
+  },
+  {
+   "idx": 20,
+   "name": "b2_12.pcx"
+  },
+  {
+   "idx": 21,
+   "name": "card0.pcx"
+  },
+  {
+   "idx": 22,
+   "name": "diji20000.pcx"
+  },
+  {
+   "idx": 23,
+   "name": "diji20001.pcx"
+  },
+  {
+   "idx": 24,
+   "name": "fag_80.sav"
+  },
+  {
+   "idx": 25,
+   "name": "bq31.pcx"
+  },
+  {
+   "idx": 26,
+   "name": "MAZE.pcx"
+  },
+  {
+   "idx": 27,
+   "name": "b20.pcx"
+  },
+  {
+   "idx": 28,
+   "name": "b21.pcx"
+  },
+  {
+   "idx": 29,
+   "name": "B22.pcx"
+  },
+  {
+   "idx": 30,
+   "name": "b23.pcx"
+  },
+  {
+   "idx": 31,
+   "name": "B24.pcx"
+  },
+  {
+   "idx": 32,
+   "name": "b25.pcx"
+  },
+  {
+   "idx": 33,
+   "name": "b26.pcx"
+  },
+  {
+   "idx": 34,
+   "name": "B31.pcx"
+  },
+  {
+   "idx": 35,
+   "name": "b32.pcx"
+  },
+  {
+   "idx": 36,
+   "name": "B33.pcx"
+  }
+ ],
+ "glpics.pak": [
+  {
+   "idx": 0,
+   "name": "logo.pcx"
+  },
+  {
+   "idx": 1,
+   "name": "button_sell.pcx"
+  },
+  {
+   "idx": 2,
+   "name": "button_attack.pcx"
+  },
+  {
+   "idx": 4,
+   "name": "text_gamerwin.pcx"
+  },
+  {
+   "idx": 5,
+   "name": "button_assign.pcx"
+  },
+  {
+   "idx": 6,
+   "name": "button_capture.pcx"
+  },
+  {
+   "idx": 7,
+   "name": "button_card.pcx"
+  },
+  {
+   "idx": 8,
+   "name": "button_aimrole.pcx"
+  },
+  {
+   "idx": 9,
+   "name": "button_finish.pcx"
+  },
+  {
+   "idx": 10,
+   "name": "start_katharina.pcx"
+  },
+  {
+   "idx": 11,
+   "name": "opjd79.sav"
+  },
+  {
+   "idx": 12,
+   "name": "flag_Road.pcx"
+  },
+  {
+   "idx": 13,
+   "name": "troop_all.pcx"
+  },
+  {
+   "idx": 14,
+   "name": "button_bank.pcx"
+  },
+  {
+   "idx": 15,
+   "name": "face_tichy.pcx"
+  },
+  {
+   "idx": 16,
+   "name": "Landmark_port_1.pcx"
+  },
+  {
+   "idx": 17,
+   "name": "landmark_port_2.pcx"
+  },
+  {
+   "idx": 18,
+   "name": "LandMark_port_3.pcx"
+  },
+  {
+   "idx": 19,
+   "name": "landmark_port_4.pcx"
+  },
+  {
+   "idx": 20,
+   "name": "button_base.pcx"
+  },
+  {
+   "idx": 21,
+   "name": "face_panda.pcx"
+  },
+  {
+   "idx": 22,
+   "name": "flag_tichy.pcx"
+  },
+  {
+   "idx": 23,
+   "name": "button_trade.pcx"
+  },
+  {
+   "idx": 24,
+   "name": "Player_drake.pcx"
+  },
+  {
+   "idx": 25,
+   "name": "button_notcapture.pcx"
+  },
+  {
+   "idx": 26,
+   "name": "helm_still.pcx"
+  },
+  {
+   "idx": 27,
+   "name": "button_build.pcx"
+  },
+  {
+   "idx": 28,
+   "name": "flag_panda.pcx"
+  },
+  {
+   "idx": 29,
+   "name": "flag_branchroad.pcx"
+  },
+  {
+   "idx": 30,
+   "name": "flag_holidayplace.pcx"
+  },
+  {
+   "idx": 31,
+   "name": "button_explore.pcx"
+  },
+  {
+   "idx": 32,
+   "name": "landinfo.pcx"
+  },
+  {
+   "idx": 33,
+   "name": "face_katharina.pcx"
+  },
+  {
+   "idx": 35,
+   "name": "button_aimland.pcx"
+  },
+  {
+   "idx": 36,
+   "name": "switchpage.pcx"
+  },
+  {
+   "idx": 37,
+   "name": "button_system.pcx"
+  },
+  {
+   "idx": 38,
+   "name": "target_head.pcx"
+  },
+  {
+   "idx": 39,
+   "name": "helm_motion.pcx"
+  },
+  {
+   "idx": 40,
+   "name": "start_tichy.pcx"
+  },
+  {
+   "idx": 41,
+   "name": "flag_battlefield.pcx"
+  },
+  {
+   "idx": 42,
+   "name": "helm_base.pcx"
+  },
+  {
+   "idx": 43,
+   "name": "button_info.pcx"
+  },
+  {
+   "idx": 44,
+   "name": "role_shadow.pcx"
+  },
+  {
+   "idx": 45,
+   "name": "button_load.pcx"
+  },
+  {
+   "idx": 46,
+   "name": "start_panda.pcx"
+  },
+  {
+   "idx": 47,
+   "name": "button_aimcastle.pcx"
+  },
+  {
+   "idx": 48,
+   "name": "helm_number.pcx"
+  },
+  {
+   "idx": 49,
+   "name": "player_kidd.pcx"
+  },
+  {
+   "idx": 50,
+   "name": "button_troop.pcx"
+  },
+  {
+   "idx": 51,
+   "name": "helm_pointer.pcx"
+  },
+  {
+   "idx": 52,
+   "name": "target_locater.pcx"
+  },
+  {
+   "idx": 53,
+   "name": "button_move.pcx"
+  },
+  {
+   "idx": 54,
+   "name": "face_drake.pcx"
+  },
+  {
+   "idx": 55,
+   "name": "button_buy.pcx"
+  },
+  {
+   "idx": 56,
+   "name": "Landmark_city_1.pcx"
+  },
+  {
+   "idx": 57,
+   "name": "Landmark_city_2.pcx"
+  },
+  {
+   "idx": 58,
+   "name": "landmark_city_3.pcx"
+  },
+  {
+   "idx": 59,
+   "name": "landmark_city_4.pcx"
+  },
+  {
+   "idx": 60,
+   "name": "button_invest.pcx"
+  },
+  {
+   "idx": 61,
+   "name": "button_return.pcx"
+  },
+  {
+   "idx": 62,
+   "name": "button_pay.pcx"
+  },
+  {
+   "idx": 63,
+   "name": "ship_all.pcx"
+  },
+  {
+   "idx": 64,
+   "name": "flag_drake.pcx"
+  },
+  {
+   "idx": 65,
+   "name": "demo.pcx"
+  },
+  {
+   "idx": 66,
+   "name": "target_knife.pcx"
+  },
+  {
+   "idx": 67,
+   "name": "face_savager.pcx"
+  },
+  {
+   "idx": 68,
+   "name": "flag_wildwood.pcx"
+  },
+  {
+   "idx": 69,
+   "name": "role_status.pcx"
+  },
+  {
+   "idx": 70,
+   "name": "button_exit.pcx"
+  },
+  {
+   "idx": 71,
+   "name": "Player_katharina.pcx"
+  },
+  {
+   "idx": 72,
+   "name": "player_tichy.pcx"
+  },
+  {
+   "idx": 73,
+   "name": "face_kidd.pcx"
+  },
+  {
+   "idx": 74,
+   "name": "start_kidd.pcx"
+  },
+  {
+   "idx": 75,
+   "name": "button_focus.pcx"
+  },
+  {
+   "idx": 76,
+   "name": "flag_katharina.pcx"
+  },
+  {
+   "idx": 77,
+   "name": "start_drake.pcx"
+  },
+  {
+   "idx": 78,
+   "name": "Player_panda.pcx"
+  },
+  {
+   "idx": 79,
+   "name": "target_area.pcx"
+  },
+  {
+   "idx": 80,
+   "name": "flag_kidd.pcx"
+  },
+  {
+   "idx": 81,
+   "name": "button_save.pcx"
+  },
+  {
+   "idx": 82,
+   "name": "bg.pcx"
+  },
+  {
+   "idx": 83,
+   "name": "button_view.pcx"
+  },
+  {
+   "idx": 84,
+   "name": "button_option.pcx"
+  },
+  {
+   "idx": 85,
+   "name": "text_gameover.pcx"
+  },
+  {
+   "idx": 86,
+   "name": "number.pcx"
+  },
+  {
+   "idx": 87,
+   "name": "dialogue.pcx"
+  }
+ ],
+ "goods.lpk": [
+  {
+   "idx": 0,
+   "name": "goods.mdu"
+  }
+ ],
+ "music.lpk": [
+  {
+   "idx": 0,
+   "name": "invalid.wav"
+  },
+  {
+   "idx": 1,
+   "name": "levelup.wav"
+  },
+  {
+   "idx": 2,
+   "name": "attack.wav"
+  },
+  {
+   "idx": 3,
+   "name": "glmusic.mod"
+  },
+  {
+   "idx": 4,
+   "name": "press.wav"
+  },
+  {
+   "idx": 5,
+   "name": "victory.wav"
+  }
+ ],
+ "ui.pak": [
+  {
+   "idx": 0,
+   "name": "100.pcx"
+  },
+  {
+   "idx": 1,
+   "name": "101.pcx"
+  },
+  {
+   "idx": 2,
+   "name": "102.pcx"
+  },
+  {
+   "idx": 3,
+   "name": "103.pcx"
+  },
+  {
+   "idx": 4,
+   "name": "104.pcx"
+  },
+  {
+   "idx": 5,
+   "name": "105.pcx"
+  },
+  {
+   "idx": 6,
+   "name": "106.pcx"
+  },
+  {
+   "idx": 7,
+   "name": "107.pcx"
+  },
+  {
+   "idx": 8,
+   "name": "108.pcx"
+  },
+  {
+   "idx": 9,
+   "name": "109.pcx"
+  },
+  {
+   "idx": 10,
+   "name": "110.pcx"
+  },
+  {
+   "idx": 11,
+   "name": "111.pcx"
+  },
+  {
+   "idx": 12,
+   "name": "112.pcx"
+  },
+  {
+   "idx": 13,
+   "name": "113.pcx"
+  },
+  {
+   "idx": 14,
+   "name": "114.pcx"
+  },
+  {
+   "idx": 15,
+   "name": "115.pcx"
+  },
+  {
+   "idx": 16,
+   "name": "116.pcx"
+  },
+  {
+   "idx": 17,
+   "name": "117.pcx"
+  },
+  {
+   "idx": 18,
+   "name": "118.pcx"
+  },
+  {
+   "idx": 19,
+   "name": "119.pcx"
+  },
+  {
+   "idx": 20,
+   "name": "120.pcx"
+  },
+  {
+   "idx": 21,
+   "name": "mapinfo.ini"
+  },
+  {
+   "idx": 22,
+   "name": "01.pcx"
+  },
+  {
+   "idx": 23,
+   "name": "02.pcx"
+  },
+  {
+   "idx": 24,
+   "name": "03.pcx"
+  },
+  {
+   "idx": 25,
+   "name": "04.pcx"
+  },
+  {
+   "idx": 26,
+   "name": "05.pcx"
+  },
+  {
+   "idx": 27,
+   "name": "06.pcx"
+  },
+  {
+   "idx": 28,
+   "name": "07.pcx"
+  },
+  {
+   "idx": 29,
+   "name": "08.pcx"
+  },
+  {
+   "idx": 30,
+   "name": "09.pcx"
+  },
+  {
+   "idx": 31,
+   "name": "10.pcx"
+  },
+  {
+   "idx": 32,
+   "name": "11.pcx"
+  },
+  {
+   "idx": 33,
+   "name": "12.pcx"
+  },
+  {
+   "idx": 34,
+   "name": "13.pcx"
+  },
+  {
+   "idx": 35,
+   "name": "14.pcx"
+  },
+  {
+   "idx": 36,
+   "name": "15.pcx"
+  },
+  {
+   "idx": 37,
+   "name": "16.pcx"
+  },
+  {
+   "idx": 38,
+   "name": "17.pcx"
+  },
+  {
+   "idx": 39,
+   "name": "18.pcx"
+  },
+  {
+   "idx": 40,
+   "name": "19.pcx"
+  },
+  {
+   "idx": 41,
+   "name": "20.pcx"
+  },
+  {
+   "idx": 42,
+   "name": "21.pcx"
+  },
+  {
+   "idx": 43,
+   "name": "22.pcx"
+  },
+  {
+   "idx": 44,
+   "name": "23.pcx"
+  },
+  {
+   "idx": 45,
+   "name": "24.pcx"
+  },
+  {
+   "idx": 46,
+   "name": "25.pcx"
+  },
+  {
+   "idx": 47,
+   "name": "26.pcx"
+  },
+  {
+   "idx": 48,
+   "name": "27.pcx"
+  },
+  {
+   "idx": 49,
+   "name": "28.pcx"
+  },
+  {
+   "idx": 50,
+   "name": "29.pcx"
+  },
+  {
+   "idx": 51,
+   "name": "30.pcx"
+  },
+  {
+   "idx": 52,
+   "name": "31.pcx"
+  },
+  {
+   "idx": 53,
+   "name": "32.pcx"
+  },
+  {
+   "idx": 54,
+   "name": "33.pcx"
+  },
+  {
+   "idx": 55,
+   "name": "34.pcx"
+  },
+  {
+   "idx": 56,
+   "name": "35.pcx"
+  },
+  {
+   "idx": 57,
+   "name": "36.pcx"
+  },
+  {
+   "idx": 58,
+   "name": "37.pcx"
+  },
+  {
+   "idx": 59,
+   "name": "38.pcx"
+  },
+  {
+   "idx": 60,
+   "name": "39.pcx"
+  },
+  {
+   "idx": 61,
+   "name": "40.pcx"
+  },
+  {
+   "idx": 62,
+   "name": "41.pcx"
+  },
+  {
+   "idx": 63,
+   "name": "42.pcx"
+  },
+  {
+   "idx": 64,
+   "name": "43.pcx"
+  },
+  {
+   "idx": 65,
+   "name": "44.pcx"
+  },
+  {
+   "idx": 66,
+   "name": "45.pcx"
+  },
+  {
+   "idx": 67,
+   "name": "46.pcx"
+  },
+  {
+   "idx": 68,
+   "name": "47.pcx"
+  },
+  {
+   "idx": 69,
+   "name": "48.pcx"
+  },
+  {
+   "idx": 70,
+   "name": "49.pcx"
+  },
+  {
+   "idx": 71,
+   "name": "50.pcx"
+  },
+  {
+   "idx": 72,
+   "name": "51.pcx"
+  },
+  {
+   "idx": 73,
+   "name": "52.pcx"
+  },
+  {
+   "idx": 74,
+   "name": "53.pcx"
+  },
+  {
+   "idx": 75,
+   "name": "54.pcx"
+  },
+  {
+   "idx": 76,
+   "name": "55.pcx"
+  },
+  {
+   "idx": 77,
+   "name": "56.pcx"
+  },
+  {
+   "idx": 78,
+   "name": "57.pcx"
+  },
+  {
+   "idx": 79,
+   "name": "58.pcx"
+  },
+  {
+   "idx": 80,
+   "name": "59.pcx"
+  },
+  {
+   "idx": 81,
+   "name": "60.pcx"
+  },
+  {
+   "idx": 82,
+   "name": "61.pcx"
+  },
+  {
+   "idx": 83,
+   "name": "62.pcx"
+  },
+  {
+   "idx": 84,
+   "name": "63.pcx"
+  },
+  {
+   "idx": 85,
+   "name": "64.pcx"
+  },
+  {
+   "idx": 86,
+   "name": "65.pcx"
+  },
+  {
+   "idx": 87,
+   "name": "66.pcx"
+  },
+  {
+   "idx": 88,
+   "name": "67.pcx"
+  },
+  {
+   "idx": 89,
+   "name": "68.pcx"
+  },
+  {
+   "idx": 90,
+   "name": "69.pcx"
+  },
+  {
+   "idx": 91,
+   "name": "70.pcx"
+  },
+  {
+   "idx": 92,
+   "name": "71.pcx"
+  },
+  {
+   "idx": 93,
+   "name": "72.pcx"
+  },
+  {
+   "idx": 94,
+   "name": "73.pcx"
+  },
+  {
+   "idx": 95,
+   "name": "74.pcx"
+  },
+  {
+   "idx": 96,
+   "name": "75.pcx"
+  },
+  {
+   "idx": 97,
+   "name": "76.pcx"
+  },
+  {
+   "idx": 98,
+   "name": "77.pcx"
+  },
+  {
+   "idx": 99,
+   "name": "78.pcx"
+  },
+  {
+   "idx": 100,
+   "name": "79.pcx"
+  },
+  {
+   "idx": 101,
+   "name": "80.pcx"
+  },
+  {
+   "idx": 102,
+   "name": "81.pcx"
+  },
+  {
+   "idx": 103,
+   "name": "82.pcx"
+  },
+  {
+   "idx": 104,
+   "name": "83.pcx"
+  },
+  {
+   "idx": 105,
+   "name": "84.pcx"
+  },
+  {
+   "idx": 106,
+   "name": "85.pcx"
+  },
+  {
+   "idx": 107,
+   "name": "86.pcx"
+  },
+  {
+   "idx": 108,
+   "name": "87.pcx"
+  },
+  {
+   "idx": 109,
+   "name": "88.pcx"
+  },
+  {
+   "idx": 110,
+   "name": "89.pcx"
+  },
+  {
+   "idx": 111,
+   "name": "90.pcx"
+  },
+  {
+   "idx": 112,
+   "name": "91.pcx"
+  },
+  {
+   "idx": 113,
+   "name": "92.pcx"
+  },
+  {
+   "idx": 114,
+   "name": "93.pcx"
+  },
+  {
+   "idx": 115,
+   "name": "94.pcx"
+  },
+  {
+   "idx": 116,
+   "name": "95.pcx"
+  },
+  {
+   "idx": 117,
+   "name": "96.pcx"
+  },
+  {
+   "idx": 118,
+   "name": "97.pcx"
+  },
+  {
+   "idx": 119,
+   "name": "98.pcx"
+  },
+  {
+   "idx": 120,
+   "name": "99.pcx"
+  },
+  {
+   "idx": 121,
+   "name": "._2e52.wav"
+  }
+ ]
+}

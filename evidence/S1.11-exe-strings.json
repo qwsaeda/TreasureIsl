@@ -1,0 +1,305 @@
+{
+ "0xce273eb8": [
+  "Player_katharina.pcx",
+  "player_katharina.pcx"
+ ],
+ "0xebafa92e": [
+  "flag_kidd.pcx"
+ ],
+ "0xc8ca472e": [
+  "role_status.pcx"
+ ],
+ "0x77a3e1d4": [
+  "attack.wav"
+ ],
+ "0x523f7161": [
+  "flag_holidayplace.pcx"
+ ],
+ "0x1b289fa8": [
+  "button_capture.pcx"
+ ],
+ "0xf3a5358d": [
+  "button_option.pcx"
+ ],
+ "0xfcfffb62": [
+  "number.pcx"
+ ],
+ "0x939e2f09": [
+  "target_locater.pcx"
+ ],
+ "0x9d92b7ec": [
+  "Landmark_city_2.pcx",
+  "landmark_city_2.pcx"
+ ],
+ "0x34786d2f": [
+  "button_base.pcx"
+ ],
+ "0xd3deee43": [
+  "face_kidd.pcx"
+ ],
+ "0x7ea415ea": [
+  "start_panda.pcx"
+ ],
+ "0x551ff8b9": [
+  "levelup.wav"
+ ],
+ "0xd346da26": [
+  "Player_tichy.pcx",
+  "player_tichy.pcx"
+ ],
+ "0x45715c4c": [
+  "Player_drake.pcx",
+  "player_drake.pcx"
+ ],
+ "0x804615c2": [
+  "glmusic.mod"
+ ],
+ "0x9da4d06d": [
+  "Landmark_city_3.pcx",
+  "landmark_city_3.pcx"
+ ],
+ "0x339fe318": [
+  "Landmark_port_2.pcx",
+  "landmark_port_2.pcx"
+ ],
+ "0xe3001cc9": [
+  "Player_panda.pcx",
+  "player_panda.pcx"
+ ],
+ "0x33c4141a": [
+  "LandMark_port_4.pcx",
+  "landmark_port_4.pcx"
+ ],
+ "0xebd70a03": [
+  "button_save.pcx"
+ ],
+ "0x293b3510": [
+  "button_bank.pcx"
+ ],
+ "0x9d28dfc4": [
+  "button_buy.pcx"
+ ],
+ "0xdb7cd834": [
+  "button_focus.pcx"
+ ],
+ "0x67488bb9": [
+  "button_system.pcx"
+ ],
+ "0x8b6f9d61": [
+  "Player_kidd.pcx",
+  "player_kidd.pcx"
+ ],
+ "0x285a6df8": [
+  "flag_Road.pcx",
+  "flag_road.pcx"
+ ],
+ "0x338dca97": [
+  "Landmark_port_1.pcx",
+  "landmark_port_1.pcx"
+ ],
+ "0x696521f1": [
+  "Target_head.pcx",
+  "target_head.pcx"
+ ],
+ "0xebfc8ca2": [
+  "bg.pcx"
+ ],
+ "0x50a893a6": [
+  "flag_branchroad.pcx"
+ ],
+ "0xb20aae0c": [
+  "Target_knife.pcx",
+  "target_knife.pcx"
+ ],
+ "0x9bcac96e": [
+  "face_drake.pcx"
+ ],
+ "0xf20c750f": [
+  "button_view.pcx"
+ ],
+ "0x29a04748": [
+  "face_tichy.pcx"
+ ],
+ "0x28927aa5": [
+  "troop_all.pcx"
+ ],
+ "0x47d426a": [
+  "Logo.pcx",
+  "logo.pcx"
+ ],
+ "0xb3480d10": [
+  "face_savager.pcx"
+ ],
+ "0xdd57b2a5": [
+  "flag_katharina.pcx"
+ ],
+ "0x9ef9b7a9": [
+  "press.wav"
+ ],
+ "0x9db6e8ee": [
+  "Landmark_city_4.pcx",
+  "landmark_city_4.pcx"
+ ],
+ "0x33b1fb99": [
+  "LandMark_port_3.pcx",
+  "landmark_port_3.pcx"
+ ],
+ "0xa12660d4": [
+  "button_return.pcx"
+ ],
+ "0x1eee611d": [
+  "button_aimrole.pcx"
+ ],
+ "0x199b7ed9": [
+  "button_assign.pcx"
+ ],
+ "0xadb2e1b9": [
+  "flag_drake.pcx"
+ ],
+ "0x496cbbd9": [
+  "button_notcapture.pcx"
+ ],
+ "0x5fd66cda": [
+  "face_katharina.pcx"
+ ],
+ "0xae1a80cc": [
+  "victory.wav"
+ ],
+ "0x4ae5a0c4": [
+  "button_build.pcx"
+ ],
+ "0xa0c8d90d": [
+  "button_invest.pcx"
+ ],
+ "0x644c4a0a": [
+  "button_aimland.pcx"
+ ],
+ "0x83795627": [
+  "helm_number.pcx"
+ ],
+ "0x97fb5f4b": [
+  "button_move.pcx"
+ ],
+ "0x1f74e059": [
+  "start_katharina.pcx"
+ ],
+ "0xd5f87662": [
+  "start_kidd.pcx"
+ ],
+ "0xaea72f9e": [
+  "demo.pcx"
+ ],
+ "0xf9d67333": [
+  "text_gameover.pcx"
+ ],
+ "0xe115556d": [
+  "start_drake.pcx"
+ ],
+ "0x4b41a236": [
+  "flag_panda.pcx"
+ ],
+ "0x395989eb": [
+  "face_panda.pcx"
+ ],
+ "0xa43105be": [
+  "button_pay.pcx"
+ ],
+ "0x755c3a00": [
+  "button_info.pcx"
+ ],
+ "0x73ee7719": [
+  "helm_base.pcx"
+ ],
+ "0x7aab1cb4": [
+  "button_load.pcx"
+ ],
+ "0xe56bbe98": [
+  "target_area.pcx"
+ ],
+ "0x6c33ceb4": [
+  "helm_motion.pcx"
+ ],
+ "0x3c7701a4": [
+  "button_trade.pcx"
+ ],
+ "0xa4ad2e05": [
+  "ship_all.pcx"
+ ],
+ "0x8eb1244": [
+  "button_sell.pcx"
+ ],
+ "0x52e90093": [
+  "button_explore.pcx"
+ ],
+ "0xcd753a6e": [
+  "button_exit.pcx"
+ ],
+ "0x669f1308": [
+  "switchpage.pcx"
+ ],
+ "0x6f3ae372": [
+  "flag_battlefield.pcx"
+ ],
+ "0x3b885f93": [
+  "flag_tichy.pcx"
+ ],
+ "0x8f435abf": [
+  "helm_pointer.pcx"
+ ],
+ "0xa09d13f0": [
+  "goods.mdu"
+ ],
+ "0x5c5af184": [
+  "landinfo.pcx"
+ ],
+ "0xfffb9a43": [
+  "Dialogue.pcx",
+  "dialogue.pcx"
+ ],
+ "0x3753dc98": [
+  "mapinfo.ini"
+ ],
+ "0x8fcf2ac": [
+  "button_attack.pcx"
+ ],
+ "0x6eead347": [
+  "start_tichy.pcx"
+ ],
+ "0x49af5826": [
+  "helm_still.pcx"
+ ],
+ "0x9d809f6b": [
+  "Landmark_city_1.pcx",
+  "landmark_city_1.pcx"
+ ],
+ "0x80d07367": [
+  "button_aimcastle.pcx"
+ ],
+ "0x43104390": [
+  "event.ini"
+ ],
+ "0x14a26f17": [
+  "text_gamerwin.pcx"
+ ],
+ "0x759a9d50": [
+  "role_shadow.pcx"
+ ],
+ "0x1b8a9203": [
+  "invalid.wav"
+ ],
+ "0x1e5300ee": [
+  "button_card.pcx"
+ ],
+ "0x8c9620a8": [
+  "button_troop.pcx"
+ ],
+ "0x1f3c1695": [
+  "button_finish.pcx"
+ ],
+ "0xb8d411bb": [
+  "flag_wildwood.pcx"
+ ],
+ "0xca00521b": [
+  "cards.ini"
+ ]
+}

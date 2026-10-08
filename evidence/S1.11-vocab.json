@@ -1,0 +1,195 @@
+{
+ "glpics.pak": [
+  {
+   "idx": 3,
+   "key": "0xd4ef1be",
+   "cands": [
+    "n=156239.pcx"
+   ]
+  },
+  {
+   "idx": 34,
+   "key": "0x6171a968",
+   "cands": []
+  }
+ ],
+ "glmap_m01.pak": [
+  {
+   "idx": 0,
+   "key": "0x37fbb49",
+   "cands": [
+    "dialogue8084r.pcx",
+    "9t7280em.pcx",
+    "7167182.pcx",
+    "dialogue80860.pcx",
+    "dialogue80860.pcx"
+   ]
+  },
+  {
+   "idx": 6,
+   "key": "0x43105ffb",
+   "cands": []
+  },
+  {
+   "idx": 17,
+   "key": "0x80d06f6a",
+   "cands": [
+    "_hr7141k.pcx"
+   ]
+  },
+  {
+   "idx": 29,
+   "key": "0xa23c0229",
+   "cands": []
+  },
+  {
+   "idx": 30,
+   "key": "0xa566a76a",
+   "cands": []
+  },
+  {
+   "idx": 31,
+   "key": "0xa578bfeb",
+   "cands": [
+    "@29689rn.pcx"
+   ]
+  },
+  {
+   "idx": 32,
+   "key": "0xa58ad86c",
+   "cands": []
+  },
+  {
+   "idx": 34,
+   "key": "0xb53654f2",
+   "cands": [
+    "sq006537.pcx",
+    "need844it.pcx"
+   ]
+  },
+  {
+   "idx": 35,
+   "key": "0xb5486d73",
+   "cands": [
+    "sq006538.pcx"
+   ]
+  },
+  {
+   "idx": 36,
+   "key": "0xb55a85f4",
+   "cands": [
+    "0'988470.pcx",
+    "sq006539.pcx"
+   ]
+  },
+  {
+   "idx": 37,
+   "key": "0xb56c9e75",
+   "cands": [
+    "g22077od.pcx",
+    "0'988471.pcx"
+   ]
+  },
+  {
+   "idx": 38,
+   "key": "0xb95f0b95",
+   "cands": [
+    "e!32le.pcx",
+    "cc32le.pcx",
+    "&3844874.pcx"
+   ]
+  },
+  {
+   "idx": 39,
+   "key": "0xc7f79173",
+   "cands": [
+    "landmark_city_1010151.pcx",
+    "@hl783896.fnt"
+   ]
+  },
+  {
+   "idx": 45,
+   "key": "0xe6acd3a6",
+   "cands": [
+    "o!8e.pcx",
+    "mc8e.pcx",
+    "text_gameover.pcx079281.sav",
+    "98016062.ani",
+    "font7400k.pcx"
+   ]
+  }
+ ],
+ "glmap_m02.pak": [
+  {
+   "idx": 0,
+   "key": "0x37fbb49",
+   "cands": [
+    "dialogue8084r.pcx",
+    "9t7280em.pcx",
+    "7167182.pcx",
+    "dialogue80860.pcx",
+    "dialogue80860.pcx"
+   ]
+  },
+  {
+   "idx": 5,
+   "key": "0x40912d92",
+   "cands": [
+    "`t4_2.pcx",
+    "b24_2.pcx",
+    "@l431221.pcx"
+   ]
+  },
+  {
+   "idx": 9,
+   "key": "0x8d8b6a53",
+   "cands": [
+    "`t5_2.pcx",
+    "b25_2.pcx",
+    "@l431321.pcx"
+   ]
+  },
+  {
+   "idx": 11,
+   "key": "0x92de88f1",
+   "cands": [
+    "b32_2.pcx",
+    "@l432021.pcx",
+    "mon1085du"
+   ]
+  },
+  {
+   "idx": 18,
+   "key": "0xb95f0b95",
+   "cands": [
+    "e!32le.pcx",
+    "cc32le.pcx",
+    "&3844874.pcx"
+   ]
+  },
+  {
+   "idx": 22,
+   "key": "0xe4b250ab",
+   "cands": []
+  },
+  {
+   "idx": 23,
+   "key": "0xe4c4692c",
+   "cands": [
+    "landmark_port_4.pcx47270.txt",
+    "landmark_port_4.pcx47270.txt"
+   ]
+  },
+  {
+   "idx": 26,
+   "key": "0xe6acd3a6",
+   "cands": [
+    "o!8e.pcx",
+    "mc8e.pcx",
+    "text_gameover.pcx079281.sav",
+    "98016062.ani",
+    "font7400k.pcx"
+   ]
+  }
+ ]
+}

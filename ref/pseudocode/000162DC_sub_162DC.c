@@ -1,0 +1,11 @@
+/* ea:   0x000162DC */
+/* name: sub_162DC */
+/* size: 64 */
+_DWORD *__fastcall sub_162DC(_DWORD *a1, char *a2)
+{
+  int v4; // r0
+
+  v4 = sub_12F04(a2);
+  return sub_136F8(a1, a2, &a2[2 * v4]);
+}
+

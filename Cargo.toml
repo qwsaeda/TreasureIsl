@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ti-formats",
+    "crates/ti-core",
+    "crates/ti-platform",
+    "crates/ti-app",
+    "crates/ti-tools",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+thiserror = "2"
+flate2 = "1"
+macroquad = "0.4"
+ti-formats = { path = "crates/ti-formats" }
+ti-core = { path = "crates/ti-core" }
+ti-platform = { path = "crates/ti-platform" }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+panic = "deny"

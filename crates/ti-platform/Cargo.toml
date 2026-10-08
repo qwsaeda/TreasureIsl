@@ -1,0 +1,16 @@
+[package]
+name = "ti-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "平台抽象层：gfx/input/audio/storage/clock trait（后端实现于 S2）"
+
+[dependencies]
+thiserror.workspace = true
+macroquad.workspace = true
+ti-core.workspace = true
+ti-formats.workspace = true
+
+[lints]
+workspace = true

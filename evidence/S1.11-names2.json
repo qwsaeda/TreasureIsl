@@ -1,0 +1,1541 @@
+{
+ "ui.pak": [
+  {
+   "idx": 0,
+   "key": "0x2f5cfa6a",
+   "name": "100.pcx"
+  },
+  {
+   "idx": 1,
+   "key": "0x2f6f12eb",
+   "name": "101.pcx"
+  },
+  {
+   "idx": 2,
+   "key": "0x2f812b6c",
+   "name": "102.pcx"
+  },
+  {
+   "idx": 3,
+   "key": "0x2f9343ed",
+   "name": "103.pcx"
+  },
+  {
+   "idx": 4,
+   "key": "0x2fa55c6e",
+   "name": "104.pcx"
+  },
+  {
+   "idx": 5,
+   "key": "0x2fb774ef",
+   "name": "105.pcx"
+  },
+  {
+   "idx": 6,
+   "key": "0x2fc98d70",
+   "name": "106.pcx"
+  },
+  {
+   "idx": 7,
+   "key": "0x2fdba5f1",
+   "name": "107.pcx"
+  },
+  {
+   "idx": 8,
+   "key": "0x2fedbe72",
+   "name": "108.pcx"
+  },
+  {
+   "idx": 9,
+   "key": "0x2fffd6f3",
+   "name": "109.pcx"
+  },
+  {
+   "idx": 10,
+   "key": "0x31b2230b",
+   "name": "110.pcx"
+  },
+  {
+   "idx": 11,
+   "key": "0x31c43b8c",
+   "name": "111.pcx"
+  },
+  {
+   "idx": 12,
+   "key": "0x31d6540d",
+   "name": "112.pcx"
+  },
+  {
+   "idx": 13,
+   "key": "0x31e86c8e",
+   "name": "113.pcx"
+  },
+  {
+   "idx": 14,
+   "key": "0x31fa850f",
+   "name": "114.pcx"
+  },
+  {
+   "idx": 15,
+   "key": "0x320c9d90",
+   "name": "115.pcx"
+  },
+  {
+   "idx": 16,
+   "key": "0x321eb611",
+   "name": "116.pcx"
+  },
+  {
+   "idx": 17,
+   "key": "0x3230ce92",
+   "name": "117.pcx"
+  },
+  {
+   "idx": 18,
+   "key": "0x3242e713",
+   "name": "118.pcx"
+  },
+  {
+   "idx": 19,
+   "key": "0x3254ff94",
+   "name": "119.pcx"
+  },
+  {
+   "idx": 20,
+   "key": "0x34074bac",
+   "name": "120.pcx"
+  },
+  {
+   "idx": 21,
+   "key": "0x3753dc98",
+   "name": null
+  },
+  {
+   "idx": 22,
+   "key": "0x738971fa",
+   "name": "01.pcx"
+  },
+  {
+   "idx": 23,
+   "key": "0x739b8a7b",
+   "name": "02.pcx"
+  },
+  {
+   "idx": 24,
+   "key": "0x73ada2fc",
+   "name": "03.pcx"
+  },
+  {
+   "idx": 25,
+   "key": "0x73bfbb7d",
+   "name": "04.pcx"
+  },
+  {
+   "idx": 26,
+   "key": "0x73d1d3fe",
+   "name": "05.pcx"
+  },
+  {
+   "idx": 27,
+   "key": "0x73e3ec7f",
+   "name": "06.pcx"
+  },
+  {
+   "idx": 28,
+   "key": "0x73f60500",
+   "name": "07.pcx"
+  },
+  {
+   "idx": 29,
+   "key": "0x74081d81",
+   "name": "08.pcx"
+  },
+  {
+   "idx": 30,
+   "key": "0x741a3602",
+   "name": "09.pcx"
+  },
+  {
+   "idx": 31,
+   "key": "0x75cc821a",
+   "name": "10.pcx"
+  },
+  {
+   "idx": 32,
+   "key": "0x75de9a9b",
+   "name": "11.pcx"
+  },
+  {
+   "idx": 33,
+   "key": "0x75f0b31c",
+   "name": "12.pcx"
+  },
+  {
+   "idx": 34,
+   "key": "0x7602cb9d",
+   "name": "13.pcx"
+  },
+  {
+   "idx": 35,
+   "key": "0x7614e41e",
+   "name": "14.pcx"
+  },
+  {
+   "idx": 36,
+   "key": "0x7626fc9f",
+   "name": "15.pcx"
+  },
+  {
+   "idx": 37,
+   "key": "0x76391520",
+   "name": "16.pcx"
+  },
+  {
+   "idx": 38,
+   "key": "0x764b2da1",
+   "name": "17.pcx"
+  },
+  {
+   "idx": 39,
+   "key": "0x765d4622",
+   "name": "18.pcx"
+  },
+  {
+   "idx": 40,
+   "key": "0x766f5ea3",
+   "name": "19.pcx"
+  },
+  {
+   "idx": 41,
+   "key": "0x7821aabb",
+   "name": "20.pcx"
+  },
+  {
+   "idx": 42,
+   "key": "0x7833c33c",
+   "name": "21.pcx"
+  },
+  {
+   "idx": 43,
+   "key": "0x7845dbbd",
+   "name": "22.pcx"
+  },
+  {
+   "idx": 44,
+   "key": "0x7857f43e",
+   "name": "23.pcx"
+  },
+  {
+   "idx": 45,
+   "key": "0x786a0cbf",
+   "name": "24.pcx"
+  },
+  {
+   "idx": 46,
+   "key": "0x787c2540",
+   "name": "25.pcx"
+  },
+  {
+   "idx": 47,
+   "key": "0x788e3dc1",
+   "name": "26.pcx"
+  },
+  {
+   "idx": 48,
+   "key": "0x78a05642",
+   "name": "27.pcx"
+  },
+  {
+   "idx": 49,
+   "key": "0x78b26ec3",
+   "name": "28.pcx"
+  },
+  {
+   "idx": 50,
+   "key": "0x78c48744",
+   "name": "29.pcx"
+  },
+  {
+   "idx": 51,
+   "key": "0x7a76d35c",
+   "name": "30.pcx"
+  },
+  {
+   "idx": 52,
+   "key": "0x7a88ebdd",
+   "name": "31.pcx"
+  },
+  {
+   "idx": 53,
+   "key": "0x7a9b045e",
+   "name": "32.pcx"
+  },
+  {
+   "idx": 54,
+   "key": "0x7aad1cdf",
+   "name": "33.pcx"
+  },
+  {
+   "idx": 55,
+   "key": "0x7abf3560",
+   "name": "34.pcx"
+  },
+  {
+   "idx": 56,
+   "key": "0x7ad14de1",
+   "name": "35.pcx"
+  },
+  {
+   "idx": 57,
+   "key": "0x7ae36662",
+   "name": "36.pcx"
+  },
+  {
+   "idx": 58,
+   "key": "0x7af57ee3",
+   "name": "37.pcx"
+  },
+  {
+   "idx": 59,
+   "key": "0x7b079764",
+   "name": "38.pcx"
+  },
+  {
+   "idx": 60,
+   "key": "0x7b19afe5",
+   "name": "39.pcx"
+  },
+  {
+   "idx": 61,
+   "key": "0x7ccbfbfd",
+   "name": "40.pcx"
+  },
+  {
+   "idx": 62,
+   "key": "0x7cde147e",
+   "name": "41.pcx"
+  },
+  {
+   "idx": 63,
+   "key": "0x7cf02cff",
+   "name": "42.pcx"
+  },
+  {
+   "idx": 64,
+   "key": "0x7d024580",
+   "name": "43.pcx"
+  },
+  {
+   "idx": 65,
+   "key": "0x7d145e01",
+   "name": "44.pcx"
+  },
+  {
+   "idx": 66,
+   "key": "0x7d267682",
+   "name": "45.pcx"
+  },
+  {
+   "idx": 67,
+   "key": "0x7d388f03",
+   "name": "46.pcx"
+  },
+  {
+   "idx": 68,
+   "key": "0x7d4aa784",
+   "name": "47.pcx"
+  },
+  {
+   "idx": 69,
+   "key": "0x7d5cc005",
+   "name": "48.pcx"
+  },
+  {
+   "idx": 70,
+   "key": "0x7d6ed886",
+   "name": "49.pcx"
+  },
+  {
+   "idx": 71,
+   "key": "0x7f21249e",
+   "name": "50.pcx"
+  },
+  {
+   "idx": 72,
+   "key": "0x7f333d1f",
+   "name": "51.pcx"
+  },
+  {
+   "idx": 73,
+   "key": "0x7f4555a0",
+   "name": "52.pcx"
+  },
+  {
+   "idx": 74,
+   "key": "0x7f576e21",
+   "name": "53.pcx"
+  },
+  {
+   "idx": 75,
+   "key": "0x7f6986a2",
+   "name": "54.pcx"
+  },
+  {
+   "idx": 76,
+   "key": "0x7f7b9f23",
+   "name": "55.pcx"
+  },
+  {
+   "idx": 77,
+   "key": "0x7f8db7a4",
+   "name": "56.pcx"
+  },
+  {
+   "idx": 78,
+   "key": "0x7f9fd025",
+   "name": "57.pcx"
+  },
+  {
+   "idx": 79,
+   "key": "0x7fb1e8a6",
+   "name": "58.pcx"
+  },
+  {
+   "idx": 80,
+   "key": "0x7fc40127",
+   "name": "59.pcx"
+  },
+  {
+   "idx": 81,
+   "key": "0x81764d3f",
+   "name": "60.pcx"
+  },
+  {
+   "idx": 82,
+   "key": "0x818865c0",
+   "name": "61.pcx"
+  },
+  {
+   "idx": 83,
+   "key": "0x819a7e41",
+   "name": "62.pcx"
+  },
+  {
+   "idx": 84,
+   "key": "0x81ac96c2",
+   "name": "63.pcx"
+  },
+  {
+   "idx": 85,
+   "key": "0x81beaf43",
+   "name": "64.pcx"
+  },
+  {
+   "idx": 86,
+   "key": "0x81d0c7c4",
+   "name": "65.pcx"
+  },
+  {
+   "idx": 87,
+   "key": "0x81e2e045",
+   "name": "66.pcx"
+  },
+  {
+   "idx": 88,
+   "key": "0x81f4f8c6",
+   "name": "67.pcx"
+  },
+  {
+   "idx": 89,
+   "key": "0x82071147",
+   "name": "68.pcx"
+  },
+  {
+   "idx": 90,
+   "key": "0x821929c8",
+   "name": "69.pcx"
+  },
+  {
+   "idx": 91,
+   "key": "0x83cb75e0",
+   "name": "70.pcx"
+  },
+  {
+   "idx": 92,
+   "key": "0x83dd8e61",
+   "name": "71.pcx"
+  },
+  {
+   "idx": 93,
+   "key": "0x83efa6e2",
+   "name": "72.pcx"
+  },
+  {
+   "idx": 94,
+   "key": "0x8401bf63",
+   "name": "73.pcx"
+  },
+  {
+   "idx": 95,
+   "key": "0x8413d7e4",
+   "name": "74.pcx"
+  },
+  {
+   "idx": 96,
+   "key": "0x8425f065",
+   "name": "75.pcx"
+  },
+  {
+   "idx": 97,
+   "key": "0x843808e6",
+   "name": "76.pcx"
+  },
+  {
+   "idx": 98,
+   "key": "0x844a2167",
+   "name": "77.pcx"
+  },
+  {
+   "idx": 99,
+   "key": "0x845c39e8",
+   "name": "78.pcx"
+  },
+  {
+   "idx": 100,
+   "key": "0x846e5269",
+   "name": "79.pcx"
+  },
+  {
+   "idx": 101,
+   "key": "0x86209e81",
+   "name": "80.pcx"
+  },
+  {
+   "idx": 102,
+   "key": "0x8632b702",
+   "name": "81.pcx"
+  },
+  {
+   "idx": 103,
+   "key": "0x8644cf83",
+   "name": "82.pcx"
+  },
+  {
+   "idx": 104,
+   "key": "0x8656e804",
+   "name": "83.pcx"
+  },
+  {
+   "idx": 105,
+   "key": "0x86690085",
+   "name": "84.pcx"
+  },
+  {
+   "idx": 106,
+   "key": "0x867b1906",
+   "name": "85.pcx"
+  },
+  {
+   "idx": 107,
+   "key": "0x868d3187",
+   "name": "86.pcx"
+  },
+  {
+   "idx": 108,
+   "key": "0x869f4a08",
+   "name": "87.pcx"
+  },
+  {
+   "idx": 109,
+   "key": "0x86b16289",
+   "name": "88.pcx"
+  },
+  {
+   "idx": 110,
+   "key": "0x86c37b0a",
+   "name": "89.pcx"
+  },
+  {
+   "idx": 111,
+   "key": "0x8875c722",
+   "name": "90.pcx"
+  },
+  {
+   "idx": 112,
+   "key": "0x8887dfa3",
+   "name": "91.pcx"
+  },
+  {
+   "idx": 113,
+   "key": "0x8899f824",
+   "name": "92.pcx"
+  },
+  {
+   "idx": 114,
+   "key": "0x88ac10a5",
+   "name": "93.pcx"
+  },
+  {
+   "idx": 115,
+   "key": "0x88be2926",
+   "name": "94.pcx"
+  },
+  {
+   "idx": 116,
+   "key": "0x88d041a7",
+   "name": "95.pcx"
+  },
+  {
+   "idx": 117,
+   "key": "0x88e25a28",
+   "name": "96.pcx"
+  },
+  {
+   "idx": 118,
+   "key": "0x88f472a9",
+   "name": "97.pcx"
+  },
+  {
+   "idx": 119,
+   "key": "0x89068b2a",
+   "name": "98.pcx"
+  },
+  {
+   "idx": 120,
+   "key": "0x8918a3ab",
+   "name": "99.pcx"
+  },
+  {
+   "idx": 121,
+   "key": "0xf6ef0287",
+   "name": "._2e52.wav"
+  }
+ ],
+ "glpics.pak": [
+  {
+   "idx": 0,
+   "key": "0x47d426a",
+   "name": null
+  },
+  {
+   "idx": 1,
+   "key": "0x8eb1244",
+   "name": null
+  },
+  {
+   "idx": 2,
+   "key": "0x8fcf2ac",
+   "name": null
+  },
+  {
+   "idx": 3,
+   "key": "0xd4ef1be",
+   "name": null
+  },
+  {
+   "idx": 4,
+   "key": "0x14a26f17",
+   "name": null
+  },
+  {
+   "idx": 5,
+   "key": "0x199b7ed9",
+   "name": null
+  },
+  {
+   "idx": 6,
+   "key": "0x1b289fa8",
+   "name": null
+  },
+  {
+   "idx": 7,
+   "key": "0x1e5300ee",
+   "name": null
+  },
+  {
+   "idx": 8,
+   "key": "0x1eee611d",
+   "name": null
+  },
+  {
+   "idx": 9,
+   "key": "0x1f3c1695",
+   "name": null
+  },
+  {
+   "idx": 10,
+   "key": "0x1f74e059",
+   "name": null
+  },
+  {
+   "idx": 11,
+   "key": "0x20769d35",
+   "name": "opjd79.sav"
+  },
+  {
+   "idx": 12,
+   "key": "0x285a6df8",
+   "name": null
+  },
+  {
+   "idx": 13,
+   "key": "0x28927aa5",
+   "name": null
+  },
+  {
+   "idx": 14,
+   "key": "0x293b3510",
+   "name": null
+  },
+  {
+   "idx": 15,
+   "key": "0x29a04748",
+   "name": null
+  },
+  {
+   "idx": 16,
+   "key": "0x338dca97",
+   "name": null
+  },
+  {
+   "idx": 17,
+   "key": "0x339fe318",
+   "name": null
+  },
+  {
+   "idx": 18,
+   "key": "0x33b1fb99",
+   "name": null
+  },
+  {
+   "idx": 19,
+   "key": "0x33c4141a",
+   "name": null
+  },
+  {
+   "idx": 20,
+   "key": "0x34786d2f",
+   "name": null
+  },
+  {
+   "idx": 21,
+   "key": "0x395989eb",
+   "name": null
+  },
+  {
+   "idx": 22,
+   "key": "0x3b885f93",
+   "name": "slw01.wav"
+  },
+  {
+   "idx": 23,
+   "key": "0x3c7701a4",
+   "name": null
+  },
+  {
+   "idx": 24,
+   "key": "0x45715c4c",
+   "name": null
+  },
+  {
+   "idx": 25,
+   "key": "0x496cbbd9",
+   "name": null
+  },
+  {
+   "idx": 26,
+   "key": "0x49af5826",
+   "name": null
+  },
+  {
+   "idx": 27,
+   "key": "0x4ae5a0c4",
+   "name": null
+  },
+  {
+   "idx": 28,
+   "key": "0x4b41a236",
+   "name": null
+  },
+  {
+   "idx": 29,
+   "key": "0x50a893a6",
+   "name": null
+  },
+  {
+   "idx": 30,
+   "key": "0x523f7161",
+   "name": null
+  },
+  {
+   "idx": 31,
+   "key": "0x52e90093",
+   "name": ".5os17.ani"
+  },
+  {
+   "idx": 32,
+   "key": "0x5c5af184",
+   "name": null
+  },
+  {
+   "idx": 33,
+   "key": "0x5fd66cda",
+   "name": null
+  },
+  {
+   "idx": 34,
+   "key": "0x6171a968",
+   "name": null
+  },
+  {
+   "idx": 35,
+   "key": "0x644c4a0a",
+   "name": null
+  },
+  {
+   "idx": 36,
+   "key": "0x669f1308",
+   "name": "ypdc28.mod"
+  },
+  {
+   "idx": 37,
+   "key": "0x67488bb9",
+   "name": null
+  },
+  {
+   "idx": 38,
+   "key": "0x696521f1",
+   "name": null
+  },
+  {
+   "idx": 39,
+   "key": "0x6c33ceb4",
+   "name": null
+  },
+  {
+   "idx": 40,
+   "key": "0x6eead347",
+   "name": null
+  },
+  {
+   "idx": 41,
+   "key": "0x6f3ae372",
+   "name": null
+  },
+  {
+   "idx": 42,
+   "key": "0x73ee7719",
+   "name": null
+  },
+  {
+   "idx": 43,
+   "key": "0x755c3a00",
+   "name": null
+  },
+  {
+   "idx": 44,
+   "key": "0x759a9d50",
+   "name": null
+  },
+  {
+   "idx": 45,
+   "key": "0x7aab1cb4",
+   "name": null
+  },
+  {
+   "idx": 46,
+   "key": "0x7ea415ea",
+   "name": null
+  },
+  {
+   "idx": 47,
+   "key": "0x80d07367",
+   "name": "hazf17.fnt"
+  },
+  {
+   "idx": 48,
+   "key": "0x83795627",
+   "name": "znn_05.bmp"
+  },
+  {
+   "idx": 49,
+   "key": "0x8b6f9d61",
+   "name": null
+  },
+  {
+   "idx": 50,
+   "key": "0x8c9620a8",
+   "name": "yiqd64.dat"
+  },
+  {
+   "idx": 51,
+   "key": "0x8f435abf",
+   "name": null
+  },
+  {
+   "idx": 52,
+   "key": "0x939e2f09",
+   "name": null
+  },
+  {
+   "idx": 53,
+   "key": "0x97fb5f4b",
+   "name": null
+  },
+  {
+   "idx": 54,
+   "key": "0x9bcac96e",
+   "name": null
+  },
+  {
+   "idx": 55,
+   "key": "0x9d28dfc4",
+   "name": null
+  },
+  {
+   "idx": 56,
+   "key": "0x9d809f6b",
+   "name": null
+  },
+  {
+   "idx": 57,
+   "key": "0x9d92b7ec",
+   "name": null
+  },
+  {
+   "idx": 58,
+   "key": "0x9da4d06d",
+   "name": null
+  },
+  {
+   "idx": 59,
+   "key": "0x9db6e8ee",
+   "name": null
+  },
+  {
+   "idx": 60,
+   "key": "0xa0c8d90d",
+   "name": null
+  },
+  {
+   "idx": 61,
+   "key": "0xa12660d4",
+   "name": null
+  },
+  {
+   "idx": 62,
+   "key": "0xa43105be",
+   "name": null
+  },
+  {
+   "idx": 63,
+   "key": "0xa4ad2e05",
+   "name": null
+  },
+  {
+   "idx": 64,
+   "key": "0xadb2e1b9",
+   "name": null
+  },
+  {
+   "idx": 65,
+   "key": "0xaea72f9e",
+   "name": null
+  },
+  {
+   "idx": 66,
+   "key": "0xb20aae0c",
+   "name": null
+  },
+  {
+   "idx": 67,
+   "key": "0xb3480d10",
+   "name": ".3sa21.sav"
+  },
+  {
+   "idx": 68,
+   "key": "0xb8d411bb",
+   "name": null
+  },
+  {
+   "idx": 69,
+   "key": "0xc8ca472e",
+   "name": "hefi31.txt"
+  },
+  {
+   "idx": 70,
+   "key": "0xcd753a6e",
+   "name": "zn_f35.pcx"
+  },
+  {
+   "idx": 71,
+   "key": "0xce273eb8",
+   "name": null
+  },
+  {
+   "idx": 72,
+   "key": "0xd346da26",
+   "name": null
+  },
+  {
+   "idx": 73,
+   "key": "0xd3deee43",
+   "name": null
+  },
+  {
+   "idx": 74,
+   "key": "0xd5f87662",
+   "name": null
+  },
+  {
+   "idx": 75,
+   "key": "0xdb7cd834",
+   "name": null
+  },
+  {
+   "idx": 76,
+   "key": "0xdd57b2a5",
+   "name": null
+  },
+  {
+   "idx": 77,
+   "key": "0xe115556d",
+   "name": null
+  },
+  {
+   "idx": 78,
+   "key": "0xe3001cc9",
+   "name": "w_5e56.mod"
+  },
+  {
+   "idx": 79,
+   "key": "0xe56bbe98",
+   "name": null
+  },
+  {
+   "idx": 80,
+   "key": "0xebafa92e",
+   "name": null
+  },
+  {
+   "idx": 81,
+   "key": "0xebd70a03",
+   "name": null
+  },
+  {
+   "idx": 82,
+   "key": "0xebfc8ca2",
+   "name": null
+  },
+  {
+   "idx": 83,
+   "key": "0xf20c750f",
+   "name": null
+  },
+  {
+   "idx": 84,
+   "key": "0xf3a5358d",
+   "name": null
+  },
+  {
+   "idx": 85,
+   "key": "0xf9d67333",
+   "name": null
+  },
+  {
+   "idx": 86,
+   "key": "0xfcfffb62",
+   "name": "xxoi31.fnt"
+  },
+  {
+   "idx": 87,
+   "key": "0xfffb9a43",
+   "name": null
+  }
+ ],
+ "glmap_m01.pak": [
+  {
+   "idx": 0,
+   "key": "0x37fbb49",
+   "name": null
+  },
+  {
+   "idx": 1,
+   "key": "0x7e0a42c",
+   "name": "s00.pcx"
+  },
+  {
+   "idx": 2,
+   "key": "0xe8d8c62",
+   "name": "gr_001.pcx"
+  },
+  {
+   "idx": 3,
+   "key": "0x10d09c82",
+   "name": "gr_010.pcx"
+  },
+  {
+   "idx": 4,
+   "key": "0x30fff368",
+   "name": null
+  },
+  {
+   "idx": 5,
+   "key": "0x3753dc98",
+   "name": null
+  },
+  {
+   "idx": 6,
+   "key": "0x43105ffb",
+   "name": null
+  },
+  {
+   "idx": 7,
+   "key": "0x49daf3a2",
+   "name": null
+  },
+  {
+   "idx": 8,
+   "key": "0x6cddcf0b",
+   "name": "b-03.pcx"
+  },
+  {
+   "idx": 9,
+   "key": "0x6cefe78c",
+   "name": "b-04.pcx"
+  },
+  {
+   "idx": 10,
+   "key": "0x6d02000d",
+   "name": "b-05.pcx"
+  },
+  {
+   "idx": 11,
+   "key": "0x6d14188e",
+   "name": "b-06.pcx"
+  },
+  {
+   "idx": 12,
+   "key": "0x6d26310f",
+   "name": "b-07.pcx"
+  },
+  {
+   "idx": 13,
+   "key": "0x6d384990",
+   "name": "b-08.pcx"
+  },
+  {
+   "idx": 14,
+   "key": "0x6d4a6211",
+   "name": "b-09.pcx"
+  },
+  {
+   "idx": 15,
+   "key": "0x6efcae29",
+   "name": "b-10.pcx"
+  },
+  {
+   "idx": 16,
+   "key": "0x7fae1112",
+   "name": null
+  },
+  {
+   "idx": 17,
+   "key": "0x80d06f6a",
+   "name": null
+  },
+  {
+   "idx": 18,
+   "key": "0x917a99c6",
+   "name": "aiyn70.txt"
+  },
+  {
+   "idx": 19,
+   "key": "0x918cb247",
+   "name": "aiyn71.txt"
+  },
+  {
+   "idx": 20,
+   "key": "0x919ecac8",
+   "name": "grqr60.ani"
+  },
+  {
+   "idx": 21,
+   "key": "0x91b0e349",
+   "name": "grqr61.ani"
+  },
+  {
+   "idx": 22,
+   "key": "0x91c2fbca",
+   "name": "grqr62.ani"
+  },
+  {
+   "idx": 23,
+   "key": "0x96e748e4",
+   "name": null
+  },
+  {
+   "idx": 24,
+   "key": "0x995f2553",
+   "name": null
+  },
+  {
+   "idx": 25,
+   "key": "0x9b8a88af",
+   "name": "bd_001.pcx"
+  },
+  {
+   "idx": 26,
+   "key": "0x9baeb9b1",
+   "name": "bd_003.pcx"
+  },
+  {
+   "idx": 27,
+   "key": "0x9bc0d232",
+   "name": "bd_004.pcx"
+  },
+  {
+   "idx": 28,
+   "key": "0x9c1b4cb7",
+   "name": "bd_009.pcx"
+  },
+  {
+   "idx": 29,
+   "key": "0xa23c0229",
+   "name": null
+  },
+  {
+   "idx": 30,
+   "key": "0xa566a76a",
+   "name": null
+  },
+  {
+   "idx": 31,
+   "key": "0xa578bfeb",
+   "name": null
+  },
+  {
+   "idx": 32,
+   "key": "0xa58ad86c",
+   "name": null
+  },
+  {
+   "idx": 33,
+   "key": "0xb2c0af43",
+   "name": "v9zw85.fnt"
+  },
+  {
+   "idx": 34,
+   "key": "0xb53654f2",
+   "name": null
+  },
+  {
+   "idx": 35,
+   "key": "0xb5486d73",
+   "name": null
+  },
+  {
+   "idx": 36,
+   "key": "0xb55a85f4",
+   "name": null
+  },
+  {
+   "idx": 37,
+   "key": "0xb56c9e75",
+   "name": null
+  },
+  {
+   "idx": 38,
+   "key": "0xb95f0b95",
+   "name": null
+  },
+  {
+   "idx": 39,
+   "key": "0xc7f79173",
+   "name": null
+  },
+  {
+   "idx": 40,
+   "key": "0xe3f39e26",
+   "name": null
+  },
+  {
+   "idx": 41,
+   "key": "0xe4e89a2e",
+   "name": "fag_81.sav"
+  },
+  {
+   "idx": 42,
+   "key": "0xe4fab2af",
+   "name": "fag_82.sav"
+  },
+  {
+   "idx": 43,
+   "key": "0xe50ccb30",
+   "name": "fag_83.sav"
+  },
+  {
+   "idx": 44,
+   "key": "0xe6313b30",
+   "name": "bq31.pcx"
+  },
+  {
+   "idx": 45,
+   "key": "0xe6acd3a6",
+   "name": null
+  },
+  {
+   "idx": 46,
+   "key": "0xfc2b2774",
+   "name": "ng51.pcx"
+  }
+ ],
+ "glmap_m02.pak": [
+  {
+   "idx": 0,
+   "key": "0x37fbb49",
+   "name": null
+  },
+  {
+   "idx": 1,
+   "key": "0x5e55251",
+   "name": "bo_c88.ini"
+  },
+  {
+   "idx": 2,
+   "key": "0x7f2bcad",
+   "name": "s01.pcx"
+  },
+  {
+   "idx": 3,
+   "key": "0xe9fa4e3",
+   "name": "gr_002.pcx"
+  },
+  {
+   "idx": 4,
+   "key": "0x3753dc98",
+   "name": null
+  },
+  {
+   "idx": 5,
+   "key": "0x40912d92",
+   "name": null
+  },
+  {
+   "idx": 6,
+   "key": "0x6c37e3a1",
+   "name": "g01.pcx"
+  },
+  {
+   "idx": 7,
+   "key": "0x6c49fc22",
+   "name": "g02.pcx"
+  },
+  {
+   "idx": 8,
+   "key": "0x6efcae29",
+   "name": "b-10.pcx"
+  },
+  {
+   "idx": 9,
+   "key": "0x8d8b6a53",
+   "name": null
+  },
+  {
+   "idx": 10,
+   "key": "0x8e86bbf8",
+   "name": "xcko49.fnt"
+  },
+  {
+   "idx": 11,
+   "key": "0x92de88f1",
+   "name": null
+  },
+  {
+   "idx": 12,
+   "key": "0xa51c946b",
+   "name": "evep20.pcx"
+  },
+  {
+   "idx": 13,
+   "key": "0xaf495a0a",
+   "name": "appo01.pcx"
+  },
+  {
+   "idx": 14,
+   "key": "0xaf5b728b",
+   "name": "appo02.pcx"
+  },
+  {
+   "idx": 15,
+   "key": "0xaf6d8b0c",
+   "name": "appo03.pcx"
+  },
+  {
+   "idx": 16,
+   "key": "0xaf7fa38d",
+   "name": "appo04.pcx"
+  },
+  {
+   "idx": 17,
+   "key": "0xb2c0af43",
+   "name": "v9zw85.fnt"
+  },
+  {
+   "idx": 18,
+   "key": "0xb95f0b95",
+   "name": null
+  },
+  {
+   "idx": 19,
+   "key": "0xc339fc8e",
+   "name": "b2_11.pcx"
+  },
+  {
+   "idx": 20,
+   "key": "0xc34c150f",
+   "name": "b2_12.pcx"
+  },
+  {
+   "idx": 21,
+   "key": "0xc54404c3",
+   "name": "x_6r95.fnt"
+  },
+  {
+   "idx": 22,
+   "key": "0xe4b250ab",
+   "name": null
+  },
+  {
+   "idx": 23,
+   "key": "0xe4c4692c",
+   "name": null
+  },
+  {
+   "idx": 24,
+   "key": "0xe4d681ad",
+   "name": "fag_80.sav"
+  },
+  {
+   "idx": 25,
+   "key": "0xe6313b30",
+   "name": "bq31.pcx"
+  },
+  {
+   "idx": 26,
+   "key": "0xe6acd3a6",
+   "name": null
+  },
+  {
+   "idx": 27,
+   "key": "0xefecec9d",
+   "name": "b20.pcx"
+  },
+  {
+   "idx": 28,
+   "key": "0xefff051e",
+   "name": "b21.pcx"
+  },
+  {
+   "idx": 29,
+   "key": "0xf0111d9f",
+   "name": "b22.pcx"
+  },
+  {
+   "idx": 30,
+   "key": "0xf0233620",
+   "name": "b23.pcx"
+  },
+  {
+   "idx": 31,
+   "key": "0xf0354ea1",
+   "name": "b24.pcx"
+  },
+  {
+   "idx": 32,
+   "key": "0xf0476722",
+   "name": "b25.pcx"
+  },
+  {
+   "idx": 33,
+   "key": "0xf0597fa3",
+   "name": "b26.pcx"
+  },
+  {
+   "idx": 34,
+   "key": "0xf2542dbf",
+   "name": "b31.pcx"
+  },
+  {
+   "idx": 35,
+   "key": "0xf2664640",
+   "name": "b32.pcx"
+  },
+  {
+   "idx": 36,
+   "key": "0xf2785ec1",
+   "name": "b33.pcx"
+  }
+ ],
+ "cards.lpk": [
+  {
+   "idx": 0,
+   "key": "0x43104390",
+   "name": null
+  },
+  {
+   "idx": 1,
+   "key": "0xc5561d44",
+   "name": "x_6r96.fnt"
+  },
+  {
+   "idx": 2,
+   "key": "0xc56835c5",
+   "name": "x_6r97.fnt"
+  },
+  {
+   "idx": 3,
+   "key": "0xca00521b",
+   "name": null
+  }
+ ],
+ "music.lpk": [
+  {
+   "idx": 0,
+   "key": "0x1b8a9203",
+   "name": null
+  },
+  {
+   "idx": 1,
+   "key": "0x551ff8b9",
+   "name": null
+  },
+  {
+   "idx": 2,
+   "key": "0x77a3e1d4",
+   "name": null
+  },
+  {
+   "idx": 3,
+   "key": "0x804615c2",
+   "name": "7evr50.pcx"
+  },
+  {
+   "idx": 4,
+   "key": "0x9ef9b7a9",
+   "name": "prg31.wav"
+  },
+  {
+   "idx": 5,
+   "key": "0xae1a80cc",
+   "name": null
+  }
+ ],
+ "goods.lpk": [
+  {
+   "idx": 0,
+   "key": "0xa09d13f0",
+   "name": "_11926.txt"
+  }
+ ]
+}

@@ -14,3 +14,11 @@ target/
 *.log.tmp
 __pycache__/
 .venv/
+
+# IDA 调试期临时输出（非产物）
+/diag3_ida
+/hello_ida
+/ida_dump
+
+# S2.5 生成物（scripts/build_wasm.ps1 可重新产出）
+/web/

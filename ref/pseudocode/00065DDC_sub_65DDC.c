@@ -1,0 +1,16 @@
+/* ea:   0x00065DDC */
+/* name: sub_65DDC */
+/* size: 64 */
+char *__fastcall sub_65DDC(int a1, char *a2, _BYTE *a3)
+{
+  _BYTE *v5; // r4
+  char *v6; // r0
+
+  v5 = *(_BYTE **)(a1 + 4);
+  v6 = a2;
+  if ( v5 != a3 )
+    v6 = &v5[(_BYTE *)memmove(a2, a3, v5 - a3) - a3];
+  *(_DWORD *)(a1 + 4) = v6;
+  return a2;
+}
+

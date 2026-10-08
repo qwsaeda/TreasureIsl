@@ -3,10 +3,10 @@
 项目：Windows Mobile 游戏《金银岛 TreasureIsl》(ARM 原生) 的**逆向 + Rust 现代化移植**，目标 WASM(浏览器) + Android 双端。
 背景计划不在此处，按任务路由读文档，**不要凭默认习惯开工**。
 
-## 当前状态（bootstrap 前）
+## 当前状态
 
-- 根目录只有：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA 7.5 数据库，已自动分析、**无自定义命名**）、`data/`（原始资源）、本文件与 `docs/`。
-- **尚无 Cargo 工程、无构建脚本、无 CI**。S0.1 完成后必须回本文件把「命令」一节替换为真实命令。
+- 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA 7.5 数据库，已自动分析、**无自定义命名**）、`data/`（原始资源）、`Cargo.toml`（5 crate workspace）、`scripts/`、`docs/`、`plan/ledger.yaml`。
+- 工程已 bootstrap：`crates/{ti-formats,ti-core,ti-platform,ti-app,ti-tools}`，阶段进度看台账（`plan/ledger.yaml`）。
 
 ## 路由表
 
@@ -31,13 +31,27 @@
 
 ## 命令
 
-- bootstrap 前：无可运行命令。
-- S0.1 之后在此登记真实命令，固定顺序：
-
 ```sh
+# 每轮循环的门禁（8 项，全绿才可把任务置 verified，输出 tee 到 evidence/<id>.log）
+powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
+
+# 单项调试
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test  --workspace
-scripts/gate.ps1       # 上述三项 + 构建 + 占位扫描 + 零未知字节 + 台账校验，全绿才算过
-                       # 构建范围随阶段解锁：native（S0.1 起）→ wasm（S2.5）→ android（S2.6）
+cargo test  -p ti-tools                       # 台账解析器单测
+cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml   # 台账校验（= gate 第 8 项）
+
+# 反编译导出（S0.2）
+"D:\soft\IDA_Pro_v7.5_Portable\idat64.exe" -A -Sscripts\ida_dump.py TreasureIsl.exe
+```
+
+- 构建范围随阶段解锁：native（已解锁）→ wasm（**S2.5 已解锁**，target 已装，产物走 `scripts/build_wasm.ps1`）→ android（S2.6 装 SDK/NDK）；gate 自动按已装 target 判定并打印 SKIP。
+
+```sh
+# S2.5：构建浏览器产物到 web/（wasm + miniquad gl.js + 真实资源）
+powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
+
+# 本地预览（wasm 需 HTTP，不能 file://）
+cargo run -q -p ti-tools --bin serve -- --dir web --port 8080
 ```

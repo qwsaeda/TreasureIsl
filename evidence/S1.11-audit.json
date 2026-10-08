@@ -1,0 +1,1899 @@
+{
+ "summary": {
+  "ui.pak": {
+   "total": 122,
+   "exe": 1,
+   "mapinfo": 120,
+   "inferred": 1,
+   "unknown": 0
+  },
+  "glpics.pak": {
+   "total": 88,
+   "exe": 85,
+   "mapinfo": 0,
+   "inferred": 1,
+   "unknown": 2
+  },
+  "glmap_m01.pak": {
+   "total": 47,
+   "exe": 1,
+   "mapinfo": 46,
+   "inferred": 0,
+   "unknown": 0
+  },
+  "glmap_m02.pak": {
+   "total": 37,
+   "exe": 1,
+   "mapinfo": 32,
+   "inferred": 4,
+   "unknown": 0
+  },
+  "cards.lpk": {
+   "total": 4,
+   "exe": 2,
+   "mapinfo": 0,
+   "inferred": 2,
+   "unknown": 0
+  },
+  "music.lpk": {
+   "total": 6,
+   "exe": 6,
+   "mapinfo": 0,
+   "inferred": 0,
+   "unknown": 0
+  },
+  "goods.lpk": {
+   "total": 1,
+   "exe": 1,
+   "mapinfo": 0,
+   "inferred": 0,
+   "unknown": 0
+  }
+ },
+ "rows": {
+  "ui.pak": [
+   {
+    "idx": 0,
+    "key": "0x2f5cfa6a",
+    "name": "100.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 1,
+    "key": "0x2f6f12eb",
+    "name": "101.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 2,
+    "key": "0x2f812b6c",
+    "name": "102.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 3,
+    "key": "0x2f9343ed",
+    "name": "103.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 4,
+    "key": "0x2fa55c6e",
+    "name": "104.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 5,
+    "key": "0x2fb774ef",
+    "name": "105.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 6,
+    "key": "0x2fc98d70",
+    "name": "106.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 7,
+    "key": "0x2fdba5f1",
+    "name": "107.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 8,
+    "key": "0x2fedbe72",
+    "name": "108.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 9,
+    "key": "0x2fffd6f3",
+    "name": "109.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 10,
+    "key": "0x31b2230b",
+    "name": "110.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 11,
+    "key": "0x31c43b8c",
+    "name": "111.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 12,
+    "key": "0x31d6540d",
+    "name": "112.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 13,
+    "key": "0x31e86c8e",
+    "name": "113.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 14,
+    "key": "0x31fa850f",
+    "name": "114.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 15,
+    "key": "0x320c9d90",
+    "name": "115.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 16,
+    "key": "0x321eb611",
+    "name": "116.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 17,
+    "key": "0x3230ce92",
+    "name": "117.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 18,
+    "key": "0x3242e713",
+    "name": "118.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 19,
+    "key": "0x3254ff94",
+    "name": "119.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 20,
+    "key": "0x34074bac",
+    "name": "120.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 21,
+    "key": "0x3753dc98",
+    "name": "mapinfo.ini",
+    "src": "exe"
+   },
+   {
+    "idx": 22,
+    "key": "0x738971fa",
+    "name": "01.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 23,
+    "key": "0x739b8a7b",
+    "name": "02.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 24,
+    "key": "0x73ada2fc",
+    "name": "03.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 25,
+    "key": "0x73bfbb7d",
+    "name": "04.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 26,
+    "key": "0x73d1d3fe",
+    "name": "05.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 27,
+    "key": "0x73e3ec7f",
+    "name": "06.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 28,
+    "key": "0x73f60500",
+    "name": "07.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 29,
+    "key": "0x74081d81",
+    "name": "08.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 30,
+    "key": "0x741a3602",
+    "name": "09.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 31,
+    "key": "0x75cc821a",
+    "name": "10.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 32,
+    "key": "0x75de9a9b",
+    "name": "11.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 33,
+    "key": "0x75f0b31c",
+    "name": "12.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 34,
+    "key": "0x7602cb9d",
+    "name": "13.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 35,
+    "key": "0x7614e41e",
+    "name": "14.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 36,
+    "key": "0x7626fc9f",
+    "name": "15.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 37,
+    "key": "0x76391520",
+    "name": "16.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 38,
+    "key": "0x764b2da1",
+    "name": "17.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 39,
+    "key": "0x765d4622",
+    "name": "18.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 40,
+    "key": "0x766f5ea3",
+    "name": "19.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 41,
+    "key": "0x7821aabb",
+    "name": "20.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 42,
+    "key": "0x7833c33c",
+    "name": "21.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 43,
+    "key": "0x7845dbbd",
+    "name": "22.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 44,
+    "key": "0x7857f43e",
+    "name": "23.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 45,
+    "key": "0x786a0cbf",
+    "name": "24.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 46,
+    "key": "0x787c2540",
+    "name": "25.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 47,
+    "key": "0x788e3dc1",
+    "name": "26.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 48,
+    "key": "0x78a05642",
+    "name": "27.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 49,
+    "key": "0x78b26ec3",
+    "name": "28.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 50,
+    "key": "0x78c48744",
+    "name": "29.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 51,
+    "key": "0x7a76d35c",
+    "name": "30.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 52,
+    "key": "0x7a88ebdd",
+    "name": "31.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 53,
+    "key": "0x7a9b045e",
+    "name": "32.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 54,
+    "key": "0x7aad1cdf",
+    "name": "33.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 55,
+    "key": "0x7abf3560",
+    "name": "34.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 56,
+    "key": "0x7ad14de1",
+    "name": "35.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 57,
+    "key": "0x7ae36662",
+    "name": "36.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 58,
+    "key": "0x7af57ee3",
+    "name": "37.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 59,
+    "key": "0x7b079764",
+    "name": "38.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 60,
+    "key": "0x7b19afe5",
+    "name": "39.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 61,
+    "key": "0x7ccbfbfd",
+    "name": "40.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 62,
+    "key": "0x7cde147e",
+    "name": "41.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 63,
+    "key": "0x7cf02cff",
+    "name": "42.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 64,
+    "key": "0x7d024580",
+    "name": "43.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 65,
+    "key": "0x7d145e01",
+    "name": "44.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 66,
+    "key": "0x7d267682",
+    "name": "45.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 67,
+    "key": "0x7d388f03",
+    "name": "46.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 68,
+    "key": "0x7d4aa784",
+    "name": "47.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 69,
+    "key": "0x7d5cc005",
+    "name": "48.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 70,
+    "key": "0x7d6ed886",
+    "name": "49.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 71,
+    "key": "0x7f21249e",
+    "name": "50.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 72,
+    "key": "0x7f333d1f",
+    "name": "51.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 73,
+    "key": "0x7f4555a0",
+    "name": "52.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 74,
+    "key": "0x7f576e21",
+    "name": "53.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 75,
+    "key": "0x7f6986a2",
+    "name": "54.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 76,
+    "key": "0x7f7b9f23",
+    "name": "55.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 77,
+    "key": "0x7f8db7a4",
+    "name": "56.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 78,
+    "key": "0x7f9fd025",
+    "name": "57.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 79,
+    "key": "0x7fb1e8a6",
+    "name": "58.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 80,
+    "key": "0x7fc40127",
+    "name": "59.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 81,
+    "key": "0x81764d3f",
+    "name": "60.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 82,
+    "key": "0x818865c0",
+    "name": "61.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 83,
+    "key": "0x819a7e41",
+    "name": "62.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 84,
+    "key": "0x81ac96c2",
+    "name": "63.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 85,
+    "key": "0x81beaf43",
+    "name": "64.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 86,
+    "key": "0x81d0c7c4",
+    "name": "65.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 87,
+    "key": "0x81e2e045",
+    "name": "66.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 88,
+    "key": "0x81f4f8c6",
+    "name": "67.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 89,
+    "key": "0x82071147",
+    "name": "68.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 90,
+    "key": "0x821929c8",
+    "name": "69.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 91,
+    "key": "0x83cb75e0",
+    "name": "70.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 92,
+    "key": "0x83dd8e61",
+    "name": "71.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 93,
+    "key": "0x83efa6e2",
+    "name": "72.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 94,
+    "key": "0x8401bf63",
+    "name": "73.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 95,
+    "key": "0x8413d7e4",
+    "name": "74.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 96,
+    "key": "0x8425f065",
+    "name": "75.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 97,
+    "key": "0x843808e6",
+    "name": "76.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 98,
+    "key": "0x844a2167",
+    "name": "77.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 99,
+    "key": "0x845c39e8",
+    "name": "78.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 100,
+    "key": "0x846e5269",
+    "name": "79.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 101,
+    "key": "0x86209e81",
+    "name": "80.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 102,
+    "key": "0x8632b702",
+    "name": "81.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 103,
+    "key": "0x8644cf83",
+    "name": "82.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 104,
+    "key": "0x8656e804",
+    "name": "83.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 105,
+    "key": "0x86690085",
+    "name": "84.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 106,
+    "key": "0x867b1906",
+    "name": "85.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 107,
+    "key": "0x868d3187",
+    "name": "86.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 108,
+    "key": "0x869f4a08",
+    "name": "87.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 109,
+    "key": "0x86b16289",
+    "name": "88.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 110,
+    "key": "0x86c37b0a",
+    "name": "89.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 111,
+    "key": "0x8875c722",
+    "name": "90.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 112,
+    "key": "0x8887dfa3",
+    "name": "91.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 113,
+    "key": "0x8899f824",
+    "name": "92.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 114,
+    "key": "0x88ac10a5",
+    "name": "93.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 115,
+    "key": "0x88be2926",
+    "name": "94.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 116,
+    "key": "0x88d041a7",
+    "name": "95.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 117,
+    "key": "0x88e25a28",
+    "name": "96.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 118,
+    "key": "0x88f472a9",
+    "name": "97.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 119,
+    "key": "0x89068b2a",
+    "name": "98.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 120,
+    "key": "0x8918a3ab",
+    "name": "99.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 121,
+    "key": "0xf6ef0287",
+    "name": "._2e52.wav",
+    "src": "inferred"
+   }
+  ],
+  "glpics.pak": [
+   {
+    "idx": 0,
+    "key": "0x47d426a",
+    "name": "Logo.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 1,
+    "key": "0x8eb1244",
+    "name": "button_sell.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 2,
+    "key": "0x8fcf2ac",
+    "name": "button_attack.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 3,
+    "key": "0xd4ef1be",
+    "name": null,
+    "src": "unknown"
+   },
+   {
+    "idx": 4,
+    "key": "0x14a26f17",
+    "name": "text_gamerwin.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 5,
+    "key": "0x199b7ed9",
+    "name": "button_assign.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 6,
+    "key": "0x1b289fa8",
+    "name": "button_capture.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 7,
+    "key": "0x1e5300ee",
+    "name": "button_card.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 8,
+    "key": "0x1eee611d",
+    "name": "button_aimrole.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 9,
+    "key": "0x1f3c1695",
+    "name": "button_finish.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 10,
+    "key": "0x1f74e059",
+    "name": "start_katharina.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 11,
+    "key": "0x20769d35",
+    "name": "opjd79.sav",
+    "src": "inferred"
+   },
+   {
+    "idx": 12,
+    "key": "0x285a6df8",
+    "name": "flag_Road.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 13,
+    "key": "0x28927aa5",
+    "name": "troop_all.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 14,
+    "key": "0x293b3510",
+    "name": "button_bank.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 15,
+    "key": "0x29a04748",
+    "name": "face_tichy.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 16,
+    "key": "0x338dca97",
+    "name": "Landmark_port_1.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 17,
+    "key": "0x339fe318",
+    "name": "Landmark_port_2.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 18,
+    "key": "0x33b1fb99",
+    "name": "LandMark_port_3.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 19,
+    "key": "0x33c4141a",
+    "name": "LandMark_port_4.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 20,
+    "key": "0x34786d2f",
+    "name": "button_base.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 21,
+    "key": "0x395989eb",
+    "name": "face_panda.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 22,
+    "key": "0x3b885f93",
+    "name": "flag_tichy.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 23,
+    "key": "0x3c7701a4",
+    "name": "button_trade.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 24,
+    "key": "0x45715c4c",
+    "name": "Player_drake.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 25,
+    "key": "0x496cbbd9",
+    "name": "button_notcapture.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 26,
+    "key": "0x49af5826",
+    "name": "helm_still.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 27,
+    "key": "0x4ae5a0c4",
+    "name": "button_build.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 28,
+    "key": "0x4b41a236",
+    "name": "flag_panda.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 29,
+    "key": "0x50a893a6",
+    "name": "flag_branchroad.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 30,
+    "key": "0x523f7161",
+    "name": "flag_holidayplace.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 31,
+    "key": "0x52e90093",
+    "name": "button_explore.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 32,
+    "key": "0x5c5af184",
+    "name": "landinfo.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 33,
+    "key": "0x5fd66cda",
+    "name": "face_katharina.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 34,
+    "key": "0x6171a968",
+    "name": null,
+    "src": "unknown"
+   },
+   {
+    "idx": 35,
+    "key": "0x644c4a0a",
+    "name": "button_aimland.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 36,
+    "key": "0x669f1308",
+    "name": "switchpage.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 37,
+    "key": "0x67488bb9",
+    "name": "button_system.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 38,
+    "key": "0x696521f1",
+    "name": "Target_head.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 39,
+    "key": "0x6c33ceb4",
+    "name": "helm_motion.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 40,
+    "key": "0x6eead347",
+    "name": "start_tichy.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 41,
+    "key": "0x6f3ae372",
+    "name": "flag_battlefield.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 42,
+    "key": "0x73ee7719",
+    "name": "helm_base.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 43,
+    "key": "0x755c3a00",
+    "name": "button_info.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 44,
+    "key": "0x759a9d50",
+    "name": "role_shadow.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 45,
+    "key": "0x7aab1cb4",
+    "name": "button_load.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 46,
+    "key": "0x7ea415ea",
+    "name": "start_panda.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 47,
+    "key": "0x80d07367",
+    "name": "button_aimcastle.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 48,
+    "key": "0x83795627",
+    "name": "helm_number.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 49,
+    "key": "0x8b6f9d61",
+    "name": "Player_kidd.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 50,
+    "key": "0x8c9620a8",
+    "name": "button_troop.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 51,
+    "key": "0x8f435abf",
+    "name": "helm_pointer.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 52,
+    "key": "0x939e2f09",
+    "name": "target_locater.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 53,
+    "key": "0x97fb5f4b",
+    "name": "button_move.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 54,
+    "key": "0x9bcac96e",
+    "name": "face_drake.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 55,
+    "key": "0x9d28dfc4",
+    "name": "button_buy.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 56,
+    "key": "0x9d809f6b",
+    "name": "Landmark_city_1.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 57,
+    "key": "0x9d92b7ec",
+    "name": "Landmark_city_2.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 58,
+    "key": "0x9da4d06d",
+    "name": "Landmark_city_3.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 59,
+    "key": "0x9db6e8ee",
+    "name": "Landmark_city_4.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 60,
+    "key": "0xa0c8d90d",
+    "name": "button_invest.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 61,
+    "key": "0xa12660d4",
+    "name": "button_return.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 62,
+    "key": "0xa43105be",
+    "name": "button_pay.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 63,
+    "key": "0xa4ad2e05",
+    "name": "ship_all.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 64,
+    "key": "0xadb2e1b9",
+    "name": "flag_drake.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 65,
+    "key": "0xaea72f9e",
+    "name": "demo.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 66,
+    "key": "0xb20aae0c",
+    "name": "Target_knife.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 67,
+    "key": "0xb3480d10",
+    "name": "face_savager.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 68,
+    "key": "0xb8d411bb",
+    "name": "flag_wildwood.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 69,
+    "key": "0xc8ca472e",
+    "name": "role_status.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 70,
+    "key": "0xcd753a6e",
+    "name": "button_exit.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 71,
+    "key": "0xce273eb8",
+    "name": "Player_katharina.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 72,
+    "key": "0xd346da26",
+    "name": "Player_tichy.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 73,
+    "key": "0xd3deee43",
+    "name": "face_kidd.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 74,
+    "key": "0xd5f87662",
+    "name": "start_kidd.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 75,
+    "key": "0xdb7cd834",
+    "name": "button_focus.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 76,
+    "key": "0xdd57b2a5",
+    "name": "flag_katharina.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 77,
+    "key": "0xe115556d",
+    "name": "start_drake.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 78,
+    "key": "0xe3001cc9",
+    "name": "Player_panda.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 79,
+    "key": "0xe56bbe98",
+    "name": "target_area.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 80,
+    "key": "0xebafa92e",
+    "name": "flag_kidd.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 81,
+    "key": "0xebd70a03",
+    "name": "button_save.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 82,
+    "key": "0xebfc8ca2",
+    "name": "bg.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 83,
+    "key": "0xf20c750f",
+    "name": "button_view.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 84,
+    "key": "0xf3a5358d",
+    "name": "button_option.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 85,
+    "key": "0xf9d67333",
+    "name": "text_gameover.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 86,
+    "key": "0xfcfffb62",
+    "name": "number.pcx",
+    "src": "exe"
+   },
+   {
+    "idx": 87,
+    "key": "0xfffb9a43",
+    "name": "Dialogue.pcx",
+    "src": "exe"
+   }
+  ],
+  "glmap_m01.pak": [
+   {
+    "idx": 0,
+    "key": "0x37fbb49",
+    "name": "0.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 1,
+    "key": "0x7e0a42c",
+    "name": "s00.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 2,
+    "key": "0xe8d8c62",
+    "name": "gr_001.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 3,
+    "key": "0x10d09c82",
+    "name": "gr_010.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 4,
+    "key": "0x30fff368",
+    "name": "shui_04_4.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 5,
+    "key": "0x3753dc98",
+    "name": "mapinfo.ini",
+    "src": "exe"
+   },
+   {
+    "idx": 6,
+    "key": "0x43105ffb",
+    "name": "event.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 7,
+    "key": "0x49daf3a2",
+    "name": "shui_01_1.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 8,
+    "key": "0x6cddcf0b",
+    "name": "B-03.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 9,
+    "key": "0x6cefe78c",
+    "name": "B-04.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 10,
+    "key": "0x6d02000d",
+    "name": "B-05.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 11,
+    "key": "0x6d14188e",
+    "name": "B-06.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 12,
+    "key": "0x6d26310f",
+    "name": "B-07.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 13,
+    "key": "0x6d384990",
+    "name": "B-08.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 14,
+    "key": "0x6d4a6211",
+    "name": "B-09.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 15,
+    "key": "0x6efcae29",
+    "name": "B-10.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 16,
+    "key": "0x7fae1112",
+    "name": "shui.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 17,
+    "key": "0x80d06f6a",
+    "name": "ice.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 18,
+    "key": "0x917a99c6",
+    "name": "shui_5.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 19,
+    "key": "0x918cb247",
+    "name": "shui_6.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 20,
+    "key": "0x919ecac8",
+    "name": "shui_7.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 21,
+    "key": "0x91b0e349",
+    "name": "shui_8.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 22,
+    "key": "0x91c2fbca",
+    "name": "shui_9.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 23,
+    "key": "0x96e748e4",
+    "name": "shui_02_2.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 24,
+    "key": "0x995f2553",
+    "name": "card.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 25,
+    "key": "0x9b8a88af",
+    "name": "bd_001.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 26,
+    "key": "0x9baeb9b1",
+    "name": "bd_003.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 27,
+    "key": "0x9bc0d232",
+    "name": "bd_004.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 28,
+    "key": "0x9c1b4cb7",
+    "name": "bd_009.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 29,
+    "key": "0xa23c0229",
+    "name": "diji_1.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 30,
+    "key": "0xa566a76a",
+    "name": "diji_10001.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 31,
+    "key": "0xa578bfeb",
+    "name": "diji_10002.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 32,
+    "key": "0xa58ad86c",
+    "name": "diji_10003.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 33,
+    "key": "0xb2c0af43",
+    "name": "war.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 34,
+    "key": "0xb53654f2",
+    "name": "shui_01.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 35,
+    "key": "0xb5486d73",
+    "name": "shui_02.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 36,
+    "key": "0xb55a85f4",
+    "name": "shui_03.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 37,
+    "key": "0xb56c9e75",
+    "name": "shui_04.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 38,
+    "key": "0xb95f0b95",
+    "name": "Castle.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 39,
+    "key": "0xc7f79173",
+    "name": "pool.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 40,
+    "key": "0xe3f39e26",
+    "name": "shui_03_3.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 41,
+    "key": "0xe4e89a2e",
+    "name": "diji20003.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 42,
+    "key": "0xe4fab2af",
+    "name": "diji20004.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 43,
+    "key": "0xe50ccb30",
+    "name": "diji20005.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 44,
+    "key": "0xe6313b30",
+    "name": "BOSS.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 45,
+    "key": "0xe6acd3a6",
+    "name": "MAZE.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 46,
+    "key": "0xfc2b2774",
+    "name": "new1.pcx",
+    "src": "mapinfo"
+   }
+  ],
+  "glmap_m02.pak": [
+   {
+    "idx": 0,
+    "key": "0x37fbb49",
+    "name": "0.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 1,
+    "key": "0x5e55251",
+    "name": "zhuzi-1.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 2,
+    "key": "0x7f2bcad",
+    "name": "s01.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 3,
+    "key": "0xe9fa4e3",
+    "name": "gr_002.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 4,
+    "key": "0x3753dc98",
+    "name": "mapinfo.ini",
+    "src": "exe"
+   },
+   {
+    "idx": 5,
+    "key": "0x40912d92",
+    "name": "B24_2.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 6,
+    "key": "0x6c37e3a1",
+    "name": "g01.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 7,
+    "key": "0x6c49fc22",
+    "name": "g02.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 8,
+    "key": "0x6efcae29",
+    "name": "B-10.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 9,
+    "key": "0x8d8b6a53",
+    "name": "B25_2.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 10,
+    "key": "0x8e86bbf8",
+    "name": "huo_4.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 11,
+    "key": "0x92de88f1",
+    "name": "B32_2.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 12,
+    "key": "0xa51c946b",
+    "name": "event0.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 13,
+    "key": "0xaf495a0a",
+    "name": "appo01.pcx",
+    "src": "inferred"
+   },
+   {
+    "idx": 14,
+    "key": "0xaf5b728b",
+    "name": "appo02.pcx",
+    "src": "inferred"
+   },
+   {
+    "idx": 15,
+    "key": "0xaf6d8b0c",
+    "name": "appo03.pcx",
+    "src": "inferred"
+   },
+   {
+    "idx": 16,
+    "key": "0xaf7fa38d",
+    "name": "appo04.pcx",
+    "src": "inferred"
+   },
+   {
+    "idx": 17,
+    "key": "0xb2c0af43",
+    "name": "war.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 18,
+    "key": "0xb95f0b95",
+    "name": "Castle.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 19,
+    "key": "0xc339fc8e",
+    "name": "B2_11.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 20,
+    "key": "0xc34c150f",
+    "name": "B2_12.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 21,
+    "key": "0xc54404c3",
+    "name": "card0.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 22,
+    "key": "0xe4b250ab",
+    "name": "diji20000.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 23,
+    "key": "0xe4c4692c",
+    "name": "diji20001.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 24,
+    "key": "0xe4d681ad",
+    "name": "diji20002.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 25,
+    "key": "0xe6313b30",
+    "name": "BOSS.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 26,
+    "key": "0xe6acd3a6",
+    "name": "MAZE.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 27,
+    "key": "0xefecec9d",
+    "name": "B20.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 28,
+    "key": "0xefff051e",
+    "name": "B21.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 29,
+    "key": "0xf0111d9f",
+    "name": "B22.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 30,
+    "key": "0xf0233620",
+    "name": "B23.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 31,
+    "key": "0xf0354ea1",
+    "name": "B24.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 32,
+    "key": "0xf0476722",
+    "name": "B25.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 33,
+    "key": "0xf0597fa3",
+    "name": "B26.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 34,
+    "key": "0xf2542dbf",
+    "name": "B31.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 35,
+    "key": "0xf2664640",
+    "name": "B32.pcx",
+    "src": "mapinfo"
+   },
+   {
+    "idx": 36,
+    "key": "0xf2785ec1",
+    "name": "B33.pcx",
+    "src": "mapinfo"
+   }
+  ],
+  "cards.lpk": [
+   {
+    "idx": 0,
+    "key": "0x43104390",
+    "name": "event.ini",
+    "src": "exe"
+   },
+   {
+    "idx": 1,
+    "key": "0xc5561d44",
+    "name": "x_6r96.fnt",
+    "src": "inferred"
+   },
+   {
+    "idx": 2,
+    "key": "0xc56835c5",
+    "name": "x_6r97.fnt",
+    "src": "inferred"
+   },
+   {
+    "idx": 3,
+    "key": "0xca00521b",
+    "name": "cards.ini",
+    "src": "exe"
+   }
+  ],
+  "music.lpk": [
+   {
+    "idx": 0,
+    "key": "0x1b8a9203",
+    "name": "invalid.wav",
+    "src": "exe"
+   },
+   {
+    "idx": 1,
+    "key": "0x551ff8b9",
+    "name": "levelup.wav",
+    "src": "exe"
+   },
+   {
+    "idx": 2,
+    "key": "0x77a3e1d4",
+    "name": "attack.wav",
+    "src": "exe"
+   },
+   {
+    "idx": 3,
+    "key": "0x804615c2",
+    "name": "glmusic.mod",
+    "src": "exe"
+   },
+   {
+    "idx": 4,
+    "key": "0x9ef9b7a9",
+    "name": "press.wav",
+    "src": "exe"
+   },
+   {
+    "idx": 5,
+    "key": "0xae1a80cc",
+    "name": "victory.wav",
+    "src": "exe"
+   }
+  ],
+  "goods.lpk": [
+   {
+    "idx": 0,
+    "key": "0xa09d13f0",
+    "name": "goods.mdu",
+    "src": "exe"
+   }
+  ]
+ }
+}

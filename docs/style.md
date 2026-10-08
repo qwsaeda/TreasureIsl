@@ -125,3 +125,16 @@ pub trait SaveCodec { fn encode(&self) -> Vec<u8>; }                   // v1/v2 
 - 新增依赖必须：纯 Rust（wasm/Android 双端可编）、维护活跃、无传递膨胀；引入前在任务 evidence 里记录候选对比。
 - 已定：`macroquad`（渲染/输入/音频）、`thiserror`（错误）、`serde`+`serde_json`（JSON）、`flate2`（zlib）、`png`（资源导出）。其余按需走 §5.9 流程。
 - 禁止 `unsafe`；平台后端确需时单独 feature 解封 + `// SAFETY:` 注释，并先记 `docs/experience.md`。
+
+## §5.10 Clippy pedantic 规约（`-D warnings` 强制）
+
+workspace `[workspace.lints]` 开了 `all` + `pedantic` + `panic = deny` + `unwrap_used = deny`，以下模式反复触发，写代码时直接规避（详见 EXP-015）：
+
+| 模式 | 触发 lint | 规避写法 |
+|---|---|---|
+| `assert!(false, ...)` | `assertions_on_constants` | `assert!(matches!(ev, Pat { .. }))` + `if let Pat { .. } = ev { ... }` |
+| `[T; N]` 栈数组 > 16 KB | `large_stack_arrays` | `Box<[T]>` = `vec![val; n].into_boxed_slice()` |
+| `u32 as f32` / `i32 as f32` | `cast_precision_loss` | f32 字面量 `const LW: f32 = 176.0;` 或 `#[allow(clippy::cast_precision_loss)]` |
+| `fn new() -> Self` 无 Default | `new_without_default` | 手动 `impl Default { fn default() -> Self { Self::new() } }` |
+| 宏展开后变量未用 | `unused_variables` | `#[allow(unused_variables)] let x = ...;` |
+| 返回值的 pub fn | `must_use_candidate` | 加 `#[must_use]` |

@@ -1,0 +1,11 @@
+# S2.5（wasm 壳音频）：quad-snd 0.2.8 的 wasm 后端用「不带
+# #[link(wasm_import_module = "env")] 的 extern "C" 声明」声明了 audio_* 导入；
+# rust-lld 默认把未定义符号当链接错误（macOS/Android 侧 miniquad 是显式标注的，
+# 所以只有 macroquad 的 `audio` feature 会踩到）。
+# 这里对 wasm 目标放行未定义符号 → 它们会退化为 module="env" 的导入，
+# 由 web/audio.js 的 register_plugin 注入实现（miniquad gl.js 的 register_plugins
+# 会在 WebAssembly.instantiate 之前合并到 importObject.env）。
+#
+# 只影响 wasm32-unknown-unknown，不改变 native/android 的链接行为。
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=--allow-undefined"]

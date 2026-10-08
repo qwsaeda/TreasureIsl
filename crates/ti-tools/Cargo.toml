@@ -1,0 +1,34 @@
+﻿[package]
+name = "ti-tools"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "逆向与资源管线工具：台账校验、解包、格式转换、校验报告"
+
+[[bin]]
+name = "ledger"
+path = "src/bin/ledger.rs"
+
+[[bin]]
+name = "unpak"
+path = "src/bin/unpak.rs"
+
+[[bin]]
+name = "build_assets"
+path = "src/bin/build_assets.rs"
+
+[[bin]]
+name = "map2json"
+path = "src/bin/map2json.rs"
+
+[[bin]]
+name = "serve"
+path = "src/bin/serve.rs"
+
+[dependencies]
+ti-formats.workspace = true
+ti-platform.workspace = true
+
+[lints]
+workspace = true

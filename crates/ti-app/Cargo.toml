@@ -1,0 +1,28 @@
+[package]
+name = "ti-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "TreasureIsl 组装层：场景注册、主循环、三端入口（入口 bin 随 S2/S3 加入）"
+
+[dependencies]
+thiserror.workspace = true
+# audio = quad-snd（macroquad 0.4.16 的真实音频输出；wasm 上走 WebAudio 胶水 js/audio.js）
+macroquad = { workspace = true, features = ["audio"] }
+ti-core.workspace = true
+ti-formats.workspace = true
+ti-platform.workspace = true
+
+[[bin]]
+name = "treasure-wasm"
+path = "src/bin/treasure_wasm.rs"
+required-features = ["wasm-shell"]
+
+[features]
+default = []
+# wasm/浏览器壳（S2.5）：桌面构建不参与
+wasm-shell = []
+
+[lints]
+workspace = true

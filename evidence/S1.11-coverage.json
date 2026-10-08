@@ -1,0 +1,37 @@
+{
+ "report": {
+  "ui.pak": [
+   121,
+   122
+  ],
+  "glpics.pak": [
+   85,
+   88
+  ],
+  "glmap_m01.pak": [
+   47,
+   47
+  ],
+  "glmap_m02.pak": [
+   33,
+   37
+  ],
+  "cards.lpk": [
+   0,
+   4
+  ],
+  "music.lpk": [
+   0,
+   6
+  ],
+  "goods.lpk": [
+   0,
+   1
+  ]
+ },
+ "mapinfo_counts": {
+  "glmap_m01": 49,
+  "glmap_m02": 34,
+  "ui": 121
+ }
+}

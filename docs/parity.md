@@ -16,7 +16,7 @@
 | # | 判据 | 验收 |
 |---|---|---|
 | P1-1 | 全部记录 100% 解析为 JSON，JSON→二进制 roundtrip 无损 | `define_format!` 生成的 `roundtrip_all!` 测试全绿 |
-| P1-2 | 逆出的 `name→key` 哈希函数对 exe 内 119 个资源名**命中率 100%** | `cargo test -p ti-tools --test pak_key` → 119/119 |
+| P1-2 | 逆出的 `name→key` 哈希函数（djb2 种子 0 + 小写）对**可由资源名解释的容器条目**命中率 100%（实测 85/85，`glpics.pak`），ID 型 key 另立 S1.11 | `cargo test -p ti-tools --test pak_key` |
 | P1-3 | 每个 `.Map` 控件记录字段全定义、事件 id 全部提取 | `ref/event_ids.json` 计数 == 解析器提取计数 |
 
 ## P2 逻辑对齐（双通道差分）
@@ -60,10 +60,12 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
    cargo build --workspace --target wasm32-unknown-unknown          # S2.5 解锁（需先 rustup target add）
    cargo build -p ti-app --target aarch64-linux-android             # S2.6 解锁（需 NDK）
 5  占位扫描：Select-String -Path crates/**/*.rs -Pattern 'TODO|FIXME|unimplemented!|todo!|panic!\(' → 0 命中
-6  unwrap 扫描：同上 Pattern '\.unwrap\(\)|\.expect\('，排除 tests/ → 0 命中
-   （本机无 ripgrep，扫描一律用 PowerShell Select-String，见 EXP-011）
-7  cargo run -p ti-tools -- verify --zero-unknown      # 全格式 0 未知字节（S1.3 起才有输出，之前 SKIP）
-8  ledger 校验：verified 任务必须带 evidence 文件；rounds<3；状态/依赖合法（python 脚本校验）
+6  库代码 unwrap 扫描：同上 Pattern '\.unwrap\(\)|\.expect\('，排除 `tests/` 目录 → 0 命中
+   （内联 `#[cfg(test)]` 模块同样禁止 unwrap；本机无 ripgrep，扫描一律用
+    PowerShell Select-String，见 EXP-011）
+7  cargo run -q -p ti-tools --bin verify -- --zero-unknown   # S1 起解锁，之前 SKIP
+8  台账校验：`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml`
+   （解析 `docs/loop.md` §1 schema：状态/依赖/rounds/verified 必须有 evidence 文件）
 ```
 
 任一项红灯 = 本轮不可标 verified，不可推进下一任务。

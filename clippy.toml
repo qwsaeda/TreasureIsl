@@ -1,0 +1,5 @@
+# CLIPPY CONFIG (workspace)
+# MSRV 必须与 workspace.package.rust-version 保持一致
+msrv = "1.85"
+# 仓库内 crate 尚未发布，不需要为外部使用者保留旧 API
+avoid-breaking-exported-api = false
