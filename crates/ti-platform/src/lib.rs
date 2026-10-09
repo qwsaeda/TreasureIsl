@@ -11,6 +11,10 @@ pub mod backend;
 pub mod error;
 pub mod gfx;
 pub mod input;
+pub mod mod_pcm;
+#[cfg(feature = "ogg")]
+pub mod ogg_encode;
+pub mod settings;
 pub mod storage;
 
 pub use audio::{Clip, Mixer, parse_wav};
@@ -19,6 +23,9 @@ pub use backend::{
     Audio, Backend, Channel, Clock, Event, Gfx, Input, KeyCode, Rect, Rgb565, Storage,
 };
 pub use error::{Error, Result};
-pub use gfx::{FB_PIXELS, Framebuf, Viewport};
+pub use gfx::{FB_PIXELS, FramePresenter, Framebuf, UploadMode, Viewport};
 pub use input::{HeadlessInput, VirtualButton, translate_event};
+pub use settings::{
+    Gesture, GestureTracker, KeyBindings, Orientation, ScaleMode, Settings, VirtualKeyPad,
+};
 pub use storage::{FileStore, MemoryStore, validate_key};
