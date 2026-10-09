@@ -1,13 +1,15 @@
 ﻿S4.3 wasm 体积记录（2026-10-10）
 
 == wasm 主体 ==
-treasure_wasm.wasm              744,927 B
+treasure_wasm.wasm              776,193 B
 
 == 首屏附属资源（阻塞首帧渲染，不含 wasm 主体）==
 audio.js                          6,139 B
 gl.js                            67,252 B
 index.html                        2,262 B
 font.dat                          2,034 B
+glmapm01.Map                     17,148 B
+glmap_m01.pak                    39,609 B
 glpics.pak                       87,027 B
 GoldLand.Fnt                     24,384 B
 index.Map                           780 B
@@ -20,7 +22,7 @@ selectrole.Map                    1,788 B
 settings.dat                          8 B
 ui.pak                          102,369 B
 vs.Map                            2,388 B
-首屏附属合计                          308,227 B
+首屏附属合计                          364,984 B
 
 == 非首屏资源（进对应场景或空闲补载，不阻塞首屏）==
 background.Map                      276 B
@@ -29,10 +31,8 @@ build.Map                         1,836 B
 card.Map                          1,500 B
 cards.lpk                        34,000 B
 castle.Map                        4,116 B
-glmapm01.Map                     17,148 B
 glmapm02.Map                     18,948 B
 glmapm03.Map                      8,976 B
-glmap_m01.pak                    39,609 B
 glmap_m02.pak                    30,315 B
 goods.lpk                           469 B
 help.Map                          2,460 B
@@ -43,12 +43,12 @@ music.lpk                        67,737 B
 option.Map                        3,732 B
 selecttarget.Map                  2,676 B
 trade.Map                         3,828 B
-非首屏合计                           250,154 B
+非首屏合计                           193,397 B
 
 == 预算比对（基准见 docs/plan-s4.md §S4.3 体积预算）==
-wasm 主体 744,927 B / 预算 800,000 B -> PASS
-首屏附属 308,227 B / 预算 430,000 B -> PASS
-非首屏   250,154 B / 预算 180,000 B -> FAIL(超预算)
+wasm 主体 776,193 B / 预算 800,000 B -> PASS
+首屏附属 364,984 B / 预算 430,000 B -> PASS
+非首屏   193,397 B / 预算 180,000 B -> FAIL(超预算)
 
 分包说明（资源改造 Step 1，docs/modernization.md §9）：
   首屏  = wasm + gl.js + audio.js + 字体 + ui.pak + glpics.pak + index/intro.Map

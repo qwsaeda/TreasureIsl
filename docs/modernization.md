@@ -262,10 +262,27 @@ else:
 
 ## 9. 资源体积预算
 
-| 项 | 预算 | 说明 |
+> 2026-10-10 修订（S5.6/S6.1~S6.4 后实测）：首屏含 8 场景 `.Map` + `ui.pak` + `glpics.pak`
+> + 地形 `glmap_m01.pak`/`glmapm01.Map`（bin 启动即 fetch）。
+
+| 项 | 预算 | 实测 | 说明 |
+|---|---|---|---|
+| wasm 主体 | ≤ 800 KB | 745 KB | S5.6/S6.1~S6.4 后 wasm 增长（sprite_atlas + terrain_atlas + 触屏/滤波/边框） |
+| 首屏资源 | ≤ 490 KB | 308 KB | 字体 + 8 场景 .Map + ui.pak + glpics.pak + 地形 pak + settings |
+| TTF 字体 | ≤ 4 MB | — | 思源黑体子集（非首屏分包，待 M2） |
+| 非首屏资源 | ≤ 180 KB | 250 KB | glmap_m02/m03 + cards/goods + music.lpk + 其余场景 .Map |
+
+**首屏明细**（`build_wasm.ps1` 实测 308,227 B）：
+
+| 类别 | 文件 | 字节 |
 |---|---|---|
-| wasm 主体 | ≤ 800 KB | S2.5 实测 670KB |
-| 首屏资源 | ≤ 150 KB | 字体 + settings.dat |
-| TTF 字体 | ≤ 4 MB | 思源黑体子集（非首屏分包） |
-| 非首屏资源 | ≤ 100 KB | music.lpk |
+| 字体 | GoldLand.Fnt + font.dat + settings.dat | 26 KB |
+| 精灵 | ui.pak + glpics.pak | 185 KB |
+| 场景布局 | 8 个 .Map | 31 KB |
+| 地形 | glmap_m01.pak + glmapm01.Map | 55 KB |
+
+**非首屏明细**（250,154 B）：glmap_m02.pak（30 KB）+ glmapm02/m03.Map（27 KB）
++ cards.lpk（33 KB）+ goods.lpk（0.5 KB）+ music.lpk（66 KB）+ 其余 18 场景 .Map（47 KB）。
+
+**三键快捷键**（native + wasm）：`F1` 缩放模式 / `F2` 上采样滤波 / `F3` 边框样式。
 | PWA service worker | ≤ 10 KB | 预缓存清单 |
