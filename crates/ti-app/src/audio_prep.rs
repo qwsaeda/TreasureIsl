@@ -16,6 +16,17 @@ use ti_platform::audio_asset::{Asset, Kind};
 
 use crate::Result;
 
+/// OGG/Opus 转码（S1.7b）。
+///
+/// 默认关闭：`build_assets` 离线预转码产物已落 `assets_out/audio/*.ogg`，
+/// 游戏运行时直接播放预编码文件；此 feature 仅供测试链路与未来在线转码场景
+/// 显式开启。关闭时本 feature 不引入 `opus-pure` 依赖体积
+/// （见 docs/style.md §5.9，wasm 体积预算 800 KB）。
+#[cfg(feature = "mod-ogg")]
+use ti_platform::mod_pcm::ModAudio;
+#[cfg(feature = "mod-ogg")]
+use ti_platform::ogg_encode::encode_ogg;
+
 /// 混音音量（0..=255）：255 = 原样混音，响度交给播放端的 `PlaySoundParams`。
 pub const MIX_VOLUME: u8 = 255;
 
@@ -64,12 +75,25 @@ impl MixedTrack {
 pub struct MusicBundle {
     /// 成功过混音器的 WAV 曲目（保持条目顺序）。
     pub tracks: Vec<MixedTrack>,
-    /// 识别为 MOD 的条目数（原版 BGM，播放器属 S1.7b，当前未接入）。
+    /// MOD 条目转码出的 OGG/Opus 曲目（BGM；原版 `glmusic.mod`，F-208）。
+    pub ogg_tracks: Vec<OggTrack>,
+    /// 识别为 MOD 的条目数（原版 BGM，S1.7b 起已转 OGG 并接入播放）。
     pub mod_count: usize,
     /// 识别为其他二进制的条目数。
     pub binary_count: usize,
     /// 未能进入混音的条目数（解压失败 / 非法 WAV / 非单声道 / 空采样）。
     pub skipped: usize,
+}
+
+/// MOD 条目转 OGG/Opus 后的曲目。
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct OggTrack {
+    /// `music.lpk` 条目 key。
+    pub key: u32,
+    /// 标题（INHL.MOD 0x14 起 NUL 结尾，实测 "I Need Her Love"）。
+    pub title: String,
+    /// OGG/Opus 字节流（RFC 7845，可直接喂 `load_sound_from_bytes`）。
+    pub ogg: Vec<u8>,
 }
 
 /// 解包 `music.lpk` 并把每条 WAV 曲目过一遍 [`Mixer`]（`looping = true`）。
@@ -93,7 +117,33 @@ pub fn prepare_music(buf: &[u8]) -> Result<MusicBundle> {
         };
         let asset = Asset::detect(&raw);
         match asset.kind {
-            Kind::Mod => out.mod_count += 1,
+            Kind::Mod => {
+                out.mod_count += 1;
+                #[cfg(feature = "mod-ogg")]
+                {
+                    let Ok(audio) = ModAudio::parse(&raw) else {
+                        out.skipped += 1;
+                        continue;
+                    };
+                    let pcm = audio.to_i16();
+                    match encode_ogg(&pcm, audio.sample_rate) {
+                        Ok(ogg) => out.ogg_tracks.push(OggTrack {
+                            key: entry.key,
+                            title: audio.title,
+                            ogg,
+                        }),
+                        Err(e) => {
+                            eprintln!("[audio_prep] MOD 条目 {entry:?} OGG 编码失败: {e}");
+                            out.skipped += 1;
+                        }
+                    }
+                }
+                #[cfg(not(feature = "mod-ogg"))]
+                {
+                    // 未开启在线转码：MOD 条目计跳过（离线 OGG 产物由 build_assets 提供）
+                    out.skipped += 1;
+                }
+            }
             Kind::Binary => out.binary_count += 1,
             Kind::Wav => {
                 let Ok(clip) = parse_wav(&raw) else {

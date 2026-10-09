@@ -9,20 +9,55 @@ description = "TreasureIsl 组装层：场景注册、主循环、三端入口�
 [dependencies]
 thiserror.workspace = true
 # audio = quad-snd（macroquad 0.4.16 的真实音频输出；wasm 上走 WebAudio 胶水 js/audio.js）
+# Android target 下 macroquad 的音频/渲染经 miniquad → NDK ANativeWindow + AAudio，
+# 资源 IO 走 macroquad::file::load_file（APK assets 后端，S2.6 在 Mac 编译 APK 时生效）。
 macroquad = { workspace = true, features = ["audio"] }
 ti-core.workspace = true
 ti-formats.workspace = true
 ti-platform.workspace = true
+# S5.2：headless 全流程脚本解析（full_run.json，复用 workspace serde/serde_json，不新增依赖）
+serde.workspace = true
+serde_json.workspace = true
 
 [[bin]]
 name = "treasure-wasm"
 path = "src/bin/treasure_wasm.rs"
 required-features = ["wasm-shell"]
 
+[[bin]]
+name = "treasure-native"
+path = "src/bin/treasure_native.rs"
+required-features = ["native-shell"]
+
+[[bin]]
+name = "treasure-headless"
+path = "src/bin/treasure_headless.rs"
+required-features = ["headless"]
+
+[[bin]]
+name = "treasure-android"
+path = "src/bin/treasure_android.rs"
+required-features = ["android-shell"]
+
 [features]
 default = []
 # wasm/浏览器壳（S2.5）：桌面构建不参与
 wasm-shell = []
+# 桌面 native 壳：std::fs 读本地 data/ 资源（与 wasm 同源），macroquad 原生窗口
+native-shell = []
+# S2.6 Android 壳：macroquad native（NDK ANativeWindow + AAudio）+ 资源读 APK assets
+# （macroquad::file::load_file 的 android 后端）。本机 Windows 不编译此 target，
+# APK 在 Mac（已装 NDK/SDK + cargo-apk）编译，见 docs/plan-s5.md §S5.5。
+android-shell = []
+# S4.3 性能诊断：主循环每秒打印平均 FPS + 呈现器上传/跳帧计数
+stats = []
+# S1.7b：MOD → OGG/Opus 在线转码（默认关闭，build_assets 离线预转码产物直接播放；
+# 开启后启用 ti-platform/ogg（opus-pure），仅供测试链路与在线转码场景，
+# 见 docs/style.md §5.9 与 wasm 800 KB 体积预算）
+mod-ogg = ["ti-platform/ogg"]
+# S5.2：headless 全流程回归（P3-3 判据）：无窗口跑 GameApp 逻辑链，
+# 按 full_run.json 固定种子脚本逐步喂事件，断言场景流转 0 失败
+headless = []
 
 [lints]
 workspace = true

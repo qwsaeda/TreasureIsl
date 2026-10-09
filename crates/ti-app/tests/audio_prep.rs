@@ -1,12 +1,15 @@
 //! S2.5 补实验收：`music.lpk` → 解包 → `parse_wav` → `Mixer` → WAV 字节
 //! 是**真实音频链路**（对应「假 2」：旧版只是 6 个编造的字符串，从未播放）。
+//! S1.7b 追加：MOD 条目（INHL.MOD）→ PCM 提取 → OGG/Opus 转码（`opus-pure`），
+//! `prepare_music` 产出 `ogg_tracks`，`macroquad::audio::load_sound_from_bytes` 直接可播。
 //!
 //! 断言覆盖：
 //! 1. 6 条条目里 5 条 WAV + 1 条 MOD（F-208），key 与实测一致；
 //! 2. `MIX_VOLUME = 255` 时混音输出与原 WAV 的 PCM **逐样本一致**（链路不丢数据）；
 //! 3. 每条曲目非静音；
 //! 4. `wav_pcm16` 的产物能被 `parse_wav` 原样读回（macroquad 后端就吃这个字节流）；
-//! 5. 全链路确定性（两次准备结果完全相同）。
+//! 5. 全链路确定性（两次准备结果完全相同）；
+//! 6. S1.7b：MOD → OGG 转码产出 `OggTrack`，OGG 魔数 `OggS`，确定性。
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -42,7 +45,22 @@ fn music_lpk_unpacks_five_wav_tracks_and_one_mod() {
     assert_eq!(bundle.tracks.len(), 5, "5 条 WAV 应全部过混音器");
     assert_eq!(bundle.mod_count, 1, "1 条 MOD（F-208）");
     assert_eq!(bundle.binary_count, 0, "没有其他二进制条目");
-    assert_eq!(bundle.skipped, 0, "没有条目被跳过");
+    #[cfg(feature = "mod-ogg")]
+    {
+        assert_eq!(bundle.skipped, 0, "没有条目被跳过");
+        // S1.7b：MOD 条目转 OGG 后应产生 1 条 OGG 曲目
+        assert_eq!(bundle.ogg_tracks.len(), 1, "1 条 MOD 应转成 1 条 OGG");
+        let ogg = &bundle.ogg_tracks[0];
+        assert_eq!(ogg.key, MOD_KEY, "OGG 曲目 key 应为 MOD 条目");
+        assert_eq!(&ogg.ogg[..4], b"OggS", "OGG 魔数");
+        assert!(!ogg.ogg.is_empty(), "OGG 非空");
+        assert!(!ogg.title.is_empty(), "INHL.MOD 标题非空");
+    }
+    #[cfg(not(feature = "mod-ogg"))]
+    {
+        assert_eq!(bundle.skipped, 1, "1 条 MOD 计跳过（在线转码未开启）");
+        assert_eq!(bundle.ogg_tracks.len(), 0, "无 OGG 曲目（在线转码未开启）");
+    }
 
     let keys: Vec<u32> = bundle.tracks.iter().map(|track| track.key).collect();
     let expected: Vec<u32> = EXPECTED_KEYS.iter().copied().filter(|key| *key != MOD_KEY).collect();
@@ -54,13 +72,19 @@ fn music_lpk_unpacks_five_wav_tracks_and_one_mod() {
         assert!(track.duration_secs() > 0.0, "曲目 {:08x} 时长应 > 0", track.key);
     }
     eprintln!(
-        "[s2.5] 5 条 WAV 过 Mixer：{}",
+        "[s2.5] 5 条 WAV 过 Mixer + 1 条 MOD：{}",
         bundle
             .tracks
             .iter()
             .map(|t| format!("{:08x}@{}Hz/{:.2}s", t.key, t.sample_rate, t.duration_secs()))
             .collect::<Vec<_>>()
             .join(" ")
+    );
+    #[cfg(feature = "mod-ogg")]
+    eprintln!(
+        "[s1.7b] OGG 曲目: {} @ {} bytes",
+        bundle.ogg_tracks[0].title,
+        bundle.ogg_tracks[0].ogg.len()
     );
 }
 

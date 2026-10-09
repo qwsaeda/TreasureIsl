@@ -2,10 +2,11 @@
 //!
 //! 从 `treasure_wasm` 壳里抽到 lib 层（S2.5 补实）的原因：
 //! 1. `tests/` 必须能对**渲染路径本身**做逐位断言 —— 证明画出来的是真字形，
-//!    而不是旧版按 `ch.wrapping_mul(2_654_435_761)` 播种的伪随机噪点；
+//!    而非早期占位的伪随机位图（已废弃，仅 `tests/glyph_raster.rs::legacy_noise`
+//!    保留一段历史复刻用于"噪点已被清除"的对照断言，主渲染路径不再使用）；
 //! 2. 光栅逻辑与 macroquad 解耦：纯函数、无 IO、无窗口，三端共用同一份实现。
 //!
-//! 实测依据：`docs/reverse-facts.md` F-303；几何断言先例见
+//! 实测依据：`docs/facts/index.md` F-303；几何断言先例见
 //! `crates/ti-formats/tests/font_parity.rs`（S1.5b）。
 
 use ti_core::{LOGICAL_HEIGHT, LOGICAL_WIDTH};
@@ -109,10 +110,15 @@ impl Raster {
     }
 
     /// 把位图上墨到帧缓冲（整数逻辑坐标，越界部分逐像素裁剪，不整体丢弃）。
+    ///
+    /// 着墨完成后按实际写入的行区间调用 [`Framebuf::mark_dirty`]（S4.3 脏行带）；
+    /// 全空白字形（无墨点）不置脏。
     pub fn blit(&self, fb: &mut Framebuf, x: i32, y: i32, color: u16) {
         let screen_w = i32::try_from(LOGICAL_WIDTH).unwrap_or(i32::MAX);
         let screen_h = i32::try_from(LOGICAL_HEIGHT).unwrap_or(i32::MAX);
         let stride = usize::try_from(LOGICAL_WIDTH).unwrap_or(0);
+        let mut first_written: Option<i32> = None;
+        let mut last_written: Option<i32> = None;
         for row in 0..self.rows {
             let Ok(offset_y) = i32::try_from(row) else {
                 break;
@@ -121,6 +127,7 @@ impl Raster {
             if !(0..screen_h).contains(&dst_y) {
                 continue;
             }
+            let mut row_has_ink = false;
             for col in 0..self.cols {
                 if !self.at(col, row) {
                     continue;
@@ -138,8 +145,18 @@ impl Raster {
                 let index = py.saturating_mul(stride).saturating_add(px);
                 if let Some(slot) = fb.as_mut_slice().get_mut(index) {
                     *slot = color;
+                    row_has_ink = true;
                 }
             }
+            if row_has_ink {
+                if first_written.is_none() {
+                    first_written = Some(dst_y);
+                }
+                last_written = Some(dst_y);
+            }
+        }
+        if let (Some(fy), Some(lt)) = (first_written, last_written) {
+            fb.mark_dirty(x, fy, i32::try_from(self.cols).unwrap_or(0), lt - fy + 1);
         }
     }
 }
