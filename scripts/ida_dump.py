@@ -2,7 +2,7 @@
 """IDA headless 导出（S0.2）。
 
 用法：
-    idat64.exe -A -Sscripts\\ida_dump.py TreasureIsl.exe
+    idat.exe -A -Lref\\ida_run.log -Sscripts\\ida_dump.py TreasureIsl.exe
 
 产出（相对 exe/i64 所在目录）：
     ref/pseudocode/<start>_<name>.c   每函数一个文件（Hex-Rays 失败则存反汇编）

@@ -59,7 +59,9 @@ if ($installed -match 'aarch64-linux-android') {
     & cargo build -p ti-app --target aarch64-linux-android 2>&1 | Out-Null
     Report ($LASTEXITCODE -eq 0) 'cargo build (aarch64-linux-android)'
 } else {
-    Skip 'cargo build (aarch64-linux-android)' 'target 未安装，S2.6 解锁'
+    # S2.6：APK 在 Mac（已装 Android NDK/SDK + cargo-apk）编译，本机 Windows 不产出。
+    # 桌面/浏览器可玩（S5.1-S5.4）为当前收口目标；Android 为后续移动端交付，故 SKIP 不阻塞。
+    Skip 'cargo build (aarch64-linux-android)' 'S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）'
 }
 
 # 5) 占位扫描（0 命中）

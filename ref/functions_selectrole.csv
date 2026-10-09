@@ -1,0 +1,6 @@
+addr,size,name,module,reason
+0003ECDC,616,sub_3ECDC,selection,selectrole.Map 角色选择场景装载器：sub_37EDC(ui.pak)+sub_37EDC(selectrole.Map)+new 0x3FC+sub_43B8C+sub_43D54+虚调用+4 装载+sub_3FE84 控件注入+gl.rec 四槽位非零检查+byte_81194..97 全非零时写 a1[13]=5/a1[14]=58/a1[15]=75/a1[16]=5（行 32/36/40/62/64-69）
+0003FE84,876,sub_3FE84,selection,selectrole.Map 控件注入器：sub_1DDA4(a1+32,0xBu)=11 控件槽+注入 Target_knife/face_katharina/drake/kidd/tichy/panda/Player_katharina/drake/kidd/tichy/panda.pcx 共 11 个资源（行 61-84/85）
+000406DC,96,sub_406DC,selection,动态数组 append（end/capacity 语义）：selectmap 装载器 sub_402D8 的 3 槽位写入工具，sub_402D8 行 81/84/87/96/98/100/110/112/114 调用；glmapm 已解锁时写入 a1+13/a1+16/a1+19 三个槽位
+000334BC,140,sub_334BC,selection,通用控件表注入总控（被 sub_2077C 行 187 调用以装载主地图控件表）：遍历控件表注入 button_*.pcx × 29（sub_33548 行 14 调用），S3.3 归属为 menu，但主地图装载时复用
+00044978,48,sub_44978,selection,场景对象 vtable 初始化（sub_44A74 分配+设 off_6F518）：被 sub_43B8C 行 10 调用，selectrole/selectmap 场景对象的底层初始化

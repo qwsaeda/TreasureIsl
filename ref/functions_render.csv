@@ -1,0 +1,9 @@
+addr,size,name,module,reason
+00042574,516,sub_42574,render,intro.Map 场景装载器：new 0x3FC + sub_43B8C + sub_37EDC(buf,ui,"UI.pak") + sub_37EDC(buf2,ui,"intro.Map")
+0003ECDC,616,sub_3ECDC,render,selectrole.Map 场景装载器：new 0x3FC + sub_43B8C + sub_37EDC(buf,ui,"selectrole.Map")
+000402D8,1028,sub_402D8,render,selectmap.Map 场景装载器 + glmapm01/02/03.Map 存在性探测（CreateFileW），sub_406DC 写三槽位
+00040D80,816,sub_40D80,render,index.Map 场景装载器 + glpics.pak + data/gl.rec 魔数校验（0x01315A47）
+0002077C,2204,sub_2077C,render,main.Map（主地图探索/贸易）场景装载器，引用 aDataMainMap 字符串
+00037EDC,148,sub_37EDC,render,场景资源通用装载：从容器索引按字符串名取 PCX/控件表（所有场景装载器共用）
+00043B8C,108,sub_43B8C,render,场景对象 ctor：*a1=off_6F518（场景类 vtable），设置 [253]=1 等标志
+00043D54,64,sub_43D54,render,场景对象关联 UI 句柄（每个场景装载器紧随 sub_43B8C 调用）

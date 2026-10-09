@@ -1,0 +1,13 @@
+addr,size,name,module,reason
+00040D80,816,sub_40D80,menu,index.Map 主菜单场景装载器：new 0x3FC + sub_43B8C + sub_37EDC(ui.pak) + sub_37EDC(index.Map) + glpics.pak + data/gl.rec 魔数 0x01315A47 校验 + sub_41B5C 控件表注入（行 41/64/67/79）
+00042574,516,sub_42574,menu,intro.Map 过场场景装载器：new 0x3FC + sub_43B8C + sub_37EDC(ui.pak) + sub_37EDC(intro.Map)，触发条件=游戏启动/过场动画 phase（行 31/54/58/62）
+0003ECDC,616,sub_3ECDC,menu,selectrole.Map 角色选择场景装载器：sub_37EDC(selectrole.Map)（行 36）；由 index 主菜单新游戏项触发
+000402D8,1028,sub_402D8,menu,selectmap.Map 地图选择场景装载器 + glmapm01/02/03.Map 存在性探测（行 48/72/89/103）；由 index 主菜单继续游戏项触发
+00041354,2056,sub_41354,menu,index.Map 事件处理分发器：a3==13 时 switch(v3[14]) case 0..5 分派 saveload/Option/help/exit（行 100-258）
+0004085C,1032,sub_4085C,menu,Option.map 选项场景事件处理：a3 38/39/40 翻页 + a3==13 装载 help.map + a3==27 返回（行 33-141）
+0003F4E4,1048,sub_3F4E4,menu,Help 翻页场景事件处理：a3 37/38/39/40 页导航 + a3==13 重载 help.map + a3==27 返回 index（行 49-138）
+00041B5C,728,sub_41B5C,menu,index.Map 角色头像控件表注入（Player_*.pcx × 6），sub_40D80 行 67 调用
+00033548,1768,sub_33548,menu,通用按钮控件表注入（button_focus/move/view/info/card/system/load/save/option/exit/return... × 29），sub_334BC 行 14 调用
+00029110,22844,sub_29110,menu,场景管理器帧更新总控：switch(*(a1+716)) case 0/3/4 装载 vs.Map、卸载、回主菜单（行 772/833/843）；case 5..8 装载 saveload.map×2 + Option.map + 事件（行 1583-1699）
+0003D430,300,sub_3D430,menu,全局单例 ctor（off_811A0）：菜单/选项设置承载体（-1 初值 + 宽字符串名）
+0003D49C,60,sub_3D49C,menu,全局单例 dtor（off_811A0 清零 + 子对象析构）
