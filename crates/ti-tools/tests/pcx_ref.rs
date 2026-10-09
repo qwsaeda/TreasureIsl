@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use ti_formats::{Package, pcx};
+use ti_tools::hash::fnv1a64;
 
 const CONTAINERS: [&str; 4] = ["ui.pak", "glpics.pak", "glmap_m01.pak", "glmap_m02.pak"];
 const SAMPLE_PER_CONTAINER: usize = 12;
@@ -17,15 +18,6 @@ fn repo_root() -> PathBuf {
         .parent()
         .and_then(Path::parent)
         .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
-}
-
-fn fingerprint(bytes: &[u8]) -> String {
-    let mut h1: u64 = 0xcbf2_9ce4_8422_2325;
-    for b in bytes {
-        h1 ^= u64::from(*b);
-        h1 = h1.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    format!("{h1:016x}")
 }
 
 #[test]
@@ -75,7 +67,7 @@ fn rust_decoder_matches_python_reference() {
             let ph: u16 = parts[1].parse().unwrap_or(0);
             let ref_hash = parts[2];
 
-            let our_hash = fingerprint(&img.pixels);
+            let our_hash = fnv1a64(&img.pixels);
             if pw != img.width || ph != img.height || ref_hash != our_hash {
                 mismatches.push(format!(
                     "{c}[{i}] 不一致: py={pw}x{ph}/{ref_hash} rust={}x{}/{our_hash}",

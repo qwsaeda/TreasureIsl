@@ -11,6 +11,10 @@ name = "ledger"
 path = "src/bin/ledger.rs"
 
 [[bin]]
+name = "doccheck"
+path = "src/bin/doccheck.rs"
+
+[[bin]]
 name = "unpak"
 path = "src/bin/unpak.rs"
 
@@ -30,9 +34,25 @@ path = "src/bin/serve.rs"
 name = "controls"
 path = "src/bin/controls.rs"
 
+[[bin]]
+name = "classify"
+path = "src/bin/classify.rs"
+
+[[bin]]
+name = "specskel"
+path = "src/bin/specskel.rs"
+
+[[bin]]
+name = "mod2ogg"
+path = "src/bin/mod2ogg.rs"
+
 [dependencies]
 ti-formats.workspace = true
-ti-platform.workspace = true
+# OGG/Opus 转码（S1.7b）：mod2ogg / build_assets 走 ti-platform/ogg feature，
+# opus-pure 经 ti-platform 传递引入，ti-tools 不再直接依赖 opus-pure（更干净的单一路径）。
+ti-platform = { workspace = true, features = ["ogg"] }
+serde.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

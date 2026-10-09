@@ -12,6 +12,7 @@ use std::process::ExitCode;
 use ti_formats::lucency::Package;
 use ti_formats::mapfile::MapScene;
 use ti_formats::{Ini, TerrainMap};
+use ti_tools::hash::fnv1a64;
 
 const CONTAINERS: [&str; 7] = [
     "ui.pak",
@@ -28,15 +29,6 @@ fn repo_root() -> PathBuf {
         .parent()
         .and_then(Path::parent)
         .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
-}
-
-fn fnv1a64(bytes: &[u8]) -> String {
-    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-    for b in bytes {
-        h ^= u64::from(*b);
-        h = h.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    format!("{h:016x}")
 }
 
 fn main() -> ExitCode {
@@ -126,7 +118,22 @@ fn build(out: &Path) -> Result<usize, String> {
         }
     }
 
-    // 4. manifest（排序、无时间戳 → 幂等）
+    // 4. S1.7b：MOD 条目 → OGG/Opus（glmusic.mod BGM 转码）
+    let mbuf = fs::read(data.join("music.lpk")).map_err(|e| format!("读 music.lpk: {e}"))?;
+    let mpkg = Package::parse("music.lpk", &mbuf).map_err(|e| format!("解析 music.lpk: {e}"))?;
+    if let Some(idx) = mpkg.find_key(0x8046_15C2) {
+        let raw = mpkg.read_entry(&mbuf, idx).map_err(|e| format!("解压 MOD: {e}"))?;
+        let audio =
+            ti_platform::mod_pcm::ModAudio::parse(&raw).map_err(|e| format!("MOD 解析: {e}"))?;
+        let pcm = audio.to_i16();
+        let ogg = ti_platform::ogg_encode::encode_ogg(&pcm, audio.sample_rate)
+            .map_err(|e| format!("OGG 编码: {e}"))?;
+        let rel = "audio/glmusic.ogg".to_string();
+        write_file(out, &rel, &ogg)?;
+        files.insert(rel, fnv1a64(&ogg));
+    }
+
+    // 5. manifest（排序、无时间戳 → 幂等）
     let mut man = String::from("{\n  \"files\": {\n");
     for (i, (k, v)) in files.iter().enumerate() {
         if i > 0 {
