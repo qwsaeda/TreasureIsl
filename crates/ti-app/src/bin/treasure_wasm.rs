@@ -29,6 +29,8 @@ const SE_VOLUME: f32 = 1.0;
 struct Shell {
     /// S6.4：上一帧耗时（毫秒），驱动精灵动画帧推进。
     last_frame_ms: u32,
+    /// S6.4：macroquad 全局时钟上一帧读数（毫秒）。
+    prev_now_ms: u64,
     game: GameApp,
     touch: TouchPad,
     bgm: Option<Sound>,
@@ -85,7 +87,8 @@ impl Shell {
         let bgm = pick_bgm(&loaded, bundle.as_ref());
         let se = pick_sound(&loaded, bundle.as_ref(), false);
 
-        let shell = Shell { game, touch: TouchPad::new(), bgm, se, last_frame_ms: 0 };
+        let shell =
+            Shell { game, touch: TouchPad::new(), bgm, se, last_frame_ms: 0, prev_now_ms: 0 };
         shell.start_bgm();
         shell
     }
@@ -95,6 +98,15 @@ impl Shell {
         if let Some(sound) = self.bgm.as_ref() {
             play_sound(sound, PlaySoundParams { looped: true, volume: BGM_VOLUME });
         }
+    }
+
+    /// S6.4：用 macroquad 全局时钟算本帧耗时（毫秒），驱动精灵动画帧推进。
+    fn tick_frame_time(&mut self) {
+        let now_ms = (macroquad::time::get_time().max(0.0) * 1000.0) as u64;
+        let delta = now_ms.saturating_sub(self.prev_now_ms);
+        self.prev_now_ms = now_ms;
+        // 首帧或时钟回退时取默认步长（~60fps），避免动画静止
+        self.last_frame_ms = u32::try_from(delta).unwrap_or(16).clamp(1, 250);
     }
 
     /// 播放一次音效（`GameApp.last_sfx` 非空时）+ 记录选择（内存存储）。
@@ -215,7 +227,8 @@ async fn main() {
             sell: is_key_pressed(KeyCode::Y),
             build: is_key_pressed(KeyCode::B),
         };
-        // S6.4：把本帧时长喂给 GameApp（驱动多帧精灵动画推进）
+        // S6.4：算本帧耗时并喂给 GameApp（驱动多帧精灵动画推进）
+        shell.tick_frame_time();
         shell.game.frame_delta_ms = shell.last_frame_ms;
         let mut changed = shell.game.poll(&k);
         // F1 循环切换缩放模式（等比/整数倍/拉伸/裁剪），立即按窗口尺寸重建视口

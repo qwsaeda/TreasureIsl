@@ -33,6 +33,8 @@ struct Shell {
     game: GameApp,
     /// S6.4：上一帧耗时（毫秒），驱动精灵动画帧推进。
     last_frame_ms: u32,
+    /// S6.4：macroquad 全局时钟上一帧读数（毫秒）。
+    prev_now_ms: u64,
     touch: TouchPad,
     bgm: Option<Sound>,
     se: Option<Sound>,
@@ -173,7 +175,8 @@ impl Shell {
         let bgm = pick_bgm(&loaded, bundle.as_ref());
         let se = pick_sound(&loaded, bundle.as_ref(), false);
 
-        let shell = Shell { game, touch: TouchPad::new(), bgm, se, last_frame_ms: 0 };
+        let shell =
+            Shell { game, touch: TouchPad::new(), bgm, se, last_frame_ms: 0, prev_now_ms: 0 };
         shell.start_bgm();
         shell
     }
@@ -201,6 +204,16 @@ impl Shell {
     /// 鼠标左键**不**映射到 `confirm`：触屏/鼠标走
     /// [`GameApp::poll_touch`] 的元素命中判定（点菜单行/地图格），
     /// 若同时并入 `confirm` 会重复触发。
+
+    /// S6.4：用 macroquad 全局时钟算本帧耗时（毫秒），驱动精灵动画帧推进。
+    fn tick_frame_time(&mut self) {
+        let now_ms = (macroquad::time::get_time().max(0.0) * 1000.0) as u64;
+        let delta = now_ms.saturating_sub(self.prev_now_ms);
+        self.prev_now_ms = now_ms;
+        // 首帧或时钟回退时取默认步长（~60fps），避免动画静止
+        self.last_frame_ms = u32::try_from(delta).unwrap_or(16).clamp(1, 250);
+    }
+
     fn poll_input(&mut self) -> bool {
         let k = KeyState {
             up: is_key_pressed(KeyCode::Up),
@@ -286,7 +299,8 @@ async fn main() {
         // 触摸命中判定用逻辑坐标，必须先有本帧视口才能正确反变换
         shell.game.shell.refit(screen_width(), screen_height());
 
-        // S6.4：把本帧时长喂给 GameApp（驱动多帧精灵动画推进）
+        // S6.4：算本帧耗时并喂给 GameApp（驱动多帧精灵动画推进）
+        shell.tick_frame_time();
         shell.game.frame_delta_ms = shell.last_frame_ms;
 
         // S5.1：交互核心驱动（各场景输入 → GameApp.handle → 场景跳转）
