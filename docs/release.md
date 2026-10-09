@@ -66,6 +66,21 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
   越界裁剪 + 空 INI 拒绝）。寻址机制实测：`ui.pak` 122 条目 = 120 PCX + 1 filenum
   INI + 1 其他，`f1=N` → `"{N:02d}.pcx"`（F-311 的 `f1` 字段在 `sub_460F8` 是
   blit 贴图索引，F-315 的事件描述符 +22 字节在运行期回填，不冲突）。
+- **S6.1 上采样滤波**：`FilterMode`（Nearest 默认 / Linear）+ `F2` 键循环切换；
+  滤波只改纹理采样器，不进坐标变换（P4-2 往返不变式单测已证）。
+- **S6.2 边框装饰**：`BorderStyle`（Black / DeepBlue 默认 / MatchBackdrop）+ `F3` 键
+  循环切换；letterbox 区域整屏填充主题色，游戏区 quad 后画覆盖，天然处理
+  Stretch/ZoomCrop 裁剪模式。
+- **S6.3 地形瓦片 blit**：新增 `terrain_atlas.rs`（`glmap_m01.pak` 46 瓦片 PCX +
+  filenum INI 49 条映射）；**关键发现**：地形是大画布 + 摄像机（实测 m01 的
+  `iso_x` 范围 0..1216、`iso_y` 16..608，远超 176×220），故必须按摄像机偏移
+  平移画布窗口；`center_camera` 把包围盒中心对到屏心 (88,110)；painter's order
+  按 `iso_y` 升序。6 项单测全绿（含真实地形+真实瓦片 blit 出 >100 非黑像素）。
+- **S6.4 多帧动画**：`filenum INI` 的 `num` 字段是帧数，实测 4 个 `num=5` 精灵
+  （14/31/32/37.pcx，高度 199 = 5×40 帧纵向堆叠）；`advance_animation(delta_ms)`
+  按毫秒推进，`frame()` 取当前帧号；`GameApp::render` 每帧按 `frame_delta_ms`
+  推进（native+wasm 用 `macroquad::time::get_time()` 算帧耗时）。5 项单测全绿
+  （多帧切分 / 帧号环绕 / 帧推进 / 多帧 blit 差异 / 静态精灵帧不变）。
 
 三端产物（S5.4 复测）：
 

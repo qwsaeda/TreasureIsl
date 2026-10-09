@@ -172,6 +172,14 @@ TTF 文件（~4MB 思源黑体子集）作为 wasm 非首屏资源分包加载�
 | 长按 0.5s | 返回 |
 | 双指缩放 | 地图缩放（未来增强） |
 
+### 5.4 多帧动画（S6.4）
+
+`filenum INI` 的 `num` 字段是帧数。实测 `ui.pak` 120 个精灵中 4 个 `num=5`
+（14/31/32/37.pcx，高度 199 = 5×40 帧纵向堆叠）。`SpriteAtlas` 按
+`advance_animation(delta_ms)` 推进帧号，`frame()` 取当前帧，blit 时按
+`frame_offset(frame)` 切帧。每帧驱动由壳层用 `macroquad::time::get_time()`
+算本帧耗时写入 `GameApp::frame_delta_ms`。
+
 ### 5.4 响应式布局判定
 
 ```
@@ -194,7 +202,9 @@ else:
 
 | 项 | 选项 | 默认 |
 |---|---|---|
-| 缩放模式 | 整数 / 平滑 / 自适应 | 整数 |
+| 缩放模式 | 等比 Smooth / 整数倍 Integer / 拉伸 Stretch / 裁剪 ZoomCrop | 等比 Smooth |
+| 上采样滤波 | 像素锐利 Nearest / 平滑 Linear | 像素锐利 Nearest |
+| 边框装饰 | 纯黑 Black / 深蓝 DeepBlue / 同背景 MatchBackdrop | 深蓝 DeepBlue |
 | 怀旧滤镜 | 开 / 关 | 关 |
 | 音效音量 | 0~100% | 80% |
 | BGM 音量 | 0~100% | 60% |
@@ -202,6 +212,8 @@ else:
 | 手柄布局 | 左手 / 右手 / 居中 | 居中 |
 | 主题 | 深色 / 浅色 | 深色 |
 | 语言 | 中文 / English | 中文 |
+
+**缩放/滤波/边框快捷键**（已实现，S6.1/S6.2）：`F1` 循环缩放模式、`F2` 循环滤波、`F3` 循环边框样式。三键在 native + wasm 均接线，Android 共用 GameApp 透传。
 
 ### 6.2 存档管理（现代化）
 
@@ -232,15 +244,19 @@ else:
 
 ## 8. 实现路线图
 
-| 阶段 | 内容 | 依赖 |
+| 阶段 | 内容 | 状态 |
 |---|---|---|
-| M1 | 双层渲染框架（游戏区 texture blit + UI 层 macroquad 原生绘制） | S5.1 GameApp |
-| M2 | TTF 字体集成 + 响应式布局判定 | M1 |
-| M3 | 虚拟手柄 + 手势 + 手柄映射 | M1 |
-| M4 | 设置菜单 + 现代化存档管理 | M2 |
-| M5 | PWA 清单 + service worker + 离线缓存 | S2.5 |
-| M6 | Android NDK + APK 构建 + scoped storage | S2.6 解锁 |
-| M7 | 可选 CRT 滤镜 + 美术增强 | M4 |
+| M1 | 双层渲染框架（游戏区 texture blit + UI 层 macroquad 原生绘制） | ✅ S5.1 GameApp |
+| M2 | TTF 字体集成 + 响应式布局判定 | ⏸ 待做（设置类新界面用） |
+| M3 | 虚拟手柄 + 手势 + 手柄映射 | ✅ S5.5 触屏（直接触摸，无虚拟按键） |
+| M4 | 设置菜单 + 现代化存档管理 | ⏸ 待做（F1/F2/F3 快捷键已接线） |
+| M5 | PWA 清单 + service worker + 离线缓存 | ⏸ 待做 |
+| M6 | Android NDK + APK 构建 + scoped storage | ⏸ 待 Mac（S2.6 阻塞） |
+| M7 | 可选 CRT 滤镜 + 美术增强 | ⏸ 待做 |
+| M8 | 上采样滤波（Nearest/Linear） | ✅ S6.1 |
+| M9 | 边框装饰（letterbox 主题色填充） | ✅ S6.2 |
+| M10 | 地形瓦片 blit（等距投影 + 摄像机） | ✅ S6.3 |
+| M11 | 多帧动画（filenum INI num>1） | ✅ S6.4 |
 
 ---
 

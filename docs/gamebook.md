@@ -239,6 +239,29 @@ render() {
 - 已知限制：`filenum INI` 中 `num>1` 的多帧动画只取第 0 帧；地形瓦片
   （`glmap_m*.pak`）未接入，主地图仍是占位网格。
 
+### 4c.1 多帧动画（S6.4）
+
+`filenum INI` 的 `num` 字段是帧数。实测 `ui.pak` 120 个精灵中 **4 个 `num=5`**
+（f1 = 14/31/32/37），它们的 PCX 高度 ≈ 5 × 40 —— 帧**纵向堆叠**在同一张图里。
+
+| API | 作用 |
+|---|---|
+| `FRAME_MS` | 每帧时长（毫秒），默认 100（约 10 fps） |
+| `DecodedSprite::frame_offset(frame)` | 帧号 → 像素行偏移（自动环绕 `frame % frames`） |
+| `SpriteAtlas::advance_animation(delta_ms)` | 按毫秒累积推进，返回当前帧号 |
+| `SpriteAtlas::frame()` | 当前帧号 = `elapsed_ms / FRAME_MS` |
+| `SpriteAtlas::blit_scene_frame(scene, fb, n)` | 指定帧号 blit（测试/定格用） |
+
+**每帧驱动**：native + wasm 用 `macroquad::time::get_time()` 算本帧耗时
+（`tick_frame_time`：首帧 16ms 默认步长，后续实际 delta，clamp 1..250ms），
+写入 `GameApp::frame_delta_ms`；`GameApp::render` 在 blit 前调
+`atlas.advance_animation(self.frame_delta_ms)`。
+
+**脏行带联动**：`blit_sprite` 按可见区域置脏行带，动画每帧重绘不会全帧上传。
+
+**已知限制**：多帧精灵是 UI 控件（战斗动画/提示框等），不是场景装饰；
+等距地形瓦片（`glmap_m*.pak`）当前全为静态图（INI 全 `num=1`），不受影响。
+
 固定种子全流程脚本（`tests/scripts/full_run.ron`，`--features headless`）必须覆盖：
 
 ```

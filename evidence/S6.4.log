@@ -1,0 +1,45 @@
+S6.4 多帧动画验收（2026-10-10）
+
+== DoD 1: SpriteAtlas 解析 num=帧数 ==
+  filenum INI 新增 `num` 字段读取（原 S5.6 只读 filename）
+  实测 ui.pak：120 个精灵中 4 个 num=5（f1 = 14 / 31 / 32 / 37）
+    14.pcx  34x199  -> frame_h = 199/5 = 39.8 -> 取整 40（截断多 1 行）
+    31.pcx  43x199  -> frame_h = 40
+    32.pcx  99x199  -> frame_h = 40
+    37.pcx  46x199  -> frame_h = 40
+  其余 116 个 num=1（静态图）
+  多帧精灵像素缓冲 = width * height * frames（帧间纵向堆叠，行主序）
+
+== DoD 2: blit 时按 tick 取帧 ==
+  新增 API：
+    FRAME_MS = 100（毫秒/帧，约 10 fps）
+    DecodedSprite::frame_offset(frame) -> usize   帧号自动环绕（frame % frames）
+    SpriteAtlas::advance_animation(delta_ms)      按毫秒累积推进
+    SpriteAtlas::frame()                          当前帧号 = elapsed_ms / FRAME_MS
+    SpriteAtlas::blit_scene(scene, fb)            用当前帧号 blit
+    SpriteAtlas::blit_scene_frame(scene, fb, n)   指定帧号 blit（测试/定格用）
+  GameApp::render：调用 blit_scene 前按本帧时长推进动画
+    （atlas.advance_animation(self.frame_delta_ms)）
+  脏行带联动：blit_sprite 按可见区域置脏行带，动画每帧重绘不会全帧上传
+
+== DoD 3: 单测（5 项，全绿）==
+  cargo test -p ti-app --lib -> 26 passed; 0 failed（新增 5 项）
+  multi_frame_slicing_from_real_pkg  真实 ui.pak：4 个 num=5、14.pcx frames=5、帧高还原
+  frame_offset_wraps_around         帧号环绕：offset(5)=0、offset(7)=2*stride
+  advance_animation_drives_frame    frame() 随 delta_ms 递增；delta=0 不推进
+  animated_blit_differs_by_frame    多帧精灵 frame 0 vs frame 1 blit 结果不同
+  static_sprite_same_across_frames  静态精灵（num=1）任意帧号画面相同
+
+== DoD 4: gate ==
+  fmt / clippy -D warnings / test / build(x86+wasm) / 占位 / unwrap / ledger
+  -> 0 failure（android target SKIP，无 NDK）
+
+== 三端接线 ==
+  每帧驱动：native + wasm 用 macroquad::time::get_time() 算本帧耗时
+    （tick_frame_time：首帧 16ms 默认步长，后续实际 delta，clamp 1..250ms）
+  GameApp::frame_delta_ms 字段承载
+  android：共用 GameApp/menu_shell，透传
+
+== 说明 ==
+  多帧精灵是 UI 控件（战斗动画/提示框等），不是场景装饰；
+  等距地形瓦片（glmap_m*.pak）当前全为静态图（INI 全 num=1），不受影响。
