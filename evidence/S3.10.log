@@ -1,0 +1,100 @@
+# S3.10 存读档/设置 — 验收日志
+
+## 子步 1: analyzed
+- 定位函数：`sub_1F20C`（存档写入 `gl0~4.sav`，`SetFilePointer(2)` 跳 2B 前缀 + 魔数 `0x01315A47` 写 + 角色 `**(a1+264)` + `dword_7FB70` 角色索引 + `dword_7FB6C` 地图索引 + 场景/据点/资源集/物品/卡牌/兵种虚调用子对象 + `a1+544` 6B + 卡牌持有量 u16 链表，行 68-119）、
+  `sub_1F7B8`（存档读取 `gl0~4.sav`，魔数校验 `Buffer!=19810929` → 返回 0 + `dword_7FB70`/`dword_7FB6C` 读 + 场景/据点/卡牌/兵种虚调用恢复 + 物品/卡牌持有量 u16 链表读，行 92-227）、
+  `sub_3EB24`（设置读取 `settings.dat`，`SetFilePointer(2)` 跳 2B + 魔数 `Buffer==19810929` 校验 + 2 字节设置读 `a1+32`/`a1+33`，行 19-26）、
+  `sub_30FDC`（设置写入 `settings.dat`，魔数 `19810929` 写 + 2 字节设置写 `a1+32`/`a1+33`，行 19-23）、
+  `sub_40D80`（index.Map 装载 + `gl.rec` 魔数校验，`CreateFileW(data/gl.rec)` + `SetFilePointer(2)` + `Buffer==19810929` 校验 + 4 字节全局状态 `byte_81194..81197` 读 + `off_81198`/`off_8119C` 清 0，行 71-88）、
+  `sub_41354`（saveload.Map 继续游戏场景，`sub_4E60C` 子窗口叠加 + `sub_30FDC` 写设置 + 菜单项 0..=5 case 分派 + 退出，行 83/121/149-253）、
+  `sub_3F4E4`（帮助/说明场景帧处理，`dword_7FB70 = v3[13]` 角色索引写全局，行 78）、
+  `sub_4085C`（选项场景帧处理，`dword_7FB6C = *(v3[13]+4*v3[22])` 地图索引写全局，行 64）、
+  `sub_3D4C8`（卡牌场景 ctor，`sub_3EB24` 读 settings + `srand`，行 34）、
+  `sub_45E78`（卡牌场景入口 wrapper，行 6-7）。
+- 魔数证据：`sub_1F20C` 行 69 `Buffer = 19810929`（= `0x01315A47`），`sub_1F7B8` 行 95 `Buffer != 19810929` 校验，`sub_40D80` 行 79 `Buffer == 19810929` 校验。
+- 5 角色槽位证据：`sub_1F20C`/`sub_1F7B8` switch a2 case 1..4 → `gl1~4.sav`，default → `gl0.sav`（行 34-51 / 60-77）。
+- 产出：`ref/functions_saveload.csv`（10 行，不改动原 functions.csv）。
+
+## 子步 2: specified
+- 产出：`docs/spec/save_load.md`（§a settings.dat 字段表/§b gl*.sav 存档结构/§c gl.rec 记录/§d 读档校验/§e v1→v2 迁移规则/§f 函数归属表）。
+- 真实结论（证据）：
+  - 魔数 `0x01315A47`（`sub_1F20C` 行 69 / `sub_1F7B8` 行 95 / `sub_40D80` 行 79 三处一致）；
+  - 2 字节前缀（`SetFilePointer(2)` 跳过后才校验魔数，`sub_1F20C` 行 68 / `sub_1F7B8` 行 92 / `sub_40D80` 行 76）；
+  - 5 槽位选择（`sub_1F20C` 行 34-51 / `sub_1F7B8` 行 60-77 switch a2）；
+  - `dword_7FB70` 角色索引（`sub_1F20C` 行 73 / `sub_3F4E4` 行 78 写全局）；
+  - `dword_7FB6C` 地图索引（`sub_1F20C` 行 74 / `sub_4085C` 行 64 写全局）；
+  - `a1+724` 游戏进度（`sub_1F20C` 行 77）；
+  - settings.dat 8 字节（F-304 实测 `5D 4A 71 4A 2E 01 01 01`，`sub_3EB24`/`sub_30FDC` 读写）；
+  - gl.rec 魔数校验 + 4 字节全局状态（`sub_40D80` 行 71-88）。
+- 推测结论：
+  - settings.dat 魔数字节序（S1.9 实测 `71 4A 2E 01` vs exe 常量 `0x01315A47`，推测前 2 字节 `5D 4A` 为独立前缀）；
+  - gl*.sav 可变子对象（场景/据点/卡牌/兵种虚调用）具体字节布局（`sub_44`/`sub_40`/`sub_4` 偏移需对照 vtable）；
+  - v1→v2 迁移规则（exe 无独立迁移代码，`version` 字段位置为 S4.2 新增占位）；
+  - `byte_81194..81197` 4 个全局标志位语义（`sub_41354` 行 64-69 全非零 = 5 角色初始化完成）；
+  - SaveSlot oracle 简化（固定 5 字段，可变子对象不建模）。
+
+## 子步 3: oracle
+- `crates/ti-core/src/oracle/saveload.rs`：
+  - `SaveSlot` struct（`version`/`character`/`gold`/`map_slot`/`position`，spec §b）；
+  - `REC_MAGIC` 常量（`0x01315A47` = 19810929，spec §d）；
+  - `MIN_SAVE_SIZE` 常量（26 字节，v2 布局）；
+  - `SaveErr` 枚举（`BadMagic`/`TooShort`/`BadVersion`）；
+  - `oracle_validate_save(bytes) -> Result<(), SaveErr>`（魔数 + 最小大小校验）；
+  - `oracle_migrate_v1_to_v2(s) -> SaveSlot`（v1→v2 迁移，**推测**占位规则）；
+  - `oracle_read_slot(bytes) -> Result<SaveSlot, SaveErr>`（按 spec §b 偏移解析）；
+  - `oracle_write_slot(slot) -> Vec<u8>`（序列化为字节，与 read_slot 往返一致）；
+  - `oracle_read_slot_v1(bytes)`（v1 兼容读，**推测** 18 字节布局）。
+- oracle 函数数：5（validate + migrate + read_slot + write_slot + read_slot_v1）。
+
+## 子步 4: implemented
+- `crates/ti-core/src/rules/saveload.rs`：
+  - `SaveManager` struct（`slots: Vec<SaveSlot>`）；
+  - 方法：`new`/`slot_count`/`slot`/`validate`/`migrate`/`read_slot`/`write_slot`/`slots`/`set_slot`/`magic`/`min_size`；
+  - 行为与 oracle 逐位一致，结构为 struct + 方法（vs 自由函数）。
+- impl 方法数：11。
+
+## 子步 5: diff
+- `crates/ti-core/tests/diff_saveload.rs`：9 个测试。
+  - 差分测试 4 个：
+    - `diff_read_write_all_combos`：5 角色 × 3 gold × 5 map_slot × 4 position × 2 version = 600 组合，read_slot/validate/write_slot 全等 + 往返；
+    - `diff_bad_magic`：魔数破坏 → `Err(BadMagic)`（oracle 与 impl 一致）；
+    - `diff_size_boundaries`：len 0..17 → `TooShort`，len=26 → 通过；
+    - `diff_bad_version`：version=3 → `Err(BadVersion)`（validate 不检查 version）；
+  - 语义测试 5 个：
+    - `semantic_roundtrip_byte_identical`（write_slot → read_slot 往返逐字节）；
+    - `semantic_bad_magic_error`（魔数全 0 → `Err(BadMagic)`）；
+    - `semantic_migrate_v1_to_v2_preserves_fields`（v1→v2 迁移后 version==1 且其余字段不变，v2 不变）；
+    - `semantic_5_slots_full_path`（5 槽位 write → read → 全等 + 越界 → None）；
+    - `semantic_constants`（`SaveManager::magic()` == `REC_MAGIC` + `min_size()` == 26）。
+
+## 子步 6: coverage
+- 5 槽位全路径：`semantic_5_slots_full_path` 遍历 5 个槽位 write → read → 全等 + 越界 `slot(5)` → `None`；
+- 迁移全路径：v1（version=0）→ version=1，v2（version=2）→ 不变，version=3 → `BadVersion`；
+- 错误路径 3/3：`BadMagic`（魔数破坏）/ `TooShort`（len < 26）/ `BadVersion`（version > 2）；
+- 往返逐字节：`semantic_roundtrip_byte_identical` 验证 write → read → write 逐字节相同；
+- 大小边界：len 0..17 → TooShort，len=26 → 通过（600 组合全遍历）。
+
+## 子步 7: gate
+```
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未安装，S2.6 解锁)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+  PASS  ledger validate
+=== gate: 0 failure(s) ===
+```
+
+## 子步 8: DoD 达成说明
+- DoD：「v1 兼容读写 + 迁移测试」。
+- 达成验证：
+  - v1 兼容读：`oracle_read_slot_v1` 18 字节布局（2 前缀 + 4 魔数 + 4 character + 4 map_slot + 4 position），读入后补 `version=1`、`gold=0`（**推测** 占位）；
+  - v2 读写：`oracle_read_slot`/`oracle_write_slot` 26 字节布局（2 前缀 + 4 魔数 + 5×4 u32 字段），`semantic_roundtrip_byte_identical` 证明 write → read → write 逐字节一致；
+  - 迁移测试：`semantic_migrate_v1_to_v2_preserves_fields` 验证 v1（version=0）→ version=1 且其余字段不变，v2（version=2）→ 不变；
+  - 5 槽位 + 错误路径全遍历（600 组合 + 3 种错误 + 5 槽位 + 边界）。
+- 结论：S3.10 DoD 达成。

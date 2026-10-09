@@ -1,0 +1,34 @@
+﻿cargo :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+所在位置 行:1 字符: 1
++ cargo test -p ti-app --test game_app_flow 2>&1 | Out-File -Encoding u ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.09s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running tests\game_app_flow.rs (target\debug\deps\game_app_flow-1b2d45b6f1d40976.exe)
+
+running 7 tests
+test flow_landmark_to_battle ... ok
+test flow_main_map_move_trade_build ... ok
+test flow_menu_quit ... ok
+test flow_battle_to_menu ... ok
+test flow_menu_to_main_map ... ok
+test flow_message_pages ... ok
+test flow_save_load_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+=== gate.ps1 8 项 ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未安装，S2.6 解锁)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 50 tasks, 45 verified, 0 error(s)
+  PASS  ledger validate
+=== gate: 0 failure(s) ===

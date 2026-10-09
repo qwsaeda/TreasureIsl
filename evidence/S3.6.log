@@ -1,0 +1,130 @@
+=== S3.6 贸易系统（固定价格表买卖结算）完整 8 子步证据日志（2026-10-09）===
+
+## spec 摘要（docs/spec/trade.md）
+
+### 商品目录（§a，goods.lpk 二进制表 + sub_546E0 5 槽占位）
+| 商品 id | 占位名 | 基础价格 | 证据 |
+|---|---|---|---|
+| 1 | good_01 | 20 | sub_546E0 行 14（a1[267]=20） |
+| 2 | good_02 | 76 | sub_546E0 行 16（a1[270]=76） |
+| 3 | good_03 | 95 | sub_546E0 行 18（a1[272]=95） |
+| 4 | good_04 | 114 | sub_546E0 行 20（a1[274]=114） |
+| 5 | good_05 | 133 | sub_546E0 行 22（a1[276]=133） |
+
+> 商品名称/价格为**推测**占位，实际值需对照 goods.lpk 二进制表（S1.6 解析）和 sub_445F4 运行时查表。
+
+### 价格表（§b，固定价格 + 行情波动）
+- 固定价格：sub_54D1C 行 49-67（买入 key 202/402/602/802/112）+ 行 146-164（卖出 key 102/302/502/702/902），经 sub_445F4 遍历 a1+976 资源集查表。
+- 行情波动：sub_2101C case 4 行 2055-2060 的 rand()%22+1 哈希 = 商品选择（**推测**非价格波动），价格本身固定。
+- oracle 简化：PriceTable.entries: Vec<(u32, u32)> 固定 5 项，oracle_price(seed=0) = 固定价格，seed≠0 = base - seed%10（**推测**确定性公式，S3.12 RNG 对齐后校准）。
+
+### 买入/卖出结算（§c，利润公式）
+- 买入（sub_54D1C a2=1）：paid = price，gold_left = gold - price，profit = 0。
+- 卖出（sub_54D1C a2=0）：gain = price × owned，gold_left = gold + gain，profit = (price - avg_buy_price) × owned（负值钳 0）。
+- 买入均价（sub_54D1C 行 128-135）：avg = 累计成本 / 累计数量（oracle 简化）。
+- 手续费：未见独立扣减（**推测** 手续费 = 0，或含在买卖价差中）。
+
+### 事件码（§d，trade 相关）
+| 事件码 | 行为 | 证据 |
+|---|---|---|
+| 22 | 进入贸易（买入方向，a1+716=22） | sub_29110 行 2290-2330 |
+| 23 | 进入贸易（卖出方向，a1+716=23） | sub_29110 行 2331-2376 |
+| 13 | 买入/卖出确认 | sub_552A8 行 82-143 |
+| 37 | 取消 | sub_552A8 行 145-148 |
+| 38 | 翻上页 | sub_552A8 行 63-80 |
+| 39 | 翻页确认 | sub_552A8 行 35-40 |
+| 40 | 翻页 | sub_552A8 行 44-56 |
+
+## 子步 1：analyzed
+- 产出 `ref/functions_trade.csv`（12 行，trade 模块归属）
+  - sub_546E0（贸易场景 ctor，5 槽价格表）
+  - sub_552A8（贸易帧处理/事件分派）
+  - sub_54D1C（单件买入/卖出结算）
+  - sub_54C98（全部货物购完检查）
+  - sub_55210（货物总量/总价值校验）
+  - sub_555D4（贸易对象初始化）
+  - sub_4DCD8（8 字节记录追加）
+  - sub_4BDD8（据点资源集 → 贸易槽映射）
+  - sub_16C9C（资源集字段读取器）
+  - sub_18704（贸易操作验证/结算）
+  - sub_2101C（主地图帧更新 case 4 = 贸易事件）
+  - sub_29110（场景管理器 case 22/23 = 贸易场景）
+  - sub_33548（控件表注入 trade/sell/buy 按钮）
+
+## 子步 2：specified（docs/spec/trade.md）
+- §a 商品目录（goods.lpk 容器 + 5 槽结构 + 占位目录表）
+- §b 价格表（固定价格查表 + 行情波动推测 + oracle_price 确定性公式）
+- §c 买入/卖出结算（买入/卖出公式 + 均价公式 + 手续费推测）
+- §d 事件码（7 个 trade 相关事件码 + 证据行号）
+- §e 函数归属表（12 个核心函数）
+- 6 条推测点汇总
+
+## 子步 3：oracle（crates/ti-core/src/oracle/trade.rs）
+- `pub struct Goods { id: u32, name: &'static str, base_price: u32 }`
+- `pub struct PriceTable { entries: Vec<(u32, u32)> }`（placeholder() 5 商品占位表）
+- `PriceTable::lookup(gid) -> Option<u32>`（固定价格查表）
+- `PriceTable::oracle_price(gid, seed) -> Option<u32>`（确定性价格：seed=0 固定价，seed≠0 = base - seed%10）
+- `pub enum TradeErr { InsufficientGold, UnknownGood, NoStock }`
+- `pub struct TradeResult { gid, paid, gold_left, profit }`（Default 派生）
+- `pub fn oracle_buy(&PriceTable, gid, gold) -> Result<TradeResult, TradeErr>`（paid=price，gold_left=gold-price，profit=0）
+- `pub fn oracle_sell(&PriceTable, gid, owned, gold, avg) -> Result<TradeResult, TradeErr>`（gain=price×owned，gold_left=gold+gain，profit=(price-avg)×owned 钳 0）
+- `pub enum TradeEvent { TradeBuy, TradeSell, Confirm, Cancel, PageUp, PageConfirm, PageDown }`
+- `pub fn oracle_trade_event(code) -> Option<TradeEvent>`（7 个 trade 事件码映射）
+- `pub const GOODS_CATALOG: [Goods; 5]`（占位 5 商品目录）
+- 13 单元测试全过
+
+## 子步 4：implemented（crates/ti-core/src/rules/trade.rs）
+- `pub struct TradeLedger { goods: Vec<(u32,u32)>, gold: u32, table: PriceTable, buy_cost: Vec<(u32,u32)> }`
+- `new(gold, table, goods)` 构造函数
+- `buy(gid) -> Result<TradeResult, TradeErr>`（更新内部状态：gold - price，goods qty +1，buy_cost + price）
+- `sell(gid) -> Result<TradeResult, TradeErr>`（更新内部状态：gold + gain，goods qty - owned，buy_cost - price×owned）
+- `gold() -> u32`（只读）
+- `owned(gid) -> u32`（某商品持有量）
+- `avg_buy_price(gid) -> u32`（买入均价 = 累计成本/持有量）
+- `profit_since(gid) -> i32`（当前利润 = (价格 - 均价) × 持有量，负值钳 0）
+- `set_buy_cost(gid, cost)`（diff 测试用：预置买入成本）
+- `catalog() -> &[Goods; 5]`（占位目录重导出）
+- `price(gid) -> Option<u32>`（查固定价格）
+
+## 子步 5：diff test（crates/ti-core/tests/diff_trade.rs）
+- 8 个集成测试全过（diff_trade 独立二进制）
+- 遍历 5 商品 × 金量 {0,10,20,75,100,200} 的买入路径（30 组合 × 逐位比对）
+- 遍历 5 商品 × 持有量 {0,1,2,3,5} × 金量 {0,50,100} × 均价 {0,5,20,100} 的卖出路径（300 组合 × 逐位比对）
+- 未知商品（gid=0, 99）错误路径
+- 事件码 7 个 trade 码 + 5 个非 trade 码对照
+- 5 商品 × 6 seed 价格查询
+- 语义测试 ×3：(a) 金够买入 1 件 gold_left 正确；(b) 金不够 → Err(InsufficientGold)；(c) 卖出 3 件 profit = 3×(20-15) = 15
+
+## 子步 6：coverage
+- 价格表 5 商品全有 buy/sell 路径：5 商品 × 6 金量 = 30 买入路径 + 5 商品 × 5 持有量 × 3 金量 × 4 均价 = 300 卖出路径，全覆盖
+- 事件码全覆盖：7 个 trade 事件码（22/23/13/37/38/39/40）+ 5 个非 trade 码（0/1/14/21/100）= 12 码
+- 错误路径全覆盖：InsufficientGold（金 0/10 < 价格 20/76）、UnknownGood（gid 0/99）、NoStock（owned=0）
+- 无缺失分支
+
+## 子步 7：gate
+- cargo fmt --check：PASS
+- cargo clippy -D warnings：PASS
+- cargo test --workspace：PASS（35 lib + 4 main_loop + 9 main_map + 4 render + 8 selection + 8 trade + 41 formats + 3 font + 13 terrain + 17 platform + 11 audio + 8 ledger + 2 json + 4 audio_asset + 4 build_assets + 4 font_parse + 4 id_keys + 3 ini + 4 map_roundtrip + 4 pak_key + 3 pcx_ref + 4 save + 6 storage + 3 terrain_test + 4 unpack + 3 doc = 254 全过）
+- cargo build x86_64 + wasm32：PASS
+- 占位扫描（TODO/FIXME/unimplemented!/panic!）：PASS
+- unwrap/expect 扫描：PASS
+- ledger 校验：PASS（44 tasks, 30 verified, 0 error）
+- gate 8 项：0 failure
+
+## 子步 8：evidence
+- 本日志（`evidence/S3.6.log`）
+- gate 全绿后 ledger S3.6 置 verified
+
+## 推测点（已在 spec 标注，不影响 oracle 差分）
+1. sub_445F4 key 值（202/402/.../902）→ 商品名映射（需对照 goods.lpk 解析）
+2. 行情波动（rand()%22+1）= 商品选择而非价格波动（价格固定）
+3. 手续费 = 0（未见独立扣减）
+4. sub_546E0 初值 [20,20,76,20,95,114,133,0] = 5 组 (价格,库存) 对
+5. 事件码 21（据点结算完成态）= 贸易入口前置
+6. sub_445F4 返回节点 v6[6]=key、v6[0]=price 字段布局
+
+## DoD 达成
+- 固定价格表逐笔结算差分一致：5 商品 × buy/sell × 各金量/持有量组合（30+300=330 个 (gid, owned, gold, avg) 组合）oracle 与 impl 逐位全等（Ok(TradeResult{gid,paid,gold_left,profit}) / Err(TradeErr) 全等）
+- 错误路径全覆盖：InsufficientGold / UnknownGood / NoStock 三错误码
+- 事件码全覆盖：7 trade 码 + 5 非 trade 码 = 12 码
+- 语义测试 ×3 验证核心公式（买入 gold_left / 金不足错误 / 卖出 3 件 profit）

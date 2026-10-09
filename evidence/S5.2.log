@@ -1,0 +1,40 @@
+=== S5.2 headless ??? + full_run.json ?????P3-3 ??? ===
+???cargo run -q -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json
+
+--- ???????? 0 ???---
+S5.2 ???????????????P3-3 ??????seed=42?????16
+  ???  0 OK  confirm        Index -> SelectRole
+  ???  1 OK  next           SelectRole -> SelectRole
+  ???  2 OK  confirm        SelectRole -> SelectMap
+  ???  3 OK  next           SelectMap -> SelectMap
+  ???  4 OK  confirm        SelectMap -> MainMap
+  ???  5 OK  walk           MainMap -> MainMap
+  ???  6 OK  trade_buy      MainMap -> MainMap
+  ???  7 OK  trade_sell     MainMap -> MainMap
+  ???  8 OK  build          MainMap -> MainMap
+  ???  9 OK  landmark       MainMap -> Vs
+  ??? 10 OK  attack         Vs -> Vs
+  ??? 11 OK  back           Vs -> Index
+  ??? 12 OK  move_down      Index -> Index
+  ??? 13 OK  confirm        Index -> Saveload
+  ??? 14 OK  write_save     Saveload -> Saveload
+  ??? 15 OK  load_save      Saveload -> MainMap
+  ???????????37 ???HP=0 BOSSHP=49428 ???=Some(Enemy)
+?????16/16 ????? 0 ?????3-3 ????????
+
+--- gate.ps1 8 ? ---
+
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target ????S2.6 ??)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x ??????????)
+        ledger: 50 tasks, 46 verified, 0 error(s)
+  PASS  ledger validate
+=== gate: 0 failure(s) ===
+
+

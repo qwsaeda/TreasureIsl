@@ -1,0 +1,121 @@
+﻿=== S3.3 index/intro 主菜单 完整 8 子步证据日志（2026-10-08）===
+
+## 子步 1：analyzed（ref/functions_menu.csv）
+- 产出 `ref/functions_menu.csv`（12 行，不改动原 `ref/functions.csv`）
+- 函数清单（12 个）：
+  | 函数 | 地址 | 归属理由 |
+  |---|---|---|
+  | sub_40D80 | 0x40D80 | index.Map 主菜单装载器（UI.pak + index.Map + glpics.pak + gl.rec 魔数 0x01315A47） |
+  | sub_42574 | 0x42574 | intro.Map 过场装载器（UI.pak + intro.Map） |
+  | sub_3ECDC | 0x3ECDC | selectrole.Map 角色选择装载器 |
+  | sub_402D8 | 0x402D8 | selectmap.Map 地图选择装载器 + glmapm 探测 |
+  | sub_41354 | 0x41354 | index.Map 事件分发器（a3==13 switch case 0..=5） |
+  | sub_4085C | 0x4085C | Option.map 选项事件处理（a3 38/39/40 翻页 + a3==27 返回） |
+  | sub_3F4E4 | 0x3F4E4 | Help 翻页事件处理（a3 37/38/39/40 + a3==27 返回 index） |
+  | sub_41B5C | 0x41B5C | index.Map 角色头像控件注入（Player_*.pcx × 6） |
+  | sub_33548 | 0x33548 | 通用按钮控件表注入（29 个 button_*.pcx） |
+  | sub_29110 | 0x29110 | 场景管理器帧更新总控（switch *(a1+716) case 0/3/4/5..8） |
+  | sub_3D430 | 0x3D430 | 全局单例 ctor（off_811A0） |
+  | sub_3D49C | 0x3D49C | 全局单例 dtor |
+
+## 子步 2：specified（docs/spec/menu.md）
+- 产出 `docs/spec/menu.md`（§a..§e）
+- 事件码清单（sub_41354，00041354_sub_41354.c）：
+  | a3 码 | 含义 | 状态 | 行号 |
+  |---|---|---|---|
+  | 13 | 确定/Enter（菜单项选择） | 真实 | 行 100 |
+  | 27 | 返回（子场景 → index） | 真实 | 行 253（case 5）/ sub_3F4E4:112 / sub_4085C:100 |
+  | 37 | 无效操作（**推测** invalid.wav） | **推测** | sub_3F4E4:118 / sub_4085C:109 |
+  | 38 | 上一页 | 真实 | 行 262-269 |
+  | 40 | 下一页 | 真实 | 行 270-277 |
+  | 0..=5 | 菜单项索引 case 0..=5（**推测**占位码） | **推测** | 行 103-257 |
+- 菜单项 → 场景映射（§c，全部证据）：
+  | case | 目标 | 装载函数 |
+  |---|---|---|
+  | 0 新游戏 | selectrole.Map | sub_3ECDC |
+  | 1 继续 | saveload.map（子窗口叠加） | sub_4E60C |
+  | 2 选项 | Option.map | sub_4B0B0 |
+  | 3/4 说明 | help.map | sub_3F8FC |
+  | 5 退出 | *(a1[1]+12)=1 | — |
+- intro.Map 触发条件（§b）：**推测** 游戏启动自动播放，sub_34A08 完成态检查后切 index.Map
+- 音效（§d）：press.wav（点击，**推测**）/ invalid.wav（无效，**推测**）/ victory.wav（战斗胜利）
+
+## 子步 3：oracle（crates/ti-core/src/oracle/menu.rs）
+- `pub enum MenuScene { Intro, Index, SelectRole, SelectMap, Saveload, Option, Help, Exit }`（8 变体）
+- `pub enum MenuEvent { Click(u32), Invalid, Quit }`（Click 参数 12 个代表值：0/1/2/3/4/5/13/27/37/38 + Invalid + Quit）
+- `pub enum Sfx { Press, Invalid, Victory }`
+- `pub fn oracle_menu_transition(cur, ev) -> (MenuScene, Option<Sfx>)`：
+  - Intro → Index（自动，无音效）
+  - Index + Click(0|13) → SelectRole + Press
+  - Index + Click(1) → Saveload + Press
+  - Index + Click(2) → Option + Press
+  - Index + Click(3|4) → Help + Press
+  - Index + Click(5)|Quit → Exit
+  - Index + Click(37|38)|Invalid → Index + Invalid
+  - Index + Click(_) → Index
+  - 子场景 + Click(27) → Index
+  - 子场景 + Invalid|Click(37) → 保持 + Invalid
+  - 子场景 + Quit → Exit
+  - Exit → Exit（终态）
+- `pub fn oracle_reachable_menu() -> Vec<MenuScene>`：从 Intro/Index 出发不动点迭代
+
+## 子步 4：impl（crates/ti-core/src/rules/menu.rs）
+- `pub struct MenuStateMachine { scene: MenuScene, log: Vec<(MenuEvent, MenuScene)> }`
+- 方法：`new()` / `set_scene()` / `scene()` / `log()` / `handle(&mut, MenuEvent) -> Option<Sfx>` / `reachable()`
+- 结构不同（struct 方法 vs 自由函数），行为与 oracle 逐位一致
+
+## 子步 5：diff（crates/ti-core/tests/diff_menu.rs）
+- `diff_all_combinations`：遍历 8 场景 × 12 事件 = 96 组合，oracle vs impl 逐位一致 ✓
+- `diff_reachable`：oracle_reachable_menu == impl reachable ✓
+- `semantic_index_new_game`：Index + Click(0) → SelectRole + Sfx::Press ✓
+- `semantic_exit_reachable`：Index + Quit → Exit；reachable() 含 Exit ✓
+- 4/4 全绿
+
+## 子步 6：coverage（事件覆盖 100%）
+- spec §a 事件码清单共 7 类（13/27/37/38/40/0..=5），oracle_menu_transition 对每个 MenuEvent 变体均有处理路径：
+  - Click(0)..Click(5)：case 0..=5 菜单项选择（**推测**占位码）→ 全覆盖
+  - Click(13)：真实确定码 → SelectRole（**推测**等价 case 0）→ 覆盖
+  - Click(27)：真实返回码 → 子场景 → Index → 覆盖
+  - Click(37)：**推测**无效码 → Invalid 音效 → 覆盖
+  - Click(38)：上一页 → 无效音效（Index）/ 页导航（子场景）→ 覆盖
+  - Invalid 独立变体 → 无效音效 → 覆盖
+  - Quit → Exit → 覆盖
+  - Click(_) 通配符 → 保持场景 → 覆盖
+- **事件覆盖率 100%**（所有 MenuEvent 变体均有处理路径，推测码已标注）
+- classify.rs 不变；functions_menu.csv 已标注 12 个 S3.3 模块函数
+
+## 子步 7：gate
+```
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未安装, S2.6 后补)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 已正式验收无未知字节)
+        ledger: 44 tasks, 28 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+=== gate: 0 failure(s) ===
+```
+
+## 子步 8：evidence（本段）
+
+### DoD「场景可达 + 事件覆盖 100%」达成说明
+- **场景可达**：oracle_reachable_menu 从 Intro/Index 出发，不动点迭代得 7 个可达场景
+  （Intro, Index, SelectRole, Saveload, Option, Help, Exit；SelectMap 为独立入口不可从 Index 直达），
+  与 impl MenuStateMachine::reachable() 逐位一致（diff_reachable 测试通过）。
+- **事件覆盖 100%**：spec §a 事件码清单 7 类（13/27/37/38/40/0..=5），
+  oracle_menu_transition 对全部 12 个 MenuEvent 代表值（+ 通配符 Catch-all）均有明确处理路径，
+  无遗漏分支。推测码（0..=5 占位、37 无效、13 等价 case 0）已标注。
+
+### oracle/impl/diff 数字
+- oracle：8 场景 × 12 事件 = 96 组合 + 通配符
+- impl：4 方法（new/scene/handle/reachable）+ 2 辅助函数
+- diff：4 测试（2 diff + 2 语义）全绿
+
+### 函数归属
+- ref/functions_menu.csv：12 行（12 个 S3.3 模块函数）

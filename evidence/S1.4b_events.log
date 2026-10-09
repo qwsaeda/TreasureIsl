@@ -1,0 +1,102 @@
+﻿===== S1.4b 事件 id 回填点深挖（2026-10-08 续）=====
+时间: 2026-10-08
+
+--- 1) 事件描述符对象布局 ---
+  0x34 字节控件/精灵描述符对象（sub_45EC0 初始化）：
+  +0 vtable / +4 未知(=1) / +8 未知(=-1) / +12 = f1 精灵索引（sub_46294 写入）
+  / +16 = f2 X 坐标 / +20 资源集指针(=1，sub_31400 读) / +24 sprite width
+  / +28 sprite height / +36..40 派生 / +44 位深/动画(=1) / +48 帧计数
+  sub_31424 经 *(ctrl+12) 解引用 f1 -> 精灵对象，读 +22 字节（u8）：
+  低 2 位 = 子任务标志，高 6 位 = 事件 id（>>2 +1 = 1..31）
+
+--- 2) 全量 write_sites（41 处）---
+  sub_2101C（32 处）：
+    队列 2（+88，经 sub_33E20(v+72) -> sub_2F6A8(v+88)）：
+      行 2313/2314: 26/27（case_7 消息）
+      行 2566-2571: 19/20/21(条件)/27（716==27 case_1）
+      行 2581/2582: 17/18（case_1 sub_314C4 分支）
+      行 2628/2629: 24/25（case_1 默认）
+      行 2770-2773: 11/12/13/27（case_4 贸易）
+      行 2796/2797: 24/25（case_5 卡片翻转）
+      行 3090/3091: 11/27（case_5 sub_31504 后）
+      行 3229/3230: 26/27（case_7 消息超阈值）
+      行 3573-3577: 1/2/3/4/5（场景初始化，sub_3402C 清空后）
+    队列 1（v43+18 -> sub_2F6A8(v43+34)）：
+      行 2566-2571: 19/20/21/27
+    直接 sub_2F6A8(v1+88)：
+      行 2519-2525: 11/12/13/27（子任务完成）
+  sub_29110（9 处）：
+    队列 1+28（a1+72 -> sub_33E3C -> sub_2F6A8(a1+100)）：
+      行 1025-1028: 14/16/15/10（case 0xD）
+      行 1586-1590: 6/7/8/9/10（case 5 战斗准备）
+      行 2283-2285: 22/23/10（case 21 建造子任务）
+  事件 id 值域 = 1..27（sub_33E6C 哨兵 27；sub_29110 switch case 1..27）
+
+--- 3) 事件 id <-> .Map 映射结论 ---
+  不可静态映射（4 条证据，见 F-318）：
+  1) sub_45EC0 初始化 +12 槽 = 0
+  2) sub_449C8 写 .Map 6 字段到 +12/16/20/24/28/32/36/40/44/48，未写 +22
+  3) sub_31424 等经 *(ctrl+12) 解引用读 +22，.Map 加载后为 0
+  4) f5 分布（44 种，1..1400）与事件 id 值域 {1..27} 无直接对应
+  结论：.Map 记录仅提供位置/精灵/类型，事件 id 由运行时场景逻辑回填
+
+--- 4) ref/event_ids.json 新增 ---
+  object_layout（ctrl_0x34 + event_descriptor_+22 + app_event_structs）
+  write_sites（41 条，含 func/file/line/id_value/target_slot/writer/note）
+  event_id_consumption（dispatch_1_8 / dispatch_9_27 / subtask_2_7_8 / direct_1_6_7）
+  event_id_to_map_mapping（conclusion + 4 evidence）
+  consumers 由 3 条增至 4 条（新增行 2303 直接读）
+  unresolved 更新为 3 条
+
+--- 5) 验收脚本（scripts/s14b_verify.py，27 项全 PASS）---
+[PASS] 0.1 非地形 UI 场景数 == 20 (20)
+[PASS] 0.2 记录总数 == 2041 (2041)
+[PASS] 0.3 f0 恒为 1 ([1])
+[PASS] 0.4 f4 ∈ {1,2,3} ([1, 2, 3])
+[PASS] 0.5 f3 p95 ≤ 219（Y 坐标，非事件 id；F-311） (p95=216, 哨兵 0xFFFFFFFF × 1)
+[PASS] 0.6 f1 最大 ≤ 119（精灵索引） (119)
+[PASS] 0.7 f5 去重种类 == 44 (44)
+[PASS] 1.1 controls.json scene_count == 20 (20)
+[PASS] 1.2 controls.json record_total == 2041 (2041)
+[PASS] 1.3 controls.json scenes 数组长度 == 20 (20)
+[PASS] 1.4 controls.json 逐场景 count 与数据一致 ([])
+[PASS] 1.5 controls.json kind_dist 与数据 f5 分布一致
+[PASS] 2.1 event_ids.json 记载 f3 = 屏幕 Y 坐标
+[PASS] 2.2 event_ids.json 记载 f5 = 控件类型码
+[PASS] 2.3 event_ids.json 记载事件 id 公式 sub_31424
+[PASS] 2.4 event_ids.json consumers 覆盖 sub_2101C 四处调用（含行 2303 直接读） (4)
+[PASS] 3.1 write_sites 共 41 条（sub_2101C 32 + sub_29110 9） (41)
+[PASS] 3.2 write_sites 每条 id_value ∈ 1..27 (27 distinct values)
+[PASS] 3.3 write_sites 仅涉及 sub_2101C/sub_29110
+[PASS] 3.4 write_sites writer ∈ {sub_33E20, sub_33E3C, sub_2F6A8}
+[PASS] 3.5 write_sites target_slot 全部在事件队列槽
+[PASS] 4.1 事件消费分派表存在
+[PASS] 4.2 事件 id ↔ .Map 映射结论 = 不可静态映射
+[PASS] 4.3 不可静态映射证据 ≥ 3 条 (4)
+[PASS] 5.1 object_layout.ctrl_0x34 存在
+[PASS] 5.2 object_layout.event_descriptor_+22 存在
+[PASS] 5.3 object_layout.app_event_structs 存在
+[PASS] 5.4 unresolved 仍有遗留项 (3)
+PASS: S1.4b 全部验收项通过
+
+--- 6) gate.ps1（8 项）---
+=== gate: TreasureIsl (8 items) ===
+  FAIL  cargo fmt --check
+  FAIL  cargo clippy -D warnings
+  FAIL  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)
+  PASS  no placeholders
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify
+  PASS  ledger validate (44 tasks, 28 verified, 0 error(s))
+=== gate: 3 failure(s) ===
+
+--- 7) gate 失败说明 ---
+  3 项 FAIL 全部源于 crates/ti-core/src/rules/selection.rs + tests/diff_selection.rs
+  （另一会话 S3.4 selectrole/selectmap 的在途代码，非本任务文件域）：
+  - cargo fmt --check：selection.rs 未格式化
+  - cargo clippy：missing_panics_doc + trivially_copy_pass_by_ref ×11
+  - cargo test：diff_selection 3 项状态不一致
+  本任务文件域（ref/event_ids.json + scripts/s14b_verify.py + docs/reverse-facts.md）无 FAIL。

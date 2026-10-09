@@ -1,0 +1,86 @@
+=== S5.4 ?????? + ???? + ?????S5 ??? ===
+
+[1] ?????S5.1 game_app_flow 7 ? + S5.3 render_parity 5 ???
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+[2] S5.2 headless ????P3-3 ????
+cargo : warning: unused imports: `TouchPad`, `TouchSample`, and `layout`
+???? ?:11 ??: 6
++ $h = cargo run -q -p ti-app --features headless --bin treasure-headle ...
++      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: unused...`, and `layout`:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> crates\ti-app\src\game_app.rs:27:20
+   |
+27 | use crate::touch::{TouchPad, TouchSample, layout};
+   |                    ^^^^^^^^  ^^^^^^^^^^^  ^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ti_platform::settings::Gesture`
+  --> crates\ti-app\src\game_app.rs:29:5
+   |
+29 | use ti_platform::settings::Gesture;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+S5.2 ???????????????P3-3 ??????seed=42?????16
+  ???  0 OK  confirm        Index -> SelectRole
+  ???  1 OK  next           SelectRole -> SelectRole
+  ???  2 OK  confirm        SelectRole -> SelectMap
+  ???  3 OK  next           SelectMap -> SelectMap
+  ???  4 OK  confirm        SelectMap -> MainMap
+  ???  5 OK  walk           MainMap -> MainMap
+  ???  6 OK  trade_buy      MainMap -> MainMap
+  ???  7 OK  trade_sell     MainMap -> MainMap
+  ???  8 OK  build          MainMap -> MainMap
+  ???  9 OK  landmark       MainMap -> Vs
+  ??? 10 OK  attack         Vs -> Vs
+  ??? 11 OK  back           Vs -> Index
+  ??? 12 OK  move_down      Index -> Index
+  ??? 13 OK  confirm        Index -> Saveload
+  ??? 14 OK  write_save     Saveload -> Saveload
+  ??? 15 OK  load_save      Saveload -> MainMap
+  ???????????37 ???HP=0 BOSSHP=49428 ???=Some(Enemy)
+?????16/16 ????? 0 ?????3-3 ????????
+
+[3] ?????S5.4 ????
+  ??    treasure-native.exe  1134592 B  sha256=C28A418361EE413E9E9FF9992847C6C889A1590474AF9BA6767937FC087FCAA3
+  ???  web/treasure_wasm.wasm  675047 B  sha256=68A8A9D806D71DD7A5743404FE950479C45DC45D967963F64212A352970A787F
+  Android  ? (S2.6 ???SDK/NDK ????gate SKIP)
+
+[4] ?????gate.ps1 8 ???
+  FAIL  cargo fmt --check  
+  FAIL  cargo clippy -D warnings  
+        error[E0599]: no method named `screen_y` found for mutable reference `&mut touch::TouchPad` in the current scop
+e
+        error[E0609]: no field `touch_down` on type `&game_app::GameApp`
+        error[E0609]: no field `touch_down` on type `&mut game_app::GameApp`
+        Some errors have detailed explanations: E0599, E0609.
+        For more information about an error, try `rustc --explain E0599`.
+        error: could not compile `ti-app` (lib) due to 13 previous errors
+        warning: build failed, waiting for other jobs to finish...
+        error: could not compile `ti-app` (lib test) due to 13 previous errors
+  FAIL  cargo test --workspace  
+        error[E0599]: no method named `screen_y` found for mutable reference `&mut TouchPad` in the current scope
+        error[E0609]: no field `touch_down` on type `&GameApp`
+        error[E0609]: no field `touch_down` on type `&mut GameApp`
+        Some errors have detailed explanations: E0599, E0609.
+        For more information about an error, try `rustc --explain E0599`.
+        error: could not compile `ti-app` (lib test) due to 11 previous errors; 2 warnings emitted
+        warning: build failed, waiting for other jobs to finish...
+        error: could not compile `ti-app` (lib) due to 11 previous errors; 2 warnings emitted
+  FAIL  cargo build (x86_64-pc-windows-msvc)  
+  FAIL  cargo build (wasm32-unknown-unknown)  
+  SKIP  cargo build (aarch64-linux-android)  (target ????S2.6 ??)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  FAIL  no unwrap()/expect() outside tests/  C:\???\crates\ti-app\src\touch.rs:228, C:\???\crates\ti-app\src\touch.rs:2
+44, C:\???\crates\ti-app\src\touch.rs:264
+  SKIP  zero-unknown verify  (S1.x ??????????)
+        ledger: 50 tasks, 49 verified, 0 error(s)
+  PASS  ledger validate
+=== gate: 6 failure(s) ===
+
+

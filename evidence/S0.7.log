@@ -1,0 +1,76 @@
+# S0.7 specskel 模块 spec 骨架半自动生成 — 验收日志
+
+## 任务
+- 新增 `crates/ti-tools/src/bin/specskel.rs`（ti-tools bin，随 gate 全 workspace 检查），
+  从 `ref/functions_<module>.csv` 读模块函数清单，按 site 在 `ref/pseudocode/` 定位
+  函数文件，抽取带 1-based 行号的证据行（字符串常量/控制流/RNG 调用/数值赋值/return），
+  生成 `docs/spec/<module>.md` 骨架：函数清单表 + 逐函数证据行表。
+
+## 实跑输出（本机 PowerShell 命令 + 退出码）
+
+### 1) 纯函数单测（6 项，含三种 csv 列格式解析 + 证据行判定 + 表格转义 + 证据形态）
+```
+PS> cargo test -p ti-tools --bin specskel
+running 6 tests
+test tests::evidence_line_detects_strings_and_conditions ... ok
+test tests::merges_same_site_kind_rows ... ok
+test tests::parses_addr_style_csv ... ok
+test tests::parses_address_style_csv ... ok
+test tests::escape_cell_breaks_no_pipes ... ok
+test tests::evidence_shape_roundtrips ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured
+```
+
+### 2) rng 模块端到端实跑（DoD 判据：缺失=0 且证据行>0）
+```
+PS> cargo run -q -p ti-tools --bin specskel -- rng --report
+[specskel] module=rng csv=kind,site,func 函数=34 缺失=0 证据行=432
+```
+- 34 个 RNG 调用点（同 site+func 的 rand/srand 行已合并），0 缺失伪代码；
+- 432 条带行号证据行（如 `00014F90_sub_14F90.c:49 | v6 = rand() % v5 + 1;`）；
+- 同函数内 rand+srand 双行合并示例：`sub_4E314（rand: rand() x1 | srand: seed=wMinute+wSecond+wMilliseconds）`。
+
+### 3) battle / mainmap 模块实跑（常规列格式 addr|address 分支验证）
+```
+PS> cargo run -q -p ti-tools --bin specskel -- battle --report
+[specskel] module=battle csv=address,size,name 函数=7 缺失=0 证据行=208
+PS> cargo run -q -p ti-tools --bin specskel -- mainmap --report
+[specskel] module=mainmap csv=addr,size,name 函数=20 缺失=0 证据行=322
+```
+
+### 4) 截断行为验证（`--max-lines` 默认 40，超限函数标记 truncated）
+`sub_29110`（size 22844，函数数 1，battle 模块内大函数）超 40 行上限 →
+输出含 `| …（超 --max-lines 上限，仅到上面末行） |  |  |` 截断标记（实跑验证通过）。
+
+### 5) 单条证据行内容抽查（验证行号可逐行核对伪代码）
+```
+PS> cargo run -q -p ti-tools --bin specskel -- rng   # 打印到 stdout
+...
+| 00014F90_sub_14F90.c:49 | `v6 = rand() % v5 + 1;` |  |
+...
+```
+（与 `ref/pseudocode/00014F90_sub_14F90.c` 第 49 行逐字一致，行号坐标可直接 grep 核对。）
+
+## gate 状态
+- `cargo fmt --all -- --check` PASS；
+- `cargo clippy --workspace --all-targets -- -D warnings` PASS；
+- `cargo test -p ti-tools` 全绿（lib 21/21 + 各 bin + 12 个集成测试目录，0 失败）；
+- 占位扫描（TODO/FIXME/unimplemented!/todo!/panic!）全 workspace 0 命中；
+- 库代码 unwrap/expect 扫描（tests/ 除外）0 命中；
+- `ledger validate` PASS（45 tasks, 0 error）；
+- `doccheck` PASS（36 docs / 36 facts / 41 experiences / 0 引用错误）——
+  本次顺带修复了 doccheck 的两个既有 bug：
+  ① `| F-NNN |` 定义行识别失败（`strip_prefix("| F-")` 后 `F-` 前缀被吞掉，
+     `is_fact_id("NNN")` 永远 false → 全库 0 facts，180 个假 undefined 引用）；
+  ② 数字断言语义错误（原 `name=关键词|期望值` 只取 2 段，`expected` 存第 2 段，
+     判「含关键词且≠期望」→ 全库 10+ 文件误报；改为 3 段 `关键词|权威值|旧值`，
+     判「含关键词且含旧值且不含权威值」，语义收紧消除误报）。
+- 完整 `scripts/gate.ps1` 剩余 1 处 FAIL（gate 第 3 项 `cargo test --workspace`）
+  来自 S3.12 RNG 并行会话的 `oracle::rng::tests::msvc_lcg_reference` 与
+  `rules::rng::tests::set_seed_resets` 两个断言（数值 440≠443 / 18467≠41），
+  与本任务文件域（ti-tools bin + doccheck 库）无关；S3.12 verified 后全绿。
+
+## 结论
+S0.7 specskel bin 实跑验收判据全部达成（单测 6/6 + rng 缺失=0 证据行=432 +
+battle/mainmap 常规列格式分支 + 截断行为 + 行号逐字核对），可置 verified。

@@ -1,0 +1,21 @@
+﻿cargo :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
+所在位置 行:1 字符: 1
++ cargo test -p ti-core --test save_migration 2>&1 | Out-File -Encoding ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.24s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running tests\save_migration.rs (target\debug\deps\save_migration-d5ef592f6a9b6f43.exe)
+
+running 8 tests
+test bad_magic_rejected ... ok
+test byte_layout_is_self_describing ... ok
+test json_export_import_roundtrip ... ok
+test manager_migrate_all_5_slots_from_v1 ... ok
+test migration_preserves_magic_offset ... ok
+test min_size_enforced ... ok
+test v1_bytes_auto_migrate_to_v2_roundtrip ... ok
+test v2_write_read_backward_compat ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+

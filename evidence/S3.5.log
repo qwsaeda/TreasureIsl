@@ -1,0 +1,110 @@
+=== S3.5 主地图（glmapm0x/移动/据点/事件分派）完整 8 子步证据日志（2026-10-09）===
+
+## spec 摘要（docs/spec/main_map.md）
+
+### 地图数据（S1.8b 已逆出，`terrain.rs`）
+| 地图 | 网格 | 缺格 |
+|---|---|---|
+| m01/m02 | 20×20 | cell(0, grid_w-1) |
+| m03 | 15×15 | cell(0, grid_w-1) |
+
+缺格无 cell 记录，oracle 以 blocked=true 建模（spec 推测点 6）。
+
+### 移动规则（`sub_53808`/`sub_51D88`/`sub_51940`/`sub_52080`）
+- 网格取值 `sub_53808`：越界 → 0（不可通行哨兵）
+- 方向可达性 `sub_51D88`：入口要求 cell `+22` 高 6 位==6（探索格）；探测优先级 南→东→北→西
+- 走 N 步 `sub_51940`：switch(v15) case 1/2/4/8 = 西/南/东/北；随机分支（`rand()%4`）归 S3.12
+- 初始定位 `sub_52080`：`row = cell_index % grid_w`、`col = cell_index / grid_w`
+
+### 事件码 → 场景目标（`sub_31424` 高 6 位+1，值域 1..31）
+| 事件码 | 目标场景 |
+|---|---|
+| 1 | Msgl（据点/地标） |
+| 2 | Msgm（面板） |
+| 3 | None（卡牌随机数） |
+| 4 | Msgl（货物结果） |
+| 5 | Msgm（卡片翻转） |
+| 6 | Vs（战斗） |
+| 7 | Msgm（消息） |
+| 8 | Msgs（虚调用 +80==0 分支） |
+| 9..31 | None（无主分派 case，归 S3.1 排队事件域） |
+
+## 子步 1：analyzed
+- 产出 `ref/functions_mainmap.csv`（21 行，mainmap 模块归属）
+  - sub_2077C（装载）、sub_2101C（帧更新/事件分派）、sub_31424（事件码）
+  - sub_51D88（4 方向可达性）、sub_51940（走 N 步）、sub_52080（初始定位）
+  - sub_53808（网格取值）、sub_52998（方向位查询）、sub_52A28/sub_52CE8（轨迹链表）
+  - sub_49120（据点判定）、sub_48654（据点结算）、sub_324DC（据点布局）
+  - sub_572E4（战斗对象，size=104）、sub_33548（控件表，size=1768）等
+
+## 子步 2：specified（docs/spec/main_map.md）
+- §a 地图数据（装载/网格几何/可通行判定）
+- §b 移动规则（单步/走 N 步/方向枚举/初始定位 + oracle 简化说明）
+- §c 据点/地标（判定/资源结算）
+- §d 事件码 → 场景目标表（1..8 有主分派 case，9..31 无）
+- §e 函数归属表
+- 6 条推测点汇总（方向命名/格低 2 位语义/事件码 9..20/40% 匹配概率/扣减分支/缺格）
+
+## 子步 3：oracle（crates/ti-core/src/oracle/main_map.rs）
+- `pub struct GridPos { row: u32, col: u32 }`（`index(grid_w)` 方法）
+- `pub enum Dir { North(0), West(1), South(2), East(3) }`（`code()`/`from_code()`/`delta()`）
+- `pub struct MapTerrain { grid_w, grid_h, blocked: Vec<bool> }`（`open(w,h)`/`is_blocked(pos)`）
+- `pub enum SceneTarget { Msgl, Msgm, Msgs, Card, Bigcard, Vs }`
+- `pub fn oracle_move(&MapTerrain, GridPos, Dir) -> Option<GridPos>`（越界/阻挡 → None）
+- `pub fn oracle_pick_dir(&MapTerrain, GridPos) -> Option<Dir>`（优先级 南→东→北→西）
+- `pub fn oracle_walk(&MapTerrain, GridPos, Dir, u32) -> (GridPos, u32)`（走 N 步，撞阻停）
+- `pub fn oracle_dispatch_event(u32) -> Option<SceneTarget>`（1..8 映射，其余 None）
+- `pub fn oracle_at_landmark(&[(u32,u32)], GridPos) -> bool`（坐标命中判定）
+- 11 单元测试全过
+
+## 子步 4：implemented（crates/ti-core/src/rules/main_map.rs）
+- `pub struct MapSession { terrain: MapTerrain, pos: GridPos, landmarks: Vec<(u32,u32)> }`
+- `new(terrain, pos, landmarks)` 构造函数
+- `move_to(Dir) -> Option<GridPos>`（更新内部位置）
+- `choose_direction() -> Option<Dir>`（不移动）
+- `walk(Dir, u32) -> (GridPos, u32)`（更新内部位置）
+- `at_landmark() -> bool`
+- `dispatch(u32) -> Option<SceneTarget>`（`#[allow(clippy::unused_self)]`）
+- 3 单元测试全过
+
+## 子步 5：diff test（crates/ti-core/tests/diff_main_map.rs）
+- 9 个集成测试全过（diff_main_map 独立二进制）
+- 遍历 4×4 全地形 × 每格 × 4 方向：move/pick_dir/walk 各组合
+- 阻挡格组合 × 边界：move/pick_dir/walk
+- 全阻挡格：None 不变
+- 事件码 0..=31：dispatch 全码遍历
+- 据点坐标命中/未命中：at_landmark 全格遍历
+- 语义测试 ×2：pick_dir 优先级顺序（南→东→北→西 逐级阻挡）、walk 1 步语义
+
+## 子步 6：coverage
+- 移动：4 方向 × 4×4 全格 = 64 组合 × 3 操作 = 192 断言
+- 阻挡：3 阻挡格 × 16 格 × 4 方向 × 4 steps = 768 断言
+- 事件码：0..=31 = 32 码全遍历
+- 据点：3 据点 × 16 格 = 48 断言
+- 全量 12+ 分支覆盖，无缺失分支
+
+## 子步 7：gate
+- cargo fmt --check：PASS
+- cargo clippy -D warnings：PASS
+- cargo test --workspace：PASS（23 lib + 4 main_loop + 9 main_map + 4 render + 8 selection + 8 doc）
+- cargo build x86_64 + wasm32：PASS
+- 占位扫描（TODO/FIXME/unimplemented!/panic!）：PASS
+- unwrap/expect 扫描：PASS
+- ledger 校验：PASS（44 tasks, 29 verified, 0 error）
+- gate 8 项：0 failure
+
+## 子步 8：evidence
+- 本日志（`evidence/S3.5.log`）
+- gate 全绿后 ledger S3.5 置 verified
+
+## 推测点（已在 spec 标注，不影响 oracle 差分）
+1. 方向码 0..=3 的东南西北命名（iso 投影公式推得，渲染层校准）
+2. 格子 `+22` 低 2 位完整语义（实测仅 `&3==1` 可通行被使用）
+3. 事件码 9..31 无主分派 case（归 S3.1 排队事件域）
+4. `sub_49120` 行 154 的 40% 区域匹配概率（推测）
+5. `sub_48654` 未命中扣减分支（推测，需 S3.6/S3.7 交叉验证）
+6. 缺格 cell(grid_w-1) 在运行期网格中的可通行性（oracle 以 blocked=true 建模）
+
+## DoD 达成
+- 地图数据对齐：GridPos/MapTerrain 与 S1.8b terrain.rs 一致，越界=blocked 建模
+- 移动规则差分：oracle_move/pick_dir/walk vs MapSession 逐位一致，12+ 分支全覆盖

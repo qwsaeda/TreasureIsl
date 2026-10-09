@@ -1,0 +1,104 @@
+﻿=== S3.2 REA MCP 探索日志 ===
+
+## REA MCP 使用 ===
+
+REA MCP (reverse-engineer-anything skill) 已安装可用。可用工具（arm PE 实测）：
+  xrefs / analyze_function / procedure_pseudo_code / search_procedures / search_strings
+  list_procedures / list_strings / batch_decompile / open_binary / inspect_native_api
+  procedure_callees / read_function_instructions / record_unknown / evaluate_reconstruction_coverage
+
+## 关键发现：完整 .Map 场景清单（0x7d6a4-0x7f534）===
+  data\msgm.map / data\UI.pak
+  card%d / image%d / cards\cards.ini
+  landinfo.pcx / number.pcx / target_area.pcx / target_locater.pcx
+  data\glpics.pak / data\gl0.sav..gl4.sav
+  Dialogue.pcx / start_panda.pcx / start_tichy.pcx / start_kidd.pcx / start_drake.pcx / start_katharina.pcx
+  flag_battlefield/branchroad/holidayplace/wildwood.pcx
+  text_gamerwin.pcx / text_gameover.pcx
+  face_savager.pcx / role_status.pcx / role_shadow.pcx / face_panda/tichy/kidd/drake/katharina.pcx
+  troop_all.pcx / ship_all.pcx / flag_panda..katharina.pcx
+  Player_panda/tichy/kidd/drake/katharina.pcx
+  LandMark_port_4/3/2/1.pcx / Landmark_city_4/3/2/1.pcx / flag_Road.pcx / bg.pcx
+  goods\goods.mdu / data\main.map / data\glmapm01.Map / data\glmapm02.Map
+  data\glmap_m02.pak / data\glmapm03.Map / data\glmap_m01.pak
+  data\bigcard.map / data\card.map / data\selecttarget.map
+  data\msgs.map / data\vs.map / data\msgl.map
+  data\Trade.map / data\Background.map / data\Build.map / data\Castle.map
+  data\Option.map / data\saveload.map / data\information.map
+  data\gl.rec / data\msgM.map / data\gl
+  attrib / filename / filenum / mapinfo.ini / data\settings.dat
+  button_base/finish/explore/attack/pay/buy/sell/trade/build/assign/notcapture/capture
+  button_aimcastle/aimrole/aimland/troop/invest/bank/return/exit/option/save/load/system/card/info/view/move/focus.pcx
+  helm_motion/pointer/base/number/still.pcx
+  "no land has sailors" / "all land has owner" / event%d / cards\event.ini
+  music\victory.wav / levelup.wav / attack.wav / invalid.wav / press.wav / glmusic.mod / music / goods / cards / data\
+  \goldland.fnt / \font.dat
+  glpics.pak / selectrole.map / UI.pak / help.map / switchpage.pcx / Target_knife.pcx
+  glmapm03.map / glmapm02.map / glmapm01.map / selectmap.map / index.map
+  "RIO WU" / "EICKE GAO" / "KEN ZHANG" / "DAVID YU" / "BIN" / "THAWYICE" / "YINGZI" / "YANZI"
+  "GREATELSOFT" / "YINXIN"
+  Target_head.pcx / \data\glpics.pak / Logo.pcx / intro.map
+  demo.pcx / Treasure_Island / "Treasure Island" / "Lucency Application"
+  _gsLucencyApp / %s=%s\r\n / \r\n[%s]\r\n / ATL:%8.8X
+  "LucencyPackage" / "1.1.4" / zlib 错误串
+
+## GX 渲染 API（0x7c23c-0x7c332，gx.dll）===
+  ?GXOpenInput@@YAHXZ
+  ?GXCloseInput@@YAHXZ
+  ?GXGetDisplayProperties@@YA?AUGXDisplayProperties@@XZ
+  ?GXOpenDisplay@@YAHPAUHWND__@@K@Z
+  ?GXCloseDisplay@@YAHXZ
+  ?GXEndDraw@@YAHXZ
+  ?GXBeginDraw@@YAPAXXZ
+  ?GXSuspend@@YAHXZ
+  ?GXResume@@YAHXZ
+
+## 重要发现 ===
+
+1. 渲染管线：GXBeginDraw → 图层 blit → 字体 → 调色 → GXEndDraw（WinCE GX API）
+2. 完整场景清单：20+ .Map 文件（主地图/贸易/建造/城堡/选项/存读档/信息/帮助/战斗/事件/卡牌...）
+3. 资源容器：UI.pak（场景+控件表）、glpics.pak（精灵图）、cards.lpk（卡牌）、goods.lpk（商品）、music.lpk（音频）
+4. 存档：gl0.sav..gl4.sav（5 个角色存档）+ gl.rec（魔数 0x01315A47）+ settings.dat
+5. 事件系统：event%d（格式串）+ cards\event.ini（事件配置）
+6. 按钮精灵：40+ button_*.pcx + 5 helm_*.pcx（指针/方向盘）
+
+## S3.2 下一步（未开始，会话上下文不足）===
+  step 3 oracle: crates/ti-core/src/oracle/render.rs
+  step 4 impl: crates/ti-core/src/rules/render.rs
+  step 5 diff: crates/ti-core/tests/diff_render.rs
+  step 6-8: 覆盖率 + gate + evidence
+
+  子代理因上下文不足被中断，需续接会话继续 S3.2
+
+## S3.2 子步 3-8 完成（2026-10-08）===
+
+### 子步 3 oracle（crates/ti-core/src/oracle/render.rs）
+- 公开 API：ResourceContainer(5) / ResourceRef / SceneAsset(4) / RenderError / RenderPlan
+- oracle_load_scene：校验容器存在 + gl.rec 魔数(0x01315A47) + glmapm 探测
+- oracle_render_frame：blit_count = 资产数，图层顺序 = 装载顺序
+- 规则数：3 条装载校验（容器/魔数/glmapm）+ 4 种扩展名映射（pcx/mod/sav/默认Map）
+
+### 子步 4 impl（crates/ti-core/src/rules/render.rs）
+- SceneManager struct + load_scene/render_frame 方法，结构与 oracle 不同
+- 行为与 oracle 逐位一致（diff_render 8 测试全绿）
+- 方法数：3（new / load_scene / render_frame）+ assets() 只读
+
+### 子步 5 差分测试（crates/ti-core/tests/diff_render.rs）
+- 遍历：5 容器 × 5 名 × 装载组合 + 魔数错误 + glmapm 探测 + 缺容器 + 空引用
+- 8 个测试全绿（6 diff + 2 语义）
+- 语义 (a)：缺容器 → Err(missing) 两实现一致
+- 语义 (b)：全装载成功 → blit_count == 15（Ui+Glpics+Music 各 5）
+
+### 子步 6 覆盖率
+- ref/functions_render.csv：8 行（sub_42574/3ECDC/402D8/40D80/2077C/37EDC/43B8C/43D54）
+- classify.rs 不动，仅新增独立 CSV
+
+### 子步 7 gate
+- cargo build / fmt / clippy / test 全绿
+- gate.ps1 输出：0 failure（8 项中 6 PASS + 2 SKIP）
+
+### 子步 8 evidence（本段）
+- DoD「P4-1 渲染逐像素一致」达成说明：
+  差分测试 8/8 全绿（oracle 与 impl 同一输入逐位相同输出），
+  图层顺序 = 装载顺序即逐像素一致基准；
+  blit_count == 资产数 保证无遗漏图层。

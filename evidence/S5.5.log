@@ -1,0 +1,34 @@
+=== S5.5 Android ????android-shell + treasure-android + android/ ????APK ? Mac ??? ===
+
+[1] host ?????????? Windows?feature android-shell??
+  cargo build -p ti-app --features android-shell --bin treasure-android
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.03s
+
+[2] ??????
+  crates/ti-app/Cargo.toml                [feature] android-shell + [[bin]] treasure-android?required-features?
+  crates/ti-app/src/bin/treasure_android.rs  Android ? bin???? android_shell::run?
+  crates/ti-app/src/android_shell.rs        ????????? android-activity ? game_loop ?????????
+  crates/ti-app/src/lib.rs                   ?? android_shell ???feature-gated?
+  android/AndroidManifest.xml               ??/??/????????? com.example.treasureisland ???
+  android/android-activity/Cargo.toml       cdylib JNI ? crate?????? miniquad + ti-app[android-shell] + futures?
+  android/android-activity/src/lib.rs        miniquad::run(game_loop) ? block_on(android_shell::run)????
+  android/assets/README.md                  APK assets ??????
+  android/README.md                          Mac ??????A ?????? / B cargo apk create?+ ???? + ??/????
+  docs/plan-s5.md ?S5.5 / AGENTS.md / docs/release.md / plan/ledger.yaml S5.5 ??
+
+[3] ?????gate.ps1 8 ???
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6?APK ? Mac ?????? NDK/SDK???????????)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x ??????????)
+        ledger: 51 tasks, 50 verified, 0 error(s)
+  PASS  ledger validate
+=== gate: 0 failure(s) ===
+
+

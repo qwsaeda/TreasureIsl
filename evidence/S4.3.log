@@ -1,0 +1,58 @@
+S4.3 性能与体积（脏矩形/批处理/wasm 分包）验收日志
+日期：2026-10-09
+
+== 验收项 1：桌面 60fps（--features stats 打印）==
+命令：
+  cargo build -p ti-app --features stats,wasm-shell --release
+  cargo test -p ti-app --features stats --test s43_fps_smoke -- --nocapture
+输出（实测）：
+  [stats] avg 57.0 fps | uploads=1 skipped=56
+  [stats] avg 60.0 fps | uploads=0 skipped=60
+  [stats] avg 60.0 fps | uploads=0 skipped=60
+  断言：最近 2 个 1s 窗口 avg fps >= 55 → PASS（实测 60.0 / 60.0）
+  脏行带跳帧观测：空闲帧 uploads=0 skipped=60/60（静止菜单 100% 跳帧，
+  呈现器整帧跳过 GPU 上传 —— S4.3 脏矩形优化的直接证据）
+
+== 验收项 2：wasm 首屏资源体积（budget 比对）==
+命令：powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
+  → evidence/S4.3-size.log（同目录）
+  wasm 主体 673,937 B / 预算 800,000 B → PASS
+  首屏附属 102,079 B / 预算 150,000 B → PASS
+  非首屏   67,737 B / 预算 100,000 B → PASS
+  （budget 基准写入 docs/plan-s4.md §S4.3 体积预算）
+
+== 验收项 3：单元测试 ==
+命令：cargo test --workspace
+  全绿（含新增：
+    ti-platform tests/gfx_dirty.rs  7 项（脏行带语义 / 裁剪 / reset / 跳帧计数）
+    ti-app tests/stats_unit.rs      2 项（1s 窗口滚动 / 呈现器累计差分）
+    ti-app tests/s43_fps_smoke.rs   1 项（桌面 60fps 冒烟，需 release 产物））
+
+== 验收项 4：门禁 ==
+命令：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
+  8 项：PASS×6 + SKIP×2（android 目标未装 S2.6 / zero-unknown S1.x），0 失败 → 全绿
+
+== 变更清单 ==
+1. 脏矩形（行级）：crates/ti-platform/src/gfx.rs
+   - Framebuf 增加 dirty_rows（220 位）+ mark_dirty/has_dirty/dirty_row_range/reset_dirty
+   - 新 FramePresenter：复用单张 Texture2D + 持久 RGBA8 缓存，
+     脏帧按 update_part 部分上传（未脏行保留 GPU 旧值），无脏帧整帧跳过 GPU；
+     零分配（纹理/缓存构造时一次分配）
+   - glyph_raster blit / shell fill_rect 写后同步置脏行带
+   - shell 静态帧优化：selected 未变时跳过 render()（→ 无脏行 → 呈现器零 GPU）
+2. wasm 分包：treasure_wasm bin
+   - 音频包（music.lpk）移出首屏启动路径，主循环空闲 30 帧后补载
+     （AudioBank.pending 防重复；首屏 = wasm + 字体 + 字符表 + 设置）
+   - build_wasm.ps1 新增首屏/非首屏体积记录 → evidence/S4.3-size.log + 预算比对
+3. stats：crates/ti-app/src/stats.rs（FpsMeter，1s 窗口）
+   - --features stats 主循环每秒打印 avg fps + uploads/skipped 计数
+   - 新增 feature stats（ti-app/Cargo.toml）
+4. 文档：docs/plan-s4.md §S4.3 体积预算（开工基准）
+   测试：crates/ti-platform/tests/gfx_dirty.rs、crates/ti-app/tests/stats_unit.rs、
+        crates/ti-app/tests/s43_fps_smoke.rs
+
+== 备注 ==
+- gzip/brotli：不引入压缩依赖（ti-tools 零依赖原则），传输层压缩属部署侧，
+  记入 docs/release.md 后续章节；产物体积按未压缩字节记录。
+- 启动加载进度：index.html 已有「加载 wasm…」状态行；分包后音频不再阻塞首屏，
+  首帧渲染后状态行即显示资源计数，无需新增进度条。

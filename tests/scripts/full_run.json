@@ -1,0 +1,22 @@
+{
+  "seed": 42,
+  "title": "S5.2 固定种子全流程回归（P3-3 判据）",
+  "steps": [
+    { "action": "confirm",   "scene": "Index",      "expect": "SelectRole" },
+    { "action": "next",      "scene": "SelectRole", "expect": "SelectRole" },
+    { "action": "confirm",   "scene": "SelectRole", "expect": "SelectMap" },
+    { "action": "next",      "scene": "SelectMap",  "expect": "SelectMap" },
+    { "action": "confirm",   "scene": "SelectMap",  "expect": "MainMap" },
+    { "action": "walk", "dir": "South", "scene": "MainMap", "expect": "MainMap" },
+    { "action": "trade_buy", "gid": 1,  "scene": "MainMap", "expect": "MainMap" },
+    { "action": "trade_sell","gid": 1,  "scene": "MainMap", "expect": "MainMap" },
+    { "action": "build", "kind": "Castle", "scene": "MainMap", "expect": "MainMap" },
+    { "action": "landmark", "code": 6,  "scene": "MainMap", "expect": "Vs" },
+    { "action": "attack", "repeat": 200, "scene": "Vs", "expect": "Vs" },
+    { "action": "back",    "scene": "Vs",       "expect": "Index" },
+    { "action": "move_down","scene": "Index",    "expect": "Index" },
+    { "action": "confirm", "scene": "Index",     "expect": "Saveload" },
+    { "action": "write_save", "slot": 0, "scene": "Saveload", "expect": "Saveload" },
+    { "action": "load_save",  "slot": 0, "scene": "Saveload", "expect": "MainMap" }
+  ]
+}

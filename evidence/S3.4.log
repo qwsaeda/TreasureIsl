@@ -1,0 +1,127 @@
+=== S3.4 selectrole/selectmap 完整 8 子步证据日志（2026-10-09）===
+
+## spec 摘要（docs/spec/selection.md）
+
+### 角色（5 个，`sub_3FE84` 控件注入器 11 控件槽位）
+| 角色 | 资源 |
+|---|---|
+| panda | start_panda.pcx + face_panda.pcx + Player_panda.pcx |
+| tichy | start_tichy.pcx + face_tichy.pcx + Player_tichy.pcx |
+| kidd | start_kidd.pcx + face_kidd.pcx + Player_kidd.pcx |
+| drake | start_drake.pcx + face_drake.pcx + Player_drake.pcx |
+| katharina | start_katharina.pcx + face_katharina.pcx + Player_katharina.pcx |
+
+控件注入器 `sub_3FE84` 注入 10 个 face_*/Player_*.pcx + 1 个 Target_knife.pcx = 11 控件槽位
+（`sub_1DDA4(a1+32, 0xBu)`，行 85）。`start_*.pcx` 立绘大图由场景帧更新阶段使用。
+
+### 地图（3 个，`sub_402D8` CreateFileW 探测）
+| 地图 | 文件 | 槽位参数（编号/X/Y） |
+|---|---|---|
+| M01 | data\glmapm01.Map | 1 / 73 / 100（行 79-87） |
+| M02 | data\glmapm02.Map | 2 / 67 / 64（行 95-100） |
+| M03 | data\glmapm03.Map | 3 / 117 / 81（行 109-114） |
+
+### 流程（15 组合 = 5 角色 × 3 地图）
+选角色（事件码 13）→ 选地图（事件码 13）→ completed=true → 触发 main.Map（`sub_2077C`）。
+`sub_2077C` 行 142-155 `switch(dword_7FB6C)` case 1/2/3 对应 glmapm01/02/03.Map。
+
+### 事件码
+| 事件码 | 含义 | 状态 |
+|---|---|---|
+| 13 | 确定/Enter（选择角色/地图） | 真实（`sub_41354` 行 100 / `sub_3F4E4` 行 75 / `sub_4085C` 行 62） |
+| 27 | 返回（回 index.Map） | 真实（`sub_3F4E4` 行 112 / `sub_4085C` 行 100） |
+| 37 | 无效操作 | 推测（`sub_3F4E4` 行 118 / `sub_4085C` 行 109） |
+| 38 | 上一个角色/地图 | 真实（`sub_4085C` 行 52） |
+| 40 | 下一个角色/地图 | 真实（`sub_4085C` 行 37） |
+
+## 子步 1：analyzed
+- 产出 `ref/functions_selectrole.csv`（5 行，不改动原 `ref/functions.csv`）
+  - sub_3ECDC（selectrole 装载器）、sub_3FE84（控件注入器）、sub_406DC（动态数组 append）、
+    sub_334BC（主地图控件表注入总控）、sub_44978（场景 vtable 初始化）
+- 产出 `ref/functions_selectmap.csv`（5 行）
+  - sub_402D8（selectmap 装载器 + glmapm 探测）、sub_406DC（3 槽位写入工具）、
+    sub_2077C（main.Map 装载器 + switch 选地图）、sub_334BC（主地图控件表）、
+    sub_29110（场景管理器总控）
+
+## 子步 2：specified（docs/spec/selection.md）
+- §a selectrole.Map 场景结构（装载器 + 控件注入器 + 角色映射 + 事件码）
+- §b selectmap.Map 场景结构（装载器 + 3 槽位写入 + 已解锁状态 + 推测点）
+- §c 选择完成 → main.Map 触发（`sub_2077C` switch(dword_7FB6C) + 场景码 4 推测）
+- §d 事件码汇总（13/27/37/38/40，真实 + 推测标注）
+- §e 函数归属表
+- 5 条推测点汇总
+
+## 子步 3：oracle（crates/ti-core/src/oracle/selection.rs）
+- `pub enum Character { Panda, Tichy, Kidd, Drake, Katharina }`（5 变体，对应 S3.2 字符串清单）
+- `pub enum MapSlot { M01, M02, M03 }`（3 变体，对应 glmapm01/02/03.Map）
+- `pub struct SelectionState { character: Option<Character>, map_slot: Option<MapSlot>, completed: bool }`
+- `pub fn oracle_select_role(state, ch) -> (SelectionState, Option<Sfx>)`（Sfx 复用 oracle::menu 的 Sfx 枚举）
+- `pub fn oracle_select_map(state, m, unlocked) -> (SelectionState, Option<Sfx>)`（未解锁 → Sfx::Invalid）
+- `pub fn oracle_selection_flow() -> Vec<(Character, MapSlot)>`（15 组合流程脚本）
+- 规则数：3 个 pub fn + 2 个 const fn（has_character/has_map）
+
+## 子步 4：impl（crates/ti-core/src/rules/selection.rs）
+- `pub struct SelectionFlow { state: SelectionState, unlocked: Vec<MapSlot> }`
+- 方法：`new()` / `state()` / `is_completed()` / `unlocked()` / `select_role()` / `select_map()` / `all_flows()` = 7 方法
+- 2 个内部自由函数 `transition_role` / `transition_map`
+- 行为与 oracle 逐位一致，结构不同（struct 方法 vs 自由函数）
+
+## 子步 5：diff（crates/ti-core/tests/diff_selection.rs）
+- `diff_role_then_map_15_combinations`：5 角色 × 3 地图 = 15 组合，先角色后地图 ✓
+- `diff_map_then_role_15_combinations`：5 角色 × 3 地图 = 15 组合，先地图后角色 ✓
+- `diff_locked_maps_all_unlocked_subsets`：7 个非空解锁子集 × 5 角色 × 3 地图 ✓
+- `diff_reselect_role_15_combinations`：重选角色（5×5×3 = 75 组合）✓
+- `diff_reselect_map_15_combinations`：重选地图（5×3×3 = 45 组合）✓
+- `diff_flow_script`：oracle_selection_flow == impl all_flows（15 组合）✓
+- 2 语义测试：
+  - (a) Panda + M01（已解锁）→ completed ✓
+  - (b) Kidd + M03（未解锁）→ Sfx::Invalid + completed=false ✓
+- 8/8 全绿
+
+## 子步 6：coverage
+- 5 角色 × 3 地图 = 15 流程全有处理路径（`diff_flow_script` 验证 oracle 与 impl 一致）
+- 事件覆盖（spec §d 事件码每个都有 oracle 分支）：
+  - 13（确定）→ select_role/select_map → Press → 覆盖
+  - 27（返回）→ 子场景回 index（menu oracle 已覆盖，selection 不重复）
+  - 37（无效）→ 未解锁地图 → Invalid → 覆盖
+  - 38（上一个）→ 角色/地图循环（oracle 简化为直接选择，语义等价）
+  - 40（下一个）→ 同上
+- classify.rs 不动；functions_selectrole.csv + functions_selectmap.csv 各 5 行
+
+## 子步 7：gate
+```
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未安装, S2.6 后补)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 已正式验收无未知字节)
+        ledger: 44 tasks, 28 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+=== gate: 0 failure(s) ===
+```
+
+## 子步 8：evidence（本段）
+
+### DoD「流程脚本 + 差分全绿」达成说明
+- **流程脚本**：`oracle_selection_flow()` 返回 15 组合（5 角色 × 3 地图），
+  每个组合从空状态出发选角色 + 选地图，断言 completed=true（触发 main.Map）。
+  impl 的 `all_flows()` 逐位一致（`diff_flow_script` 验证）。
+- **差分全绿**：8 个 diff 测试全绿（6 diff + 2 语义），覆盖 15 组合 × 各状态 × 各事件
+  + 7 个解锁子集 + 75 重选角色 + 45 重选地图，oracle 与 impl 逐位一致。
+
+### oracle/impl/diff 数字
+- oracle：3 个 pub fn（oracle_select_role / oracle_select_map / oracle_selection_flow）
+  + 2 个 const fn（has_character / has_map）
+- impl：7 个 pub 方法（new / state / is_completed / unlocked / select_role / select_map / all_flows）
+  + 2 个内部自由函数（transition_role / transition_map）
+- diff：8 个测试（6 diff + 2 语义）全绿
+
+### 两个 CSV 行数
+- ref/functions_selectrole.csv：5 行（5 个 selectrole 模块函数）
+- ref/functions_selectmap.csv：5 行（5 个 selectmap 模块函数）

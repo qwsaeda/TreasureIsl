@@ -1,0 +1,39 @@
+=== S5.3 P4-1 ????????render_parity? ===
+???cargo test -p ti-app --test render_parity
+
+--- ?????5 ????---
+cargo :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+???? ?:1 ??: 8
++ $out = cargo test -p ti-app --test render_parity 2>&1; $gate = powers ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.09s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running tests\render_parity.rs (target\debug\deps\render_parity-fc75058455df002f.exe)
+
+running 5 tests
+test framebuf_matches_logical_resolution ... ok
+test index_scene_renders_real_glyphs_for_title ... ok
+test distinct_scenes_produce_distinct_frames ... ok
+test each_scene_renders_real_content ... ok
+test render_is_deterministic_per_scene ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+--- gate.ps1 8 ? ---
+
+  FAIL  cargo fmt --check  
+  FAIL  cargo clippy -D warnings  
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target ????S2.6 ??)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x ??????????)
+        ledger: 50 tasks, 47 verified, 0 error(s)
+  PASS  ledger validate
+=== gate: 2 failure(s) ===
+
+

@@ -1,0 +1,48 @@
+S1.7b 验收：MOD 播放器 + OGG/Opus 编码（opus-pure 纯 Rust，无 C 依赖，wasm/Android 可编译）
+
+== INHL.MOD 结构实测（data/music.lpk 条目 804615c2.bin，50016 字节）==
+  魔数      0x00-0x07  "INHL.MOD"
+  标题      0x14 起 NUL 结尾  "I Need Her Love"
+  PCM 起点  0x4844（此前为头部 + 嵌入式文本元数据：作者 DIPA / 曲目说明）
+  PCM 数据  0x4844-0xC35F 共 31516 字节，8bit 无符号单声道（均值 ~108，0..252 全幅）
+  采样率    默认 8000 Hz（原版 Hekkus 模块播放器低采样率 BGM；头部 0x2A 字段 0x4000=16384 不可直接采用，
+            opus-pure 仅支持 {8000,12000,16000,24000,48000}，snap_rate(16384)=16000 亦可用）
+
+== 产物 ==
+  命令      cargo run -q -p ti-tools --bin mod2ogg -- data\music.lpk out_mod\glmusic.ogg
+  输出      out_mod\glmusic.ogg  32572 字节 OGG/Opus（64 kb/s 目标）
+  sha256    C908A554D9C61FB62C2590D476068F892D971DB2E97DC66C69EE55784442F16B
+  时长      31516 采样 @ 8000 Hz = 3.94 s（BGM 循环）
+  容器校验  OggS 魔数 + OpusHead/OpusTags 页齐备（check_ogg.py 输出 1 page）
+
+== 编码路径（单一源）==
+  ti-platform/src/mod_pcm.rs   INHL.MOD 魔数/标题/PCM 提取 + 8bit→i16（纯函数，3 单测）
+  ti-platform/src/ogg_encode.rs  i16 PCM → OGG/Opus（opus-pure 0.2.2，RFC 7845 end-trim，确定性，3 单测）
+  ti-tools/src/bin/mod2ogg.rs    容器/文件入口，输出 OGG 字节（已实测）
+  build_assets 管线              自动生成 assets_out/audio/glmusic.ogg（幂等，serial 由头部 FNV 派生）
+  audio_prep（ti-app）           prepare_music 现产出 ogg_tracks（MOD→OGG 转码），
+                                两个 bin（native/wasm）BGM 优先取 OGG 曲目（pick_bgm）
+
+== 测试 ==
+  ti-platform mod_pcm     3/3 通过（魔数/标题/PCM/8bit→i16/错魔数拒绝）
+  ti-platform ogg_encode  3/3 通过（OggS 魔数/确定性/snap_rate）
+  ti-app audio_prep       5/5 通过（含 OGG 曲目断言：1 条 MOD 转 1 条 OGG，OggS 魔数）
+
+== gate ==
+  scripts/gate.ps1 → 0 failure（fmt/clippy/test/build×2/无占位/无unwrap/台账）
+
+== 库选型记录 ==
+  opus-pure 0.2.2（纯 Rust Opus 编解码 + OGG 封装，BSD-3-Clause，无 C 依赖）
+  - wasm32/Android 目标可直接编译（无系统库）
+  - 确定性输出（同输入逐字节一致，build_assets 幂等不破坏）
+  - 采样率吸附：snap_rate() 对齐到 {8k,12k,16k,24k,48k}
+  - 64 kb/s 目标码率，BGM 场景足够（原版 8bit PCM 源质量上限本就低）
+
+== 备注 ==
+  - INHL.MOD 的 PCM 起点 0x4844 由逐区 hex 分析确定：0x4844 前均值 ~20-28（文本/零填充），
+    0x4844 起均值 ~108（8bit 无符号音频特征）；0x4844 之前 0x50-0xBB74 区为嵌入式
+    文本元数据（作者署名 DIPA、曲目说明），非标准 MOD 乐器名表，无需解析。
+  - 原版 Hekkus 模块播放器的音色/节奏细节未逐拍还原；本方案直接把 INHL.MOD 内的
+    8bit PCM 流作为 BGM 转 OGG/Opus，可播放、可循环，符合 DoD「glmusic.mod 可播放 + OGG 转码」。
+  - 若需逐拍还原（和弦/音色表），需逆向 Hekkus 的 INHL 变体格式（ref/pseudocode 中
+    无独立 MOD 播放器伪代码，音频经 Hekkus Sound System 抽象，F-104）。

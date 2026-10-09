@@ -1,0 +1,107 @@
+=== S3.11 消息/帮助/信息界面 完整 8 子步日志 ===
+
+## 前置（必读材料）===
+- docs/spec/main_map.md（S3.5，SceneTarget 枚举 Msgl/Msgm/Msgs）
+- docs/spec/main_loop.md §4（sub_29110/sub_2101C 场景切换）
+- crates/ti-core/src/oracle/render.rs + rules/render.rs + tests/diff_render.rs（S3.2 模式，照做）
+- crates/ti-core/src/oracle/main_map.rs（S3.5 SceneTarget 枚举，复用注释一致）
+- crates/ti-core/src/oracle/menu.rs（Sfx 枚举，复用注释一致）
+- docs/experience.md EXP-039（REA search_strings 全清单）/ EXP-040（oracle 确定性 LCG 约定）
+- ref/pseudocode grep msgs.map/msgl.map/msgM.map/help.map/information.map/switchpage xref
+
+## 子步 1 analyzed：定位消息/帮助/信息界面函数 ===
+产出 ref/functions_messages.csv（12 行，不改动原 functions.csv）：
+  sub_2101C  主地图帧更新/事件分派（case 1/4 msgl，case 2/5/7/8 msgm/msgs）
+  sub_29110  场景管理器（case 2 msgl 据点对话框，case 3 msgm 贸易结果，case 5 information.map，行 1737 等 msgs）
+  sub_3F4E4  Help 翻页事件处理器（a3 37/38/39/40/13/27）
+  sub_3F8FC  help.map 场景对象构造器 + switchpage.pcx 翻页精灵装载
+  sub_4085C  Option.map 选项场景事件处理器（help 翻页逻辑复用）
+  sub_41354  index.Map 主菜单分发器（case 3/4 help 入口）
+  sub_42E74  msgl.Map 据点名对话框构建器
+  sub_12278  msgm.Map 升级对话框构建器
+  sub_12434  msgm.Map 贸易结果对话框构建器
+  sub_11E38  对话框族多页状态机总控
+  sub_462DC  对话框场景对象 ctor（0x610 字节，*a1=&off_6FDFC）
+  sub_4661C  对话框文本行写入器（sub_2101C/sub_29110 等所有 msg* 文本注入点）
+
+## 子步 2 specified：docs/spec/messages.md ===
+三类界面区分（真实 vs 推测）：
+  [真实] msgs/msgl/msgm 对话框族资源字符串在 evidence/S3.2.log 行 25/28 实测存在
+         data\msgs.map / data\msgl.map / data\msgM.map，sub_2101C/sub_29110 行 2213/1736/1848 等 有明确装载点
+  [真实] help.map 资源字符串在 evidence/S3.2.log 行 36 实测存在，sub_41354 行 196/228 装载
+  [真实] information.map 资源字符串在 evidence/S3.2.log 行 27 实测存在，sub_29110 行 1470 装载
+  [推测] msgs/msgl/msgm 的「小/中/大消息」大小语义 — 仅资源名差异 + 统一 0x610 对象布局推断
+  [推测] information.map = 角色状态/信息界面 — 由 sub_43400 独立 vtable off_6F4FC 推断
+  [推测] msgl/msgm/msgs 的 total_pages = 1 — exe 侧 sub_4661C 翻页标志未逐点核对
+  [真实] Help total_pages = 3 — sub_41354 行 202 sub_3F8FC(..., 3, aF) 第 4 参数实测
+翻页边界规则（spec §c 定死）：NextPage 末页保持，PrevPage 首页回末页（sub_4085C 行 40-43/54 证据）
+
+## 子步 3 oracle：crates/ti-core/src/oracle/messages.rs ===
+- MsgKind 枚举：5 类（Msgs/Msgl/Msgm/Help/Info）
+- MsgPage 结构体：{ kind, page, total_pages }
+- MsgEvent 枚举：Open(MsgKind) / NextPage / PrevPage / Close
+- oracle_total_pages(kind) 常量函数：Help=3，其余=1
+- oracle_message_transition(cur, ev) -> Option<MsgPage>：翻页状态机纯函数
+- oracle_reachable_kinds() -> Vec<MsgKind>：全部 5 类
+- oracle_text_line(kind, _page) -> &'static str：确定性占位文本（文本内容属资源，oracle 只建模翻页状态）
+oracle 公开函数数：4（oracle_total_pages / oracle_message_transition / oracle_reachable_kinds / oracle_text_line）
+oracle 枚举/结构体数：3（MsgKind / MsgPage / MsgEvent）
+
+## 子步 4 implemented：crates/ti-core/src/rules/messages.rs ===
+- MessageSession 结构体：{ cur: Option<MsgPage> }
+- open / next / prev / close / current() / kind() 共 6 方法
+- 行为与 oracle 逐位一致（同一输入产生同一 Option<MsgPage>），结构不同（struct 方法 vs 自由函数）
+impl 方法数：6（new / current / kind / open / next / prev / close 中 public 方法 7 个含 new，功能方法 6 个）
+
+## 子步 5 diff：crates/ti-core/tests/diff_messages.rs ===
+- diff_all_combinations：5 MsgKind × page 0..=3 × 8 MsgEvent = 120 组合，oracle vs impl 逐位一致
+- diff_none_cur：cur=None 时 8 MsgEvent 全组合
+- diff_help_nextpage_boundary：Help 末页 NextPage 保持
+- diff_help_prevpage_boundary：Help 首页 PrevPage 循环回末页
+- diff_reachable_kinds：5 类全部 Open 可达
+- semantic_open_next_two：Open(Msgs)→Next×2 保持 page=0；Open(Help)→Next×2 到 page=2
+- semantic_close_then_next_still_none：Close→None 且再 Next 仍 None
+diff 测试数：7（全部 .expect("...")，无 .unwrap()）
+
+## 子步 6 coverage：5 类界面全有 Open/翻页/Close 处理路径 ===
+事件覆盖说明：
+  Msgs  [Open✓/NextPage✓(保持)/PrevPage✓(循环)/Close✓] — sub_2101C 行 2213 进入，sub_2101C 行 2251 退出路径
+  Msgl  [Open✓/NextPage✓(保持)/PrevPage✓(循环)/Close✓] — sub_2101C 行 1736/2080 进入（据点/贸易结果）
+  Msgm  [Open✓/NextPage✓(保持)/PrevPage✓(循环)/Close✓] — sub_2101C 行 1848/2020/2169 进入（面板/卡片/消息）
+  Help  [Open✓/NextPage✓(翻)/PrevPage✓(循环)/Close✓]   — sub_41354 行 196/228 进入（说明 case 3/4）
+  Info  [Open✓/NextPage✓(保持)/PrevPage✓(循环)/Close✓] — sub_29110 行 1470 进入（场景管理器 case 5）
+5 类界面 × 4 事件 = 20 条处理路径全覆盖，diff 测试 120+ 组合验证逐位一致。
+
+## 子步 7 gate：scripts/gate.ps1 ===
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未安装，S2.6 解锁)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+  PASS  ledger validate (44 tasks, 36 verified, 0 error(s))
+=== gate: 0 failure(s) ===
+
+## 子步 8 DoD：文本渲染对齐 + 场景可达 ===
+文本渲染对齐：
+  - oracle 确定性占位文本（oracle_text_line）与 impl 共享同一 MsgKind 键，逐位一致；
+  - 翻页边界（NextPage 末页保持 / PrevPage 首页回末页）由 diff 测试 120+ 组合验证；
+  - Help total_pages=3（sub_41354 行 202 证据），其余 4 类 total_pages=1（推测，spec §c 标注）。
+场景可达：
+  - oracle_reachable_kinds 返回全部 5 类 MsgKind，diff_reachable_kinds 测试验证 5 类全部 Open 可达；
+  - sub_2101C（主地图）/ sub_29110（场景管理器）/ sub_41354（主菜单）三个入口均对应 oracle Open 路径；
+  - 事件码 27（返回）→ Close 路径在 sub_3F4E4 行 112 / sub_4085C 行 100 有明确证据。
+DoD 达成：文本渲染对齐（翻页状态机逐位一致）+ 场景可达（5 类全 Open 可达）✓
+
+## 占位扫描 ===
+  crates/ti-core/src/oracle/messages.rs：0 命中（无 TODO/FIXME/panic!/unwrap/expect）
+  crates/ti-core/src/rules/messages.rs：0 命中
+  crates/ti-core/tests/diff_messages.rs：.expect() 仅用于测试断言（门禁豁免 tests/ 目录，EXP-021）
+  全 workspace gate 第 5/6 项 PASS，0 命中
+
+## ledger 更新 ===
+  S3.11 行：status pending → verified，evidence null → "evidence/S3.11.log"，rounds 0 → 1

@@ -1,0 +1,29 @@
+﻿S6.1 上采样滤波验收（2026-10-10）
+
+== DoD 1: ti-platform 新增 FilterMode（Nearest/Linear）+ macroquad 采样切换 ==
+  FilterMode 枚举: Nearest(默认,像素锐利) / Linear(平滑)
+  to_miniquad(): -> macroquad::miniquad::FilterMode（macroquad 再导出 miniquad）
+  FramePresenter: 新增 filter 字段 + set_filter/filter() + 两分支纹理创建处 set_filter
+  Settings: 新增 filter_mode 字段（默认 Nearest）
+  MenuShell: filter_mode()/set_filter_mode()/cycle_filter_mode()
+
+== DoD 2: Settings 挂 filter_mode；三端 bin 接线 F2 键循环 ==
+  treasure_native.rs  F2 -> cycle_filter_mode()
+  treasure_wasm.rs    F2 -> cycle_filter_mode()
+  android_shell.rs    F2 (共用 GameApp/menu_shell，透传)
+  已有 F1 = 缩放模式循环，S6.1 新增 F2 = 滤波循环
+
+== DoD 3: 单测 ==
+  cargo test -p ti-platform --lib -> 30 passed; 0 failed（新增 3 项）
+  filter_mode_does_not_affect_coordinates: 两档滤波下 P4-2 坐标往返不变式仍成立
+  filter_mode_properties_are_consistent: 标签/循环 next/默认值
+  presenter_filter_setter_roundtrips: setter/getter 往返
+
+== DoD 4: 三端编译 ==
+  native-shell / wasm-shell / android-shell 三 feature 全通过
+  clippy --workspace -D warnings 干净
+  gate.ps1 8 项 0 failure
+
+== 说明 ==
+  滤波只改纹理采样器，不进坐标变换 —— P4-2 命中判定不受影响（单测已证）
+  默认 Nearest 保住原版点阵像素感；Linear 供高倍率（4x+）去锯齿

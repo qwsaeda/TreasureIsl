@@ -1,0 +1,55 @@
+=== S0.3 验收：函数分类打标 classify → ref/classify.json ===
+数据源: ref/functions.csv (1827 行) + ref/imports.json (116 API, 101 thunk) + ref/pseudocode/*.c
+方法:  特征级联 —— ① 函数名(nullsub/WinMain/C++修饰名) → ② callee API 映射
+       (imports.json thunk→api, 强特征票优先 + 专用度 tie-break, 弱特征 crt 需≥2 佐证)
+       → ③ 字符串特征(zlib 错误串/LucencyPackage/HMSS/pcx/资源名/事件词)
+       → ④ 伪代码全文模式(vtable ctor/虚函数调用/operator new-delete)
+       → ⑤ 高频 sub callee(≥10 callers → utility) → ⑥ 结构兜底(size/入度)
+
+  PASS  覆盖率 100.00%% (1827/1827, pending=0; 允许 pending 类目, 本次实测 0)
+        类目分布:
+  utility       1299   stub           115   crt            113
+  cpp_virt        81   win_ce          53   io              50
+  crt_data        39   game_logic      32   dead_code       22
+  thread          10   zlib             6   audio            3
+  gfx              3   lucency          1
+        抽查: 0005AD7C→audio, 000115D8→thread, 00063D88→lucency,
+              000114D4→io, 00062A14/00062B84→win_ce, 00045458→crt,
+              00011000→crt_data  全部命中
+        说明: dead_code(22)=无引用中等体量(65~400B)子程序 S3 甄别;
+              utility(1299)含 hot-sub callee, 细分子类在 S3 各模块内做
+脚本: python scripts/classify.py   产出: ref/classify.json
+
+gate:
+﻿=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未安装，S2.6 解锁)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 44 tasks, 25 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+=== gate: 0 failure(s) ===
+=== S0.3 classify ===
+total=1827  coverage=100.00%  pending=0
+by_category:
+  utility         1299
+  stub             115
+  crt              113
+  cpp_virt          81
+  win_ce            53
+  io                50
+  crt_data          39
+  game_logic        32
+  dead_code         22
+  thread            10
+  zlib               6
+  audio              3
+  gfx                3
+  lucency            1
+hot_sub_callees=53  output=ref\classify.json

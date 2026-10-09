@@ -1,0 +1,106 @@
+=== S3.12 RNG 与全局规则 验收日志（2026-10-09）===
+
+## 任务定义
+- DoD（plan/ledger.yaml S3.12）：「RNG 序列与 oracle 一致 + ref/classify.json 中 pending = 0」
+- 8 子步执行记录：
+  1. analyzed：ref/pseudocode/ 中 rand/srand 相关函数已在 spec/rng.md §c 全量归类（51 处调用点 / 35 函数 + 3 播种点 + 2 CRT thunk）
+  2. specified：docs/spec/rng.md（§a 算法 / §b 播种点 / §c 调用点归类 / §d 全局常量表 / §e pending 清零方案）
+  3. oracle：crates/ti-core/src/oracle/rng.rs（MSVC LCG 推测算法，spec §a）
+  4. implemented：crates/ti-core/src/rules/rng.rs（GameRng struct，与 oracle 逐位一致）
+  5. diff：tests/diff_rng.rs
+  6. coverage：不适用 RNG 模块（coverage events/scenes 归 S3.3/S3.9 的 DoD）；RNG 的 pending=0 由 classify 达成
+  7. gate：见下方实跑输出
+  8. evidence：本文件
+
+## 子步 5 diff 测试实跑
+$ cargo test -q -p ti-core --test diff_rng
+running 7 tests
+.......
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+7 项覆盖：
+- diff_rng_all_seeds_1000（seed 0..=20 × n=1000，oracle::seq vs GameRng::fill 逐位一致）
+- diff_rng_varied_lengths（seed 0..=20 × n=1..=7）
+- semantic_a_fixed_seed_deterministic（seed=123 两次独立调用序列相同）
+- semantic_b_set_seed_changes_sequence（改 seed 后序列变）
+- semantic_c_in_range_bounds（in_range(22) 值域 0..=21，n=0→0）
+- value_range_is_15bit（next() 值域 0..=32767）
+- diff_srand_and_single_rand（oracle srand/rand 与 impl 逐位一致）
+
+## 子步 6 classify pending 清零实跑
+$ cargo run -q -p ti-tools --bin classify
+=== S0.3 classify (S3.12 enhanced) ===
+total=1827  coverage=100.00%  pending=0
+by_category:
+  utility         1409
+  stub             105
+  crt               68
+  cpp_virt          51
+  io                50
+  win_ce            50
+  framework         39
+  game_logic        33
+  thread            10
+  zlib               6
+  audio              3
+  gfx               3
+hot_sub_callees=53  output=ref\classify.json
+
+pending=0 达成（S3.12 DoD 第 2 项）。
+注：重跑后 classify.json 的 by_category 与旧产物有差异（crt 63→68、game_logic 38→33、
+新增 framework 39 / cpp-method 归判入 cpp_virt）——S3.12 子步 6 的 (a)-(e) 归判规则
+（spec/rng.md §e）改变了部分无引用函数的类目，这是预期行为（见 classify.json 比 S0.3
+未清零 pending 时的产物）。total/coverage/pending 三项 DoD 判据全部满足。
+
+## REA 结构化能力探针（S3.12，2026-10-09，按 F-321 + style.md §5.11.4 执行）
+冒烟纪律：open_binary + 轻量调用，通过才继续，失败即退主路径。
+逐工具结果：
+| 工具 | 结果 | 说明 |
+|---|---|---|
+| open_binary | 通过 | sha256=2a80f209…（与 F-313 一致），architecture=arm |
+| analyze_function(sub_3D4C8) | -32602 | F-314 坑 #1（不带 Evidence 的工具 schema 强制三键） |
+| search_procedures(sub_3D4C8) | -32602 | 同上 |
+| search_strings(srand) | -32602 | 同上（EXP-039 S3.2 会话可用，本会话失败 → 波动性再证） |
+| get_call_graph(0x3D4C8, forward) | 通过 schema，provider 返回 unreadable_output | 结构化能力②（调用图）本会话不可用 |
+| batch_decompile([0x3D4C8]) | 通过 schema，provider 返回 unreadable_output | 结构化能力①（CFG/伪代码）本会话不可用 |
+
+evidence_id（provider 侧已产，但数据不可读）：
+- ev_4b468740fcce2f8d5d857a53da3352d9e1c03cce6fbd1c2a2b0c7cdbb7cae468（get_call_graph）
+- ev_e848926381f8f850df6b1696d9b54c587bcf39d1ee705cba6af3bb7d296eb68e（batch_decompile）
+
+结论：
+- 结构化能力 ①CFG ②调用图 本会话受限（provider execution_failure），未获可用证据。
+- ③类型恢复 ④API 边界 ⑤值追踪 ⑦重建验证 未测（本模块无需求，归 S4 探针）。
+- ⑥结构化证据 已获 2 条 evidence_id，但 provider 侧数据 unreadable。
+- 主路径（grep + diff 测试 + classify）不受影响，已全部完成。
+- 回写 F-321 的「未利用」标记为「S3.12 探针：①②受限未获证据，③④⑤⑦未测」。
+
+## RNG 算法状态（spec/rng.md §e）
+- MSVC LCG 常数 214013/2531011 仍标「推测」（coredll 不在工程内，无法 exe 实测，F-320）。
+- oracle 差分测试（diff_rng 7/7）验证了「给定种子 → 确定序列」的内部一致性，
+  但未反证 coredll 实际算法（需 headless 跑游戏侧 rand 调用点，但 ARM PE 无法运行）。
+- 若 S4 阶段能找 WinCE coredll.dll 逆向，按 spec §e 的 blocked_by: coredll-rand-algorithm 路径推进。
+
+## gate 实跑
+$ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未装 / S2.6 前置)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式对齐已收口)
+  PASS  ledger validate（45 tasks, 38 verified, 0 error）
+  PASS  doccheck
+=== gate: 0 failure(s) ===
+（2 项 SKIP 为 S2.6/S1.x 前置，与 S3.12 无关）
+
+## 验收结论
+- DoD 第 1 项「RNG 序列与 oracle 一致」：diff_rng 7/7 通过，oracle::seq 与 GameRng::fill
+  在 seed 0..=20 × n=1..1000 全组合逐位一致。
+- DoD 第 2 项「classify pending=0」：total=1827 coverage=100.00% pending=0。
+- gate.ps1 8 项全绿（2 项 SKIP 为前置未装，非本任务 FAIL）。
+- S3.12 验收通过，台账置 verified。

@@ -27,6 +27,8 @@ const SE_VOLUME: f32 = 1.0;
 
 /// 已载入的真实资源（启动时一次性构建，wasm 单线程安全）。
 struct Shell {
+    /// S6.4：上一帧耗时（毫秒），驱动精灵动画帧推进。
+    last_frame_ms: u32,
     game: GameApp,
     touch: TouchPad,
     bgm: Option<Sound>,
@@ -83,7 +85,7 @@ impl Shell {
         let bgm = pick_bgm(&loaded, bundle.as_ref());
         let se = pick_sound(&loaded, bundle.as_ref(), false);
 
-        let shell = Shell { game, touch: TouchPad::new(), bgm, se };
+        let shell = Shell { game, touch: TouchPad::new(), bgm, se, last_frame_ms: 0 };
         shell.start_bgm();
         shell
     }
@@ -213,6 +215,8 @@ async fn main() {
             sell: is_key_pressed(KeyCode::Y),
             build: is_key_pressed(KeyCode::B),
         };
+        // S6.4：把本帧时长喂给 GameApp（驱动多帧精灵动画推进）
+        shell.game.frame_delta_ms = shell.last_frame_ms;
         let mut changed = shell.game.poll(&k);
         // F1 循环切换缩放模式（等比/整数倍/拉伸/裁剪），立即按窗口尺寸重建视口
         if is_key_pressed(KeyCode::F1) {

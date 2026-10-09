@@ -85,6 +85,12 @@ impl Package {
         self.entries.iter().position(|e| e.key == key)
     }
 
+    /// 按原始 key 值查找资源下标（不经过名称哈希）。
+    #[must_use]
+    pub fn find_key(&self, key: u32) -> Option<usize> {
+        self.entries.iter().position(|e| e.key == key)
+    }
+
     /// 解压第 `index` 条资源的内容。
     ///
     /// # Errors

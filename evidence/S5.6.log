@@ -1,0 +1,37 @@
+﻿S5.6 美术纹理渲染接线验收（2026-10-10）
+
+== DoD 1: sprite_atlas.rs 实现 ==
+  crates/ti-app/src/sprite_atlas.rs (295 行)
+  功能: ui.pak filenum INI 解析 + PCX 解码缓存 + f1→NN.pcx 寻址 + Framebuf blit
+
+== DoD 2: 单测 ==
+  cargo test -p ti-app --lib
+  result: 15 passed; 0 failed
+  新增 5 项: atlas_end_to_end / atlas_missing_f1 / filenum_ini_parsing /
+            filenum_ini_rejects_empty / blit_clips_to_screen
+
+== DoD 3: 三端 bin 注入 ui.pak + 8 场景 .Map ==
+  treasure_wasm.rs   -> set_atlas + add_scene ×8 (load_file)
+  treasure_native.rs -> set_atlas + add_scene ×8 (read_local)
+  android_shell.rs   -> set_atlas + add_scene ×8 (read_asset)
+  GameApp::render()  -> 场景名映射 + blit_scene 叠加
+
+== DoD 4: 编译验证（三端）==
+  cargo build -p ti-app --features native-shell --bin treasure-native    PASS
+  cargo build -p ti-app --features wasm-shell --bin treasure-wasm (wasm) PASS
+  cargo build -p ti-app --features android-shell --bin treasure-android PASS
+
+== DoD 5: gate ==
+  cargo fmt --check / clippy -D warnings / test / build (x86+wasm) / 占位扫描 / ledger
+  -> 0 failure (android target SKIP, 无 NDK)
+
+== 寻址机制（docs/design/ui_controls.md §2.3）==
+  f1=N → ui.pak filenum INI [N] filename=NN.pcx → name_key → PCX 解码
+  实测 ui.pak 122 条目 = 120 PCX + 1 INI(filenumber=120) + 1 其他
+  blit 坐标 = (f2, f3)，越界裁到 176×220 屏内
+
+== 已知限制（不阻塞 S5.6）==
+  - f1 全场景覆盖（120/120）已实现，但 glpics.pak 88 张未接入（ui.pak 120 张已够主场景）
+  - 精灵 blit 在占位渲染之后叠加（背景色先画，精灵覆盖），视觉正确
+  - 动画帧（INI num>1 的 sprite 取第 0 帧）未做
+  - 地形瓦片 blit（glmap_m*.pak）未做，主地图仍占位网格

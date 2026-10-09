@@ -1,0 +1,61 @@
+S6.3 地形瓦片 blit 验收（2026-10-10）
+
+== DoD 1: TerrainAtlas 解析 glmap_m01/02.pak 的瓦片 PCX（按 name_key 寻址）==
+  crates/ti-app/src/terrain_atlas.rs
+  机制：与 ui.pak 同构（filenum INI + name_key 寻址），实测 glmap_m01.pak 47 条目
+        = 46 PCX + 1 filenum INI（filenum=49，键名 attrib 而非 num）
+  瓦片名可解：gr_001 / shui / shui_01 / B-03..B-10 / ice / war / Castle /
+        MAZE / BOSS / bd_001..009 / diji_1 / diji_10001..3 / diji20003..5 / pool / card
+  瓦片尺寸实测 63x31 ~ 127x105（远大于 32x16 等距格步进）
+  解码缓存：HashMap<tile 索引, DecodedTile>，避免每帧 RLE 解压
+
+== DoD 2: render_main_map 按等距投影 blit 瓦片 + 玩家棋子 + 据点==
+  等距投影（F-307 恒等式 3/3 全量验证）：
+    iso_x = 32 * (row + col)
+    iso_y = 16 * (row + grid_w - 1 - col)
+  **关键发现**：地形是大画布 + 摄像机
+    实测 m01 的 iso_x 范围 0..1216、iso_y 范围 16..608，
+    远超 176x220 逻辑屏 —— 故必须按摄像机偏移把画布窗口平移到屏内。
+    （首版实现未加摄像机，blit 全部落在屏外，单测捕获到 0 像素）
+  新增 API：
+    bounds(terrain) -> (min_x, min_y, max_x, max_y)   等距包围盒
+    center_camera(terrain) -> (i64, i64)             包围盒中心对到屏心 (88, 110)
+    blit_map(terrain, fb)                             居中摄像机 blit
+    blit_map_cam(terrain, fb, camera)                显式摄像机 blit
+  painter's order：cell 按 iso_y 升序（远的先画，近的覆盖）
+  瓦片以 (iso_x, iso_y) 居中于等距格点（iso_x - w/2）
+  玩家棋子/据点坐标改用同一等距投影 + 同一摄像机（此前是 6px 网格占位）
+  无地形资源时自动退回占位网格（terrain_drawn=false 分支）
+
+== DoD 3: 三端 bin 注入 glmap_m01.pak + glmapm01.Map==
+  treasure_native.rs  set_terrain(pak, map, name)   read_local
+  treasure_wasm.rs    set_terrain(pak, map, name)   load_file
+  treasure_android.rs 共用 GameApp（android_shell），透传
+  GameApp 新增字段：terrain_atlas / terrain_map + set_terrain() 注入方法
+
+== DoD 4: 单测（6 项，全绿）==
+  cargo test -p ti-app --lib -> 21 passed; 0 failed
+  iso_projection_matches_f307           等距投影公式 4 组取值 + 缺格落在 (0,0)
+  terrain_atlas_end_to_end              真实 pak 解析 40+ 映射 + tile 1 解码
+  terrain_atlas_missing_tile_returns_none  tile 9999 越界 -> None
+  blit_real_terrain_produces_pixels     真实地形+真实瓦片 -> >100 非黑像素
+  blit_clips_to_screen                  完全出屏的 blit 不写像素
+  filenum_ini_parsing_with_attrib       attrib 键的地形 INI 解析
+
+== DoD 5: build_wasm.ps1 资产清单 ==
+  glmap_m01.pak + glmapm01.Map 归入首屏（bin 启动即 fetch）
+  glmap_m02.pak / glmapm02.Map / glmapm03.Map 留在 lazyAssets（选图后按需）
+  首屏预算 430 KB -> 490 KB（+55 KB 地形资源）
+
+== DoD 6: gate ==
+  fmt / clippy -D warnings / test / build(x86+wasm) / 占位 / unwrap / ledger
+  -> 0 failure（android target SKIP，无 NDK）
+
+== 三端编译 ==
+  native-shell / wasm-shell / android-shell 三 feature 全通过
+
+== 已知限制（不阻塞 S6.3）==
+  - 摄像机固定居中，尚未跟随玩家位置平移（玩家走出视野需手动跟随）
+  - glmap_m02/m03 未接入（当前固定用 m01；选图切换时需按 map_slot 选 pak）
+  - 连线/路点记录（ConnectionRecord）未 blit（地形瓦片之外的路点 sprite）
+  - 瓦片无透明通道，边缘为硬边（原版同样如此）

@@ -1,0 +1,58 @@
+﻿S4.3 wasm 体积记录（2026-10-10）
+
+== wasm 主体 ==
+treasure_wasm.wasm              744,927 B
+
+== 首屏附属资源（阻塞首帧渲染，不含 wasm 主体）==
+audio.js                          6,139 B
+gl.js                            67,252 B
+index.html                        2,262 B
+font.dat                          2,034 B
+glpics.pak                       87,027 B
+GoldLand.Fnt                     24,384 B
+index.Map                           780 B
+intro.Map                         1,956 B
+main.Map                          1,692 B
+msgs.Map                            900 B
+saveload.Map                      5,052 B
+selectmap.Map                     2,196 B
+selectrole.Map                    1,788 B
+settings.dat                          8 B
+ui.pak                          102,369 B
+vs.Map                            2,388 B
+首屏附属合计                          308,227 B
+
+== 非首屏资源（进对应场景或空闲补载，不阻塞首屏）==
+background.Map                      276 B
+Bigcard.Map                       5,124 B
+build.Map                         1,836 B
+card.Map                          1,500 B
+cards.lpk                        34,000 B
+castle.Map                        4,116 B
+glmapm01.Map                     17,148 B
+glmapm02.Map                     18,948 B
+glmapm03.Map                      8,976 B
+glmap_m01.pak                    39,609 B
+glmap_m02.pak                    30,315 B
+goods.lpk                           469 B
+help.Map                          2,460 B
+information.Map                   3,780 B
+msgl.Map                          2,532 B
+msgm.Map                          1,092 B
+music.lpk                        67,737 B
+option.Map                        3,732 B
+selecttarget.Map                  2,676 B
+trade.Map                         3,828 B
+非首屏合计                           250,154 B
+
+== 预算比对（基准见 docs/plan-s4.md §S4.3 体积预算）==
+wasm 主体 744,927 B / 预算 800,000 B -> PASS
+首屏附属 308,227 B / 预算 430,000 B -> PASS
+非首屏   250,154 B / 预算 180,000 B -> FAIL(超预算)
+
+分包说明（资源改造 Step 1，docs/modernization.md §9）：
+  首屏  = wasm + gl.js + audio.js + 字体 + ui.pak + glpics.pak + index/intro.Map
+  非首屏= 地形瓦片/地形布局（进主地图时）、cards/goods（触发时）、
+          其余场景 .Map（进对应场景时）、music.lpk（空闲 30 帧补载）
+美术不转码：PCX 已是最优压缩（RLE+调色板），且 .Map 按精灵索引 f1 寻址，
+转图集会打断寻址并引入像素偏差（P4-1 要求逐像素一致）；仅音频 MOD→OGG 必须转。

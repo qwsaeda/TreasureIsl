@@ -238,6 +238,8 @@ pub struct GameApp {
     pub scene_cache: HashMap<&'static str, ti_formats::mapfile::MapScene>,
     /// 地形图集（`glmap_m0*.pak` 瓦片 + 解码缓存，S6.3）。
     pub terrain_atlas: Option<crate::terrain_atlas::TerrainAtlas>,
+    /// S6.4：本帧经过毫秒（壳层每帧传入，驱动精灵动画帧推进）。
+    pub frame_delta_ms: u32,
     /// 已解析的地形（glmapm0*.Map，MainMap 场景渲染用）。
     pub terrain_map: Option<ti_formats::terrain::TerrainMap>,
 }
@@ -448,6 +450,7 @@ impl GameApp {
             atlas: None,
             scene_cache: HashMap::new(),
             terrain_atlas: None,
+            frame_delta_ms: 0,
             terrain_map: None,
         }
     }
@@ -1066,6 +1069,8 @@ impl GameApp {
         if let (Some(atlas), Some(scene)) = (self.atlas.as_mut(), self.scene_cache.get(scene_name))
         {
             if !scene.words.is_empty() {
+                // S6.4：按本帧时长推进动画（多帧精灵 num>1 才受影响）
+                atlas.advance_animation(self.frame_delta_ms);
                 atlas.blit_scene(scene, &mut self.shell.fb);
             }
         }

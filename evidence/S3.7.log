@@ -1,0 +1,81 @@
+# S3.7 建造/城堡系统 — 验收日志
+
+## 子步 1: analyzed
+- 定位函数：`sub_33548`（29 控件装载，行 134-153 button_bank/invest/aimcastle/build）、
+  `sub_1B9AC`（银行/资源状态机，双槽位金 +1032/+1040 + 步进器 10/100/1000...）、
+  `sub_503F0`（投资奖励结算，5 兵种匹配 + 奖励阶梯 30000/40000/20000/15000/50000）、
+  `sub_445F4`（资源查表）、`sub_2077C`（主地图装载，5 兵种字符串 +12/+24/+36/+48/+60）、
+  `sub_20088`（troop_all.pcx 装载）。
+- 产出：`ref/functions_build.csv`（6 行，不改动原 functions.csv）。
+
+## 子步 2: specified
+- 产出：`docs/spec/build.md`（§a 建筑类型/§b 建造条件/§c 银行存取/§d 事件码/§e 函数归属表）。
+- 真实结论：
+  - 4 种建筑类型由 button_bank/invest/aimcastle/build 控件组合推得（spec §a）；
+  - 银行双槽位金 `+1032/+1040` + 步进器 10/100/1000/10000/100000 阶梯（sub_1B9AC 行 102-137/190-240）；
+  - 金量上限 999999（sub_503F0 行 114-116，0xF423F）；
+  - 投资奖励 5 档（sub_503F0 行 125-169）。
+- 推测结论：
+  - 建造条件仅为金量（无独立材料系统，伪代码未见材料字段）；
+  - 银行步进器为 UX 选择器，非固定存取金额；
+  - 建造/银行无独立事件码（复用主地图事件码 4）；
+  - 4 种建筑类型（Castle/Investment/Bank/Fort）由控件组合推断，exe 无独立类型码常量。
+
+## 子步 3: oracle
+- `crates/ti-core/src/oracle/build.rs`：
+  - `Building` 枚举（4 种：Castle/Investment/Bank/Fort）；
+  - `Bank` struct（`gold: u32`）；
+  - `BuildErr` 枚举（`Insufficient`/`InvalidLevel`）；
+  - `oracle_build_cost(kind, level) -> u32`（base_cost × (level+1)，推测公式）；
+  - `oracle_can_afford(bank, cost) -> bool`；
+  - `oracle_build(bank, kind, level) -> Result<Bank, BuildErr>`；
+  - `oracle_deposit(bank, amount) -> Result<Bank, BuildErr>`；
+  - `oracle_withdraw(bank, amount) -> Bank`（永不失败，上限 999999）。
+- oracle 函数数：7（含 4 个 pub fn + 2 个 const fn + 1 个 辅助 fn）。
+
+## 子步 4: implemented
+- `crates/ti-core/src/rules/build.rs`：
+  - `BuildManager` struct（`bank: Bank` + `buildings: Vec<(Building, u32)>`）；
+  - 方法：`new`/`bank`/`buildings`/`level`/`build_cost`/`can_afford`/`build`/`deposit`/`withdraw`；
+  - 行为与 oracle 逐位一致，结构为 struct 状态机。
+- impl 方法数：9（含 3 个 getter + 6 个业务方法）。
+
+## 子步 5: diff
+- `crates/ti-core/tests/diff_build.rs`：7 个测试。
+  - 差分测试 5 个：
+    - `diff_build_cost_all_levels`：4 建筑 × 6 level = 24 组合；
+    - `diff_can_afford_all_gold`：4×6×9 金量 = 216 组合；
+    - `diff_build_all_combos`：4×6×7 金量 = 168 组合；
+    - `diff_deposit_all_amounts`：5 金量 × 6 金额 = 30 组合；
+    - `diff_withdraw_all_amounts`：6 金量 × 6 金额 = 36 组合；
+  - 语义测试 2 个：
+    - `semantic_build_success_increments_level`（金够建造→新 level）；
+    - `semantic_build_insufficient_gold`（金不够→Err(Insufficient)）。
+
+## 子步 6: coverage
+- 建筑类型 4/4 覆盖（Castle/Investment/Bank/Fort 全遍历）；
+- 事件码：建造/银行无独立事件码（spec §d 推测），复用主地图事件码 4；
+- 错误路径 2/2（Insufficient + InvalidLevel 全覆盖）；
+- 金量上限 999999 截断路径覆盖（withdraw_cap 测试）。
+
+## 子步 7: gate
+```
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未安装，S2.6 解锁)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+  PASS  ledger validate
+=== gate: 0 failure(s) ===
+```
+
+## 子步 8: DoD 达成说明
+- DoD：「差分 + 事件覆盖」。
+- 差分达成：oracle/impl/diff 三层逐位一致（5 差分 + 2 语义测试全绿）。
+- 事件覆盖：建筑类型 4/4、错误路径 2/2、金量上限 1/1 全覆盖。
+- 结论：S3.7 DoD 达成。

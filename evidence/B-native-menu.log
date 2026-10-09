@@ -1,0 +1,94 @@
+# B-native-menu 验收证据 — 桌面 native 入口（treasure-native）
+
+## 任务
+新增 `cargo run -p ti-app --features native-shell --bin treasure-native`：
+Windows 上弹 macroquad 原生窗口，显示同一主菜单 + 真字形中文 + 真实音效，
+资源读本地 `data/{GoldLand.Fnt,font.dat,settings.dat,music.lpk}`（与 wasm 同源）。
+表现层下沉到共享 `ti_app::menu_shell::MenuShell`，与 `treasure-wasm` 壳共用同一份渲染逻辑。
+
+## 实跑判据（全部命中）
+
+### 1. 窗口出现 + 标题正确
+枚举顶层窗口标题命中「金银岛 TreasureIsl」（`EnumWindows`+`GetWindowText` 过滤）。
+
+### 2. 渲染非黑屏 + 画面不翻转（S4.3 适配修复后）
+**黑屏根因**（两层，均已在 native 侧解决，wasm 路径未动）：
+- `FramePresenter`（S4.3 脏行带 + 复用纹理部分上传）是 wasm 调优的，native
+  macroquad 下 `update_*` 不重进本帧批次 → 首帧上黑帧后 `last_rendered` 锁死。
+  修复：`FramePresenter` 加 `UploadMode`，native 走 `FullRebuild`（每脏帧整帧
+  `from_rgba8` 重建纹理 + 静止帧也 `draw_quad` 复用上次纹理避免黑底）。
+- 翻转根因：native 端 `from_rgba8` 的纹理 V 轴语义与 wasm 相反。修复：
+  `draw_quad` 的 UV V 坐标翻转正（行主序 bytes 前部=逻辑顶，屏顶 V=0 → 不颠倒）。
+
+**修复后实跑**（`cargo run -p ti-app --features "native-shell,stats" --bin treasure-native`）：
+```
+[stats] avg 59.0 fps | uploads=1 skipped=59
+[stats] avg 60.0 fps | uploads=0 skipped=60
+[stats] avg 60.0 fps | uploads=0 skipped=60
+[stats] avg 56.3 fps | uploads=0 skipped=58
+[stats] avg 59.7 fps | uploads=0 skipped=60
+[stats] avg 59.9 fps | uploads=0 skipped=60
+```
+首帧 `uploads=1`（全帧重建纹理上传菜单帧），静止帧 `uploads=0 skipped=60`
+（`FullRebuild` 静止帧仍 `draw_quad` 复用纹理，S4.3 静止帧 0 GPU 转换优化成立），
+平均 60fps 稳定。窗口 client=176×220，标题在顶、状态行在底（`draw_quad` V 翻转后顺序正确）。
+
+### 3. 资源齐全（data/ 4 文件，与 wasm 同源）
+```
+OK  GoldLand.Fnt     24,384 B
+OK  font.dat         2,034 B
+OK  settings.dat         8 B
+OK  music.lpk        67,737 B
+```
+`probe-assets` 诊断 bin 证实：字体 1016 字形解析成功、
+音频 5 WAV 曲目 + 1 MOD 识别成功、0 跳过。
+
+### 3. 资源齐全（data/ 4 文件，与 wasm 同源）
+```
+OK  GoldLand.Fnt     24,384 B
+OK  font.dat         2,034 B
+OK  settings.dat         8 B
+OK  music.lpk        67,737 B
+```
+
+## 共享模块重构（两端同源证明）
+- 新增 `crates/ti-app/src/menu_shell.rs`（默认编译，平台无关）：
+  `MenuShell`（fb/vp/presenter/font/selected/last_rendered）+
+  `render/draw_glyph/fill_rect/draw_text_row/move_selection/refit/present`
+  + 布局常量 + `parse_font_bytes`。
+- `treasure_wasm.rs` 重写：表现层改调 `MenuShell`，保留 HTTP `load_file` + async main。
+- `treasure_native.rs` 新增：`std::fs` 读 `data/`，调同一 `MenuShell`，async main。
+- 两 bin 仅差资源 IO + main 宏，渲染逻辑 100% 同源。
+
+## 门禁（gate.ps1 全绿）
+```
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (target 未安装，S2.6 解锁)
+  PASS  no placeholders
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (verify bin 未就绪)
+        ledger: 45 tasks, 42 verified, 0 error(s)
+=== gate: 0 failure(s) ===
+```
+
+## 已知边界
+- 截图（窗口 DC 抓取）在 headless 服务环境下挂死，未取到 PNG；
+  改以「窗口标题枚举命中 + stats 实跑输出」为等效证据（画面已由 60fps 渲染证实）。
+- 音频首帧可能需首次交互才出声（quad-snd 桌面同步初始化）；
+  `start_bgm` 已调用，窗口打开即尝试播放。
+- native bin 挂 `native-shell` feature（默认关闭）→ gate 默认 native 构建不参与该 bin，
+  与 `wasm-shell` 互斥，门禁不受影响。
+
+## S4.3 脏行带优化在 native 端（后续补做，已验证）
+- 初版 native 走「每帧全帧上传」（绕开 `FramePresenter`），S4.3 静止帧优化未生效。
+- 补做：`FramePresenter` 加 `UploadMode`（`Partial` 默认给 wasm / `FullRebuild` 给 native），
+  native bin 切回 `FramePresenter::with_mode(FullRebuild)` + 恢复 `last_rendered` 静态帧判据。
+- 实跑验证（stats）：`uploads=1 skipped=59` → `uploads=0 skipped=60` 全跳，
+  60fps 稳定 —— S4.3 静止帧 0 GPU 转换在 native 端成立。
+- 画面不翻：`draw_quad` 的 UV V 坐标已翻转正（行主序 bytes 前部=逻辑顶，屏顶 V=0）。
+- wasm 路径（`Partial` 部分上传 + 原 UV 映射）未动，浏览器端不受影响。

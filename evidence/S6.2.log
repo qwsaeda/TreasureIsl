@@ -1,0 +1,31 @@
+﻿S6.2 边框装饰（letterbox 填充）验收（2026-10-10）
+
+== DoD 1: 按 offset 计算边框区域并填充装饰色 ==
+  BorderStyle 枚举: Black / DeepBlue(默认) / MatchBackdrop
+  fill_border(x0,y0,x1,y1): 整屏 draw_rectangle 填边框色
+  设计要点：整屏填充 -> 游戏区 quad 后画并覆盖中间
+            天然处理 Stretch/ZoomCrop（游戏区溢出时整屏填充即正确表现）
+            不需分 4 段(上/下/左/右)分别算矩形
+  thread_local BORDER_STYLE + set_border_style()/border_style()
+  fill_border 前置判定：游戏区完全出屏时不画边框
+
+== DoD 2: 单测验证边框区与游戏区无重叠、游戏区像素不被污染 ==
+  cargo test -p ti-platform --lib -> 34 passed; 0 failed（新增 4 项）
+  border_style_properties_are_consistent: 标签/循环/色值/默认值
+  border_resolve_uses_backdrop_pixel: MatchBackdrop 取帧缓冲首像素
+  border_skipped_when_game_area_offscreen: 游戏区出屏时不画边框
+  border_does_not_affect_viewport_math: 边框不影响 P4-2 坐标往返
+  覆盖顺序保证: 边框先画(底) -> 游戏区 quad 后画(上) -> 游戏区像素不被污染
+
+== DoD 3: gate ==
+  cargo fmt --check / clippy -D warnings / test / build(x86+wasm) / 占位 / ledger
+  -> 0 failure
+
+== 三端接线 ==
+  MenuShell: border_style()/set_border_style()/cycle_border_style()
+  native + wasm: F3 键循环切换（与 F1 缩放 / F2 滤波 一致）
+  android: 共用 GameApp/menu_shell，透传
+
+== 说明 ==
+  176x220 是 4:5 竖屏内容，20:9 屏上 Smooth 模式只有 56% 利用率，
+  剩余 44% 此前是纯黑（GPU clear 色），现可换成与游戏主背景一致的深蓝

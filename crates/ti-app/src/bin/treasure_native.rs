@@ -31,6 +31,8 @@ const SE_VOLUME: f32 = 1.0;
 /// 已载入的真实资源（启动时一次性构建）。
 struct Shell {
     game: GameApp,
+    /// S6.4：上一帧耗时（毫秒），驱动精灵动画帧推进。
+    last_frame_ms: u32,
     touch: TouchPad,
     bgm: Option<Sound>,
     se: Option<Sound>,
@@ -171,7 +173,7 @@ impl Shell {
         let bgm = pick_bgm(&loaded, bundle.as_ref());
         let se = pick_sound(&loaded, bundle.as_ref(), false);
 
-        let shell = Shell { game, touch: TouchPad::new(), bgm, se };
+        let shell = Shell { game, touch: TouchPad::new(), bgm, se, last_frame_ms: 0 };
         shell.start_bgm();
         shell
     }
@@ -283,6 +285,9 @@ async fn main() {
         // 视口先跟随窗口尺寸（letterbox / pillarbox，P4-2）：
         // 触摸命中判定用逻辑坐标，必须先有本帧视口才能正确反变换
         shell.game.shell.refit(screen_width(), screen_height());
+
+        // S6.4：把本帧时长喂给 GameApp（驱动多帧精灵动画推进）
+        shell.game.frame_delta_ms = shell.last_frame_ms;
 
         // S5.1：交互核心驱动（各场景输入 → GameApp.handle → 场景跳转）
         let changed = shell.poll_input();
