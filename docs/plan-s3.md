@@ -43,6 +43,6 @@
 
 ## 4. 模块推进中的记录要求
 
-- 发现伪代码与 `docs/reverse-facts.md` 冲突 → 先实测修正事实库，再改 spec（顺序不可倒置）；
-- 同一坑第二次遇到 → 必须写 `docs/experience.md` 并在该模块 evidence 中引用条目 ID；
+- 发现伪代码与 `docs/facts/index.md` 冲突 → 先实测修正事实库，再改 spec（顺序不可倒置）；
+- 同一坑第二次遇到 → 必须写 `docs/experience/index.mdindex.md` 并在该模块 evidence 中引用条目 ID；
 - 数值表一律资源化进 `assets_out`，代码里只留常量名（§5.3）。

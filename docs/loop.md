@@ -46,14 +46,14 @@ tasks:
 | 情况 | 处置 |
 |---|---|
 | 验收连续失败 3 轮 | 拆子任务，原任务转 `blocked`，`blocked_by` 写具体缺口 |
-| 发现计划与实测冲突 | 以实测为准 → 更新 `docs/reverse-facts.md`，再改 WBS/台账，**不许静默绕过** |
-| 踩到新坑（工具/格式/平台） | 立即写入 `docs/experience.md`（格式见该文件），并在任务 evidence 中引用 |
+| 发现计划与实测冲突 | 以实测为准 → 更新 `docs/facts/index.md`，再改 WBS/台账，**不许静默绕过** |
+| 踩到新坑（工具/格式/平台） | 立即写入 `docs/experience/index.mdindex.md`（格式见该文件），并在任务 evidence 中引用 |
 | 需要暂停（外部依赖缺失） | 任务标 `blocked`，继续推进无依赖任务，不空转 |
 
 ## 5. 会话交接
 
 - 会话结束前：ledger 合法、`evidence/` 无缺失、经验库已回写。
-- 会话开始时：先 `git status` + 读 ledger + 读 `docs/experience.md` 最近条目，避免重复踩坑。
+- 会话开始时：先 `git status` + 读 ledger + 读 `docs/experience/index.mdindex.md` 最近条目，避免重复踩坑。
 
 ## 6. 多会话并行规则（2026-10 起）
 
@@ -63,9 +63,9 @@ tasks:
 
 | 波次 | 会话 | 任务 | 独占文件域（其他会话不得改） |
 |---|---|---|---|
-| 1 | A | S0.2 → S0.4 → S1.4b | `scripts/ida_dump.py`、`ref/`、`docs/reverse-facts.md` |
+| 1 | A | S0.2 → S0.4 → S1.4b | `scripts/ida_dump.py`、`ref/`、`docs/facts/index.md` |
 | 1 | B | S2.6 | `scripts/` 中 android 相关新文件、`scripts/gate.ps1` 的 android 行 |
-| 1 | C | S2.7 | `scripts/smoke.sh`（新建） |
+| 1 | C | S2.7 | `scripts/smoke.ps1`（本机无 bash，见 EXP-011） |
 | 2 | D | S0.3（等 S0.2 verified） | `ref/classify.json`、`crates/ti-tools` 的 classify bin |
 | 3 | 按 S3 裂变 | S3.1 后：主链 / S3.10 / S3.12 三路并行，S3.6/7/8 三模块并行 | 每模块独立的 `docs/spec/<m>.md`、`oracle/<m>.rs`、`rules|<m>.rs`、`tests/diff_<m>.rs` |
 
@@ -78,4 +78,6 @@ tasks:
 3. **gate 的归属判定**：gate 8 项是全 workspace 检查，别人半成品代码可能导致 FAIL。工作途中可随时跑 gate 自检；**但只有当你任务的产出物已落地、且 FAIL 项与你文件域无关时，才可忽略该 FAIL**。置 `verified` 前必须：已合并（或 rebase 到最新 main）且 gate 8 项全绿。
 4. **共享文件按「最后合并者负责对齐」**：`crates/*/src/lib.rs`、`mod.rs`、`Cargo.toml`、`AGENTS.md` 等不可避免的注册点，改动最小化（只加自己的一行注册），合并冲突就地解决后必须重跑受影响的测试。
 5. **cargo 并发**：`target/` 目录锁会让并行构建排队，属正常现象，不要杀掉对方的 cargo 进程。
-6. **经验与事实库**：`docs/experience.md`、`docs/reverse-facts.md` 可能被多方追加——只在文件**末尾追加**自己的条目（不改动既有行），冲突概率最低；已有的坑不许静默绕过。
+6. **经验与事实库**：`docs/experience/index.mdindex.md`、`docs/facts/index.md` 可能被多方追加——只在文件**末尾追加**自己的条目（不改动既有行），冲突概率最低；已有的坑不许静默绕过。
+7. **S3 模块 8 子步固定产出物**（loop §6.1 波次 3 起）：每模块必产 `docs/spec/<m>.md` + `ref/functions_<m>.csv`（只列本模块函数，**不改动原 `ref/functions.csv`**）+ `crates/ti-core/src/oracle/<m>.rs` + `rules/<m>.rs` + `tests/diff_<m>.rs` + `evidence/S3.x.log`。oracle 与 impl 用**同一批公开类型/常量**（枚举、整数像素、错误型），仅「自由函数 vs struct 方法」结构不同；diff 测试遍历状态×事件全组合 + ≥2 语义测试，用 `.expect("...")` 不用 `.unwrap()`。**公式/常量/类型单一源**（EXP-043）：纯函数（LCG/FNV/哈希）只写一份，oracle 侧不重复抄写公式，diff 对比的是「自由函数 vs struct 方法」行为而非「公式 A vs 公式 B」。
+8. **子代理 verified 复核**（EXP-038 实测回退教训）：子代理报告「已 verified」后，主线程必须独立复核：(1) 该模块 5 类产出物文件 `Test-Path` 真实存在；(2) 实跑 `cargo test -p ti-core --test diff_<m>` 看 `test result: ok`；(3) 重读 ledger 该行 `status: verified` + `evidence` 非空。三者齐备才认账，缺任一补写/回滚并重跑 `scripts/gate.ps1`。子代理改 ledger **只许 edit 工具按行替换**，禁止整文件重写（会冲掉并行子代理刚置的 verified）。

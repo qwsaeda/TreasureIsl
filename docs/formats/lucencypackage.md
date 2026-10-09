@@ -1,6 +1,6 @@
 # `LucencyPackage` 容器格式规格（`*.pak` / `*.lpk`）
 
-> 全部结论由 S1.1 实测得出，证据见 `docs/reverse-facts.md` F-201~F-209 与 `evidence/S1.1.log`。
+> 全部结论由 S1.1 实测得出，证据见 `docs/facts/index.md` F-201~F-209 与 `evidence/S1.1.log`。
 > 解析器实现：`crates/ti-formats/src/lucency.rs`；验收：`crates/ti-tools/tests/pak_key.rs`。
 
 ## 1. 头部（固定 0x36 字节）

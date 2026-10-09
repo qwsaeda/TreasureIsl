@@ -60,15 +60,25 @@ panic = "deny"                     # 禁 panic，错误走 Result 链
 
 ## §5.4 宏消除重复（`ti-formats/src/macros.rs`，全部 `macro_rules!`）
 
+**已落地**（`crates/ti-formats/src/macros.rs`，逐条对应源码里的 `macro_rules!`）：
+
 | 宏 | 展开产物 | 服务的标准 |
 |---|---|---|
 | `define_format!(字段表)` | `read`（带 offset 追踪 + 末尾断言 `consumed==len`）/ `write`（与 read 同源顺序）/ `Debug` 差分 / `roundtrip_all!` 测试 | P0-2 0 未知字节、P0-3 roundtrip 由构造保证 |
-| `define_id!` | newtype ID + `From<u32>/Display/FromStr` + 关联常量 | 消除重复 ID 定义 |
-| `define_scene!` | 场景样板 + 事件分发表注册（12 个场景零样板） | P3-1 事件覆盖 |
-| `diff_test!` | oracle vs 正式实现同种子对拍 harness | P2 双通道差分 |
 | `parse_err!` | 带 `offset/field/path` 上下文的解析错误 | 错误处理集中 |
+| `roundtrip_all!` | 由 `entries` 重建 → 字节级对比的往返测试用例 | P0-3 |
 
-过程宏暂不引入；确需时先在 `docs/experience.md` 记录理由再改 §5.1。
+**规划中（尚未落地，禁止在本文件描述其产物形状）**：
+
+| 宏 | 落地任务 | 用途 |
+|---|---|---|
+| `define_scene!` | S3.1 之后补 | 场景样板 + 事件分发表注册（20 个 UI 场景 `.Map` 零样板，见 F-301）；P3-1 事件覆盖 |
+| `define_id!` | 随对应 ID 域任务 | newtype ID + `From<u32>/Display/FromStr` + 关联常量；消除重复 ID 定义 |
+| `diff_test!` | 已由各模块手写 `tests/diff_*.rs` 取代 | oracle vs 正式实现同种子对拍；P2 双通道差分 |
+
+> 门禁第 9 项 `doccheck` 会校验本表「已落地」段的每个宏名都能在 `macros.rs` 里 grep 到；把未实现的宏写进「已落地」段即判失败。
+
+过程宏暂不引入；确需时先在 `docs/experience/index.md` 记录理由再改 §5.1。
 
 ## §5.5 错误处理集中（每 crate 一个 Error，顶层聚合）
 
@@ -110,9 +120,11 @@ pub trait SaveCodec { fn encode(&self) -> Vec<u8>; }                   // v1/v2 
 
 ## §5.7 测试组织
 
-- 单元测试：同文件 `#[cfg(test)] mod tests`；集成测试：`tests/`；对拍类：`tests/diff_*.rs`。
+- **一律放集成测试目录 `crates/<crate>/tests/`**，文件名对应被测模块（`pak.rs` → `tests/pak.rs`）。⛔ **禁止**在 `src/` 内写 `#[cfg(test)] mod tests` —— 门禁第 6 项的 unwrap/expect 扫描**只豁免 `tests/` 目录**，内联模块会被命中，且 `panic = deny` 也会拦住（见 EXP-021 坑 3）。
+- 对拍类：`tests/diff_<module>.rs`；资源管线类：`tests/<crate>_<主题>.rs`。
+- 测试内**可以用** `.expect("常量字面量")`，但 `.expect(&format!(...))` 触发 `expect_fun_call`（见 EXP-027）。
 - 平台相关一律用 `HeadlessBackend`，CI 不依赖窗口/声卡。
-- 新增格式必须同时新增 `roundtrip_all!` 用例（否则 P0 验收缺项）。
+- 新增格式必须同时新增 roundtrip 用例（否则 P0-2 验收缺项）。
 
 ## §5.8 命名与文档
 
@@ -124,7 +136,11 @@ pub trait SaveCodec { fn encode(&self) -> Vec<u8>; }                   // v1/v2 
 
 - 新增依赖必须：纯 Rust（wasm/Android 双端可编）、维护活跃、无传递膨胀；引入前在任务 evidence 里记录候选对比。
 - 已定：`macroquad`（渲染/输入/音频）、`thiserror`（错误）、`serde`+`serde_json`（JSON）、`flate2`（zlib）、`png`（资源导出）。其余按需走 §5.9 流程。
-- 禁止 `unsafe`；平台后端确需时单独 feature 解封 + `// SAFETY:` 注释，并先记 `docs/experience.md`。
+- 禁止 `unsafe`；平台后端确需时单独 feature 解封 + `// SAFETY:` 注释，并先记 `docs/experience/index.mdindex.md`。
+- **大依赖默认 feature 门控（S4.4 决策，EXP-046）**：体积敏感的可选能力（如 `opus-pure` OGG/Opus 转码）在提供它的库 crate（`ti-platform`）里做成 **optional dep + 自定义 feature**（`ogg = ["dep:opus-pure"]`，**不进 default**），调用方按需开启。
+  - `ti-tools`（mod2ogg / build_assets 离线转码）经 `ti-platform = { features = ["ogg"] }` 传递引入 opus-pure，**不**直接依赖 `opus-pure`（保持单一传递路径，`cargo tree -p ti-tools` 仅 `ti-tools → ti-platform → opus-pure`）。
+  - 运行时壳（`ti-app` 桌面/wasm）默认**不含** opus-pure：在线转码走独立 feature `mod-ogg = ["ti-platform/ogg"]`（默认关闭），正常启动直接播放 `build_assets` 离线预转码的 OGG 产物（`assets_out/audio/*.ogg`）。
+  - 判据：`cargo build -p ti-app --features wasm-shell --release` 的依赖树里**不得**出现 opus-pure；wasm 主体 ≤ 800 KB（`evidence/S4.3-size.log`，S4.4 复核 675,047 B）。
 
 ## §5.10 Clippy pedantic 规约（`-D warnings` 强制）
 
@@ -138,3 +154,58 @@ workspace `[workspace.lints]` 开了 `all` + `pedantic` + `panic = deny` + `unwr
 | `fn new() -> Self` 无 Default | `new_without_default` | 手动 `impl Default { fn default() -> Self { Self::new() } }` |
 | 宏展开后变量未用 | `unused_variables` | `#[allow(unused_variables)] let x = ...;` |
 | 返回值的 pub fn | `must_use_candidate` | 加 `#[must_use]` |
+
+## §5.11 REA MCP 使用规约 + thunk/导入识别 + RNG oracle 规约（S3.12 实测，见 EXP-036/037、F-319/F-320）
+
+### 5.11.1 REA 工具冒烟规约（强制）
+
+接入或升级 MCP 后，**不能只测一两个工具就写「可用」结论**（F-313 的教训）。冒烟必须：
+
+1. **逐工具实际调用**：列出计划用的全部工具，每个跑一次真实调用（不是看文档描述）；
+2. **校验返回 JSON 通过 OpenCode schema**：`-32602` = 不可用，哪怕工具「能返回数据」也算失败（OpenCode 会拒绝）；
+3. **描述性结论标 `推测`**：未实测输出的工具不许写「可用」，只能写「推测可用，待冒烟」；
+4. **冒烟结果回写 `docs/facts/tools.md`**：F-313/F-319 模式，带「实测日期 + 工具清单 + 通过/失败」。
+
+> **当前状态不在本文件复述**：逐工具可用性以 `docs/facts/tools.md` §6 的实测表为唯一事实源；本节只保留「怎么测」的规约。
+
+**S3 模块 RE 开工前固定动作**：`open_binary` 绑 arm PE → `search_strings`（cursor 分页拿全 .rdata 字符串段）一次性取资源/场景/事件/数值清单作 spec 骨架，**禁止逐文件 grep 1827 份伪代码找资源名**（慢且易漏）。
+
+**台账与 verified 复核规约（EXP-038）**：
+- 子代理改 `plan/ledger.yaml` **只许用 edit 工具 oldString/newString 含目标任务行**，禁止整文件重写（会冲掉并行子代理刚置的 verified）；
+- 主线程收子代理「已 verified」报告后，**独立复核三件事才认账**：(1) 该模块代码/测试文件 `Test-Path` 真实存在；(2) 实跑 `cargo test -p ti-core --test diff_<m>` 看 `test result: ok`；(3) 重读 ledger 该行 `status: verified` + `evidence` 非空。三者齐备才算 verified，缺任一就补写/回滚并重跑 gate。
+
+### 5.11.2 thunk / 导入函数识别规约（逆向通用）
+
+遇到 IDA 伪代码里 `void fn(args) { __imp_fn(args); }` 且函数体仅一行 `__imp_*` 调用 + size ≤ 16 字节 → **判定为 thunk → 导入函数**，算法在外部 DLL（coredll.dll / aygshell.dll 等），**不在 exe 内**。处理：
+
+1. **停止挖 exe 内实现**（挖不到，浪费时间）；
+2. 查平台 CRT / SDK 文档（WinCE = MSVC CRT，`rand`/`srand`/`memcpy` 等都有文档）；
+3. oracle 按文档写，标 `推测`，等差分测试反证（见 5.11.3）；
+4. 导入名清单见 `ref/imports.json`（S0.4 已恢复 116 个导入 API 名）。
+
+### 5.11.3 RNG oracle 实现规约（S3.12 专用）
+
+- **算法（推测）**：MSVC WinCE ARM LCG `seed = seed.wrapping_mul(214013).wrapping_add(2531011); ((seed >> 16) & 0x7fff) as i32`（见 F-320）；
+- **oracle 结构**：`ti-core/src/oracle/rng.rs` 的 `pub struct RngState { seed: u32 }` + `pub fn srand(&mut self, s: u32)` + `pub fn rand(&mut self) -> i32`；
+- **播种点不进 oracle**：毫秒时间种子不可复现，oracle 只负责「给定种子 → 确定序列」；正式实现 `rules::rng` 同理，播种由调用层（场景 ctor）注入；
+- **差分用例**：固定种子（如 `srand(123)`）→ 取 1000 次 `rand()` → 与 oracle 序列逐位比对；若游戏侧能复现同种子序列则算法确认，否则 coredll 用了不同算法 → 找 WinCE coredll.dll 逆向（标 `blocked_by: coredll-rand-algorithm`）；
+- **rand 调用点归类**：S3.12 验收要求 `ref/classify.json` 中 `pending=0`，所有 `rand()%N` 调用点必须归到对应模块（cards/trade/battle/mainmap 等），不许留 pending。
+
+### 5.11.4 REA 结构化能力使用指引（2026-10 制定，见 F-321 / EXP-041）
+
+REA 在本项目的角色 = **补结构化深度分析的洞**，非次级交叉校验。主路径（grep 1827 份 + pe_rva.py + idat -S，离线可复现）不可替代；但以下场景**应试 REA 而非 grep**（REA 有结构化能力，grep 没有）：
+
+| 场景 | REA 工具 | grep 为什么不够 |
+|---|---|---|
+| 精确调用链 / 可达路径 | `get_call_graph` / `trace_call_path` | grep 只找调用点，不建图、不判可达性 |
+| 控制流图（basic blocks + successors） | `analyze_function` | grep 伪代码靠人脑补跳转 |
+| 数据流 def-use / 常量传播 | `trace_native_values` | grep 无法追踪值依赖 |
+| 原生类型恢复（struct/enum/位域） | `inspect_native_data_type` | 资源结构体靠人肉数偏移 |
+| API 边界（jump table dispatch/case 映射） | `inspect_native_api` | grep 找不到 dispatch 表 |
+| 重建验证 / 对齐覆盖率（S4） | `verify_reconstruction` / `build_reconstruction_obligation_ledger` | 没有机制化对齐验收 |
+
+**必走 grep 的场景**：批量 / 离线 / 需要可复现 / 1827 份全量扫描 / 跨函数统计。
+
+**冒烟纪律**（5.11.1 已定，此处重申）：每次用 REA 前先 `open_binary` + 一个轻量调用（如 `search_strings`），通过才继续，失败即退主路径，不浪费回合数（F-319 波动性可用）。
+
+**S4 重建验证探针**：S4.1 开始时花一回合验 `verify_reconstruction` / `evaluate_reconstruction_coverage` 能否吃我们的 evidence bundle —— 如果能，S4.4 的对齐验收就有了机制；如果不能，继续靠 P0~P4 判据 + gate。

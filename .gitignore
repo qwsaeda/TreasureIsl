@@ -22,3 +22,9 @@ __pycache__/
 
 # S2.5 生成物（scripts/build_wasm.ps1 可重新产出）
 /web/
+
+# 离线转码产物（build_assets/mod2ogg 可重新产出，不入版本库）
+/assets_out/
+
+# 临时转储（MOD 解包调试产物，非交付）
+/out_mod/

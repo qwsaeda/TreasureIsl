@@ -20,17 +20,21 @@
 
 | ID | 产出物 | 验收 |
 |---|---|---|
-| S1.1 | `docs/formats/lucencypackage.md`：头部全字段（含 F-201 非对齐偏移）+ **`name→key` 哈希算法逆出** | P1-2：119 个 exe 资源名命中率 100%（`cargo test -p ti-tools --test pak_key`） |
+| S1.1 | `docs/formats/lucencypackage.md`：头部全字段（含 F-201 非对齐偏移）+ **`name→key` 哈希算法逆出** | P1-2（DoD 已修订，见 EXP-017）：凡是能用资源名解释的条目 100% 无误且数量 ≥ 实测下界 85；`cargo test -p ti-tools --test pak_key`。**旧 DoD「119 个 exe 资源名命中率 100%」不可达**（`.map`/`.sav`/`settings.dat`/`GoldLand.Fnt` 是磁盘独立文件，无 key） |
 | S1.2 | `ti-tools` 的 `unpak`：通吃 `.pak`/`.lpk`（两者结构差异写入文档） | P0-1 提取率 100%；P0-3 `--repack` sha256 相等 |
 | S1.3 | `pcx2png` + 独立 python 参考解码器（交叉验证用）：PCX 全变体（调色板/RLE/多平面） | P0-4 逐像素一致 |
-| S1.4 | `map2json`：21 个 UI 场景 `.Map` → JSON（记录级语义解析在 S1.4b） | 0 未知字节；roundtrip 逐字节一致 |
+| S1.4 | `map2json`：**20 个 UI 场景 + 3 个地形 = 23 个** `.Map` → JSON（记录级语义解析在 S1.4b） | 0 未知字节；roundtrip 逐字节一致 |
 | S1.4b | `controls` bin 全量导出控件记录（`ref/controls.json`，20 场景 2041 条）+ `ti-formats/src/ids.rs` 控件类型枚举（f5） | P1-3：`ref/controls.json` 记录数 == 控件总数（2041）；20/20 UI 场景整除吻合；字段语义 exe 侧确认（F-311：f3=Y 坐标，非事件 id） |
-| S1.5 | `font2bmfont`：`GoldLand.Fnt` + `font.dat` → BMFont/引擎字模 | P4-3 抽样字形逐位图一致 |
+| S1.5 | `font2bmfont`：`GoldLand.Fnt` + `font.dat` 结构解析（往返 + 0 未知字节） | 结构完整 + 0 未知字节 + 往返逐字节；**逐位图一致拆至 S1.5b** |
+| S1.5b | 字形位图**行列组织与位序**逆出（12 行 × 2B、MSB-first、行序自上而下） | P4-3：`cargo test -p ti-formats --test font_parity` 全绿（charset 1:1 + 几何断言 + 渲染样例） |
 | S1.6 | `ini2json`：`.lpk` 内 UTF-16 INI（cards/event/goods catalog） | 键值解析率 100%；JSON→INI 语义无损 |
-| S1.7 | `audiotrans`：WAV 直取 + `glmusic.mod` 离线转 OGG 入 `assets_out` | 每条音轨可播放，时长/采样率与源一致 |
-| S1.8 | `map2json --terrain`：`glmapm01/02/03.Map` 地形格式逆出 | 0 未知字节 + roundtrip + 尺寸与头字段吻合 |
-| S1.9 | `ti-core/src/save/`：`settings.dat` 等存档格式规格 + 读写实现 | roundtrip 逐字节一致 + 字段语义文档 |
-| S1.10 | `build_assets`（一条命令生成 `assets_out/` + `manifest.json` sha256）+ `preview`（桌面预览 UI 场景/地图/卡牌/字体） | `build_assets` 幂等；manifest 校验通过；preview 能打开全部 21 场景 + 3 地图。**→ P0、P1 全绿，阶段门禁** | 
+| S1.7 | `audiotrans`：WAV 抽取/重采样 + `glmusic.mod` 头部规格 | 素材识别 + WAV 抽取正确 + MOD 头规格明确；**OGG 编码拆至 S1.7b** |
+| S1.7b | MOD 播放器 + OGG/Vorbis 编码 | `glmusic.mod` 可播放 + OGG 转码。**已 `verified`**（opus-pure 0.2.2 纯 Rust 编码器，INHL.MOD PCM 提取 → OGG/Opus 64kb/s，`evidence/S1.7b.log`） |
+| S1.8 | `map2json --terrain`：`glmapm01/02/03.Map` 地形格式结构解析 | 0 未知字节 + roundtrip + 尺寸吻合；**区域字段语义拆至 S1.8b** |
+| S1.8b | 地形 cell/连线/trailer 记录字段语义逆出 | 单测 `tests/terrain.rs` 13 项 + 3/3 图全量恒等式验证（F-307/F-308） |
+| S1.9 | `ti-core/src/save/`：`settings.dat` 往返 + 存档封套编解码 | `settings.dat` 往返逐字节 + 封套往返；**字段表语义拆至 S3.10** |
+| S1.10 | `build_assets`（一条命令生成 `assets_out/` + `manifest.json` sha256）+ `preview`（桌面预览 UI 场景/地图/卡牌/字体） | `build_assets` 幂等；manifest 校验通过；preview 能打开全部 **20 场景 + 3 地图**。**→ P0、P1 全绿，阶段门禁** |
+| S1.11 | ID 型 key 绑定机制逆出（容器内 `mapinfo.ini` 文件名清单，217 条） | `cargo test -p ti-tools --test id_keys` 全绿：ui/m01/m02 共 204 行 `filename` 的 `djb2` 在同容器 entries 中 0 失配 + UI 场景记录布局 20/20 | 
 
 ## S2 — 三端骨架（1~2 周）
 
@@ -42,7 +46,7 @@
 | S2.4 | `ti-platform/storage`：桌面文件 / wasm IndexedDB / Android 内部存储 三实现 | 三端存读档往返测试 |
 | S2.5 | wasm 构建链：`rustup target add wasm32-unknown-unknown` + `build_wasm` 脚本 + html 壳 + 资源加载；解锁 gate 第 4 项 wasm 行 | 浏览器打开主菜单场景，真实资源 + 中文 + 音效 |
 | S2.6 | Android 构建链：**无 Docker** → `rustup target add` 三个 android triple + 装 Android SDK/NDK + `cargo-apk` 或 `cargo-ndk` 本机链路（Java 17 已备）；manifest 配置 orientation/exported；解锁 gate 第 4 项 android 行 | APK 装到设备/模拟器，显示同一主菜单 |
-| S2.7 | `scripts/smoke.sh`：native/wasm/apk 各跑资源加载 + 场景渲染 | 三端全绿。**→ 阶段 S2 门禁（同时消化 macroquad Android 风险）** |
+| S2.7 | `scripts/smoke.ps1`：native/wasm 各跑资源加载 + 场景渲染（APK 端随 S2.6 后补） | 两端全绿。**→ 阶段 S2 门禁（同时消化 macroquad Android 风险）** |
 
 ## 修订记录
 

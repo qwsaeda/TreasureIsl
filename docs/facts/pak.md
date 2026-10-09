@@ -1,0 +1,17 @@
+# 资源容器 `LucencyPackage`（`*.pak` / `*.lpk`）
+
+以 `data/ui.pak` 为样本（F-2xx 全部实测）。字段级完整规格见 [`../formats/lucencypackage.md`](../formats/lucencypackage.md)。
+
+| ID | 事实 |
+|---|
+| F-201 | magic `LucencyPackage\0\0`（16B）；头部字段**不是 4 字节对齐**：版本号 u16 `@0x1A`、条目数 u32 `@0x26`、**索引流长度 u32 `@0x2E`**、数据区起点 u32 `@0x32`、索引流起点固定 `@0x36`。⚠️ 旧记录写 `@0x2A` 是**错的**（该处读出 `01 00 00 00`），实测以 `@0x2E` 为准（S1.1 hexdump 复核）→ EXP-017 |
+| F-202 | 索引 = `条目数 × 16` 字节，记录 `{u32 key, u32 off, u32 usize, u32 csize}`，`off` 相对数据区起点。**是否 zlib 压缩由索引首 2 字节的 zlib 魔数判定**：`.pak` 全部压缩，`.lpk` 全部为原始记录；**与版本号无关**（`glpics.pak` 版本亦为 2005 但索引仍压缩）→ EXP-017 |
+| F-203 | 数据区每条目是**独立 zlib 流**（`78 DA`）；`ui.pak` 共 123 流 = 1 索引 + 122 数据 |
+| F-204 | **`key = djb2(name.to_ascii_lowercase())`，种子 0，`h = h*33 + c`**（大写与小写名同 key）。实测向量：`landinfo.pcx`=0x5C5AF184、`number.pcx`=0xFCFFFB62、`dialogue.pcx`=0xFFFB9A43、`logo.pcx`=0x047D426A、`mapinfo.ini`=0x3753DC98。⚠️ 旧记录「不是任何常见哈希 / 高字节恒为 0x2F」**均已被推翻**（高字节实为 23 种不同值） |
+| F-205 | `ui.pak` 首个数据条目 = PCX：`0A 05 01 08`，8bpp、1 平面、34×12（`Xmax@0x08=33`、`Ymax@0x0A=11`）。⚠️ **行跨度字段不可信**：`NPlanes@0x3D=0`、`BytesPerLine@0x3E=0`，真正的跨度在 `0x42`（=34=width）；实现用「RLE 恰好消费到文件尾」反解 → EXP-019 |
+| F-206 | 用 `b'\x78\xda'` 全文扫描找流会误报（`cards.lpk` 偏移 27358 处解压报错）；**必须按索引记录遍历** → EXP-004 |
+| F-207 | 容器清单与规模：`ui.pak` 122 条 / `glpics.pak` 88 条 / `glmap_m01.pak` 47 条 / `glmap_m02.pak` 37 条 / `cards.lpk` 4 条 / `music.lpk` 6 条 / `goods.lpk` 1 条（合计 305 条） |
+| F-208 | `cards.lpk` 首条解压为 UTF-16 文本（`; event catalog` 等 INI 注释）；`music.lpk` 首条为 `RIFF/WAVE` 8kHz 8bit；`goods.lpk` 首条为二进制表 | 逐流解压看头部 |
+| F-209 | **key 分两类，ID 型绑定机制已逆出（S1.11 实测）**：① 名称哈希型（`glpics.pak` 88 条中 **85 条**由 exe UTF-16 资源名唯一解释；余 3 条 `0x0D4EF1BE`/`0x20769D35`/`0x6171A968` 未解，内容均为 PCX，DoD 不含 glpics）；② **ID 型 217 条**（ui/glmap/lpk）：**绑定 = 容器内 `mapinfo.ini` 文件名清单**（见 F-210），`key = djb2(filename)` 闭合；其余 9 条由 exe 资源名（cards/music/goods）+ 多键结构证实名（`appo01~04.pcx` = m02 idx13~16、`card1/2.pcx` = cards idx1/2）+ `Thumbs.db`（ui idx121，内容 OLE 复合文档吻合）解释 → **`DoD` 范围 217/217 全解**（`evidence/S1.11-audit.json` + 单测 `id_keys`）。⚠️ 旧记录「ui 前 90 个 key 公差恒为 `0x121101`」**是错的**：idx0..20 实测公差集合 = {`33^4` = `0x121881`, `24×33^4`（进位 `09→10`}；「ID 型 key 由 `.Map` 场景按索引绑定」的推测**不成立**（`.Map` 元素字段语义属 S1.4b，依赖 exe）→ EXP-025 |
+| F-210 | **容器内 `mapinfo.ini` = ID 型 key 的权威资源名清单**：key `0x3753DC98`（=`djb2("mapinfo.ini")`，各容器同 key），UTF-16LE + BOM `FF FE`，CRLF 行尾，结构 `[filenum]` + `filenum=N` + 逐条 `[i]` / `filename=xxx` / `num=1`。行数：`ui.pak` 121（`01.pcx`..`120.pcx` + 重复 `50.pcx`，唯一 120）/ `glmap_m01.pak` 49（唯一 46）/ `glmap_m02.pak` 34（唯一 32）；容器内索引位 ui idx21、m01 idx5、m02 idx4。全部 `filename` 的 `djb2` 均在同容器 entries 中闭合（121+49+34 行 0 失配，单测 `mapinfo_filenames_close_over_container_keys`） |
+| F-305 | `.lpk` 与 `.pak` 头部结构不同（zlib 起始偏移不同：cards 118 / music 150 / goods 70），索引位置待 S1.1 确认 → 推测 两者同一格式但头部含变长区 |

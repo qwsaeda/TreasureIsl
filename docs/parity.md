@@ -17,7 +17,7 @@
 |---|---|---|
 | P1-1 | 全部记录 100% 解析为 JSON，JSON→二进制 roundtrip 无损 | `define_format!` 生成的 `roundtrip_all!` 测试全绿 |
 | P1-2 | 逆出的 `name→key` 哈希函数（djb2 种子 0 + 小写）对**可由资源名解释的容器条目**命中率 100%（实测 85/85，`glpics.pak`），ID 型 key 另立 S1.11 | `cargo test -p ti-tools --test pak_key` |
-| P1-3 | 每个 .Map 控件记录 6 字段全定义 + 全量提取（f0..f5；f5=控件类型码） | ef/controls.json 记录数 == 控件总数（2041）；字段语义见 F-311（f3=Y 坐标，非事件 id） |
+| P1-3 | 每个 `.Map` 控件记录 6 字段全定义 + 全量提取（f0..f5） | `cargo run -p ti-tools --bin controls -- --out ref` → `ref/controls.json` 记录数 == 控件总数（2041）；20/20 UI 场景整除吻合；字段语义见 F-311（f3 = 屏幕 Y 坐标，非事件 id） |
 
 ## P2 逻辑对齐（双通道差分）
 
@@ -37,7 +37,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 | # | 判据 | 验收 |
 |---|---|---|
-| P3-1 | .Map 控件字段语义 + 逐条 5 类型码全量提取（事件语义 S3.3 起，含菜单→控件映射） | cargo run -p ti-tools --bin controls -- --out ref 无 skipped（地形除外）且 20/20 整除；ef/controls.json 2041 条 |
+| P3-1 | 44 种 f5 控件类型码逐档解释 + 事件语义完整（事件语义 S3.3 起，含菜单→控件映射） | `cargo run -p ti-tools --bin controls -- --out ref` 无 skipped（地形除外）；**2041 条 + 20/20 整除已由 P1-3 验收，本项不重复** |
 | P3-2 | 每个场景可进入/返回（场景图全覆盖） | `coverage scenes` → missing = 0 |
 | P3-3 | 固定种子全流程脚本跑通：开局→选人→选图→移动→贸易→建造→战斗→存档→读档 | `cargo run -p ti-app --features headless -- --script tests/scripts/full_run.ron` |
 
