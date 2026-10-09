@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 金银岛 TreasureIsl — Android APK 清单（cargo-apk 标准布局，S5.5 / S2.6）
+     包名 com.example.treasureisland 为占位，Mac 侧 `cargo apk create` 时按自定义包名覆盖。
+     minSdk 21（Android 5.0），targetSdk 34。横竖屏自适应（不锁方向，P4-2 letterbox）。 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.treasureisland"
+    android:versionCode="1"
+    android:versionName="0.1.0">
+
+    <!-- 音频输出（macroquad 的 AAudio 后端；无网络权限，游戏全离线可玩） -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <uses-sdk
+        android:minSdkVersion="21"
+        android:targetSdkVersion="34" />
+
+    <!-- 全屏 + 保持唤醒（游戏场景，防锁屏） -->
+    <uses-feature android:name="android.hardware.screen.landscape" android:required="false" />
+
+    <application
+        android:label="金银岛 TreasureIsl"
+        android:allowBackup="true"
+        android:icon="@drawable/icon"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+
+        <!--
+            入口 Activity：cargo-apk 在 android/android-activity/ 生成的 miniquad JNI 壳。
+            这里的 activity 全限定名需与 android/android-activity/Cargo.toml 的
+            包名 + 你的 Activity 类一致（cargo apk create 自动生成，默认
+            `.AppActivity`；本仓模板沿用该约定，见 android/README.md）。
+        -->
+        <activity
+            android:name=".AppActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

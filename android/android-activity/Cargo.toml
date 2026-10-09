@@ -1,0 +1,41 @@
+# android-activity — 金银岛 TreasureIsl 的 miniquad JNI 入口（cargo-apk 标准布局，S5.5）
+#
+# 这是 cargo-apk 的「壳 crate」：它不直接调游戏逻辑，只把 miniquad 的 Android 后端
+# （`android_glue` + `miniquad`）接到 Android Activity 生命周期，然后转交给
+# `ti-app` 的 `treasure-android` bin（feature `android-shell`）的主循环。
+#
+# 资源 IO 走 macroquad::file::load_file 的 android 后端（APK assets），
+# 与 wasm 壳的 HTTP fetch 同源机制（`docs/gamebook.md` §8 / `docs/plan-s5.md` §S5.5）。
+#
+# ── Mac 侧首次生成（cargo-apk 脚手架会自动创建/覆盖本 crate 与 ../AndroidManifest.xml）──
+#   cargo install cargo-apk
+#   cargo apk create
+#   # 若已存在本目录，cargo apk create 会提示复用/覆盖；按提示填包名。
+#
+# ── 依赖 ──
+#   miniquad：macroquad 的 Android 渲染/音频/GUI 后端（必须与 ti-app 的 macroquad 0.4.16
+#             所依赖的 miniquad 版本一致，否则 ABI 不匹配；用 workspace 对齐）。
+#   ti-app：游戏本体（android-shell feature 的 treasure-android bin）。
+
+[package]
+name = "android-activity"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+# miniquad 的 Android 入口是 cdylib（被 Android Activity 的 JNI 调起）
+crate-type = ["cdylib"]
+
+[dependencies]
+# miniquad 由 macroquad 传递引入；此处显式声明以保证 ABI 版本对齐
+# （Mac 侧 `cargo apk create` 会自动补全/校正，若版本漂移以 macroquad 锁定版为准）。
+miniquad = { version = "0.4" }
+# 游戏本体：ti-app 的 android-shell bin
+ti-app = { path = "../../crates/ti-app", features = ["android-shell"] }
+# futures::executor::block_on：在 miniquad 的同步渲染回调里驱动
+# `ti_app::android_shell::run`（async macroquad 主循环）；纯同步执行器，
+# 不跨线程、不 spawn 额外渲染线程（`docs/plan-s5.md` §S5.5 单渲染线程约束）。
+futures = "0.3"
+
+[build]
+# cargo-apk 构建时由 miniquad 的 android 胶水处理（`cargo apk` 自动注入）
