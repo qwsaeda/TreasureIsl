@@ -8,6 +8,10 @@ description = "TreasureIsl 玩法核心：数值、规则、场景状态机（�
 
 [dependencies]
 ti-formats.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true

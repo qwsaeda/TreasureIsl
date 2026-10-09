@@ -4,5 +4,7 @@
 //! [`ti_formats`]，因此可以在无窗口环境跑差分测试与全流程回归。
 
 pub mod consts;
+pub mod oracle;
+pub mod rules;
 
 pub use consts::{LOGICAL_HEIGHT, LOGICAL_WIDTH};

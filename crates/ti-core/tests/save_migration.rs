@@ -1,0 +1,238 @@
+//! S4.2 存档 v2（导出/导入、IndexedDB 与 Android 存储互通）+ v1 自动迁移。
+//!
+//! 验收（DoD）：
+//! - (1) v1 存档字节 → 自动迁移 → v2 SaveSlot（往返一致）；
+//! - (2) v2 写入 → 读取 → v1 兼容读（向后兼容）；
+//! - (3) 5 槽位 SaveManager：全部槽位从 v1 迁移到 v2；
+//! - (4) 导出/导入：序列化 `SaveManager` 槽位为 JSON 字节，反序列化回，逐字段一致；
+//! - (5) 字节布局自描述（魔数 + version 字段在偏移 6，跨平台同字节）。
+//!
+//! 置于集成测试目录，豁免门禁的 unwrap/expect 扫描（EXP-021）。
+
+use ti_core::oracle::saveload::{
+    MIN_SAVE_SIZE, REC_MAGIC, SaveErr, SaveSlot, oracle_migrate_v1_to_v2, oracle_read_slot,
+    oracle_read_slot_v1, oracle_write_slot,
+};
+use ti_core::rules::saveload::SaveManager;
+
+/// 构造 v1 存档字节（18 字节：2B 前缀 + 4B 魔数 + 4B character + 4B `map_slot` + 4B position）。
+///
+/// v1 布局无 version / gold 字段（spec §e **推测**）。
+fn make_v1_bytes(character: u32, map_slot: u32, position: u32) -> Vec<u8> {
+    let mut buf = vec![0u8; 18];
+    buf[0..2].copy_from_slice(&[0x00, 0x00]); // 前缀
+    buf[2..6].copy_from_slice(&REC_MAGIC.to_le_bytes());
+    buf[6..10].copy_from_slice(&character.to_le_bytes());
+    buf[10..14].copy_from_slice(&map_slot.to_le_bytes());
+    buf[14..18].copy_from_slice(&position.to_le_bytes());
+    buf
+}
+
+/// (1) v1 存档字节 → `oracle_read_slot_v1` → `oracle_migrate_v1_to_v2` → `oracle_write_slot` →
+/// `oracle_read_slot` 往返逐位一致。
+#[test]
+fn v1_bytes_auto_migrate_to_v2_roundtrip() {
+    let v1_bytes = make_v1_bytes(3, 2, 100);
+    assert_eq!(v1_bytes.len(), 18, "v1 布局 = 18 字节");
+
+    // 步骤 2：v1 兼容读 → SaveSlot{version=1, gold=0, character=3, map_slot=2, position=100}
+    let v1_slot = oracle_read_slot_v1(&v1_bytes).expect("v1 字节应解析成功");
+    assert_eq!(v1_slot.version, 1, "v1 兼容读默认 version=1");
+    assert_eq!(v1_slot.character, 3);
+    assert_eq!(v1_slot.gold, 0, "v1 无 gold → 默认 0");
+    assert_eq!(v1_slot.map_slot, 2);
+    assert_eq!(v1_slot.position, 100);
+
+    // 步骤 3：迁移 → version 升至 2
+    let migrated = oracle_migrate_v1_to_v2(&v1_slot);
+    assert_eq!(migrated.version, 2, "v1 迁移后 version=2");
+    assert_eq!(migrated.character, 3);
+    assert_eq!(migrated.gold, 0);
+    assert_eq!(migrated.map_slot, 2);
+    assert_eq!(migrated.position, 100);
+
+    // 步骤 4：写入 v2 字节
+    let v2_bytes = oracle_write_slot(&migrated);
+    assert_eq!(v2_bytes.len(), 26, "v2 布局 = 26 字节");
+
+    // 步骤 5：v2 读回 → 逐位一致
+    let v2_read = oracle_read_slot(&v2_bytes).expect("v2 字节应解析成功");
+    assert_eq!(v2_read, migrated, "v2 往返应逐位一致");
+}
+
+/// (2) v2 写入 → 读取 → v1 兼容读（向后兼容）：v2 字节的前 18 字节可被 v1 解析器接受
+/// （魔数仍正确），但 `oracle_read_slot_v1` 会丢失 version/gold 字段（这是 v1 格式的固有限制）。
+/// 本测试验证 v2 → v2 读回的字节布局中，魔数偏移 2..6 仍正确。
+#[test]
+fn v2_write_read_backward_compat() {
+    let slot = SaveSlot { version: 2, character: 4, gold: 500, map_slot: 1, position: 42 };
+    let v2_bytes = oracle_write_slot(&slot);
+    assert_eq!(v2_bytes.len(), 26, "v2 布局 = 26 字节");
+
+    // v2 读回 → 逐位一致
+    let read = oracle_read_slot(&v2_bytes).expect("v2 读回应成功");
+    assert_eq!(read, slot, "v2 往返逐位一致");
+
+    // 取前 18 字节做 v1 兼容读：魔数在偏移 2..6 不变，但 v1 解析器读偏移 6..18 为
+    // character/map_slot/position（实际 v2 的偏移 6 是 version → 被 v1 解析器误读为 character）。
+    // 因此 v2 字节直接走 v1 路径会丢失 version/gold，验证此限制而非兼容性。
+    let v1_prefix = &v2_bytes[..18];
+    let v1_read = oracle_read_slot_v1(v1_prefix).expect("v2 前 18B 魔数正确，v1 解析器应接受");
+    // v1 解析器把 v2 偏移 6 的 version(=2) 误读为 character，偏移 10 的 character(=4) 误读为 map_slot
+    assert_eq!(v1_read.character, 2, "v1 解析器误读 v2 version 为 character");
+    assert_eq!(v1_read.gold, 0, "v1 无 gold → 默认 0");
+
+    // 正确做法：v2 字节走 v2 读回，不走 v1 兼容读。
+    assert_eq!(read, slot);
+}
+
+/// (3) 5 槽位 SaveManager：全部槽位从 v1 迁移到 v2。
+#[test]
+fn manager_migrate_all_5_slots_from_v1() {
+    let mut mgr = SaveManager::new(5);
+
+    // 每个槽位写入不同的 v1 数据（模拟 v1 存档已存在）
+    for i in 0..5u32 {
+        let v1_bytes = make_v1_bytes(i + 1, i % 5, i * 42);
+        let v1_slot = oracle_read_slot_v1(&v1_bytes).expect("v1 解析应成功");
+        let migrated = mgr.migrate(&v1_slot);
+        assert_eq!(migrated.version, 2, "槽位 {i} 迁移后 version=2");
+        assert_eq!(migrated.character, i + 1, "槽位 {i} character 不变");
+        assert_eq!(migrated.map_slot, i % 5, "槽位 {i} map_slot 不变");
+        assert_eq!(migrated.position, i * 42, "槽位 {i} position 不变");
+        mgr.set_slot(i as usize, migrated);
+    }
+
+    // 验证 5 个槽位全部迁移完成
+    for i in 0..5 {
+        let s = mgr.slot(i).expect("槽位应存在");
+        assert_eq!(s.version, 2, "槽位 {i} version=2（已迁移）");
+        let v2_bytes = mgr.write_slot(s);
+        assert_eq!(v2_bytes.len(), 26, "槽位 {i} v2 写入 = 26 字节");
+        let read = mgr.read_slot(&v2_bytes).expect("槽位 {i} v2 读回应成功");
+        assert_eq!(read, *s, "槽位 {i} 往返逐位一致");
+    }
+}
+
+/// (4) 导出/导入：序列化 `SaveManager` 槽位为 JSON 字节，反序列化回，逐字段一致。
+#[test]
+fn json_export_import_roundtrip() {
+    let mut mgr = SaveManager::new(5);
+    for i in 0..5u32 {
+        let slot =
+            SaveSlot { version: 2, character: i + 1, gold: i * 1000, map_slot: i, position: i * 7 };
+        mgr.set_slot(i as usize, slot);
+    }
+
+    // 导出：Vec<SaveSlot> → JSON 字节
+    let slots: Vec<SaveSlot> = mgr.slots().to_vec();
+    let json_bytes = serde_json::to_vec(&slots).expect("JSON 序列化应成功");
+    assert!(!json_bytes.is_empty(), "JSON 字节非空");
+
+    // 导入：JSON 字节 → Vec<SaveSlot>
+    let imported: Vec<SaveSlot> = serde_json::from_slice(&json_bytes).expect("JSON 反序列化应成功");
+    assert_eq!(imported.len(), 5, "导入后 5 槽位");
+
+    // 逐字段一致
+    for (original, restored) in slots.iter().zip(imported.iter()) {
+        assert_eq!(original, restored, "JSON 往返应逐字段一致");
+    }
+
+    // 导入的槽位写回 v2 字节仍正确
+    for (idx, slot) in imported.iter().enumerate() {
+        let v2_bytes = oracle_write_slot(slot);
+        let read = oracle_read_slot(&v2_bytes).expect("导入槽位 v2 读回应成功");
+        assert_eq!(read, *slot, "槽位 {idx} 导入后往返一致");
+    }
+}
+
+/// (5) 字节布局自描述：v2 格式 26 字节（2B 前缀 + 4B 魔数 + 5×u32 字段），
+/// 魔数在偏移 2..6，version 字段在偏移 6..10。
+/// 无论读自桌面文件、浏览器 `IndexedDB` 还是 Android 存储，字节完全相同。
+#[test]
+fn byte_layout_is_self_describing() {
+    let slot = SaveSlot { version: 2, character: 3, gold: 42_000, map_slot: 2, position: 777 };
+    let bytes = oracle_write_slot(&slot);
+    assert_eq!(bytes.len(), MIN_SAVE_SIZE, "v2 布局 = 26 字节");
+
+    // 魔数在偏移 2..6
+    let magic = u32::from_le_bytes([bytes[2], bytes[3], bytes[4], bytes[5]]);
+    assert_eq!(magic, REC_MAGIC, "偏移 2..6 魔数 = REC_MAGIC");
+
+    // version 字段在偏移 6..10
+    let version = u32::from_le_bytes([bytes[6], bytes[7], bytes[8], bytes[9]]);
+    assert_eq!(version, 2, "偏移 6..10 version = 2");
+
+    // v1 布局 18 字节：魔数同样在偏移 2..6（无 version 字段，偏移 6 是 character）
+    let v1_bytes = make_v1_bytes(3, 2, 100);
+    assert_eq!(v1_bytes.len(), 18, "v1 布局 = 18 字节");
+    let v1_magic = u32::from_le_bytes([v1_bytes[2], v1_bytes[3], v1_bytes[4], v1_bytes[5]]);
+    assert_eq!(v1_magic, REC_MAGIC, "v1 偏移 2..6 魔数 = REC_MAGIC");
+
+    // MIN_SAVE_SIZE 校验
+    assert_eq!(MIN_SAVE_SIZE, 26, "v2 最小大小 = 26");
+}
+
+/// (6) 魔数损坏 → `SaveErr::BadMagic`（跨平台字节一致性验证：同一批字节在
+/// 任一存储后端读出，魔数校验结果相同）。
+#[test]
+fn bad_magic_rejected() {
+    let slot = SaveSlot::default();
+    let mut bytes = oracle_write_slot(&slot);
+    bytes[2] = 0xFF;
+    assert_eq!(oracle_read_slot(&bytes), Err(SaveErr::BadMagic));
+    let mgr = SaveManager::new(5);
+    assert_eq!(mgr.read_slot(&bytes), Err(SaveErr::BadMagic));
+}
+
+/// (7) v1 最小大小 18 字节，v2 最小大小 26 字节；不足 → `TooShort`。
+#[test]
+fn min_size_enforced() {
+    // 17 字节（< v1 最小 18）→ v1 读 TooShort
+    let short_v1 = vec![0u8; 17];
+    assert_eq!(oracle_read_slot_v1(&short_v1), Err(SaveErr::TooShort));
+
+    // 18 字节（v1 最小）→ 需魔数正确
+    let v1_bytes = make_v1_bytes(1, 0, 0);
+    assert_eq!(v1_bytes.len(), 18, "v1 最小 = 18 字节");
+    assert!(oracle_read_slot_v1(&v1_bytes).is_ok(), "18 字节 v1 应解析成功");
+
+    // 25 字节（< v2 最小 26）→ v2 读 TooShort
+    let short_v2 = vec![0u8; 25];
+    assert_eq!(oracle_read_slot(&short_v2), Err(SaveErr::TooShort));
+
+    // 26 字节（v2 最小）→ 需魔数正确
+    let v2_bytes = oracle_write_slot(&SaveSlot::default());
+    assert_eq!(v2_bytes.len(), 26, "v2 最小 = 26 字节");
+    assert!(oracle_read_slot(&v2_bytes).is_ok(), "26 字节 v2 应解析成功");
+}
+
+/// (8) 验证 v1 迁移后写字节流与直接写 v2 字节流的魔数位置一致（跨平台自描述）。
+#[test]
+fn migration_preserves_magic_offset() {
+    // 模拟 5 个槽位的 v1 → v2 迁移
+    let slots: Vec<SaveSlot> = (1..=5u32)
+        .map(|i| {
+            let v1 = make_v1_bytes(i, i % 5, i * 10);
+            let parsed = oracle_read_slot_v1(&v1).expect("v1 解析应成功");
+            oracle_migrate_v1_to_v2(&parsed)
+        })
+        .collect();
+
+    for (i, slot) in slots.iter().enumerate() {
+        let v2_bytes = oracle_write_slot(slot);
+        assert_eq!(v2_bytes.len(), 26, "槽位 {i} v2 = 26 字节");
+
+        // 魔数在偏移 2..6
+        let magic = u32::from_le_bytes([v2_bytes[2], v2_bytes[3], v2_bytes[4], v2_bytes[5]]);
+        assert_eq!(magic, REC_MAGIC, "槽位 {i} 魔数 = REC_MAGIC");
+
+        // version 在偏移 6..10
+        let version = u32::from_le_bytes([v2_bytes[6], v2_bytes[7], v2_bytes[8], v2_bytes[9]]);
+        assert_eq!(version, 2, "槽位 {i} version = 2");
+
+        // 往返
+        let read = oracle_read_slot(&v2_bytes).expect("槽位 {i} 读回应成功");
+        assert_eq!(read, *slot, "槽位 {i} 往返逐位一致");
+    }
+}

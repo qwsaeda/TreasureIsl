@@ -1,6 +1,6 @@
 //! 全局常量（`docs/style.md` §5.3 的「全局」一列）。
 //!
-//! 来源：`docs/reverse-facts.md` F-106（UI 场景头实测）。
+//! 来源：`docs/facts/index.md` F-106（UI 场景头实测）。
 //! 分域常量放在各自 crate 的 `consts.rs`，数值表一律资源化，不进代码。
 
 /// 逻辑分辨率宽（像素）。原版 UI 场景头字段 `0xB0`。
