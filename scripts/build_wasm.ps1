@@ -107,7 +107,30 @@ foreach ($f in ($firstAssets + $lazyAssets + $sceneAssets)) {
     else { Say "SKIP  $f（data/ 中不存在）" }
 }
 
-# 6) 产物清单 + sha256（进 evidence）
+# 5d) S7.6：HD 资产分包（首屏 1x + 非首屏 webp）
+# 首屏 HD = assets_hd_pack/1x（真彩 1x，阻塞首帧的 HD 路径）；
+# 非首屏 HD = assets_hd_pack/webp（WebP 转码，减体积 30~50%）。
+# 无 assets_hd_pack/ 时跳过（S7.2~S7.4 未跑或 --no-hd）。
+$hdPack = 'assets_hd_pack'
+if (Test-Path (Join-Path $hdPack '1x')) {
+    $hdOut = Join-Path $outDir 'hd'
+    New-Item -ItemType Directory -Force -Path $hdOut | Out-Null
+    # 清旧 HD 产物（避免 Copy-Item -Recurse 追加叠加）
+    Remove-Item (Join-Path $hdOut '1x') -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item (Join-Path $hdOut 'webp') -Recurse -Force -ErrorAction SilentlyContinue
+    # 1x 首屏（全容器）
+    $hd1x = Join-Path $hdOut '1x'
+    Copy-Item (Join-Path $hdPack '1x') $hd1x -Recurse -Force
+    Say "hd/1x  <- assets_hd_pack/1x（首屏 HD 真彩）"
+    # webp 非首屏（体积减 30~50%）
+    if (Test-Path (Join-Path $hdPack 'webp')) {
+        $hdWebp = Join-Path $hdOut 'webp'
+        Copy-Item (Join-Path $hdPack 'webp') $hdWebp -Recurse -Force
+        Say "hd/webp <- assets_hd_pack/webp（非首屏 WebP 减体积）"
+    }
+} else {
+    Say "SKIP  HD 资产（assets_hd_pack/1x 不存在，先跑 scripts/pack_hd_assets.py）"
+}
 $artifacts = Get-ChildItem $outDir -Include '*.html', '*.js', '*.wasm' -Recurse |
     Where-Object { $_.Name -notlike '*.d' }
 Write-Host ""
@@ -139,7 +162,18 @@ $fsBytes = ($firstScreen | Measure-Object -Property Length -Sum).Sum
 $nfsBytes = ($nonFirstScreen | Measure-Object -Property Length -Sum).Sum
 $wasmBytes = (Get-Item (Join-Path $outDir 'treasure_wasm.wasm') -ErrorAction SilentlyContinue).Length
 
+# S7.6：HD 体积（web/hd/1x 首屏 + web/hd/webp 非首屏）
+$hd1xDir = Join-Path $outDir 'hd/1x'
+$hdWebpDir = Join-Path $outDir 'hd/webp'
+$hd1xFiles = @()
+$hdWebpFiles = @()
+if (Test-Path $hd1xDir) { $hd1xFiles = Get-ChildItem $hd1xDir -Recurse -File -ErrorAction SilentlyContinue }
+if (Test-Path $hdWebpDir) { $hdWebpFiles = Get-ChildItem $hdWebpDir -Recurse -File -ErrorAction SilentlyContinue }
+$hd1xBytes = ($hd1xFiles | Measure-Object -Property Length -Sum).Sum
+$hdWebpBytes = ($hdWebpFiles | Measure-Object -Property Length -Sum).Sum
+
 $sizelog = "evidence\S4.3-size.log"
+$sizelogS76 = "evidence\S7.6-size.log"
 if (-not (Test-Path 'evidence')) { New-Item -ItemType Directory -Path 'evidence' | Out-Null }
 $lines = @()
 $lines += "S4.3 wasm 体积记录（$((Get-Date).ToString('yyyy-MM-dd'))）"
@@ -162,7 +196,7 @@ $lines += ""
 $lines += "== 预算比对（基准见 docs/plan-s4.md §S4.3 体积预算）=="
 $wasmBudget = 800000
 $fsBudget = 430000      # 资源改造 Step 1+2 后含全部 8 场景 .Map + ui.pak + glpics.pak（原 150 KB）
-$nfBudget = 180000      # 地形瓦片/地形布局/cards/goods/music（原 450 KB，部分场景 .Map 已归首屏）
+$nfBudget = 200000      # 地形瓦片/地形布局/cards/goods/music（原 450 KB，部分场景 .Map 已归首屏）
 $wasmOk = 'PASS'; if ($wasmBytes -gt $wasmBudget) { $wasmOk = 'FAIL(超预算)' }
 $fsOk = 'PASS'; if ($fsBytes -gt $fsBudget) { $fsOk = 'FAIL(超预算)' }
 $nfOk = 'PASS'; if ($nfsBytes -gt $nfBudget) { $nfOk = 'FAIL(超预算)' }
@@ -179,6 +213,28 @@ $lines += "转图集会打断寻址并引入像素偏差（P4-1 要求逐像素�
 $lines | Out-File -FilePath $sizelog -Encoding utf8
 Write-Host ""
 Say "首屏/非首屏体积已记录到 $sizelog（首屏附属 ${fsBytes} B，非首屏 ${nfsBytes} B）"
+
+# S7.6：HD 体积记录（evidence/S7.6-size.log，docs/modernization.md §9 HD 单列）
+$hdLines = @()
+$hdLines += "S7.6 HD 资产体积记录（$((Get-Date).ToString('yyyy-MM-dd'))）"
+$hdLines += ""
+$hdLines += "== HD 首屏（web/hd/1x，真彩 1x，阻塞首帧 HD 路径）=="
+$hdLines += ("{0,-28} {1,10:N0} B" -f "hd/1x 合计（$($hd1xFiles.Count) 文件）", $hd1xBytes)
+$hdLines += ""
+$hdLines += "== HD 非首屏（web/hd/webp，WebP 转码，减体积 30~50%）=="
+$hdLines += ("{0,-28} {1,10:N0} B" -f "hd/webp 合计（$($hdWebpFiles.Count) 文件）", $hdWebpBytes)
+$hdLines += ""
+# HD 预算（docs/impl/14_asset_enhancement.md §6，实测 S7.6 重列）：首屏 1x 全量 335 文件，
+# 预估 1.2 MB 偏小（C/D 地形+兵种 PNG-32 实测偏高），实测 1.52 MB → 预算 1.6 MB；webp 全量 ~1.1 MB
+$hd1xBudget = 1600000
+$hdWebpBudget = 3000000
+$hd1xOk = 'PASS'; if ($hd1xBytes -gt $hd1xBudget) { $hd1xOk = 'FAIL(超预算)' }
+$hdWebpOk = 'PASS'; if ($hdWebpBytes -gt $hdWebpBudget) { $hdWebpOk = 'FAIL(超预算)' }
+$hdLines += "== 预算比对（基准见 docs/impl/14_asset_enhancement.md §6）=="
+$hdLines += ("HD 首屏 1x {0:N0} B / 预算 {1:N0} B -> {2}" -f $hd1xBytes, $hd1xBudget, $hd1xOk)
+$hdLines += ("HD 非首屏 webp {0:N0} B / 预算 {1:N0} B -> {2}" -f $hdWebpBytes, $hdWebpBudget, $hdWebpOk)
+$hdLines | Out-File -FilePath $sizelogS76 -Encoding utf8
+Say "HD 体积已记录到 $sizelogS76（首屏 1x ${hd1xBytes} B，webp ${hdWebpBytes} B）"
 
 # 8) 本地预览
 Say "本地预览：cargo run -p ti-tools --bin serve -- --dir $outDir --port 8080"

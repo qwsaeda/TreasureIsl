@@ -2,15 +2,15 @@
 //!
 //! 直译 `docs/spec/main_map.md` 的移动/据点/事件规则：
 //! - 网格坐标 [`GridPos`]（`row × grid_w + col`，与 S1.8b f8 公式一致）；
-//! - 方向枚举 [`Dir`]（0=北 / 1=西 / 2=南 / 3=东，`sub_51D88` 写 `a1+124` 值域）；
-//! - 地形 [`MapTerrain`]（`grid_w`/`grid_h` + 可通行表 `blocked`，越界=不可通行，`sub_53808` 等价）；
-//! - [`oracle_move`]：单步移动（`sub_51940` 每步语义，越界/阻挡 → `None`）；
-//! - [`oracle_pick_dir`]：`sub_51D88` 方向可达性（优先级 南→东→北→西，仅 `+22&3==1` 格）；
-//! - [`oracle_walk`]：走 N 步（给定方向位，每步同方向，`sub_51940` 确定性分支）；
+//! - 方向枚举 [`Dir`]（0=北 / 1=西 / 2=南 / 3=东，`探索格` 写 `a1+124` 值域）；
+//! - 地形 [`MapTerrain`]（`grid_w`/`grid_h` + 可通行表 `blocked`，越界=不可通行，`二维网格取值` 等价）；
+//! - [`oracle_move`]：单步移动（`cards` 每步语义，越界/阻挡 → `None`）；
+//! - [`oracle_pick_dir`]：`探索格` 方向可达性（优先级 南→东→北→西，仅 `+22&3==1` 格）；
+//! - [`oracle_walk`]：走 N 步（给定方向位，每步同方向，`cards` 确定性分支）；
 //! - [`oracle_dispatch_event`]：事件码 → 场景目标（spec §d，1..8 有主分派 case，其余 `None`）；
 //! - [`oracle_at_landmark`]：据点/地标判定（坐标在列表内 → `true`）。
 //!
-//! 随机分支（`rand() % 4`，`sub_51940` 行 77-94）不在此 oracle 建模，
+//! 随机分支（`rand() % 4`，`cards` 行 77-94）不在此 oracle 建模，
 //! diff 测试以固定输入做 1 步语义断言（随机序列对齐归 S3.12）。
 
 /// 网格坐标（行/列，`u32`，越界检查用）。
@@ -39,7 +39,7 @@ impl GridPos {
     }
 }
 
-/// 方向枚举（`sub_51D88` 写 `a1+124` 的值域 0..=3，spec §b 方向枚举表）。
+/// 方向枚举（`探索格` 写 `a1+124` 的值域 0..=3，spec §b 方向枚举表）。
 ///
 /// 命名依据等距投影（**推测**，渲染层校准）：
 /// - `North`(0)：`row-1`（北，行 30-33 优先级 4/兜底）；
@@ -88,7 +88,7 @@ impl Dir {
         }
     }
 
-    /// 行/列增量（`sub_51940` switch 语义：南=row+1/东=col+1/北=row-1/西=col-1）。
+    /// 行/列增量（`cards` switch 语义：南=row+1/东=col+1/北=row-1/西=col-1）。
     #[must_use]
     pub const fn delta(self) -> (i32, i32) {
         match self {
@@ -100,11 +100,11 @@ impl Dir {
     }
 }
 
-/// 地形（`grid_w`/`grid_h` + 可通行表，`sub_53808` 网格取值 oracle 化）。
+/// 地形（`grid_w`/`grid_h` + 可通行表，`二维网格取值` 网格取值 oracle 化）。
 ///
 /// - `grid_w`/`grid_h`：m01/m02=20×20，m03=15×15（S1.8b）；
 /// - `blocked`：长度 `grid_w × grid_h` 的二维可通行表（`blocked[i]` = 该格不可通行）；
-///   越界坐标一律视为不可通行（`sub_53808` 越界返回 0 → `0+22` 越界读被 `&3==1` 挡住，行为等价）。
+///   越界坐标一律视为不可通行（`二维网格取值` 越界返回 0 → `0+22` 越界读被 `&3==1` 挡住，行为等价）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapTerrain {
     /// 网格宽（`*(v6+692)`，m01/m02=20，m03=15）。
@@ -122,7 +122,7 @@ impl MapTerrain {
         Self { grid_w, grid_h, blocked: vec![false; grid_w.saturating_mul(grid_h) as usize] }
     }
 
-    /// 该格是否不可通行（越界 = 不可通行，`sub_53808` 等价）。
+    /// 该格是否不可通行（越界 = 不可通行，`二维网格取值` 等价）。
     #[must_use]
     pub fn is_blocked(&self, pos: GridPos) -> bool {
         if pos.row >= self.grid_h || pos.col >= self.grid_w {
@@ -141,7 +141,7 @@ pub enum SceneTarget {
     Msgm,
     /// `msgs.Map`（事件码 8 虚调用 `+80`==0 分支，spec §d 行 2213）。
     Msgs,
-    /// `card` 场景（卡牌准备，事件码 3 的 `sub_32960` 目标，**推测**场景标识）。
+    /// `card` 场景（卡牌准备，事件码 3 的 `cards` 目标，**推测**场景标识）。
     Card,
     /// `bigcard` 场景（大卡，**推测**）。
     Bigcard,
@@ -149,7 +149,7 @@ pub enum SceneTarget {
     Vs,
 }
 
-/// oracle：单步移动（`sub_51940` 每步语义）。
+/// oracle：单步移动（`cards` 每步语义）。
 ///
 /// 规则（spec §b 单步移动）：
 /// ```text
@@ -179,7 +179,7 @@ pub fn oracle_move(terrain: &MapTerrain, pos: GridPos, d: Dir) -> Option<GridPos
     Some(GridPos::new(nrow, ncol))
 }
 
-/// oracle：`sub_51D88` 方向可达性（仅可通行格 `+22&3==1` 才有方向，否则 `None`）。
+/// oracle：`探索格` 方向可达性（仅可通行格 `+22&3==1` 才有方向，否则 `None`）。
 ///
 /// 规则（spec §b 方向枚举表，探测优先级 南→东→北→西）：
 /// - 当前格不可通行 → `None`（入口 `+22&3==1` 不满足）；
@@ -197,7 +197,7 @@ pub fn oracle_pick_dir(terrain: &MapTerrain, pos: GridPos) -> Option<Dir> {
         .find(|&d| oracle_move(terrain, pos, d).is_some())
 }
 
-/// oracle：走 N 步（`sub_51940` 确定性分支，给定方向每步同方向）。
+/// oracle：走 N 步（`cards` 确定性分支，给定方向每步同方向）。
 ///
 /// 规则：
 /// - 每步按 `Dir` 的 delta 走 1 格（`oracle_move` 语义）；
@@ -221,9 +221,9 @@ pub fn oracle_walk(terrain: &MapTerrain, pos: GridPos, d: Dir, steps: u32) -> (G
     (cur, walked)
 }
 
-/// oracle：事件码分派（spec §d，`sub_31424` 高 6 位+1，值域 1..31）。
+/// oracle：事件码分派（spec §d，`事件码生成器` 高 6 位+1，值域 1..31）。
 ///
-/// 主分派 `sub_2101C` 行 1709 `switch` 只有 case 1..8（行 1711-2281 实测）：
+/// 主分派 `主地图帧更新` 行 1709 `switch` 只有 case 1..8（行 1711-2281 实测）：
 ///
 /// | 事件码 | 目标场景 | 证据行号 |
 /// |---|---|---|
@@ -236,7 +236,7 @@ pub fn oracle_walk(terrain: &MapTerrain, pos: GridPos, d: Dir, steps: u32) -> (G
 /// | `7` | `Msgm`（消息） | 2157-2196 |
 /// | `8` | `Msgs`（虚调用 `+80`==0，行 2213） | 2197-2281 |
 ///
-/// 事件码 9..31：主分派无 case（由 `sub_29110` 排队事件消费路径处理，S3.1 域），返回 `None`。
+/// 事件码 9..31：主分派无 case（由 `场景管理器帧更新总控` 排队事件消费路径处理，S3.1 域），返回 `None`。
 #[must_use]
 pub fn oracle_dispatch_event(code: u32) -> Option<SceneTarget> {
     match code {
@@ -250,7 +250,7 @@ pub fn oracle_dispatch_event(code: u32) -> Option<SceneTarget> {
 
 /// oracle：据点/地标判定（坐标在据点列表内 → `true`）。
 ///
-/// 直译 `sub_49120` 的据点判定核心（行 145-160 遍历据点定义对象命中判定，
+/// 直译 `trade` 的据点判定核心（行 145-160 遍历据点定义对象命中判定，
 /// 概率/名称表 `word_7FB48` 语义在 oracle 层简化为纯坐标命中）。
 #[must_use]
 pub fn oracle_at_landmark(landmarks: &[(u32, u32)], pos: GridPos) -> bool {

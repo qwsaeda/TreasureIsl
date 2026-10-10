@@ -1,0 +1,14 @@
+﻿=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 64 tasks, 56 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+=== gate: 0 failure(s) ===

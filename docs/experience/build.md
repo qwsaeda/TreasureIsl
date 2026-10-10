@@ -1,6 +1,6 @@
 # 经验库 · build
 
-> 构建与三端产物：工具链选型、wasm/wasm 壳、浏览器自动化。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.mdindex.md。
+> 构建与三端产物：工具链选型、wasm 壳、浏览器自动化。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 
 ### EXP-008 构建：本机无 Docker → 放弃 macroquad docker APK 路线
 - 现象：`docker` 命令不存在；macroquad 官方 Android 构建推荐 `notfl3/cargo-apk` 镜像。
@@ -67,5 +67,28 @@
   3. `ti-app`：独立 feature `mod-ogg = ["ti-platform/ogg"]`（默认关）；`audio_prep.rs` 的在线转码路径 `#[cfg(feature = "mod-ogg")]` 门控，默认构建不调 `encode_ogg`，MOD 条目计入 skipped（离线 OGG 由 build_assets 提供）。运行时（wasm/native）BGM 直接播离线 OGG 产物。
 - 验证：`cargo build -p ti-app --features wasm-shell --release --target wasm32-unknown-unknown` 依赖树无 opus-pure；wasm 主体 675,047 B ≤ 800,000（`evidence/S4.3-size.log` S4.4 行）；gate 全绿。
 - 教训：**体积敏感的可选能力（编码器/大 codec）一律「库 crate optional dep + feature，调用方按需开」**；工具与运行时各走各的 feature，默认构建不拉入；保持单一传递路径（`cargo tree` 核对），工具不直接依赖底层 codec。
+
+
+### EXP-047 构建：手工 `Mesh`+`draw_mesh` 弱引用纹理在 native macroquad 下不渲染 → 黑屏；EXP-045 验证漏像素输出（S6.2 实测）
+- 现象：`cargo run -p ti-app --features native-shell --bin treasure-native` 窗口整屏黑（深蓝边框 0x000084 ≈ 黑）；帧缓冲 PNG dump 证实 `render()` 正确写入菜单内容（非黑、多色），即**画面数据对，GPU 侧没画出来**。
+- 根因：`draw_quad` 手工构造 `Mesh{texture: Some(texture.weak_clone())}` + `draw_mesh`。native macroquad 桌面 GL 后端的纹理批处理器对「本帧刚 `from_rgba8` 建的独立纹理 + 弱引用 mesh」不重新进批次/不绑定采样器 → 画面 quad 实际未渲染，只剩 `fill_border` 整屏深蓝 → 看起来黑。
+- 被 EXP-045 掩盖：EXP-045 验证「全跳 stats `uploads=0 skipped=60`」只证明**CPU 侧脏行跳帧生效**，从未核对 native 窗口实际像素输出 → 渲染 bug 被 stats 绿灯盖住。
+- 解法：`draw_quad` 改用 macroquad 宏观 API `draw_texture_ex(tex, x0, y0, WHITE, DrawTextureParams{dest_size: Some(vec2(w,h)), flip_y: !is_wasm, ..})`（自带批处理 + 正确纹理绑定）；`flip_y` 处理 native 与 wasm 纹理 V 语义相反（EXP-045），`cfg!(target_arch="wasm32")` 区分两端。
+- 验证：实跑 `get_screen_data` dump native 窗口实际像素 → 非黑占比 99.6%，菜单标题区在顶部（FF00FF/FFFFFF 主导），底部为状态行（003C00）；`flip_y` 方向正确。`gate.ps1` 全绿（含 clippy `items_after_statements` 已修：`const IS_WASM` 置于函数首）。
+- 教训：
+  1. **跨端呈现层验收必须核对目标端实际像素输出（截图/dump 屏幕），不能只信 CPU 侧计数（uploads/skipped/fps）**。
+  2. **native macroquad 画整帧纹理优先用 `draw_texture_ex`，别手工 `Mesh`+`draw_mesh` 弱引用纹理**——独立纹理在 native 批次下易漏采样。
+
+### EXP-048 构建：macroquad `flip_y` 必须端侧固定，禁止因「画面反了」反复翻转（S5/S6 后续实测）
+- 现象：native 桌面窗口画面上下颠倒；随后多轮修复中 `flip_y` 在 `IS_WASM` / `!IS_WASM` 之间来回改，导致 native/wasm 任一端被改反。
+- 根因：`draw_texture_ex` 的 `flip_y` 是纹理 V 坐标翻转开关，不是「让画面看起来正确」的调试开关。行主序 framebuffer 的首行是逻辑 y=0（画面顶部）。在 macroquad 0.4 本项目实测中：native 端使用 `flip_y = IS_WASM` 时，native `IS_WASM=false` → `flip_y=false`，画面正确；wasm 端 `IS_WASM=true` → `flip_y=true`，画面正确。任何改成 `!IS_WASM` 的尝试都会把 native 改反。
+- 解法：`crates/ti-platform/src/gfx.rs` 的 `draw_quad` 固定为：
+  ```rust
+  const IS_WASM: bool = cfg!(target_arch = "wasm32");
+  DrawTextureParams { flip_y: IS_WASM, .. }
+  ```
+  即 native 不翻转、wasm 翻转。后续遇到画面反向时，先查 frame_delta/窗口尺寸/渲染层级/纹理上传路径，不得先改 `flip_y`。
+- 验证：native 运行主菜单时，顶部标题条和「金银岛」位于屏幕上方，底部状态行位于屏幕下方；全仓 `cargo test` 与 `scripts/gate.ps1` 全绿。
+
 
 

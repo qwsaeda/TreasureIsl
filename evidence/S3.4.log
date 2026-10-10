@@ -67,6 +67,7 @@
 - 行为与 oracle 逐位一致，结构不同（struct 方法 vs 自由函数）
 
 ## 子步 5：diff（crates/ti-core/tests/diff_selection.rs）
+- 实跑：`cargo test -p ti-core --test diff_selection` 8/8 全绿
 - `diff_role_then_map_15_combinations`：5 角色 × 3 地图 = 15 组合，先角色后地图 ✓
 - `diff_map_then_role_15_combinations`：5 角色 × 3 地图 = 15 组合，先地图后角色 ✓
 - `diff_locked_maps_all_unlocked_subsets`：7 个非空解锁子集 × 5 角色 × 3 地图 ✓

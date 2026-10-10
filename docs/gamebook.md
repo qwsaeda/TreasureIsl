@@ -7,11 +7,11 @@
 > 关系：`docs/spec/*.md` 是各模块逆向规格（输入/数值/事件码的**证据源**）；
 > `crates/ti-core/src/rules/*.rs` 是各模块的**正式实现**（已 diff 验证，可直接调用）；
 > 本手册是**接线规格**——把这些已验证的 rules 接进 `ti-app` 表现层，
-> 让 13 个玩法模块 + 主菜单拼成一条可从头玩到尾的流程。
+> 让 12 个玩法模块 + 主菜单拼成一条可从头玩到尾的流程。
 
 ## 0. 现状与目标
 
-- **已完成**：13 个玩法模块的 `rules/` 正式实现全部 diff 全绿
+- **已完成**：12 个玩法模块的 `rules/` 正式实现全部 diff 全绿
   （menu/selection/main_map/trade/build/battle/cards/saveload/messages/render/rng/main_loop）。
 - **缺口**：可运行产物只停在**主菜单**——`shell_ui.rs` 的 6 个 `event_id` 是占位值，
   点「新游戏」后没有接进 `ti-core::rules` 的场景状态机，玩法没有进入 UI 流程。
@@ -48,7 +48,7 @@
 
 - `GameApp` 取代 `MenuShell` 成为两壳（native/wasm）共用的交互核心；
   `MenuShell` 退化为 `GameApp` 在 `Index` 场景下的**渲染子视图**（保留其
-  帧缓冲/字形/脏行带机制，见 §3）。
+  帧缓冲/字形/脏行带机制，见 §4b）。
 - 两 bin 入口（`treasure_native.rs` / `treasure_wasm.rs`）改为持有 `GameApp`，
   把 `ti_platform::input` 的每帧输入事件喂给 `GameApp::update`，
   `GameApp::render` 画到 `Framebuf`，`FramePresenter` 上屏（机制不变，EXP-045）。
@@ -142,7 +142,7 @@ enum Scene {
 - 渲染：当前页文本（据点事件文本 / 帮助页 / 卡片说明）+ 页码。
 
 ### 3.6 Saveload（存读档子窗口）
-- 持有：`rules::saveload::SaveManager`（slot 数 3）。
+- 持有：`rules::saveload::SaveManager`（slot 数 5，见 design/constants.md §9.3）。
 - 输入：槽位选择 → `read_slot`（读 `gl*.sav`，`validate` 校验魔数）
   或 `write_slot`（写档，`REC_MAGIC` 头）；`migrate` v1→v2。
 - 渲染：槽位列表（版本号/时间戳）+ 金/进度摘要。
@@ -262,7 +262,7 @@ render() {
 **已知限制**：多帧精灵是 UI 控件（战斗动画/提示框等），不是场景装饰；
 等距地形瓦片（`glmap_m*.pak`）当前全为静态图（INI 全 `num=1`），不受影响。
 
-固定种子全流程脚本（`tests/scripts/full_run.ron`，`--features headless`）必须覆盖：
+固定种子全流程脚本（`tests/scripts/full_run.json`，`--features headless --bin treasure-headless`）必须覆盖：
 
 ```
 开局 → 选人(select_role) → 选图(select_map)
@@ -282,7 +282,7 @@ render() {
 | S5.1 交互壳接通 | `cargo test -p ti-app`（GameApp 状态机单测 + 全链路 7 项断言）+ 桌面 exe 实跑：菜单→选人→选图→主地图→贸易→建造→战斗→存读档 全链路可点通 |
 | S5.2 全流程 headless | `cargo run -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json`（seed=42）→ 16 步场景流转断言 0 失败（P3-3） |
 | S5.3 P4-1 渲染对齐 | `cargo test -p ti-app --test render_parity`（headless 渲染 5 关键场景，确定性/非空白/场景区分/真字形/176×220 逐像素一致） |
-| S5.4 业务对齐收敛 | 各 spec `推测` 项收敛 + `docs/release.md` 更新 + `gate.ps1` 8 项全绿 + 桌面/浏览器产物 sha256 入 evidence（**桌面/浏览器为当前收口目标**；Android APK 在 Mac 工具链编译，见 S2.6） |
+| S5.4 业务对齐收敛 | 各 spec `推测` 项收敛 + `docs/release.md` 更新 + `gate.ps1` 8 项全绿（S5.4 时点 8 项，当前 11 项）+ 桌面/浏览器产物 sha256 入 evidence（**桌面/浏览器为当前收口目标**；Android APK 在 Mac 工具链编译，见 S2.6） |
 
 ## 7. 实现约束（硬规则）
 
@@ -301,5 +301,5 @@ render() {
   （`Click(0..=5)`，spec/menu.md §a，与 rules 对齐）。
 - `crates/ti-app/src/bin/{treasure_native,treasure_wasm}.rs`：入口改持 `GameApp`。
 - `crates/ti-app/Cargo.toml`：加 `headless` feature（S5.2）。
-- `tests/scripts/full_run.ron`（新，S5.2）+ `crates/ti-app/tests/headless_full_run.rs`（新）。
+- `tests/scripts/full_run.json`（新，S5.2）+ `crates/ti-app/tests/headless_full_run.rs`（新）。
 - `plan/ledger.yaml`：登记 S5.1~S5.4。

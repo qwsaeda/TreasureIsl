@@ -1,0 +1,67 @@
+S8.3.d 存读档（JSON v2）验收
+========================================
+日期：2026-10-11
+命令：cargo test -p ti-core --test rules_saveload --test rules_saveload_json --test save_migration
+
+判据 1：存→读往返（SaveSlotV2 / SaveV2 JSON roundtrip）
+  [PASS] save_v2_roundtrip_json
+  [PASS] save_roundtrip_preserves_fields
+
+判据 2：v1→v2 迁移补默认（缺 version/bank/rng_seed → 默认值）
+  [PASS] migrate_v1_fills_defaults
+  [PASS] save_migrate_v1_to_v2_defaults
+
+判据 3：迁移幂等（v2 再迁不变）
+  [PASS] migration_idempotent
+  [PASS] save_migration_idempotent
+
+判据 4：未知版本拒绝（version≥3 → Err(UnknownVersion)）
+  [PASS] save_unknown_version_rejected
+
+判据 5：同 seed 同随机流（GameRng 续流，in_range(u32::MAX) 比较）
+  [PASS] rng_seed_restores_stream
+  [PASS] rng_same_seed_same_stream
+  [PASS] save_rng_seed_restores_stream
+
+判据 6：旧 SaveSlot 迁移（from_legacy_slot 数字→字符串保守映射）
+  [PASS] legacy_slot_to_v2
+
+判据 7：SaveManager 槽位 JSON v2 编排（set_slot/slot/slot_json/set_slot_json）
+  [PASS] manager_slot_roundtrip
+  [PASS] manager_from_balance_slot_count
+
+判据 8：oracle 二进制布局冻结参照物（魔数/字节自描述）
+  [PASS] v1_bytes_auto_migrate_to_v2_roundtrip
+  [PASS] v2_write_read_backward_compat
+  [PASS] manager_migrate_all_5_slots_from_v1
+  [PASS] json_export_import_roundtrip
+  [PASS] byte_layout_is_self_describing
+  [PASS] bad_magic_rejected
+  [PASS] min_size_enforced
+  [PASS] migration_preserves_magic_offset
+
+测试汇总
+========
+rules_saveload      : 7 passed; 0 failed
+rules_saveload_json : 10 passed; 0 failed
+save_migration      : 8 passed; 0 failed
+合计：25 passed; 0 failed
+
+Gate（与本任务域相关项）
+========================
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  PASS  no unwrap()/expect() outside tests/
+  PASS  ledger validate
+  PASS  validate_data (assets/data/*.json)
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  ti-core clippy -p ti-core --all-targets: 无 error（lib + 全部 tests）
+
+  注：gate 5 项 FAIL（fmt/clippy/test workspace/placeholders/doccheck）均因
+  ti-app（widgets.rs / e2e_playthrough / render_parity / newline）或 S7.6
+  历史 evidence，非本任务域，不影响 S8.3.d 验收。
+
+台账
+====
+ledger: 77 tasks, 68 verified, 0 error(s)；S8.3.d → verified

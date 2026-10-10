@@ -15,13 +15,13 @@
 
 use std::mem::size_of;
 
-/// 存档槽位（spec §b，`sub_1F20C`/`sub_1F7B8` 的 oracle 化）。
+/// 存档槽位（spec §b，`存档写入`/`存档读取` 的 oracle 化）。
 ///
 /// - `version`：存档版本（v1=原版无此字段 → 默认 1，v2=新格式，spec §e **推测**）；
-/// - `character`：角色索引（`dword_7FB70`，1..5，`sub_1F20C` 行 73）；
+/// - `character`：角色索引（`dword_7FB70`，1..5，`存档写入` 行 73）；
 /// - `gold`：当前金（**推测**：`a1+144` 子对象的金量字段）；
-/// - `map_slot`：地图索引（`dword_7FB6C`，0..4，`sub_1F20C` 行 74）；
-/// - `position`：游戏进度（`a1+724`，`sub_1F20C` 行 77）。
+/// - `map_slot`：地图索引（`dword_7FB6C`，0..4，`存档写入` 行 74）；
+/// - `position`：游戏进度（`a1+724`，`存档写入` 行 77）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SaveSlot {
     /// 存档版本（v1=1，v2=2，spec §e **推测**）。
@@ -42,7 +42,7 @@ impl Default for SaveSlot {
     }
 }
 
-/// 存档魔数（`sub_1F20C` 行 69 / `sub_1F7B8` 行 95 / `sub_40D80` 行 79 实测 `19810929`）。
+/// 存档魔数（`存档写入` 行 69 / `存档读取` 行 95 / `index` 行 79 实测 `19810929`）。
 pub const REC_MAGIC: u32 = 0x0131_5A47;
 
 /// 存档最小有效大小（2 字节前缀 + 4 字节魔数 + 4×u32 字段 = 18 字节，spec §d）。
@@ -58,7 +58,7 @@ pub const MIN_SAVE_SIZE: usize = 2 + 4 + 4 * 5;
 /// 存读档错误（spec §d）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SaveErr {
-    /// 魔数不符（`sub_1F7B8` 行 95-101：`Buffer != 19810929` → 返回 0）。
+    /// 魔数不符（`存档读取` 行 95-101：`Buffer != 19810929` → 返回 0）。
     BadMagic,
     /// 字节数不足最小有效大小（spec §d）。
     TooShort,
@@ -68,7 +68,7 @@ pub enum SaveErr {
 
 /// oracle：校验存档字节（魔数 + 最小大小，spec §d）。
 ///
-/// 规则（`sub_1F7B8` 行 92-101 直译 + spec §d 最小大小）：
+/// 规则（`存档读取` 行 92-101 直译 + spec §d 最小大小）：
 /// - `bytes.len() < MIN_SAVE_SIZE` → `Err(TooShort)`；
 /// - `bytes[2..6]`（跳过 2 字节前缀）的 u32 LE ≠ `REC_MAGIC` → `Err(BadMagic)`；
 /// - 否则 → `Ok(())`。

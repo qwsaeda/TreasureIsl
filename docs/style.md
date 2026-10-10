@@ -9,7 +9,7 @@ treasure-island/
 ├── Cargo.toml              # [workspace] edition="2024"，[workspace.lints] 集中
 ├── rustfmt.toml            # 全局唯一格式化配置
 ├── clippy.toml
-├── scripts/gate.ps1        # 门禁（parity.md 8 项，PowerShell 本机执行）
+├── scripts/gate.ps1        # 门禁（parity.md 11 项，PowerShell 本机执行）
 ├── crates/
 │   ├── ti-formats/         # 纯二进制格式解析/序列化：pak/lpk/pcx/map/font/save
 │   │   └── src/{pak.rs, pcx.rs, map.rs, font.rs, save.rs, macros.rs, error.rs, ids.rs}
@@ -136,7 +136,7 @@ pub trait SaveCodec { fn encode(&self) -> Vec<u8>; }                   // v1/v2 
 
 - 新增依赖必须：纯 Rust（wasm/Android 双端可编）、维护活跃、无传递膨胀；引入前在任务 evidence 里记录候选对比。
 - 已定：`macroquad`（渲染/输入/音频）、`thiserror`（错误）、`serde`+`serde_json`（JSON）、`flate2`（zlib）、`png`（资源导出）。其余按需走 §5.9 流程。
-- 禁止 `unsafe`；平台后端确需时单独 feature 解封 + `// SAFETY:` 注释，并先记 `docs/experience/index.mdindex.md`。
+- 禁止 `unsafe`；平台后端确需时单独 feature 解封 + `// SAFETY:` 注释，并先记 `docs/experience/index.md`。
 - **大依赖默认 feature 门控（S4.4 决策，EXP-046）**：体积敏感的可选能力（如 `opus-pure` OGG/Opus 转码）在提供它的库 crate（`ti-platform`）里做成 **optional dep + 自定义 feature**（`ogg = ["dep:opus-pure"]`，**不进 default**），调用方按需开启。
   - `ti-tools`（mod2ogg / build_assets 离线转码）经 `ti-platform = { features = ["ogg"] }` 传递引入 opus-pure，**不**直接依赖 `opus-pure`（保持单一传递路径，`cargo tree -p ti-tools` 仅 `ti-tools → ti-platform → opus-pure`）。
   - 运行时壳（`ti-app` 桌面/wasm）默认**不含** opus-pure：在线转码走独立 feature `mod-ogg = ["ti-platform/ogg"]`（默认关闭），正常启动直接播放 `build_assets` 离线预转码的 OGG 产物（`assets_out/audio/*.ogg`）。

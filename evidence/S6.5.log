@@ -1,0 +1,159 @@
+﻿S6.5 容器条目业务名修正（key 哈希 → 可读名）验收日志（2026-10-10）
+
+== 判据 1：cargo test -p ti-formats --lib resource_names（单测 5/5）==
+cargo :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.26s
+所在位置 行:5 字符: 11
++ $out += ((cargo test -p ti-formats --lib resource_names 2>&1) | Out-S ...
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.26s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running unittests src\lib.rs (target\debug\deps\ti_formats-9947e0da44ca5a13.exe)
+
+running 5 tests
+test resource_names::tests::export_csv_lists_non_skipped_entries_in_idx_order ... ok
+test resource_names::tests::export_entries_falls_back_to_unknown_for_unnamed_key ... ok
+test resource_names::tests::export_entries_prefers_named_over_unknown ... ok
+test resource_names::tests::unknown_key_has_no_name ... ok
+test resource_names::tests::unresolved_mapinfo_recorded_separately ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 41 filtered out; finished in 0.01s
+
+== 判据 2：cargo test -p ti-formats --test resource_names（集成测试 7/7）==
+cargo :    Compiling ti-formats v0.1.0 (C:\閲戦摱宀沑crates\ti-formats)
+所在位置 行:8 字符: 11
++ $out += ((cargo test -p ti-formats --test resource_names 2>&1) | Out- ...
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ti...tes\ti-formats):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.72s
+     Running tests\resource_names.rs (target\debug\deps\resource_names-e87cf31997f66355.exe)
+
+running 7 tests
+test duplicate_50_pcx_content_merge_path_covered ... ok
+test goods_lpk_named_via_exe ... ok
+test export_csv_has_source_column_and_no_skipped ... ok
+test mapinfo_filenames_close_over_container_keys ... ok
+test cards_lpk_named_via_extras_and_exe ... ok
+test music_lpk_named_via_exe ... ok
+test ui_pak_all_named_via_mapinfo_and_extras ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+== 判据 3：cargo test -p ti-tools --test build_assets（幂等 + manifest 校验 3/3）==
+cargo :    Compiling ti-tools v0.1.0 (C:\閲戦摱宀沑crates\ti-tools)
+所在位置 行:11 字符: 11
++ $out += ((cargo test -p ti-tools --test build_assets 2>&1) | Out-Stri ...
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ti...rates\ti-tools):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.54s
+     Running tests\build_assets.rs (target\debug\deps\build_assets-052621f57b3af9ed.exe)
+
+running 3 tests
+test all_scenes_and_maps_exported ... ok
+test manifest_hashes_match_actual_files ... ok
+test build_assets_is_idempotent ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.73s
+
+== 判据 4：cargo run -p ti-tools --bin unpak -- --check-all（P0-1 提取率 100%）==
+cargo : [unpak] ui.pak           鏉＄洰  122
+所在位置 行:14 字符: 11
++ $out += ((cargo run -q -p ti-tools --bin unpak -- --check-all 2>&1) | ...
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([unpak] ui.pak           鏉＄洰  122:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[unpak] glpics.pak       鏉＄洰   88
+[unpak] glmap_m01.pak    鏉＄洰   47
+[unpak] glmap_m02.pak    鏉＄洰   37
+[unpak] cards.lpk        鏉＄洰    4
+[unpak] music.lpk        鏉＄洰    6
+[unpak] goods.lpk        鏉＄洰    1
+[unpak] 鍚堣 305 鏉★紝鎴愬姛瑙ｅ帇 305 鏉★紙100.0%锛?
+
+== 判据 5：cargo run -p ti-tools --bin unpak -- --out assets_raw（S6.5 命名覆盖率）==
+cargo : [unpak] ui.pak           鍛藉悕 122/122 宸插懡鍚嶏紙璺宠繃 0 鍚堝苟椤癸級
+所在位置 行:17 字符: 11
++ $out += ((cargo run -q -p ti-tools --bin unpak -- --out assets_raw 2> ...
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([unpak] ui.pak ...鍚嶏紙璺宠繃 0 鍚堝苟椤癸級:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[unpak] ui.pak           鏉＄洰  122
+[unpak] glpics.pak       鍛藉悕 85/88 宸插懡鍚嶏紙璺宠繃 0 鍚堝苟椤癸級
+[unpak] glpics.pak       鏉＄洰   88
+[unpak] glmap_m01.pak    鍛藉悕 47/47 宸插懡鍚嶏紙璺宠繃 0 鍚堝苟椤癸級
+[unpak] glmap_m01.pak    鏉＄洰   47
+[unpak] glmap_m02.pak    鍛藉悕 37/37 宸插懡鍚嶏紙璺宠繃 0 鍚堝苟椤癸級
+[unpak] glmap_m02.pak    鏉＄洰   37
+[unpak] cards.lpk        鍛藉悕 4/4 宸插懡鍚嶏紙璺宠繃 0 鍚堝苟椤癸級
+[unpak] cards.lpk        鏉＄洰    4
+[unpak] music.lpk        鍛藉悕 6/6 宸插懡鍚嶏紙璺宠繃 0 鍚堝苟椤癸級
+[unpak] music.lpk        鏉＄洰    6
+[unpak] goods.lpk        鍛藉悕 1/1 宸插懡鍚嶏紙璺宠繃 0 鍚堝苟椤癸級
+[unpak] goods.lpk        鏉＄洰    1
+[unpak] 鍚堣 305 鏉★紝鎴愬姛瑙ｅ帇 0 鏉★紙0.0%锛?
+
+== 判据 6：build_assets 产物 raw/ 目录业务名核验（抽样）==
+ui.pak raw/ 前 5 个文件:
+  01.pcx
+  02.pcx
+  03.pcx
+  04.pcx
+  05.pcx
+music.lpk raw/ 全部文件:
+  attack.wav
+  glmusic.mod
+  invalid.wav
+  levelup.wav
+  press.wav
+  victory.wav
+goods.lpk raw/ 全部文件:
+  goods.mdu
+cards.lpk raw/ 全部文件:
+  card1.pcx
+  card2.pcx
+  cards.ini
+  event.ini
+glpics unknown-*（回落哈希名，预期 3 条 F-209）:
+  unknown-0d4ef1be.bin
+  unknown-20769d35.bin
+  unknown-6171a968.bin
+全 raw/ 下 unknown-* 条数（预期 = glpics 3，其余 0）:
+  3
+
+== 判据 7：未命名回落核验（DoD 217/217，glpics 余 3 条）==
+unpak --out 命名覆盖率（判据 5 的 '命名 X/Y' 行）：
+  ui.pak 122/122（mapinfo 权威源 + Thumbs.db EXTRA + mapinfo.ini EXTRA）
+  glmap_m01.pak 47/47（mapinfo 49 行闭合）
+  glmap_m02.pak 37/37（mapinfo 34 行 + appo01~04 EXTRA）
+  cards.lpk 4/4（cards.ini/event.ini exe + card1/2.pcx EXTRA）
+  music.lpk 6/6（exe music\*.wav + glmusic.mod）
+  goods.lpk 1/1（exe goods\goods.mdu）
+  glpics.pak 85/88（exe 85 + unknown 3 条 F-209）
+  DoD 范围（ui+m01+m02+cards+music+goods）= 122+47+37+4+6+1 = 217/217 全解
+
+== 判据 8：注释 804615c2.bin → glmusic.mod 核验 ==
+crates/**/*.rs 中 804615c2.bin 命中数: 0（预期 0；mod_pcm.rs/mod2ogg.rs/audio_asset.rs 已改 glmusic.mod）
+
+== 判据 9：scripts/gate.ps1 全绿 ==
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 64 tasks, 55 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+=== gate: 0 failure(s) ===
+
+结论：S6.5 DoD 全部判据通过（单测 12/12 + 提取率 100% + 命名 217/217 + 注释 0 命中 + gate 全绿）

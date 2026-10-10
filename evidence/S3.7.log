@@ -41,6 +41,7 @@
 - impl 方法数：9（含 3 个 getter + 6 个业务方法）。
 
 ## 子步 5: diff
+- 实跑：`cargo test -p ti-core --test diff_build` 7/7 全绿
 - `crates/ti-core/tests/diff_build.rs`：7 个测试。
   - 差分测试 5 个：
     - `diff_build_cost_all_levels`：4 建筑 × 6 level = 24 组合；

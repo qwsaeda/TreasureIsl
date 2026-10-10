@@ -6,7 +6,7 @@
 //! - [`oracle_menu_transition`]：同一 (场景, 事件) 产生同一 (新场景, Option<`Sfx`>)，逐位基准；
 //! - [`oracle_reachable_menu`]：从 Intro/Index 出发的可达场景集。
 //!
-//! 事件码（`docs/spec/menu.md` §a，`sub_41354` 实测）：
+//! 事件码（`docs/spec/menu.md` §a，`saveload` 实测）：
 //! - 13 = 确定/Enter（菜单项选择）；
 //! - 27 = 返回（子场景回 index）；
 //! - 37 = 无效操作（**推测** invalid.wav 触发）；
@@ -26,21 +26,21 @@
 /// 菜单场景枚举。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuScene {
-    /// intro.Map 过场动画（`sub_42574`）。
+    /// intro.Map 过场动画（`intro`）。
     Intro,
-    /// index.Map 主菜单（`sub_40D80`）。
+    /// index.Map 主菜单（`index`）。
     Index,
-    /// selectrole.Map 角色选择（`sub_3ECDC`）。
+    /// selectrole.Map 角色选择（`selectrole`）。
     SelectRole,
-    /// selectmap.Map 地图选择（`sub_402D8`）。
+    /// selectmap.Map 地图选择（`selectmap`）。
     SelectMap,
-    /// saveload.map 继续游戏（`sub_41354` case 1 子窗口叠加）。
+    /// saveload.map 继续游戏（`saveload` case 1 子窗口叠加）。
     Saveload,
-    /// Option.map 选项（`sub_41354` case 2 / `sub_4085C`）。
+    /// Option.map 选项（`saveload` case 2 / `选项场景帧处理`）。
     Option,
-    /// help.map 说明（`sub_41354` case 3/4 / `sub_3F4E4`）。
+    /// help.map 说明（`saveload` case 3/4 / `帮助`）。
     Help,
-    /// 退出游戏（`sub_41354` case 5：`*(a1[1]+12)=1`）。
+    /// 退出游戏（`saveload` case 5：`*(a1[1]+12)=1`）。
     Exit,
 }
 
@@ -115,7 +115,7 @@ impl MenuEvent {
 /// oracle：给定当前场景 + 事件，返回 (新场景, 可选音效)。
 ///
 /// 规则（直译 `docs/spec/menu.md` §a/§c/§d）：
-/// - `Intro` + 任何事件 → 自动进入 `Index`（过场结束，`sub_34A08` 完成态检查），无音效；
+/// - `Intro` + 任何事件 → 自动进入 `Index`（过场结束，`00029110:场景管理器` 完成态检查），无音效；
 /// - `Index` + `Click(0)`（新游戏）→ `SelectRole` + `Press`；
 /// - `Index` + `Click(1)`（继续）→ `Saveload` + `Press`；
 /// - `Index` + `Click(2)`（选项）→ `Option` + `Press`；

@@ -116,6 +116,125 @@ impl Default for Framebuf {
     }
 }
 
+/// S7.5：176×220 RGBA8（`0xAARRGGBB`）HD 帧缓冲（feature `hd-8bit`，默认关）。
+///
+/// 与 [`Framebuf`]（RGB565）并行存在；路径 1 并行（`docs/impl/14_asset_enhancement.md` §3.5）：
+/// 默认构建不引入本结构，RGB565 原路径逐像素不变。
+#[cfg(feature = "hd-8bit")]
+pub struct FramebufRgba {
+    /// 行主序 176×220 RGBA8 像素（`0xAARRGGBB`，A=0xFF 不透明）。
+    pixels: Box<[u32]>,
+    /// 逐行脏标记（220 行），与 [`Framebuf`] 同语义。
+    dirty_rows: [bool; LH_I32 as usize],
+}
+
+#[cfg(feature = "hd-8bit")]
+impl FramebufRgba {
+    /// 新建全黑不透明帧缓冲（全脏，保证首次呈现一定上传）。
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            pixels: vec![0xFF000000u32; FB_PIXELS].into_boxed_slice(),
+            dirty_rows: [true; LH_I32 as usize],
+        }
+    }
+
+    /// 用指定 RGBA8 值清空全部像素（置全帧脏）。
+    pub fn clear(&mut self, color: u32) {
+        self.pixels.fill(color);
+        self.dirty_rows.fill(true);
+    }
+
+    /// 只读访问全部像素（行主序，176×220）。
+    #[must_use]
+    pub fn as_slice(&self) -> &[u32] {
+        &self.pixels
+    }
+
+    /// 可变访问全部像素。
+    pub fn as_mut_slice(&mut self) -> &mut [u32] {
+        &mut self.pixels
+    }
+
+    /// 标记矩形 `[x, x+w) × [y, y+h)` 所在行脏（越界裁到逻辑屏内；全裁空 = no-op）。
+    pub fn mark_dirty(&mut self, x: i32, y: i32, w: i32, h: i32) {
+        let y0 = y.max(0);
+        let y1 = (y.saturating_add(h).saturating_sub(1)).min(LH_I32 - 1);
+        if y0 > y1 || x.saturating_add(w) <= 0 || x >= 176 {
+            return;
+        }
+        for r in y0..=y1 {
+            self.dirty_rows[usize::try_from(r).unwrap_or(0)] = true;
+        }
+    }
+
+    /// 是否有任何脏行。
+    #[must_use]
+    pub fn has_dirty(&self) -> bool {
+        self.dirty_rows.iter().any(|d| *d)
+    }
+
+    /// 脏行带 `[first, last]`（无脏行时返回 `(0, 0)`，调用方先查 [`has_dirty`]）。
+    #[must_use]
+    pub fn dirty_row_range(&self) -> (i32, i32) {
+        let mut first: Option<i32> = None;
+        let mut last: Option<i32> = None;
+        for (i, &d) in self.dirty_rows.iter().enumerate() {
+            if d {
+                let i = i32::try_from(i).unwrap_or(0);
+                first = Some(match first {
+                    None => i,
+                    Some(f) => f.min(i),
+                });
+                last = Some(match last {
+                    None => i,
+                    Some(l) => l.max(i),
+                });
+            }
+        }
+        match (first, last) {
+            (Some(f), Some(l)) => (f, l),
+            _ => (0, 0),
+        }
+    }
+
+    /// 清零所有脏标记（一次上传完成后调用）。
+    pub fn reset_dirty(&mut self) {
+        self.dirty_rows.fill(false);
+    }
+}
+
+#[cfg(feature = "hd-8bit")]
+impl Default for FramebufRgba {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// S7.5（feature `hd-8bit`）：RGBA8 像素（`0xAARRGGBB`）→ RGBA8 四元组（供纹理上传）。
+///
+/// 与 [`rgb565_to_rgba8`] 同用途；HD 帧缓冲已是 8 位真彩，直接解包即可。
+#[cfg(feature = "hd-8bit")]
+#[must_use]
+pub fn rgba8_to_rgba8_quad(p: u32) -> [u8; 4] {
+    [
+        u8::try_from((p >> 16) & 0xFF).unwrap_or(0),
+        u8::try_from((p >> 8) & 0xFF).unwrap_or(0),
+        u8::try_from(p & 0xFF).unwrap_or(0),
+        0xFF,
+    ]
+}
+
+/// S7.5（feature `hd-8bit`）：PNG 解码后的 RGBA 四元组 → 帧缓冲值（`0xAARRGGBB`）。
+///
+/// 透明像素（A=0）不参与合成（调用方在 blit 时判 A=0 跳过写帧缓冲）；
+/// 此处仅做通道重排，不预乘 alpha（原版 blit 为不透明覆盖语义，F-311）。
+#[cfg(feature = "hd-8bit")]
+#[must_use]
+pub fn png_rgba_to_framebuf_u32(rgba: [u8; 4]) -> u32 {
+    0xFF00_0000u32 | u32::from(rgba[0]) << 16 | u32::from(rgba[1]) << 8 | u32::from(rgba[2])
+}
+
 /// RGB565 → `Color`（macroquad 用 f32 RGBA，通道范围 0.0~1.0）。
 ///
 /// 原版帧缓冲是 RGB565，这里做标准位扩展（`r5<<3|r5>>2`），可视作无损。
@@ -320,6 +439,75 @@ impl FramePresenter {
         self.filter = filter;
     }
 
+    /// S7.5（feature `hd-8bit`）：RGBA8 帧缓冲版的呈现（`FramebufRgba` → 纹理上传）。
+    ///
+    /// 与 [`present`](FramePresenter::present) 同语义（脏行带部分上传 / 整帧重建），
+    /// 差异只在像素源：`FramebufRgba` 已是 RGBA8（`0xAARRGGBB`），直接解包写缓存，
+    /// 无需 565→888 转换。
+    #[cfg(feature = "hd-8bit")]
+    pub fn present_rgba(&mut self, fb: &mut FramebufRgba, vp: &Viewport) {
+        if !fb.has_dirty() {
+            self.skipped += 1;
+            if self.mode == UploadMode::FullRebuild {
+                // native：静止帧也重绘 quad（复用上次纹理），否则黑底（EXP-045）。
+                if let Some(tex) = self.texture.as_ref() {
+                    draw_quad(tex, vp);
+                }
+            }
+            return;
+        }
+        let width_u16 = u16::try_from(LOGICAL_WIDTH).unwrap_or(0);
+        let height_u16 = u16::try_from(LOGICAL_HEIGHT).unwrap_or(0);
+        let (first, last) = fb.dirty_row_range();
+        let first = first.clamp(0, LH_I32);
+        let last = last.min(LH_I32 - 1).max(first);
+        let stride = usize::try_from(LOGICAL_WIDTH).unwrap_or(1) * 4;
+        let px = fb.as_slice();
+        for row in first..=last {
+            let Ok(r) = usize::try_from(row) else {
+                continue;
+            };
+            let base = r * stride;
+            for (i, &p) in
+                px[r * LOGICAL_WIDTH as usize..(r + 1) * LOGICAL_WIDTH as usize].iter().enumerate()
+            {
+                let b = rgba8_to_rgba8_quad(p);
+                self.cache[base + i * 4..base + i * 4 + 4].copy_from_slice(&b);
+            }
+        }
+        if self.mode == UploadMode::FullRebuild {
+            let texture =
+                macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache);
+            texture.set_filter(self.filter.to_miniquad());
+            self.texture = Some(texture);
+            if let Some(tex) = self.texture.as_ref() {
+                draw_quad(tex, vp);
+            }
+        } else {
+            let texture = self.texture.get_or_insert_with(|| {
+                macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache)
+            });
+            texture.set_filter(self.filter.to_miniquad());
+            if first == 0 && last == LH_I32 - 1 {
+                texture.update_from_bytes(u32::from(width_u16), u32::from(height_u16), &self.cache);
+            } else {
+                let band_h = u16::try_from(last - first + 1).unwrap_or(height_u16);
+                let band_start = usize::try_from(first).map_or(0, |f| f.saturating_mul(stride));
+                let band_end = usize::try_from(last)
+                    .map_or(0, |l| (l.saturating_add(1)).saturating_mul(stride));
+                let img = macroquad::texture::Image {
+                    bytes: self.cache[band_start..band_end].to_vec(),
+                    width: width_u16,
+                    height: band_h,
+                };
+                texture.update_part(&img, 0, first, i32::from(width_u16), last - first + 1);
+            }
+            draw_quad(texture, vp);
+        }
+        fb.reset_dirty();
+        self.uploads += 1;
+    }
+
     /// 当前滤波模式。
     #[must_use]
     pub fn filter(&self) -> FilterMode {
@@ -400,25 +588,23 @@ pub fn border_style() -> crate::settings::BorderStyle {
 }
 
 fn draw_quad(texture: &macroquad::texture::Texture2D, vp: &Viewport) {
-    use macroquad::models::{Mesh, Vertex, draw_mesh};
-
-    let white = macroquad::color::WHITE;
+    // 行主序 bytes 前部 = 逻辑顶（y=0）；`flip_y` 处理 native 与 wasm 纹理 V 语义
+    // 相反（EXP-045/047）。`const` 须置于函数首，避免 clippy items_after_statements。
+    const IS_WASM: bool = cfg!(target_arch = "wasm32");
     let (x0, y0) = vp.logical_to_screen(0.0, 0.0);
     let (x1, y1) = vp.logical_to_screen(LW, LH);
-    // S6.2：先把 letterbox / pillarbox 边框区填成主题色，再画画面 quad。
+    // S6.2：先把 letterbox / pillarbox 边框区填成主题色，再画画面。
     // 边框区 = 游戏区外扩 1px 的整屏矩形（避免与画面边缘产生接缝）。
     fill_border(x0, y0, x1, y1);
-    // 行主序 bytes 前部 = 逻辑顶（y=0）。native macroquad 桌面 GL 后端 `from_rgba8`
-    // 把 buffer 首行作纹理 V=1（顶）；要屏顶显逻辑顶，屏顶(y0) 配 V=1、屏底(y1) 配 V=0。
-    let vertices = vec![
-        Vertex::new(x0, y0, 0.0, 0.0, 1.0, white),
-        Vertex::new(x1, y0, 0.0, 1.0, 1.0, white),
-        Vertex::new(x1, y1, 0.0, 1.0, 0.0, white),
-        Vertex::new(x0, y1, 0.0, 0.0, 0.0, white),
-    ];
-    let mesh =
-        Mesh { vertices, indices: vec![0, 1, 2, 0, 2, 3], texture: Some(texture.weak_clone()) };
-    draw_mesh(&mesh);
+    // 用 `draw_texture_ex`（宏观 API，自带正确纹理 V 方向 + 批处理）替代手工
+    // `Mesh`+`draw_mesh`：手工 mesh 的弱引用纹理在 native 桌面 GL 下不进批次、
+    // 不渲染，整屏只剩深蓝边框 → 看起来黑屏（EXP-047）。
+    let params = macroquad::texture::DrawTextureParams {
+        dest_size: Some(macroquad::prelude::vec2(x1 - x0, y1 - y0)),
+        flip_y: IS_WASM,
+        ..Default::default()
+    };
+    macroquad::texture::draw_texture_ex(texture, x0, y0, macroquad::color::WHITE, params);
 }
 
 /// 屏幕坐标 ↔ 逻辑坐标(176×220)的等比缩放变换。

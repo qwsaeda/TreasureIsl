@@ -1,4 +1,4 @@
-//! oracle：S3.1 差分基准，直译 `sub_29110`/`sub_2101C` 伪代码，测试专用。
+//! oracle：S3.1 差分基准，直译 `场景管理器帧更新总控`/`主地图帧更新` 伪代码，测试专用。
 //!
 //! 按 `docs/spec/main_loop.md` §4.3「场景切换状态机」的 case 行为直译：
 //! - 状态码 = `*(a1+716)`，合法取值 0/2/3/4/25/26/27；
@@ -76,17 +76,17 @@ impl SceneState {
 /// 场景 id（spec §4.1 的 5 个装载器 + vs.Map）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SceneId {
-    /// `intro.Map`（`sub_42574`）。
+    /// `intro.Map`（`intro`）。
     Intro,
-    /// `selectrole.Map`（`sub_3ECDC`）。
+    /// `selectrole.Map`（`selectrole`）。
     SelectRole,
-    /// `selectmap.Map`（`sub_402D8`）。
+    /// `selectmap.Map`（`selectmap`）。
     SelectMap,
-    /// `index.Map`（`sub_40D80`）。
+    /// `index.Map`（`index`）。
     Index,
-    /// `main.Map`（`sub_2077C`）。
+    /// `main.Map`（`main`）。
     MainMap,
-    /// `vs.Map`（`sub_572E4`）。
+    /// `vs.Map`（`战斗对象构造`）。
     Vs,
 }
 

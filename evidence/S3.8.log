@@ -46,6 +46,7 @@
 - impl 方法数：6。
 
 ## 子步 5: diff
+- 实跑：`cargo test -p ti-core --test diff_battle` 4/4 全绿
 - `crates/ti-core/tests/diff_battle.rs`：4 个测试。
   - 差分测试 2 个：
     - `diff_full_battle_all_combos`：11 seed × 5 tier × 6 HP × 5 atk = 1650 组合，

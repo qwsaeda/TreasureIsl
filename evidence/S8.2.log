@@ -1,0 +1,121 @@
+=== S8.2 验收日志：工具链脚本化 + gate 第 10 项 ===
+
+--- python scripts/gen_layout.py (生成) ---
+���� assets\data\controls.json��2041 ��¼ / 20 ������
+
+--- python scripts/gen_layout.py --check (幂等一致) ---
+OK controls.json һ�£�2041 ��¼ / 20 ������
+
+--- python scripts/validate_data.py (data 全绿) ---
+validate_data: OK��3 ����strings 44 ����
+
+--- python scripts/check_hardcode.py --warn (先红：抓出现存硬编码) ---
+  crates/ti-app/src/bin/treasure_headless.rs:137: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/bin/treasure_headless.rs:141: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/bin/treasure_headless.rs:147: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/bin/treasure_headless.rs:198: CJK literal `ת` (should use strings.json)
+  crates/ti-app/src/bin/treasure_headless.rs:209: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1142: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1205: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1206: CJK literal `ɫ` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1211: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1215: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1221: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1222: CJK literal `ͼ` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1228: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1235: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1251: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1252: CJK literal `ͼ` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1270: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1274: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1281: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1285: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1288: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1294: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1295: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1305: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1306: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1309: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1311: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1317: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1325: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1331: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/game_app.rs:1332: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1336: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1336: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/game_app.rs:1343: CJK literal `д` (should use strings.json)
+  crates/ti-app/src/menu_shell.rs:138: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/menu_shell.rs:141: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/menu_shell.rs:147: layout call with hardcoded color (should use scenes.json)
+  crates/ti-app/src/shell_ui.rs:24: CJK literal `Ϸ` (should use strings.json)
+  crates/ti-app/src/shell_ui.rs:25: CJK literal `Ϸ` (should use strings.json)
+  crates/ti-app/src/shell_ui.rs:26: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/shell_ui.rs:27: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/shell_ui.rs:28: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/shell_ui.rs:29: CJK literal `Ϸ` (should use strings.json)
+  crates/ti-app/src/shell_ui.rs:35: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/sprite_atlas.rs:166: CJK literal `��` (should use strings.json)
+  crates/ti-app/src/terrain_atlas.rs:133: CJK literal `��` (should use strings.json)
+  crates/ti-core/src/oracle/messages.rs:47: CJK literal `Ϣ` (should use strings.json)
+  crates/ti-core/src/oracle/messages.rs:48: CJK literal `��` (should use strings.json)
+  crates/ti-core/src/oracle/messages.rs:49: CJK literal `��` (should use strings.json)
+  crates/ti-core/src/oracle/messages.rs:50: CJK literal `��` (should use strings.json)
+  crates/ti-core/src/oracle/messages.rs:51: CJK literal `Ϣ` (should use strings.json)
+  crates/ti-platform/src/audio.rs:238: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/audio.rs:240: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/audio.rs:243: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/audio.rs:264: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/audio.rs:270: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/mod_pcm.rs:45: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/mod_pcm.rs:50: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:38: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:39: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:40: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:41: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:285: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:286: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:330: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:368: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:369: CJK literal `��` (should use strings.json)
+  crates/ti-platform/src/settings.rs:370: CJK literal `��` (should use strings.json)
+  crates/ti-tools/src/bin/controls.rs:81: CJK literal `��` (should use strings.json)
+  crates/ti-tools/src/bin/map2json.rs:31: CJK literal `��` (should use strings.json)
+  crates/ti-tools/src/bin/serve.rs:121: CJK literal `��` (should use strings.json)
+  crates/ti-tools/src/bin/serve.rs:132: CJK literal `��` (should use strings.json)
+  crates/ti-tools/src/bin/specskel.rs:211: CJK literal `��` (should use strings.json)
+  crates/ti-tools/src/bin/unpak.rs:232: CJK literal `��` (should use strings.json)
+  crates/ti-tools/src/bin/unpak.rs:248: CJK literal `��` (should use strings.json)
+check_hardcode: 75 hit(s) in 83 file(s)
+(--warn mode, not failing)
+
+=== 判据核对 (ledger S8.2 dod) ===
+1. 三脚本落地: scripts/{gen_layout,validate_data,check_hardcode}.py  [OK]
+2. 幂等: gen_layout 连跑两次产物逐字节一致 + --check 只读校验通过  [OK]
+3. validate_data 全绿: assets/data/*.json 结构与数值合法域  [OK]
+4. check_hardcode 能抓出现存 crates/**/src 中文化硬编码（先红）  [OK: 75 hits]
+   （注: 硬编码清零属 S8.3/S8.4；gate 第 10c 项暂用 --warn 只报告不判 FAIL）
+5. gate 新增第 10 项（validate_data + gen_layout --check + check_hardcode）全绿  [OK]
+
+--- scripts/gate.ps1 ---
+=== gate: TreasureIsl (10 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6��APK �� Mac ���룬������ NDK/SDK���û��ȶ����������ȣ�)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x ��ʽ���������������)
+        ledger: 72 tasks, 63 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 80 docs, 37 facts, 50 experiences, 72 task refs, 2 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK��3 ����strings 44 ����
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json һ�£�2041 ��¼ / 20 ������
+  PASS  gen_layout --check (idempotent)
+        check_hardcode: 75 hit(s) in 83 file(s)
+  PASS  check_hardcode (warn mode; hardcode debt tracked in S8.3/S8.4)
+=== gate: 0 failure(s) ===

@@ -1,0 +1,31 @@
+﻿# S7.4 evidence: 多分辨率打包 + Rust 侧校验
+
+## 1) 打包脚本产物（1x/2x/4x/webp + manifest）
+python scripts/pack_hd_assets.py
+[pack_hd_assets] 1340 文件（1x=335 2x=335 4x=335 webp=335）→ C:\金银岛\assets_hd_pack
+
+## 2) manifest 幂等
+第一次：sha256=8821B7FE1C44D67445DFE9E20089E8D4D750887EBC1A3A4A69B142B778ADBB42
+第二次：sha256=8821B7FE1C44D67445DFE9E20089E8D4D750887EBC1A3A4A69B142B778ADBB42
+manifest idempotent: OK
+
+## 3) Rust 侧校验（0 缺失 / 0 失配 / 0 失尺寸）
+cargo run -q -p ti-tools --bin build_hd_assets -- --check
+[build_hd_assets] 1340 条 manifest 记录（C:\金银岛\assets_hd_pack\manifest_hd.json）
+[build_hd_assets] 校验 1340 条全通过（0 缺失 / 0 失配 / 0 失尺寸）
+
+## 4) gate.ps1（验收时全绿）
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 64 tasks, 58 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+=== gate: 0 failure(s) ===

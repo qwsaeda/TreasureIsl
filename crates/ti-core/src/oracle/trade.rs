@@ -6,25 +6,25 @@
 //! - [`oracle_price`]：固定价格查表（无行情波动，spec §b 推测：`rand()%22+1` = 商品选择而非价格波动）；
 //! - [`oracle_buy`]：买入结算（`paid = price`，`profit = 0`，`gold_left = gold - paid`，spec §c）；
 //! - [`oracle_sell`]：卖出结算（`gain = price`，`profit = price - avg_buy_price`，`gold_left = gold + gain`，spec §c）；
-//! - 事件码 [`oracle_trade_event`]：trade 相关事件（spec §d，`sub_29110` case 22/23 + `sub_552A8` a3 码）。
+//! - 事件码 [`oracle_trade_event`]：trade 相关事件（spec §d，`场景管理器帧更新总控` case 22/23 + `贸易场景帧处理` a3 码）。
 //!
 //! 行为确定（同输入逐位相同），不允许 rand。
-//! 随机分支（`sub_2101C` case 4 的 `rand()%22+1` 商品选择）不在此 oracle 建模，
+//! 随机分支（`主地图帧更新` case 4 的 `rand()%22+1` 商品选择）不在此 oracle 建模，
 //! diff 测试以固定输入做 5 商品 × buy/sell × 各金量/持有量组合 × 错误路径对拍
 //! （随机序列对齐归 S3.12）。
 
 /// 商品（占位目录，spec §a；具体名称对照 S1.6 goods.lpk 解析结果）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Goods {
-    /// 商品 id（`u32`，对应 `sub_445F4` 的 key 值域）。
+    /// 商品 id（`u32`，对应 `资源查表` 的 key 值域）。
     pub id: u32,
     /// 商品名称（占位，**推测**对应 goods.lpk 记录）。
     pub name: &'static str,
-    /// 基础价格（`sub_546E0` 初值 / `sub_445F4` 查表值的占位，spec §b）。
+    /// 基础价格（`贸易场景对象` 初值 / `资源查表` 查表值的占位，spec §b）。
     pub base_price: u32,
 }
 
-/// 价格表（固定价格，spec §b；`sub_54D1C` 行 49-67/146-164 查表语义）。
+/// 价格表（固定价格，spec §b；`单件买入` 行 49-67/146-164 查表语义）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PriceTable {
     /// 价格条目（`goods_id → fixed_price`，5 商品占位表，spec §a 5 槽）。
@@ -32,7 +32,7 @@ pub struct PriceTable {
 }
 
 impl PriceTable {
-    /// 新建固定价格表（5 商品占位：id 1..5，价格 [20, 76, 95, 114, 133]，来自 `sub_546E0` 初值）。
+    /// 新建固定价格表（5 商品占位：id 1..5，价格 [20, 76, 95, 114, 133]，来自 `贸易场景对象` 初值）。
     #[must_use]
     pub fn placeholder() -> Self {
         Self { entries: vec![(1, 20), (2, 76), (3, 95), (4, 114), (5, 133)] }
@@ -40,7 +40,7 @@ impl PriceTable {
 
     /// 查固定价格（`oracle_price` 的无 seed 版本，spec §b 固定价格表）。
     ///
-    /// 查不到 → `None`（对应 `sub_445F4` 遍历无匹配返回 0 的语义）。
+    /// 查不到 → `None`（对应 `资源查表` 遍历无匹配返回 0 的语义）。
     #[must_use]
     pub fn lookup(&self, gid: u32) -> Option<u32> {
         self.entries.iter().find(|&&(id, _)| id == gid).map(|&(_, p)| p)
@@ -59,18 +59,18 @@ impl PriceTable {
     }
 }
 
-/// 贸易错误（`sub_18704` 返回码映射，spec §c）。
+/// 贸易错误（`贸易操作验证` 返回码映射，spec §c）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TradeErr {
-    /// 金不足（`sub_18704` case 0/2 行 31-38：`sub_16C9C(+136,0)==0` → 结果码 2）。
+    /// 金不足（`贸易操作验证` case 0/2 行 31-38：`资源集字段读取器(+136,0)==0` → 结果码 2）。
     InsufficientGold,
-    /// 未知商品（`gid` 不在价格表中，`sub_445F4` 遍历无匹配）。
+    /// 未知商品（`gid` 不在价格表中，`资源查表` 遍历无匹配）。
     UnknownGood,
-    /// 无库存（`sub_18704` case 1/5 行 41-49/73-89：持有列表无匹配 → 结果码 1/15）。
+    /// 无库存（`贸易操作验证` case 1/5 行 41-49/73-89：持有列表无匹配 → 结果码 1/15）。
     NoStock,
 }
 
-/// 贸易结算结果（`sub_54D1C` 行 99/118 金累加 + 行 128-135 均价计算，spec §c）。
+/// 贸易结算结果（`单件买入` 行 99/118 金累加 + 行 128-135 均价计算，spec §c）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TradeResult {
     /// 商品 id。
@@ -83,7 +83,7 @@ pub struct TradeResult {
     pub profit: i32,
 }
 
-/// oracle：买入结算（`sub_54D1C` a2=1，spec §c 买入公式）。
+/// oracle：买入结算（`单件买入` a2=1，spec §c 买入公式）。
 ///
 /// 规则（spec §c 直译）：
 /// - 查不到商品 → `Err(UnknownGood)`；
@@ -102,16 +102,16 @@ pub fn oracle_buy(table: &PriceTable, gid: u32, gold: u32) -> Result<TradeResult
     Ok(TradeResult { gid, paid: price, gold_left: gold - price, profit: 0 })
 }
 
-/// oracle：卖出结算（`sub_54D1C` a2=0，spec §c 卖出公式）。
+/// oracle：卖出结算（`单件买入` a2=0，spec §c 卖出公式）。
 ///
 /// 规则（spec §c 直译）：
 /// - 查不到商品 → `Err(UnknownGood)`；
 /// - `owned == 0` → `Err(NoStock)`；
 /// - `gold` 为卖出前金（不影响利润计算，仅影响 `gold_left`）；
-/// - `avg_buy_price` = 历史买入均价（`sub_54D1C` 行 128-135 公式的 oracle 简化：
+/// - `avg_buy_price` = 历史买入均价（`单件买入` 行 128-135 公式的 oracle 简化：
 ///   由调用方提供，若 `avg == 0` 则视为无历史买入 → `profit = price`）；
 /// - `paid = price × owned`（卖出获得），`gold_left = gold + paid`，
-///   `profit = (price - avg_buy_price) × owned`（负值钳 0，`sub_54D1C` 行 134/231）。
+///   `profit = (price - avg_buy_price) × owned`（负值钳 0，`单件买入` 行 134/231）。
 ///
 /// # Errors
 ///
@@ -134,22 +134,22 @@ pub fn oracle_sell(
     Ok(TradeResult { gid, paid: gain, gold_left: gold.saturating_add(gain), profit })
 }
 
-/// 贸易事件码（spec §d，`sub_29110` case 22/23 + `sub_552A8` a3 码）。
+/// 贸易事件码（spec §d，`场景管理器帧更新总控` case 22/23 + `贸易场景帧处理` a3 码）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TradeEvent {
-    /// 进入贸易场景（买入方向，`sub_29110` case 22，`a1+716=22`）。
+    /// 进入贸易场景（买入方向，`场景管理器帧更新总控` case 22，`a1+716=22`）。
     TradeBuy,
-    /// 进入贸易场景（卖出方向，`sub_29110` case 23，`a1+716=23`）。
+    /// 进入贸易场景（卖出方向，`场景管理器帧更新总控` case 23，`a1+716=23`）。
     TradeSell,
-    /// 买入/卖出确认（`sub_552A8` a3=13，`+1020==6` 买入 / `+1020==7` 卖出）。
+    /// 买入/卖出确认（`贸易场景帧处理` a3=13，`+1020==6` 买入 / `+1020==7` 卖出）。
     Confirm,
-    /// 取消（`sub_552A8` a3=37，撤销当前操作）。
+    /// 取消（`贸易场景帧处理` a3=37，撤销当前操作）。
     Cancel,
-    /// 翻上页（`sub_552A8` a3=38，商品索引递减）。
+    /// 翻上页（`贸易场景帧处理` a3=38，商品索引递减）。
     PageUp,
-    /// 翻页确认（`sub_552A8` a3=39，`+1020` 6→7）。
+    /// 翻页确认（`贸易场景帧处理` a3=39，`+1020` 6→7）。
     PageConfirm,
-    /// 翻页（`sub_552A8` a3=40，商品索引递增）。
+    /// 翻页（`贸易场景帧处理` a3=40，商品索引递增）。
     PageDown,
 }
 
@@ -170,7 +170,7 @@ pub fn oracle_trade_event(code: u32) -> Option<TradeEvent> {
     }
 }
 
-/// 占位商品目录（5 商品，spec §a；名称 **推测**，价格来自 `sub_546E0` 初值）。
+/// 占位商品目录（5 商品，spec §a；名称 **推测**，价格来自 `贸易场景对象` 初值）。
 pub const GOODS_CATALOG: [Goods; 5] = [
     Goods { id: 1, name: "good_01", base_price: 20 },
     Goods { id: 2, name: "good_02", base_price: 76 },

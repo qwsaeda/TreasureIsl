@@ -20,18 +20,18 @@
 | `resolved by EXP-NNN` | 坑已解决，保留作经验 | `### EXP-NNN 标题（**status: resolved by EXP-NNN**）` |
 | `superseded by EXP-NNN` | 条文已被作废，**不要照它行动** | `### EXP-NNN 标题（**status: superseded by EXP-NNN**）` |
 
-> 门禁第 9 项 `doccheck` 会校验：`EXP-NNN` 全库唯一、status 标记格式合法、被标记的条目必须带提示块。
+> 约定（当前门禁未自动校验提示块）：`doccheck`（gate 第 9 项，独立命令）校验 `EXP-NNN` 全库唯一 + 跨文档引用有效；status 标记格式与「被标记条目必须带提示块」为文档约定，当前门禁不自动校验。
 
 ## 分卷
 
 | 卷 | 内容 | 条数 |
 |---|---|---|
-| [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 14 |
+| [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 15 |
 | [`reverse.md`](reverse.md) | 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程 | 4 |
-| [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 9 |
-| [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 6 |
+| [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 10 |
+| [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 9 |
 | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约 | 8 |
-| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱 | 4 |
+| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n | 9 |
 
 ## 条目索引
 
@@ -82,7 +82,18 @@
 | EXP-043 | code | | 双实现 + 差分对拍是冗余模式，公式/类型应单一源 |
 | EXP-044 | code | | macroquad Texture2D 部分上传需 update_part，行级脏标记与之精确对应 |
 | EXP-045 | build | | native macroquad 窗口下 `FramePresenter` 呈现失效 → 黑屏；且纹理 V 语义相反 → 画面翻转 |
+| EXP-045（续） | build | **status: resolved** | native 端 S4.3 脏行带优化补做（`UploadMode::FullRebuild`，见 build.md） |
 | EXP-046 | build | | 大依赖（opus-pure）feature 门控 + 单一路径：默认 wasm/native 不含 OGG 编码器 |
+| EXP-047 | build | | 手工 `Mesh`+`draw_mesh` 弱引用纹理在 native macroquad 不渲染 → 黑屏；EXP-045 验证只查 stats 漏了像素输出 |
+ | EXP-048 | build | | macroquad `flip_y` 必须端侧固定（native 不翻 / wasm 翻），禁止因「画面反了」反复改 |
+ | EXP-049 | formats | | 容器条目 key 的业务名由三级反查权威源提供，禁止裸哈希命名（S6.5 实测） |
+ | EXP-050 | tools | | CJK 路径下 cargo `env!("CARGO_MANIFEST_DIR")` 损坏，bin 定位 repo 根优先 `current_dir()` |
+| EXP-051 | code | | PowerShell `Set-Content` 重写会破坏 UTF-8 源码（CJK 乱码+换行合并），改源码禁用 PS 文本替换 |
+| EXP-052 | code | | 门禁第 5/6 项扫全量 `.rs`，`src/` 内联 `#[cfg(test)]` 的 `expect`/`panic!` 同样被拦 → 单测放 `tests/` |
+| EXP-053 | code | | clippy pedantic 拦 `f64 as u32` 与 `Copy` 按引用传；`#[allow]` 须挂 item 非 let |
+| EXP-054 | code | | 固化脚本三契约（幂等/--report/非0退出码），且必须被门禁/循环消费才不算摆设 |
+| EXP-055 | code | | `pub const` 表禁调非 const fn（E0015）；i18n 用「常量存 key + 运行时 sget 解析」 |
+| EXP-056 | resources | | 多帧精灵 HD PNG 分帧命名（NN_hd_fK.png），Rust 侧须按帧列表注入（S7.5 实测） |
 
 ## 条目格式（写新条时照抄）
 

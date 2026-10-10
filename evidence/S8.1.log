@@ -1,0 +1,48 @@
+=== S8.1 验收日志：数值/文本数据化 + 加载层 ===
+--- cargo test -p ti-core --test data_tables ---
+
+running 16 tests
+test balance_fixture_is_constructible_for_future_rules_tests ... ok
+test boss_tier_lookup_in_range_and_out_of_range ... ok
+test build_buildings_lookable_by_id_with_unique_ids ... ok
+test balance_json_parses_and_is_populated ... ok
+test cards_event_chance_in_unit_interval_and_weights_positive ... ok
+test damage_cfg_has_positive_floor_and_span ... ok
+test invalid_json_is_a_hard_error_not_fallback ... ok
+test save_cfg_is_sane ... ok
+test list_scenes_have_positive_row_metrics ... ok
+test strings_cover_every_goods_building_and_message_name_key ... ok
+test scene_layout_rects_are_inside_logical_resolution ... ok
+test strings_cover_every_scene_title_and_hint ... ok
+test strings_table_loads_and_resolves_keys ... ok
+test scenes_table_loads_and_every_game_scene_present ... ok
+test trade_goods_have_positive_price_and_qty_cap ... ok
+test ui_cfg_matches_logical_resolution ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running tests\data_tables.rs (target\debug\deps\data_tables-70daa7f0637b2b92.exe)
+
+=== 判据核对 (ledger S8.1 dod) ===
+1. data 三表落地: assets/data/{balance,strings,scenes}.json  [OK]
+2. 加载层 crates/ti-core/src/data.rs: OnceLock 缓存 + 解析失败硬错误(不 fallback) + 无 panic!  [OK]
+3. balance 键覆盖 economy/combat/trade/build/cards/save/ui/selection 全系统数值  [OK]
+4. 集成测试 crates/ti-core/tests/data_tables.rs 16 项全绿  [OK]
+5. 数据完整性: strings 覆盖每个 scene/goods/building/card 的 name_key; scenes 覆盖 7 个场景布局  [OK]
+
+--- scripts/gate.ps1 ---
+=== gate: TreasureIsl (8 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6��APK �� Mac ���룬������ NDK/SDK���û��ȶ����������ȣ�)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x ��ʽ���������������)
+        ledger: 72 tasks, 62 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+=== gate: 0 failure(s) ===

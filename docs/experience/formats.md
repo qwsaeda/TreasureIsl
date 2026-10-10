@@ -1,6 +1,6 @@
 # 经验库 · formats
 
-> 二进制/资源格式的坑：容器、图像、地图、字体、音频、INI。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.mdindex.md。
+> 二进制/资源格式的坑：容器、图像、地图、字体、音频、INI。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 
 ### EXP-001 格式：exe 里的资源名是 UTF-16 宽字符
 - 现象：用 ASCII 正则扫 `TreasureIsl.exe` 找 `*.pcx` 得 0 结果，误以为没有明文资源名表。
@@ -110,4 +110,11 @@
 - **`f0` 高 16 位有「双语义」陷阱**：目标格 ≠ 0 时是类别码（1..=9，9 值全覆盖）；目标格 = 0 时是 **16/64/128/192 的属性位**（外加两条不透明值 4/5）。→ **教训：同一字段在不同取值区间语义不同时，单测必须按「前置条件分支」分别断言**，否则会拿错语义去校验。
 - trailer 的 `f5 = 连线记录数 + 1`（75+1 / 125+1 / 23+1，3/3 精确）——**这是最强的「段尾校验子」**，可直接当解析循环的终止/一致性断言。
 - clippy 补充（`tests/` 内同样适用，`--all-targets`）：`.expect(&format!(...))` 触发 `expect_fun_call`（用静态字符串）；`lo.checked_mul(10).unwrap_or(MAX)` 触发 `manual_saturating_arithmetic`（改 `saturating_mul`）；`u32 as i64` 触发 `cast_lossless`（改 `i64::from`）；文档里的 `grid_w` 等标识符要加反引号（`doc_markdown`）；单字符变量名 ≥5 个触发 `many_single_char_names`。
+
+### EXP-049 格式：容器条目 key→业务名反查必须三级权威源，禁止纯哈希命名（S6.5 实测）
+- **现象**：`build_assets` 的 `raw/` 目录与 `unpak --out` 导出全部按 `<key:08x>.bin` 命名（如 `raw/glmap_m01/037fbb49.bin`），8679 个文件全无命名意义，业务侧无法识别资源。
+- **根因**：`key = djb2(name_lowercase)` 是单向哈希，导出层没做反查，直接拿 key 当文件名。
+- **解法**（`ti-formats/src/resource_names.rs`，S6.5 落地）：`ResourceNames` 三级权威源反查，优先级 **`mapinfo.ini` > exe UTF-16 资源名 > `EXTRAS` 多键证实名**（用户决策 2026-10）：① 容器内 `mapinfo.ini`（key `0x3753DC98`）逐 `filename=` 行 `name_key` 闭合（F-210，ui 121/m01 49/m02 34 行 0 失配）；② exe 资源名扫出后**同时登记叶名 + 全路径**两个候选（`music\glmusic.mod` → key 由叶名 `glmusic.mod` 计算）；③ `EXTRAS` 表（`card1/2.pcx`、`Thumbs.db`、`mapinfo.ini` 等 8 条，`id_keys.rs` 同源）。三级未中回退 `unknown-{key:08x}.bin`。**同名合并规则**（用户决策）：同名条目内容全同 → 首见保留、后续标 `skipped=true` 不产生第二个文件；内容不同 → 首见保留原名、后续加 `_2`/`_3` 后缀。
+- **教训**：① 导出层（`build_assets`/`unpak`）的「业务名」与寻址层（`Package::find`/`find_key` 继续用 key）必须分离 —— 运行时继续 key 寻址，仅导出/展示换名；② exe 资源名是带 `\\` 前缀的全路径（`music\glmusic.mod`），容器 key 只由叶名算，反查必须**叶名 + 全路径双候选**否则漏命中；③ `mapinfo.ini` 无扩展名，导出时直接是 `50.pcx` 而非 `mapinfo.ini`。
+- **验证**：单测 `cargo test -p ti-formats --test resource_names` 7/7（ui 122/122 全命名 + mapinfo 闭合 0 失配 + music/cards/goods exe/EXTRAS 命中 + CSV source 列 + 50.pcx 重复行内容合并路径）+ `cargo test -p ti-tools --test build_assets` 3/3（幂等 + manifest 校验仍全绿，raw/ 改业务名后 332 文件）。命名覆盖率 DoD 217/217（ui/m01/m02/cards/music/goods），glpics 余 3 条（F-209 名称哈希型）回落 `unknown-{key:08x}.bin` 并显式标 `unknown`。
 

@@ -1,6 +1,6 @@
 # 经验库 · tools
 
-> 本机工具链与 MCP：IDA/Python/REA/clippy 的用法与已知缺陷。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.mdindex.md。
+> 本机工具链与 MCP：IDA/Python/REA/clippy 的用法与已知缺陷。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 
 ### EXP-006 工具：本机 Python 环境缺包、`pip` 不在 PATH
 - 现象：`import pefile/capstone` 失败，`pip list` 命令找不到。
@@ -84,6 +84,8 @@
 - 验证：本次冒烟 2 个工具调用日志（`open_binary` 成功 / `search_strings` -32602）；后续 S3.12 任务 evidence 中引用本条，记录「REA 冒烟失败，走主路径」。
 - 教训：① REA 波动性可用是**会话级**事实，每次会话必须重新冒烟，不许把上次会话的可用/失败结论外推；② 冒烟失败时立刻切主路径，不要在同一会话反复试 REA 不同工具（EXP-036 的 10 连失败就是浪费）；③ 本条与 F-319 形成第三组交叉证据，若下次会话 REA 又全失败，应考虑在 AGENTS.md 把 REA 定位进一步降级为「仅 open_binary 绑定 + 离线时可选」。
 
+### EXP-041 工具：REA 定位维度错误 + 文档矛盾未读全（三层定位修正，见 F-321）
+
 - 现象：两轮会话对 REA 在项目中的定位前后矛盾——先判断为「次级交叉校验」（低估），用户反问后修正为「补结构化深度分析的洞」。根因分析发现文档内部自相矛盾：`style.md` §5.11.1 要求 S3 模块用 REA `search_strings`，但 `F-319`/`EXP-036`/`AGENTS.md` 说「按不可用对待 / 先停用」，而 `EXP-039` + S3.2 verified 任务明确反驳（search_strings 实测可用）。
 - 根因：① 把 REA 与本地 grep 放在同一维度比较（批量离线 vs 结构化深度是不同维度），导致判断为「次级」；② 只读 `AGENTS.md`「按不可用对待」摘要就下判断，未读 `EXP-039` / `style.md` §5.11.1 的反证；③ 文档自相矛盾未被及时发现。
 - 解法：分层定位（三层）：① **批量/离线主路径**（grep 1827 份 + pe_rva.py + idat -S，不可替代，离线可复现）；② **REA 结构化能力**（CFG/调用图/类型/值追踪/重建验证，补洞，冒烟优先，失败即退，见 F-321 + `style.md` §5.11.4）；③ **S4 重建验证探针**（`verify_reconstruction`，S4.1 花一回合验可行性）。
@@ -91,3 +93,18 @@
 - 教训：**路由表摘要是入口不是全貌**——涉及工具可用性/定位判断时，必须读全 experience + facts 原文（`EXP-033/036/039` + `F-313/314/319/321`），不能只看 `AGENTS.md` 一句摘要。文档自相矛盾时，先读全再下判断，发现矛盾立即修订（不留「停用」与「要求用」并存的状态）。
 
 
+### EXP-050 工具：CJK 路径下 cargo `env!("CARGO_MANIFEST_DIR")` 损坏
+- 现象：`crates/ti-tools` 的 bin 在 `C:\金银岛`（CJK 字符路径）下用 `env!("CARGO_MANIFEST_DIR")` 拼 repo 根，`cargo run` 后进程里解析出的路径丢 CJK 字符 → `fs::read` 报 "系统找不到指定的文件"（os error 2），但 `Test-Path` / Python 都能正常访问同一路径。
+- 根因：`env!` 宏在编译期把 `CARGO_MANIFEST_DIR` 字符串嵌进二进制，经 shell/PowerShell 传递 CJK 路径时编码损坏（Windows 控制台 GBK vs Rust `String` UTF-8 不一致），导致路径字符串失真。
+- 解法：bin 的 `repo_root()` 改为**优先 `std::env::current_dir()`**（`cargo run` 与 shell 同 cwd，cwd 是运行时获取、不经过编译期宏），再回退 `env!`；用 `data/` 目录存在性判定哪个是真正的 repo 根。`build_hd_assets` 已按此修（`crates/ti-tools/src/bin/build_hd_assets.rs`）。
+- 验证：`cargo run -q -p ti-tools --bin build_hd_assets -- --check` 在 `C:\金银岛` 下全通过（1340 条 0 失配）；evidence/S7.4.log 记录。
+- 教训：CJK 路径项目里，**凡 bin 需要定位 repo 根，优先 `current_dir()` 运行时获取，不要依赖 `env!("CARGO_MANIFEST_DIR")` 编译期字符串**。其他 bin（`build_assets`/`unpak` 等）若遇同样问题按此法修。
+
+
+
+
+### EXP-056 资源：多帧精灵 HD PNG 以分帧命名（NN_hd_fK.png），Rust 侧须按帧列表注入
+- 现象：assets_hd_pack/1x/ui/ 的多帧精灵（f1=14/31/32/37）不以全图 NN_hd.png 命名，而是分帧 NN_hd_f0.png ~ NN_hd_f4.png（pack_hd_assets.py 产物）。若 blit_sprite_rgba 按单张全图 + frame_offset 切帧的方式读 PNG，PNG 宽 = PCX 宽但帧高度只占全图 1/5，行 stride 匹配但帧窗口不对（PNG 是单帧 35×40，PCX 全图 35×199）。
+- 根因：pixel_upscale.py 对多帧精灵按帧切开后逐帧 PNG 化，pack_hd_assets.py 原样进 4 档。Rust 侧 hd_cache 原设计为 HashMap<u32, HdPng>（单张），多帧只能注入 1 帧。
+- 解法：hd_cache 改 HashMap<u32, Vec<HdPng>>（f1 → 帧列表）；load_hd_pngs 签名改 (u32, Vec<Vec<u8>>)；blit_sprite_rgba 按 frame % frames 取对应 PNG，缺帧回退 PCX。
+- 验证：render_parity_hd 判据 7（f1=14 注入 5 帧，frame 0 vs 1 blit 画面不同）全绿；1x 档 335 文件 1,519,349 B（1.45 MB）预算 1.6 MB PASS。

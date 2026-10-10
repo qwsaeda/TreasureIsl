@@ -1,0 +1,84 @@
+# 贸易 / 建造 / 银行（Economy）
+
+## 设计意图
+
+经济系统是**金币的进出两端**，服务核心循环（探索→贸易→建造→战斗）：
+
+- **贸易**：低买高卖赚差价，是金币主要来源；
+- **建造**：花金币提升城堡，提供**金量上限**与**被动收益**；
+- **银行**：金币满仓后的溢出处理（提高上限）。
+
+数值全在 `assets/data/balance.json`，调平衡不改代码。
+
+> **命名说明**：本文的商品/建筑名（spice/silk/gem、palisade/harbor/keep 等）是
+> **业务可读命名（设计示例）**；实际数值与 id 以 `assets/data/balance.json` 为准
+> （trade.goods 1..5 数字 id、build.buildings Castle/Investment/Bank/Fort 字符串 id）。
+
+## 商品与价格
+
+```jsonc
+"trade": {
+  "markup": 1.0,          // 售价 = 成本 * markup
+  "goods": [              // 商品目录
+    { "id": "spice",  "name_key": "goods.spice",  "buy": 10,  "qty_max": 99 },
+    { "id": "silk",   "name_key": "goods.silk",   "buy": 25,  "qty_max": 50 },
+    { "id": "gem",    "name_key": "goods.gem",   "buy": 60,  "qty_max": 20 }
+  ]
+}
+```
+
+### 买卖结算（设计选择）
+
+```
+买入 cost  = goods.buy  * qty
+卖出 value = round(goods.buy * markup) * qty      // 售价随目录固定，避免套利
+约束       = 0 ≤ qty ≤ goods.qty_max
+           = 0 ≤ gold ≤ balance.gold_max
+```
+
+**不做「动态行情」**：价格固定，避免出现「囤货等涨价」的复杂博弈——本作定位
+轻量经营，贸易是稳定的金币来源，而非投机玩法。
+
+## 建造系统
+
+```jsonc
+"build": {
+  "buildings": [
+    { "id": "palisade", "name_key": "build.palisade", "cost": 200,  "gold_max": 2000 },
+    { "id": "harbor",   "name_key": "build.harbor",   "cost": 500,  "gold_max": 5000 },
+    { "id": "keep",     "name_key": "build.keep",     "cost": 1500, "gold_max": 20000 }
+  ]
+}
+```
+
+建造是**单调升级链**（围栏→港口→堡垒），每建一个：
+
+1. 扣金币；
+2. **抬升金量上限**到该建筑对应值（`gold_max` 取已建建筑的最大值）；
+3. 解锁对应玩法（港口→贸易范围，堡垒→高阶 BOSS）。
+
+### 银行
+
+当金币达到上限，溢出部分进银行累计（`balance.economy.bank_rate` 比例）。
+银行余额在战后按比例返还为金币，或作为结算加分。这是「上限不是硬墙」的设计。
+
+## 可测试规则
+
+| 规则 | 单测 |
+|---|---|
+| 买入扣金币、货物 +qty | `trade_buy_debits_gold_adds_goods` |
+| 卖出加金币、货物 -qty | `trade_sell_credits_gold_removes_goods` |
+| qty 越界拒绝 | `trade_qty_bounds_enforced` |
+| 售价 = buy*markup | `trade_sell_price_from_markup` |
+| 建造扣金币 + 抬上限 | `build_debits_and_raises_cap` |
+| 金币恒 ≤ 上限（银行承接溢出） | `economy_gold_never_exceeds_cap`（待 S8.3.b 补单测落地） |
+| 建筑单调解锁 | `build_unlocks_monotonic` |
+
+（上表单测已落地于 `crates/ti-core/tests/rules_trade.rs` / `rules_build.rs`（S8.3.b verified）；
+`economy_gold_never_exceeds_cap` 待补单测）
+
+## 与实现的接口
+
+- 玩法：`rules::trade`（`TradeLedger`）、`rules::build`（`BuildManager`）（已落地，S8.3.b verified）；
+- 数值注入：会话构造时接收 `&balance::Balance`，测试可注假值；
+- 表现层只读 `TradeLedger` / `BuildManager` 的只读视图来画 UI，不重算价格。

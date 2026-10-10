@@ -54,6 +54,7 @@ oracle 枚举/结构体数：3（MsgKind / MsgPage / MsgEvent）
 impl 方法数：6（new / current / kind / open / next / prev / close 中 public 方法 7 个含 new，功能方法 6 个）
 
 ## 子步 5 diff：crates/ti-core/tests/diff_messages.rs ===
+- 实跑：`cargo test -p ti-core --test diff_messages` 7/7 全绿
 - diff_all_combinations：5 MsgKind × page 0..=3 × 8 MsgEvent = 120 组合，oracle vs impl 逐位一致
 - diff_none_cur：cur=None 时 8 MsgEvent 全组合
 - diff_help_nextpage_boundary：Help 末页 NextPage 保持

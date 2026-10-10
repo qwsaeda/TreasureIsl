@@ -1,13 +1,13 @@
-# 金银岛 TreasureIsl — 游戏设计总纲
+# 金银岛 TreasureIsl — 游戏设计文档
 
-本文件是**全库设计文档的入口与路由**。各系统的完整规格在 `docs/design/*.md`，
-现代化改造方案在 `docs/modernization.md`。
+本文件是**实现级规格**的入口。目标：读者仅凭本目录文档 + 资源格式文档，即可
+从头实现出完整可玩游戏。
 
-> **文档分层**：
+> **文档分层**
+> - 本文件 = 概述与路由
+> - `docs/formats/` = 资源字节级格式（pak/lpk/pcx/map/font/save）
+> - `docs/design/` = 各玩法系统的实现级规格（含公式、状态机、数据表）
 > - `docs/spec/*.md` = 逆向规格（含 IDA 证据行号，用于 diff 验证）
-> - `docs/design/*.md` = **实现设计书**（从文档就能实现游戏的完整规格，不含 IDA 地址）
-> - `docs/gamebook.md` = 接线规格（壳怎么把 rules 串起来）
-> - `docs/modernization.md` = 现代化改造方案
 > - `crates/ti-core/src/rules/*.rs` = 已验证正式实现
 
 ---
@@ -18,11 +18,9 @@
 |---|---|
 | 游戏名 | 金银岛 TreasureIsl |
 | 类型 | 回合制策略经营 + 探索冒险 |
-| 原平台 | Windows Mobile（ARM，176×220 触屏） |
+| 原平台 | Windows Mobile（ARM PE32，176×220 逻辑分辨率） |
 | 目标平台 | 浏览器（WASM）+ Android + 桌面 |
-| 逻辑分辨率 | 176×220 像素（RGB565） |
-| 字体 | `GoldLand.Fnt`，12×12 点阵汉字 |
-| 角色 | 5 选 1（panda/tichy/kidd/drake/katharina） |
+| 玩家角色 | 5 选 1（panda/tichy/kidd/drake/katharina） |
 | 地图 | 3 张等距网格地图（20×20 / 20×20 / 15×15） |
 
 ### 1.1 一句话
@@ -31,7 +29,15 @@
 建造城堡、翻卡牌碰事件，最终挑战 BOSS。通过贸易赚金、建造升级实力、
 卡牌事件增减 HP/金，在回合制战斗中击败 BOSS。
 
-### 1.2 全流程图
+### 1.2 核心循环
+
+```
+探索地图 ──→ 遭遇据点/事件 ──→ 贸易赚金 ──→ 建造升级
+    ↑                                         │
+    └──────── 卡牌事件（HP/金增减） ←── 战斗挑战 ←──┘
+```
+
+### 1.3 全流程图
 
 ```
 启动 → intro.Map 片头 → index.Map 主菜单
@@ -45,111 +51,66 @@
   └─ [退出]
 ```
 
-### 1.3 核心循环
+---
 
-```
-探索地图 ──→ 遭遇据点/事件 ──→ 贸易赚金 ──→ 建造升级
-    ↑                                         │
-    └── 卡牌事件（HP/金增减） ←── 战斗挑战 ←──┘
-```
+## 2. 系统设计索引
+
+| 系统 | 文档 | 内容 |
+|---|---|---|
+| 主循环/场景状态机 | [`design/main_loop.md`](design/main_loop.md) | 场景枚举、状态机、跨场景状态、实现路由 |
+| 输入映射 | [`design/input_mapping.md`](design/input_mapping.md) | 物理键/触摸 → 逻辑事件 → 场景行为 |
+| 地图/移动 | [`design/map_system.md`](design/map_system.md) | 地形网格、等距投影、移动规则、摄像机 |
+| 贸易/经济 | [`design/economy.md`](design/economy.md) | 商品目录、价格表、买卖公式、银行 |
+| 建造 | [`design/economy.md`](design/economy.md) | 建筑类型、成本公式、金量上限 |
+| 战斗 | [`design/combat.md`](design/combat.md) | BOSS 档、伤害公式、回合制流程、胜负判定 |
+| 卡牌/事件 | [`design/combat.md`](design/combat.md) | 卡牌目录、效果码、触发、事件 id 映射 |
+| 消息/界面 | [`design/ui_controls.md`](design/ui_controls.md) | 消息类型、翻页状态机、对话框布局 |
+| 控件表 | [`design/ui_controls.md`](design/ui_controls.md) | 29 按钮、6 字段 .Map 记录、资源容器 |
+| 持久化/RNG | [`design/persistence.md`](design/persistence.md) | 文件布局、魔数、v1/v2 迁移、LCG 算法 |
 
 ---
 
-## 2. 架构
+## 3. 数据源
 
-```
-                    ┌─────────────────────────────────────────┐
-                    │            ti-app（表现+交互壳）          │
-                    │  GameApp（场景状态机）                     │
-                    │   ├─ 持有 ti-core rules 各 Session       │
-                    │   ├─ 每场景：update(输入事件) + render(fb) │
-                    │   └─ 跨场景跳转（SceneStack advance）     │
-                    └──────────────┬──────────────────────────┘
-                                   │ 只调用（不重抄数值）
-                    ┌──────────────▼──────────────────────────┐
-                    │            ti-core::rules（已验证）       │
-                    │  MenuStateMachine / SelectionFlow /      │
-                    │  MapSession / TradeLedger / BuildManager /│
-                    │  BattleSession / CardEngine / SaveManager /│
-                    │  MessageSession / SceneStack / GameRng     │
-                    └──────────────┬──────────────────────────┘
-                                   │ 读资源
-                    ┌──────────────▼──────────────────────────┐
-                    │  ti-formats（容器/字体/PCX/存档/音频解析）  │
-                    │  ti-platform（gfx 帧缓冲 / input / audio） │
-                    └─────────────────────────────────────────┘
-```
+| 类别 | 文件 | 说明 |
+|---|---|---|
+| UI 场景布局 | `*.Map` ×20 | 控件记录 6 字段，头部 16 字节 |
+| 精灵 | `ui.pak` / `glpics.pak` | PCX 贴图 |
+| 地形 | `glmap_m01/02.pak` | 瓦片 PCX |
+| 地形布局 | `glmapm01/02/03.Map` | stride=9 记录流 |
+| 音频 | `music.lpk` | MOD → OGG 已转码 |
+| 设置 | `settings.dat` | 8 字节 |
+| 存档 | `gl0~4.sav` | 可变长度 |
+| 记录 | `gl.rec` | 10 字节 |
 
----
-
-## 3. 设计文档索引
-
-| 文档 | 内容 |
-|---|---|
-| [`design/scene_flow.md`](design/scene_flow.md) | 场景状态机、主菜单、角色/地图选择、事件码体系 |
-| [`design/map_system.md`](design/map_system.md) | 地图数据、地形网格、移动规则、据点/地标、事件分派 |
-| [`design/economy.md`](design/economy.md) | 贸易系统（商品/价格/买卖/利润）+ 建造系统（建筑/银行/金上限） |
-| [`design/combat.md`](design/combat.md) | 战斗系统（BOSS档/伤害公式/回合制）+ 卡牌事件系统（目录/效果/触发） |
-| [`design/persistence.md`](design/persistence.md) | 存读档（文件布局/魔数/迁移）+ RNG（LCG算法/播种/调用点） |
-| [`design/ui_controls.md`](design/ui_controls.md) | 消息界面/帮助/信息 + 控件表 + 资源容器 + 渲染管线 + 控制方案 |
-| [`design/constants.md`](design/constants.md) | 全局常量表（分辨率/金上限/BOSS HP/RNG 常数/价格表等） |
-| [`modernization.md`](modernization.md) | 多端现代化改造方案（双层渲染/响应式/虚拟手柄/PWA） |
-| [`gamebook.md`](gamebook.md) | 可玩实现手册（rules 接进交互壳的接线规格） |
+完整格式规格见 [`docs/formats/lucencypackage.md`](../formats/lucencypackage.md)。
 
 ---
 
 ## 4. 实现路由
 
-| 要实现的部分 | 调用的 rules 模块 | 接口 | 详细规格 |
-|---|---|---|---|
-| 主菜单 | `rules::menu` | `MenuStateMachine::handle(MenuEvent)` | scene_flow.md |
-| 场景管理 | `rules::main_loop` | `SceneStack::advance(trigger)` | scene_flow.md |
-| 角色/地图选择 | `rules::selection` | `SelectionFlow::select_role(ch)` / `select_map(m)` | scene_flow.md |
-| 主地图移动 | `rules::main_map` | `MapSession::move_to(dir)` / `walk(dir, n)` | map_system.md |
-| 主地图事件 | `rules::main_map` | `MapSession::dispatch(code)` / `at_landmark()` | map_system.md |
-| 贸易 | `rules::trade` | `TradeLedger::buy(gid)` / `sell(gid)` | economy.md |
-| 建造/银行 | `rules::build` | `BuildManager::build(kind, level)` / `deposit(amt)` / `withdraw(amt)` | economy.md |
-| 战斗 | `rules::battle` | `BattleSession::new(seed, player, tier)` / `step()` | combat.md |
-| 卡牌 | `rules::cards` | `CardEngine::apply(event_id, &mut state)` | combat.md |
-| 存读档 | `rules::saveload` | `SaveManager::read_slot(bytes)` / `write_slot(&slot)` | persistence.md |
-| 消息 | `rules::messages` | `MessageSession::open(kind)` / `next()` / `prev()` | ui_controls.md |
-| RNG | `rules::rng` | `GameRng::new(seed)` / `next()` / `in_range(n)` | persistence.md |
-| 渲染 | `rules::render` | `SceneManager::load_scene(...)` / `render_frame(&assets)` | ui_controls.md |
+| 要实现的部分 | 调用 | 详细规格 |
+|---|---|---|
+| 主菜单 | `rules::menu` | main_loop.md |
+| 场景管理 | `rules::main_loop` | main_loop.md |
+| 角色/地图选择 | `rules::selection` | main_loop.md |
+| 主地图移动 | `rules::main_map` | map_system.md |
+| 贸易 | `rules::trade` | economy.md |
+| 建造/银行 | `rules::build` | economy.md |
+| 战斗 | `rules::battle` | combat.md |
+| 卡牌 | `rules::cards` | combat.md |
+| 存读档 | `rules::saveload` | persistence.md |
+| 消息 | `rules::messages` | ui_controls.md |
+| RNG | `rules::rng` | persistence.md |
+| 渲染 | `rules::render` | ui_controls.md |
 
 ---
 
-## 5. 全流程验收脚本
+## 5. 验收标准
 
-固定种子全流程（headless，`seed = 42`）：
-
-```
-开局 → select_role(Panda) → select_map(M01)
-    → main.Map 装载
-    → move_to(South) × 3 → move_to(East) × 2
-    → at_landmark() == true → dispatch(1) → Msgl 据点
-    → dispatch(4) → 贸易 buy(1) → gold -= 20
-    → build(Castle, 0) → gold -= 1000
-    → dispatch(3) → 卡牌事件 apply(rand_id, &mut state)
-    → dispatch(6) → BattleSession::new(42, player, 0) → step() 到 outcome
-    → write_slot(slot) → read_slot(bytes) → roundtrip
-    → 回主菜单
-```
-
-断言每步场景/状态正确，0 失败。
-
----
-
-## 6. 推测项
-
-以下为推测值，实现时可先按推测，后续用实测收敛（详见各 design 文档标注）：
-
-1. MSVC LCG 常数 214013/2531011 — coredll 导入 thunk无法实测
-2. 战斗伤害公式 `(seed × 2654435761) % (atk+1) + 1` — oracle 占位
-3. 效果码 1..4 → Damage/Heal/Gold/Move — 需对照 `cards\event.ini`
-4. 建造成本公式 `base × (level+1)` — 占位公式
-5. 5 种兵种名具体对应 — 宽字符串需对照资源包
-6. 手续费 = 0 — 伪代码未见独立扣减
-7. 据点触发概率 40% — `rand()%100+1 > 40`
-8. 金量上限 999999 — `sub_503F0` 行 114/116
-9. 卡牌价格表 17 组 — `sub_19F9C` 初值
-10. 建筑类型 4 种 — 控件组合推断
+1. **场景全覆盖**：9 个场景（Intro..Exit，Exit 为终态）均可进入/返回，无死锁
+2. **输入正确**：每个按键在每个场景的行为符合映射表
+3. **资源注入**：ui.pak + 9 个场景 .Map 正确加载并渲染
+4. **三端编译**：native/wasm/android 均可编译
+5. **数值精确**：价格表、BOSS HP、伤害公式、LCG 序列逐位一致
+6. **全流程**：开局→选人→选图→移动→贸易→建造→战斗→存读档→回主菜单

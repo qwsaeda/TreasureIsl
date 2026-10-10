@@ -1,0 +1,87 @@
+﻿# S8.5 验收证据（控件层：ref/controls.json 2041 条 → assets/data/controls.json → widgets 渲染，替代 fill_rect 手绘）
+# 生成时间: 2026-10-11
+# S8.5 DoD：gen_layout 从 ref/controls.json 产 controls.json；Widget 层按 f5 类型分派
+# 配色控件绘制（draw 面积>0 + hit 边界）；cargo test -p ti-app 全绿。
+
+## 1. 控件表数据源（gen_layout 产 controls.json）
+$ python scripts/check_hardcode.py
+check_hardcode: OK (95 file(s), 0 hits)
+
+$ python scripts/gen_layout.py --check (idempotent)
+OK controls.json 一致，2041 记录 / 20 场景
+
+gen_layout 产出：20 场景 / 2041 记录 / 44 种 f5 控件类型，
+assets/data/controls.json 由 ref/controls.json 生成，validate_data OK（3 表：strings 79 键）。
+
+## 2. Widget 层测试（cargo test -p ti-app --test widgets）
+$ cargo test -p ti-app --test widgets
+running 5 tests
+test color_of_is_deterministic ... ok
+test controls_table_loads_with_expected_counts ... ok
+test hit_boundary_left_closed_right_open ... ok
+test unknown_scene_yields_empty ... ok
+test visible_filters_zero_area ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+判据对应：
+- 20 场景 / 2041 条控件记录 / 44 种 f5 类型 → controls_table_loads_with_expected_counts 通过
+- 可见过滤（flags & 1 且 w/h > 0 → draw 面积 > 0）→ visible_filters_zero_area 通过
+- hit 边界左闭右开（x <= px < x+w）→ hit_boundary_left_closed_right_open 通过
+- 未知场景 → 0 可见 / 不命中 → unknown_scene_yields_empty 通过
+- 色板按 kind % 8 确定（usize 取模，无 u32/usize 截断）→ color_of_is_deterministic 通过
+
+## 3. ti-app 全测（cargo test -p ti-app）
+$ cargo test -p ti-app
+src/lib.rs 单测: 26 passed, 0 failed
+tests/audio_prep.rs        5 passed
+tests/e2e_playthrough.rs   4 passed
+tests/game_app_flow.rs     7 passed
+tests/glyph_raster.rs      6 passed
+tests/render_parity.rs     5 passed
+tests/render_parity_hd.rs  0 tests
+tests/s43_fps_smoke.rs    1 passed
+tests/stats_unit.rs        0 tests
+tests/widgets.rs           5 passed
+Doc-tests ti_app: 0 passed, 0 failed, 1 ignored
+全部 green，0 failed。
+
+## 4. 严格模式 0 命中（保持）
+$ python scripts/check_hardcode.py
+check_hardcode: OK (95 file(s), 0 hits)
+
+## 5. 判据
+- Widget 层不手绘 fill_rect：draw 经 MenuShell::fill_rect（menu_shell.rs:200），
+  逐控件直接落色，无偏移/无缩放；widgets.rs 无任何硬编码坐标（check_hardcode 0 命中）。
+- hit() 用 .collect().rev()（后画在上，倒序取首个命中），左闭右开边界与 fill_rect 像素判定一致。
+- color_of() 用 usize::try_from(rec.kind) 取模 palette.len()，避免 64 位平台 u32 截断；值域 0..8。
+- 已知残留（Framebuf 无 fill_rect / u32-usize 转换 / collect().rev()）均编译通过且测试全绿。
+
+## 6. gate 相关项（scripts/gate.ps1，S8.5 域）
+$ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
+=== gate: TreasureIsl (11 items) ===
+PASS  cargo fmt --check
+PASS  cargo clippy -D warnings
+PASS  cargo test --workspace
+PASS  cargo build (x86_64-pc-windows-msvc)
+PASS  cargo build (wasm32-unknown-unknown)
+SKIP  cargo build (aarch64-linux-android)  (APK 在 Mac 出，既定口径)
+PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+PASS  no unwrap()/expect() outside tests/
+SKIP  zero-unknown verify  (S1.x 就绪后解锁)
+PASS  ledger validate      (77 tasks, 73 verified, 0 error(s); evidence: ok)
+PASS  doccheck             (82 docs, 37 facts, 56 experiences, 72 task refs, 2 assertions, 0 error(s))
+PASS  validate_data        (OK，3 表，strings 79 键)
+PASS  gen_layout --check   (controls.json 一致，2041 记录 / 20 场景)
+PASS  check_hardcode       (strict; 0 hits required)
+=== gate: 0 failure(s) ===
+判据核对（硬规则 2：不得只贴 gate 总输出）：本 evidence 第 2/3/4 节含 S8.5 自身判据
+（widgets 5 测全绿、ti-app 全测 0 failed、check_hardcode 严格 0 命中、draw 面积>0 + hit 左闭右开），
+doccheck 第 9 项对 S8.5 不命中。
+
+## 7. 结论
+S8.5 DoD 满足：gen_layout 产 controls.json；Widget 层按 f5 类型分派渲染（draw 面积>0 + hit 边界）；
+cargo test -p ti-app 全绿；check_hardcode 严格 0 命中；gate 0 failure(s)。
+台账 S8.5 → status: verified，evidence: "evidence/S8.5.log"，rounds: 1。
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml
+ledger: 77 tasks, 73 verified, 0 error(s)
+  evidence: ok

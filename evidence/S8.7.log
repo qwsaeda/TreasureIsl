@@ -1,0 +1,126 @@
+# S8.7 库复用收尾（rand_pcg 替手写 LCG + fnv 替手写 FNV）验收
+# 生成时间: 2026-10-11
+#
+# DoD：Cargo.toml 引入 rand_pcg/fnv（未用 `rand` 主 crate 已删）；玩法层禁 thread_rng
+# （只经 ti-core::rules::rng 可播种 GameRng）；删除自造 LCG/FNV 实现；
+# cargo test --workspace 全绿 + clippy -D warnings 全绿。
+
+## 1. 依赖已引、未用依赖已删
+# 根 Cargo.toml [workspace.dependencies]：rand_pcg = "=0.9.0"、rand_core = "=0.9.5"、fnv = "1"。
+# 未用的 `rand` 主 crate（0.8.8）已删除（grep 确认全库无 `use rand::`，仅 rand_pcg + rand_core 被用）。
+# crates/ti-core/Cargo.toml：仅 `rand_pcg.workspace = true` + `rand_core.workspace = true`（不引 rand）。
+# crates/ti-tools/Cargo.toml：`fnv.workspace = true`。
+
+## 2. Lcg128Xsl64 API 真实可用（registry 源码核验）
+# rand_pcg-0.9.0/src/pcg128.rs（.cargo/registry）：
+#   pub fn new(state: u128, stream: u128) -> Self
+#   impl RngCore for Lcg128Xsl64 { fn next_u64(&mut self) -> u64 }
+# crates/ti-core/src/rules/rng.rs 第 30 行 `Lcg128Xsl64::new(u128::from(u64::from(seed)), 0)`
+# 与第 36 行 `self.inner.next_u64()` 签名逐一对应（state/stream 双参 + RngCore::next_u64）。
+
+## 3. fnv crate API 真实可用（registry 源码核验）
+# fnv-1.0.7/lib.rs：pub struct FnvHasher(u64)；Default = FnvHasher(0xcbf29ce484222325)；
+# impl Hasher { fn write(bytes) -> 逐字节 h ^= b; h = h.wrapping_mul(0x100000001b3)；fn finish() -> 返回 self.0 }
+# crates/ti-tools/src/hash.rs：fnv1a64 = FnvHasher::default() + Hasher::write + Hasher::finish（薄封装，
+# 无手写步进/常量；finish 直接返回 FNV 原值，与旧手写实现逐位等价）。
+
+## 4. 无手写 LCG/FNV 残留（grep 判据）
+# 旧 LCG 常量 214013/2531011：全库仅 crates/ti-core/src/rules/rng.rs:4 文档行（旧实现降级参照物标注），
+# 无活代码使用。
+# 旧 FNV 手写步进（offset basis / 质数 const + 循环）：已自 hash.rs 删除，全库无剩余手写 FNV 循环；
+# 仅 hash.rs 文档行保留标准 FNV-1a 64 常量值（0xcbf29ce484222325 / 0x100000001b3）作等价性说明。
+# 玩法层无 `rand::thread_rng`（grep 全库仅 rng.rs 文档行提及，无活代码调用）。
+
+## 5. 测试全绿
+$ cargo test -p ti-core --lib（含 rules::rng 3 项）
+test rules::rng::tests::set_seed_resets_stream ... ok
+test rules::rng::tests::in_range_bounds ... ok
+test rules::rng::tests::fill_matches_next ... ok
+test result: ok. 87 passed; 0 failed; 0 ignored; 0 measured
+
+$ cargo test -p ti-tools（含 pcx_ref FNV 逐位回归 3 项 + build_assets 3 项 + ledger/doccheck/unpak 等）
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured  (lib)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured   (pcx_ref：FNV 与 Python 参考实现逐像素一致)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured   (build_assets：幂等 + manifest FNV 校验)
+
+$ cargo test -p ti-app（widgets 控件层 + 全场景）
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured
+
+$ cargo test --workspace --no-fail-fast
+  全 5 crate 0 failed（ti-formats 48 + ti-core 87+各集成 + ti-tools + ti-platform 103 + ti-app 26）
+
+## 6. clippy -D warnings 全绿
+$ cargo clippy --workspace --all-targets -- -D warnings
+  Finished `dev` profile（0 error / 0 warning 阻断）
+# 各 crate 单验：
+#   cargo clippy -p ti-core --all-targets -- -D warnings  → Finished（含 rules::rng Lcg128Xsl64 实现）
+#   cargo clippy -p ti-tools --all-targets -- -D warnings  → Finished（含 hash.rs fnv 薄封装）
+#   cargo clippy -p ti-app --all-targets -- -D warnings   → Finished（widgets/e2e/render_parity 已修）
+
+## 7. 门禁 gate.ps1（S8.7 相关项）
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6 既定，APK 在 Mac 出，不阻塞)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (verify.rs 未就绪，既定 SKIP)
+  PASS  validate_data (assets/data/*.json)
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  台账项：ledger validate 在 S8.5 证据补齐后通过（本 log 同批补 S8.5.log）；doccheck 仅报 S7.6 历史
+  证据格式问题（S7.6 本体已 verified，证据文件存在，非 S8.7 引入）。
+
+## 8. 判据对应
+- 「删除自造 LCG 实现」→ rng.rs 手写 MSVC LCG 已移除，底层改 Lcg128Xsl64（registry 核验 API）。
+- 「删除自造 FNV 实现」→ hash.rs 手写 FNV 步进/常量已移除，底层改 fnv::FnvHasher（registry 核验 API）。
+- 「未用依赖删除」→ rand 主 crate 从根 Cargo.toml 删除（全库无 use rand::）。
+- 「玩法层禁 thread_rng」→ 全库无活代码调用，仅经可播种 GameRng（rules::rng）。
+- 「测试 + clippy 全绿」→ 见 §5/§6 实跑输出。
+
+## 9. CJK Zeroization Supplementary Record (S8.4 Residual, 2026-10-11)
+
+Background: After S8.4 scene restructuring, 14 CJK literals remained in game_app.rs's render_vs/render_message/render_saveload (battle / victory! / save file / etc.). In this round, all have been migrated to `assets/data/strings.json`; the .rs side was changed to call `i18n::sget` / `i18n::sgetf`, and check_hardcode strict is now 0 hits.
+
+### Change details (crates/ti-app/src/game_app.rs)
+- render_vs: title -> sget(scene.vs.title); 3 format strings for player HP/BOSS HP/round -> sgetf(scene.vs.player_hp_fmt / boss_hp_fmt / rounds_fmt);
+  victory/defeat/press attack key/no battle/attack back -> sget(scene.vs.victory / defeat / awaiting / empty / hint)
+- render_message: page nav hint -> sget(scene.message.nav_hint)
+- render_saveload: title -> sget(scene.saveload.title); slot_fmt -> sgetf(slot.label_fmt + slot.has/slot.empty); gold -> sgetf(hud.gold_fmt); nav -> sget(scene.saveload.nav_hint)
+
+### keys added/verified (assets/data/strings.json, total 88 keys)
+scene.vs.{title,player_hp_fmt,boss_hp_fmt,rounds_fmt,victory,defeat,awaiting,empty,hint}
+scene.message.nav_hint, scene.saveload.{title,nav_hint}, slot.{label_fmt,has,empty}, hud.gold_fmt
+
+### Verification commands and output
+$ python scripts/check_hardcode.py
+check_hardcode: OK (95 file(s), 0 hits)
+
+$ cargo test -p ti-app
+All test targets ok, 0 failed
+
+$ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
+﻿=== gate: TreasureIsl (11 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 77 tasks, 74 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 82 docs, 37 facts, 56 experiences, 72 task refs, 2 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK（3 表，strings 88 键）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+=== gate: 0 failure(s) ===
+

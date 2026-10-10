@@ -8,6 +8,16 @@
 //! 2. 非空白：各场景渲染后墨点/色块数 > 0；
 //! 3. 场景区分：不同场景渲染结果不同；
 //! 4. 字形正确：标题「金银岛」命中真字形（与 `font_parity` 同口径）。
+#![allow(
+    clippy::many_single_char_names,
+    clippy::redundant_closure_for_method_calls,
+    clippy::type_complexity,
+    clippy::manual_let_else,
+    clippy::items_after_statements,
+    clippy::single_match_else,
+    clippy::unwrap_used,
+    clippy::expect_used
+)]
 
 use ti_app::game_app::{GameApp, GameInput};
 use ti_platform::gfx::Framebuf;
@@ -18,7 +28,7 @@ const FB_PIXELS: usize = 176 * 220;
 /// 渲染当前场景到 `GameApp.shell.fb`，返回帧缓冲像素切片。
 fn render_current(app: &mut GameApp) -> Vec<u16> {
     app.render();
-    app.shell.fb.as_slice().to_vec()
+    app.shell().fb.as_slice().to_vec()
 }
 
 /// 场景渲染的「墨点率」：非背景色像素占比（证明画了真实内容，非全黑/全背景）。
@@ -143,4 +153,220 @@ fn framebuf_matches_logical_resolution() {
     app.shell.render();
     let pixels = app.shell.fb.as_slice();
     assert_eq!(pixels[0], 0x01E0, "主菜单第 0 行 x=0 应为标题条色 0x01E0");
+}
+
+// ── S8.6 渲染基线去自指：独立 ti-formats 解码基线 vs 渲染逐像素对照 ──
+
+/// 定位仓库根 `data/` 目录（`CARGO_MANIFEST_DIR` 向上两级）。
+fn data_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(std::path::Path::parent)
+        .map_or_else(|| std::path::PathBuf::from("."), |p| p.to_path_buf())
+        .join("data")
+}
+
+/// 用 `ti-formats` 独立路径解码 `ui.pak` 中 f1 对应的 PCX 精灵，
+/// 返回 `(width, frame_height, pixels, palette, frames)`。
+/// 不经过 `GameApp`/`SpriteAtlas`，纯 `ti_formats` 解码；
+/// 帧高 = 图高 / 帧数（与 `SpriteAtlas` 多帧语义一致）。
+fn decode_pcx_independent(f1: u32) -> Option<(u32, u32, Vec<u8>, [[u8; 3]; 256], u32)> {
+    use ti_formats::lucency::Package;
+    use ti_formats::pcx::Image;
+
+    let base = data_dir();
+    let pkg_bytes = std::fs::read(base.join("ui.pak")).ok()?;
+    let pkg = Package::parse("ui.pak", &pkg_bytes).ok()?;
+
+    // 找 filenum INI（f1 → 文件名 + 帧数），与 `SpriteAtlas::parse_filenum_ini` 同逻辑
+    let mut f1_to_info: std::collections::HashMap<u32, (String, u32)> =
+        std::collections::HashMap::new();
+    for (i, _) in pkg.entries.iter().enumerate() {
+        let content = match pkg.read_entry(&pkg_bytes, i) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        if content.len() < 4 || content[0] != 0xFF || content[1] != 0xFE {
+            continue;
+        }
+        let units: Vec<u16> =
+            content.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+        let Ok(text) = String::from_utf16(&units) else {
+            continue;
+        };
+        let mut section: Option<u32> = None;
+        let mut pending_fn: Option<String> = None;
+        let mut pending_num: u32 = 1;
+        for raw in text.lines() {
+            let line = raw.trim().trim_start_matches('\u{feff}');
+            if line.is_empty() {
+                continue;
+            }
+            if let Some(inner) = line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+                if let Some(id) = section.take() {
+                    if let Some(name) = pending_fn.take() {
+                        f1_to_info.insert(id, (name, pending_num));
+                    }
+                }
+                pending_num = 1;
+                if inner != "filenum" {
+                    section = inner.parse::<u32>().ok();
+                }
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("filename=") {
+                pending_fn = Some(rest.trim().to_owned());
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("num=") {
+                pending_num = rest.trim().parse::<u32>().unwrap_or(1).max(1);
+            }
+        }
+        if let Some(id) = section.take() {
+            if let Some(name) = pending_fn.take() {
+                f1_to_info.insert(id, (name, pending_num));
+            }
+        }
+        if !f1_to_info.is_empty() {
+            break;
+        }
+    }
+
+    let (name, frames) = f1_to_info.get(&f1)?.clone();
+    let entry_idx = pkg.find(&name)?;
+    let pcx_bytes = pkg.read_entry(&pkg_bytes, entry_idx).ok()?;
+    let img = Image::decode(&name, &pcx_bytes).ok()?;
+    let frame_h = u32::from(img.height).checked_div(frames).unwrap_or(1).max(1);
+    Some((u32::from(img.width), frame_h, img.pixels, img.palette, frames))
+}
+
+/// 把 PCX 像素（调色板索引）blit 到独立 Framebuf（RGB565），
+/// 与 `SpriteAtlas::blit_sprite` 同几何（越界裁剪），但不经过 ti-app 渲染路径。
+fn blit_pcx_independent(
+    fb: &mut Framebuf,
+    width: u32,
+    height: u32,
+    pixels: &[u8],
+    palette: &[[u8; 3]; 256],
+    x: u32,
+    y: u32,
+) {
+    const FB_W: usize = 176;
+    const FB_H: usize = 220;
+    let ox = (x as usize).min(FB_W - 1);
+    let oy = (y as usize).min(FB_H - 1);
+    for row in 0..height as usize {
+        let fy = oy.saturating_add(row);
+        if fy >= FB_H {
+            break;
+        }
+        for col in 0..width as usize {
+            let fx = ox.saturating_add(col);
+            if fx >= FB_W {
+                break;
+            }
+            let idx = pixels.get(row * (width as usize) + col).copied().unwrap_or(0) as usize;
+            let [r, g, b] = palette[idx];
+            let rgb565: u16 =
+                (u16::from(r) >> 3) << 11 | (u16::from(g) >> 2) << 5 | u16::from(b) >> 3;
+            let pos = fy * FB_W + fx;
+            if let Some(slot) = fb.as_mut_slice().get_mut(pos) {
+                *slot = rgb565;
+            }
+        }
+    }
+}
+
+/// S8.6 判据：渲染帧中精灵 blit 区域与独立 `ti-formats` 解码基线逐像素一致。
+///
+/// 独立基线路径：`ti_formats::lucency::Package` → `pcx::Image::decode` → 手动 blit，
+/// 不经过 `GameApp::render` / `SpriteAtlas`。
+#[test]
+fn render_sprite_region_matches_tiformats_baseline() {
+    let (w, h, pixels, palette, _frames) = match decode_pcx_independent(1) {
+        Some(v) => v,
+        None => {
+            eprintln!("SKIP: data/ui.pak 不存在或 f1=1 解码失败");
+            return;
+        }
+    };
+
+    // 独立基线：干净 Framebuf + 手动 blit
+    let mut baseline = Framebuf::new();
+    baseline.clear(0x0000);
+    blit_pcx_independent(&mut baseline, w, h, &pixels, &palette, 10, 10);
+
+    // 渲染路径：注入 atlas + scene_cache，单独 blit（不经 render 全文字层）
+    // MapScene::parse 期望完整文件字节（16B 头 + words）；words 布局 =
+    // [表头4字, 控件数, 控件记录6字…]，f1/f2/f3 对应 w[5]/w[6]/w[7]。
+    let pkg_bytes = std::fs::read(data_dir().join("ui.pak")).expect("ui.pak 应可解析");
+    let mut atlas =
+        ti_app::sprite_atlas::SpriteAtlas::new(&pkg_bytes).expect("ui.pak 应可解析为 SpriteAtlas");
+    let words: Vec<u32> = vec![
+        176, 220, 0, 0, /* 控件数 */ 1, /* f0 f1 f2 f3 f4 f5 */ 1, 1, 10, 10, 1, 0,
+    ];
+    let mut scene_bytes: Vec<u8> = Vec::new();
+    for w in [176u32, 220, 0, 0] {
+        scene_bytes.extend_from_slice(&w.to_le_bytes());
+    }
+    for w in &words {
+        scene_bytes.extend_from_slice(&w.to_le_bytes());
+    }
+    let scene =
+        ti_formats::mapfile::MapScene::parse("index.Map", &scene_bytes).expect("场景 bytes 应合法");
+    let mut app = GameApp::new(176.0, 220.0);
+    let app_shell = &mut app.shell;
+    app_shell.fb.clear(0x0000);
+    atlas.blit_scene(&scene, &mut app_shell.fb);
+
+    // 逐像素比对精灵 blit 区域（10,10 起 w×h，裁剪到 176×220）
+    let cw = w as usize;
+    let ch = h as usize;
+    const X0: usize = 10;
+    const Y0: usize = 10;
+    let render_pixels = app_shell.fb.as_slice();
+    let base_pixels = baseline.as_slice();
+    let mut mismatch = 0usize;
+    for row in 0..ch {
+        let fy = Y0.saturating_add(row);
+        if fy >= FB_PIXELS / 176 {
+            break;
+        }
+        for col in 0..cw {
+            let fx = X0.saturating_add(col);
+            if fx >= 176 {
+                break;
+            }
+            let pos = fy * 176 + fx;
+            if render_pixels[pos] != base_pixels[pos] {
+                mismatch += 1;
+            }
+        }
+    }
+    assert_eq!(
+        mismatch, 0,
+        "渲染帧精灵 blit 区域应与独立 ti-formats 解码基线逐像素一致（mismatch={mismatch}）"
+    );
+}
+
+/// S8.6 判据：基线帧（独立 ti-formats 解码）本身非空（证明解码成功且 blit 有内容）。
+#[test]
+fn tiformats_baseline_is_non_empty() {
+    let (w, h, pixels, palette, frames) = match decode_pcx_independent(1) {
+        Some(v) => v,
+        None => {
+            eprintln!("SKIP: data/ui.pak 不存在或 f1=1 解码失败");
+            return;
+        }
+    };
+    assert!(w > 0 && h > 0, "PCX 宽高应 > 0");
+    // pixels 是全图（多帧纵向堆叠），单帧高 = h，总高 = h × frames
+    let total_h = (h as usize) * (frames as usize);
+    assert_eq!(pixels.len(), (w as usize) * total_h, "像素数 = w × (h × frames)");
+    assert!(!palette.iter().all(|c| c[0] == 0 && c[1] == 0 && c[2] == 0), "调色板非全黑");
+    let mut fb = Framebuf::new();
+    fb.clear(0x0000);
+    blit_pcx_independent(&mut fb, w, h, &pixels, &palette, 10, 10);
+    let non_black = fb.as_slice().iter().filter(|&&p| p != 0).count();
+    assert!(non_black > 0, "独立基线 blit 后应有非黑像素（实际 {non_black}）");
 }

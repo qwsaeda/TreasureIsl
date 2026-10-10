@@ -1,25 +1,25 @@
 //! oracle：S3.4 差分基准，测试专用。
 //!
 //! 直译 `docs/spec/selection.md` 的角色/地图选择状态机：
-//! - 角色枚举 [`Character`]：5 角色（panda/tichy/kidd/drake/katharina，`sub_3FE84` 控件注入器 11 槽位）；
-//! - 地图槽位枚举 [`MapSlot`]：3 地图（glmapm01/02/03，`sub_402D8` `CreateFileW` 探测）；
+//! - 角色枚举 [`Character`]：5 角色（panda/tichy/kidd/drake/katharina，`selectrole` 控件注入器 11 槽位）；
+//! - 地图槽位枚举 [`MapSlot`]：3 地图（glmapm01/02/03，`selectmap` `CreateFileW` 探测）；
 //! - 选择状态 [`SelectionState`]：已选角色 + 已选地图 + 完成标志；
 //! - [`oracle_select_role`]：选择角色（未选地图前只记录角色）；
 //! - [`oracle_select_map`]：选择地图（未解锁 → `Sfx::Invalid`；已解锁 + 角色已选 → `completed=true`）；
 //! - [`oracle_selection_flow`]：5×3=15 组合的完整流程脚本。
 //!
-//! 事件码（`docs/spec/selection.md` §d，`sub_41354`/`sub_3F4E4`/`sub_4085C` 实测）：
+//! 事件码（`docs/spec/selection.md` §d，`saveload`/`帮助`/`选项场景帧处理` 实测）：
 //! - 13 = 确定/Enter（选择角色/地图，真实）；
 //! - 27 = 返回（子场景回 index，真实）；
 //! - 37 = 无效操作（**推测** invalid.wav）；
-//! - 38 = 上一个角色/地图（真实，`sub_4085C` 行 52）；
-//! - 40 = 下一个角色/地图（真实，`sub_4085C` 行 37）。
+//! - 38 = 上一个角色/地图（真实，`选项场景帧处理` 行 52）；
+//! - 40 = 下一个角色/地图（真实，`选项场景帧处理` 行 37）。
 
 use crate::oracle::menu::Sfx;
 
 /// 角色枚举（`evidence/S3.2.log` 字符串清单 行 15/18/20：`start_*`/`face_*`/`Player_*` × 5）。
 ///
-/// 资源映射（`sub_3FE84` 行 61-84）：
+/// 资源映射（`selectrole` 行 61-84）：
 /// - `Panda` → `face_panda.pcx` + `Player_panda.pcx` + `start_panda.pcx`；
 /// - `Tichy` → `face_tichy.pcx` + `Player_tichy.pcx` + `start_tichy.pcx`；
 /// - `Kidd` → `face_kidd.pcx` + `Player_kidd.pcx` + `start_kidd.pcx`；
@@ -84,9 +84,9 @@ impl Character {
     }
 }
 
-/// 地图槽位枚举（`sub_402D8` 行 72/89/103：`glmapm01/02/03.Map` `CreateFileW` 探测）。
+/// 地图槽位枚举（`selectmap` 行 72/89/103：`glmapm01/02/03.Map` `CreateFileW` 探测）。
 ///
-/// 槽位参数（`sub_406DC` 写入 `a1+13/16/19`，`000402D8_sub_402D8.c` 行 79-87/95-100/109-114）：
+/// 槽位参数（`动态数组` 写入 `a1+13/16/19`，`000402D8_selectmap.c` 行 79-87/95-100/109-114）：
 /// - `M01` → 编号 1、X 73、Y 100（行 79-87）；
 /// - `M02` → 编号 2、X 67、Y 64（行 95-100）；
 /// - `M03` → 编号 3、X 117、Y 81（行 109-114）。
@@ -107,7 +107,7 @@ impl MapSlot {
         [Self::M01, Self::M02, Self::M03]
     }
 
-    /// 地图编号（`dword_7FB6C` 值，`sub_2077C` 行 142-155 switch 用）。
+    /// 地图编号（`dword_7FB6C` 值，`main` 行 142-155 switch 用）。
     #[must_use]
     pub const fn index(self) -> u32 {
         match self {
@@ -138,7 +138,7 @@ impl MapSlot {
         }
     }
 
-    /// 地图可读名称（`sub_2077C` 行 145/149/153 资源字符串）。
+    /// 地图可读名称（`main` 行 145/149/153 资源字符串）。
     #[must_use]
     pub const fn label(self) -> &'static str {
         match self {
@@ -153,7 +153,7 @@ impl MapSlot {
 ///
 /// - `character`：已选角色（`None` = 尚未选择）；
 /// - `map_slot`：已选地图（`None` = 尚未选择）；
-/// - `completed`：选择完成（角色 + 地图均已选定）→ 触发 `main.Map`（`sub_2077C`）。
+/// - `completed`：选择完成（角色 + 地图均已选定）→ 触发 `main.Map`（`main`）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SelectionState {
     /// 已选角色（`None` = 未选）。

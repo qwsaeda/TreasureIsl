@@ -1,0 +1,1846 @@
+{
+  "entries": {
+    "cards/43104390": {
+      "class": "Skip",
+      "container": "cards",
+      "name": "event.ini",
+      "source": "exe"
+    },
+    "cards/c5561d44": {
+      "class": "C_pixel",
+      "container": "cards",
+      "name": "card1.pcx",
+      "source": "extra"
+    },
+    "cards/c56835c5": {
+      "class": "C_pixel",
+      "container": "cards",
+      "name": "card2.pcx",
+      "source": "extra"
+    },
+    "cards/ca00521b": {
+      "class": "Skip",
+      "container": "cards",
+      "name": "cards.ini",
+      "source": "exe"
+    },
+    "glmap_m01/037fbb49": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "0.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/07e0a42c": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "s00.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/0e8d8c62": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "gr_001.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/10d09c82": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "gr_010.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/30fff368": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_04_4.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/3753dc98": {
+      "class": "Skip",
+      "container": "glmap_m01",
+      "name": "mapinfo.ini",
+      "source": "exe"
+    },
+    "glmap_m01/43105ffb": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "event.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/49daf3a2": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_01_1.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/6cddcf0b": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "B-03.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/6cefe78c": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "B-04.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/6d02000d": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "B-05.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/6d14188e": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "B-06.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/6d26310f": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "B-07.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/6d384990": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "B-08.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/6d4a6211": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "B-09.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/6efcae29": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "B-10.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/7fae1112": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/80d06f6a": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "ice.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/917a99c6": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_5.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/918cb247": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_6.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/919ecac8": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_7.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/91b0e349": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_8.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/91c2fbca": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_9.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/96e748e4": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_02_2.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/995f2553": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "card.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/9b8a88af": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "bd_001.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/9baeb9b1": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "bd_003.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/9bc0d232": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "bd_004.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/9c1b4cb7": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "bd_009.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/a23c0229": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "diji_1.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/a566a76a": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "diji_10001.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/a578bfeb": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "diji_10002.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/a58ad86c": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "diji_10003.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/b2c0af43": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "war.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/b53654f2": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_01.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/b5486d73": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_02.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/b55a85f4": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_03.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/b56c9e75": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_04.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/b95f0b95": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "Castle.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/c7f79173": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "pool.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/e3f39e26": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "shui_03_3.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/e4e89a2e": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "diji20003.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/e4fab2af": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "diji20004.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/e50ccb30": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "diji20005.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/e6313b30": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "BOSS.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/e6acd3a6": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "MAZE.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m01/fc2b2774": {
+      "class": "D_terrain",
+      "container": "glmap_m01",
+      "name": "new1.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/037fbb49": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "0.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/05e55251": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "zhuzi-1.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/07f2bcad": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "s01.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/0e9fa4e3": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "gr_002.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/3753dc98": {
+      "class": "Skip",
+      "container": "glmap_m02",
+      "name": "mapinfo.ini",
+      "source": "exe"
+    },
+    "glmap_m02/40912d92": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B24_2.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/6c37e3a1": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "g01.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/6c49fc22": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "g02.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/6efcae29": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B-10.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/8d8b6a53": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B25_2.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/8e86bbf8": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "huo_4.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/92de88f1": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B32_2.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/a51c946b": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "event0.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/af495a0a": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "appo01.pcx",
+      "source": "extra"
+    },
+    "glmap_m02/af5b728b": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "appo02.pcx",
+      "source": "extra"
+    },
+    "glmap_m02/af6d8b0c": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "appo03.pcx",
+      "source": "extra"
+    },
+    "glmap_m02/af7fa38d": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "appo04.pcx",
+      "source": "extra"
+    },
+    "glmap_m02/b2c0af43": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "war.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/b95f0b95": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "Castle.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/c339fc8e": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B2_11.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/c34c150f": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B2_12.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/c54404c3": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "card0.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/e4b250ab": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "diji20000.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/e4c4692c": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "diji20001.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/e4d681ad": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "diji20002.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/e6313b30": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "BOSS.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/e6acd3a6": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "MAZE.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/efecec9d": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B20.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/efff051e": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B21.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/f0111d9f": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B22.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/f0233620": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B23.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/f0354ea1": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B24.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/f0476722": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B25.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/f0597fa3": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B26.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/f2542dbf": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B31.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/f2664640": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B32.pcx",
+      "source": "mapinfo"
+    },
+    "glmap_m02/f2785ec1": {
+      "class": "D_terrain",
+      "container": "glmap_m02",
+      "name": "B33.pcx",
+      "source": "mapinfo"
+    },
+    "glpics/047d426a": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "Logo.pcx",
+      "source": "exe"
+    },
+    "glpics/08eb1244": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_sell.pcx",
+      "source": "exe"
+    },
+    "glpics/08fcf2ac": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_attack.pcx",
+      "source": "exe"
+    },
+    "glpics/0d4ef1be": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "boat_scene.pcx",
+      "source": "extra"
+    },
+    "glpics/14a26f17": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "text_gamerwin.pcx",
+      "source": "exe"
+    },
+    "glpics/199b7ed9": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_assign.pcx",
+      "source": "exe"
+    },
+    "glpics/1b289fa8": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_capture.pcx",
+      "source": "exe"
+    },
+    "glpics/1e5300ee": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_card.pcx",
+      "source": "exe"
+    },
+    "glpics/1eee611d": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_aimrole.pcx",
+      "source": "exe"
+    },
+    "glpics/1f3c1695": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_finish.pcx",
+      "source": "exe"
+    },
+    "glpics/1f74e059": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "start_katharina.pcx",
+      "source": "exe"
+    },
+    "glpics/20769d35": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "stripe_bar.pcx",
+      "source": "extra"
+    },
+    "glpics/285a6df8": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_Road.pcx",
+      "source": "exe"
+    },
+    "glpics/28927aa5": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "troop_all.pcx",
+      "source": "exe"
+    },
+    "glpics/293b3510": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_bank.pcx",
+      "source": "exe"
+    },
+    "glpics/29a04748": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "face_tichy.pcx",
+      "source": "exe"
+    },
+    "glpics/338dca97": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "Landmark_port_1.pcx",
+      "source": "exe"
+    },
+    "glpics/339fe318": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "Landmark_port_2.pcx",
+      "source": "exe"
+    },
+    "glpics/33b1fb99": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "LandMark_port_3.pcx",
+      "source": "exe"
+    },
+    "glpics/33c4141a": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "LandMark_port_4.pcx",
+      "source": "exe"
+    },
+    "glpics/34786d2f": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_base.pcx",
+      "source": "exe"
+    },
+    "glpics/395989eb": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "face_panda.pcx",
+      "source": "exe"
+    },
+    "glpics/3b885f93": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_tichy.pcx",
+      "source": "exe"
+    },
+    "glpics/3c7701a4": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_trade.pcx",
+      "source": "exe"
+    },
+    "glpics/45715c4c": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "Player_drake.pcx",
+      "source": "exe"
+    },
+    "glpics/496cbbd9": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_notcapture.pcx",
+      "source": "exe"
+    },
+    "glpics/49af5826": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "helm_still.pcx",
+      "source": "exe"
+    },
+    "glpics/4ae5a0c4": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_build.pcx",
+      "source": "exe"
+    },
+    "glpics/4b41a236": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_panda.pcx",
+      "source": "exe"
+    },
+    "glpics/50a893a6": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_branchroad.pcx",
+      "source": "exe"
+    },
+    "glpics/523f7161": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_holidayplace.pcx",
+      "source": "exe"
+    },
+    "glpics/52e90093": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_explore.pcx",
+      "source": "exe"
+    },
+    "glpics/5c5af184": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "landinfo.pcx",
+      "source": "exe"
+    },
+    "glpics/5fd66cda": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "face_katharina.pcx",
+      "source": "exe"
+    },
+    "glpics/6171a968": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "icon_stack.pcx",
+      "source": "extra"
+    },
+    "glpics/644c4a0a": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_aimland.pcx",
+      "source": "exe"
+    },
+    "glpics/669f1308": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "switchpage.pcx",
+      "source": "exe"
+    },
+    "glpics/67488bb9": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_system.pcx",
+      "source": "exe"
+    },
+    "glpics/696521f1": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "Target_head.pcx",
+      "source": "exe"
+    },
+    "glpics/6c33ceb4": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "helm_motion.pcx",
+      "source": "exe"
+    },
+    "glpics/6eead347": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "start_tichy.pcx",
+      "source": "exe"
+    },
+    "glpics/6f3ae372": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_battlefield.pcx",
+      "source": "exe"
+    },
+    "glpics/73ee7719": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "helm_base.pcx",
+      "source": "exe"
+    },
+    "glpics/755c3a00": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_info.pcx",
+      "source": "exe"
+    },
+    "glpics/759a9d50": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "role_shadow.pcx",
+      "source": "exe"
+    },
+    "glpics/7aab1cb4": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_load.pcx",
+      "source": "exe"
+    },
+    "glpics/7ea415ea": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "start_panda.pcx",
+      "source": "exe"
+    },
+    "glpics/80d07367": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_aimcastle.pcx",
+      "source": "exe"
+    },
+    "glpics/83795627": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "helm_number.pcx",
+      "source": "exe"
+    },
+    "glpics/8b6f9d61": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "Player_kidd.pcx",
+      "source": "exe"
+    },
+    "glpics/8c9620a8": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_troop.pcx",
+      "source": "exe"
+    },
+    "glpics/8f435abf": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "helm_pointer.pcx",
+      "source": "exe"
+    },
+    "glpics/939e2f09": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "target_locater.pcx",
+      "source": "exe"
+    },
+    "glpics/97fb5f4b": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_move.pcx",
+      "source": "exe"
+    },
+    "glpics/9bcac96e": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "face_drake.pcx",
+      "source": "exe"
+    },
+    "glpics/9d28dfc4": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_buy.pcx",
+      "source": "exe"
+    },
+    "glpics/9d809f6b": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "Landmark_city_1.pcx",
+      "source": "exe"
+    },
+    "glpics/9d92b7ec": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "Landmark_city_2.pcx",
+      "source": "exe"
+    },
+    "glpics/9da4d06d": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "Landmark_city_3.pcx",
+      "source": "exe"
+    },
+    "glpics/9db6e8ee": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "Landmark_city_4.pcx",
+      "source": "exe"
+    },
+    "glpics/a0c8d90d": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_invest.pcx",
+      "source": "exe"
+    },
+    "glpics/a12660d4": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_return.pcx",
+      "source": "exe"
+    },
+    "glpics/a43105be": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_pay.pcx",
+      "source": "exe"
+    },
+    "glpics/a4ad2e05": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "ship_all.pcx",
+      "source": "exe"
+    },
+    "glpics/adb2e1b9": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_drake.pcx",
+      "source": "exe"
+    },
+    "glpics/aea72f9e": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "demo.pcx",
+      "source": "exe"
+    },
+    "glpics/b20aae0c": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "Target_knife.pcx",
+      "source": "exe"
+    },
+    "glpics/b3480d10": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "face_savager.pcx",
+      "source": "exe"
+    },
+    "glpics/b8d411bb": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_wildwood.pcx",
+      "source": "exe"
+    },
+    "glpics/c8ca472e": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "role_status.pcx",
+      "source": "exe"
+    },
+    "glpics/cd753a6e": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_exit.pcx",
+      "source": "exe"
+    },
+    "glpics/ce273eb8": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "Player_katharina.pcx",
+      "source": "exe"
+    },
+    "glpics/d346da26": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "Player_tichy.pcx",
+      "source": "exe"
+    },
+    "glpics/d3deee43": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "face_kidd.pcx",
+      "source": "exe"
+    },
+    "glpics/d5f87662": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "start_kidd.pcx",
+      "source": "exe"
+    },
+    "glpics/db7cd834": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_focus.pcx",
+      "source": "exe"
+    },
+    "glpics/dd57b2a5": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_katharina.pcx",
+      "source": "exe"
+    },
+    "glpics/e115556d": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "start_drake.pcx",
+      "source": "exe"
+    },
+    "glpics/e3001cc9": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "Player_panda.pcx",
+      "source": "exe"
+    },
+    "glpics/e56bbe98": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "target_area.pcx",
+      "source": "exe"
+    },
+    "glpics/ebafa92e": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "flag_kidd.pcx",
+      "source": "exe"
+    },
+    "glpics/ebd70a03": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_save.pcx",
+      "source": "exe"
+    },
+    "glpics/ebfc8ca2": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "bg.pcx",
+      "source": "exe"
+    },
+    "glpics/f20c750f": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_view.pcx",
+      "source": "exe"
+    },
+    "glpics/f3a5358d": {
+      "class": "A_ui",
+      "container": "glpics",
+      "name": "button_option.pcx",
+      "source": "exe"
+    },
+    "glpics/f9d67333": {
+      "class": "B_portrait",
+      "container": "glpics",
+      "name": "text_gameover.pcx",
+      "source": "exe"
+    },
+    "glpics/fcfffb62": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "number.pcx",
+      "source": "exe"
+    },
+    "glpics/fffb9a43": {
+      "class": "C_pixel",
+      "container": "glpics",
+      "name": "Dialogue.pcx",
+      "source": "exe"
+    },
+    "goods/a09d13f0": {
+      "class": "Skip",
+      "container": "goods",
+      "name": "goods.mdu",
+      "source": "exe"
+    },
+    "music/1b8a9203": {
+      "class": "Skip",
+      "container": "music",
+      "name": "invalid.wav",
+      "source": "exe"
+    },
+    "music/551ff8b9": {
+      "class": "Skip",
+      "container": "music",
+      "name": "levelup.wav",
+      "source": "exe"
+    },
+    "music/77a3e1d4": {
+      "class": "Skip",
+      "container": "music",
+      "name": "attack.wav",
+      "source": "exe"
+    },
+    "music/804615c2": {
+      "class": "Skip",
+      "container": "music",
+      "name": "glmusic.mod",
+      "source": "exe"
+    },
+    "music/9ef9b7a9": {
+      "class": "Skip",
+      "container": "music",
+      "name": "press.wav",
+      "source": "exe"
+    },
+    "music/ae1a80cc": {
+      "class": "Skip",
+      "container": "music",
+      "name": "victory.wav",
+      "source": "exe"
+    },
+    "ui/2f5cfa6a": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "100.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2f6f12eb": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "101.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2f812b6c": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "102.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2f9343ed": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "103.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2fa55c6e": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "104.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2fb774ef": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "105.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2fc98d70": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "106.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2fdba5f1": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "107.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2fedbe72": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "108.pcx",
+      "source": "mapinfo"
+    },
+    "ui/2fffd6f3": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "109.pcx",
+      "source": "mapinfo"
+    },
+    "ui/31b2230b": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "110.pcx",
+      "source": "mapinfo"
+    },
+    "ui/31c43b8c": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "111.pcx",
+      "source": "mapinfo"
+    },
+    "ui/31d6540d": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "112.pcx",
+      "source": "mapinfo"
+    },
+    "ui/31e86c8e": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "113.pcx",
+      "source": "mapinfo"
+    },
+    "ui/31fa850f": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "114.pcx",
+      "source": "mapinfo"
+    },
+    "ui/320c9d90": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "115.pcx",
+      "source": "mapinfo"
+    },
+    "ui/321eb611": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "116.pcx",
+      "source": "mapinfo"
+    },
+    "ui/3230ce92": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "117.pcx",
+      "source": "mapinfo"
+    },
+    "ui/3242e713": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "118.pcx",
+      "source": "mapinfo"
+    },
+    "ui/3254ff94": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "119.pcx",
+      "source": "mapinfo"
+    },
+    "ui/34074bac": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "120.pcx",
+      "source": "mapinfo"
+    },
+    "ui/3753dc98": {
+      "class": "Skip",
+      "container": "ui",
+      "name": "mapinfo.ini",
+      "source": "exe"
+    },
+    "ui/738971fa": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "01.pcx",
+      "source": "mapinfo"
+    },
+    "ui/739b8a7b": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "02.pcx",
+      "source": "mapinfo"
+    },
+    "ui/73ada2fc": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "03.pcx",
+      "source": "mapinfo"
+    },
+    "ui/73bfbb7d": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "04.pcx",
+      "source": "mapinfo"
+    },
+    "ui/73d1d3fe": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "05.pcx",
+      "source": "mapinfo"
+    },
+    "ui/73e3ec7f": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "06.pcx",
+      "source": "mapinfo"
+    },
+    "ui/73f60500": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "07.pcx",
+      "source": "mapinfo"
+    },
+    "ui/74081d81": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "08.pcx",
+      "source": "mapinfo"
+    },
+    "ui/741a3602": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "09.pcx",
+      "source": "mapinfo"
+    },
+    "ui/75cc821a": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "10.pcx",
+      "source": "mapinfo"
+    },
+    "ui/75de9a9b": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "11.pcx",
+      "source": "mapinfo"
+    },
+    "ui/75f0b31c": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "12.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7602cb9d": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "13.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7614e41e": {
+      "class": "E_animation",
+      "container": "ui",
+      "name": "14.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7626fc9f": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "15.pcx",
+      "source": "mapinfo"
+    },
+    "ui/76391520": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "16.pcx",
+      "source": "mapinfo"
+    },
+    "ui/764b2da1": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "17.pcx",
+      "source": "mapinfo"
+    },
+    "ui/765d4622": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "18.pcx",
+      "source": "mapinfo"
+    },
+    "ui/766f5ea3": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "19.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7821aabb": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "20.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7833c33c": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "21.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7845dbbd": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "22.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7857f43e": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "23.pcx",
+      "source": "mapinfo"
+    },
+    "ui/786a0cbf": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "24.pcx",
+      "source": "mapinfo"
+    },
+    "ui/787c2540": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "25.pcx",
+      "source": "mapinfo"
+    },
+    "ui/788e3dc1": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "26.pcx",
+      "source": "mapinfo"
+    },
+    "ui/78a05642": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "27.pcx",
+      "source": "mapinfo"
+    },
+    "ui/78b26ec3": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "28.pcx",
+      "source": "mapinfo"
+    },
+    "ui/78c48744": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "29.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7a76d35c": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "30.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7a88ebdd": {
+      "class": "E_animation",
+      "container": "ui",
+      "name": "31.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7a9b045e": {
+      "class": "E_animation",
+      "container": "ui",
+      "name": "32.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7aad1cdf": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "33.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7abf3560": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "34.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7ad14de1": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "35.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7ae36662": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "36.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7af57ee3": {
+      "class": "E_animation",
+      "container": "ui",
+      "name": "37.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7b079764": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "38.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7b19afe5": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "39.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7ccbfbfd": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "40.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7cde147e": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "41.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7cf02cff": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "42.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7d024580": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "43.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7d145e01": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "44.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7d267682": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "45.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7d388f03": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "46.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7d4aa784": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "47.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7d5cc005": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "48.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7d6ed886": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "49.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7f21249e": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "50.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7f333d1f": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "51.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7f4555a0": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "52.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7f576e21": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "53.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7f6986a2": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "54.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7f7b9f23": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "55.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7f8db7a4": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "56.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7f9fd025": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "57.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7fb1e8a6": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "58.pcx",
+      "source": "mapinfo"
+    },
+    "ui/7fc40127": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "59.pcx",
+      "source": "mapinfo"
+    },
+    "ui/81764d3f": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "60.pcx",
+      "source": "mapinfo"
+    },
+    "ui/818865c0": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "61.pcx",
+      "source": "mapinfo"
+    },
+    "ui/819a7e41": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "62.pcx",
+      "source": "mapinfo"
+    },
+    "ui/81ac96c2": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "63.pcx",
+      "source": "mapinfo"
+    },
+    "ui/81beaf43": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "64.pcx",
+      "source": "mapinfo"
+    },
+    "ui/81d0c7c4": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "65.pcx",
+      "source": "mapinfo"
+    },
+    "ui/81e2e045": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "66.pcx",
+      "source": "mapinfo"
+    },
+    "ui/81f4f8c6": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "67.pcx",
+      "source": "mapinfo"
+    },
+    "ui/82071147": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "68.pcx",
+      "source": "mapinfo"
+    },
+    "ui/821929c8": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "69.pcx",
+      "source": "mapinfo"
+    },
+    "ui/83cb75e0": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "70.pcx",
+      "source": "mapinfo"
+    },
+    "ui/83dd8e61": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "71.pcx",
+      "source": "mapinfo"
+    },
+    "ui/83efa6e2": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "72.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8401bf63": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "73.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8413d7e4": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "74.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8425f065": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "75.pcx",
+      "source": "mapinfo"
+    },
+    "ui/843808e6": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "76.pcx",
+      "source": "mapinfo"
+    },
+    "ui/844a2167": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "77.pcx",
+      "source": "mapinfo"
+    },
+    "ui/845c39e8": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "78.pcx",
+      "source": "mapinfo"
+    },
+    "ui/846e5269": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "79.pcx",
+      "source": "mapinfo"
+    },
+    "ui/86209e81": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "80.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8632b702": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "81.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8644cf83": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "82.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8656e804": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "83.pcx",
+      "source": "mapinfo"
+    },
+    "ui/86690085": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "84.pcx",
+      "source": "mapinfo"
+    },
+    "ui/867b1906": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "85.pcx",
+      "source": "mapinfo"
+    },
+    "ui/868d3187": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "86.pcx",
+      "source": "mapinfo"
+    },
+    "ui/869f4a08": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "87.pcx",
+      "source": "mapinfo"
+    },
+    "ui/86b16289": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "88.pcx",
+      "source": "mapinfo"
+    },
+    "ui/86c37b0a": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "89.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8875c722": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "90.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8887dfa3": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "91.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8899f824": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "92.pcx",
+      "source": "mapinfo"
+    },
+    "ui/88ac10a5": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "93.pcx",
+      "source": "mapinfo"
+    },
+    "ui/88be2926": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "94.pcx",
+      "source": "mapinfo"
+    },
+    "ui/88d041a7": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "95.pcx",
+      "source": "mapinfo"
+    },
+    "ui/88e25a28": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "96.pcx",
+      "source": "mapinfo"
+    },
+    "ui/88f472a9": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "97.pcx",
+      "source": "mapinfo"
+    },
+    "ui/89068b2a": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "98.pcx",
+      "source": "mapinfo"
+    },
+    "ui/8918a3ab": {
+      "class": "C_pixel",
+      "container": "ui",
+      "name": "99.pcx",
+      "source": "mapinfo"
+    },
+    "ui/f6ef0287": {
+      "class": "Skip",
+      "container": "ui",
+      "name": "Thumbs.db",
+      "source": "extra"
+    }
+  },
+  "stats": {
+    "by_class": {
+      "A_ui": 30,
+      "B_portrait": 21,
+      "C_pixel": 155,
+      "D_terrain": 82,
+      "E_animation": 4,
+      "Skip": 13
+    },
+    "total": 305,
+    "unknown": []
+  }
+}

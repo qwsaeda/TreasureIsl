@@ -1,0 +1,113 @@
+﻿=== S8.4 场景重构验收 evidence (2026-10-11 01:49:43) ===
+
+## DoD 判据
+1. ti-app/src/scenes/ 每场景 1 struct 实现 Scene trait
+2. game_app.rs 键盘/触摸走 SceneHost::advance 统一路径
+3. cargo test -p ti-app 全绿 + headless 全链路回归通过
+
+## 场景 struct 清单（7 个）
+  scenes/index.rs        IndexScene      （主菜单）
+  scenes/main_map.rs     MainMapScene    （主地图）
+  scenes/message.rs      MessageScene    （消息/帮助）
+  scenes/saveload.rs     SaveloadScene   （存读档）
+  scenes/select_map.rs   SelectMapScene  （地图选择）
+  scenes/select_role.rs  SelectRoleScene （角色选择）
+  scenes/vs.rs           VsScene         （战斗）
+
+## Scene trait + SceneHost + SceneRegistry
+  scenes/mod.rs: Scene trait (kind/on_input/render)
+                SceneHost trait (current_scene/enter/advance/play_sfx/render_current)
+                SceneRegistry (按 SceneKind 分发)
+
+## 验收命令输出
+
+### cargo test -p ti-app
+``
+
+running 26 tests
+..........................
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+running 5 tests
+.....
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+running 4 tests
+....
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+.......
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+......
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 5 tests
+.....
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+.
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 5 tests
+.....
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+running 1 test
+i
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.46s; merged doctests compilation took 0.28s
+``
+
+### headless 全链路回归 (P3-3 判据)
+``
+S5.2 鍥哄畾绉嶅瓙鍏ㄦ祦绋嬪洖褰掞紙P3-3 鍒ゆ嵁锛夛細seed=42锛屾楠?16
+  姝ラ  0 OK  confirm        Index -> SelectRole
+  姝ラ  1 OK  next           SelectRole -> SelectRole
+  姝ラ  2 OK  confirm        SelectRole -> SelectMap
+  姝ラ  3 OK  next           SelectMap -> SelectMap
+  姝ラ  4 OK  confirm        SelectMap -> MainMap
+  姝ラ  5 OK  walk           MainMap -> MainMap
+  姝ラ  6 OK  trade_buy      MainMap -> MainMap
+  姝ラ  7 OK  trade_sell     MainMap -> MainMap
+  姝ラ  8 OK  build          MainMap -> MainMap
+  姝ラ  9 OK  landmark       MainMap -> Vs
+  姝ラ 10 OK  attack         Vs -> Vs
+  姝ラ 11 OK  back           Vs -> Index
+  姝ラ 12 OK  move_down      Index -> Index
+  姝ラ 13 OK  confirm        Index -> Saveload
+  姝ラ 14 OK  write_save     Saveload -> Saveload
+  姝ラ 15 OK  load_save      Saveload -> MainMap
+  鎴樻枟杩涘害锛氬洖鍚?16 鐜╁HP=0 BOSSHP=99499 缁撴灉=Some(Enemy)
+鍏ㄦ祦绋?16/16 姝ユ柇瑷€ 0 澶辫触锛圥3-3 鍒ゆ嵁杈炬垚锛?
+``
+
+### clippy
+``
+``
+
+## 结论
+  S8.4 验收通过: 7 场景 struct + Scene trait + SceneHost 窄能力边界落地;
+  game_app.rs 键盘/触摸统一走 advance 路径; headless 16/16 全链路 0 失败.

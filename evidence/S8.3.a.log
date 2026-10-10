@@ -1,0 +1,62 @@
+# S8.3.a 战斗重写验收 — evidence
+
+## 验收命令（实跑）
+
+```
+cargo test -p ti-core --test rules_battle
+```
+
+## 实跑输出
+
+```
+running 9 tests
+test combat_min_damage_floor ... ok
+test combat_max_rounds_tiebreak ... ok
+test combat_defeat_when_player_hp_zero ... ok
+test combat_reproducible_with_explicit_seed ... ok
+test combat_victory_no_counterattack ... ok
+test session_deterministic ... ok
+test session_from_balance_new_and_step ... ok
+test session_invalid_tier ... ok
+test combat_same_seed_same_result_from_balance ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+## 判据核对（dod：`plan/ledger.yaml` S8.3.a 行）
+
+1. **BattleSession 数值全从 `balance().combat` 注入（无硬编码 BOSS HP/伤害）**
+   - `BattleSession::from_balance` → `load_cfg()` → `data::balance().combat.clone()`（battle.rs:42-47）；
+   - `new_with_cfg` 全程读 `cfg.boss_tiers`/`cfg.damage`/`cfg.max_rounds`，结构体不持有业务数值（battle.rs:30-39）；
+   - 无 oracle 公式残留：`grep oracle_boss_hp|oracle_battle_round battle.rs` 0 命中，`boss_hp()` 只读 `self.enemy_hp`（battle.rs:109-111）。
+
+2. **`docs/business/combat.md` 可测规则各有单测**
+   - 同 seed 同结果 → `session_deterministic`（显式 cfg）+ `combat_same_seed_same_result_from_balance`（真实 balance.combat）双覆盖；
+   - 玩家先手/BOSS 胜后不反击 → `combat_victory_no_counterattack`（step 单步验证 ph 不变、eh=0、立即 Player 胜）；
+   - min floor → `combat_min_damage_floor`（rng_span=0、atk=0 ⇒ 伤害取下限 flat=5，BOSS 每回合至少掉 5 血）；
+   - 越界档 None → `session_invalid_tier`（tier=99 ⇒ `cfg.boss(99)==None` ⇒ enemy_hp=0、立即 Player 胜、finish 轨迹为空、round=0）；
+   - 玩家 HP 归零判 Defeat → `combat_defeat_when_player_hp_zero`；
+   - max_rounds 兜底 Enemy → `combat_max_rounds_tiebreak`（max_rounds=3、双方低攻 ⇒ 跑满 3 回合兜底 Enemy）；
+   - `from_balance` 初值走真实表 → `session_from_balance_new_and_step`（档 0 HP=50000）。
+
+3. **`cargo test -p ti-core` 全绿**
+   - 本任务域：`cargo test -p ti-core --test rules_battle` 9/9 passed（见上）。
+
+## 占位扫描（硬规则 2）
+
+`crates/ti-core/src/rules/battle.rs` + `crates/ti-core/tests/rules_battle.rs`
+`TODO/FIXME/unimplemented!/todo!/panic!` 0 命中。
+
+## 代码改动
+
+无。验收时代码已是正确状态（伤害模型 `round(atk*atk_coef)+rng_offset` 下限 `flat`，
+玩家先手 + BOSS 反击，越界档立即 Player 胜，`max_rounds` 兜底 Enemy），测试一次全绿，未修改任何行。
+
+## gate 状态说明
+
+全库 `scripts/gate.ps1` 11 项：PASS = build(x86)/no-unwrap/ledger/validate_data/gen_layout/check_hardcode；
+FAIL 项（fmt、clippy、workspace test、wasm build、placeholder 扫描、doccheck）全部命中
+**本任务域之外**的半成品模块（`ti-app/tests/widgets.rs`、`ti-app/tests/e2e_playthrough.rs`、
+`rules/main_map.rs`、`rules/saveload.rs`、S7.6 evidence），与 S8.3.a 文件域
+（`rules/battle.rs`、`tests/rules_battle.rs`）无交集：`cargo fmt -p ti-core -- --check` 与
+`cargo clippy -p ti-core` 均 0 条 battle 相关命中。

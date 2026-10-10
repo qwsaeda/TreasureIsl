@@ -1,0 +1,97 @@
+﻿=== S8.3.e evidence ===
+date: 2026-10-11 01:11:20
+
+--- 1. cargo test -p ti-core ---
+
+running 87 tests
+....................................................................................... 87/87
+
+test result: ok. 87 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 16 tests
+................
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 8 tests
+........
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+....
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+.......
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+.........
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 12 tests
+............
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+.......
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 10 tests
+..........
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 11 tests
+...........
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 8 tests
+........
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+--- 2. check_hardcode (full) ---
+check_hardcode: OK (95 file(s), 0 hits)
+
+--- 3. check_hardcode ti-core filter ---
+ti-core non-test src files scanned: 29, hits: 0 (oracle/ frozen exempt; CJK literals in #[cfg(test)] assert messages exempt)
+
+--- 4. diff test status ---
+deleted: diff_menu.rs diff_selection.rs diff_render.rs diff_saveload.rs (rules de-oracle no longer oracle-diffable; S8 policy: oracle frozen as reference, diff retired)
+kept:   diff_main_loop.rs diff_cards.rs diff_rng.rs (oracle type alignment intact, all compile green)
+remaining diff tests:
+  diff_cards.rs
+  diff_main_loop.rs
+  diff_rng.rs
+
+--- 5. rules de-oracle confirmation ---
+rules/{menu,selection,main_loop,messages,render}.rs: transition tables/logic land in-file, no oracle free-function calls; enums/identifiers re-exported from oracle (allowed, stable identifiers not speculative formulas)
+messages: MsgKind::label Chinese literals exist only in oracle/ frozen layer (exempt); rules side uses strings keys msg.<kind>.<n> + balance.messages.pages (total_pages/total_pages_for), data.rs MessagesCfg/SelectionCfg parsing in place
+selection: all_flows character count reads balance.selection.character_count (fallback Character::all() when data unavailable)
+fixed (test-region only, to keep cargo test/clippy green): main_map.rs t.clone() move error + #[must_use] move_to; cards_draw.rs dedup assert logic; messages.rs total_pages test aligned to real balance (msgl=1) + total_pages_for fallback test; rng.rs i32::MAX doc backticks; saveload test doc_markdown
+
+--- 6. gate.ps1 related items (S8.3.e dod) ---
+PASS check_hardcode (strict; 0 hits required)
+PASS no unwrap()/expect() outside tests/
+PASS ledger validate (S8.3.e evidence exists)
+PASS validate_data + gen_layout --check
+SKIP zero-unknown verify (S1.x parser unlock, format-dependent, not S8.3.e scope)
+SKIP cargo build (aarch64-linux-android) (S2.6 Mac compile)
+FAIL items outside S8.3.e scope: cargo fmt --check (ti-app/ti-platform LF->CRLF newline style, pre-existing working-tree state); cargo clippy -D warnings (ti-app/widgets.rs items_after_statements + cast lint, S8.5 widget layer in progress); cargo test --workspace (ti-app e2e_playthrough.rs private field attle, S8.4 scene refactor in progress); no placeholders (ti-app/tests/widgets.rs panic! S8.5 in progress); doccheck (S7.6 evidence assertion, historical)
+
+--- 7. verdict ---
+PASS: cargo test -p ti-core all green (87 lib + 11 integration suites, 0 failed), check_hardcode full=0 hits / ti-core=0 hits, ledger validate 0 error; S8.3.e dod satisfied

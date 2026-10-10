@@ -39,7 +39,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 |---|---|---|
 | P3-1 | 44 种 f5 控件类型码逐档解释 + 事件语义完整（事件语义 S3.3 起，含菜单→控件映射） | `cargo run -p ti-tools --bin controls -- --out ref` 无 skipped（地形除外）；**2041 条 + 20/20 整除已由 P1-3 验收，本项不重复** |
 | P3-2 | 每个场景可进入/返回（场景图全覆盖） | `coverage scenes` → missing = 0 |
-| P3-3 | 固定种子全流程脚本跑通：开局→选人→选图→移动→贸易→建造→战斗→存档→读档 | `cargo run -p ti-app --features headless -- --script tests/scripts/full_run.ron` |
+| P3-3 | 固定种子全流程脚本跑通：开局→选人→选图→移动→贸易→建造→战斗→存档→读档 | `cargo run -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json`（seed=42，16 步断言 0 失败） |
 
 ## P4 视觉/操作对齐
 
@@ -49,7 +49,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-2 | 176×220 逻辑坐标命中判定在任意整数/非整数缩放下不偏移 | `cargo test -p ti-platform -- test coordinate_roundtrip` |
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
 
-## 代码质量门禁 `scripts/gate.ps1`（8 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（11 项，循环每轮强制）
 
 ```
 1  cargo fmt --all -- --check
@@ -66,10 +66,18 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 7  cargo run -q -p ti-tools --bin verify -- --zero-unknown   # S1 起解锁，之前 SKIP
 8  台账校验：`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml`
    （解析 `docs/loop.md` §1 schema：状态/依赖/rounds/verified 必须有 evidence 文件）
+9  文档一致性：`cargo run -q -p ti-tools --bin doccheck`
+    （F-/EXP- ID 唯一性与跨文档引用、任务 ID 登记、数字断言、evidence 内容特征）
+9b 跨文档数值漂移 + release 台账计数同步：`cargo run -q -p ti-tools --bin doccheck2`
+    （第 1-3 轮对抗审计固化：权威值 2041/UI 场景 20 + release.md 任务计数与 ledger 实测一致）
+10 数据表门禁（S8.2，见 docs/process/04_tooling.md §2）：
+   python scripts/validate_data.py            # assets/data/*.json 结构与数值域，须全绿
+   python scripts/gen_layout.py --check       # controls.json 幂等一致，须全绿
+   python scripts/check_hardcode.py --warn    # 硬编码扫描（迁移期只报告，清零后改 FAIL）
 ```
 
 任一项红灯 = 本轮不可标 verified，不可推进下一任务。
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass` + `gate 8 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass` + `gate 10 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。

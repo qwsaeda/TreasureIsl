@@ -15,10 +15,8 @@ target/
 __pycache__/
 .venv/
 
-# IDA 调试期临时输出（非产物）
-/diag3_ida
-/hello_ida
-/ida_dump
+# 审计暂存区（待确认后删除）
+/temp/
 
 # S2.5 生成物（scripts/build_wasm.ps1 可重新产出）
 /web/
@@ -26,5 +24,12 @@ __pycache__/
 # 离线转码产物（build_assets/mod2ogg 可重新产出，不入版本库）
 /assets_out/
 
-# 临时转储（MOD 解包调试产物，非交付）
+# 临时转储（已删）
 /out_mod/
+
+# S6.5 起 unpak --out 导出（业务名命名，不入版本库）
+/assets_raw/
+
+# S7 HD 资产（build_hd_assets 可重新产出）
+/assets_hd/
+/assets_hd_pack/

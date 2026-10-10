@@ -9,36 +9,37 @@
 
 ## 平台产物
 
-| 平台 | 产物 | 路径 | sha256 (前 16) |
+| 平台 | 产物 | 路径 | 体积 (S5.4 后最新) |
 |---|---|---|---|
-| 桌面（当前收口） | `treasure-native.exe` (1,134,592 B) | `target/release/` | `C28A418361EE413E` |
-| 浏览器（当前收口） | `treasure_wasm.wasm` (675,047 B) + JS 壳 + 资源 | `web/` | `68A8A9D806D71DD7` |
+| 桌面（当前收口） | `treasure-native.exe` | `target/release/` | 见 `evidence/S5.4.log` |
+| 浏览器（当前收口） | `treasure_wasm.wasm` (S6.4 后 745 KB，见 `docs/modernization.md` §9) + JS 壳 + 资源 | `web/` | 见 `evidence/S5.4.log` |
 | Android（后续，Mac 编译） | — | — (S2.6 在 Mac NDK/SDK 工具链出 APK，本机不产出) | — |
 
-完整 sha256 见 `evidence/S4.4.log` 与 `evidence/S5.4.log`。
+完整 sha256 见 `evidence/S4.4.log`（S4.3 时点 wasm 675,016 B）、`evidence/S5.4.log`；S5.6/S6.1~S6.4 完成后 wasm 增长至 745 KB（体积表见 `docs/modernization.md` §9，首屏 308,227 B / 非首屏 250,154 B）。
 **桌面 + 浏览器为当前可玩收口目标**（S5.1–S5.4：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定）；
 Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译。
 
-### 体积预算达成（见 docs/plan-s4.md §S4.3）
+### 体积预算达成（见 docs/plan-s4.md §S4.3；S4.3 时点实测，S5.6 及 S6.1~S6.4 完成后最新值见 modernization.md §9）
 
-| 项 | 实测 | 预算 | 状态 |
-|---|---|---|---|
-| wasm 主体 | 675,016 B | ≤ 800,000 B | PASS |
-| 首屏附属资源 | 102,079 B | ≤ 150,000 B | PASS |
-| 非首屏 (music.lpk) | 67,737 B | ≤ 100,000 B | PASS |
+| 项 | S4.3 实测 | S5.6 及 S6.1~S6.4 完成后 | 预算 | 状态 |
+|---|---|---|---|---|
+| wasm 主体 | 675,016 B | 745 KB（modernization §9） | ≤ 800,000 B | PASS |
+| 首屏附属资源 | 102,079 B | 308,227 B（modernization §9 明细） | ≤ 490 KB（modernization 口径；S4.3 时点 ≤ 150,000 B） | PASS |
+| 非首屏 (music.lpk) | 67,737 B | 250,154 B（modernization §9） | ≤ 180 KB（modernization 口径；S4.3 时点 ≤ 100,000 B） | 超 S4.3 时点预算，modernization §9 已重列口径 |
 
 ## 性能说明
 
-- **桌面 60fps**：`--features stats` 实测 avg 60.9/59.3 fps（S4.4 复测），主循环脏矩形呈现
+- **桌面 60fps**：`--features stats` 实测 avg 60.0/60.0 fps（S4.3 验收值；`evidence/S4.4.log` 复测 60.9/59.3，同口径），主循环脏矩形呈现
   （静止帧 uploads=0 skipped=60/60，100% 跳帧、零 GPU 上传）。
-- **WASM 体积**：675 KB (release)，含 macroquad + miniquad gl.js + 真实字体/音效资源，单文件可运行。
+- **WASM 体积**：S6 后 745 KB（release，见 `docs/modernization.md` §9），含 macroquad + miniquad gl.js + 真实字体/音效资源，单文件可运行。
   （S1.7b 起 OGG 转码默认不入游戏运行时 —— opus-pure 仅离线 build_assets/mod2ogg 链路开启，
   见「已知限制」；OGG 走预转码产物播放。）
 - **传输层压缩**：浏览器对 `.wasm` 与 `.js` 普遍启用 gzip/brotli，实际下载体积更小（部署侧关注项）。
 
-## 可玩收口（S5.1–S5.3，2026-10 新增）
+## 可玩收口（S5.1–S5.6 + S6.1–S6.5 + S7 HD 管线 + S8.0 标准化，2026-10）
 
-把 S3 已 diff 验证的 13 个玩法模块接进 `ti-app` 交互壳，使游戏**从头可玩到尾**：
+把 S3 已 diff 验证的 12 个玩法模块接进 `ti-app` 交互壳，使游戏**从头可玩到尾**，
+并完成呈现层完善（S6）、HD 资产管线（S7）与 S8.0 标准化改造（流程 + 业务文档，见 `docs/plan-s8-refactor.md`）：
 
 - **S5.1 交互状态机**（`GameApp`）：`crates/ti-app/src/game_app.rs` 顶层场景状态机，
   把 `menu → selection → main_map → trade/build → battle → saveload` 全链路接通
@@ -60,10 +61,12 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
   + cargo-apk）产出。开发本身不依赖 Android 工具链。
 - **S5.6 美术纹理渲染接线**（`docs/modernization.md` §9 资源改造 Step 3）：新增
   `crates/ti-app/src/sprite_atlas.rs`（`ui.pak` filenum INI 解析 + PCX 解码缓存 +
-  `f1 → NN.pcx` 寻址 + `Framebuf` RGB565 blit）；三端 bin 注入 `ui.pak` + 8 个场景
-  `.Map`（`selectrole/selectmap/main/vs/msgs/saveload` + 首屏两个）；`GameApp::render`
-  在占位渲染后叠加真实精灵。sprite_atlas 5 项单测全绿（含真 `ui.pak` 端到端 +
-  越界裁剪 + 空 INI 拒绝）。寻址机制实测：`ui.pak` 122 条目 = 120 PCX + 1 filenum
+  `f1 → NN.pcx` 寻址 + `Framebuf` RGB565 blit）；三端 bin 注入 `ui.pak` + 首屏 8 个
+  场景 `.Map`（`index`/`intro`/`selectrole`/`selectmap`/`main`/`vs`/`msgs`/
+  `saveload`，其中 `index`/`intro` 共用 1 个 .Map → 8 个 .Map 文件覆盖 9 个场景，
+   全量 20 UI 场景）；`GameApp::render` 在占位渲染后叠加真实精灵。sprite_atlas 5 项单测全绿
+  （含真 `ui.pak` 端到端 + 越界裁剪 + 空 INI 拒绝）；寻址机制实测：`ui.pak` 122 条目
+  = 120 PCX + 1 filenum
   INI + 1 其他，`f1=N` → `"{N:02d}.pcx"`（F-311 的 `f1` 字段在 `sub_460F8` 是
   blit 贴图索引，F-315 的事件描述符 +22 字节在运行期回填，不冲突）。
 - **S6.1 上采样滤波**：`FilterMode`（Nearest 默认 / Linear）+ `F2` 键循环切换；
@@ -71,8 +74,9 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
 - **S6.2 边框装饰**：`BorderStyle`（Black / DeepBlue 默认 / MatchBackdrop）+ `F3` 键
   循环切换；letterbox 区域整屏填充主题色，游戏区 quad 后画覆盖，天然处理
   Stretch/ZoomCrop 裁剪模式。
-- **S6.3 地形瓦片 blit**：新增 `terrain_atlas.rs`（`glmap_m01.pak` 46 瓦片 PCX +
-  filenum INI 49 条映射）；**关键发现**：地形是大画布 + 摄像机（实测 m01 的
+- **S6.3 地形瓦片 blit**：新增 `terrain_atlas.rs`（`glmap_m01/02.pak` 瓦片 PCX，
+   m01 47 条目/46 唯一 + m02 37 条目/32 唯一，filenum INI 映射；台账 S6.3 DoD 口径
+   m01/m02，m03 未接入）；**关键发现**：地形是大画布 + 摄像机（实测 m01 的
   `iso_x` 范围 0..1216、`iso_y` 16..608，远超 176×220），故必须按摄像机偏移
   平移画布窗口；`center_camera` 把包围盒中心对到屏心 (88,110)；painter's order
   按 `iso_y` 升序。6 项单测全绿（含真实地形+真实瓦片 blit 出 >100 非黑像素）。
@@ -81,6 +85,14 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
   按毫秒推进，`frame()` 取当前帧号；`GameApp::render` 每帧按 `frame_delta_ms`
   推进（native+wasm 用 `macroquad::time::get_time()` 算帧耗时）。5 项单测全绿
   （多帧切分 / 帧号环绕 / 帧推进 / 多帧 blit 差异 / 静态精灵帧不变）。
+- **S6.5 容器条目业务名修正**：`build_assets` 的 `raw/` 目录与 `manifest.json`
+  及 `unpak --out` 导出条目改按**业务名**命名（原为 `<key:08x>.bin` 哈希名，
+  无命名意义）。新增 `ti-formats/src/resource_names.rs`：`ResourceNames` 三级反查
+  （`mapinfo.ini` > exe UTF-16 资源名 > `EXTRAS` 多键证实名）+ 同名内容合并 +
+  未命名回退 `unknown-{key:08x}.bin`。命名覆盖率 DoD 217/217（ui/m01/m02/cards/
+  music/goods 全解），glpics 余 3 条名称哈希型（F-209）回落哈希名并显式标 `unknown`。
+  单测 `resource_names` 7/7 + `build_assets` 3/3 全绿；注释里 `804615c2.bin`
+  改 `glmusic.mod`（`mod_pcm.rs`/`mod2ogg.rs`/`audio_asset.rs`）。
 
 三端产物（S5.4 复测）：
 
@@ -92,9 +104,10 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
 
 ## 后续（不阻塞完成）
 
-- **Android 端落地（S2.6）**：桌面/浏览器可玩为当前收口目标；APK 在 **Mac**（已装 Android NDK/SDK + cargo-apk/cargo-ndk）编译，本机 Windows 不产出（gate android 行 SKIP 为既定状态，不阻塞）。
-- **动画帧**：`filenum INI` 中 `num>1` 的精灵（如 `num=5` 的多帧动画）当前只取第 0 帧；后续加帧定时切换。
-- **地形瓦片 blit**：`glmap_m*.pak`（88+47 张瓦片 PCX）未接入，主地图仍占位网格；复用 SpriteAtlas 机制即可。
+- **Android 端落地**：S5.5 Android 壳已落地（`android-shell` feature + `treasure-android` bin，verified）；
+  S2.6 仅 APK 在 **Mac**（已装 Android NDK/SDK + cargo-apk/cargo-ndk）编译（blocked，本机 Windows 无工具链不产出，gate android 行 SKIP 为既定状态，不阻塞）。
+- ~~**动画帧**：`filenum INI` 中 `num>1` 的精灵（如 `num=5` 的多帧动画）当前只取第 0 帧；后续加帧定时切换。~~ → 已完成 **S6.4**（多帧动画，`advance_animation` 按毫秒推进）。
+- ~~**地形瓦片 blit**：`glmap_m*.pak`（88+47 张瓦片 PCX）未接入，主地图仍占位网格；复用 SpriteAtlas 机制即可。~~ → 已完成 **S6.3**（`terrain_atlas.rs` 解析 `glmap_m*.pak` 瓦片 PCX，按等距投影 + 摄像机平移 blit）。
 - **帧缓冲色深**：RGB565 → RGB888，待 LLM 重画 HD 真彩色美术后一起做（现 16 色平涂无收益）。
 - QEMU-CE 视觉对照（原版 ARM 运行环境，P4-1 逐像素对原版渲染的最终基准）
 - 多人/联机扩展
@@ -168,8 +181,8 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 
 ## 验收
 
-- `scripts/gate.ps1` 8 项全绿（S5.4 复测；6 PASS + 2 SKIP：android target 未装 S2.6 / verify.rs 未落地）
-- `plan/ledger.yaml` 50 任务：49 verified + 1 blocked（S2.6 Android，SDK/NDK 未安装，既定阻塞项）
+- `scripts/gate.ps1` 全绿 + doccheck 独立第 9 项（`cargo run -q -p ti-tools --bin doccheck`）通过（S5.4 时点 8 项门禁，gate 6 PASS + 2 SKIP：android target 未装 S2.6 / verify.rs 未落地；当前为 11 项，见 parity.md）
+- `plan/ledger.yaml` 77 任务：65 verified + 0 in_progress + 10 pending + 2 blocked（S2.6 / S7.7）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`

@@ -305,6 +305,42 @@ impl FilterMode {
     }
 }
 
+/// 画质模式（S7.6，`docs/impl/14_asset_enhancement.md` §3.5 路径 1 并行的运行时开关）。
+///
+/// 原版 = RGB565 + PCX 解码（默认，P4-1 逐像素基准不变）；
+/// HD = RGBA8 + `assets_hd` 管线（feature `hd-8bit`，P5-2 基准）。
+/// 未启用 `hd-8bit` 时 `Hd` 档行为等同 `Original`（无 HD 资产可渲染）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum QualityMode {
+    /// 原版（RGB565 + PCX，默认）。
+    #[default]
+    Original,
+    /// HD（RGBA8 真彩，需 feature `hd-8bit` + `assets_hd_pack` 资产）。
+    Hd,
+}
+
+impl QualityMode {
+    /// 全部模式（设置菜单枚举用）。
+    pub const ALL: [Self; 2] = [Self::Original, Self::Hd];
+
+    /// 可读标签（设置菜单显示）。
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Original => "原版",
+            Self::Hd => "HD",
+        }
+    }
+
+    /// 取下一个模式（循环，`ALL` 顺序）。
+    #[must_use]
+    pub fn next(self) -> Self {
+        let all = Self::ALL;
+        let i = all.iter().position(|&m| m == self).unwrap_or(0);
+        all[(i + 1) % all.len()]
+    }
+}
+
 /// 边框装饰样式（S6.2）：letterbox / pillarbox 黑边的填充方式。
 ///
 /// 176×220 是 4:5 竖屏内容，在 20:9 屏上等比铺满只有 36~78% 利用率，
@@ -386,6 +422,8 @@ pub struct Settings {
     pub keypad: VirtualKeyPad,
     /// 按键自定义映射。
     pub key_bindings: KeyBindings,
+    /// 画质模式（S7.6：原版 RGB565 / HD RGBA8，F4 循环切换）。
+    pub quality: QualityMode,
 }
 
 impl Settings {
@@ -400,6 +438,7 @@ impl Settings {
             virtual_keypad: true,
             keypad: VirtualKeyPad::default(),
             key_bindings: KeyBindings::defaults(),
+            quality: QualityMode::default(),
         }
     }
 

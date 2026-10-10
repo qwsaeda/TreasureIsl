@@ -1,0 +1,14 @@
+﻿=== S8.6 渲染基线改造验收 evidence (2026-10-11 03:17:18) ===
+
+## DoD 判据
+参考图由 ti-formats 资源解码独立产出；渲染断言对真实基线；cargo test -p ti-app --test render_parity 全绿
+
+### cargo test -p ti-app --test render_parity
+
+running 7 tests
+.......
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+## 结论
+S8.6 验收通过: 7 项测试全绿，基线由 ti-formats 独立解码产出（decode_pcx_independent），渲染断言对真实基线.

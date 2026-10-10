@@ -11,7 +11,7 @@
 4 implemented ti-core/src/rules|<module>.rs 正式实现（实现 §5.6 的 trait，非 dyn）
 5 diff        diff_test!(oracle, impl, cases) → cargo test -p ti-core --test diff_<module> 全绿
 6 coverage    cargo run -p ti-tools -- coverage events|scenes → 本模块 missing = 0
-7 gate        scripts/gate.ps1 8 项全绿（占位扫描 0 命中）
+7 gate        scripts/gate.ps1 全绿（S3 时点 8 项，现 11 项；占位扫描 0 命中）
 8 evidence    日志写入 evidence/S3.x.log → ledger 置 verified
 ```
 
@@ -39,10 +39,10 @@
 - 12 个模块全部 `verified`，每份 evidence 齐全；
 - `docs/parity.md` **P2、P3 全绿**：差分测试全通过、事件覆盖 100%、场景覆盖 100%、固定种子全流程脚本跑通（P3-3）；
 - `ref/classify.json` 覆盖率 `pending=0`（exe 中每个函数都有归属，无漏网逻辑）；
-- `scripts/gate.ps1` 8 项全绿。
+- `scripts/gate.ps1` 全绿（S3 时点 8 项，现 11 项）。
 
 ## 4. 模块推进中的记录要求
 
 - 发现伪代码与 `docs/facts/index.md` 冲突 → 先实测修正事实库，再改 spec（顺序不可倒置）；
-- 同一坑第二次遇到 → 必须写 `docs/experience/index.mdindex.md` 并在该模块 evidence 中引用条目 ID；
+- 同一坑第二次遇到 → 必须写 `docs/experience/index.md` 并在该模块 evidence 中引用条目 ID；
 - 数值表一律资源化进 `assets_out`，代码里只留常量名（§5.3）。

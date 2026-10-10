@@ -19,6 +19,19 @@ thiserror = "2"
 flate2 = "1"
 macroquad = "0.4"
 opus-pure = "0.2"
+# S7.5：HD 资产 PNG 解码（§5.9 定案清单，`ti-platform` optional，feature `hd-8bit` 门控，
+# 默认构建不进依赖树——EXP-046 模式）
+png = "0.17"
+# S8.7：RNG / FNV 库化（替换手写 LCG + 手写 FNV，见 docs/process/01_architecture.md §4）
+# rand_pcg（可复现 PCG64，docs/business/persistence.md §RNG「目标库复用」）
+# fnv（FNV 哈希，替换 ti-tools/src/hash.rs 手写 fnv1a64）
+# EXP-057：rand_pcg 0.9 的 PCG64 = Lcg128Xsl64（Lcg128Xsl64::new(state, stream) 确定性播种
+# + RngCore::next_u64() 取值）；0.8 的 Pcg64 旧型名在 0.9 不存在。锁定精确版。
+# 仅引 `rand_pcg` + `rand_core`（RngCore trait）；`rand` 主 crate 未使用（禁 thread_rng，
+# 玩法层只经 `ti-core::rules::rng` 可播种 GameRng，S8.7 库复用判据：不引未用依赖）。
+rand_pcg = "=0.9.0"
+rand_core = "=0.9.5"
+fnv = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ti-formats = { path = "crates/ti-formats" }

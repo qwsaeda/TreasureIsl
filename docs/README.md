@@ -8,7 +8,7 @@
 |---|---|
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 8 项 + doccheck 独立第 9 项） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 11 项 + doccheck/doccheck2 独立第 9/9b 项） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md) |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
@@ -26,7 +26,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 8 项（doccheck 独立第 9 项，`cargo run -p ti-tools --bin doccheck`） |
+| [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 11 项（doccheck/doccheck2 独立第 9/9b 项，`cargo run -p ti-tools --bin doccheck` / `--bin doccheck2`） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收） |
 | [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP） |
 | [`git.md`](git.md) | 推送规范（远端 origin/分支模型/推送规则/commit 格式/推送检查清单） |
@@ -156,6 +156,8 @@
 | [`impl/12_audio.md`](impl/12_audio.md) | 音频系统（BGM/音效/音量/静音/浏览器策略） |
  | [`impl/13_appendix.md`](impl/13_appendix.md) | 附录（全常量表/事件码/场景码/错误类型/资源清单） |
  | [`impl/14_asset_enhancement.md`](impl/14_asset_enhancement.md) | HD 资产增强管线（S7 分类清单/工具链选型/流水线步骤/体积预算/验收判据） |
+ | [`impl/15_gameplay_full.md`](impl/15_gameplay_full.md) | **完整玩法规格**（全系统实现手册：场景状态机/事件码/核心循环/角色地图/主地图/贸易/建造/战斗/卡牌/消息/存读档/RNG/输入/音效/数值平衡） |
+ | [`impl/16_modern_platform.md`](impl/16_modern_platform.md) | **现代多端实现指南**（架构分层/双层渲染/响应式布局/触屏/字体/音频/持久化/PWA/Android/资源分包/性能预算/错误处理） |
 
 ### 现代化
 

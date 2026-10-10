@@ -257,6 +257,7 @@ else:
 | M9 | 边框装饰（letterbox 主题色填充） | ✅ S6.2 |
 | M10 | 地形瓦片 blit（等距投影 + 摄像机） | ✅ S6.3 |
 | M11 | 多帧动画（filenum INI num>1） | ✅ S6.4 |
+| M12 | 容器条目业务名修正（key 哈希 → 可读名） | ✅ S6.5 |
 
 ---
 
@@ -270,7 +271,7 @@ else:
 | wasm 主体 | ≤ 800 KB | 745 KB | S5.6/S6.1~S6.4 后 wasm 增长（sprite_atlas + terrain_atlas + 触屏/滤波/边框） |
 | 首屏资源 | ≤ 490 KB | 308 KB | 字体 + 8 场景 .Map + ui.pak + glpics.pak + 地形 pak + settings |
 | TTF 字体 | ≤ 4 MB | — | 思源黑体子集（非首屏分包，待 M2） |
-| 非首屏资源 | ≤ 180 KB | 250 KB | glmap_m02/m03 + cards/goods + music.lpk + 其余场景 .Map |
+| 非首屏资源 | ≤ 180 KB | 250 KB（超限，S5.6/S6.1~S6.4 后新增内容，预算重列见 release.md §体积预算） | glmap_m02/m03 + cards/goods + music.lpk + 其余场景 .Map |
 
 **首屏明细**（`build_wasm.ps1` 实测 308,227 B）：
 
@@ -284,5 +285,25 @@ else:
 **非首屏明细**（250,154 B）：glmap_m02.pak（30 KB）+ glmapm02/m03.Map（27 KB）
 + cards.lpk（33 KB）+ goods.lpk（0.5 KB）+ music.lpk（66 KB）+ 其余 18 场景 .Map（47 KB）。
 
-**三键快捷键**（native + wasm）：`F1` 缩放模式 / `F2` 上采样滤波 / `F3` 边框样式。
+**HD 资产管线（S7，单列，与原版 380 KB 口径并存）**（`docs/impl/14_asset_enhancement.md` §6）：
+
+| 类别 | 数量（manifest 实测） | 单张预估（2x PNG） | 小计 | 实测落盘（`assets_hd_pack/` 各档） |
+|---|---|---|---|---|
+| A. UI 控件 | 60（30 基础 + 30 九宫格 `_9s`） | 5~15 KB | ~300 KB | 1x 档 `ui/`+`glpics/`，见 §6 表 |
+| B. 角色立绘 | 21 | 30~80 KB（4x 超分后） | ~600 KB | 1x 档 `glpics/`（21 条） |
+| C. 兵种/地标 | 152 | 5~20 KB | ~1 MB | 1x 档 `ui/`+`glpics/`（152 条） |
+| D. 地形瓦片 | 82 | 15~50 KB | ~3 MB | 1x 档 `glmap_m01/`+`glmap_m02/`（82 条） |
+| E. 多帧动画 | 4（×5帧=20帧） | 5~10 KB/帧 | ~150 KB | 1x 档 `ui/*_f0..f4.png`（20 条，分帧命名） |
+| **合计** | **335 文件**（A-E，各档相同） | | **~5 MB（2x）**；4x ≈ 20 MB | 1x **1,519,349 B（1.45 MB）** / 2x **1,936,304 B（1.85 MB）** / 4x **2,494,827 B（2.38 MB）** / webp **1,136,388 B（1.08 MB）** |
+
+> E 类多帧精灵（f1=14/31/32/37）在 `assets_hd_pack/1x/ui/` 以**分帧命名** `NN_hd_fK.png`
+> （非全图 `NN_hd.png`），Rust 侧 `load_hd_pngs` 按 `(f1, Vec<Vec<u8>>)` 注入帧列表，
+> `blit_sprite_rgba` 按 `frame % frames` 取对应 PNG；缺帧回退 PCX 调色板扩色。
+
+- 首屏策略：只载 1x（实测 335 文件 1.45 MB，预算 1.6 MB → PASS）+ 关键场景 2x（1.85 MB）；4x（2.38 MB）仅桌面非首屏分包。
+- WebP 转码（`assets_hd_pack/webp/`，实测 1,136,388 B ≈ 1.08 MB，较 1x PNG 减 25%；wasm 非首屏首选）。
+- 实际落盘体积以 `evidence/S7.6-size.log`（`build_wasm.ps1` 实测）为准。
+- 画质切换：`F4` 键循环（原版/HD），状态行显示当前画质 + 快捷键提示（`QualityMode::label()`）。
+
+**四键快捷键**（native + wasm + android）：`F1` 缩放模式 / `F2` 上采样滤波 / `F3` 边框样式 / `F4` 画质模式（原版/HD，feature `hd-8bit` 门控）。
 | PWA service worker | ≤ 10 KB | 预缓存清单 |

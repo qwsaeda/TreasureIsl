@@ -54,6 +54,7 @@
 - impl 方法数：11。
 
 ## 子步 5: diff
+- 实跑：`cargo test -p ti-core --test diff_saveload` 9/9 全绿
 - `crates/ti-core/tests/diff_saveload.rs`：9 个测试。
   - 差分测试 4 个：
     - `diff_read_write_all_combos`：5 角色 × 3 gold × 5 map_slot × 4 position × 2 version = 600 组合，read_slot/validate/write_slot 全等 + 往返；

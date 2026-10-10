@@ -65,6 +65,7 @@
 - 结构不同（struct 方法 vs 自由函数），行为与 oracle 逐位一致
 
 ## 子步 5：diff（crates/ti-core/tests/diff_menu.rs）
+- 实跑：`cargo test -p ti-core --test diff_menu` 4/4 全绿
 - `diff_all_combinations`：遍历 8 场景 × 12 事件 = 96 组合，oracle vs impl 逐位一致 ✓
 - `diff_reachable`：oracle_reachable_menu == impl reachable ✓
 - `semantic_index_new_game`：Index + Click(0) → SelectRole + Sfx::Press ✓

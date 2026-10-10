@@ -9,13 +9,13 @@
 //! - [`oracle_text_line`]：确定性占位文本（与 page 无关，文本内容属资源，oracle 只建模翻页状态）。
 //!
 //! 边界规则（spec §c，定死）：
-//! - `NextPage` 到最后一页 → 保持最后一页（`page` 不变，`sub_4085C` 行 54 语义）；
-//! - `PrevPage` 到第一页（`page==0`）→ 回最后一页（`page = total_pages - 1`，`sub_4085C` 行 40-43 循环语义）；
+//! - `NextPage` 到最后一页 → 保持最后一页（`page` 不变，`选项场景帧处理` 行 54 语义）；
+//! - `PrevPage` 到第一页（`page==0`）→ 回最后一页（`page = total_pages - 1`，`选项场景帧处理` 行 40-43 循环语义）；
 //! - `Close` → `None`；
 //! - `Open(kind)` → `page = 0`，`total_pages` 取 [`oracle_total_pages`]；
 //! - 无当前页（`None`）时 `NextPage`/`PrevPage` → `None`（界面未打开）。
 //!
-//! `total_pages`（spec §c 常量表，`Help=3` 有 `sub_41354` 行 202 证据，其余 1 为推测）：
+//! `total_pages`（spec §c 常量表，`Help=3` 有 `saveload` 行 202 证据，其余 1 为推测）：
 //! 见 [`oracle_total_pages`]。
 
 /// 消息/帮助/信息界面种类（spec §a 五类）。
@@ -29,7 +29,7 @@ pub enum MsgKind {
     Msgm,
     /// `help.map` + `switchpage.pcx` 多页帮助文本（主菜单「说明」case 3/4）。
     Help,
-    /// `information.map` 信息/角色状态界面（场景管理器 case 5，`sub_43400` 专属 vtable）。
+    /// `information.map` 信息/角色状态界面（场景管理器 case 5，`00029110:场景管理器` 专属 vtable）。
     Info,
 }
 
@@ -58,7 +58,7 @@ impl MsgKind {
 pub struct MsgPage {
     /// 界面种类。
     pub kind: MsgKind,
-    /// 当前页码（0 起，`sub_4085C` 的 `v3[22]` 语义，spec §c）。
+    /// 当前页码（0 起，`选项场景帧处理` 的 `v3[22]` 语义，spec §c）。
     pub page: u32,
     /// 总页数（来自 [`oracle_total_pages`]，spec §c 常量表）。
     pub total_pages: u32,
@@ -67,9 +67,9 @@ pub struct MsgPage {
 /// 消息/帮助/信息界面事件（spec §c 事件码归一）。
 ///
 /// - `Open(kind)`：打开某类界面（主菜单「说明」/据点事件/场景管理器 case 5），`page=0`；
-/// - `NextPage`：下一页（事件码 38，`sub_4085C` 行 52-61 语义，到末页保持）；
-/// - `PrevPage`：上一页（事件码 37，`sub_4085C` 行 40-43 循环语义，首页回末页）；
-/// - `Close`：关闭/返回（事件码 27，`sub_3F4E4`/`sub_4085C` 行 112/100 语义）。
+/// - `NextPage`：下一页（事件码 38，`选项场景帧处理` 行 52-61 语义，到末页保持）；
+/// - `PrevPage`：上一页（事件码 37，`选项场景帧处理` 行 40-43 循环语义，首页回末页）；
+/// - `Close`：关闭/返回（事件码 27，`帮助`/`选项场景帧处理` 行 112/100 语义）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MsgEvent {
     /// 打开某类界面（`MsgKind` 参数）。
@@ -103,8 +103,8 @@ impl MsgEvent {
 
 /// 各类界面的总页数（spec §c 常量表）。
 ///
-/// `Help = 3`（证据：`sub_41354` 行 202 `sub_3F8FC(..., 3, aF)` 第 4 参数 = 3 页）；
-/// 其余 4 类 `= 1`（**推测**：单页对话框，`sub_4661C` 翻页标志未逐点核对）。
+/// `Help = 3`（证据：`saveload` 行 202 `help(..., 3, aF)` 第 4 参数 = 3 页）；
+/// 其余 4 类 `= 1`（**推测**：单页对话框，`对话框文本行写入器` 翻页标志未逐点核对）。
 #[must_use]
 pub const fn oracle_total_pages(kind: MsgKind) -> u32 {
     match kind {
@@ -117,8 +117,8 @@ pub const fn oracle_total_pages(kind: MsgKind) -> u32 {
 ///
 /// 规则（spec §c，边界定死）：
 /// - `Open(kind)` → `Some(MsgPage { kind, page: 0, total_pages: oracle_total_pages(kind) })`；
-/// - `NextPage`：`cur=None` → `None`；否则 `page+1`，到末页（`page == total-1`）→ 保持（`sub_4085C` 行 54）；
-/// - `PrevPage`：`cur=None` → `None`；否则 `page==0` → 回末页（`total-1`，`sub_4085C` 行 40-43 循环）；
+/// - `NextPage`：`cur=None` → `None`；否则 `page+1`，到末页（`page == total-1`）→ 保持（`选项场景帧处理` 行 54）；
+/// - `PrevPage`：`cur=None` → `None`；否则 `page==0` → 回末页（`total-1`，`选项场景帧处理` 行 40-43 循环）；
 ///   `total==1` 时 `page` 恒 0，无变化；
 /// - `Close` → `None`（`cur=None` 时仍 `None`，幂等）。
 #[must_use]

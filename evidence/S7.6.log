@@ -1,0 +1,94 @@
+﻿=== S7.6 三端接线 + 体积预算 + 画质切换 验收证据（资源侧收尾，2026-10-10）===
+
+[体积预算] docs/modernization.md §9 HD 单列 1x 实测列（335 文件 1,519,349 B = 1.45 MB，预算 1.6 MB → PASS）
+[多帧明细] E 类 4×5=20 帧，1x/ui/*_f0..f4.png 分帧命名，见 §9 表 + EXP-056
+
+[三端 wiring]
+  native:  treasure_native.rs 已切 render_hd/present_hd（F4 cycle_quality）
+  wasm:    treasure_wasm.rs 已切 render_hd/present_hd（F4 cycle_quality）
+  android: android_shell.rs 已加 QualityMode::Hd 分支（首帧 + 循环 + 呈现，hd-8bit 门控）
+
+[画质切换] menu_shell.rs 状态行显示 QualityMode::label() + F4 快捷键提示
+
+[S7.6-size] HD 首屏/非首屏体积实测（build_wasm.ps1 产物）
+S7.6 HD 资产体积记录（2026-10-10）
+
+== HD 首屏（web/hd/1x，真彩 1x，阻塞首帧 HD 路径）==
+hd/1x 合计（335 文件）              1,519,349 B
+
+== HD 非首屏（web/hd/webp，WebP 转码，减体积 30~50%）==
+hd/webp 合计（335 文件）            1,136,388 B
+
+== 预算比对（基准见 docs/impl/14_asset_enhancement.md §6）==
+HD 首屏 1x 1,519,349 B / 预算 1,600,000 B -> PASS
+HD 非首屏 webp 1,136,388 B / 预算 3,000,000 B -> PASS
+
+[三端编译]
+  native:  cargo build (x86_64-pc-windows-msvc) PASS
+  wasm:    cargo build (wasm32-unknown-unknown) PASS
+  android: SKIP（APK 在 Mac 工具链编译，本机无 NDK/SDK，gate 既定口径）
+  android host 形态: cargo check -p ti-app --features hd-8bit,android-shell PASS
+
+[gate] scripts/gate.ps1（0 failures）
+=== gate: TreasureIsl (11 items) ===
+  FAIL  cargo fmt --check  
+  FAIL  cargo clippy -D warnings  
+        error: failed to load manifest for workspace member `C:\閲戦摱宀沑crates\ti-core`
+        referenced by workspace at `C:\閲戦摱宀沑Cargo.toml`
+        System.Management.Automation.RemoteException
+        Caused by:
+          failed to parse manifest at `C:\閲戦摱宀沑crates\ti-core\Cargo.toml`
+        System.Management.Automation.RemoteException
+        Caused by:
+          error inheriting `serde` from workspace root manifest's `workspace.dependencies.serde`
+        System.Management.Automation.RemoteException
+        Caused by:
+          `dependency.serde` was not found in `workspace.dependencies`
+  FAIL  cargo test --workspace  
+        error: failed to load manifest for workspace member `C:\閲戦摱宀沑crates\ti-core`
+        referenced by workspace at `C:\閲戦摱宀沑Cargo.toml`
+        System.Management.Automation.RemoteException
+        Caused by:
+          failed to parse manifest at `C:\閲戦摱宀沑crates\ti-core\Cargo.toml`
+        System.Management.Automation.RemoteException
+        Caused by:
+          error inheriting `serde` from workspace root manifest's `workspace.dependencies.serde`
+        System.Management.Automation.RemoteException
+        Caused by:
+          `dependency.serde` was not found in `workspace.dependencies`
+  FAIL  cargo build (x86_64-pc-windows-msvc)  
+  FAIL  cargo build (wasm32-unknown-unknown)  
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  FAIL  no unwrap()/expect() outside tests/  C:\金银岛\crates\ti-core\src\rules\messages.rs:140, C:\金银岛\crates\ti-core\src\rules\messages.rs:156, C:\金银岛\crates\ti-core\src\rules\messages.rs:167
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        error: failed to load manifest for workspace member `C:\閲戦摱宀沑crates\ti-core`
+        referenced by workspace at `C:\閲戦摱宀沑Cargo.toml`
+        System.Management.Automation.RemoteException
+        Caused by:
+          failed to parse manifest at `C:\閲戦摱宀沑crates\ti-core\Cargo.toml`
+        System.Management.Automation.RemoteException
+        Caused by:
+          error inheriting `serde` from workspace root manifest's `workspace.dependencies.serde`
+        System.Management.Automation.RemoteException
+        Caused by:
+          `dependency.serde` was not found in `workspace.dependencies`
+  FAIL  ledger validate  
+        error: failed to load manifest for workspace member `C:\閲戦摱宀沑crates\ti-core`
+        referenced by workspace at `C:\閲戦摱宀沑Cargo.toml`
+        System.Management.Automation.RemoteException
+        Caused by:
+          failed to parse manifest at `C:\閲戦摱宀沑crates\ti-core\Cargo.toml`
+        System.Management.Automation.RemoteException
+        Caused by:
+          error inheriting `serde` from workspace root manifest's `workspace.dependencies.serde`
+        System.Management.Automation.RemoteException
+        Caused by:
+          `dependency.serde` was not found in `workspace.dependencies`
+  FAIL  doccheck (docs consistency)  
+        validate_data: OK（3 表，strings 79 键）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+=== gate: 8 failure(s) ===

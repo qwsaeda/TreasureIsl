@@ -16,11 +16,16 @@ ti-formats.workspace = true
 # 避免 ~500 KB 编码器体积（wasm 800 KB 预算，docs/plan-s4.md §S4.3）。
 # 产物由 build_assets 离线预转码到 assets_out/audio/，运行时直接播放 OGG 文件。
 opus-pure = { workspace = true, optional = true }
+# S7.5 HD 资产 PNG 解码（feature `hd-8bit`）：§5.9 定案清单的 `png`，
+# 仅 HD 渲染路径使用；默认构建不进依赖树（EXP-046 门控模式）。
+png = { workspace = true, optional = true }
 
 [features]
 default = []
 # OGG/Opus 编码能力（S1.7b）
 ogg = ["dep:opus-pure"]
+# S7.5 RGBA8 HD 帧缓冲 + PNG 解码（默认关，RGB565 原路径逐像素不变）
+hd-8bit = ["dep:png"]
 
 [lints]
 workspace = true

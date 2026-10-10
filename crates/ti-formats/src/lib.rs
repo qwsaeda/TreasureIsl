@@ -16,6 +16,7 @@ pub mod lucency;
 pub mod macros;
 pub mod mapfile;
 pub mod pcx;
+pub mod resource_names;
 pub mod save;
 pub mod terrain;
 
@@ -27,5 +28,8 @@ pub use ini::{Ini, IniEntry};
 pub use lucency::{Entry, Package, name_key};
 pub use mapfile::{MapControl, MapHeader, MapScene};
 pub use pcx::Image;
+pub use resource_names::{
+    NameSource, ResourceNames, export_csv, export_entries, mapinfo_filenames,
+};
 pub use save::{SaveEnvelope, Settings};
 pub use terrain::{CellRecord, ConnectionRecord, TerrainMap};

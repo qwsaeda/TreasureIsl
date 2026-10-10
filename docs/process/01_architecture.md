@@ -1,0 +1,104 @@
+# 架构规范（Architecture）
+
+## 1. 分层与依赖方向
+
+```
+┌─────────────────────────────────────────────┐
+│ crates/ti-app        表现层：场景 / 控件 / 输入 / 三端 bin │
+├─────────────────────────────────────────────┤
+│ crates/ti-core       玩法层：纯逻辑，零 IO、可单测 │
+├─────────────────────────────────────────────┤
+│ crates/ti-platform   平台层：窗口 / 帧缓冲 / 音频 / 存储 │
+├─────────────────────────────────────────────┤
+│ crates/ti-formats    格式层：pak / PCX / 字体 / 地图 / 存档解析 │
+└─────────────────────────────────────────────┘
+        ↕ 单向依赖，只能向下，禁止反向或跨层跳跃
+```
+
+- **玩法层零 IO 硬约束**：`ti-core` 不得依赖任何平台后端，因此能在无窗口环境跑全流程回归（`treasure-headless`）。
+- **格式层只做编解码**，不含玩法判断、不含渲染。
+- **表现层不含数值**：所有金币/伤害/价格来自 `ti-core::rules`，表现层只画（详见 `02_conventions.md` §1）。
+- **逆向参照物不进接口**：`docs/facts`/`ref/pseudocode` 不出现在任何 `pub` API 签名或 trait 约束里。
+
+## 2. crate 现状（2026-10）
+
+| crate | 职责 | 备注 |
+|---|---|---|
+| `ti-formats` | 资源格式解析/序列化（pak/lpk、PCX、字体、`.Map`、存档） | 真实资产，保留 |
+| `ti-core` | 玩法规则（菜单/选人/选图/地图/贸易/建造/战斗/卡牌/存读档/消息/RNG） | 含 67 处「推测」（2026-10-10 实数，含 oracle+rules+tests），S8 重写 |
+| `ti-platform` | 帧缓冲、输入、音频、存储、设置 | |
+| `ti-app` | 场景状态机、UI 控件、三端 bin（native/wasm/android/headless） | 含架构债，S8 重构 |
+| `ti-tools` | 离线工具：unpak / map2json / build_assets / controls / classify / specskel / doccheck | 工具链落点 |
+
+## 3. trait 约定
+
+玩法层对每个系统定义一个「会话」对象（可持有状态），表现层只调它的方法，不重抄数值。
+
+```rust
+// 惯例：会话 struct + 单方法入口；表现层只见 trait。
+pub trait Scene {
+    /// 输入事件 → 是否消费了该事件（false = 未消费，交给全局）
+    fn handle(&mut self, input: &InputEvent) -> bool;
+    /// 渲染到帧缓冲
+    fn render(&mut self, fb: &mut Framebuf);
+}
+```
+
+约定：
+
+1. **单一入口 trait**（`Scene` / `Widget`），不用多态字段堆；
+2. 会话状态在 `struct` 里，不用全局 `static mut`；
+3. trait 方法返回 `bool`（是否消费事件）或小枚举（`Flow`），不返回 `Result<(), E>` 给表现层——错误在玩法层内部收敛；
+4. 新增系统 = 加一个 `rules/<sys>.rs` + 一个会话 struct + 单测，不改其他文件。
+
+## 4. 现成库清单（**不自造轮子**）
+
+引入新依赖前先查此表；表里没有的，先在 `docs/experience/index.md` 记「查过 crates.io 无合适库」再自造。
+
+| 需求 | 用这个 | 版本 | 备注 |
+|---|---|---|---|
+| 错误类型 | `thiserror` | 2 | 已用 |
+| 序列化（存档/配置） | `serde` + `serde_json` | 1 | 已用；**不要** `bincode`（存档要人可读+可迁移） |
+| 解压 | `flate2` | 1 | 已用 |
+| PNG 解码 | `png` | 0.17 | 已用（HD 资产，可选 feature） |
+| 窗口 / 渲染 | `macroquad` | 0.4 | 已用，三端统一 |
+| OGG/Opus 编码 | `opus-pure` | 0.2 | 已用，纯 Rust |
+| 数据表解析 | `serde_json` + `include_str!` | 1 | 数值/文本表走 JSON，不写进 .rs |
+| **随机** | `rand` + `rand_pcg` | 0.8/0.3 | 可复现 PCG；玩法层禁止 `thread_rng`（S8.7 落地引入，当前过渡实现为自造 LCG） |
+| **哈希** | `fnv` 或 `twox-hash` | 1/2 | 容器名→key；不要手写 FNV（S8.7 落地引入） |
+| **文本格式化** | `write!` / `format!` | std | 禁 `format!("{}", x)` 无占位 |
+| **时间** | `std::time::Instant` | std | 帧计时 |
+| **随机洗牌** | `rand::seq::SliceRandom` | 0.8 | 卡牌抽牌，禁止手写 Fisher-Yates |
+
+> **新增依赖判据**：① crates.io 有活跃维护的库 → 用；② 无 → 自造但必须有单测；
+> ③ 引入需在 `Cargo.toml` 注释写明「为什么不用现有方案」（`docs/style.md` §5.9 同规则）。
+
+## 5. 数据驱动（数值与文本一律进 data/）
+
+**原则：调平衡不改代码。**
+
+```
+assets/data/
+  balance.json      # 金币上限、价格表、BOSS 档、伤害系数、回合上限
+  strings.json      # 按 key 的中文文本（i18n 雏形）
+  scenes.json       # 场景 id / 名称 / 布局常量
+  controls.json     # 控件表（源自 ref/controls.json，接入控件层）
+```
+
+加载约定：
+
+1. `include_str!` 进包（wasm 免 IO），或用 `ti_platform::storage` 按平台加载；
+2. 反序列化失败 = **启动即报错**，不 fallback 到默认值（避免「能跑但数值错」）；
+3. 解析结果进 `OnceLock`/`LazyLock`，每帧不重解析。
+
+**收益**：数值调整 = 改 JSON = 可 diff、可评审、免编译；LLM 不再有机会「顺手改数值」。
+
+## 6. 三端一致性
+
+| 层 | native | wasm | android |
+|---|---|---|---|
+| 玩法 | 同一 `ti-core` | 同一 `ti-core` | 同一 `ti-core` |
+| 表现 | `GameApp` + macroquad 窗口 | `GameApp` + WebAudio | `GameApp` + AAudio |
+| 资源 | `data/` | `web/` 打包 | `assets/` |
+
+三端**共用同一 `GameApp`**，端差异只在 bin 入口的资源加载与音频后端。禁止在玩法/表现层写 `#[cfg(target_os)]` 业务分支。

@@ -1,0 +1,74 @@
+=== S8.3.b 验收日志：经济系统（trade/build）按 docs/business 重写 ===
+
+--- cargo test -p ti-core --test rules_trade --test rules_build ---
+
+running 12 tests
+test build_debits_and_raises_cap ... ok
+test build_cost_scales_with_level ... ok
+test build_insufficient_no_state_change ... ok
+test build_leveraged_from_balance_table ... ok
+test build_respects_max_level ... ok
+test build_unlocks_monotonic_cap ... ok
+test build_unknown_building_rejected ... ok
+test deposit_withdraw_move_gold ... ok
+test deposit_insufficient ... ok
+test settle_overflow_moves_excess_to_deposit ... ok
+test settle_overflow_rate_scales ... ok
+test withdraw_clamps_to_deposit ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 11 tests
+test trade_avg_buy_price_is_cost_over_qty ... ok
+test trade_insufficient_gold ... ok
+test trade_buy_debits_gold_adds_goods ... ok
+test trade_leveraged_from_balance_table ... ok
+test trade_profit_uses_markup_margin ... ok
+test trade_qty_bounds_enforced ... ok
+test trade_sell_credits_gold_removes_goods ... ok
+test trade_sell_price_from_markup ... ok
+test trade_sell_no_stock ... ok
+test trade_sell_zero_qty_sells_all ... ok
+test trade_unknown_good_rejected ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling ti-core v0.1.0 (C:\金银岛\crates\ti-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.39s
+     Running tests\rules_build.rs (target\debug\deps\rules_build-370e21281d14490a.exe)
+     Running tests\rules_trade.rs (target\debug\deps\rules_trade-5b77eeb7568b116b.exe)
+
+=== 判据核对 (ledger S8.3.b dod) ===
+1. TradeLedger/BuildManager 数值全从 balance().trade/build 注入  [OK]
+2. docs/business/economy.md 可测规则各有单测  [OK]
+   - trade: 买卖结算/qty 越界/售价=buy*markup/金币不足/无库存/均价/利润 12 项
+   - build: 建造扣金抬上限/造价随等级/unknown建筑/金不足不改状态/上限单调/等级上限/存取守恒/溢出结算 11 项
+3. 去除 oracle 依赖（不再取推测价格/成本表）；oracle 冻结  [OK]
+4. 删除过期 diff_trade.rs/diff_build.rs（oracle 对拍不再有意义）  [OK]
+5. cargo test -p ti-core 全绿  [OK: 23 项 + 其余]
+6. gate 10 项全绿  [OK]
+
+--- scripts/gate.ps1 ---
+=== gate: TreasureIsl (10 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6��APK �� Mac ���룬������ NDK/SDK���û��ȶ����������ȣ�)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x ��ʽ���������������)
+        ledger: 77 tasks, 64 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 80 docs, 37 facts, 50 experiences, 72 task refs, 2 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK��3 ����strings 44 ����
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json һ�£�2041 ��¼ / 20 ������
+  PASS  gen_layout --check (idempotent)
+        check_hardcode: 75 hit(s) in 83 file(s)
+  PASS  check_hardcode (warn mode; hardcode debt tracked in S8.3/S8.4)
+=== gate: 0 failure(s) ===

@@ -6,7 +6,7 @@
 //! - [`oracle_build_cost`]：建造成本公式（`base × level`，spec §b 推测占位）；
 //! - [`oracle_can_afford`]：金量是否足够（spec §b）；
 //! - [`oracle_build`]：建造操作（扣金 + 升级，spec §b/c）；
-//! - [`oracle_deposit`] / [`oracle_withdraw`]：银行存取（spec §c，`sub_1B9AC` 双槽位）；
+//! - [`oracle_deposit`] / [`oracle_withdraw`]：银行存取（spec §c，`银行` 双槽位）；
 //! - 错误 [`BuildErr`]（`Insufficient` / `InvalidLevel`）。
 //!
 //! 行为确定（同输入逐位相同），不允许 rand。
@@ -15,7 +15,7 @@
 //! ```text
 //! cost = base_cost(kind) × (level + 1)
 //! ```
-//! 各建筑基础成本（spec §a 占位，对照 `sub_503F0` 奖励阶梯）：
+//! 各建筑基础成本（spec §a 占位，对照 `投资` 奖励阶梯）：
 //! - Castle = 1000
 //! - Investment = 500
 //! - Bank = 200
@@ -41,7 +41,7 @@ impl Building {
         [Self::Castle, Self::Investment, Self::Bank, Self::Fort]
     }
 
-    /// 基础建造成本（spec §a 占位，对照 `sub_503F0` 奖励阶梯量级）。
+    /// 基础建造成本（spec §a 占位，对照 `投资` 奖励阶梯量级）。
     #[must_use]
     pub const fn base_cost(self) -> u32 {
         match self {
@@ -53,10 +53,10 @@ impl Building {
     }
 }
 
-/// 银行（金量，spec §c，`sub_1B9AC` 双槽位金 `+1032/+1040` 的 oracle 化）。
+/// 银行（金量，spec §c，`银行` 双槽位金 `+1032/+1040` 的 oracle 化）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Bank {
-    /// 当前金量（上限 999999，`sub_503F0` 行 114/116）。
+    /// 当前金量（上限 999999，`投资` 行 114/116）。
     pub gold: u32,
 }
 
@@ -91,7 +91,7 @@ pub fn oracle_can_afford(bank: Bank, cost: u32) -> bool {
     bank.gold >= cost
 }
 
-/// oracle：建造操作（spec §b/c，`sub_1B9AC` 存款/取款 + `sub_503F0` 奖励的 oracle 化）。
+/// oracle：建造操作（spec §b/c，`银行` 存款/取款 + `投资` 奖励的 oracle 化）。
 ///
 /// 规则：
 /// - `level > 10` → `InvalidLevel`（上限 10 级，**推测**）；
@@ -113,7 +113,7 @@ pub fn oracle_build(bank: Bank, kind: Building, level: u32) -> Result<Bank, Buil
     Ok(Bank::new(bank.gold - cost))
 }
 
-/// oracle：存款（spec §c，`sub_1B9AC` `a2==0, mode==2` 方向，金从流动→银行）。
+/// oracle：存款（spec §c，`银行` `a2==0, mode==2` 方向，金从流动→银行）。
 ///
 /// `amount > bank.gold` → `Insufficient`（不能存超过持有的金）；
 /// 成功 → 金量减少 `amount`（银行金增加，oracle 只跟踪流动金）。
@@ -128,9 +128,9 @@ pub fn oracle_deposit(bank: Bank, amount: u32) -> Result<Bank, BuildErr> {
     Ok(Bank::new(bank.gold - amount))
 }
 
-/// oracle：取款（spec §c，`sub_1B9AC` `a2!=0, mode==2` 方向，金从银行→流动）。
+/// oracle：取款（spec §c，`银行` `a2!=0, mode==2` 方向，金从银行→流动）。
 ///
-/// 金量上限 999999（`sub_503F0` 行 114/116，`0xF423F`）；
+/// 金量上限 999999（`投资` 行 114/116，`0xF423F`）；
 /// 成功 → 金量增加 `amount`（截断至 999999）。
 ///
 /// 永不失败（金量只增不减，上限截断），返回新 `Bank`。

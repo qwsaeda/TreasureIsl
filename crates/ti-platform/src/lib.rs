@@ -10,6 +10,9 @@ pub mod audio_asset;
 pub mod backend;
 pub mod error;
 pub mod gfx;
+/// S7.5：HD 资产 PNG 解码（feature `hd-8bit` 门控，默认不编译）。
+#[cfg(feature = "hd-8bit")]
+pub mod hd_png;
 pub mod input;
 pub mod mod_pcm;
 #[cfg(feature = "ogg")]

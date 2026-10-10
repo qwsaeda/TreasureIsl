@@ -53,7 +53,7 @@ damage(seed, atk) = (seed × 2654435761) % (atk + 1) + 1
 - `atk = 0` → 恒 1（`% 1 = 0` + 1）。
 - `seed = 0` → 恒 1。
 - 纯确定性（同 seed 同 atk 同结果），无 rand 库。
-- 常数 `2654435761`（K = 0x9E3779B1，Knuth 乘子）。
+- 常数 `2654435761`（K = 0x9E3779B1，占位常数，非标准 Knuth，exe 实测值）。
 
 > 该公式为 oracle 占位（推测），exe 实际 RNG 归 `docs/design/persistence.md` §RNG 对齐。
 
@@ -149,8 +149,8 @@ struct BattleSession {
 
 ```
 new vs 对象 (0x474 bytes)
-sub_572E4 构造:
-    sub_43B8C 构造基类（设 vtable）
+战斗对象构造 构造:
+    场景对象 构造基类（设 vtable）
     *a1 = &off_73A2C              // vs 场景 vtable
     a1[256..261] = 0              // 6 个战斗状态字段清零
     a1[277..284] = 0              // 8 个兵种/HP 字段清零
@@ -162,8 +162,8 @@ sub_572E4 构造:
 
 | 步骤 | 动作 | 状态变化 |
 |---|---|---|
-| 1 | 主地图事件码 6 触发 | `sub_31408` 判定 |
-| 2 | 建 vs 对象 | `sub_572E4` + `ui.pak+vs.Map` + `sub_4BB34` 初始化 |
+| 1 | 主地图事件码 6 触发 | `0002101C:帧更新` 判定 |
+| 2 | 建 vs 对象 | `战斗对象构造` + `ui.pak+vs.Map` + `cards` 初始化 |
 | 3 | 进入战斗态 | `a1+716 = 25` |
 | 4 | 玩家点「攻击」 | `BattleSession::step()` 单回合 |
 | 5 | 循环直到 `outcome != None` | 渲染 HP/回合数/胜方 |
@@ -191,7 +191,7 @@ exe 内无独立兵种数值表，推测兵种 HP/atk 由 BOSS 档决定。
 
 ### 2.1 卡牌效果类型
 
-`sub_3D1B4` 效果码 1..4 → 语义（推测映射）：
+`效果类型码解码` 效果码 1..4 → 语义（推测映射）：
 
 | 效果码 | Rust 枚举 | 行为 |
 |---|---|---|
@@ -248,7 +248,7 @@ event_to_card(event_id, catalog):
 
 ### 2.5 事件生成
 
-主地图帧更新 case 3（`sub_2101C` 行 2841-2851）：
+主地图帧更新 case 3（`主地图帧更新` 行 2841-2851）：
 
 ```
 // 1. 生成原始 event_id
@@ -263,7 +263,7 @@ if event_id ∈ {4, 13, 14, 15}:
 MEMORY[0x100081170] = event_id
 
 // 4. 卡牌库存门控
-card_state = sub_313D8(ctrl + 72)
+card_state = 0002101C:帧更新(ctrl + 72)
 if 卡牌库存 >= 10:
     装载 ui.pak + card.Map + bigcard.Map
     a1+716 = 4                     // 卡牌态
@@ -298,7 +298,7 @@ if 卡牌库存 >= 10:
 | 19 | 由 15 重映射 | ✓ |
 | 20..25 | 直接 | ✓ |
 
-全部 25 个 id 都有处理路径（`sub_32960` 统一存储），覆盖率 100%。
+全部 25 个 id 都有处理路径（`cards` 统一存储），覆盖率 100%。
 
 ### 2.8 卡牌效果应用
 
@@ -324,7 +324,7 @@ match event_to_card(event_id, catalog):
 
 ### 2.9 卡牌价格表
 
-`sub_19F9C` 初始化 17 组 (price, stock) 对：
+`卡牌对象` 初始化 17 组 (price, stock) 对：
 
 ```
 [7, 9, 62, 9, 117, 9, 7, 53, 62, 53, 117, 53, 7, 97, 62, 97, 117, 97, 62, 141, 0]
@@ -352,9 +352,9 @@ match event_to_card(event_id, catalog):
 |---|---|
 | 场景资源 | `card.Map` + `bigcard.Map` |
 | 状态码 | `a1+716 = 4` |
-| 卡牌对象 ctor | `sub_19F9C` |
-| 场景 ctor | `sub_3D4C8`（`srand` + `sub_3EB24` 读 settings） |
-| 场景入口 wrapper | `sub_45E78` |
+| 卡牌对象 ctor | `卡牌对象` |
+| 场景 ctor | `卡牌场景`（`srand` + `设置读取` 读 settings） |
+| 场景入口 wrapper | `卡牌场景入口` |
 | 翻页按钮 | `switchpage.pcx` |
 
 ### 2.11 卡牌引擎结构
@@ -395,5 +395,5 @@ CardState.hp 变化（Damage/Heal）
 
 战斗胜利后：
 - 播 `victory.wav`
-- 兵种奖励阶梯（`sub_503F0`）：+15000 ~ +50000 金
+- 兵种奖励阶梯（`投资`）：+15000 ~ +50000 金
 - 回主菜单（`advance(2)` → 状态 0）

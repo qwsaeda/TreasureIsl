@@ -9,6 +9,16 @@ description = "TreasureIsl 玩法核心：数值、规则、场景状态机（�
 [dependencies]
 ti-formats.workspace = true
 serde.workspace = true
+# S8.1：assets/data/*.json 运行时反序列化（data.rs 的 OnceLock 加载层，
+# include_str! 进包保证 wasm 免运行时 IO；解析失败硬错误不 fallback）
+serde_json.workspace = true
+# S8.7：RNG 库化（`docs/business/persistence.md` §RNG「目标库复用」，替手写 LCG）
+# 玩法层只经 `rules::rng` 取随机（禁 `thread_rng` 不可复现）；`rand_pcg` = PCG64 可播种。
+# EXP-057：rand_pcg 0.9 的 PCG64 = Lcg128Xsl64（`Lcg128Xsl64::new(state, stream)` 确定性
+# 播种 + `RngCore::next_u64()` 取值）。仅引 `rand_pcg` + `rand_core`（RngCore trait），
+# `rand` 主 crate 未使用，不引未用依赖。
+rand_pcg.workspace = true
+rand_core.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

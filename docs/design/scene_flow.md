@@ -20,16 +20,16 @@
 
 ### 装载器
 
-每个场景有独立的装载器函数，共同模式：`new 场景对象 → sub_43B8C 构造（设 vtable） → sub_43D54 关联 UI → 虚调用 +4 装载资源`。
+每个场景有独立的装载器函数，共同模式：`new 场景对象 → 场景对象 构造（设 vtable） → 场景对象关联 关联 UI → 虚调用 +4 装载资源`。
 
 | 场景 | 装载函数 | 额外加载 |
 |---|---|---|
-| Intro | `sub_42574` | `ui.pak` + `intro.Map` |
-| SelectRole | `sub_3ECDC` | `ui.pak` + `selectrole.Map` + `glpics.pak` + 11 控件 |
-| SelectMap | `sub_402D8` | `ui.pak` + `selectmap.Map` + 探测 `glmapm01/02/03.Map` |
-| Index | `sub_40D80` | `ui.pak` + `index.Map` + `glpics.pak` + `data/gl.rec` 魔数校验 |
-| MainMap | `sub_2077C` | `glpics.pak` + `switch(dword_7FB6C)` 选 `glmapm0x.Map` + `main.Map` + `ui.pak` + 29 按钮 |
-| Vs | `sub_572E4` | `ui.pak` + `vs.Map` |
+| Intro | `intro` | `ui.pak` + `intro.Map` |
+| SelectRole | `selectrole` | `ui.pak` + `selectrole.Map` + `glpics.pak` + 11 控件 |
+| SelectMap | `selectmap` | `ui.pak` + `selectmap.Map` + 探测 `glmapm01/02/03.Map` |
+| Index | `index` | `ui.pak` + `index.Map` + `glpics.pak` + `data/gl.rec` 魔数校验 |
+| MainMap | `main` | `glpics.pak` + `switch(dword_7FB6C)` 选 `glmapm0x.Map` + `main.Map` + `ui.pak` + 29 按钮 |
+| Vs | `战斗对象构造` | `ui.pak` + `vs.Map` |
 
 ---
 
@@ -208,7 +208,7 @@ oracle_next_state(当前状态, 触发码) → (新状态, 目标场景)
 ### 场景码切换函数
 
 ```
-sub_3DC04(ctx, scene_code):
+00029110:场景管理器;0003D4C8:设置;0003F4E4:帮助;0004085C:选项;00041354:主菜单;0004220C:存读档;00042378:继续;000427E8:退出;000428F0:新游戏(ctx, scene_code):
   取场景管理器单例
   虚调用+4 判断是否接受切换
   接受 → 销毁旧场景（+8 虚函数 + vtable[0] 传 1）

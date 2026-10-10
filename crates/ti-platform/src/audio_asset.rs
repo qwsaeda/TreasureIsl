@@ -2,7 +2,7 @@
 //!
 //! 实测（`data/music.lpk` 6 条）：
 //! - 5 条 `RIFF/WAVE`（8000Hz/8bit 单声道等）；
-//! - 1 条 **MOD 音乐**（`804615c2.bin`），头部为 **`INHL.MOD`** + 标题（偏移 `0x14`）
+//! - 1 条 **MOD 音乐**（`glmusic.mod`，key `0x8046_15C2`，S6.5 业务名），头部为 **`INHL.MOD`** + 标题（偏移 `0x14`）
 //!   `"I Need Her Love"`，**非标准 `ProTracker` 20 字节签名布局**，需按原版模块播放器解析。
 //!
 //! 交付：素材识别 + WAV 抽取 + MOD 头部规格 + PCM 归一化转储。

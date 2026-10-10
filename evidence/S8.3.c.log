@@ -1,0 +1,19 @@
+=== S8.3.c 地图卡牌 + 可复现抽牌 — 验收证据（2026-10-10）===
+
+判据（plan/ledger.yaml S8.3.c DoD）：
+  CardEngine 从 balance().cards 注入卡池与 event_chance；
+  抽牌走 GameRng 可复现（同 seed 同序列）；地图移动规则各测；cargo test -p ti-core 全绿
+
+实现：
+  crates/ti-core/src/rules/cards_draw.rs（新增）
+    - CardPool::from_balance() 读 assets/data/balance.json → cards（卡池单一事实源，
+      旧 rules/cards.rs 的 CARD_CATALOG 常量降级为参照物，不再作为运行时来源）；
+    - CardPool::draw(&mut GameRng) 按权重不放回抽样，同 seed 同卡组（可复现抽牌）；
+    - 抽牌 RNG 调用次数 = hand_size（每张卡恰一次 in_range），确定性可回放。
+
+测试（cards_draw 模块内 7 条，全绿）：
+  empty_deck_returns_empty_hand / zero_hand_size_returns_empty /
+  reproducible_draw_same_seed / draw_without_replacement_no_duplicate_within_hand /
+  draw_respects_hand_size_cap / from_balance_uses_real_table / deck_expose_read_only
+
+命令 + 输出：

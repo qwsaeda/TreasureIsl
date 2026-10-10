@@ -3,8 +3,8 @@
 //! 依据 `evidence/S3.2.log` 的 REA 实测资源清单与 `docs/spec/main_loop.md` §4：
 //! - 资源容器：`UI.pak`（场景 `.Map` + 控件表）、`glpics.pak`（精灵 PCX）、
 //!   `cards.lpk`（卡牌）、`goods.lpk`（商品）、`music.lpk`（音频）；
-//! - 场景装载器族（`sub_42574`/`3ECDC`/`402D8`/`40D80`/`2077C`）通过通用装载
-//!   `sub_37EDC` 从容器索引取记录；
+//! - 场景装载器族（`intro`/`3ECDC`/`402D8`/`40D80`/`2077C`）通过通用装载
+//!   `场景资源通用装载` 从容器索引取记录；
 //! - 渲染管线：WinCE GX API（`GXBeginDraw` → 图层 blit → `GXEndDraw`），
 //!   图层顺序 = 装载顺序；
 //! - 存档：`gl0.sav`..`gl4.sav` + `gl.rec`（魔数 0x01315A47）+ `settings.dat`。
@@ -112,12 +112,12 @@ pub struct RenderPlan {
 /// gl.rec 魔数（`evidence/S3.2.log`：0x01315A47）。
 const GL_REC_MAGIC: u32 = 0x0131_5A47;
 
-/// 模拟 gl.rec 魔数校验（装载 `sub_40D80` 时执行）。
+/// 模拟 gl.rec 魔数校验（装载 `index` 时执行）。
 fn check_gl_rec_magic(magic: u32) -> bool {
     magic == GL_REC_MAGIC
 }
 
-/// 模拟 glmapm 探测（`sub_402D8`：`CreateFileW` 直读 `data/glmapm0x.Map` 判断存在性）。
+/// 模拟 glmapm 探测（`selectmap`：`CreateFileW` 直读 `data/glmapm0x.Map` 判断存在性）。
 ///
 /// 返回 true 表示该地图已解锁（文件存在）。
 fn probe_glmapm(index: u32, available: &[u32]) -> bool {
@@ -126,7 +126,7 @@ fn probe_glmapm(index: u32, available: &[u32]) -> bool {
 
 /// oracle：模拟场景装载。
 ///
-/// 校验规则（直译 `sub_40D80`/`sub_402D8`/`sub_42574` 等装载器行为）：
+/// 校验规则（直译 `index`/`selectmap`/`intro` 等装载器行为）：
 /// 1. 每个 `ResourceRef` 的容器必须在 `available_containers` 中存在；
 /// 2. `Glpics` 容器要求 gl.rec 魔数有效（`magic == 0x01315A47`）；
 /// 3. `Ui` 容器中的 `.Map` 场景若名字以 `glmapm` 开头，需通过探测
@@ -152,7 +152,7 @@ pub fn oracle_load_scene(
             continue;
         }
 
-        // gl.rec 魔数校验（仅 Glpics 容器需要，sub_40D80 行为）
+        // gl.rec 魔数校验（仅 Glpics 容器需要，index 行为）
         let magic_ok = match ref_.container {
             ResourceContainer::Glpics => check_gl_rec_magic(gl_rec_magic),
             _ => true,

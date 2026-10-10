@@ -1,6 +1,6 @@
 # 经验库 · code
 
-> 代码级教训：文档与实现不一致、类型转换陷阱。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.mdindex.md。
+> 代码级教训：文档与实现不一致、类型转换陷阱。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 
 ### EXP-015 代码：clippy pedantic 反复触发的模式（workspace `-D warnings`）
 - **`assert!(false, ...)`** → 触发 `assertions_on_constants`（`all` 组）。改用 `assert!(matches!(ev, Pattern { .. }))` + `if let Pattern { .. } = ev { ... }`，不留不可达分支。
@@ -43,3 +43,77 @@
 - 验证：cargo test -p ti-platform --test gfx_dirty 7/7（含跳帧计数断言）；桌面 stats 实测 uploads=0 skipped=60（空闲菜单 100% 跳帧）。
 - 教训：macroquad 纹理 API 的「部分上传」能力藏在 update_part（需构造 Image），不在 from_rgba8/update 里；做脏区域优化时先确认目标引擎的部分上传粒度（行带 vs 像素），再选脏标记级别。
 
+
+### EXP-051 工具：PowerShell `Set-Content` / `-Raw` 重写会破坏 UTF-8 源码（本轮踩 2 次）
+- 现象：用 `Get-Content -Raw` + 字符串替换 + `Set-Content` 改 `.rs` / `.py` 文件后，中文注释变成乱码且**换行被合并**（`//! a?//! b?//! c?` 挤成一行）；`.py` 直接报 `Non-UTF-8 code starting with '\xe3' in file ... but no encoding declared`。
+- 根因：Windows PowerShell 5.1 的 `Set-Content` 默认按系统 ANSI(GBK) 写文件，`-Encoding UTF8` 才写 UTF-8；而 `Get-Content -Raw` 读回时已按 ANSI 解码，中文往返即不可逆损坏。同一 `-Raw` + `-replace` 组合在改完再 `Set-Content -NoNewline` 时还会丢失编码声明。
+- 解法：**改源码文件一律不用 PowerShell 文本替换**。三条路：
+  1. 优先用编辑工具（Edit/Write），它按 UTF-8 无损读写；
+  2. 需要脚本化批量替换时，用 `python -c` / 落盘 `.py` 且**显式 `encoding="utf-8"` 读写**（`io.open(p, encoding="utf-8")`）；
+  3. 批量改文本时先落盘 `.py` 再 `python file.py`，别用 `python -c` 内联长脚本（引号转义会再坏一层）。
+- 验证：本轮 S8.1 数据表加载层、S8.3.b 经济模块的多次编辑改用 Edit/Write 与 Python 落盘脚本后，gate 第 1 项 `cargo fmt --check` 与 clippy 全绿，文件中文注释完好。
+- 教训：**PowerShell 只用来跑命令，不用来改源码**。CJK 仓库里这是高频陷阱（参见 EXP-050 的同类根因：中文路径 + Windows 工具链）。凡是「批量改 N 个文件」，第一反应应该是脚本 + 显式编码，而不是 shell 文本替换。
+
+### EXP-052 流程：门禁扫描 `crates/**` 全量 `.rs`，`src/` 内联 `#[cfg(test)]` 的 `expect`/`panic!` 同样被拦（本轮踩 2 次）
+- 现象：在 `crates/ti-core/src/data.rs` / `rules/trade.rs` 内联写 `#[cfg(test)] mod tests` 并用 `.expect(...)` 取值，跑 `gate.ps1` 第 5/6 项直接 FAIL（占位扫描 + unwrap 扫描），而 `cargo test` 全绿。
+- 根因：`gate.ps1` 第 6 项的 `$srcDirs` 只排除路径含 `\tests\` 的**目录**，不区分 `src/*.rs` 文件内部的 `#[cfg(test)] mod tests`；第 5 项占位扫描同理扫全文 `panic!`。于是「src 内联测试」和「tests 目录集成测试」被同等对待。
+- 解法：**业务单测一律放 `crates/<c>/tests/<name>.rs`**（`tests/` 目录不受第 5/6 项扫描约束），`src/` 只留加载/实现代码。需要断言时用 `match ... { Ok(v)=>v, Err(e)=>panic!("...") }` 也**不行**（`panic!` 仍被第 5 项拦）——正确写法是让夹具函数返回可断言的值，或把测试整体迁到 `tests/`。
+- 验证：把 S8.1 数据表测试迁到 `crates/ti-core/tests/data_tables.rs`、S8.3.b 经济测试迁到 `tests/rules_trade.rs` + `tests/rules_build.rs` 后，gate 第 5/6 项恢复 PASS。
+- 教训：`docs/parity.md` 第 6 项那句「内联 `#[cfg(test)]` 模块同样禁止 unwrap」是**文档已写明**的规则，踩坑原因是没先读门禁脚本。改代码前先 `Select-String` 看门禁到底扫什么，别凭直觉。
+
+### EXP-053 代码：clippy pedantic 拦 `f64 as u32` 与 `Copy` 结构按引用传（balance 数值计算必踩）
+- 现象：经济模块里 `u32::try_from(v.round())` 编译不过（`f64: TryFrom` 未实现）；改成 `as u32` 后 clippy `-D warnings` 报 `cast_possible_truncation` / `cast_sign_loss`；`Bank`（`Copy`）的 `total(&self)` 又报 `trivially_copy_pass_by_ref`。
+- 根因：workspace 开了 `clippy::pedantic = warn` + `-D warnings`（`Cargo.toml` `[workspace.lints.clippy]`）。`as` 转换与「按引用传 `Copy` 小类型」都在 pedantic 里。
+- 解法：数值换算统一走一个模块内私有 helper：
+  ```rust
+  #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+  fn f64_to_u32(v: f64) -> Option<u32> {
+      if !v.is_finite() || v < 0.0 { return None; }
+      Some(v.round().min(f64::from(u32::MAX)) as u32)
+  }
+  ```
+  `#[allow]` 必须挂在 **函数/表达式所在 item** 上（挂 `let` 绑定无效）。`Copy` 结构的 `&self` 方法加 `#[allow(clippy::trivially_copy_pass_by_ref)]`。
+- 验证：`cargo clippy --workspace --all-targets -- -D warnings` 0 warning；`gate.ps1` 第 2 项 PASS。
+- 教训：balance.json 里的 `markup`/`atk_coef`/`bank_rate`/`event_chance` 都是 f64，凡是「乘/取整回 u32」的结算函数都会重复踩这个。抽成一个共享 helper（`rules/*.rs` 各自私有副本即可）比逐处 `#[allow]` 更省事。
+
+### EXP-054 流程：固化脚本必须「可重复跑 + 幂等 + 有 --report/--check 干跑」，且要真的用来批量干活（S8 教训）
+- 现象：S8 改造中反复出现「能脚本化的重复活手工做了」——硬编码中文手改 75 处、
+  格式校验靠人眼、数值散落在 .rs。把坑固化成 `scripts/*.py` 后，又发现脚本本身
+  写得糙（`check_hardcode.py` 误报 oracle/CLI、`migrate_strings.py` 首版 KEY_HINTS 太少、
+  改写后不幂等），导致「写了脚本但没人真用」。
+- 根因：两个独立问题——(1) 固化的脚本没有幂等/干跑（`--report`/`--check`）契约，
+  跑一次改一次，没法在门禁里反复验证；(2) 写完脚本就停了，没有把它接进
+  循环/门禁去驱动真正的批量改动，脚本成了「摆设」。
+- 解法（三条，全部已落 `docs/process/04_tooling.md` §2/§5）：
+  1. **固化脚本一律三契约**：幂等（连跑两次产物逐字节一致）+ `--report`（只列不写）
+     + 退出码非 0（门禁可判 FAIL）。`gen_layout.py --check`、`check_hardcode.py --list`
+     是这个范式的样板；
+  2. **脚本要驱动改动，不只报告**：`migrate_strings.py --apply` 把命中 KEY_HINTS 的
+     字面量批量迁到 `strings.json` + 改写调用点为 `sget(key)`，人只给一次映射表，
+     硬编码命中数从 75 → 37（真实减少，非「报告了 75」）；
+  3. **把脚本接进门禁**：gate 第 10 项已挂 `validate_data` / `gen_layout --check` /
+     `check_hardcode --warn`，下次有人手改坏 JSON/控件表/硬编码会被机器拦。
+- 验证：`python scripts/migrate_strings.py --report` 显示 0 待迁（幂等已迁完）；
+  `gate.ps1` 10 项全绿；`check_hardcode --list` 分类命中（oracle/CLI 已豁免，只剩真待迁）。
+- 教训：**「固化脚本」的验收不是脚本存在，而是它被门禁/循环真正消费**。
+  写了脚本却停留在 `--warn` 报告、不驱动任何改动，等于没写。判断标准：
+  这个脚本跑完后，仓库里的重复活是否真的变少了（命中数下降 / 文件被自动改写）。
+
+### EXP-055 流程：`pub const` 表不能调非 const 函数（E0015），i18n 用 `key + 运行时解析` 解法
+- 现象：`shell_ui::MENU` 是 `pub const &[MenuItem]`，`label` 字段想填
+  `sget("menu.help")`（i18n 运行时查表），编译报 `E0015: cannot call non-const function in constants`。
+  同时 `sget` 想返回 `&'static str`，但 strings.json 反序列化出的 `String` 不是 `'static`，
+  报 `E0638: lifetime may not live long enough`。
+- 根因：`const` 上下文不能调任何非 `const fn`（`OnceLock` 惰性展开都不是 const）；
+  且 `serde` 反序列化出的 `String` 生命周期不等于 `&'static`。
+- 解法（`crates/ti-app/src/i18n.rs` 最终形态，EXP-052 的落地）：
+  1. `MenuItem.label` 改存 **i18n key**（`&'static str`，如 `"menu.help"`），不存中文文本；
+     常量表保持纯 const（key + event_id）；
+  2. 中文文本在**运行时**经 `sget(key)` 解析（`sget` 非 const，`table()` 用 `OnceLock`
+     摊平一次）；`shell_ui::menu_labels()` 返回 `Vec<&'static str>` 供渲染层用；
+  3. 缺失 key / 整表改坏 → `sget` 回 `key` 本身（`&'static str` 来自 `include_str!` 字符串池，
+     生命周期安全，且不 panic、不静默假文本——符合门禁红线）。
+- 验证：`cargo build` 通过；`tests/glyph_raster.rs` 经 `menu_labels()` 取中文后仍全绿
+  （缺字回退『继』『续』断言保留）；`sget("scene.index.title")` 直接返 `&'static str`。
+- 教训：**「数据化的常量表」正确做法是「常量存 key，运行时解析成值」**，而不是
+  在 `const` 里调查表。i18n / 数值 / 布局表都要遵守这个形态。

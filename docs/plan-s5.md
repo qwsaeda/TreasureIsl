@@ -1,6 +1,6 @@
 # S5 可玩收口 — 计划
 
-目标：把 S3 已 diff 验证的 13 个玩法模块接进 `ti-app` 交互壳，
+目标：把 S3 已 diff 验证的 12 个玩法模块接进 `ti-app` 交互壳，
 使游戏**从头可玩到尾**（菜单→选人→选图→主地图→贸易/建造→战斗→存读档），
 并补齐 P3-3 全流程 headless 判据、P4-1 渲染对齐、业务推测项收敛。
 
@@ -16,10 +16,10 @@
 - 两 bin 入口改持 `GameApp`。
 - 验收：`cargo test -p ti-app` 全绿 + 桌面 exe 实跑全链路点通。
 
-### S5.2 全流程 headless + full_run.ron（P3-3）
-- `Cargo.toml` 加 `headless` feature；`tests/scripts/full_run.ron` 固定种子脚本。
-- `headless_full_run.rs`：无窗口跑 `GameApp` 逻辑链，逐步喂事件，断言场景流转。
-- 验收：`cargo run -p ti-app --features headless -- --script tests/scripts/full_run.ron` 0 失败。
+### S5.2 全流程 headless + full_run.json（P3-3）
+- `Cargo.toml` 加 `headless` feature；`tests/scripts/full_run.json` 固定种子脚本（seed=42）。
+- `treasure-headless` bin（`--features headless`）：无窗口跑 `GameApp` 逻辑链，逐步喂事件，断言场景流转。
+- 验收：`cargo run -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json` 16 步 0 失败。
 
 ### S5.3 P4-1 逐像素渲染对齐
 - `crates/ti-app/tests/render_parity.rs`：HeadlessBackend 渲染关键场景，对比 P0 参考图。

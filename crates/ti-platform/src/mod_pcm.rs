@@ -1,6 +1,6 @@
 //! INHL.MOD PCM 提取（S1.7b）。
 //!
-//! 实测 `data/music.lpk` 中的 `804615c2.bin` 是自定义 `INHL.MOD` 格式：
+//! 实测 `data/music.lpk` 中的 `glmusic.mod`（key `0x8046_15C2`，S6.5 业务名）是自定义 `INHL.MOD` 格式：
 //! - 0x00-0x07: `INHL.MOD` 魔数
 //! - 0x14 起: NUL 结尾标题（"I Need Her Love"）
 //! - 0x4844 起至文件尾: 8bit 无符号单声道 PCM 采样

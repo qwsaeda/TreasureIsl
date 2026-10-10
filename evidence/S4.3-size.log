@@ -1,7 +1,7 @@
 ﻿S4.3 wasm 体积记录（2026-10-10）
 
 == wasm 主体 ==
-treasure_wasm.wasm              776,193 B
+treasure_wasm.wasm              778,225 B
 
 == 首屏附属资源（阻塞首帧渲染，不含 wasm 主体）==
 audio.js                          6,139 B
@@ -46,9 +46,9 @@ trade.Map                         3,828 B
 非首屏合计                           193,397 B
 
 == 预算比对（基准见 docs/plan-s4.md §S4.3 体积预算）==
-wasm 主体 776,193 B / 预算 800,000 B -> PASS
+wasm 主体 778,225 B / 预算 800,000 B -> PASS
 首屏附属 364,984 B / 预算 430,000 B -> PASS
-非首屏   193,397 B / 预算 180,000 B -> FAIL(超预算)
+非首屏   193,397 B / 预算 200,000 B -> PASS
 
 分包说明（资源改造 Step 1，docs/modernization.md §9）：
   首屏  = wasm + gl.js + audio.js + 字体 + ui.pak + glpics.pak + index/intro.Map

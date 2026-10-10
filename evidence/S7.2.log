@@ -1,0 +1,35 @@
+﻿# S7.2 验收证据：批量超分/矢量化（C/D/E/B/A 类）
+
+## 产物（scripts/pixel_upscale.py，按 ref/asset_classification.json 分类）
+
+```
+[pixel_upscale] 处理 335 条，跳过 16，失败 0
+[pixel_upscale] 产物格式: png
+[pixel_upscale] manifest → C:\金银岛\manifest_hd.json
+```
+
+策略（docs/impl/14 §3.2）：
+- C_pixel（152）：PCX 解码 → 索引转真彩 RGBA（背景 slot 0 标 alpha=0）→ NEAREST 2x → PNG-32
+- D_terrain（82）：LANCZOS 2x（Pillow，缺时双线性兜底）→ PNG-32
+- E_animation（4 精灵 × 5 帧）：纵向切 5 帧 → 逐帧 NEAREST 2x + 相邻帧 RGB 中值去抖（轻量时序稳定）
+- B_portrait（21）：NEAREST 2x 兜底（waifu2x AI 超分为可选增强，scripts/waifu2x_upscale.py，工具未装时降级不阻塞）
+- A_ui（30）：NEAREST 2x + 九宫格切分（边缘 1/4 像素带）→ _hd_9s.png + 切分参数进 manifest
+
+## 验证
+
+```
+全 335 条 PNG 签名（\x89PNG）+ FNV-1a64 哈希 + 宽高（PIL Image.open）→ 0 错误
+assets_hd 总体积：1,886 KB（2x PNG-32）
+manifest_hd.json：335 条，fnv1a64 全部与落盘字节一致（0 mismatch）
+```
+
+## 用户手动增强（cards.lpk 卡牌面图）
+
+`assets_hd/cards/card1_hd.png` / `card2_hd.png` 由用户自行 AI 处理（1000×480，真彩），
+已并入 S7.4 打包（1x/2x/4x/webp 四档），P5-1 校验通过。
+
+## 判据达成
+
+- 全条目有对应 HD 产物（按分类标签 A-E）：335 条 PNG-32 + 九宫格参数，0 失败
+- manifest_hd.json 校验通过：FNV-1a64 幂等哈希，无时间戳
+- 原 PCX 管线零侵入（P4-1 原基准 render_parity 仍基于 RGB565+PCX，本任务不触碰渲染层）

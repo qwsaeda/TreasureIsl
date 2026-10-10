@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "ti-tools"
 version.workspace = true
 edition.workspace = true
@@ -46,6 +46,10 @@ path = "src/bin/specskel.rs"
 name = "mod2ogg"
 path = "src/bin/mod2ogg.rs"
 
+[[bin]]
+name = "build_hd_assets"
+path = "src/bin/build_hd_assets.rs"
+
 [dependencies]
 ti-formats.workspace = true
 # OGG/Opus 转码（S1.7b）：mod2ogg / build_assets 走 ti-platform/ogg feature，
@@ -53,6 +57,8 @@ ti-formats.workspace = true
 ti-platform = { workspace = true, features = ["ogg"] }
 serde.workspace = true
 serde_json.workspace = true
+# S8.7：FNV 哈希库化（hash.rs 的 fnv1a64 走 fnv crate，替手写）
+fnv.workspace = true
 
 [lints]
 workspace = true
