@@ -25,7 +25,10 @@ use ti_core::oracle::trade::PriceTable;
 use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::rng::GameRng;
 
-use crate::menu_shell::MenuShell;
+use crate::i18n;
+use crate::menu_shell::{
+    COLOR_BG, COLOR_LANDMARK, COLOR_PLAYER, COLOR_SELECTED, COLOR_TITLE_BAR, MenuShell,
+};
 use crate::sprite_atlas::SpriteAtlas;
 use crate::touch::{TouchSample, layout};
 use ti_platform::gfx::UploadMode;
@@ -493,6 +496,109 @@ impl GameApp {
     #[must_use]
     pub fn should_quit(&self) -> bool {
         self.quit
+    }
+
+    /// 当前选中角色（只读）。
+    #[must_use]
+    pub fn character(&self) -> Option<Character> {
+        self.character
+    }
+
+    /// 当前选中地图槽位（只读）。
+    #[must_use]
+    pub fn map_slot(&self) -> Option<MapSlot> {
+        self.map_slot
+    }
+
+    /// 当前地图坐标（只读）。
+    #[must_use]
+    pub fn map_pos(&self) -> Option<GridPos> {
+        self.map_pos
+    }
+
+    /// 当前金币数（只读）。
+    #[must_use]
+    pub fn gold(&self) -> u32 {
+        self.gold
+    }
+
+    /// 已拥有物品列表（只读）。
+    #[must_use]
+    pub fn owned(&self) -> &[(u32, u32)] {
+        &self.owned
+    }
+
+    /// 经济管理器（只读）。
+    #[must_use]
+    pub fn bank(&self) -> &Bank {
+        &self.bank
+    }
+
+    /// 已建造列表（只读）。
+    #[must_use]
+    pub fn buildings(&self) -> &[(Building, u32)] {
+        &self.buildings
+    }
+
+    /// 主菜单选中项索引（只读）。
+    #[must_use]
+    pub fn menu_selected(&self) -> usize {
+        self.menu_selected
+    }
+
+    /// 消息页码（只读）。
+    #[must_use]
+    pub fn msg_page(&self) -> u32 {
+        self.msg_page
+    }
+
+    /// 存档槽位列表（只读）。
+    #[must_use]
+    pub fn save_slots(&self) -> &[SaveSlot] {
+        &self.save_slots
+    }
+
+    /// 战斗会话（只读）。
+    #[must_use]
+    pub fn battle(&self) -> Option<&BattleView> {
+        self.battle.as_ref()
+    }
+
+    /// 取可变 RNG 句柄（测试用）。
+    #[must_use]
+    pub fn rng_mut(&mut self) -> &mut GameRng {
+        &mut self.rng
+    }
+
+    /// 设置 RNG 种子（测试用）。
+    pub fn set_rng_seed(&mut self, seed: u32) {
+        self.rng_seed = seed;
+        self.rng.set_seed(seed);
+    }
+
+    /// 取渲染壳（只读）。
+    #[must_use]
+    pub fn shell(&self) -> &MenuShell {
+        &self.shell
+    }
+
+    /// 取可变精灵图集（测试用）。
+    #[must_use]
+    pub fn atlas_mut(&mut self) -> Option<&mut SpriteAtlas> {
+        self.atlas.as_mut()
+    }
+
+    #[cfg(feature = "hd-8bit")]
+    #[must_use]
+    pub fn atlas_hd_cache_size(&self) -> usize {
+        self.atlas.as_ref().map_or(0, |a| a.hd_cache_size())
+    }
+
+    #[cfg(feature = "hd-8bit")]
+    pub fn load_hd_pngs(&mut self, f1_to_rgba: impl IntoIterator<Item = (u32, Vec<Vec<u8>>)>) {
+        if let Some(atlas) = self.atlas.as_mut() {
+            atlas.load_hd_pngs(f1_to_rgba);
+        }
     }
 
     /// 处理输入事件：更新内部 rules 状态 + 顶层场景跳转。
@@ -1084,43 +1190,43 @@ impl GameApp {
 
     /// `SelectRole` 场景渲染：角色头像占位 + 名称 + 选中高亮。
     fn render_select_role(&mut self) {
-        self.shell.fb.clear(0x0010);
-        self.shell.fill_rect(0, 0, 176, 20, 0x01E0);
-        self.shell.draw_text_row("选择角色", 40, 4);
+        self.shell.fb.clear(COLOR_BG);
+        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        self.shell.draw_text_row(i18n::sget("scene.select_role.title"), 40, 4);
         for (i, c) in Character::all().iter().enumerate() {
             let y = 50 + i32::try_from(i).unwrap_or(0) * 30;
             let sel = i == self.character.map_or(0, |c| c.index() as usize);
             if sel {
-                self.shell.fill_rect(20, y - 10, 136, 26, 0x03E0);
+                self.shell.fill_rect(20, y - 10, 136, 26, COLOR_SELECTED);
             }
             self.shell.draw_text_row(c.label(), 60, y);
         }
-        self.shell.draw_text_row("38/40 切换  13 确认", 30, 210);
+        self.shell.draw_text_row(i18n::sget("scene.select_role.nav_hint"), 30, 210);
     }
 
     /// `SelectMap` 场景渲染：地图缩略 + 名称 + 选中高亮。
     fn render_select_map(&mut self) {
-        self.shell.fb.clear(0x0010);
-        self.shell.fill_rect(0, 0, 176, 20, 0x01E0);
-        self.shell.draw_text_row("选择地图", 40, 4);
+        self.shell.fb.clear(COLOR_BG);
+        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        self.shell.draw_text_row(i18n::sget("scene.select_map.title"), 40, 4);
         for (i, m) in MapSlot::all().iter().enumerate() {
             let y = 50 + i32::try_from(i).unwrap_or(0) * 30;
             let sel = i == self.map_slot.map_or(0, |m| m.zero_index() as usize);
             let locked = !self.unlocked_maps.contains(m);
             if sel && !locked {
-                self.shell.fill_rect(20, y - 10, 136, 26, 0x03E0);
+                self.shell.fill_rect(20, y - 10, 136, 26, COLOR_SELECTED);
             }
             self.shell.draw_text_row(m.label(), 60, y);
             if locked {
-                self.shell.draw_text_row("[未解锁]", 130, y);
+                self.shell.draw_text_row(i18n::sget("scene.select_map.locked"), 130, y);
             }
         }
-        self.shell.draw_text_row("38/40 切换  13 确认", 30, 210);
+        self.shell.draw_text_row(i18n::sget("scene.select_map.nav_hint"), 30, 210);
     }
 
     /// `MainMap` 场景渲染：等距网格 + 玩家棋子 + 据点 + 金/持有量 HUD。
     fn render_main_map(&mut self) {
-        self.shell.fb.clear(0x0010);
+        self.shell.fb.clear(COLOR_BG);
 
         // S6.3：真实地形瓦片（等距投影 + 摄像机），无地形资源时保持占位背景
         let terrain_drawn = match (self.terrain_atlas.as_mut(), self.terrain_map.as_ref()) {
@@ -1129,11 +1235,11 @@ impl GameApp {
         };
 
         // HUD（标题条 + 金/持有量 + 提示）
-        self.shell.fill_rect(0, 0, 176, 16, 0x01E0);
-        self.shell.draw_text_row("主地图", 64, 2);
-        let gold_str = format!("金{}", self.gold);
+        self.shell.fill_rect(0, 0, 176, 16, COLOR_TITLE_BAR);
+        self.shell.draw_text_row(i18n::sget("scene.main_map.title"), 64, 2);
+        let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&self.gold]);
         self.shell.draw_text_row(&gold_str, 4, 150);
-        let own_str = format!("持有{}", self.owned.len());
+        let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&self.owned.len()]);
         self.shell.draw_text_row(&own_str, 4, 162);
 
         // 玩家棋子 + 据点（等距投影坐标，相机与地形一致）
@@ -1148,54 +1254,58 @@ impl GameApp {
             if terrain_drawn {
                 let iso_x = crate::terrain_atlas::TerrainAtlas::iso_x(pos.row, pos.col);
                 let iso_y = crate::terrain_atlas::TerrainAtlas::iso_y(pos.row, pos.col, gw);
-                self.shell.fill_rect(iso_x + cx - 2, iso_y + cy - 2, 5, 5, 0xFFFF);
+                self.shell.fill_rect(iso_x + cx - 2, iso_y + cy - 2, 5, 5, COLOR_PLAYER);
             } else {
                 let px = i32::try_from(pos.col).unwrap_or(0) * 6 + 20;
                 let py = i32::try_from(pos.row).unwrap_or(0) * 6 + 30;
-                self.shell.fill_rect(px - 1, py - 1, 4, 4, 0xFFFF);
+                self.shell.fill_rect(px - 1, py - 1, 4, 4, COLOR_PLAYER);
             }
         }
         for (r, c) in &self.map_landmarks {
             if terrain_drawn {
                 let iso_x = crate::terrain_atlas::TerrainAtlas::iso_x(*r, *c);
                 let iso_y = crate::terrain_atlas::TerrainAtlas::iso_y(*r, *c, gw);
-                self.shell.fill_rect(iso_x + cx - 1, iso_y + cy - 1, 3, 3, 0x07C0);
+                self.shell.fill_rect(iso_x + cx - 1, iso_y + cy - 1, 3, 3, COLOR_LANDMARK);
             } else {
                 let px = i32::try_from(*c).unwrap_or(0) * 6 + 20;
                 let py = i32::try_from(*r).unwrap_or(0) * 6 + 30;
-                self.shell.fill_rect(px - 1, py - 1, 3, 3, 0x07C0);
+                self.shell.fill_rect(px - 1, py - 1, 3, 3, COLOR_LANDMARK);
             }
         }
-        self.shell.draw_text_row("方向键移动 据点触发事件", 4, 210);
+        self.shell.draw_text_row(i18n::sget("scene.main_map.hint"), 4, 210);
     }
 
     /// `Vs` 场景渲染：战斗面板（双方 HP + 回合 + 结果）。
     fn render_vs(&mut self) {
-        self.shell.fb.clear(0x0010);
-        self.shell.fill_rect(0, 0, 176, 20, 0x01E0);
-        self.shell.draw_text_row("战斗", 64, 4);
+        self.shell.fb.clear(COLOR_BG);
+        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        self.shell.draw_text_row(i18n::sget("scene.vs.title"), 64, 4);
         if let Some(b) = self.battle.as_ref() {
-            let ph = format!("玩家 HP {}", b.player_hp);
-            let bh = format!("BOSS HP {}", b.boss_hp);
-            let rd = format!("回合 {}", b.rounds);
+            let ph = i18n::sgetf("scene.vs.player_hp_fmt", &[&b.player_hp]);
+            let bh = i18n::sgetf("scene.vs.boss_hp_fmt", &[&b.boss_hp]);
+            let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
             self.shell.draw_text_row(&ph, 10, 50);
             self.shell.draw_text_row(&bh, 10, 80);
             self.shell.draw_text_row(&rd, 10, 110);
             match &b.outcome {
-                Some(Side::Player) => self.shell.draw_text_row("胜利!", 60, 150),
-                Some(Side::Enemy) => self.shell.draw_text_row("失败", 60, 150),
-                None => self.shell.draw_text_row("按攻击键", 50, 150),
+                Some(Side::Player) => {
+                    self.shell.draw_text_row(i18n::sget("scene.vs.victory"), 60, 150);
+                }
+                Some(Side::Enemy) => {
+                    self.shell.draw_text_row(i18n::sget("scene.vs.defeat"), 60, 150);
+                }
+                None => self.shell.draw_text_row(i18n::sget("scene.vs.awaiting"), 50, 150),
             }
         } else {
-            self.shell.draw_text_row("无战斗", 60, 50);
+            self.shell.draw_text_row(i18n::sget("scene.vs.empty"), 60, 50);
         }
-        self.shell.draw_text_row("攻击  返回", 60, 210);
+        self.shell.draw_text_row(i18n::sget("scene.vs.hint"), 60, 210);
     }
 
     /// `Message` 场景渲染：当前页文本 + 页码。
     fn render_message(&mut self) {
-        self.shell.fb.clear(0x0010);
-        self.shell.fill_rect(0, 0, 176, 20, 0x01E0);
+        self.shell.fb.clear(COLOR_BG);
+        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
         let kind = self.msg_kind.unwrap_or(MsgKind::Help);
         self.shell.draw_text_row(kind.label(), 60, 4);
         // 当前页文本（`rules::messages::oracle_text_line` 行为，`spec/messages.md §c`）
@@ -1203,24 +1313,25 @@ impl GameApp {
         self.shell.draw_text_row(text, 10, 40);
         let page_str = format!("{}/{}", self.msg_page + 1, self.msg_total);
         self.shell.draw_text_row(&page_str, 60, 200);
-        self.shell.draw_text_row("38/40 翻页  27 关闭", 40, 210);
+        self.shell.draw_text_row(i18n::sget("scene.message.nav_hint"), 40, 210);
     }
 
     /// `Saveload` 场景渲染：槽位列表 + 金/进度摘要。
     fn render_saveload(&mut self) {
-        self.shell.fb.clear(0x0010);
-        self.shell.fill_rect(0, 0, 176, 20, 0x01E0);
-        self.shell.draw_text_row("存读档", 60, 4);
+        self.shell.fb.clear(COLOR_BG);
+        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        self.shell.draw_text_row(i18n::sget("scene.saveload.title"), 60, 4);
         for (i, s) in self.save_slots.iter().enumerate() {
             let y = 40 + i32::try_from(i).unwrap_or(0) * 40;
             let has = s.version > 0;
-            let slot_str = format!("槽{} {}", i + 1, if has { "有" } else { "空" });
+            let has_str = if has { i18n::sget("slot.has") } else { i18n::sget("slot.empty") };
+            let slot_str = i18n::sgetf("slot.label_fmt", &[&(i + 1), &has_str]);
             self.shell.draw_text_row(&slot_str, 10, y);
             if has {
-                let g = format!("金{}", s.gold);
+                let g = i18n::sgetf("hud.gold_fmt", &[&s.gold]);
                 self.shell.draw_text_row(&g, 100, y);
             }
         }
-        self.shell.draw_text_row("上下选槽 13 读/写", 30, 210);
+        self.shell.draw_text_row(i18n::sget("scene.saveload.nav_hint"), 30, 210);
     }
 }

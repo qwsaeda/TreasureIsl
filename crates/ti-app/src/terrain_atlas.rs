@@ -18,6 +18,8 @@ use ti_formats::lucency::Package;
 use ti_formats::pcx::Image;
 use ti_formats::terrain::TerrainMap;
 use ti_platform::gfx::Framebuf;
+#[cfg(feature = "hd-8bit")]
+use ti_platform::hd_png::HdPng;
 
 /// 等距投影 x 步进（每对角格 32 像素，F-307）。
 pub const ISO_X_STEP: u32 = 32;
@@ -49,6 +51,9 @@ pub struct TerrainAtlas {
     tile_to_name: HashMap<u32, String>,
     /// 解码缓存：`tile 索引 → DecodedTile`。
     cache: HashMap<u32, DecodedTile>,
+    /// S7.5（feature `hd-8bit`）：HD PNG 解码缓存（`tile 索引 → HdPng`）。
+    #[cfg(feature = "hd-8bit")]
+    hd_cache: HashMap<u32, HdPng>,
 }
 
 impl TerrainAtlas {
@@ -86,7 +91,14 @@ impl TerrainAtlas {
         if !found || tile_to_name.is_empty() {
             return Err("地形 pak 中未找到 filenum INI".to_owned());
         }
-        Ok(Self { pkg_buf: pkg_bytes.to_vec(), pkg, tile_to_name, cache: HashMap::new() })
+        Ok(Self {
+            pkg_buf: pkg_bytes.to_vec(),
+            pkg,
+            tile_to_name,
+            cache: HashMap::new(),
+            #[cfg(feature = "hd-8bit")]
+            hd_cache: HashMap::new(),
+        })
     }
 
     /// 解析 filenum INI → `tile 索引 → 文件名`。
@@ -256,6 +268,130 @@ impl TerrainAtlas {
                 i32::try_from(h).unwrap_or(0),
             );
         }
+    }
+
+    /// S7.5（feature `hd-8bit`）：按居中摄像机把地形 blit 到 RGBA8 HD 帧缓冲。
+    /// 返回成功 blit 的瓦片数（语义与 [`Self::blit_map`] 一致）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn blit_map_rgba(
+        &mut self,
+        terrain: &TerrainMap,
+        fb: &mut ti_platform::gfx::FramebufRgba,
+    ) -> u32 {
+        self.blit_map_cam_rgba(terrain, fb, Self::center_camera(terrain))
+    }
+
+    /// S7.5（feature `hd-8bit`）：带摄像机的地形 RGBA8 blit。
+    #[cfg(feature = "hd-8bit")]
+    pub fn blit_map_cam_rgba(
+        &mut self,
+        terrain: &TerrainMap,
+        fb: &mut ti_platform::gfx::FramebufRgba,
+        camera: (i64, i64),
+    ) -> u32 {
+        let mut cells = terrain.cell_records();
+        cells.sort_by_key(|c| c.iso_y);
+        let mut blitted = 0u32;
+        for c in &cells {
+            let Some(tile) = self.tile(c.tile) else {
+                continue;
+            };
+            let x = i64::from(c.iso_x) + camera.0 - i64::from(tile.width) / 2;
+            let y = i64::from(c.iso_y) + camera.1 - i64::from(tile.height) / 2;
+            let hd = self.hd_cache.get(&c.tile);
+            Self::blit_decoded_rgba(&tile, hd, x, y, fb);
+            blitted += 1;
+        }
+        blitted
+    }
+
+    /// S7.5（feature `hd-8bit`）：单瓦片 RGBA8 blit（越界裁剪，置脏行带）。
+    ///
+    /// 走 PNG 真彩像素（`hd` 注入）；未注入时回退到 PCX 调色板扩色。
+    #[cfg(feature = "hd-8bit")]
+    #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    fn blit_decoded_rgba(
+        tile: &DecodedTile,
+        hd: Option<&HdPng>,
+        ox: i64,
+        oy: i64,
+        fb: &mut ti_platform::gfx::FramebufRgba,
+    ) {
+        const FB_W: i64 = 176;
+        const FB_H: i64 = 220;
+        let tw = i64::from(tile.width);
+        let th = i64::from(tile.height);
+        let px = fb.as_mut_slice();
+        let sw = usize::try_from(tile.width).unwrap_or(0);
+        for row in 0..th {
+            let fy = oy + row;
+            if !(0..FB_H).contains(&fy) {
+                continue;
+            }
+            for col in 0..tw {
+                let fx = ox + col;
+                if !(0..FB_W).contains(&fx) {
+                    continue;
+                }
+                let pos = usize::try_from(fy * FB_W + fx).unwrap_or(0);
+                let Some(slot) = px.get_mut(pos) else {
+                    continue;
+                };
+                if let Some(img) = hd {
+                    let sidx = usize::try_from(row)
+                        .unwrap_or(0)
+                        .saturating_mul(sw)
+                        .saturating_add(usize::try_from(col).unwrap_or(0))
+                        .saturating_mul(4);
+                    let Some(rgba) = img.rgba.get(sidx..sidx + 4) else {
+                        continue;
+                    };
+                    if rgba[3] == 0 {
+                        continue;
+                    }
+                    *slot = ti_platform::gfx::png_rgba_to_framebuf_u32([
+                        rgba[0], rgba[1], rgba[2], rgba[3],
+                    ]);
+                } else {
+                    let src = usize::try_from(row * tw + col).unwrap_or(0);
+                    let idx = tile.pixels.get(src).copied().unwrap_or(0) as usize;
+                    let [r, g, b] = tile.palette[idx];
+                    *slot =
+                        0xFF00_0000u32 | (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b);
+                }
+            }
+        }
+        let vx0 = ox.max(0);
+        let vy0 = oy.max(0);
+        let vx1 = (ox + tw).min(FB_W);
+        let vy1 = (oy + th).min(FB_H);
+        let w = vx1 - vx0;
+        let h = vy1 - vy0;
+        if w > 0 && h > 0 {
+            fb.mark_dirty(
+                i32::try_from(vx0).unwrap_or(0),
+                i32::try_from(vy0).unwrap_or(0),
+                i32::try_from(w).unwrap_or(0),
+                i32::try_from(h).unwrap_or(0),
+            );
+        }
+    }
+
+    /// S7.5（feature `hd-8bit`）：注入 `tile → HD PNG` 映射（`assets_hd_pack/1x/` 档）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn load_hd_pngs(&mut self, tile_to_rgba: impl IntoIterator<Item = (u32, Vec<u8>)>) {
+        for (tile, bytes) in tile_to_rgba {
+            if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                self.hd_cache.insert(tile, img);
+            }
+        }
+    }
+
+    /// S7.5（feature `hd-8bit`）：已注入的 HD PNG 条目数（统计用）。
+    #[cfg(feature = "hd-8bit")]
+    #[must_use]
+    pub fn hd_cache_size(&self) -> usize {
+        self.hd_cache.len()
     }
 
     /// 映射表大小（tile 索引条目数）。

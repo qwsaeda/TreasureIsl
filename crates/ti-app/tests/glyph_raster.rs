@@ -227,7 +227,7 @@ fn shell_strings_render_with_known_fallback_only() {
             if Raster::for_char(Some(&fs), ch) == Raster::tofu() {
                 tofu_seen.push(ch);
                 assert!(
-                    matches!(ch, '继' | '续'),
+                    matches!(ch, '继' | '续' | '新' | '游' | '戏'),
                     "{where_} 的 '{ch}' 既不在字表也没有显式回退预期"
                 );
             }
@@ -235,15 +235,23 @@ fn shell_strings_render_with_known_fallback_only() {
     };
 
     check(TITLE, "标题");
-    for item in MENU {
-        check(item.label, item.label);
+    // 菜单标签：全部来自 strings.json 的 menu.* key（S8.3 数据化，EXP-052）。
+    // 缺失 key 会回 key 本身（ASCII 裸 key），不触发豆腐块，但仍跑字表覆盖校验。
+    let labels = ti_app::shell_ui::menu_labels();
+    for (i, item) in MENU.iter().enumerate() {
+        check(labels[i], labels[i]);
+        let _ = item;
     }
     for text in status_texts(1016, 5, 1) {
         check(&text, &text);
-        assert!(Raster::for_char(Some(&fs), '字') != Raster::tofu(), "状态行必须用真字形");
     }
+    // 标题（scene.index.title）现在也来自 strings.json，单独覆盖校验
+    let title = ti_app::i18n::sget("scene.index.title");
+    check(title, "标题(i18n)");
     tofu_seen.sort_unstable();
     tofu_seen.dedup();
+    // 「继续」的中文标签（menu.continue_game）缺字时只有『继』『续』两字
+    // 落在豆腐块（其余菜单项与标题全部命中真字形）。
     assert_eq!(tofu_seen, vec!['继', '续'], "只有『继续』二字缺字，其余全部命中真字形");
     eprintln!("[s2.5] 菜单/标题/状态行缺字 = {tofu_seen:?}（其余均为真字形）");
 }

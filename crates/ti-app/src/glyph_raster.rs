@@ -159,4 +159,54 @@ impl Raster {
             fb.mark_dirty(x, fy, i32::try_from(self.cols).unwrap_or(0), lt - fy + 1);
         }
     }
+
+    /// S7.5（feature `hd-8bit`）：把位图 RGBA8 上墨到 HD 帧缓冲（与 [`Self::blit`] 同几何）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn blit_rgba(&self, fb: &mut ti_platform::gfx::FramebufRgba, x: i32, y: i32, color: u32) {
+        use ti_core::{LOGICAL_HEIGHT, LOGICAL_WIDTH};
+        let screen_w = i32::try_from(LOGICAL_WIDTH).unwrap_or(i32::MAX);
+        let screen_h = i32::try_from(LOGICAL_HEIGHT).unwrap_or(i32::MAX);
+        let stride = usize::try_from(LOGICAL_WIDTH).unwrap_or(0);
+        let mut first_written: Option<i32> = None;
+        let mut last_written: Option<i32> = None;
+        for row in 0..self.rows {
+            let Ok(offset_y) = i32::try_from(row) else {
+                break;
+            };
+            let dst_y = y.saturating_add(offset_y);
+            if !(0..screen_h).contains(&dst_y) {
+                continue;
+            }
+            let mut row_has_ink = false;
+            for col in 0..self.cols {
+                if !self.at(col, row) {
+                    continue;
+                }
+                let Ok(offset_x) = i32::try_from(col) else {
+                    break;
+                };
+                let dst_x = x.saturating_add(offset_x);
+                if !(0..screen_w).contains(&dst_x) {
+                    continue;
+                }
+                let (Ok(px), Ok(py)) = (usize::try_from(dst_x), usize::try_from(dst_y)) else {
+                    continue;
+                };
+                let index = py.saturating_mul(stride).saturating_add(px);
+                if let Some(slot) = fb.as_mut_slice().get_mut(index) {
+                    *slot = color;
+                    row_has_ink = true;
+                }
+            }
+            if row_has_ink {
+                if first_written.is_none() {
+                    first_written = Some(dst_y);
+                }
+                last_written = Some(dst_y);
+            }
+        }
+        if let (Some(fy), Some(lt)) = (first_written, last_written) {
+            fb.mark_dirty(x, fy, i32::try_from(self.cols).unwrap_or(0), lt - fy + 1);
+        }
+    }
 }

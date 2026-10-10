@@ -35,9 +35,18 @@ struct Shell {
     last_frame_ms: u32,
     /// S6.4：macroquad 全局时钟上一帧读数（毫秒）。
     prev_now_ms: u64,
+    /// 上一帧按键快照，用于把 held 键转成单次按键沿，避免菜单连续跳变。
+    prev_keys: KeyState,
+    /// 上一帧 F1/F2/F3/F4 按下状态，用于功能键边沿触发。
+    prev_function_keys: [bool; 4],
     touch: TouchPad,
     bgm: Option<Sound>,
     se: Option<Sound>,
+}
+
+/// 本帧相对上一帧的按键沿（只有“刚按下”才返回 true）。
+fn key_edge(current: bool, previous: bool) -> bool {
+    current && !previous
 }
 
 /// 取下一个缩放模式（循环，`ScaleMode::ALL` 顺序）。
@@ -136,7 +145,7 @@ impl Shell {
         if let (Some(font_bytes), Some(charset_bytes)) =
             (read_local("GoldLand.Fnt"), read_local("font.dat"))
         {
-            game.shell.set_font(parse_font_bytes(&font_bytes, &charset_bytes));
+            game.shell().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
         }
 
         // 精灵图集 + 场景 .Map（本地 data/ 读，blit 真实贴图）
@@ -169,14 +178,22 @@ impl Shell {
         let (bundle, loaded) = load_audio_bank().await;
         let total_count = loaded.len();
         let mod_count = bundle.as_ref().map_or(0, |b| b.mod_count);
-        game.shell.set_audio(total_count, mod_count);
+        game.shell().set_audio(total_count, mod_count);
 
         // S1.7b：BGM 优先取 OGG 曲目（MOD 转码），SE 取 WAV 最短
         let bgm = pick_bgm(&loaded, bundle.as_ref());
         let se = pick_sound(&loaded, bundle.as_ref(), false);
 
-        let shell =
-            Shell { game, touch: TouchPad::new(), bgm, se, last_frame_ms: 0, prev_now_ms: 0 };
+        let shell = Shell {
+            game,
+            touch: TouchPad::new(),
+            bgm,
+            se,
+            last_frame_ms: 0,
+            prev_now_ms: 0,
+            prev_keys: KeyState::default(),
+            prev_function_keys: [false; 4],
+        };
         shell.start_bgm();
         shell
     }
@@ -190,13 +207,13 @@ impl Shell {
 
     /// 播放一次音效（`GameApp.last_sfx` 非空时，交互触发）。
     fn play_last_sfx(&mut self) {
-        if self.game.last_sfx.is_some() {
+        if self.game.last_sfx().is_some() {
             if let Some(sound) = self.se.as_ref() {
                 play_sound(sound, PlaySoundParams { looped: false, volume: SE_VOLUME });
             }
         }
         // 触发后清空，避免同一音效连播（下一帧交互重新触发）
-        self.game.last_sfx = None;
+        self.game.last_sfx() = None;
     }
 
     /// 把键盘事件映射为 `GameInput`（`docs/gamebook.md` §3，壳层输入归一）。
@@ -215,35 +232,59 @@ impl Shell {
     }
 
     fn poll_input(&mut self) -> bool {
-        let k = KeyState {
+        let raw = KeyState {
             up: is_key_pressed(KeyCode::Up),
             down: is_key_pressed(KeyCode::Down),
             left: is_key_pressed(KeyCode::Left),
             right: is_key_pressed(KeyCode::Right),
-            confirm: is_key_pressed(KeyCode::Enter),
+            confirm: is_key_pressed(KeyCode::Enter) || is_key_pressed(KeyCode::Space),
             back: is_key_pressed(KeyCode::Backspace) || is_key_pressed(KeyCode::Escape),
             landmark: is_key_pressed(KeyCode::Space),
             buy: is_key_pressed(KeyCode::T),
             sell: is_key_pressed(KeyCode::Y),
             build: is_key_pressed(KeyCode::B),
         };
+        // 游戏按键只取“刚按下”沿：按住不重复触发菜单/选择/战斗，
+        // 避免 is_key_pressed 每帧轮询造成快速连跳。
+        let k = KeyState {
+            up: key_edge(raw.up, self.prev_keys.up),
+            down: key_edge(raw.down, self.prev_keys.down),
+            left: key_edge(raw.left, self.prev_keys.left),
+            right: key_edge(raw.right, self.prev_keys.right),
+            confirm: key_edge(raw.confirm, self.prev_keys.confirm),
+            back: key_edge(raw.back, self.prev_keys.back),
+            landmark: key_edge(raw.landmark, self.prev_keys.landmark),
+            buy: key_edge(raw.buy, self.prev_keys.buy),
+            sell: key_edge(raw.sell, self.prev_keys.sell),
+            build: key_edge(raw.build, self.prev_keys.build),
+        };
         let mut changed = self.game.poll(&k);
-        // F1 循环切换缩放模式（等比/整数倍/拉伸/裁剪），立即按窗口尺寸重建视口
-        if is_key_pressed(KeyCode::F1) {
-            let next = next_scale_mode(self.game.shell.scale_mode());
-            self.game.shell.set_scale_mode(next, screen_width(), screen_height());
+
+        let f1 = is_key_pressed(KeyCode::F1);
+        let f2 = is_key_pressed(KeyCode::F2);
+        let f3 = is_key_pressed(KeyCode::F3);
+        let f4 = is_key_pressed(KeyCode::F4);
+        if key_edge(f1, self.prev_function_keys[0]) {
+            let next = next_scale_mode(self.game.shell().scale_mode());
+            self.game.shell().set_scale_mode(next, screen_width(), screen_height());
             changed = true;
         }
-        // F2 循环切换上采样滤波（像素锐利/平滑）
-        if is_key_pressed(KeyCode::F2) {
-            self.game.shell.cycle_filter_mode();
+        if key_edge(f2, self.prev_function_keys[1]) {
+            self.game.shell().cycle_filter_mode();
             changed = true;
         }
-        // F3 循环切换边框装饰样式（纯黑/深蓝/同背景）
-        if is_key_pressed(KeyCode::F3) {
-            self.game.shell.cycle_border_style();
+        if key_edge(f3, self.prev_function_keys[2]) {
+            self.game.shell().cycle_border_style();
             changed = true;
         }
+        // S7.6：F4 循环切换画质（原版/HD）
+        if key_edge(f4, self.prev_function_keys[3]) {
+            self.game.shell().cycle_quality();
+            changed = true;
+        }
+        self.prev_function_keys = [f1, f2, f3, f4];
+        self.prev_keys = raw;
+
         changed |= self.poll_touch();
         changed
     }
@@ -255,17 +296,17 @@ impl Shell {
     fn poll_touch(&mut self) -> bool {
         let (mx, my) = mouse_position();
         let down = is_mouse_button_pressed(MouseButton::Left);
-        let sample = self.touch.feed_screen(&self.game.shell.vp, mx, my, down);
+        let sample = self.touch.feed_screen(&self.game.shell().vp, mx, my, down);
         self.game.poll_touch(sample)
     }
 }
 
-/// 窗口配置：强制原版逻辑分辨率 176×220（F-101）。
+/// 窗口配置：原版逻辑分辨率 176×220，桌面窗口放大 4 倍便于操作（F1 可循环缩放模式）。
 fn window_conf() -> Conf {
     Conf {
         window_title: "金银岛 TreasureIsl".to_owned(),
-        window_width: 176,
-        window_height: 220,
+        window_width: 176 * 4,
+        window_height: 220 * 4,
         ..Default::default()
     }
 }
@@ -279,29 +320,18 @@ async fn main() {
     let mut shell = Shell::new().await;
     // 首帧强制渲染（font/audio 已注入，画好菜单再进主循环）
     shell.game.render();
-    shell.game.shell.last_rendered = Some(shell.game.shell.selected);
-    // 临时诊断：主循环前 dump 帧缓冲，验证 render 是否真正画了菜单
-    let fb = shell.game.shell.fb.as_slice();
-    let distinct = fb.iter().cloned().collect::<std::collections::HashSet<_>>();
-    let top: Vec<u16> = distinct.iter().take(8).cloned().collect();
-    println!("[diag] pre-loop fb distinct={} top={top:?}", distinct.len());
-    let _ = macroquad::texture::Image {
-        width: 176,
-        height: 220,
-        bytes: fb.iter().flat_map(|&p| ti_platform::gfx::rgb565_to_rgba8(p)).collect(),
-    }
-    .export_png("C:\\Users\\Administrator\\AppData\\Local\\Temp\\opencode\\fb_prelaunch.png");
+    shell.game.shell().last_rendered = Some(shell.game.shell().selected);
     #[cfg(feature = "stats")]
     let mut fps = FpsMeter::new();
 
     loop {
         // 视口先跟随窗口尺寸（letterbox / pillarbox，P4-2）：
         // 触摸命中判定用逻辑坐标，必须先有本帧视口才能正确反变换
-        shell.game.shell.refit(screen_width(), screen_height());
+        shell.game.shell().refit(screen_width(), screen_height());
 
         // S6.4：算本帧耗时并喂给 GameApp（驱动多帧精灵动画推进）
         shell.tick_frame_time();
-        shell.game.frame_delta_ms = shell.last_frame_ms;
+        shell.game.set_frame_delta_ms(shell.last_frame_ms);
 
         // S5.1：交互核心驱动（各场景输入 → GameApp.handle → 场景跳转）
         let changed = shell.poll_input();
@@ -312,45 +342,39 @@ async fn main() {
         shell.play_last_sfx();
 
         // S5.1：场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
-        let current_selected = shell.game.shell.selected;
+        let current_selected = shell.game.shell().selected;
         let scene_key = shell.game.scene().key();
         if changed
-            || shell.game.shell.last_rendered != Some(current_selected)
-            || shell.game.shell.last_rendered_scene != Some(scene_key)
+            || shell.game.shell().last_rendered != Some(current_selected)
+            || shell.game.shell().last_rendered_scene != Some(scene_key)
         {
+            // S7.5/S7.6：hd-8bit 开启且画质=HD 时走 RGBA8 HD 渲染，否则 RGB565 原路径
+            #[cfg(feature = "hd-8bit")]
+            if shell.game.shell().settings().quality == ti_platform::settings::QualityMode::Hd {
+                shell.game.render_hd();
+            } else {
+                shell.game.render();
+            }
+            #[cfg(not(feature = "hd-8bit"))]
             shell.game.render();
-            shell.game.shell.last_rendered = Some(current_selected);
-            shell.game.shell.last_rendered_scene = Some(scene_key);
+            shell.game.shell().last_rendered = Some(current_selected);
+            shell.game.shell().last_rendered_scene = Some(scene_key);
         }
         // 呈现（FullRebuild：静止帧整帧 skip，脏帧整帧 from_rgba8 重建纹理）
-        shell.game.shell.present();
-        // 临时诊断：dump 帧缓冲 + 截屏，验证黑屏根因
-        {
-            let fb = shell.game.shell.fb.as_slice();
-            let nonzero = fb.iter().filter(|&&p| p != 0).count();
-            let distinct = fb.iter().cloned().collect::<std::collections::HashSet<_>>();
-            let top: Vec<u16> = distinct.iter().take(8).cloned().collect();
-            let scene = shell.game.scene().key();
-            let (u, s) = (shell.game.shell.uploads(), shell.game.shell.skipped());
-            let out = "C:\\Users\\Administrator\\AppData\\Local\\Temp\\opencode\\fb_dump.png";
-            let _ = macroquad::texture::Image {
-                width: 176,
-                height: 220,
-                bytes: fb.iter().flat_map(|&p| ti_platform::gfx::rgb565_to_rgba8(p)).collect(),
-            }
-            .export_png(out);
-            if s == 1 || u == 1 || u == 10 {
-                println!(
-                    "[diag] scene={scene} uploads={u} skipped={s} fb nonzero={nonzero} distinct={} colors={top:?}",
-                    distinct.len()
-                );
-            }
+        #[cfg(feature = "hd-8bit")]
+        if shell.game.shell().settings().quality == ti_platform::settings::QualityMode::Hd {
+            shell.game.present_hd();
+        } else {
+            shell.game.shell().present();
         }
+        #[cfg(not(feature = "hd-8bit"))]
+        shell.game.shell().present();
         #[cfg(feature = "stats")]
         {
             let total_ms_f = get_time().max(0.0) * 1000.0;
             let now_ms = u128::from(total_ms_f.max(0.0).min(u32::MAX as f64) as u32);
-            let report = fps.tick(now_ms, shell.game.shell.uploads(), shell.game.shell.skipped());
+            let report =
+                fps.tick(now_ms, shell.game.shell().uploads(), shell.game.shell().skipped());
             if let Some((avg, uploads, skipped)) = report {
                 println!("[stats] avg {avg:.1} fps | uploads={uploads} skipped={skipped}");
             }

@@ -150,8 +150,8 @@ fn main() {
     );
 
     let mut app = GameApp::new(176.0, 220.0);
-    app.rng.set_seed(script.seed);
-    app.rng_seed = script.seed;
+    app.rng_mut().set_seed(script.seed);
+    app.set_rng_seed(script.seed);
 
     let mut failures = 0usize;
     for (i, step) in script.steps.iter().enumerate() {
@@ -189,7 +189,7 @@ fn main() {
     }
 
     // 战斗进度检查（Vs 场景应已推进回合；`rounds > 0` 证明战斗逻辑真实执行）
-    if let Some(b) = app.battle.as_ref() {
+    if let Some(b) = app.battle() {
         println!(
             "  战斗进度：回合={} 玩家HP={} BOSSHP={} 结果={:?}",
             b.rounds, b.player_hp, b.boss_hp, b.outcome

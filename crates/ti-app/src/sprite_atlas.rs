@@ -20,6 +20,8 @@ use ti_formats::lucency::Package;
 use ti_formats::mapfile::{MapControl, MapHeader, MapScene};
 use ti_formats::pcx::Image;
 use ti_platform::gfx::Framebuf;
+#[cfg(feature = "hd-8bit")]
+use ti_platform::hd_png::HdPng;
 
 /// 每帧时长（毫秒）—— 5 帧动画约 10 fps（`docs/gamebook.md` §4c）。
 pub const FRAME_MS: u32 = 100;
@@ -63,6 +65,10 @@ pub struct SpriteAtlas {
     f1_to_name: HashMap<u32, (String, u32)>,
     /// 解码缓存：`f1 → DecodedSprite`。
     cache: HashMap<u32, DecodedSprite>,
+    /// S7.5（feature `hd-8bit`）：HD PNG 解码缓存（`f1 → 帧列表`，`assets_hd_pack/1x/` 档注入）。
+    /// 多帧精灵（`num > 1`）存多张单帧 PNG；静态精灵存 1 张。
+    #[cfg(feature = "hd-8bit")]
+    hd_cache: HashMap<u32, Vec<HdPng>>,
     /// 累积经过的毫秒数（由 [`Self::advance_animation`] 推进）。
     elapsed_ms: u32,
 }
@@ -108,6 +114,8 @@ impl SpriteAtlas {
             pkg,
             f1_to_name,
             cache: HashMap::new(),
+            #[cfg(feature = "hd-8bit")]
+            hd_cache: HashMap::new(),
             elapsed_ms: 0,
         })
     }
@@ -267,6 +275,156 @@ impl SpriteAtlas {
             i32::try_from(w).unwrap_or(0),
             i32::try_from(h).unwrap_or(0),
         );
+    }
+
+    /// S7.5（feature `hd-8bit`）：按指定帧号 RGBA8 blit 场景（测试与定格渲染用）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn blit_scene_frame_rgba(
+        &mut self,
+        scene: &MapScene,
+        fb: &mut ti_platform::gfx::FramebufRgba,
+        frame: u32,
+    ) -> u32 {
+        let Ok(controls) = MapControl::parse_words("scene.Map", &scene.words) else {
+            return 0;
+        };
+        let mut blitted = 0u32;
+        for ctrl in &controls {
+            if ctrl.f1 == 0 {
+                continue;
+            }
+            let Some(sprite) = self.sprite(ctrl.f1) else {
+                continue;
+            };
+            let hd = self.hd_cache.get(&ctrl.f1);
+            Self::blit_sprite_rgba(&sprite, ctrl.f2, ctrl.f3, fb, frame, hd);
+            blitted += 1;
+        }
+        blitted
+    }
+
+    /// S7.5（feature `hd-8bit`）：把 `.Map` 场景的全部控件记录按 RGBA8 blit 到 HD 帧缓冲。
+    /// 返回成功 blit 的精灵数量（语义与 [`Self::blit_scene`] 一致）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn blit_scene_rgba(
+        &mut self,
+        scene: &MapScene,
+        fb: &mut ti_platform::gfx::FramebufRgba,
+    ) -> u32 {
+        let Ok(controls) = MapControl::parse_words("scene.Map", &scene.words) else {
+            return 0;
+        };
+        let mut blitted = 0u32;
+        for ctrl in &controls {
+            if ctrl.f1 == 0 {
+                continue;
+            }
+            let Some(sprite) = self.sprite(ctrl.f1) else {
+                continue;
+            };
+            let hd = self.hd_cache.get(&ctrl.f1);
+            Self::blit_sprite_rgba(&sprite, ctrl.f2, ctrl.f3, fb, self.frame(), hd);
+            blitted += 1;
+        }
+        blitted
+    }
+
+    /// S7.5（feature `hd-8bit`）：单个精灵 RGBA8 blit（越界裁剪，置脏行带）。
+    ///
+    /// 走 PNG 真彩像素（`hd` 注入帧列表）；未注入该 f1 的 PNG 时回退到 PCX 调色板
+    /// 扩色（保证 HD 路径不因缺资产而黑屏）。多帧精灵按 `frame % frames` 取对应 PNG。
+    #[cfg(feature = "hd-8bit")]
+    fn blit_sprite_rgba(
+        sprite: &DecodedSprite,
+        px_x: u32,
+        py_y: u32,
+        fb: &mut ti_platform::gfx::FramebufRgba,
+        frame: u32,
+        hd: Option<&Vec<HdPng>>,
+    ) {
+        const FB_W: usize = 176;
+        const FB_H: usize = 220;
+        let ox = usize::try_from(px_x).unwrap_or(0).min(FB_W - 1);
+        let oy = usize::try_from(py_y).unwrap_or(0).min(FB_H - 1);
+        let sw = usize::try_from(sprite.width).unwrap_or(0);
+        let sh = usize::try_from(sprite.height).unwrap_or(0);
+        let fbase = sprite.frame_offset(frame);
+        let px = fb.as_mut_slice();
+        // 多帧：取当前帧对应的 PNG；缺帧回退 PCX
+        let img = hd.and_then(|frames| {
+            if frames.is_empty() {
+                return None;
+            }
+            let fi = usize::try_from(frame % sprite.frames.max(1)).unwrap_or(0) % frames.len();
+            frames.get(fi)
+        });
+        for row in 0..sh {
+            let fy = oy.saturating_add(row);
+            if fy >= FB_H {
+                break;
+            }
+            for col in 0..sw {
+                let fx = ox.saturating_add(col);
+                if fx >= FB_W {
+                    break;
+                }
+                let pos = fy * FB_W + fx;
+                let Some(slot) = px.get_mut(pos) else {
+                    continue;
+                };
+                if let Some(img) = img {
+                    // PNG 真彩（RGBA8，行主序；透明像素跳过不覆盖）
+                    let sidx = (row * sw + col).saturating_mul(4);
+                    let Some(rgba) = img.rgba.get(sidx..sidx + 4) else {
+                        continue;
+                    };
+                    if rgba[3] == 0 {
+                        continue;
+                    }
+                    *slot = ti_platform::gfx::png_rgba_to_framebuf_u32([
+                        rgba[0], rgba[1], rgba[2], rgba[3],
+                    ]);
+                } else {
+                    // 回退：PCX 调色板扩色到 8 位真彩（与 RGB565 路径同像素）
+                    let idx =
+                        sprite.pixels.get(fbase + row * sw + col).copied().unwrap_or(0) as usize;
+                    let [r, g, b] = sprite.palette[idx];
+                    *slot = 0xFF00_0000u32 | u32::from(r) << 16 | u32::from(g) << 8 | u32::from(b);
+                }
+            }
+        }
+        let w = sw.min(FB_W.saturating_sub(ox));
+        let h = sh.min(FB_H.saturating_sub(oy));
+        fb.mark_dirty(
+            i32::try_from(ox).unwrap_or(0),
+            i32::try_from(oy).unwrap_or(0),
+            i32::try_from(w).unwrap_or(0),
+            i32::try_from(h).unwrap_or(0),
+        );
+    }
+
+    /// S7.5（feature `hd-8bit`）：注入 `f1 → HD PNG 帧列表` 映射（`assets_hd_pack/1x/` 档）。
+    ///
+    /// 静态精灵：`[(f1, vec![png])]`；多帧精灵：`[(f1, vec![f0, f1, f2, f3, f4])]`。
+    /// 解码失败的条目跳过（blit 回退 PCX 调色板扩色）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn load_hd_pngs(&mut self, f1_to_rgba: impl IntoIterator<Item = (u32, Vec<Vec<u8>>)>) {
+        for (f1, frames) in f1_to_rgba {
+            let decoded: Vec<HdPng> = frames
+                .into_iter()
+                .filter_map(|bytes| ti_platform::hd_png::decode_png_rgba(&bytes).ok())
+                .collect();
+            if !decoded.is_empty() {
+                self.hd_cache.insert(f1, decoded);
+            }
+        }
+    }
+
+    /// S7.5（feature `hd-8bit`）：已注入的 HD PNG 精灵条目数（统计用）。
+    #[cfg(feature = "hd-8bit")]
+    #[must_use]
+    pub fn hd_cache_size(&self) -> usize {
+        self.hd_cache.len()
     }
 
     /// 映射表大小（f1 条目数）。

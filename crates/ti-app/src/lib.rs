@@ -9,7 +9,8 @@
 //!   （S2.5 补实）与 [`shell_ui`]：壳的菜单表/状态行文本；
 //! - [`game_app`]：可玩交互核心（S5.1，把 `ti-core::rules` 的 13 个玩法模块接进表现层，
 //!   见 `docs/gamebook.md`）；
-//! - [`touch`]：触屏输入层（**直接触摸界面元素，不画虚拟按键**，见 `docs/modernization.md` §5）。
+//! - [`touch`]：触屏输入层（**直接触摸界面元素，不画虚拟按键**，见 `docs/modernization.md` §5）；
+//! - [`i18n`]：文本访问层（`S.get("key")` → `assets/data/strings.json`，S8.3 数据化）。
 //!
 //! 三端入口 bin 见 `src/bin/`（`treasure-wasm` 需 `wasm-shell` feature）。
 
@@ -17,11 +18,14 @@ pub mod audio_prep;
 pub mod error;
 pub mod game_app;
 pub mod glyph_raster;
+pub mod i18n;
 pub mod menu_shell;
+pub mod scenes;
 pub mod shell_ui;
 pub mod sprite_atlas;
 pub mod terrain_atlas;
 pub mod touch;
+pub mod widgets;
 
 #[cfg(feature = "android-shell")]
 pub mod android_shell;
@@ -31,7 +35,12 @@ pub mod stats;
 
 pub use error::{Error, Result};
 pub use game_app::{BattleView, GameApp, GameInput, Scene};
+pub use i18n::{sget, sgetf, try_sget};
 pub use menu_shell::MenuShell;
+pub use scenes::{
+    IndexScene, MainMapScene, MessageScene, SaveloadScene, Scene as SceneTrait, SceneHost,
+    SceneKind, SceneRegistry, SelectMapScene, SelectRoleScene, VsScene,
+};
 pub use shell_ui::{MENU, MenuItem, status_texts};
 pub use sprite_atlas::SpriteAtlas;
 pub use terrain_atlas::TerrainAtlas;

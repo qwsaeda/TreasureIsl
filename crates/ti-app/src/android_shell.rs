@@ -100,14 +100,14 @@ pub async fn run() {
     if let (Some(font_bytes), Some(charset_bytes)) =
         (read_asset("assets/GoldLand.Fnt").await, read_asset("assets/font.dat").await)
     {
-        game.shell.set_font(parse_font_bytes(&font_bytes, &charset_bytes));
+        game.shell().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
     }
 
     // 真实音效（music.lpk → 解包 → 混音 → OGG 转码 → macroquad 音频后端）
     let (bundle, loaded) = load_audio_bank().await;
     let total_count = loaded.len();
     let mod_count = bundle.as_ref().map_or(0, |b| b.mod_count);
-    game.shell.set_audio(total_count, mod_count);
+    game.shell().set_audio(total_count, mod_count);
 
     // 精灵图集（ui.pak → SpriteAtlas）+ 场景 .Map 文件（blit 真实贴图）
     if let Some(ui_pak) = read_asset("assets/ui.pak").await {
@@ -138,17 +138,24 @@ pub async fn run() {
     let mut touch = TouchPad::new();
 
     // 首帧强制渲染（font/audio 已注入）
+    #[cfg(feature = "hd-8bit")]
+    if game.shell().settings().quality == ti_platform::settings::QualityMode::Hd {
+        game.render_hd();
+    } else {
+        game.render();
+    }
+    #[cfg(not(feature = "hd-8bit"))]
     game.render();
-    game.shell.last_rendered = Some(game.shell.selected);
+    game.shell().last_rendered = Some(game.shell().selected);
 
     loop {
         // 视口先跟随窗口尺寸（letterbox / pillarbox，P4-2）
-        game.shell.refit(screen_width(), screen_height());
+        game.shell().refit(screen_width(), screen_height());
 
         // 触屏输入 → GameApp.poll_touch → 场景跳转
         let (mx, my) = mouse_position();
         let down = is_mouse_button_pressed(MouseButton::Left);
-        let sample = touch.feed_screen(&game.shell.vp, mx, my, down);
+        let sample = touch.feed_screen(&game.shell().vp, mx, my, down);
         let changed = game.poll_touch(sample);
 
         if game.should_quit() {
@@ -157,17 +164,33 @@ pub async fn run() {
         play_last_sfx(&mut game, se.as_ref());
 
         // 场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
-        let current_selected = game.shell.selected;
+        let current_selected = game.shell().selected;
         let scene_key = game.scene().key();
         if changed
-            || game.shell.last_rendered != Some(current_selected)
-            || game.shell.last_rendered_scene != Some(scene_key)
+            || game.shell().last_rendered != Some(current_selected)
+            || game.shell().last_rendered_scene != Some(scene_key)
         {
+            // S7.5/S7.6：hd-8bit 开启且画质=HD 时走 RGBA8 HD 渲染，否则 RGB565 原路径
+            #[cfg(feature = "hd-8bit")]
+            if game.shell().settings().quality == ti_platform::settings::QualityMode::Hd {
+                game.render_hd();
+            } else {
+                game.render();
+            }
+            #[cfg(not(feature = "hd-8bit"))]
             game.render();
-            game.shell.last_rendered = Some(current_selected);
-            game.shell.last_rendered_scene = Some(scene_key);
+            game.shell().last_rendered = Some(current_selected);
+            game.shell().last_rendered_scene = Some(scene_key);
         }
-        game.shell.present();
+        // 呈现
+        #[cfg(feature = "hd-8bit")]
+        if game.shell().settings().quality == ti_platform::settings::QualityMode::Hd {
+            game.present_hd();
+        } else {
+            game.shell().present();
+        }
+        #[cfg(not(feature = "hd-8bit"))]
+        game.shell().present();
         next_frame().await;
     }
 }
@@ -181,10 +204,10 @@ fn start_bgm(bgm: &Option<Sound>) {
 
 /// 播放一次音效（`GameApp.last_sfx` 非空时，交互触发）+ 清空避免连播。
 fn play_last_sfx(game: &mut GameApp, se: Option<&Sound>) {
-    if game.last_sfx.is_some() {
+    if game.last_sfx().is_some() {
         if let Some(sound) = se {
             play_sound(sound, PlaySoundParams { looped: false, volume: SE_VOLUME });
         }
     }
-    game.last_sfx = None;
+    game.last_sfx() = None;
 }

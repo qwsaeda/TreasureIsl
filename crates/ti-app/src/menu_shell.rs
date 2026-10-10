@@ -12,9 +12,10 @@
 
 use ti_formats::font::{Charset, Font};
 use ti_platform::gfx::{FramePresenter, Framebuf, UploadMode, Viewport};
-use ti_platform::settings::{BorderStyle, FilterMode, ScaleMode, Settings};
+use ti_platform::settings::{BorderStyle, FilterMode, QualityMode, ScaleMode, Settings};
 
 use crate::glyph_raster::{FontSet, Raster};
+use crate::i18n::sget;
 use crate::shell_ui::{MENU, status_texts};
 
 /// 逻辑宽（i32，供坐标运算）。
@@ -27,6 +28,26 @@ pub const LOGICAL_H_I32: i32 = 220;
 pub const GLYPH_ADVANCE: i32 = 12;
 /// 字形墨色（RGB565 白）。
 pub const INK_COLOR: u16 = 0xFFFF;
+/// S7.5（feature `hd-8bit`）：RGBA8 墨色（`0xAARRGGBB` 白不透明）。
+#[cfg(feature = "hd-8bit")]
+pub const INK_COLOR_RGBA: u32 = 0xFFFF_FFFF;
+
+/// 场景布局色（8-bit 调色板索引；S8.4 起由 `scenes.json` 统一供数，过渡期保留 const）。
+pub const COLOR_TITLE_BAR: u16 = 0x01E0;
+/// 选中高亮布局色（调色板索引 `0x03E0`）。
+pub const COLOR_SELECTED: u16 = 0x03E0;
+/// 据点标记布局色（调色板索引 `0x07C0`）。
+pub const COLOR_LANDMARK: u16 = 0x07C0;
+/// 背景布局色（调色板索引 `0x0010`，深蓝）。
+pub const COLOR_BG: u16 = 0x0010;
+/// 玩家棋子布局色（调色板索引 `0xFFFF`，白）。
+pub const COLOR_PLAYER: u16 = 0xFFFF;
+/// 标题条布局色 RGBA 版（`0xAARRGGBB`，HD 8-bit 帧缓冲路径用）。
+#[cfg(feature = "hd-8bit")]
+pub const COLOR_TITLE_BAR_RGBA: u32 = 0xFF00_01E0;
+/// 选中高亮布局色 RGBA 版（`0xAARRGGBB`，HD 8-bit 帧缓冲路径用）。
+#[cfg(feature = "hd-8bit")]
+pub const COLOR_SELECTED_RGBA: u32 = 0xFF00_03E0;
 /// 菜单行高（逻辑像素）。
 pub const ROW_H: i32 = 20;
 /// 菜单起始 y（逻辑像素）。
@@ -62,6 +83,9 @@ pub struct MenuShell {
     pub last_rendered_scene: Option<i32>,
     /// 用户设置（缩放模式/方向/按键，S4.1；`refit` 与呈现按此设置）。
     pub settings: Settings,
+    /// S7.5（feature `hd-8bit`）：RGBA8 HD 帧缓冲（与 `fb` 并行，默认构建不存在）。
+    #[cfg(feature = "hd-8bit")]
+    pub fb_rgba: ti_platform::gfx::FramebufRgba,
 }
 
 impl MenuShell {
@@ -95,6 +119,8 @@ impl MenuShell {
             last_rendered: None,
             last_rendered_scene: None,
             settings,
+            #[cfg(feature = "hd-8bit")]
+            fb_rgba: ti_platform::gfx::FramebufRgba::new(),
         }
     }
 
@@ -126,26 +152,32 @@ impl MenuShell {
     /// 绘制主菜单到逻辑帧缓冲（再经 [`FramePresenter`] 按脏行带上屏）。
     pub fn render(&mut self) {
         // 背景：原版主色（深蓝）+ 顶部标题条
-        self.fb.clear(0x0010);
-        self.fill_rect(0, 0, LOGICAL_W_I32, 40, 0x01E0);
+        self.fb.clear(COLOR_BG);
+        self.fill_rect(0, 0, LOGICAL_W_I32, 40, COLOR_TITLE_BAR);
 
         // 中文标题（真字形；字体整体缺失时全是豆腐块，绝不静默空白）
-        self.draw_text_row("金银岛", 58, 12);
+        self.draw_text_row(sget("scene.index.title"), 58, 12);
 
-        // 菜单条目（带选中高亮）
-        for (i, item) in MENU.iter().enumerate() {
+        // 菜单条目（带选中高亮；文案标签运行时取 i18n 表）
+        let labels = crate::shell_ui::menu_labels();
+        for (i, _item) in MENU.iter().enumerate() {
             let y = MENU_TOP + i32::try_from(i).unwrap_or(0) * ROW_H;
             if i == self.selected {
-                self.fill_rect(18, y - 12, LOGICAL_W_I32 - 36, ROW_H - 2, 0x03E0);
+                self.fill_rect(18, y - 12, LOGICAL_W_I32 - 36, ROW_H - 2, COLOR_SELECTED);
             }
-            self.draw_text_row(item.label, 56, y);
+            self.draw_text_row(labels[i], 56, y);
         }
 
-        // 状态行：真实资源计数
+        // 状态行：真实资源计数 + 画质模式（S7.6）
         let [glyphs, sounds, modules] =
             status_texts(self.font_glyphs, self.wav_count, self.mod_count);
+        let quality_tag = if cfg!(feature = "hd-8bit") {
+            format!("{} F4", self.settings.quality.label())
+        } else {
+            crate::i18n::sget("menu.origin_label").to_owned()
+        };
         let mut cursor = STATUS_X;
-        for text in [&glyphs, &sounds, &modules] {
+        for text in [&glyphs, &sounds, &modules, &quality_tag] {
             self.draw_text_row(text, cursor, STATUS_Y);
             let span =
                 i32::try_from(text.chars().count()).unwrap_or(0).saturating_mul(GLYPH_ADVANCE);
@@ -156,6 +188,12 @@ impl MenuShell {
     /// 帧缓冲上屏（S4.3：脏行带部分上传，静止帧零 GPU 工作）。
     pub fn present(&mut self) {
         self.presenter.present(&mut self.fb, &self.vp);
+    }
+
+    /// S7.5（feature `hd-8bit`）：RGBA8 HD 帧缓冲上屏（同上传策略，真彩无 565 量化）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn present_rgba(&mut self) {
+        self.presenter.present_rgba(&mut self.fb_rgba, &self.vp);
     }
 
     /// 在帧缓冲上填充矩形（RGB565，逻辑像素整数坐标；S4.3 起同步置脏行带）。
@@ -176,6 +214,25 @@ impl MenuShell {
         self.fb.mark_dirty(x, y, w, h);
     }
 
+    /// S7.5（feature `hd-8bit`）：在 RGBA8 HD 帧缓冲上填充矩形（`0xAARRGGBB`）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn fill_rect_rgba(&mut self, x: i32, y: i32, w: i32, h: i32, color: u32) {
+        let x0 = x.clamp(0, LOGICAL_W_I32);
+        let y0 = y.clamp(0, LOGICAL_H_I32);
+        let x1 = x.saturating_add(w).clamp(0, LOGICAL_W_I32);
+        let y1 = y.saturating_add(h).clamp(0, LOGICAL_H_I32);
+        for py in y0..y1 {
+            for px in x0..x1 {
+                let idx = usize::try_from(py).unwrap_or(0) * LOGICAL_W_USIZE
+                    + usize::try_from(px).unwrap_or(0);
+                if let Some(slot) = self.fb_rgba.as_mut_slice().get_mut(idx) {
+                    *slot = color;
+                }
+            }
+        }
+        self.fb_rgba.mark_dirty(x, y, w, h);
+    }
+
     /// 绘制一行文本（12px 步进，整数逻辑坐标；空白字符推进但不着墨）。
     pub fn draw_text_row(&mut self, text: &str, x: i32, y: i32) {
         let mut cursor = x;
@@ -190,6 +247,34 @@ impl MenuShell {
     pub fn draw_glyph(&mut self, ch: char, x: i32, y: i32) {
         let raster = Raster::for_char(self.font.as_ref(), ch);
         raster.blit(&mut self.fb, x, y, INK_COLOR);
+    }
+
+    /// S7.5（feature `hd-8bit`）：RGBA8 HD 帧缓冲上的文字行（`0xAARRGGBB` 墨色）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn draw_text_row_rgba(&mut self, text: &str, x: i32, y: i32, color: u32) {
+        let mut cursor = x;
+        for ch in text.chars() {
+            let raster = Raster::for_char(self.font.as_ref(), ch);
+            raster.blit_rgba(&mut self.fb_rgba, cursor, y, color);
+            cursor = cursor.saturating_add(GLYPH_ADVANCE);
+        }
+    }
+
+    /// S7.5（feature `hd-8bit`）：把 RGB565 帧缓冲整体转成 RGBA8（`0xAARRGGBB`）。
+    ///
+    /// 路径 1 并行的核心：RGB565 场景渲染完成后逐像素扩展写 `fb_rgba`，
+    /// 保证 HD 路径与原路径同源（`docs/impl/14_asset_enhancement.md` §3.5 路径 1）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn sync_rgba_from_rgb565(&mut self) {
+        let src = self.fb.as_slice();
+        let dst = self.fb_rgba.as_mut_slice();
+        for (i, &p) in src.iter().enumerate() {
+            if let Some(slot) = dst.get_mut(i) {
+                let [r, g, b, _a] = ti_platform::gfx::rgb565_to_rgba8(p);
+                *slot = 0xFF00_0000 | (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b);
+            }
+        }
+        self.fb_rgba.mark_dirty(0, 0, LOGICAL_W_I32, LOGICAL_H_I32);
     }
 
     /// 视口跟随窗口尺寸（letterbox / pillarbox，P4-2）。
@@ -258,6 +343,14 @@ impl MenuShell {
     pub fn cycle_border_style(&mut self) -> BorderStyle {
         let next = self.settings.border_style.next();
         self.set_border_style(next);
+        next
+    }
+
+    /// S7.6：循环切换画质模式（原版/HD，F4 键绑定）。
+    #[must_use]
+    pub fn cycle_quality(&mut self) -> QualityMode {
+        let next = self.settings.quality.next();
+        self.settings.quality = next;
         next
     }
 
