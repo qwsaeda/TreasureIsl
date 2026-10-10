@@ -5,8 +5,9 @@
 
 ## 当前状态
 
-- 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA Professional 9.4，已自动分析、**无自定义命名**）、`data/`、`Cargo.toml`（5 crate workspace）、`scripts/`、`docs/`、`plan/ledger.yaml`、`evidence/`、`ref/`。
+- 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA Professional 9.4，已自动分析、**无自定义命名**）、`data/`、`Cargo.toml`（5 crate workspace）、`scripts/`、`docs/`、`android/`、`plan/ledger.yaml`、`evidence/`、`ref/`。
 - 工程已 bootstrap：`crates/{ti-formats,ti-core,ti-platform,ti-app,ti-tools}`；进度只由 `plan/ledger.yaml` 驱动。
+- **S8 标准化改造进行中**（见 `docs/plan-s8-refactor.md`）：逆向产物降级为参照物，业务与流程文档独立。
 
 ## 路由表
 
@@ -14,19 +15,23 @@
 
 | 你要做的事 | 读 |
 |---|---|
+| **新开工 / 参与开发（先读这个）** | `docs/process/00_index.md`（分工表：谁做什么 + 标准工作流）+ `docs/business/00_index.md`（业务唯一事实源） |
 | **任何开工动作之前** | `docs/loop.md` + `plan/ledger.yaml` + `docs/README.md` |
 | 判断「做完了没有」/ 验收 | `docs/parity.md` |
-| 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | `docs/style.md` |
-| 逆向 exe 或 `data/` 格式 | `docs/facts/index.md`（含已实测结论，先读再动手） |
-| 找当前阶段任务与验收命令 | `docs/plan-s0-s2.md`、`docs/plan-s3.md`、`docs/plan-s4.md` |
+| 写 Rust（分层/数据驱动/现成库） | `docs/process/01_architecture.md` + `docs/process/02_conventions.md`（新）；语法层细节 `docs/style.md` |
+| 套用模版 / 写新场景·控件·模块 | `docs/process/03_templates.md` |
+| 用脚本/codegen 批量处理 | `docs/process/04_tooling.md` |
+| **查业务规则（战斗/经济/地图/存档）** | `docs/business/` 各系统文档（不依赖逆向产物） |
+| S8 标准化改造总计划 | `docs/plan-s8-refactor.md` |
+| 逆向 exe 或 `data/` 格式（**仅参照物**） | `docs/facts/index.md` |
+| 找当前阶段任务与验收命令 | `docs/plan-s0-s2.md`、`docs/plan-s3.md`、`docs/plan-s4.md`、`docs/plan-s5.md`、`docs/plan-s7.md`、`docs/plan-s8-refactor.md` |
 | 避免重复踩坑 | `docs/experience/index.md` ← **每次踩坑后必须回写** |
 | 容器格式（pak/lpk）字段与偏移 | `docs/formats/lucencypackage.md` |
-| 某玩法模块的行为规格 | `docs/spec/<module>.md`（模块清单见 `docs/README.md`） |
-| **要实现/改玩法逻辑（实现级规格）** | `docs/game_design.md` → `docs/design/<system>.md`（不含 IDA 地址） |
 | 现代化改造 / 移植 / 多端适配 | `docs/modernization.md` |
-| Android 壳落地 + Mac 出 APK（S5.5） | `android/README.md`（cargo-apk 脚手架 + 资源拷贝 + 编译/装机步骤） |
-| 查数值（价格表/BOSS HP/RNG 常数/上限） | `docs/design/constants.md` |
-| 引入新依赖 / 改 workspace 结构 | `docs/style.md` §5.1、§5.9 |
+| **HD 资产增强 / 超分 / 矢量化 / 多分辨率打包（S7）** | `docs/impl/14_asset_enhancement.md`（方案规格）→ `docs/plan-s7.md`（任务表） |
+| Android 壳落地 + Mac 出 APK（S5.5） | `android/README.md` |
+| 引入新依赖 / 改 workspace 结构 | `docs/process/01_architecture.md` §4（现成库清单，先查再引）→ `docs/style.md` §5.9 |
+| 推送远端 / 分支与 commit 规范 / 每任务合入即推 | `docs/git.md` |
 
 ## 硬规则（违反 = 返工）
 
@@ -40,7 +45,8 @@
 ## 命令
 
 ```sh
-# 每轮循环的门禁（9 项，全绿才可把任务置 verified，输出 tee 到 evidence/<id>.log）
+# 每轮循环的门禁：gate.ps1 8 项（fmt/clippy/test/build×3/占位/unwrap/zero-unknown/台账）+ doccheck 独立第 9 项（`cargo run -q -p ti-tools --bin doccheck`）
+# 全绿才可把任务置 verified，输出 tee 到 evidence/<id>.log
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 
 # 单项调试
