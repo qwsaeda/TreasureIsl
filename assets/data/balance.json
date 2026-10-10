@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+
+  "economy": {
+    "gold_max": 999999,
+    "bank_rate": 1.0,
+    "initial_gold": 100
+  },
+
+  "combat": {
+    "player_first": true,
+    "max_rounds": 1000,
+    "damage": {
+      "model": "atk_plus_flat",
+      "flat": 1,
+      "atk_coef": 1.0,
+      "rng_span": 3
+    },
+    "boss_tiers": [
+      { "tier": 0, "hp": 50000,  "atk": 10 },
+      { "tier": 1, "hp": 100000, "atk": 12 },
+      { "tier": 2, "hp": 150000, "atk": 14 },
+      { "tier": 3, "hp": 200000, "atk": 16 },
+      { "tier": 4, "hp": 300000, "atk": 20 }
+    ]
+  },
+
+  "trade": {
+    "markup": 1.0,
+    "goods": [
+      { "id": 1, "name_key": "goods.1", "buy": 20,  "qty_max": 99 },
+      { "id": 2, "name_key": "goods.2", "buy": 76,  "qty_max": 99 },
+      { "id": 3, "name_key": "goods.3", "buy": 95,  "qty_max": 99 },
+      { "id": 4, "name_key": "goods.4", "buy": 114, "qty_max": 99 },
+      { "id": 5, "name_key": "goods.5", "buy": 133, "qty_max": 99 }
+    ]
+  },
+
+  "build": {
+    "max_level": 10,
+    "buildings": [
+      { "id": "Castle",     "name_key": "build.castle",     "base_cost": 1000, "gold_max": 20000 },
+      { "id": "Investment", "name_key": "build.investment", "base_cost": 500,  "gold_max": 12000 },
+      { "id": "Bank",       "name_key": "build.bank",       "base_cost": 200,  "gold_max": 5000  },
+      { "id": "Fort",       "name_key": "build.fort",       "base_cost": 800,  "gold_max": 16000 }
+    ]
+  },
+
+  "cards": {
+    "event_chance": 0.35,
+    "hand_size": 1,
+    "deck": [
+      { "id": 1, "name_key": "cards.1", "weight": 3, "effect": { "kind": "damage", "value": 10 } },
+      { "id": 2, "name_key": "cards.2", "weight": 2, "effect": { "kind": "heal",   "value": 15 } },
+      { "id": 3, "name_key": "cards.3", "weight": 3, "effect": { "kind": "gold",   "value": 20 } },
+      { "id": 4, "name_key": "cards.4", "weight": 1, "effect": { "kind": "move" } },
+      { "id": 5, "name_key": "cards.5", "weight": 1, "effect": { "kind": "unknown" } }
+    ]
+  },
+
+  "messages": {
+    "pages": { "msgs": 1, "msgl": 1, "msgm": 1, "help": 3, "info": 1 }
+  },
+
+  "save": {
+    "slot_count": 5,
+    "magic": 20125007,
+    "v2_size": 26
+  },
+
+  "selection": {
+    "characters": [
+      { "id": "panda",     "index": 0 },
+      { "id": "tichy",     "index": 1 },
+      { "id": "kidd",      "index": 2 },
+      { "id": "drake",     "index": 3 },
+      { "id": "katharina", "index": 4 }
+    ],
+    "maps": [
+      { "id": "m01", "index": 0, "grid_w": 20, "grid_h": 20, "boss_tier": 0 },
+      { "id": "m02", "index": 1, "grid_w": 20, "grid_h": 20, "boss_tier": 1 },
+      { "id": "m03", "index": 2, "grid_w": 15, "grid_h": 15, "boss_tier": 2 }
+    ]
+  },
+
+  "ui": {
+    "logical_width": 176,
+    "logical_height": 220,
+    "glyph_advance": 12,
+    "max_back_steps": 8
+  }
+}

@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（8 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（11 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (8 items) ==="
+Write-Host "=== gate: TreasureIsl (11 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -88,6 +88,27 @@ if (Test-Path 'crates/ti-tools/src/bin/verify.rs') {
 $ledgerOut = & cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml 2>&1
 $ledgerOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'ledger validate'
+
+# 9) 文档一致性（doccheck 独立第 9 项，见 crates/ti-tools/src/doccheck.rs）
+$docOut = & cargo run -q -p ti-tools --bin doccheck 2>&1
+$docOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'doccheck (docs consistency)'
+
+# 10) 数据表校验 + 硬编码扫描（S8.2，见 docs/process/04_tooling.md §2）
+#     10a) validate_data 必须全绿：assets/data/*.json 结构与数值合法域
+$valOut = & python scripts/validate_data.py 2>&1
+$valOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'validate_data (assets/data/*.json)'
+#     10b) gen_layout --check：controls.json 与 ref/controls.json 派生产物一致（幂等）
+$genOut = & python scripts/gen_layout.py --check 2>&1
+$genOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'gen_layout --check (idempotent)'
+#     10c) check_hardcode：严格模式（发现硬编码即 FAIL）。2026-10 已清零 37 处债务，
+#          玩家可见中文全进 strings.json、布局色全走 COLOR_* 常量；诊断/CLI 经 EXEMPT 豁免。
+$hcOut = & python scripts/check_hardcode.py 2>&1
+$hcHits = @($hcOut | Where-Object { $_ -match 'hit\(s\)' })
+$hcHits | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'check_hardcode (strict; 0 hits required)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

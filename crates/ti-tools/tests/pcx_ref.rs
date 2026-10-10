@@ -67,7 +67,7 @@ fn rust_decoder_matches_python_reference() {
             let ph: u16 = parts[1].parse().unwrap_or(0);
             let ref_hash = parts[2];
 
-            let our_hash = fnv1a64(&img.pixels);
+            let our_hash = format!("{:016x}", fnv1a64(&img.pixels));
             if pw != img.width || ph != img.height || ref_hash != our_hash {
                 mismatches.push(format!(
                     "{c}[{i}] 不一致: py={pw}x{ph}/{ref_hash} rust={}x{}/{our_hash}",

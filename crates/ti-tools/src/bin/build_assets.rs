@@ -12,7 +12,7 @@ use std::process::ExitCode;
 use ti_formats::lucency::Package;
 use ti_formats::mapfile::MapScene;
 use ti_formats::{Ini, TerrainMap};
-use ti_tools::hash::fnv1a64;
+use ti_tools::hash::fnv1a64_hex;
 
 const CONTAINERS: [&str; 7] = [
     "ui.pak",
@@ -72,7 +72,7 @@ fn build(out: &Path) -> Result<usize, String> {
             let raw = pkg.read_entry(&buf, i).map_err(|e| format!("解压 {c}[{i}]: {e}"))?;
             let rel = format!("raw/{stem}/{:08x}.bin", pkg.entries[i].key);
             write_file(out, &rel, &raw)?;
-            files.insert(rel, fnv1a64(&raw));
+            files.insert(rel, fnv1a64_hex(&raw));
         }
     }
 
@@ -100,7 +100,7 @@ fn build(out: &Path) -> Result<usize, String> {
         };
         let rel = format!("scenes/{name}.json");
         write_file(out, &rel, json.as_bytes())?;
-        files.insert(rel, fnv1a64(json.as_bytes()));
+        files.insert(rel, fnv1a64_hex(json.as_bytes()));
     }
 
     // 3. 容器内 INI → JSON
@@ -114,7 +114,7 @@ fn build(out: &Path) -> Result<usize, String> {
             let json = ini.to_json();
             let rel = format!("ini/cards_{i}.json");
             write_file(out, &rel, json.as_bytes())?;
-            files.insert(rel, fnv1a64(json.as_bytes()));
+            files.insert(rel, fnv1a64_hex(json.as_bytes()));
         }
     }
 
@@ -130,7 +130,7 @@ fn build(out: &Path) -> Result<usize, String> {
             .map_err(|e| format!("OGG 编码: {e}"))?;
         let rel = "audio/glmusic.ogg".to_string();
         write_file(out, &rel, &ogg)?;
-        files.insert(rel, fnv1a64(&ogg));
+        files.insert(rel, fnv1a64_hex(&ogg));
     }
 
     // 5. manifest（排序、无时间戳 → 幂等）

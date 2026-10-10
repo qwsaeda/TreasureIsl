@@ -56,10 +56,10 @@ fn collect(dir: &Path, base: &Path) -> Vec<(String, String)> {
     v
 }
 
-use ti_tools::hash::fnv1a64;
+use ti_tools::hash::fnv1a64_hex;
 
 fn hash(bytes: &[u8]) -> String {
-    fnv1a64(bytes)
+    fnv1a64_hex(bytes)
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn manifest_hashes_match_actual_files() {
         match fs::read(&full) {
             Ok(data) => {
                 checked += 1;
-                let actual = fnv1a64(&data);
+                let actual = fnv1a64_hex(&data);
                 if actual != want {
                     bad.push(format!("{path}: manifest={want} actual={actual}"));
                 }
