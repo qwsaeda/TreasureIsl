@@ -1,17 +1,12 @@
-//! S3.3 主菜单事件状态机正式实现。
+//! S3.3 / S8.3.e 主菜单事件状态机正式实现（数据化：转移表落本文件，不再调 oracle）。
 //!
-//! 与 `oracle::menu::oracle_menu_transition` 行为逐位一致（同一场景 + 同一事件产生
-//! 同一 `(MenuScene, Option<Sfx>)`），但结构不同：用 `MenuStateMachine` 结构体 +
-//! `handle` 方法承载状态与日志，而非自由函数。
+//! S8 定位变更：旧 `oracle::menu::oracle_menu_transition`/`oracle_reachable_menu` 降级参照物；
+//! 本模块的转移表直接落本文件（`docs/business/loop_core.md` §菜单），行为与 oracle 一致
+//! （同场景 + 同事件 → 同 `(MenuScene, Option<Sfx>)`），但**不再调用** oracle 自由函数。
 //!
-//! 依据 `docs/spec/menu.md`：
-//! - 场景枚举 [`MenuScene`]（8 个，从 oracle 重导出）；
-//! - 事件枚举 [`MenuEvent`]（`Click(u32)` / `Invalid` / `Quit`）；
-//! - `handle` 方法返回可选音效并更新内部场景状态。
-//!
-//! 事件码（spec §a，`sub_41354` 实测）：
-//! - 13 = 确定/Enter；27 = 返回；37 = 无效；38 = 上一页；40 = 下一页；
-//! - 0..=5 = 菜单项索引（case 0..=5，**推测**占位码，与真实码 13 等价分派）。
+//! [`MenuScene`]/[`MenuEvent`]/[`Sfx`] 仍从 oracle 重导出（枚举定义非推测公式，S8.3.e 允许）；
+//! 事件码语义（13/27/37/38/40 + 菜单项 0..=5）在 `docs/business/loop_core.md`，
+//! 菜单标签走 `strings.json`（`menu.*` key，非中文字面量）。
 
 use crate::oracle::menu::{MenuEvent, MenuScene, Sfx};
 
@@ -48,7 +43,7 @@ impl MenuStateMachine {
 
     /// 处理事件，更新场景，返回可选音效。
     ///
-    /// 行为与 `oracle::menu::oracle_menu_transition` 逐位一致。
+    /// 转移表（`docs/business/loop_core.md` §菜单，与 oracle 行为一致但本文件为唯一事实源）。
     #[must_use]
     pub fn handle(&mut self, ev: MenuEvent) -> Option<Sfx> {
         let (next, sfx) = transition(self.scene, ev);
@@ -57,7 +52,7 @@ impl MenuStateMachine {
         sfx
     }
 
-    /// 可达场景集（从 Intro/Index 出发，与 `oracle::menu::oracle_reachable_menu` 逐位一致）。
+    /// 可达场景集（从 Intro/Index 出发，转移表在本文件，与 oracle 行为一致）。
     ///
     /// 此方法语义上为关联函数（不读 `self`），但保留为实例方法以保持 API 一致性。
     #[must_use]

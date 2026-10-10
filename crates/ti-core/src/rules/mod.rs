@@ -3,6 +3,7 @@
 pub mod battle;
 pub mod build;
 pub mod cards;
+pub mod cards_draw;
 pub mod main_loop;
 pub mod main_map;
 pub mod menu;
@@ -10,5 +11,6 @@ pub mod messages;
 pub mod render;
 pub mod rng;
 pub mod saveload;
+pub mod saveload_json;
 pub mod selection;
 pub mod trade;

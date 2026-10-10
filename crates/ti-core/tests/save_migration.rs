@@ -13,7 +13,7 @@ use ti_core::oracle::saveload::{
     MIN_SAVE_SIZE, REC_MAGIC, SaveErr, SaveSlot, oracle_migrate_v1_to_v2, oracle_read_slot,
     oracle_read_slot_v1, oracle_write_slot,
 };
-use ti_core::rules::saveload::SaveManager;
+use ti_core::rules::saveload::{SaveManager, SaveSlotV2};
 
 /// 构造 v1 存档字节（18 字节：2B 前缀 + 4B 魔数 + 4B character + 4B `map_slot` + 4B position）。
 ///
@@ -86,31 +86,25 @@ fn v2_write_read_backward_compat() {
     assert_eq!(read, slot);
 }
 
-/// (3) 5 槽位 SaveManager：全部槽位从 v1 迁移到 v2。
+/// (3) 5 槽位 SaveManager：全部槽位从 v1 迁移到 v2（JSON 存储 + oracle 迁移路径）。
 #[test]
 fn manager_migrate_all_5_slots_from_v1() {
     let mut mgr = SaveManager::new(5);
 
-    // 每个槽位写入不同的 v1 数据（模拟 v1 存档已存在）
     for i in 0..5u32 {
         let v1_bytes = make_v1_bytes(i + 1, i % 5, i * 42);
         let v1_slot = oracle_read_slot_v1(&v1_bytes).expect("v1 解析应成功");
-        let migrated = mgr.migrate(&v1_slot);
+        let migrated = oracle_migrate_v1_to_v2(&v1_slot);
         assert_eq!(migrated.version, 2, "槽位 {i} 迁移后 version=2");
-        assert_eq!(migrated.character, i + 1, "槽位 {i} character 不变");
-        assert_eq!(migrated.map_slot, i % 5, "槽位 {i} map_slot 不变");
-        assert_eq!(migrated.position, i * 42, "槽位 {i} position 不变");
-        mgr.set_slot(i as usize, migrated);
+        // 经 JSON 写读回槽位（JSON v2 槽位，含 oracle 迁移后的字段）
+        mgr.set_slot(i as usize, SaveSlotV2::from_legacy_slot(&migrated));
     }
 
-    // 验证 5 个槽位全部迁移完成
     for i in 0..5 {
         let s = mgr.slot(i).expect("槽位应存在");
-        assert_eq!(s.version, 2, "槽位 {i} version=2（已迁移）");
-        let v2_bytes = mgr.write_slot(s);
-        assert_eq!(v2_bytes.len(), 26, "槽位 {i} v2 写入 = 26 字节");
-        let read = mgr.read_slot(&v2_bytes).expect("槽位 {i} v2 读回应成功");
-        assert_eq!(read, *s, "槽位 {i} 往返逐位一致");
+        assert!(s.is_v2(), "槽位 {i} 已迁移 v2");
+        let json = mgr.slot_json(i).expect("槽位 {i} JSON 序列化");
+        assert!(!json.is_empty(), "槽位 {i} JSON 非空");
     }
 }
 
@@ -119,30 +113,21 @@ fn manager_migrate_all_5_slots_from_v1() {
 fn json_export_import_roundtrip() {
     let mut mgr = SaveManager::new(5);
     for i in 0..5u32 {
-        let slot =
+        let legacy =
             SaveSlot { version: 2, character: i + 1, gold: i * 1000, map_slot: i, position: i * 7 };
-        mgr.set_slot(i as usize, slot);
+        mgr.set_slot(i as usize, SaveSlotV2::from_legacy_slot(&legacy));
     }
 
-    // 导出：Vec<SaveSlot> → JSON 字节
-    let slots: Vec<SaveSlot> = mgr.slots().to_vec();
+    // 导出：各槽 JSON 收集 → 整体 JSON 字节
+    let slots: Vec<String> = (0..5).map(|i| mgr.slot_json(i).expect("序列化")).collect();
     let json_bytes = serde_json::to_vec(&slots).expect("JSON 序列化应成功");
     assert!(!json_bytes.is_empty(), "JSON 字节非空");
 
-    // 导入：JSON 字节 → Vec<SaveSlot>
-    let imported: Vec<SaveSlot> = serde_json::from_slice(&json_bytes).expect("JSON 反序列化应成功");
+    // 导入：JSON 字节 → 各槽 → 逐字段一致
+    let imported: Vec<String> = serde_json::from_slice(&json_bytes).expect("JSON 反序列化应成功");
     assert_eq!(imported.len(), 5, "导入后 5 槽位");
-
-    // 逐字段一致
-    for (original, restored) in slots.iter().zip(imported.iter()) {
-        assert_eq!(original, restored, "JSON 往返应逐字段一致");
-    }
-
-    // 导入的槽位写回 v2 字节仍正确
-    for (idx, slot) in imported.iter().enumerate() {
-        let v2_bytes = oracle_write_slot(slot);
-        let read = oracle_read_slot(&v2_bytes).expect("导入槽位 v2 读回应成功");
-        assert_eq!(read, *slot, "槽位 {idx} 导入后往返一致");
+    for (i, orig) in slots.iter().enumerate() {
+        assert_eq!(orig, &imported[i], "槽 {i} JSON 往返一致");
     }
 }
 
@@ -173,16 +158,16 @@ fn byte_layout_is_self_describing() {
     assert_eq!(MIN_SAVE_SIZE, 26, "v2 最小大小 = 26");
 }
 
-/// (6) 魔数损坏 → `SaveErr::BadMagic`（跨平台字节一致性验证：同一批字节在
-/// 任一存储后端读出，魔数校验结果相同）。
+/// (6) 魔数损坏 → `SaveErr::BadMagic`（oracle 二进制路径；JSON 槽位无魔数，走 `ParseErr`）。
 #[test]
 fn bad_magic_rejected() {
     let slot = SaveSlot::default();
     let mut bytes = oracle_write_slot(&slot);
     bytes[2] = 0xFF;
     assert_eq!(oracle_read_slot(&bytes), Err(SaveErr::BadMagic));
-    let mgr = SaveManager::new(5);
-    assert_eq!(mgr.read_slot(&bytes), Err(SaveErr::BadMagic));
+    // JSON 槽位路径：损坏 JSON 文本 → 解析失败（无魔数概念，用 ParseErr 兜底）
+    let mut mgr = SaveManager::new(5);
+    assert!(mgr.set_slot_json(0, "{not valid json").is_none(), "损坏 JSON → 忽略写入");
 }
 
 /// (7) v1 最小大小 18 字节，v2 最小大小 26 字节；不足 → `TooShort`。

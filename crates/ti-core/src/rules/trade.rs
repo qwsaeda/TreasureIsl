@@ -1,47 +1,82 @@
-//! S3.6 贸易系统正式实现。
+//! S8.3.b 贸易系统正式实现（数值从 `assets/data/balance.json` 注入）。
 //!
-//! 与 `oracle::trade` 行为逐位一致（同一输入产生逐位相同的
-//! 买入/卖出结算/价格查询/利润计算），但结构不同：用 `TradeLedger`
-//! 结构体 + 方法承载状态（持有量/金/价格表/买入成本），而非自由函数。
+//! 业务规格（唯一事实源）：[`docs/business/economy.md`](../../../docs/business/economy.md)。
+//! 设计要点：
+//! - **不重抄数值**：价格/售价系数/数量上限全部来自 [`TradeCfg`]（由 `data::balance()` 注入）；
+//! - **不做动态行情**：售价固定（`sell = buy × markup`），避免投机博弈；
+//! - 纯逻辑、零 IO、确定性（同输入同输出）。
 //!
-//! 依据 `docs/spec/trade.md`：
-//! - 商品目录 [`Goods`]、价格表 [`PriceTable`]、错误 [`TradeErr`]、结果 [`TradeResult`]
-//!   （从 oracle 重导出）；
-//! - [`TradeLedger`]：贸易账本（`goods: Vec<(gid, qty)>` + `gold` + `table` + `buy_cost`）；
-//! - `buy` / `sell` / `gold()` / `profit_since(&self, gid)` 方法。
+//! S8 定位变更：本模块不再从 `oracle::trade` 取「推测」价格表，改为读 balance.json；
+//! oracle 仅作历史参照。
 
-use crate::oracle::trade::{
-    GOODS_CATALOG, Goods, PriceTable, TradeErr, TradeResult, oracle_buy, oracle_sell,
-};
+use crate::data::TradeCfg;
 
-/// 贸易账本：持有量 + 金 + 价格表 + 买入成本。
+/// 贸易错误。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TradeErr {
+    /// 金不足（`gold < cost`）。
+    InsufficientGold,
+    /// 未知商品（`gid` 不在目录中）。
+    UnknownGood,
+    /// 无库存（持有量为 0）。
+    NoStock,
+    /// 数量越界（`qty > qty_max` 或 `qty == 0`）。
+    QtyOutOfRange,
+}
+
+/// 一次买卖的结算结果。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TradeResult {
+    /// 商品 id。
+    pub gid: u32,
+    /// 成交数量。
+    pub qty: u32,
+    /// 支付/获得金额。
+    pub amount: u32,
+    /// 结算后金币。
+    pub gold_left: u32,
+}
+
+/// 把非负有限 `f64` 钳到 `u32` 区间后取整（避免直接 cast 触发 clippy pedantic）。
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::trivially_copy_pass_by_ref
+)]
+fn f64_to_u32(v: f64) -> Option<u32> {
+    if !v.is_finite() || v < 0.0 {
+        return None;
+    }
+    Some(v.round().min(f64::from(u32::MAX)) as u32)
+}
+
+/// 贸易账本：持有量 + 金 + 配置 + 累计买入成本。
 #[derive(Debug, Clone)]
 pub struct TradeLedger {
-    /// 持有量（`goods_id → qty`，`sub_4DCD8` 8 字节记录的 oracle 化）。
+    /// 持有量（`goods_id → qty`）。
     goods: Vec<(u32, u32)>,
-    /// 当前金（`sub_54D1C` `+1024` 偏移的 oracle 化）。
+    /// 当前金。
     gold: u32,
-    /// 价格表（`sub_546E0`/`sub_54D1C` 固定 5 商品占位表）。
-    table: PriceTable,
-    /// 历史买入成本（`goods_id → 累计成本`，用于 `avg_buy_price` 计算均价，
-    /// 对应 `sub_54D1C` 行 128-135 均价公式的 oracle 简化）。
+    /// 累计买入成本（`goods_id → 累计成本`，用于均价与利润）。
     buy_cost: Vec<(u32, u32)>,
+    /// 数值配置（价格表/售价系数/数量上限），由 balance 注入。
+    cfg: TradeCfg,
 }
 
 impl TradeLedger {
-    /// 新建贸易账本（指定初始金、价格表、初始持有量）。
+    /// 新建贸易账本（注入配置 + 初始金 + 初始持有）。
     #[must_use]
-    pub fn new(gold: u32, table: PriceTable, goods: &[(u32, u32)]) -> Self {
-        Self { goods: goods.to_vec(), gold, table, buy_cost: Vec::new() }
+    pub fn new(cfg: TradeCfg, gold: u32, goods: &[(u32, u32)]) -> Self {
+        Self { goods: goods.to_vec(), gold, buy_cost: Vec::new(), cfg }
     }
 
-    /// 当前金（只读，对应 `sub_54D1C` `+1024` 偏移）。
+    /// 当前金（只读）。
     #[must_use]
     pub fn gold(&self) -> u32 {
         self.gold
     }
 
-    /// 持有量（只读，对应 `sub_4DCD8` 链表记录）。
+    /// 持有量（只读）。
     #[must_use]
     pub fn goods(&self) -> &[(u32, u32)] {
         &self.goods
@@ -53,9 +88,33 @@ impl TradeLedger {
         self.goods.iter().find(|(id, _)| *id == gid).map_or(0, |&(_, q)| q)
     }
 
-    /// 买入均价（`sub_54D1C` 行 128-135 公式的 oracle 简化：`累计成本 / 累计数量`）。
-    ///
-    /// 无买入记录或持有量为 0 → 0（对应 `oracle_sell` 的 `avg_buy_price == 0` → profit = 全价）。
+    /// 商品配置（只读；不存在 → `None`）。
+    #[must_use]
+    pub fn good_def(&self, gid: u32) -> Option<&crate::data::GoodsDef> {
+        self.cfg.goods.iter().find(|g| g.id == gid)
+    }
+
+    /// 买入单价（`buy`；不存在 → `None`）。
+    #[must_use]
+    pub fn buy_price(&self, gid: u32) -> Option<u32> {
+        self.good_def(gid).map(|g| g.buy)
+    }
+
+    /// 卖出单价（`round(buy × markup)`；不存在 → `None`）。
+    #[must_use]
+    pub fn sell_price(&self, gid: u32) -> Option<u32> {
+        let g = self.good_def(gid)?;
+        let v = f64::from(g.buy) * f64::from(self.cfg.markup);
+        Some(f64_to_u32(v).unwrap_or(g.buy))
+    }
+
+    /// 持有量上限（`qty_max`；不存在 → 0）。
+    #[must_use]
+    pub fn qty_cap(&self, gid: u32) -> u32 {
+        self.good_def(gid).map_or(0, |g| g.qty_max)
+    }
+
+    /// 买入均价（累计成本 / 持有量；无记录 → 0）。
     #[must_use]
     pub fn avg_buy_price(&self, gid: u32) -> u32 {
         let qty = self.owned(gid);
@@ -65,71 +124,69 @@ impl TradeLedger {
         self.buy_cost.iter().find(|(id, _)| *id == gid).map_or(0, |&(_, cost)| cost / qty)
     }
 
-    /// 买入 1 件（行为与 `oracle_buy` 逐位一致，同时更新内部状态）。
+    /// 买入 `qty` 件。
     ///
-    /// 成功：`gold -= price`，`goods[gid].qty += 1`，`buy_cost[gid].cost += price`。
-    /// 失败：状态不变。
+    /// 成功：`gold -= buy_price × qty`，`goods[gid].qty += qty`，
+    /// `buy_cost[gid] += buy_price × qty`；失败状态不变。
     ///
     /// # Errors
     ///
-    /// - [`TradeErr::UnknownGood`]：`gid` 不在价格表中；
-    /// - [`TradeErr::InsufficientGold`]：`gold < price`。
-    pub fn buy(&mut self, gid: u32) -> Result<TradeResult, TradeErr> {
-        let result = oracle_buy(&self.table, gid, self.gold)?;
-        self.gold = result.gold_left;
-        self.apply_buy(gid, result.paid);
-        Ok(result)
+    /// - [`TradeErr::UnknownGood`]：`gid` 不在目录；
+    /// - [`TradeErr::QtyOutOfRange`]：`qty == 0` 或 `owned + qty > qty_max`；
+    /// - [`TradeErr::InsufficientGold`]：`gold < cost`。
+    pub fn buy(&mut self, gid: u32, qty: u32) -> Result<TradeResult, TradeErr> {
+        let price = self.buy_price(gid).ok_or(TradeErr::UnknownGood)?;
+        let cap = self.qty_cap(gid);
+        if qty == 0 || self.owned(gid).saturating_add(qty) > cap {
+            return Err(TradeErr::QtyOutOfRange);
+        }
+        let cost = price.saturating_mul(qty);
+        if self.gold < cost {
+            return Err(TradeErr::InsufficientGold);
+        }
+        self.gold -= cost;
+        self.apply_buy(gid, qty, cost);
+        Ok(TradeResult { gid, qty, amount: cost, gold_left: self.gold })
     }
 
-    /// 卖出当前全部持有件（行为与 `oracle_sell` 逐位一致，同时更新内部状态）。
+    /// 卖出 `qty` 件（`qty == 0` 视为卖出全部持有，符合 UI 直觉）。
     ///
-    /// 成功：`gold += gain`，`goods[gid].qty -= owned`，`buy_cost[gid].cost -= price × owned`。
-    /// 失败：状态不变。
+    /// 成功：`gold += sell_price × qty`，`goods[gid].qty -= qty`，
+    /// 按比例扣减 `buy_cost`。
     ///
     /// # Errors
     ///
-    /// - [`TradeErr::UnknownGood`]：`gid` 不在价格表中；
-    /// - [`TradeErr::NoStock`]：`owned == 0`。
-    pub fn sell(&mut self, gid: u32) -> Result<TradeResult, TradeErr> {
+    /// - [`TradeErr::UnknownGood`]：`gid` 不在目录；
+    /// - [`TradeErr::NoStock`]：持有量为 0。
+    pub fn sell(&mut self, gid: u32, qty: u32) -> Result<TradeResult, TradeErr> {
         let owned = self.owned(gid);
-        let avg = self.avg_buy_price(gid);
-        let result = oracle_sell(&self.table, gid, owned, self.gold, avg)?;
-        self.gold = result.gold_left;
-        self.apply_sell(gid, owned);
-        Ok(result)
+        if owned == 0 {
+            return Err(TradeErr::NoStock);
+        }
+        let price = self.sell_price(gid).ok_or(TradeErr::UnknownGood)?;
+        let qty = if qty == 0 { owned } else { qty.min(owned) };
+        let gain = price.saturating_mul(qty);
+        self.gold = self.gold.saturating_add(gain);
+        self.apply_sell(gid, qty, price);
+        Ok(TradeResult { gid, qty, amount: gain, gold_left: self.gold })
     }
 
-    /// 某商品的累计利润（`profit_since`，对应 `sub_54D1C` 行 128-135 均价公式）。
-    ///
-    /// 规则：`profit = (当前价 - 买入均价) × 持有量`（负值钳 0，与 `oracle_sell` 一致）。
-    /// 无持有 → 0。
+    /// 某商品的累计利润（`(卖出价 - 买入均价) × 持有量`；无持有 → 0）。
     #[must_use]
     pub fn profit_since(&self, gid: u32) -> i32 {
         let owned = self.owned(gid);
         if owned == 0 {
             return 0;
         }
-        let Some(price) = self.table.lookup(gid) else {
+        let Some(price) = self.sell_price(gid) else {
             return 0;
         };
         let avg = self.avg_buy_price(gid);
-        let unit_profit = if avg > 0 { price.saturating_sub(avg) } else { price };
-        i32::try_from(unit_profit.saturating_mul(owned)).unwrap_or(i32::MAX)
+        let unit = price.saturating_sub(avg);
+        i32::try_from(unit.saturating_mul(owned)).unwrap_or(i32::MAX)
     }
 
-    /// 占位商品目录（`GOODS_CATALOG` 重导出，spec §a）。
-    #[must_use]
-    pub fn catalog() -> &'static [Goods; 5] {
-        &GOODS_CATALOG
-    }
-
-    /// 查固定价格（行为与 `oracle_price` 逐位一致，seed=0 即固定价格）。
-    #[must_use]
-    pub fn price(&self, gid: u32) -> Option<u32> {
-        self.table.lookup(gid)
-    }
-
-    /// 预置买入成本（用于 diff 测试：构造任意 `avg_buy_price` 而不走 buy 链）。
+    /// 预置买入成本（测试夹具：构造任意均价而不必先 buy）。
     pub fn set_buy_cost(&mut self, gid: u32, cost: u32) {
         match self.buy_cost.iter_mut().find(|(id, _)| *id == gid) {
             Some(entry) => entry.1 = cost,
@@ -137,39 +194,37 @@ impl TradeLedger {
         }
     }
 
+    /// 配置只读视图（表现层画价格表用）。
+    #[must_use]
+    pub fn cfg(&self) -> &TradeCfg {
+        &self.cfg
+    }
+
     // ── 内部辅助 ─────────────────────────────────────────────────────────────
 
-    /// 买入成功后的内部状态更新（`goods` 持有量 +1，`buy_cost` 累计 + price）。
-    fn apply_buy(&mut self, gid: u32, price: u32) {
+    /// 买入后：持有量 +qty，累计成本 +cost。
+    fn apply_buy(&mut self, gid: u32, qty: u32, cost: u32) {
         match self.goods.iter_mut().find(|(id, _)| *id == gid) {
-            Some(entry) => entry.1 += 1,
-            None => self.goods.push((gid, 1)),
+            Some(entry) => entry.1 += qty,
+            None => self.goods.push((gid, qty)),
         }
         match self.buy_cost.iter_mut().find(|(id, _)| *id == gid) {
-            Some(entry) => entry.1 = entry.1.saturating_add(price),
-            None => self.buy_cost.push((gid, price)),
+            Some(entry) => entry.1 = entry.1.saturating_add(cost),
+            None => self.buy_cost.push((gid, cost)),
         }
     }
 
-    /// 卖出成功后的内部状态更新（`goods` 持有量 - `sold_qty`，`buy_cost` 按比例扣减）。
-    fn apply_sell(&mut self, gid: u32, sold_qty: u32) {
-        if sold_qty == 0 {
+    /// 卖出后：持有量 -qty，按买入价等比扣减累计成本。
+    fn apply_sell(&mut self, gid: u32, qty: u32, buy_price: u32) {
+        if qty == 0 {
             return;
         }
         if let Some(entry) = self.goods.iter_mut().find(|(id, _)| *id == gid) {
-            entry.1 = entry.1.saturating_sub(sold_qty);
+            entry.1 = entry.1.saturating_sub(qty);
         }
-        // 扣减 buy_cost（精确扣减：price × sold_qty，因 oracle 固定价格表下均价 = cost/qty）
-        let price = self.table.lookup(gid).unwrap_or(0);
-        let reduce = price.saturating_mul(sold_qty);
+        let reduce = buy_price.saturating_mul(qty);
         if let Some(entry) = self.buy_cost.iter_mut().find(|(id, _)| *id == gid) {
             entry.1 = entry.1.saturating_sub(reduce);
         }
-    }
-}
-
-impl Default for TradeLedger {
-    fn default() -> Self {
-        Self::new(0, PriceTable::placeholder(), &[])
     }
 }

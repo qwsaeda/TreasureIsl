@@ -1,7 +1,7 @@
 //! S3.9 卡牌/事件系统正式实现。
 //!
 //! 依据 `docs/spec/cards.md`：
-//! - 卡牌效果 [`CardEffect`]（Damage/Heal/Gold/Move/Unknown，spec §c `sub_3D1B4` 4 种效果码）；
+//! - 卡牌效果 [`CardEffect`]（Damage/Heal/Gold/Move/Unknown，spec §c `效果类型码解码` 4 种效果码）；
 //! - 卡牌定义 [`CardDef`]（`id` + `effect`）；
 //! - 卡牌状态 [`CardState`]（`hp` + `gold`）；
 //! - 应用结果 [`CardResult`]（`Applied(CardEffect)` / `UnknownEvent`）；
@@ -10,10 +10,10 @@
 //! - `event_to_card` / `apply` / `all_event_ids` / `card_by_id` 方法。
 //!
 //! 行为确定（同输入逐位相同），不允许 rand。
-//! 随机分支（`sub_2101C` case 3 的 `rand()%25+1` 事件生成）不在此建模，
+//! 随机分支（`主地图帧更新` case 3 的 `rand()%25+1` 事件生成）不在此建模，
 //! 随机序列对齐归 S3.12。
 
-/// 卡牌效果（spec §c，`sub_3D1B4` case 1..4 → 4 种效果码，**推测**语义映射）。
+/// 卡牌效果（spec §c，`效果类型码解码` case 1..4 → 4 种效果码，**推测**语义映射）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CardEffect {
     /// 扣 HP（效果码 1，**推测**）。
@@ -24,7 +24,7 @@ pub enum CardEffect {
     Gold(u32),
     /// 地图移动（效果码 4，**推测**）。
     Move,
-    /// 未知效果（`sub_3D1B4` default → 0，spec §c）。
+    /// 未知效果（`效果类型码解码` default → 0，spec §c）。
     Unknown,
 }
 
@@ -33,11 +33,11 @@ pub enum CardEffect {
 pub struct CardDef {
     /// 卡牌 id（`u32`，对应 `cards\cards.ini` 的 `card%d` 序号，1-based）。
     pub id: u32,
-    /// 卡牌效果（spec §c，`sub_3D1B4` 效果码 1..4 的 oracle 化）。
+    /// 卡牌效果（spec §c，`效果类型码解码` 效果码 1..4 的 oracle 化）。
     pub effect: CardEffect,
 }
 
-/// 卡牌状态（spec §b，`sub_32960` 存储的卡牌对象 + 金量的 oracle 化）。
+/// 卡牌状态（spec §b，`cards` 存储的卡牌对象 + 金量的 oracle 化）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct CardState {
     /// 当前 HP（`Damage` 扣减 / `Heal` 加成的目标字段）。
@@ -55,7 +55,7 @@ pub enum CardResult {
     UnknownEvent,
 }
 
-/// 占位卡牌目录（5 张卡，spec §a；效果 **推测** 映射，对照 `sub_19F9C` 初值价格表）。
+/// 占位卡牌目录（5 张卡，spec §a；效果 **推测** 映射，对照 `卡牌对象` 初值价格表）。
 pub const CARD_CATALOG: [CardDef; 5] = [
     CardDef { id: 1, effect: CardEffect::Damage(10) },
     CardDef { id: 2, effect: CardEffect::Heal(15) },
@@ -64,9 +64,9 @@ pub const CARD_CATALOG: [CardDef; 5] = [
     CardDef { id: 5, effect: CardEffect::Unknown },
 ];
 
-/// `event_id` → 卡牌定义映射（spec §b，`sub_32960` 统一存储语义）。
+/// `event_id` → 卡牌定义映射（spec §b，`cards` 统一存储语义）。
 ///
-/// 规则（spec §b 重映射表 + `sub_32960` 行 14-15）：
+/// 规则（spec §b 重映射表 + `cards` 行 14-15）：
 /// - `event_id` 1..=5：直接映射到 `catalog[i-1]`（卡牌 id = `event_id`）；
 /// - `event_id` 6..=25：映射到 `catalog[(event_id - 1) % 5]`（**推测**：事件 id 循环对应 5 张卡）；
 /// - `catalog` 为空 → 返回 `None`（无处理路径，spec §d）。
@@ -92,9 +92,9 @@ pub fn event_to_card(event_id: u32, catalog: &[CardDef]) -> Option<&CardDef> {
 /// 规则（spec §c 直译）：
 /// - `Damage(n)`：`state.hp = hp.saturating_sub(n)`；
 /// - `Heal(n)`：`state.hp += n`（u32 饱和加）；
-/// - `Gold(n)`：`state.gold += n`（**推测**：仅加，exe 侧扣金由贸易系统 `sub_54D1C` 处理）；
+/// - `Gold(n)`：`state.gold += n`（**推测**：仅加，exe 侧扣金由贸易系统 `单件买入` 处理）；
 /// - `Move`：不改 `state`（地图移动归 S3.5，oracle 层仅记录效果）；
-/// - `Unknown`：不改 `state`（`sub_3D1B4` default → 0，无效果）。
+/// - `Unknown`：不改 `state`（`效果类型码解码` default → 0，无效果）。
 ///
 /// 返回 `Applied(effect)`；`event_id` 无对应卡牌时返回 `UnknownEvent`。
 #[must_use]
@@ -119,8 +119,8 @@ pub fn apply_card(card: &CardDef, state: &mut CardState) -> CardResult {
 
 /// 全部有处理路径的 `event_id` 清单（spec §b，25 个 id，100% 覆盖）。
 ///
-/// 规则（spec §b `sub_2101C` case 3 重映射表）：
-/// - `event_id` 1..=25 全部有处理路径（`sub_32960` 统一存储）；
+/// 规则（spec §b `主地图帧更新` case 3 重映射表）：
+/// - `event_id` 1..=25 全部有处理路径（`cards` 统一存储）；
 /// - 重映射 {4→8, 13→17, 14→18, 15→19} 为 exe 侧 id 修正（`rand()%25+1` 生成后）；
 /// - 返回 1..=25 共 25 个 id（`catalog` 为空时返回空列表，表示无处理路径）。
 #[must_use]

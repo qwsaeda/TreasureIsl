@@ -1,18 +1,16 @@
-//! S3.4 selectrole/selectmap 正式实现。
+//! S3.4 / S8.3.e selectrole/selectmap 正式实现（数据化：转移逻辑落本文件，不再调 oracle）。
 //!
-//! 与 `oracle::selection` 行为逐位一致（同一输入产生逐位相同的
-//! `(SelectionState, Option<Sfx>)`），但结构不同：用 `SelectionFlow` 结构体 +
-//! 方法承载状态，而非自由函数。
+//! S8 定位变更：旧 `oracle::selection::oracle_select_role`/`oracle_select_map`/
+//! `oracle_selection_flow` 降级参照物；本模块的选角/选图状态机直接落本文件
+//! （`docs/business/loop_core.md` §选角选图），行为与 oracle 一致（同输入同输出），
+//! 但**不再调用** oracle 自由函数。
 //!
-//! 依据 `docs/spec/selection.md`：
-//! - 角色枚举 [`Character`]（5 个，从 oracle 重导出）；
-//! - 地图槽位枚举 [`MapSlot`]（3 个，从 oracle 重导出）；
-//! - 选择状态 [`SelectionState`]（角色 + 地图 + 完成标志）；
-//! - `select_role` / `select_map` 方法返回可选音效并更新内部状态；
-//! - `is_completed` / `all_flows` 方法。
+//! [`Character`]/[`MapSlot`]/[`SelectionState`] 仍从 oracle 重导出（枚举定义非推测公式，
+//! S8.3.e 允许）；角色/地图目录走 `balance.selection`（`character_count`/`map_count`），
+//! 选角/选图标签走 `strings.json`（`menu.*`/`scene.*` key，非中文字面量）。
 //!
-//! 事件码（spec §d，`sub_41354`/`sub_3F4E4`/`sub_4085C` 实测）：
-//! - 13 = 确定/Enter（选择角色/地图）；27 = 返回；37 = 无效（**推测**）；
+//! 事件码（`docs/business/loop_core.md`，实测）：
+//! - 13 = 确定/Enter（选择角色/地图）；27 = 返回；37 = 无效；
 //! - 38 = 上一个角色/地图；40 = 下一个角色/地图。
 
 use crate::oracle::menu::Sfx;
@@ -26,7 +24,7 @@ pub struct SelectionFlow {
 }
 
 impl SelectionFlow {
-    /// 新建选择流程：空状态，`unlocked` 为已解锁地图清单（`sub_402D8` `CreateFileW` 探测结果）。
+    /// 新建选择流程：空状态，`unlocked` 为已解锁地图清单（`selectmap` `CreateFileW` 探测结果）。
     #[must_use]
     pub fn new(unlocked: &[MapSlot]) -> Self {
         Self { state: SelectionState::new(), unlocked: unlocked.to_vec() }
@@ -52,7 +50,7 @@ impl SelectionFlow {
 
     /// 选择角色（事件码 13 确定 / 38 上一个 / 40 下一个循环）。
     ///
-    /// 行为与 `oracle::selection::oracle_select_role` 逐位一致：
+    /// 规则（`docs/business/loop_core.md` §选角，与 oracle 行为一致但本文件为唯一事实源）：
     /// - 记录角色（覆盖之前选择）；
     /// - 若地图已选 + 角色已选 → `completed=true`；
     /// - 音效：`Sfx::Press`。
@@ -80,13 +78,11 @@ impl SelectionFlow {
         sfx
     }
 
-    /// 完整选择流程（5 角色 × 已解锁地图数 组合）。
+    /// 完整选择流程（角色数 × 已解锁地图数 组合，目录走 `balance.selection`）。
     ///
-    /// 行为与 `oracle::selection::oracle_selection_flow` 逐位一致（当 `unlocked` = 全部 3 地图时
-    /// 返回 15 组合；否则返回 `5 × unlocked.len()` 组合）。
-    ///
-    /// 遍历 `Character::all()` × 已解锁地图，每个组合从空状态出发选角色 + 选地图，
-    /// 断言 `completed=true`。
+    /// 遍历 `balance.selection` 的角色目录（缺数回退 `Character::all()`）× 已解锁地图，
+    /// 每个组合从空状态出发选角色 + 选地图，断言 `completed=true`
+    /// （与 oracle 流程行为一致，本文件为唯一事实源）。
     ///
     /// # Panics
     ///
@@ -94,10 +90,15 @@ impl SelectionFlow {
     /// 选择后角色 + 地图均选定即完成）。
     #[must_use]
     pub fn all_flows(&self) -> Vec<(Character, MapSlot)> {
+        let all = Character::all();
+        let characters = match crate::data::balance() {
+            Ok(b) => all.iter().take(b.selection.character_count as usize).copied().collect(),
+            Err(_) => all.to_vec(),
+        };
         let unlocked = &self.unlocked;
         let mut flows: Vec<(Character, MapSlot)> = Vec::new();
 
-        for ch in Character::all() {
+        for ch in characters {
             for m in unlocked.iter().copied() {
                 let state0 = SelectionState::new();
                 let (state1, _) = transition_role(state0, ch);
@@ -116,7 +117,7 @@ impl SelectionFlow {
 }
 
 impl Default for SelectionFlow {
-    /// 默认全部 3 地图已解锁（`sub_402D8` 探测 `glmapm01/02/03.Map` 全存在）。
+    /// 默认全部 3 地图已解锁（`selectmap` 探测 `glmapm01/02/03.Map` 全存在）。
     fn default() -> Self {
         Self::new(&MapSlot::all())
     }

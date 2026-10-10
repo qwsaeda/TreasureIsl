@@ -1,17 +1,15 @@
-//! S3.2 资源/渲染核心正式实现。
+//! S3.2 / S8.6 资源/渲染核心正式实现（渲染基线对齐真实资源，去自指）。
 //!
-//! 与 `oracle::render` 行为逐位一致（同一输入产生逐位相同的 `Result<Vec<SceneAsset>, RenderError>`
-//! 与 `RenderPlan`），但结构不同：用 `SceneManager` 结构体 + 方法组织，
-//! 而非自由函数。
+//! S8 定位变更：旧 `oracle::render::oracle_load_scene`/`oracle_render_frame` 降级参照物；
+//! 本模块的装载校验规则直接落本文件（`docs/business/economy.md` 资源容器 + S8.6 渲染基线），
+//! 行为与 oracle 一致（同输入同输出），但**不再调用** oracle 自由函数。
 //!
-//! 依据 `docs/spec/main_loop.md` §4 与 `evidence/S3.2.log`：
-//! - 场景装载器族：`sub_42574`/`3ECDC`/`402D8`/`40D80`/`2077C`；
-//! - 通用装载 `sub_37EDC`：从容器索引取 PCX/控件表；
-//! - 渲染：WinCE GX API，图层顺序 = 装载顺序；
-//! - 存档：`gl0.sav`..`gl4.sav` + `gl.rec`（魔数 0x01315A47）+ `settings.dat`。
+//! 渲染基线（`docs/plan-s8-refactor.md` S8.6）：参考图改用**真实资源**（`ref/` 容器 +
+//! `assets/` 贴图）而非逆向自指的伪参考；`render_parity` 测试改测真实资源对齐。
+//! 本模块只负责「装载校验 + 图层顺序」，像素级对齐归 `ti-app` 的 `render_parity`。
 
-/// 资源容器类型（`evidence/S3.2.log` 关键发现 §3）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// 资源容器类型（`docs/business/economy.md` 资源清单 + `evidence/S3.2.log` 关键发现 §3）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ResourceContainer {
     /// UI.pak：场景 .Map + 控件表。
     Ui,
@@ -38,7 +36,7 @@ impl ResourceContainer {
         ]
     }
 
-    /// 容器可读名称。
+    /// 容器可读名称（稳定字符串，非中文；显示走 `strings.json`）。
     #[must_use]
     pub const fn label(self) -> &'static str {
         match self {
@@ -52,7 +50,7 @@ impl ResourceContainer {
 }
 
 /// 资源引用：容器 + 资源名。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ResourceRef {
     /// 所属容器。
     pub container: ResourceContainer,
@@ -107,11 +105,17 @@ pub struct RenderPlan {
     pub blit_count: usize,
 }
 
-/// gl.rec 魔数（0x01315A47）。
-const GL_REC_MAGIC: u32 = 0x0131_5A47;
+/// gl.rec 魔数（0x01315A47，`docs/business/economy.md` 容器清单）。
+pub const GL_REC_MAGIC: u32 = 0x0131_5A47;
 
 /// 场景管理器：持有可装载资源清单，执行装载与渲染规划。
-#[derive(Debug, Clone)]
+///
+/// 装载校验规则（`docs/business/economy.md` 资源容器 + S8.6 渲染基线，本文件为唯一事实源）：
+/// 1. 每个 `ResourceRef` 的容器必须在 `available_containers` 中存在；
+/// 2. `Glpics` 容器要求 gl.rec 魔数有效（`magic == GL_REC_MAGIC`）；
+/// 3. `Ui` 容器中以 `glmapm` 开头的 `.Map` 资源需通过探测（编号在 `glmapm_indices` 已解锁）；
+/// 4. 校验通过的资源按扩展名映射为 `SceneAsset` 变体。
+#[derive(Debug, Clone, Default)]
 pub struct SceneManager {
     /// 已装载的场景资产列表（按装载顺序，即渲染图层顺序）。
     scenes: Vec<SceneAsset>,
@@ -121,7 +125,7 @@ impl SceneManager {
     /// 新建空的场景管理器。
     #[must_use]
     pub fn new() -> Self {
-        Self { scenes: Vec::new() }
+        Self::default()
     }
 
     /// 当前已装载的资产（只读引用）。
@@ -130,20 +134,10 @@ impl SceneManager {
         &self.scenes
     }
 
-    /// 装载场景资源。
-    ///
-    /// 行为与 `oracle::render::oracle_load_scene` 逐位一致：
-    /// 1. 每个 `ResourceRef` 的容器必须在 `available_containers` 中存在；
-    /// 2. `Glpics` 容器要求 gl.rec 魔数有效（`magic == 0x01315A47`）；
-    /// 3. `Ui` 容器中以 `glmapm` 开头的 `.Map` 资源需通过探测
-    ///    （编号必须在 `glmapm_indices` 中已解锁）；
-    /// 4. 校验通过的资源按扩展名映射为 `SceneAsset` 变体。
-    ///
-    /// 成功后更新内部 `scenes`；失败时 `scenes` 保持不变。
+    /// 装载场景资源（校验规则见 [`SceneManager`] 文档；成功更新内部 `scenes`，失败保持）。
     ///
     /// # Errors
-    ///
-    /// 任一资源校验失败时返回 `Err(RenderError { missing })`，列出全部缺失项。
+    /// 任一资源校验失败 → `Err(RenderError { missing })`，列出全部缺失项。
     pub fn load_scene(
         &mut self,
         refs: &[ResourceRef],
@@ -203,20 +197,11 @@ impl SceneManager {
         }
     }
 
-    /// 生成渲染计划。
+    /// 生成渲染计划（图层顺序 = 装载顺序，`blit_count` = 图层数）。
     ///
-    /// 图层顺序 = 装载顺序（`assets` 参数即当前已装载资产或指定资产列表），
-    /// `blit_count` = 图层数。
-    ///
-    /// 行为与 `oracle::render::oracle_render_frame` 逐位一致。
+    /// S8.6：本计划是「图层顺序基线」，像素级对齐由 `ti-app::render_parity` 用真实资源验证。
     #[must_use]
     pub fn render_frame(assets: &[SceneAsset]) -> RenderPlan {
         RenderPlan { layers: assets.to_vec(), blit_count: assets.len() }
-    }
-}
-
-impl Default for SceneManager {
-    fn default() -> Self {
-        Self::new()
     }
 }
