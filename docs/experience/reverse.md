@@ -28,7 +28,7 @@
   - **种子 = `wMinute + wSecond + wMilliseconds`**（不是 wHour/wDay）→ 毫秒级时间播种，秒级重复。固定毫秒 → 固定种子 → 固定 rand() 序列，**确定性可复现**。
   - ⚠️ `sub_42AE8` 也调 `GetLocalTime` 但**不是播种**：它是存档时间戳逻辑（`sub_42DB0` 算时间戳，前 8 字节存「起始/当前」时间戳，`v4 <= Buffer + 2592000` 判 30 天过期）。
 - 算法（推测，标 `推测`）：MSVC WinCE ARM 的 `rand()` = 标准 LCG `seed = seed * 214013 + 2531011; return (seed >> 16) & 0x7fff`（与桌面 MSVC 一致，见 MSVC CRT 文档）。**无法从 exe 实测验证**（coredll 不在工程内），只能等 S3.12 oracle 实现后用差分测试反证：若 oracle LCG 序列与游戏行为对不上，则 coredll 用了不同算法，需找 WinCE coredll.dll 逆向。
-- 解法（S3.12 oracle 实现路径）：
+- 解法（S3.12 oracle 实现路径；**`oracle/rng.rs` 已随 S8.7 删除**，`rules/rng.rs` 改用 `rand_pcg` PCG64，以下为历史参照）：
   1. `ti-core/src/oracle/rng.rs`：`struct RngState { seed: u32 }`；`srand(seed)`、`rand()` = `seed = seed.wrapping_mul(214013).wrapping_add(2531011); ((seed >> 16) & 0x7fff) as i32`；
   2. 差分用例：固定种子（如 `srand(123)`）→ 取 1000 次 rand() → 与 oracle 序列逐位比对；若游戏侧能复现同种子序列（需 headless 跑游戏 rand 调用点），则算法确认；
   3. **播种点不进 oracle**（毫秒时间种子不可复现），oracle 只负责「给定种子 → 确定序列」；正式实现 `rules::rng` 同理，播种由调用层（场景 ctor）注入。

@@ -1,12 +1,14 @@
-//! 战斗场景（S8.4：场景 struct 化，经 `SceneHost` 窄能力边界，不接触 `GameApp` 字段）。
+//! 战斗场景（S9 骨架）：回合推进 / 战斗面板绘制。
+use ti_core::oracle::battle::Side;
 
 use crate::game_app::GameInput;
+use crate::i18n;
+use crate::menu_shell::{COLOR_BG, COLOR_TITLE_BAR};
 use crate::scenes::{Scene, SceneHost, SceneKind};
+use crate::touch::TouchSample;
+use ti_platform::settings::Gesture;
 
 /// 战斗场景处理器（`Vs`）。
-///
-/// 只持有场景标识（`SceneKind`），不持有 `GameApp`：所有操作经
-/// [`SceneHost`] 能力接口（`advance` 交回宿主业务判定 / `enter` 切场景）。
 pub struct VsScene;
 
 impl Scene for VsScene {
@@ -14,14 +16,58 @@ impl Scene for VsScene {
         SceneKind::Vs
     }
 
-    fn on_input(&mut self, host: &mut dyn SceneHost, input: GameInput) -> Option<SceneKind> {
-        // 业务判定内聚在宿主（`GameApp::handle_X`），场景只做路由：
-        // 宿主处理后若切了场景，返回新 `SceneKind`，否则停留。
-        let changed = host.advance(input);
-        if changed { Some(SceneKind::from_legacy(host.current_scene())) } else { None }
+    fn on_input(&mut self, host: &mut dyn SceneHost, input: GameInput) -> bool {
+        match input {
+            GameInput::Attack => {
+                host.battle_step();
+                false
+            }
+            GameInput::Back => {
+                // 战斗结束/中途退出 → 回主菜单（`spec/battle.md §d`，状态码 25→0）
+                host.enter(SceneKind::Index);
+                true
+            }
+            _ => false,
+        }
     }
 
+    /// 点任意处 = 攻击一回合；下滑 = 退出战斗。
+    fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
+        match sample.gesture {
+            Gesture::Tap | Gesture::SwipeUp | Gesture::SwipeLeft | Gesture::SwipeRight => {
+                host.advance(GameInput::Attack)
+            }
+            Gesture::SwipeDown => host.advance(GameInput::Back),
+        }
+    }
+
+    /// 战斗面板（双方 HP + 回合 + 结果）。
     fn render(&mut self, host: &mut dyn SceneHost) {
-        host.render_current();
+        host.clear_frame(COLOR_BG);
+        host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        host.draw_text(i18n::sget("scene.vs.title"), 64, 4);
+        match host.battle_snapshot() {
+            Some(b) => {
+                let ph = i18n::sgetf("scene.vs.player_hp_fmt", &[&b.player_hp]);
+                let bh = i18n::sgetf("scene.vs.boss_hp_fmt", &[&b.boss_hp]);
+                let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
+                host.draw_text(&ph, 10, 50);
+                host.draw_text(&bh, 10, 80);
+                host.draw_text(&rd, 10, 110);
+                match b.outcome {
+                    Some(Side::Player) => {
+                        host.draw_text(i18n::sget("scene.vs.victory"), 60, 150);
+                    }
+                    Some(Side::Enemy) => {
+                        host.draw_text(i18n::sget("scene.vs.defeat"), 60, 150);
+                    }
+                    None => host.draw_text(i18n::sget("scene.vs.awaiting"), 50, 150),
+                }
+            }
+            None => {
+                host.draw_text(i18n::sget("scene.vs.empty"), 60, 50);
+            }
+        }
+        host.draw_text(i18n::sget("scene.vs.hint"), 60, 210);
     }
 }

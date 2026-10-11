@@ -57,6 +57,17 @@ pub fn page_text_key(kind: MsgKind, page: u32) -> String {
     format!("msg.{}.{}", kind_key(kind), p + 1)
 }
 
+/// 某类消息界面第 `page` 页的纯文本（`balance.messages.pages` 分页 + 越界钳末页，不 panic）。
+///
+/// 实现：返回该页的文本 key（`strings.json` 查表由调用方经 `i18n::sget` 完成；
+/// 本函数只做 `balance.messages` 分页钳位，保持纯函数无 IO、可单测）。
+/// 与 `oracle_text_line` 的差异：oracle 是固定占位文本（非分页），本函数按
+/// `balance.messages.pages` 真实分页，越界页钳到最后一页（`docs/business/loop_core.md` 消息 §边界）。
+#[must_use]
+pub fn page_text(kind: MsgKind, page: u32) -> String {
+    page_text_key(kind, page)
+}
+
 /// kind → 短 key（`strings.json` 的 `msg.*` 前缀，稳定字符串，非中文）。
 fn kind_key(k: MsgKind) -> &'static str {
     match k {

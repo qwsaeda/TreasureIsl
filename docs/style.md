@@ -1,4 +1,4 @@
-# 工程规范（Style Guide）
+﻿# 工程规范（Style Guide）
 
 本文件是 Rust 代码的强制规范。与本文件冲突的写法一律返工。选型已定案：**Rust edition 2024 + macroquad**，禁止重新讨论。
 
@@ -9,7 +9,7 @@ treasure-island/
 ├── Cargo.toml              # [workspace] edition="2024"，[workspace.lints] 集中
 ├── rustfmt.toml            # 全局唯一格式化配置
 ├── clippy.toml
-├── scripts/gate.ps1        # 门禁（parity.md 11 项，PowerShell 本机执行）
+├── scripts/gate.ps1        # 门禁（parity.md 13 项，PowerShell 本机执行）
 ├── crates/
 │   ├── ti-formats/         # 纯二进制格式解析/序列化：pak/lpk/pcx/map/font/save
 │   │   └── src/{pak.rs, pcx.rs, map.rs, font.rs, save.rs, macros.rs, error.rs, ids.rs}

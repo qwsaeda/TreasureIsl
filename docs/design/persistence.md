@@ -1,6 +1,11 @@
+> ⚠️ **弃用/归档（S8，2026-10）**：本目录为逆向规格参照物，不再是开发依据或验收基准。
+> 业务规则唯一事实源 = [`docs/business/`](../business/00_index.md) + `assets/data/*.json`。
+> 本文仅作原版形态参考；数值/文本以 `assets/data/*.json` 为准，流程以 `docs/business/` 为准。
+> 见 [`docs/plan-s8-refactor.md`](../plan-s8-refactor.md) §1（逆向产物降级）。
+
 # 持久化与随机系统设计
 
-本文档涵盖：存读档（settings.dat / gl*.sav / gl.rec，文件布局/魔数/迁移）+ RNG（LCG 算法/播种/调用点）。
+本文档涵盖：存读档（settings.dat / gl*.sav / gl.rec，文件布局/魔数/迁移）+ RNG（LCG 算法（oracle 历史参照）/PCG（当前实现）/播种/调用点）。
 
 ---
 
@@ -16,7 +21,7 @@
 
 ### 1.2 统一魔数
 
-所有存档文件共用魔数 `0x01315A47`（= 19,810,929）。
+所有存档文件共用魔数 `0x01315A47`（= 20,011,591）。
 （`settings.dat` 除外，见 §1.3 / F-304：前缀 `5D 4A` + 负载无魔数校验。）
 
 文件布局统一为：`[2B 前缀][4B 魔数(u32 LE)][负载]`。
@@ -283,6 +288,8 @@ if rand() % 5 != 0:
 
 ### 2.1 算法
 
+> S8.7 后当前实现为 PCG（`rand_pcg`，`rules/rng.rs`）；本节 MSVC LCG（**推测**，coredll.dll 导入 thunk 无法实测）为 **oracle 历史参照物**（S8.7 前实现）。
+
 MSVC 标准 LCG（**推测**，coredll.dll 导入 thunk 无法实测）：
 
 ```
@@ -327,7 +334,7 @@ impl GameRng {
 }
 ```
 
-`GameRng` 只做「结构体 + 方法」封装，LCG 常数只写在 `RngState::step` 一处。
+`GameRng` 只做「结构体 + 方法」封装，LCG 常数只写在 `RngState::step` 一处（S8.7 前；现库化 `rand_pcg`，旧 LCG 为 oracle 历史参照）。
 
 ### 2.3 播种点
 
@@ -393,7 +400,7 @@ impl GameRng {
 
 `oracle_damage` 使用 `K = 2,654,435,761`（Knuth 乘子），**不与全局 RNG 统一**。
 
-理由：这是战斗模块自有的伤害公式常数，语义与全局 LCG 序列不同，
+理由：这是战斗模块自有的伤害公式常数，语义与全局随机序列（LCG 历史参照 / PCG 当前实现）不同，
 强行统一会破坏已验证的 diff_battle 组合结果。
 
 ### 2.7 确定性验收
@@ -409,5 +416,5 @@ oracle 序列 vs impl 序列 → 逐位一致
 
 ### 2.8 不使用 rand crate
 
-- 不引 `rand` crate，不用 `SystemRandom`（ti-core 无平台依赖硬约束）。
-- 用自实现 LCG，保证跨端（native/wasm/android）序列逐位一致。
+- 不引 `rand` crate，不用 `SystemRandom`（ti-core 无平台依赖硬约束，S8.7 前）；S8.7 后库化 `rand_pcg`，旧自造 LCG 为 oracle 历史参照。
+- 用自实现 LCG（S8.7 前）/ `rand_pcg`（S8.7 起），保证跨端（native/wasm/android）序列逐位一致。

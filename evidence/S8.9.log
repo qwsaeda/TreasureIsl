@@ -1,0 +1,90 @@
+# S8.9 验收证据 — HD 资源提升为默认档
+
+## 判据
+- 默认构建含 `hd-8bit`（`crates/ti-app/Cargo.toml` default = ["hd-8bit"]）
+- `render_hd`/`present_hd`/`set_frame_delta_ms`/`shell_mut`/`last_sfx()` 落地
+- 缺失 `assets_hd_pack` 回退 RGB565 PCX 不 panic
+- `render_parity` / `render_parity_hd` 不回归
+- clippy -D warnings 全绿
+
+## 实跑命令与输出
+
+### 1) cargo build --workspace（默认 feature 含 hd-8bit）
+```
+cargo build --workspace
+   Compiling ti-platform v0.1.0
+   Compiling ti-tools v0.1.0
+   Compiling ti-app v0.1.0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.14s
+```
+
+### 2) cargo clippy --workspace --all-targets -- -D warnings
+```
+cargo clippy --workspace --all-targets -- -D warnings
+    Checking ti-app v0.1.0
+    Checking ti-tools v0.1.0
+    Checking ti-platform v0.1.0
+    Checking ti-core v0.1.0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.34s
+```
+
+### 3) render_parity_hd（feature 进 default 后激活）
+```
+cargo test -p ti-app --test render_parity_hd
+running 7 tests
+test tests::hd_framebuf_matches_logical_resolution ... ok
+test tests::hd_index_scene_renders_real_glyphs_for_title ... ok
+test tests::hd_distinct_scenes_produce_distinct_frames ... ok
+test tests::hd_each_scene_renders_real_content ... ok
+test tests::hd_multi_frame_png_blits_differ_by_frame ... ok
+test tests::hd_png_injection_produces_true_color_pixels ... ok
+test tests::hd_render_is_deterministic_per_scene ... ok
+test result: ok. 7 passed; 0 failed; 0 ignored
+```
+本机 `assets_hd_pack/1x/` 存在 → PNG 注入用例 PASS（非 SKIP）。
+
+### 4) render_parity（RGB565 原路径不回归）
+```
+cargo test -p ti-app --test render_parity
+test each_scene_renders_real_content ... ok
+test index_scene_renders_real_glyphs_for_title ... ok
+test render_is_deterministic_per_scene ... ok
+test tiformats_baseline_is_non_empty ... ok
+test render_sprite_region_matches_tiformats_baseline ... ok
+test result: ok. 7 passed; 0 failed; 0 ignored
+```
+
+### 5) 全量 test
+```
+cargo test --workspace
+test result: ok.（全绿）
+```
+
+## 改动文件
+- `crates/ti-app/Cargo.toml`：default = ["hd-8bit"]
+- `crates/ti-app/src/game_app.rs`：
+  - `shell_mut()` 可变渲染壳访问器
+  - `last_sfx() -> &mut Option<Sfx>` 音效访问器
+  - `set_frame_delta_ms(ms: u32)` 写 frame_delta_ms
+  - `render_hd()`：调 RGB565 `render()` 派发 → `shell.sync_rgba_from_rgb565()`
+  - `present_hd()`：`shell.present_rgba()`
+  - `load_hd_pack_from_dir(dir)`：枚举 `assets_hd_pack/1x/` 按 `NN_hd(_fK).png` 命名解析 f1/帧号，组装 `f1→帧列表` 喂 `load_hd_pngs`；目录缺失/无可解码 PNG 返回 false（PCX 回退，不 panic）
+  - `atlas_hd_cache_size`/`load_hd_pngs` 补 `///` doc 注释
+- `crates/ti-app/src/bin/treasure_native.rs`：可变 shell 操作改 `shell_mut()`；`Shell::new()` 末尾注入 HD PNG（`#[cfg(feature="hd-8bit")]` + `hd_dir.is_dir()` 守卫）
+- `crates/ti-app/src/bin/treasure_wasm.rs`：可变 shell 操作改 `shell_mut()`；非 wasm32 目标注入 HD PNG（`#[cfg(all(feature="hd-8bit", not(target_arch="wasm32")))]`）
+- `crates/ti-app/src/android_shell.rs`：可变 shell 操作改 `shell_mut()`；APK 端按已知静态(116)+多帧(14/31/32/37) HD PNG 文件名逐个 `read_asset` 注入，缺失走 PCX 回退
+- `crates/ti-platform/src/gfx.rs`：`FramebufRgba::new()` 字面量 `0xFF000000` → `0xFF00_0000`（hd-8bit 进 default 后激活的既有 clippy lint，feature 门控代码，允许清单外必要修正）
+- `crates/ti-app/tests/render_parity_hd.rs`：3 处既有 clippy lint（L34/L149 字面量分隔符 + L181 case-sensitive 扩展名比较），feature 进 default 后激活，gate 强制 --all-targets 全绿必要修正
+
+## 缺 assets_hd_pack 回退逻辑
+`treasure_native.rs` `Shell::new()`：
+```rust
+#[cfg(feature = "hd-8bit")]
+{
+    let hd_dir = repo_root().join("assets_hd_pack").join("1x");
+    if hd_dir.is_dir() {
+        game.load_hd_pack_from_dir(&hd_dir);
+    }
+}
+```
+目录不存在 → 跳过注入，`render` 走 RGB565 PCX 原路径（`blit_scene`），不 panic。

@@ -1,4 +1,5 @@
 === S8.3.b 验收日志：经济系统（trade/build）按 docs/business 重写 ===
+（S8.3.b 时点快照：gate 10 项 / check_hardcode warn 75 hit；当前基线 12 项严格 0，见 docs/release.md）
 
 --- cargo test -p ti-core --test rules_trade --test rules_build ---
 

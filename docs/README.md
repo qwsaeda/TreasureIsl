@@ -1,4 +1,4 @@
-# 文档索引（Docs Index）
+﻿# 文档索引（Docs Index）
 
 `AGENTS.md` 只做路由表与硬规则；本文件是**全库索引**。新增文档必须在本文件登记（硬规则 6）。
 
@@ -8,7 +8,7 @@
 |---|---|
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 11 项 + doccheck/doccheck2 独立第 9/9b 项） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 13 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md) |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
@@ -26,7 +26,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 11 项（doccheck/doccheck2 独立第 9/9b 项，`cargo run -p ti-tools --bin doccheck` / `--bin doccheck2`） |
+| [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 13 项（doccheck 独立第 9 项含跨文档数值漂移 + release 台账计数同步，`cargo run -p ti-tools --bin doccheck`） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收） |
 | [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP） |
 | [`git.md`](git.md) | 推送规范（远端 origin/分支模型/推送规则/commit 格式/推送检查清单） |
@@ -48,7 +48,7 @@
 | [`business/00_index.md`](business/00_index.md) | **业务总入口**：与逆向产物的边界 + 设计意图/数值分层 + 编写约定 |
 | [`business/loop_core.md`](business/loop_core.md) | 核心循环（探索→贸易→建造→卡牌→战斗）、目标/失败、回合节奏 |
 | [`business/economy.md`](business/economy.md) | 贸易（买卖结算/无动态行情）/ 建造（单调升级链）/ 银行（溢出） |
-| [`business/combat.md`](combat.md) | 战斗：伤害模型（自主设计非逆向）、回合流程、胜负判定 |
+| [`business/combat.md`](business/combat.md) | 战斗：伤害模型（自主设计非逆向）、回合流程、胜负判定 |
 | [`business/progression.md`](business/progression.md) | 地图网格/等距投影/移动规则/据点/卡牌事件（可复现抽牌） |
 | [`business/persistence.md`](business/persistence.md) | 存档 v2 JSON schema + 迁移 + 可复现 RNG + 设置 |
 
@@ -122,16 +122,21 @@
 | [`spec/rng.md`](spec/rng.md) | S3.12 RNG 与全局规则 |
 | [`gamebook.md`](gamebook.md) | **可玩实现手册**（把已验证 rules 接进交互壳的全流程接线规格，S5 起） |
 
-### 设计文档（`docs/design/`，实现级规格）
+### 设计文档（`docs/design/`，**已弃用/归档**，S8）
+
+> ⚠️ 本目录为逆向规格参照物，不再是开发依据或验收基准。
+> 业务规则唯一事实源 = [`business/`](business/00_index.md) + `assets/data/*.json`。
+> 见 [`plan-s8-refactor.md`](plan-s8-refactor.md) §1。
 
 | 文件 | 内容 |
 |---|---|
+| [`design/00_index.md`](design/00_index.md) | **弃用/归档索引**：定位说明 + 文件清单 + 使用指引 |
 | [`game_design.md`](game_design.md) | **游戏设计总纲**（概述/架构/全流程/设计文档索引/实现路由） |
 | [`design/scene_flow.md`](design/scene_flow.md) | 场景状态机、主菜单、角色/地图选择、事件码体系 |
 | [`design/map_system.md`](design/map_system.md) | 地图数据、地形网格几何、移动规则、据点/地标、事件分派 |
 | [`design/economy.md`](design/economy.md) | 贸易系统 + 建造系统（建筑/银行/金上限） |
 | [`design/combat.md`](design/combat.md) | 战斗系统（BOSS 档/伤害公式/回合制）+ 卡牌事件系统 |
-| [`design/persistence.md`](design/persistence.md) | 存读档（文件布局/魔数/迁移）+ RNG（LCG 算法/播种/调用点） |
+| [`design/persistence.md`](design/persistence.md) | 存读档（文件布局/魔数/迁移）+ RNG（LCG 算法（oracle 历史参照）/PCG（当前实现）/播种/调用点） |
 | [`design/ui_controls.md`](design/ui_controls.md) | 消息界面 + 控件表 + 资源容器 + 渲染管线 + 控制方案 |
 | [`design/constants.md`](design/constants.md) | 全局常量表（分辨率/金上限/BOSS HP/RNG 常数/价格表等） |
 | [`design/main_loop.md`](design/main_loop.md) | 主循环与游戏状态机（场景枚举/状态转换/跨场景状态/实现路由） |
@@ -151,7 +156,7 @@
 | [`impl/07_ui_controls.md`](impl/07_ui_controls.md) | 消息界面、控件表、资源容器、渲染管线 |
 | [`impl/08_input_mapping.md`](impl/08_input_mapping.md) | 输入系统（键盘/触摸/手势/场景行为表） |
 | [`impl/09_persistence.md`](impl/09_persistence.md) | 持久化（文件布局/魔数/v1/v2 迁移/校验） |
-| [`impl/10_rng.md`](impl/10_rng.md) | RNG 系统（LCG 算法/播种点/51 处调用点/确定性） |
+| [`impl/10_rng.md`](impl/10_rng.md) | RNG 系统（LCG 算法（oracle 历史参照）/PCG（当前实现）/播种点/51 处调用点/确定性） |
 | [`impl/11_modernization.md`](impl/11_modernization.md) | 现代化方案（双层渲染/缩放/DPI/虚拟手柄/PWA/Android） |
 | [`impl/12_audio.md`](impl/12_audio.md) | 音频系统（BGM/音效/音量/静音/浏览器策略） |
  | [`impl/13_appendix.md`](impl/13_appendix.md) | 附录（全常量表/事件码/场景码/错误类型/资源清单） |

@@ -2,11 +2,15 @@
 
 本文档是战斗系统的完整实现规格，实现者无需阅读其他文档即可写出正确的战斗逻辑代码。
 
-> 事实来源：`docs/design/combat.md` §1 + `docs/design/constants.md` §4 + `docs/facts/exe.md`。
+> 事实来源：`docs/business/combat.md`（伤害模型/胜负判定节）+ `docs/design/constants.md` §4 + `docs/facts/exe.md`。
 
 ---
 
 ## 1. 类型定义
+
+> S8.3.a 起 `rules::battle.rs` 数值走 `CombatCfg` + `GameRng`（battle.rs:30），
+> 本结构（`seed/player:Unit/enemy:Unit/round/outcome`）为 oracle 占位。
+> 当前实际结构：`BattleSession { cfg, rng, player_hp, player_atk, enemy_hp, enemy_atk, round, outcome }`。
 
 ```rust
 /// 战斗单位
@@ -75,6 +79,10 @@ pub fn oracle_boss_hp(tier: u32) -> u32 {
 
 ## 3. 伤害公式
 
+> S8.3.a 起当前伤害模型 = `balance.combat.damage`（atk_plus_flat）：
+> `damage = round(atk × atk_coef) + rng_offset`（`rng_offset ∈ [0, rng_span)`，下限 `flat`）。
+> 本节的 K=2654435761 公式为 oracle 占位（推测），非当前实现。
+
 ```
 damage(seed, atk) = (seed × 2654435761) % (atk + 1) + 1
 ```
@@ -131,6 +139,9 @@ pub fn battle_round(seed: u32, player: Unit, enemy: Unit) -> RoundResult {
 
 ## 5. 整场战斗
 
+> 注：当前 `rules::battle.rs` 的 `max_rounds` 由 `balance.combat.max_rounds` 注入；
+> balance 缺失时回退 30（battle.rs:53 `fallback_cfg`），非 1000。本节的 1000 为 oracle 占位。
+
 ```rust
 pub const MAX_BATTLE_ROUNDS: u32 = 1000;
 
@@ -145,7 +156,7 @@ pub fn full_battle(seed: u32, player: Unit, boss_tier: u32) -> BattleResult {
     }
 
     let mut player_cur = player;
-    let mut enemy_cur = Unit { hp: boss_hp, atk: 10 };
+    let mut enemy_cur = Unit { hp: boss_hp, atk: 10 }; // 注：当前 rules/battle.rs 从 balance.combat.boss_tiers 对应档取 atk（各档 10/12/14/16/20），此处 10 为 oracle 占位
     let mut trace = Vec::new();
     let mut round_seed = seed;
     let mut round_num = 0u32;
@@ -197,19 +208,26 @@ BattleSession 状态:
 
 ### 7.2 方法语义
 
+> **API 变更（S8.3.a）**：`rules/battle.rs` 已实现 `from_balance(seed, player, boss_tier)`（数值走 `balance.combat`）
+> 与 `new_with_cfg(cfg, seed, player, boss_tier)`（测试注入），不再有裸 `new`。
+> 下表「构造」行描述的是 oracle 历史路径，当前代码入口为 `from_balance`。
+
 | 方法 | 语义 |
 |---|---|
-| `new(seed, player, boss_tier)` | 构造（`enemy.hp` 由 `oracle_boss_hp` 初始化，`enemy.atk = 10`） |
+| `from_balance(seed, player, boss_tier)` | 构造（数值走 `balance.combat.boss_tiers`，越界档 → `enemy_hp=0` 立即胜） |
 | `boss_hp()` | 当前 BOSS HP |
 | `round()` | 当前回合数 |
 | `outcome()` | 战斗结果（`None` = 未结束） |
-| `step()` | 单步回合，返回 `RoundResult` |
-| `finish()` | 整场战斗，返回 `BattleResult` |
+| `step()` | 单步回合，返回 `(player_hp, boss_hp, winner)` |
 
-### 7.3 实现
+### 7.3 实现（oracle 历史参照，**非当前代码**）
+
+> 以下为 `oracle/battle.rs` 的直译参考（S8.3.a 前）；当前 `rules/battle.rs` 用
+> `from_balance`/`new_with_cfg` 构造，数值全走 `balance.combat`。
 
 ```rust
 impl BattleSession {
+    // oracle 历史路径（rules 侧已替换为 from_balance）
     pub fn new(seed: u32, player: Unit, boss_tier: u32) -> Self {
         let boss_hp = oracle_boss_hp(boss_tier);
         let outcome = if boss_hp == 0 { Some(Side::Player) } else { None };

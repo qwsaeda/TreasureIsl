@@ -1,4 +1,4 @@
-# AGENTS.md — 路由表
+﻿# AGENTS.md — 路由表
 
 项目：Windows Mobile 游戏《金银岛 TreasureIsl》(ARM 原生) 的**逆向 + Rust 现代化移植**，目标 WASM(浏览器) + Android 双端。
 背景计划不在此处，按任务路由读文档，**不要凭默认习惯开工**。
@@ -45,7 +45,7 @@
 ## 命令
 
 ```sh
-# 每轮循环的门禁：gate.ps1 11 项（fmt/clippy/test/build×3/占位/unwrap/zero-unknown/台账 + doccheck 第 9 / 数据表第 10 / doccheck2 第 11）
+# 每轮循环的门禁：gate.ps1 13 项（fmt/clippy/test/build×3/占位/unwrap/zero-unknown/台账 + doccheck 第 9 / 数据表第 10 / oracle 边界第 11 / check_hardcode 严格第 12 / doccheck2 第 13）
 # 全绿才可把任务置 verified，输出 tee 到 evidence/<id>.log
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 
@@ -54,8 +54,7 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test  --workspace
 cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（gate 第 8 项）
-cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 9 项）
-cargo run -q -p ti-tools --bin doccheck2                       # 跨文档数值漂移（gate 第 11 项）
+cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 9 项，含跨文档数值断言 + release 台账计数漂移）
 
 # S2.5：构建浏览器产物到 web/（wasm + miniquad gl.js + 真实资源）
 powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1

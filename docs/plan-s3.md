@@ -1,4 +1,4 @@
-# 执行计划 S3：玩法逆向与重写（主体，4~8 周）
+﻿# 执行计划 S3：玩法逆向与重写（主体，4~8 周）
 
 台账驱动的模块循环。**每个模块必须走完 8 个固定子步骤**才可 `verified`，禁止跳步。
 
@@ -11,7 +11,7 @@
 4 implemented ti-core/src/rules|<module>.rs 正式实现（实现 §5.6 的 trait，非 dyn）
 5 diff        diff_test!(oracle, impl, cases) → cargo test -p ti-core --test diff_<module> 全绿
 6 coverage    cargo run -p ti-tools -- coverage events|scenes → 本模块 missing = 0
-7 gate        scripts/gate.ps1 全绿（S3 时点 8 项，现 11 项；占位扫描 0 命中）
+7 gate        scripts/gate.ps1 全绿（S3 时点 8 项，现 13 项；占位扫描 0 命中）
 8 evidence    日志写入 evidence/S3.x.log → ledger 置 verified
 ```
 
@@ -39,7 +39,7 @@
 - 12 个模块全部 `verified`，每份 evidence 齐全；
 - `docs/parity.md` **P2、P3 全绿**：差分测试全通过、事件覆盖 100%、场景覆盖 100%、固定种子全流程脚本跑通（P3-3）；
 - `ref/classify.json` 覆盖率 `pending=0`（exe 中每个函数都有归属，无漏网逻辑）；
-- `scripts/gate.ps1` 全绿（S3 时点 8 项，现 11 项）。
+- `scripts/gate.ps1` 全绿（S3 时点 8 项，现 13 项）。
 
 ## 4. 模块推进中的记录要求
 

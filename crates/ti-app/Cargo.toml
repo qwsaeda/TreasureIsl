@@ -40,7 +40,10 @@ path = "src/bin/treasure_android.rs"
 required-features = ["android-shell"]
 
 [features]
-default = []
+# S8.9：HD 资源提升为默认档——默认构建含 `hd-8bit`（RGBA8 真彩帧缓冲 + PNG 解码）。
+# 缺失 `assets_hd_pack` 时 bin 自动回退 RGB565 PCX 原路径（不 panic）。
+# 需要纯 RGB565 时 `--no-default-features` 关闭。
+default = ["hd-8bit"]
 # wasm/浏览器壳（S2.5）：桌面构建不参与
 wasm-shell = []
 # 桌面 native 壳：std::fs 读本地 data/ 资源（与 wasm 同源），macroquad 原生窗口

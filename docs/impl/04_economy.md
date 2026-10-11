@@ -47,6 +47,8 @@ impl PriceTable {
 
 ### 1.3 买入
 
+> oracle 逐件占位；当前 `TradeLedger::buy(gid, qty)` 为 qty 批量（`rules/trade.rs`），本节为 oracle 占位/历史参照。
+
 ```rust
 pub fn oracle_buy(
     table: &PriceTable,
@@ -67,6 +69,9 @@ pub fn oracle_buy(
 ```
 
 ### 1.4 卖出
+
+> 同上：oracle 逐件占位；当前 `TradeLedger::sell(gid, qty)` 为 qty 批量（`rules/trade.rs`）。
+> `TradeResult` 字段名：oracle 占位用 `paid`/`profit`；当前 `rules::trade::TradeResult` 为 `{ gid, qty, amount, gold_left }`（见 §3）。
 
 卖出**当前全部持有量**：
 
@@ -130,6 +135,8 @@ profit_since(gid):
 | `TradeError::InsufficientGold` | `gold < price`（买入） |
 | `TradeError::NoStock` | `owned == 0`（卖出） |
 
+> 注：oracle 侧仅 3 变体；当前 `rules::trade::TradeErr` 实际有 4 个变体（多 `QtyOutOfRange`，qty==0 或超持有上限），见 §3。
+
 失败时状态不变（事务性）。
 
 ### 1.8 贸易场景事件码
@@ -149,6 +156,8 @@ profit_since(gid):
 ---
 
 ## 2. 建造系统
+
+> 注：§1/§2 代码块中枚举名 `TradeError`/`BuildError` 为 oracle 占位名；当前 `rules::trade`/`rules::build` 实际为 `TradeErr`/`BuildErr`（见 §3）。
 
 ### 2.1 建筑类型
 
@@ -195,6 +204,8 @@ MAX_GOLD = 999999    // 0xF423F
 ```
 
 金量溢出时截断到 999999。
+
+> 注：`rules::build::BuildManager::settle_overflow(rate)` 实际为「溢出按 `bank_rate` 比例进银行」（`gold_cap` 由已建建筑的 `gold_max` 抬升），gold_max 截断为上限语义，非简单 999999 截断。
 
 ### 2.5 银行系统
 
@@ -249,14 +260,15 @@ pub fn oracle_withdraw(bank: &mut Bank, amount: u32) {
 pub struct TradeLedger {
     pub goods: Vec<(u32, u32)>,      // (gid, qty)
     pub gold: u32,
-    pub table: PriceTable,
-    pub buy_cost: Vec<(u32, u32)>,   // (gid, cost)
+    pub buy_cost: Vec<(u32, u32)>,   // (gid, 累计成本)
+    pub cfg: TradeCfg,              // 价格表/售价系数/数量上限，由 balance.json 注入
 }
 
 #[derive(Debug, Clone)]
 pub struct BuildManager {
     pub bank: Bank,
-    pub buildings: Vec<(Building, u32)>, // (kind, level)
+    pub buildings: Vec<(String, u32)>, // (id, level)
+    pub cfg: BuildCfg,                // 建筑造价/金上限配置，由 balance.json 注入
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -273,23 +285,28 @@ pub enum Building {
     Fort,
 }
 
+// 注：`Building` 枚举为 oracle 侧；当前 `rules::build` 用 balance 字符串 id（`Vec<(String, u32)>`），
+// 无 `Building` 枚举参与，建筑由 `BuildCfg`（balance.json）驱动。
+
 #[derive(Debug, Clone, Copy)]
 pub struct TradeResult {
     pub gid: u32,
-    pub paid: u32,
+    pub qty: u32,
+    pub amount: u32,
     pub gold_left: u32,
-    pub profit: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum TradeError {
+pub enum TradeErr {
     UnknownGood,
     InsufficientGold,
     NoStock,
+    QtyOutOfRange,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum BuildError {
+pub enum BuildErr {
+    UnknownBuilding,
     Insufficient,
     InvalidLevel,
 }

@@ -17,7 +17,7 @@
 - 行 56-63：`(**(scene)+4)(...)` 虚调用 — 装载资源/控件表；
 - 行 64：`sub_37EDC(v22, v17, aGlpicsPak)` — 加载 `glpics.pak`；
 - 行 67：`sub_41B5C(a1, v16[0], a1+8)` — 注入角色头像控件表（Player_panda/tichy/kidd/drake/katharina.pcx × 6，`00041B5C_sub_41B5C.c:53-64`）；
-- 行 69-87：`CreateFileW(data/gl.rec)` + 魔数校验（`Buffer == 19810929` = 0x01315A47），读 4 字节头（`byte_81194..81197`）。
+- 行 69-87：`CreateFileW(data/gl.rec)` + 魔数校验（`Buffer == 0x01315A47`），读 4 字节头（`byte_81194..81197`）。
 
 ### 控件表（证据）
 

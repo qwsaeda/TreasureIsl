@@ -1,4 +1,4 @@
-# 推送规范（git push conventions）
+﻿# 推送规范（git push conventions）
 
 远端：`origin` = `https://github.com/qwsaeda/TreasureIsl.git`，主干 **`master`**（本仓无 `main`；⛔ 不要 `git push -u origin main`，refspec 不匹配）。
 
@@ -49,7 +49,7 @@ fmt: 全库规范 CRLF→LF 行尾（rustfmt newline_style=Unix）+ modernizatio
 
 ```
 [ ] git status 无意外文件；data/ 二进制与 evidence/ 按 .gitignore 策略
-[ ] powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 全绿（9 项）
+[ ] powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 全绿（13 项）
 [ ] plan/ledger.yaml 目标任务 verified + evidence/<task>.log 已写
 [ ] commit 消息符合 <scope>: 格式
 [ ] 推送 `master`（本仓无 main）；任务分支合入后删远端 task/*

@@ -20,6 +20,27 @@
 - **表现层不含数值**：所有金币/伤害/价格来自 `ti-core::rules`，表现层只画（详见 `02_conventions.md` §1）。
 - **逆向参照物不进接口**：`docs/facts`/`ref/pseudocode` 不出现在任何 `pub` API 签名或 trait 约束里。
 
+### 1.1 表现层内部分层（`ti-app`）
+
+```
+ti-app/src/
+  game_app.rs        组合根：状态字段 + 键位/触摸/帧路由 + impl SceneHost
+  scenes/mod.rs      SceneHost 能力接口 + Scene trait + 路由（route_*）
+  scenes/<scene>.rs  每场景一个 struct：on_input / on_touch / render
+  menu_shell.rs      帧缓冲 / 字形 / 呈现机制（渲染子系统）
+  bin/               native / wasm / android / headless 四端入口
+```
+
+硬边界：
+
+1. 场景 struct **不持有** `GameApp`，只持有 `&mut dyn SceneHost`；
+2. `SceneHost` 的每个方法都是**一行状态读写 / 表现转发**，业务判定在 `scenes/*.rs`；
+3. `game_app.rs` 不出现 `handle_X` / `touch_X` / `render_X` 场景分支；
+4. 场景之间需要同时可变借用两个字段时（如 `map_session` + `rng`），
+   由 `SceneHost` 提供**单一能力方法**（`map_session_move`），避免宿主暴露裸字段引用；
+5. `SceneHost` 刻意是**一个宽接口**：Rust 不允许 trait object 作为 supertrait，
+   动态分发只能落在单接口上。场景层稳定后可按场景切成具体泛型参数再收窄。
+
 ## 2. crate 现状（2026-10）
 
 | crate | 职责 | 备注 |
@@ -27,7 +48,7 @@
 | `ti-formats` | 资源格式解析/序列化（pak/lpk、PCX、字体、`.Map`、存档） | 真实资产，保留 |
 | `ti-core` | 玩法规则（菜单/选人/选图/地图/贸易/建造/战斗/卡牌/存读档/消息/RNG） | 含 67 处「推测」（2026-10-10 实数，含 oracle+rules+tests），S8 重写 |
 | `ti-platform` | 帧缓冲、输入、音频、存储、设置 | |
-| `ti-app` | 场景状态机、UI 控件、三端 bin（native/wasm/android/headless） | 含架构债，S8 重构 |
+| `ti-app` | 场景状态机、UI 控件、三端 bin（native/wasm/android/headless） | 内部分层见 §1.1；组合根 `game_app.rs` + 场景模块 `scenes/` |
 | `ti-tools` | 离线工具：unpak / map2json / build_assets / controls / classify / specskel / doccheck | 工具链落点 |
 
 ## 3. trait 约定
@@ -64,8 +85,8 @@ pub trait Scene {
 | 窗口 / 渲染 | `macroquad` | 0.4 | 已用，三端统一 |
 | OGG/Opus 编码 | `opus-pure` | 0.2 | 已用，纯 Rust |
 | 数据表解析 | `serde_json` + `include_str!` | 1 | 数值/文本表走 JSON，不写进 .rs |
-| **随机** | `rand` + `rand_pcg` | 0.8/0.3 | 可复现 PCG；玩法层禁止 `thread_rng`（S8.7 落地引入，当前过渡实现为自造 LCG） |
-| **哈希** | `fnv` 或 `twox-hash` | 1/2 | 容器名→key；不要手写 FNV（S8.7 落地引入） |
+| **随机** | `rand_pcg` + `rand_core` | =0.9.0 / =0.9.5 | 可复现 PCG64；玩法层禁止 `thread_rng`（S8.7 落地引入；旧自造 MSVC LCG 降级 oracle 历史参照）；未引 `rand` 主 crate |
+| **哈希** | `fnv` | 1 | 容器名→key；不要手写 FNV（S8.7 落地引入） |
 | **文本格式化** | `write!` / `format!` | std | 禁 `format!("{}", x)` 无占位 |
 | **时间** | `std::time::Instant` | std | 帧计时 |
 | **随机洗牌** | `rand::seq::SliceRandom` | 0.8 | 卡牌抽牌，禁止手写 Fisher-Yates |

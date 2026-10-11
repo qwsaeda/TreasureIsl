@@ -152,26 +152,31 @@ impl GridPos {
 
 ### 2.5 游戏状态
 
+> **S8.4 起**：`GameState` 已不再作为独立 struct，各状态字段直接内嵌在 `GameApp` 中。
+> 以下为 `crates/ti-app/src/game_app.rs` `GameApp` 字段列表（S8.4 后实际结构，字段延伸至 game_app.rs:180-248）：
+
 ```rust
 // crates/ti-app/src/game_app.rs（GameState 各字段直接内嵌在 GameApp 中，非独立 struct）
 
-#[derive(Debug, Clone)]
-pub struct GameState {
-    pub character: Option<Character>,
-    pub map_slot: Option<MapSlot>,
-    pub gold: u32,
-    pub owned: Vec<(u32, u32)>,         // (goods_id, qty)
-    pub bank: Bank,
-    pub buildings: Vec<(Building, u32)>, // (kind, level)
-    pub battle: Option<BattleView>,
-    pub msg_kind: Option<MsgKind>,
-    pub msg_page: u32,
-    pub msg_total: u32,
-    pub save_slots: Vec<SaveSlot>,
-    pub rng: GameRng,
-    pub rng_seed: u32,
-    pub quit: bool,
-}
+// GameApp 游戏状态字段（§3 顶层结构示例，完整 40+ 字段见 game_app.rs:180-248）：
+//   character: Option<Character>
+//   map_slot: Option<MapSlot>
+//   unlocked_maps: Vec<MapSlot>
+//   selection: SelectionState
+//   map_terrain: Option<MapTerrain>
+//   map_pos: Option<GridPos>
+//   map_landmarks: Vec<(u32, u32)>
+//   gold: u32
+//   price_table: PriceTable
+//   owned: Vec<(u32, u32)>
+//   bank: Bank
+//   buildings: Vec<(Building, u32)>
+//   battle: Option<BattleView>
+//   map_session: MapSession
+//   rng: GameRng / rng_seed: u32
+//   msg_kind / msg_page / msg_total / save_slots / quit / last_dispatch
+```
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Character {
@@ -211,16 +216,39 @@ pub enum MsgKind {
 ## 3. 顶层应用结构
 
 ```rust
-// crates/ti-app/src/game_app.rs
+// crates/ti-app/src/game_app.rs（S8.4 后实际字段，完整 40+ 字段见 game_app.rs:180-240）
 
 pub struct GameApp {
     pub shell: MenuShell,
-    pub atlas: Option<SpriteAtlas>,
     pub scenes: SceneStack,
     pub scene: Scene,
-    pub state: GameState,
-    pub input: KeyState,
-    pub settings: Settings,
+    pub menu_selected: usize,
+    // 游戏状态（原 GameState 字段已直接内嵌，§2.5 列表）
+    pub character: Option<Character>,
+    pub map_slot: Option<MapSlot>,
+    pub unlocked_maps: Vec<MapSlot>,
+    pub selection: SelectionState,
+    pub map_terrain: Option<MapTerrain>,
+    pub map_pos: Option<GridPos>,
+    pub map_landmarks: Vec<(u32, u32)>,
+    pub gold: u32,
+    pub price_table: PriceTable,
+    pub owned: Vec<(u32, u32)>,
+    pub bank: Bank,
+    pub buildings: Vec<(Building, u32)>,
+    pub battle: Option<BattleView>,
+    pub map_session: MapSession,
+    pub rng: GameRng,
+    pub rng_seed: u32,
+    pub msg_kind: Option<MsgKind>,
+    pub msg_page: u32,
+    pub msg_total: u32,
+    pub save_slots: Vec<SaveSlot>,
+    pub last_sfx: Option<Sfx>,
+    pub battle_won: bool,
+    pub quit: bool,
+    pub last_dispatch: Option<SceneTarget>,
+    pub atlas: Option<SpriteAtlas>,
 }
 
 impl GameApp {
@@ -229,18 +257,9 @@ impl GameApp {
         // 初始场景 = Intro
     }
 
-    pub fn run(&mut self) {
-        // 主循环
-        while !self.state.quit {
-            self.shell.refit(self.screen_w, self.screen_h);
-            let keys = self.poll_input();
-            self.input.update(&keys);
-            self.scenes.update(&mut self.state);
-            self.shell.render(&self.scene, &self.state, &self.atlas);
-            self.shell.present();
-            next_frame().await;
-        }
-    }
+    // 注：S8.4 前 `run()` 为主循环伪代码；S8.4 后各 bin 直接调 `poll(&KeyState)` + `render()`，
+    // 不再用 `.state`/`.input` 字段（已内嵌）。
+    pub fn poll(&mut self, keys: &KeyState) -> bool { /* 输入处理 */ }
 }
 ```
 
@@ -332,21 +351,20 @@ fn main():
     game = GameApp::new(176, 220)
     if let Some(ui_pak) = read_file("ui.pak"):
         game.atlas = Some(SpriteAtlas::load(&ui_pak))
-    game.shell.render(&game.scene, &game.state, &game.atlas)
+    game.render()   // 帧循环：各 bin 按帧调 poll(&KeyState) + render()（S8.4 后入口形态）
 
     loop:
-        if game.state.quit:
+        if game.quit:   // S8.4 后字段直接内嵌 GameApp，无独立 .state
             break
 
         game.shell.refit(176, 220)
         keys = poll_keyboard()
-        game.input.update(&keys)
-        changed = game.input.consume_changed()
+        changed = game.poll(&keys)   // S8.4 后：各 bin 调 GameApp::poll(&KeyState)
 
         if changed:
-            game.scenes.update(&mut game.state)
+            // 场景切换由 poll 内部处理（无独立 .state / .input 字段）
 
-        game.shell.render(&game.scene, &game.state, &game.atlas)
+        game.render()
         game.shell.present()
         sleep(16ms)
         next_frame().await
@@ -359,23 +377,22 @@ fn main():
 ### 7.1 按键状态
 
 ```rust
-// crates/ti-platform/src/input.rs
+// crates/ti-app/src/game_app.rs（S8.4 后实际结构：11 个 bool 字段位标志）
 
 pub struct KeyState {
-    pressed: Vec<Key>,
-    just_pressed: Vec<Key>,
-    just_released: Vec<Key>,
+    pub up: bool,
+    pub down: bool,
+    pub left: bool,
+    pub right: bool,
+    pub confirm: bool,
+    pub back: bool,
+    pub landmark: bool,
+    pub buy: bool,
+    pub sell: bool,
+    pub build: bool,
+    // 共 10 个 bool（+Default = 11 含 Default）
 }
-
-impl KeyState {
-    pub fn update(&mut self, keys: &[Key]) {
-        // 计算 just_pressed / just_released
-    }
-
-    pub fn just_pressed(&self, key: Key) -> bool {
-        self.just_pressed.contains(&key)
-    }
-}
+// 注：S8.4 前 KeyState 为 Vec<Key> 结构；S8.4 后改为 bool 位标志，各 bin 直接构造 KeyState 喂给 GameApp::poll。
 ```
 
 ### 7.2 全局按键映射
@@ -423,14 +440,16 @@ impl KeyState {
 ### 9.1 平台 trait
 
 ```rust
-// crates/ti-platform/src/lib.rs
+// crates/ti-platform/src/backend.rs（实际：Storage + Clock 分 trait，无统一 Platform trait）
+// 注：以下为概念抽象；实际 ti-platform 拆为 Storage + Clock 两个 trait（backend.rs:104-121）。
 
-pub trait Platform {
-    fn read_file(&self, path: &str) -> Option<Vec<u8>>;
-    fn write_file(&self, path: &str, data: &[u8]) -> Result<(), IoError>;
-    fn list_files(&self, dir: &str) -> Vec<String>;
-    fn now_ms(&self) -> u64;
-    fn sleep_ms(&self, ms: u32);
+pub trait Storage {
+    fn read(&mut self, key: &str) -> Result<Vec<u8>, Error>;
+    fn write(&mut self, key: &str, value: &[u8]) -> Result<(), Error>;
+}
+
+pub trait Clock {
+    fn now_ms(&mut self) -> u64;
 }
 ```
 
@@ -470,13 +489,17 @@ pub enum TradeError {
     UnknownGood,
     InsufficientGold,
     NoStock,
+    QtyOutOfRange,   // S8.3.b 后实际 4 变体（含 qty 越界）
 }
 
 #[derive(Debug)]
 pub enum BuildError {
+    UnknownBuilding,
     Insufficient,
     InvalidLevel,
 }
+// 注：oracle 占位名 `TradeError`/`BuildError`；当前 `rules::trade::TradeErr`（4 变体，含 QtyOutOfRange）/
+// `rules::build::BuildErr`（3 变体，含 UnknownBuilding）为实际实现。
 ```
 
 ---

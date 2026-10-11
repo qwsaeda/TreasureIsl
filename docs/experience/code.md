@@ -1,4 +1,4 @@
-# 经验库 · code
+﻿# 经验库 · code
 
 > 代码级教训：文档与实现不一致、类型转换陷阱。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 
@@ -117,3 +117,20 @@
   （缺字回退『继』『续』断言保留）；`sget("scene.index.title")` 直接返 `&'static str`。
 - 教训：**「数据化的常量表」正确做法是「常量存 key，运行时解析成值」**，而不是
   在 `const` 里调查表。i18n / 数值 / 布局表都要遵守这个形态。
+
+### EXP-057 门禁脚本判「oracle 类型重导出 vs oracle_ 函数调用」须区分，shell 层禁函数调用（S8.8）
+- 现象：S8.3.a–e 把 rules 数值迁 alance.json 后，game_app.rs 残留 8 行 use ti_core::oracle::*
+  含 4 个 oracle_* 公式函数（boss_hp/battle_round/move/text_line）直调。手 grep 清完
+  （S8.8），但若不进门禁，下次回归（有人重抄 oracle 公式）没人抓。
+- 根因：oracle:: 前缀下**两类引用**性质不同——oracle::main_map::Dir（类型/枚举重导出，
+  属几何/像素事实层，允许保留）vs oracle::main_map::oracle_move(（公式函数，属「推测」业务逻辑，
+  S8 起禁）。粗 grep oracle:: 会把类型也判违规（误伤）；纯删 import 又会漏全限定调用
+  	i_core::oracle::main_map::oracle_move(。
+- 解法：scripts/check_oracle_boundary.py（gate 第 11 项）——只约束 shell 层
+  （game_app.rs/widgets.rs/i18n.rs/scenes/*/ins/*），匹配 oracle_[a-z_0-9]+(
+  函数调用（含全限定 + 排除 use/注释行）；类型路径（后不跟 (）不算违规。幂等只读
+  （--check 非 0 判 FAIL / --report 恒 0 看明细，EXP-054 三契约）。
+- 验证：python scripts/check_oracle_boundary.py --check 0 违规；gate.ps1 13 项全绿；
+  全仓 grep shell 层 oracle_ 函数调用 = 0。
+- 教训：**固化脚本的判定要按「引用语义」分层，不能按前缀一刀切**——oracle 的「类型/几何」
+  是事实层（可留），「公式函数」是推测层（禁）。门禁脚本要能区分二者，否则要么误伤、要么漏放。

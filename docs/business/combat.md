@@ -34,7 +34,7 @@ damage = round(atk * atk_coef) + rand_offset()    // rand_offset ∈ [0, rng_spa
 下限   = flat                                    // 保证每回合至少掉 flat 血，避免死循环
 ```
 
-- **确定性**：随机来自 `rules::rng::GameRng`（可播种 LCG），同 seed 同操作序列
+- **确定性**：随机来自 `rules::rng::GameRng`（可播种 PCG，`rand_pcg`，S8.7 落地），同 seed 同操作序列
   ⇒ 同结果（可复现、可回放、可测试）。禁用 `thread_rng`。
 - **先手优势**：玩家固定先手（`player_first`），双方伤害独立取随机。
 

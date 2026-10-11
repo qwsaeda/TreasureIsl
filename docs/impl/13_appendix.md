@@ -34,7 +34,7 @@
 
 ### 1.5 RNG 常量（数值见 constants.md §10）
 
-`LCG_A` / `LCG_C` / `LCG_MASK` / `LCG_MAX`（MSVC LCG 推测算法，F-320）。
+`LCG_A` / `LCG_C` / `LCG_MASK` / `LCG_MAX`（MSVC LCG 推测算法，F-320；**oracle 历史参照，S8.7 起当前全局 RNG 为 `rand_pcg` PCG64，上述常量不再参与运行时计算**）。
 
 ### 1.6 存档常量（数值见 constants.md §9）
 
@@ -311,7 +311,7 @@ base_cost 见 `docs/design/constants.md` §3.2（Castle 1000 / Investment 500 / 
 ### 5.12 据点触发概率
 
 ```
-命中 = (rand() % 100 + 1) > 40         // 40% 命中率（来源 docs/design/map_system.md §3.3，constants.md §6.6；exe 实测 `trade` 行 154）
+命中 = (rand() % 100 + 1) > 40         // 60% 命中率（>40 判据，即 rand()%100+1 ∈ 41..100；来源 docs/design/constants.md §6.6，design/map_system.md §3.3 为旧口径；exe 实测 `trade` 行 154）
 ```
 
 ### 5.13 等距投影
@@ -444,7 +444,7 @@ cell = row × grid_w + col
 
 | 约束 | 说明 |
 |---|---|
-| 不引 `rand` crate | 自实现 LCG |
+| 不引 `rand` crate | 自实现 LCG（S8.7 前）；现库化 `rand_pcg`（PCG），旧 LCG 为 oracle 历史参照 |
 | 不占位 | `TODO/unwrap/expect/panic!` 0 命中 |
 | RNG 单一源 | 全走 `GameRng` |
 | 战斗伤害独立 | K 常数不统一 |

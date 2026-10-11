@@ -3,7 +3,7 @@
 //! 设计（`docs/business/progression.md` §卡片）：
 //! - **卡池单一事实源** = `assets/data/balance.json → cards`（[`crate::data::cards`]）；
 //!   旧 `rules/cards.rs` 的 `CARD_CATALOG` 常量降级为参照物（S8 定位 §1），本模块不再引用；
-//! - **抽牌可复现** = 用调用方注入的 [`crate::rules::rng::GameRng`]（LCG 确定性，EXP-040），
+//! - **抽牌可复现** = 用调用方注入的 [`crate::rules::rng::GameRng`]（可播种 PCG，`rand_pcg`，S8.7 落地，确定性；EXP-040），
 //!   同 seed + 同操作序列 → 同卡组，可被存读档/回放验证；
 //! - **无占位**：抽不到（`deck` 为空 / `hand_size == 0`）返回空手，不 panic、不 fallback。
 //!

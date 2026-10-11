@@ -66,7 +66,7 @@
 | 卡牌/事件 | [`design/combat.md`](design/combat.md) | 卡牌目录、效果码、触发、事件 id 映射 |
 | 消息/界面 | [`design/ui_controls.md`](design/ui_controls.md) | 消息类型、翻页状态机、对话框布局 |
 | 控件表 | [`design/ui_controls.md`](design/ui_controls.md) | 29 按钮、6 字段 .Map 记录、资源容器 |
-| 持久化/RNG | [`design/persistence.md`](design/persistence.md) | 文件布局、魔数、v1/v2 迁移、LCG 算法 |
+| 持久化/RNG | [`design/persistence.md`](design/persistence.md) | 文件布局、魔数、v1/v2 迁移、LCG 算法（oracle 历史参照）/PCG（当前实现） |
 
 ---
 
@@ -112,5 +112,5 @@
 2. **输入正确**：每个按键在每个场景的行为符合映射表
 3. **资源注入**：ui.pak + 9 个场景 .Map 正确加载并渲染
 4. **三端编译**：native/wasm/android 均可编译
-5. **数值精确**：价格表、BOSS HP、伤害公式、LCG 序列逐位一致
+5. **数值精确**：价格表、BOSS HP、伤害公式、RNG 序列逐位一致（当前实现为 PCG，`rand_pcg`，S8.7；旧 MSVC LCG 序列为 oracle 历史参照）
 6. **全流程**：开局→选人→选图→移动→贸易→建造→战斗→存读档→回主菜单

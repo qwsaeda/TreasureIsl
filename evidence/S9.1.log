@@ -1,0 +1,26 @@
+﻿=== gate: TreasureIsl (13 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 80 tasks, 77 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 85 docs, 37 facts, 57 experiences, 75 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK（3 表，strings 88 键）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+        doccheck2: 0 error(s) across 6 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items)
+          WARN i18n 瀛ゅ効 key `scene.main_map.hud.gold`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.owned`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+=== gate: 0 failure(s) ===

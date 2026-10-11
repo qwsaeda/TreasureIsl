@@ -2,7 +2,8 @@
 //!
 //! 直译 `docs/spec/save_load.md` 的存读档/设置规则：
 //! - 存档槽 [`SaveSlot`]（`version`/`character`/`gold`/`map_slot`/`position`，spec §b）；
-//! - 魔数常量 [`REC_MAGIC`]（`0x01315A47` = 19810929，spec §d）；
+//! - 魔数常量 [`REC_MAGIC`]（`0x01315A47` = 20011591，spec §d；
+//!   伪代码反编译十进制 19810929 = 0x012E4A71 为 `settings.dat` 魔数，gl.rec 魔数为 `0x01315A47`）；
 //! - 错误枚举 [`SaveErr`]（`BadMagic`/`TooShort`/`BadVersion`，spec §d）；
 //! - [`oracle_validate_save`]：魔数 + 最小大小校验（spec §d）；
 //! - [`oracle_migrate_v1_to_v2`]：v1→v2 迁移（补 version 字段，spec §e，**推测**）；
@@ -42,7 +43,7 @@ impl Default for SaveSlot {
     }
 }
 
-/// 存档魔数（`存档写入` 行 69 / `存档读取` 行 95 / `index` 行 79 实测 `19810929`）。
+/// 存档魔数（`0x01315A47` = 20011591；`存档写入` 行 69 / `存档读取` 行 95 / `index` 行 79 实测）。
 pub const REC_MAGIC: u32 = 0x0131_5A47;
 
 /// 存档最小有效大小（2 字节前缀 + 4 字节魔数 + 4×u32 字段 = 18 字节，spec §d）。
@@ -58,7 +59,7 @@ pub const MIN_SAVE_SIZE: usize = 2 + 4 + 4 * 5;
 /// 存读档错误（spec §d）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SaveErr {
-    /// 魔数不符（`存档读取` 行 95-101：`Buffer != 19810929` → 返回 0）。
+    /// 魔数不符（`存档读取` 行 95-101：`Buffer != 0x01315A47` → 返回 0）。
     BadMagic,
     /// 字节数不足最小有效大小（spec §d）。
     TooShort,

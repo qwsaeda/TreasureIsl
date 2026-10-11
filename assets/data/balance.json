@@ -4,7 +4,7 @@
   "economy": {
     "gold_max": 999999,
     "bank_rate": 1.0,
-    "initial_gold": 100
+    "initial_gold": 1000
   },
 
   "combat": {
@@ -64,7 +64,7 @@
 
   "save": {
     "slot_count": 5,
-    "magic": 20125007,
+    "magic": 20011591,
     "v2_size": 26
   },
 

@@ -1,4 +1,4 @@
-# S8 改造计划（Refactor Plan）
+﻿# S8 改造计划（Refactor Plan）
 
 **目标**：把项目从「逆向驱动的功能性复刻」改造为**标准游戏工程**。
 手段按「固化 / 模版化 / 脚本化 / 复用现成库」分派，交给 LLM、脚本与 loop 各司其职。
@@ -42,7 +42,7 @@
 | **S8.0** | 流程 + 业务文档落地 | 固化 | — | `docs/process/*` + `docs/business/*` 齐备，doccheck 全绿 |
 | **S8.1** | 数值/文本抽 `assets/data/*.json` + 加载层 | 固化 | S8.0 | balance/strings/scenes JSON 落地 + 加载器 + 单测；`.rs` 数值改从 JSON 读 |
 | **S8.2** | 工具链：`gen_layout` + `validate_data` + `check_hardcode` + 门禁第 10 项 | 脚本化 | S8.1 | 三个脚本幂等 + `--check`；`check_hardcode` 进 gate 且能抓出现存硬编码 |
-| **S8.3** | 玩法重写：13 模块按 `docs/business/` 重写（分 13 子任务 `.a`–`.m`） | 固化+LLM | S8.1 | 每模块：设计意图注释 + 数值注入 + 可复现单测；`docs/spec` 只作参照 |
+| **S8.3** | 玩法重写：13 模块按 `docs/business/` 重写（分 5 子任务 `.a`–`.e`） | 固化+LLM | S8.1 | 每模块：设计意图注释 + 数值注入 + 可复现单测；`docs/spec` 只作参照 |
 | **S8.4** | 场景重构：Scene trait + 注册表 + 7 场景 | 模版化 | S8.3 | `game_app.rs` 21 个重复方法 → 每场景 1 struct；键盘/触摸共用 `on_event` |
 | **S8.5** | 控件层：2041 条控件 → widget 渲染 | 脚本化+模版化 | S8.2, S8.4 | 控件表驱动；`fill_rect` 手绘清零；控件单测（墨点/命中） |
 | **S8.6** | 渲染基线改造（去自指） | 固化 | S8.4 | 参考图由真实资源解码独立产出；渲染断言对真实基线 |
@@ -108,7 +108,7 @@
 | E 控件层 | `crates/ti-app/src/widgets.rs`、`crates/ti-app/tests/widgets.rs`、`evidence/S8.5.log` | `widgets.rs`：`Framebuf` 无 `fill_rect` → 改 `MenuShell`；`color_of` 的 `rec.kind % palette.len()` u32/usize 转换；`hit()` 需 `.collect().rev()` |
 | G 渲染基线 | `crates/ti-app/tests/render_parity.rs`、`evidence/S8.6.log` | `E0596`（`a` 未 `mut`）；参考图需由 `ti-formats` 资源解码独立产出（去自指） |
 
-**收尾（主线程）：** 各子任务文件域全绿 → 按 `loop.md` §6.2 第 8 条复核（5 类产出物 + `cargo test` + ledger + gate）→ `S8.3` 父任务全子任务 verified → `gate.ps1` 11 项全绿。
+**收尾（主线程）：** 各子任务文件域全绿 → 按 `loop.md` §6.2 第 8 条复核（5 类产出物 + `cargo test` + ledger + gate）→ `S8.3` 父任务全子任务 verified → `gate.ps1` 13 项全绿。
 
 ### 7.3 各子任务 DoD 验收命令
 
@@ -121,7 +121,7 @@
 | E 控件层 | `cargo test -p ti-app --test widgets` | 全 `ok` |
 | F RNG/FNV | `cargo build --workspace && cargo clippy --workspace --all-targets -- -D warnings` | 无未用 `rand` 警告，无手写 LCG/FNV 残留 |
 | G 渲染基线 | `cargo test -p ti-app --test render_parity` | 全 `ok`，基线来自 `ti-formats` 资源解码 |
-| 收尾 | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 11 项全绿，`tee evidence/<id>.log` |
+| 收尾 | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 13 项全绿，`tee evidence/<id>.log` |
 
 ### 7.4 备注（主线程已顺手改、留待子会话验收）
 

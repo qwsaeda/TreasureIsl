@@ -155,6 +155,18 @@ impl MapSession {
     pub fn dispatch(&self, code: u32) -> Option<SceneTarget> {
         oracle_dispatch_event(code)
     }
+
+    /// 静态事件分派（不依赖会话状态，行为与 `oracle_dispatch_event` 逐位一致）。
+    #[must_use]
+    pub fn dispatch_event(code: u32) -> Option<SceneTarget> {
+        oracle_dispatch_event(code)
+    }
+
+    /// 静态单步合法性预检（不移动、不改状态，等价 `oracle_move` 的 `Option` 判定）。
+    #[must_use]
+    pub fn can_walk(terrain: &MapTerrain, pos: GridPos, d: Dir) -> bool {
+        oracle_move(terrain, pos, d).is_some()
+    }
 }
 
 #[cfg(test)]

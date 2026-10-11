@@ -1,4 +1,4 @@
-# 14 — HD 资产增强管线（S7）
+﻿# 14 — HD 资产增强管线（S7）
 
 > 单一事实源：本文件是「分类 → 批量超分/矢量化 → 关键图 AI 重绘 → 动画时序稳定 → 多分辨率打包」
 > 的完整实现规格。关联：`docs/plan-s7.md`（任务表）、`docs/modernization.md`（总纲）、
@@ -307,7 +307,7 @@ pub struct Framebuf {
 | P5-2 | RGBA8 渲染逐像素一致（HD 基准图） | `cargo test -p ti-app --test render_parity_hd` 全绿 |
 | P5-3 | 多分辨率（1x/2x/4x）坐标往返不变式 | `cargo test -p ti-platform --test coordinate_roundtrip`（扩展 RGBA8） |
 | P5-4 | 首屏 HD 资源体积达标 | `evidence/S7.6-size.log` 与 §6 预算比对全 PASS |
-| P5-5 | 三端 bin（native/wasm/android host）编译通过 | `scripts/gate.ps1` 8 项全绿 |
+| P5-5 | 三端 bin（native/wasm/android host）编译通过 | `scripts/gate.ps1` 13 项全绿（S7 时点 8 项） |
 
 > 现有 P0~P4 不变；S7.5 路径 1 下 P4-1 原基准继续绿。
 

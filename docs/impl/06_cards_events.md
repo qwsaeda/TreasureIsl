@@ -339,7 +339,7 @@ CardState.hp 变化（Damage/Heal）
 
 ## 13. RNG 对齐
 
-卡牌场景使用 MSVC LCG（F-320）：
+卡牌场景使用 MSVC LCG（F-320；**oracle 历史参照，S8.7 起当前全局 RNG 为 `rand_pcg` PCG64**）：
 
 | 常量 | 值 | 说明 |
 |---|---|---|

@@ -1,0 +1,63 @@
+# S8.8 — oracle 死 import / 死函数引用清理（shell 层只调 rules）
+
+## 判据
+1. shell 层（`game_app.rs` / `bins` / `scenes` / `widgets` / `i18n`）`oracle_*` 函数调用 0 命中；
+2. `cargo build --workspace` / `cargo clippy -D warnings` / `cargo test --workspace` 全绿；
+3. `scripts/gate.ps1` 11 项 0 failure。
+
+## 改动明细（6 处 oracle_* 直调 → rules）
+| 位置 | 旧调用 | 新调用 |
+|---|---|---|
+| `game_app.rs` `BattleView::new`（L100） | `oracle_boss_hp(boss_tier)` | `BattleSession::from_balance(seed, player, boss_tier)`（数值走 `balance().combat`） |
+| `game_app.rs` `BattleView::step`（L120） | `oracle_battle_round(seed, player, enemy)` | `self.session.step()`（`rules::battle::BattleSession`） |
+| `game_app.rs` `handle_main_map Walk`（L792） | `oracle_move(&t, pos, dir)` | `self.map_session.move_to(dir, &mut self.rng)`（`rules::main_map::MapSession`，据点/卡牌事件可复现） |
+| `game_app.rs` `handle_main_map Landmark`（L800） | `oracle_dispatch_event(code)` | `self.map_session.dispatch(code)`（`rules::main_map::MapSession`） |
+| `game_app.rs` `walk_towards` 预检（L1091） | `oracle_move(terrain, pos, dir).is_none()` | `!MapSession::can_walk(terrain, pos, dir)`（rules 新增静态辅助） |
+| `game_app.rs` `render_message`（L1312） | `oracle_text_line(kind, page)` | `page_text(kind, page)` + `i18n::sget`（`rules::messages` 新增纯函数，走 `balance().messages` 分页） |
+
+配套：
+- `rules/main_map.rs` 新增静态辅助 `MapSession::can_walk` / `MapSession::dispatch_event`（几何预检/事件分派，壳层免建会话）；
+- `rules/messages.rs` 新增纯函数 `page_text(kind, page) -> String`（返回 `msg.<kind>.<n>` 文本 key，越界钳末页，不 panic）+ 集成测试 `crates/ti-core/tests/rules_messages.rs`（6 项全绿）；
+- `msg_total` 赋值由硬编码 `1`/`3` 改为 `rules::messages::total_pages(kind)`（走 `balance.messages.pages`）。
+
+## import 清理
+`game_app.rs` L17-24 原 8 行 `use ti_core::oracle::*`：
+- 删：`oracle_battle_round`、`oracle_boss_hp`、`oracle_move`、`oracle_text_line`（4 个函数 import）；
+- 留（壳层仍用的类型重导出）：`Side`/`Unit`（battle）、`Bank`/`Building`（build）、`Dir`/`GridPos`/`MapTerrain`/`SceneTarget`（main_map）、`Sfx`（menu）、`MsgKind`（messages）、`SaveSlot`（saveload）、`Character`/`MapSlot`/`SelectionState`（selection）、`PriceTable`（trade）。
+- 删：内联 `use ti_core::oracle::main_map::Dir`（poll MainMap 分支，L323，已走顶层 import）。
+
+## 证据：shell 层 `oracle_` grep
+```
+grep oracle_ crates/ti-app/src/game_app.rs → 0 命中
+grep oracle_ crates/ti-app/src/bin/       → 0 命中
+grep oracle_ crates/ti-app/src/scenes/    → 0 命中
+grep oracle_ crates/ti-app/src/i18n.rs    → 0 命中
+```
+（`bins/treasure_headless.rs`、`scenes/mod.rs` 仅剩 `oracle::main_map::Dir` / `oracle::build::Building` / `oracle::menu::Sfx` 等**类型**路径引用，属任务允许的类型重导出；`oracle_` 前缀函数 0 命中。）
+
+## 构建/测试/clippy
+- `cargo build --workspace` → Finished 0.61s，0 error
+- `cargo clippy --workspace --all-targets -- -D warnings` → Finished，0 warning
+- `cargo test --workspace` → 全部 `test result: ok`（0 failed），含新增 `rules_messages` 集成 6/6
+
+## gate.ps1 11 项
+```
+PASS  cargo fmt --check
+PASS  cargo clippy -D warnings
+PASS  cargo test --workspace
+PASS  cargo build (x86_64-pc-windows-msvc)
+PASS  cargo build (wasm32-unknown-unknown)
+SKIP  cargo build (aarch64-linux-android)  (S2.6 既定：APK 在 Mac 出)
+PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+PASS  no unwrap()/expect() outside tests/
+SKIP  zero-unknown verify  (S1.x 既定)
+PASS  ledger validate
+PASS  doccheck (docs consistency)
+PASS  validate_data (assets/data/*.json)
+PASS  gen_layout --check (idempotent)
+PASS  check_hardcode (strict; 0 hits required)
+=== gate: 0 failure(s) ===
+```
+
+## ledger
+S8.8 已置 `verified`，`evidence: evidence/S8.8.log`；`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 校验通过（78 tasks, 75 verified, 0 error）。

@@ -15,6 +15,10 @@ name = "doccheck"
 path = "src/bin/doccheck.rs"
 
 [[bin]]
+name = "doccheck2"
+path = "src/bin/doccheck2.rs"
+
+[[bin]]
 name = "unpak"
 path = "src/bin/unpak.rs"
 

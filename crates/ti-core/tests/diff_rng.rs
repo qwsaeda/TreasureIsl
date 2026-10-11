@@ -1,7 +1,8 @@
 //! S3.12 全局 RNG 性质测试。
 //!
 //! 遍历 seed 0..=20 × 取 1000 个值：`GameRng::fill` 序列确定性（同 seed 同序列，
-//! MSVC LCG 推测算法，见 `docs/spec/rng.md` §a）；另加 5 个语义测试：
+//! 值域/确定性兼容旧 MSVC LCG 口径，S8.7 起当前实现为 `rand_pcg` PCG64，
+//! `next()` 值域仍归一 0..=32767；见 `docs/spec/rng.md` §a）；另加 5 个语义测试：
 //! (a) 固定 seed=123 序列确定（两次独立调用 `GameRng::new(123).fill` 逐位相同）；
 //! (b) `set_seed` 改 seed 后序列变（不同 seed 产生不同序列）；
 //! (c) `in_range(22)` 值域 0..22（200 次采样无越界，`n=0` → 0）；
@@ -87,7 +88,8 @@ fn semantic_c_in_range_bounds() {
     assert_eq!(g.in_range(0), 0, "in_range(0) 应为 0（避免除零）");
 }
 
-/// 值域检查：MSVC LCG `(seed>>16)&0x7fff` → 0..=32767（15 位）。
+/// 值域检查：旧 MSVC LCG 口径 `(seed>>16)&0x7fff` → 0..=32767（15 位）；
+/// S8.7 起 `GameRng` 为 `rand_pcg` PCG64，`next()` 值域仍归一 0..=32767 兼容旧口径。
 #[test]
 fn value_range_is_15bit() {
     let mut g = GameRng::new(0);

@@ -1,7 +1,7 @@
 # 09 — 持久化系统实现规格
 
 > 单一事实源：本文件是 `ti-platform::fs` + `ti-formats::save` + `ti-core::rules::saveload` 的实现规格。
-> 逆向事实引用：F-304（存档布局）、F-320（RNG 来源：coredll srand/rand、播种点与 LCG 推测算法）。
+> 逆向事实引用：F-304（存档布局）、F-320（RNG 来源：coredll srand/rand、播种点与 LCG 推测算法）（LCG 为 oracle 历史参照，S8.7 起 rules 侧改 `rand_pcg` PCG，见 `docs/spec/rng.md` §a）。
 
 ---
 
@@ -27,7 +27,7 @@
 
 所有存档文件共享同一头部布局：
 
-（下表为 `gl.rec` / `gl*.sav` 布局；`settings.dat` 例外，见 §3.1：前缀 `5D 4A`、无魔数，F-304。）
+（下表为 `gl.rec` / `gl*.sav` 布局；`settings.dat` 例外，见 §3：前缀 `5D 4A`、无魔数，F-304。）
 
 ```
 ┌──────────┬─────────────────┬──────────────────────────┐
@@ -37,7 +37,7 @@
 ```
 
 - 前缀：2 字节。`gl*.sav` / `gl.rec` 写入固定 `[0x00, 0x00]`，读取时跳过（`seek(2, SeekFrom::Start)`）；`settings.dat` 前缀实测 `5D 4A`（F-304，见 §3.1）。
-- 魔数：`REC_MAGIC = 0x01315A47`（= 19,810,929），**仅 `gl.rec` / `gl*.sav`；`settings.dat` 无魔数（F-304 实测 8 字节 `5D 4A 71 4A 2E 01 01 01`）**。
+- 魔数：`REC_MAGIC = 0x01315A47`（= 20,011,591），**仅 `gl.rec` / `gl*.sav`；`settings.dat` 无魔数（F-304 实测 8 字节 `5D 4A 71 4A 2E 01 01 01`）**。
 - 校验：`u32_le(bytes[2..6]) == REC_MAGIC`（gl.rec / gl*.sav）。
 
 ---
@@ -87,7 +87,7 @@ read_settings(path):
     })
 
 write_settings(path, settings):
-    # 实测前缀 5D 4A（F-304）；settings.dat 负载无魔数校验（§3.1），此处 4 字节负载按读取侧回填值写回
+    # 实测前缀 5D 4A（F-304）；settings.dat 负载无魔数校验（§3.1 → §3），此处 4 字节负载按读取侧回填值写回
     buf = [0x5D, 0x4A, 0x71, 0x4A, 0x2E, 0x01, settings.bgm_volume, settings.sfx_enabled]
     write_file(path, &buf)
 ```
@@ -103,7 +103,7 @@ write_settings(path, settings):
 
 ---
 
-> `settings.dat` 无魔数（§3.1），本节魔数校验仅适用于 `gl.rec` / `gl*.sav`。
+> `settings.dat` 无魔数（§3.1 → §3），本节魔数校验仅适用于 `gl.rec` / `gl*.sav`。
 
 ## 4. gl.rec
 
@@ -282,7 +282,7 @@ read_slot_auto(bytes) -> Result<SaveSlot, SaveErr>:
     if bytes.len() >= 26:
         version = u32_le(bytes[6..10])
         if version > 2:
-            return Err(BadVersion)      // 与 §5.5 一致
+            return Err(BadVersion)      // 与 §5.2 一致
         if version == 1:
             // 短布局 v1（18 字节）或 version 字段为 1
             return read_slot_v1(bytes)
@@ -375,7 +375,7 @@ if rand() % 5 != 0:
 ## 6. 存档时间戳
 
 > 以下布局为 `gl.rec` 扩展区时间戳字段（`WriteFile`/`00042AE8:存档写`），**非 v2 26 字节存档槽布局**；
-> 存档槽（gl*.sav）的 26 字节布局见 §5.5，时间戳不落在 26 字节槽内（推测，S3 逆向产物）。
+> 存档槽（gl*.sav）的 26 字节布局见 §5.2，时间戳不落在 26 字节槽内（推测，S3 逆向产物）。
 
 | 字段 | 偏移 | 说明 |
 |---|---|---|
@@ -404,7 +404,8 @@ if rand() % 5 != 0:
 ```
 fn validate_save(bytes: &[u8]) -> Result<(), SaveErr> {
     if bytes.len() < 26 { return Err(TooShort); }
-    let magic = u32::from_le_bytes(bytes[2..6].try_into().unwrap());
+    let magic = bytes[2..6].try_into().ok()?.try_into(); // 文档伪代码示意；实际用 u32::from_le_bytes(bytes[2..6].try_into().ok()?)
+    let magic: u32 = u32::from_le_bytes(magic);
     if magic != REC_MAGIC { return Err(BadMagic); }
     Ok(())
 }

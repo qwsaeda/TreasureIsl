@@ -1,4 +1,4 @@
-# 金银岛 TreasureIsl — 可玩实现手册（Gamebook）
+﻿# 金银岛 TreasureIsl — 可玩实现手册（Gamebook）
 
 本文件是「从文档就能实现出一个可玩游戏」的单一事实源。
 资源层（S1）与离线规则层（S3 各模块 diff 全绿）已完成；本手册补齐
@@ -35,9 +35,9 @@
                     ┌──────────────▼──────────────────────────┐
                     │            ti-core::rules（已验证）       │
                     │  MenuStateMachine / SelectionFlow /      │
-                    │  MapSession / TradeLedger / BuildManager /│
-                    │  BattleSession / CardEngine / SaveManager /│
-                    │  MessageSession / SceneStack / GameRng     │
+                     │  MapSession / TradeLedger / BuildManager /│
+                     │  BattleSession / CardEngine / saveload_json /│
+                     │  MessageSession / SceneStack / GameRng     │
                     └─────────────────────────────────────────┘
                                    │ 读资源
                     ┌──────────────▼──────────────────────────┐
@@ -134,7 +134,7 @@ enum Scene {
   - 玩家 HP / 敌方 HP / 回合数 / 胜方 渲染为战斗面板。
   - `outcome = Some(Player)` → 播 `victory.wav`，切回 `Index`（`advance(2)`）。
   - `outcome = Some(Enemy)` → 失败面板 → 回 `Index`。
-- seed 来源：`GameRng`（全局 LCG，`in_range` 取 BOSS 档 tier 0..=4）。
+- seed 来源：`GameRng`（全局可播种 PCG，`rand_pcg`，S8.7 落地；`in_range` 取 BOSS 档 tier 0..=4）。
 
 ### 3.5 Message（消息/帮助/据点文本）
 - 持有：`rules::messages::MessageSession`。
@@ -282,7 +282,7 @@ render() {
 | S5.1 交互壳接通 | `cargo test -p ti-app`（GameApp 状态机单测 + 全链路 7 项断言）+ 桌面 exe 实跑：菜单→选人→选图→主地图→贸易→建造→战斗→存读档 全链路可点通 |
 | S5.2 全流程 headless | `cargo run -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json`（seed=42）→ 16 步场景流转断言 0 失败（P3-3） |
 | S5.3 P4-1 渲染对齐 | `cargo test -p ti-app --test render_parity`（headless 渲染 5 关键场景，确定性/非空白/场景区分/真字形/176×220 逐像素一致） |
-| S5.4 业务对齐收敛 | 各 spec `推测` 项收敛 + `docs/release.md` 更新 + `gate.ps1` 8 项全绿（S5.4 时点 8 项，当前 11 项）+ 桌面/浏览器产物 sha256 入 evidence（**桌面/浏览器为当前收口目标**；Android APK 在 Mac 工具链编译，见 S2.6） |
+| S5.4 业务对齐收敛 | 各 spec `推测` 项收敛 + `docs/release.md` 更新 + `gate.ps1` 8 项全绿（S5.4 时点 8 项，当前 13 项）+ 桌面/浏览器产物 sha256 入 evidence（**桌面/浏览器为当前收口目标**；Android APK 在 Mac 工具链编译，见 S2.6） |
 
 ## 7. 实现约束（硬规则）
 
@@ -290,7 +290,7 @@ render() {
 2. **不占位**：`TODO/unwrap/expect/panic!/unimplemented!` 在 `src/` 0 命中（gate 第 5/6 项）。
 3. **跨场景状态传递**：`(character, map_slot)`、`gold`、`boss_tier` 等由 `GameApp` 顶层字段
    持有，场景切换时注入对应 rules Session 构造（不跨场景共享可变指针）。
-4. **RNG 单一源**：战斗/事件随机全走 `rules::rng::GameRng`（LCG，EXP-040），壳不另开 rand。
+4. **RNG 单一源**：战斗/事件随机全走 `rules::rng::GameRng`（可播种 PCG，`rand_pcg`，S8.7 落地；EXP-040），壳不另开 rand。
 5. **每场景可独立渲染**：`GameApp::render` 按 `Scene` 分发，头屏资源预算不破坏（S4.3）。
 
 ## 8. 文件改动清单（S5.1）

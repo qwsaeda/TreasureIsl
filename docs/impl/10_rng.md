@@ -7,6 +7,10 @@
 
 ## 1. LCG 算法
 
+> **实现现状（S8.7 起）**：当前实现为 PCG（`rand_pcg::Lcg128Xsl64`，`rules/rng.rs` 库化 rand_pcg），
+> 本节 MSVC LCG（214013/2531011，**推测**算法）为 **oracle 历史参照物**（S8.7 前实现），
+> 仅用于 diff 对拍锚点与逆向事实记录，非当前运行时算法。
+
 ### 1.1 算法定义
 
 采用 MSVC 标准线性同余发生器（LCG），全部 u32 环绕运算：
@@ -239,7 +243,7 @@ pub fn time_seed() -> u32 {
 |---|---|
 | 不引 `rand` crate | 避免平台相关随机源 |
 | 不用 `SystemRandom` | ti-core 无平台依赖硬约束 |
-| 自实现 LCG | 保证 native/wasm/android 序列逐位一致 |
+| 自实现 LCG | 保证 native/wasm/android 序列逐位一致（S8.7 前；现 `GameRng` 库化 `rand_pcg`，旧 LCG 降级 oracle 历史参照） |
 | 环绕运算 | `wrapping_mul` / `wrapping_add`，非 panic |
 
 ### 4.2 确定性验收
@@ -275,8 +279,8 @@ damage(seed, atk) = (seed * 2_654_435_761) % (atk + 1) + 1
 
 ### 5.3 独立性说明
 
-`oracle_damage` 使用 K 常数，**不与全局 LCG 统一**。理由：
-- 战斗模块自有的伤害公式常数，语义与全局 LCG 序列不同。
+`oracle_damage` 使用 K 常数，**不与全局 RNG 统一**（S8.7 前为全局 LCG，现为 PCG）。理由：
+- 战斗模块自有的伤害公式常数，语义与全局随机序列不同。
 - 强行统一会破坏已验证的 diff_battle 组合结果。
 
 ### 5.4 Rust 实现
@@ -294,7 +298,7 @@ pub fn damage(seed: u32, atk: u32) -> u32 {
 
 ## 6. 调用约束
 
-1. **RNG 单一源**：战斗/事件随机全走 `GameRng`（LCG），壳不另开 rand。
+1. **RNG 单一源**：战斗/事件随机全走 `GameRng`（可播种 PCG，`rand_pcg`，S8.7 落地），壳不另开 rand。
 2. **战斗模块例外**：伤害公式使用独立 K 常数，不经过 `GameRng`。
 3. **播种可见**：每次 `srand` 必须记录日志（调试用），生产可关闭。
    注：约束 3 为壳层职责，`rules::rng`（ti-core）不实现日志（无平台依赖，

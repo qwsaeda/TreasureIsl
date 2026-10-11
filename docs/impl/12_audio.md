@@ -53,6 +53,10 @@ pub struct AudioResourceMap {
 
 ### 2.2 通道状态
 
+> 实际 `ti-platform::audio`（`audio.rs:51`）为 struct 非 enum：
+> `ChannelState { active: bool, volume: u8 (0..=255), position: usize, looping: bool }`。
+> 本节的 `AudioChannel` + `ChannelState` enum 为设计占位。
+
 ```rust
 pub struct AudioChannel {
     id: u8,
@@ -78,6 +82,8 @@ pub enum ChannelState {
 | 音量通道 | 范围 | 默认值 | 存储位置 |
 |---|---|---|---|
 | BGM 音量 | 0~100% | 60% | `settings.dat` offset 6 |
+
+> 注：settings 侧 0..=100，mixer 侧 0..=255（`audio.rs` `ChannelState.volume: u8`），换算 `0..=100 × 255/100`。
 | 音效音量 | 0~100% | 80% | `settings.dat` offset 7 |
 | 主音量 | 0~100% | 100% | 运行时计算 |
 
@@ -131,6 +137,9 @@ fade_in(channel, duration_ms):
 ```
 
 ### 4.3 循环播放
+
+> 注：设计占位；当前 BGM 走 `audio_prep` 预转码 OGG + `Mixer.play`（`crates/ti-platform/src/audio.rs:64`），
+> 无独立 `BgmPlayer`/`AudioResourceMap` struct。
 
 ```rust
 pub struct BgmPlayer {

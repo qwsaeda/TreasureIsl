@@ -58,7 +58,7 @@ ti-tools (开发工具: ledger/doccheck/serve/controls — 不依赖 ti-app)
 | `Scene` | 9 场景枚举 |
 | `GameState` | 全局游戏状态（角色/地图/金量/货物/建筑/战斗/RNG） |
 | `SceneStack` | 场景栈（state/scene/history） |
-| `GameRng` | 可播种 LCG（确定性） |
+| `GameRng` | 可播种 PCG（`rand_pcg`，S8.7 落地；旧 MSVC LCG 为 oracle 历史参照；确定性） |
 | `BattleSession` | 战斗会话状态机 |
 | `CardEngine` | 卡牌引擎 |
 | `TradeLedger` | 贸易账本 |
@@ -794,7 +794,7 @@ pub enum Error {
 2. **场景全覆盖**：9 场景均可进入/返回，无死锁
 3. **输入正确**：每个按键/手势在每个场景的行为符合映射表
 4. **资源注入**：ui.pak + 9 场景 .Map 正确加载并渲染
-5. **数值精确**：价格表、BOSS HP、伤害公式、LCG 序列逐位一致
+5. **数值精确**：价格表、BOSS HP、伤害公式、RNG 序列逐位一致（当前实现为 PCG，`rand_pcg`，S8.7；旧 MSVC LCG 序列为 oracle 历史参照）
 6. **全流程可玩**：开局→选人→选图→移动→贸易→建造→战斗→存读档→回主菜单
 7. **响应式布局**：竖屏/横屏/桌面三档布局正确切换
 8. **音频正常**：BGM 循环 + 音效触发 + 音量控制 + 静音

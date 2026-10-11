@@ -31,7 +31,7 @@ mod tests {
         // 主菜单背景 = 0x0010（RGB565 深蓝），HD 扩展后 = 0xFF_00_00_00 量级；
         // 标题条 = 0x01E0、选中高亮 = 0x03E0、墨色 = 0xFFFF（白）。
         // 取「非黑且 alpha 全」为内容像素。
-        let content = pixels.iter().filter(|&&p| p != 0xFF000000 && p != 0).count();
+        let content = pixels.iter().filter(|&&p| p != 0xFF00_0000 && p != 0).count();
         let total = pixels.len();
         content as f32 / total as f32
     }
@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn hd_framebuf_matches_logical_resolution() {
         let mut fb = FramebufRgba::new();
-        fb.clear(0xFF000000);
+        fb.clear(0xFF00_0000);
         assert_eq!(fb.as_slice().len(), FB_PIXELS, "HD 帧缓冲 = 176×220");
         let mut app = GameApp::new(176.0, 220.0);
         app.render_hd();
@@ -178,7 +178,10 @@ mod tests {
         for entry in std::fs::read_dir(&pack_dir).into_iter().flatten().flatten() {
             let path = entry.path();
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if !name.ends_with(".png") {
+            if !std::path::Path::new(name)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
+            {
                 continue;
             }
             let stem = name.strip_suffix(".png").unwrap_or(name);

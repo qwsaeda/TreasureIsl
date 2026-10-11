@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（11 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（13 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (11 items) ==="
+Write-Host "=== gate: TreasureIsl (13 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -109,6 +109,18 @@ $hcOut = & python scripts/check_hardcode.py 2>&1
 $hcHits = @($hcOut | Where-Object { $_ -match 'hit\(s\)' })
 $hcHits | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_hardcode (strict; 0 hits required)'
+
+# 11) oracle 边界（S8.8）：shell 层 0 个 oracle_* 函数调用（oracle 仅 rules 内部参照物）
+#     check_oracle_boundary.py 区分「oracle_* 函数调用=违规」vs「oracle::xxx::Type 类型重导出=允许」。
+$orbOut = & python scripts/check_oracle_boundary.py --check 2>&1
+$orbOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'check_oracle_boundary (shell 层禁 oracle_* 函数调用)'
+
+# 12) 双 agent 审计固化断言（doccheck2）：文档↔代码/数据一致性（第 1~5 轮审计高频项）
+#     6 项检查：audio ChannelState API 一致性 / shell 层 oracle_* 残留 / LCG hex / 据点阈值 / i18n 孤儿 key / release 门禁项数漂移
+$dc2Out = & cargo run -q -p ti-tools --bin doccheck2 . 2>&1
+$dc2Out | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'doccheck2 (audit-codified doc↔code/data consistency)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

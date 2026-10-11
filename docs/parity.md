@@ -49,35 +49,44 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-2 | 176×220 逻辑坐标命中判定在任意整数/非整数缩放下不偏移 | `cargo test -p ti-platform -- test coordinate_roundtrip` |
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
 
-## 代码质量门禁 `scripts/gate.ps1`（11 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（13 项，循环每轮强制）
 
 ```
 1  cargo fmt --all -- --check
 2  cargo clippy --workspace --all-targets -- -D warnings
 3  cargo test  --workspace
 4  构建（范围随阶段解锁，未解锁的行在脚本里跳过并打印 SKIP）：
-   cargo build --workspace --target x86_64-pc-windows-msvc          # S0.1 起
-   cargo build --workspace --target wasm32-unknown-unknown          # S2.5 解锁（需先 rustup target add）
-   cargo build -p ti-app --target aarch64-linux-android             # S2.6 解锁（需 NDK）
+    cargo build --workspace --target x86_64-pc-windows-msvc          # S0.1 起
+    cargo build --workspace --target wasm32-unknown-unknown          # S2.5 解锁（需先 rustup target add）
+    cargo build -p ti-app --target aarch64-linux-android             # S2.6 解锁（需 NDK）
 5  占位扫描：Select-String -Path crates/**/*.rs -Pattern 'TODO|FIXME|unimplemented!|todo!|panic!\(' → 0 命中
 6  库代码 unwrap 扫描：同上 Pattern '\.unwrap\(\)|\.expect\('，排除 `tests/` 目录 → 0 命中
-   （内联 `#[cfg(test)]` 模块同样禁止 unwrap；本机无 ripgrep，扫描一律用
-    PowerShell Select-String，见 EXP-011）
+    （内联 `#[cfg(test)]` 模块同样禁止 unwrap；本机无 ripgrep，扫描一律用
+     PowerShell Select-String，见 EXP-011）
 7  cargo run -q -p ti-tools --bin verify -- --zero-unknown   # S1 起解锁，之前 SKIP
 8  台账校验：`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml`
-   （解析 `docs/loop.md` §1 schema：状态/依赖/rounds/verified 必须有 evidence 文件）
+    （解析 `docs/loop.md` §1 schema：状态/依赖/rounds/verified 必须有 evidence 文件）
 9  文档一致性：`cargo run -q -p ti-tools --bin doccheck`
-    （F-/EXP- ID 唯一性与跨文档引用、任务 ID 登记、数字断言、evidence 内容特征）
-9b 跨文档数值漂移 + release 台账计数同步：`cargo run -q -p ti-tools --bin doccheck2`
-    （第 1-3 轮对抗审计固化：权威值 2041/UI 场景 20 + release.md 任务计数与 ledger 实测一致）
+      （F-/EXP- ID 唯一性与跨文档引用、任务 ID 登记、数字断言、evidence 内容特征；
+       第 9 项内含跨文档数值断言（2041/UI 场景 20/0x343FD/20011591）+
+       release 台账计数漂移检查（check_ledger_counts））
 10 数据表门禁（S8.2，见 docs/process/04_tooling.md §2）：
-   python scripts/validate_data.py            # assets/data/*.json 结构与数值域，须全绿
-   python scripts/gen_layout.py --check       # controls.json 幂等一致，须全绿
-   python scripts/check_hardcode.py --warn    # 硬编码扫描（迁移期只报告，清零后改 FAIL）
+     python scripts/validate_data.py            # assets/data/*.json 结构与数值域，须全绿
+     python scripts/gen_layout.py --check       # controls.json 幂等一致，须全绿
+11 oracle 边界（S8.8）：python scripts/check_oracle_boundary.py --check
+     （shell 层 0 个 oracle_* 函数调用；oracle 仅 rules 内部参照物，类型重导出允许）
+12 check_hardcode 严格（第 10 项组内 10c，单独计第 12 项）：python scripts/check_hardcode.py
+     （发现硬编码即 FAIL；2026-10 已清零 37 处债务：玩家可见中文全进 strings.json、
+      布局色全走 COLOR_* 常量；诊断/CLI 经 EXEMPT 豁免）
+13 doccheck2（双 agent 审计固化断言，第 1~5 轮审计高频项）：
+     cargo run -q -p ti-tools --bin doccheck2 .
+     （文档↔代码/数据一致性 6 项：audio ChannelState API 一致性 / shell 层 oracle_* 残留 /
+      LCG hex 误算（0x3443D）/ 据点阈值反向断言（<= 40）/ i18n 孤儿 key / release 门禁项数漂移；
+      替代每轮双 agent 审计里靠子代理现场 grep 的重复检查，见 docs/experience/build.md）
 ```
 
 任一项红灯 = 本轮不可标 verified，不可推进下一任务。
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass` + `gate 10 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass` + `gate 13 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。

@@ -39,21 +39,23 @@
 
 卡牌是**轻量 roguelite 式事件**：抽一张牌，立刻生效（多为一次性增益/损失）。
 
+> 以下为**示例节选**（3 张），完整数值（5 张卡，deck 1..5）以 `assets/data/balance.json` 为准。
+
 ```jsonc
 "cards": {
-  "deck": [                       // 卡池
+  "deck": [                       // 卡池（示例节选）
     { "id": "treasure", "weight": 3, "effect": { "gold": +200 } },
     { "id": "ambush",   "weight": 2, "effect": { "hp": -10 } },
     { "id": "supply",   "weight": 2, "effect": { "gold": +50, "hp": +5 } }
   ],
   "event_chance": 0.35,           // 移动触发卡牌的概率
-  "hand_size": 3                  // 可选：一次抽几张
+  "hand_size": 1                 // 一次抽几张（balance.json 当前值 = 1）
 }
 ```
 
 ### 抽牌（可复现）
 
-用 `GameRng` 按权重抽卡（可播种 LCG 走确定性序列）：
+用 `GameRng` 按权重抽卡（可播种 PCG，`rand_pcg`，S8.7 落地，走确定性序列）：
 同 seed + 同移动序列 ⇒ 同一串卡牌结果。**禁用 `thread_rng`**。
 
 ### 效果结算

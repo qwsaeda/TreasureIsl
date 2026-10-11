@@ -90,17 +90,25 @@ fn e2e_full_game_session() {
     assert!(move_count > 0, "至少应有一个方向可移动");
 
     // ── 阶段 5：贸易系统 ──────────────────────────────────────────────
+    // 开局金走 `balance.economy.initial_gold`（S8.1 数据化），期望值从表读，不硬编码
+    let initial_gold = ti_core::data::balance().map_or(1000, |b| b.economy.initial_gold);
     let gold_before_trade = app.gold();
-    assert_eq!(gold_before_trade, 1000, "开局金应为 1000");
+    assert_eq!(gold_before_trade, initial_gold, "开局金应等于 balance.economy.initial_gold");
 
-    // 买入商品 1（价格 20）
+    // 买入商品 1
+    let price1 = app.price_table.lookup(1).unwrap_or(0);
     app.handle(GameInput::TradeBuy(1));
-    assert_eq!(app.gold(), 980, "买入后金应减少 20");
+    assert_eq!(app.gold(), initial_gold.saturating_sub(price1), "买入后金应减少商品1单价");
     assert_eq!(app.owned().len(), 1, "买入后持有量 +1");
 
-    // 买入商品 2（价格 76）
+    // 买入商品 2
+    let price2 = app.price_table.lookup(2).unwrap_or(0);
     app.handle(GameInput::TradeBuy(2));
-    assert_eq!(app.gold(), 904, "第二次买入后金应再减少 76");
+    assert_eq!(
+        app.gold(),
+        initial_gold.saturating_sub(price1).saturating_sub(price2),
+        "第二次买入后金应再减少商品2单价"
+    );
 
     // 卖出商品 1
     let gold_before_sell = app.gold();
@@ -109,12 +117,17 @@ fn e2e_full_game_session() {
 
     // ── 阶段 6：建造系统 ──────────────────────────────────────────────
     let bank_before = app.bank().gold;
-    assert_eq!(bank_before, 1000, "开局银行金应为 1000");
+    assert_eq!(bank_before, initial_gold, "开局银行金应等于 balance.economy.initial_gold");
 
-    // 建造 Castle（成本 1000）
+    // 建造 Castle（成本走 `Building::base_cost`）
+    let castle_cost = Building::Castle.base_cost();
     app.handle(GameInput::Build(Building::Castle));
     assert_eq!(app.buildings().len(), 1, "建造后建筑列表 +1");
-    assert_eq!(app.bank().gold, 0, "建造后银行金应减少 1000");
+    assert_eq!(
+        app.bank().gold,
+        initial_gold.saturating_sub(castle_cost),
+        "建造后银行金应减少 Castle 成本"
+    );
 
     // ── 阶段 7：消息系统（战斗前，battle=None 时 MsgClose 回 MainMap）────
     app.handle(GameInput::Landmark(1));

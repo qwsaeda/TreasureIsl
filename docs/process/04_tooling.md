@@ -1,4 +1,4 @@
-# 工具链与脚本化（Tooling）
+﻿# 工具链与脚本化（Tooling）
 
 **原则**：凡是「重复、机械、跨文件」的活，都要有脚本；凡是人肉复制粘贴的地方，
 先问「能不能 codegen」。
@@ -29,9 +29,19 @@
 | `scripts/gen_layout.py` | 把 `ref/controls.json` 2041 条控件记录转成 `assets/data/controls.json`（控件层数据源） | 连跑两次逐字节一致；`--check` 只读比对 |
 | `scripts/validate_data.py` | 手查 JSON 字段与数值域 | `--check` 校验：必填字段、概率域、价格/权重>0、strings 覆盖每个 name_key（无孤儿）、scenes 覆盖 7 场景 |
 | `scripts/check_hardcode.py` | 人眼找 `.rs` 里的硬编码数值/中文（`02_conventions.md` §1） | `--warn` 迁移期只报告（历史时点）；`--list` 按文件分类汇总；EXEMPT 豁免带理由（oracle/CLI/配置键）；当前严格模式 0 命中即绿 |
+| `crates/ti-tools --bin doccheck` | 跨文档 ID/数值漂移 + 数据文件一致性（对抗审计固化，gate 第 9 项） | 数值断言 4 条：UI 场景数=20、控件记录=2041、LCG hex=0x343FD（非 0x3443D）、save.magic=20011591（非 20125007）；扫描 docs + AGENTS.md + plan + assets/data/*.json |
+
+| `scripts/check_oracle_boundary.py` | S8 定位边界：shell 层（game_app/bins/scenes/widgets/i18n）禁 `oracle_*` 函数调用（oracle 仅 rules 内部参照物，类型重导出允许） | `--check` 违规即非 0（gate 第 11 项）；`--report` 列命中明细恒 0；幂等只读（EXP-054/EXP-057） |
 | `scripts/migrate_strings.py` | 把 `.rs` 中命中 `KEY_HINTS` 的中文字面量批量迁到 `strings.json` + 改写调用点为 `sget(key)` | `--report` 只列不写；`--apply` 幂等（已迁过的再跑零改动）；新增文案只需在 KEY_HINTS 加一条再重跑 |
 
-> **gate 第 10 项** = `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（当前严格模式 0 命中即绿；原 75 处硬编码债已于 2026-10 清零）。
+> **gate 项数**（2026-10 扩展，随对抗审计固化）：第 9 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
+> 第 10 项「数据表门禁」= `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（严格 0 命中）。
+> 历史时点 gate 为 8 项（plan-s0-s2/s3/s4 文档保留「当时 8 项」注，勿直接改写）。
+
+> **对抗审计→门禁固化流程**（第 1-5 轮经验，EXP-048）：凡审计中发现「重复、可机械判定」的
+> 数值/引用/一致性检查，**必须**固化成 `doccheck` 数值断言或 gate 脚本项，否则下一轮必然复发。
+> 例：2041/0x343FD/save.magic 三条断言即来自第 4-5 轮审计反复出现的跨文档漂移。
+> **gate 第 11 项** = `check_oracle_boundary.py --check`（S8.8：shell 层 0 个 `oracle_*` 函数调用；oracle 仅作 rules 内部类型/几何参照物，EXP-057）。
 
 ### 待建
 

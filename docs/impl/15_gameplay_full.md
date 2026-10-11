@@ -489,7 +489,7 @@ rand_offset ∈ [0, balance.combat.damage.rng_span]（= 3）
 下限 = balance.combat.damage.flat（= 1），保证每回合至少掉 1 血
 ```
 
-- 确定性：随机来自 `GameRng`（可播种 LCG），同 seed 同操作序列 ⇒ 同结果。
+- 确定性：随机来自 `GameRng`（可播种 PCG，`rand_pcg`，S8.7 落地），同 seed 同操作序列 ⇒ 同结果。
 - 玩家先手（`balance.combat.player_first = true`）。
 
 ### 9.3 回合流程
@@ -702,6 +702,8 @@ rand() % 5 != 0 → 进入存读档流程（80% 概率）
 
 ### 13.1 LCG 算法（MSVC 标准）
 
+> S8.7 后当前实现为 PCG（`rand_pcg`，`rules/rng.rs`）；本节 MSVC LCG 为 oracle 历史参照物。
+
 ```
 seed = (seed × 214013 + 2531011) mod 2^32
 rand() = (seed >> 16) & 0x7FFF   // 值域 0..=32767
@@ -724,7 +726,7 @@ seed = wMinute + wSecond + wMilliseconds
 ### 13.3 确定性要求
 
 - 全走 `GameRng`，禁 `thread_rng`
-- 战斗伤害 K 常数（`0x9E3779B1`）独立于全局 LCG
+- 战斗伤害 K 常数（`0x9E3779B1`）独立于全局 RNG（S8.7 起为 PCG64，`rand_pcg`）
 - 同 seed + 同操作序列 ⇒ 同结果（可复现、可回放、可测试）
 - 测试用固定 seed = 42
 

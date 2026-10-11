@@ -41,6 +41,9 @@
 
 ### 1.4 Rust 类型
 
+> S6.1/S6.2 落地为 `MenuShell` 帧/边框机制（`ti-app/src/menu_shell.rs`），
+> `DualLayerRenderer` 为设计占位，代码无此 struct。
+
 ```rust
 pub struct DualLayerRenderer {
     game_texture: Texture2D,
@@ -75,6 +78,8 @@ pub enum BorderStyle {
 ## 2. 分辨率缩放
 
 ### 2.1 整数缩放档
+
+> 注：实际整数 2x/3x/4x 缩放走 `MenuShell` refit（见 `impl/16` §3.4），本表为 DPI 参考。
 
 | 屏幕短边 | 缩放倍数 | 游戏画面像素 | UI 层 |
 |---|---|---|---|

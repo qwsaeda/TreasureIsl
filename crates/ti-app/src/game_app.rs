@@ -1,11 +1,22 @@
 //! 可玩交互核心：把 `ti-core::rules` 的 13 个已验证玩法模块接进表现层
 //! （`docs/gamebook.md` §2/§3/§5 接线规格）。
 //!
+//! 可玩交互核心 = **组合根**（S9 骨架改造后本文件不再含场景业务）。
+//!
+//! 职责只剩三件：
+//! 1. 持有全部跨场景状态（角色/地图/经济/战斗/消息/存档/表现层资源）；
+//! 2. 把键位快照（`poll`）、触摸手势（`poll_touch`）、帧（`render`）
+//!    **路由**到 `scenes/` 里对应的场景模块；
+//! 3. 实现 [`SceneHost`]——一行状态读写 / 表现转发，供场景模块调用。
+//!
+//! 各场景的输入判定、触摸手势、绘制逻辑全部在 `scenes/*.rs`
+//! （`docs/process/01_architecture.md` §2 分层边界）。
+//!
 //! 设计原则（`docs/gamebook.md` §7）：
-//! - **不重抄数值**：壳层一切判定/数值走 `ti-core::rules`，本模块只编排 UI/输入/渲染；
+//! - **不重抄数值**：一切判定/数值走 `ti-core::rules`，本层只编排状态与路由；
 //! - **零占位**：不保留任何临时脚手架；
-//! - **RNG 单一源**：战斗/事件随机全走 `rules::rng::GameRng`（LCG，EXP-040 确定性）；
-//! - **渲染复用**：`render_*` 走 [`menu_shell`] 的 `Framebuf`/`FramePresenter`/字形机制
+//! - **RNG 单一源**：战斗/事件随机全走 `rules::rng::GameRng`（可播种 PCG，`rand_pcg`，S8.7 落地；EXP-040 确定性）；
+//! - **渲染复用**：场景绘制走 [`menu_shell`] 的 `Framebuf`/`FramePresenter`/字形机制
 //!   （`docs/gamebook.md` §4），各场景分发到同一帧缓冲，脏行带机制不变（S4.3）。
 //!
 //! 与 [`MenuShell`] 的关系：`GameApp` 取代 `MenuShell` 成为两壳共用的交互核心；
@@ -14,25 +25,25 @@
 
 use std::collections::HashMap;
 
-use ti_core::oracle::battle::{Side, Unit, oracle_battle_round, oracle_boss_hp};
+use ti_core::oracle::battle::{Side, Unit};
 use ti_core::oracle::build::{Bank, Building};
-use ti_core::oracle::main_map::{Dir, GridPos, MapTerrain, SceneTarget, oracle_move};
+use ti_core::oracle::main_map::{Dir, GridPos, MapTerrain, SceneTarget};
 use ti_core::oracle::menu::Sfx;
-use ti_core::oracle::messages::{MsgKind, oracle_text_line};
+use ti_core::oracle::messages::MsgKind;
 use ti_core::oracle::saveload::SaveSlot;
 use ti_core::oracle::selection::{Character, MapSlot, SelectionState};
 use ti_core::oracle::trade::PriceTable;
+use ti_core::rules::battle::BattleSession;
 use ti_core::rules::main_loop::SceneStack;
+use ti_core::rules::main_map::{MapSession, StepResult};
+use ti_core::rules::messages::total_pages;
 use ti_core::rules::rng::GameRng;
 
-use crate::i18n;
-use crate::menu_shell::{
-    COLOR_BG, COLOR_LANDMARK, COLOR_PLAYER, COLOR_SELECTED, COLOR_TITLE_BAR, MenuShell,
-};
+use crate::menu_shell::MenuShell;
+use crate::scenes::{SceneHost, SceneKind, route_input, route_render, route_touch};
 use crate::sprite_atlas::SpriteAtlas;
-use crate::touch::{TouchSample, layout};
+use crate::touch::TouchSample;
 use ti_platform::gfx::UploadMode;
-use ti_platform::settings::Gesture;
 
 /// 顶层场景（`docs/gamebook.md` §2，与 `oracle::menu::MenuScene` + `main_loop::SceneId` 对齐）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,32 +85,33 @@ impl Scene {
     }
 }
 
-/// 战斗会话封装（持有 `rules::battle::BattleSession` 的输入，壳层只编排）。
+/// 战斗会话封装（持 `rules::battle::BattleSession`，壳层只编排）。
 #[derive(Debug, Clone)]
 pub struct BattleView {
     /// 玩家单位（HP/atk，来自角色）。
     pub player: Unit,
-    /// BOSS 档 tier（0..=4，`oracle_boss_hp` 表）。
+    /// BOSS 档 tier（0..=4，`balance.combat.boss_tiers` 表）。
     pub boss_tier: u32,
-    /// 战斗 seed（`GameRng` 派生，确定性）。
-    pub seed: u32,
-    /// 已战回合数。
+    /// 战斗会话（`rules::battle::BattleSession`，数值全走 `balance().combat`）。
+    pub session: BattleSession,
+    /// 已战回合数（`step` 后同步，`BattleSession::round` 镜像）。
     pub rounds: u32,
-    /// 玩家当前 HP。
+    /// 玩家当前 HP（`step` 后同步，`BattleSession` 无只读访问器）。
     pub player_hp: u32,
-    /// BOSS 当前 HP。
+    /// BOSS 当前 HP（`step` 后同步，`BattleSession::boss_hp` 镜像）。
     pub boss_hp: u32,
-    /// 胜方（`None` = 未结束）。
+    /// 胜方（`step` 后同步，`None` = 未结束）。
     pub outcome: Option<Side>,
 }
 
 impl BattleView {
-    /// 新建战斗视图（调用 `oracle_boss_hp` 初始化 BOSS HP，行为与 `rules::battle::BattleSession` 一致）。
+    /// 新建战斗视图（`BattleSession::from_balance`，数值走 `balance().combat`）。
     #[must_use]
     pub fn new(seed: u32, player: Unit, boss_tier: u32) -> Self {
-        let boss_hp = oracle_boss_hp(boss_tier);
-        let outcome = if boss_hp == 0 { Some(Side::Player) } else { None };
-        Self { player, boss_tier, seed, rounds: 0, player_hp: player.hp, boss_hp, outcome }
+        let session = BattleSession::from_balance(seed, player, boss_tier);
+        let outcome = session.outcome();
+        let boss_hp = session.boss_hp();
+        Self { player, boss_tier, session, rounds: 0, player_hp: player.hp, boss_hp, outcome }
     }
 
     /// 是否结束。
@@ -108,22 +120,29 @@ impl BattleView {
         self.outcome.is_some()
     }
 
-    /// 单回合推进（调用 `oracle_battle_round` 行为，壳层只更新本视图字段）。
+    /// 单回合推进（`BattleSession::step`，确定性走 `balance().combat` + `GameRng`）。
     ///
     /// 已结束的会话不再推进（与 `BattleSession::step` 一致）。
     pub fn step(&mut self) {
-        if self.outcome.is_some() {
-            return;
-        }
-        let player = Unit { hp: self.player_hp, atk: self.player.atk };
-        let enemy = Unit { hp: self.boss_hp, atk: 10 };
-        let (ph, eh, winner) = oracle_battle_round(self.seed, player, enemy);
+        let (ph, eh, winner) = self.session.step();
         self.player_hp = ph;
         self.boss_hp = eh;
-        self.rounds += 1;
-        self.seed = self.seed.wrapping_add(1);
+        self.rounds = self.session.round();
         self.outcome = winner;
     }
+}
+
+/// 战斗面板快照（渲染层只读视图，避免与帧缓冲借用重叠）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BattleSnapshot {
+    /// 玩家当前 HP。
+    pub player_hp: u32,
+    /// BOSS 当前 HP。
+    pub boss_hp: u32,
+    /// 已战回合数。
+    pub rounds: u32,
+    /// 胜方（`None` = 未结束）。
+    pub outcome: Option<Side>,
 }
 
 /// 归一输入事件（壳层负责把触摸/键/拖拽映射到这些变体，`docs/gamebook.md` §3）。
@@ -192,6 +211,8 @@ pub struct GameApp {
     pub character: Option<Character>,
     /// 已选地图（`None` = 未选）。
     pub map_slot: Option<MapSlot>,
+    /// 当前地图的 BOSS 档（`MapSlot` → `balance.selection.maps[i].boss_tier`，`enter_main_map` 时写入）。
+    pub current_boss_tier: u32,
     /// 已解锁地图清单（壳层探测 `glmapm01/02/03.Map` 得到）。
     pub unlocked_maps: Vec<MapSlot>,
     /// 选择状态（`rules::selection` 行为镜像）。
@@ -202,19 +223,22 @@ pub struct GameApp {
     pub map_pos: Option<GridPos>,
     /// 据点坐标列表（`(row, col)`，`MainMap` 场景时有效）。
     pub map_landmarks: Vec<(u32, u32)>,
-    /// 贸易账本（`rules::trade` 行为镜像，`MainMap` 场景时有效）。
+    /// 当前金（`rules::trade` 账本镜像，壳层拆分持有，`MainMap` 场景时有效）。
     pub gold: u32,
     /// 固定价格表（`oracle::trade::PriceTable`，`rules::trade` 行为）。
     pub price_table: PriceTable,
     /// 持有量（`(goods_id, qty)`，`rules::trade` 行为）。
     pub owned: Vec<(u32, u32)>,
-    /// 建造管理器（`rules::build` 行为镜像）。
+    /// 银行（`rules::build::Bank`，`MainMap` 场景时有效）。
     pub bank: Bank,
-    /// 建筑列表（`(kind, level)`，`rules::build` 行为）。
+    /// 主地图会话（`rules::main_map::MapSession`，`MainMap` 场景时有效；
+    /// 卡牌事件走 `balance.cards` + `GameRng`，可复现）。
+    pub map_session: MapSession,
+    /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// 战斗会话（`Vs` 场景时有效）。
     pub battle: Option<BattleView>,
-    /// 全局 RNG（MSVC LCG，`rules::rng` 行为，EXP-040 确定性）。
+    /// 全局 RNG（可播种 PCG，`rand_pcg`，`rules::rng` 行为，EXP-040 确定性；S8.7 前为 MSVC LCG 历史参照）。
     pub rng: GameRng,
     /// 全局 RNG seed（供战斗/事件随机，壳层播种）。
     pub rng_seed: u32,
@@ -222,7 +246,7 @@ pub struct GameApp {
     pub msg_kind: Option<MsgKind>,
     /// 当前消息页码（0 起，`rules::messages` 行为）。
     pub msg_page: u32,
-    /// 当前消息总页数（`oracle_total_pages` 取，`rules::messages` 行为）。
+    /// 当前消息总页数（`rules::messages::total_pages`，`balance.messages.pages` 行为）。
     pub msg_total: u32,
     /// 存读档槽位（`rules::saveload` 行为，`Saveload` 场景时有效）。
     pub save_slots: Vec<SaveSlot>,
@@ -312,7 +336,6 @@ impl GameApp {
                 }
             }
             Scene::MainMap => {
-                use ti_core::oracle::main_map::Dir;
                 if k.up {
                     changed = self.handle(GameInput::Walk(Dir::North)) || changed;
                 }
@@ -332,9 +355,7 @@ impl GameApp {
                     changed = self.handle(GameInput::TradeSell(1)) || changed;
                 }
                 if k.build {
-                    changed = self
-                        .handle(GameInput::Build(ti_core::oracle::build::Building::Castle))
-                        || changed;
+                    changed = self.handle(GameInput::Build(Building::Castle)) || changed;
                 }
                 if k.landmark {
                     changed = self.handle(GameInput::Landmark(6)) || changed;
@@ -389,22 +410,8 @@ impl GameApp {
     /// 或触屏被禁用）时无副作用。
     pub fn poll_touch(&mut self, sample: Option<TouchSample>) -> bool {
         let Some(s) = sample else { return false };
-        let mut changed = false;
-        match self.scene {
-            Scene::Index => changed = self.touch_index(s),
-            Scene::SelectRole => changed = self.touch_select_role(s),
-            Scene::SelectMap => changed = self.touch_select_map(s),
-            Scene::MainMap => changed = self.touch_main_map(s),
-            Scene::Vs => changed = self.touch_vs(s),
-            Scene::Message => changed = self.touch_message(s),
-            Scene::Saveload => changed = self.touch_saveload(s),
-            Scene::Intro => {
-                self.scene = Scene::Index;
-                changed = true;
-            }
-            Scene::Exit => {}
-        }
-        changed
+        let kind = SceneKind::from_legacy(self.scene);
+        route_touch(self, kind, &s)
     }
 
     /// 新建交互壳：默认 `Index` 场景，未选角色/地图，3 存档槽。
@@ -429,6 +436,7 @@ impl GameApp {
             menu_selected: 0,
             character: None,
             map_slot: None,
+            current_boss_tier: 0,
             unlocked_maps: MapSlot::all().to_vec(),
             selection: SelectionState::new(),
             map_terrain: None,
@@ -438,6 +446,7 @@ impl GameApp {
             price_table: PriceTable::placeholder(),
             owned: Vec::new(),
             bank: Bank::default(),
+            map_session: MapSession::new(MapTerrain::open(1, 1), GridPos::new(0, 0), &[]),
             buildings: Vec::new(),
             battle: None,
             rng: GameRng::new(0),
@@ -445,7 +454,7 @@ impl GameApp {
             msg_kind: None,
             msg_page: 0,
             msg_total: 0,
-            save_slots: vec![SaveSlot::default(); 3],
+            save_slots: vec![SaveSlot::default(); 5],
             last_sfx: None,
             battle_won: false,
             quit: false,
@@ -582,18 +591,58 @@ impl GameApp {
         &self.shell
     }
 
+    /// 取可变渲染壳（壳层对 `MenuShell` 的可变操作，如注入字体/音频、切缩放模式、`present`）。
+    ///
+    /// `shell()` 给 `&MenuShell` 无法驱动 `MenuShell` 的 `&mut` 方法，bins 统一走本访问器。
+    pub fn shell_mut(&mut self) -> &mut MenuShell {
+        &mut self.shell
+    }
+
+    /// 音效访问器（`last_sfx` 字段的 `&mut` 视图，壳层交互后读/清）。
+    pub fn last_sfx(&mut self) -> &mut Option<Sfx> {
+        &mut self.last_sfx
+    }
+
+    /// 清空本帧音效（`last_sfx = None`，壳层交互后调用，避免同一音效连播）。
+    pub fn clear_last_sfx(&mut self) {
+        self.last_sfx = None;
+    }
+
+    /// 设置本帧经过毫秒（S6.4，驱动多帧精灵动画推进）。
+    pub fn set_frame_delta_ms(&mut self, ms: u32) {
+        self.frame_delta_ms = ms;
+    }
+
     /// 取可变精灵图集（测试用）。
     #[must_use]
     pub fn atlas_mut(&mut self) -> Option<&mut SpriteAtlas> {
         self.atlas.as_mut()
     }
 
+    /// S7.5（feature `hd-8bit`）：HD 渲染路径——复用既有 RGB565 [`Self::render`] 派发，
+    /// 再把 RGB565 帧缓冲扩展成 RGBA8（`sync_rgba_from_rgb565`），让 HD 帧就绪。
+    ///
+    /// 调用方随后调 [`Self::present_hd`] 上屏。
+    #[cfg(feature = "hd-8bit")]
+    pub fn render_hd(&mut self) {
+        self.render();
+        self.shell.sync_rgba_from_rgb565();
+    }
+
+    /// S7.5（feature `hd-8bit`）：RGBA8 HD 帧缓冲上屏（同 `present` 上传策略，真彩无 565 量化）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn present_hd(&mut self) {
+        self.shell.present_rgba();
+    }
+
+    /// S7.5（feature `hd-8bit`）：HD RGBA8 缓存条目数（诊断用，未注入时 0）。
     #[cfg(feature = "hd-8bit")]
     #[must_use]
     pub fn atlas_hd_cache_size(&self) -> usize {
-        self.atlas.as_ref().map_or(0, |a| a.hd_cache_size())
+        self.atlas.as_ref().map_or(0, SpriteAtlas::hd_cache_size)
     }
 
+    /// S7.5（feature `hd-8bit`）：注入 HD PNG（`f1 → 多帧 RGBA`），未注入时跳过（PCX 回退）。
     #[cfg(feature = "hd-8bit")]
     pub fn load_hd_pngs(&mut self, f1_to_rgba: impl IntoIterator<Item = (u32, Vec<Vec<u8>>)>) {
         if let Some(atlas) = self.atlas.as_mut() {
@@ -601,158 +650,67 @@ impl GameApp {
         }
     }
 
-    /// 处理输入事件：更新内部 rules 状态 + 顶层场景跳转。
+    /// S7.5（feature `hd-8bit`）：从 `assets_hd_pack/1x/` 目录注入 HD PNG。
+    ///
+    /// 文件命名：静态精灵 `NN_hd.png`（1 帧）；多帧 `NN_hd_f0.png`~`f4.png`。
+    /// 按帧号排序组成 `f1 → 帧列表`，喂 [`Self::load_hd_pngs`]。目录不存在或
+    /// 无可解码 PNG 时返回 `false`（PCX 回退，不 panic）。
+    /// 仅 native 宿主可用（依赖 `std::fs` 目录枚举）；wasm32 目标不编译。
+    #[cfg(all(feature = "hd-8bit", not(target_arch = "wasm32")))]
+    pub fn load_hd_pack_from_dir(&mut self, dir: &std::path::Path) -> bool {
+        let mut png_map: std::collections::BTreeMap<u32, Vec<(u32, Vec<u8>)>> =
+            std::collections::BTreeMap::new();
+        let Ok(read_iter) = std::fs::read_dir(dir) else {
+            return false;
+        };
+        for entry in read_iter.flatten() {
+            let path = entry.path();
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if !std::path::Path::new(name)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
+            {
+                continue;
+            }
+            let stem = name.strip_suffix(".png").unwrap_or(name);
+            // 静态："NN_hd" → f1=NN, frame=0；多帧："NN_hd_fK" → f1=NN, frame=K
+            let (f1_str, frame_str) = match stem.rsplit_once("_f") {
+                Some((a, b)) => (a.strip_suffix("_hd").unwrap_or(a), b),
+                None => (stem.strip_suffix("_hd").unwrap_or(stem), "0"),
+            };
+            let Ok(f1) = f1_str.parse::<u32>() else {
+                continue;
+            };
+            let frame_no: u32 = frame_str.parse().unwrap_or(0);
+            let Ok(bytes) = std::fs::read(&path) else {
+                continue;
+            };
+            if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                if img.rgba.iter().any(|&b| b > 0) {
+                    png_map.entry(f1).or_default().push((frame_no, bytes));
+                }
+            }
+        }
+        if png_map.is_empty() {
+            return false;
+        }
+        let png_bytes: Vec<(u32, Vec<Vec<u8>>)> = png_map
+            .into_iter()
+            .map(|(f1, mut frames)| {
+                frames.sort_by_key(|(n, _)| *n);
+                (f1, frames.into_iter().map(|(_, b)| b).collect())
+            })
+            .collect();
+        self.load_hd_pngs(png_bytes);
+        true
+    }
+
+    /// 处理输入事件：路由到 `scenes/` 里对应场景的 [`crate::scenes::Scene::on_input`]。
     ///
     /// 调用方随后调 `render` 刷新帧缓冲。返回是否发生了场景切换。
     pub fn handle(&mut self, input: GameInput) -> bool {
-        match self.scene {
-            Scene::Index => self.handle_index(input),
-            Scene::SelectRole => self.handle_select_role(input),
-            Scene::SelectMap => self.handle_select_map(input),
-            Scene::MainMap => self.handle_main_map(input),
-            Scene::Vs => self.handle_vs(input),
-            Scene::Message => self.handle_message(input),
-            Scene::Saveload => self.handle_saveload(input),
-            Scene::Intro => {
-                self.scene = Scene::Index;
-                true
-            }
-            Scene::Exit => false,
-        }
-    }
-
-    /// Index 场景：菜单项选择（`docs/gamebook.md` §3.1）。
-    ///
-    /// 菜单项 0..5（`spec/menu.md §a` case 0..=5）：
-    /// - 0 新游戏 → `SelectRole`；1 继续 → `Saveload`；
-    /// - 2/3/4 选项/说明 → `Message`（Help kind）；5 退出 → 置 `quit`。
-    fn handle_index(&mut self, input: GameInput) -> bool {
-        match input {
-            GameInput::MoveUp => {
-                self.menu_selected = self.menu_selected.wrapping_add(5) % 6;
-                false
-            }
-            GameInput::MoveDown => {
-                self.menu_selected = (self.menu_selected + 1) % 6;
-                false
-            }
-            GameInput::Confirm => {
-                self.last_sfx = Some(Sfx::Press);
-                match self.menu_selected {
-                    0 => {
-                        self.selection = SelectionState::new();
-                        self.character = None;
-                        self.map_slot = None;
-                        self.scene = Scene::SelectRole;
-                        true
-                    }
-                    1 => {
-                        self.scene = Scene::Saveload;
-                        true
-                    }
-                    2..=4 => {
-                        self.msg_kind = Some(MsgKind::Help);
-                        self.msg_page = 0;
-                        self.msg_total = 3;
-                        self.scene = Scene::Message;
-                        true
-                    }
-                    5 => {
-                        self.quit = true;
-                        self.scene = Scene::Exit;
-                        true
-                    }
-                    _ => false,
-                }
-            }
-            _ => false,
-        }
-    }
-
-    /// `SelectRole` 场景：角色选择（`docs/gamebook.md` §3.2，`rules::selection` 行为）。
-    fn handle_select_role(&mut self, input: GameInput) -> bool {
-        match input {
-            GameInput::Prev => {
-                let cur = self.character.map_or(0, Character::index);
-                let n = if cur == 0 { 4 } else { cur - 1 };
-                self.character = Character::from_index(n);
-                self.selection.character = self.character;
-                self.last_sfx = Some(Sfx::Press);
-                false
-            }
-            GameInput::Next => {
-                let cur = self.character.map_or(4, Character::index);
-                let n = (cur + 1) % 5;
-                self.character = Character::from_index(n);
-                self.selection.character = self.character;
-                self.last_sfx = Some(Sfx::Press);
-                false
-            }
-            GameInput::Confirm => {
-                self.selection.character = self.character;
-                // 角色选定 → 进选图（地图未选，completed 仍 false）
-                self.selection.completed =
-                    self.selection.has_character() && self.selection.has_map();
-                if self.selection.completed {
-                    self.enter_main_map();
-                    true
-                } else {
-                    self.scene = Scene::SelectMap;
-                    true
-                }
-            }
-            GameInput::Back => {
-                self.scene = Scene::Index;
-                true
-            }
-            _ => false,
-        }
-    }
-
-    /// `SelectMap` 场景：地图选择（`docs/gamebook.md` §3.2，`rules::selection` 行为）。
-    fn handle_select_map(&mut self, input: GameInput) -> bool {
-        match input {
-            GameInput::Prev => {
-                let cur = self.map_slot.map_or(0, MapSlot::zero_index);
-                let n = if cur == 0 { 2 } else { cur - 1 };
-                self.map_slot = MapSlot::from_index(n);
-                self.last_sfx = Some(Sfx::Press);
-                false
-            }
-            GameInput::Next => {
-                let cur = self.map_slot.map_or(2, MapSlot::zero_index);
-                let n = (cur + 1) % 3;
-                self.map_slot = MapSlot::from_index(n);
-                self.last_sfx = Some(Sfx::Press);
-                false
-            }
-            GameInput::Confirm => {
-                let Some(slot) = self.map_slot else {
-                    self.last_sfx = Some(Sfx::Invalid);
-                    return false;
-                };
-                if !self.unlocked_maps.contains(&slot) {
-                    self.last_sfx = Some(Sfx::Invalid);
-                    return false;
-                }
-                self.selection.map_slot = Some(slot);
-                // 角色+地图齐全 → 完成（`rules::selection` 行为：completed = 双选定）
-                self.selection.completed =
-                    self.selection.has_character() && self.selection.has_map();
-                if self.selection.completed {
-                    self.enter_main_map();
-                    true
-                } else {
-                    self.last_sfx = Some(Sfx::Press);
-                    false
-                }
-            }
-            GameInput::Back => {
-                self.scene = Scene::SelectRole;
-                true
-            }
-            _ => false,
-        }
+        let kind = SceneKind::from_legacy(self.scene);
+        route_input(self, kind, input)
     }
 
     /// 进入主地图（`docs/gamebook.md` §3.3）：初始化 `MapSession` + 贸易/建造会话。
@@ -763,13 +721,31 @@ impl GameApp {
             _ => 20,
         };
         let gh = gw;
+        // 据点档：按地图槽走 `balance.selection.maps[i].boss_tier`（m01=0, m02=1, m03=2）
+        let boss_tier = match self.map_slot {
+            Some(MapSlot::M01) => 0u32,
+            Some(MapSlot::M02) => 1,
+            _ => 2,
+        };
+        self.current_boss_tier = boss_tier;
         self.map_terrain = Some(MapTerrain::open(gw, gh));
         self.map_pos = Some(GridPos::new(gh / 2, gw / 2));
         self.map_landmarks = vec![(2, 2), (gh - 3, gw - 3)];
-        // 贸易/建造：开局 1000 金 + 占位价格表
-        self.gold = 1000;
+        // 主地图会话（`rules::main_map::MapSession`，卡牌池走 `balance.cards`）
+        self.map_session = MapSession::new(
+            MapTerrain::open(gw, gh),
+            GridPos::new(gh / 2, gw / 2),
+            &self.map_landmarks,
+        );
+        // 贸易/建造：开局金走 `balance.economy.initial_gold`（表缺失时回退 1000，
+        // 与 `spec/save_load.md` 段记录的原始 1000 一致）
+        let init_gold = match ti_core::data::balance() {
+            Ok(b) => b.economy.initial_gold,
+            Err(_) => 1000,
+        };
+        self.gold = init_gold;
         self.owned = Vec::new();
-        self.bank = Bank::new(1000);
+        self.bank = Bank::new(init_gold);
         self.buildings = Vec::new();
         // 选择完成标志
         self.selection.completed = self.selection.has_character() && self.selection.has_map();
@@ -778,402 +754,63 @@ impl GameApp {
         self.scenes.set_state(0);
     }
 
-    /// `MainMap` 场景：移动/贸易/建造/事件分派（`docs/gamebook.md` §3.3）。
-    fn handle_main_map(&mut self, input: GameInput) -> bool {
-        match input {
-            GameInput::Walk(dir) => {
-                let Some(t) = self.map_terrain.clone() else {
-                    return false;
-                };
-                let Some(pos) = self.map_pos else {
-                    return false;
-                };
-                // `rules::main_map::MapSession::move_to` 行为（`oracle_move`）
-                let next = ti_core::oracle::main_map::oracle_move(&t, pos, dir);
-                if next.is_some() {
-                    self.map_pos = next;
-                }
-                false
-            }
-            GameInput::Landmark(code) => {
-                // `rules::main_map::MapSession::dispatch` 行为（`oracle_dispatch_event`）
-                let target = ti_core::oracle::main_map::oracle_dispatch_event(code);
-                self.last_dispatch = target;
-                match target {
-                    Some(SceneTarget::Vs) => {
-                        // 战斗：建 `BattleView`（`GameRng` 取 seed + tier）
-                        let seed = self.rng.next().unsigned_abs();
-                        let tier = self.rng.in_range(5);
-                        let player = Unit { hp: 200, atk: 30 };
-                        self.battle = Some(BattleView::new(seed, player, tier));
-                        self.scene = Scene::Vs;
-                        true
-                    }
-                    Some(SceneTarget::Msgl | SceneTarget::Msgm | SceneTarget::Msgs) => {
-                        let kind = match target {
-                            Some(SceneTarget::Msgl) => MsgKind::Msgl,
-                            Some(SceneTarget::Msgm) => MsgKind::Msgm,
-                            _ => MsgKind::Msgs,
-                        };
-                        self.msg_kind = Some(kind);
-                        self.msg_page = 0;
-                        self.msg_total = 1;
-                        self.scene = Scene::Message;
-                        true
-                    }
-                    Some(SceneTarget::Card | SceneTarget::Bigcard) => {
-                        // 卡片准备（`spec/main_map.md §d` 事件码 3/5）
-                        self.msg_kind = Some(MsgKind::Msgm);
-                        self.msg_page = 0;
-                        self.msg_total = 1;
-                        self.scene = Scene::Message;
-                        true
-                    }
-                    None => false,
-                }
-            }
-            GameInput::TradeBuy(gid) => {
-                // `rules::trade::TradeLedger::buy` 行为（`oracle_buy`）
-                if let Some(price) = self.price_table.lookup(gid) {
-                    if self.gold >= price {
-                        self.gold -= price;
-                        match self.owned.iter_mut().find(|(id, _)| *id == gid) {
-                            Some(entry) => entry.1 += 1,
-                            None => self.owned.push((gid, 1)),
-                        }
-                        self.last_sfx = Some(Sfx::Press);
-                    }
-                }
-                false
-            }
-            GameInput::TradeSell(gid) => {
-                // `rules::trade::TradeLedger::sell` 行为（`oracle_sell`）
-                let owned_qty = self.owned.iter().find(|(id, _)| *id == gid).map_or(0, |&(_, q)| q);
-                if owned_qty > 0 {
-                    if let Some(price) = self.price_table.lookup(gid) {
-                        let gain = price * owned_qty;
-                        self.gold = self.gold.saturating_add(gain);
-                        self.owned.retain(|(id, _)| *id != gid);
-                        self.last_sfx = Some(Sfx::Press);
-                    }
-                }
-                false
-            }
-            GameInput::Build(kind) => {
-                // `rules::build::BuildManager::build` 行为（`oracle_build`）
-                let cost = kind.base_cost();
-                if self.bank.gold >= cost {
-                    self.bank.gold -= cost;
-                    match self.buildings.iter_mut().find(|(k, _)| *k == kind) {
-                        Some(entry) => entry.1 += 1,
-                        None => self.buildings.push((kind, 1)),
-                    }
-                    self.last_sfx = Some(Sfx::Press);
-                }
-                false
-            }
-            GameInput::MapBack => {
-                self.scene = Scene::Index;
-                true
-            }
-            _ => false,
-        }
-    }
-
-    /// Vs 场景：战斗回合推进（`docs/gamebook.md` §3.4，`rules::battle` 行为）。
-    fn handle_vs(&mut self, input: GameInput) -> bool {
-        match input {
-            GameInput::Attack => {
-                if let Some(b) = self.battle.as_mut() {
-                    b.step();
-                    if b.outcome.is_some() {
-                        self.battle_won = matches!(b.outcome, Some(Side::Player));
-                        if self.battle_won {
-                            self.last_sfx = Some(Sfx::Victory);
-                        }
-                    }
-                }
-                false
-            }
-            GameInput::Back => {
-                // 战斗结束/中途退出 → 回主菜单（`spec/battle.md §d`，状态码 25→0）
-                self.scene = Scene::Index;
-                self.scenes.set_state(0);
-                true
-            }
-            _ => false,
-        }
-    }
-
-    /// Message 场景：消息/帮助翻页（`docs/gamebook.md` §3.5，`rules::messages` 行为）。
-    fn handle_message(&mut self, input: GameInput) -> bool {
-        match input {
-            GameInput::MsgNext => {
-                // `rules::messages::MessageSession::next` 行为（到末页保持）
-                if self.msg_page + 1 < self.msg_total {
-                    self.msg_page += 1;
-                }
-                false
-            }
-            GameInput::MsgPrev => {
-                // `rules::messages::MessageSession::prev` 行为（首页回末页循环）
-                if self.msg_page == 0 {
-                    self.msg_page = self.msg_total.saturating_sub(1);
-                } else {
-                    self.msg_page -= 1;
-                }
-                false
-            }
-            GameInput::MsgClose | GameInput::Back => {
-                // 关闭 → 回场景源（`Message` 来自 `Index`/`MainMap`/`Vs`）
-                self.scene = if self.map_pos.is_some() && self.battle.is_none() {
-                    Scene::MainMap
-                } else {
-                    Scene::Index
-                };
-                self.msg_kind = None;
-                true
-            }
-            _ => false,
-        }
-    }
-
-    /// Saveload 场景：存读档（`docs/gamebook.md` §3.6，`rules::saveload` 行为）。
-    fn handle_saveload(&mut self, input: GameInput) -> bool {
-        match input {
-            GameInput::LoadSave(slot) => {
-                // `rules::saveload::SaveManager::read_slot` 行为：按槽位恢复状态
-                let Some(s) = self.save_slots.get(slot) else {
-                    return false;
-                };
-                if s.character > 0 && s.character <= 5 {
-                    self.character = Character::from_index(s.character - 1);
-                    self.selection.character = self.character;
-                }
-                if s.map_slot < 3 {
-                    self.map_slot = MapSlot::from_index(s.map_slot);
-                    self.selection.map_slot = self.map_slot;
-                }
-                self.gold = s.gold;
-                self.bank = Bank::new(s.gold);
-                // 读档 → 进主地图（若角色+地图齐全）
-                if self.selection.has_character() && self.selection.has_map() {
-                    self.enter_main_map();
-                    self.selection.completed = true;
-                } else {
-                    self.scene = Scene::SelectRole;
-                }
-                self.last_sfx = Some(Sfx::Press);
-                true
-            }
-            GameInput::WriteSave(slot) => {
-                // `rules::saveload::SaveManager::write_slot` 行为：序列化 `SaveSlot`
-                let ch = self.character.map_or(1, |c| c.index() + 1);
-                let m = self.map_slot.map_or(0, MapSlot::zero_index);
-                if self.save_slots.len() > slot {
-                    self.save_slots[slot] = SaveSlot {
-                        version: 2,
-                        character: ch,
-                        gold: self.gold,
-                        map_slot: m,
-                        position: self.map_pos.map_or(0, |p| p.index(20)),
-                    };
-                    self.last_sfx = Some(Sfx::Press);
-                }
-                false
-            }
-            GameInput::SaveloadClose | GameInput::Back => {
-                // 关闭存读档子窗口 → 回主菜单
-                self.scene = Scene::Index;
-                true
-            }
-            _ => false,
-        }
-    }
-
-    /// Index 场景触摸：点菜单行 = 选中该行并立即执行（`docs/modernization.md` §5）。
-    fn touch_index(&mut self, s: TouchSample) -> bool {
-        if s.gesture != Gesture::Tap {
-            return false;
-        }
-        let Some(idx) = layout::menu_row_at(s.x, s.y) else { return false };
-        self.menu_selected = idx;
-        self.handle(GameInput::Confirm)
-    }
-
-    /// `SelectRole` 场景触摸：点某行 = 选中该角色并确认；下滑 = 返回。
-    fn touch_select_role(&mut self, s: TouchSample) -> bool {
-        match s.gesture {
-            Gesture::Tap => {
-                let Some(i) = layout::list_index_at(s.x, s.y, Character::all().len()) else {
-                    return false;
-                };
-                self.character = Character::from_index(u32::try_from(i).unwrap_or(0));
-                self.selection.character = self.character;
-                self.handle(GameInput::Confirm)
-            }
-            Gesture::SwipeDown => self.handle(GameInput::Back),
-            _ => false,
-        }
-    }
-
-    /// `SelectMap` 场景触摸：点某行 = 选中该地图并确认；下滑 = 返回。
-    ///
-    /// 未解锁地图点按由 `handle_select_map` 的 `Confirm` 分支判 `Sfx::Invalid`。
-    fn touch_select_map(&mut self, s: TouchSample) -> bool {
-        match s.gesture {
-            Gesture::Tap => {
-                let Some(i) = layout::list_index_at(s.x, s.y, MapSlot::all().len()) else {
-                    return false;
-                };
-                self.map_slot = MapSlot::from_index(u32::try_from(i).unwrap_or(0));
-                self.handle(GameInput::Confirm)
-            }
-            Gesture::SwipeDown => self.handle(GameInput::Back),
-            _ => false,
-        }
-    }
-
-    /// `MainMap` 场景触摸：
-    /// - 点格子 = 朝该格逐格走（每次点按走到能走的最远格，不穿墙）；
-    /// - 点自己所在格 = 触发据点事件（`Landmark(code)`）；
-    /// - 滑动 = 朝该方向走一步。
-    fn touch_main_map(&mut self, s: TouchSample) -> bool {
-        let Some(cur) = self.map_pos else { return false };
-        match s.gesture {
-            Gesture::Tap => {
-                let Some(terrain) = self.map_terrain.clone() else { return false };
-                let Some((row, col)) =
-                    layout::grid_cell_at(s.x, s.y, terrain.grid_w, terrain.grid_h)
-                else {
-                    return false;
-                };
-                let target = GridPos::new(row, col);
-                // 点自己所在格 = 触发据点事件（等价键盘 Space）
-                if target == cur {
-                    return self.handle(GameInput::Landmark(6));
-                }
-                // 朝目标逐格走：先走差值大的轴，撞墙/越界即停
-                self.walk_towards(&terrain, target)
-            }
-            Gesture::SwipeUp => self.handle(GameInput::Walk(Dir::North)),
-            Gesture::SwipeDown => self.handle(GameInput::Walk(Dir::South)),
-            Gesture::SwipeLeft => self.handle(GameInput::Walk(Dir::West)),
-            Gesture::SwipeRight => self.handle(GameInput::Walk(Dir::East)),
-        }
-    }
-
-    /// 从当前位置朝 `to` 逐格移动：优先走差值大的轴，遇阻挡/越界即停（不穿墙）。
-    ///
-    /// 每步经 [`GameApp::handle`] 的 `Walk` 分支落地（保持与键盘路径同一实现），
-    /// `oracle_move` 只用于合法性预检。单次点按最多 `MAX_TOUCH_WALK` 步
-    /// （避免一次触摸跨越半张图）。
-    fn walk_towards(&mut self, terrain: &MapTerrain, to: GridPos) -> bool {
-        /// 单次点按的最大步数。
-        const MAX_TOUCH_WALK: u32 = 6;
-        let mut changed = false;
-        for _ in 0..MAX_TOUCH_WALK {
-            let Some(pos) = self.map_pos else { break };
-            let dr = i64::from(to.row) - i64::from(pos.row);
-            let dc = i64::from(to.col) - i64::from(pos.col);
-            if dr == 0 && dc == 0 {
-                break;
-            }
-            // 行差绝对值 ≥ 列差 → 走纵向，否则走横向
-            let dir = if dr.unsigned_abs() >= dc.unsigned_abs() {
-                if dr < 0 { Dir::North } else { Dir::South }
-            } else if dc < 0 {
-                Dir::West
-            } else {
-                Dir::East
-            };
-            // 预检：不可通行则停下（不穿墙、不越界）
-            if oracle_move(terrain, pos, dir).is_none() {
-                break;
-            }
-            changed |= self.handle(GameInput::Walk(dir));
-        }
-        changed
-    }
-
-    /// `Vs` 场景触摸：点任意处 = 攻击一回合；下滑 = 退出战斗。
-    fn touch_vs(&mut self, s: TouchSample) -> bool {
-        match s.gesture {
-            Gesture::Tap | Gesture::SwipeUp | Gesture::SwipeLeft | Gesture::SwipeRight => {
-                self.handle(GameInput::Attack)
-            }
-            Gesture::SwipeDown => self.handle(GameInput::Back),
-        }
-    }
-
-    /// `Message` 场景触摸：左半屏 = 关闭；右半屏 = 下一页；
-    /// 上滑 = 下一页；下滑 = 上一页（`docs/modernization.md` §5 翻页表）。
-    fn touch_message(&mut self, s: TouchSample) -> bool {
-        match s.gesture {
-            Gesture::Tap => {
-                if s.x < layout::MSG_SPLIT_X {
-                    self.handle(GameInput::MsgClose)
-                } else {
-                    self.handle(GameInput::MsgNext)
-                }
-            }
-            Gesture::SwipeUp => self.handle(GameInput::MsgNext),
-            Gesture::SwipeDown => self.handle(GameInput::MsgPrev),
-            _ => false,
-        }
-    }
-
-    /// `Saveload` 场景触摸：点有档的槽 = 读档；点空槽 = 存档；下滑 = 关闭。
-    fn touch_saveload(&mut self, s: TouchSample) -> bool {
-        match s.gesture {
-            Gesture::Tap => {
-                let hit = (0..self.save_slots.len()).find(|&i| layout::slot_at(s.x, s.y, i));
-                let Some(slot) = hit else { return false };
-                // 有档（version > 0）→ 读档；空槽 → 存档
-                if self.save_slots[slot].version > 0 {
-                    self.handle(GameInput::LoadSave(slot))
-                } else {
-                    self.handle(GameInput::WriteSave(slot))
-                }
-            }
-            Gesture::SwipeDown => self.handle(GameInput::SaveloadClose),
-            _ => false,
-        }
-    }
-
-    /// 渲染当前场景到帧缓冲（`docs/gamebook.md` §4，分发到各 `render_*`）。
+    /// 渲染当前场景：先由场景模块绘制（`scenes/*.rs::render`），
+    /// 再叠加该场景 `.Map` 的真实精灵 blit。
     ///
     /// 调用方随后调 [`MenuShell::present`] 上屏。
-    ///
-    /// 若 `self.atlas` 与 `self.scene_cache` 已注入，则先 blit 该场景的
-    /// 真实精灵（`.Map` 控件记录 → PCX），再叠加文字/高亮（占位逻辑不变）。
     pub fn render(&mut self) {
-        let scene_name: &'static str = match self.scene {
-            Scene::Index | Scene::Intro => "index.Map",
-            Scene::SelectRole => "selectrole.Map",
-            Scene::SelectMap => "selectmap.Map",
-            Scene::MainMap => "main.Map",
-            Scene::Vs => "vs.Map",
-            Scene::Message => "msgs.Map",
-            Scene::Saveload => "saveload.Map",
-            Scene::Exit => "",
-        };
-        match self.scene {
-            Scene::Index | Scene::Intro => self.render_index(),
-            Scene::SelectRole => self.render_select_role(),
-            Scene::SelectMap => self.render_select_map(),
-            Scene::MainMap => self.render_main_map(),
-            Scene::Vs => self.render_vs(),
-            Scene::Message => self.render_message(),
-            Scene::Saveload => self.render_saveload(),
-            Scene::Exit => {
-                self.shell.fb.clear(0x0000);
-                return;
-            }
-        }
-        // 真实精灵 blit（atlas + 场景缓存都齐备时）
-        if let (Some(atlas), Some(scene)) = (self.atlas.as_mut(), self.scene_cache.get(scene_name))
+        let kind = SceneKind::from_legacy(self.scene);
+        let asset = kind.asset_name();
         {
+            let host: &mut dyn SceneHost = self;
+            route_render(host, kind);
+            host.blit_scene_sprites(asset);
+        }
+    }
+}
+
+/// `GameApp` 的 [`SceneHost`] 实现：全部是一行状态读写 / 表现转发，
+/// 业务判定在 `scenes/*.rs`（`docs/process/01_architecture.md` §2）。
+impl SceneHost for GameApp {
+    // ── 场景控制 ────────────────────────────────────────────────────────
+    fn current_scene(&self) -> Scene {
+        self.scene
+    }
+
+    fn enter(&mut self, next: SceneKind) {
+        self.scene = next.to_legacy();
+    }
+
+    fn advance(&mut self, input: GameInput) -> bool {
+        self.handle(input)
+    }
+
+    // ── 表现层 ──────────────────────────────────────────────────────────
+    fn shell(&self) -> &MenuShell {
+        &self.shell
+    }
+
+    fn shell_mut(&mut self) -> &mut MenuShell {
+        &mut self.shell
+    }
+
+    fn clear_frame(&mut self, color: u16) {
+        self.shell.fb.clear(color);
+    }
+
+    fn fill_rect(&mut self, x: i32, y: i32, w: i32, h: i32, color: u16) {
+        self.shell.fill_rect(x, y, w, h, color);
+    }
+
+    fn draw_text(&mut self, text: &str, x: i32, y: i32) {
+        self.shell.draw_text_row(text, x, y);
+    }
+
+    fn blit_scene_sprites(&mut self, asset: &str) {
+        if asset.is_empty() {
+            return;
+        }
+        if let (Some(atlas), Some(scene)) = (self.atlas.as_mut(), self.scene_cache.get(asset)) {
             if !scene.words.is_empty() {
                 // S6.4：按本帧时长推进动画（多帧精灵 num>1 才受影响）
                 atlas.advance_animation(self.frame_delta_ms);
@@ -1182,156 +819,287 @@ impl GameApp {
         }
     }
 
-    /// Index 场景渲染（复用 `MenuShell::render` 菜单 + 标题 + 状态行机制）。
-    fn render_index(&mut self) {
-        self.shell.selected = self.menu_selected;
-        self.shell.render();
-    }
-
-    /// `SelectRole` 场景渲染：角色头像占位 + 名称 + 选中高亮。
-    fn render_select_role(&mut self) {
-        self.shell.fb.clear(COLOR_BG);
-        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        self.shell.draw_text_row(i18n::sget("scene.select_role.title"), 40, 4);
-        for (i, c) in Character::all().iter().enumerate() {
-            let y = 50 + i32::try_from(i).unwrap_or(0) * 30;
-            let sel = i == self.character.map_or(0, |c| c.index() as usize);
-            if sel {
-                self.shell.fill_rect(20, y - 10, 136, 26, COLOR_SELECTED);
-            }
-            self.shell.draw_text_row(c.label(), 60, y);
-        }
-        self.shell.draw_text_row(i18n::sget("scene.select_role.nav_hint"), 30, 210);
-    }
-
-    /// `SelectMap` 场景渲染：地图缩略 + 名称 + 选中高亮。
-    fn render_select_map(&mut self) {
-        self.shell.fb.clear(COLOR_BG);
-        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        self.shell.draw_text_row(i18n::sget("scene.select_map.title"), 40, 4);
-        for (i, m) in MapSlot::all().iter().enumerate() {
-            let y = 50 + i32::try_from(i).unwrap_or(0) * 30;
-            let sel = i == self.map_slot.map_or(0, |m| m.zero_index() as usize);
-            let locked = !self.unlocked_maps.contains(m);
-            if sel && !locked {
-                self.shell.fill_rect(20, y - 10, 136, 26, COLOR_SELECTED);
-            }
-            self.shell.draw_text_row(m.label(), 60, y);
-            if locked {
-                self.shell.draw_text_row(i18n::sget("scene.select_map.locked"), 130, y);
-            }
-        }
-        self.shell.draw_text_row(i18n::sget("scene.select_map.nav_hint"), 30, 210);
-    }
-
-    /// `MainMap` 场景渲染：等距网格 + 玩家棋子 + 据点 + 金/持有量 HUD。
-    fn render_main_map(&mut self) {
-        self.shell.fb.clear(COLOR_BG);
-
-        // S6.3：真实地形瓦片（等距投影 + 摄像机），无地形资源时保持占位背景
-        let terrain_drawn = match (self.terrain_atlas.as_mut(), self.terrain_map.as_ref()) {
+    fn draw_terrain(&mut self) -> bool {
+        match (self.terrain_atlas.as_mut(), self.terrain_map.as_ref()) {
             (Some(atlas), Some(terrain)) => atlas.blit_map(terrain, &mut self.shell.fb) > 0,
             _ => false,
-        };
+        }
+    }
 
-        // HUD（标题条 + 金/持有量 + 提示）
-        self.shell.fill_rect(0, 0, 176, 16, COLOR_TITLE_BAR);
-        self.shell.draw_text_row(i18n::sget("scene.main_map.title"), 64, 2);
-        let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&self.gold]);
-        self.shell.draw_text_row(&gold_str, 4, 150);
-        let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&self.owned.len()]);
-        self.shell.draw_text_row(&own_str, 4, 162);
+    fn terrain_grid_w(&self) -> u32 {
+        self.terrain_map.as_ref().map_or(20, |t| t.grid_w)
+    }
 
-        // 玩家棋子 + 据点（等距投影坐标，相机与地形一致）
-        let gw = self.terrain_map.as_ref().map_or(20, |t| t.grid_w);
-        let camera = self
+    fn terrain_camera(&self) -> (u32, u32) {
+        let (cx, cy) = self
             .terrain_map
             .as_ref()
-            .map_or((0, 0), crate::terrain_atlas::TerrainAtlas::center_camera);
-        let cx = i32::try_from(camera.0).unwrap_or(0);
-        let cy = i32::try_from(camera.1).unwrap_or(0);
-        if let Some(pos) = self.map_pos {
-            if terrain_drawn {
-                let iso_x = crate::terrain_atlas::TerrainAtlas::iso_x(pos.row, pos.col);
-                let iso_y = crate::terrain_atlas::TerrainAtlas::iso_y(pos.row, pos.col, gw);
-                self.shell.fill_rect(iso_x + cx - 2, iso_y + cy - 2, 5, 5, COLOR_PLAYER);
-            } else {
-                let px = i32::try_from(pos.col).unwrap_or(0) * 6 + 20;
-                let py = i32::try_from(pos.row).unwrap_or(0) * 6 + 30;
-                self.shell.fill_rect(px - 1, py - 1, 4, 4, COLOR_PLAYER);
-            }
-        }
-        for (r, c) in &self.map_landmarks {
-            if terrain_drawn {
-                let iso_x = crate::terrain_atlas::TerrainAtlas::iso_x(*r, *c);
-                let iso_y = crate::terrain_atlas::TerrainAtlas::iso_y(*r, *c, gw);
-                self.shell.fill_rect(iso_x + cx - 1, iso_y + cy - 1, 3, 3, COLOR_LANDMARK);
-            } else {
-                let px = i32::try_from(*c).unwrap_or(0) * 6 + 20;
-                let py = i32::try_from(*r).unwrap_or(0) * 6 + 30;
-                self.shell.fill_rect(px - 1, py - 1, 3, 3, COLOR_LANDMARK);
-            }
-        }
-        self.shell.draw_text_row(i18n::sget("scene.main_map.hint"), 4, 210);
+            .map_or((0_i64, 0), crate::terrain_atlas::TerrainAtlas::center_camera);
+        (
+            i64::max(cx, 0).try_into().unwrap_or_default(),
+            i64::max(cy, 0).try_into().unwrap_or_default(),
+        )
     }
 
-    /// `Vs` 场景渲染：战斗面板（双方 HP + 回合 + 结果）。
-    fn render_vs(&mut self) {
-        self.shell.fb.clear(COLOR_BG);
-        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        self.shell.draw_text_row(i18n::sget("scene.vs.title"), 64, 4);
-        if let Some(b) = self.battle.as_ref() {
-            let ph = i18n::sgetf("scene.vs.player_hp_fmt", &[&b.player_hp]);
-            let bh = i18n::sgetf("scene.vs.boss_hp_fmt", &[&b.boss_hp]);
-            let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
-            self.shell.draw_text_row(&ph, 10, 50);
-            self.shell.draw_text_row(&bh, 10, 80);
-            self.shell.draw_text_row(&rd, 10, 110);
-            match &b.outcome {
-                Some(Side::Player) => {
-                    self.shell.draw_text_row(i18n::sget("scene.vs.victory"), 60, 150);
+    // ── 音效 ────────────────────────────────────────────────────────────
+    fn play_sfx(&mut self, sfx: Sfx) {
+        self.last_sfx = Some(sfx);
+    }
+
+    // ── Index ───────────────────────────────────────────────────────────
+    fn menu_selected(&self) -> usize {
+        self.menu_selected
+    }
+
+    fn set_menu_selected(&mut self, value: usize) {
+        self.menu_selected = value;
+    }
+
+    fn reset_selection(&mut self) {
+        self.selection = SelectionState::new();
+        self.character = None;
+        self.map_slot = None;
+    }
+
+    fn open_help(&mut self) {
+        self.open_message(MsgKind::Help);
+    }
+
+    fn request_quit(&mut self) {
+        self.quit = true;
+    }
+
+    // ── 选择 ────────────────────────────────────────────────────────────
+    fn character(&self) -> Option<Character> {
+        self.character
+    }
+
+    fn set_character(&mut self, value: Option<Character>) {
+        self.character = value;
+    }
+
+    fn map_slot(&self) -> Option<MapSlot> {
+        self.map_slot
+    }
+
+    fn set_map_slot(&mut self, value: Option<MapSlot>) {
+        self.map_slot = value;
+    }
+
+    fn selection(&self) -> SelectionState {
+        self.selection
+    }
+
+    fn selection_mut(&mut self) -> &mut SelectionState {
+        &mut self.selection
+    }
+
+    fn map_unlocked(&self, slot: MapSlot) -> bool {
+        self.unlocked_maps.contains(&slot)
+    }
+
+    fn enter_main_map(&mut self) {
+        GameApp::enter_main_map(self);
+    }
+
+    // ── 主地图 ──────────────────────────────────────────────────────────
+    fn map_pos(&self) -> Option<GridPos> {
+        self.map_pos
+    }
+
+    fn set_map_pos(&mut self, value: Option<GridPos>) {
+        self.map_pos = value;
+    }
+
+    fn map_terrain(&self) -> Option<MapTerrain> {
+        self.map_terrain.clone()
+    }
+
+    fn map_landmarks(&self) -> Vec<(u32, u32)> {
+        self.map_landmarks.clone()
+    }
+
+    fn map_session_move(&mut self, dir: Dir) -> StepResult {
+        self.map_session.move_to(dir, &mut self.rng)
+    }
+
+    fn map_session_dispatch(&self, code: u32) -> Option<SceneTarget> {
+        self.map_session.dispatch(code)
+    }
+
+    fn set_last_dispatch(&mut self, target: Option<SceneTarget>) {
+        self.last_dispatch = target;
+    }
+
+    fn start_battle(&mut self) {
+        let seed = self.rng.next().unsigned_abs();
+        // 据点档用当前地图对应的固定 boss_tier（非随机）：`enter_main_map` 已按 map_slot 写入
+        let tier = self.current_boss_tier;
+        // 玩家单位 HP/atk：balance 无专用玩家属性字段（combat 段只有 boss_tiers/damage），
+        // 用合理默认值 1000/150（第 5 轮审计 Q001/Q044/Q045/Q081：旧值 200/30 对 tier0
+        // 50000 HP 在 max_rounds=1000 内不可胜，属功能性 Bug，已修正）
+        let player = Unit { hp: 1000, atk: 150 };
+        self.battle = Some(BattleView::new(seed, player, tier));
+        self.scene = Scene::Vs;
+    }
+
+    fn open_message(&mut self, kind: MsgKind) {
+        self.msg_kind = Some(kind);
+        self.msg_page = 0;
+        self.msg_total = total_pages(kind);
+        self.scene = Scene::Message;
+    }
+
+    // ── 经济 ────────────────────────────────────────────────────────────
+    fn price_of(&self, gid: u32) -> Option<u32> {
+        self.price_table.lookup(gid)
+    }
+
+    fn gold(&self) -> u32 {
+        self.gold
+    }
+
+    fn set_gold(&mut self, value: u32) {
+        self.gold = value;
+    }
+
+    fn owned_index_of(&self, gid: u32) -> Option<usize> {
+        self.owned.iter().position(|(id, _)| *id == gid)
+    }
+
+    fn owned_push(&mut self, gid: u32, qty: u32) {
+        self.owned.push((gid, qty));
+    }
+
+    fn owned_bump(&mut self, index: usize) {
+        if let Some(entry) = self.owned.get_mut(index) {
+            entry.1 += 1;
+        }
+    }
+
+    fn owned_count(&self, gid: u32) -> u32 {
+        self.owned.iter().find(|(id, _)| *id == gid).map_or(0, |&(_, q)| q)
+    }
+
+    fn owned_total(&self) -> usize {
+        self.owned.len()
+    }
+
+    fn owned_take_all(&mut self, gid: u32) -> u32 {
+        let removed = self.owned_count(gid);
+        self.owned.retain(|(id, _)| *id != gid);
+        removed
+    }
+
+    fn bank_gold(&self) -> u32 {
+        self.bank.gold
+    }
+
+    fn spend_bank_gold(&mut self, amount: u32) {
+        self.bank.gold -= amount;
+    }
+
+    fn build_increment(&mut self, kind: Building) {
+        match self.buildings.iter_mut().find(|(k, _)| *k == kind) {
+            Some(entry) => entry.1 += 1,
+            None => self.buildings.push((kind, 1)),
+        }
+    }
+
+    // ── 战斗 ────────────────────────────────────────────────────────────
+    fn battle_step(&mut self) {
+        if let Some(b) = self.battle.as_mut() {
+            b.step();
+            if b.outcome.is_some() {
+                self.battle_won = matches!(b.outcome, Some(Side::Player));
+                if self.battle_won {
+                    self.last_sfx = Some(Sfx::Victory);
                 }
-                Some(Side::Enemy) => {
-                    self.shell.draw_text_row(i18n::sget("scene.vs.defeat"), 60, 150);
-                }
-                None => self.shell.draw_text_row(i18n::sget("scene.vs.awaiting"), 50, 150),
             }
+        }
+    }
+
+    fn battle_snapshot(&self) -> Option<BattleSnapshot> {
+        self.battle.as_ref().map(|b| BattleSnapshot {
+            player_hp: b.player_hp,
+            boss_hp: b.boss_hp,
+            rounds: b.rounds,
+            outcome: b.outcome,
+        })
+    }
+
+    // ── 消息 ────────────────────────────────────────────────────────────
+    fn msg_kind(&self) -> Option<MsgKind> {
+        self.msg_kind
+    }
+
+    fn msg_page(&self) -> u32 {
+        self.msg_page
+    }
+
+    fn msg_total(&self) -> u32 {
+        self.msg_total
+    }
+
+    fn msg_next_page(&mut self) {
+        if self.msg_page + 1 < self.msg_total {
+            self.msg_page += 1;
+        }
+    }
+
+    fn msg_prev_page(&mut self) {
+        if self.msg_page == 0 {
+            self.msg_page = self.msg_total.saturating_sub(1);
         } else {
-            self.shell.draw_text_row(i18n::sget("scene.vs.empty"), 60, 50);
+            self.msg_page -= 1;
         }
-        self.shell.draw_text_row(i18n::sget("scene.vs.hint"), 60, 210);
     }
 
-    /// `Message` 场景渲染：当前页文本 + 页码。
-    fn render_message(&mut self) {
-        self.shell.fb.clear(COLOR_BG);
-        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        let kind = self.msg_kind.unwrap_or(MsgKind::Help);
-        self.shell.draw_text_row(kind.label(), 60, 4);
-        // 当前页文本（`rules::messages::oracle_text_line` 行为，`spec/messages.md §c`）
-        let text = oracle_text_line(kind, self.msg_page);
-        self.shell.draw_text_row(text, 10, 40);
-        let page_str = format!("{}/{}", self.msg_page + 1, self.msg_total);
-        self.shell.draw_text_row(&page_str, 60, 200);
-        self.shell.draw_text_row(i18n::sget("scene.message.nav_hint"), 40, 210);
+    fn close_message(&mut self) {
+        self.scene = if self.map_pos.is_some() && self.battle.is_none() {
+            Scene::MainMap
+        } else {
+            Scene::Index
+        };
+        self.msg_kind = None;
     }
 
-    /// `Saveload` 场景渲染：槽位列表 + 金/进度摘要。
-    fn render_saveload(&mut self) {
-        self.shell.fb.clear(COLOR_BG);
-        self.shell.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        self.shell.draw_text_row(i18n::sget("scene.saveload.title"), 60, 4);
-        for (i, s) in self.save_slots.iter().enumerate() {
-            let y = 40 + i32::try_from(i).unwrap_or(0) * 40;
-            let has = s.version > 0;
-            let has_str = if has { i18n::sget("slot.has") } else { i18n::sget("slot.empty") };
-            let slot_str = i18n::sgetf("slot.label_fmt", &[&(i + 1), &has_str]);
-            self.shell.draw_text_row(&slot_str, 10, y);
-            if has {
-                let g = i18n::sgetf("hud.gold_fmt", &[&s.gold]);
-                self.shell.draw_text_row(&g, 100, y);
-            }
+    // ── 存读档 ──────────────────────────────────────────────────────────
+    fn save_slots(&self) -> &[SaveSlot] {
+        &self.save_slots
+    }
+
+    fn write_save_slot(&mut self, slot: usize, data: SaveSlot) {
+        if let Some(dst) = self.save_slots.get_mut(slot) {
+            *dst = data;
         }
-        self.shell.draw_text_row(i18n::sget("scene.saveload.nav_hint"), 30, 210);
+    }
+
+    fn restore_save(&mut self, data: SaveSlot) {
+        if data.character > 0 && data.character <= 5 {
+            self.character = Character::from_index(data.character - 1);
+            self.selection.character = self.character;
+        }
+        if data.map_slot < 3 {
+            self.map_slot = MapSlot::from_index(data.map_slot);
+            self.selection.map_slot = self.map_slot;
+        }
+        self.gold = data.gold;
+        self.bank = Bank::new(data.gold);
+        if self.selection.has_character() && self.selection.has_map() {
+            GameApp::enter_main_map(self);
+            self.selection.completed = true;
+        } else {
+            self.scene = Scene::SelectRole;
+        }
+    }
+
+    // ── 状态查询 ────────────────────────────────────────────────────────
+    fn in_map(&self) -> bool {
+        self.map_pos.is_some()
+    }
+
+    fn in_battle(&self) -> bool {
+        self.battle.is_some()
     }
 }

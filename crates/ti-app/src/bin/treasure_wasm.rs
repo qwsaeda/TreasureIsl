@@ -47,14 +47,14 @@ impl Shell {
             macroquad::file::load_file("assets/GoldLand.Fnt").await,
             macroquad::file::load_file("assets/font.dat").await,
         ) {
-            game.shell().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
+            game.shell_mut().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
         }
 
         // 真实音效（music.lpk → 解包 → 混音 → OGG 转码 → macroquad 音频后端）
         let (bundle, loaded) = Self::load_audio_bank().await;
         let total_count = loaded.len();
         let mod_count = bundle.as_ref().map_or(0, |b| b.mod_count);
-        game.shell().set_audio(total_count, mod_count);
+        game.shell_mut().set_audio(total_count, mod_count);
 
         // 精灵图集（ui.pak → SpriteAtlas）+ 场景 .Map 文件（blit 用）
         if let Ok(ui_pak) = macroquad::file::load_file("assets/ui.pak").await {
@@ -66,6 +66,21 @@ impl Shell {
             macroquad::file::load_file("assets/glmapm01.Map").await,
         ) {
             game.set_terrain(&pak, &map_bytes, "glmapm01.Map");
+        }
+        // S7.5/S8.9：HD PNG 档（`assets_hd_pack/1x/`）。`load_hd_pack_from_dir` 仅
+        // native 宿主可编译（`std::fs` 目录枚举）；wasm32 目标缺失该能力，走 RGB565
+        // PCX 回退（不 panic）。
+        #[cfg(all(feature = "hd-8bit", not(target_arch = "wasm32")))]
+        {
+            let hd_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .and_then(std::path::Path::parent)
+                .map_or_else(std::path::PathBuf::from, std::path::PathBuf::from)
+                .join("assets_hd_pack")
+                .join("1x");
+            if hd_dir.is_dir() {
+                game.load_hd_pack_from_dir(&hd_dir);
+            }
         }
         let map_names = [
             "index.Map",
@@ -120,7 +135,7 @@ impl Shell {
                 play_sound(sound, PlaySoundParams { looped: false, volume: SE_VOLUME });
             }
         }
-        self.game.last_sfx() = None;
+        self.game.clear_last_sfx();
     }
 
     /// 载入 `music.lpk` → 解包 → 混音 → OGG 转码 → 交给 macroquad 音频后端。
@@ -205,14 +220,14 @@ async fn main() {
     let mut shell = Shell::new().await;
     // 首帧强制渲染（font/audio 已注入）
     shell.game.render();
-    shell.game.shell().last_rendered = Some(shell.game.shell().selected);
+    shell.game.shell_mut().last_rendered = Some(shell.game.shell().selected);
     #[cfg(feature = "stats")]
     let mut fps = FpsMeter::new();
 
     loop {
         // 视口先跟随窗口尺寸（letterbox / pillarbox，P4-2）：
         // 触摸命中判定用逻辑坐标，必须先有本帧视口才能正确反变换
-        shell.game.shell().refit(screen_width(), screen_height());
+        shell.game.shell_mut().refit(screen_width(), screen_height());
 
         // S5.1：交互核心驱动（各场景输入 → GameApp.poll → 场景跳转）
         let k = KeyState {
@@ -236,22 +251,22 @@ async fn main() {
             let all = ScaleMode::ALL;
             let cur = all.iter().position(|&m| m == shell.game.shell().scale_mode()).unwrap_or(0);
             let next = all[(cur + 1) % all.len()];
-            shell.game.shell().set_scale_mode(next, screen_width(), screen_height());
+            shell.game.shell_mut().set_scale_mode(next, screen_width(), screen_height());
             changed = true;
         }
         // F2 循环切换上采样滤波（像素锐利/平滑）
         if is_key_pressed(KeyCode::F2) {
-            shell.game.shell().cycle_filter_mode();
+            shell.game.shell_mut().cycle_filter_mode();
             changed = true;
         }
         // F3 循环切换边框装饰样式（纯黑/深蓝/同背景）
         if is_key_pressed(KeyCode::F3) {
-            shell.game.shell().cycle_border_style();
+            shell.game.shell_mut().cycle_border_style();
             changed = true;
         }
         // S7.6 F4 循环切换画质模式（原版/HD）
         if is_key_pressed(KeyCode::F4) {
-            shell.game.shell().cycle_quality();
+            shell.game.shell_mut().cycle_quality();
             changed = true;
         }
         // 触屏/鼠标：直接触摸界面元素，不画虚拟按键（`docs/modernization.md` §5）。
@@ -284,17 +299,17 @@ async fn main() {
             }
             #[cfg(not(feature = "hd-8bit"))]
             shell.game.render();
-            shell.game.shell().last_rendered = Some(current_selected);
-            shell.game.shell().last_rendered_scene = Some(scene_key);
+            shell.game.shell_mut().last_rendered = Some(current_selected);
+            shell.game.shell_mut().last_rendered_scene = Some(scene_key);
         }
         #[cfg(feature = "hd-8bit")]
         if shell.game.shell().settings().quality == ti_platform::settings::QualityMode::Hd {
             shell.game.present_hd();
         } else {
-            shell.game.shell().present();
+            shell.game.shell_mut().present();
         }
         #[cfg(not(feature = "hd-8bit"))]
-        shell.game.shell().present();
+        shell.game.shell_mut().present();
         #[cfg(feature = "stats")]
         {
             let total_ms_f = get_time().max(0.0) * 1000.0;

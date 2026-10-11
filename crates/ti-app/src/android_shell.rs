@@ -100,14 +100,14 @@ pub async fn run() {
     if let (Some(font_bytes), Some(charset_bytes)) =
         (read_asset("assets/GoldLand.Fnt").await, read_asset("assets/font.dat").await)
     {
-        game.shell().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
+        game.shell_mut().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
     }
 
     // 真实音效（music.lpk → 解包 → 混音 → OGG 转码 → macroquad 音频后端）
     let (bundle, loaded) = load_audio_bank().await;
     let total_count = loaded.len();
     let mod_count = bundle.as_ref().map_or(0, |b| b.mod_count);
-    game.shell().set_audio(total_count, mod_count);
+    game.shell_mut().set_audio(total_count, mod_count);
 
     // 精灵图集（ui.pak → SpriteAtlas）+ 场景 .Map 文件（blit 真实贴图）
     if let Some(ui_pak) = read_asset("assets/ui.pak").await {
@@ -129,6 +129,52 @@ pub async fn run() {
         }
     }
 
+    // S7.5/S8.9：HD PNG 档（`assets_hd_pack/1x/ui/`）。APK 端无目录枚举能力，按已知
+    // 静态/多帧 HD PNG 文件名逐个尝试读取；全部缺失则走 RGB565 PCX 回退（不 panic）。
+    #[cfg(feature = "hd-8bit")]
+    {
+        // 静态 f1（`NN_hd.png`，116 个）
+        let statics: [u32; 116] = [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+            26, 27, 28, 29, 30, 33, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+            51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72,
+            73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94,
+            95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
+            113, 114, 115, 116, 117, 118, 119, 120,
+        ];
+        let mut mapping: Vec<(u32, Vec<Vec<u8>>)> = Vec::new();
+        for f1 in statics {
+            let name = format!("assets_hd_pack/1x/ui/{f1}_hd.png");
+            if let Some(bytes) = read_asset(&name).await {
+                if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                    if img.rgba.iter().any(|&b| b > 0) {
+                        mapping.push((f1, vec![bytes]));
+                    }
+                }
+            }
+        }
+        // 多帧 f1（`NN_hd_f0..f4.png`）
+        for f1 in [14u32, 31, 32, 37] {
+            let mut frames: Vec<Vec<u8>> = Vec::new();
+            for k in 0..5u32 {
+                let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{k}.png");
+                if let Some(bytes) = read_asset(&name).await {
+                    if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                        if img.rgba.iter().any(|&b| b > 0) {
+                            frames.push(bytes);
+                        }
+                    }
+                }
+            }
+            if !frames.is_empty() {
+                mapping.push((f1, frames));
+            }
+        }
+        if !mapping.is_empty() {
+            game.load_hd_pngs(mapping);
+        }
+    }
+
     // BGM 优先取 OGG 曲目（MOD 转码），SE 取 WAV 最短
     let bgm = pick_bgm(&loaded, bundle.as_ref());
     let se = pick_sound(&loaded, bundle.as_ref(), false);
@@ -146,11 +192,11 @@ pub async fn run() {
     }
     #[cfg(not(feature = "hd-8bit"))]
     game.render();
-    game.shell().last_rendered = Some(game.shell().selected);
+    game.shell_mut().last_rendered = Some(game.shell().selected);
 
     loop {
         // 视口先跟随窗口尺寸（letterbox / pillarbox，P4-2）
-        game.shell().refit(screen_width(), screen_height());
+        game.shell_mut().refit(screen_width(), screen_height());
 
         // 触屏输入 → GameApp.poll_touch → 场景跳转
         let (mx, my) = mouse_position();
@@ -179,18 +225,18 @@ pub async fn run() {
             }
             #[cfg(not(feature = "hd-8bit"))]
             game.render();
-            game.shell().last_rendered = Some(current_selected);
-            game.shell().last_rendered_scene = Some(scene_key);
+            game.shell_mut().last_rendered = Some(current_selected);
+            game.shell_mut().last_rendered_scene = Some(scene_key);
         }
         // 呈现
         #[cfg(feature = "hd-8bit")]
         if game.shell().settings().quality == ti_platform::settings::QualityMode::Hd {
             game.present_hd();
         } else {
-            game.shell().present();
+            game.shell_mut().present();
         }
         #[cfg(not(feature = "hd-8bit"))]
-        game.shell().present();
+        game.shell_mut().present();
         next_frame().await;
     }
 }
@@ -209,5 +255,5 @@ fn play_last_sfx(game: &mut GameApp, se: Option<&Sound>) {
             play_sound(sound, PlaySoundParams { looped: false, volume: SE_VOLUME });
         }
     }
-    game.last_sfx() = None;
+    game.clear_last_sfx();
 }

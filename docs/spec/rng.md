@@ -2,11 +2,16 @@
 
 ## a) RNG 算法
 
+> **时点说明**：本 spec 成文于 S3.12（S8.7 前）。S8.7 已将全局 RNG 从手写 MSVC LCG 改为
+> `rand_pcg`（PCG64），`oracle/rng.rs` 已删除。下文「推测 MSVC LCG」段为**oracle 历史参照**，
+> 当前实现见 `crates/ti-core/src/rules/rng.rs`（`rand_pcg::Lcg128Xsl64`，EXP-057 版本锁定 0.9.0）。
+
 游戏**不自带 RNG 实现**（EXP-037 / F-320）：`srand`/`rand` 是 coredll.dll 导入 thunk
 （`ref/pseudocode/00058634_srand.c` 仅 8 字节 `__imp_srand` 转发，`rand` 同理
 `000585E0` 8 字节 `__imp_rand`）。算法在 coredll 内，无法从 exe 实测。
 
-**算法（推测，标 `推测`）**：MSVC WinCE ARM CRT 与桌面 MSVC 一致的标准 LCG
+**算法（推测，标 `推测`，oracle 历史参照；S8.7 起当前实现为 PCG64，见上注）**：
+MSVC WinCE ARM CRT 与桌面 MSVC 一致的标准 LCG
 （见 MSVC CRT `rand`/`srand` 文档）：
 
 ```
@@ -15,24 +20,26 @@ rand():    seed = seed * 214013 + 2531011
            return (seed >> 16) & 0x7fff      // 值域 0..=32767
 ```
 
-Rust 实现（公式单一源 `crates/ti-core/src/rules/rng.rs` 的 `GameRng`，内部复用
-`oracle::rng::RngState::step` 的 LCG 递推）：
+Rust 实现（公式单一源 `crates/ti-core/src/rules/rng.rs` 的 `GameRng`）：
 
 ```rust
-// RngState::step（oracle/rng.rs，公式单一源）
+// S8.7 前（oracle 历史参照）：oracle/rng.rs RngState::step 的 LCG 递推
 self.seed = self.seed.wrapping_mul(214013).wrapping_add(2531011);
 ((self.seed >> 16) & 0x7fff) as i32
-// GameRng::next = step（rules/rng.rs，不再独立抄写常数，EXP-043）
+// S8.7 起（当前）：GameRng 改用 rand_pcg::Lcg128Xsl64（PCG64），
+// 旧 LCG 常数（214013/2531011/0x7fff）降级为历史参照；
+// next()/in_range() 值域仍归一 0..=32767 兼容旧口径（回归测试用）。
 ```
 
-- **不引 rand crate、不用 SystemRandom**（EXP-040 确定性 LCG 约定，ti-core 无平台依赖硬约束）；
-- **公式单一源**（EXP-043）：LCG 常数只写在 `RngState::step` 一处，`GameRng` 通过
+- **S8.7 前**不引 rand crate（EXP-040 确定性 LCG 约定，ti-core 无平台依赖硬约束）；**S8.7 起**引入 `rand_pcg = 0.9.0`（PCG64，可播种可复现，仍为纯计算、无平台依赖）；
+- **公式单一源**（EXP-043，S8.7 前）：LCG 常数只写在 `RngState::step` 一处，`GameRng` 通过
   `self.state.step()` 复用，不再独立抄写 `214_013 / 2_531_011 / 0x7fff`；
+  S8.7 起 oracle/rng.rs 已删除，递推公式改由 `rand_pcg` 库内实现，`GameRng` 只做 PCG64 封装；
 - **差分反证路径**：固定种子（如 `srand(123)`）→ 取 1000 次 `rand()` → oracle/impl 逐位一致
   （`tests/diff_rng.rs` 已做）；若未来游戏侧能复现同种子序列（需 headless 跑 rand 调用点）则算法
   确认，否则 coredll 用了不同算法 → 需找 WinCE coredll.dll 逆向（标 `blocked_by: coredll-rand-algorithm`）。
 
-与 S3.8 战斗 LCG 的关系：`oracle/battle.rs` 用 `wrapping_mul(2654435761)` 作为单回合伤害伪随机，
+与 S3.8 战斗 LCG 的关系（oracle 历史参照；S8.7 起战斗伤害数值走 rules/battle.rs 的 balance.combat 模型，当前 PCG 实现见 rules/rng.rs）：`oracle/battle.rs` 用 `wrapping_mul(2654435761)` 作为单回合伤害伪随机，
 是**战斗模块自有的占位常数**（spec §c 推测公式，非 coredll rand），**不与 S3.12 全局 RNG 统一**
 （EXP-040 允许各模块各用一套，S3.12 负责全局 srand/rand 对齐；battle 的 K=2654435761 是伤害公式
 常数，语义与 LCG 序列不同，强行统一会破坏 S3.8 已 verified 的 diff_battle 1650 组合结果）。
@@ -79,7 +86,7 @@ self.seed = self.seed.wrapping_mul(214013).wrapping_add(2531011);
 | 投资奖励 5 档（troop/ship 对应 5 种兵种） | +30000/+40000/+20000/+15000/+50000 | S3.7 `docs/spec/build.md`（`sub_503F0` 行 128-175，字符串 `aAstx3t`/`aKq`/`asc_7DFF8`/`aGy`/`byte_7DFE4`，**推测** 投资回报） |
 | 逻辑分辨率 | 176×220 | `ti-core/src/consts.rs`（F-106，S3.2） |
 | 战斗最大回合数 | 1000 | S3.8 `oracle/battle.rs`（**推测**上限） |
-| RNG 值域 | 0..=32767（`(seed>>16)&0x7fff`） | 本 spec §a（**推测** MSVC LCG） |
+| RNG 值域（oracle 历史参照，当前 PCG） | 0..=32767（`(seed>>16)&0x7fff`） | 本 spec §a（**推测** MSVC LCG，S8.7 前）；S8.7 起 GameRng 为 PCG64，`next()` 值域仍归一 0..=32767 兼容旧口径 |
 
 ## e) classify pending 清零方案
 
@@ -106,7 +113,7 @@ lucency 1）。S3.12 的子步 6 要求把 `classify.rs`（Rust bin）的 pendin
 - 播种点：`0003D4C8_sub_3D4C8.c:35-36`、`0004E314_sub_4E314.c:12-13`、`0004E568_sub_4E568.c:12-13`；
 - `srand` thunk：`00058634_srand.c`（整文件 8 字节，仅 `__imp_srand` 转发）；
 - `rand` thunk：`000585E0_rand.c`（`int __cdecl rand()` 头注释 + `__imp_rand` 转发）；
-- 战斗 LCG 占位（K=2654435761）：`crates/ti-core/src/oracle/battle.rs:60-62`（`oracle_damage`）。
+- 战斗 LCG 占位（K=2654435761，oracle 历史参照；S8.7 起当前 PCG 实现见 rules/rng.rs）：`crates/ti-core/src/oracle/battle.rs:60-62`（`oracle_damage`）。
 
 ## e) 缺口与推测
 
@@ -118,6 +125,6 @@ lucency 1）。S3.12 的子步 6 要求把 `classify.rs`（Rust bin）的 pendin
 
 ## 已知问题清单
 
-1. **本任务在台账仍为 `pending`**（`plan/ledger.yaml` S3.12）：spec 已成文，但 DoD 的两项验收 —— 「RNG 序列与 oracle 一致」和「`ref/classify.json` 中 `pending = 0`」—— **尚无实跑证据**。禁止据本文件认为 S3.12 已完成。
+1. ~~本任务在台账仍为 `pending`（`plan/ledger.yaml` S3.12）：spec 已成文，但 DoD 的两项验收 ——「RNG 序列与 oracle 一致」和「`ref/classify.json` 中 `pending = 0`」—— 尚无实跑证据。禁止据本文件认为 S3.12 已完成。~~（**历史文本**：S3.12 已于 S8 前 verified，实跑证据在 `evidence/S3.12.log`；本条为 spec 成文时的过期状态说明，保留作历史参照。）
 2. LCG 常数是推测而非实测（见上表）；若差分测试反证失败，本 spec 的 (a) 节需要改写。
 3. `classify.rs` 的 `framework` 类目是**兜底类目**，用「不允许再叫 pending」的方式把计数清零 —— 这是**形式达标**，「每个函数都有实质归属」这一实质目标未验证。

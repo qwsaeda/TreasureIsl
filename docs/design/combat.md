@@ -1,3 +1,8 @@
+> ⚠️ **弃用/归档（S8，2026-10）**：本目录为逆向规格参照物，不再是开发依据或验收基准。
+> 业务规则唯一事实源 = [`docs/business/`](../business/00_index.md) + `assets/data/*.json`。
+> 本文仅作原版形态参考；数值/文本以 `assets/data/*.json` 为准，流程以 `docs/business/` 为准。
+> 见 [`docs/plan-s8-refactor.md`](../plan-s8-refactor.md) §1（逆向产物降级）。
+
 # 战斗与卡牌系统设计
 
 本文档涵盖：战斗系统（BOSS 档/伤害公式/回合制流程/胜负判定）+ 卡牌事件系统（目录/效果/触发/映射）。

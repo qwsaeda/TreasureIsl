@@ -35,14 +35,30 @@ fn numeric_assertions() -> Vec<NumericAssertion> {
             expected: "20".to_string(),
             scope: Vec::new(),
         },
-        // 控件记录总数：S1.4b 修订 2042，旧值 2041
+        // 控件记录总数：S1.4b 实测 2041（ref/controls.json record_total，evidence/S1.4b.log 实跑）
         NumericAssertion {
-            name: "控件记录总数|2042|2041".to_string(),
-            expected: "2042".to_string(),
+            name: "控件记录总数|2041".to_string(),
+            expected: "2041".to_string(),
+            scope: Vec::new(),
+        },
+        // LCG 乘数 hex（第 4-5 轮审计固化：214013 = 0x343FD；0x3443D 为误算旧值）
+        NumericAssertion {
+            name: "0x3443D|0x343FD".to_string(),
+            expected: "0x343FD".to_string(),
+            scope: Vec::new(),
+        },
+        // save.magic（REC_MAGIC 十进制）：balance.json / 文档必须 = 20011591（0x01315A47）；
+        // 旧值 20125007 为笔误（第 5 轮审计 Q092 发现，已修正 balance.json）
+        NumericAssertion {
+            name: "20125007|20011591".to_string(),
+            expected: "20011591".to_string(),
             scope: Vec::new(),
         },
     ]
 }
+
+/// 参与数据一致性扫描的 JSON 数据文件（相对仓库根）。
+const DATA_FILES: &[&str] = &["assets/data/balance.json", "assets/data/strings.json"];
 
 fn read_docs(root: &Path) -> Vec<Doc> {
     let mut docs = Vec::new();
@@ -52,6 +68,13 @@ fn read_docs(root: &Path) -> Vec<Doc> {
             push_doc(&path, &path, &mut docs);
         } else if path.is_dir() {
             collect(&path, root, &mut docs);
+        }
+    }
+    // 数据文件（JSON）也参与数值断言扫描，保证 balance.json 与文档数值一致
+    for entry in DATA_FILES {
+        let path = root.join(entry);
+        if path.is_file() {
+            push_doc(&path, &path, &mut docs);
         }
     }
     docs
@@ -72,7 +95,7 @@ fn collect(dir: &Path, root: &Path, out: &mut Vec<Doc>) {
 
 fn push_doc(path: &Path, root: &Path, out: &mut Vec<Doc>) {
     let Some(ext) = path.extension().and_then(|e| e.to_str()) else { return };
-    if !matches!(ext, "md" | "yaml") {
+    if !matches!(ext, "md" | "yaml" | "json") {
         return;
     }
     let Ok(text) = std::fs::read_to_string(path) else { return };
@@ -113,6 +136,76 @@ fn check_evidence(root: &Path, tasks: &[Task]) -> Vec<String> {
     errors
 }
 
+/// 台账计数漂移检查（第 5 轮审计 Q021 固化）：
+/// 文档里「N 任务：M verified」统计行必须与 ledger 实测一致。
+/// 防 release.md 等文档在台账演进后计数漂移（已复现 2 次：65→74→75）。
+fn check_ledger_counts(docs: &[Doc], tasks: &[Task]) -> Vec<String> {
+    let mut errors = Vec::new();
+    let total = tasks.len();
+    let verified = tasks.iter().filter(|t| t.status == Status::Verified).count();
+    // 逐行提取「(\d+) 任务」与「(\d+) verified」的声明值，与实测比对
+    for doc in docs {
+        if !doc.path.contains("release.md") && !doc.path.contains("ledger") {
+            continue;
+        }
+        for (i, line) in doc.text.lines().enumerate() {
+            if !line.contains("任务") || !line.contains("verified") {
+                continue;
+            }
+            // 提取「N 任务」：找「任务」前的数字
+            if let Some(declared_total) = num_before(line, "任务") {
+                if declared_total != total {
+                    errors.push(format!(
+                        "{}:{} 台账任务总数声明 {declared_total}，ledger 实测 {total}（第 5 轮审计 Q021 固化）",
+                        doc.path,
+                        i + 1
+                    ));
+                }
+            }
+            // 提取「M verified」：找「verified」前的数字
+            if let Some(declared_ver) = num_before(line, "verified") {
+                if declared_ver != verified {
+                    errors.push(format!(
+                        "{}:{} verified 计数声明 {declared_ver}，ledger 实测 {verified}",
+                        doc.path,
+                        i + 1
+                    ));
+                }
+            }
+        }
+    }
+    errors
+}
+
+/// 提取字符串中 `word` 紧邻前方的完整十进制数（如「78 任务」→ 78，取完整多位数）。
+fn num_before(line: &str, word: &str) -> Option<usize> {
+    let idx = line.find(word)?;
+    let before = &line[..idx];
+    // 从 word 前向回扫，取连续的 ASCII 数字串（允许数字与 word 之间有空白）
+    let mut end = before.len();
+    while end > 0 {
+        let c = before[..end].chars().last().unwrap_or('\0');
+        if c.is_ascii_whitespace() {
+            end -= 1;
+            continue;
+        }
+        break;
+    }
+    let mut start = end;
+    while start > 0 {
+        let c = before[..start].chars().last().unwrap_or('\0');
+        if c.is_ascii_digit() {
+            start -= 1;
+        } else {
+            break;
+        }
+    }
+    if start >= end {
+        return None;
+    }
+    before[start..end].parse().ok()
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| PathBuf::from("."), PathBuf::from);
@@ -134,6 +227,7 @@ fn main() -> ExitCode {
 
     let mut report = check(&docs, &numeric_assertions(), &task_ids);
     report.errors.extend(check_evidence(&root, &tasks));
+    report.errors.extend(check_ledger_counts(&docs, &tasks));
 
     println!(
         "doccheck: {} docs, {} facts, {} experiences, {} task refs, {} assertions, {} error(s)",

@@ -34,12 +34,13 @@ pub mod android_shell;
 pub mod stats;
 
 pub use error::{Error, Result};
-pub use game_app::{BattleView, GameApp, GameInput, Scene};
+pub use game_app::{BattleSnapshot, BattleView, GameApp, GameInput, Scene};
 pub use i18n::{sget, sgetf, try_sget};
 pub use menu_shell::MenuShell;
 pub use scenes::{
     IndexScene, MainMapScene, MessageScene, SaveloadScene, Scene as SceneTrait, SceneHost,
-    SceneKind, SceneRegistry, SelectMapScene, SelectRoleScene, VsScene,
+    SceneKind, SceneRegistry, SelectMapScene, SelectRoleScene, VsScene, route_input, route_render,
+    route_touch,
 };
 pub use shell_ui::{MENU, MenuItem, status_texts};
 pub use sprite_atlas::SpriteAtlas;

@@ -16,10 +16,12 @@
 
 ## 商品与价格
 
+> 以下为**示例节选**（3 种），完整数值（5 种商品，id 1..5）以 `assets/data/balance.json` 为准。
+
 ```jsonc
 "trade": {
   "markup": 1.0,          // 售价 = 成本 * markup
-  "goods": [              // 商品目录
+  "goods": [              // 商品目录（示例节选）
     { "id": "spice",  "name_key": "goods.spice",  "buy": 10,  "qty_max": 99 },
     { "id": "silk",   "name_key": "goods.silk",   "buy": 25,  "qty_max": 50 },
     { "id": "gem",    "name_key": "goods.gem",   "buy": 60,  "qty_max": 20 }
@@ -41,21 +43,24 @@
 
 ## 建造系统
 
+> 以下为**示例节选**（3 种），完整数值（4 种建筑，id 以 `assets/data/balance.json` `build.buildings` 为准）以 `assets/data/balance.json` 为准。
+
 ```jsonc
 "build": {
   "buildings": [
-    { "id": "palisade", "name_key": "build.palisade", "cost": 200,  "gold_max": 2000 },
-    { "id": "harbor",   "name_key": "build.harbor",   "cost": 500,  "gold_max": 5000 },
-    { "id": "keep",     "name_key": "build.keep",     "cost": 1500, "gold_max": 20000 }
+    { "id": "Castle",     "name_key": "build.castle",     "base_cost": 1000, "gold_max": 20000 },
+    { "id": "Investment", "name_key": "build.investment", "base_cost": 500,  "gold_max": 12000 },
+    { "id": "Bank",       "name_key": "build.bank",       "base_cost": 200,  "gold_max": 5000  },
+    { "id": "Fort",       "name_key": "build.fort",       "base_cost": 800,  "gold_max": 16000 }
   ]
 }
 ```
 
-建造是**单调升级链**（围栏→港口→堡垒），每建一个：
+建造是**单调升级链**（每种建筑可反复升级，`base_cost × (level+1)` 递增），每建一级：
 
 1. 扣金币；
 2. **抬升金量上限**到该建筑对应值（`gold_max` 取已建建筑的最大值）；
-3. 解锁对应玩法（港口→贸易范围，堡垒→高阶 BOSS）。
+3. 解锁对应玩法（据点/堡垒 → 高阶 BOSS）。
 
 ### 银行
 

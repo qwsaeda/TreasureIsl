@@ -134,7 +134,7 @@ impl FramebufRgba {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            pixels: vec![0xFF000000u32; FB_PIXELS].into_boxed_slice(),
+            pixels: vec![0xFF00_0000u32; FB_PIXELS].into_boxed_slice(),
             dirty_rows: [true; LH_I32 as usize],
         }
     }

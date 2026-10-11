@@ -145,7 +145,7 @@ impl Shell {
         if let (Some(font_bytes), Some(charset_bytes)) =
             (read_local("GoldLand.Fnt"), read_local("font.dat"))
         {
-            game.shell().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
+            game.shell_mut().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
         }
 
         // 精灵图集 + 场景 .Map（本地 data/ 读，blit 真实贴图）
@@ -157,6 +157,15 @@ impl Shell {
             (read_local("glmap_m01.pak"), read_local("glmapm01.Map"))
         {
             game.set_terrain(&pak, &map_bytes, "glmapm01.Map");
+        }
+        // S7.5/S8.9：HD PNG 档（`assets_hd_pack/1x/`）——存在则注入真彩贴图；
+        // 缺失则跳过，走 RGB565 PCX 回退（不 panic）。
+        #[cfg(feature = "hd-8bit")]
+        {
+            let hd_dir = repo_root().join("assets_hd_pack").join("1x");
+            if hd_dir.is_dir() {
+                game.load_hd_pack_from_dir(&hd_dir);
+            }
         }
         let map_names = [
             "index.Map",
@@ -178,7 +187,7 @@ impl Shell {
         let (bundle, loaded) = load_audio_bank().await;
         let total_count = loaded.len();
         let mod_count = bundle.as_ref().map_or(0, |b| b.mod_count);
-        game.shell().set_audio(total_count, mod_count);
+        game.shell_mut().set_audio(total_count, mod_count);
 
         // S1.7b：BGM 优先取 OGG 曲目（MOD 转码），SE 取 WAV 最短
         let bgm = pick_bgm(&loaded, bundle.as_ref());
@@ -213,7 +222,7 @@ impl Shell {
             }
         }
         // 触发后清空，避免同一音效连播（下一帧交互重新触发）
-        self.game.last_sfx() = None;
+        self.game.clear_last_sfx();
     }
 
     /// 把键盘事件映射为 `GameInput`（`docs/gamebook.md` §3，壳层输入归一）。
@@ -265,21 +274,21 @@ impl Shell {
         let f3 = is_key_pressed(KeyCode::F3);
         let f4 = is_key_pressed(KeyCode::F4);
         if key_edge(f1, self.prev_function_keys[0]) {
-            let next = next_scale_mode(self.game.shell().scale_mode());
-            self.game.shell().set_scale_mode(next, screen_width(), screen_height());
+            let next = next_scale_mode(self.game.shell_mut().scale_mode());
+            self.game.shell_mut().set_scale_mode(next, screen_width(), screen_height());
             changed = true;
         }
         if key_edge(f2, self.prev_function_keys[1]) {
-            self.game.shell().cycle_filter_mode();
+            self.game.shell_mut().cycle_filter_mode();
             changed = true;
         }
         if key_edge(f3, self.prev_function_keys[2]) {
-            self.game.shell().cycle_border_style();
+            self.game.shell_mut().cycle_border_style();
             changed = true;
         }
         // S7.6：F4 循环切换画质（原版/HD）
         if key_edge(f4, self.prev_function_keys[3]) {
-            self.game.shell().cycle_quality();
+            let _ = self.game.shell_mut().cycle_quality();
             changed = true;
         }
         self.prev_function_keys = [f1, f2, f3, f4];
@@ -320,14 +329,14 @@ async fn main() {
     let mut shell = Shell::new().await;
     // 首帧强制渲染（font/audio 已注入，画好菜单再进主循环）
     shell.game.render();
-    shell.game.shell().last_rendered = Some(shell.game.shell().selected);
+    shell.game.shell_mut().last_rendered = Some(shell.game.shell().selected);
     #[cfg(feature = "stats")]
     let mut fps = FpsMeter::new();
 
     loop {
         // 视口先跟随窗口尺寸（letterbox / pillarbox，P4-2）：
         // 触摸命中判定用逻辑坐标，必须先有本帧视口才能正确反变换
-        shell.game.shell().refit(screen_width(), screen_height());
+        shell.game.shell_mut().refit(screen_width(), screen_height());
 
         // S6.4：算本帧耗时并喂给 GameApp（驱动多帧精灵动画推进）
         shell.tick_frame_time();
@@ -357,18 +366,18 @@ async fn main() {
             }
             #[cfg(not(feature = "hd-8bit"))]
             shell.game.render();
-            shell.game.shell().last_rendered = Some(current_selected);
-            shell.game.shell().last_rendered_scene = Some(scene_key);
+            shell.game.shell_mut().last_rendered = Some(current_selected);
+            shell.game.shell_mut().last_rendered_scene = Some(scene_key);
         }
         // 呈现（FullRebuild：静止帧整帧 skip，脏帧整帧 from_rgba8 重建纹理）
         #[cfg(feature = "hd-8bit")]
         if shell.game.shell().settings().quality == ti_platform::settings::QualityMode::Hd {
             shell.game.present_hd();
         } else {
-            shell.game.shell().present();
+            shell.game.shell_mut().present();
         }
         #[cfg(not(feature = "hd-8bit"))]
-        shell.game.shell().present();
+        shell.game.shell_mut().present();
         #[cfg(feature = "stats")]
         {
             let total_ms_f = get_time().max(0.0) * 1000.0;

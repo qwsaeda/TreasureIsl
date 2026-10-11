@@ -12,6 +12,8 @@
 
 ```jsonc
 // save v2 schema（v2 字段以 design/persistence.md 为准，此处为最小示例）
+// 注：示例用业务名；`rules::saveload_json` 序列化格式为 char{N}/m{NN}（数字索引+1），
+// 见 `crates/ti-core/src/rules/saveload_json.rs`（from_legacy_slot 保守映射）。
 {
   "version": 2,
   "character": "drake",          // 角色 id（business/rng 无关）
@@ -39,7 +41,7 @@
 
 | 场景 | RNG |
 |---|---|
-| 战斗伤害浮动 | `GameRng`（可播种 LCG） |
+| 战斗伤害浮动 | `GameRng`（可播种 PCG，`rand_pcg`，S8.7 落地） |
 | 卡牌抽牌 | 同上，共享一个可播种 RNG 流 |
 | 全流程回归测试 | 固定 seed（测试用 `42`），同脚本 ⇒ 同结果 |
 
@@ -47,7 +49,7 @@
 
 - 玩法层**只经 `rules::rng::GameRng` 取随机**，禁 `rand::thread_rng`（不可复现）；
 - RNG 状态进存档，保证「读档后继续」的随机序列可复现；
-- 目标库复用：`rand` + `rand_pcg`（见 [`process/01_architecture.md`](../process/01_architecture.md) §4，S8.7 落地引入），当前过渡实现为自造确定性 LCG。
+- 目标库复用：`rand` + `rand_pcg`（见 [`process/01_architecture.md`](../process/01_architecture.md) §4，S8.7 落地），当前实现为库化 `rand_pcg`（旧自造 LCG 为 oracle 历史参照）。
 
 ## 设置
 

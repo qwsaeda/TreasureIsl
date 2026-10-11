@@ -32,7 +32,7 @@
 | [07_ui_controls.md](07_ui_controls.md) | 消息界面、控件表、资源容器、渲染管线 | ~300 |
 | [08_input_mapping.md](08_input_mapping.md) | 输入系统（键盘/触摸/手势/场景行为表） | ~300 |
 | [09_persistence.md](09_persistence.md) | 持久化（文件布局/魔数/v1/v2 迁移/校验） | ~400 |
-| [10_rng.md](10_rng.md) | RNG 系统（LCG 算法/播种点/调用点/确定性） | ~300 |
+| [10_rng.md](10_rng.md) | RNG 系统（LCG 算法（oracle 历史参照）/PCG（当前实现）/播种点/调用点/确定性） | ~300 |
 | [11_modernization.md](11_modernization.md) | 现代化方案（双层渲染/缩放/DPI/虚拟手柄/PWA/Android） | ~350 |
 | [12_audio.md](12_audio.md) | 音频系统（BGM/音效/音量/静音/浏览器策略） | ~370 |
 | [13_appendix.md](13_appendix.md) | 附录（全常量表/事件码/场景码/错误类型/资源清单） | ~530 |
@@ -54,8 +54,9 @@
 │       │              │              │              │         │
 │  ┌────▼─────┐  ┌─────▼─────┐  ┌────▼─────┐  ┌────▼─────┐  │
 │  │ atlas    │  │ game_state│  │ rng      │  │ save_sys │  │
-│  │(SpriteAt)│  │(GameState)│  │(GameRng) │  │(SaveSys) │  │
+│  │(SpriteAt)│  │(GameApp*) │  │(GameRng) │  │(SaveSys) │  │
 │  └──────────┘  └───────────┘  └──────────┘  └──────────┘  │
+│  * S8.4 起无独立 GameState struct，各字段直接内嵌 GameApp（game_app.rs:180-248）
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -81,13 +82,13 @@ ti-tools (工具: 台账/doccheck/controls) —— 独立工具 crate，仅依�
 ## 5. 数据流
 
 ```
-资源文件 → ti-formats 解析 → SpriteAtlas/MapData/PriceTable
-                                    ↓
+资源文件 → ti-formats 解析 → SpriteAtlas/MapTerrain/PriceTable
+                                     ↓
 输入事件 → ti-platform → KeyState → ti-app 场景状态机
-                                    ↓
-                              GameState 更新
-                                    ↓
-                              shell 渲染 → 帧缓冲
+                                     ↓
+                               GameApp 字段更新（S8.4 起无独立 GameState，各字段内嵌 GameApp）
+                                     ↓
+                               shell 渲染 → 帧缓冲
 ```
 
 ---
@@ -98,15 +99,15 @@ ti-tools (工具: 台账/doccheck/controls) —— 独立工具 crate，仅依�
 |---|---|---|
 | `GameApp` | 01_architecture.md §3 | 顶层应用结构 |
 | `Scene` | 01_architecture.md §2.1 | 场景枚举 |
-| `GameState` | 01_architecture.md §2.5 | 全局游戏状态 |
+| `GameState` | 01_architecture.md §2.5（文档占位；S8.4 起各字段直接内嵌 `GameApp`，无独立 struct） | 全局游戏状态 |
 | `SceneStack` | 01_architecture.md §4 | 场景栈管理器 |
-| `EventCode` | 02_scene_flow.md §3.1 | 事件码枚举 |
-| `MapData` | 03_map_system.md §2 | 地图数据结构 |
+| `EventCode` | 02_scene_flow.md §3 事件码表（数值码，非枚举名） | 事件码定义（13/27/37/38/39/40） |
+| `MapData` | 03_map_system.md §2（文档占位类型；crates 无此 struct，实际类型见 `rules::main_map::MapTerrain` / `formats::mapfile::MapScene`） | 地图数据结构 |
 | `GridPos` | 01_architecture.md §2.4 | 网格坐标 |
 | `Direction` | 01_architecture.md §2.3 | 方向枚举 |
 | `TradeLedger` | 04_economy.md §3 | 贸易账本 |
 | `BuildManager` | 04_economy.md §3 | 建造管理器 |
-| `Bank` | 04_economy.md §2.5 | 银行系统（`Bank` struct 定义见 §3） |
+| `Bank` | 04_economy.md §3 | 银行系统（`Bank` struct 定义见 §3，行为见 §2.5） |
 
 ---
 
@@ -127,7 +128,7 @@ ti-tools (工具: 台账/doccheck/controls) —— 独立工具 crate，仅依�
 2. **输入正确**：每个按键在每个场景的行为符合映射表
 3. **资源注入**：ui.pak + 9 个场景 .Map 正确加载并渲染
 4. **三端编译**：native/wasm/android 均可编译
-5. **数值精确**：价格表、BOSS HP、伤害公式、LCG 序列逐位一致
+5. **数值精确**：价格表、BOSS HP、伤害公式、RNG 序列逐位一致（当前实现为 PCG，`rand_pcg`，S8.7；旧 MSVC LCG 序列为 oracle 历史参照）
 6. **全流程**：开局→选人→选图→移动→贸易→建造→战斗→存读档→回主菜单
 
 ---

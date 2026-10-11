@@ -36,7 +36,7 @@
 ## 子步 3: oracle
 - `crates/ti-core/src/oracle/saveload.rs`：
   - `SaveSlot` struct（`version`/`character`/`gold`/`map_slot`/`position`，spec §b）；
-  - `REC_MAGIC` 常量（`0x01315A47` = 19810929，spec §d）；
+  - `REC_MAGIC` 常量（`0x01315A47` = 19810929，spec §d）（历史笔误：0x01315A47 十进制 = 20,011,591，非 19,810,929；19,810,929 对应 settings.dat 魔数 0x012E4A71）；
   - `MIN_SAVE_SIZE` 常量（26 字节，v2 布局）；
   - `SaveErr` 枚举（`BadMagic`/`TooShort`/`BadVersion`）；
   - `oracle_validate_save(bytes) -> Result<(), SaveErr>`（魔数 + 最小大小校验）；

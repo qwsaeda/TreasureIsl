@@ -21,7 +21,7 @@
 | **设计意图** | 本目录（散文 + 规则 + 公式结构） | 策划 / 评审 | 「伤害 = f(atk, rng)，玩家先手，回合制」 |
 | **平衡数值** | `assets/data/balance.json` | 策划，改 JSON 即可 | 「boss_tiers[0].hp = 50000」 |
 | **文本** | `assets/data/strings.json` | 策划 / 本地化 | 「scene.select_role.title = 选择角色」 |
-| **实现** | `crates/ti-core/src/rules/` | 工程师 | `struct CombatSession`（S8.3.a–e 重写中，当前 `battle.rs` 仍含 oracle 公式残留，S8.3.a pending） |
+| **实现** | `crates/ti-core/src/rules/` | 工程师 | `struct CombatSession`（S8.3.a–e 已 verified；`battle.rs` 数值全由 `balance.combat` 注入，不再含 oracle 公式残留） |
 
 改数值 = 改 JSON（不碰代码）；改机制 = 先改本目录（评审）再改代码。
 

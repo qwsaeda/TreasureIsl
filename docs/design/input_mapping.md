@@ -1,3 +1,8 @@
+> ⚠️ **弃用/归档（S8，2026-10）**：本目录为逆向规格参照物，不再是开发依据或验收基准。
+> 业务规则唯一事实源 = [`docs/business/`](../business/00_index.md) + `assets/data/*.json`。
+> 本文仅作原版形态参考；数值/文本以 `assets/data/*.json` 为准，流程以 `docs/business/` 为准。
+> 见 [`docs/plan-s8-refactor.md`](../plan-s8-refactor.md) §1（逆向产物降级）。
+
 # 输入映射层
 
 本文档是**自包含的实现规格**：把物理按键/触摸映射到逻辑 `GameInput` 事件，
@@ -6,6 +11,11 @@
 ---
 
 ## 1. 逻辑输入事件
+
+> S8.4 后 `GameInput` 实际为 19 个变体（`crates/ti-app/src/game_app.rs:130-169`），
+> 本节的 11 变体为 S8.4 前的旧口径。
+
+实际 19 变体清单：`MoveUp / MoveDown / Confirm / Back / Prev / Next / Walk(Dir) / Landmark(u32) / TradeBuy(u32) / TradeSell(u32) / Build(Building) / Attack / LoadSave(usize) / WriteSave(usize) / MsgNext / MsgPrev / MsgClose / SaveloadClose / MapBack`
 
 ```rust
 /// 归一化输入事件（物理键/触摸 → 逻辑动作）

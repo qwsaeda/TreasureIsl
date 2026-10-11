@@ -8,6 +8,18 @@
 
 ## 1. 逻辑输入事件
 
+> S8.4 后 `GameInput` 实际为 19 个变体（`crates/ti-app/src/game_app.rs:130-169`），
+> 本节的 11 变体（Up/Down/Left/Right/Confirm/Cancel/Attack/CycleScale/CycleFilter/CycleBorder/None）
+> 为 S8.4 前的旧口径。
+
+实际 19 变体清单（`game_app.rs:130-169`）：
+```
+MoveUp / MoveDown / Confirm / Back / Prev / Next /
+Walk(Dir) / Landmark(u32) / TradeBuy(u32) / TradeSell(u32) /
+Build(Building) / Attack / LoadSave(usize) / WriteSave(usize) /
+MsgNext / MsgPrev / MsgClose / SaveloadClose / MapBack
+```
+
 ```rust
 /// 归一化输入事件（物理键/触摸 → 逻辑动作）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -63,6 +75,8 @@ pub enum GameInput {
 
 ### 2.3 手柄
 
+> 注：设计占位，当前未实现手柄支持（代码中无手柄输入路径）。
+
 | 手柄输入 | GameInput | 说明 |
 |---|---|---|
 | 左摇杆上 | `Up` | 方向 |
@@ -83,7 +97,7 @@ pub enum GameInput {
 ```rust
 pub struct VirtualButton {
     pub name: &'static str,
-    pub rect: Rect,
+    pub rect: Rect,   // 对齐 ti-platform/backend.rs:14 Rect { x: i32, y: i32, w: u32, h: u32 }
 }
 
 pub struct Rect {
@@ -108,6 +122,10 @@ impl VirtualButton {
 ---
 
 ## 4. 事件翻译管线
+
+> 实际实现（`crates/ti-platform/src/input.rs:35`）为单 `Event` 枚举（`backend.rs:35-63`），
+> 无独立 `ScreenEvent` 类型；`translate_event(Event, &Viewport) -> Event` 单枚举。
+> 本节的 `ScreenEvent`/`Event` 双枚举为 S8 前的设计占位。
 
 ```rust
 pub enum ScreenEvent {

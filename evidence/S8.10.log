@@ -1,0 +1,41 @@
+S8.10 docs/design/ 标注弃用归档
+日期：2026-10-11
+判据：design/ 每文件顶部有弃用横幅 + 新 index 已登记 docs/README.md + doccheck 0 error + check_hardcode 0 命中
+
+=== 1. 弃用横幅 ===
+docs/design/ 9 个 .md 文件（combat/constants/economy/input_mapping/main_loop/map_system/persistence/scene_flow/ui_controls）
+全部在文件顶部插入弃用横幅（4 行 blockquote，指向 docs/business/00_index.md + plan-s8-refactor.md §1），正文未改动。
+
+=== 2. 新 index ===
+docs/design/00_index.md 新建：弃用状态说明 + 文件清单 + 使用指引（指向 docs/business/）。
+已登记进 docs/README.md（「设计文档（docs/design/）」节标注已弃用/归档，新增 00_index.md 行）。
+
+=== 3. doccheck ===
+doccheck: 85 docs, 37 facts, 57 experiences, 74 task refs, 4 assertions, 0 error(s)
+（85 个 docs 计数含新增 design/00_index.md；新文件已登记，无未登记 error）
+
+=== 4. check_hardcode ===
+check_hardcode: OK (96 file(s), 0 hits)
+（横幅为中文文档，check_hardcode 只扫 crates/**/src，0 命中保持）
+
+=== 5. gate ===
+=== gate: TreasureIsl (13 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6 APK 在 Mac 编译，本机无 NDK/SDK，既定 SKIP)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式逆向任务已全部 verified，既定 SKIP)
+  PASS  ledger validate  (ledger: 79 tasks, 76 verified, 0 error(s))
+  PASS  doccheck (docs consistency)  (0 error(s))
+  PASS  validate_data (assets/data/*.json)
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  PASS  check_oracle_boundary (shell 层 0 oracle_* 函数调用)
+  PASS  doccheck2 (audit-codified doc/code/data consistency, 0 error(s))
+=== gate: 0 failure(s) ===
+
+结论：13 项全 PASS/既定 SKIP，0 failure。
