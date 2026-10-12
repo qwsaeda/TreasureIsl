@@ -133,4 +133,27 @@
 - 验证：python scripts/check_oracle_boundary.py --check 0 违规；gate.ps1 14 项全绿；
   全仓 grep shell 层 oracle_ 函数调用 = 0。
 - 教训：**固化脚本的判定要按「引用语义」分层，不能按前缀一刀切**——oracle 的「类型/几何」
-  是事实层（可留），「公式函数」是推测层（禁）。门禁脚本要能区分二者，否则要么误伤、要么漏放。
+   是事实层（可留），「公式函数」是推测层（禁）。门禁脚本要能区分二者，否则要么误伤、要么漏放。
+
+### EXP-066 表现层数值硬编码须走 balance 注入，但「壳层写死 player Unit」属 P1-P5 白名单外，审计留 unknown（S10.5）
+- 现象：`game_app.rs::start_battle` 写死 `Unit { hp: 1000, atk: 150 }`，而
+  `balance.json → combat.player` 已定义 `{hp:2000,atk:60}`（`combat.md` 数值单一事实源
+  要求玩家属性也走 balance 注入，与 `boss_tiers` 同源）。S10.5 双 agent 审计反向扫描
+  （docs/business 可测规则 vs rules/domain 实现）抓到这条数值漂移。
+- 根因：S10.2 占位清零阶段只清了 8 处（markup/qty_max/boss_tier/卡片目录等），
+  「玩家 Unit hp/atk」这处漏网——它藏在 `start_battle` 而非 `rules/` 内，check_hardcode
+  与 check_oracle_boundary 都扫不到（前者只扫 CJK 面量与色常量，后者只扫 oracle_ 调用）。
+- 分类（漂移三分类）：属「需人裁决」——修复要改 `game_app.rs` 的 `start_battle` 读
+  `balance().combat.player`，但表现层数值注入契约归 P1-P5 白名单（已 verified 的
+  rules/domain 层）。S10.5 白名单（doccheck2/experience/evidence）不含 rules/domain 与
+  表现层 start_battle，故本轮**留 unknown 不强制修**，仅登记本条 + 写 evidence/S10.5.log。
+- 解法（待集成轮）：`start_battle` 改 `Unit { hp: b.combat.player.hp, atk: b.combat.player.atk }`
+  （读 balance 失败走 LoadError 硬报错，不 fallback 假值，与 S10.2 第 7 条同口径）；
+  并给 `Balance`/`CombatCfg` 补 `player: PlayerUnit { hp, atk }` 解析字段。
+- 验证：`grep "combat.player" crates/` 当前 0 命中（未接）；`balance.json` 已含该字段
+  （validate_data 通过，说明数据侧就绪、代码侧未消费）。
+- 教训：**「数值单一事实源」的红线不止 oracle 调用——壳层直接 new Unit 写死 hp/atk
+  同样是漂移**，且这类「数据表已有字段但代码没读」的漂移 check_hardcode/oracle_boundary
+  都抓不到，得靠双 agent 反向审计（文档可测规则 vs 实现）补洞。若同类高频，应固化为
+  doccheck2 断言（如「balance.json 某 key 存在但 crates/ 无消费方」，需人裁决归属白名单后再固化）。
+

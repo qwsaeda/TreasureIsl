@@ -810,6 +810,17 @@ impl GameApp {
         route_input(self, kind, input)
     }
 
+    /// S9.5 Command 派发入口：把 [`crate::commands::GameCommand`] 路由到当前场景。
+    ///
+    /// 与 [`Self::handle`] 等价（`GameCommand::to_input` 后走 `route_input`），
+    /// 但语义层统一为 Command 模式，供命令派发枚举调用。
+    /// 返回是否消费了该输入（发生了场景切换）。
+    pub fn dispatch(&mut self, cmd: crate::commands::GameCommand) -> bool {
+        let kind = SceneKind::from_legacy(self.scene);
+        let input = cmd.to_input();
+        route_input(self, kind, input)
+    }
+
     /// 进入主地图（`docs/gamebook.md` §3.3）：初始化 `MapSession` + 贸易/建造会话。
     fn enter_main_map(&mut self) {
         // 地形：按 `map_slot` 取 m01/m02/m03（m03 = 15×15，其余 20×20）

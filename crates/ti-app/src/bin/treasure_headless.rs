@@ -192,12 +192,12 @@ fn main() {
     if let Some(b) = app.battle() {
         println!(
             "  battle: rounds={} player_hp={} boss_hp={} outcome={:?}",
-            b.rounds(),
+            b.rounds,
             b.player_hp(),
             b.boss_hp(),
             b.outcome()
         );
-        if b.rounds() == 0 {
+        if b.rounds == 0 {
             println!("  warn: battle 0 rounds (script did not advance attack), scene-flow only");
         }
     }

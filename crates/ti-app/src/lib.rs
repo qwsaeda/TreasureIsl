@@ -15,6 +15,7 @@
 //! 三端入口 bin 见 `src/bin/`（`treasure-wasm` 需 `wasm-shell` feature）。
 
 pub mod audio_prep;
+pub mod commands;
 pub mod error;
 pub mod game_app;
 pub mod glyph_raster;
@@ -34,6 +35,7 @@ pub mod android_shell;
 #[cfg(feature = "stats")]
 pub mod stats;
 
+pub use commands::{Command as CommandTrait, GameCommand};
 pub use error::{Error, Result};
 pub use game_app::{BattleSnapshot, BattleView, GameApp, GameInput, Scene};
 pub use i18n::{sget, sgetf, try_sget};

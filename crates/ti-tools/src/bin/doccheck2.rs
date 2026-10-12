@@ -347,6 +347,67 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 7. P3-3 headless bin API 一致性：`treasure_headless.rs` 对 `BattleView` 的
+///    访问方式必须与 `game_app.rs` 中 `BattleView` 真实定义一致（field vs method）。
+///    若 `BattleView` 里某成员是 pub field，headless bin 里不得调用同名 method；
+///    反之亦然（防 P3-3 因 API 漂移编译失败，S10.5 第 6 轮审计发现）。
+fn check_headless_battle_api(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let headless = read_file(root, "crates/ti-app/src/bin/treasure_headless.rs");
+    let game_app = read_file(root, "crates/ti-app/src/game_app.rs");
+    let (Some(headless), Some(game_app)) = (headless, game_app) else {
+        return vec![
+            "treasure_headless.rs 或 game_app.rs 不存在，无法校验 BattleView API 一致性"
+                .to_string(),
+        ];
+    };
+    // 从 game_app.rs 抽 `pub struct BattleView` 的真实字段名集合
+    let Some(struct_start) = game_app.find("pub struct BattleView") else {
+        return vec!["game_app.rs 缺少 `pub struct BattleView` 定义".to_string()];
+    };
+    let after = &game_app[struct_start..];
+    let brace = after.find('{').map_or(after.len(), |i| i);
+    let close = after[brace..].find('}').map_or(after.len(), |i| i) + brace;
+    let body = &after[..=close];
+    let fields: BTreeSet<String> = body
+        .lines()
+        .filter(|l| l.trim().starts_with("pub ") && l.contains(':'))
+        .filter_map(|l| {
+            let name = l.trim().strip_prefix("pub ")?.split(':').next()?.trim().to_string();
+            (!name.is_empty()).then_some(name)
+        })
+        .collect();
+    if fields.is_empty() {
+        return vec!["game_app.rs BattleView 未解析出任何 `pub <field>` 字段".to_string()];
+    }
+    // 抽 `impl BattleView` 里定义的 method 名集合（这些字段同时有 accessor method，
+    // 方法调用合法；只有「纯 field 无 method」的成员，方法调用才是错的）
+    let methods: BTreeSet<String> = game_app
+        .lines()
+        .filter(|l| l.trim().starts_with("pub fn "))
+        .filter_map(|l| {
+            let name = l.trim().strip_prefix("pub fn ")?.split('(').next()?.trim().to_string();
+            (!name.is_empty()).then_some(name)
+        })
+        .collect();
+    // 只对「纯 pub field 且无同名 method」的成员检查方法调用（编译会失败）
+    let field_only: Vec<&String> = fields.iter().filter(|f| !methods.contains(*f)).collect();
+    // 检查 headless bin 里对这些纯 field 成员的方法调用 `b.<name>()`：
+    // 若 <name> 是纯 pub field（无同名 method），则不得写成 method 调用（编译会失败）
+    for (i, line) in headless.lines().enumerate() {
+        for field in &field_only {
+            let pattern = format!(".{field}()");
+            if line.contains(&pattern) {
+                errors.push(format!(
+                    "treasure_headless.rs:{} 调用 `.{field}()` 但 BattleView.{field} 是纯 pub field（无同名 method），应写字段访问 `.{field}` 而非方法调用",
+                    i + 1
+                ));
+            }
+        }
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -358,9 +419,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_landmark_threshold(&root));
     all_errors.extend(check_i18n_orphans(&root));
     all_errors.extend(check_gate_item_count(&root));
+    all_errors.extend(check_headless_battle_api(&root));
 
     println!(
-        "doccheck2: {} error(s) across 6 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items)",
+        "doccheck2: {} error(s) across 7 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api)",
         all_errors.len()
     );
     for err in &all_errors {
