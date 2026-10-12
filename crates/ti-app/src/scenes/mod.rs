@@ -1,23 +1,23 @@
 //! S8.4 场景层：`SceneHost` 能力接口 + `Scene` trait + 路由骨架。
 //!
-//! ## 分层边界（S9 骨架改造）
+//! ## 分层边界（S9 骨架改造 + S9.2 接口拆分）
 //!
-//! - `GameApp`（`game_app.rs`）= **组合根**：持有全部状态，实现 [`SceneHost`]，
-//!   只保留键位映射（`poll`）、触摸入口（`poll_touch`）、帧调度（`render`）。
+//! - `GameApp`（`game_app.rs`）= **组合根**：持有全部状态，实现 [`SceneHost`]
+//!   （8 个子 trait 的 supertrait 聚合），只保留键位映射（`poll`）、触摸入口
+//!   （`poll_touch`）、帧调度（`render`）。
 //! - `scenes/*.rs` = **场景模块**：每个场景一个 struct，实现 [`Scene`]，
 //!   持有该场景的输入判定（`on_input`）、触摸手势（`on_touch`）与绘制（`render`）。
 //! - 场景 struct **不持有** `GameApp`，只持有 `&mut dyn SceneHost`，
 //!   因此业务判定与渲染细节真正离开组合根，`game_app.rs` 不再有
-//!   `handle_X` / `touch_X` / `render_X` 巨��分支。
+//!   `handle_X` / `touch_X` / `render_X` 巨大分支。
 //!
-//! ## 为什么是「一个宽接口」而不是 7 个窄接口
+//! ## S9.2 接口拆分（8 个子 trait）
 //!
-//! Rust 不允许 trait object 作为另一个 trait 的 supertrait
-//! （`trait A: B` + `dyn A` 会因 `B: Sized` 报错），
-//! 因此动态分发只能落在**单个宽接口**上。这是过渡期形态：
-//! 场景层一旦稳定，可把宽接口按场景切成若干**具体泛型**参数
-//! （`IndexScene<H: IndexOps>` 等），届时再收窄。收敛判据见
-//! `docs/process/01_architecture.md` §2。
+//! 原单一宽接口 `SceneHost`（62 方法）按职责拆为 8 个子 trait：
+//! [`NavHost`] / [`RenderHost`] / [`SpriteHost`] / [`MenuHost`] /
+//! [`SelectionHost`] / [`MapHost`] / [`EconomyHost`] / [`SessionHost`]。
+//! [`SceneHost`] 退化为 8 个子 trait 的 supertrait 聚合（空 trait），
+//! `dyn SceneHost` 仍可访问全部方法（supertrait 机制）。
 //!
 //! 所有方法都是**一行的字段读写**，不含业务判定——业务在 `scenes/*.rs`。
 
@@ -244,13 +244,8 @@ scene_transition!(Saveload, Index, "`Saveload` → `Index`（子窗口关闭）"
 scene_transition!(Saveload, MainMap, "`Saveload` → `MainMap`（读档恢复：角色 + 地图齐全）");
 scene_transition!(Saveload, SelectRole, "`Saveload` → `SelectRole`（读档恢复：角色/地图缺失）");
 
-/// 场景宿主能力接口：`GameApp` 实现的**唯一**状态/表现出口。
-///
-/// 场景 struct 经此 trait 读写状态与帧缓冲，**不接触** `GameApp` 任何字段
-/// （`docs/process/01_architecture.md` §2）。每个方法都是一行读写，
-/// 业务判定留在 `scenes/*.rs`。
-pub trait SceneHost {
-    // ── 场景控制 ────────────────────────────────────────────────────────
+/// S9.2：场景导航接口（`GameApp` 实现，场景侧经 `dyn SceneHost` 调用）。
+pub trait NavHost {
     /// 当前顶层场景（宿主自有字段）。
     fn current_scene(&self) -> LegacyScene;
 
@@ -260,8 +255,10 @@ pub trait SceneHost {
     /// 把归一输入交回宿主路由（`GameApp::handle`）——触摸/手势内部再次派生
     /// `GameInput` 时经此递归进入同一场景的 `on_input`。
     fn advance(&mut self, input: GameInput) -> bool;
+}
 
-    // ── 表现层 ──────────────────────────────────────────────────────────
+/// S9.2：帧渲染基础接口（帧缓冲/字形读写，不含精灵/地形）。
+pub trait RenderHost {
     /// 只读帧缓冲/字形视图（场景渲染读 `selected` 等）。
     fn shell(&self) -> &MenuShell;
 
@@ -276,7 +273,10 @@ pub trait SceneHost {
 
     /// 绘制一行字形。
     fn draw_text(&mut self, text: &str, x: i32, y: i32);
+}
 
+/// S9.2：精灵/地形渲染接口（`.Map` blit + 等距地形瓦片）。
+pub trait SpriteHost {
     /// 把 `asset` 对应的 `.Map` 真实精灵 blit 到帧缓冲（宿主内做图集/帧缓冲
     /// 的同时可变借用，场景层拿不到两个借用）。
     fn blit_scene_sprites(&mut self, asset: &str);
@@ -292,122 +292,181 @@ pub trait SceneHost {
 
     /// 是否加载了真实地形瓦片图集（决定触摸命中走等距逆变换还是占位网格）。
     fn has_terrain_atlas(&self) -> bool;
+}
 
-    // ── 音效 ────────────────────────────────────────────────────────────
+/// S9.2：主菜单接口（`Index` 场景的状态读写）。
+pub trait MenuHost {
+    /// 主菜单选中项。
+    fn menu_selected(&self) -> usize;
+
+    /// 置主菜单选中项。
+    fn set_menu_selected(&mut self, value: usize);
+
+    /// 新游戏：重置选择状态 + 清空角色/地图。
+    fn reset_selection(&mut self);
+
+    /// 打开帮助消息（`MsgKind::Help`，首页）。
+    fn open_help(&mut self);
+
+    /// 置退出标志。
+    fn request_quit(&mut self);
+}
+
+/// S9.2：角色/地图选择接口（`SelectRole`/`SelectMap` 场景共用）。
+pub trait SelectionHost {
+    /// 当前角色。
+    fn character(&self) -> Option<Character>;
+
+    /// 置当前角色。
+    fn set_character(&mut self, value: Option<Character>);
+
+    /// 当前地图槽。
+    fn map_slot(&self) -> Option<MapSlot>;
+
+    /// 置当前地图槽。
+    fn set_map_slot(&mut self, value: Option<MapSlot>);
+
+    /// 选择状态快照（`Copy`）。
+    fn selection(&self) -> SelectionState;
+
+    /// 选择状态可写引用。
+    fn selection_mut(&mut self) -> &mut SelectionState;
+
+    /// 是否已解锁 `slot`。
+    fn map_unlocked(&self, slot: MapSlot) -> bool;
+
+    /// 进入主地图（初始化 `MapSession` + 经济会话，三场景共用）。
+    fn enter_main_map(&mut self);
+}
+
+/// S9.2：主地图会话接口（移动/贸易/建造/事件分派）。
+pub trait MapHost {
+    /// 当前玩家格。
+    fn map_pos(&self) -> Option<GridPos>;
+
+    /// 置当前玩家格。
+    fn set_map_pos(&mut self, value: Option<GridPos>);
+
+    /// 地形（`Copy` 快照，触摸预检用）。
+    fn map_terrain(&self) -> Option<MapTerrain>;
+
+    /// 据点坐标（拷贝出，避免与帧缓冲借用重叠）。
+    fn map_landmarks(&self) -> Vec<(u32, u32)>;
+
+    /// 走一步（宿主内同时借用 `map_session` 与 `rng`，场景层拿不到两个借用）。
+    fn map_session_move(&mut self, dir: Dir) -> StepResult;
+
+    /// 事件码 → 场景目标（`rules::main_map::MapSession::dispatch`）。
+    fn map_session_dispatch(&self, code: u32) -> Option<SceneTarget>;
+
+    /// 记录最近一次分派结果（供 HUD/测试观察）。
+    fn set_last_dispatch(&mut self, target: Option<SceneTarget>);
+
+    /// 开一场战斗（宿主取 RNG seed + tier 建会话）。
+    fn start_battle(&mut self);
+
+    /// 打开指定消息会话（首页 + 总页数 + 切场景）。
+    fn open_message(&mut self, kind: MsgKind);
+}
+
+/// S9.2：经济接口（贸易/建造/银行，`MainMap` 场景会话）。
+pub trait EconomyHost {
+    /// 商品 `gid` 单价（买入价，`balance.trade.goods`）。
+    fn price_of(&self, gid: u32) -> Option<u32>;
+
+    /// 商品 `gid` 卖出单价（`round(buy × markup)`，`balance.trade.markup`，S10.3 改动 3）。
+    fn sell_price_of(&self, gid: u32) -> Option<u32>;
+
+    /// 当前金。
+    fn gold(&self) -> u32;
+
+    /// 置当前金。
+    fn set_gold(&mut self, value: u32);
+
+    /// 持有表中 `gid` 的下标。
+    fn owned_index_of(&self, gid: u32) -> Option<usize>;
+
+    /// 持有表追加 `(gid, qty)`。
+    fn owned_push(&mut self, gid: u32, qty: u32);
+
+    /// 持有表第 `index` 项数量 +1。
+    fn owned_bump(&mut self, index: usize);
+
+    /// 持有表 `gid` 的总数量。
+    fn owned_count(&self, gid: u32) -> u32;
+
+    /// 持有表条数（HUD 用）。
+    fn owned_total(&self) -> usize;
+
+    /// 移除 `gid` 全部持有，返回移除数量。
+    fn owned_take_all(&mut self, gid: u32) -> u32;
+
+    /// 银行金。
+    fn bank_gold(&self) -> u32;
+
+    /// 银行扣款。
+    fn spend_bank_gold(&mut self, amount: u32);
+
+    /// 建筑列表 `kind` 等级 +1（不存在则新增）。
+    fn build_increment(&mut self, kind: Building);
+}
+
+/// S9.2：会话接口（音效/战斗/消息/存读档/状态查询）。
+pub trait SessionHost {
     /// 置本次交互的音效（宿主 `last_sfx`，壳层消费）。
     fn play_sfx(&mut self, sfx: Sfx);
 
-    // ── Index 场景 ──────────────────────────────────────────────────────
-    /// 主菜单选中项。
-    fn menu_selected(&self) -> usize;
-    /// 置主菜单选中项。
-    fn set_menu_selected(&mut self, value: usize);
-    /// 新游戏：重置选择状态 + 清空角色/地图。
-    fn reset_selection(&mut self);
-    /// 打开帮助消息（`MsgKind::Help`，首页）。
-    fn open_help(&mut self);
-    /// 置退出标志。
-    fn request_quit(&mut self);
-
-    // ── 选择场景 ────────────────────────────────────────────────────────
-    /// 当前角色。
-    fn character(&self) -> Option<Character>;
-    /// 置当前角色。
-    fn set_character(&mut self, value: Option<Character>);
-    /// 当前地图槽。
-    fn map_slot(&self) -> Option<MapSlot>;
-    /// 置当前地图槽。
-    fn set_map_slot(&mut self, value: Option<MapSlot>);
-    /// 选择状态快照（`Copy`）。
-    fn selection(&self) -> SelectionState;
-    /// 选择状态可写引用。
-    fn selection_mut(&mut self) -> &mut SelectionState;
-    /// 是否已解锁 `slot`。
-    fn map_unlocked(&self, slot: MapSlot) -> bool;
-    /// 进入主地图（初始化 `MapSession` + 经济会话，三场景共用）。
-    fn enter_main_map(&mut self);
-
-    // ── 主地图 ──────────────────────────────────────────────────────────
-    /// 当前玩家格。
-    fn map_pos(&self) -> Option<GridPos>;
-    /// 置当前玩家格。
-    fn set_map_pos(&mut self, value: Option<GridPos>);
-    /// 地形（`Copy` 快照，触摸预检用）。
-    fn map_terrain(&self) -> Option<MapTerrain>;
-    /// 据点坐标（拷贝出，避免与帧缓冲借用重叠）。
-    fn map_landmarks(&self) -> Vec<(u32, u32)>;
-    /// 走一步（宿主内同时借用 `map_session` 与 `rng`，场景层拿不到两个借用）。
-    fn map_session_move(&mut self, dir: Dir) -> StepResult;
-    /// 事件码 → 场景目标（`rules::main_map::MapSession::dispatch`）。
-    fn map_session_dispatch(&self, code: u32) -> Option<SceneTarget>;
-    /// 记录最近一次分派结果（供 HUD/测试观察）。
-    fn set_last_dispatch(&mut self, target: Option<SceneTarget>);
-    /// 开一场战斗（宿主取 RNG seed + tier 建会话）。
-    fn start_battle(&mut self);
-    /// 打开指定消息会话（首页 + 总页数 + 切场景）。
-    fn open_message(&mut self, kind: MsgKind);
-
-    // ── 经济 ────────────────────────────────────────────────────────────
-    /// 商品 `gid` 单价（买入价，`balance.trade.goods`）。
-    fn price_of(&self, gid: u32) -> Option<u32>;
-    /// 商品 `gid` 卖出单价（`round(buy × markup)`，`balance.trade.markup`，S10.3 改动 3）。
-    fn sell_price_of(&self, gid: u32) -> Option<u32>;
-    /// 当前金。
-    fn gold(&self) -> u32;
-    /// 置当前金。
-    fn set_gold(&mut self, value: u32);
-    /// 持有表中 `gid` 的下标。
-    fn owned_index_of(&self, gid: u32) -> Option<usize>;
-    /// 持有表追加 `(gid, qty)`。
-    fn owned_push(&mut self, gid: u32, qty: u32);
-    /// 持有表第 `index` 项数量 +1。
-    fn owned_bump(&mut self, index: usize);
-    /// 持有表 `gid` 的总数量。
-    fn owned_count(&self, gid: u32) -> u32;
-    /// 持有表条数（HUD 用）。
-    fn owned_total(&self) -> usize;
-    /// 移除 `gid` 全部持有，返回移除数量。
-    fn owned_take_all(&mut self, gid: u32) -> u32;
-    /// 银行金。
-    fn bank_gold(&self) -> u32;
-    /// 银行扣款。
-    fn spend_bank_gold(&mut self, amount: u32);
-    /// 建筑列表 `kind` 等级 +1（不存在则新增）。
-    fn build_increment(&mut self, kind: Building);
-
-    // ── 战斗 ────────────────────────────────────────────────────────────
     /// 推进一个回合并同步胜负/胜利音效（宿主内就地改 `BattleView`）。
     fn battle_step(&mut self);
+
     /// 战斗面板快照（渲染用）。
     fn battle_snapshot(&self) -> Option<BattleSnapshot>;
 
-    // ── 消息 ────────────────────────────────────────────────────────────
     /// 当前消息种类。
     fn msg_kind(&self) -> Option<MsgKind>;
+
     /// 当前页码（0 起）。
     fn msg_page(&self) -> u32;
+
     /// 总页数。
     fn msg_total(&self) -> u32;
+
     /// 下一页（末页保持）。
     fn msg_next_page(&mut self);
+
     /// 上一页（首页回末页）。
     fn msg_prev_page(&mut self);
+
     /// 关闭消息并回到场景源。
     fn close_message(&mut self);
 
-    // ── 存读档 ──────────────────────────────────────────────────────────
     /// 存档槽快照（`Copy` 切片）。
     fn save_slots(&self) -> &[SaveSlot];
+
     /// 写存档槽（越界忽略）。
     fn write_save_slot(&mut self, slot: usize, data: SaveSlot);
+
     /// 按存档快照恢复状态并跳到主地图/选角。
     fn restore_save(&mut self, data: SaveSlot);
 
-    // ── 状态查询 ────────────────────────────────────────────────────────
     /// 当前是否处于主地图（有玩家格）。
     fn in_map(&self) -> bool;
+
     /// 当前是否有战斗会话。
     fn in_battle(&self) -> bool;
+}
+
+/// 场景宿主能力接口：`GameApp` 实现的**唯一**状态/表现出口。
+///
+/// S9.2 起退化为 8 个子 trait 的 supertrait 聚合（空 trait，方法全在子 trait）。
+/// `dyn SceneHost` 仍可访问全部方法（supertrait 机制自动展开）。
+///
+/// 场景 struct 经此 trait 读写状态与帧缓冲，**不接触** `GameApp` 任何字段
+/// （`docs/process/01_architecture.md` §2）。每个方法都是一行读写，
+/// 业务判定留在 `scenes/*.rs`。
+pub trait SceneHost:
+    NavHost + RenderHost + SpriteHost + MenuHost + SelectionHost + MapHost + EconomyHost + SessionHost
+{
 }
 
 /// 场景处理器 trait：键盘/触摸共用输入面，渲染单独一方法。

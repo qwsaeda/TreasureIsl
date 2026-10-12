@@ -184,7 +184,7 @@ fn flow_menu_quit() {
 
 // ── P6 表现层包：`docs/business/07_ui_flow.md §6` 12 条可测规则（逐条具名） ──
 
-use ti_app::scenes::{SceneHost, SceneKind, SceneTransition, markers};
+use ti_app::scenes::{SceneKind, SceneTransition, SessionHost, markers};
 use ti_app::touch::layout;
 use ti_platform::gfx::Viewport;
 use ti_platform::settings::Gesture;

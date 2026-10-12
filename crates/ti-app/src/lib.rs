@@ -39,8 +39,9 @@ pub use game_app::{BattleSnapshot, BattleView, GameApp, GameInput, Scene};
 pub use i18n::{sget, sgetf, try_sget};
 pub use menu_shell::MenuShell;
 pub use scenes::{
-    IndexScene, MainMapScene, MessageScene, SaveloadScene, Scene as SceneTrait, SceneHost,
-    SceneKind, SceneRegistry, SceneTransition, SelectMapScene, SelectRoleScene, VsScene, markers,
+    EconomyHost, IndexScene, MainMapScene, MapHost, MenuHost, MessageScene, NavHost, RenderHost,
+    SaveloadScene, Scene as SceneTrait, SceneHost, SceneKind, SceneRegistry, SceneTransition,
+    SelectMapScene, SelectRoleScene, SelectionHost, SessionHost, SpriteHost, VsScene, markers,
     route_input, route_render, route_touch,
 };
 pub use shell_ui::{MENU, MenuItem, status_texts};

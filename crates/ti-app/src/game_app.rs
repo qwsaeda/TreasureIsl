@@ -40,7 +40,10 @@ use ti_core::rules::messages::total_pages;
 use ti_core::rules::rng::GameRng;
 
 use crate::menu_shell::MenuShell;
-use crate::scenes::{SceneHost, SceneKind, route_input, route_render, route_touch};
+use crate::scenes::{
+    EconomyHost, MapHost, MenuHost, NavHost, RenderHost, SceneHost, SceneKind, SelectionHost,
+    SessionHost, SpriteHost, route_input, route_render, route_touch,
+};
 use crate::sprite_atlas::SpriteAtlas;
 use crate::touch::TouchSample;
 use ti_platform::gfx::UploadMode;
@@ -634,6 +637,33 @@ impl GameApp {
         &self.save_slots
     }
 
+    /// 写入存档槽（越界忽略，测试 / 存档往返用）。
+    pub fn write_save_slot(&mut self, slot: usize, data: SaveSlot) {
+        if let Some(dst) = self.save_slots.get_mut(slot) {
+            *dst = data;
+        }
+    }
+
+    /// 按存档槽恢复状态并跳场景（测试 / 存档往返用，与 `SceneHost::restore_save` 同逻辑）。
+    pub fn restore_save(&mut self, data: SaveSlot) {
+        if data.character > 0 && data.character <= 5 {
+            self.character = Character::from_index(data.character - 1);
+            self.selection.character = self.character;
+        }
+        if data.map_slot < 3 {
+            self.map_slot = MapSlot::from_index(data.map_slot);
+            self.selection.map_slot = self.map_slot;
+        }
+        self.gold = data.gold;
+        self.bank = Bank::new(data.gold);
+        if self.selection.has_character() && self.selection.has_map() {
+            GameApp::enter_main_map(self);
+            self.selection.completed = true;
+        } else {
+            self.scene = Scene::SelectRole;
+        }
+    }
+
     /// 战斗会话（只读）。
     #[must_use]
     pub fn battle(&self) -> Option<&BattleView> {
@@ -836,10 +866,9 @@ impl GameApp {
     }
 }
 
-/// `GameApp` 的 [`SceneHost`] 实现：全部是一行状态读写 / 表现转发，
+/// `GameApp` 的 8 个 [`SceneHost`] 子 trait 实现：全部是一行状态读写 / 表现转发，
 /// 业务判定在 `scenes/*.rs`（`docs/process/01_architecture.md` §2）。
-impl SceneHost for GameApp {
-    // ── 场景控制 ────────────────────────────────────────────────────────
+impl NavHost for GameApp {
     fn current_scene(&self) -> Scene {
         self.scene
     }
@@ -851,8 +880,9 @@ impl SceneHost for GameApp {
     fn advance(&mut self, input: GameInput) -> bool {
         self.handle(input)
     }
+}
 
-    // ── 表现层 ──────────────────────────────────────────────────────────
+impl RenderHost for GameApp {
     fn shell(&self) -> &MenuShell {
         &self.shell
     }
@@ -872,7 +902,9 @@ impl SceneHost for GameApp {
     fn draw_text(&mut self, text: &str, x: i32, y: i32) {
         self.shell.draw_text_row(text, x, y);
     }
+}
 
+impl SpriteHost for GameApp {
     fn blit_scene_sprites(&mut self, asset: &str) {
         if asset.is_empty() {
             return;
@@ -906,13 +938,9 @@ impl SceneHost for GameApp {
     fn has_terrain_atlas(&self) -> bool {
         self.terrain_atlas.is_some()
     }
+}
 
-    // ── 音效 ────────────────────────────────────────────────────────────
-    fn play_sfx(&mut self, sfx: Sfx) {
-        self.last_sfx = Some(sfx);
-    }
-
-    // ── Index ───────────────────────────────────────────────────────────
+impl MenuHost for GameApp {
     fn menu_selected(&self) -> usize {
         self.menu_selected
     }
@@ -934,8 +962,9 @@ impl SceneHost for GameApp {
     fn request_quit(&mut self) {
         self.quit = true;
     }
+}
 
-    // ── 选择 ────────────────────────────────────────────────────────────
+impl SelectionHost for GameApp {
     fn character(&self) -> Option<Character> {
         self.character
     }
@@ -967,8 +996,9 @@ impl SceneHost for GameApp {
     fn enter_main_map(&mut self) {
         GameApp::enter_main_map(self);
     }
+}
 
-    // ── 主地图 ──────────────────────────────────────────────────────────
+impl MapHost for GameApp {
     fn map_pos(&self) -> Option<GridPos> {
         self.map_pos
     }
@@ -1015,8 +1045,9 @@ impl SceneHost for GameApp {
         self.msg_total = total_pages(kind);
         self.scene = Scene::Message;
     }
+}
 
-    // ── 经济 ────────────────────────────────────────────────────────────
+impl EconomyHost for GameApp {
     fn price_of(&self, gid: u32) -> Option<u32> {
         self.price_table.lookup(gid)
     }
@@ -1078,8 +1109,13 @@ impl SceneHost for GameApp {
             None => self.buildings.push((kind, 1)),
         }
     }
+}
 
-    // ── 战斗 ────────────────────────────────────────────────────────────
+impl SessionHost for GameApp {
+    fn play_sfx(&mut self, sfx: Sfx) {
+        self.last_sfx = Some(sfx);
+    }
+
     fn battle_step(&mut self) {
         if let Some(b) = self.battle.as_mut() {
             b.step();
@@ -1101,7 +1137,6 @@ impl SceneHost for GameApp {
         })
     }
 
-    // ── 消息 ────────────────────────────────────────────────────────────
     fn msg_kind(&self) -> Option<MsgKind> {
         self.msg_kind
     }
@@ -1137,7 +1172,6 @@ impl SceneHost for GameApp {
         self.msg_kind = None;
     }
 
-    // ── 存读档 ──────────────────────────────────────────────────────────
     fn save_slots(&self) -> &[SaveSlot] {
         &self.save_slots
     }
@@ -1167,7 +1201,6 @@ impl SceneHost for GameApp {
         }
     }
 
-    // ── 状态查询 ────────────────────────────────────────────────────────
     fn in_map(&self) -> bool {
         self.map_pos.is_some()
     }
@@ -1176,3 +1209,5 @@ impl SceneHost for GameApp {
         self.battle.is_some()
     }
 }
+
+impl SceneHost for GameApp {}
