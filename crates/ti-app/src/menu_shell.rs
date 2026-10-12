@@ -153,7 +153,7 @@ impl MenuShell {
     pub fn render(&mut self) {
         // 背景：原版主色（深蓝）+ 顶部标题条
         self.fb.clear(COLOR_BG);
-        self.fill_rect(0, 0, LOGICAL_W_I32, 40, COLOR_TITLE_BAR);
+        self.fill_rect(0, 0, LOGICAL_W_I32, 20, COLOR_TITLE_BAR);
 
         // 中文标题（真字形；字体整体缺失时全是豆腐块，绝不静默空白）
         self.draw_text_row(sget("scene.index.title"), 58, 12);

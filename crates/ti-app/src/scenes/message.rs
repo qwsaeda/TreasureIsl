@@ -56,16 +56,24 @@ impl Scene for MessageScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         host.clear_frame(COLOR_BG);
         host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
+        let layout = ti_core::data::scenes()
+            .ok()
+            .and_then(|s| s.get("message"))
+            .cloned()
+            .unwrap_or_default();
         let kind = host.msg_kind().unwrap_or(MsgKind::Help);
-        host.draw_text(i18n::sget(kind.label()), 60, 4);
+        host.draw_text(i18n::sget(kind.label()), layout.title.x, layout.title.y);
         // 当前页文本（`rules::messages::page_text` 分页钳位，文本经 `i18n::sget` 查表）
         let page = host.msg_page();
         let key = page_text(kind, page);
         let text = i18n::sget(key.as_str());
-        host.draw_text(text, 10, 40);
+        let body = layout.extra.get("body").copied().unwrap_or_default();
+        host.draw_text(text, body.x, body.y);
         let total = host.msg_total();
         let page_str = format!("{}/{}", page + 1, total);
-        host.draw_text(&page_str, 60, 200);
-        host.draw_text(i18n::sget("scene.message.nav_hint"), 40, 210);
+        let page_pos = layout.page;
+        host.draw_text(&page_str, page_pos.x, page_pos.y);
+        host.draw_text(i18n::sget("scene.message.nav_hint"), layout.hint.x, layout.hint.y);
     }
 }

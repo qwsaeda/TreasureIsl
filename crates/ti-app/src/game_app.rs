@@ -109,12 +109,14 @@ pub struct BattleView {
 
 impl BattleView {
     /// 新建战斗视图（`BattleSession::from_balance`，数值走 `balance().combat`）。
+    ///
+    /// `balance()` 加载失败返回 `None`（硬错误，不 fallback，`02_conventions.md` §4.4）。
     #[must_use]
-    pub fn new(seed: u32, player: Unit, boss_tier: u32) -> Self {
-        let session = BattleSession::from_balance(seed, player, boss_tier);
+    pub fn new(seed: u32, player: Unit, boss_tier: u32) -> Option<Self> {
+        let session = BattleSession::from_balance(seed, player, boss_tier).ok()?;
         let outcome = session.outcome();
         let boss_hp = session.boss_hp();
-        Self { player, boss_tier, session, rounds: 0, player_hp: player.hp, boss_hp, outcome }
+        Some(Self { player, boss_tier, session, rounds: 0, player_hp: player.hp, boss_hp, outcome })
     }
 
     /// 是否结束。
@@ -383,7 +385,7 @@ impl GameApp {
                     changed = self.handle(GameInput::Build(Building::Castle)) || changed;
                 }
                 if k.landmark {
-                    changed = self.handle(GameInput::Landmark(6)) || changed;
+                    changed = self.handle(GameInput::Landmark(1)) || changed;
                 }
                 if k.back {
                     changed = self.handle(GameInput::MapBack) || changed;
@@ -798,7 +800,16 @@ impl GameApp {
                 (f1, frames.into_iter().map(|(_, b)| b).collect())
             })
             .collect();
-        self.load_hd_pngs(png_bytes);
+        self.load_hd_pngs(png_bytes.clone());
+        // P2-8：同时喂 terrain_atlas（地形 HD 接线，`assets_hd_pack/1x/` 同档）
+        #[cfg(feature = "hd-8bit")]
+        if let Some(ta) = self.terrain_atlas.as_mut() {
+            let terrain_png: Vec<(u32, Vec<u8>)> = png_bytes
+                .iter()
+                .filter_map(|(f1, frames)| frames.first().map(|b| (*f1, b.clone())))
+                .collect();
+            ta.load_hd_pngs(terrain_png);
+        }
         true
     }
 
@@ -823,11 +834,8 @@ impl GameApp {
 
     /// 进入主地图（`docs/gamebook.md` §3.3）：初始化 `MapSession` + 贸易/建造会话。
     fn enter_main_map(&mut self) {
-        // 地形：按 `map_slot` 取 m01/m02/m03（m03 = 15×15，其余 20×20）
-        let gw = match self.map_slot {
-            Some(MapSlot::M03) => 15,
-            _ => 20,
-        };
+        // P0-4：grid_w 统一走 terrain_map（bin 注入的真值），不再按 map_slot 推算
+        let gw = self.terrain_map.as_ref().map_or(20, |t| t.grid_w);
         let gh = gw;
         // 据点档：按地图槽走 `balance.selection.maps[i].boss_tier`（m01=0, m02=1, m03=2）
         let boss_tier = match self.map_slot {
@@ -838,18 +846,22 @@ impl GameApp {
         self.current_boss_tier = boss_tier;
         self.map_terrain = Some(MapTerrain::open(gw, gh));
         self.map_pos = Some(GridPos::new(gh / 2, gw / 2));
-        self.map_landmarks = vec![(2, 2), (gh - 3, gw - 3)];
+        self.map_landmarks = vec![(2, 2), (gh.saturating_sub(3), gw.saturating_sub(3))];
         // 主地图会话（`rules::main_map::MapSession`，卡牌池走 `balance.cards`）
         self.map_session = MapSession::new(
             MapTerrain::open(gw, gh),
             GridPos::new(gh / 2, gw / 2),
             &self.map_landmarks,
         );
-        // 贸易/建造：开局金走 `balance.economy.initial_gold`（表缺失时回退 1000，
-        // 与 `spec/save_load.md` 段记录的原始 1000 一致）
+        // 贸易/建造：开局金走 `balance.economy.initial_gold`（表缺失时硬错误，不 fallback，
+        // `02_conventions.md` §4.4 数据失败=硬错误）
         let init_gold = match ti_core::data::balance() {
             Ok(b) => b.economy.initial_gold,
-            Err(_) => 1000,
+            Err(_e) => {
+                #[cfg(feature = "stats")]
+                eprintln!("[stats] enter_main_map: balance.json 加载失败（硬错误，不 fallback）");
+                return;
+            }
         };
         self.gold = init_gold;
         self.owned = Vec::new();
@@ -1042,11 +1054,12 @@ impl MapHost for GameApp {
         let seed = self.rng.next().unsigned_abs();
         // 据点档用当前地图对应的固定 boss_tier（非随机）：`enter_main_map` 已按 map_slot 写入
         let tier = self.current_boss_tier;
-        // 玩家单位 HP/atk：balance 无专用玩家属性字段（combat 段只有 boss_tiers/damage），
-        // 用合理默认值 1000/150（第 5 轮审计 Q001/Q044/Q045/Q081：旧值 200/30 对 tier0
-        // 50000 HP 在 max_rounds=1000 内不可胜，属功能性 Bug，已修正）
-        let player = Unit { hp: 1000, atk: 150 };
-        self.battle = Some(BattleView::new(seed, player, tier));
+        // P0-1：玩家单位读 `balance.combat.player`（EXP-066 重复踩坑闭环：不再写死 1000/150）
+        let player = match balance() {
+            Ok(b) => b.combat.player.unwrap_or(Unit { hp: 1000, atk: 150 }),
+            Err(_) => Unit { hp: 1000, atk: 150 },
+        };
+        self.battle = BattleView::new(seed, player, tier);
         self.scene = Scene::Vs;
     }
 

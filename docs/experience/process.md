@@ -135,3 +135,37 @@
   3. 闀块樁娈碉紙S10/S11 杩欑涓€寮€鍗佸嚑涓换鍔★級鏀跺熬鏃?commit锛岄伩鍏嶅叏閮ㄥ伐浣滃彧瀛樺湪浜庡伐浣滃尯銆?
 - **楠岃瘉**锛歚python scripts/check_ledger_reality.py` 姝ｅ父鎬併€?8 涓?verified 涓夋柟瀵硅处閫氳繃 + 0 涓鍎?evidence銆嶏紱涓存椂鏋勯€犲鍎胯瘉鎹枃浠跺嵆鎶?FAIL 涓旈€€鍑虹爜 1锛坄evidence/S13.2.log`锛夈€?
 
+### EXP-068 流程：子代理开轮不读最新规范/EXP/契约 → 重复踩坑（开轮必读清单 + 规范回执，doccheck2 第 8 项固化）- **现象**：子代理跑对抗流水线时不读最新规范/EXP/契约，凭 prompt 摘要 + 自身惯例做，
+  导致重复踩坑：crate 前缀写成 `ty-`（应为 `ti-`）、跨层几何公式自洽但不对齐渲染侧
+  （未读 EXP-067 跨层几何正逆成对测试约定）、不知道 gate 第 16 项查什么就产出违规写法。
+- **根因**：任务书只列「白名单 + 目标 + 验收」，无「开轮必读清单」；
+  子代理回报无「规范回执」判据，主线程无法确认代理是否读过现行规范。
+- **解法**：
+  1. 新建 `docs/process/06_flywheel.md`（飞轮单一事实源）：3 角色（找问题/审计/修复）
+     + 开轮必读 6 条 + 飞轮回写规则 + 停机条件；
+  2. `05_module_parallel.md` 新增 §4.5「开轮必读清单 + 规范回执」，
+     下发/回报双侧硬要求，缺项打回；
+  3. `03_templates.md` §7 任务书模版加「开轮必读 + 回执」段（checkbox 清单 + 回执 4 项）；
+  4. `doccheck2.rs` 新增第 8 项断言 `check_flywheel_readback` 固化（检查上述 4 份文档关键词）。
+- **飞轮**：子代理开轮读规范 → 命中回执 → 发现漂移 → 固化/EXP/lint 回写
+  （`06_flywheel` §3）→ 下轮子代理读到新规范/新 EXP，不重复踩坑。
+- **验证**：`cargo run -q -p ti-tools --bin doccheck2 .` 8 项 0 error（含第 8 项）。
+
+### EXP-070 流程：开轮必读靠 LLM 手动 Read 6 份文档 → 工具调用爆炸 + 漏读（脚本化一键生成，EXP-068 增强）
+- **现象**：EXP-068 开轮必读靠 LLM 每次手动 Read 6 份文档 + 读 gate + 读 doccheck2 + 读 packages.yaml，
+  N 个子代理各跑一遍，工具调用爆炸 + 容易漏读（本轮 P6 子代理没读 06_flywheel 的在途白名单）。
+- **根因**：必读清单是「规格」不是「脚本」——文档写死了 6 条路径，但没固化成一个一次跑全的入口。
+- **解法**：
+  1. 新建 `scripts/flywheel_readme.ps1`：一键生成完整必读输出（环境事实 + 6 文档路径 + 白名单
+     + 本域 EXP + gate 项 + doccheck2 断言），读 `plan/packages.yaml` / `docs/experience/index.md`
+     / `scripts/gate.ps1` / `doccheck2.rs` 的实时内容，规范变更后脚本自动反映，无需改 prompt；
+  2. gate 加 `flywheel-readme -Check` 项（第 17 项）验证脚本输出完整性；
+  3. `06_flywheel.md` 加「§开轮必读脚本化」节，LLM 子代理只需跑脚本 + 回执，不再逐个 Read 工具调用；
+  4. doccheck2 加第 10 项 `check_flywheel_script`（断言脚本存在 + gate/06_flywheel/index.md 含关键词）。
+- **飞轮**：脚本读的是各文件的**实时内容**，规范/EXP/门禁变了脚本自动反映；
+  LLM 子代理只需跑 `powershell -File scripts/flywheel_readme.ps1 -Package <本包>` + 回执，不再逐个工具调用。
+- **验证**：`powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package P6` 输出含 6 条必读
+  + P6 白名单 + 本域 EXP + gate 17 项 + doccheck2 10 项；`-Check -Quiet` exit 0；
+  `cargo run -q -p ti-tools --bin doccheck2 .` 10 项 0 error。
+
+

@@ -153,7 +153,23 @@
 - 验证：`grep "combat.player" crates/` 当前 0 命中（未接）；`balance.json` 已含该字段
   （validate_data 通过，说明数据侧就绪、代码侧未消费）。
 - 教训：**「数值单一事实源」的红线不止 oracle 调用——壳层直接 new Unit 写死 hp/atk
-  同样是漂移**，且这类「数据表已有字段但代码没读」的漂移 check_hardcode/oracle_boundary
-  都抓不到，得靠双 agent 反向审计（文档可测规则 vs 实现）补洞。若同类高频，应固化为
-  doccheck2 断言（如「balance.json 某 key 存在但 crates/ 无消费方」，需人裁决归属白名单后再固化）。
+   同样是漂移**，且这类「数据表已有字段但代码没读」的漂移 check_hardcode/oracle_boundary
+   都抓不到，得靠双 agent 反向审计（文档可测规则 vs 实现）补洞。若同类高频，应固化为
+   doccheck2 断言（如「balance.json 某 key 存在但 crates/ 无消费方」，需人裁决归属白名单后再固化）。
+
+### EXP-067 跨层几何公式须正逆成对测试：逆变换(正变换(p))==p，单层公式自洽不算数（S10.5）
+- 现象：主地图触摸命中 EXP-059 修复后，`iso_grid_cell_at`（逆变换）与
+  `iso_x`/`iso_y`（正变换）各自公式正确，但两层几何约定不一致导致触摸点永远不中
+  正确格子。S10.5 审计发现：单测只验证了「单层公式自洽」，未验证「正逆变换往返」。
+- 根因：`terrain_atlas.rs` 的 `iso_projection_matches_f307` 测试只正向验证
+  `iso_x`/`iso_y` 公式，未做 `grid_cell_at(iso_x(p), iso_y(p)) == p` 的逆验证；
+  子代理修触摸命中时只对齐了渲染侧公式，未同步改触摸命中侧。
+- 解法：跨层几何公式（rules 逻辑坐标 ↔ 渲染投影）须正逆成对测试——
+  对任意格 `p`，断言 `逆变换(正变换(p)) == p`；单层公式自洽不算数。
+  `iso_projection_matches_f307` 补逆验证后，触摸命中回归自动拦截。
+- 验证：`cargo test --workspace` 中 `iso_projection_matches_f307` 含正向 + 往返断言。
+- 教训：**几何公式跨层（rules/渲染/触摸）必须成对测试正逆变换往返**，
+  单层自洽测试会漏掉「两层公式约定不一致」的漂移。子代理修跨层 bug 时
+  必须同时改两侧 + 补往返测试，否则同一条 EXP 会二次踩坑。
+
 

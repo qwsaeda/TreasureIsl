@@ -45,29 +45,37 @@ impl Scene for VsScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         host.clear_frame(COLOR_BG);
         host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        host.draw_text(i18n::sget("scene.vs.title"), 64, 4);
-        match host.battle_snapshot() {
-            Some(b) => {
-                let ph = i18n::sgetf("scene.vs.player_hp_fmt", &[&b.player_hp]);
-                let bh = i18n::sgetf("scene.vs.boss_hp_fmt", &[&b.boss_hp]);
-                let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
-                host.draw_text(&ph, 10, 50);
-                host.draw_text(&bh, 10, 80);
-                host.draw_text(&rd, 10, 110);
-                match b.outcome {
-                    Some(Side::Player) => {
-                        host.draw_text(i18n::sget("scene.vs.victory"), 60, 150);
-                    }
-                    Some(Side::Enemy) => {
-                        host.draw_text(i18n::sget("scene.vs.defeat"), 60, 150);
-                    }
-                    None => host.draw_text(i18n::sget("scene.vs.awaiting"), 50, 150),
+        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
+        let layout =
+            ti_core::data::scenes().ok().and_then(|s| s.get("vs")).cloned().unwrap_or_default();
+        host.draw_text(i18n::sget("scene.vs.title"), layout.title.x, layout.title.y);
+        if let Some(b) = host.battle_snapshot() {
+            let ph = i18n::sgetf("scene.vs.player_hp_fmt", &[&b.player_hp]);
+            let bh = i18n::sgetf("scene.vs.boss_hp_fmt", &[&b.boss_hp]);
+            let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
+            let ph_pos = layout.extra.get("player_hp").copied().unwrap_or_default();
+            let bh_pos = layout.extra.get("boss_hp").copied().unwrap_or_default();
+            let rd_pos = layout.extra.get("rounds").copied().unwrap_or_default();
+            host.draw_text(&ph, ph_pos.x, ph_pos.y);
+            host.draw_text(&bh, bh_pos.x, bh_pos.y);
+            host.draw_text(&rd, rd_pos.x, rd_pos.y);
+            let oc = layout.extra.get("outcome").copied().unwrap_or_default();
+            match b.outcome {
+                Some(Side::Player) => {
+                    host.draw_text(i18n::sget("scene.vs.victory"), oc.x, oc.y);
+                }
+                Some(Side::Enemy) => {
+                    host.draw_text(i18n::sget("scene.vs.defeat"), oc.x, oc.y);
+                }
+                None => {
+                    let aw = layout.extra.get("empty").copied().unwrap_or_default();
+                    host.draw_text(i18n::sget("scene.vs.awaiting"), aw.x, aw.y);
                 }
             }
-            None => {
-                host.draw_text(i18n::sget("scene.vs.empty"), 60, 50);
-            }
+        } else {
+            let em = layout.extra.get("empty").copied().unwrap_or_default();
+            host.draw_text(i18n::sget("scene.vs.empty"), em.x, em.y);
         }
-        host.draw_text(i18n::sget("scene.vs.hint"), 60, 210);
+        host.draw_text(i18n::sget("scene.vs.hint"), layout.hint.x, layout.hint.y);
     }
 }

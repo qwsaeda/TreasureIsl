@@ -64,8 +64,16 @@ pub(crate) struct RawEconomy {
 pub(crate) struct RawCombat {
     pub(crate) player_first: bool,
     pub(crate) max_rounds: u32,
+    #[serde(default)]
+    pub(crate) player: Option<RawPlayerUnit>,
     pub(crate) damage: RawDamage,
     pub(crate) boss_tiers: Vec<RawBoss>,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct RawPlayerUnit {
+    pub(crate) hp: u32,
+    pub(crate) atk: u32,
 }
 
 #[derive(Deserialize)]

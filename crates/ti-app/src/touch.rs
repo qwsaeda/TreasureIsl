@@ -197,14 +197,26 @@ pub mod layout {
 
     /// 点按是否落在主地图某格（**等距投影**，与 `TerrainAtlas` 渲染同坐标系）。
     ///
-    /// 逆变换（`GridPos::iso_pos` 的逆：`iso_x = 32×(row+col)`，`iso_y = 16×(row+grid_w-1-col)`）：
-    /// - `row = (px/32 + py/16 - (grid_w - 1)) / 2`
-    /// - `col = (px/32 - py/16 + (grid_w - 1)) / 2`
+    /// 坐标系契约（EXP-067，与 `terrain_atlas::blit_map_cam` + `center_camera` 严格互逆）：
+    /// - 格点（菱形交点）：`iso_x = 32×(row+col)`、`iso_y = 16×(row+grid_w-1-col)`（`GridPos::iso_pos`）。
+    /// - 渲染侧瓦片以**格点为中心锚点**向左上扩展（`blit_map_cam` 的 `- w/2, - h/2`），
+    ///   屏幕像素 `(sx, sy) = (iso_x + cam.0, iso_y + cam.1)`；
+    ///   `camera = center_camera(terrain)` 把 iso 包围盒中心对到屏幕中心 (88,110)，**通常为负**。
+    /// - 触摸逆变换（`GridPos::iso_pos` 的严格逆，与 camera 取值无关）：
+    ///   `u = (x-cam.0)/32 = row+col`，`v = (y-cam.1)/16 = row+grid_w-1-col`
+    ///   → `row = round((u+v-(grid_w-1))/2)`，`col = round((u-v+(grid_w-1))/2)`，clamp 到 `[0, grid)`。
+    /// - 命中区 = 每格 Voronoi 菱形（四邻格点围成），与瓦片尺寸无关、四象限互斥无空洞。
     ///
-    /// 其中 `px = x - cx`、`py = y - cy`。`-0.5` 半格偏移使命中中心对准格心，
-    /// 边界处仍正确归格（半格偏移不改变 `round()` 命中区）。
+    /// 旧实现 bug（EXP-067 根因）：`px = x - cam` 把 camera 当平移量却混入了错误的归一项
+    /// （`half = (grid_w-1-0.5)/2` 未对齐 `iso_y` 的 `grid_w-1` 语义），且 `camera=(0,0)` 测试
+    /// 掩盖了负 camera 下的系统性推偏 → 主地图点格命中错位、界面错乱。
     #[must_use]
-    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::manual_midpoint)]
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss,
+        clippy::manual_midpoint,
+        clippy::cast_sign_loss
+    )]
     pub fn iso_grid_cell_at(
         x: f32,
         y: f32,
@@ -212,19 +224,23 @@ pub mod layout {
         grid_h: u32,
         camera: (i64, i64),
     ) -> Option<(u32, u32)> {
-        let px = x - camera.0 as f32;
-        let py = y - camera.1 as f32;
-        let half = (grid_w.saturating_sub(1) as f32 - 0.5) / 2.0;
-        let row = ((px / 32.0 + py / 16.0) / 2.0 - half).round();
-        let col = ((px / 32.0 - py / 16.0) / 2.0 + half).round();
-        let row = row as i64;
-        let col = col as i64;
-        if row < 0 || col < 0 {
+        if grid_w == 0 || grid_h == 0 {
             return None;
         }
-        let row = u32::try_from(row).ok()?;
-        let col = u32::try_from(col).ok()?;
-        if row < grid_h && col < grid_w { Some((row, col)) } else { None }
+        // 屏幕 → 等距画布（camera 是「画布原点→屏幕」偏移，center_camera 产负值，减之还原）
+        let px = x - camera.0 as f32;
+        let py = y - camera.1 as f32;
+        // 严格逆 `GridPos::iso_pos`（iso_x = 32(row+col), iso_y = 16(row+W-1-col)）：
+        //   u = px/32 = row+col，v = py/16 = row+W-1-col
+        //   row = (u+v-(W-1))/2，col = (u-v+(W-1))/2
+        // 命中区 = 每格 Voronoi 菱形（四邻格点围成），round() 归最近格，clamp 到 [0, grid)
+        let w1 = grid_w.saturating_sub(1) as f32;
+        let u = px / 32.0;
+        let v = py / 16.0;
+        let row = ((u + v - w1) / 2.0).round().clamp(0.0, grid_h.saturating_sub(1) as f32);
+        let col = ((u - v + w1) / 2.0).round().clamp(0.0, grid_w.saturating_sub(1) as f32);
+        // clamp 保证 row/col ∈ [0, grid)，f32→u32 不丢符号、不截断
+        Some((row as u32, col as u32))
     }
 
     /// 点按是否落在存读档第 `slot` 个槽位（0 起）。

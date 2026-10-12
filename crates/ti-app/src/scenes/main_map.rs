@@ -65,6 +65,11 @@ impl Scene for MainMapScene {
                 if result.moved {
                     host.set_map_pos(Some(result.pos));
                 }
+                // P0-6：BOSS 格落格触发战斗（`progression.md` 落格结算）
+                if result.boss {
+                    host.start_battle();
+                    return true;
+                }
                 // 落在据点 → 触发事件分派（与 `Landmark` 同路径）
                 if let Some(target) = result.landmark {
                     host.set_last_dispatch(Some(target));
@@ -85,8 +90,9 @@ impl Scene for MainMapScene {
                 // S10.3 改动 5：买前查 `balance.trade.goods[i].qty_max`，超限时拒买
                 let b = match balance() {
                     Ok(b) => b,
-                    Err(e) => {
-                        eprintln!("balance.json 加载失败：{e}（硬报错，不 fallback）");
+                    Err(_e) => {
+                        #[cfg(feature = "stats")]
+                        eprintln!("[stats] TradeBuy: balance.json 加载失败（硬报错，不 fallback）");
                         return false;
                     }
                 };
@@ -126,8 +132,9 @@ impl Scene for MainMapScene {
                 // S10.3 改动 4：造价走 `balance.build.buildings`（`rules::build::cost_of` 纯函数）
                 let b = match balance() {
                     Ok(b) => b,
-                    Err(e) => {
-                        eprintln!("balance.json 加载失败：{e}（硬报错，不 fallback）");
+                    Err(_e) => {
+                        #[cfg(feature = "stats")]
+                        eprintln!("[stats] Build: balance.json 加载失败（硬报错，不 fallback）");
                         return false;
                     }
                 };
@@ -178,9 +185,9 @@ impl Scene for MainMapScene {
                     return false;
                 };
                 let target = GridPos::new(row, col);
-                // 点自己所在格 = 触发据点事件（等价键盘 Space）
+                // P0-5：点自身格 = 走 dispatch(1)→Msgl（据点菜单），与 business/progression.md L33 对齐
                 if target == cur {
-                    return host.advance(GameInput::Landmark(6));
+                    return host.advance(GameInput::Landmark(1));
                 }
                 walk_towards(host, &terrain, target)
             }
@@ -198,15 +205,22 @@ impl Scene for MainMapScene {
         // 真实地形瓦片（等距投影 + 摄像机），无地形资源时保持占位背景
         let terrain_drawn = host.draw_terrain();
 
+        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
+        let layout = ti_core::data::scenes()
+            .ok()
+            .and_then(|s| s.get("main_map"))
+            .cloned()
+            .unwrap_or_default();
+
         // HUD（标题条 + 金/持有量）
         host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        host.draw_text(i18n::sget("scene.main_map.title"), 64, 2);
+        host.draw_text(i18n::sget("scene.main_map.title"), layout.title.x, layout.title.y);
         let gold = host.gold();
         let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
-        host.draw_text(&gold_str, 4, 150);
+        host.draw_text(&gold_str, layout.hud.x, layout.hud.y);
         let owned = host.owned_total();
         let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
-        host.draw_text(&own_str, 4, 162);
+        host.draw_text(&own_str, layout.hud.x, layout.hud.y + 12);
 
         // 玩家棋子 + 据点（等距投影坐标，相机与地形一致；`terrain_camera` 为真值可能为负）
         let gw = host.terrain_grid_w();
@@ -235,6 +249,6 @@ impl Scene for MainMapScene {
                 host.fill_rect(px - 1, py - 1, 3, 3, COLOR_LANDMARK);
             }
         }
-        host.draw_text(i18n::sget("scene.main_map.hint"), 4, 210);
+        host.draw_text(i18n::sget("scene.main_map.hint"), layout.hint.x, layout.hint.y);
     }
 }

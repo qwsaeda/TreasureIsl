@@ -2,10 +2,10 @@
 //!
 //! 与 `treasure_wasm` 壳**共用同一份表现层**（[`MenuShell`]），差异只在资源 IO：
 //! - wasm：`macroquad::file::load_file`（HTTP fetch）；
-//! - native：`std::fs::read`（读仓库根 `data/` 下 4 个原始文件，与 wasm 同源资源）。
+//! - native：`std::fs::read`（读仓库根 `legacy/data/` 下 4 个原始文件，与 wasm 同源资源）。
 //!
 //! 用法：`cargo run -p ti-app --features native-shell --bin treasure-native`
-//! 资源路径 = 仓库根 `data/{GoldLand.Fnt,font.dat,settings.dat,music.lpk}`。
+//! 资源路径 = 仓库根 `legacy/data/{GoldLand.Fnt,font.dat,settings.dat,music.lpk}`。
 
 use std::path::{Path, PathBuf};
 

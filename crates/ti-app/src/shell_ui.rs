@@ -46,6 +46,6 @@ pub fn status_texts(font_glyphs: usize, wav_count: usize, mod_count: usize) -> [
     [
         crate::i18n::sgetf("diag.fonts", &[&font_glyphs]),
         crate::i18n::sgetf("diag.wav", &[&wav_count]),
-        format!("MOD{mod_count}"),
+        crate::i18n::sgetf("diag.mod_fmt", &[&mod_count]),
     ]
 }

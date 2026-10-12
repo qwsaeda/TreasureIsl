@@ -41,17 +41,17 @@ ti-app/src/
 5. **现状（过渡期）**：`SceneHost` 是**单一宽接口**（约 60 方法，`scenes/mod.rs` L355+），
    Rust 不允许 trait object 作为 supertrait，动态分发只能落在单接口上；场景统一持
    `&mut dyn SceneHost`。`scenes/mod.rs` 头部已标注此过渡形态。
-6. **目标态（S9.2 待拆分）**：按**职责拆分为窄接口**（接口隔离原则），场景只依赖它
-   需要的窄接口：
-   - `SceneControl`：场景切换 + 输入路由（`current_scene`/`enter`/`advance`）
-   - `RenderHost`：帧缓冲/字形/精灵/地形（`shell`/`shell_mut`/`clear_frame`/`fill_rect`/`draw_text`/`blit_scene_sprites`/`draw_terrain`）
-   - `EconomyHost`：金/价格/持有/银行/建筑（`gold`/`set_gold`/`price_of`/`owned_*`/`bank_*`/`build_increment`）
-   - `BattleHost`：战斗推进/快照（`battle_step`/`battle_snapshot`）
-   - `SelectionHost`：角色/地图选择状态（`character`/`set_character`/`map_slot`/`set_map_slot`/`selection`）
-   - `MessageHost`：消息分页（`msg_kind`/`msg_page`/`msg_total`/`msg_next_page`/`msg_prev_page`/`close_message`）
-   - `SaveHost`：存读档（`save_slots`/`write_save_slot`/`restore_save`）
-   - `MapHost`：主地图状态（`map_pos`/`set_map_pos`/`map_terrain`/`map_landmarks`/`map_session_move`/`map_session_dispatch`）
-   拆分判据与进度见台账 `S9.2`（当前 pending）。拆分前，场景统一走宽接口 `SceneHost`。
+6. **目标态（S9.2 已落地）**：按**职责拆分为窄接口**（接口隔离原则），场景只依赖它
+    需要的窄接口（8 个子 trait，`scenes/mod.rs` S9.2 已落地，与 c3 契约 §2.1 对齐）：
+    - `NavHost`：场景切换 + 输入路由（`current_scene`/`enter`/`advance`）
+    - `RenderHost`：帧缓冲/字形（`shell`/`shell_mut`/`clear_frame`/`fill_rect`/`draw_text`）
+    - `SpriteHost`：精灵/地形渲染（`blit_scene_sprites`/`draw_terrain`/`terrain_grid_w`/`terrain_camera`/`has_terrain_atlas`）
+    - `MenuHost`：主菜单状态（`menu_selected`/`set_menu_selected`/`reset_selection`/`open_help`/`request_quit`）
+    - `SelectionHost`：角色/地图选择状态（`character`/`set_character`/`map_slot`/`set_map_slot`/`selection`/`selection_mut`/`map_unlocked`/`enter_main_map`）
+    - `MapHost`：主地图状态（`map_pos`/`set_map_pos`/`map_terrain`/`map_landmarks`/`map_session_move`/`map_session_dispatch`/`set_last_dispatch`/`start_battle`/`open_message`）
+    - `EconomyHost`：金/价格/持有/银行/建筑（`gold`/`set_gold`/`price_of`/`owned_*`/`bank_*`/`build_increment`）
+    - `SessionHost`：会话/战斗/消息/存读档（`play_sfx`/`battle_step`/`battle_snapshot`/`msg_*`/`close_message`/`save_slots`/`write_save_slot`/`restore_save`/`in_map`/`in_battle`）
+    `SceneHost` 退化为 8 个子 trait 的空 supertrait 聚合（`dyn SceneHost` 经 supertrait 展开仍可访问全部方法）。
 
 ## 2. crate 现状（2026-10）
 

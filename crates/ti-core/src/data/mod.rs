@@ -27,6 +27,8 @@ use std::fmt;
 
 use serde::Deserialize;
 
+use crate::domain::combat::Unit;
+
 /// 平衡数值表（编译期内联，保证 wasm 不依赖运行时文件系统）。
 pub(crate) const BALANCE_JSON: &str = include_str!("../../../../assets/data/balance.json");
 /// 文本表（编译期内联）。
@@ -167,6 +169,8 @@ pub struct CombatCfg {
     pub player_first: bool,
     /// 回合数上限（兜底判胜负）。
     pub max_rounds: u32,
+    /// 玩家基础单位（`balance.combat.player`；`None` = 表无该段，调用方须显式传）。
+    pub player: Option<Unit>,
     /// 伤害模型。
     pub damage: DamageCfg,
     /// BOSS 档表。
@@ -394,7 +398,7 @@ impl Strings {
 // ------------------------------------------------------------------- scenes
 
 /// 一个矩形定位（`scenes.json` 中的 `{x, y[, w, h]}`）。
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
 pub struct Rect {
     /// 左上 x（逻辑坐标）。
     pub x: i32,
@@ -452,10 +456,12 @@ pub struct SceneLayout {
     pub list: ListLayout,
     /// 提示行。
     pub hint: Rect,
-    /// HUD（金/持有量）。
+    /// HUD（金/持有量；`main_map` 场景专用，`x`/`y` = 金文字位置，`w`/`h` 未用）。
     pub hud: Rect,
     /// 页码。
     pub page: Rect,
+    /// 场景专属额外矩形（`scenes.json` 各场景的 `player_hp`/`boss_hp`/`rounds`/`outcome`/`empty`/`body`/`locked` 等）。
+    pub extra: BTreeMap<String, Rect>,
 }
 
 // ------------------------------------------------------------------- 缓存入口
@@ -528,6 +534,7 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
         combat: CombatCfg {
             player_first: raw.combat.player_first,
             max_rounds: raw.combat.max_rounds,
+            player: raw.combat.player.map(|p| Unit { hp: p.hp, atk: p.atk }),
             damage: DamageCfg {
                 flat: raw.combat.damage.flat,
                 atk_coef: raw.combat.damage.atk_coef,

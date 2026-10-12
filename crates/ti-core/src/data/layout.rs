@@ -32,6 +32,14 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
     }
     let mut out = BTreeMap::new();
     for (id, r) in raw {
+        let extra = r
+            .extra
+            .iter()
+            .map(|(k, v)| {
+                let rect: Rect = serde_json::from_value(v.clone()).unwrap_or_default();
+                (k.clone(), rect)
+            })
+            .collect();
         out.insert(
             id.clone(),
             SceneLayout {
@@ -49,6 +57,7 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 hint: r.hint.map_or_else(Rect::default, Rect::from),
                 hud: r.hud.map_or_else(Rect::default, Rect::from),
                 page: r.page.map_or_else(Rect::default, Rect::from),
+                extra,
             },
         );
     }
@@ -68,6 +77,9 @@ struct RawScene {
     hud: Option<RectJson>,
     #[serde(default)]
     page: Option<RectJson>,
+    /// 场景专属额外矩形（`player_hp`/`boss_hp`/`rounds`/`outcome`/`empty`/`body`/`locked` 等）。
+    #[serde(flatten)]
+    extra: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Deserialize, Default)]

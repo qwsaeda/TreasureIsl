@@ -195,9 +195,19 @@ pub async fn run() {
     game.render();
     game.shell_mut().last_rendered = Some(game.shell().selected);
 
+    // P0-7：帧计时（与 native 壳同机制，驱动多帧精灵动画推进）
+    let mut prev_now_ms: u64 = 0;
+
     loop {
         // 视口先跟随窗口尺寸（letterbox / pillarbox，P4-2）
         game.shell_mut().refit(screen_width(), screen_height());
+
+        // P0-7：算本帧耗时并喂给 GameApp（驱动多帧精灵动画帧推进）
+        let now_ms = (macroquad::time::get_time().max(0.0) * 1000.0) as u64;
+        let delta = now_ms.saturating_sub(prev_now_ms);
+        prev_now_ms = now_ms;
+        let frame_delta_ms = u32::try_from(delta).unwrap_or(16).clamp(1, 250);
+        game.set_frame_delta_ms(frame_delta_ms);
 
         // 触屏输入 → GameApp.poll_touch → 场景跳转
         let (mx, my) = mouse_position();

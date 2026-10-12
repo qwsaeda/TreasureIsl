@@ -205,6 +205,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
         combat: CombatCfg {
             player_first: true,
             max_rounds: 10,
+            player: None,
             damage: DamageCfg { flat: 1, atk_coef: 1.0, rng_span: 1 },
             boss_tiers: vec![BossTier { tier: 0, hp: 10, atk: 1 }],
         },

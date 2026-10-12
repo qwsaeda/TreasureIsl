@@ -332,22 +332,71 @@ fn touch_logical_roundtrip() {
     assert!((ry2 - ly2).abs() < 1e-2, "y 往返不一致：{ly2} → {ry2}");
 }
 
-/// 规则 8 `iso_touch_matches_move`：主地图点按与棋子移动同坐标系。
+/// 规则 8 `iso_touch_matches_move`：主地图点按命中格 == 渲染格（真实 `center_camera` 语义）。
 ///
-/// 点按坐标 → `iso_grid_cell_at` 命中格 → 与 `GridPos::iso_pos` 渲染公式同坐标系
-/// （命中格中心 = 渲染格中心，同一 `iso_x/iso_y` 公式）。
+/// 构造 7×7 网格的真实 `center_camera`（iso 包围盒中心对屏幕中心 88,110），
+/// 把渲染格点的屏幕像素喂给 `iso_grid_cell_at`，必须逆解回原格。
 #[test]
 fn iso_touch_matches_move() {
     use ti_core::domain::map::GridPos;
-    // 20×20 等距网格，摄像机中心 (0,0)（无地形资源时 host 返回 (0,0)）
-    let (row, col) = (3u32, 5u32);
-    let grid_w = 20u32;
-    let pos = GridPos::new(row, col);
-    // 域公式单一事实源：`iso_x = 32*(row+col)`，`iso_y = 16*(row+grid_w-1-col)`
-    let (ix, iy) = pos.iso_pos(grid_w);
-    #[allow(clippy::cast_precision_loss)] // 20×20 等距像素值远小于 f32 尾数，精度无损
-    let hit = layout::iso_grid_cell_at(ix as f32, iy as f32, grid_w, grid_w, (0, 0));
-    assert_eq!(hit, Some((row, col)), "iso_pos 像素应逆解回原格，实际 {hit:?}");
+    let grid_w = 7u32;
+    let grid_h = 7u32;
+    // 全格 iso 包围盒（与 terrain_atlas::center_camera 同公式）
+    let (mut min_x, mut max_x, mut min_y, mut max_y) = (i64::MAX, i64::MIN, i64::MAX, i64::MIN);
+    for r in 0..grid_h {
+        for c in 0..grid_w {
+            let (ix, iy) = GridPos::new(r, c).iso_pos(grid_w);
+            min_x = min_x.min(i64::from(ix));
+            max_x = max_x.max(i64::from(ix));
+            min_y = min_y.min(i64::from(iy));
+            max_y = max_y.max(i64::from(iy));
+        }
+    }
+    let cam = (88 - (min_x + max_x) / 2, 110 - (min_y + max_y) / 2);
+    let (row, col) = (3u32, 2u32);
+    let (ix, iy) = GridPos::new(row, col).iso_pos(grid_w);
+    // 渲染侧：瓦片格点 (ix,iy) + camera = 屏幕像素
+    let (sx, sy) = (i64::from(ix) + cam.0, i64::from(iy) + cam.1);
+    #[allow(clippy::cast_precision_loss)]
+    let hit = layout::iso_grid_cell_at(sx as f32, sy as f32, grid_w, grid_h, cam);
+    assert_eq!(hit, Some((row, col)), "center_camera 语义下渲染格点像素应逆解回原格，实际 {hit:?}");
+}
+
+/// EXP-067 跨层一致性：触摸命中格 == 渲染该格实际像素所在格（真实 center-camera + 矩形 grid）。
+///
+/// 渲染侧 `blit_map_cam` 把瓦片格点 `(iso_x+cam.0, iso_y+cam.1)` 画到屏幕；
+/// 触摸侧 `iso_grid_cell_at` 对该屏幕像素逆解，必须命中同一行格。
+/// 用 7×5 矩形网格（`grid_w` 不等于 `grid_h`）+ 真实 `center_camera` 公式，避免正方形退化。
+#[test]
+fn iso_touch_render_cross_layer() {
+    use ti_core::domain::map::GridPos;
+    let grid_w = 7u32;
+    let grid_h = 5u32;
+    let (mut min_x, mut max_x, mut min_y, mut max_y) = (i64::MAX, i64::MIN, i64::MAX, i64::MIN);
+    for r in 0..grid_h {
+        for c in 0..grid_w {
+            let (ix, iy) = GridPos::new(r, c).iso_pos(grid_w);
+            min_x = min_x.min(i64::from(ix));
+            max_x = max_x.max(i64::from(ix));
+            min_y = min_y.min(i64::from(iy));
+            max_y = max_y.max(i64::from(iy));
+        }
+    }
+    let cam = (88 - (min_x + max_x) / 2, 110 - (min_y + max_y) / 2);
+    for r in 0..grid_h {
+        for c in 0..grid_w {
+            let (ix, iy) = GridPos::new(r, c).iso_pos(grid_w);
+            let sx = i64::from(ix) + cam.0;
+            let sy = i64::from(iy) + cam.1;
+            #[allow(clippy::cast_precision_loss)]
+            let hit = layout::iso_grid_cell_at(sx as f32, sy as f32, grid_w, grid_h, cam);
+            assert_eq!(
+                hit,
+                Some((r, c)),
+                "格 ({r},{c}) 渲染像素 ({sx},{sy}) cam={cam:?} 逆解应回 ({r},{c})，实际 {hit:?}"
+            );
+        }
+    }
 }
 
 /// 规则 9 `gesture_threshold_split`：位移 <20 判点按、≥20 判滑动。

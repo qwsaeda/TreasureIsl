@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (16 items) ==="
+Write-Host "=== gate: TreasureIsl (17 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -140,6 +140,11 @@ Report ($LASTEXITCODE -eq 0) 'check_forward_closed (业务闭环：business 零�
 $modOut = & python scripts/check_module_contracts.py --check 2>&1
 $modOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)'
+
+# 17) 飞轮开轮必读脚本（EXP-070）：验证 scripts/flywheel_readme.ps1 能正常运行且输出完整
+$fwOut = & powershell -ExecutionPolicy Bypass -File "scripts/flywheel_readme.ps1" -Check -Quiet 2>&1
+$fwOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'flywheel-readme (开轮必读脚本完整性)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

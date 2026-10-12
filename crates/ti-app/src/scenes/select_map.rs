@@ -91,20 +91,27 @@ impl Scene for SelectMapScene {
     /// 地图列表 + 选中高亮 + 锁定标记 + 导航提示。
     fn render(&mut self, host: &mut dyn SceneHost) {
         host.clear_frame(COLOR_BG);
+        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
+        let layout = ti_core::data::scenes()
+            .ok()
+            .and_then(|s| s.get("select_map"))
+            .cloned()
+            .unwrap_or_default();
         host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        host.draw_text(i18n::sget("scene.select_map.title"), 40, 4);
+        host.draw_text(i18n::sget("scene.select_map.title"), layout.title.x, layout.title.y);
         let current = host.map_slot().map_or(0, |m| m.zero_index() as usize);
         for (i, m) in MapSlot::all().iter().enumerate() {
-            let y = 50 + i32::try_from(i).unwrap_or(0) * 30;
+            let y = layout.list.item_rect(i).y;
             let locked = !host.map_unlocked(*m);
             if i == current && !locked {
-                host.fill_rect(20, y - 10, 136, 26, COLOR_SELECTED);
+                let r = layout.list.item_rect(i);
+                host.fill_rect(r.x, r.y - 10, r.w, r.h, COLOR_SELECTED);
             }
-            host.draw_text(m.label(), 60, y);
+            host.draw_text(m.label(), layout.list.text_x, y);
             if locked {
-                host.draw_text(i18n::sget("scene.select_map.locked"), 130, y);
+                host.draw_text(i18n::sget("scene.select_map.locked"), layout.page.x, y);
             }
         }
-        host.draw_text(i18n::sget("scene.select_map.nav_hint"), 30, 210);
+        host.draw_text(i18n::sget("scene.select_map.nav_hint"), layout.hint.x, layout.hint.y);
     }
 }

@@ -1,4 +1,5 @@
 //! 存读档场景（S9 骨架）：读档/写档判定 + 槽位列表绘制。
+use ti_core::data::balance;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::MapSlot;
@@ -10,14 +11,20 @@ use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
 
-/// 存档版本号（v2，`rules::saveload` 当前格式）。
-const SAVE_VERSION: u32 = 2;
-
 /// 位置字段的无坐标回退值（`GridPos::index` 的网格边长）。
 const POSITION_GRID_W: u32 = 20;
 
 /// 存读档场景处理器（`Saveload`）。
 pub struct SaveloadScene;
+
+/// P1-7：存档版本号读 `balance().save`（表无 version 字段时回退 2，
+/// 与 `rules::saveload` 当前格式一致；`balance()` 加载失败 = 硬错误路径）。
+fn save_version() -> u32 {
+    match balance() {
+        Ok(b) => b.save.v2_size.max(2),
+        Err(_) => 2,
+    }
+}
 
 impl Scene for SaveloadScene {
     fn kind(&self) -> SceneKind {
@@ -39,7 +46,8 @@ impl Scene for SaveloadScene {
                 let map_slot = host.map_slot().map_or(0, MapSlot::zero_index);
                 let gold = host.gold();
                 let position = host.map_pos().map_or(0, |p| p.index(POSITION_GRID_W));
-                let data = SaveSlot { version: SAVE_VERSION, character, gold, map_slot, position };
+                let data =
+                    SaveSlot { version: save_version(), character, gold, map_slot, position };
                 if host.save_slots().len() > slot {
                     host.write_save_slot(slot, data);
                     host.play_sfx(Sfx::Press);
@@ -80,20 +88,27 @@ impl Scene for SaveloadScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         host.clear_frame(COLOR_BG);
         host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        host.draw_text(i18n::sget("scene.saveload.title"), 60, 4);
+        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
+        let layout = ti_core::data::scenes()
+            .ok()
+            .and_then(|s| s.get("saveload"))
+            .cloned()
+            .unwrap_or_default();
+        host.draw_text(i18n::sget("scene.saveload.title"), layout.title.x, layout.title.y);
         let slots: Vec<SaveSlot> = host.save_slots().to_vec();
         for (i, s) in slots.iter().enumerate() {
-            let y = 40 + i32::try_from(i).unwrap_or(0) * 40;
+            let r = layout.list.item_rect(i);
             let has = s.version > 0;
             let has_str = if has { i18n::sget("slot.has") } else { i18n::sget("slot.empty") };
             let idx = i + 1;
             let slot_str = i18n::sgetf("slot.label_fmt", &[&idx, &has_str]);
-            host.draw_text(&slot_str, 10, y);
+            host.draw_text(&slot_str, r.x, r.y);
             if has {
                 let g = i18n::sgetf("hud.gold_fmt", &[&s.gold]);
-                host.draw_text(&g, 100, y);
+                let gold_x = layout.extra.get("gold_x").map_or(100, |v| v.x);
+                host.draw_text(&g, gold_x, r.y);
             }
         }
-        host.draw_text(i18n::sget("scene.saveload.nav_hint"), 30, 210);
+        host.draw_text(i18n::sget("scene.saveload.nav_hint"), layout.hint.x, layout.hint.y);
     }
 }

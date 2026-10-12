@@ -1,0 +1,23 @@
+﻿=== 飞轮基础设施自检（EXP-068）=== 2026-10-13
+
+## doccheck2 .（8 项全过）
+doccheck2: 0 error(s) across 8 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback)
+
+## cargo test --workspace
+全绿（exit=0，无 FAIL）
+
+## cargo clippy --workspace --all-targets -- -D warnings
+0 warning（exit=0）
+
+## oracle 边界
+crates/ 内 6 处 oracle 字样均非函数调用：
+  - crates/ti-core/src/lib.rs / domain/mod.rs：module 文档注释（oracle 桥接层说明）
+  - crates/ti-core/tests/{reference_diff_main_loop,save_migration}.rs：tests 内 oracle 参照（gate 第 11 项 check_oracle_boundary 允许 tests 参照，shell 层 0 调用）
+  - crates/ti-formats/src/save.rs：模块注释提及
+  - crates/ti-tools/src/bin/doccheck2.rs：第 8 项断言自身检查 oracle 关键词（文档层，非调用）
+
+## 结论
+第 8 项断言 check_flywheel_readback 生效（8 项 0 error）；既有 7 项未动。
+新增文件：docs/process/06_flywheel.md；改：05_module_parallel.md §4.5、03_templates.md §7、doccheck2.rs、
+docs/experience/{process.md(EXP-068), index.md(EXP-067/068 登记)}、docs/README.md（登记 06_flywheel）。
+

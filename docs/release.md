@@ -187,3 +187,4 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全�?
 - 产物 sha256 记录�?`evidence/S4.4.log` �?`evidence/S5.4.log`
 
+

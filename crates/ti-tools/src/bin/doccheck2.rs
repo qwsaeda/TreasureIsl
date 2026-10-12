@@ -23,6 +23,21 @@
 //! 6. **release.md 门禁项数漂移**：`docs/release.md` 里凡出现「N 项门禁」的行，
 //!    N 必须 == `scripts/gate.ps1` 实际 `Report`/`Skip` 的项数。
 //!
+//! 7. **P3-3 headless bin API 一致性**：`treasure_headless.rs` 对 `BattleView` 的
+//!    访问方式必须与 `game_app.rs` 中 `BattleView` 真实定义一致（field vs method）。
+//! 8. **飞轮回读（EXP-068）**：开轮必读清单 + 规范回执的文档固化检查：
+//!    `05_module_parallel.md` 须含「开轮必读」并引用 `06_flywheel`；
+//!    `03_templates.md` §7 任务书模版须含「开轮必读 + 回执」段；
+//!    `06_flywheel.md` 须存在且含「开轮必读清单」「飞轮回写」「停机条件」三关键词；
+//!    `docs/experience/index.md` 须登记 EXP-068。
+//!
+//! 9. **战斗玩家数值数据驱动（EXP-066 闭环）**：`game_app.rs` 的 `start_battle`
+//!    不得写死 `Unit { hp: 1000, atk: 150 }`，须读 `balance().combat.player`。
+//!
+//! 10. **飞轮开轮必读脚本（EXP-070）**：`scripts/flywheel_readme.ps1` 存在、
+//!     `gate.ps1` 含 `flywheel_readme` 关键词、`06_flywheel.md` 含「开轮必读脚本化」、
+//!     `docs/experience/index.md` 含 `EXP-070`。
+//!
 //! 用法：`cargo run -q -p ti-tools -- doccheck2 [repo_root]`（缺省 `repo_root = "."`）。
 
 use std::collections::BTreeSet;
@@ -408,6 +423,104 @@ fn check_headless_battle_api(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 8. 飞轮回读（EXP-068）：开轮必读清单 + 规范回执的文档固化检查。
+///    - `05_module_parallel.md` 须含「开轮必读」关键词 + 引用 `06_flywheel`；
+///    - `03_templates.md` §7 任务书模版须含「开轮必读 + 回执」段；
+///    - `06_flywheel.md` 须存在且含「开轮必读清单」「飞轮回写」「停机条件」；
+///    - `docs/experience/index.md` 须登记 EXP-068。
+fn check_flywheel_readback(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let parallel = read_file(root, "docs/process/05_module_parallel.md").unwrap_or_default();
+    if !parallel.contains("开轮必读") {
+        errors.push(
+            "05_module_parallel.md 缺少「开轮必读」关键词（EXP-068 飞轮增强，见 06_flywheel §开轮必读）"
+                .to_string(),
+        );
+    }
+    if !parallel.contains("06_flywheel") {
+        errors.push("05_module_parallel.md 未引用 06_flywheel（开轮必读单一事实源）".to_string());
+    }
+    let templates = read_file(root, "docs/process/03_templates.md").unwrap_or_default();
+    if !templates.contains("开轮必读") || !templates.contains("规范回执") {
+        errors.push(
+            "03_templates.md §7 任务书模版缺少「开轮必读 + 回执」段（EXP-068 飞轮增强）"
+                .to_string(),
+        );
+    }
+    match read_file(root, "docs/process/06_flywheel.md") {
+        None => {
+            errors
+                .push("docs/process/06_flywheel.md 不存在（飞轮单一事实源，EXP-068）".to_string());
+        }
+        Some(flywheel) => {
+            for kw in ["开轮必读清单", "飞轮回写", "停机条件"] {
+                if !flywheel.contains(kw) {
+                    errors.push(format!("06_flywheel.md 缺少关键词「{kw}」（EXP-068 飞轮增强）"));
+                }
+            }
+        }
+    }
+    let exp_index = read_file(root, "docs/experience/index.md").unwrap_or_default();
+    if !exp_index.contains("EXP-068") {
+        errors.push("docs/experience/index.md 未登记 EXP-068（飞轮回读）".to_string());
+    }
+    errors
+}
+
+/// 9. 战斗玩家数值数据驱动（EXP-066 闭环）：`game_app.rs` 的 `start_battle`
+///    不得写死 `Unit { hp: 1000, atk: 150 }`，须读 `balance().combat.player`。
+///    机械判据：`game_app.rs` 里 `start_battle` 函数体须含 `balance().combat.player`
+///    或 `combat.player` 引用（P0-1 修复后闭环验证，防再次回归）。
+fn check_battle_player_data_driven(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(game_app) = read_file(root, "crates/ti-app/src/game_app.rs") else {
+        return vec!["game_app.rs 不存在，无法校验战斗玩家数值数据驱动".to_string()];
+    };
+    let Some(sb_start) = game_app.find("fn start_battle") else {
+        return vec!["game_app.rs 缺少 `fn start_battle`".to_string()];
+    };
+    // 取 start_battle 函数体（到下一个 `}` 闭合为止，简化取 300 字符窗口，按 char 边界截取）
+    let raw_end = (sb_start + 300).min(game_app.len());
+    // 回退到合法 char 边界（floor_char_boundary 需 Rust 1.91，MSRV 1.85 故手动回退）
+    let mut end = raw_end;
+    while end > sb_start && !game_app.is_char_boundary(end) {
+        end -= 1;
+    }
+    let body = &game_app[sb_start..end];
+    if !body.contains("combat.player") {
+        errors.push(
+            "game_app.rs start_battle 未读 balance.combat.player（EXP-066 未闭环，战斗玩家数值写死）"
+                .to_string(),
+        );
+    }
+    errors
+}
+
+/// 10. 飞轮开轮必读脚本（EXP-070）：`scripts/flywheel_readme.ps1` 存在、
+///     `gate.ps1` 含 `flywheel_readme` 关键词、`06_flywheel.md` 含「开轮必读脚本化」、
+///     `docs/experience/index.md` 含 `EXP-070`。
+fn check_flywheel_script(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let script_path = root.join("scripts/flywheel_readme.ps1");
+    if !script_path.exists() {
+        errors.push("scripts/flywheel_readme.ps1 不存在（EXP-070 开轮必读脚本化）".to_string());
+    }
+    let gate = read_file(root, "scripts/gate.ps1").unwrap_or_default();
+    if !gate.contains("flywheel_readme") {
+        errors
+            .push("gate.ps1 未含 flywheel_readme 关键词（EXP-070 gate 第 17 项缺失）".to_string());
+    }
+    let flywheel = read_file(root, "docs/process/06_flywheel.md").unwrap_or_default();
+    if !flywheel.contains("开轮必读脚本化") {
+        errors.push("06_flywheel.md 缺少「开轮必读脚本化」节（EXP-070）".to_string());
+    }
+    let exp_index = read_file(root, "docs/experience/index.md").unwrap_or_default();
+    if !exp_index.contains("EXP-070") {
+        errors.push("docs/experience/index.md 未登记 EXP-070（开轮必读脚本化）".to_string());
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -420,9 +533,12 @@ fn main() -> ExitCode {
     all_errors.extend(check_i18n_orphans(&root));
     all_errors.extend(check_gate_item_count(&root));
     all_errors.extend(check_headless_battle_api(&root));
+    all_errors.extend(check_flywheel_readback(&root));
+    all_errors.extend(check_battle_player_data_driven(&root));
+    all_errors.extend(check_flywheel_script(&root));
 
     println!(
-        "doccheck2: {} error(s) across 7 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api)",
+        "doccheck2: {} error(s) across 10 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script)",
         all_errors.len()
     );
     for err in &all_errors {

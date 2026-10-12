@@ -285,6 +285,20 @@ if __name__ == "__main__":
 - docs/process/03_templates.md §4（玩法模块模版）/ §5（测试模版）
 - docs/style.md §5（Rust 规范）
 
+## 开轮必读（下发方列清单，子代理逐条回执 —— 06_flywheel §开轮必读）
+- [ ] docs/process/00_index.md + docs/business/00_index.md
+- [ ] docs/process/01_architecture.md + 02_conventions.md
+- [ ] docs/contracts/00_index.md + <涉及契约 c1/c2/c3>
+- [ ] docs/experience/index.md（重点读 <本包域> 相关 EXP）
+- [ ] scripts/gate.ps1 项清单 + doccheck2 断言清单
+- [ ] 在途并行包白名单：<本轮 P 包清单 + 文件域>
+
+## 规范回执（子代理回报必填）
+- 已读：<逐条>
+- 命中现行规范：<条数 + 哪几条>
+- 读到本包域相关 EXP：<EXP-xxx>
+- 未读/读不了：<原因>
+
 ## 禁区（违反即打回）
 1. 跨包 import（只许契约里的公共类型）
 2. 写死数值/中文面量（进 balance.json / strings.json）

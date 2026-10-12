@@ -68,19 +68,48 @@ impl Shell {
         ) {
             game.set_terrain(&pak, &map_bytes, "glmapm01.Map");
         }
-        // S7.5/S8.9：HD PNG 档（`assets_hd_pack/1x/`）。`load_hd_pack_from_dir` 仅
-        // native 宿主可编译（`std::fs` 目录枚举）；wasm32 目标缺失该能力，走 RGB565
-        // PCX 回退（不 panic）。
-        #[cfg(all(feature = "hd-8bit", not(target_arch = "wasm32")))]
+        // P2-8：HD PNG 档（`assets_hd_pack/1x/`）。wasm 端走 `macroquad::file::load_file`
+        // （HTTP fetch / 文件系统），不再用 `std::fs` 目录枚举（native 专用路径）。
+        #[cfg(feature = "hd-8bit")]
         {
-            let hd_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .and_then(std::path::Path::parent)
-                .map_or_else(std::path::PathBuf::from, std::path::PathBuf::from)
-                .join("assets_hd_pack")
-                .join("1x");
-            if hd_dir.is_dir() {
-                game.load_hd_pack_from_dir(&hd_dir);
+            // 静态 f1（`NN_hd.png`，116 个）+ 多帧 f1（`NN_hd_f0..f4.png`）
+            let statics: [u32; 116] = [
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+                25, 26, 27, 28, 29, 30, 33, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+                49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+                70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
+                91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108,
+                109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
+            ];
+            let mut mapping: Vec<(u32, Vec<Vec<u8>>)> = Vec::new();
+            for f1 in statics {
+                let name = format!("assets_hd_pack/1x/ui/{f1}_hd.png");
+                if let Ok(bytes) = macroquad::file::load_file(&name).await {
+                    if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                        if img.rgba.iter().any(|&b| b > 0) {
+                            mapping.push((f1, vec![bytes]));
+                        }
+                    }
+                }
+            }
+            for f1 in [14u32, 31, 32, 37] {
+                let mut frames: Vec<Vec<u8>> = Vec::new();
+                for k in 0..5u32 {
+                    let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{k}.png");
+                    if let Ok(bytes) = macroquad::file::load_file(&name).await {
+                        if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                            if img.rgba.iter().any(|&b| b > 0) {
+                                frames.push(bytes);
+                            }
+                        }
+                    }
+                }
+                if !frames.is_empty() {
+                    mapping.push((f1, frames));
+                }
+            }
+            if !mapping.is_empty() {
+                game.load_hd_pngs(mapping);
             }
         }
         let map_names = [

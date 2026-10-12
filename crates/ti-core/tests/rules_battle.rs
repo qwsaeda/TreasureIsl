@@ -27,6 +27,7 @@ fn test_cfg() -> CombatCfg {
     CombatCfg {
         player_first: true,
         max_rounds: 30,
+        player: None,
         damage: DamageCfg { flat: 1, atk_coef: 1.0, rng_span: 3 },
         boss_tiers: vec![BossTier { tier: 0, hp: 50_000, atk: 10 }],
     }
@@ -35,7 +36,7 @@ fn test_cfg() -> CombatCfg {
 #[test]
 fn session_from_balance_new_and_step() {
     let player = Unit { hp: 100, atk: 10 };
-    let mut s = BattleSession::from_balance(1, player, 0);
+    let mut s = BattleSession::from_balance(1, player, 0).expect("balance.json 有效");
     assert_eq!(s.boss_hp(), 50_000, "BOSS 档 0 初 HP 走 balance.combat");
     assert_eq!(s.round(), 0);
     assert_eq!(s.outcome(), None);
@@ -116,8 +117,8 @@ fn combat_max_rounds_tiebreak() {
 fn combat_same_seed_same_result_from_balance() {
     // 走 `from_balance`（真实 `balance.combat`）验证同 seed 同结果
     let player = Unit { hp: 500, atk: 40 };
-    let mut a = BattleSession::from_balance(7, player, 1);
-    let mut b = BattleSession::from_balance(7, player, 1);
+    let mut a = BattleSession::from_balance(7, player, 1).expect("balance.json 有效");
+    let mut b = BattleSession::from_balance(7, player, 1).expect("balance.json 有效");
     assert_eq!(a.finish(), b.finish(), "from_balance 同 seed 同结果");
 }
 
@@ -168,7 +169,7 @@ fn combat_boss_first_when_disabled() {
 #[test]
 fn combat_invalid_tier_rejected() {
     let player = Unit { hp: 100, atk: 10 };
-    let mut s = BattleSession::from_balance(0, player, 99);
+    let mut s = BattleSession::from_balance(0, player, 99).expect("balance.json 有效");
     assert_eq!(s.boss_hp(), 0, "越界档 → 无效战斗（BOSS 无 HP）");
     assert_eq!(s.outcome(), Some(Side::Player), "无效战斗判玩家胜（无 BOSS 可打）");
     let (trace, winner, rounds) = s.finish();
@@ -203,11 +204,11 @@ fn combat_boss_tiers_from_balance() {
     let expect_boss_hp: &[u32] = &[50_000, 100_000, 150_000, 200_000, 300_000];
     for (tier, &init) in expect_boss_hp.iter().enumerate() {
         let tier_u32 = u32::try_from(tier).unwrap_or(u32::MAX);
-        let s = BattleSession::from_balance(0, player, tier_u32);
+        let s = BattleSession::from_balance(0, player, tier_u32).expect("balance.json 有效");
         assert_eq!(s.boss_hp(), init, "档 {tier} 初 HP 走 balance.combat.boss_tiers[{tier}]");
         assert_eq!(s.outcome(), None, "合法档 → 正常开打");
     }
-    let invalid = BattleSession::from_balance(0, player, 5);
+    let invalid = BattleSession::from_balance(0, player, 5).expect("balance.json 有效");
     assert_eq!(invalid.boss_hp(), 0, "档 5 越界 → 无效战斗");
     assert_eq!(invalid.outcome(), Some(Side::Player), "越界档判玩家胜（无 BOSS 可打）");
 }

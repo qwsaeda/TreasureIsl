@@ -40,23 +40,10 @@ pub struct BattleSession {
     outcome: Option<Side>,
 }
 
-/// 从 `balance.combat` 读战斗参数（数值单一事实源；加载失败时回退 [`fallback_cfg`]
-/// 显式默认档 0，不 panic、不静默假数据，门禁红线）。
-fn load_cfg() -> CombatCfg {
-    match data::balance() {
-        Ok(b) => b.combat.clone(),
-        Err(_) => fallback_cfg(),
-    }
-}
-
-/// 整表改坏时的回退战斗参数（显式默认，非静默假数据；BOSS 档 0 同 `balance.json`）。
-fn fallback_cfg() -> CombatCfg {
-    CombatCfg {
-        player_first: true,
-        max_rounds: 30,
-        damage: DamageCfg { flat: 1, atk_coef: 1.0, rng_span: 3 },
-        boss_tiers: vec![crate::data::BossTier { tier: 0, hp: 50_000, atk: 10 }],
-    }
+/// 从 `balance.combat` 读战斗参数（数值单一事实源；加载失败时**硬错误**，
+/// 不 fallback，`docs/process/02_conventions.md` §4.4 数据失败=硬错误）。
+fn load_cfg() -> Result<CombatCfg, data::LoadError> {
+    Ok(data::balance()?.combat.clone())
 }
 
 /// 伤害结算（`docs/business/combat.md`）：`round(atk * atk_coef) + rng_offset`，下限 `flat`。
@@ -84,9 +71,19 @@ impl BattleSession {
     /// `boss_tier` 越界（`cfg.boss_tier(tier)` → `None`）→ `enemy_hp = 0`，会话立即
     /// `outcome = Some(Player)`、`round = 0`（无效战斗，与 `docs/business/combat.md`
     /// 「越界 tier ⇒ 无效战斗」一致，可回归测）。
-    #[must_use]
-    pub fn from_balance(seed: u32, player: Unit, boss_tier: u32) -> Self {
-        Self::new_with_cfg(load_cfg(), seed, player, boss_tier)
+    ///
+    /// `balance()` 加载失败返回 `Err`（硬错误，不 fallback，`02_conventions.md` §4.4）。
+    ///
+    /// # Errors
+    ///
+    /// [`crate::data::LoadError`]：`balance.json` 缺失 / 解析失败。
+    pub fn from_balance(
+        seed: u32,
+        player: Unit,
+        boss_tier: u32,
+    ) -> Result<Self, crate::data::LoadError> {
+        let cfg = load_cfg()?;
+        Ok(Self::new_with_cfg(cfg, seed, player, boss_tier))
     }
 
     /// 显式 `CombatCfg` 注入（测试 / 自定义战斗参数，不读 `balance`）。
