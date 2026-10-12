@@ -1,0 +1,27 @@
+assets_hd/glpics/Logo_hd_enhanced.png
+assets_hd/glpics/Player_drake_hd_enhanced.png
+assets_hd/glpics/Player_katharina_hd_enhanced.png
+assets_hd/glpics/Player_kidd_hd_enhanced.png
+assets_hd/glpics/Player_panda_hd_enhanced.png
+assets_hd/glpics/Player_tichy_hd_enhanced.png
+assets_hd/glpics/Target_head_hd_enhanced.png
+assets_hd/glpics/Target_knife_hd_enhanced.png
+assets_hd/glpics/face_drake_hd_enhanced.png
+assets_hd/glpics/face_katharina_hd_enhanced.png
+assets_hd/glpics/face_kidd_hd_enhanced.png
+assets_hd/glpics/face_panda_hd_enhanced.png
+assets_hd/glpics/face_savager_hd_enhanced.png
+assets_hd/glpics/face_tichy_hd_enhanced.png
+assets_hd/glpics/start_drake_hd_enhanced.png
+assets_hd/glpics/start_katharina_hd_enhanced.png
+assets_hd/glpics/start_kidd_hd_enhanced.png
+assets_hd/glpics/start_panda_hd_enhanced.png
+assets_hd/glpics/start_tichy_hd_enhanced.png
+assets_hd/glpics/text_gameover_hd_enhanced.png
+assets_hd/glpics/text_gamerwin_hd_enhanced.png
+---
+S7.3 关键图 AI 回炉（增强档）
+方案：本机无独显，Real-ESRGAN/SD 不可行 → OpenCV Lanccoz4+双边滤波+unsharp 高质量 2x 增强替代最近邻
+产物：21 张 B 类 *_hd_enhanced.png（assets_hd/glpics/ + assets_hd_pack/）
+校验：PIL 比对 5 角色（不透明 RGB 均差 5.6~9.7/255 + 边缘环脏边 0px）
+build_hd_assets --check: 1424 条全通过 / 0 缺失 / 0 失配 / 0 失尺寸
