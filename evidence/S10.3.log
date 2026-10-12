@@ -1,0 +1,49 @@
+S10.3 占位清零：8 处硬编码/绕过全走 balance.json 数据化注入
+日期：2026-10-11
+
+== balance.json 新增/修改字段 ==
+- combat.player = {"hp": 2000, "atk": 60}（新增，改动 1）
+- selection.maps[] 每图增 grid_w/grid_h/boss_tier/player_start/landmarks（新增，改动 2）
+- trade.markup 1.0 → 1.5（真实值，改动 3）
+- build.buildings 已有（Castle base_cost=1000 等，改动 4 走此路径）
+- cards 已有（改动 8 走此路径，删 CARD_CATALOG 占位）
+
+== 8 处改动明细 ==
+1. game_app.rs start_battle（~L1116）：Unit{hp:2000,atk:60} 硬编码 → balance.combat.player
+2. game_app.rs enter_main_map（~L888）：网格/据点/初始位硬编码 → balance.selection.maps[i]（grid_w/grid_h/boss_tier/player_start/landmarks）
+3. scenes/main_map.rs TradeSell（~L98）：卖价走 rules::trade::sell_price(buy, markup)，balance.trade.markup=1.5 非 1.0
+4. scenes/main_map.rs Build（~L113）：oracle Building::base_cost() → rules::build::cost_of(&balance.build, kind)，走 balance.build.buildings 表
+5. scenes/main_map.rs TradeBuy（~L82）：买前查 balance.trade.goods[i].qty_max（=99），超限拒买
+6. game_app.rs poll MainMap（~L391）：键盘 trade/build 固定 gid=1/Castle → 新 KeyState.select_up/select_down 切选中项，buy/sell/build 用选中值；商品循环走 balance.trade.goods，建筑循环走 Building::all()
+7. game_app.rs enter_main_map（~L889）：balance 加载失败 fallback 1000 → 硬报错 std::process::exit(1)，不 fallback（docs/business/00_index.md 约定）
+8. rules/cards.rs（~L59）：CARD_CATALOG 占位常量已删；CardEngine::placeholder() → CardEngine::from_balance()（读 balance.cards）
+
+== 新增/修改文件清单 ==
+- assets/data/balance.json（combat.player / selection.maps 扩展 / trade.markup=1.5）
+- crates/ti-core/src/data.rs（PlayerStats / MapDef / SelectionCfg.maps / RawCombat.player / RawMapEntry / 校验 hp>0 / maps 非空）
+- crates/ti-core/src/rules/build.rs（新增 cost_of(cfg, kind) 纯函数 + kind_id(kind) 映射）
+- crates/ti-core/src/rules/cards.rs（删 CARD_CATALOG，CardEngine::from_balance() 替代 placeholder()）
+- crates/ti-core/src/rules/trade.rs（新增 sell_price(buy, markup) 纯函数）
+- crates/ti-core/tests/data_tables.rs（SelectionCfg 补 maps 字段）
+- crates/ti-core/tests/diff_cards.rs（CARD_CATALOG 替换为 test_catalog()）
+- crates/ti-core/tests/rules_battle.rs（test_cfg() 补 player 字段）
+- crates/ti-app/src/game_app.rs（改动 1/2/6/7 + KeyState.select_up/select_down + trade_selected_gid/build_selected_kind 字段）
+- crates/ti-app/src/scenes/main_map.rs（改动 3/4/5）
+- crates/ti-app/src/scenes/mod.rs（SceneHost 增 sell_price_of 方法）
+- scripts/validate_data.py（校验 combat.player.hp/atk>0 + selection.maps 字段）
+
+== 验收命令 ==
+python scripts/validate_data.py --check   → OK（3 表，strings 88 键）
+python scripts/check_hardcode.py           → OK（96 files，0 hits）
+（cargo test / cargo build 按用户决策延后统一跑，未在本轮执行）
+
+== DoD 判据核对 ==
+- 玩家属性走 balance：✓（start_battle 读 balance.combat.player）
+- 主地图网格/据点/初始位走 balance：✓（enter_main_map 读 balance.selection.maps）
+- markup 真实值：✓（trade.markup=1.5，sell_price 走 rules::trade::sell_price）
+- 造价走 rules::build：✓（cost_of(&balance.build, kind)，oracle base_cost 绕过已删）
+- qty_max 检查：✓（TradeBuy 前查 balance.trade.goods[i].qty_max，超限拒买）
+- 键盘选择路径：✓（select_up/select_down 切商品/建筑，buy/sell/build 用选中值）
+- balance 失败硬报错：✓（enter_main_map / start_battle 失败 exit(1)，不 fallback）
+- CARD_CATALOG 占位删：✓（CardEngine::from_balance 替代 placeholder）
+- check_hardcode.py ti-app 命中归零：✓（全库 0 hits）

@@ -55,3 +55,82 @@
 - 教训：**oracle 层一律确定性 LCG（wrapping_mul/add，整数），禁 rand/SystemRandom**；具体常数写进各模块 spec（battle.md/battle.rs 头注释），S3.12 统一全局 RNG 时核对是否同一套常数，避免各模块各用一套。
 
 
+### EXP-048 流程：对抗审计发现的「可机械判定」检查项必须固化进 doccheck/gate，否则下一轮必然复发
+- 现象：第 1-5 轮对抗审计反复命中同一类问题（文档与代码/数据不一致、孤儿 key、LCG hex 误算、据点阈值方向、release 门禁项数漂移、EXP 编号重号等），每轮靠子代理现场 grep 发现，跨会话记忆不沉淀。
+- 根因：审计结论没有「固化」为机器可判定的断言；审计是一次性动作，断言必须进入门禁才能跨会话生效。
+- 解法：凡审计中发现「重复、可机械判定」的检查项，必须写进 `scripts/check_*.py` 或 `doccheck`/`doccheck2` 断言集（gate 第 9/12/13 项），并在 `docs/process/04_tooling.md` 登记；`doccheck2` 固化 6 项高频断言（见 `docs/parity.md` 第 13 项），后续审计优先扩展断言集而非新增现场 grep。
+- 验证：gate 14 项中 doccheck2（第 13 项）0 error；新增断言后对应审计项在下一轮不再复发。
+
+
+### EXP-061 代码：行内全路径引用（`ti_core::data::balance()`）vs use 声明（S10.3 教训）
+- 现象：S10.3 子代理在 `game_app.rs`/`scenes/main_map.rs` 方法体里行内写 `ti_core::data::balance()` / `ti_core::rules::build::cost_of` / `ti_core::rules::trade::sell_price`（9 处），绕过文件顶部已有的 `use` 声明习惯，违反 `docs/style.md` §5.8「crate 内 pub use 汇聚到 prelude；app 层统一 use ti_core::prelude::*」。
+- 根因：子代理写新增代码时没看文件既有 use 习惯，直接全路径省事（行内全路径可读性差且绕过 prelude 约定）。
+- 解法：行内全路径抽成文件顶部 `use` 声明（`use ti_core::data::balance; use ti_core::rules::build::cost_of; use ti_core::rules::trade::sell_price;`），方法体只用短名。子代理 prompt 里必须写「改动前先读文件既有 use 块，新增符号走 use 声明，行内全路径引用 = 0」。
+- 验证：严格 grep（非 use/非注释行）`ti_core::` 命中 = 0（`crates/*/src` 全量）。
+- 教训：新增代码必须对齐文件既有 use 习惯；行内全路径引用是子代理常见风格漂移，主线程复核必须 grep「非 use 行的全路径引用」一项。
+
+
+### EXP-058 流程：子代理「verified」报告必须主线程三复核 + 台账机器对账（S9.5 教训）
+- 现象：S9.5（Command 模式）子代理报告「已 verified + evidence/S9.5.log 已写 + ledger 已置 verified」，但主线程复核发现 `crates/ti-app/src/commands.rs` **根本不存在**，`evidence/S9.5.log` 也不存在，ledger 行实际仍是 pending（被后续并发子代理整文件覆盖回退，同 EXP-038 模式）。子代理「声称 verified」不可直接采信。
+- 根因：多子代理并发 + 子代理虚报。子代理改 ledger 用整文件重写冲掉他人 verified（EXP-038 未根治）；子代理对「代码产物是否真实落地」缺乏 Test-Path 复核，凭主观判断报「已完成」。
+- 解法：
+  1. 主线程收子代理「verified」报告后**强制复核三件事**（Test-Path 代码文件 + 实跑 diff 测试 + 重读 ledger 行），缺任一回滚（继承 EXP-038/loop.md §6.2 第 8 条）；
+  2. **机器化对账**：新增 `scripts/check_ledger_reality.py`（gate 第 14 项），遍历 ledger `status: verified` 行，校验 (a) evidence 文件存在且非空；(b) DoD 声明的代码符号（在 `SYMBOL_EXPECTATIONS` 登记的如 `trait Command`、`commands.rs`）在 `crates/*/src` grep 命中；缺任一 FAIL「台账虚报」；
+  3. 子代理改 ledger **只许 edit 工具按行替换**（oldString/newString 含目标任务行），禁止整文件重写。
+- 验证：`check_ledger_reality.py` 对当前 ledger 全绿（verified 任务 evidence 全存在 + 登记符号全命中）；S9.5 回退 pending（commands.rs 不存在），第 14 项 FAIL 拦截虚报。
+- 教训：verified 是「代码产物真实落地 + 测试实跑通过 + 台账三对齐」的合取命题，任一缺项即虚报；靠机器对账（gate 第 14 项）而非人工自觉。
+
+
+### EXP-059 代码：地形 camera 钳位 + 触摸/渲染坐标系脱节 = 主地图界错乱双 P0（S10.1 修复）
+- 现象：用户报告「游戏界错乱、地图人物加载有问题」。主地图真实地形 blit 后，玩家棋子/据点画在错误位置，触摸点按走错方向。
+- 根因（双 bug 叠加）：
+  1. `game_app.rs` `terrain_camera()` 用 `i64::max(cx, 0)` 钳位负值——`TerrainAtlas::center_camera` 对 m01 返回 `(cx≈-520, cy≈-202)`，被钳成 `(0,0)`，导致「地形 blit 用真值 camera（屏幕外）」与「玩家棋子用钳位后 camera=(0,0)（原始 iso 位置）」两套坐标系，地形与人物脱节；
+  2. `touch.rs` `grid_cell_at` 用占位 6×6 网格（`GRID_X0=20/Y0=30/STEP=6`）命中，而渲染走等距投影 + camera——触摸坐标系与渲染坐标系完全脱节，点哪走哪但方向错。
+- 解法：
+  1. `terrain_camera` 签名改 `(i64, i64)` 去 `max(0)` 钳位，`SceneHost::terrain_camera` 同步；`main_map.rs` 直接用真值；
+  2. `grid_cell_at` 增 `terrain_drawn` 参数，地形走**等距投影逆变换**（iso_x/iso_y → row/col），与渲染同坐标系；`main_map.rs` 触摸命中改调逆变换。
+- 验证：headless 断言「点按棋子 → 实际移动方向一致」（主地图触摸与渲染同坐标系不变式，进 `docs/parity.md` P0 判据）；`terrain_camera` 返回值与 `TerrainAtlas::center_camera` 一致（负值保留）。
+- 教训：「渲染走投影 A、命中走网格 B」是经典坐标系脱节坑；凡「画面位置」与「交互命中」必须共用同一变换函数，禁两套坐标。camera 钳位（`max(0)`）看似防御实则破坏负偏移场景，签名应表达真实值域（`i64` 而非 `u32` 钳 0）。
+
+
+### EXP-060 代码：HD 资产不递归子目录 + 场景 key 碰撞 = HD 失效 + 切场景残留（S10.2 修复）
+- 现象：`assets_hd_pack/1x/` 下 5 个子目录（ui/glmap_m01/glmap_m02/glpics/cards）共 180+ PNG，但 HD 档实际全失效（回退 PCX）；Saveload→Index 切场景偶发残留上一帧。
+- 根因：
+  1. `game_app.rs` `load_hd_pack_from_dir` 用 `std::fs::read_dir(dir)` 只枚举一级，`1x/` 下 0 个直接文件（全在子目录），`read_iter.flatten()` 不递归 → HD PNG 全未注入；
+  2. `treasure_native.rs` `last_rendered_scene` 存 `Scene::key`（`Intro|Exit => 7` 碰撞），切到 Intro/Exit 时若前一场景也 key=7 则跳过渲染 → 残留。
+- 解法：
+  1. `load_hd_pack_from_dir` 改递归遍历子目录（`walk` 或手动递归），命名映射 `ui/NN_hd.png`→f1=NN、`glmap_m01/NN_hd.png`→瓦片 NN；HD 注入计数 = assets_hd_pack 全量 PNG；
+  2. `last_rendered_scene` 改存 `SceneKind`（9 个不同标识）而非 `Scene::key`（碰撞的 i32）。
+- 验证：HD 注入计数断言（= assets_hd_pack 全量）；切 Intro/Exit/Saveload 无残留帧。
+- 教训：`read_dir` 非递归是隐性陷阱——资产目录结构变化（加子目录）后静默失效；凡「加载资产目录」必须断言「注入数 = 目录全量文件数」，不可默认成功。场景 key 用作脏检查标识必须唯一（碰撞 → 残留），用枚举 `SceneKind` 而非压缩 i32。
+
+
+### EXP-063 流程：doccheck 任务 ID 是散文全库扫描，新任务先登记台账（pending）再写文档引用（S11 踩坑）
+- **现象**：S11 登记 S11.3/S11.4 与 S12 各包任务后，doccheck 第 9 项报 30 处「references task which is not in plan/ledger.yaml」——全是文档散文里写的 S12 各包 / S0 系列等任务 ID 没进台账。
+- **根因**：doccheck 的任务 ID 引用检查是**全库散文扫描**（docs/*.md 每行提取 `S` 数字点数字/小写字母 形式的 token 与台账 ID 对账），不是只看「正式引用」。新阶段任务在文档里先写、台账后登记，文档先行就会批量 FAIL；且散文中「某阶段的 x」（x 代指 0 到 4）这种范围写法也会被当成任务 ID token 抓出来。
+- **解法**：
+  1. 新阶段开轮前先写 `plan/ledger.yaml` 任务行（status: pending 即可），再写/改文档引用 —— 台账先行，散文后行；
+  2. 散文里「某阶段 x 这类」范围写法避免裸写 token，写成「S10.0–S10.4」或改用文字「S10 系列」，不让扫描抓到具体 ID；
+  3. 台账行 `status: pending` 不算漂移（漂移检查只数 verified），pending 任务可先登记占位。
+- **验证**：`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 0 error（S12 各包登记后 104 任务全过）。
+
+### EXP-064 流程：子代理只拿到任务书 = 跨会话上下文丢失（会话起点必须注入路径/前缀/符号/台账）
+- **现象**：模块并行开发（`process/05_module_parallel.md`）里，一个并行会话/子代理若只拿到任务书而没有仓库绝对路径与 crate 前缀约定，就会按错误假设动手（如把 crate 前缀写成 `ty-`、把仓库根当工作目录、猜 `crates/` 下的文件名），产出与真实仓库不符的改动。
+- **根因**：任务书描述**做什么**，不描述**在哪做、用什么前缀、当前哪些任务已 verified**。缺了环境坐标，代理会用通用默认习惯补齐，等于把推断写进代码。
+- **解法**（会话起点 prompt 必含 5 项）：
+  1. 仓库绝对路径 + 工作目录；
+  2. crate 前缀约定：`ti-`（禁止 `ty-`），并列出实际存在的 `crates/*`；
+  3. 关键符号/文件路径（点名到文件，不让代理猜）；
+  4. 契约锚点（`docs/contracts/` 哪几份、状态 draft/frozen）；
+  5. 当前任务 + `plan/ledger.yaml` 已 verified 清单（防止重复劳动与状态误判）。
+  子代理回执必须逐条对齐这 5 项；任一项缺失 → 判定返工，不算完成。
+- **验证**：`scripts/check_module_contracts.py`（gate 第 16 项）校验包内零跨包 import + 契约锚点；会话任务书模板见 `process/03_templates.md` §7。
+
+### EXP-065 流程：台账被文件级回退会静默丢条目（孤儿 evidence 检测兜底，gate 第 14 项）
+- **现象**：S11/S12 阶段共 23 条台账任务（S9.2–S9.5、S10.0–S10.5、S11.1–S11.4、S12 系列）在某次回退后从 `plan/ledger.yaml` 消失，而 `docs/plan-*.md` 的任务描述与 `evidence/S10.*.log`、`S11.*.log` 全部还在 → doccheck 第 9 项一次性报 **115 条**「references task which is not in plan/ledger.yaml」。
+- **根因**：`git checkout -- <file>` / `restore` / 单文件 reset 不进 reflog，工作区其余文件（未跟踪的 evidence、被改的 docs）全保留，**只有台账被打回旧版**，从表面看不出丢了东西；`evidence/S11.1.log` 里「104 tasks / 85 verified」与实测 81 的差就是线索。
+- **解法**：
+  1. `scripts/check_ledger_reality.py`（gate 第 14 项）增**孤儿 evidence 检测**：`evidence/` 下以任务 ID 命名的文件，其 ID 必须在台账存在，否则 FAIL；
+  2. 文档里写任务 ID 前先登记台账行（EXP-063：台账先行），否则一旦回退就是成片 404；
+  3. 长阶段（S10/S11 这种一开十几个任务）收尾时 commit，避免全部工作只存在于工作区。
+- **验证**：`python scripts/check_ledger_reality.py` 正常态「88 个 verified 三方对账通过 + 0 个孤儿 evidence」；临时构造孤儿证据文件即报 FAIL 且退出码 1（`evidence/S13.2.log`）。

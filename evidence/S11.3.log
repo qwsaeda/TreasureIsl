@@ -1,0 +1,28 @@
+﻿=== S11.3 验收快照（模块化并行 loop 固化）===
+docs/process/05_module_parallel.md (一轮 4 步 + 包划分 + 纪律 5 条) 已落地
+docs/process/03_templates.md §7 任务书模板已落地
+docs/loop.md §7 并行轮入口已登记
+
+=== gate: TreasureIsl (16 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+  PASS  ledger validate
+  PASS  doccheck (docs consistency)
+  PASS  validate_data (assets/data/*.json)
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+  PASS  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+=== gate: 0 failure(s) ===

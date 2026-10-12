@@ -1,0 +1,45 @@
+S10.0 标准修正与防虚报 验收日志
+================================
+执行日期: 2026-10-11
+执行人: 主线程（S10 飞轮阶段 0）
+
+## 0.1 台账回退 + S10 登记（plan/ledger.yaml）
+- S9.5 加 blocked_by: s10-flywheel-stage-0（维持 pending，commands.rs 不存在，子代理虚报回退，EXP-058）
+- 新增 S10.0-S10.5 六任务（S10.1-S10.4 pending，S10.5 对抗流水线）
+- S2.5 evidence 字段清理括号说明（check_ledger_reality 误伤修复）
+
+## 0.2 门禁第 14 项（scripts/check_ledger_reality.py + gate.ps1）
+- 新脚本 check_ledger_reality.py：遍历 ledger status: verified 行，校验
+  (a) evidence 文件存在且非空（支持 + 多文件）
+  (b) DoD 声明的代码符号（SYMBOL_EXPECTATIONS 登记，如 S9.5 的 trait Command/commands.rs）在 crates/*/src grep 命中
+  缺任一 FAIL 台账虚报
+- gate.ps1 增第 14 项调用，标题 13 项改 14 项
+- 实跑输出:
+check_ledger_reality: 全绿（80 个 verified 任务三方对账通过）
+
+## 0.3 经验回写（docs/experience/process.md + code.md + index.md）
+- 新 EXP-058：子代理 verified 必须 Test-Path + 实跑复核 + 三方对账（S9.5 commands.rs 虚报教训）
+- 新 EXP-059：地形 camera 钳位 + 触摸/渲染坐标系脱节 = 主地图界错乱双 P0（S10.1）
+- 新 EXP-060：HD 不递归 + 场景 key 碰撞 = HD 失效 + 切场景残留（S10.2）
+- index.md 分卷表条数更新（process 8→11, code 12→14），全量索引增 3 行
+
+## 0.4 标准入档
+- docs/modernization.md §1：渲染目标改 GPU 逐精灵 batch + TTF 字形，176×220 CPU blit 降级为 legacy-render feature
+- docs/parity.md：P0-5（触摸/渲染同坐标系）+ P0-6（HD 递归注入 100%）+ P4-4（GPU 观感）+ gate 14 项 + S10 停机条件
+- docs/style.md §5.6.5：GPU 渲染约定（atlas + batch + alpha blend + TTF）
+- docs/plan-s10-refactor.md：S10 计划全文（阶段 0-4 + 风险对策）
+- docs/README.md：登记 plan-s10-refactor.md
+- docs/process/04_tooling.md：登记 check_ledger_reality.py + gate 第 14 项
+
+## 判据自检
+- gate.ps1 第 14 项落地: yes（check_ledger_reality.py 实跑全绿 80 verified 任务三方对账通过）
+- S9.5 回退 pending: yes（blocked_by: s10-flywheel-stage-0）
+- docs/experience 新 EXP 条: yes（EXP-058/059/060）
+- modernization.md GPU 渲染目标: yes
+- parity.md 触摸/渲染同坐标系 + HD 递归注入判据: yes（P0-5/P0-6）
+- style.md §5.6 GPU 渲染约定: yes
+
+## 备注
+- 全程未编译（用户决策：代码全改完再测）；check_ledger_reality.py 为纯 Python 脚本（零第三方依赖），
+  直接 python 实跑验证（非 cargo 编译），全绿。
+- gate.ps1 第 14 项当前可独立 python 跑通；完整 gate 14 项需 cargo（下轮编译验证）。

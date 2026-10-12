@@ -181,8 +181,8 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 
 ## 验收
 
-- `scripts/gate.ps1` 全绿 + doccheck 独立第 9 项（`cargo run -q -p ti-tools --bin doccheck`）+ doccheck2 独立第 13 项（双 agent 审计固化断言，`cargo run -q -p ti-tools --bin doccheck2 .`）通过（S5.4 时点 8 项门禁，gate 6 PASS + 2 SKIP：android target 未装 S2.6 / verify.rs 未落地；当前为 13 项，见 parity.md）
-- `plan/ledger.yaml` 80 任务：77 verified + 0 in_progress + 1 pending + 2 blocked（台账计数随 S8 演进，doccheck 断言锁定防漂移）（S2.6 / S7.7）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `scripts/gate.ps1` 全绿 + doccheck 独立第 9 项（`cargo run -q -p ti-tools --bin doccheck`）+ doccheck2 独立第 13 项（双 agent 审计固化断言，`cargo run -q -p ti-tools --bin doccheck2 .`）+ 台账三方对账独立第 14 项（`python scripts/check_ledger_reality.py`，S10.0 增）+ 业务闭环断言第 15 项（`python scripts/check_forward_closed.py --check`，S11 增）+ 模块并行前置第 16 项（`python scripts/check_module_contracts.py --check`，S11.4 增）通过（S5.4 时点 8 项门禁；当前 16 项，见 parity.md）
+- `plan/ledger.yaml` 105 任务（88 verified；台账计数随 S8–S13 演进，doccheck 断言锁定防漂移）（S2.6 / S7.7）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`

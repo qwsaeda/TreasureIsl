@@ -28,10 +28,10 @@
 |---|---|---|
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 15 |
 | [`reverse.md`](reverse.md) | 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程 | 4 |
-| [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 10 |
-| [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 9 |
-| [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约 | 8 |
-| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本 | 11 |
+| [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 9 |
+| [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
+| [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065） | 14 |
+| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059） | 14 |
 
 ## 条目索引
 
@@ -86,7 +86,7 @@
 | EXP-046 | build | | 大依赖（opus-pure）feature 门控 + 单一路径：默认 wasm/native 不含 OGG 编码器 |
 | EXP-047 | build | | 手工 `Mesh`+`draw_mesh` 弱引用纹理在 native macroquad 不渲染 → 黑屏；EXP-045 验证只查 stats 漏了像素输出 |
 | EXP-048 | process | | 对抗审计发现的「可机械判定」检查项必须固化进 doccheck/gate，否则下一轮必然复发 |
- | EXP-048 | build | | macroquad `flip_y` 必须端侧固定（native 不翻 / wasm 翻），禁止因「画面反了」反复改 |
+ | EXP-062 | build | | macroquad `flip_y` 必须端侧固定（native 不翻 / wasm 翻），禁止因「画面反了」反复改（S5/S6 实测，Q053 重号修正：原误标 EXP-058，与 process 卷「子代理虚报」条撞号，另立 EXP-062） |
  | EXP-049 | formats | | 容器条目 key 的业务名由三级反查权威源提供，禁止裸哈希命名（S6.5 实测） |
  | EXP-050 | tools | | CJK 路径下 cargo `env!("CARGO_MANIFEST_DIR")` 损坏，bin 定位 repo 根优先 `current_dir()` |
 | EXP-051 | code | | PowerShell `Set-Content` 重写会破坏 UTF-8 源码（CJK 乱码+换行合并），改源码禁用 PS 文本替换 |
@@ -96,6 +96,13 @@
 | EXP-055 | code | | `pub const` 表禁调非 const fn（E0015）；i18n 用「常量存 key + 运行时 sget 解析」 |
 | EXP-056 | resources | | 多帧精灵 HD PNG 分帧命名（NN_hd_fK.png），Rust 侧须按帧列表注入（S7.5 实测） |
 | EXP-057 | code | | 门禁脚本判 oracle 须区分「类型重导出=允许」vs「oracle_* 函数调用=禁」（check_oracle_boundary，S8.8） |
+| EXP-058 | process | | 子代理报「已 verified」必须 Test-Path + 实跑复核；台账 verified ↔ evidence ↔ 代码符号三方对账（S9.5 commands.rs 虚报教训，`check_ledger_reality` 第 14 项） |
+| EXP-059 | code | | 地形 camera 钳位负值 + 触摸/渲染坐标系脱节 = 主地图界错乱双 P0（`terrain_camera` 去 `max(0)` 钳位，`grid_cell_at` 走等距投影逆变换，S10.1） |
+| EXP-060 | process | | HD 资产不递归子目录 + 场景 key 碰撞 = HD 全失效 + 切场景残留（`read_dir` 非递归陷阱，注入数须断言=目录全量，S10.2） |
+| EXP-061 | code | | 行内全路径引用（`ti_core::data::balance()`）vs use 声明——子代理风格漂移，改动前读既有 use 块，行内全路径=0（S10.3 教训） |
+| EXP-063 | process | | doccheck 任务 ID 检查是散文全库扫描：新阶段任务先登记 `plan/ledger.yaml`（pending 即可）再写文档引用；散文范围写法「某阶段 x」会被当 token 抓，写「S10 系列」或逐个编号（S11 登记 S12 WBS 踩坑） |
+| EXP-064 | process | | 子代理只拿到任务书 = 跨会话上下文丢失：会话起点 prompt 必注入仓库绝对路径 + crate 前缀 `ti-`（非 `ty-`）+ 关键符号路径 + 契约锚点 + 当前任务与已 verified 清单，回执逐条对齐否则返工（模块并行 loop 纪律） |
+| EXP-065 | process | | 台账被文件级回退（`git checkout -- <file>`/restore 不进 reflog）会静默丢任务条目：23 条丢失 → doccheck 第 9 项 115 error；兜底 = gate 第 14 项「孤儿 evidence 检测」（`evidence/` 里任务 ID 命名的文件其 ID 必须在台账）+ 长阶段收尾即 commit |
 
 ## 条目格式（写新条时照抄）
 

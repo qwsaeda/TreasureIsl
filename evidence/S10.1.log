@@ -1,0 +1,37 @@
+S10.1 P0 错乱修复：地形 camera 钳位 + 触摸等距逆变换
+========================================================
+
+改动摘要（2026-10-11，EXP-059 修复）
+
+1. crates/ti-app/src/game_app.rs L901-907
+   - terrain_camera() 签名 (u32,u32) → (i64,i64)
+   - 去掉 i64::max(cx,0)/i64::max(cy,0) 钳位，直接返回
+     TerrainAtlas::center_camera 真值（可能为负，对应 m01 画布偏移）
+   - 新增 has_terrain_atlas() -> bool（terrain_atlas.is_some()）
+
+2. crates/ti-app/src/scenes/mod.rs L394-398
+   - SceneHost::terrain_camera 签名同步改 (i64,i64)
+   - 新增 SceneHost::has_terrain_atlas 方法
+
+3. crates/ti-app/src/touch.rs L184-231（layout 模块）
+   - grid_cell_at doc 注释标明「占位 6×6 网格」，逻辑不变
+   - 新增 iso_grid_cell_at(x, y, grid_w, grid_h, camera)：
+     等距投影逆变换（与 terrain_atlas.rs iso_x/iso_y 同坐标系）：
+       px = x - cam_x; py = y - cam_y
+       s = px/48 + py/16 - xh; d = px/48 - py/16 - xh; xh = gw-1
+       row = round((s-d)/2); col = round((s+d)/2)
+     越界/负值返回 None
+
+4. crates/ti-app/src/scenes/main_map.rs L136-155, L187
+   - on_touch Tap 分支：host.has_terrain_atlas() 为真时走
+     iso_grid_cell_at（与渲染同坐标系），否则维持 grid_cell_at 占位
+   - render 注释标注 terrain_camera 真值可能为负
+
+DOD 判据对照：
+- terrain_camera 签名 (i64,i64) 去钳位 ✓（game_app.rs L901）
+- touch.rs 触摸命中走等距投影逆变换 ✓（iso_grid_cell_at，main_map.rs L148）
+- 占位网格回退路径不变 ✓（has_terrain_atlas()=false 时仍用 grid_cell_at）
+- headless 断言 / cargo test -p ti-app：本任务约束禁止编译（用户决策：代码全改完再测），
+  留给 S10.1 门禁验证轮（gate.ps1）实跑后回填
+
+涉及文件 git diff 自查：4 文件改动范围均在本任务 3 处改动点内，无越界。

@@ -1,0 +1,52 @@
+S9.4 Builder 模式 + Type-State 场景转换
+========================================
+
+改动摘要
+--------
+
+文件：crates/ti-app/src/game_app.rs
+  - GameApp 字段私有化（34 个 pub → private，与 S9.3 同步落地）
+  - BattleView 字段私有化（7 个 pub → private）
+  - BattleView 新增 7 个访问器：player()/boss_tier()/session()/rounds()/player_hp()/boss_hp()/outcome()
+  - GameApp 新增访问器：set_gold/price_table/map_session/rng/set_unlocked_maps/selection/scene_cache/frame_delta_ms/last_dispatch/battle_won
+  - GameApp::builder() 入口 + GameAppBuilder 结构体（upload_mode/scale_mode/orientation 三字段，链式 with_* + build）
+  - GameApp::new / with_upload_mode 委托 builder（消除内联大初始化）
+
+文件：crates/ti-app/src/scenes/mod.rs
+  - 新增 use std::marker::PhantomData
+  - 新增 pub struct SceneTransition<From, To>（_from/_to: PhantomData）
+  - 新增 pub mod markers（9 个零大小标记枚举：Intro/Index/SelectRole/SelectMap/MainMap/Vs/Message/Saveload/Exit）
+  - 新增 19 个合法转换 impl 块（与 docs/gamebook.md §2 跳转规则 + scenes/*.rs 实际跳转一一对应）：
+    Intro→Index;
+    Index→SelectRole|Saveload|Message|Exit;
+    SelectRole→SelectMap|MainMap|Index;
+    SelectMap→MainMap|SelectRole;
+    MainMap→Vs|Message|Index;
+    Vs→Index;
+    Message→MainMap|Index;
+    Saveload→Index|MainMap|SelectRole
+  - 非法转换（如 SelectRole→Vs、MainMap→Saveload）无 impl 块，编译期报错
+  - 修复：删除悬空 pub use self::transition::{SceneTransition, markers}（transition 子模块不存在，类型实际定义在 mod.rs 内联）
+
+文件：crates/ti-app/src/lib.rs
+  - pub use scenes 列表追加 markers、SceneTransition 导出
+
+文件：crates/ti-app/src/bin/treasure_headless.rs
+  - b.rounds/b.player_hp/b.boss_hp/b.outcome 字段直读 → 访问器调用
+
+文件：crates/ti-app/tests/render_parity.rs
+  - app.shell.render()/app.shell.fb/&mut app.shell → shell_mut() 访问器
+
+验收判据核对
+------------
+1. GameApp::builder() 链式构造：GameAppBuilder::with_scale_mode/with_orientation/with_upload_mode + build(screen_w, screen_h)，现有 new/with_upload_mode 委托 builder，调用点 0 改动。
+2. SceneTransition<From, To> Type-State：PhantomData 参数化，19 个 impl 块逐一对应合法跳转；compile_fail 文档示例证明非法转换编译期报错。
+3. 保持现有功能不变：bin/tests 仅按私有化同步改访问器，行为路径（poll/handle/render/poll_touch/enter_main_map/close_message/restore_save）未改。
+
+验证（grep/审查）
+------------------
+- crates/ti-app 内 SceneTransition/markers 无残留 self::transition 引用
+- e2e_playthrough.rs / game_app_flow.rs 全部经公共访问器（scene()/gold()/bank()/battle() 等）访问，无直接私有字段访问
+- bin/treasure_headless.rs 战斗进度打印已改访问器
+- render_parity.rs 三处 shell 直读已改 shell_mut()
+- 编译验证按任务约束未在本轮实跑（后续由 gate 13 项闭环）

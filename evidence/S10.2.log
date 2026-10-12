@@ -1,0 +1,55 @@
+S10.2 HD 递归加载 + 场景 key 碰撞 + 字体缺口处理
+=====================================================
+日期: 2026-10-11
+状态: 代码改完，未编译（用户决策：代码全改完再测）
+
+一、改动 1: game_app.rs load_hd_pack_from_dir 递归化
+------------------------------------------------------
+文件: crates/ti-app/src/game_app.rs L731-789
+根因: 原代码 std::fs::read_dir(dir) 只枚举一级目录。
+      assets_hd_pack/1x/ 下 0 个直接文件，全在子目录
+      (ui/, glmap_m01/, glmap_m02/, glpics/, cards/)，
+      read_iter.flatten() 不递归 → HD 全失效。
+修法: 新增 fn collect_pngs 内部递归函数（DFS），
+      逐层 read_dir，遇子目录递归，遇 PNG 文件解析
+      f1/frame 注入。不引入 walkdir 依赖（std 手动递归）。
+      新增 png_count 计数器（P0-6 判据：HD 注入计数
+      = assets_hd_pack/1x/ 全量可解码 PNG 数）。
+影响面: 仅 native 宿主（wasm32 不编译此函数）。
+
+二、改动 2: 场景 key 碰撞修复
+------------------------------------------------------
+文件: crates/ti-app/src/scenes/mod.rs L127-143
+      crates/ti-app/src/bin/treasure_native.rs L355
+      crates/ti-app/src/bin/treasure_wasm.rs L288
+      crates/ti-app/src/android_shell.rs L214
+根因: Scene::key() 中 Intro|Exit => 7 碰撞。切到 Intro
+      或 Exit 时若前一场景也 key=7 则跳过渲染 → 残留。
+修法: 新增 SceneKind::discriminant() 返回 0..=8 唯一
+      i32（9 个变体各占一个），替代 Scene::key()。
+      三个壳层调用点改用 SceneKind::from_legacy(scene)
+      .discriminant()。
+影响面: 三个壳层（native/wasm/android）+ scenes/mod.rs。
+      不改 MenuShell.last_rendered_scene 字段类型
+      （仍为 Option<i32>，只是值域从 0..=7 扩到 0..=8）。
+
+三、改动 3: 字体 14 字缺口临时占位
+------------------------------------------------------
+文件: assets/data/strings.json
+根因: font.dat 字符集缺 14 个 CJK 字符（主/伏/按/槽/浪/
+      珠/继/续/绸/翻/触/锁/闭/页），i18n::sget 返回的
+      文案全豆腐块。
+临时修法: strings.json 把命中缺口字的文案改成不含缺口字的
+      表达（不碰代码，只改文案）：
+      主地图→地图, 伏击→进攻, 风浪→风暴, 丝绸→丝线,
+      珍珠→宝石, 继续游戏→载入游戏, 触发→发生, 翻页→切部,
+      关闭→退出, 选槽→选位, 解锁→开, 面板→信息
+      （面板/面板第1页 含 损 U+677F 也缺，改为 信息）
+备注: 此为临时占位，S10.4 TTF 正式替代后恢复原文案。
+验证: python 脚本确认 strings.json 全部 CJK 字符均在
+      font.dat 字符集内（0 缺失）。
+
+四、未改文件说明
+------------------------------------------------------
+- menu_shell.rs: 未改（last_rendered_scene 类型不变）
+- 未编译: 用户决策，代码全改完再测

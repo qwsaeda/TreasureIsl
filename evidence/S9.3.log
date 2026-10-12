@@ -1,0 +1,118 @@
+S9.3 BattleView/GameApp 字段私有化 + 访问器
+=============================================
+
+改动摘要
+--------
+
+文件：crates/ti-app/src/game_app.rs
+
+BattleView 字段私有化（7 个 pub → private）：
+  - player: Unit → private
+  - boss_tier: u32 → private
+  - session: BattleSession → private
+  - rounds: u32 → private
+  - player_hp: u32 → private
+  - boss_hp: u32 → private
+  - outcome: Option<Side> → private
+
+BattleView 新增访问器（7 个）：
+  - player() -> &Unit
+  - boss_tier() -> u32
+  - session() -> &BattleSession
+  - rounds() -> u32
+  - player_hp() -> u32
+  - boss_hp() -> u32
+  - outcome() -> Option<Side>
+
+GameApp 字段私有化（34 个 pub → private）：
+  shell, scenes, scene, menu_selected, character, map_slot,
+  current_boss_tier, unlocked_maps, selection, map_terrain,
+  map_pos, map_landmarks, gold, price_table, owned, bank,
+  map_session, buildings, battle, rng, rng_seed, msg_kind,
+  msg_page, msg_total, save_slots, last_sfx, battle_won, quit,
+  last_dispatch, atlas, scene_cache, terrain_atlas,
+  frame_delta_ms, terrain_map
+
+GameApp 新增访问器（8 个）：
+  - set_gold(value: u32)
+  - price_table() -> &PriceTable
+  - map_session() -> &MapSession
+  - rng() -> &GameRng
+  - set_unlocked_maps(maps: Vec<MapSlot>)
+  - selection() -> SelectionState
+  - scene_cache() -> &HashMap<&'static str, MapScene>
+  - frame_delta_ms() -> u32
+  - last_dispatch() -> Option<SceneTarget>
+  - battle_won() -> bool
+
+GameApp 已有访问器（无需新增）：
+  gold(), owned(), bank(), buildings(), battle(), rng_mut(),
+  scene(), character(), map_slot(), map_pos(), menu_selected(),
+  msg_page(), save_slots(), shell(), shell_mut(), last_sfx(),
+  should_quit(), set_atlas(), add_scene(), set_terrain(),
+  set_frame_delta_ms(), set_rng_seed(), poll(), poll_touch(),
+  handle(), render(), atlas_mut()
+
+外部代码更新：
+  - bin/treasure_headless.rs: b.rounds → b.rounds(),
+    b.player_hp → b.player_hp(), b.boss_hp → b.boss_hp(),
+    b.outcome → b.outcome()
+  - tests/render_parity.rs: app.shell.render() → app.shell_mut().render(),
+    app.shell.fb → app.shell_mut().fb, &mut app.shell → app.shell_mut()
+
+验证（grep 确认无遗漏直接字段访问）：
+  - scenes/ 中无对 GameApp/BattleView 私有字段的直接访问（均走 SceneHost trait）
+  - bin/ 中无对 GameApp/BattleView 私有字段的直接访问
+  - tests/ 中 render_parity.rs 已改用 shell_mut() 访问器
+  - tests/ 中 e2e_playthrough.rs / game_app_flow.rs 均通过公共访问器（app.scene()、app.gold() 等）访问，无直接字段访问
+  - game_app.rs 内部 self.xxx 访问保持不变（同一模块允许）
+
+S9.4 Builder 模式 + Type-State 场景转换
+========================================
+
+改动摘要
+--------
+
+文件：crates/ti-app/src/game_app.rs
+
+Builder 模式（字段数 34 > 3，必须用 Builder 构造）：
+  - GameAppBuilder { upload_mode, scale_mode, orientation }
+  - GameApp::builder() -> GameAppBuilder
+  - GameAppBuilder::new()（默认 Partial + Smooth + Portrait）
+  - GameAppBuilder::with_upload_mode(mode)
+  - GameAppBuilder::with_scale_mode(mode)
+  - GameAppBuilder::with_orientation(orientation)
+  - GameAppBuilder::build(screen_w, screen_h) -> GameApp
+  - GameApp::new() / GameApp::with_upload_mode() 均委托 builder
+
+使用示例：
+  let app = GameApp::builder()
+      .with_scale_mode(ScaleMode::Smooth)
+      .with_orientation(Orientation::Portrait)
+      .with_upload_mode(UploadMode::Partial)
+      .build(176.0, 220.0);
+
+文件：crates/ti-app/src/scenes/mod.rs
+
+Type-State 场景转换（编译期保证只有合法转换才能构造）：
+  - SceneTransition<From, To> { _from: PhantomData<From>, _to: PhantomData<To> }
+  - markers 模块：Intro, Index, SelectRole, SelectMap, MainMap, Vs, Message, Saveload, Exit
+  - 合法转换表（19 条，与 scenes/*.rs 实际跳转一一对应）：
+    Intro → Index
+    Index → SelectRole | Saveload | Message | Exit
+    SelectRole → SelectMap | MainMap | Index
+    SelectMap → MainMap | SelectRole
+    MainMap → Vs | Message | Index
+    Vs → Index
+    Message → MainMap | Index
+    Saveload → Index | MainMap | SelectRole
+  - 非法转换（如 SelectRole → Vs、MainMap → Saveload）无 impl 块，编译期报错
+
+文件：crates/ti-app/src/lib.rs
+  - pub use scenes::{markers, SceneTransition, ...} 导出
+
+验证（grep 确认）：
+  - scenes/mod.rs 中 19 个 impl 块覆盖全部合法转换
+  - 非法转换无 impl 块（如 SelectRole → Vs 编译报错）
+  - GameApp 全部 34 字段 private，外部通过访问器/Builder 访问
+  - 测试文件均通过公共 API 访问，无直接私有字段访问

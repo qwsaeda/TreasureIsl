@@ -1,0 +1,11 @@
+﻿S13.2 台账回退防护（孤儿 evidence 检测）验收
+执行：2026-10-12
+=== 1) 正例：正常态应全绿 ===
+check_ledger_reality: 全绿（88 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+exit_code=0
+=== 2) 负例：临时构造孤儿证据文件（台账无该任务）应 FAIL ===
+FAIL  [orphan] 孤儿 evidence `evidence/S99.9.log`：任务 `S99.9` 不在 plan/ledger.yaml（台账可能被文件级回退丢条目）
+exit_code=1（非 0 = 门禁可捕获）
+=== 3) 清理后复核 ===
+check_ledger_reality: 全绿（88 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+exit_code=0
