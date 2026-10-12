@@ -150,8 +150,8 @@ fn framebuf_matches_logical_resolution() {
     fb.clear(0x0000);
     assert_eq!(fb.as_slice().len(), FB_PIXELS, "帧缓冲 = 176×220");
     let mut app = GameApp::new(176.0, 220.0);
-    app.shell.render();
-    let pixels = app.shell.fb.as_slice();
+    app.shell_mut().render();
+    let pixels = app.shell_mut().fb.as_slice();
     assert_eq!(pixels[0], 0x01E0, "主菜单第 0 行 x=0 应为标题条色 0x01E0");
 }
 
@@ -163,6 +163,7 @@ fn data_dir() -> std::path::PathBuf {
         .parent()
         .and_then(std::path::Path::parent)
         .map_or_else(|| std::path::PathBuf::from("."), |p| p.to_path_buf())
+        .join("legacy")
         .join("data")
 }
 
@@ -315,7 +316,7 @@ fn render_sprite_region_matches_tiformats_baseline() {
     let scene =
         ti_formats::mapfile::MapScene::parse("index.Map", &scene_bytes).expect("场景 bytes 应合法");
     let mut app = GameApp::new(176.0, 220.0);
-    let app_shell = &mut app.shell;
+    let app_shell = app.shell_mut();
     app_shell.fb.clear(0x0000);
     atlas.blit_scene(&scene, &mut app_shell.fb);
 

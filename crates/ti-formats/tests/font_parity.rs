@@ -17,12 +17,14 @@ fn repo_root() -> PathBuf {
 }
 
 fn load_font() -> Font {
-    let raw = fs::read(repo_root().join("data").join("GoldLand.Fnt")).expect("字体存在");
+    let raw =
+        fs::read(repo_root().join("legacy").join("data").join("GoldLand.Fnt")).expect("字体存在");
     Font::parse("GoldLand.Fnt", &raw).expect("字体解析成功")
 }
 
 fn load_charset() -> Charset {
-    let raw = fs::read(repo_root().join("data").join("font.dat")).expect("font.dat 存在");
+    let raw =
+        fs::read(repo_root().join("legacy").join("data").join("font.dat")).expect("font.dat 存在");
     Charset::parse("font.dat", &raw).expect("字符集解析成功")
 }
 

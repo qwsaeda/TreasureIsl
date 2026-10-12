@@ -24,7 +24,7 @@ fn repo_root() -> PathBuf {
 }
 
 fn load(name: &str) -> Vec<u8> {
-    let path = repo_root().join("data").join(name);
+    let path = repo_root().join("legacy").join("data").join(name);
     fs::read(&path).expect("读取 data/glmapm0*.Map 失败")
 }
 

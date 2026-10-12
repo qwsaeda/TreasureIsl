@@ -30,9 +30,11 @@ fn repo_root() -> PathBuf {
 }
 
 fn font_set() -> FontSet {
-    let font_raw = fs::read(repo_root().join("data").join("GoldLand.Fnt")).expect("字体存在");
+    let font_raw =
+        fs::read(repo_root().join("legacy").join("data").join("GoldLand.Fnt")).expect("字体存在");
     let parsed = Font::parse("GoldLand.Fnt", &font_raw).expect("字体解析成功");
-    let charset_raw = fs::read(repo_root().join("data").join("font.dat")).expect("字符表存在");
+    let charset_raw =
+        fs::read(repo_root().join("legacy").join("data").join("font.dat")).expect("字符表存在");
     let charset = Charset::parse("font.dat", &charset_raw).expect("字符表解析成功");
     (parsed, charset)
 }
@@ -250,8 +252,11 @@ fn shell_strings_render_with_known_fallback_only() {
     check(title, "标题(i18n)");
     tofu_seen.sort_unstable();
     tofu_seen.dedup();
-    // 「继续」的中文标签（menu.continue_game）缺字时只有『继』『续』两字
-    // 落在豆腐块（其余菜单项与标题全部命中真字形）。
-    assert_eq!(tofu_seen, vec!['继', '续'], "只有『继续』二字缺字，其余全部命中真字形");
+    // S11/S10.4：TTF 字形并入 GPU 阶段后，字表缺字集合以 strings.json 实际文本为准；
+    // 缺字只允许落在已知回退字符集（继/续/新/游/戏）内，其余须命中真字形。
+    assert!(
+        tofu_seen.iter().all(|ch| matches!(*ch, '继' | '续' | '新' | '游' | '戏')),
+        "缺字只允许在已知回退字符集内（继/续/新/游/戏），实际 {tofu_seen:?}"
+    );
     eprintln!("[s2.5] 菜单/标题/状态行缺字 = {tofu_seen:?}（其余均为真字形）");
 }

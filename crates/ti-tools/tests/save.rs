@@ -15,8 +15,8 @@ fn repo_root() -> PathBuf {
 
 #[test]
 fn settings_dat_roundtrip() {
-    let raw =
-        std::fs::read(repo_root().join("data").join("settings.dat")).expect("settings.dat 存在");
+    let raw = std::fs::read(repo_root().join("legacy").join("data").join("settings.dat"))
+        .expect("settings.dat 存在");
     assert_eq!(raw, vec![0x5D, 0x4A, 0x71, 0x4A, 0x2E, 0x01, 0x01, 0x01], "F-304 字节");
     let s = Settings::parse("settings.dat", &raw).expect("解析成功");
     assert_eq!(s.to_bytes(), raw, "往返必须逐字节一致");

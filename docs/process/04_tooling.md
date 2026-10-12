@@ -33,6 +33,7 @@
 
 | `scripts/check_oracle_boundary.py` | S8 定位边界：shell 层（game_app/bins/scenes/widgets/i18n）禁 `oracle_*` 函数调用（oracle 仅 rules 内部参照物，类型重导出允许） | `--check` 违规即非 0（gate 第 11 项）；`--report` 列命中明细恒 0；幂等只读（EXP-054/EXP-057） |
 | `scripts/migrate_strings.py` | 把 `.rs` 中命中 `KEY_HINTS` 的中文字面量批量迁到 `strings.json` + 改写调用点为 `sget(key)` | `--report` 只列不写；`--apply` 幂等（已迁过的再跑零改动）；新增文案只需在 KEY_HINTS 加一条再重跑 |
+| `scripts/check_ledger_reality.py` | 台账三方对账（防虚报，S10.0）：ledger `status: verified` 行 ↔ evidence 文件（存在+非空，支持 `+` 多文件）↔ 代码符号（`SYMBOL_EXPECTATIONS` 登记的 DoD 产物在 `crates/*/src` grep）三方一致 | 全绿 0 退出码；任一虚报 FAIL 列命中（gate 第 14 项）；只读幂等；新增任务若 DoD 声明代码产物，往 `SYMBOL_EXPECTATIONS` 登记（EXP-058） |
 
 > **gate 项数**（2026-10 扩展，随对抗审计固化）：第 9 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
 > 第 10 项「数据表门禁」= `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（严格 0 命中）。
@@ -42,6 +43,7 @@
 > 数值/引用/一致性检查，**必须**固化成 `doccheck` 数值断言或 gate 脚本项，否则下一轮必然复发。
 > 例：2041/0x343FD/save.magic 三条断言即来自第 4-5 轮审计反复出现的跨文档漂移。
 > **gate 第 11 项** = `check_oracle_boundary.py --check`（S8.8：shell 层 0 个 `oracle_*` 函数调用；oracle 仅作 rules 内部类型/几何参照物，EXP-057）。
+> **gate 第 14 项** = `check_ledger_reality.py`（S10.0：台账 verified ↔ evidence ↔ 代码符号三方对账，防子代理虚报，EXP-058；S9.5 commands.rs 虚报教训）。
 
 ### 待建
 

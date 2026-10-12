@@ -9,7 +9,7 @@ treasure-island/
 ├── Cargo.toml              # [workspace] edition="2024"，[workspace.lints] 集中
 ├── rustfmt.toml            # 全局唯一格式化配置
 ├── clippy.toml
-├── scripts/gate.ps1        # 门禁（parity.md 13 项，PowerShell 本机执行）
+├── scripts/gate.ps1        # 门禁（parity.md 14 项，PowerShell 本机执行）
 ├── crates/
 │   ├── ti-formats/         # 纯二进制格式解析/序列化：pak/lpk/pcx/map/font/save
 │   │   └── src/{pak.rs, pcx.rs, map.rs, font.rs, save.rs, macros.rs, error.rs, ids.rs}
@@ -117,6 +117,95 @@ pub trait Rng    { fn next_u32(&mut self) -> u32; }                    // 注入
 pub trait Rules  { /* 贸易/战斗结算入口 */ }                          // 正式实现与 oracle 同 trait → diff_test!
 pub trait SaveCodec { fn encode(&self) -> Vec<u8>; }                   // v1/v2 各一实现
 ```
+
+### 5.6.1 接口隔离原则（SceneHost 拆分）
+
+**强制约束**：`SceneHost` 按职责拆分为窄接口，场景只依赖它需要的接口：
+
+| 窄接口 | 职责 | 方法数 |
+|---|---|---|
+| `SceneControl` | 场景切换 + 输入路由 | 3 |
+| `RenderHost` | 帧缓冲/字形/精灵/地形 | 7 |
+| `EconomyHost` | 金/价格/持有/银行/建筑 | ~12 |
+| `BattleHost` | 战斗推进/快照 | 2 |
+| `SelectionHost` | 角色/地图选择状态 | ~6 |
+| `MessageHost` | 消息分页 | ~6 |
+| `SaveHost` | 存读档 | 3 |
+| `MapHost` | 主地图状态 | ~6 |
+
+**规则**：
+1. 场景 struct 只声明它需要的窄接口（如 `IndexScene` 只依赖 `SceneControl` + `RenderHost`）；
+2. 新增方法必须归入已有窄接口，不得随意加到 `SceneControl`；
+3. 窄接口方法保持**一行读写**，不含业务判定。
+
+### 5.6.2 Builder 模式（复杂对象构造）
+
+**强制约束**：`GameApp` 等复杂对象必须用 Builder 模式构造：
+
+```rust
+let app = GameApp::builder()
+    .with_scale_mode(ScaleMode::Smooth)
+    .with_orientation(Orientation::Portrait)
+    .with_filter_mode(FilterMode::Nearest)
+    .with_hd_assets(true)
+    .build()?;
+```
+
+**规则**：
+1. 字段数 > 3 的 struct 必须用 Builder；
+2. Builder 方法返回 `Self`，支持链式调用；
+3. `build()` 返回 `Result<Self, Error>`，校验必填字段。
+
+### 5.6.3 Type-State 模式（场景转换编译期安全）
+
+**强制约束**：场景转换用 Type-State 保证编译期安全：
+
+```rust
+pub struct SceneTransition<From, To> {
+    _from: PhantomData<From>,
+    _to: PhantomData<To>,
+}
+
+// 只有合法转换才能编译
+impl SceneTransition<SelectMap, MainMap> {
+    pub fn new() -> Self { /* ... */ }
+}
+```
+
+**规则**：
+1. 场景转换必须用 Type-State 或编译期检查；
+2. 非法转换（如 `Intro → Vs`）必须在编译期报错。
+
+### 5.6.4 Command 模式（输入可序列化/重放）
+
+**强制约束**：输入用 Command 模式封装：
+
+```rust
+pub trait Command: Serialize + DeserializeOwned {
+    fn execute(&self, app: &mut GameApp) -> bool;
+    fn undo(&self, app: &mut GameApp) -> bool;
+}
+```
+
+**规则**：
+1. 输入事件封装为 Command 对象；
+2. Command 可序列化（支持重放/回放）；
+3. 支持 `undo`（用于测试/回滚）。
+
+### 5.6.5 GPU 渲染约定（S10.4，逐精灵 batch + 纹理图集 + alpha 混合 + TTF）
+
+**强制约束**（S10 起，`docs/modernization.md` §1 修订）：
+
+| 规则 | 内容 |
+|---|---|
+| 默认渲染路径 | GPU 化：macroquad `draw_texture` 逐精灵 + 纹理图集（`TextureAtlas`）+ alpha 混合（`BlendFactor::SrcAlpha/DstAlpha`），不再走 176×220 CPU 逐像素 blit |
+| legacy 回退 | 176×220 RGB565 CPU blit 保留为 feature `legacy-render`（P4-1 历史基准对比 + 回退），**不再是默认** |
+| 纹理来源 | PCX/HD PNG 解码 → macroquad `Texture`（一次上传，逐帧 `draw_texture` 复用），禁每帧重传 |
+| alpha 混合 | HD PNG 透明通道走 alpha blend（`SrcAlpha/DstAlpha`），禁直接丢 A（`png_rgba_to_framebuf_u32` 旧路径仅 legacy 用） |
+| TTF 字形 | `macroquad::load_ttf` 加载子集 TTF（Noto Sans CJK 子集），替代 `font.dat` 14 缺口字符（继续/胜负!/页 等豆腐块）；原版点阵字保留为可选「怀旧字体」模式 |
+| 新增场景 | 场景 render 走「GPU 精灵 pass + 文字 pass」，禁新增逐像素 CPU blit 路径 |
+
+**性能取向**：纹理图集 batch（减少 draw call 数）+ 静止帧跳过（脏标记）；目标 60fps（`stats` feature 实跑验证）。
 
 ## §5.7 测试组织
 

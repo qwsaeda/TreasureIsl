@@ -10,6 +10,8 @@
 | P0-2 | 每个格式解析器 **0 未知字节**（文件 100% 字段被定义，否则报错） | `cargo run -p ti-tools -- verify --zero-unknown` → 全格式 pass |
 | P0-3 | 解包后**重打包逐字节一致** | `--repack` 输出 sha256 == 原文件 sha256 |
 | P0-4 | PCX 解码像素与**独立参考实现**逐像素一致 | `cargo test -p ti-formats --test pcx_parity` |
+| P0-5（S10.1 新增）| 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test touch_render_same_coords`：点按棋子 → 实际移动方向一致 |
+| P0-6（S10.2 新增）| HD 递归加载 100% 注入（`load_hd_pack_from_dir` 递归子目录） | `cargo test -p ti-app --test hd_inject_full`：注入计数 == `assets_hd_pack` 全量 PNG |
 
 ## P1 数据对齐
 
@@ -45,11 +47,12 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 | # | 判据 | 验收 |
 |---|---|---|
-| P4-1 | 关键场景渲染 == 资源解码参考图，逐像素一致 | `cargo test -p ti-app --test render_parity`（用 `HeadlessBackend` 渲染，对比 P0 参考图） |
+| P4-1 | 关键场景渲染 == 资源解码参考图，逐像素一致 | `cargo test -p ti-app --test render_parity`（用 `HeadlessBackend` 渲染，对比 P0 参考图）；S10.4 起 GPU 路径基准全重生成（联动 S7.7 解锁），legacy CPU blit 基准保留 |
 | P4-2 | 176×220 逻辑坐标命中判定在任意整数/非整数缩放下不偏移 | `cargo test -p ti-platform -- test coordinate_roundtrip` |
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
+| P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 
-## 代码质量门禁 `scripts/gate.ps1`（13 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（16 项，循环每轮强制）
 
 ```
 1  cargo fmt --all -- --check
@@ -79,14 +82,30 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
      （发现硬编码即 FAIL；2026-10 已清零 37 处债务：玩家可见中文全进 strings.json、
       布局色全走 COLOR_* 常量；诊断/CLI 经 EXEMPT 豁免）
 13 doccheck2（双 agent 审计固化断言，第 1~5 轮审计高频项）：
-     cargo run -q -p ti-tools --bin doccheck2 .
-     （文档↔代码/数据一致性 6 项：audio ChannelState API 一致性 / shell 层 oracle_* 残留 /
-      LCG hex 误算（0x3443D）/ 据点阈值反向断言（<= 40）/ i18n 孤儿 key / release 门禁项数漂移；
-      替代每轮双 agent 审计里靠子代理现场 grep 的重复检查，见 docs/experience/build.md）
+      cargo run -q -p ti-tools --bin doccheck2 .
+      （文档↔代码/数据一致性 6 项：audio ChannelState API 一致性 / shell 层 oracle_* 残留 /
+       LCG hex 误算（0x3443D）/ 据点阈值反向断言（<= 40）/ i18n 孤儿 key / release 门禁项数漂移；
+       替代每轮双 agent 审计里靠子代理现场 grep 的重复检查，见 docs/experience/build.md）
+14 台账三方对账（S10.0，防子代理虚报，EXP-058）：
+       python scripts/check_ledger_reality.py
+       （遍历 ledger status: verified 任务行，校验 (a) evidence 文件存在且非空；
+        (b) DoD 声明的关键代码符号在 crates/*/src grep 命中；缺任一 FAIL「台账虚报」。
+        机器化拦截「子代理报 verified 但代码产物不存在」（S9.5 commands.rs 教训））
+15 业务闭环断言（S11，docs/plan-s11-forward.md §1 闭环判据 1~4）：
+       python scripts/check_forward_closed.py --check
+       （C1 业务文档零逆向引用（legacy/ 出处标注豁免）/ C2 表现层 0 oracle /
+        C3 根目录清空原版文件 + legacy 归档在位 / C4 oracle 桥接层与归档同源）
+16 模块并行前置（S11.4，docs/process/05_module_parallel.md §4 并行纪律 1/2）：
+       python scripts/check_module_contracts.py --check
+       （M1 包白名单两两互斥（plan/packages.yaml）/ M2 契约校验锚点在 crates/ grep 到 /
+        M3 ti-app 跨 crate 可见面只走契约模块（domain/rules/data）/ M4 draft 残留 WARN）
 ```
 
 任一项红灯 = 本轮不可标 verified，不可推进下一任务。
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass` + `gate 13 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 14 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+
+**S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 14 项全绿。

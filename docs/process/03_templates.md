@@ -250,3 +250,60 @@ if __name__ == "__main__":
 ```
 
 **硬要求**：脚本必须幂等 + `--check` 只读模式 + 非 0 退出码让 gate 判 FAIL。
+
+## 7. 模块包任务书模版（并行轮下发用）
+
+> 用法：契约冻结轮按 [`05_module_parallel.md`](05_module_parallel.md) §2 逐包填充本模版，
+> 下发给领取该包的会话；**契约未 `frozen` 不许下发**。模版字段一个都不能少。
+
+```markdown
+# 任务书 <包 ID> <包名>（S<轮>.<n>）
+
+## 环境事实（下发方填，子代理禁止靠摸目录试错 —— EXP-064）
+- 工作目录：`<绝对路径>`（本项目 = `C:\金银岛`）
+- crate 前缀：`ti-`（**不是** `ty-`；目录名 `crates/ti-app`、`crates/ti-core`、`crates/ti-platform`、`crates/ti-tools`、`crates/ti-formats`）
+- 关键命令：`cargo build --workspace` / `cargo test --workspace` / `cargo clippy --workspace --all-targets -- -D warnings` / `grep -rn "oracle" crates/`
+- 逆向产物已归档在 `legacy/`（`ref/`、`TreasureIsl.exe`、`oracle-rust/` 均在 `legacy/` 下），`rules/` 与 `domain/` 层正向代码**不得** import `legacy::oracle`（EXP-061）
+- 当前在途并行包（本包之外的）：<包 ID 清单 + 各自白名单一句话>，避免误改他包文件
+
+## 契约（只读，不许改）
+- 公共类型：docs/contracts/c1_core_public_types.md（状态须为 frozen）
+- 数值/文本 key：docs/contracts/c2_data_keys.md
+- 表现层会话 API：docs/contracts/c3_app_host_api.md（P6 表现层包才需要）
+
+## 文件白名单（只能改这些，越界即违规）
+- <crate 路径>/src/<module>.rs
+- <crate 路径>/tests/<test>.rs
+
+## 业务依据（唯一事实源）
+- docs/business/<module>.md §<节>  ← 规则
+- assets/data/balance.json key <a.b.c>  ← 数值（不在代码里写死）
+- 可测规则表：本包负责第 <n> 条（见下）
+
+## 工程规范
+- docs/process/02_conventions.md（数据驱动/命名/错误/测试）
+- docs/process/03_templates.md §4（玩法模块模版）/ §5（测试模版）
+- docs/style.md §5（Rust 规范）
+
+## 禁区（违反即打回）
+1. 跨包 import（只许契约里的公共类型）
+2. 写死数值/中文面量（进 balance.json / strings.json）
+3. TODO / unimplemented! / panic! / unwrap()（tests 除外）
+4. 白名单外文件；契约 `frozen` 段；`docs/business/`；台账 verified 行
+
+## 分支与基线
+- 分支：task/S<轮>.<n>
+- 基线：标签 baseline-s<轮>（从该标签切出，勿从主干 HEAD 切）
+
+## 包内验收（三条全绿才算「包内绿」）
+1. cargo test -p <crate> --test <本包测试>            # test result: ok
+2. 越界 grep = 0                                      # 只碰白名单文件
+3. 业务可测规则表本包条目全部有对应用例
+
+## 产物与回报
+- 代码 + evidence/S<轮>.<n>.log（包内自检实跑输出）
+- 回报格式：「包内绿 / 卡在哪 / 是否触碰契约边界」（**不写台账 verified**）
+```
+
+**并行纪律提示**：台账 `verified` 与 `evidence` 由集成轮统一给（见 [`05_module_parallel.md`](05_module_parallel.md) §5），
+包会话回报「包内绿」即可；越界或触碰契约 → 立即停手并回报，不许自行扩大白名单。

@@ -8,9 +8,9 @@
 //! - `e2e_playthrough.rs`：完整会话连续性（一个测试跑完整局游戏）
 
 use ti_app::game_app::{BattleView, GameApp, GameInput, Scene};
-use ti_core::oracle::build::Building;
-use ti_core::oracle::main_map::Dir;
-use ti_core::oracle::selection::{Character, MapSlot};
+use ti_core::domain::economy::Building;
+use ti_core::domain::map::Dir;
+use ti_core::domain::selection::{Character, MapSlot};
 
 /// 完整游戏会话：从启动到退出，模拟真实玩家操作序列。
 #[allow(clippy::too_many_lines)]
@@ -96,13 +96,13 @@ fn e2e_full_game_session() {
     assert_eq!(gold_before_trade, initial_gold, "开局金应等于 balance.economy.initial_gold");
 
     // 买入商品 1
-    let price1 = app.price_table.lookup(1).unwrap_or(0);
+    let price1 = app.price_table().lookup(1).unwrap_or(0);
     app.handle(GameInput::TradeBuy(1));
     assert_eq!(app.gold(), initial_gold.saturating_sub(price1), "买入后金应减少商品1单价");
     assert_eq!(app.owned().len(), 1, "买入后持有量 +1");
 
     // 买入商品 2
-    let price2 = app.price_table.lookup(2).unwrap_or(0);
+    let price2 = app.price_table().lookup(2).unwrap_or(0);
     app.handle(GameInput::TradeBuy(2));
     assert_eq!(
         app.gold(),
@@ -119,8 +119,9 @@ fn e2e_full_game_session() {
     let bank_before = app.bank().gold;
     assert_eq!(bank_before, initial_gold, "开局银行金应等于 balance.economy.initial_gold");
 
-    // 建造 Castle（成本走 `Building::base_cost`）
-    let castle_cost = Building::Castle.base_cost();
+    // 建造 Castle（成本走 `balance.build.buildings`，`rules::build::cost_of`）
+    let b = ti_core::data::balance().expect("balance.json 加载失败");
+    let castle_cost = ti_core::rules::build::cost_of(&b.build, Building::Castle);
     app.handle(GameInput::Build(Building::Castle));
     assert_eq!(app.buildings().len(), 1, "建造后建筑列表 +1");
     assert_eq!(
@@ -314,9 +315,9 @@ fn e2e_battle_determinism() {
             break;
         }
     }
-    let outcome1 = app1.battle().map(|b| b.outcome);
-    let player_hp1 = app1.battle().map(|b| b.player_hp);
-    let boss_hp1 = app1.battle().map(|b| b.boss_hp);
+    let outcome1 = app1.battle().map(BattleView::outcome);
+    let player_hp1 = app1.battle().map(BattleView::player_hp);
+    let boss_hp1 = app1.battle().map(BattleView::boss_hp);
 
     // 第二次战斗（相同种子）
     let mut app2 = GameApp::new(176.0, 220.0);
@@ -338,9 +339,9 @@ fn e2e_battle_determinism() {
             break;
         }
     }
-    let outcome2 = app2.battle().map(|b| b.outcome);
-    let player_hp2 = app2.battle().map(|b| b.player_hp);
-    let boss_hp2 = app2.battle().map(|b| b.boss_hp);
+    let outcome2 = app2.battle().map(BattleView::outcome);
+    let player_hp2 = app2.battle().map(BattleView::player_hp);
+    let boss_hp2 = app2.battle().map(BattleView::boss_hp);
 
     // 两次战斗结果应完全一致
     assert_eq!(rounds1, rounds2, "相同种子战斗回合数应一致");

@@ -1,6 +1,6 @@
 //! 主菜单场景（S9 骨架）：输入判定 / 触摸手势 / 绘制三面全部落在本文件，
 //! 宿主只提供状态读写能力（`SceneHost`）。
-use ti_core::oracle::menu::Sfx;
+use ti_core::domain::flow::Sfx;
 
 use crate::game_app::GameInput;
 use crate::scenes::{Scene, SceneHost, SceneKind};

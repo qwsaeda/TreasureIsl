@@ -1,14 +1,12 @@
-//! S3.3 / S8.3.e 主菜单事件状态机正式实现（数据化：转移表落本文件，不再调 oracle）。
+//! S3.3 / S8.3.e / S12.4 主菜单事件状态机正式实现（数据化：转移表落本文件）。
 //!
-//! S8 定位变更：旧 `oracle::menu::oracle_menu_transition`/`oracle_reachable_menu` 降级参照物；
-//! 本模块的转移表直接落本文件（`docs/business/loop_core.md` §菜单），行为与 oracle 一致
-//! （同场景 + 同事件 → 同 `(MenuScene, Option<Sfx>)`），但**不再调用** oracle 自由函数。
+//! 本模块的转移表直接落本文件（`docs/business/loop_core.md` §菜单 + `07_ui_flow.md` §1/§3），
+//! 类型全部来自 `domain::flow`（S11 类型唯一家）。
 //!
-//! [`MenuScene`]/[`MenuEvent`]/[`Sfx`] 仍从 oracle 重导出（枚举定义非推测公式，S8.3.e 允许）；
 //! 事件码语义（13/27/37/38/40 + 菜单项 0..=5）在 `docs/business/loop_core.md`，
 //! 菜单标签走 `strings.json`（`menu.*` key，非中文字面量）。
 
-use crate::oracle::menu::{MenuEvent, MenuScene, Sfx};
+use crate::domain::flow::{MenuDir, MenuEvent, MenuScene, MenuTarget, Sfx};
 
 /// 主菜单状态机：当前场景 + 事件处理日志。
 #[derive(Debug, Clone)]
@@ -43,7 +41,7 @@ impl MenuStateMachine {
 
     /// 处理事件，更新场景，返回可选音效。
     ///
-    /// 转移表（`docs/business/loop_core.md` §菜单，与 oracle 行为一致但本文件为唯一事实源）。
+    /// 转移表（`docs/business/loop_core.md` §菜单，本文件为唯一事实源）。
     #[must_use]
     pub fn handle(&mut self, ev: MenuEvent) -> Option<Sfx> {
         let (next, sfx) = transition(self.scene, ev);
@@ -52,13 +50,17 @@ impl MenuStateMachine {
         sfx
     }
 
-    /// 可达场景集（从 Intro/Index 出发，转移表在本文件，与 oracle 行为一致）。
+    /// 可达场景集（从 `Intro`/`Index` 两入口出发，转移表在本文件）。
+    ///
+    /// 两入口各走一次转移表取并集：`07_ui_flow.md` §1 转换表中 `SelectMap`（经
+    /// `SelectRole` 的 `Click(0|13)` 出边）经 `SelectRole` 出边可达；`Option` 场景
+    /// 由地图/选项流驱动（不经菜单转移表），可达闭包按转移表实际边集计算。
     ///
     /// 此方法语义上为关联函数（不读 `self`），但保留为实例方法以保持 API 一致性。
     #[must_use]
     #[allow(clippy::unused_self)]
     pub fn reachable(&self) -> Vec<MenuScene> {
-        reachable_from_root()
+        reachable_from_roots(&[MenuScene::Intro, MenuScene::Index])
     }
 }
 
@@ -68,7 +70,7 @@ impl Default for MenuStateMachine {
     }
 }
 
-/// 内部自由函数：与 `oracle_menu_transition` 逻辑相同，但作为结构体方法分派的入口。
+/// 内部自由函数：菜单事件 → 下一场景 + 音效，作为结构体方法分派的入口。
 #[must_use]
 fn transition(cur: MenuScene, ev: MenuEvent) -> (MenuScene, Option<Sfx>) {
     match cur {
@@ -79,8 +81,7 @@ fn transition(cur: MenuScene, ev: MenuEvent) -> (MenuScene, Option<Sfx>) {
         MenuScene::Index => match ev {
             MenuEvent::Click(0 | 13) => (MenuScene::SelectRole, Some(Sfx::Press)),
             MenuEvent::Click(1) => (MenuScene::Saveload, Some(Sfx::Press)),
-            MenuEvent::Click(2) => (MenuScene::Option, Some(Sfx::Press)),
-            MenuEvent::Click(3 | 4) => (MenuScene::Help, Some(Sfx::Press)),
+            MenuEvent::Click(2..=4) => (MenuScene::Help, Some(Sfx::Press)),
             MenuEvent::Click(5) | MenuEvent::Quit => (MenuScene::Exit, None),
             MenuEvent::Click(37 | 38) | MenuEvent::Invalid => {
                 (MenuScene::Index, Some(Sfx::Invalid))
@@ -101,11 +102,11 @@ fn transition(cur: MenuScene, ev: MenuEvent) -> (MenuScene, Option<Sfx>) {
     }
 }
 
-/// 内部自由函数：与 `oracle_reachable_menu` 逻辑相同（从 Intro 和 Index 出发）。
+/// 内部自由函数：从一组入口场景出发做可达闭包（从 `Intro` 与 `Index` 两入口出发取并集）。
 #[must_use]
-fn reachable_from_root() -> Vec<MenuScene> {
+fn reachable_from_roots(roots: &[MenuScene]) -> Vec<MenuScene> {
     let mut visited: [bool; 8] = [false; 8];
-    let mut worklist: Vec<MenuScene> = vec![MenuScene::Intro, MenuScene::Index];
+    let mut worklist: Vec<MenuScene> = roots.to_vec();
     let mut reachable: Vec<MenuScene> = Vec::new();
 
     while let Some(s) = worklist.pop() {
@@ -123,7 +124,29 @@ fn reachable_from_root() -> Vec<MenuScene> {
         }
     }
 
-    reachable.retain(|s| visited[*s as usize]);
     reachable.sort_by_key(|s| *s as usize);
     reachable
+}
+
+/// 菜单光标移动（`07_ui_flow.md` §3.1：`Index` ↑/↓ 在 n 项间循环，不越界）。
+///
+/// `07_ui_flow.md` §6 规则 1（`menu_cursor_wraps`）：首项上移 → 末项，末项下移 → 首项。
+/// 返回 `(新选中项, 是否变化)`（表现层据此决定重绘）。
+#[must_use]
+pub fn move_menu_cursor(selected: usize, dir: MenuDir, count: usize) -> (usize, bool) {
+    if count == 0 {
+        return (0, false);
+    }
+    let next = match dir {
+        MenuDir::Up => selected.wrapping_add(count - 1) % count,
+        MenuDir::Down => (selected + 1) % count,
+    };
+    (next, next != selected)
+}
+
+/// 菜单项确认目标（`07_ui_flow.md` §6 规则 2 `menu_item_targets`：0/1/2..4/5 →
+/// `SelectRole`/`Saveload`/`Help`/`Exit`，路由语义唯一事实源在 `domain::flow::MenuTarget`）。
+#[must_use]
+pub fn menu_item_target(selected: usize) -> Option<MenuTarget> {
+    MenuTarget::from_index(selected)
 }

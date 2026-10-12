@@ -13,7 +13,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn entries() -> Vec<(usize, Vec<u8>)> {
-    let buf = std::fs::read(repo_root().join("data").join("music.lpk")).expect("music.lpk 存在");
+    let buf = std::fs::read(repo_root().join("legacy").join("data").join("music.lpk"))
+        .expect("music.lpk 存在");
     let pkg = Package::parse("music.lpk", &buf).expect("解析成功");
     (0..pkg.entries.len()).map(|i| (i, pkg.read_entry(&buf, i).expect("解压成功"))).collect()
 }

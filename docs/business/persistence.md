@@ -14,6 +14,8 @@
 // save v2 schema（v2 字段以 design/persistence.md 为准，此处为最小示例）
 // 注：示例用业务名；`rules::saveload_json` 序列化格式为 char{N}/m{NN}（数字索引+1），
 // 见 `crates/ti-core/src/rules/saveload_json.rs`（from_legacy_slot 保守映射）。
+// buildings/goods 的 id 以 balance.json 为准（Castle/Investment/Bank/Fort 字符串 id、
+// goods.1..5 数字 id）；下方 palisade/harbor/spice 等为旧设计占位名，照抄会写错。
 {
   "version": 2,
   "character": "drake",          // 角色 id（business/rng 无关）
@@ -22,9 +24,9 @@
   "position": { "row": 5, "col": 7 },  // 玩家所在格
   "gold": 1200,
   "hp": 85,
-  "buildings": ["palisade", "harbor"],
-  "goods": [ { "id": "spice", "qty": 5 } ],
-  "rng_seed": 12345,             // 复现关键：存 RNG 当前状态/种子
+  "buildings": ["Castle", "Bank"],
+  "goods": [ { "id": 1, "qty": 5 } ],
+  "rng_seed": 0,                 // 复现关键：固定默认种子（存时间戳会破坏可复现性）
   "bank": 300,
   "unlocked_maps": ["m01", "m02"]
 }
@@ -33,7 +35,7 @@
 ### 迁移
 
 - v1 → v2：v1 缺 `version`/`bank`/`rng_seed`，迁移时补默认值
-  （`version=2`、`bank=0`、`rng_seed` 由存档时间或默认种子填）；
+  （`version=2`、`bank=0`、`rng_seed=0`（固定默认种子，保证可复现，不存时间戳））；
 - 迁移函数纯函数、幂等、可单测（`tests/save_migration.rs`，已存在）；
   注：business 可测规则单测（`save_*` 等）待 S8.3.d 落地。
 
@@ -49,7 +51,7 @@
 
 - 玩法层**只经 `rules::rng::GameRng` 取随机**，禁 `rand::thread_rng`（不可复现）；
 - RNG 状态进存档，保证「读档后继续」的随机序列可复现；
-- 目标库复用：`rand` + `rand_pcg`（见 [`process/01_architecture.md`](../process/01_architecture.md) §4，S8.7 落地），当前实现为库化 `rand_pcg`（旧自造 LCG 为 oracle 历史参照）。
+- 目标库复用：`rand` + `rand_pcg`（见 [`process/01_architecture.md`](../process/01_architecture.md) §4，S8.7 落地），当前实现为库化 `rand_pcg`（自造 LCG 已删除，见 S8.7）。
 
 ## 设置
 

@@ -1,0 +1,54 @@
+﻿=== gate: TreasureIsl (16 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
+  PASS  no unwrap()/expect() outside tests/
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 104 tasks, 89 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 98 docs, 37 facts, 62 experiences, 99 task refs, 4 assertions, 8 error(s)
+          ERROR docs/experience/index.md:33: references undefined experience `EXP-063`
+          ERROR docs/experience/index.md:103: references undefined experience `EXP-063`
+          ERROR docs/experience/index.md:103: references task `S10.x` which is not in plan/ledger.yaml
+          ERROR docs/experience/process.md:109: references task `S12.x` which is not in plan/ledger.yaml
+          ERROR docs/experience/process.md:109: references task `S0.x` which is not in plan/ledger.yaml
+          ERROR docs/experience/process.md:110: references task `S10.x` which is not in plan/ledger.yaml
+          ERROR docs/experience/process.md:113: references task `S10.x` which is not in plan/ledger.yaml
+          ERROR plan/ledger.yaml:112 鍙拌处浠诲姟鎬绘暟澹版槑 7锛宭edger 瀹炴祴 104锛堢 5 杞璁?Q021 鍥哄寲锛?
+  FAIL  doccheck (docs consistency)  
+        validate_data: OK（3 表，strings 88 键）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+        doccheck2: 0 error(s) across 6 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items)
+          WARN i18n 瀛ゅ効 key `scene.main_map.hud.gold`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.owned`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+        check_ledger_reality: 全绿（89 个 verified 任务三方对账通过）
+  PASS  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+        check_forward_closed: C1 业务文档零逆向引用: OK
+        check_forward_closed: C2 表现层零 oracle 引用: OK
+        check_forward_closed: C3 根目录清空 + legacy 在位: OK
+        check_forward_closed: C4 oracle 桥接层与归档同源: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 包 D status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P1 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P2 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P3 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P4 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P5 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P6 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 契约 c1_core_public_types.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c2_data_keys.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+=== gate: 1 failure(s) ===

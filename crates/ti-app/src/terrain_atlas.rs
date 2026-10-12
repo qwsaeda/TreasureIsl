@@ -18,6 +18,8 @@ use ti_formats::lucency::Package;
 use ti_formats::pcx::Image;
 use ti_formats::terrain::TerrainMap;
 use ti_platform::gfx::Framebuf;
+#[cfg(feature = "gpu-render")]
+use ti_platform::gpu_renderer::{GpuRenderer, SpriteRef};
 #[cfg(feature = "hd-8bit")]
 use ti_platform::hd_png::HdPng;
 
@@ -405,6 +407,59 @@ impl TerrainAtlas {
     pub fn cache_size(&self) -> usize {
         self.cache.len()
     }
+
+    // ── S10.4 GPU 路径（feature `gpu-render`）────────────────────────────────────
+
+    /// S10.4（feature `gpu-render`）：把 `tile` 对应的瓦片转成 GPU 纹理引用。
+    ///
+    /// `atlas_texture_id` 为已上传 macroquad 纹理的 `id()`；
+    /// `atlas_base_x/y` 为图集内该瓦片的左上角像素坐标。
+    #[cfg(feature = "gpu-render")]
+    #[must_use]
+    pub fn gpu_tile(
+        &mut self,
+        tile_index: u32,
+        atlas_texture_id: u32,
+        atlas_base_x: i32,
+        atlas_base_y: i32,
+    ) -> Option<SpriteRef> {
+        let tile = self.tile(tile_index)?;
+        let fw = i32::try_from(tile.width).unwrap_or(0);
+        let fh = i32::try_from(tile.height).unwrap_or(0);
+        Some(SpriteRef { texture: atlas_texture_id, rect: (atlas_base_x, atlas_base_y, fw, fh) })
+    }
+
+    /// S10.4（feature `gpu-render`）：GPU 地形 blit（走 `GpuRenderer::blit_terrain_tile`）。
+    ///
+    /// 不修改帧缓冲（GPU 路径直接上屏），返回成功提交的瓦片数。
+    #[cfg(feature = "gpu-render")]
+    pub fn gpu_blit_map(
+        &mut self,
+        terrain: &TerrainMap,
+        renderer: &mut GpuRenderer,
+        atlas_texture_id: u32,
+        atlas_base_x: i32,
+        atlas_base_y: i32,
+        camera: (i64, i64),
+    ) -> u32 {
+        let mut cells = terrain.cell_records();
+        cells.sort_by_key(|c| c.iso_y);
+        let mut blitted = 0u32;
+        for c in &cells {
+            let Some(ref_) = self.gpu_tile(c.tile, atlas_texture_id, atlas_base_x, atlas_base_y)
+            else {
+                continue;
+            };
+            let x = i64::from(c.iso_x) + camera.0;
+            let y = i64::from(c.iso_y) + camera.1;
+            renderer.blit_terrain_tile(
+                (i32::try_from(x).unwrap_or(0), i32::try_from(y).unwrap_or(0)),
+                &ref_,
+            );
+            blitted += 1;
+        }
+        blitted
+    }
 }
 
 #[cfg(test)]
@@ -417,7 +472,7 @@ mod tests {
             .parent()
             .and_then(std::path::Path::parent)
             .map_or_else(|| std::path::PathBuf::from("."), std::path::Path::to_path_buf);
-        std::fs::read(base.join("data").join(name)).ok()
+        std::fs::read(base.join("legacy").join("data").join(name)).ok()
     }
 
     fn atlas_or_skip() -> Option<TerrainAtlas> {

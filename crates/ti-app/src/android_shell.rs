@@ -14,6 +14,7 @@
 use crate::audio_prep::{MusicBundle, prepare_music, wav_pcm16};
 use crate::game_app::GameApp;
 use crate::menu_shell::parse_font_bytes;
+use crate::scenes::SceneKind;
 use crate::touch::TouchPad;
 use macroquad::audio::{PlaySoundParams, Sound, load_sound_from_bytes, play_sound};
 use macroquad::prelude::*;
@@ -211,7 +212,7 @@ pub async fn run() {
 
         // 场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
         let current_selected = game.shell().selected;
-        let scene_key = game.scene().key();
+        let scene_key = SceneKind::from_legacy(game.scene()).discriminant();
         if changed
             || game.shell().last_rendered != Some(current_selected)
             || game.shell().last_rendered_scene != Some(scene_key)

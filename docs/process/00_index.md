@@ -33,13 +33,17 @@
 ## 标准工作流
 
 ```
-1. 认领   手动读 plan/ledger.yaml，取第一个 deps 全 verified 且 status != verified 的任务
-           （`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 只校验台账合法性，不选任务）
-2. 读规格 docs/business/<模块>.md（业务意图）
+1. 认领   读 plan/ledger.yaml，取第一个 deps 全 verified 且 status != verified 的任务
+          （`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 只校验台账合法性，不选任务）
+          ⚠ 任务 ≥ 2 个且文件域互不相交时，改走并行轮（05_module_parallel.md §1），
+            不要串行一个做完再下一个
+2. 读规格 docs/business/<模块>.md（业务意图，07_ui_flow.md 管表现层）
           + docs/process/02_conventions.md（工程约定）
 3. 分类   查 §分工表：这个任务的主体属于「脚本 / 模板 / 库 / LLM」哪一类？
 4. 实施   模板 + 脚本优先；能用库不写循环；数值进 data/，不写进 .rs
+          （并行轮 = 照任务书白名单开发，越界即违规；见 05_module_parallel.md §4）
 5. 验收   该任务 dod 命令实跑 → tee evidence/<id>.log（须含任务自身判据）
+          （并行轮包内只报「包内绿」，verified 由集成轮给，05_module_parallel.md §5）
 6. 门禁   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 7. 记账   全绿才置 verified + evidence 路径；否则 rounds+=1
 8. 复核   子代理报告完成后，主线程独立复核（loop.md §6.2 第 8 条）
@@ -64,6 +68,7 @@
 | [`02_conventions.md`](02_conventions.md) | 数据驱动、命名、错误、测试、日志约定 |
 | [`03_templates.md`](03_templates.md) | 可复制的模版：场景 / 控件 / 数据表 / 模块 / 测试 |
 | [`04_tooling.md`](04_tooling.md) | 脚本与 codegen 工具链、幂等要求、新增工具的登记方式 |
+| [`05_module_parallel.md`](05_module_parallel.md) | **模块并行开发 loop**（契约冻结 → 多包并行 → 集成联调 → 记账；包白名单互斥 + 任务书模板 + 纪律 5 条） |
 
 ## 文档治理（与 [`loop.md`](../loop.md) 一致）
 

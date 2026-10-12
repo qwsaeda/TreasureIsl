@@ -10,6 +10,7 @@
   "combat": {
     "player_first": true,
     "max_rounds": 1000,
+    "player": { "hp": 2000, "atk": 60 },
     "damage": {
       "model": "atk_plus_flat",
       "flat": 1,
@@ -26,7 +27,7 @@
   },
 
   "trade": {
-    "markup": 1.0,
+    "markup": 1.5,
     "goods": [
       { "id": 1, "name_key": "goods.1", "buy": 20,  "qty_max": 99 },
       { "id": 2, "name_key": "goods.2", "buy": 76,  "qty_max": 99 },
@@ -77,9 +78,42 @@
       { "id": "katharina", "index": 4 }
     ],
     "maps": [
-      { "id": "m01", "index": 0, "grid_w": 20, "grid_h": 20, "boss_tier": 0 },
-      { "id": "m02", "index": 1, "grid_w": 20, "grid_h": 20, "boss_tier": 1 },
-      { "id": "m03", "index": 2, "grid_w": 15, "grid_h": 15, "boss_tier": 2 }
+      {
+        "id": "m01",
+        "index": 0,
+        "grid_w": 20,
+        "grid_h": 20,
+        "boss_tier": 0,
+        "player_start": [10, 10],
+        "landmarks": [
+          [2, 2],
+          [17, 17]
+        ]
+      },
+      {
+        "id": "m02",
+        "index": 1,
+        "grid_w": 20,
+        "grid_h": 20,
+        "boss_tier": 1,
+        "player_start": [10, 10],
+        "landmarks": [
+          [2, 2],
+          [17, 17]
+        ]
+      },
+      {
+        "id": "m03",
+        "index": 2,
+        "grid_w": 15,
+        "grid_h": 15,
+        "boss_tier": 2,
+        "player_start": [7, 7],
+        "landmarks": [
+          [2, 2],
+          [12, 12]
+        ]
+      }
     ]
   },
 

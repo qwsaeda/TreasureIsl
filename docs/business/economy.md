@@ -17,6 +17,7 @@
 ## 商品与价格
 
 > 以下为**示例节选**（3 种），完整数值（5 种商品，id 1..5）以 `assets/data/balance.json` 为准。
+> ⚠️ 下表 id/name_key/数值为设计示例，**与 balance.json 实际值不同**；实际以 assets/data/balance.json 为准（数字 id 1..5、name_key=goods.N、buy=20/76/95/114/133、qty_max=99）。
 
 ```jsonc
 "trade": {

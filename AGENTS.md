@@ -7,7 +7,10 @@
 
 - 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA Professional 9.4，已自动分析、**无自定义命名**）、`data/`、`Cargo.toml`（5 crate workspace）、`scripts/`、`docs/`、`android/`、`plan/ledger.yaml`、`evidence/`、`ref/`。
 - 工程已 bootstrap：`crates/{ti-formats,ti-core,ti-platform,ti-app,ti-tools}`；进度只由 `plan/ledger.yaml` 驱动。
-- **S8 标准化改造进行中**（见 `docs/plan-s8-refactor.md`）：逆向产物降级为参照物，业务与流程文档独立。
+- **S11 正向开发收口中**（S0–S10.4 已 verified，S10.5 对抗流水线并行；S11.1/S11.2 为本轮收口目标，详见 `docs/plan-s11-forward.md` §7 交接快照）：
+  逆向产物物理归档 `legacy/`（`TreasureIsl.exe`/`.i64`/`data/`/`ref/`/`oracle-rust/`/逆向 `docs/facts`）
+  + 业务文档去逆向引用 + 模块并行开发 loop 固化（`docs/process/05_module_parallel.md`）。
+  oracle 桥接层（`ti-core/src/oracle` → `legacy-oracle` crate，默认构建 0 行参照代码参与）。
 
 ## 路由表
 
@@ -23,6 +26,8 @@
 | 用脚本/codegen 批量处理 | `docs/process/04_tooling.md` |
 | **查业务规则（战斗/经济/地图/存档）** | `docs/business/` 各系统文档（不依赖逆向产物） |
 | S8 标准化改造总计划 | `docs/plan-s8-refactor.md` |
+| **S10 现代化收口总计划（P0 修复/占位清零/GPU 渲染/对抗流水线）** | `docs/plan-s10-refactor.md` |
+| S11 正向开发收口（逆向归档 legacy/ + 业务闭环 + 模块化并行 loop） | docs/plan-s11-forward.md（§7 交接快照）+ docs/process/05_module_parallel.md（一轮 4 步 + 包划分 + 纪律 5 条）+ docs/contracts/（跨包契约 c1/c2/c3） |
 | 逆向 exe 或 `data/` 格式（**仅参照物**） | `docs/facts/index.md` |
 | 找当前阶段任务与验收命令 | `docs/plan-s0-s2.md`、`docs/plan-s3.md`、`docs/plan-s4.md`、`docs/plan-s5.md`、`docs/plan-s7.md`、`docs/plan-s8-refactor.md` |
 | 避免重复踩坑 | `docs/experience/index.md` ← **每次踩坑后必须回写** |
@@ -31,7 +36,7 @@
 | **HD 资产增强 / 超分 / 矢量化 / 多分辨率打包（S7）** | `docs/impl/14_asset_enhancement.md`（方案规格）→ `docs/plan-s7.md`（任务表） |
 | Android 壳落地 + Mac 出 APK（S5.5） | `android/README.md` |
 | 引入新依赖 / 改 workspace 结构 | `docs/process/01_architecture.md` §4（现成库清单，先查再引）→ `docs/style.md` §5.9 |
-| 推送远端 / 分支与 commit 规范 / 每任务合入即推 | `docs/git.md` |
+| 推送远端 / 分支与 commit 规范 / **完成即自动推送**（gate 全绿 + verified → commit → 自动 push，无需用户逐次指令） | `docs/git.md` |
 
 ## 硬规则（违反 = 返工）
 
@@ -45,7 +50,7 @@
 ## 命令
 
 ```sh
-# 每轮循环的门禁：gate.ps1 13 项（fmt/clippy/test/build×3/占位/unwrap/zero-unknown/台账 + doccheck 第 9 / 数据表第 10 / oracle 边界第 11 / check_hardcode 严格第 12 / doccheck2 第 13）
+# 每轮循环的门禁：gate.ps1 16 项（fmt/clippy/test/build×3/占位/unwrap/zero-unknown/台账 + doccheck 第 9 / 数据表第 10 / oracle 边界第 11 / check_hardcode 严格第 12 / doccheck2 第 13 / 台账三方对账第 14 / 业务闭环第 15 / 模块并行前置第 16）
 # 全绿才可把任务置 verified，输出 tee 到 evidence/<id>.log
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 
@@ -55,6 +60,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test  --workspace
 cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（gate 第 8 项）
 cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 9 项，含跨文档数值断言 + release 台账计数漂移）
+python scripts/check_ledger_reality.py                         # 台账三方对账（gate 第 14 项，verified↔evidence↔代码符号，EXP-058）
 
 # S2.5：构建浏览器产物到 web/（wasm + miniquad gl.js + 真实资源）
 powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
@@ -80,7 +86,7 @@ cargo run -q -p ti-tools --bin specskel -- <module> --report     # 只打印统�
 ```
 
 - 构建范围随阶段解锁：native（已解锁）→ wasm（**S2.5 已解锁**）→ android（S2.6 在 **Mac** 装 NDK/SDK + cargo-apk 编译 APK，本机 Windows 不产出，gate SKIP）；gate 按已装 target 自动判定并打印 SKIP。
-- **桌面/浏览器可玩为当前收口目标**（S5.1–S5.4）：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定；Android 为后续移动端交付，开发本身不依赖 Android 工具链。
+- **桌面/浏览器可玩（S5.1–S5.4）已收口**：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定；当前收口目标为 S9（S9.2/S9.5 pending，S9.3/S9.4 已 verified，见 `plan/ledger.yaml`）；Android 为后续移动端交付，开发本身不依赖 Android 工具链。
 - S5.5 Android 壳已落地（`android-shell` feature + `treasure-android` bin + `android/README.md`）；APK 实际产出在 Mac，本机 host 形态可编译校验。
 
 ## REA 逆向 MCP（2026-10 接入）

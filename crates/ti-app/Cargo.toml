@@ -43,7 +43,7 @@ required-features = ["android-shell"]
 # S8.9：HD 资源提升为默认档——默认构建含 `hd-8bit`（RGBA8 真彩帧缓冲 + PNG 解码）。
 # 缺失 `assets_hd_pack` 时 bin 自动回退 RGB565 PCX 原路径（不 panic）。
 # 需要纯 RGB565 时 `--no-default-features` 关闭。
-default = ["hd-8bit"]
+default = ["hd-8bit", "gpu-render"]
 # wasm/浏览器壳（S2.5）：桌面构建不参与
 wasm-shell = []
 # 桌面 native 壳：std::fs 读本地 data/ 资源（与 wasm 同源），macroquad 原生窗口
@@ -64,6 +64,15 @@ headless = []
 # S7.5：RGBA8 HD 帧缓冲 + PNG 解码（默认关，RGB565 原路径不变；
 # 透传 ti-platform 的 hd-8bit，`png` 随其 optional 依赖进入，EXP-046 门控）
 hd-8bit = ["ti-platform/hd-8bit"]
+# S10.4：GPU 化渲染（macroquad 逐精灵 batch + 纹理图集 + alpha 混合 + TTF 字形）。
+# 默认开；legacy CPU 逐像素 blit 路径在 `gpu-render` 关闭时生效（feature 互斥）。
+gpu-render = []
+# S10.4 legacy：CPU 逐像素 blit 路径（P4-1 历史基准回退；默认关）。
+# 开启 `legacy-render` 时 CPU 路径编译进构建，GPU 路径不生效。
+legacy-render = []
+# S10.4：原版 GoldLand.Fnt 点阵字（怀旧模式；默认关）。
+# 开启 `legacy-font` 时字形走 `glyph_raster::Raster` 点阵光栅，TTF 矢量字形不生效。
+legacy-font = []
 
 [lints]
 workspace = true

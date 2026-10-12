@@ -1,39 +1,23 @@
-//! S3.11 / S8.3.e 消息/帮助/信息界面正式实现（文本 key 化 + 页数数据化）。
+//! S3.11 / S8.3.e / S12.4 消息/帮助/信息界面正式实现（文本 key 化 + 页数数据化）。
 //!
-//! S8 定位变更：旧 `oracle::messages::oracle_message_transition`/`oracle_total_pages`
-//! 降级参照物；本模块的翻页状态机直接落本文件（`docs/business/loop_core.md` §消息），
-//! 文本标签走 `strings.json`（`msg.*` key，非中文字面量），页数走 `balance.messages`。
+//! 本模块的翻页状态机直接落本文件（`docs/business/loop_core.md` §消息 +
+//! `07_ui_flow.md` §4 消息分页），类型全部来自 `domain::messages`（S11 类型唯一家）。
 //!
-//! 边界规则（`docs/business/loop_core.md` 消息界面，与 oracle 行为一致）：
+//! 边界规则（`docs/business/loop_core.md` 消息界面）：
 //! - `next` 到最后一页 → 保持；
 //! - `prev` 到第一页 → 回最后一页（循环）；
-//! - `close` → 关闭（`None`）；`open(kind)` → `page=0`。
+//! - `close` → 关闭（回到打开源场景，`FlowSource` 由调用方注入）；`open(kind, source)` → `page=0`。
 //!
-//! [`MsgKind`] 仍从 oracle 重导出（枚举定义非推测公式，S8.3.e 允许）；
-//! `MsgPage`/页数/文本标签改由本模块持有（页数来自 `balance.messages.pages`，文本 key 化）。
+//! 页数来自 `balance.messages.pages`（`total_pages` 读表，缺省回退 3 不 panic）；
+//! 文本 key 走 `strings.json`（`msg.<kind>.<n>`，非中文字面量）。
 
 use crate::data as data_alias;
-
-/// 消息界面种类（`docs/business/loop_core.md`，5 类；从 `oracle::messages` 重导出稳定标识）。
-pub type MsgKind = crate::oracle::messages::MsgKind;
-
-/// 当前打开的消息页（`None` = 界面未打开）。
-///
-/// 页数不再读 oracle，走 `balance.messages.pages`（`total_pages_for` 注入）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MsgPage {
-    /// 界面种类。
-    pub kind: MsgKind,
-    /// 当前页（0-based）。
-    pub page: u32,
-    /// 总页数（`balance.messages.pages`，`total_pages_for` 计算）。
-    pub total_pages: u32,
-}
+use crate::domain::messages::{FlowSource, MsgEvent, MsgKind, MsgPage};
 
 /// 某类消息界面的总页数（`balance.messages.pages`，缺省回退 3，不 panic）。
 ///
 /// 页数 = 该 kind 的文本 key 条数（`strings.json` 的 `msg.<kind>.<n>`），
-/// 单一事实源在 `balance.json → messages`。整表改坏 → 回退 3（与旧 oracle 一致）。
+/// 单一事实源在 `balance.json → messages`。整表改坏 → 回退 3。
 #[must_use]
 pub fn total_pages(kind: MsgKind) -> u32 {
     total_pages_for(kind_key(kind))
@@ -49,7 +33,7 @@ pub fn total_pages_for(kind_key: &str) -> u32 {
 }
 
 /// 某类消息界面第 `page` 页的文本 key（`strings.json` 的 `msg.<kind>.<page+1>`，key 化非中文）。
-/// 越界页 → 回最后一页 key（不 panic）。
+/// 越界页 → 回最后一页 key（不 panic，`07_ui_flow.md` §4 首尾钳位）。
 #[must_use]
 pub fn page_text_key(kind: MsgKind, page: u32) -> String {
     let total = total_pages(kind);
@@ -57,19 +41,18 @@ pub fn page_text_key(kind: MsgKind, page: u32) -> String {
     format!("msg.{}.{}", kind_key(kind), p + 1)
 }
 
-/// 某类消息界面第 `page` 页的纯文本（`balance.messages.pages` 分页 + 越界钳末页，不 panic）。
+/// 某类消息界面第 `page` 页的纯文本 key（`balance.messages.pages` 分页 + 越界钳末页，不 panic）。
 ///
 /// 实现：返回该页的文本 key（`strings.json` 查表由调用方经 `i18n::sget` 完成；
 /// 本函数只做 `balance.messages` 分页钳位，保持纯函数无 IO、可单测）。
-/// 与 `oracle_text_line` 的差异：oracle 是固定占位文本（非分页），本函数按
-/// `balance.messages.pages` 真实分页，越界页钳到最后一页（`docs/business/loop_core.md` 消息 §边界）。
 #[must_use]
 pub fn page_text(kind: MsgKind, page: u32) -> String {
     page_text_key(kind, page)
 }
 
 /// kind → 短 key（`strings.json` 的 `msg.*` 前缀，稳定字符串，非中文）。
-fn kind_key(k: MsgKind) -> &'static str {
+#[must_use]
+pub fn kind_key(k: MsgKind) -> &'static str {
     match k {
         MsgKind::Help => "help",
         MsgKind::Info => "info",
@@ -79,137 +62,128 @@ fn kind_key(k: MsgKind) -> &'static str {
     }
 }
 
-#[allow(dead_code)]
-fn kind_key_static(k: MsgKind) -> &'static str {
-    kind_key(k)
+/// 消息会话（`07_ui_flow.md` §4/§6 规则 10/11/12）：翻页钳位 + 关闭回打开源场景 + 切场景复位。
+///
+/// 与 `MessageSession`（S8 旧 API）同语义，并补全 `MsgEvent` 分派 + 打开源场景归属
+/// （`FlowSource`）+ 场景切换复位（`scene_switch_resets_state` 的域层语义：
+/// `open(kind, source)` 强制 `page=0`，不残留旧页码/旧种类）。
+#[derive(Debug, Clone)]
+pub struct MsgSession {
+    page: Option<MsgPage>,
+    source: FlowSource,
 }
 
-/// 消息/帮助/信息界面会话：当前打开的页（`None` = 界面未打开）。
-#[derive(Debug, Clone, Default)]
-pub struct MessageSession {
-    cur: Option<MsgPage>,
-}
-
-impl MessageSession {
-    /// 新建空会话（无打开界面）。
+impl MsgSession {
+    /// 新建未打开会话（默认打开源 = 主菜单，`07_ui_flow.md` §1 `Message → Index` 出边）。
     #[must_use]
     pub fn new() -> Self {
-        Self { cur: None }
+        Self { page: None, source: FlowSource::FromIndex }
     }
 
-    /// 当前打开的页（只读，`None` = 未打开）。
+    /// 当前页（`None` = 未打开）。
     #[must_use]
     pub fn current(&self) -> Option<MsgPage> {
-        self.cur
+        self.page
     }
 
-    /// 当前界面种类（`None` = 未打开）。
+    /// 是否已打开。
+    #[must_use]
+    pub fn is_open(&self) -> bool {
+        self.page.is_some()
+    }
+
+    /// 当前种类（`None` = 未打开）。
     #[must_use]
     pub fn kind(&self) -> Option<MsgKind> {
-        self.cur.map(|p| p.kind)
+        self.page.map(|p| p.kind)
     }
 
-    /// 打开某类界面（`page=0`，页数走 `balance.messages`）。
-    pub fn open(&mut self, kind: MsgKind) {
-        self.cur = Some(MsgPage { kind, page: 0, total_pages: total_pages(kind) });
+    /// 打开源场景（未打开时返回默认 `FromIndex`）。
+    #[must_use]
+    pub fn source(&self) -> FlowSource {
+        self.source
     }
 
-    /// 下一页（到末页保持）。
-    pub fn next(&mut self) {
-        if let Some(page) = self.cur {
-            let next_page =
-                if page.page + 1 < page.total_pages { page.page + 1 } else { page.page };
-            self.cur =
-                Some(MsgPage { kind: page.kind, page: next_page, total_pages: page.total_pages });
+    /// 打开某类界面（`page=0`，页数走 `balance.messages`；同时记录打开源场景）。
+    ///
+    /// `07_ui_flow.md` §6 规则 12（`scene_switch_resets_state`）：打开即复位页码与种类，
+    /// 禁止残留上一次会话的 `page`/`kind`。
+    pub fn open(&mut self, kind: MsgKind, source: FlowSource) {
+        self.page = Some(MsgPage { kind, page: 0, total_pages: total_pages(kind) });
+        self.source = source;
+    }
+
+    /// 处理消息事件（`MsgEvent` 分派，`07_ui_flow.md` §4 翻页钳位 + §6 规则 10/11）。
+    ///
+    /// 返回是否产生可见状态变化（表现层据此决定重绘）：
+    /// - `Open` / `Close`：恒为 `true`；
+    /// - `NextPage`：未到末页时 `true`（到末页保持 → `false`）；
+    /// - `PrevPage`：首页循环回末页 → 总页数 > 1 时 `true`，单页时 `false`。
+    #[must_use]
+    pub fn handle(&mut self, ev: MsgEvent) -> bool {
+        match ev {
+            MsgEvent::Open(kind) => {
+                // 经 `MsgEvent::Open` 进入时源场景未知，保留当前 `source`（不覆盖）。
+                let source = self.source;
+                self.open(kind, source);
+                true
+            }
+            MsgEvent::NextPage => {
+                let Some(page) = self.page else {
+                    return false;
+                };
+                if page.page + 1 < page.total_pages {
+                    self.page = Some(MsgPage {
+                        kind: page.kind,
+                        page: page.page + 1,
+                        total_pages: page.total_pages,
+                    });
+                    true
+                } else {
+                    false
+                }
+            }
+            MsgEvent::PrevPage => {
+                let Some(page) = self.page else {
+                    return false;
+                };
+                let next =
+                    if page.page == 0 { page.total_pages.saturating_sub(1) } else { page.page - 1 };
+                let changed = next != page.page;
+                self.page =
+                    Some(MsgPage { kind: page.kind, page: next, total_pages: page.total_pages });
+                changed
+            }
+            MsgEvent::Close => {
+                self.page = None;
+                true
+            }
         }
     }
 
-    /// 上一页（首页回末页，循环）。
-    pub fn prev(&mut self) {
-        if let Some(page) = self.cur {
-            let next_page =
-                if page.page == 0 { page.total_pages.saturating_sub(1) } else { page.page - 1 };
-            self.cur =
-                Some(MsgPage { kind: page.kind, page: next_page, total_pages: page.total_pages });
+    /// 关闭后应回到的场景码（`07_ui_flow.md` §6 规则 11 `msg_close_returns_source`）：
+    /// 据点/面板/结算从主地图打开 → 回主地图；菜单/帮助从主菜单打开 → 回主菜单。
+    /// 未打开时返回 `None`（无界可回）。
+    #[must_use]
+    pub fn close_target(&self) -> Option<u32> {
+        if !self.is_open() {
+            return None;
         }
+        Some(match self.source {
+            FlowSource::FromMainMap => 4,
+            FlowSource::FromIndex => 0,
+        })
     }
 
-    /// 关闭/返回（`cur = None`）。
-    pub fn close(&mut self) {
-        self.cur = None;
+    /// 场景切换复位（`07_ui_flow.md` §6 规则 12 `scene_switch_resets_state`）：
+    /// 切场景后消息会话强制关闭，页码/种类/打开源全部不残留。
+    pub fn reset(&mut self) {
+        *self = Self::new();
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn total_pages_from_balance() {
-        // `balance.messages.pages` 已配 `msgl = 1`（数据注入优先于缺省回退）
-        assert_eq!(total_pages(MsgKind::Msgl), 1, "balance.messages.pages.msgl = 1");
-    }
-
-    #[test]
-    fn total_pages_falls_back_when_missing() {
-        // 缺键 kind 回退 3（与旧 oracle 一致，不 panic）
-        assert_eq!(total_pages_for("nonexistent_kind"), 3, "缺省页数回退 3");
-    }
-
-    #[test]
-    fn open_starts_at_page_zero() {
-        let mut s = MessageSession::new();
-        s.open(MsgKind::Help);
-        let p = s.current();
-        assert!(p.is_some(), "open 后有页（会话不变式）");
-        let p = p.unwrap_or(MsgPage { kind: MsgKind::Help, page: 0, total_pages: 0 });
-        assert_eq!(p.page, 0);
-        assert_eq!(p.kind, MsgKind::Help);
-        assert_eq!(p.total_pages, total_pages(MsgKind::Help));
-    }
-
-    #[test]
-    fn next_stops_at_last_page() {
-        let mut s = MessageSession::new();
-        s.open(MsgKind::Info);
-        let total = total_pages(MsgKind::Info);
-        for _ in 0..total {
-            s.next();
-        }
-        // 多 next 保持末页
-        s.next();
-        let p = s.current();
-        assert!(p.is_some(), "next 后仍有页（会话不变式）");
-        let p = p.unwrap_or(MsgPage { kind: MsgKind::Info, page: 0, total_pages: 0 });
-        assert_eq!(p.page, total - 1, "到末页保持");
-    }
-
-    #[test]
-    fn prev_wraps_to_last_page() {
-        let mut s = MessageSession::new();
-        s.open(MsgKind::Msgs);
-        s.next(); // page 1
-        s.prev(); // page 0
-        s.prev(); // 回末页
-        let p = s.current();
-        assert!(p.is_some(), "prev 后仍有页（会话不变式）");
-        let p = p.unwrap_or(MsgPage { kind: MsgKind::Msgs, page: 0, total_pages: 0 });
-        assert_eq!(p.page, total_pages(MsgKind::Msgs) - 1, "首页 prev 回末页");
-    }
-
-    #[test]
-    fn close_sets_none() {
-        let mut s = MessageSession::new();
-        s.open(MsgKind::Help);
-        s.close();
-        assert!(s.current().is_none(), "close 后无页");
-    }
-
-    #[test]
-    fn page_text_key_is_i18n_not_cjk() {
-        let key = page_text_key(MsgKind::Help, 0);
-        assert_eq!(key, "msg.help.1", "文本走 strings key，非中文");
-        assert!(!key.chars().any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c)));
-        let _ = kind_key_static(MsgKind::Help); // 保持辅助函数被引用
+impl Default for MsgSession {
+    fn default() -> Self {
+        Self::new()
     }
 }

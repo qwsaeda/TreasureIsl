@@ -70,7 +70,8 @@ fn set_volume_takes_effect_immediately() {
 #[test]
 fn real_music_lpk_clips_decode() {
     let root = repo_root();
-    let buf = std::fs::read(root.join("data").join("music.lpk")).expect("music.lpk 存在");
+    let buf =
+        std::fs::read(root.join("legacy").join("data").join("music.lpk")).expect("music.lpk 存在");
     let pkg = ti_formats::lucency::Package::parse("music.lpk", &buf).expect("容器解析成功");
     assert_eq!(pkg.entries.len(), 6, "music.lpk 应有 6 条音轨");
     let mut wav_count = 0usize;
@@ -97,7 +98,8 @@ fn real_music_lpk_clips_decode() {
 fn clipping_free_across_all_music_tracks() {
     // 把全部 WAV 音轨同时播放并整段渲染，确认无削波/爆音
     let root = repo_root();
-    let buf = std::fs::read(root.join("data").join("music.lpk")).expect("music.lpk 存在");
+    let buf =
+        std::fs::read(root.join("legacy").join("data").join("music.lpk")).expect("music.lpk 存在");
     let pkg = ti_formats::lucency::Package::parse("music.lpk", &buf).expect("解析成功");
     let mut m = Mixer::new(8);
     let mut played = 0usize;

@@ -131,6 +131,34 @@ fn settle_overflow_rate_scales() {
 }
 
 #[test]
+fn economy_gold_never_exceeds_cap() {
+    // 建造 Castle 抬上限到 5000，初始金 6000 → 结算后金币永远 ≤ 上限
+    let mut m = BuildManager::new(
+        ti_core::data::BuildCfg {
+            max_level: 10,
+            buildings: vec![BuildingDef {
+                id: "Castle".into(),
+                name_key: "build.castle".into(),
+                base_cost: 500,
+                gold_max: 5_000,
+            }],
+        },
+        Bank::new(6_000),
+        &[],
+    );
+    assert_eq!(m.gold_cap(), 0, "无建筑 → 无上限");
+    m.build("Castle").expect("affordable: 500*1 <= 6000");
+    let cap = m.gold_cap();
+    assert_eq!(cap, 5_000, "上限须等于建筑 gold_max");
+    // 结算溢出：6000 - 500 = 5500 流动 > cap 5000 → 溢出进银行
+    let moved = m.settle_overflow(1.0);
+    assert_eq!(moved, 500, "5500 - 5000 = 500 进银行");
+    assert!(m.bank().gold <= cap, "结算后流动金须 ≤ 上限");
+    assert_eq!(m.bank().gold, 5_000);
+    assert_eq!(m.bank().deposit, 500);
+}
+
+#[test]
 fn build_leveraged_from_balance_table() {
     // 真实 balance 表：成本/上限来自 JSON
     let b = ti_core::data::balance().expect("balance should load");

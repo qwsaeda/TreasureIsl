@@ -1,4 +1,4 @@
-//! 正式实现模块：规则/状态机（结构与 oracle 不同，行为必须与 oracle 逐位一致）。
+//! 正式实现模块：规则/状态机（唯一事实源在 `docs/business/` + `assets/data/*.json`）。
 
 pub mod battle;
 pub mod build;

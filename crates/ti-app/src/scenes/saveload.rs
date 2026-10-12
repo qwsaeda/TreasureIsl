@@ -1,7 +1,7 @@
 //! 存读档场景（S9 骨架）：读档/写档判定 + 槽位列表绘制。
-use ti_core::oracle::menu::Sfx;
-use ti_core::oracle::saveload::SaveSlot;
-use ti_core::oracle::selection::MapSlot;
+use ti_core::domain::flow::Sfx;
+use ti_core::domain::persistence::SaveSlot;
+use ti_core::domain::selection::MapSlot;
 
 use crate::game_app::GameInput;
 use crate::i18n;

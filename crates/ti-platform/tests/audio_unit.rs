@@ -108,7 +108,8 @@ fn parse_wav_rejects_garbage() {
 
 #[test]
 fn parses_music_lpk_wav_entry() {
-    let buf = std::fs::read(repo_root().join("data").join("music.lpk")).expect("music.lpk 存在");
+    let buf = std::fs::read(repo_root().join("legacy").join("data").join("music.lpk"))
+        .expect("music.lpk 存在");
     let pkg = Package::parse("music.lpk", &buf).expect("容器解析成功");
     let wav = pkg.read_entry(&buf, 0).expect("首条解压成功");
     let clip = parse_wav(&wav).expect("WAV 解析成功");

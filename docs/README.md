@@ -8,11 +8,12 @@
 |---|---|
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 13 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 16 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
-| 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md) |
+| 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
-| 查业务规则（战斗/经济/地图/存档） | [`business/`](business/00_index.md) 各系统文档 |
+| **模块并行开发（契约→并行→集成）** | [`process/05_module_parallel.md`](process/05_module_parallel.md)（一轮 4 步 + 包划分 + 纪律）+ [`contracts/`](contracts/00_index.md) + `plan/packages.yaml` |
+| 查业务规则（战斗/经济/地图/存档） | [`business/`](business/00_index.md) 各系统文档（含 [`07_ui_flow.md`](business/07_ui_flow.md) 场景流/控件/输入/消息） |
 | S8 标准化改造 | [`plan-s8-refactor.md`](plan-s8-refactor.md) |
 | 逆向 exe 或 `data/` 格式（**仅参照物**） | [`facts/index.md`](facts/index.md) |
 | 找当前阶段任务与验收命令 | [`plan-s0-s2.md`](plan-s0-s2.md)、[`plan-s3.md`](plan-s3.md)、[`plan-s4.md`](plan-s4.md)、[`plan-s5.md`](plan-s5.md)、[`plan-s7.md`](plan-s7.md)、[`plan-s8-refactor.md`](plan-s8-refactor.md) |
@@ -26,7 +27,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 13 项（doccheck 独立第 9 项含跨文档数值漂移 + release 台账计数同步，`cargo run -p ti-tools --bin doccheck`） |
+| [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 16 项（doccheck 独立第 9 项含跨文档数值漂移 + release 台账计数同步，`cargo run -p ti-tools --bin doccheck`） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收） |
 | [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP） |
 | [`git.md`](git.md) | 推送规范（远端 origin/分支模型/推送规则/commit 格式/推送检查清单） |
@@ -40,6 +41,7 @@
 | [`process/02_conventions.md`](process/02_conventions.md) | 数值/文本数据化 + 门禁红线 + 命名 + 错误 + 测试 + 提交粒度 |
 | [`process/03_templates.md`](process/03_templates.md) | **模版库**：场景/控件/数据表/玩法模块/测试/脚本 六个可复制模版 |
 | [`process/04_tooling.md`](process/04_tooling.md) | 工具链现状 + 待建脚本（codegen/校验/硬编码扫描）+ 幂等要求 |
+| [process/05_module_parallel.md](process/05_module_parallel.md) | **模块并行开发 loop**（一轮 4 步 + 包划分 + 并行纪律 5 条；机读白名单 plan/packages.yaml） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 
@@ -55,6 +57,15 @@
 > **定位变更（2026-10）**：逆向产物（`docs/facts/`、`docs/spec/`、`ref/pseudocode/`、`oracle/`）
 > 降级为**参照物**，不再作为业务规则来源与验收基准。详见 [`plan-s8-refactor.md`](plan-s8-refactor.md) §1。
 
+### 跨包契约（`docs/contracts/`，模块并行冻结面）
+
+| 文件 | 内容 |
+|---|---|
+| [`contracts/00_index.md`](contracts/00_index.md) | 契约清单 + 状态（draft/frozen）+ 全票规则 |
+| [`contracts/c1_core_public_types.md`](contracts/c1_core_public_types.md) | ti-core 公共类型（`domain/*` + `rules::rng` + `data` 访问器）+ 校验锚点 |
+| [`contracts/c2_data_keys.md`](contracts/c2_data_keys.md) | `assets/data/*.json` 的 key 契约（四张表 + 加载纪律） |
+| [`contracts/c3_app_host_api.md`](contracts/c3_app_host_api.md) | 表现层会话 API（`SceneHost` 冻结面 / `MenuShell` / `GpuRenderer`） |
+
 ### 计划
 
 | 文件 | 覆盖 |
@@ -65,7 +76,10 @@
 | [`plan-s5.md`](plan-s5.md) | S5 可玩收口（交互壳 + 全流程 + P4-1 + 业务对齐） |
 | [`plan-s7.md`](plan-s7.md) | S7 HD 资产增强管线（分类 → 批量超分/矢量化 → 重绘 → 多分辨率打包） |
 | [`plan-s8-refactor.md`](plan-s8-refactor.md) | **S8 标准化改造**（定位变更 + 固化/模版化/脚本化/库复用 + 分波次任务） |
+| [`plan-s10-refactor.md`](plan-s10-refactor.md) | **S10 现代化收口**（P0 错乱修复 + 占位清零 + GPU 化渲染 + 对抗流水线 loop 至停机） |
 | [`pipeline.md`](pipeline.md) | TEST-AUDIT-FIX 多代理协作循环（测试→审计→复核→修复→再测） |
+| [plan-s11-forward.md](plan-s11-forward.md) | **S11 正向开发收口**（逆向归档 legacy/ + 业务闭环 + 模块化并行 loop；§7 交接快照） |
+| [plan-s12-parallel.md](plan-s12-parallel.md) | **S12 模块化并行 WBS**（一轮 4 步执行：S12.0 契约冻结 → P1–P5 并行 → S12.6 集成；W2 起 P6 表现层） |
 
 ### 工具与产出物索引
 

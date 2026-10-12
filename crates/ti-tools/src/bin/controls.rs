@@ -60,7 +60,7 @@ struct Report {
 }
 
 fn run(out: Option<&Path>) -> Result<String, String> {
-    let data_dir = repo_root().join("data");
+    let data_dir = repo_root().join("legacy").join("data");
     let mut files: Vec<PathBuf> = fs::read_dir(&data_dir)
         .map_err(|e| format!("读 data/: {e}"))?
         .filter_map(Result::ok)

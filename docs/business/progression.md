@@ -11,7 +11,7 @@
 | 项 | 设计 |
 |---|---|
 | 网格 | 每地图 `grid_w × grid_h`（来自资源，实测 20×20 / 20×20 / 15×15） |
-| 投影 | 等距：`iso_x = 32*(row+col)`，`iso_y = 16*(row + grid_w - 1 - col)`（实测，参照 facts F-307，逆向产物非权威源） |
+| 投影 | 等距：`iso_x = 32*(row+col)`，`iso_y = 16*(row + grid_w - 1 - col)`（实测值，出处 `legacy/docs/facts/map.md` F-307；此处内联为业务公式，不依赖原版产物） |
 | 摄像机 | 跟随玩家，按投影中心计算，整格对齐（不做平滑插值，保证确定性；实现落点 `ti_platform::gfx::FramePresenter`/`Viewport`，见 impl/03_map_system.md §5） |
 | 地形类型 | 由资源 terrain 记录给出（水/陆/障碍），移动合法性查表 |
 
@@ -43,15 +43,18 @@
 
 ```jsonc
 "cards": {
-  "deck": [                       // 卡池（示例节选）
-    { "id": "treasure", "weight": 3, "effect": { "gold": +200 } },
-    { "id": "ambush",   "weight": 2, "effect": { "hp": -10 } },
-    { "id": "supply",   "weight": 2, "effect": { "gold": +50, "hp": +5 } }
+  "deck": [                       // 卡池（示例节选；id/effect schema 与 balance.json 一致）
+    { "id": 1, "name_key": "cards.1", "weight": 3, "effect": { "kind": "gold",   "value": 20 } },
+    { "id": 2, "name_key": "cards.2", "weight": 2, "effect": { "kind": "heal",   "value": 15 } },
+    { "id": 3, "name_key": "cards.3", "weight": 3, "effect": { "kind": "damage", "value": 10 } }
   ],
   "event_chance": 0.35,           // 移动触发卡牌的概率
-  "hand_size": 1                 // 一次抽几张（balance.json 当前值 = 1）
+  "hand_size": 1                  // 一次抽几张（balance.json 当前值 = 1）
 }
 ```
+
+> 上表为示例节选（3 张），完整 5 张卡（id 1..5）以 `assets/data/balance.json` `cards.deck` 为准。
+> `effect` schema 为 `{ kind, value }`（非 `{ "gold": +200 }` 旧设计占位），见 `docs/impl/06_cards_events.md`。
 
 ### 抽牌（可复现）
 

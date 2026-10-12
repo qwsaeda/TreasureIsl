@@ -1,5 +1,5 @@
 //! 战斗场景（S9 骨架）：回合推进 / 战斗面板绘制。
-use ti_core::oracle::battle::Side;
+use ti_core::domain::combat::Side;
 
 use crate::game_app::GameInput;
 use crate::i18n;

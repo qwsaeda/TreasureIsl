@@ -89,37 +89,37 @@ fn to_input(step: &Step) -> GameInput {
         "write_save" => GameInput::WriteSave(step.slot.unwrap_or(0)),
         "load_save" => GameInput::LoadSave(step.slot.unwrap_or(0)),
         other => {
-            eprintln!("未知 action：{other}");
+            eprintln!("unknown action: {other}");
             std::process::exit(1);
         }
     }
 }
 
 /// 方向名 → `Dir`。
-fn dir_by_name(name: &str) -> ti_core::oracle::main_map::Dir {
-    use ti_core::oracle::main_map::Dir;
+fn dir_by_name(name: &str) -> ti_core::domain::map::Dir {
+    use ti_core::domain::map::Dir;
     match name {
         "North" => Dir::North,
         "West" => Dir::West,
         "South" => Dir::South,
         "East" => Dir::East,
         other => {
-            eprintln!("未知方向：{other}");
+            eprintln!("unknown direction: {other}");
             std::process::exit(1);
         }
     }
 }
 
 /// 建筑名 → `Building`。
-fn building_by_name(name: &str) -> ti_core::oracle::build::Building {
-    use ti_core::oracle::build::Building;
+fn building_by_name(name: &str) -> ti_core::domain::economy::Building {
+    use ti_core::domain::economy::Building;
     match name {
         "Castle" => Building::Castle,
         "Investment" => Building::Investment,
         "Bank" => Building::Bank,
         "Fort" => Building::Fort,
         other => {
-            eprintln!("未知建筑：{other}");
+            eprintln!("unknown building: {other}");
             std::process::exit(1);
         }
     }
@@ -134,17 +134,17 @@ fn main() {
         .unwrap_or_else(|| "tests/scripts/full_run.json".to_owned());
 
     let Ok(raw) = std::fs::read_to_string(&script_path) else {
-        eprintln!("读脚本 {script_path} 失败");
+        eprintln!("read script {script_path} failed");
         std::process::exit(1);
     };
     let Ok(script) = serde_json::from_str::<Script>(&raw) else {
-        eprintln!("解析 {script_path} 失败");
+        eprintln!("parse {script_path} failed");
         std::process::exit(1);
     };
 
     println!(
-        "{}：seed={}，步骤={}",
-        if script.title.is_empty() { "全流程回归" } else { &script.title },
+        "{}: seed={}, steps={}",
+        if script.title.is_empty() { "full-run" } else { &script.title },
         script.seed,
         script.steps.len()
     );
@@ -159,7 +159,7 @@ fn main() {
         let cur = app.scene();
         let cur_name = scene_name(cur);
         if cur_name != step.scene {
-            println!("  步骤 {i:>2} 前置场景不符：期望 {}，实际 {cur_name}", step.scene);
+            println!("  step {i:>2} scene mismatch: expected {} got {cur_name}", step.scene);
             failures += 1;
             continue;
         }
@@ -175,38 +175,41 @@ fn main() {
         let after_name = scene_name(after);
         if after_name != step.expect {
             println!(
-                "  步骤 {i:>2} 后续场景不符：期望 {}，实际 {after_name}（action={}）",
+                "  step {i:>2} post scene mismatch: expected {} got {after_name} (action={})",
                 step.expect, step.action
             );
             failures += 1;
         } else {
             println!(
-                "  步骤 {i:>2} OK  {action:<14} {scene} -> {after_name}",
+                "  step {i:>2} OK  {action:<14} {scene} -> {after_name}",
                 action = step.action,
                 scene = step.scene
             );
         }
     }
 
-    // 战斗进度检查（Vs 场景应已推进回合；`rounds > 0` 证明战斗逻辑真实执行）
+    // battle progress check (Vs scene should advance rounds; `rounds > 0` proves combat ran)
     if let Some(b) = app.battle() {
         println!(
-            "  战斗进度：回合={} 玩家HP={} BOSSHP={} 结果={:?}",
-            b.rounds, b.player_hp, b.boss_hp, b.outcome
+            "  battle: rounds={} player_hp={} boss_hp={} outcome={:?}",
+            b.rounds(),
+            b.player_hp(),
+            b.boss_hp(),
+            b.outcome()
         );
-        if b.rounds == 0 {
-            println!("  警告：战斗 0 回合（脚本未推进 attack），仅验证场景流转");
+        if b.rounds() == 0 {
+            println!("  warn: battle 0 rounds (script did not advance attack), scene-flow only");
         }
     }
 
     if failures == 0 {
         println!(
-            "全流程 {}/{} 步断言 0 失败（P3-3 判据达成）",
+            "full run {}/{} steps, 0 failures (P3-3 criterion met)",
             script.steps.len(),
             script.steps.len()
         );
     } else {
-        println!("全流程 {failures}/{} 步断言失败", script.steps.len());
+        println!("full run {failures}/{} steps failed", script.steps.len());
         std::process::exit(1);
     }
 }

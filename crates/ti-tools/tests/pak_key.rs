@@ -66,14 +66,14 @@ fn extract_names(exe: &[u8]) -> Vec<String> {
 }
 
 fn load(c: &str) -> (Vec<u8>, Package) {
-    let buf = fs::read(repo_root().join("data").join(c)).expect("容器存在");
+    let buf = fs::read(repo_root().join("legacy").join("data").join(c)).expect("容器存在");
     let pkg = Package::parse(c, &buf).expect("容器解析成功");
     (buf, pkg)
 }
 
 #[test]
 fn name_derivable_entries_are_all_explained() {
-    let exe = fs::read(repo_root().join("TreasureIsl.exe")).expect("exe 存在");
+    let exe = fs::read(repo_root().join("legacy").join("TreasureIsl.exe")).expect("exe 存在");
     let names = extract_names(&exe);
     assert!(names.len() >= 100, "资源名过少: {}", names.len());
 

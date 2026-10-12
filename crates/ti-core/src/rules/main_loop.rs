@@ -1,14 +1,12 @@
-//! 场景状态机（S8.3.e 数据化：`SceneId` 从 `oracle::main_loop` 重导出为唯一事实源，
-//! 转移规则依据 `docs/business/loop_core.md`）。
+//! 场景状态机（S8.3.e / S12.4 数据化：`SceneId` 来自 `domain::flow` 唯一事实源，
+//! 转移规则依据 `docs/business/loop_core.md` §场景切换 + `07_ui_flow.md` §1 场景流）。
 //!
-//! S8 定位变更：旧 `oracle::main_loop::oracle_next_state` 降级参照物；本模块的转移表
-//! 与 oracle 行为一致（同状态 + 同 trigger → 同输出），但**不再调用** oracle 自由函数，
-//! 转移逻辑直接落本文件（`docs/business/loop_core.md` 场景切换状态机）。
+//! 本模块的转移表直接落本文件（同状态 + 同 trigger → 同输出），
+//! 类型全部来自 `domain::flow`（S11 类型唯一家）。
 //!
-//! `SceneId` 仍从 oracle 重导出（S8.3.e 允许：枚举定义非「推测公式」，是稳定标识）；
 //! 状态码/trigger 码表在 `docs/business/loop_core.md`，数值在 `balance.json`（场景键）。
 
-use crate::oracle::main_loop::SceneId;
+use crate::domain::flow::SceneId;
 
 /// 场景管理器：当前状态码、当前场景 id、切换历史栈。
 ///
@@ -60,7 +58,10 @@ impl SceneStack {
 
     /// 推进状态机：给定触发事件码，更新状态与场景，返回 (新状态码, 目标场景 id)。
     ///
-    /// 转移表（`docs/business/loop_core.md`，与 oracle 行为一致但本文件为唯一事实源）：
+    /// `07_ui_flow.md` §1 硬规则 3：任何跳转都必须更新 `scenes` 状态码（本函数经
+    /// `advance`/`push_scene` 落 `state`），否则静态帧优化跳帧。
+    ///
+    /// 转移表（`docs/business/loop_core.md`，本文件为唯一事实源）：
     /// - 0 + trigger 1 → (25, Vs)；否则保持；
     /// - 2 + trigger 5 → (0, Index)；否则保持；
     /// - 3 → 任意 trigger → (0, Index)；

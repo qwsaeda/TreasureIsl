@@ -17,7 +17,8 @@ use ti_tools::doccheck::{Doc, NumericAssertion, check, dod_keywords, evidence_is
 use ti_tools::ledger::{Status, Task, validate};
 
 /// 参与扫描的文档根（相对仓库根）。
-const DOC_ROOTS: &[&str] = &["docs", "AGENTS.md", "plan"];
+/// S11 归档后 `legacy/docs/facts/` 仍登记 F-NNN 事实（只读参照物，允许被引用）。
+const DOC_ROOTS: &[&str] = &["docs", "AGENTS.md", "plan", "legacy/docs"];
 
 /// 跨文档必须一致的数字断言。
 ///

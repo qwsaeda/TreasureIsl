@@ -14,7 +14,8 @@ fn repo_root() -> PathBuf {
 #[test]
 fn all_cards_lpk_ini_entries_parse_and_roundtrip() {
     let root = repo_root();
-    let buf = std::fs::read(root.join("data").join("cards.lpk")).expect("cards.lpk 存在");
+    let buf =
+        std::fs::read(root.join("legacy").join("data").join("cards.lpk")).expect("cards.lpk 存在");
     let pkg = Package::parse("cards.lpk", &buf).expect("容器解析成功");
 
     let mut total_ini = 0usize;
@@ -55,7 +56,8 @@ fn cards_ini_has_card_catalog() {
     // 实测（djb2 小写）：event.ini=0x43104390（索引 0）、cards.ini=0xCA00521B（索引 3）
     // cards.ini 内容 = [card] imageCount=2 cardCount=26 + [imageN]/[cardN]
     let root = repo_root();
-    let buf = std::fs::read(root.join("data").join("cards.lpk")).expect("cards.lpk 存在");
+    let buf =
+        std::fs::read(root.join("legacy").join("data").join("cards.lpk")).expect("cards.lpk 存在");
     let pkg = Package::parse("cards.lpk", &buf).expect("解析成功");
     assert_eq!(pkg.find("event.ini"), Some(0), "event.ini 应是首条");
     let idx = pkg.find("cards.ini").expect("cards.ini 应存在");
@@ -72,7 +74,8 @@ fn cards_ini_has_card_catalog() {
 #[test]
 fn event_ini_entries_have_ids_and_names() {
     let root = repo_root();
-    let buf = std::fs::read(root.join("data").join("cards.lpk")).expect("cards.lpk 存在");
+    let buf =
+        std::fs::read(root.join("legacy").join("data").join("cards.lpk")).expect("cards.lpk 存在");
     let pkg = Package::parse("cards.lpk", &buf).expect("解析成功");
     let idx = pkg.find("event.ini").expect("event.ini 应存在");
     let raw = pkg.read_entry(&buf, idx).expect("解压成功");

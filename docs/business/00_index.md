@@ -3,15 +3,15 @@
 本目录是**游戏业务规则的唯一事实源**。它描述**游戏应该怎么玩**（设计意图 +
 平衡数值），不描述原版 exe 怎么实现。
 
-> **与逆向产物的关系（2026-10 决策）**
-> 逆向产物（`docs/facts/`、`docs/spec/`、`ref/pseudocode/*.c`、`crates/ti-core/src/oracle/`）
-> 已降级为**参照物**：可以看看原版长什么样，但**不作为业务规则来源、不作为验收基准**。
+> **与原版逆向产物的关系（2026-10 决策）**
+> 原版 exe 的逆向产物已归档到 `legacy/`（原版资源、伪代码、逆向规格、逆向脚本）。
+> 它是**参照物**：可以查证原版长什么样，但**不作为业务规则来源、不作为验收基准**。
 > 业务规则以本目录 + `assets/data/*.json` 为准。详见 [`plan-s8-refactor.md`](../plan-s8-refactor.md) §1。
 
 ## 为什么这样切分
 
-历史上业务规则写在 `oracle/`（差分测试基准）+ `docs/design/`（实现级规格）里，
-两者都源于逆向伪代码，导致「猜的公式 → 自己验证自己 → 全绿」的假对齐。
+历史上业务规则与「原版怎么实现」的规格混在一起（同一批逆向产物既当规则又当基准），
+导致「猜的公式 → 自己验证自己 → 全绿」的假对齐。
 本目录把业务规则**独立出来、可读、可调、可评审**，数值落到 `assets/data/*.json`。
 
 ## 分层：设计意图 vs 数值
@@ -21,7 +21,7 @@
 | **设计意图** | 本目录（散文 + 规则 + 公式结构） | 策划 / 评审 | 「伤害 = f(atk, rng)，玩家先手，回合制」 |
 | **平衡数值** | `assets/data/balance.json` | 策划，改 JSON 即可 | 「boss_tiers[0].hp = 50000」 |
 | **文本** | `assets/data/strings.json` | 策划 / 本地化 | 「scene.select_role.title = 选择角色」 |
-| **实现** | `crates/ti-core/src/rules/` | 工程师 | `struct CombatSession`（S8.3.a–e 已 verified；`battle.rs` 数值全由 `balance.combat` 注入，不再含 oracle 公式残留） |
+| **实现** | `crates/ti-core/src/rules/` | 工程师 | `struct CombatSession`（S8.3.a–e 已 verified；`battle.rs` 数值全由 `balance.combat` 注入，不再含原版公式残留） |
 
 改数值 = 改 JSON（不碰代码）；改机制 = 先改本目录（评审）再改代码。
 
@@ -34,6 +34,7 @@
 | [`combat.md`](combat.md) | 战斗 | BOSS 档、伤害模型、回合流程、胜负 |
 | [`progression.md`](progression.md) | 地图 / 据点 / 卡牌事件 | 网格地图、移动、探索事件、卡牌 |
 | [`persistence.md`](persistence.md) | 存读档 / 设置 / RNG | 存档字段、迁移、RNG 可复现 |
+| [`07_ui_flow.md`](07_ui_flow.md) | **UI 流程（S11 新增）** | 场景流/控件/键盘触摸输入/消息分页/UI 约束；表现层并行开发唯一依据 |
 
 ## 编写约定
 
@@ -46,6 +47,36 @@
 ## 与其他文档的边界
 
 - **工程怎么做**：[`docs/process/`](../process/00_index.md)（分层/约定/模板/工具）；
+- **架构约束**：[`docs/process/01_architecture.md`](../process/01_architecture.md) §1.1（SceneHost 窄接口隔离）+ §5.6（Builder/Type-State/Command 模式）；
+- **代码规范**：[`docs/style.md`](../style.md) §5.6（Trait 设计 + 接口隔离 + 设计模式）；
 - **资源字节格式**：`docs/formats/`（pak/lpk/pcx/字体/存档的真实布局，这些是实测事实，保留）；
 - **玩法意图（本文档）**：`docs/business/`；
-- **原版实现（仅参照）**：`docs/facts/` + `ref/pseudocode/`。
+- **原版实现（仅参照，出处标注一律带 `legacy/` 前缀）**：`legacy/docs/`、`legacy/ref/`。
+
+## 架构约束（S9 起）
+
+### 接口隔离（现状宽接口 → 目标窄接口，S9.2 拆分中）
+
+`SceneHost` 现状是单一宽接口（约 60 方法，`scenes/mod.rs`），S9.2 目标按职责拆分为 8 个窄接口
+（`SceneControl`/`RenderHost`/`EconomyHost`/`BattleHost`/`SelectionHost`/`MessageHost`/`SaveHost`/`MapHost`），
+场景只依赖它需要的接口。详见 [`docs/process/01_architecture.md`](../process/01_architecture.md) §1.1。
+
+### 设计模式
+
+| 模式 | 用途 | 详见 |
+|---|---|---|
+| Builder | `GameApp` 复杂对象构造 | [`docs/style.md`](../style.md) §5.6.2 |
+| Type-State | 场景转换编译期安全 | [`docs/style.md`](../style.md) §5.6.3 |
+| Command | 输入可序列化/重放 | [`docs/style.md`](../style.md) §5.6.4 |
+| Observer | 事件驱动（规划中） | — |
+| ECS | 动态组合行为（规划中） | — |
+
+### 模块边界
+
+- `ti-formats`：纯二进制格式解析/序列化，零依赖；
+- `ti-core`：纯玩法逻辑，零 IO，只依赖 `ti-formats`；
+- `ti-platform`：平台抽象 trait + macroquad 后端，不依赖 `ti-core`；
+- `ti-app`：组装层 + 三端 bin，依赖 `ti-core` + `ti-platform` + `ti-formats`；
+- `ti-tools`：离线工具，依赖 `ti-formats`。
+
+**禁止反向依赖**：`ti-core` 不得依赖 `ti-platform`；`ti-platform` 不得依赖 `ti-app`。

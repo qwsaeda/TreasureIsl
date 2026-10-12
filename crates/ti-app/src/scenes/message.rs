@@ -1,5 +1,5 @@
 //! 消息/帮助场景（S9 骨架）：翻页判定 + 页面文本绘制。
-use ti_core::oracle::messages::MsgKind;
+use ti_core::domain::messages::MsgKind;
 use ti_core::rules::messages::page_text;
 
 use crate::game_app::GameInput;
@@ -57,7 +57,7 @@ impl Scene for MessageScene {
         host.clear_frame(COLOR_BG);
         host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
         let kind = host.msg_kind().unwrap_or(MsgKind::Help);
-        host.draw_text(kind.label(), 60, 4);
+        host.draw_text(i18n::sget(kind.label()), 60, 4);
         // 当前页文本（`rules::messages::page_text` 分页钳位，文本经 `i18n::sget` 查表）
         let page = host.msg_page();
         let key = page_text(kind, page);

@@ -36,7 +36,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn music_bytes() -> Vec<u8> {
-    fs::read(repo_root().join("data").join("music.lpk")).expect("music.lpk 存在")
+    // S11：原版资源归档至 legacy/data/（ti-app 运行时用 assets/，测试读 legacy 原版包）
+    fs::read(repo_root().join("legacy").join("data").join("music.lpk")).expect("music.lpk 存在")
 }
 
 #[test]

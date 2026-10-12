@@ -130,7 +130,7 @@
   （game_app.rs/widgets.rs/i18n.rs/scenes/*/ins/*），匹配 oracle_[a-z_0-9]+(
   函数调用（含全限定 + 排除 use/注释行）；类型路径（后不跟 (）不算违规。幂等只读
   （--check 非 0 判 FAIL / --report 恒 0 看明细，EXP-054 三契约）。
-- 验证：python scripts/check_oracle_boundary.py --check 0 违规；gate.ps1 13 项全绿；
+- 验证：python scripts/check_oracle_boundary.py --check 0 违规；gate.ps1 14 项全绿；
   全仓 grep shell 层 oracle_ 函数调用 = 0。
 - 教训：**固化脚本的判定要按「引用语义」分层，不能按前缀一刀切**——oracle 的「类型/几何」
   是事实层（可留），「公式函数」是推测层（禁）。门禁脚本要能区分二者，否则要么误伤、要么漏放。

@@ -25,6 +25,7 @@ pub mod shell_ui;
 pub mod sprite_atlas;
 pub mod terrain_atlas;
 pub mod touch;
+pub mod ttf_font;
 pub mod widgets;
 
 #[cfg(feature = "android-shell")]
@@ -39,8 +40,8 @@ pub use i18n::{sget, sgetf, try_sget};
 pub use menu_shell::MenuShell;
 pub use scenes::{
     IndexScene, MainMapScene, MessageScene, SaveloadScene, Scene as SceneTrait, SceneHost,
-    SceneKind, SceneRegistry, SelectMapScene, SelectRoleScene, VsScene, route_input, route_render,
-    route_touch,
+    SceneKind, SceneRegistry, SceneTransition, SelectMapScene, SelectRoleScene, VsScene, markers,
+    route_input, route_render, route_touch,
 };
 pub use shell_ui::{MENU, MenuItem, status_texts};
 pub use sprite_atlas::SpriteAtlas;

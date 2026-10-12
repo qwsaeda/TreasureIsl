@@ -1,27 +1,27 @@
-//! oracle：S3.3 差分基准，测试专用。
-//!
-//! 直译 `docs/spec/menu.md` 的主菜单事件状态机：
-//! - 场景枚举 [`MenuScene`]：8 个可到达状态（Intro/Index/SelectRole/SelectMap/Saveload/Option/Help/Exit）；
-//! - 事件枚举 [`MenuEvent`]：`Click(u32)`（事件码）/ `Invalid` / `Quit`；
-//! - [`oracle_menu_transition`]：同一 (场景, 事件) 产生同一 (新场景, Option<`Sfx`>)，逐位基准；
-//! - [`oracle_reachable_menu`]：从 Intro/Index 出发的可达场景集。
-//!
-//! 事件码（`docs/spec/menu.md` §a，`saveload` 实测）：
-//! - 13 = 确定/Enter（菜单项选择）；
-//! - 27 = 返回（子场景回 index）；
-//! - 37 = 无效操作（**推测** invalid.wav 触发）；
-//! - 38 = 上一页；40 = 下一页；
-//! - `Click(u32)` 参数 = 上述事件码，其中 13 的「选中菜单项」由 `MenuScene` 决定（Index 场景下 case 0..=5）。
-//!
-//! 事件码 0/1/2 为**推测**占位码（spec §a 标注），对应菜单项 case 0..=5：
-//! - `Click(0)` = 新游戏 → `SelectRole`；
-//! - `Click(1)` = 继续 → `Saveload`；
-//! - `Click(2)` = 选项 → `Option`；
-//! - `Click(3)` = 说明 → `Help`；
-//! - `Click(4)` = 说明续 → `Help`（第二页，oracle 简化为 `Help`）；
-//! - `Click(5)` = 退出 → `Exit`；
-//!
-//! 真实事件码为 13（确定键），菜单项索引 `v3[14]` 0..=5 与 Click 参数 0..=5 一一对应。
+// oracle：S3.3 差分基准，测试专用。
+//
+// 直译 `docs/spec/menu.md` 的主菜单事件状态机：
+// - 场景枚举 [`MenuScene`]：8 个可到达状态（Intro/Index/SelectRole/SelectMap/Saveload/Option/Help/Exit）；
+// - 事件枚举 [`MenuEvent`]：`Click(u32)`（事件码）/ `Invalid` / `Quit`；
+// - [`oracle_menu_transition`]：同一 (场景, 事件) 产生同一 (新场景, Option<`Sfx`>)，逐位基准；
+// - [`oracle_reachable_menu`]：从 Intro/Index 出发的可达场景集。
+//
+// 事件码（`docs/spec/menu.md` §a，`saveload` 实测）：
+// - 13 = 确定/Enter（菜单项选择）；
+// - 27 = 返回（子场景回 index）；
+// - 37 = 无效操作（**推测** invalid.wav 触发）；
+// - 38 = 上一页；40 = 下一页；
+// - `Click(u32)` 参数 = 上述事件码，其中 13 的「选中菜单项」由 `MenuScene` 决定（Index 场景下 case 0..=5）。
+//
+// 事件码 0/1/2 为**推测**占位码（spec §a 标注），对应菜单项 case 0..=5：
+// - `Click(0)` = 新游戏 → `SelectRole`；
+// - `Click(1)` = 继续 → `Saveload`；
+// - `Click(2)` = 选项 → `Option`；
+// - `Click(3)` = 说明 → `Help`；
+// - `Click(4)` = 说明续 → `Help`（第二页，oracle 简化为 `Help`）；
+// - `Click(5)` = 退出 → `Exit`；
+//
+// 真实事件码为 13（确定键），菜单项索引 `v3[14]` 0..=5 与 Click 参数 0..=5 一一对应。
 
 /// 菜单场景枚举。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

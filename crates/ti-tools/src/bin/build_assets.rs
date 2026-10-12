@@ -55,7 +55,7 @@ fn main() -> ExitCode {
 
 fn build(out: &Path) -> Result<usize, String> {
     let root = repo_root();
-    let data = root.join("data");
+    let data = root.join("legacy").join("data");
     if out.exists() {
         fs::remove_dir_all(out).map_err(|e| format!("清空 {}: {e}", out.display()))?;
     }

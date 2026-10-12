@@ -20574,5 +20574,5 @@
     }
   ],
   "schema_version": 1,
-  "source": "ref/controls.json"
+  "source": "legacy/ref/controls.json"
 }

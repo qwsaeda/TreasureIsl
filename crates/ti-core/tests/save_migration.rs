@@ -1,17 +1,18 @@
-//! S4.2 存档 v2（导出/导入、IndexedDB 与 Android 存储互通）+ v1 自动迁移。
+//! S4.2 / S12.5 存档 v2（导出/导入、IndexedDB 与 Android 存储互通）+ v1 自动迁移。
 //!
 //! 验收（DoD）：
 //! - (1) v1 存档字节 → 自动迁移 → v2 SaveSlot（往返一致）；
 //! - (2) v2 写入 → 读取 → v1 兼容读（向后兼容）；
 //! - (3) 5 槽位 SaveManager：全部槽位从 v1 迁移到 v2；
 //! - (4) 导出/导入：序列化 `SaveManager` 槽位为 JSON 字节，反序列化回，逐字段一致；
-//! - (5) 字节布局自描述（魔数 + version 字段在偏移 6，跨平台同字节）。
+//! - (5) 字节布局自描述（魔数 + version 字段在偏移 6，跨平台同字节）；
+//! - S12.5 新增：(6) `rng_steps` 字段在 v1→v2 迁移后补 0（向后兼容）。
 //!
 //! 置于集成测试目录，豁免门禁的 unwrap/expect 扫描（EXP-021）。
 
+use ti_core::domain::persistence::{MIN_SAVE_SIZE, REC_MAGIC, SaveErr, SaveSlot};
 use ti_core::oracle::saveload::{
-    MIN_SAVE_SIZE, REC_MAGIC, SaveErr, SaveSlot, oracle_migrate_v1_to_v2, oracle_read_slot,
-    oracle_read_slot_v1, oracle_write_slot,
+    oracle_migrate_v1_to_v2, oracle_read_slot, oracle_read_slot_v1, oracle_write_slot,
 };
 use ti_core::rules::saveload::{SaveManager, SaveSlotV2};
 
@@ -220,4 +221,24 @@ fn migration_preserves_magic_offset() {
         let read = oracle_read_slot(&v2_bytes).expect("槽位 {i} 读回应成功");
         assert_eq!(read, *slot, "槽位 {i} 往返逐位一致");
     }
+}
+
+/// (9) S12.5：v1→v2 迁移后 `rng_steps` 缺省补 0（向后兼容，旧 JSON 无 `rng_steps` 字段）。
+#[test]
+fn migrate_v1_json_fills_rng_steps_default_zero() {
+    // 旧 JSON v1（缺 `version`/`bank`/`rng_seed`/`rng_steps`）
+    let json = r#"{"character":"drake","map":"m01"}"#;
+    let v1 = SaveSlotV2::from_json(json).expect("v1 JSON 解析成功");
+    assert_eq!(v1.rng_steps, 0, "v1 缺 rng_steps → default 补 0（向后兼容）");
+
+    // 迁移到 v2
+    let v2 = v1.migrate();
+    assert!(v2.is_v2(), "迁移后 version=2");
+    assert_eq!(v2.rng_steps, 0, "v2 迁移后 rng_steps 保持 0（不覆盖缺省值）");
+
+    // 显式 `rng_steps` 值在 v2 迁移中不被覆盖
+    let json2 = r#"{"version":2,"character":"drake","map":"m01","rng_steps":42}"#;
+    let s2 = SaveSlotV2::from_json(json2).expect("解析");
+    let m2 = s2.migrate();
+    assert_eq!(m2.rng_steps, 42, "已有 rng_steps 不被迁移覆盖（幂等）");
 }

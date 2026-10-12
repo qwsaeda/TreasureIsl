@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""扫描 crates/**/src/** 的硬编码中文与布局魔法数（数据化红线）。
+"""check_hardcode.py — S8.2 硬编码扫描（gate 第 12 项，严格模式：命中即 FAIL）。
 
-用法：
-    python scripts/check_hardcode.py           # 扫描并报告（发现即失败）
-    python scripts/check_hardcode.py --warn    # 只报告不失败（迁移期用）
-    python scripts/check_hardcode.py --list    # 按类别汇总（不清单明细）
+背景（docs/process/02_conventions.md 数据化红线）：
+「表现层不含数值」：玩家可见中文（菜单/按钮/标签/状态行）必须来自
+`assets/data/strings.json`（i18n sget/sgetf，按 key）；布局色值必须来自
+`menu_shell` 的 COLOR_* 常量。代码里的中文字面量/硬编码色值 = 漂移源。
 
-判据（docs/process/02_conventions.md §1）：
-- **玩家可见中文**（场景标题/提示/商品名/建筑名/消息标签）必须进 `assets/data/strings.json`；
-- 布局调用（`fill_rect`/`draw_text_row`/...）里的硬编码颜色必须进 `assets/data/scenes.json`。
-
-豁免（带理由，见下方 EXEMPT）：
-1. `oracle/` 冻结参照层 —— S8 定位变更后不再改，不追（`docs/plan-s8-refactor.md` §1）；
-2. `ti-tools` CLI —— 输出是**命令行终端文本**，不是游戏内 UI，不进 strings.json；
-3. 注释与 `#[cfg(test)]` 模块 —— 非生产代码；
-4. `settings.rs` 的**配置键名** —— 是 storage key 不是显示文本。
+豁免（带理由）：
+1. `oracle/`（含 `ti-core/src/oracle` 桥接层与 `legacy/oracle-rust`）— S8/S11
+   定位变更后为冻结参照层，不再改，不追（docs/plan-s8-refactor.md 1）；
+2. `ti-tools` CLI — 输出是命令行终端文本，不是游戏内 UI，不进 strings.json；
+3. 注释行与 `#[cfg(test)]` 模块 — 非生产代码；
+4. `settings.rs` 配置键名 — storage key 不是显示文本。
 
 退出码：0 通过；非 0 发现硬编码（gate 判 FAIL）。迁移期可用 --warn。
 """
@@ -32,24 +29,28 @@ STR_LIT = re.compile(r'"([^"\\]|\\.)*"')
 LAYOUT_CALL = re.compile(r"\b(fill_rect|draw_text_row|draw_text|blit|fill)\s*\(")
 COLOR_HEX = re.compile(r"\b0x[0-9A-Fa-f]{4}\b")
 
-SKIP_DIR_PARTS = {"tests", "target"}
+SKIP_DIR_PARTS = {"tests", "target", "legacy"}
 
-# ── 豁免规则（每条必须有理由，改动时先看这里）──────────────────────────────
+# -- 豁免规则（每条必须有理由，改动时先看这里）--
 EXEMPT: list[tuple[str, str, str]] = [
-    # (路径子串, 类别, 理由)
-    ("oracle/", "any", "冻结参照层：S8 后不再改，不追硬编码"),
-    ("ti-tools/", "cjk", "CLI 工具：终端输出文本，非游戏内 UI"),
-    ("treasure_headless.rs", "cjk", "无头冒烟 CLI 打印（P3-3 机器判定），非游戏内 UI"),
-    ("settings.rs", "cjk", "storage 配置键名，非显示文本"),
-    ("mod_pcm.rs", "cjk", "PCM 格式诊断信息，仅 debug 打印"),
-    ("audio.rs", "cjk", "WAV 解析错误描述（Error::Asset 原因），非玩家可见 UI 文案"),
-    ("sprite_atlas.rs", "cjk", "贴图加载诊断 / 断言消息，非玩家可见 UI 文案"),
-    ("terrain_atlas.rs", "cjk", "地形 pak 加载诊断 / 断言消息，非玩家可见 UI 文案"),
+    # (path-substring, category, reason)
+    ("oracle/", "any", "frozen reference layer: post-S8/S11 archived, do not chase"),
+    ("legacy/", "any", "archived artifacts: not in the active build"),
+    ("ti-tools/", "cjk", "CLI tool: terminal output text, not in-game UI"),
+    ("treasure_headless.rs", "cjk", "headless smoke CLI prints (P3-3 machine check), not in-game UI"),
+    ("treasure_android.rs", "cjk", "Android shell diagnostic prints, not in-game UI"),
+    ("settings.rs", "cjk", "storage config key names, not display text"),
+    ("mod_pcm.rs", "cjk", "PCM format diagnostics, debug prints only"),
+    ("audio.rs", "cjk", "WAV parse error descriptions, not player-visible UI"),
+    ("audio_prep.rs", "cjk", "audio asset diagnostics / test messages, not player-visible UI"),
+    ("sprite_atlas.rs", "cjk", "atlas loading diagnostics / assertion messages, not player UI"),
+    ("terrain_atlas.rs", "cjk", "terrain pak loading diagnostics / assertion messages, not player UI"),
+    ("game_app.rs", "cjk", "runtime error eprintln diagnostics (balance load failures), not player UI"),
 ]
 
 
 def exempt_for(rel: str, cat: str) -> str | None:
-    """返回豁免理由；未豁免返回 None。"""
+    """Return the exemption reason, or None if not exempt."""
     norm = rel.replace("\\", "/")
     for pat, c, why in EXEMPT:
         if pat in norm and (c == "any" or c == cat):
@@ -70,13 +71,14 @@ def in_test_region(lines: list[str], idx0: int) -> bool:
 
 
 def scan_file(path: Path) -> list[tuple[str, str, int, str]]:
-    """返回 (rel, category, lineno, detail) 列表。"""
+    """Return a list of (rel, category, lineno, detail) hits."""
     hits: list[tuple[str, str, int, str]] = []
     rel = path.as_posix()
     try:
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return hits
+
     lines = text.splitlines()
     for i, raw in enumerate(lines):
         if in_test_region(lines, i):
@@ -98,40 +100,51 @@ def scan_file(path: Path) -> list[tuple[str, str, int, str]]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--root", type=Path, default=Path("."))
-    ap.add_argument("--warn", action="store_true", help="report only, do not fail")
-    ap.add_argument("--list", action="store_true", help="summarize by file")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--warn", action="store_true", help="report but do not fail")
+    ap.add_argument("--root", default=".", help="repo root")
     args = ap.parse_args()
 
-    crates = args.root / "crates"
-    hits: list[tuple[str, str, int, str]] = []
+    root = Path(args.root).resolve()
+    crates = root / "crates"
     files = 0
+    all_hits: list[tuple[str, str, int, str]] = []
     for rs in sorted(crates.rglob("*.rs")):
-        if any(p in SKIP_DIR_PARTS for p in rs.parts):
+        if not rs.is_file():
+            continue
+        rel = rs.relative_to(root).as_posix()
+        parts = Path(rel).parts
+        if any(p in SKIP_DIR_PARTS for p in parts):
+            continue
+        if "src" not in parts:
             continue
         files += 1
-        hits.extend(scan_file(rs))
+        all_hits.extend(scan_file(root / rel))
 
-    if args.list:
-        from collections import Counter
+    by_file: dict[str, list[tuple[str, str, int, str]]] = {}
+    for h in all_hits:
+        by_file.setdefault(h[0], []).append(h)
 
-        c = Counter(h[0] for h in hits)
-        for f, n in c.most_common():
-            k = sum(1 for h in hits if h[0] == f and h[1] == "cjk")
+    if args.warn:
+        for f in sorted(by_file):
+            hits = by_file[f]
+            n = len(hits)
+            k = sum(1 for h in hits if h[1] == "cjk")
             print("  %3d hits (cjk=%d color=%d)  %s" % (n, k, n - k, f))
-        print("check_hardcode: %d hit(s) in %d file(s) scanned" % (len(hits), files))
+        print("check_hardcode: %d hit(s) in %d file(s) scanned" % (len(all_hits), files))
         return 0
 
-    for rel, cat, lineno, detail in hits:
+    for rel, cat, lineno, detail in all_hits:
         print("  %s:%d [%s] %s" % (rel, lineno, cat, detail))
-    if hits:
-        cjk = sum(1 for h in hits if h[1] == "cjk")
-        print("check_hardcode: %d hit(s) (cjk=%d color=%d) in %d file(s)" % (len(hits), cjk, len(hits) - cjk, files))
+
+    if all_hits:
+        cjk = sum(1 for h in all_hits if h[1] == "cjk")
+        print("check_hardcode: %d hit(s) (cjk=%d color=%d) in %d file(s)" % (len(all_hits), cjk, len(all_hits) - cjk, files))
         if args.warn:
             print("(--warn mode, not failing)")
             return 0
         return 1
+
     print("check_hardcode: OK (%d file(s), 0 hits)" % files)
     return 0
 

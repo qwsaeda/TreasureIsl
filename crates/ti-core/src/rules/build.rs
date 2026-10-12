@@ -7,9 +7,30 @@
 //! - **银行承接溢出**：金币超过上限时溢出部分按 `bank_rate` 进银行；
 //! - 纯逻辑、零 IO、确定性。
 //!
-//! S8 定位变更：不再从 `oracle::build` 取「推测」成本表，改为读 balance.json。
+//! S8 定位变更：不再取逆向「推测」成本表，改为读 balance.json。
 
 use crate::data::BuildCfg;
+use crate::domain::economy::Building;
+
+/// S10.3 改动 4：建造造价纯函数（`balance.build.buildings` 表，不依赖逆向成本表）。
+///
+/// 查 `cfg.get(kind_id(kind)).base_cost`；查不到 → 0（调用方应据 0 拒建，不 panic）。
+/// `kind_id` = `Building` 枚举 → 字符串 id（与 `balance.build.buildings[].id` 对齐）。
+#[must_use]
+pub fn cost_of(cfg: &BuildCfg, kind: Building) -> u32 {
+    cfg.get(kind_id(kind)).map_or(0, |b| b.base_cost)
+}
+
+/// `Building` 枚举 → `balance.build.buildings[].id` 字符串（与 JSON 对齐）。
+#[must_use]
+pub fn kind_id(kind: Building) -> &'static str {
+    match kind {
+        Building::Castle => "Castle",
+        Building::Investment => "Investment",
+        Building::Bank => "Bank",
+        Building::Fort => "Fort",
+    }
+}
 
 /// 把非负有限 `f64` 钳到 `u32` 区间后取整（避免直接 cast 触发 clippy pedantic）。
 #[allow(
@@ -162,6 +183,12 @@ impl BuildManager {
         self.bank.gold -= amount;
         self.bank.deposit = self.bank.deposit.saturating_add(amount);
         Ok(())
+    }
+
+    /// 设置银行流动金（测试/存档恢复用；正式流程经 `deposit`/`withdraw`/
+    /// `settle_overflow` 搬移，不直接改）。
+    pub fn set_bank_gold(&mut self, gold: u32) {
+        self.bank.gold = gold;
     }
 
     /// 取款（银行 → 流动金，永不失败）。

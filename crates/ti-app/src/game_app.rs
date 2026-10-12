@@ -25,14 +25,14 @@
 
 use std::collections::HashMap;
 
-use ti_core::oracle::battle::{Side, Unit};
-use ti_core::oracle::build::{Bank, Building};
-use ti_core::oracle::main_map::{Dir, GridPos, MapTerrain, SceneTarget};
-use ti_core::oracle::menu::Sfx;
-use ti_core::oracle::messages::MsgKind;
-use ti_core::oracle::saveload::SaveSlot;
-use ti_core::oracle::selection::{Character, MapSlot, SelectionState};
-use ti_core::oracle::trade::PriceTable;
+use ti_core::data::balance;
+use ti_core::domain::combat::{Side, Unit};
+use ti_core::domain::economy::{Bank, Building, PriceTable};
+use ti_core::domain::flow::Sfx;
+use ti_core::domain::map::{Dir, GridPos, MapTerrain, SceneTarget};
+use ti_core::domain::messages::MsgKind;
+use ti_core::domain::persistence::SaveSlot;
+use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::battle::BattleSession;
 use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::main_map::{MapSession, StepResult};
@@ -45,7 +45,7 @@ use crate::sprite_atlas::SpriteAtlas;
 use crate::touch::TouchSample;
 use ti_platform::gfx::UploadMode;
 
-/// 顶层场景（`docs/gamebook.md` §2，与 `oracle::menu::MenuScene` + `main_loop::SceneId` 对齐）。
+/// 顶层场景（`docs/gamebook.md` §2，与 `main_loop::SceneId` 对齐）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Scene {
     /// 片头（触发即跳 Index，可选）。
@@ -118,6 +118,24 @@ impl BattleView {
     #[must_use]
     pub fn finished(&self) -> bool {
         self.outcome.is_some()
+    }
+
+    /// 胜方（`None` = 未结束，`outcome` 字段投影，测试用）。
+    #[must_use]
+    pub fn outcome(&self) -> Option<Side> {
+        self.outcome
+    }
+
+    /// 玩家当前 HP（`player_hp` 字段投影，测试用）。
+    #[must_use]
+    pub fn player_hp(&self) -> u32 {
+        self.player_hp
+    }
+
+    /// BOSS 当前 HP（`boss_hp` 字段投影，测试用）。
+    #[must_use]
+    pub fn boss_hp(&self) -> u32 {
+        self.boss_hp
     }
 
     /// 单回合推进（`BattleSession::step`，确定性走 `balance().combat` + `GameRng`）。
@@ -201,7 +219,7 @@ pub enum GameInput {
 pub struct GameApp {
     /// 表现层（帧缓冲/字形/呈现，Index 场景渲染子视图）。
     pub shell: MenuShell,
-    /// 场景管理器（`rules::main_loop::SceneStack`，状态码语义与 oracle 逐位一致）。
+    /// 场景管理器（`rules::main_loop::SceneStack`，状态码语义与业务文档对齐）。
     pub scenes: SceneStack,
     /// 顶层场景。
     pub scene: Scene,
@@ -225,7 +243,7 @@ pub struct GameApp {
     pub map_landmarks: Vec<(u32, u32)>,
     /// 当前金（`rules::trade` 账本镜像，壳层拆分持有，`MainMap` 场景时有效）。
     pub gold: u32,
-    /// 固定价格表（`oracle::trade::PriceTable`，`rules::trade` 行为）。
+    /// 固定价格表（`domain::economy::PriceTable`，`rules::trade` 行为）。
     pub price_table: PriceTable,
     /// 持有量（`(goods_id, qty)`，`rules::trade` 行为）。
     pub owned: Vec<(u32, u32)>,
@@ -269,6 +287,10 @@ pub struct GameApp {
     pub frame_delta_ms: u32,
     /// 已解析的地形（glmapm0*.Map，MainMap 场景渲染用）。
     pub terrain_map: Option<ti_formats::terrain::TerrainMap>,
+    /// S10.4 GPU 渲染器（feature `gpu-render`；默认 headless no-op，
+    /// 非 headless bin 经 `GpuRenderer::new` 注入真实路径）。
+    #[cfg(feature = "gpu-render")]
+    pub gpu_renderer: ti_platform::gpu_renderer::GpuRenderer,
 }
 
 /// 键位快照（壳层把触摸/键映射到这些布尔位，平台无关，`docs/gamebook.md` §3）。
@@ -464,6 +486,25 @@ impl GameApp {
             terrain_atlas: None,
             frame_delta_ms: 0,
             terrain_map: None,
+            #[cfg(feature = "gpu-render")]
+            gpu_renderer: {
+                #[cfg(any(
+                    feature = "wasm-shell",
+                    feature = "native-shell",
+                    feature = "android-shell"
+                ))]
+                {
+                    ti_platform::gpu_renderer::GpuRenderer::new()
+                }
+                #[cfg(not(any(
+                    feature = "wasm-shell",
+                    feature = "native-shell",
+                    feature = "android-shell"
+                )))]
+                {
+                    ti_platform::gpu_renderer::GpuRenderer::new_headless()
+                }
+            },
         }
     }
 
@@ -541,6 +582,32 @@ impl GameApp {
     #[must_use]
     pub fn bank(&self) -> &Bank {
         &self.bank
+    }
+
+    /// 价格表（只读，`PriceTable` 来自 `domain::economy` 的域类型）。
+    #[must_use]
+    pub fn price_table(&self) -> &PriceTable {
+        &self.price_table
+    }
+
+    /// GPU 渲染器只读访问器（feature `gpu-render`，P4-4 测试用）。
+    #[cfg(feature = "gpu-render")]
+    #[must_use]
+    pub fn gpu_renderer(&self) -> &ti_platform::gpu_renderer::GpuRenderer {
+        &self.gpu_renderer
+    }
+
+    /// GPU 渲染器可变访问器（feature `gpu-render`，blit 路径用）。
+    #[cfg(feature = "gpu-render")]
+    pub fn gpu_renderer_mut(&mut self) -> &mut ti_platform::gpu_renderer::GpuRenderer {
+        &mut self.gpu_renderer
+    }
+
+    /// GPU 累计 draw call 数（feature `gpu-render`，P4-4 判据 2/3）。
+    #[cfg(feature = "gpu-render")]
+    #[must_use]
+    pub fn gpu_draw_calls(&self) -> u64 {
+        self.gpu_renderer.draw_call_count()
     }
 
     /// 已建造列表（只读）。
@@ -830,15 +897,14 @@ impl SceneHost for GameApp {
         self.terrain_map.as_ref().map_or(20, |t| t.grid_w)
     }
 
-    fn terrain_camera(&self) -> (u32, u32) {
-        let (cx, cy) = self
-            .terrain_map
+    fn terrain_camera(&self) -> (i64, i64) {
+        self.terrain_map
             .as_ref()
-            .map_or((0_i64, 0), crate::terrain_atlas::TerrainAtlas::center_camera);
-        (
-            i64::max(cx, 0).try_into().unwrap_or_default(),
-            i64::max(cy, 0).try_into().unwrap_or_default(),
-        )
+            .map_or((0_i64, 0), crate::terrain_atlas::TerrainAtlas::center_camera)
+    }
+
+    fn has_terrain_atlas(&self) -> bool {
+        self.terrain_atlas.is_some()
     }
 
     // ── 音效 ────────────────────────────────────────────────────────────
@@ -953,6 +1019,13 @@ impl SceneHost for GameApp {
     // ── 经济 ────────────────────────────────────────────────────────────
     fn price_of(&self, gid: u32) -> Option<u32> {
         self.price_table.lookup(gid)
+    }
+
+    fn sell_price_of(&self, gid: u32) -> Option<u32> {
+        let b = balance().ok()?;
+        self.price_table
+            .lookup(gid)
+            .map(|buy| ti_core::rules::trade::sell_price(buy, b.trade.markup))
     }
 
     fn gold(&self) -> u32 {

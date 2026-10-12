@@ -444,6 +444,46 @@ impl SpriteAtlas {
     pub fn animated_count(&self) -> usize {
         self.f1_to_name.values().filter(|(_, n)| *n > 1).count()
     }
+
+    /// S10.4（feature `gpu-render`）：GPU 场景 blit（逐精灵走 `GpuRenderer::blit_sprite`）。
+    ///
+    /// 不修改帧缓冲（GPU 路径直接上屏），返回成功提交的 draw call 数。
+    #[cfg(feature = "gpu-render")]
+    pub fn gpu_blit_scene(
+        &mut self,
+        scene: &MapScene,
+        renderer: &mut ti_platform::gpu_renderer::GpuRenderer,
+        atlas_texture_id: u32,
+        atlas_base_x: i32,
+        atlas_base_y: i32,
+    ) -> u32 {
+        let Ok(controls) = MapControl::parse_words("scene.Map", &scene.words) else {
+            return 0;
+        };
+        let _frame = self.frame();
+        let mut blitted = 0u32;
+        for ctrl in &controls {
+            if ctrl.f1 == 0 {
+                continue;
+            }
+            let Some(sprite) = self.sprite(ctrl.f1) else {
+                continue;
+            };
+            // 取当前帧的像素区域，转成 GPU SpriteRef（atlas 内坐标）
+            let fw = i32::try_from(sprite.width).unwrap_or(0);
+            let fh = i32::try_from(sprite.height).unwrap_or(0);
+            let ref_ = ti_platform::gpu_renderer::SpriteRef {
+                texture: atlas_texture_id,
+                rect: (atlas_base_x, atlas_base_y, fw, fh),
+            };
+            renderer.blit_sprite(
+                (i32::try_from(ctrl.f2).unwrap_or(0), i32::try_from(ctrl.f3).unwrap_or(0)),
+                &ref_,
+            );
+            blitted += 1;
+        }
+        blitted
+    }
 }
 
 /// 把 `MapHeader` 的字段直接暴露（避免构造 `MapScene` 时的字段访问器依赖）。
@@ -460,7 +500,7 @@ mod tests {
             .parent()
             .and_then(std::path::Path::parent)
             .map_or_else(|| std::path::PathBuf::from("."), std::path::Path::to_path_buf);
-        std::fs::read(base.join("data").join("ui.pak")).ok()
+        std::fs::read(base.join("legacy").join("data").join("ui.pak")).ok()
     }
 
     /// 取真实包并构建图集；缺失则 `SKIP` 测试。

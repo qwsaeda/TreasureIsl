@@ -15,7 +15,7 @@ fn repo_root() -> PathBuf {
 }
 
 fn map_files() -> Vec<PathBuf> {
-    let dir = repo_root().join("data");
+    let dir = repo_root().join("legacy").join("data");
     let mut v: Vec<PathBuf> = fs::read_dir(&dir)
         .expect("data 目录存在")
         .filter_map(Result::ok)

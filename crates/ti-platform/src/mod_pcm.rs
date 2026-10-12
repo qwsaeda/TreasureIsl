@@ -92,7 +92,7 @@ mod tests {
     /// 读取 MOD 条目；失败时测试直接返回（数据文件不存在属于环境问题，不在库内断言）。
     fn mod_bytes() -> Option<Vec<u8>> {
         const MOD_KEY: u32 = 0x8046_15C2;
-        let buf = std::fs::read(repo_root().join("data").join("music.lpk")).ok()?;
+        let buf = std::fs::read(repo_root().join("legacy").join("data").join("music.lpk")).ok()?;
         let pkg = Package::parse("music.lpk", &buf).ok()?;
         let idx = pkg.find_key(MOD_KEY)?;
         pkg.read_entry(&buf, idx).ok()

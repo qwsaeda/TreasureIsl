@@ -79,7 +79,7 @@
   1. **跨端呈现层验收必须核对目标端实际像素输出（截图/dump 屏幕），不能只信 CPU 侧计数（uploads/skipped/fps）**。
   2. **native macroquad 画整帧纹理优先用 `draw_texture_ex`，别手工 `Mesh`+`draw_mesh` 弱引用纹理**——独立纹理在 native 批次下易漏采样。
 
-### EXP-048 构建：macroquad `flip_y` 必须端侧固定，禁止因「画面反了」反复翻转（S5/S6 后续实测）
+### EXP-062 构建：macroquad `flip_y` 必须端侧固定，禁止因「画面反了」反复翻转（S5/S6 后续实测）
 - 现象：native 桌面窗口画面上下颠倒；随后多轮修复中 `flip_y` 在 `IS_WASM` / `!IS_WASM` 之间来回改，导致 native/wasm 任一端被改反。
 - 根因：`draw_texture_ex` 的 `flip_y` 是纹理 V 坐标翻转开关，不是「让画面看起来正确」的调试开关。行主序 framebuffer 的首行是逻辑 y=0（画面顶部）。在 macroquad 0.4 本项目实测中：native 端使用 `flip_y = IS_WASM` 时，native `IS_WASM=false` → `flip_y=false`，画面正确；wasm 端 `IS_WASM=true` → `flip_y=true`，画面正确。任何改成 `!IS_WASM` 的尝试都会把 native 改反。
 - 解法：`crates/ti-platform/src/gfx.rs` 的 `draw_quad` 固定为：

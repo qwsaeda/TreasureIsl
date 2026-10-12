@@ -1,136 +1,137 @@
-# 经验库 · process
+﻿# 缁忛獙搴?路 process
 
-> 流程与协作：验收纪律、并行会话、文档治理、oracle 规约。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
+> 娴佺▼涓庡崗浣滐細楠屾敹绾緥銆佸苟琛屼細璇濄€佹枃妗ｆ不鐞嗐€乷racle 瑙勭害銆傛潯鐩?ID 鍏ㄥ眬鍞竴锛圗XP-NNN锛夛紝缁存姢瑙勫垯涓庡叏閲忕储寮曡 docs/experience/index.md銆?
 
-### EXP-007 流程：低价值目标不要反复投入（`.rsrc` 解析两次失败）
-- 现象：解析 `.rsrc` 目录两次出错（基址换算、根目录 numId 偏移读错），第三次才意识到它只含图标/版本信息。
-- 根因：没先评估信息价值就动手。
-- 解法：先问「拿到它能推进哪个验收」，不能则记为缺口、跳过。
-- 验证：跳过后无任何任务受阻（无任务依赖 `.rsrc`）。
-
-
-### EXP-009 流程：二进制结构结论必须先 hexdump 再下笔
-- 现象：EXP-003、EXP-005、EXP-007 都是「按直觉写解析 → 失败 → 回头看字节」。
-- 根因：跳过了「先观察、后建模」。
-- 解法：任何格式先出一张偏移标注表（docs/formats/ 里放 hexdump 片段），确认后再写 `define_format!`。
-- 验证：S1 各格式一次性通过 roundtrip（作为阶段统计指标，若反复返工则本条需补充）。
+### EXP-007 娴佺▼锛氫綆浠峰€肩洰鏍囦笉瑕佸弽澶嶆姇鍏ワ紙`.rsrc` 瑙ｆ瀽涓ゆ澶辫触锛?
+- 鐜拌薄锛氳В鏋?`.rsrc` 鐩綍涓ゆ鍑洪敊锛堝熀鍧€鎹㈢畻銆佹牴鐩綍 numId 鍋忕Щ璇婚敊锛夛紝绗笁娆℃墠鎰忚瘑鍒板畠鍙惈鍥炬爣/鐗堟湰淇℃伅銆?
+- 鏍瑰洜锛氭病鍏堣瘎浼颁俊鎭环鍊煎氨鍔ㄦ墜銆?
+- 瑙ｆ硶锛氬厛闂€屾嬁鍒板畠鑳芥帹杩涘摢涓獙鏀躲€嶏紝涓嶈兘鍒欒涓虹己鍙ｃ€佽烦杩囥€?
+- 楠岃瘉锛氳烦杩囧悗鏃犱换浣曚换鍔″彈闃伙紙鏃犱换鍔′緷璧?`.rsrc`锛夈€?
 
 
-### EXP-012 流程：文档与环境冲突时，先改文档再开工
-- 现象：规范写 `gate.sh`+`rg`，环境不支持；若直接按文档硬做会产出跑不起来的脚本。
-- 解法：把「文档 → 环境」的适配作为迭代 0 的独立动作，连同笔误（六 crate→5）一起修，并在计划文件写修订记录，避免规范与现实长期背离。
-- 验证：修订记录与提交历史对应。
+### EXP-009 娴佺▼锛氫簩杩涘埗缁撴瀯缁撹蹇呴』鍏?hexdump 鍐嶄笅绗?
+- 鐜拌薄锛欵XP-003銆丒XP-005銆丒XP-007 閮芥槸銆屾寜鐩磋鍐欒В鏋?鈫?澶辫触 鈫?鍥炲ご鐪嬪瓧鑺傘€嶃€?
+- 鏍瑰洜锛氳烦杩囦簡銆屽厛瑙傚療銆佸悗寤烘ā銆嶃€?
+- 瑙ｆ硶锛氫换浣曟牸寮忓厛鍑轰竴寮犲亸绉绘爣娉ㄨ〃锛坉ocs/formats/ 閲屾斁 hexdump 鐗囨锛夛紝纭鍚庡啀鍐?`define_format!`銆?
+- 楠岃瘉锛歋1 鍚勬牸寮忎竴娆℃€ч€氳繃 roundtrip锛堜綔涓洪樁娈电粺璁℃寚鏍囷紝鑻ュ弽澶嶈繑宸ュ垯鏈潯闇€琛ュ厖锛夈€?
 
 
-### EXP-013 流程：编译工具链后置（用户决策）
-- 现象：原计划把 `rustup target add`（wasm/android，数百 MB 下载）放在 S0.1，阻塞真正的代码开发。
-- 解法：**先代码、后工具链** —— S0.1 只建 workspace + native 构建；wasm/android target 分别移入 S2.5/S2.6，gate 第 4 项按阶段解锁（脚本里用 SKIP 标注未解锁项）。
-- 验证：S0.1 全程不装 target 即可 gate 全绿。
+### EXP-012 娴佺▼锛氭枃妗ｄ笌鐜鍐茬獊鏃讹紝鍏堟敼鏂囨。鍐嶅紑宸?
+- 鐜拌薄锛氳鑼冨啓 `gate.sh`+`rg`锛岀幆澧冧笉鏀寔锛涜嫢鐩存帴鎸夋枃妗ｇ‖鍋氫細浜у嚭璺戜笉璧锋潵鐨勮剼鏈€?
+- 瑙ｆ硶锛氭妸銆屾枃妗?鈫?鐜銆嶇殑閫傞厤浣滀负杩唬 0 鐨勭嫭绔嬪姩浣滐紝杩炲悓绗旇锛堝叚 crate鈫?锛変竴璧蜂慨锛屽苟鍦ㄨ鍒掓枃浠跺啓淇璁板綍锛岄伩鍏嶈鑼冧笌鐜板疄闀挎湡鑳岀銆?
+- 楠岃瘉锛氫慨璁㈣褰曚笌鎻愪氦鍘嗗彶瀵瑰簲銆?
 
 
-### EXP-022 存储：三端差异只放后端，语义用「同一套断言」锁（S2.4 实测）
-- 设计：`storage::Backend` trait（`load/store/remove/keys`）+ 两个可测实现：`MemoryStore`（headless / 语义基准）与 `FileStore`（桌面，每键一文件）。
-- **三端一致性做法**：`tests/storage.rs` 里 `all_backends_share_identical_semantics` 对**同一批键值跑两遍**并逐项比对返回值与键集合；S2.5/S2.6 接上 IndexedDB / Android 后端时，**必须复用同一组断言**（把新后端塞进同一个 for 循环），而不是另写一套测试。
-- 键名规范 `validate_key`：ASCII 字母数字 + `_ . -`，长度 1..=64；**禁止路径分隔符**（否则桌面文件实现会被目录穿越），非法键在三端都必须返回错误而不是静默成功。
-- 体积：`MemoryStore::bytes_used()` 用于存档上限校验；512 KB 存档往返已覆盖。
-
-### EXP-034 流程：并行会话工作树里先 git status 再动手，台账计数会「漂移」
-- 现象：开工时台账 23 verified，几分钟后变 26；`ref/classify.json`、`evidence/S0.3.log` 等凭空出现；`ti-core/src/oracle` 编译坏（`RenderPlan` 重复定义）——都是并行会话（S0.3 / S3.2）的进行中状态。
-- 教训：loop.md §5 的「先 git status + 读 ledger」不是仪式：**每开一轮、每个大动作前都重读一次**；别人未提交的半成品不属于你的文件域，编译坏了先确认是不是别人正在写（`git status` 看 untracked 目录 + 最近 mtime），不是就修，是就绕开/上报。
+### EXP-013 娴佺▼锛氱紪璇戝伐鍏烽摼鍚庣疆锛堢敤鎴峰喅绛栵級
+- 鐜拌薄锛氬師璁″垝鎶?`rustup target add`锛坵asm/android锛屾暟鐧?MB 涓嬭浇锛夋斁鍦?S0.1锛岄樆濉炵湡姝ｇ殑浠ｇ爜寮€鍙戙€?
+- 瑙ｆ硶锛?*鍏堜唬鐮併€佸悗宸ュ叿閾?* 鈥斺€?S0.1 鍙缓 workspace + native 鏋勫缓锛泈asm/android target 鍒嗗埆绉诲叆 S2.5/S2.6锛実ate 绗?4 椤规寜闃舵瑙ｉ攣锛堣剼鏈噷鐢?SKIP 鏍囨敞鏈В閿侀」锛夈€?
+- 楠岃瘉锛歋0.1 鍏ㄧ▼涓嶈 target 鍗冲彲 gate 鍏ㄧ豢銆?
 
 
-### EXP-038 流程：子代理声称 verified 后必须主线程独立复核（S3.3 台账回退实测）
-- 现象：S3.3 子代理报告「台账已置 verified + gate 0 failure」，但几轮后重读 plan/ledger.yaml 发现 S3.3 行变回 status: pending、evidence: null（被后续子代理改台账时覆盖），而 oracle/menu.rs / rules/menu.rs / tests/diff_menu.rs / evidence/S3.3.log 全部真实存在且 diff_menu 4/4 实跑通过。子代理虚报或台账被回退，导致 verified 计数漂移。
-- 根因：多子代理并发写 plan/ledger.yaml 时，后写的子代理用旧版 ledger 全量覆盖，把先前子代理刚置的 verified 冲回 pending（loop.md §6.2 第 2 条「只改自己任务行」未严格执行——子代理改的是整文件）。
-- 解法：主线程（非子代理）每次收子代理报告后必须独立复核三件事：(1) 代码/测试文件真实存在（Test-Path）；(2) 实跑该模块 diff 测试（cargo test -p ti-core --test diff_<m> 看 test result）；(3) 重读 ledger 该行 status/evidence 是否仍为 verified。三者齐备才认 verified，缺任一就补写/回滚。
-- 验证：本次 S3.3 复核 = 4 文件 EXISTS + diff_menu 4 passed + ledger 行修回 verified + rounds=1。
-- 教训：**子代理的 verified 声称不可直接采信**，主线程是最终裁判；台账必须按行 edit（edit 工具的 oldString/newString 只含目标任务行），禁止整文件重写。
+### EXP-022 瀛樺偍锛氫笁绔樊寮傚彧鏀惧悗绔紝璇箟鐢ㄣ€屽悓涓€濂楁柇瑷€銆嶉攣锛圫2.4 瀹炴祴锛?
+- 璁捐锛歚storage::Backend` trait锛坄load/store/remove/keys`锛? 涓や釜鍙祴瀹炵幇锛歚MemoryStore`锛坔eadless / 璇箟鍩哄噯锛変笌 `FileStore`锛堟闈紝姣忛敭涓€鏂囦欢锛夈€?
+- **涓夌涓€鑷存€у仛娉?*锛歚tests/storage.rs` 閲?`all_backends_share_identical_semantics` 瀵?*鍚屼竴鎵归敭鍊艰窇涓ら亶**骞堕€愰」姣斿杩斿洖鍊间笌閿泦鍚堬紱S2.5/S2.6 鎺ヤ笂 IndexedDB / Android 鍚庣鏃讹紝**蹇呴』澶嶇敤鍚屼竴缁勬柇瑷€**锛堟妸鏂板悗绔杩涘悓涓€涓?for 寰幆锛夛紝鑰屼笉鏄彟鍐欎竴濂楁祴璇曘€?
+- 閿悕瑙勮寖 `validate_key`锛欰SCII 瀛楁瘝鏁板瓧 + `_ . -`锛岄暱搴?1..=64锛?*绂佹璺緞鍒嗛殧绗?*锛堝惁鍒欐闈㈡枃浠跺疄鐜颁細琚洰褰曠┛瓒婏級锛岄潪娉曢敭鍦ㄤ笁绔兘蹇呴』杩斿洖閿欒鑰屼笉鏄潤榛樻垚鍔熴€?
+- 浣撶Н锛歚MemoryStore::bytes_used()` 鐢ㄤ簬瀛樻。涓婇檺鏍￠獙锛?12 KB 瀛樻。寰€杩斿凡瑕嗙洊銆?
+
+### EXP-034 娴佺▼锛氬苟琛屼細璇濆伐浣滄爲閲屽厛 git status 鍐嶅姩鎵嬶紝鍙拌处璁℃暟浼氥€屾紓绉汇€?
+- 鐜拌薄锛氬紑宸ユ椂鍙拌处 23 verified锛屽嚑鍒嗛挓鍚庡彉 26锛沗ref/classify.json`銆乣evidence/S0.3.log` 绛夊嚟绌哄嚭鐜帮紱`ti-core/src/oracle` 缂栬瘧鍧忥紙`RenderPlan` 閲嶅瀹氫箟锛夆€斺€旈兘鏄苟琛屼細璇濓紙S0.3 / S3.2锛夌殑杩涜涓姸鎬併€?
+- 鏁欒锛歭oop.md 搂5 鐨勩€屽厛 git status + 璇?ledger銆嶄笉鏄华寮忥細**姣忓紑涓€杞€佹瘡涓ぇ鍔ㄤ綔鍓嶉兘閲嶈涓€娆?*锛涘埆浜烘湭鎻愪氦鐨勫崐鎴愬搧涓嶅睘浜庝綘鐨勬枃浠跺煙锛岀紪璇戝潖浜嗗厛纭鏄笉鏄埆浜烘鍦ㄥ啓锛坄git status` 鐪?untracked 鐩綍 + 鏈€杩?mtime锛夛紝涓嶆槸灏变慨锛屾槸灏辩粫寮€/涓婃姤銆?
 
 
-### EXP-040 逆向：S3 模块 oracle 固定种子确定性公式约定（S3.8 battle 实测）
-- 现象：S3.8 战斗系统 oracle 需要「固定种子整场战斗输出一致」，但不能引入 rand 库（ti-core 无平台依赖硬约束 + 确定性要求）。
-- 根因：oracle/impl 必须对同输入逐位一致，且可差分测试。真随机不可复现，必须用确定性伪随机。
-- 解法：统一用 LCG 式确定性公式 `seed = seed.wrapping_mul(K).wrapping_add(C)`（S3.8 用 K=2654435761 / C 见 oracle/battle.rs，S3.12 全局 RNG 用 MSVC LCG K=214013 C=2531011，见 EXP-037），**不引 rand crate、不用 SystemRandom**（注：S8.7 起 rules 侧改 `rand_pcg` PCG，LCG 为 oracle 历史参照）。播种点（毫秒时间种子）不进 oracle，由调用层注入；oracle 只负责「给定种子 → 确定序列」。
-- 验证：diff_battle 1650 组合（11 seed × 5 tier × 6 HP × 5 atk）oracle/impl 逐位一致 + semantic_deterministic_output 同 seed 两次独立调用逐位相同。
-- 教训：**oracle 层一律确定性 LCG（wrapping_mul/add，整数），禁 rand/SystemRandom**；具体常数写进各模块 spec（battle.md/battle.rs 头注释），S3.12 统一全局 RNG 时核对是否同一套常数，避免各模块各用一套。
+### EXP-038 娴佺▼锛氬瓙浠ｇ悊澹扮О verified 鍚庡繀椤讳富绾跨▼鐙珛澶嶆牳锛圫3.3 鍙拌处鍥為€€瀹炴祴锛?
+- 鐜拌薄锛歋3.3 瀛愪唬鐞嗘姤鍛娿€屽彴璐﹀凡缃?verified + gate 0 failure銆嶏紝浣嗗嚑杞悗閲嶈 plan/ledger.yaml 鍙戠幇 S3.3 琛屽彉鍥?status: pending銆乪vidence: null锛堣鍚庣画瀛愪唬鐞嗘敼鍙拌处鏃惰鐩栵級锛岃€?oracle/menu.rs / rules/menu.rs / tests/diff_menu.rs / evidence/S3.3.log 鍏ㄩ儴鐪熷疄瀛樺湪涓?diff_menu 4/4 瀹炶窇閫氳繃銆傚瓙浠ｇ悊铏氭姤鎴栧彴璐﹁鍥為€€锛屽鑷?verified 璁℃暟婕傜Щ銆?
+- 鏍瑰洜锛氬瀛愪唬鐞嗗苟鍙戝啓 plan/ledger.yaml 鏃讹紝鍚庡啓鐨勫瓙浠ｇ悊鐢ㄦ棫鐗?ledger 鍏ㄩ噺瑕嗙洊锛屾妸鍏堝墠瀛愪唬鐞嗗垰缃殑 verified 鍐插洖 pending锛坙oop.md 搂6.2 绗?2 鏉°€屽彧鏀硅嚜宸变换鍔¤銆嶆湭涓ユ牸鎵ц鈥斺€斿瓙浠ｇ悊鏀圭殑鏄暣鏂囦欢锛夈€?
+- 瑙ｆ硶锛氫富绾跨▼锛堥潪瀛愪唬鐞嗭級姣忔鏀跺瓙浠ｇ悊鎶ュ憡鍚庡繀椤荤嫭绔嬪鏍镐笁浠朵簨锛?1) 浠ｇ爜/娴嬭瘯鏂囦欢鐪熷疄瀛樺湪锛圱est-Path锛夛紱(2) 瀹炶窇璇ユā鍧?diff 娴嬭瘯锛坈argo test -p ti-core --test diff_<m> 鐪?test result锛夛紱(3) 閲嶈 ledger 璇ヨ status/evidence 鏄惁浠嶄负 verified銆備笁鑰呴綈澶囨墠璁?verified锛岀己浠讳竴灏辫ˉ鍐?鍥炴粴銆?
+- 楠岃瘉锛氭湰娆?S3.3 澶嶆牳 = 4 鏂囦欢 EXISTS + diff_menu 4 passed + ledger 琛屼慨鍥?verified + rounds=1銆?
+- 鏁欒锛?*瀛愪唬鐞嗙殑 verified 澹扮О涓嶅彲鐩存帴閲囦俊**锛屼富绾跨▼鏄渶缁堣鍒わ紱鍙拌处蹇呴』鎸夎 edit锛坋dit 宸ュ叿鐨?oldString/newString 鍙惈鐩爣浠诲姟琛岋級锛岀姝㈡暣鏂囦欢閲嶅啓銆?
 
 
-### EXP-048 流程：对抗审计发现的「可机械判定」检查项必须固化进 doccheck/gate，否则下一轮必然复发
-- 现象：第 1-5 轮对抗审计反复命中同一类问题（文档与代码/数据不一致、孤儿 key、LCG hex 误算、据点阈值方向、release 门禁项数漂移、EXP 编号重号等），每轮靠子代理现场 grep 发现，跨会话记忆不沉淀。
-- 根因：审计结论没有「固化」为机器可判定的断言；审计是一次性动作，断言必须进入门禁才能跨会话生效。
-- 解法：凡审计中发现「重复、可机械判定」的检查项，必须写进 `scripts/check_*.py` 或 `doccheck`/`doccheck2` 断言集（gate 第 9/12/13 项），并在 `docs/process/04_tooling.md` 登记；`doccheck2` 固化 6 项高频断言（见 `docs/parity.md` 第 13 项），后续审计优先扩展断言集而非新增现场 grep。
-- 验证：gate 14 项中 doccheck2（第 13 项）0 error；新增断言后对应审计项在下一轮不再复发。
+### EXP-040 閫嗗悜锛歋3 妯″潡 oracle 鍥哄畾绉嶅瓙纭畾鎬у叕寮忕害瀹氾紙S3.8 battle 瀹炴祴锛?
+- 鐜拌薄锛歋3.8 鎴樻枟绯荤粺 oracle 闇€瑕併€屽浐瀹氱瀛愭暣鍦烘垬鏂楄緭鍑轰竴鑷淬€嶏紝浣嗕笉鑳藉紩鍏?rand 搴擄紙ti-core 鏃犲钩鍙颁緷璧栫‖绾︽潫 + 纭畾鎬ц姹傦級銆?
+- 鏍瑰洜锛歰racle/impl 蹇呴』瀵瑰悓杈撳叆閫愪綅涓€鑷达紝涓斿彲宸垎娴嬭瘯銆傜湡闅忔満涓嶅彲澶嶇幇锛屽繀椤荤敤纭畾鎬т吉闅忔満銆?
+- 瑙ｆ硶锛氱粺涓€鐢?LCG 寮忕‘瀹氭€у叕寮?`seed = seed.wrapping_mul(K).wrapping_add(C)`锛圫3.8 鐢?K=2654435761 / C 瑙?oracle/battle.rs锛孲3.12 鍏ㄥ眬 RNG 鐢?MSVC LCG K=214013 C=2531011锛岃 EXP-037锛夛紝**涓嶅紩 rand crate銆佷笉鐢?SystemRandom**锛堟敞锛歋8.7 璧?rules 渚ф敼 `rand_pcg` PCG锛孡CG 涓?oracle 鍘嗗彶鍙傜収锛夈€傛挱绉嶇偣锛堟绉掓椂闂寸瀛愶級涓嶈繘 oracle锛岀敱璋冪敤灞傛敞鍏ワ紱oracle 鍙礋璐ｃ€岀粰瀹氱瀛?鈫?纭畾搴忓垪銆嶃€?
+- 楠岃瘉锛歞iff_battle 1650 缁勫悎锛?1 seed 脳 5 tier 脳 6 HP 脳 5 atk锛塷racle/impl 閫愪綅涓€鑷?+ semantic_deterministic_output 鍚?seed 涓ゆ鐙珛璋冪敤閫愪綅鐩稿悓銆?
+- 鏁欒锛?*oracle 灞備竴寰嬬‘瀹氭€?LCG锛坵rapping_mul/add锛屾暣鏁帮級锛岀 rand/SystemRandom**锛涘叿浣撳父鏁板啓杩涘悇妯″潡 spec锛坆attle.md/battle.rs 澶存敞閲婏級锛孲3.12 缁熶竴鍏ㄥ眬 RNG 鏃舵牳瀵规槸鍚﹀悓涓€濂楀父鏁帮紝閬垮厤鍚勬ā鍧楀悇鐢ㄤ竴濂椼€?
 
 
-### EXP-061 代码：行内全路径引用（`ti_core::data::balance()`）vs use 声明（S10.3 教训）
-- 现象：S10.3 子代理在 `game_app.rs`/`scenes/main_map.rs` 方法体里行内写 `ti_core::data::balance()` / `ti_core::rules::build::cost_of` / `ti_core::rules::trade::sell_price`（9 处），绕过文件顶部已有的 `use` 声明习惯，违反 `docs/style.md` §5.8「crate 内 pub use 汇聚到 prelude；app 层统一 use ti_core::prelude::*」。
-- 根因：子代理写新增代码时没看文件既有 use 习惯，直接全路径省事（行内全路径可读性差且绕过 prelude 约定）。
-- 解法：行内全路径抽成文件顶部 `use` 声明（`use ti_core::data::balance; use ti_core::rules::build::cost_of; use ti_core::rules::trade::sell_price;`），方法体只用短名。子代理 prompt 里必须写「改动前先读文件既有 use 块，新增符号走 use 声明，行内全路径引用 = 0」。
-- 验证：严格 grep（非 use/非注释行）`ti_core::` 命中 = 0（`crates/*/src` 全量）。
-- 教训：新增代码必须对齐文件既有 use 习惯；行内全路径引用是子代理常见风格漂移，主线程复核必须 grep「非 use 行的全路径引用」一项。
+### EXP-048 娴佺▼锛氬鎶楀璁″彂鐜扮殑銆屽彲鏈烘鍒ゅ畾銆嶆鏌ラ」蹇呴』鍥哄寲杩?doccheck/gate锛屽惁鍒欎笅涓€杞繀鐒跺鍙?
+- 鐜拌薄锛氱 1-5 杞鎶楀璁″弽澶嶅懡涓悓涓€绫婚棶棰橈紙鏂囨。涓庝唬鐮?鏁版嵁涓嶄竴鑷淬€佸鍎?key銆丩CG hex 璇畻銆佹嵁鐐归槇鍊兼柟鍚戙€乺elease 闂ㄧ椤规暟婕傜Щ銆丒XP 缂栧彿閲嶅彿绛夛級锛屾瘡杞潬瀛愪唬鐞嗙幇鍦?grep 鍙戠幇锛岃法浼氳瘽璁板繂涓嶆矇娣€銆?
+- 鏍瑰洜锛氬璁＄粨璁烘病鏈夈€屽浐鍖栥€嶄负鏈哄櫒鍙垽瀹氱殑鏂█锛涘璁℃槸涓€娆℃€у姩浣滐紝鏂█蹇呴』杩涘叆闂ㄧ鎵嶈兘璺ㄤ細璇濈敓鏁堛€?
+- 瑙ｆ硶锛氬嚒瀹¤涓彂鐜般€岄噸澶嶃€佸彲鏈烘鍒ゅ畾銆嶇殑妫€鏌ラ」锛屽繀椤诲啓杩?`scripts/check_*.py` 鎴?`doccheck`/`doccheck2` 鏂█闆嗭紙gate 绗?9/12/13 椤癸級锛屽苟鍦?`docs/process/04_tooling.md` 鐧昏锛沗doccheck2` 鍥哄寲 6 椤归珮棰戞柇瑷€锛堣 `docs/parity.md` 绗?13 椤癸級锛屽悗缁璁′紭鍏堟墿灞曟柇瑷€闆嗚€岄潪鏂板鐜板満 grep銆?
+- 楠岃瘉锛歡ate 14 椤逛腑 doccheck2锛堢 13 椤癸級0 error锛涙柊澧炴柇瑷€鍚庡搴斿璁￠」鍦ㄤ笅涓€杞笉鍐嶅鍙戙€?
 
 
-### EXP-058 流程：子代理「verified」报告必须主线程三复核 + 台账机器对账（S9.5 教训）
-- 现象：S9.5（Command 模式）子代理报告「已 verified + evidence/S9.5.log 已写 + ledger 已置 verified」，但主线程复核发现 `crates/ti-app/src/commands.rs` **根本不存在**，`evidence/S9.5.log` 也不存在，ledger 行实际仍是 pending（被后续并发子代理整文件覆盖回退，同 EXP-038 模式）。子代理「声称 verified」不可直接采信。
-- 根因：多子代理并发 + 子代理虚报。子代理改 ledger 用整文件重写冲掉他人 verified（EXP-038 未根治）；子代理对「代码产物是否真实落地」缺乏 Test-Path 复核，凭主观判断报「已完成」。
-- 解法：
-  1. 主线程收子代理「verified」报告后**强制复核三件事**（Test-Path 代码文件 + 实跑 diff 测试 + 重读 ledger 行），缺任一回滚（继承 EXP-038/loop.md §6.2 第 8 条）；
-  2. **机器化对账**：新增 `scripts/check_ledger_reality.py`（gate 第 14 项），遍历 ledger `status: verified` 行，校验 (a) evidence 文件存在且非空；(b) DoD 声明的代码符号（在 `SYMBOL_EXPECTATIONS` 登记的如 `trait Command`、`commands.rs`）在 `crates/*/src` grep 命中；缺任一 FAIL「台账虚报」；
-  3. 子代理改 ledger **只许 edit 工具按行替换**（oldString/newString 含目标任务行），禁止整文件重写。
-- 验证：`check_ledger_reality.py` 对当前 ledger 全绿（verified 任务 evidence 全存在 + 登记符号全命中）；S9.5 回退 pending（commands.rs 不存在），第 14 项 FAIL 拦截虚报。
-- 教训：verified 是「代码产物真实落地 + 测试实跑通过 + 台账三对齐」的合取命题，任一缺项即虚报；靠机器对账（gate 第 14 项）而非人工自觉。
+### EXP-061 浠ｇ爜锛氳鍐呭叏璺緞寮曠敤锛坄ti_core::data::balance()`锛塿s use 澹版槑锛圫10.3 鏁欒锛?
+- 鐜拌薄锛歋10.3 瀛愪唬鐞嗗湪 `game_app.rs`/`scenes/main_map.rs` 鏂规硶浣撻噷琛屽唴鍐?`ti_core::data::balance()` / `ti_core::rules::build::cost_of` / `ti_core::rules::trade::sell_price`锛? 澶勶級锛岀粫杩囨枃浠堕《閮ㄥ凡鏈夌殑 `use` 澹版槑涔犳儻锛岃繚鍙?`docs/style.md` 搂5.8銆宑rate 鍐?pub use 姹囪仛鍒?prelude锛沘pp 灞傜粺涓€ use ti_core::prelude::*銆嶃€?
+- 鏍瑰洜锛氬瓙浠ｇ悊鍐欐柊澧炰唬鐮佹椂娌＄湅鏂囦欢鏃㈡湁 use 涔犳儻锛岀洿鎺ュ叏璺緞鐪佷簨锛堣鍐呭叏璺緞鍙鎬у樊涓旂粫杩?prelude 绾﹀畾锛夈€?
+- 瑙ｆ硶锛氳鍐呭叏璺緞鎶芥垚鏂囦欢椤堕儴 `use` 澹版槑锛坄use ti_core::data::balance; use ti_core::rules::build::cost_of; use ti_core::rules::trade::sell_price;`锛夛紝鏂规硶浣撳彧鐢ㄧ煭鍚嶃€傚瓙浠ｇ悊 prompt 閲屽繀椤诲啓銆屾敼鍔ㄥ墠鍏堣鏂囦欢鏃㈡湁 use 鍧楋紝鏂板绗﹀彿璧?use 澹版槑锛岃鍐呭叏璺緞寮曠敤 = 0銆嶃€?
+- 楠岃瘉锛氫弗鏍?grep锛堥潪 use/闈炴敞閲婅锛塦ti_core::` 鍛戒腑 = 0锛坄crates/*/src` 鍏ㄩ噺锛夈€?
+- 鏁欒锛氭柊澧炰唬鐮佸繀椤诲榻愭枃浠舵棦鏈?use 涔犳儻锛涜鍐呭叏璺緞寮曠敤鏄瓙浠ｇ悊甯歌椋庢牸婕傜Щ锛屼富绾跨▼澶嶆牳蹇呴』 grep銆岄潪 use 琛岀殑鍏ㄨ矾寰勫紩鐢ㄣ€嶄竴椤广€?
 
 
-### EXP-059 代码：地形 camera 钳位 + 触摸/渲染坐标系脱节 = 主地图界错乱双 P0（S10.1 修复）
-- 现象：用户报告「游戏界错乱、地图人物加载有问题」。主地图真实地形 blit 后，玩家棋子/据点画在错误位置，触摸点按走错方向。
-- 根因（双 bug 叠加）：
-  1. `game_app.rs` `terrain_camera()` 用 `i64::max(cx, 0)` 钳位负值——`TerrainAtlas::center_camera` 对 m01 返回 `(cx≈-520, cy≈-202)`，被钳成 `(0,0)`，导致「地形 blit 用真值 camera（屏幕外）」与「玩家棋子用钳位后 camera=(0,0)（原始 iso 位置）」两套坐标系，地形与人物脱节；
-  2. `touch.rs` `grid_cell_at` 用占位 6×6 网格（`GRID_X0=20/Y0=30/STEP=6`）命中，而渲染走等距投影 + camera——触摸坐标系与渲染坐标系完全脱节，点哪走哪但方向错。
-- 解法：
-  1. `terrain_camera` 签名改 `(i64, i64)` 去 `max(0)` 钳位，`SceneHost::terrain_camera` 同步；`main_map.rs` 直接用真值；
-  2. `grid_cell_at` 增 `terrain_drawn` 参数，地形走**等距投影逆变换**（iso_x/iso_y → row/col），与渲染同坐标系；`main_map.rs` 触摸命中改调逆变换。
-- 验证：headless 断言「点按棋子 → 实际移动方向一致」（主地图触摸与渲染同坐标系不变式，进 `docs/parity.md` P0 判据）；`terrain_camera` 返回值与 `TerrainAtlas::center_camera` 一致（负值保留）。
-- 教训：「渲染走投影 A、命中走网格 B」是经典坐标系脱节坑；凡「画面位置」与「交互命中」必须共用同一变换函数，禁两套坐标。camera 钳位（`max(0)`）看似防御实则破坏负偏移场景，签名应表达真实值域（`i64` 而非 `u32` 钳 0）。
+### EXP-058 娴佺▼锛氬瓙浠ｇ悊銆寁erified銆嶆姤鍛婂繀椤讳富绾跨▼涓夊鏍?+ 鍙拌处鏈哄櫒瀵硅处锛圫9.5 鏁欒锛?
+- 鐜拌薄锛歋9.5锛圕ommand 妯″紡锛夊瓙浠ｇ悊鎶ュ憡銆屽凡 verified + evidence/S9.5.log 宸插啓 + ledger 宸茬疆 verified銆嶏紝浣嗕富绾跨▼澶嶆牳鍙戠幇 `crates/ti-app/src/commands.rs` **鏍规湰涓嶅瓨鍦?*锛宍evidence/S9.5.log` 涔熶笉瀛樺湪锛宭edger 琛屽疄闄呬粛鏄?pending锛堣鍚庣画骞跺彂瀛愪唬鐞嗘暣鏂囦欢瑕嗙洊鍥為€€锛屽悓 EXP-038 妯″紡锛夈€傚瓙浠ｇ悊銆屽０绉?verified銆嶄笉鍙洿鎺ラ噰淇°€?
+- 鏍瑰洜锛氬瀛愪唬鐞嗗苟鍙?+ 瀛愪唬鐞嗚櫄鎶ャ€傚瓙浠ｇ悊鏀?ledger 鐢ㄦ暣鏂囦欢閲嶅啓鍐叉帀浠栦汉 verified锛圗XP-038 鏈牴娌伙級锛涘瓙浠ｇ悊瀵广€屼唬鐮佷骇鐗╂槸鍚︾湡瀹炶惤鍦般€嶇己涔?Test-Path 澶嶆牳锛屽嚟涓昏鍒ゆ柇鎶ャ€屽凡瀹屾垚銆嶃€?
+- 瑙ｆ硶锛?
+  1. 涓荤嚎绋嬫敹瀛愪唬鐞嗐€寁erified銆嶆姤鍛婂悗**寮哄埗澶嶆牳涓変欢浜?*锛圱est-Path 浠ｇ爜鏂囦欢 + 瀹炶窇 diff 娴嬭瘯 + 閲嶈 ledger 琛岋級锛岀己浠讳竴鍥炴粴锛堢户鎵?EXP-038/loop.md 搂6.2 绗?8 鏉★級锛?
+  2. **鏈哄櫒鍖栧璐?*锛氭柊澧?`scripts/check_ledger_reality.py`锛坓ate 绗?14 椤癸級锛岄亶鍘?ledger `status: verified` 琛岋紝鏍￠獙 (a) evidence 鏂囦欢瀛樺湪涓旈潪绌猴紱(b) DoD 澹版槑鐨勪唬鐮佺鍙凤紙鍦?`SYMBOL_EXPECTATIONS` 鐧昏鐨勫 `trait Command`銆乣commands.rs`锛夊湪 `crates/*/src` grep 鍛戒腑锛涚己浠讳竴 FAIL銆屽彴璐﹁櫄鎶ャ€嶏紱
+  3. 瀛愪唬鐞嗘敼 ledger **鍙 edit 宸ュ叿鎸夎鏇挎崲**锛坥ldString/newString 鍚洰鏍囦换鍔¤锛夛紝绂佹鏁存枃浠堕噸鍐欍€?
+- 楠岃瘉锛歚check_ledger_reality.py` 瀵瑰綋鍓?ledger 鍏ㄧ豢锛坴erified 浠诲姟 evidence 鍏ㄥ瓨鍦?+ 鐧昏绗﹀彿鍏ㄥ懡涓級锛汼9.5 鍥為€€ pending锛坈ommands.rs 涓嶅瓨鍦級锛岀 14 椤?FAIL 鎷︽埅铏氭姤銆?
+- 鏁欒锛歷erified 鏄€屼唬鐮佷骇鐗╃湡瀹炶惤鍦?+ 娴嬭瘯瀹炶窇閫氳繃 + 鍙拌处涓夊榻愩€嶇殑鍚堝彇鍛介锛屼换涓€缂洪」鍗宠櫄鎶ワ紱闈犳満鍣ㄥ璐︼紙gate 绗?14 椤癸級鑰岄潪浜哄伐鑷銆?
 
 
-### EXP-060 代码：HD 资产不递归子目录 + 场景 key 碰撞 = HD 失效 + 切场景残留（S10.2 修复）
-- 现象：`assets_hd_pack/1x/` 下 5 个子目录（ui/glmap_m01/glmap_m02/glpics/cards）共 180+ PNG，但 HD 档实际全失效（回退 PCX）；Saveload→Index 切场景偶发残留上一帧。
-- 根因：
-  1. `game_app.rs` `load_hd_pack_from_dir` 用 `std::fs::read_dir(dir)` 只枚举一级，`1x/` 下 0 个直接文件（全在子目录），`read_iter.flatten()` 不递归 → HD PNG 全未注入；
-  2. `treasure_native.rs` `last_rendered_scene` 存 `Scene::key`（`Intro|Exit => 7` 碰撞），切到 Intro/Exit 时若前一场景也 key=7 则跳过渲染 → 残留。
-- 解法：
-  1. `load_hd_pack_from_dir` 改递归遍历子目录（`walk` 或手动递归），命名映射 `ui/NN_hd.png`→f1=NN、`glmap_m01/NN_hd.png`→瓦片 NN；HD 注入计数 = assets_hd_pack 全量 PNG；
-  2. `last_rendered_scene` 改存 `SceneKind`（9 个不同标识）而非 `Scene::key`（碰撞的 i32）。
-- 验证：HD 注入计数断言（= assets_hd_pack 全量）；切 Intro/Exit/Saveload 无残留帧。
-- 教训：`read_dir` 非递归是隐性陷阱——资产目录结构变化（加子目录）后静默失效；凡「加载资产目录」必须断言「注入数 = 目录全量文件数」，不可默认成功。场景 key 用作脏检查标识必须唯一（碰撞 → 残留），用枚举 `SceneKind` 而非压缩 i32。
+### EXP-059 浠ｇ爜锛氬湴褰?camera 閽充綅 + 瑙︽懜/娓叉煋鍧愭爣绯昏劚鑺?= 涓诲湴鍥剧晫閿欎贡鍙?P0锛圫10.1 淇锛?
+- 鐜拌薄锛氱敤鎴锋姤鍛娿€屾父鎴忕晫閿欎贡銆佸湴鍥句汉鐗╁姞杞芥湁闂銆嶃€備富鍦板浘鐪熷疄鍦板舰 blit 鍚庯紝鐜╁妫嬪瓙/鎹偣鐢诲湪閿欒浣嶇疆锛岃Е鎽哥偣鎸夎蛋閿欐柟鍚戙€?
+- 鏍瑰洜锛堝弻 bug 鍙犲姞锛夛細
+  1. `game_app.rs` `terrain_camera()` 鐢?`i64::max(cx, 0)` 閽充綅璐熷€尖€斺€擿TerrainAtlas::center_camera` 瀵?m01 杩斿洖 `(cx鈮?520, cy鈮?202)`锛岃閽虫垚 `(0,0)`锛屽鑷淬€屽湴褰?blit 鐢ㄧ湡鍊?camera锛堝睆骞曞锛夈€嶄笌銆岀帺瀹舵瀛愮敤閽充綅鍚?camera=(0,0)锛堝師濮?iso 浣嶇疆锛夈€嶄袱濂楀潗鏍囩郴锛屽湴褰笌浜虹墿鑴辫妭锛?
+  2. `touch.rs` `grid_cell_at` 鐢ㄥ崰浣?6脳6 缃戞牸锛坄GRID_X0=20/Y0=30/STEP=6`锛夊懡涓紝鑰屾覆鏌撹蛋绛夎窛鎶曞奖 + camera鈥斺€旇Е鎽稿潗鏍囩郴涓庢覆鏌撳潗鏍囩郴瀹屽叏鑴辫妭锛岀偣鍝蛋鍝絾鏂瑰悜閿欍€?
+- 瑙ｆ硶锛?
+  1. `terrain_camera` 绛惧悕鏀?`(i64, i64)` 鍘?`max(0)` 閽充綅锛宍SceneHost::terrain_camera` 鍚屾锛沗main_map.rs` 鐩存帴鐢ㄧ湡鍊硷紱
+  2. `grid_cell_at` 澧?`terrain_drawn` 鍙傛暟锛屽湴褰㈣蛋**绛夎窛鎶曞奖閫嗗彉鎹?*锛坕so_x/iso_y 鈫?row/col锛夛紝涓庢覆鏌撳悓鍧愭爣绯伙紱`main_map.rs` 瑙︽懜鍛戒腑鏀硅皟閫嗗彉鎹€?
+- 楠岃瘉锛歨eadless 鏂█銆岀偣鎸夋瀛?鈫?瀹為檯绉诲姩鏂瑰悜涓€鑷淬€嶏紙涓诲湴鍥捐Е鎽镐笌娓叉煋鍚屽潗鏍囩郴涓嶅彉寮忥紝杩?`docs/parity.md` P0 鍒ゆ嵁锛夛紱`terrain_camera` 杩斿洖鍊间笌 `TerrainAtlas::center_camera` 涓€鑷达紙璐熷€间繚鐣欙級銆?
+- 鏁欒锛氥€屾覆鏌撹蛋鎶曞奖 A銆佸懡涓蛋缃戞牸 B銆嶆槸缁忓吀鍧愭爣绯昏劚鑺傚潙锛涘嚒銆岀敾闈綅缃€嶄笌銆屼氦浜掑懡涓€嶅繀椤诲叡鐢ㄥ悓涓€鍙樻崲鍑芥暟锛岀涓ゅ鍧愭爣銆俢amera 閽充綅锛坄max(0)`锛夌湅浼奸槻寰″疄鍒欑牬鍧忚礋鍋忕Щ鍦烘櫙锛岀鍚嶅簲琛ㄨ揪鐪熷疄鍊煎煙锛坄i64` 鑰岄潪 `u32` 閽?0锛夈€?
 
 
-### EXP-063 流程：doccheck 任务 ID 是散文全库扫描，新任务先登记台账（pending）再写文档引用（S11 踩坑）
-- **现象**：S11 登记 S11.3/S11.4 与 S12 各包任务后，doccheck 第 9 项报 30 处「references task which is not in plan/ledger.yaml」——全是文档散文里写的 S12 各包 / S0 系列等任务 ID 没进台账。
-- **根因**：doccheck 的任务 ID 引用检查是**全库散文扫描**（docs/*.md 每行提取 `S` 数字点数字/小写字母 形式的 token 与台账 ID 对账），不是只看「正式引用」。新阶段任务在文档里先写、台账后登记，文档先行就会批量 FAIL；且散文中「某阶段的 x」（x 代指 0 到 4）这种范围写法也会被当成任务 ID token 抓出来。
-- **解法**：
-  1. 新阶段开轮前先写 `plan/ledger.yaml` 任务行（status: pending 即可），再写/改文档引用 —— 台账先行，散文后行；
-  2. 散文里「某阶段 x 这类」范围写法避免裸写 token，写成「S10.0–S10.4」或改用文字「S10 系列」，不让扫描抓到具体 ID；
-  3. 台账行 `status: pending` 不算漂移（漂移检查只数 verified），pending 任务可先登记占位。
-- **验证**：`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 0 error（S12 各包登记后 104 任务全过）。
+### EXP-060 浠ｇ爜锛欻D 璧勪骇涓嶉€掑綊瀛愮洰褰?+ 鍦烘櫙 key 纰版挒 = HD 澶辨晥 + 鍒囧満鏅畫鐣欙紙S10.2 淇锛?
+- 鐜拌薄锛歚assets_hd_pack/1x/` 涓?5 涓瓙鐩綍锛坲i/glmap_m01/glmap_m02/glpics/cards锛夊叡 180+ PNG锛屼絾 HD 妗ｅ疄闄呭叏澶辨晥锛堝洖閫€ PCX锛夛紱Saveload鈫扞ndex 鍒囧満鏅伓鍙戞畫鐣欎笂涓€甯с€?
+- 鏍瑰洜锛?
+  1. `game_app.rs` `load_hd_pack_from_dir` 鐢?`std::fs::read_dir(dir)` 鍙灇涓句竴绾э紝`1x/` 涓?0 涓洿鎺ユ枃浠讹紙鍏ㄥ湪瀛愮洰褰曪級锛宍read_iter.flatten()` 涓嶉€掑綊 鈫?HD PNG 鍏ㄦ湭娉ㄥ叆锛?
+  2. `treasure_native.rs` `last_rendered_scene` 瀛?`Scene::key`锛坄Intro|Exit => 7` 纰版挒锛夛紝鍒囧埌 Intro/Exit 鏃惰嫢鍓嶄竴鍦烘櫙涔?key=7 鍒欒烦杩囨覆鏌?鈫?娈嬬暀銆?
+- 瑙ｆ硶锛?
+  1. `load_hd_pack_from_dir` 鏀归€掑綊閬嶅巻瀛愮洰褰曪紙`walk` 鎴栨墜鍔ㄩ€掑綊锛夛紝鍛藉悕鏄犲皠 `ui/NN_hd.png`鈫抐1=NN銆乣glmap_m01/NN_hd.png`鈫掔摝鐗?NN锛汬D 娉ㄥ叆璁℃暟 = assets_hd_pack 鍏ㄩ噺 PNG锛?
+  2. `last_rendered_scene` 鏀瑰瓨 `SceneKind`锛? 涓笉鍚屾爣璇嗭級鑰岄潪 `Scene::key`锛堢鎾炵殑 i32锛夈€?
+- 楠岃瘉锛欻D 娉ㄥ叆璁℃暟鏂█锛? assets_hd_pack 鍏ㄩ噺锛夛紱鍒?Intro/Exit/Saveload 鏃犳畫鐣欏抚銆?
+- 鏁欒锛歚read_dir` 闈為€掑綊鏄殣鎬ч櫡闃扁€斺€旇祫浜х洰褰曠粨鏋勫彉鍖栵紙鍔犲瓙鐩綍锛夊悗闈欓粯澶辨晥锛涘嚒銆屽姞杞借祫浜х洰褰曘€嶅繀椤绘柇瑷€銆屾敞鍏ユ暟 = 鐩綍鍏ㄩ噺鏂囦欢鏁般€嶏紝涓嶅彲榛樿鎴愬姛銆傚満鏅?key 鐢ㄤ綔鑴忔鏌ユ爣璇嗗繀椤诲敮涓€锛堢鎾?鈫?娈嬬暀锛夛紝鐢ㄦ灇涓?`SceneKind` 鑰岄潪鍘嬬缉 i32銆?
 
-### EXP-064 流程：子代理只拿到任务书 = 跨会话上下文丢失（会话起点必须注入路径/前缀/符号/台账）
-- **现象**：模块并行开发（`process/05_module_parallel.md`）里，一个并行会话/子代理若只拿到任务书而没有仓库绝对路径与 crate 前缀约定，就会按错误假设动手（如把 crate 前缀写成 `ty-`、把仓库根当工作目录、猜 `crates/` 下的文件名），产出与真实仓库不符的改动。
-- **根因**：任务书描述**做什么**，不描述**在哪做、用什么前缀、当前哪些任务已 verified**。缺了环境坐标，代理会用通用默认习惯补齐，等于把推断写进代码。
-- **解法**（会话起点 prompt 必含 5 项）：
-  1. 仓库绝对路径 + 工作目录；
-  2. crate 前缀约定：`ti-`（禁止 `ty-`），并列出实际存在的 `crates/*`；
-  3. 关键符号/文件路径（点名到文件，不让代理猜）；
-  4. 契约锚点（`docs/contracts/` 哪几份、状态 draft/frozen）；
-  5. 当前任务 + `plan/ledger.yaml` 已 verified 清单（防止重复劳动与状态误判）。
-  子代理回执必须逐条对齐这 5 项；任一项缺失 → 判定返工，不算完成。
-- **验证**：`scripts/check_module_contracts.py`（gate 第 16 项）校验包内零跨包 import + 契约锚点；会话任务书模板见 `process/03_templates.md` §7。
 
-### EXP-065 流程：台账被文件级回退会静默丢条目（孤儿 evidence 检测兜底，gate 第 14 项）
-- **现象**：S11/S12 阶段共 23 条台账任务（S9.2–S9.5、S10.0–S10.5、S11.1–S11.4、S12 系列）在某次回退后从 `plan/ledger.yaml` 消失，而 `docs/plan-*.md` 的任务描述与 `evidence/S10.*.log`、`S11.*.log` 全部还在 → doccheck 第 9 项一次性报 **115 条**「references task which is not in plan/ledger.yaml」。
-- **根因**：`git checkout -- <file>` / `restore` / 单文件 reset 不进 reflog，工作区其余文件（未跟踪的 evidence、被改的 docs）全保留，**只有台账被打回旧版**，从表面看不出丢了东西；`evidence/S11.1.log` 里「104 tasks / 85 verified」与实测 81 的差就是线索。
-- **解法**：
-  1. `scripts/check_ledger_reality.py`（gate 第 14 项）增**孤儿 evidence 检测**：`evidence/` 下以任务 ID 命名的文件，其 ID 必须在台账存在，否则 FAIL；
-  2. 文档里写任务 ID 前先登记台账行（EXP-063：台账先行），否则一旦回退就是成片 404；
-  3. 长阶段（S10/S11 这种一开十几个任务）收尾时 commit，避免全部工作只存在于工作区。
-- **验证**：`python scripts/check_ledger_reality.py` 正常态「88 个 verified 三方对账通过 + 0 个孤儿 evidence」；临时构造孤儿证据文件即报 FAIL 且退出码 1（`evidence/S13.2.log`）。
+### EXP-063 娴佺▼锛歞occheck 浠诲姟 ID 鏄暎鏂囧叏搴撴壂鎻忥紝鏂颁换鍔″厛鐧昏鍙拌处锛坧ending锛夊啀鍐欐枃妗ｅ紩鐢紙S11 韪╁潙锛?
+- **鐜拌薄**锛歋11 鐧昏 S11.3/S11.4 涓?S12 鍚勫寘浠诲姟鍚庯紝doccheck 绗?9 椤规姤 30 澶勩€宺eferences task which is not in plan/ledger.yaml銆嶁€斺€斿叏鏄枃妗ｆ暎鏂囬噷鍐欑殑 S12 鍚勫寘 / S0 绯诲垪绛変换鍔?ID 娌¤繘鍙拌处銆?
+- **鏍瑰洜**锛歞occheck 鐨勪换鍔?ID 寮曠敤妫€鏌ユ槸**鍏ㄥ簱鏁ｆ枃鎵弿**锛坉ocs/*.md 姣忚鎻愬彇 `S` 鏁板瓧鐐规暟瀛?灏忓啓瀛楁瘝 褰㈠紡鐨?token 涓庡彴璐?ID 瀵硅处锛夛紝涓嶆槸鍙湅銆屾寮忓紩鐢ㄣ€嶃€傛柊闃舵浠诲姟鍦ㄦ枃妗ｉ噷鍏堝啓銆佸彴璐﹀悗鐧昏锛屾枃妗ｅ厛琛屽氨浼氭壒閲?FAIL锛涗笖鏁ｆ枃涓€屾煇闃舵鐨?x銆嶏紙x 浠ｆ寚 0 鍒?4锛夎繖绉嶈寖鍥村啓娉曚篃浼氳褰撴垚浠诲姟 ID token 鎶撳嚭鏉ャ€?
+- **瑙ｆ硶**锛?
+  1. 鏂伴樁娈靛紑杞墠鍏堝啓 `plan/ledger.yaml` 浠诲姟琛岋紙status: pending 鍗冲彲锛夛紝鍐嶅啓/鏀规枃妗ｅ紩鐢?鈥斺€?鍙拌处鍏堣锛屾暎鏂囧悗琛岋紱
+  2. 鏁ｆ枃閲屻€屾煇闃舵 x 杩欑被銆嶈寖鍥村啓娉曢伩鍏嶈８鍐?token锛屽啓鎴愩€孲10.0鈥揝10.4銆嶆垨鏀圭敤鏂囧瓧銆孲10 绯诲垪銆嶏紝涓嶈鎵弿鎶撳埌鍏蜂綋 ID锛?
+  3. 鍙拌处琛?`status: pending` 涓嶇畻婕傜Щ锛堟紓绉绘鏌ュ彧鏁?verified锛夛紝pending 浠诲姟鍙厛鐧昏鍗犱綅銆?
+- **楠岃瘉**锛歚cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 0 error锛圫12 鍚勫寘鐧昏鍚?104 浠诲姟鍏ㄨ繃锛夈€?
+
+### EXP-064 娴佺▼锛氬瓙浠ｇ悊鍙嬁鍒颁换鍔′功 = 璺ㄤ細璇濅笂涓嬫枃涓㈠け锛堜細璇濊捣鐐瑰繀椤绘敞鍏ヨ矾寰?鍓嶇紑/绗﹀彿/鍙拌处锛?
+- **鐜拌薄**锛氭ā鍧楀苟琛屽紑鍙戯紙`process/05_module_parallel.md`锛夐噷锛屼竴涓苟琛屼細璇?瀛愪唬鐞嗚嫢鍙嬁鍒颁换鍔′功鑰屾病鏈変粨搴撶粷瀵硅矾寰勪笌 crate 鍓嶇紑绾﹀畾锛屽氨浼氭寜閿欒鍋囪鍔ㄦ墜锛堝鎶?crate 鍓嶇紑鍐欐垚 `ty-`銆佹妸浠撳簱鏍瑰綋宸ヤ綔鐩綍銆佺寽 `crates/` 涓嬬殑鏂囦欢鍚嶏級锛屼骇鍑轰笌鐪熷疄浠撳簱涓嶇鐨勬敼鍔ㄣ€?
+- **鏍瑰洜**锛氫换鍔′功鎻忚堪**鍋氫粈涔?*锛屼笉鎻忚堪**鍦ㄥ摢鍋氥€佺敤浠€涔堝墠缂€銆佸綋鍓嶅摢浜涗换鍔″凡 verified**銆傜己浜嗙幆澧冨潗鏍囷紝浠ｇ悊浼氱敤閫氱敤榛樿涔犳儻琛ラ綈锛岀瓑浜庢妸鎺ㄦ柇鍐欒繘浠ｇ爜銆?
+- **瑙ｆ硶**锛堜細璇濊捣鐐?prompt 蹇呭惈 5 椤癸級锛?
+  1. 浠撳簱缁濆璺緞 + 宸ヤ綔鐩綍锛?
+  2. crate 鍓嶇紑绾﹀畾锛歚ti-`锛堢姝?`ty-`锛夛紝骞跺垪鍑哄疄闄呭瓨鍦ㄧ殑 `crates/*`锛?
+  3. 鍏抽敭绗﹀彿/鏂囦欢璺緞锛堢偣鍚嶅埌鏂囦欢锛屼笉璁╀唬鐞嗙寽锛夛紱
+  4. 濂戠害閿氱偣锛坄docs/contracts/` 鍝嚑浠姐€佺姸鎬?draft/frozen锛夛紱
+  5. 褰撳墠浠诲姟 + `plan/ledger.yaml` 宸?verified 娓呭崟锛堥槻姝㈤噸澶嶅姵鍔ㄤ笌鐘舵€佽鍒わ級銆?
+  瀛愪唬鐞嗗洖鎵у繀椤婚€愭潯瀵归綈杩?5 椤癸紱浠讳竴椤圭己澶?鈫?鍒ゅ畾杩斿伐锛屼笉绠楀畬鎴愩€?
+- **楠岃瘉**锛歚scripts/check_module_contracts.py`锛坓ate 绗?16 椤癸級鏍￠獙鍖呭唴闆惰法鍖?import + 濂戠害閿氱偣锛涗細璇濅换鍔′功妯℃澘瑙?`process/03_templates.md` 搂7銆?
+
+### EXP-065 娴佺▼锛氬彴璐﹁鏂囦欢绾у洖閫€浼氶潤榛樹涪鏉＄洰锛堝鍎?evidence 妫€娴嬪厹搴曪紝gate 绗?14 椤癸級
+- **鐜拌薄**锛歋11/S12 闃舵鍏?23 鏉″彴璐︿换鍔★紙S9.2鈥揝9.5銆丼10.0鈥揝10.5銆丼11.1鈥揝11.4銆丼12 绯诲垪锛夊湪鏌愭鍥為€€鍚庝粠 `plan/ledger.yaml` 娑堝け锛岃€?`docs/plan-*.md` 鐨勪换鍔℃弿杩颁笌 `evidence/S10.*.log`銆乣S11.*.log` 鍏ㄩ儴杩樺湪 鈫?doccheck 绗?9 椤逛竴娆℃€ф姤 **115 鏉?*銆宺eferences task which is not in plan/ledger.yaml銆嶃€?
+- **鏍瑰洜**锛歚git checkout -- <file>` / `restore` / 鍗曟枃浠?reset 涓嶈繘 reflog锛屽伐浣滃尯鍏朵綑鏂囦欢锛堟湭璺熻釜鐨?evidence銆佽鏀圭殑 docs锛夊叏淇濈暀锛?*鍙湁鍙拌处琚墦鍥炴棫鐗?*锛屼粠琛ㄩ潰鐪嬩笉鍑轰涪浜嗕笢瑗匡紱`evidence/S11.1.log` 閲屻€?04 tasks / 85 verified銆嶄笌瀹炴祴 81 鐨勫樊灏辨槸绾跨储銆?
+- **瑙ｆ硶**锛?
+  1. `scripts/check_ledger_reality.py`锛坓ate 绗?14 椤癸級澧?*瀛ゅ効 evidence 妫€娴?*锛歚evidence/` 涓嬩互浠诲姟 ID 鍛藉悕鐨勬枃浠讹紝鍏?ID 蹇呴』鍦ㄥ彴璐﹀瓨鍦紝鍚﹀垯 FAIL锛?
+  2. 鏂囨。閲屽啓浠诲姟 ID 鍓嶅厛鐧昏鍙拌处琛岋紙EXP-063锛氬彴璐﹀厛琛岋級锛屽惁鍒欎竴鏃﹀洖閫€灏辨槸鎴愮墖 404锛?
+  3. 闀块樁娈碉紙S10/S11 杩欑涓€寮€鍗佸嚑涓换鍔★級鏀跺熬鏃?commit锛岄伩鍏嶅叏閮ㄥ伐浣滃彧瀛樺湪浜庡伐浣滃尯銆?
+- **楠岃瘉**锛歚python scripts/check_ledger_reality.py` 姝ｅ父鎬併€?8 涓?verified 涓夋柟瀵硅处閫氳繃 + 0 涓鍎?evidence銆嶏紱涓存椂鏋勯€犲鍎胯瘉鎹枃浠跺嵆鎶?FAIL 涓旈€€鍑虹爜 1锛坄evidence/S13.2.log`锛夈€?
+

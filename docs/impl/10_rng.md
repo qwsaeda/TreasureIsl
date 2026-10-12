@@ -33,7 +33,10 @@ rand():
 | 掩码 `M` | 32,767 | `0x00007FFF` | 输出掩码 |
 | 值域 | 0..=32,767 | 15 位 | `rand()` 返回范围 |
 
-### 1.3 Rust 实现（公式单一源）
+### 1.3 Rust 实现（公式单一源；**oracle 历史参照，S8.7 起当前为 PCG**）
+
+> 以下为 MSVC LCG 的手写实现（`oracle/rng.rs` 历史参照物）。
+> **当前代码** `rules/rng.rs` 已改用 `rand_pcg::Lcg128Xsl64`（PCG64），不再手写 LCG。
 
 ```rust
 /// RNG 内部状态，LCG 常数只在此处定义
@@ -241,7 +244,7 @@ pub fn time_seed() -> u32 {
 
 | 要求 | 说明 |
 |---|---|
-| 不引 `rand` crate | 避免平台相关随机源 |
+| 不引 `rand` crate | 避免平台相关随机源（S8.7 前约束；现库化 `rand_pcg`，`Cargo.toml` 已引 `rand_pcg = 0.9` + `rand_core`，此处表述过时，以 L249 括号注为准） |
 | 不用 `SystemRandom` | ti-core 无平台依赖硬约束 |
 | 自实现 LCG | 保证 native/wasm/android 序列逐位一致（S8.7 前；现 `GameRng` 库化 `rand_pcg`，旧 LCG 降级 oracle 历史参照） |
 | 环绕运算 | `wrapping_mul` / `wrapping_add`，非 panic |

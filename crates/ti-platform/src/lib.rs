@@ -10,6 +10,8 @@ pub mod audio_asset;
 pub mod backend;
 pub mod error;
 pub mod gfx;
+/// S10.4：GPU 化逐精灵 batch 渲染（macroquad draw_texture + 纹理图集 + alpha 混合）。
+pub mod gpu_renderer;
 /// S7.5：HD 资产 PNG 解码（feature `hd-8bit` 门控，默认不编译）。
 #[cfg(feature = "hd-8bit")]
 pub mod hd_png;

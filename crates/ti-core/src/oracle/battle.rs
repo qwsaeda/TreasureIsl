@@ -1,43 +1,18 @@
-//! oracle：S3.8 战斗系统（vs/兵种/BOSS 档）差分基准，测试专用。
-//!
-//! 直译 `docs/spec/battle.md` 的战斗规则：
-//! - 单位 [`Unit`]（`hp` + `atk`，spec §c）；
-//! - 阵营 [`Side`]（`Player` / `Enemy`）；
-//! - [`oracle_boss_hp`]：BOSS 档 HP 表（tier 0..=4 → 50000/100000/150000/200000/300000，spec §b）；
-//! - [`oracle_battle_round`]：单回合（固定种子确定性伪随机伤害，spec §c 推测公式）；
-//! - [`oracle_full_battle`]：整场战斗（每回合双方 HP 轨迹 + 胜方 + 回合数，spec §c）。
-//!
-//! 行为确定（同 seed 同输入逐位相同），不允许 rand。
-//!
-//! 伤害公式（**推测**，spec §c oracle 占位）：
-//! ```text
-//! damage = (seed.wrapping_mul(2654435761)) % (atk + 1) + 1
-//! ```
-//! `seed = 0` 时 `damage = 0 % (atk+1) + 1 = 1`（最小伤害）。
-//! 该公式无 rand 库，纯确定性；exe 实际 RNG 归 S3.12 对齐。
+// oracle：战斗系统差分基准，测试专用（S11 起降级为纯基准函数）。
+//
+// **类型已迁至 [`crate::domain::combat`]**（S11 归档改造：业务类型不该住在逆向目录）。
+// 本模块只保留从伪代码直译的**差分基准行为函数**（BOSS 档表 / 单回合 / 整场），
+// 供 `tests/diff_battle.rs` 与 `rules::battle` 对拍。
+//
+// 业务规则以 `docs/business/combat.md` 为准；本 oracle 是**历史参照**，不是规则来源。
 
-/// 战斗单位（spec §c，兵种 HP/atk 的 oracle 化）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Unit {
-    /// 当前 HP。
-    pub hp: u32,
-    /// 攻击力。
-    pub atk: u32,
-}
+pub use crate::domain::combat::{Side, Unit};
 
-/// 阵营（spec §c）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Side {
-    /// 玩家。
-    Player,
-    /// 敌方（BOSS）。
-    Enemy,
-}
-
-/// oracle：BOSS 档 HP 表（spec §b，5 档，**推测** 等差 50000 阶梯）。
+/// oracle：BOSS 档 HP 表（逆向初值，5 档；权威值在 `balance.combat.boss_tiers`）。
 ///
-/// tier 0..=4 → 50000/100000/150000/200000/300000；
-/// 越界（`tier > 4`）→ 0（无效档）。
+/// tier 0..=4 → 50000/100000/150000/200000/300000；越界（`tier > 4`）→ 0。
+/// ⚠️ 正式实现 `rules::battle::BattleSession` 用 `balance.json` 的值（可调），
+/// 本表冻结为历史基准（不改）。
 #[must_use]
 pub fn oracle_boss_hp(tier: u32) -> u32 {
     match tier {

@@ -21,12 +21,14 @@
 //!
 //! 所有方法都是**一行的字段读写**，不含业务判定——业务在 `scenes/*.rs`。
 
-use ti_core::oracle::build::Building;
-use ti_core::oracle::main_map::{Dir, GridPos, MapTerrain, SceneTarget};
-use ti_core::oracle::menu::Sfx;
-use ti_core::oracle::messages::MsgKind;
-use ti_core::oracle::saveload::SaveSlot;
-use ti_core::oracle::selection::{Character, MapSlot, SelectionState};
+use std::marker::PhantomData;
+
+use ti_core::domain::economy::Building;
+use ti_core::domain::flow::Sfx;
+use ti_core::domain::map::{Dir, GridPos, MapTerrain, SceneTarget};
+use ti_core::domain::messages::MsgKind;
+use ti_core::domain::persistence::SaveSlot;
+use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::main_map::StepResult;
 
 use crate::game_app::{BattleSnapshot, GameInput, Scene as LegacyScene};
@@ -121,7 +123,126 @@ impl SceneKind {
             Self::Exit => "",
         }
     }
+
+    /// 场景唯一判别值（0..=8，9 个变体各占一个 i32，无碰撞）。
+    ///
+    /// 用于壳层静态帧优化（`last_rendered_scene`），替代 `Scene::key()` 的
+    /// `i32` 键（`Intro|Exit => 7` 碰撞，S10.2 修复）。
+    #[must_use]
+    pub const fn discriminant(self) -> i32 {
+        match self {
+            Self::Intro => 0,
+            Self::Index => 1,
+            Self::SelectRole => 2,
+            Self::SelectMap => 3,
+            Self::MainMap => 4,
+            Self::Vs => 5,
+            Self::Message => 6,
+            Self::Saveload => 7,
+            Self::Exit => 8,
+        }
+    }
 }
+
+/// Type-State 场景转换：编译期保证只有合法转换才能构造（S9.4）。
+///
+/// `From`/`To` 为场景标记类型（[`markers`]），只有 impl 块中声明的合法转换
+/// 才能构造；非法转换（如 `SelectRole → Vs`、`MainMap → Saveload`）无 impl，
+/// 编译期直接报错。合法转换表见下方 impl 块注释（与 `scenes/*.rs` 实际跳转一一对应）。
+///
+/// 使用示例（编译期可静态证明 `SelectMap → MainMap` 合法、`SelectRole → Vs` 非法）：
+///
+/// ```compile_fail
+/// use ti_app::scenes::{SceneTransition, markers};
+/// // 合法转换可构造：
+/// let _ok: SceneTransition<markers::SelectMap, markers::MainMap> = SceneTransition::new();
+/// // 非法转换编译报错（无对应 impl 块）：
+/// let _bad: SceneTransition<markers::SelectRole, markers::Vs> = SceneTransition::new();
+/// ```
+pub struct SceneTransition<From, To> {
+    _from: PhantomData<From>,
+    _to: PhantomData<To>,
+}
+
+pub mod markers {
+    //! 场景类型标记（零大小，仅用于类型参数），供 [`SceneTransition`] 使用。
+
+    /// `Intro` 场景标记。
+    pub enum Intro {}
+    /// `Index` 场景标记。
+    pub enum Index {}
+    /// `SelectRole` 场景标记。
+    pub enum SelectRole {}
+    /// `SelectMap` 场景标记。
+    pub enum SelectMap {}
+    /// `MainMap` 场景标记。
+    pub enum MainMap {}
+    /// `Vs` 场景标记。
+    pub enum Vs {}
+    /// `Message` 场景标记。
+    pub enum Message {}
+    /// `Saveload` 场景标记。
+    pub enum Saveload {}
+    /// `Exit` 场景标记。
+    pub enum Exit {}
+}
+
+// 合法转换表（业务侧唯一事实源 = `docs/business/07_ui_flow.md` §1 场景流）：
+//
+//   Intro      → Index
+//   Index      → SelectRole / Saveload / Message / Exit
+//   SelectRole → SelectMap / MainMap / Index
+//   SelectMap  → MainMap / SelectRole
+//   MainMap    → Vs / Message / Index
+//   Vs         → Index
+//   Message    → MainMap / Index
+//   Saveload   → Index / MainMap / SelectRole
+//
+// 非法转换（如 `SelectRole → Vs`、`MainMap → Saveload`）没有 macro 调用 = 没有 impl 块，
+// 编译期直接报错（与 `scenes/*.rs` 实际跳转一一对应）。
+
+/// 生成一条合法场景转换的构造器 + `Default`（类型即约束，S9.4）。
+///
+/// 每条合法转换调用一次；`Default` 只为满足 trait 约定，语义等价 [`SceneTransition::new`]。
+macro_rules! scene_transition {
+    ($from:ident, $to:ident, $doc:expr) => {
+        #[doc = $doc]
+        impl SceneTransition<markers::$from, markers::$to> {
+            /// 构造该场景转换（无字段；能否构造取决于 impl 块是否存在）。
+            #[must_use]
+            pub fn new() -> Self {
+                Self { _from: PhantomData, _to: PhantomData }
+            }
+        }
+
+        impl Default for SceneTransition<markers::$from, markers::$to> {
+            /// 与 [`SceneTransition::new`] 等价。
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+    };
+}
+
+scene_transition!(Intro, Index, "`Intro` → `Index`（片头结束即跳主菜单）");
+scene_transition!(Index, SelectRole, "`Index` → `SelectRole`（菜单项 0 新游戏）");
+scene_transition!(Index, Saveload, "`Index` → `Saveload`（菜单项 1 继续）");
+scene_transition!(Index, Message, "`Index` → `Message`（菜单项 2/3/4 选项/说明）");
+scene_transition!(Index, Exit, "`Index` → `Exit`（菜单项 5 退出）");
+scene_transition!(SelectRole, SelectMap, "`SelectRole` → `SelectMap`（角色选定，地图未定）");
+scene_transition!(SelectRole, MainMap, "`SelectRole` → `MainMap`（角色 + 地图齐全）");
+scene_transition!(SelectRole, Index, "`SelectRole` → `Index`（返回）");
+scene_transition!(SelectMap, MainMap, "`SelectMap` → `MainMap`（地图选定）");
+scene_transition!(SelectMap, SelectRole, "`SelectMap` → `SelectRole`（返回）");
+scene_transition!(MainMap, Vs, "`MainMap` → `Vs`（事件码 6 dispatch）");
+scene_transition!(MainMap, Message, "`MainMap` → `Message`（事件码 1/4/2/5/7/8 dispatch）");
+scene_transition!(MainMap, Index, "`MainMap` → `Index`（`MapBack` 返回键）");
+scene_transition!(Vs, Index, "`Vs` → `Index`（战斗结束/中途退出）");
+scene_transition!(Message, MainMap, "`Message` → `MainMap`（关闭，场景源为主地图）");
+scene_transition!(Message, Index, "`Message` → `Index`（关闭，场景源为主菜单）");
+scene_transition!(Saveload, Index, "`Saveload` → `Index`（子窗口关闭）");
+scene_transition!(Saveload, MainMap, "`Saveload` → `MainMap`（读档恢复：角色 + 地图齐全）");
+scene_transition!(Saveload, SelectRole, "`Saveload` → `SelectRole`（读档恢复：角色/地图缺失）");
 
 /// 场景宿主能力接口：`GameApp` 实现的**唯一**状态/表现出口。
 ///
@@ -167,7 +288,10 @@ pub trait SceneHost {
     fn terrain_grid_w(&self) -> u32;
 
     /// 地形摄像机中心偏移 `(x, y)`（缺资源时 `(0, 0)`）。
-    fn terrain_camera(&self) -> (u32, u32);
+    fn terrain_camera(&self) -> (i64, i64);
+
+    /// 是否加载了真实地形瓦片图集（决定触摸命中走等距逆变换还是占位网格）。
+    fn has_terrain_atlas(&self) -> bool;
 
     // ── 音效 ────────────────────────────────────────────────────────────
     /// 置本次交互的音效（宿主 `last_sfx`，壳层消费）。
@@ -224,8 +348,10 @@ pub trait SceneHost {
     fn open_message(&mut self, kind: MsgKind);
 
     // ── 经济 ────────────────────────────────────────────────────────────
-    /// 商品 `gid` 单价。
+    /// 商品 `gid` 单价（买入价，`balance.trade.goods`）。
     fn price_of(&self, gid: u32) -> Option<u32>;
+    /// 商品 `gid` 卖出单价（`round(buy × markup)`，`balance.trade.markup`，S10.3 改动 3）。
+    fn sell_price_of(&self, gid: u32) -> Option<u32>;
     /// 当前金。
     fn gold(&self) -> u32;
     /// 置当前金。

@@ -23,7 +23,7 @@ fn repo_root() -> PathBuf {
 }
 
 fn load(c: &str) -> (Vec<u8>, Package) {
-    let buf = fs::read(repo_root().join("data").join(c)).expect("容器存在");
+    let buf = fs::read(repo_root().join("legacy").join("data").join(c)).expect("容器存在");
     let pkg = Package::parse(c, &buf).expect("容器解析成功");
     (buf, pkg)
 }
@@ -83,7 +83,7 @@ fn build_names(pkg: &Package, buf: &[u8]) -> ResourceNames {
     let mapinfo = mapinfo_filenames(pkg, buf);
     names.register_mapinfo(&mapinfo);
     // 2. exe 资源名（叶名 + 全路径）
-    let exe = fs::read(repo_root().join("TreasureIsl.exe")).expect("exe 存在");
+    let exe = fs::read(repo_root().join("legacy").join("TreasureIsl.exe")).expect("exe 存在");
     let exe_names = extract_exe_names(&exe);
     names.register_exe_names(&exe_names);
     // 3. EXTRAS 多键证实名

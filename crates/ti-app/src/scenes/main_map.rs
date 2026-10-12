@@ -2,8 +2,10 @@
 //!
 //! 事件分派的跳转结果（`Vs` / `Message`）由路由层 [`crate::scenes::enter_target`]
 //! 处理——那是跨场景的公共跳转点，不属于本场景。
-use ti_core::oracle::main_map::{Dir, GridPos, MapTerrain};
-use ti_core::oracle::menu::Sfx;
+use ti_core::data::balance;
+use ti_core::domain::flow::Sfx;
+use ti_core::domain::map::{Dir, GridPos, MapTerrain};
+use ti_core::rules::build::cost_of;
 use ti_core::rules::main_map::MapSession;
 
 use crate::game_app::GameInput;
@@ -80,7 +82,21 @@ impl Scene for MainMapScene {
                 }
             }
             GameInput::TradeBuy(gid) => {
-                // `rules::trade` 账本行为：结算后记持有
+                // S10.3 改动 5：买前查 `balance.trade.goods[i].qty_max`，超限时拒买
+                let b = match balance() {
+                    Ok(b) => b,
+                    Err(e) => {
+                        eprintln!("balance.json 加载失败：{e}（硬报错，不 fallback）");
+                        return false;
+                    }
+                };
+                let Some(goods) = b.trade.goods.iter().find(|g| g.id == gid) else {
+                    return false;
+                };
+                let held = host.owned_count(gid);
+                if held >= goods.qty_max {
+                    return false; // 持有量已达上限，拒买
+                }
                 if let Some(price) = host.price_of(gid) {
                     let gold = host.gold();
                     if gold >= price {
@@ -95,23 +111,28 @@ impl Scene for MainMapScene {
                 false
             }
             GameInput::TradeSell(gid) => {
-                // `rules::trade` 账本行为：先确认单价再结算，缺货不动
-                if let Some(price) = host.price_of(gid) {
-                    let qty = host.owned_count(gid);
-                    if qty > 0 {
-                        let gain = price.saturating_mul(qty);
-                        let gold = host.gold();
-                        host.set_gold(gold.saturating_add(gain));
-                        host.owned_take_all(gid);
-                        host.play_sfx(Sfx::Press);
-                    }
+                // S10.3 改动 3：卖价走 `balance.trade.markup`（`host.price_of` 已应用 markup 系数）
+                let qty = host.owned_count(gid);
+                if qty > 0 {
+                    let gain = host.sell_price_of(gid).unwrap_or(0).saturating_mul(qty);
+                    let gold = host.gold();
+                    host.set_gold(gold.saturating_add(gain));
+                    host.owned_take_all(gid);
+                    host.play_sfx(Sfx::Press);
                 }
                 false
             }
             GameInput::Build(kind) => {
-                // `rules::build::BuildManager::build` 行为：银行扣款 + 等级 +1
-                let cost = kind.base_cost();
-                if host.bank_gold() >= cost {
+                // S10.3 改动 4：造价走 `balance.build.buildings`（`rules::build::cost_of` 纯函数）
+                let b = match balance() {
+                    Ok(b) => b,
+                    Err(e) => {
+                        eprintln!("balance.json 加载失败：{e}（硬报错，不 fallback）");
+                        return false;
+                    }
+                };
+                let cost = cost_of(&b.build, kind);
+                if cost > 0 && host.bank_gold() >= cost {
                     host.spend_bank_gold(cost);
                     host.build_increment(kind);
                     host.play_sfx(Sfx::Press);
@@ -129,6 +150,9 @@ impl Scene for MainMapScene {
     /// - 点格子 = 朝该格逐格走（每次点按走到能走的最远格，不穿墙）；
     /// - 点自己所在格 = 触发据点事件（`Landmark(code)`）；
     /// - 滑动 = 朝该方向走一步。
+    ///
+    /// 命中坐标与渲染同坐标系：真实地形（等距投影）走 `iso_grid_cell_at`，
+    /// 占位网格（无地形资源）走 `grid_cell_at`（6×6 占位命中不变）。
     fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
         let Some(cur) = host.map_pos() else {
             return false;
@@ -138,9 +162,19 @@ impl Scene for MainMapScene {
                 let Some(terrain) = host.map_terrain() else {
                     return false;
                 };
-                let Some((row, col)) =
+                let cam = host.terrain_camera();
+                let cell = if host.has_terrain_atlas() {
+                    layout::iso_grid_cell_at(
+                        sample.x,
+                        sample.y,
+                        terrain.grid_w,
+                        terrain.grid_h,
+                        cam,
+                    )
+                } else {
                     layout::grid_cell_at(sample.x, sample.y, terrain.grid_w, terrain.grid_h)
-                else {
+                };
+                let Some((row, col)) = cell else {
                     return false;
                 };
                 let target = GridPos::new(row, col);
@@ -174,7 +208,7 @@ impl Scene for MainMapScene {
         let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
         host.draw_text(&own_str, 4, 162);
 
-        // 玩家棋子 + 据点（等距投影坐标，相机与地形一致）
+        // 玩家棋子 + 据点（等距投影坐标，相机与地形一致；`terrain_camera` 为真值可能为负）
         let gw = host.terrain_grid_w();
         let (cam_x, cam_y) = host.terrain_camera();
         let cx = i32::try_from(cam_x).unwrap_or(0);

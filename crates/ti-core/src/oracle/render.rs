@@ -1,113 +1,14 @@
-//! oracle：S3.2 差分基准，直译场景装载/渲染管线，测试专用。
-//!
-//! 依据 `evidence/S3.2.log` 的 REA 实测资源清单与 `docs/spec/main_loop.md` §4：
-//! - 资源容器：`UI.pak`（场景 `.Map` + 控件表）、`glpics.pak`（精灵 PCX）、
-//!   `cards.lpk`（卡牌）、`goods.lpk`（商品）、`music.lpk`（音频）；
-//! - 场景装载器族（`intro`/`3ECDC`/`402D8`/`40D80`/`2077C`）通过通用装载
-//!   `场景资源通用装载` 从容器索引取记录；
-//! - 渲染管线：WinCE GX API（`GXBeginDraw` → 图层 blit → `GXEndDraw`），
-//!   图层顺序 = 装载顺序；
-//! - 存档：`gl0.sav`..`gl4.sav` + `gl.rec`（魔数 0x01315A47）+ `settings.dat`。
-//!
-//! 本 oracle 模拟装载校验（容器存在性、gl.rec 魔数、glmapm 探测），
-//! 生成逐位一致的差分基准，供 `rules::render::SceneManager` 对拍。
+// oracle：场景装载/渲染管线差分基准，测试专用（S11 起降级为纯基准函数）。
+//
+// **类型已迁至 [`crate::domain::render`]**（S11 归档改造）。
+// 本模块只保留**装载校验**的差分基准函数（容器存在性 / gl.rec 魔数 / glmapm 探测）。
+// 渲染管线本身是现代实现（GPU 逐精灵 batch，见 `docs/modernization.md` §1）。
+//
+// 资源格式事实见 `docs/reverse/formats/lucencypackage.md`。
 
-/// 资源容器类型（`evidence/S3.2.log` 关键发现 §3）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ResourceContainer {
-    /// UI.pak：场景 .Map + 控件表。
-    Ui,
-    /// glpics.pak：精灵 PCX（face_*/troop/ship/flag/landmark 等）。
-    Glpics,
-    /// cards.lpk：卡牌数据。
-    Cards,
-    /// goods.lpk：商品数据。
-    Goods,
-    /// music.lpk：音频（victory.wav / glmusic.mod 等）。
-    Music,
-}
-
-impl ResourceContainer {
-    /// 全部容器（按枚举声明顺序，diff 测试遍历用）。
-    #[must_use]
-    pub const fn all() -> [ResourceContainer; 5] {
-        [
-            ResourceContainer::Ui,
-            ResourceContainer::Glpics,
-            ResourceContainer::Cards,
-            ResourceContainer::Goods,
-            ResourceContainer::Music,
-        ]
-    }
-
-    /// 容器可读名称（错误消息用）。
-    #[must_use]
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Ui => "UI.pak",
-            Self::Glpics => "glpics.pak",
-            Self::Cards => "cards.lpk",
-            Self::Goods => "goods.lpk",
-            Self::Music => "music.lpk",
-        }
-    }
-}
-
-/// 资源引用：容器 + 资源名（`&'static str`，测试代码外禁止 unwrap）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ResourceRef {
-    /// 所属容器。
-    pub container: ResourceContainer,
-    /// 资源名（`.Map`/`.pcx`/`.sav`/`.mod` 等小写扩展名形式）。
-    pub name: &'static str,
-}
-
-impl ResourceRef {
-    /// 构造资源引用。
-    #[must_use]
-    pub const fn new(container: ResourceContainer, name: &'static str) -> Self {
-        Self { container, name }
-    }
-}
-
-/// 装载后的场景资产（与 `ResourceRef` 一一对应）。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SceneAsset {
-    /// 地图场景（`.Map` 文件）。
-    Map(String),
-    /// 精灵图（`.pcx` 文件）。
-    Pcx(String),
-    /// 模型/控件表（`.mod` 文件）。
-    Mod(String),
-    /// 存档（`.sav` 文件）。
-    Sav(String),
-}
-
-/// 装载错误：缺失容器 + 缺失资源名。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RenderError {
-    /// 缺失的资源引用（容器不存在或资源名不在容器索引中）。
-    pub missing: Vec<ResourceRef>,
-}
-
-impl std::fmt::Display for RenderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "render: {} missing resource(s)", self.missing.len())?;
-        for ref_ in &self.missing {
-            write!(f, "\n  - {} / {}", ref_.container.label(), ref_.name)?;
-        }
-        Ok(())
-    }
-}
-
-/// 渲染计划：图层顺序 = 装载顺序（`GXBeginDraw` → blit → `GXEndDraw`）。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RenderPlan {
-    /// 图层（按装载顺序，即 blit 顺序）。
-    pub layers: Vec<SceneAsset>,
-    /// blit 调用次数（= 图层数，每层一次 GX blit）。
-    pub blit_count: usize,
-}
+pub use crate::domain::render::{
+    RenderError, RenderPlan, ResourceContainer, ResourceRef, SceneAsset,
+};
 
 /// gl.rec 魔数（`evidence/S3.2.log`：0x01315A47）。
 const GL_REC_MAGIC: u32 = 0x0131_5A47;

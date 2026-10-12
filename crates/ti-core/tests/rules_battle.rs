@@ -1,22 +1,34 @@
-//! S8.3.a 战斗系统（`rules/battle`）测试。
+//! S8.3.a / S12.1 战斗域包：战斗系统（`rules/battle`）测试。
 //!
-//! 依据 `docs/business/combat.md` 的可测试规则（每条 → 单测名）：
-//! 同 seed 同结果 / 玩家先手 / min floor / 越界档无效 / 超回合兜底。
+//! 依据 `docs/business/combat.md` 可测试规则表（每条 → 单测名）：
+//!
+//! | 规则 | 单测 |
+//! |---|---|
+//! | 同 seed + 同操作序列 ⇒ 同结果 | `combat_same_seed_same_result` / `combat_same_seed_same_result_from_balance` |
+//! | 玩家先手，伤害顺序固定 | `combat_player_first`（`combat_victory_no_counterattack` 覆盖先手顺序） |
+//! | 每回合玩家至少掉 `flat` 血 | `combat_min_damage_floor` |
+//! | BOSS.hp==0 立即 Victory，不再反击 | `combat_victory_no_counterattack` |
+//! | player.hp==0 判 Defeat | `combat_defeat_when_player_hp_zero` |
+//! | `max_rounds` 兜底判胜负 | `combat_max_rounds_tiebreak` / `combat_max_rounds_tiebreak_same_hp` |
+//! | 越界 tier ⇒ 无效战斗 | `combat_invalid_tier_rejected`（`session_invalid_tier`） |
 //!
 //! 置于集成测试目录，豁免门禁的 `unwrap`/`expect` 扫描（EXP-052）；
-//! `cfg.boss(0)` 在 `test_cfg()` 恒有档 0，`unwrap` 在此安全。
+//! `cfg.boss(0)` 在 `test_cfg()` 恒有档 0，`expect` 在此安全。
+//!
+//! 类型路径走 `ti_core::domain::combat`（c1 契约 §1，`Unit`/`Side` 类型唯一家），
+//! 不经逆向参照路径重导出（S12.1 消除战斗域对逆向路径的依赖）。
 
-use ti_core::oracle::battle::{Side, Unit};
+use ti_core::data::{BossTier, CombatCfg, DamageCfg};
+use ti_core::domain::combat::{Side, Unit};
 use ti_core::rules::battle::BattleSession;
-use ti_core::rules::rng::GameRng;
 
 /// 测试用战斗参数（不读 `balance`，隔离 RNG 行为；BOSS 档 0 与 `balance.json` 同值）。
-fn test_cfg() -> ti_core::data::CombatCfg {
-    ti_core::data::CombatCfg {
+fn test_cfg() -> CombatCfg {
+    CombatCfg {
         player_first: true,
         max_rounds: 30,
-        damage: ti_core::data::DamageCfg { flat: 1, atk_coef: 1.0, rng_span: 3 },
-        boss_tiers: vec![ti_core::data::BossTier { tier: 0, hp: 50_000, atk: 10 }],
+        damage: DamageCfg { flat: 1, atk_coef: 1.0, rng_span: 3 },
+        boss_tiers: vec![BossTier { tier: 0, hp: 50_000, atk: 10 }],
     }
 }
 
@@ -109,14 +121,93 @@ fn combat_same_seed_same_result_from_balance() {
     assert_eq!(a.finish(), b.finish(), "from_balance 同 seed 同结果");
 }
 
-/// 可复现性：显式 `GameRng` 播种同 seed → 同战斗轨迹（`docs/business/combat.md` §伤害模型）。
+/// 同 seed + 同操作序列 ⇒ 同结果（`docs/business/combat.md` 可测试规则表第 1 条）：
+/// 显式 `GameRng` 播种 → 同战斗轨迹/胜方/回合数（可复现、可回放、可测试）。
 #[test]
-fn combat_reproducible_with_explicit_seed() {
+fn combat_same_seed_same_result() {
     let player = Unit { hp: 300, atk: 20 };
     let mut s1 = BattleSession::new_with_cfg(test_cfg(), 1234, player, 0);
     let mut s2 = BattleSession::new_with_cfg(test_cfg(), 1234, player, 0);
     let r1 = s1.finish();
     let r2 = s2.finish();
-    assert_eq!(r1, r2, "同 seed 同参数 → 同轨迹/胜方/回合数（可复现、可回放）");
-    let _ = GameRng::new(0); // 占位：保持 RNG 依赖路径编译（战斗内部走 GameRng）
+    assert_eq!(r1, r2, "同 seed 同参数 → 同轨迹/胜方/回合数");
+}
+
+/// 玩家先手，伤害顺序固定（`docs/business/combat.md` 可测试规则表第 2 条）：
+/// `player_first == true`（默认档）→ 一击秒 BOSS 的回合内，BOSS 不反击 → 玩家 HP 保持初始值不变
+/// （顺序即「先结算玩家伤害、归零即结束、不再轮到 BOSS」的固定流程；若顺序颠倒，先手优势即被破坏）。
+#[test]
+fn combat_player_first() {
+    let cfg = test_cfg();
+    let boss = cfg.boss(0).expect("test_cfg 恒有档 0");
+    let player = Unit { hp: 7, atk: boss.hp };
+    let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
+    let (ph, eh, outcome) = s.step();
+    assert_eq!(eh, 0, "玩家先手：先结算对 BOSS 伤害，BOSS 归零");
+    assert_eq!(outcome, Some(Side::Player), "同回合 BOSS 归零即判玩家胜");
+    assert_eq!(ph, 7, "BOSS 归零不再反击，玩家 HP 不变（顺序固定的可观测判据）");
+}
+
+/// `player_first == false`（配置可翻转）→ 先结算 BOSS 伤害：
+/// BOSS 一击秒玩家的回合内，玩家不反击 → BOSS HP 保持初始值不变。
+#[test]
+fn combat_boss_first_when_disabled() {
+    let mut cfg = test_cfg();
+    cfg.player_first = false;
+    let boss = cfg.boss(0).expect("test_cfg 恒有档 0");
+    let player = Unit { hp: 1, atk: boss.hp };
+    let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
+    let (ph, eh, outcome) = s.step();
+    assert_eq!(ph, 0, "BOSS 先手：先结算对玩家伤害，玩家归零");
+    assert_eq!(outcome, Some(Side::Enemy), "同回合玩家归零即判 Defeat");
+    assert_eq!(eh, boss.hp, "玩家归零不再反击，BOSS HP 不变（顺序翻转可观测）");
+}
+
+/// 越界 tier ⇒ 无效战斗（`docs/business/combat.md` 可测试规则表第 7 条，
+/// `from_balance` 路径：真实 `balance.combat` 档表之外的 tier 同样判无效）。
+#[test]
+fn combat_invalid_tier_rejected() {
+    let player = Unit { hp: 100, atk: 10 };
+    let mut s = BattleSession::from_balance(0, player, 99);
+    assert_eq!(s.boss_hp(), 0, "越界档 → 无效战斗（BOSS 无 HP）");
+    assert_eq!(s.outcome(), Some(Side::Player), "无效战斗判玩家胜（无 BOSS 可打）");
+    let (trace, winner, rounds) = s.finish();
+    assert!(trace.is_empty(), "无效战斗无回合轨迹");
+    assert_eq!(winner, Side::Player);
+    assert_eq!(rounds, 0);
+}
+
+/// `max_rounds` 兜底：跑满回合上限未分胜负 → `Defeat`（`Side::Enemy`，
+/// `docs/business/combat.md` 胜负判定表第 3 行「超过 `max_rounds` 仍按 HP 高者判（同回合为 Defeat）」）。
+/// 本用例把 `test_cfg` 的 `max_rounds` 调到 1000 以匹配 `balance.json` 的 `combat.max_rounds`
+/// （战斗平衡目标 10–40 回合，30 回合内正常分胜负，1000 是防拉锯兜底）；
+/// 玩家 `atk = 0`（单回合 1–4 伤害，BOSS 50k HP 撑满 1000 回合不掉空），玩家 HP 足够存活满 1000 回合
+/// ⇒ 跑满上限双方均未归零 → 未分胜负，触发兜底判 `Enemy`。
+#[test]
+fn combat_max_rounds_tiebreak_same_hp() {
+    let mut cfg = test_cfg();
+    cfg.max_rounds = 1_000;
+    let player = Unit { hp: 30_000, atk: 0 };
+    let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
+    let (trace, winner, rounds) = s.finish();
+    assert_eq!(rounds, 1_000, "跑满 max_rounds 未分胜负");
+    assert_eq!(trace.len(), 1_000, "逐回合快照条数 = 跑满回合数");
+    assert_eq!(winner, Side::Enemy, "兜底判 Enemy（Defeat）");
+}
+
+/// BOSS 档表逐档走 `balance.json`（`docs/business/combat.md` 可测试规则表 + `combat.md` §参数）：
+/// 档 0..=4 的 HP 与 BOSS 档表一致，越界档 5 ⇒ 无效战斗。
+#[test]
+fn combat_boss_tiers_from_balance() {
+    let player = Unit { hp: 1, atk: 0 };
+    let expect_boss_hp: &[u32] = &[50_000, 100_000, 150_000, 200_000, 300_000];
+    for (tier, &init) in expect_boss_hp.iter().enumerate() {
+        let tier_u32 = u32::try_from(tier).unwrap_or(u32::MAX);
+        let s = BattleSession::from_balance(0, player, tier_u32);
+        assert_eq!(s.boss_hp(), init, "档 {tier} 初 HP 走 balance.combat.boss_tiers[{tier}]");
+        assert_eq!(s.outcome(), None, "合法档 → 正常开打");
+    }
+    let invalid = BattleSession::from_balance(0, player, 5);
+    assert_eq!(invalid.boss_hp(), 0, "档 5 越界 → 无效战斗");
+    assert_eq!(invalid.outcome(), Some(Side::Player), "越界档判玩家胜（无 BOSS 可打）");
 }

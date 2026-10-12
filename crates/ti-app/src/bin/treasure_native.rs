@@ -14,6 +14,7 @@ use macroquad::prelude::*;
 use ti_app::audio_prep::{MusicBundle, prepare_music, wav_pcm16};
 use ti_app::game_app::{GameApp, KeyState};
 use ti_app::menu_shell::parse_font_bytes;
+use ti_app::scenes::SceneKind;
 use ti_app::touch::TouchPad;
 use ti_platform::gfx::UploadMode;
 use ti_platform::settings::ScaleMode;
@@ -66,7 +67,7 @@ fn repo_root() -> PathBuf {
 
 /// 读本地资源文件；失败返回 `None`（壳以全豆腐块 / 0 曲目运行，不静默空白）。
 fn read_local(name: &str) -> Option<Vec<u8>> {
-    let path = repo_root().join("data").join(name);
+    let path = repo_root().join("legacy").join("data").join(name);
     std::fs::read(path).ok()
 }
 /// 把 `music.lpk` 解包 → 混音 → OGG 转码 → 逐条交给 macroquad 音频后端。
@@ -352,7 +353,7 @@ async fn main() {
 
         // S5.1：场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
         let current_selected = shell.game.shell().selected;
-        let scene_key = shell.game.scene().key();
+        let scene_key = SceneKind::from_legacy(shell.game.scene()).discriminant();
         if changed
             || shell.game.shell().last_rendered != Some(current_selected)
             || shell.game.shell().last_rendered_scene != Some(scene_key)

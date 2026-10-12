@@ -1,88 +1,61 @@
-//! oracle：S3.7 建造/城堡系统差分基准，测试专用。
-//!
-//! 直译 `docs/spec/build.md` 的建造/银行规则：
-//! - 建筑类型 [`Building`]（4 种：Castle/Investment/Bank/Fort，spec §a 推测）；
-//! - 银行 [`Bank`]（金量，spec §c）；
-//! - [`oracle_build_cost`]：建造成本公式（`base × level`，spec §b 推测占位）；
-//! - [`oracle_can_afford`]：金量是否足够（spec §b）；
-//! - [`oracle_build`]：建造操作（扣金 + 升级，spec §b/c）；
-//! - [`oracle_deposit`] / [`oracle_withdraw`]：银行存取（spec §c，`银行` 双槽位）；
-//! - 错误 [`BuildErr`]（`Insufficient` / `InvalidLevel`）。
-//!
-//! 行为确定（同输入逐位相同），不允许 rand。
-//!
-//! 建造成本公式（**推测**，spec §b）：
-//! ```text
-//! cost = base_cost(kind) × (level + 1)
-//! ```
-//! 各建筑基础成本（spec §a 占位，对照 `投资` 奖励阶梯）：
-//! - Castle = 1000
-//! - Investment = 500
-//! - Bank = 200
-//! - Fort = 800
+// oracle：建造/银行差分基准，测试专用（S11 起降级为纯基准函数）。
+//
+// 业务规则以 `docs/business/economy.md` 为准；造价以 `balance.json` 为准（可调）。
+//
+// 类型分工（P2 经济域收口）：`Building` 域类型来自 `domain::economy`；
+// 银行与错误类型是 oracle 差分基准专用形态（含 `deposit` 追踪与
+// `UnknownBuilding` 变体），正式实现用 `rules::build::{Bank, BuildErr}`。
 
-/// 建筑类型（spec §a，4 种，**推测** 由控件组合推断）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Building {
-    /// 城堡（`button_aimcastle` + `button_build`）。
-    Castle,
-    /// 投资设施（`button_invest`）。
-    Investment,
-    /// 银行（`button_bank`）。
-    Bank,
-    /// 据点/堡垒（`button_capture` + `button_build`，**推测**）。
-    Fort,
-}
+pub use crate::domain::economy::Building;
 
-impl Building {
-    /// 全部建筑类型（按枚举声明顺序，diff 测试遍历用）。
-    #[must_use]
-    pub const fn all() -> [Building; 4] {
-        [Self::Castle, Self::Investment, Self::Bank, Self::Fort]
-    }
-
-    /// 基础建造成本（spec §a 占位，对照 `投资` 奖励阶梯量级）。
-    #[must_use]
-    pub const fn base_cost(self) -> u32 {
-        match self {
-            Self::Castle => 1000,
-            Self::Investment => 500,
-            Self::Bank => 200,
-            Self::Fort => 800,
-        }
-    }
-}
-
-/// 银行（金量，spec §c，`银行` 双槽位金 `+1032/+1040` 的 oracle 化）。
+/// 银行（oracle 差分基准形态：流动金 + 已存金）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Bank {
-    /// 当前金量（上限 999999，`投资` 行 114/116）。
+    /// 流动金。
     pub gold: u32,
+    /// 银行累计。
+    pub deposit: u32,
 }
 
 impl Bank {
-    /// 新建银行（指定金量）。
+    /// 新建银行（流动金 `gold`，存款 0）。
     #[must_use]
     pub const fn new(gold: u32) -> Self {
-        Self { gold }
+        Self { gold, deposit: 0 }
     }
 }
 
-/// 建造/银行操作错误。
+/// 建造/银行操作错误（oracle 差分基准专用）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BuildErr {
-    /// 金量不足（`bank.gold < cost`，spec §b）。
+    /// 金量不足。
     Insufficient,
-    /// 等级无效（`level` 超出范围，spec §b）。
+    /// 等级无效。
     InvalidLevel,
+    /// 未知建筑 id（oracle `oracle_build` 按字符串 id 校验路径）。
+    UnknownBuilding,
 }
 
-/// oracle：建造成本（`base_cost(kind) × (level + 1)`，spec §b 推测公式）。
+/// oracle：建筑基础造价（逆向初值，冻结为历史基准）。
+///
+/// ⚠️ 正式实现 `rules::build::cost_of` 用 `balance.build.buildings[i].base_cost`（可调），
+/// 本表冻结不改（S11 起不再挂在 `Building` 类型上，避免业务类型携带逆向数值）。
+#[must_use]
+pub const fn oracle_base_cost(kind: Building) -> u32 {
+    match kind {
+        Building::Castle => 1000,
+        Building::Investment => 500,
+        Building::Bank => 200,
+        Building::Fort => 800,
+    }
+}
+
+/// oracle：建造成本（`oracle_base_cost(kind) × (level + 1)`，逆向推测公式）。
 ///
 /// `level = 0`（首次建造）→ `base × 1`；`level = 1`（升级）→ `base × 2`；以此类推。
 #[must_use]
 pub fn oracle_build_cost(kind: Building, level: u32) -> u32 {
-    kind.base_cost() * (level + 1)
+    oracle_base_cost(kind) * (level + 1)
 }
 
 /// oracle：金量是否足够支付建造成本（spec §b）。
@@ -125,7 +98,7 @@ pub fn oracle_deposit(bank: Bank, amount: u32) -> Result<Bank, BuildErr> {
     if amount > bank.gold {
         return Err(BuildErr::Insufficient);
     }
-    Ok(Bank::new(bank.gold - amount))
+    Ok(Bank { gold: bank.gold - amount, deposit: bank.deposit.saturating_add(amount) })
 }
 
 /// oracle：取款（spec §c，`银行` `a2!=0, mode==2` 方向，金从银行→流动）。
@@ -137,7 +110,7 @@ pub fn oracle_deposit(bank: Bank, amount: u32) -> Result<Bank, BuildErr> {
 #[must_use]
 pub fn oracle_withdraw(bank: Bank, amount: u32) -> Bank {
     let new_gold = bank.gold.saturating_add(amount).min(999_999);
-    Bank::new(new_gold)
+    Bank { gold: new_gold, deposit: bank.deposit }
 }
 
 #[cfg(test)]
@@ -163,7 +136,7 @@ mod tests {
         let bank = Bank::new(5000);
         let result = oracle_build(bank, Building::Castle, 0);
         assert!(result.is_ok(), "build 5000 gold for Castle L0 should succeed");
-        let Bank { gold } = result.unwrap_or_default();
+        let Bank { gold, .. } = result.unwrap_or_default();
         assert_eq!(gold, 4000);
     }
 
@@ -178,8 +151,9 @@ mod tests {
         let bank = Bank::new(5000);
         let result = oracle_deposit(bank, 1000);
         assert!(result.is_ok(), "deposit 1000 from 5000 should succeed");
-        let Bank { gold } = result.unwrap_or_default();
+        let Bank { gold, deposit } = result.unwrap_or_default();
         assert_eq!(gold, 4000);
+        assert_eq!(deposit, 1000, "存款累计到 deposit");
     }
 
     #[test]
@@ -200,5 +174,6 @@ mod tests {
         let bank = Bank::new(1000);
         let result = oracle_withdraw(bank, 500);
         assert_eq!(result.gold, 1500);
+        assert_eq!(result.deposit, 0, "oracle 取款不触碰 deposit（原版语义）");
     }
 }

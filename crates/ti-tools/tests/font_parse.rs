@@ -16,7 +16,8 @@ fn repo_root() -> PathBuf {
 
 #[test]
 fn real_font_parses_with_zero_unknown_bytes() {
-    let raw = std::fs::read(repo_root().join("data").join("GoldLand.Fnt")).expect("字体存在");
+    let raw = std::fs::read(repo_root().join("legacy").join("data").join("GoldLand.Fnt"))
+        .expect("字体存在");
     assert_eq!(raw.len(), 24_384, "F-303：GoldLand.Fnt 应为 24384 字节");
     let f = Font::parse("GoldLand.Fnt", &raw).expect("解析成功");
     assert_eq!(raw.len() % GLYPH_BYTES, 0, "24384 必须整除 24");
@@ -29,7 +30,8 @@ fn real_font_parses_with_zero_unknown_bytes() {
 #[test]
 fn glyph_bits_use_low_byte_plus_high_nibble() {
     // 实测：u16 LE 的 bit8~bit11 恒为 0 → 每行 12 像素（低 8 位 + 高 4 位）
-    let raw = std::fs::read(repo_root().join("data").join("GoldLand.Fnt")).expect("字体存在");
+    let raw = std::fs::read(repo_root().join("legacy").join("data").join("GoldLand.Fnt"))
+        .expect("字体存在");
     let f = Font::parse("GoldLand.Fnt", &raw).expect("解析成功");
     let mut checked = 0usize;
     for g in &f.glyphs {
@@ -46,7 +48,8 @@ fn glyph_bits_use_low_byte_plus_high_nibble() {
 
 #[test]
 fn json_export_matches_structure() {
-    let raw = std::fs::read(repo_root().join("data").join("GoldLand.Fnt")).expect("字体存在");
+    let raw = std::fs::read(repo_root().join("legacy").join("data").join("GoldLand.Fnt"))
+        .expect("字体存在");
     let f = Font::parse("GoldLand.Fnt", &raw).expect("解析成功");
     let j = f.to_json();
     assert!(j.contains("\"glyph_width\": 12"), "{j}");
@@ -57,7 +60,8 @@ fn json_export_matches_structure() {
 #[test]
 fn font_dat_starts_with_utf16_bom() {
     // F-303（S1.5b 修正）：font.dat = UTF-16LE+BOM 的字符集清单（非字宽表）
-    let raw = std::fs::read(repo_root().join("data").join("font.dat")).expect("font.dat 存在");
+    let raw = std::fs::read(repo_root().join("legacy").join("data").join("font.dat"))
+        .expect("font.dat 存在");
     assert_eq!(raw.len(), 2034, "F-303：font.dat 应为 2034 字节");
     assert_eq!(&raw[..2], &[0xFF, 0xFE], "应以 UTF-16 BOM 开头");
 }

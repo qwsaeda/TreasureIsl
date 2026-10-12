@@ -56,6 +56,7 @@ pub struct AudioResourceMap {
 > 实际 `ti-platform::audio`（`audio.rs:51`）为 struct 非 enum：
 > `ChannelState { active: bool, volume: u8 (0..=255), position: usize, looping: bool }`。
 > 本节的 `AudioChannel` + `ChannelState` enum 为设计占位。
+> ⚠️ 以下 enum 为**设计占位**（`@deprecated`），真实实现是 `struct ChannelState { active, volume, position, looping }`（`audio.rs:51`），勿照抄。
 
 ```rust
 pub struct AudioChannel {

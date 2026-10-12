@@ -44,7 +44,7 @@ fn repo_root() -> PathBuf {
 }
 
 fn load(c: &str) -> (Vec<u8>, Package) {
-    let buf = fs::read(repo_root().join("data").join(c)).expect("容器存在");
+    let buf = fs::read(repo_root().join("legacy").join("data").join(c)).expect("容器存在");
     let pkg = Package::parse(c, &buf).expect("容器解析成功");
     (buf, pkg)
 }
@@ -130,7 +130,7 @@ fn mapinfo_filenames_close_over_container_keys() {
 
 #[test]
 fn dod_scope_keys_are_all_named() {
-    let exe = fs::read(repo_root().join("TreasureIsl.exe")).expect("exe 存在");
+    let exe = fs::read(repo_root().join("legacy").join("TreasureIsl.exe")).expect("exe 存在");
     let mut auth: HashSet<u32> = extract_names(&exe).iter().map(|n| name_key(n)).collect();
     for n in EXTRAS {
         auth.insert(name_key(n));
@@ -204,7 +204,7 @@ fn key_vectors_and_ui_ap_structure() {
 #[test]
 fn ui_scene_map_record_layout_matches_count() {
     // F-306：[16B 头][子头 4×u32][count u32][count × 6 × u32] => words.len() == 5 + 6*count
-    let dir = repo_root().join("data");
+    let dir = repo_root().join("legacy").join("data");
     let mut checked = 0usize;
     let mut names = Vec::new();
     for entry in fs::read_dir(&dir).expect("data 目录可读") {

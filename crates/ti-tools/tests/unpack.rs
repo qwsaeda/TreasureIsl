@@ -28,7 +28,7 @@ fn p0_1_every_entry_extracts() {
     let mut ok = 0usize;
     let mut failed: Vec<String> = Vec::new();
     for c in CONTAINERS {
-        let buf = fs::read(repo_root().join("data").join(c)).expect("容器存在");
+        let buf = fs::read(repo_root().join("legacy").join("data").join(c)).expect("容器存在");
         let pkg = Package::parse(c, &buf).expect("解析成功");
         for i in 0..pkg.entries.len() {
             total += 1;
@@ -49,7 +49,7 @@ fn p0_1_every_entry_extracts() {
 #[test]
 fn p0_3_repack_is_byte_identical() {
     for c in CONTAINERS {
-        let buf = fs::read(repo_root().join("data").join(c)).expect("容器存在");
+        let buf = fs::read(repo_root().join("legacy").join("data").join(c)).expect("容器存在");
         let pkg = Package::parse(c, &buf).expect("解析成功");
         let rebuilt = pkg.repack(&buf).expect("重打包成功");
         assert_eq!(rebuilt.len(), buf.len(), "{c} 重打包长度不一致");
@@ -65,7 +65,7 @@ fn p0_3_repack_is_byte_identical() {
 fn raw_index_reencodes_byte_identically() {
     // .lpk 索引未压缩 → 由 entries 重新编码必须与原文件逐字节一致（记录布局证明）
     for c in ["cards.lpk", "music.lpk", "goods.lpk"] {
-        let buf = fs::read(repo_root().join("data").join(c)).expect("容器存在");
+        let buf = fs::read(repo_root().join("legacy").join("data").join(c)).expect("容器存在");
         let pkg = Package::parse(c, &buf).expect("解析成功");
         assert!(!pkg.index_compressed, "{c} 应为原始索引");
         let idx = pkg.encode_index().expect("索引重编码成功");
@@ -77,7 +77,7 @@ fn raw_index_reencodes_byte_identically() {
 #[test]
 fn all_entries_inflate_to_nonzero_payloads() {
     let root = repo_root();
-    let buf = fs::read(root.join("data").join("ui.pak")).expect("ui.pak 存在");
+    let buf = fs::read(root.join("legacy").join("data").join("ui.pak")).expect("ui.pak 存在");
     let pkg = Package::parse("ui.pak", &buf).expect("解析成功");
     assert_eq!(pkg.entries.len(), 122);
     for i in 0..pkg.entries.len() {

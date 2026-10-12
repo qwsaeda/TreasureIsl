@@ -11,6 +11,7 @@ use macroquad::prelude::*;
 use ti_app::audio_prep::{MusicBundle, prepare_music, wav_pcm16};
 use ti_app::game_app::{GameApp, KeyState};
 use ti_app::menu_shell::parse_font_bytes;
+use ti_app::scenes::SceneKind;
 use ti_app::touch::TouchPad;
 use ti_platform::settings::ScaleMode;
 use ti_platform::storage::{Backend, MemoryStore};
@@ -285,7 +286,7 @@ async fn main() {
 
         // S5.1：场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
         let current_selected = shell.game.shell().selected;
-        let scene_key = shell.game.scene().key();
+        let scene_key = SceneKind::from_legacy(shell.game.scene()).discriminant();
         if changed
             || shell.game.shell().last_rendered != Some(current_selected)
             || shell.game.shell().last_rendered_scene != Some(scene_key)

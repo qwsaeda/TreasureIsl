@@ -82,7 +82,7 @@ fn run(
     let mut all_ok = true;
 
     for c in CONTAINERS {
-        let path = root.join("data").join(c);
+        let path = root.join("legacy").join("data").join(c);
         let buf = fs::read(&path).map_err(|e| format!("读取 {c}: {e}"))?;
         let pkg = Package::parse(c, &buf).map_err(|e| format!("解析 {c}: {e}"))?;
         total += pkg.entries.len();

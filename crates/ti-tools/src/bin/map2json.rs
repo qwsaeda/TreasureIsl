@@ -39,7 +39,7 @@ fn main() -> ExitCode {
 }
 
 fn run(out: Option<&Path>) -> Result<usize, String> {
-    let data_dir = repo_root().join("data");
+    let data_dir = repo_root().join("legacy").join("data");
     if let Some(dir) = out {
         fs::create_dir_all(dir).map_err(|e| format!("建目录 {}: {e}", dir.display()))?;
     }

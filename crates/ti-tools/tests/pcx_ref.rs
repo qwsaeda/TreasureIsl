@@ -32,7 +32,7 @@ fn rust_decoder_matches_python_reference() {
     let mut mismatches: Vec<String> = Vec::new();
 
     for c in CONTAINERS {
-        let buf = fs::read(root.join("data").join(c)).expect("容器存在");
+        let buf = fs::read(root.join("legacy").join("data").join(c)).expect("容器存在");
         let pkg = Package::parse(c, &buf).expect("解析成功");
         let step = (pkg.entries.len() / SAMPLE_PER_CONTAINER).max(1);
         for i in (0..pkg.entries.len()).step_by(step) {
@@ -89,7 +89,7 @@ fn rust_decoder_matches_python_reference() {
 fn first_ui_pak_entry_matches_f205() {
     // F-205: ui.pak 首条 = PCX 头 0A 05 01 08，8bpp 1 平面 34×12
     let root = repo_root();
-    let buf = fs::read(root.join("data").join("ui.pak")).expect("ui.pak 存在");
+    let buf = fs::read(root.join("legacy").join("data").join("ui.pak")).expect("ui.pak 存在");
     let pkg = Package::parse("ui.pak", &buf).expect("解析成功");
     let img = pcx::decode_from_package("ui.pak[0]", &pkg, &buf, 0).expect("解码成功");
     assert_eq!((img.width, img.height), (34, 12), "F-205 尺寸不符");
@@ -100,7 +100,8 @@ fn first_ui_pak_entry_matches_f205() {
 #[test]
 fn all_image_entries_in_glpics_decode() {
     let root = repo_root();
-    let buf = fs::read(root.join("data").join("glpics.pak")).expect("glpics.pak 存在");
+    let buf =
+        fs::read(root.join("legacy").join("data").join("glpics.pak")).expect("glpics.pak 存在");
     let pkg = Package::parse("glpics.pak", &buf).expect("解析成功");
     let mut decoded = 0usize;
     let mut failed: Vec<String> = Vec::new();

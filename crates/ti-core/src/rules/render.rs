@@ -1,111 +1,20 @@
-//! S3.2 / S8.6 资源/渲染核心正式实现（渲染基线对齐真实资源，去自指）。
+//! S3.2 / S8.6 / S12.4 资源/渲染核心正式实现（渲染基线对齐真实资源，去自指）。
 //!
-//! S8 定位变更：旧 `oracle::render::oracle_load_scene`/`oracle_render_frame` 降级参照物；
-//! 本模块的装载校验规则直接落本文件（`docs/business/economy.md` 资源容器 + S8.6 渲染基线），
-//! 行为与 oracle 一致（同输入同输出），但**不再调用** oracle 自由函数。
+//! S11 类型唯一家：`ResourceContainer`/`ResourceRef`/`SceneAsset`/`RenderError`/
+//! `RenderPlan` 类型定义住在 `domain::render`（c1 契约 §1 渲染资源域），
+//! 本模块只做**装载校验 + 图层顺序**的行为实现，类型经 `pub use` 重导出保持
+//! `ti_core::rules::render::*` 兼容（跨包只经 `domain::render`，不直连本模块类型）。
 //!
-//! 渲染基线（`docs/plan-s8-refactor.md` S8.6）：参考图改用**真实资源**（`ref/` 容器 +
+//! 渲染基线（`docs/plan-s8-refactor.md` S8.6）：参考图改用**真实资源**（`legacy/ref/` 容器 +
 //! `assets/` 贴图）而非逆向自指的伪参考；`render_parity` 测试改测真实资源对齐。
 //! 本模块只负责「装载校验 + 图层顺序」，像素级对齐归 `ti-app` 的 `render_parity`。
 
-/// 资源容器类型（`docs/business/economy.md` 资源清单 + `evidence/S3.2.log` 关键发现 §3）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ResourceContainer {
-    /// UI.pak：场景 .Map + 控件表。
-    Ui,
-    /// glpics.pak：精灵 PCX（face_*/troop/ship/flag/landmark 等）。
-    Glpics,
-    /// cards.lpk：卡牌数据。
-    Cards,
-    /// goods.lpk：商品数据。
-    Goods,
-    /// music.lpk：音频（victory.wav / glmusic.mod 等）。
-    Music,
-}
+/// 渲染资源域类型（唯一家 `domain::render`，c1 契约 §1）。
+pub use crate::domain::render::{
+    RenderError, RenderPlan, ResourceContainer, ResourceRef, SceneAsset,
+};
 
-impl ResourceContainer {
-    /// 全部容器（按枚举声明顺序）。
-    #[must_use]
-    pub const fn all() -> [ResourceContainer; 5] {
-        [
-            ResourceContainer::Ui,
-            ResourceContainer::Glpics,
-            ResourceContainer::Cards,
-            ResourceContainer::Goods,
-            ResourceContainer::Music,
-        ]
-    }
-
-    /// 容器可读名称（稳定字符串，非中文；显示走 `strings.json`）。
-    #[must_use]
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Ui => "UI.pak",
-            Self::Glpics => "glpics.pak",
-            Self::Cards => "cards.lpk",
-            Self::Goods => "goods.lpk",
-            Self::Music => "music.lpk",
-        }
-    }
-}
-
-/// 资源引用：容器 + 资源名。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ResourceRef {
-    /// 所属容器。
-    pub container: ResourceContainer,
-    /// 资源名（`.Map`/`.pcx`/`.sav`/`.mod` 等小写扩展名形式）。
-    pub name: &'static str,
-}
-
-impl ResourceRef {
-    /// 构造资源引用。
-    #[must_use]
-    pub const fn new(container: ResourceContainer, name: &'static str) -> Self {
-        Self { container, name }
-    }
-}
-
-/// 装载后的场景资产。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SceneAsset {
-    /// 地图场景（`.Map` 文件）。
-    Map(String),
-    /// 精灵图（`.pcx` 文件）。
-    Pcx(String),
-    /// 模型/控件表（`.mod` 文件）。
-    Mod(String),
-    /// 存档（`.sav` 文件）。
-    Sav(String),
-}
-
-/// 装载错误。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RenderError {
-    /// 缺失的资源引用。
-    pub missing: Vec<ResourceRef>,
-}
-
-impl std::fmt::Display for RenderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "render: {} missing resource(s)", self.missing.len())?;
-        for ref_ in &self.missing {
-            write!(f, "\n  - {} / {}", ref_.container.label(), ref_.name)?;
-        }
-        Ok(())
-    }
-}
-
-/// 渲染计划：图层顺序 = 装载顺序。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RenderPlan {
-    /// 图层（按装载顺序，即 blit 顺序）。
-    pub layers: Vec<SceneAsset>,
-    /// blit 调用次数（= 图层数）。
-    pub blit_count: usize,
-}
-
-/// gl.rec 魔数（0x01315A47，`docs/business/economy.md` 容器清单）。
+/// gl.rec 魔数（0x01315A47，`docs/business/economy.md` 容器清单，实测 F-3xx）。
 pub const GL_REC_MAGIC: u32 = 0x0131_5A47;
 
 /// 场景管理器：持有可装载资源清单，执行装载与渲染规划。

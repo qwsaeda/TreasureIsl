@@ -38,8 +38,20 @@ ti-app/src/
 3. `game_app.rs` 不出现 `handle_X` / `touch_X` / `render_X` 场景分支；
 4. 场景之间需要同时可变借用两个字段时（如 `map_session` + `rng`），
    由 `SceneHost` 提供**单一能力方法**（`map_session_move`），避免宿主暴露裸字段引用；
-5. `SceneHost` 刻意是**一个宽接口**：Rust 不允许 trait object 作为 supertrait，
-   动态分发只能落在单接口上。场景层稳定后可按场景切成具体泛型参数再收窄。
+5. **现状（过渡期）**：`SceneHost` 是**单一宽接口**（约 60 方法，`scenes/mod.rs` L355+），
+   Rust 不允许 trait object 作为 supertrait，动态分发只能落在单接口上；场景统一持
+   `&mut dyn SceneHost`。`scenes/mod.rs` 头部已标注此过渡形态。
+6. **目标态（S9.2 待拆分）**：按**职责拆分为窄接口**（接口隔离原则），场景只依赖它
+   需要的窄接口：
+   - `SceneControl`：场景切换 + 输入路由（`current_scene`/`enter`/`advance`）
+   - `RenderHost`：帧缓冲/字形/精灵/地形（`shell`/`shell_mut`/`clear_frame`/`fill_rect`/`draw_text`/`blit_scene_sprites`/`draw_terrain`）
+   - `EconomyHost`：金/价格/持有/银行/建筑（`gold`/`set_gold`/`price_of`/`owned_*`/`bank_*`/`build_increment`）
+   - `BattleHost`：战斗推进/快照（`battle_step`/`battle_snapshot`）
+   - `SelectionHost`：角色/地图选择状态（`character`/`set_character`/`map_slot`/`set_map_slot`/`selection`）
+   - `MessageHost`：消息分页（`msg_kind`/`msg_page`/`msg_total`/`msg_next_page`/`msg_prev_page`/`close_message`）
+   - `SaveHost`：存读档（`save_slots`/`write_save_slot`/`restore_save`）
+   - `MapHost`：主地图状态（`map_pos`/`set_map_pos`/`map_terrain`/`map_landmarks`/`map_session_move`/`map_session_dispatch`）
+   拆分判据与进度见台账 `S9.2`（当前 pending）。拆分前，场景统一走宽接口 `SceneHost`。
 
 ## 2. crate 现状（2026-10）
 

@@ -1,0 +1,108 @@
+# 并行包白名单（机读，模块并行开发的解耦面）
+#
+# 用途：
+#   1. scripts/check_module_contracts.py（gate 第 16 项）读这里校验「白名单两两交集 = ∅」；
+#   2. docs/process/05_module_parallel.md §3 人读表，与此文件必须保持一致
+#      （doccheck 第 9 项断言两者一致）。
+#
+# 规则：
+#   - files = 该包**唯一可写**文件集合（含对应 tests/）；白名单交集必须为空；
+#   - depends_on = 契约依赖（须先 verified / 先 merged 的包，无环）；
+#   - status: draft（契约轮未冻结）| frozen（并行轮进行中）。
+
+packages:
+  - id: D
+    name: "数据/工具（先行）"
+    status: draft
+    depends_on: []
+    files:
+      - assets/data/balance.json
+      - assets/data/strings.json
+      - assets/data/scenes.json
+      - crates/ti-core/src/data/
+      - legacy/scripts/validate_data.py
+      - legacy/scripts/gen_layout.py
+    tests:
+      - crates/ti-core/tests/data_tables.rs
+
+  - id: P1
+    name: "战斗域"
+    status: draft
+    depends_on: [D]
+    files:
+      - crates/ti-core/src/rules/battle.rs
+      - crates/ti-core/src/domain/combat.rs
+    tests:
+      - crates/ti-core/tests/rules_battle.rs
+
+  - id: P2
+    name: "经济域（贸易+建造）"
+    status: draft
+    depends_on: [D]
+    files:
+      - crates/ti-core/src/rules/trade.rs
+      - crates/ti-core/src/rules/build.rs
+      - crates/ti-core/src/domain/economy.rs
+    tests:
+      - crates/ti-core/tests/rules_trade.rs
+      - crates/ti-core/tests/rules_build.rs
+
+  - id: P3
+    name: "地图/卡牌域"
+    status: draft
+    depends_on: [D]
+    files:
+      - crates/ti-core/src/rules/main_map.rs
+      - crates/ti-core/src/rules/cards.rs
+      - crates/ti-core/src/rules/cards_draw.rs
+      - crates/ti-core/src/domain/map.rs
+    tests:
+      - crates/ti-core/tests/reference_diff_cards.rs
+
+  - id: P4
+    name: "流程/菜单/消息域"
+    status: draft
+    depends_on: [D]
+    files:
+      - crates/ti-core/src/rules/menu.rs
+      - crates/ti-core/src/rules/selection.rs
+      - crates/ti-core/src/rules/messages.rs
+      - crates/ti-core/src/rules/main_loop.rs
+      - crates/ti-core/src/rules/render.rs
+      - crates/ti-core/src/domain/flow.rs
+      - crates/ti-core/src/domain/messages.rs
+      - crates/ti-core/src/domain/selection.rs
+      - crates/ti-core/src/domain/render.rs
+    tests:
+      - crates/ti-core/tests/rules_messages.rs
+      - crates/ti-core/tests/reference_diff_main_loop.rs
+      - crates/ti-core/tests/reference_diff_rng.rs
+
+  - id: P5
+    name: "存档+RNG 域（结构须与 P1–P4 稳定后才开）"
+    status: draft
+    depends_on: [D, P1, P2, P3, P4]
+    files:
+      - crates/ti-core/src/rules/saveload.rs
+      - crates/ti-core/src/rules/saveload_json.rs
+      - crates/ti-core/src/rules/rng.rs
+      - crates/ti-core/src/domain/persistence.rs
+    tests:
+      - crates/ti-core/tests/rules_saveload.rs
+      - crates/ti-core/tests/rules_saveload_json.rs
+      - crates/ti-core/tests/save_migration.rs
+
+  - id: P6
+    name: "表现层（后续轮）"
+    status: draft
+    depends_on: [P1, P2, P3, P4, P5]
+    files:
+      - crates/ti-app/src/scenes/
+      - crates/ti-app/src/widgets.rs
+      - crates/ti-app/src/touch.rs
+      - crates/ti-app/src/menu_shell.rs
+      - crates/ti-app/src/game_app.rs
+      - crates/ti-platform/src/
+    tests:
+      - crates/ti-app/tests/game_app_flow.rs
+      - crates/ti-app/tests/e2e_playthrough.rs

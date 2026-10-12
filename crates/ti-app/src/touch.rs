@@ -181,7 +181,7 @@ pub mod layout {
         if idx < count { Some(idx) } else { None }
     }
 
-    /// 点按是否落在主地图某格 → 返回 `(row, col)`（越界 → `None`）。
+    /// 点按是否落在主地图某格（**占位 6×6 网格**）→ 返回 `(row, col)`（越界 → `None`）。
     // allow 理由：`x < GRID_X0` / `y < GRID_Y0` 已排除负值，
     // `floor()` 后为非负数，f32→u32 转换不截断、不丢符号。
     #[must_use]
@@ -193,6 +193,38 @@ pub mod layout {
         let col = ((x - GRID_X0) / GRID_STEP).floor() as u32;
         let row = ((y - GRID_Y0) / GRID_STEP).floor() as u32;
         if col < grid_w && row < grid_h { Some((row, col)) } else { None }
+    }
+
+    /// 点按是否落在主地图某格（**等距投影**，与 `TerrainAtlas` 渲染同坐标系）。
+    ///
+    /// 逆变换（`GridPos::iso_pos` 的逆：`iso_x = 32×(row+col)`，`iso_y = 16×(row+grid_w-1-col)`）：
+    /// - `row = (px/32 + py/16 - (grid_w - 1)) / 2`
+    /// - `col = (px/32 - py/16 + (grid_w - 1)) / 2`
+    ///
+    /// 其中 `px = x - cx`、`py = y - cy`。`-0.5` 半格偏移使命中中心对准格心，
+    /// 边界处仍正确归格（半格偏移不改变 `round()` 命中区）。
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::manual_midpoint)]
+    pub fn iso_grid_cell_at(
+        x: f32,
+        y: f32,
+        grid_w: u32,
+        grid_h: u32,
+        camera: (i64, i64),
+    ) -> Option<(u32, u32)> {
+        let px = x - camera.0 as f32;
+        let py = y - camera.1 as f32;
+        let half = (grid_w.saturating_sub(1) as f32 - 0.5) / 2.0;
+        let row = ((px / 32.0 + py / 16.0) / 2.0 - half).round();
+        let col = ((px / 32.0 - py / 16.0) / 2.0 + half).round();
+        let row = row as i64;
+        let col = col as i64;
+        if row < 0 || col < 0 {
+            return None;
+        }
+        let row = u32::try_from(row).ok()?;
+        let col = u32::try_from(col).ok()?;
+        if row < grid_h && col < grid_w { Some((row, col)) } else { None }
     }
 
     /// 点按是否落在存读档第 `slot` 个槽位（0 起）。

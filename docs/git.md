@@ -39,17 +39,17 @@ docs+台账: S6.4 多帧动画 verified + 文档同步（gamebook/modernization/
 fmt: 全库规范 CRLF→LF 行尾（rustfmt newline_style=Unix）+ modernization S6.4 预算表同步
 ```
 
-## 推送频率（尽量推远端）
+## 推送频率（完成即自动推送）
 
-- **每个任务合入 `master` 后尽量立即推送**：`git push -u origin master`（首次带 `-u`，后续 `git push` 即可）。
-- 开发节奏：完成一个任务并 gate 全绿、台账 verified → commit → **推远端**，作为进度备份；不要攒多个任务才推一次。
+- **每完成一个任务合入 `master` 后自动推送**（无需用户逐次指令）：`git push -u origin master`（首次带 `-u`，后续 `git push` 即可）。
+- 开发节奏：完成一个任务并 gate 全绿、台账 verified → commit → **自动推远端**，作为进度备份；不要攒多个任务才推一次。
 - 网络不通时：本地照常 commit，记录「待推送」，网络恢复后补推（不阻塞本地开发，但不得长期积压不推）。
 
 ## 推送检查清单（每次推送前）
 
 ```
 [ ] git status 无意外文件；data/ 二进制与 evidence/ 按 .gitignore 策略
-[ ] powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 全绿（13 项）
+[ ] powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 全绿（16 项）
 [ ] plan/ledger.yaml 目标任务 verified + evidence/<task>.log 已写
 [ ] commit 消息符合 <scope>: 格式
 [ ] 推送 `master`（本仓无 main）；任务分支合入后删远端 task/*

@@ -1,71 +1,12 @@
-//! oracle：S3.10 存读档/设置差分基准，测试专用。
-//!
-//! 直译 `docs/spec/save_load.md` 的存读档/设置规则：
-//! - 存档槽 [`SaveSlot`]（`version`/`character`/`gold`/`map_slot`/`position`，spec §b）；
-//! - 魔数常量 [`REC_MAGIC`]（`0x01315A47` = 20011591，spec §d；
-//!   伪代码反编译十进制 19810929 = 0x012E4A71 为 `settings.dat` 魔数，gl.rec 魔数为 `0x01315A47`）；
-//! - 错误枚举 [`SaveErr`]（`BadMagic`/`TooShort`/`BadVersion`，spec §d）；
-//! - [`oracle_validate_save`]：魔数 + 最小大小校验（spec §d）；
-//! - [`oracle_migrate_v1_to_v2`]：v1→v2 迁移（补 version 字段，spec §e，**推测**）；
-//! - [`oracle_read_slot`]：按 spec §b 偏移解析（魔数 + 角色 + 地图 + 进度）；
-//! - [`oracle_write_slot`]：序列化为字节（与 `oracle_read_slot` 往返一致，spec §b）。
-//!
-//! 行为确定（同输入逐位相同），不允许 rand。
-//! 存档的可变子对象（场景/据点/卡牌/兵种虚调用）不在此 oracle 建模，
-//! oracle 层简化为固定 5 字段结构（spec §b **推测** 简化）。
+// oracle：存档二进制编解码差分基准，测试专用（S11 起降级为纯基准函数）。
+//
+// **类型已迁至 [`crate::domain::persistence`]**（S11 归档改造）。
+// 本模块只保留**二进制存档路径**的差分基准函数（校验 / v1→v2 迁移 / 读写）。
+// 正式存档格式是 **JSON v2**（`rules::saveload_json`），二进制路径仅供历史对拍。
+//
+// 业务规则以 `docs/business/persistence.md` 为准。
 
-use std::mem::size_of;
-
-/// 存档槽位（spec §b，`存档写入`/`存档读取` 的 oracle 化）。
-///
-/// - `version`：存档版本（v1=原版无此字段 → 默认 1，v2=新格式，spec §e **推测**）；
-/// - `character`：角色索引（`dword_7FB70`，1..5，`存档写入` 行 73）；
-/// - `gold`：当前金（**推测**：`a1+144` 子对象的金量字段）；
-/// - `map_slot`：地图索引（`dword_7FB6C`，0..4，`存档写入` 行 74）；
-/// - `position`：游戏进度（`a1+724`，`存档写入` 行 77）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct SaveSlot {
-    /// 存档版本（v1=1，v2=2，spec §e **推测**）。
-    pub version: u32,
-    /// 角色索引（`dword_7FB70`，1..5）。
-    pub character: u32,
-    /// 当前金（**推测** 字段）。
-    pub gold: u32,
-    /// 地图索引（`dword_7FB6C`，0..4）。
-    pub map_slot: u32,
-    /// 游戏进度（`a1+724`）。
-    pub position: u32,
-}
-
-impl Default for SaveSlot {
-    fn default() -> Self {
-        Self { version: 1, character: 1, gold: 0, map_slot: 0, position: 0 }
-    }
-}
-
-/// 存档魔数（`0x01315A47` = 20011591；`存档写入` 行 69 / `存档读取` 行 95 / `index` 行 79 实测）。
-pub const REC_MAGIC: u32 = 0x0131_5A47;
-
-/// 存档最小有效大小（2 字节前缀 + 4 字节魔数 + 4×u32 字段 = 18 字节，spec §d）。
-///
-/// v1：2 + 4 + 4(character) + 4(map_slot) + 4(position) = 18 字节（gold 在可变子对象中，**推测**）。
-///
-/// v2：2 + 4 + 4(version) + 4(character) + 4(gold) + 4(map_slot) + 4(position) = 26 字节。
-///
-/// oracle 层用 v2 布局（含 version + gold）：2 + 4 + 4 + 4 + 4 + 4 + 4 = 26 字节。
-#[allow(clippy::doc_markdown)]
-pub const MIN_SAVE_SIZE: usize = 2 + 4 + 4 * 5;
-
-/// 存读档错误（spec §d）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SaveErr {
-    /// 魔数不符（`存档读取` 行 95-101：`Buffer != 0x01315A47` → 返回 0）。
-    BadMagic,
-    /// 字节数不足最小有效大小（spec §d）。
-    TooShort,
-    /// 未知版本号（`version > 2` → `Err(BadVersion)`，spec §e **推测**）。
-    BadVersion,
-}
+pub use crate::domain::persistence::{MIN_SAVE_SIZE, REC_MAGIC, SaveErr, SaveSlot};
 
 /// oracle：校验存档字节（魔数 + 最小大小，spec §d）。
 ///

@@ -1,6 +1,6 @@
 //! 角色选择场景（S9 骨架）：输入判定 / 触摸手势 / 绘制三面全部落在本文件。
-use ti_core::oracle::menu::Sfx;
-use ti_core::oracle::selection::Character;
+use ti_core::domain::flow::Sfx;
+use ti_core::domain::selection::Character;
 
 use crate::game_app::GameInput;
 use crate::i18n;

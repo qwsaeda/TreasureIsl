@@ -5,6 +5,7 @@
 
 pub mod consts;
 pub mod data;
+pub mod domain;
 pub mod oracle;
 pub mod rules;
 

@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（13 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（16 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (13 items) ==="
+Write-Host "=== gate: TreasureIsl (16 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -96,11 +96,11 @@ Report ($LASTEXITCODE -eq 0) 'doccheck (docs consistency)'
 
 # 10) 数据表校验 + 硬编码扫描（S8.2，见 docs/process/04_tooling.md §2）
 #     10a) validate_data 必须全绿：assets/data/*.json 结构与数值合法域
-$valOut = & python scripts/validate_data.py 2>&1
+$valOut = & python legacy/scripts/validate_data.py 2>&1
 $valOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'validate_data (assets/data/*.json)'
-#     10b) gen_layout --check：controls.json 与 ref/controls.json 派生产物一致（幂等）
-$genOut = & python scripts/gen_layout.py --check 2>&1
+#     10b) gen_layout --check：controls.json 与 legacy/ref/controls.json 派生产物一致（幂等）
+$genOut = & python legacy/scripts/gen_layout.py --check 2>&1
 $genOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'gen_layout --check (idempotent)'
 #     10c) check_hardcode：严格模式（发现硬编码即 FAIL）。2026-10 已清零 37 处债务，
@@ -116,11 +116,30 @@ $orbOut = & python scripts/check_oracle_boundary.py --check 2>&1
 $orbOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_oracle_boundary (shell 层禁 oracle_* 函数调用)'
 
-# 12) 双 agent 审计固化断言（doccheck2）：文档↔代码/数据一致性（第 1~5 轮审计高频项）
+# 13) 双 agent 审计固化断言（doccheck2）：文档↔代码/数据一致性（第 1~5 轮审计高频项）
 #     6 项检查：audio ChannelState API 一致性 / shell 层 oracle_* 残留 / LCG hex / 据点阈值 / i18n 孤儿 key / release 门禁项数漂移
 $dc2Out = & cargo run -q -p ti-tools --bin doccheck2 . 2>&1
 $dc2Out | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'doccheck2 (audit-codified doc↔code/data consistency)'
+
+# 14) 台账三方对账（防虚报，S10.0）：ledger verified ↔ evidence 文件 ↔ 代码符号
+#     机器化拦截子代理「已 verified」虚报（S9.5 commands.rs 教训）
+$lrOut = & python scripts/check_ledger_reality.py 2>&1
+$lrOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)'
+
+# 15) 业务闭环断言（S11）：业务文档零逆向引用 / 表现层零 oracle / 根目录清空 legacy 在位 /
+#     oracle 桥接层与归档同源（docs/plan-s11-forward.md §1 闭环判据 1~4）
+$fwdOut = & python scripts/check_forward_closed.py --check 2>&1
+$fwdOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)'
+
+# 16) 模块并行前置（S11.4）：包白名单互斥（plan/packages.yaml）+ 契约锚点存在
+#     （docs/contracts/*.md 校验锚点在 crates/ grep 到）+ 跨 crate 可见面只走契约模块
+#     （docs/process/05_module_parallel.md §4 并行纪律 1/2 的机器判定）
+$modOut = & python scripts/check_module_contracts.py --check 2>&1
+$modOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

@@ -8,10 +8,10 @@
   PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)
   PASS  no unwrap()/expect() outside tests/
   SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
-        ledger: 80 tasks, 77 verified, 0 error(s)
+        ledger: 81 tasks, 78 verified, 0 error(s)
           evidence: ok
   PASS  ledger validate
-        doccheck: 85 docs, 37 facts, 57 experiences, 75 task refs, 4 assertions, 0 error(s)
+        doccheck: 85 docs, 37 facts, 57 experiences, 76 task refs, 4 assertions, 0 error(s)
   PASS  doccheck (docs consistency)
         validate_data: OK（3 表，strings 88 键）
   PASS  validate_data (assets/data/*.json)

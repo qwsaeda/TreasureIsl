@@ -26,9 +26,9 @@ fn repo_root() -> PathBuf {
         .and_then(Path::parent)
         .unwrap_or_else(|| Path::new("."));
     // 取在 repo 根存在 data/ 的那个（data/ 是 S1 资源目录，必在根）
-    if cwd.join("data").is_dir() {
+    if cwd.join("legacy").join("data").is_dir() {
         cwd
-    } else if via_cargo.join("data").is_dir() {
+    } else if via_cargo.join("legacy").join("data").is_dir() {
         via_cargo.to_path_buf()
     } else {
         cwd

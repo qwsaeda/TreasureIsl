@@ -1,94 +1,11 @@
-//! oracle：S3.1 差分基准，直译 `场景管理器帧更新总控`/`主地图帧更新` 伪代码，测试专用。
-//!
-//! 按 `docs/spec/main_loop.md` §4.3「场景切换状态机」的 case 行为直译：
-//! - 状态码 = `*(a1+716)`，合法取值 0/2/3/4/25/26/27；
-//! - 触发事件（trigger）取值 0..=30；
-//! - 返回 (新状态码, 目标场景 id)。
-//!
-//! 本 oracle 只用 if/else 写死 spec 规则，不追求优雅。
-//! 与 `rules::main_loop::SceneStack` 对拍必须逐位一致。
+// oracle：场景切换状态机差分基准，测试专用（S11 起降级为纯基准函数）。
+//
+// **类型已迁至 [`crate::domain::flow`]**（S11 归档改造）。
+// 本模块只保留从伪代码直译的**差分基准函数**（状态码 + 触发事件 → 新状态/目标场景）。
+//
+// 业务规则以 `docs/business/loop_core.md` §场景图为准。
 
-/// 场景状态码（`*(a1+716)` 枚举值）。
-///
-/// 语义（spec §4.3）：
-/// - `0`  = 主菜单态（case 0 装载 vs.Map 进入战斗；case 3 退出 vs 回主菜单）
-/// - `2`  = 场景卸载中（case 2：停止音效 + 场景卸载虚函数）
-/// - `3`  = 回主菜单
-/// - `4`  = 过场/坐标（case 4：读玩家/目标位置、设相机、销毁旧对象）
-/// - `25` = 战斗态
-/// - `26` = 过场动画 phase 26
-/// - `27` = 过场动画 phase 27
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SceneState {
-    /// 主菜单态（`case 0`/`case 3` 所在 switch）。
-    Menu,
-    /// 场景卸载中（`case 2`）。
-    Unloading,
-    /// 回主菜单（`case 3` 的语义状态）。
-    BackToMenu,
-    /// 过场/坐标（`case 4`）。
-    Transition,
-    /// 战斗态（`case 25`）。
-    Battle,
-    /// 过场动画 phase 26。
-    Anim26,
-    /// 过场动画 phase 27。
-    Anim27,
-}
-
-impl SceneState {
-    /// 状态码 → 枚举。未知码返回 `None`。
-    #[must_use]
-    pub fn from_code(code: u32) -> Option<Self> {
-        Some(match code {
-            0 => Self::Menu,
-            2 => Self::Unloading,
-            3 => Self::BackToMenu,
-            4 => Self::Transition,
-            25 => Self::Battle,
-            26 => Self::Anim26,
-            27 => Self::Anim27,
-            _ => return None,
-        })
-    }
-
-    /// 枚举 → 状态码。
-    #[must_use]
-    pub fn code(self) -> u32 {
-        match self {
-            Self::Menu => 0,
-            Self::Unloading => 2,
-            Self::BackToMenu => 3,
-            Self::Transition => 4,
-            Self::Battle => 25,
-            Self::Anim26 => 26,
-            Self::Anim27 => 27,
-        }
-    }
-
-    /// 全部合法场景状态码（7 个，按数值排序，diff 测试遍历用）。
-    #[must_use]
-    pub const fn all_codes() -> [u32; 7] {
-        [0, 2, 3, 4, 25, 26, 27]
-    }
-}
-
-/// 场景 id（spec §4.1 的 5 个装载器 + vs.Map）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SceneId {
-    /// `intro.Map`（`intro`）。
-    Intro,
-    /// `selectrole.Map`（`selectrole`）。
-    SelectRole,
-    /// `selectmap.Map`（`selectmap`）。
-    SelectMap,
-    /// `index.Map`（`index`）。
-    Index,
-    /// `main.Map`（`main`）。
-    MainMap,
-    /// `vs.Map`（`战斗对象构造`）。
-    Vs,
-}
+pub use crate::domain::flow::{SceneId, SceneState};
 
 /// oracle：给定当前状态码 + 触发事件码，返回 (新状态码, 目标场景 id)。
 ///

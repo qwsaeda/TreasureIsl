@@ -332,7 +332,7 @@ CardEngine::apply(event_id, &mut CardState)
      ↓
 CardState.hp 变化（Damage/Heal）
      ↓
-进入战斗 vs.Map 时，BattleSession::new(seed, Unit { hp: CardState.hp, atk }, tier)
+进入战斗 vs.Map 时，BattleSession::from_balance(seed, Unit { hp: CardState.hp, atk }, tier)
 ```
 
 ---

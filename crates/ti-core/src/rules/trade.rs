@@ -6,8 +6,7 @@
 //! - **不做动态行情**：售价固定（`sell = buy × markup`），避免投机博弈；
 //! - 纯逻辑、零 IO、确定性（同输入同输出）。
 //!
-//! S8 定位变更：本模块不再从 `oracle::trade` 取「推测」价格表，改为读 balance.json；
-//! oracle 仅作历史参照。
+//! 本模块数值全部读 balance.json，不再取逆向「推测」价格表。
 
 use crate::data::TradeCfg;
 
@@ -35,6 +34,8 @@ pub struct TradeResult {
     pub amount: u32,
     /// 结算后金币。
     pub gold_left: u32,
+    /// 超出 `gold_cap` 的溢出量（进银行；`gold_cap == 0` 时恒 0）。
+    pub overflow: u32,
 }
 
 /// 把非负有限 `f64` 钳到 `u32` 区间后取整（避免直接 cast 触发 clippy pedantic）。
@@ -50,7 +51,19 @@ fn f64_to_u32(v: f64) -> Option<u32> {
     Some(v.round().min(f64::from(u32::MAX)) as u32)
 }
 
+/// S10.3 改动 3：卖出单价纯函数（`round(buy × markup)`，不依赖 `TradeCfg` 结构体）。
+///
+/// 供 `SceneHost` 等无账本上下文的调用点使用；`markup` 走 `balance.trade.markup`。
+#[must_use]
+pub fn sell_price(buy: u32, markup: f32) -> u32 {
+    let v = f64::from(buy) * f64::from(markup);
+    f64_to_u32(v).unwrap_or(buy)
+}
+
 /// 贸易账本：持有量 + 金 + 配置 + 累计买入成本。
+///
+/// `gold_cap` 来自 `balance.economy.gold_max`（`0` = 无上限，卖出加金时不做钳制）。
+/// 卖出加金钳到 `gold_cap` 后溢出部分由调用方经 [`BuildManager::settle_overflow`](crate::rules::build::BuildManager::settle_overflow) 处理。
 #[derive(Debug, Clone)]
 pub struct TradeLedger {
     /// 持有量（`goods_id → qty`）。
@@ -61,13 +74,23 @@ pub struct TradeLedger {
     buy_cost: Vec<(u32, u32)>,
     /// 数值配置（价格表/售价系数/数量上限），由 balance 注入。
     cfg: TradeCfg,
+    /// 金量上限（`balance.economy.gold_max`；`0` = 不限制）。
+    gold_cap: u32,
 }
 
 impl TradeLedger {
-    /// 新建贸易账本（注入配置 + 初始金 + 初始持有）。
+    /// 新建贸易账本（注入配置 + 初始金 + 初始持有 + 金量上限）。
+    ///
+    /// `gold_cap` 来自 `balance.economy.gold_max`；`0` 表示不限制（卖出加金不钳制）。
     #[must_use]
-    pub fn new(cfg: TradeCfg, gold: u32, goods: &[(u32, u32)]) -> Self {
-        Self { goods: goods.to_vec(), gold, buy_cost: Vec::new(), cfg }
+    pub fn new(cfg: TradeCfg, gold: u32, goods: &[(u32, u32)], gold_cap: u32) -> Self {
+        Self { goods: goods.to_vec(), gold, buy_cost: Vec::new(), cfg, gold_cap }
+    }
+
+    /// 新建贸易账本（金量上限 = 0，不限制）。
+    #[must_use]
+    pub fn new_unlimited(cfg: TradeCfg, gold: u32, goods: &[(u32, u32)]) -> Self {
+        Self::new(cfg, gold, goods, 0)
     }
 
     /// 当前金（只读）。
@@ -146,13 +169,15 @@ impl TradeLedger {
         }
         self.gold -= cost;
         self.apply_buy(gid, qty, cost);
-        Ok(TradeResult { gid, qty, amount: cost, gold_left: self.gold })
+        Ok(TradeResult { gid, qty, amount: cost, gold_left: self.gold, overflow: 0 })
     }
 
     /// 卖出 `qty` 件（`qty == 0` 视为卖出全部持有，符合 UI 直觉）。
     ///
     /// 成功：`gold += sell_price × qty`，`goods[gid].qty -= qty`，
-    /// 按比例扣减 `buy_cost`。
+    /// 按比例扣减 `buy_cost`。若设置了 `gold_cap > 0`，结算后
+    /// 金币钳制到 `gold_cap`（溢出走银行，由调用方经
+    /// [`crate::rules::build::BuildManager::settle_overflow`] 处理）。
     ///
     /// # Errors
     ///
@@ -166,9 +191,29 @@ impl TradeLedger {
         let price = self.sell_price(gid).ok_or(TradeErr::UnknownGood)?;
         let qty = if qty == 0 { owned } else { qty.min(owned) };
         let gain = price.saturating_mul(qty);
-        self.gold = self.gold.saturating_add(gain);
+        let raw = self.gold.saturating_add(gain);
+        let (new_gold, overflow) = if self.gold_cap > 0 {
+            let clamped = raw.min(self.gold_cap);
+            (clamped, raw.saturating_sub(clamped))
+        } else {
+            (raw, 0)
+        };
+        self.gold = new_gold;
         self.apply_sell(gid, qty, price);
-        Ok(TradeResult { gid, qty, amount: gain, gold_left: self.gold })
+        Ok(TradeResult { gid, qty, amount: gain, gold_left: self.gold, overflow })
+    }
+
+    /// 当前金量上限（`0` = 不限制）。
+    #[must_use]
+    pub fn gold_cap(&self) -> u32 {
+        self.gold_cap
+    }
+
+    /// 设置金量上限（建造完成后由调用方调用）。
+    ///
+    /// `0` = 解除限制。
+    pub fn set_gold_cap(&mut self, cap: u32) {
+        self.gold_cap = cap;
     }
 
     /// 某商品的累计利润（`(卖出价 - 买入均价) × 持有量`；无持有 → 0）。
