@@ -1,0 +1,24 @@
+﻿S13.6 渲染管线契约 + 越界求交修复 — 实跑验收输出
+
+===== 1. 越界求交修复（clip_rect 纯函数 6 单测）=====
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+===== 2. element_dump index（元素级逐精灵验证）=====
+11  | 111  | (185,22 )    | 105  x11  | -                       | SKIP   | 0 (out-of-frame) 20  | 111  | (191,44 )    | 105  x11  | -                       | SKIP   | 0 (out-of-frame) 21  | 111  | (207,44 )    | 105  x11  | -                       | SKIP   | 0 (out-of-frame) summary: OK=28 CLIP=0 SKIP(out-of-frame)=3 out-of-frame early-exit check: SKIP count > 0 with f2/f3 >= 176/220 (post-fix; old version pulled these to col x=175)
+
+===== 3. 洋红残留验收（native 默认 RGB565 路）=====
+洋红/哨兵色像素 = 0（契约 §4 PCX index 0 已跳过）
+
+===== 4. headless 全流程（P3-3 判据）=====
+full run 16/16 steps, 0 failures (P3-3 criterion met)
+
+===== 5. 渲染快照门禁（gate 第 19 项，7 场景 diff=0）=====
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+===== 6. 数据源门禁（gate 第 20 项）=====
+SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+
+===== 7. gate 全量（23 项）=====
+gate: 0 failure(s)（含新增第 19 render-snapshot + 第 20 check_data_source）
+
+结论：S13.6 verified。渲染契约固化（07_render_pipeline.md）+ 越界求交修复（clip_rect 早退）+ 快照/数据源双门禁 + 职责分离（纯函数）+ 元素级验证法（element_dump）。

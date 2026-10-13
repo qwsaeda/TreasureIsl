@@ -254,8 +254,12 @@ fn blit_pcx_independent(
 ) {
     const FB_W: usize = 176;
     const FB_H: usize = 220;
-    let ox = (x as usize).min(FB_W - 1);
-    let oy = (y as usize).min(FB_H - 1);
+    // 契约 §3（07_render_pipeline.md）：原点越界求交为空 → 整条不画（对齐 blit_sprite）
+    if x as usize >= FB_W || y as usize >= FB_H {
+        return;
+    }
+    let ox = x as usize;
+    let oy = y as usize;
     for row in 0..height as usize {
         let fy = oy.saturating_add(row);
         if fy >= FB_H {

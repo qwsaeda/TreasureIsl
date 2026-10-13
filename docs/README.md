@@ -44,6 +44,7 @@
 | [`process/04_tooling.md`](process/04_tooling.md) | 工具链现状 + 待建脚本（codegen/校验/硬编码扫描）+ 幂等要求 |
 | [process/05_module_parallel.md](process/05_module_parallel.md) | **模块并行开发 loop**（一轮 4 步 + 包划分 + 并行纪律 5 条 + §4.5 开轮必读/规范回执；机读白名单 plan/packages.yaml） |
 | [process/06_flywheel.md](process/06_flywheel.md) | **对抗流水线飞轮**（找问题/审计/修复 3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件；EXP-068 单一事实源） |
+| [process/07_render_pipeline.md](process/07_render_pipeline.md) | **渲染管线契约**（路径表/z-order 文件顺序/越界求交裁剪/PCX 透明位 index 0；改渲染代码必读，gate 第 19/20 项锚点） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 
@@ -101,6 +102,22 @@
 | [`facts/font.md`](facts/font.md) | `GoldLand.Fnt` / `font.dat` 布局与位序（F-303） |
 | [`facts/save.md`](facts/save.md) | `settings.dat` / `gl*.sav` / `gl.rec`（F-304） |
 | [`facts/tools.md`](facts/tools.md) | IDA / REA MCP 可用性 / RNG 来源（F-313/314/319/320/321） |
+
+### 入门教程（`docs/tutorial/`，游戏开发学习材料）
+
+| 文件 | 内容 |
+|---|---|
+| [`tutorial/README.md`](tutorial/README.md) | **教程总索引**：学习路径 + 进度追踪表 + 与项目文档的关系 |
+| [`tutorial/01_game_loop.md`](tutorial/01_game_loop.md) | 游戏循环（update + render 分离、固定时间步长） |
+| [`tutorial/02_state_machine.md`](tutorial/02_state_machine.md) | 状态与状态机（FSM、堆栈式状态、场景路由） |
+| [`tutorial/03_coordinates.md`](tutorial/03_coordinates.md) | 坐标系与变换（世界/屏幕/本地、等距投影、视口） |
+| [`tutorial/04_time_step.md`](tutorial/04_time_step.md) | 帧率无关更新（固定时间步长 + 累积器 + 插值） |
+| [`tutorial/05_collision.md`](tutorial/05_collision.md) | 碰撞检测（AABB/圆形/网格、空间划分优化） |
+| [`tutorial/06_input_system.md`](tutorial/06_input_system.md) | 输入系统（事件驱动 vs 轮询、输入映射、触摸手势） |
+| [`tutorial/07_rendering_basics.md`](tutorial/07_rendering_basics.md) | 渲染基础（帧缓冲/图元/Z-order/裁剪/脏行带） |
+| [`tutorial/08_ecs_vs_component.md`](tutorial/08_ecs_vs_component.md) | ECS vs 组件化（为什么本项目选组件化） |
+| [`tutorial/09_business_render_separation.md`](tutorial/09_business_render_separation.md) | 业务/渲染分离（架构核心原则） |
+| [`tutorial/10_project_architecture.md`](tutorial/10_project_architecture.md) | 项目架构对照（分层 + trait 约定 + 场景模型） |
 
 ### 经验库（过程与教训）
 

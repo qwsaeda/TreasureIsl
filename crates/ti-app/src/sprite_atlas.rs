@@ -238,29 +238,35 @@ impl SpriteAtlas {
     }
 
     /// 单个精灵 blit（RGB565，越界裁剪，置脏行带）。`frame` 自动环绕。
-    fn blit_sprite(sprite: &DecodedSprite, px_x: u32, py_y: u32, fb: &mut Framebuf, frame: u32) {
-        const FB_W: usize = 176;
-        const FB_H: usize = 220;
-        let ox = (px_x as usize).min(FB_W - 1);
-        let oy = (py_y as usize).min(FB_H - 1);
+    ///
+    /// 契约 §3（`docs/process/07_render_pipeline.md`）：原点越界（x≥176 或 y≥220）
+    /// 经 [`crate::render_pipeline::clip_rect`] 求交为空 → 整条早退不画（对齐原版
+    /// `sub_5EAA8`/`sub_5D9C4`，`evidence/audit_zorder.md` A3）；部分越界按裁剪矩形画。
+    /// 修掉原 `ox = px_x.min(FB_W-1)` 把越界精灵拉回右缘画 1 列竖条的 bug。
+    pub fn blit_sprite(
+        sprite: &DecodedSprite,
+        px_x: u32,
+        py_y: u32,
+        fb: &mut Framebuf,
+        frame: u32,
+    ) {
+        use crate::render_pipeline::{FB_W, TRANSPARENT_INDEX, clip_rect};
         let sw = sprite.width as usize;
         let sh = sprite.height as usize;
+        let Some(clip) = clip_rect(px_x as usize, py_y as usize, sw, sh) else {
+            return;
+        };
+        let ox = clip.x;
+        let oy = clip.y;
         let fbase = sprite.frame_offset(frame);
         let px = fb.as_mut_slice();
-        for row in 0..sh {
+        for row in 0..clip.h {
             let fy = oy + row;
-            if fy >= FB_H {
-                break;
-            }
-            for col in 0..sw {
+            for col in 0..clip.w {
                 let fx = ox + col;
-                if fx >= FB_W {
-                    break;
-                }
                 let idx = sprite.pixels.get(fbase + row * sw + col).copied().unwrap_or(0) as usize;
-                // 原版 8-bit blit 例程 sub_5D9C4：palette index 0 = 透明哨兵位
-                //（PCX 尾部调色板 0 槽常被填成洋红 (255,0,255) 以显眼，跳过后透出背景）。
-                if idx == 0 {
+                // 契约 §4：PCX 调色板 index 0 = 透明哨兵位（sub_5D9C4），跳过后透出背景。
+                if idx == TRANSPARENT_INDEX {
                     continue;
                 }
                 let [r, g, b] = sprite.palette[idx];
@@ -272,13 +278,11 @@ impl SpriteAtlas {
                 }
             }
         }
-        let w = sw.min(FB_W.saturating_sub(ox));
-        let h = sh.min(FB_H.saturating_sub(oy));
         fb.mark_dirty(
             i32::try_from(ox).unwrap_or(0),
             i32::try_from(oy).unwrap_or(0),
-            i32::try_from(w).unwrap_or(0),
-            i32::try_from(h).unwrap_or(0),
+            i32::try_from(clip.w).unwrap_or(0),
+            i32::try_from(clip.h).unwrap_or(0),
         );
     }
 
@@ -351,12 +355,20 @@ impl SpriteAtlas {
         frame: u32,
         hd: Option<&Vec<HdPng>>,
     ) {
-        const FB_W: usize = 176;
-        const FB_H: usize = 220;
-        let ox = usize::try_from(px_x).unwrap_or(0).min(FB_W - 1);
-        let oy = usize::try_from(py_y).unwrap_or(0).min(FB_H - 1);
+        use crate::render_pipeline::{FB_W, TRANSPARENT_INDEX, clip_rect};
         let sw = usize::try_from(sprite.width).unwrap_or(0);
         let sh = usize::try_from(sprite.height).unwrap_or(0);
+        // 契约 §3：原点越界求交为空 → 整条早退（与 RGB565 路 blit_sprite 同口径）
+        let Some(clip) = clip_rect(
+            usize::try_from(px_x).unwrap_or(0),
+            usize::try_from(py_y).unwrap_or(0),
+            sw,
+            sh,
+        ) else {
+            return;
+        };
+        let ox = clip.x;
+        let oy = clip.y;
         let fbase = sprite.frame_offset(frame);
         let px = fb.as_mut_slice();
         // 多帧：取当前帧对应的 PNG；缺帧回退 PCX
@@ -367,16 +379,10 @@ impl SpriteAtlas {
             let fi = usize::try_from(frame % sprite.frames.max(1)).unwrap_or(0) % frames.len();
             frames.get(fi)
         });
-        for row in 0..sh {
-            let fy = oy.saturating_add(row);
-            if fy >= FB_H {
-                break;
-            }
-            for col in 0..sw {
-                let fx = ox.saturating_add(col);
-                if fx >= FB_W {
-                    break;
-                }
+        for row in 0..clip.h {
+            let fy = oy + row;
+            for col in 0..clip.w {
+                let fx = ox + col;
                 let pos = fy * FB_W + fx;
                 let Some(slot) = px.get_mut(pos) else {
                     continue;
@@ -401,8 +407,8 @@ impl SpriteAtlas {
                     // 回退：PCX 调色板扩色到 8 位真彩（与 RGB565 路径同像素）
                     let idx =
                         sprite.pixels.get(fbase + row * sw + col).copied().unwrap_or(0) as usize;
-                    // 同口径：palette index 0 = 透明哨兵位（sub_5D9C4），跳过写 RGBA
-                    if idx == 0 {
+                    // 契约 §4：palette index 0 = 透明哨兵位（sub_5D9C4），跳过写 RGBA
+                    if idx == TRANSPARENT_INDEX {
                         continue;
                     }
                     let [r, g, b] = sprite.palette[idx];
@@ -410,13 +416,11 @@ impl SpriteAtlas {
                 }
             }
         }
-        let w = sw.min(FB_W.saturating_sub(ox));
-        let h = sh.min(FB_H.saturating_sub(oy));
         fb.mark_dirty(
             i32::try_from(ox).unwrap_or(0),
             i32::try_from(oy).unwrap_or(0),
-            i32::try_from(w).unwrap_or(0),
-            i32::try_from(h).unwrap_or(0),
+            i32::try_from(clip.w).unwrap_or(0),
+            i32::try_from(clip.h).unwrap_or(0),
         );
     }
 

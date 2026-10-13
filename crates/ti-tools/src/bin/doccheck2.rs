@@ -579,14 +579,14 @@ fn check_hd_sprite_transparency(root: &Path) -> Vec<String> {
     // EXP-075①（主根因）：PCX 调色板 index 0 = 洋红哨兵色（ui.pak 94/120 张实测），
     // 原版 8-bit blit 例程 sub_5D9C4 逐像素 `if (idx != 0) write` 跳过，
     // Rust `blit_sprite`（RGB565，native 默认 `QualityMode::Original` 实机路径）必须同口径跳过。
-    if !atlas.contains("if idx == 0 {") {
+    if !atlas.contains("if idx == 0 {") && !atlas.contains("if idx == TRANSPARENT_INDEX {") {
         errors.push(
             "sprite_atlas.rs `blit_sprite`（RGB565 路）必须跳过 palette index 0（EXP-075①：index 0 = 洋红哨兵色，原版 sub_5D9C4 透明位，native 默认 Original 路径实机走这里）"
                 .to_string(),
         );
     }
     let terrain = read_file(root, "crates/ti-app/src/terrain_atlas.rs").unwrap_or_default();
-    if !terrain.contains("if idx == 0 {") {
+    if !terrain.contains("if idx == 0 {") && !terrain.contains("if idx == TRANSPARENT_INDEX {") {
         errors.push(
             "terrain_atlas.rs `blit_decoded`/`blit_decoded_rgba` 必须跳过 palette index 0（EXP-075①，同口径 2 处）"
                 .to_string(),

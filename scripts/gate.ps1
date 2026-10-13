@@ -151,5 +151,20 @@ $vrOut = & powershell -ExecutionPolicy Bypass -File "scripts/visual_baseline.ps1
 $vrOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'visual-regression (3 场景 headless 基准图逐像素 diff)'
 
+# 19) 渲染快照门禁（S13.6 契约 §5，docs/process/07_render_pipeline.md）：
+#     7 场景（index/selectrole/selectmap/main/vs/msgs/saveload）× RGB565 路逐像素基准 diff。
+#     基准由越界求交修复后代码生成（assets/render_baseline/，杜绝 EXP-074/075 自证循环）；
+#     背景像素掩（EXP-074），只锁 UI 层漂移。数据源 .Map/.pak 改动须同步跑本项（第 20 项 check_data_source 触发）。
+$rsOut = & cargo test -q -p ti-app --test render_snapshot 2>&1
+$rsOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'render-snapshot (7 场景 headless 逐像素基准 diff，契约 §5)'
+
+# 20) 数据源门禁（S13.6 契约 §5，docs/process/07_render_pipeline.md）：
+#     legacy/data/*.Map / *.pak 相对 HEAD 有改动 → 强制跑 render_snapshot（第 19 项），漂移即 FAIL。
+#     无改动时 SKIP（gate 全绿前提）。
+$dsOut = & python scripts/check_data_source.py 2>&1
+$dsOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'check_data_source (数据源改动 → 渲染快照门禁)'
+
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

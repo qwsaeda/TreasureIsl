@@ -30,12 +30,14 @@
 | S11 正向开发收口（逆向归档 legacy/ + 业务闭环 + 模块化并行 loop） | docs/plan-s11-forward.md（§7 交接快照）+ docs/process/05_module_parallel.md（一轮 4 步 + 包划分 + 纪律 5 条）+ docs/contracts/（跨包契约 c1/c2/c3） |
 | 逆向 exe 或 `data/` 格式（**仅参照物**） | `docs/facts/index.md` |
 | 找当前阶段任务与验收命令 | `docs/plan-s0-s2.md`、`docs/plan-s3.md`、`docs/plan-s4.md`、`docs/plan-s5.md`、`docs/plan-s7.md`、`docs/plan-s8-refactor.md` |
+| **游戏开发入门教程** | `docs/tutorial/README.md`（10 章 + 进度追踪，紧密绑定项目代码） |
 | 避免重复踩坑 | `docs/experience/index.md` ← **每次踩坑后必须回写** |
 | 容器格式（pak/lpk）字段与偏移 | `docs/formats/lucencypackage.md` |
 | 现代化改造 / 移植 / 多端适配 | `docs/modernization.md` |
 | **HD 资产增强 / 超分 / 矢量化 / 多分辨率打包（S7）** | `docs/impl/14_asset_enhancement.md`（方案规格）→ `docs/plan-s7.md`（任务表） |
 | Android 壳落地 + Mac 出 APK（S5.5） | `android/README.md` |
 | 引入新依赖 / 改 workspace 结构 | `docs/process/01_architecture.md` §4（现成库清单，先查再引）→ `docs/style.md` §5.9 |
+| **改渲染代码（sprite_atlas/terrain_atlas/game_app render/越界/透明/z-order）前必读** | `docs/process/07_render_pipeline.md`（路径表 + z-order 文件顺序 + 越界求交裁剪 + PCX 透明 index 0；gate 第 19/20 项锚点） |
 | 推送远端 / 分支与 commit 规范 / **完成即自动推送**（gate 全绿 + verified → commit → 自动 push，无需用户逐次指令） | `docs/git.md` |
 
 ## 硬规则（违反 = 返工）

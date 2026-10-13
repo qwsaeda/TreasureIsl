@@ -224,3 +224,17 @@
   子代理修列表场景触摸时，必须先核对 band 数 == 渲染行数，不得凭印象填数。
 
 
+### EXP-076 渲染管线契约 + 越界求交裁剪（贴图覆盖菜单根治，EXP-075 后续）
+
+- **现象**：native 默认 RGB565 路（`QualityMode::Original`），index 场景报「贴图覆盖菜单 / 特定区域错位」。洋红框（EXP-075①）已修但界面仍有贴图压在菜单文字上。
+- **根因**：`f1=111`（105×11 长条精灵）在 index.Map 有 3 条记录 x=185/191/207 越界（>176 屏宽）。原版 8-bit blit 例程 `sub_5EAA8` 源窗求交为空 → `sub_5D9C4` 早退**整条不画**（`evidence/audit_zorder.md` A3，高置信）；Rust `blit_sprite` 的 `ox = px_x.min(FB_W-1)` 把越界精灵**拉回屏幕右缘 175 列**画 1 列宽竖条 → 落在菜单区右缘 = 「贴图覆盖菜单」直接根因（`evidence/audit_zorder.md` B4，高置信）。z-order 本身无错（子代理坐实：原版按文件顺序 blit，非 f5 分档、非分帧，`evidence/audit_f5_zorder.md` 高置信）。
+- **解法**（职责分离 + 契约固化）：
+  1. 新增 `crates/ti-app/src/render_pipeline.rs`：`clip_rect(src_w, src_h, ox, oy) -> Option<ClipRect>` 纯函数（越界早退，6 单测）+ `TRANSPARENT_INDEX` 常量。
+  2. `sprite_atlas.rs::blit_sprite`（RGB565）+ `blit_sprite_rgba`（RGBA）接入 `clip_rect`，越界 `None` 直接早退（修掉拉回 bug）。
+  3. `docs/process/07_render_pipeline.md` 渲染契约（路径表/z-order 文件顺序/越界求交/PCX index 0 透明位 + §7 元素级验证法），登记进 `docs/README.md` + `AGENTS.md` 路由表。
+  4. `tests/render_snapshot.rs` 7 场景逐像素基准 diff（gate 第 19 项，基准由修复后代码生成杜绝 EXP-074/075 自证循环）+ `scripts/check_data_source.py`（gate 第 20 项，数据源改动→快照门禁）。
+  5. `element_dump` 长期诊断 bin（`Cargo.toml` 声明）：逐精灵 blit dump 落点/越界判定/像素贡献，定位「漂的是哪个元素」（契约 §7）。
+- **验证**：`element_dump index` 显示记录 11/20/21（f1=111 越界条）= SKIP、贡献 0 像素；洋红残留 = 0；headless 全流程 16/16 OK；`render_snapshot` 7 场景 diff=0；gate 23 项全绿。
+- **教训**：渲染链路关键行为（越界裁剪/透明位/z-order）散在多文件无契约 → 每轮瞎猜。**必须**：(a) 渲染行为提成纯函数可单测；(b) 契约文档登记进路由表，改渲染代码前必读；(c) 快照门禁锁「最终像素」+ 数据源门禁当场拦；(d) 修 bug 前先按 native 真实链路逐层定位（哪条 quality 路 + 越界/透明语义），不靠猜；(e) 报「特定区域错位」先用 `element_dump` 逐元素定位，别全帧 diff 盲猜。
+
+
