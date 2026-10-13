@@ -267,6 +267,10 @@ fn blit_pcx_independent(
                 break;
             }
             let idx = pixels.get(row * (width as usize) + col).copied().unwrap_or(0) as usize;
+            // 同口径：palette index 0 = 透明哨兵位（sub_5D9C4），跳过（与 blit_sprite 一致）
+            if idx == 0 {
+                continue;
+            }
             let [r, g, b] = palette[idx];
             let rgb565: u16 =
                 (u16::from(r) >> 3) << 11 | (u16::from(g) >> 2) << 5 | u16::from(b) >> 3;

@@ -1,0 +1,8 @@
+=== main_map 场景 HD 路径（render_hd + fb_rgba）洋红像素 ===
+总洋红(rgba): 0
+前 50 个坐标:
+
+
+=== main_map 场景 RGB565 路径（render + render_to_framebuf）洋红像素 ===
+总洋红(565): 0
+PNG dump: evidence/mag_dump_main_map.png（RGBA 全帧，可肉眼看洋红位置）

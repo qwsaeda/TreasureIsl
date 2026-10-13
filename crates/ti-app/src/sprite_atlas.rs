@@ -258,6 +258,11 @@ impl SpriteAtlas {
                     break;
                 }
                 let idx = sprite.pixels.get(fbase + row * sw + col).copied().unwrap_or(0) as usize;
+                // 原版 8-bit blit 例程 sub_5D9C4：palette index 0 = 透明哨兵位
+                //（PCX 尾部调色板 0 槽常被填成洋红 (255,0,255) 以显眼，跳过后透出背景）。
+                if idx == 0 {
+                    continue;
+                }
                 let [r, g, b] = sprite.palette[idx];
                 let rgb565: u16 =
                     (u16::from(r) >> 3) << 11 | (u16::from(g) >> 2) << 5 | u16::from(b) >> 3;
@@ -396,6 +401,10 @@ impl SpriteAtlas {
                     // 回退：PCX 调色板扩色到 8 位真彩（与 RGB565 路径同像素）
                     let idx =
                         sprite.pixels.get(fbase + row * sw + col).copied().unwrap_or(0) as usize;
+                    // 同口径：palette index 0 = 透明哨兵位（sub_5D9C4），跳过写 RGBA
+                    if idx == 0 {
+                        continue;
+                    }
                     let [r, g, b] = sprite.palette[idx];
                     *slot = 0xFF00_0000u32 | u32::from(r) << 16 | u32::from(g) << 8 | u32::from(b);
                 }

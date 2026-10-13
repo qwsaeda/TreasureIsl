@@ -246,6 +246,10 @@ impl TerrainAtlas {
                 }
                 let src = usize::try_from(row * tw + col).unwrap_or(0);
                 let idx = tile.pixels.get(src).copied().unwrap_or(0) as usize;
+                // 原版 8-bit blit：palette index 0 = 透明哨兵位（sub_5D9C4），跳过
+                if idx == 0 {
+                    continue;
+                }
                 let [r, g, b] = tile.palette[idx];
                 let rgb565: u16 =
                     (u16::from(r) >> 3) << 11 | (u16::from(g) >> 2) << 5 | u16::from(b) >> 3;
@@ -348,7 +352,7 @@ impl TerrainAtlas {
                     let Some(rgba) = img.rgba.get(sidx..sidx + 4) else {
                         continue;
                     };
-                    if rgba[3] == 0 {
+                    if rgba[3] < 128 {
                         continue;
                     }
                     *slot = ti_platform::gfx::png_rgba_to_framebuf_u32([
@@ -357,6 +361,10 @@ impl TerrainAtlas {
                 } else {
                     let src = usize::try_from(row * tw + col).unwrap_or(0);
                     let idx = tile.pixels.get(src).copied().unwrap_or(0) as usize;
+                    // 同口径：palette index 0 = 透明哨兵位（sub_5D9C4），跳过
+                    if idx == 0 {
+                        continue;
+                    }
                     let [r, g, b] = tile.palette[idx];
                     *slot =
                         0xFF00_0000u32 | (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b);
