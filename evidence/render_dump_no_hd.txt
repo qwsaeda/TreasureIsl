@@ -1,0 +1,4 @@
+[no_hd]
+index       ui=11008 bg=27712 total=38720 ui_ratio=0.28429753
+select_role ui=8338 bg=30382 total=38720
+main_map    ui=4236 bg=34484 total=38720

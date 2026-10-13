@@ -28,7 +28,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 HD = REPO / "assets_hd"
 PACK = REPO / "assets_hd_pack"
-MANIFEST_SRC = REPO / "manifest_hd.json"
+# manifest 与 assets_hd 同目录（S7.2 产物落 assets_hd/manifest_hd.json）
+MANIFEST_SRC = HD / "manifest_hd.json"
 MANIFEST_OUT = PACK / "manifest_hd.json"
 
 
@@ -57,6 +58,42 @@ def open_rgba(path: Path):
 
     img = Image.open(path).convert("RGBA")
     return img, img.width, img.height
+
+
+def sanitize_alpha(img):
+    """EXP-075：清理 alpha 半透明 + 透明区脏 RGB（预乘缩采样前置）。
+
+    原版 PCX 精灵的背景像素是**调色板色**（本项目里是洋红），alpha=0。
+    直接对 RGBA 做 Lanczos 缩采样会：
+      1. 把 alpha=0 像素的 RGB（洋红）混进邻域 → 边缘洋红脏边；
+      2. alpha 通道被重采样成 0..255 半透明 → blit 侧（只跳 a==0）当不透明画上去，
+         表现就是「人物/立绘被洋红矩形包住」（EXP-075）。
+
+    修法（与 ``scripts/enhance_portraits.py`` 的 alpha 二值化同口径）：
+      - alpha 二值化（>=128 → 255，否则 0），杜绝半透明；
+      - alpha=0 处 RGB 清零，杜绝透明像素带色参与插值。
+
+    返回新图（不改调用方的原图语义）。
+    """
+    from PIL import Image
+
+    w, h = img.size
+    data = img.tobytes()
+    out = bytearray(len(data))
+    for i in range(0, len(data), 4):
+        a = data[i + 3]
+        if a >= 128:
+            out[i] = data[i]
+            out[i + 1] = data[i + 1]
+            out[i + 2] = data[i + 2]
+            out[i + 3] = 255
+        else:
+            # 全透明：RGB 一并清零（否则 Lanczos 会把这里的脏色渗进邻域）
+            out[i] = 0
+            out[i + 1] = 0
+            out[i + 2] = 0
+            out[i + 3] = 0
+    return Image.frombytes("RGBA", (w, h), bytes(out))
 
 
 def save_png(rgba: bytes, w: int, h: int, path: Path) -> None:
@@ -102,10 +139,15 @@ def main() -> int:
             print(f"[pack_hd_assets] WARN 缺源 {rel}")
             continue
         img, w, h = open_rgba(src)
+        # EXP-075：缩采样前置清理（alpha 二值化 + 透明区 RGB 清零），
+        # 否则 1x 档 Lanczos 会把透明像素的洋红背景色渗进邻域。
+        img = sanitize_alpha(img)
         rgba = img.tobytes()
 
         # 1x（首屏）：从 2x 反向 Lanczos 0.5x
         img1 = img.resize((max(1, w // 2), max(1, h // 2)), Image.LANCZOS)
+        # EXP-075：缩采样后再二值化一次（插值仍可能产生 1..254 的软 alpha）
+        img1 = sanitize_alpha(img1)
         r1, w1, h1 = img1.tobytes(), img1.width, img1.height
         p1 = PACK / "1x" / container / base_name
         save_png(r1, w1, h1, p1)

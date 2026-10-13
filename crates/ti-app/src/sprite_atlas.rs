@@ -329,10 +329,14 @@ impl SpriteAtlas {
         blitted
     }
 
-    /// S7.5（feature `hd-8bit`）：单个精灵 RGBA8 blit（越界裁剪，置脏行带）。
+    /// alpha 透明判定阈值（EXP-075）：PNG alpha < 本值视为透明，blit 时跳过。
     ///
-    /// 走 PNG 真彩像素（`hd` 注入帧列表）；未注入该 f1 的 PNG 时回退到 PCX 调色板
-    /// 扩色（保证 HD 路径不因缺资产而黑屏）。多帧精灵按 `frame % frames` 取对应 PNG。
+    /// 原版 PCX blit 是「不透明覆盖」语义（F-311，调色板 0 号位即透明），
+    /// 阈值化而非 `a == 0` 判定，可兜住 HD 资产生成残留的软 alpha（1..254）。
+    #[cfg(feature = "hd-8bit")]
+    const ALPHA_TRANSPARENT_CUTOFF: u8 = 128;
+
+    /// S7.5（feature `hd-8bit`）：单个精灵 RGBA8 blit（越界裁剪，置脏行带）。
     #[cfg(feature = "hd-8bit")]
     fn blit_sprite_rgba(
         sprite: &DecodedSprite,
@@ -373,12 +377,16 @@ impl SpriteAtlas {
                     continue;
                 };
                 if let Some(img) = img {
-                    // PNG 真彩（RGBA8，行主序；透明像素跳过不覆盖）
+                    // PNG 像素是 RGBA8；透明像素不参与合成（EXP-075）
                     let sidx = (row * sw + col).saturating_mul(4);
                     let Some(rgba) = img.rgba.get(sidx..sidx + 4) else {
                         continue;
                     };
-                    if rgba[3] == 0 {
+                    // EXP-075：alpha 阈值化判透明。原版 PCX blit 是「不透明覆盖」语义
+                    // （F-311，调色板 0 号位即透明），HD 资产若残留 1..254 的软 alpha
+                    // （缩采样渗色所致），按 a==0 判会让半透明像素被当不透明画上去 →
+                    // 人物/立绘被背景色矩形包住。故 <128 一律跳过。
+                    if rgba[3] < Self::ALPHA_TRANSPARENT_CUTOFF {
                         continue;
                     }
                     *slot = ti_platform::gfx::png_rgba_to_framebuf_u32([

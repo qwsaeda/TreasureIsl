@@ -1,0 +1,3 @@
+index       洋红(rgb565):     0  洋红(rgba):     0  非背景(rgba): 38720
+select_role 洋红(rgb565):     0  洋红(rgba):     0  非背景(rgba): 38720
+main_map    洋红(rgb565):     0  洋红(rgba):     0  非背景(rgba): 38720

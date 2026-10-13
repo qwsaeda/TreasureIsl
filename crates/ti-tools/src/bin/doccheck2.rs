@@ -553,6 +553,54 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
 /// 12. 场景 band 数 == 渲染行数（EXP-073）：`select_role.rs` 的 `scene_list_bands`
 ///     调用参数必须等于 `Character::all().len()`（即 5），禁止硬编码魔法数字。
 ///     若 band 数走常量（如 `ROLE_COUNT`），则检查常量值 == 5。
+fn check_hd_sprite_transparency(root: &Path) -> Vec<String> {
+    // EXP-075：HD 精灵「洋红框」根因在资产生成（Lanczos 缩采样把 alpha=0 像素的洋红 RGB 渗进邻域，
+    // 产生 1..254 软 alpha）+ blit 只判 a==0。机器锚定三处不变量：
+    // 1. `blit_sprite_rgba` 必须用 alpha 阈值（`ALPHA_TRANSPARENT_CUTOFF`）而非 `a == 0`；
+    // 2. `pack_hd_assets.py` 必须做 alpha 二值化（`sanitize_alpha`），杜绝软 alpha 进 pack；
+    // 3. `render_hd` 必须把注入的 HD PNG 真正 blit 到 `fb_rgba`（`blit_scene_rgba` 调用）。
+    let mut errors = Vec::new();
+
+    let atlas = read_file(root, "crates/ti-app/src/sprite_atlas.rs").unwrap_or_default();
+    if !atlas.contains("ALPHA_TRANSPARENT_CUTOFF")
+        || !atlas.contains("rgba[3] < Self::ALPHA_TRANSPARENT_CUTOFF")
+    {
+        errors.push(
+            "sprite_atlas.rs `blit_sprite_rgba` 必须用 alpha 阈值 ALPHA_TRANSPARENT_CUTOFF 判透明（EXP-075；`a == 0` 会把软 alpha 当不透明画成洋红框）"
+                .to_string(),
+        );
+    }
+    if atlas.contains("if rgba[3] == 0") {
+        errors.push(
+            "sprite_atlas.rs 残留 `rgba[3] == 0` 透明判定，必须改 alpha 阈值（EXP-075）"
+                .to_string(),
+        );
+    }
+
+    let packer = read_file(root, "scripts/pack_hd_assets.py").unwrap_or_default();
+    if !packer.contains("def sanitize_alpha") || !packer.contains("a >= 128") {
+        errors.push(
+            "scripts/pack_hd_assets.py 必须含 `sanitize_alpha`（alpha 二值化 + 透明区 RGB 清零），否则 Lanczos 缩采样产生软 alpha（EXP-075）"
+                .to_string(),
+        );
+    }
+    if !packer.contains("img1 = sanitize_alpha(img1)") {
+        errors.push(
+            "pack_hd_assets.py 1x 档必须对缩采样结果再 `sanitize_alpha`（EXP-075：插值仍可能产生 1..254 软 alpha）"
+                .to_string(),
+        );
+    }
+
+    let game_app = read_file(root, "crates/ti-app/src/game_app.rs").unwrap_or_default();
+    if !game_app.contains("blit_scene_rgba(scene, &mut self.shell.fb_rgba)") {
+        errors.push(
+            "game_app.rs `render_hd` 必须调 `atlas.blit_scene_rgba` 把 HD PNG 叠加到 `fb_rgba`（EXP-075：此前漏调，注入的 HD 贴图从未上屏，画面退化成 RGB565 扩色）"
+                .to_string(),
+        );
+    }
+    errors
+}
+
 fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
     // EXP-074：scenes.json 布局表值必须 == 旧验收视觉（ab0e5b5 硬编码坐标），
     // 子代理禁止把表当「新设计值」凭空重填。机器锚定旧坐标 + 高亮「基线上移 offset」语义
@@ -744,9 +792,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_touch_render_pair(&root));
     all_errors.extend(check_scene_band_count(&root));
     all_errors.extend(check_scene_layout_fidelity(&root));
+    all_errors.extend(check_hd_sprite_transparency(&root));
 
     println!(
-        "doccheck2: {} error(s) across 13 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/scene-band-count/scene-layout-fidelity)",
+        "doccheck2: {} error(s) across 14 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count)",
         all_errors.len()
     );
     for err in &all_errors {

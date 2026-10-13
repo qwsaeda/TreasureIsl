@@ -1,0 +1,16 @@
+﻿=== S13.5 洋红修复验证 ===
+headless 渲染（默认构建，已重生成 assets_hd_pack）：
+index       洋红(rgb565):0  洋红(rgba):0  非背景(rgba):38720
+select_role 洋红(rgb565):0  洋红(rgba):0  非背景(rgba):38720
+main_map    洋红(rgb565):0  洋红(rgba):0  非背景(rgba):38720
+
+=== assets_hd_pack/1x/ui alpha 统计（重生成后）===
+alpha=0 总数:76637 其中洋红:0  半透明总数:0  洋红总数:715
+（修复前：半透明 38666 / 洋红 1956）
+
+=== 台账三方对账 ===
+check_ledger_reality: 全绿（105 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+
+=== 视觉回归 ===
+=== doccheck2 ===
+doccheck2: 0 error(s) across 14 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count)

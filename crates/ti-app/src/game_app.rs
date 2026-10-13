@@ -726,6 +726,19 @@ impl GameApp {
     pub fn render_hd(&mut self) {
         self.render();
         self.shell.sync_rgba_from_rgb565();
+        // EXP-075：在 RGBA 帧缓冲上叠加 HD PNG 精灵（此前漏调，HD 贴图从未生效）
+        let asset = SceneKind::from_legacy(self.scene).asset_name();
+        if !asset.is_empty() {
+            if let (Some(atlas), Some(scene)) = (self.atlas.as_mut(), self.scene_cache.get(asset)) {
+                if !scene.words.is_empty() {
+                    atlas.advance_animation(self.frame_delta_ms);
+                    atlas.blit_scene_rgba(scene, &mut self.shell.fb_rgba);
+                }
+            }
+        }
+        // 地形 HD 同理（`blit_scene_rgba` 同源；terrain_atlas 无 RGBA 版接口时不接入）
+        #[allow(unused_variables)]
+        let _ = &self.terrain_atlas;
     }
 
     /// S7.5（feature `hd-8bit`）：RGBA8 HD 帧缓冲上屏（同 `present` 上传策略，真彩无 565 量化）。

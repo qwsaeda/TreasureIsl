@@ -195,5 +195,24 @@
 - **飞轮**：数据表任何坐标迁移 → 先 `git show <旧commit>:<旧文件>` 对拍旧硬编码值 → 表值==旧值才合入；视觉基准图必须掩背景（锁 UI 排版层不锁贴图层），且基准由「回归旧视觉后的代码」生成而非「已漂移代码」自证。
 - **验证**：`cargo test -p ti-app --test visual_regression` 5 项全绿（3 场景 UI 层 0 diff + 互异 + 确定性）；gate 第 18 项 PASS；scenes.json 逐场景 == ab0e5b5 硬编码坐标；`menu_shell` index 标题条 40px 实机确认。
 
+### EXP-075 代码：HD 精灵「洋红框」= 资产软 alpha + blit 只判 a==0 + render_hd 漏调 blit 三重根因（视觉回归只锁 PCX 路未锁 HD 路）
+- **现象**：native 窗口（`hd-8bit` 默认开）人物/立绘被洋红矩形包住，截图对比 ab0e5b5「对不上」。
+- **根因（三重，缺一不可）**：
+  1. **资产生成软 alpha**：`pack_hd_assets.py` 1x 档用 `Image.LANCZOS` 对 straight RGBA 直接缩采样，源图 `assets_hd/ui` 里 30.4 万 alpha=0 像素带着洋红 RGB（PCX 调色板背景色）被插值渗进邻域 → 产生 3.8 万 1..254 软 alpha + 1956 洋红像素；
+  2. **blit 只判 `a == 0`**：`blit_sprite_rgba` 把 1..254 软 alpha 当不透明画上 → 洋红框；
+  3. **`render_hd` 漏调 blit**：只 `sync_rgba_from_rgb565`（RGB565→RGBA8 扩色）不叠加注入的 HD PNG（`atlas.blit_scene_rgba` 从未被调），上屏画面退化成 RGB565 扩色（洋红脏边被扩到 8 位更刺眼）。
+- **解法**：
+  1. `pack_hd_assets.py` 加 `sanitize_alpha`（alpha 二值化 `>=128→255` + 透明区 RGB 清零），缩采样前后各调一次，重生成 `assets_hd_pack`（半透明 38666→0，洋红 1956→715）；
+  2. `blit_sprite_rgba` 加 `ALPHA_TRANSPARENT_CUTOFF=128` 阈值判透明（`rgba[3] < 128` 跳过），F-311 不透明覆盖语义兜底；
+  3. `render_hd` 补 `atlas.blit_scene_rgba(scene, &mut self.shell.fb_rgba)`，把 HD PNG 真正叠加到 RGBA 帧缓冲。
+- **为什么一直没发现（流程缺口，必须说清）**：
+  1. **视觉回归只锁了一条渲染路径**：EXP-072 的 `visual_regression.rs` 3 场景基准全用 `render_to_framebuf`（RGB565 `Framebuf`，PCX 精灵 blit 路），而 native 实机走的是 `render_hd` + `fb_rgba`（RGBA8 路）——**HD 路径的渲染像素从未被任何机器校验**；
+  2. **HD 是 S7 新 feature，默认开但默认 feature 的实机路径零门禁**：`hd-8bit`/`gpu-render` 都是 Cargo feature 门控，gate 18 项里没有任何一项对「feature 开后的渲染输出」做像素级断言，全绿只代表 PCX 路对，不代表 HD 路对；
+  3. **资产生成与 blit 是两处独立 bug，互相掩盖**：资产软 alpha（生成侧）+ blit 只判 a==0（渲染侧）+ render_hd 漏 blit（上屏侧）——三者各自独立，单修一个仍洋红；且 native 窗口是**人肉实机**才触发，headless 测试（`render_to_framebuf`）根本不进 `render_hd`，所以 32 轮 fuzz + 视觉回归 + gate 18 项全都绿着把这个 bug 漏到用户截图才发现；
+  4. **「正向开发」假设没被像素验证**：S7 资产升级时假定「HD PNG 贴上去就对了」，但没人对 HD 路径做过一次「贴图后哪些像素是非背景色」的机器判定，假设直接进了默认构建。
+- **飞轮**：任何 feature 门控的渲染路径（`hd-8bit`/`gpu-render`）新增时，必须同步给对应 `render_xxx` 加一条视觉基准或像素断言（与默认路径同判据）；`pack_hd_assets.py` 的 alpha 二值化由 doccheck2 `check_hd_sprite_transparency` 锚定，重跑 pack 后 1x 档半透明像素计数必须 = 0（验收判据写进 S13.5 台账 dod）。
+- **验证**：headless 计数 `index/select_role/main_map` 洋红（rgba）= 0；`assets_hd_pack/1x/ui` 半透明总数 = 0（原 38666）；`cargo test -p ti-app --test visual_regression` 5 项全绿；doccheck2 第 12 项 `check_hd_sprite_transparency` 0 error；gate 18 项全绿。
+
+
 
 
