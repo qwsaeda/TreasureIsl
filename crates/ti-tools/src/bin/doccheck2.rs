@@ -553,6 +553,122 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
 /// 12. 场景 band 数 == 渲染行数（EXP-073）：`select_role.rs` 的 `scene_list_bands`
 ///     调用参数必须等于 `Character::all().len()`（即 5），禁止硬编码魔法数字。
 ///     若 band 数走常量（如 `ROLE_COUNT`），则检查常量值 == 5。
+fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
+    // EXP-074：scenes.json 布局表值必须 == 旧验收视觉（ab0e5b5 硬编码坐标），
+    // 子代理禁止把表当「新设计值」凭空重填。机器锚定旧坐标 + 高亮「基线上移 offset」语义
+    //（旧代码 `fill_rect(x, 基线y - offset, w, item_h)`，非居中 `-item_h/2`）。
+    let mut errors = Vec::new();
+    let Some(json) = read_file(root, "assets/data/scenes.json") else {
+        return vec!["assets/data/scenes.json 不存在，无法校验布局保真度（EXP-074）".to_string()];
+    };
+
+    // 逐场景锚定：(字段路径, 期望字面量, 说明)
+    let anchors: &[(&str, &str, &str)] = &[
+        // index：标题条 40px + 列表起点 y=96 行高 20（旧 menu_shell MENU_TOP/ROW_H）
+        ("\"index\"", "\"h\": 40", "index 标题条高度必须 = 40（旧视觉，EXP-074）"),
+        ("\"index\"", "\"y\": 96", "index 列表起点 y 必须 = 96（MENU_TOP，EXP-074）"),
+        ("\"index\"", "\"row_h\": 20", "index 行高必须 = 20（ROW_H，EXP-074）"),
+        (
+            "\"index\"",
+            "\"highlight_offset\": 12",
+            "index 高亮上移必须 = 12（旧代码 y-12，EXP-074）",
+        ),
+        // select_role / select_map：基线 y=50 行高 30 + 高亮上移 10（旧代码 fill_rect(20, y-10, 136, 26)）
+        (
+            "\"select_role\"",
+            "\"highlight_offset\": 10",
+            "select_role 高亮上移必须 = 10（旧代码 y-10，EXP-074）",
+        ),
+        ("\"select_role\"", "\"row_h\": 30", "select_role 行高必须 = 30（EXP-074）"),
+        ("\"select_map\"", "\"highlight_offset\": 10", "select_map 高亮上移必须 = 10（EXP-074）"),
+        // saveload：基线 y=40 行高 40 + 金字号列 x=100（旧代码 y=40+i*40 / gold_x=100）
+        ("\"saveload\"", "\"y\": 40", "saveload 列表起点 y 必须 = 40（EXP-074）"),
+        ("\"saveload\"", "\"row_h\": 40", "saveload 行高必须 = 40（EXP-074）"),
+        ("\"saveload\"", "\"gold_x\": 100", "saveload 金字号列 x 必须 = 100（EXP-074）"),
+    ];
+    // 每个场景段单独切片，避免跨场景误匹配（如 select_role 与 select_map 同名 list）
+    for &(scene_key, needle, msg) in anchors {
+        let scene_block = scene_section(&json, scene_key);
+        if !scene_block.contains(needle) {
+            errors.push(format!("scenes.json {scene_key}: {msg}（须含 `{needle}`）"));
+        }
+    }
+
+    // 标量字段语义：locked.text_x 必须 = 130（旧代码 draw_text(locked, 130, y)）
+    if !json.contains("\"text_x\": 130") && !json.contains("\"text_x\":130") {
+        errors.push(
+            "scenes.json select_map.locked.text_x 必须 = 130（旧代码锁定文字 x，EXP-074 标量字段不得静默置 0）"
+                .to_string(),
+        );
+    }
+
+    // 负向锚定：废弃的 `-item_h/2` 居中性不得残留（EXP-074 回归「基线上移 offset」语义）
+    let layout_src = read_file(root, "crates/ti-core/src/data/mod.rs").unwrap_or_default();
+    if layout_src.contains("item_h / 2") {
+        errors.push(
+            "ListLayout::item_rect 残留 `-item_h/2` 居中性，必须回归「基线上移 highlight_offset」语义（EXP-074）"
+                .to_string(),
+        );
+    }
+    if !layout_src.contains("highlight_offset") {
+        errors.push(
+            "ListLayout 缺少 `highlight_offset` 字段（EXP-074 高亮上移像素，旧代码 y-10/y-12）"
+                .to_string(),
+        );
+    }
+
+    // 标量解析器：extra_scalar 抽取 `*_x`/`*_y`（EXP-074 修复 extra 静默置 0）
+    let layout_parser = read_file(root, "crates/ti-core/src/data/layout.rs").unwrap_or_default();
+    if !layout_parser.contains("extra_scalar") {
+        errors.push(
+            "scenes 解析器缺少 `extra_scalar`（EXP-074：locked.text_x 等标量字段不得被 Rect 反序列化静默置 0）"
+                .to_string(),
+        );
+    }
+
+    // 视觉回归必须掩背景（EXP-074：HD 背景 ≠ PCX 背景非排版漂移，只锁 UI 像素分布）
+    let vr = read_file(root, "crates/ti-app/tests/visual_regression.rs").unwrap_or_default();
+    if !vr.contains("diff_frames_ui") || !vr.contains("is_bg_cur") {
+        errors.push(
+            "visual_regression.rs 必须用 `diff_frames_ui` 掩背景色只比 UI 像素分布（EXP-074，整帧 diff 会因 HD/PCX 背景差异误报）"
+                .to_string(),
+        );
+    }
+    errors
+}
+
+/// 取 `scene_key`（如 `"index"`）在 JSON 中的对象段（到配对的 `}` 为止）。
+fn scene_section(json: &str, scene_key: &str) -> String {
+    let Some(start) = json.find(scene_key) else {
+        return String::new();
+    };
+    // 从 scene_key 之后找 `:` 后的 `{`，截取到配对的 `}`
+    let after = &json[start..];
+    let Some(colon) = after.find(':') else {
+        return after.to_string();
+    };
+    let rest = &after[colon + 1..];
+    let Some(open) = rest.find('{') else {
+        return String::new();
+    };
+    let mut depth = 0usize;
+    let mut end = open;
+    for (i, c) in rest[open..].char_indices() {
+        match c {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    end = open + i + 1;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    rest[open..end].to_string()
+}
+
 fn check_scene_band_count(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(src) = read_file(root, "crates/ti-app/src/scenes/select_role.rs") else {
@@ -627,9 +743,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_flywheel_script(&root));
     all_errors.extend(check_touch_render_pair(&root));
     all_errors.extend(check_scene_band_count(&root));
+    all_errors.extend(check_scene_layout_fidelity(&root));
 
     println!(
-        "doccheck2: {} error(s) across 12 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/scene-band-count)",
+        "doccheck2: {} error(s) across 13 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/scene-band-count/scene-layout-fidelity)",
         all_errors.len()
     );
     for err in &all_errors {

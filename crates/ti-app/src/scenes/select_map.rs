@@ -89,6 +89,7 @@ impl Scene for SelectMapScene {
                     scene.list.y as f32,
                     scene.list.row_h as f32,
                     scene.list.item_h as f32,
+                    scene.list.highlight_offset as f32,
                     MAP_COUNT as usize,
                 );
                 let Some(i) = layout::scene_list_index_at(&bands, sample.x, sample.y) else {
@@ -115,7 +116,7 @@ impl Scene for SelectMapScene {
         host.draw_text(i18n::sget("scene.select_map.title"), layout.title.x, layout.title.y);
         let current = host.map_slot().map_or(0, |m| m.zero_index() as usize);
         for (i, m) in MapSlot::all().iter().enumerate() {
-            let y = layout.list.item_rect(i).y;
+            let y = layout.list.item_text_pos(i).1;
             let locked = !host.map_unlocked(*m);
             if i == current && !locked {
                 let r = layout.list.item_rect(i);
@@ -123,7 +124,7 @@ impl Scene for SelectMapScene {
             }
             host.draw_text(m.label(), layout.list.text_x, y);
             if locked {
-                let text_x = layout.extra.get("text_x").map_or(0, |v| v.x);
+                let text_x = layout.extra_scalar.get("locked.text_x").copied().unwrap_or(130);
                 host.draw_text(i18n::sget("scene.select_map.locked"), text_x, y);
             }
         }

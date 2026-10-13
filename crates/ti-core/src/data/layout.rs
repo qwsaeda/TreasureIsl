@@ -40,6 +40,20 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 (k.clone(), rect)
             })
             .collect();
+        // EXP-074：`extra` 值可能是标量字段（如 `locked:{"text_x":130}`），而非 Rect 形状。
+        // 逐 key 抽取 `*_x` / `*_y` 标量，避免缺 key 被静默置 0 丢失坐标。
+        let mut extra_scalar = BTreeMap::new();
+        for (k, v) in &r.extra {
+            if let Some(obj) = v.as_object() {
+                for (fk, fv) in obj {
+                    if let Some(n) = fv.as_i64() {
+                        if let Ok(s) = i32::try_from(n) {
+                            extra_scalar.insert(format!("{k}.{fk}"), s);
+                        }
+                    }
+                }
+            }
+        }
         out.insert(
             id.clone(),
             SceneLayout {
@@ -53,11 +67,14 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                     item_h: r.list.as_ref().map_or(0, |l| l.item_h),
                     text_x: r.list.as_ref().map_or(0, |l| l.text_x),
                     w: r.list.as_ref().map_or(0, |l| l.w),
+                    highlight_offset: r.list.as_ref().map_or(0, |l| l.highlight_offset),
+                    gold_x: r.list.as_ref().map_or(0, |l| l.gold_x),
                 },
                 hint: r.hint.map_or_else(Rect::default, Rect::from),
                 hud: r.hud.map_or_else(Rect::default, Rect::from),
                 page: r.page.map_or_else(Rect::default, Rect::from),
                 extra,
+                extra_scalar,
             },
         );
     }
@@ -114,4 +131,10 @@ struct ListJson {
     item_h: i32,
     #[serde(default)]
     text_x: i32,
+    /// EXP-074：高亮矩形相对基线上移像素（旧代码 `y - 10`/`y - 12`）。
+    #[serde(default)]
+    highlight_offset: i32,
+    /// 次要列文字 x（如 saveload 金字号列；EXP-074）。
+    #[serde(default)]
+    gold_x: i32,
 }

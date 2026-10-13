@@ -252,11 +252,35 @@ fn zlib_decompress_stored(data: &[u8]) -> Option<Vec<u8>> {
     Some(out)
 }
 
-/// 逐像素 diff：RGB8 对比，允许 ±1 量化误差。返回 `(diff_pixels, max_channel_delta)`。
-fn diff_frames(current_rgb: &[u8], baseline_rgb: &[u8]) -> (usize, i32) {
+/// 背景色 RGB8（`COLOR_BG=16` 清屏色；UI 像素 = 非背景色，EXP-074）。
+///
+/// EXP-074：视觉回归只锁「UI 像素分布」（高亮矩形 / 文字 / HUD 落在哪些逻辑像素），
+/// **不锁背景贴图**——HD 化（`assets_hd_pack` 2x/4x PNG）与原版 PCX 背景不同，
+/// 整帧 diff 会因背景差异误报。故 diff 时把「背景色像素」掩掉，只比 UI 层。
+const BG565: u16 = 16;
+
+/// 清屏背景色在 RGB565→RGB8 下的三通道值（用于掩背景）。
+fn bg_rgb8() -> [i32; 3] {
+    rgb565_to_rgb8(BG565)
+}
+
+/// 逐像素 diff：只比 **UI 像素**（任一侧非背景色的位置），背景像素不参与计数（EXP-074）。
+///
+/// 返回 `(ui_diff_pixels, max_channel_delta)`；UI 层（高亮矩形/文字/HUD）有漂移才计数。
+/// 两侧都是背景色的像素 → 跳过（HD 化背景差异不判漂）。
+fn diff_frames_ui(current_rgb: &[u8], baseline_rgb: &[u8]) -> (usize, i32) {
+    let bg = bg_rgb8();
     let mut diff = 0usize;
     let mut max_delta = 0i32;
     for i in 0..FB_PIXELS {
+        let is_bg_cur =
+            (0..3).all(|c| (i32::from(current_rgb[i * 3 + c]) - bg[c]).abs() <= TOLERANCE);
+        let is_bg_base =
+            (0..3).all(|c| (i32::from(baseline_rgb[i * 3 + c]) - bg[c]).abs() <= TOLERANCE);
+        // 背景色像素不参与 UI 漂移计数（EXP-074：HD 背景与原版 PCX 背景不同，非排版漂移）
+        if is_bg_cur && is_bg_base {
+            continue;
+        }
         for ch in 0..3usize {
             let cur = i32::from(current_rgb[i * 3 + ch]);
             let base = i32::from(baseline_rgb[i * 3 + ch]);
@@ -295,10 +319,10 @@ fn visual_regression(name: &str, app: GameApp) {
                     ]
                 })
                 .collect();
-            let (diff, max_delta) = diff_frames(&current_rgb, &baseline);
+            let (diff, max_delta) = diff_frames_ui(&current_rgb, &baseline);
             assert_eq!(
                 diff, 0,
-                "{name} 视觉回归漂移：diff 像素 {diff}/{FB_PIXELS}，最大通道偏差 {max_delta}（允许 ±{TOLERANCE}）"
+                "{name} 视觉回归漂移（UI 像素分布）：diff 像素 {diff}/{FB_PIXELS}，最大通道偏差 {max_delta}（允许 ±{TOLERANCE}，背景像素已掩，EXP-074）"
             );
         }
         None => {

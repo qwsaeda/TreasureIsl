@@ -83,6 +83,7 @@ impl Scene for SelectRoleScene {
                     scene.list.y as f32,
                     scene.list.row_h as f32,
                     scene.list.item_h as f32,
+                    scene.list.highlight_offset as f32,
                     ROLE_COUNT as usize,
                 );
                 let Some(i) = layout::scene_list_index_at(&bands, sample.x, sample.y) else {
@@ -111,7 +112,7 @@ impl Scene for SelectRoleScene {
         host.draw_text(i18n::sget("scene.select_role.title"), layout.title.x, layout.title.y);
         let current = host.character().map_or(0, |c| c.index() as usize);
         for (i, c) in Character::all().iter().enumerate() {
-            let y = layout.list.item_rect(i).y;
+            let y = layout.list.item_text_pos(i).1;
             if i == current {
                 let r = layout.list.item_rect(i);
                 host.fill_rect(r.x, r.y, r.w, r.h, COLOR_SELECTED);

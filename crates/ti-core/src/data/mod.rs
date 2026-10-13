@@ -411,35 +411,47 @@ pub struct Rect {
 }
 
 /// 列表布局（`scenes.json` 的 `list`）。
+///
+/// EXP-074：坐标回归旧视觉（ab0e5b5 硬编码值）——文字画在「基线 y」，
+/// 高亮矩形 = 基线 y 上移 `highlight_offset` 像素、高 `item_h`。
+/// 旧代码 `item_rect` 的 `-item_h/2` 居中性是 P6 重填表值时引入的语义漂移，
+/// 已废弃，改回旧「基线 + 固定上移偏移」语义。
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ListLayout {
     /// 列表起点 x。
     pub x: i32,
-    /// 列表起点 y。
+    /// 列表起点 y（第 0 项文字基线）。
     pub y: i32,
     /// 行高（步进）。
     pub row_h: i32,
-    /// 每项高（绘制用）。
+    /// 每项高（高亮矩形绘制用）。
     pub item_h: i32,
     /// 文本 x。
     pub text_x: i32,
     /// 宽度。
     pub w: i32,
+    /// 高亮矩形相对文字基线上移的像素（旧代码 `y - 10` / `y - 12`，EXP-074）。
+    pub highlight_offset: i32,
+    /// 次要列文字 x（如 `saveload` 的金字号列；`0` = 未指定，消费方回退旧硬编码）。
+    pub gold_x: i32,
 }
 
 impl ListLayout {
-    /// 第 `i` 项的绘制矩形。
-    #[must_use]
-    pub fn item_rect(&self, i: usize) -> Rect {
-        let n = i32::try_from(i).unwrap_or(0);
-        Rect { x: self.x, y: self.y + n * self.row_h - self.item_h / 2, w: self.w, h: self.item_h }
-    }
-
-    /// 第 `i` 项的文本位置。
+    /// 第 `i` 项的文字绘制位置（基线 y，EXP-074 回归旧语义：文字在 `y + i*row_h`）。
     #[must_use]
     pub fn item_text_pos(&self, i: usize) -> (i32, i32) {
         let n = i32::try_from(i).unwrap_or(0);
         (self.text_x, self.y + n * self.row_h)
+    }
+
+    /// 第 `i` 项的高亮矩形（基线 y 上移 `highlight_offset`，EXP-074）。
+    ///
+    /// 旧代码：`fill_rect(list_x, 基线y - offset, w, item_h, COLOR_SELECTED)`。
+    #[must_use]
+    pub fn item_rect(&self, i: usize) -> Rect {
+        let n = i32::try_from(i).unwrap_or(0);
+        let baseline = self.y + n * self.row_h;
+        Rect { x: self.x, y: baseline - self.highlight_offset, w: self.w, h: self.item_h }
     }
 }
 
@@ -462,6 +474,8 @@ pub struct SceneLayout {
     pub page: Rect,
     /// 场景专属额外矩形（`scenes.json` 各场景的 `player_hp`/`boss_hp`/`rounds`/`outcome`/`empty`/`body`/`locked` 等）。
     pub extra: BTreeMap<String, Rect>,
+    /// 场景专属标量字段（如 `select_map.locked.text_x`；EXP-074 解析器不得把缺 key 静默置 0）。
+    pub extra_scalar: BTreeMap<String, i32>,
 }
 
 // ------------------------------------------------------------------- 缓存入口

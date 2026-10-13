@@ -1,0 +1,9 @@
+﻿=== S13.4 视觉回归（UI 像素分布，掩背景，基准=回归旧视觉后生成）===
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+=== 基准图（3 张，由回归旧视觉后代码重新生成）===
+Index.png 116229B MainMap.png 116229B SelectRole.png 116229B
+
+=== 台账三方对账 ===
+check_ledger_reality: 全绿（104 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+

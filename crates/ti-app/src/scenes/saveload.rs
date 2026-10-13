@@ -70,6 +70,7 @@ impl Scene for SaveloadScene {
                     scene.list.y as f32,
                     scene.list.row_h as f32,
                     scene.list.item_h as f32,
+                    scene.list.highlight_offset as f32,
                     host.save_slots().len(),
                 );
                 let Some(slot) = layout::slot_band_index_at(&bands, sample.x, sample.y) else {
@@ -109,7 +110,7 @@ impl Scene for SaveloadScene {
             host.draw_text(&slot_str, r.x, r.y);
             if has {
                 let g = i18n::sgetf("hud.gold_fmt", &[&s.gold]);
-                let gold_x = layout.extra.get("gold_x").map_or(100, |v| v.x);
+                let gold_x = layout.list.gold_x;
                 host.draw_text(&g, gold_x, r.y);
             }
         }

@@ -110,6 +110,7 @@
 | EXP-071 | code | | 列表场景触摸命中带必须与渲染 `item_rect` 公式正逆成对：`touch.rs` 删旧常量/旧 API，新增 `scene_list_bands`/`slot_bands` 从 `ListLayout` 推导，三场景 `on_touch` 改读 `scenes.json`，doccheck2 第 11 项 `check_touch_render_pair` 固化（S11 审计 N3） |
  | EXP-072 | process | | 表现层改触摸/渲染坐标后界面错乱但 `cargo test` 全绿漏到用户才发现：P4-1 只锁 PCX 解码基准不锁「场景渲染最终像素」，gate 无视觉几何回归。`visual_regression.rs` 3 场景 headless 逐像素 diff + `visual_baseline.ps1` 基准图 + gate 第 18 项 `visual-regression`（EXP-072） |
  | EXP-073 | code | | 触摸/渲染 band 数必须 == 渲染行数（`Character::all().len()`），禁止硬编码：`select_role.rs` `scene_list_bands(..., 9)` 硬编码 9 条带但渲染只 5 行，多出的 4 条带 `from_index(5..=8) → None → unwrap_or(0)` 静默选第 0 角色，违反 EXP-067（EXP-059/EXP-071 第 3 次变体）。band 数走场景常量 `ROLE_COUNT`，doccheck2 第 12 项 `check_scene_band_count` 固化 |
+ | EXP-074 | code | | 数据表迁移（scenes.json 坐标回归旧视觉值）：P6 重填表值未对拍 ab0e5b5 旧视觉、`item_rect` 误加 `-item_h/2` 居中性（旧代码高亮是「文字基线 y 上移固定 offset」非居中）、extra 解析器把缺 key 静默置 0 丢失 `locked.text_x=130`、视觉基准自生成（循环论证）。修复：`ListLayout` 新增 `highlight_offset`/`gold_x`、`extra_scalar` 抽 `*_x`/`*_y`、`menu_shell` 标题条 40px 回归、视觉回归只比「UI 像素分布」掩背景色（HD 背景≠PCX 背景非排版漂移），基准=回归后旧视觉帧。HD 化只换贴图不动逻辑布局坐标；数据表值必须==旧验收视觉，子代理禁止凭空重填+自证基准图（EXP-059/067/071 第 4 次变体） |
 
 ## 条目格式（写新条时照抄）
 

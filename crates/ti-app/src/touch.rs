@@ -156,10 +156,11 @@ pub mod layout {
         if idx < MENU_COUNT { Some(idx) } else { None }
     }
 
-    /// 场景列表命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071）。
+    /// 场景列表命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071/EXP-074）。
     ///
     /// `select_role` / `select_map` / `saveload` 等列表场景的触摸命中与渲染高亮
     /// 共用此公式（正逆成对），不再各自维护常量（EXP-048/060）。
+    /// 命中带 = 文字基线 y 上移 `offset` 像素、高 `item_h`（与 `ListLayout::item_rect` 同公式）。
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn scene_list_bands(
@@ -168,11 +169,12 @@ pub mod layout {
         y0: f32,
         step: f32,
         item_h: f32,
+        offset: f32,
         count: usize,
     ) -> Vec<RectF> {
         (0..count)
             .map(|i| {
-                let y = y0 + i as f32 * step - item_h / 2.0;
+                let y = y0 + i as f32 * step - offset;
                 RectF { x0, x1, y0: y, y1: y + item_h }
             })
             .collect()
@@ -198,16 +200,16 @@ pub mod layout {
         pub y1: f32,
     }
 
-    /// 存读档槽位命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071）。
+    /// 存读档槽位命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071/EXP-074）。
     ///
     /// 与 `saveload` 场景渲染共用同一 `ListLayout` 参数（正逆成对）；
-    /// 命中区为整屏宽（`0..176`），行带由 `item_rect` 公式推导。
+    /// 命中区为整屏宽（`0..176`），行带 = 基线 y 上移 `offset`、高 `item_h`。
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
-    pub fn slot_bands(y0: f32, step: f32, item_h: f32, count: usize) -> Vec<RectF> {
+    pub fn slot_bands(y0: f32, step: f32, item_h: f32, offset: f32, count: usize) -> Vec<RectF> {
         (0..count)
             .map(|i| {
-                let y = y0 + i as f32 * step - item_h / 2.0;
+                let y = y0 + i as f32 * step - offset;
                 RectF { x0: 0.0, x1: 176.0, y0: y, y1: y + item_h }
             })
             .collect()
@@ -388,8 +390,17 @@ mod tests {
         // EXP-071 正逆成对：渲染 `ListLayout::item_rect(i)` 的中心点必须命中
         // `scene_list_index_at` 的第 i 条命中带（select_role / select_map 同公式）。
         use ti_core::data::ListLayout;
-        let ll = ListLayout { x: 20, y: 50, row_h: 30, item_h: 26, text_x: 60, w: 136 };
-        let bands = super::layout::scene_list_bands(20.0, 20.0 + 136.0, 50.0, 30.0, 26.0, 5);
+        let ll = ListLayout {
+            x: 20,
+            y: 50,
+            row_h: 30,
+            item_h: 26,
+            text_x: 60,
+            w: 136,
+            highlight_offset: 10,
+            gold_x: 0,
+        };
+        let bands = super::layout::scene_list_bands(20.0, 20.0 + 136.0, 50.0, 30.0, 26.0, 10.0, 5);
         for i in 0..5usize {
             let r = ll.item_rect(i);
             let cx = (r.x + r.w / 2) as f32;
@@ -410,8 +421,17 @@ mod tests {
     fn slot_bands_match_item_rect() {
         // EXP-071 正逆成对：saveload 槽位渲染 `item_rect` 中心点必须命中 `slot_bands`。
         use ti_core::data::ListLayout;
-        let ll = ListLayout { x: 10, y: 40, row_h: 40, item_h: 26, text_x: 10, w: 166 };
-        let bands = super::layout::slot_bands(40.0, 40.0, 26.0, 5);
+        let ll = ListLayout {
+            x: 10,
+            y: 40,
+            row_h: 40,
+            item_h: 26,
+            text_x: 10,
+            w: 166,
+            highlight_offset: 10,
+            gold_x: 100,
+        };
+        let bands = super::layout::slot_bands(40.0, 40.0, 26.0, 10.0, 5);
         for i in 0..5usize {
             let r = ll.item_rect(i);
             let cx = 88.0;

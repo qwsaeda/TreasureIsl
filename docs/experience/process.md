@@ -179,4 +179,21 @@
 - **飞轮**：表现层任何坐标/布局改动 → gate 第 18 项自动 diff 基准图 → 漂移当场拦，不等用户发现；改完正常渲染后重跑 `visual_baseline.ps1`（无 -Check）重新生成基准图。
 - **验证**：`cargo test -p ti-app --test visual_regression` 5 项全绿（首次生成 3 张基准图 + 二次 0 diff）；`powershell scripts/visual_baseline.ps1 -Check` exit 0；gate 第 18 项 PASS。
 
+### EXP-074 代码：数据表坐标迁移必须对拍旧验收视觉（scenes.json 回归旧值 + 视觉基准掩背景，HD 化只换贴图不动逻辑布局）
+- **现象**：用户报「系统性全场景界面错乱」——角色列表、地图选择、存读档、主菜单标题条整体偏移/挤压，但 `cargo test` 全绿。
+- **根因**（P6 数据表迁移 4 处漂移，EXP-059/067/071 第 4 次变体）：
+  1. **表值凭空重填**：P6 子代理把 ab0e5b5 硬编码坐标搬进 scenes.json 时未对拍旧值，`index.list.y=96` 行高/起点、`saveload.list.y=40` 等被重填漂移；
+  2. **`item_rect` 语义漂移**：旧代码高亮矩形 = `fill_rect(x, 基线y - offset, w, item_h)`（文字在基线 y，高亮上移固定 `offset`），P6 误加 `-item_h/2` 居中性 → 高亮矩形整体下移 13px；
+  3. **extra 解析器静默置 0**：`locked:{text_x:130}` 是标量字段而非 Rect 形状，`serde_json::from_value::<Rect>` 失败 → `unwrap_or_default()` → 坐标丢失，「已锁定」文字画到 x=0；
+  4. **视觉基准自生成（循环论证）**：EXP-072 首版基准图由「已漂移代码」渲染生成，diff=0 只证明自洽不证明正确。
+- **解法**：
+  1. `ListLayout` 新增 `highlight_offset`（高亮上移像素）+ `gold_x`（次要列），废弃 `-item_h/2` 居中性；`item_text_pos` 回归「文字基线 y」语义；
+  2. `SceneLayout.extra_scalar: BTreeMap<String,i32>` 抽取 `*_x`/`*_y` 标量，消费方 `extra_scalar.get("locked.text_x")`；
+  3. `menu_shell` index 标题条回归 40px（旧视觉），`scenes.json index.title.h=40`；
+  4. 视觉回归 `diff_frames_ui` **掩背景色**（RGB565=16 清屏色），只比「UI 像素分布」（高亮/文字/HUD 落在哪些逻辑像素），不比背景贴图——HD 化（`assets_hd_pack` 2x/4x PNG）与原版 PCX 背景必然不同，整帧 diff 会误报；基准图 = 回归旧视觉后重新生成。
+- **关键澄清**（正向开发不矛盾）：渲染坐标系恒为 176×220 逻辑帧（`LOGICAL_WIDTH/HEIGHT`），HD/分辨率升级 = 贴图 2x/4x + `Viewport` 缩放上屏，**UI 布局坐标（fill_rect/draw_text 的 x,y）不随图片分辨率变**。数据表驱动 UI 坐标是正向架构，但**表值必须 == 旧验收视觉值**，子代理禁止把表当「新设计值」凭空重填。
+- **飞轮**：数据表任何坐标迁移 → 先 `git show <旧commit>:<旧文件>` 对拍旧硬编码值 → 表值==旧值才合入；视觉基准图必须掩背景（锁 UI 排版层不锁贴图层），且基准由「回归旧视觉后的代码」生成而非「已漂移代码」自证。
+- **验证**：`cargo test -p ti-app --test visual_regression` 5 项全绿（3 场景 UI 层 0 diff + 互异 + 确定性）；gate 第 18 项 PASS；scenes.json 逐场景 == ab0e5b5 硬编码坐标；`menu_shell` index 标题条 40px 实机确认。
+
+
 

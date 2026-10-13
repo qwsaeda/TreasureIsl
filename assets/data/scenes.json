@@ -3,32 +3,30 @@
 
   "index": {
     "bg": 16,
-    "title": { "x": 0, "y": 0, "style": "title" },
-    "list": { "x": 30, "y": 96, "w": 116, "row_h": 20, "item_h": 16, "text_x": 40 },
+    "title": { "x": 0, "y": 0, "h": 40, "style": "title" },
+    "list": { "x": 18, "y": 96, "w": 140, "row_h": 20, "item_h": 18, "text_x": 56, "highlight_offset": 12 },
     "status": { "x": 4, "y": 208 }
   },
 
   "select_role": {
     "bg": 16,
-    "title": { "x": 40, "y": 4, "style": "title" },
-    "list": { "x": 20, "y": 50, "w": 136, "row_h": 30, "item_h": 26, "text_x": 60 },
-    "selected": { "style": "highlight" },
+    "title": { "x": 40, "y": 4 },
+    "list": { "x": 20, "y": 50, "w": 136, "row_h": 30, "item_h": 26, "text_x": 60, "highlight_offset": 10 },
     "hint": { "x": 30, "y": 210 }
   },
 
   "select_map": {
     "bg": 16,
-    "title": { "x": 40, "y": 4, "style": "title" },
-    "list": { "x": 20, "y": 50, "w": 136, "row_h": 30, "item_h": 26, "text_x": 60 },
-    "selected": { "style": "highlight" },
+    "title": { "x": 40, "y": 4 },
+    "list": { "x": 20, "y": 50, "w": 136, "row_h": 30, "item_h": 26, "text_x": 60, "highlight_offset": 10 },
     "locked": { "text_x": 130 },
     "hint": { "x": 30, "y": 210 }
   },
 
   "main_map": {
     "bg": 16,
-    "title": { "x": 64, "y": 2, "h": 16, "style": "title" },
-    "hud": { "gold_x": 4, "gold_y": 150, "owned_x": 4, "owned_y": 162 },
+    "title": { "x": 64, "y": 2 },
+    "hud": { "x": 4, "y": 150 },
     "player": { "size": 5, "color": "ink" },
     "landmark": { "size": 3, "color": "landmark" },
     "placeholder_player": { "cell": 6, "origin_x": 20, "origin_y": 30 },
@@ -37,7 +35,7 @@
 
   "vs": {
     "bg": 16,
-    "title": { "x": 64, "y": 4, "style": "title" },
+    "title": { "x": 64, "y": 4 },
     "player_hp": { "x": 10, "y": 50 },
     "boss_hp": { "x": 10, "y": 80 },
     "rounds": { "x": 10, "y": 110 },
@@ -48,7 +46,7 @@
 
   "message": {
     "bg": 16,
-    "title": { "x": 60, "y": 4, "style": "title" },
+    "title": { "x": 60, "y": 4 },
     "body": { "x": 10, "y": 40 },
     "page": { "x": 60, "y": 200 },
     "hint": { "x": 40, "y": 210 }
@@ -56,8 +54,8 @@
 
   "saveload": {
     "bg": 16,
-    "title": { "x": 60, "y": 4, "style": "title" },
-    "list": { "x": 10, "y": 40, "w": 166, "row_h": 40, "item_h": 26, "text_x": 10, "gold_x": 100 },
+    "title": { "x": 60, "y": 4 },
+    "list": { "x": 10, "y": 40, "w": 166, "row_h": 40, "item_h": 26, "text_x": 10, "highlight_offset": 10, "gold_x": 100 },
     "hint": { "x": 30, "y": 210 }
   }
 }
