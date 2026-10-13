@@ -813,6 +813,62 @@ impl GameApp {
         true
     }
 
+    /// N7（EXP-048/060）：manifest 驱动的 HD PNG 注入核心逻辑（同步，宿主传 fetch 闭包）。
+    ///
+    /// 与 native 的 [`Self::load_hd_pack_from_dir`] 同源：注入数 = manifest 全量
+    /// （`static_f1` + `multiframe_f1`），不硬编码 f1 数组。
+    /// `static_f1` → `NN_hd.png`（1 帧）；`multiframe_f1` → `NN_hd_f0..f4.png`（5 帧）。
+    /// 返回实际注入的 `(f1, 帧列表)`（与 `terrain_atlas` 同档喂入）；调用方按
+    /// `static_f1 + multiframe_f1` 断言全量（EXP-048/060）。
+    #[cfg(feature = "hd-8bit")]
+    pub fn load_hd_pngs_from_manifest(
+        &mut self,
+        static_f1: &[u32],
+        multiframe_f1: &[u32],
+        fetch: &mut dyn FnMut(&str) -> Option<Vec<u8>>,
+    ) -> Vec<(u32, Vec<Vec<u8>>)> {
+        let mut mapping: Vec<(u32, Vec<Vec<u8>>)> = Vec::new();
+        for f1 in static_f1.iter().chain(multiframe_f1.iter()) {
+            let f1 = *f1;
+            let mut frames: Vec<Vec<u8>> = Vec::new();
+            if multiframe_f1.contains(&f1) {
+                for k in 0..5u32 {
+                    let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{k}.png");
+                    if let Some(bytes) = fetch(&name) {
+                        if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                            if img.rgba.iter().any(|&b| b > 0) {
+                                frames.push(bytes);
+                            }
+                        }
+                    }
+                }
+            } else {
+                let name = format!("assets_hd_pack/1x/ui/{f1}_hd.png");
+                if let Some(bytes) = fetch(&name) {
+                    if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                        if img.rgba.iter().any(|&b| b > 0) {
+                            frames.push(bytes);
+                        }
+                    }
+                }
+            }
+            if !frames.is_empty() {
+                mapping.push((f1, frames));
+            }
+        }
+        if !mapping.is_empty() {
+            self.load_hd_pngs(mapping.clone());
+            if let Some(ta) = self.terrain_atlas.as_mut() {
+                let terrain_png: Vec<(u32, Vec<u8>)> = mapping
+                    .iter()
+                    .filter_map(|(f1, frames)| frames.first().map(|b| (*f1, b.clone())))
+                    .collect();
+                ta.load_hd_pngs(terrain_png);
+            }
+        }
+        mapping
+    }
+
     /// 处理输入事件：路由到 `scenes/` 里对应场景的 [`crate::scenes::Scene::on_input`]。
     ///
     /// 调用方随后调 `render` 刷新帧缓冲。返回是否发生了场景切换。
@@ -886,6 +942,17 @@ impl GameApp {
             route_render(host, kind);
             host.blit_scene_sprites(asset);
         }
+    }
+
+    /// 视觉回归基准（EXP-072）：渲染当前场景后返回 176×220 RGB565 帧缓冲只读切片。
+    ///
+    /// 测试专用（`tests/visual_regression.rs`）：调本方法拿像素 → 与
+    /// `assets/hd_baseline/<场景>.png` 基准图逐像素 diff（RGB565→RGB 量化误差 ≤1）。
+    /// 与 [`Self::render`] 同源（场景绘制 + 精灵 blit），不含 `present` 上屏副作用。
+    #[must_use]
+    pub fn render_to_framebuf(&mut self) -> &[u16] {
+        self.render();
+        self.shell.fb.as_slice()
     }
 }
 

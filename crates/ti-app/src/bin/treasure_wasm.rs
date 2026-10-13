@@ -68,48 +68,54 @@ impl Shell {
         ) {
             game.set_terrain(&pak, &map_bytes, "glmapm01.Map");
         }
-        // P2-8：HD PNG 档（`assets_hd_pack/1x/`）。wasm 端走 `macroquad::file::load_file`
-        // （HTTP fetch / 文件系统），不再用 `std::fs` 目录枚举（native 专用路径）。
+        // P2-8/N7：HD PNG 档（`assets_hd_pack/1x/ui/`）。注入清单来自
+        // `assets_hd_pack/hd_f1_manifest.json`（EXP-048/060：注入数 = 目录全量，
+        // 不再硬编码 f1 数组）。缺失 manifest 时回退空列表（PCX 原路径，不 panic）。
         #[cfg(feature = "hd-8bit")]
         {
-            // 静态 f1（`NN_hd.png`，116 个）+ 多帧 f1（`NN_hd_f0..f4.png`）
-            let statics: [u32; 116] = [
-                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-                25, 26, 27, 28, 29, 30, 33, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
-                49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
-                70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
-                91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108,
-                109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
-            ];
-            let mut mapping: Vec<(u32, Vec<Vec<u8>>)> = Vec::new();
-            for f1 in statics {
-                let name = format!("assets_hd_pack/1x/ui/{f1}_hd.png");
-                if let Ok(bytes) = macroquad::file::load_file(&name).await {
-                    if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
-                        if img.rgba.iter().any(|&b| b > 0) {
-                            mapping.push((f1, vec![bytes]));
-                        }
+            use ti_app::hd_manifest::{
+                HdF1Manifest, collect_hd_pngs_sync, manifest_expected_count,
+            };
+            let manifest: HdF1Manifest =
+                match macroquad::file::load_file("assets_hd_pack/hd_f1_manifest.json").await {
+                    Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
+                    Err(_) => HdF1Manifest::default(),
+                };
+            if !manifest.static_f1.is_empty() || !manifest.multiframe_f1.is_empty() {
+                // collect_hd_pngs_sync 是同步 fetch；wasm 侧在 async 上下文里逐条
+                // await macroquad::file::load_file 后喂入同步闭包（先批量预取再 collect）。
+                let static_names: Vec<String> = manifest
+                    .static_f1
+                    .iter()
+                    .map(|f1| format!("assets_hd_pack/1x/ui/{f1}_hd.png"))
+                    .collect();
+                let multi_names: Vec<String> = manifest
+                    .multiframe_f1
+                    .iter()
+                    .flat_map(|f1| {
+                        (0..5).map(move |fr| format!("assets_hd_pack/1x/ui/{f1}_hd_f{fr}.png"))
+                    })
+                    .collect();
+                let all_names: Vec<String> = static_names.into_iter().chain(multi_names).collect();
+                let mut fetch_map: std::collections::HashMap<String, Vec<u8>> =
+                    std::collections::HashMap::new();
+                for name in &all_names {
+                    if let Ok(bytes) = macroquad::file::load_file(name.as_str()).await {
+                        fetch_map.insert(name.clone(), bytes);
                     }
                 }
-            }
-            for f1 in [14u32, 31, 32, 37] {
-                let mut frames: Vec<Vec<u8>> = Vec::new();
-                for k in 0..5u32 {
-                    let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{k}.png");
-                    if let Ok(bytes) = macroquad::file::load_file(&name).await {
-                        if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
-                            if img.rgba.iter().any(|&b| b > 0) {
-                                frames.push(bytes);
-                            }
-                        }
-                    }
+                let mapping = collect_hd_pngs_sync(&manifest, &mut |name| fetch_map.remove(name));
+                let expected = manifest_expected_count(&manifest);
+                if mapping.len() < expected {
+                    eprintln!(
+                        "[hd] N7 注入 {}/{} f1（manifest 全量 {expected}；缺失 = PCX 回退，EXP-048/060 告警）",
+                        mapping.len(),
+                        expected
+                    );
                 }
-                if !frames.is_empty() {
-                    mapping.push((f1, frames));
+                if !mapping.is_empty() {
+                    game.load_hd_pngs(mapping);
                 }
-            }
-            if !mapping.is_empty() {
-                game.load_hd_pngs(mapping);
             }
         }
         let map_names = [

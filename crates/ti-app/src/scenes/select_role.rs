@@ -67,11 +67,25 @@ impl Scene for SelectRoleScene {
     }
 
     /// 点某行 = 选中该角色并确认；下滑 = 返回。
+    #[allow(clippy::cast_precision_loss)]
     fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
         match sample.gesture {
             Gesture::Tap => {
-                let Some(i) = layout::list_index_at(sample.x, sample.y, Character::all().len())
-                else {
+                // N3：命中带与渲染 `item_rect` 同公式（scenes.json select_role 段），正逆成对
+                let scene = ti_core::data::scenes()
+                    .ok()
+                    .and_then(|s| s.get("select_role"))
+                    .cloned()
+                    .unwrap_or_default();
+                let bands = layout::scene_list_bands(
+                    scene.list.x as f32,
+                    scene.list.x as f32 + scene.list.w as f32,
+                    scene.list.y as f32,
+                    scene.list.row_h as f32,
+                    scene.list.item_h as f32,
+                    ROLE_COUNT as usize,
+                );
+                let Some(i) = layout::scene_list_index_at(&bands, sample.x, sample.y) else {
                     return false;
                 };
                 let picked = Character::from_index(u32::try_from(i).unwrap_or(0));
@@ -100,7 +114,7 @@ impl Scene for SelectRoleScene {
             let y = layout.list.item_rect(i).y;
             if i == current {
                 let r = layout.list.item_rect(i);
-                host.fill_rect(r.x, r.y - 10, r.w, r.h, COLOR_SELECTED);
+                host.fill_rect(r.x, r.y, r.w, r.h, COLOR_SELECTED);
             }
             host.draw_text(c.label(), layout.list.text_x, y);
         }

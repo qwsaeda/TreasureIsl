@@ -165,7 +165,18 @@
 - **飞轮**：脚本读的是各文件的**实时内容**，规范/EXP/门禁变了脚本自动反映；
   LLM 子代理只需跑 `powershell -File scripts/flywheel_readme.ps1 -Package <本包>` + 回执，不再逐个工具调用。
 - **验证**：`powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package P6` 输出含 6 条必读
-  + P6 白名单 + 本域 EXP + gate 17 项 + doccheck2 10 项；`-Check -Quiet` exit 0；
-  `cargo run -q -p ti-tools --bin doccheck2 .` 10 项 0 error。
+   + P6 白名单 + 本域 EXP + gate 17 项 + doccheck2 10 项；`-Check -Quiet` exit 0；
+   `cargo run -q -p ti-tools --bin doccheck2 .` 10 项 0 error。
+
+### EXP-072 流程：表现层坐标/渲染改动后界面错乱，`cargo test` 全绿但漏到用户才发现（视觉回归基准图 + gate 第 18 项）
+- **现象**：P6 表现层改触摸/渲染坐标后界面错乱，`cargo test` 全绿（gate 16/17 项通过）但没跑实机/截图验证，漏到用户才发现。
+- **根因**：gate 16/17 项全是编译/测试/文档一致性，**没有视觉几何回归**；P4-1 `render_parity` 只锁 PCX 解码基准（`render_parity.rs` 5 项断言），不锁「场景渲染最终像素」；表现层坐标/布局改动的回归只能靠肉眼或实机截图。
+- **解法**：
+  1. `crates/ti-app/src/game_app.rs` 加 `render_to_framebuf()`（渲染 + 返回 176×220 RGB565 只读切片，测试专用）；
+  2. `crates/ti-app/tests/visual_regression.rs`（5 测试）：3 关键场景（Index/SelectRole/MainMap）headless 渲染 → 逐像素与 `assets/hd_baseline/<场景>.png` 对比（RGB565→RGB8，允许 ±1 量化误差），基准图缺失时生成落盘，存在时 diff 断言；
+  3. `scripts/visual_baseline.ps1`（幂等）：`-Check` 模式 = 基准图 3 张在位 + `cargo test` 全绿 → exit 0；
+  4. gate 加第 18 项 `visual-regression`（`visual_baseline.ps1 -Check`）。
+- **飞轮**：表现层任何坐标/布局改动 → gate 第 18 项自动 diff 基准图 → 漂移当场拦，不等用户发现；改完正常渲染后重跑 `visual_baseline.ps1`（无 -Check）重新生成基准图。
+- **验证**：`cargo test -p ti-app --test visual_regression` 5 项全绿（首次生成 3 张基准图 + 二次 0 diff）；`powershell scripts/visual_baseline.ps1 -Check` exit 0；gate 第 18 项 PASS。
 
 

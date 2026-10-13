@@ -122,6 +122,17 @@ if (Test-Path (Join-Path $hdPack '1x')) {
     $hd1x = Join-Path $hdOut '1x'
     Copy-Item (Join-Path $hdPack '1x') $hd1x -Recurse -Force
     Say "hd/1x  <- assets_hd_pack/1x（首屏 HD 真彩）"
+    # N7：HD 注入 manifest（wasm/android bin 启动时读，EXP-048/060 注入数 = 目录全量）。
+    # 路径与 bin 内 fetch 前缀 `assets_hd_pack/` 对齐（bin 约定，见 treasure_wasm.rs）。
+    $manifestSrc = Join-Path $hdPack 'hd_f1_manifest.json'
+    if (Test-Path $manifestSrc) {
+        $manifestOut = Join-Path $outDir 'assets_hd_pack'
+        New-Item -ItemType Directory -Force -Path $manifestOut | Out-Null
+        Copy-Item $manifestSrc (Join-Path $manifestOut 'hd_f1_manifest.json') -Force
+        Say "assets_hd_pack/hd_f1_manifest.json（N7 注入清单）"
+    } else {
+        Say "SKIP  hd_f1_manifest.json（不存在，N7 注入回退 PCX 原路径）"
+    }
     # webp 非首屏（体积减 30~50%）
     if (Test-Path (Join-Path $hdPack 'webp')) {
         $hdWebp = Join-Path $hdOut 'webp'

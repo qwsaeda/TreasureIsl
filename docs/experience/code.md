@@ -172,4 +172,55 @@
   单层自洽测试会漏掉「两层公式约定不一致」的漂移。子代理修跨层 bug 时
   必须同时改两侧 + 补往返测试，否则同一条 EXP 会二次踩坑。
 
+### EXP-071 列表场景触摸命中带必须与渲染 `item_rect` 公式正逆成对（S11 审计 N3）
+- 现象：`select_role` / `select_map` / `saveload` 的 `on_touch` 用 `touch.rs` 里
+  各自硬编码的常量（`LIST_Y0` / `SLOT_Y0` / `SLOT_STEP` / `SLOT_H`）做命中判定，
+  而渲染侧用 `ListLayout::item_rect(i)`（来自 `scenes.json`）算高亮位置。
+  两套坐标独立维护，改 `scenes.json` 后触摸必然脱节（EXP-059 同类问题第三次出现）。
+- 根因：`touch.rs` 的命中区常量与渲染公式无程序化绑定，子代理修渲染时不会
+  同步改触摸常量；旧 API `list_index_at` / `slot_at` 已废弃但未删除，新代码
+  误用旧常量。
+- 解法：
+  1. `touch.rs` 删除 `LIST_Y0` / `SLOT_Y0` / `SLOT_STEP` / `SLOT_H` 常量及
+     `list_index_at` / `slot_at` 函数；
+  2. 新增 `scene_list_bands(x0, x1, y0, step, item_h, count) -> Vec<RectF>` 和
+     `slot_bands(y0, step, item_h, count) -> Vec<RectF>`，公式与
+     `ListLayout::item_rect(i)` 严格互逆（正逆成对，EXP-067）；
+  3. 新增 `scene_list_index_at(&[RectF], x, y)` / `slot_band_index_at(&[RectF], x, y)`
+     判定命中带；
+  4. 三个场景的 `on_touch` 改读 `ti_core::data::scenes()` 取 `ListLayout`，
+     调 `scene_list_bands` / `slot_bands` 推导命中带，不再用常量；
+  5. 单测 `scene_list_bands_match_item_rect` / `slot_bands_match_item_rect` 做
+     正逆变换往返（渲染 `item_rect` 中心点必须命中对应带）；
+  6. `doccheck2` 第 11 项 `check_touch_render_pair` 断言三个场景文件不含
+     `list_index_at` / `slot_at(` 且含 `scene_list_bands` / `slot_bands`。
+- 验证：`cargo test --workspace` 全绿（含 2 个新往返断言测试）；
+  `doccheck2` 0 errors；`gate.ps1` 0 failures。
+- 教训：**触摸命中几何必须从渲染同一 `ListLayout` 推导，禁止独立硬编码常量**；
+  改 `scenes.json` 后触摸自动跟随，无需同步维护两套坐标。
+  子代理修列表场景渲染/触摸时，必须先读 `touch.rs` 的 `scene_list_bands` /
+  `slot_bands` 再动手，不得在场景文件里新建命中区常量。
+
+### EXP-073 触摸/渲染 band 数必须 == 渲染行数（`Character::all().len()`），禁止硬编码（S11 飞轮第 3 轮 N8）
+- 现象：`select_role.rs` `on_touch` 调 `scene_list_bands(..., 9)` 硬编码 9 条命中带，
+  但渲染 `render` 只遍历 `Character::all()`（5 个角色，5 行）。触摸侧多出的第 6–9 条带
+  无渲染对应，点落时 `from_index(5..=8) → None → unwrap_or(0)` 静默选中第 0 角色，
+  违反 EXP-067 触摸/渲染同坐标系（第 3 次同类变体，EXP-059/EXP-071 之后）。
+- 根因：`select_role.rs` 的 `ROLE_COUNT = 5` 常量已正确（与 `Character::all()` 一致），
+  但 `on_touch` 写 band 数时误写了 9（疑似参照 `select_map` 的 3 或其他场景旧值），
+  未复用 `ROLE_COUNT`。`scene_list_bands` 的 `count` 参数是自由 usize，编译期无约束
+  阻止与渲染行数脱节。
+- 解法：
+  1. `select_role.rs` `on_touch` 的 band 数从硬编码 `9` 改为 `ROLE_COUNT as usize`
+     （`ROLE_COUNT` 已声明 = 5，与 `Character::all().len()` 一致）；
+  2. `doccheck2` 第 12 项 `check_scene_band_count` 断言 `select_role.rs` 的
+     `scene_list_bands` 调用参数 == `Character::all().len()`（即 5），
+     若 band 数走常量则检查常量值 == 5。
+- 验证：`cargo build -p ti-app --target wasm32-unknown-unknown` 0 error；
+  `cargo test --workspace` 全绿；`cargo clippy --workspace --all-targets -- -D warnings` 0 warning；
+  `doccheck2` 第 12 项 PASS。
+- 教训：**`scene_list_bands` 的 band 数必须 == 渲染循环 `Character::all().len()`，
+  禁止硬编码**。band 数应走场景常量（如 `ROLE_COUNT`），不得写魔法数字。
+  子代理修列表场景触摸时，必须先核对 band 数 == 渲染行数，不得凭印象填数。
+
 

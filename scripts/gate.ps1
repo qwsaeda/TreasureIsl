@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (17 items) ==="
+Write-Host "=== gate: TreasureIsl (18 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -145,6 +145,11 @@ Report ($LASTEXITCODE -eq 0) 'check_module_contracts (包白名单互斥 + 契�
 $fwOut = & powershell -ExecutionPolicy Bypass -File "scripts/flywheel_readme.ps1" -Check -Quiet 2>&1
 $fwOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'flywheel-readme (开轮必读脚本完整性)'
+
+# 18) 视觉回归基准图（EXP-072）：3 场景 headless 逐像素 diff，基准图存在且 0 diff
+$vrOut = & powershell -ExecutionPolicy Bypass -File "scripts/visual_baseline.ps1" -Check 2>&1
+$vrOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'visual-regression (3 场景 headless 基准图逐像素 diff)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

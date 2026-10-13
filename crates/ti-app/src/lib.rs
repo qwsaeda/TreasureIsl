@@ -19,6 +19,7 @@ pub mod commands;
 pub mod error;
 pub mod game_app;
 pub mod glyph_raster;
+pub mod hd_manifest;
 pub mod i18n;
 pub mod menu_shell;
 pub mod scenes;

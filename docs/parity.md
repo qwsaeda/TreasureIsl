@@ -52,7 +52,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 
-## 代码质量门禁 `scripts/gate.ps1`（16 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（18 项，循环每轮强制）
 
 ```
 1  cargo fmt --all -- --check
@@ -97,9 +97,16 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
         C3 根目录清空原版文件 + legacy 归档在位 / C4 oracle 桥接层与归档同源）
 16 模块并行前置（S11.4，docs/process/05_module_parallel.md §4 并行纪律 1/2）：
        python scripts/check_module_contracts.py --check
-       （M1 包白名单两两互斥（plan/packages.yaml）/ M2 契约校验锚点在 crates/ grep 到 /
-        M3 ti-app 跨 crate 可见面只走契约模块（domain/rules/data）/ M4 draft 残留 WARN）
-```
+        （M1 包白名单两两互斥（plan/packages.yaml）/ M2 契约校验锚点在 crates/ grep 到 /
+         M3 ti-app 跨 crate 可见面只走契约模块（domain/rules/data）/ M4 draft 残留 WARN）
+ 17 飞轮开轮必读脚本（EXP-070）：
+        powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check -Quiet
+        （脚本存在 + 输出含 6 条必读 + gate ≥16 项 + doccheck2 ≥8 项，exit 0 = PASS）
+ 18 视觉回归基准图（EXP-072）：
+        powershell -ExecutionPolicy Bypass -File scripts/visual_baseline.ps1 -Check
+        （3 场景 headless 逐像素 diff：Index/SelectRole/MainMap，基准图在位且 0 diff = PASS；
+         基准图缺失时先跑 `visual_baseline.ps1` 无 -Check 生成）
+ ```
 
 任一项红灯 = 本轮不可标 verified，不可推进下一任务。
 

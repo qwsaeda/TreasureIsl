@@ -114,6 +114,10 @@ impl Default for TouchPad {
 
 /// 触屏命中区布局（逻辑坐标，与 `GameApp::render` 各场景的绘制位置
 /// **严格一致**；改了绘制坐标必须同步改这里）。
+///
+/// 列表类场景（`select_role` / `select_map` / `saveload`）的命中带**不再用常量**，
+/// 改由 [`scene_list_bands`] / [`slot_bands`] 从 `ListLayout`（scenes.json）推导，
+/// 与渲染 `item_rect` 公式正逆成对（EXP-071）。
 pub mod layout {
     /// 主菜单行首 y（= `MENU_TOP(96) - 12`，即选中高亮矩形顶边）。
     pub const MENU_ROW_Y0: f32 = 84.0;
@@ -126,28 +130,12 @@ pub mod layout {
     /// 主菜单项数（`spec/menu.md §a` case 0..=5）。
     pub const MENU_COUNT: usize = 6;
 
-    /// 选角/选图列表行首 y（= 绘制 `y - 10`）。
-    pub const LIST_Y0: f32 = 40.0;
-    /// 选角/选图列表行步进。
-    pub const LIST_STEP: f32 = 30.0;
-    /// 选角/选图命中区左边界。
-    pub const LIST_X0: f32 = 20.0;
-    /// 选角/选图命中区右边界（= `x + w`）。
-    pub const LIST_X1: f32 = 156.0;
-
     /// 主地图网格原点 x（与渲染 `px = col * 6 + 20` 互逆）。
     pub const GRID_X0: f32 = 20.0;
     /// 主地图网格原点 y（与渲染 `py = row * 6 + 30` 互逆）。
     pub const GRID_Y0: f32 = 30.0;
     /// 主地图网格格距（逻辑像素）。
     pub const GRID_STEP: f32 = 6.0;
-
-    /// 存读档槽位首 y（= 绘制 `y`）。
-    pub const SLOT_Y0: f32 = 40.0;
-    /// 存读档槽位步进。
-    pub const SLOT_STEP: f32 = 40.0;
-    /// 存读档槽位命中高度。
-    pub const SLOT_H: f32 = 40.0;
 
     /// 消息界面左右分区 x（左 = 关闭，右 = 下一页）。
     pub const MSG_SPLIT_X: f32 = 88.0;
@@ -168,17 +156,68 @@ pub mod layout {
         if idx < MENU_COUNT { Some(idx) } else { None }
     }
 
-    /// 点按是否落在选角/选图列表某行 → 返回行索引（`< count`）。
-    // allow 理由：同 [`menu_row_at`]，`y < LIST_Y0` 已排除负值。
+    /// 场景列表命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071）。
+    ///
+    /// `select_role` / `select_map` / `saveload` 等列表场景的触摸命中与渲染高亮
+    /// 共用此公式（正逆成对），不再各自维护常量（EXP-048/060）。
     #[must_use]
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn list_index_at(x: f32, y: f32, count: usize) -> Option<usize> {
-        if !(LIST_X0..LIST_X1).contains(&x) || y < LIST_Y0 {
-            return None;
-        }
-        let idx = ((y - LIST_Y0) / LIST_STEP).floor() as i32;
-        let idx = usize::try_from(idx).ok()?;
-        if idx < count { Some(idx) } else { None }
+    #[allow(clippy::cast_precision_loss)]
+    pub fn scene_list_bands(
+        x0: f32,
+        x1: f32,
+        y0: f32,
+        step: f32,
+        item_h: f32,
+        count: usize,
+    ) -> Vec<RectF> {
+        (0..count)
+            .map(|i| {
+                let y = y0 + i as f32 * step - item_h / 2.0;
+                RectF { x0, x1, y0: y, y1: y + item_h }
+            })
+            .collect()
+    }
+
+    /// 点按落在哪条场景列表命中带（[`scene_list_bands`] 几何）→ 返回行索引。
+    /// 与渲染 `item_rect` 公式严格互逆（EXP-071 正逆成对）。
+    #[must_use]
+    pub fn scene_list_index_at(bands: &[RectF], x: f32, y: f32) -> Option<usize> {
+        bands.iter().position(|b| (b.x0..b.x1).contains(&x) && (b.y0..b.y1).contains(&y))
+    }
+
+    /// 场景列表命中带（逻辑坐标矩形，`y0 ≤ y < y1` 半开区间）。
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub struct RectF {
+        /// 左边界（含）。
+        pub x0: f32,
+        /// 右边界（不含）。
+        pub x1: f32,
+        /// 上边界（含）。
+        pub y0: f32,
+        /// 下边界（不含）。
+        pub y1: f32,
+    }
+
+    /// 存读档槽位命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071）。
+    ///
+    /// 与 `saveload` 场景渲染共用同一 `ListLayout` 参数（正逆成对）；
+    /// 命中区为整屏宽（`0..176`），行带由 `item_rect` 公式推导。
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
+    pub fn slot_bands(y0: f32, step: f32, item_h: f32, count: usize) -> Vec<RectF> {
+        (0..count)
+            .map(|i| {
+                let y = y0 + i as f32 * step - item_h / 2.0;
+                RectF { x0: 0.0, x1: 176.0, y0: y, y1: y + item_h }
+            })
+            .collect()
+    }
+
+    /// 点按落在哪条存读档槽位命中带（[`slot_bands`] 几何）→ 返回槽位索引。
+    /// 与渲染 `item_rect` 公式严格互逆（EXP-071 正逆成对）。
+    #[must_use]
+    pub fn slot_band_index_at(bands: &[RectF], x: f32, y: f32) -> Option<usize> {
+        bands.iter().position(|b| (b.x0..b.x1).contains(&x) && (b.y0..b.y1).contains(&y))
     }
 
     /// 点按是否落在主地图某格（**占位 6×6 网格**）→ 返回 `(row, col)`（越界 → `None`）。
@@ -242,23 +281,11 @@ pub mod layout {
         // clamp 保证 row/col ∈ [0, grid)，f32→u32 不丢符号、不截断
         Some((row as u32, col as u32))
     }
-
-    /// 点按是否落在存读档第 `slot` 个槽位（0 起）。
-    // allow 理由：槽位下标 ≤ 4（`SaveManager` 默认 5 槽），远小于 f32 尾数 23 位。
-    #[must_use]
-    #[allow(clippy::cast_precision_loss)]
-    pub fn slot_at(x: f32, y: f32, slot: usize) -> bool {
-        let step = slot as f32 * SLOT_STEP;
-        (0.0..176.0).contains(&x) && (SLOT_Y0 + step..SLOT_Y0 + step + SLOT_H).contains(&y)
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::layout::{
-        GRID_STEP, GRID_X0, GRID_Y0, LIST_STEP, LIST_Y0, MENU_ROW_STEP, MENU_ROW_Y0, SLOT_H,
-        SLOT_STEP, SLOT_Y0,
-    };
+    use super::layout::{GRID_STEP, GRID_X0, GRID_Y0, MENU_ROW_STEP, MENU_ROW_Y0};
     use super::{Gesture, TouchPad, TouchSample};
     use ti_platform::gfx::Viewport;
 
@@ -340,17 +367,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::cast_precision_loss)] // 测试下标 ≤ 5，f32 表示无损
-    fn list_index_maps_five_roles() {
-        for i in 0..5usize {
-            let y = LIST_Y0 + i as f32 * LIST_STEP + 4.0;
-            assert_eq!(super::layout::list_index_at(88.0, y, 5), Some(i), "item {i}");
-        }
-        assert_eq!(super::layout::list_index_at(88.0, LIST_Y0 + 5.0 * LIST_STEP + 4.0, 5), None);
-        assert_eq!(super::layout::list_index_at(4.0, LIST_Y0 + 4.0, 5), None, "左边界外");
-    }
-
-    #[test]
     #[allow(clippy::cast_precision_loss)] // 测试坐标 ≤ 19，f32 表示无损
     fn grid_cell_inverts_render_formula() {
         // 渲染 px = col*6 + 20 / py = row*6 + 30 → 命中应还原 (row, col)
@@ -367,11 +383,41 @@ mod tests {
     }
 
     #[test]
-    fn slot_bands_do_not_overlap() {
-        assert!(super::layout::slot_at(10.0, SLOT_Y0 + 2.0, 0));
-        assert!(super::layout::slot_at(170.0, SLOT_Y0 + SLOT_H - 1.0, 0));
-        assert!(!super::layout::slot_at(10.0, SLOT_Y0 + SLOT_H + 1.0, 0), "槽 0 下沿外");
-        assert!(super::layout::slot_at(10.0, SLOT_Y0 + SLOT_STEP + 2.0, 1));
-        assert!(!super::layout::slot_at(200.0, SLOT_Y0 + 2.0, 0), "右侧边界外");
+    #[allow(clippy::cast_precision_loss)]
+    fn scene_list_bands_match_item_rect() {
+        // EXP-071 正逆成对：渲染 `ListLayout::item_rect(i)` 的中心点必须命中
+        // `scene_list_index_at` 的第 i 条命中带（select_role / select_map 同公式）。
+        use ti_core::data::ListLayout;
+        let ll = ListLayout { x: 20, y: 50, row_h: 30, item_h: 26, text_x: 60, w: 136 };
+        let bands = super::layout::scene_list_bands(20.0, 20.0 + 136.0, 50.0, 30.0, 26.0, 5);
+        for i in 0..5usize {
+            let r = ll.item_rect(i);
+            let cx = (r.x + r.w / 2) as f32;
+            let cy = (r.y + r.h / 2) as f32;
+            assert_eq!(super::layout::scene_list_index_at(&bands, cx, cy), Some(i), "item {i}");
+        }
+        // 行带之外 → None
+        assert_eq!(super::layout::scene_list_index_at(&bands, 88.0, 5.0), None, "上沿外");
+        assert_eq!(
+            super::layout::scene_list_index_at(&bands, 88.0, 50.0 + 5.0 * 30.0),
+            None,
+            "超出行数"
+        );
+    }
+
+    #[test]
+    #[allow(clippy::cast_precision_loss)]
+    fn slot_bands_match_item_rect() {
+        // EXP-071 正逆成对：saveload 槽位渲染 `item_rect` 中心点必须命中 `slot_bands`。
+        use ti_core::data::ListLayout;
+        let ll = ListLayout { x: 10, y: 40, row_h: 40, item_h: 26, text_x: 10, w: 166 };
+        let bands = super::layout::slot_bands(40.0, 40.0, 26.0, 5);
+        for i in 0..5usize {
+            let r = ll.item_rect(i);
+            let cx = 88.0;
+            let cy = (r.y + r.h / 2) as f32;
+            assert_eq!(super::layout::slot_band_index_at(&bands, cx, cy), Some(i), "slot {i}");
+        }
+        assert_eq!(super::layout::slot_band_index_at(&bands, 88.0, 5.0), None, "上沿外");
     }
 }

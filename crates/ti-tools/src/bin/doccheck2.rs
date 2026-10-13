@@ -521,6 +521,95 @@ fn check_flywheel_script(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 11. 触摸/渲染正逆成对（EXP-071）：列表场景的 `on_touch` 必须用
+///     `scene_list_bands` / `slot_bands`（从 `ListLayout` 推导），
+///     不得残留旧的 `list_index_at` / `slot_at` 调用。
+fn check_touch_render_pair(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    for rel in [
+        "crates/ti-app/src/scenes/select_role.rs",
+        "crates/ti-app/src/scenes/select_map.rs",
+        "crates/ti-app/src/scenes/saveload.rs",
+    ] {
+        let src = read_file(root, rel).unwrap_or_default();
+        let has_old_api = src.contains("list_index_at") && !src.contains("scene_list_index_at")
+            || src.contains("slot_at(") && !src.contains("slot_band_index_at");
+        if has_old_api {
+            errors.push(format!("{rel} 仍残留旧触摸 API list_index_at/slot_at（EXP-071 应改用 scene_list_bands/slot_bands）"));
+        }
+        let has_bands = src.contains("scene_list_bands") || src.contains("slot_bands");
+        if !has_bands {
+            errors
+                .push(format!("{rel} 未使用 scene_list_bands/slot_bands（EXP-071 正逆成对缺失）"));
+        }
+    }
+    let touch_src = read_file(root, "crates/ti-app/src/touch.rs").unwrap_or_default();
+    if touch_src.contains("LIST_Y0") || touch_src.contains("SLOT_Y0") {
+        errors.push("touch.rs 仍残留旧常量 LIST_Y0/SLOT_Y0（EXP-071 应已移除）".to_string());
+    }
+    errors
+}
+
+/// 12. 场景 band 数 == 渲染行数（EXP-073）：`select_role.rs` 的 `scene_list_bands`
+///     调用参数必须等于 `Character::all().len()`（即 5），禁止硬编码魔法数字。
+///     若 band 数走常量（如 `ROLE_COUNT`），则检查常量值 == 5。
+fn check_scene_band_count(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(src) = read_file(root, "crates/ti-app/src/scenes/select_role.rs") else {
+        return vec!["select_role.rs 不存在，无法校验 band 数".to_string()];
+    };
+    // 找到 `scene_list_bands(` 调用
+    let Some(call_pos) = src.find("scene_list_bands(") else {
+        return errors; // 已由 check_touch_render_pair 报错
+    };
+    // 提取调用块（平衡括号）
+    let after_call = &src[call_pos + "scene_list_bands(".len()..];
+    let mut depth = 1usize;
+    let mut end_pos = 0usize;
+    for (i, c) in after_call.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    end_pos = i;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let args_block = after_call[..end_pos].trim();
+    // 按逗号取最后一个非空参数（band 数）
+    let last_arg = args_block.rsplit(',').map(str::trim).find(|s| !s.is_empty()).unwrap_or("");
+    // 判断 band 数是否为字面量 5 或常量 ROLE_COUNT
+    let band_ok = last_arg == "5"
+        || last_arg == "5usize"
+        || last_arg == "ROLE_COUNT as usize"
+        || last_arg == "ROLE_COUNT";
+    if !band_ok {
+        errors.push(format!(
+            "select_role.rs scene_list_bands band 数参数为 `{last_arg}`，必须 == Character::all().len()（= 5）或 ROLE_COUNT（EXP-073）"
+        ));
+    }
+    // 若走常量，验证常量值 == 5
+    if last_arg.contains("ROLE_COUNT") {
+        let Some(role_const_pos) = src.find("const ROLE_COUNT") else {
+            errors.push("select_role.rs 引用 ROLE_COUNT 但未定义该常量".to_string());
+            return errors;
+        };
+        let after_const = &src[role_const_pos..];
+        let const_line_end = after_const.find(';').unwrap_or(0);
+        let const_decl = &after_const[..=const_line_end];
+        if !const_decl.contains("= 5") {
+            errors.push(format!(
+                "select_role.rs ROLE_COUNT 常量值 ≠ 5（声明: `{const_decl}`），必须 == Character::all().len()（EXP-073）"
+            ));
+        }
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -536,9 +625,11 @@ fn main() -> ExitCode {
     all_errors.extend(check_flywheel_readback(&root));
     all_errors.extend(check_battle_player_data_driven(&root));
     all_errors.extend(check_flywheel_script(&root));
+    all_errors.extend(check_touch_render_pair(&root));
+    all_errors.extend(check_scene_band_count(&root));
 
     println!(
-        "doccheck2: {} error(s) across 10 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script)",
+        "doccheck2: {} error(s) across 12 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/scene-band-count)",
         all_errors.len()
     );
     for err in &all_errors {

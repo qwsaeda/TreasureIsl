@@ -130,49 +130,31 @@ pub async fn run() {
         }
     }
 
-    // S7.5/S8.9：HD PNG 档（`assets_hd_pack/1x/ui/`）。APK 端无目录枚举能力，按已知
-    // 静态/多帧 HD PNG 文件名逐个尝试读取；全部缺失则走 RGB565 PCX 回退（不 panic）。
+    // S7.5/S8.9 + N7：HD PNG 档（`assets_hd_pack/1x/ui/`）。注入清单来自
+    // `assets_hd_pack/hd_f1_manifest.json`（EXP-048/060：注入数 = 目录全量，不硬编码）。
     #[cfg(feature = "hd-8bit")]
     {
-        // 静态 f1（`NN_hd.png`，116 个）
-        let statics: [u32; 116] = [
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-            26, 27, 28, 29, 30, 33, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
-            51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72,
-            73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94,
-            95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
-            113, 114, 115, 116, 117, 118, 119, 120,
-        ];
-        let mut mapping: Vec<(u32, Vec<Vec<u8>>)> = Vec::new();
-        for f1 in statics {
-            let name = format!("assets_hd_pack/1x/ui/{f1}_hd.png");
-            if let Some(bytes) = read_asset(&name).await {
-                if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
-                    if img.rgba.iter().any(|&b| b > 0) {
-                        mapping.push((f1, vec![bytes]));
-                    }
-                }
+        use crate::hd_manifest::{
+            HdF1Manifest, load_hd_pngs_from_manifest, manifest_expected_count,
+        };
+        let manifest: HdF1Manifest = match read_asset("assets_hd_pack/hd_f1_manifest.json").await {
+            Some(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
+            None => HdF1Manifest::default(),
+        };
+        if !manifest.static_f1.is_empty() || !manifest.multiframe_f1.is_empty() {
+            let mut fetch = |name: &str| async move { read_asset(name).await };
+            let mapping = load_hd_pngs_from_manifest(&manifest, &mut fetch).await;
+            let expected = manifest_expected_count(&manifest);
+            if mapping.len() < expected {
+                eprintln!(
+                    "[hd] N7 注入 {}/{} f1（manifest 全量 {expected}；缺失 = PCX 回退，EXP-048/060 告警）",
+                    mapping.len(),
+                    expected
+                );
             }
-        }
-        // 多帧 f1（`NN_hd_f0..f4.png`）
-        for f1 in [14u32, 31, 32, 37] {
-            let mut frames: Vec<Vec<u8>> = Vec::new();
-            for k in 0..5u32 {
-                let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{k}.png");
-                if let Some(bytes) = read_asset(&name).await {
-                    if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
-                        if img.rgba.iter().any(|&b| b > 0) {
-                            frames.push(bytes);
-                        }
-                    }
-                }
+            if !mapping.is_empty() {
+                game.load_hd_pngs(mapping);
             }
-            if !frames.is_empty() {
-                mapping.push((f1, frames));
-            }
-        }
-        if !mapping.is_empty() {
-            game.load_hd_pngs(mapping);
         }
     }
 

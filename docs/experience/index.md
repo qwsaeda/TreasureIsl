@@ -30,8 +30,8 @@
 | [`reverse.md`](reverse.md) | 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程 | 4 |
 | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 9 |
 | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
- | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070） | 15 |
-| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066） | 15 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072） | 15 |
+| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071） | 16 |
 
 ## 条目索引
 
@@ -107,6 +107,9 @@
 | EXP-067 | code | | 跨层几何公式（rules 逻辑坐标 ↔ 渲染投影）须正逆成对测试：逆变换(正变换(p))==p，单层公式自洽不算数（S10.5 审计发现，主地图触摸命中教训 EXP-059 的泛化） |
 | EXP-068 | process | | 子代理开轮不读最新规范/EXP/契约 → 重复踩坑（ty-app 前缀、跨层几何不对齐、不知 gate 第 16 项查什么）：开轮必读清单 6 条 + 规范回执固化进 06_flywheel（飞轮单一事实源）+ 05 §4.5 + 03 §7 + doccheck2 第 8 项 `check_flywheel_readback` |
 | EXP-070 | process | | 开轮必读靠 LLM 手动 Read 6 份文档 → 工具调用爆炸 + 漏读（P6 子代理漏读在途白名单）：`scripts/flywheel_readme.ps1` 一键生成完整必读（环境事实 + 6 文档 + 白名单 + 本域 EXP + gate 项 + doccheck2 断言），gate 第 17 项 `flywheel-readme -Check` 验证完整性，doccheck2 第 10 项 `check_flywheel_script` 固化 |
+| EXP-071 | code | | 列表场景触摸命中带必须与渲染 `item_rect` 公式正逆成对：`touch.rs` 删旧常量/旧 API，新增 `scene_list_bands`/`slot_bands` 从 `ListLayout` 推导，三场景 `on_touch` 改读 `scenes.json`，doccheck2 第 11 项 `check_touch_render_pair` 固化（S11 审计 N3） |
+ | EXP-072 | process | | 表现层改触摸/渲染坐标后界面错乱但 `cargo test` 全绿漏到用户才发现：P4-1 只锁 PCX 解码基准不锁「场景渲染最终像素」，gate 无视觉几何回归。`visual_regression.rs` 3 场景 headless 逐像素 diff + `visual_baseline.ps1` 基准图 + gate 第 18 项 `visual-regression`（EXP-072） |
+ | EXP-073 | code | | 触摸/渲染 band 数必须 == 渲染行数（`Character::all().len()`），禁止硬编码：`select_role.rs` `scene_list_bands(..., 9)` 硬编码 9 条带但渲染只 5 行，多出的 4 条带 `from_index(5..=8) → None → unwrap_or(0)` 静默选第 0 角色，违反 EXP-067（EXP-059/EXP-071 第 3 次变体）。band 数走场景常量 `ROLE_COUNT`，doccheck2 第 12 项 `check_scene_band_count` 固化 |
 
 ## 条目格式（写新条时照抄）
 

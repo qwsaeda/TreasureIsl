@@ -73,11 +73,25 @@ impl Scene for SelectMapScene {
     /// 点某行 = 选中该地图并确认；下滑 = 返回。
     ///
     /// 未解锁地图点按由 `on_input` 的 `Confirm` 分支判 `Sfx::Invalid`。
+    #[allow(clippy::cast_precision_loss)]
     fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
         match sample.gesture {
             Gesture::Tap => {
-                let Some(i) = layout::list_index_at(sample.x, sample.y, MapSlot::all().len())
-                else {
+                // N3：命中带与渲染 `item_rect` 同公式（scenes.json select_map 段），正逆成对
+                let scene = ti_core::data::scenes()
+                    .ok()
+                    .and_then(|s| s.get("select_map"))
+                    .cloned()
+                    .unwrap_or_default();
+                let bands = layout::scene_list_bands(
+                    scene.list.x as f32,
+                    scene.list.x as f32 + scene.list.w as f32,
+                    scene.list.y as f32,
+                    scene.list.row_h as f32,
+                    scene.list.item_h as f32,
+                    MAP_COUNT as usize,
+                );
+                let Some(i) = layout::scene_list_index_at(&bands, sample.x, sample.y) else {
                     return false;
                 };
                 host.set_map_slot(MapSlot::from_index(u32::try_from(i).unwrap_or(0)));
@@ -105,11 +119,12 @@ impl Scene for SelectMapScene {
             let locked = !host.map_unlocked(*m);
             if i == current && !locked {
                 let r = layout.list.item_rect(i);
-                host.fill_rect(r.x, r.y - 10, r.w, r.h, COLOR_SELECTED);
+                host.fill_rect(r.x, r.y, r.w, r.h, COLOR_SELECTED);
             }
             host.draw_text(m.label(), layout.list.text_x, y);
             if locked {
-                host.draw_text(i18n::sget("scene.select_map.locked"), layout.page.x, y);
+                let text_x = layout.extra.get("text_x").map_or(0, |v| v.x);
+                host.draw_text(i18n::sget("scene.select_map.locked"), text_x, y);
             }
         }
         host.draw_text(i18n::sget("scene.select_map.nav_hint"), layout.hint.x, layout.hint.y);
