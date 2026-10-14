@@ -31,7 +31,7 @@ const FB_H: usize = 220;
 const FB_PIXELS: usize = FB_W * FB_H;
 const TOLERANCE: i32 = 1;
 /// 清屏背景色 RGB565（`menu_shell::COLOR_BG`，UI 像素 = 非背景色，EXP-074）。
-const BG565: u16 = 16;
+const BG565: u16 = 0x87BB;
 
 #[test]
 fn render_snapshot_all_scenes() {

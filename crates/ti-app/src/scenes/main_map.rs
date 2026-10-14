@@ -212,8 +212,8 @@ impl Scene for MainMapScene {
             .cloned()
             .unwrap_or_default();
 
-        // HUD（标题条 + 金/持有量）
-        host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        // HUD（S14：棕色标题条 + 米白背景 + 等距瓦片 + 代码棋子/据点）
+        host.fill_rect(0, 0, 176, 24, COLOR_TITLE_BAR);
         host.draw_text(i18n::sget("scene.main_map.title"), layout.title.x, layout.title.y);
         let gold = host.gold();
         let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);

@@ -32,22 +32,24 @@ pub const INK_COLOR: u16 = 0xFFFF;
 #[cfg(feature = "hd-8bit")]
 pub const INK_COLOR_RGBA: u32 = 0xFFFF_FFFF;
 
-/// 场景布局色（8-bit 调色板索引；S8.4 起由 `scenes.json` 统一供数，过渡期保留 const）。
-pub const COLOR_TITLE_BAR: u16 = 0x01E0;
-/// 选中高亮布局色（调色板索引 `0x03E0`）。
-pub const COLOR_SELECTED: u16 = 0x03E0;
-/// 据点标记布局色（调色板索引 `0x07C0`）。
-pub const COLOR_LANDMARK: u16 = 0x07C0;
-/// 背景布局色（调色板索引 `0x0010`，深蓝）。
-pub const COLOR_BG: u16 = 0x0010;
-/// 玩家棋子布局色（调色板索引 `0xFFFF`，白）。
-pub const COLOR_PLAYER: u16 = 0xFFFF;
+/// 场景布局色（S14 全量重设计，航海图纸质系，`docs/business/08_layout_design.md` §2）。
+pub const COLOR_TITLE_BAR: u16 = 0x87BB; // #8B4513 棕（主色，标题条/边框）
+/// 选中高亮布局色（#2E8B57 海绿，强调色）。
+pub const COLOR_SELECTED: u16 = 0x066F;
+/// 据点标记布局色（#8B4513 棕，主色）。
+pub const COLOR_LANDMARK: u16 = 0x87BB;
+/// 背景布局色（#F5F5DC 米白，航海图纸质背景）。
+pub const COLOR_BG: u16 = 0xFD70;
+/// 玩家棋子布局色（#2E8B57 海绿，强调色）。
+pub const COLOR_PLAYER: u16 = 0x066F;
+/// 危险/玩家血条布局色（#FF6347 橙红，S14 战斗面板）。
+pub const COLOR_DANGER: u16 = 0xFDAF;
 /// 标题条布局色 RGBA 版（`0xAARRGGBB`，HD 8-bit 帧缓冲路径用）。
 #[cfg(feature = "hd-8bit")]
-pub const COLOR_TITLE_BAR_RGBA: u32 = 0xFF00_01E0;
+pub const COLOR_TITLE_BAR_RGBA: u32 = 0xFF_87BB;
 /// 选中高亮布局色 RGBA 版（`0xAARRGGBB`，HD 8-bit 帧缓冲路径用）。
 #[cfg(feature = "hd-8bit")]
-pub const COLOR_SELECTED_RGBA: u32 = 0xFF00_03E0;
+pub const COLOR_SELECTED_RGBA: u32 = 0xFF_066F;
 /// 菜单行高（逻辑像素）。
 pub const ROW_H: i32 = 20;
 /// 菜单起始 y（逻辑像素）。
@@ -151,11 +153,12 @@ impl MenuShell {
 
     /// 绘制主菜单到逻辑帧缓冲（再经 [`FramePresenter`] 按脏行带上屏）。
     pub fn render(&mut self) {
-        // 背景：原版主色（深蓝）+ 顶部标题条（EXP-074：高度 40 回归旧视觉）
+        // 背景：航海图纸质系（米白，S14 全量重设计）
         self.fb.clear(COLOR_BG);
+        // 顶部标题条（棕色，S14：高 40px=2.5格）
         self.fill_rect(0, 0, LOGICAL_W_I32, 40, COLOR_TITLE_BAR);
 
-        // 中文标题（真字形；字体整体缺失时全是豆腐块，绝不静默空白）
+        // 标题（S14：航海图纸质系，米白背景 + 棕色标题条 + 居中标题）
         self.draw_text_row(sget("scene.index.title"), 58, 12);
 
         // 菜单条目（带选中高亮；文案标签运行时取 i18n 表）
@@ -380,11 +383,15 @@ pub fn parse_font_bytes(font_bytes: &[u8], charset_bytes: &[u8]) -> Option<FontS
 #[cfg(test)]
 mod tests {
     //! S10.2 渲染断言：`last_rendered_scene` 静态帧优化不变式。
+    //! S14 配色/布局断言：航海图纸质系常量值域 + scenes.json 坐标对齐 16px 网格。
     //!
     //! 不变式 = `last_rendered_scene` 值域 ∈ `SceneKind::discriminant()` 0..=8（唯一无碰撞），
     //! 场景切换时必然 `!=` 旧值 → 壳层强制重渲染（P0-5 场景 key 碰撞修复回归）。
 
-    use super::MenuShell;
+    use super::{
+        COLOR_BG, COLOR_DANGER, COLOR_LANDMARK, COLOR_PLAYER, COLOR_SELECTED, COLOR_TITLE_BAR,
+        GLYPH_ADVANCE, MenuShell,
+    };
 
     #[test]
     fn last_rendered_scene_discriminant_range() {
@@ -416,5 +423,93 @@ mod tests {
         assert_eq!(shell.last_rendered_scene, Some(intro_key));
         shell.last_rendered_scene = Some(exit_key);
         assert_eq!(shell.last_rendered_scene, Some(exit_key));
+    }
+
+    /// S14：航海图纸质系配色常量与 `docs/business/08_layout_design.md` §2 表一致（值域断言）。
+    #[test]
+    fn palette_constants_match_doc() {
+        // §2 表：bg=#F5F5DC(0xFD70) primary=#8B4513(0x87BB) accent=#2E8B57(0x066F)
+        //       danger=#FF6347(0xFDAF) ink=深灰
+        assert_eq!(COLOR_BG, 0xFD70, "背景应米白 0xFD70");
+        assert_eq!(COLOR_TITLE_BAR, 0x87BB, "标题条应棕 0x87BB（主色）");
+        assert_eq!(COLOR_SELECTED, 0x066F, "选中高亮应海绿 0x066F（强调色）");
+        assert_eq!(COLOR_LANDMARK, 0x87BB, "据点应棕 0x87BB");
+        assert_eq!(COLOR_PLAYER, 0x066F, "玩家棋子应海绿 0x066F");
+        assert_eq!(COLOR_DANGER, 0xFDAF, "玩家血条应橙红 0xFDAF");
+    }
+
+    fn abort_on_err<E: std::fmt::Display>(e: E) -> ! {
+        eprintln!("{e}");
+        std::process::abort();
+    }
+
+    /// S14：scenes.json 坐标 ∈ [0,176]×[0,220] 且列表起点对齐 16px 网格（±2px）。
+    #[test]
+    fn layout_coords_in_bounds_grid() {
+        let scenes = ti_core::data::scenes().unwrap_or_else(|e| abort_on_err(e));
+        for (id, layout) in scenes {
+            // 标题/列表/hint/hud 全在屏内
+            assert!(layout.title.x >= 0 && layout.title.x < 176, "{id} 标题 x 越界");
+            assert!(layout.title.y >= 0 && layout.title.y < 220, "{id} 标题 y 越界");
+            assert!(layout.hint.x >= 0 && layout.hint.x < 176, "{id} 提示 x 越界");
+            assert!(layout.hint.y >= 0 && layout.hint.y < 220, "{id} 提示 y 越界");
+            assert!(layout.hud.x >= 0 && layout.hud.x < 176, "{id} HUD x 越界");
+            // 列表场景（select_role/select_map/saveload/index）起点对齐 16px 网格 ±2px
+            if layout.list.row_h > 0 {
+                let y_mod = layout.list.y % 16;
+                let aligned = y_mod <= 2 || y_mod >= 14;
+                assert!(aligned, "{id} 列表 y={} 未对齐 16px 网格（§4）", layout.list.y);
+                // 列表右缘不越屏（x + w <= 176）
+                assert!(
+                    layout.list.x + layout.list.w <= 176,
+                    "{id} 列表右缘 {x}+{w}={r} 越屏 176",
+                    x = layout.list.x,
+                    w = layout.list.w,
+                    r = layout.list.x + layout.list.w
+                );
+            }
+        }
+    }
+
+    /// S14：主地图 HUD 区 y=152..176 不与瓦片区 y=32..144 重叠（§4.3）。
+    #[test]
+    fn main_map_hud_no_overlap() {
+        let scenes = ti_core::data::scenes().unwrap_or_else(|e| abort_on_err(e));
+        let Some(main) = scenes.get("main_map") else {
+            std::process::abort();
+        };
+        // 瓦片区 32..144（112px），HUD 152..176（24px），间隙 8px 无重叠
+        let tile_end = 32 + 112;
+        let hud_start = main.hud.y;
+        assert!(hud_start >= tile_end, "main_map HUD y={hud_start} 与瓦片区 end={tile_end} 重叠");
+    }
+
+    /// S14：战斗血条 x=16..160 在屏内（176 宽）（§4.4）。
+    #[test]
+    fn vs_hp_bars_in_frame() {
+        let scenes = ti_core::data::scenes().unwrap_or_else(|e| abort_on_err(e));
+        let Some(vs) = scenes.get("vs") else {
+            std::process::abort();
+        };
+        for key in ["player_hp", "boss_hp"] {
+            let Some(bar) = vs.extra.get(key) else {
+                eprintln!("血条 extra 缺失: {key}");
+                std::process::abort();
+            };
+            assert!(bar.x >= 0, "{key} x 越左");
+            assert!(
+                bar.x + bar.w <= 176,
+                "{key} 右缘 {}+{}={} 越屏 176",
+                bar.x,
+                bar.w,
+                bar.x + bar.w
+            );
+        }
+    }
+
+    /// S14：字号 12px 正文（[`GLYPH_ADVANCE`]）与 §3 字体规格一致。
+    #[test]
+    fn font_advance_match() {
+        assert_eq!(GLYPH_ADVANCE, 12, "正文字号应为 12px（08_layout_design.md §3）");
     }
 }

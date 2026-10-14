@@ -21,6 +21,7 @@
 | 避免重复踩坑 | [`experience/index.md`](experience/index.md) |
 | 引入新依赖 / 改 workspace 结构 | [`process/01_architecture.md`](process/01_architecture.md) §4（现成库清单）+ [`style.md`](style.md) §5.9 |
 | 推送远端 / 分支与 commit 规范 | [`git.md`](git.md) |
+| **常用命令一键入口（native 运行 / 门禁 / 测试 / 推送 / 元素验证 / 台账校验）** | `scripts/playbook.ps1`（`-List` 列全部；22 项命令固化为单一脚本，含 push 前置 gate 全绿检查） |
 
 ## 全库清单
 
@@ -88,6 +89,7 @@
 
 | 文件 | 作用 |
 |---|---|
+| `scripts/playbook.ps1` | **常用命令一键入口**（22 项命令固化：native 运行 / 无头回归 / wasm / 冒烟 / 门禁 / 测试 / fmt / clippy / 元素验证 / 逐精灵渲染 / 推送前置检查 / 台账 / doccheck / 硬编码扫描；`-List` 列全部；UTF-8 BOM 防 PowerShell 编码错位） |
 | `crates/ti-tools/src/bin/specskel.rs` | spec 骨架半自动生成（S0.7；命令见 `AGENTS.md` 命令节） |
 | `evidence/S0.7.log` | specskel 验收日志（单测 6/6 + 三模块实跑） |
 

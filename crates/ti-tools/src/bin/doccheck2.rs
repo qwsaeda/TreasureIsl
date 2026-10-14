@@ -618,37 +618,43 @@ fn check_hd_sprite_transparency(root: &Path) -> Vec<String> {
 }
 
 fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
-    // EXP-074：scenes.json 布局表值必须 == 旧验收视觉（ab0e5b5 硬编码坐标），
-    // 子代理禁止把表当「新设计值」凭空重填。机器锚定旧坐标 + 高亮「基线上移 offset」语义
-    //（旧代码 `fill_rect(x, 基线y - offset, w, item_h)`，非居中 `-item_h/2`）。
+    // S14 全量重设计：scenes.json 坐标以 `docs/business/08_layout_design.md` §4 为单一事实源。
+    // 旧 EXP-074 锚定（=ab0e5b5 逆向坐标）已作废——S14 重设计是正向开发的新版面，
+    // 不再要求 == 旧逆向视觉，改锚定 08_layout_design.md §4 的新坐标。
     let mut errors = Vec::new();
     let Some(json) = read_file(root, "assets/data/scenes.json") else {
-        return vec!["assets/data/scenes.json 不存在，无法校验布局保真度（EXP-074）".to_string()];
+        return vec!["assets/data/scenes.json 不存在，无法校验布局（S14）".to_string()];
     };
 
-    // 逐场景锚定：(字段路径, 期望字面量, 说明)
+    // 逐场景锚定 S14 新坐标（08_layout_design.md §4）：
+    // index: 标题条 40px + 列表 y=48 行高 32 + 高亮上移 12 + 列表 x=16 w=144
+    // select_role/select_map: 列表 y=48 行高 32 + 高亮上移 12 + 列表 x=16 w=144
+    // saveload: 列表 y=48 行高 32 + 高亮上移 12 + gold_x=120 + 列表 x=16 w=144
+    // vs: 血条 x=16 w=144 h=8（玩家 y=32 / BOSS y=56）
+    // main_map: HUD y=152 h=24（不与瓦片区 y=32..144 重叠）
     let anchors: &[(&str, &str, &str)] = &[
-        // index：标题条 40px + 列表起点 y=96 行高 20（旧 menu_shell MENU_TOP/ROW_H）
-        ("\"index\"", "\"h\": 40", "index 标题条高度必须 = 40（旧视觉，EXP-074）"),
-        ("\"index\"", "\"y\": 96", "index 列表起点 y 必须 = 96（MENU_TOP，EXP-074）"),
-        ("\"index\"", "\"row_h\": 20", "index 行高必须 = 20（ROW_H，EXP-074）"),
-        (
-            "\"index\"",
-            "\"highlight_offset\": 12",
-            "index 高亮上移必须 = 12（旧代码 y-12，EXP-074）",
-        ),
-        // select_role / select_map：基线 y=50 行高 30 + 高亮上移 10（旧代码 fill_rect(20, y-10, 136, 26)）
+        ("\"index\"", "\"h\": 40", "index 标题条高度 = 40（S14 §4.1）"),
+        ("\"index\"", "\"y\": 48", "index 列表起点 y = 48（S14 §4.1，旧 96 作废）"),
+        ("\"index\"", "\"row_h\": 32", "index 行高 = 32（S14 §4.1，旧 20 作废）"),
+        ("\"index\"", "\"highlight_offset\": 12", "index 高亮上移 = 12（S14 §4.1）"),
         (
             "\"select_role\"",
-            "\"highlight_offset\": 10",
-            "select_role 高亮上移必须 = 10（旧代码 y-10，EXP-074）",
+            "\"highlight_offset\": 12",
+            "select_role 高亮上移 = 12（S14 §4.2，旧 10 作废）",
         ),
-        ("\"select_role\"", "\"row_h\": 30", "select_role 行高必须 = 30（EXP-074）"),
-        ("\"select_map\"", "\"highlight_offset\": 10", "select_map 高亮上移必须 = 10（EXP-074）"),
-        // saveload：基线 y=40 行高 40 + 金字号列 x=100（旧代码 y=40+i*40 / gold_x=100）
-        ("\"saveload\"", "\"y\": 40", "saveload 列表起点 y 必须 = 40（EXP-074）"),
-        ("\"saveload\"", "\"row_h\": 40", "saveload 行高必须 = 40（EXP-074）"),
-        ("\"saveload\"", "\"gold_x\": 100", "saveload 金字号列 x 必须 = 100（EXP-074）"),
+        ("\"select_role\"", "\"row_h\": 32", "select_role 行高 = 32（S14 §4.2，旧 30 作废）"),
+        (
+            "\"select_map\"",
+            "\"highlight_offset\": 12",
+            "select_map 高亮上移 = 12（S14 §4.2，旧 10 作废）",
+        ),
+        ("\"saveload\"", "\"y\": 48", "saveload 列表起点 y = 48（S14 §4.6，旧 40 作废）"),
+        ("\"saveload\"", "\"row_h\": 32", "saveload 行高 = 32（S14 §4.6，旧 40 作废）"),
+        ("\"saveload\"", "\"gold_x\": 120", "saveload 金字号列 x = 120（S14 §4.6，旧 100 作废）"),
+        ("\"vs\"", "\"y\": 32", "vs 玩家血条 y = 32（S14 §4.4）"),
+        ("\"vs\"", "\"y\": 56", "vs BOSS 血条 y = 56（S14 §4.4）"),
+        ("\"vs\"", "\"w\": 144", "vs 血条宽 = 144（S14 §4.4）"),
+        ("\"main_map\"", "\"y\": 152", "main_map HUD y = 152（S14 §4.3，与瓦片区 32..144 不重叠）"),
     ];
     // 每个场景段单独切片，避免跨场景误匹配（如 select_role 与 select_map 同名 list）
     for &(scene_key, needle, msg) in anchors {
@@ -658,11 +664,10 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         }
     }
 
-    // 标量字段语义：locked.text_x 必须 = 130（旧代码 draw_text(locked, 130, y)）
+    // 标量字段语义：locked.text_x 必须 = 130（select_map 未解锁标签 x，S14 §4.2）
     if !json.contains("\"text_x\": 130") && !json.contains("\"text_x\":130") {
         errors.push(
-            "scenes.json select_map.locked.text_x 必须 = 130（旧代码锁定文字 x，EXP-074 标量字段不得静默置 0）"
-                .to_string(),
+            "scenes.json select_map.locked.text_x 必须 = 130（S14 §4.2 未解锁标签 x）".to_string(),
         );
     }
 

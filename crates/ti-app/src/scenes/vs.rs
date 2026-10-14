@@ -3,7 +3,7 @@ use ti_core::domain::combat::Side;
 
 use crate::game_app::GameInput;
 use crate::i18n;
-use crate::menu_shell::{COLOR_BG, COLOR_TITLE_BAR};
+use crate::menu_shell::{COLOR_BG, COLOR_DANGER, COLOR_LANDMARK, COLOR_PLAYER, COLOR_TITLE_BAR};
 use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::TouchSample;
 use ti_platform::settings::Gesture;
@@ -41,31 +41,47 @@ impl Scene for VsScene {
         }
     }
 
-    /// 战斗面板（双方 HP + 回合 + 结果）。
+    /// 战斗面板（双方 HP 进度条 + 回合 + 结果，S14 航海图纸质系）。
     fn render(&mut self, host: &mut dyn SceneHost) {
         host.clear_frame(COLOR_BG);
-        host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
-        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
+        host.fill_rect(0, 0, 176, 24, COLOR_TITLE_BAR);
         let layout =
             ti_core::data::scenes().ok().and_then(|s| s.get("vs")).cloned().unwrap_or_default();
         host.draw_text(i18n::sget("scene.vs.title"), layout.title.x, layout.title.y);
         if let Some(b) = host.battle_snapshot() {
-            let ph = i18n::sgetf("scene.vs.player_hp_fmt", &[&b.player_hp]);
-            let bh = i18n::sgetf("scene.vs.boss_hp_fmt", &[&b.boss_hp]);
-            let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
-            let ph_pos = layout.extra.get("player_hp").copied().unwrap_or_default();
-            let bh_pos = layout.extra.get("boss_hp").copied().unwrap_or_default();
+            // S14：血条进度条（玩家橙红 / BOSS 海绿，x=16 w=144 h=8，scenes.json 定位置）
+            let ph_bar = layout.extra.get("player_hp").copied().unwrap_or_default();
+            let bh_bar = layout.extra.get("boss_hp").copied().unwrap_or_default();
             let rd_pos = layout.extra.get("rounds").copied().unwrap_or_default();
-            host.draw_text(&ph, ph_pos.x, ph_pos.y);
-            host.draw_text(&bh, bh_pos.x, bh_pos.y);
+            let oc_pos = layout.extra.get("outcome").copied().unwrap_or_default();
+            let ph_w = b.player_hp.saturating_mul(u32::try_from(ph_bar.w).unwrap_or(0)) / 500u32;
+            let bh_w = b.boss_hp.saturating_mul(u32::try_from(bh_bar.w).unwrap_or(0)) / 500u32;
+            // 玩家血条（橙红 #FF6347）
+            host.fill_rect(ph_bar.x, ph_bar.y, ph_bar.w, ph_bar.h, COLOR_DANGER);
+            host.fill_rect(
+                ph_bar.x,
+                ph_bar.y,
+                i32::try_from(ph_w).unwrap_or(0),
+                ph_bar.h,
+                COLOR_PLAYER,
+            );
+            // BOSS 血条（海绿 #2E8B57）
+            host.fill_rect(bh_bar.x, bh_bar.y, bh_bar.w, bh_bar.h, COLOR_LANDMARK);
+            host.fill_rect(
+                bh_bar.x,
+                bh_bar.y,
+                i32::try_from(bh_w).unwrap_or(0),
+                bh_bar.h,
+                COLOR_PLAYER,
+            );
+            let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
             host.draw_text(&rd, rd_pos.x, rd_pos.y);
-            let oc = layout.extra.get("outcome").copied().unwrap_or_default();
             match b.outcome {
                 Some(Side::Player) => {
-                    host.draw_text(i18n::sget("scene.vs.victory"), oc.x, oc.y);
+                    host.draw_text(i18n::sget("scene.vs.victory"), oc_pos.x, oc_pos.y);
                 }
                 Some(Side::Enemy) => {
-                    host.draw_text(i18n::sget("scene.vs.defeat"), oc.x, oc.y);
+                    host.draw_text(i18n::sget("scene.vs.defeat"), oc_pos.x, oc_pos.y);
                 }
                 None => {
                     let aw = layout.extra.get("empty").copied().unwrap_or_default();

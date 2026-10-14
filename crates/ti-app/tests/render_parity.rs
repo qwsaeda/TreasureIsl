@@ -34,8 +34,8 @@ fn render_current(app: &mut GameApp) -> Vec<u16> {
 /// 场景渲染的「墨点率」：非背景色像素占比（证明画了真实内容，非全黑/全背景）。
 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 fn ink_ratio(pixels: &[u16]) -> f32 {
-    // 主菜单背景 = 0x0010（深蓝），标题条 = 0x01E0，选中高亮 = 0x03E0，墨色 = 0xFFFF。
-    let content = pixels.iter().filter(|&&p| p != 0x0000 && p != 0x0010).count();
+    // S14 航海图纸质系：背景 = 0xFD70（米白），标题条 = 0x87BB（棕），选中高亮 = 0x066F（海绿），墨色 = 0xFFFF。
+    let content = pixels.iter().filter(|&&p| p != 0x0000 && p != 0xFD70).count();
     let total = pixels.len();
     content as f32 / total as f32
 }
@@ -152,7 +152,7 @@ fn framebuf_matches_logical_resolution() {
     let mut app = GameApp::new(176.0, 220.0);
     app.shell_mut().render();
     let pixels = app.shell_mut().fb.as_slice();
-    assert_eq!(pixels[0], 0x01E0, "主菜单第 0 行 x=0 应为标题条色 0x01E0");
+    assert_eq!(pixels[0], 0x87BB, "主菜单第 0 行 x=0 应为标题条色（S14 航海图纸质系棕）");
 }
 
 // ── S8.6 渲染基线去自指：独立 ti-formats 解码基线 vs 渲染逐像素对照 ──

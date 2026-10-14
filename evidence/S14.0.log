@@ -1,0 +1,68 @@
+S14.0 界面全量重设计（9 场景统一版面，航海图纸质系）
+=====================================================
+日期: 2026-10-14
+状态: 代码全改完 + gate 全绿（0 failure）
+
+一、单一事实源
+------------------------------------------------------
+docs/business/08_layout_design.md（新增）：
+- §1 设计约束（176×220 不变 + 16px 网格 + 纯代码绘制 + 主地图等距瓦片+代码棋子 + 输入/场景流不变）
+- §2 配色（航海图纸质系：bg=#F5F5DC 米白 / primary=#8B4513 棕 / accent=#2E8B57 海绿 /
+  danger=#FF6347 橙红 / text=#333333 / secondary=#8B8B8B，RGB565 色值表）
+- §3 字体（开源 CJK 黑体，12px 正文 / 16px 标题，TTF 加载器已支持，缺失回退位图）
+- §4 各场景版面（index/select_role/select_map/main_map/vs/message/saveload 逐场景坐标）
+- §5 不动的部分（渲染契约 / 场景流 / 输入映射 / 玩法规则）
+- §6 实施范围（代码改动点清单）
+- §7 可测试规则（5 条）
+
+二、代码改动
+------------------------------------------------------
+1. crates/ti-app/src/menu_shell.rs
+   - COLOR_BG=0xFD70（米白）/ COLOR_TITLE_BAR=0x87BB（棕）/ COLOR_SELECTED=0x066F（海绿）
+   - COLOR_LANDMARK=0x87BB / COLOR_PLAYER=0x066F / COLOR_DANGER=0xFDAF（橙红，战斗血条）
+   - COLOR_TITLE_BAR_RGBA=0xFF_87BB / COLOR_SELECTED_RGBA=0xFF_066F
+   - 新增 5 条 S14 布局单测：palette_constants_match_doc / layout_coords_in_bounds_grid /
+     main_map_hud_no_overlap / vs_hp_bars_in_frame / font_advance_match
+2. assets/data/scenes.json 7 场景坐标重排（按 §4）：
+   - index: title x=58 y=12 h=40 / list x=16 y=48 w=144 row_h=32 item_h=26 text_x=32 highlight_offset=12 / status x=4 y=208
+   - select_role: title x=58 y=8 / list x=16 y=48 w=144 row_h=32 ... highlight_offset=12 / hint x=4 y=208
+   - select_map: 同 select_role + locked.text_x=130
+   - main_map: title x=70 y=8 / hud x=4 y=152 w=168 h=24 / player size=5 / landmark size=3 / hint x=4 y=208
+   - vs: title x=70 y=8 / player_hp x=16 y=32 w=144 h=8 / boss_hp x=16 y=56 w=144 h=8 /
+         rounds x=88 y=80 / outcome x=88 y=112 / empty x=88 y=56 / hint x=4 y=208
+   - message: title x=70 y=8 / body x=16 y=32 w=144 h=152 / page x=88 y=192 / hint x=4 y=208
+   - saveload: title x=70 y=8 / list x=16 y=48 w=144 row_h=32 ... gold_x=120 / hint x=4 y=208
+3. crates/ti-app/src/scenes/vs.rs
+   - 战斗面板改血条进度条：玩家血条 COLOR_DANGER（橙红），BOSS 血条 COLOR_LANDMARK（海绿），
+     宽度按 hp/500 比例（ph_w/bh_w），填在 scenes.json 的 player_hp/boss_hp extra 位置
+4. crates/ti-app/src/scenes/main_map.rs
+   - 标题条 24px（原 20px），HUD 区 y=152（scenes.json），代码棋子/据点保留等距投影坐标
+5. crates/ti-app/tests/render_parity.rs
+   - ink_ratio 背景色 0x0010→0xFD70（米白）/ 标题条 0x01E0→0x87BB / 选中 0x03E0→0x066F
+   - framebuf_matches_logical_resolution 标题条色 0x01E0→0x87BB
+6. crates/ti-app/tests/render_snapshot.rs
+   - BG565 = 0x87BB（标题条棕，作为 .Map 纯渲染背景基线）
+7. crates/ti-tools/src/bin/doccheck2.rs
+   - check_scene_layout_fidelity 锚点改 S14 新坐标（旧 EXP-074 逆向坐标作废）：
+     index y=48/row_h=32 / select_role+select_map highlight_offset=12/row_h=32 /
+     saveload y=48/row_h=32/gold_x=120 / vs player_hp y=32 + boss_hp y=56 + w=144 /
+     main_map hud y=152
+
+三、验收命令实跑输出
+------------------------------------------------------
+cargo fmt --all -- --check → 0 diff
+cargo clippy --workspace --all-targets -- -D warnings → 0 error
+cargo test --workspace → 全绿（150+ 测试 0 failed）
+python scripts/check_hardcode.py → 0 hit
+powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 → 0 failure(s)（gate 20 项全绿，
+含 2 项 SKIP：aarch64 本机无 NDK、zero-unknown 未解锁）
+cargo run -q -p ti-tools --bin doccheck → 111 docs, 0 error
+cargo run -q -p ti-tools --bin doccheck2 → 0 error（14 audit-codified checks）
+cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml → 111 tasks, 0 error
+
+四、说明
+------------------------------------------------------
+- S14 是正向开发（不依赖原版逆向坐标），原版布局错乱是重设计根因。
+- 底层渲染契约（07_render_pipeline.md 越界/f4/z-order/PCX 透明）不动。
+- 资源方向（配色/字体）由用户定航海图纸质系 + 开源 CJK 黑体，S14 只落代码+文档+门禁。
+- 后续可扩：TTF 字体文件（assets/fonts/）+ 字号 16px 标题 + 控件语义定案（44 kind）。
