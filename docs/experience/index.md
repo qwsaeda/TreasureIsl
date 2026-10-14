@@ -30,7 +30,7 @@
 | [`reverse.md`](reverse.md) | 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程 | 4 |
 | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 9 |
 | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072） | 15 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078） | 16 |
 | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076） | 17 |
 
 ## 条目索引
@@ -113,6 +113,8 @@
  | EXP-074 | code | | 数据表迁移（scenes.json 坐标回归旧视觉值）：P6 重填表值未对拍 ab0e5b5 旧视觉、`item_rect` 误加 `-item_h/2` 居中性（旧代码高亮是「文字基线 y 上移固定 offset」非居中）、extra 解析器把缺 key 静默置 0 丢失 `locked.text_x=130`、视觉基准自生成（循环论证）。修复：`ListLayout` 新增 `highlight_offset`/`gold_x`、`extra_scalar` 抽 `*_x`/`*_y`、`menu_shell` 标题条 40px 回归、视觉回归只比「UI 像素分布」掩背景色（HD 背景≠PCX 背景非排版漂移），基准=回归后旧视觉帧。HD 化只换贴图不动逻辑布局坐标；数据表值必须==旧验收视觉，子代理禁止凭空重填+自证基准图（EXP-059/067/071 第 4 次变体） |
   | EXP-075 | code | | HD 精灵「洋红框」根因实为**两条独立路径、两个独立根因，前次只修了一半**：① PCX 调色板 index 0 = 洋红哨兵色（ui.pak 94/120 张实测 (255,0,255)，index 0 占背景区 0%~84.7%），原版 8-bit blit 例程 sub_5D9C4 逐像素 `if (idx != 0) write` 跳过 index 0，但 Rust `blit_sprite`（RGB565，native 默认 `QualityMode::Original` 实际走的路）漏了这个跳过 → 洋红背景整片写满帧缓冲；② HD PNG 路（`QualityMode::Hd`）是另一根因：`pack_hd_assets.py` Lanczos 缩采样产生 3.8 万软 alpha + `blit_sprite_rgba` 只判 `a==0` + `render_hd` 漏调 blit。前次 S13.5 只修了②（HD 路），native 默认 ①（RGB565 路）未修 → 用户"没解决"。修复：① `blit_sprite`/`blit_sprite_rgba` PCX 回退/`terrain_atlas` 2 处加 `if idx == 0 { continue; }`（同 sub_5D9C4 口径）+ render_parity 基线同步；② 保留 pack_hd_assets.py sanitize_alpha + ALPHA_TRANSPARENT_CUTOFF + render_hd 补 blit。教训：**同一种视觉现象（洋红框）在 RGB565 路与 HD 路各有一个独立根因，修一条路必须查另一条路的同口径点；native 默认质量模式（Original）才是实机路径，headless 测试若只跑默认路径会漏 HD 路，反之亦然**。doccheck2 第 12 项 check_hd_sprite_transparency 扩为锚定两路 4 处不变量 |
   | EXP-076 | code | | 「贴图覆盖菜单/特定区域错位」= 越界裁剪策略错 + 渲染管线无契约无分层。**现象**：native 默认 RGB565 路，index 场景 f1=111（105×11 长条）有 3 条 x=185/191/207 越界（>176），Rust `blit_sprite` 的 `ox = px_x.min(FB_W-1)` 把越界精灵**拉回屏幕右缘 175 列**画 1 列宽竖条 → 落在菜单区右缘 = 用户报的"贴图覆盖菜单/特定区域错位"。**根因**：原版 `sub_5EAA8` 源窗求交为空 → `sub_5D9C4` 早退**整条不画**（高置信，`evidence/audit_zorder.md` A3），Rust 漏了这个早退。**z-order 本身无错**（子代理坐实：原版按文件顺序 blit，非 f5 分档、非分帧，`evidence/audit_f5_zorder.md` 高置信）；`words[4]=176` 是误读（实际 `MapScene.words[4]`=w[8]=31=记录数，正确）。**解法**（职责分离 + 契约固化）：① 新增 `render_pipeline.rs` `clip_rect(src_w,src_h,ox,oy)->Option<ClipRect>` 纯函数（越界早退，6 单测），`blit_sprite`/`blit_sprite_rgba` 接入（修掉越界拉回）；② `docs/process/07_render_pipeline.md` 渲染契约（路径表/z-order 文件顺序/越界求交/PCX index 0 透明位，单一事实源）；③ `tests/render_snapshot.rs` 7 场景逐像素基准 diff（gate 第 19 项，基准由修复后代码生成杜绝自证循环）；④ `scripts/check_data_source.py`（gate 第 20 项，数据源 .Map/.pak 改动→快照门禁）。**教训**：渲染链路关键行为（越界裁剪/透明位/z-order）散在多文件无契约 → 每轮瞎猜。**必须**：(a) 渲染行为提成纯函数可单测；(b) 契约文档登记进路由表，改渲染代码前必读；(c) 快照门禁锁"最终像素"，数据源改动当场拦；(d) 修 bug 前先按 native 真实链路逐层定位（哪条 quality 路 + 越界/透明语义），不靠猜。gate 23 项全绿 |
+| EXP-077 | process | | 无原版渲染 ground truth 时禁止向用户索要截图（ARM WinCE exe 本机跑不起来；替代证据链=用户指认偏移量/像素对比工具/QEMU 系统模式需 WinCE 镜像；补网格层 a1[247]） |
+| EXP-078 | process | | 并行半成品致 gate FAIL 时先归因再决定能否转 verified：git stash 基线对照法归因（stash 前后 FAIL 项集合 diff），本轮引入项修干净、并行半成品项不替别人修（evidence 写明归因），台账维持 in_progress，commit 只暂存本轮改的文件（显式列文件不用 -A） |
 
 ## 条目格式（写新条时照抄）
 

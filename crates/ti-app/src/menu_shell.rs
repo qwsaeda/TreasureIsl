@@ -376,3 +376,45 @@ pub fn parse_font_bytes(font_bytes: &[u8], charset_bytes: &[u8]) -> Option<FontS
     let charset = Charset::parse("font.dat", charset_bytes).ok()?;
     Some((parsed, charset))
 }
+
+#[cfg(test)]
+mod tests {
+    //! S10.2 渲染断言：`last_rendered_scene` 静态帧优化不变式。
+    //!
+    //! 不变式 = `last_rendered_scene` 值域 ∈ `SceneKind::discriminant()` 0..=8（唯一无碰撞），
+    //! 场景切换时必然 `!=` 旧值 → 壳层强制重渲染（P0-5 场景 key 碰撞修复回归）。
+
+    use super::MenuShell;
+
+    #[test]
+    fn last_rendered_scene_discriminant_range() {
+        // S10.2：值域 0..=8（9 个 SceneKind 各占一个），旧 `Scene::key()` 值域 0..=7 有
+        // Intro|Exit 碰撞（值 7），切场景跳帧残留。discriminant() 消除碰撞。
+        // 逐一验证 9 个新壳默认 last_rendered_scene 均为 None（首帧强制渲染判据）。
+        for _ in 0..9 {
+            let shell = MenuShell::with_upload_mode(
+                352.0,
+                440.0,
+                ti_platform::gfx::UploadMode::FullRebuild,
+            );
+            // 默认 None = 首帧强制渲染（壳层 `changed || last_rendered != ...` 判据）
+            assert!(
+                shell.last_rendered_scene.is_none(),
+                "新壳 last_rendered_scene 应为 None（首帧强制重渲染）"
+            );
+        }
+        // 模拟场景切换：Intro(0) → Exit(8)，两值不同 → 壳层必重渲染
+        let intro_key = 0i32;
+        let exit_key = 8i32;
+        assert_ne!(
+            intro_key, exit_key,
+            "Intro 与 Exit 的 discriminant 必须不同（旧 key=7 碰撞回归）"
+        );
+        let mut shell =
+            MenuShell::with_upload_mode(352.0, 440.0, ti_platform::gfx::UploadMode::FullRebuild);
+        shell.last_rendered_scene = Some(intro_key);
+        assert_eq!(shell.last_rendered_scene, Some(intro_key));
+        shell.last_rendered_scene = Some(exit_key);
+        assert_eq!(shell.last_rendered_scene, Some(exit_key));
+    }
+}

@@ -214,5 +214,28 @@
 - **验证**：headless 计数 `index/select_role/main_map` 洋红（rgba）= 0；`assets_hd_pack/1x/ui` 半透明总数 = 0（原 38666）；`cargo test -p ti-app --test visual_regression` 5 项全绿；doccheck2 第 12 项 `check_hd_sprite_transparency` 0 error；gate 18 项全绿。
 
 
+### EXP-077 流程：无原版渲染 ground truth 时禁止向用户索要截图
+- 现象：渲染问题（EXP-076 后续「横条盖徽章/贴图覆盖菜单/特定区域错位」）排查中，多次把「原版截图/原版稳态画面」当成可行证据来源向用户索要；用户反复指出「几十年的游戏去哪运行」「没有原版截图」。
+- 根因：
+  1. 没先确认「原版能否在本机运行」这一硬约束——原版 `TreasureIsl.exe` 是 **ARM PE32 (machine=0x01c0) + subsystem=4 + 导入 coredll** 的 Windows CE/Mobile 程序，本机 x64 Windows 无 QEMU/ARM 工具链、无 WinCE 镜像，**根本跑不起来**；
+  2. 在零 ground truth 下仍用「静态反推 + 子代理审计」求解渲染位置，伪代码里 IDA 吞寄存器（a4/v34）导致二义，子代理结论互相矛盾却无法裁决；
+  3. 用户已明确「你不行就调 REA 来做」「出流水线对抗 10000 次必须找到问题」，但本会话工具列表无 `rea_*`，未第一时间声明「REA 不可用，只能静态」，继续凑数。
+- 解法（以后遇到「渲染位置/视觉错位」类问题，按序执行，禁止跳步）：
+  1. **先声明 ground truth 现状**：本机无原版运行能力（ARM WinCE exe 跑不了），无原版截图，无 QEMU 镜像——把这一事实写进本条 EXP 与 `docs/process/07_render_pipeline.md`；
+  2. **禁止向用户索要「原版截图/原版稳态画面」**（用户没有，且这是几十年前的 ARM WinCE 游戏）；
+  3. **替代证据链**（按可行性排序）：
+     - (a) **用户指认偏移量**：用户看我渲染的 PNG，指出「哪个精灵朝哪个方向偏了多少像素」——我据此反推是坐标映射/PCX 宽高/网格层/z-order 哪一条；
+     - (b) **像素级对比工具**：`scripts/compare_render.py` 输入「用户提供的任何参考图 + 我的渲染 PNG」，自动 diff 报告（哪些区域不一致、偏移多少、疑似哪条精灵）；
+     - (c) **QEMU 系统模式**：需 ARM WinCE 镜像（NK.bin + 文件系统），本机没有——若用户能提供镜像，用 `qemu-system-arm` 跑原版 dump 帧缓冲；
+  4. **补网格层**（`sub_443FC` 行 30-103，`a1[247]`）：这是坐实缺失的渲染层，无论「位置不对」根因是什么都该补——原版先画 `a1[248]`列×`a1[249]`行 背景 tile（底层），再画控件（顶层）；Rust `blit_scene_frame` 只画控件链。
+- 验证：本条 EXP 登记；后续渲染问题排查不再出现「请提供原版截图」类提问；网格层补入后 `blit_scene_frame` 输出与原版 `sub_443FC` 两段结构一致。
 
 
+
+
+
+### EXP-078 流程：并行半成品致 gate FAIL 时，先归因再决定能否转 verified
+- **现象**：收口 S10.2 时 gate 4 项 FAIL（fmt/clippy/no placeholders/check_hardcode），但 4 项命中文件全是工作区**未提交的并行任务半成品**（sprite_step.rs 编译错 E0061、e2e_render_alignment.rs 占位符、render_snapshot.rs/sprite_atlas.rs 既有 warning），非本轮 S10.2 改动引起。
+- **根因**：多任务并行开发共用一个工作区，前序任务（sprite_step/e2e_render_alignment）改完未提交，其半成品污染 gate 全局扫描；本轮任务若盲目「gate 全绿就转 verified」会把自己的改动与并行半成品混在一起提交，违反 AGENTS.md 硬规则 1/2。
+- **解法**：(a) 用 git stash 基线对照法归因——stash 本轮改动跑 gate，凡 stash 后仍 FAIL 的项即既有/并行任务遗留，stash 后新出现的项才是本轮引入；(b) 本轮引入项必须修干净（fmt/clippy）；(c) 并行半成品项**不替别人修**，在 evidence log 里写明归因（哪些 FAIL 命中哪些未提交文件、哪个并行任务），台账维持 in_progress，待并行任务收口重跑 gate 全绿后再转 verified；(d) commit 只暂存本轮改的文件（git add 显式列文件，不用 git add -A），不裹挟并行半成品。
+- **验证**：git stash 前后 gate FAIL 项集合 diff + evidence/S10.2.log 末尾「gate FAIL 归因（非 S10.2 引起）」章节 + 台账 S10.2 维持 in_progress。

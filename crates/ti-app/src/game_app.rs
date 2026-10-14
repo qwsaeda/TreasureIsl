@@ -770,39 +770,53 @@ impl GameApp {
     /// 仅 native 宿主可用（依赖 `std::fs` 目录枚举）；wasm32 目标不编译。
     #[cfg(all(feature = "hd-8bit", not(target_arch = "wasm32")))]
     pub fn load_hd_pack_from_dir(&mut self, dir: &std::path::Path) -> bool {
-        let mut png_map: std::collections::BTreeMap<u32, Vec<(u32, Vec<u8>)>> =
-            std::collections::BTreeMap::new();
-        let Ok(read_iter) = std::fs::read_dir(dir) else {
-            return false;
-        };
-        for entry in read_iter.flatten() {
-            let path = entry.path();
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if !std::path::Path::new(name)
-                .extension()
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
-            {
-                continue;
-            }
-            let stem = name.strip_suffix(".png").unwrap_or(name);
-            // 静态："NN_hd" → f1=NN, frame=0；多帧："NN_hd_fK" → f1=NN, frame=K
-            let (f1_str, frame_str) = match stem.rsplit_once("_f") {
-                Some((a, b)) => (a.strip_suffix("_hd").unwrap_or(a), b),
-                None => (stem.strip_suffix("_hd").unwrap_or(stem), "0"),
+        // S10.2：递归 DFS 收集子目录 PNG（assets_hd_pack/1x/{ui,glmap_m01,glmap_m02,
+        // glpics,cards}/...）。不引入 walkdir（std 手动递归）。
+        fn collect_pngs_recursive(
+            root: &std::path::Path,
+            png_map: &mut std::collections::BTreeMap<u32, Vec<(u32, Vec<u8>)>>,
+        ) {
+            let Ok(entries) = std::fs::read_dir(root) else {
+                return;
             };
-            let Ok(f1) = f1_str.parse::<u32>() else {
-                continue;
-            };
-            let frame_no: u32 = frame_str.parse().unwrap_or(0);
-            let Ok(bytes) = std::fs::read(&path) else {
-                continue;
-            };
-            if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
-                if img.rgba.iter().any(|&b| b > 0) {
-                    png_map.entry(f1).or_default().push((frame_no, bytes));
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    collect_pngs_recursive(&path, png_map);
+                    continue;
+                }
+                let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                    continue;
+                };
+                if !std::path::Path::new(name)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
+                {
+                    continue;
+                }
+                let stem = name.strip_suffix(".png").unwrap_or(name);
+                // 静态："NN_hd" → f1=NN, frame=0；多帧："NN_hd_fK" → f1=NN, frame=K
+                let (f1_str, frame_str) = match stem.rsplit_once("_f") {
+                    Some((a, b)) => (a.strip_suffix("_hd").unwrap_or(a), b),
+                    None => (stem.strip_suffix("_hd").unwrap_or(stem), "0"),
+                };
+                let Ok(f1) = f1_str.parse::<u32>() else {
+                    continue;
+                };
+                let frame_no: u32 = frame_str.parse().unwrap_or(0);
+                let Ok(bytes) = std::fs::read(&path) else {
+                    continue;
+                };
+                if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                    if img.rgba.iter().any(|&b| b > 0) {
+                        png_map.entry(f1).or_default().push((frame_no, bytes));
+                    }
                 }
             }
         }
+        let mut png_map: std::collections::BTreeMap<u32, Vec<(u32, Vec<u8>)>> =
+            std::collections::BTreeMap::new();
+        collect_pngs_recursive(dir, &mut png_map);
         if png_map.is_empty() {
             return false;
         }
