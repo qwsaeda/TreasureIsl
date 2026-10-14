@@ -64,10 +64,12 @@ if ($installed -match 'aarch64-linux-android') {
     Skip 'cargo build (aarch64-linux-android)' 'S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）'
 }
 
-# 5) 占位扫描（0 命中）
-$ph = Scan -pattern 'TODO|FIXME|unimplemented!|todo!|panic!\(' -paths @('crates')
-$phList = ($ph | ForEach-Object { "$($_.Path):$($_.LineNumber)" }) -join ', '
-Report ($ph.Count -eq 0) 'no placeholders (TODO/FIXME/todo!/unimplemented!/panic!)' $phList
+# 5) 占位扫描（0 命中；tests/ 除外 —— 集成测试合法用 panic!/unwrap 做断言）
+$srcDirsPh = @(Get-ChildItem -Path crates -Recurse -Filter *.rs -File |
+    Where-Object { $_.FullName -notmatch '\\tests\\' })
+$phHits = @($srcDirsPh | Select-String -Pattern 'TODO|FIXME|unimplemented!|todo!|panic!\(')
+$phList = ($phHits | ForEach-Object { "$($_.Path):$($_.LineNumber)" }) -join ', '
+Report ($phHits.Count -eq 0) 'no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/' $phList
 
 # 6) 库代码 unwrap/expect 扫描（排除集成测试目录，0 命中）
 $srcDirs = @(Get-ChildItem -Path crates -Recurse -Filter *.rs -File |
