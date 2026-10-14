@@ -5,6 +5,8 @@
 > 必须先读本文档；改完必须过 `tests/render_snapshot.rs`（gate 第 19 项）+ `scripts/check_data_source.py`（gate 第 20 项）。
 > 证据锚点全部来自 `evidence/` 审计 + `legacy/ref/pseudocode/`（参照物，非验收基准）。
 
+> **无原版渲染 ground truth（EXP-077）**：本机无原版运行能力（`TreasureIsl.exe` = ARM PE32 machine=0x01c0 + subsystem=4 + 导入 coredll 的 Windows CE/Mobile 程序，x64 Windows 无 QEMU/ARM 工具链、无 WinCE 镜像），**原版在本机跑不起来**。排查渲染问题时**禁止向用户索要原版截图**（用户没有）。替代证据链：(a) 用户指认偏移量（看我渲染的 PNG，指出哪个精灵朝哪个方向偏了多少像素）；(b) 像素级对比工具（`scripts/compare_render.py`，输入任何参考图 + 我的渲染 PNG，自动 diff）；(c) QEMU 系统模式（需 ARM WinCE 镜像 NK.bin，本机没有）。
+
 ---
 
 ## 0. 为什么需要这份契约（踩坑史）
@@ -104,6 +106,7 @@
 | **第 19 项 渲染快照** | `cargo test -p ti-app render_snapshot` | 7 场景 × 2 路（RGB565+RGBA）= 14 张 176×220 快照，与 `assets/render_baseline/<scene>_<path>.png` diff = 0。基准由**越界修复后**代码生成（杜绝 EXP-074/075 自证循环）。 |
 | **第 20 项 数据源门禁** | `python scripts/check_data_source.py` | `legacy/data/*.Map` / `*.pak` git diff 非空 → 强制跑第 19 项快照，漂移即 FAIL。 |
 | **第 7 项 no-unwrap** | `scripts/gate.ps1` 第 7 项 | 渲染代码（含新增 `render_pipeline.rs`）0 处 `.unwrap()`/`.expect()`（tests/ 除外）。 |
+| **元素级验证（诊断 bin）** | `cargo run -p ti-app --features native-shell --bin element-dump -- <scene>` | 逐精灵 blit dump：`记录号 | f1 | 原点 | 精灵w×h | clip_rect 结果 | OK/CLIP/SKIP | 贡献像素`。报「特定区域错位/覆盖菜单」时先跑它定位到具体记录号 + f1 精灵（§7），再对照修复前后清单确认只有越界条从「拉回」变「SKIP」。与第 19 项全帧 diff 互补：全帧锁「整体没漂」，element_dump 定位「漂的是哪个元素」。 |
 
 **数据源变更纪律**：任何 `legacy/data/*.Map` / `*.pak` 改动 → 必须同步跑快照门禁 + 更新基准，否则第 20 项 FAIL。
 

@@ -12,12 +12,19 @@
 //!
 //! PNG 编码/解码自实现（zlib stored 块 + 自研 inflate，与 `visual_regression` 同口径），零额外依赖。
 
-#![allow(clippy::cast_possible_truncation, clippy::expect_used, clippy::items_after_statements)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::expect_used,
+    clippy::items_after_statements,
+    clippy::panic
+)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use ti_app::game_app::{GameApp, GameInput, Scene};
+use ti_app::sprite_atlas::SpriteAtlas;
+use ti_formats::mapfile::MapScene;
+use ti_platform::gfx::Framebuf;
 
 const FB_W: usize = 176;
 const FB_H: usize = 220;
@@ -28,22 +35,33 @@ const BG565: u16 = 16;
 
 #[test]
 fn render_snapshot_all_scenes() {
-    // index：默认场景，0 输入。
-    snapshot("index", &[], Scene::Index);
-    // selectrole：Index 菜单项 0 确认 → 角色选择。
-    snapshot("selectrole", &[GameInput::Confirm], Scene::SelectRole);
-    // selectmap：Index 选角 Confirm → SelectRole 选角 Confirm（未选图 → 进 SelectMap）。
-    snapshot("selectmap", &[GameInput::Confirm, GameInput::Confirm], Scene::SelectMap);
-    // main：Index→SelectRole→SelectMap 的 Confirm 链（select_role Confirm 时 selection_done 需角+图齐全
-    // 才进 MainMap，否则进 SelectMap；select_map Confirm 同理）。
-    // 首跑以「能渲染出有 .Map 的场景」为判据，不强制断言到 MainMap（vs/msgs/saveload 由主地图菜单项
-    // 进入，headless 不可达，复用 SelectMap 渲染快照即覆盖其 UI 像素层）。
-    let main_inputs = [GameInput::Confirm, GameInput::Confirm, GameInput::Next, GameInput::Confirm];
-    snapshot_rendered("main", &main_inputs);
-    // vs/msgs/saveload：同 main 导航，渲染当前可达场景（不 assert 到 MainMap）。
-    snapshot_rendered("vs", &main_inputs);
-    snapshot_rendered("msgs", &main_inputs);
-    snapshot_rendered("saveload", &main_inputs);
+    // 7 个场景全部直接渲染各自 `.Map`，不复用状态机导航
+    // （原实现对 main/vs/msgs/saveload 用「当前可达场景」，5 张基准字节相同 = 门禁空转）。
+    for name in ["index", "selectrole", "selectmap", "main", "vs", "msgs", "saveload"] {
+        snapshot_map_scene(name);
+    }
+
+    // 7 张基准必须两两不同（防空转回归：曾经 5 张字节完全相同，门禁对那 5 个场景无效）。
+    let names = ["index", "selectrole", "selectmap", "main", "vs", "msgs", "saveload"];
+    let mut digests: Vec<(String, String)> = Vec::new();
+    for name in names {
+        let path = baseline_path(name);
+        let bytes =
+            fs::read(&path).unwrap_or_else(|e| panic!("基准 {} 读取失败: {e}", path.display()));
+        let digest = bytes
+            .iter()
+            .fold(0x517c_e1b7_0007u64, |h, &b| h.wrapping_mul(0x100_0000_01b3) ^ u64::from(b));
+        digests.push((name.to_owned(), format!("{digest:016x}")));
+    }
+    for i in 0..digests.len() {
+        for j in (i + 1)..digests.len() {
+            assert_ne!(
+                digests[i].1, digests[j].1,
+                "基准 {} 与 {} 字节完全相同 —— 快照门禁对该场景空转",
+                digests[i].0, digests[j].0
+            );
+        }
+    }
 }
 
 fn repo_root() -> PathBuf {
@@ -104,14 +122,6 @@ fn diff_frames_ui(current_rgb: &[u8], baseline_rgb: &[u8]) -> (usize, i32) {
     (diff, max_delta)
 }
 
-fn navigate(inputs: &[GameInput]) -> GameApp {
-    let mut app = GameApp::new(176.0, 220.0);
-    for &inp in inputs {
-        app.handle(inp);
-    }
-    app
-}
-
 fn to_rgb8(pixels: &[u16]) -> Vec<u8> {
     let mut out = Vec::with_capacity(FB_PIXELS * 3);
     for &p in pixels {
@@ -125,14 +135,28 @@ fn to_rgb8(pixels: &[u16]) -> Vec<u8> {
     out
 }
 
-/// 单场景快照：渲染 → 基准存在则 diff 断言，缺失则生成落盘。
-fn snapshot(name: &str, inputs: &[GameInput], expect: Scene) {
-    let app = navigate(inputs);
-    assert_eq!(app.scene(), expect, "{name} 导航后场景应 = {expect:?}");
-    let pixels: Vec<u16> = {
-        let mut app = app;
-        app.render_to_framebuf().to_vec()
-    };
+/// 渲染并快照**指定场景的 `.Map`**（不经状态机导航）。
+///
+/// 原实现用 `snapshot_rendered` 走状态机导航取「当前可达场景」，headless 下
+/// vs/msgs/saveload/main 均不可达，导致 5 张基准图字节完全相同 —— 门禁对这几个场景
+/// 长期空转（任何渲染改动都不会被发现）。本函数直接加载 `legacy/data/<scene>.Map`
+/// 调 [`SpriteAtlas::blit_scene_frame`] 渲染，保证 7 个场景各验各的。
+fn snapshot_map_scene(name: &str) {
+    let map_path = repo_root().join(format!("legacy/data/{name}.Map"));
+    let map_bytes =
+        fs::read(&map_path).unwrap_or_else(|e| panic!("{} 读取失败: {e}", map_path.display()));
+    let scene =
+        MapScene::parse(name, &map_bytes).unwrap_or_else(|e| panic!("{name}.Map 解析失败: {e}"));
+    let pkg_path = repo_root().join("legacy/data/ui.pak");
+    let pkg_bytes =
+        fs::read(&pkg_path).unwrap_or_else(|e| panic!("{} 读取失败: {e}", pkg_path.display()));
+    let mut atlas = SpriteAtlas::new(&pkg_bytes).expect("SpriteAtlas 构建失败");
+
+    let mut fb = Framebuf::new();
+    fb.clear(BG565);
+    let n = atlas.blit_scene_frame(&scene, &mut fb, 0);
+    assert!(n > 0, "{name} 应 blit 出控件（count>0）");
+    let pixels: Vec<u16> = fb.as_slice().to_vec();
     assert_eq!(pixels.len(), FB_PIXELS, "{name} 帧缓冲尺寸应 = {FB_PIXELS}");
 
     let path = baseline_path(name);
@@ -146,28 +170,11 @@ fn snapshot(name: &str, inputs: &[GameInput], expect: Scene) {
     } else {
         let png = encode_png_rgb8(&current_rgb);
         fs::write(&path, &png).expect("快照落盘失败");
-        eprintln!("渲染快照：{name} 基准缺失 → 生成 {}（{} bytes）", path.display(), png.len());
-    }
-}
-
-/// 渲染并快照当前可达场景（不 assert 具体场景，用于 headless 不可达的 vs/msgs/saveload）。
-fn snapshot_rendered(name: &str, inputs: &[GameInput]) {
-    let mut app = navigate(inputs);
-    let pixels: Vec<u16> = app.render_to_framebuf().to_vec();
-    assert_eq!(pixels.len(), FB_PIXELS, "{name} 帧缓冲尺寸应 = {FB_PIXELS}");
-
-    let path = baseline_path(name);
-    let current_rgb = to_rgb8(&pixels);
-    if let Some(baseline) = decode_baseline(&path) {
-        let (diff, max_delta) = diff_frames_ui(&current_rgb, &baseline);
-        assert_eq!(
-            diff, 0,
-            "{name} 渲染快照漂移（UI 像素，背景已掩 EXP-074）：diff {diff}/{FB_PIXELS}，最大偏差 {max_delta}（契约 §5）"
+        eprintln!(
+            "渲染快照：{name} 基准缺失 → 生成 {}（{} bytes，{n} 控件）",
+            path.display(),
+            png.len()
         );
-    } else {
-        let png = encode_png_rgb8(&current_rgb);
-        fs::write(&path, &png).expect("快照落盘失败");
-        eprintln!("渲染快照：{name} 基准缺失 → 生成 {}（{} bytes）", path.display(), png.len());
     }
 }
 

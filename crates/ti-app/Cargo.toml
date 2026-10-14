@@ -47,6 +47,12 @@ name = "element-dump"
 path = "src/bin/element_dump.rs"
 required-features = ["native-shell"]
 
+# S13.6（契约 §7）：逐精灵渲染验证 bin —— 累积 blit 记录 0..=N，输出 4x 放大 PNG 供肉眼确认。
+[[bin]]
+name = "sprite-step"
+path = "src/bin/sprite_step.rs"
+required-features = ["native-shell"]
+
 [features]
 # S8.9：HD 资源提升为默认档——默认构建含 `hd-8bit`（RGBA8 真彩帧缓冲 + PNG 解码）。
 # 缺失 `assets_hd_pack` 时 bin 自动回退 RGB565 PCX 原路径（不 panic）。

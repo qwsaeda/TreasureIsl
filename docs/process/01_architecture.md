@@ -4,20 +4,30 @@
 
 ```
 ┌─────────────────────────────────────────────┐
-│ crates/ti-app        表现层：场景 / 控件 / 输入 / 三端 bin │
-├─────────────────────────────────────────────┤
-│ crates/ti-core       玩法层：纯逻辑，零 IO、可单测 │
+│ crates/ti-app        表现层：场景 / 控件 / 输入 / 四端 bin │
 ├─────────────────────────────────────────────┤
 │ crates/ti-platform   平台层：窗口 / 帧缓冲 / 音频 / 存储 │
 ├─────────────────────────────────────────────┤
+│ crates/ti-core       玩法层：纯逻辑，零 IO、可单测 │
+├─────────────────────────────────────────────┤
 │ crates/ti-formats    格式层：pak / PCX / 字体 / 地图 / 存档解析 │
 └─────────────────────────────────────────────┘
-        ↕ 单向依赖，只能向下，禁止反向或跨层跳跃
+        ↕ 单向依赖，只能向下，禁止反向依赖
 ```
 
-- **玩法层零 IO 硬约束**：`ti-core` 不得依赖任何平台后端，因此能在无窗口环境跑全流程回归（`treasure-headless`）。
+> **层序以 `Cargo.toml` 实测为准**（2026-10 校正）：
+> `ti-app → {ti-core, ti-platform, ti-formats}`、
+> `ti-platform → {ti-core, ti-formats}`、`ti-core → ti-formats`。
+> 即 **`ti-platform` 位于 `ti-core` 之上**（仅为 `LOGICAL_WIDTH/HEIGHT` 常量，
+> 见 `ti-platform/src/gfx.rs` 的 `use ti_core::{LOGICAL_HEIGHT, LOGICAL_WIDTH};`）。
+> 旧版本文档曾把 `ti-core` 画在 `ti-platform` 之上，与实测依赖相反，已更正。
+
+- **玩法层零 IO 硬约束**：`ti-core` 不得依赖任何平台后端（实测只依赖 `ti-formats`），因此能在无窗口环境跑全流程回归（`treasure-headless`）。
 - **格式层只做编解码**，不含玩法判断、不含渲染。
 - **表现层不含数值**：所有金币/伤害/价格来自 `ti-core::rules`，表现层只画（详见 `02_conventions.md` §1）。
+- **跨层直接依赖是既成事实，非禁令**：`ti-app/Cargo.toml` 直接声明 `ti-formats`（读资源需要），
+  `ti-core/Cargo.toml` 以 `dev-dependency` 引入 `legacy-oracle`。
+  分层是**设计意图**（玩法判定不越层），不是 Cargo 层面的机械禁令。
 - **逆向参照物不进接口**：`docs/facts`/`ref/pseudocode` 不出现在任何 `pub` API 签名或 trait 约束里。
 
 ### 1.1 表现层内部分层（`ti-app`）

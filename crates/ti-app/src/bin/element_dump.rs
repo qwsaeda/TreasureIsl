@@ -80,7 +80,7 @@ fn main() {
                 let mut fb = ti_platform::gfx::Framebuf::new();
                 fb.clear(0);
                 ti_app::sprite_atlas::SpriteAtlas::blit_sprite(
-                    &sprite, ctrl.f2, ctrl.f3, &mut fb, 0,
+                    &sprite, ctrl.f2, ctrl.f3, &mut fb, 0, ctrl.f4,
                 );
                 let contrib = fb.as_slice().iter().filter(|&&p| p != 0).count();
                 let kind = if clip.x == ctrl.f2 as usize && clip.y == ctrl.f3 as usize {

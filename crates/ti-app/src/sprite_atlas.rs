@@ -219,19 +219,33 @@ impl SpriteAtlas {
     }
 
     /// 按指定帧号 blit 场景（测试与定格渲染用）。
+    ///
+    /// z-order 契约 §2（`docs/process/07_render_pipeline.md`）：**文件倒序** blit，
+    /// 即 record N 先画（最底层）→ record 0 后画（最顶层）。
+    ///
+    /// 依据（数据反推，非猜测）：`index.Map` rec0（`f1=105`，60×58，@6,12）与
+    /// rec2（`f1=111`，105×11，@36,22）在 x∈[36,66) y∈[22,33) **几何重叠**；
+    /// 原版实机呈现为「横条在但**不盖**徽章」= 徽章压横条 = rec0（文件首条）在顶层。
+    /// 故遍历取 `.rev()`。7 场景共 1326 对重叠记录全部符合此唯一方向
+    /// （`tests/e2e_render_alignment.rs::z_order_overlap_pairs_follow_reverse_file_order` 机器判定）。
+    ///
+    /// f4 翻转契约 §5（`sub_460F8:28-82`）：f4=1 正向（`sub_5D9C4`）、f4=2 Y 翻转
+    /// （`sub_5E158`）、f4=3 X+Y 双翻转（`sub_5DD7C`）。f4=3 在数据中成对出现在对称位置
+    /// （左 `f4=1` @x=0 / 右 `f4=3` @x=163，如 selectrole rec63/rec64 `f43` 13×45
+    /// 恰好拼成 0..13 与 163..176 的满宽边框），坐实「框内翻转件」语义。
     pub fn blit_scene_frame(&mut self, scene: &MapScene, fb: &mut Framebuf, frame: u32) -> u32 {
         let Ok(controls) = MapControl::parse_words("scene.Map", &scene.words) else {
             return 0;
         };
         let mut blitted = 0u32;
-        for ctrl in &controls {
+        for ctrl in controls.iter().rev() {
             if ctrl.f1 == 0 {
                 continue;
             }
             let Some(sprite) = self.sprite(ctrl.f1) else {
                 continue;
             };
-            Self::blit_sprite(&sprite, ctrl.f2, ctrl.f3, fb, frame);
+            Self::blit_sprite(&sprite, ctrl.f2, ctrl.f3, fb, frame, ctrl.f4);
             blitted += 1;
         }
         blitted
@@ -243,12 +257,17 @@ impl SpriteAtlas {
     /// 经 [`crate::render_pipeline::clip_rect`] 求交为空 → 整条早退不画（对齐原版
     /// `sub_5EAA8`/`sub_5D9C4`，`evidence/audit_zorder.md` A3）；部分越界按裁剪矩形画。
     /// 修掉原 `ox = px_x.min(FB_W-1)` 把越界精灵拉回右缘画 1 列竖条的 bug。
+    ///
+    /// `f4` 翻转（契约 §5）：原版 `sub_460F8` 按 f4 选 blit 例程——
+    /// f4=1 → `sub_5D9C4`（正向）、f4=2 → `sub_5E158`（Y 反向步进，`v16 -= a3[1]`）、
+    /// f4=3 → `sub_5DD7C`（X 反向 `--v17` + Y 反向，180° 翻转）。其余 f4 值按正向画。
     pub fn blit_sprite(
         sprite: &DecodedSprite,
         px_x: u32,
         py_y: u32,
         fb: &mut Framebuf,
         frame: u32,
+        f4: u32,
     ) {
         use crate::render_pipeline::{FB_W, TRANSPARENT_INDEX, clip_rect};
         let sw = sprite.width as usize;
@@ -259,12 +278,19 @@ impl SpriteAtlas {
         let ox = clip.x;
         let oy = clip.y;
         let fbase = sprite.frame_offset(frame);
+        let flip_x = f4 == 3;
+        let flip_y = f4 == 2 || f4 == 3;
         let px = fb.as_mut_slice();
         for row in 0..clip.h {
             let fy = oy + row;
+            // 契约 §5：f4=2/3 时 Y 反向（`sub_5E158`/`sub_5DD7C` 行 64 `v16 -= a3[1]`）
+            let src_row = if flip_y { clip.h - 1 - row } else { row };
             for col in 0..clip.w {
                 let fx = ox + col;
-                let idx = sprite.pixels.get(fbase + row * sw + col).copied().unwrap_or(0) as usize;
+                // 契约 §5：f4=3 时 X 反向（`sub_5DD7C` 行 73 `--v17`）
+                let src_col = if flip_x { clip.w - 1 - col } else { col };
+                let idx = sprite.pixels.get(fbase + src_row * sw + src_col).copied().unwrap_or(0)
+                    as usize;
                 // 契约 §4：PCX 调色板 index 0 = 透明哨兵位（sub_5D9C4），跳过后透出背景。
                 if idx == TRANSPARENT_INDEX {
                     continue;
@@ -298,7 +324,8 @@ impl SpriteAtlas {
             return 0;
         };
         let mut blitted = 0u32;
-        for ctrl in &controls {
+        // z-order 契约 §2：与 `blit_scene_frame` 同为文件倒序（首条顶层）。
+        for ctrl in controls.iter().rev() {
             if ctrl.f1 == 0 {
                 continue;
             }
@@ -324,7 +351,8 @@ impl SpriteAtlas {
             return 0;
         };
         let mut blitted = 0u32;
-        for ctrl in &controls {
+        // z-order 契约 §2：与 `blit_scene_frame` 同为文件倒序（首条顶层）。
+        for ctrl in controls.iter().rev() {
             if ctrl.f1 == 0 {
                 continue;
             }
@@ -483,7 +511,8 @@ impl SpriteAtlas {
         };
         let _frame = self.frame();
         let mut blitted = 0u32;
-        for ctrl in &controls {
+        // z-order 契约 §2：与 `blit_scene_frame` 同为文件倒序（首条顶层）。
+        for ctrl in controls.iter().rev() {
             if ctrl.f1 == 0 {
                 continue;
             }
