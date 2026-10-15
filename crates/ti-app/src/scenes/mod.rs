@@ -401,6 +401,9 @@ pub trait EconomyHost {
     /// 持有表 `gid` 的总数量。
     fn owned_count(&self, gid: u32) -> u32;
 
+    /// 持有表全量快照（`(goods_id, qty)`，`B` 根治：`TradeLedger` 构造用，避免逐商品 `owned_count`）。
+    fn owned_snapshot(&self) -> Vec<(u32, u32)>;
+
     /// 持有表条数（HUD 用）。
     fn owned_total(&self) -> usize;
 

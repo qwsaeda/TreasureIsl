@@ -3,9 +3,9 @@
 //! 事件分派的跳转结果（`Vs` / `Message`）由路由层 [`crate::scenes::enter_target`]
 //! 处理——那是跨场景的公共跳转点，不属于本场景。
 use ti_core::data::balance;
+use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::map::{Dir, GridPos, MapTerrain};
-use ti_core::rules::build::cost_of;
 use ti_core::rules::main_map::MapSession;
 
 use crate::game_app::GameInput;
@@ -52,6 +52,97 @@ fn walk_towards(host: &mut dyn SceneHost, terrain: &MapTerrain, to: GridPos) -> 
     changed
 }
 
+/// B 根治：买入走 `TradeLedger` 校验，可玩路径与业务线同一逻辑（双轨语义对齐）。
+fn handle_trade_buy(host: &mut dyn SceneHost, gid: u32) {
+    let b = match balance() {
+        Ok(b) => b,
+        Err(_e) => {
+            #[cfg(feature = "stats")]
+            eprintln!("[stats] TradeBuy: balance.json 加载失败（硬报错，不 fallback）");
+            return;
+        }
+    };
+    let mut ledger = ti_core::rules::trade::TradeLedger::new(
+        b.trade.clone(),
+        host.gold(),
+        &host.owned_snapshot(),
+        host.gold_cap(),
+    );
+    match ledger.buy(gid, 1) {
+        Ok(res) => {
+            host.set_gold(res.gold_left);
+            match host.owned_index_of(res.gid) {
+                Some(index) => host.owned_bump(index),
+                None => host.owned_push(res.gid, res.qty),
+            }
+            host.play_sfx(Sfx::Press);
+        }
+        Err(_) => {
+            host.play_sfx(Sfx::Invalid);
+        }
+    }
+}
+
+/// B 根治：卖出走 `TradeLedger` 结算 + 溢出进银行（修复 P1-6 T1 漏接点）。
+fn handle_trade_sell(host: &mut dyn SceneHost, gid: u32) {
+    let b = match balance() {
+        Ok(b) => b,
+        Err(_e) => {
+            #[cfg(feature = "stats")]
+            eprintln!("[stats] TradeSell: balance.json 加载失败（硬报错，不 fallback）");
+            return;
+        }
+    };
+    let mut ledger = ti_core::rules::trade::TradeLedger::new(
+        b.trade.clone(),
+        host.gold(),
+        &host.owned_snapshot(),
+        host.gold_cap(),
+    );
+    match ledger.sell(gid, 0) {
+        Ok(res) => {
+            host.set_gold(res.gold_left);
+            host.owned_take_all(res.gid);
+            if res.overflow > 0 {
+                host.settle_overflow(res.overflow);
+            }
+            host.play_sfx(Sfx::Press);
+        }
+        Err(_) => {
+            host.play_sfx(Sfx::Invalid);
+        }
+    }
+}
+
+/// B 根治：建造走 `BuildManager` 结算（等级 + 抬上限），可玩路径与业务线对齐。
+fn handle_build(host: &mut dyn SceneHost, kind: Building) {
+    let b = match balance() {
+        Ok(b) => b,
+        Err(_e) => {
+            #[cfg(feature = "stats")]
+            eprintln!("[stats] Build: balance.json 加载失败（硬报错，不 fallback）");
+            return;
+        }
+    };
+    let mut mgr = ti_core::rules::build::BuildManager::new(
+        b.build.clone(),
+        ti_core::rules::build::Bank { gold: host.bank_gold(), deposit: 0 },
+        &[],
+    );
+    let bank_before = mgr.bank().gold;
+    match mgr.build(ti_core::rules::build::kind_id(kind)) {
+        Ok(()) => {
+            let spent = bank_before.saturating_sub(mgr.bank().gold);
+            host.spend_bank_gold(spent);
+            host.build_increment(kind);
+            host.play_sfx(Sfx::Press);
+        }
+        Err(_) => {
+            host.play_sfx(Sfx::Invalid);
+        }
+    }
+}
+
 impl Scene for MainMapScene {
     fn kind(&self) -> SceneKind {
         SceneKind::MainMap
@@ -94,63 +185,15 @@ impl Scene for MainMapScene {
                 }
             }
             GameInput::TradeBuy(gid) => {
-                // S10.3 改动 5：买前查 `balance.trade.goods[i].qty_max`，超限时拒买
-                let b = match balance() {
-                    Ok(b) => b,
-                    Err(_e) => {
-                        #[cfg(feature = "stats")]
-                        eprintln!("[stats] TradeBuy: balance.json 加载失败（硬报错，不 fallback）");
-                        return false;
-                    }
-                };
-                let Some(goods) = b.trade.goods.iter().find(|g| g.id == gid) else {
-                    return false;
-                };
-                let held = host.owned_count(gid);
-                if held >= goods.qty_max {
-                    return false; // 持有量已达上限，拒买
-                }
-                if let Some(price) = host.price_of(gid) {
-                    let gold = host.gold();
-                    if gold >= price {
-                        host.set_gold(gold - price);
-                        match host.owned_index_of(gid) {
-                            Some(index) => host.owned_bump(index),
-                            None => host.owned_push(gid, 1),
-                        }
-                        host.play_sfx(Sfx::Press);
-                    }
-                }
+                handle_trade_buy(host, gid);
                 false
             }
             GameInput::TradeSell(gid) => {
-                // S10.3 改动 3：卖价走 `balance.trade.markup`（`host.price_of` 已应用 markup 系数）
-                let qty = host.owned_count(gid);
-                if qty > 0 {
-                    let gain = host.sell_price_of(gid).unwrap_or(0).saturating_mul(qty);
-                    let gold = host.gold();
-                    host.set_gold(gold.saturating_add(gain));
-                    host.owned_take_all(gid);
-                    host.play_sfx(Sfx::Press);
-                }
+                handle_trade_sell(host, gid);
                 false
             }
             GameInput::Build(kind) => {
-                // S10.3 改动 4：造价走 `balance.build.buildings`（`rules::build::cost_of` 纯函数）
-                let b = match balance() {
-                    Ok(b) => b,
-                    Err(_e) => {
-                        #[cfg(feature = "stats")]
-                        eprintln!("[stats] Build: balance.json 加载失败（硬报错，不 fallback）");
-                        return false;
-                    }
-                };
-                let cost = cost_of(&b.build, kind);
-                if cost > 0 && host.bank_gold() >= cost {
-                    host.spend_bank_gold(cost);
-                    host.build_increment(kind);
-                    host.play_sfx(Sfx::Press);
-                }
+                handle_build(host, kind);
                 false
             }
             GameInput::MapBack => {

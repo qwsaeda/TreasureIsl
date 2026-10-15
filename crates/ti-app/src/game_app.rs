@@ -1354,6 +1354,10 @@ impl EconomyHost for GameApp {
         self.owned.iter().find(|(id, _)| *id == gid).map_or(0, |&(_, q)| q)
     }
 
+    fn owned_snapshot(&self) -> Vec<(u32, u32)> {
+        self.owned.clone()
+    }
+
     fn owned_total(&self) -> usize {
         self.owned.len()
     }
