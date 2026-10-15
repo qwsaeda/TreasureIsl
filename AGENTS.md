@@ -54,7 +54,14 @@
 ## 命令
 
 ```sh
-# 每轮循环的门禁：gate.ps1 16 项（fmt/clippy/test/build×3/占位/unwrap/zero-unknown/台账 + doccheck 第 9 / 数据表第 10 / oracle 边界第 11 / check_hardcode 严格第 12 / doccheck2 第 13 / 台账三方对账第 14 / 业务闭环第 15 / 模块并行前置第 16）
+# 常用命令一键入口（16 项命令固化，-List 列全部；含 push 前置 gate 全绿检查）
+powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -List
+powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 run-native     # 桌面版（HD 真彩，F4 切画质）
+powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 gate         # 全门禁
+powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 test         # 全 workspace 测试
+powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 element-dump index 3  # 元素级验证（场景 + 记录号）
+
+# 每轮循环的门禁：gate.ps1 20 项（fmt/clippy/test/build×3/占位/unwrap/zero-unknown/台账 + doccheck 第 9 / 数据表第 10 / oracle 边界第 11 / check_hardcode 严格第 12 / doccheck2 第 13 / 台账三方对账第 14 / 业务闭环第 15 / 模块并行前置第 16 / 飞轮自触第 17 / 视觉回归第 18 / 渲染快照第 19 / 数据源第 20）
 # 全绿才可把任务置 verified，输出 tee 到 evidence/<id>.log
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 
