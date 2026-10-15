@@ -356,6 +356,9 @@ pub trait MapHost {
     /// 据点坐标（拷贝出，避免与帧缓冲借用重叠）。
     fn map_landmarks(&self) -> Vec<(u32, u32)>;
 
+    /// BOSS 格坐标（`None` = 本地图无 BOSS 格；P0-2 渲染用，橙红三角标记）。
+    fn map_boss_tile(&self) -> Option<GridPos>;
+
     /// 走一步（宿主内同时借用 `map_session` 与 `rng`，场景层拿不到两个借用）。
     fn map_session_move(&mut self, dir: Dir) -> StepResult;
 
@@ -412,6 +415,33 @@ pub trait EconomyHost {
 
     /// 建筑列表 `kind` 等级 +1（不存在则新增）。
     fn build_increment(&mut self, kind: Building);
+
+    /// 当前金量上限（`balance.economy.gold_max`，建造可抬升；`0` = 不限制）。
+    ///
+    /// P1-6（T1）：经济上限机制接线——表现层卖出加金钳到 `gold_cap`，
+    /// 溢出经 `settle_overflow` 进银行（`rules::trade` + `rules::build` 契约）。
+    /// 默认 0（不限制），宿主可覆盖读 `balance.economy.gold_max`。
+    fn gold_cap(&self) -> u32 {
+        0
+    }
+
+    /// 卖出加金后结算溢出：若 `gold > gold_cap`，超出部分按 `bank_rate` 进银行。
+    ///
+    /// P1-6（T1）：承接 `TradeResult.overflow` 的落点（`rules::build::Bank`）。
+    /// 默认 no-op（不限制），宿主实现为 `bank.deposit += excess × rate`。
+    fn settle_overflow(&mut self, excess: u32) {
+        let _ = excess;
+    }
+
+    /// P1-7（M5）：卡牌效果真接进可玩路径——`event_id`（`StepResult.card_event`）映射到
+    /// `balance.cards` 卡并经 `rules::cards::apply_card` 结算（扣金/加金/扣 HP/加 HP）。
+    ///
+    /// 默认 no-op（不接卡牌），宿主实现走 `rules::cards`（数值单一事实源）。
+    /// 返回是否实际改动了状态（`Applied` = 改动，`UnknownEvent` = 无改动）。
+    fn apply_card_effect(&mut self, event_id: u32) -> bool {
+        let _ = event_id;
+        false
+    }
 }
 
 /// S9.2：会话接口（音效/战斗/消息/存读档/状态查询）。
@@ -457,6 +487,9 @@ pub trait SessionHost {
 
     /// 当前是否有战斗会话。
     fn in_battle(&self) -> bool;
+
+    /// P1-8（S1）：当前 RNG 已消费 `next_u64` 次数（写档捕获，读档精确续流）。
+    fn rng_steps(&self) -> u128;
 }
 
 /// 场景宿主能力接口：`GameApp` 实现的**唯一**状态/表现出口。

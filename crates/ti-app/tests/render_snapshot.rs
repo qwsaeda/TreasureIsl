@@ -30,8 +30,11 @@ const FB_W: usize = 176;
 const FB_H: usize = 220;
 const FB_PIXELS: usize = FB_W * FB_H;
 const TOLERANCE: i32 = 1;
-/// 清屏背景色 RGB565（`menu_shell::COLOR_BG`，UI 像素 = 非背景色，EXP-074）。
-const BG565: u16 = 0x87BB;
+/// 清屏背景色 RGB565（`menu_shell::COLOR_BG` 米白 0xFD70，UI 像素 = 非背景色，EXP-074）。
+///
+/// 背景掩码 = 清屏色（`MenuShell::clear_frame(COLOR_BG)` 0xFD70），非标题条色 0x87BB。
+/// 标题条/HUD 是 UI 像素（非背景），漂移须被检测到。
+const BG565: u16 = 0xFD70;
 
 #[test]
 fn render_snapshot_all_scenes() {

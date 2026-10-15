@@ -80,7 +80,8 @@ fn manager_from_balance_slot_count() {
 
 #[test]
 fn legacy_slot_to_v2() {
-    let legacy = SaveSlot { version: 1, character: 2, gold: 500, map_slot: 3, position: 777 };
+    let legacy =
+        SaveSlot { version: 1, character: 2, gold: 500, map_slot: 3, position: 777, rng_steps: 0 };
     let v2 = SaveSlotV2::from_legacy_slot(&legacy);
     assert!(v2.is_v2());
     assert_eq!(v2.character, "char2");

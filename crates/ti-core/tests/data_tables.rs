@@ -225,6 +225,8 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
                 name_key: "b".to_string(),
                 base_cost: 1,
                 gold_max: 9,
+                atk_bonus: 0,
+                hp_bonus: 0,
             }],
         },
         cards: ti_core::data::CardsCfg { event_chance: 0.5, hand_size: 1, deck: Vec::new() },

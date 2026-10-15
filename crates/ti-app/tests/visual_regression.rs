@@ -252,12 +252,13 @@ fn zlib_decompress_stored(data: &[u8]) -> Option<Vec<u8>> {
     Some(out)
 }
 
-/// 背景色 RGB8（`COLOR_BG=16` 清屏色；UI 像素 = 非背景色，EXP-074）。
+/// 背景色 RGB8（`COLOR_BG` 米白 0xFD70 清屏色；UI 像素 = 非背景色，EXP-074）。
 ///
 /// EXP-074：视觉回归只锁「UI 像素分布」（高亮矩形 / 文字 / HUD 落在哪些逻辑像素），
 /// **不锁背景贴图**——HD 化（`assets_hd_pack` 2x/4x PNG）与原版 PCX 背景不同，
 /// 整帧 diff 会因背景差异误报。故 diff 时把「背景色像素」掩掉，只比 UI 层。
-const BG565: u16 = 16;
+/// UI-14：清屏色 = `COLOR_BG` 米白 0xFD70（S14 航海图纸质系），非 16（黑色）。
+const BG565: u16 = 0xFD70;
 
 /// 清屏背景色在 RGB565→RGB8 下的三通道值（用于掩背景）。
 fn bg_rgb8() -> [i32; 3] {

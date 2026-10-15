@@ -37,13 +37,13 @@ fn test_cfg() -> CombatCfg {
 fn session_from_balance_new_and_step() {
     let player = Unit { hp: 100, atk: 10 };
     let mut s = BattleSession::from_balance(1, player, 0).expect("balance.json 有效");
-    assert_eq!(s.boss_hp(), 50_000, "BOSS 档 0 初 HP 走 balance.combat");
+    assert_eq!(s.boss_hp(), 2_400, "BOSS 档 0 初 HP 走 balance.combat");
     assert_eq!(s.round(), 0);
     assert_eq!(s.outcome(), None);
     let (ph, eh, _) = s.step();
     assert_eq!(s.round(), 1);
     assert!(ph <= 100, "玩家 HP 只减不增");
-    assert!(eh < 50_000, "BOSS 被扣血");
+    assert!(eh < 2_400, "BOSS 被扣血（档 0 hp=2400）");
 }
 
 #[test]
@@ -98,7 +98,7 @@ fn combat_min_damage_floor() {
     let player = Unit { hp: 100, atk: 0 };
     let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
     let (_ph, eh, _) = s.step();
-    assert!(eh <= 50_000 - 5, "BOSS 每回合至少掉 flat=5 血");
+    assert!(eh <= 50_000 - 5, "BOSS 每回合至少掉 flat=5 血（test_cfg 档 0 夹具 50k，非 balance）");
 }
 
 #[test]
@@ -201,7 +201,7 @@ fn combat_max_rounds_tiebreak_same_hp() {
 #[test]
 fn combat_boss_tiers_from_balance() {
     let player = Unit { hp: 1, atk: 0 };
-    let expect_boss_hp: &[u32] = &[50_000, 100_000, 150_000, 200_000, 300_000];
+    let expect_boss_hp: &[u32] = &[2_400, 4_800, 7_200, 9_600, 12_000];
     for (tier, &init) in expect_boss_hp.iter().enumerate() {
         let tier_u32 = u32::try_from(tier).unwrap_or(u32::MAX);
         let s = BattleSession::from_balance(0, player, tier_u32).expect("balance.json 有效");

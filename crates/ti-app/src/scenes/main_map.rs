@@ -70,6 +70,13 @@ impl Scene for MainMapScene {
                     host.start_battle();
                     return true;
                 }
+                // P1-7（M5）：卡牌事件真接进可玩路径——`card_event`（`StepResult`）
+                // 经 `EconomyHost::apply_card_effect` 结算（扣金/加金/扣 HP/加 HP，`rules::cards`）。
+                if let Some(event_id) = result.card_event {
+                    if host.apply_card_effect(event_id) {
+                        host.play_sfx(Sfx::Press);
+                    }
+                }
                 // 落在据点 → 触发事件分派（与 `Landmark` 同路径）
                 if let Some(target) = result.landmark {
                     host.set_last_dispatch(Some(target));
@@ -251,6 +258,24 @@ impl Scene for MainMapScene {
                 let px = i32::try_from(c).unwrap_or(0) * gs + g0;
                 let py = i32::try_from(r).unwrap_or(0) * gs + g1;
                 host.fill_rect(px - 1, py - 1, 3, 3, COLOR_LANDMARK);
+            }
+        }
+        // P0-2（M1）：BOSS 格橙红标记（4×4 方块，`COLOR_DANGER`，与玩家棋子同坐标系）
+        if let Some(bt) = host.map_boss_tile() {
+            if terrain_drawn {
+                let iso_x = TerrainAtlas::iso_x(bt.row, bt.col);
+                let iso_y = TerrainAtlas::iso_y(bt.row, bt.col, gw);
+                host.fill_rect(
+                    iso_x + cx - 2,
+                    iso_y + cy - 2,
+                    4,
+                    4,
+                    crate::menu_shell::COLOR_DANGER,
+                );
+            } else {
+                let px = i32::try_from(bt.col).unwrap_or(0) * gs + g0;
+                let py = i32::try_from(bt.row).unwrap_or(0) * gs + g1;
+                host.fill_rect(px - 1, py - 1, 4, 4, crate::menu_shell::COLOR_DANGER);
             }
         }
         host.draw_text(i18n::sget("scene.main_map.hint"), layout.hint.x, layout.hint.y);

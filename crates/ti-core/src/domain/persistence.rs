@@ -19,11 +19,15 @@ pub struct SaveSlot {
     pub map_slot: u32,
     /// 游戏进度（业务定义：已探索据点数）。
     pub position: u32,
+    /// P1-8（S1）：RNG 已消费 `next_u64` 次数（精确续流；旧存档缺省 0 = 种子重置语义）。
+    /// 读档后 `GameRng::restore_state(rng_seed, rng_steps)` O(log n) 跳转。
+    #[serde(default)]
+    pub rng_steps: u128,
 }
 
 impl Default for SaveSlot {
     fn default() -> Self {
-        Self { version: 1, character: 1, gold: 0, map_slot: 0, position: 0 }
+        Self { version: 1, character: 1, gold: 0, map_slot: 0, position: 0, rng_steps: 0 }
     }
 }
 

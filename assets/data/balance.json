@@ -7,24 +7,24 @@
     "initial_gold": 1000
   },
 
-  "combat": {
-    "player_first": true,
-    "max_rounds": 1000,
-    "player": { "hp": 2000, "atk": 60 },
-    "damage": {
-      "model": "atk_plus_flat",
-      "flat": 1,
-      "atk_coef": 1.0,
-      "rng_span": 3
+    "combat": {
+      "player_first": true,
+      "max_rounds": 1000,
+      "player": { "hp": 2000, "atk": 60 },
+      "damage": {
+        "model": "atk_plus_flat",
+        "flat": 1,
+        "atk_coef": 1.0,
+        "rng_span": 3
+      },
+      "boss_tiers": [
+        { "tier": 0, "hp": 2400,  "atk": 10 },
+        { "tier": 1, "hp": 4800,  "atk": 12 },
+        { "tier": 2, "hp": 7200,  "atk": 14 },
+        { "tier": 3, "hp": 9600,  "atk": 16 },
+        { "tier": 4, "hp": 12000, "atk": 20 }
+      ]
     },
-    "boss_tiers": [
-      { "tier": 0, "hp": 50000,  "atk": 10 },
-      { "tier": 1, "hp": 100000, "atk": 12 },
-      { "tier": 2, "hp": 150000, "atk": 14 },
-      { "tier": 3, "hp": 200000, "atk": 16 },
-      { "tier": 4, "hp": 300000, "atk": 20 }
-    ]
-  },
 
   "trade": {
     "markup": 1.5,
@@ -37,15 +37,15 @@
     ]
   },
 
-  "build": {
-    "max_level": 10,
-    "buildings": [
-      { "id": "Castle",     "name_key": "build.castle",     "base_cost": 1000, "gold_max": 20000 },
-      { "id": "Investment", "name_key": "build.investment", "base_cost": 500,  "gold_max": 12000 },
-      { "id": "Bank",       "name_key": "build.bank",       "base_cost": 200,  "gold_max": 5000  },
-      { "id": "Fort",       "name_key": "build.fort",       "base_cost": 800,  "gold_max": 16000 }
-    ]
-  },
+    "build": {
+      "max_level": 10,
+      "buildings": [
+        { "id": "Castle",     "name_key": "build.castle",     "base_cost": 1000, "gold_max": 20000, "atk_bonus": 10, "hp_bonus": 200 },
+        { "id": "Investment", "name_key": "build.investment", "base_cost": 500,  "gold_max": 12000, "atk_bonus": 5,  "hp_bonus": 100 },
+        { "id": "Bank",       "name_key": "build.bank",       "base_cost": 200,  "gold_max": 5000,  "atk_bonus": 0,  "hp_bonus": 50 },
+        { "id": "Fort",       "name_key": "build.fort",       "base_cost": 800,  "gold_max": 16000, "atk_bonus": 8,  "hp_bonus": 150 }
+      ]
+    },
 
   "cards": {
     "event_chance": 0.35,
@@ -88,7 +88,8 @@
         "landmarks": [
           [2, 2],
           [17, 17]
-        ]
+        ],
+        "boss_tile": [5, 5]
       },
       {
         "id": "m02",
@@ -100,7 +101,8 @@
         "landmarks": [
           [2, 2],
           [17, 17]
-        ]
+        ],
+        "boss_tile": [5, 5]
       },
       {
         "id": "m03",
@@ -112,7 +114,8 @@
         "landmarks": [
           [2, 2],
           [12, 12]
-        ]
+        ],
+        "boss_tile": [4, 4]
       }
     ]
   },

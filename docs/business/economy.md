@@ -49,10 +49,10 @@
 ```jsonc
 "build": {
   "buildings": [
-    { "id": "Castle",     "name_key": "build.castle",     "base_cost": 1000, "gold_max": 20000 },
-    { "id": "Investment", "name_key": "build.investment", "base_cost": 500,  "gold_max": 12000 },
-    { "id": "Bank",       "name_key": "build.bank",       "base_cost": 200,  "gold_max": 5000  },
-    { "id": "Fort",       "name_key": "build.fort",       "base_cost": 800,  "gold_max": 16000 }
+    { "id": "Castle",     "name_key": "build.castle",     "base_cost": 1000, "gold_max": 20000, "atk_bonus": 10, "hp_bonus": 200 },
+    { "id": "Investment", "name_key": "build.investment", "base_cost": 500,  "gold_max": 12000, "atk_bonus": 5,  "hp_bonus": 100 },
+    { "id": "Bank",       "name_key": "build.bank",       "base_cost": 200,  "gold_max": 5000,  "atk_bonus": 0,  "hp_bonus": 50 },
+    { "id": "Fort",       "name_key": "build.fort",       "base_cost": 800,  "gold_max": 16000, "atk_bonus": 8,  "hp_bonus": 150 }
   ]
 }
 ```
@@ -61,7 +61,14 @@
 
 1. 扣金币；
 2. **抬升金量上限**到该建筑对应值（`gold_max` 取已建建筑的最大值）；
-3. 解锁对应玩法（据点/堡垒 → 高阶 BOSS）。
+3. **抬升战斗 atk/hp**（`atk_bonus`/`hp_bonus` × 等级，`combat.md` §建造加成）；
+4. 解锁对应玩法（据点/堡垒 → 高阶 BOSS）。
+
+### 经济上限（`gold_cap` + `settle_overflow`）
+
+- 卖出加金钳到 `gold_cap`（`balance.economy.gold_max`，建造可抬升）；
+- 溢出部分按 `bank_rate` 进银行累计（`EconomyHost::settle_overflow`）；
+- 金币恒 ≤ 上限（`economy_gold_never_exceeds_cap` 单测）。
 
 ### 银行
 

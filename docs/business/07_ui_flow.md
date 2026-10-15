@@ -99,7 +99,7 @@
 - 5 类界面：`Msgs`（通用提示/退出对话框）、`Msgl`（据点对话框 + 结算面板）、
   `Msgm`（多页面板/卡片/贸易结果）、`Help`（多页帮助）、`Info`（信息/角色状态）；
 - **页数来自 `balance.messages.pages`**（`rules::messages::total_pages` 读表），禁止硬编码；
-- 当前页 `page ∈ 0..total_pages`，上/下页**钳位**（首尾不环绕）；
+- 当前页 `page ∈ 0..total_pages`，**下页到末页保持、上页到首页回末页（首尾环绕循环）**（`rules::messages::MsgSession` 实现）；
 - 关闭时回到**打开源场景**（见 §1 `Message` 的两条出边），不得回固定场景；
 - 标题与正文文本走 `strings.json`（`msg.<kind>.label` + 页正文 key），禁止中文面量。
 

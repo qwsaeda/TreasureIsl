@@ -134,6 +134,22 @@ impl BuildManager {
             .unwrap_or(0)
     }
 
+    /// 全部已建建筑提供的战斗 atk 总加成（`Σ atk_bonus × level`，`docs/business/combat.md` §建造加成）。
+    ///
+    /// 无建筑 → 0。成长机制入口：`start_battle` 用 `player_atk + build_atk_bonus()`。
+    #[must_use]
+    pub fn build_atk_bonus(&self) -> u32 {
+        self.buildings.iter().map(|(id, lvl)| self.cfg.atk_bonus_at(id, *lvl)).sum()
+    }
+
+    /// 全部已建建筑提供的战斗 hp 总加成（`Σ hp_bonus × level`，同上）。
+    ///
+    /// 无建筑 → 0。成长机制入口：`start_battle` 用 `player.hp + build_hp_bonus()`。
+    #[must_use]
+    pub fn build_hp_bonus(&self) -> u32 {
+        self.buildings.iter().map(|(id, lvl)| self.cfg.hp_bonus_at(id, *lvl)).sum()
+    }
+
     /// 金量是否足够支付 `cost`。
     #[must_use]
     pub fn can_afford(&self, cost: u32) -> bool {

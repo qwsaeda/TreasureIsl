@@ -42,6 +42,10 @@ pub const COLOR_BG: u16 = 0xFD70;
 pub const COLOR_PLAYER: u16 = 0x066F;
 /// 危险/玩家血条布局色（#FF6347 橙红，S14 战斗面板）。
 pub const COLOR_DANGER: u16 = 0xFDAF;
+/// 文字墨色（#000000 深灰，S14 航海图纸质文字，`08_layout_design.md` §2 ink）。
+pub const COLOR_INK: u16 = 0x0000;
+/// 次文字/提示行布局色（#808080 灰，S14 未解锁项/提示行，`08_layout_design.md` §2 secondary）。
+pub const COLOR_SECONDARY: u16 = 0x7BEF;
 /// 标题条布局色 RGBA 版（`0xAARRGGBB`，HD 8-bit 帧缓冲路径用）。
 #[cfg(feature = "hd-8bit")]
 pub const COLOR_TITLE_BAR_RGBA: u32 = 0xFF_87BB;
@@ -329,10 +333,7 @@ mod tests {
     //! 不变式 = `last_rendered_scene` 值域 ∈ `SceneKind::discriminant()` 0..=8（唯一无碰撞），
     //! 场景切换时必然 `!=` 旧值 → 壳层强制重渲染（P0-5 场景 key 碰撞修复回归）。
 
-    use super::{
-        COLOR_BG, COLOR_DANGER, COLOR_LANDMARK, COLOR_PLAYER, COLOR_SELECTED, COLOR_TITLE_BAR,
-        GLYPH_ADVANCE, MenuShell,
-    };
+    use super::{GLYPH_ADVANCE, MenuShell};
 
     #[test]
     fn last_rendered_scene_discriminant_range() {
@@ -369,14 +370,20 @@ mod tests {
     /// S14：航海图纸质系配色常量与 `docs/business/08_layout_design.md` §2 表一致（值域断言）。
     #[test]
     fn palette_constants_match_doc() {
+        use super::{
+            COLOR_BG, COLOR_DANGER, COLOR_INK, COLOR_LANDMARK, COLOR_PLAYER, COLOR_SECONDARY,
+            COLOR_SELECTED, COLOR_TITLE_BAR,
+        };
         // §2 表：bg=#F5F5DC(0xFD70) primary=#8B4513(0x87BB) accent=#2E8B57(0x066F)
-        //       danger=#FF6347(0xFDAF) ink=深灰
+        //       danger=#FF6347(0xFDAF) ink=深灰 secondary=灰
         assert_eq!(COLOR_BG, 0xFD70, "背景应米白 0xFD70");
         assert_eq!(COLOR_TITLE_BAR, 0x87BB, "标题条应棕 0x87BB（主色）");
         assert_eq!(COLOR_SELECTED, 0x066F, "选中高亮应海绿 0x066F（强调色）");
         assert_eq!(COLOR_LANDMARK, 0x87BB, "据点应棕 0x87BB");
         assert_eq!(COLOR_PLAYER, 0x066F, "玩家棋子应海绿 0x066F");
         assert_eq!(COLOR_DANGER, 0xFDAF, "玩家血条应橙红 0xFDAF");
+        assert_eq!(COLOR_INK, 0x0000, "文字墨色应深灰 0x0000（ink）");
+        assert_eq!(COLOR_SECONDARY, 0x7BEF, "次文字应灰 0x7BEF（secondary）");
     }
 
     fn abort_on_err<E: std::fmt::Display>(e: E) -> ! {

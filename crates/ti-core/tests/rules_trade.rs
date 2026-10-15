@@ -15,12 +15,16 @@ fn cfg_build() -> BuildCfg {
                 name_key: "build.bank".into(),
                 base_cost: 100,
                 gold_max: 1_000,
+                atk_bonus: 0,
+                hp_bonus: 0,
             },
             BuildingDef {
                 id: "Castle".into(),
                 name_key: "build.castle".into(),
                 base_cost: 500,
                 gold_max: 5_000,
+                atk_bonus: 0,
+                hp_bonus: 0,
             },
         ],
     }

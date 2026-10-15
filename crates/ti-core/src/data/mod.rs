@@ -121,6 +121,10 @@ pub struct BuildingDef {
     pub base_cost: u32,
     /// 建成后抬升的金量上限。
     pub gold_max: u32,
+    /// 每级战斗 atk 加成（成长机制，`docs/business/combat.md` §建造加成；`0` = 无加成）。
+    pub atk_bonus: u32,
+    /// 每级战斗 hp 加成（成长机制，`0` = 无加成）。
+    pub hp_bonus: u32,
 }
 
 /// 卡牌效果（`balance.cards.deck[].effect`）。
@@ -209,6 +213,22 @@ impl BuildCfg {
     pub fn get(&self, id: &str) -> Option<&BuildingDef> {
         self.buildings.iter().find(|b| b.id == id)
     }
+
+    /// 按建筑 id + 当前等级算该建筑提供的战斗 atk 加成（`atk_bonus × level`，`docs/business/combat.md` §建造加成）。
+    ///
+    /// 查不到建筑 / 等级 0 → `0`（无加成）。
+    #[must_use]
+    pub fn atk_bonus_at(&self, id: &str, level: u32) -> u32 {
+        self.get(id).map_or(0, |b| b.atk_bonus.saturating_mul(level))
+    }
+
+    /// 按建筑 id + 当前等级算该建筑提供的战斗 hp 加成（`hp_bonus × level`，同上）。
+    ///
+    /// 查不到建筑 / 等级 0 → `0`。
+    #[must_use]
+    pub fn hp_bonus_at(&self, id: &str, level: u32) -> u32 {
+        self.get(id).map_or(0, |b| b.hp_bonus.saturating_mul(level))
+    }
 }
 
 /// 卡牌参数（`balance.cards`）。
@@ -292,6 +312,8 @@ pub struct MapDef {
     pub player_start: [u32; 2],
     /// 据点坐标列表 `[(row, col)]`。
     pub landmarks: Vec<[u32; 2]>,
+    /// BOSS 格 `(row, col)`（`progression.md` 落格结算：玩家移入此格 → 进战斗场景；缺省 = 无 BOSS 格）。
+    pub boss_tile: Option<[u32; 2]>,
 }
 
 /// 单个控件记录（`controls.json` 的 `scenes[].records[]`，S8.5 控件层）。
@@ -553,8 +575,16 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
             .trade
             .goods
             .into_iter()
-            .map(|g| GoodsDef { id: g.id, name_key: g.name_key, buy: g.buy, qty_max: g.qty_max })
-            .collect(),
+            .map(|g| {
+                if g.buy == 0 {
+                    return Err(LoadError::Schema(format!(
+                        "trade.goods[{}].buy = 0（免费商品可无限刷金，必须 > 0）",
+                        g.id
+                    )));
+                }
+                Ok(GoodsDef { id: g.id, name_key: g.name_key, buy: g.buy, qty_max: g.qty_max })
+            })
+            .collect::<Result<Vec<_>, LoadError>>()?,
     };
 
     let build = BuildCfg {
@@ -563,13 +593,23 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
             .build
             .buildings
             .into_iter()
-            .map(|b| BuildingDef {
-                id: b.id,
-                name_key: b.name_key,
-                base_cost: b.base_cost,
-                gold_max: b.gold_max,
+            .map(|b| {
+                if b.base_cost == 0 {
+                    return Err(LoadError::Schema(format!(
+                        "build.buildings[{}].base_cost = 0（免费建筑可无限刷，必须 > 0）",
+                        b.id
+                    )));
+                }
+                Ok(BuildingDef {
+                    id: b.id,
+                    name_key: b.name_key,
+                    base_cost: b.base_cost,
+                    gold_max: b.gold_max,
+                    atk_bonus: b.atk_bonus,
+                    hp_bonus: b.hp_bonus,
+                })
             })
-            .collect(),
+            .collect::<Result<Vec<_>, LoadError>>()?,
     };
 
     Ok(Balance {
@@ -611,14 +651,19 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
                 .selection
                 .maps
                 .into_iter()
-                .map(|m| MapDef {
-                    id: m.id,
-                    index: m.index,
-                    grid_w: m.grid_w,
-                    grid_h: m.grid_h,
-                    boss_tier: m.boss_tier,
-                    player_start: m.player_start,
-                    landmarks: m.landmarks,
+                .map(|m| {
+                    // BOSS 格坐标越界校验（与 player_start/landmarks 同口径，FIND-105）
+                    let boss_tile = m.boss_tile.filter(|pt| pt[0] < m.grid_h && pt[1] < m.grid_w);
+                    MapDef {
+                        id: m.id,
+                        index: m.index,
+                        grid_w: m.grid_w,
+                        grid_h: m.grid_h,
+                        boss_tier: m.boss_tier,
+                        player_start: m.player_start,
+                        landmarks: m.landmarks,
+                        boss_tile,
+                    }
                 })
                 .collect(),
         },

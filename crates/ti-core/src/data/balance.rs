@@ -68,6 +68,9 @@ pub(crate) struct RawMapEntry {
     pub(crate) boss_tier: u32,
     pub(crate) player_start: [u32; 2],
     pub(crate) landmarks: Vec<[u32; 2]>,
+    /// BOSS 格 `(row, col)`（缺省 = 无 BOSS 格，`progression.md` 落格结算用）。
+    #[serde(default)]
+    pub(crate) boss_tile: Option<[u32; 2]>,
 }
 
 fn default_char_count() -> u32 {
@@ -143,6 +146,12 @@ pub(crate) struct RawBuilding {
     pub(crate) name_key: String,
     pub(crate) base_cost: u32,
     pub(crate) gold_max: u32,
+    /// 每级战斗 atk 加成（成长机制，`docs/business/combat.md` §建造加成；缺省 0）。
+    #[serde(default)]
+    pub(crate) atk_bonus: u32,
+    /// 每级战斗 hp 加成（成长机制，缺省 0）。
+    #[serde(default)]
+    pub(crate) hp_bonus: u32,
 }
 
 #[derive(Deserialize)]

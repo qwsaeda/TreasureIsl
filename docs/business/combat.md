@@ -19,14 +19,35 @@
     "rng_span": 3                // 随机浮动幅度
   },
   "boss_tiers": [                // BOSS 档（hp / atk）
-    { "tier": 0, "hp": 50000, "atk": 10 },
-    { "tier": 1, "hp": 100000, "atk": 12 },
-    { "tier": 2, "hp": 150000, "atk": 14 },
-    { "tier": 3, "hp": 200000, "atk": 16 },
-    { "tier": 4, "hp": 300000, "atk": 20 }
+    { "tier": 0, "hp": 2400,  "atk": 10 },
+    { "tier": 1, "hp": 4800,  "atk": 12 },
+    { "tier": 2, "hp": 7200,  "atk": 14 },
+    { "tier": 3, "hp": 9600,  "atk": 16 },
+    { "tier": 4, "hp": 12000, "atk": 20 }
   ]
 }
 ```
+
+## 建造加成（成长机制，`docs/business/economy.md` §建造）
+
+玩家 atk/hp = 基础值（`balance.combat.player`）+ 已建建筑加成。
+加成数值在 `balance.build.buildings[].atk_bonus` / `hp_bonus`（每级加成，
+`BuildCfg::atk_bonus_at(id, level)` = `atk_bonus × level`，`Σ` 全部建筑）。
+
+```jsonc
+"build": {
+  "buildings": [
+    { "id": "Castle", "atk_bonus": 10, "hp_bonus": 200, ... },
+    { "id": "Investment", "atk_bonus": 5, "hp_bonus": 100, ... },
+    { "id": "Bank", "atk_bonus": 0, "hp_bonus": 50, ... },
+    { "id": "Fort", "atk_bonus": 8, "hp_bonus": 150, ... }
+  ]
+}
+```
+
+- 无建筑 → 加成 0，退化为 base 战斗（与原行为一致）；
+- 卡牌 `Damage` 事件扣 HP 走同一通道（`rules::cards::CardState.hp` 暂存，
+  `start_battle` 时并入玩家 hp）。
 
 ## 伤害模型（设计选择，非逆向）
 

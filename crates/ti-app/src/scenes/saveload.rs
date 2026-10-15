@@ -40,7 +40,16 @@ impl Scene for SaveloadScene {
                 // 无坐标时回退 0，无地形资源时 `terrain_grid_w` 本身回退 `POSITION_GRID_W`（20）。
                 let grid_w = host.terrain_grid_w();
                 let position = host.map_pos().map_or(0, |p| p.index(grid_w));
-                let data = SaveSlot { version: WRITE_VERSION, character, gold, map_slot, position };
+                // P1-8（S1）：写档捕获当前 RNG 步数（精确续流，读档后随机流可复现）
+                let rng_steps = host.rng_steps();
+                let data = SaveSlot {
+                    version: WRITE_VERSION,
+                    character,
+                    gold,
+                    map_slot,
+                    position,
+                    rng_steps,
+                };
                 if host.save_slots().len() > slot {
                     host.write_save_slot(slot, data);
                     host.play_sfx(Sfx::Press);

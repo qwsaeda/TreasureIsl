@@ -30,6 +30,7 @@
     "grid": { "x0": 20, "y0": 30, "step": 6 },
     "player": { "size": 5 },
     "landmark": { "size": 3 },
+    "boss": { "size": 4 },
     "hint": { "x": 4, "y": 208 }
   },
 

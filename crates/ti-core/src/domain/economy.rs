@@ -69,6 +69,18 @@ impl PriceTable {
         Self { entries: vec![(1, 20), (2, 76), (3, 95), (4, 114), (5, 133)] }
     }
 
+    /// 从 `balance.trade.goods` 构建价格表（数据驱动，`docs/business/economy.md` §价格）。
+    ///
+    /// balance 加载失败 → 空表（调用方应据空表拒买卖，不 panic）。
+    /// 替代 `placeholder()` 的冻结初值：调平衡改 JSON 即反映到可玩路径。
+    #[must_use]
+    pub fn from_balance() -> Self {
+        let Ok(b) = crate::data::balance() else {
+            return Self { entries: Vec::new() };
+        };
+        Self { entries: b.trade.goods.iter().map(|g| (g.id, g.buy)).collect() }
+    }
+
     /// 带 seed 的价格（`[P2]` 差分基准语义，原逆向公式正向化：seed=0 固定，seed>0 减 `seed % 10`）。
     ///
     /// 查不到商品 → `None`。仅供差分基准/测试使用；

@@ -66,7 +66,8 @@ fn v1_bytes_auto_migrate_to_v2_roundtrip() {
 /// 本测试验证 v2 → v2 读回的字节布局中，魔数偏移 2..6 仍正确。
 #[test]
 fn v2_write_read_backward_compat() {
-    let slot = SaveSlot { version: 2, character: 4, gold: 500, map_slot: 1, position: 42 };
+    let slot =
+        SaveSlot { version: 2, character: 4, gold: 500, map_slot: 1, position: 42, rng_steps: 0 };
     let v2_bytes = oracle_write_slot(&slot);
     assert_eq!(v2_bytes.len(), 26, "v2 布局 = 26 字节");
 
@@ -114,8 +115,14 @@ fn manager_migrate_all_5_slots_from_v1() {
 fn json_export_import_roundtrip() {
     let mut mgr = SaveManager::new(5);
     for i in 0..5u32 {
-        let legacy =
-            SaveSlot { version: 2, character: i + 1, gold: i * 1000, map_slot: i, position: i * 7 };
+        let legacy = SaveSlot {
+            version: 2,
+            character: i + 1,
+            gold: i * 1000,
+            map_slot: i,
+            position: i * 7,
+            rng_steps: 0,
+        };
         mgr.set_slot(i as usize, SaveSlotV2::from_legacy_slot(&legacy));
     }
 
@@ -137,7 +144,14 @@ fn json_export_import_roundtrip() {
 /// 无论读自桌面文件、浏览器 `IndexedDB` 还是 Android 存储，字节完全相同。
 #[test]
 fn byte_layout_is_self_describing() {
-    let slot = SaveSlot { version: 2, character: 3, gold: 42_000, map_slot: 2, position: 777 };
+    let slot = SaveSlot {
+        version: 2,
+        character: 3,
+        gold: 42_000,
+        map_slot: 2,
+        position: 777,
+        rng_steps: 0,
+    };
     let bytes = oracle_write_slot(&slot);
     assert_eq!(bytes.len(), MIN_SAVE_SIZE, "v2 布局 = 26 字节");
 

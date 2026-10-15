@@ -56,16 +56,16 @@ impl Scene for VsScene {
             let oc_pos = layout.extra.get("outcome").copied().unwrap_or_default();
             let ph_w = b.player_hp * u32::try_from(ph_bar.w).unwrap_or(0) / b.player_hp_max.max(1);
             let bh_w = b.boss_hp * u32::try_from(bh_bar.w).unwrap_or(0) / b.boss_hp_max.max(1);
-            // 玩家血条（橙红 #FF6347）
-            host.fill_rect(ph_bar.x, ph_bar.y, ph_bar.w, ph_bar.h, COLOR_DANGER);
+            // 玩家血条（橙红 #FF6347 前景，海绿 #2E8B57 底色，08_layout_design.md:110「玩家血条橙红」）
+            host.fill_rect(ph_bar.x, ph_bar.y, ph_bar.w, ph_bar.h, COLOR_LANDMARK);
             host.fill_rect(
                 ph_bar.x,
                 ph_bar.y,
                 i32::try_from(ph_w).unwrap_or(0),
                 ph_bar.h,
-                COLOR_PLAYER,
+                COLOR_DANGER,
             );
-            // BOSS 血条（海绿 #2E8B57）
+            // BOSS 血条（海绿 #2E8B57 前景，棕 #8B4513 底色）
             host.fill_rect(bh_bar.x, bh_bar.y, bh_bar.w, bh_bar.h, COLOR_LANDMARK);
             host.fill_rect(
                 bh_bar.x,

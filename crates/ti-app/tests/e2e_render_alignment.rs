@@ -26,7 +26,8 @@ use ti_platform::gfx::Framebuf;
 
 const FB_W: usize = 176;
 const FB_H: usize = 220;
-const BG565: u16 = 16;
+/// UI-14：清屏背景色 RGB565 = `COLOR_BG` 米白 0xFD70（S14 航海图纸质系），非 16（黑色）。
+const BG565: u16 = 0xFD70;
 
 const SCENES: [&str; 7] = ["index", "selectrole", "selectmap", "main", "vs", "msgs", "saveload"];
 

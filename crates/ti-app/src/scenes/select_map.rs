@@ -131,7 +131,8 @@ impl Scene for SelectMapScene {
             host.draw_text(m.label(), layout.list.text_x, y);
             if locked {
                 let text_x = layout.extra_scalar.get("locked.text_x").copied().unwrap_or(130);
-                host.draw_text(i18n::sget("scene.select_map.locked"), text_x, y);
+                // UI-10：未解锁项次文字灰（`COLOR_SECONDARY`，08_layout_design.md §4.2）
+                host.fill_rect(text_x - 2, y - 8, 48, 16, crate::menu_shell::COLOR_SECONDARY);
             }
         }
         host.draw_text(i18n::sget("scene.select_map.nav_hint"), layout.hint.x, layout.hint.y);
