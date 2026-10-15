@@ -1,6 +1,0 @@
-addr,size,name,module,reason
-000402D8,1028,sub_402D8,selection,selectmap.Map 地图选择场景装载器：sub_37EDC(ui.pak)+sub_37EDC(selectmap.Map)+new 0x3FC+sub_43B8C+sub_43D54+虚调用+4 装载+sub_406DC 写 3 槽位+glmapm01/02/03.Map 存在性探测（行 44/48/52/58/60/63/71/76-87/89-92/93-100/103-106/107-115）
-000406DC,96,sub_406DC,selection,动态数组 append（end/capacity 语义）：selectmap 装载器 sub_402D8 的 3 槽位写入工具，sub_402D8 行 81/84/87/96/98/100/110/112/114 调用；glmapm 已解锁时写入 a1+13/a1+16/a1+19 三个槽位
-0002077C,2204,sub_2077C,selection,main.Map 主地图探索/贸易场景装载器（选择完成后的触发目标）：sub_43B8C+sub_43D54+虚调用+4 装载+sub_334BC 控件表注入+switch(dword_7FB6C) case 1/2/3 → glmapm01/02/03.Map（行 167-195/142-155）
-000334BC,140,sub_334BC,selection,通用控件表注入总控：被 sub_2077C 行 187 调用，遍历控件表注入 button_*.pcx × 29（主地图按钮表，sub_33548 行 14 调用）
-00029110,22844,sub_29110,selection,场景管理器帧更新/切换总控：两处 switch(*(a1+716)) 分支，case 0/3/4 装载 vs.Map、卸载、回主菜单（行 772/833/843）；case 5..8 装载 saveload.map×2 + Option.map + 事件（行 1583-1699）

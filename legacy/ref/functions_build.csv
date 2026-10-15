@@ -1,7 +1,0 @@
-address,size,name,callers,callers_note
-00033548,1768,sub_33548,0002077C:sub_2077C,主地图 29 控件装载（button_bank/invest/aimcastle/build 等）
-0001B9AC,1636,sub_1B9AC,0001B940:sub_1B940,银行/资源状态机（双槽位金 + 步进器 10/100/1000...）
-000503F0,1096,sub_503F0,0001B9AC:sub_1B9AC,投资/建造奖励结算（5 兵种匹配 + 奖励阶梯）
-000445F4,unknown,sub_445F4,0001B9AC:sub_1B9AC,资源查表（sub_1B9AC 行 40/78/99/166/190 调用）
-0002077C,2204,sub_2077C,0003D4C8:sub_3D4C8,主地图装载（5 兵种字符串 + button_build 宿主场景）
-00020088,unknown,sub_20088,0002077C:sub_2077C,troop_all.pcx 装载（行 163 aTroopAllPcx）

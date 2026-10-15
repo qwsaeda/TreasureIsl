@@ -1,7 +1,7 @@
 # 10 — RNG 系统实现规格
 
 > 单一事实源：本文件是 `ti-core::rules::rng::GameRng` 的实现规格。
-> 逆向事实引用：F-320（RNG 来源：coredll srand/rand、播种点、LCG 推测算法）。
+> 数值溯源（历史实测参照，归档 `legacy/`）：RNG 播种点与 LCG 算法为 S3.12 实测，完整证据见 `legacy/evidence/`；LCG 为 oracle 历史参照，S8.7 起 rules 侧改 `rand_pcg` PCG。
 
 ---
 
@@ -260,9 +260,9 @@ pub fn time_seed() -> u32 {
 
 ### 4.3 已知波动性
 
-- F-319 波动性可用（S3.2 实测可用 EXP-039 / S3.12 实测失败 EXP-036）。
+- REA 工具波动性可用（S3.2 实测可用 EXP-039 / S3.12 实测失败 EXP-036，证据见 `legacy/evidence/`）。
 - 反证路径：若未来游戏侧能复现同种子序列 → 算法确认；
-  否则需找 WinCE `coredll.dll` 逆向。
+  否则需找 WinCE `coredll.dll` 逆向（归档 `legacy/ref/`）。
 
 ---
 

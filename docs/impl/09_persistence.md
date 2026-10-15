@@ -1,7 +1,7 @@
 # 09 — 持久化系统实现规格
 
 > 单一事实源：本文件是 `ti-platform::fs` + `ti-formats::save` + `ti-core::rules::saveload` 的实现规格。
-> 逆向事实引用：F-304（存档布局）、F-320（RNG 来源：coredll srand/rand、播种点与 LCG 推测算法）（LCG 为 oracle 历史参照，S8.7 起 rules 侧改 `rand_pcg` PCG，见 `docs/spec/rng.md` §a）。
+> 数值溯源（历史实测参照，归档 `legacy/`）：存档布局（前缀 `5D 4A` / magic 字节序列）与 RNG 播种点均来自 S1.9 实测，完整证据见 `legacy/evidence/`。LCG 为 oracle 历史参照，S8.7 起 rules 侧改 `rand_pcg` PCG。
 
 ---
 
@@ -27,7 +27,7 @@
 
 所有存档文件共享同一头部布局：
 
-（下表为 `gl.rec` / `gl*.sav` 布局；`settings.dat` 例外，见 §3：前缀 `5D 4A`、无魔数，F-304。）
+（下表为 `gl.rec` / `gl*.sav` 布局；`settings.dat` 例外，见 §3：前缀 `5D 4A`、无魔数。）
 
 ```
 ┌──────────┬─────────────────┬──────────────────────────┐
@@ -36,8 +36,8 @@
 └──────────┴─────────────────┴──────────────────────────┘
 ```
 
-- 前缀：2 字节。`gl*.sav` / `gl.rec` 写入固定 `[0x00, 0x00]`，读取时跳过（`seek(2, SeekFrom::Start)`）；`settings.dat` 前缀实测 `5D 4A`（F-304，见 §3.1）。
-- 魔数：`REC_MAGIC = 0x01315A47`（= 20,011,591），**仅 `gl.rec` / `gl*.sav`；`settings.dat` 无魔数（F-304 实测 8 字节 `5D 4A 71 4A 2E 01 01 01`）**。
+- 前缀：2 字节。`gl*.sav` / `gl.rec` 写入固定 `[0x00, 0x00]`，读取时跳过（`seek(2, SeekFrom::Start)`）；`settings.dat` 前缀实测 `5D 4A`（见 §3.1）。
+- 魔数：`REC_MAGIC = 0x01315A47`（= 20,011,591），**仅 `gl.rec` / `gl*.sav`；`settings.dat` 无魔数（实测 8 字节 `5D 4A 71 4A 2E 01 01 01`）**。
 - 校验：`u32_le(bytes[2..6]) == REC_MAGIC`（gl.rec / gl*.sav）。
 
 ---
@@ -50,8 +50,8 @@
 
 | 偏移 | 字节数 | 字段 | 类型 | 实测值 | 说明 |
 |---|---|---|---|---|---|
-| 0 | 2 | 前缀 | u8[2] | `5D 4A` | 固定（F-304） |
-| 2 | 4 | 负载 | u8[4] | `71 4A 2E 01` | 无魔数（settings.dat 例外，F-304 实测 8 字节全量） |
+| 0 | 2 | 前缀 | u8[2] | `5D 4A` | 固定（前缀 magic 实测值） |
+| 2 | 4 | 负载 | u8[4] | `71 4A 2E 01` | 无魔数（settings.dat 例外，实测 8 字节全量） |
 | 6 | 1 | settings[0] | u8 | `0x01` | 音量/BGM 开 |
 | 7 | 1 | settings[1] | u8 | `0x01` | 音效开 |
 
@@ -80,14 +80,14 @@ impl Default for Settings {
 read_settings(path):
     bytes = read_file(path)?
     if bytes.len() < 8: return Err(TooShort)
-    # settings.dat 无魔数校验（§3.1，F-304），仅校验长度 + 负载值域
+    # settings.dat 无魔数校验（§3.1，（§3.1）），仅校验长度 + 负载值域
     return Ok(Settings {
         bgm_volume: bytes[6],
         sfx_enabled: bytes[7],
     })
 
 write_settings(path, settings):
-    # 实测前缀 5D 4A（F-304）；settings.dat 负载无魔数校验（§3.1 → §3），此处 4 字节负载按读取侧回填值写回
+    # 实测前缀 5D 4A（前缀 magic 实测值）；settings.dat 负载无魔数校验（§3.1 → §3），此处 4 字节负载按读取侧回填值写回
     buf = [0x5D, 0x4A, 0x71, 0x4A, 0x2E, 0x01, settings.bgm_volume, settings.sfx_enabled]
     write_file(path, &buf)
 ```
@@ -368,7 +368,7 @@ if rand() % 5 != 0:
 ```
 
 - 种子 = `wMinute + wSecond + wMilliseconds`（毫秒级时间播种）。
-- 20% 概率跳过（`rand() % 5 != 0` 门控，RNG 来源 F-320）。
+- 20% 概率跳过（`rand() % 5 != 0` 门控，RNG 播种点（历史实测））。
 
 ---
 
@@ -386,7 +386,7 @@ if rand() % 5 != 0:
 过期判定 = (current_timestamp - start_timestamp) <= 2_592_000  // 30 天（秒）
 ```
 
-> `WriteFile` 调 `GetLocalTime` 是时间戳逻辑，**不是** RNG 播种点（F-320）。
+> `WriteFile` 调 `GetLocalTime` 是时间戳逻辑，**不是** RNG 播种点（历史实测）。
 
 ---
 

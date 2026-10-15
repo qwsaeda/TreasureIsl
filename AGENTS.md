@@ -18,6 +18,7 @@
 
 | 你要做的事 | 读 |
 |---|---|
+| **理解游戏怎么设计/架构/模块化（第一入口）** | `docs/00_design.md`（正向设计总览：核心循环 + 数据分层 + 5 crate 架构 + 9 场景 + 7 模块包 + 窄接口；**不读 legacy/**） |
 | **新开工 / 参与开发（先读这个）** | `docs/process/00_index.md`（分工表：谁做什么 + 标准工作流）+ `docs/business/00_index.md`（业务唯一事实源） |
 | **任何开工动作之前** | `docs/loop.md` + `plan/ledger.yaml` + `docs/README.md` |
 | 判断「做完了没有」/ 验收 | `docs/parity.md` |

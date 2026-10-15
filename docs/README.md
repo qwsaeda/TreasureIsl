@@ -6,6 +6,7 @@
 
 | 你要做的事 | 读 |
 |---|---|
+| **理解游戏怎么设计/架构/模块化（第一入口）** | [`00_design.md`](00_design.md)（正向设计总览：核心循环 + 数据分层 + 5 crate 架构 + 9 场景 + 7 模块包 + 窄接口；不读 legacy/） |
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
 | 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 20 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
@@ -29,6 +30,7 @@
 
 | 文件 | 作用 |
 |---|---|
+| [`00_design.md`](00_design.md) | **正向设计总入口**：核心循环 + 数据驱动分层 + 5 crate 架构 + 9 场景流 + 7 模块包 + 场景宿主窄接口（不读 legacy/） |
 | [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 20 项（doccheck 独立第 9 项含跨文档数值漂移 + release 台账计数同步，`cargo run -p ti-tools --bin doccheck`） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收） |
 | [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP） |

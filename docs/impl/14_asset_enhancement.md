@@ -1,4 +1,4 @@
-﻿# 14 — HD 资产增强管线（S7）
+# 14 — HD 资产增强管线（S7）
 
 > 单一事实源：本文件是「分类 → 批量超分/矢量化 → 关键图 AI 重绘 → 动画时序稳定 → 多分辨率打包」
 > 的完整实现规格。关联：`docs/plan-s7.md`（任务表）、`docs/modernization.md`（总纲）、
@@ -19,7 +19,7 @@
 |---|---|---|
 | P4-1 逐像素对齐 | `docs/parity.md` P4 | 替换原 PCX 管线则需重写 `render_parity` 基准图；并行则新增 `render_parity_hd` |
 | 首屏 ≤ 490 KB | `docs/plan-s4.md` S4.3 | HD 真彩 PNG 远超预算，需重列分包策略（§6 体积预算） |
-| `.Map` f1 寻址 | F-311 / F-204 | 精灵编号不可变，HD 资源沿用 `f1 → NN.pcx` 命名映射 |
+| `.Map` f1 寻址 | §1 实测 | 精灵编号不可变，HD 资源沿用 `f1 → NN.pcx` 命名映射 |
 | RGB565 帧缓冲 | `crates/ti-platform/src/gfx.rs` | 全 HD 需 `Framebuf` 升 RGBA8，波及 `sprite_atlas`/`terrain_atlas`/`menu_shell` 全部 blit 路径 |
 | 零依赖原则 | `docs/style.md` §5.9 | Rust 侧不引新依赖；Python 侧允许 Pillow；AI 工具走命令行 |
 
@@ -33,7 +33,7 @@
 
 ## 2. 资源分类（按处理策略）
 
-原版美术资源共 **5 类**，来自 7 个 pak/lpk 容器（305 条容器条目，F-207；
+原版美术资源共 **5 类**，来自 7 个 pak/lpk 容器（305 条容器条目，§2 实测；
 `ref/asset_classification.json` 305 条 / `assets_hd/_stats.json` 335 条处理 = 305 容器条目 + 30 九宫格派生（16 条跳过））：
 
 | 类 | 容器 | 数量 | 特征 | 处理策略 | 工具 |
@@ -41,7 +41,7 @@
 | **A. UI 控件/图标/按钮** | `ui.pak` | ~30（button_* 29 + switchpage + 对话框背景） | 平涂索引色，几何清晰 | 矢量化：Inkscape 描摹 → SVG 基准 + PNG 九宫格 | Inkscape / Vector Magic |
 | **B. 角色立绘/头像** | `ui.pak` + `glpics.pak` | ~11（face_* 5 + Player_* 5 + Target_head/knife） | 卡通角色中等细节 | AI 超分：Real-ESRGAN x4 anime；可选 SD 重绘 | Real-ESRGAN / ComfyUI |
 | **C. 兵种/船只/旗帜/地标** | `glpics.pak`（实测全容器 C_pixel = 155 条，含 ui/glpics/glmap/cards） | ~77（仅 `glpics.pak` 侧：88 条去 B 类 11 个） | 小尺寸像素精灵硬边 | 最近邻 2x 整数倍（保硬边），不做 AI 平滑 | Pillow NEAREST |
-| **D. 地形瓦片** | `glmap_m01/m02.pak` | ~84（47+37=84 条目，去重 46+32=78 唯一，F-207） | 大画布 63×31~127×105（S6.3 实测） | Lanczos 2x + 摄像机步进同步 2x | Pillow LANCZOS |
+| **D. 地形瓦片** | `glmap_m01/m02.pak` | ~84（47+37=84 条目，去重 46+32=78 唯一，§2 实测） | 大画布 63×31~127×105（S6.3 实测） | Lanczos 2x + 摄像机步进同步 2x | Pillow LANCZOS |
 | **E. 多帧动画** | `ui.pak` | 4 精灵 × 5 帧（14/31/32/37.pcx，num=5，S6.4 实测） | 帧纵向堆叠高 199 | 序列当短视频 → 时序超分 → 回切帧（防闪烁） | Topaz Video AI / RIFE |
 
 **不处理**：`GoldLand.Fnt`（点阵字体按整数缩放即可，HD 走 TTF 矢量字体见
@@ -54,7 +54,7 @@ S1.7b 已转 OGG）、`Thumbs.db`（OLE 文档）。
   几何清晰的 UI 控件。
 - **B 类**：`docs/impl/07_ui_controls.md` §7.2 列 6 角色头像 + 5 `Player_*.pcx`，
   SelectRole 场景卡通立绘。
-- **C 类**：`glpics.pak` 88 条（F-207）中除去 B 类 11 个，余 77 个为
+- **C 类**：`glpics.pak` 88 条（§2 实测）中除去 B 类 11 个，余 77 个为
   troop/ship/flag/landmark 系列（`docs/design/ui_controls.md` §3.1）；
   实测全容器（ui+glpics+glmap+cards）`C_pixel` 共 155 条（`ref/asset_classification.json` by_class）。
 - **D 类**：`crates/ti-app/src/terrain_atlas.rs` 注释实测瓦片 63×31~127×105、
@@ -113,7 +113,7 @@ enum AssetClass {
 
 `unpak --out assets_raw/` 产出 7 个容器目录（`ui` 122 条 / `glpics` 88 条 /
 `glmap_m01` 47 条 / `glmap_m02` 37 条 / `cards` 4 条 / `music` 6 条 / `goods` 1 条，
-合计 305 条，F-207）。每目录含 `manifest.csv`（key,name,usize,sha_len，
+合计 305 条，§2 实测）。每目录含 `manifest.csv`（key,name,usize,sha_len，
 name 由 `ti-formats/src/resource_names.rs` 三级反查（S6.5，`mapinfo>exe>EXTRAS`）生成）。
 
 **`scripts/classify_assets.py`**（S7.1 新建）：
@@ -143,7 +143,7 @@ name 由 `ti-formats/src/resource_names.rs` 三级反查（S6.5，`mapinfo>exe>E
 ```python
 # 1. PCX 解码：复用 scripts/pcx_ref.py 的 RLE 反解逻辑（强约束消费到文件尾）
 # 2. 索引→真彩：rgb = palette[idx]；背景色 = 调色板 slot 0（逐图确认）
-# 3. 透明处理：原版 PCX 无 alpha 通道（blit 模式由 .Map f4 字段选，F-311），
+# 3. 透明处理：原版 PCX 无 alpha 通道（blit 模式由 .Map f4 字段选，§1 实测），
 #    HD 管线把「像素值 == 背景 slot」标 alpha=0，其余 255
 ```
 

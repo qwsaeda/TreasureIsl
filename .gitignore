@@ -40,3 +40,7 @@ __pycache__/
 # S7 HD 资产（build_hd_assets 可重新产出）
 /assets_hd/
 /assets_hd_pack/
+
+# S11 逆向归档实体（压缩为 legacy-archive.zip 进 git；仅保留 oracle-rust 供 Cargo 测试）
+/legacy/
+!/legacy/oracle-rust/

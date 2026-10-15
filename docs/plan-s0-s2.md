@@ -1,5 +1,7 @@
 ﻿# 执行计划 S0–S2：地基 / 资源逆向 / 三端骨架
 
+> **定位**：S0–S2 是逆向期的历史计划（S0 地基 / S1 资源逆向 / S2 三端骨架），**已 archived**，非正向开发依据。逆向产物实体归档 `legacy/`。当前正向开发见 `docs/00_design.md` + `docs/business/`。
+
 任务 ID 即台账 ID。**每个任务必须同时满足：产出物落地 + 验收命令通过 + `evidence/<id>.log` 存档 + `scripts/gate.ps1` 全绿**，缺一不可 `verified`。
 全局标准见 `docs/parity.md`，循环机制见 `docs/loop.md`。
 

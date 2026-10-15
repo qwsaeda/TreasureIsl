@@ -1,6 +1,8 @@
 # 经验库 · reverse
 
-> 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
+> **定位**：逆向方法论卷（exe 内部结构、语义交叉验证、结论推翻流程）。**历史参照卷**——记录逆向期的踩坑与方法，**非正向开发依据**。逆向产物实体归档 `legacy/`，本卷仅作经验溯源。
+
+> 条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 
 ### EXP-005 流程：`.pdata` 别按 x86 布局硬解
 - 现象：按 12 字节 `RUNTIME_FUNCTION` 解析 `.pdata` 得到 size 为负数/上 GB 的荒谬结果。

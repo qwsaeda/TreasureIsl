@@ -1,8 +1,0 @@
-address,size,name,callers,callers_note
-000572E4,104,sub_572E4,00029110:sub_29110,vs 战斗场景 ctor（off_73A2C vtable, a1[255]=1 战斗标志）
-00029110,22844,sub_29110,0003D4C8:sub_3D4C8,场景管理器帧更新（case 0 建 vs / case 3 销毁 vs / a1+716 状态码）
-000503F0,1096,sub_503F0,0001B9AC:sub_1B9AC,兵种奖励结算（5 档 30000/40000/20000/15000/50000）
-0002077C,2204,sub_2077C,0003D4C8:sub_3D4C8,主地图装载（5 兵种字符串 a1+276 +12/+24/+36/+48/+60）
-00020088,unknown,sub_20088,0002077C:sub_2077C,troop_all.pcx 装载（行 163 aTroopAllPcx）
-0004BB34,unknown,sub_4BB34,0002101C:sub_2101C,vs 场景初始化（sub_2101C case 6 调用，推测）
-0001B9AC,1636,sub_1B9AC,0001B940:sub_1B940,银行/资源状态机（v20==100000 BOSS HP 档判定，行 110/201）
