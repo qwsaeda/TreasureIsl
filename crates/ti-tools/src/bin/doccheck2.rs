@@ -20,8 +20,9 @@
 //!    key 必须都存在于 `assets/data/strings.json`；反向 `strings.json` 里未被任何
 //!    `sget`/`sgetf`/`MenuItem.key` 引用的 key 以 WARN 打印（不阻塞门禁，S8.x 数据化
 //!    迁移前清理；`schema_*` 与旧命名空间 key 豁免）。
-//! 6. **release.md 门禁项数漂移**：`docs/release.md` 里凡出现「N 项门禁」的行，
-//!    N 必须 == `scripts/gate.ps1` 实际 `Report`/`Skip` 的项数。
+//! 6. **gate 项数声称一致性**：`scripts/gate.ps1` 头注释/横幅 + `docs/parity.md` /
+//!    `docs/git.md` / `docs/README.md` 里所有「gate N 项」声称值，必须 == 实测固定项数
+//!    （`gate.ps1` 顶层不缩进 `Report` 调用数 = 20，条件 `Report`/`Skip` 分支不计）。
 //!
 //! 7. **P3-3 headless bin API 一致性**：`treasure_headless.rs` 对 `BattleView` 的
 //!    访问方式必须与 `game_app.rs` 中 `BattleView` 真实定义一致（field vs method）。
@@ -321,45 +322,137 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
     errors
 }
 
-/// 6. `release.md` 门禁项数：凡「N 项门禁」的行，N 必须 == `gate.ps1` 实际项数。
+/// 6. **gate 项数声称一致性**：`scripts/gate.ps1` 头注释/横幅 + `docs/parity.md` /
+///    `docs/git.md` / `docs/README.md` 里所有「gate N 项」类声称值，必须 == 实测固定项数
+///    （`gate.ps1` 顶层不缩进 `Report` 调用数；条件 `Report`/`Skip` 分支不计）。
+///    豁免项编号（「第 N 项」）/ doccheck2 检查数声称（「N 项检查」）/ playbook 命令数
+///    声称（「N 项命令」），上下文区分「gate 项数」vs「doccheck2 项数」。
+fn gate_item_actual_count(gate: &str) -> usize {
+    // 固定项 = 顶层（不缩进）`Report` 调用数；条件分支（if 块内缩进的
+    // `Report`/`Skip`）不计。实测 gate.ps1 = 20 固定 + 3 条件 Skip。
+    gate.lines().filter(|l| l.starts_with("Report ")).count()
+}
+
+/// 抽「紧邻 `项` 前的数字 + 数字左边是非数字字符（行首/空白/全角括号等）」的声称值。
+/// 豁免：「第 N 项」项编号（数字前是「第」）/ 行含「项检查」（doccheck2 检查数声称）/
+/// 行含「项命令」（playbook 命令数声称）。
+fn extract_count_claim(line: &str, keyword: char) -> Option<usize> {
+    // char 边界安全扫描：「项」是 3 字节 UTF-8，byte find 结果不能直接当 char 偏移用。
+    let mut positions: Vec<usize> = Vec::new();
+    for (ci, ch) in line.char_indices() {
+        if ch == keyword {
+            positions.push(ci);
+        }
+    }
+    let bytes = line.as_bytes();
+    for &pos in &positions {
+        // 数字串（紧邻 `项` 左边，中间只允许空白）
+        let before = &bytes[..pos];
+        let mut i = before.len();
+        while i > 0 && (before[i - 1] == b' ' || before[i - 1] == b'\t') {
+            i -= 1;
+        }
+        let mut j = i;
+        while j > 0 && before[j - 1].is_ascii_digit() {
+            j -= 1;
+        }
+        let digit_run_len = i - j;
+        if digit_run_len == 0 {
+            continue;
+        }
+        let digit_start = j;
+        let left_ok = digit_start == 0 || !bytes[digit_start - 1].is_ascii_digit();
+        if !left_ok {
+            continue;
+        }
+        // 豁免项编号/非 gate 项数声称（「第 N 项」里 N 前是「第」→ 项编号非项数）
+        let is_item_number = line[..digit_start].chars().any(|c| c == '第');
+        let is_check_count = line.contains("项检查");
+        let is_cmd_count = line.contains("项命令");
+        if is_item_number || is_check_count || is_cmd_count {
+            continue;
+        }
+        let digits: String = bytes[digit_start..i].iter().map(|&b| b as char).collect();
+        return digits.parse::<usize>().ok();
+    }
+    None
+}
+
 fn check_gate_item_count(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(gate) = read_file(root, "scripts/gate.ps1") else {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
-    // `gate.ps1` 顶层的 `Report`/`Skip` 调用数量 = 实际项数
-    let actual_items = gate
-        .lines()
-        .filter(|l| {
-            let t = l.trim();
-            t.starts_with("Report ") || t.starts_with("Skip ")
-        })
-        .count();
-    let Some(release) = read_file(root, "docs/release.md") else { return errors };
-    for (i, line) in release.lines().enumerate() {
-        let Some(pos) = line.find("项门禁") else { continue };
-        let before = &line[..pos];
-        let digits: String = before
-            .chars()
-            .rev()
-            .take_while(char::is_ascii_digit)
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect();
-        if digits.is_empty() {
+    let actual = gate_item_actual_count(&gate);
+    let expected = 20usize;
+    if actual != expected {
+        errors.push(format!(
+            "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"
+        ));
+    }
+    // 声称点：gate.ps1 头注释 + 横幅（`N 项` 由 extract_count_claim 提取，`N items` 由
+    // extract_items_claim 提取；同一行同时命中两者时按 (N 项) 优先去重，避免双报）
+    let mut claimed: Vec<(String, usize)> = Vec::new();
+    for (i, line) in gate.lines().enumerate() {
+        let trimmed = line.trim_start();
+        if !(trimmed.starts_with('#') || trimmed.starts_with("Write-Host")) {
             continue;
         }
-        if let Ok(declared) = digits.parse::<usize>() {
-            if declared != actual_items {
-                errors.push(format!(
-                    "release.md:{} 门禁项数声明 {declared}，gate.ps1 实测 {actual_items}（第 5 轮审计固化的漂移检查）",
-                    i + 1
-                ));
+        let v_items = extract_items_claim(line);
+        let v_xiang = extract_count_claim(line, '项');
+        if let Some(v) = v_xiang {
+            claimed.push((format!("gate.ps1:{} {}", i + 1, line.trim()), v));
+        } else if let Some(v) = v_items {
+            claimed.push((format!("gate.ps1:{} {}", i + 1, line.trim()), v));
+        }
+    }
+    // docs 里的「gate N 项」/「gate.ps1 N 项」声称（含 doccheck2 上下文豁免）
+    for rel in ["docs/parity.md", "docs/git.md", "docs/README.md"] {
+        let Some(text) = read_file(root, rel) else { continue };
+        for (i, line) in text.lines().enumerate() {
+            if line.contains("doccheck2") {
+                continue; // doccheck2 项数声称，非 gate 项数
+            }
+            if !line.contains("gate") {
+                continue;
+            }
+            if let Some(v) = extract_count_claim(line, '项') {
+                claimed.push((format!("{rel}:{} {}", i + 1, line.trim()), v));
             }
         }
     }
+    for (where_, declared) in &claimed {
+        if *declared != actual {
+            errors.push(format!(
+                "{where_} 声称 gate 项数 {declared}，实测 {actual}（FIND-304-B：门禁项数声称漂移）"
+            ));
+        }
+    }
     errors
+}
+
+/// 仅匹配 `N items`（横幅声称，`items` 前是 `N` 或 `N ` 形式，N 左边非数字）
+fn extract_items_claim(line: &str) -> Option<usize> {
+    let pos = line.find(" items")?;
+    let bytes = line.as_bytes();
+    let before = &bytes[..pos];
+    let mut i = before.len();
+    while i > 0 && (before[i - 1] == b' ' || before[i - 1] == b'\t') {
+        i -= 1;
+    }
+    let mut j = i;
+    while j > 0 && before[j - 1].is_ascii_digit() {
+        j -= 1;
+    }
+    if i == j {
+        return None;
+    }
+    let left_ok = j == 0 || !bytes[j - 1].is_ascii_digit();
+    if !left_ok {
+        return None;
+    }
+    let digits: String = bytes[j..i].iter().map(|&b| b as char).collect();
+    digits.parse::<usize>().ok()
 }
 
 /// 7. P3-3 headless bin API 一致性：`treasure_headless.rs` 对 `BattleView` 的
@@ -479,8 +572,9 @@ fn check_battle_player_data_driven(root: &Path) -> Vec<String> {
     let Some(sb_start) = game_app.find("fn start_battle") else {
         return vec!["game_app.rs 缺少 `fn start_battle`".to_string()];
     };
-    // 取 start_battle 函数体（到下一个 `}` 闭合为止，简化取 300 字符窗口，按 char 边界截取）
-    let raw_end = (sb_start + 300).min(game_app.len());
+    // 取 start_battle 函数体（到下一个 `}` 闭合为止，简化取 800 字符窗口，按 char 边界截取；
+    // 800 足以覆盖到 `b.combat.player` 引用行（FIND-013 改后引用在函数体中部）
+    let raw_end = (sb_start + 800).min(game_app.len());
     // 回退到合法 char 边界（floor_char_boundary 需 Rust 1.91，MSRV 1.85 故手动回退）
     let mut end = raw_end;
     while end > sb_start && !game_app.is_char_boundary(end) {
@@ -795,6 +889,28 @@ fn check_scene_band_count(root: &Path) -> Vec<String> {
     errors
 }
 
+/// FIND-203 固化：存读档 `map_slot` 字段写档/读档基准统一为 0 起 `zero_index`。
+/// 机械判据：`crates/ti-app/src/scenes/saveload.rs` 与 `crates/ti-app/tests/fuzz_playtest.rs`
+/// 中所有 `SaveSlot` 字面量构造处的 `map_slot` 赋值不得使用 `MapSlot::index`（1 起），
+/// 须使用 `MapSlot::zero_index`（0 起）或字面量 `0`（无地图时回退值）。
+fn check_save_slot_map_slot_basis(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let files = ["crates/ti-app/src/scenes/saveload.rs", "crates/ti-app/tests/fuzz_playtest.rs"];
+    for rel in files {
+        let src = read_file(root, rel).unwrap_or_default();
+        for (i, line) in src.lines().enumerate() {
+            if line.contains("MapSlot::index") && !line.contains("zero_index") {
+                errors.push(format!(
+                    "{rel}:{} `map_slot` 写档基准用了 `MapSlot::index`（1 起），应统一为 `MapSlot::zero_index`（0 起，FIND-203）：{}",
+                    i + 1,
+                    line.trim()
+                ));
+            }
+        }
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -814,9 +930,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_scene_band_count(&root));
     all_errors.extend(check_scene_layout_fidelity(&root));
     all_errors.extend(check_hd_sprite_transparency(&root));
+    all_errors.extend(check_save_slot_map_slot_basis(&root));
 
     println!(
-        "doccheck2: {} error(s) across 14 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count)",
+        "doccheck2: {} error(s) across 15 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis)",
         all_errors.len()
     );
     for err in &all_errors {

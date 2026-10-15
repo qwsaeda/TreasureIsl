@@ -260,6 +260,38 @@ pub struct SelectionCfg {
     pub character_count: u32,
     /// 地图数（`selection.map_count`）。
     pub map_count: u32,
+    /// 角色目录（`selection.characters`，`id`/`index`）。
+    pub characters: Vec<CharacterDef>,
+    /// 地图目录（`selection.maps`，含 `boss_tier`/`player_start`/`landmarks`/`grid_w`/`grid_h`）。
+    pub maps: Vec<MapDef>,
+}
+
+/// 角色目录条目（`balance.selection.characters[]`）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CharacterDef {
+    /// 角色标识名。
+    pub id: String,
+    /// 角色索引（0 起）。
+    pub index: u32,
+}
+
+/// 地图目录条目（`balance.selection.maps[]`）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MapDef {
+    /// 地图标识名。
+    pub id: String,
+    /// 地图索引（0 起）。
+    pub index: u32,
+    /// 网格宽。
+    pub grid_w: u32,
+    /// 网格高。
+    pub grid_h: u32,
+    /// BOSS 档 tier。
+    pub boss_tier: u32,
+    /// 玩家初始格 `(row, col)`。
+    pub player_start: [u32; 2],
+    /// 据点坐标列表 `[(row, col)]`。
+    pub landmarks: Vec<[u32; 2]>,
 }
 
 /// 单个控件记录（`controls.json` 的 `scenes[].records[]`，S8.5 控件层）。
@@ -480,6 +512,7 @@ pub struct SceneLayout {
 
 // ------------------------------------------------------------------- 缓存入口
 
+#[allow(clippy::too_many_lines)]
 fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
     let cards = CardsCfg {
         event_chance: raw.cards.event_chance,
@@ -568,6 +601,26 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
         selection: SelectionCfg {
             character_count: raw.selection.character_count,
             map_count: raw.selection.map_count,
+            characters: raw
+                .selection
+                .characters
+                .into_iter()
+                .map(|c| CharacterDef { id: c.id, index: c.index })
+                .collect(),
+            maps: raw
+                .selection
+                .maps
+                .into_iter()
+                .map(|m| MapDef {
+                    id: m.id,
+                    index: m.index,
+                    grid_w: m.grid_w,
+                    grid_h: m.grid_h,
+                    boss_tier: m.boss_tier,
+                    player_start: m.player_start,
+                    landmarks: m.landmarks,
+                })
+                .collect(),
         },
         save: SaveCfg {
             slot_count: raw.save.slot_count,

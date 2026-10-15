@@ -55,8 +55,14 @@ impl Scene for SelectMapScene {
                 let done = selection_done(host);
                 host.selection_mut().completed = done;
                 if done {
-                    host.enter_main_map();
-                    true
+                    let ok = host.enter_main_map();
+                    if ok {
+                        true
+                    } else {
+                        // FIND-204：数据校验失败（balance 缺条目/坐标越界）→ 停留原场景
+                        host.play_sfx(Sfx::Invalid);
+                        false
+                    }
                 } else {
                     host.play_sfx(Sfx::Press);
                     false
@@ -112,7 +118,7 @@ impl Scene for SelectMapScene {
             .and_then(|s| s.get("select_map"))
             .cloned()
             .unwrap_or_default();
-        host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
         host.draw_text(i18n::sget("scene.select_map.title"), layout.title.x, layout.title.y);
         let current = host.map_slot().map_or(0, |m| m.zero_index() as usize);
         for (i, m) in MapSlot::all().iter().enumerate() {

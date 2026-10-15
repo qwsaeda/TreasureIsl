@@ -175,7 +175,7 @@ pub async fn run() {
     }
     #[cfg(not(feature = "hd-8bit"))]
     game.render();
-    game.shell_mut().last_rendered = Some(game.shell().selected);
+    game.shell_mut().last_rendered = Some(game.menu_selected());
 
     // P0-7：帧计时（与 native 壳同机制，驱动多帧精灵动画推进）
     let mut prev_now_ms: u64 = 0;
@@ -203,7 +203,7 @@ pub async fn run() {
         play_last_sfx(&mut game, se.as_ref());
 
         // 场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
-        let current_selected = game.shell().selected;
+        let current_selected = game.menu_selected();
         let scene_key = SceneKind::from_legacy(game.scene()).discriminant();
         if changed
             || game.shell().last_rendered != Some(current_selected)

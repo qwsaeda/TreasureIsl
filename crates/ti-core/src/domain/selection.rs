@@ -4,8 +4,8 @@
 
 /// 可选角色。
 ///
-/// 业务语义（`docs/business/progression.md` §角色）：5 个角色，各有独立的
-/// 初始金/初始属性（`balance.selection.roles[i]`）。
+/// 业务语义（`docs/business/progression.md` §角色）：5 个角色，目录 id/索引
+/// （`balance.selection.characters`）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Character {
     /// 熊猫海盗。

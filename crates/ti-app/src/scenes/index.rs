@@ -3,6 +3,8 @@
 use ti_core::domain::flow::Sfx;
 
 use crate::game_app::GameInput;
+use crate::i18n;
+use crate::menu_shell::{COLOR_BG, COLOR_SELECTED, COLOR_TITLE_BAR};
 use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
@@ -73,10 +75,40 @@ impl Scene for IndexScene {
         host.advance(GameInput::Confirm)
     }
 
-    /// 复用 `MenuShell::render` 菜单 + 标题 + 状态行机制。
+    /// 主菜单渲染：坐标全读 `scenes.json` 的 `index` 段（`list.y`=48 / `list.row_h`=32 等）。
+    /// 旧版 `menu_shell` 的 `MENU_TOP`=96 / `ROW_H`=20 死坐标路径已删除（FIND-101）。
+    #[allow(
+        clippy::needless_range_loop,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap
+    )]
     fn render(&mut self, host: &mut dyn SceneHost) {
+        host.clear_frame(COLOR_BG);
+        let layout =
+            ti_core::data::scenes().ok().and_then(|s| s.get("index")).cloned().unwrap_or_default();
+        let title_h = layout.title.h.max(1);
+        host.fill_rect(0, 0, 176, title_h, COLOR_TITLE_BAR);
+        host.draw_text(i18n::sget("scene.index.title"), layout.title.x, layout.title.y);
+        let labels = crate::shell_ui::menu_labels();
         let sel = host.menu_selected();
-        host.shell_mut().selected = sel;
-        host.shell_mut().render();
+        for i in 0..labels.len() {
+            let r = layout.list.item_rect(i);
+            if i == sel {
+                host.fill_rect(r.x, r.y, r.w, r.h, COLOR_SELECTED);
+            }
+            host.draw_text(labels[i], layout.list.text_x, layout.list.item_text_pos(i).1);
+        }
+        let [glyphs, sounds, modules] = crate::shell_ui::status_texts(
+            host.shell().font_glyphs,
+            host.shell().wav_count,
+            host.shell().mod_count,
+        );
+        let status = layout.extra.get("status").copied().unwrap_or_default();
+        let cursor = status.x;
+        host.draw_text(&glyphs, cursor, status.y);
+        let cursor2 = status.x + i32::try_from(sounds.chars().count()).unwrap_or(0) * 12;
+        host.draw_text(&sounds, cursor2, status.y);
+        let cursor3 = cursor2 + i32::try_from(modules.chars().count()).unwrap_or(0) * 12;
+        host.draw_text(&modules, cursor3, status.y);
     }
 }

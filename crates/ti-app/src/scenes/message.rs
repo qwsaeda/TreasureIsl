@@ -55,13 +55,13 @@ impl Scene for MessageScene {
     /// 标题 + 当前页文本 + 页码 + 导航提示。
     fn render(&mut self, host: &mut dyn SceneHost) {
         host.clear_frame(COLOR_BG);
-        host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
         // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
         let layout = ti_core::data::scenes()
             .ok()
             .and_then(|s| s.get("message"))
             .cloned()
             .unwrap_or_default();
+        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
         let kind = host.msg_kind().unwrap_or(MsgKind::Help);
         host.draw_text(i18n::sget(kind.label()), layout.title.x, layout.title.y);
         // 当前页文本（`rules::messages::page_text` 分页钳位，文本经 `i18n::sget` 查表）

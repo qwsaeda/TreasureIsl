@@ -229,7 +229,12 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
         },
         cards: ti_core::data::CardsCfg { event_chance: 0.5, hand_size: 1, deck: Vec::new() },
         messages: ti_core::data::MessagesCfg { pages: std::collections::BTreeMap::new() },
-        selection: ti_core::data::SelectionCfg { character_count: 5, map_count: 3 },
+        selection: ti_core::data::SelectionCfg {
+            character_count: 5,
+            map_count: 3,
+            characters: Vec::new(),
+            maps: Vec::new(),
+        },
         save: ti_core::data::SaveCfg { slot_count: 1, magic: 1, v2_size: 1 },
         ui: ti_core::data::UiCfg {
             logical_width: 1,

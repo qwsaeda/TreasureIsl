@@ -46,6 +46,7 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("sprite_atlas.rs", "cjk", "atlas loading diagnostics / assertion messages, not player UI"),
     ("terrain_atlas.rs", "cjk", "terrain pak loading diagnostics / assertion messages, not player UI"),
     ("game_app.rs", "cjk", "runtime error eprintln diagnostics (balance load failures), not player UI"),
+    ("treasure_wasm.rs", "cjk", "wasm shell diagnostic / comments, not in-game UI text"),
 ]
 
 

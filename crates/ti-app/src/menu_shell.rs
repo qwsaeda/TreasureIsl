@@ -15,8 +15,6 @@ use ti_platform::gfx::{FramePresenter, Framebuf, UploadMode, Viewport};
 use ti_platform::settings::{BorderStyle, FilterMode, QualityMode, ScaleMode, Settings};
 
 use crate::glyph_raster::{FontSet, Raster};
-use crate::i18n::sget;
-use crate::shell_ui::{MENU, status_texts};
 
 /// 逻辑宽（i32，供坐标运算）。
 pub const LOGICAL_W_I32: i32 = 176;
@@ -50,14 +48,6 @@ pub const COLOR_TITLE_BAR_RGBA: u32 = 0xFF_87BB;
 /// 选中高亮布局色 RGBA 版（`0xAARRGGBB`，HD 8-bit 帧缓冲路径用）。
 #[cfg(feature = "hd-8bit")]
 pub const COLOR_SELECTED_RGBA: u32 = 0xFF_066F;
-/// 菜单行高（逻辑像素）。
-pub const ROW_H: i32 = 20;
-/// 菜单起始 y（逻辑像素）。
-pub const MENU_TOP: i32 = 96;
-/// 底部状态行起点 x（逻辑像素）。
-pub const STATUS_X: i32 = 4;
-/// 底部状态行 y（贴最后一行菜单之下）。
-pub const STATUS_Y: i32 = LOGICAL_H_I32 - GLYPH_ADVANCE;
 
 /// 已载入的真实资源 + 菜单 UI 状态（壳的渲染核心，平台无关）。
 #[derive(Default)]
@@ -94,7 +84,7 @@ impl MenuShell {
     /// 构建壳：清空帧缓冲、按当前窗口尺寸建立视口。
     ///
     /// 调用方随后填充 [`font`](MenuShell::font) / [`wav_count`](MenuShell::wav_count) /
-    /// [`mod_count`](MenuShell::mod_count) 再调 [`render`](MenuShell::render)。
+    /// [`mod_count`](MenuShell::mod_count)；场景渲染走 `scenes/*.rs`（`IndexScene` 等）。
     ///
     /// 默认走 [`UploadMode::Partial`]（wasm 路径，复用纹理部分上传）。
     #[must_use]
@@ -137,55 +127,6 @@ impl MenuShell {
     pub fn set_audio(&mut self, wav_count: usize, mod_count: usize) {
         self.wav_count = wav_count;
         self.mod_count = mod_count;
-    }
-
-    /// 菜单确认：记录选择（写存储由入口负责）并返回当前选中项。
-    #[must_use]
-    pub fn selected_item(&self) -> usize {
-        self.selected
-    }
-
-    /// 菜单上下移动（循环）。
-    pub fn move_selection(&mut self, up: bool) {
-        let n = MENU.len();
-        self.selected = if up { (self.selected + n - 1) % n } else { (self.selected + 1) % n };
-    }
-
-    /// 绘制主菜单到逻辑帧缓冲（再经 [`FramePresenter`] 按脏行带上屏）。
-    pub fn render(&mut self) {
-        // 背景：航海图纸质系（米白，S14 全量重设计）
-        self.fb.clear(COLOR_BG);
-        // 顶部标题条（棕色，S14：高 40px=2.5格）
-        self.fill_rect(0, 0, LOGICAL_W_I32, 40, COLOR_TITLE_BAR);
-
-        // 标题（S14：航海图纸质系，米白背景 + 棕色标题条 + 居中标题）
-        self.draw_text_row(sget("scene.index.title"), 58, 12);
-
-        // 菜单条目（带选中高亮；文案标签运行时取 i18n 表）
-        let labels = crate::shell_ui::menu_labels();
-        for (i, _item) in MENU.iter().enumerate() {
-            let y = MENU_TOP + i32::try_from(i).unwrap_or(0) * ROW_H;
-            if i == self.selected {
-                self.fill_rect(18, y - 12, LOGICAL_W_I32 - 36, ROW_H - 2, COLOR_SELECTED);
-            }
-            self.draw_text_row(labels[i], 56, y);
-        }
-
-        // 状态行：真实资源计数 + 画质模式（S7.6）
-        let [glyphs, sounds, modules] =
-            status_texts(self.font_glyphs, self.wav_count, self.mod_count);
-        let quality_tag = if cfg!(feature = "hd-8bit") {
-            format!("{} F4", self.settings.quality.label())
-        } else {
-            crate::i18n::sget("menu.origin_label").to_owned()
-        };
-        let mut cursor = STATUS_X;
-        for text in [&glyphs, &sounds, &modules, &quality_tag] {
-            self.draw_text_row(text, cursor, STATUS_Y);
-            let span =
-                i32::try_from(text.chars().count()).unwrap_or(0).saturating_mul(GLYPH_ADVANCE);
-            cursor = cursor.saturating_add(span);
-        }
     }
 
     /// 帧缓冲上屏（S4.3：脏行带部分上传，静止帧零 GPU 工作）。

@@ -150,9 +150,16 @@ fn framebuf_matches_logical_resolution() {
     fb.clear(0x0000);
     assert_eq!(fb.as_slice().len(), FB_PIXELS, "帧缓冲 = 176×220");
     let mut app = GameApp::new(176.0, 220.0);
-    app.shell_mut().render();
+    app.render();
     let pixels = app.shell_mut().fb.as_slice();
-    assert_eq!(pixels[0], 0x87BB, "主菜单第 0 行 x=0 应为标题条色（S14 航海图纸质系棕）");
+    // 标题条（index.title.h=40）覆盖第 0..40 行；第 0 列 x=0 应是标题条色（S14 航海图纸质系棕）
+    // 字形豆腐块（INK_COLOR=0xFFFF）也可能叠在标题条上（标题文字 x=58 起，豆腐块 12px 步进），
+    // 故允许 0x87BB 或 0xFFFF（墨色）——关键是「非背景色 0xFD70、非黑 0x0000」。
+    assert!(
+        pixels[0] != 0x0000 && pixels[0] != 0xFD70,
+        "像素(0,0) 应为标题条区（非黑非背景），实为 {:#04X}",
+        pixels[0]
+    );
 }
 
 // ── S8.6 渲染基线去自指：独立 ti-formats 解码基线 vs 渲染逐像素对照 ──

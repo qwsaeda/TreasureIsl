@@ -11,6 +11,7 @@
 ```jsonc
 "combat": {
   "player_first": true,          // 玩家先手
+  "player": { "hp": 2000, "atk": 60 },   // 玩家基础单位（balance.combat.player）
   "damage": {
     "model": "atk_plus_flat",    // 伤害模型（见下）
     "flat": 1,                   // 最小伤害

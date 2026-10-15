@@ -43,6 +43,31 @@ pub(crate) struct RawSelection {
     pub(crate) character_count: u32,
     #[serde(default = "default_map_count")]
     pub(crate) map_count: u32,
+    /// 角色目录（`id`/`index`）。
+    #[serde(default)]
+    pub(crate) characters: Vec<RawCharacter>,
+    /// 地图目录（`id`/`index`/`grid_w`/`grid_h`/`boss_tier`/`player_start`/`landmarks`）。
+    #[serde(default)]
+    pub(crate) maps: Vec<RawMapEntry>,
+}
+
+/// 角色目录条目（`balance.selection.characters[]`）。
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct RawCharacter {
+    pub(crate) id: String,
+    pub(crate) index: u32,
+}
+
+/// 地图目录条目（`balance.selection.maps[]`）。
+#[derive(Deserialize, Clone)]
+pub(crate) struct RawMapEntry {
+    pub(crate) id: String,
+    pub(crate) index: u32,
+    pub(crate) grid_w: u32,
+    pub(crate) grid_h: u32,
+    pub(crate) boss_tier: u32,
+    pub(crate) player_start: [u32; 2],
+    pub(crate) landmarks: Vec<[u32; 2]>,
 }
 
 fn default_char_count() -> u32 {

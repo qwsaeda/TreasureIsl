@@ -52,11 +52,18 @@ impl Scene for SelectRoleScene {
                 let done = selection_done(host);
                 host.selection_mut().completed = done;
                 if done {
-                    host.enter_main_map();
+                    let ok = host.enter_main_map();
+                    if ok {
+                        true
+                    } else {
+                        // FIND-204：数据校验失败 → 停留原场景
+                        host.play_sfx(Sfx::Invalid);
+                        false
+                    }
                 } else {
                     host.enter(SceneKind::SelectMap);
+                    true
                 }
-                true
             }
             GameInput::Back => {
                 host.enter(SceneKind::Index);
@@ -108,7 +115,7 @@ impl Scene for SelectRoleScene {
             .and_then(|s| s.get("select_role"))
             .cloned()
             .unwrap_or_default();
-        host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
+        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
         host.draw_text(i18n::sget("scene.select_role.title"), layout.title.x, layout.title.y);
         let current = host.character().map_or(0, |c| c.index() as usize);
         for (i, c) in Character::all().iter().enumerate() {

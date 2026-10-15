@@ -50,6 +50,8 @@
   ],
   "event_chance": 0.35,           // 移动触发卡牌的概率
   "hand_size": 1                  // 一次抽几张（balance.json 当前值 = 1）
+                                     // FIND-029 设计裁决：单卡 roguelite 事件（抽一张立即生效），非占位；
+                                     // 调 >1 需同步 main_map.rs draw_one 的 n 参数（每步抽 n 张逐一结算）
 }
 ```
 

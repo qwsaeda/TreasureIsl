@@ -2,6 +2,13 @@
 target/
 *.pdb
 
+# IDE
+.idea/
+
+# installer / binaries
+qemu-w64-setup-*.exe
+*.exe
+
 # IDA backup files
 *.id0
 *.id1

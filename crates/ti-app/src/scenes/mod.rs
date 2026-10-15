@@ -336,7 +336,10 @@ pub trait SelectionHost {
     fn map_unlocked(&self, slot: MapSlot) -> bool;
 
     /// 进入主地图（初始化 `MapSession` + 经济会话，三场景共用）。
-    fn enter_main_map(&mut self);
+    ///
+    /// 返回 `false` = 数据校验失败（`balance` 缺条目 / 坐标越界），调用方
+    /// （如 `restore_save`）据此回滚已写字段，避免半初始化态（FIND-204）。
+    fn enter_main_map(&mut self) -> bool;
 }
 
 /// S9.2：主地图会话接口（移动/贸易/建造/事件分派）。

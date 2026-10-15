@@ -22,7 +22,7 @@
 
 ### 1.2 布局常量（数值见 constants.md §2）
 
-`MENU_TOP` / `ROW_H` / `STATUS_X` / `STATUS_Y`（主菜单壳布局）。
+主菜单壳渲染布局已由 `IndexScene`（`scenes/index.rs`）接管；旧常量 `MENU_TOP` / `ROW_H` / `STATUS_X` / `STATUS_Y` 已随 `MenuShell::render` 死路径删除（FIND-101）。
 
 ### 1.3 经济常量（数值见 constants.md §3）
 

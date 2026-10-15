@@ -163,9 +163,11 @@ impl Shell {
     /// 播放一次音效（`GameApp.last_sfx` 非空时）+ 记录选择（内存存储）。
     fn play_last_sfx(&mut self) {
         let sfx = self.game.last_sfx();
-        let event_id = ti_app::MENU[self.game.menu_selected()].event_id;
+        // FIND-205：last_menu 直接存 `menu_selected()`（usize 0..=5），不再经
+        // `MENU[..].event_id` 读取路径（该字段 S5.1 起已弃用，仅 glyph_raster 遍历用）。
+        let selected = u32::try_from(self.game.menu_selected()).unwrap_or(0);
         let mut store = MemoryStore::new();
-        let _ = store.store("last_menu", &event_id.to_le_bytes());
+        let _ = store.store("last_menu", &selected.to_le_bytes());
         if sfx.is_some() {
             if let Some(sound) = self.se.as_ref() {
                 play_sound(sound, PlaySoundParams { looped: false, volume: SE_VOLUME });
@@ -256,7 +258,7 @@ async fn main() {
     let mut shell = Shell::new().await;
     // 首帧强制渲染（font/audio 已注入）
     shell.game.render();
-    shell.game.shell_mut().last_rendered = Some(shell.game.shell().selected);
+    shell.game.shell_mut().last_rendered = Some(shell.game.menu_selected());
     #[cfg(feature = "stats")]
     let mut fps = FpsMeter::new();
 
@@ -320,7 +322,7 @@ async fn main() {
         shell.play_last_sfx();
 
         // S5.1：场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
-        let current_selected = shell.game.shell().selected;
+        let current_selected = shell.game.menu_selected();
         let scene_key = SceneKind::from_legacy(shell.game.scene()).discriminant();
         if changed
             || shell.game.shell().last_rendered != Some(current_selected)

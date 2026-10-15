@@ -213,7 +213,8 @@ impl Scene for MainMapScene {
             .unwrap_or_default();
 
         // HUD（S14：棕色标题条 + 米白背景 + 等距瓦片 + 代码棋子/据点）
-        host.fill_rect(0, 0, 176, 24, COLOR_TITLE_BAR);
+        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
+        host.fill_rect(layout.hud.x, layout.hud.y, layout.hud.w, layout.hud.h, COLOR_TITLE_BAR);
         host.draw_text(i18n::sget("scene.main_map.title"), layout.title.x, layout.title.y);
         let gold = host.gold();
         let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
@@ -227,14 +228,17 @@ impl Scene for MainMapScene {
         let (cam_x, cam_y) = host.terrain_camera();
         let cx = i32::try_from(cam_x).unwrap_or(0);
         let cy = i32::try_from(cam_y).unwrap_or(0);
+        let g0 = layout.extra_scalar.get("grid.x0").copied().unwrap_or(20);
+        let g1 = layout.extra_scalar.get("grid.y0").copied().unwrap_or(30);
+        let gs = layout.extra_scalar.get("grid.step").copied().unwrap_or(6);
         if let Some(pos) = host.map_pos() {
             if terrain_drawn {
                 let iso_x = TerrainAtlas::iso_x(pos.row, pos.col);
                 let iso_y = TerrainAtlas::iso_y(pos.row, pos.col, gw);
                 host.fill_rect(iso_x + cx - 2, iso_y + cy - 2, 5, 5, COLOR_PLAYER);
             } else {
-                let px = i32::try_from(pos.col).unwrap_or(0) * 6 + 20;
-                let py = i32::try_from(pos.row).unwrap_or(0) * 6 + 30;
+                let px = i32::try_from(pos.col).unwrap_or(0) * gs + g0;
+                let py = i32::try_from(pos.row).unwrap_or(0) * gs + g1;
                 host.fill_rect(px - 1, py - 1, 4, 4, COLOR_PLAYER);
             }
         }
@@ -244,8 +248,8 @@ impl Scene for MainMapScene {
                 let iso_y = TerrainAtlas::iso_y(r, c, gw);
                 host.fill_rect(iso_x + cx - 1, iso_y + cy - 1, 3, 3, COLOR_LANDMARK);
             } else {
-                let px = i32::try_from(c).unwrap_or(0) * 6 + 20;
-                let py = i32::try_from(r).unwrap_or(0) * 6 + 30;
+                let px = i32::try_from(c).unwrap_or(0) * gs + g0;
+                let py = i32::try_from(r).unwrap_or(0) * gs + g1;
                 host.fill_rect(px - 1, py - 1, 3, 3, COLOR_LANDMARK);
             }
         }

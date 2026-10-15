@@ -181,7 +181,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 
 ## 验收
 
-- `scripts/gate.ps1` 全绿 + doccheck 独立�?9 项（`cargo run -q -p ti-tools --bin doccheck`�? doccheck2 独立�?13 项（�?agent 审计固化断言，`cargo run -q -p ti-tools --bin doccheck2 .`�? 台账三方对账独立�?14 项（`python scripts/check_ledger_reality.py`，S10.0 增）+ 业务闭环断言�?15 项（`python scripts/check_forward_closed.py --check`，S11 增）+ 模块并行前置�?16 项（`python scripts/check_module_contracts.py --check`，S11.4 增）+ 飞轮开轮必读第17 项（；EXP-070 增）+ 视袄回军准准图第18 项（；EXP-072 增）通过（S5.4 时点 8 项门禁；当前 18 项，�?parity.md�?
+- `scripts/gate.ps1` 全绿 + doccheck 独立�?9 项（`cargo run -q -p ti-tools --bin doccheck`�? doccheck2 独立�?13 项（�?agent 审计固化断言，`cargo run -q -p ti-tools --bin doccheck2 .`�? 台账三方对账独立�?14 项（`python scripts/check_ledger_reality.py`，S10.0 增）+ 业务闭环断言�?15 项（`python scripts/check_forward_closed.py --check`，S11 增）+ 模块并行前置�?16 项（`python scripts/check_module_contracts.py --check`，S11.4 增）+ 飞轮开轮必读第17 项（；EXP-070 增）+ 视袄回军准准图第18 项（；EXP-072 增）通过（S5.4 时点 8 项门禁；当前 20 项，�?parity.md�?
 - `plan/ledger.yaml` 106 任务�?02 verified；台账计数随 S8–S13 演进，doccheck 断言锁定防漂移）（S2.6 / S7.7）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测�?
 - S5.1 全链�?7 项断言（`tests/game_app_flow.rs`�? S5.2 headless 全流�?16/16 步（P3-3�?
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全�?

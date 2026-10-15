@@ -13,8 +13,9 @@ pub struct MenuItem {
     pub key: &'static str,
     /// 菜单项事件码（`docs/spec/menu.md §a`，`saveload` 的 `v3[14]` case 0..=5；
     /// 0=新游戏 / 1=继续 / 2=选项 / 3=说明1 / 4=说明2 / 5=退出）。
-    /// 真实确定键事件码 = 13（`spec/menu.md §a`）；本字段是「选中菜单项索引」，
-    /// S5.1 起 `GameApp::handle_index` 用 `menu_selected` 直接匹配 case，不再靠此占位。
+    /// S5.1 起 `GameApp::handle_index` 用 `menu_selected` 直接匹配 case，本字段仅作
+    /// 事件码参考（`glyph_raster` 遍历用）；FIND-205 起 wasm 壳 `last_menu` 直接存
+    /// `menu_selected()`（usize），不再经此字段读取。
     pub event_id: u32,
 }
 

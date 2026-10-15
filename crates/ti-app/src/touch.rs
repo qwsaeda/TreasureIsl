@@ -119,14 +119,6 @@ impl Default for TouchPad {
 /// 改由 [`scene_list_bands`] / [`slot_bands`] 从 `ListLayout`（scenes.json）推导，
 /// 与渲染 `item_rect` 公式正逆成对（EXP-071）。
 pub mod layout {
-    /// 主菜单行首 y（= `MENU_TOP(96) - 12`，即选中高亮矩形顶边）。
-    pub const MENU_ROW_Y0: f32 = 84.0;
-    /// 主菜单行步进（= `ROW_H`）。
-    pub const MENU_ROW_STEP: f32 = 20.0;
-    /// 主菜单命中区左边界（= 高亮矩形 `x`）。
-    pub const MENU_X0: f32 = 18.0;
-    /// 主菜单命中区右边界（= 高亮矩形 `x + w`）。
-    pub const MENU_X1: f32 = 158.0;
     /// 主菜单项数（`spec/menu.md §a` case 0..=5）。
     pub const MENU_COUNT: usize = 6;
 
@@ -142,16 +134,21 @@ pub mod layout {
 
     /// 点按是否落在主菜单某行 → 返回菜单项索引。
     ///
-    /// 命中区为整行宽（手指容错），行带高 = `MENU_ROW_STEP`。
-    // allow 理由：`y < MENU_ROW_Y0` 已排除负值，屏高 220 限定上界，
-    // `floor()` 后必 ∈ [0, 6]，故 f32→i32 转换不截断、不丢符号。
+    /// 命中区几何读 `scenes.json` 的 `index` 段（`list.y`/`list.row_h` 与渲染
+    /// `item_rect` 正逆成对，EXP-071），`MENU_COUNT` 常量兜底项数。
+    /// scenes.json 不可用 → `None`（触摸无副作用）。
     #[must_use]
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn menu_row_at(x: f32, y: f32) -> Option<usize> {
-        if !(MENU_X0..MENU_X1).contains(&x) || y < MENU_ROW_Y0 {
+        let scene = ti_core::data::scenes().ok()?.get("index")?.clone();
+        let y0 = scene.list.y as f32;
+        let step = scene.list.row_h as f32;
+        let x0 = scene.list.x as f32;
+        let x1 = x0 + scene.list.w as f32;
+        if !(x0..x1).contains(&x) || y < y0 {
             return None;
         }
-        let idx = ((y - MENU_ROW_Y0) / MENU_ROW_STEP).floor() as i32;
+        let idx = ((y - y0) / step).floor() as i32;
         let idx = usize::try_from(idx).ok()?;
         if idx < MENU_COUNT { Some(idx) } else { None }
     }
@@ -203,14 +200,23 @@ pub mod layout {
     /// 存读档槽位命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071/EXP-074）。
     ///
     /// 与 `saveload` 场景渲染共用同一 `ListLayout` 参数（正逆成对）；
-    /// 命中区为整屏宽（`0..176`），行带 = 基线 y 上移 `offset`、高 `item_h`。
+    /// 命中区 x 范围由调用方传 `x0`/`x1`（渲染列表 `list.x`/`list.x+list.w`），
+    /// 行带 = 基线 y 上移 `offset`、高 `item_h`。
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
-    pub fn slot_bands(y0: f32, step: f32, item_h: f32, offset: f32, count: usize) -> Vec<RectF> {
+    pub fn slot_bands(
+        x0: f32,
+        x1: f32,
+        y0: f32,
+        step: f32,
+        item_h: f32,
+        offset: f32,
+        count: usize,
+    ) -> Vec<RectF> {
         (0..count)
             .map(|i| {
                 let y = y0 + i as f32 * step - offset;
-                RectF { x0: 0.0, x1: 176.0, y0: y, y1: y + item_h }
+                RectF { x0, x1, y0: y, y1: y + item_h }
             })
             .collect()
     }
@@ -287,7 +293,7 @@ pub mod layout {
 
 #[cfg(test)]
 mod tests {
-    use super::layout::{GRID_STEP, GRID_X0, GRID_Y0, MENU_ROW_STEP, MENU_ROW_Y0};
+    use super::layout::{GRID_STEP, GRID_X0, GRID_Y0};
     use super::{Gesture, TouchPad, TouchSample};
     use ti_platform::gfx::Viewport;
 
@@ -354,18 +360,27 @@ mod tests {
     #[test]
     #[allow(clippy::cast_precision_loss)] // 测试常量下标 ≤ 20，f32 表示无损
     fn menu_rows_cover_six_items() {
+        // 坐标读 scenes.json index 段（list.y=48/row_h=32），与渲染 item_rect 正逆成对
+        let scene = match ti_core::data::scenes() {
+            Ok(v) => match v.get("index") {
+                Some(v) => v,
+                None => std::process::abort(),
+            },
+            Err(e) => {
+                eprintln!("scenes.json 不可用: {e}");
+                std::process::abort()
+            }
+        };
+        let y0 = scene.list.y as f32;
+        let step = scene.list.row_h as f32;
         for i in 0..6usize {
-            let y = MENU_ROW_Y0 + i as f32 * MENU_ROW_STEP + 4.0;
+            let y = y0 + i as f32 * step + 4.0;
             assert_eq!(super::layout::menu_row_at(88.0, y), Some(i), "row {i}");
         }
-        assert_eq!(super::layout::menu_row_at(5.0, 90.0), None, "左边界外");
-        assert_eq!(super::layout::menu_row_at(200.0, 90.0), None, "右边界外");
+        assert_eq!(super::layout::menu_row_at(5.0, y0 + 4.0), None, "左边界外");
+        assert_eq!(super::layout::menu_row_at(200.0, y0 + 4.0), None, "右边界外");
         assert_eq!(super::layout::menu_row_at(88.0, 10.0), None, "标题条区域");
-        assert_eq!(
-            super::layout::menu_row_at(88.0, MENU_ROW_Y0 + 6.0 * MENU_ROW_STEP),
-            None,
-            "超出 6 项"
-        );
+        assert_eq!(super::layout::menu_row_at(88.0, y0 + 6.0 * step), None, "超出 6 项");
     }
 
     #[test]
@@ -431,7 +446,7 @@ mod tests {
             highlight_offset: 10,
             gold_x: 100,
         };
-        let bands = super::layout::slot_bands(40.0, 40.0, 26.0, 10.0, 5);
+        let bands = super::layout::slot_bands(10.0, 10.0 + 166.0, 40.0, 40.0, 26.0, 10.0, 5);
         for i in 0..5usize {
             let r = ll.item_rect(i);
             let cx = 88.0;

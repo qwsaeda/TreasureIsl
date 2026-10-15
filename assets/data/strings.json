@@ -54,7 +54,7 @@
   "scene.main_map.hud.gold": "金",
   "scene.main_map.hud.gold_fmt": "金 {0}",
   "scene.main_map.hud.owned": "持有",
-  "scene.main_map.hud.owned_fmt": "持有 {0}",
+  "scene.main_map.hud.owned_fmt": "持有 {0} 种",
   "scene.main_map.title": "地图",
   "scene.message.hint": "上下切部  退出",
   "scene.message.nav_hint": "38/40 切部  27 退出",

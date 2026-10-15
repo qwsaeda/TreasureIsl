@@ -121,7 +121,7 @@ cargo run -p ti-app --features headless --bin treasure-headless -- --script test
 | 我改了什么 | 必须同步 | 验证命令 |
 |---|---|---|
 | 玩法规则（`business/*.md`） | `rules/*` + 对应单测 + 本文件 §1 表 | `cargo test -p ti-core` |
-| 数值 | `assets/data/balance.json`（不改代码） | `python legacy/scripts/validate_data.py` |
+| 数值 | `assets/data/balance.json`（不改代码） | `python scripts/validate_data.py` |
 | 玩家可见文本 | `assets/data/strings.json`（不改代码） | `python scripts/check_hardcode.py` |
 | 场景流/输入/控件 | 本文件 §3–§5 + [`07_ui_flow.md`](business/07_ui_flow.md) + `scenes/*.rs` | `cargo test -p ti-app` |
 | 场景转换表 | **两处同改**（本文件/业务文档 ↔ `scene_transition!` 宏） | `cargo test -p ti-app`（含 `compile_fail` 文档测试） |

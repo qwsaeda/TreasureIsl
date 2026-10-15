@@ -8,7 +8,7 @@
 |---|---|
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 18 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 20 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
@@ -21,7 +21,7 @@
 | 避免重复踩坑 | [`experience/index.md`](experience/index.md) |
 | 引入新依赖 / 改 workspace 结构 | [`process/01_architecture.md`](process/01_architecture.md) §4（现成库清单）+ [`style.md`](style.md) §5.9 |
 | 推送远端 / 分支与 commit 规范 | [`git.md`](git.md) |
-| **常用命令一键入口（native 运行 / 门禁 / 测试 / 推送 / 元素验证 / 台账校验）** | `scripts/playbook.ps1`（`-List` 列全部；22 项命令固化为单一脚本，含 push 前置 gate 全绿检查） |
+| **常用命令一键入口（native 运行 / 门禁 / 测试 / 推送 / 元素验证 / 台账校验）** | `scripts/playbook.ps1`（`-List` 列全部；16 项命令固化为单一脚本，含 push 前置 gate 全绿检查） |
 
 ## 全库清单
 
@@ -29,7 +29,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 18 项（doccheck 独立第 9 项含跨文档数值漂移 + release 台账计数同步，`cargo run -p ti-tools --bin doccheck`） |
+| [`parity.md`](parity.md) | P0~P4 对齐标准 + `gate.ps1` 20 项（doccheck 独立第 9 项含跨文档数值漂移 + release 台账计数同步，`cargo run -p ti-tools --bin doccheck`） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收） |
 | [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP） |
 | [`git.md`](git.md) | 推送规范（远端 origin/分支模型/推送规则/commit 格式/推送检查清单） |
@@ -89,7 +89,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| `scripts/playbook.ps1` | **常用命令一键入口**（22 项命令固化：native 运行 / 无头回归 / wasm / 冒烟 / 门禁 / 测试 / fmt / clippy / 元素验证 / 逐精灵渲染 / 推送前置检查 / 台账 / doccheck / 硬编码扫描；`-List` 列全部；UTF-8 BOM 防 PowerShell 编码错位） |
+| `scripts/playbook.ps1` | **常用命令一键入口**（16 项命令固化：native 运行 / 无头回归 / wasm / 冒烟 / 门禁 / 测试 / fmt / clippy / 元素验证 / 逐精灵渲染 / 推送前置检查 / 台账 / doccheck / 硬编码扫描；`-List` 列全部；UTF-8 BOM 防 PowerShell 编码错位） |
 | `crates/ti-tools/src/bin/specskel.rs` | spec 骨架半自动生成（S0.7；命令见 `AGENTS.md` 命令节） |
 | `evidence/S0.7.log` | specskel 验收日志（单测 6/6 + 三模块实跑） |
 

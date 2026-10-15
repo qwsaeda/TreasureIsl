@@ -481,11 +481,12 @@ impl Raster {
 
 | 函数 | 逻辑 | 常量 |
 |---|---|---|
-| `MenuShell::render` | 主菜单（标题 + 菜单项 + 选中高亮 + 状态行） | `MENU_TOP=96`, `ROW_H=20` |
-| `STATUS_Y` | 底部状态行 y | `220 - 12 = 208` |
-| `STATUS_X` | 底部状态行 x | `4` |
+| `IndexScene::render`（`scenes/index.rs`） | 主菜单（标题 + 菜单项 + 选中高亮 + 状态行），坐标读 `scenes.json` index 段 | `list.y=48`, `row_h=32` |
 
-静态帧优化：`last_rendered: Option<usize>` 未变化时跳过整帧；`last_rendered_scene: Option<i32>` 场景切换时强制整帧重渲染。
+> FIND-101：旧 `MenuShell::render` + `MENU_TOP=96`/`ROW_H=20`/`STATUS_X=4`/`STATUS_Y=208` 常量已随死路径删除；
+> 主菜单渲染改由 `IndexScene` 走 `scenes.json`（与触摸命中区 `menu_row_at` 同源，EXP-071 正逆成对）。
+
+静态帧优化：`last_rendered` 同步源 = `GameApp.menu_selected()`（Index 场景选中项）；`last_rendered_scene` 场景切换时强制整帧重渲染。
 
 ---
 

@@ -228,7 +228,7 @@ if ($Check) {
     $msg = @()
     if ($output -notcontains '[1] docs/process/00_index.md — 分工表 + 标准工作流') { $ok = $false; $msg += '缺 [1] 必读条目' }
     if ($gateItems.Count -lt 16) { $ok = $false; $msg += "gate 项仅 $($gateItems.Count)（要求 ≥16）" }
-    if ($dc2Checks.Count -lt 9) { $ok = $false; $msg += "doccheck2 断言仅 $($dc2Checks.Count)（要求 ≥9）" }
+    if ($dc2Checks.Count -lt 15) { $ok = $false; $msg += "doccheck2 断言仅 $($dc2Checks.Count)（要求 ≥15）" }
     if ($packages.Count -lt 7) { $ok = $false; $msg += "packages.yaml 仅 $($packages.Count) 包（要求 ≥7）" }
     # 6 条必读关键词
     $required6 = @(

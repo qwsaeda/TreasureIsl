@@ -42,13 +42,27 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
             .collect();
         // EXP-074：`extra` 值可能是标量字段（如 `locked:{"text_x":130}`），而非 Rect 形状。
         // 逐 key 抽取 `*_x` / `*_y` 标量，避免缺 key 被静默置 0 丢失坐标。
+        // FIND-106/FIND-202：分诊——非数值标量（字符串/嵌套对象等，如装饰性 color 字段）
+        // 静默跳过；数值但 i64 溢出或 i32 越界才 eprintln（真异常，validate_data.py V2 兜底）。
         let mut extra_scalar = BTreeMap::new();
         for (k, v) in &r.extra {
             if let Some(obj) = v.as_object() {
                 for (fk, fv) in obj {
-                    if let Some(n) = fv.as_i64() {
-                        if let Ok(s) = i32::try_from(n) {
-                            extra_scalar.insert(format!("{k}.{fk}"), s);
+                    match fv.as_i64() {
+                        Some(n) => match i32::try_from(n) {
+                            Ok(s) => {
+                                extra_scalar.insert(format!("{k}.{fk}"), s);
+                            }
+                            Err(_) => eprintln!(
+                                "scenes.json: `{k}.{fk}` = {fv} out of i32 range, extra_scalar skipped"
+                            ),
+                        },
+                        None => {
+                            if fv.is_number() {
+                                eprintln!(
+                                    "scenes.json: `{k}.{fk}` = {fv} is numeric but not an i64 scalar, extra_scalar skipped"
+                                );
+                            }
                         }
                     }
                 }

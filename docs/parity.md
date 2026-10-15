@@ -52,7 +52,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 
-## 代码质量门禁 `scripts/gate.ps1`（18 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（20 项，循环每轮强制）
 
 ```
 1  cargo fmt --all -- --check
@@ -73,19 +73,23 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
       （F-/EXP- ID 唯一性与跨文档引用、任务 ID 登记、数字断言、evidence 内容特征；
        第 9 项内含跨文档数值断言（2041/UI 场景 20/0x343FD/20011591）+
        release 台账计数漂移检查（check_ledger_counts））
-10 数据表门禁（S8.2，见 docs/process/04_tooling.md §2）：
-     python scripts/validate_data.py            # assets/data/*.json 结构与数值域，须全绿
-     python scripts/gen_layout.py --check       # controls.json 幂等一致，须全绿
+ 10 数据表门禁（S8.2，见 docs/process/04_tooling.md §2）：
+      python scripts/validate_data.py            # 统一入口（FIND-201 合并）：balance/strings/scenes/controls
+                                                # 基础校验 + V1 main_map.grid 三键 + V2 全场景 extra 标量正整数，须全绿
+      python legacy/scripts/gen_layout.py --check # controls.json 幂等一致，须全绿
 11 oracle 边界（S8.8）：python scripts/check_oracle_boundary.py --check
      （shell 层 0 个 oracle_* 函数调用；oracle 仅 rules 内部参照物，类型重导出允许）
 12 check_hardcode 严格（第 10 项组内 10c，单独计第 12 项）：python scripts/check_hardcode.py
      （发现硬编码即 FAIL；2026-10 已清零 37 处债务：玩家可见中文全进 strings.json、
       布局色全走 COLOR_* 常量；诊断/CLI 经 EXEMPT 豁免）
-13 doccheck2（双 agent 审计固化断言，第 1~5 轮审计高频项）：
-      cargo run -q -p ti-tools --bin doccheck2 .
-      （文档↔代码/数据一致性 6 项：audio ChannelState API 一致性 / shell 层 oracle_* 残留 /
-       LCG hex 误算（0x3443D）/ 据点阈值反向断言（<= 40）/ i18n 孤儿 key / release 门禁项数漂移；
-       替代每轮双 agent 审计里靠子代理现场 grep 的重复检查，见 docs/experience/build.md）
+ 13 doccheck2（双 agent 审计固化断言，第 1~6 轮审计高频项）：
+       cargo run -q -p ti-tools --bin doccheck2 .
+       （文档↔代码/数据一致性 15 项：audio ChannelState API 一致性 / shell 层 oracle_* 残留 /
+        LCG hex 误算（0x3443D）/ 据点阈值反向断言（<= 40）/ i18n 孤儿 key / release 门禁项数漂移 /
+        headless BattleView API / 飞轮回读 / 战斗玩家数值数据驱动 / 飞轮脚本 /
+        触摸渲染正逆成对 / HD 精灵透明 / 场景布局保真 / 场景 band 数 /
+        map_slot 写档 0 起 zero_index 基准（FIND-203）；
+        替代每轮双 agent 审计里靠子代理现场 grep 的重复检查，见 docs/experience/build.md）
 14 台账三方对账（S10.0，防子代理虚报，EXP-058）：
        python scripts/check_ledger_reality.py
        （遍历 ledger status: verified 任务行，校验 (a) evidence 文件存在且非空；
@@ -112,7 +116,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 14 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 20 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
 
 **S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
-审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 14 项全绿。
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 20 项全绿。

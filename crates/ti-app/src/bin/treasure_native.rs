@@ -330,7 +330,7 @@ async fn main() {
     let mut shell = Shell::new().await;
     // 首帧强制渲染（font/audio 已注入，画好菜单再进主循环）
     shell.game.render();
-    shell.game.shell_mut().last_rendered = Some(shell.game.shell().selected);
+    shell.game.shell_mut().last_rendered = Some(shell.game.menu_selected());
     #[cfg(feature = "stats")]
     let mut fps = FpsMeter::new();
 
@@ -352,7 +352,7 @@ async fn main() {
         shell.play_last_sfx();
 
         // S5.1：场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
-        let current_selected = shell.game.shell().selected;
+        let current_selected = shell.game.menu_selected();
         let scene_key = SceneKind::from_legacy(shell.game.scene()).discriminant();
         if changed
             || shell.game.shell().last_rendered != Some(current_selected)

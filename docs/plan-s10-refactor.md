@@ -1,7 +1,7 @@
 # S10 现代化收口计划（Modern Refinement Flywheel）
 
 **目标**：修复界错乱/加载 bug → 占位清零 → GPU 化渲染 → 对抗流水线 loop 至停机。
-**前置决策**（2026-10 用户）：本轮全做完（阶段 0+1+2+3+4）；TTF 字形并入 GPU 阶段；停机条件 = 审计 0 新发现 + P3-3 16 步 0 失败 + gate 14 项全绿。
+**前置决策**（2026-10 用户）：本轮全做完（阶段 0+1+2+3+4）；TTF 字形并入 GPU 阶段；停机条件 = 审计 0 新发现 + P3-3 16 步 0 失败 + gate 16 项全绿（S10 时点，现 20 项）。
 
 > 本计划取代旧「S9 骨架」定位：S9.1/S9.3/S9.4 已 verified（场景拆分/字段私有化/Builder+Type-State），
 > S9.2（窄接口拆分）与 S9.5（Command 模式）回退 pending（S9.5 因 commands.rs 不存在被 `check_ledger_reality` 第 14 项拦截，EXP-058）。
@@ -17,7 +17,7 @@
   - EXP-060：HD 不递归 + 场景 key 碰撞 = HD 失效 + 切场景残留（S10.2）。
 - **0.4 标准入档**：
   - `docs/modernization.md` §1：渲染目标改 GPU 逐精灵 batch + TTF 字形，176×220 CPU blit 降级为 `legacy-render` feature；
-  - `docs/parity.md`：P0-5（触摸/渲染同坐标系）+ P0-6（HD 递归注入 100%）+ P4-4（GPU 观感）+ gate 14 项 + 停机条件；
+  - `docs/parity.md`：P0-5（触摸/渲染同坐标系）+ P0-6（HD 递归注入 100%）+ P4-4（GPU 观感）+ gate 16 项（S10 时点） + 停机条件；
   - `docs/style.md` §5.6.5：GPU 渲染约定（atlas + batch + alpha blend + TTF）。
 
 ## 2. 阶段 1 — P0 错乱修复（并行 2 子代理，文件域不相交）
@@ -57,14 +57,14 @@
 
 ```
 loop:
-  1. gate.ps1（14 项）全绿
+   1. gate.ps1（16 项，S10 时点）全绿
   2. rea-audit-fix 双 agent 对抗审计（找文档/代码/数据漂移）
   3. 漂移三分类回写：
      - 可机械判定 → doccheck2 数值断言 / gate 项
      - 需修码     → evidence 修复 + 测试
      - 流程教训   → docs/experience/index.md 新 EXP 条
   4. 修复 → 重 gate → 再审计
-停机：审计 0 新发现 + P3-3 16 步 0 失败 + gate 14 项全绿
+停机：审计 0 新发现 + P3-3 16 步 0 失败 + gate 16 项全绿（S10 时点，现 20 项）
 ```
 
 **防虚报**：每轮子代理产出主线程一律 Test-Path + 实跑复核（EXP-058）。

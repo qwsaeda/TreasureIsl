@@ -105,6 +105,10 @@ pub struct BattleView {
     pub boss_hp: u32,
     /// 胜方（`step` 后同步，`None` = 未结束）。
     pub outcome: Option<Side>,
+    /// 玩家初始 HP（血条分母，`Unit.hp`）。
+    pub player_hp_max: u32,
+    /// BOSS 初始 HP（血条分母，`BattleSession::boss_hp()` 构造时快照）。
+    pub boss_hp_max: u32,
 }
 
 impl BattleView {
@@ -116,7 +120,17 @@ impl BattleView {
         let session = BattleSession::from_balance(seed, player, boss_tier).ok()?;
         let outcome = session.outcome();
         let boss_hp = session.boss_hp();
-        Some(Self { player, boss_tier, session, rounds: 0, player_hp: player.hp, boss_hp, outcome })
+        Some(Self {
+            player_hp_max: player.hp,
+            boss_hp_max: boss_hp,
+            player,
+            boss_tier,
+            session,
+            rounds: 0,
+            player_hp: player.hp,
+            boss_hp,
+            outcome,
+        })
     }
 
     /// 是否结束。
@@ -166,6 +180,10 @@ pub struct BattleSnapshot {
     pub rounds: u32,
     /// 胜方（`None` = 未结束）。
     pub outcome: Option<Side>,
+    /// 玩家初始 HP（血条分母，`balance.combat.player.hp`）。
+    pub player_hp_max: u32,
+    /// BOSS 初始 HP（血条分母，`balance.combat.boss_tiers[tier].hp`）。
+    pub boss_hp_max: u32,
 }
 
 /// 归一输入事件（壳层负责把触摸/键/拖拽映射到这些变体，`docs/gamebook.md` §3）。
@@ -260,6 +278,7 @@ pub struct GameApp {
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// 战斗会话（`Vs` 场景时有效）。
+    /// 初始值来自 `BattleSession::from_balance`（`balance.combat.player` + `boss_tier`）。
     pub battle: Option<BattleView>,
     /// 全局 RNG（可播种 PCG，`rand_pcg`，`rules::rng` 行为，EXP-040 确定性；S8.7 前为 MSVC LCG 历史参照）。
     pub rng: GameRng,
@@ -481,7 +500,10 @@ impl GameApp {
             msg_kind: None,
             msg_page: 0,
             msg_total: 0,
-            save_slots: vec![SaveSlot::default(); 5],
+            save_slots: {
+                let count = ti_core::data::balance().map_or(5, |b| b.save.slot_count) as usize;
+                vec![SaveSlot::default(); count]
+            },
             last_sfx: None,
             battle_won: false,
             quit: false,
@@ -647,19 +669,50 @@ impl GameApp {
     }
 
     /// 按存档槽恢复状态并跳场景（测试 / 存档往返用，与 `SceneHost::restore_save` 同逻辑）。
+    ///
+    /// FIND-107：角色/地图边界改读 `balance.selection.characters/maps` 目录长度，
+    /// 不再硬编码 5/3（调目录只需改 balance.json）。
+    ///
+    /// FIND-204：字段写入前先快照旧值，`enter_main_map` 校验失败（返回 `false`）时
+    /// 回滚 4 个字段（`character`/`map_slot`/`gold`/`bank`），不留下半初始化态；成功才提交。
     pub fn restore_save(&mut self, data: SaveSlot) {
-        if data.character > 0 && data.character <= 5 {
-            self.character = Character::from_index(data.character - 1);
-            self.selection.character = self.character;
+        let bounds = balance()
+            .map_or((0usize, 0usize), |b| (b.selection.characters.len(), b.selection.maps.len()));
+        let (char_count, map_count) = bounds;
+        // FIND-204：快照调用前 4 字段，enter_main_map 失败时回滚
+        let prev_character = self.character;
+        let prev_map_slot = self.map_slot;
+        let prev_selection = self.selection;
+        let prev_gold = self.gold;
+        let prev_bank = self.bank;
+        let char_idx = data.character.saturating_sub(1);
+        if usize::try_from(char_idx).is_ok_and(|i| i < char_count) {
+            if let Some(ch) = Character::from_index(char_idx) {
+                self.character = Some(ch);
+                self.selection.character = Some(ch);
+            }
         }
-        if data.map_slot < 3 {
-            self.map_slot = MapSlot::from_index(data.map_slot);
-            self.selection.map_slot = self.map_slot;
+        let mc_u32 = u32::try_from(map_count).unwrap_or(0);
+        if data.map_slot < mc_u32 {
+            if let Some(ms) = MapSlot::from_index(data.map_slot) {
+                self.map_slot = Some(ms);
+                self.selection.map_slot = Some(ms);
+            }
         }
         self.gold = data.gold;
         self.bank = Bank::new(data.gold);
         if self.selection.has_character() && self.selection.has_map() {
-            GameApp::enter_main_map(self);
+            let ok = GameApp::enter_main_map(self);
+            if !ok {
+                // FIND-204：校验失败回滚 4 字段 + selection，跳到 SelectRole（不污染状态）
+                self.character = prev_character;
+                self.map_slot = prev_map_slot;
+                self.selection = prev_selection;
+                self.gold = prev_gold;
+                self.bank = prev_bank;
+                self.scene = Scene::SelectRole;
+                return;
+            }
             self.selection.completed = true;
         } else {
             self.scene = Scene::SelectRole;
@@ -916,36 +969,70 @@ impl GameApp {
     }
 
     /// 进入主地图（`docs/gamebook.md` §3.3）：初始化 `MapSession` + 贸易/建造会话。
-    fn enter_main_map(&mut self) {
-        // P0-4：grid_w 统一走 terrain_map（bin 注入的真值），不再按 map_slot 推算
-        let gw = self.terrain_map.as_ref().map_or(20, |t| t.grid_w);
-        let gh = gw;
-        // 据点档：按地图槽走 `balance.selection.maps[i].boss_tier`（m01=0, m02=1, m03=2）
-        let boss_tier = match self.map_slot {
-            Some(MapSlot::M01) => 0u32,
-            Some(MapSlot::M02) => 1,
-            _ => 2,
-        };
-        self.current_boss_tier = boss_tier;
-        self.map_terrain = Some(MapTerrain::open(gw, gh));
-        self.map_pos = Some(GridPos::new(gh / 2, gw / 2));
-        self.map_landmarks = vec![(2, 2), (gh.saturating_sub(3), gw.saturating_sub(3))];
-        // 主地图会话（`rules::main_map::MapSession`，卡牌池走 `balance.cards`）
-        self.map_session = MapSession::new(
-            MapTerrain::open(gw, gh),
-            GridPos::new(gh / 2, gw / 2),
-            &self.map_landmarks,
-        );
-        // 贸易/建造：开局金走 `balance.economy.initial_gold`（表缺失时硬错误，不 fallback，
-        // `02_conventions.md` §4.4 数据失败=硬错误）
-        let init_gold = match ti_core::data::balance() {
-            Ok(b) => b.economy.initial_gold,
+    ///
+    /// 返回 `false` = 数据校验失败（`balance.json` 加载失败 / `selection.maps` 缺条目 /
+    /// `boss_tiers` 缺档 / `player_start` 或 `landmarks` 坐标越界），此时本方法自身的
+    /// 字段写入未发生（校验在写入前），但调用方 `restore_save` 已先写入
+    /// `character`/`map_slot`/`gold`/`bank`，须据返回值回滚（FIND-204 半初始化态消除）。
+    /// 返回 `true` = 成功进入主地图（`scene` 已切 `MainMap`）。
+    fn enter_main_map(&mut self) -> bool {
+        let b = match ti_core::data::balance() {
+            Ok(b) => b,
             Err(_e) => {
                 #[cfg(feature = "stats")]
                 eprintln!("[stats] enter_main_map: balance.json 加载失败（硬错误，不 fallback）");
-                return;
+                return false;
             }
         };
+        let init_gold = b.economy.initial_gold;
+        let zero_index = self.map_slot.map_or(0, MapSlot::zero_index);
+        let Some(map_def) = b.selection.maps.iter().find(|m| m.index == zero_index) else {
+            #[cfg(feature = "stats")]
+            eprintln!(
+                "[stats] enter_main_map: balance.selection.maps 缺 index={zero_index} 条目（硬错误，不 fallback）"
+            );
+            return false;
+        };
+        let gw = map_def.grid_w;
+        let gh = map_def.grid_h;
+        let boss_tier = map_def.boss_tier;
+        // FIND-103：boss_tier 越界校验（与 start_battle combat.player 缺失同口径）
+        if b.combat.boss(boss_tier).is_none() {
+            eprintln!(
+                "enter_main_map: balance.combat.boss_tiers 缺 tier={boss_tier}（硬错误，不 fallback）"
+            );
+            return false;
+        }
+        let start = map_def.player_start;
+        // FIND-105：player_start 坐标越界校验
+        if start[0] >= gh || start[1] >= gw {
+            eprintln!(
+                "enter_main_map: player_start [{} {}] 越界（grid {gw}×{gh}，硬错误，不 fallback）",
+                start[0], start[1]
+            );
+            return false;
+        }
+        let landmarks: Vec<(u32, u32)> =
+            map_def.landmarks.iter().map(|pair| (pair[0], pair[1])).collect();
+        // FIND-105：landmarks 坐标越界校验
+        for &(lr, lc) in &landmarks {
+            if lr >= gh || lc >= gw {
+                eprintln!(
+                    "enter_main_map: landmark [{lr} {lc}] 越界（grid {gw}×{gh}，硬错误，不 fallback）"
+                );
+                return false;
+            }
+        }
+        self.current_boss_tier = boss_tier;
+        self.map_terrain = Some(MapTerrain::open(gw, gh));
+        self.map_pos = Some(GridPos::new(start[0], start[1]));
+        self.map_landmarks = landmarks;
+        // 主地图会话（`rules::main_map::MapSession`，卡牌池走 `balance.cards`）
+        self.map_session = MapSession::new(
+            MapTerrain::open(gw, gh),
+            GridPos::new(start[0], start[1]),
+            &self.map_landmarks,
+        );
         self.gold = init_gold;
         self.owned = Vec::new();
         self.bank = Bank::new(init_gold);
@@ -955,6 +1042,7 @@ impl GameApp {
         self.scene = Scene::MainMap;
         // 场景管理器状态码同步（`rules::main_loop` 行为）
         self.scenes.set_state(0);
+        true
     }
 
     /// 渲染当前场景：先由场景模块绘制（`scenes/*.rs::render`），
@@ -1110,8 +1198,8 @@ impl SelectionHost for GameApp {
         self.unlocked_maps.contains(&slot)
     }
 
-    fn enter_main_map(&mut self) {
-        GameApp::enter_main_map(self);
+    fn enter_main_map(&mut self) -> bool {
+        GameApp::enter_main_map(self)
     }
 }
 
@@ -1148,10 +1236,19 @@ impl MapHost for GameApp {
         let seed = self.rng.next().unsigned_abs();
         // 据点档用当前地图对应的固定 boss_tier（非随机）：`enter_main_map` 已按 map_slot 写入
         let tier = self.current_boss_tier;
-        // P0-1：玩家单位读 `balance.combat.player`（EXP-066 重复踩坑闭环：不再写死 1000/150）
-        let player = match balance() {
-            Ok(b) => b.combat.player.unwrap_or(Unit { hp: 1000, atk: 150 }),
-            Err(_) => Unit { hp: 1000, atk: 150 },
+        // FIND-013：玩家单位读 `balance.combat.player`（EXP-066 重复踩坑闭环：不再写死 1000/150）；
+        // 硬报错口径与 `enter_main_map` 的 initial_gold 一致（数据缺失 = eprintln + return，不静默 fallback）
+        let b = match balance() {
+            Ok(b) => b,
+            Err(_e) => {
+                #[cfg(feature = "stats")]
+                eprintln!("[stats] start_battle: balance.json 加载失败（硬错误，不 fallback）");
+                return;
+            }
+        };
+        let Some(player) = b.combat.player else {
+            eprintln!("start_battle: balance.combat.player 缺失（硬错误，不 fallback）");
+            return;
         };
         self.battle = BattleView::new(seed, player, tier);
         self.scene = Scene::Vs;
@@ -1252,6 +1349,8 @@ impl SessionHost for GameApp {
             boss_hp: b.boss_hp,
             rounds: b.rounds,
             outcome: b.outcome,
+            player_hp_max: b.player_hp_max,
+            boss_hp_max: b.boss_hp_max,
         })
     }
 
@@ -1301,22 +1400,7 @@ impl SessionHost for GameApp {
     }
 
     fn restore_save(&mut self, data: SaveSlot) {
-        if data.character > 0 && data.character <= 5 {
-            self.character = Character::from_index(data.character - 1);
-            self.selection.character = self.character;
-        }
-        if data.map_slot < 3 {
-            self.map_slot = MapSlot::from_index(data.map_slot);
-            self.selection.map_slot = self.map_slot;
-        }
-        self.gold = data.gold;
-        self.bank = Bank::new(data.gold);
-        if self.selection.has_character() && self.selection.has_map() {
-            GameApp::enter_main_map(self);
-            self.selection.completed = true;
-        } else {
-            self.scene = Scene::SelectRole;
-        }
+        GameApp::restore_save(self, data);
     }
 
     fn in_map(&self) -> bool {

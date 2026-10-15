@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（16 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（20 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (18 items) ==="
+Write-Host "=== gate: TreasureIsl (20 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -98,7 +98,9 @@ Report ($LASTEXITCODE -eq 0) 'doccheck (docs consistency)'
 
 # 10) 数据表校验 + 硬编码扫描（S8.2，见 docs/process/04_tooling.md §2）
 #     10a) validate_data 必须全绿：assets/data/*.json 结构与数值合法域
-$valOut = & python legacy/scripts/validate_data.py 2>&1
+#          （FIND-201：统一入口 scripts/validate_data.py，已并入 legacy 基础校验
+#           balance/strings/scenes/controls + V1/V2 场景标量兜底，旧 legacy 脚本作废）
+$valOut = & python scripts/validate_data.py 2>&1
 $valOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'validate_data (assets/data/*.json)'
 #     10b) gen_layout --check：controls.json 与 legacy/ref/controls.json 派生产物一致（幂等）
@@ -118,8 +120,10 @@ $orbOut = & python scripts/check_oracle_boundary.py --check 2>&1
 $orbOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_oracle_boundary (shell 层禁 oracle_* 函数调用)'
 
-# 13) 双 agent 审计固化断言（doccheck2）：文档↔代码/数据一致性（第 1~5 轮审计高频项）
-#     6 项检查：audio ChannelState API 一致性 / shell 层 oracle_* 残留 / LCG hex / 据点阈值 / i18n 孤儿 key / release 门禁项数漂移
+# 13) 双 agent 审计固化断言（doccheck2）：文档↔代码/数据一致性（第 1~6 轮审计高频项）
+#     15 项检查：audio ChannelState API / shell oracle_* 残留 / LCG hex / 据点阈值 / i18n 孤儿 /
+#     release 门禁项数 / headless BattleView API / 飞轮回读 / 战斗玩家数值 / 飞轮脚本 /
+#     触摸渲染正逆成对 / HD 精灵透明 / 场景布局保真 / 场景 band 数 / map_slot 0 起基准（FIND-203）
 $dc2Out = & cargo run -q -p ti-tools --bin doccheck2 . 2>&1
 $dc2Out | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'doccheck2 (audit-codified doc↔code/data consistency)'

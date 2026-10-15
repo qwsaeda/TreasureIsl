@@ -12,7 +12,10 @@ pub struct SaveSlot {
     pub character: u32,
     /// 当前金。
     pub gold: u32,
-    /// 地图索引（`1..=3`，对应 [`crate::domain::MapSlot`] 顺序 +1）。
+    /// 地图索引（`0..=2`，对应 [`crate::domain::MapSlot`] 的 0 起 `zero_index`，
+    /// 与 `rules::saveload` 写档/读档（`saveload.rs::WriteSave`/`restore_save`）及
+    /// `restore_save` 的 `map_slot < maps.len()` 0 起基准校验一致；`character` 与
+    /// `map_slot` 基准不同：`character` 是 1 起 `index()+1`，`map_slot` 是 0 起 `zero_index`）。
     pub map_slot: u32,
     /// 游戏进度（业务定义：已探索据点数）。
     pub position: u32,

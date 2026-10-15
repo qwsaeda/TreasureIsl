@@ -44,9 +44,9 @@ impl Scene for VsScene {
     /// 战斗面板（双方 HP 进度条 + 回合 + 结果，S14 航海图纸质系）。
     fn render(&mut self, host: &mut dyn SceneHost) {
         host.clear_frame(COLOR_BG);
-        host.fill_rect(0, 0, 176, 24, COLOR_TITLE_BAR);
         let layout =
             ti_core::data::scenes().ok().and_then(|s| s.get("vs")).cloned().unwrap_or_default();
+        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
         host.draw_text(i18n::sget("scene.vs.title"), layout.title.x, layout.title.y);
         if let Some(b) = host.battle_snapshot() {
             // S14：血条进度条（玩家橙红 / BOSS 海绿，x=16 w=144 h=8，scenes.json 定位置）
@@ -54,8 +54,8 @@ impl Scene for VsScene {
             let bh_bar = layout.extra.get("boss_hp").copied().unwrap_or_default();
             let rd_pos = layout.extra.get("rounds").copied().unwrap_or_default();
             let oc_pos = layout.extra.get("outcome").copied().unwrap_or_default();
-            let ph_w = b.player_hp.saturating_mul(u32::try_from(ph_bar.w).unwrap_or(0)) / 500u32;
-            let bh_w = b.boss_hp.saturating_mul(u32::try_from(bh_bar.w).unwrap_or(0)) / 500u32;
+            let ph_w = b.player_hp * u32::try_from(ph_bar.w).unwrap_or(0) / b.player_hp_max.max(1);
+            let bh_w = b.boss_hp * u32::try_from(bh_bar.w).unwrap_or(0) / b.boss_hp_max.max(1);
             // 玩家血条（橙红 #FF6347）
             host.fill_rect(ph_bar.x, ph_bar.y, ph_bar.w, ph_bar.h, COLOR_DANGER);
             host.fill_rect(

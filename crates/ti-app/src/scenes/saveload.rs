@@ -67,6 +67,8 @@ impl Scene for SaveloadScene {
                     .cloned()
                     .unwrap_or_default();
                 let bands = layout::slot_bands(
+                    scene.list.x as f32,
+                    scene.list.x as f32 + scene.list.w as f32,
                     scene.list.y as f32,
                     scene.list.row_h as f32,
                     scene.list.item_h as f32,
@@ -92,13 +94,13 @@ impl Scene for SaveloadScene {
     /// 槽位列表 + 每档金/空满标记 + 导航提示。
     fn render(&mut self, host: &mut dyn SceneHost) {
         host.clear_frame(COLOR_BG);
-        host.fill_rect(0, 0, 176, 20, COLOR_TITLE_BAR);
         // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
         let layout = ti_core::data::scenes()
             .ok()
             .and_then(|s| s.get("saveload"))
             .cloned()
             .unwrap_or_default();
+        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
         host.draw_text(i18n::sget("scene.saveload.title"), layout.title.x, layout.title.y);
         let slots: Vec<SaveSlot> = host.save_slots().to_vec();
         for (i, s) in slots.iter().enumerate() {
