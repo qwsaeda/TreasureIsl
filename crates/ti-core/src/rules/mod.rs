@@ -8,6 +8,7 @@ pub mod main_loop;
 pub mod main_map;
 pub mod menu;
 pub mod messages;
+pub mod progression;
 pub mod render;
 pub mod rng;
 pub mod saveload;

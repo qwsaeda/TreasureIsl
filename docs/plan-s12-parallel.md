@@ -19,7 +19,7 @@ W1（本轮）
          ⚠ P5 依赖 P1–P4 的 domain 结构稳定：若 P1–P4 在集成前改了公共 struct，
            P5 打回（05_module_parallel.md §7），不强行开
   S12.6  集成联调轮（主线程）：按依赖序合并 task/* 分支 → 全 workspace build + test
-          → P3-3 16 步 → gate 20 项全绿 → 逐包回写 evidence + 台账 verified
+          → P3-3 16 步 → gate 21 项全绿 → 逐包回写 evidence + 台账 verified
 
 W2（下一轮，P5 绿后开）
   S12.7  P6 表现层包（deps P1–P5 + c3 frozen）：scenes/widgets/touch/gfx
@@ -47,5 +47,5 @@ S12.0–S12.6 在 `plan/ledger.yaml` 各占一行（`deps` 指向 packages.yaml 
 
 ## 4. 停机条件
 
-W1 停机 = S12.6 集成轮 gate 20 项全绿 + P3-3 16 步 0 失败 + P1–P5 全部 verified；
+W1 停机 = S12.6 集成轮 gate 21 项全绿 + P3-3 16 步 0 失败 + P1–P5 全部 verified；
 P6（W2）开轮判据 = S12.6 绿 + c3 契约 frozen。

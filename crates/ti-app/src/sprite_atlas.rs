@@ -1,6 +1,6 @@
-//! 精灵图集：`ui.pak` 的 120 个 PCX 贴图 + `.Map` 控件记录 → `Framebuf` blit。
+//! 精灵图集：`ui.pak` 的 120 个 PCX 贴图 + `.Map` 控件记录 → 解码 / GPU blit。
 //!
-//! 寻址链（`docs/design/ui_controls.md` §2.3，F-311 实测）：
+//! 寻址链（`legacy/docs/design/ui_controls.md` §2.3，F-311 实测）：
 //! - `.Map` 控件记录 `f1`（精灵索引 1..120）
 //! - → `ui.pak` 的 filenum INI（`f1=N` → `"NN.pcx"`，零填充 2 位）
 //! - → `ui.pak` 条目 `name_key("NN.pcx")` → PCX 字节
@@ -11,15 +11,17 @@
 //! 同一张图里。`num=1`（116 个）为静态图。本模块按 `frame_h = height / num`
 //! 切帧，并提供 [`SpriteAtlas::advance_animation`] 按 tick 推进帧号。
 //!
-//! 本模块封装这 4 步，提供 [`SpriteAtlas::blit_scene`] 把某个 `.Map` 场景
-//! 的全部控件记录按 `(f2, f3)` 坐标 blit 到帧缓冲（RGB565）。
+//! **S15.4（架构重构）**：legacy 逐像素 CPU 写帧（`blit_scene` / `blit_scene_frame` /
+//! `blit_sprite` / RGB565 + hd-8bit RGBA 逐像素 blit）已整体移除，运行时像素仅由代码
+//! 绘制（`fill_rect`/`draw_text`）+ GPU 纹理路（feature `gpu-render` 的 `gpu_blit_scene`）
+//! 产生。本模块保留 PCX 解码（`sprite`/`frame`/`advance_animation`）+ GPU blit + HD PNG
+//! 注入（`load_hd_pngs`），供诊断与 GPU 路径使用。
 
 use std::collections::HashMap;
 
 use ti_formats::lucency::Package;
 use ti_formats::mapfile::{MapControl, MapHeader, MapScene};
 use ti_formats::pcx::Image;
-use ti_platform::gfx::Framebuf;
 #[cfg(feature = "hd-8bit")]
 use ti_platform::hd_png::HdPng;
 
@@ -210,247 +212,10 @@ impl SpriteAtlas {
         self.elapsed_ms / FRAME_MS
     }
 
-    /// 把 `.Map` 场景的全部控件记录按 `(f2, f3)` blit 到帧缓冲（RGB565）。
-    ///
-    /// 多帧精灵取当前动画帧 [`Self::frame`]。
-    /// 返回成功 blit 的精灵数量。
-    pub fn blit_scene(&mut self, scene: &MapScene, fb: &mut Framebuf) -> u32 {
-        self.blit_scene_frame(scene, fb, self.frame())
-    }
-
-    /// 按指定帧号 blit 场景（测试与定格渲染用）。
-    ///
-    /// z-order 契约 §2（`docs/process/07_render_pipeline.md`）：**文件倒序** blit，
-    /// 即 record N 先画（最底层）→ record 0 后画（最顶层）。
-    ///
-    /// 依据（数据反推，非猜测）：`index.Map` rec0（`f1=105`，60×58，@6,12）与
-    /// rec2（`f1=111`，105×11，@36,22）在 x∈[36,66) y∈[22,33) **几何重叠**；
-    /// 原版实机呈现为「横条在但**不盖**徽章」= 徽章压横条 = rec0（文件首条）在顶层。
-    /// 故遍历取 `.rev()`。7 场景共 1326 对重叠记录全部符合此唯一方向
-    /// （`tests/e2e_render_alignment.rs::z_order_overlap_pairs_follow_reverse_file_order` 机器判定）。
-    ///
-    /// f4 翻转契约 §5（`sub_460F8:28-82`）：f4=1 正向（`sub_5D9C4`）、f4=2 Y 翻转
-    /// （`sub_5E158`）、f4=3 X+Y 双翻转（`sub_5DD7C`）。f4=3 在数据中成对出现在对称位置
-    /// （左 `f4=1` @x=0 / 右 `f4=3` @x=163，如 selectrole rec63/rec64 `f43` 13×45
-    /// 恰好拼成 0..13 与 163..176 的满宽边框），坐实「框内翻转件」语义。
-    pub fn blit_scene_frame(&mut self, scene: &MapScene, fb: &mut Framebuf, frame: u32) -> u32 {
-        let Ok(controls) = MapControl::parse_words("scene.Map", &scene.words) else {
-            return 0;
-        };
-        let mut blitted = 0u32;
-        for ctrl in controls.iter().rev() {
-            if ctrl.f1 == 0 {
-                continue;
-            }
-            let Some(sprite) = self.sprite(ctrl.f1) else {
-                continue;
-            };
-            Self::blit_sprite(&sprite, ctrl.f2, ctrl.f3, fb, frame, ctrl.f4);
-            blitted += 1;
-        }
-        blitted
-    }
-
-    /// 单个精灵 blit（RGB565，越界裁剪，置脏行带）。`frame` 自动环绕。
-    ///
-    /// 契约 §3（`docs/process/07_render_pipeline.md`）：原点越界（x≥176 或 y≥220）
-    /// 经 [`crate::render_pipeline::clip_rect`] 求交为空 → 整条早退不画（对齐原版
-    /// `sub_5EAA8`/`sub_5D9C4`，`evidence/audit_zorder.md` A3）；部分越界按裁剪矩形画。
-    /// 修掉原 `ox = px_x.min(FB_W-1)` 把越界精灵拉回右缘画 1 列竖条的 bug。
-    ///
-    /// `f4` 翻转（契约 §5）：原版 `sub_460F8` 按 f4 选 blit 例程——
-    /// f4=1 → `sub_5D9C4`（正向）、f4=2 → `sub_5E158`（Y 反向步进，`v16 -= a3[1]`）、
-    /// f4=3 → `sub_5DD7C`（X 反向 `--v17` + Y 反向，180° 翻转）。其余 f4 值按正向画。
-    pub fn blit_sprite(
-        sprite: &DecodedSprite,
-        px_x: u32,
-        py_y: u32,
-        fb: &mut Framebuf,
-        frame: u32,
-        f4: u32,
-    ) {
-        use crate::render_pipeline::{FB_W, TRANSPARENT_INDEX, clip_rect};
-        let sw = sprite.width as usize;
-        let sh = sprite.height as usize;
-        let Some(clip) = clip_rect(px_x as usize, py_y as usize, sw, sh) else {
-            return;
-        };
-        let ox = clip.x;
-        let oy = clip.y;
-        let fbase = sprite.frame_offset(frame);
-        let flip_x = f4 == 3;
-        let flip_y = f4 == 2 || f4 == 3;
-        let px = fb.as_mut_slice();
-        for row in 0..clip.h {
-            let fy = oy + row;
-            // 契约 §5：f4=2/3 时 Y 反向（`sub_5E158`/`sub_5DD7C` 行 64 `v16 -= a3[1]`）
-            let src_row = if flip_y { clip.h - 1 - row } else { row };
-            for col in 0..clip.w {
-                let fx = ox + col;
-                // 契约 §5：f4=3 时 X 反向（`sub_5DD7C` 行 73 `--v17`）
-                let src_col = if flip_x { clip.w - 1 - col } else { col };
-                let idx = sprite.pixels.get(fbase + src_row * sw + src_col).copied().unwrap_or(0)
-                    as usize;
-                // 契约 §4：PCX 调色板 index 0 = 透明哨兵位（sub_5D9C4），跳过后透出背景。
-                if idx == TRANSPARENT_INDEX {
-                    continue;
-                }
-                let [r, g, b] = sprite.palette[idx];
-                let rgb565: u16 =
-                    (u16::from(r) >> 3) << 11 | (u16::from(g) >> 2) << 5 | u16::from(b) >> 3;
-                let pos = fy * FB_W + fx;
-                if let Some(slot) = px.get_mut(pos) {
-                    *slot = rgb565;
-                }
-            }
-        }
-        fb.mark_dirty(
-            i32::try_from(ox).unwrap_or(0),
-            i32::try_from(oy).unwrap_or(0),
-            i32::try_from(clip.w).unwrap_or(0),
-            i32::try_from(clip.h).unwrap_or(0),
-        );
-    }
-
-    /// S7.5（feature `hd-8bit`）：按指定帧号 RGBA8 blit 场景（测试与定格渲染用）。
-    #[cfg(feature = "hd-8bit")]
-    pub fn blit_scene_frame_rgba(
-        &mut self,
-        scene: &MapScene,
-        fb: &mut ti_platform::gfx::FramebufRgba,
-        frame: u32,
-    ) -> u32 {
-        let Ok(controls) = MapControl::parse_words("scene.Map", &scene.words) else {
-            return 0;
-        };
-        let mut blitted = 0u32;
-        // z-order 契约 §2：与 `blit_scene_frame` 同为文件倒序（首条顶层）。
-        for ctrl in controls.iter().rev() {
-            if ctrl.f1 == 0 {
-                continue;
-            }
-            let Some(sprite) = self.sprite(ctrl.f1) else {
-                continue;
-            };
-            let hd = self.hd_cache.get(&ctrl.f1);
-            Self::blit_sprite_rgba(&sprite, ctrl.f2, ctrl.f3, fb, frame, hd);
-            blitted += 1;
-        }
-        blitted
-    }
-
-    /// S7.5（feature `hd-8bit`）：把 `.Map` 场景的全部控件记录按 RGBA8 blit 到 HD 帧缓冲。
-    /// 返回成功 blit 的精灵数量（语义与 [`Self::blit_scene`] 一致）。
-    #[cfg(feature = "hd-8bit")]
-    pub fn blit_scene_rgba(
-        &mut self,
-        scene: &MapScene,
-        fb: &mut ti_platform::gfx::FramebufRgba,
-    ) -> u32 {
-        let Ok(controls) = MapControl::parse_words("scene.Map", &scene.words) else {
-            return 0;
-        };
-        let mut blitted = 0u32;
-        // z-order 契约 §2：与 `blit_scene_frame` 同为文件倒序（首条顶层）。
-        for ctrl in controls.iter().rev() {
-            if ctrl.f1 == 0 {
-                continue;
-            }
-            let Some(sprite) = self.sprite(ctrl.f1) else {
-                continue;
-            };
-            let hd = self.hd_cache.get(&ctrl.f1);
-            Self::blit_sprite_rgba(&sprite, ctrl.f2, ctrl.f3, fb, self.frame(), hd);
-            blitted += 1;
-        }
-        blitted
-    }
-
-    /// alpha 透明判定阈值（EXP-075）：PNG alpha < 本值视为透明，blit 时跳过。
-    ///
-    /// 原版 PCX blit 是「不透明覆盖」语义（F-311，调色板 0 号位即透明），
-    /// 阈值化而非 `a == 0` 判定，可兜住 HD 资产生成残留的软 alpha（1..254）。
-    #[cfg(feature = "hd-8bit")]
-    const ALPHA_TRANSPARENT_CUTOFF: u8 = 128;
-
-    /// S7.5（feature `hd-8bit`）：单个精灵 RGBA8 blit（越界裁剪，置脏行带）。
-    #[cfg(feature = "hd-8bit")]
-    fn blit_sprite_rgba(
-        sprite: &DecodedSprite,
-        px_x: u32,
-        py_y: u32,
-        fb: &mut ti_platform::gfx::FramebufRgba,
-        frame: u32,
-        hd: Option<&Vec<HdPng>>,
-    ) {
-        use crate::render_pipeline::{FB_W, TRANSPARENT_INDEX, clip_rect};
-        let sw = usize::try_from(sprite.width).unwrap_or(0);
-        let sh = usize::try_from(sprite.height).unwrap_or(0);
-        // 契约 §3：原点越界求交为空 → 整条早退（与 RGB565 路 blit_sprite 同口径）
-        let Some(clip) = clip_rect(
-            usize::try_from(px_x).unwrap_or(0),
-            usize::try_from(py_y).unwrap_or(0),
-            sw,
-            sh,
-        ) else {
-            return;
-        };
-        let ox = clip.x;
-        let oy = clip.y;
-        let fbase = sprite.frame_offset(frame);
-        let px = fb.as_mut_slice();
-        // 多帧：取当前帧对应的 PNG；缺帧回退 PCX
-        let img = hd.and_then(|frames| {
-            if frames.is_empty() {
-                return None;
-            }
-            let fi = usize::try_from(frame % sprite.frames.max(1)).unwrap_or(0) % frames.len();
-            frames.get(fi)
-        });
-        for row in 0..clip.h {
-            let fy = oy + row;
-            for col in 0..clip.w {
-                let fx = ox + col;
-                let pos = fy * FB_W + fx;
-                let Some(slot) = px.get_mut(pos) else {
-                    continue;
-                };
-                if let Some(img) = img {
-                    // PNG 像素是 RGBA8；透明像素不参与合成（EXP-075）
-                    let sidx = (row * sw + col).saturating_mul(4);
-                    let Some(rgba) = img.rgba.get(sidx..sidx + 4) else {
-                        continue;
-                    };
-                    // EXP-075：alpha 阈值化判透明。原版 PCX blit 是「不透明覆盖」语义
-                    // （F-311，调色板 0 号位即透明），HD 资产若残留 1..254 的软 alpha
-                    // （缩采样渗色所致），按 a==0 判会让半透明像素被当不透明画上去 →
-                    // 人物/立绘被背景色矩形包住。故 <128 一律跳过。
-                    if rgba[3] < Self::ALPHA_TRANSPARENT_CUTOFF {
-                        continue;
-                    }
-                    *slot = ti_platform::gfx::png_rgba_to_framebuf_u32([
-                        rgba[0], rgba[1], rgba[2], rgba[3],
-                    ]);
-                } else {
-                    // 回退：PCX 调色板扩色到 8 位真彩（与 RGB565 路径同像素）
-                    let idx =
-                        sprite.pixels.get(fbase + row * sw + col).copied().unwrap_or(0) as usize;
-                    // 契约 §4：palette index 0 = 透明哨兵位（sub_5D9C4），跳过写 RGBA
-                    if idx == TRANSPARENT_INDEX {
-                        continue;
-                    }
-                    let [r, g, b] = sprite.palette[idx];
-                    *slot = 0xFF00_0000u32 | u32::from(r) << 16 | u32::from(g) << 8 | u32::from(b);
-                }
-            }
-        }
-        fb.mark_dirty(
-            i32::try_from(ox).unwrap_or(0),
-            i32::try_from(oy).unwrap_or(0),
-            i32::try_from(clip.w).unwrap_or(0),
-            i32::try_from(clip.h).unwrap_or(0),
-        );
-    }
+    // S15.4：legacy 逐像素 RGBA 写帧（`blit_scene_frame_rgba` / `blit_scene_rgba` /
+    // `blit_sprite_rgba` / `ALPHA_TRANSPARENT_CUTOFF`）已整体移除——运行时像素仅由代码
+    // 绘制原语产生（`08_render_arch.md` 契约 2）。HD PNG 解码仍保留（`load_hd_pngs` /
+    // `hd_cache`）供诊断与后续代码化贴图复用。
 
     /// S7.5（feature `hd-8bit`）：注入 `f1 → HD PNG 帧列表` 映射（`assets_hd_pack/1x/` 档）。
     ///
@@ -566,26 +331,18 @@ mod tests {
     }
 
     #[test]
-    fn atlas_end_to_end_with_real_pkg() {
+    fn atlas_decode_end_to_end_with_real_pkg() {
+        // S15.4：legacy 像素写帧移除后，本测试只验证「解码」链（保留诊断解码）。
         let Some(mut atlas) = atlas_or_skip() else { return };
         assert!(atlas.entry_count() >= 100, "应有 ≥100 个 f1 映射，实际 {}", atlas.entry_count());
         let Some(sprite) = atlas.sprite(1) else { return };
         assert!(sprite.width > 0 && sprite.height > 0);
         assert_eq!(
             sprite.pixels.len(),
-            usize::try_from(sprite.width * sprite.height * sprite.frames).unwrap_or(0)
+            usize::try_from(sprite.width * sprite.height * sprite.frames).unwrap_or(0),
+            "解码像素数 = 宽×高×帧数"
         );
-
-        let mut fb = Framebuf::new();
-        let scene = MapScene {
-            header: MapHeader { width: 176, height: 220, flags: 0, reserved: 0 },
-            words: vec![176, 220, 0, 0, 1, 1, 1, 10, 10, 1, 0],
-        };
-        let blitted = atlas.blit_scene(&scene, &mut fb);
-        assert_eq!(blitted, 1, "应 blit 1 个精灵");
-        let nonzero = fb.as_slice().iter().filter(|&&p| p != 0).count();
-        assert!(nonzero > 0, "blit 后应有非黑像素");
-        assert!(fb.has_dirty(), "blit 后应置脏行带");
+        assert!(sprite.palette.len() == 256, "调色板应 256 项");
     }
 
     #[test]
@@ -612,18 +369,6 @@ mod tests {
     fn filenum_ini_rejects_empty() {
         let mut out = HashMap::new();
         assert!(SpriteAtlas::parse_filenum_ini("", &mut out).is_err(), "空 INI 应失败");
-    }
-
-    /// 越界 blit 不越界写。
-    #[test]
-    fn blit_clips_to_screen() {
-        let Some(mut atlas) = atlas_or_skip() else { return };
-        let mut fb = Framebuf::new();
-        let scene = MapScene {
-            header: MapHeader { width: 176, height: 220, flags: 0, reserved: 0 },
-            words: vec![176, 220, 0, 0, 2, 1, 1, 200, 200, 1, 0, 1, 1, 200, 200, 1, 0],
-        };
-        let _ = atlas.blit_scene(&scene, &mut fb);
     }
 
     // ── S6.4 多帧动画 ──────────────────────────────────────────────
@@ -670,37 +415,5 @@ mod tests {
         assert_eq!(atlas.frame(), 3);
         atlas.advance_animation(0);
         assert_eq!(atlas.frame(), 3, "delta=0 不应推进");
-    }
-
-    #[test]
-    fn animated_blit_differs_by_frame() {
-        let Some(mut atlas) = atlas_or_skip() else { return };
-        if atlas.sprite(14).is_none() {
-            eprintln!("SKIP: f1=14 不可用");
-            return;
-        }
-        let scene = MapScene {
-            header: MapHeader { width: 176, height: 220, flags: 0, reserved: 0 },
-            words: vec![176, 220, 0, 0, 1, 1, 14, 10, 10, 1, 0],
-        };
-        let mut fb0 = Framebuf::new();
-        let mut fb1 = Framebuf::new();
-        assert_eq!(atlas.blit_scene_frame(&scene, &mut fb0, 0), 1);
-        assert_eq!(atlas.blit_scene_frame(&scene, &mut fb1, 1), 1);
-        assert_ne!(fb0.as_slice(), fb1.as_slice(), "5 帧动画的不同帧应 blit 出不同画面");
-    }
-
-    #[test]
-    fn static_sprite_same_across_frames() {
-        let Some(mut atlas) = atlas_or_skip() else { return };
-        let scene = MapScene {
-            header: MapHeader { width: 176, height: 220, flags: 0, reserved: 0 },
-            words: vec![176, 220, 0, 0, 1, 1, 1, 10, 10, 1, 0],
-        };
-        let mut fb0 = Framebuf::new();
-        let mut fb1 = Framebuf::new();
-        atlas.blit_scene_frame(&scene, &mut fb0, 0);
-        atlas.blit_scene_frame(&scene, &mut fb1, 3);
-        assert_eq!(fb0.as_slice(), fb1.as_slice(), "静态精灵（num=1）在任意帧号下画面应相同");
     }
 }

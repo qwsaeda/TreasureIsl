@@ -1,0 +1,34 @@
+{
+  "_comment": "S15.7 渲染主题数据（1080 单一事实源）。RGB565 色板 + 逻辑像素字号。经 ti_render::Theme::from_json_str 解析（缺字段回落 Theme::default，不静默改值）。改色/改字号只改本文件，不改 Rust 常量。§2 色板见 docs/business/08_layout_design.md；§3 字号见同文档。",
+  "palette": {
+    "parch_dark": "0x10A3",
+    "parch_light": "0x2106",
+    "wood": "0x3A0B",
+    "gold": "0xF5A8",
+    "gold_glow": "0x453E",
+    "gold_bright": "0x245C",
+    "menu_bg": "0x2147",
+    "menu_border": "0x3A0B",
+    "hilite": "0x2967",
+    "bevel_hi": "0x31A9",
+    "bevel_shadow": "0x0862",
+    "text_on_parch": "0xFFFF",
+    "text_on_wood": "0xFF77",
+    "danger": "0xEAAA",
+    "player": "0x2D33",
+    "landmark": "0xF5A8",
+    "bg": "0x10A3",
+    "title_bar": "0x3A0B",
+    "selected": "0x245C",
+    "secondary": "0x8C93",
+    "black": "0x0000"
+  },
+  "fonts": {
+    "font_size": 44,
+    "title_font_size": 96,
+    "hint_font_size": 28,
+    "bitmap_advance": 12,
+    "bitmap_advance_title": 26,
+    "bitmap_advance_hint": 8
+  }
+}

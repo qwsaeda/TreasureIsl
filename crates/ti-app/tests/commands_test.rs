@@ -61,7 +61,7 @@ fn command_has_param_true_for_parameterized() {
 /// `Confirm`（菜单项 0）消费（切到 `SelectRole`，`dispatch` 返回 true）。
 #[test]
 fn dispatch_index_move_and_confirm() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     assert_eq!(app.scene(), Scene::Index);
 
     // MoveDown：菜单下移，无场景切换 → false
@@ -84,7 +84,7 @@ fn dispatch_index_move_and_confirm() {
 /// `Landmark(6)` 触发战斗 → 切 Vs → true。
 #[test]
 fn dispatch_main_map_walk_and_battle() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
@@ -107,7 +107,7 @@ fn dispatch_main_map_walk_and_battle() {
 /// 战斗场景：`Attack` 推进回合，不切场景 → false（战斗未结束时）。
 #[test]
 fn dispatch_vs_attack_does_not_consume() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到战斗
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
@@ -133,7 +133,7 @@ fn dispatch_vs_attack_does_not_consume() {
 /// 消息场景：`MsgNext` 翻页不切场景 → false（页数受限时保持）；`MsgClose` 关闭 → true。
 #[test]
 fn dispatch_message_next_and_close() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图，再打开消息（事件码 1 → MsgKind::Msgl）
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
@@ -163,7 +163,7 @@ fn dispatch_message_next_and_close() {
 /// 存读档：`WriteSave(0)` 写档不切场景 → false；`SaveloadClose` → true。
 #[test]
 fn dispatch_saveload_write_and_close() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 主菜单 → 存读档
     app.set_menu_selected(1);
     app.handle(GameInput::Confirm);
@@ -181,8 +181,8 @@ fn dispatch_saveload_write_and_close() {
 #[test]
 fn command_trait_execute_matches_dispatch() {
     // 两个独立 app，同一命令序列，经不同入口执行，结果应一致。
-    let mut app_a = GameApp::new(176.0, 220.0);
-    let mut app_b = GameApp::new(176.0, 220.0);
+    let mut app_a = GameApp::new(1080.0, 1920.0);
+    let mut app_b = GameApp::new(1080.0, 1920.0);
 
     app_a.set_menu_selected(0);
     app_b.set_menu_selected(0);

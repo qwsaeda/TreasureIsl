@@ -2,7 +2,7 @@
 //!
 //! 遍历 seed 0..=20 × 取 1000 个值：`GameRng::fill` 序列确定性（同 seed 同序列，
 //! 值域/确定性兼容旧 MSVC LCG 口径，S8.7 起当前实现为 `rand_pcg` PCG64，
-//! `next()` 值域仍归一 0..=32767；见 `docs/spec/rng.md` §a）；另加 5 个语义测试：
+//! `next()` 值域仍归一 0..=32767；见 `legacy/docs/spec/rng.md` §a）；另加 5 个语义测试：
 //! (a) 固定 seed=123 序列确定（两次独立调用 `GameRng::new(123).fill` 逐位相同）；
 //! (b) `set_seed` 改 seed 后序列变（不同 seed 产生不同序列）；
 //! (c) `in_range(22)` 值域 0..22（200 次采样无越界，`n=0` → 0）；

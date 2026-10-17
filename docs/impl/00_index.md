@@ -1,5 +1,14 @@
 # 实现文档总索引
 
+> ⚠️ **本目录是 S3 时期的历史实现规格，不是当前开发依据，也不是验收基准。**
+>
+> - **业务规则唯一事实源** = [`docs/business/`](../business/00_index.md)（含 `07_ui_flow.md` / `08_layout_design.md`）
+> - **数值唯一事实源** = `assets/data/*.json`（`balance.json` / `strings.json` / `scenes.json` / `controls.json`）
+> - **渲染契约** = [`docs/process/07_render_pipeline.md`](../process/07_render_pipeline.md)；**版面契约** = [`docs/business/08_layout_design.md`](../business/08_layout_design.md)
+> - 本文内出现的常量/公式/坐标来自 `legacy/docs/design/constants.md` 等**归档逆向规格**，是历史参照；
+>   两者不一致时**一律以 `docs/business/` + `balance.json` 为准**（硬规则：与实现不一致时改本文，不留两个真相）。
+> - 保留原因：本目录是「从零重建完整游戏」的完整实现手册，仍有参考价值；`impl/13_appendix.md` 的常量→Rust 名映射亦被源码注释引用。
+
 本文档是 Rust 重建项目的**实现级入口**。读者仅凭本目录 17 份文档（00-16）即可从头实现完整游戏（含 HD 资产管线 + 现代多端实现）。
 
 ---
@@ -137,9 +146,9 @@ ti-tools (工具: 台账/doccheck/controls) —— 独立工具 crate，仅依�
 
 | 本文档引用 | 来源 |
 |---|---|
-| 场景枚举/状态机 | `docs/design/main_loop.md` |
-| 事件码体系 | `docs/design/scene_flow.md` |
-| 地图数据结构 | `docs/design/map_system.md` |
-| 经济系统 | `docs/design/economy.md` |
-| 全局常量 | `docs/design/constants.md` |
+| 场景枚举/状态机 | `legacy/docs/design/main_loop.md` |
+| 事件码体系 | `legacy/docs/design/scene_flow.md` |
+| 地图数据结构 | `legacy/docs/design/map_system.md` |
+| 经济系统 | `legacy/docs/design/economy.md` |
+| 全局常量 | `legacy/docs/design/constants.md` |
 | 游戏设计总纲 | `docs/game_design.md` |

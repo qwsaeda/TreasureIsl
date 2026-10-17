@@ -11,7 +11,7 @@ use crate::i18n::sget;
 pub struct MenuItem {
     /// i18n key（运行时经 `sget` 解析成中文标签；启动缺失 key 时显示 key 本身）。
     pub key: &'static str,
-    /// 菜单项事件码（`docs/spec/menu.md §a`，`saveload` 的 `v3[14]` case 0..=5；
+    /// 菜单项事件码（`legacy/docs/spec/menu.md §a`，`saveload` 的 `v3[14]` case 0..=5；
     /// 0=新游戏 / 1=继续 / 2=选项 / 3=说明1 / 4=说明2 / 5=退出）。
     /// S5.1 起 `GameApp::handle_index` 用 `menu_selected` 直接匹配 case，本字段仅作
     /// 事件码参考（`glyph_raster` 遍历用）；FIND-205 起 wasm 壳 `last_menu` 直接存
@@ -41,12 +41,6 @@ pub fn menu_labels() -> Vec<&'static str> {
     MENU.iter().map(|i| sget(i.key)).collect()
 }
 
-/// 底部状态行的三段文本（从左到右：字形数 → 音效条数 → 未接入 MOD 数）。
-#[must_use]
-pub fn status_texts(font_glyphs: usize, wav_count: usize, mod_count: usize) -> [String; 3] {
-    [
-        crate::i18n::sgetf("diag.fonts", &[&font_glyphs]),
-        crate::i18n::sgetf("diag.wav", &[&wav_count]),
-        crate::i18n::sgetf("diag.mod_fmt", &[&mod_count]),
-    ]
-}
+// S15.6 QB150：旧「开发自检状态行」`status_texts`（字形/音效/MOD 计数）已删——
+// index 尾行改为用户版 i18n `scene.index.footer`，开发诊断走 `stats` feature 的
+// eprintln（不进 UI 字面量，`check_hardcode` 口径不变）。

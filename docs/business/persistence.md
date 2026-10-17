@@ -12,8 +12,11 @@
 
 ```jsonc
 // save v2 schema（v2 字段以 design/persistence.md 为准，此处为最小示例）
-// 注：示例用业务名；`rules::saveload_json` 序列化格式为 char{N}/m{NN}（数字索引+1），
-// 见 `crates/ti-core/src/rules/saveload_json.rs`（from_legacy_slot 保守映射）。
+// 注：示例用业务名；正式 JSON v2 的角色/地图字段为**稳定字符串 label**（panda/tichy/… + m01/m02/m03），
+// 旧 26 字节数字槽位经 `from_legacy_slot` 保守映射（legacy 数字均 1 起：character 1..=5 → 角色 label，
+// map_slot 1..=3 → m0N；0/越界钳位到首项，产物必可被 `character_from_label`/`map_slot_from_label` 回读，
+// 第 12 轮审计 Q010 修复：旧 "char{N}"/0 起 "m0N" 映射不可解析已废弃），
+// 见 `crates/ti-core/src/rules/saveload_json.rs`。
 // buildings/goods 的 id 以 balance.json 为准（Castle/Investment/Bank/Fort 字符串 id、
 // goods.1..5 数字 id）；下方 palisade/harbor/spice 等为旧设计占位名，照抄会写错。
 {

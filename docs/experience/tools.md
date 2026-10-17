@@ -49,7 +49,7 @@
 - 抽查复核：`ref/pseudocode/00011000_sub_11000.c` 是真伪代码（`_DWORD *__fastcall sub_11000(...)`，含 `&off_6B000` 全局初始化），与 9.4 + idalib 无头重跑结果逐字一致。
 - 结论：**不需要 Ghidra**。EXP-014 是 portable 破解版的问题，正式版不存在；台账 S0.2 已是 `verified` / `blocked_by: null`。
 - 连带作废：EXP-016 记的 `PYTHONHOME=...\python38` / `python38.zip` 补丁、`idat64.exe` 进程管理等**只适用于 7.5 portable**，9.4 无需；headless 文本模式统一为 `idat.exe`（9.x 已把 `idat64.exe` 合并进去，32/64 同一程序，`-A`/`-S`/`-L` 开关不变）。
-- 联动修正：`AGENTS.md`、`docs/facts/index.md`、`docs/plan-s0-s2.md`、`scripts/ida_dump.py` 中的 `IDA_Pro_v7.5_Portable\idat64.exe` 全部改为 `D:\soft\IDA Professional 9.4\idat.exe`。
+- 联动修正：`AGENTS.md`、`legacy/docs/facts/index.md`、`docs/plan-s0-s2.md`、`legacy/scripts/ida_dump.py` 中的 `IDA_Pro_v7.5_Portable\idat64.exe` 全部改为 `D:\soft\IDA Professional 9.4\idat.exe`。
 - 附：REA 逆向 MCP 走同一条 IDA 路径（`idapro 0.0.9` + `ida-pro-mcp 2.0.0` 的 `idalib-mcp` headless supervisor，注册见 `~/.rea/ida-mcp.json`）。注意 `idapro` 必须装 IDA 自带版本（9.4 = 0.0.9），PyPI 上的 0.0.11 对应更新版 IDA。
 - 教训：**环境类阻塞先分清「portable/破解版」与「正式版」**。EXP-014 花了 4 条排除项才定位到破解版授权校验失败，而正确答案只是换正式版；下次遇到「某功能在破解版上不可用」应优先怀疑授权链，而不是继续挖 DLL 签名/版本匹配。
 
@@ -108,3 +108,12 @@
 - 根因：pixel_upscale.py 对多帧精灵按帧切开后逐帧 PNG 化，pack_hd_assets.py 原样进 4 档。Rust 侧 hd_cache 原设计为 HashMap<u32, HdPng>（单张），多帧只能注入 1 帧。
 - 解法：hd_cache 改 HashMap<u32, Vec<HdPng>>（f1 → 帧列表）；load_hd_pngs 签名改 (u32, Vec<Vec<u8>>)；blit_sprite_rgba 按 frame % frames 取对应 PNG，缺帧回退 PCX。
 - 验证：render_parity_hd 判据 7（f1=14 注入 5 帧，frame 0 vs 1 blit 画面不同）全绿；1x 档 335 文件 1,519,349 B（1.45 MB）预算 1.6 MB PASS。
+
+
+### EXP-091 工具：文档文件含非法 UTF-8 坏字节时 doccheck 的 `read_to_string` 静默跳过整文件 → 该文件所有检查行永久失声（**status: resolved**）
+- 现象：`docs/release.md` 台账计数行长期漂移（文件里是旧值，ledger 实测已 113 任务/110 verified），但 doccheck（gate 第 9 项）一直报 0 error——计数断言（`check_ledger_counts`）形同虚设。
+- 根因：release.md 含 ~292 处历史坏字节（UTF-8 三字节字符第 3 字节被替成 `0x3F '?'`，如 `EF BC 3F` 非法序列；另混入 GBK 双字节段）。`ti_tools::doccheck::push_doc` 用 `std::fs::read_to_string`（严格 UTF-8）+ `let Ok(text)=… else { return }` → 整文件被**静默跳过且无告警**，其中「N 任务 M verified」行因此从未被校验。AGENTS.md 写「release.md ⚠️ GBK 编码」亦与实测不符（实测为 UTF-8 主体 + 少量坏字节 + GBK 段混杂，2026-10 字节级扫描确认）。
+- 解法：① 编辑此类文件先跑坏字节扫描（UTF-8 严格解码 + 坏序列定位，见 evidence 附脚本），确认该文件是否「对 doccheck 不可见」；② 修正只动 ASCII 区（如数字），用**字节级替换**（`ReadAllBytes`/`WriteAllBytes` 定点改，或编辑工具匹配纯 ASCII 子串），禁止整文件 Set-Content/重编码（EXP-051/083/086 三次复发教训）；③ 坏字节全量修复须另立任务（含「doccheck 增加文档可解码性检查：注册文档读不到/含非法 UTF-8 → FAIL 而非静默跳过」），登记台账后才做，不在顺手中做。
+- 验证：2026-10 S16 登记会话实测：release.md 坏字节 292 处、`read_to_string` 失败可复现；计数行字节级修为「117 任务：110 verified」后 doccheck 仍 0 error（文件仍被跳过，行为不变=无回归）；坏字节全部修好后该行将首次真正进入 `check_ledger_counts` 校验（117/110 与 ledger 一致）。
+- 教训：**门禁里「读不到文件」必须显式失败，不许静默 skip**——静默 skip 让 release.md 的计数漂移躲过检查多轮；同类模式（`read_to_string` + `else return`）在 doccheck2/check_ledger_reality 里也要排查一遍。
+- 解决记录（2026-10）：子项 ③(a)「release.md 坏字节全量修复」已完成——未走字节逐替，而是从 git 历史取最后干净版（commit `24c5716`，UTF-8 严格解码 0 坏字节）为基底，重排瘦身成纯 UTF-8（14135→12581 字节，无 BOM），保留工作区唯一在途 WIP 行（ledger 117/110）。修复后 doccheck 重新纳管该文件（docs 计数 114→115），0 error。子项 ③(b)「doccheck 增加文档可解码性检查（读不到/含非法 UTF-8 → FAIL 而非静默跳过）」**仍未做**，如需落地另立台账任务。

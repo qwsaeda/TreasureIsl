@@ -1,20 +1,26 @@
-//! 渲染管线契约（`docs/process/07_render_pipeline.md`）：越界求交裁剪 + z-order 纯函数层。
+//! 渲染管线契约（`docs/process/08_render_arch.md` 契约 2/3）：越界求交裁剪 + z-order 纯函数层。
 //!
-//! 职责分离：把「越界裁剪」从 `sprite_atlas.rs` 的 blit 内联逻辑提成可单测纯函数，
+//! 职责分离：把「越界裁剪」从像素写帧逻辑提成可单测纯函数，
 //! 对齐原版 `sub_5EAA8` 源窗求交为空即不画（`sub_5D9C4` 早退，`evidence/audit_zorder.md` A3）。
 //!
 //! - [`clip_rect`]：精灵原点 × 尺寸 → 裁剪矩形；越界（原点 ≥ 帧宽/高）返回 `None`（整条跳过）。
-//! - [`TRANSPARENT_INDEX`]：PCX 调色板 index 0 = 哨兵透明位（§4 契约，4 处同口径）。
+//! - [`TRANSPARENT_INDEX`]：PCX 调色板 index 0 = 哨兵透明位（诊断解码用）。
+//!
+//! **S15.4（架构重构）**：legacy 176×220 `.Map` 像素写帧层已整体移除（`blit_sprite` /
+//! `terrain_atlas::blit_*` 逐像素写帧删除），`legacy_scaled` / `scaled_src` 等 176→1080
+//! 等比坐标变换随之删除。运行时像素仅由 3 代码绘制原语产生（契约 2）；本文件只保留
+//! 纯几何裁剪与诊断解码所需的常量。
 
-/// 逻辑帧宽（`docs/design/ui_controls.md`，原版场景 176×220）。
-pub const FB_W: usize = 176;
+/// 逻辑帧宽（现代 UI 1080×1920）。
+pub const FB_W: usize = 1080;
 /// 逻辑帧高。
-pub const FB_H: usize = 220;
+pub const FB_H: usize = 1920;
 
 /// PCX 调色板 index 0 = 透明哨兵位（§4 契约）。
 ///
 /// 原版 8-bit blit 例程 `sub_5D9C4` 逐像素 `if (idx != 0) write`，index 0 跳过后透出背景。
 /// `ui.pak` 94/120 张 PCX 的调色板 0 槽常被填成洋红 (255,0,255)（`evidence/audit_mag_red_cause.md`）。
+/// S15.4 起仅诊断解码（`SpriteAtlas::sprite` / 独立基线）使用本常量，运行时不再有像素写帧。
 pub const TRANSPARENT_INDEX: usize = 0;
 
 /// 裁剪矩形（源精灵左上角 + 画入帧缓冲的宽高）。
@@ -32,11 +38,10 @@ pub struct ClipRect {
 
 /// 越界求交裁剪（契约 §3，对齐原版 `sub_5EAA8` 求交为空即不画）。
 ///
-/// - 原点越界（`ox >= FB_W || oy >= FB_H`）→ `None`（整条跳过，不写像素、不 `mark_dirty`）。
+/// - 原点越界（`ox >= FB_W || oy >= FB_H`）→ `None`（整条跳过）。
 /// - 原点在屏内 → `Some(ClipRect)`，`w/h` 取「精灵尺寸 × 到帧右缘/下缘剩余」的较小值。
 ///
-/// 纯函数：无副作用、可单测。`blit_sprite` / `blit_sprite_rgba` 开头调用本函数，
-/// `None` 直接早退（修掉原 `ox = px_x.min(FB_W-1)` 把越界精灵拉回右缘画 1 列竖条的 bug）。
+/// 纯函数：无副作用、可单测。S15.4 后仅诊断/基线工具使用（运行时已无逐像素写帧）。
 #[must_use]
 pub fn clip_rect(ox: usize, oy: usize, src_w: usize, src_h: usize) -> Option<ClipRect> {
     // 契约 §3：原点 ≥ 帧宽/高 → 原版源窗求交为空 → 整条不画（高置信，audit_zorder.md A3）
@@ -61,32 +66,31 @@ mod tests {
 
     #[test]
     fn offscreen_x_skipped() {
-        // x=185（f1=111 越界条，audit_zorder.md B4）：原 ox=min(185,175)=175 拉回右缘，
-        // 契约修正后 ox>=FB_W → None 整条跳过
-        assert_eq!(clip_rect(185, 22, 105, 11), None);
-        assert_eq!(clip_rect(191, 44, 105, 11), None);
-        assert_eq!(clip_rect(207, 44, 105, 11), None);
+        // ox=1080（= FB_W）：原点越界 → None 整条跳过
+        assert_eq!(clip_rect(1080, 22, 105, 11), None);
+        assert_eq!(clip_rect(1100, 44, 105, 11), None);
+        assert_eq!(clip_rect(1150, 44, 105, 11), None);
     }
 
     #[test]
     fn offscreen_y_skipped() {
-        assert_eq!(clip_rect(34, 205, 47, 15), Some(ClipRect { x: 34, y: 205, w: 47, h: 15 }));
-        // y=230 越界
-        assert_eq!(clip_rect(10, 230, 50, 50), None);
+        // oy=1920（= FB_H）越界 → None
+        assert_eq!(clip_rect(10, 1920, 50, 50), None);
+        assert_eq!(clip_rect(10, 2000, 50, 50), None);
     }
 
     #[test]
     fn partial_clip_right_edge() {
-        // x=150 宽 100：右缘 250>176，裁到 26 列
-        let c = clip_rect(150, 0, 100, 10);
-        assert_eq!(c, Some(ClipRect { x: 150, y: 0, w: 26, h: 10 }));
+        // x=1000 宽 100：右缘 1100>1080，裁到 80 列
+        let c = clip_rect(1000, 0, 100, 10);
+        assert_eq!(c, Some(ClipRect { x: 1000, y: 0, w: 80, h: 10 }));
     }
 
     #[test]
-    fn boundary_x_175_last_col() {
-        // x=175 仍是屏内最后一列（部分画 1 列）
-        let c = clip_rect(175, 0, 105, 11);
-        assert_eq!(c, Some(ClipRect { x: 175, y: 0, w: 1, h: 11 }));
+    fn boundary_x_1079_last_col() {
+        // x=1079 仍是屏内最后一列（部分画 1 列）
+        let c = clip_rect(1079, 0, 105, 11);
+        assert_eq!(c, Some(ClipRect { x: 1079, y: 0, w: 1, h: 11 }));
     }
 
     #[test]

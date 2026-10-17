@@ -1,0 +1,16 @@
+[package]
+name = "ti-render"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "纯渲染框架：帧缓冲/3 原语/z-order/字体/主题/等距投影/文本排版"
+
+[dependencies]
+ab_glyph.workspace = true
+ti-formats.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

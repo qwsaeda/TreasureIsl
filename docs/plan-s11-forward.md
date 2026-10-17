@@ -54,7 +54,13 @@
 - 跨包只经 `balance.json` key + 公共 struct 签名（`rules::rng::GameRng`、`domain::economy::Unit`）；
 - 公共 struct 冻结后改动须全票同步（集成轮约定，§6.3）。
 
-| 并行包 | 域 | 依赖 |
+> ⚠️ **包划分口径（2026-10 修正）**：下表是 S11.3 当时的**五包草案**，已被 S11.4 的
+> `plan/packages.yaml` **七包口径**取代（D 契约冻结 + P1–P6，P6 = 表现层）。
+> **机读唯一源 = [`plan/packages.yaml`](../plan/packages.yaml)**；
+> 并行纪律与一轮 4 步流程见 [`process/05_module_parallel.md`](process/05_module_parallel.md)，
+> WBS 见 [`plan-s12-parallel.md`](plan-s12-parallel.md)。本表仅存历史决策痕迹。
+
+| 并行包（S11.3 草案） | 域 | 依赖 |
 |---|---|---|
 | P1 玩法-战斗+经济 | `rules/combat`、`rules/economy`、`rules/cards`（结算器） | P2 公共契约 |
 | P2 玩法-地图+卡牌抽取 | `rules/progression`、`rules/cards_draw`、`rules/rng` | 无（契约制定者） |
@@ -163,6 +169,8 @@ S11.1（A）/S11.2（B）进 `plan/ledger.yaml`；`docs/README.md` 登记 `07_ui
 
 ## 7. 交接与接手记录
 
+> **历史快照（S11 收口时点，不再维护）**：本节是 2026-10 会话 A/B/C 的交接日志；S11/S12 均已 verified，流程细节唯一事实源在 [`process/05_module_parallel.md`](process/05_module_parallel.md)，历史阶段索引见 [`plan-archive.md`](plan-archive.md)。下方「剩余（会话 C 起点）」为**历史时点**清单（S11-B/S12 早已完成），仅留作审计轨迹，不再据此行动。
+
 ### 7.1 第一版快照（2026-10-12 会话 A 收尾，未 commit）
 
 > S11-A 物理归档完成，gate 16 项时点 10 PASS + 2 SKIP + 3 FAIL（fmt / clippy / gen_layout），**未 commit**。
@@ -188,7 +196,7 @@ S11.1（A）/S11.2（B）进 `plan/ledger.yaml`；`docs/README.md` 登记 `07_ui
 5. D `docs/process/05_module_parallel.md`（一轮 4 步 + P1–P6 包划分 + 并行纪律 5 条 + 台账口径）+ `03_templates.md` §7 任务书模板 + `docs/contracts/{00_index,c1,c2,c3}.md`（draft）+ `plan/packages.yaml` + `scripts/check_module_contracts.py` 进 gate **第 16 项（历史时点）**（白名单互斥 / 契约锚点 / 跨包可见面 / draft 残留 WARN）。
 
 **剩余（会话 C 起点）**：
-6. S11-B 验收：gate 16 项全绿（S11 时点，现 20 项）→ tee `evidence/S11.1.log` + `evidence/S11.2.log` → ledger S11.1/S11.2 置 verified（deps 建议改 `[S10.4]`，S10.5 并行不前置）；
+6. S11-B 验收：gate 16 项全绿（S11 时点，现 21 项）→ tee `evidence/S11.1.log` + `evidence/S11.2.log` → ledger S11.1/S11.2 置 verified（deps 建议改 `[S10.4]`，S10.5 并行不前置）；
 7. S12.0 契约冻结轮：`docs/contracts/*` draft→frozen + `plan/packages.yaml` 全票 frozen + 基线标签 `baseline-s12` + 逐包任务书下发；
 8. commit：S10 系列 成果 + S11-A + S11-B 一并 commit（legacy 归档 + oracle 桥 + 业务闭环 + gate 15/16 项历史时点），S12 各包另行 commit。
 

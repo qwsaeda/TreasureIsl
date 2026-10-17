@@ -1,6 +1,6 @@
 //! `.Map` 场景文件（S1.4）。
 //!
-//! 实测结构（`docs/facts/index.md` F-301/F-302）：
+//! 实测结构（`legacy/docs/facts/index.md` F-301/F-302）：
 //! - 头部 16 字节：`width=0xB0(176)`、`height=0xDC(220)`、`flags`、`reserved`；
 //! - 其后为 u32 字流（控件/场景记录），**文件内无任何字符串**（F-302）；
 //! - 文件长度必为 `16 + 4k`，因此 roundtrip 可逐字节还原（0 未知字节）。

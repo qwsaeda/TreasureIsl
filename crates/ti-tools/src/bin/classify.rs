@@ -8,7 +8,7 @@
 //!
 //! S3.12 子步 6：原 pending 兜底类目清零，改判到
 //! cpp-method / utility / game-logic / stub / framework 之一
-//! （`ref/classify.json` 中 `category=="pending"` 计数 = 0，见 `docs/spec/rng.md` §e）。
+//! （`ref/classify.json` 中 `category=="pending"` 计数 = 0，见 `legacy/docs/spec/rng.md` §e）。
 #![allow(
     clippy::doc_markdown,
     clippy::redundant_closure,
@@ -73,7 +73,7 @@ struct OutJson {
     entries: BTreeMap<String, Entry>,
 }
 
-/// 字符串特征表（与 scripts/classify.py STR_FEATURES 对齐，大小写不敏感）。
+/// 字符串特征表（与 legacy/scripts/classify.py STR_FEATURES 对齐，大小写不敏感）。
 const STR_FEATURES: &[(&str, &str)] = &[
     ("need dictionary", "zlib"),
     ("unknown compression method", "zlib"),
@@ -117,7 +117,7 @@ const STR_FEATURES: &[(&str, &str)] = &[
     ("button", "ui_event"),
 ];
 
-/// API 名表 → 类目的对照表（与 `scripts/classify.py` 的 `API_CATEGORY`/`GX_APIS` 对齐）。
+/// API 名表 → 类目的对照表（与 `legacy/scripts/classify.py` 的 `API_CATEGORY`/`GX_APIS` 对齐）。
 const API_TABLES: &[(&[&str], &str)] = &[
     (CRT_NAMES, "crt"),
     (IO_NAMES, "io"),
@@ -259,7 +259,7 @@ const THREAD_NAMES: &[&str] = &[
     "HeapDestroy",
 ];
 
-/// 已知 API 名 → 类目（与 scripts/classify.py 的 API_CATEGORY/GX_APIS 对齐）。
+/// 已知 API 名 → 类目（与 legacy/scripts/classify.py 的 API_CATEGORY/GX_APIS 对齐）。
 fn api_category(api: &str) -> Option<&'static str> {
     for (names, category) in API_TABLES {
         if names.contains(&api) {
@@ -400,7 +400,7 @@ fn classify_apis(apis: &[String]) -> Option<(String, Vec<String>)> {
 
 /// S3.12 (a)-(e) 判类：把原 `pending` 兜底改判到具体类目。
 ///
-/// 优先级（命中即停，见 `docs/spec/rng.md` §e）：
+/// 优先级（命中即停，见 `legacy/docs/spec/rng.md` §e）：
 /// (a) 伪代码特征 → `cpp-method`；(b) 被 ≥3 个函数调用 → `utility`；
 /// (c) 尺寸 ≥300 → `game-logic`；(d) 尺寸 ≤32 且无 caller → `stub`；
 /// (e) 其余 → `framework`（LucencyApp 框架杂项兜底，不再叫 pending）。

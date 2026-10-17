@@ -37,6 +37,7 @@ use ti_core::rules::battle::BattleSession;
 use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::main_map::{MapSession, StepResult};
 use ti_core::rules::messages::total_pages;
+use ti_core::rules::progression::ProgressionState;
 use ti_core::rules::rng::GameRng;
 
 use crate::menu_shell::MenuShell;
@@ -239,6 +240,10 @@ pub enum GameInput {
 ///
 /// 不走 `#[derive]`：`MenuShell`（帧缓冲/字形）与 `PriceTable` 无 `Debug`/`Clone`/`Default`
 /// 派生；`GameApp` 由 [`GameApp::new`] 构造，`scenes`/`rng` 等规则态自带 `Default`。
+///
+/// `struct_excessive_bools` 不适用：组合根的跨场景布尔状态（`quit`/`press_held`/
+/// `battle_won`）各属不同子系统，非「同类状态打包」场景。
+#[allow(clippy::struct_excessive_bools)]
 pub struct GameApp {
     /// 表现层（帧缓冲/字形/呈现，Index 场景渲染子视图）。
     pub shell: MenuShell,
@@ -254,7 +259,9 @@ pub struct GameApp {
     pub map_slot: Option<MapSlot>,
     /// 当前地图的 BOSS 档（`MapSlot` → `balance.selection.maps[i].boss_tier`，`enter_main_map` 时写入）。
     pub current_boss_tier: u32,
-    /// 已解锁地图清单（壳层探测 `glmapm01/02/03.Map` 得到）。
+    /// 已解锁地图清单（跨图推进，`business/progression.md`）：开档 =
+    /// `ProgressionState::initial_unlocked()`（仅 m01），`battle_step` 胜利钩规则层推进，
+    /// `restore_save` 按存档 `map_slot` 最小前置链恢复。
     pub unlocked_maps: Vec<MapSlot>,
     /// 选择状态（`rules::selection` 行为镜像）。
     pub selection: SelectionState,
@@ -295,15 +302,18 @@ pub struct GameApp {
     pub msg_total: u32,
     /// 存读档槽位（`rules::saveload` 行为，`Saveload` 场景时有效）。
     pub save_slots: Vec<SaveSlot>,
+    /// QB136（S15.6）：存读档槽光标（三态渲染锚点；触摸落槽时 `set_saveload_cursor`，
+    /// 默认 0 = 第 1 槽为初始候选；越界由渲染侧钳到槽数内）。
+    pub saveload_cursor: usize,
     /// 音效（本次交互触发的音效，壳层播放）。
     pub last_sfx: Option<Sfx>,
-    /// 战斗结果（`Vs` 场景结束时镜像，用于回 `Index`）。
+    /// 本场战斗是否玩家胜（`battle_step` 结果落定时重算；`start_battle` 开新战斗时复位，避免陈旧态）。
     pub battle_won: bool,
     /// 退出标志（`Index` 场景菜单项 5 置位）。
     pub quit: bool,
     /// 主地图事件分派结果（最近一次 `dispatch`，壳层据此跳场景）。
     pub last_dispatch: Option<SceneTarget>,
-    /// 精灵图集（`ui.pak` 的 120 个 PCX 贴图 + 解码缓存，`docs/design/ui_controls.md` §3）。
+    /// 精灵图集（`ui.pak` 的 120 个 PCX 贴图 + 解码缓存，`legacy/docs/design/ui_controls.md` §3）。
     /// 入口 bin 启动时注入，`render_scene` 据此 blit 真实贴图。
     pub atlas: Option<SpriteAtlas>,
     /// 已解析的 `.Map` 场景缓存（`scene_name → MapScene`，渲染时 blit 用）。
@@ -318,6 +328,42 @@ pub struct GameApp {
     /// 非 headless bin 经 `GpuRenderer::new` 注入真实路径）。
     #[cfg(feature = "gpu-render")]
     pub gpu_renderer: ti_platform::gpu_renderer::GpuRenderer,
+    /// 场景切换过渡状态（None = 无过渡，正常渲染；EXP-079 淡入淡出）。
+    pub transition: Option<TransitionState>,
+    /// 确认输入当前是否按住（每帧由 `poll` 从 `KeyState.confirm` 快照，
+    /// 驱动菜单项按下凹陷，EXP-079 §7.3）。
+    pub press_held: bool,
+    /// 是否已完成过至少一次场景渲染（首帧前无旧画面可混合，跳过过渡防黑闪，EXP-081）。
+    pub rendered_once: bool,
+    /// 显示用玩家 HP（平滑插值，每帧向实际值推进，EXP-085 HUD 平滑动画）。
+    pub displayed_player_hp: u32,
+    /// 显示用 BOSS HP（平滑插值）。
+    pub displayed_boss_hp: u32,
+}
+
+/// HP 平滑插值步长（每帧向目标推进差值的 25%，最小 1）。
+fn approach(current: u32, target: u32) -> u32 {
+    if current == target {
+        return current;
+    }
+    let diff = target.abs_diff(current);
+    let step = (diff / 4).max(1);
+    if current < target {
+        current.saturating_add(step).min(target)
+    } else {
+        current.saturating_sub(step).max(target)
+    }
+}
+
+/// 场景切换过渡状态机（EXP-081：真交叉淡化，快照旧画面 → 与新画面逐帧插值）。
+#[derive(Debug, Clone, Default)]
+pub struct TransitionState {
+    /// 旧画面快照（`enter()` 前抓的帧缓冲，`render_to_framebuf` / 快照路径为 `None`）。
+    pub prev: Option<Box<[u16]>>,
+    /// 当前插值进度（0.0 = 全旧画面，1.0 = 全新画面）。
+    pub t: f32,
+    /// 每帧推进量。
+    pub step: f32,
 }
 
 /// 键位快照（壳层把触摸/键映射到这些布尔位，平台无关，`docs/gamebook.md` §3）。
@@ -357,6 +403,8 @@ impl GameApp {
     /// 返回是否发生场景切换（壳层据此强制整帧渲染）。
     /// 同一帧内多个键可同时命中（如 confirm + move），按场景语义合并。
     pub fn poll(&mut self, k: &KeyState) -> bool {
+        // 按住态快照（菜单项按下凹陷，EXP-079 §7.3）：每帧从键位布尔取。
+        self.press_held = k.confirm;
         let mut changed = false;
         match self.scene {
             Scene::Index => {
@@ -486,7 +534,9 @@ impl GameApp {
             character: None,
             map_slot: None,
             current_boss_tier: 0,
-            unlocked_maps: MapSlot::all().to_vec(),
+            // 跨图推进（`docs/business/progression.md` §跨图推进）：新档仅 m01 解锁，
+            // 击败 BOSS 才解锁下一图（`battle_step` 结算钩）；不走 `MapSlot::all()` 全开。
+            unlocked_maps: ProgressionState::initial_unlocked(),
             selection: SelectionState::new(),
             map_terrain: None,
             map_pos: None,
@@ -508,6 +558,7 @@ impl GameApp {
                 let count = ti_core::data::balance().map_or(5, |b| b.save.slot_count) as usize;
                 vec![SaveSlot::default(); count]
             },
+            saveload_cursor: 0,
             last_sfx: None,
             battle_won: false,
             quit: false,
@@ -517,6 +568,11 @@ impl GameApp {
             terrain_atlas: None,
             frame_delta_ms: 0,
             terrain_map: None,
+            transition: None,
+            press_held: false,
+            rendered_once: false,
+            displayed_player_hp: 0,
+            displayed_boss_hp: 0,
             #[cfg(feature = "gpu-render")]
             gpu_renderer: {
                 #[cfg(any(
@@ -595,6 +651,12 @@ impl GameApp {
     #[must_use]
     pub fn map_pos(&self) -> Option<GridPos> {
         self.map_pos
+    }
+
+    /// BOSS 格坐标（`MapSession::boss_tile`，主地图渲染橙红标记 + 战斗触发用，只读）。
+    #[must_use]
+    pub fn map_boss_tile(&self) -> Option<GridPos> {
+        self.map_session.boss_tile()
     }
 
     /// 当前金币数（只读）。
@@ -706,17 +768,26 @@ impl GameApp {
     /// 不再硬编码 5/3（调目录只需改 balance.json）。
     ///
     /// FIND-204：字段写入前先快照旧值，`enter_main_map` 校验失败（返回 `false`）时
-    /// 回滚 4 个字段（`character`/`map_slot`/`gold`/`bank`），不留下半初始化态；成功才提交。
+    /// 回滚 7 个字段（`character`/`map_slot`/`selection`/`gold`/`bank`/`unlocked_maps`/`rng`），不留下半初始化态；成功才提交。
+    ///
+    /// 跨图推进（`business/progression.md`）：`SaveSlot` 无解锁链字段（schema 稳定），
+    /// 读档按存档 `map_slot` 的「最小前置链」恢复解锁（选中 m(i) ⟹ m(0)..m(i-1) 已击败）。
+    ///
+    /// Q007（第 12 轮审计）：读档成功路径按存档恢复 `gold`/位置（`enter_main_map_at` 会用
+    /// 初始值重铺经济/位置，成功后须再覆写存档值）；`SaveSlot` 无 `owned`/`buildings` 字段，
+    /// 持有/建造不可恢复（schema 限制，`persistence.md` 明示）。
     pub fn restore_save(&mut self, data: SaveSlot) {
         let bounds = balance()
             .map_or((0usize, 0usize), |b| (b.selection.characters.len(), b.selection.maps.len()));
         let (char_count, map_count) = bounds;
-        // FIND-204：快照调用前 4 字段，enter_main_map 失败时回滚
+        // FIND-204：快照调用前 7 字段，enter_main_map 失败时回滚
         let prev_character = self.character;
         let prev_map_slot = self.map_slot;
         let prev_selection = self.selection;
         let prev_gold = self.gold;
         let prev_bank = self.bank;
+        let prev_unlocked_maps = self.unlocked_maps.clone();
+        let prev_rng = self.rng.clone();
         let char_idx = data.character.saturating_sub(1);
         if usize::try_from(char_idx).is_ok_and(|i| i < char_count) {
             if let Some(ch) = Character::from_index(char_idx) {
@@ -729,6 +800,9 @@ impl GameApp {
             if let Some(ms) = MapSlot::from_index(data.map_slot) {
                 self.map_slot = Some(ms);
                 self.selection.map_slot = Some(ms);
+                // 读档解锁链恢复（跨图推进）：选中 m(i) 的最小前置 = m(0)..m(i-1) 已击败。
+                // 旧档（高图直选/多解锁值）按链回读，与规则单调链一致，无需 schema 迁移。
+                self.unlocked_maps = ProgressionState::min_progression_to_select(ms).unlocked();
             }
         }
         self.gold = data.gold;
@@ -736,18 +810,34 @@ impl GameApp {
         // P1-8（S1）：RNG 精确续流——读档后 `restore_state(rng_seed, rng_steps)` O(log n) 跳转，
         // 后续卡牌/地图随机流与"未存档"一致（`persistence.md` §RNG 可复现性）。
         self.rng = ti_core::rules::rng::GameRng::restore_state(self.rng_seed, data.rng_steps);
+        // Q007：读档位置恢复——`data.position` = 行主序格索引（写端 `map_pos().index(grid_w)`，
+        // `0` = 未写位置）。越界 / 无该图定义 → 回退 `player_start`（不拦读档）。
+        let start_override = balance().ok().and_then(|b| {
+            let def = b.selection.maps.iter().find(|m| m.index == data.map_slot)?;
+            if data.position == 0 {
+                return None;
+            }
+            let (row, col) = (data.position / def.grid_w.max(1), data.position % def.grid_w.max(1));
+            if row < def.grid_h && col < def.grid_w { Some(GridPos::new(row, col)) } else { None }
+        });
         if self.selection.has_character() && self.selection.has_map() {
-            let ok = GameApp::enter_main_map(self);
+            let ok = GameApp::enter_main_map_at(self, start_override);
             if !ok {
-                // FIND-204：校验失败回滚 4 字段 + selection，跳到 SelectRole（不污染状态）
+                // FIND-204：校验失败回滚 7 字段 + selection，跳到 SelectRole（不污染状态）
                 self.character = prev_character;
                 self.map_slot = prev_map_slot;
                 self.selection = prev_selection;
                 self.gold = prev_gold;
                 self.bank = prev_bank;
+                self.unlocked_maps = prev_unlocked_maps;
+                self.rng = prev_rng;
                 self.scene = Scene::SelectRole;
                 return;
             }
+            // Q007：`enter_main_map_at` 按初始值重铺了经济/位置，成功后再覆写存档值
+            //（`owned`/`buildings` 不在 `SaveSlot` schema 内，保持初始空——schema 限制，`persistence.md`）。
+            self.gold = data.gold;
+            self.bank = Bank::new(data.gold);
             self.selection.completed = true;
         } else {
             self.scene = Scene::SelectRole;
@@ -809,24 +899,14 @@ impl GameApp {
     /// S7.5（feature `hd-8bit`）：HD 渲染路径——复用既有 RGB565 [`Self::render`] 派发，
     /// 再把 RGB565 帧缓冲扩展成 RGBA8（`sync_rgba_from_rgb565`），让 HD 帧就绪。
     ///
+    /// S15.4：legacy 逐像素 HD PNG 精灵叠加（`blit_scene_rgba`）已移除；HD 帧 = 纯代码
+    /// 绘制 UI 的 RGBA8 扩色版（`08_render_arch.md` 契约 2）。
+    ///
     /// 调用方随后调 [`Self::present_hd`] 上屏。
     #[cfg(feature = "hd-8bit")]
     pub fn render_hd(&mut self) {
         self.render();
         self.shell.sync_rgba_from_rgb565();
-        // EXP-075：在 RGBA 帧缓冲上叠加 HD PNG 精灵（此前漏调，HD 贴图从未生效）
-        let asset = SceneKind::from_legacy(self.scene).asset_name();
-        if !asset.is_empty() {
-            if let (Some(atlas), Some(scene)) = (self.atlas.as_mut(), self.scene_cache.get(asset)) {
-                if !scene.words.is_empty() {
-                    atlas.advance_animation(self.frame_delta_ms);
-                    atlas.blit_scene_rgba(scene, &mut self.shell.fb_rgba);
-                }
-            }
-        }
-        // 地形 HD 同理（`blit_scene_rgba` 同源；terrain_atlas 无 RGBA 版接口时不接入）
-        #[allow(unused_variables)]
-        let _ = &self.terrain_atlas;
     }
 
     /// S7.5（feature `hd-8bit`）：RGBA8 HD 帧缓冲上屏（同 `present` 上传策略，真彩无 565 量化）。
@@ -1005,12 +1085,15 @@ impl GameApp {
 
     /// 进入主地图（`docs/gamebook.md` §3.3）：初始化 `MapSession` + 贸易/建造会话。
     ///
+    /// `start_override` = 入口格：`None` = 该图 `player_start`；`Some(pos)` = 读档位置恢复
+    /// （Q007 第 12 轮审计）；越界 → 校验失败返回 `false`，调用方回滚。
+    ///
     /// 返回 `false` = 数据校验失败（`balance.json` 加载失败 / `selection.maps` 缺条目 /
     /// `boss_tiers` 缺档 / `player_start` 或 `landmarks` 坐标越界），此时本方法自身的
     /// 字段写入未发生（校验在写入前），但调用方 `restore_save` 已先写入
     /// `character`/`map_slot`/`gold`/`bank`，须据返回值回滚（FIND-204 半初始化态消除）。
     /// 返回 `true` = 成功进入主地图（`scene` 已切 `MainMap`）。
-    fn enter_main_map(&mut self) -> bool {
+    fn enter_main_map_at(&mut self, start_override: Option<GridPos>) -> bool {
         let b = match ti_core::data::balance() {
             Ok(b) => b,
             Err(_e) => {
@@ -1038,7 +1121,10 @@ impl GameApp {
             );
             return false;
         }
-        let start = map_def.player_start;
+        let start: [u32; 2] = match start_override {
+            Some(pos) => [pos.row, pos.col],
+            None => map_def.player_start,
+        };
         // FIND-105：player_start 坐标越界校验
         if start[0] >= gh || start[1] >= gw {
             eprintln!(
@@ -1086,27 +1172,112 @@ impl GameApp {
         true
     }
 
-    /// 渲染当前场景：先由场景模块绘制（`scenes/*.rs::render`），
-    /// 再叠加该场景 `.Map` 的真实精灵 blit。
+    /// 进入主地图（入口格 = 该图 `player_start`；选图 Confirm 路径，`start_override` = `None`）。
+    fn enter_main_map(&mut self) -> bool {
+        self.enter_main_map_at(None)
+    }
+
+    /// 渲染当前场景：场景模块绘制（`scenes/*.rs::render`），纯代码绘制
+    /// （`08_render_arch.md` 契约 2：S15.4 起无 legacy 精灵层叠加）。
     ///
     /// 调用方随后调 [`MenuShell::present`] 上屏。
     pub fn render(&mut self) {
+        crate::scenes::chrome::tick_press_flash();
+        // HP 条平滑插值（EXP-085）：每帧向实际值推进，步长 = 差值的 25% 或最小 1。
+        self.update_displayed_hp();
+        if self.transition.is_none() {
+            self.render_scene();
+            return;
+        }
+        // 取出过渡态（避开与 `render_scene` 的 `&mut self` 借用冲突）。
+        let Some(mut trans) = self.transition.take() else {
+            self.render_scene();
+            return;
+        };
+        let next_t = trans.t + trans.step;
+        let done = next_t >= 1.0;
+        self.render_scene();
+        if done {
+            // 终帧：直接显示全新画面（不混合），过渡自然结束。
+            return;
+        }
+        match trans.prev.take() {
+            Some(prev) => {
+                // 真交叉淡化：旧画面 → 新画面逐帧插值（EXP-081）。
+                self.shell.fb.crossfade_from(&prev, trans.t);
+                trans.prev = Some(prev);
+            }
+            None => {
+                // 无旧画面快照（进入前未渲染过）：退回亮度调制。
+                self.shell.fb.apply_brightness(trans.t);
+            }
+        }
+        trans.t = next_t;
+        self.transition = Some(trans);
+    }
+
+    /// 实际场景渲染（不含过渡逻辑）。
+    fn render_scene(&mut self) {
         let kind = SceneKind::from_legacy(self.scene);
-        let asset = kind.asset_name();
+        // S15.4：legacy 像素写帧层移除后，场景渲染 = 纯代码绘制（chrome/menu_shell/scenes，
+        // 1080×1920，`08_render_arch.md` 契约 2）。不再叠加 `.Map` 精灵层 / 地形瓦片。
         {
             let host: &mut dyn SceneHost = self;
             route_render(host, kind);
-            host.blit_scene_sprites(asset);
         }
+        self.rendered_once = true;
     }
 
-    /// 视觉回归基准（EXP-072）：渲染当前场景后返回 176×220 RGB565 帧缓冲只读切片。
+    /// HP 条平滑插值（EXP-085）：每帧向实际值推进，步长 = 差值的 25% 或最小 1。
+    fn update_displayed_hp(&mut self) {
+        let Some(b) = self.battle.as_ref() else {
+            return;
+        };
+        let target_p = b.player_hp;
+        let target_b = b.boss_hp;
+        self.displayed_player_hp = approach(self.displayed_player_hp, target_p);
+        self.displayed_boss_hp = approach(self.displayed_boss_hp, target_b);
+    }
+
+    /// 启动场景切换过渡（EXP-081 真交叉淡化，~230ms @ step=0.09）。
+    ///
+    /// 抓取当前帧缓冲作为「旧画面」；`enter()` 在切场景前调用本方法，
+    /// 此刻帧缓冲仍持有旧场景像素，故快照有效。
+    ///
+    /// 两道守卫（否则首帧黑闪）：
+    /// - 首帧前（`rendered_once == false`）无旧画面可混合 → 跳过过渡；
+    /// - 过渡已在进行时再次切场景 → 沿用原 `prev` 并重置进度（不重抓半混合帧）。
+    pub fn start_transition(&mut self) {
+        if !self.rendered_once {
+            self.transition = None;
+            return;
+        }
+        if let Some(existing) = self.transition.as_mut() {
+            existing.t = 0.0;
+            return;
+        }
+        self.transition =
+            Some(TransitionState { prev: Some(self.shell.fb.snapshot()), t: 0.0, step: 0.09 });
+    }
+
+    /// 视觉回归基准（EXP-072）：渲染当前场景后返回 1080×1920 RGB565 帧缓冲只读切片。
     ///
     /// 测试专用（`tests/visual_regression.rs`）：调本方法拿像素 → 与
     /// `assets/hd_baseline/<场景>.png` 基准图逐像素 diff（RGB565→RGB 量化误差 ≤1）。
-    /// 与 [`Self::render`] 同源（场景绘制 + 精灵 blit），不含 `present` 上屏副作用。
+    /// 与 [`Self::render`] 同源（场景纯代码绘制，`08_render_arch.md` 契约 2），
+    /// 不含 `present` 上屏副作用。
+    ///
+    /// 快照确定性：先清过渡态 + 重置动画帧计数（微光/翻页正弦），
+    /// 使同一场景的快照像素与历史渲染次数无关（EXP-079 动画化回归防护）。
+    /// S15.6 QA121：重置后预推 5 帧翻页计数（淡入窗口 0..=4 全过），快照锁实机
+    /// **稳态**亮度 1.0——旧实现 `PAGE_FRAME`=0 时亮度 0.6，三套基线锁的是过渡中间态。
     #[must_use]
     pub fn render_to_framebuf(&mut self) -> &[u16] {
+        self.transition = None;
+        crate::scenes::chrome::reset_animation_state();
+        for _ in 0..5 {
+            crate::scenes::chrome::tick_page_frame();
+        }
         self.render();
         self.shell.fb.as_slice()
     }
@@ -1121,6 +1292,7 @@ impl NavHost for GameApp {
 
     fn enter(&mut self, next: SceneKind) {
         self.scene = next.to_legacy();
+        self.start_transition();
     }
 
     fn advance(&mut self, input: GameInput) -> bool {
@@ -1148,37 +1320,42 @@ impl RenderHost for GameApp {
     fn draw_text(&mut self, text: &str, x: i32, y: i32) {
         self.shell.draw_text_row(text, x, y);
     }
+
+    fn draw_text_colored(&mut self, text: &str, x: i32, y: i32, color: u16) {
+        self.shell.draw_text_row_colored(text, x, y, color);
+    }
+
+    fn draw_title_text(&mut self, text: &str, x: i32, y: i32, color: u16) {
+        self.shell.draw_title_row(text, x, y, color);
+    }
+
+    fn draw_hint_text(&mut self, text: &str, x: i32, y: i32, color: u16) {
+        self.shell.draw_hint_row(text, x, y, color);
+    }
+
+    fn pixel_at(&self, x: i32, y: i32) -> u16 {
+        let w = crate::menu_shell::LOGICAL_W_USIZE;
+        let h = crate::menu_shell::LOGICAL_H_I32;
+        let wi = i32::try_from(w).unwrap_or(i32::MAX);
+        if x < 0 || y < 0 || x >= wi || y >= h {
+            return 0;
+        }
+        let xi = usize::try_from(x).unwrap_or(0);
+        let yi = usize::try_from(y).unwrap_or(0);
+        let idx = yi * w + xi;
+        self.shell.fb.as_slice().get(idx).copied().unwrap_or(0)
+    }
 }
 
 impl SpriteHost for GameApp {
-    fn blit_scene_sprites(&mut self, asset: &str) {
-        if asset.is_empty() {
-            return;
-        }
-        if let (Some(atlas), Some(scene)) = (self.atlas.as_mut(), self.scene_cache.get(asset)) {
-            if !scene.words.is_empty() {
-                // S6.4：按本帧时长推进动画（多帧精灵 num>1 才受影响）
-                atlas.advance_animation(self.frame_delta_ms);
-                atlas.blit_scene(scene, &mut self.shell.fb);
-            }
-        }
-    }
-
-    fn draw_terrain(&mut self) -> bool {
-        match (self.terrain_atlas.as_mut(), self.terrain_map.as_ref()) {
-            (Some(atlas), Some(terrain)) => atlas.blit_map(terrain, &mut self.shell.fb) > 0,
-            _ => false,
-        }
-    }
+    // S15.4：legacy 像素写帧（`blit_scene_sprites` / `draw_terrain`）已移除——运行时
+    // 场景/主地图纯代码绘制（`08_render_arch.md` 契约 2），不再叠 `.Map` 精灵层 / 地形瓦片。
+    // 保留 2 个等距几何访问器（`terrain_grid_w` / `has_terrain_atlas`），
+    // 主地图代码棋盘仍据 `terrain_grid_w`² 铺菱形格（§4.3）。
+    // S15.6 QA114：旧 `terrain_camera`（176 时代 88/110 老屏中心偏移，零消费方）已删。
 
     fn terrain_grid_w(&self) -> u32 {
         self.terrain_map.as_ref().map_or(20, |t| t.grid_w)
-    }
-
-    fn terrain_camera(&self) -> (i64, i64) {
-        self.terrain_map
-            .as_ref()
-            .map_or((0_i64, 0), crate::terrain_atlas::TerrainAtlas::center_camera)
     }
 
     fn has_terrain_atlas(&self) -> bool {
@@ -1207,6 +1384,10 @@ impl MenuHost for GameApp {
 
     fn request_quit(&mut self) {
         self.quit = true;
+    }
+
+    fn press_held(&self) -> bool {
+        self.press_held
     }
 }
 
@@ -1305,6 +1486,7 @@ impl MapHost for GameApp {
         let player_unit = Unit { hp: player_hp, atk: player_atk };
         self.card_state = ti_core::rules::cards::CardState::default();
         self.battle = BattleView::new(seed, player_unit, tier);
+        self.battle_won = false; // Q005：开新战斗复位（防上一场陈旧结果）
         self.scene = Scene::Vs;
     }
 
@@ -1468,6 +1650,14 @@ impl SessionHost for GameApp {
                 self.battle_won = matches!(b.outcome, Some(Side::Player));
                 if self.battle_won {
                     self.last_sfx = Some(Sfx::Victory);
+                    // 跨图推进（`business/progression.md`）：击败当前图 BOSS → 解锁下一图。
+                    // 结算走规则层（`from_unlocked` 重建 + `on_boss_defeated`，幂等）：
+                    // 重复攻击已结束时集合不变；失败（`battle_won=false`）不解锁（可重试当前图）。
+                    if let Some(ms) = self.map_slot {
+                        self.unlocked_maps = ProgressionState::from_unlocked(&self.unlocked_maps)
+                            .on_boss_defeated(ms)
+                            .unlocked();
+                    }
                 }
             }
         }
@@ -1482,6 +1672,14 @@ impl SessionHost for GameApp {
             player_hp_max: b.player_hp_max,
             boss_hp_max: b.boss_hp_max,
         })
+    }
+
+    fn displayed_player_hp(&self) -> u32 {
+        self.displayed_player_hp
+    }
+
+    fn displayed_boss_hp(&self) -> u32 {
+        self.displayed_boss_hp
     }
 
     fn msg_kind(&self) -> Option<MsgKind> {
@@ -1544,6 +1742,14 @@ impl SessionHost for GameApp {
     /// P1-8（S1）：当前 RNG 已消费次数（写档捕获，读档 `restore_state` 精确续流）。
     fn rng_steps(&self) -> u128 {
         self.rng.steps_taken()
+    }
+
+    fn saveload_cursor(&self) -> usize {
+        self.saveload_cursor
+    }
+
+    fn set_saveload_cursor(&mut self, slot: usize) {
+        self.saveload_cursor = slot;
     }
 }
 

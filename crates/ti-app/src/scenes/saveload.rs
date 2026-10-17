@@ -5,7 +5,7 @@ use ti_core::domain::selection::MapSlot;
 
 use crate::game_app::GameInput;
 use crate::i18n;
-use crate::menu_shell::{COLOR_BG, COLOR_TITLE_BAR};
+use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
@@ -70,11 +70,8 @@ impl Scene for SaveloadScene {
         match sample.gesture {
             Gesture::Tap => {
                 // N3：命中带与渲染 `item_rect` 同公式（scenes.json saveload 段），正逆成对
-                let scene = ti_core::data::scenes()
-                    .ok()
-                    .and_then(|s| s.get("saveload"))
-                    .cloned()
-                    .unwrap_or_default();
+                // QA031：统一走 `chrome::scene_layout`（scenes.json 单一读点，契约 4）
+                let scene = chrome::scene_layout("saveload");
                 let bands = layout::slot_bands(
                     scene.list.x as f32,
                     scene.list.x as f32 + scene.list.w as f32,
@@ -89,6 +86,9 @@ impl Scene for SaveloadScene {
                 };
                 // 有档（version > 0）→ 读档；空槽 → 存档
                 let has = host.save_slots().get(slot).is_some_and(|s| s.version > 0);
+                chrome::flash_press();
+                // S15.6 QB136：三态卡（has/empty/cursor）——点选先落光标（卡片描边态），再推进
+                host.set_saveload_cursor(slot);
                 if has {
                     host.advance(GameInput::LoadSave(slot))
                 } else {
@@ -100,31 +100,47 @@ impl Scene for SaveloadScene {
         }
     }
 
-    /// 槽位列表 + 每档金/空满标记 + 导航提示。
+    /// 槽位列表 + 每档金/空满标记 + 导航提示（v2 羊皮纸/木纹/金色系）。
+    /// S15.6 QB136 三态卡：有档=金底 / 空档=普通羊皮纸块 / 光标=选中描边（`saveload_cursor`），
+    /// 卡片第二行摘要（有档 = `slot_summary_fmt` 角色/金/回合；空档 = `empty_line`，次级灰蓝墨 +56）。
     fn render(&mut self, host: &mut dyn SceneHost) {
-        host.clear_frame(COLOR_BG);
         // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
-        let layout = ti_core::data::scenes()
-            .ok()
-            .and_then(|s| s.get("saveload"))
-            .cloned()
-            .unwrap_or_default();
-        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
-        host.draw_text(i18n::sget("scene.saveload.title"), layout.title.x, layout.title.y);
+        let layout = chrome::scene_layout("saveload");
+        chrome::scene_shell(host, "saveload", "scene.saveload.title");
         let slots: Vec<SaveSlot> = host.save_slots().to_vec();
+        let held = host.press_held();
+        let flashing = chrome::press_flash_active();
+        let cursor = host.saveload_cursor();
         for (i, s) in slots.iter().enumerate() {
             let r = layout.list.item_rect(i);
-            let has = s.version > 0;
-            let has_str = if has { i18n::sget("slot.has") } else { i18n::sget("slot.empty") };
+            // 有档 = 金底（可点），空档 = 普通羊皮纸块；光标卡 = 选中描边态（QB136 三态）
+            let chosen = s.version > 0;
+            chrome::menu_item(host, r.x, r.y, r.w, r.h, chosen, chosen && (held || flashing));
+            if i == cursor && !chosen {
+                // 空档光标 = 外圈 2px 选中蓝描边（压普通卡，不盖金字列）
+                chrome::panel(host, r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+            }
+            let ty = r.y + (r.h - host.shell().glyph_px()) / 2; // QA009：字形高按活跃字体（TTF 44px / 位图 12px）
+            let has_str =
+                if s.version > 0 { i18n::sget("slot.has") } else { i18n::sget("slot.empty") };
             let idx = i + 1;
             let slot_str = i18n::sgetf("slot.label_fmt", &[&idx, &has_str]);
-            host.draw_text(&slot_str, r.x, r.y);
-            if has {
+            chrome::draw_body_text(host, &slot_str, layout.list.text_x, ty);
+            // 第二行摘要：有档 = 角色/金/回合（`slot_summary_fmt`）；空档 = `empty_line`
+            let summary = if s.version > 0 {
+                i18n::sgetf(
+                    "scene.saveload.slot_summary_fmt",
+                    &[&s.character, &s.gold, &s.rng_steps],
+                )
+            } else {
+                i18n::sget("scene.saveload.empty_line").to_string()
+            };
+            chrome::draw_body_text_secondary(host, &summary, layout.list.text_x, ty + 56);
+            if s.version > 0 {
                 let g = i18n::sgetf("hud.gold_fmt", &[&s.gold]);
-                let gold_x = layout.list.gold_x;
-                host.draw_text(&g, gold_x, r.y);
+                chrome::draw_body_text(host, &g, layout.list.gold_x, ty);
             }
         }
-        host.draw_text(i18n::sget("scene.saveload.nav_hint"), layout.hint.x, layout.hint.y);
+        chrome::scene_hint(host, "saveload", "scene.saveload.nav_hint");
     }
 }

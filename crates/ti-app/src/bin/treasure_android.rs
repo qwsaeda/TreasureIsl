@@ -23,21 +23,21 @@
 
 use macroquad::prelude::*;
 
-/// 窗口配置：强制原版逻辑分辨率 176×220（F-101）。
+/// 窗口配置：S15.6 QA126 现代窗口（540×960 竖屏，1080×1920 呈现层的半采样逻辑盒）。
 ///
 /// Android 上 miniquad 的 `window_width/height` 作为初始逻辑尺寸，实际屏幕尺寸
 /// 由 `screen_width()/screen_height()` 每帧 `refit` 跟随（P4-2 letterbox/pillarbox）。
 fn window_conf() -> Conf {
     Conf {
         window_title: "金银岛 TreasureIsl".to_owned(),
-        window_width: 176,
-        window_height: 220,
+        window_width: 540,
+        window_height: 960,
         ..Default::default()
     }
 }
 
 /// 主循环：转发到共享 `android_shell::run`（游戏主循环本体，13 玩法模块全场景
-/// + 触屏输入 + 逐帧渲染 176×220 逻辑帧缓冲，`docs/gamebook.md` §4/§5）。
+/// + 触屏输入 + 逐帧渲染 1080×1920 逻辑帧缓冲，`docs/gamebook.md` §4/§5）。
 #[macroquad::main(window_conf)]
 async fn main() {
     ti_app::android_shell::run().await;

@@ -25,7 +25,9 @@ use crate::domain::map::GridPos as DomainGridPos;
 use crate::domain::persistence::SaveSlot;
 use crate::domain::selection::{Character, MapSlot};
 use crate::rules::rng::GameRng;
-use crate::rules::saveload_json::{character_from_label, map_slot_from_label};
+use crate::rules::saveload_json::{
+    character_from_label, legacy_character_label, legacy_map_label, map_slot_from_label,
+};
 
 /// 存档槽位（v2，JSON 显式字段；`docs/business/persistence.md` §存档结构）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -222,12 +224,16 @@ impl SaveSlotV2 {
 
     /// 从旧 26 字节二进制 `SaveSlot`（`domain::persistence` 类型家）构造 v2 存档
     /// （迁移路径，数字→稳定字符串保守映射；正式格式为 JSON v2，二进制布局仅供历史对拍）。
+    ///
+    /// legacy 数字口径：`character` / `map_slot` 均 1 起（`1..=5` / `1..=3`，原版 26 字节槽位）；
+    /// 映射到可解析标签：角色 → 角色 label（`character_from_label` 可回读），地图 → `m0N`
+    /// （`map_slot_from_label` 可回读）；`0`/越界保守钳位到首项（门禁红线不 panic）。
     #[must_use]
     pub fn from_legacy_slot(slot: &SaveSlot) -> Self {
         Self {
             version: 2,
-            character: format!("char{}", slot.character),
-            map: format!("m{:02}", slot.map_slot),
+            character: legacy_character_label(slot.character),
+            map: legacy_map_label(slot.map_slot),
             scene: "Index".to_owned(),
             position: GridPos { row: slot.position, col: 0 },
             gold: slot.gold,

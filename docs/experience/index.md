@@ -10,7 +10,7 @@
 3. **被推翻要改**：后续证据推翻某条结论 → 在原条目**头部加 `status:` 标记**（见下表 status 约定），正文保留「已作废/已解决」提示块，**不删条目**（保留错误路径本身就是信息）。
 4. **落到正确的卷**：新增条目写入其主题分卷（格式/逆向/工具/构建/流程/代码），并在本表登记一行。
 5. **关联**：任务 evidence 中引用条目 ID（如 `见 EXP-003`），台账 evidence 与本文件互相可追。
-6. **与事实库的分工**：**事实库放"结论"**（`docs/facts/`，必须带证据），**本库放"过程与教训"**；结论必须先进事实库，再在本库记怎么拿到的。
+6. **与事实库的分工**：**事实库放"结论"**（`legacy/docs/facts/`，必须带证据），**本库放"过程与教训"**；结论必须先进事实库，再在本库记怎么拿到的。
 
 ### status 标记约定
 
@@ -28,10 +28,10 @@
 |---|---|---|
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 15 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
-| [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 9 |
-| [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078） | 16 |
-| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076） | 17 |
+| [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 12 |
+| [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 9 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092） | 26 |
+| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 28 |
 
 ## 条目索引
 
@@ -94,7 +94,7 @@
 | EXP-053 | code | | clippy pedantic 拦 `f64 as u32` 与 `Copy` 按引用传；`#[allow]` 须挂 item 非 let |
 | EXP-054 | code | | 固化脚本三契约（幂等/--report/非0退出码），且必须被门禁/循环消费才不算摆设 |
 | EXP-055 | code | | `pub const` 表禁调非 const fn（E0015）；i18n 用「常量存 key + 运行时 sget 解析」 |
-| EXP-056 | resources | | 多帧精灵 HD PNG 分帧命名（NN_hd_fK.png），Rust 侧须按帧列表注入（S7.5 实测） |
+| EXP-056 | tools | | 多帧精灵 HD PNG 分帧命名（NN_hd_fK.png），Rust 侧须按帧列表注入（S7.5 实测；条目实体在 tools.md） |
 | EXP-057 | code | | 门禁脚本判 oracle 须区分「类型重导出=允许」vs「oracle_* 函数调用=禁」（check_oracle_boundary，S8.8） |
 | EXP-058 | process | | 子代理报「已 verified」必须 Test-Path + 实跑复核；台账 verified ↔ evidence ↔ 代码符号三方对账（S9.5 commands.rs 虚报教训，`check_ledger_reality` 第 14 项） |
 | EXP-059 | code | | 地形 camera 钳位负值 + 触摸/渲染坐标系脱节 = 主地图界错乱双 P0（`terrain_camera` 去 `max(0)` 钳位，`grid_cell_at` 走等距投影逆变换，S10.1） |
@@ -108,13 +108,30 @@
 | EXP-068 | process | | 子代理开轮不读最新规范/EXP/契约 → 重复踩坑（ty-app 前缀、跨层几何不对齐、不知 gate 第 16 项查什么）：开轮必读清单 6 条 + 规范回执固化进 06_flywheel（飞轮单一事实源）+ 05 §4.5 + 03 §7 + doccheck2 第 8 项 `check_flywheel_readback` |
 | EXP-070 | process | | 开轮必读靠 LLM 手动 Read 6 份文档 → 工具调用爆炸 + 漏读（P6 子代理漏读在途白名单）：`scripts/flywheel_readme.ps1` 一键生成完整必读（环境事实 + 6 文档 + 白名单 + 本域 EXP + gate 项 + doccheck2 断言），gate 第 17 项 `flywheel-readme -Check` 验证完整性，doccheck2 第 10 项 `check_flywheel_script` 固化 |
 | EXP-071 | code | | 列表场景触摸命中带必须与渲染 `item_rect` 公式正逆成对：`touch.rs` 删旧常量/旧 API，新增 `scene_list_bands`/`slot_bands` 从 `ListLayout` 推导，三场景 `on_touch` 改读 `scenes.json`，doccheck2 第 11 项 `check_touch_render_pair` 固化（S11 审计 N3） |
- | EXP-072 | process | | 表现层改触摸/渲染坐标后界面错乱但 `cargo test` 全绿漏到用户才发现：P4-1 只锁 PCX 解码基准不锁「场景渲染最终像素」，gate 无视觉几何回归。`visual_regression.rs` 3 场景 headless 逐像素 diff + `visual_baseline.ps1` 基准图 + gate 第 18 项 `visual-regression`（EXP-072） |
- | EXP-073 | code | | 触摸/渲染 band 数必须 == 渲染行数（`Character::all().len()`），禁止硬编码：`select_role.rs` `scene_list_bands(..., 9)` 硬编码 9 条带但渲染只 5 行，多出的 4 条带 `from_index(5..=8) → None → unwrap_or(0)` 静默选第 0 角色，违反 EXP-067（EXP-059/EXP-071 第 3 次变体）。band 数走场景常量 `ROLE_COUNT`，doccheck2 第 12 项 `check_scene_band_count` 固化 |
- | EXP-074 | code | | 数据表迁移（scenes.json 坐标回归旧视觉值）：P6 重填表值未对拍 ab0e5b5 旧视觉、`item_rect` 误加 `-item_h/2` 居中性（旧代码高亮是「文字基线 y 上移固定 offset」非居中）、extra 解析器把缺 key 静默置 0 丢失 `locked.text_x=130`、视觉基准自生成（循环论证）。修复：`ListLayout` 新增 `highlight_offset`/`gold_x`、`extra_scalar` 抽 `*_x`/`*_y`、`menu_shell` 标题条 40px 回归、视觉回归只比「UI 像素分布」掩背景色（HD 背景≠PCX 背景非排版漂移），基准=回归后旧视觉帧。HD 化只换贴图不动逻辑布局坐标；数据表值必须==旧验收视觉，子代理禁止凭空重填+自证基准图（EXP-059/067/071 第 4 次变体） |
-  | EXP-075 | code | | HD 精灵「洋红框」根因实为**两条独立路径、两个独立根因，前次只修了一半**：① PCX 调色板 index 0 = 洋红哨兵色（ui.pak 94/120 张实测 (255,0,255)，index 0 占背景区 0%~84.7%），原版 8-bit blit 例程 sub_5D9C4 逐像素 `if (idx != 0) write` 跳过 index 0，但 Rust `blit_sprite`（RGB565，native 默认 `QualityMode::Original` 实际走的路）漏了这个跳过 → 洋红背景整片写满帧缓冲；② HD PNG 路（`QualityMode::Hd`）是另一根因：`pack_hd_assets.py` Lanczos 缩采样产生 3.8 万软 alpha + `blit_sprite_rgba` 只判 `a==0` + `render_hd` 漏调 blit。前次 S13.5 只修了②（HD 路），native 默认 ①（RGB565 路）未修 → 用户"没解决"。修复：① `blit_sprite`/`blit_sprite_rgba` PCX 回退/`terrain_atlas` 2 处加 `if idx == 0 { continue; }`（同 sub_5D9C4 口径）+ render_parity 基线同步；② 保留 pack_hd_assets.py sanitize_alpha + ALPHA_TRANSPARENT_CUTOFF + render_hd 补 blit。教训：**同一种视觉现象（洋红框）在 RGB565 路与 HD 路各有一个独立根因，修一条路必须查另一条路的同口径点；native 默认质量模式（Original）才是实机路径，headless 测试若只跑默认路径会漏 HD 路，反之亦然**。doccheck2 第 12 项 check_hd_sprite_transparency 扩为锚定两路 4 处不变量 |
-  | EXP-076 | code | | 「贴图覆盖菜单/特定区域错位」= 越界裁剪策略错 + 渲染管线无契约无分层。**现象**：native 默认 RGB565 路，index 场景 f1=111（105×11 长条）有 3 条 x=185/191/207 越界（>176），Rust `blit_sprite` 的 `ox = px_x.min(FB_W-1)` 把越界精灵**拉回屏幕右缘 175 列**画 1 列宽竖条 → 落在菜单区右缘 = 用户报的"贴图覆盖菜单/特定区域错位"。**根因**：原版 `sub_5EAA8` 源窗求交为空 → `sub_5D9C4` 早退**整条不画**（高置信，`evidence/audit_zorder.md` A3），Rust 漏了这个早退。**z-order 本身无错**（子代理坐实：原版按文件顺序 blit，非 f5 分档、非分帧，`evidence/audit_f5_zorder.md` 高置信）；`words[4]=176` 是误读（实际 `MapScene.words[4]`=w[8]=31=记录数，正确）。**解法**（职责分离 + 契约固化）：① 新增 `render_pipeline.rs` `clip_rect(src_w,src_h,ox,oy)->Option<ClipRect>` 纯函数（越界早退，6 单测），`blit_sprite`/`blit_sprite_rgba` 接入（修掉越界拉回）；② `docs/process/07_render_pipeline.md` 渲染契约（路径表/z-order 文件顺序/越界求交/PCX index 0 透明位，单一事实源）；③ `tests/render_snapshot.rs` 7 场景逐像素基准 diff（gate 第 19 项，基准由修复后代码生成杜绝自证循环）；④ `scripts/check_data_source.py`（gate 第 20 项，数据源 .Map/.pak 改动→快照门禁）。**教训**：渲染链路关键行为（越界裁剪/透明位/z-order）散在多文件无契约 → 每轮瞎猜。**必须**：(a) 渲染行为提成纯函数可单测；(b) 契约文档登记进路由表，改渲染代码前必读；(c) 快照门禁锁"最终像素"，数据源改动当场拦；(d) 修 bug 前先按 native 真实链路逐层定位（哪条 quality 路 + 越界/透明语义），不靠猜。gate 20 项全绿 |
+| EXP-072 | process | | 表现层改触摸/渲染坐标后 `cargo test` 全绿却界面错乱（漏到用户截图才发现）：P4-1 只锁 PCX 解码基准，不锁「场景渲染最终像素」→ `visual_regression` 3 场景逐像素 diff + gate 第 18 项。正文见 `process.md` |
+| EXP-073 | code | | 触摸/渲染 band 数必须 == 渲染行数，禁止硬编码：`select_role.rs` 硬编码 9 条带实渲 5 行，多出的 4 条静默选第 0 角色（EXP-059/071 第 3 次变体）→ band 数走场景常量 `ROLE_COUNT` + doccheck2 第 12 项。正文见 `code.md` |
+| EXP-074 | code | | 数据表迁移必须对拍旧验收视觉：凭空重填 + `-item_h/2` 居中性误解 + 缺 key 静默置 0 + 视觉基准自生成（循环论证）→ `highlight_offset`/`gold_x`/`extra_scalar` + 基准=回归后旧视觉帧（EXP-059/067/071 第 4 次变体）。正文见 `code.md` |
+| EXP-075 | process | | HD 精灵洋红框 = **两条路径各一根因**（RGB565 路漏 `idx==0` 跳过 + HD 路软 alpha/漏 blit），S13.5 只修 HD 路，而 native 默认走 RGB565 故"没解决"；**native 默认质量模式才是实机路径**。正文见 `process.md` |
+| EXP-076 | code | | 「贴图覆盖菜单/错位」= 越界裁剪策略错 + 渲染管线无契约：Rust `ox.min(FB_W-1)` 把越界精灵拉回右缘，原版 `sub_5EAA8` 源窗求交为空即**整条不画**；z-order 本身无错 → `clip_rect` 纯函数越界早退 + 契约文档 + 快照门禁。正文见 `code.md` |
 | EXP-077 | process | | 无原版渲染 ground truth 时禁止向用户索要截图（ARM WinCE exe 本机跑不起来；替代证据链=用户指认偏移量/像素对比工具/QEMU 系统模式需 WinCE 镜像；补网格层 a1[247]） |
 | EXP-078 | process | | 并行半成品致 gate FAIL 时先归因再决定能否转 verified：git stash 基线对照法归因（stash 前后 FAIL 项集合 diff），本轮引入项修干净、并行半成品项不替别人修（evidence 写明归因），台账维持 in_progress，commit 只暂存本轮改的文件（显式列文件不用 -A） |
+| EXP-079 | code | | UI 色彩统一 + 场景过渡动画 + 菜单交互反馈三件套：色彩常量单一文件源（chrome.rs）、TransitionState 淡入淡出、menu_item pressed 凹陷 + 选中正弦微光；帧动画用 AtomicU32（static mut 在 Rust 2024 编译错） |
+| EXP-080 | code | | 帧级动画破坏像素快照确定性（render_snapshot_forward diff 1758）：快照入口 render_to_framebuf 归零 transition + reset_animation_state，实机路径保留动画（分治）；基线由修复后代码重生成（删三套 baseline 目录首跑落盘） |
+| EXP-081 | code | | 真交叉淡化必须守卫「上一帧不存在」+ 防重入：首帧前 rendered_once=false 直接跳过过渡（否则 prev 是空白缓冲 → 全帧黑，render_parity 墨点率 0）；过渡中再 enter 沿用原 prev 只重置 t，不重抓半混合帧 |
+| EXP-082 | code | | 「≥4 行序列在 ≥3 处重复」= 提取信号：chrome::scene_shell/scene_hint 收敛 6 场景样板，顺带把 hint_row 的 i18n::sget 双查（为算宽度）收成单查，省每帧查表 + String 分配 |
+| EXP-083 | code | | EXP-051 复发：删 3 处未用 `use` 时用 PowerShell `Get-Content\|Set-Content` 批量改含中文注释的 .rs → 3 文件 CJK 乱码 + 注释与代码行粘连（fmt 报 unexpected closing delimiter）。含非 ASCII 的文件一律用编辑工具，改完立刻 fmt --check |
+| EXP-084 | code | | TTF 软件光栅化（ab_glyph）：`TtfFont::from_bytes` 加载 + `rasterize` 逐字形 1px 描边 + `advance` 字宽；`MenuShell.ttf_font` 可选字段（None 时回退 5×7 位图）；`find_ttf_font` 搜 `assets/fonts/` 再 fallback 系统字体；LXGW WenKai GB Lite（SIL OFL）放 `assets/fonts/lxgw-wenkai-reg.ttf` |
+| EXP-085 | code | | 数值平滑动画：显示值与实际值分离（`displayed_player_hp` / `displayed_boss_hp`），`approach()` 25% 步进 + 最小 1 确定性插值；`title_bar(animate)` logo 用 `glow_factor()` 闪烁；trait 扩展同步 mock（`render_intent.rs` VsHost 补 `pixel_at` / `displayed_*`）；`i32 as f32` 用 `#[allow]`，`usize as i32` 用 `usize::try_from` |
+| EXP-086 | code | | EXP-051/083 复发（第 3 次）：PowerShell `Get-Content\|Set-Content` 改含中文 .rs → 整文件双重编码乱码（GBK/UTF-8）；新变体：捕获 native `cargo` 中文 stdout 前未设 `[Console]::OutputEncoding=UTF8` 也乱码 log；解法=源改一律 edit/write 工具 + 设 OutputEncoding + 用 Read 核对 |
+| EXP-087 | code | | 忠实接线 `BuildManager` 须用宿主当前金注资：`Bank::new(0)` 让所有建造走「金不足被拒=状态不变」静默路径 → 建造加成恒 0（hp/atk +0,+0），拒绝时不报错难察觉；须核对加成真进战斗（seed=7 实测 hp=2040=2000+50−10） |
+| EXP-088 | process | | 机制≠规则：`unlocked_maps` 有存档字段/UI 置灰但无「击败 BOSS→解锁下一图」推进规则（开档 `game_app.rs:535` 全解锁、全库无写入增长端）；定稿跨图前先查规则是否存在 → `progression.md` 定稿 + `rules/progression.rs` + `cross_map_demo`，app 层接线归渲染线 |
+| EXP-089 | process | | 「跑多少次都一样」是固定种子回归测试的**正确**行为；要展示「每次都不同」用新种子 demo（无参=SystemTime 种子、`--seed N` 复现）；「随机/非固定」用选择指纹 distinct（366/400）+ 受控变异证明；数值断言须实测（m01=10 步不是 20） |
+| EXP-090 | code | | clippy pedantic 值语义状态 + `single_match_else`（EXP-053 复发）：小 Copy 状态结构用值语义 + 功能式（`on_boss_defeated(mut self)->Self`）；`Some/None` match → `if let/else`；demo 参数 >7 挂 `#[allow(clippy::too_many_arguments)]` |
+| EXP-091 | tools | | 文档文件含非法 UTF-8 坏字节时 doccheck `read_to_string` 静默跳过整文件 → 该文件全部检查行（如台账计数漂移）永久失声：release.md 实测 292 处坏字节（三字节字符第 3 字节被替 `0x3F`），计数行长期漂移未被 gate 抓到；解法=编辑前先扫坏字节确认文件是否「对 doccheck 可见」、只动 ASCII 区用字节级替换（EXP-051/083/086 教训）、全量修复另立任务。正文见 `tools.md` |
+| EXP-092 | process | | 已提交的乱码（UTF-8→GBK 误读）文件恢复 = 找最后干净 commit + 拼接干净新段，**绝不**逆向「解码回去」：`git show <sha>:<path>` 逐 commit 找最后干净 blob（标题字节判干净）+ 工作树截取乱码后追加的干净新段 + `WriteAllBytes` 写回（勿 `Set-Content`）。正文见 `process.md` |
+| EXP-093 | code | | 快照基线编解码不对称致「像素漂移」假阳（EXP-080 第 2 类根因）：渲染本身跨进程确定（3 次重生成哈希一致），漂移来自 PNG encode（`Rgb` 3 通道）与 decode（`EXPAND`+手工 `px*4` buffer+`next_frame`）通道/buffer 错位 → 解码行内右移 1 字节 → 87% 假阳 diff。解法：编解码对称无损（存 `Rgba`，按 `OutputInfo` 通道数归一）+ 上线前小 fixture 往返探针先证 0 mismatch。正文见 `code.md` |
+| EXP-094 | code | | 渲染框架提取时像素面必须能被测试宿主拦截：框架认具体帧缓冲型→两型同名不同型编不过；绕过宿主 `RenderHost::fill_rect` 直接画具体缓冲→测试宿主记录不到（编译绿≠行为等价，`key_rects_have_pixels` 血条宽 0）。解法：`PixelSink` trait 解帧缓冲 + `HostCanvas` 桥把像素转回宿主 trait（只读几何才走 `shell()`）+ 闭包式 `with_canvas` 避 E0515。正文见 `code.md` |
+| EXP-095 | code | | 居中 `cx - w/2` 与口径 `(W-w)/2` 在**奇数宽**时差 1px：hint 条宽断言数出 0 并连带打挂 3 套快照（看着像大改版）。解法：实现统一到「先减后除」`(2*screen_cx - w)/2`；奇数宽来自 TTF 文本 advance 非常量，别改测试口径也别重生基线。正文见 `code.md` |
 
 ## 条目格式（写新条时照抄）
 

@@ -51,7 +51,7 @@
 | **D 数据/工具**（先行） | 数值/文本/布局/控件表 + 校验脚本 | `assets/data/*.json`、`crates/ti-core/src/data/**`、`scripts/validate_data.py`（FIND-201 统一入口）、`legacy/scripts/gen_layout.py` | 无（契约轮内完成） |
 | **P1 战斗** | 战斗会话与结算 | `crates/ti-core/src/rules/battle.rs`、`crates/ti-core/src/domain/combat.rs`、`crates/ti-core/tests/rules_battle.rs` | D |
 | **P2 经济** | 贸易 + 建造 + 银行 | `crates/ti-core/src/rules/{trade,build}.rs`、`domain/economy.rs`、`tests/{rules_trade,rules_build}.rs` | D |
-| **P3 地图/卡牌** | 网格移动、据点、抽牌 | `crates/ti-core/src/rules/{main_map,cards,cards_draw}.rs`、`domain/map.rs`、对应 tests | D |
+| **P3 地图/卡牌** | 网格移动、据点、抽牌、跨图推进 | `crates/ti-core/src/rules/{main_map,cards,cards_draw,progression}.rs`、`domain/map.rs`、对应 tests | D |
 | **P4 流程菜单** | 主菜单/选角/选图/消息/渲染 | `crates/ti-core/src/rules/{menu,selection,messages,main_loop,render}.rs`、`domain/{flow,selection,messages,render}.rs` | D |
 | **P5 存档 + RNG** | 存档 v2 + 迁移 + 可复现随机 | `crates/ti-core/src/rules/{saveload,saveload_json,rng}.rs`、`domain/persistence.rs`、`tests/{rules_saveload,rules_saveload_json,save_migration}.rs` | **P1–P4 状态结构稳定后** |
 | **P6 表现层**（后续轮） | 场景/控件/渲染/输入 | `crates/ti-app/src/{scenes,widgets.rs,touch.rs,menu_shell.rs}`、`crates/ti-platform/src/**` | P1–P5 会话 API 冻结 |

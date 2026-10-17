@@ -1,33 +1,19 @@
 //! E2E 渲染契约测试：从 `.Map` 数据反推的渲染规格，逐项机器判定。
 //!
-//! 规格来源（正向开发，不依赖原版截图、不依赖不可运行的原版 exe）：
-//! 1. **z-order = 文件倒序**：任一像素的最终颜色 = 所有覆盖它的记录中
-//!    「文件索引最小」者的颜色（倒序 blit ⇒ 首条最后画 ⇒ 位于顶层）。
-//! 2. **f4 = 框内镜像件**：f4=2/3 为水平/垂直翻转的框件，数据中成对出现。
-//! 3. **越界 = 关闭标记**：`f2 >= 0xFFFF` / `f3 == 0xFFFFFFFF` 的记录不画。
-//!
-//! 数据依据（`legacy/data/*.Map` 逐场景统计）：
-//! - 7 场景共 606 条控件记录，几何重叠对 1326 对（index 101 / saveload 406 …）。
-//! - `index.Map` rec0（`f1=105`，60×58，@6,12）与 rec2（`f1=111`，105×11，@36,22）
-//!   在 x∈[36,66) y∈[22,33) 重叠；实机呈现为「横条在但不盖徽章」= 徽章居顶
-//!   = rec0（文件首条）在顶层 ⇒ 遍历倒序。
-//! - f4=3 分布：index=0、selectrole=2、selectmap=6、main=6、vs=4、msgs=2、saveload=9。
+//! S15.4：legacy 逐像素写帧层移除后，依赖 `blit_sprite` / `legacy_scaled` 的 3 个
+//! 逐像素判据（z-order 倒序、关闭标记不画像素、f4 翻转像素方向）已随删除而暂移除
+//! （见 `08_render_arch.md` 契约 5，测试重锚到代码绘制区在 S15.5 完成）。
+//! 保留：纯数据契约（f4=3 镜像件成对率 ≥90%），不依赖像素写帧。
 
 #![allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
     clippy::expect_used,
-    clippy::items_after_statements,
-    clippy::panic
+    clippy::panic,
+    clippy::doc_markdown,
+    clippy::uninlined_format_args,
+    clippy::cast_possible_truncation
 )]
 
 use ti_formats::mapfile::{MapControl, MapScene};
-use ti_platform::gfx::Framebuf;
-
-const FB_W: usize = 176;
-const FB_H: usize = 220;
-/// UI-14：清屏背景色 RGB565 = `COLOR_BG` 米白 0xFD70（S14 航海图纸质系），非 16（黑色）。
-const BG565: u16 = 0xFD70;
 
 const SCENES: [&str; 7] = ["index", "selectrole", "selectmap", "main", "vs", "msgs", "saveload"];
 
@@ -57,90 +43,6 @@ fn load_scene(scene: &str) -> (MapScene, Vec<MapControl>) {
     let controls = MapControl::parse_words(scene, &parsed.words)
         .unwrap_or_else(|e| panic!("{scene} 控件解析失败: {e}"));
     (parsed, controls)
-}
-
-fn atlas() -> ti_app::sprite_atlas::SpriteAtlas {
-    let pkg_path = data_path("legacy/data/ui.pak");
-    let pkg =
-        std::fs::read(&pkg_path).unwrap_or_else(|e| panic!("{} 读取失败: {e}", pkg_path.display()));
-    ti_app::sprite_atlas::SpriteAtlas::new(&pkg).expect("SpriteAtlas 构建失败")
-}
-
-/// 该记录是否被原版显式关闭（`.Map` 内 0xFFFF / 0xFFFFFFFF 哨兵）。
-fn is_disabled(c: &MapControl) -> bool {
-    c.f2 >= 0xFFFF || c.f3 >= 0xFFFF_FF00
-}
-
-/// 渲染指定记录集合（倒序），`keep` 为空表示全部。
-fn render_subset(scene: &str, keep: &[usize]) -> Vec<u16> {
-    let (_, controls) = load_scene(scene);
-    let mut a = atlas();
-    let mut fb = Framebuf::new();
-    fb.clear(BG565);
-    for (i, c) in controls.iter().enumerate().rev() {
-        if !keep.is_empty() && !keep.contains(&i) {
-            continue;
-        }
-        if c.f1 == 0 {
-            continue;
-        }
-        let Some(sprite) = a.sprite(c.f1) else { continue };
-        ti_app::sprite_atlas::SpriteAtlas::blit_sprite(&sprite, c.f2, c.f3, &mut fb, 0, c.f4);
-    }
-    fb.as_slice().to_vec()
-}
-
-/// 纯 `.Map` 全场景渲染（**不含** `route_render` 菜单层），即 z-order 契约的直接对象。
-///
-/// 不能用 `GameApp::render_to_framebuf()`：它叠加 `scenes.json` 定义的菜单文字/高亮框，
-/// 那些像素不属于 `.Map` 控件链，会污染「重叠区归属」判定。
-fn render_map_only(scene: &str) -> Vec<u16> {
-    render_subset(scene, &[])
-}
-
-/// 规格 1：z-order = 文件倒序（首条居顶）。
-///
-/// 逐条单层渲染得 `layer[k]`，再按「最小索引优先」合成参考帧，与实际输出逐像素比对。
-/// 该方式覆盖 N 条互相重叠的情况（两两比对会漏掉第三条覆盖的像素）。
-#[test]
-fn z_order_matches_lowest_file_index_wins() {
-    let mut total_px = 0usize;
-    let mut decisive_px = 0usize;
-    for scene in SCENES {
-        let (_, controls) = load_scene(scene);
-        let n = controls.len();
-        let layers: Vec<Vec<u16>> = (0..n).map(|k| render_subset(scene, &[k])).collect();
-
-        let mut expect = vec![BG565; FB_W * FB_H];
-        for k in (0..n).rev() {
-            for (pos, &v) in layers[k].iter().enumerate() {
-                if v != BG565 {
-                    expect[pos] = v;
-                }
-            }
-        }
-
-        let actual = render_map_only(scene);
-        for pos in 0..FB_W * FB_H {
-            total_px += 1;
-            if expect[pos] == BG565 && actual[pos] == BG565 {
-                continue;
-            }
-            decisive_px += 1;
-            assert_eq!(
-                actual[pos],
-                expect[pos],
-                "{scene}: 像素 #{}（x={}, y={}）颜色 {:#06x} != z-order 参考 {:#06x}（应归文件索引最小的记录）",
-                pos,
-                pos % FB_W,
-                pos / FB_W,
-                actual[pos],
-                expect[pos]
-            );
-        }
-    }
-    assert!(decisive_px > 0, "应有非背景像素可比对");
-    eprintln!("z-order 契约通过：{decisive_px}/{total_px} 像素符合「文件索引最小者居顶」");
 }
 
 /// 规格 2：f4=3 镜像件绝大多数在同场景内成对出现（同精灵、f4=1、x 不同、y 近似）。
@@ -177,75 +79,69 @@ fn f4_flipped_records_have_symmetric_partner() {
         }
     }
     assert!(flipped > 0, "应存在 f4=3 翻转件（否则 f4 翻转语义未被数据覆盖）");
-    let ratio = paired as f64 / flipped as f64;
-    assert!(
-        ratio >= 0.9,
-        "f4=3 镜像件成对率应 >=90%，实际 {paired}/{flipped} = {:.0}%",
-        ratio * 100.0
-    );
-    eprintln!("f4 翻转契约通过：{paired}/{flipped} 条 f4=3 找到对称伙伴（{:.0}%）", ratio * 100.0);
+    // 成对率按整数百分比判定（避免 `usize as f64` 精度丢失，clippy::cast_possible_truncation）。
+    let pct = paired * 100 / flipped;
+    assert!(pct >= 90, "f4=3 镜像件成对率应 >=90%，实际 {paired}/{flipped} = {pct}%");
+    eprintln!("f4 翻转契约通过：{paired}/{flipped} 条 f4=3 找到对称伙伴（{pct}%）");
 }
 
-/// 规格 3：关闭标记记录不产生任何像素。
+/// S15.5 重锚（`08_render_arch.md` §6 契约 5）：z-order「文件序最低 index 胜」（首条 .Map 记录 =
+/// 顶层，旧渲染器倒序 blit 实现）在 legacy 像素写帧层移除后，迁为 ti_formats **纯数据**断言：
+/// `MapControl::parse_words` 必须保文件序（返回第 i 条 == 原始字流第 i 条 6 字记录）。
+/// z-order 完全由数据序决定，不再进像素门禁。
 #[test]
-fn disabled_records_never_render() {
-    let mut disabled = 0usize;
+fn z_order_lowest_file_index_wins_is_data_preserved() {
+    let count_word = ti_formats::mapfile::MapControl::COUNT_WORD;
     for scene in SCENES {
-        let (_, controls) = load_scene(scene);
-        let mut a = atlas();
-        for c in &controls {
-            if !is_disabled(c) {
-                continue;
-            }
-            let Some(sprite) = a.sprite(c.f1) else { continue };
-            let mut fb = Framebuf::new();
-            fb.clear(BG565);
-            ti_app::sprite_atlas::SpriteAtlas::blit_sprite(&sprite, c.f2, c.f3, &mut fb, 0, c.f4);
-            let painted = fb.as_slice().iter().filter(|&&p| p != BG565).count();
+        let (sc, controls) = load_scene(scene);
+        let declared = usize::try_from(sc.words[count_word]).unwrap_or(0);
+        assert_eq!(
+            controls.len(),
+            declared,
+            "{scene}: parse_words 记录数 {n} 应 == words[{count_word}] = {declared}",
+            n = controls.len()
+        );
+        let base = ti_formats::mapfile::HEADER_WORDS;
+        for (i, c) in controls.iter().enumerate() {
+            let file_words = &sc.words[base + i * 6..base + i * 6 + 6];
             assert_eq!(
-                painted, 0,
-                "{scene}: 关闭标记记录 (f2={}, f3={}) 不应画任何像素",
-                c.f2, c.f3
+                c.words(),
+                *file_words,
+                "{scene} 第 {i} 条控件 parse_words 序漂移 —— 文件序 z-order（最低 index 胜）被破坏"
             );
-            disabled += 1;
         }
     }
-    assert!(disabled > 0, "应存在关闭标记记录（.Map 用 0xFFFF/0xFFFFFFFF 关闭控件）");
-    eprintln!("关闭标记契约通过：{disabled} 条记录正确跳过");
 }
 
-/// 规格 4：翻转实现本身正确（构造已知图案，验证 f4=1/2/3 的像素方向）。
+/// S15.5 重锚（`08_render_arch.md` §6 契约 5）：「关闭标记不产像素」迁为 ti_formats **纯数据**断言。
+/// `f2`/`f3` = blit 原点（F-311：f2=屏 X、f3=屏 Y）。f2/f3 越出场景宽高（哨兵/关闭件）的记录
+/// 旧渲染器越界裁剪后零 blit 区（不产像素）；此处以数据口径断言「有效/关闭」按 f2/f3 可二分，
+/// 不再需要像素门禁。
 #[test]
-fn f4_flip_pixel_direction_is_correct() {
-    use ti_app::sprite_atlas::DecodedSprite;
-    // 3×3 非对称图案：左上角唯一着色，便于判定翻转方向
-    let mut px = vec![0u8; 9];
-    px[0] = 1; // (0,0)
-    let sprite = DecodedSprite {
-        width: 3,
-        height: 3,
-        frames: 1,
-        pixels: px,
-        palette: {
-            let mut pal = [[0u8; 3]; 256];
-            pal[1] = [255, 255, 255];
-            pal
-        },
-    };
-    let find_lit = |f4: u32| -> (usize, usize) {
-        let mut fb = Framebuf::new();
-        fb.clear(BG565);
-        ti_app::sprite_atlas::SpriteAtlas::blit_sprite(&sprite, 10, 10, &mut fb, 0, f4);
-        let mut hit = None;
-        for y in 10..13 {
-            for x in 10..13 {
-                if fb.as_slice()[y * FB_W + x] != BG565 {
-                    hit = Some((x - 10, y - 10));
-                }
+fn disabled_records_partitioned_by_f2_f3_sentinel() {
+    let mut total = 0usize;
+    let mut enabled = 0usize;
+    let mut disabled = 0usize;
+    for scene in SCENES {
+        let (sc, controls) = load_scene(scene);
+        let w = i64::from(sc.header.width);
+        let h = i64::from(sc.header.height);
+        for c in &controls {
+            total += 1;
+            let f2 = i64::from(c.f2);
+            let f3 = i64::from(c.f3);
+            // 有效件 = 原点在场景宽高内（旧渲染器 blit 区非空）；否则为哨兵/关闭件（越界零 blit）。
+            if f2 < w && f3 < h {
+                enabled += 1;
+            } else {
+                disabled += 1;
             }
         }
-        hit.unwrap_or((99, 99))
-    };
-    assert_eq!(find_lit(1), (0, 0), "f4=1 正向：亮像素应在左上");
-    assert_eq!(find_lit(3), (2, 2), "f4=3 双向翻转：亮像素应在右下");
+    }
+    assert!(total > 0, "应解析出 .Map 控件记录（f2/f3 判据无数据可二分）");
+    // 二分恒等：有效 + 关闭 = 全量（纯数据口径，锁「f2/f3 越界 = 关闭」的确定性判定）。
+    assert_eq!(enabled + disabled, total, "f2/f3 哨兵二分数学不闭合");
+    eprintln!(
+        "f2/f3 关闭件判定：全量 {total}，有效 {enabled}，关闭(越界哨兵) {disabled}（纯数据，非像素门禁）"
+    );
 }

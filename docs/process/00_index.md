@@ -1,11 +1,11 @@
 # 标准化开发流程（Process）
 
 本目录是**不依赖任何逆向产物**的工程规范。新人（或新会话）只读本目录 +
-[`docs/business/`](../business/00_index.md) 即可参与开发，无需读 `docs/facts/`、
-`docs/spec/`、`ref/pseudocode/`。
+[`docs/business/`](../business/00_index.md) 即可参与开发，无需读 `legacy/docs/facts/`、
+`legacy/docs/spec/`、`ref/pseudocode/`。
 
 > **逆向产物的定位变更（2026-10 决策）**
-> 逆向产物（`docs/facts/`、`docs/spec/`、`ref/pseudocode/*.c`、`crates/ti-core/src/oracle/`）
+> 逆向产物（`legacy/docs/facts/`、`legacy/docs/spec/`、`ref/pseudocode/*.c`、`crates/ti-core/src/oracle/`）
 > **降级为「参照物」**，不再是开发依据、不是验收基准、不进代码注释作为权威来源。
 > 业务规则的唯一事实源是 [`docs/business/`](../business/00_index.md) + `assets/data/*.json`。
 > 详见 [`docs/plan-s8-refactor.md`](../plan-s8-refactor.md) §1。
@@ -69,6 +69,9 @@
 | [`03_templates.md`](03_templates.md) | 可复制的模版：场景 / 控件 / 数据表 / 模块 / 测试 |
 | [`04_tooling.md`](04_tooling.md) | 脚本与 codegen 工具链、幂等要求、新增工具的登记方式 |
 | [`05_module_parallel.md`](05_module_parallel.md) | **模块并行开发 loop**（契约冻结 → 多包并行 → 集成联调 → 记账；包白名单互斥 + 任务书模板 + 纪律 5 条） |
+| [`06_flywheel.md`](06_flywheel.md) | **对抗流水线飞轮**（找问题 / 审计 / 修复 3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件；gate 第 17 项） |
+| [`07_render_pipeline.md`](07_render_pipeline.md) | **legacy 像素管线契约**（路径表 / z-order 文件顺序 / 越界求交裁剪 / PCX 透明位 index 0）；S16 起**降级为逆向参照**——运行时架构见 08 |
+| [`08_render_arch.md`](08_render_arch.md) | **运行时渲染架构**（分层 / 3 绘制原语 / z-order 枚举 / 5 条坐标与像素来源契约 / grep 门禁 / 测试重锚矩阵；改渲染代码前必读） |
 
 ## 文档治理（与 [`loop.md`](../loop.md) 一致）
 

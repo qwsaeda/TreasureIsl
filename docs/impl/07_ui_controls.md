@@ -2,7 +2,7 @@
 
 本文档是 UI 系统的完整实现规格，实现者无需阅读其他文档即可写出正确的界面渲染与控件逻辑代码。
 
-> 事实来源：`docs/design/ui_controls.md` + `docs/design/constants.md` §1/§2/§8 + `docs/facts/map.md` + `docs/facts/font.md`。
+> 事实来源：`legacy/docs/design/ui_controls.md` + `legacy/docs/design/constants.md` §1/§2/§8 + `legacy/docs/facts/map.md` + `legacy/docs/facts/font.md`。
 
 ---
 

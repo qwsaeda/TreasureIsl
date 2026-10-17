@@ -1,4 +1,4 @@
-﻿# 执行计划 S0–S2：地基 / 资源逆向 / 三端骨架
+# 执行计划 S0–S2：地基 / 资源逆向 / 三端骨架
 
 > **定位**：S0–S2 是逆向期的历史计划（S0 地基 / S1 资源逆向 / S2 三端骨架），**已 archived**，非正向开发依据。逆向产物实体归档 `legacy/`。当前正向开发见 `docs/00_design.md` + `docs/business/`。
 
@@ -9,12 +9,12 @@
 
 | ID | 产出物 | 验收命令 / DoD | deps |
 |---|---|---|---|
-| S0.1 | cargo workspace（§5.1 **5 crate** 骨架）；`rustfmt.toml`/`clippy.toml`/`[workspace.lints]`；`scripts/gate.ps1`（当时 8 项；构建项本期只含 native，wasm/android 行按阶段解锁；现 20 项） | `scripts/gate.ps1` 全绿（gate 第 4 项本期只跑 native）；占位扫描 0 命中；**完成后回写 AGENTS.md 命令一节** | — |
-| S0.2 | `scripts/ida_dump.py` + `idat -A -S` 批处理；产出 `ref/pseudocode/*.c`、`ref/functions.csv`（addr/size/name/caller/callee/字符串 xref） | 伪代码文件数 == IDA 函数数；`functions.csv` 行数与 `.i64` 函数表一致（0 缺失） | S0.1 |
+| S0.1 | cargo workspace（§5.1 **5 crate** 骨架）；`rustfmt.toml`/`clippy.toml`/`[workspace.lints]`；`scripts/gate.ps1`（当时 8 项；构建项本期只含 native，wasm/android 行按阶段解锁；现 21 项） | `scripts/gate.ps1` 全绿（gate 第 4 项本期只跑 native）；占位扫描 0 命中；**完成后回写 AGENTS.md 命令一节** | — |
+| S0.2 | `legacy/scripts/ida_dump.py` + `idat -A -S` 批处理；产出 `ref/pseudocode/*.c`、`ref/functions.csv`（addr/size/name/caller/callee/字符串 xref） | 伪代码文件数 == IDA 函数数；`functions.csv` 行数与 `.i64` 函数表一致（0 缺失） | S0.1 |
 | S0.3 | `cargo run -p ti-tools -- classify`：按库特征（zlib 字符串/HMSS/PCX/gx 调用/UI 事件串）分类 → `ref/classify.json` + 覆盖率报告 | 覆盖率 100%（允许类目 `pending`，S3.12 前清零） | S0.2 |
 | S0.4 | `ref/imports.json`：105+9+2=116 个导入序号/名字 → API 名 100% 恢复（WinCE 序号表 + 调用点特征双向校验） | 116/116 有名字；每条至少 1 处调用点证据 | S0.2 |
 | S0.5 | `ti-formats/src/macros.rs` 落地 `define_format!`/`parse_err!`/`roundtrip_all!` 三个宏 + 单测 | 宏的单测全绿（用一个玩具格式验证 0 未知字节 + roundtrip 断言生效） | S0.1 |
-| S0.6 | `plan/ledger.yaml` 全量任务登记（本文件与 S3/S4 的所有 ID，状态 `pending`，deps 正确） | gate 第 8 项台账校验通过（当时 8 项门禁；现 20 项） | S0.1 |
+| S0.6 | `plan/ledger.yaml` 全量任务登记（本文件与 S3/S4 的所有 ID，状态 `pending`，deps 正确） | gate 第 8 项台账校验通过（当时 8 项门禁；现 21 项） | S0.1 |
 
 ## S1 — 资源逆向（1~2 周）
 

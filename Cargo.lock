@@ -3,6 +3,22 @@
 version = 4
 
 [[package]]
+name = "ab_glyph"
+version = "0.2.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01c0457472c38ea5bd1c3b5ada5e368271cb550be7a4ca4a0b4634e9913f6cc2"
+dependencies = [
+ "ab_glyph_rasterizer",
+ "owned_ttf_parser",
+]
+
+[[package]]
+name = "ab_glyph_rasterizer"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "366ffbaa4442f4684d91e2cd7c5ea7c4ed8add41959a31447066e279e432b618"
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -192,14 +208,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
-name = "legacy-oracle"
-version = "0.1.0"
-dependencies = [
- "ti-core",
- "ti-formats",
-]
-
-[[package]]
 name = "lewton"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -334,6 +342,15 @@ name = "opus-pure"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4de7c2ad44427a636b27bf0b03eb29e713775ba1b45ff31a0618c19ee5adb215"
+
+[[package]]
+name = "owned_ttf_parser"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36820e9051aca1014ddc75770aab4d68bc1e9e632f0f5627c4086bc216fb583b"
+dependencies = [
+ "ttf-parser",
+]
 
 [[package]]
 name = "png"
@@ -502,20 +519,22 @@ dependencies = [
 name = "ti-app"
 version = "0.1.0"
 dependencies = [
+ "ab_glyph",
  "macroquad",
+ "png",
  "serde",
  "serde_json",
  "thiserror",
  "ti-core",
  "ti-formats",
  "ti-platform",
+ "ti-render",
 ]
 
 [[package]]
 name = "ti-core"
 version = "0.1.0"
 dependencies = [
- "legacy-oracle",
  "rand_core",
  "rand_pcg",
  "serde",
@@ -540,6 +559,17 @@ dependencies = [
  "png",
  "thiserror",
  "ti-core",
+ "ti-formats",
+ "ti-render",
+]
+
+[[package]]
+name = "ti-render"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "serde",
+ "serde_json",
  "ti-formats",
 ]
 

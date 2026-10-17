@@ -15,9 +15,17 @@ macroquad = { workspace = true, features = ["audio"] }
 ti-core.workspace = true
 ti-formats.workspace = true
 ti-platform.workspace = true
+ti-render.workspace = true
 # S5.2：headless 全流程脚本解析（full_run.json，复用 workspace serde/serde_json，不新增依赖）
 serde.workspace = true
 serde_json.workspace = true
+# UI-21 TTF 软件光栅化（纯 Rust，无 Freetype 依赖）
+ab_glyph.workspace = true
+
+# S15.5：渲染快照/视觉回归基线（1080 代码绘制帧 → DEFLATE PNG，`png` 已在 workspace 依赖，
+# 经 ti-platform hd-8bit 进入；此处 dev-dep 供 tests/ 基线门禁直接编码/解码，零新增外部库）
+[dev-dependencies]
+png.workspace = true
 
 [[bin]]
 name = "treasure-wasm"
@@ -51,6 +59,13 @@ required-features = ["native-shell"]
 [[bin]]
 name = "sprite-step"
 path = "src/bin/sprite_step.rs"
+required-features = ["native-shell"]
+
+# 渲染意图排查（08_layout_design.md §4）：7 场景完整帧导出 4x PNG（场景层+精灵+地形叠加），
+# 供肉眼过「立绘盖不盖文字/血条/瓦片画没画对」等跨层观感问题。与 sprite-step（只渲染 .Map 层）互补。
+[[bin]]
+name = "render-png"
+path = "src/bin/render_png.rs"
 required-features = ["native-shell"]
 
 [features]

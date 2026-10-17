@@ -1,15 +1,14 @@
 # S10 现代化收口计划（Modern Refinement Flywheel）
 
 **目标**：修复界错乱/加载 bug → 占位清零 → GPU 化渲染 → 对抗流水线 loop 至停机。
-**前置决策**（2026-10 用户）：本轮全做完（阶段 0+1+2+3+4）；TTF 字形并入 GPU 阶段；停机条件 = 审计 0 新发现 + P3-3 16 步 0 失败 + gate 16 项全绿（S10 时点，现 20 项）。
+**前置决策**（2026-10 用户）：本轮全做完（阶段 0+1+2+3+4）；TTF 字形并入 GPU 阶段；停机条件 = 审计 0 新发现 + P3-3 16 步 0 失败 + gate 全绿（S10 时点 16 项；当前项数以 `docs/parity.md` §代码质量门禁 的计数约定为准）。
 
-> 本计划取代旧「S9 骨架」定位：S9.1/S9.3/S9.4 已 verified（场景拆分/字段私有化/Builder+Type-State），
-> S9.2（窄接口拆分）与 S9.5（Command 模式）回退 pending（S9.5 因 commands.rs 不存在被 `check_ledger_reality` 第 14 项拦截，EXP-058）。
-> S10 在 S9 骨架之上推进「真正可玩 + 现代观感」。
+> **历史时点说明**：S9.1–S9.5 全部已 verified（见 `plan/ledger.yaml`）。
+> 本计划为 S10 阶段历史文档，保留用于追溯；S10.0–S10.5 全部已 verified。
 
 ## 1. 阶段 0 — 标准修正与防虚报（主线程）
 
-- **0.1 台账回退 + S10 登记**（`plan/ledger.yaml`）：S9.5 加 `blocked_by: s10-flywheel-stage-0`（pending）；新增 S10.0–S10.5。
+- **0.1 台账回退 + S10 登记**（`plan/ledger.yaml`）：S10.0–S10.5 已全部 verified（见台账）。
 - **0.2 门禁第 14 项**（`scripts/check_ledger_reality.py` + `gate.ps1`）：台账 verified ↔ evidence ↔ 代码符号三方对账（`SYMBOL_EXPECTATIONS` 登记 DoD 声明的代码产物，如 S9.5 的 `trait Command`/`commands.rs`），机器化拦截子代理虚报。
 - **0.3 经验回写**（`docs/experience/process.md` + `code.md` + `index.md`）：
   - EXP-058：子代理 verified 必须 Test-Path + 实跑复核 + 三方对账（S9.5 教训）；
@@ -64,7 +63,7 @@ loop:
      - 需修码     → evidence 修复 + 测试
      - 流程教训   → docs/experience/index.md 新 EXP 条
   4. 修复 → 重 gate → 再审计
-停机：审计 0 新发现 + P3-3 16 步 0 失败 + gate 16 项全绿（S10 时点，现 20 项）
+停机：审计 0 新发现 + P3-3 16 步 0 失败 + gate 16 项全绿（S10 时点，现 21 项）
 ```
 
 **防虚报**：每轮子代理产出主线程一律 Test-Path + 实跑复核（EXP-058）。

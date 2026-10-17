@@ -1,5 +1,15 @@
 //! S8.5 控件层：`assets/data/controls.json`（2041 条控件记录）→ 帧缓冲绘制 + hit 边界。
 //!
+//! **状态：legacy 保留（生产渲染路径不使用）**
+//!
+//! S15 UI 重设计后，7 个场景的渲染全部走 `scenes::chrome`（羊皮纸/木纹/金色系 + `scenes.json` 坐标），
+//! 不再调用本模块。保留原因：
+//! 1. `controls.json` 是 `scripts/validate_data.py` 的校验对象（与 `legacy/ref/controls.json` 一致性）；
+//! 2. `tests/widgets.rs` 与 `tests/game_app_flow.rs` 用本模块验证数据驱动渲染/hit 边界契约。
+//!
+//! 如需彻底移除，须同步：删 `lib.rs` 的 `pub mod widgets;` + 删 `tests/widgets.rs` + 删 `tests/game_app_flow.rs`
+//! 中相关用例 + 确认 `gen_layout` 脚本不再产出 `controls.json`。
+//!
 //! 单一事实源（`docs/impl/14_asset_enhancement.md`）：
 //! - 控件表 = `scripts/gen_layout.py` 从 `ref/controls.json`（逆向控件记录）生成的
 //!   `assets/data/controls.json`（20 场景 / 2041 记录 / 44 种 f5 控件类型）；
@@ -10,9 +20,9 @@
 //! - 只画**可见**控件（`flags & 1 != 0` 且 `w > 0 && h > 0` → 「draw 面积 > 0」）；
 //! - hit 边界 = 控件矩形（`x/y/w/h`），供触摸层做「点在哪个控件上」；
 //! - 控件类型 `f5` 决定默认色板索引（`kind % 调色板长度`，避免硬编码每种类型的色）。
-//
-// 色板索引计算：`usize::try_from(rec.kind)`（`kind` 为 u32，32/64 位平台均安全）取模 `palette.len()`，
-// 避免 `as u32` 中转在 64 位指针平台触发 `cast_possible_truncation`。
+//!
+//! 色板索引计算：`usize::try_from(rec.kind)`（`kind` 为 u32，32/64 位平台均安全）取模 `palette.len()`，
+//! 避免 `as u32` 中转在 64 位指针平台触发 `cast_possible_truncation`。
 use ti_core::data::{self as ti_data, ControlRec, ControlsCfg};
 
 /// 控件层：封装 `controls.json` 的读取 + 绘制 + hit 测试。

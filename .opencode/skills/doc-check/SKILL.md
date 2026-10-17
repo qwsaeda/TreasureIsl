@@ -38,9 +38,9 @@ Read `assets/data/balance.json`，逐字段比对 `docs/business/{economy,progre
 修法：Read 真实 `.rs` 方法签名，把文档里过时的 API 名改掉；若是「设计占位」代码块，加 `> 设计占位，勿照抄` 标注。
 
 ### gate 项数全库漂移
-`gate.ps1` 顶层 `Report`/`Skip` 调用数 = 实际项数（当前 13 项）。
-`grep` 全库 `12 项`/`13 项`，对照修正所有写死的文档（`AGENTS.md`、`loop.md`、`parity.md`、`plan-s*.md`、`gamebook.md`、`git.md`、`README.md`、`style.md`、`impl/14_asset_enhancement.md`、`experience/code.md`、`process/04_tooling.md`）。
-`parity.md` 是唯一权威口径，其他文档以它为准。
+项数 = `gate.ps1` 中**顶格（第 0 列）**的 `Report` 调用数；缩进在 `if`/`else` 内的条件 `Report`/`Skip` **不计入**（wasm / android 构建、`zero-unknown verify`），`Skip` 也不单独计项。当前 **21 项**。
+**不要手工重数**——跑 `powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check -Quiet`，末行直接打印 `gate N 项`；该口径同时由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账。
+`grep` 全库 `gate \d+ 项`，把写死的数字改为与上述口径一致；带「X 时点」标注的历史计划文档**不要改**（那是快照）。`docs/parity.md` §代码质量门禁 是唯一权威口径。
 
 ### release.md 台账计数
 跑 `cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 拿实测 `N tasks, M verified`，更新 `docs/release.md` 对应行。`doccheck` 第 9 项 `check_ledger_counts` 会校验，改完必须与实测一致。

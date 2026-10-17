@@ -1,12 +1,12 @@
 // oracle：S3.3 差分基准，测试专用。
 //
-// 直译 `docs/spec/menu.md` 的主菜单事件状态机：
+// 直译 `legacy/docs/spec/menu.md` 的主菜单事件状态机：
 // - 场景枚举 [`MenuScene`]：8 个可到达状态（Intro/Index/SelectRole/SelectMap/Saveload/Option/Help/Exit）；
 // - 事件枚举 [`MenuEvent`]：`Click(u32)`（事件码）/ `Invalid` / `Quit`；
 // - [`oracle_menu_transition`]：同一 (场景, 事件) 产生同一 (新场景, Option<`Sfx`>)，逐位基准；
 // - [`oracle_reachable_menu`]：从 Intro/Index 出发的可达场景集。
 //
-// 事件码（`docs/spec/menu.md` §a，`saveload` 实测）：
+// 事件码（`legacy/docs/spec/menu.md` §a，`saveload` 实测）：
 // - 13 = 确定/Enter（菜单项选择）；
 // - 27 = 返回（子场景回 index）；
 // - 37 = 无效操作（**推测** invalid.wav 触发）；
@@ -61,7 +61,7 @@ impl MenuScene {
     }
 }
 
-/// 音效枚举（`docs/spec/menu.md` §d，**推测**触发点）。
+/// 音效枚举（`legacy/docs/spec/menu.md` §d，**推测**触发点）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sfx {
     /// 点击有效菜单项（`music\press.wav`）。
@@ -114,7 +114,7 @@ impl MenuEvent {
 
 /// oracle：给定当前场景 + 事件，返回 (新场景, 可选音效)。
 ///
-/// 规则（直译 `docs/spec/menu.md` §a/§c/§d）：
+/// 规则（直译 `legacy/docs/spec/menu.md` §a/§c/§d）：
 /// - `Intro` + 任何事件 → 自动进入 `Index`（过场结束，`00029110:场景管理器` 完成态检查），无音效；
 /// - `Index` + `Click(0)`（新游戏）→ `SelectRole` + `Press`；
 /// - `Index` + `Click(1)`（继续）→ `Saveload` + `Press`；

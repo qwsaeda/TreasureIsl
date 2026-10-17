@@ -149,7 +149,8 @@ fn main() {
         script.steps.len()
     );
 
-    let mut app = GameApp::new(176.0, 220.0);
+    // QA020：呈现层 1080×1920 口径（headless 只跑状态机，视口参数不影响判据）
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.rng_mut().set_seed(script.seed);
     app.set_rng_seed(script.seed);
 

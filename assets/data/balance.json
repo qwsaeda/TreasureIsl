@@ -121,8 +121,8 @@
   },
 
   "ui": {
-    "logical_width": 176,
-    "logical_height": 220,
+    "logical_width": 1080,
+    "logical_height": 1920,
     "glyph_advance": 12,
     "max_back_steps": 8
   }

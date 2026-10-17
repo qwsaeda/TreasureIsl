@@ -2,7 +2,7 @@
 
 本文档是战斗系统的完整实现规格，实现者无需阅读其他文档即可写出正确的战斗逻辑代码。
 
-> 事实来源：`docs/business/combat.md`（伤害模型/胜负判定节）+ `docs/design/constants.md` §4 + `docs/facts/exe.md`。
+> 事实来源：`docs/business/combat.md`（伤害模型/胜负判定节）+ `legacy/docs/design/constants.md` §4 + `legacy/docs/facts/exe.md`。
 
 ---
 
@@ -58,7 +58,7 @@ pub struct BattleResult {
 
 ## 2. BOSS HP 表
 
-各档 HP 见 `docs/design/constants.md` §4（BOSS 档 0..4 = 50,000/100,000/150,000/200,000/300,000；tier > 4 → 0 无效档）：
+各档 HP 见 `legacy/docs/design/constants.md` §4（BOSS 档 0..4 = 50,000/100,000/150,000/200,000/300,000；tier > 4 → 0 无效档）：
 
 ```rust
 pub fn oracle_boss_hp(tier: u32) -> u32 {
@@ -100,7 +100,7 @@ pub fn damage(seed: u32, atk: u32) -> u32 {
 }
 ```
 
-> 该公式为 oracle 占位（推测），exe 实际 RNG 归 `docs/design/persistence.md` §RNG 对齐。
+> 该公式为 oracle 占位（推测），exe 实际 RNG 归 `legacy/docs/design/persistence.md` §RNG 对齐。
 
 ---
 
@@ -333,7 +333,7 @@ exe 内无独立兵种数值表，推测兵种 HP/atk 由 BOSS 档决定。
 
 战斗胜利后：
 - 播 `victory.wav`
-- 兵种奖励阶梯（`投资`）：+15,000 ~ +50,000 金（数值表见 `docs/design/constants.md` §3.4 / `docs/design/economy.md` §2.8）
+- 兵种奖励阶梯（`投资`）：+15,000 ~ +50,000 金（数值表见 `legacy/docs/design/constants.md` §3.4 / `legacy/docs/design/economy.md` §2.8）
 - 回主菜单（`advance(2)` → 状态 0）
 
 > 推测：兵种奖励与兵种匹配关系（A..E 各档），exe 无独立数值表。

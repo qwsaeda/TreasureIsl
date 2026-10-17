@@ -1,14 +1,12 @@
-//! oracle 桥接层（S11）。
+//! oracle 原版参照实现（S11 归档；S15.8 起为本 crate **唯一**镜像源）。
 //!
-//! 原版参照实现已物理归档至 `legacy/oracle-rust/`（独立 crate `legacy-oracle`，
-//! 仅测试编译）。本目录是原版 oracle 代码的**镜像**（`pub use crate::` 版），
-//! 使 `rules/` 与集成测试的 `crate::oracle::` 路径不变；两份内容同源，修改须同步。
+//! 原参照实现曾物理归档为重复 crate `legacy/oracle-rust/`（`legacy-oracle`，
+//! 与本目录逐字节同源、零代码引用），已于 S15.8 连同 workspace member 登记一并删除。
+//! 现本目录是单点源：经 lib.rs `pub mod oracle` 公开导出，`rules/` 与集成测试
+//! （`reference_diff_*` / `diff_*`）统一 `use ti_core::oracle::`，无 feature 门控。
 //!
 //! 业务规则唯一事实源 = `docs/business/` + `assets/data/*.json`；oracle 仅作
-//! 差分测试参照（`reference_diff_*`），不是业务依据。
-//!
-//! 注：`legacy-oracle` 为独立 crate（`pub use ti_core::` 版，cfg(test) 门控），
-//! 供 `reference_diff_*` 集成测试直接 import，做「rules vs 原版参照」对拍。
+//! 差分测试参照，不是业务依据。
 
 #![allow(missing_docs)]
 pub mod battle;

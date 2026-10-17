@@ -12,8 +12,9 @@
 //! | 消息 | 左半屏 = 关闭；右半屏 = 下一页 | 上滑 = 下一页；下滑 = 上一页 |
 //! | 存读档 | 点有档的槽 = 读档；点空槽 = 存档 | 下滑 = 关闭 |
 //!
-//! 坐标约定：本模块产出的坐标一律是 **176×220 逻辑坐标**（屏幕坐标由调用方用
-//! [`Viewport::screen_to_logical`] 反变换后传入，见 [`TouchPad::feed_screen`]）。
+//! 坐标约定：本模块产出的坐标一律是 **1080×1920 呈现层坐标**（= `menu_shell::LOGICAL_W_I32/H_I32`
+//! 单一权威呈现坐标系，`08_render_arch.md` 契约 1）；屏幕坐标由调用方用
+//! [`Viewport::screen_to_logical`] 反变换后传入（见 [`TouchPad::feed_screen`]）。
 
 use ti_platform::gfx::Viewport;
 use ti_platform::settings::{Gesture, GestureTracker};
@@ -122,35 +123,34 @@ pub mod layout {
     /// 主菜单项数（`spec/menu.md §a` case 0..=5）。
     pub const MENU_COUNT: usize = 6;
 
-    /// 主地图网格原点 x（与渲染 `px = col * 6 + 20` 互逆）。
-    pub const GRID_X0: f32 = 20.0;
-    /// 主地图网格原点 y（与渲染 `py = row * 6 + 30` 互逆）。
-    pub const GRID_Y0: f32 = 30.0;
-    /// 主地图网格格距（逻辑像素）。
-    pub const GRID_STEP: f32 = 6.0;
-
-    /// 消息界面左右分区 x（左 = 关闭，右 = 下一页）。
-    pub const MSG_SPLIT_X: f32 = 88.0;
+    /// 消息界面左右分区 x（呈现层宽中心 540 = 1080/2；左 = 关闭，右 = 下一页）。
+    /// S15.6 QA024：旧值 88 是 176 时代半屏（176/2），1080 空间 92% 宽度皆误判「下一页」。
+    pub const MSG_SPLIT_X: f32 = 540.0;
 
     /// 点按是否落在主菜单某行 → 返回菜单项索引。
     ///
-    /// 命中区几何读 `scenes.json` 的 `index` 段（`list.y`/`list.row_h` 与渲染
-    /// `item_rect` 正逆成对，EXP-071），`MENU_COUNT` 常量兜底项数。
-    /// scenes.json 不可用 → `None`（触摸无副作用）。
+    /// 命中区几何读 `scenes.json` 的 `index` 段（`list.*` 与渲染 `item_rect`
+    /// 正逆成对，EXP-071），`MENU_COUNT` 常量兜底项数。
+    /// S15.6 QA101：带形 = `scene_list_bands` 同式（卡 i 占「顶 y0 + i*step - offset、
+    /// 高 `item_h`」纵带，与 `ListLayout::item_rect` 正逆成对，同一读点 `scenes.json`）。
+    /// 旧式（按基线 y0 起 floor 分带）漏减 `highlight_offset`：每卡顶 40px 带为
+    /// 触摸死区、卡 1 顶带误选菜单 0；卡间空档（gap）= 无命中（点空白无副作用）。
+    /// `scenes.json` 不可用 → `None`（触摸无副作用）。
     #[must_use]
-    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[allow(clippy::cast_precision_loss)]
     pub fn menu_row_at(x: f32, y: f32) -> Option<usize> {
         let scene = ti_core::data::scenes().ok()?.get("index")?.clone();
-        let y0 = scene.list.y as f32;
-        let step = scene.list.row_h as f32;
-        let x0 = scene.list.x as f32;
-        let x1 = x0 + scene.list.w as f32;
-        if !(x0..x1).contains(&x) || y < y0 {
-            return None;
-        }
-        let idx = ((y - y0) / step).floor() as i32;
-        let idx = usize::try_from(idx).ok()?;
-        if idx < MENU_COUNT { Some(idx) } else { None }
+        let l = &scene.list;
+        let bands = scene_list_bands(
+            l.x as f32,
+            l.x as f32 + l.w as f32,
+            l.y as f32,
+            l.row_h as f32,
+            l.item_h as f32,
+            l.highlight_offset as f32,
+            MENU_COUNT,
+        );
+        scene_list_index_at(&bands, x, y)
     }
 
     /// 场景列表命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071/EXP-074）。
@@ -228,72 +228,76 @@ pub mod layout {
         bands.iter().position(|b| (b.x0..b.x1).contains(&x) && (b.y0..b.y1).contains(&y))
     }
 
-    /// 点按是否落在主地图某格（**占位 6×6 网格**）→ 返回 `(row, col)`（越界 → `None`）。
-    // allow 理由：`x < GRID_X0` / `y < GRID_Y0` 已排除负值，
-    // `floor()` 后为非负数，f32→u32 转换不截断、不丢符号。
+    /// 点按是否落在主地图某格（`chrome::iso_cell` 的逆，EXP-067 正逆成对）。
+    ///
+    /// 几何派生自 `scenes.json` 的 `main_map.grid.{x0,y0,tile_w,tile_h}` 段
+    /// （`chrome::scene_layout("main_map").extra_scalar`，与渲染 `iso_cell`/`iso_tile`
+    /// 同一数据源，契约 4）；触摸入参为 1080 呈现坐标。旧 176 时代占位公式
+    /// （`GRID_X0`=20 / `GRID_Y0`=30 / `GRID_STEP`=6，6×6 格）已删除——S15.6 QA022：
+    /// 渲染棋盘走 scenes.json 网格（x0=540/y0=520/tw=25/th=13，S15.6 QB105 重锚），
+    /// 占位公式使整个可见棋盘的点格命中全部失效。越出棋盘 → `None`（触摸无副作用）。
     #[must_use]
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn grid_cell_at(x: f32, y: f32, grid_w: u32, grid_h: u32) -> Option<(u32, u32)> {
-        if x < GRID_X0 || y < GRID_Y0 {
-            return None;
-        }
-        let col = ((x - GRID_X0) / GRID_STEP).floor() as u32;
-        let row = ((y - GRID_Y0) / GRID_STEP).floor() as u32;
-        if col < grid_w && row < grid_h { Some((row, col)) } else { None }
+        let layout = crate::scenes::chrome::scene_layout("main_map");
+        iso_grid_cell_at(x, y, grid_w, grid_h, &layout)
     }
 
-    /// 点按是否落在主地图某格（**等距投影**，与 `TerrainAtlas` 渲染同坐标系）。
+    /// 点按是否落在主地图某格（**等距投影**，`chrome::iso_cell` 的严格逆，EXP-067 正逆成对）。
     ///
-    /// 坐标系契约（EXP-067，与 `terrain_atlas::blit_map_cam` + `center_camera` 严格互逆）：
-    /// - 格点（菱形交点）：`iso_x = 32×(row+col)`、`iso_y = 16×(row+grid_w-1-col)`（`GridPos::iso_pos`）。
-    /// - 渲染侧瓦片以**格点为中心锚点**向左上扩展（`blit_map_cam` 的 `- w/2, - h/2`），
-    ///   屏幕像素 `(sx, sy) = (iso_x + cam.0, iso_y + cam.1)`；
-    ///   `camera = center_camera(terrain)` 把 iso 包围盒中心对到屏幕中心 (88,110)，**通常为负**。
-    /// - 触摸逆变换（`GridPos::iso_pos` 的严格逆，与 camera 取值无关）：
-    ///   `u = (x-cam.0)/32 = row+col`，`v = (y-cam.1)/16 = row+grid_w-1-col`
-    ///   → `row = round((u+v-(grid_w-1))/2)`，`col = round((u-v+(grid_w-1))/2)`，clamp 到 `[0, grid)`。
-    /// - 命中区 = 每格 Voronoi 菱形（四邻格点围成），与瓦片尺寸无关、四象限互斥无空洞。
-    ///
-    /// 旧实现 bug（EXP-067 根因）：`px = x - cam` 把 camera 当平移量却混入了错误的归一项
-    /// （`half = (grid_w-1-0.5)/2` 未对齐 `iso_y` 的 `grid_w-1` 语义），且 `camera=(0,0)` 测试
-    /// 掩盖了负 camera 下的系统性推偏 → 主地图点格命中错位、界面错乱。
+    /// 坐标系契约（S15.6 QA023 重锚：渲染 `chrome::iso_cell` 与触摸共享 `scenes.json`
+    /// `grid.*` 数据源，**无 legacy 32/16 投影、无 (88,110) 摄像机**——legacy 像素层
+    /// 退出运行时的直接后果，`08_render_arch.md` 契约 1）：
+    /// - 渲染正变换（`chrome::iso_cell`）：`sx = x0 + (col - row) * tw`、`sy = y0 + (row + col) * th`
+    ///   （`x0/y0/tw/th` = `layout.extra_scalar` 的 `grid.x0/y0/tile_w/tile_h`）。
+    /// - 触摸逆变换（严格逆，round-trip `iso_cell(iso_grid_cell_at(p)) == p` 对每个格点成立）：
+    ///   `u = (x - x0) / tw = col - row`，`v = (y - y0) / th = row + col`
+    ///   → `row = round((v - u) / 2)`，`col = round((v + u) / 2)`。
+    /// - 命中区 = 每格最近格点（Voronoi 菱形）；越出 `[0, grid_w) × [0, grid_h)` → `None`
+    ///   （棋盘外的黑屏点按不触发行走）。
     #[must_use]
     #[allow(
         clippy::cast_possible_truncation,
         clippy::cast_precision_loss,
         clippy::manual_midpoint,
-        clippy::cast_sign_loss
+        clippy::cast_sign_loss,
+        clippy::many_single_char_names
     )]
     pub fn iso_grid_cell_at(
         x: f32,
         y: f32,
         grid_w: u32,
         grid_h: u32,
-        camera: (i64, i64),
+        layout: &ti_core::data::SceneLayout,
     ) -> Option<(u32, u32)> {
         if grid_w == 0 || grid_h == 0 {
             return None;
         }
-        // 屏幕 → 等距画布（camera 是「画布原点→屏幕」偏移，center_camera 产负值，减之还原）
-        let px = x - camera.0 as f32;
-        let py = y - camera.1 as f32;
-        // 严格逆 `GridPos::iso_pos`（iso_x = 32(row+col), iso_y = 16(row+W-1-col)）：
-        //   u = px/32 = row+col，v = py/16 = row+W-1-col
-        //   row = (u+v-(W-1))/2，col = (u-v+(W-1))/2
-        // 命中区 = 每格 Voronoi 菱形（四邻格点围成），round() 归最近格，clamp 到 [0, grid)
-        let w1 = grid_w.saturating_sub(1) as f32;
-        let u = px / 32.0;
-        let v = py / 16.0;
-        let row = ((u + v - w1) / 2.0).round().clamp(0.0, grid_h.saturating_sub(1) as f32);
-        let col = ((u - v + w1) / 2.0).round().clamp(0.0, grid_w.saturating_sub(1) as f32);
-        // clamp 保证 row/col ∈ [0, grid)，f32→u32 不丢符号、不截断
-        Some((row as u32, col as u32))
+        let s = &layout.extra_scalar;
+        let x0 = s.get("grid.x0").copied().unwrap_or(0) as f32;
+        let y0 = s.get("grid.y0").copied().unwrap_or(0) as f32;
+        let tw = s.get("grid.tile_w").copied().unwrap_or(0) as f32;
+        let th = s.get("grid.tile_h").copied().unwrap_or(0) as f32;
+        if tw <= 0.0 || th <= 0.0 {
+            return None;
+        }
+        // 严格逆 `chrome::iso_cell`（`sx = x0 + (col-row)*tw` / `sy = y0 + (row+col)*th`）：
+        // u = col - row，v = row + col → row = (v-u)/2，col = (v+u)/2，round 归最近格点。
+        let u = (x - x0) / tw;
+        let v = (y - y0) / th;
+        let row = ((v - u) / 2.0).round();
+        let col = ((v + u) / 2.0).round();
+        if row < 0.0 || col < 0.0 {
+            return None;
+        }
+        // round 后非负，f32→u32 不丢符号、不截断
+        let row_u = row as u32;
+        let col_u = col as u32;
+        if row_u < grid_h && col_u < grid_w { Some((row_u, col_u)) } else { None }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::layout::{GRID_STEP, GRID_X0, GRID_Y0};
     use super::{Gesture, TouchPad, TouchSample};
     use ti_platform::gfx::Viewport;
 
@@ -344,23 +348,23 @@ mod tests {
 
     #[test]
     fn feed_screen_inverts_viewport() {
-        // 视口 2x：屏幕 (176,220) → 逻辑 (88,110)
-        let vp = Viewport::fit(352.0, 440.0);
+        // 视口 2x：屏幕 (1080,1920) → 逻辑 (540,960)
+        let vp = Viewport::fit(2160.0, 3840.0);
         let mut pad = TouchPad::new();
-        assert!(pad.feed_screen(&vp, 176.0, 220.0, true).is_none());
-        let got = pad.feed_screen(&vp, 176.0, 220.0, false);
+        assert!(pad.feed_screen(&vp, 1080.0, 1920.0, true).is_none());
+        let got = pad.feed_screen(&vp, 1080.0, 1920.0, false);
         assert!(
-            matches!(got, Some(TouchSample { x, y, .. }) if near(x, 88.0) && near(y, 110.0)),
-            "屏幕 (176,220) 应反变换为逻辑 (88,110)，实际 {got:?}"
+            matches!(got, Some(TouchSample { x, y, .. }) if near(x, 540.0) && near(y, 960.0)),
+            "屏幕 (1080,1920) 应反变换为逻辑 (540,960)，实际 {got:?}"
         );
         let (px, py) = pad.pos();
-        assert!(near(px, 88.0) && near(py, 110.0), "pad.pos() 应记住最近采样点");
+        assert!(near(px, 540.0) && near(py, 960.0), "pad.pos() 应记住最近采样点");
     }
 
     #[test]
     #[allow(clippy::cast_precision_loss)] // 测试常量下标 ≤ 20，f32 表示无损
     fn menu_rows_cover_six_items() {
-        // 坐标读 scenes.json index 段（list.y=48/row_h=32），与渲染 item_rect 正逆成对
+        // 坐标读 scenes.json index 段（list.y/row_h/item_h/highlight_offset），与渲染 item_rect 正逆成对
         let scene = match ti_core::data::scenes() {
             Ok(v) => match v.get("index") {
                 Some(v) => v,
@@ -373,30 +377,88 @@ mod tests {
         };
         let y0 = scene.list.y as f32;
         let step = scene.list.row_h as f32;
+        let offset = scene.list.highlight_offset as f32;
+        let item_h = scene.list.item_h as f32;
         for i in 0..6usize {
-            let y = y0 + i as f32 * step + 4.0;
-            assert_eq!(super::layout::menu_row_at(88.0, y), Some(i), "row {i}");
+            let top = y0 + i as f32 * step - offset;
+            // 卡 i 顶带（含旧死区的卡顶 40px 带）+ 卡底 → 命中卡 i
+            assert_eq!(super::layout::menu_row_at(540.0, top + 4.0), Some(i), "row {i} 卡顶带");
+            assert_eq!(
+                super::layout::menu_row_at(540.0, top + item_h - 4.0),
+                Some(i),
+                "row {i} 卡底"
+            );
+            // 卡间空档（gap）→ 无命中（点在空白，触摸无副作用；QA101 带形）
+            if i + 1 < 6 {
+                let gap_mid = top + item_h + (step - item_h) / 2.0;
+                assert_eq!(
+                    super::layout::menu_row_at(540.0, gap_mid),
+                    None,
+                    "row {i} 卡间空档应无命中（QA101）"
+                );
+            }
         }
-        assert_eq!(super::layout::menu_row_at(5.0, y0 + 4.0), None, "左边界外");
-        assert_eq!(super::layout::menu_row_at(200.0, y0 + 4.0), None, "右边界外");
-        assert_eq!(super::layout::menu_row_at(88.0, 10.0), None, "标题条区域");
-        assert_eq!(super::layout::menu_row_at(88.0, y0 + 6.0 * step), None, "超出 6 项");
+        // QA101 反例 1（死区）：卡 0 顶 40px 带 y ∈ [y0-offset, y0)——旧式 y<y0 → None，
+        // 新式命中卡 0（渲染卡 0 顶 = y0-offset，带内点按必须可选）
+        assert_eq!(
+            super::layout::menu_row_at(540.0, y0 - 20.0),
+            Some(0),
+            "卡 0 顶带（旧死区）应命中卡 0（QA101）"
+        );
+        // QA101 反例 2（误选）：卡 1 顶 40px 带——旧式 floor 归 0 误选菜单 0，新式命中卡 1
+        let top1 = y0 + step - offset;
+        assert_eq!(
+            super::layout::menu_row_at(540.0, top1 + 20.0),
+            Some(1),
+            "卡 1 顶带（旧误选反例）应命中卡 1（QA101）"
+        );
+        assert_eq!(super::layout::menu_row_at(40.0, y0 + 4.0), None, "左边界外");
+        assert_eq!(super::layout::menu_row_at(1040.0, y0 + 4.0), None, "右边界外");
+        assert_eq!(super::layout::menu_row_at(540.0, 10.0), None, "标题条区域");
+        assert_eq!(
+            super::layout::menu_row_at(540.0, y0 + 6.0 * step - offset + item_h + 4.0),
+            None,
+            "超出 6 项"
+        );
     }
 
     #[test]
-    #[allow(clippy::cast_precision_loss)] // 测试坐标 ≤ 19，f32 表示无损
-    fn grid_cell_inverts_render_formula() {
-        // 渲染 px = col*6 + 20 / py = row*6 + 30 → 命中应还原 (row, col)
-        for (row, col) in [(0u32, 0u32), (1, 2), (5, 7), (19, 19)] {
-            let x = col as f32 * GRID_STEP + GRID_X0;
-            let y = row as f32 * GRID_STEP + GRID_Y0;
-            assert_eq!(super::layout::grid_cell_at(x, y, 20, 20), Some((row, col)));
+    #[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+    fn grid_cell_inverts_iso_cell() {
+        // EXP-067 正逆成对（S15.6 QA022/023 重锚）：渲染 `chrome::iso_cell` 的每个格点
+        // （scenes.json `main_map.grid.*` 数据源，无 legacy camera）喂回 `grid_cell_at`，
+        // 必须逆解回原格。
+        use crate::scenes::chrome;
+        let layout = ti_core::data::scenes()
+            .ok()
+            .and_then(|s| s.get("main_map"))
+            .cloned()
+            .unwrap_or_default();
+        let (tw, th) = chrome::iso_tile(&layout);
+        assert!(tw > 0 && th > 0, "main_map grid.tile_w/h 应为正（触摸逆变换可用）");
+        for r in 0..20u32 {
+            for c in 0..20u32 {
+                let (sx, sy) = chrome::iso_cell(r as i32, c as i32, &layout);
+                let hit = super::layout::grid_cell_at(sx as f32, sy as f32, 20, 20);
+                assert_eq!(hit, Some((r, c)), "格 ({r},{c}) round-trip 应逆解回原格，实际 {hit:?}");
+            }
         }
-        assert_eq!(super::layout::grid_cell_at(5.0, 30.0, 20, 20), None, "网格左外");
-        assert_eq!(super::layout::grid_cell_at(20.0, 10.0, 20, 20), None, "标题条区域");
+        // 棋盘外的黑屏点按 → None（不触发行走，S15.6 QA022 边界语义）
+        assert_eq!(super::layout::grid_cell_at(50.0, 1500.0, 20, 20), None, "棋盘外点按应无命中");
+        assert_eq!(super::layout::grid_cell_at(1050.0, 500.0, 20, 20), None, "屏右外点按应无命中");
         // 越界格 → None
-        let x = 19.0 * GRID_STEP + GRID_X0;
-        assert_eq!(super::layout::grid_cell_at(x, 30.0, 15, 15), None, "超出 15×15");
+        assert_eq!(
+            super::layout::grid_cell_at(540.0, 520.0, 15, 15),
+            Some((0, 0)),
+            "格点 (0,0) 在 15×15 内应命中（QB105 重锚：iso_cell(0,0) = (x0, y0) = (540, 520)）"
+        );
+        let out = super::layout::grid_cell_at(
+            chrome::iso_cell(19, 19, &layout).0 as f32,
+            chrome::iso_cell(19, 19, &layout).1 as f32,
+            15,
+            15,
+        );
+        assert_eq!(out, None, "超出 15×15 的格点应无命中");
     }
 
     #[test]

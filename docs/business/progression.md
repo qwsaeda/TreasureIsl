@@ -79,6 +79,47 @@
 | 效果后 HP/金钳制在合法域 | `cards_effects_clamped`（待 S8.3.c 补单测落地） |
 | 权重抽卡分布合理（单测只断言「可复现」，分布靠统计脚本） | `cards_weighted_pick_reproducible`（待 S8.3.c 补单测落地） |
 
+## 跨图推进（地图解锁 `unlocked_maps`）
+
+游戏共 3 图 m01/m02/m03，难度按 `boss_tier` 升序（m01=0 → m02=1 → m03=2，BOSS 更强）。
+推进规则 = **击败当前图 BOSS 才解锁下一图**，非开局三图齐选。
+
+| 阶段 | 规则 |
+|---|---|
+| 初始解锁 | 仅 `m01`（`unlocked_maps = [m01]`） |
+| 推进 | 击败当前图 BOSS（`combat` 结果 = Player 胜）→ 解锁序列下一图，追加进 `unlocked_maps` |
+| 序列 | m01 →(击败)→ 解锁 m02 →(击败)→ 解锁 m03；m03 无下一图 |
+| 通关 | 击败 m03 的 BOSS = 全图通杀 = 游戏通关（本局结束） |
+| 失败 | HP 归零 / 超 `combat.max_rounds` = 失败，**不解锁**；回主菜单后可**重试**当前图 |
+| 选择约束 | SelectMap 显示**全部 3 图**，锁定项置灰 + 深色「锁」块（`08_layout_design.md` §锁块）；Prev/Next 可自由导航（含锁定位），仅 **Confirm** 经 `map_unlocked` 校验拒绝（`Sfx::Invalid`，选择态不提交） |
+
+### 与存档一致（`persistence.md`）
+
+- 规则层存档（`saveload`/`saveload_json` 的 `SaveData.unlocked_maps` 字段）**当前无生产写入端**：4 处构造恒 `Vec::new()`，仅测试 fixture 手工置值——解锁链的**唯一事实源 = app 侧 `GameApp.unlocked_maps`**（`ProgressionState` 驱动）。该字段为预留扩展位（接规则层存档需 `capture_state` 增 `unlocked` 入参，c1 契约变更，见台账 S15.2 残留）。
+- **app 侧存档槽（`domain::persistence::SaveSlot`）不持解锁链字段**（v2 schema 稳定，不迁移）：读档按存档 `map_slot` 的「最小前置链」恢复（选中 m(i) ⟹ m(0)..m(i-1) 已击败，`ProgressionState::min_progression_to_select`）；旧档（高图直选/多解锁值）按链回读，无需迁移。
+
+### 可测试规则
+
+| 规则 | 单测 |
+|---|---|
+| 初始仅 m01 解锁 | `progression_initial_unlocks_only_m01` |
+| 击败 m01 → 解锁 m02（m03 仍锁） | `progression_defeat_m01_unlocks_m02_only` |
+| 击败 m02 → 解锁 m03 | `progression_defeat_m02_unlocks_m03` |
+| 击败 m03 = 通关、无下一图 | `progression_defeat_m03_clears_game` |
+| 失败（未击败）不解锁 | `progression_loss_does_not_unlock` |
+| 解锁链单调（只增不降，m01 恒解锁） | `progression_unlocks_monotonic` |
+| 读档链恢复：选中 m(i) 的最小前置 = 击败 m(0)..m(i-1) | `min_progression_to_select_chain` |
+| 解锁集重建（战斗结算 / 旧档异常集忠实保留 / 全解锁幂等） | `from_unlocked_feeds_boss_defeat_step`、`from_unlocked_legacy_anomaly_is_faithful`、`from_unlocked_all_then_m03_clears` |
+
+> 实现落点：`crates/ti-core/src/rules/progression.rs`（`ProgressionState`：`initial_unlocked` /
+> `unlocked` / `on_boss_defeated` / `is_cleared` / `can_select` / `from_unlocked` / `min_progression_to_select`）。
+> **app 层已接线**（`crates/ti-app/src/game_app.rs`）：开档 `unlocked_maps = initial_unlocked()`（仅 m01，非全开）；
+> `battle_step` 胜利钩 = 击败当前图 BOSS → 规则层结算解锁下一图（幂等，失败不加）；`restore_save` 按链恢复。
+> 验收：`crates/ti-app/tests/app_progression_wiring.rs`（4 条：初始仅 m01 / 胜解锁+幂等 / m01→m02 全链路 / 读档链恢复+gold/位置恢复）。
+> 演示：`crates/ti-core/examples/cross_map_demo.rs`（打满 3 图）。
+> **残留（S15.2 登记）**：① 通关判定 `is_cleared` 在 app 游玩层暂无表现（击败 m03 后 Back 回主菜单，无通关画面/提示）；
+> ② 规则层存档 `SaveData.unlocked_maps` 无生产写入端（见上「与存档一致」）。
+
 ## 与实现的接口
 
 - 玩法：`rules::main_map`（`MapSession`）、`rules::cards`（`CardEngine`）（S8.3.c 重写中）；

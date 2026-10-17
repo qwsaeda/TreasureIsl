@@ -47,7 +47,7 @@ mod tests {
     /// P4-4 判据 1：headless 模式下 GPU 渲染器为 no-op（`is_headless()` 为 `true`）。
     #[test]
     fn gpu_renderer_is_headless_in_default_build() {
-        let app = GameApp::new(176.0, 220.0);
+        let app = GameApp::new(1080.0, 1920.0);
         assert!(
             app.gpu_renderer().is_headless(),
             "默认 headless 构建中 GpuRenderer 应退化为 no-op"
@@ -58,7 +58,7 @@ mod tests {
     /// 证明 GPU 路径被走到（非整帧跳过）。
     #[test]
     fn index_scene_gpu_draw_calls_positive_with_ui_pak() {
-        let mut app = GameApp::new(176.0, 220.0);
+        let mut app = GameApp::new(1080.0, 1920.0);
         if let Some(bytes) = read_ui_pak() {
             app.set_atlas(&bytes);
         }
@@ -76,8 +76,8 @@ mod tests {
     /// P4-4 判据：主地图场景 GPU 渲染确定性（两次渲染 draw call 数相同）。
     #[test]
     fn main_map_scene_gpu_render_deterministic() {
-        let mut app1 = GameApp::new(176.0, 220.0);
-        let mut app2 = GameApp::new(176.0, 220.0);
+        let mut app1 = GameApp::new(1080.0, 1920.0);
+        let mut app2 = GameApp::new(1080.0, 1920.0);
         if let Some(bytes) = read_ui_pak() {
             app1.set_atlas(&bytes);
             app2.set_atlas(&bytes);

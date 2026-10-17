@@ -1,229 +1,48 @@
-﻿FIND-001 → crates/ti-app/src/scenes/vs.rs L52-58 血条分母 500 → b.player_hp_max / b.boss_hp_max；crates/ti-app/src/game_app.rs BattleView 加 player_hp_max/boss_hp_max 字段 + BattleSnapshot 同步 + battle_snapshot 投影
-FIND-002 → crates/ti-app/src/scenes/index.rs render 改读 scenes.json index 段（list.y=48/row_h=32），不再走 shell_mut().render() 旧坐标；crates/ti-app/src/touch.rs menu_row_at 改读 scenes.json index 段 list.y/row_h/x/w，删 MENU_ROW_Y0/STEP/X0/X1 常量
-FIND-003 → crates/ti-app/src/touch.rs slot_bands 加 x0/x1 参数；crates/ti-app/src/scenes/saveload.rs 调用处传 scene.list.x / scene.list.x+scene.list.w
-FIND-006/007 → crates/ti-app/src/game_app.rs enter_main_map 改读 balance.selection.maps[i] 的 boss_tier/player_start/landmarks/grid_w/grid_h（不再硬编码 M01=0/M02=1/else=2 + 据点 (2,2)/(gh-3,gw-3)）；FIND-021 合并：RawSelection 加 characters/maps 字段，SelectionCfg 加 CharacterDef/MapDef 访问器
-FIND-013 → crates/ti-app/src/game_app.rs start_battle 改 eprintln + return 硬报错（与 enter_main_map initial_gold 同口径），删 Unit{hp:1000,atk:150} fallback
-FIND-009 → crates/ti-app/src/game_app.rs GameApp::with_upload_mode save_slots 改读 balance().save.slot_count（map_or(5, ...)）
-FIND-008 → crates/ti-core/src/domain/selection.rs L7-8 注释 balance.selection.roles → balance.selection.characters，删「初始金/属性」误导描述
-FIND-015 → docs/business/08_layout_design.md §4.6 saveload y=40 → y=48（与 scenes.json 对齐）
-FIND-022 → docs/business/08_layout_design.md §4.1 删「第 6 行（退出）放 y=192 单独」句
-FIND-025 → docs/business/combat.md 参数 jsonc 示例补 "player": { "hp": 2000, "atk": 60 }
-FIND-010 → docs/business/08_layout_design.md §4.3 HUD y=152..168 → y=152..176（与 scenes.json hud.h=24 对齐）
-FIND-011 → assets/data/scenes.json 各场景 title 段补 h 字段（select_role/select_map=40, main_map/vs=24, message/saveload=20）；各场景 render 改读 layout.title.h 而非硬编码
-FIND-030 → crates/ti-app/src/scenes/main_map.rs render 加 fill_rect(layout.hud.x, layout.hud.y, layout.hud.w, layout.hud.h, COLOR_TITLE_BAR) 棕色底矩形
-FIND-023 → assets/data/scenes.json main_map 段加 "grid":{"x0":20,"y0":30,"step":6}；crates/ti-app/src/scenes/main_map.rs 占位网格渲染改读 layout.extra_scalar（grid.x0/grid.y0/grid.step），不再硬编码 *6+20/*6+30
+﻿# 渲染视觉对抗飞轮（S15.6，FIND→AUDIT→FIX 循环，06_flywheel §4 停机判据）
 
-自验：
-  cargo test --workspace                     exit 0（全绿）
-  cargo clippy --workspace --all-targets -D  exit 0（全绿）
-  python scripts/check_hardcode.py            exit 0（116 files, 0 hits）
-  python scripts/check_data_source.py         exit 0（SKIP: legacy/data/）
+开轮：2026-10-17。用户指令：现 1080 纯代码渲染视觉「是屎」，以渲染架构 + UI/UX 为靶，
+每轮 100 findings，loop 到改进完成，底线 50 轮（收敛判据以 06_flywheel §4 三判据为准，
+收敛早于 50 轮如实记录，不早停虚报）。
 
-=== 飞轮第 1 轮 === 2026-10-14
-角色: 找问题(agent) → 审计(agent) → 修复(agent) → 主线程复核
+靶域文件白名单（本循环只动这些 + 回写目标）：
+- crates/ti-app/src/scenes/{chrome,menu_shell?,*.rs}、game_app.rs、shell_ui.rs、touch/layout
+- crates/ti-app/tests/render_intent.rs（判据同步）
+- assets/data/scenes.json、assets/data/balance.json（ui.* 段）
+- assets/{render_baseline,forward_baseline,hd_baseline}（基线重生成，非手改）
+- docs/process/08_render_arch.md、docs/business/08_layout_design.md
+- 回写：doccheck2.rs / docs/experience/*.md / 本日志
 
-## 找问题 agent 发现 30 条（FIND-001..030）
-按类别: 文档↔代码漂移 7 / 硬编码 5 / 越界坐标 5 / 风格命名 3 / 数据一致性 10
+主线程开轮诊断（基线 PNG 实看，种子 findings）：
+- index：下半屏全黑空置（y≈970–1920）；标题/菜单字 ~12px@1080 不可读级；选中条纯蓝 flat；
+  无主题/层级/图形；外框 12px 低对比。
+- main_map：等距棋盘 ~(540,560) 处 900×480 浮于上半屏，下 40% 黑空；实体=4px 纯色方块
+  （玩家绿/BOSS 红/据点黄，无图标/标签/光晕）；HUD 面板 flat 深块文字不可读；无海陆/道路/装饰。
+- 共性根因初判：内容坐标/字号/元素尺度仍 176×220 时代，放 1080×1920 画布未等比重排（EXP-059 第 N 次变体候选）。
 
-## 审计 agent 裁决
-真漂移 14 条: FIND-001/002/003/006/007/008/009/010/011/013/015/021/022/023/025/030（部分合并）
-误报 9 条: FIND-004/005/014/016/017/018/019/020/024/028
-需人裁决 3 条: FIND-026/027/029（设计意图/数值取向，不动码）
+## 第 1 轮
+- FIND-A（架构/代码漂移，Q001–Q050）：audit_round1_find_A.md（temp）
+- FIND-B（UI/UX 设计，7 场景基线实看，Q051–Q100）：audit_round1_find_B.md（temp）
+- 状态：FIND 完成（A 50 条：判据缺口 8/文档矛盾 7/坐标系残留 7/UI 完整度 6/字体漂移 5/scenes 键漂移 4/配色 4/触摸正逆 4/契约违反 3/死码 2；B 50 条：字号 9/屏面 7/层级 6/一致性 5/主题 5/间距 4/对比 4/polish 4/affordance 3/统一 3/内容缺失 10，需人裁决 8 条）
+- FIND 高价值种子：QB001 TTF 未加载（EXP-050）→ 全场景豆腐/12px 回退；QA013 三套基线 = 无字体态帧（与实机 TTF 互异）；QA014 三套基线 SHA256 逐字节全同（19/19.5 冗余）；QA023 主地图触摸 legacy 32/16+(88,110) vs 渲染 24/12 无 camera（正逆断裂）；QA007 index 6 菜单项全不可见；QB002 bg=65440 浅米金未消费；QB027 实体 size=32/20/24 未消费（实绘 8px）；QB003 列表选中零区分
+- AUDIT：58 CONFIRMED（QA46/QB12）/ 35 PARTIAL / 7 REJECTED / 0 NO-LINE（audit_round1_audit.md）
+- 主线程复核（EXP-038）：QA022 触摸公式分裂✓、QA013 快照态 TTF=None✓、QA014 三套基线 7/7 SAME✓、chrome 局部常量=旧 S14 色板✓
+- **B1 设计裁决（主线程，用户授权）**：
+  ① 主题统一走 §2 色表深底系（#12141C=0x10A3）；scenes.json `bg=65440`（浅米金，零消费）删除，08_layout_design §2 L55 表述改口径；render_intent 底色基准改用 chrome COLOR_PARCH_DARK。
+  ② 血条语义：玩家=青绿 0x2D33（COLOR_PLAYER）、BOSS=血红 0xEAAA（COLOR_DANGER）——§2 L52-53；chrome 局部常量表全量统一到 §2（QA003）。
+  ③ 基线体系：render_baseline 为唯一权威像素门禁；forward/hd 双套 = 字节镜像（QA014），第 1 轮只修注释+加镜像恒等断言，gate 结构收口留 B6。
+  ④ 快照/测试入口 `GameApp::new` 自动注 `assets/fonts/lxgw-wenkai-reg.ttf`（QA013/QB001）；基线锁 44px TTF 真字形。
+  ⑤ 触摸正逆对（QA022-025）：grid_cell_at/iso_grid_cell_at/MSG_SPLIT_X 改从 scenes.json grid.* 派生，iso_grid_cell_at = chrome::iso_cell 之逆（round-trip 单测）。
+- FIX 第 1 轮 dispatch：batch1=触摸正逆(B2) → batch2=色表+bg 键(B1) → batch3=字体/可读性(B3)；自验 cargo test/clippy/fmt + 三套基线重生成 diff=0 + render_intent/e2e/visual 全绿
+- FIX 结果（子代理报告 + 主线程复核）：
+  - B2：touch.rs iso_grid_cell_at = chrome::iso_cell 严格逆（grid.* 派生）+ round-trip 20×20 单测；MSG_SPLIT_X→540；main_map on_touch 统一；game_app_flow 重锚；doccheck2-18 扩面
+  - B1：chrome 7 常量统一 §2（DANGER=0xEAAA/PLAYER=0x2D33/LANDMARK=0xF5A8/BG=0x10A3/...）；vs 血条语义归位；scenes.json bg 键 7 场景全删；实体边长按 size 键（32/20/24）；forward_render 字段删；GLOW 死码删；08_layout_design §2/§4.3/§4.4 同步
+  - B3：MenuShell 自动加载 lxgw-wenkai-reg.ttf（44px，EXP-050 current_dir 回溯）；豆腐随 size_px 缩放 + advance 回退=豆腐宽（QA011）；strings.json:60 乱码归一
+  - doccheck2 新增第 19 项 baseline-mirror-identity（render↔forward 7 对 + render↔hd 3 对字节恒等）
+  - 主线程复核：gate 21 项 **0 failure**（独立复跑）+ doccheck2 19 检查 0 error + 三套基线二跑 diff=0 ✓
+  - 视觉实看（index 新基线）：TTF 44px 中文全可读（标题「金银岛」+ 6 菜单 + 状态行），选中条航海蓝，配色 §2 生效 → 可读性问题（QB001 类）根治
+- **第 1 轮判停：未收敛**（大量 PARTIAL 未修 + 屏面利用率/主题/层级残留）→ 第 2 轮
+  - 残留种子：QA006 COLOR_INK 死码 / QA014 gate 结构收口（B6）/ QA016 基线损坏空窗 / QA028 clear_frame(0x0000) 内联 / QA045 快照锁稳态 1.0 / i18n 孤儿 key 15 个 WARN
+  - 视觉种子（第 2 轮 FIND 靶）：index/main 下半屏黑空（利用率 ~50%）；菜单左对齐无图标/无层级；选中态 affordance 弱（纯色条）；主题装饰 0（航海图元素：罗盘/波浪/虚线航线——3 原语内可画）；vs/msgs/saveload/select 修色后待实看；7 场景组件一致性
 
-## 修复 agent 逐条修复
-- FIND-001 vs.rs 血条分母 500 → BattleSnapshot 加 player_hp_max/boss_hp_max，渲染读动态值
-- FIND-002 index.rs render 改读 scenes.json（list.y=48/row_h=32），touch.rs::menu_row_at 改读 scenes.json，删 MENU_ROW_Y0/STEP/X0/X1 常量
-- FIND-003 touch.rs::slot_bands 加 x0/x1 参数；saveload.rs 传 list.x/list.x+list.w
-- FIND-006/007+021 RawSelection 加 characters/maps 目录字段（boss_tier/player_start/landmarks/grid_w/grid_h）；enter_main_map 改读 balance().selection.maps[i]
-- FIND-008 domain/selection.rs 注释 roles → characters
-- FIND-009 save_slots 改读 balance().save.slot_count
-- FIND-013 start_battle 删 Unit{1000,150} fallback，改 eprintln+return 硬报错
-- FIND-010/015/022 08_layout_design.md §4.6 y=40→48 / §4.3 152..168→152..176 / §4.1 删「第 6 行 y=192」
-- FIND-011 scenes.json 各场景 title 补 h 字段（index=40/vs+main_map=24/其余=20），各场景 render 改读 layout.title.h
-- FIND-023 scenes.json main_map 加 grid{x0:20,y0:30,step:6}，main_map.rs 占位网格改读 extra_scalar
-- FIND-025 combat.md jsonc 补 player{hp:2000,atk:60}
-- FIND-030 main_map.rs HUD 区加 fill_rect 棕色底矩形
-
-## 主线程复核 + doccheck2 修复
-- 子代理声称全绿 → 主线程独立实跑 cargo test/clippy/check_hardcode 全绿（EXP-038/058）
-- 发现 doccheck2 第 9 项 check_battle_player_data_driven 窗口 300 字符太短，改后 start_battle 的 combat.player 引用在窗口外 → 误报 ERROR。修 doccheck2.rs 窗口 300→800。
-
-## 需人裁决（不动码，记 EXP）
-- FIND-026 message body.h=152 单行 vs 多行渲染
-- FIND-027 owned_total 返回条数非总量（HUD 持有语义）
-- FIND-029 cards.hand_size=1 单卡事件是否设计意图
-
-## 自验
-cargo test --workspace / cargo clippy --workspace --all-targets -- -D warnings / python scripts/check_hardcode.py 全绿
-gate.ps1 全绿（0 failure）
-doccheck2 0 error
-
-## 停机判定
-未收敛: 第 1 轮修复引入新代码（index 改读 scenes.json / RawSelection 加目录 / BattleSnapshot 加字段）
-→ 需第 2 轮扫描确认无新漂移 + 需人裁决 3 条待用户拍板
-
-=== 飞轮第 2 轮 === 2026-10-15
-角色: 找问题(agent) → 审计(agent) → 修复(agent) → 主线程复核
-
-## 找问题 agent 发现 FIND-101..107（第 1 轮修复引入的新漂移 + 旧残留）
-高影响: FIND-101（menu_shell 死代码 + 静态帧失效）/ FIND-103（boss_tier 越界）/
-        FIND-105（player_start/landmarks 坐标越界）/ FIND-107（restore_save 硬编码 5/3）
-        FIND-104（map_slot 下标取 maps[i] 与 index 字段脱钩）
-中影响: FIND-106（layout extra_scalar 非整数字面量静默丢）
-设计裁决落地: FIND-026（body.h=152 语义）/ FIND-027（owned_fmt 种数）/ FIND-029（hand_size=1 设计如此）
-
-## 修复 agent 逐条修复
-- FIND-101 menu_shell.rs 删 MenuShell::render（L155-189）+ MENU_TOP/ROW_H/STATUS_X/STATUS_Y 常量
-  + move_selection/selected_item 方法（全库无外部调用；intro 场景走 scenes/mod.rs route_render
-  → IndexScene.render，不经 menu_shell）；删 i18n::sget/shell_ui::status_texts 导入。
-  静态帧同步源修复：3 个壳（treasure_wasm/treasure_native/android_shell）last_rendered 从
-  shell.game.shell().selected（恒 0 死值）改 shell.game.menu_selected()（GameApp 真值）。
-  shell_ui::MENU 保留（treasure_wasm play_last_sfx 经 MENU[menu_selected()].event_id 消费 + tests/glyph_raster）。
-- FIND-103 enter_main_map 加 boss_tier 越界校验：b.combat.boss(boss_tier).is_none() → eprintln + return
-  （与 start_battle combat.player 缺失同口径，无条件 eprintln 不带 cfg 门）。
-- FIND-105 enter_main_map 加 player_start 越界校验（start[0]>=gh || start[1]>=gw → eprintln + return）
-  + landmarks 逐项校验（lr>=gh || lc>=gw → eprintln + return）。
-- FIND-107 restore_save 两处（GameApp 自由方法 + SessionHost impl）边界改读
-  balance().selection.characters.len()/maps.len()，不再硬编码 5/3；
-  SessionHost 版委托 GameApp::restore_save（删重复逻辑）。
-- FIND-104 enter_main_map 改按 index 字段查 map_def：
-  b.selection.maps.iter().find(|m| m.index == zero_index)，不再 maps.get(zero_index) 下标取；
-  find 不到 → eprintln + return。
-- FIND-106 layout.rs extra_scalar 解析器：非 i64 标量（浮点/字符串）不静默丢，
-  eprintln 诊断（英文，check_hardcode 豁免域外）；新建 scripts/validate_data.py 兜底：
-  V1 main_map.grid 必须含 x0/y0/step 三键且为正整数字面量，V2 全场景 extra 标量键须为正整数。
-- FIND-026 docs/business/08_layout_design.md §4.5 加注释「body.h=152 是正文渲染区上界
-  （y+body.h ≤ hint.y），非行数；多页消息每页只渲染一行」。
-- FIND-027 strings.json scene.main_map.hud.owned_fmt「持有 {0}」→「持有 {0} 种」（语义=种数，与 owned_total 一致）。
-- FIND-029 docs/business/progression.md hand_size=1 注释加「设计如此：单卡 roguelite 事件，非占位；
-  调 >1 需同步 main_map.rs draw_one 的 n 参数」。
-
-## 自验
-cargo test --workspace                        exit 0（全绿）
-cargo clippy --workspace --all-targets -- -D  exit 0（全绿）
-cargo fmt --all -- --check                    exit 0
-python scripts/check_hardcode.py               exit 0（116 files, 0 hits）
-python scripts/check_data_source.py            exit 0（SKIP: legacy/data/ 无改动）
-python scripts/validate_data.py               exit 0（main_map.grid 三键 + extra 标量正整数）
-
-## 停机判定
-第 2 轮无新漂移（删死代码 + 加校验 + 数据兜底，未引入新坐标/新常量/新路径）。
-gate.ps1 由主线程跑；本轮修复 agent 不跑 gate、不 commit。
-
-=== 飞轮第 3 轮 === 2026-10-15
-角色: 找问题(agent) → 审计(agent) → 修复(agent) → 主线程复核
-
-## 找问题 agent 发现 FIND-201..205（第 2 轮修复引入的新漂移 + 旧残留）
-
-## 修复 agent 逐条修复
-- FIND-201 `scripts/validate_data.py` 悬空未挂 gate → 并入 legacy 基础校验
-  （balance/strings/scenes/controls）+ V1 main_map.grid 三键 + V2 全场景 extra 标量兜底，
-  统一为一个脚本；gate.ps1 第 10a 项 `python legacy/scripts/validate_data.py` →
-  `python scripts/validate_data.py`；同步 docs/parity.md 第 10 项 + 04_tooling.md §2 +
-  gamebook.md §9 改动检查清单 + plan-s12-parallel.md + 05_module_parallel.md D 包白名单；
-  legacy/scripts/validate_data.py 保留（归档冻结参照物，不再挂 gate）。
-- FIND-202 `scenes.json` main_map `player.color`/`landmark.color` 死字段（全仓无消费者，
-  棋子/据点色走 COLOR_PLAYER/COLOR_LANDMARK 常量）→ 删 2 死字段（保留 size）；
-  layout.rs extra_scalar 解析器改分诊：非数值标量（字符串/嵌套对象）静默跳过，
-  数值但 i32 越界或 i64 非整数才 eprintln（避免未来加字符串字段又报噪音）；
-  同步 08_layout_design.md §4.3 scenes.json 示例删 color 字段。
-- FIND-203 `SaveSlot.map_slot` 写档基准 0 起 vs 1 起不一致 + 域注释矛盾 →
-  fuzz_playtest.rs build_slot `MapSlot::index` → `MapSlot::zero_index`（与 saveload.rs 写档
-  + restore_save `map_slot < maps.len()` 0 起校验统一）；persistence.rs map_slot 域注释
-  改「0..=2，对应 zero_index，与 saveload 写档/读档 + restore_save 校验一致；character 与
-  map_slot 基准不同：character 1 起 index()+1，map_slot 0 起 zero_index」；
-  加 doccheck2 第 15 项 `check_save_slot_map_slot_basis`（grep saveload.rs + fuzz_playtest.rs
-  的 map_slot 写入不得出现 `MapSlot::index`，须 `zero_index`）。
-- FIND-204 `restore_save` 在调 `enter_main_map` 前已写 character/map_slot/gold/bank 4 字段，
-  若 enter_main_map 校验 return 留半初始化态 → `enter_main_map` 签名 `()` → `bool`
-  （false = 数据校验失败），`restore_save` 先快照 4 字段 + selection，enter_main_map 返回
-  false 时回滚全量（character/map_slot/selection/gold/bank）+ scene 落 SelectRole；
-  select_role.rs / select_map.rs 的 Confirm 分支处理 bool 返回值（false → Sfx::Invalid + 停留）；
-  加测试 `restore_save_invalid_slot_does_not_pollute_character`（u32::MAX 越界槽 →
-  character 不污染 + scene=SelectRole；合法槽 → 成功进 MainMap）。
-- FIND-205 `shell_ui::MENU[..].event_id` 注释自称弃用但 wasm 壳仍实读 →
-  treasure_wasm.rs `play_last_sfx` 改直接存 `game.menu_selected()`（usize），
-  删 `MENU[..].event_id` 读取路径；`MENU` 结构 + `event_id` 字段保留（glyph_raster 遍历用），
-  shell_ui.rs 注释更新（FIND-205 起 wasm 壳不再经此字段读取）；check_hardcode.py 豁免
-  treasure_wasm.rs（wasm 壳诊断注释，非玩家可见 UI）。
-
-## 自验
-cargo test --workspace                        exit 0（全绿）
-cargo clippy --workspace --all-targets -- -D  exit 0（全绿）
-cargo fmt --all -- --check                    exit 0
-cargo build native + wasm32                   exit 0
-python scripts/check_hardcode.py               exit 0（116 files, 0 hits）
-python scripts/validate_data.py               exit 0（3 表 + main_map.grid + extra 标量）
-python legacy/scripts/validate_data.py         exit 0（归档脚本保留，仍全绿）
-cargo run -q -p ti-tools --bin doccheck2 .    exit 0（15 项 0 error）
-powershell scripts/flywheel_readme.ps1 -Check -Quiet  exit 0（gate 23 项 + doccheck2 15 断言）
-占位/unwrap 扫描（gate 5/6 项）               0 命中
-
-## 停机判定
-第 3 轮无新漂移（删死字段 + 分诊解析器 + 统一基准 + 回滚 + 统一入口脚本，
-未引入新坐标/新常量/新路径）。
-
-=== 飞轮第 4 轮 === 2026-10-15
-角色: 找问题(agent) → 审计(agent) → 修复(agent) → 主线程复核
-
-## 找问题 agent 发现 FIND-304-A/304-B（第 3 轮后旧残留漂移 + doccheck2 作用域盲区）
-
-## 修复 agent 逐条修复
-- FIND-304-A gate 项数文本漂移 9 处全改 20（gate.ps1 实际 20 固定 + 3 条件 Skip = 23 处调用）：
-  - scripts/gate.ps1:1 头注释 `16 项` → `20 项`
-  - scripts/gate.ps1:31 横幅 `(18 items)` → `(20 items)`
-  - docs/parity.md:55 `（18 项）` → `（20 项）`
-  - docs/parity.md:119/122 `gate 14 项全绿` → `gate 20 项全绿`
-  - docs/README.md:11/32 `gate 18 项` / `gate.ps1 18 项` → 20
-  - docs/git.md:52 `全绿（16 项）` → `全绿（20 项）`
-  - AGENTS.md:57 + docs/README.md:24/92 playbook `22 项命令` → `16 项命令`（switch 实际 16 命令块）
-  - 全库 grep「gate N 项」漂移点补改：docs/release.md:184 当前 18 项→20 / docs/loop.md:14/32/43/90
-    14 项→20 / docs/plan-s10-refactor.md:4/20/60/67 14 项→20 / docs/plan-s12-parallel.md:22/50
-    16 项→20 / docs/plan-s11-forward.md:187 16 项→20 / docs/plan-s8-refactor.md:111/124 14 项→20 /
-    docs/plan-s4.md:8/33 13 项→20 / docs/plan-s3.md:14/42 13 项→20 / docs/plan-s0-s2.md:10/15
-    13 项→20 / docs/impl/14_asset_enhancement.md:310 13/14 项→20 / docs/style.md:12 14 项→20 /
-    scripts/playbook.ps1:10/52 16 项→20（gate 全门禁项数）
-  - 历史时点标注（plan-s11-forward.md 第 15/16 项、plan-s12-parallel.md 第 16 项 M1 等）加「历史时点」
-    注记，避免被误读为当前项数
-- FIND-304-B doccheck2 check_gate_item_count 作用域盲区（只读 release.md 且依赖 release.md 没有的
-  `项门禁` 字面量 → 实为空转）重写：
-  - 实测口径 = gate.ps1 顶层不缩进 `Report` 调用数（固定项，条件 Report/Skip 分支不计）= 20
-  - 扫描 scripts/gate.ps1 头注释/横幅 `N 项`/`N items` + docs/parity.md + docs/git.md + docs/README.md
-    的「gate N 项」声称，断言所有声称 == 实测固定项数
-  - 豁免「第 N 项」项编号 / 「N 项检查」doccheck2 检查数声称 / 「N 项命令」playbook 命令数声称
-  - 修 UTF-8 char 边界 panic（`line.find('项')` 返回 byte 偏移不能当 char 偏移，改 char_indices 定位）
-  - flywheel_readme.ps1 阈值：gate ≥16 / doccheck2 ≥15（check_ 函数仍 15 个，无新增，阈值不变）
-
-## 自验
-cargo fmt --all -- --check                     exit 0
-python scripts/check_hardcode.py               exit 0（116 files, 0 hits）
-cargo run -q -p ti-tools --bin doccheck2 .    exit 0（15 项 0 error，check_gate_item_count 实捕获声称非空转）
-powershell -File scripts/gate.ps1             exit 0（20 固定 PASS + 3 条件 SKIP，0 failure）
-
-## 停机判定
-第 4 轮修复均为文本对齐 + doccheck2 作用域补洞，未引入新坐标/新常量/新代码路径
-（doccheck2 重写是检查逻辑非游戏代码）。gate 全绿。
-第 5 轮是否收敛：本轮 0 条新漂移（漂移点全为旧残留，已被全库 grep 扫净）→ 第 5 轮预期 0 新发现 = 停机。
-gate.ps1 由主线程跑；本轮修复 agent 不跑 gate、不 commit。
-
-=== 飞轮第 5 轮 === 2026-10-14
-角色: 找问题(agent) → 修复(agent) → 主线程复核
-
-## 找问题 agent 发现 9 处真漂移
-- gate 23 项笔误 ×2（docs/experience/index.md L115、code.md L237，gate 实际 20 项）
-- 历史时点误改 ×7（plan-s8 ×2、plan-s10 ×4、plan-s11 ×1，第 4 轮修复把历史 gate 项数快照误改成现值 20）
-
-## 修复
-- FIND-434/435: docs/experience/index.md + code.md 「gate 23 项」→「gate 20 项」
-- FIND-402/403: plan-s8-refactor.md L111/L124 「gate.ps1 20 项全绿」→「10 项全绿（S8 时点，现 20 项）」
-- FIND-419/420/421/422: plan-s10-refactor.md L4/L20/L60/L67 「gate 20 项」→「16 项（S10 时点，现 20 项）」
-- FIND-426: plan-s11-forward.md L187 「gate 20 项全绿」→「16 项全绿（S11 时点，现 20 项）」
-
-## 主线程复核
-cargo fmt --all / cargo clippy --workspace --all-targets -- -D warnings / cargo test --workspace 全绿
-doccheck 0 error / doccheck2 0 error（15 项）
-gate.ps1 0 failure（20 固定项 + 3 条件 Skip）
-
-## 判定
-第 5 轮修复完成，0 新发现残留 → 满足停机条件（审计 0 新发现 + 0 误报 + 0 残留）
-飞轮收敛停机
+## 第 2 轮
+- FIND：进行中（架构漂移 + UI/UX 视觉，各 50 条，区域清单按第 1 轮已修项更新）

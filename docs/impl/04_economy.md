@@ -10,7 +10,7 @@
 
 ### 1.1 商品目录
 
-5 种商品，固定价格表（来源 `docs/design/economy.md` §1.1，`资源查表` 哈希键 buy_key/sell_key）：
+5 种商品，固定价格表（来源 `legacy/docs/design/economy.md` §1.1，`资源查表` 哈希键 buy_key/sell_key）：
 
 | 商品 ID | 名称 | 价格 | buy_key | sell_key |
 |---|---|---|---|---|
@@ -20,7 +20,7 @@
 | 4 | good_04 | 114 | 802 | 702 |
 | 5 | good_05 | 133 | 112 | 902 |
 
-> 商品名 good_01..05 为占位（**推测**），价格与 buy_key/sell_key 来源 `docs/design/economy.md` §1.1。
+> 商品名 good_01..05 为占位（**推测**），价格与 buy_key/sell_key 来源 `legacy/docs/design/economy.md` §1.1。
 
 ### 1.2 价格表结构
 
@@ -45,7 +45,7 @@ impl PriceTable {
 }
 ```
 
-> 来源 `docs/design/economy.md` §1.3（行情波动占位：`base - (seed % 10)` 只降不涨，oracle 占位公式）。
+> 来源 `legacy/docs/design/economy.md` §1.3（行情波动占位：`base - (seed % 10)` 只降不涨，oracle 占位公式）。
 
 ### 1.3 买入
 
@@ -176,7 +176,7 @@ profit_since(gid):
 cost = base_cost(kind) × (level + 1)       level ∈ [0, 10]
 ```
 
-base_cost 见 `docs/design/constants.md` §3.2（Castle 1000 / Investment 500 / Bank 200 / Fort 800）；
+base_cost 见 `legacy/docs/design/constants.md` §3.2（Castle 1000 / Investment 500 / Bank 200 / Fort 800）；
 等级 0..10 展开值 = base_cost × (level+1)，等级上限 10（`level > 10` → `InvalidLevel`）。
 
 ### 2.3 建造操作
@@ -244,11 +244,11 @@ pub fn oracle_withdraw(bank: &mut Bank, amount: u32) {
 
 ### 2.6 银行步进器
 
-按压 1/2/3/4/5 次 = 10/100/1000/10000/100000，6..10 保持当前（`docs/design/constants.md` §3.3）。
+按压 1/2/3/4/5 次 = 10/100/1000/10000/100000，6..10 保持当前（`legacy/docs/design/constants.md` §3.3）。
 
 ### 2.7 投资奖励阶梯
 
-兵种 A..E 奖励 +30,000/+40,000/+20,000/+15,000/+50,000（`投资`，来源 `docs/design/economy.md` §2.8 投资奖励阶梯（外部设计源）/ `docs/design/constants.md` §3.4；
+兵种 A..E 奖励 +30,000/+40,000/+20,000/+15,000/+50,000（`投资`，来源 `legacy/docs/design/economy.md` §2.8 投资奖励阶梯（外部设计源）/ `legacy/docs/design/constants.md` §3.4；
 数值与本地 §2.7 一致）。
 
 ---

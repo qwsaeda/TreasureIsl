@@ -1,4 +1,4 @@
-﻿# 执行计划 S3：玩法逆向与重写（主体，4~8 周）
+# 执行计划 S3：玩法逆向与重写（主体，4~8 周）
 
 > **定位**：S3 是逆向期玩法重写计划，**已 archived**（S3.1–S3.12 全 verified），非正向开发依据。当前正向开发见 `docs/00_design.md` + `docs/business/`。
 
@@ -8,12 +8,12 @@
 
 ```
 1 analyzed    读 ref/pseudocode/ 对应函数 → 在 ref/functions.csv 标注模块归属
-2 specified   写 docs/spec/<module>.md：输入/状态机/输出/数值公式/控件字段（f5 类型码，见 ref/controls.json）/事件语义
+2 specified   写 legacy/docs/spec/<module>.md：输入/状态机/输出/数值公式/控件字段（f5 类型码，见 ref/controls.json）/事件语义
 3 oracle      ti-core/src/oracle/<module>.rs 直译伪代码（测试专用，允许与正式实现重复）
 4 implemented ti-core/src/rules|<module>.rs 正式实现（实现 §5.6 的 trait，非 dyn）
 5 diff        diff_test!(oracle, impl, cases) → cargo test -p ti-core --test diff_<module> 全绿
 6 coverage    cargo run -p ti-tools -- coverage events|scenes → 本模块 missing = 0
-7 gate        scripts/gate.ps1 全绿（S3 时点 8 项，现 20 项；占位扫描 0 命中）
+7 gate        scripts/gate.ps1 全绿（S3 时点 8 项，现 21 项；占位扫描 0 命中）
 8 evidence    日志写入 evidence/S3.x.log → ledger 置 verified
 ```
 
@@ -41,10 +41,10 @@
 - 12 个模块全部 `verified`，每份 evidence 齐全；
 - `docs/parity.md` **P2、P3 全绿**：差分测试全通过、事件覆盖 100%、场景覆盖 100%、固定种子全流程脚本跑通（P3-3）；
 - `ref/classify.json` 覆盖率 `pending=0`（exe 中每个函数都有归属，无漏网逻辑）；
-- `scripts/gate.ps1` 全绿（S3 时点 8 项，现 20 项）。
+- `scripts/gate.ps1` 全绿（S3 时点 8 项，现 21 项）。
 
 ## 4. 模块推进中的记录要求
 
-- 发现伪代码与 `docs/facts/index.md` 冲突 → 先实测修正事实库，再改 spec（顺序不可倒置）；
+- 发现伪代码与 `legacy/docs/facts/index.md` 冲突 → 先实测修正事实库，再改 spec（顺序不可倒置）；
 - 同一坑第二次遇到 → 必须写 `docs/experience/index.md` 并在该模块 evidence 中引用条目 ID；
 - 数值表一律资源化进 `assets_out`，代码里只留常量名（§5.3）。

@@ -1,4 +1,4 @@
-﻿# 工具链与脚本化（Tooling）
+# 工具链与脚本化（Tooling）
 
 **原则**：凡是「重复、机械、跨文件」的活，都要有脚本；凡是人肉复制粘贴的地方，
 先问「能不能 codegen」。
@@ -10,12 +10,14 @@
 | `scripts/gate.ps1` | PowerShell | 全库门禁（fmt/clippy/test/build×3/占位/unwrap/台账 + doccheck） | — |
 | `scripts/build_wasm.ps1` | PowerShell | 产出 `web/`（wasm + gl.js + 资源） | 是 |
 | `scripts/smoke.ps1` | PowerShell | native + wasm 两端冒烟 | — |
-| `scripts/classify.py` | Python | 函数分类打标 → `ref/classify.json` | 是 |
-| `scripts/classify_assets.py` | Python | 资产分类 → `ref/asset_classification.json` | 是 |
-| `scripts/pixel_upscale.py` / `waifu2x_upscale.py` | Python | 批量超分 | 是 |
-| `scripts/vectorize_ui.py` | Python | UI 矢量化 | 是 |
+| `legacy/scripts/classify.py` | Python | 函数分类打标 → `ref/classify.json` | 是 |
+| `legacy/scripts/classify_assets.py` | Python | 资产分类 → `ref/asset_classification.json` | 是 |
+| `legacy/scripts/pixel_upscale.py` / `waifu2x_upscale.py` | Python | 批量超分 | 是 |
+| `legacy/scripts/vectorize_ui.py` | Python | UI 矢量化 | 是 |
 | `scripts/pack_hd_assets.py` / `verify_hd_manifest.py` | Python | 多分辨率打包 + 校验 | 是 |
 | `crates/ti-tools` 各 bin | Rust | unpack / map2json / build_assets / controls / classify / specskel / doccheck | 是 |
+
+> 注：两个 HD manifest 脚本**分工不同，勿混用**——`check_hd_manifest.py` 是**门禁项**（校验 `hd_f1_manifest.json` 与 `assets_hd_pack/1x/ui` 目录一致，EXP-048/060）；`verify_hd_manifest.py` 是 **S7.2 验收辅助**（校验 `manifest_hd.json` 与 `assets_hd` 产物 PNG-32/无缺失/哈希匹配）。二者查不同 manifest 文件、不同产物阶段。
 
 新增工具**必须**：幂等 + 提供 `--check` 只读模式 + 非 0 退出码，并登记本表 +
 [`docs/README.md`](../README.md)。

@@ -51,6 +51,25 @@ impl Shell {
             game.shell_mut().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
         }
 
+        // S15.6 QA126/127：TTF 单一资源通路（EXP-046）——浏览器侧 `load_file` 取内置
+        // 真彩 TTF（lxgw-wenkai-reg）字节，按 QB115 三档（96/44/28）实例化后注入壳。
+        // 与 native/快照的内置自动加载（`MenuShell::with_upload_mode`，QA128）同源字体
+        // → 跨端帧等价（QA127）。缺失 → 三档 None（壳回退 12px 位图，§3 不静默空白）。
+        let ttf_bytes = macroquad::file::load_file("assets/fonts/lxgw-wenkai-reg.ttf").await;
+        if let Ok(bytes) = ttf_bytes {
+            use ti_app::glyph_raster::TtfFont;
+            let title = TtfFont::from_bytes(&bytes, 96.0);
+            let body = TtfFont::from_bytes(&bytes, 44.0);
+            let hint = TtfFont::from_bytes(&bytes, 28.0);
+            if title.is_some() || body.is_some() || hint.is_some() {
+                game.shell_mut().set_ttf_fonts(title, body, hint);
+            } else {
+                eprintln!("[font] lxgw-wenkai-reg.ttf 解析失败 → 回退 12px 位图");
+            }
+        } else {
+            eprintln!("[font] assets/fonts/lxgw-wenkai-reg.ttf 未取到 → 回退 12px 位图（§3）");
+        }
+
         // 真实音效（music.lpk → 解包 → 混音 → OGG 转码 → macroquad 音频后端）
         let (bundle, loaded) = Self::load_audio_bank().await;
         let total_count = loaded.len();
@@ -242,12 +261,12 @@ fn pick_sound(
     best.map(|(_, sound)| sound.clone())
 }
 
-/// 窗口配置：强制原版逻辑分辨率 176×220（F-101）。
+/// 窗口配置：原版逻辑分辨率 176×220 的 3 倍（540×960，S15.6 QA126 窗口裁决）。
 fn window_conf() -> Conf {
     Conf {
         window_title: "金银岛 TreasureIsl".to_owned(),
-        window_width: 176,
-        window_height: 220,
+        window_width: 540,
+        window_height: 960,
         ..Default::default()
     }
 }

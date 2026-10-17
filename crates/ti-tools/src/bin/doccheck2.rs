@@ -329,7 +329,7 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
 ///    声称（「N 项命令」），上下文区分「gate 项数」vs「doccheck2 项数」。
 fn gate_item_actual_count(gate: &str) -> usize {
     // 固定项 = 顶层（不缩进）`Report` 调用数；条件分支（if 块内缩进的
-    // `Report`/`Skip`）不计。实测 gate.ps1 = 20 固定 + 3 条件 Skip。
+    // `Report`/`Skip`）不计。实测 gate.ps1 = 21 固定 + 3 条件 Skip。
     gate.lines().filter(|l| l.starts_with("Report ")).count()
 }
 
@@ -384,7 +384,7 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
     let actual = gate_item_actual_count(&gate);
-    let expected = 20usize;
+    let expected = 21usize;
     if actual != expected {
         errors.push(format!(
             "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"
@@ -641,52 +641,45 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
     if touch_src.contains("LIST_Y0") || touch_src.contains("SLOT_Y0") {
         errors.push("touch.rs 仍残留旧常量 LIST_Y0/SLOT_Y0（EXP-071 应已移除）".to_string());
     }
+    // S15.6 QA025：主地图触摸↔渲染正逆成对锚点（EXP-067）——触摸逆变换须读
+    // scenes.json `grid.*`（与渲染 `chrome::iso_cell` 同数据源，无 legacy 32/16 + camera 分裂）。
+    if !touch_src.contains("grid.x0") {
+        errors.push(
+            "touch.rs 等距逆变换未读 scenes.json `grid.*`（QA022/QA023：触摸与渲染须共用 grid 数据源，EXP-067 正逆成对）"
+                .to_string(),
+        );
+    }
+    let main_map_src = read_file(root, "crates/ti-app/src/scenes/main_map.rs").unwrap_or_default();
+    if !main_map_src.contains("grid_cell_at") {
+        errors.push(
+            "main_map.rs 触摸命中未走 scenes.json 派生的 grid_cell_at（QA025：主地图触摸↔渲染正逆成对锚点缺失）"
+                .to_string(),
+        );
+    }
     errors
 }
 
-/// 12. 场景 band 数 == 渲染行数（EXP-073）：`select_role.rs` 的 `scene_list_bands`
-///     调用参数必须等于 `Character::all().len()`（即 5），禁止硬编码魔法数字。
-///     若 band 数走常量（如 `ROLE_COUNT`），则检查常量值 == 5。
+/// 13. HD 精灵透明门禁（EXP-075 洋红框）。S15.4 重锚：legacy 逐像素 CPU blit 层
+///     （index 0 跳过 + RGBA alpha 阈值）已随 legacy 像素写帧层移除，运行时只剩代码
+///     绘制 + GPU 纹理路。本检查重锚到三条仍存不变量：`render_pipeline::TRANSPARENT_INDEX`
+///     （PCX 调色板 index 0 哨兵透明位）保留、`pack_hd_assets.py` 的 `sanitize_alpha`
+///     （alpha 二值化）未破坏、运行时不再残留绕过透明的 CPU 逐像素 RGBA blit（重锚 = S15.5）。
 fn check_hd_sprite_transparency(root: &Path) -> Vec<String> {
-    // EXP-075：洋红框实为两条渲染路径、两个独立根因，机器锚定 5 处不变量：
-    // ① PCX 路（RGB565，native 默认 Original 实际走）：`blit_sprite`/`terrain_atlas`
-    //    必须跳过 palette index 0（原版 sub_5D9C4 透明位；ui.pak 94/120 张 index 0 = 洋红）。
-    // ② HD PNG 路：`blit_sprite_rgba` 用 alpha 阈值；`pack_hd_assets.py` 二值化；
-    //    `render_hd` 真正 blit HD PNG 到 fb_rgba。
     let mut errors = Vec::new();
 
-    let atlas = read_file(root, "crates/ti-app/src/sprite_atlas.rs").unwrap_or_default();
-    if !atlas.contains("ALPHA_TRANSPARENT_CUTOFF")
-        || !atlas.contains("rgba[3] < Self::ALPHA_TRANSPARENT_CUTOFF")
-    {
+    // ① PCX 调色板 index 0 = 哨兵透明位（EXP-075①：原版 sub_5D9C4 透明位，ui.pak 94/120 张
+    //    index 0 = 洋红）。S15.4 后该约定保留在 `render_pipeline::TRANSPARENT_INDEX`（解码/诊断 + GPU 路）。
+    let pipeline = read_file(root, "crates/ti-app/src/render_pipeline.rs").unwrap_or_default();
+    if !pipeline.contains("TRANSPARENT_INDEX") {
         errors.push(
-            "sprite_atlas.rs `blit_sprite_rgba` 必须用 alpha 阈值 ALPHA_TRANSPARENT_CUTOFF 判透明（EXP-075②；`a == 0` 会把软 alpha 当不透明画成洋红框）"
-                .to_string(),
-        );
-    }
-    if atlas.contains("if rgba[3] == 0") {
-        errors.push(
-            "sprite_atlas.rs 残留 `rgba[3] == 0` 透明判定，必须改 alpha 阈值（EXP-075②）"
-                .to_string(),
-        );
-    }
-    // EXP-075①（主根因）：PCX 调色板 index 0 = 洋红哨兵色（ui.pak 94/120 张实测），
-    // 原版 8-bit blit 例程 sub_5D9C4 逐像素 `if (idx != 0) write` 跳过，
-    // Rust `blit_sprite`（RGB565，native 默认 `QualityMode::Original` 实机路径）必须同口径跳过。
-    if !atlas.contains("if idx == 0 {") && !atlas.contains("if idx == TRANSPARENT_INDEX {") {
-        errors.push(
-            "sprite_atlas.rs `blit_sprite`（RGB565 路）必须跳过 palette index 0（EXP-075①：index 0 = 洋红哨兵色，原版 sub_5D9C4 透明位，native 默认 Original 路径实机走这里）"
-                .to_string(),
-        );
-    }
-    let terrain = read_file(root, "crates/ti-app/src/terrain_atlas.rs").unwrap_or_default();
-    if !terrain.contains("if idx == 0 {") && !terrain.contains("if idx == TRANSPARENT_INDEX {") {
-        errors.push(
-            "terrain_atlas.rs `blit_decoded`/`blit_decoded_rgba` 必须跳过 palette index 0（EXP-075①，同口径 2 处）"
+            "render_pipeline.rs 必须保留 TRANSPARENT_INDEX 常量（EXP-075①：PCX 调色板 index 0 = 哨兵透明位；S15.4 后为解码/诊断 + GPU 图集透明约定）"
                 .to_string(),
         );
     }
 
+    // ② HD 资产管线 alpha 二值化（EXP-075②：Lanczos 重采样软 alpha 1..254 → 洋红框）。
+    //    `blit_scene_rgba` 已删（S15.4），但 HD PNG 注入仍走 `load_hd_pngs`/GPU 路，
+    //    资产侧二值化约定不变。
     let packer = read_file(root, "scripts/pack_hd_assets.py").unwrap_or_default();
     if !packer.contains("def sanitize_alpha") || !packer.contains("a >= 128") {
         errors.push(
@@ -701,54 +694,61 @@ fn check_hd_sprite_transparency(root: &Path) -> Vec<String> {
         );
     }
 
-    let game_app = read_file(root, "crates/ti-app/src/game_app.rs").unwrap_or_default();
-    if !game_app.contains("blit_scene_rgba(scene, &mut self.shell.fb_rgba)") {
-        errors.push(
-            "game_app.rs `render_hd` 必须调 `atlas.blit_scene_rgba` 把 HD PNG 叠加到 `fb_rgba`（EXP-075②：此前漏调，注入的 HD 贴图从未上屏，画面退化成 RGB565 扩色）"
-                .to_string(),
-        );
-    }
     errors
 }
 
+/// S14 全量重设计：scenes.json 坐标以 `docs/business/08_layout_design.md` §4 为单一事实源。
+/// 旧 EXP-074 锚定（=ab0e5b5 逆向坐标）已作废——S14 重设计是正向开发的新版面，
+/// 不再要求 == 旧逆向视觉，改锚定 `08_layout_design.md` §4 的新坐标。
+#[allow(clippy::too_many_lines)] // S15.6 QA133 实体 size 键在位锚并入后 > 100 行
 fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
-    // S14 全量重设计：scenes.json 坐标以 `docs/business/08_layout_design.md` §4 为单一事实源。
-    // 旧 EXP-074 锚定（=ab0e5b5 逆向坐标）已作废——S14 重设计是正向开发的新版面，
-    // 不再要求 == 旧逆向视觉，改锚定 08_layout_design.md §4 的新坐标。
     let mut errors = Vec::new();
     let Some(json) = read_file(root, "assets/data/scenes.json") else {
         return vec!["assets/data/scenes.json 不存在，无法校验布局（S14）".to_string()];
     };
 
-    // 逐场景锚定 S14 新坐标（08_layout_design.md §4）：
-    // index: 标题条 40px + 列表 y=48 行高 32 + 高亮上移 12 + 列表 x=16 w=144
-    // select_role/select_map: 列表 y=48 行高 32 + 高亮上移 12 + 列表 x=16 w=144
-    // saveload: 列表 y=48 行高 32 + 高亮上移 12 + gold_x=120 + 列表 x=16 w=144
-    // vs: 血条 x=16 w=144 h=8（玩家 y=32 / BOSS y=56）
-    // main_map: HUD y=152 h=24（不与瓦片区 y=32..144 重叠）
+    // 逐场景锚定 **1080 现代版面**（`08_layout_design.md` §4 / `scenes.json`，S16 渲染线）：
+    // 公共：标题条 h=90、提示/状态行 y=1860、列表 x=90 w=900
+    // index: list y=400 row_h=220 item_h=170 highlight_offset=40（S15.6 QB101 六行重分布），status y=1860
+    // select_role: row_h=270；select_map: row_h=340（S15.6 QB103，3 地图卡）；saveload: row_h=250 gold_x=820
+    // vs: player_hp 60..500 / boss_hp 580..1020（S15.6 QB120 解重叠）y=170 w=440 h=48
+    // main_map: hud y=150 h=120（不与等距区 grid.y0=520 重叠）
     let anchors: &[(&str, &str, &str)] = &[
-        ("\"index\"", "\"h\": 40", "index 标题条高度 = 40（S14 §4.1）"),
-        ("\"index\"", "\"y\": 48", "index 列表起点 y = 48（S14 §4.1，旧 96 作废）"),
-        ("\"index\"", "\"row_h\": 32", "index 行高 = 32（S14 §4.1，旧 20 作废）"),
-        ("\"index\"", "\"highlight_offset\": 12", "index 高亮上移 = 12（S14 §4.1）"),
+        ("\"index\"", "\"h\": 90", "index 标题条高度 = 90（§4.1，1080）"),
+        ("\"index\"", "\"y\": 400", "index 列表基线 y = 400（§4.1，1080，S15.6 QB101 六行重分布）"),
+        ("\"index\"", "\"row_h\": 220", "index 行高 = 220（§4.1，1080，S15.6 QB101）"),
+        ("\"index\"", "\"highlight_offset\": 40", "index 高亮上移 = 40（§4.1，1080）"),
+        ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，1080，S15.6 二轮 retune）"),
         (
             "\"select_role\"",
-            "\"highlight_offset\": 12",
-            "select_role 高亮上移 = 12（S14 §4.2，旧 10 作废）",
+            "\"row_h\": 300",
+            "select_role 行高 = 300（§4.2，5 角色卡，S15.6 二轮 retune）",
         ),
-        ("\"select_role\"", "\"row_h\": 32", "select_role 行高 = 32（S14 §4.2，旧 30 作废）"),
         (
             "\"select_map\"",
-            "\"highlight_offset\": 12",
-            "select_map 高亮上移 = 12（S14 §4.2，旧 10 作废）",
+            "\"row_h\": 340",
+            "select_map 行高 = 340（§4.2，3 地图卡，S15.6 QB103）",
         ),
-        ("\"saveload\"", "\"y\": 48", "saveload 列表起点 y = 48（S14 §4.6，旧 40 作废）"),
-        ("\"saveload\"", "\"row_h\": 32", "saveload 行高 = 32（S14 §4.6，旧 40 作废）"),
-        ("\"saveload\"", "\"gold_x\": 120", "saveload 金字号列 x = 120（S14 §4.6，旧 100 作废）"),
-        ("\"vs\"", "\"y\": 32", "vs 玩家血条 y = 32（S14 §4.4）"),
-        ("\"vs\"", "\"y\": 56", "vs BOSS 血条 y = 56（S14 §4.4）"),
-        ("\"vs\"", "\"w\": 144", "vs 血条宽 = 144（S14 §4.4）"),
-        ("\"main_map\"", "\"y\": 152", "main_map HUD y = 152（S14 §4.3，与瓦片区 32..144 不重叠）"),
+        ("\"saveload\"", "\"row_h\": 300", "saveload 行高 = 300（§4.6，1080，S15.6 二轮 retune）"),
+        (
+            "\"saveload\"",
+            "\"gold_x\": 820",
+            "saveload 金字号列 x = 820（§4.6，1080，S15.6 QA105/QB122 左移防越屏）",
+        ),
+        (
+            "\"vs\"",
+            "\"w\": 440",
+            "vs 血条宽 = 440（§4.4，1080，S15.6 QB120 解重叠 60..500/580..1020）",
+        ),
+        ("\"vs\"", "\"h\": 48", "vs 血条高 = 48（§4.4，1080）"),
+        ("\"main_map\"", "\"y\": 150", "main_map HUD y = 150（§4.3，1080，与等距区 520 不重叠）"),
+        ("\"main_map\"", "\"h\": 120", "main_map HUD h = 120（§4.3，1080）"),
+        (
+            "\"main_map\"",
+            "\"y0\": 520",
+            "main_map 等距棋盘 grid.y0 = 520（§4.3，1080，S15.6 QB105 棋盘下移）",
+        ),
+        ("\"message\"", "\"h\": 1480", "message 正文区 h = 1480（§4.5，FIND-026 区间约束）"),
     ];
     // 每个场景段单独切片，避免跨场景误匹配（如 select_role 与 select_map 同名 list）
     for &(scene_key, needle, msg) in anchors {
@@ -758,10 +758,29 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         }
     }
 
-    // 标量字段语义：locked.text_x 必须 = 130（select_map 未解锁标签 x，S14 §4.2）
-    if !json.contains("\"text_x\": 130") && !json.contains("\"text_x\":130") {
+    // 标量字段语义：未解锁标签 x。QA033 更新：1080 版面数据驱动键 `locked.text_x` = 920
+    // （scenes.json `select_map.locked` 块），legacy 176 时代休眠回退值 130 已删
+    // （键缺失/非正 = 不画锁块，契约 1/4）。锚定**数据侧键存在 + 代码侧读取、
+    // 且无 130 回退**。
+    let select_map_rs =
+        read_file(root, "crates/ti-app/src/scenes/select_map.rs").unwrap_or_default();
+    let select_map_json = read_file(root, "assets/data/scenes.json").unwrap_or_default();
+    if !select_map_rs.contains("locked.text_x") {
         errors.push(
-            "scenes.json select_map.locked.text_x 必须 = 130（S14 §4.2 未解锁标签 x）".to_string(),
+            "select_map.rs 必须读 `extra_scalar[\"locked.text_x\"]`（QA033：§4.2 未解锁标签 x，1080 数据驱动，契约 4）"
+                .to_string(),
+        );
+    }
+    if select_map_rs.contains("unwrap_or(130)") {
+        errors.push(
+            "select_map.rs 不得有 legacy 176 时代回退值 130（QA033：130 = 176 坐标系值，契约 1）"
+                .to_string(),
+        );
+    }
+    if !select_map_json.contains("locked") || !select_map_json.contains("\"text_x\": 920") {
+        errors.push(
+            "scenes.json `select_map` 必须声明 `locked.text_x` = 920（QA033：锁块 x 走 1080 数据驱动）"
+                .to_string(),
         );
     }
 
@@ -789,11 +808,34 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         );
     }
 
-    // 视觉回归必须掩背景（EXP-074：HD 背景 ≠ PCX 背景非排版漂移，只锁 UI 像素分布）
+    // S15.6 QA133：实体 size 键（player.size / landmark.size / boss.size，§4.3 数据驱动）
+    // 存在性锚——键缺失时 `main_map.rs` 静默回退 16×8/12×6/18×9 旧公式，
+    // gate/doccheck2 全绿（QA030 修了「键被消费」，本锚补「键本身被守护」）。
+    let main_map_section = scene_section(&json, "\"main_map\"");
+    for ent in ["player", "landmark", "boss"] {
+        let pat = format!("\"{ent}\":");
+        let Some(pos) = main_map_section.find(&pat) else {
+            errors.push(format!(
+                "scenes.json main_map 缺实体对象 `{ent}`（QA133：§4.3 实体边长数据驱动键，缺失 = 代码静默回退旧公式）"
+            ));
+            continue;
+        };
+        let tail = &main_map_section[pos..];
+        let close = tail.find('}').map_or(tail.len(), |i| i);
+        if !tail[..=close].contains("\"size\":") {
+            errors.push(format!(
+                "scenes.json main_map `{ent}` 缺 `size` 键（QA133：§4.3 实体边长数据驱动，键缺失 = 渲染静默回退旧公式）"
+            ));
+        }
+    }
+
+    // 视觉回归必须掩背景（EXP-074：HD 背景 ≠ PCX 背景非排版漂移，只锁 UI 像素分布）。
+    // S15.4：176×220 逐像素基线机制已暂移除（legacy 像素写帧层删除），`diff_frames_ui`/`is_bg_cur`
+    // 不变量随 S15.5 重锚到 1080 代码绘制基线时重新落地；此期间门禁校验文件处于 S15.5 暂存状态。
     let vr = read_file(root, "crates/ti-app/tests/visual_regression.rs").unwrap_or_default();
-    if !vr.contains("diff_frames_ui") || !vr.contains("is_bg_cur") {
+    if !vr.contains("diff_frames_ui") && !vr.contains("S15.5") {
         errors.push(
-            "visual_regression.rs 必须用 `diff_frames_ui` 掩背景色只比 UI 像素分布（EXP-074，整帧 diff 会因 HD/PCX 背景差异误报）"
+            "visual_regression.rs 必须用 `diff_frames_ui` 掩背景色只比 UI 像素分布（EXP-074）；S15.4 起逐像素基线暂移除，文件应含 S15.5 重锚标记"
                 .to_string(),
         );
     }
@@ -911,6 +953,281 @@ fn check_save_slot_map_slot_basis(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 15. 穷举场景双写对账（S15.1 第 6 域补全，第 11 轮对抗审计 Q062/Q063/Q085 固化）：
+///     `assets/data/exhaust_scenarios.json` 与 `assets/data/balance.json` 双写的数值常量
+///     必须一致，防 balance 改值后 exhaust JSON 静默失配（exhaust 测试读 JSON，balance 读
+///     真实表，两者各自「自洽」但互相矛盾时全部假绿）：
+///     - ① `exhaust.combat.max_rounds_one_case_exact.player_atk` == `balance.combat.boss_tiers[tier=0].hp`
+///       （exhaust 的「精确边界」用例假设 atk 恰好等于档 0 BOSS hp）；
+///     - ② `exhaust.progression.card_event_id_max` == `25`（`cards.rs::all_event_ids` 返回
+///       `(1..=25)` 硬编码上界，exhaust 卡牌穷举遍历 `0..=card_event_id_max`，两者必须一致）。
+fn parse_json_file(root: &Path, rel: &str) -> Option<serde_json::Value> {
+    let text = read_file(root, rel)?;
+    serde_json::from_str(&text).ok()
+}
+
+fn check_exhaust_balance_dual_write(root: &Path) -> Vec<String> {
+    use serde_json::Value;
+    let mut errors = Vec::new();
+    let exhaust = parse_json_file(root, "assets/data/exhaust_scenarios.json");
+    if exhaust.is_none() {
+        errors.push("exhaust_scenarios.json 不存在或解析失败".to_string());
+        return errors;
+    }
+    let balance = parse_json_file(root, "assets/data/balance.json");
+    if balance.is_none() {
+        errors.push("balance.json 不存在或解析失败".to_string());
+        return errors;
+    }
+    let (Some(exhaust), Some(balance)) = (exhaust, balance) else {
+        return errors;
+    };
+    // ① player_atk 须 == 档 0 BOSS hp
+    let player_atk =
+        exhaust.pointer("/combat/max_rounds_one_case_exact/player_atk").and_then(Value::as_u64);
+    let tier0_hp = balance.pointer("/combat/boss_tiers").and_then(|t| {
+        t.as_array().and_then(|arr| {
+            arr.iter()
+                .find(|tier| tier.get("tier").and_then(Value::as_u64) == Some(0))
+                .and_then(|tier| tier.get("hp"))
+                .and_then(Value::as_u64)
+        })
+    });
+    match (player_atk, tier0_hp) {
+        (Some(a), Some(h)) if a != h => errors.push(format!(
+            "exhaust_scenarios.json combat.max_rounds_one_case_exact.player_atk={a} \
+             != balance.json combat.boss_tiers[0].hp={h}（双写失配，exhaust 精确边界用例假绿）"
+        )),
+        (None, _) => errors.push(
+            "exhaust_scenarios.json 缺 combat.max_rounds_one_case_exact.player_atk".to_string(),
+        ),
+        (_, None) => errors.push("balance.json 缺 combat.boss_tiers[tier=0].hp".to_string()),
+        _ => {}
+    }
+    // ② card_event_id_max 须 == 25（cards.rs all_event_ids 硬编码上界）
+    let card_max = exhaust.pointer("/progression/card_event_id_max").and_then(Value::as_u64);
+    if card_max != Some(25) {
+        errors.push(format!(
+            "exhaust_scenarios.json progression.card_event_id_max={card_max:?} != 25 \
+             （cards.rs all_event_ids 返回 1..=25，exhaust 卡牌穷举遍历 0..=card_event_id_max 须与之上界一致）"
+        ));
+    }
+    errors
+}
+
+/// 18. 运行时禁 legacy 坐标（S16 渲染线契约 1，`docs/process/08_render_arch.md`）：
+///     呈现坐标系唯一 = 1080×1920。`ti-platform/gfx.rs`、`ti-app/menu_shell.rs`、
+///     `ti-app/scenes/**`、`ti-app/src/touch.rs`、`ti-app/src/game_app.rs` 与
+///     `ti-core/tests/**` 的**代码**（剔除 `//` / `///` / `//!` 注释与 `#[cfg(test)]`
+///     模块）不得出现 legacy 尺寸字面量 `176` / `220` —— S15.2 事故根因就是
+///     legacy 坐标泄漏进运行时（`select_map.rs` 曾写 `176 - text_x - 6` 钳进 176 宽屏）。
+///     S15.6 QA047：目标集扩面（旧网恰好漏掉全部 176 尺度活件 `touch.rs`/`game_app.rs`
+///     与 ti-core 测试面）。
+///     同时锁呈现常量同值（`menu_shell` 的 `LOGICAL_W_I32`/`LOGICAL_H_I32` == `gfx` 的 `CANVAS_W`/`CANVAS_H`）。
+fn check_runtime_no_legacy_coords(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let mut targets: Vec<std::path::PathBuf> = Vec::new();
+    for rel in [
+        "crates/ti-platform/src/gfx.rs",
+        "crates/ti-app/src/menu_shell.rs",
+        "crates/ti-app/src/touch.rs",
+        "crates/ti-app/src/game_app.rs",
+    ] {
+        targets.push(root.join(rel));
+    }
+    {
+        let mut scene_rs: BTreeSet<String> = BTreeSet::new();
+        collect_recursive(&root.join("crates/ti-app/src/scenes"), &mut scene_rs);
+        targets.extend(scene_rs.iter().map(|rel| root.join(rel)));
+        // QA047：ti-core 集成测试面（`unwrap_or(176/220)` 休眠回退值类泄漏，data_tables.rs）。
+        let mut core_tests: BTreeSet<String> = BTreeSet::new();
+        collect_recursive(&root.join("crates/ti-core/tests"), &mut core_tests);
+        targets.extend(core_tests.iter().map(|rel| root.join(rel)));
+    }
+
+    for path in targets {
+        let Ok(text) = std::fs::read_to_string(&path) else { continue };
+        let rel = path.strip_prefix(root).unwrap_or(path.as_path()).display().to_string();
+        let mut in_test_mod = false;
+        for (i, line) in text.lines().enumerate() {
+            let t = line.trim();
+            // 跳过 `#[cfg(test)]` 单测模块：测试夹具坐标（如 Viewport 变换的
+            // 176×220 采样点）是合法输入数据，不算运行时坐标泄漏。
+            if !in_test_mod && (t.starts_with("#[cfg(test)]") || t == "mod tests {") {
+                in_test_mod = true;
+                continue;
+            }
+            if in_test_mod {
+                // 只认**列 0** 的 `}` 作模块结束（缩进的 `}` 是函数/块闭合，不算）
+                if line == "}" {
+                    in_test_mod = false;
+                }
+                continue;
+            }
+            // 剔除注释：整行注释 + 行尾注释（注释里的历史尺寸引用不算泄漏）
+            let code = match line.find("//") {
+                Some(p) => &line[..p],
+                None => line,
+            };
+            if code.trim().is_empty() {
+                continue;
+            }
+            for lit in ["176", "220"] {
+                if contains_word(code, lit) {
+                    errors.push(format!(
+                        "{rel}:{} 运行时出现 legacy 坐标字面量 `{lit}`（契约 1：呈现坐标系唯一 1080×1920，见 08_render_arch.md §3/§5；改用 gfx::CANVAS_W/H 或 menu_shell::LOGICAL_*_I32）",
+                        i + 1
+                    ));
+                }
+            }
+        }
+    }
+
+    // 呈现常量同值：权威坐标系单一源 = `ti_render::framebuffer`（S15.7 框架提取后，
+    // LOGICAL_*_I32 由菜单层上移到渲染框架），平台层 gfx CANVAS_* 须与之同值。
+    // menu_shell 现为 `pub use` 转发（非本地定义），故不再 grep 其 `pub const`。
+    let gfx = read_file(root, "crates/ti-platform/src/gfx.rs").unwrap_or_default();
+    let render = read_file(root, "crates/ti-render/src/framebuffer.rs").unwrap_or_default();
+    for (a, b, label) in [
+        ("pub const LOGICAL_W_I32: i32 = 1080;", "pub const CANVAS_W: u32 = 1080;", "宽度"),
+        ("pub const LOGICAL_H_I32: i32 = 1920;", "pub const CANVAS_H: u32 = 1920;", "高度"),
+    ] {
+        if !render.contains(a) {
+            errors.push(format!(
+                "ti_render/framebuffer.rs 缺呈现常量 `{a}`（契约 1：框架权威坐标系单一源）"
+            ));
+        }
+        if !gfx.contains(b) {
+            errors.push(format!("gfx.rs 缺呈现常量 `{b}`（契约 1：{label}须与 ti_render 同值）"));
+        }
+    }
+    errors
+}
+
+/// 行内是否出现独立词 `needle`（避免 `1176` / `2200` 之类误判）。
+fn contains_word(haystack: &str, needle: &str) -> bool {
+    let bytes = haystack.as_bytes();
+    let n = needle.len();
+    let mut from = 0usize;
+    while let Some(rel) = haystack[from..].find(needle) {
+        let at = from + rel;
+        let before_ok = at == 0 || !bytes[at - 1].is_ascii_digit();
+        let after = at + n;
+        let after_ok = after >= bytes.len() || !bytes[after].is_ascii_digit();
+        if before_ok && after_ok {
+            return true;
+        }
+        from = at + n;
+    }
+    false
+}
+
+/// 17. 经验库分卷条数对账（第 12 轮对抗审计 Q016 类复发固化）：
+///     `docs/experience/index.md` 分卷表「条数」列须 == 各卷文件实际 `### EXP-` heading 数
+///     （历史 2 轮漂移：code/process 各差 5、tools/build 反向差 3/1，均靠人肉发现）。
+fn check_experience_volume_counts(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(index) = read_file(root, "docs/experience/index.md") else { return errors };
+    for line in index.lines() {
+        let trimmed = line.trim();
+        // 仅解析分卷表行：`| [`file.md`](file.md) | 内容 | 条数 |`（3 列且首列含 `](…md)`）
+        if !trimmed.starts_with('|') || !trimmed.ends_with('|') {
+            continue;
+        }
+        let body = &trimmed[1..trimmed.len() - 1];
+        let cols: Vec<&str> = body.split('|').map(str::trim).collect();
+        if cols.len() != 3 || !cols[0].contains(".md](") {
+            continue;
+        }
+        let Some(p) = cols[0].find("](") else { continue };
+        let seg = &cols[0][p + 2..];
+        let Some(close) = seg.find(')') else { continue };
+        let fname = &seg[..close];
+        let Ok(declared) = cols[2].parse::<usize>() else { continue };
+        let actual = read_file(root, &format!("docs/experience/{fname}"))
+            .map_or(0, |t| t.lines().filter(|l| l.starts_with("### EXP-")).count());
+        if actual != declared {
+            errors.push(format!(
+                "docs/experience/index.md 分卷表条数列：{fname} 声明 {declared}，实际 `### EXP-` heading {actual}（Q016 类漂移，改条目时须同步分卷表）"
+            ));
+        }
+    }
+    errors
+}
+
+/// 19. 基线镜像恒等（S15.6 QA014 / B1 裁决③「三套基线镜像恒等」）：
+///     `assets/render_baseline` 为唯一权威基线，`forward_baseline` / `hd_baseline`
+///     是同一代码渲染器的**镜像**（S15.4 删 legacy 写帧层后两态像素恒等）。
+///     对应场景文件须**逐字节恒等**（比 SHA256 恒等更强：字节同 ⇒ 哈希同），
+///     防未来某套基线被单独改动导致三套门禁静默分叉。
+///     场景名映射：render（legacy 名）↔ forward（scenes.json 键）/ hd（PascalCase）。
+fn check_baseline_mirror_identity(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    // (render legacy 名, forward scenes.json 键) 7 对
+    let maps: [(&str, &str); 7] = [
+        ("index", "index"),
+        ("selectrole", "select_role"),
+        ("selectmap", "select_map"),
+        ("main", "main_map"),
+        ("vs", "vs"),
+        ("msgs", "message"),
+        ("saveload", "saveload"),
+    ];
+    for (render, forward) in maps {
+        let rp = root.join("assets/render_baseline").join(format!("{render}.png"));
+        let fp = root.join("assets/forward_baseline").join(format!("{forward}.png"));
+        let (rb, fb) = (std::fs::read(&rp), std::fs::read(&fp));
+        match (rb, fb) {
+            (Ok(a), Ok(b)) => {
+                if a != b {
+                    errors.push(format!(
+                        "基线镜像分叉：render_baseline/{render}.png（{} bytes）≠ forward_baseline/{forward}.png（{} bytes）（B1 裁决③：forward 为 render 的镜像，同代码生成应逐字节恒等；某套被单独改动）",
+                        a.len(),
+                        b.len()
+                    ));
+                }
+            }
+            (Err(e1), Err(e2)) => {
+                errors.push(format!(
+                    "基线镜像缺失：render_baseline/{render}.png（{e1}）与 forward_baseline/{forward}.png（{e2}）均不存在（跑 `cargo test -p ti-app --test render_snapshot --test render_snapshot_forward` 重生成）"
+                ));
+            }
+            _ => {
+                errors.push(format!(
+                    "基线镜像缺失：render_baseline/{render}.png 与 forward_baseline/{forward}.png 至少一个不存在（跑快照测试重生成）"
+                ));
+            }
+        }
+    }
+    // hd_baseline 3 文件（Index/SelectRole/MainMap）与 render 对应文件恒等
+    let hd: [(&str, &str); 3] =
+        [("index", "Index"), ("selectrole", "SelectRole"), ("main", "MainMap")];
+    for (render, hd_name) in hd {
+        let rp = root.join("assets/render_baseline").join(format!("{render}.png"));
+        let hp = root.join("assets/hd_baseline").join(format!("{hd_name}.png"));
+        match (std::fs::read(&rp), std::fs::read(&hp)) {
+            (Ok(a), Ok(b)) => {
+                if a != b {
+                    errors.push(format!(
+                        "基线镜像分叉：render_baseline/{render}.png ≠ hd_baseline/{hd_name}.png（B1 裁决③：hd 为 render 的镜像，同代码生成应逐字节恒等）"
+                    ));
+                }
+            }
+            (Err(e1), Err(e2)) => {
+                errors.push(format!(
+                    "基线镜像缺失：render_baseline/{render}.png（{e1}）与 hd_baseline/{hd_name}.png（{e2}）均不存在（跑 `cargo test -p ti-app --test visual_regression` 重生成）"
+                ));
+            }
+            _ => {
+                errors.push(format!(
+                    "基线镜像缺失：render_baseline/{render}.png 与 hd_baseline/{hd_name}.png 至少一个不存在（跑快照测试重生成）"
+                ));
+            }
+        }
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -931,9 +1248,13 @@ fn main() -> ExitCode {
     all_errors.extend(check_scene_layout_fidelity(&root));
     all_errors.extend(check_hd_sprite_transparency(&root));
     all_errors.extend(check_save_slot_map_slot_basis(&root));
+    all_errors.extend(check_exhaust_balance_dual_write(&root));
+    all_errors.extend(check_experience_volume_counts(&root));
+    all_errors.extend(check_runtime_no_legacy_coords(&root));
+    all_errors.extend(check_baseline_mirror_identity(&root));
 
     println!(
-        "doccheck2: {} error(s) across 15 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis)",
+        "doccheck2: {} error(s) across 19 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity)",
         all_errors.len()
     );
     for err in &all_errors {

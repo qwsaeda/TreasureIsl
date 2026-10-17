@@ -13,12 +13,14 @@ mod balance;
 #[allow(unused_imports)]
 use balance::RawBalance;
 mod controls;
+mod exhaust;
 mod layout;
 mod strings;
 
 // re-export（保持 `ti_core::data::*` 公共 API 不变）
 pub use balance::balance;
 pub use controls::controls;
+pub use exhaust::{ExhaustScenarios, exhaust, exhaust_key_counts};
 pub use layout::scenes;
 pub use strings::{pairs, strings};
 
@@ -318,7 +320,7 @@ pub struct MapDef {
 
 /// 单个控件记录（`controls.json` 的 `scenes[].records[]`，S8.5 控件层）。
 ///
-/// 字段语义见 `docs/facts/map.md`（F-306/F-311：`f0`=x、`f1`=w、`f2`=h、
+/// 字段语义见 `legacy/docs/facts/map.md`（F-306/F-311：`f0`=x、`f1`=w、`f2`=h、
 /// `f3`=y、`f4`=flags、`f5`=控件类型、`f6`=extra）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ControlRec {
@@ -514,7 +516,8 @@ impl ListLayout {
 pub struct SceneLayout {
     /// 场景 id（键名，如 `select_role`）。
     pub id: String,
-    /// 背景色。
+    /// 背景色。S15.6 裁决①：`scenes.json` 的 `bg` 键已删（运行时零消费，画布底色 =
+    /// chrome `COLOR_PARCH_DARK` 深底）；解析缺省 0，**无消费方**。
     pub bg: u16,
     /// 标题条。
     pub title: Rect,
@@ -530,6 +533,9 @@ pub struct SceneLayout {
     pub extra: BTreeMap<String, Rect>,
     /// 场景专属标量字段（如 `select_map.locked.text_x`；EXP-074 解析器不得把缺 key 静默置 0）。
     pub extra_scalar: BTreeMap<String, i32>,
+    /// §4 立绘允许区清单（`scenes.json` 的 `portrait_zones`，0~N 块；大立绘落点越所有区 = 错位，
+    /// `08_layout_design.md` §4.1/§4.2 声明 + `render_intent::large_portraits_respect_layout_zones` 判定）。
+    pub portrait_zones: Vec<Rect>,
 }
 
 // ------------------------------------------------------------------- 缓存入口

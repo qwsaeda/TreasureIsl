@@ -66,6 +66,6 @@
 ## 8. 文档
 
 - 结论单一事实源，跨文档引用 ID 不复述；
-- 业务规则写 [`docs/business/`](../business/)，工程规范写本目录，格式事实写 `docs/facts/`；
+- 业务规则写 [`docs/business/`](../business/)，工程规范写本目录，格式事实写 `legacy/docs/facts/`；
 - **不要**在 `.rs` 注释里把「推测」当事实陈述——推测写进 `docs/business/` 对应模块并标注验证方法；
 - 新文档登记 [`docs/README.md`](../README.md)。

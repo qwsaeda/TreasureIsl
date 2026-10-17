@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "combat": {
+    "seeds": [42, 123, 999],
+    "max_rounds_levels": [1, 5, 10, 50],
+    "player_variants": [
+      {"hp": 1000, "atk": 60},
+      {"hp": 2000, "atk": 100},
+      {"hp": 500, "atk": 30}
+    ],
+    "oob_seed_check": [42, 123],
+    "max_rounds_one_case": {"seed": 42, "player_hp": 1000, "player_atk": 5000, "boss_tier": 0},
+    "max_rounds_one_case_exact": {"seed": 42, "player_hp": 1000, "player_atk": 2400, "boss_tier": 0},
+    "fixture": {
+      "boss_tiers": [
+        {"tier": 0, "hp": 100, "atk": 5},
+        {"tier": 1, "hp": 200, "atk": 8}
+      ],
+      "seeds": [7, 8],
+      "max_rounds_levels": [1, 3],
+      "player_hp": 500,
+      "player_atk": 50
+    }
+  },
+  "trade": {
+    "qty_offset_levels": [-2, -1, 0, 1, 2],
+    "qty_offset_labels": ["-2", "-1", "0", "+1", "+2"],
+    "gold_offset_levels": [-100, -10, 0, 10, 100],
+    "gold_offset_labels": ["-100", "-10", "0", "+10", "+100"],
+    "fixture": {
+      "markup": 1.5,
+      "goods": [
+        {"id": 1, "buy": 100, "qty_max": 10},
+        {"id": 2, "buy": 200, "qty_max": 5}
+      ],
+      "gold_cap": 9999,
+      "cases": [
+        {"gid": 1, "owned": 5, "gold": 500, "sell_unit": 150},
+        {"gid": 2, "owned": 3, "gold": 1000, "sell_unit": 300}
+      ],
+      "unlimited_case": {"gid": 1, "owned": 8, "gold": 5000, "sell_unit": 150}
+    }
+  },
+  "build": {
+    "fixture": {
+      "max_level": 5,
+      "buildings": [
+        {"id": "castle", "base_cost": 1000, "gold_max": 5000},
+        {"id": "barracks", "base_cost": 800, "gold_max": 3000}
+      ],
+      "initial_bank_gold": 16000
+    }
+  },
+  "saveload": {
+    "seeds": [42, 123],
+    "gold_levels": [0, 100, 1000],
+    "hp_levels": [100, 500, 1000],
+    "bank_levels": [0, 500, 2000],
+    "rng_step_levels": [0, 10, 100],
+    "legacy_slot_cases": [
+      {"version": 1, "character": 1, "gold": 100, "map_slot": 0, "position": 0, "rng_steps": 0}
+    ]
+  },
+  "menu": {
+    "cursor_counts": [3, 5, 8],
+    "cursor_starts": [0, 1, 2],
+    "item_target_indexes": [0, 1, 2, 3, 4, 5],
+    "msg_page_offset_levels": [-1, 0, 1],
+    "msg_page_offset_labels": ["-1", "0", "+1"]
+  },
+  "main_loop": {
+    "states": [0, 2, 3, 4, 25, 26, 27],
+    "triggers": [1, 2, 4, 5]
+  },
+  "progression": {
+    "card_seeds": [42, 123, 999],
+    "card_state_variants": [
+      {"hp": 0, "gold": 0, "hp_max": 1000, "gold_max": 999999},
+      {"hp": 500, "gold": 100, "hp_max": 1000, "gold_max": 999999}
+    ],
+    "card_event_id_max": 25
+  }
+}

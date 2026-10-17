@@ -11,7 +11,7 @@
 ### S7.1 资产解包 + 分类 + 备份
 
 - `cargo run -p ti-tools --bin unpak -- --out assets_raw`（已有工具，幂等基准）。
-- 新建 `scripts/classify_assets.py`：读 `assets_raw/*/manifest.csv` + filenum INI num 字段，
+- 新建 `legacy/scripts/classify_assets.py`：读 `assets_raw/*/manifest.csv` + filenum INI num 字段，
   按 `docs/impl/14` §2.2 文件名模式打 A/B/C/D/E/Skip 标签。
 - 产出 `ref/asset_classification.json`（全 305 容器条目，`_unknown` 桶人工复核清零；
   S7.2 产出 `assets_hd/_stats.json` 335 含九宫格派生，口径不同）。
@@ -19,10 +19,10 @@
 
 ### S7.2 批量超分 / 矢量化
 
-- 新建 `scripts/pixel_upscale.py`（C/D/E 类）：PCX 解码 → 索引转真彩 RGBA →
+- 新建 `legacy/scripts/pixel_upscale.py`（C/D/E 类）：PCX 解码 → 索引转真彩 RGBA →
   C=NEAREST 2x / D=LANCZOS 2x / E=5 帧序列时序处理（无视频工具时中值去抖）→
   PNG-32 落 `assets_hd/<容器>/<name>_hd.png`。
-- 新建 `scripts/vectorize_ui.py`（A 类）：Inkscape 描摹 SVG 基准（Inkscape 未装则先切
+- 新建 `legacy/scripts/vectorize_ui.py`（A 类）：Inkscape 描摹 SVG 基准（Inkscape 未装则先切
   PNG 九宫格 `<name>_hd_9s.png`，SVG 留人工，标注待办）。
 - B 类（可选并入 S7.2 或 S7.3）：Real-ESRGAN anime x4（CPU 回退），alpha 分离（RGB 超分 +
   alpha Lanczos 阈值防黑边）。

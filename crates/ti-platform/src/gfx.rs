@@ -1,28 +1,30 @@
-//! 176×220 逻辑帧缓冲与屏幕坐标变换（P4-2）。
+//! 1080×1920 呈现层帧缓冲与屏幕坐标变换（P4-2，`08_render_arch.md` 契约 1）。
 //!
-//! 原版 gx.dll 以 176×220 整屏位块绘制；本模块提供：
+//! 呈现坐标系唯一 = 1080×1920（legacy 176×220 已退出运行时）；本模块提供：
 //! - [`Framebuf`]：固定大小的 RGB565 像素缓冲（S4.3 起内置逐行脏标记）；
 //! - [`FramePresenter`]：持续纹理呈现器（S4.3 脏行带部分上传，静止帧零 GPU）；
 //! - [`Viewport`]：屏幕 ↔ 逻辑坐标的等比缩放（letterbox/pillarbox），
 //!   保证任意窗口尺寸下坐标互逆（P4-2 命中判定不偏移）。
 
-use ti_core::{LOGICAL_HEIGHT, LOGICAL_WIDTH};
-
 use crate::settings::{FilterMode, ScaleMode};
 
-/// 帧缓冲像素数 = `LOGICAL_WIDTH × LOGICAL_HEIGHT`。
-pub const FB_PIXELS: usize = (LOGICAL_WIDTH as usize) * (LOGICAL_HEIGHT as usize);
+/// UI 呈现画布宽（1080×1920 单一权威呈现坐标系，`08_render_arch.md` 契约 1）。
+pub const CANVAS_W: u32 = 1080;
+/// UI 呈现画布高。
+pub const CANVAS_H: u32 = 1920;
 
-/// 逻辑宽的 f32 值（= `LOGICAL_WIDTH`，避免 `u32 as f32` 精度告警）。
-const LW: f32 = 176.0;
-/// 逻辑高的 f32 值（= `LOGICAL_HEIGHT`）。
-const LH: f32 = 220.0;
-/// 逻辑高的 i32 版（供坐标运算）。
-const LH_I32: i32 = 220;
+/// 帧缓冲像素数 = `CANVAS_W × CANVAS_H`（UI 呈现层）。
+pub const FB_PIXELS: usize = (CANVAS_W as usize) * (CANVAS_H as usize);
 
-/// 176×220 RGB565 逻辑帧缓冲（P4-2）。
+/// 画布宽的 f32 值（= `CANVAS_W`，避免 `u32 as f32` 精度告警）。
+const LW: f32 = 1080.0;
+/// 画布高的 f32 值（= `CANVAS_H`）。
+const LH: f32 = 1920.0;
+/// 画布高的 i32 版（供坐标运算）。
+const LH_I32: i32 = 1920;
+
+/// 1080×1920 RGB565 呈现层帧缓冲（P4-2；legacy 176×220 整屏缓冲已退出运行时）。
 ///
-/// 原版 gx.dll 的 `GXBeginDraw`/`GXEndDraw` 返回的正是这样的整屏缓冲；
 /// 渲染后端（macroquad）负责把它缩放到实际窗口并 present。
 ///
 /// S4.3：内置逐行脏标记（[`mark_dirty`]/[`has_dirty`]/[`dirty_row_range`]/
@@ -30,7 +32,7 @@ const LH_I32: i32 = 220;
 /// 新建缓冲全脏（保证首次呈现一定上传）。
 pub struct Framebuf {
     pixels: Box<[u16]>,
-    /// 逐行脏标记（220 行），[`mark_dirty`] 置位、[`reset_dirty`] 清零。
+    /// 逐行脏标记（1920 行），[`mark_dirty`] 置位、[`reset_dirty`] 清零。
     dirty_rows: [bool; LH_I32 as usize],
 }
 
@@ -50,7 +52,7 @@ impl Framebuf {
         self.dirty_rows.fill(true);
     }
 
-    /// 只读访问全部像素（行主序，176×220）。
+    /// 只读访问全部像素（行主序，1080×1920）。
     #[must_use]
     pub fn as_slice(&self) -> &[u16] {
         &self.pixels
@@ -66,7 +68,7 @@ impl Framebuf {
     pub fn mark_dirty(&mut self, x: i32, y: i32, w: i32, h: i32) {
         let y0 = y.max(0);
         let y1 = (y.saturating_add(h).saturating_sub(1)).min(LH_I32 - 1);
-        if y0 > y1 || x.saturating_add(w) <= 0 || x >= 176 {
+        if y0 > y1 || x.saturating_add(w) <= 0 || x >= 1080 {
             return;
         }
         for r in y0..=y1 {
@@ -108,6 +110,60 @@ impl Framebuf {
     pub fn reset_dirty(&mut self) {
         self.dirty_rows.fill(false);
     }
+
+    /// 全帧亮度调制（场景切换淡入淡出用）。
+    ///
+    /// `factor` = 1.0 → 原样；0.0 → 全黑。对每个 RGB565 像素做 per-channel 缩放。
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn apply_brightness(&mut self, factor: f32) {
+        let f = factor.clamp(0.0, 1.0);
+        for p in &mut self.pixels {
+            let r = f32::from((*p >> 11) & 0x1F);
+            let g = f32::from((*p >> 5) & 0x3F);
+            let b = f32::from(*p & 0x1F);
+            let rr = (r * f).round().min(31.0) as u16;
+            let gg = (g * f).round().min(63.0) as u16;
+            let bb = (b * f).round().min(31.0) as u16;
+            *p = (rr << 11) | (gg << 5) | bb;
+        }
+        self.dirty_rows.fill(true);
+    }
+
+    /// 当前像素快照（行主序，`FB_PIXELS` 个 RGB565，供交叉淡化保存旧画面）。
+    #[must_use]
+    pub fn snapshot(&self) -> Box<[u16]> {
+        self.pixels.clone()
+    }
+
+    /// 与快照交叉淡化：按 `t`（0.0 = 全旧画面，1.0 = 全当前画面）逐像素混合。
+    ///
+    /// 用于场景切换真交叉淡化（EXP-081）：`enter()` 前快照旧画面，
+    /// 渲染新场景后调本方法做两帧插值，而非亮度调制。
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn crossfade_from(&mut self, prev: &[u16], t: f32) {
+        let ratio = (t.clamp(0.0, 1.0) * 255.0).round() as u32;
+        for (i, slot) in self.pixels.iter_mut().enumerate() {
+            let Some(&old) = prev.get(i) else { break };
+            if ratio == 0 {
+                *slot = old;
+            } else if ratio >= 255 {
+                // 全当前画面，无需写
+            } else {
+                let cur = *slot;
+                let mix = |a: u16, b: u16, shift: u32, mask: u16| -> u16 {
+                    let av = u32::from((a >> shift) & mask);
+                    let bv = u32::from((b >> shift) & mask);
+                    let m = u32::from(mask);
+                    (((av * ratio + bv * (255 - ratio) + 127) / 255) & m) as u16
+                };
+                let r = mix(old, cur, 11, 0x1F);
+                let g = mix(old, cur, 5, 0x3F);
+                let b = mix(old, cur, 0, 0x1F);
+                *slot = (r << 11) | (g << 5) | b;
+            }
+        }
+        self.dirty_rows.fill(true);
+    }
 }
 
 impl Default for Framebuf {
@@ -116,15 +172,30 @@ impl Default for Framebuf {
     }
 }
 
-/// S7.5：176×220 RGBA8（`0xAARRGGBB`）HD 帧缓冲（feature `hd-8bit`，默认关）。
+/// S15.7：`Framebuf` 实现渲染框架的 [`ti_render::framebuffer::PixelSink`]，
+/// 使 `ti_render::font::bitmap::Raster::blit` 可直接写平台帧缓冲（渲染框架不依赖具体缓冲类型）。
+impl ti_render::framebuffer::PixelSink for Framebuf {
+    fn set_pixel(&mut self, x: i32, y: i32, color: u16) {
+        let w = i32::try_from(CANVAS_W).unwrap_or(0);
+        if (0..w).contains(&x) && (0..LH_I32).contains(&y) {
+            let idx = usize::try_from(y).unwrap_or(0) * usize::try_from(CANVAS_W).unwrap_or(0)
+                + usize::try_from(x).unwrap_or(0);
+            if let Some(slot) = self.pixels.get_mut(idx) {
+                *slot = color;
+            }
+        }
+    }
+}
+
+/// S7.5：1080×1920 RGBA8（`0xAARRGGBB`）HD 帧缓冲（feature `hd-8bit`，默认关）。
 ///
 /// 与 [`Framebuf`]（RGB565）并行存在；路径 1 并行（`docs/impl/14_asset_enhancement.md` §3.5）：
 /// 默认构建不引入本结构，RGB565 原路径逐像素不变。
 #[cfg(feature = "hd-8bit")]
 pub struct FramebufRgba {
-    /// 行主序 176×220 RGBA8 像素（`0xAARRGGBB`，A=0xFF 不透明）。
+    /// 行主序 1080×1920 RGBA8 像素（`0xAARRGGBB`，A=0xFF 不透明）。
     pixels: Box<[u32]>,
-    /// 逐行脏标记（220 行），与 [`Framebuf`] 同语义。
+    /// 逐行脏标记（1920 行），与 [`Framebuf`] 同语义。
     dirty_rows: [bool; LH_I32 as usize],
 }
 
@@ -145,7 +216,7 @@ impl FramebufRgba {
         self.dirty_rows.fill(true);
     }
 
-    /// 只读访问全部像素（行主序，176×220）。
+    /// 只读访问全部像素（行主序，1080×1920）。
     #[must_use]
     pub fn as_slice(&self) -> &[u32] {
         &self.pixels
@@ -160,7 +231,7 @@ impl FramebufRgba {
     pub fn mark_dirty(&mut self, x: i32, y: i32, w: i32, h: i32) {
         let y0 = y.max(0);
         let y1 = (y.saturating_add(h).saturating_sub(1)).min(LH_I32 - 1);
-        if y0 > y1 || x.saturating_add(w) <= 0 || x >= 176 {
+        if y0 > y1 || x.saturating_add(w) <= 0 || x >= 1080 {
             return;
         }
         for r in y0..=y1 {
@@ -277,8 +348,8 @@ pub fn present_framebuffer(fb: &Framebuf, vp: &Viewport) {
     for &p in fb.as_slice() {
         bytes.extend_from_slice(&rgb565_to_rgba8(p));
     }
-    let width_u16 = u16::try_from(LOGICAL_WIDTH).unwrap_or(0);
-    let height_u16 = u16::try_from(LOGICAL_HEIGHT).unwrap_or(0);
+    let width_u16 = u16::try_from(CANVAS_W).unwrap_or(0);
+    let height_u16 = u16::try_from(CANVAS_H).unwrap_or(0);
     let texture = Texture2D::from_rgba8(width_u16, height_u16, &bytes);
     draw_quad(&texture, vp);
 }
@@ -380,20 +451,19 @@ impl FramePresenter {
             }
             return;
         }
-        let width_u16 = u16::try_from(LOGICAL_WIDTH).unwrap_or(0);
-        let height_u16 = u16::try_from(LOGICAL_HEIGHT).unwrap_or(0);
+        let width_u16 = u16::try_from(CANVAS_W).unwrap_or(0);
+        let height_u16 = u16::try_from(CANVAS_H).unwrap_or(0);
         let (first, last) = fb.dirty_row_range();
         let first = first.clamp(0, LH_I32);
         let last = last.min(LH_I32 - 1).max(first);
-        let stride = usize::try_from(LOGICAL_WIDTH).unwrap_or(1) * 4;
+        let stride = usize::try_from(CANVAS_W).unwrap_or(1) * 4;
         let px = fb.as_slice();
         for row in first..=last {
             let Ok(r) = usize::try_from(row) else {
                 continue;
             };
             let base = r * stride;
-            for (i, &p) in
-                px[r * LOGICAL_WIDTH as usize..(r + 1) * LOGICAL_WIDTH as usize].iter().enumerate()
+            for (i, &p) in px[r * CANVAS_W as usize..(r + 1) * CANVAS_W as usize].iter().enumerate()
             {
                 let b = rgb565_to_rgba8(p);
                 self.cache[base + i * 4..base + i * 4 + 4].copy_from_slice(&b);
@@ -456,20 +526,19 @@ impl FramePresenter {
             }
             return;
         }
-        let width_u16 = u16::try_from(LOGICAL_WIDTH).unwrap_or(0);
-        let height_u16 = u16::try_from(LOGICAL_HEIGHT).unwrap_or(0);
+        let width_u16 = u16::try_from(CANVAS_W).unwrap_or(0);
+        let height_u16 = u16::try_from(CANVAS_H).unwrap_or(0);
         let (first, last) = fb.dirty_row_range();
         let first = first.clamp(0, LH_I32);
         let last = last.min(LH_I32 - 1).max(first);
-        let stride = usize::try_from(LOGICAL_WIDTH).unwrap_or(1) * 4;
+        let stride = usize::try_from(CANVAS_W).unwrap_or(1) * 4;
         let px = fb.as_slice();
         for row in first..=last {
             let Ok(r) = usize::try_from(row) else {
                 continue;
             };
             let base = r * stride;
-            for (i, &p) in
-                px[r * LOGICAL_WIDTH as usize..(r + 1) * LOGICAL_WIDTH as usize].iter().enumerate()
+            for (i, &p) in px[r * CANVAS_W as usize..(r + 1) * CANVAS_W as usize].iter().enumerate()
             {
                 let b = rgba8_to_rgba8_quad(p);
                 self.cache[base + i * 4..base + i * 4 + 4].copy_from_slice(&b);
@@ -734,7 +803,6 @@ impl Default for Viewport {
 mod tests {
     use super::*;
     use crate::settings::BorderStyle;
-    use ti_core::{LOGICAL_HEIGHT, LOGICAL_WIDTH};
 
     use crate::settings::ScaleMode;
 
@@ -744,9 +812,10 @@ mod tests {
 
     #[test]
     fn coordinate_roundtrip_integer_scale_2x() {
-        let vp = Viewport::fit(352.0, 440.0);
+        // 呈现坐标系 1080×1920（契约 1）：2× 整数缩放 = 屏幕 2160×3840
+        let vp = Viewport::fit(2160.0, 3840.0);
         assert!(approx_eq(vp.scale(), 2.0));
-        let points = [(0.0, 0.0), (88.0, 110.0), (176.0, 220.0), (1.0, 1.0)];
+        let points = [(0.0, 0.0), (540.0, 960.0), (1080.0, 1920.0), (1.0, 1.0)];
         for (lx, ly) in points {
             let (sx, sy) = vp.logical_to_screen(lx, ly);
             let (rx, ry) = vp.screen_to_logical(sx, sy);
@@ -757,8 +826,8 @@ mod tests {
 
     #[test]
     fn coordinate_roundtrip_non_integer_scale() {
-        let vp = Viewport::fit(300.0, 375.0);
-        let points = [(0.0, 0.0), (88.0, 110.0), (176.0, 220.0), (50.5, 75.5)];
+        let vp = Viewport::fit(1800.0, 3200.0);
+        let points = [(0.0, 0.0), (540.0, 960.0), (1080.0, 1920.0), (505.0, 755.0)];
         for (lx, ly) in points {
             let (sx, sy) = vp.logical_to_screen(lx, ly);
             let (rx, ry) = vp.screen_to_logical(sx, sy);
@@ -769,27 +838,27 @@ mod tests {
 
     #[test]
     fn coordinate_roundtrip_wide_screen_letterbox() {
-        let vp = Viewport::fit(800.0, 220.0);
+        let vp = Viewport::fit(2400.0, 1920.0);
         assert!(vp.scale() > 0.0);
-        let (sx, sy) = vp.logical_to_screen(88.0, 110.0);
+        let (sx, sy) = vp.logical_to_screen(540.0, 960.0);
         let (rx, ry) = vp.screen_to_logical(sx, sy);
-        assert!(approx_eq(rx, 88.0));
-        assert!(approx_eq(ry, 110.0));
+        assert!(approx_eq(rx, 540.0));
+        assert!(approx_eq(ry, 960.0));
     }
 
     #[test]
     fn coordinate_roundtrip_tall_screen_pillarbox() {
-        let vp = Viewport::fit(176.0, 440.0);
-        let (sx, sy) = vp.logical_to_screen(88.0, 110.0);
+        let vp = Viewport::fit(1080.0, 2400.0);
+        let (sx, sy) = vp.logical_to_screen(540.0, 960.0);
         let (rx, ry) = vp.screen_to_logical(sx, sy);
-        assert!(approx_eq(rx, 88.0));
-        assert!(approx_eq(ry, 110.0));
+        assert!(approx_eq(rx, 540.0));
+        assert!(approx_eq(ry, 960.0));
     }
 
     #[test]
     fn coordinate_roundtrip_screen_to_logical_then_back() {
-        let vp = Viewport::fit(463.0, 578.0);
-        let screen_points = [(0.0, 0.0), (200.0, 300.0), (462.0, 577.0), (100.5, 200.5)];
+        let vp = Viewport::fit(1440.0, 2560.0);
+        let screen_points = [(0.0, 0.0), (600.0, 1000.0), (1439.0, 2559.0), (605.5, 1005.5)];
         for (sx, sy) in screen_points {
             let (lx, ly) = vp.screen_to_logical(sx, sy);
             let (rx, ry) = vp.logical_to_screen(lx, ly);
@@ -800,8 +869,8 @@ mod tests {
 
     #[test]
     fn framebuf_size_matches_logical_resolution() {
-        assert_eq!(FB_PIXELS, (LOGICAL_WIDTH * LOGICAL_HEIGHT) as usize);
-        assert_eq!(FB_PIXELS, 176 * 220);
+        assert_eq!(FB_PIXELS, (CANVAS_W * CANVAS_H) as usize);
+        assert_eq!(FB_PIXELS, 1080 * 1920);
     }
 
     #[test]
@@ -832,8 +901,9 @@ mod tests {
         let vp = Viewport::with_mode(1080.0, 2400.0, ScaleMode::Smooth, false);
         assert!((vp.scale_x() - vp.scale_y()).abs() < 1e-4, "等比模式横纵缩放应相等");
         assert!(vp.offset_y > 1.0, "竖屏应留上下黑边");
+        // 1080×1920 呈现区放进 1080×2400 屏：等比 1× → 利用率 = 1920/2400 = 80%
         let fill = screen_fill(&vp, 1080.0, 2400.0);
-        assert!(fill < 0.60 && fill > 0.50, "Smooth 利用率约 56%，实际 {fill}");
+        assert!(fill < 0.85 && fill > 0.75, "Smooth 利用率约 80%，实际 {fill}");
     }
 
     #[test]
@@ -956,8 +1026,8 @@ mod tests {
     /// 本测试验证 `fill_border` 的前置判定——游戏区完全出屏时不画边框。
     #[test]
     fn border_skipped_when_game_area_offscreen() {
-        // 游戏区完全在屏幕左侧之外 → offset 使 x1 <= 0
-        let vp = Viewport::from_scale(1.0, -1000.0, 0.0, LW, LH);
+        // 游戏区完全在屏幕左侧之外 → offset 使 x1 <= 0（呈现区宽 LW=1080，offset 取 -2000）
+        let vp = Viewport::from_scale(1.0, -2000.0, 0.0, LW, LH);
         let (_x0, _y0) = vp.logical_to_screen(0.0, 0.0);
         let (x1, _y1) = vp.logical_to_screen(LW, LH);
         assert!(x1 <= 0.0, "构造的游戏区应在屏外，实际 x1={x1}");

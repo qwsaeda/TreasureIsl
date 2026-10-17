@@ -8,7 +8,7 @@
 `menu_shell` 的 COLOR_* 常量。代码里的中文字面量/硬编码色值 = 漂移源。
 
 豁免（带理由）：
-1. `oracle/`（含 `ti-core/src/oracle` 桥接层与 `legacy/oracle-rust`）— S8/S11
+1. `oracle/`（`ti-core/src/oracle` 冻结参照层；重复 crate `legacy/oracle-rust`已于 S15.8 删除）— S8/S11
    定位变更后为冻结参照层，不再改，不追（docs/plan-s8-refactor.md 1）；
 2. `ti-tools` CLI — 输出是命令行终端文本，不是游戏内 UI，不进 strings.json；
 3. 注释行与 `#[cfg(test)]` 模块 — 非生产代码；
@@ -47,6 +47,9 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("terrain_atlas.rs", "cjk", "terrain pak loading diagnostics / assertion messages, not player UI"),
     ("game_app.rs", "cjk", "runtime error eprintln diagnostics (balance load failures), not player UI"),
     ("treasure_wasm.rs", "cjk", "wasm shell diagnostic / comments, not in-game UI text"),
+    ("element_dump.rs", "cjk", "diagnostic bin: §4 layout zone / bleed terminal output, not in-game UI"),
+    ("forward_nav.rs", "cjk", "S14 forward navigation diagnostic prints, not in-game UI text"),
+    ("render_png.rs", "cjk", "S14 forward PNG export bin terminal output, not in-game UI text"),
 ]
 
 

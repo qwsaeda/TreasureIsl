@@ -99,7 +99,7 @@ fn random_key_input(rng: &mut GameRng) -> GameInput {
     }
 }
 
-/// 从 `rng` 取一个伪随机触摸采样（手势 + 176×220 逻辑坐标）。
+/// 从 `rng` 取一个伪随机触摸采样（手势 + 1080×1920 逻辑坐标）。
 fn random_touch(rng: &mut GameRng) -> TouchSample {
     let gestures = [
         Gesture::Tap,
@@ -110,9 +110,10 @@ fn random_touch(rng: &mut GameRng) -> TouchSample {
     ];
     TouchSample {
         gesture: gestures[rng.in_range(5) as usize],
-        // 逻辑坐标 176×220（`menu_shell` LOGICAL_W/H），f32 表示无损（值 < 2^23）
-        x: f32::from(u16::try_from(rng.in_range(176)).unwrap_or(0)),
-        y: f32::from(u16::try_from(rng.in_range(220)).unwrap_or(0)),
+        // S15.6 QA108：呈现层逻辑坐标 = 1080×1920（`menu_shell` LOGICAL_W/H_I32 契约 1；
+        // 旧 176×220 逻辑盒使 40% 触摸通路探的是 1080 失效区，触摸几何回归零覆盖）
+        x: f32::from(u16::try_from(rng.in_range(1080)).unwrap_or(0)),
+        y: f32::from(u16::try_from(rng.in_range(1920)).unwrap_or(0)),
     }
 }
 
@@ -129,7 +130,7 @@ fn run_playtest(seed: u32) -> SeedResult {
 
     let closure = AssertUnwindSafe(|| {
         let mut rng = GameRng::new(seed);
-        let mut app = GameApp::new(176.0, 220.0);
+        let mut app = GameApp::new(1080.0, 1920.0);
         app.set_rng_seed(seed);
 
         for step in 0..STEPS {
@@ -152,7 +153,7 @@ fn run_playtest(seed: u32) -> SeedResult {
             // 存档往返：每 500 步做一次 save→load，断言字段一致
             if step > 0 && step % SAVE_CHECK_INTERVAL == 0 {
                 let slot = build_slot(&app);
-                let mut restored = GameApp::new(176.0, 220.0);
+                let mut restored = GameApp::new(1080.0, 1920.0);
                 restored.set_rng_seed(seed);
                 restored.write_save_slot(0, slot);
                 restored.restore_save(slot);
@@ -255,7 +256,7 @@ fn deterministic_replay() {
 fn record_scene_sequence(seed: u32) -> Vec<i32> {
     let mut seq = Vec::new();
     let mut rng = GameRng::new(seed);
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.set_rng_seed(seed);
     for _ in 0..STEPS {
         seq.push(scene_discriminant(app.scene()));
@@ -281,7 +282,7 @@ fn fuzz_single_seed_quick() {
 /// FIND-204 回归测试：越界槽读档不污染 character 字段。
 #[test]
 fn restore_save_invalid_slot_does_not_pollute_character() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.set_rng_seed(42);
     // 先设一个已选角色（确保调用前 character 非 None，可观测「未被污染」）
     app.character = Some(Character::Drake);

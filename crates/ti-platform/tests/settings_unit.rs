@@ -14,10 +14,10 @@ fn approx_eq(a: f32, b: f32) -> bool {
 fn coordinate_roundtrip_smooth_scale() {
     let s = Settings::default_settings();
     assert_eq!(s.scale_mode, ScaleMode::Smooth);
-    let vp = s.viewport(352.0, 440.0);
-    // 176×220 → 352×440 是正好 2×
+    // 呈现坐标系 1080×1920（契约 1）：竖屏逻辑 1080×1920 → 屏幕 2160×3840 正好 2×
+    let vp = s.viewport(2160.0, 3840.0);
     assert!(approx_eq(vp.scale(), 2.0));
-    for (lx, ly) in [(0.0, 0.0), (88.0, 110.0), (176.0, 220.0)] {
+    for (lx, ly) in [(0.0, 0.0), (540.0, 960.0), (1080.0, 1920.0)] {
         let (sx, sy) = vp.logical_to_screen(lx, ly);
         let (rx, ry) = vp.screen_to_logical(sx, sy);
         assert!(approx_eq(rx, lx), "x: {rx} != {lx}");
@@ -28,17 +28,18 @@ fn coordinate_roundtrip_smooth_scale() {
 #[test]
 fn coordinate_roundtrip_integer_scale_mode() {
     let s = Settings { scale_mode: ScaleMode::Integer, ..Settings::default_settings() };
-    // 352×440 → raw=2.0 → integer=2.0
-    let vp = s.viewport(352.0, 440.0);
+    // 竖屏逻辑 1080×1920（契约 1）：
+    // 2160×3840 → raw=min(2160/1080,3840/1920)=2.0 → integer=2.0
+    let vp = s.viewport(2160.0, 3840.0);
     assert!(approx_eq(vp.scale(), 2.0));
-    // 300×440 → raw=min(300/176, 440/220)=min(1.704, 2.0)=1.704 → integer=1.0
-    let vp = s.viewport(300.0, 440.0);
+    // 1620×2880 → raw=min(1.5,1.5)=1.5 → integer=1.0
+    let vp = s.viewport(1620.0, 2880.0);
     assert!(approx_eq(vp.scale(), 1.0));
-    // 800×600 → raw=min(800/176, 600/220)=min(4.545, 2.727)=2.727 → integer=2.0
-    let vp = s.viewport(800.0, 600.0);
+    // 2700×4800 → raw=min(2.5,2.5)=2.5 → integer=2.0
+    let vp = s.viewport(2700.0, 4800.0);
     assert!(approx_eq(vp.scale(), 2.0));
-    // 100×130 → raw=min(100/176, 130/220)=min(0.568, 0.591)=0.568 → integer=1.0（最小1）
-    let vp = s.viewport(100.0, 130.0);
+    // 540×960 → raw=min(0.5,0.5)=0.5 → integer 最小取 1.0
+    let vp = s.viewport(540.0, 960.0);
     assert!(approx_eq(vp.scale(), 1.0));
 }
 
@@ -62,20 +63,20 @@ fn scale_mode_integer_floors_to_whole() {
 
 #[test]
 fn orientation_portrait_logical_size() {
-    assert_eq!(Orientation::Portrait.logical_size(), (176.0, 220.0));
+    assert_eq!(Orientation::Portrait.logical_size(), (1080.0, 1920.0));
 }
 
 #[test]
 fn orientation_landscape_logical_size() {
-    assert_eq!(Orientation::Landscape.logical_size(), (220.0, 176.0));
+    assert_eq!(Orientation::Landscape.logical_size(), (1920.0, 1080.0));
 }
 
 #[test]
 fn orientation_landscape_viewport_fits_wide_screen() {
     let s = Settings { orientation: Orientation::Landscape, ..Settings::default_settings() };
-    // 800×400 横屏：raw = min(800/220, 400/176) = min(3.636, 2.273) = 2.273
+    // 横屏逻辑 1920×1080（契约 1）：800×400 横屏 raw = min(800/1920, 400/1080)
     let vp = s.viewport(800.0, 400.0);
-    let expected = (800.0_f32 / 220.0).min(400.0 / 176.0);
+    let expected = (800.0_f32 / 1920.0).min(400.0 / 1080.0);
     assert!(approx_eq(vp.scale(), expected));
 }
 
@@ -200,7 +201,8 @@ fn settings_default_values() {
 fn settings_viewport_coordinate_roundtrip_landscape() {
     let s = Settings { orientation: Orientation::Landscape, ..Settings::default_settings() };
     let vp = s.viewport(800.0, 400.0);
-    for (lx, ly) in [(0.0, 0.0), (110.0, 88.0), (220.0, 176.0)] {
+    // 横屏逻辑 1920×1080（契约 1）：取 1080 系逻辑点做往返
+    for (lx, ly) in [(0.0, 0.0), (960.0, 540.0), (1920.0, 1080.0)] {
         let (sx, sy) = vp.logical_to_screen(lx, ly);
         let (rx, ry) = vp.screen_to_logical(sx, sy);
         assert!(approx_eq(rx, lx), "landscape x: {rx} != {lx}");
@@ -211,32 +213,32 @@ fn settings_viewport_coordinate_roundtrip_landscape() {
 #[test]
 fn settings_viewport_integer_mode_roundtrip() {
     let s = Settings { scale_mode: ScaleMode::Integer, ..Settings::default_settings() };
-    let vp = s.viewport(800.0, 600.0);
-    // 800/176=4.545, 600/220=2.727 → raw=2.727 → integer=2.0
+    // 竖屏逻辑 1080×1920：2160×3840 → raw=2.0 → integer=2.0
+    let vp = s.viewport(2160.0, 3840.0);
     assert!(approx_eq(vp.scale(), 2.0));
-    let (sx, sy) = vp.logical_to_screen(88.0, 110.0);
+    let (sx, sy) = vp.logical_to_screen(540.0, 960.0);
     let (rx, ry) = vp.screen_to_logical(sx, sy);
-    assert!(approx_eq(rx, 88.0));
-    assert!(approx_eq(ry, 110.0));
+    assert!(approx_eq(rx, 540.0));
+    assert!(approx_eq(ry, 960.0));
 }
 
 // ── P4-2 核心验收（与 parity.md 对应）────────────────────────────────────────
 
 #[test]
 fn coordinate_roundtrip_p42_full_sweep() {
-    // 整数/非整数缩放 + 任意窗口尺寸 → 命中判定不偏移
+    // 整数/非整数缩放 + 任意窗口尺寸 → 命中判定不偏移（呈现坐标系 1080×1920，契约 1）
     let window_sizes: [(f32, f32); 8] = [
-        (176.0, 220.0),
-        (352.0, 440.0),
-        (528.0, 660.0),
-        (300.0, 375.0),
-        (800.0, 600.0),
-        (463.0, 578.0),
-        (176.0, 440.0),
-        (1000.0, 200.0),
+        (1080.0, 1920.0),
+        (2160.0, 3840.0),
+        (3240.0, 5760.0),
+        (540.0, 960.0),
+        (1620.0, 2880.0),
+        (1920.0, 1080.0),
+        (2700.0, 4800.0),
+        (300.0, 500.0),
     ];
     let logical_points: [(f32, f32); 5] =
-        [(0.0, 0.0), (88.0, 110.0), (176.0, 220.0), (50.5, 75.5), (1.0, 1.0)];
+        [(0.0, 0.0), (540.0, 960.0), (1080.0, 1920.0), (505.0, 755.0), (1.0, 1.0)];
     for (w, h) in window_sizes {
         for mode in [ScaleMode::Smooth, ScaleMode::Integer] {
             let s = Settings { scale_mode: mode, ..Settings::default_settings() };
@@ -262,19 +264,19 @@ fn coordinate_roundtrip_p42_full_sweep() {
 
 #[test]
 fn viewport_from_scale_matches_fit_for_smooth() {
-    // Viewport::from_scale(scale, ox, oy, _, _) 与 Viewport::fit 结果一致
-    let screen_w = 352.0_f32;
-    let screen_h = 440.0_f32;
+    // Viewport::from_scale(scale, ox, oy, lw, lh) 与 Viewport::fit（用 1080×1920 逻辑）结果一致
+    let screen_w = 2160.0_f32;
+    let screen_h = 3840.0_f32;
     let vp1 = Viewport::fit(screen_w, screen_h);
     let raw = vp1.scale();
     let vp2 = Viewport::from_scale(
         raw,
-        (screen_w - 176.0 * raw) * 0.5,
-        (screen_h - 220.0 * raw) * 0.5,
-        176.0,
-        220.0,
+        (screen_w - 1080.0 * raw) * 0.5,
+        (screen_h - 1920.0 * raw) * 0.5,
+        1080.0,
+        1920.0,
     );
-    for (lx, ly) in [(0.0, 0.0), (88.0, 110.0), (176.0, 220.0)] {
+    for (lx, ly) in [(0.0, 0.0), (540.0, 960.0), (1080.0, 1920.0)] {
         let (x1, y1) = vp1.logical_to_screen(lx, ly);
         let (x2, y2) = vp2.logical_to_screen(lx, ly);
         assert!(approx_eq(x1, x2), "x1: {x1} vs {x2}");

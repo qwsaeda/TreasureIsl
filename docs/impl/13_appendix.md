@@ -1,13 +1,13 @@
 # 13 — 参考附录
 
 > 单一事实源：本文件汇总所有全局常量、事件码、场景码、错误类型、文件格式和资源清单。
-> 关联文档：`docs/design/constants.md`（常量表）、`docs/formats/lucencypackage.md`（容器格式）。
+> 关联文档：`legacy/docs/design/constants.md`（常量表）、`docs/formats/lucencypackage.md`（容器格式）。
 
 ---
 
 ## 1. 全局常量总表
 
-> 权威数值表见 `docs/design/constants.md`（§1 显示 / §2 布局 / §3 经济 / §4 战斗 / §10 RNG / §9 存档 / §11 容器 / §13 现代化）；本节仅列 Rust 侧常量名映射，数值以 constants.md 为单一事实源。
+> 权威数值表见 `legacy/docs/design/constants.md`（§1 显示 / §2 布局 / §3 经济 / §4 战斗 / §10 RNG / §9 存档 / §11 容器 / §13 现代化）；本节仅列 Rust 侧常量名映射，数值以 constants.md 为单一事实源。
 
 ### 1.1 显示与分辨率（数值见 constants.md §1）
 
@@ -271,7 +271,7 @@ event_id ∈ 1..27（哨兵 27）
 
 ### 5.5 价格表
 
-5 种商品固定价格 20/76/95/114/133，buy_key 202/402/602/802/112、sell_key 102/302/502/702/902（来源 `docs/design/economy.md` §1.1，`资源查表` 查表哈希键）。
+5 种商品固定价格 20/76/95/114/133，buy_key 202/402/602/802/112、sell_key 102/302/502/702/902（来源 `legacy/docs/design/economy.md` §1.1，`资源查表` 查表哈希键）。
 
 ### 5.6 建造成本表
 
@@ -279,19 +279,19 @@ event_id ∈ 1..27（哨兵 27）
 cost = base_cost × (level + 1)       level ∈ [0, 10]
 ```
 
-base_cost 见 `docs/design/constants.md` §3.2（Castle 1000 / Investment 500 / Bank 200 / Fort 800）。
+base_cost 见 `legacy/docs/design/constants.md` §3.2（Castle 1000 / Investment 500 / Bank 200 / Fort 800）。
 
 ### 5.7 银行步进器阶梯
 
-按压 1/2/3/4/5 次 = 10/100/1000/10000/100000，6..10 保持当前（`docs/design/constants.md` §3.3）。
+按压 1/2/3/4/5 次 = 10/100/1000/10000/100000，6..10 保持当前（`legacy/docs/design/constants.md` §3.3）。
 
 ### 5.8 投资奖励阶梯
 
-兵种 A..E 奖励 +30,000/+40,000/+20,000/+15,000/+50,000（`投资`，`docs/design/constants.md` §3.4）。
+兵种 A..E 奖励 +30,000/+40,000/+20,000/+15,000/+50,000（`投资`，`legacy/docs/design/constants.md` §3.4）。
 
 ### 5.9 BOSS HP 速查
 
-`oracle_boss_hp(tier)`：0→50,000 / 1→100,000 / 2→150,000 / 3→200,000 / 4→300,000 / _→0（`docs/design/constants.md` §4.2）。
+`oracle_boss_hp(tier)`：0→50,000 / 1→100,000 / 2→150,000 / 3→200,000 / 4→300,000 / _→0（`legacy/docs/design/constants.md` §4.2）。
 
 ### 5.10 方向枚举
 
@@ -311,7 +311,7 @@ base_cost 见 `docs/design/constants.md` §3.2（Castle 1000 / Investment 500 / 
 ### 5.12 据点触发概率
 
 ```
-命中 = (rand() % 100 + 1) > 40         // 60% 命中率（>40 判据，即 rand()%100+1 ∈ 41..100；来源 docs/design/constants.md §6.6，design/map_system.md §3.3 为旧口径；exe 实测 `trade` 行 154）
+命中 = (rand() % 100 + 1) > 40         // 60% 命中率（>40 判据，即 rand()%100+1 ∈ 41..100；来源 legacy/docs/design/constants.md §6.6，design/map_system.md §3.3 为旧口径；exe 实测 `trade` 行 154）
 ```
 
 ### 5.13 等距投影

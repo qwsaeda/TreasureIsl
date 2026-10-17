@@ -2,7 +2,7 @@
 //! `android-activity` JNI 入口（`miniquad::run(game_loop)`）调用的纯函数。
 //!
 //! 设计（`docs/plan-s5.md` §S5.5）：
-//! - `run` 是游戏主循环本体（构建共享 `GameApp` + 触屏输入 + 逐帧渲染 176×220 帧缓冲），
+//! - `run` 是游戏主循环本体（构建共享 `GameApp` + 触屏输入 + 逐帧渲染 1080×1920 帧缓冲），
 //!   与 `treasure-android` bin 的 `#[macroquad::main]` 同源逻辑（单渲染线程，避免双开后端）；
 //! - `android-activity` crate 的 `game_loop` 经本模块桥接，miniquad 的 android 入口
 //!   线程直接调用，不 spawn 额外渲染线程。

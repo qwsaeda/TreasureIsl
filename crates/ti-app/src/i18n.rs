@@ -72,6 +72,12 @@ fn fill_args(tmpl: &str, args: &[&dyn std::fmt::Display]) -> String {
         if let Ok(idx) = inner.parse::<usize>() {
             if idx < args.len() {
                 out.push_str(&args[idx].to_string());
+            } else {
+                // S15.6 QA124：越界占位符保留字面 `{N}`（旧实现静默丢弃 → 缺 `{0}` 的
+                // `scene.message.page` 曾产 `/{}` 垃圾输出；保留占位 = 肉眼可见异常）。
+                out.push('{');
+                out.push_str(inner);
+                out.push('}');
             }
         } else {
             out.push_str(inner);

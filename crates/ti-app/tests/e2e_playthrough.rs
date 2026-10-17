@@ -16,7 +16,7 @@ use ti_core::domain::selection::{Character, MapSlot};
 #[allow(clippy::too_many_lines)]
 #[test]
 fn e2e_full_game_session() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.rng_mut().set_seed(42);
     app.set_rng_seed(42);
 
@@ -191,7 +191,7 @@ fn e2e_full_game_session() {
 /// E2E 边界情况：非法输入不应崩溃或卡死。
 #[test]
 fn e2e_invalid_inputs_no_crash() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
 
     // 主菜单按返回（无效）
     app.handle(GameInput::Back);
@@ -239,7 +239,7 @@ fn e2e_invalid_inputs_no_crash() {
 /// E2E 状态一致性：多轮操作后状态应保持一致。
 #[test]
 fn e2e_state_consistency() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.rng_mut().set_seed(123);
 
     // 快进到主地图
@@ -290,13 +290,88 @@ fn e2e_state_consistency() {
     }
 }
 
+/// E2E 纯触摸经济闭环（S15.6 QA149）：0 键盘——
+/// `index` / `select_role` / `select_map` 各点卡 0 进 `MainMap`，再点 HUD 三按钮完成
+/// 贸易（买 1）→ 卖出（全卖）→ 建造（`Castle`）。坐标全数据驱动自 `scenes.json`。
+#[allow(clippy::cast_precision_loss)] // i32 布局坐标 → f32 触摸坐标（1080 呈现层）
+#[test]
+fn e2e_touch_economy_loop() {
+    let mut app = GameApp::new(1080.0, 1920.0);
+    app.rng_mut().set_seed(7);
+    app.set_rng_seed(7);
+    let scenes = ti_core::data::scenes().expect("scenes.json 加载");
+    // 单次点按（显式传 `&mut GameApp`，闭包不捕获 app，避免可变借用在作用域内滞留）
+    let tap = |app: &mut GameApp, x: f32, y: f32| {
+        let s = ti_app::touch::TouchSample { gesture: ti_platform::settings::Gesture::Tap, x, y };
+        app.poll_touch(Some(s))
+    };
+    // 卡 0 命中中心：`ListLayout::item_rect` 同式（顶 = y - highlight_offset）
+    let card_center = |scene_id: &str| -> (f32, f32) {
+        let s = scenes.get(scene_id).expect("scenes.json 缺场景");
+        let top = s.list.y - s.list.highlight_offset;
+        (s.list.x as f32 + s.list.w as f32 / 2.0, top as f32 + s.list.item_h as f32 / 2.0)
+    };
+    // HUD 按钮中心（scenes.json main_map extra 矩形）
+    let hud_center = |key: &str| -> (f32, f32) {
+        let main = scenes.get("main_map").expect("scenes.json 缺 main_map");
+        let r = main.extra.get(key).expect("main_map 缺 HUD 按钮矩形");
+        ((r.x + r.w / 2) as f32, (r.y + r.h / 2) as f32)
+    };
+
+    // index 卡 0 = 「新游戏」→ 选角
+    let (x, y) = card_center("index");
+    assert!(tap(&mut app, x, y), "index 卡 0 点按应命中");
+    assert_eq!(app.scene(), Scene::SelectRole, "index 卡 0 应进选角");
+    // select_role 卡 0 = Panda → 选图
+    let (x, y) = card_center("select_role");
+    assert!(tap(&mut app, x, y), "select_role 卡 0 点按应命中");
+    assert_eq!(app.scene(), Scene::SelectMap, "选角卡 0 应进选图");
+    // select_map 卡 0 = M01 → 主地图
+    let (x, y) = card_center("select_map");
+    assert!(tap(&mut app, x, y), "select_map 卡 0 点按应命中");
+    assert_eq!(app.scene(), Scene::MainMap, "选图卡 0 应进主地图");
+    assert!(app.map_pos().is_some(), "主地图应有初始位置");
+
+    let initial_gold = ti_core::data::balance().expect("balance.json 加载").economy.initial_gold;
+    let price1 = app.price_table().lookup(1).unwrap_or(0);
+
+    // ① 贸易臂：买商品 1（键盘 T 同语义；HUD 臂不切场景，poll_touch 返回 false 属正常，
+    // 命中判据 = 下方状态断言）
+    let (x, y) = hud_center("hud_trade");
+    tap(&mut app, x, y);
+    assert_eq!(app.gold(), initial_gold.saturating_sub(price1), "触摸贸易后金 = 开局金 - 单价");
+    assert_eq!(app.owned().len(), 1, "触摸贸易后持有量 +1");
+
+    // ② 卖出臂：全卖商品 1（键盘 Y 同语义）
+    let gold_before_sell = app.gold();
+    let (x, y) = hud_center("hud_sell");
+    tap(&mut app, x, y);
+    assert!(app.gold() > gold_before_sell, "触摸卖出后金应增加");
+    assert_eq!(app.owned().len(), 0, "全卖后持有量清零");
+
+    // ③ 建造臂：造 Castle（键盘 B 同语义）
+    let castle_cost = ti_core::rules::build::cost_of(
+        &ti_core::data::balance().expect("balance.json 加载").build,
+        Building::Castle,
+    );
+    let bank_before = app.bank().gold;
+    let (x, y) = hud_center("hud_build");
+    tap(&mut app, x, y);
+    assert_eq!(app.buildings().len(), 1, "触摸建造后建筑 +1");
+    assert_eq!(
+        app.bank().gold,
+        bank_before.saturating_sub(castle_cost),
+        "触摸建造后银行金 = 前值 - Castle 成本"
+    );
+}
+
 /// E2E 战斗完整性：多次战斗结果应一致（固定种子）。
 #[test]
 fn e2e_battle_determinism() {
     let seed = 42u32;
 
     // 第一次战斗
-    let mut app1 = GameApp::new(176.0, 220.0);
+    let mut app1 = GameApp::new(1080.0, 1920.0);
     app1.rng_mut().set_seed(seed);
     app1.set_rng_seed(seed);
     app1.handle(GameInput::Confirm);
@@ -320,7 +395,7 @@ fn e2e_battle_determinism() {
     let boss_hp1 = app1.battle().map(BattleView::boss_hp);
 
     // 第二次战斗（相同种子）
-    let mut app2 = GameApp::new(176.0, 220.0);
+    let mut app2 = GameApp::new(1080.0, 1920.0);
     app2.rng_mut().set_seed(seed);
     app2.set_rng_seed(seed);
     app2.handle(GameInput::Confirm);

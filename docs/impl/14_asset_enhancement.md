@@ -55,7 +55,7 @@ S1.7b 已转 OGG）、`Thumbs.db`（OLE 文档）。
 - **B 类**：`docs/impl/07_ui_controls.md` §7.2 列 6 角色头像 + 5 `Player_*.pcx`，
   SelectRole 场景卡通立绘。
 - **C 类**：`glpics.pak` 88 条（§2 实测）中除去 B 类 11 个，余 77 个为
-  troop/ship/flag/landmark 系列（`docs/design/ui_controls.md` §3.1）；
+  troop/ship/flag/landmark 系列（`legacy/docs/design/ui_controls.md` §3.1）；
   实测全容器（ui+glpics+glmap+cards）`C_pixel` 共 155 条（`ref/asset_classification.json` by_class）。
 - **D 类**：`crates/ti-app/src/terrain_atlas.rs` 注释实测瓦片 63×31~127×105、
   iso_x 范围 0..1216（S6.3），属大画布等距地形。
@@ -84,12 +84,12 @@ enum AssetClass {
 ┌──────────────────────────────────────────────────────────────┐
 │ Step 1  解包 + 分类 + 备份（S7.1）                            │
 │   cargo run -p ti-tools --bin unpak -- --out assets_raw      │
-│   python scripts/classify_assets.py → ref/asset_classification.json │
+│   python legacy/scripts/classify_assets.py → ref/asset_classification.json │
 │   assets_raw/ = 不可变基准（unpak 幂等，P0-3 逐字节一致）     │
 ├──────────────────────────────────────────────────────────────┤
 │ Step 2  批量超分/矢量化（S7.2）                                │
-│   python scripts/pixel_upscale.py   （C/D/E 类）             │
-│   python scripts/vectorize_ui.py    （A 类 Inkscape 批处理） │
+│   python legacy/scripts/pixel_upscale.py   （C/D/E 类）             │
+│   python legacy/scripts/vectorize_ui.py    （A 类 Inkscape 批处理） │
 │   产物：assets_hd/<容器>/<原名>_hd.png（PNG-32）+ manifest_hd.json │
 ├──────────────────────────────────────────────────────────────┤
 │ Step 3  关键图 AI 重绘（S7.3，可选）                          │
@@ -116,7 +116,7 @@ enum AssetClass {
 合计 305 条，§2 实测）。每目录含 `manifest.csv`（key,name,usize,sha_len，
 name 由 `ti-formats/src/resource_names.rs` 三级反查（S6.5，`mapinfo>exe>EXTRAS`）生成）。
 
-**`scripts/classify_assets.py`**（S7.1 新建）：
+**`legacy/scripts/classify_assets.py`**（S7.1 新建）：
 
 ```
 读 assets_raw/*/manifest.csv（key,name,usize,sha_len）
@@ -155,7 +155,7 @@ name 由 `ti-formats/src/resource_names.rs` 三级反查（S6.5，`mapinfo>exe>E
 | B | Real-ESRGAN x4 anime 模型 → 按需缩回 2x/4x | `realesrgan-ncnn-vulkan -n realesrgan-x4plus-anime -s 4` | alpha 分离：RGB 超分，alpha 走 Lanczos + 阈值防黑边 |
 | A | Inkscape 描摹 → SVG 基准；实际打包 PNG 九宫格 | 9-slice 切图 | macroquad 不直接渲染 SVG，SVG 进 `assets_hd/ui/svgs/` 备查，打包仍用 PNG |
 
-**`scripts/pixel_upscale.py`**（S7.2 新建）：
+**`legacy/scripts/pixel_upscale.py`**（S7.2 新建）：
 
 ```
 读 ref/asset_classification.json
@@ -166,7 +166,7 @@ name 由 `ti-formats/src/resource_names.rs` 三级反查（S6.5，`mapinfo>exe>E
 输出 manifest_hd.json（沿用 build_assets 的 FNV-1a64 哈希，幂等无时间戳）
 ```
 
-**`scripts/vectorize_ui.py`**（S7.2 新建，A 类）：
+**`legacy/scripts/vectorize_ui.py`**（S7.2 新建，A 类）：
 
 ```
 对 class == A_ui 的条目：
@@ -307,7 +307,7 @@ pub struct Framebuf {
 | P5-2 | RGBA8 渲染逐像素一致（HD 基准图） | `cargo test -p ti-app --test render_parity_hd` 全绿 |
 | P5-3 | 多分辨率（1x/2x/4x）坐标往返不变式 | `cargo test -p ti-platform --test coordinate_roundtrip`（扩展 RGBA8） |
 | P5-4 | 首屏 HD 资源体积达标 | `evidence/S7.6-size.log` 与 §6 预算比对全 PASS |
-| P5-5 | 三端 bin（native/wasm/android host）编译通过 | `scripts/gate.ps1` 20 项全绿（S7 时点 8 项；当前 20 项） |
+| P5-5 | 三端 bin（native/wasm/android host）编译通过 | `scripts/gate.ps1` 21 项全绿（S7 时点 8 项；当前 21 项） |
 
 > 现有 P0~P4 不变；S7.5 路径 1 下 P4-1 原基准继续绿。
 
@@ -319,10 +319,10 @@ pub struct Framebuf {
 
 | 文件 | 阶段 |
 |---|---|
-| `scripts/classify_assets.py` | S7.1 |
+| `legacy/scripts/classify_assets.py` | S7.1 |
 | `ref/asset_classification.json` | S7.1 |
-| `scripts/pixel_upscale.py` | S7.2 |
-| `scripts/vectorize_ui.py` | S7.2 |
+| `legacy/scripts/pixel_upscale.py` | S7.2 |
+| `legacy/scripts/vectorize_ui.py` | S7.2 |
 | `assets_hd/`（产物目录） | S7.2 |
 | `scripts/comfyui_workflow.json` | S7.3（可选） |
 | `scripts/pack_hd_assets.py` | S7.4 |

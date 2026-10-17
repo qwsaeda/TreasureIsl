@@ -5,7 +5,7 @@
 //! 2. 非空白：各场景 HD 渲染后墨点/色块数 > 0；
 //! 3. 场景区分：不同场景 HD 渲染结果不同；
 //! 4. 字形正确：主菜单标题命中真字形（与 `font_parity` 同口径）；
-//! 5. `FramebufRgba` 尺寸与逻辑分辨率 176×220 一致。
+//! 5. `FramebufRgba` 尺寸与呈现层分辨率 1080×1920 一致（QA112 注释同步）。
 //!
 //! 与 `render_parity.rs`（RGB565 原路径，P4-1）并行：默认构建本测试目标为空
 //! （feature 关闭时全部 `#[cfg]` 裁剪），开启 `hd-8bit` 后全绿。
@@ -13,11 +13,10 @@
 #[cfg(feature = "hd-8bit")]
 mod tests {
     use ti_app::game_app::{GameApp, GameInput};
-    use ti_app::menu_shell::INK_COLOR_RGBA;
     use ti_platform::gfx::FramebufRgba;
 
-    /// 逻辑帧像素数（`LOGICAL_W × LOGICAL_H`）。
-    const FB_PIXELS: usize = 176 * 220;
+    /// 呈现层帧像素数（`1080 × 1920`，§1 约束；legacy 176×220 统一缩放落画布）。
+    const FB_PIXELS: usize = 1080 * 1920;
 
     /// 渲染当前场景到 `GameApp.shell.fb_rgba`（RGBA8 HD 路径），返回帧缓冲像素切片。
     fn render_current_hd(app: &mut GameApp) -> Vec<u32> {
@@ -38,20 +37,20 @@ mod tests {
 
     /// 主菜单（Index 场景）HD 渲染。
     fn render_index_hd() -> Vec<u32> {
-        let mut app = GameApp::new(176.0, 220.0);
+        let mut app = GameApp::new(1080.0, 1920.0);
         render_current_hd(&mut app)
     }
 
     /// 选角场景 HD 渲染。
     fn render_select_role_hd() -> Vec<u32> {
-        let mut app = GameApp::new(176.0, 220.0);
+        let mut app = GameApp::new(1080.0, 1920.0);
         app.handle(GameInput::Confirm); // Index → SelectRole
         render_current_hd(&mut app)
     }
 
     /// 选图场景 HD 渲染。
     fn render_select_map_hd() -> Vec<u32> {
-        let mut app = GameApp::new(176.0, 220.0);
+        let mut app = GameApp::new(1080.0, 1920.0);
         app.handle(GameInput::Confirm); // → SelectRole
         app.handle(GameInput::Confirm); // → SelectMap
         render_current_hd(&mut app)
@@ -59,7 +58,7 @@ mod tests {
 
     /// 主地图场景 HD 渲染。
     fn render_main_map_hd() -> Vec<u32> {
-        let mut app = GameApp::new(176.0, 220.0);
+        let mut app = GameApp::new(1080.0, 1920.0);
         app.handle(GameInput::Confirm); // → SelectRole
         app.handle(GameInput::Next); // 选角
         app.handle(GameInput::Confirm); // → SelectMap
@@ -70,7 +69,7 @@ mod tests {
 
     /// 战斗场景 HD 渲染。
     fn render_vs_hd() -> Vec<u32> {
-        let mut app = GameApp::new(176.0, 220.0);
+        let mut app = GameApp::new(1080.0, 1920.0);
         app.handle(GameInput::Confirm);
         app.handle(GameInput::Next);
         app.handle(GameInput::Confirm);
@@ -98,7 +97,7 @@ mod tests {
                 _ => render_vs_hd(),
             };
             assert_eq!(pixels, again, "{name} 场景 HD 渲染应确定性（两次逐像素相同）");
-            assert_eq!(pixels.len(), FB_PIXELS, "{name} HD 帧缓冲尺寸应 = 176×220");
+            assert_eq!(pixels.len(), FB_PIXELS, "{name} HD 帧缓冲尺寸应 = 1080×1920");
         }
     }
 
@@ -135,153 +134,28 @@ mod tests {
     #[test]
     fn hd_index_scene_renders_real_glyphs_for_title() {
         let pixels = render_index_hd();
-        let ink_pixels = pixels.iter().filter(|&&p| p == INK_COLOR_RGBA).count();
+        // S15 v2：主菜单改用羊皮纸/木纹/金色系，UI 像素 = 非背景、非黑（标题条木纹、
+        // 羊皮纸棋盘、bevel 按钮、深墨文字）——比旧版白墨 0xFFFF_FFFF 判据更宽松。
+        let ui_pixels = pixels.iter().filter(|&&p| p != 0 && p != 0xFF_FD70).count();
         assert!(
-            ink_pixels > 10,
-            "主菜单标题+菜单项 HD 应渲染出真字形（墨色像素数 {ink_pixels} > 10）"
+            ui_pixels > 10,
+            "主菜单标题+菜单项 HD 应渲染出真字形（非背景/非黑像素数 {ui_pixels} > 10）"
         );
     }
 
-    /// P5-2 判据 5：`FramebufRgba` 尺寸与逻辑分辨率 176×220 一致。
+    /// P5-2 判据 5：`FramebufRgba` 尺寸与呈现层分辨率 1080×1920 一致。
     #[test]
     fn hd_framebuf_matches_logical_resolution() {
         let mut fb = FramebufRgba::new();
         fb.clear(0xFF00_0000);
-        assert_eq!(fb.as_slice().len(), FB_PIXELS, "HD 帧缓冲 = 176×220");
-        let mut app = GameApp::new(176.0, 220.0);
+        assert_eq!(fb.as_slice().len(), FB_PIXELS, "HD 帧缓冲 = 1080×1920");
+        let mut app = GameApp::new(1080.0, 1920.0);
         app.render_hd();
         let pixels = app.shell().fb_rgba.as_slice();
         assert!(pixels[0] != 0, "HD 主菜单第 0 行 x=0 应为标题条色（非黑）");
     }
 
-    /// P5-2 判据 6（真 PNG 注入）：`assets_hd_pack/1x/` 的 PNG 字节经
-    /// `load_hd_pngs` 注入后，HD blit 路径消费 RGBA8 真彩像素（非纯 PCX 扩色）。
-    /// 缺失 `assets_hd_pack` 时 SKIP（S7.4 产物未落盘）。
-    ///
-    /// 文件命名：静态精灵 `NN_hd.png`（1 帧）；多帧精灵 `NN_hd_f0.png`~`f4.png`
-    /// （分帧，`_fN` 后缀）。f1 从文件名前缀数字提取，帧号从 `_fN` 提取。
-    #[test]
-    fn hd_png_injection_produces_true_color_pixels() {
-        use ti_platform::hd_png::decode_png_rgba;
-
-        // 定位 repo 根（CWD 优先，EXP-050）
-        let base = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-        let pack_dir = base.join("assets_hd_pack").join("1x");
-        if !pack_dir.is_dir() {
-            eprintln!("SKIP: assets_hd_pack/1x 不存在");
-            return;
-        }
-
-        // 收集 1x 档全部 PNG 字节（f1 → 帧列表，按帧号排序）
-        let mut png_map: std::collections::BTreeMap<u32, Vec<(u32, Vec<u8>)>> =
-            std::collections::BTreeMap::new();
-        for entry in std::fs::read_dir(&pack_dir).into_iter().flatten().flatten() {
-            let path = entry.path();
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if !std::path::Path::new(name)
-                .extension()
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
-            {
-                continue;
-            }
-            let stem = name.strip_suffix(".png").unwrap_or(name);
-            // 静态："NN_hd" → f1=NN, frame=0；多帧："NN_hd_fK" → f1=NN, frame=K
-            let (f1_str, frame_str) = match stem.rsplit_once("_f") {
-                Some((a, b)) => (a.strip_suffix("_hd").unwrap_or(a), b),
-                None => (stem.strip_suffix("_hd").unwrap_or(stem), "0"),
-            };
-            let f1: u32 = match f1_str.parse() {
-                Ok(v) => v,
-                Err(_) => continue,
-            };
-            let frame_no: u32 = frame_str.parse().unwrap_or(0);
-            if let Ok(bytes) = std::fs::read(&path) {
-                let Ok(img) = decode_png_rgba(&bytes) else {
-                    continue;
-                };
-                let has_color = img.rgba.iter().any(|&b| b > 0);
-                if has_color {
-                    png_map.entry(f1).or_default().push((frame_no, bytes));
-                }
-            }
-        }
-        assert!(!png_map.is_empty(), "assets_hd_pack/1x 应至少有一个可解码的非黑 PNG");
-
-        // 帧号排序 → (f1, Vec<Vec<u8>>)
-        let png_bytes: Vec<(u32, Vec<Vec<u8>>)> = png_map
-            .into_iter()
-            .map(|(f1, mut frames)| {
-                frames.sort_by_key(|(n, _)| *n);
-                (f1, frames.into_iter().map(|(_, b)| b).collect())
-            })
-            .collect();
-
-        // 注入到一个 GameApp 的 sprite_atlas
-        let mut app = GameApp::new(176.0, 220.0);
-        app.load_hd_pngs(png_bytes);
-        let cache_size = app.atlas_hd_cache_size();
-        assert!(cache_size > 0, "HD PNG 注入后 cache_size 应 > 0");
-
-        // 渲染 Index 场景（含 f1 精灵 blit）
-        app.render_hd();
-        let pixels = app.shell().fb_rgba.as_slice().to_vec();
-
-        // 验证存在非黑、非纯 PCX 扩色的 RGBA8 像素
-        let non_black = pixels.iter().filter(|&&p| p != 0xFF00_0000 && p != 0).count();
-        assert!(non_black > FB_PIXELS / 10, "HD 渲染后应有大量非黑像素");
-    }
-
-    /// P5-2 判据 7（多帧 PNG 注入）：多帧精灵（f1=14，5 帧）注入后，
-    /// 第 0 帧与第 1 帧 blit 出的 RGBA8 画面不同（动画帧切换生效）。
-    /// 缺失 `assets_hd_pack/1x/ui/14_hd_f0.png` 时 SKIP。
-    #[test]
-    fn hd_multi_frame_png_blits_differ_by_frame() {
-        use ti_platform::hd_png::decode_png_rgba;
-
-        let base = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-        let f0_path = base.join("assets_hd_pack").join("1x").join("ui").join("14_hd_f0.png");
-        let f1_path = base.join("assets_hd_pack").join("1x").join("ui").join("14_hd_f1.png");
-        if !f0_path.is_file() || !f1_path.is_file() {
-            eprintln!("SKIP: 多帧 PNG 14_hd_f0/f1 不存在");
-            return;
-        }
-
-        let mut frames: Vec<Vec<u8>> = Vec::new();
-        for k in 0..5u32 {
-            let p =
-                base.join("assets_hd_pack").join("1x").join("ui").join(format!("14_hd_f{k}.png"));
-            if p.is_file() {
-                if let Ok(bytes) = std::fs::read(&p) {
-                    let Ok(img) = decode_png_rgba(&bytes) else {
-                        continue;
-                    };
-                    let has_color = img.rgba.iter().any(|&b| b > 0);
-                    if has_color {
-                        frames.push(bytes);
-                    }
-                }
-            }
-        }
-        assert!(frames.len() >= 2, "f1=14 多帧 PNG 应至少 2 帧（实际 {}/5）", frames.len());
-
-        let mut app = GameApp::new(176.0, 220.0);
-        app.load_hd_pngs(vec![(14u32, frames)]);
-        assert!(app.atlas_hd_cache_size() >= 1, "f1=14 注入后缓存应 ≥1");
-
-        let scene = ti_formats::mapfile::MapScene {
-            header: ti_formats::mapfile::MapHeader {
-                width: 176,
-                height: 220,
-                flags: 0,
-                reserved: 0,
-            },
-            words: vec![176, 220, 0, 0, 1, 1, 14, 10, 10, 1, 0],
-        };
-        let atlas = app.atlas_mut().expect("atlas 应已注入");
-        let mut fb0 = ti_platform::gfx::FramebufRgba::new();
-        let mut fb1 = ti_platform::gfx::FramebufRgba::new();
-        atlas.blit_scene_frame_rgba(&scene, &mut fb0, 0);
-        atlas.blit_scene_frame_rgba(&scene, &mut fb1, 1);
-        assert_ne!(fb0.as_slice(), fb1.as_slice(), "f1=14 多帧 PNG 不同帧号 blit 画面应不同");
-    }
+    // S15.4：legacy HD PNG 逐像素 blit 判据（判据 6/7）已随 legacy 像素写帧层移除而删除：
+    // `render_hd` 不再叠加 HD 精灵，`blit_scene_frame_rgba` 已删除。HD 真彩注入的
+    // 代码化贴图路径（`blit_texture` 原语）与逐像素重锚见 S15.5。
 }

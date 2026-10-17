@@ -68,7 +68,7 @@ impl Scene for <Name>Scene {
 
 ```rust
 // crates/ti-app/src/ui/widgets/<kind>.rs
-//! <控件类型>渲染。字段语义见 docs/facts/map.md（F-3xx），布局见 data/controls.json。
+//! <控件类型>渲染。字段语义见 legacy/docs/facts/map.md（F-3xx），布局见 data/controls.json。
 //! （S8.5 落地：`ti_app::ui::widgets` 与 `Control` trait 待建）
 
 use super::{Control, Framebuf, StringTable};
@@ -261,9 +261,9 @@ if __name__ == "__main__":
 
 ## 环境事实（下发方填，子代理禁止靠摸目录试错 —— EXP-064）
 - 工作目录：`<绝对路径>`（本项目 = `C:\金银岛`）
-- crate 前缀：`ti-`（**不是** `ty-`；目录名 `crates/ti-app`、`crates/ti-core`、`crates/ti-platform`、`crates/ti-tools`、`crates/ti-formats`）
+- crate 前缀：`ti-`（**不是** `ty-`；目录名 `crates/ti-app`、`crates/ti-core`、`crates/ti-platform`、`crates/ti-render`、`crates/ti-tools`、`crates/ti-formats`）
 - 关键命令：`cargo build --workspace` / `cargo test --workspace` / `cargo clippy --workspace --all-targets -- -D warnings` / `grep -rn "oracle" crates/`
-- 逆向产物已归档在 `legacy/`（`ref/`、`TreasureIsl.exe`、`oracle-rust/` 均在 `legacy/` 下），`rules/` 与 `domain/` 层正向代码**不得** import `legacy::oracle`（EXP-061）
+- 逆向产物已归档在 `legacy/`（`ref/`、`TreasureIsl.exe` 等均在 `legacy/` 下）；oracle 参照实现唯一源 = `crates/ti-core/src/oracle`（`use ti_core::oracle::`），重复 crate `legacy/oracle-rust` 已删除（S15.8），`rules/` 与 `domain/` 层正向代码**不得** import 参照实现（EXP-061）
 - 当前在途并行包（本包之外的）：<包 ID 清单 + 各自白名单一句话>，避免误改他包文件
 
 ## 契约（只读，不许改）
@@ -292,11 +292,17 @@ if __name__ == "__main__":
 - [ ] docs/experience/index.md（重点读 <本包域> 相关 EXP）
 - [ ] scripts/gate.ps1 项清单 + doccheck2 断言清单
 - [ ] 在途并行包白名单：<本轮 P 包清单 + 文件域>
+- [ ] `powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package <P?>`（S15.1 起强制：
+      穷举/测试类任务必须先跑本脚本拿到本域相关 EXP 清单 + 当前 doccheck2 断言清单 + gate 项数，
+      逐条回执——"读本域 EXP"从自由文本升级为脚本化机读回执，防 EXP-067 式"两边各自单层自洽"假绿
+      在下一轮任务里重蹈覆辙）
 
 ## 规范回执（子代理回报必填）
 - 已读：<逐条>
 - 命中现行规范：<条数 + 哪几条>
 - 读到本包域相关 EXP：<EXP-xxx>
+- flywheel_readme 脚本实跑输出（S15.1 起必填，穷举/测试类任务）：已跑 `-Package <P?>`，
+  命中本域 EXP <N> 条 + doccheck2 断言 <M> 条 + gate 项数 <K>
 - 未读/读不了：<原因>
 
 ## 禁区（违反即打回）

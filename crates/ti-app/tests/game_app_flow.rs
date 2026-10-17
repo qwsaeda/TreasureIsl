@@ -9,7 +9,7 @@ use ti_app::game_app::{GameApp, GameInput, Scene};
 /// 菜单→新游戏→选角→选图→主地图（P3-3 全链路前半段）。
 #[test]
 fn flow_menu_to_main_map() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     assert_eq!(app.scene(), Scene::Index);
 
     // 主菜单：菜单项 0（新游戏）确认
@@ -33,7 +33,7 @@ fn flow_menu_to_main_map() {
 /// 主地图：移动 + 贸易 + 建造。
 #[test]
 fn flow_main_map_move_trade_build() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -73,7 +73,7 @@ fn flow_main_map_move_trade_build() {
 /// 据点事件码 6 → 战斗场景。
 #[test]
 fn flow_landmark_to_battle() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -91,7 +91,7 @@ fn flow_landmark_to_battle() {
 /// 战斗：推进到结束 + 回主菜单。
 #[test]
 fn flow_battle_to_menu() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -119,7 +119,7 @@ fn flow_battle_to_menu() {
 /// 主地图 → 消息场景（事件码 1 据点）+ 翻页 + 关闭。
 #[test]
 fn flow_message_pages() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -141,7 +141,7 @@ fn flow_message_pages() {
 /// 存读档：写档 + 读档往返。
 #[test]
 fn flow_save_load_roundtrip() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -172,7 +172,7 @@ fn flow_save_load_roundtrip() {
 /// 主菜单退出（菜单项 5 → quit）。
 #[test]
 fn flow_menu_quit() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 移动到菜单项 5（退出）
     for _ in 0..5 {
         app.handle(GameInput::MoveDown);
@@ -192,7 +192,7 @@ use ti_platform::settings::Gesture;
 /// 规则 1 `menu_cursor_wraps`：菜单项 0..5 上下循环不越界。
 #[test]
 fn menu_cursor_wraps() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 从 0 上移 → 回绕到 5；从 5 下移 1 次 → 回绕到 0
     app.handle(GameInput::MoveUp);
     assert_eq!(app.menu_selected(), 5, "0 上移应回绕到 5");
@@ -208,18 +208,18 @@ fn menu_cursor_wraps() {
 /// 规则 2 `menu_item_targets`：菜单项 0/1/5 分别跳 SelectRole/Saveload/退出。
 #[test]
 fn menu_item_targets() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 菜单项 0 → SelectRole
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::SelectRole, "菜单项 0 应进选角");
 
     // 回主菜单（选角 Back）
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.handle(GameInput::MoveDown); // 菜单项 1
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::Saveload, "菜单项 1 应进存读档");
 
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     for _ in 0..5 {
         app.handle(GameInput::MoveDown); // 菜单项 5
     }
@@ -317,8 +317,8 @@ fn widget_hit_bounds() {
 /// 规则 7 `touch_logical_roundtrip`：触摸坐标反变换往返一致。
 #[test]
 fn touch_logical_roundtrip() {
-    // 视口 2x：逻辑 176×220 → 屏幕 352×440
-    let vp = Viewport::fit(352.0, 440.0);
+    // 视口 2x：呈现层 1080×1920 → 屏幕 2160×3840（QA112 注释同步）
+    let vp = Viewport::fit(2160.0, 3840.0);
     let (lx, ly) = (88.0_f32, 110.0_f32);
     let (sx, sy) = vp.logical_to_screen(lx, ly);
     let (rx, ry) = vp.screen_to_logical(sx, sy);
@@ -332,68 +332,59 @@ fn touch_logical_roundtrip() {
     assert!((ry2 - ly2).abs() < 1e-2, "y 往返不一致：{ly2} → {ry2}");
 }
 
-/// 规则 8 `iso_touch_matches_move`：主地图点按命中格 == 渲染格（真实 `center_camera` 语义）。
+/// 规则 8 `iso_touch_matches_move`：主地图点按命中格 == 渲染格。
 ///
-/// 构造 7×7 网格的真实 `center_camera`（iso 包围盒中心对屏幕中心 88,110），
-/// 把渲染格点的屏幕像素喂给 `iso_grid_cell_at`，必须逆解回原格。
+/// S15.6 QA025 重锚（`08_render_arch.md` 契约 5 / EXP-067）：渲染侧 =
+/// `chrome::iso_cell`（scenes.json `main_map.grid.*`，无 legacy 32/16 投影、无
+/// (88,110) 摄像机——S15.4 已删层），触摸侧 = `grid_cell_at`（`iso_cell` 的逆）。
+/// 渲染格点像素喂给触摸逆变换，必须逆解回原格。
 #[test]
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 fn iso_touch_matches_move() {
-    use ti_core::domain::map::GridPos;
-    let grid_w = 7u32;
-    let grid_h = 7u32;
-    // 全格 iso 包围盒（与 terrain_atlas::center_camera 同公式）
-    let (mut min_x, mut max_x, mut min_y, mut max_y) = (i64::MAX, i64::MIN, i64::MAX, i64::MIN);
-    for r in 0..grid_h {
-        for c in 0..grid_w {
-            let (ix, iy) = GridPos::new(r, c).iso_pos(grid_w);
-            min_x = min_x.min(i64::from(ix));
-            max_x = max_x.max(i64::from(ix));
-            min_y = min_y.min(i64::from(iy));
-            max_y = max_y.max(i64::from(iy));
-        }
-    }
-    let cam = (88 - (min_x + max_x) / 2, 110 - (min_y + max_y) / 2);
+    use ti_app::scenes::chrome;
+    let scene = ti_core::data::scenes()
+        .expect("scenes.json")
+        .get("main_map")
+        .cloned()
+        .expect("scenes.json main_map");
     let (row, col) = (3u32, 2u32);
-    let (ix, iy) = GridPos::new(row, col).iso_pos(grid_w);
-    // 渲染侧：瓦片格点 (ix,iy) + camera = 屏幕像素
-    let (sx, sy) = (i64::from(ix) + cam.0, i64::from(iy) + cam.1);
-    #[allow(clippy::cast_precision_loss)]
-    let hit = layout::iso_grid_cell_at(sx as f32, sy as f32, grid_w, grid_h, cam);
-    assert_eq!(hit, Some((row, col)), "center_camera 语义下渲染格点像素应逆解回原格，实际 {hit:?}");
+    let (sx, sy) = chrome::iso_cell(row as i32, col as i32, &scene);
+    let hit = layout::grid_cell_at(sx as f32, sy as f32, 20, 20);
+    assert_eq!(hit, Some((row, col)), "渲染格点像素 ({sx},{sy}) 应逆解回原格，实际 {hit:?}");
 }
 
-/// EXP-067 跨层一致性：触摸命中格 == 渲染该格实际像素所在格（真实 center-camera + 矩形 grid）。
+/// EXP-067 跨层一致性（S15.6 QA025 重锚）：触摸命中格 == 渲染该格实际像素所在格。
 ///
-/// 渲染侧 `blit_map_cam` 把瓦片格点 `(iso_x+cam.0, iso_y+cam.1)` 画到屏幕；
-/// 触摸侧 `iso_grid_cell_at` 对该屏幕像素逆解，必须命中同一行格。
-/// 用 7×5 矩形网格（`grid_w` 不等于 `grid_h`）+ 真实 `center_camera` 公式，避免正方形退化。
+/// 渲染侧 `chrome::iso_cell`（数据源 scenes.json `grid.*`）把格点画到 1080 呈现层；
+/// 触摸侧 `grid_cell_at`（`iso_cell` 严格逆，同数据源）对该像素逆解，
+/// 全格遍历必须命中同一格（`iso_cell(iso_grid_cell_at(p)) == p`，EXP-067 正逆成对）。
 #[test]
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 fn iso_touch_render_cross_layer() {
-    use ti_core::domain::map::GridPos;
-    let grid_w = 7u32;
-    let grid_h = 5u32;
-    let (mut min_x, mut max_x, mut min_y, mut max_y) = (i64::MAX, i64::MIN, i64::MAX, i64::MIN);
-    for r in 0..grid_h {
-        for c in 0..grid_w {
-            let (ix, iy) = GridPos::new(r, c).iso_pos(grid_w);
-            min_x = min_x.min(i64::from(ix));
-            max_x = max_x.max(i64::from(ix));
-            min_y = min_y.min(i64::from(iy));
-            max_y = max_y.max(i64::from(iy));
-        }
-    }
-    let cam = (88 - (min_x + max_x) / 2, 110 - (min_y + max_y) / 2);
-    for r in 0..grid_h {
-        for c in 0..grid_w {
-            let (ix, iy) = GridPos::new(r, c).iso_pos(grid_w);
-            let sx = i64::from(ix) + cam.0;
-            let sy = i64::from(iy) + cam.1;
-            #[allow(clippy::cast_precision_loss)]
-            let hit = layout::iso_grid_cell_at(sx as f32, sy as f32, grid_w, grid_h, cam);
+    use ti_app::scenes::chrome;
+    let scene = ti_core::data::scenes()
+        .expect("scenes.json")
+        .get("main_map")
+        .cloned()
+        .expect("scenes.json main_map");
+    for r in 0..20u32 {
+        for c in 0..20u32 {
+            let (sx, sy) = chrome::iso_cell(r as i32, c as i32, &scene);
+            let hit = layout::grid_cell_at(sx as f32, sy as f32, 20, 20);
             assert_eq!(
                 hit,
                 Some((r, c)),
-                "格 ({r},{c}) 渲染像素 ({sx},{sy}) cam={cam:?} 逆解应回 ({r},{c})，实际 {hit:?}"
+                "格 ({r},{c}) 渲染像素 ({sx},{sy}) 逆解应回 ({r},{c})，实际 {hit:?}"
             );
         }
     }
@@ -424,7 +415,7 @@ fn gesture_threshold_split() {
 /// 规则 10 `msg_page_clamped`：消息翻页首尾钳位。
 #[test]
 fn msg_page_clamped() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图 → 打开消息（事件码 1 → Msgl）
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
@@ -451,7 +442,7 @@ fn msg_page_clamped() {
 /// 规则 11 `msg_close_returns_source`：消息关闭回到打开源场景。
 #[test]
 fn msg_close_returns_source() {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图 → 打开消息
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
@@ -465,7 +456,7 @@ fn msg_close_returns_source() {
     assert_eq!(app.scene(), Scene::MainMap, "主地图打开的消息关闭应回主地图");
 
     // 主菜单打开的帮助消息关闭 → 回主菜单
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     // 菜单项 2（选项/说明）→ Help 消息：从 0 起 MoveDown 2 次
     app.handle(GameInput::MoveDown);
     app.handle(GameInput::MoveDown);
@@ -480,7 +471,7 @@ fn msg_close_returns_source() {
 #[test]
 fn scene_switch_resets_state() {
     // 选角场景：角色 + 地图选定进主地图后，回选角应复位选中项
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Next); // 选角 → 第 1 个（Panda）
     let _char = app.character();
@@ -505,7 +496,7 @@ fn scene_switch_resets_state() {
     );
 
     // 消息页码复位：打开消息 → 翻到末页 → 关闭 → 再打开应回首页
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
     app.handle(GameInput::Confirm);

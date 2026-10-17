@@ -1,4 +1,4 @@
-﻿# S8 改造计划（Refactor Plan）
+# S8 改造计划（Refactor Plan）
 
 **目标**：把项目从「逆向驱动的功能性复刻」改造为**标准游戏工程**。
 手段按「固化 / 模版化 / 脚本化 / 复用现成库」分派，交给 LLM、脚本与 loop 各司其职。
@@ -7,8 +7,8 @@
 
 | 对象 | 旧定位 | 新定位 |
 |---|---|---|
-| `docs/facts/`、`ref/pseudocode/` | 开发依据 + 验收基准 | **参照物**（可查原版形态，不驱动开发） |
-| `docs/spec/*.md`（逆向规格） | 业务规则来源 | 参照物（历史归档） |
+| `legacy/docs/facts/`、`ref/pseudocode/` | 开发依据 + 验收基准 | **参照物**（可查原版形态，不驱动开发） |
+| `legacy/docs/spec/*.md`（逆向规格） | 业务规则来源 | 参照物（历史归档） |
 | `crates/ti-core/src/oracle/` | 差分测试基准（自证） | **冻结**，不再新增；新系统不写 oracle |
 | `crates/ti-core/src/rules/` | 逆向转写实现 | **重写**为按 `docs/business/` 实现 |
 | `crates/ti-app/game_app.rs` | 21 个重复方法 | 重构为 Scene trait + 场景注册表 |
@@ -108,7 +108,7 @@
 | E 控件层 | `crates/ti-app/src/widgets.rs`、`crates/ti-app/tests/widgets.rs`、`evidence/S8.5.log` | `widgets.rs`：`Framebuf` 无 `fill_rect` → 改 `MenuShell`；`color_of` 的 `rec.kind % palette.len()` u32/usize 转换；`hit()` 需 `.collect().rev()` |
 | G 渲染基线 | `crates/ti-app/tests/render_parity.rs`、`evidence/S8.6.log` | `E0596`（`a` 未 `mut`）；参考图需由 `ti-formats` 资源解码独立产出（去自指） |
 
-**收尾（主线程）：** 各子任务文件域全绿 → 按 `loop.md` §6.2 第 8 条复核（5 类产出物 + `cargo test` + ledger + gate）→ `S8.3` 父任务全子任务 verified → `gate.ps1` 10 项全绿（S8 时点，现 20 项）。
+**收尾（主线程）：** 各子任务文件域全绿 → 按 `loop.md` §6.2 第 8 条复核（5 类产出物 + `cargo test` + ledger + gate）→ `S8.3` 父任务全子任务 verified → `gate.ps1` 10 项全绿（S8 时点，现 21 项）。
 
 ### 7.3 各子任务 DoD 验收命令
 
@@ -121,7 +121,7 @@
 | E 控件层 | `cargo test -p ti-app --test widgets` | 全 `ok` |
 | F RNG/FNV | `cargo build --workspace && cargo clippy --workspace --all-targets -- -D warnings` | 无未用 `rand` 警告，无手写 LCG/FNV 残留 |
 | G 渲染基线 | `cargo test -p ti-app --test render_parity` | 全 `ok`，基线来自 `ti-formats` 资源解码 |
-| 收尾 | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 10 项全绿（S8 时点，现 20 项），`tee evidence/<id>.log` |
+| 收尾 | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 10 项全绿（S8 时点，现 21 项），`tee evidence/<id>.log` |
 
 ### 7.4 备注（主线程已顺手改、留待子会话验收）
 

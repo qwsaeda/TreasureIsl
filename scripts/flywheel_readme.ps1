@@ -115,18 +115,22 @@ function Read-GateItems {
     $itemNum = 0
     foreach ($line in ($text -split "`n")) {
         $trimmed = $line.TrimStart()
-        if ($trimmed -match "^Report\b") {
+        # 与 doccheck2 gate_item_actual_count 同口径：只数**顶层**（第 0 列、不缩进）的
+        # `Report` 调用 = 实际固定门禁项（当前 21 项）。条件分支（if/else 块内缩进的
+        # Report/Skip，如 wasm/android 构建、zero-unknown）不计入固定项，Skip 不单独计项。
+        # 用原始行（未 TrimStart）判定是否顶格，避免把条件缩进行误算进去。
+        if ($line -match "^Report\b") {
             $itemNum++
             # 提取引号内的描述
+            $desc = $trimmed
             if ($trimmed -match "Report\s+\(.*\)\s+'(.+?)'") {
-                $items += @{ n = $itemNum; desc = $Matches[1] }
+                $desc = $Matches[1]
             }
             elseif ($trimmed -match 'Report\s+\(.*\)\s+"(.+?)"') {
-                $items += @{ n = $itemNum; desc = $Matches[1] }
+                $desc = $Matches[1]
             }
-            else {
-                $items += @{ n = $itemNum; desc = $trimmed }
-            }
+            # 顶层 Report 一一对应固定项，描述不重复
+            $items += @{ n = $itemNum; desc = $desc }
         }
     }
     return $items
@@ -227,7 +231,7 @@ if ($Check) {
     $ok = $true
     $msg = @()
     if ($output -notcontains '[1] docs/process/00_index.md — 分工表 + 标准工作流') { $ok = $false; $msg += '缺 [1] 必读条目' }
-    if ($gateItems.Count -lt 16) { $ok = $false; $msg += "gate 项仅 $($gateItems.Count)（要求 ≥16）" }
+    if ($gateItems.Count -lt 21) { $ok = $false; $msg += "gate 项仅 $($gateItems.Count)（要求 ≥21，与 gate.ps1 顶层固定项 21 对齐，doccheck2 gate_item_actual_count 同口径）" }
     if ($dc2Checks.Count -lt 15) { $ok = $false; $msg += "doccheck2 断言仅 $($dc2Checks.Count)（要求 ≥15）" }
     if ($packages.Count -lt 7) { $ok = $false; $msg += "packages.yaml 仅 $($packages.Count) 包（要求 ≥7）" }
     # 6 条必读关键词

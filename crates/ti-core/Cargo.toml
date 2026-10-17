@@ -20,14 +20,11 @@ serde_json.workspace = true
 rand_pcg.workspace = true
 rand_core.workspace = true
 
-# S11：oracle（原版参照实现）桥接层。feature 默认 off；测试经 `cargo test` 的
-# dev-dependency 编译 legacy-oracle，桥接模块 `src/oracle/` 仅在该 feature 下编译。
-[features]
-default = []
-oracle-reference = []
+# S11：oracle 原版参照实现已归档；重复 crate `legacy/oracle-rust` 于 S15.8 删除。
+# 唯一镜像源 = 本 crate `src/oracle/`，经 lib.rs `pub mod oracle` 公开导出，集成测试
+# `reference_diff_*` / `diff_*` 直接 `use ti_core::oracle::`；故无 feature 门控、无 dev-dep。
 
 [dev-dependencies]
-legacy-oracle.workspace = true
 serde_json.workspace = true
 
 [lints]

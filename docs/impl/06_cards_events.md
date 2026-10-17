@@ -2,7 +2,7 @@
 
 本文档是卡牌/事件系统的完整实现规格，实现者无需阅读其他文档即可写出正确的卡牌逻辑代码。
 
-> 事实来源：`docs/design/combat.md` §2 + `docs/design/constants.md` §5 + `docs/facts/map.md`。
+> 事实来源：`legacy/docs/design/combat.md` §2 + `legacy/docs/design/constants.md` §5 + `legacy/docs/facts/map.md`。
 
 ---
 

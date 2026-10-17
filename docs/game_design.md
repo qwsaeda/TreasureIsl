@@ -6,8 +6,8 @@
 > **文档分层**
 > - 本文件 = 概述与路由
 > - `docs/formats/` = 资源字节级格式（pak/lpk/pcx/map/font/save）
-> - `docs/design/` = 各玩法系统的实现级规格（含公式、状态机、数据表）
-> - `docs/spec/*.md` = 逆向规格（含 IDA 证据行号，用于 diff 验证）
+> - `legacy/docs/design/` = 各玩法系统的实现级规格（含公式、状态机、数据表）
+> - `legacy/docs/spec/*.md` = 逆向规格（含 IDA 证据行号，用于 diff 验证）
 > - `crates/ti-core/src/rules/*.rs` = 已验证正式实现
 
 ---

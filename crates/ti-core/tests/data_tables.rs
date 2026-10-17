@@ -6,7 +6,8 @@
 //! 本文件位于 `tests/`，因此允许 `expect`（`docs/process/02_conventions.md` §5）。
 
 use ti_core::data::{
-    Balance, BossTier, BuildingDef, CombatCfg, DamageCfg, LoadError, balance, scenes, strings,
+    Balance, BossTier, BuildingDef, CombatCfg, DamageCfg, LoadError, balance, exhaust, scenes,
+    strings,
 };
 
 // ---------------------------------------------------------------- 平衡数值表
@@ -115,12 +116,12 @@ fn strings_cover_every_scene_title_and_hint() {
     let s = strings().expect("strings");
     for key in [
         "scene.select_role.title",
-        "scene.select_role.hint",
+        "scene.select_role.nav_hint",
         "scene.select_map.title",
-        "scene.select_map.hint",
+        "scene.select_map.nav_hint",
         "scene.main_map.title",
         "scene.vs.title",
-        "scene.message.hint",
+        "scene.message.nav_hint",
         "scene.saveload.title",
     ] {
         assert!(s.try_get(key).is_some(), "missing string key `{key}`");
@@ -157,8 +158,10 @@ fn scene_layout_rects_are_inside_logical_resolution() {
     let sc = scenes().expect("scenes");
     let ui = &balance().expect("balance").ui;
     for (id, layout) in sc {
-        let w = i32::try_from(ui.logical_width).unwrap_or(176);
-        let h = i32::try_from(ui.logical_height).unwrap_or(220);
+        // S15.6 QA047/契约 1：呈现坐标系唯一 1080×1920（balance.json `ui.logical_width/height`
+        // 已 1080 口径），回退值随权威常量走（旧 176/220 legacy 回退值已废）。
+        let w = i32::try_from(ui.logical_width).unwrap_or(1080);
+        let h = i32::try_from(ui.logical_height).unwrap_or(1920);
         assert!(
             layout.title.x >= 0 && layout.title.x < w,
             "scene `{id}` title.x {} out of bounds",
@@ -246,4 +249,53 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
         },
     };
     assert_eq!(b.combat.boss(0).map(|x| x.hp), Some(10));
+}
+
+// ---------------------------------------------------------------- 穷举场景表
+
+/// S15.1：`exhaust_scenarios.json` 可解析 + 各域枚举空间非空（数值入 JSON 纪律，
+/// 加/改穷举维度 = 改 JSON 一行，不改测试代码）。
+#[test]
+fn exhaust_scenarios_parses_and_is_populated() {
+    let e = exhaust().expect("exhaust_scenarios.json should parse");
+    assert!(!e.combat.seeds.is_empty(), "combat.seeds must not be empty");
+    assert!(!e.combat.player_variants.is_empty(), "combat.player_variants must not be empty");
+    assert!(!e.trade.qty_offset_levels.is_empty(), "trade.qty_offset_levels must not be empty");
+    assert!(!e.trade.gold_offset_levels.is_empty(), "trade.gold_offset_levels must not be empty");
+    assert!(!e.build.fixture.buildings.is_empty(), "build.fixture.buildings must not be empty");
+    assert!(!e.saveload.seeds.is_empty(), "saveload.seeds must not be empty");
+    assert!(
+        !e.saveload.legacy_slot_cases.is_empty(),
+        "saveload.legacy_slot_cases must not be empty"
+    );
+    assert!(!e.menu.item_target_indexes.is_empty(), "menu.item_target_indexes must not be empty");
+    assert!(
+        !e.menu.msg_page_offset_levels.is_empty(),
+        "menu.msg_page_offset_levels must not be empty"
+    );
+    assert!(!e.main_loop.states.is_empty(), "main_loop.states must not be empty");
+    assert!(!e.main_loop.triggers.is_empty(), "main_loop.triggers must not be empty");
+    assert!(!e.progression.card_seeds.is_empty(), "progression.card_seeds must not be empty");
+    assert!(
+        !e.progression.card_state_variants.is_empty(),
+        "progression.card_state_variants must not be empty"
+    );
+    assert!(e.progression.card_event_id_max > 0, "progression.card_event_id_max must be > 0");
+
+    // 组合数对账（与 `exhaust_*.rs` 里的断言同口径，防 JSON 档位改动后测试静默失配）
+    // 逐 key 对账 `exhaust_key_counts()` 全部 9 个返回值（不能只断言 1 个，
+    // 否则 JSON 档位改动后其余 key 会静默失配而测试不报）
+    let counts = ti_core::data::exhaust_key_counts();
+    assert_eq!(counts.get("combat.seeds"), Some(&e.combat.seeds.len()));
+    assert_eq!(counts.get("trade.qty_offset"), Some(&e.trade.qty_offset_levels.len()));
+    assert_eq!(counts.get("build.fixture.buildings"), Some(&e.build.fixture.buildings.len()));
+    assert_eq!(counts.get("saveload.seeds"), Some(&e.saveload.seeds.len()));
+    assert_eq!(counts.get("menu.item_target_indexes"), Some(&e.menu.item_target_indexes.len()));
+    assert_eq!(counts.get("main_loop.states"), Some(&e.main_loop.states.len()));
+    assert_eq!(counts.get("main_loop.triggers"), Some(&e.main_loop.triggers.len()));
+    assert_eq!(counts.get("progression.card_seeds"), Some(&e.progression.card_seeds.len()));
+    assert_eq!(
+        counts.get("progression.card_state_variants"),
+        Some(&e.progression.card_state_variants.len())
+    );
 }

@@ -16,8 +16,8 @@
      权重 > 0、上限 > 下限）；strings 覆盖 balance 中每个 name_key（无孤儿引用）；
      scenes 覆盖全部游戏场景；controls.json（若存在）与 legacy/ref/controls.json
      记录数一致。
-  V1 `main_map.grid` 段必须含 `x0`/`y0`/`step` 三键，且均为 >0 的整数字面量
-     （`extra_scalar` 消费方 `main_map.rs` 的占位网格渲染依赖此三键）。
+   V1 `main_map.grid` 段必须含 `x0`/`y0`/`tile_w`/`tile_h` 四键，且均为 >0 的整数字面量
+      （`chrome::iso_cell`/`iso_tile` 等距投影依赖此四键，S15.3 1080 重锚后 `step` 改 `tile_w`/`tile_h`）。
   V2 全场景 `extra` 中的非 Rect 标量键（int/float 值）必须是 >0 的整数字面量
      （`extra_scalar` 抽取判据一致，防静默丢）。
 
@@ -37,12 +37,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-DATA_FILES = ["balance.json", "strings.json", "scenes.json"]
+DATA_FILES = ["balance.json", "strings.json", "scenes.json", "theme.json"]
 
 GAME_SCENES = ["index", "select_role", "select_map", "main_map", "vs", "message", "saveload"]
 
-# V1：main_map 占位网格渲染三键（`main_map.rs` `extra_scalar.get("grid.x0")` 等）
-V1_REQUIRED = ("x0", "y0", "step")
+# V1：main_map 占位网格渲染四键（`chrome::iso_cell`/`iso_tile` 读 `grid.x0`/`grid.y0`/`grid.tile_w`/`grid.tile_h`，
+# S15.3 1080 重锚后 `step` 已改 `tile_w`/`tile_h`；无配置 = 0，调用方据此跳过绘制）
+V1_REQUIRED = ("x0", "y0", "tile_w", "tile_h")
 
 
 def load(p: Path, problems: list[str]) -> dict | None:
@@ -185,8 +186,8 @@ def check_scenes(sc: dict, problems: list[str]) -> None:
     for sid, layout in sc.items():
         if sid == "schema_version":
             continue
-        if "bg" not in layout:
-            problems.append(f"scene `{sid}` 缺少 bg")
+        # S15.6 裁决①：`bg` 键已删（运行时零消费——画布底色 = chrome COLOR_PARCH_DARK
+        # 深底；旧 65440 浅米白与实绘相反，QA029）。解析容错：缺省 0，无消费方。
         lst = layout.get("list")
         if lst is not None:
             if lst.get("row_h", 0) <= 0:
@@ -223,7 +224,7 @@ def is_positive_int(v: object) -> bool:
 
 
 def check_v1(main_map: dict, problems: list[str]) -> None:
-    """V1：main_map.grid 三键存在且为正整数字面量。"""
+    """V1：main_map.grid 四键存在且为正整数字面量。"""
     grid = main_map.get("grid")
     if not isinstance(grid, dict):
         problems.append("V1: main_map.grid 段缺失或形状非对象")
@@ -233,6 +234,69 @@ def check_v1(main_map: dict, problems: list[str]) -> None:
             problems.append(f"V1: main_map.grid 缺键 `{key}`")
         elif not is_positive_int(grid[key]):
             problems.append(f"V1: main_map.grid.{key} = {grid[key]!r} 非正整数字面量")
+
+
+THEME_PALETTE_KEYS = (
+    "parch_dark", "parch_light", "wood", "gold", "gold_glow", "gold_bright",
+    "menu_bg", "menu_border", "hilite", "bevel_hi", "bevel_shadow",
+    "text_on_parch", "text_on_wood", "danger", "player", "landmark",
+    "bg", "title_bar", "selected", "secondary", "black",
+)
+THEME_FONT_KEYS = (
+    "font_size", "title_font_size", "hint_font_size",
+    "bitmap_advance", "bitmap_advance_title", "bitmap_advance_hint",
+)
+
+
+def _as_hex16(v: object) -> int | None:
+    """主题色值接受 "0x10A3" / "10A3" 字符串或裸数字，统一成 int（非法 → None）。"""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, str):
+        t = v.strip()
+        t = t[2:] if t[:2].lower() == "0x" else t
+        try:
+            return int(t, 16)
+        except ValueError:
+            return None
+    return None
+
+
+def check_theme(theme: dict, problems: list[str]) -> None:
+    """theme.json：palette 21 键全在 + 0..=0xFFFF；fonts 6 键全在 + > 0。
+
+    S15.7 数据分离：色板与字号唯一事实源 = assets/data/theme.json，
+    Rust 侧只留兜底值。键缺失 = 解析时静默回落 default = 隐藏漂移，故此处守键存在性。
+    """
+    palette = theme.get("palette")
+    if not isinstance(palette, dict):
+        problems.append("theme.json 缺 palette 组（色板唯一事实源）")
+        palette = {}
+    for key in THEME_PALETTE_KEYS:
+        if key not in palette:
+            problems.append(f"theme.json palette 缺 `{key}`（键缺失 = 静默回落 default）")
+            continue
+        n = _as_hex16(palette[key])
+        if n is None:
+            problems.append(f"theme.json palette.{key} 非 RGB565（值 {palette[key]!r}）")
+        elif not (0 <= n <= 0xFFFF):
+            problems.append(f"theme.json palette.{key} = {n} 越界（须 0..=0xFFFF）")
+
+    fonts = theme.get("fonts")
+    if not isinstance(fonts, dict):
+        problems.append("theme.json 缺 fonts 组（字号唯一事实源）")
+        fonts = {}
+    for key in THEME_FONT_KEYS:
+        if key not in fonts:
+            problems.append(f"theme.json fonts 缺 `{key}`（键缺失 = 静默回落 default）")
+            continue
+        n = fonts[key]
+        if not isinstance(n, int) or isinstance(n, bool):
+            problems.append(f"theme.json fonts.{key} 非整数（值 {n!r}）")
+        elif n <= 0:
+            problems.append(f"theme.json fonts.{key} = {n} 非正（字号须 > 0）")
 
 
 def check_v2(scenes: dict, problems: list[str]) -> None:
@@ -274,6 +338,8 @@ def main() -> int:
         referenced = check_balance(loaded["balance.json"], problems)
     if "strings.json" in loaded:
         check_strings(loaded["strings.json"], referenced, problems)
+    if "theme.json" in loaded:
+        check_theme(loaded["theme.json"], problems)
     if "scenes.json" in loaded:
         check_scenes(loaded["scenes.json"], problems)
         scenes = loaded["scenes.json"]

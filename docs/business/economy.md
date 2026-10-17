@@ -84,11 +84,12 @@
 | qty 越界拒绝 | `trade_qty_bounds_enforced` |
 | 售价 = buy*markup | `trade_sell_price_from_markup` |
 | 建造扣金币 + 抬上限 | `build_debits_and_raises_cap` |
-| 金币恒 ≤ 上限（银行承接溢出） | `economy_gold_never_exceeds_cap`（待 S8.3.b 补单测落地） |
+| 金币恒 ≤ 上限（银行承接溢出） | `economy_gold_never_exceeds_cap`（已落地 `rules_build.rs`；穷举覆盖见 `crates/ti-core/tests/exhaust_economy.rs`：贸易侧 `sell` 后 `gold_left ≤ gold_cap`、建造侧 `build` 后 `bank().gold ≤ u32::MAX/4`（上界不越初始值，`saturating_sub` 保证无下溢），S15.1 verified） |
 | 建筑单调解锁 | `build_unlocks_monotonic` |
 
 （上表单测已落地于 `crates/ti-core/tests/rules_trade.rs` / `rules_build.rs`（S8.3.b verified）；
-`economy_gold_never_exceeds_cap` 待补单测）
+`economy_gold_never_exceeds_cap` 已由 `rules_build.rs::economy_gold_never_exceeds_cap` +
+`crates/ti-core/tests/exhaust_economy.rs` 穷举覆盖双路验证（S15.1 verified））
 
 ## 与实现的接口
 

@@ -2,7 +2,7 @@
 
 本文档是输入系统的完整实现规格，实现者无需阅读其他文档即可写出正确的输入处理代码。
 
-> 事实来源：`docs/design/input_mapping.md` + `docs/design/ui_controls.md` §5 + `docs/design/constants.md` §7。
+> 事实来源：`legacy/docs/design/input_mapping.md` + `legacy/docs/design/ui_controls.md` §5 + `legacy/docs/design/constants.md` §7。
 
 ---
 

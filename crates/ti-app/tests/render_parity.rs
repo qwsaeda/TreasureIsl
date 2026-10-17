@@ -22,8 +22,8 @@
 use ti_app::game_app::{GameApp, GameInput};
 use ti_platform::gfx::Framebuf;
 
-/// 逻辑帧像素数（`LOGICAL_W × LOGICAL_H`）。
-const FB_PIXELS: usize = 176 * 220;
+/// 呈现层帧像素数（`1080 × 1920`，`08_layout_design.md` §1；legacy 176×220 统一缩放落画布）。
+const FB_PIXELS: usize = 1080 * 1920;
 
 /// 渲染当前场景到 `GameApp.shell.fb`，返回帧缓冲像素切片。
 fn render_current(app: &mut GameApp) -> Vec<u16> {
@@ -42,20 +42,20 @@ fn ink_ratio(pixels: &[u16]) -> f32 {
 
 /// 主菜单（Index 场景）渲染：标题 + 菜单项 + 状态行。
 fn render_index() -> Vec<u16> {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     render_current(&mut app)
 }
 
 /// 选角场景渲染。
 fn render_select_role() -> Vec<u16> {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.handle(GameInput::Confirm); // Index → SelectRole
     render_current(&mut app)
 }
 
 /// 选图场景渲染。
 fn render_select_map() -> Vec<u16> {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Confirm); // → SelectMap
     render_current(&mut app)
@@ -63,7 +63,7 @@ fn render_select_map() -> Vec<u16> {
 
 /// 主地图场景渲染。
 fn render_main_map() -> Vec<u16> {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Next); // 选角
     app.handle(GameInput::Confirm); // → SelectMap
@@ -74,7 +74,7 @@ fn render_main_map() -> Vec<u16> {
 
 /// 战斗场景渲染。
 fn render_vs() -> Vec<u16> {
-    let mut app = GameApp::new(176.0, 220.0);
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
     app.handle(GameInput::Confirm);
@@ -102,7 +102,7 @@ fn render_is_deterministic_per_scene() {
             _ => render_vs(),
         };
         assert_eq!(pixels, again, "{name} 场景渲染应确定性（两次渲染逐像素相同）");
-        assert_eq!(pixels.len(), FB_PIXELS, "{name} 帧缓冲尺寸应 = 176×220");
+        assert_eq!(pixels.len(), FB_PIXELS, "{name} 帧缓冲尺寸应 = 1080×1920");
     }
 }
 
@@ -139,25 +139,37 @@ fn distinct_scenes_produce_distinct_frames() {
 #[test]
 fn index_scene_renders_real_glyphs_for_title() {
     let pixels = render_index();
-    let ink_pixels = pixels.iter().filter(|&&p| p == 0xFFFF).count();
-    assert!(ink_pixels > 10, "主菜单标题+菜单项应渲染出真字形（墨色像素数 {ink_pixels} > 10）");
+    // S15 v2：主菜单文字改用深墨（`chrome::COLOR_TEXT_ON_PARCH`，0x20A1）而非默认白墨
+    // （0xFFFF），压羊皮纸浅块上才清晰（evidence/ui_concept/review_all.txt 第 2 条）。
+    // 判定 = 深墨/象牙金/白墨任一出现 > 10 像素（标题象牙金 + 正文深墨）。
+    let parch = 0x20A1;
+    let wood_text = 0xFF77;
+    let ink_pixels =
+        pixels.iter().filter(|&&p| p == 0xFFFF || p == parch || p == wood_text).count();
+    assert!(
+        ink_pixels > 10,
+        "主菜单标题+菜单项应渲染出真字形（深墨/象牙金/白墨像素数 {ink_pixels} > 10）"
+    );
 }
 
-/// P4-1 判据：`Framebuf` 尺寸与原版逻辑分辨率 176×220 一致（P0 资源解码参考的坐标系）。
+/// P4-1 判据：`Framebuf` 尺寸与呈现层分辨率 1080×1920 一致（§1 约束；legacy 176×220 统一缩放落画布）。
 #[test]
 fn framebuf_matches_logical_resolution() {
     let mut fb = Framebuf::new();
     fb.clear(0x0000);
-    assert_eq!(fb.as_slice().len(), FB_PIXELS, "帧缓冲 = 176×220");
-    let mut app = GameApp::new(176.0, 220.0);
+    assert_eq!(fb.as_slice().len(), FB_PIXELS, "帧缓冲 = 1080×1920");
+    let mut app = GameApp::new(1080.0, 1920.0);
     app.render();
     let pixels = app.shell_mut().fb.as_slice();
-    // 标题条（index.title.h=40）覆盖第 0..40 行；第 0 列 x=0 应是标题条色（S14 航海图纸质系棕）
-    // 字形豆腐块（INK_COLOR=0xFFFF）也可能叠在标题条上（标题文字 x=58 起，豆腐块 12px 步进），
-    // 故允许 0x87BB 或 0xFFFF（墨色）——关键是「非背景色 0xFD70、非黑 0x0000」。
+    // 标题条（v2 S15 木纹外框 COLOR_WOOD 0x59C4，index.title.h=24）覆盖第 0..24 行；
+    // 第 0 列 x=0 应是木纹外框色。字形豆腐块（INK_COLOR=0xFFFF）叠在标题文字区（x≥50），
+    // 不覆盖 x=0。允许 0x59C4（木纹）或 0x8A22（羊皮纸棋盘暗格在 x=0 的 2×2 块）——
+    // 关键是「非背景色 0xFD70、非黑 0x0000」。
+    let wood = ti_app::menu_shell::COLOR_WOOD;
+    let parch_dark = ti_app::menu_shell::COLOR_PARCH_DARK;
     assert!(
-        pixels[0] != 0x0000 && pixels[0] != 0xFD70,
-        "像素(0,0) 应为标题条区（非黑非背景），实为 {:#04X}",
+        pixels[0] == wood || pixels[0] == parch_dark,
+        "像素(0,0) 应为木纹外框/羊皮纸（非黑非背景），实为 {:#05X}",
         pixels[0]
     );
 }
@@ -248,124 +260,11 @@ fn decode_pcx_independent(f1: u32) -> Option<(u32, u32, Vec<u8>, [[u8; 3]; 256],
     Some((u32::from(img.width), frame_h, img.pixels, img.palette, frames))
 }
 
-/// 把 PCX 像素（调色板索引）blit 到独立 Framebuf（RGB565），
-/// 与 `SpriteAtlas::blit_sprite` 同几何（越界裁剪），但不经过 ti-app 渲染路径。
-fn blit_pcx_independent(
-    fb: &mut Framebuf,
-    width: u32,
-    height: u32,
-    pixels: &[u8],
-    palette: &[[u8; 3]; 256],
-    x: u32,
-    y: u32,
-) {
-    const FB_W: usize = 176;
-    const FB_H: usize = 220;
-    // 契约 §3（07_render_pipeline.md）：原点越界求交为空 → 整条不画（对齐 blit_sprite）
-    if x as usize >= FB_W || y as usize >= FB_H {
-        return;
-    }
-    let ox = x as usize;
-    let oy = y as usize;
-    for row in 0..height as usize {
-        let fy = oy.saturating_add(row);
-        if fy >= FB_H {
-            break;
-        }
-        for col in 0..width as usize {
-            let fx = ox.saturating_add(col);
-            if fx >= FB_W {
-                break;
-            }
-            let idx = pixels.get(row * (width as usize) + col).copied().unwrap_or(0) as usize;
-            // 同口径：palette index 0 = 透明哨兵位（sub_5D9C4），跳过（与 blit_sprite 一致）
-            if idx == 0 {
-                continue;
-            }
-            let [r, g, b] = palette[idx];
-            let rgb565: u16 =
-                (u16::from(r) >> 3) << 11 | (u16::from(g) >> 2) << 5 | u16::from(b) >> 3;
-            let pos = fy * FB_W + fx;
-            if let Some(slot) = fb.as_mut_slice().get_mut(pos) {
-                *slot = rgb565;
-            }
-        }
-    }
-}
+// S15.4：legacy 逐像素 blit 对齐（`blit_pcx_independent` / `render_sprite_region_matches_tiformats_baseline`）
+// 已随 legacy 像素写帧层移除而删除。保留 `decode_pcx_independent`（纯 ti-formats 解码，诊断用）
+// 与下方 5 个 `app.render()` 代码绘制判定。逐像素渲染基线重锚见 S15.5。
 
-/// S8.6 判据：渲染帧中精灵 blit 区域与独立 `ti-formats` 解码基线逐像素一致。
-///
-/// 独立基线路径：`ti_formats::lucency::Package` → `pcx::Image::decode` → 手动 blit，
-/// 不经过 `GameApp::render` / `SpriteAtlas`。
-#[test]
-fn render_sprite_region_matches_tiformats_baseline() {
-    let (w, h, pixels, palette, _frames) = match decode_pcx_independent(1) {
-        Some(v) => v,
-        None => {
-            eprintln!("SKIP: data/ui.pak 不存在或 f1=1 解码失败");
-            return;
-        }
-    };
-
-    // 独立基线：干净 Framebuf + 手动 blit
-    let mut baseline = Framebuf::new();
-    baseline.clear(0x0000);
-    blit_pcx_independent(&mut baseline, w, h, &pixels, &palette, 10, 10);
-
-    // 渲染路径：注入 atlas + scene_cache，单独 blit（不经 render 全文字层）
-    // MapScene::parse 期望完整文件字节（16B 头 + words）；words 布局 =
-    // [表头4字, 控件数, 控件记录6字…]，f1/f2/f3 对应 w[5]/w[6]/w[7]。
-    let pkg_bytes = std::fs::read(data_dir().join("ui.pak")).expect("ui.pak 应可解析");
-    let mut atlas =
-        ti_app::sprite_atlas::SpriteAtlas::new(&pkg_bytes).expect("ui.pak 应可解析为 SpriteAtlas");
-    let words: Vec<u32> = vec![
-        176, 220, 0, 0, /* 控件数 */ 1, /* f0 f1 f2 f3 f4 f5 */ 1, 1, 10, 10, 1, 0,
-    ];
-    let mut scene_bytes: Vec<u8> = Vec::new();
-    for w in [176u32, 220, 0, 0] {
-        scene_bytes.extend_from_slice(&w.to_le_bytes());
-    }
-    for w in &words {
-        scene_bytes.extend_from_slice(&w.to_le_bytes());
-    }
-    let scene =
-        ti_formats::mapfile::MapScene::parse("index.Map", &scene_bytes).expect("场景 bytes 应合法");
-    let mut app = GameApp::new(176.0, 220.0);
-    let app_shell = app.shell_mut();
-    app_shell.fb.clear(0x0000);
-    atlas.blit_scene(&scene, &mut app_shell.fb);
-
-    // 逐像素比对精灵 blit 区域（10,10 起 w×h，裁剪到 176×220）
-    let cw = w as usize;
-    let ch = h as usize;
-    const X0: usize = 10;
-    const Y0: usize = 10;
-    let render_pixels = app_shell.fb.as_slice();
-    let base_pixels = baseline.as_slice();
-    let mut mismatch = 0usize;
-    for row in 0..ch {
-        let fy = Y0.saturating_add(row);
-        if fy >= FB_PIXELS / 176 {
-            break;
-        }
-        for col in 0..cw {
-            let fx = X0.saturating_add(col);
-            if fx >= 176 {
-                break;
-            }
-            let pos = fy * 176 + fx;
-            if render_pixels[pos] != base_pixels[pos] {
-                mismatch += 1;
-            }
-        }
-    }
-    assert_eq!(
-        mismatch, 0,
-        "渲染帧精灵 blit 区域应与独立 ti-formats 解码基线逐像素一致（mismatch={mismatch}）"
-    );
-}
-
-/// S8.6 判据：基线帧（独立 ti-formats 解码）本身非空（证明解码成功且 blit 有内容）。
+/// S8.6 判据：独立 ti-formats 解码基线本身非空（证明 PCX 解码成功，decode-only）。
 #[test]
 fn tiformats_baseline_is_non_empty() {
     let (w, h, pixels, palette, frames) = match decode_pcx_independent(1) {
@@ -380,9 +279,4 @@ fn tiformats_baseline_is_non_empty() {
     let total_h = (h as usize) * (frames as usize);
     assert_eq!(pixels.len(), (w as usize) * total_h, "像素数 = w × (h × frames)");
     assert!(!palette.iter().all(|c| c[0] == 0 && c[1] == 0 && c[2] == 0), "调色板非全黑");
-    let mut fb = Framebuf::new();
-    fb.clear(0x0000);
-    blit_pcx_independent(&mut fb, w, h, &pixels, &palette, 10, 10);
-    let non_black = fb.as_slice().iter().filter(|&&p| p != 0).count();
-    assert!(non_black > 0, "独立基线 blit 后应有非黑像素（实际 {non_black}）");
 }

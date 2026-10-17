@@ -109,7 +109,7 @@ crates/
   ti-platform/    — 后勤（gfx + input + audio + storage + settings）
   ti-app/         — 前厅（scenes + menu_shell + sprite_atlas + bin/）
   ti-tools/       — 外部工具（unpak/map2json/build_assets/controls/specskel/doccheck）
-  legacy/oracle-rust/ — 逆向 oracle 参照物（仅 ti-core 的 dev-dependency）
+  oracle 参照实现的唯一源是 `crates/ti-core/src/oracle/`（经 lib.rs `pub mod oracle` 导出，集成测试直接 `use ti_core::oracle::`）；旧的逐字节重复 crate `legacy/oracle-rust/` 已于 S15.8 删除
 ```
 （共 6 个 workspace member，以根 `Cargo.toml` 的 `members` 为准）
 

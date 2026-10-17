@@ -4,10 +4,9 @@ members = [
     "crates/ti-formats",
     "crates/ti-core",
     "crates/ti-platform",
+    "crates/ti-render",
     "crates/ti-app",
     "crates/ti-tools",
-    # S11：原版参照实现（测试专用 dev-dependency，默认不编译进 ti-core/ti-app）
-    "legacy/oracle-rust",
 ]
 
 [workspace.package]
@@ -39,8 +38,9 @@ serde_json = "1"
 ti-formats = { path = "crates/ti-formats" }
 ti-core = { path = "crates/ti-core" }
 ti-platform = { path = "crates/ti-platform" }
-# S11：原版参照实现 crate（仅测试用 dev-dependency；不引入 ti-core/ti-app 默认构建）
-legacy-oracle = { path = "legacy/oracle-rust" }
+ti-render = { path = "crates/ti-render" }
+# UI-21 字体：ab_glyph 纯 Rust TTF/OTF 光栅化（无 Freetype 依赖，适合 CPU Framebuf 路径）
+ab_glyph = "0.2"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

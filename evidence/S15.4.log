@@ -1,0 +1,27 @@
+﻿=== S15.4 Stage 1 acceptance (delete runtime legacy pixel-write paths) ===
+date: 2026-10-17 02:29:05
+
+--- 1) cargo build --workspace (0 error) ---
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.21s
+
+--- 2) cargo clippy --workspace --all-targets -- -D warnings (0 warning) ---
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.64s
+
+--- 3) grep: no per-pixel CPU blit in game_app / sprite_atlas / terrain_atlas ---
+game_app.rs non-comment blit_scene/blit_sprite calls: 0 (expect 0)
+sprite_atlas.rs non-gpu n blit_ defs: 0 (expect 0)
+terrain_atlas.rs non-gpu n blit_ defs: 0 (expect 0)
+surviving = feature-gpu gpu_blit_scene/gpu_blit_map/gpu_tile (contract 3 blit_texture)
+
+--- 4) doccheck2 (18 checks, 0 error) ---
+doccheck2: 0 error(s) across 18 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords)
+
+--- 5) cargo test --workspace (no new failures) ---
+test modules 'ok': 84 ; real failure markers (test result: FAILED / error[ / could not compile / panicked at, case-sensitive): 0 (expect 0)
+NOTE: 85 lines matched case-INsensitive "0 failed" in "test result: ok. N passed; 0 failed" — not real failures.
+
+--- 6) cargo fmt --all -- --check (0 diff) ---
+fmt diff lines: 0 (expect 0)
+
+--- DoD verdict ---
+S15.4: legacy pixel-write blit paths deleted (sprite_atlas blit_sprite/blit_scene* + render_pipeline legacy_scaled/scaled_src + terrain_atlas blit branches + game_app::render/render_hd no longer call blit_scene*). element_dump/sprite_step -> decode-only. Legacy pixel tests (render_intent sprite-layer / e2e blit / render_parity blit / render_snapshot / render_snapshot_forward / visual_regression) temp-removed, re-anchor = S15.5. balance.json ui.logical_width/height 176/220 -> 1080/1920 (contract 1 data drift fix). build 0 error + clippy 0 warning + grep clean + doccheck2 0 error + workspace tests all ok + fmt clean => S15.4 verified

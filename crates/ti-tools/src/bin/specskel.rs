@@ -10,7 +10,7 @@
 //! 读 `ref/functions_<module>.csv`（自动识别两种列格式：常规 `addr|address,` 与
 //! RNG 专用 `kind,site,func,`），按 site 在 `ref/pseudocode/` 定位函数文件，
 //! 抽取带 1-based 行号的证据行（字符串常量 / 控制流 / RNG 调用 / 数值赋值 /
-//! return），生成 `docs/spec/<module>.md` 骨架：函数清单表 + 逐函数证据行表
+//! return），生成 `legacy/docs/spec/<module>.md` 骨架：函数清单表 + 逐函数证据行表
 //! （`证据` 列坐标可直接核对伪代码行号），人工只补「语义」列。已存在的 spec
 //! 文件需 `--out` 显式覆盖，默认只打印到 stdout 不改动任何文件。
 

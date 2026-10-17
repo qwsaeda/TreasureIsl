@@ -11,7 +11,7 @@ description: Use when the user asks to make gate.ps1 all green, diagnose gate fa
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 ```
 
-当前 13 项（见 `docs/parity.md`）。`SKIP` 项（android target / zero-unknown verify 未落地）不算失败。
+当前 21 项（口径 = `gate.ps1` 顶格 `Report` 数；计数约定见 `docs/parity.md` §代码质量门禁）。条件 `SKIP` 项（wasm/android target 未装、zero-unknown verify 未解锁）不算失败。
 
 ## 失败归因（关键）
 

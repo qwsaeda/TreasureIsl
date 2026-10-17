@@ -41,6 +41,12 @@ __pycache__/
 /assets_hd/
 /assets_hd_pack/
 
-# S11 逆向归档实体（压缩为 legacy-archive.zip 进 git；仅保留 oracle-rust 供 Cargo 测试）
+# S11 逆向归档实体（压缩为 legacy-archive.zip 进 git；S15.8 起重复 crate oracle-rust 已删除）
 /legacy/
-!/legacy/oracle-rust/
+
+# S15.7 字体下载暂存（可重下载；实际使用的 TTF 已固化于 assets/fonts/，须入库）
+/lxgw-wenkai-gb-lite-v1.522/
+
+# S15.6 视觉审计草稿（一次性渲染 dump，非正式 evidence；正式 evidence = evidence/S15.x.log）
+/evidence/render_png/
+/evidence/ui_concept/

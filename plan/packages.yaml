@@ -19,6 +19,7 @@ packages:
       - assets/data/balance.json
       - assets/data/strings.json
       - assets/data/scenes.json
+      - assets/data/exhaust_scenarios.json
       - crates/ti-core/src/data/
       - legacy/scripts/validate_data.py
       - legacy/scripts/gen_layout.py
@@ -32,8 +33,15 @@ packages:
     files:
       - crates/ti-core/src/rules/battle.rs
       - crates/ti-core/src/domain/combat.rs
+      # 会话 demo（S15.1/S5.1 可玩演示，P1 持有；勿在其他包重复登记，第 12 轮审计 Q013）
+      - crates/ti-core/examples/random_session_demo.rs
+      - crates/ti-core/examples/full_run_demo.rs
     tests:
       - crates/ti-core/tests/rules_battle.rs
+      - crates/ti-core/tests/exhaust_combat.rs
+      # 跨域闭环集成测试（选角→地图→战斗→贸易建造→存档，选择全由 seeded RNG 随机穷举、
+      # 逐步断言业务不变式）。因含战斗高潮归 P1 唯一持有（白名单两两交集须为 ∅，勿在 P2–P5 重复登记）。
+      - crates/ti-core/tests/exhaust_random_session.rs
 
   - id: P2
     name: "经济域（贸易+建造）"
@@ -46,6 +54,7 @@ packages:
     tests:
       - crates/ti-core/tests/rules_trade.rs
       - crates/ti-core/tests/rules_build.rs
+      - crates/ti-core/tests/exhaust_economy.rs
 
   - id: P3
     name: "地图/卡牌域"
@@ -55,9 +64,12 @@ packages:
       - crates/ti-core/src/rules/main_map.rs
       - crates/ti-core/src/rules/cards.rs
       - crates/ti-core/src/rules/cards_draw.rs
+      - crates/ti-core/src/rules/progression.rs
       - crates/ti-core/src/domain/map.rs
+      - crates/ti-core/examples/cross_map_demo.rs  # 跨图推进 demo（S15.2，P3 持有；Q013）
     tests:
       - crates/ti-core/tests/reference_diff_cards.rs
+      - crates/ti-core/tests/exhaust_progression.rs
 
   - id: P4
     name: "流程/菜单/消息域"
@@ -77,6 +89,8 @@ packages:
       - crates/ti-core/tests/rules_messages.rs
       - crates/ti-core/tests/reference_diff_main_loop.rs
       - crates/ti-core/tests/reference_diff_rng.rs
+      - crates/ti-core/tests/exhaust_menu.rs
+      - crates/ti-core/tests/exhaust_main_loop.rs
 
   - id: P5
     name: "存档+RNG 域（结构须与 P1–P4 稳定后才开）"
@@ -91,6 +105,7 @@ packages:
       - crates/ti-core/tests/rules_saveload.rs
       - crates/ti-core/tests/rules_saveload_json.rs
       - crates/ti-core/tests/save_migration.rs
+      - crates/ti-core/tests/exhaust_saveload.rs
 
   - id: P6
     name: "表现层（后续轮）"
@@ -106,3 +121,4 @@ packages:
     tests:
       - crates/ti-app/tests/game_app_flow.rs
       - crates/ti-app/tests/e2e_playthrough.rs
+      - crates/ti-app/tests/app_progression_wiring.rs  # 跨图推进接线验收（game_app.rs，EXP-088 闭环）

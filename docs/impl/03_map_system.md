@@ -270,7 +270,7 @@ pub fn oracle_at_landmark(landmarks: &[Landmark], pos: GridPos) -> Option<&Landm
 ### 4.3 据点触发概率
 
 ```
-命中 = (rand() % 100 + 1) > 40         // 60% 命中率（>40 判据，即 rand()%100+1 ∈ 41..100；来源 docs/design/constants.md §6.6；exe 实测 `trade` 行 154）
+命中 = (rand() % 100 + 1) > 40         // 60% 命中率（>40 判据，即 rand()%100+1 ∈ 41..100；来源 legacy/docs/design/constants.md §6.6；exe 实测 `trade` 行 154）
 ```
 
 ### 4.4 据点显示

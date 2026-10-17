@@ -32,12 +32,14 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
     }
     let mut out = BTreeMap::new();
     for (id, r) in raw {
+        // EXP-074/RectDefault：extra 嵌套对象（如 status/rounds 只有 x/y 无 w/h）用 RectJson 解析
+        // （RectJson 的 w/h 有 #[serde(default)]），缺 w/h 时填 0 而非整体解析失败兜底全 0。
         let extra = r
             .extra
             .iter()
             .map(|(k, v)| {
-                let rect: Rect = serde_json::from_value(v.clone()).unwrap_or_default();
-                (k.clone(), rect)
+                let rj: RectJson = serde_json::from_value(v.clone()).unwrap_or_default();
+                (k.clone(), Rect::from(rj))
             })
             .collect();
         // EXP-074：`extra` 值可能是标量字段（如 `locked:{"text_x":130}`），而非 Rect 形状。
@@ -68,6 +70,16 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 }
             }
         }
+        // §4 立绘允许区清单（scenes.json 的 `portrait_zones`，多块；缺 = 空 Vec）。
+        // EXP-074/RectDefault：嵌套对象用 RectJson 解析（w/h 有 #[serde(default)]），缺 w/h 填 0。
+        let portrait_zones: Vec<Rect> = r
+            .portrait_zones
+            .into_iter()
+            .map(|v| {
+                let rj: RectJson = serde_json::from_value(v).unwrap_or_default();
+                Rect::from(rj)
+            })
+            .collect();
         out.insert(
             id.clone(),
             SceneLayout {
@@ -89,6 +101,7 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 page: r.page.map_or_else(Rect::default, Rect::from),
                 extra,
                 extra_scalar,
+                portrait_zones,
             },
         );
     }
@@ -97,6 +110,9 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
 
 #[derive(Deserialize)]
 struct RawScene {
+    /// S15.6 裁决①：`bg` 键已删（运行时零消费——渲染底色 = chrome `COLOR_PARCH_DARK` 深底；
+    /// 旧浅米白 65440 与代码相反）。解析容错：键缺省 = 0（哨兵，无消费方）。
+    #[serde(default)]
     bg: u16,
     #[serde(default)]
     title: Option<RectJson>,
@@ -111,6 +127,9 @@ struct RawScene {
     /// 场景专属额外矩形（`player_hp`/`boss_hp`/`rounds`/`outcome`/`empty`/`body`/`locked` 等）。
     #[serde(flatten)]
     extra: BTreeMap<String, serde_json::Value>,
+    /// §4 立绘允许区清单（`08_layout_design.md` §4.1/§4.2 声明的大立绘可落区，多块；缺 = 无声明）。
+    #[serde(default)]
+    portrait_zones: Vec<serde_json::Value>,
 }
 
 #[derive(Deserialize, Default)]

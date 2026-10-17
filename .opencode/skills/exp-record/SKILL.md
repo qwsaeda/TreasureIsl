@@ -46,5 +46,5 @@ description: Use after fixing a bug, doc drift, or gate failure, to record the l
 ## 硬约束
 
 - 不许只写现象不写根因（「下次注意」不是根因）。
-- 验证命令必须真实跑过，不是推测（`docs/facts/` 硬规则 4 同样适用于经验条目的「验证」字段）。
+- 验证命令必须真实跑过，不是推测（`legacy/docs/facts/` 硬规则 4 同样适用于经验条目的「验证」字段）。
 - 一条经验只写一处，其他文档用 ID 引用（`EXP-0XX`）不重复叙述（AGENTS.md 硬规则 6）。

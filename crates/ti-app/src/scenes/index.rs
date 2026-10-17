@@ -3,8 +3,7 @@
 use ti_core::domain::flow::Sfx;
 
 use crate::game_app::GameInput;
-use crate::i18n;
-use crate::menu_shell::{COLOR_BG, COLOR_SELECTED, COLOR_TITLE_BAR};
+use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
@@ -72,43 +71,40 @@ impl Scene for IndexScene {
             return false;
         };
         host.set_menu_selected(idx);
+        chrome::flash_press();
         host.advance(GameInput::Confirm)
     }
 
-    /// 主菜单渲染：坐标全读 `scenes.json` 的 `index` 段（`list.y`=48 / `list.row_h`=32 等）。
-    /// 旧版 `menu_shell` 的 `MENU_TOP`=96 / `ROW_H`=20 死坐标路径已删除（FIND-101）。
-    #[allow(
-        clippy::needless_range_loop,
-        clippy::cast_possible_truncation,
-        clippy::cast_possible_wrap
-    )]
+    /// 主菜单渲染（v2 概念图 `evidence/ui_concept/index_v2.png` 风格）：共享外壳
+    /// `chrome::scene_shell`（羊皮纸底 / 航海网格 / 木纹外框 / 标题条 / bevel 按钮）+
+    /// 菜单列表（QB126 icon 列 + 正文）+ QB150 用户版尾行。坐标全读 `scenes.json` 的
+    /// `index` 段；旧开发自检状态行（字形/音效/MOD 计数）已替换为 i18n 尾行
+    /// （`scene.index.footer`，开发诊断走 `stats` feature 的 eprintln，不进 UI）。
     fn render(&mut self, host: &mut dyn SceneHost) {
-        host.clear_frame(COLOR_BG);
-        let layout =
-            ti_core::data::scenes().ok().and_then(|s| s.get("index")).cloned().unwrap_or_default();
-        let title_h = layout.title.h.max(1);
-        host.fill_rect(0, 0, 176, title_h, COLOR_TITLE_BAR);
-        host.draw_text(i18n::sget("scene.index.title"), layout.title.x, layout.title.y);
+        let layout = chrome::scene_layout("index");
+        chrome::scene_shell(host, "index", "scene.index.title");
         let labels = crate::shell_ui::menu_labels();
         let sel = host.menu_selected();
-        for i in 0..labels.len() {
+        let held = host.press_held();
+        let flashing = chrome::press_flash_active();
+        // QB126：icon 列（64×64 逻辑盒，三原语 rect 组合；scenes.json `index.icon.x`
+        // 缺失/非正 = 不画 icon 列，契约 4 数据驱动）
+        let icon_x = layout.extra.get("icon").map(|r| r.x).filter(|x| *x > 0);
+        for (i, label) in labels.iter().enumerate() {
             let r = layout.list.item_rect(i);
-            if i == sel {
-                host.fill_rect(r.x, r.y, r.w, r.h, COLOR_SELECTED);
+            chrome::menu_item(host, r.x, r.y, r.w, r.h, i == sel, i == sel && (held || flashing));
+            // 文字垂直居中：块高 r.h，字形高 = 正文档（TTF 44px / 位图回退 12px，QA009）
+            let ty = r.y + (r.h - host.shell().glyph_px()) / 2;
+            chrome::draw_body_text(host, label, layout.list.text_x, ty);
+            if let Some(ix) = icon_x {
+                let iy = r.y + (r.h - 64) / 2;
+                chrome::menu_icon(host, i, ix, iy);
             }
-            host.draw_text(labels[i], layout.list.text_x, layout.list.item_text_pos(i).1);
         }
-        let [glyphs, sounds, modules] = crate::shell_ui::status_texts(
-            host.shell().font_glyphs,
-            host.shell().wav_count,
-            host.shell().mod_count,
-        );
         let status = layout.extra.get("status").copied().unwrap_or_default();
-        let cursor = status.x;
-        host.draw_text(&glyphs, cursor, status.y);
-        let cursor2 = status.x + i32::try_from(sounds.chars().count()).unwrap_or(0) * 12;
-        host.draw_text(&sounds, cursor2, status.y);
-        let cursor3 = cursor2 + i32::try_from(modules.chars().count()).unwrap_or(0) * 12;
-        host.draw_text(&modules, cursor3, status.y);
+        // QB150：尾行 = 用户版信息（i18n `scene.index.footer`），经 `hint_row` 单查收敛 +
+        // 提示档（28px）+ 屏心居中（QB123）
+        let footer = crate::i18n::sget("scene.index.footer");
+        chrome::hint_row(host, footer, status.x + 2, status.y);
     }
 }

@@ -26,7 +26,6 @@
 - **格式层只做编解码**，不含玩法判断、不含渲染。
 - **表现层不含数值**：所有金币/伤害/价格来自 `ti-core::rules`，表现层只画（详见 `02_conventions.md` §1）。
 - **跨层直接依赖是既成事实，非禁令**：`ti-app/Cargo.toml` 直接声明 `ti-formats`（读资源需要），
-  `ti-core/Cargo.toml` 以 `dev-dependency` 引入 `legacy-oracle`。
   分层是**设计意图**（玩法判定不越层），不是 Cargo 层面的机械禁令。
 - **逆向参照物不进接口**：`docs/facts`/`ref/pseudocode` 不出现在任何 `pub` API 签名或 trait 约束里。
 

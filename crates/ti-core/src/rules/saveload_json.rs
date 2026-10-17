@@ -144,6 +144,18 @@ pub fn map_slot_from_label(label: &str) -> Option<MapSlot> {
     })
 }
 
+/// legacy 数字角色（1 起，`1..=5`）→ 角色 label（`0`/越界保守落首角色 `panda`，可回读）。
+#[must_use]
+pub fn legacy_character_label(n: u32) -> String {
+    Character::from_index(n.saturating_sub(1)).map_or("panda".to_owned(), |c| c.label().to_owned())
+}
+
+/// legacy 数字地图（1 起，`1..=3`）→ `m0N`（`0`/越界钳到 `m01..m03`，可回读）。
+#[must_use]
+pub fn legacy_map_label(n: u32) -> String {
+    format!("m{:02}", n.clamp(1, 3))
+}
+
 /// `SceneId` → 存档 `scene` 字段（稳定字符串，与 `SceneId` 变体名一致）。
 fn scene_id_label(s: SceneId) -> String {
     match s {
@@ -378,12 +390,16 @@ impl SaveManager {
 
 /// 从旧 26 字节二进制 `SaveSlot`（`domain::persistence` 类型家）构造 v2 存档
 /// （迁移路径，数字→稳定字符串保守映射；正式格式为 JSON v2，二进制布局仅供历史对拍）。
+///
+/// legacy 数字口径：`character` / `map_slot` 均 1 起（`1..=5` / `1..=3`，原版 26 字节槽位）；
+/// 映射到可解析标签：角色 → 角色 label（`character_from_label` 可回读），地图 → `m0N`
+/// （`map_slot_from_label` 可回读）；`0`/越界保守钳位到首项（门禁红线不 panic）。
 #[must_use]
 pub fn from_legacy_slot(slot: &SaveSlot) -> SaveV2 {
     SaveV2 {
         version: 2,
-        character: format!("char{}", slot.character),
-        map: format!("m{:02}", slot.map_slot),
+        character: legacy_character_label(slot.character),
+        map: legacy_map_label(slot.map_slot),
         scene: "Index".to_owned(),
         position: GridPosSave { row: slot.position, col: 0 },
         gold: slot.gold,

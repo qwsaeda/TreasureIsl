@@ -10,9 +10,9 @@ use ti_core::rules::main_map::MapSession;
 
 use crate::game_app::GameInput;
 use crate::i18n;
-use crate::menu_shell::{COLOR_BG, COLOR_LANDMARK, COLOR_PLAYER, COLOR_TITLE_BAR};
+use crate::menu_shell::{COLOR_LANDMARK, COLOR_PLAYER};
+use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind, enter_target};
-use crate::terrain_atlas::TerrainAtlas;
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
 
@@ -204,33 +204,49 @@ impl Scene for MainMapScene {
         }
     }
 
+    /// - S15.6 QA149：点 HUD 三按钮（scenes.json `hud_trade`/`hud_sell`/`hud_build`
+    ///   矩形）= 买商品 1 / 卖商品 1 / 造 Castle（与键盘 T/Y/B 同语义，0 键盘纯触摸经济闭环）；
     /// - 点格子 = 朝该格逐格走（每次点按走到能走的最远格，不穿墙）；
     /// - 点自己所在格 = 触发据点事件（`Landmark(code)`）；
     /// - 滑动 = 朝该方向走一步。
     ///
-    /// 命中坐标与渲染同坐标系：真实地形（等距投影）走 `iso_grid_cell_at`，
-    /// 占位网格（无地形资源）走 `grid_cell_at`（6×6 占位命中不变）。
+    /// 命中坐标与渲染同坐标系：`grid_cell_at` = `chrome::iso_cell` 的逆
+    /// （数据源 = `scenes.json` `main_map.grid.*`，EXP-067 正逆成对；legacy 32/16
+    /// 投影 + (88,110) 摄像机已退出运行时，S15.6 QA022/023）。
+    #[allow(clippy::cast_possible_truncation)] // HUD 臂：1080 呈现坐标 f32 → i32 命中判定
     fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
         let Some(cur) = host.map_pos() else {
             return false;
         };
         match sample.gesture {
             Gesture::Tap => {
+                // S15.6 QA149：HUD 三经济臂——先命中 scenes.json 三个 extra 按钮矩形
+                // （渲染同一坐标系，契约 4 数据驱动；语义 = 键盘 T/Y/B，game_app.rs poll），
+                // 未命中落回下方网格点按逻辑。
+                let l = chrome::scene_layout("main_map");
+                let px = sample.x as i32;
+                let py = sample.y as i32;
+                let hud_hit = |key: &str| -> bool {
+                    l.extra.get(key).is_some_and(|r| {
+                        r.w > 0
+                            && r.h > 0
+                            && (r.x..(r.x + r.w)).contains(&px)
+                            && (r.y..(r.y + r.h)).contains(&py)
+                    })
+                };
+                if hud_hit("hud_trade") {
+                    return host.advance(GameInput::TradeBuy(1));
+                }
+                if hud_hit("hud_sell") {
+                    return host.advance(GameInput::TradeSell(1));
+                }
+                if hud_hit("hud_build") {
+                    return host.advance(GameInput::Build(Building::Castle));
+                }
                 let Some(terrain) = host.map_terrain() else {
                     return false;
                 };
-                let cam = host.terrain_camera();
-                let cell = if host.has_terrain_atlas() {
-                    layout::iso_grid_cell_at(
-                        sample.x,
-                        sample.y,
-                        terrain.grid_w,
-                        terrain.grid_h,
-                        cam,
-                    )
-                } else {
-                    layout::grid_cell_at(sample.x, sample.y, terrain.grid_w, terrain.grid_h)
-                };
+                let cell = layout::grid_cell_at(sample.x, sample.y, terrain.grid_w, terrain.grid_h);
                 let Some((row, col)) = cell else {
                     return false;
                 };
@@ -248,79 +264,131 @@ impl Scene for MainMapScene {
         }
     }
 
-    /// 等距地形瓦片（真资源）+ 玩家棋子 + 据点 + 金/持有量 HUD。
+    /// 等距地形瓦片（真资源）+ 玩家棋子 + 据点 + 金/持有量 HUD（v2 羊皮纸/木纹/金色系）。
     fn render(&mut self, host: &mut dyn SceneHost) {
-        host.clear_frame(COLOR_BG);
+        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）；
+        // QA031：统一走 `chrome::scene_layout`（scenes.json 单一读点，契约 4）
+        let layout = chrome::scene_layout("main_map");
+        // S15.4：legacy 地形瓦片像素层移除。主地图 = 羊皮纸底 + 航海网格装饰 + 代码绘制等距棋盘（§4.3）
+        chrome::parchment_bg(host);
+        chrome::nautical_grid(host);
+        let gw = host.terrain_grid_w();
 
-        // 真实地形瓦片（等距投影 + 摄像机），无地形资源时保持占位背景
-        let terrain_drawn = host.draw_terrain();
+        // 等距棋盘（代码画，1080 呈现层；tile 25×13 菱形（QB105），`terrain_grid_w`² 铺满）
+        let gw_i = i32::try_from(gw).unwrap_or(0);
+        let (tw, th) = chrome::iso_tile(&layout);
+        if gw_i > 0 && tw > 0 && th > 0 {
+            for r in 0..gw_i {
+                for c in 0..gw_i {
+                    let (sx, sy) = chrome::iso_cell(r, c, &layout);
+                    host.fill_rect(sx, sy, tw * 2, th * 2, crate::menu_shell::COLOR_MENU_BG);
+                    // 格间描边（浅一线，现代棋盘感）
+                    host.fill_rect(sx, sy, tw * 2, 1, crate::menu_shell::COLOR_BEVEL_HI);
+                }
+            }
+        }
 
-        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
-        let layout = ti_core::data::scenes()
-            .ok()
-            .and_then(|s| s.get("main_map"))
-            .cloned()
-            .unwrap_or_default();
-
-        // HUD（S14：棕色标题条 + 米白背景 + 等距瓦片 + 代码棋子/据点）
-        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
-        host.fill_rect(layout.hud.x, layout.hud.y, layout.hud.w, layout.hud.h, COLOR_TITLE_BAR);
-        host.draw_text(i18n::sget("scene.main_map.title"), layout.title.x, layout.title.y);
+        // HUD：木纹标题条 + 金色 Logo + 羊皮纸 HUD 面板（可读深墨字）
+        chrome::wood_frame(host);
+        chrome::title_bar(host, layout.title.h);
+        let title = i18n::sget("scene.main_map.title");
+        // S15.6 QB116：标题 96px 屏心居中（scenes.json 标题 x 缺省语义 = 居中，QA143）
+        let cx = chrome::centered_title_x(host, title);
+        let title_color = host.theme().text_on_wood;
+        chrome::draw_title_text(host, title, cx, layout.title.y, title_color);
+        chrome::panel(host, layout.hud.x, layout.hud.y, layout.hud.w, layout.hud.h);
         let gold = host.gold();
         let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
-        host.draw_text(&gold_str, layout.hud.x, layout.hud.y);
+        chrome::draw_body_text(host, &gold_str, layout.hud.x + 4, layout.hud.y + 2);
         let owned = host.owned_total();
         let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
-        host.draw_text(&own_str, layout.hud.x, layout.hud.y + 12);
+        chrome::draw_body_text(host, &own_str, layout.hud.x + 4, layout.hud.y + 56);
 
-        // 玩家棋子 + 据点（等距投影坐标，相机与地形一致；`terrain_camera` 为真值可能为负）
-        let gw = host.terrain_grid_w();
-        let (cam_x, cam_y) = host.terrain_camera();
-        let cx = i32::try_from(cam_x).unwrap_or(0);
-        let cy = i32::try_from(cam_y).unwrap_or(0);
-        let g0 = layout.extra_scalar.get("grid.x0").copied().unwrap_or(20);
-        let g1 = layout.extra_scalar.get("grid.y0").copied().unwrap_or(30);
-        let gs = layout.extra_scalar.get("grid.step").copied().unwrap_or(6);
-        if let Some(pos) = host.map_pos() {
-            if terrain_drawn {
-                let iso_x = TerrainAtlas::iso_x(pos.row, pos.col);
-                let iso_y = TerrainAtlas::iso_y(pos.row, pos.col, gw);
-                host.fill_rect(iso_x + cx - 2, iso_y + cy - 2, 5, 5, COLOR_PLAYER);
-            } else {
-                let px = i32::try_from(pos.col).unwrap_or(0) * gs + g0;
-                let py = i32::try_from(pos.row).unwrap_or(0) * gs + g1;
-                host.fill_rect(px - 1, py - 1, 4, 4, COLOR_PLAYER);
+        // S15.6 QA149：HUD 三经济按钮（scenes.json extra 矩形）——面板 + 28px 提示档标签
+        // （i18n `scene.main_map.hud.<trade|sell|build>`，按钮中心居中）；触摸判据见
+        // `e2e_touch_economy_loop`。
+        for (key, label_key) in [
+            ("hud_trade", "scene.main_map.hud.trade"),
+            ("hud_sell", "scene.main_map.hud.sell"),
+            ("hud_build", "scene.main_map.hud.build"),
+        ] {
+            let Some(r) = layout.extra.get(key).copied() else {
+                continue;
+            };
+            if r.w > 0 && r.h > 0 {
+                chrome::panel(host, r.x, r.y, r.w, r.h);
+                let label = i18n::sget(label_key);
+                let lx = r.x + (r.w - host.shell().hint_text_width_px(label)) / 2;
+                let ly = r.y + (r.h - host.shell().hint_glyph_px()) / 2;
+                host.draw_hint_text(label, lx, ly, chrome::COLOR_TEXT_ON_PARCH);
             }
+        }
+
+        // 玩家棋子 + 据点 + BOSS 格（§4.3 代码绘制等距坐标，`chrome::iso_cell`）。
+        // QB027/QA030：实体边长接 scenes.json `player.size`/`landmark.size`/`boss.size`
+        // （26/20/24，QA106 重锚；契约 4 数据驱动）；键缺失/非正 = 回退 §4.3 旧公式（tile 比例）。
+        let entity_size = |key: &str, fallback_w: i32, fallback_h: i32| -> (i32, i32) {
+            match layout.extra_scalar.get(key).copied() {
+                Some(s) if s > 0 => (s, s),
+                _ => (fallback_w, fallback_h),
+            }
+        };
+        // S15.6 QA142：主地图 z-order（渲染线契约）= parchment_bg → nautical_grid → 瓦片 →
+        // chrome 填充（wood_frame/title_bar/HUD 面板/经济按钮面板）→ 实体填充 → **全部文本最上层**。
+        // 旧实现把 HUD 文字/按钮标签/实体标签**交错**画在各自 fill 之后，实体方块会盖住
+        // 早画的 HUD 文字（QA142 缺陷）。这里先把实体方块画完，再统一补上所有文本。
+
+        // 第一遍：实体填充（玩家棋子 + 据点 + BOSS），记录它们的文本落点。
+        let mut entity_texts: Vec<(i32, i32, &str)> = Vec::new();
+        if let Some(pos) = host.map_pos() {
+            let pr = i32::try_from(pos.row).unwrap_or(0);
+            let pc = i32::try_from(pos.col).unwrap_or(0);
+            let (sx, sy) = chrome::iso_cell(pr, pc, &layout);
+            let (tw, th) = chrome::iso_tile(&layout);
+            let (pw, ph) = entity_size("player.size", tw * 2 / 3, th * 2 / 3);
+            let (px, py) = (sx + (tw - pw) / 2, sy + (th - ph) / 2);
+            host.fill_rect(px, py, pw, ph, COLOR_PLAYER);
+            // QA142：实体 1px bevel 描边（凸出感，不越实体盒）
+            host.fill_rect(px, py, pw, 1, chrome::COLOR_BEVEL_HI);
+            host.fill_rect(px, py + ph - 1, pw, 1, chrome::COLOR_BEVEL_SHADOW);
+            let lbl = i18n::sget("scene.main_map.player_label");
+            entity_texts.push((px + pw, py, lbl));
         }
         for (r, c) in host.map_landmarks() {
-            if terrain_drawn {
-                let iso_x = TerrainAtlas::iso_x(r, c);
-                let iso_y = TerrainAtlas::iso_y(r, c, gw);
-                host.fill_rect(iso_x + cx - 1, iso_y + cy - 1, 3, 3, COLOR_LANDMARK);
-            } else {
-                let px = i32::try_from(c).unwrap_or(0) * gs + g0;
-                let py = i32::try_from(r).unwrap_or(0) * gs + g1;
-                host.fill_rect(px - 1, py - 1, 3, 3, COLOR_LANDMARK);
-            }
+            let rr = i32::try_from(r).unwrap_or(0);
+            let cc = i32::try_from(c).unwrap_or(0);
+            let (sx, sy) = chrome::iso_cell(rr, cc, &layout);
+            let (tw, th) = chrome::iso_tile(&layout);
+            let (lw, lh) = entity_size("landmark.size", tw / 2, th / 2);
+            let (lx, ly) = (sx + (tw - lw) / 2, sy + (th - lh) / 2);
+            host.fill_rect(lx, ly, lw, lh, COLOR_LANDMARK);
+            host.fill_rect(lx, ly, lw, 1, chrome::COLOR_BEVEL_HI);
+            host.fill_rect(lx, ly + lh - 1, lw, 1, chrome::COLOR_BEVEL_SHADOW);
+            let lbl = i18n::sget("scene.main_map.landmark_label");
+            entity_texts.push((lx + lw, ly, lbl));
         }
-        // P0-2（M1）：BOSS 格橙红标记（4×4 方块，`COLOR_DANGER`，与玩家棋子同坐标系）
+        // P0-2（M1）：BOSS 格血红标记（方块，`COLOR_DANGER`，与玩家棋子同坐标系）
         if let Some(bt) = host.map_boss_tile() {
-            if terrain_drawn {
-                let iso_x = TerrainAtlas::iso_x(bt.row, bt.col);
-                let iso_y = TerrainAtlas::iso_y(bt.row, bt.col, gw);
-                host.fill_rect(
-                    iso_x + cx - 2,
-                    iso_y + cy - 2,
-                    4,
-                    4,
-                    crate::menu_shell::COLOR_DANGER,
-                );
-            } else {
-                let px = i32::try_from(bt.col).unwrap_or(0) * gs + g0;
-                let py = i32::try_from(bt.row).unwrap_or(0) * gs + g1;
-                host.fill_rect(px - 1, py - 1, 4, 4, crate::menu_shell::COLOR_DANGER);
-            }
+            let br = i32::try_from(bt.row).unwrap_or(0);
+            let bc = i32::try_from(bt.col).unwrap_or(0);
+            let (sx, sy) = chrome::iso_cell(br, bc, &layout);
+            let (tw, th) = chrome::iso_tile(&layout);
+            let (bw, bh) = entity_size("boss.size", tw * 3 / 4, th * 3 / 4);
+            let (bx, by) = (sx + (tw - bw) / 2, sy + (th - bh) / 2);
+            host.fill_rect(bx, by, bw, bh, crate::menu_shell::COLOR_DANGER);
+            host.fill_rect(bx, by, bw, 1, chrome::COLOR_BEVEL_HI);
+            host.fill_rect(bx, by + bh - 1, bw, 1, chrome::COLOR_BEVEL_SHADOW);
+            let lbl = i18n::sget("scene.main_map.boss_label");
+            entity_texts.push((bx + bw, by, lbl));
         }
-        host.draw_text(i18n::sget("scene.main_map.hint"), layout.hint.x, layout.hint.y);
+
+        // 第二遍：实体标签（28px 提示档，QA142 全部文本最上层）
+        for (x, y, lbl) in &entity_texts {
+            host.draw_hint_text(lbl, *x, *y, chrome::COLOR_TEXT_ON_PARCH);
+        }
+
+        // QA032：hint 行统一走 `chrome::scene_hint`（i18n 单查收敛，EXP-082）
+        // S15.6：key = `nav_hint`（`hint` 已并入，`strings.json` 删孤儿）
+        chrome::scene_hint(host, "main_map", "scene.main_map.nav_hint");
     }
 }

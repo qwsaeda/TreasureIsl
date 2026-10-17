@@ -17,7 +17,8 @@ pub struct SaveSlot {
     /// `restore_save` 的 `map_slot < maps.len()` 0 起基准校验一致；`character` 与
     /// `map_slot` 基准不同：`character` 是 1 起 `index()+1`，`map_slot` 是 0 起 `zero_index`）。
     pub map_slot: u32,
-    /// 游戏进度（业务定义：已探索据点数）。
+    /// 玩家所在格索引（行主序 `row × grid_w + col`，写端 `WriteSave` 走 `map_pos().index(grid_w)`；
+    /// `0` = 未写位置。读档位置恢复消费此值（Q008 口径统一）。
     pub position: u32,
     /// P1-8（S1）：RNG 已消费 `next_u64` 次数（精确续流；旧存档缺省 0 = 种子重置语义）。
     /// 读档后 `GameRng::restore_state(rng_seed, rng_steps)` O(log n) 跳转。

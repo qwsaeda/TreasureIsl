@@ -1,0 +1,24 @@
+﻿=== S15.3 Stage 0 acceptance (rendering-line contract docs + grep gate) ===
+date: 2026-10-16 23:46:29
+
+--- 1) doccheck (gate item 9) ---
+doccheck: 116 docs, 37 facts, 91 experiences, 115 task refs, 4 assertions, 0 error(s)
+
+--- 2) doccheck2 (18 checks incl runtime-no-legacy-coords) ---
+doccheck2: 0 error(s) across 18 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords)
+
+--- 3) ledger validator ---
+ledger: 120 tasks, 110 verified, 0 error(s)
+  evidence: ok
+
+--- 4) cargo test -p ti-platform (incl FB_PIXELS=1080*1920 assert) ---
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+--- DoD verdict ---
+08_render_arch.md (new) + 08_layout_design.md (rewritten) mutually consistent single-source of 1080
+doccheck 0 error; doccheck2 0 error across 18 checks; ledger 0 error; ti-platform all tests green => S15.3 verified

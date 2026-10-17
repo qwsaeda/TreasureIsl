@@ -5,7 +5,7 @@
 
 use crate::error::Error;
 
-/// 16 位 RGB565 颜色（原版 gx.dll 显示格式，见 `docs/facts/index.md` F-102）。
+/// 16 位 RGB565 颜色（原版 gx.dll 显示格式，见 `legacy/docs/facts/index.md` F-102）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Rgb565(pub u16);
 

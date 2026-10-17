@@ -1,0 +1,66 @@
+=== 文档审计 + 重构批次（P0→P2）· 实跑证据（非门控台账，不写 ledger）===
+日期: 2026-10-16
+
+## P0 高危修复（全 done + 验证）
+- AGENTS.md 状态段：S11/S9 → S15.2；5 crate → 6 workspace member；删重复 tutorial 行
+- 全局路径迁移 docs/{facts,spec,design}/ → legacy/docs/{facts,spec,design}/（51 文件批替）
+- 9 处陈旧脚本路径 → legacy/scripts/
+- plan-s10-refactor.md：S9.2/S9.5 pending→verified + 历史注
+- scripts/compare_render.py 标 TODO
+- 自纠：PS5.1 Set-Content 误加 BOM 到 47 文件 → 剥离；GBK 的 docs/release.md 被误读毁 292 U+FFFD → git checkout HEAD(5fc5b71) 还原（S15.2 WIP 不可恢复，已注记）
+
+## P1 门禁口径 + 路由 + 索引
+- parity.md 门禁清单：补 19/19.5/20、修 check_hardcode 重复编号、写计数约定块（单一事实源）
+  机器核对 = gate 21 项（顶层列 0 的 Report 调用；条件子项 wasm/android/zero-unknown 不计；10a/10b/10c 各计 1）
+  验证: scripts/flywheel_readme.ps1 -Check -Quiet → "gate 21 项 / doccheck2 N 断言 / packages 7 包" exit 0
+- AGENTS.md 路由表重建（+8 入口：06_flywheel / 05_module_parallel+contracts+packages.yaml / 08_layout_design / gamebook / release[GBK warn] / check_ledger_reality / plan-s12 / plan-archive / 07_render_pipeline）
+- 索引补全：process/00_index、business/00_index、docs/README
+- 7 包统一：plan-s11-forward P1-P5 标历史草案，指向 plan/packages.yaml（D+P1-P6=7，机读唯一源）
+- 3 skill（doc-check/gate-green/rea-audit-fix）「13 项」→ 引 parity.md 计数约定
+
+## P2 脚本重组 + 历史文档
+- 删（git rm）：scripts/diag_doccheck.py、fix_dod_keywords.py、fix_classify_lints.ps1、pipeline/
+- 移入 probes/（s1_4b_ 前缀）：scan_events.ps1 / map_event_ids_probe.py / scan_s14b.py；登记 probes/README
+- 移 legacy/scripts/：de_reverse_annotate2.py
+- 保留（S15.2 WIP 未跟踪，勿动）：agnes_gen.py / agnes_test.py / fix_hint_row.py / fix_text_regions.py / rgb565.py
+- 建 docs/plan-archive.md（历史阶段 S0~S11 一行摘要 + 链接；原文件因 43 处交叉引用保留原位）
+- docs/impl/00_index.md 加历史-spec banner
+- 04_tooling.md 加 1 行：check_hd_manifest.py（gate，hd_f1_manifest vs 1x/ui）vs verify_hd_manifest.py（S7.2 验收，manifest_hd.json vs assets_hd）分工注记
+
+## 乱码事故恢复（P2-14 主任务）
+- docs/experience/process.md 标题+前 16 条（EXP-007~065）UTF-8→CP936 误读乱码且已提交（838ca016c 起）；
+  文件呈「前段乱码 + 后段 EXP-068~089 干净」混合态
+- 恢复法（EXP-092）：git show 逐 commit 找最后干净 blob=3630693bd（16 条全干净）
+  + 工作树截取乱码后追加的干净段（### EXP-068 起）+ WriteAllBytes 写回（去 BOM、LF→CRLF、单空行接缝）
+- 验证：entries=25→26（+EXP-092）· mojibakeHits=0（仅 EXP-092 举例 1 处「缇忛獙搴」为说明性文本）· 标题含「经验库」· 无重复 ID
+- 乱码原版备份：C:\Users\Administrator\AppData\Local\Temp\process.md.moji_bak
+
+## 回写经验
+- EXP-092（process.md）：已提交乱码文件恢复法（找最后干净 commit + 拼干净新段，绝不逆向解码）
+- index.md：process 分卷条数 25→26 + 描述 + 索引行
+
+## P2-11 release.md 瘦身 + 编码损坏修复
+- 根因（EXP-091）：release.md 非 GBK，是 UTF-8 编码 + ~292 处坏字节（三字节 CJK 第 3 字节被替 0x3F），
+  UTF-8 严格解码失败 → doccheck/doccheck2 静默跳过该文件（docs 只计 114，漏 release.md）
+- git 历史逐 commit utf8strict 扫描：最后干净版 = commit 24c5716（utf8strict=True，0 坏字节）；损坏自 235882b 起
+- 恢复法：取 24c5716 干净基底 + 工作区唯一在途 WIP 行（ledger 117/110）+ 瘦身（去 后续 节陈旧 ~~已完成~~ 项、
+  音频说明收敛为摘要、验收 gate 计数改引 parity.md 单一事实源）+ WriteAllBytes 写纯 UTF-8（无 BOM，14135→12581 字节）
+- 效果：doccheck 重新纳管该文件（docs 114→115），0 error；EXP-091 子项 (a) 完成
+
+## P2-13 flywheel-kickoff skill
+- 建 .opencode/skills/flywheel-kickoff/SKILL.md：编排整轮飞轮（开轮必读→找问题→审计→修复自验→回写→停机），
+  细节交专项 skill（rea-audit-fix/gate-green/exp-record/doc-check），不重述
+- 06_flywheel.md：修 §5/§7 重复段（「与 05 关系」两次）→ 保留 §5（补 §6 脚本化注）、删 §7、§8 单轮流程 重编号为 §7
+- AGENTS.md：飞轮路由行 +「开轮编排 = flywheel-kickoff skill」；release.md 失实「GBK 编码」警告 → 改「纯 UTF-8」
+- EXP-091：头行加 status: resolved + 解决记录（a 完成、b「doccheck 可解码性检查」仍 pending）
+
+## 最终验证
+- cargo run -q -p ti-tools --bin doccheck  → 115 docs / 37 facts / 91 experiences / 112 task refs / 4 assertions / 0 error
+- scripts/flywheel_readme.ps1 -Check -Quiet → PASS（gate 21 项 / doccheck2 17 断言 / packages 7 包）
+- doccheck2 . → 15 error（全部既有 S15.2 WIP 的 scenes.json S15 §4.x v2 布局断言，非本批次引入；无 release.md/gate-items 新增）
+- cargo check --workspace --all-targets → ti-app E0061（sprite_atlas.rs:353/380/401 7参vs6参）＝ 并行 S15.2 WIP 半成品，非本批次引入
+
+## 状态
+- 未 commit：工作树含大量并行 S15.2 WIP（gate.ps1/doccheck2.rs/plan/packages.yaml/assets/data/scenes.json/08_layout_design.md/release.md/crates/ti-app/*），
+  本批次改动须待 WIP 收口后随 owner 提交，避免捕获他人半成品
+- 全部 P0/P1/P2 已 done（含 P2-11/P2-13）

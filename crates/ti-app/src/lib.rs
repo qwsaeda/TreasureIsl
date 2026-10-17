@@ -17,6 +17,9 @@
 pub mod audio_prep;
 pub mod commands;
 pub mod error;
+/// S14 正向渲染导航辅助（forward 态 7 场景状态机导航，`render-png` bin 与
+/// `tests/render_snapshot_forward.rs` 共用，见 `docs/business/08_layout_design.md` §4）。
+pub mod forward_nav;
 pub mod game_app;
 pub mod glyph_raster;
 #[cfg(feature = "hd-8bit")]
@@ -49,7 +52,8 @@ pub use scenes::{
     SelectMapScene, SelectRoleScene, SelectionHost, SessionHost, SpriteHost, VsScene, markers,
     route_input, route_render, route_touch,
 };
-pub use shell_ui::{MENU, MenuItem, status_texts};
+pub use shell_ui::{MENU, MenuItem};
 pub use sprite_atlas::SpriteAtlas;
 pub use terrain_atlas::TerrainAtlas;
+pub use ti_render as render;
 pub use touch::{TouchPad, TouchSample};

@@ -75,11 +75,15 @@ pub enum MenuEvent {
 }
 
 impl MenuEvent {
-    /// 全部事件变体（遍历用，`docs/spec/menu.md` §a 事件码表）。
+    /// 全部事件变体（遍历用，`legacy/docs/spec/menu.md` §a 事件码表）。
     ///
     /// `Click(0)..Click(5)`（菜单项索引）+ `Click(13)`（真实确定码）
     /// + `Click(27)`（返回码）+ `Click(37)`（无效码）+ `Click(38)`（上页码）
     /// + `Invalid` + `Quit`。
+    ///
+    /// 注：`Click(40)`（下一个角色/地图码，`docs/business/loop_core.md` §选角选图）
+    /// 属表现层 `SelectionHost` 循环步进语义，不经 `MenuStateMachine::handle`
+    /// （`transition` 对子场景 `Click(_)` 统一 pass-through），故不纳入本事件空间。
     #[must_use]
     pub const fn all() -> [MenuEvent; 12] {
         [

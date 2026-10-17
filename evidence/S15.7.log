@@ -1,0 +1,119 @@
+﻿=== gate: TreasureIsl (21 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build (wasm32-unknown-unknown)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 123 tasks, 114 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 117 docs, 38 facts, 92 experiences, 118 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK（3 表，strings 70 键；main_map.grid 三键 + 全场景 extra 标量正整数）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+        doccheck2: 0 error(s) across 19 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity)
+          WARN i18n 瀛ゅ効 key `role.desc.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.index.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.build`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.sell`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.trade`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.message.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.slot_summary_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_role.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.vs.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+        check_ledger_reality: 全绿（114 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+  PASS  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+        check_forward_closed: C1 业务文档零逆向引用: OK
+        check_forward_closed: C2 表现层零 oracle 引用: OK
+        check_forward_closed: C3 根目录清空 + legacy 在位: OK
+        check_forward_closed: C4 oracle 单点源 + 禁重复 crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 包 D status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P1 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P2 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P3 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P4 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P5 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P6 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 契约 c1_core_public_types.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c2_data_keys.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+        flywheel_readme -Check PASS: 6 条必读 ?, gate 21 项, doccheck2 19 断言, packages 7 包
+  PASS  flywheel-readme (开轮必读脚本完整性)
+        === visual_baseline (EXP-072) ===
+          PRESENT  Index.png
+          PRESENT  SelectRole.png
+          PRESENT  MainMap.png
+          running cargo test -p ti-app --test visual_regression ...
+                    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+                     Running tests\visual_regression.rs (target\debug\deps\visual_regression-8bcb3360e56b543f.exe)
+                
+                running 1 test
+                test visual_regression_3_scenes ... ok
+                
+                test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.92s
+                
+          PASS  visual-regression (3 scene baselines present + 0 diff)
+  PASS  visual-regression (3 场景 headless 基准图逐像素 diff)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.40s
+        
+  PASS  render-snapshot (7 场景 headless 逐像素基准 diff，契约 §5)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.36s
+        
+  PASS  forward-render-snapshot (S14 正向纯代码渲染 7 场景逐像素基准 diff，§4 版面意图)
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染快照门禁)
+=== gate: 0 failure(s) ===
+
+
+==========================================
+S15.7 DoD 自验（渲染框架提取，gate 21 项 0 失败之上逐条实测）
+==========================================
+
+判据 1  新增独立 crate crates/ti-render（12 源文件）
+  实测  canvas.rs / framebuffer.rs / iso.rs / primitives.rs / shell.rs / text.rs /
+        theme.rs / zorder.rs / font/{mod,ttf,bitmap}.rs + lib.rs
+
+判据 2  ti-render 零游戏语义（可复用到其它游戏）
+  期望  全库 grep main_map|select_role|battle|treasure|金银岛|i18n|ti_app|ti_core|
+        GameApp|SceneHost|MenuShell = 0 命中
+  实测  0 命中
+
+判据 3  依赖面最小
+  实测  deps = ab_glyph + ti-formats（位图回退字体数据）；无 ti-app / ti-core / ti-platform
+
+判据 4  3 个可复用抽象到位
+  实测  PixelSink（帧缓冲解耦：ti_render::Framebuf 与 ti_platform::gfx::Framebuf 均实现）
+        Canvas + HostCanvas 桥（框架只认 Canvas；像素落宿主 RenderHost，测试宿主可拦截）
+        Theme（21 色 + 6 字号单点源）
+
+判据 5  chrome / menu_shell / 7 场景全部迁到 ti-render
+  实测  chrome.rs 9 wrapper + index/main_map/message/saveload/select_map/select_role/vs 全接线
+
+判据 6  ti-platform 依赖方向正确（平台依赖框架，不反向）
+  实测  ti-platform/Cargo.toml 新增 ti-render.workspace = true
+
+判据 7  无快照漂移（像素级与提取前一致）
+  实测  render_snapshot 7 场景 0 diff、forward 7 场景 0 diff、visual_regression 3 场景 0 diff
+
+判据 8  全 workspace 测试 + clippy + fmt 全绿
+  实测  见本文件上半部 gate 第 1~3 项全部 PASS
+
+判据 9  文档门禁同步
+  实测  doccheck 0 error（含 release.md 台账计数）；doccheck2 0 error / 19 检查
+        （常量锚点已重指向 crates/ti-render/src/framebuffer.rs）
+
+判据 10 顺带修的回归
+  实测  ti_render::hint_row 居中公式 540-w/2 → (2*540-w)/2（奇数宽 1px 偏移）
+        —— 修前 3 套快照判漂移，修后 0 diff 且免基线重生成

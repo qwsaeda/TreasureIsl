@@ -3,7 +3,7 @@
 //! 设计原则：
 //! - 所有配置均为纯数据结构，不依赖后端；
 //! - [`GestureTracker`] 把事件流折叠为高层手势，供上层场景直接消费；
-//! - 默认值来自原版 `WinCE` 触摸设备的行为（`docs/facts/index.md`）。
+//! - 默认值来自原版 `WinCE` 触摸设备的行为（`legacy/docs/facts/index.md`）。
 
 use crate::backend::KeyCode;
 use crate::gfx::Viewport;
@@ -77,12 +77,12 @@ pub enum Orientation {
 }
 
 impl Orientation {
-    /// 返回该方向下逻辑宽高（竖屏 176×220，横屏 220×176）。
+    /// 返回该方向下逻辑宽高（竖屏 1080×1920，横屏 1920×1080，现代 UI 分辨率）。
     #[must_use]
     pub fn logical_size(self) -> (f32, f32) {
         match self {
-            Self::Portrait => (176.0, 220.0),
-            Self::Landscape => (220.0, 176.0),
+            Self::Portrait => (1080.0, 1920.0),
+            Self::Landscape => (1920.0, 1080.0),
         }
     }
 }
@@ -460,7 +460,7 @@ impl Settings {
         let (lw, lh) = self.orientation.logical_size();
         let integer = self.scale_mode == ScaleMode::Integer;
         if self.scale_mode == ScaleMode::Stretch || self.scale_mode == ScaleMode::ZoomCrop {
-            // 拉伸/裁剪固定作用于 176×220 原版逻辑尺寸
+            // 拉伸/裁剪固定作用于 1080×1920 呈现逻辑尺寸（契约 1，模块常量 LW/LH）
             return Viewport::with_mode(screen_w, screen_h, self.scale_mode, integer);
         }
         let raw = (screen_w / lw).min(screen_h / lh);

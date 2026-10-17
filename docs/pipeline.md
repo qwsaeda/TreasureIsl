@@ -70,7 +70,7 @@ cargo test --workspace 2>&1
 
 每轮流水线结束后：
 - 新发现的坑写入 `docs/experience/index.md`
-- 新发现的事实写入 `docs/facts/index.md`
+- 新发现的事实写入 `legacy/docs/facts/index.md`
 - 流水线本身的问题写入本文件
 
 ---

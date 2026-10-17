@@ -35,6 +35,7 @@ use crate::game_app::{BattleSnapshot, GameInput, Scene as LegacyScene};
 use crate::menu_shell::MenuShell;
 use crate::touch::TouchSample;
 
+pub mod chrome;
 pub mod index;
 pub mod main_map;
 pub mod message;
@@ -107,7 +108,7 @@ impl SceneKind {
         }
     }
 
-    /// 场景对应的 `.Map` 精灵资源名（`docs/design/ui_controls.md` §3）。
+    /// 场景对应的 `.Map` 精灵资源名（`legacy/docs/design/ui_controls.md` §3）。
     ///
     /// `Intro` 复用 `index.Map`；`Exit` 无资源（纯清屏）。
     #[must_use]
@@ -265,7 +266,13 @@ pub trait RenderHost {
     /// 可写帧缓冲/字形视图（场景渲染写像素与文本）。
     fn shell_mut(&mut self) -> &mut MenuShell;
 
-    /// 清屏到 `color`（565 色）。
+    /// 渲染主题（颜色 + 字号，数据驱动）。
+    fn theme(&self) -> &ti_render::Theme {
+        &self.shell().theme
+    }
+
+    /// 清屏到 `color`（565 色；QA120：色值走 `menu_shell` 命名常量，不写内联 hex——
+    /// `check_hardcode.py` 布局调用正则已含 `clear_frame`）。
     fn clear_frame(&mut self, color: u16);
 
     /// 填矩形。
@@ -273,22 +280,32 @@ pub trait RenderHost {
 
     /// 绘制一行字形。
     fn draw_text(&mut self, text: &str, x: i32, y: i32);
+
+    /// 绘制一行**指定墨色**的字形（正文档 44px；S15 深底需白墨）。
+    fn draw_text_colored(&mut self, text: &str, x: i32, y: i32, color: u16);
+
+    /// QB115：绘制一行**标题档**字形（TTF 96px / 位图回退 12px @ 26px advance，
+    /// `menu_shell::TITLE_FONT_SIZE_PX`；`chrome::draw_title_text` 收敛口）。
+    fn draw_title_text(&mut self, text: &str, x: i32, y: i32, color: u16);
+
+    /// QB115：绘制一行**提示档**字形（TTF 28px / 位图回退 12px @ 8px advance，
+    /// `menu_shell::HINT_FONT_SIZE_PX`；hint 行/实体标签/按钮标签/页码收敛口）。
+    fn draw_hint_text(&mut self, text: &str, x: i32, y: i32, color: u16);
+
+    /// 读取帧缓冲某像素颜色（供渐变/混合层读取当前状态）。
+    fn pixel_at(&self, x: i32, y: i32) -> u16;
 }
 
-/// S9.2：精灵/地形渲染接口（`.Map` blit + 等距地形瓦片）。
+/// S9.2：精灵/地形渲染接口。
+///
+/// S15.4：legacy 像素写帧（`.Map` 精灵 blit + 等距地形瓦片 blit）已整体移除——运行时
+/// 场景/主地图纯代码绘制（`08_render_arch.md` 契约 2）。本 trait 保留 2 个等距几何
+/// 访问器（`terrain_grid_w` / `has_terrain_atlas`），供主地图代码棋盘（§4.3）按
+/// `terrain_grid_w`² 铺菱形格。
+/// S15.6 QA114：`terrain_camera`（旧 176 时代 88/110 老屏中心偏移，零消费方）已删。
 pub trait SpriteHost {
-    /// 把 `asset` 对应的 `.Map` 真实精灵 blit 到帧缓冲（宿主内做图集/帧缓冲
-    /// 的同时可变借用，场景层拿不到两个借用）。
-    fn blit_scene_sprites(&mut self, asset: &str);
-
-    /// 绘制真实地形瓦片（等距投影 + 摄像机），返回是否真的画出了瓦片。
-    fn draw_terrain(&mut self) -> bool;
-
     /// 地形网格宽（缺资源时回退 20）。
     fn terrain_grid_w(&self) -> u32;
-
-    /// 地形摄像机中心偏移 `(x, y)`（缺资源时 `(0, 0)`）。
-    fn terrain_camera(&self) -> (i64, i64);
 
     /// 是否加载了真实地形瓦片图集（决定触摸命中走等距逆变换还是占位网格）。
     fn has_terrain_atlas(&self) -> bool;
@@ -310,6 +327,15 @@ pub trait MenuHost {
 
     /// 置退出标志。
     fn request_quit(&mut self);
+
+    /// 确认输入当前是否**按住**（桌面：确认键/鼠标左键每帧快照；触摸：恒 `false`，
+    /// 触摸走 `chrome::flash_press` 闪烁腿）。
+    ///
+    /// 供 `chrome::menu_item` 判定菜单项按下凹陷（EXP-079 §7.3 三态）。
+    /// 默认 `false`（无输入状态的宿主，如测试 mock / headless 渲染）。
+    fn press_held(&self) -> bool {
+        false
+    }
 }
 
 /// S9.2：角色/地图选择接口（`SelectRole`/`SelectMap` 场景共用）。
@@ -458,6 +484,12 @@ pub trait SessionHost {
     /// 战斗面板快照（渲染用）。
     fn battle_snapshot(&self) -> Option<BattleSnapshot>;
 
+    /// 显示用玩家 HP（平滑插值，EXP-085 HUD 平滑动画）。
+    fn displayed_player_hp(&self) -> u32;
+
+    /// 显示用 BOSS HP（平滑插值）。
+    fn displayed_boss_hp(&self) -> u32;
+
     /// 当前消息种类。
     fn msg_kind(&self) -> Option<MsgKind>;
 
@@ -490,6 +522,13 @@ pub trait SessionHost {
 
     /// 当前是否有战斗会话。
     fn in_battle(&self) -> bool;
+
+    /// QB136：存读档槽光标（三态：有档=实框金边 / 空=虚线框 / 光标=金色辉光外框；
+    /// 触摸落槽时 [`SessionHost::set_saveload_cursor`]，键盘面无选位键（QB141 裁决））。
+    fn saveload_cursor(&self) -> usize;
+
+    /// QB136：置存读档槽光标（越界忽略，渲染钳到槽数内）。
+    fn set_saveload_cursor(&mut self, slot: usize);
 
     /// P1-8（S1）：当前 RNG 已消费 `next_u64` 次数（写档捕获，读档精确续流）。
     fn rng_steps(&self) -> u128;
@@ -590,12 +629,13 @@ pub fn route_touch(host: &mut dyn SceneHost, kind: SceneKind, sample: &TouchSamp
     }
 }
 
-/// 路由：绘制 `kind` 对应场景（`Exit` 清屏）。
+/// 路由：绘制 `kind` 对应场景（`Exit` 清屏；QA120：清屏色走 `menu_shell::COLOR_BLACK`
+/// 命名常量，`check_hardcode.py` 布局调用正则已含 `clear_frame`，内联 hex 即 FAIL）。
 pub fn route_render(host: &mut dyn SceneHost, kind: SceneKind) {
     match kind {
         // 片头与主菜单共用同一张 `index.Map` + 同一套菜单绘制
         SceneKind::Intro | SceneKind::Index => IndexScene.render(host),
-        SceneKind::Exit => host.clear_frame(0x0000),
+        SceneKind::Exit => host.clear_frame(crate::menu_shell::COLOR_BLACK),
         SceneKind::SelectRole => SelectRoleScene.render(host),
         SceneKind::SelectMap => SelectMapScene.render(host),
         SceneKind::MainMap => MainMapScene.render(host),

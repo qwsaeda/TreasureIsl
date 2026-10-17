@@ -149,6 +149,10 @@ impl Shell {
             game.shell_mut().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
         }
 
+        /// S15.6 QA107：TTF 改**内置自动加载**（`GameApp::with_upload_mode` 构造壳时
+        /// `MenuShell::builtin_ttf_set`，QA128 进程级缓存）——本 bin 不再显式
+        /// `find_ttf_font` + `set_ttf_font`（旧 S5 路径已删；字体缺失 → 壳构造时
+        /// `None` 三档 + `eprintln!` 诊断，回退 12px 位图，§3 不静默空白）。
         // 精灵图集 + 场景 .Map（本地 data/ 读，blit 真实贴图）
         if let Some(ui_pak) = read_local("ui.pak") {
             game.set_atlas(&ui_pak);
@@ -311,12 +315,12 @@ impl Shell {
     }
 }
 
-/// 窗口配置：原版逻辑分辨率 176×220，桌面窗口放大 4 倍便于操作（F1 可循环缩放模式）。
+/// 窗口配置：S15.6 QA126 现代窗口（540×960 竖屏逻辑 1080×1920 的半采样，F1 可循环缩放模式）。
 fn window_conf() -> Conf {
     Conf {
         window_title: "金银岛 TreasureIsl".to_owned(),
-        window_width: 176 * 4,
-        window_height: 220 * 4,
+        window_width: 540,
+        window_height: 960,
         ..Default::default()
     }
 }

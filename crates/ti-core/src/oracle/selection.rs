@@ -10,7 +10,7 @@ pub use crate::domain::selection::{Character, MapSlot, SelectionState};
 
 /// oracle：选择角色。
 ///
-/// 规则（直译 `docs/spec/selection.md` §a/§d）：
+/// 规则（直译 `legacy/docs/spec/selection.md` §a/§d）：
 /// - 记录角色（覆盖之前选择）；
 /// - 若地图已选（`map_slot` 非 `None`）且角色已选 → `completed=true`（触发 `main.Map`）；
 /// - 音效：`Press`（有效选择，`music\press.wav`，**推测**框架层触发）。
@@ -29,7 +29,7 @@ pub fn oracle_select_role(state: SelectionState, ch: Character) -> (SelectionSta
 
 /// oracle：选择地图。
 ///
-/// 规则（直译 `docs/spec/selection.md` §b/§d）：
+/// 规则（直译 `legacy/docs/spec/selection.md` §b/§d）：
 /// - 未解锁地图（`m` 不在 `unlocked` 列表）→ `completed=false` + `Sfx::Invalid`（`music\invalid.wav`，**推测**）；
 /// - 已解锁地图：
 ///   - 记录地图（覆盖之前选择）；

@@ -3,8 +3,7 @@ use ti_core::domain::flow::Sfx;
 use ti_core::domain::selection::Character;
 
 use crate::game_app::GameInput;
-use crate::i18n;
-use crate::menu_shell::{COLOR_BG, COLOR_SELECTED, COLOR_TITLE_BAR};
+use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
@@ -47,8 +46,20 @@ impl Scene for SelectRoleScene {
                 false
             }
             GameInput::Confirm => {
-                let picked = host.character();
-                host.selection_mut().character = picked;
+                // 首次进 SelectRole 时 `character`=None（Index 只 `reset_selection` 不设角色），
+                // Confirm 兜底选第 0 个角色（对齐 select_map Confirm 的 map_slot 兜底语义）
+                if host.character().is_none() {
+                    let Some(c) = Character::from_index(0) else {
+                        host.play_sfx(Sfx::Invalid);
+                        return false;
+                    };
+                    host.set_character(Some(c));
+                }
+                let Some(picked) = host.character() else {
+                    host.play_sfx(Sfx::Invalid);
+                    return false;
+                };
+                host.selection_mut().character = Some(picked);
                 let done = selection_done(host);
                 host.selection_mut().completed = done;
                 if done {
@@ -79,11 +90,7 @@ impl Scene for SelectRoleScene {
         match sample.gesture {
             Gesture::Tap => {
                 // N3：命中带与渲染 `item_rect` 同公式（scenes.json select_role 段），正逆成对
-                let scene = ti_core::data::scenes()
-                    .ok()
-                    .and_then(|s| s.get("select_role"))
-                    .cloned()
-                    .unwrap_or_default();
+                let scene = chrome::scene_layout("select_role");
                 let bands = layout::scene_list_bands(
                     scene.list.x as f32,
                     scene.list.x as f32 + scene.list.w as f32,
@@ -99,6 +106,7 @@ impl Scene for SelectRoleScene {
                 let picked = Character::from_index(u32::try_from(i).unwrap_or(0));
                 host.set_character(picked);
                 host.selection_mut().character = picked;
+                chrome::flash_press();
                 host.advance(GameInput::Confirm)
             }
             Gesture::SwipeDown => host.advance(GameInput::Back),
@@ -106,26 +114,31 @@ impl Scene for SelectRoleScene {
         }
     }
 
-    /// 角色列表 + 选中高亮 + 导航提示。
+    /// 角色列表 + 选中高亮 + 导航提示（v2 羊皮纸/木纹/金色系）。
     fn render(&mut self, host: &mut dyn SceneHost) {
-        host.clear_frame(COLOR_BG);
-        // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
-        let layout = ti_core::data::scenes()
-            .ok()
-            .and_then(|s| s.get("select_role"))
-            .cloned()
-            .unwrap_or_default();
-        host.fill_rect(0, 0, 176, layout.title.h, COLOR_TITLE_BAR);
-        host.draw_text(i18n::sget("scene.select_role.title"), layout.title.x, layout.title.y);
+        let layout = chrome::scene_layout("select_role");
+        chrome::scene_shell(host, "select_role", "scene.select_role.title");
         let current = host.character().map_or(0, |c| c.index() as usize);
+        let held = host.press_held();
+        let flashing = chrome::press_flash_active();
         for (i, c) in Character::all().iter().enumerate() {
-            let y = layout.list.item_text_pos(i).1;
-            if i == current {
-                let r = layout.list.item_rect(i);
-                host.fill_rect(r.x, r.y, r.w, r.h, COLOR_SELECTED);
-            }
-            host.draw_text(c.label(), layout.list.text_x, y);
+            let r = layout.list.item_rect(i);
+            chrome::menu_item(
+                host,
+                r.x,
+                r.y,
+                r.w,
+                r.h,
+                i == current,
+                i == current && (held || flashing),
+            );
+            let ty = r.y + (r.h - host.shell().glyph_px()) / 2; // QA009：字形高按活跃字体（TTF 44px / 位图 12px）
+            chrome::draw_body_text(host, c.label(), layout.list.text_x, ty);
+            // S15.6 批次6：第二行简介（i18n `role.desc.<label>`，44px 次级灰蓝墨，主行之下 +56）
+            let desc_key = format!("role.desc.{}", c.label());
+            let desc = crate::i18n::sget(&desc_key);
+            chrome::draw_body_text_secondary(host, desc, layout.list.text_x, ty + 56);
         }
-        host.draw_text(i18n::sget("scene.select_role.nav_hint"), layout.hint.x, layout.hint.y);
+        chrome::scene_hint(host, "select_role", "scene.select_role.nav_hint");
     }
 }

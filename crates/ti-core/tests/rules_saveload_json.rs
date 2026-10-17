@@ -115,8 +115,8 @@ fn legacy_slot_to_v2() {
         SaveSlot { version: 1, character: 2, gold: 500, map_slot: 3, position: 777, rng_steps: 0 };
     let v2 = ti_core::rules::saveload_json::from_legacy_slot(&legacy);
     assert!(v2.is_v2());
-    assert_eq!(v2.character, "char2");
-    assert_eq!(v2.map, "m03");
+    assert_eq!(v2.character, "tichy", "legacy character=2（1 起）→ 角色 label tichy（Q010 修复）");
+    assert_eq!(v2.map, "m03", "legacy map_slot=3（1 起）→ m03");
     assert_eq!(v2.gold, 500);
 }
 

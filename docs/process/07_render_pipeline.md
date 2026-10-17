@@ -1,13 +1,19 @@
-# 渲染管线契约（Render Pipeline Contract）
+# 渲染管线契约（legacy 像素管线，Render Pipeline Contract）
 
-> 单一事实源：《金银岛》UI 渲染链路的**路径、z-order、越界裁剪、PCX 透明**四类行为契约。
+> ⚠️ **状态：降级为逆向参照（S16 渲染线裁决）**。运行时**零 legacy 像素层**：画面 100%
+> 由代码绘制产出，逐像素 PCX blit 已退出热渲染路径。本文的 z-order 文件顺序 / 越界求交裁剪 /
+> PCX 透明位 index 0 三类契约**仅作逆向事实参照与诊断工具依据**，不再是运行时验收基准。
+> **运行时架构契约见 [`08_render_arch.md`](08_render_arch.md)**（分层 / 3 原语 / z-order 枚举 /
+> 单一坐标系）。版面数值见 [`../business/08_layout_design.md`](../business/08_layout_design.md)。
+
+> 单一事实源：《金银岛》legacy UI 渲染链路的**路径、z-order、越界裁剪、PCX 透明**四类行为契约。
 > 任何改 `sprite_atlas.rs` / `terrain_atlas.rs` / `game_app.rs::render` / `menu_shell.rs` 的代码，
 > 必须先读本文档；改完必须过 `tests/render_snapshot.rs`（gate 第 19 项）+ `scripts/check_data_source.py`（gate 第 20 项）。
 > 本文档是**正向设计契约**（"渲染应当如何"）；逆向实现细节（原版函数地址、伪代码）仅作历史参照，归档 `legacy/`，不作为验收基准。
 
 > **排查原则（EXP-077）**：原版 ARM WinCE 程序本机跑不起来，**禁止向用户索要原版截图**。
 > 替代证据链：(a) 用户指认偏移量（看我渲染的 PNG，指出哪个精灵朝哪个方向偏了多少像素）；
-> (b) 像素级对比工具（`scripts/compare_render.py`，输入参考图 + 我的渲染 PNG，自动 diff）；
+> (b) 像素级对比工具（`scripts/compare_render.py`，**TODO 未实现**，当前用 `element-dump` + `render_snapshot` 测试替代，见 gate 第 19 项）；
 > (c) QEMU 系统模式（需 WinCE 镜像，本机没有）。
 
 ---
@@ -132,7 +138,56 @@
 
 ---
 
-## 7. 元素级验证法（EXP-076：逐精灵定位「哪个元素错位」）
+## 7. UI 色彩/动画/交互标准（EXP-079）
+
+### 7.1 色彩单一事实源
+
+- 所有 UI 色彩常量定义在 `crates/ti-app/src/scenes/chrome.rs`（语义色 + v2 chrome 色 + RGBA 变体）。
+- `menu_shell.rs` 通过 `pub use crate::scenes::chrome::{...}` 转发，禁止在 `menu_shell.rs` 定义新色。
+- 语义色（`COLOR_DANGER`/`COLOR_PLAYER`/`COLOR_LANDMARK`/`COLOR_BG`/`COLOR_TITLE_BAR`/`COLOR_SELECTED`/`COLOR_SECONDARY`）+ chrome 色（`COLOR_PARCH_DARK`/`COLOR_GOLD`/`COLOR_WOOD` 等）统一在 `chrome.rs`。
+- HD 8-bit 路径 RGBA 变体以 `_RGBA` 后缀命名，值 `0xAARRGGBB`。
+
+### 7.2 场景切换过渡动画
+
+- `NavHost::enter()` 自动触发 `TransitionState`（`FadingOut` → `FadingIn`），禁止硬切。
+- `Framebuf::apply_brightness(factor: f32)` 做全帧亮度调制（per-channel 缩放），`factor` ∈ [0,1]。
+- 过渡速度 `step = 0.08`（约 12 帧完成，~200ms @ 60fps）。
+- 过渡期间 `GameApp::render` 每帧：渲染场景 → `apply_brightness(当前亮度)` → 更新亮度。
+- 静态帧优化兼容：过渡期间每帧亮度不同 → dirty_rows 全置位 → 强制上传。
+
+### 7.3 菜单项三态视觉
+
+- `chrome::menu_item(host, x, y, w, h, chosen, pressed)` 必须传 `pressed` 参数。
+- **常态**：羊皮纸底（`COLOR_MENU_BG`）+ bevel 凸起（高光上/左、阴影下/右）。
+- **选中**（`chosen=true`）：金底（`COLOR_GOLD`）+ 正弦微光波动（`blend_color` alpha 混合）+ 金色铆钉。
+- **按下**（`pressed=true`）：bevel 反转（阴影上/左、高光下/右）= 凹陷实体感。
+- 微光动画由 `tick_glow_frame()`（每帧调用）+ `glow_factor()`（正弦）驱动，确定性可复现。
+
+### 7.4 新增 UI 元素必须遵守
+
+- 新色彩 → 加到 `chrome.rs`，同步加 RGBA 变体 + 测试。
+- 新可交互元素 → 必须有「常态/选中/按下」三态。
+- 新场景切换 → 走 `NavHost::enter()`，自动获得过渡动画，禁止直接赋值 `scene`。
+- 新动画 → 用 `AtomicU32` 帧计数器 + 确定性函数（正弦/hash），禁止 `rand::random`；**禁止 `static mut`**（Rust 2024 `static_mut_refs` 编译错误，EXP-079 实测）。
+
+### 7.5 帧级动画与像素快照门禁的分治（EXP-080）
+
+**矛盾**：像素快照门禁（gate 第 18/19/20 项）假设「同场景渲染 = 确定性像素」；帧级动画（微光/过渡/翻页）让像素依赖渲染帧历史。
+
+**分治契约（改任何动画代码前必读）**：
+- **体验路径**（实机 `GameApp::render` + 每帧 `tick_glow_frame`）：保留全部动画。
+- **快照路径**（`render_to_framebuf`，所有逐像素门禁的唯一入口）：开头必须
+  `transition = None` + `chrome::reset_animation_state()`（微光/翻页计数器归零），
+  使快照像素与历史帧数解耦。
+- **新增帧计数器**：任何新 `AtomicU32` 动画计数器必须在 `reset_animation_state()` 登记归零，否则下一次快照门禁必漂移。
+- **基线重生成纪律**：动画改动 = 基线必然漂移（旧基线是旧代码产物，非 bug）。处置 =
+  删 `assets/forward_baseline/*.png` + `assets/hd_baseline/*.png` + `assets/render_baseline/*.png`
+  → 首跑门禁自动重新落盘（测试自带「基准缺失→生成 PASS」分支，EXP-076 口径：基线由修复后代码生成）→
+  再跑一次全绿才算完。禁止手工画基线 PNG。
+
+---
+
+## 8. 元素级验证法（EXP-076：逐精灵定位「哪个元素错位」）
 
 全帧 diff（`render_snapshot` 第 19 项）只能告诉你「有没有漂移」，不能告诉你「哪个元素漂移」。
 定位到具体元素用**逐精灵 dump**：

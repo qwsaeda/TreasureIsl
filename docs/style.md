@@ -1,4 +1,4 @@
-﻿# 工程规范（Style Guide）
+# 工程规范（Style Guide）
 
 本文件是 Rust 代码的强制规范。与本文件冲突的写法一律返工。选型已定案：**Rust edition 2024 + macroquad**，禁止重新讨论。
 
@@ -9,7 +9,7 @@ treasure-island/
 ├── Cargo.toml              # [workspace] edition="2024"，[workspace.lints] 集中
 ├── rustfmt.toml            # 全局唯一格式化配置
 ├── clippy.toml
-├── scripts/gate.ps1        # 门禁（parity.md 20 项，PowerShell 本机执行）
+├── scripts/gate.ps1        # 门禁（parity.md 21 项，PowerShell 本机执行）
 ├── crates/
 │   ├── ti-formats/         # 纯二进制格式解析/序列化：pak/lpk/pcx/map/font/save
 │   │   └── src/{pak.rs, pcx.rs, map.rs, font.rs, save.rs, macros.rs, error.rs, ids.rs}
@@ -253,9 +253,9 @@ workspace `[workspace.lints]` 开了 `all` + `pedantic` + `panic = deny` + `unwr
 1. **逐工具实际调用**：列出计划用的全部工具，每个跑一次真实调用（不是看文档描述）；
 2. **校验返回 JSON 通过 OpenCode schema**：`-32602` = 不可用，哪怕工具「能返回数据」也算失败（OpenCode 会拒绝）；
 3. **描述性结论标 `推测`**：未实测输出的工具不许写「可用」，只能写「推测可用，待冒烟」；
-4. **冒烟结果回写 `docs/facts/tools.md`**：F-313/F-319 模式，带「实测日期 + 工具清单 + 通过/失败」。
+4. **冒烟结果回写 `legacy/docs/facts/tools.md`**：F-313/F-319 模式，带「实测日期 + 工具清单 + 通过/失败」。
 
-> **当前状态不在本文件复述**：逐工具可用性以 `docs/facts/tools.md` §6 的实测表为唯一事实源；本节只保留「怎么测」的规约。
+> **当前状态不在本文件复述**：逐工具可用性以 `legacy/docs/facts/tools.md` §6 的实测表为唯一事实源；本节只保留「怎么测」的规约。
 
 **S3 模块 RE 开工前固定动作**：`open_binary` 绑 arm PE → `search_strings`（cursor 分页拿全 .rdata 字符串段）一次性取资源/场景/事件/数值清单作 spec 骨架，**禁止逐文件 grep 1827 份伪代码找资源名**（慢且易漏）。
 

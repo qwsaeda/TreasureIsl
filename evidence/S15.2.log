@@ -1,0 +1,59 @@
+﻿===== S15.2 跨图推进规则定稿 + 落地 + app 层接线（验收证据）=====
+2026-10-16T15:23:04  e66dde0 B 根治：经济双轨收敛到 TradeLedger/BuildManager 校验
+改动面：rules/progression.rs（+from_unlocked/+min_progression_to_select，10 单测）+ game_app.rs（开档仅 m01 / battle_step 胜利钩 / restore_save 链恢复，SaveSlot schema 不变）+ tests/app_progression_wiring.rs（新，4 条）+ 文档（progression.md/EXP-088 闭环/packages.yaml P6/ledger S15.2）。
+
+--- [1] 规则层（rules/progression.rs，10 单测）---
+running 10 tests
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 89 filtered out; finished in 0.00s
+
+--- [2] app 接线验收（tests/app_progression_wiring.rs，4 条）---
+running 4 tests
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+--- [3] 既有相关测试 0 回归（e2e/flow/fuzz/commands）---
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.98s
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+--- [4] clippy（ti-core + ti-app all-targets）+ fmt（本轮文件）---
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.99s
+rustfmt --edition 2024 --check game_app.rs app_progression_wiring.rs progression.rs => 0 diff（上轮已跑）
+
+--- [5] 文档一致性 + 台账 + 模块契约 ---
+doccheck: 113 docs, 37 facts, 89 experiences, 108 task refs, 4 assertions, 0 error(s)
+ledger: 113 tasks, 110 verified, 0 error(s)
+check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+
+--- [6] gate FAIL 归因（EXP-078：全部非 S15.2 引入）---
+(a) 渲染线未提交 WIP（git status: M assets/data/scenes.json + M crates/ti-app 多文件 + M gfx.rs + ?? bin/render_png.rs）：lib 4（menu_shell palette/touch doc 断言）+ e2e_render_alignment 2 + render_intent 9 + render_parity 4 + render_parity_hd 2 + render_snapshot 1 + render_snapshot_forward 1 + visual_regression 3（失败集合与 S15.2 改前基线逐项一致）；
+(b) M assets/data/scenes.json + M data_tables.rs 未提交改动 → ti-core data_tables scene_layout_rects_are_inside_logical_resolution 1 失败（S15 布局域，同 doccheck2 scenes.json 4 错误同源）；
+(c) fmt 漂移 2 文件（bin/render_png.rs 未跟踪 / gfx.rs 已改，渲染线 WIP，本轮未触碰）；
+(d) 期间观察到 ti-app lib test 瞬时 E0432（ti_core::CANVAS_W/H unresolved）= 并行会话编辑中间态，复查自复。
+S15.2 自身改动面：clippy 0 warning、本轮文件 fmt 0 diff、相关测试 0 回归（[2][3]）、doccheck 0 error、台账 0 error、module-contracts M1-M3 0 违例。
+台账口径：gate 非全绿（上述渲染线 WIP 未收口）→ S15.2 维持 in_progress；渲染线收敛 + 视觉基线重生成（select_map 新档 m02/m03 置灰块）后转 verified。
+
+--- [7] 第 12 轮对抗审计（FIND 18 条 / AUDIT 16 CONFIRMED + 2 PARTIAL / 修复清单）---
+说明：FIND/AUDIT 原文为双 agent 会话内输出（未落单独文件），本修复清单为持久记录；Q0xx 为 FIND 编号。
+代码修复：
+  Q004/Q005 saveload.rs + saveload_json.rs from_legacy_slot：character 写 label（不再写数字串）；map_slot 越界 clamp（1..=3，0 保守映射 m01，legacy 1 起口径）；
+  Q006/Q007 game_app.rs restore_save：回滚补 rng 7 字段；读档恢复 gold/位置（SaveSlot schema 不变）；
+  Q017 tests/app_progression_wiring.rs：头注口径修正 + 补 gold/位置恢复断言（4 条全绿）；
+  测试同步：rules_saveload / rules_saveload_json 期望值 char2→tichy；exhaust_saveload 补 label 可解析断言；persistence.rs position 字段注释（0 起）修正；
+  game_app.rs：unlocked_maps 字段注释 + battle_won 注释/复位 + enter_main_map_at 重构。
+文档修复：
+  Q001/Q003/Q009/Q011 docs/business/progression.md（规则表 8 行/10 单测口径、初始仅 m01 语义、与存档一致节）；
+  Q010 docs/business/persistence.md（legacy 映射 1 起口径注释）；
+  Q012 docs/gamebook.md（规则 6→10 条口径）；
+  Q013 plan/packages.yaml（P6 登记 examples）；
+  Q014 docs/loop.md（blocked_by 快照口径约定）；
+  Q002/Q015 plan/ledger.yaml S15.2（title 8 条可测试规则/10 单测 + blocked_by 26 项快照 @15:23，数字随渲染线推进漂移、收敛时复核）；
+  Q016 docs/experience/index.md 分卷表条数（tools 9→12、build 10→9）+ EXP-056 卷归属（resources→tools）；
+  固化：doccheck2 新增第 17 项断言 experience-volume-counts（index 分卷表条数 == 各卷 `### EXP-` heading 实数，防 Q016 类复发）。
+验证快照（本轮末，渲染线 WIP 仍在推进、数字为快照值）：
+  ti-core 全量：仅 data_tables scene_layout 1 失败（渲染线 scenes.json WIP，[6](b) 同源）；
+  ti-app：仅渲染线既有失败集（lib 0 + e2e_render_alignment 2 + render_intent 3 + render_parity 3 + render_parity_hd 2 + render_snapshot 1 + render_snapshot_forward 1 + visual_regression 3，较 15:23 快照 26 已收敛至 ~15，渲染线会话在推进中）；
+  doccheck 0 error（114 docs / 90 experiences / 112 task refs）+ ledger 0 error（117 tasks / 110 verified，新增 S16.1–S16.4 pending）+ module-contracts M1-M3 0 违例；
+  clippy（ti-core/ti-app/ti-tools all-targets）0 warning + 本轮全部改动文件 rustfmt 0 diff；
+  doccheck2：15 error 全为 scenes.json 布局类（渲染线 WIP，[6](a) 同源），experience-volume-counts 新断言 0 命中。
+Q018：out of scope（渲染线收口 / S16 开工），不回写本任务。

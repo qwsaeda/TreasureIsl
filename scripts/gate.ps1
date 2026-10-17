@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（20 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（21 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (20 items) ==="
+Write-Host "=== gate: TreasureIsl (21 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -64,19 +64,19 @@ if ($installed -match 'aarch64-linux-android') {
     Skip 'cargo build (aarch64-linux-android)' 'S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）'
 }
 
-# 5) 占位扫描（0 命中；tests/ 除外 —— 集成测试合法用 panic!/unwrap 做断言）
+# 5) 占位扫描（0 命中；tests/ 与 examples/ 除外 —— 集成测试 / demo 可执行体合法用 panic!/unwrap 做断言）
 $srcDirsPh = @(Get-ChildItem -Path crates -Recurse -Filter *.rs -File |
-    Where-Object { $_.FullName -notmatch '\\tests\\' })
+    Where-Object { $_.FullName -notmatch '\\(tests|examples)\\' })
 $phHits = @($srcDirsPh | Select-String -Pattern 'TODO|FIXME|unimplemented!|todo!|panic!\(')
 $phList = ($phHits | ForEach-Object { "$($_.Path):$($_.LineNumber)" }) -join ', '
-Report ($phHits.Count -eq 0) 'no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/' $phList
+Report ($phHits.Count -eq 0) 'no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/' $phList
 
-# 6) 库代码 unwrap/expect 扫描（排除集成测试目录，0 命中）
+# 6) 库代码 unwrap/expect 扫描（排除集成测试目录 + demo examples 目录，0 命中）
 $srcDirs = @(Get-ChildItem -Path crates -Recurse -Filter *.rs -File |
-    Where-Object { $_.FullName -notmatch '\\tests\\' })
+    Where-Object { $_.FullName -notmatch '\\(tests|examples)\\' })
 $uw = @($srcDirs | Select-String -Pattern '\.unwrap\(\)|\.expect\(')
 $uwList = ($uw | ForEach-Object { "$($_.Path):$($_.LineNumber)" }) -join ', '
-Report ($uw.Count -eq 0) 'no unwrap()/expect() outside tests/' $uwList
+Report ($uw.Count -eq 0) 'no unwrap()/expect() outside tests/+examples/ (库代码)' $uwList
 
 # 7) 全格式 0 未知字节（S1 起有实现）
 if (Test-Path 'crates/ti-tools/src/bin/verify.rs') {
@@ -121,9 +121,11 @@ $orbOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_oracle_boundary (shell 层禁 oracle_* 函数调用)'
 
 # 13) 双 agent 审计固化断言（doccheck2）：文档↔代码/数据一致性（第 1~6 轮审计高频项）
-#     15 项检查：audio ChannelState API / shell oracle_* 残留 / LCG hex / 据点阈值 / i18n 孤儿 /
-#     release 门禁项数 / headless BattleView API / 飞轮回读 / 战斗玩家数值 / 飞轮脚本 /
-#     触摸渲染正逆成对 / HD 精灵透明 / 场景布局保真 / 场景 band 数 / map_slot 0 起基准（FIND-203）
+#     19 项检查：audio ChannelState API / shell oracle_* 残留 / LCG hex / 据点阈值 / i18n 孤儿 /
+#     gate 项数 / headless BattleView API / 飞轮回读 / 战斗玩家数值 / 飞轮脚本 /
+#     触摸渲染正逆成对 / 场景 band 数 / 场景布局保真 / HD 精灵透明 /
+#     map_slot 0 起基准（FIND-203）/ exhaust 双写对账 / 经验卷条数 /
+#     运行时 legacy 坐标禁 / 基线镜像恒等（S15.6 B1 裁决③）
 $dc2Out = & cargo run -q -p ti-tools --bin doccheck2 . 2>&1
 $dc2Out | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'doccheck2 (audit-codified doc↔code/data consistency)'
@@ -158,12 +160,23 @@ $vrOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'visual-regression (3 场景 headless 基准图逐像素 diff)'
 
 # 19) 渲染快照门禁（S13.6 契约 §5，docs/process/07_render_pipeline.md）：
-#     7 场景（index/selectrole/selectmap/main/vs/msgs/saveload）× RGB565 路逐像素基准 diff。
-#     基准由越界求交修复后代码生成（assets/render_baseline/，杜绝 EXP-074/075 自证循环）；
-#     背景像素掩（EXP-074），只锁 UI 层漂移。数据源 .Map/.pak 改动须同步跑本项（第 20 项 check_data_source 触发）。
+#     7 场景（index/selectrole/selectmap/main/vs/msgs/saveload）× 纯代码渲染全帧逐像素基准 diff。
+#     基准由现行代码生成（assets/render_baseline/，杜绝 EXP-074/075 自证循环）；
+#     全帧 diff=0（EXP-074 背景像素掩已废弃，S15.4/15.5 重锚 1080 代码绘制基线）。
+#     快照入口带 TTF 在位断言（S15.6 QA125：缺失字体即 panic，禁止豆腐基线静默入库）。
 $rsOut = & cargo test -q -p ti-app --test render_snapshot 2>&1
 $rsOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'render-snapshot (7 场景 headless 逐像素基准 diff，契约 §5)'
+
+# 19.5) S14 正向渲染快照门禁（第三套，与第 19 项并列，docs/business/08_layout_design.md §4）：
+#     7 场景纯代码渲染逐像素基准 diff。基准 assets/forward_baseline/ 是**业务重设计意图产物**
+#     （§4 版面 + §2 配色 + 代码绘制元素），S14 正向开发目标态——立绘/菜单条/HUD/血条全由
+#     代码绘制，不依赖逆向素材。S15.4 删 legacy 写帧层后 forward 开关已退役（S15.6 QA017，
+#     两态帧恒等），forward_baseline 为 render_baseline 的**字节镜像**（doccheck2
+#     baseline-mirror-identity 锁逐字节恒等），防某套被单独改动导致门禁静默分叉。
+$frsOut = & cargo test -q -p ti-app --test render_snapshot_forward 2>&1
+$frsOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'forward-render-snapshot (S14 正向纯代码渲染 7 场景逐像素基准 diff，§4 版面意图)'
 
 # 20) 数据源门禁（S13.6 契约 §5，docs/process/07_render_pipeline.md）：
 #     legacy/data/*.Map / *.pak 相对 HEAD 有改动 → 强制跑 render_snapshot（第 19 项），漂移即 FAIL。

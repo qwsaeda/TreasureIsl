@@ -10,8 +10,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use ti_app::MENU;
 use ti_app::glyph_raster::{FontSet, Raster};
-use ti_app::{MENU, status_texts};
 use ti_formats::font::{Charset, Font, GLYPH_ROWS, GLYPH_WIDTH};
 use ti_platform::gfx::Framebuf;
 
@@ -86,7 +86,7 @@ fn draw_path_is_bit_identical_to_glyph_pixel() {
 fn blit_writes_exactly_the_glyph_pixels_to_the_framebuffer() {
     let fs = font_set();
     let (parsed, charset) = &fs;
-    let stride = usize::try_from(ti_core::LOGICAL_WIDTH).expect("逻辑宽可转 usize");
+    let stride = usize::try_from(ti_platform::gfx::CANVAS_W).expect("帧宽(CANVAS)可转 usize");
     let origin_x = 30usize;
     let origin_y = 40usize;
     for ch in ['A', '金'] {
@@ -228,9 +228,13 @@ fn shell_strings_render_with_known_fallback_only() {
             }
             if Raster::for_char(Some(&fs), ch) == Raster::tofu() {
                 tofu_seen.push(ch);
+                // 显式回退白名单：见文件末尾 `KNOWN_BITMAP_FALLBACK`（legacy 位图字表覆盖边界记录，
+                // 运行时 TTF 正常渲染）。S15.6 QB150 新增 `scene.index.footer`
+                // =「金银岛 v1 · 桌面版」带出 桌/面/版 三字。
                 assert!(
-                    matches!(ch, '继' | '续' | '新' | '游' | '戏'),
-                    "{where_} 的 '{ch}' 既不在字表也没有显式回退预期"
+                    KNOWN_BITMAP_FALLBACK.contains(&ch),
+                    "{where_} 的 '{ch}' 既不在字表也没有显式回退预期（新增 UI 文案带出的新字必须 \
+                     先进 KNOWN_BITMAP_FALLBACK，或改用字表已覆盖的表述）"
                 );
             }
         }
@@ -244,19 +248,30 @@ fn shell_strings_render_with_known_fallback_only() {
         check(labels[i], labels[i]);
         let _ = item;
     }
-    for text in status_texts(1016, 5, 1) {
-        check(&text, &text);
-    }
+    // S15.6 QB150：index 尾行 = 用户版 i18n `scene.index.footer`（旧开发自检
+    // status_texts 已删，诊断走 `stats` feature eprintln，不进 UI 字表覆盖）。
+    let footer = ti_app::i18n::sget("scene.index.footer");
+    check(footer, "尾行(i18n)");
     // 标题（scene.index.title）现在也来自 strings.json，单独覆盖校验
     let title = ti_app::i18n::sget("scene.index.title");
     check(title, "标题(i18n)");
     tofu_seen.sort_unstable();
     tofu_seen.dedup();
     // S11/S10.4：TTF 字形并入 GPU 阶段后，字表缺字集合以 strings.json 实际文本为准；
-    // 缺字只允许落在已知回退字符集（继/续/新/游/戏）内，其余须命中真字形。
+    // 缺字只允许落在已知回退字符集内，其余须命中真字形。
+    // 白名单单一来源 = `KNOWN_BITMAP_FALLBACK`（上方 check 闭包内定义，两处断言共用，
+    // 避免两处硬编码漂移 = EXP-048 重复模式固化）。
     assert!(
-        tofu_seen.iter().all(|ch| matches!(*ch, '继' | '续' | '新' | '游' | '戏')),
-        "缺字只允许在已知回退字符集内（继/续/新/游/戏），实际 {tofu_seen:?}"
+        tofu_seen.iter().all(|ch| KNOWN_BITMAP_FALLBACK.contains(ch)),
+        "缺字只允许在已知回退字符集内（{KNOWN_BITMAP_FALLBACK:?}），实际 {tofu_seen:?}"
     );
     eprintln!("[s2.5] 菜单/标题/状态行缺字 = {tofu_seen:?}（其余均为真字形）");
 }
+
+/// 已知 **legacy 位图字表**（`GoldLand.Fnt` + `font.dat`）覆盖边界外的 UI 用字。
+///
+/// 语义澄清（避免误读为「已知缺陷」）：这些字在运行时由 `lxgw-wenkai-reg.ttf`
+/// TTF 正常光栅渲染（44/96/28 三档）；仅当 TTF 不可用时才回退位图态，此时它们
+/// 落在字表外 → 豆腐块。本清单 = **legacy 字表覆盖边界的显式记录**，新增 UI 文案
+/// 带出表外新字时必须先进此清单（或改用已覆盖表述），否则本测试 FAIL 报警。
+const KNOWN_BITMAP_FALLBACK: [char; 8] = ['继', '续', '新', '游', '戏', '桌', '面', '版'];

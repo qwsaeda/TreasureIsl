@@ -28,7 +28,7 @@ ti-app::menu_shell + ti-platform::gfx  帧缓冲 / 视口 / 缩放 / 上屏
 | [`loop_core.md`](business/loop_core.md) | `rules/main_loop.rs`、`domain/flow.rs` | `scenes/mod.rs` 路由 | `tests/reference_diff_main_loop.rs` |
 | [`economy.md`](business/economy.md) | `rules/trade.rs`、`rules/build.rs`、`domain/economy.rs` | `scenes/main_map.rs` | `tests/rules_trade.rs`、`tests/rules_build.rs` |
 | [`combat.md`](business/combat.md) | `rules/battle.rs`、`domain/combat.rs` | `scenes/vs.rs` | `tests/rules_battle.rs` |
-| [`progression.md`](business/progression.md) | `rules/main_map.rs`、`rules/cards.rs`、`rules/cards_draw.rs`、`domain/map.rs` | `scenes/main_map.rs` | `tests/reference_diff_cards.rs` |
+| [`progression.md`](business/progression.md) | `rules/main_map.rs`、`rules/cards.rs`、`rules/cards_draw.rs`、`rules/progression.rs`、`domain/map.rs` | `scenes/main_map.rs` | `tests/reference_diff_cards.rs`、`rules/progression.rs` 内联跨图推进单测（10）、`tests/app_progression_wiring.rs`（app 接线 4 条） |
 | [`persistence.md`](business/persistence.md) | `rules/saveload.rs`、`rules/saveload_json.rs`、`rules/rng.rs`、`domain/persistence.rs` | `scenes/saveload.rs` | `tests/rules_saveload*.rs`、`tests/save_migration.rs` |
 | [`07_ui_flow.md`](business/07_ui_flow.md) | —（表现层规范） | 全部 `scenes/*.rs`、`touch.rs`、`widgets.rs` | `tests/game_app_flow.rs`、`tests/e2e_playthrough.rs` |
 

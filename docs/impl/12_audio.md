@@ -1,7 +1,7 @@
 # 12 — 音频系统实现规格
 
 > 单一事实源：本文件是 `ti-platform::audio` + `ti-app::audio_prep` 的实现规格。
-> 关联文档：`docs/design/constants.md` §12（音效资源表）。
+> 关联文档：`legacy/docs/design/constants.md` §12（音效资源表）。
 
 ---
 

@@ -234,7 +234,117 @@
   3. `docs/process/07_render_pipeline.md` 渲染契约（路径表/z-order 文件顺序/越界求交/PCX index 0 透明位 + §7 元素级验证法），登记进 `docs/README.md` + `AGENTS.md` 路由表。
   4. `tests/render_snapshot.rs` 7 场景逐像素基准 diff（gate 第 19 项，基准由修复后代码生成杜绝 EXP-074/075 自证循环）+ `scripts/check_data_source.py`（gate 第 20 项，数据源改动→快照门禁）。
   5. `element_dump` 长期诊断 bin（`Cargo.toml` 声明）：逐精灵 blit dump 落点/越界判定/像素贡献，定位「漂的是哪个元素」（契约 §7）。
-- **验证**：`element_dump index` 显示记录 11/20/21（f1=111 越界条）= SKIP、贡献 0 像素；洋红残留 = 0；headless 全流程 16/16 OK；`render_snapshot` 7 场景 diff=0；gate 20 项全绿。
+- **验证**：`element_dump index` 显示记录 11/20/21（f1=111 越界条）= SKIP、贡献 0 像素；洋红残留 = 0；headless 全流程 16/16 OK；`render_snapshot` 7 场景 diff=0；gate 21 项全绿。
 - **教训**：渲染链路关键行为（越界裁剪/透明位/z-order）散在多文件无契约 → 每轮瞎猜。**必须**：(a) 渲染行为提成纯函数可单测；(b) 契约文档登记进路由表，改渲染代码前必读；(c) 快照门禁锁「最终像素」+ 数据源门禁当场拦；(d) 修 bug 前先按 native 真实链路逐层定位（哪条 quality 路 + 越界/透明语义），不靠猜；(e) 报「特定区域错位」先用 `element_dump` 逐元素定位，别全帧 diff 盲猜。
 
 
+### EXP-079 UI 色彩统一 + 场景过渡动画 + 菜单交互反馈
+
+- **现象**：S14/S15 双色彩系统共存（`menu_shell.rs` 旧语义色 vs `chrome.rs` 新 v2 色），场景切换硬切无过渡，菜单项无按下/选中视觉反馈，整体观感「塑料廉价」。
+- **根因**：(a) 两轮 UI 重设计（S14→S15）色彩常量分置两文件，语义色（`COLOR_DANGER`/`COLOR_PLAYER`/`COLOR_LANDMARK`）仍留在 `menu_shell.rs`，v2 色（`COLOR_GOLD`/`COLOR_PARCH_DARK`）在 `chrome.rs`，改色需双处同步；(b) `NavHost::enter` 直接切场景无过渡态；(c) `menu_item` 仅有选/未选两态，无按下凹陷、无选中动态效果。
+- **解法**：
+  1. 语义色统一迁入 `chrome.rs`（含 RGBA 变体），`menu_shell.rs` 改为 `pub use crate::scenes::chrome::{...}` 单一事实源；测试改为 `semantic_colors_match_doc`。
+  2. 新增 `TransitionState`（`FadingOut`→`FadingIn` 两阶段）+ `Framebuf::apply_brightness(factor)` 全帧亮度调制；`NavHost::enter` 自动调 `start_transition()`（step=0.08，约 12 帧完成淡入淡出）；`GameApp::render` 每帧驱动过渡。
+  3. `menu_item` 新增 `pressed: bool` 参数：pressed 时 bevel 反转（阴影上/左、高光下/右）= 凹陷实体感；选中项金底叠加正弦微光（`tick_glow_frame` + `blend_color` RGB565 alpha 混合）。
+- **验证**：gate 21 项全绿（`evidence/ui_improvement.log`），视觉回归 3 场景 diff=0，clippy `-D warnings` 0 warning。
+- **教训**：UI 视觉改进三件套（色统一 + 过渡动画 + 交互反馈）应作为一个**标准模式**固化：(a) 色彩常量必须单一文件源，禁止两轮设计留双份；(b) 场景切换必须有过渡态（淡入淡出/滑动），禁止硬切；(c) 可交互元素必须有「常态/选中/按下」三态视觉；(d) 微光等周期动画用 `AtomicU32` 帧计数器 + 确定性函数（正弦/hash），**禁止 `static mut`（Rust 2024 `static_mut_refs` 编译错误）+ 禁止 `rand`**；(e) **帧级动画会破坏像素快照确定性**：`render_to_framebuf`（快照入口）必须先 `transition=None` + `reset_animation_state()`，否则基线漂移；改动画后所有快照基线（`assets/forward_baseline/` + `assets/hd_baseline/` + `assets/render_baseline/`）须删除重生成（EXP-076 口径：基线由修复后代码生成，非人工造）。
+
+### EXP-080 帧级动画 + 像素快照基线漂移（EXP-079 后续）
+
+- **现象**：EXP-079 加微光/过渡/翻页动画后，`render_snapshot_forward` 报 index 快照 diff 1758/38720（最大偏差 4），`hd_baseline`/`render_baseline` 同族门禁均漂移；`cargo test` 全绿但快照门禁红。
+- **根因**：像素快照门禁假设「同场景渲染 = 确定性像素」；帧级动画（`GLOW_FRAME` 全局累加 + `TransitionState` 半程态 + `PAGE_FRAME`）让像素依赖「渲染过多少帧」→ 与旧基线必然不同；且 `render_to_framebuf` 未清动画态，跨场景累加值还随测试顺序变。
+- **解法**：(a) 快照入口 `render_to_framebuf` 开头 `transition=None` + `chrome::reset_animation_state()`（微光/翻页计数归零），同一场景快照与历史帧数解耦；(b) 基线由修复后代码重生成：删 `assets/forward_baseline/*.png`、`assets/hd_baseline/*.png`、`assets/render_baseline/*.png` 后首跑门禁自动落盘（测试自带「基准缺失→生成 PASS」分支）；(c) 实机体验路径（`render` + 逐帧 `tick_glow_frame`）保留动画，仅快照路径归零——两路分治，不牺牲表现。
+- **验证**：重生成后 `render_snapshot_forward`/`visual_regression`/`render_snapshot` 全 diff=0；`gate.ps1` 21 项全绿；动画在 native 运行仍可观察（F4 切画质 + 切场景淡入淡出）。
+- **教训**：**加帧级动画 = 必须同步审计所有像素级门禁**：凡「逐像素 diff / 基线图 / 元素 dump」类断言，都要确认其入口是否经过动画计数器；确定性门禁（快照）与体验路径（实机）必须分治——快照入口归零，实机路径保留动画。新增任何 `AtomicU32` 帧计数器时，同步在 `reset_animation_state()` 登记。
+
+### EXP-081 真交叉淡化 + 首帧黑闪守卫
+
+- **现象**：EXP-079 的「淡入淡出」名不副实——`enter()` 先切场景再启动过渡，淡出的是**新**场景（实为「闪黑再亮」）；改为真交叉淡化后 `render_parity` 2 个测试 FAIL（`each_scene_renders_real_content` / `distinct_scenes_produce_distinct_frames`），墨点率为 0，全帧近黑。
+- **根因**：双重。(a) 真交叉淡化需旧画面快照，但 `enter()` 时帧缓冲若**从未渲染过**（首帧、或 `handle()` 连切多场景后才渲染一次，如 `render_parity` 的 `render_select_map`），快照是空白缓冲 → `t=0` 时全帧 = 空白 = 黑屏；(b) 过渡进行中再次 `enter()` 会把「半混合帧」当旧画面重抓，产生递归脏化。
+- **解法**：(a) `Framebuf::snapshot() -> Box<[u16]>` + `crossfade_from(prev, t)` 纯逐像素插值（`t=0` 全旧、`t=1` 全新）；`GameApp.transition` 改单阶段插值 `t += step`，终帧不混合直接显示新画面；(b) **首帧守卫**：`rendered_once` 标志，`render_scene` 末尾置位；`start_transition` 在 `!rendered_once` 时直接 `transition=None` 跳过过渡（无旧画面可混合）；(c) **重入守卫**：过渡已在进行时再次 `enter()` 沿用原 `prev` 只重置 `t=0`，不重抓快照。
+- **验证**：`render_parity` 7/7 通过（墨点率恢复、各场景帧互异）；`render_snapshot_forward` / `render_parity_hd` / `visual_regression` 基线不变（快照路径本就归零过渡态）；`gate.ps1` 21 项全绿。
+- **教训**：**(a) 任何基于「上一帧内容」的插值/动画，必须显式处理「上一帧不存在」的状态**——用 `rendered_once` 之类的守卫跳过，而不是让它自然退化成黑屏（黑屏是最难排查的表现，因为「看起来像渲染 bug」实为「状态缺失」）。**(b) 过渡/动画状态要防重入**：连续触发时沿用初始快照而非重抓，否则会把中间混合帧当起点，动画语义漂移。**(c) `enter()`/`start_transition` 的调用顺序**：快照必须在**切场景前**抓（此刻帧缓冲仍持旧像素），但因为快照取的是缓冲内容而非场景 id，切场景后抓同样有效——前提是缓冲未被中间渲染覆盖。
+
+### EXP-084 TTF 软件光栅化接线（ab_glyph，UI-21）
+
+- **背景**：仓库无 TTF/OTF 资产，原 `ttf_font.rs` 仅包装 macroquad GPU `Font`（与 CPU Framebuf 路径不兼容，零引用死代码）。用户选「引入 TTF + 软件光栅化」。
+- **实现**：
+  1. `ab_glyph` 依赖（workspace `=0.2`，纯 Rust 无 Freetype）。
+  2. `glyph_raster.rs` 新增 `TtfFont`（持有 `FontVec`）：`from_bytes` / `rasterize(ch, size_px) -> Raster`（尺寸可变）/ `advance` / `line_height`；`Raster` 新增 `from_ink(cols, rows, ink)` 构造器。
+  3. `menu_shell.rs` 新增 `ttf_font` 字段 + `set_ttf_font`；`draw_text_row_colored` 优先 TTF 路径（`rasterize` + `advance` 推进 + `px_bounds` 垂直对齐），fallback 到 GoldLand.Fnt 位图路径。
+  4. 字体资产：**未接线**（需用户提供可商用 CJK TTF，或指定系统字体仅测试用）。
+- **验证**：`cargo clippy --workspace --all-targets -- -D warnings` 全绿；`cargo test -p ti-app` 全绿（无 TTF 时 fallback 到位图路径，基线不变）。
+- **待办**：字体资产加载（`assets/fonts/` 或系统路径）；native/wasm 壳接线 `set_ttf_font`；HD 路径（`hd-8bit`）的 TTF RGBA blit。
+- **教训**：**(a) `ab_glyph` 的 `Font` trait 与 `ti_formats::font::Font` struct 重名**——用 `Font as AbFont` 别名区分。**(b) `FontVec` 不实现 `Clone`**——`TtfFont` 不能 derive Clone。**(c) `px_bounds` 在 `OutlinedGlyph` 上，不在 `Glyph` 上**——需先 `outline_glyph()` 再取 bounds。**(d) 字形像素坐标有界**（≤ 字号），`as usize` / `as i32` 转换安全但需 `#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]`。
+
+### EXP-082 场景渲染样板提取（7 场景重复收敛）
+
+- **现象**：7 个场景的 `render()` 开头重复同一段 6 行样板（读 `scenes.json` → `parchment_bg` → `wood_frame` → `title_bar` → `draw_title_text`），结尾重复 `hint_row(…, i18n::sget(key), …, i18n::sget(key).chars().count())`。
+- **根因**：S15 重设计时逐场景改 chrome 调用，未提取公共外壳；`hint_row` 需要「文本 + 字符数」，而各场景为算宽度把同一个 i18n key **查了两遍**（`i18n::sget` 返回值是 `String`，每次调用都重新查表 + 分配）。
+- **解法**：`chrome` 新增两个模板函数 + 一个取版面辅助：
+  - `scene_layout(scene_id) -> SceneLayout`（读 `scenes.json` 段，缺失回退默认）；
+  - `scene_shell(host, scene_id, title_key)` = 底 + 框 + 标题条 + 标题文字（动态标题传 `&format!(...)`，如 `message` 的 `msg.<kind>`）；
+  - `scene_hint(host, scene_id, hint_key)` = 底条 + 深墨字，**i18n key 只查一次**（同时拿到 `text` 与 `.chars().count()`）。
+  - 6 个场景（index/select_role/select_map/saveload/message/vs）改调模板；`on_touch` 里的命中带计算也改用 `scene_layout`（原先每处内联 `ti_core::data::scenes().ok().and_then(...)` 三行）。
+- **验证**：6 场景 `render()` 各减 5~8 行；`hint_row` 双查消失；门禁 21 项全绿，快照基线不变（模板只做等价替换，渲染结果逐像素一致）。
+- **教训**：**「同一段 ≥4 行的序列在 ≥3 处重复」就是提取信号**，尤其当它同时牵涉「同一数据源多次查询」（本例 `i18n::sget(key)` 查两遍算宽度）。提取时把「重复的查询」一并收敛到只查一次，收益不只是行数，还有每帧的查表 + `String` 分配开销。
+
+### EXP-083 EXP-051 复发（本轮第二次踩同一坑，必读）
+
+- **现象**：为删 3 处未使用的 `use crate::i18n;`，用 PowerShell `(Get-Content $p) | Where-Object { ... } | Set-Content $p -Encoding UTF8` 批量改 3 个含中文注释的 `.rs` → 3 文件全废（CJK 乱码 + 文档注释行与代码行粘连，`cargo fmt` 报 `unexpected closing delimiter`）。
+- **根因**：与 EXP-051 原判一致——`Get-Content` 按默认编码读、`Set-Content` 重写，CJK 与换行都被破坏；`-Encoding UTF8` 只作用于**写入端**，救不了**读取端**的误解码。
+- **解法**：用 `write` 工具整文件重写 3 个受损文件（保持 UTF-8），再 `cargo fmt` + clippy + 全量测试确认恢复；补完后 CJK 与渲染基线均正常。
+- **教训（强化）**：**删未使用 import 这类操作也必须走编辑工具**。批量文本替换的诱惑来自「要改好几处」，但**收益（删一行）远小于风险（整文件 CJK + 换行损坏）**。判据：(a) 只要文件含非 ASCII，一律不用 shell 改写；(b) 要删多行 import，就用编辑工具逐个精确删除（3 次调用 < 1 次损坏重建的成本）；(c) 改完立刻 `cargo fmt --check`，`unexpected closing delimiter` / `unexpected EOF` 是粘连损坏的第一信号。
+
+### EXP-085 数值平滑动画：显示值与实际值分离 + `approach()` 插值
+
+- **现象**：战斗 HP 条从 100% 直接跳到 0%，视觉跳变刺眼；标题条 logo 无装饰动画，画面单调。
+- **根因**：`vs.rs` 血条宽度直接用 `b.player_hp`（实际值），无插值层；`title_bar` 的 logo 颜色写死 `COLOR_GOLD_BRIGHT`，无帧驱动。
+- **解法**：
+  1. `GameApp` 加 `displayed_player_hp` / `displayed_boss_hp` 字段 + `update_displayed_hp()` 方法，每帧 `render()` 顶部调用；
+  2. `approach(current, target) -> u32`：差值的 25% 步进、最小 1（指数衰减，~4 帧收敛），确定性（同输入同输出）；
+  3. `SessionHost` trait 加 `displayed_player_hp()` / `displayed_boss_hp()` 访问器；
+  4. `vs.rs` 血条宽度改用 `host.displayed_player_hp()` 而非 `b.player_hp`；
+  5. `title_bar` 加 `animate: bool` 参数，logo 颜色用 `glow_factor()` 驱动闪烁（`COLOR_GOLD_BRIGHT` ↔ `COLOR_GOLD` 混合）；
+  6. `scene_shell` 传 `animate: true`，非交互场景（headless 快照）传 `false`。
+- **教训**：
+  - **显示值与实际值必须分离**：游戏逻辑读实际值（`b.player_hp`），渲染读显示值（`displayed_player_hp`），插值层在两者之间。这样战斗结束瞬间 HP 归零的逻辑不受渲染平滑影响；
+  - **确定性插值**：`approach()` 不用随机数、不用时间戳，纯帧计数驱动（与 `GLOW_FRAME` 一致），保证快照可重现（EXP-080 约束）；
+  - **trait 扩展要同步 mock**：`SessionHost` 加方法后，所有测试 mock（`render_intent.rs` 的 `VsHost`）必须同步补实现，否则编译失败。批量检查用 `grep -rn "impl.*SessionHost"` 一次找全；
+  - **`f32` 转换**：`i32 as f32` 触发 clippy `cast_precision_loss`，值域已知时（0..220）用 `#[allow]` 而非改类型；`usize as i32` 触发 `cast_sign_loss`，用 `usize::try_from` 替代。
+
+### EXP-086 代码：PowerShell `Get-Content|Set-Content` 改含中文源 = 整文件双重编码（EXP-051/083 第 3 次复发）+ 捕获 native 输出未设码页也乱码
+- **现象**：本轮用 `(Get-Content -Raw) -replace ... | Set-Content -Encoding UTF8` 批量改含中文的 `exhaust_random_session.rs`，整文件中文变双重编码乱码（GBK/UTF-8 互译），源结构损坏（`unexpected closing delimiter`）——EXP-051/EXP-083 同类坑**第 3 次**中招。新变体：捕获 `cargo` 中文 stdout 到 log 前未设 `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`，log 里中文同样双重编码乱码。
+- **根因**：本机 PowerShell 控制台码页默认 CP936（GBK）。`Get-Content` 把 UTF-8 源码按 GBK 解成乱码 → `Set-Content` 把乱码按 UTF-8 写回 → 双重编码；捕获 native 输出走 `[Console]::OutputEncoding`（默认 CP936）解 UTF-8 字节流 → 乱码。EXP-051/083 已记录过本坑，但本轮动手前没读 EXP → 又踩。
+- **解法**：(a) 含非 ASCII 的源文件**一律用 edit/write 工具**改，改完立刻 `cargo fmt --all -- --check`；(b) 捕获 native 命令输出前**必设** `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`；(c) log 里的中文用 **Read 工具**核对（Read 正确处理 UTF-8），别用 PowerShell `Select-String`（其 `-Pattern` 中文本身会被码页弄乱而匹配不到）。
+- **验证**：事故文件 `cargo clippy -p ti-core --test exhaust_random_session` 用 write 工具重写后编译 0 错 + `Select-String "MUTATION"` 命中 0；`Set-Content` 前若先 `Get-Content` 预览已有乱码即停手。
+
+### EXP-087 代码：忠实接线 `BuildManager` 须用宿主当前金注资（`Bank::new(0)` 会让所有建造被静默拒 → 建造加成恒 0）
+- **现象**：`random_session_demo` 做「完整单图循环」时，据点阶段用 `BuildManager::new(b.build, Bank::new(0), &[])` 建 builder，`build()` 一律走「金不足被拒 = 状态不变」路径（合法、不 panic），但打印仍显示「建 X」，看似成功；结果战斗单位 `atk/hp` 加成恒 0（`+0,+0`），「建造 → 进战斗」闭环实际断裂。
+- **根因**：`BuildManager` 的资金来自 `Bank`（与宿主金分离），`Bank::new(0)` = 建造预算恒 0 → 每次 `build()` 都 `Insufficient`；「金不足被拒」是设计内的合法分支，表面无异常，接线错也不会报错——不验证「加成是否真进战斗」就发现不了。
+- **解法**：经济阶段用**宿主当前金**注资 builder：贸易后 `BuildManager::new(cfg, Bank::new(host.gold), &[])`（成功建造则把 `host.gold` 同步为 `builder.bank().gold`）；并在下游**核对**开战单位 `atk = base.atk + build_atk_bonus()` 真带上了加成。
+- **验证**：`random_session_demo --seed 7`：据点建 Bank 成功后，战斗输出 `hp=2040 = 2000(基础) + 50(Bank 建造 hp 加成) − 10(卡牌暂存扣血)`（不再是 +0,+0）。
+
+### EXP-090 代码：clippy pedantic 值语义状态 + `single_match_else`（EXP-053 复发）
+- **现象**：本轮连中 3 个 pedantic：① 小 Copy 状态结构 `ProgressionState`（3B）的方法用 `&self`/`&mut self` → 「小参数应按值传」；② `full_run_demo` 的 `match r.card_event { Some.. | None.. }` → `single_match_else`；③ demo 函数参数 >7 → `too_many_arguments`。
+- **根因**：EXP-053 同类（「clippy pedantic 拦 Copy 按引用」）**第 2 次**复发：写新规则模块前没读 EXP-053，把小状态结构写成了引用语义；workspace `avoid-breaking-exported-api=false` 意味着 clippy 会自由建议破坏性改法，新模块直接写值语义最省事。
+- **解法**：小 Copy 状态结构统一**值语义 + 功能式**：`fn unlocked(self)`、`fn on_boss_defeated(mut self, m) -> Self`（消费 self 返回新状态，调用方 `s = s.on_boss_defeated(m)`）；`Some/None` 双分支 match → `if let Some(..) {..} else {..}`；参数多的 demo 函数挂 `#[allow(clippy::too_many_arguments)]`（挂 item 不挂 let，EXP-053）。
+- **验证**：`cargo clippy -p ti-core --all-targets` 0 warning；`rules::progression` 6 单测全绿（功能式 `s = s.on_boss_defeated(m)`）。
+
+### EXP-093 标签（代码）
+- **现象**：S15.5 三套渲染快照门禁（`render_snapshot` / `render_snapshot_forward` / `visual_regression`）二次运行**全部**报「87% 像素漂移、最大通道偏差 255」，首跑重生成后又复现，初判为渲染跨进程不确定。
+- **根因**：渲染本身**是**跨进程确定的（同场景 3 次独立重生成 PNG 哈希完全一致）；漂移假阳来自基线**编解码不对称**：`encode_png_rgb8` 存 `ColorType::Rgb`（3 通道），`decode_png` 却按 `EXPAND`→RGBA + **手工 `px*4` buffer + `next_frame`** 读，通道数 / buffer 尺寸与真实输出错位 → 解码像素**行内逐字节右移 1**（行 filter 错位）→ 与当前帧逐像素 diff 出 87% 假阳。即「diff=0」命题依赖**编解码器无损往返**，不能只验「渲染确定性」。
+- **解法**：编解码**对称 + 无损**：① 存储改 `ColorType::Rgba`（alpha=255），与解码 `STRIP_16|EXPAND` 对齐 4 通道；② buffer 按 `width*height*4` 上限分配，读后以 `OutputInfo`（`next_frame` 返回）的真实 `color_type`/`width`/`height` 归一到每像素前 3 通道，**不**手工假定通道数；③ 上线前用**小 fixture 往返探针**（4×3 随机字节 → encode → decode → 逐字节 0 mismatch）先证 0 再跑门禁。
+- **验证**：探针 `roundtrip` 0 mismatch；三套基线重生成为 1080×1920 DEFLATE PNG（80–120KB）后**二次运行 0 漂移**（`Match`），`cargo test --workspace` 85 模块 0 failed。
+
+### EXP-094 渲染框架提取：像素面必须能被测试宿主拦截（`PixelSink` + `Canvas` 桥，勿绕过宿主直接画具体缓冲）
+- **现象**：把 chrome 外壳抽到独立 crate `ti-render`（零游戏语义、目标是可复用到其它游戏）后，`ti-app` 出现两类编译错：① `Raster::blit` 要 `&mut ti_render::framebuffer::Framebuf`，但 `MenuShell.fb` 是 `ti_platform::gfx::Framebuf`（**两个同名不同型**）；② `ti_render::shell::bar_slot(host: &mut dyn Canvas, …)` 收到的是 `&mut dyn SceneHost`。改完编译通过后，`render_intent::key_rects_have_pixels` 仍红：「vs 玩家血条槽 fill_rect 未按 §4.4 画 (60,170,440,48) — 宽度 0 / 整段不画」。
+- **根因**：两层叠加。**(a)** 框架若直接依赖**具体帧缓冲类型**，就无法同时吃「纯内存帧缓冲」与「平台 GPU 帧缓冲」两类目标，抽象从根上漏。**(b)** 更隐蔽：把 chrome wrapper 的入参从 `&mut dyn SceneHost` 改成 `&mut MenuShell`（或 `host.shell_mut()`）后，像素写入**绕过**了宿主自己的 `RenderHost::fill_rect`，而 `render_intent` 的 `VsHost` 正是靠**覆写 `RenderHost::fill_rect` 把调用记进 `self.fills`** 来做断言的（`impl SceneHost for VsHost {}` 是空的）。于是「真机有像素、测试断言 0 条记录」——**编译绿 ≠ 行为等价**，测试宿主从旁路被摘掉了。
+- **解法**：① 框架侧定义最小像素 trait `PixelSink { fn set_pixel(&mut self, x, y, color) }`，`ti_render::Framebuf` 与 `ti_platform::gfx::Framebuf` 各自实现，`Raster::blit(&mut dyn PixelSink, …)` 只认 trait 不认具体型（可复用到其它游戏/平台的判据）。② 桥接**留在宿主侧且必须走宿主 trait**：`chrome.rs` 内建 `struct HostCanvas<'a> { host: &'a mut dyn SceneHost }` + `impl Canvas for HostCanvas`，像素方法一律 `<dyn SceneHost as RenderHost>::fill_rect(self.host, …)`（**不**写 `self.host.shell_mut().fill_rect`），只读几何（`text_width`/`glyph_height`）才走 `shell()`。③ 因 `&mut HostCanvas{…}` 会触发 E0515（返回指向临时值的引用），用闭包式 `with_canvas(host, |c| …)` 持有桥接体，作用域内借用。④ 顺带**不要**改 `SceneHost` 的 trait 边界，也不要把 `Canvas` 提成 supertrait（会让所有 impl 方都被迫实现）。
+- **验证**：`grep` 框架零游戏语义 0 命中；`key_rects_have_pixels` 恢复 PASS（记录条数回到 5 条血条 fill）；三套快照 0 diff；`cargo clippy --workspace --all-targets -- -D warnings` 0 warning；gate 21 项 0 失败（evidence/S15.7.log 判据 4）。
+
+### EXP-095 居中用 `cx - w/2` 在**奇数宽**时与「先减后除」的测试口径差 1px → 快照整片判漂移
+- **现象**：抽框架后 3 套快照（render_snapshot / forward / visual_regression）同时红，diff 看着像「大改版」；但 `cargo test --workspace` 里只有 1 条 `hint_bar_width_height_follow_active_font` 真实失败：`index 尾行 hint 条宽 0 ≒ hint_text_width_px+8 = 209`。逐层量：条确实画了、高也对，唯独**左缘起点**差 1px，于是「从左缘起数连续 `COLOR_BEVEL_HI` 像素」直接数出 0。
+- **根因**：`ti_render::shell::hint_row` 原写 `cx = screen_cx - w / 2`（**先整除 w 再减**），而测试与 UI 口径是 `(W - w) / 2`（**先减再整除**）。`screen_cx = 540`、`w = 209`（奇数）：前者 `540 - 104 = 436`，后者 `871/2 = 435` → 恒差 `w` 为奇数时的半个像素取整差。奇数宽来自 TSF 文本宽随字形 advance 变化，**不是常量**，所以只在某些文本上暴露；bar 宽度断言、`hint_bar` 双态判据与整屏像素基线被同一个 1px 连带打挂。
+- **解法**：把居中统一到「先减后除」——`cx = (2 * screen_cx - w) / 2`（`screen_cx` 恒为屏心时它严格等于 `(W - w)/2`）。**不要**去改测试口径或重生成基线：测试与 UI 语义（条左缘 = 屏心居中余量）是对的，错的是实现取整顺序。修完 3 套快照**直接 0 diff**，无需重生成基线。
+- **验证**：`hint_bar_width_height_follow_active_font` PASS；3 套快照全部 PASS（0 diff，`assets/{render,forward,hd}_baseline` 未改动）；gate 视觉 3 项 0 失败（evidence/S15.7.log 判据 10）。

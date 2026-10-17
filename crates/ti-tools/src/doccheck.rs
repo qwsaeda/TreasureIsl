@@ -20,7 +20,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// 一份文档快照（相对路径 + 全文）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Doc {
-    /// 相对仓库根的路径，用 `/` 分隔（如 `docs/facts/map.md`）。
+    /// 相对仓库根的路径，用 `/` 分隔（如 `legacy/docs/facts/map.md`）。
     pub path: String,
     /// 文件全文。
     pub text: String,
@@ -327,8 +327,8 @@ mod tests {
     #[test]
     fn accepts_consistent_snapshot() {
         let docs = vec![
-            doc("docs/facts/map.md", "| F-301 | UI 场景族 20 个 |"),
-            doc("docs/spec/x.md", "见 F-301 与 EXP-001"),
+            doc("legacy/docs/facts/map.md", "| F-301 | UI 场景族 20 个 |"),
+            doc("legacy/docs/spec/x.md", "见 F-301 与 EXP-001"),
             doc("docs/experience/a.md", "### EXP-001 标签\n- 现象"),
         ];
         let report = check(&docs, &[], &BTreeSet::new());
@@ -340,8 +340,8 @@ mod tests {
     #[test]
     fn rejects_duplicate_fact_ids() {
         let docs = vec![
-            doc("docs/facts/map.md", "| F-315 | 事件 id |"),
-            doc("docs/facts/tools.md", "| F-315 | REA 坑范围 |"),
+            doc("legacy/docs/facts/map.md", "| F-315 | 事件 id |"),
+            doc("legacy/docs/facts/tools.md", "| F-315 | REA 坑范围 |"),
         ];
         let report = check(&docs, &[], &BTreeSet::new());
         assert!(report.errors.iter().any(|e| e.contains("fact `F-315` defined 2 times")));
@@ -361,7 +361,7 @@ mod tests {
     fn rejects_reference_to_undefined_fact() {
         let docs = vec![
             doc("plan/ledger.yaml", "dod: 见 F-311/F-312"),
-            doc("docs/facts/map.md", "| F-311 | x |"),
+            doc("legacy/docs/facts/map.md", "| F-311 | x |"),
         ];
         let report = check(&docs, &[], &BTreeSet::new());
         assert!(report.errors.iter().any(|e| e.contains("undefined fact `F-312`")));
@@ -399,7 +399,7 @@ mod tests {
     #[test]
     fn rejects_conflicting_numeric_assertion() {
         let docs = vec![
-            doc("docs/facts/map.md", "| F-301 | UI 场景族 20 个 |"),
+            doc("legacy/docs/facts/map.md", "| F-301 | UI 场景族 20 个 |"),
             // 旧值行：含关键词 + 旧值 21，但**不含**权威值 20
             doc("docs/plan-s0-s2.md", "UI 场景数 21 个"),
         ];
@@ -418,7 +418,7 @@ mod tests {
 
     #[test]
     fn accepts_matching_numeric_assertion() {
-        let docs = vec![doc("docs/facts/map.md", "UI 场景族实测 20 个")];
+        let docs = vec![doc("legacy/docs/facts/map.md", "UI 场景族实测 20 个")];
         let assertions = vec![NumericAssertion {
             name: "UI 场景数|20|21".into(),
             expected: "20".into(),

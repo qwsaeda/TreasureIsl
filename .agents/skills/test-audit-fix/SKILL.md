@@ -40,5 +40,5 @@ cargo test --workspace 2>&1
 
 ## 经验文档
 - `docs/experience/index.md` — 踩坑记录
-- `docs/facts/index.md` — 逆向事实
+- `legacy/docs/facts/index.md` — 逆向事实
 - `docs/pipeline.md` — 流水线定义

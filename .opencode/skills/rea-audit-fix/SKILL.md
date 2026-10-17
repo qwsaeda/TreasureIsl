@@ -17,8 +17,8 @@ description: Use when the user asks to run the twin-agent adversarial audit (双
   1. `crates/ti-app/src/game_app.rs` + `scenes/*.rs`：oracle 调用残留、`Unit{hp,atk}` 硬编码、Build/Trade 内联结算 vs 委托 `TradeLedger`/`BuildManager`、boss tier 随机 vs `map.boss_tier`。
   2. `assets/data/strings.json` 88+ keys vs `i18n::sget`/`sgetf` 实际引用（孤儿 key 检查）。
   3. gate 项数：`scripts/gate.ps1` 当前几项？`AGENTS.md`/`docs/parity.md`/`docs/loop.md`/`docs/release.md` 里的数字是否互相一致。
-  4. LCG hex `0x343FD` 全库残留（`docs/design/constants.md`、`docs/impl/10_rng.md`、`docs/impl/06_cards_events.md`、`docs/facts/tools.md` F-320）；误算 `0x3443D` 是否还有。
-  5. 据点 `>40` 阈值一致性（`docs/business/progression.md`、`docs/design/constants.md` §6.6、`assets/data/balance.json`）。
+  4. LCG hex `0x343FD` 全库残留（`legacy/docs/design/constants.md`、`docs/impl/10_rng.md`、`docs/impl/06_cards_events.md`、`legacy/docs/facts/tools.md` F-320）；误算 `0x3443D` 是否还有。
+  5. 据点 `>40` 阈值一致性（`docs/business/progression.md`、`legacy/docs/design/constants.md` §6.6、`assets/data/balance.json`）。
   6. `docs/impl/12_audio.md` 的 `AudioChannel`/`enum ChannelState{Idle,Playing,Paused,Stopped}` vs `crates/ti-platform/src/audio.rs` 真实 `struct ChannelState{active,volume,position,looping}`。
   7. `docs/business/*.md` 引用的数值（cards.event_chance、buildings base_cost、goods prices、boss_tiers hp/atk）是否逐一对得上 `assets/data/balance.json`。
   8. `docs/impl/*.md` 各模块错误枚举（E0xxx）是否与代码真实 error.rs 一致。
@@ -52,12 +52,12 @@ description: Use when the user asks to run the twin-agent adversarial audit (双
 ## 4. FIX
 
 - 按 CONFIRMED 清单修复。docs 为主；代码改动不得引入 `unwrap/expect/TODO/FIXME`（门禁红线）。
-- 若某项是「同类高频复现」，**顺手补进 `crates/ti-tools/src/bin/doccheck2.rs`** 作为新断言（见 doc-check skill）。
+- 若某项是「同类高频复现」，**交 doc-check skill §修完后 固化进 doccheck2**（步骤唯一源在那：新加 `check_xxx` 函数 + `main` 里 `all_errors.extend`），本 skill 不重复步骤、避免两处漂移。
 - 每改一处用 Edit 工具做精确替换；**禁止用 PowerShell `Set-Content`/`Out-File` 改 CJK 源文件**（EXP-051）。
 
 ## 5. GATE
 
-- `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1`（当前 13 项）。
+- `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1`（项数以 `docs/parity.md` §代码质量门禁 的计数约定为准，不要在此写死数字）。
 - `cargo run -q -p ti-tools --bin doccheck2 .` 必须 0 error。
 - gate 全绿 + doccheck2 0 error 才算本轮收口。
 

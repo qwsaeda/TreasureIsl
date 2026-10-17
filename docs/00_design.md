@@ -20,7 +20,7 @@
 | 金币 | 支付建造/升级；不是通关门槛 |
 | 回合结算 | 每次玩家操作后固定三段：① 动作生效 → ② 地图/据点响应 → ③ 状态检查 |
 
-**可断言约束**：单次操作至多一次结算流水线；`0 ≤ gold ≤ gold_max`；HP ∈ [0, hp_max]；任意场景 ≤ N 次操作可回主菜单。
+**可断言约束**：单次操作至多一次结算流水线；`0 ≤ gold ≤ gold_max`；HP ∈ [0, hp_max]；任意场景 ≤ N 次操作可回主菜单（**存在性上界**语义：对每个场景**存在**一条 ≤ N 的合法序列可回主菜单，即「无死锁」；非「任意序列都 ≤ N」的强约束。N = `balance.ui.max_back_steps`，穷举覆盖 `crates/ti-core/tests/exhaust_main_loop.rs` 用 BFS 最短路径断言）。
 详见 `docs/business/loop_core.md`。
 
 ---
@@ -30,7 +30,7 @@
 | 层 | 写在哪 | 谁改 | 例 |
 |---|---|---|---|
 | **设计意图** | `docs/business/` | 策划/评审 | 「伤害 = f(atk, rng)，玩家先手，回合制」 |
-| **平衡数值** | `assets/data/balance.json` | 策划，改 JSON 即可 | `boss_tiers[0].hp = 50000` |
+| **平衡数值** | `assets/data/balance.json` | 策划，改 JSON 即可 | `boss_tiers[0].hp = 2400`（示例值，实际以 balance.json 为准） |
 | **文本** | `assets/data/strings.json` | 策划/本地化 | `scene.select_role.title = 选择角色` |
 | **实现** | `crates/ti-core/src/rules/` | 工程师 | `struct CombatSession` |
 

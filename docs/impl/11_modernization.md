@@ -1,7 +1,7 @@
 # 11 — 现代化改造实现规格
 
 > 单一事实源：本文件是 `ti-app` 表现层 + `ti-platform` 渲染后端的现代化实现规格。
-> 关联文档：`docs/modernization.md`（方案总纲）、`docs/design/constants.md`（常量表）。
+> 关联文档：`docs/modernization.md`（方案总纲）、`legacy/docs/design/constants.md`（常量表）。
 
 ---
 
