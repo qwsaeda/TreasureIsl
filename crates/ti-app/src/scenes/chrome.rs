@@ -403,3 +403,18 @@ pub fn title_art_block(host: &mut dyn SceneHost, scene_id: &str) {
     let theme = host.theme().clone();
     with_canvas(host, |c| ti_render::shell::title_art_block(c, &theme, art.x, art.y, art.w, art.h));
 }
+
+/// v3 战斗竞技区装饰（vs）：读 `scenes.json` 该场景的 `battle_arena` 矩形，缺失/非正 = 不画。
+///
+/// z-order（调用序）：`scene_shell` 之后、血条/回合文本/提示行之前（装饰垫底，内容叠上）。
+pub fn battle_arena(host: &mut dyn SceneHost, scene_id: &str) {
+    let layout = scene_layout(scene_id);
+    let Some(art) = layout.extra.get("battle_arena") else {
+        return;
+    };
+    if art.w <= 0 || art.h <= 0 {
+        return;
+    }
+    let theme = host.theme().clone();
+    with_canvas(host, |c| ti_render::shell::battle_arena(c, &theme, art.x, art.y, art.w, art.h));
+}

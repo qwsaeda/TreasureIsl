@@ -1712,7 +1712,8 @@ fn parse_const_ms(src: &str, const_name: &str) -> Option<u32> {
 }
 
 /// ① 8pt 栅格：遍历 scenes.json 各场景标量（豁免业务几何、动态落区、屏心锚点 540
-/// 与 v3 场景叙事键 `title_art`/`ambient_art`/`focus_anchor`——v3 约束由 `check_scene_narrative` 接管）。
+/// 与 v3 场景叙事键 `title_art`/`ambient_art`/`focus_anchor`/`battle_arena`——v3 约束由
+/// `check_scene_narrative` 接管）。
 fn ui_8pt_walk(
     obj: &serde_json::Value,
     in_exempt: bool,
@@ -1725,7 +1726,7 @@ fn ui_8pt_walk(
         "x0" | "y0" | "tile_w" | "tile_h" | "size" | "portrait_zones"
             // v3 场景叙事键（UI 重设计 v3.1 双写，docs/ui-redesign-v3/02 §10：v3 坐标不再 8pt 强制，
             // 约束改由 gate 第 21 项 check_scene_narrative DSL 接管；v2 键仍走 8pt 纪律）
-            | "title_art" | "ambient_art" | "focus_anchor"
+            | "title_art" | "ambient_art" | "focus_anchor" | "battle_arena"
     );
     match obj {
         serde_json::Value::Object(map) => {
@@ -1747,8 +1748,8 @@ fn ui_8pt_walk(
                 if v % 8 != 0 && v != 540 {
                     errors.push(format!(
                         "scenes.json {scene}: `{key}` = {v} 非 8pt 栅格（10_ui_redesign §4：版面坐标 8 整除；\
-                         业务几何 grid.*/size、portrait_zones、屏心锚点 540 与 v3 叙事键 \
-                         （title_art/ambient_art/focus_anchor，ui-redesign-v3/02 §10）已豁免）"
+                          业务几何 grid.*/size、portrait_zones、屏心锚点 540 与 v3 叙事键 \
+                          （title_art/ambient_art/focus_anchor/battle_arena，ui-redesign-v3/02 §10）已豁免）"
                     ));
                 }
             }

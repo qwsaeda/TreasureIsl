@@ -1,0 +1,80 @@
+﻿=== S17.7 vs 战斗试点（battle_arena 竞技区装饰层）验收证据 ===
+时间: 2026-10-19
+范围: docs/ui-redesign-v3 波次 4 首波（vs 战斗场景双写落地；03 提案 §3.5）
+
+## 判据 1：check_scene_narrative N1-N8 0 失败（N8 对 vs focus_anchor 激活，SKIP 清单剩 5 场景）
+（见下方实测输出 A）
+
+## 判据 2：ti-render shell 测试模块恢复 + battle_arena 单测
+（fill_rect 计数 11 / 确定性双跑一致 / 非正尺寸 no-op；TEST_THEME 27 字段 + ModTests 全 Canvas 12 方法）
+（见下方实测输出 B）
+
+## 判据 3：像素抽检 render_baseline/vs.png（竞技区 battle_arena {x:76, y:230, w:918, h:998}）
+三层甲板阶梯自暗向亮：tier0(540,1150)=(16,24,74) → tier1(540,1100)=(24,32,99) → tier2(540,1030)=(33,44,140)，
+在底色 bg(540,1300)=(8,12,41) 上逐级可见（bevel_shadow 与 bg 同色 0x0865 不可见，已弃用改用 parch_light）；
+罗盘饰 compass(540,479)=(74,199,239)；血条带 y=168..216 在竞技区顶 230 之上不重叠。
+（见下方实测输出 C）
+
+## 判据 4：cargo test --workspace 0 failed + clippy -D warnings 0 + fmt 0 diff + doccheck/doccheck2 0 error + gate 23 项全绿
+（见下方实测输出 D）
+
+--- 实测输出 A：check_scene_narrative ---
+=== check_scene_narrative (UI 叙事约束 DSL v3) ===
+select_role: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+select_map: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+main_map: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+message: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+saveload: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+=== check_scene_narrative: 0 failure(s) ===
+--- 实测输出 B：cargo test -p ti-render ---
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+--- 实测输出 C：像素抽检 render_baseline/vs.png ---
+tier0 (16, 24, 74, 255)
+tier1 (24, 32, 99, 255)
+tier2 (33, 44, 140, 255)
+bg_below (8, 12, 41, 255)
+compass (74, 199, 239, 255)
+line (16, 24, 74, 255)
+hp_zone (66, 182, 181, 255)
+--- 实测输出 D：gate.ps1 全门禁 ---
+=== check_scene_narrative: 0 failure(s) ===
+=== gate: 0 failure(s) ===
+=== gate: TreasureIsl (23 items) ===
+PASS  cargo fmt --check
+PASS  cargo clippy -D warnings
+PASS  cargo test --workspace
+PASS  cargo build (x86_64-pc-windows-msvc)
+PASS  cargo build+clippy (wasm32-unknown-unknown; wasm-shell 门控 bin)
+SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)
+PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+PASS  no unwrap()/expect() outside tests/+examples/ (库代码)
+SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+PASS  ledger validate
+PASS  doccheck (docs consistency)
+PASS  validate_data (assets/data/*.json)
+PASS  gen_layout --check (idempotent)
+PASS  check_hardcode (strict; 0 hits required)
+PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+PASS  doccheck2 (audit-codified doc?code/data consistency)
+PASS  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+PASS  flywheel-readme (开轮必读脚本完整性)
+PASS  visual-regression (3 scene baselines present + 0 diff)
+PASS  visual-regression (3 场景 headless 基准图逐像素 diff)
+PASS  render-snapshot (7 场景 headless 逐像素基准 diff，契约 §5)
+PASS  forward-render-snapshot (S14 正向纯代码渲染 7 场景逐像素基准 diff，§4 版面意图)
+PASS  check_data_source (数据源改动 → 渲染快照门禁)
+select_role: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+select_map: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+main_map: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+message: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+saveload: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)
+=== gate: 0 failure(s) ===

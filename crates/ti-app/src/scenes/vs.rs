@@ -46,6 +46,8 @@ impl Scene for VsScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("vs");
         chrome::scene_shell(host, "vs", "scene.vs.title");
+        // v3.1 双写：竞技区装饰垫底（battle_arena 键缺失 = 不画，v2 版面不变）。
+        chrome::battle_arena(host, "vs");
         if let Some(b) = host.battle_snapshot() {
             let ph_bar = layout.extra.get("player_hp").copied().unwrap_or_default();
             let bh_bar = layout.extra.get("boss_hp").copied().unwrap_or_default();

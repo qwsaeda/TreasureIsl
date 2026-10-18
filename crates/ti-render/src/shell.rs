@@ -256,3 +256,238 @@ pub fn title_art_block(host: &mut dyn Canvas, theme: &Theme, x: i32, y: i32, w: 
         host.fill_rect(cx - 4, cy - 4, 8, 8, theme.gold);
     }
 }
+
+// ── v3 场景叙事 · 战斗竞技区装饰（03 提案 §3.5 vs；主题色版） ───────
+
+/// 战斗竞技区装饰（vs v3.1）：外框 2px `wood` 发丝框、底部三层舞台
+/// （90%/70%/50% 宽阶梯，`parch_light`/`menu_bg`/`bevel_hi` 自暗向亮 = 甲板纵深；
+/// `bevel_shadow` 与 `bg` 同色不可见故弃用）、
+/// 竞技区 1/4 高处横罗盘饰（`gold_bright` 十字 + `gold` 中心点，
+/// 与 `title_art_block` 罗盘语言同源）、2/3 处 `parch_light` 水平饰线。
+/// 纯静态 0 动效（快照确定性；S17.4 动效波次另议）。
+/// 宽度/高度非正数 → 不绘制（数据键缺失即无装饰，不 panic）。
+pub fn battle_arena(host: &mut dyn Canvas, theme: &Theme, x: i32, y: i32, w: i32, h: i32) {
+    if w <= 0 || h <= 0 {
+        return;
+    }
+    // 外框发丝（2px）。
+    host.fill_rect(x, y, w, 2, theme.wood);
+    host.fill_rect(x, y + h - 2, w, 2, theme.wood);
+    host.fill_rect(x, y, 2, h, theme.wood);
+    host.fill_rect(x + w - 2, y, 2, h, theme.wood);
+    // 水平饰线（2/3 高，留 16px 内缩；内缩后非正宽不画）。
+    let line_w = w.saturating_sub(32);
+    if line_w > 0 {
+        host.fill_rect(x + 16, y + h * 2 / 3, line_w, 1, theme.parch_light);
+    }
+    // 三层舞台（自底向上 90%→70%→50% 宽阶梯；每层高 h/14，顶块 = 对峙甲板）。
+    let step = h / 14;
+    if step > 0 {
+        let tiers: [(i32, i32); 3] = [(0, 9), (1, 7), (2, 5)];
+        for &(i, frac) in &tiers {
+            let tier_w = w * frac / 10;
+            if tier_w <= 0 {
+                continue;
+            }
+            let tier_x = x + (w - tier_w) / 2;
+            let tier_y = y + h - 16 - (i + 1) * step;
+            let color = match i {
+                0 => theme.parch_light,
+                1 => theme.menu_bg,
+                _ => theme.bevel_hi,
+            };
+            host.fill_rect(tier_x, tier_y, tier_w, step, color);
+        }
+    }
+    // 罗盘饰（竞技区 1/4 高处横置；与 title_art_block 罗盘同源语言）。
+    let cx = x + w / 2;
+    let cy = y + h / 4;
+    let arm = 28;
+    host.fill_rect(cx - arm, cy - 1, 2 * arm, 2, theme.gold_bright);
+    host.fill_rect(cx - 1, cy - arm / 2, 2, arm, theme.gold_bright);
+    host.fill_rect(cx - 3, cy - 3, 6, 6, theme.gold);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 测试用 Theme（逐 token 不同色值 → 像素色可区分；0 外部资源）。
+    const TEST_THEME: Theme = Theme {
+        parch_dark: 1,
+        parch_light: 2,
+        wood: 3,
+        gold: 4,
+        gold_glow: 5,
+        gold_bright: 6,
+        menu_bg: 7,
+        menu_border: 8,
+        hilite: 9,
+        bevel_hi: 10,
+        bevel_shadow: 11,
+        text_on_parch: 12,
+        text_on_wood: 13,
+        danger: 14,
+        player: 15,
+        landmark: 16,
+        bg: 17,
+        title_bar: 18,
+        selected: 19,
+        secondary: 20,
+        black: 21,
+        font_size: 44,
+        title_font_size: 72,
+        hint_font_size: 24,
+        bitmap_advance: 8,
+        bitmap_advance_title: 12,
+        bitmap_advance_hint: 6,
+    };
+
+    /// 记录型 Canvas：统计 `fill_rect` 次数与面积和（`draw_text` 不记账）。
+    struct ModTests {
+        painted: i32,
+        pixels: u32,
+    }
+
+    impl ModTests {
+        fn new() -> Self {
+            Self { painted: 0, pixels: 0 }
+        }
+
+        fn as_canvas(&mut self) -> &mut dyn Canvas {
+            self
+        }
+    }
+
+    impl Canvas for ModTests {
+        fn fill_rect(&mut self, _x: i32, _y: i32, w: i32, h: i32, _c: u16) {
+            self.painted += 1;
+            let area = i64::from(w.saturating_mul(h));
+            self.pixels = self.pixels.saturating_add(u32::try_from(area).unwrap_or(u32::MAX));
+        }
+
+        fn draw_text(&mut self, _text: &str, _x: i32, _y: i32, _color: u16) {}
+        fn draw_title_text(&mut self, _text: &str, _x: i32, _y: i32, _color: u16) {}
+        fn draw_hint_text(&mut self, _text: &str, _x: i32, _y: i32, _color: u16) {}
+        fn text_width(&self, _text: &str) -> i32 {
+            0
+        }
+        fn title_text_width(&self, _text: &str) -> i32 {
+            0
+        }
+        fn hint_text_width(&self, _text: &str) -> i32 {
+            0
+        }
+        fn glyph_height(&self) -> i32 {
+            0
+        }
+        fn title_glyph_height(&self) -> i32 {
+            0
+        }
+        fn hint_glyph_height(&self) -> i32 {
+            0
+        }
+        fn clear_frame(&mut self, _color: u16) {}
+        fn pixel_at(&self, _x: i32, _y: i32) -> u16 {
+            0
+        }
+    }
+
+    #[test]
+    fn wood_frame_draws_four_edges() {
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        wood_frame(canvas, &TEST_THEME);
+        assert_eq!(host.painted, 4);
+        // 外框 12px 四矩形面积和（角部重叠按两次计）= 2×1080×12 + 2×12×1920。
+        assert_eq!(host.pixels, 2 * 1080 * 12 + 2 * 12 * 1920);
+    }
+
+    #[test]
+    fn star_sky_deterministic() {
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        star_sky(canvas, &TEST_THEME, 0, 0, 1080, 1920);
+        let first = (host.pixels, host.painted);
+        host.painted = 0;
+        host.pixels = 0;
+        let canvas = host.as_canvas();
+        star_sky(canvas, &TEST_THEME, 0, 0, 1080, 1920);
+        assert_eq!((host.pixels, host.painted), first);
+        // 外框内 26 星（亮 12 + 暗 14；亮星 3 件/暗星 3 件按占位统计 ≥26）。
+        assert!(host.painted >= 26);
+    }
+
+    #[test]
+    fn star_sky_noop_on_invalid_size() {
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        star_sky(canvas, &TEST_THEME, 0, 0, 0, 1920);
+        assert_eq!(host.painted, 0);
+    }
+
+    #[test]
+    fn title_art_block_deterministic() {
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        title_art_block(canvas, &TEST_THEME, 108, 192, 864, 160);
+        let first = (host.pixels, host.painted);
+        assert!(host.painted >= 11); // 卡底 + 4 框 + 4 bevel + 2 金线（+3 罗盘）
+        host.painted = 0;
+        host.pixels = 0;
+        let canvas = host.as_canvas();
+        title_art_block(canvas, &TEST_THEME, 108, 192, 864, 160);
+        assert_eq!((host.pixels, host.painted), first);
+    }
+
+    #[test]
+    fn title_art_block_compass_only_tall_enough() {
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        title_art_block(canvas, &TEST_THEME, 108, 192, 864, 80);
+        assert_eq!(host.painted, 10); // 卡底 + 4 框 + 3 bevel + 2 金线，无罗盘（内高 56 < 96）
+        let mut host2 = ModTests::new();
+        let canvas2 = host2.as_canvas();
+        title_art_block(canvas2, &TEST_THEME, 108, 192, 864, 200);
+        assert_eq!(host2.painted, 13); // 罗盘 3 件在位
+    }
+
+    #[test]
+    fn title_art_block_noop_on_invalid_size() {
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        title_art_block(canvas, &TEST_THEME, 108, 192, 0, 160);
+        assert_eq!(host.painted, 0);
+    }
+
+    #[test]
+    fn battle_arena_fixed_paint_count() {
+        // w=918, h=998：框 4 + 饰线 1 + 阶梯 3 + 罗盘 3 = 11 次填充。
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        battle_arena(canvas, &TEST_THEME, 76, 230, 918, 998);
+        assert_eq!(host.painted, 11);
+        assert!(host.pixels > 0);
+    }
+
+    #[test]
+    fn battle_arena_deterministic() {
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        battle_arena(canvas, &TEST_THEME, 76, 230, 918, 998);
+        let first = (host.pixels, host.painted);
+        host.painted = 0;
+        host.pixels = 0;
+        let canvas = host.as_canvas();
+        battle_arena(canvas, &TEST_THEME, 76, 230, 918, 998);
+        assert_eq!((host.pixels, host.painted), first);
+    }
+
+    #[test]
+    fn battle_arena_noop_on_invalid_size() {
+        let mut host = ModTests::new();
+        let canvas = host.as_canvas();
+        battle_arena(canvas, &TEST_THEME, 76, 230, 0, 998);
+        assert_eq!(host.painted, 0);
+    }
+}

@@ -52,7 +52,9 @@
     "outcome": { "x": 540, "y": 960 },
     "empty": { "x": 540, "y": 960 },
     "hint": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 170, "w": 1080, "h": 1680 }]
+    "portrait_zones": [{ "x": 0, "y": 170, "w": 1080, "h": 1680 }],
+    "battle_arena": { "x": 76, "y": 230, "w": 918, "h": 998 },
+    "focus_anchor": { "type": "battle_arena", "bbox": { "x": 76, "y": 230, "w": 918, "h": 998 } }
   },
 
   "message": {

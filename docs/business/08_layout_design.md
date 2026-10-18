@@ -145,6 +145,8 @@
 | 空手提示 | `empty {x:540, y:960}` | 无卡时提示。`empty` 与 `outcome` **同 y 但互斥**（空手持牌态 vs 战斗结算态，同帧只出现一个）；`y=960` 远在血条带 `168..216` 之下（QA140） |
 | 提示行 | `hint {x:540, y:1840}` | 攻击/返回 |
 | 动态区 | `portrait_zones [{0,170,1080,1680}]` | 玩家/BOSS 代码方块允许落区 |
+| 战斗竞技区（v3） | `battle_arena {x:76, y:230, w:918, h:998}` | v3.1 双写：`chrome::battle_arena` 三层甲板阶梯 + 罗盘饰 + 饰线垫底（z-order 外壳之后、血条/回合文本之前）；血条带 `168..216` 在竞技区顶之上不重叠；8pt 豁免（v3 键，ui-redesign-v3/02 §10） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:918, h:998}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` vs `focus.bbox_pct` × (1080,1920)）；gate 第 21 项 `check_scene_narrative` N8 对账锚点 |
 
 不变式：`player_hp.x+w ≤ 1080`、`boss_hp.x+w ≤ 1080`；**双条互斥**：`boss_hp.x - (player_hp.x+w) ≥ 40`（64..512 / 576..1024，gap=64，QA140/QB120）；`rounds`/`empty`/`outcome` 均不在血条带 `y=168..216` 内。
 
