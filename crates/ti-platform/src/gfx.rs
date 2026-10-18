@@ -172,6 +172,21 @@ impl Default for Framebuf {
     }
 }
 
+/// 借用视图（§5.6.6 选用矩阵「缓冲/容器借用视图 → `AsRef/AsMut`」）：
+/// 泛型消费方（`fn draw(fb: &impl AsRef<[u16]>)`）可复用此缓冲。
+/// 手写 `as_slice`/`as_mut_slice` 保留（30 调用点），本 trait 为纯增量。
+impl AsRef<[u16]> for Framebuf {
+    fn as_ref(&self) -> &[u16] {
+        &self.pixels
+    }
+}
+
+impl AsMut<[u16]> for Framebuf {
+    fn as_mut(&mut self) -> &mut [u16] {
+        &mut self.pixels
+    }
+}
+
 /// S15.7：`Framebuf` 实现渲染框架的 [`ti_render::framebuffer::PixelSink`]，
 /// 使 `ti_render::font::bitmap::Raster::blit` 可直接写平台帧缓冲（渲染框架不依赖具体缓冲类型）。
 impl ti_render::framebuffer::PixelSink for Framebuf {
@@ -279,6 +294,21 @@ impl FramebufRgba {
 impl Default for FramebufRgba {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// 借用视图（§5.6.6）：RGBA8 缓冲 slice 视图，与 `Framebuf` 同口径。
+#[cfg(feature = "hd-8bit")]
+impl AsRef<[u32]> for FramebufRgba {
+    fn as_ref(&self) -> &[u32] {
+        &self.pixels
+    }
+}
+
+#[cfg(feature = "hd-8bit")]
+impl AsMut<[u32]> for FramebufRgba {
+    fn as_mut(&mut self) -> &mut [u32] {
+        &mut self.pixels
     }
 }
 
@@ -474,7 +504,7 @@ impl FramePresenter {
             // 行主序 bytes 前部 = 逻辑顶（y=0），与 draw_quad 的 V=0 在顶映射一致 → 不翻转。
             let texture =
                 macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache);
-            texture.set_filter(self.filter.to_miniquad());
+            texture.set_filter(self.filter.into());
             self.texture = Some(texture);
             if let Some(tex) = self.texture.as_ref() {
                 draw_quad(tex, vp);
@@ -483,7 +513,7 @@ impl FramePresenter {
             let texture = self.texture.get_or_insert_with(|| {
                 macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache)
             });
-            texture.set_filter(self.filter.to_miniquad());
+            texture.set_filter(self.filter.into());
             if first == 0 && last == LH_I32 - 1 {
                 texture.update_from_bytes(u32::from(width_u16), u32::from(height_u16), &self.cache);
             } else {
@@ -547,7 +577,7 @@ impl FramePresenter {
         if self.mode == UploadMode::FullRebuild {
             let texture =
                 macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache);
-            texture.set_filter(self.filter.to_miniquad());
+            texture.set_filter(self.filter.into());
             self.texture = Some(texture);
             if let Some(tex) = self.texture.as_ref() {
                 draw_quad(tex, vp);
@@ -556,7 +586,7 @@ impl FramePresenter {
             let texture = self.texture.get_or_insert_with(|| {
                 macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache)
             });
-            texture.set_filter(self.filter.to_miniquad());
+            texture.set_filter(self.filter.into());
             if first == 0 && last == LH_I32 - 1 {
                 texture.update_from_bytes(u32::from(width_u16), u32::from(height_u16), &self.cache);
             } else {

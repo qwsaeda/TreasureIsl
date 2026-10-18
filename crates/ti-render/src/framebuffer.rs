@@ -72,6 +72,21 @@ impl Default for Framebuf {
     }
 }
 
+/// 借用视图（§5.6.6 选用矩阵「缓冲/容器借用视图 → `AsRef/AsMut`」）：
+/// 泛型消费方可把 `Framebuf` 当作 `&[u16]` 直接读。
+/// 手写 `as_slice`/`as_mut_slice` 保留（既有调用点），本 trait 为纯增量。
+impl AsRef<[u16]> for Framebuf {
+    fn as_ref(&self) -> &[u16] {
+        &self.pixels
+    }
+}
+
+impl AsMut<[u16]> for Framebuf {
+    fn as_mut(&mut self) -> &mut [u16] {
+        &mut self.pixels
+    }
+}
+
 /// 像素写入目标：渲染框架操作像素的最小 trait。
 ///
 /// 任何帧缓冲（[`Framebuf`]、平台 GPU 缓冲等）实现此 trait，即可作为

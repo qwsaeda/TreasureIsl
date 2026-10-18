@@ -1109,7 +1109,7 @@ impl GameApp {
     /// 返回是否消费了该输入（发生了场景切换）。
     pub fn dispatch(&mut self, cmd: crate::commands::GameCommand) -> bool {
         let kind = SceneKind::from_legacy(self.scene);
-        let input = cmd.to_input();
+        let input = GameInput::from(cmd);
         route_input(self, kind, input)
     }
 

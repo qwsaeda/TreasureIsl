@@ -34,7 +34,7 @@
 | [`parity.md`](parity.md) | P0~P4 对齐标准 + **门禁项数与计数约定的唯一事实源**（doccheck 独立第 9 项含跨文档数值漂移 + release 台账计数同步） |
 | [`gamebook.md`](gamebook.md) | **可玩实现手册**：把已验证 `rules` 接进交互壳的全流程接线规格（S5 起） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收）⚠️ **GBK 编码，勿用 `Set-Content` 编辑** |
-| [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP） |
+| [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP；**§5.6.6 标准库 trait 选用矩阵 + 重构操作规程**） |
 | [`git.md`](git.md) | 推送规范（远端 origin/分支模型/推送规则/commit 格式/推送检查清单） |
 | [`check_ledger_reality.md`](check_ledger_reality.md) | 防虚报：台账 `verified` ↔ `evidence` ↔ 代码符号三方对账（EXP-058；gate 第 14 项） |
 | [`plan-archive.md`](plan-archive.md) | **历史阶段计划归档索引**（S0~S8 逐阶段摘要 + 原文件位置；查背景用，非开发依据） |

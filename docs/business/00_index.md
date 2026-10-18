@@ -69,6 +69,7 @@
 | Builder | `GameApp` 复杂对象构造 | [`docs/style.md`](../style.md) §5.6.2 |
 | Type-State | 场景转换编译期安全 | [`docs/style.md`](../style.md) §5.6.3 |
 | Command | 输入可序列化/重放 | [`docs/style.md`](../style.md) §5.6.4 |
+| 标准库 trait 选用 | From/Into/TryFrom/Display/Default/AsRef 何时用 + 手写转换补 trait 规程 | [`docs/style.md`](../style.md) §5.6.6 |
 | Observer | 事件驱动（规划中） | — |
 | ECS | 动态组合行为（规划中） | — |
 

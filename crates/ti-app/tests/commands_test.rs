@@ -7,7 +7,7 @@ use ti_app::scenes::{MenuHost, SessionHost};
 use ti_core::domain::economy::Building;
 use ti_core::domain::map::Dir;
 
-/// `GameCommand::to_input` 与 `GameInput` 的 1:1 对齐（穷举校验）。
+/// `From<GameCommand> for GameInput` 与 `GameInput` 的 1:1 对齐（穷举校验，§5.6.6）。
 #[test]
 fn command_to_input_is_exhaustive() {
     let pairs: Vec<(GameCommand, GameInput)> = vec![
@@ -32,7 +32,7 @@ fn command_to_input_is_exhaustive() {
         (GameCommand::MapBack, GameInput::MapBack),
     ];
     for (cmd, expected) in pairs {
-        assert_eq!(cmd.to_input(), expected, "to_input 对齐失败：{cmd:?}");
+        assert_eq!(GameInput::from(cmd), expected, "From<GameCommand> 对齐失败：{cmd:?}");
     }
 }
 

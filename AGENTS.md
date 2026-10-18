@@ -21,7 +21,7 @@
 | **新开工 / 参与开发（先读这个）** | `docs/process/00_index.md`（分工表：谁做什么 + 标准工作流）+ `docs/business/00_index.md`（业务唯一事实源） |
 | **任何开工动作之前** | `docs/loop.md` + `plan/ledger.yaml` + `docs/README.md` |
 | 判断「做完了没有」/ 验收 | `docs/parity.md`（P0~P4 判据 + **门禁项数/口径唯一事实源**） |
-| 写 Rust（分层/数据驱动/现成库） | `docs/process/01_architecture.md` + `docs/process/02_conventions.md`（新）；语法层细节 `docs/style.md` |
+| 写 Rust（分层/数据驱动/现成库） | `docs/process/01_architecture.md` + `docs/process/02_conventions.md`（新）；语法层细节 `docs/style.md`（**标准库 trait 选用矩阵 + 重构操作规程 = §5.6.6**：From/Into/TryFrom/Display/Default/AsRef/include_str! 等何时用 + 手写转换补 trait 的五步规程） |
 | 套用模版 / 写新场景·控件·模块 | `docs/process/03_templates.md`（§7 = 模块包任务书模版） |
 | 用脚本/codegen 批量处理 | `docs/process/04_tooling.md` |
 | **查业务规则（战斗/经济/地图/存档/UI 流）** | `docs/business/` 各系统文档（不依赖逆向产物） |

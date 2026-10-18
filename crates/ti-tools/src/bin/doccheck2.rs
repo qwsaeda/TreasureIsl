@@ -1372,6 +1372,53 @@ fn check_baseline_mirror_identity(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 标准库 trait 选用矩阵（`docs/style.md` §5.6.6）的落地断言：
+/// 文档里点名的「先例」impl 必须真实存在于对应源文件，防止被静默删除
+/// （§5.6.6 选用矩阵与代码双向锚定，同 EXP-058 防虚报口径）。
+fn check_std_traits_matrix(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    // (文件, 必须存在的 impl 签名, 说明)
+    let expectations: [(&str, &str, &str); 5] = [
+        (
+            "crates/ti-app/src/commands.rs",
+            "impl From<GameCommand> for GameInput",
+            "GameCommand → GameInput 零损失转换（§5.6.6 先例）",
+        ),
+        (
+            "crates/ti-platform/src/settings.rs",
+            "impl From<FilterMode> for macroquad::miniquad::FilterMode",
+            "FilterMode → miniquad 零损失转换（§5.6.6 先例）",
+        ),
+        (
+            "crates/ti-render/src/framebuffer.rs",
+            "impl AsRef<[u16]> for Framebuf",
+            "Framebuf 借用视图（§5.6.6 缓冲/容器 → AsRef/AsMut）",
+        ),
+        (
+            "crates/ti-platform/src/gfx.rs",
+            "impl AsRef<[u16]> for Framebuf",
+            "平台 Framebuf 借用视图（§5.6.6 缓冲/容器 → AsRef/AsMut）",
+        ),
+        (
+            "crates/ti-formats/src/ids.rs",
+            "impl From<u32> for ControlKind",
+            "ControlKind ↔ u32 newtype ID（§5.6.6 先例 / §5.4 define_id! 参考实现）",
+        ),
+    ];
+    for (rel, needle, why) in expectations {
+        let Some(text) = read_file(root, rel) else {
+            errors.push(format!("缺文件 {rel}（{why}）"));
+            continue;
+        };
+        if !text.contains(needle) {
+            errors.push(format!(
+                "{rel} 缺 `{needle}`（{why}；§5.6.6 选用矩阵已登记为先例，删除须先改文档）"
+            ));
+        }
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -1398,9 +1445,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_baseline_mirror_identity(&root));
     all_errors.extend(check_layout_doc_table_cross_check(&root));
     all_errors.extend(check_no_ti_core_fullpath(&root));
+    all_errors.extend(check_std_traits_matrix(&root));
 
     println!(
-        "doccheck2: {} error(s) across 21 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath)",
+        "doccheck2: {} error(s) across 22 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix)",
         all_errors.len()
     );
     for err in &all_errors {

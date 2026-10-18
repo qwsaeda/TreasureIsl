@@ -296,11 +296,20 @@ impl FilterMode {
     }
 
     /// 对应 miniquad 的 `FilterMode`（经 `macroquad::miniquad` 再导出）。
+    ///
+    /// `From<FilterMode> for miniquad::FilterMode` 的薄封装（§5.6.6 操作规程）。
     #[must_use]
     pub fn to_miniquad(self) -> macroquad::miniquad::FilterMode {
-        match self {
-            Self::Nearest => macroquad::miniquad::FilterMode::Nearest,
-            Self::Linear => macroquad::miniquad::FilterMode::Linear,
+        macroquad::miniquad::FilterMode::from(self)
+    }
+}
+
+impl From<FilterMode> for macroquad::miniquad::FilterMode {
+    /// 项目 `FilterMode` → miniquad `FilterMode`（2 变体 1:1，零损失，§5.6.6 选用矩阵）。
+    fn from(mode: FilterMode) -> Self {
+        match mode {
+            FilterMode::Nearest => Self::Nearest,
+            FilterMode::Linear => Self::Linear,
         }
     }
 }

@@ -1,0 +1,54 @@
+S15.9 标准库 trait 选用矩阵 + 重构操作规程（用户 2026-10-18 请求：项目是否已有 Rust 官方常用 trait/宏/组合/泛型规范 → 无成文 → 立项补规范 + 按规范重构）
+
+--- [1] 规范落地（docs/style.md 新增 §5.6.6）---
+§5.6.6 标准库 trait 选用矩阵 + 重构操作规程（style.md:210）：
+  选用矩阵 9 行（From/Into、TryFrom、数据驱动回退 Option（house 保留）、FromStr、Display、Default、AsRef/AsMut、PhantomData、关联类型+泛型）；
+  重构操作规程 4 步（判据先判后改 / 五步落地 / 反冗余 3 条 / 停机线）；
+  宏边界（macro_rules! 集中 + proc-macro 不引，§5.4 对齐）+ 组合 vs 泛型选型判据 3 条；
+§5.4 规划表 `define_id!` 行补注：参考实现 = ids.rs ControlKind（newtype + From×2 + Display + FromStr + 关联常量）；
+§5.4 尾补 include_str! 进包约定单一事实源指引（01_architecture.md §5，不复述）；
+§5.6.6 先例清单：ControlKind↔u32（ti-formats/ids.rs）、RectJson→Rect（ti-core/data/layout.rs）、
+  GameCommand→GameInput（ti-app/commands.rs）、FilterMode→miniquad（ti-platform/settings.rs）。
+
+--- [2] 按规范重构（代码，行为不变）---
+2.1 ti-app/src/commands.rs：新增 `impl From<GameCommand> for GameInput`（19 变体 1:1 零损失）；
+    `to_input` 保留为薄封装（`GameInput::from(self)`）；调用点迁移：
+    commands.rs execute()、game_app.rs dispatch()、tests/commands_test.rs（穷举测试改 `GameInput::from(cmd）`）；
+2.2 ti-platform/src/settings.rs：新增 `impl From<FilterMode> for macroquad::miniquad::FilterMode`（2 变体 1:1）；
+    `to_miniquad` 保留为薄封装；调用点迁移 gfx.rs 4 处 → `self.filter.into()`；
+    tests/settings_unit.rs 新增 `filter_mode_from_matches_thin_wrapper`（From ↔ 薄封装一致断言）；
+2.3 缓冲借用视图（AsRef/AsMut，纯增量、手写 as_slice 30 调用点保留不迁移）：
+    ti-render/src/framebuffer.rs：`AsRef<[u16]>` + `AsMut<[u16]> for Framebuf`；
+    ti-platform/src/gfx.rs：`AsRef/AsMut<[u16]> for Framebuf` + `AsRef/AsMut<[u32]> for FramebufRgba`（hd-8bit 门控）；
+    停机线应用：ti-render/font/bitmap.rs Raster::as_slice（bool 墨点）无泛型消费方 → 不加 AsRef（规范 §5.6.6 停机线）；
+2.4 停机线应用（不重构）：SaveV2/SaveData `from_legacy_slot`（保守钳位非零损失 → 保持手写构造器）、
+    `from_index/from_code → Option` 数据驱动回退（const 友好，house 风格保留，规范明列）。
+
+--- [3] 文档登记（单一事实源）---
+  AGENTS.md 路由表「写 Rust」行补 §5.6.6 指针；docs/README.md style.md 行补 §5.6.6；
+  docs/business/00_index.md 设计模式表新增「标准库 trait 选用」行。
+
+--- [4] 防复发固化（doccheck2 第 22 项）---
+  `check_std_traits_matrix`：style.md §5.6.6 点名的 5 个先例 impl 必须真实存在
+  （commands.rs From<GameCommand> / settings.rs From<FilterMode> / ti-render framebuffer.rs AsRef<[u16]> /
+  gfx.rs AsRef<[u16]> / ids.rs From<u32>），删除先例须先改文档，防静默回退；
+  doccheck2 21 → 22 项（main 报行数同步）。
+
+--- [5] 自验（实跑输出）---
+  $ cargo fmt --all -- --check          # 0 diff
+  $ cargo clippy --workspace --all-targets -- -D warnings        # 0
+  $ cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless,ti-platform/hd-8bit -- -D warnings
+  # 0（hd-8bit 门控的 AsRef/AsMut FramebufRgba 实测）
+  $ cargo test --workspace             # 0 failed（含 commands_test 穷举 + settings_unit 新增断言）
+  $ cargo run -q -p ti-tools --bin doccheck2 .
+  doccheck2: 0 error(s) across 22 audit-codified checks（含 std-traits-matrix）
+  $ cargo run -q -p ti-tools --bin doccheck
+  doccheck: 117 docs, 38 facts, 96 experiences, 118 task refs, 4 assertions, 0 error(s)
+  $ powershell -File scripts/gate.ps1
+  === gate: TreasureIsl (22 items) ===  === gate: 0 failure(s) ===
+  （视觉回归/渲染快照 0 diff：本轮纯 trait 增量 + 等价迁移，无像素改动）
+
+--- [6] 判定 ---
+  规范：style.md §5.6.6（选用矩阵 + 重构操作规程 + 宏边界 + 组合 vs 泛型判据）= 本任务唯一事实源；
+  重构：From ×2 族 + AsRef/AsMut ×3 类型落地，薄封装保留、调用点同轮迁移、停机线 2 处明确不套（有据可查）；
+  固化：doccheck2 #22 双向锚定（文档先例 ↔ 代码 impl）。S15.9 verified。

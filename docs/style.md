@@ -73,12 +73,13 @@ panic = "deny"                     # 禁 panic，错误走 Result 链
 | 宏 | 落地任务 | 用途 |
 |---|---|---|
 | `define_scene!` | S3.1 之后补 | 场景样板 + 事件分发表注册（20 个 UI 场景 `.Map` 零样板，见 F-301）；P3-1 事件覆盖 |
-| `define_id!` | 随对应 ID 域任务 | newtype ID + `From<u32>/Display/FromStr` + 关联常量；消除重复 ID 定义 |
+| `define_id!` | 随对应 ID 域任务（**参考实现已在** `ti-formats/src/ids.rs` 手写 `ControlKind`：newtype + `From<u32>/From<ControlKind> for u32` + `Display` + `FromStr` + 关联常量，§5.6.6 选用矩阵） | newtype ID + `From<u32>/Display/FromStr` + 关联常量；消除重复 ID 定义；落地宏时把 `ControlKind` 迁进宏 |
 | `diff_test!` | 已由各模块手写 `tests/diff_*.rs` 取代 | oracle vs 正式实现同种子对拍；P2 双通道差分 |
 
 > 门禁第 9 项 `doccheck` 会校验本表「已落地」段的每个宏名都能在 `macros.rs` 里 grep 到；把未实现的宏写进「已落地」段即判失败。
 
 过程宏暂不引入；确需时先在 `docs/experience/index.md` 记录理由再改 §5.1。
+数据表 `include_str!` 进包约定（serde + `OnceLock`、失败即硬错误不 fallback）单一事实源 = `docs/process/01_architecture.md` §5，本文件不复述。
 
 ## §5.5 错误处理集中（每 crate 一个 Error，顶层聚合）
 
@@ -206,6 +207,37 @@ pub trait Command: Serialize + DeserializeOwned {
 | 新增场景 | 场景 render 走「GPU 精灵 pass + 文字 pass」，禁新增逐像素 CPU blit 路径 |
 
 **性能取向**：纹理图集 batch（减少 draw call 数）+ 静止帧跳过（脏标记）；目标 60fps（`stats` feature 实跑验证）。
+
+### 5.6.6 标准库 trait 选用矩阵 + 重构操作规程（From/Into/TryFrom/Display/Default/AsRef 等）
+
+**选用矩阵**（何时用哪个官方 trait，与 §5.4 宏、§5.6 各模式配合）：
+
+| 目的 | 用 | 项目规则 |
+|---|---|---|
+| 零损失值转换 | `From<T> for U`（自动派生 `Into`/`&Into`） | 只在**目标类型**侧写 `From`，调用侧 `.into()`/`U::from(x)`；反向转换另写对称 `From`，不手写 `to_x()` 自由函数。先例：`ControlKind`↔`u32`（`ti-formats/src/ids.rs`）、`RectJson→Rect`（`ti-core/src/data/layout.rs`）、`GameCommand→GameInput`（`ti-app/src/commands.rs`）、`FilterMode→miniquad`（`ti-platform/src/settings.rs`） |
+| 可失败值转换 | `TryFrom<T>`（自动派生 `TryInto`） | 错误用编译器生成的 `#[error_generic]`（edition 2024，免手写错误类型）；需命名错误时 `TryFrom` + `map_err` 到 crate `Error` |
+| 数据驱动回退 | `from_index/from_code/from_label → Option`（house 风格，**保留**） | 驱动表枚举（`MapSlot`/`Character`/`Dir`/`Flow`…）的 const 友好回退构造器保持 `Option` 不迁移；**const 不受 `TryFrom` 限制时**才优先 `TryFrom`，不两种并存 |
+| 字符串解析 | `FromStr` | 配合 `.parse()`；`ControlKind` 为参考（`Err = String`，语义名特判 + 数值解析）；需要命名错误时 `type Err = <named>` |
+| 人读输出 | `Display` | 只给用户面文本与错误（`thiserror` 的 `#[error]` 走它）；禁「用 `Display` 替代 `Debug` dump」；库内类型不实现 `Display` 除非有用户面（`missing_docs` 只查文档不查 trait） |
+| 缺省值 | `Default` | 零值 = 语义缺省 → `#[derive(Default)]`；语义缺省 ≠ 零值 → 手动 `impl Default`（`new_without_default`，EXP 见 §5.10）；「非缺省初始态」不许用 `Default` 顶 |
+| 借用视图 | `AsRef<T>` / `AsMut<T>` | 缓冲类型（`Framebuf` 族）实现 slice 视图，泛型消费方（如 `fn draw(fb: &impl AsRef<[u16]>)`）即可复用。**已有手写 `as_slice/as_mut_slice` 保留**（30 调用点），trait 为纯增量、调用点不强制迁移 |
+| Type-State / 零大小载荷 | `PhantomData<T/U>` | 见 §5.6.3（`SceneTransition<From, To>`）；只表类型、不存值 |
+| 后端注入 | 关联类型 + 泛型（不 dyn） | 见 §5.6（`Backend { type Gfx: Gfx … }`） |
+
+**重构操作规程**（把既有手写转换补成标准库 trait，保持行为不变）：
+
+1. **判据（先判后改）**：转换**全域零损失** → `From`；**可失败、错误固定** → `TryFrom`；**缓冲/容器借用视图** → `AsRef/AsMut`；不满足任一 → 保持手写方法，本矩阵不强行套。
+2. **步骤（每类一次成对落地）**：① grep 调用点全集；② 加 trait impl（原方法保留为薄封装并注「`From` 薄封装，调用点已/将迁移」，单轮缓冲不删）；③ 调用点逐一迁到 `.into()` / `From::from` / `try_into`（同轮完成）；④ 补 roundtrip/边界单测（`From`：`x == From::<U>(from(x)).into()`；`TryFrom`：全域合法值 + 越界 `Err`）；⑤ 跑 §5.10 全套门禁（fmt/clippy 双 feature/tests/doccheck2）。
+3. **反冗余**：`Into` 由 `From` 自动派生，**不**手写 `impl Into`；无泛型/trait 消费方的类型**不**加 `AsRef`；const 回退构造器**不**迁 `TryFrom`（会丢 `const`）。
+4. **停机线**：调用点 < 2 且无泛型消费 → 保留手写方法，在 evidence 注「deferred」。
+
+**宏边界（与 §5.4 对齐）**：声明式 `macro_rules!` 集中（`ti-formats/src/macros.rs`、`scenes/mod.rs` 的 `scene_transition!`）；**派生宏/proc-macro 不引**（仅 `thiserror` 生成 `Error` 为既定例外，§5.5）；确需时在 `docs/experience/index.md` 记理由再改 §5.1。
+
+**组合 vs 泛型**（选型一句话判据，展开见 §5.6 各模式）：
+
+- 行为随「运行期后端/平台」变 → **trait object / 窄接口组合**（`SessionHost` 8 子 trait、`Canvas`、`PixelSink`）；
+- 行为随「编译期类型参数」变、零成本 → **泛型 + 关联类型**（`Backend`、`SceneTransition`）；
+- 两态互斥状态 → **Type-State（`PhantomData`）**；运行时集合 → **枚举 + 组合**（`GameCommand` 枚举 + `From<GameCommand> for GameInput`）。
 
 ## §5.7 测试组织
 

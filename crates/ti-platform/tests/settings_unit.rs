@@ -186,6 +186,17 @@ fn key_bindings_unknown_action_returns_none() {
     assert_eq!(kb.get("fly"), None);
 }
 
+/// §5.6.6：`From<FilterMode> for miniquad::FilterMode` 零损失映射。
+/// `to_miniquad` 薄封装与 `From` 必须逐位一致（宏展开后等价，防薄封装漂移）。
+#[test]
+fn filter_mode_from_matches_thin_wrapper() {
+    use ti_platform::settings::FilterMode;
+    for fm in [FilterMode::Nearest, FilterMode::Linear] {
+        let via_from: macroquad::miniquad::FilterMode = macroquad::miniquad::FilterMode::from(fm);
+        assert_eq!(via_from, fm.to_miniquad(), "From 与薄封装 to_miniquad 应一致：{fm:?}");
+    }
+}
+
 // ── Settings 综合 ────────────────────────────────────────────────────────────
 
 #[test]

@@ -72,31 +72,40 @@ pub enum GameCommand {
     MapBack,
 }
 
+impl From<GameCommand> for GameInput {
+    /// `GameCommand` → `GameInput` 全量映射（1:1 枚举变体，零损失，§5.6.6 选用矩阵「零损失值转换」）。
+    fn from(cmd: GameCommand) -> Self {
+        match cmd {
+            GameCommand::MoveUp => Self::MoveUp,
+            GameCommand::MoveDown => Self::MoveDown,
+            GameCommand::Confirm => Self::Confirm,
+            GameCommand::Back => Self::Back,
+            GameCommand::Prev => Self::Prev,
+            GameCommand::Next => Self::Next,
+            GameCommand::Walk(d) => Self::Walk(d),
+            GameCommand::Landmark(c) => Self::Landmark(c),
+            GameCommand::TradeBuy(g) => Self::TradeBuy(g),
+            GameCommand::TradeSell(g) => Self::TradeSell(g),
+            GameCommand::Build(b) => Self::Build(b),
+            GameCommand::Attack => Self::Attack,
+            GameCommand::LoadSave(s) => Self::LoadSave(s),
+            GameCommand::WriteSave(s) => Self::WriteSave(s),
+            GameCommand::MsgNext => Self::MsgNext,
+            GameCommand::MsgPrev => Self::MsgPrev,
+            GameCommand::MsgClose => Self::MsgClose,
+            GameCommand::SaveloadClose => Self::SaveloadClose,
+            GameCommand::MapBack => Self::MapBack,
+        }
+    }
+}
+
 impl GameCommand {
     /// 转回 `GameInput`（与 `scenes::route_input` 消费的类型一致）。
+    ///
+    /// `From<GameCommand> for GameInput` 的薄封装（§5.6.6 操作规程：trait 落地后原方法留作薄封装）。
     #[must_use]
     pub fn to_input(self) -> GameInput {
-        match self {
-            Self::MoveUp => GameInput::MoveUp,
-            Self::MoveDown => GameInput::MoveDown,
-            Self::Confirm => GameInput::Confirm,
-            Self::Back => GameInput::Back,
-            Self::Prev => GameInput::Prev,
-            Self::Next => GameInput::Next,
-            Self::Walk(d) => GameInput::Walk(d),
-            Self::Landmark(c) => GameInput::Landmark(c),
-            Self::TradeBuy(g) => GameInput::TradeBuy(g),
-            Self::TradeSell(g) => GameInput::TradeSell(g),
-            Self::Build(b) => GameInput::Build(b),
-            Self::Attack => GameInput::Attack,
-            Self::LoadSave(s) => GameInput::LoadSave(s),
-            Self::WriteSave(s) => GameInput::WriteSave(s),
-            Self::MsgNext => GameInput::MsgNext,
-            Self::MsgPrev => GameInput::MsgPrev,
-            Self::MsgClose => GameInput::MsgClose,
-            Self::SaveloadClose => GameInput::SaveloadClose,
-            Self::MapBack => GameInput::MapBack,
-        }
+        GameInput::from(self)
     }
 
     /// 命令是否携带参数（无参命令 = 纯状态机推进）。
@@ -117,7 +126,7 @@ impl GameCommand {
 
 impl Command for GameCommand {
     fn execute(&self, host: &mut dyn SceneHost) -> bool {
-        let input = (*self).to_input();
+        let input = GameInput::from(*self);
         let kind = SceneKind::from_legacy(host.current_scene());
         route_input(host, kind, input)
     }
