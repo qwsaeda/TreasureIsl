@@ -11,6 +11,7 @@ v2 (`10_ui_redesign.md`) 是配色/字号/图标局部精修，**v3 是版面结
 | 2 | `02_spec_lang.md` | **UI 描述语言规格**（硬约束 DSL，可机器断言） |
 | 3 | `03_redesign_proposal.md` | 7 场景重设计提案（每场景独立视觉重心） |
 | 4 | `04_index_impl.md` | index 主菜单落地实现（scenes.json + chrome.rs 改动） |
+| 5 | `05_vs_impl.md` | vs 战斗落地实现（battle_arena 竞技区装饰层 + 双写键 + 像素证据 + v3.4 后续波） |
 | — | `../../assets/data/ui_schema/scene_manifest_v3.schema.json` | 场景清单 JSON Schema（DSL 的机读形态） |
 
 ## 与既有规范的关系

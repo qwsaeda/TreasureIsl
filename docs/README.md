@@ -54,7 +54,7 @@
 | [process/08_render_arch.md](process/08_render_arch.md) | **运行时渲染架构**（分层/绘制原语/z-order=调用顺序/5 条坐标与像素来源契约/grep 门禁/测试重锚矩阵；改渲染代码必读） |
 | [process/09_render_framework.md](process/09_render_framework.md) | **`ti-render` crate 边界契约**（职责与禁止项/模块结构/Theme schema/迁移映射/数据分离原则；改 `crates/ti-render/` 代码前必读） |
 | [process/10_ui_redesign.md](process/10_ui_redesign.md) | **界面全量重设计·航海夜精修规格（S17 单一事实源）**：设计令牌 v2（色板 13 色/8pt 栅格/字号阶/动效 4 参数/图标 14 项）+ 7 场景版面增量 + 对比度 AA 表 + 验收锚点（改 UI 视觉量前必读） |
-| [ui-redesign-v3/README.md](ui-redesign-v3/README.md) | **UI 重设计 v3 · 真游戏化版面**（对标拆解 01 + 场景叙事 DSL 规格 02 + 7 场景重设计提案 03 + index 落地 04；gate 第 21 项 `check_scene_narrative` 锚点；v2 的"7 场景同模板"前提由 v3 取代） |
+| [ui-redesign-v3/README.md](ui-redesign-v3/README.md) | **UI 重设计 v3 · 真游戏化版面**（对标拆解 01 + 场景叙事 DSL 规格 02 + 7 场景重设计提案 03 + index 落地 04 + vs 落地 05；gate 第 21 项 `check_scene_narrative` 锚点；v2 的"7 场景同模板"前提由 v3 取代） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 
