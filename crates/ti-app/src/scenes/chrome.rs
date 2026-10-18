@@ -15,6 +15,7 @@ use ti_render::framebuffer::LOGICAL_W_I32;
 use ti_render::theme::Theme;
 
 use crate::scenes::{RenderHost, SceneHost};
+use ti_core::data::{IconDef, ui_icons};
 
 // === 颜色常量重导出（从 Theme 默认值，兼容旧导入路径） ===
 
@@ -267,11 +268,38 @@ pub fn nautical_grid(host: &mut dyn SceneHost) {
     with_canvas(host, |c| ti_render::shell::nautical_grid(c, &theme));
 }
 
-/// 菜单 icon。
+/// 菜单 icon（兼容出口：委托 `ti_render::icons`，kind 即图标 id）。
 pub fn menu_icon(host: &mut dyn SceneHost, kind: usize, x: i32, y: i32) {
     let theme = host.theme().clone();
     let kind_u32 = u32::try_from(kind).unwrap_or(0);
     with_canvas(host, |c| ti_render::shell::menu_icon(c, &theme, kind_u32, x, y));
+}
+
+/// S17.3 图标（注册表驱动）：`id` = `assets/data/ui_icons.json` 的 `icons[].id`，
+/// `selected` 决定 tint（默认 `theme.gold` / 选中 `theme.text_on_wood`——
+/// 选中底是航海蓝，白墨对比更高）。
+pub fn ui_icon(host: &mut dyn SceneHost, id: u32, x: i32, y: i32, selected: bool) {
+    let theme = host.theme().clone();
+    let tint = if selected { theme.text_on_wood } else { theme.gold };
+    with_canvas(host, |c| ti_render::icons::icon(c, &theme, id, x, y, tint));
+}
+
+/// 图标元数据取用（`ui_icons.json` 解析失败 = 不画图标，不 panic）。
+#[must_use]
+pub fn icon_def(name: &str) -> Option<IconDef> {
+    ui_icons().ok().and_then(|t| t.icon(name)).cloned()
+}
+
+/// 注册表按 id 取用（主菜单等按序号取图标的场景）。
+#[must_use]
+pub fn index_menu_icon_def(menu_index: usize) -> Option<IconDef> {
+    ui_icons().ok().and_then(|t| t.index_menu_icon(menu_index)).cloned()
+}
+
+/// 注册表按 HUD 键取用。
+#[must_use]
+pub fn hud_icon_def(hud_key: &str) -> Option<IconDef> {
+    ui_icons().ok().and_then(|t| t.hud_icon(hud_key)).cloned()
 }
 
 /// 菜单项。

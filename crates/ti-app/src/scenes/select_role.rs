@@ -134,6 +134,18 @@ impl Scene for SelectRoleScene {
             );
             let ty = r.y + (r.h - host.shell().glyph_px()) / 2; // QA009：字形高按活跃字体（TTF 44px / 位图 12px）
             chrome::draw_body_text(host, c.label(), layout.list.text_x, ty);
+            // S17.3：角色像位 = 圆环图标（`ui_icons.json` bindings.select_role_row = monogram）
+            // + 首字母叠画（角色名首字符，数据驱动，不用色块当头像）。
+            if let Some(def) = chrome::icon_def("monogram") {
+                if let Some(ix) = layout.extra_scalar.get("icon.x").copied().filter(|v| *v > 0) {
+                    let iy = r.y + (r.h - def.size) / 2;
+                    chrome::ui_icon(host, def.id, ix, iy, i == current);
+                    let letter = c.label().chars().next().map(String::from).unwrap_or_default();
+                    let ly = r.y + (r.h - host.shell().glyph_px()) / 2;
+                    let lw = host.shell().text_width_px(&letter);
+                    chrome::draw_body_text(host, &letter, ix + (def.size - lw) / 2, ly);
+                }
+            }
             // S15.6 批次6：第二行简介（i18n `role.desc.<label>`，44px 次级灰蓝墨，主行之下 +56）
             let desc_key = format!("role.desc.{}", c.label());
             let desc = crate::i18n::sget(&desc_key);

@@ -150,6 +150,13 @@ impl Scene for SelectMapScene {
             chrome::menu_item(host, r.x, r.y, r.w, r.h, chosen, chosen && (held || flashing));
             let ty = r.y + (r.h - host.shell().glyph_px()) / 2; // QA009：字形高按活跃字体（TTF 44px / 位图 12px）
             chrome::draw_body_text(host, m.label(), layout.list.text_x, ty);
+            // S17.3：行首折叠地图图标（`ui_icons.json` bindings.select_map_row = map）。
+            if let Some(def) = chrome::icon_def("map") {
+                if let Some(ix) = layout.extra_scalar.get("icon.x").copied().filter(|v| *v > 0) {
+                    let iy = r.y + (r.h - def.size) / 2;
+                    chrome::ui_icon(host, def.id, ix, iy, chosen);
+                }
+            }
             if locked {
                 // UI-10：未解锁项 = 深色「锁」块（压按钮右内侧，钳进画布内不溢出）。
                 // QA033：锁块 x 只走 `scenes.json` `locked.text_x`（1080 数据驱动，契约 4）；

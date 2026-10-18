@@ -12,6 +12,7 @@
   "select_role": {
     "title": { "y": 8, "h": 96 },
     "list": { "x": 96, "y": 240, "w": 896, "row_h": 304, "item_h": 256, "text_x": 248, "highlight_offset": 40 },
+    "icon": { "x": 144 },
     "hint": { "x": 540, "y": 1840 },
     "portrait_zones": [{ "x": 0, "y": 240, "w": 1080, "h": 1460 }]
   },
@@ -19,6 +20,7 @@
   "select_map": {
     "title": { "y": 8, "h": 96 },
     "list": { "x": 96, "y": 240, "w": 896, "row_h": 336, "item_h": 280, "text_x": 248, "highlight_offset": 40 },
+    "icon": { "x": 144 },
     "locked": { "text_x": 920 },
     "hint": { "x": 540, "y": 1840 },
     "portrait_zones": [{ "x": 0, "y": 240, "w": 1080, "h": 960 }]

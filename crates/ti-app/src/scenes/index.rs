@@ -96,8 +96,13 @@ impl Scene for IndexScene {
             let ty = r.y + (r.h - host.shell().glyph_px()) / 2;
             chrome::draw_body_text(host, label, layout.list.text_x, ty);
             if let Some(ix) = icon_x {
-                let iy = r.y + (r.h - 64) / 2;
-                chrome::menu_icon(host, i, ix, iy);
+                // S17.3：图标走注册表（`ui_icons.json` bindings.index_menu = 菜单序号 → 图标名），
+                // 尺寸/tint 全数据驱动；注册表缺项 = 不画图标（不 panic、不画占位色块）。
+                let def = chrome::index_menu_icon_def(i);
+                if let Some(def) = def {
+                    let iy = r.y + (r.h - def.size) / 2;
+                    chrome::ui_icon(host, def.id, ix, iy, i == sel);
+                }
             }
         }
         let status = layout.extra.get("status").copied().unwrap_or_default();

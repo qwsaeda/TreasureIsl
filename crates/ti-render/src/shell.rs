@@ -47,62 +47,12 @@ pub fn nautical_grid(host: &mut dyn Canvas, theme: &Theme) {
     }
 }
 
-/// 菜单 icon 体系（6 枚，64×64 逻辑盒内绘制）。
+/// 菜单 icon（兼容出口）：委托 14 枚图标集（`icons::icon`），kind = 图标 id。
 ///
-/// `kind` = icon 种类（0=剑 / 1=旗 / 2=齿轮 / 3=书 / 4=箱 / 5=锚）。
-/// 墨色统一白（`text_on_parch`）：选中蓝底/未选卡底上均可读。
+/// S17.3 起本函数**不含绘制逻辑**（零重复实现）：几何全在 `crate::icons`，
+/// tint 由调用方（`chrome::ui_icon`）按选中态传入；此处保留旧签名做薄转发。
 pub fn menu_icon(host: &mut dyn Canvas, theme: &Theme, kind: u32, x: i32, y: i32) {
-    let ink = theme.text_on_parch;
-    match kind {
-        0 => {
-            // 剑：刃 6×40 竖直 + 护手 24×4 + 柄头 8×8
-            host.fill_rect(x + 29, y + 8, 6, 40, ink);
-            host.fill_rect(x + 20, y + 44, 24, 4, ink);
-            host.fill_rect(x + 28, y + 52, 8, 8, ink);
-        }
-        1 => {
-            // 旗：旗杆 4×52 + 旗面 34×22
-            host.fill_rect(x + 20, y + 6, 4, 52, ink);
-            host.fill_rect(x + 24, y + 6, 34, 22, ink);
-        }
-        2 => {
-            // 齿轮：方框 40×40（四边 4px）+ 四凸点 8×8 + 中心孔（卡底色开孔）
-            host.fill_rect(x + 12, y + 12, 40, 4, ink);
-            host.fill_rect(x + 12, y + 48, 40, 4, ink);
-            host.fill_rect(x + 12, y + 16, 4, 32, ink);
-            host.fill_rect(x + 48, y + 16, 4, 32, ink);
-            host.fill_rect(x + 4, y + 28, 8, 8, ink);
-            host.fill_rect(x + 52, y + 28, 8, 8, ink);
-            host.fill_rect(x + 28, y + 4, 8, 8, ink);
-            host.fill_rect(x + 28, y + 52, 8, 8, ink);
-            host.fill_rect(x + 28, y + 28, 8, 8, theme.menu_bg);
-        }
-        3 => {
-            // 书：双开页 22×40 × 2（间距 4）+ 书脊 4×44
-            host.fill_rect(x + 10, y + 12, 22, 40, ink);
-            host.fill_rect(x + 36, y + 12, 22, 40, ink);
-            host.fill_rect(x + 30, y + 10, 4, 44, theme.menu_bg);
-        }
-        4 => {
-            // 箱：外框 48×40（四边 4px）+ 盖线 48×4 + 竖缝 4×24
-            host.fill_rect(x + 8, y + 14, 48, 4, ink);
-            host.fill_rect(x + 8, y + 50, 48, 4, ink);
-            host.fill_rect(x + 8, y + 18, 4, 32, ink);
-            host.fill_rect(x + 52, y + 18, 4, 32, ink);
-            host.fill_rect(x + 8, y + 26, 48, 4, ink);
-            host.fill_rect(x + 30, y + 30, 4, 24, ink);
-        }
-        5 => {
-            // 锚：竖杆 6×44 + 顶环（12×12 开孔）+ 底横杆 40×6 + 两侧锚爪 8×14
-            host.fill_rect(x + 29, y + 10, 6, 44, ink);
-            host.fill_rect(x + 24, y + 2, 16, 8, ink);
-            host.fill_rect(x + 28, y + 6, 8, 4, theme.menu_bg);
-            host.fill_rect(x + 14, y + 44, 36, 6, ink);
-            host.fill_rect(x + 14, y + 44, 8, 14, ink);
-            host.fill_rect(x + 42, y + 44, 8, 14, ink);
-        }
-        _ => {}
-    }
+    crate::icons::icon(host, theme, kind, x, y, theme.gold);
 }
 
 /// 菜单项：卡片按钮 + 描边 + bevel 凸起/凹陷 + 选中金底铆钉。

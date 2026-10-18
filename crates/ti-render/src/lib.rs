@@ -13,6 +13,7 @@
 pub mod canvas;
 pub mod font;
 pub mod framebuffer;
+pub mod icons;
 pub mod iso;
 pub mod primitives;
 pub mod shell;
@@ -20,6 +21,7 @@ pub mod text;
 pub mod theme;
 
 // 便捷重导出
+pub use icons::{ICON_COUNT, ICON_SIZE, icon, is_valid as is_valid_icon};
 pub use primitives::parchment_bg;
 pub use shell::{
     bar_slot, draw_body_text, draw_body_text_secondary, draw_title_text, hint_row, menu_icon,

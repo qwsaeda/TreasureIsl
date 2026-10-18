@@ -1428,6 +1428,110 @@ fn check_ui_redesign_tokens(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     errors.extend(ui_8pt_check(root));
     errors.extend(ui_palette_triple_check(root));
+    errors.extend(ui_icon_registry_check(root));
+    errors
+}
+
+/// S17.3 图标注册表完备性（`docs/process/10_ui_redesign.md` §5）：
+/// ① `assets/data/ui_icons.json` 恰好 14 枚、id 连续 0..13、name 唯一；
+/// ② 每枚 id 在 `ti-render/src/icons.rs` 有对应 `ICON_*` 分支（防注册了但没画）；
+/// ③ bindings 引用的图标名都在 `icons` 内（防悬空引用）。
+fn ui_icon_registry_check(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(text) = read_file(root, "assets/data/ui_icons.json") else {
+        errors.push("缺 assets/data/ui_icons.json（S17.3 图标注册表）".to_string());
+        return errors;
+    };
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&text) else {
+        errors.push("assets/data/ui_icons.json 解析失败".to_string());
+        return errors;
+    };
+    let Some(icons) = parsed.get("icons").and_then(serde_json::Value::as_array) else {
+        errors.push("ui_icons.json 缺 icons[]".to_string());
+        return errors;
+    };
+    if icons.len() != 14 {
+        errors.push(format!(
+            "ui_icons.json icons[] = {} 条，应 14 枚（10_ui_redesign §5）",
+            icons.len()
+        ));
+    }
+    let mut ids: Vec<u32> = Vec::new();
+    let mut names: Vec<String> = Vec::new();
+    for it in icons {
+        let (Some(name), Some(id)) = (
+            it.get("name").and_then(serde_json::Value::as_str),
+            it.get("id").and_then(serde_json::Value::as_u64),
+        ) else {
+            errors.push("ui_icons.json icons[] 缺 name/id 字段".to_string());
+            continue;
+        };
+        if let Ok(id_u32) = u32::try_from(id) {
+            ids.push(id_u32);
+        }
+        names.push(name.to_string());
+    }
+    for (want, got) in (0..14).zip(&ids) {
+        if want != *got {
+            errors.push(format!("ui_icons.json id 序列非连续 0..13：期望 {want} 实际 {got}"));
+        }
+    }
+    let mut sorted = names.clone();
+    sorted.sort();
+    sorted.dedup();
+    if sorted.len() != names.len() {
+        errors.push("ui_icons.json 图标名重复".to_string());
+    }
+    // ② 框架侧图标分支覆盖（`match kind { ICON_X => … }`）
+    let Some(icons_rs) = read_file(root, "crates/ti-render/src/icons.rs") else {
+        return errors;
+    };
+    for name in &names {
+        let const_name = if name == "monogram" {
+            "ICON_MONOGRAM_RING".to_string()
+        } else {
+            format!("ICON_{}", name.to_uppercase())
+        };
+        let has_const = icons_rs.contains(&format!("pub const {const_name}"));
+        let has_branch = icons_rs.contains(&format!("{const_name} =>"));
+        if !(has_const && has_branch) {
+            errors.push(format!(
+                "ui_icons.json 登记 `{name}` 但 ti_render::icons 缺 {const_name} 常量/绘制分支（S17.3：注册即须可画）"
+            ));
+        }
+    }
+    // ③ bindings 引用名在册
+    if let Some(bindings) = parsed.get("bindings") {
+        let mut refs: Vec<String> = Vec::new();
+        if let Some(arr) = bindings.get("index_menu").and_then(serde_json::Value::as_array) {
+            refs.extend(
+                arr.iter()
+                    .filter_map(|b| b.get("icon").and_then(serde_json::Value::as_str))
+                    .map(str::to_string),
+            );
+        }
+        if let Some(arr) = bindings.get("main_map_hud").and_then(serde_json::Value::as_array) {
+            refs.extend(
+                arr.iter()
+                    .filter_map(|b| b.get("icon").and_then(serde_json::Value::as_str))
+                    .map(str::to_string),
+            );
+        }
+        for key in ["select_map_row", "select_role_row", "main_map_landmark", "vs_boss_cap"] {
+            if let Some(n) =
+                bindings.get(key).and_then(|v| v.get("icon")).and_then(serde_json::Value::as_str)
+            {
+                refs.push(n.to_string());
+            }
+        }
+        for r in refs {
+            if !names.contains(&r) {
+                errors.push(format!(
+                    "ui_icons.json bindings 引用 `{r}`，但 icons[] 无此名（S17.3：禁悬空引用）"
+                ));
+            }
+        }
+    }
     errors
 }
 

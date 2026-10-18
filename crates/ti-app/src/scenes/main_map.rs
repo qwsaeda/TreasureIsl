@@ -2,7 +2,7 @@
 //!
 //! 事件分派的跳转结果（`Vs` / `Message`）由路由层 [`crate::scenes::enter_target`]
 //! 处理——那是跨场景的公共跳转点，不属于本场景。
-use ti_core::data::balance;
+use ti_core::data::{SceneLayout, balance};
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::map::{Dir, GridPos, MapTerrain};
@@ -117,6 +117,32 @@ fn handle_trade_sell(host: &mut dyn SceneHost, gid: u32) {
 }
 
 /// B 根治：建造走 `BuildManager` 结算（等级 + 抬上限），可玩路径与业务线对齐。
+/// HUD 经济按钮（面板 + 图标 + 28px 标签；S17.3 图标取 `ui_icons.json` 注册表，
+/// 宽度不足时自动退回纯文字居中）。
+fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, label_key: &str) {
+    let Some(r) = layout.extra.get(key).copied() else {
+        return;
+    };
+    if r.w <= 0 || r.h <= 0 {
+        return;
+    }
+    chrome::panel(host, r.x, r.y, r.w, r.h);
+    let label = i18n::sget(label_key);
+    let icon = chrome::hud_icon_def(key);
+    let (label_x, icon_x) = match icon.as_ref() {
+        Some(def) if r.w >= def.size + 8 => {
+            let ix = r.x + 8;
+            (ix + def.size + 8, Some((def.id, def.size, ix)))
+        }
+        _ => (r.x + (r.w - host.shell().hint_text_width_px(label)) / 2, None),
+    };
+    if let Some((id, size, ix)) = icon_x {
+        chrome::ui_icon(host, id, ix, r.y + (r.h - size) / 2, false);
+    }
+    let ly = r.y + (r.h - host.shell().hint_glyph_px()) / 2;
+    host.draw_hint_text(label, label_x, ly, chrome::COLOR_TEXT_ON_PARCH);
+}
+
 fn handle_build(host: &mut dyn SceneHost, kind: Building) {
     let b = match balance() {
         Ok(b) => b,
@@ -314,16 +340,7 @@ impl Scene for MainMapScene {
             ("hud_sell", "scene.main_map.hud.sell"),
             ("hud_build", "scene.main_map.hud.build"),
         ] {
-            let Some(r) = layout.extra.get(key).copied() else {
-                continue;
-            };
-            if r.w > 0 && r.h > 0 {
-                chrome::panel(host, r.x, r.y, r.w, r.h);
-                let label = i18n::sget(label_key);
-                let lx = r.x + (r.w - host.shell().hint_text_width_px(label)) / 2;
-                let ly = r.y + (r.h - host.shell().hint_glyph_px()) / 2;
-                host.draw_hint_text(label, lx, ly, chrome::COLOR_TEXT_ON_PARCH);
-            }
+            render_hud_button(host, &layout, key, label_key);
         }
 
         // 玩家棋子 + 据点 + BOSS 格（§4.3 代码绘制等距坐标，`chrome::iso_cell`）。

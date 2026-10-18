@@ -16,6 +16,7 @@ mod controls;
 mod exhaust;
 mod layout;
 mod strings;
+mod ui_icons;
 
 // re-export（保持 `ti_core::data::*` 公共 API 不变）
 pub use balance::balance;
@@ -23,6 +24,7 @@ pub use controls::controls;
 pub use exhaust::{ExhaustScenarios, exhaust, exhaust_key_counts};
 pub use layout::scenes;
 pub use strings::{pairs, strings};
+pub use ui_icons::{HudIcon, IconDef, IndexMenuIcon, UiIconBindings, UiIcons, icon_ids, ui_icons};
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -40,6 +42,8 @@ pub(crate) const SCENES_JSON: &str = include_str!("../../../../assets/data/scene
 /// 控件表（编译期内联；`scripts/gen_layout.py` 从 `ref/controls.json` 生成，
 /// S8.5 控件层数据源，`docs/impl/14_asset_enhancement.md`）。
 pub(crate) const CONTROLS_JSON: &str = include_str!("../../../../assets/data/controls.json");
+/// UI 图标注册表（编译期内联；S17.3 图标元数据 + 界面元素绑定）。
+pub(crate) const UI_ICONS_JSON: &str = include_str!("../../../../assets/data/ui_icons.json");
 
 /// 表级元数据键名：数字型的 `schema_version`，在 key→value 映射中跳过。
 pub(crate) const SCHEMA_VERSION_KEY: &str = "schema_version";

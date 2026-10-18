@@ -1,0 +1,38 @@
+{
+  "_comment": "S17.3 UI 图标注册表（10_ui_redesign.md §5 数值源）：icons = 14 枚图标元数据（id 锚定 ti_render::icons 的 ICON_* 常量，size = 逻辑边长，tint_* = theme 令牌名）；bindings = 界面元素 → 图标名 的游戏侧映射（改界面换图标只改本文件，不改 Rust 代码）。",
+  "icons": [
+    { "name": "compass", "id": 0, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "chest", "id": 1, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "anchor", "id": 2, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "gear", "id": 3, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "book", "id": 4, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "door", "id": 5, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "coin", "id": 6, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "sword", "id": 7, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "castle", "id": 8, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "beacon", "id": 9, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "heart", "id": 10, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "flag", "id": 11, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "map", "id": 12, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" },
+    { "name": "monogram", "id": 13, "size": 48, "tint_default": "gold", "tint_selected": "text_on_wood" }
+  ],
+  "bindings": {
+    "index_menu": [
+      { "menu_index": 0, "icon": "compass" },
+      { "menu_index": 1, "icon": "chest" },
+      { "menu_index": 2, "icon": "anchor" },
+      { "menu_index": 3, "icon": "gear" },
+      { "menu_index": 4, "icon": "book" },
+      { "menu_index": 5, "icon": "door" }
+    ],
+    "select_map_row": { "icon": "map" },
+    "select_role_row": { "icon": "monogram", "label": "first_letter" },
+    "main_map_hud": [
+      { "hud_key": "hud_trade", "icon": "coin" },
+      { "hud_key": "hud_sell", "icon": "coin" },
+      { "hud_key": "hud_build", "icon": "castle" }
+    ],
+    "main_map_landmark": { "icon": "beacon" },
+    "vs_boss_cap": { "icon": "sword" }
+  }
+}

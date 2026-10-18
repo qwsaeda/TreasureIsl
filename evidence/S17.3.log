@@ -1,0 +1,48 @@
+S17.3 图标集（14 枚代码矢量 + 注册表 + 四场景接线）验收
+
+--- [1] 产物 ---
+ ① 框架层 `crates/ti-render/src/icons.rs`（新）：14 枚图标 = 48×48 盒内矩形组合
+    （compass/chest/anchor/gear/book/door/coin/sword/castle/beacon/heart/flag/map/
+    monogram_ring），公开 ICON_* id 常量 + ICON_COUNT=14 + ICON_SIZE=48 + is_valid；
+    未知 id 静默 0 墨点（不 panic 不留坑）；`ring()` 私有助手画环。
+    `shell::menu_icon` 改为薄转发（旧 6 枚内联实现删除，零重复绘制逻辑）。
+    lib.rs 导出 `icons` 模块 + `icon/is_valid_icon/ICON_COUNT/ICON_SIZE` 便捷重导出。
+ ② 数据层 `assets/data/ui_icons.json`（新）+ `ti-core/src/data/ui_icons.rs`（新解析）：
+    icons[] 14 枚元数据（name/id/size/tint_default/tint_selected）；
+    bindings[] 界面元素 → 图标名（index_menu 6 项 / select_map_row map /
+    select_role_row monogram / main_map_hud coin·coin·castle / main_map_landmark beacon /
+    vs_boss_cap sword）；include_str! 内联 + OnceLock 缓存 + 语法错误即 LoadError。
+ ③ 接线（4 场景，全部注册表驱动，尺寸/tint 走数据）：
+    index：菜单图标列改 `chrome::index_menu_icon_def(i)`（选中 tint = text_on_wood）；
+    select_role：新增 `icon.x=144` 数据键 + 圆环 + 角色名首字母居中叠画（替代色块头像）；
+    select_map：新增 `icon.x=144` + 行首折叠地图图标；
+    main_map：HUD 三按钮图标+文字并排（宽度不足自动退回纯文字居中，抽出 render_hud_button）。
+ ④ chrome 新增 `ui_icon(host, id, x, y, selected)` + `icon_def/index_menu_icon_def/
+    hud_icon_def`（EXP-061 全路径收敛：0 处 `ti_core::` 内联路径）。
+ ⑤ 测试：ti-render/tests/icon_set.rs（3 项）—— 14 枚逐枚墨点 > 40（0 空图标）/
+    tint 真生效（同形状换色）/ 越界 id 0 墨点；ti-core 注册表完备性由 doccheck2 断言。
+ ⑥ doccheck2 第 24 项 ui-redesign-tokens 增 ui_icon_registry_check：恰好 14 条 +
+    id 连续 0..13 + name 唯一 + 每枚在 icons.rs 有 ICON_* 常量与绘制分支（防注册未画）
+    + bindings 引用无悬空名。
+ ⑦ 文档：08_layout_design §4.2 增 select_role/select_map 图标列行（icon {x:144}）。
+
+--- [2] 负例/缺陷验证（断言按设计抓到了真问题）---
+  · 断言抓 ①：ui_icons.json 登记 `monogram` 但 icons.rs 常量名是 ICON_MONOGRAM_RING
+    → ui_icon_registry_check 报 ERROR → 断言加别名映射修正（monogram ↔ ICON_MONOGRAM_RING）；
+  · 断言抓 ②：新增 4 处 `ti_core::data::ui_icons()` 内联全路径 → EXP-061 断言报错
+    → chrome 加 3 个取用函数收敛（这是既有断言在工作，非新增门禁）；
+  · 编译期抓 ③：main_map::render 因新增图标块 105/100 行超限 → 抽 render_hud_button。
+
+--- [3] 判据实跑 ---
+$ cargo test -q -p ti-render --test icon_set   → 3 passed（14 枚逐枚有墨点）
+$ cargo test -q --workspace                     → 86 批次 0 failed
+$ cargo clippy --workspace --all-targets -- -D warnings → 0
+$ cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless,ti-platform/hd-8bit -- -D warnings → 0
+$ cargo clippy --target wasm32-unknown-unknown -p ti-app --features wasm-shell --all-targets -- -D warnings → 0
+$ cargo run -q -p ti-tools --bin doccheck / doccheck2 . → 0 error(s) / 24 项 0 error
+$ powershell -File scripts/gate.ps1 → === gate: TreasureIsl (22 items) === === gate: 0 failure(s) ===
+
+--- [4] 判定 ---
+  14 枚图标 0 空图标（逐枚墨点实测）+ tint 生效 + 越界静默 + 注册表三维完备（条数/id/分支/
+  绑定）+ 四场景真图标 + 三套基线重生成 diff=0 + 全测试/clippy/gate 0 失败
+  → S17.3 verified。视觉终态留 S17.5 用户验收；下一任务 S17.4 动效。
