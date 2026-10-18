@@ -1,0 +1,31 @@
+S17.1 UI 重设计规格（航海夜·精修）验收
+
+--- [1] 产物 ---
+docs/process/10_ui_redesign.md 落盘（13 色令牌表含 8-bit→RGB565 换算（脚本口径，rgb565 公式）
++ 8pt 栅格版面增量 22 项 + 字号 4 档 + 动效 4 参数 + 图标 14 项 + 对比度 AA 表 + 验收锚点 4 条）；
+色值全部按 `((r&0xF8)<<8)|((g&0xFC)<<3)|(b>>2)` 口径计算（与 scripts/rgb565.py 同式）：
+  bg0 #0C0E16→0x0865 / bg1 #151827→0x10C9 / surface #1B2033→0x190C / bevel_hi #262C45→0x2171 /
+  stroke #39415E→0x3A17 / gold #FFC857→0xFE55 / blue #4FC3F7→0x4E3D / text_hi #F4F1E8→0xF7BA /
+  text_mid #9AA3C0→0x9D30 / text_lo #5A6178→0x5B1E / danger #FF6B5E→0xFB57 /
+  success #69D58C→0x6EA3 / info #45B7D8→0x45B6
+
+--- [2] 登记 ---
+plan/ledger.yaml 新增 S17.1~S17.5（130 任务）；S15.6 加「被 S17 取代」标注 + blocked_by；
+docs/README.md process 卷 + AGENTS.md 路由表各登记 10_ui_redesign.md 行。
+
+--- [3] 判据实跑 ---
+$ cargo run -q -p ti-tools --bin doccheck
+  doccheck: 118 docs, 38 facts, 97 experiences, 125 task refs, 4 assertions, 0 error(s)
+  （10_ui_redesign.md 的 S16.x 占位写法触发任务引用检查 → 已改措辞复跑 0 error）
+$ cargo run -p ti-tools --bin doccheck2 .
+  doccheck2: 0 error(s) across 23 audit-codified checks
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml
+  ledger: 130 tasks, 118 verified, 0 error(s)
+
+--- [4] 用户批准留痕 ---
+2026-10-18 用户在方向选择拍板「A 航海夜·精修」（选项式提问回复），随后指令
+「loop完你能做的」= 规格批准并授权按波次实施。S17.1 判据 = 规格落盘 + 登记 + 文档 0 error
++ 用户明确批准 → 全命中。
+
+--- [5] 判定 ---
+S17.1 verified（下一任务 S17.2 令牌+版面落地）。
