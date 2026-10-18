@@ -139,16 +139,18 @@ fn distinct_scenes_produce_distinct_frames() {
 #[test]
 fn index_scene_renders_real_glyphs_for_title() {
     let pixels = render_index();
-    // S15 v2：主菜单文字改用深墨（`chrome::COLOR_TEXT_ON_PARCH`，0x20A1）而非默认白墨
-    // （0xFFFF），压羊皮纸浅块上才清晰（evidence/ui_concept/review_all.txt 第 2 条）。
-    // 判定 = 深墨/象牙金/白墨任一出现 > 10 像素（标题象牙金 + 正文深墨）。
-    let parch = 0x20A1;
-    let wood_text = 0xFF77;
-    let ink_pixels =
-        pixels.iter().filter(|&&p| p == 0xFFFF || p == parch || p == wood_text).count();
+    // S17.2：墨色判定走 theme 令牌（`COLOR_TEXT_ON_PARCH` 正文墨 / `COLOR_TEXT_ON_WOOD` 标题墨，
+    // 航海夜·精修 v2），不再硬编码旧色值；判定 = 任一墨色出现 > 10 像素。
+    let ink_pixels = pixels
+        .iter()
+        .filter(|&&p| {
+            p == ti_app::scenes::chrome::COLOR_TEXT_ON_PARCH
+                || p == ti_app::scenes::chrome::COLOR_TEXT_ON_WOOD
+        })
+        .count();
     assert!(
         ink_pixels > 10,
-        "主菜单标题+菜单项应渲染出真字形（深墨/象牙金/白墨像素数 {ink_pixels} > 10）"
+        "主菜单标题+菜单项应渲染出真字形（theme 墨色像素数 {ink_pixels} > 10）"
     );
 }
 

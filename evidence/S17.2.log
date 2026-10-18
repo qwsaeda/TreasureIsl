@@ -1,0 +1,54 @@
+S17.2 主题 + 版面落地（航海夜·精修 v2）验收
+
+--- [1] 改动面 ---
+ ① 色板 v2 三方同步（数值源 = docs/process/10_ui_redesign.md §3 表，8-bit→RGB565 脚本口径）：
+    crates/ti-render/src/theme.rs Theme::DEFAULT 22 色值更新（bg0 #0C0E16→0x0865 /
+    gold #FFC857→0xFE55 / blue #4FC3F7→0x4E3D / surface #1B2033→0x190C / text_hi→0xF7BA /
+    secondary→0x9D30 / player=success #69D58C→0x6EA3 / danger #FF6B5E→0xFB57 /
+    info=slot #45B7D8→0x45B6 / stroke #39415E→0x3A17 等）；
+    assets/data/theme.json palette 22 值同值镜像（运行时数据源）；
+    chrome::COLOR_* 转发 Theme::DEFAULT 自动同步（零改）。
+ ② 版面 8pt 整备（scenes.json v2）：title y6→8/h90→96；index list x90→96 y400→392 w900→896
+    row_h220→224 item_h170→168 text_x240→248 icon x150→144；select_role row_h300→304
+    item_h260→256；select_map row_h340→336；saveload row_h304 item_h248 gold_x820→816；
+    main_map hud y150→152 h120→128 按钮 w140→136 sell x696→704 按钮 y166→168（增量，
+    规格表未列，8pt 收口一并整备）；vs hp x60→64/x580→576 y170→168 w440→448 rounds y420→416；
+    message body x96 y224 w896。grid.*/棋子 size/portrait_zones = 业务几何不动。
+ ③ 文档同步：08_layout_design.md §1 约束/§2 色板表 v2/§4 七场景表值 = scenes.json 同值（含不变式
+    重算：index 首块顶 352/末块底 1640；vs 双条 64..512/576..1024 gap=64；message 底 1704）；
+    10_ui_redesign.md §3 表 success/text_hi/text_lo 行与实现对齐。
+ ④ doccheck2：check_scene_layout_fidelity 15 锚点改 v2 值；新增第 24 项
+    check_ui_redesign_tokens（① scenes.json 8pt 遍历含豁免集 grid.*/size/portrait_zones/屏心540；
+    ② theme.json == Theme::DEFAULT 逐字段；③ 10_ui_redesign §3 表 RGB565 列 == theme.json
+    经 COLOR_ 常量映射，反引号精确匹配防子串碰撞）。
+ ⑤ 测试重锚：render_intent 6 个版面测试字面量全改 v2（含不变式 102→108/360→352/1630→1640/
+    血条带 168..216）；render_parity 墨色判定改 theme 常量（COLOR_TEXT_ON_PARCH/
+    COLOR_TEXT_ON_WOOD）不再硬编码旧色。
+ ⑥ 三套基线重生成：删 assets/{render_baseline,forward_baseline,hd_baseline}/*.png →
+    跑 render_snapshot/render_snapshot_forward/visual_regression → Regenerated → 复跑 0 diff。
+
+--- [2] 负例验证（断言先打负例再还原）---
+  8pt：scenes.json index y 392→390 → doccheck2 3 error（8pt + 锚点 + 表对账同时报）→ 还原 0；
+  色板：theme.json gold 0xFE55→0xF5A8 → 2 error（json≠code + 文档≠json 双报）→ 还原 0；
+  文档表：10_ui_redesign §3 gold 0xFE55→0xF5A8 → 1 error（文档≠json）→ 还原 0。
+
+--- [3] 判据实跑 ---
+$ cargo test -q --workspace            → 86 批次 0 failed
+$ cargo fmt --all -- --check          → 0
+$ cargo clippy --workspace --all-targets -- -D warnings → 0
+$ cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless,ti-platform/hd-8bit -- -D warnings → 0
+$ cargo clippy --target wasm32-unknown-unknown -p ti-app --features wasm-shell --all-targets -- -D warnings → 0
+$ cargo run -q -p ti-tools --bin doccheck      → 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck2 .   → 0 error(s) across 24 audit-codified checks
+  （含 ui-redesign-tokens 24 项 + baseline-mirror-identity 三套镜像恒等 0 违例）
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml → 130 tasks, 0 error(s)
+$ cargo test -p ti-app --test render_snapshot --test render_snapshot_forward --test visual_regression
+  → 重生成后 3×「test result: ok」（基线 diff=0 复跑确认）
+$ powershell -File scripts/gate.ps1
+  === gate: TreasureIsl (22 items) ===
+  === gate: 0 failure(s) ===
+
+--- [4] 判定 ---
+  08_layout_design.md 表值 == scenes.json（doccheck2 对账 0）、theme.json == Theme::DEFAULT
+  （三方对账 0）、三套基线镜像恒等 + diff=0、全测试/clippy/文档 0 失败 → S17.2 verified。
+  视觉终态（新色板观感）留 S17.5 用户验收；S17.3（图标集）为下一任务。

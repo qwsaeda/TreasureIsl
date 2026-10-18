@@ -706,46 +706,47 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         return vec!["assets/data/scenes.json 不存在，无法校验布局（S14）".to_string()];
     };
 
-    // 逐场景锚定 **1080 现代版面**（`08_layout_design.md` §4 / `scenes.json`，S16 渲染线）：
-    // 公共：标题条 h=90、提示/状态行 y=1840、列表 x=90 w=900
-    // index: list y=400 row_h=220 item_h=170 highlight_offset=40（S15.6 QB101 六行重分布），status y=1840
-    // select_role: row_h=300；select_map: row_h=340（S15.6 QB103，3 地图卡）；saveload: row_h=300 gold_x=820
-    // vs: player_hp 60..500 / boss_hp 580..1020（S15.6 QB120 解重叠）y=170 w=440 h=48
-    // main_map: hud y=150 h=120（不与等距区 grid.y0=520 重叠）
+    // 逐场景锚定 **1080 现代版面**（`08_layout_design.md` §4 / `scenes.json`，S16 渲染线；
+    // S17.2 起锚点 = 航海夜·精修 v2 8pt 值，`docs/process/10_ui_redesign.md` §4 增量）：
+    // 公共：标题条 h=96、提示/状态行 y=1840、列表 x=96 w=896
+    // index: list y=392 row_h=224 item_h=168 highlight_offset=40，status y=1840
+    // select_role: row_h=304；select_map: row_h=336；saveload: row_h=304 gold_x=816
+    // vs: player_hp 64..512 / boss_hp 576..1024 y=168 w=448 h=48
+    // main_map: hud y=152 h=128（不与等距区 grid.y0=520 重叠）
     let anchors: &[(&str, &str, &str)] = &[
-        ("\"index\"", "\"h\": 90", "index 标题条高度 = 90（§4.1，1080）"),
-        ("\"index\"", "\"y\": 400", "index 列表基线 y = 400（§4.1，1080，S15.6 QB101 六行重分布）"),
-        ("\"index\"", "\"row_h\": 220", "index 行高 = 220（§4.1，1080，S15.6 QB101）"),
-        ("\"index\"", "\"highlight_offset\": 40", "index 高亮上移 = 40（§4.1，1080）"),
-        ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，1080，S15.6 二轮 retune）"),
+        ("\"index\"", "\"h\": 96", "index 标题条高度 = 96（§4.1，S17.2 8pt）"),
+        ("\"index\"", "\"y\": 392", "index 列表基线 y = 392（§4.1，S17.2 8pt）"),
+        ("\"index\"", "\"row_h\": 224", "index 行高 = 224（§4.1，S17.2 8pt）"),
+        ("\"index\"", "\"highlight_offset\": 40", "index 高亮上移 = 40（§4.1，S17.2 8pt）"),
+        ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，S17.2 8pt）"),
         (
             "\"select_role\"",
-            "\"row_h\": 300",
-            "select_role 行高 = 300（§4.2，5 角色卡，S15.6 二轮 retune）",
+            "\"row_h\": 304",
+            "select_role 行高 = 304（§4.2，5 角色卡，S17.2 8pt）",
         ),
-        (
-            "\"select_map\"",
-            "\"row_h\": 340",
-            "select_map 行高 = 340（§4.2，3 地图卡，S15.6 QB103）",
-        ),
-        ("\"saveload\"", "\"row_h\": 300", "saveload 行高 = 300（§4.6，1080，S15.6 二轮 retune）"),
+        ("\"select_map\"", "\"row_h\": 336", "select_map 行高 = 336（§4.2，3 地图卡，S17.2 8pt）"),
+        ("\"saveload\"", "\"row_h\": 304", "saveload 行高 = 304（§4.6，S17.2 8pt）"),
         (
             "\"saveload\"",
-            "\"gold_x\": 820",
-            "saveload 金字号列 x = 820（§4.6，1080，S15.6 QA105/QB122 左移防越屏）",
+            "\"gold_x\": 816",
+            "saveload 金字号列 x = 816（§4.6，S17.2 8pt，QA105/QB122 左移防越屏）",
         ),
         (
             "\"vs\"",
-            "\"w\": 440",
-            "vs 血条宽 = 440（§4.4，1080，S15.6 QB120 解重叠 60..500/580..1020）",
+            "\"w\": 448",
+            "vs 血条宽 = 448（§4.4，S17.2 8pt，QB120 解重叠 64..512/576..1024）",
         ),
-        ("\"vs\"", "\"h\": 48", "vs 血条高 = 48（§4.4，1080）"),
-        ("\"main_map\"", "\"y\": 150", "main_map HUD y = 150（§4.3，1080，与等距区 520 不重叠）"),
-        ("\"main_map\"", "\"h\": 120", "main_map HUD h = 120（§4.3，1080）"),
+        ("\"vs\"", "\"h\": 48", "vs 血条高 = 48（§4.4，8pt）"),
+        (
+            "\"main_map\"",
+            "\"y\": 152",
+            "main_map HUD y = 152（§4.3，S17.2 8pt，与等距区 520 不重叠）",
+        ),
+        ("\"main_map\"", "\"h\": 128", "main_map HUD h = 128（§4.3，S17.2 8pt）"),
         (
             "\"main_map\"",
             "\"y0\": 520",
-            "main_map 等距棋盘 grid.y0 = 520（§4.3，1080，S15.6 QB105 棋盘下移）",
+            "main_map 等距棋盘 grid.y0 = 520（§4.3，业务几何非 8pt 版面令牌）",
         ),
         ("\"message\"", "\"h\": 1480", "message 正文区 h = 1480（§4.5，FIND-026 区间约束）"),
     ];
@@ -1419,6 +1420,200 @@ fn check_std_traits_matrix(root: &Path) -> Vec<String> {
     errors
 }
 
+/// UI 重设计令牌锁（S17.2，`docs/process/10_ui_redesign.md` §3/§4/§8.1）：
+/// ① `scenes.json` 全部版面坐标 8pt 整除（业务几何 `grid.*`/棋子 `size`/`portrait_zones` 整棵豁免）；
+/// ② 色板三方恒等：`assets/data/theme.json`（运行时数据源）== `ti-render/src/theme.rs`
+///    `Theme::DEFAULT`（代码锚点）== `docs/process/10_ui_redesign.md` §3 令牌表（人读镜像）。
+fn check_ui_redesign_tokens(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    errors.extend(ui_8pt_check(root));
+    errors.extend(ui_palette_triple_check(root));
+    errors
+}
+
+/// ① 8pt 栅格：遍历 scenes.json 各场景标量（豁免业务几何、动态落区与屏心锚点 540）。
+fn ui_8pt_walk(
+    obj: &serde_json::Value,
+    in_exempt: bool,
+    key: &str,
+    scene: &str,
+    errors: &mut Vec<String>,
+) {
+    let exempt_by_key =
+        matches!(key, "x0" | "y0" | "tile_w" | "tile_h" | "size" | "portrait_zones");
+    match obj {
+        serde_json::Value::Object(map) => {
+            for (k, v) in map {
+                let next_exempt = in_exempt || exempt_by_key || k == "portrait_zones";
+                ui_8pt_walk(v, next_exempt, k, scene, errors);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for it in items {
+                ui_8pt_walk(it, in_exempt || exempt_by_key, key, scene, errors);
+            }
+        }
+        serde_json::Value::Number(n) => {
+            if in_exempt || exempt_by_key {
+                return;
+            }
+            if let Some(v) = n.as_i64() {
+                if v % 8 != 0 && v != 540 {
+                    errors.push(format!(
+                        "scenes.json {scene}: `{key}` = {v} 非 8pt 栅格（10_ui_redesign §4：版面坐标 8 整除；\
+                         业务几何 grid.*/size、portrait_zones 与屏心锚点 540 已豁免）"
+                    ));
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+/// ① 8pt 栅格入口（scenes.json 各场景）。
+fn ui_8pt_check(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(json_text) = read_file(root, "assets/data/scenes.json") else {
+        return errors;
+    };
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(&json_text) else {
+        return errors;
+    };
+    let Some(scenes) = json.as_object() else {
+        return errors;
+    };
+    for (key, val) in scenes {
+        if key == "schema_version" {
+            continue;
+        }
+        ui_8pt_walk(val, false, key, key, &mut errors);
+    }
+    errors
+}
+
+/// ② 色板三方恒等：`theme.json` == `Theme::DEFAULT` == `10_ui_redesign.md` §3 表。
+fn ui_palette_triple_check(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(theme_json_text) = read_file(root, "assets/data/theme.json") else {
+        return errors;
+    };
+    let Some(theme_rs) = read_file(root, "crates/ti-render/src/theme.rs") else {
+        return errors;
+    };
+    // theme.rs DEFAULT 块：`field: 0xNNNN,`
+    let mut code_map: Vec<(String, u16)> = Vec::new();
+    if let Some(start) = theme_rs.find("pub const DEFAULT") {
+        let end =
+            theme_rs[start..].find("black: 0x0000").map_or(theme_rs.len(), |o| start + o + 16);
+        for line in theme_rs[start..end].lines() {
+            let Some((name, val)) = line.trim().trim_end_matches(',').split_once("0x") else {
+                continue;
+            };
+            let field = name.trim().trim_end_matches(':').to_string();
+            if val.len() == 4 && field.chars().all(|c| c.is_ascii_lowercase() || c == '_') {
+                if let Ok(v) = u16::from_str_radix(val, 16) {
+                    code_map.push((field, v));
+                }
+            }
+        }
+    }
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&theme_json_text) else {
+        return errors;
+    };
+    let Some(palette) = parsed.get("palette").and_then(serde_json::Value::as_object) else {
+        return errors;
+    };
+    for (field, val) in palette {
+        let Some(json_v) = val
+            .as_str()
+            .and_then(|s| s.strip_prefix("0x"))
+            .and_then(|h| u16::from_str_radix(h, 16).ok())
+        else {
+            continue;
+        };
+        match code_map.iter().find(|(f, _)| f == field) {
+            Some((_, code_v)) if *code_v != json_v => {
+                errors.push(format!(
+                    "theme.json `{field}` = 0x{json_v:04X} 但 Theme::DEFAULT = 0x{code_v:04X}（S17.2：theme.json 运行时数据源须与代码锚点恒等）"
+                ));
+            }
+            None => errors.push(format!(
+                "theme.json palette 字段 `{field}` 在 Theme::DEFAULT 无对应（S17.2 三方对账）"
+            )),
+            _ => {}
+        }
+    }
+    // 文档 §3 表：`| `token` | `#hex` | `0xNNNN` | `COLOR_X` / … |` → RGB565 列 vs theme.json
+    // （经 COLOR_ 常量名映射到 theme 字段；反引号精确匹配防子串碰撞）
+    let Some(doc) = read_file(root, "docs/process/10_ui_redesign.md") else {
+        return errors;
+    };
+    let mut doc_errors = ui_doc_table_check(&doc, palette);
+    errors.append(&mut doc_errors);
+    errors
+}
+
+/// ②-3 文档 §3 令牌表（`10_ui_redesign.md`）RGB565 列 vs `theme.json`（人读镜像漂移检测）。
+fn ui_doc_table_check(
+    doc: &str,
+    palette: &serde_json::Map<String, serde_json::Value>,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    let color_to_field: &[(&str, &str)] = &[
+        ("COLOR_PARCH_DARK", "parch_dark"),
+        ("COLOR_BG", "bg"),
+        ("COLOR_WOOD", "wood"),
+        ("COLOR_MENU_BORDER", "menu_border"),
+        ("COLOR_TITLE_BAR", "title_bar"),
+        ("COLOR_GOLD", "gold"),
+        ("COLOR_LANDMARK", "landmark"),
+        ("COLOR_TEXT_ON_WOOD", "text_on_wood"),
+        ("COLOR_GOLD_GLOW", "gold_glow"),
+        ("COLOR_GOLD_BRIGHT", "gold_bright"),
+        ("COLOR_SELECTED", "selected"),
+        ("COLOR_MENU_BG", "menu_bg"),
+        ("COLOR_BEVEL_HI", "bevel_hi"),
+        ("COLOR_HILITE", "hilite"),
+        ("COLOR_SECONDARY", "secondary"),
+        ("COLOR_PLAYER", "player"),
+        ("COLOR_DANGER", "danger"),
+        ("COLOR_BEVEL_SHADOW", "bevel_shadow"),
+        ("COLOR_TEXT_ON_PARCH", "text_on_parch"),
+    ];
+    for line in doc.lines() {
+        let parts: Vec<&str> = line.split('`').collect();
+        // §3 表行：parts[1]=token, parts[3]=8-bit hex, parts[5]=RGB565
+        let Some(rgb) = parts.get(5) else {
+            continue;
+        };
+        if !rgb.starts_with("0x") || rgb.len() != 6 {
+            continue;
+        }
+        let Ok(rgb565) = u16::from_str_radix(&rgb[2..], 16) else {
+            continue;
+        };
+        let Some((_, field)) =
+            color_to_field.iter().find(|(c, _)| line.contains(&format!("`{c}`")))
+        else {
+            continue;
+        };
+        let Some(expected) = palette
+            .get(&field.to_string())
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.strip_prefix("0x"))
+            .and_then(|h| u16::from_str_radix(h, 16).ok())
+        else {
+            continue;
+        };
+        if expected != rgb565 {
+            errors.push(format!(
+                "10_ui_redesign.md §3 表 `{field}` = 0x{rgb565:04X} 但 theme.json = 0x{expected:04X}（文档表 = 数值镜像，须同步）"
+            ));
+        }
+    }
+    errors
+}
+
 /// 渲染框架分离收口防复发（S15.10，`docs/process/08_render_arch.md` §2 契约）：
 /// ① `MenuShell::fill_rect` 不得自带像素循环（须转发 `ti_render` 帧缓冲）；
 /// ② `ti-render` 不得依赖 `ti-platform`（框架可复用到其他游戏 = 依赖单向且不反向）；
@@ -1495,9 +1690,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_no_ti_core_fullpath(&root));
     all_errors.extend(check_std_traits_matrix(&root));
     all_errors.extend(check_render_framework_boundary(&root));
+    all_errors.extend(check_ui_redesign_tokens(&root));
 
     println!(
-        "doccheck2: {} error(s) across 23 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary)",
+        "doccheck2: {} error(s) across 24 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens)",
         all_errors.len()
     );
     for err in &all_errors {

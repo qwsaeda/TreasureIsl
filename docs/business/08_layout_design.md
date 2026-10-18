@@ -17,7 +17,7 @@
 |---|---|---|
 | 呈现坐标系 | **1080×1920**（9:16 竖屏） | 唯一权威呈现坐标系（`menu_shell::LOGICAL_W_I32/H_I32` = 1080/1920、`gfx::CANVAS_W/H`）。所有绘制原语入参都是 1080 空间坐标 |
 | 业务逻辑网格 | 无像素绑定 | 移动/战斗/经济跑在 `ti_core` 的网格与状态上（`GridPos` 等），**不携带像素坐标**；逻辑与渲染分离（`08_render_arch.md` 契约 4） |
-| 版式骨架 | 1080 现代栅格 | 标题条 h=90、外框 12px 边距（`chrome::wood_frame`）、底部提示行 y=1840；**不再有 16px 网格对齐约束**（176 时代遗留，已废） |
+| 版式骨架 | 1080 现代栅格 | 标题条 h=96、外框 12px 边距（`chrome::wood_frame`）、底部提示行 y=1840；S17.2 起版面坐标 8pt 整除（`10_ui_redesign.md` §4 增量，`grid.*` 业务几何除外）；**不再有 16px 网格对齐约束**（176 时代遗留，已废） |
 | 渲染路径 | 纯代码绘制 | 背景层 + 面板矩形 + 文本 + 进度条 + 代码棋子；**不依赖** PCX 精灵做定位（棋子/据点/BOSS 全走代码绘制） |
 | 主地图 | 代码等距菱形格 + 代码棋子 | 棋盘 = `chrome::iso_cell` 按 `grid.*` 计算的菱形格（`terrain_atlas` legacy 瓦片已退出）；玩家/据点/BOSS = 代码色块 |
 | 字号 | 正文/标题 TTF 44px | `menu_shell::FONT_SIZE_PX` = 44；位图字体回退 advance `GLYPH_ADVANCE` = 12 |
@@ -33,27 +33,27 @@
 > 判为最廉价（见 `review_render_index.txt`）。用 `scripts/rgb565.py` 从 8-bit hex 换算
 > R11G5B10（round 量化）。
 
-| 角色 | hex | RGB565 | 常量（`menu_shell`） | 用途 |
+| 角色 | hex | RGB565 | 常量（`chrome` theme 令牌） | 用途 |
 |---|---|---|---|---|
-| 深底 | `#12141C` | `0x10A3` | `COLOR_PARCH_DARK` | 场景底色、标题条内块 |
-| 深底亮 | `#1E2230` | `0x2106` | `COLOR_PARCH_LIGHT` | 背景顶部层次 |
-| 卡片描边 | `#3A4058` | `0x3A0B` | `COLOR_WOOD` | 整屏外框、标题条外框 |
-| 金高光 | `#F5B841` | `0xF5A8` | `COLOR_GOLD` / `COLOR_LANDMARK` | 高光点缀、据点标记 |
-| 航海蓝亮 | `#42A5F5` | `0x453E` | `COLOR_GOLD_GLOW` | 选中项内高光 |
-| 航海蓝 | `#1E88E5` | `0x245C` | `COLOR_GOLD_BRIGHT` | 标题条 accent 条、选中项底 |
-| 卡片底 | `#242838` | `0x2147` | `COLOR_MENU_BG` | 菜单卡片面、正文/提示面板 |
-| 卡片描边 | `#3A4058` | `0x3A0B` | `COLOR_MENU_BORDER` | 卡片/面板细边 |
-| 卡片亮 | `#30364A` | `0x31A9` | `COLOR_BEVEL_HI` | 卡片顶部/左侧（凸起） |
-| 暗角 | `#0A0C12` | `0x0862` | `COLOR_BEVEL_SHADOW` | 卡片底部/右侧（凹陷） |
-| 槽位底 | `#2A3350` | `0x2967` | `COLOR_HILITE` | 血条/进度条槽底（`chrome::bar_slot`） |
-| 副文字 | — | `0x8C93` | `COLOR_SECONDARY` | 状态/提示行次级文字 |
-| 正文白字 | — | `0xFFFF` | `chrome::COLOR_TEXT_ON_PARCH` | 深色底上的正文/提示面板白字（S15 深色改版；QA005 三方对齐 = 代码/测试/文档） |
-| 标题象牙金 | `#FFF0C0` | `0xFF77` | `chrome::COLOR_TEXT_ON_WOOD` | 标题条文字 |
-| 玩家青绿 | `#26A69A` | `0x2D33` | `COLOR_PLAYER` | 玩家血条、玩家棋子 |
-| BOSS 血红 | `#EF5350` | `0xEAAA` | `COLOR_DANGER` | BOSS 血条、BOSS 格 |
+| 深底 bg0 | `#0C0E16` | `0x0865` | `COLOR_PARCH_DARK` / `COLOR_BG` | 场景底色、标题条内块、bevel 凹陷 |
+| 深底亮 bg1 | `#151827` | `0x10C9` | `COLOR_PARCH_LIGHT` | 背景顶部层次 |
+| 描边 stroke | `#39415E` | `0x3A17` | `COLOR_WOOD` / `COLOR_MENU_BORDER` / `COLOR_TITLE_BAR` | 整屏外框、卡片细边、标题条外框 |
+| 金高光 gold | `#FFC857` | `0xFE55` | `COLOR_GOLD` / `COLOR_LANDMARK` / `COLOR_TEXT_ON_WOOD` | 主强调、据点标记、标题墨 |
+| 航海蓝 blue | `#4FC3F7` | `0x4E3D` | `COLOR_GOLD_GLOW` / `COLOR_GOLD_BRIGHT` / `COLOR_SELECTED` | 交互高亮、选中项底 |
+| 卡片底 surface | `#1B2033` | `0x190C` | `COLOR_MENU_BG` | 菜单卡片面、正文/提示面板 |
+| 卡片亮 bevel_hi | `#262C45` | `0x2171` | `COLOR_BEVEL_HI` | 卡片顶部/左侧（凸起） |
+| 槽位底 info | `#45B7D8` | `0x45B6` | `COLOR_HILITE` | 血条/进度条槽底（`chrome::bar_slot`） |
+| 副文字 text_mid | `#9AA3C0` | `0x9D30` | `COLOR_SECONDARY` | 状态/提示行次级文字（深底上 AA ≈7.1:1；置灰/锁定态复用本 token） |
+| 正文墨 text_hi | `#F4F1E8` | `0xF7BA` | `chrome::COLOR_TEXT_ON_PARCH` | 深色底上的正文/提示面板墨字（QA005 三方对齐 = 代码/测试/文档） |
+| 玩家绿 success | `#69D58C` | `0x6EA3` | `COLOR_PLAYER` | 玩家血条、玩家棋子 |
+| BOSS 红 danger | `#FF6B5E` | `0xFB57` | `COLOR_DANGER` | BOSS 血条、BOSS 格 |
+
+> **S17.1 航海夜·精修 v2**（`docs/process/10_ui_redesign.md` §3 令牌表为数值源）：底色加深拉层次、
+> 金/蓝提亮、次级文字提亮达 AA；旧表（`#12141C`/`#F5B841`/`#1E88E5` 系）随 S17.2 作废。
+> 对比度表与禁用态口径见 `10_ui_redesign.md` §3.1/§5。
 
 **场景底色**（S15.6 B1 裁决①）：运行时画布底色 = `chrome` 的 `COLOR_PARCH_DARK` 深底
-`#12141C`（`0x10A3`，航海图深底口径）；`scenes.json` 的 `bg` 键已删（运行时零消费，
+`#0C0E16`（`0x0865`，航海夜 v2 底色口径）；`scenes.json` 的 `bg` 键已删（运行时零消费，
 旧 `65440` 浅米白与实绘深底相反，三方失配 QA029）。`render_intent` 清屏/密度判据底色
 基准 = `COLOR_PARCH_DARK`（QA029 重锚）。
 
@@ -73,13 +73,13 @@
 > 全场景公共结构（`chrome::wood_frame` 12px 外框 + `chrome::title_bar`）：
 > 外框 `y=0..12` 顶 / `y=1908..1920` 底 / `x=0..12` 左 / `x=1068..1080` 右；
 > 标题条 = `(12,12,1056,h)` 木纹外框 + `(16,16,1048,h-8)` 羊皮纸内块 +
-> `(20,20,8,h-16)` 金色 accent 条，`h` 走 `scenes.json` `title.h` = 90（7 场景同值）。
+> `(20,20,8,h-16)` 金色 accent 条，`h` 走 `scenes.json` `title.h` = 96（7 场景同值，S17.2）。
 >
 > **标题文字的 `x` 不在 `scenes.json` 里**：`title` 只有 `y`/`h` 两个键。绘制链是
 > `chrome::scene_shell` → `centered_title_x(host, title)` = `(LOGICAL_W_I32 -
 > shell().title_text_width_px(title)) / 2`（96px 标题档按**当前文本实测宽度**居中）
 > → `draw_title_text(host, title, cx, layout.title.y, text_on_wood)`。
-> `title.y = 6` 的语义是**标题墨迹顶边锚点**：`MenuShell::draw_ttf_row` 用
+> `title.y = 8` 的语义是**标题墨迹顶边锚点**（S17.2 8pt 整备，旧值 6）：`MenuShell::draw_ttf_row` 用
 > `-ceil(px_bounds.min.y)` 作 y 偏移使字形墨迹顶边正好落在 `y`（位图回退路径则把
 > `y` 直接当首行位图字顶边）。`title.h` 只喂给 `title_bar` 决定标题条高度，不决定文字位置。
 
@@ -87,45 +87,45 @@
 
 | 元素 | 坐标（`scenes.json`） | 说明 |
 |---|---|---|
-| 标题 | `title {y:6, h:90}` | **无 `x` 键**（按文本宽度居中，见上）；标题条高 90（`y=12..102`）；标题文字「金银岛」象牙金墨 |
-| 菜单列表 | `list {x:90, y:400, w:900, row_h:220, item_h:170, text_x:240, highlight_offset:40}` | 6 项（新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏）；首块顶 = `400-40` = **360**；末块底 = `360+5*220+170` = **1630**（QB101：6 行重分布 260..1700 带，空带收窄至 1630..1840） |
-| 图标列 | `icon {x:150}` | 菜单项图标左缘 |
+| 标题 | `title {y:8, h:96}` | **无 `x` 键**（按文本宽度居中，见上）；标题条高 96（`y=12..108`，S17.2）；标题文字「金银岛」金墨 |
+| 菜单列表 | `list {x:96, y:392, w:896, row_h:224, item_h:168, text_x:248, highlight_offset:40}` | 6 项（新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏）；首块顶 = `392-40` = **352**；末块底 = `352+5*224+168` = **1640**（S17.2 8pt 整备） |
+| 图标列 | `icon {x:144}` | 菜单项图标左缘（S17.3 换 `ui_icons` 罗盘/宝箱/锚/齿轮/书/门） |
 | 状态行 | `status {x:540, y:1840}` | 浅底条 + 深墨字（字体数/音效/模块数）；`status` 走 `extra` 字段；`x=540` 为屏心锚点 |
 | 立绘/动态区 | `portrait_zones [{x:0,y:360,w:1080,h:1310}]` | **代码绘制动态实体**允许落区（QB102：收紧到实渲内容区 360..1670，无 legacy 立绘） |
 
-不变式：`360 ≥ 102`（首块不压标题条）、`1630 ≤ 1840`（末块不撞提示行）。
+不变式：`352 ≥ 108`（首块不压标题条）、`1640 ≤ 1840`（末块不撞提示行）。
 
 ### 4.2 select_role / select_map（选择类）
 
 | 元素 | select_role | select_map |
 |---|---|---|
-| 标题 | `title {y:6, h:90}`（无 `x` 键，居中算） | 同左 |
-| 列表 | `list {x:90, y:240, w:900, row_h:300, item_h:260, text_x:240, highlight_offset:40}` | `list {x:90, y:240, w:900, row_h:340, item_h:280, text_x:240, highlight_offset:40}` |
+| 标题 | `title {y:8, h:96}`（无 `x` 键，居中算） | 同左 |
+| 列表 | `list {x:96, y:240, w:896, row_h:304, item_h:256, text_x:248, highlight_offset:40}` | `list {x:96, y:240, w:896, row_h:336, item_h:280, text_x:248, highlight_offset:40}` |
 | 首块顶 | `240-40` = 200 | 200 |
-| 项数 × 末块底 | 5 角色卡 → `200+4*300+260` = **1660** | 3 地图卡（`MAP_COUNT=3`，QA139 三方分叉销账）→ `200+2*340+280` = **1160**（QB103：3 卡撑满，空带收窄至 1160..1840） |
+| 项数 × 末块底 | 5 角色卡 → `200+4*304+256` = **1672** | 3 地图卡（`MAP_COUNT=3`，QA139 三方分叉销账）→ `200+2*336+280` = **1252**（QB103：3 卡撑满，S17.2 8pt 整备后空带收窄至 1252..1840） |
 | 锁定标记列 | — | `locked {text_x:920}` |
 | 提示行 | `hint {x:540, y:1840}` | 同左 |
 | 动态区 | `portrait_zones [{0,240,1080,1460}]` | `portrait_zones [{0,240,1080,960}]` |
 
-不变式：`200 ≥ 102`（不压标题条）、末块底 `≤ 1840`。
+不变式：`200 ≥ 108`（不压标题条）、末块底 `≤ 1840`。
 
 ### 4.3 main_map（主地图，代码等距菱形格 + 代码棋子）
 
 | 元素 | 坐标 | 说明 |
 |---|---|---|
-| 标题 | `title {y:6, h:90}`（无 `x` 键，居中算） | 「地图」标题 |
-| HUD | `hud {x:80, y:150, w:920, h:120}` | 羊皮纸面板 + 木纹细边（金字 + 持有量，两行 44px 字）；底 = **270** |
-| 等距棋盘 | `grid {x0:540, y0:520, tile_w:25, tile_h:13}`（QB105 重锚：旧 y0=380/tile 24×12） | `chrome::iso_cell(row,col)` = `(x0+(col-row)*25, y0+(row+col)*13)`；`tile_w/h` 走 `extra_scalar` 的 `grid.*` 键 |
-| HUD 三按钮 | `hud_trade {x:536, y:166, w:140, h:88}` / `hud_sell {x:696, y:166, w:140, h:88}` / `hud_build {x:856, y:166, w:140, h:88}` | QA149：HUD 三经济臂（点按 = 买商品 1 / 全卖商品 1 / 造 Castle，与键盘 T/Y/B 同语义，`main_map.rs` on_touch 命中分派 + `e2e_touch_economy_loop` 纯触摸判据；面板无标签，标签归后续批次） |
+| 标题 | `title {y:8, h:96}`（无 `x` 键，居中算） | 「地图」标题 |
+| HUD | `hud {x:80, y:152, w:920, h:128}` | 羊皮纸面板 + 描边细边（金字 + 持有量，两行 44px 字）；底 = **280**（S17.2 8pt） |
+| 等距棋盘 | `grid {x0:540, y0:520, tile_w:25, tile_h:13}`（QB105 重锚：旧 y0=380/tile 24×12；业务几何非 8pt 版面令牌，S17 不动） | `chrome::iso_cell(row,col)` = `(x0+(col-row)*25, y0+(row+col)*13)`；`tile_w/h` 走 `extra_scalar` 的 `grid.*` 键 |
+| HUD 三按钮 | `hud_trade {x:536, y:168, w:136, h:88}` / `hud_sell {x:704, y:168, w:136, h:88}` / `hud_build {x:856, y:168, w:136, h:88}` | QA149：HUD 三经济臂（点按 = 买商品 1 / 全卖商品 1 / 造 Castle，与键盘 T/Y/B 同语义，`main_map.rs` on_touch 命中分派 + `e2e_touch_economy_loop` 纯触摸判据；S17.2 8pt 整备：按钮宽 140→136、sell x 696→704、按钮 y 166→168） |
 | 提示行 | `hint {x:540, y:1840}` | 方向键移动/据点事件 |
 | 动态区 | `portrait_zones [{0,150,1080,1680}]` | 玩家/据点/BOSS 代码方块允许落区 |
 
-不变式：HUD 底 `270 ≤ 520`（不与等距区 `y0=520` 重叠）；**实体 size ≤ 瓦片行高 `2*tile_h` = 26**（QA106：棋子/据点/BOSS 不越格覆盖邻居——player.size=26 为临界值）。
+不变式：HUD 底 `280 ≤ 520`（不与等距区 `y0=520` 重叠）；**实体 size ≤ 瓦片行高 `2*tile_h` = 26**（QA106：棋子/据点/BOSS 不越格覆盖邻居——player.size=26 为临界值）。
 
-- 玩家棋子：`COLOR_PLAYER` 方块（青绿，§2 L52），中心落在 `iso_cell(row,col)`，
+- 玩家棋子：`COLOR_PLAYER` 方块（玩家绿 success，§2 v2），中心落在 `iso_cell(row,col)`，
   边长走 `scenes.json` `player.size` = 26（QA030 数据驱动，QA106 重锚 32→26；键缺失回退 `tile*2/3` 公式）
-- 据点：`COLOR_LANDMARK` 方块（金高光，§2 L41），边长走 `scenes.json` `landmark.size` = 20
-- BOSS 格：`COLOR_DANGER` 方块（血红，§2 L53），边长走 `scenes.json` `boss.size` = 24
+- 据点：`COLOR_LANDMARK` 方块（金高光 gold，§2 v2），边长走 `scenes.json` `landmark.size` = 20
+- BOSS 格：`COLOR_DANGER` 方块（BOSS 红 danger，§2 v2），边长走 `scenes.json` `boss.size` = 24
 - **瓦片来源**：`terrain_atlas` legacy 瓦片已退出运行时，棋盘 100% 代码菱形格绘制
   （`main_map.rs` 无地形资源分支；`has_terrain_atlas()` 恒假）
 
@@ -133,37 +133,37 @@
 
 | 元素 | 坐标 | 说明 |
 |---|---|---|
-| 标题 | `title {y:6, h:90}`（无 `x` 键，居中算） | 「战斗」标题 |
-| 玩家血条 | `player_hp {x:60, y:170, w:440, h:48}` | `chrome::bar_slot` 槽底 `COLOR_HILITE` + 前景血量 `COLOR_PLAYER`（玩家青绿，§2 L52，S15.6 QA038 归位）；右缘 **500**（QB120 解重叠：60..500） |
-| BOSS 血条 | `boss_hp {x:580, y:170, w:440, h:48}` | 槽底 + 前景 `COLOR_DANGER`（BOSS 血红，§2 L53）；右缘 **1020 ≤ 1080**（QB120：580..1020） |
-| 回合数 | `rounds {x:540, y:420}` | 屏心文字（`x=540` = 屏心锚点） |
+| 标题 | `title {y:8, h:96}`（无 `x` 键，居中算） | 「战斗」标题 |
+| 玩家血条 | `player_hp {x:64, y:168, w:448, h:48}` | `chrome::bar_slot` 槽底 `COLOR_HILITE` + 前景血量 `COLOR_PLAYER`（玩家绿，§2 v2）；右缘 **512**（S17.2 8pt：64..512） |
+| BOSS 血条 | `boss_hp {x:576, y:168, w:448, h:48}` | 槽底 + 前景 `COLOR_DANGER`（BOSS 红，§2 v2）；右缘 **1024 ≤ 1080**（S17.2：576..1024） |
+| 回合数 | `rounds {x:540, y:416}` | 屏心文字（`x=540` = 屏心锚点；S17.3 数字用 label 档 32px） |
 | 战斗结果 | `outcome {x:540, y:960}` | 胜/负 |
-| 空手提示 | `empty {x:540, y:960}` | 无卡时提示。`empty` 与 `outcome` **同 y 但互斥**（空手持牌态 vs 战斗结算态，同帧只出现一个）；`y=960` 远在血条带 `170..218` 之下（QA140） |
+| 空手提示 | `empty {x:540, y:960}` | 无卡时提示。`empty` 与 `outcome` **同 y 但互斥**（空手持牌态 vs 战斗结算态，同帧只出现一个）；`y=960` 远在血条带 `168..216` 之下（QA140） |
 | 提示行 | `hint {x:540, y:1840}` | 攻击/返回 |
 | 动态区 | `portrait_zones [{0,170,1080,1680}]` | 玩家/BOSS 代码方块允许落区 |
 
-不变式：`player_hp.x+w ≤ 1080`、`boss_hp.x+w ≤ 1080`；**双条互斥**：`boss_hp.x - (player_hp.x+w) ≥ 40`（60..500 / 580..1020，gap=80，QA140/QB120）；`rounds`/`empty`/`outcome` 均不在血条带 `y=170..218` 内。
+不变式：`player_hp.x+w ≤ 1080`、`boss_hp.x+w ≤ 1080`；**双条互斥**：`boss_hp.x - (player_hp.x+w) ≥ 40`（64..512 / 576..1024，gap=64，QA140/QB120）；`rounds`/`empty`/`outcome` 均不在血条带 `y=168..216` 内。
 
 ### 4.5 message（消息/帮助）
 
 | 元素 | 坐标 | 说明 |
 |---|---|---|
-| 标题 | `title {y:6, h:90}`（无 `x` 键，居中算） | 标题 key = `msg.<kind>` |
-| 正文区 | `body {x:90, y:220, w:900, h:1480}` | 羊皮纸浅块 + 木纹细边 + bevel，多页文本；底 = **1700** |
+| 标题 | `title {y:8, h:96}`（无 `x` 键，居中算） | 标题 key = `msg.<kind>` |
+| 正文区 | `body {x:96, y:224, w:896, h:1480}` | 卡片浅块 + 描边细边 + bevel，多页文本；底 = **1704**（S17.2 8pt） |
 | 页码 | `page {x:540, y:1800}` | 页码/总页（`x=540` = 屏心锚点） |
 | 提示行 | `hint {x:540, y:1840}` | 切页/关闭 |
 | 动态区 | `portrait_zones [{0,220,1080,1680}]` | 代码绘制动态实体允许落区 |
 
-> FIND-026 设计裁决：`body.h=1480` 是**正文渲染区上界**（`body.y+body.h = 1700 ≤ page.y = 1800`），
+> FIND-026 设计裁决：`body.h=1480` 是**正文渲染区上界**（`body.y+body.h = 1704 ≤ page.y = 1800`），
 > **不是行数**；翻页由 `msg_page`/`msg_total` 驱动，`body.h` 仅作版面区间约束。
 
 ### 4.6 saveload（存读档）
 
 | 元素 | 坐标 | 说明 |
 |---|---|---|
-| 标题 | `title {y:6, h:90}`（无 `x` 键，居中算） | 「存读档」 |
-| 槽位列表 | `list {x:90, y:240, w:900, row_h:300, item_h:250, text_x:240, highlight_offset:40, gold_x:820}`（QA105 重锚 gold_x：旧 920 贴右缘） | 5 槽；首块顶 200；末块底 `200+4*300+250` = **1650** |
-| 金币次列 | `list.gold_x` = 820 | 每槽金币数右对齐列 |
+| 标题 | `title {y:8, h:96}`（无 `x` 键，居中算） | 「存读档」 |
+| 槽位列表 | `list {x:96, y:240, w:896, row_h:304, item_h:248, text_x:248, highlight_offset:40, gold_x:816}`（QA105 重锚 gold_x；S17.2 8pt：gold_x 820→816） | 5 槽；首块顶 200；末块底 `200+4*304+248` = **1664** |
+| 金币次列 | `list.gold_x` = 816 | 每槽金币数右对齐列（S17.3 数字 label 档） |
 | 提示行 | `hint {x:540, y:1840}` | 选位/读写 |
 | 动态区 | `portrait_zones [{0,240,1080,1450}]` | 代码绘制动态实体允许落区 |
 

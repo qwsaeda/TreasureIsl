@@ -45,60 +45,63 @@ fn scenes() -> std::collections::BTreeMap<String, ti_core::data::SceneLayout> {
     ti_core::data::scenes().expect("scenes.json 解析失败").clone()
 }
 
-/// index §4.1（1080 现代版面）：标题条 h=90，列表基线 y=400 row_h=220 item_h=170（S15.6 QB101 六行重分布），尾行 y=1840（QB150）。
+/// index §4.1（1080 现代版面，S17.2 航海夜 8pt 整备）：标题条 h=96，列表基线 y=392 row_h=224 item_h=168，尾行 y=1840（QB150）。
 #[test]
 fn index_layout_matches_doc() {
     let s = scenes();
     let Some(idx) = s.get("index") else {
         panic!("scenes.json 缺 index");
     };
-    assert_eq!(idx.title.h, 90, "index 标题条 h=90（1080 现代版面）");
-    assert_eq!(idx.list.y, 400, "index 列表基线 y=400（1080 现代版面，S15.6 QB101 六行重分布）");
-    assert_eq!(idx.list.row_h, 220, "index 列表 row_h=220（1080 现代版面，S15.6 QB101）");
-    assert_eq!(idx.list.item_h, 170, "index 列表 item_h=170（1080 现代版面，S15.6 QB101）");
-    // 现代版面不变式：首块顶 = 基线 - highlight_offset = 400-40 = 360，须在标题条（12..102）之下留间隙；
-    // 末块底 = 360 + 5*220 + 170 = 1630，须在尾行（1840）之上。
+    assert_eq!(idx.title.h, 96, "index 标题条 h=96（1080 现代版面，S17.2 8pt）");
+    assert_eq!(
+        idx.list.y, 392,
+        "index 列表基线 y=392（1080 现代版面，S17.2 8pt；S15.6 QB101 六行重分布）"
+    );
+    assert_eq!(idx.list.row_h, 224, "index 列表 row_h=224（1080 现代版面，S17.2 8pt）");
+    assert_eq!(idx.list.item_h, 168, "index 列表 item_h=168（1080 现代版面，S17.2 8pt）");
+    // 现代版面不变式：首块顶 = 基线 - highlight_offset = 392-40 = 352，须在标题条（12..108）之下留间隙；
+    // 末块底 = 352 + 5*224 + 168 = 1640，须在尾行（1840）之上。
     let top = idx.list.y - idx.list.highlight_offset;
-    assert_eq!(top, 360, "index 首块顶 = 360（1080 现代版面，S15.6 QB101）");
-    assert!(top >= 102, "index 首块顶 {top} 压标题条（条底 102）");
+    assert_eq!(top, 352, "index 首块顶 = 352（1080 现代版面，S17.2 8pt）");
+    assert!(top >= 108, "index 首块顶 {top} 压标题条（条底 108）");
     let bottom = top + 5 * idx.list.row_h + idx.list.item_h;
-    assert_eq!(bottom, 1630, "index 末块底 = 1630（1080 现代版面，S15.6 QB101）");
+    assert_eq!(bottom, 1640, "index 末块底 = 1640（1080 现代版面，S17.2 8pt）");
     assert!(bottom <= 1838, "index 末块底 {bottom} 撞尾行 y=1840");
     let status = idx.extra.get("status").expect("index 缺 status 矩形");
     assert_eq!(status.x, 540, "index status x=540（QB123 屏心居中语义坐标）");
     assert_eq!(status.y, 1840, "index 尾行 y=1840（1080 现代版面，QB150）");
 }
 
-/// select_role/select_map §4.2（1080 现代版面）：标题条 h=90，列表基线 y=240，提示行 y=1840（QB115/123）。
+/// select_role/select_map §4.2（1080 现代版面，S17.2 8pt）：标题条 h=96，列表基线 y=240，提示行 y=1840（QB115/123）。
 #[test]
 fn select_scenes_layout_matches_doc() {
     let s = scenes();
     let role = s.get("select_role").expect("scenes.json 缺 select_role");
-    assert_eq!(role.title.h, 90, "select_role 标题条 h=90（1080 现代版面）");
+    assert_eq!(role.title.h, 96, "select_role 标题条 h=96（1080 现代版面，S17.2 8pt）");
     assert_eq!(role.list.y, 240, "select_role 列表基线 y=240");
-    assert_eq!(role.list.row_h, 300, "select_role row_h=300（S15.6 批次6：5 角色卡）");
-    assert_eq!(role.list.item_h, 260, "select_role item_h=260（S15.6 批次6）");
+    assert_eq!(role.list.row_h, 304, "select_role row_h=304（S17.2 8pt：5 角色卡）");
+    assert_eq!(role.list.item_h, 256, "select_role item_h=256（S17.2 8pt）");
     assert_eq!(role.hint.y, 1840, "select_role 提示行 y=1840（QB115/123）");
     let role_top = role.list.y - role.list.highlight_offset;
-    assert!(role_top >= 102, "select_role 首块顶 {role_top} 压标题条");
+    assert!(role_top >= 108, "select_role 首块顶 {role_top} 压标题条");
     let map = s.get("select_map").expect("scenes.json 缺 select_map");
-    assert_eq!(map.title.h, 90, "select_map 标题条 h=90（1080 现代版面）");
+    assert_eq!(map.title.h, 96, "select_map 标题条 h=96（1080 现代版面，S17.2 8pt）");
     assert_eq!(map.list.y, 240, "select_map 列表基线 y=240");
-    assert_eq!(map.list.row_h, 340, "select_map row_h=340（S15.6 QB103，3 地图卡撑满）");
+    assert_eq!(map.list.row_h, 336, "select_map row_h=336（S17.2 8pt；S15.6 QB103，3 地图卡撑满）");
     assert_eq!(map.list.item_h, 280, "select_map item_h=280（S15.6 QB103）");
     assert_eq!(map.hint.y, 1840, "select_map 提示行 y=1840（QB115/123）");
 }
 
-/// main_map §4.3（1080 现代版面）：标题条 h=90，HUD y=150 h=120（与等距区 y0=520 不重叠，QB105 重锚），提示 y=1840。
+/// main_map §4.3（1080 现代版面，S17.2 8pt）：标题条 h=96，HUD y=152 h=128（与等距区 y0=520 不重叠，QB105 重锚），提示 y=1840。
 #[test]
 fn main_map_layout_matches_doc() {
     let s = scenes();
     let Some(main) = s.get("main_map") else {
         panic!("scenes.json 缺 main_map");
     };
-    assert_eq!(main.title.h, 90, "main_map 标题条 h=90（1080 现代版面）");
-    assert_eq!(main.hud.y, 150, "main_map HUD y=150（1080 现代版面）");
-    assert_eq!(main.hud.h, 120, "main_map HUD h=120（1080，44px 字 2 行）");
+    assert_eq!(main.title.h, 96, "main_map 标题条 h=96（1080 现代版面，S17.2 8pt）");
+    assert_eq!(main.hud.y, 152, "main_map HUD y=152（1080 现代版面，S17.2 8pt）");
+    assert_eq!(main.hud.h, 128, "main_map HUD h=128（1080，44px 字 2 行，S17.2 8pt）");
     assert!(main.hud.y + main.hud.h <= 520, "main_map HUD 与等距区 y0=520 重叠（QB105 重锚）");
     assert_eq!(main.hint.y, 1840, "main_map 提示行 y=1840（QB115/123）");
     // S15.6 QA133：实体 size 键在位（键缺失时 main_map.rs 静默回退 16×8/12×6/18×9
@@ -123,57 +126,57 @@ fn main_map_layout_matches_doc() {
     }
 }
 
-/// vs §4.4（1080 现代版面）：标题条 h=90，血条 60..500 / 580..1020（S15.6 QB120 解重叠）
-/// y=170 h=48，回合 540/420，结果/空 540/960（QA141 屏心居中 + S15.6 批次6 挪出血条带）。
+/// vs §4.4（1080 现代版面，S17.2 8pt）：标题条 h=96，血条 64..512 / 576..1024（S15.6 QB120 解重叠）
+/// y=168 h=48，回合 540/416，结果/空 540/960（QA141 屏心居中 + S15.6 批次6 挪出血条带）。
 #[test]
 fn vs_layout_matches_doc() {
     let s = scenes();
     let Some(vs) = s.get("vs") else {
         panic!("scenes.json 缺 vs");
     };
-    assert_eq!(vs.title.h, 90, "vs 标题条 h=90（1080 现代版面）");
+    assert_eq!(vs.title.h, 96, "vs 标题条 h=96（1080 现代版面，S17.2 8pt）");
     let ph = vs.extra.get("player_hp").expect("vs 缺 player_hp 矩形");
     let bh = vs.extra.get("boss_hp").expect("vs 缺 boss_hp 矩形");
-    assert_eq!(ph.x, 60, "vs 玩家血条 x=60（1080，S15.6 QB120 解重叠）");
-    assert_eq!(ph.w, 440, "vs 玩家血条 w=440（1080，60..500）");
+    assert_eq!(ph.x, 64, "vs 玩家血条 x=64（1080，S17.2 8pt；S15.6 QB120 解重叠）");
+    assert_eq!(ph.w, 448, "vs 玩家血条 w=448（1080，64..512，S17.2 8pt）");
     assert_eq!(ph.h, 48, "vs 玩家血条 h=48（1080）");
-    assert_eq!(ph.y, 170, "vs 玩家血条 y=170（1080）");
-    assert_eq!(bh.x, 580, "vs BOSS 血条 x=580（1080，S15.6 QB120 解重叠）");
-    assert_eq!(bh.y, 170, "vs BOSS 血条 y=170（1080）");
+    assert_eq!(ph.y, 168, "vs 玩家血条 y=168（1080，S17.2 8pt）");
+    assert_eq!(bh.x, 576, "vs BOSS 血条 x=576（1080，S17.2 8pt；S15.6 QB120 解重叠）");
+    assert_eq!(bh.y, 168, "vs BOSS 血条 y=168（1080，S17.2 8pt）");
     assert!(ph.x + ph.w <= 1080, "vs 玩家血条右缘越屏 1080");
     assert!(bh.x + bh.w <= 1080, "vs BOSS 血条右缘越屏 1080");
-    // S15.6 QA140 互斥不变式（§4.4）：双条 gap ≥ 40（60..500 / 580..1020，gap=80）
+    // S15.6 QA140 互斥不变式（§4.4）：双条 gap ≥ 40（64..512 / 576..1024，gap=64）
     assert!(
         bh.x - (ph.x + ph.w) >= 40,
         "vs 双血条 gap < 40（QA140 互斥不变式：player_hp 右缘 {} + 40 须 ≤ boss_hp.x {}）",
         ph.x + ph.w,
         bh.x
     );
-    // QA140：empty（「击键」提示）不得落在血条带 y=170..218（与双条撞行）
+    // QA140：empty（「击键」提示）不得落在血条带 y=168..216（与双条撞行）
     let em = vs.extra.get("empty").expect("vs 缺 empty 矩形");
     assert!(
-        em.y < 170 || em.y >= 170 + 48,
-        "vs empty y={} 落在血条带 170..218（QA140：应挪出血条带）",
+        em.y < 168 || em.y >= 168 + 48,
+        "vs empty y={} 落在血条带 168..216（QA140：应挪出血条带）",
         em.y
     );
     let rd = vs.extra.get("rounds").expect("vs 缺 rounds 矩形");
     assert_eq!(rd.x, 540, "vs 回合数 x=540（QA141 屏心居中语义坐标）");
-    assert_eq!(rd.y, 420, "vs 回合数 y=420（S15.6 批次6：血条带之下首屏区）");
+    assert_eq!(rd.y, 416, "vs 回合数 y=416（S17.2 8pt：血条带之下首屏区）");
     let oc = vs.extra.get("outcome").expect("vs 缺 outcome 矩形");
     assert_eq!(oc.x, 540, "vs 战斗结果 x=540（QA141 屏心居中语义坐标）");
     assert_eq!(oc.y, 960, "vs 战斗结果 y=960（S15.6 批次6 屏心区）");
 }
 
-/// message §4.5（1080 现代版面）：标题条 h=90，正文区 y=220 h=1480（区间约束），页码 540/1800（QA124/144），提示 y=1840。
+/// message §4.5（1080 现代版面，S17.2 8pt）：标题条 h=96，正文区 y=224 h=1480（区间约束），页码 540/1800（QA124/144），提示 y=1840。
 #[test]
 fn message_layout_matches_doc() {
     let s = scenes();
     let Some(msg) = s.get("message") else {
         panic!("scenes.json 缺 message");
     };
-    assert_eq!(msg.title.h, 90, "message 标题条 h=90（1080 现代版面）");
+    assert_eq!(msg.title.h, 96, "message 标题条 h=96（1080 现代版面，S17.2 8pt）");
     let body = msg.extra.get("body").expect("message 缺 body 矩形");
-    assert_eq!(body.y, 220, "message 正文区 y=220（1080）");
+    assert_eq!(body.y, 224, "message 正文区 y=224（1080，S17.2 8pt）");
     assert_eq!(body.h, 1480, "message 正文区 h=1480（1080，FIND-026 区间约束）");
     // body.y + body.h ≤ 1800（正文区上界不越页码行，QA124/144 批次6 重分布）
     assert!(body.y + body.h <= 1800, "message 正文区越页码行 y=1800（FIND-026）");
@@ -182,20 +185,20 @@ fn message_layout_matches_doc() {
     assert_eq!(msg.hint.y, 1840, "message 提示行 y=1840（QB115/123）");
 }
 
-/// saveload §4.6（S15.6 批次6）：标题条 h=90，列表基线 y=240 row_h=300 item_h=250（QB136 三态卡），金字列 x=820，提示 y=1840。
+/// saveload §4.6（S15.6 批次6 + S17.2 8pt）：标题条 h=96，列表基线 y=240 row_h=304 item_h=248（QB136 三态卡），金字列 x=816，提示 y=1840。
 #[test]
 fn saveload_layout_matches_doc() {
     let s = scenes();
     let Some(sv) = s.get("saveload") else {
         panic!("scenes.json 缺 saveload");
     };
-    assert_eq!(sv.title.h, 90, "saveload 标题条 h=90（1080 现代版面）");
+    assert_eq!(sv.title.h, 96, "saveload 标题条 h=96（1080 现代版面，S17.2 8pt）");
     assert_eq!(sv.list.y, 240, "saveload 列表基线 y=240（1080）");
-    assert_eq!(sv.list.row_h, 300, "saveload 列表 row_h=300（S15.6 批次6，QB136 三态卡）");
-    assert_eq!(sv.list.item_h, 250, "saveload 列表 item_h=250（S15.6 批次6）");
+    assert_eq!(sv.list.row_h, 304, "saveload 列表 row_h=304（S17.2 8pt，QB136 三态卡）");
+    assert_eq!(sv.list.item_h, 248, "saveload 列表 item_h=248（S17.2 8pt）");
     assert_eq!(
-        sv.list.gold_x, 820,
-        "saveload 金字号列 x=820（1080，S15.6 QA105 重锚：旧 920 贴右缘越安全距）"
+        sv.list.gold_x, 816,
+        "saveload 金字号列 x=816（1080，S17.2 8pt；S15.6 QA105 重锚：旧 920 贴右缘越安全距）"
     );
     assert_eq!(sv.hint.y, 1840, "saveload 提示行 y=1840（QB115/123）");
 }
