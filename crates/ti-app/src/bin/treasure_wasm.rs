@@ -55,20 +55,7 @@ impl Shell {
         // 真彩 TTF（lxgw-wenkai-reg）字节，按 QB115 三档（96/44/28）实例化后注入壳。
         // 与 native/快照的内置自动加载（`MenuShell::with_upload_mode`，QA128）同源字体
         // → 跨端帧等价（QA127）。缺失 → 三档 None（壳回退 12px 位图，§3 不静默空白）。
-        let ttf_bytes = macroquad::file::load_file("assets/fonts/lxgw-wenkai-reg.ttf").await;
-        if let Ok(bytes) = ttf_bytes {
-            use ti_app::glyph_raster::TtfFont;
-            let title = TtfFont::from_bytes(&bytes, 96.0);
-            let body = TtfFont::from_bytes(&bytes, 44.0);
-            let hint = TtfFont::from_bytes(&bytes, 28.0);
-            if title.is_some() || body.is_some() || hint.is_some() {
-                game.shell_mut().set_ttf_fonts(title, body, hint);
-            } else {
-                eprintln!("[font] lxgw-wenkai-reg.ttf 解析失败 → 回退 12px 位图");
-            }
-        } else {
-            eprintln!("[font] assets/fonts/lxgw-wenkai-reg.ttf 未取到 → 回退 12px 位图（§3）");
-        }
+        Self::inject_ttf_fonts(&mut game).await;
 
         // 真实音效（music.lpk → 解包 → 混音 → OGG 转码 → macroquad 音频后端）
         let (bundle, loaded) = Self::load_audio_bank().await;
@@ -163,6 +150,24 @@ impl Shell {
         shell
     }
 
+    /// S15.6 QA126/127：注入三档 TTF（96/44/28），失败即回退 12px 位图（§3 不静默空白）。
+    async fn inject_ttf_fonts(game: &mut GameApp) {
+        let ttf_bytes = macroquad::file::load_file("assets/fonts/lxgw-wenkai-reg.ttf").await;
+        if let Ok(bytes) = ttf_bytes {
+            use ti_app::glyph_raster::TtfFont;
+            let title = TtfFont::from_bytes(&bytes, 96.0);
+            let body = TtfFont::from_bytes(&bytes, 44.0);
+            let hint = TtfFont::from_bytes(&bytes, 28.0);
+            if title.is_some() || body.is_some() || hint.is_some() {
+                game.shell_mut().set_ttf_fonts(title, body, hint);
+            } else {
+                eprintln!("[font] lxgw-wenkai-reg.ttf 解析失败 → 回退 12px 位图");
+            }
+        } else {
+            eprintln!("[font] assets/fonts/lxgw-wenkai-reg.ttf 未取到 → 回退 12px 位图（§3）");
+        }
+    }
+
     /// 起循环 BGM（浏览器自动播放策略下可能要等首次交互才出声）。
     fn start_bgm(&self) {
         if let Some(sound) = self.bgm.as_ref() {
@@ -171,6 +176,7 @@ impl Shell {
     }
 
     /// S6.4：用 macroquad 全局时钟算本帧耗时（毫秒），驱动精灵动画帧推进。
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn tick_frame_time(&mut self) {
         let now_ms = (macroquad::time::get_time().max(0.0) * 1000.0) as u64;
         let delta = now_ms.saturating_sub(self.prev_now_ms);
@@ -181,13 +187,13 @@ impl Shell {
 
     /// 播放一次音效（`GameApp.last_sfx` 非空时）+ 记录选择（内存存储）。
     fn play_last_sfx(&mut self) {
-        let sfx = self.game.last_sfx();
+        let has_sfx = self.game.last_sfx().is_some();
         // FIND-205：last_menu 直接存 `menu_selected()`（usize 0..=5），不再经
         // `MENU[..].event_id` 读取路径（该字段 S5.1 起已弃用，仅 glyph_raster 遍历用）。
         let selected = u32::try_from(self.game.menu_selected()).unwrap_or(0);
         let mut store = MemoryStore::new();
         let _ = store.store("last_menu", &selected.to_le_bytes());
-        if sfx.is_some() {
+        if has_sfx {
             if let Some(sound) = self.se.as_ref() {
                 play_sound(sound, PlaySoundParams { looped: false, volume: SE_VOLUME });
             }
@@ -323,7 +329,7 @@ async fn main() {
         }
         // S7.6 F4 循环切换画质模式（原版/HD）
         if is_key_pressed(KeyCode::F4) {
-            shell.game.shell_mut().cycle_quality();
+            let _ = shell.game.shell_mut().cycle_quality();
             changed = true;
         }
         // 触屏/鼠标：直接触摸界面元素，不画虚拟按键（`docs/modernization.md` §5）。

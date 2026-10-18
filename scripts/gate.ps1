@@ -50,8 +50,14 @@ $nativeTarget = 'x86_64-pc-windows-msvc'
 Report ($LASTEXITCODE -eq 0) "cargo build ($nativeTarget)"
 $installed = (@(& rustup target list --installed 2>$null) -join ' ')
 if ($installed -match 'wasm32-unknown-unknown') {
+    # 裸 build 不编 `required-features = ["wasm-shell"]` 的 treasure-wasm（第 4b 项注释的
+    # 既有口径有误：第 4 项并不覆盖 wasm bin）。补 wasm 目标的 feature 门控 clippy
+    # （wasm-shell：wasm bin + 全部集成测试在 wasm32 编译，EXP-104 盲区实证）。
     & cargo build --workspace --target wasm32-unknown-unknown 2>&1 | Out-Null
-    Report ($LASTEXITCODE -eq 0) 'cargo build (wasm32-unknown-unknown)'
+    $wasmBuildOk = ($LASTEXITCODE -eq 0)
+    & cargo clippy --target wasm32-unknown-unknown -p ti-app --features wasm-shell --all-targets -- -D warnings 2>&1 | Out-Null
+    $wasmClippyOk = ($LASTEXITCODE -eq 0)
+    Report ($wasmBuildOk -and $wasmClippyOk) 'cargo build+clippy (wasm32-unknown-unknown; wasm-shell 门控 bin)'
 } else {
     Skip 'cargo build (wasm32-unknown-unknown)' 'target 未安装，S2.5 解锁'
 }
@@ -68,8 +74,9 @@ if ($installed -match 'aarch64-linux-android') {
 #     第 1~3 项不带 feature，`required-features = ["native-shell"/"headless"]` 的 bin
 #     （treasure-native / treasure-headless / element-dump / sprite-step / render-png）
 #     从不被编译与 lint —— 它们是**官方排障工具**，静默失效等于没有。
-#     实证：element-dump 曾长期编译失败（4×E0308）而 gate 全绿。wasm/android bin 由
-#     第 4 项的 wasm / android target 构建行覆盖，不在本项范围。
+#     实证：element-dump 曾长期编译失败（4×E0308）而 gate 全绿。wasm bin（treasure-wasm）
+#     由第 4 项 wasm 分支的 feature 门控 clippy 覆盖（EXP-104：wasm-shell 组合的
+#     借用/截断错误 2026-10 实证漏网一次）；android bin 同 android 分支构建行覆盖。
 $featOut = & cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless -- -D warnings 2>&1
 Report ($LASTEXITCODE -eq 0) 'clippy feature-gated bins (native-shell/headless; required-features 盲区)'
 if ($LASTEXITCODE -ne 0) { $featOut | Select-Object -Last 30 | ForEach-Object { Write-Host "        $_" } }

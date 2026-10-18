@@ -30,7 +30,7 @@
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
 | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 12 |
 | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 9 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099） | 28 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101） | 29 |
 | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 28 |
 
 ## 条目索引
@@ -134,6 +134,7 @@
 | EXP-095 | code | | 居中 `cx - w/2` 与口径 `(W-w)/2` 在**奇数宽**时差 1px：hint 条宽断言数出 0 并连带打挂 3 套快照（看着像大改版）。解法：实现统一到「先减后除」`(2*screen_cx - w)/2`；奇数宽来自 TTF 文本 advance 非常量，别改测试口径也别重生基线。正文见 `code.md` |
 | EXP-099 | process | | `required-features` 门控的 bin（element-dump / sprite-step / render-png / treasure-native / treasure-headless）不被 gate 第 1~3 项编译/lint ⇒ 官方排障工具静默失效（element-dump 长期编不过而 gate 全绿）。解法 = 新增 gate 第 4b 项 `clippy --all-targets --features ti-app/native-shell,ti-app/headless`，门禁计数 21→22。正文见 `process.md` |
 | EXP-100 | process | | 脚本化批量改 import 的正则陷阱：捕获组 `+` 漏单段模块、前缀带尾 `::` + `split('::')[-1]` 得空串把限定名削成裸类型名（43 处全编译失败）；正解 `(?:…::)*`、插入点锚文件顶部 import 区、嵌套 mod 补 `use super::`、逐文件 `cargo check` + 全量 clippy 双跑当裁判。正文见 `process.md` |
+| EXP-101 | process | | `required-features` bin 只在「目标+feature 双命中」时被编译：裸 wasm target build 跳过 treasure-wasm（需 `wasm-shell`），gate 的 clippy 组合又只覆盖 native 侧 feature → 借用错误 + wasm 独有 clippy 3 处旧伤漏网到 `build_wasm.ps1` 才爆；gate 第 4 项 wasm 分支并入 `clippy --features wasm-shell --all-targets` 复合判定。正文见 `process.md` |
 
 
 ## 条目格式（写新条时照抄）

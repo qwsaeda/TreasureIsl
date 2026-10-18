@@ -41,8 +41,8 @@ pub fn load_ttf_from_path(path: &std::path::Path) -> Option<Font> {
 /// wasm 路径：从预打包 TTF 字节加载（`init` 时注入）。
 #[cfg(target_arch = "wasm32")]
 #[must_use]
-pub fn load_ttf_from_bytes(bytes: Vec<u8>) -> Option<Font> {
-    load_ttf(Some(&bytes))
+pub fn load_ttf_from_bytes(bytes: &[u8]) -> Option<Font> {
+    load_ttf(Some(bytes))
 }
 
 /// 同步加载 TTF（同步路径；native 端从文件读后调用）。

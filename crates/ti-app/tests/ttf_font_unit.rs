@@ -1,6 +1,8 @@
 //! `ttf_font::load_ttf` 单测（S10.4，EXP-052：内联测试移至 tests/ 目录）。
 
-use ti_app::ttf_font::{TTF_SUBSET_PATH, load_ttf, load_ttf_from_path};
+#[cfg(not(target_arch = "wasm32"))]
+use ti_app::ttf_font::load_ttf_from_path;
+use ti_app::ttf_font::{TTF_SUBSET_PATH, load_ttf};
 
 #[test]
 fn ttf_subset_path_is_assets_fonts() {

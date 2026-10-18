@@ -305,3 +305,30 @@
 - **验证**：`cargo check -p ti-app --features native-shell,headless` 0 error；
   `cargo test --workspace` 0 failed；新增 doccheck2 第 21 项 `check_no_ti_core_fullpath`
   断言该风格不再回潮（本次命中 0）；gate 22 项全绿。
+
+### EXP-101 流程/构建：`required-features` bin 只在「目标+feature 双命中」时被编译，裸 target 构建是门禁盲区
+- **现象**：S15.10 期间 `build_wasm.ps1` 首跑爆 E0502（`treasure_wasm.rs::play_last_sfx`
+  的 `last_sfx()` 可变借用与 `menu_selected()` 不可变借用冲突）；修完编译后又连爆
+  wasm-shell 组合独享的 3 处旧伤（`cycle_quality` must_use 未消费、`load_ttf_from_bytes`
+  按值传 `Vec` 未消费、`f64→u64` 截断在 wasm32 才触发 `cast_possible_truncation`）。
+  这些全部**从未被 gate 拦住**：第 4 项 `cargo build --workspace --target wasm32-unknown-unknown`
+  因 `treasure-wasm` 带 `required-features = ["wasm-shell"]` 被 cargo 直接跳过；
+  第 4b 项 clippy 组合只覆盖 `native-shell,headless`。4 个文件在 wasm 端静默烂了多轮。
+- **根因**：门禁对「feature 门控 bin」的覆盖 = 各 clippy feature 组合的**手工并集**
+  （EXP-099 补了 native 侧，S15.9 补了 hd-8bit），但没有任何机制保证「**每个 bin 的
+  required-features 都被某条 gate 行编译到**」。目标特有 bin（wasm32 的 treasure-wasm）
+  天然双盲区：裸 target build 跳过它（required-features 不命中）；native clippy 组合
+  不含它（wasm-shell 不在组合里）。wasm32 平台类型宽度还不同（`u64` 非默认宽度 →
+  截断 lint 只在 wasm 触发），同一行代码 native 绿 wasm 红。
+- **解法**：① gate 第 4 项 wasm 分支并入
+  `cargo clippy --target wasm32-unknown-unknown -p ti-app --features wasm-shell
+  --all-targets -- -D warnings`，一行报 build+clippy 复合（项数不变，gate 仍 22 项）；
+  ② 4 处旧伤就地修复：借用改 `last_sfx().is_some()` 前置再读菜单、`Vec<u8>`→`&[u8]`、
+  `cycle_quality` 对齐 native 的 `let _ =`、截断用 native 同款
+  `#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]`；
+  ③ 纪律（写进 gate.ps1 第 4b 注释）：**新增/改 feature 门控 bin 时，其
+  required-features 必须同步进某条 gate 行**，否则等于没门禁。
+- **验证**：`cargo clippy --target wasm32-unknown-unknown -p ti-app --features wasm-shell
+  --all-targets -- -D warnings` 0 error（修复前 3 连 error）；gate 第 4 项改复合判定后
+  全绿；`build_wasm.ps1` 由 FAIL 转 PASS（产出 web/ 正常）。
+
