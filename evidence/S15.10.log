@@ -1,0 +1,73 @@
+S15.10 渲染框架分离收口（用户 2026-10-18 复核发现 S15.7 只完成上层组件分离；
+本任务收底层帧缓冲单源 + 断 ti-formats 依赖，兑现「零游戏语义、可复用到其他游戏」）
+
+--- [1] 复现实测（为什么收口）---
+  ① ti_render::Framebuf / primitives::{fill_rect,gradient_row,vignette} 全仓 0 使用方
+     （含 pub use 短路径 grep，ti_render::Framebuf 0 命中）；
+  ② MenuShell::fill_rect 逐行重复了 ti-render Framebuf::fill_rect 的像素循环（实测只差一行 mark_dirty）；
+  ③ ti-render/Cargo.toml 依赖 ti-formats（font/mod.rs FontSet 别名 + font/bitmap.rs Glyph/GLYPH_* 引用 2 处）；
+  ④ ti_platform::gfx::Framebuf 与 ti_render::Framebuf 两个帧缓冲类型并存。
+
+--- [2] 步1 帧缓冲单源 ---
+  ti-render/src/framebuffer.rs：
+    Framebuf 补 apply_brightness / snapshot / crossfade_from（从 gfx.rs 原样搬，逻辑 0 改）；
+    新增 FramebufRgba（RGBA8 像素，不含脏行）；
+  ti-platform/src/gfx.rs：
+    删 Framebuf / FramebufRgba 两个 struct 全块（约 300 行）；
+    dirty_rows + mark_dirty/has_dirty/dirty_row_range/reset_dirty 迁入 FramePresenter，
+    新增 mark_all_dirty()（整帧像素操作后标全帧脏，等价旧 dirty_rows.fill(true)）；
+    present / present_rgba 签名改 &ti_render Framebuf（只读）/ &FramebufRgba；
+  ti-app：
+    MenuShell::fill_rect 删手写像素循环 → self.fb.fill_rect(...) + presenter.mark_dirty(...)；
+    新增 MenuShell::apply_brightness / crossfade_from 封装（像素操作 + mark_all_dirty，
+    保住旧「整帧像素操作自动全帧脏」语义）；
+    menu_shell/game_app/message.rs 调用点全部迁移；present(&mut fb) → present(&fb) 4 处；
+  ti-platform/tests/gfx_dirty.rs：改测 FramePresenter 脏行状态机（6 测试全保留断言口径）。
+
+--- [3] 步2 原语归位 ---
+  primitives.rs：删 0 使用的 fill_rect 自由函数（与 Canvas trait 方法重复）；
+    gradient_row / vignette 收为模块私有（仅 parchment_bg 内部用，pub 属误导性 API）；
+  lib.rs 重导出收紧：primitives 只导 parchment_bg；
+  08_render_arch.md §2 改为「绘制原语 = Canvas trait 方法 + parchment_bg 组合函数」
+    （与实现一致，旧口径「4 原语 + 1 组合函数自由函数」失真已修）。
+
+--- [4] 步3 断 ti-formats 依赖（可复用性硬指标）---
+  ti-render/Cargo.toml 摘除 ti-formats（实测依赖表只剩 ab_glyph/serde/serde_json）；
+  ti-render/font/mod.rs：自持中性 FontSet{glyphs, chars} + Glyph{rows:[u16;12]} +
+    GLYPH_ROWS/GLYPH_WIDTH 常量 + glyph_for/index_of（不认 GoldLand.Fnt 载体格式）；
+  ti-render/font/bitmap.rs：from_glyph/for_char 全改吃 ti-render 自己的 Glyph/FontSet（签名 0 变）；
+  ti-app 转换层：menu_shell::parse_font_bytes 成为「格式层 → 框架层」唯一转换点
+    （ti_formats Font/Charset 解析 → 逐字形 glyph(i).rows 拷贝进中性 FontSet）；
+    glyph_raster 测试 font_set() helper 同步转换；ti-formats 侧 0 改动（其测试原样通过）。
+
+--- [5] 步4 文档 + 防复发 ---
+  09_render_framework.md §1 Crate 边界表：ti-render 禁止项加 ti-formats + 依赖实测口径 +
+    ti-app 转换点登记 + ti-platform 呈现层职责；§2 模块结构说明同步；
+  08_render_arch.md §2：原语表改口径 + 帧缓冲归属（S15.10 单源）+ 脏行归属（presenter）段落；
+  doccheck2 新增第 23 项 check_render_framework_boundary（3 条断言，负例实测均 FAIL 生效）：
+    a) menu_shell.rs::fill_rect 出现 as_mut_slice/LOGICAL_W_USIZE 像素循环 → ERROR（负例注入验证）；
+    b) menu_shell.rs::fill_rect 缺 presenter.mark_dirty → ERROR；
+    c) ti-render/Cargo.toml 出现 ti-platform/ti-formats/ti-core/ti-app → ERROR（负例加回 ti-formats 验证）；
+  S15.9 断言同步：std-traits-matrix 的平台 Framebuf AsRef 条目改为「FramePresenter 存在」
+    （S15.10 删类型后该断言如实报错 = 断言按设计工作，随后修正锚点）。
+
+--- [6] 验收命令实跑输出 ---
+  $ cargo test -q -p ti-app --test visual_regression --test render_snapshot --test render_snapshot_forward
+  test result: ok. 1 passed（×3）
+    = 视觉三套基线 0 diff（像素逻辑逐行等价 + 字体中性化 0 行为变化，机器验证）
+  $ cargo test -q --workspace   → 全绿 0 failed（47 批次）
+  $ cargo fmt --all -- --check  → 0
+  $ cargo clippy --workspace --all-targets -- -D warnings            → 0
+  $ cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless,ti-platform/hd-8bit -- -D warnings → 0
+  $ cargo run -q -p ti-tools --bin doccheck      → 0 error(s)
+  $ cargo run -q -p ti-tools --bin doccheck2 .   → 0 error(s) across 23 audit-codified checks
+  $ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml → 125 tasks, 0 error(s)
+  $ powershell -File scripts/gate.ps1
+    === gate: TreasureIsl (22 items) ===
+    === gate: 0 failure(s) ===（视觉回归/渲染快照/正向快照 0 diff）
+
+--- [7] 判定 ---
+  S15.10 四步全闭环：帧缓冲单源（ti-render 类型被 MenuShell/gfx/测试真实使用，平台侧删除）、
+  原语可见性收紧（0 死出口）、ti-render 依赖表实测 = ab_glyph+serde+serde_json（可复用性达标：
+  换游戏只需替换 ti-app 的加载/转换层，渲染框架 0 改动）；3 条 doccheck2 断言负例验证生效。
+  S15.10 verified。

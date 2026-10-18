@@ -7,8 +7,9 @@
 //! - 菜单表 / 状态行文本取自 [`crate::shell_ui`]（壳与测试同源）。
 
 use ti_formats::font::{Charset, Font};
-use ti_platform::gfx::{FramePresenter, Framebuf, UploadMode, Viewport};
+use ti_platform::gfx::{FramePresenter, UploadMode, Viewport};
 use ti_platform::settings::{BorderStyle, FilterMode, QualityMode, ScaleMode, Settings};
+use ti_render::framebuffer::{Framebuf, FramebufRgba};
 
 use ti_render::canvas::Canvas;
 use ti_render::font::{FontSet, TtfFont};
@@ -61,7 +62,7 @@ pub struct MenuShell {
     pub theme: Theme,
     /// S7.5（feature `hd-8bit`）：RGBA8 HD 帧缓冲（与 `fb` 并行，默认构建不存在）。
     #[cfg(feature = "hd-8bit")]
-    pub fb_rgba: ti_platform::gfx::FramebufRgba,
+    pub fb_rgba: FramebufRgba,
 }
 
 /// QA128：内置 TTF 三档的**进程级**缓存（同字节只读盘 + 只解析一次；模块级 static，
@@ -101,7 +102,7 @@ impl MenuShell {
             settings,
             theme: Self::load_theme(),
             #[cfg(feature = "hd-8bit")]
-            fb_rgba: ti_platform::gfx::FramebufRgba::new(),
+            fb_rgba: FramebufRgba::new(),
         }
     }
 
@@ -171,7 +172,7 @@ impl MenuShell {
 
     /// 注入字体（解析成功的 `GoldLand.Fnt` + `font.dat`）。
     pub fn set_font(&mut self, font: Option<FontSet>) {
-        let glyph_count = font.as_ref().map_or(0, |(parsed, _)| parsed.glyph_count());
+        let glyph_count = font.as_ref().map_or(0, |f| f.glyphs.len());
         self.font = font;
         self.font_glyphs = glyph_count;
     }
@@ -276,25 +277,30 @@ impl MenuShell {
 
     /// 帧缓冲上屏（S4.3：脏行带部分上传，静止帧零 GPU 工作）。
     pub fn present(&mut self) {
-        self.presenter.present(&mut self.fb, &self.vp);
+        self.presenter.present(&self.fb, &self.vp);
     }
 
     /// 在帧缓冲上填充矩形（RGB565，逻辑像素整数坐标）。
     pub fn fill_rect(&mut self, x: i32, y: i32, w: i32, h: i32, color: u16) {
-        let x0 = x.clamp(0, LOGICAL_W_I32);
-        let y0 = y.clamp(0, LOGICAL_H_I32);
-        let x1 = x.saturating_add(w).clamp(0, LOGICAL_W_I32);
-        let y1 = y.saturating_add(h).clamp(0, LOGICAL_H_I32);
-        for py in y0..y1 {
-            for px in x0..x1 {
-                let idx = usize::try_from(py).unwrap_or(0) * LOGICAL_W_USIZE
-                    + usize::try_from(px).unwrap_or(0);
-                if let Some(slot) = self.fb.as_mut_slice().get_mut(idx) {
-                    *slot = color;
-                }
-            }
-        }
-        self.fb.mark_dirty(x, y, w, h);
+        // S15.10：像素写入单源 = 渲染框架 `Framebuf::fill_rect`（本方法不再自带像素循环）；
+        // 脏行标记属呈现层，转 `presenter.mark_dirty`。
+        self.fb.fill_rect(x, y, w, h, color);
+        self.presenter.mark_dirty(x, y, w, h);
+    }
+
+    /// 整帧调亮/压暗（场景切换淡入、消息页压暗）并标全帧脏。
+    ///
+    /// S15.10：像素操作在渲染框架帧缓冲，脏行跟踪在呈现层，故整帧像素操作后
+    /// 必须显式标全帧脏（旧实现在帧缓冲内部 `dirty_rows.fill(true)`）。
+    pub fn apply_brightness(&mut self, factor: f32) {
+        self.fb.apply_brightness(factor);
+        self.presenter.mark_all_dirty();
+    }
+
+    /// 从上一帧缓冲渐变到当前内容（场景切换淡入，EXP-081）并标全帧脏。
+    pub fn crossfade_from(&mut self, prev: &[u16], t: f32) {
+        self.fb.crossfade_from(prev, t);
+        self.presenter.mark_all_dirty();
     }
 
     /// 绘制一行文本（正文档，默认墨色 = 深底白字 [`COLOR_TEXT_ON_PARCH`]）。
@@ -460,7 +466,7 @@ impl MenuShell {
     /// S7.5（feature `hd-8bit`）：RGBA8 HD 帧缓冲上屏。
     #[cfg(feature = "hd-8bit")]
     pub fn present_rgba(&mut self) {
-        self.presenter.present_rgba(&mut self.fb_rgba, &self.vp);
+        self.presenter.present_rgba(&self.fb_rgba, &self.vp);
     }
 
     /// S7.5（feature `hd-8bit`）：把 RGB565 帧缓冲整体转成 RGBA8。
@@ -474,16 +480,25 @@ impl MenuShell {
                 *slot = 0xFF00_0000 | (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b);
             }
         }
-        self.fb_rgba.mark_dirty(0, 0, 1080, 1920);
+        self.presenter.mark_all_dirty();
     }
 }
 
-/// 把「字体字节 + 字符表字节」解析成 [`FontSet`]（纯字节，无 IO）。
+/// 把「字体字节 + 字符表字节」解析成渲染框架的**中性** [`FontSet`]（纯字节，无 IO）。
+///
+/// S15.10（可复用性）：`ti_formats::font` 是**本游戏的字体载体格式**，渲染框架不认它。
+/// 本函数是「格式层 → 框架层」的唯一转换点：逐字形把原始字节行解成 `u16` 行位图，
+/// 产出 `ti_render::font::FontSet`。换游戏只需换本函数 + `ti-formats` 侧解析器。
 #[must_use]
 pub fn parse_font_bytes(font_bytes: &[u8], charset_bytes: &[u8]) -> Option<FontSet> {
     let parsed = Font::parse("GoldLand.Fnt", font_bytes).ok()?;
     let charset = Charset::parse("font.dat", charset_bytes).ok()?;
-    Some((parsed, charset))
+    let count = parsed.glyph_count();
+    let mut glyphs = Vec::with_capacity(count);
+    for i in 0..count {
+        glyphs.push(ti_render::font::Glyph { rows: parsed.glyph(i)?.rows });
+    }
+    Some(FontSet { glyphs, chars: charset.chars })
 }
 
 // === ti_render::Canvas trait 实现 ===

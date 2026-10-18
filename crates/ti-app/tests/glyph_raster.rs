@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use ti_app::MENU;
 use ti_app::glyph_raster::{FontSet, Raster};
 use ti_formats::font::{Charset, Font, GLYPH_ROWS, GLYPH_WIDTH};
-use ti_platform::gfx::Framebuf;
+use ti_render::framebuffer::Framebuf;
 
 /// 壳里画的中文标题。
 const TITLE: &str = "金银岛";
@@ -36,7 +36,13 @@ fn font_set() -> FontSet {
     let charset_raw =
         fs::read(repo_root().join("legacy").join("data").join("font.dat")).expect("字符表存在");
     let charset = Charset::parse("font.dat", &charset_raw).expect("字符表解析成功");
-    (parsed, charset)
+    let count = parsed.glyph_count();
+    let mut glyphs = Vec::with_capacity(count);
+    for i in 0..count {
+        glyphs
+            .push(ti_render::font::Glyph { rows: parsed.glyph(i).expect("字形在表内").rows });
+    }
+    FontSet { glyphs, chars: charset.chars }
 }
 
 /// 旧版占位光栅（`seed = ch * 2_654_435_761`，12 行 × 8 列 MSB-first）。
@@ -61,10 +67,9 @@ fn legacy_noise(ch: char) -> Vec<bool> {
 #[test]
 fn draw_path_is_bit_identical_to_glyph_pixel() {
     let fs = font_set();
-    let (parsed, charset) = &fs;
     let mut ink_report = Vec::new();
     for ch in ['A', 'b', 'd', 'p', 'L', '金', '岛', '！'] {
-        let glyph = parsed.glyph_for(charset, ch).expect("样例字符在字表内");
+        let glyph = fs.glyph_for(ch).expect("样例字符在字表内");
         let raster = Raster::for_char(Some(&fs), ch);
         assert_eq!(raster, Raster::from_glyph(&glyph), "'{ch}' 光栅应等于真字形");
         for y in 0..usize::from(GLYPH_ROWS) {
@@ -85,12 +90,11 @@ fn draw_path_is_bit_identical_to_glyph_pixel() {
 #[test]
 fn blit_writes_exactly_the_glyph_pixels_to_the_framebuffer() {
     let fs = font_set();
-    let (parsed, charset) = &fs;
     let stride = usize::try_from(ti_platform::gfx::CANVAS_W).expect("帧宽(CANVAS)可转 usize");
     let origin_x = 30usize;
     let origin_y = 40usize;
     for ch in ['A', '金'] {
-        let glyph = parsed.glyph_for(charset, ch).expect("样例字符在字表内");
+        let glyph = fs.glyph_for(ch).expect("样例字符在字表内");
         let mut fb = Framebuf::new();
         Raster::for_char(Some(&fs), ch).blit(&mut fb, 30, 40, INK_COLOR);
         let pixels = fb.as_slice();
@@ -200,8 +204,8 @@ fn missing_chars_fall_back_to_visible_tofu() {
     assert!(!tofu.at(6, 6), "豆腐块内部应留空");
 
     // 字表缺字 → 豆腐块（实测：'继'/'续' 不在 font.dat 的 1016 字表内）
-    assert!(fs.1.index_of('继').is_none(), "'继' 实测不在字表内");
-    assert!(fs.1.index_of('续').is_none(), "'续' 实测不在字表内");
+    assert!(fs.index_of('继').is_none(), "'继' 实测不在字表内");
+    assert!(fs.index_of('续').is_none(), "'续' 实测不在字表内");
     for ch in ['继', '续'] {
         let raster = Raster::for_char(Some(&fs), ch);
         assert_eq!(raster, tofu, "'{ch}' 不在字表，必须回退豆腐块而不是空白");

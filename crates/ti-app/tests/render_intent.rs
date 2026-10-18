@@ -204,7 +204,7 @@ fn saveload_layout_matches_doc() {
 /// 其余 7 子 trait 方法给编译期最小 no-op（`Scene::render` 静态分发 `dyn SceneHost`，
 /// 运行时只触发 clear/fill/draw_text/battle_snapshot 这几条）。
 struct VsHost {
-    pub fb: ti_platform::gfx::Framebuf,
+    pub fb: ti_render::framebuffer::Framebuf,
     pub shell: ti_app::menu_shell::MenuShell,
     pub fills: Vec<(i32, i32, i32, i32, u16)>,
     pub texts: Vec<(String, i32, i32)>,
@@ -215,7 +215,7 @@ struct VsHost {
 impl VsHost {
     fn new(battle: Option<ti_app::game_app::BattleSnapshot>) -> Self {
         Self {
-            fb: ti_platform::gfx::Framebuf::new(),
+            fb: ti_render::framebuffer::Framebuf::new(),
             shell: ti_app::menu_shell::MenuShell::with_upload_mode(
                 1080.0,
                 1920.0,

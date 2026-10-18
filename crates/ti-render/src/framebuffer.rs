@@ -64,6 +64,57 @@ impl Framebuf {
             }
         }
     }
+
+    /// 全帧提亮/压暗（场景切换淡入，`factor` = 1.0 原值 / 0.0 全黑）。
+    ///
+    /// `factor` = 1.0 = 原样，0.0 = 全黑；逐像素对 RGB565 三通道做 per-channel 乘法。
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn apply_brightness(&mut self, factor: f32) {
+        let f = factor.clamp(0.0, 1.0);
+        for p in &mut self.pixels {
+            let r = f32::from((*p >> 11) & 0x1F);
+            let g = f32::from((*p >> 5) & 0x3F);
+            let b = f32::from(*p & 0x1F);
+            let rr = (r * f).round().min(31.0) as u16;
+            let gg = (g * f).round().min(63.0) as u16;
+            let bb = (b * f).round().min(31.0) as u16;
+            *p = (rr << 11) | (gg << 5) | bb;
+        }
+    }
+
+    /// 当前画面快照（定长 `FB_PIXELS` 的 RGB565），供场景切换后渐变用。
+    #[must_use]
+    pub fn snapshot(&self) -> Box<[u16]> {
+        self.pixels.clone()
+    }
+
+    /// 从上一帧缓冲 `prev` 渐变到当前内容，`t` = 0.0 = 全上一帧，1.0 = 全当前帧不渐变。
+    ///
+    /// 用于场景切换淡入（EXP-081）：`enter()` 前先快照，进入后渐变到新画面。
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn crossfade_from(&mut self, prev: &[u16], t: f32) {
+        let ratio = (t.clamp(0.0, 1.0) * 255.0).round() as u32;
+        for (i, slot) in self.pixels.iter_mut().enumerate() {
+            let Some(&old) = prev.get(i) else { break };
+            if ratio == 0 {
+                *slot = old;
+            } else if ratio >= 255 {
+                // 全当前帧，不渐变
+            } else {
+                let cur = *slot;
+                let mix = |a: u16, b: u16, shift: u32, mask: u16| -> u16 {
+                    let av = u32::from((a >> shift) & mask);
+                    let bv = u32::from((b >> shift) & mask);
+                    let m = u32::from(mask);
+                    (((av * ratio + bv * (255 - ratio) + 127) / 255) & m) as u16
+                };
+                let r = mix(old, cur, 11, 0x1F);
+                let g = mix(old, cur, 5, 0x3F);
+                let b = mix(old, cur, 0, 0x1F);
+                *slot = (r << 11) | (g << 5) | b;
+            }
+        }
+    }
 }
 
 impl Default for Framebuf {
@@ -106,5 +157,56 @@ impl PixelSink for Framebuf {
                 *slot = color;
             }
         }
+    }
+}
+
+/// RGBA8 帧缓冲（`0xAARRGGBB`，1080×1920）。
+///
+/// HD 资产路径用（真彩色 + alpha 混合）；与 [`Framebuf`]（RGB565）同构，
+/// 差别只在像素宽度与初始色。**不含脏行跟踪** —— 上传带宽优化属平台呈现层
+/// （`ti_platform::gfx::FramePresenter`）职责，渲染框架只管像素（S15.10 单源）。
+pub struct FramebufRgba {
+    pixels: Box<[u32]>,
+}
+
+impl FramebufRgba {
+    /// 新建全帧缓冲（不透明黑）。
+    #[must_use]
+    pub fn new() -> Self {
+        Self { pixels: vec![0xFF00_0000u32; FB_PIXELS].into_boxed_slice() }
+    }
+
+    /// 用指定 RGBA8 值清空全部像素。
+    pub fn clear(&mut self, color: u32) {
+        self.pixels.fill(color);
+    }
+
+    /// 只读访问全部像素（行主序，1080×1920）。
+    #[must_use]
+    pub fn as_slice(&self) -> &[u32] {
+        &self.pixels
+    }
+
+    /// 可变访问全部像素。
+    pub fn as_mut_slice(&mut self) -> &mut [u32] {
+        &mut self.pixels
+    }
+}
+
+impl Default for FramebufRgba {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AsRef<[u32]> for FramebufRgba {
+    fn as_ref(&self) -> &[u32] {
+        &self.pixels
+    }
+}
+
+impl AsMut<[u32]> for FramebufRgba {
+    fn as_mut(&mut self) -> &mut [u32] {
+        &mut self.pixels
     }
 }

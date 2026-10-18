@@ -20,7 +20,7 @@ pub mod text;
 pub mod theme;
 
 // 便捷重导出
-pub use primitives::{fill_rect, gradient_row, parchment_bg, vignette};
+pub use primitives::parchment_bg;
 pub use shell::{
     bar_slot, draw_body_text, draw_body_text_secondary, draw_title_text, hint_row, menu_icon,
     menu_item, nautical_grid, panel, title_bar, wood_frame,

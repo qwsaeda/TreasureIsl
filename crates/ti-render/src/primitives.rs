@@ -1,7 +1,11 @@
-//! 3 个绘制原语：纯色矩形 / 垂直渐变行 / 四边暗角。
+//! 背景组合函数 `parchment_bg`（底色 + 垂直渐变行 + 四边暗角）。
+//!
+//! 绘制原语是 [`crate::canvas::Canvas`] 的 trait 方法（见 `docs/process/08_render_arch.md`
+//! §2）；本模块只提供建立在原语之上的**组合函数**。
 //!
 //! 高频渲染路径优化：避免逐像素 `fill_rect(1,1)` 造成百万次调用，
-//! 改为整行/整条批量填充。
+//! 改为整行/整条批量填充（S15.10：`gradient_row`/`vignette` 为本组合函数私有辅助，
+//! 原语 1 的自由函数转发壳已删除 —— 零外部调用且与 trait 方法重复）。
 
 use crate::canvas::Canvas;
 use crate::framebuffer::{LOGICAL_H_I32, LOGICAL_W_I32};
@@ -22,23 +26,19 @@ fn blend_color(fg: u16, bg: u16, alpha: f32) -> u16 {
     r | g | b
 }
 
-/// 原语 1：纯色矩形填充。
-pub fn fill_rect(host: &mut dyn Canvas, x: i32, y: i32, w: i32, h: i32, color: u16) {
-    host.fill_rect(x, y, w, h, color);
-}
-
-/// 原语 2：垂直渐变行（整行填充，从 `top_color` 渐变到 `bottom_color`）。
+/// 垂直渐变行（整行填充，从 `top_color` 渐变到 `bottom_color`；`parchment_bg` 内部用，
+/// S15.10 收可见性 —— 对外原语是 `Canvas` trait 方法，不是本自由函数）。
 ///
 /// 逐行计算混合色后整行填充，避免逐像素调用。
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-pub fn gradient_row(host: &mut dyn Canvas, theme: &Theme, y: i32, strength: f32) {
+fn gradient_row(host: &mut dyn Canvas, theme: &Theme, y: i32, strength: f32) {
     let t = y as f32 / LOGICAL_H_I32 as f32;
     let color = blend_color(theme.parch_light, theme.parch_dark, strength * t);
     host.fill_rect(0, y, LOGICAL_W_I32, 1, color);
 }
 
-/// 原语 3：四边暗角（整条填充，压深边缘）。
-pub fn vignette(host: &mut dyn Canvas, theme: &Theme, vig: i32) {
+/// 四边暗角（整条填充，压深边缘；`parchment_bg` 内部用，S15.10 收可见性）。
+fn vignette(host: &mut dyn Canvas, theme: &Theme, vig: i32) {
     host.fill_rect(0, 0, LOGICAL_W_I32, vig, theme.parch_dark);
     host.fill_rect(0, LOGICAL_H_I32 - vig, LOGICAL_W_I32, vig, theme.parch_dark);
 }

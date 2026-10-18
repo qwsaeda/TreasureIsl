@@ -28,7 +28,7 @@ pub use backend::{
     Audio, Backend, Channel, Clock, Event, Gfx, Input, KeyCode, Rect, Rgb565, Storage,
 };
 pub use error::{Error, Result};
-pub use gfx::{FB_PIXELS, FramePresenter, Framebuf, UploadMode, Viewport};
+pub use gfx::{FB_PIXELS, FramePresenter, UploadMode, Viewport};
 pub use input::{HeadlessInput, VirtualButton, translate_event};
 pub use settings::{
     Gesture, GestureTracker, KeyBindings, Orientation, ScaleMode, Settings, VirtualKeyPad,

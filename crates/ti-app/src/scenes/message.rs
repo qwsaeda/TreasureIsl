@@ -118,7 +118,7 @@ impl Scene for MessageScene {
         chrome::scene_hint(host, "message", "scene.message.nav_hint");
         let factor = chrome::page_brightness_factor();
         if factor < 1.0 {
-            host.shell_mut().fb.apply_brightness(factor);
+            host.shell_mut().apply_brightness(factor);
         }
         chrome::tick_page_frame();
     }

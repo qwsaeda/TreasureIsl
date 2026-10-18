@@ -1396,8 +1396,8 @@ fn check_std_traits_matrix(root: &Path) -> Vec<String> {
         ),
         (
             "crates/ti-platform/src/gfx.rs",
-            "impl AsRef<[u16]> for Framebuf",
-            "平台 Framebuf 借用视图（§5.6.6 缓冲/容器 → AsRef/AsMut）",
+            "pub struct FramePresenter",
+            "呈现器（脏行跟踪归属方，S15.10 起脏行状态在 presenter 而非帧缓冲）",
         ),
         (
             "crates/ti-formats/src/ids.rs",
@@ -1416,6 +1416,54 @@ fn check_std_traits_matrix(root: &Path) -> Vec<String> {
             ));
         }
     }
+    errors
+}
+
+/// 渲染框架分离收口防复发（S15.10，`docs/process/08_render_arch.md` §2 契约）：
+/// ① `MenuShell::fill_rect` 不得自带像素循环（须转发 `ti_render` 帧缓冲）；
+/// ② `ti-render` 不得依赖 `ti-platform`（框架可复用到其他游戏 = 依赖单向且不反向）；
+/// ③ `ti-render` 不得依赖 `ti-formats`（不认本游戏资产载体格式，字体走中性 `FontSet`）。
+fn check_render_framework_boundary(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    // ① MenuShell::fill_rect 内不得出现像素索引运算（禁手写重复实现）
+    let Some(shell) = read_file(root, "crates/ti-app/src/menu_shell.rs") else {
+        errors.push("缺 crates/ti-app/src/menu_shell.rs（无法校验 fill_rect 单源）".to_string());
+        return errors;
+    };
+    if let Some(idx) = shell.find("pub fn fill_rect") {
+        let body: String = shell[idx..].chars().take(600).collect();
+        // 转发实现应命中 `fb.fill_rect(`；若出现 `as_mut_slice` 或 `* LOGICAL_W_USIZE`
+        // 说明像素循环又回到了 ti-app（重复实现）
+        if body.contains("as_mut_slice") || body.contains("LOGICAL_W_USIZE") {
+            errors.push(
+                "menu_shell.rs::fill_rect 又出现手写像素循环（S15.10：像素单源 = ti_render 帧缓冲，\
+                 本方法只应转发 + presenter.mark_dirty）"
+                    .to_string(),
+            );
+        }
+        if !body.contains("presenter.mark_dirty") {
+            errors.push(
+                "menu_shell.rs::fill_rect 未标脏（应调 presenter.mark_dirty —— S15.10 脏行跟踪在呈现层）"
+                    .to_string(),
+            );
+        }
+    }
+
+    // ② ti-render 不得依赖 ti-platform；③ 不得依赖 ti-formats
+    let Some(cargo) = read_file(root, "crates/ti-render/Cargo.toml") else {
+        errors.push("缺 crates/ti-render/Cargo.toml（无法校验依赖方向）".to_string());
+        return errors;
+    };
+    for forbidden in ["ti-platform", "ti-formats", "ti-core", "ti-app"] {
+        if cargo.contains(forbidden) {
+            errors.push(format!(
+                "ti-render/Cargo.toml 依赖了 `{forbidden}`（S15.10：渲染框架须可复用，\
+                 只依赖 ab_glyph/serde/serde_json；游戏资产载体格式由 ti-app 在转换层解耦）"
+            ));
+        }
+    }
+
     errors
 }
 
@@ -1446,9 +1494,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_layout_doc_table_cross_check(&root));
     all_errors.extend(check_no_ti_core_fullpath(&root));
     all_errors.extend(check_std_traits_matrix(&root));
+    all_errors.extend(check_render_framework_boundary(&root));
 
     println!(
-        "doccheck2: {} error(s) across 22 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix)",
+        "doccheck2: {} error(s) across 23 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary)",
         all_errors.len()
     );
     for err in &all_errors {

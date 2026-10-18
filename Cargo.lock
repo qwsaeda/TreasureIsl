@@ -570,7 +570,6 @@ dependencies = [
  "ab_glyph",
  "serde",
  "serde_json",
- "ti-formats",
 ]
 
 [[package]]

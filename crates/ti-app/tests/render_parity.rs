@@ -20,7 +20,7 @@
 )]
 
 use ti_app::game_app::{GameApp, GameInput};
-use ti_platform::gfx::Framebuf;
+use ti_render::framebuffer::Framebuf;
 
 /// 呈现层帧像素数（`1080 × 1920`，`08_layout_design.md` §1；legacy 176×220 统一缩放落画布）。
 const FB_PIXELS: usize = 1080 * 1920;

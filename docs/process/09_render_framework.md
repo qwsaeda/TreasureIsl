@@ -8,9 +8,9 @@
 
 | Crate | 职责 | 禁止 |
 |---|---|---|
-| `ti-render` | 帧缓冲 / 绘制原语 / 字体系统 / 主题类型 / 等距投影 / 文本排版 / 场景外壳组件 | 禁止依赖 `ti-app`/`ti-core`/`ti-platform`；禁止出现游戏语义（场景名/角色/战斗等） |
-| `ti-app` | 游戏业务渲染（scenes/*.rs）/GameApp 状态机/游戏 UI 组件 | 禁止直接操作帧缓冲像素；必须通过 `ti-render` 绘制 |
-| `ti-platform` | 平台抽象（窗口/输入/文件系统） | 不动 |
+| `ti-render` | 帧缓冲 / 绘制原语 / 字体系统 / 主题类型 / 等距投影 / 文本排版 / 场景外壳组件 | 禁止依赖 `ti-app`/`ti-core`/`ti-platform`/`ti-formats`（S15.10 起连资产载体格式也不依赖）；禁止出现游戏语义（场景名/角色/战斗等）。**依赖实测**：仅 `ab_glyph`/`serde`/`serde_json`，由 doccheck2 第 23 项 `render-framework-boundary` 锁定 |
+| `ti-app` | 游戏业务渲染（scenes/*.rs）/GameApp 状态机/游戏 UI 组件 | 禁止直接操作帧缓冲像素（须经 `Canvas` trait / `Framebuf` 方法，S15.10）；必须通过 `ti-render` 绘制；**持有格式层 → 框架层的转换点**（如 `menu_shell::parse_font_bytes` 把 `ti_formats::font` 解析结果转成框架中性 `ti_render::font::FontSet`） |
+| `ti-platform` | 平台抽象（窗口/输入/文件系统）+ **呈现层**（脏行跟踪 + 纹理上传，帧缓冲本体不在此，S15.10） | 不重新定义帧缓冲类型（会与 `ti-render` 重复） |
 
 ## 2. ti-render 模块结构
 
@@ -21,13 +21,13 @@ crates/ti-render/
     canvas.rs       // Canvas trait：渲染框架 ↔ 宿主平台的最小抽象（帧缓冲 + 3 档文字）
     framebuffer.rs  // 帧缓冲抽象（RGB565/RGBA8）、1080 空间常量、PixelSink
     font/
-      mod.rs        // Font trait + FontSet（TTF + bitmap fallback）
+      mod.rs        // FontSet/Glyph 中性类型 + TtfFont 转发（S15.10：不认 ti-formats，宿主转换）
       ttf.rs        // TTF 光栅化（ab_glyph）
-      bitmap.rs     // 位图字体回退（GoldLand.Fnt + font.dat）
+      bitmap.rs     // 位图字体回退（中性 FontSet → Raster；宿主在转换层喂字形）
     theme.rs        // 主题类型：色板 + 字号 + 间距（数据驱动）
     iso.rs          // 等距投影（IsoProjection，纯数学）
     text.rs         // 文本排版（center_x/center_y/wrap_text/multi_line_metrics）
-    primitives.rs   // 绘制原语（fill_rect / gradient_row / vignette；parchment_bg = 组合函数）
+    primitives.rs   // 组合函数 parchment_bg（gradient_row/vignette 为私有辅助；绘制原语 = Canvas trait 方法，S15.10）
     shell.rs        // 场景外壳（wood_frame/title_bar/menu_item/hint_row/panel/bar_slot/…）
 ```
 

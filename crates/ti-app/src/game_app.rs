@@ -1234,12 +1234,12 @@ impl GameApp {
         match trans.prev.take() {
             Some(prev) => {
                 // 真交叉淡化：旧画面 → 新画面逐帧插值（EXP-081）。
-                self.shell.fb.crossfade_from(&prev, trans.t);
+                self.shell.crossfade_from(&prev, trans.t);
                 trans.prev = Some(prev);
             }
             None => {
                 // 无旧画面快照（进入前未渲染过）：退回亮度调制。
-                self.shell.fb.apply_brightness(trans.t);
+                self.shell.apply_brightness(trans.t);
             }
         }
         trans.t = next_t;

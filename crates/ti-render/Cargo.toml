@@ -8,7 +8,6 @@ description = "纯渲染框架：帧缓冲/3 原语/z-order/字体/主题/等距
 
 [dependencies]
 ab_glyph.workspace = true
-ti-formats.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 

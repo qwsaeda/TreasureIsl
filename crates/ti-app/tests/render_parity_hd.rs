@@ -13,7 +13,7 @@
 #[cfg(feature = "hd-8bit")]
 mod tests {
     use ti_app::game_app::{GameApp, GameInput};
-    use ti_platform::gfx::FramebufRgba;
+    use ti_render::framebuffer::FramebufRgba;
 
     /// 呈现层帧像素数（`1080 × 1920`，§1 约束；legacy 176×220 统一缩放落画布）。
     const FB_PIXELS: usize = 1080 * 1920;

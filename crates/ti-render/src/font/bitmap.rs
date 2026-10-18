@@ -3,8 +3,7 @@
 //! 从 `GoldLand.Fnt` 解析的字形 → 位图，缺字画豆腐块。
 //! 作为 TTF 不可用时的回退路径。
 
-use ti_formats::font::{GLYPH_ROWS, GLYPH_WIDTH, Glyph};
-
+use crate::font::{FontSet, GLYPH_ROWS, GLYPH_WIDTH, Glyph};
 use crate::framebuffer::{CANVAS_H, CANVAS_W};
 
 /// 12×12 墨点位图（行主序：`ink[y * cols + x]`）。
@@ -38,14 +37,14 @@ impl Raster {
 
     /// 字符 → 位图：空白留空；命中字表用真字形；否则豆腐块。
     #[must_use]
-    pub fn for_char(font: Option<&crate::font::FontSet>, ch: char) -> Self {
+    pub fn for_char(font: Option<&FontSet>, ch: char) -> Self {
         if ch.is_whitespace() {
             return Self::blank();
         }
         match font {
-            Some((parsed, charset)) => parsed
-                .glyph_for(charset, ch)
-                .map_or_else(Self::tofu, |glyph| Self::from_glyph(&glyph)),
+            Some(set) => {
+                set.glyph_for(ch).map_or_else(Self::tofu, |glyph| Self::from_glyph(&glyph))
+            }
             None => Self::tofu(),
         }
     }

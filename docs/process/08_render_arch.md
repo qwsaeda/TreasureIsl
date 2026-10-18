@@ -85,23 +85,29 @@
 
 ---
 
-## 2. 绘制原语（`ti_render::primitives` + `Canvas`）
+## 2. 绘制原语（`Canvas` trait 方法 + `ti_render::primitives` 组合函数）
 
 视图层只经 `SceneHost` → `Canvas` trait（`ti_render::canvas`）调下列原语。
-`primitives.rs` 里实有的绘制函数只有 4 个，外加 1 个组合函数：
+**绘制原语是 `Canvas` trait 的方法**（`primitives.rs` 里没有同名自由函数，S15.10）
++ 1 个组合函数：
 
 | 原语 | 签名语义 | 用途 |
 |---|---|---|
-| `fill_rect(x, y, w, h, color)` | 以 1080 空间左上角 + 尺寸填一个矩形 | 外框/面板/棋盘格/棋子/血条/文字底条 |
-| `gradient_row(theme, y, strength)` | 在第 `y` 行铺一条横向渐变带 | 背景顶部层次 |
-| `vignette(theme, vig)` | 四边暗角 | 羊皮纸底纹收边 |
-| `parchment_bg(theme)` | **组合函数** = 底色 + `gradient_row` ×N + `vignette` | 场景背景（`chrome::parchment_bg` 转发） |
+| `Canvas::fill_rect(x, y, w, h, color)` | 以 1080 空间左上角 + 尺寸填一个矩形 | 外框/面板/棋盘格/棋子/血条/文字底条 |
+| `parchment_bg(theme)` | **组合函数** = 底色 + 垂直渐变行（模块私有 `gradient_row`）×N + 四边暗角（模块私有 `vignette`） | 场景背景（`chrome::parchment_bg` 转发） |
 | `Canvas::draw_text` / `draw_title_text` / `draw_hint_text` | 在 1080 空间起点绘制一行文本（TTF 三档 96/44/28px，回退位图 advance 26/12/8） | 标题/列表项/状态行/HUD/血量数字 |
 
+> `gradient_row` / `vignette` 是 `parchment_bg` 的**模块私有辅助**（S15.10 收可见性：
+> 原为 `pub` 但零外部调用，属误导性 API）；渐变/暗角通过 `Canvas::fill_rect` 落地。
 > **不存在 `blit_texture`**：全仓无此函数。HD 位图注入走 `ti-platform` 的
 > `gpu_renderer`/PNG 解码路径，**不在视图层原语表内**（引入需先补本文契约，见 §8 反模式 6）。
 > `shell.rs` 里的 `wood_frame/title_bar/panel/bar_slot/menu_item/hint_row/nautical_grid/`
 > `menu_icon/draw_*_text` 是**上层组合组件**，不是原语。
+
+**帧缓冲归属（S15.10 单源）**：帧缓冲本体唯一 = `ti_render::framebuffer::{Framebuf, FramebufRgba}`
+（像素 + 填充/渐变/快照等纯像素操作）。`ti_platform::gfx` 的同名类型已删除；该模块只做
+**呈现层**：逐行脏标记（`mark_dirty`/`has_dirty`/`dirty_row_range`/`reset_dirty`，S15.10 从帧缓冲
+迁入 `FramePresenter`）+ 纹理上传 + 屏幕坐标变换。依赖方向单向：`ti-platform → ti-render`。
 
 **语义单一性**：每个原语只做一件事。任何"既要缩放又要翻转又要裁剪还要查像素"的
 绘制逻辑都是架构违规——它属于工具链/构建期，不属于运行时。

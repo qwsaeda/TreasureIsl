@@ -1,7 +1,7 @@
 //! 1080×1920 呈现层帧缓冲与屏幕坐标变换（P4-2，`08_render_arch.md` 契约 1）。
 //!
 //! 呈现坐标系唯一 = 1080×1920（legacy 176×220 已退出运行时）；本模块提供：
-//! - [`Framebuf`]：固定大小的 RGB565 像素缓冲（S4.3 起内置逐行脏标记）；
+//! - 帧缓冲本体在渲染框架 crate（`ti_render::framebuffer::{Framebuf, FramebufRgba}`，S15.10 单源）；
 //! - [`FramePresenter`]：持续纹理呈现器（S4.3 脏行带部分上传，静止帧零 GPU）；
 //! - [`Viewport`]：屏幕 ↔ 逻辑坐标的等比缩放（letterbox/pillarbox），
 //!   保证任意窗口尺寸下坐标互逆（P4-2 命中判定不偏移）。
@@ -23,294 +23,9 @@ const LH: f32 = 1920.0;
 /// 画布高的 i32 版（供坐标运算）。
 const LH_I32: i32 = 1920;
 
-/// 1080×1920 RGB565 呈现层帧缓冲（P4-2；legacy 176×220 整屏缓冲已退出运行时）。
-///
-/// 渲染后端（macroquad）负责把它缩放到实际窗口并 present。
-///
-/// S4.3：内置逐行脏标记（[`mark_dirty`]/[`has_dirty`]/[`dirty_row_range`]/
-/// [`reset_dirty`]），供 [`FramePresenter`] 按脏行带部分上传、静止帧整帧跳过。
-/// 新建缓冲全脏（保证首次呈现一定上传）。
-pub struct Framebuf {
-    pixels: Box<[u16]>,
-    /// 逐行脏标记（1920 行），[`mark_dirty`] 置位、[`reset_dirty`] 清零。
-    dirty_rows: [bool; LH_I32 as usize],
-}
-
-impl Framebuf {
-    /// 新建全黑帧缓冲（全脏，保证首次呈现一定上传）。
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            pixels: vec![0u16; FB_PIXELS].into_boxed_slice(),
-            dirty_rows: [true; LH_I32 as usize],
-        }
-    }
-
-    /// 用指定 RGB565 值清空全部像素（置全帧脏）。
-    pub fn clear(&mut self, color: u16) {
-        self.pixels.fill(color);
-        self.dirty_rows.fill(true);
-    }
-
-    /// 只读访问全部像素（行主序，1080×1920）。
-    #[must_use]
-    pub fn as_slice(&self) -> &[u16] {
-        &self.pixels
-    }
-
-    /// 可变访问全部像素。
-    pub fn as_mut_slice(&mut self) -> &mut [u16] {
-        &mut self.pixels
-    }
-
-    /// 标记矩形 `[x, x+w) × [y, y+h)` 所在行脏（越界裁到逻辑屏内；全裁空 = no-op）。
-    /// 调用方在写像素后调用；`mark_dirty` 只记行，不写像素。
-    pub fn mark_dirty(&mut self, x: i32, y: i32, w: i32, h: i32) {
-        let y0 = y.max(0);
-        let y1 = (y.saturating_add(h).saturating_sub(1)).min(LH_I32 - 1);
-        if y0 > y1 || x.saturating_add(w) <= 0 || x >= 1080 {
-            return;
-        }
-        for r in y0..=y1 {
-            self.dirty_rows[usize::try_from(r).unwrap_or(0)] = true;
-        }
-    }
-
-    /// 是否有任何脏行。
-    #[must_use]
-    pub fn has_dirty(&self) -> bool {
-        self.dirty_rows.iter().any(|d| *d)
-    }
-
-    /// 脏行带 `[first, last]`（无脏行时返回 `(0, 0)`，调用方先查 [`has_dirty`]）。
-    #[must_use]
-    pub fn dirty_row_range(&self) -> (i32, i32) {
-        let mut first: Option<i32> = None;
-        let mut last: Option<i32> = None;
-        for (i, &d) in self.dirty_rows.iter().enumerate() {
-            if d {
-                let i = i32::try_from(i).unwrap_or(0);
-                first = Some(match first {
-                    None => i,
-                    Some(f) => f.min(i),
-                });
-                last = Some(match last {
-                    None => i,
-                    Some(l) => l.max(i),
-                });
-            }
-        }
-        match (first, last) {
-            (Some(f), Some(l)) => (f, l),
-            _ => (0, 0),
-        }
-    }
-
-    /// 清零所有脏标记（一次上传完成后调用）。
-    pub fn reset_dirty(&mut self) {
-        self.dirty_rows.fill(false);
-    }
-
-    /// 全帧亮度调制（场景切换淡入淡出用）。
-    ///
-    /// `factor` = 1.0 → 原样；0.0 → 全黑。对每个 RGB565 像素做 per-channel 缩放。
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn apply_brightness(&mut self, factor: f32) {
-        let f = factor.clamp(0.0, 1.0);
-        for p in &mut self.pixels {
-            let r = f32::from((*p >> 11) & 0x1F);
-            let g = f32::from((*p >> 5) & 0x3F);
-            let b = f32::from(*p & 0x1F);
-            let rr = (r * f).round().min(31.0) as u16;
-            let gg = (g * f).round().min(63.0) as u16;
-            let bb = (b * f).round().min(31.0) as u16;
-            *p = (rr << 11) | (gg << 5) | bb;
-        }
-        self.dirty_rows.fill(true);
-    }
-
-    /// 当前像素快照（行主序，`FB_PIXELS` 个 RGB565，供交叉淡化保存旧画面）。
-    #[must_use]
-    pub fn snapshot(&self) -> Box<[u16]> {
-        self.pixels.clone()
-    }
-
-    /// 与快照交叉淡化：按 `t`（0.0 = 全旧画面，1.0 = 全当前画面）逐像素混合。
-    ///
-    /// 用于场景切换真交叉淡化（EXP-081）：`enter()` 前快照旧画面，
-    /// 渲染新场景后调本方法做两帧插值，而非亮度调制。
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn crossfade_from(&mut self, prev: &[u16], t: f32) {
-        let ratio = (t.clamp(0.0, 1.0) * 255.0).round() as u32;
-        for (i, slot) in self.pixels.iter_mut().enumerate() {
-            let Some(&old) = prev.get(i) else { break };
-            if ratio == 0 {
-                *slot = old;
-            } else if ratio >= 255 {
-                // 全当前画面，无需写
-            } else {
-                let cur = *slot;
-                let mix = |a: u16, b: u16, shift: u32, mask: u16| -> u16 {
-                    let av = u32::from((a >> shift) & mask);
-                    let bv = u32::from((b >> shift) & mask);
-                    let m = u32::from(mask);
-                    (((av * ratio + bv * (255 - ratio) + 127) / 255) & m) as u16
-                };
-                let r = mix(old, cur, 11, 0x1F);
-                let g = mix(old, cur, 5, 0x3F);
-                let b = mix(old, cur, 0, 0x1F);
-                *slot = (r << 11) | (g << 5) | b;
-            }
-        }
-        self.dirty_rows.fill(true);
-    }
-}
-
-impl Default for Framebuf {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// 借用视图（§5.6.6 选用矩阵「缓冲/容器借用视图 → `AsRef/AsMut`」）：
-/// 泛型消费方（`fn draw(fb: &impl AsRef<[u16]>)`）可复用此缓冲。
-/// 手写 `as_slice`/`as_mut_slice` 保留（30 调用点），本 trait 为纯增量。
-impl AsRef<[u16]> for Framebuf {
-    fn as_ref(&self) -> &[u16] {
-        &self.pixels
-    }
-}
-
-impl AsMut<[u16]> for Framebuf {
-    fn as_mut(&mut self) -> &mut [u16] {
-        &mut self.pixels
-    }
-}
-
-/// S15.7：`Framebuf` 实现渲染框架的 [`ti_render::framebuffer::PixelSink`]，
-/// 使 `ti_render::font::bitmap::Raster::blit` 可直接写平台帧缓冲（渲染框架不依赖具体缓冲类型）。
-impl ti_render::framebuffer::PixelSink for Framebuf {
-    fn set_pixel(&mut self, x: i32, y: i32, color: u16) {
-        let w = i32::try_from(CANVAS_W).unwrap_or(0);
-        if (0..w).contains(&x) && (0..LH_I32).contains(&y) {
-            let idx = usize::try_from(y).unwrap_or(0) * usize::try_from(CANVAS_W).unwrap_or(0)
-                + usize::try_from(x).unwrap_or(0);
-            if let Some(slot) = self.pixels.get_mut(idx) {
-                *slot = color;
-            }
-        }
-    }
-}
-
-/// S7.5：1080×1920 RGBA8（`0xAARRGGBB`）HD 帧缓冲（feature `hd-8bit`，默认关）。
-///
-/// 与 [`Framebuf`]（RGB565）并行存在；路径 1 并行（`docs/impl/14_asset_enhancement.md` §3.5）：
-/// 默认构建不引入本结构，RGB565 原路径逐像素不变。
-#[cfg(feature = "hd-8bit")]
-pub struct FramebufRgba {
-    /// 行主序 1080×1920 RGBA8 像素（`0xAARRGGBB`，A=0xFF 不透明）。
-    pixels: Box<[u32]>,
-    /// 逐行脏标记（1920 行），与 [`Framebuf`] 同语义。
-    dirty_rows: [bool; LH_I32 as usize],
-}
-
-#[cfg(feature = "hd-8bit")]
-impl FramebufRgba {
-    /// 新建全黑不透明帧缓冲（全脏，保证首次呈现一定上传）。
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            pixels: vec![0xFF00_0000u32; FB_PIXELS].into_boxed_slice(),
-            dirty_rows: [true; LH_I32 as usize],
-        }
-    }
-
-    /// 用指定 RGBA8 值清空全部像素（置全帧脏）。
-    pub fn clear(&mut self, color: u32) {
-        self.pixels.fill(color);
-        self.dirty_rows.fill(true);
-    }
-
-    /// 只读访问全部像素（行主序，1080×1920）。
-    #[must_use]
-    pub fn as_slice(&self) -> &[u32] {
-        &self.pixels
-    }
-
-    /// 可变访问全部像素。
-    pub fn as_mut_slice(&mut self) -> &mut [u32] {
-        &mut self.pixels
-    }
-
-    /// 标记矩形 `[x, x+w) × [y, y+h)` 所在行脏（越界裁到逻辑屏内；全裁空 = no-op）。
-    pub fn mark_dirty(&mut self, x: i32, y: i32, w: i32, h: i32) {
-        let y0 = y.max(0);
-        let y1 = (y.saturating_add(h).saturating_sub(1)).min(LH_I32 - 1);
-        if y0 > y1 || x.saturating_add(w) <= 0 || x >= 1080 {
-            return;
-        }
-        for r in y0..=y1 {
-            self.dirty_rows[usize::try_from(r).unwrap_or(0)] = true;
-        }
-    }
-
-    /// 是否有任何脏行。
-    #[must_use]
-    pub fn has_dirty(&self) -> bool {
-        self.dirty_rows.iter().any(|d| *d)
-    }
-
-    /// 脏行带 `[first, last]`（无脏行时返回 `(0, 0)`，调用方先查 [`has_dirty`]）。
-    #[must_use]
-    pub fn dirty_row_range(&self) -> (i32, i32) {
-        let mut first: Option<i32> = None;
-        let mut last: Option<i32> = None;
-        for (i, &d) in self.dirty_rows.iter().enumerate() {
-            if d {
-                let i = i32::try_from(i).unwrap_or(0);
-                first = Some(match first {
-                    None => i,
-                    Some(f) => f.min(i),
-                });
-                last = Some(match last {
-                    None => i,
-                    Some(l) => l.max(i),
-                });
-            }
-        }
-        match (first, last) {
-            (Some(f), Some(l)) => (f, l),
-            _ => (0, 0),
-        }
-    }
-
-    /// 清零所有脏标记（一次上传完成后调用）。
-    pub fn reset_dirty(&mut self) {
-        self.dirty_rows.fill(false);
-    }
-}
-
-#[cfg(feature = "hd-8bit")]
-impl Default for FramebufRgba {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// 借用视图（§5.6.6）：RGBA8 缓冲 slice 视图，与 `Framebuf` 同口径。
-#[cfg(feature = "hd-8bit")]
-impl AsRef<[u32]> for FramebufRgba {
-    fn as_ref(&self) -> &[u32] {
-        &self.pixels
-    }
-}
-
-#[cfg(feature = "hd-8bit")]
-impl AsMut<[u32]> for FramebufRgba {
-    fn as_mut(&mut self) -> &mut [u32] {
-        &mut self.pixels
-    }
-}
+// 帧缓冲类型归属（S15.10 单源）：帧缓冲本体在渲染框架 crate
+// （`ti_render::framebuffer::Framebuf` / `FramebufRgba`），本模块只做**呈现层**：
+// 脏行跟踪 + 纹理上传 + 屏幕变换。渲染框架不依赖本 crate（可复用到其他游戏）。
 
 /// S7.5（feature `hd-8bit`）：RGBA8 像素（`0xAARRGGBB`）→ RGBA8 四元组（供纹理上传）。
 ///
@@ -361,7 +76,7 @@ pub fn rgb565_to_rgba8(p: u16) -> [u8; 4] {
     [(r5 << 3) | (r5 >> 2), (g6 << 2) | (g6 >> 4), (b5 << 3) | (b5 >> 2), 255]
 }
 
-/// 用 [`Framebuf`] 的像素绘制到 macroquad 窗口（无状态单帧版）。
+/// 用 `ti_render::framebuffer::Framebuf` 的像素绘制到 macroquad 窗口（无状态单帧版）。
 ///
 /// 每帧新建纹理并整帧上传；[`FramePresenter`] 提供复用纹理 + 脏行带
 /// 部分上传的高性能版本（S4.3）。本函数保留用于不需要持续呈现器的
@@ -371,7 +86,7 @@ pub fn rgb565_to_rgba8(p: u16) -> [u8; 4] {
 /// [`Viewport::logical_to_screen`] 映射，窗口比例差异体现为
 /// letterbox / pillarbox。**必须传入视口**：浏览器侧 canvas 会被拉伸到窗口
 /// 尺寸，若仍按 176×220 直接绘制，画面只会缩在左上角。
-pub fn present_framebuffer(fb: &Framebuf, vp: &Viewport) {
+pub fn present_framebuffer(fb: &ti_render::framebuffer::Framebuf, vp: &Viewport) {
     use macroquad::texture::Texture2D;
 
     let mut bytes: Vec<u8> = Vec::with_capacity(FB_PIXELS * 4);
@@ -392,7 +107,7 @@ pub fn present_framebuffer(fb: &Framebuf, vp: &Viewport) {
 /// - 帧有脏行 → 只转换脏行带内的像素，`update_part` 一次部分上传，
 ///   绘制一次全屏 quad（纹理未更新部分保留 GPU 旧值）。
 ///
-/// 典型用法：shell 主循环每帧 `presenter.present(&mut fb, &vp)`。
+/// 典型用法：shell 主循环每帧 `presenter.present(&fb, &vp)`。
 ///
 /// **上传策略**（[`UploadMode`]，构造时选定）：
 /// - [`UploadMode::Partial`]（默认，wasm 路径）：脏行带 `update_part`/`update_from_bytes`
@@ -401,7 +116,7 @@ pub fn present_framebuffer(fb: &Framebuf, vp: &Viewport) {
 ///   native macroquad 桌面下复用纹理的 `update_*` 不会重新进本帧批次（`from_rgba8`
 ///   内部 `texture_batcher.add_unbatched` 而 `update_*` 不重标记），部分上传不反映到
 ///   屏幕（EXP-045）；重建纹理虽放弃"未更新行保留 GPU 旧值"的部分上传优化，但
-///   [`Framebuf::has_dirty`] 的**静止帧整帧 skip 仍成立**（菜单静止时 0 GPU 工作），
+///   [`FramePresenter::has_dirty`] 的**静止帧整帧 skip 仍成立**（菜单静止时 0 GPU 工作），
 ///   脏帧 ≤220 行全帧上传代价可忽略。
 pub struct FramePresenter {
     /// 纹理槽（`None` = 尚未创建，首次 present 惰性创建）。
@@ -416,6 +131,9 @@ pub struct FramePresenter {
     filter: FilterMode,
     /// 因无脏行而整帧跳过的帧数。
     skipped: u64,
+    /// 逐行脏标记（1920 行；S15.10 从帧缓冲迁入 —— 脏行跟踪是**上传带宽优化**，
+    /// 属呈现层职责，帧缓冲本体只管像素，在 `ti_render::framebuffer`）。
+    dirty_rows: [bool; LH_I32 as usize],
 }
 
 /// 脏帧的纹理上传策略（见 [`FramePresenter`] 文档）。
@@ -452,7 +170,67 @@ impl FramePresenter {
             uploads: 0,
             skipped: 0,
             filter: FilterMode::default(),
+            dirty_rows: [true; LH_I32 as usize],
         }
+    }
+
+    /// 标记矩形 `[x, x+w) × [y, y+h)` 所在行脏（越界裁到逻辑屏内；全裁空 = no-op）。
+    ///
+    /// 调用方在写像素后调用；`mark_dirty` 只记行，不写像素。
+    /// S15.10：从帧缓冲迁入（帧缓冲不再持有平台层的脏行状态）。
+    pub fn mark_dirty(&mut self, x: i32, y: i32, w: i32, h: i32) {
+        let y0 = y.max(0);
+        let y1 = (y.saturating_add(h).saturating_sub(1)).min(LH_I32 - 1);
+        let w_i32 = i32::try_from(CANVAS_W).unwrap_or(0);
+        if y0 > y1 || x.saturating_add(w) <= 0 || x >= w_i32 {
+            return;
+        }
+        for r in y0..=y1 {
+            let Ok(rr) = usize::try_from(r) else { break };
+            if let Some(slot) = self.dirty_rows.get_mut(rr) {
+                *slot = true;
+            }
+        }
+    }
+
+    /// 是否存在脏行（无脏行时 `present` 可整帧跳过，静止帧 0 GPU 工作）。
+    #[must_use]
+    pub fn has_dirty(&self) -> bool {
+        self.dirty_rows.iter().any(|&d| d)
+    }
+
+    /// 脏行带 `[first, last]`（无脏行时返回 `(0, 0)`，调用方先查 [`has_dirty`]）。
+    #[must_use]
+    pub fn dirty_row_range(&self) -> (i32, i32) {
+        let mut first: Option<i32> = None;
+        let mut last: Option<i32> = None;
+        for (i, &d) in self.dirty_rows.iter().enumerate() {
+            if d {
+                let i = i32::try_from(i).unwrap_or(0);
+                first = Some(match first {
+                    None => i,
+                    Some(f) => f.min(i),
+                });
+                last = Some(match last {
+                    None => i,
+                    Some(l) => l.max(i),
+                });
+            }
+        }
+        match (first, last) {
+            (Some(f), Some(l)) => (f, l),
+            _ => (0, 0),
+        }
+    }
+
+    /// 清零所有脏标记（一次上传完成后调用）。
+    pub fn reset_dirty(&mut self) {
+        self.dirty_rows.fill(false);
+    }
+
+    /// 标记全帧脏（S15.10：整帧像素操作如渐变/调亮之后调用）。
+    pub fn mark_all_dirty(&mut self) {
+        self.dirty_rows.fill(true);
     }
 
     /// 上传策略（只读）。
@@ -468,9 +246,9 @@ impl FramePresenter {
     ///   不转像素）——native macroquad 纹理批处理每帧重组，不重绘就露出黑底（EXP-045）；
     ///   仅保留「无脏帧不转像素」的优化，`skipped` 仍计数用于诊断。
     ///
-    /// 有脏行时按 mode 转换 + 上传，成功后调用 [`Framebuf::reset_dirty`]。
-    pub fn present(&mut self, fb: &mut Framebuf, vp: &Viewport) {
-        if !fb.has_dirty() {
+    /// 有脏行时按 mode 转换 + 上传，成功后清本呈现器的脏行标记（[`FramePresenter::reset_dirty`]。
+    pub fn present(&mut self, fb: &ti_render::framebuffer::Framebuf, vp: &Viewport) {
+        if !self.has_dirty() {
             self.skipped += 1;
             if self.mode == UploadMode::FullRebuild {
                 // native：静止帧也重绘 quad（复用上次纹理），否则黑底。
@@ -483,7 +261,7 @@ impl FramePresenter {
         }
         let width_u16 = u16::try_from(CANVAS_W).unwrap_or(0);
         let height_u16 = u16::try_from(CANVAS_H).unwrap_or(0);
-        let (first, last) = fb.dirty_row_range();
+        let (first, last) = self.dirty_row_range();
         let first = first.clamp(0, LH_I32);
         let last = last.min(LH_I32 - 1).max(first);
         let stride = usize::try_from(CANVAS_W).unwrap_or(1) * 4;
@@ -530,7 +308,7 @@ impl FramePresenter {
             }
             draw_quad(texture, vp);
         }
-        fb.reset_dirty();
+        self.reset_dirty();
         self.uploads += 1;
     }
 
@@ -545,8 +323,8 @@ impl FramePresenter {
     /// 差异只在像素源：`FramebufRgba` 已是 RGBA8（`0xAARRGGBB`），直接解包写缓存，
     /// 无需 565→888 转换。
     #[cfg(feature = "hd-8bit")]
-    pub fn present_rgba(&mut self, fb: &mut FramebufRgba, vp: &Viewport) {
-        if !fb.has_dirty() {
+    pub fn present_rgba(&mut self, fb: &ti_render::framebuffer::FramebufRgba, vp: &Viewport) {
+        if !self.has_dirty() {
             self.skipped += 1;
             if self.mode == UploadMode::FullRebuild {
                 // native：静止帧也重绘 quad（复用上次纹理），否则黑底（EXP-045）。
@@ -558,7 +336,7 @@ impl FramePresenter {
         }
         let width_u16 = u16::try_from(CANVAS_W).unwrap_or(0);
         let height_u16 = u16::try_from(CANVAS_H).unwrap_or(0);
-        let (first, last) = fb.dirty_row_range();
+        let (first, last) = self.dirty_row_range();
         let first = first.clamp(0, LH_I32);
         let last = last.min(LH_I32 - 1).max(first);
         let stride = usize::try_from(CANVAS_W).unwrap_or(1) * 4;
@@ -603,7 +381,7 @@ impl FramePresenter {
             }
             draw_quad(texture, vp);
         }
-        fb.reset_dirty();
+        self.reset_dirty();
         self.uploads += 1;
     }
 
@@ -905,14 +683,14 @@ mod tests {
 
     #[test]
     fn framebuf_clear_sets_all_pixels() {
-        let mut fb = Framebuf::new();
+        let mut fb = ti_render::framebuffer::Framebuf::new();
         fb.clear(0xF800);
         assert!(fb.as_slice().iter().all(|&p| p == 0xF800));
     }
 
     #[test]
     fn framebuf_default_is_black() {
-        let fb = Framebuf::default();
+        let fb = ti_render::framebuffer::Framebuf::default();
         assert!(fb.as_slice().iter().all(|&p| p == 0));
     }
 
