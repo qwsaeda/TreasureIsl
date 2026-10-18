@@ -92,6 +92,9 @@
 | 图标列 | `icon {x:144}` | 菜单项图标左缘（S17.3 换 `ui_icons` 罗盘/宝箱/锚/齿轮/书/门） |
 | 状态行 | `status {x:540, y:1840}` | 浅底条 + 深墨字（字体数/音效/模块数）；`status` 走 `extra` 字段；`x=540` 为屏心锚点 |
 | 立绘/动态区 | `portrait_zones [{x:0,y:360,w:1080,h:1310}]` | **代码绘制动态实体**允许落区（QB102：收紧到实渲内容区 360..1670，无 legacy 立绘） |
+| 仪式标题面板（v3） | `title_art {x:108, y:192, w:864, h:160}` | v3.1 双写：`chrome::title_art_block` 仪式面板（卡底+木纹双描边+bevel+中央罗盘饰），落在标题条底 108 与菜单首块顶 352 之间的**空带** 192..352，不压列表；v3.2 菜单瘦身后扩为完整仪式感区（`ui-redesign-v3/04`） |
+| 星空氛围层（v3） | `ambient_art {x:0, y:0, w:1080, h:1920}` | v3.1 双写：`chrome::star_sky` 确定性 26 星（无 RNG，快照可复现），绘制夹 12px 外框内，z-order 在外壳之后/菜单之前（P-SoT-2） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:108, y:192, w:864, h:672}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` index `focus.bbox_pct` × (1080,1920)）；gate 第 21 项 `check_scene_narrative` N8 对账锚点 |
 
 不变式：`352 ≥ 108`（首块不压标题条）、`1640 ≤ 1840`（末块不撞提示行）。
 

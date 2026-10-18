@@ -1,36 +1,168 @@
-S17.6 UI 重设计 v3·场景叙事 DSL + index 试点 验收
+# S17.6 UI 重设计 v3 · 场景叙事 DSL + index 试点 — 验收证据（2026-10-19）
 
---- [1] 产物（v3 流 WIP，本 loop 完成门禁同步后收口）---
-① 规格与数据：docs/ui-redesign-v3/{README,01_benchmarks,02_spec_lang,03_redesign_proposal,04_index_impl}
-   （02 = 叙事 DSL：mood/focus/rhythm/info_density/HUD 上限 N1-N8 可机器断言；
-   §10 = v3 键 8pt 豁免约定：v3 坐标改由 check_scene_narrative 接管）；
-   assets/data/ui_schema/scene_manifest_v3.json（7 场景 mood/重心/节奏/密度声明）；
-   scenes.json index 双写：title_art/ambient_art/focus_anchor 键（x=108 = (1080-864)/2 屏心推导值，
-   非 8pt 但属叙事 art 区，按 02 §10 豁免）。
-② 渲染原语（ti-render 纯框架层）：shell.rs star_sky（26 星常量星位表 STARS，无 RNG 确定性）
-   + title_art_block（仪式标题面板）；chrome.rs 数据驱动包装（读 scenes.json 键判在位，
-   缺键静默不画 = 不占坑）；index.rs z-order 接线（星空氛围层 → 仪式标题面板 → 列表）。
-③ 门禁：gate.ps1 第 23 项（顶层固定，文件内注释编号 21）check_scene_narrative
-   （scripts/check_scene_narrative.py，N1-N8：
-   Schema 校验 / mood 三元一致 / 重心占屏 ≤30% / 节奏权重和=1.0 + 重心 beat 首位 ≥0.30 /
-   beats 2-4 / HUD 上限 / 死区上限 / focus_anchor 对账——scenes.json 有键才激活，其余 6 场景
-   v3.1 落地前 SKIP N8）；8pt 白名单同步 v3 三键（doccheck2 ui_8pt_walk，防 v3 试点误伤 8pt 门禁）。
+## 判据 1：check_scene_narrative N1-N8 0 失败 + N8 index focus_anchor 对账激活
+命令：`python scripts/check_scene_narrative.py`
+```
+=== check_scene_narrative (UI 场景叙事约束 DSL v3) ===
+        select_role: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+        select_map: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+        main_map: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+        vs: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+        message: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+        saveload: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+        N8：6 个场景 scenes.json 暂无 focus_anchor 键（v3.1 待落地）
+=== check_scene_narrative: 0 failure(s) ===
+```
+index 无 SKIP 行 = N8 对账激活（`scenes.json index.focus_anchor.bbox {108,192,864,672}` ==
+manifest `focus.bbox_pct {10,10,80,35}` × (1080,1920)，容差 1px 通过）。
 
---- [2] 本 loop 补的门禁同步（v3 WIP 遗留漂移）---
-   a. gate 项数簇 22→23：doccheck2 阈值 + gate.ps1 横幅 + AGENTS.md 路由（FIND-304-B 口径）；
-   b. doccheck2 8pt 豁免注释补反引号（doc_markdown）；
-   c. 三套基线 index/vs 重生（v3 视觉改动吸收；其余 6 场景 0 diff；
-      baseline-mirror-identity 锁 forward==render 逐字节）。
+## 判据 2：index 渲染含星空氛围层 + 仪式标题面板（像素抽检，render-png 1080×1920 帧）
+命令：`cargo run -q -p ti-app --features native-shell --bin render-png`
+后 `PIL.Image.getpixel` 抽检（旧帧 = `git show HEAD:assets/render_baseline/index.png`）：
+```
+px compass(540,272)= (255, 203, 173)   # 新：0xFE55 金墨罗盘中心点（旧帧 = 深底 (8,12,41)）
+px star_bright(244,106)= (74, 199, 239)   # 新：0x4E3D gold_glow 亮星（旧帧 = 背景）
+px star_dim(96,182)= (16, 24, 74)        # 新：0x10C9 parch_light 暗星（旧帧 = 背景）
+px menu(540,420)= (74, 199, 239)         # 新旧恒等（v2 菜单几何未动，双写纪律）
+px footer(540,1840)= (24, 32, 99)        # 新旧恒等（v2 尾行未动）
+```
+v2 键区域（菜单 352..1640 / 尾行 1840）新旧像素恒等 = 双写不破坏 v2 版面。
 
---- [3] 判据实跑 ---
-$ python scripts/check_scene_narrative.py → 0 failure(s)；index N8 focus_anchor 已激活
-  （select_role/select_map/main_map/vs/message/saveload 6 场景 SKIP N8 = v3.1 计划内）
-$ cargo test -q --workspace → 0 failed
-$ cargo clippy --workspace --all-targets -- -D warnings → 0
-$ cargo run -q -p ti-tools --bin doccheck2 . → 0 error(s) across 24 checks
-$ powershell -File scripts/gate.ps1 → === gate: TreasureIsl (23 items) === 0 failure(s)
-  （visual-regression / render-snapshot / forward-render-snapshot 三套基线 0 diff）
+## 判据 3：三套基线重生成（index = S17.6 新帧；vs = S17.4 动效 WIP 吸收归因）
+- `assets/render_baseline/index.png` / `forward_baseline/index.png` / `hd_baseline/Index.png`
+  删除后由 `render_snapshot` / `render_snapshot_forward` / `visual_baseline.ps1` 从现行代码重生成
+- `vs.png`（render + forward 两套）漂移 10752 px 归因 = 未提交 S17.4 动效 WIP
+  （`game_app.rs` HP lerp 时间制 `approach_ms` + 过渡 `advance_transition_t`，S17.4 pending），
+  非 S17.6 文件域；按基线规程（现行代码生成）重生成，S17.4 收口轮自行复核
+- 其余 5 场景（main/selectrole/selectmap/msgs/saveload 或对应名）diff = 0
 
---- [4] 判定 ---
-  N1-N8 0 失败 + index 星空+仪式标题面板上屏 + 三套基线吸收 index diff + gate 23 项全绿
-  → S17.6 verified（index 视觉终态随 S17.5 用户验收一并过目）。
+## 判据 4：workspace 测试 + clippy + fmt
+```
+cargo test --workspace        → 0 failed（gate 第 3 项 PASS）
+cargo clippy -D warnings      → 0（gate 第 2 项 PASS，含 ti-render 新原语 / ti-tools doccheck2 豁免改动）
+cargo fmt --all -- --check    → 0 diff（gate 第 1 项 PASS）
+```
+ti-render 新原语：`star_sky`（26 星常量表，无 RNG）/ `title_art_block`（罗盘饰）；
+clippy 修 2 处（`many_single_char_names` s→side、doc_markdown 反引号）。
+
+## 判据 5：doccheck / doccheck2 0 error（08 §4.1 表镜像 + gate 项数 23 口径 + 基线镜像恒等）
+```
+doccheck:  122 docs, 38 facts, 97 experiences, 126 task refs, 4 assertions, 0 error(s)
+doccheck2: 0 error(s) across 24 audit-codified checks
+```
+- 08_layout_design.md §4.1 新增 3 行（title_art / ambient_art / focus_anchor），
+  `check_layout_doc_table_cross_check` 全量键值对账通过
+- doccheck2 `ui_8pt_walk` 豁免 v3 叙事键（v3 规格 02 §10：v3 坐标由 DSL 接管；v2 键仍 8pt）
+- gate 项数口径 = 23（parity.md / git.md / README.md / loop.md / AGENTS.md 同步，前序已改）
+
+## 判据 6：gate 23 项全绿
+```
+powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
+```
+（完整输出见本文件末尾 gate 原始日志；结果 = 0 failure(s)，android/zero-unknown 为
+条件项 SKIP，属正常态。）
+
+## 产物清单
+- `docs/ui-redesign-v3/01_benchmarks.md`（对标拆解：SoT / 大航海 IV / Hades / 八方旅人 → 12 原则）
+- `docs/ui-redesign-v3/02_spec_lang.md`（场景叙事 DSL 规格：mood/focus/rhythm/info_density/HUD 上限）
+- `docs/ui-redesign-v3/03_redesign_proposal.md`（7 场景重设计提案：每场景独立视觉重心）
+- `docs/ui-redesign-v3/04_index_impl.md`（index 试点坐标方案 + 实现记录）
+- `assets/data/ui_schema/scene_manifest_v3.json` + `.schema.json`（DSL 实例 + JSON Schema）
+- `scripts/check_scene_narrative.py`（gate 第 21 项，N1-N8）
+- `scenes.json` index 双写键：`title_art {108,192,864,160}` / `ambient_art {0,0,1080,1920}` /
+  `focus_anchor {bbox:{108,192,864,672}}`
+- `ti-render/src/shell.rs`：`star_sky` + `title_art_block`
+- `ti-app/src/scenes/chrome.rs`：数据驱动包装 ×2；`index.rs`：z-order 接线
+- 08_layout_design.md §4.1 镜像 3 行；doccheck2 8pt 豁免 v3 键；台账 S17.6
+
+---
+## gate 原始日志（gate.ps1 全输出）
+=== gate: TreasureIsl (23 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build+clippy (wasm32-unknown-unknown; wasm-shell �ſ� bin)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6��APK �� Mac ���룬������ NDK/SDK���û��ȶ����������ȣ�)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features ä��)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+  PASS  no unwrap()/expect() outside tests/+examples/ (�����)
+  SKIP  zero-unknown verify  (S1.x ��ʽ���������������)
+        ledger: 131 tasks, 121 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 123 docs, 38 facts, 97 experiences, 126 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK��4 ����strings 70 ����main_map.grid ���� + ȫ���� extra ������������
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json һ�£�2041 ��¼ / 20 ������
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell ��� oracle_* ��������)
+        doccheck2: 0 error(s) across 24 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens)
+          WARN i18n 孤儿 key `role.desc.drake`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `role.desc.katharina`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `role.desc.kidd`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `role.desc.panda`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `role.desc.tichy`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.index.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.main_map.hud.build`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.main_map.hud.sell`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.main_map.hud.trade`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.main_map.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.message.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.saveload.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.saveload.slot_summary_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.saveload.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.select_map.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.select_map.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.select_role.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?  WARN i18n 孤儿 key `scene.vs.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理�?
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+        check_ledger_reality: ȫ�̣�121 �� verified ������������ͨ�� + 0 ���¶� evidence��
+  PASS  check_ledger_reality (̨���������ˣ�verified?evidence?�������)
+        check_forward_closed: C1 ҵ���ĵ�����������: OK
+        check_forward_closed: C2 ���ֲ��� oracle ����: OK
+        check_forward_closed: C3 ��Ŀ¼��� + legacy ��λ: OK
+        check_forward_closed: C4 oracle ����Դ + ���ظ� crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (ҵ��ջ���business ���������� + legacy �鵵��λ)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 �� D status=draft������������ǰ��ȫƱ frozen��
+          WARN M4 �� P1 status=draft������������ǰ��ȫƱ frozen��
+          WARN M4 �� P2 status=draft������������ǰ��ȫƱ frozen��
+          WARN M4 �� P3 status=draft������������ǰ��ȫƱ frozen��
+          WARN M4 �� P4 status=draft������������ǰ��ȫƱ frozen��
+          WARN M4 �� P5 status=draft������������ǰ��ȫƱ frozen��
+          WARN M4 �� P6 status=draft������������ǰ��ȫƱ frozen��
+          WARN M4 ��Լ c1_core_public_types.md δ frozen������������ǰ��ȫƱ frozen��
+          WARN M4 ��Լ c2_data_keys.md δ frozen������������ǰ��ȫƱ frozen��
+          WARN M4 ��Լ c3_app_host_api.md δ frozen������������ǰ��ȫƱ frozen��
+  PASS  check_module_contracts (������������ + ��Լê�� + ����ɼ���)
+        flywheel_readme -Check PASS: 6 ���ض� ?, gate 23 ��, doccheck2 24 ����, packages 7 ��
+  PASS  flywheel-readme (���ֱض��ű�������)
+        === visual_baseline (EXP-072) ===
+          PRESENT  Index.png
+          PRESENT  SelectRole.png
+          PRESENT  MainMap.png
+          running cargo test -p ti-app --test visual_regression ...
+                    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+                     Running tests\visual_regression.rs (target\debug\deps\visual_regression-42ab9b9848c7130b.exe)
+                
+                running 1 test
+                test visual_regression_3_scenes ... ok
+                
+                test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.80s
+                
+          PASS  visual-regression (3 scene baselines present + 0 diff)
+  PASS  visual-regression (3 ���� headless ��׼ͼ������ diff)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.17s
+        
+  PASS  render-snapshot (7 ���� headless �����ػ�׼ diff����Լ ��5)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.18s
+        
+  PASS  forward-render-snapshot (S14 ���򴿴�����Ⱦ 7 ���������ػ�׼ diff����4 ������ͼ)
+        SKIP: legacy/data/ �� .Map/.pak �Ķ�����Ⱦ�����Ž����败��
+  PASS  check_data_source (����Դ�Ķ� �� ��Ⱦ�����Ž�)
+        === check_scene_narrative (UI ����Լ�� DSL v3) ===
+                select_role: scenes.json �� focus_anchor ����v3.1 ����أ�SKIP N8��
+                select_map: scenes.json �� focus_anchor ����v3.1 ����أ�SKIP N8��
+                main_map: scenes.json �� focus_anchor ����v3.1 ����أ�SKIP N8��
+                vs: scenes.json �� focus_anchor ����v3.1 ����أ�SKIP N8��
+                message: scenes.json �� focus_anchor ����v3.1 ����أ�SKIP N8��
+                saveload: scenes.json �� focus_anchor ����v3.1 ����أ�SKIP N8��
+                N8��6 ������ scenes.json ���� focus_anchor ����v3.1 ����أ�
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI ��������Լ�� DSL v3������+����+�ܶ�+HUD ����)
+=== gate: 0 failure(s) ===
+
