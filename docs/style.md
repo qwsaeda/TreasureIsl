@@ -220,7 +220,7 @@ pub trait Command: Serialize + DeserializeOwned {
 | 字符串解析 | `FromStr` | 配合 `.parse()`；`ControlKind` 为参考（`Err = String`，语义名特判 + 数值解析）；需要命名错误时 `type Err = <named>` |
 | 人读输出 | `Display` | 只给用户面文本与错误（`thiserror` 的 `#[error]` 走它）；禁「用 `Display` 替代 `Debug` dump」；库内类型不实现 `Display` 除非有用户面（`missing_docs` 只查文档不查 trait） |
 | 缺省值 | `Default` | 零值 = 语义缺省 → `#[derive(Default)]`；语义缺省 ≠ 零值 → 手动 `impl Default`（`new_without_default`，EXP 见 §5.10）；「非缺省初始态」不许用 `Default` 顶 |
-| 借用视图 | `AsRef<T>` / `AsMut<T>` | 缓冲类型（`Framebuf` 族）实现 slice 视图，泛型消费方（如 `fn draw(fb: &impl AsRef<[u16]>)`）即可复用。**已有手写 `as_slice/as_mut_slice` 保留**（30 调用点），trait 为纯增量、调用点不强制迁移 |
+| 借用视图 | `AsRef<T>` / `AsMut<T>` | 缓冲类型（`Framebuf` 族）实现 slice 视图，泛型消费方（如 `fn draw(fb: &impl AsRef<[u16]>)`）即可复用。**已有手写 `as_slice/as_mut_slice` 保留**（手写方法 7 处 + 落在我方类型的调用点 26 处，含测试；另 4 处是 `Vec` 自带的同名 std 方法，不计），trait 为纯增量、调用点不强制迁移 |
 | Type-State / 零大小载荷 | `PhantomData<T/U>` | 见 §5.6.3（`SceneTransition<From, To>`）；只表类型、不存值 |
 | 后端注入 | 关联类型 + 泛型（不 dyn） | 见 §5.6（`Backend { type Gfx: Gfx … }`） |
 

@@ -17,9 +17,12 @@ S15.9 标准库 trait 选用矩阵 + 重构操作规程（用户 2026-10-18 请�
 2.2 ti-platform/src/settings.rs：新增 `impl From<FilterMode> for macroquad::miniquad::FilterMode`（2 变体 1:1）；
     `to_miniquad` 保留为薄封装；调用点迁移 gfx.rs 4 处 → `self.filter.into()`；
     tests/settings_unit.rs 新增 `filter_mode_from_matches_thin_wrapper`（From ↔ 薄封装一致断言）；
-2.3 缓冲借用视图（AsRef/AsMut，纯增量、手写 as_slice 30 调用点保留不迁移）：
+2.3 缓冲借用视图（AsRef/AsMut，纯增量、手写方法 7 处 + 调用点 26 处保留不迁移；另 4 处 `.as_slice()` 是
+    `Vec` 自带 std 方法——macros.rs to_bytes()->Vec<u8> ×2、glyph_raster legacy_noise()->Vec<bool> ×2，不计）：
     ti-render/src/framebuffer.rs：`AsRef<[u16]>` + `AsMut<[u16]> for Framebuf`；
     ti-platform/src/gfx.rs：`AsRef/AsMut<[u16]> for Framebuf` + `AsRef/AsMut<[u32]> for FramebufRgba`（hd-8bit 门控）；
+    手写方法 7 处构成（未动）：ti-render framebuffer.rs `Framebuf` as_slice/as_mut_slice ×2、
+    ti-render font/bitmap.rs `Raster::as_slice` ×1、ti-platform gfx.rs `Framebuf` ×2 + `FramebufRgba` ×2；
     停机线应用：ti-render/font/bitmap.rs Raster::as_slice（bool 墨点）无泛型消费方 → 不加 AsRef（规范 §5.6.6 停机线）；
 2.4 停机线应用（不重构）：SaveV2/SaveData `from_legacy_slot`（保守钳位非零损失 → 保持手写构造器）、
     `from_index/from_code → Option` 数据驱动回退（const 友好，house 风格保留，规范明列）。
