@@ -1,48 +1,167 @@
-﻿# 渲染视觉对抗飞轮（S15.6，FIND→AUDIT→FIX 循环，06_flywheel §4 停机判据）
+﻿# 对抗流水线飞轮轮次记录（flywheel）
 
-开轮：2026-10-17。用户指令：现 1080 纯代码渲染视觉「是屎」，以渲染架构 + UI/UX 为靶，
-每轮 100 findings，loop 到改进完成，底线 50 轮（收敛判据以 06_flywheel §4 三判据为准，
-收敛早于 50 轮如实记录，不早停虚报）。
+包域：P6 表现层 + `crates/ti-render/`（S15.7 新 crate）
+开轮基线：`scripts/gate.ps1` 0 failure / 21 项（实测，gate0.log 于临时目录）
+轮次日期：2026-10-18
 
-靶域文件白名单（本循环只动这些 + 回写目标）：
-- crates/ti-app/src/scenes/{chrome,menu_shell?,*.rs}、game_app.rs、shell_ui.rs、touch/layout
-- crates/ti-app/tests/render_intent.rs（判据同步）
-- assets/data/scenes.json、assets/data/balance.json（ui.* 段）
-- assets/{render_baseline,forward_baseline,hd_baseline}（基线重生成，非手改）
-- docs/process/08_render_arch.md、docs/business/08_layout_design.md
-- 回写：doccheck2.rs / docs/experience/*.md / 本日志
+## ① 找问题（只读 agent，禁改文件）
 
-主线程开轮诊断（基线 PNG 实看，种子 findings）：
-- index：下半屏全黑空置（y≈970–1920）；标题/菜单字 ~12px@1080 不可读级；选中条纯蓝 flat；
-  无主题/层级/图形；外框 12px 低对比。
-- main_map：等距棋盘 ~(540,560) 处 900×480 浮于上半屏，下 40% 黑空；实体=4px 纯色方块
-  （玩家绿/BOSS 红/据点黄，无图标/标签/光晕）；HUD 面板 flat 深块文字不可读；无海陆/道路/装饰。
-- 共性根因初判：内容坐标/字号/元素尺度仍 176×220 时代，放 1080×1920 画布未等比重排（EXP-059 第 N 次变体候选）。
+- 开轮脚本：`scripts/flywheel_readme.ps1 -Package P6`（6 项输出齐全）
+- 发现 30 条：P0 ×1（F1）／P1 ×8（F2–F9）／P2 ×15（F10–F24）／P3 ×6（F25–F30）
+- 另附「已确认无问题」12 项（防重复扫）
 
-## 第 1 轮
-- FIND-A（架构/代码漂移，Q001–Q050）：audit_round1_find_A.md（temp）
-- FIND-B（UI/UX 设计，7 场景基线实看，Q051–Q100）：audit_round1_find_B.md（temp）
-- 状态：FIND 完成（A 50 条：判据缺口 8/文档矛盾 7/坐标系残留 7/UI 完整度 6/字体漂移 5/scenes 键漂移 4/配色 4/触摸正逆 4/契约违反 3/死码 2；B 50 条：字号 9/屏面 7/层级 6/一致性 5/主题 5/间距 4/对比 4/polish 4/affordance 3/统一 3/内容缺失 10，需人裁决 8 条）
-- FIND 高价值种子：QB001 TTF 未加载（EXP-050）→ 全场景豆腐/12px 回退；QA013 三套基线 = 无字体态帧（与实机 TTF 互异）；QA014 三套基线 SHA256 逐字节全同（19/19.5 冗余）；QA023 主地图触摸 legacy 32/16+(88,110) vs 渲染 24/12 无 camera（正逆断裂）；QA007 index 6 菜单项全不可见；QB002 bg=65440 浅米金未消费；QB027 实体 size=32/20/24 未消费（实绘 8px）；QB003 列表选中零区分
-- AUDIT：58 CONFIRMED（QA46/QB12）/ 35 PARTIAL / 7 REJECTED / 0 NO-LINE（audit_round1_audit.md）
-- 主线程复核（EXP-038）：QA022 触摸公式分裂✓、QA013 快照态 TTF=None✓、QA014 三套基线 7/7 SAME✓、chrome 局部常量=旧 S14 色板✓
-- **B1 设计裁决（主线程，用户授权）**：
-  ① 主题统一走 §2 色表深底系（#12141C=0x10A3）；scenes.json `bg=65440`（浅米金，零消费）删除，08_layout_design §2 L55 表述改口径；render_intent 底色基准改用 chrome COLOR_PARCH_DARK。
-  ② 血条语义：玩家=青绿 0x2D33（COLOR_PLAYER）、BOSS=血红 0xEAAA（COLOR_DANGER）——§2 L52-53；chrome 局部常量表全量统一到 §2（QA003）。
-  ③ 基线体系：render_baseline 为唯一权威像素门禁；forward/hd 双套 = 字节镜像（QA014），第 1 轮只修注释+加镜像恒等断言，gate 结构收口留 B6。
-  ④ 快照/测试入口 `GameApp::new` 自动注 `assets/fonts/lxgw-wenkai-reg.ttf`（QA013/QB001）；基线锁 44px TTF 真字形。
-  ⑤ 触摸正逆对（QA022-025）：grid_cell_at/iso_grid_cell_at/MSG_SPLIT_X 改从 scenes.json grid.* 派生，iso_grid_cell_at = chrome::iso_cell 之逆（round-trip 单测）。
-- FIX 第 1 轮 dispatch：batch1=触摸正逆(B2) → batch2=色表+bg 键(B1) → batch3=字体/可读性(B3)；自验 cargo test/clippy/fmt + 三套基线重生成 diff=0 + render_intent/e2e/visual 全绿
-- FIX 结果（子代理报告 + 主线程复核）：
-  - B2：touch.rs iso_grid_cell_at = chrome::iso_cell 严格逆（grid.* 派生）+ round-trip 20×20 单测；MSG_SPLIT_X→540；main_map on_touch 统一；game_app_flow 重锚；doccheck2-18 扩面
-  - B1：chrome 7 常量统一 §2（DANGER=0xEAAA/PLAYER=0x2D33/LANDMARK=0xF5A8/BG=0x10A3/...）；vs 血条语义归位；scenes.json bg 键 7 场景全删；实体边长按 size 键（32/20/24）；forward_render 字段删；GLOW 死码删；08_layout_design §2/§4.3/§4.4 同步
-  - B3：MenuShell 自动加载 lxgw-wenkai-reg.ttf（44px，EXP-050 current_dir 回溯）；豆腐随 size_px 缩放 + advance 回退=豆腐宽（QA011）；strings.json:60 乱码归一
-  - doccheck2 新增第 19 项 baseline-mirror-identity（render↔forward 7 对 + render↔hd 3 对字节恒等）
-  - 主线程复核：gate 21 项 **0 failure**（独立复跑）+ doccheck2 19 检查 0 error + 三套基线二跑 diff=0 ✓
-  - 视觉实看（index 新基线）：TTF 44px 中文全可读（标题「金银岛」+ 6 菜单 + 状态行），选中条航海蓝，配色 §2 生效 → 可读性问题（QB001 类）根治
-- **第 1 轮判停：未收敛**（大量 PARTIAL 未修 + 屏面利用率/主题/层级残留）→ 第 2 轮
-  - 残留种子：QA006 COLOR_INK 死码 / QA014 gate 结构收口（B6）/ QA016 基线损坏空窗 / QA028 clear_frame(0x0000) 内联 / QA045 快照锁稳态 1.0 / i18n 孤儿 key 15 个 WARN
-  - 视觉种子（第 2 轮 FIND 靶）：index/main 下半屏黑空（利用率 ~50%）；菜单左对齐无图标/无层级；选中态 affordance 弱（纯色条）；主题装饰 0（航海图元素：罗盘/波浪/虚线航线——3 原语内可画）；vs/msgs/saveload/select 修色后待实看；7 场景组件一致性
+## ② 审计（只读 agent）+ 主线程复核
 
-## 第 2 轮
-- FIND：进行中（架构漂移 + UI/UX 视觉，各 50 条，区域清单按第 1 轮已修项更新）
+- 裁决：真漂移 27／误报 2（F22 主结论、F30）／需人裁决 1（F23 存档 schema）
+- 主线程亲自复核 8 条高价值项（Read/Grep/实跑）：
+  - F1 md §4 表 ↔ scenes.json 漂移 —— 实跑 python 逐键比对确认（P0，改 md 不改 JSON）
+  - NEW-1 element-dump 编译失败 —— 主线程实跑 `cargo check -p ti-app --features
+    native-shell --bin element-dump` 确认 4 × E0308（P0，gate 全绿却官方排障工具失效）
+  - F9 09_render_framework.md 未登记 —— 三处 grep 0 命中确认
+  - F2 ZOrder 死枚举 —— 全仓 grep 仅定义/重导出/注释确认
+  - F5 packages.yaml 无 ti-render —— 实读 P6 files 段确认
+  - F22 —— gate 日志「render-snapshot (7 场景…)」+ render_snapshot.rs:44 SCENES 确认为 7 场景，
+    审计判误报成立
+- 审计新发现 NEW-1（element-dump 门禁盲区，P0）／NEW-2（doccheck2 注释自相矛盾）／
+  NEW-3（09 文档三处与代码不符）／NEW-4（required-features 屏蔽 bin 整类盲区）
+
+## ③ 修复 + 自验（修复 agent，Token Plan 上限中断，主线程接力完成）
+
+### 已完成（本轮）
+- NEW-1：element-dump.rs 解构修复（`zone.0` + `map_or`）；同批修复 sprite-step /
+  treasure-native / treasure-headless / render_png 的 5 处存量问题（EXP-099）
+- NEW-4：gate.ps1 新增第 4b 项 `clippy --all-targets --features
+  ti-app/native-shell,ti-app/headless`（feature 门控 bin 纳入编译+lint）；
+  门禁计数口径 21 → 22，doccheck2 `check_gate_item_count` 阈值同步 22
+- F1：`docs/business/08_layout_design.md` §4 全表（7 场景）对齐 scenes.json 实值
+  （text_x 240／row_h 300/340、hint y=1840、status {540,1840}、title {y:6,h:90} 无 x、
+  vs rounds {540,420}、message page {540,1800}、portrait_zones 全 7 区、补 3 处缺失的
+  「动态区」行）；§7 措辞改为「§4 表 = JSON 人读镜像」
+- NEW-2：doccheck2 `check_scene_layout_fidelity` 锚点上方过期注释同步（row_h 300／status 1840）
+- F9：09_render_framework.md 登记三处（docs/README.md / process/00_index.md / AGENTS.md 路由表）
+- NEW-3 + F3 + F29：09 文档三处与代码不符修正（z-order 死枚举、font.json 不存在、
+  theme.json 权威 = Rust 默认值）；08 §2 原语表改代码实况（4 原语 + 1 组合，blit_texture 不存在）；
+  08 §3/§5 常量权威改 `ti_render::framebuffer` + `ti-render/src/shell.rs`
+- F2：删除 `crates/ti-render/src/zorder.rs` + lib.rs 两处 re-export；08 §4 改写为
+  「z-order = 调用顺序，权威在 chrome::scene_shell」；09 §2 同步
+- F5：`plan/packages.yaml` P6 files 增 `crates/ti-render/src/`、tests 增 `crates/ti-render/tests/`
+- 飞轮回写：EXP-099（required-features 门禁盲区，process.md +27 条，index.md 已登记）
+- doccheck2 新断言 `check_layout_doc_table_cross_check`（第 20 项）：scenes.json 每场景
+  每个整数标量键值对必须以「k:v,」或「k:v}」出现在 md §4 表；portrait_zones 兼容
+  k:v / 位置两种写法；size 键跳过（QA133 另锁）
+
+### 明确未修（需人裁决 / 留下一轮，零像素约束）
+- F23：存档 schema 增解锁位（跨图进度丢失）—— progression.md 已登记待办，归 S15.2
+- F24／F27／F10：任何取值改动会改像素并破 gate 18/19/20 三套 SHA 基线，必须人裁决+重生成基线
+- F13／F19／F20／F8／F6 迁移接线部分：涉及数据 schema 或跨层迁移
+- F18 render_pipeline.rs 死码删除：需先解 doccheck2 对其的字符串断言依赖
+- F17 非 use 行全路径引用 43 处：断言上线前需先收敛 import（未做，故断言未上线）
+- F22 真子项（render_parity.rs 走 app.render() 而非 render_to_framebuf()）：改测试语义，未动
+
+## ④ 停机判定（06_flywheel §4 三条）
+
+- 找问题 = 0 新发现：✗（本轮 30 条）
+- 审计 = 0 误报：✗（2 条误报：F22、F30）
+- 修复 = 0 残留：✗（F23 + 5 项需人裁决 + 4 项迁移留下一轮）
+
+**本轮不停机**，下一轮目标：F17 import 收敛 + 断言上线、F18 死码清理、
+F4 COLOR_*→Theme 收敛（零像素）、F7/F15/F16 零像素收敛、F24/F27 人裁决+基线重生成。
+
+## ⑤ 自验证据（实跑）
+
+```
+cargo fmt --all -- --check                          → exit 0
+cargo clippy --workspace --all-targets -- -D warnings → 0 error
+cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless
+                                                      → 0 error
+cargo run -q -p ti-tools --bin doccheck2 .          → 0 error(s) across 20 checks
+cargo run -q -p ti-tools --bin doccheck .           → 117 docs, 95 experiences, 0 error(s)
+python scripts/check_module_contracts.py            → 仅 draft WARN（既有）
+scripts/gate.ps1                                    → === gate: 0 failure(s) ===（22 项）
+```
+
+主线程复核：本记录全部结论均经主线程 Read/Grep/实跑复核（EXP-058 纪律），
+子代理声称一律不作为停机依据。
+
+
+---
+
+## 附：第 2 轮（零像素收敛批，主线程执行）
+
+触发：修复 agent 撞 Token Plan 上限后主线程接手 + 用户要求不停。全部改动**零像素**
+（
+ender_intent 12 + 
+ender_snapshot/
+ender_snapshot_forward/isual_regression
+四套基线实跑全绿 = 像素未变）。
+
+### 已完成
+- F7：MenuShell::Canvas::pixel_at 越界语义与 GameApp 版对齐（负坐标不再落到第 0 行/列）
+- F11：message.rs 的裸 1080/540 与 	ouch::layout::MSG_SPLIT_X 改走 LOGICAL_W_I32
+- F12：select_map 锁标右界改按卡片右缘（item_rect 的 x+w）推导，不再按屏幕宽
+- F15：scenes/index.rs 的 MENU_ITEMS 删除，改用单一常量源 	ouch::layout::MENU_COUNT
+- F16：slot_bands / slot_band_index_at 改为委托 scene_list_bands / scene_list_index_at
+  （消除逐字重复，与注释里「勿复制粘贴 EXP-071」对齐）
+- F4：chrome::COLOR_* 21 个常量改为锚定新单源 	i_render::theme::Theme::DEFAULT
+  （新增 const，Theme::default() 复用它；theme.json 镜像测试仍恒等 ⇒ 改色只改一处）
+- F18：删除 crates/ti-app/src/render_pipeline.rs 整文件（FB_W/FB_H/clip_rect/ClipRect
+  生产零消费）+ lib.rs 的 pub mod + doccheck2 check_hd_sprite_transparency 的
+  TRANSPARENT_INDEX 断言改为**死码不得复活**的负向断言
+
+### 未完成 / 踩坑记录
+- F17（非 use 行全路径 	i_core:: 43 处 → import 收敛）：**本轮放弃**，理由有二：
+  1. 脚本化批量改 import 出过一次严重错误（正则捕获前缀带尾 ::，split('::')[-1]
+     得空串，把 	i_core::rules::cards::CardState 削成裸 CardState，43 处全部编译失败）；
+  2. 全路径风格属 EXP-061 建议项、当前无门禁，且跨 6 文件语义面大、收益低于风险。
+  留作下一轮人工逐文件收敛（配合新断言 check_no_ti_core_fullpath）。
+- 连带修：agent 原改动被误回退的 	reasure_headless.rs if_not_else 交换已重新应用。
+
+### 自验（同上，全部实跑）
+`
+cargo fmt --all -- --check                          → 0 diff
+cargo clippy --workspace --all-targets -- -D warnings → 0 error
+cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless → 0 error
+cargo test --workspace                              → 0 failed
+scripts/gate.ps1                                    → === gate: 0 failure(s) ===（22 项）
+`
+
+
+---
+
+## 附：第 3 轮（主线程，用户要求继续做完能做的）
+
+### 已完成
+- **F17**（上轮放弃项）：非 use 行 `ti_core::` 全路径 43 处 → 顶部 import 收敛，
+  `ti_core::rules::cards::CardState` 等改 `cards::CardState`；实跑归零
+- **F17 门禁化**：新增 doccheck2 第 21 项 `check_no_ti_core_fullpath`（扫 6 个 crate 的
+  `src/`，非 use 非注释行 `ti_core::` 命中必须为 0；排除 doccheck2 自身实现）
+- **F6**（部分）：`IsoProjection::screen_to_cell` 加 tile 退化早退（`tile_w/tile_h==0`
+  原会整数除零 panic）+ `is_degenerate()` 判定
+- **F21**：新增 `crates/ti-render/tests/geometry.rs`（8 例）——IsoProjection 正逆
+  往返（含退化不 panic）、title_bar 四层 + 罗盘装饰几何、menu_item 描边/bevel/铆钉/
+  按下反转、bar_slot/panel/wood_frame 落点；判据用录制型 Canvas 断言精确矩形序列
+- **F25**（跳过，见下）
+
+### F25 跳过的技术理由
+`chrome.rs` 9 处 `host.theme().clone()`：`theme()` 返回 `&Theme`，而
+`with_canvas(host, …)` 需 `&mut host` —— 不可变借用跨越可变借用是 borrowck 禁止的，
+clone 是当前桥接手段。去掉 clone 需重构 `with_canvas` 签名（如传入 `&Theme` 参数
+或把绘制参数化），收益（每帧 27 字段一次拷贝）低于风险，留作后续渲染重构项。
+
+### 踩坑记录（脚本化批量改 import 的正则陷阱）
+批量把 `ti_core::a::b::X` 收敛为 import 时，正则若写成
+`ti_core::((?:[a-z_0-9]+::)+[a-z_0-9]+)::`（用 `+`）会漏掉单段模块（`ti_core::data::`），
+若再用 `split('::')[-1]` 取别名还会因前缀带尾 `::` 得空串、把限定名削成裸类型名，
+43 处全部编译失败。正解：捕获组用 `(?:[a-z_0-9]+::)*`（`*` 允许零次），替换前逐文件
+`cargo check` 编译验证；插入的 `use` 需落在**文件顶部 import 区**，嵌套 `mod`
+（touch.rs 的 `layout`/`tests`）要各自 `use super::`。
+
+### 自验
+```
+cargo fmt --all -- --check                          → 0 diff
+cargo clippy --workspace --all-targets             → 0 error
+cargo clippy --workspace --all-targets --features…  → 0 error（feature 门控 bin）
+cargo test --workspace                              → 0 failed（新增 ti-render geometry 8 例）
+cargo run -q -p ti-tools --bin doccheck2 .          → 0 error across 21 checks
+scripts/gate.ps1                                    → === gate: 0 failure(s) ===（22 项）
+```

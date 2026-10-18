@@ -1,6 +1,6 @@
 # 渲染架构（Runtime Render Architecture）
 
-> **单一事实源**：《金银岛》**运行时**渲染架构 —— 分层、绘制原语、z-order、坐标契约。
+> **单一事实源**：《金银岛》**运行时**渲染架构 —— 分层、绘制原语、z-order（= 调用顺序）、坐标契约。
 > 任何改 `ti-platform/gfx.rs` / `ti-app/scenes/*` / `ti-app/menu_shell.rs` /
 > `ti-app/game_app.rs::render` 的代码，必须先读本文。
 >
@@ -25,7 +25,7 @@
 | S15.2 三套坐标系同屏（1080 chrome + 1:1 legacy + 缩放映射） | legacy 像素层与呈现层各自带坐标系 | 契约 1：运行时只有 1080 一个坐标系，legacy 坐标不进运行时 |
 | legacy↔1080 缩放公式散落 3 处（RGB565/RGBA/独立基线） | 同一映射多副本，漂移即静默像素分歧 | 契约 1：无 legacy 像素即无映射需求，副本归零 |
 | 逐帧 CPU 重采样 1980s 像素 | 把参照物当运行时管线 | 契约 2：像素来源只有代码绘制 |
-| 翻转语义与缩放映射纠缠 | 两个概念揉进一个循环 | 契约 3：绘制原语只有 3 个，各自语义单一 |
+| 翻转语义与缩放映射纠缠 | 两个概念揉进一个循环 | 契约 3：每个绘制原语语义单一（§2：4 原语 + 1 组合函数 + 3 档文本口） |
 | 测试以 legacy 像素为判据（密度/立绘区） | 判据锚在参照物上 | 契约 5：门禁判据锚在代码绘制区 + scenes.json |
 
 ---
@@ -50,10 +50,10 @@
 ┌─ 视图层（ti-app）────────────┴───────────────────────────────┐
 │ scenes/chrome.rs   公共外壳：外框/标题条/面板/血条槽/等距格   │
 │ scenes/{index,select_role,select_map,main_map,vs,message,   │
-│         saveload}.rs   逐场景接线：读状态 → 调 3 原语          │
+│         saveload}.rs   逐场景接线：读状态 → 调 §2 原语           │
 │ menu_shell.rs      文字绘制 + 帧缓冲持有 + 上屏               │
 └──────────────────────────────┬───────────────────────────────┘
-                               │ 1080 坐标 + 3 原语
+                                │ 1080 坐标 + §2 原语
 ┌─ 平台层（ti-platform）───────┴───────────────────────────────┐
 │ gfx.rs：Framebuf(RGB565) / FramebufRgba(RGBA8) / CANVAS_W/H   │
 │ gpu_renderer.rs（feature=gpu-render）：纹理上屏               │
@@ -69,7 +69,7 @@
 |---|---|---|
 | 数据 | 解析成结构体 | 产像素、做坐标变换 |
 | 逻辑 | 状态转移与规则判定 | 画任何东西、持有帧缓冲 |
-| 视图 | 读状态 → 调 3 原语 | 跑业务规则、直接写 `Framebuf` 切片 |
+| 视图 | 读状态 → 调 §2 原语 | 跑业务规则、直接写 `Framebuf` 切片 |
 | 平台 | 帧缓冲分配/清屏/上传/上屏 | 解释游戏状态、知道 legacy 存在 |
 
 ### 1.3 legacy 的运行时角色 = 无
@@ -85,15 +85,23 @@
 
 ---
 
-## 2. 绘制原语（只有 3 个）
+## 2. 绘制原语（`ti_render::primitives` + `Canvas`）
 
-视图层允许且只允许调用这 3 个绘制原语（经 `SceneHost` 转发）：
+视图层只经 `SceneHost` → `Canvas` trait（`ti_render::canvas`）调下列原语。
+`primitives.rs` 里实有的绘制函数只有 4 个，外加 1 个组合函数：
 
 | 原语 | 签名语义 | 用途 |
 |---|---|---|
 | `fill_rect(x, y, w, h, color)` | 以 1080 空间左上角 + 尺寸填一个矩形 | 外框/面板/棋盘格/棋子/血条/文字底条 |
-| `draw_text(text, x, y)` / `draw_text_colored(...)` | 在 1080 空间起点绘制一行文本（TTF 44px，回退位图 12px advance） | 标题/列表项/状态行/HUD/血量数字 |
-| `blit_texture(...)` | 未来若引入 HD 位图资产，一次纹理 blit（GPU 拉伸或 CPU 单次拷贝） | 当前**未启用**；启用需先补契约 |
+| `gradient_row(theme, y, strength)` | 在第 `y` 行铺一条横向渐变带 | 背景顶部层次 |
+| `vignette(theme, vig)` | 四边暗角 | 羊皮纸底纹收边 |
+| `parchment_bg(theme)` | **组合函数** = 底色 + `gradient_row` ×N + `vignette` | 场景背景（`chrome::parchment_bg` 转发） |
+| `Canvas::draw_text` / `draw_title_text` / `draw_hint_text` | 在 1080 空间起点绘制一行文本（TTF 三档 96/44/28px，回退位图 advance 26/12/8） | 标题/列表项/状态行/HUD/血量数字 |
+
+> **不存在 `blit_texture`**：全仓无此函数。HD 位图注入走 `ti-platform` 的
+> `gpu_renderer`/PNG 解码路径，**不在视图层原语表内**（引入需先补本文契约，见 §8 反模式 6）。
+> `shell.rs` 里的 `wood_frame/title_bar/panel/bar_slot/menu_item/hint_row/nautical_grid/`
+> `menu_icon/draw_*_text` 是**上层组合组件**，不是原语。
 
 **语义单一性**：每个原语只做一件事。任何"既要缩放又要翻转又要裁剪还要查像素"的
 绘制逻辑都是架构违规——它属于工具链/构建期，不属于运行时。
@@ -104,7 +112,10 @@
 
 ### 契约 1 · 单一权威呈现坐标系
 
-- 呈现坐标系**只有** 1080×1920（`menu_shell::LOGICAL_W_I32/H_I32`、`gfx::CANVAS_W/H` 三处常量同值）。
+- 呈现坐标系**只有** 1080×1920。常量权威在 `ti_render::framebuffer`：
+  `CANVAS_W/CANVAS_H`（u32）与 `LOGICAL_W_I32/LOGICAL_H_I32/LOGICAL_W_USIZE`
+  （均 = 1080/1920）。`ti-app::menu_shell` 与 `ti-platform::gfx` 侧的同名常量是
+  **转发/同值副本**，由单测锁同值。
 - 所有绘制原语入参、帧缓冲索引、快照/基线尺寸，一律 1080 空间。
 - **legacy 坐标（176×220）不得出现在运行时**；如需 legacy 尺寸做业务判断，由逻辑层
   以数据形式提供，视图层不得感知。
@@ -113,12 +124,12 @@
 
 ### 契约 2 · 像素来源单一
 
-- 运行时帧缓冲的每一个非底色像素，来自 §2 的 3 个原语。
+- 运行时帧缓冲的每一个非底色像素，来自 §2 列出的原语/组合函数。
 - 禁止在运行时按帧解码/上传/重采样 legacy 位图资产。
 
 ### 契约 3 · 逻辑与渲染分离
 
-- 视图层 `render()` **只读**状态、**只调** 3 原语；不跑业务规则、不改状态。
+- 视图层 `render()` **只读**状态、**只调** §2 原语；不跑业务规则、不改状态。
 - 业务规则只在 `ti_core::rules/*`；状态推进只在 `GameApp::advance(GameInput)`。
 - 判据：把 `render()` 换成"只读快照"，同一次渲染必产生同一帧（确定性门禁覆盖）。
 
@@ -127,7 +138,8 @@
 - 场景版面坐标只有一处事实源：`assets/data/scenes.json`。
 - `chrome.rs` / `scenes/*.rs` 读它，不写死坐标常量（几何常量如 `wood_frame` 的 12px
   外框宽、`iso_cell` 的公式属**实现**，可写死在 `chrome.rs`，但不得重复场景级坐标）。
-- 改版面 = 改 `scenes.json`，代码不动；`08_layout_design.md` §4 表与之同值。
+- 改版面 = 改 `scenes.json`，代码不动；`08_layout_design.md` §4 表是它的**人读镜像**
+  （由 `doccheck2::check_layout_doc_table_cross_check` 逐项对账，漂移即 FAIL）。
 
 ### 契约 5 · 门禁判据锚在代码绘制区
 
@@ -138,23 +150,27 @@
 
 ---
 
-## 4. z-order 单一枚举
+## 4. z-order = 调用顺序（无枚举）
 
-绘制顺序由一个枚举唯一决定（视图层自底向上）：
+**本仓没有 z-order 枚举**。曾有的 `ti_render::zorder::ZOrder`
+（`BgBoard < BgGrid < Frame < TitleBar < Content < Text < BarSlot < Highlight`）是**死代码**——
+零消费方（`grep ZOrder` 只命中定义与 re-export），真实层序完全由**函数调用顺序**决定。
+该死枚举已删除；下列分层是**约定 + 代码事实**，权威在调用点。
 
-```
-BgBoard  → ChromePanels → DynamicMarkers → Text
-```
+约定分层（视图层自底向上），权威实现 = `crates/ti-app/src/scenes/chrome.rs::scene_shell`
+的调用序 + `scenes/main_map.rs:336-339` 注释：
 
-| 层 | 内容 | 实现 |
+| 层 | 内容 | 实现（**按此顺序调用**） |
 |---|---|---|
-| `BgBoard` | 场景底色、等距棋盘菱形格 | `chrome::parchment_bg` + `chrome::iso_cell` 循环 |
-| `ChromePanels` | 外框、标题条、面板、血条槽、提示条 | `chrome::wood_frame/title_bar/panel/bar_slot/hint_row` |
-| `DynamicMarkers` | 玩家棋子、据点、BOSS 格 | `scenes/main_map.rs` 等距坐标上的代码色块 |
-| `Text` | 标题文字、列表项、HUD 数值、状态/提示文字 | `chrome::draw_*_text` / `SceneHost::draw_text` |
+| 背景 | 场景底色 + 航海网格 + 棋盘菱形格 | `parchment_bg` → `nautical_grid`（`scene_shell` 前两步） |
+| `ChromePanels` | 外框、标题条、面板、血条槽、提示条 | `wood_frame` → `title_bar(host, layout.title.h)` → `panel`/`bar_slot`/`hint_row` |
+| `DynamicMarkers` | 玩家棋子、据点、BOSS 格 | `scenes/main_map.rs` 等距坐标上的代码色块（各场景自行追加） |
+| `Text` | 标题文字、列表项、HUD 数值、状态/提示文字 | `draw_title_text(host, title, cx, layout.title.y, …)` 与各场景 `draw_*_text` |
 
-**纪律**：层内顺序由代码调用顺序决定，层间顺序由本枚举决定；**不得**在层内偷偷
-补画属于其他层的内容（例如在 `DynamicMarkers` 里补 HUD 底板）。新增绘制先归层，再实现。
+**纪律**：层内顺序由代码调用顺序决定；**不得**在层内偷偷补画属于其他层的内容
+（例如在 `DynamicMarkers` 里补 HUD 底板）。新增绘制先判断落在哪层，再决定插在
+`scene_shell` 的哪一步之后。**改这个顺序 = 改像素**，会破 gate 第 18/19/19.5 项的三套
+SHA 基线，必须同时重生成基线并人裁决。
 
 ---
 
@@ -162,19 +178,25 @@ BgBoard  → ChromePanels → DynamicMarkers → Text
 
 | 契约 | 保证方式 | 门禁项 |
 |---|---|---|
-| 契约 1 坐标系唯一 | `doccheck2` grep：`ti-platform/gfx.rs` + `ti-app/scenes/**` + `menu_shell.rs` 禁字面 `176`/`220`；另断言 `LOGICAL_W_I32 == gfx::CANVAS_W` 等三常量同值 | gate 第 13 项（doccheck2 第 18 检查 runtime-no-legacy-coords） |
+| 契约 1 坐标系唯一 | `doccheck2` grep：`ti-platform/gfx.rs` + `ti-app/scenes/**` + `menu_shell.rs` 禁字面 `176`/`220`；另断言 `ti_render::framebuffer::CANVAS_W/H` 与 `LOGICAL_*_I32` 同值 | gate 第 13 项（doccheck2 `check_runtime_no_legacy_coords`） |
 | 契约 2 像素来源单一 | `grep` 断言：`game_app::render`/`render_hd` 不调 `blit_scene*`；`sprite_atlas` 无写帧函数；`terrain_atlas` 无 blit 分支 | gate 第 13 项（doccheck2）+ 编译期（函数删除即失效） |
 | 契约 3 逻辑/渲染分离 | `render_parity.rs` 确定性/非空/场景区分；`render()` 签名不暴露可变状态 | gate 第 3 项（cargo test） |
-| 契约 4 版面数据驱动 | `render_intent.rs` 6 个 `*_layout_matches_doc` 断言 `scenes.json` = §4 表值 | 测试（gate 第 3 项 cargo test） |
+| 契约 4 版面数据驱动 | `render_intent.rs` 6 个 `*_layout_matches_doc` 断言 `scenes.json` **实值**；`doccheck2::check_layout_doc_table_cross_check` 锁 §4 表 == `scenes.json` | 测试（gate 第 3 项）+ gate 第 13 项 |
 | 契约 5 判据锚代码区 | `render_intent.rs` 关键矩形/动态区断言基于代码绘制；`e2e_render_alignment` 的 legacy z 断言迁 `ti_formats` 纯数据 | 测试（gate 第 3 项 cargo test） |
 
-**不变量清单**（常量同值，编译期 + 单测双锁）：
+**不变量清单**（常量同值，权威在 `ti-render`，编译期 + 单测双锁）：
 
 ```
-menu_shell::LOGICAL_W_I32 == gfx::CANVAS_W == 1080
-menu_shell::LOGICAL_H_I32 == gfx::CANVAS_H == 1920
-gfx::FB_PIXELS == CANVAS_W * CANVAS_H
+ti_render::framebuffer::CANVAS_W       == 1080
+ti_render::framebuffer::CANVAS_H       == 1920
+ti_render::framebuffer::LOGICAL_W_I32  == CANVAS_W  as i32
+ti_render::framebuffer::LOGICAL_H_I32  == CANVAS_H  as i32
+ti_render::framebuffer::FB_PIXELS      == CANVAS_W as usize * CANVAS_H as usize
+ti_render::framebuffer::LOGICAL_W_USIZE == CANVAS_W as usize
 ```
+
+`ti-app::menu_shell` / `ti-platform::gfx` 侧的同名常量是**同值副本**（转发），
+改动必须同步并在 `cargo test -p ti-render` 验证。
 
 **基线镜像恒等（S15.6 B1 裁决③ / QA014）**：`render_baseline`（gate 第 19 项 render-snapshot）为**唯一权威基线**；
 `forward_baseline`（gate 第 19.5 项 forward-render-snapshot）与 `hd_baseline`（gate 第 18 项 visual-regression，

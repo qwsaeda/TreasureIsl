@@ -4,6 +4,7 @@ use ti_core::rules::messages::page_text;
 
 use crate::game_app::GameInput;
 use crate::i18n;
+use crate::menu_shell::LOGICAL_W_I32;
 use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
@@ -91,7 +92,7 @@ impl Scene for MessageScene {
         let total = host.msg_total();
         let dots_n = i32::try_from(total).unwrap_or(0);
         let dots_w = dots_n * 36 - 24;
-        let dots_x = (1080 - dots_w.max(0)) / 2;
+        let dots_x = (LOGICAL_W_I32 - dots_w.max(0)) / 2;
         let dots_y = layout.page.y - 48;
         for i in 0..dots_n {
             let dx = dots_x + i * 36;
@@ -103,7 +104,13 @@ impl Scene for MessageScene {
                 host.fill_rect(dx + 2, dots_y + 2, 8, 8, chrome::COLOR_MENU_BG);
             }
         }
-        host.fill_rect(540, body.y + 8, 2, (body.h - 16).max(0), chrome::COLOR_MENU_BORDER);
+        host.fill_rect(
+            LOGICAL_W_I32 / 2,
+            body.y + 8,
+            2,
+            (body.h - 16).max(0),
+            chrome::COLOR_MENU_BORDER,
+        );
         let page_str = i18n::sgetf("scene.message.page", &[&(page + 1), &total]);
         let page_pos = layout.page;
         let page_x = chrome::centered_body_x(host, &page_str);

@@ -12,7 +12,9 @@
 //! 版面区清单是 legacy 176×220 坐标（`.Map` 逆向参照口径），本 bin 独立维护一份。
 
 /// §4 版面区清单（legacy 176×220 坐标）：场景名 → ((x0,y0,x1,y1), 区名)。
-fn layout_zones(scene: &str) -> &'static [((u32, u32, u32, u32), &'static str)] {
+type LayoutZone = ((u32, u32, u32, u32), &'static str);
+
+fn layout_zones(scene: &str) -> &'static [LayoutZone] {
     match scene {
         "index" => &[
             ((0, 0, 176, 40), "标题条"),
@@ -51,7 +53,7 @@ const LEGACY_H: u32 = 220;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let scene_name = args.get(1).map(|s| s.as_str()).unwrap_or("index");
+    let scene_name = args.get(1).map_or("index", String::as_str);
     let map_path = format!("legacy/data/{scene_name}.Map");
 
     let Ok(pkg) = std::fs::read("legacy/data/ui.pak") else {
@@ -118,11 +120,11 @@ fn main() {
         }
         let zone = zones
             .iter()
-            .find(|&((zx0, zy0, zx1, zy1), _)| {
+            .find(|zone| {
+                let (zx0, zy0, zx1, zy1) = zone.0;
                 ctrl.f2 >= zx0 && ctrl.f2 < zx1 && ctrl.f3 >= zy0 && ctrl.f3 < zy1
             })
-            .map(|&(_, n)| n)
-            .unwrap_or("其他");
+            .map_or("其他", |zone| zone.1);
         println!(
             "{i:>2} | {f1:<4} | ({x:<3},{y:<3})    | {w:<4} x{h:<3} | {iof:<8} | ok       | {zone}",
             f1 = ctrl.f1,

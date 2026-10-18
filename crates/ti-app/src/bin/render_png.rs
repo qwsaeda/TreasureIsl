@@ -110,9 +110,9 @@ fn upscale_rgb565(fb: &[u16], scale: u32) -> Vec<u8> {
             let r5 = (p >> 11) & 0x1F;
             let g6 = (p >> 5) & 0x3F;
             let b5 = p & 0x1F;
-            let r = ((r5 as u32) << 3 | (r5 as u32) >> 2) & 0xFF;
-            let g = ((g6 as u32) << 2 | (g6 as u32) >> 4) & 0xFF;
-            let b = ((b5 as u32) << 3 | (b5 as u32) >> 2) & 0xFF;
+            let r = (u32::from(r5) << 3 | u32::from(r5) >> 2) & 0xFF;
+            let g = (u32::from(g6) << 2 | u32::from(g6) >> 4) & 0xFF;
+            let b = (u32::from(b5) << 3 | u32::from(b5) >> 2) & 0xFF;
             let idx = ((oy as usize) * out_w as usize + ox as usize) * 3;
             out[idx] = r as u8;
             out[idx + 1] = g as u8;
@@ -134,7 +134,7 @@ fn encode_png_rgb(rgb: &[u8], width: u32, height: u32) -> Vec<u8> {
     let crc_table = build_crc_table();
     let mut out = vec![137u8, 80, 78, 71, 13, 10, 26, 10];
     let chunk = |tag: &[u8; 4], data: &[u8], out: &mut Vec<u8>| {
-        out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+        out.extend_from_slice(&u32::try_from(data.len()).unwrap_or(u32::MAX).to_be_bytes());
         out.extend_from_slice(tag);
         out.extend_from_slice(data);
         let mut crc_input = Vec::with_capacity(4 + data.len());
@@ -162,8 +162,8 @@ fn zlib_compress_stored(data: &[u8]) -> Vec<u8> {
         let chunk = &data[off..];
         last = chunk.len() <= 65535;
         let n = if last { chunk.len() } else { 65535 };
-        let len = n as u16;
-        out.push(if last { 0x01 } else { 0x00 });
+        let len = u16::try_from(n).unwrap_or(u16::MAX);
+        out.push(u8::from(last));
         out.extend_from_slice(&len.to_le_bytes());
         out.extend_from_slice(&(!len).to_le_bytes());
         out.extend_from_slice(&chunk[..n]);
@@ -185,7 +185,7 @@ fn adler32(data: &[u8]) -> u32 {
 fn build_crc_table() -> [u32; 256] {
     let mut table = [0u32; 256];
     for (i, slot) in table.iter_mut().enumerate() {
-        let mut c = i as u32;
+        let mut c = u32::from(u8::try_from(i).unwrap_or(u8::MAX));
         for _ in 0..8 {
             c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
         }

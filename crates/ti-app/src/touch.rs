@@ -16,6 +16,7 @@
 //! 单一权威呈现坐标系，`08_render_arch.md` 契约 1）；屏幕坐标由调用方用
 //! [`Viewport::screen_to_logical`] 反变换后传入（见 [`TouchPad::feed_screen`]）。
 
+use ti_core::data;
 use ti_platform::gfx::Viewport;
 use ti_platform::settings::{Gesture, GestureTracker};
 
@@ -120,12 +121,15 @@ impl Default for TouchPad {
 /// 改由 [`scene_list_bands`] / [`slot_bands`] 从 `ListLayout`（scenes.json）推导，
 /// 与渲染 `item_rect` 公式正逆成对（EXP-071）。
 pub mod layout {
+    use super::data;
+
     /// 主菜单项数（`spec/menu.md §a` case 0..=5）。
     pub const MENU_COUNT: usize = 6;
 
     /// 消息界面左右分区 x（呈现层宽中心 540 = 1080/2；左 = 关闭，右 = 下一页）。
     /// S15.6 QA024：旧值 88 是 176 时代半屏（176/2），1080 空间 92% 宽度皆误判「下一页」。
-    pub const MSG_SPLIT_X: f32 = 540.0;
+    #[allow(clippy::cast_precision_loss)]
+    pub const MSG_SPLIT_X: f32 = (ti_render::framebuffer::LOGICAL_W_I32 / 2) as f32;
 
     /// 点按是否落在主菜单某行 → 返回菜单项索引。
     ///
@@ -139,7 +143,7 @@ pub mod layout {
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn menu_row_at(x: f32, y: f32) -> Option<usize> {
-        let scene = ti_core::data::scenes().ok()?.get("index")?.clone();
+        let scene = data::scenes().ok()?.get("index")?.clone();
         let l = &scene.list;
         let bands = scene_list_bands(
             l.x as f32,
@@ -204,6 +208,7 @@ pub mod layout {
     /// 行带 = 基线 y 上移 `offset`、高 `item_h`。
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
+    #[inline]
     pub fn slot_bands(
         x0: f32,
         x1: f32,
@@ -213,19 +218,15 @@ pub mod layout {
         offset: f32,
         count: usize,
     ) -> Vec<RectF> {
-        (0..count)
-            .map(|i| {
-                let y = y0 + i as f32 * step - offset;
-                RectF { x0, x1, y0: y, y1: y + item_h }
-            })
-            .collect()
+        scene_list_bands(x0, x1, y0, step, item_h, offset, count)
     }
 
     /// 点按落在哪条存读档槽位命中带（[`slot_bands`] 几何）→ 返回槽位索引。
     /// 与渲染 `item_rect` 公式严格互逆（EXP-071 正逆成对）。
+    #[inline]
     #[must_use]
     pub fn slot_band_index_at(bands: &[RectF], x: f32, y: f32) -> Option<usize> {
-        bands.iter().position(|b| (b.x0..b.x1).contains(&x) && (b.y0..b.y1).contains(&y))
+        scene_list_index_at(bands, x, y)
     }
 
     /// 点按是否落在主地图某格（`chrome::iso_cell` 的逆，EXP-067 正逆成对）。
@@ -267,7 +268,7 @@ pub mod layout {
         y: f32,
         grid_w: u32,
         grid_h: u32,
-        layout: &ti_core::data::SceneLayout,
+        layout: &data::SceneLayout,
     ) -> Option<(u32, u32)> {
         if grid_w == 0 || grid_h == 0 {
             return None;
@@ -298,6 +299,7 @@ pub mod layout {
 
 #[cfg(test)]
 mod tests {
+    use super::data;
     use super::{Gesture, TouchPad, TouchSample};
     use ti_platform::gfx::Viewport;
 
@@ -365,7 +367,7 @@ mod tests {
     #[allow(clippy::cast_precision_loss)] // 测试常量下标 ≤ 20，f32 表示无损
     fn menu_rows_cover_six_items() {
         // 坐标读 scenes.json index 段（list.y/row_h/item_h/highlight_offset），与渲染 item_rect 正逆成对
-        let scene = match ti_core::data::scenes() {
+        let scene = match data::scenes() {
             Ok(v) => match v.get("index") {
                 Some(v) => v,
                 None => std::process::abort(),
@@ -429,11 +431,8 @@ mod tests {
         // （scenes.json `main_map.grid.*` 数据源，无 legacy camera）喂回 `grid_cell_at`，
         // 必须逆解回原格。
         use crate::scenes::chrome;
-        let layout = ti_core::data::scenes()
-            .ok()
-            .and_then(|s| s.get("main_map"))
-            .cloned()
-            .unwrap_or_default();
+        let layout =
+            data::scenes().ok().and_then(|s| s.get("main_map")).cloned().unwrap_or_default();
         let (tw, th) = chrome::iso_tile(&layout);
         assert!(tw > 0 && th > 0, "main_map grid.tile_w/h 应为正（触摸逆变换可用）");
         for r in 0..20u32 {

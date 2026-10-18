@@ -9,55 +9,57 @@
 //! 坐标系：1080×1920 呈现层像素（`menu_shell::LOGICAL_W_I32`/`LOGICAL_H_I32`）。
 
 use std::sync::atomic::{AtomicU32, Ordering};
+use ti_core::data;
 
 use ti_render::framebuffer::LOGICAL_W_I32;
+use ti_render::theme::Theme;
 
 use crate::scenes::{RenderHost, SceneHost};
 
 // === 颜色常量重导出（从 Theme 默认值，兼容旧导入路径） ===
 
 /// 深底上的**白文字**色。
-pub const COLOR_TEXT_ON_PARCH: u16 = 0xFFFF;
+pub const COLOR_TEXT_ON_PARCH: u16 = Theme::DEFAULT.text_on_parch;
 /// 标题条上的**亮文字**色（象牙金）。
-pub const COLOR_TEXT_ON_WOOD: u16 = 0xFF77;
+pub const COLOR_TEXT_ON_WOOD: u16 = Theme::DEFAULT.text_on_wood;
 /// 危险/BOSS 标记色。
-pub const COLOR_DANGER: u16 = 0xEAAA;
+pub const COLOR_DANGER: u16 = Theme::DEFAULT.danger;
 /// 玩家棋子/单位色。
-pub const COLOR_PLAYER: u16 = 0x2D33;
+pub const COLOR_PLAYER: u16 = Theme::DEFAULT.player;
 /// 据点标记色。
-pub const COLOR_LANDMARK: u16 = 0xF5A8;
+pub const COLOR_LANDMARK: u16 = Theme::DEFAULT.landmark;
 /// 背景填充色。
-pub const COLOR_BG: u16 = 0x10A3;
+pub const COLOR_BG: u16 = Theme::DEFAULT.bg;
 /// 标题条主色。
-pub const COLOR_TITLE_BAR: u16 = 0x3A0B;
+pub const COLOR_TITLE_BAR: u16 = Theme::DEFAULT.title_bar;
 /// 选中高亮色。
-pub const COLOR_SELECTED: u16 = 0x245C;
+pub const COLOR_SELECTED: u16 = Theme::DEFAULT.selected;
 /// 次文字/提示行色。
-pub const COLOR_SECONDARY: u16 = 0x8C93;
+pub const COLOR_SECONDARY: u16 = Theme::DEFAULT.secondary;
 /// 卡片亮（bevel 凸起）。
-pub const COLOR_BEVEL_HI: u16 = 0x31A9;
+pub const COLOR_BEVEL_HI: u16 = Theme::DEFAULT.bevel_hi;
 /// 暗角（bevel 凹陷）。
-pub const COLOR_BEVEL_SHADOW: u16 = 0x0862;
+pub const COLOR_BEVEL_SHADOW: u16 = Theme::DEFAULT.bevel_shadow;
 /// 卡片底（菜单项色块）。
-pub const COLOR_MENU_BG: u16 = 0x2147;
+pub const COLOR_MENU_BG: u16 = Theme::DEFAULT.menu_bg;
 /// 卡片描边（菜单项边框）。
-pub const COLOR_MENU_BORDER: u16 = 0x3A0B;
+pub const COLOR_MENU_BORDER: u16 = Theme::DEFAULT.menu_border;
 /// 进度条底。
-pub const COLOR_HILITE: u16 = 0x2967;
+pub const COLOR_HILITE: u16 = Theme::DEFAULT.hilite;
 /// 深底。
-pub const COLOR_PARCH_DARK: u16 = 0x10A3;
+pub const COLOR_PARCH_DARK: u16 = Theme::DEFAULT.parch_dark;
 /// 深底亮。
-pub const COLOR_PARCH_LIGHT: u16 = 0x2106;
+pub const COLOR_PARCH_LIGHT: u16 = Theme::DEFAULT.parch_light;
 /// 卡片描边/标题条。
-pub const COLOR_WOOD: u16 = 0x3A0B;
+pub const COLOR_WOOD: u16 = Theme::DEFAULT.wood;
 /// 金高光。
-pub const COLOR_GOLD: u16 = 0xF5A8;
+pub const COLOR_GOLD: u16 = Theme::DEFAULT.gold;
 /// 航海蓝亮。
-pub const COLOR_GOLD_GLOW: u16 = 0x453E;
+pub const COLOR_GOLD_GLOW: u16 = Theme::DEFAULT.gold_glow;
 /// 航海蓝。
-pub const COLOR_GOLD_BRIGHT: u16 = 0x245C;
+pub const COLOR_GOLD_BRIGHT: u16 = Theme::DEFAULT.gold_bright;
 /// 清屏黑。
-pub const COLOR_BLACK: u16 = 0x0000;
+pub const COLOR_BLACK: u16 = Theme::DEFAULT.black;
 
 // === 动画状态管理 ===
 
@@ -95,13 +97,13 @@ pub fn reset_animation_state() {
 
 /// 读某场景的版面数据。
 #[must_use]
-pub fn scene_layout(scene_id: &str) -> ti_core::data::SceneLayout {
-    ti_core::data::scenes().ok().and_then(|s| s.get(scene_id)).cloned().unwrap_or_default()
+pub fn scene_layout(scene_id: &str) -> data::SceneLayout {
+    data::scenes().ok().and_then(|s| s.get(scene_id)).cloned().unwrap_or_default()
 }
 
 /// 等距投影：`(row, col)` → 呈现层坐标。
 #[must_use]
-pub fn iso_cell(row: i32, col: i32, layout: &ti_core::data::SceneLayout) -> (i32, i32) {
+pub fn iso_cell(row: i32, col: i32, layout: &data::SceneLayout) -> (i32, i32) {
     let s = &layout.extra_scalar;
     let ox = s.get("grid.x0").copied().unwrap_or(0);
     let oy = s.get("grid.y0").copied().unwrap_or(0);
@@ -112,7 +114,7 @@ pub fn iso_cell(row: i32, col: i32, layout: &ti_core::data::SceneLayout) -> (i32
 
 /// 等距 tile 半宽/半高。
 #[must_use]
-pub fn iso_tile(layout: &ti_core::data::SceneLayout) -> (i32, i32) {
+pub fn iso_tile(layout: &data::SceneLayout) -> (i32, i32) {
     let s = &layout.extra_scalar;
     (s.get("grid.tile_w").copied().unwrap_or(0), s.get("grid.tile_h").copied().unwrap_or(0))
 }

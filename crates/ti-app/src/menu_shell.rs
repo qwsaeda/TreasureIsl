@@ -534,10 +534,12 @@ impl Canvas for MenuShell {
     }
 
     fn pixel_at(&self, x: i32, y: i32) -> u16 {
-        let sl = self.fb.as_slice();
         let w = usize::try_from(LOGICAL_W_I32).unwrap_or(0);
+        if x < 0 || y < 0 {
+            return 0;
+        }
         let xi = usize::try_from(x).unwrap_or(0);
         let yi = usize::try_from(y).unwrap_or(0);
-        sl.get(yi.wrapping_mul(w).wrapping_add(xi)).copied().unwrap_or(0)
+        self.fb.as_slice().get(yi.wrapping_mul(w).wrapping_add(xi)).copied().unwrap_or(0)
     }
 }

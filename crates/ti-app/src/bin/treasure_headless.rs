@@ -6,6 +6,8 @@
 
 use serde::Deserialize;
 use ti_app::game_app::{GameApp, GameInput, Scene};
+use ti_core::domain::economy;
+use ti_core::domain::map;
 
 /// 全流程脚本（`tests/scripts/full_run.json`，P3-3 判据）。
 #[derive(Debug, Deserialize)]
@@ -96,7 +98,7 @@ fn to_input(step: &Step) -> GameInput {
 }
 
 /// 方向名 → `Dir`。
-fn dir_by_name(name: &str) -> ti_core::domain::map::Dir {
+fn dir_by_name(name: &str) -> map::Dir {
     use ti_core::domain::map::Dir;
     match name {
         "North" => Dir::North,
@@ -111,7 +113,7 @@ fn dir_by_name(name: &str) -> ti_core::domain::map::Dir {
 }
 
 /// 建筑名 → `Building`。
-fn building_by_name(name: &str) -> ti_core::domain::economy::Building {
+fn building_by_name(name: &str) -> economy::Building {
     use ti_core::domain::economy::Building;
     match name {
         "Castle" => Building::Castle,
@@ -174,18 +176,18 @@ fn main() {
         // 执行后：断言场景 == step.expect
         let after = app.scene();
         let after_name = scene_name(after);
-        if after_name != step.expect {
-            println!(
-                "  step {i:>2} post scene mismatch: expected {} got {after_name} (action={})",
-                step.expect, step.action
-            );
-            failures += 1;
-        } else {
+        if after_name == step.expect {
             println!(
                 "  step {i:>2} OK  {action:<14} {scene} -> {after_name}",
                 action = step.action,
                 scene = step.scene
             );
+        } else {
+            println!(
+                "  step {i:>2} post scene mismatch: expected {} got {after_name} (action={})",
+                step.expect, step.action
+            );
+            failures += 1;
         }
     }
 

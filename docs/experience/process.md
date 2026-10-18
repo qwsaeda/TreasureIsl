@@ -264,3 +264,44 @@
   4. **重建** = 干净基线（LF→CRLF 归一 + 去 BOM）+ 单空行 + 干净新段；用 `[System.IO.File]::WriteAllBytes` 写回（**绝不用 `Set-Content`**，EXP-051）。
   5. **验证**：条目数、`mojibakeHits=0`、标题含「经验库」、无重复 ID、`doccheck` 0 错误。
 - **验证**：`process.md` 已恢复（25 条全干净，`doccheck` 0 错误）；乱码原版先备份临时目录再覆盖。
+
+### EXP-099 流程：`required-features` 门控的 bin 不被 gate 编译/lint ⇒ 官方排障工具静默失效
+- **现象**：`crates/ti-app/src/bin/element_dump.rs:119-124` 的 `find(|&((zx0,zy0,zx1,zy1),_)| ...)`
+  因 `Iterator::find` 传入 `&&T` 而把绑定推成 `&u32`，**4 × E0308 编译失败**；而
+  `scripts/gate.ps1` 连续多轮 **21 项全绿**。`element_dump` 是 AGENTS.md 路由表登记的
+  「报『特定区域贴图错位』先逐元素定位」官方工具——排障时才发现它根本编不过。
+- **根因**：`treasure-native` / `treasure-headless` / `element-dump` / `sprite-step` / `render-png`
+  五个 bin 都声明了 `required-features = ["native-shell" / "headless"]`。gate 第 1~3 项
+  （`cargo fmt --check` / `cargo clippy --workspace --all-targets` / `cargo test --workspace`）
+  **不带 feature**，cargo 会直接跳过这些 target ⇒ 它们长期处于「不在编译器视野内」状态。
+  这是**盲区**而非 bug：门禁绿 ≠ 全仓可编译。（同类根因：EXP-052 讲门禁扫描边界、
+  EXP-048 讲「机械可判定项必须固化进门禁」。）
+- **解法**：
+  1. 修 `element_dump.rs` 的解构（去掉 `&` 前缀，改 `zone.0` / `map_or("其他", |z| z.1)`）；
+  2. 新增 **gate 第 4b 项**：`cargo clippy --workspace --all-targets
+     --features ti-app/native-shell,ti-app/headless -- -D warnings`，把全部 feature 门控 bin
+     纳入编译 + lint（`--all-targets` 才能覆盖 bin，`check` 不足以抓 clippy lint）；
+  3. 同批修掉该命令暴露的 5 处存量问题：`sprite_step.rs` 的 `println!` 格式串
+     `{0}` 缺占位符（会 panic）、`treasure_native.rs` 悬空 doc 注释 + f64→u64 cast、
+     `treasure_headless.rs` `if_not_else`、`render_png.rs` 6 处 pedantic cast。
+- **验证**：`cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless -- -D warnings` 0 error；
+  `cargo check -p ti-app --features native-shell --bin element-dump` 0 error；
+  gate 第 4b 项 PASS，`docs/parity.md` 计数口径同步 21 → 22（`doccheck2::check_gate_item_count` 对账）。
+### EXP-100 流程/代码：脚本化批量改 import 的正则陷阱——前缀带尾 `::` + `+` 漏单段模块
+- **现象**：飞轮 F17 要把 43 处非 use 行 `ti_core::a::b::X` 收敛为顶部 `use` + `b::X`。
+  脚本用 `re.compile(r'ti_core::((?:[a-z_0-9]+::)+[a-z_0-9]+)::')` 收集模块前缀：
+  ① `(?:…::)+` 用 `+` 要求至少两段模块 → **单段模块 `ti_core::data::` 一处都匹配不到**；
+  ② 前缀捕获带**尾 `::`** 时 `prefix.split('::')[-1]` 得**空串** → 替换成空字符串，
+  把 `ti_core::rules::cards::CardState` 削成裸 `CardState`，43 处**全部编译失败**
+  （E0425/E0422/E0433 一片）。另两次修复陷阱：③ 插入的 `use` 落在**函数/测试体内**
+  而非文件顶部 import 区（`touch.rs` 的 `layout`/`tests` 嵌套 mod 还要各自 `use super::`）；
+  ④ 新断言扫到自己源码里的字符串字面量，需排除断言文件本身。
+- **根因**：正则捕获组设计未考虑「模块路径段数可变」与「尾分隔符归属」；批量文本改写
+  没有把「编译器」当唯一裁判（本轮第一次跑就编译不过，说明缺少**逐文件 `cargo check`** 环节）。
+- **正解**：捕获组用 `(?:[a-z_0-9]+::)*`（`*` 允许零次，即支持单段）；别名取**去掉尾
+  `::` 后的** `split('::')[-1]`；插入点锚定**文件顶部首个 `use` 区**，嵌套 `mod` 补
+  `use super::`；断言类检查排除自身实现；**改完立刻逐文件 `cargo check` + 最后全量
+  `clippy --all-targets`（含 feature 门控 bin）双跑**，让编译器逐处判刑。
+- **验证**：`cargo check -p ti-app --features native-shell,headless` 0 error；
+  `cargo test --workspace` 0 failed；新增 doccheck2 第 21 项 `check_no_ti_core_fullpath`
+  断言该风格不再回潮（本次命中 0）；gate 22 项全绿。

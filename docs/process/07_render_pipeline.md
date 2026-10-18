@@ -3,8 +3,9 @@
 > ⚠️ **状态：降级为逆向参照（S16 渲染线裁决）**。运行时**零 legacy 像素层**：画面 100%
 > 由代码绘制产出，逐像素 PCX blit 已退出热渲染路径。本文的 z-order 文件顺序 / 越界求交裁剪 /
 > PCX 透明位 index 0 三类契约**仅作逆向事实参照与诊断工具依据**，不再是运行时验收基准。
-> **运行时架构契约见 [`08_render_arch.md`](08_render_arch.md)**（分层 / 3 原语 / z-order 枚举 /
-> 单一坐标系）。版面数值见 [`../business/08_layout_design.md`](../business/08_layout_design.md)。
+> **运行时架构契约见 [`08_render_arch.md`](08_render_arch.md)**（分层 / 绘制原语 / z-order=调用顺序 /
+> 单一坐标系）；`ti-render` crate 边界见 [`09_render_framework.md`](09_render_framework.md)。
+> 版面数值见 [`../business/08_layout_design.md`](../business/08_layout_design.md)。
 
 > 单一事实源：《金银岛》legacy UI 渲染链路的**路径、z-order、越界裁剪、PCX 透明**四类行为契约。
 > 任何改 `sprite_atlas.rs` / `terrain_atlas.rs` / `game_app.rs::render` / `menu_shell.rs` 的代码，

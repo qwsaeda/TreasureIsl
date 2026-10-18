@@ -67,40 +67,46 @@ pub struct Theme {
     pub bitmap_advance_hint: i32,
 }
 
+impl Theme {
+    /// 默认主题单源常量：`chrome::COLOR_*` 兼容重导出与 `theme.json` 镜像都锚定
+    /// 此处（F4 单一事实源：改色只改这里，常量/JSON 自动同步）。
+    pub const DEFAULT: Self = Self {
+        // 色板（RGB565）
+        parch_dark: 0x10A3,
+        parch_light: 0x2106,
+        wood: 0x3A0B,
+        gold: 0xF5A8,
+        gold_glow: 0x453E,
+        gold_bright: 0x245C,
+        menu_bg: 0x2147,
+        menu_border: 0x3A0B,
+        hilite: 0x2967,
+        bevel_hi: 0x31A9,
+        bevel_shadow: 0x0862,
+        text_on_parch: 0xFFFF,
+        text_on_wood: 0xFF77,
+        danger: 0xEAAA,
+        player: 0x2D33,
+        landmark: 0xF5A8,
+        bg: 0x10A3,
+        title_bar: 0x3A0B,
+        selected: 0x245C,
+        secondary: 0x8C93,
+        black: 0x0000,
+        // 字号
+        font_size: 44,
+        title_font_size: 96,
+        hint_font_size: 28,
+        bitmap_advance: 12,
+        bitmap_advance_title: 26,
+        bitmap_advance_hint: 8,
+    };
+}
+
 impl Default for Theme {
     /// 默认主题 = 现代深色 + 航海蓝 UI（与 `08_layout_design.md` §2 一致）。
     fn default() -> Self {
-        Self {
-            // 色板（RGB565）
-            parch_dark: 0x10A3,
-            parch_light: 0x2106,
-            wood: 0x3A0B,
-            gold: 0xF5A8,
-            gold_glow: 0x453E,
-            gold_bright: 0x245C,
-            menu_bg: 0x2147,
-            menu_border: 0x3A0B,
-            hilite: 0x2967,
-            bevel_hi: 0x31A9,
-            bevel_shadow: 0x0862,
-            text_on_parch: 0xFFFF,
-            text_on_wood: 0xFF77,
-            danger: 0xEAAA,
-            player: 0x2D33,
-            landmark: 0xF5A8,
-            bg: 0x10A3,
-            title_bar: 0x3A0B,
-            selected: 0x245C,
-            secondary: 0x8C93,
-            black: 0x0000,
-            // 字号
-            font_size: 44,
-            title_font_size: 96,
-            hint_font_size: 28,
-            bitmap_advance: 12,
-            bitmap_advance_title: 26,
-            bitmap_advance_hint: 8,
-        }
+        Self::DEFAULT
     }
 }
 

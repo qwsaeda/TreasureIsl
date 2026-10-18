@@ -158,7 +158,10 @@ impl Scene for SelectMapScene {
                 if lock_x > 0 {
                     // 契约 1（`08_render_arch.md`）：钳制基准用呈现坐标系常量，
                     // 不得出现 legacy 176 字面量。
-                    let lock_w = (crate::menu_shell::LOGICAL_W_I32 - lock_x - 6).min(40);
+                    // 锁标右界按**卡片右缘**（`item_rect` 的 x+w）而非屏幕宽推导，
+                    // 按钮变窄时锁标随卡片收敛，不会溢出卡片（F12）
+                    let card_right = r.x + r.w;
+                    let lock_w = (card_right - 6 - lock_x).min(40);
                     host.fill_rect(lock_x, ty, lock_w.max(4), 12, crate::menu_shell::COLOR_WOOD);
                 }
             }

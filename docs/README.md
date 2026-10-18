@@ -9,7 +9,7 @@
 | **理解游戏怎么设计/架构/模块化（第一入口）** | [`00_design.md`](00_design.md)（正向设计总览：核心循环 + 数据分层 + 5 crate 架构 + 9 场景 + 7 模块包 + 窄接口；不读 legacy/） |
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 21 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 22 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
@@ -51,7 +51,8 @@
 | [process/05_module_parallel.md](process/05_module_parallel.md) | **模块并行开发 loop**（一轮 4 步 + 包划分 + 并行纪律 5 条 + §4.5 开轮必读/规范回执；机读白名单 plan/packages.yaml） |
 | [process/06_flywheel.md](process/06_flywheel.md) | **对抗流水线飞轮**（找问题/审计/修复 3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件；EXP-068 单一事实源） |
 | [process/07_render_pipeline.md](process/07_render_pipeline.md) | **legacy 像素管线契约**（路径表/z-order 文件顺序/越界求交裁剪/PCX 透明位 index 0；S16 起降级为逆向参照，gate 第 19/20 项锚点） |
-| [process/08_render_arch.md](process/08_render_arch.md) | **运行时渲染架构**（分层/3 绘制原语/z-order 枚举/5 条坐标与像素来源契约/grep 门禁/测试重锚矩阵；改渲染代码必读） |
+| [process/08_render_arch.md](process/08_render_arch.md) | **运行时渲染架构**（分层/绘制原语/z-order=调用顺序/5 条坐标与像素来源契约/grep 门禁/测试重锚矩阵；改渲染代码必读） |
+| [process/09_render_framework.md](process/09_render_framework.md) | **`ti-render` crate 边界契约**（职责与禁止项/模块结构/Theme schema/迁移映射/数据分离原则；改 `crates/ti-render/` 代码前必读） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 

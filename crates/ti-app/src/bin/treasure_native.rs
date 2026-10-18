@@ -149,10 +149,10 @@ impl Shell {
             game.shell_mut().set_font(parse_font_bytes(&font_bytes, &charset_bytes));
         }
 
-        /// S15.6 QA107：TTF 改**内置自动加载**（`GameApp::with_upload_mode` 构造壳时
-        /// `MenuShell::builtin_ttf_set`，QA128 进程级缓存）——本 bin 不再显式
-        /// `find_ttf_font` + `set_ttf_font`（旧 S5 路径已删；字体缺失 → 壳构造时
-        /// `None` 三档 + `eprintln!` 诊断，回退 12px 位图，§3 不静默空白）。
+        // S15.6 QA107：TTF 改**内置自动加载**（`GameApp::with_upload_mode` 构造壳时
+        // `MenuShell::builtin_ttf_set`，QA128 进程级缓存）——本 bin 不再显式
+        // `find_ttf_font` + `set_ttf_font`（旧 S5 路径已删；字体缺失 → 壳构造时
+        // `None` 三档 + `eprintln!` 诊断，回退 12px 位图，§3 不静默空白）。
         // 精灵图集 + 场景 .Map（本地 data/ 读，blit 真实贴图）
         if let Some(ui_pak) = read_local("ui.pak") {
             game.set_atlas(&ui_pak);
@@ -230,13 +230,12 @@ impl Shell {
         self.game.clear_last_sfx();
     }
 
-    /// 把键盘事件映射为 `GameInput`（`docs/gamebook.md` §3，壳层输入归一）。
-    ///
-    /// 鼠标左键**不**映射到 `confirm`：触屏/鼠标走
-    /// [`GameApp::poll_touch`] 的元素命中判定（点菜单行/地图格），
-    /// 若同时并入 `confirm` 会重复触发。
+    // 键鼠映射见 `docs/gamebook.md` §3（壳层输入归一）：鼠标左键**不**映射到 `confirm`，
+    // 触屏/鼠标走 `GameApp::poll_touch` 的元素命中判定（点菜单行/地图格），
+    // 若同时并入 `confirm` 会重复触发。
 
     /// S6.4：用 macroquad 全局时钟算本帧耗时（毫秒），驱动精灵动画帧推进。
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn tick_frame_time(&mut self) {
         let now_ms = (macroquad::time::get_time().max(0.0) * 1000.0) as u64;
         let delta = now_ms.saturating_sub(self.prev_now_ms);

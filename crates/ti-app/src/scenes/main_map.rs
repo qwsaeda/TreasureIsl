@@ -6,7 +6,9 @@ use ti_core::data::balance;
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::map::{Dir, GridPos, MapTerrain};
+use ti_core::rules::build;
 use ti_core::rules::main_map::MapSession;
+use ti_core::rules::trade;
 
 use crate::game_app::GameInput;
 use crate::i18n;
@@ -62,7 +64,7 @@ fn handle_trade_buy(host: &mut dyn SceneHost, gid: u32) {
             return;
         }
     };
-    let mut ledger = ti_core::rules::trade::TradeLedger::new(
+    let mut ledger = trade::TradeLedger::new(
         b.trade.clone(),
         host.gold(),
         &host.owned_snapshot(),
@@ -93,7 +95,7 @@ fn handle_trade_sell(host: &mut dyn SceneHost, gid: u32) {
             return;
         }
     };
-    let mut ledger = ti_core::rules::trade::TradeLedger::new(
+    let mut ledger = trade::TradeLedger::new(
         b.trade.clone(),
         host.gold(),
         &host.owned_snapshot(),
@@ -124,13 +126,13 @@ fn handle_build(host: &mut dyn SceneHost, kind: Building) {
             return;
         }
     };
-    let mut mgr = ti_core::rules::build::BuildManager::new(
+    let mut mgr = build::BuildManager::new(
         b.build.clone(),
-        ti_core::rules::build::Bank { gold: host.bank_gold(), deposit: 0 },
+        build::Bank { gold: host.bank_gold(), deposit: 0 },
         &[],
     );
     let bank_before = mgr.bank().gold;
-    match mgr.build(ti_core::rules::build::kind_id(kind)) {
+    match mgr.build(build::kind_id(kind)) {
         Ok(()) => {
             let spent = bank_before.saturating_sub(mgr.bank().gold);
             host.spend_bank_gold(spent);

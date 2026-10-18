@@ -11,17 +11,14 @@
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let scene_name = args.get(1).map(|s| s.as_str()).unwrap_or("index");
+    let scene_name = args.get(1).map_or("index", String::as_str);
     let Some(target_s) = args.get(2) else {
         eprintln!("用法: sprite-step <scene> <record#>");
         return;
     };
-    let target: usize = match target_s.parse() {
-        Ok(n) => n,
-        Err(_) => {
-            eprintln!("record# must be a number");
-            return;
-        }
+    let Ok(target) = target_s.parse() else {
+        eprintln!("record# must be a number");
+        return;
     };
 
     let pkg = match std::fs::read("legacy/data/ui.pak") {
@@ -102,7 +99,7 @@ fn main() {
         None => "none".to_owned(),
     };
     println!(
-        "record {target}: f1={} origin({},{}) sprite_size={sprite_info} => {0} 条已解码检视（decode-only，无像素写帧）",
+        "record {target}: f1={} origin({},{}) sprite_size={sprite_info} => {} 条已解码检视（decode-only，无像素写帧）",
         ctrl.f1,
         ctrl.f2,
         ctrl.f3,

@@ -47,11 +47,22 @@ impl IsoProjection {
         (self.tile_w, self.tile_h)
     }
 
+    /// tile 是否为退化值（0 或负）——此时投影不可逆。
+    #[must_use]
+    pub const fn is_degenerate(&self) -> bool {
+        self.tile_w == 0 || self.tile_h == 0
+    }
+
     /// 从屏幕坐标反推最近的逻辑格（用于触摸命中）。
     ///
     /// 返回 `(row, col)`，可能越界（调用方校验）。
+    /// tile 退化（`tile_w` 或 `tile_h` 为 0）时返回 `(0, 0)`：原公式分母
+    /// `2 * tile_w * tile_h` 为 0 会整数除零 panic（F6），此处早退兜底。
     #[must_use]
     pub const fn screen_to_cell(&self, sx: i32, sy: i32) -> (i32, i32) {
+        if self.is_degenerate() {
+            return (0, 0);
+        }
         let dx = sx - self.origin_x;
         let dy = sy - self.origin_y;
         // 解方程组：dx = (col - row) * tile_w, dy = (row + col) * tile_h

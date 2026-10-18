@@ -8,9 +8,6 @@ use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
 
-/// 主菜单项数（`spec/menu.md §a` case 0..=5）。
-const MENU_ITEMS: usize = 6;
-
 /// 主菜单场景处理器（`Index`）。
 pub struct IndexScene;
 
@@ -26,12 +23,14 @@ impl Scene for IndexScene {
         match input {
             GameInput::MoveUp => {
                 let cur = host.menu_selected();
-                host.set_menu_selected(cur.wrapping_add(MENU_ITEMS - 1) % MENU_ITEMS);
+                host.set_menu_selected(
+                    cur.wrapping_add(layout::MENU_COUNT - 1) % layout::MENU_COUNT,
+                );
                 false
             }
             GameInput::MoveDown => {
                 let cur = host.menu_selected();
-                host.set_menu_selected((cur + 1) % MENU_ITEMS);
+                host.set_menu_selected((cur + 1) % layout::MENU_COUNT);
                 false
             }
             GameInput::Confirm => {

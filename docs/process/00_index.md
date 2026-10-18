@@ -71,7 +71,8 @@
 | [`05_module_parallel.md`](05_module_parallel.md) | **模块并行开发 loop**（契约冻结 → 多包并行 → 集成联调 → 记账；包白名单互斥 + 任务书模板 + 纪律 5 条） |
 | [`06_flywheel.md`](06_flywheel.md) | **对抗流水线飞轮**（找问题 / 审计 / 修复 3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件；gate 第 17 项） |
 | [`07_render_pipeline.md`](07_render_pipeline.md) | **legacy 像素管线契约**（路径表 / z-order 文件顺序 / 越界求交裁剪 / PCX 透明位 index 0）；S16 起**降级为逆向参照**——运行时架构见 08 |
-| [`08_render_arch.md`](08_render_arch.md) | **运行时渲染架构**（分层 / 3 绘制原语 / z-order 枚举 / 5 条坐标与像素来源契约 / grep 门禁 / 测试重锚矩阵；改渲染代码前必读） |
+| [`08_render_arch.md`](08_render_arch.md) | **运行时渲染架构**（分层 / 绘制原语 / z-order=调用顺序 / 5 条坐标与像素来源契约 / grep 门禁 / 测试重锚矩阵；改渲染代码前必读） |
+| [`09_render_framework.md`](09_render_framework.md) | **`ti-render` crate 边界契约**（职责/禁止项 / 模块结构 / Theme schema / 从 ti-app 的迁移映射 / 数据分离原则；改 `crates/ti-render/` 代码前必读） |
 
 ## 文档治理（与 [`loop.md`](../loop.md) 一致）
 

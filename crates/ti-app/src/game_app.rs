@@ -25,6 +25,7 @@
 
 use std::collections::HashMap;
 
+use ti_core::data;
 use ti_core::data::balance;
 use ti_core::domain::combat::{Side, Unit};
 use ti_core::domain::economy::{Bank, Building, PriceTable};
@@ -34,11 +35,16 @@ use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::battle::BattleSession;
+use ti_core::rules::build;
+use ti_core::rules::cards;
+use ti_core::rules::cards_draw;
 use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::main_map::{MapSession, StepResult};
 use ti_core::rules::messages::total_pages;
 use ti_core::rules::progression::ProgressionState;
+use ti_core::rules::rng;
 use ti_core::rules::rng::GameRng;
+use ti_core::rules::trade;
 
 use crate::menu_shell::MenuShell;
 use crate::scenes::{
@@ -286,7 +292,7 @@ pub struct GameApp {
     pub buildings: Vec<(Building, u32)>,
     /// P1-7（M5）：卡牌效果状态（`rules::cards::CardState`，`MainMap` 场景时有效）。
     /// 初始 hp/gold = 0，`hp_max`/`gold_max` 钳制上限走 `balance.combat.player` / `balance.economy.gold_max`。
-    pub card_state: ti_core::rules::cards::CardState,
+    pub card_state: cards::CardState,
     /// 战斗会话（`Vs` 场景时有效）。
     /// 初始值来自 `BattleSession::from_balance`（`balance.combat.player` + `boss_tier`）。
     pub battle: Option<BattleView>,
@@ -547,7 +553,7 @@ impl GameApp {
             bank: Bank::default(),
             map_session: MapSession::new(MapTerrain::open(1, 1), GridPos::new(0, 0), &[]),
             buildings: Vec::new(),
-            card_state: ti_core::rules::cards::CardState::default(),
+            card_state: cards::CardState::default(),
             battle: None,
             rng: GameRng::new(0),
             rng_seed: 0,
@@ -555,7 +561,7 @@ impl GameApp {
             msg_page: 0,
             msg_total: 0,
             save_slots: {
-                let count = ti_core::data::balance().map_or(5, |b| b.save.slot_count) as usize;
+                let count = data::balance().map_or(5, |b| b.save.slot_count) as usize;
                 vec![SaveSlot::default(); count]
             },
             saveload_cursor: 0,
@@ -714,13 +720,10 @@ impl GameApp {
     /// 成长机制入口：`start_battle` 用 `player.atk + build_atk_bonus()`。无建筑 / balance 加载失败 → 0。
     #[must_use]
     pub fn build_atk_bonus(&self) -> u32 {
-        let Some(cfg) = ti_core::data::balance().ok().map(|b| &b.build) else {
+        let Some(cfg) = data::balance().ok().map(|b| &b.build) else {
             return 0;
         };
-        self.buildings
-            .iter()
-            .map(|(k, lvl)| cfg.atk_bonus_at(ti_core::rules::build::kind_id(*k), *lvl))
-            .sum()
+        self.buildings.iter().map(|(k, lvl)| cfg.atk_bonus_at(build::kind_id(*k), *lvl)).sum()
     }
 
     /// 全部已建建筑提供的战斗 hp 总加成（`Σ hp_bonus × level`，同上）。
@@ -728,13 +731,10 @@ impl GameApp {
     /// 成长机制入口：`start_battle` 用 `player.hp + build_hp_bonus()`。无建筑 / balance 加载失败 → 0。
     #[must_use]
     pub fn build_hp_bonus(&self) -> u32 {
-        let Some(cfg) = ti_core::data::balance().ok().map(|b| &b.build) else {
+        let Some(cfg) = data::balance().ok().map(|b| &b.build) else {
             return 0;
         };
-        self.buildings
-            .iter()
-            .map(|(k, lvl)| cfg.hp_bonus_at(ti_core::rules::build::kind_id(*k), *lvl))
-            .sum()
+        self.buildings.iter().map(|(k, lvl)| cfg.hp_bonus_at(build::kind_id(*k), *lvl)).sum()
     }
 
     /// 主菜单选中项索引（只读）。
@@ -809,7 +809,7 @@ impl GameApp {
         self.bank = Bank::new(data.gold);
         // P1-8（S1）：RNG 精确续流——读档后 `restore_state(rng_seed, rng_steps)` O(log n) 跳转，
         // 后续卡牌/地图随机流与"未存档"一致（`persistence.md` §RNG 可复现性）。
-        self.rng = ti_core::rules::rng::GameRng::restore_state(self.rng_seed, data.rng_steps);
+        self.rng = rng::GameRng::restore_state(self.rng_seed, data.rng_steps);
         // Q007：读档位置恢复——`data.position` = 行主序格索引（写端 `map_pos().index(grid_w)`，
         // `0` = 未写位置）。越界 / 无该图定义 → 回退 `player_start`（不拦读档）。
         let start_override = balance().ok().and_then(|b| {
@@ -1094,7 +1094,7 @@ impl GameApp {
     /// `character`/`map_slot`/`gold`/`bank`，须据返回值回滚（FIND-204 半初始化态消除）。
     /// 返回 `true` = 成功进入主地图（`scene` 已切 `MainMap`）。
     fn enter_main_map_at(&mut self, start_override: Option<GridPos>) -> bool {
-        let b = match ti_core::data::balance() {
+        let b = match data::balance() {
             Ok(b) => b,
             Err(_e) => {
                 #[cfg(feature = "stats")]
@@ -1152,7 +1152,7 @@ impl GameApp {
         self.map_pos = Some(GridPos::new(start[0], start[1]));
         self.map_landmarks = landmarks;
         // 主地图会话（`rules::main_map::MapSession::with_boss`，卡牌池走 `balance.cards` + BOSS 格真触发）
-        let pool = ti_core::rules::cards_draw::CardPool::from_balance();
+        let pool = cards_draw::CardPool::from_balance();
         self.map_session = MapSession::with_boss(
             MapTerrain::open(gw, gh),
             GridPos::new(start[0], start[1]),
@@ -1484,7 +1484,7 @@ impl MapHost for GameApp {
         let player_hp = player.hp.saturating_add(self.build_hp_bonus());
         let player_hp = player_hp.saturating_sub(self.card_state.hp);
         let player_unit = Unit { hp: player_hp, atk: player_atk };
-        self.card_state = ti_core::rules::cards::CardState::default();
+        self.card_state = cards::CardState::default();
         self.battle = BattleView::new(seed, player_unit, tier);
         self.battle_won = false; // Q005：开新战斗复位（防上一场陈旧结果）
         self.scene = Scene::Vs;
@@ -1505,9 +1505,7 @@ impl EconomyHost for GameApp {
 
     fn sell_price_of(&self, gid: u32) -> Option<u32> {
         let b = balance().ok()?;
-        self.price_table
-            .lookup(gid)
-            .map(|buy| ti_core::rules::trade::sell_price(buy, b.trade.markup))
+        self.price_table.lookup(gid).map(|buy| trade::sell_price(buy, b.trade.markup))
     }
 
     fn gold(&self) -> u32 {
@@ -1567,7 +1565,7 @@ impl EconomyHost for GameApp {
 
     /// P1-6（T1）：金量上限读 `balance.economy.gold_max`（建造可抬升，`rules::build`）。
     fn gold_cap(&self) -> u32 {
-        match ti_core::data::balance() {
+        match data::balance() {
             Ok(b) => b.economy.gold_max,
             Err(_) => 0,
         }
@@ -1578,7 +1576,7 @@ impl EconomyHost for GameApp {
         if excess == 0 {
             return;
         }
-        let rate = match ti_core::data::balance() {
+        let rate = match data::balance() {
             Ok(b) => b.economy.bank_rate,
             Err(_) => 1.0,
         };
@@ -1593,12 +1591,12 @@ impl EconomyHost for GameApp {
     ///
     /// 返回是否实际改动状态（`Applied` = true，`UnknownEvent` = false）。
     fn apply_card_effect(&mut self, event_id: u32) -> bool {
-        let engine = ti_core::rules::cards::CardEngine::from_balance();
-        let Some(card) = ti_core::rules::cards::event_to_card(event_id, engine.catalog()) else {
+        let engine = cards::CardEngine::from_balance();
+        let Some(card) = cards::event_to_card(event_id, engine.catalog()) else {
             return false;
         };
         // 钳制上限：hp_max = balance.combat.player.hp，gold_max = balance.economy.gold_max
-        let (hp_max, gold_max) = match ti_core::data::balance() {
+        let (hp_max, gold_max) = match data::balance() {
             Ok(b) => {
                 let hp = match b.combat.player {
                     Some(p) => p.hp,
@@ -1609,31 +1607,29 @@ impl EconomyHost for GameApp {
             Err(_) => (u32::MAX, u32::MAX),
         };
         // 卡牌状态从宿主现状出发（Damage/Heal 改当前 hp，Gold 改当前 gold）
-        let mut state =
-            ti_core::rules::cards::CardState { hp: 0, gold: self.gold, hp_max, gold_max };
-        let result = ti_core::rules::cards::apply_card(card, &mut state);
+        let mut state = cards::CardState { hp: 0, gold: self.gold, hp_max, gold_max };
+        let result = cards::apply_card(card, &mut state);
         match result {
-            ti_core::rules::cards::CardResult::Applied(eff) => {
+            cards::CardResult::Applied(eff) => {
                 match eff {
-                    ti_core::rules::cards::CardEffect::Gold(n) => {
+                    cards::CardEffect::Gold(n) => {
                         // 卡牌加金走宿主 gold（saturating_add + 钳 economy.gold_max）
                         self.gold = self.gold.saturating_add(n).min(gold_max);
                     }
-                    ti_core::rules::cards::CardEffect::Damage(n) => {
+                    cards::CardEffect::Damage(n) => {
                         // 扣 HP：暂存到 `card_state.hp`（本次掉了 n），
                         // 下次 `start_battle` 时并入玩家 hp（成长机制 + 卡牌 debuff 同通道）。
                         self.card_state.hp = self.card_state.hp.saturating_add(n);
                     }
-                    ti_core::rules::cards::CardEffect::Heal(n) => {
+                    cards::CardEffect::Heal(n) => {
                         // 加 HP：从暂存扣减（Heal 抵消之前的 Damage 暂存，钳 0）
                         self.card_state.hp = self.card_state.hp.saturating_sub(n);
                     }
-                    ti_core::rules::cards::CardEffect::Move
-                    | ti_core::rules::cards::CardEffect::Unknown => {}
+                    cards::CardEffect::Move | cards::CardEffect::Unknown => {}
                 }
                 true
             }
-            ti_core::rules::cards::CardResult::UnknownEvent => false,
+            cards::CardResult::UnknownEvent => false,
         }
     }
 }

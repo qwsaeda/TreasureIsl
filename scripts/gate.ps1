@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（21 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（22 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (21 items) ==="
+Write-Host "=== gate: TreasureIsl (22 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -63,6 +63,16 @@ if ($installed -match 'aarch64-linux-android') {
     # 桌面/浏览器可玩（S5.1-S5.4）为当前收口目标；Android 为后续移动端交付，故 SKIP 不阻塞。
     Skip 'cargo build (aarch64-linux-android)' 'S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）'
 }
+
+# 4b) feature 门控 bin 编译 + lint（EXP-099）
+#     第 1~3 项不带 feature，`required-features = ["native-shell"/"headless"]` 的 bin
+#     （treasure-native / treasure-headless / element-dump / sprite-step / render-png）
+#     从不被编译与 lint —— 它们是**官方排障工具**，静默失效等于没有。
+#     实证：element-dump 曾长期编译失败（4×E0308）而 gate 全绿。wasm/android bin 由
+#     第 4 项的 wasm / android target 构建行覆盖，不在本项范围。
+$featOut = & cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless -- -D warnings 2>&1
+Report ($LASTEXITCODE -eq 0) 'clippy feature-gated bins (native-shell/headless; required-features 盲区)'
+if ($LASTEXITCODE -ne 0) { $featOut | Select-Object -Last 30 | ForEach-Object { Write-Host "        $_" } }
 
 # 5) 占位扫描（0 命中；tests/ 与 examples/ 除外 —— 集成测试 / demo 可执行体合法用 panic!/unwrap 做断言）
 $srcDirsPh = @(Get-ChildItem -Path crates -Recurse -Filter *.rs -File |

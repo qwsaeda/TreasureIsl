@@ -17,6 +17,7 @@
 //! - message = Confirm + Back + MoveDown×3 + Confirm（选项 → Help）
 //! - saveload = MoveDown + Confirm（菜单项 1 → 存读档）
 
+use ti_core::domain::map;
 use ti_core::domain::map::GridPos;
 
 use crate::game_app::{GameApp, GameInput, Scene};
@@ -90,10 +91,8 @@ fn walk_to_boss(app: &mut GameApp) {
         return;
     };
     let (dr, dc) = boss_delta(start, boss);
-    let vdir =
-        if dr < 0 { ti_core::domain::map::Dir::North } else { ti_core::domain::map::Dir::South };
-    let hdir =
-        if dc < 0 { ti_core::domain::map::Dir::West } else { ti_core::domain::map::Dir::East };
+    let vdir = if dr < 0 { map::Dir::North } else { map::Dir::South };
+    let hdir = if dc < 0 { map::Dir::West } else { map::Dir::East };
     // 先走差值小的轴（横竖交错，不撞墙），再补差值大的轴
     for _ in 0..dr.abs().min(dc.abs()) {
         app.handle(GameInput::Walk(vdir));

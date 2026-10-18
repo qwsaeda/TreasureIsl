@@ -52,7 +52,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 
-## 代码质量门禁 `scripts/gate.ps1`（21 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（22 项，循环每轮强制）
 
 > **计数约定（本节是门禁项数的唯一事实源，其他文档只引用、不各自重数）**
 >
@@ -60,17 +60,19 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > 1. 只数顶格 `Report`；**缩进在 `if`/`else` 块内的条件 `Report`/`Skip` 不计入**——
 >    即 wasm 构建、android 构建、`zero-unknown verify`（`if (Test-Path ...)` 守卫）三项；
 > 2. `Skip` 不单独计项；
-> 3. 当前顶格 `Report` = **21 项**。
+> 3. 当前顶格 `Report` = **22 项**。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
 > 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
 > `flywheel-readme -Check` 亦打印同一数字）。**数字对不上时以机器输出为准**，不要手工重数。
 >
 > **易错点（勿再踩）**：
-> - `gate.ps1` 的**注释编号**（1..20 + 19.5，含第 7 项 zero-unknown）与**机器计数**差 1，
->   因为 zero-unknown 是条件项。引用「项数」一律用机器口径 21。
+> - `gate.ps1` 的**注释编号**（1..20 + 19.5 + 4b，含第 7 项 zero-unknown）与**机器计数**
+>   不一定相等：zero-unknown 是条件项不计；`10a`/`10b`/`10c` 各算 1 项。引用「项数」
+>   一律用机器口径 22。
 > - `10a`/`10b`/`10c` 是 **3 个独立顶格 `Report`，各算 1 项**，不是「三合一算 1 项」。
 > - 历史计划文档里的 8/10/14/16/18/20 项均为**该阶段时点快照**，不代表当前；引用时须带时点标注。
+> - **`required-features` 的 bin 不被第 1~3 项编译/lint 覆盖**——第 4b 项专门补这个盲区（EXP-099）。
 >
 > 增删门禁项时**只改本节**，并在同一次改动里同步更新编号与计数。
 
@@ -79,9 +81,17 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 2  cargo clippy --workspace --all-targets -- -D warnings
 3  cargo test  --workspace
 4  构建（范围随阶段解锁，未解锁的行在脚本里跳过并打印 SKIP）：
-    cargo build --workspace --target x86_64-pc-windows-msvc          # S0.1 起
-    cargo build --workspace --target wasm32-unknown-unknown          # S2.5 解锁（需先 rustup target add）
-    cargo build -p ti-app --target aarch64-linux-android             # S2.6 解锁（需 NDK）
+     cargo build --workspace --target x86_64-pc-windows-msvc          # S0.1 起
+     cargo build --workspace --target wasm32-unknown-unknown          # S2.5 解锁（需先 rustup target add）
+     cargo build -p ti-app --target aarch64-linux-android             # S2.6 解锁（需 NDK）
+4b feature 门控 bin 编译 + lint（EXP-099：`required-features` 的 bin 不被 1~3 项覆盖）：
+     cargo clippy --workspace --all-targets \
+         --features ti-app/native-shell,ti-app/headless -- -D warnings
+     （编译并 lint 全部 `required-features = ["native-shell"/"headless"]` 的 bin：
+      treasure-native / treasure-headless / element-dump / sprite-step / render-png。
+      这 5 个 bin 是**官方排障工具**，历史上因 1~3 项不带 feature 而长期不被编译验证，
+      导致 element-dump 编译失败长期静默；wasm / android bin 由 S2.5/S2.6 的 target
+      构建行覆盖，不在本项范围）
 5  占位扫描：Select-String -Path crates/**/*.rs -Pattern 'TODO|FIXME|unimplemented!|todo!|panic!\(' → 0 命中
 6  库代码 unwrap 扫描：同上 Pattern '\.unwrap\(\)|\.expect\('，排除 `tests/` 目录 → 0 命中
     （内联 `#[cfg(test)]` 模块同样禁止 unwrap；本机无 ripgrep，扫描一律用
@@ -151,7 +161,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 21 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 22 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
 
 **S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
-审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 21 项全绿。
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 22 项全绿。

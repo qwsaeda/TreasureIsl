@@ -329,7 +329,7 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
 ///    声称（「N 项命令」），上下文区分「gate 项数」vs「doccheck2 项数」。
 fn gate_item_actual_count(gate: &str) -> usize {
     // 固定项 = 顶层（不缩进）`Report` 调用数；条件分支（if 块内缩进的
-    // `Report`/`Skip`）不计。实测 gate.ps1 = 21 固定 + 3 条件 Skip。
+    // `Report`/`Skip`）不计。实测 gate.ps1 = 22 固定 + 3 条件 Skip。
     gate.lines().filter(|l| l.starts_with("Report ")).count()
 }
 
@@ -384,7 +384,7 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
     let actual = gate_item_actual_count(&gate);
-    let expected = 21usize;
+    let expected = 22usize;
     if actual != expected {
         errors.push(format!(
             "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"
@@ -661,18 +661,17 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
 
 /// 13. HD 精灵透明门禁（EXP-075 洋红框）。S15.4 重锚：legacy 逐像素 CPU blit 层
 ///     （index 0 跳过 + RGBA alpha 阈值）已随 legacy 像素写帧层移除，运行时只剩代码
-///     绘制 + GPU 纹理路。本检查重锚到三条仍存不变量：`render_pipeline::TRANSPARENT_INDEX`
-///     （PCX 调色板 index 0 哨兵透明位）保留、`pack_hd_assets.py` 的 `sanitize_alpha`
-///     （alpha 二值化）未破坏、运行时不再残留绕过透明的 CPU 逐像素 RGBA blit（重锚 = S15.5）。
+///     绘制 + GPU 纹理路。S16 渲染线再收敛：`render_pipeline.rs` 整文件删除（死码，
+///     生产零消费），PCX index 0 哨兵透明位的锚点转到 `pack_hd_assets.py` 侧
+///     `sanitize_alpha`（alpha 二值化）+ 运行时无 CPU 逐像素 RGBA blit 两条不变量。
 fn check_hd_sprite_transparency(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
 
-    // ① PCX 调色板 index 0 = 哨兵透明位（EXP-075①：原版 sub_5D9C4 透明位，ui.pak 94/120 张
-    //    index 0 = 洋红）。S15.4 后该约定保留在 `render_pipeline::TRANSPARENT_INDEX`（解码/诊断 + GPU 路）。
-    let pipeline = read_file(root, "crates/ti-app/src/render_pipeline.rs").unwrap_or_default();
-    if !pipeline.contains("TRANSPARENT_INDEX") {
+    // ① 死码不得复活：`render_pipeline.rs` 已在 S16 渲染线删除（契约 1/2 收口），
+    //    若重新出现则说明 legacy 坐标裁剪层被带回运行时。
+    if root.join("crates/ti-app/src/render_pipeline.rs").exists() {
         errors.push(
-            "render_pipeline.rs 必须保留 TRANSPARENT_INDEX 常量（EXP-075①：PCX 调色板 index 0 = 哨兵透明位；S15.4 后为解码/诊断 + GPU 图集透明约定）"
+            "render_pipeline.rs 必须保持删除（S16 渲染线：legacy 越界裁剪层生产零消费，F18 死码清理；契约 1/2 收口）"
                 .to_string(),
         );
     }
@@ -708,9 +707,9 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
     };
 
     // 逐场景锚定 **1080 现代版面**（`08_layout_design.md` §4 / `scenes.json`，S16 渲染线）：
-    // 公共：标题条 h=90、提示/状态行 y=1860、列表 x=90 w=900
-    // index: list y=400 row_h=220 item_h=170 highlight_offset=40（S15.6 QB101 六行重分布），status y=1860
-    // select_role: row_h=270；select_map: row_h=340（S15.6 QB103，3 地图卡）；saveload: row_h=250 gold_x=820
+    // 公共：标题条 h=90、提示/状态行 y=1840、列表 x=90 w=900
+    // index: list y=400 row_h=220 item_h=170 highlight_offset=40（S15.6 QB101 六行重分布），status y=1840
+    // select_role: row_h=300；select_map: row_h=340（S15.6 QB103，3 地图卡）；saveload: row_h=300 gold_x=820
     // vs: player_hp 60..500 / boss_hp 580..1020（S15.6 QB120 解重叠）y=170 w=440 h=48
     // main_map: hud y=150 h=120（不与等距区 grid.y0=520 重叠）
     let anchors: &[(&str, &str, &str)] = &[
@@ -872,6 +871,151 @@ fn scene_section(json: &str, scene_key: &str) -> String {
         }
     }
     rest[open..end].to_string()
+}
+
+/// 20. 版面表 ↔ scenes.json 逐项对账（飞轮 F1 根治）：
+///     `08_layout_design.md` §4 表是 `scenes.json` 的**人读镜像**（机器权威 = JSON）。
+///     历史上 md 长期停留旧值（`row_h` 270/250、`text_x` 140、`hint` y 1860…）而无人发现——
+///     `render_intent` / doccheck2 / 三套基线四者锁 JSON，md 是唯一漂移方。
+///     断言：JSON 每个场景的每个整数标量键值对，必须以「键:值,」或「键:值}」形式
+///     （即 md 表格 `{x:90, y:400, …}` 写法）出现在 md 文本中。
+///     只查「存在性 + 数值字面」；漂移即改 md（scenes.json 不许改，改了破基线）。
+fn check_layout_doc_table_cross_check(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(json_text) = read_file(root, "assets/data/scenes.json") else {
+        return vec!["assets/data/scenes.json 不存在".to_string()];
+    };
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(&json_text) else {
+        return vec!["assets/data/scenes.json 解析失败".to_string()];
+    };
+    let Some(md) = read_file(root, "docs/business/08_layout_design.md") else {
+        return vec!["docs/business/08_layout_design.md 不存在".to_string()];
+    };
+    let Some(scenes) = json.as_object() else {
+        return vec!["scenes.json 顶层必须是对象".to_string()];
+    };
+    let mut missing: Vec<String> = Vec::new();
+    for (scene, val) in scenes {
+        if scene == "schema_version" {
+            continue;
+        }
+        let mut pairs: Vec<(String, i64)> = Vec::new();
+        collect_scalar_pairs(val, &mut pairs);
+        for (key, v) in pairs {
+            let comma = format!("{key}:{v},");
+            let braced = format!("{key}:{v}}}");
+            if !md.contains(&comma) && !md.contains(&braced) {
+                missing.push(format!("{scene}.{key}:{v}"));
+            }
+        }
+        // `portrait_zones` 在 md 里两种写法混用（index 用 `[{x:0,…}]`，其余用位置
+        // 写法 `[{0,…}]`），任一命中即通过；数值以 scenes.json 为准
+        if let Some(serde_json::Value::Array(zones)) = val.get("portrait_zones") {
+            for z in zones {
+                let Some(obj) = z.as_object() else { continue };
+                let get = |k: &str| obj.get(k).and_then(serde_json::Value::as_i64).unwrap_or(-1);
+                let (x, y, w, h) = (get("x"), get("y"), get("w"), get("h"));
+                let pos = format!("portrait_zones [{{{x},{y},{w},{h}}}]");
+                let kv = [("x", x), ("y", y), ("w", w), ("h", h)].iter().all(|(k, v)| {
+                    md.contains(&format!("{k}:{v},")) || md.contains(&format!("{k}:{v}}}"))
+                });
+                if !md.contains(&pos) && !kv {
+                    missing.push(format!("{scene}.portrait_zones[{x},{y},{w},{h}]"));
+                }
+            }
+        }
+    }
+    if !missing.is_empty() {
+        errors.push(format!(
+            "08_layout_design.md §4 表与 scenes.json 漂移（md 是 JSON 的人读镜像，改 md 不改 JSON）：{}",
+            missing.join(", ")
+        ));
+    }
+    errors
+}
+
+/// 递归收集对象/数组中的整数标量键值对（`portrait_zones` 数组一并纳入，
+/// md 动态区行用 `portrait_zones [{x:0,…}]` 同式写法）。
+/// 跳过 `size` 键（实体边长由 QA133 锚 + 渲染测试锁，md 以「≤26」散文描述）。
+fn collect_scalar_pairs(val: &serde_json::Value, out: &mut Vec<(String, i64)>) {
+    match val {
+        serde_json::Value::Object(map) => {
+            for (k, v) in map {
+                if k == "size" || k == "portrait_zones" {
+                    continue;
+                }
+                collect_scalar_pairs(v, out);
+                if let serde_json::Value::Number(n) = v
+                    && let Some(i) = n.as_i64()
+                {
+                    out.push((k.clone(), i));
+                }
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for v in items {
+                collect_scalar_pairs(v, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// 21. 非 `use` 行禁止 `ti_core::` 全路径（EXP-061 收敛）：
+///     跨 crate 引用必须收敛到文件顶部 `use`，非 `use` 行的 `ti_core::…`
+///     全路径视为漂移隐患（同一符号两种写法，grep/门禁抓不到）。S16 渲染线
+///     全库实测已归零（43 处 → 0），本断言固化防回潮。
+fn check_no_ti_core_fullpath(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    for rel in [
+        "crates/ti-app/src",
+        "crates/ti-core/src",
+        "crates/ti-render/src",
+        "crates/ti-formats/src",
+        "crates/ti-platform/src",
+        "crates/ti-tools/src",
+    ] {
+        let dir = root.join(rel);
+        if !dir.is_dir() {
+            continue;
+        }
+        let mut hits: Vec<String> = Vec::new();
+        let mut stack = vec![dir];
+        while let Some(d) = stack.pop() {
+            let Ok(rd) = std::fs::read_dir(&d) else { continue };
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    stack.push(p);
+                    continue;
+                }
+                if p.extension().and_then(|x| x.to_str()) != Some("rs") {
+                    continue;
+                }
+                // 断言自身实现含 `ti_core::` 字符串字面量，不自我指认
+                if p.ends_with("doccheck2.rs") {
+                    continue;
+                }
+                let Ok(text) = std::fs::read_to_string(&p) else { continue };
+                for (i, line) in text.lines().enumerate() {
+                    let ls = line.trim_start();
+                    if ls.starts_with("use ") || ls.starts_with("//") || ls.starts_with('*') {
+                        continue;
+                    }
+                    if line.contains("ti_core::") {
+                        hits.push(format!("{}:{}", p.display(), i + 1));
+                    }
+                }
+            }
+        }
+        if !hits.is_empty() {
+            errors.push(format!(
+                "{rel} 非 use 行仍有 `ti_core::` 全路径（EXP-061：必须收敛到顶部 use）：{}",
+                hits.join(", ")
+            ));
+        }
+    }
+    errors
 }
 
 fn check_scene_band_count(root: &Path) -> Vec<String> {
@@ -1252,9 +1396,11 @@ fn main() -> ExitCode {
     all_errors.extend(check_experience_volume_counts(&root));
     all_errors.extend(check_runtime_no_legacy_coords(&root));
     all_errors.extend(check_baseline_mirror_identity(&root));
+    all_errors.extend(check_layout_doc_table_cross_check(&root));
+    all_errors.extend(check_no_ti_core_fullpath(&root));
 
     println!(
-        "doccheck2: {} error(s) across 19 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity)",
+        "doccheck2: {} error(s) across 21 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath)",
         all_errors.len()
     );
     for err in &all_errors {

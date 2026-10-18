@@ -118,7 +118,9 @@ packages:
       - crates/ti-app/src/menu_shell.rs
       - crates/ti-app/src/game_app.rs
       - crates/ti-platform/src/
+      - crates/ti-render/src/  # 渲染框架 crate（S15.7 抽出；飞轮 F5 登记，白名单互斥保护）
     tests:
       - crates/ti-app/tests/game_app_flow.rs
       - crates/ti-app/tests/e2e_playthrough.rs
       - crates/ti-app/tests/app_progression_wiring.rs  # 跨图推进接线验收（game_app.rs，EXP-088 闭环）
+      - crates/ti-render/tests/  # 渲染框架单测（theme_json 等）

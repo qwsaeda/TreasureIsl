@@ -26,7 +26,6 @@ pub mod glyph_raster;
 pub mod hd_manifest;
 pub mod i18n;
 pub mod menu_shell;
-pub mod render_pipeline;
 pub mod scenes;
 pub mod shell_ui;
 pub mod sprite_atlas;
