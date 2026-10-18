@@ -49,6 +49,7 @@ impl Scene for SaveloadScene {
                     map_slot,
                     position,
                     rng_steps,
+                    unlocked_mask: host.unlocked_mask(),
                 };
                 if host.save_slots().len() > slot {
                     host.write_save_slot(slot, data);

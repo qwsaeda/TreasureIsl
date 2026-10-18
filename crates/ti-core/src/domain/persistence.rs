@@ -24,11 +24,27 @@ pub struct SaveSlot {
     /// 读档后 `GameRng::restore_state(rng_seed, rng_steps)` O(log n) 跳转。
     #[serde(default)]
     pub rng_steps: u128,
+    /// 跨图推进解锁位（bit i = 第 i 张图 m0(i+1) 已解锁；`docs/business/progression.md`
+    /// §跨图推进）。`0` = 旧档（无此字段）→ 读档按 `map_slot` 的最小前置链回读
+    /// （`ProgressionState::min_progression_to_select`），不臆造解锁。
+    ///
+    /// 为什么落进 schema（S15.2）：「在 m01 击败 BOSS 解锁 m02、尚未切图时存档」若只存
+    /// `map_slot`，读档会退回仅 m01，跨图进度丢失；位掩码 1 字节即可保住整条解锁链。
+    #[serde(default)]
+    pub unlocked_mask: u8,
 }
 
 impl Default for SaveSlot {
     fn default() -> Self {
-        Self { version: 1, character: 1, gold: 0, map_slot: 0, position: 0, rng_steps: 0 }
+        Self {
+            version: 1,
+            character: 1,
+            gold: 0,
+            map_slot: 0,
+            position: 0,
+            rng_steps: 0,
+            unlocked_mask: 0,
+        }
     }
 }
 

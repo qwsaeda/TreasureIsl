@@ -3,7 +3,10 @@
 //! 覆盖三条接线（`crates/ti-app/src/game_app.rs`）：
 //! 1. 新档 `unlocked_maps` = 规则层初始值（仅 m01，`ProgressionState::initial_unlocked`）；
 //! 2. 击败当前图 BOSS → 解锁下一图（`battle_step` 结算钩，走规则层、幂等）；
-//! 3. 读档按存档 `map_slot` 的「最小前置链」恢复解锁（`restore_save`，`SaveSlot` schema 不变）。
+//! 3. 读档按存档 `unlocked_mask` 忠实还原解锁链（`restore_save`）：非零掩码逐位还原
+//!    （含 CLEARED 位 bit 3 = 通关门禁），`mask=0` 旧档退「最小前置链」可回读；
+//! 4. 通关门禁（`is_cleared` 逐图）：新档 false；m03 胜（`battle_step`）置 true；
+//!    读档按 CLEARED 位还原。
 //!
 //! 确定性约定（EXP-040）：战斗模型 `atk_plus_flat`（伤害 = `atk` + 0..=3）+ `balance.combat`
 //! （player hp 2000/atk 60；`boss_tiers` 依次为 2400/10、4800/12、7200/14）
@@ -133,8 +136,15 @@ fn app_save_load_restores_unlock_chain() {
     let b = ti_core::data::balance().expect("balance.json 加载失败");
     // 存档 map_slot=1（M02）→ 恢复 [m01, m02]；position=123（行主序格索引）+ gold=500
     let mut app = GameApp::new(1080.0, 1920.0);
-    let save =
-        SaveSlot { version: 2, character: 1, gold: 500, map_slot: 1, position: 123, rng_steps: 0 };
+    let save = SaveSlot {
+        version: 2,
+        character: 1,
+        gold: 500,
+        map_slot: 1,
+        position: 123,
+        rng_steps: 0,
+        unlocked_mask: 0,
+    };
     app.write_save_slot(0, save);
     app.restore_save(app.save_slots()[0]);
     assert_eq!(app.scene(), Scene::MainMap, "读档应进主地图");
@@ -156,8 +166,15 @@ fn app_save_load_restores_unlock_chain() {
 
     // 旧档回归：存档 map_slot=2（M03）→ 全解锁（多解锁值可回读）
     let mut app2 = GameApp::new(1080.0, 1920.0);
-    let save2 =
-        SaveSlot { version: 2, character: 1, gold: 800, map_slot: 2, position: 0, rng_steps: 0 };
+    let save2 = SaveSlot {
+        version: 2,
+        character: 1,
+        gold: 800,
+        map_slot: 2,
+        position: 0,
+        rng_steps: 0,
+        unlocked_mask: 0,
+    };
     app2.write_save_slot(0, save2);
     app2.restore_save(app2.save_slots()[0]);
     assert_eq!(app2.map_slot(), Some(MapSlot::M03));
@@ -167,4 +184,59 @@ fn app_save_load_restores_unlock_chain() {
         "旧档（高图直选）按链回读 = 全解锁，不迁移 schema"
     );
     assert_eq!(app2.gold(), 800, "读档后金应恢复存档值 800（Q007）");
+}
+
+/// S15.2（F23）：掩码忠实读档 —— 选中 m01 但 m02 已解锁（`mask = 0b0011`）应忠实保留
+/// 多解锁进度，而非退「最小前置链」（`mask=0` 旧档才退链，见接线 3）。
+#[test]
+fn app_save_load_restores_mask_faithfully() {
+    let mut app = GameApp::new(1080.0, 1920.0);
+    let save = SaveSlot {
+        version: 2,
+        character: 1,
+        gold: 300,
+        map_slot: 0, // 停在 M01（重试），但 m02 已解锁
+        position: 7,
+        rng_steps: 0,
+        unlocked_mask: 0b0011,
+    };
+    app.write_save_slot(0, save);
+    app.restore_save(app.save_slots()[0]);
+    assert_eq!(app.map_slot(), Some(MapSlot::M01));
+    assert_eq!(
+        app.unlocked_maps,
+        vec![MapSlot::M01, MapSlot::M02],
+        "非零掩码忠实还原（选中 m01 但 m02 已解锁的进度不丢失）"
+    );
+    assert!(!app.is_cleared(), "非通关掩码读档后 cleared 应为 false");
+}
+
+/// S15.2 逐图通关门禁：通关位（掩码 bit 3）读档还原 + 新档未通关。
+#[test]
+fn app_save_load_restores_cleared_gate() {
+    let mut app = GameApp::new(1080.0, 1920.0);
+    assert!(!app.is_cleared(), "新档未通关");
+    assert!(!app.is_map_cleared(MapSlot::M01));
+    assert!(!app.is_map_cleared(MapSlot::M03));
+
+    // 通关档：全解锁（0b0111）+ CLEARED 位（0b1000）= 0b1111
+    let save = SaveSlot {
+        version: 2,
+        character: 1,
+        gold: 100,
+        map_slot: 2, // M03
+        position: 0,
+        rng_steps: 0,
+        unlocked_mask: 0b1111,
+    };
+    app.write_save_slot(0, save);
+    app.restore_save(app.save_slots()[0]);
+    assert_eq!(
+        app.unlocked_maps,
+        vec![MapSlot::M01, MapSlot::M02, MapSlot::M03],
+        "通关档读档后全图解锁"
+    );
+    assert!(app.is_cleared(), "CLEARED 位读档后应还原通关位");
+    assert!(app.is_map_cleared(MapSlot::M03), "m03 击败位 = 通关位");
+    assert!(app.is_map_cleared(MapSlot::M01), "通关档 m01/m02 击败位应为 true");
 }

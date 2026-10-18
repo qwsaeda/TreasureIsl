@@ -532,6 +532,11 @@ pub trait SessionHost {
 
     /// P1-8（S1）：当前 RNG 已消费 `next_u64` 次数（写档捕获，读档精确续流）。
     fn rng_steps(&self) -> u128;
+
+    /// S15.2（F23）：当前跨图推进解锁位掩码（bit 0..=2 = 各图已解锁，bit 3 = 通关；
+    /// 编解码口径见 `rules::progression::ProgressionState::unlocked_mask`）。
+    /// 写档时落进 `SaveSlot::unlocked_mask`，保住「击败 m01 解锁 m02、尚未切图」的进度。
+    fn unlocked_mask(&self) -> u8;
 }
 
 /// 场景宿主能力接口：`GameApp` 实现的**唯一**状态/表现出口。

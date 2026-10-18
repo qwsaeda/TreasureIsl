@@ -7,7 +7,7 @@
 
 - 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA Professional 9.4，已自动分析、**无自定义命名**）、`legacy/`（逆向产物归档：`exe`/`i64`/`data`/`ref`/`docs`）、`Cargo.toml`（6 workspace member = 6 开发 crate）、`scripts/`、`docs/`、`android/`、`plan/ledger.yaml`、`evidence/`、`ref/`。
 - 工程已 bootstrap：`crates/{ti-formats,ti-core,ti-platform,ti-app,ti-tools}`；进度只由 `plan/ledger.yaml` 驱动。
-- **S15 业务场景穷举测试阶段**：S0–S14 全 verified（含 S9.1–S9.5 全 verified、S10.0–S10.5 全 verified、S11.1–S11.4 全 verified、S12.0–S12.8 全 verified、S13.1–S13.6 全 verified、S14.0 verified）；S15.1 verified，**S15.2 in_progress**（跨图推进规则定稿 + 落地，blocked_by 渲染线 WIP）。
+- **S15 业务场景穷举测试阶段**：S0–S14 全 verified（含 S9.1–S9.5 全 verified、S10.0–S10.5 全 verified、S11.1–S11.4 全 verified、S12.0–S12.8 全 verified、S13.1–S13.6 全 verified、S14.0 verified）；S15.1 verified，S15.1 verified、**S15.2 verified**（跨图推进规则定稿 + 落地，S15.2 残留 2 项已闭环 = 通关门禁 `is_cleared` 逐图 + 存档 `unlocked_mask` 逐图写入，见 `evidence/S15.2.log [8]`）。S16（试玩闭环 + 发布 + 设计 sheet）待开工（`docs/plan-s16-loop.md`，WBS S16.1 起）。
   逆向产物已物理归档 `legacy/`（S11.1 verified）；oracle 参照实现唯一源 = `ti-core/src/oracle`（`pub mod oracle` 公开导出，测试直接 `use ti_core::oracle::`）；逐字节重复 crate `legacy/oracle-rust` 已于 S15.8 删除（C4 反向守卫防重引入）。
   模块并行开发 loop 已固化（`docs/process/05_module_parallel.md`）；飞轮流水线已落地（`docs/process/06_flywheel.md` + gate 第 17 项）。
 
@@ -104,7 +104,7 @@ cargo run -q -p ti-tools --bin specskel -- <module> --report     # 只打印统�
 ```
 
 - 构建范围随阶段解锁：native（已解锁）→ wasm（**S2.5 已解锁**）→ android（S2.6 在 **Mac** 装 NDK/SDK + cargo-apk 编译 APK，本机 Windows 不产出，gate SKIP）；gate 按已装 target 自动判定并打印 SKIP。
-- **桌面/浏览器可玩（S5.1–S5.4）已收口**：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定；S0–S14 全 verified，当前活动任务 S15.2（见 `plan/ledger.yaml`）；Android 为后续移动端交付，开发本身不依赖 Android 工具链。
+- **桌面/浏览器可玩（S5.1–S5.4）已收口**：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定；S0–S14 全 verified，当前活动任务 S16.1（S15.2 已 verified，见 `plan/ledger.yaml`；WBS 详见 `docs/plan-s16-loop.md`）；Android 为后续移动端交付，开发本身不依赖 Android 工具链。
 - S5.5 Android 壳已落地（`android-shell` feature + `treasure-android` bin + `android/README.md`）；APK 实际产出在 Mac，本机 host 形态可编译校验。
 
 ## REA 逆向 MCP（2026-10 接入）

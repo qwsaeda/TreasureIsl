@@ -208,6 +208,7 @@ fn exhaust_from_legacy_slot_all_slots_no_panic() {
                 map_slot: case.map_slot,
                 position: case.position,
                 rng_steps: case.rng_steps,
+                unlocked_mask: 0,
             };
 
             let v2_json = from_legacy_slot(&legacy);

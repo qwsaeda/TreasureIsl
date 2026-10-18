@@ -41,6 +41,9 @@
   （`version=2`、`bank=0`、`rng_seed=0`（固定默认种子，保证可复现，不存时间戳））；
 - 迁移函数纯函数、幂等、可单测（`tests/save_migration.rs`，已存在）；
   注：business 可测规则单测（`save_*` 等）待 S8.3.d 落地。
+- app 侧存档槽（`domain::persistence::SaveSlot`，JSON v2 schema）：S15.2 新增 `unlocked_mask: u8`
+  （逐图推进位，bit 0/1/2 = m01/m02/m03 已解锁，bit 3 = CLEARED 通关位，旧档缺字节 = 0 = 退最小前置链）；
+  字段口径与读档还原规则 = [`progression.md`](progression.md) §与存档一致（单一事实源）。
 
 ## RNG 设计（可复现）
 

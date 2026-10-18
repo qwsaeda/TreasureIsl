@@ -57,3 +57,57 @@ S15.2 自身改动面：clippy 0 warning、本轮文件 fmt 0 diff、相关测�
   clippy（ti-core/ti-app/ti-tools all-targets）0 warning + 本轮全部改动文件 rustfmt 0 diff；
   doccheck2：15 error 全为 scenes.json 布局类（渲染线 WIP，[6](a) 同源），experience-volume-counts 新断言 0 命中。
 Q018：out of scope（渲染线收口 / S16 开工），不回写本任务。
+
+--- [8] S15.2 收口：通关门禁（is_cleared 逐图）+ 存档 unlocked_mask 逐图写入（F23）---
+2026-10-18 渲染线收口后（commit 8ecc61e 起 gate 22 项全绿），补齐 S15.2 残留 2 项：
+
+改动面（代码）：
+  ti-core/src/domain/persistence.rs：SaveSlot 新增 `unlocked_mask: u8`（#[serde(default)]，
+    旧档缺字节 = 0 = 退最小前置链；bit 0/1/2 = m01/m02/m03 已解锁，bit 3 = CLEARED 通关位）；
+  ti-core/src/rules/progression.rs：新增 `CLEARED_BIT`（0b1000）、`is_map_defeated(m)`
+    （逐图门禁判据）、`unlocked_mask(self)`、`from_mask(mask)`、`for_save_restore(mask, map_slot)`
+    （mask!=0 逐位忠实还原；mask==0 旧档退 `min_progression_to_select`；选图与掩码矛盾退链修当前图）
+    + 5 新单测（rules::progression 10→15 条）；
+  ti-app/src/game_app.rs：`cleared: bool` 字段（新档 false）；`battle_step` m03 胜置通关位；
+    只读门禁接口 `is_cleared()` / `is_map_cleared(m)`；`restore_save` 经
+    `ProgressionState::for_save_restore(data.unlocked_mask, ms)` 还原解锁链 + CLEARED 位；
+    全部 `SaveSlot { }` 字面量补 `unlocked_mask: 0`；
+  ti-app/src/scenes/mod.rs：SessionHost 新增 `fn unlocked_mask(&self) -> u8`；
+  ti-app/src/scenes/saveload.rs：写盘 = `host.unlocked_mask()`（取解锁集 + 通关位）；
+  ti-app/tests/render_intent.rs：VsHost mock 补 `unlocked_mask() -> 0`。
+
+改动面（测试）：
+  ti-app/tests/app_progression_wiring.rs 4→6 条（+读档掩码忠实还原 / +通关门禁 CLEARED 位读档还原）；
+  ti-core/tests/{rules_saveload,rules_saveload_json,exhaust_saveload,save_migration} + oracle/saveload.rs
+  全部 SaveSlot 字面量补 unlocked_mask: 0（旧档语义 = 0 = 退链，不迁移）。
+
+改动面（文档，单一事实源）：
+  docs/business/progression.md §与存档一致：SaveSlot 持 unlocked_mask（取代「不持解锁链字段」旧口径）
+    + 通关门禁（is_cleared 逐图）条目 + 可测试规则表 +3 行（掩码往返 / for_save_restore ×3 / 逐图门禁）
+    + 实现落点/验收（6 条）+ 残留①改为「画面表现属 S16 范围，门禁位与存档口径已闭环」；
+  docs/business/persistence.md §迁移：SaveSlot v2 新增 unlocked_mask 字段条目（口径引 progression.md）。
+
+--- [8a] 验收命令实跑输出 ---
+$ cargo test -q -p ti-core --lib rules::progression
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 90 filtered out; finished in 0.00s
+
+$ cargo test -q -p ti-app --test app_progression_wiring --features ti-app/native-shell,ti-app/headless
+running 6 tests
+......
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+$ cargo test -q --workspace（全绿；ti-core lib 105 passed）
+$ cargo fmt --all -- --check / clippy（workspace all-targets + 4b feature 组）0 warning
+$ cargo run -q -p ti-tools --bin doccheck2 .
+doccheck2: 0 error(s) across 21 audit-codified checks
+$ powershell -File scripts/gate.ps1
+=== gate: 0 failure(s) ===（22 项全 PASS，视觉回归/渲染快照 0 diff —— 本轮无像素改动）
+
+--- [8b] 判定 ---
+S15.2 两条残留全部闭环：
+  ① 通关门禁：`is_cleared` 逐图 = `GameApp::is_map_cleared(m)`（m01/m02 = 下一图已解锁口径，
+     m03 = `GameApp.cleared`）+ `is_cleared()` 总门禁；置位时机 = battle_step m03 胜；
+     读档 = CLEARED 位（bit 3）还原。画面表现（通关提示）划归 S16 范围，门禁位与存档口径已闭环。
+  ② 存档 unlocked_maps 逐图写入：SaveSlot.unlocked_mask（1 字节位掩码）= 写盘经
+     SessionHost::unlocked_mask() 捕获 + 读档经 for_save_restore 忠实还原（旧档 mask=0 退链可回读，
+     schema 向后兼容不迁移）。progression.md + persistence.md 已同步（单一事实源 = progression.md）。

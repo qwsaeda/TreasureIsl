@@ -41,7 +41,7 @@ use ti_core::rules::cards_draw;
 use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::main_map::{MapSession, StepResult};
 use ti_core::rules::messages::total_pages;
-use ti_core::rules::progression::ProgressionState;
+use ti_core::rules::progression::{CLEARED_BIT, ProgressionState};
 use ti_core::rules::rng;
 use ti_core::rules::rng::GameRng;
 use ti_core::rules::trade;
@@ -267,8 +267,13 @@ pub struct GameApp {
     pub current_boss_tier: u32,
     /// 已解锁地图清单（跨图推进，`business/progression.md`）：开档 =
     /// `ProgressionState::initial_unlocked()`（仅 m01），`battle_step` 胜利钩规则层推进，
-    /// `restore_save` 按存档 `map_slot` 最小前置链恢复。
+    /// `restore_save` 按存档 `unlocked_mask` 忠实还原（旧档 mask=0 退最小前置链）。
     pub unlocked_maps: Vec<MapSlot>,
+    /// 是否已通关（`business/progression.md` §通关：击败 m03 BOSS = 全图通杀）。
+    /// 开档 = false；`battle_step` 在 m03 胜时置 true；`restore_save` 按存档掩码
+    /// 的 CLEARED 位（bit 3）还原。解锁集本身不含通关标志（`from_unlocked` 口径），
+    /// 故单列此字段。
+    pub cleared: bool,
     /// 选择状态（`rules::selection` 行为镜像）。
     pub selection: SelectionState,
     /// 主地图会话（`rules::main_map` 行为镜像，`MainMap` 场景时有效）。
@@ -543,6 +548,7 @@ impl GameApp {
             // 跨图推进（`docs/business/progression.md` §跨图推进）：新档仅 m01 解锁，
             // 击败 BOSS 才解锁下一图（`battle_step` 结算钩）；不走 `MapSlot::all()` 全开。
             unlocked_maps: ProgressionState::initial_unlocked(),
+            cleared: false,
             selection: SelectionState::new(),
             map_terrain: None,
             map_pos: None,
@@ -657,6 +663,25 @@ impl GameApp {
     #[must_use]
     pub fn map_pos(&self) -> Option<GridPos> {
         self.map_pos
+    }
+
+    /// 是否已通关（`is_cleared` 逐图门禁，`business/progression.md` §通关）：
+    /// m03 的 BOSS 已击败 = 全图通杀（`battle_step` 在 m03 胜时置位，
+    /// `restore_save` 按存档掩码 CLEARED 位（bit 3）还原）。
+    #[must_use]
+    pub fn is_cleared(&self) -> bool {
+        self.cleared
+    }
+
+    /// 某图 BOSS 是否已击败（逐图门禁判据，`rules::progression`）：
+    /// m01/m02 的击败位 = 下一图已解锁（`can_select` 口径），m03 的击败位 = 通关位。
+    #[must_use]
+    pub fn is_map_cleared(&self, m: MapSlot) -> bool {
+        match m {
+            MapSlot::M01 => self.unlocked_maps.contains(&MapSlot::M02),
+            MapSlot::M02 => self.unlocked_maps.contains(&MapSlot::M03),
+            MapSlot::M03 => self.cleared,
+        }
     }
 
     /// BOSS 格坐标（`MapSession::boss_tile`，主地图渲染橙红标记 + 战斗触发用，只读）。
@@ -800,11 +825,16 @@ impl GameApp {
             if let Some(ms) = MapSlot::from_index(data.map_slot) {
                 self.map_slot = Some(ms);
                 self.selection.map_slot = Some(ms);
-                // 读档解锁链恢复（跨图推进）：选中 m(i) 的最小前置 = m(0)..m(i-1) 已击败。
-                // 旧档（高图直选/多解锁值）按链回读，与规则单调链一致，无需 schema 迁移。
-                self.unlocked_maps = ProgressionState::min_progression_to_select(ms).unlocked();
+                // 读档解锁链恢复（跨图推进，S15.2/F23）：优先用 `unlocked_mask` 忠实还原
+                // （保住「击败 m01 解锁 m02、尚未切图」的进度）；`mask==0`（旧档无字段）
+                // 退回「选中 m(i) 的最小前置链」，保证旧档仍可回读。
+                self.unlocked_maps =
+                    ProgressionState::for_save_restore(data.unlocked_mask, ms).unlocked();
             }
         }
+        // 通关位还原（S15.2 通关门禁）：掩码 CLEARED 位（bit 3）= m03 BOSS 已击败。
+        // 旧档无该字段 → mask 全 0 → cleared 保持开档 false，行为不回归。
+        self.cleared = data.unlocked_mask & CLEARED_BIT != 0;
         self.gold = data.gold;
         self.bank = Bank::new(data.gold);
         // P1-8（S1）：RNG 精确续流——读档后 `restore_state(rng_seed, rng_steps)` O(log n) 跳转，
@@ -1653,6 +1683,11 @@ impl SessionHost for GameApp {
                         self.unlocked_maps = ProgressionState::from_unlocked(&self.unlocked_maps)
                             .on_boss_defeated(ms)
                             .unlocked();
+                        // 通关门禁（`business/progression.md` §通关）：击败 m03 BOSS = 全图通杀，
+                        // 置通关位（`is_cleared`）；解锁集不变（m03 无下一图）。
+                        if ms == MapSlot::M03 {
+                            self.cleared = true;
+                        }
                     }
                 }
             }
@@ -1738,6 +1773,12 @@ impl SessionHost for GameApp {
     /// P1-8（S1）：当前 RNG 已消费次数（写档捕获，读档 `restore_state` 精确续流）。
     fn rng_steps(&self) -> u128 {
         self.rng.steps_taken()
+    }
+
+    /// S15.2（F23）：写档捕获当前跨图推进解锁位掩码（口径 = 规则层 `unlocked_mask()`）。
+    fn unlocked_mask(&self) -> u8 {
+        let base = ProgressionState::from_unlocked(&self.unlocked_maps).unlocked_mask();
+        if self.cleared { base | CLEARED_BIT } else { base }
     }
 
     fn saveload_cursor(&self) -> usize {

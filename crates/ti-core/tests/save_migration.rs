@@ -66,8 +66,15 @@ fn v1_bytes_auto_migrate_to_v2_roundtrip() {
 /// 本测试验证 v2 → v2 读回的字节布局中，魔数偏移 2..6 仍正确。
 #[test]
 fn v2_write_read_backward_compat() {
-    let slot =
-        SaveSlot { version: 2, character: 4, gold: 500, map_slot: 1, position: 42, rng_steps: 0 };
+    let slot = SaveSlot {
+        version: 2,
+        character: 4,
+        gold: 500,
+        map_slot: 1,
+        position: 42,
+        rng_steps: 0,
+        unlocked_mask: 0,
+    };
     let v2_bytes = oracle_write_slot(&slot);
     assert_eq!(v2_bytes.len(), 26, "v2 布局 = 26 字节");
 
@@ -122,6 +129,7 @@ fn json_export_import_roundtrip() {
             map_slot: i,
             position: i * 7,
             rng_steps: 0,
+            unlocked_mask: 0,
         };
         mgr.set_slot(i as usize, SaveSlotV2::from_legacy_slot(&legacy));
     }
@@ -151,6 +159,7 @@ fn byte_layout_is_self_describing() {
         map_slot: 2,
         position: 777,
         rng_steps: 0,
+        unlocked_mask: 0,
     };
     let bytes = oracle_write_slot(&slot);
     assert_eq!(bytes.len(), MIN_SAVE_SIZE, "v2 布局 = 26 字节");

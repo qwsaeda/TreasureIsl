@@ -48,6 +48,7 @@ pub fn oracle_migrate_v1_to_v2(s: &SaveSlot) -> SaveSlot {
         map_slot: s.map_slot,
         position: s.position,
         rng_steps: s.rng_steps,
+        unlocked_mask: 0,
     }
 }
 
@@ -79,7 +80,7 @@ pub fn oracle_read_slot(bytes: &[u8]) -> Result<SaveSlot, SaveErr> {
     let gold = u32::from_le_bytes([bytes[14], bytes[15], bytes[16], bytes[17]]);
     let map_slot = u32::from_le_bytes([bytes[18], bytes[19], bytes[20], bytes[21]]);
     let position = u32::from_le_bytes([bytes[22], bytes[23], bytes[24], bytes[25]]);
-    Ok(SaveSlot { version, character, gold, map_slot, position, rng_steps: 0 })
+    Ok(SaveSlot { version, character, gold, map_slot, position, rng_steps: 0, unlocked_mask: 0 })
 }
 
 /// oracle：序列化为字节（与 `oracle_read_slot` 往返逐字节一致，spec §b v2 布局）。
@@ -124,7 +125,15 @@ pub fn oracle_read_slot_v1(bytes: &[u8]) -> Result<SaveSlot, SaveErr> {
     let character = u32::from_le_bytes([bytes[6], bytes[7], bytes[8], bytes[9]]);
     let map_slot = u32::from_le_bytes([bytes[10], bytes[11], bytes[12], bytes[13]]);
     let position = u32::from_le_bytes([bytes[14], bytes[15], bytes[16], bytes[17]]);
-    Ok(SaveSlot { version: 1, character, gold: 0, map_slot, position, rng_steps: 0 })
+    Ok(SaveSlot {
+        version: 1,
+        character,
+        gold: 0,
+        map_slot,
+        position,
+        rng_steps: 0,
+        unlocked_mask: 0,
+    })
 }
 
 /// 常量：`size_of::<SaveSlot>()`（diff 测试用，验证字段数一致性）。
@@ -146,6 +155,7 @@ mod tests {
             map_slot: 0,
             position: 50,
             rng_steps: 0,
+            unlocked_mask: 0,
         };
         let bytes = oracle_write_slot(&slot);
         assert_eq!(oracle_validate_save(&bytes), Ok(()), "有效存档应通过校验");
@@ -177,6 +187,7 @@ mod tests {
                             map_slot: ms,
                             position: pos,
                             rng_steps: 0,
+                            unlocked_mask: 0,
                         };
                         let bytes = oracle_write_slot(&slot);
                         let read = oracle_read_slot(&bytes).unwrap_or_default();
@@ -199,6 +210,7 @@ mod tests {
             map_slot: 2,
             position: 100,
             rng_steps: 0,
+            unlocked_mask: 0,
         };
         let migrated = oracle_migrate_v1_to_v2(&v1);
         assert_eq!(migrated.version, 2, "v1 迁移后 version 应为 2");

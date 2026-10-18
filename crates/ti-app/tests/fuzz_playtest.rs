@@ -199,6 +199,7 @@ fn build_slot(app: &GameApp) -> SaveSlot {
         map_slot,
         position: app.map_pos().map_or(0, |p| p.index(20)),
         rng_steps: 0,
+        unlocked_mask: 0,
     }
 }
 
@@ -295,6 +296,7 @@ fn restore_save_invalid_slot_does_not_pollute_character() {
         map_slot: u32::MAX,
         position: 0,
         rng_steps: 0,
+        unlocked_mask: 0,
     };
     app.restore_save(bad);
 
@@ -306,8 +308,15 @@ fn restore_save_invalid_slot_does_not_pollute_character() {
     assert_eq!(app.gold(), 12345, "restore_save 写 gold 字段（设计行为，非 enter_main_map 路径）");
 
     // 合法 restore_save（Panda + M01）应成功进主地图
-    let good =
-        SaveSlot { version: 2, character: 1, gold: 100, map_slot: 0, position: 0, rng_steps: 0 };
+    let good = SaveSlot {
+        version: 2,
+        character: 1,
+        gold: 100,
+        map_slot: 0,
+        position: 0,
+        rng_steps: 0,
+        unlocked_mask: 0,
+    };
     app.restore_save(good);
     assert_eq!(app.scene(), Scene::MainMap, "合法 restore_save 应进主地图");
     assert_eq!(app.character(), Some(Character::Panda));
