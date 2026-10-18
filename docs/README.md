@@ -53,6 +53,7 @@
 | [process/07_render_pipeline.md](process/07_render_pipeline.md) | **legacy 像素管线契约**（路径表/z-order 文件顺序/越界求交裁剪/PCX 透明位 index 0；S16 起降级为逆向参照，gate 第 19/20 项锚点） |
 | [process/08_render_arch.md](process/08_render_arch.md) | **运行时渲染架构**（分层/绘制原语/z-order=调用顺序/5 条坐标与像素来源契约/grep 门禁/测试重锚矩阵；改渲染代码必读） |
 | [process/09_render_framework.md](process/09_render_framework.md) | **`ti-render` crate 边界契约**（职责与禁止项/模块结构/Theme schema/迁移映射/数据分离原则；改 `crates/ti-render/` 代码前必读） |
+| [process/10_ui_redesign.md](process/10_ui_redesign.md) | **界面全量重设计·航海夜精修规格（S17 单一事实源）**：设计令牌 v2（色板 13 色/8pt 栅格/字号阶/动效 4 参数/图标 14 项）+ 7 场景版面增量 + 对比度 AA 表 + 验收锚点（改 UI 视觉量前必读） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 
