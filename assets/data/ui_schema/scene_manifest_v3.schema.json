@@ -1,0 +1,188 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://treasureisland.local/ui_schema/scene_manifest_v3.schema.json",
+  "title": "Scene Manifest v3 — UI 叙事约束 DSL",
+  "description": "见 docs/ui-redesign-v3/02_spec_lang.md。每场景的 mood / focus / rhythm / info_density 描述。",
+  "type": "object",
+  "required": ["schema_version", "scenes"],
+  "properties": {
+    "schema_version": { "const": 3 },
+    "scenes": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/SceneManifest"
+      }
+    }
+  },
+  "$defs": {
+    "SceneManifest": {
+      "type": "object",
+      "required": ["scene_id", "version", "narrative", "geometry_constraints"],
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "enum": ["index", "select_role", "select_map", "main_map", "vs", "message", "saveload"]
+        },
+        "version": { "type": "string", "pattern": "^3\\.[0-9]+$" },
+        "narrative": { "$ref": "#/$defs/Narrative" },
+        "geometry_constraints": { "$ref": "#/$defs/GeometryConstraints" }
+      }
+    },
+    "Narrative": {
+      "type": "object",
+      "required": ["mood", "focus", "rhythm", "info_density", "permanent_hud_count_max"],
+      "properties": {
+        "mood": {
+          "type": "string",
+          "enum": [
+            "epic_entry",
+            "hero_choice",
+            "map_overview",
+            "world_explore",
+            "tense_battle",
+            "reading",
+            "archive"
+          ]
+        },
+        "focus": {
+          "type": "object",
+          "required": ["anchor", "bbox_pct"],
+          "properties": {
+            "anchor": {
+              "type": "string",
+              "enum": [
+                "title_art",
+                "portrait_carousel",
+                "map_collage",
+                "world_canvas",
+                "battle_arena",
+                "text_panel",
+                "slot_list_with_meta"
+              ]
+            },
+            "bbox_pct": {
+              "$ref": "#/$defs/BBoxPct",
+              "description": "重心矩形占屏百分比，w*h ≥ 20"
+            }
+          }
+        },
+        "rhythm": {
+          "type": "object",
+          "required": ["beats", "rule"],
+          "properties": {
+            "beats": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "required": ["name", "weight", "y_pct"],
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "weight": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "0-1，所有 beat 权重和必须 = 1.0"
+                  },
+                  "y_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "0-100 屏高百分比"
+                  }
+                }
+              }
+            },
+            "rule": {
+              "type": "string",
+              "enum": [
+                "art_to_action_top_down",
+                "side_anchor_center_options",
+                "world_first_hud_corner",
+                "arena_center_command_edge",
+                "left_hero_right_text",
+                "three_column_left_hero"
+              ]
+            }
+          }
+        },
+        "info_density": {
+          "type": "object",
+          "required": ["center_max_per_row", "edge_min_per_row", "dead_zone_max_pct"],
+          "properties": {
+            "center_max_per_row": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "edge_min_per_row": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            },
+            "dead_zone_max_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 50,
+              "description": "死区占屏比上限，默认 15"
+            }
+          }
+        },
+        "permanent_hud_count_max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "永久 HUD 元素数量上限（P-SoT-1）"
+        }
+      }
+    },
+    "GeometryConstraints": {
+      "type": "object",
+      "required": ["focus_bbox_must_contain", "no_rect_overlap_with", "edge_anchors"],
+      "properties": {
+        "focus_bbox_must_contain": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "scenes.json 中必须被 focus.bbox 包含的矩形键名列表"
+        },
+        "no_rect_overlap_with": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "不允许进入 focus.bbox 的矩形键名列表"
+        },
+        "edge_anchors": {
+          "type": "object",
+          "required": ["bottom_hint_y_min_pct"],
+          "properties": {
+            "bottom_hint_y_min_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "提示行 y 最小屏高百分比"
+            },
+            "hud_edge_tolerance_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 20,
+              "default": 5,
+              "description": "HUD 元素贴边容差"
+            }
+          }
+        }
+      }
+    },
+    "BBoxPct": {
+      "type": "object",
+      "required": ["x", "y", "w", "h"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 100 },
+        "y": { "type": "number", "minimum": 0, "maximum": 100 },
+        "w": { "type": "number", "minimum": 0, "maximum": 100 },
+        "h": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "$comment": "w*h ≥ 20（视觉重心占屏 ≥ 20%）"
+    }
+  }
+}

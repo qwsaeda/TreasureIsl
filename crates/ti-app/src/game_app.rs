@@ -352,13 +352,15 @@ pub struct GameApp {
     pub displayed_boss_hp: u32,
 }
 
-/// HP 平滑插值步长（每帧向目标推进差值的 25%，最小 1）。
-fn approach(current: u32, target: u32) -> u32 {
-    if current == target {
+/// HP 平滑插值（S17.4 时间制）：向目标推进「剩余差值 × 本帧时间占比」，帧率无关；
+/// 每次至少推进 1（防小差值卡死），`frac <= 0` 时保持不动。
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn approach_ms(current: u32, target: u32, frac: f64) -> u32 {
+    if current == target || frac <= 0.0 {
         return current;
     }
     let diff = target.abs_diff(current);
-    let step = (diff / 4).max(1);
+    let step = ((f64::from(diff) * frac).round().max(1.0) as u32).min(diff);
     if current < target {
         current.saturating_add(step).min(target)
     } else {
@@ -366,15 +368,22 @@ fn approach(current: u32, target: u32) -> u32 {
     }
 }
 
-/// 场景切换过渡状态机（EXP-081：真交叉淡化，快照旧画面 → 与新画面逐帧插值）。
+/// S17.4：过渡进度时间制推进（`MOTION_TRANSITION_MS` 内 delta 占比；f64 中间值 →
+/// f32 末位截断不影响单调性）。delta 按 `u16` 上限封顶（壳层本就 clamp ≤250ms）。
+#[allow(clippy::cast_possible_truncation)]
+fn advance_transition_t(t: f32, delta_ms: u32) -> f32 {
+    let denom = f64::from(crate::scenes::chrome::MOTION_TRANSITION_MS.max(1));
+    let step = f64::from(u16::try_from(delta_ms.max(1)).unwrap_or(u16::MAX)) / denom;
+    t + step as f32
+}
+
+/// 场景切换过渡状态机（EXP-081 → S17.4：真交叉淡化，`MOTION_TRANSITION_MS` 时间制推进）。
 #[derive(Debug, Clone, Default)]
 pub struct TransitionState {
     /// 旧画面快照（`enter()` 前抓的帧缓冲，`render_to_framebuf` / 快照路径为 `None`）。
     pub prev: Option<Box<[u16]>>,
-    /// 当前插值进度（0.0 = 全旧画面，1.0 = 全新画面）。
+    /// 当前插值进度（0.0 = 全旧画面，1.0 = 全新画面；按 ms 推进，S17.4）。
     pub t: f32,
-    /// 每帧推进量。
-    pub step: f32,
 }
 
 /// 键位快照（壳层把触摸/键映射到这些布尔位，平台无关，`docs/gamebook.md` §3）。
@@ -1212,7 +1221,8 @@ impl GameApp {
     ///
     /// 调用方随后调 [`MenuShell::present`] 上屏。
     pub fn render(&mut self) {
-        crate::scenes::chrome::tick_press_flash();
+        // S17.4：动效推进全部时间制（本帧经过毫秒）——帧率无关（旧按帧计数）。
+        crate::scenes::chrome::tick_press_flash(self.frame_delta_ms);
         // HP 条平滑插值（EXP-085）：每帧向实际值推进，步长 = 差值的 25% 或最小 1。
         self.update_displayed_hp();
         if self.transition.is_none() {
@@ -1224,7 +1234,9 @@ impl GameApp {
             self.render_scene();
             return;
         };
-        let next_t = trans.t + trans.step;
+        // S17.4：时间制推进（MOTION_TRANSITION_MS=240ms，帧率无关；delta 下限 1ms 防
+        // `frame_delta_ms=0` 卡死过渡）。
+        let next_t = advance_transition_t(trans.t, self.frame_delta_ms);
         let done = next_t >= 1.0;
         self.render_scene();
         if done {
@@ -1258,18 +1270,21 @@ impl GameApp {
         self.rendered_once = true;
     }
 
-    /// HP 条平滑插值（EXP-085）：每帧向实际值推进，步长 = 差值的 25% 或最小 1。
+    /// HP 条平滑插值（EXP-085 → S17.4 时间制）：按 `MOTION_HP_LERP_MS`=160ms 线性趋近目标，
+    /// 帧率无关（旧实现按帧推进差值的 25%）。
     fn update_displayed_hp(&mut self) {
         let Some(b) = self.battle.as_ref() else {
             return;
         };
+        let frac = f64::from(self.frame_delta_ms)
+            / f64::from(crate::scenes::chrome::MOTION_HP_LERP_MS.max(1));
         let target_p = b.player_hp;
         let target_b = b.boss_hp;
-        self.displayed_player_hp = approach(self.displayed_player_hp, target_p);
-        self.displayed_boss_hp = approach(self.displayed_boss_hp, target_b);
+        self.displayed_player_hp = approach_ms(self.displayed_player_hp, target_p, frac);
+        self.displayed_boss_hp = approach_ms(self.displayed_boss_hp, target_b, frac);
     }
 
-    /// 启动场景切换过渡（EXP-081 真交叉淡化，~230ms @ step=0.09）。
+    /// 启动场景切换过渡（EXP-081 真交叉淡化 → S17.4 时间制：`MOTION_TRANSITION_MS`=240ms）。
     ///
     /// 抓取当前帧缓冲作为「旧画面」；`enter()` 在切场景前调用本方法，
     /// 此刻帧缓冲仍持有旧场景像素，故快照有效。
@@ -1286,8 +1301,7 @@ impl GameApp {
             existing.t = 0.0;
             return;
         }
-        self.transition =
-            Some(TransitionState { prev: Some(self.shell.fb.snapshot()), t: 0.0, step: 0.09 });
+        self.transition = Some(TransitionState { prev: Some(self.shell.fb.snapshot()), t: 0.0 });
     }
 
     /// 视觉回归基准（EXP-072）：渲染当前场景后返回 1080×1920 RGB565 帧缓冲只读切片。
@@ -1305,9 +1319,8 @@ impl GameApp {
     pub fn render_to_framebuf(&mut self) -> &[u16] {
         self.transition = None;
         crate::scenes::chrome::reset_animation_state();
-        for _ in 0..5 {
-            crate::scenes::chrome::tick_page_frame();
-        }
+        // S17.4：翻页亮度推进到稳态（时间制：一次推进满 `MOTION_PAGE_MS`）。
+        crate::scenes::chrome::tick_page_frame(crate::scenes::chrome::MOTION_PAGE_MS);
         self.render();
         self.shell.fb.as_slice()
     }
@@ -1418,6 +1431,10 @@ impl MenuHost for GameApp {
 
     fn press_held(&self) -> bool {
         self.press_held
+    }
+
+    fn frame_delta_ms(&self) -> u32 {
+        self.frame_delta_ms
     }
 }
 

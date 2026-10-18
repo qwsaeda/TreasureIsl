@@ -384,7 +384,7 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
     let actual = gate_item_actual_count(&gate);
-    let expected = 22usize;
+    let expected = 23usize;
     if actual != expected {
         errors.push(format!(
             "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"
@@ -1428,16 +1428,69 @@ fn check_ui_redesign_tokens(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     errors.extend(ui_8pt_check(root));
     errors.extend(ui_palette_triple_check(root));
-    errors.extend(ui_icon_registry_check(root));
+    // S17.4 数据/算法分离：数值锚点（图标数/别名/绑定键、动效 4 参数）读 `assets/gate_data.json`，
+    // 改数值只改数据文件；引擎（本文件）只留谓词逻辑。
+    let gate_data = load_gate_data(root, &mut errors);
+    if !gate_data.is_null() {
+        errors.extend(ui_icon_registry_check(root, &gate_data));
+        errors.extend(ui_motion_params_check(root, &gate_data));
+    }
     errors
 }
 
-/// S17.3 图标注册表完备性（`docs/process/10_ui_redesign.md` §5）：
-/// ① `assets/data/ui_icons.json` 恰好 14 枚、id 连续 0..13、name 唯一；
-/// ② 每枚 id 在 `ti-render/src/icons.rs` 有对应 `ICON_*` 分支（防注册了但没画）；
-/// ③ bindings 引用的图标名都在 `icons` 内（防悬空引用）。
-fn ui_icon_registry_check(root: &Path) -> Vec<String> {
+/// 读 `assets/gate_data.json`（门禁数据文件；缺失/解析失败 = 单条 ERROR，不静默跳过）。
+fn load_gate_data(root: &Path, errors: &mut Vec<String>) -> serde_json::Value {
+    let Some(text) = read_file(root, "assets/gate_data.json") else {
+        errors.push("缺 assets/gate_data.json（S17.4 门禁数据文件）".to_string());
+        return serde_json::Value::Null;
+    };
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) else {
+        errors.push("assets/gate_data.json 解析失败".to_string());
+        return serde_json::Value::Null;
+    };
+    v
+}
+
+/// `gate_data.json` 表内 `alias_map`（name → 常量名）；缺表/缺键 = 空表（不报错，走默认命名规则）。
+fn gate_alias_map(val: &serde_json::Value) -> std::collections::HashMap<String, String> {
+    val.get("alias_map")
+        .and_then(serde_json::Value::as_object)
+        .map(|m| {
+            m.iter().filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string()))).collect()
+        })
+        .unwrap_or_default()
+}
+
+/// `gate_data.json` 表内字符串数组键（缺键 = 空表）。
+fn gate_str_list(val: &serde_json::Value, key: &str) -> Vec<String> {
+    val.get(key)
+        .and_then(serde_json::Value::as_array)
+        .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+        .unwrap_or_default()
+}
+
+/// S17.3 图标注册表完备性（`docs/process/10_ui_redesign.md` §5；数值锚点数据化到
+/// `assets/gate_data.json` 的 `ui_icons` 表，S17.4 数据/算法分离）：
+/// ① `assets/data/ui_icons.json` 恰 `expect_count` 枚、id 连续、name 唯一；
+/// ② 每枚 id 在 `ti-render/src/icons.rs` 有对应 `ICON_*` 分支（防注册了但没画；
+///    非常规命名走 `alias_map`）；
+/// ③ bindings（数组键 = `binding_array_keys`，标量键 = `binding_scalar_keys`）引用的
+///    图标名都在 `icons` 内（防悬空引用）。
+fn ui_icon_registry_check(root: &Path, gate_data: &serde_json::Value) -> Vec<String> {
     let mut errors = Vec::new();
+    let Some(ui) = gate_data.get("ui_icons") else {
+        errors.push("assets/gate_data.json 缺 ui_icons 表（S17.4 门禁数据）".to_string());
+        return errors;
+    };
+    let Some(n) = ui.get("expect_count").and_then(serde_json::Value::as_u64) else {
+        errors.push("gate_data.json ui_icons.expect_count 缺失".to_string());
+        return errors;
+    };
+    let expect_count = u32::try_from(n).unwrap_or(0);
+    let alias_map = gate_alias_map(ui);
+    let binding_array_keys = gate_str_list(ui, "binding_array_keys");
+    let binding_scalar_keys = gate_str_list(ui, "binding_scalar_keys");
+
     let Some(text) = read_file(root, "assets/data/ui_icons.json") else {
         errors.push("缺 assets/data/ui_icons.json（S17.3 图标注册表）".to_string());
         return errors;
@@ -1450,9 +1503,9 @@ fn ui_icon_registry_check(root: &Path) -> Vec<String> {
         errors.push("ui_icons.json 缺 icons[]".to_string());
         return errors;
     };
-    if icons.len() != 14 {
+    if icons.len() != expect_count as usize {
         errors.push(format!(
-            "ui_icons.json icons[] = {} 条，应 14 枚（10_ui_redesign §5）",
+            "ui_icons.json icons[] = {} 条，应 {expect_count} 枚（10_ui_redesign §5，gate_data.json ui_icons.expect_count）",
             icons.len()
         ));
     }
@@ -1471,9 +1524,12 @@ fn ui_icon_registry_check(root: &Path) -> Vec<String> {
         }
         names.push(name.to_string());
     }
-    for (want, got) in (0..14).zip(&ids) {
+    for (want, got) in (0..expect_count).zip(&ids) {
         if want != *got {
-            errors.push(format!("ui_icons.json id 序列非连续 0..13：期望 {want} 实际 {got}"));
+            errors.push(format!(
+                "ui_icons.json id 序列非连续 0..{}：期望 {want} 实际 {got}",
+                expect_count - 1
+            ));
         }
     }
     let mut sorted = names.clone();
@@ -1482,16 +1538,13 @@ fn ui_icon_registry_check(root: &Path) -> Vec<String> {
     if sorted.len() != names.len() {
         errors.push("ui_icons.json 图标名重复".to_string());
     }
-    // ② 框架侧图标分支覆盖（`match kind { ICON_X => … }`）
+    // ② 框架侧图标分支覆盖（`match kind { ICON_X => … }`；别名走 gate_data alias_map）
     let Some(icons_rs) = read_file(root, "crates/ti-render/src/icons.rs") else {
         return errors;
     };
     for name in &names {
-        let const_name = if name == "monogram" {
-            "ICON_MONOGRAM_RING".to_string()
-        } else {
-            format!("ICON_{}", name.to_uppercase())
-        };
+        let const_name =
+            alias_map.get(name).cloned().unwrap_or_else(|| format!("ICON_{}", name.to_uppercase()));
         let has_const = icons_rs.contains(&format!("pub const {const_name}"));
         let has_branch = icons_rs.contains(&format!("{const_name} =>"));
         if !(has_const && has_branch) {
@@ -1500,30 +1553,9 @@ fn ui_icon_registry_check(root: &Path) -> Vec<String> {
             ));
         }
     }
-    // ③ bindings 引用名在册
+    // ③ bindings 引用名在册（键清单 = gate_data.json ui_icons.binding_*_keys）
     if let Some(bindings) = parsed.get("bindings") {
-        let mut refs: Vec<String> = Vec::new();
-        if let Some(arr) = bindings.get("index_menu").and_then(serde_json::Value::as_array) {
-            refs.extend(
-                arr.iter()
-                    .filter_map(|b| b.get("icon").and_then(serde_json::Value::as_str))
-                    .map(str::to_string),
-            );
-        }
-        if let Some(arr) = bindings.get("main_map_hud").and_then(serde_json::Value::as_array) {
-            refs.extend(
-                arr.iter()
-                    .filter_map(|b| b.get("icon").and_then(serde_json::Value::as_str))
-                    .map(str::to_string),
-            );
-        }
-        for key in ["select_map_row", "select_role_row", "main_map_landmark", "vs_boss_cap"] {
-            if let Some(n) =
-                bindings.get(key).and_then(|v| v.get("icon")).and_then(serde_json::Value::as_str)
-            {
-                refs.push(n.to_string());
-            }
-        }
+        let refs = collect_binding_refs(bindings, &binding_array_keys, &binding_scalar_keys);
         for r in refs {
             if !names.contains(&r) {
                 errors.push(format!(
@@ -1535,7 +1567,152 @@ fn ui_icon_registry_check(root: &Path) -> Vec<String> {
     errors
 }
 
-/// ① 8pt 栅格：遍历 scenes.json 各场景标量（豁免业务几何、动态落区与屏心锚点 540）。
+/// 收集 `bindings` 里所有引用到的图标名（数组键取每项 `icon`，标量键取 `icon`）。
+fn collect_binding_refs(
+    bindings: &serde_json::Value,
+    array_keys: &[String],
+    scalar_keys: &[String],
+) -> Vec<String> {
+    let mut refs: Vec<String> = Vec::new();
+    for key in array_keys {
+        if let Some(arr) = bindings.get(key).and_then(serde_json::Value::as_array) {
+            refs.extend(
+                arr.iter()
+                    .filter_map(|b| b.get("icon").and_then(serde_json::Value::as_str))
+                    .map(str::to_string),
+            );
+        }
+    }
+    for key in scalar_keys {
+        if let Some(n) =
+            bindings.get(key).and_then(|v| v.get("icon")).and_then(serde_json::Value::as_str)
+        {
+            refs.push(n.to_string());
+        }
+    }
+    refs
+}
+
+/// S17.4 动效参数锁（`docs/process/10_ui_redesign.md` §7；数值锚点数据化到
+/// `assets/gate_data.json` 的 `ui_motion` 表，S17.4 数据/算法分离）：
+/// ① 代码侧各 `MOTION_*_MS` 常量（`gate_data.ui_motion.const_file`）== 文档 §7 表时长；
+/// ② 文档 §7 表行数 == `rows` 条数、每行时长为 `NNNms`。防「改了常量没改文档」或反之。
+fn ui_motion_params_check(root: &Path, gate_data: &serde_json::Value) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(mo) = gate_data.get("ui_motion") else {
+        errors.push("assets/gate_data.json 缺 ui_motion 表（S17.4 门禁数据）".to_string());
+        return errors;
+    };
+    let get_str = |k: &str| mo.get(k).and_then(serde_json::Value::as_str).map(str::to_string);
+    let Some(doc_file) = get_str("doc_file") else {
+        errors.push("gate_data.json ui_motion.doc_file 缺失".to_string());
+        return errors;
+    };
+    let Some(doc_section) = get_str("doc_section") else {
+        errors.push("gate_data.json ui_motion.doc_section 缺失".to_string());
+        return errors;
+    };
+    let Some(const_file) = get_str("const_file") else {
+        errors.push("gate_data.json ui_motion.const_file 缺失".to_string());
+        return errors;
+    };
+    let doc_rows: Vec<(String, String)> = mo
+        .get("rows")
+        .and_then(serde_json::Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|r| {
+                    let a = r.as_array()?;
+                    let name = a.first().and_then(serde_json::Value::as_str)?;
+                    let c = a.get(1).and_then(serde_json::Value::as_str)?;
+                    Some((name.to_string(), c.to_string()))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    if doc_rows.is_empty() {
+        errors.push("gate_data.json ui_motion.rows 缺失/为空".to_string());
+        return errors;
+    }
+
+    let Some(doc) = read_file(root, &doc_file) else {
+        errors.push(format!("缺 {doc_file}（ui_motion.doc_file）"));
+        return errors;
+    };
+    // 抓 §7 表：从 doc_section 标题起到下一个 "## " 之间的 markdown 表行。
+    let Some(sec_start) = doc.find(&doc_section) else {
+        errors.push(format!("{doc_file} 缺 §7 动效参数表标题 `{doc_section}`"));
+        return errors;
+    };
+    let after = &doc[sec_start..];
+    let sec_end = after.find("\n## ").map_or(after.len(), |i| i);
+    let section = &after[..sec_end];
+    // 文档 §7 表数据行数（`| 名 | NNNms |`）须与 gate_data rows 条数一致。
+    let data_rows = section
+        .lines()
+        .filter(|l| {
+            let t = l.trim_start();
+            t.starts_with('|') && t.split('|').nth(2).is_some_and(|c| c.contains("ms"))
+        })
+        .count();
+    if data_rows != doc_rows.len() {
+        errors.push(format!(
+            "{doc_file} §7 表数据行 = {data_rows}，应恰好 {}（= gate_data.json ui_motion.rows 条数）",
+            doc_rows.len()
+        ));
+    }
+    let Some(chrome) = read_file(root, &const_file) else {
+        errors.push(format!("缺 {const_file}（ui_motion.const_file）"));
+        return errors;
+    };
+    // 从文档表行里按「时长」列解析 ms 值，与代码常量对账。
+    for (name, const_name) in &doc_rows {
+        let Some(ms) = parse_doc_ms(section, name) else {
+            errors.push(format!("{doc_file} §7 缺 `{name}` 时长（ms）"));
+            continue;
+        };
+        // 代码侧常量（朴素串解析，不引新依赖）：`{const_name}: u32 = NNN`。
+        let code_ms = parse_const_ms(&chrome, const_name);
+        match code_ms {
+            Some(v) if v == ms => {}
+            Some(v) => errors.push(format!(
+                "{const_name} = {v}，但 {doc_file} §7 `{name}` = {ms}ms（S17.4：动效参数以文档表为准，须同步）"
+            )),
+            None => errors.push(format!("{const_file} 缺常量 {const_name}（S17.4 动效参数表）")),
+        }
+    }
+    errors
+}
+
+/// 文档 §7 表内某动效行的「时长」列（形如 `240ms`）→ ms 值；未找到 = None。
+fn parse_doc_ms(section: &str, name: &str) -> Option<u32> {
+    for line in section.lines() {
+        let t = line.trim_start();
+        if !t.starts_with('|') || !t.contains(name) {
+            continue;
+        }
+        let cap = t.split('|').nth(2)?;
+        let cleaned = cap.trim().strip_suffix("ms").unwrap_or_else(|| cap.trim());
+        return cleaned.parse::<u32>().ok();
+    }
+    None
+}
+
+/// 代码文本里 `{const_name}: u32 = NNN` 的常量值（朴素串解析，不引新依赖）；缺失 = None。
+fn parse_const_ms(src: &str, const_name: &str) -> Option<u32> {
+    let i = src.find(const_name)?;
+    let tail = &src[i..];
+    let eq = tail.find('=')?;
+    if !tail[..eq].contains(':') {
+        return None; // 须是 `: u32 =` 常量声明而非赋值
+    }
+    let digits: String =
+        tail[eq + 1..].trim_start().chars().take_while(char::is_ascii_digit).collect();
+    digits.parse::<u32>().ok()
+}
+
+/// ① 8pt 栅格：遍历 scenes.json 各场景标量（豁免业务几何、动态落区、屏心锚点 540
+/// 与 v3 场景叙事键 `title_art`/`ambient_art`/`focus_anchor`——v3 约束由 `check_scene_narrative` 接管）。
 fn ui_8pt_walk(
     obj: &serde_json::Value,
     in_exempt: bool,
@@ -1543,8 +1720,13 @@ fn ui_8pt_walk(
     scene: &str,
     errors: &mut Vec<String>,
 ) {
-    let exempt_by_key =
-        matches!(key, "x0" | "y0" | "tile_w" | "tile_h" | "size" | "portrait_zones");
+    let exempt_by_key = matches!(
+        key,
+        "x0" | "y0" | "tile_w" | "tile_h" | "size" | "portrait_zones"
+            // v3 场景叙事键（UI 重设计 v3.1 双写，docs/ui-redesign-v3/02 §10：v3 坐标不再 8pt 强制，
+            // 约束改由 gate 第 21 项 check_scene_narrative DSL 接管；v2 键仍走 8pt 纪律）
+            | "title_art" | "ambient_art" | "focus_anchor"
+    );
     match obj {
         serde_json::Value::Object(map) => {
             for (k, v) in map {
@@ -1565,7 +1747,8 @@ fn ui_8pt_walk(
                 if v % 8 != 0 && v != 540 {
                     errors.push(format!(
                         "scenes.json {scene}: `{key}` = {v} 非 8pt 栅格（10_ui_redesign §4：版面坐标 8 整除；\
-                         业务几何 grid.*/size、portrait_zones 与屏心锚点 540 已豁免）"
+                         业务几何 grid.*/size、portrait_zones、屏心锚点 540 与 v3 叙事键 \
+                         （title_art/ambient_art/focus_anchor，ui-redesign-v3/02 §10）已豁免）"
                     ));
                 }
             }

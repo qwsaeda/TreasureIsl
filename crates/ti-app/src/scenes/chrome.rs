@@ -63,37 +63,49 @@ pub const COLOR_GOLD_BRIGHT: u16 = Theme::DEFAULT.gold_bright;
 pub const COLOR_BLACK: u16 = Theme::DEFAULT.black;
 
 // === 动画状态管理 ===
+//
+// S17.4 动效参数表（数值源 = `docs/process/10_ui_redesign.md` §7；doccheck2
+// `check_ui_redesign_tokens` 断言本表常量 == 文档表）：全部**时间制（ms）**，
+// 帧率无关（旧实现按帧计数，30fps 下动效拖长一倍）。
 
-static PAGE_FRAME: AtomicU32 = AtomicU32::new(0);
-static PRESS_FLASH: AtomicU32 = AtomicU32::new(0);
-const PRESS_FLASH_FRAMES: u32 = 4;
+/// 场景切换交叉淡化时长（ms，ease-in-out）。
+pub const MOTION_TRANSITION_MS: u32 = 240;
+/// 按压闪光时长（ms，线性衰减）。
+pub const MOTION_PRESS_FLASH_MS: u32 = 120;
+/// 血条数值插值时长（ms，线性趋近目标）。
+pub const MOTION_HP_LERP_MS: u32 = 160;
+/// 翻页亮度渐入时长（ms，线性）。
+pub const MOTION_PAGE_MS: u32 = 120;
 
-/// 触发按下闪烁。
+static PAGE_MS_LEFT: AtomicU32 = AtomicU32::new(0);
+static PRESS_FLASH_MS_LEFT: AtomicU32 = AtomicU32::new(0);
+
+/// 触发按下闪烁（持续 [`MOTION_PRESS_FLASH_MS`]）。
 pub fn flash_press() {
-    PRESS_FLASH.store(PRESS_FLASH_FRAMES, Ordering::Relaxed);
+    PRESS_FLASH_MS_LEFT.store(MOTION_PRESS_FLASH_MS, Ordering::Relaxed);
 }
 
-/// 每帧推进按下闪烁倒计时。
-pub fn tick_press_flash() {
-    let _ = PRESS_FLASH
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| Some(v.saturating_sub(1)));
+/// 每帧推进按下闪烁倒计时（`delta_ms` = 本帧经过毫秒）。
+pub fn tick_press_flash(delta_ms: u32) {
+    let _ = PRESS_FLASH_MS_LEFT
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| Some(v.saturating_sub(delta_ms)));
 }
 
 /// 按下闪烁是否处于可见期。
 #[must_use]
 pub fn press_flash_active() -> bool {
-    PRESS_FLASH.load(Ordering::Relaxed) > 0
+    PRESS_FLASH_MS_LEFT.load(Ordering::Relaxed) > 0
 }
 
-/// 重置翻页动画帧计数。
+/// 重置翻页动画倒计时（起始为最暗）。
 pub fn reset_page_frame() {
-    PAGE_FRAME.store(0, Ordering::Relaxed);
+    PAGE_MS_LEFT.store(MOTION_PAGE_MS, Ordering::Relaxed);
 }
 
-/// 重置全部动画帧计数。
+/// 重置全部动画状态。
 pub fn reset_animation_state() {
-    PAGE_FRAME.store(0, Ordering::Relaxed);
-    PRESS_FLASH.store(0, Ordering::Relaxed);
+    PAGE_MS_LEFT.store(0, Ordering::Relaxed);
+    PRESS_FLASH_MS_LEFT.store(0, Ordering::Relaxed);
 }
 
 /// 读某场景的版面数据。
@@ -152,19 +164,23 @@ pub fn scene_hint(host: &mut dyn SceneHost, scene_id: &str, hint_key: &str) {
     hint_row(host, text, LOGICAL_W_I32 / 2, layout.hint.y);
 }
 
-/// 推进翻页动画帧计数。
-pub fn tick_page_frame() {
-    PAGE_FRAME.fetch_add(1, Ordering::Relaxed);
+/// 推进翻页动画倒计时（`delta_ms` = 本帧经过毫秒）。
+pub fn tick_page_frame(delta_ms: u32) {
+    let _ = PAGE_MS_LEFT
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| Some(v.saturating_sub(delta_ms)));
 }
 
-/// 获取当前翻页动画亮度因子。
+/// 获取当前翻页动画亮度因子（0.6 → 1.0 线性，时长 [`MOTION_PAGE_MS`]；
+/// 倒计时耗尽 = 1.0 稳态）。
 #[must_use]
 pub fn page_brightness_factor() -> f32 {
-    let f = PAGE_FRAME.load(Ordering::Relaxed);
-    match f {
-        0..=4 => 0.6 + f32::from(f.min(4) as u16) * 0.1,
-        _ => 1.0,
+    let left = PAGE_MS_LEFT.load(Ordering::Relaxed);
+    if left >= MOTION_PAGE_MS {
+        return 0.6;
     }
+    let full = f32::from(u16::try_from(MOTION_PAGE_MS).unwrap_or(0));
+    let done = f32::from(u16::try_from(MOTION_PAGE_MS - left).unwrap_or(0)) / full;
+    0.6 + done * 0.4
 }
 
 // === 兼容包装函数（旧签名，内部调用 ti-render） ===
@@ -351,4 +367,39 @@ pub fn hint_row(host: &mut dyn SceneHost, text: &str, _x: i32, y: i32) {
     let theme = host.theme().clone();
     let cx = LOGICAL_W_I32 / 2;
     with_canvas(host, |c| ti_render::shell::hint_row(c, &theme, text, cx, y));
+}
+
+// === v3 场景叙事装饰层包装（UI 重设计 v3.1，docs/ui-redesign-v3/02 §8） ===
+//
+// 数据驱动（契约 4）：矩形全读 `scenes.json` 的 `extra` 键；键缺失 / 非正 = 不画
+// （不 panic、不占位色块，与 icon 列 / 实体 size 同判据）。
+
+/// v3 氛围星空层：读 `scenes.json` 该场景的 `ambient_art` 矩形，缺失/非正 = 不画。
+///
+/// z-order（调用序）：`scene_shell`（底/网格/框/标题条）之后、内容（菜单/血条）之前。
+pub fn star_sky(host: &mut dyn SceneHost, scene_id: &str) {
+    let layout = scene_layout(scene_id);
+    let Some(art) = layout.extra.get("ambient_art") else {
+        return;
+    };
+    if art.w <= 0 || art.h <= 0 {
+        return;
+    }
+    let theme = host.theme().clone();
+    with_canvas(host, |c| ti_render::shell::star_sky(c, &theme, art.x, art.y, art.w, art.h));
+}
+
+/// v3 仪式感标题艺术面板：读 `scenes.json` 该场景的 `title_art` 矩形，缺失/非正 = 不画。
+///
+/// 面板文字（如巨字标题）由调用方按版面叠画（原语零语义）；z-order 在星空层之后。
+pub fn title_art_block(host: &mut dyn SceneHost, scene_id: &str) {
+    let layout = scene_layout(scene_id);
+    let Some(art) = layout.extra.get("title_art") else {
+        return;
+    };
+    if art.w <= 0 || art.h <= 0 {
+        return;
+    }
+    let theme = host.theme().clone();
+    with_canvas(host, |c| ti_render::shell::title_art_block(c, &theme, art.x, art.y, art.w, art.h));
 }

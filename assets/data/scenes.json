@@ -6,7 +6,11 @@
     "list": { "x": 96, "y": 392, "w": 896, "row_h": 224, "item_h": 168, "text_x": 248, "highlight_offset": 40 },
     "icon": { "x": 144 },
     "status": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 360, "w": 1080, "h": 1310 }]
+    "portrait_zones": [{ "x": 0, "y": 360, "w": 1080, "h": 1310 }],
+
+    "title_art": { "x": 108, "y": 192, "w": 864, "h": 160 },
+    "ambient_art": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+    "focus_anchor": { "type": "title_art", "bbox": { "x": 108, "y": 192, "w": 864, "h": 672 } }
   },
 
   "select_role": {

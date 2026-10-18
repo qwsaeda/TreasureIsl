@@ -1,0 +1,52 @@
+S17.4 动效（4 类时间制接线 + 帧快照断言）+ 门禁数据/算法分离（gate_data.json）验收
+
+--- [1] 产物 ---
+① 4 类动效参数全部时间制（帧率无关；旧实现按帧计数，30fps 拖长一倍）：
+   chrome.rs 常量表（数值源 = 10_ui_redesign §7，doccheck2 断言对账）：
+   MOTION_TRANSITION_MS=240（场景切换交叉淡化，ease-in-out）
+   MOTION_PRESS_FLASH_MS=120（按压闪光，线性衰减）
+   MOTION_HP_LERP_MS=160（血条 lerp，线性）
+   MOTION_PAGE_MS=120（翻页亮度 0.6→1.0 线性）
+   - 场景切换：game_app.rs start_transition 快照旧帧，render 内按
+     frame_delta_ms/240ms 推进（advance_transition_t；TransitionState 删 step 帧步长字段，
+     改 ms 制；delta 下限 1ms 防 frame_delta_ms=0 卡死）。
+   - 按压闪光：chrome tick_press_flash(delta_ms) 倒计时 ms 制；flash_press 起始 120ms。
+   - 血条：update_displayed_hp 按 MOTION_HP_LERP_MS 线性趋近（approach_ms，frac=delta/160，
+     每步至少 1 防小差值卡死；替代旧「每帧 25%」帧计数）。
+   - 翻页亮度：PAGE_MS_LEFT ms 倒计时，page_brightness_factor = 0.6 + done*0.4。
+   - 时间源统一：SceneHost 新只读 frame_delta_ms()（默认 16ms 测试 mock），
+     GameApp 透传 shell 每帧 delta（native/wasm 壳层本就每帧 set_frame_delta_ms）。
+② 帧快照断言（判据「中间帧非全黑非全白」）：ti-render/tests/motion_snapshot.rs 3 测试：
+   crossfade_black_to_white / white_to_black（0/50/100% 三帧逐通道严格单调 + 中间帧非两端）
+   + asymmetric_endpoints（通道落于两端闭区间）。
+③ 门禁数据/算法分离（A 方案）：新 `assets/gate_data.json` 两张表：
+   ui_icons（expect_count=14 / alias_map monogram→ICON_MONOGRAM_RING /
+   binding_array_keys / binding_scalar_keys）+ ui_motion（doc_file / doc_section /
+   const_file / rows 4 条 动效名→常量名）；
+   doccheck2 引擎对应改薄：ui_icon_registry_check / ui_motion_params_check 全部数值
+   读 gate_data.json，引擎只留谓词（朴素串解析，未引新依赖）；
+   改数值只改数据文件，新增谓词类型才动引擎。
+④ 门禁项数漂移簇同步（v3 流加第 23 项 check_scene_narrative 后遗留）：
+   doccheck2 阈值 22→23 + gate.ps1 横幅 22→23 + AGENTS.md 路由「第 21 项」→「顶层固定第 23 项」。
+
+--- [2] 负例（坏值注入 → 必须 FAIL → 还原）---
+   a. 文档 §7 240ms→241ms：doccheck2 报 `MOTION_TRANSITION_MS = 240，但 … 场景切换交叉淡化 = 241ms`
+      （数据表驱动的真 FAIL，非假绿）→ 还原；
+   b. gate_data.json expect_count 14→13：doccheck2 报 `icons[] = 14 条，应 13 枚（…expect_count）`
+      + §7 行数 3≠4 级联报错 → 还原；
+   c. gate_data.json 缺失：`缺 assets/gate_data.json（S17.4 门禁数据文件）` 单条 ERROR 不静默 → 还原。
+
+--- [3] 判据实跑 ---
+$ cargo test -q -p ti-render --test motion_snapshot → 3 passed（0/50/100% 三帧单调）
+$ cargo test -q --workspace → 0 failed
+$ cargo clippy --workspace --all-targets -- -D warnings → 0（另 native-shell/headless/hd-8bit 组合 + wasm-shell 组合 0）
+$ cargo run -q -p ti-tools --bin doccheck2 . → 0 error(s) across 24 checks（ui-redesign-tokens 含
+  8pt + 色板三方 + 图标注册 + 动效参数 + gate_data 表）
+$ powershell -File scripts/gate.ps1 → === gate: TreasureIsl (23 items) === === gate: 0 failure(s) ===
+  （静帧三套基线 diff=0：动效只改时序不改静帧，visual-regression/render-snapshot/
+  forward-render-snapshot 全 PASS 证明）
+
+--- [4] 判定 ---
+  4 类动效时间制接线（240/120/160/120ms == §7 表，doccheck2 对账）+ 帧快照单调性 3 断言
+  + 门禁数值锚点数据化（gate_data.json，负例 a/b/c 全 FAIL 验证）+ gate 23 项全绿
+  → S17.4 verified。S17.6（v3 叙事 DSL + index 试点）另案见 S17.6.log。

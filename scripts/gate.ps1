@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（22 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（23 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (22 items) ==="
+Write-Host "=== gate: TreasureIsl (23 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -201,6 +201,13 @@ Report ($LASTEXITCODE -eq 0) 'forward-render-snapshot (S14 正向纯代码渲染
 $dsOut = & python scripts/check_data_source.py 2>&1
 $dsOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_data_source (数据源改动 → 渲染快照门禁)'
+
+# 21) UI 场景叙事约束（v3，docs/ui-redesign-v3/02_spec_lang.md）：
+#     assets/data/ui_schema/scene_manifest_v3.json 的 mood/重心/节奏/密度/HUD 上限断言
+#     （N1-N8；scenes.json focus_anchor 键未落地时 N8 SKIP，v3.1 起全量）。
+$snOut = & python scripts/check_scene_narrative.py 2>&1
+$snOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

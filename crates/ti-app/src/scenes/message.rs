@@ -120,6 +120,6 @@ impl Scene for MessageScene {
         if factor < 1.0 {
             host.shell_mut().apply_brightness(factor);
         }
-        chrome::tick_page_frame();
+        chrome::tick_page_frame(host.frame_delta_ms());
     }
 }

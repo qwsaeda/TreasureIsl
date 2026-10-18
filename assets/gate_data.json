@@ -1,0 +1,19 @@
+{
+  "ui_icons": {
+    "expect_count": 14,
+    "alias_map": { "monogram": "ICON_MONOGRAM_RING" },
+    "binding_array_keys": ["index_menu", "main_map_hud"],
+    "binding_scalar_keys": ["select_map_row", "select_role_row", "main_map_landmark", "vs_boss_cap"]
+  },
+  "ui_motion": {
+    "doc_file": "docs/process/10_ui_redesign.md",
+    "doc_section": "## 7. 动效参数表",
+    "const_file": "crates/ti-app/src/scenes/chrome.rs",
+    "rows": [
+      ["场景切换交叉淡化", "MOTION_TRANSITION_MS"],
+      ["按压闪光", "MOTION_PRESS_FLASH_MS"],
+      ["血条 lerp", "MOTION_HP_LERP_MS"],
+      ["翻页亮度", "MOTION_PAGE_MS"]
+    ]
+  }
+}

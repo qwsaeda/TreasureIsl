@@ -1,0 +1,36 @@
+S17.6 UI 重设计 v3·场景叙事 DSL + index 试点 验收
+
+--- [1] 产物（v3 流 WIP，本 loop 完成门禁同步后收口）---
+① 规格与数据：docs/ui-redesign-v3/{README,01_benchmarks,02_spec_lang,03_redesign_proposal,04_index_impl}
+   （02 = 叙事 DSL：mood/focus/rhythm/info_density/HUD 上限 N1-N8 可机器断言；
+   §10 = v3 键 8pt 豁免约定：v3 坐标改由 check_scene_narrative 接管）；
+   assets/data/ui_schema/scene_manifest_v3.json（7 场景 mood/重心/节奏/密度声明）；
+   scenes.json index 双写：title_art/ambient_art/focus_anchor 键（x=108 = (1080-864)/2 屏心推导值，
+   非 8pt 但属叙事 art 区，按 02 §10 豁免）。
+② 渲染原语（ti-render 纯框架层）：shell.rs star_sky（26 星常量星位表 STARS，无 RNG 确定性）
+   + title_art_block（仪式标题面板）；chrome.rs 数据驱动包装（读 scenes.json 键判在位，
+   缺键静默不画 = 不占坑）；index.rs z-order 接线（星空氛围层 → 仪式标题面板 → 列表）。
+③ 门禁：gate.ps1 第 23 项（顶层固定，文件内注释编号 21）check_scene_narrative
+   （scripts/check_scene_narrative.py，N1-N8：
+   Schema 校验 / mood 三元一致 / 重心占屏 ≤30% / 节奏权重和=1.0 + 重心 beat 首位 ≥0.30 /
+   beats 2-4 / HUD 上限 / 死区上限 / focus_anchor 对账——scenes.json 有键才激活，其余 6 场景
+   v3.1 落地前 SKIP N8）；8pt 白名单同步 v3 三键（doccheck2 ui_8pt_walk，防 v3 试点误伤 8pt 门禁）。
+
+--- [2] 本 loop 补的门禁同步（v3 WIP 遗留漂移）---
+   a. gate 项数簇 22→23：doccheck2 阈值 + gate.ps1 横幅 + AGENTS.md 路由（FIND-304-B 口径）；
+   b. doccheck2 8pt 豁免注释补反引号（doc_markdown）；
+   c. 三套基线 index/vs 重生（v3 视觉改动吸收；其余 6 场景 0 diff；
+      baseline-mirror-identity 锁 forward==render 逐字节）。
+
+--- [3] 判据实跑 ---
+$ python scripts/check_scene_narrative.py → 0 failure(s)；index N8 focus_anchor 已激活
+  （select_role/select_map/main_map/vs/message/saveload 6 场景 SKIP N8 = v3.1 计划内）
+$ cargo test -q --workspace → 0 failed
+$ cargo clippy --workspace --all-targets -- -D warnings → 0
+$ cargo run -q -p ti-tools --bin doccheck2 . → 0 error(s) across 24 checks
+$ powershell -File scripts/gate.ps1 → === gate: TreasureIsl (23 items) === 0 failure(s)
+  （visual-regression / render-snapshot / forward-render-snapshot 三套基线 0 diff）
+
+--- [4] 判定 ---
+  N1-N8 0 失败 + index 星空+仪式标题面板上屏 + 三套基线吸收 index diff + gate 23 项全绿
+  → S17.6 verified（index 视觉终态随 S17.5 用户验收一并过目）。

@@ -79,9 +79,17 @@ impl Scene for IndexScene {
     /// 菜单列表（QB126 icon 列 + 正文）+ QB150 用户版尾行。坐标全读 `scenes.json` 的
     /// `index` 段；旧开发自检状态行（字形/音效/MOD 计数）已替换为 i18n 尾行
     /// （`scene.index.footer`，开发诊断走 `stats` feature 的 eprintln，不进 UI）。
+    ///
+    /// v3 场景叙事层（UI 重设计 v3.1 试点，`docs/ui-redesign-v3/04_index_impl.md`）：
+    /// 星空氛围层（`ambient_art`）+ 仪式感标题面板（`title_art`，罗盘饰），z-order 在
+    /// 外壳之后、菜单之前；双写期（v3.1）v2 菜单几何不动，v3.2 起菜单瘦身后面板
+    /// 扩展为完整仪式感区。键缺失 = 该层不画（数据驱动，契约 4）。
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("index");
         chrome::scene_shell(host, "index", "scene.index.title");
+        // v3 叙事层：星空氛围 + 仪式面板（双写，v2 键不变）
+        chrome::star_sky(host, "index");
+        chrome::title_art_block(host, "index");
         let labels = crate::shell_ui::menu_labels();
         let sel = host.menu_selected();
         let held = host.press_held();

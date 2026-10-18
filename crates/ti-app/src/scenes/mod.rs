@@ -336,6 +336,12 @@ pub trait MenuHost {
     fn press_held(&self) -> bool {
         false
     }
+
+    /// 本帧经过毫秒（S17.4：动效时间制的唯一时间源——翻页亮度等按 ms 推进，
+    /// 帧率无关）。默认 16ms（≈60fps，测试 mock / headless 渲染用）。
+    fn frame_delta_ms(&self) -> u32 {
+        16
+    }
 }
 
 /// S9.2：角色/地图选择接口（`SelectRole`/`SelectMap` 场景共用）。
