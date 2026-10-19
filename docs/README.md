@@ -55,6 +55,7 @@
 | [process/09_render_framework.md](process/09_render_framework.md) | **`ti-render` crate 边界契约**（职责与禁止项/模块结构/Theme schema/迁移映射/数据分离原则；改 `crates/ti-render/` 代码前必读） |
 | [process/10_ui_redesign.md](process/10_ui_redesign.md) | **界面全量重设计·航海夜精修规格（S17 单一事实源）**：设计令牌 v2（色板 13 色/8pt 栅格/字号阶/动效 4 参数/图标 14 项）+ 7 场景版面增量 + 对比度 AA 表 + 验收锚点（改 UI 视觉量前必读） |
 | [ui-redesign-v3/README.md](ui-redesign-v3/README.md) | **UI 重设计 v3 · 真游戏化版面**（对标拆解 01 + 场景叙事 DSL 规格 02 + 7 场景重设计提案 03 + index 落地 04 + vs 落地 05 + main_map 全量落地 06；gate 第 21 项 `check_scene_narrative` 锚点；v2 的"7 场景同模板"前提由 v3 取代） |
+| [process/11_bevy_migration.md](process/11_bevy_migration.md) | **渲染引擎迁移裁决（S18 · Bevy 0.20）**：差距定稿 + 定案推翻签核（macroquad 定案 / 800KB 预算）+ 新 wasm 预算 + 架构形状（ti-engine 新 crate + Canvas 后端替换 + 双渲染期）+ WBS S18.0–S18.8 + 风险（改引擎层代码前必读） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 

@@ -1,0 +1,34 @@
+﻿=== S18.0 Bevy 渲染引擎迁移裁决 验收证据 ===
+时间: 2026-10-19 11:47
+签核: 用户 2026-10-19 会话路线选择题选「B：全量迁 Bevy」（question 工具留痕；推翻 macroquad 定案 + 800KB wasm 预算两条定案）。
+
+## 交付物
+- docs/process/11_bevy_migration.md（差距定稿 + pin Bevy 0.20（crates.io max_stable_version 实测）
+  + 新 wasm 预算（主体 ≤8MB / 首屏附属 ≤4MB / 首屏总 ≤12MB，S18.1 实测回填）
+  + 架构形状（ti-engine 新 crate + BevyCanvas 替换 Canvas 后端 + headless CPU 画布保逻辑门禁
+  + 双渲染期）+ WBS S18.1–S18.8 + 风险表）
+- 路由登记：AGENTS.md 路由表新行 + docs/README.md 全库清单一行
+
+## 判据实测
+--- doccheck ---
+
+  ERROR :35: references task `S18.8` which is not in plan/ledger.yaml
+--- gate ---
+=== gate: TreasureIsl (23 items) ===
+FAIL  doccheck (docs consistency)
+FAIL  [orphan] 孤儿 evidence `evidence/S18.0.log`：任务 `S18.0` 不在 plan/ledger.yaml（台账可能被文件级回退丢条目）
+FAIL  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.55s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.61s
+=== check_scene_narrative: 0 failure(s) ===
+=== gate: 2 failure(s) ===
+--- 复跑（S18 全量登记后） ---
+ledger: 143 tasks, 127 verified, 0 error(s)
+doccheck: 126 docs, 38 facts, 97 experiences, 138 task refs, 4 assertions, 0 error(s)
+=== gate: TreasureIsl (23 items) ===
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.09s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.97s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.86s
+=== check_scene_narrative: 0 failure(s) ===
+=== gate: 0 failure(s) ===
