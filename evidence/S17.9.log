@@ -1,0 +1,43 @@
+=== S17.9 场景切换过渡冻结修复 + ease-in-out 曲线 验收证据 ===
+时间: 2026-10-19
+现象（用户实机反馈）: cargo run -p ti-app --features native-shell --bin treasure-native 切界面不清屏，旧画面残影。
+
+## 根因（读码定位）
+S4.3 静态帧跳渲染（treasure_native.rs / treasure_wasm.rs 主循环：仅 输入沿/选中变/场景变 才 render()）
+与 S17.4 时间制交叉淡化（GameApp::render 内 advance_transition_t 推进 t）冲突：
+切场景那帧（输入沿）render() 跑一次，t: 0 → ~0.067（16ms/240ms），crossfade_from(旧帧, 0.067)
+后画面定格在 ~93% 旧场景；之后无输入 → render() 被 S4.3 跳过 → t 不再推进 → 旧画面残影卡死。
+同冲突冻结 S17.4 全部时间制动效（翻页亮度/HP 缓动/按下闪烁）于静止帧。
+（EXP-081 / 07_render_pipeline §7.2 本意「过渡期间每帧 render」，被 S4.3 跳帧破坏。）
+
+## 修复
+1. game_app.rs: pub fn transition_active(&self) -> bool（self.transition.is_some()）
+2. treasure_native.rs / treasure_wasm.rs 主循环 render 门控加 || shell.game.transition_active()
+   （过渡窗口 ~240ms 内强制逐帧渲染，S4.3 静止跳帧在稳态仍存活）
+3. game_app.rs: transition_ease(t) = smoothstep t²(3-2t)（10_ui_redesign §动效「240ms ease-in-out」
+   定稿落地；旧 S17.4 为线性）；render() 内 crossfade_from / apply_brightness 均喂缓动 t。
+   纯数学函数，Bevy 迁移（S18）直接沿用。
+
+## 判据 + 实测
+A. 新增集成测试 crates/ti-app/tests/transition_freeze_fix.rs（2/2 pass）:
+   - 稳态 transition_active()==false（不误触发逐帧渲染）
+   - 切场景后 transition_active()==true；16ms 帧步长 ≤20 帧内走完（240ms≈15 帧）
+   - 过渡终帧像素 == 纯新场景渲染（无旧画面残色）+ 新旧场景帧互异
+B. 新增单测 game_app.rs transition_tests::ease_endpoints_and_monotone（101 点单调 + 端点 + clamp）
+C. 全测试 + clippy -D + fmt + doccheck + check_scene_narrative + gate 23 项:
+   （下方实测）
+
+--- 实测输出: cargo test -p ti-app --test transition_freeze_fix ---
+running 2 tests
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.16s
+--- 实测输出: cargo test -p ti-app transition_tests (ease) ---
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 22 filtered out; finished in 0.00s
+--- 实测输出: gate.ps1 ---
+=== gate: TreasureIsl (23 items) ===
+FAIL  [orphan] 孤儿 evidence `evidence/S17.9.log`：任务 `S17.9` 不在 plan/ledger.yaml（台账可能被文件级回退丢条目）
+FAIL  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.91s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.23s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.15s
+=== check_scene_narrative: 0 failure(s) ===
+=== gate: 1 failure(s) ===

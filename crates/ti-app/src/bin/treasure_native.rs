@@ -357,7 +357,10 @@ async fn main() {
         // S5.1：场景切换 / 选中变化时整帧重渲染；否则 S4.3 静态帧优化跳帧
         let current_selected = shell.game.menu_selected();
         let scene_key = SceneKind::from_legacy(shell.game.scene()).discriminant();
+        // S17.9：场景切换过渡（240ms 交叉淡化）进行中强制逐帧 render——
+        // 时间制过渡推进只在 `render()` 内，静止帧跳渲染会把过渡冻结在首帧（切屏残影）。
         if changed
+            || shell.game.transition_active()
             || shell.game.shell().last_rendered != Some(current_selected)
             || shell.game.shell().last_rendered_scene != Some(scene_key)
         {

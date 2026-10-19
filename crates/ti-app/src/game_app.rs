@@ -377,6 +377,15 @@ fn advance_transition_t(t: f32, delta_ms: u32) -> f32 {
     t + step as f32
 }
 
+/// S17.9：交叉淡化缓动曲线（smoothstep ease-in-out，`10_ui_redesign` §动效「240ms
+/// ease-in-out」定稿落地；旧 S17.4 为线性，观感生硬）。进度 `t∈[0,1]` → 混合因子
+/// `t²(3−2t)`（端点不变：0→0、1→1，中段前慢后快再收尾；单调不递减，像素插值无回跳）。
+#[must_use]
+fn transition_ease(t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
 /// 场景切换过渡状态机（EXP-081 → S17.4：真交叉淡化，`MOTION_TRANSITION_MS` 时间制推进）。
 #[derive(Debug, Clone, Default)]
 pub struct TransitionState {
@@ -1254,13 +1263,13 @@ impl GameApp {
         }
         match trans.prev.take() {
             Some(prev) => {
-                // 真交叉淡化：旧画面 → 新画面逐帧插值（EXP-081）。
-                self.shell.crossfade_from(&prev, trans.t);
+                // 真交叉淡化：旧画面 → 新画面逐帧插值（EXP-081；S17.9：缓动 t，ease-in-out）。
+                self.shell.crossfade_from(&prev, transition_ease(trans.t));
                 trans.prev = Some(prev);
             }
             None => {
-                // 无旧画面快照（进入前未渲染过）：退回亮度调制。
-                self.shell.apply_brightness(trans.t);
+                // 无旧画面快照（进入前未渲染过）：退回亮度调制（S17.9 同套缓动）。
+                self.shell.apply_brightness(transition_ease(trans.t));
             }
         }
         trans.t = next_t;
@@ -1291,6 +1300,13 @@ impl GameApp {
         let target_b = b.boss_hp;
         self.displayed_player_hp = approach_ms(self.displayed_player_hp, target_p, frac);
         self.displayed_boss_hp = approach_ms(self.displayed_boss_hp, target_b, frac);
+    }
+
+    /// 场景切换过渡是否进行中（S17.9：主循环 render 门控用——过渡窗口内强制逐帧
+    /// `render()`，否则 S4.3 静止帧跳渲染会把交叉淡化冻结在首帧 ~7% 旧画面，切屏残影）。
+    #[must_use]
+    pub fn transition_active(&self) -> bool {
+        self.transition.is_some()
     }
 
     /// 启动场景切换过渡（EXP-081 真交叉淡化 → S17.4 时间制：`MOTION_TRANSITION_MS`=240ms）。
@@ -1817,3 +1833,27 @@ impl SessionHost for GameApp {
 }
 
 impl SceneHost for GameApp {}
+
+#[cfg(test)]
+mod transition_tests {
+    use super::transition_ease;
+
+    /// S17.9：缓动曲线端点保持（0→0、1→1）+ [0,1] 上单调不递减 + 值域不越界。
+    #[test]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+    fn ease_endpoints_and_monotone() {
+        assert!((transition_ease(0.0) - 0.0).abs() < f32::EPSILON, "t=0 必须 = 0（全旧画面）");
+        assert!((transition_ease(1.0) - 1.0).abs() < f32::EPSILON, "t=1 必须 = 1（全新画面）");
+        let mut prev = 0.0f32;
+        for i in 0..=100 {
+            let t = i as f32 / 100.0;
+            let e = transition_ease(t);
+            assert!((0.0..=1.0).contains(&e), "缓动值越界 t={t}");
+            assert!(e >= prev, "缓动非单调 t={t}");
+            prev = e;
+        }
+        // 越界输入被 clamp（不 panic、不越值域）。
+        assert!((transition_ease(-0.5) - 0.0).abs() < f32::EPSILON, "负输入 clamp 到 0");
+        assert!((transition_ease(1.5) - 1.0).abs() < f32::EPSILON, "超 1 输入 clamp 到 1");
+    }
+}
