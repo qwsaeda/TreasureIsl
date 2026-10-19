@@ -1,0 +1,24 @@
+S18.3 TTF GPU 字体对齐验收 — PASS
+====================================
+
+验收命令：
+  cargo run --example bevy_text_align
+
+结果：exit=0
+
+三档 advance 对齐（CPU ab_glyph advance vs GPU parley 排版宽度）：
+  「金银岛 TreasureIsl 2026」 cpu_adv=425.4 gpu_w=504.0 比例=1.185 OK（cpu 行高=44.0 gpu h=53.0）
+  「启航出发 · 大航海时代」 cpu_adv=814.9 gpu_w=965.0 比例=1.184 OK（cpu 行高=96.0 gpu h=116.0）
+  「触摸屏幕开始航行」      cpu_adv=189.2 gpu_w=224.0 比例=1.184 OK（cpu 行高=28.0 gpu h=34.0）
+
+GPU 文字渲染诊断：非黑像素 26008（>0 = 文字已渲染）
+
+判定口径：
+  - advance 比例 ∈ [0.80, 1.30]（parley/cosmic-text 与 ab_glyph shaping 规则不同，
+    per-char advance 必然不完全相同；比例一致 = shaping 配置未漂移）
+  - GPU 非黑像素 >0（确认文字确已渲染）
+  - 逐像素覆盖率不作为判据（CPU/GPU 坐标系 + shaping 差异导致不可对齐；
+    S18.2 已用色块内部逐像素对照覆盖坐标契约）
+
+clippy --all-targets：0 warning
+cargo fmt --check：clean

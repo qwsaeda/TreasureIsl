@@ -18,8 +18,9 @@
 //! - `pixel_at`：Bevy 后端无 CPU 帧缓冲，返回最近一次读回的像素（无读回 = 0）；
 //!   读回走 `Screenshot` 读回（`readback_screenshot`），像素对照测试见 `tests/`。
 
+use bevy::asset::{AssetServer, Handle};
 use bevy::prelude::*;
-use bevy::text::{FontSize, TextColor};
+use bevy::text::{Font, FontSize, TextColor};
 
 use ti_render::canvas::Canvas;
 use ti_render::font::TtfFont;
@@ -101,6 +102,10 @@ pub struct BevyCanvas {
     ttf_body: Option<TtfFont>,
     ttf_title: Option<TtfFont>,
     ttf_hint: Option<TtfFont>,
+    /// GPU 字体句柄（`AssetServer` 载入的 TTF，S18.3）。
+    ///
+    /// `None` = 用 Bevy 默认字体（无 CJK 字形 → 豆腐块，仅 spike/调试用）。
+    font: Option<Handle<Font>>,
     z: i32,
     last_readback: Option<Readback>,
 }
@@ -120,10 +125,31 @@ impl BevyCanvas {
             ttf_body: None,
             ttf_title: None,
             ttf_hint: None,
+            font: None,
             z: 0,
             last_readback: None,
             theme,
         }
+    }
+
+    /// 挂 GPU 字体（`AssetServer` 载入的 TTF 句柄；S18.3 CJK GPU 图集）。
+    pub fn set_font(&mut self, font: Handle<Font>) {
+        self.font = Some(font);
+    }
+
+    /// GPU 字体是否在位。
+    #[must_use]
+    pub fn has_font(&self) -> bool {
+        self.font.is_some()
+    }
+
+    /// 从 `AssetServer` 载入项目字体资产（`assets/fonts/lxgw-wenkai-reg.ttf`）。
+    ///
+    /// 平台路径差异：native = 文件系统绝对路径；wasm = 相对 `assets/` 的 URL。
+    /// 返回句柄由调用方在 App 生命周期内持有（`Handle` 引用计数）。
+    #[must_use]
+    pub fn load_project_font(server: &AssetServer, root: &str) -> Handle<Font> {
+        server.load(format!("{root}fonts/lxgw-wenkai-reg.ttf"))
     }
 
     /// 挂 TTF 三档（与 `MenuShell::set_ttf_fonts` 同参；在位 = 指标/字号切 TTF 口径）。
@@ -208,13 +234,15 @@ impl BevyCanvas {
                     let mut t = Transform::from_translation(Vec3::new(center.x, center.y, 0.0));
                     t.translation.z = f32::from(i16::try_from(self.z + 1).unwrap_or(i16::MAX));
                     #[allow(clippy::cast_precision_loss)]
+                    let font_size = FontSize::Px(self.tier_font_px(*tier) as f32);
+                    let mut text_font = bevy::text::TextFont { font_size, ..Default::default() };
+                    if let Some(handle) = &self.font {
+                        text_font.font = handle.clone().into();
+                    }
                     world.spawn((
                         Text2d::new(text.clone()),
                         TextColor(rgb565_to_color(*color)),
-                        bevy::text::TextFont {
-                            font_size: FontSize::Px(self.tier_font_px(*tier) as f32),
-                            ..Default::default()
-                        },
+                        text_font,
                         t,
                         CanvasEntity,
                     ));
@@ -235,7 +263,7 @@ impl BevyCanvas {
         world.register_component::<Transform>();
         world.register_component::<Text2d>();
         world.register_component::<TextColor>();
-        world.register_component::<TextFont>();
+        world.register_component::<bevy::text::TextFont>();
         world.register_component::<CanvasEntity>();
         if !world.contains_resource::<ClearColor>() {
             world.insert_resource(ClearColor::default());
