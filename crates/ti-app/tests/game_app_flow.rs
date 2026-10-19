@@ -334,10 +334,10 @@ fn touch_logical_roundtrip() {
 
 /// 规则 8 `iso_touch_matches_move`：主地图点按命中格 == 渲染格。
 ///
-/// S15.6 QA025 重锚（`08_render_arch.md` 契约 5 / EXP-067）：渲染侧 =
-/// `chrome::iso_cell`（scenes.json `main_map.grid.*`，无 legacy 32/16 投影、无
-/// (88,110) 摄像机——S15.4 已删层），触摸侧 = `grid_cell_at`（`iso_cell` 的逆）。
-/// 渲染格点像素喂给触摸逆变换，必须逆解回原格。
+/// S15.6 QA025 重锚（`08_render_arch.md` 契约 5 / EXP-067），S17.8 v3 再锚：渲染侧 =
+/// `chrome::iso_cell_fit`（v3 世界画布 `board_fit` G 依赖拟合，缺席回退 `main_map.grid.*`，
+/// 无 legacy 32/16 投影、无 (88,110) 摄像机——S15.4 已删层），触摸侧 = `grid_cell_at`
+/// （同 G `board_fit` 逆解，`iso_cell_fit` 的逆）。渲染格点像素喂给触摸逆变换，必须逆解回原格。
 #[test]
 #[allow(
     clippy::cast_precision_loss,
@@ -353,16 +353,16 @@ fn iso_touch_matches_move() {
         .cloned()
         .expect("scenes.json main_map");
     let (row, col) = (3u32, 2u32);
-    let (sx, sy) = chrome::iso_cell(row as i32, col as i32, &scene);
+    let (sx, sy) = chrome::iso_cell_fit(row as i32, col as i32, &scene, 20);
     let hit = layout::grid_cell_at(sx as f32, sy as f32, 20, 20);
     assert_eq!(hit, Some((row, col)), "渲染格点像素 ({sx},{sy}) 应逆解回原格，实际 {hit:?}");
 }
 
-/// EXP-067 跨层一致性（S15.6 QA025 重锚）：触摸命中格 == 渲染该格实际像素所在格。
+/// EXP-067 跨层一致性（S15.6 QA025 重锚，S17.8 v3 再锚）：触摸命中格 == 渲染该格实际像素所在格。
 ///
-/// 渲染侧 `chrome::iso_cell`（数据源 scenes.json `grid.*`）把格点画到 1080 呈现层；
-/// 触摸侧 `grid_cell_at`（`iso_cell` 严格逆，同数据源）对该像素逆解，
-/// 全格遍历必须命中同一格（`iso_cell(iso_grid_cell_at(p)) == p`，EXP-067 正逆成对）。
+/// 渲染侧 `chrome::iso_cell_fit`（v3 `board_fit` G 依赖拟合，缺席回退 scenes.json `grid.*`）把格点
+/// 画到 1080 呈现层；触摸侧 `grid_cell_at`（同 G `board_fit` 严格逆，同数据源）对该像素逆解，
+/// 全格遍历必须命中同一格（`iso_cell_fit(iso_grid_cell_at(p)) == p`，EXP-067 正逆成对）。
 #[test]
 #[allow(
     clippy::cast_precision_loss,
@@ -379,7 +379,7 @@ fn iso_touch_render_cross_layer() {
         .expect("scenes.json main_map");
     for r in 0..20u32 {
         for c in 0..20u32 {
-            let (sx, sy) = chrome::iso_cell(r as i32, c as i32, &scene);
+            let (sx, sy) = chrome::iso_cell_fit(r as i32, c as i32, &scene, 20);
             let hit = layout::grid_cell_at(sx as f32, sy as f32, 20, 20);
             assert_eq!(
                 hit,

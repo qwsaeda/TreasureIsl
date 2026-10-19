@@ -143,6 +143,52 @@ fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, 
     host.draw_hint_text(label, label_x, ly, chrome::COLOR_TEXT_ON_PARCH);
 }
 
+/// S17.8 v3 HUD：顶左 `hud_gold` 金币 + 顶右 `hud_player` 持有量（P-Hades-1 边角化）
+/// + 底部三键命令盘（P-UW4-3，`chrome::deck_button`）。各部分键缺失/非正 = 该部分不画。
+fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
+    let gold = host.gold();
+    let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
+    if let Some(rc) = layout.extra.get("hud_gold") {
+        if rc.w > 0 && rc.h > 0 {
+            chrome::panel(host, rc.x, rc.y, rc.w, rc.h);
+            chrome::draw_body_text(host, &gold_str, rc.x + 8, rc.y + rc.h / 2 - 22);
+        }
+    }
+    let owned = host.owned_total();
+    let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
+    if let Some(rc) = layout.extra.get("hud_player") {
+        if rc.w > 0 && rc.h > 0 {
+            chrome::panel(host, rc.x, rc.y, rc.w, rc.h);
+            chrome::draw_body_text(host, &own_str, rc.x + 8, rc.y + rc.h / 2 - 22);
+        }
+    }
+    for (key, icon_key, label_key) in [
+        ("deck_trade", "hud_trade", "scene.main_map.hud.trade"),
+        ("deck_sell", "hud_sell", "scene.main_map.hud.sell"),
+        ("deck_build", "hud_build", "scene.main_map.hud.build"),
+    ] {
+        chrome::deck_button(host, "main_map", key, icon_key, label_key);
+    }
+}
+
+/// S17.8 v2 HUD：羊皮纸 HUD 面板（金币/持有量两行 44px）+ 三经济按钮（QA149）。
+fn render_hud_v2(host: &mut dyn SceneHost, layout: &SceneLayout) {
+    chrome::panel(host, layout.hud.x, layout.hud.y, layout.hud.w, layout.hud.h);
+    let gold = host.gold();
+    let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
+    chrome::draw_body_text(host, &gold_str, layout.hud.x + 4, layout.hud.y + 2);
+    let owned = host.owned_total();
+    let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
+    chrome::draw_body_text(host, &own_str, layout.hud.x + 4, layout.hud.y + 56);
+    for (key, label_key) in [
+        ("hud_trade", "scene.main_map.hud.trade"),
+        ("hud_sell", "scene.main_map.hud.sell"),
+        ("hud_build", "scene.main_map.hud.build"),
+    ] {
+        render_hud_button(host, layout, key, label_key);
+    }
+}
+
 fn handle_build(host: &mut dyn SceneHost, kind: Building) {
     let b = match balance() {
         Ok(b) => b,
@@ -262,6 +308,17 @@ impl Scene for MainMapScene {
                             && (r.y..(r.y + r.h)).contains(&py)
                     })
                 };
+                // S17.8 v3：底部命令盘（deck_trade/sell/build）优先命中；未命中落回
+                // v2 HUD 按钮（双写兼容——`e2e_touch_economy_loop` 仍按 v2 坐标命中）。
+                if hud_hit("deck_trade") {
+                    return host.advance(GameInput::TradeBuy(1));
+                }
+                if hud_hit("deck_sell") {
+                    return host.advance(GameInput::TradeSell(1));
+                }
+                if hud_hit("deck_build") {
+                    return host.advance(GameInput::Build(Building::Castle));
+                }
                 if hud_hit("hud_trade") {
                     return host.advance(GameInput::TradeBuy(1));
                 }
@@ -301,22 +358,30 @@ impl Scene for MainMapScene {
         chrome::parchment_bg(host);
         chrome::nautical_grid(host);
         let gw = host.terrain_grid_w();
+        // S17.8 v3：G 依赖棋盘几何（world_canvas 拟合，缺席回退 v2 静态 grid.*）+ v3 模式判定。
+        let v3 = chrome::has_world_canvas(&layout);
+        let bg = chrome::board_fit(&layout, gw);
 
-        // 等距棋盘（代码画，1080 呈现层；tile 25×13 菱形（QB105），`terrain_grid_w`² 铺满）
+        // 等距棋盘（代码画，1080 呈现层；S17.8 v3：G 依赖拟合进 `world_canvas`（2:1 菱形、
+        // 8pt 对齐、画布中心对齐），缺席回退 v2 静态 `grid.*`（QB105）；`terrain_grid_w`² 铺满）
         let gw_i = i32::try_from(gw).unwrap_or(0);
-        let (tw, th) = chrome::iso_tile(&layout);
+        let (tw, th) = (bg.tw, bg.th);
         if gw_i > 0 && tw > 0 && th > 0 {
             for r in 0..gw_i {
                 for c in 0..gw_i {
-                    let (sx, sy) = chrome::iso_cell(r, c, &layout);
+                    let (sx, sy) = chrome::iso_cell_fit(r, c, &layout, gw);
                     host.fill_rect(sx, sy, tw * 2, th * 2, crate::menu_shell::COLOR_MENU_BG);
                     // 格间描边（浅一线，现代棋盘感）
                     host.fill_rect(sx, sy, tw * 2, 1, crate::menu_shell::COLOR_BEVEL_HI);
                 }
             }
         }
+        // v3 世界画布装饰框（垫底，瓦片叠其上）；缺席即不画。
+        if v3 {
+            chrome::world_canvas_frame(host, "main_map");
+        }
 
-        // HUD：木纹标题条 + 金色 Logo + 羊皮纸 HUD 面板（可读深墨字）
+        // HUD：木纹标题条 + 金色 Logo（v2）
         chrome::wood_frame(host);
         chrome::title_bar(host, layout.title.h);
         let title = i18n::sget("scene.main_map.title");
@@ -324,34 +389,18 @@ impl Scene for MainMapScene {
         let cx = chrome::centered_title_x(host, title);
         let title_color = host.theme().text_on_wood;
         chrome::draw_title_text(host, title, cx, layout.title.y, title_color);
-        chrome::panel(host, layout.hud.x, layout.hud.y, layout.hud.w, layout.hud.h);
-        let gold = host.gold();
-        let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
-        chrome::draw_body_text(host, &gold_str, layout.hud.x + 4, layout.hud.y + 2);
-        let owned = host.owned_total();
-        let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
-        chrome::draw_body_text(host, &own_str, layout.hud.x + 4, layout.hud.y + 56);
 
-        // S15.6 QA149：HUD 三经济按钮（scenes.json extra 矩形）——面板 + 28px 提示档标签
-        // （i18n `scene.main_map.hud.<trade|sell|build>`，按钮中心居中）；触摸判据见
-        // `e2e_touch_economy_loop`。
-        for (key, label_key) in [
-            ("hud_trade", "scene.main_map.hud.trade"),
-            ("hud_sell", "scene.main_map.hud.sell"),
-            ("hud_build", "scene.main_map.hud.build"),
-        ] {
-            render_hud_button(host, &layout, key, label_key);
+        // S17.8：v3 边角化 HUD + 底部命令盘 / v2 羊皮纸 HUD 条 + 三按钮（双写，键缺席即 v2）。
+        if v3 {
+            render_hud_v3(host, &layout);
+        } else {
+            render_hud_v2(host, &layout);
         }
 
-        // 玩家棋子 + 据点 + BOSS 格（§4.3 代码绘制等距坐标，`chrome::iso_cell`）。
-        // QB027/QA030：实体边长接 scenes.json `player.size`/`landmark.size`/`boss.size`
-        // （26/20/24，QA106 重锚；契约 4 数据驱动）；键缺失/非正 = 回退 §4.3 旧公式（tile 比例）。
-        let entity_size = |key: &str, fallback_w: i32, fallback_h: i32| -> (i32, i32) {
-            match layout.extra_scalar.get(key).copied() {
-                Some(s) if s > 0 => (s, s),
-                _ => (fallback_w, fallback_h),
-            }
-        };
+        // 玩家棋子 + 据点 + BOSS 格（§4.3 代码绘制等距坐标，S17.8 v3 `chrome::iso_cell_fit`
+        // G 依赖几何 / 缺席回退 v2 `iso_cell`；实体边长 `chrome::entity_size_fit`：
+        // v3 = `canvas_entities.<key>` 百分比 × 棋盘 tw，缺席回退 v2 `<key>.size`（QA106））。
+        let entity_size = |key: &str| -> i32 { chrome::entity_size_fit(&layout, key, gw) };
         // S15.6 QA142：主地图 z-order（渲染线契约）= parchment_bg → nautical_grid → 瓦片 →
         // chrome 填充（wood_frame/title_bar/HUD 面板/经济按钮面板）→ 实体填充 → **全部文本最上层**。
         // 旧实现把 HUD 文字/按钮标签/实体标签**交错**画在各自 fill 之后，实体方块会盖住
@@ -362,43 +411,44 @@ impl Scene for MainMapScene {
         if let Some(pos) = host.map_pos() {
             let pr = i32::try_from(pos.row).unwrap_or(0);
             let pc = i32::try_from(pos.col).unwrap_or(0);
-            let (sx, sy) = chrome::iso_cell(pr, pc, &layout);
-            let (tw, th) = chrome::iso_tile(&layout);
-            let (pw, ph) = entity_size("player.size", tw * 2 / 3, th * 2 / 3);
-            let (px, py) = (sx + (tw - pw) / 2, sy + (th - ph) / 2);
-            host.fill_rect(px, py, pw, ph, COLOR_PLAYER);
+            let (sx, sy) = chrome::iso_cell_fit(pr, pc, &layout, gw);
+            let (tw, th) = chrome::iso_tile_fit(&layout, gw);
+            let s = entity_size("player");
+            // 实体在瓦片绘制盒（2tw × 2th）内居中
+            let (px, py) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
+            host.fill_rect(px, py, s, s, COLOR_PLAYER);
             // QA142：实体 1px bevel 描边（凸出感，不越实体盒）
-            host.fill_rect(px, py, pw, 1, chrome::COLOR_BEVEL_HI);
-            host.fill_rect(px, py + ph - 1, pw, 1, chrome::COLOR_BEVEL_SHADOW);
+            host.fill_rect(px, py, s, 1, chrome::COLOR_BEVEL_HI);
+            host.fill_rect(px, py + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
             let lbl = i18n::sget("scene.main_map.player_label");
-            entity_texts.push((px + pw, py, lbl));
+            entity_texts.push((px + s, py, lbl));
         }
         for (r, c) in host.map_landmarks() {
             let rr = i32::try_from(r).unwrap_or(0);
             let cc = i32::try_from(c).unwrap_or(0);
-            let (sx, sy) = chrome::iso_cell(rr, cc, &layout);
-            let (tw, th) = chrome::iso_tile(&layout);
-            let (lw, lh) = entity_size("landmark.size", tw / 2, th / 2);
-            let (lx, ly) = (sx + (tw - lw) / 2, sy + (th - lh) / 2);
-            host.fill_rect(lx, ly, lw, lh, COLOR_LANDMARK);
-            host.fill_rect(lx, ly, lw, 1, chrome::COLOR_BEVEL_HI);
-            host.fill_rect(lx, ly + lh - 1, lw, 1, chrome::COLOR_BEVEL_SHADOW);
+            let (sx, sy) = chrome::iso_cell_fit(rr, cc, &layout, gw);
+            let (tw, th) = chrome::iso_tile_fit(&layout, gw);
+            let s = entity_size("landmark");
+            let (lx, ly) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
+            host.fill_rect(lx, ly, s, s, COLOR_LANDMARK);
+            host.fill_rect(lx, ly, s, 1, chrome::COLOR_BEVEL_HI);
+            host.fill_rect(lx, ly + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
             let lbl = i18n::sget("scene.main_map.landmark_label");
-            entity_texts.push((lx + lw, ly, lbl));
+            entity_texts.push((lx + s, ly, lbl));
         }
         // P0-2（M1）：BOSS 格血红标记（方块，`COLOR_DANGER`，与玩家棋子同坐标系）
         if let Some(bt) = host.map_boss_tile() {
             let br = i32::try_from(bt.row).unwrap_or(0);
             let bc = i32::try_from(bt.col).unwrap_or(0);
-            let (sx, sy) = chrome::iso_cell(br, bc, &layout);
-            let (tw, th) = chrome::iso_tile(&layout);
-            let (bw, bh) = entity_size("boss.size", tw * 3 / 4, th * 3 / 4);
-            let (bx, by) = (sx + (tw - bw) / 2, sy + (th - bh) / 2);
-            host.fill_rect(bx, by, bw, bh, crate::menu_shell::COLOR_DANGER);
-            host.fill_rect(bx, by, bw, 1, chrome::COLOR_BEVEL_HI);
-            host.fill_rect(bx, by + bh - 1, bw, 1, chrome::COLOR_BEVEL_SHADOW);
+            let (sx, sy) = chrome::iso_cell_fit(br, bc, &layout, gw);
+            let (tw, th) = chrome::iso_tile_fit(&layout, gw);
+            let s = entity_size("boss");
+            let (bx, by) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
+            host.fill_rect(bx, by, s, s, crate::menu_shell::COLOR_DANGER);
+            host.fill_rect(bx, by, s, 1, chrome::COLOR_BEVEL_HI);
+            host.fill_rect(bx, by + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
             let lbl = i18n::sget("scene.main_map.boss_label");
-            entity_texts.push((bx + bw, by, lbl));
+            entity_texts.push((bx + s, by, lbl));
         }
 
         // 第二遍：实体标签（28px 提示档，QA142 全部文本最上层）

@@ -41,7 +41,15 @@
     "landmark": { "size": 20 },
     "boss": { "size": 24 },
     "hint": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 150, "w": 1080, "h": 1680 }]
+    "portrait_zones": [{ "x": 0, "y": 150, "w": 1080, "h": 1680 }],
+    "world_canvas": { "x": 43, "y": 192, "w": 1004, "h": 1478 },
+    "hud_gold": { "x": 80, "y": 80, "w": 320, "h": 96 },
+    "hud_player": { "x": 680, "y": 80, "w": 320, "h": 96 },
+    "deck_trade": { "x": 240, "y": 1760, "w": 200, "h": 80 },
+    "deck_sell": { "x": 460, "y": 1760, "w": 200, "h": 80 },
+    "deck_build": { "x": 680, "y": 1760, "w": 200, "h": 80 },
+    "canvas_entities": { "player": 100, "landmark": 80, "boss": 96 },
+    "focus_anchor": { "type": "world_canvas", "bbox": { "x": 43, "y": 192, "w": 1004, "h": 1478 } }
   },
 
   "vs": {

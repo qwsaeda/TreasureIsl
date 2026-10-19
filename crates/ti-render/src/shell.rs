@@ -308,6 +308,41 @@ pub fn battle_arena(host: &mut dyn Canvas, theme: &Theme, x: i32, y: i32, w: i32
     host.fill_rect(cx - 3, cy - 3, 6, 6, theme.gold);
 }
 
+/// v3 世界画布装饰框（`main_map`）：`wood` `2px` 外框 + `gold_bright` `1px` 内金线
+/// （内缩 `6px`）+ 四角 `gold` `12×12` 罗盘方位块。纯静态 0 动效（快照确定性）。
+/// 宽度/高度非正数 → 不绘制（数据键缺失即无装饰，不 panic）。
+pub fn world_canvas_frame(host: &mut dyn Canvas, theme: &Theme, x: i32, y: i32, w: i32, h: i32) {
+    if w <= 0 || h <= 0 {
+        return;
+    }
+    // 外框发丝（2px）。
+    host.fill_rect(x, y, w, 2, theme.wood);
+    host.fill_rect(x, y + h - 2, w, 2, theme.wood);
+    host.fill_rect(x, y, 2, h, theme.wood);
+    host.fill_rect(x + w - 2, y, 2, h, theme.wood);
+    // 内金线（内缩 6px）。
+    if w > 16 && h > 16 {
+        let ix = x + 6;
+        let iy = y + 6;
+        let iw = w - 12;
+        let ih = h - 12;
+        host.fill_rect(ix, iy, iw, 1, theme.gold_bright);
+        host.fill_rect(ix, iy + ih - 1, iw, 1, theme.gold_bright);
+        host.fill_rect(ix, iy, 1, ih, theme.gold_bright);
+        host.fill_rect(ix + iw - 1, iy, 1, ih, theme.gold_bright);
+    }
+    // 四角罗盘方位块（12×12 `gold`，压内金线交点）。
+    let corner = 12i32;
+    let ix = x + 6;
+    let iy = y + 6;
+    let ox = x + w - 6;
+    let oy = y + h - 6;
+    host.fill_rect(ix - corner / 2, iy - corner / 2, corner, corner, theme.gold);
+    host.fill_rect(ox - corner / 2, iy - corner / 2, corner, corner, theme.gold);
+    host.fill_rect(ix - corner / 2, oy - corner / 2, corner, corner, theme.gold);
+    host.fill_rect(ox - corner / 2, oy - corner / 2, corner, corner, theme.gold);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

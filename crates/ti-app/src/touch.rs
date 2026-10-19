@@ -273,11 +273,13 @@ pub mod layout {
         if grid_w == 0 || grid_h == 0 {
             return None;
         }
-        let s = &layout.extra_scalar;
-        let x0 = s.get("grid.x0").copied().unwrap_or(0) as f32;
-        let y0 = s.get("grid.y0").copied().unwrap_or(0) as f32;
-        let tw = s.get("grid.tile_w").copied().unwrap_or(0) as f32;
-        let th = s.get("grid.tile_h").copied().unwrap_or(0) as f32;
+        // S17.8：几何读 `chrome::board_fit(layout, grid_w)`（v3 世界画布 G 依赖拟合，
+        // 缺席回退 v2 静态 `grid.*`）——与渲染 `iso_cell_fit` 同一数据源，正逆成对不变。
+        let bg = crate::scenes::chrome::board_fit(layout, grid_w);
+        let x0 = bg.x0 as f32;
+        let y0 = bg.y0 as f32;
+        let tw = bg.tw as f32;
+        let th = bg.th as f32;
         if tw <= 0.0 || th <= 0.0 {
             return None;
         }
@@ -427,37 +429,39 @@ mod tests {
     #[test]
     #[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
     fn grid_cell_inverts_iso_cell() {
-        // EXP-067 正逆成对（S15.6 QA022/023 重锚）：渲染 `chrome::iso_cell` 的每个格点
-        // （scenes.json `main_map.grid.*` 数据源，无 legacy camera）喂回 `grid_cell_at`，
-        // 必须逆解回原格。
+        // EXP-067 正逆成对（S17.8 v3 重锚）：渲染 `chrome::iso_cell_fit`（v3 世界画布
+        // G 依赖拟合 `board_fit`，缺席回退 v2 静态 `grid.*`）的每个格点喂回 `grid_cell_at`
+        // （同 G 的 `board_fit` 逆解），必须逆解回原格。
         use crate::scenes::chrome;
         let layout =
             data::scenes().ok().and_then(|s| s.get("main_map")).cloned().unwrap_or_default();
-        let (tw, th) = chrome::iso_tile(&layout);
-        assert!(tw > 0 && th > 0, "main_map grid.tile_w/h 应为正（触摸逆变换可用）");
-        for r in 0..20u32 {
-            for c in 0..20u32 {
-                let (sx, sy) = chrome::iso_cell(r as i32, c as i32, &layout);
-                let hit = super::layout::grid_cell_at(sx as f32, sy as f32, 20, 20);
+        let grid = 20u32;
+        let (tw, th) = chrome::iso_tile_fit(&layout, grid);
+        assert!(tw > 0 && th > 0, "main_map 棋盘 tile_w/h 应为正（触摸逆变换可用）");
+        for r in 0..grid {
+            for c in 0..grid {
+                let (sx, sy) = chrome::iso_cell_fit(r as i32, c as i32, &layout, grid);
+                let hit = super::layout::grid_cell_at(sx as f32, sy as f32, grid, grid);
                 assert_eq!(hit, Some((r, c)), "格 ({r},{c}) round-trip 应逆解回原格，实际 {hit:?}");
             }
         }
-        // 棋盘外的黑屏点按 → None（不触发行走，S15.6 QA022 边界语义）
-        assert_eq!(super::layout::grid_cell_at(50.0, 1500.0, 20, 20), None, "棋盘外点按应无命中");
-        assert_eq!(super::layout::grid_cell_at(1050.0, 500.0, 20, 20), None, "屏右外点按应无命中");
-        // 越界格 → None
+        // 棋盘外的黑屏点按 → None（不触发行走，S15.6 QA022 边界语义）：画布中心上方一点。
+        let bg = chrome::board_fit(&layout, grid);
+        let center_x = (bg.x0 + bg.tw) as f32;
+        let above_y = (bg.y0 - 50) as f32;
         assert_eq!(
-            super::layout::grid_cell_at(540.0, 520.0, 15, 15),
-            Some((0, 0)),
-            "格点 (0,0) 在 15×15 内应命中（QB105 重锚：iso_cell(0,0) = (x0, y0) = (540, 520)）"
+            super::layout::grid_cell_at(center_x, above_y, grid, grid),
+            None,
+            "棋盘外点按应无命中"
         );
-        let out = super::layout::grid_cell_at(
-            chrome::iso_cell(19, 19, &layout).0 as f32,
-            chrome::iso_cell(19, 19, &layout).1 as f32,
-            15,
-            15,
+        // 越界格索引（同 G=15，格 (19,19) 超出 15×15）→ 逆解无命中。
+        let small = 15u32;
+        let oob = chrome::iso_cell_fit(19, 19, &layout, small);
+        assert_eq!(
+            super::layout::grid_cell_at(oob.0 as f32, oob.1 as f32, small, small),
+            None,
+            "超出 15×15 的格点应无命中"
         );
-        assert_eq!(out, None, "超出 15×15 的格点应无命中");
     }
 
     #[test]

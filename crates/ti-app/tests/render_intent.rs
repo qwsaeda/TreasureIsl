@@ -737,9 +737,10 @@ fn text_regions_not_flooded_by_chrome() {
     }
 }
 
-/// S15.5 重锚（§6）：`large_portraits` 原「.Map 大精灵 clip 矩形 ∈ portrait_zones」改为
-/// 「**代码绘制动态实体**（玩家棋子/据点/BOSS 格）中心 ∈ `scenes.json` `portrait_zones` 声明区」。
-/// main_map 的等距坐标经 `chrome::iso_cell`（数据驱动 `grid.*`）落 1080 呈现层，纯几何判定。
+/// S15.5 重锚（§6），S17.8 v3 再锚：`large_portraits` 原「.Map 大精灵 clip 矩形 ∈
+/// portrait_zones」改为「**代码绘制动态实体**（玩家棋子/据点/BOSS 格）中心 ∈ `scenes.json`
+/// `portrait_zones` 声明区」。main_map 的等距坐标经 `chrome::iso_cell_fit`（v3 `board_fit`
+/// G 依赖拟合，缺席回退 `grid.*`）落 1080 呈现层，纯几何判定。
 #[test]
 fn dynamic_entities_land_in_declared_portrait_zones() {
     let scs = ti_core::data::scenes().expect("scenes.json");
@@ -750,42 +751,46 @@ fn dynamic_entities_land_in_declared_portrait_zones() {
 
     let mut app = ti_app::game_app::GameApp::new(1080.0, 1920.0);
     let _ = ti_app::forward_nav::navigate(&mut app, "main_map");
+    let g = app.map_grid_width();
 
-    // 等距 tile 半宽/半高（`chrome::iso_tile` 读 scenes.json `grid.tile_w/h`）。
-    let (tw, th) = ti_app::scenes::chrome::iso_tile(&layout);
-    assert!(tw > 0 && th > 0, "main_map grid.tile_w/h 应为正（等距投影可用）");
+    // 等距 tile 半宽/半高（S17.8 v3：`chrome::iso_tile_fit` 读 `board_fit` G 依赖几何，缺席回退 `grid.tile_w/h`）。
+    let (tw, th) = ti_app::scenes::chrome::iso_tile_fit(&layout, g);
+    assert!(tw > 0 && th > 0, "main_map 棋盘 tile_w/h 应为正（等距投影可用）");
 
     fn in_zones(cx: i32, cy: i32, zones: &[(i32, i32, i32, i32)]) -> bool {
         zones.iter().any(|&(zx, zy, zw, zh)| zx <= cx && cx <= zx + zw && zy <= cy && cy <= zy + zh)
     }
 
     let mut checked = 0usize;
-    // 玩家棋子：iso_cell 中心 = (sx + tw, sy + th)（菱形中心）。
+    // 玩家棋子：iso_cell_fit 中心 = (sx + tw, sy + th)（菱形中心）。
     if let Some(pos) = app.map_pos() {
-        let (sx, sy) = ti_app::scenes::chrome::iso_cell(
+        let (sx, sy) = ti_app::scenes::chrome::iso_cell_fit(
             i32::try_from(pos.row).unwrap_or(0),
             i32::try_from(pos.col).unwrap_or(0),
             &layout,
+            g,
         );
         let (cx, cy) = (sx + tw, sy + th);
         assert!(in_zones(cx, cy, &zones), "玩家棋子中心 ({cx},{cy}) 越出 main_map portrait_zones");
         checked += 1;
     }
     for (r, c) in app.map_landmarks.clone() {
-        let (sx, sy) = ti_app::scenes::chrome::iso_cell(
+        let (sx, sy) = ti_app::scenes::chrome::iso_cell_fit(
             i32::try_from(r).unwrap_or(0),
             i32::try_from(c).unwrap_or(0),
             &layout,
+            g,
         );
         let (cx, cy) = (sx + tw, sy + th);
         assert!(in_zones(cx, cy, &zones), "据点 ({r},{c}) 中心 ({cx},{cy}) 越出 portrait_zones");
         checked += 1;
     }
     if let Some(bt) = app.map_boss_tile() {
-        let (sx, sy) = ti_app::scenes::chrome::iso_cell(
+        let (sx, sy) = ti_app::scenes::chrome::iso_cell_fit(
             i32::try_from(bt.row).unwrap_or(0),
             i32::try_from(bt.col).unwrap_or(0),
             &layout,
+            g,
         );
         let (cx, cy) = (sx + tw, sy + th);
         assert!(in_zones(cx, cy, &zones), "BOSS 格中心 ({cx},{cy}) 越出 portrait_zones");

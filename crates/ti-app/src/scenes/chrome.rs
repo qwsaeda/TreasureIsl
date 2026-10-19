@@ -132,6 +132,134 @@ pub fn iso_tile(layout: &data::SceneLayout) -> (i32, i32) {
     (s.get("grid.tile_w").copied().unwrap_or(0), s.get("grid.tile_h").copied().unwrap_or(0))
 }
 
+// ── v3 场景叙事 · 世界画布棋盘几何（main_map S17.8；G 依赖运行时拟合） ──────
+
+/// v3 世界画布棋盘几何：`world_canvas` 键在位 → 把 `g×g` 等距棋盘（2:1 菱形）
+/// **拟合进画布**（宽 `2*g*tw ≤ 画布宽`、`tw` 8pt 向下取整、画布中心对齐）；
+/// 缺失/非正 → 回退 v2 静态 `grid.*`（双写：v3 键缺席即 v2 版面不变）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BoardGeom {
+    /// 棋盘菱形左上参考（`iso_cell_fit(0,0)` 原点）。
+    pub x0: i32,
+    /// 棋盘顶行 y。
+    pub y0: i32,
+    /// tile 半宽（v3 拟合 / v2 静态）。
+    pub tw: i32,
+    /// tile 半高（v3 = tw/2 / v2 静态）。
+    pub th: i32,
+}
+
+/// 场景是否启用 v3 世界画布（`world_canvas` 键 + 正尺寸）。
+#[must_use]
+pub fn has_world_canvas(layout: &data::SceneLayout) -> bool {
+    layout.extra.get("world_canvas").is_some_and(|r| r.w > 0 && r.h > 0)
+}
+
+/// 棋盘几何（v3 拟合 / v2 回退，见 [`BoardGeom`] 文档）。
+///
+/// v3：`tw = (画布宽 / (2*g)) / 8 * 8`（≥8，否则回退 v2），`th = tw/2`，
+/// 画布中心 `cx/cy` → `x0 = cx - tw`、`y0 = cy - g*th`（菱形中心对齐画布中心）。
+#[must_use]
+pub fn board_fit(layout: &data::SceneLayout, g: u32) -> BoardGeom {
+    let gi = i32::try_from(g).unwrap_or(0);
+    if let Some(c) = layout.extra.get("world_canvas") {
+        if c.w > 0 && c.h > 0 && gi > 0 {
+            let tw = c.w / (2 * gi);
+            let tw = (tw / 8) * 8;
+            if tw >= 8 {
+                let th = tw / 2;
+                let cx = c.x + c.w / 2;
+                let cy = c.y + c.h / 2;
+                return BoardGeom { x0: cx - tw, y0: cy - gi * th, tw, th };
+            }
+        }
+    }
+    let s = &layout.extra_scalar;
+    BoardGeom {
+        x0: s.get("grid.x0").copied().unwrap_or(0),
+        y0: s.get("grid.y0").copied().unwrap_or(0),
+        tw: s.get("grid.tile_w").copied().unwrap_or(0),
+        th: s.get("grid.tile_h").copied().unwrap_or(0),
+    }
+}
+
+/// v3 等距投影（G 依赖 `board_fit`）：`(row, col)` → 呈现层坐标。
+#[must_use]
+pub fn iso_cell_fit(row: i32, col: i32, layout: &data::SceneLayout, g: u32) -> (i32, i32) {
+    let bg = board_fit(layout, g);
+    (bg.x0 + (col - row) * bg.tw, bg.y0 + (row + col) * bg.th)
+}
+
+/// v3 tile 半宽/半高（G 依赖 `board_fit`）。
+#[must_use]
+pub fn iso_tile_fit(layout: &data::SceneLayout, g: u32) -> (i32, i32) {
+    let bg = board_fit(layout, g);
+    (bg.tw, bg.th)
+}
+
+/// v3 实体边长：`canvas_entities.<key>`（`board_fit.tw` 的百分之几）× tw；
+/// 缺失/非正 → 回退 v2 `<key>.size`（QA106 语义，`tw/th` 与实体同数据源不越界）。
+#[must_use]
+pub fn entity_size_fit(layout: &data::SceneLayout, key: &str, g: u32) -> i32 {
+    let s = &layout.extra_scalar;
+    let ratio = s.get(&format!("canvas_entities.{key}")).copied().unwrap_or(0);
+    if ratio > 0 {
+        let bg = board_fit(layout, g);
+        return (bg.tw * ratio / 100).max(4);
+    }
+    s.get(&format!("{key}.size")).copied().unwrap_or(0)
+}
+
+/// v3 世界画布装饰框（`main_map`）：读 `world_canvas` 矩形，缺失/非正 = 不画。
+///
+/// 调用序（z-order）：`nautical_grid` 之后、等距瓦片之前（垫底框 + 四角罗盘方位块）。
+pub fn world_canvas_frame(host: &mut dyn SceneHost, scene_id: &str) {
+    let layout = scene_layout(scene_id);
+    let Some(rc) = layout.extra.get("world_canvas") else {
+        return;
+    };
+    if rc.w <= 0 || rc.h <= 0 {
+        return;
+    }
+    let theme = host.theme().clone();
+    with_canvas(host, |c| ti_render::shell::world_canvas_frame(c, &theme, rc.x, rc.y, rc.w, rc.h));
+}
+
+/// v3 底部命令盘按钮（`main_map`）：读 `<key>` 矩形（`deck_trade`/`deck_sell`/`deck_build`），
+/// 面板 + 图标（经 `icon_key` 查 `ui_icons` 注册表，如 `hud_trade`）+ `28px` 标签；缺失/非正 = 不画。
+///
+/// 图标宽度不足时自动退回纯文字居中（与 `render_hud_button` 同判据）。
+pub fn deck_button(
+    host: &mut dyn SceneHost,
+    scene_id: &str,
+    key: &str,
+    icon_key: &str,
+    label_key: &str,
+) {
+    let layout = scene_layout(scene_id);
+    let Some(r) = layout.extra.get(key) else {
+        return;
+    };
+    if r.w <= 0 || r.h <= 0 {
+        return;
+    }
+    panel(host, r.x, r.y, r.w, r.h);
+    let label = crate::i18n::sget(label_key);
+    let icon = hud_icon_def(icon_key);
+    let (label_x, icon_x) = match icon.as_ref() {
+        Some(def) if r.w >= def.size + 8 => {
+            let ix = r.x + 8;
+            (ix + def.size + 8, Some((def.id, def.size, ix)))
+        }
+        _ => (r.x + (r.w - host.shell().hint_text_width_px(label)) / 2, None),
+    };
+    if let Some((id, size, ix)) = icon_x {
+        ui_icon(host, id, ix, r.y + (r.h - size) / 2, false);
+    }
+    let ly = r.y + (r.h - host.shell().hint_glyph_px()) / 2;
+    host.draw_hint_text(label, label_x, ly, COLOR_TEXT_ON_PARCH);
+}
+
 /// **场景外壳**：深色底 + 航海网格装饰 + 卡片边框 + 标题条 + 标题文字。
 pub fn scene_shell(host: &mut dyn SceneHost, scene_id: &str, title_key: &str) {
     let layout = scene_layout(scene_id);

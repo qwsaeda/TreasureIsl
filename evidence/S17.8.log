@@ -1,0 +1,113 @@
+=== S17.8 main_map 全量 v3（棋盘 G 依赖拟合放大 + HUD 边角化 + 底部命令盘）验收证据 ===
+时间: 2026-10-19
+范围: docs/ui-redesign-v3 波次 4（main_map 主地图）；用户指令「连棋盘放大一起做」。
+
+## 设计裁决记录（关键）
+- 提案 §3.4 固定 `tile 56×28` 在 20×20 真网格上放不下（水平跨度 2·G·tw ≤ 画布宽 1004 →
+  tw ≤ 25.1，8pt 对齐 = 24，与 v2 现状 25 相当）→ 改用 **G 依赖运行时拟合** `chrome::board_fit`
+  （world_canvas 画布 + 实际网格数 G：15 格→tw=32 放大 1.28×，20 格→tw=24 保持；2:1 菱形、
+  8pt 对齐、画布中心对齐）。这是唯一能同时对 15/20 两种真网格「放大」且溢出不屏外的数据驱动解。
+- 双写纪律：v2 键（grid.*/player.size/…、hud/hud_trade/sell/build）坐标一律不动；v3 键（world_canvas/
+  hud_gold/hud_player/deck_trade/sell/build/canvas_entities/focus_anchor）顶层平铺叠加。v3 键缺席 =
+  board_fit 回退 v2 静态 grid.*，版面不变。
+- HUD 边角化右角显示「持有量」（现有 `owned_fmt` i18n 键），不造新 i18n 键（提案「玩家位」需
+  新格式键，本轮不做，v3.5 随 i18n 波次）。
+- 触摸正逆成对（EXP-067）：`chrome::iso_cell_fit`（正向）与 `touch::iso_grid_cell_at`（逆解）
+  同读 `board_fit(layout, G)`；命令盘触点 `deck_*` 优先 + v2 `hud_*` 回退（e2e 经济循环仍命中 v2）。
+- `GameApp::map_grid_width` 新 pub 访问器（暴露 `terrain_grid_w` 供集成测试取真实 G）。
+
+## 判据 1：check_scene_narrative N1-N8 0 失败（N8 main_map focus_anchor 对账激活）
+（见下方实测 A）
+
+## 判据 2：ti-app 全测试 0 failed（含重锚后网格 round-trip + portrait_zones + 经济循环）
+（见下方实测 B）
+
+## 判据 3：像素抽检 render_baseline/main.png（v3 版面在位）
+- 棋盘从 v2 `y0=520` 起点移到画布中心（G=20 拟合 y0≈691，菱形 65..1025 × 691..1171）：
+  `board_center(545,931)` 有瓦片/描边像素，`old_v2_board_y520(545,520)` = 底色（棋盘已不在旧位）。
+- HUD 边角化：`hud_gold(120,128)` / `hud_player(800,128)` = 面板色（顶左/顶右）。
+- 底部命令盘：`deck_trade(340,1800)` = 面板色（y=1760..1840 三键在位）。
+- 画布装饰框 `world_canvas_frame` 外框在 y=192 顶边。
+（见下方实测 C）
+
+## 判据 4：clippy -D warnings 0 + fmt 0 + doccheck/doccheck2 0 error + gate 23 项全绿
+（见下方实测 D）
+
+## 判据 5：三套基线 main_map 重生成（render/forward/hd）
+`assets/render_baseline/main.png`、`forward_baseline/main_map.png`、`hd_baseline/MainMap.png` 已删旧重生，
+其余场景 0 diff（main_map 版面唯一变化方）。
+
+--- 实测输出 A：check_scene_narrative ---
+select_role: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+select_map: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+message: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+saveload: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+=== check_scene_narrative: 0 failure(s) ===
+--- 实测输出 B：cargo test -p ti-app（全绿） ---
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.83s
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.28s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.05s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.49s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.79s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.89s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.10s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+(无 FAILED 行 = 全绿)
+--- 实测输出 C：像素抽检 render_baseline/main.png ---
+board_center (33, 44, 140, 255)
+board_tile (24, 32, 99, 255)
+old_v2_y520 (8, 12, 41, 255)
+hud_gold (24, 32, 99, 255)
+hud_player (24, 32, 99, 255)
+deck_trade (24, 32, 99, 255)
+canvas_frame (57, 65, 189, 255)
+--- 实测输出 D：gate.ps1 全门禁 ---
+=== gate: TreasureIsl (23 items) ===
+PASS  cargo fmt --check
+PASS  cargo clippy -D warnings
+PASS  cargo test --workspace
+PASS  cargo build (x86_64-pc-windows-msvc)
+PASS  cargo build+clippy (wasm32-unknown-unknown; wasm-shell 门控 bin)
+SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)
+PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+PASS  no unwrap()/expect() outside tests/+examples/ (库代码)
+SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+PASS  ledger validate
+PASS  doccheck (docs consistency)
+PASS  validate_data (assets/data/*.json)
+PASS  gen_layout --check (idempotent)
+PASS  check_hardcode (strict; 0 hits required)
+PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+PASS  doccheck2 (audit-codified doc?code/data consistency)
+FAIL  [orphan] 孤儿 evidence `evidence/S17.8.log`：任务 `S17.8` 不在 plan/ledger.yaml（台账可能被文件级回退丢条目）
+FAIL  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+PASS  flywheel-readme (开轮必读脚本完整性)
+PASS  visual-regression (3 scene baselines present + 0 diff)
+PASS  visual-regression (3 场景 headless 基准图逐像素 diff)
+PASS  render-snapshot (7 场景 headless 逐像素基准 diff，契约 §5)
+PASS  forward-render-snapshot (S14 正向纯代码渲染 7 场景逐像素基准 diff，§4 版面意图)
+PASS  check_data_source (数据源改动 → 渲染快照门禁)
+select_role: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+select_map: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+message: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+saveload: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）
+PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)
+=== gate: 1 failure(s) ===

@@ -674,6 +674,15 @@ impl GameApp {
         self.map_pos
     }
 
+    /// 主地图地形网格宽（v3 `chrome::board_fit` 的 G 依赖源；未载图缺省 20）。
+    ///
+    /// 暴露给测试/上层：`board_fit`/`iso_cell_fit` 正逆几何须与实际渲染同 G
+    /// （`main_map.rs` render 用 `host.terrain_grid_w()`，S17.8）。
+    #[must_use]
+    pub fn map_grid_width(&self) -> u32 {
+        self.terrain_grid_w()
+    }
+
     /// 是否已通关（`is_cleared` 逐图门禁，`business/progression.md` §通关）：
     /// m03 的 BOSS 已击败 = 全图通杀（`battle_step` 在 m03 胜时置位，
     /// `restore_save` 按存档掩码 CLEARED 位（bit 3）还原）。

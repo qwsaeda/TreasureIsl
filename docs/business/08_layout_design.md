@@ -123,6 +123,14 @@
 | HUD 三按钮 | `hud_trade {x:536, y:168, w:136, h:88}` / `hud_sell {x:704, y:168, w:136, h:88}` / `hud_build {x:856, y:168, w:136, h:88}` | QA149：HUD 三经济臂（点按 = 买商品 1 / 全卖商品 1 / 造 Castle，与键盘 T/Y/B 同语义，`main_map.rs` on_touch 命中分派 + `e2e_touch_economy_loop` 纯触摸判据；S17.2 8pt 整备：按钮宽 140→136、sell x 696→704、按钮 y 166→168） |
 | 提示行 | `hint {x:540, y:1840}` | 方向键移动/据点事件 |
 | 动态区 | `portrait_zones [{0,150,1080,1680}]` | 玩家/据点/BOSS 代码方块允许落区 |
+| 世界画布（v3） | `world_canvas {x:43, y:192, w:1004, h:1478}` | v3.1 双写：`chrome::world_canvas_frame` 装饰框 + `board_fit` 把 G 依赖等距棋盘**拟合进画布**（2:1 菱形、8pt 对齐、画布中心对齐）；v2 `grid.*` 保留为回退（键缺席即 v2 版面） |
+| HUD 顶左角 · 金币（v3） | `hud_gold {x:80, y:80, w:320, h:96}` | P-Hades-1 HUD 边角化：金币面板（v3 模式不画 v2 HUD 条；v2 `hud`/三按钮键保留为数据 + 触摸回退，双写） |
+| HUD 顶右角 · 持有量（v3） | `hud_player {x:680, y:80, w:320, h:96}` | P-Hades-1：持有量面板（原提案「玩家位」改显 `owned_fmt`，不造新 i18n 键） |
+| 命令盘 · 贸易（v3） | `deck_trade {x:240, y:1760, w:200, h:80}` | P-UW4-3 底部命令盘：`chrome::deck_button`（面板 + 图标 + 28px 标签）；点按 = 买商品 1（与键盘 T / v2 `hud_trade` 同语义） |
+| 命令盘 · 出售（v3） | `deck_sell {x:460, y:1760, w:200, h:80}` | 命令盘第 2 键 = 全卖商品 1（键盘 Y / v2 `hud_sell`） |
+| 命令盘 · 建造（v3） | `deck_build {x:680, y:1760, w:200, h:80}` | 命令盘第 3 键 = 造 Castle（键盘 B / v2 `hud_build`） |
+| 画布实体比例（v3） | `canvas_entities {player:100, landmark:80, boss:96}` | 实体边长 = `board_fit.tw` × 百分比（100/80/96）：15 格图 tw=32 → 32/26/31；20 格图 tw=24 → 24/19/23；缺席回退 v2 `player.size` 等（QA106） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:43, y:192, w:1004, h:1478}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` main_map `focus.bbox_pct{4,10,93,77}` × (1080,1920)）；gate 第 21 项 `check_scene_narrative` N8 对账锚点 |
 
 不变式：HUD 底 `280 ≤ 520`（不与等距区 `y0=520` 重叠）；**实体 size ≤ 瓦片行高 `2*tile_h` = 26**（QA106：棋子/据点/BOSS 不越格覆盖邻居——player.size=26 为临界值）。
 
