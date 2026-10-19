@@ -114,14 +114,59 @@ pub fn scene_layout(scene_id: &str) -> data::SceneLayout {
     data::scenes().ok().and_then(|s| s.get(scene_id)).cloned().unwrap_or_default()
 }
 
+/// scenes.json ↔ 代码的**版面键契约**（`main_map` 棋盘 / v3 世界画布簇）。
+///
+/// 单一事实源：`extra`（矩形键）与 `extra_scalar`（点号标量键，见
+/// [`ti_core::data`] 的 `format!("{k}.{fk}")` 扁平化）读站点一律引用本模块 const，
+/// **勿再写裸字面量**；改 scenes.json 键名只改这里一处。
+pub mod keys {
+    /// v2 静态棋盘原点 x（`extra_scalar` 点号键 = scenes.json `main_map.grid.x0`）。
+    pub const GRID_X0: &str = "grid.x0";
+    /// v2 静态棋盘原点 y（= `main_map.grid.y0`）。
+    pub const GRID_Y0: &str = "grid.y0";
+    /// v2 静态棋盘 tile 半宽（= `main_map.grid.tile_w`）。
+    pub const GRID_TILE_W: &str = "grid.tile_w";
+    /// v2 静态棋盘 tile 半高（= `main_map.grid.tile_h`）。
+    pub const GRID_TILE_H: &str = "grid.tile_h";
+    /// v3 世界画布矩形键（extra = `main_map.world_canvas`）。
+    pub const WORLD_CANVAS: &str = "world_canvas";
+    /// v3 HUD 顶左金币角矩形键（extra = `main_map.hud_gold`）。
+    pub const HUD_GOLD: &str = "hud_gold";
+    /// v3 HUD 顶右持有量角矩形键（extra = `main_map.hud_player`）。
+    pub const HUD_PLAYER: &str = "hud_player";
+    /// v3 底部命令盘「贸易」键（extra = `main_map.deck_trade`）。
+    pub const DECK_TRADE: &str = "deck_trade";
+    /// v3 底部命令盘「出售」键（extra = `main_map.deck_sell`）。
+    pub const DECK_SELL: &str = "deck_sell";
+    /// v3 底部命令盘「建造」键（extra = `main_map.deck_build`）。
+    pub const DECK_BUILD: &str = "deck_build";
+    /// v2 HUD 经济按钮「贸易」矩形键（extra = `main_map.hud_trade`）。
+    pub const HUD_TRADE: &str = "hud_trade";
+    /// v2 HUD 经济按钮「出售」矩形键（extra = `main_map.hud_sell`）。
+    pub const HUD_SELL: &str = "hud_sell";
+    /// v2 HUD 经济按钮「建造」矩形键（extra = `main_map.hud_build`）。
+    pub const HUD_BUILD: &str = "hud_build";
+    /// v3 实体百分比簇前缀（`extra_scalar` = `main_map.canvas_entities.<key>`）。
+    pub const CANVAS_ENTITIES: &str = "canvas_entities";
+    /// 实体 v2 size 回退键后缀（`extra_scalar` = `<key>.size`）。
+    pub const SIZE_SUFFIX: &str = "size";
+    // ── v3 场景叙事装饰层（index/vs；各场景一段，键缺失/非正 = 不画） ──
+    /// v3 氛围星空层矩形键（extra = 场景 `ambient_art`）。
+    pub const AMBIENT_ART: &str = "ambient_art";
+    /// v3 仪式感标题艺术面板矩形键（extra = 场景 `title_art`）。
+    pub const TITLE_ART: &str = "title_art";
+    /// v3 战斗竞技区装饰矩形键（extra = `vs.battle_arena`）。
+    pub const BATTLE_ARENA: &str = "battle_arena";
+}
+
 /// 等距投影：`(row, col)` → 呈现层坐标。
 #[must_use]
 pub fn iso_cell(row: i32, col: i32, layout: &data::SceneLayout) -> (i32, i32) {
     let s = &layout.extra_scalar;
-    let ox = s.get("grid.x0").copied().unwrap_or(0);
-    let oy = s.get("grid.y0").copied().unwrap_or(0);
-    let tw = s.get("grid.tile_w").copied().unwrap_or(0);
-    let th = s.get("grid.tile_h").copied().unwrap_or(0);
+    let ox = s.get(keys::GRID_X0).copied().unwrap_or(0);
+    let oy = s.get(keys::GRID_Y0).copied().unwrap_or(0);
+    let tw = s.get(keys::GRID_TILE_W).copied().unwrap_or(0);
+    let th = s.get(keys::GRID_TILE_H).copied().unwrap_or(0);
     (ox + (col - row) * tw, oy + (row + col) * th)
 }
 
@@ -129,7 +174,7 @@ pub fn iso_cell(row: i32, col: i32, layout: &data::SceneLayout) -> (i32, i32) {
 #[must_use]
 pub fn iso_tile(layout: &data::SceneLayout) -> (i32, i32) {
     let s = &layout.extra_scalar;
-    (s.get("grid.tile_w").copied().unwrap_or(0), s.get("grid.tile_h").copied().unwrap_or(0))
+    (s.get(keys::GRID_TILE_W).copied().unwrap_or(0), s.get(keys::GRID_TILE_H).copied().unwrap_or(0))
 }
 
 // ── v3 场景叙事 · 世界画布棋盘几何（main_map S17.8；G 依赖运行时拟合） ──────
@@ -152,7 +197,7 @@ pub struct BoardGeom {
 /// 场景是否启用 v3 世界画布（`world_canvas` 键 + 正尺寸）。
 #[must_use]
 pub fn has_world_canvas(layout: &data::SceneLayout) -> bool {
-    layout.extra.get("world_canvas").is_some_and(|r| r.w > 0 && r.h > 0)
+    layout.extra.get(keys::WORLD_CANVAS).is_some_and(|r| r.w > 0 && r.h > 0)
 }
 
 /// 棋盘几何（v3 拟合 / v2 回退，见 [`BoardGeom`] 文档）。
@@ -162,7 +207,7 @@ pub fn has_world_canvas(layout: &data::SceneLayout) -> bool {
 #[must_use]
 pub fn board_fit(layout: &data::SceneLayout, g: u32) -> BoardGeom {
     let gi = i32::try_from(g).unwrap_or(0);
-    if let Some(c) = layout.extra.get("world_canvas") {
+    if let Some(c) = layout.extra.get(keys::WORLD_CANVAS) {
         if c.w > 0 && c.h > 0 && gi > 0 {
             let tw = c.w / (2 * gi);
             let tw = (tw / 8) * 8;
@@ -176,10 +221,10 @@ pub fn board_fit(layout: &data::SceneLayout, g: u32) -> BoardGeom {
     }
     let s = &layout.extra_scalar;
     BoardGeom {
-        x0: s.get("grid.x0").copied().unwrap_or(0),
-        y0: s.get("grid.y0").copied().unwrap_or(0),
-        tw: s.get("grid.tile_w").copied().unwrap_or(0),
-        th: s.get("grid.tile_h").copied().unwrap_or(0),
+        x0: s.get(keys::GRID_X0).copied().unwrap_or(0),
+        y0: s.get(keys::GRID_Y0).copied().unwrap_or(0),
+        tw: s.get(keys::GRID_TILE_W).copied().unwrap_or(0),
+        th: s.get(keys::GRID_TILE_H).copied().unwrap_or(0),
     }
 }
 
@@ -202,12 +247,12 @@ pub fn iso_tile_fit(layout: &data::SceneLayout, g: u32) -> (i32, i32) {
 #[must_use]
 pub fn entity_size_fit(layout: &data::SceneLayout, key: &str, g: u32) -> i32 {
     let s = &layout.extra_scalar;
-    let ratio = s.get(&format!("canvas_entities.{key}")).copied().unwrap_or(0);
+    let ratio = s.get(&format!("{}.{}", keys::CANVAS_ENTITIES, key)).copied().unwrap_or(0);
     if ratio > 0 {
         let bg = board_fit(layout, g);
         return (bg.tw * ratio / 100).max(4);
     }
-    s.get(&format!("{key}.size")).copied().unwrap_or(0)
+    s.get(&format!("{key}.{}", keys::SIZE_SUFFIX)).copied().unwrap_or(0)
 }
 
 /// v3 世界画布装饰框（`main_map`）：读 `world_canvas` 矩形，缺失/非正 = 不画。
@@ -215,7 +260,7 @@ pub fn entity_size_fit(layout: &data::SceneLayout, key: &str, g: u32) -> i32 {
 /// 调用序（z-order）：`nautical_grid` 之后、等距瓦片之前（垫底框 + 四角罗盘方位块）。
 pub fn world_canvas_frame(host: &mut dyn SceneHost, scene_id: &str) {
     let layout = scene_layout(scene_id);
-    let Some(rc) = layout.extra.get("world_canvas") else {
+    let Some(rc) = layout.extra.get(keys::WORLD_CANVAS) else {
         return;
     };
     if rc.w <= 0 || rc.h <= 0 {
@@ -507,7 +552,7 @@ pub fn hint_row(host: &mut dyn SceneHost, text: &str, _x: i32, y: i32) {
 /// z-order（调用序）：`scene_shell`（底/网格/框/标题条）之后、内容（菜单/血条）之前。
 pub fn star_sky(host: &mut dyn SceneHost, scene_id: &str) {
     let layout = scene_layout(scene_id);
-    let Some(art) = layout.extra.get("ambient_art") else {
+    let Some(art) = layout.extra.get(keys::AMBIENT_ART) else {
         return;
     };
     if art.w <= 0 || art.h <= 0 {
@@ -522,7 +567,7 @@ pub fn star_sky(host: &mut dyn SceneHost, scene_id: &str) {
 /// 面板文字（如巨字标题）由调用方按版面叠画（原语零语义）；z-order 在星空层之后。
 pub fn title_art_block(host: &mut dyn SceneHost, scene_id: &str) {
     let layout = scene_layout(scene_id);
-    let Some(art) = layout.extra.get("title_art") else {
+    let Some(art) = layout.extra.get(keys::TITLE_ART) else {
         return;
     };
     if art.w <= 0 || art.h <= 0 {
@@ -537,7 +582,7 @@ pub fn title_art_block(host: &mut dyn SceneHost, scene_id: &str) {
 /// z-order（调用序）：`scene_shell` 之后、血条/回合文本/提示行之前（装饰垫底，内容叠上）。
 pub fn battle_arena(host: &mut dyn SceneHost, scene_id: &str) {
     let layout = scene_layout(scene_id);
-    let Some(art) = layout.extra.get("battle_arena") else {
+    let Some(art) = layout.extra.get(keys::BATTLE_ARENA) else {
         return;
     };
     if art.w <= 0 || art.h <= 0 {

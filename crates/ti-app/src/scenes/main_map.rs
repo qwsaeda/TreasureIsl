@@ -148,7 +148,7 @@ fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, 
 fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
     let gold = host.gold();
     let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
-    if let Some(rc) = layout.extra.get("hud_gold") {
+    if let Some(rc) = layout.extra.get(chrome::keys::HUD_GOLD) {
         if rc.w > 0 && rc.h > 0 {
             chrome::panel(host, rc.x, rc.y, rc.w, rc.h);
             chrome::draw_body_text(host, &gold_str, rc.x + 8, rc.y + rc.h / 2 - 22);
@@ -156,16 +156,18 @@ fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
     }
     let owned = host.owned_total();
     let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
-    if let Some(rc) = layout.extra.get("hud_player") {
+    if let Some(rc) = layout.extra.get(chrome::keys::HUD_PLAYER) {
         if rc.w > 0 && rc.h > 0 {
             chrome::panel(host, rc.x, rc.y, rc.w, rc.h);
             chrome::draw_body_text(host, &own_str, rc.x + 8, rc.y + rc.h / 2 - 22);
         }
     }
+    // 命令盘 3 键：`key` = v3 布局矩形键（`keys::DECK_*`），`icon_key` = `ui_icons` 注册表名
+    // （独立命名空间，与 v2 布局矩形键 `hud_trade` 同名但非布局键，故不绑 `keys::`）。
     for (key, icon_key, label_key) in [
-        ("deck_trade", "hud_trade", "scene.main_map.hud.trade"),
-        ("deck_sell", "hud_sell", "scene.main_map.hud.sell"),
-        ("deck_build", "hud_build", "scene.main_map.hud.build"),
+        (chrome::keys::DECK_TRADE, "hud_trade", "scene.main_map.hud.trade"),
+        (chrome::keys::DECK_SELL, "hud_sell", "scene.main_map.hud.sell"),
+        (chrome::keys::DECK_BUILD, "hud_build", "scene.main_map.hud.build"),
     ] {
         chrome::deck_button(host, "main_map", key, icon_key, label_key);
     }
@@ -181,9 +183,9 @@ fn render_hud_v2(host: &mut dyn SceneHost, layout: &SceneLayout) {
     let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
     chrome::draw_body_text(host, &own_str, layout.hud.x + 4, layout.hud.y + 56);
     for (key, label_key) in [
-        ("hud_trade", "scene.main_map.hud.trade"),
-        ("hud_sell", "scene.main_map.hud.sell"),
-        ("hud_build", "scene.main_map.hud.build"),
+        (chrome::keys::HUD_TRADE, "scene.main_map.hud.trade"),
+        (chrome::keys::HUD_SELL, "scene.main_map.hud.sell"),
+        (chrome::keys::HUD_BUILD, "scene.main_map.hud.build"),
     ] {
         render_hud_button(host, layout, key, label_key);
     }
@@ -310,22 +312,22 @@ impl Scene for MainMapScene {
                 };
                 // S17.8 v3：底部命令盘（deck_trade/sell/build）优先命中；未命中落回
                 // v2 HUD 按钮（双写兼容——`e2e_touch_economy_loop` 仍按 v2 坐标命中）。
-                if hud_hit("deck_trade") {
+                if hud_hit(chrome::keys::DECK_TRADE) {
                     return host.advance(GameInput::TradeBuy(1));
                 }
-                if hud_hit("deck_sell") {
+                if hud_hit(chrome::keys::DECK_SELL) {
                     return host.advance(GameInput::TradeSell(1));
                 }
-                if hud_hit("deck_build") {
+                if hud_hit(chrome::keys::DECK_BUILD) {
                     return host.advance(GameInput::Build(Building::Castle));
                 }
-                if hud_hit("hud_trade") {
+                if hud_hit(chrome::keys::HUD_TRADE) {
                     return host.advance(GameInput::TradeBuy(1));
                 }
-                if hud_hit("hud_sell") {
+                if hud_hit(chrome::keys::HUD_SELL) {
                     return host.advance(GameInput::TradeSell(1));
                 }
-                if hud_hit("hud_build") {
+                if hud_hit(chrome::keys::HUD_BUILD) {
                     return host.advance(GameInput::Build(Building::Castle));
                 }
                 let Some(terrain) = host.map_terrain() else {

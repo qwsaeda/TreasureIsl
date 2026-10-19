@@ -53,6 +53,7 @@ z-order（调用序，`main_map.rs render`）：`parchment_bg` → `nautical_gri
 
 | 层 | 落点 | 说明 |
 |---|---|---|
+| 键契约 | `chrome::keys`（单一事实源） | scenes.json ↔ 代码版面键名 const 表：`grid.*`/`world_canvas`/`hud_gold`/`hud_player`/`deck_*`/`hud_*`/`canvas_entities`/`<key>.size`/v3 场景 art 键（`ambient_art`/`title_art`/`battle_arena`）。各 read 站点（chrome/main_map/touch）一律引用 const，勿写裸字面量；改 scenes.json 键名只改 `keys` 一处 |
 | 几何 | `chrome::board_fit(layout, G) → BoardGeom{x0,y0,tw,th}` | v3 拟合：`tw=(画布宽/(2·G))/8·8`（≥8 否则回退 v2）、`th=tw/2`、`x0=画布cx−tw`、`y0=画布cy−G·th`（菱形中心对齐画布中心）；缺席/非正回退 v2 `grid.*` |
 | 正/逆 | `iso_cell_fit`/`iso_tile_fit`（正）↔ `touch::iso_grid_cell_at`（逆） | 同读 `board_fit(layout, G)`，EXP-067 正逆成对（`iso_cell`/`iso_tile` v2 保留为回退路径） |
 | 实体 | `entity_size_fit(layout, key, G)` | `canvas_entities.<key>` 百分比 × `board_fit.tw`，缺席回退 v2 `<key>.size` |
