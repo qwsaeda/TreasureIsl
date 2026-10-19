@@ -7,6 +7,10 @@ members = [
     "crates/ti-render",
     "crates/ti-app",
     "crates/ti-tools",
+    # S18 双渲染期：crates/ti-engine（Bevy 后端）**故意不在此 workspace**——
+    # bevy_dev_tools→bevy_audio→rodio/cpal→alsa-sys 与 macroquad→quad-snd→quad-alsa-sys
+    # 同 link 原生库 alsa，Cargo 统一依赖图冲突（links=alsa，S18.1 实测）。
+    # ti-engine 独立 workspace（自解析）；S18.8 macroquad 退役后并回本 workspace。
 ]
 
 [workspace.package]
@@ -41,6 +45,8 @@ ti-platform = { path = "crates/ti-platform" }
 ti-render = { path = "crates/ti-render" }
 # UI-21 字体：ab_glyph 纯 Rust TTF/OTF 光栅化（无 Freetype 依赖，适合 CPU Framebuf 路径）
 ab_glyph = "0.2"
+# S18：bevy 依赖在独立 workspace `crates/ti-engine`（双渲染期 links=alsa 冲突，
+# 见 members 注释；S18.8 并回本 workspace 时在此登记 bevy 版本 pin）。
 
 [workspace.lints.rust]
 unsafe_code = "deny"

@@ -1,0 +1,41 @@
+# S18 双渲染期：ti-engine 是**独立 workspace**（不挂根 workspace）——
+# bevy_dev_tools→bevy_audio→rodio/cpal→alsa-sys 与 macroquad→quad-snd→quad-alsa-sys
+# 同 link 原生库 alsa，统一依赖图冲突（links=alsa，S18.1 实测，docs/process/11_bevy_migration.md §6）。
+# 各自独立解析；S18.8 macroquad 退役后并回根 workspace（删本 [workspace] 表 + 用 .workspace 继承）。
+[workspace]
+
+[package]
+name = "ti-engine"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+description = "S18：Bevy 呈现后端（Canvas trait 的 Bevy 实现 + 相机/层/粒子）；零游戏语义，与 ti-render 对等定位（docs/process/11_bevy_migration.md §4）"
+
+[lib]
+name = "ti_engine"
+
+[dependencies]
+# bevy 0.20 pin（11_bevy_migration §1）。特性口径（0.20 实测特性表）：
+# - "2d" = default_app + default_platform + 2d_bevy_render + scene + picking（3D/UI 全关）
+# - "bevy_text"（0.20 特性名是 bevy_text 非 bevy_text_2d）
+# - "touch"（触摸输入；浏览器触摸映射 S18.1 结论据此）
+# 双渲染期 audio 特性关着（links=alsa 冲突）；S18.8 并回根 workspace 后恢复 "audio"。
+bevy = { version = "0.20", default-features = false, features = ["2d", "bevy_text", "touch"] }
+ti-render = { path = "../ti-render" }
+
+[lints]
+# 独立 workspace 无法继承根 [workspace.lints]，本地复制同口径（风格与根一致）。
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+panic = "deny"
+
+[profile.release]
+# wasm 体积口径（11_bevy_migration §3）：strip 符号为基线；LTO/wasm-opt -Oz 在 S18.6 门禁重建时叠加。
+strip = "symbols"

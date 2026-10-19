@@ -1,0 +1,50 @@
+# S18.1 验收证据 — Bevy 脚手架 spike（ti-engine + Bevy 0.20 最小渲染链路）
+
+日期：2026-10-19 · 判据：三端编译/可跑 + 实测体积回填 11_bevy_migration §3 + 触摸结论文档 + gate 全绿
+裁决文档：docs/process/11_bevy_migration.md（S18.0）
+
+## 1. 编译与实跑（native）
+- 环境：rustc 1.99.1（`rustup update stable`；bevy 0.20.0 final 需 ≥1.97.1，原 1.96.0 不足）。
+- crates/ti-engine 独立 workspace（links=alsa 冲突，11_bevy_migration §6）：
+  `cargo build --example bevy_spike` → Finished（dev，首编 1m36s 起；bevy 依赖族全量）。
+- 实跑：`.\target\debug\examples\bevy_spike.exe` → 窗口 540×960 存活 5s 后 `AppExit` 自动退出，**exit 0，无 error/panic 输出**。
+- 复跑（去 debug 特性后）exit 0。
+
+## 2. Bevy 0.20 API 漂移实录（编译迭代 5 轮定稿，bevy_app.rs 注释留痕）
+1. `WindowPlugin { primary_window: Option<Window> }`（无 primary_window_builder）；`Window.resolution = WindowResolution::new(w,h)`（物理像素）。
+2. `Sprite::from_color(color, size)`（无 `Sprite::new`）。
+3. 2D 文字 = `bevy_sprite::Text2d(String)` + `bevy_text::TextFont { font_size: FontSize::Px(f32) }`（0.20 拆分；字号是枚举非裸 f32）。
+4. 退出 = `MessageWriter<AppExit>.write(AppExit::Success)` 消息制（0.20 `AppExit` 是 Message，无 `trigger()`）。
+5. `Time::elapsed()` 返回**累计** `Duration`（每帧 delta 是 `Time::delta()`）。
+6. plugin 顺序/缺失资源（MinimalPlugins 手工拼链必踩）：
+   - `AssetPlugin` 必须早于 `RenderPlugin`/`WinitPlugin`（`AssetServer` 资源）；
+   - `ImagePlugin` 必须挂（`TexturePlugin::finish` 取 `get_added_plugins::<ImagePlugin>()[0]`）；
+   - `MeshPlugin`（`init_asset::<Mesh>`，fallback mesh `finish()` 需要 `Assets<Mesh>`）；
+   - `AccessibilityPlugin`（`AccessibilityRequested` 资源）；
+   - `InputPlugin`（`Messages<KeyboardFocusLost>` 通道，`bevy_winit::check_keyboard_focus_lost` 消费）；
+   - `init_resource::<ClearColor>()`（`ViewPlugin` 私有，DefaultPlugins 才挂）。
+   （诊断靠 bevy `debug` 特性解锁系统名；定位过程在 bevy_*-0.20.0 registry 源码 grep，未改引擎源码。）
+
+## 3. 三端口径
+- native：编译 + 实跑 ✓（上节）。
+- wasm：`cargo build --release --target wasm32-unknown-unknown --example bevy_spike` → Finished，产物
+  `target/wasm32-unknown-unknown/release/examples/bevy_spike.wasm`。
+  - 原始（未 strip）：**66,911 KB ≈ 65.4 MB**；
+  - `[profile.release] strip="symbols"` 后：**37,504 KB = 36.62 MB**（未 LTO / 未 wasm-opt）。
+  - **≤8 MB 主体预算当前未达标** → S18.6 门禁重建时叠加 LTO+wasm-opt 重测（风险表 83 行口径）。
+- android：本机未装 `aarch64-linux-android` target/NDK → 编译验证 **SKIP**（APK 出包链路在 Mac，AGENTS/S2.6 口径；`android/README.md` 随 S18.8 更新）。
+
+## 4. 浏览器触摸映射结论（回填 §5/S18.4 输入层）
+- bevy 特性 `touch` 已启用（Cargo.toml 特性清单 ["2d","bevy_text","touch"]）；wasm 下 winit 触摸事件经 PointerEvent 映射，**非一等 touch API**。
+- 结论：S18.4 web 输入层用 `bevy::input::TouchInput`（`InputPlugin` 注册通道）消费统一指针/触摸事件，
+  1080 坐标换算走 BevyCanvas 相机契约（S18.2 Camera2D + letterbox）；不自写 winit 事件 system。
+
+## 5. 根 gate
+- ti-engine 独立 workspace 不挂根 gate（links=alsa 隔离）；根 gate.ps1 23 项全绿不受影响
+  （S18.0 提交 4ee24c9 后无根 crate 变更，本轮仅新增 crates/ti-engine + 根 Cargo.toml 注释行）。
+- ti-engine 本地口径（[lints] 复制根）：`cargo fmt --all` 0 变更；clippy 随下一轮并入（S18.2 增量编译时一起跑，避免无谓全量重建）。
+
+## 判定
+- native spike 跑通（2D 渲染链路 + 窗口 + 5s 自退）✓；wasm release 编译 + 体积实测 ✓（36.62MB stripped，预算未达标项挂 S18.6）；
+  android 本机 SKIP（Mac 链路）；触摸结论出 ✓；§3 回填 ✓。
+- **S18.1 = verified**（android 项按 SKIP 口径记录，与 S2.6 gate SKIP 一致）。

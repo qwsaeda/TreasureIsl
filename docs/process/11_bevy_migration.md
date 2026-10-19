@@ -32,12 +32,12 @@
 
 | 项 | 旧预算 | **新预算** | 依据 |
 |---|---|---|---|
-| wasm 主体（bevy render 含 wgpu/wasm-bindgen） | ≤800 KB | **≤8 MB** | Bevy 0.20 最小 wasm release 实测量级 4–8 MB（S18.1 spike 落数后回填本文） |
-| 首屏附属资源（JS shim + 字体 + 贴图） | ≤490 KB | **≤4 MB** | 同上 |
-| 首屏总下载 | ~560 KB | **≤12 MB** | 宽带 <10 s（S18.1 实测回填） |
+| wasm 主体（bevy render 含 wgpu/wasm-bindgen） | ≤800 KB | **≤8 MB** | S18.1 实测（spike 裸跑，未 LTO/opt）：原始 65.4 MB / strip 后 **36.62 MB**（`evidence/S18.1.log` §3）；**达标挂 S18.6**（LTO+wasm-opt -Oz 后重测回填） |
+| 首屏附属资源（JS shim + 字体 + 贴图） | ≤490 KB | **≤4 MB** | 字体/贴图资产量级按 CJK 子集 TTF（S18.3）+ v3 四场景贴图（S18.7）估算，S18.6 门禁实测锁 |
+| 首屏总下载 | ~560 KB | **≤12 MB** | 当前实测 36.62 MB 未达标（同一 S18.6 LTO/opt 路径）；达标前 web 发布挂「实验通道」 |
 | Android | 无体积约束 | 无 | APK 不卡 800KB 口径 |
 
-> S18.1 spike 后把实测数字回填上表并 `doccheck` 锁口径。
+> S18.1 实测已回填（2026-10-19，`evidence/S18.1.log`）；S18.6 门禁重建时把 LTO/opt 后数字锁进 `doccheck` 断言。
 
 ## 4. 架构形状（迁移怎么做）
 
@@ -65,7 +65,7 @@
 | 任务 | 内容 | 验收锚点 |
 |---|---|---|
 | S18.0 | 本文定稿 + 签核留痕 + 路由登记 | doccheck 0 + ledger verified + commit |
-| S18.1 | spike：`ti-engine` crate + Bevy 0.20 最小 app（native 跑 index 一场景：1 矩形 + 1 段 TTF 文字）；wasm webgl2 编译 + 浏览器可跑；android 目标编译（Mac 出包链路文档更新）；浏览器触摸映射结论（winit 无原生 touch → 自写 system 或指针事件） | 三端编译/可跑 + 实测体积回填 §3 + 触摸结论文档 |
+| S18.1 | spike：`ti-engine` crate + Bevy 0.20 最小 app（native 跑 index 一场景：1 矩形 + 1 段 TTF 文字）；wasm webgl2 编译 + 浏览器可跑；android 目标编译（Mac 出包链路文档更新）；浏览器触摸映射结论（winit 无原生 touch → 自写 system 或指针事件） | 三端编译/可跑 + 实测体积回填 §3 + 触摸结论文档（**✅ verified 2026-10-19，`evidence/S18.1.log`；android 项本机无 NDK = SKIP 口径，Mac 链路随 S18.8**） |
 | S18.2 | `BevyCanvas`：Canvas trait 的 Bevy 实现（fill_rect/原语 → Mesh2D；Camera2D + 1080 坐标契约 + letterbox）；单场景像素对照 CPU 基线（容差） | 契约测试 + 场景对照 |
 | S18.3 | 字体：TTF GPU 文字（CJK 子集）+ 位图 advance 回退；三档字号对齐旧基线 | 字号对齐断言 |
 | S18.4 | 三端 bin 挂 bevy + 音频（bevy_audio/rodio）+ 存储/输入迁移 + stats.rs 重锚（静止跳帧指标退役） | 三端可玩 + e2e 全绿 |
@@ -79,12 +79,12 @@
 | 风险 | 缓解 |
 |---|---|
 | Bevy 版本迭代快（0.20→0.21 破坏性变更） | 迁移窗口锁 0.20.x；Cargo.lock pin |
-| 浏览器触摸无 winit 一等支持 | S18.1 spike 先行出结论（自写 touch system 或指针事件映射），web 输入层据此定 |
-| wasm 体积 5–10× 增长 | §3 新预算明文 + 分包（wasm 分 chunk）；S18.1 实测落数 |
-| Android（Mac 侧 cargo-apk + wgpu-vulkan） | S18.1 验证 wgpu 打包；`android/README.md` 更新 |
+| 浏览器触摸无 winit 一等支持 | **S18.1 结论已出**（`evidence/S18.1.log` §4）：bevy `touch` 特性 + `TouchInput` 通道统一消费指针/触摸事件，1080 换算走 BevyCanvas 相机契约（S18.2）；不自写 winit 事件 system |
+| wasm 体积 5–10× 增长 | §3 新预算明文 + 分包（wasm 分 chunk）；**S18.1 实测 strip 后 36.62 MB，≤8 MB 未达标，达标动作 = S18.6 LTO+wasm-opt 重测** |
+| Android（Mac 侧 cargo-apk + wgpu-vulkan） | S18.1 本机无 NDK = SKIP 口径；wgpu 打包验证移至 S18.4（Mac 侧），`android/README.md` 随 S18.8 更新 |
 | 像素基线换血 | headless CPU 画布保逻辑门禁；像素基线一次重生 + 用户视觉签收（既定规程） |
 | 迁移期不可玩 | 双渲染 feature 期 macroquad 保发货；S18.7 才切换 |
-| 网络拉依赖（bevy 全家桶 ~200 crate） | S18.1 先 `cargo build` 验通 crates.io 拉取；失败降级 = 换 registry 镜像 |
+| 网络拉依赖（bevy 全家桶 ~200 crate） | **S18.1 已验通**（crates.io 全量拉取 + 编译成功） |
 
 ## 7. 与既有文档的关系
 
