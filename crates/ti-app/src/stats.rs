@@ -75,6 +75,33 @@ impl FpsMeter {
         Some((avg, window_uploads, window_skipped))
     }
 
+    /// S18.4 重锚：Bevy 壳 GPU 口径 fps（静止跳帧指标退役）。
+    ///
+    /// 双渲染期 Bevy 壳不走 `FramePresenter` 脏行带（逐帧纹理上传，与 S10.4 macroquad
+    /// `FullRebuild` 同带宽口径），`uploads`/`skipped` 指标失去语义 → 本方法只报
+    /// 窗口平均 fps。满 1 秒窗口返回 `Some(avg_fps)` 并滚动，否则 `None`。
+    /// 复用 `frames`/`prev_frames`/`window_start_ms` 字段（每个壳只调 `tick` 或本方法之一）。
+    #[must_use]
+    pub fn bevy_tick(&mut self, now_ms: u128) -> Option<f32> {
+        self.frames = self.frames.saturating_add(1);
+        if self.frames == 1 {
+            self.window_start_ms = now_ms;
+        }
+        let elapsed = now_ms.saturating_sub(self.window_start_ms);
+        if elapsed < 1000 {
+            return None;
+        }
+        let window_frames = self.frames.saturating_sub(self.prev_frames);
+        let elapsed_ms = u16::try_from(elapsed).unwrap_or(u16::MAX);
+        let secs = f32::from(elapsed_ms) / 1000.0;
+        let frames_u16 = u16::try_from(window_frames).unwrap_or(u16::MAX);
+        let avg = f32::from(frames_u16) / secs.max(1.0);
+        self.prev_frames = self.frames;
+        self.frames = 0;
+        self.window_start_ms = now_ms;
+        Some(avg)
+    }
+
     /// 记录一帧（f64 秒时钟版，供 macroquad `get_time()` 直接驱动）。
     ///
     /// 内部把秒转换为饱和 u128 毫秒（溢出时钳位），其余语义与

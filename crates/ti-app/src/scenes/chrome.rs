@@ -87,8 +87,15 @@ pub fn flash_press() {
 
 /// 每帧推进按下闪烁倒计时（`delta_ms` = 本帧经过毫秒）。
 pub fn tick_press_flash(delta_ms: u32) {
-    let _ = PRESS_FLASH_MS_LEFT
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| Some(v.saturating_sub(delta_ms)));
+    let mut cur = PRESS_FLASH_MS_LEFT.load(Ordering::Relaxed);
+    while let Err(got) = PRESS_FLASH_MS_LEFT.compare_exchange_weak(
+        cur,
+        cur.saturating_sub(delta_ms),
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    ) {
+        cur = got;
+    }
 }
 
 /// 按下闪烁是否处于可见期。
@@ -339,8 +346,15 @@ pub fn scene_hint(host: &mut dyn SceneHost, scene_id: &str, hint_key: &str) {
 
 /// 推进翻页动画倒计时（`delta_ms` = 本帧经过毫秒）。
 pub fn tick_page_frame(delta_ms: u32) {
-    let _ = PAGE_MS_LEFT
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| Some(v.saturating_sub(delta_ms)));
+    let mut cur = PAGE_MS_LEFT.load(Ordering::Relaxed);
+    while let Err(got) = PAGE_MS_LEFT.compare_exchange_weak(
+        cur,
+        cur.saturating_sub(delta_ms),
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    ) {
+        cur = got;
+    }
 }
 
 /// 获取当前翻页动画亮度因子（0.6 → 1.0 线性，时长 [`MOTION_PAGE_MS`]；

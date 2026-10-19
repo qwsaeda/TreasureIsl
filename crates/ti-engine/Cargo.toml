@@ -15,14 +15,32 @@ description = "S18：Bevy 呈现后端（Canvas trait 的 Bevy 实现 + 相机/�
 [lib]
 name = "ti_engine"
 
+# S18.4：bevy 呈现壳 bin（native 可玩 / wasm 编译；同源码 `cfg(target_arch)` 分支，
+# 资源加载 native = std::fs 仓库资源，wasm = 降级形态无资源（资源链 S18.8 bevy 资产管线））。
+[[bin]]
+name = "treasure-bevy-native"
+path = "src/bin/treasure_bevy.rs"
+
+[[bin]]
+name = "treasure-bevy-wasm"
+path = "src/bin/treasure_bevy.rs"
+
 [dependencies]
 # bevy 0.20 pin（11_bevy_migration §1）。特性口径（0.20 实测特性表）：
 # - "2d" = default_app + default_platform + 2d_bevy_render + scene + picking（3D/UI 全关）
 # - "bevy_text"（0.20 特性名是 bevy_text 非 bevy_text_2d）
 # - "touch"（触摸输入；浏览器触摸映射 S18.1 结论据此）
 # 双渲染期 audio 特性关着（links=alsa 冲突）；S18.8 并回根 workspace 后恢复 "audio"。
-bevy = { version = "0.20", default-features = false, features = ["2d", "bevy_text", "touch"] }
+bevy = { version = "0.20", default-features = false, features = ["2d", "bevy_text", "touch", "keyboard", "mouse"] }
 ti-render = { path = "../ti-render" }
+# S18.4：bevy 壳 bin 挂本 workspace（架构修正：links=alsa 冲突检查 target-independent 且
+# optional 依赖也进 resolution 图 → 双渲染期 macroquad(audio 发货壳) 与 bevy(dev_tools→rodio
+# →alsa 链) 不能同 cargo 图）。ti-app 以 default-features=false 挂入（关 macroquad-audio，
+# bevy 壳双渲染期无音频）；hd-8bit/gpu-render 保持（与发货壳同画质路径）。
+# S18.8 macroquad 退役后本依赖随 alsa 链消失，可并回根 workspace。
+ti-app = { path = "../ti-app", default-features = false, features = ["hd-8bit", "gpu-render", "stats"] }
+ti-platform = { path = "../ti-platform" }
+ti-core = { path = "../ti-core" }
 # S18.3 字号对齐对照需与 ti-app `MenuShell::draw_ttf_row` 逐式同算法（baseline 偏移按
 # ab_glyph 轮廓算），故直引 ab_glyph（版本与根 workspace 一致 = 0.2，与 ti-render 同一份光栅器）。
 ab_glyph = "0.2"

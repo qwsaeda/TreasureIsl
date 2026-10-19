@@ -11,7 +11,7 @@ thiserror.workspace = true
 # audio = quad-snd（macroquad 0.4.16 的真实音频输出；wasm 上走 WebAudio 胶水 js/audio.js）
 # Android target 下 macroquad 的音频/渲染经 miniquad → NDK ANativeWindow + AAudio，
 # 资源 IO 走 macroquad::file::load_file（APK assets 后端，S2.6 在 Mac 编译 APK 时生效）。
-macroquad = { workspace = true, features = ["audio"] }
+macroquad.workspace = true
 ti-core.workspace = true
 ti-formats.workspace = true
 ti-platform.workspace = true
@@ -21,7 +21,10 @@ serde.workspace = true
 serde_json.workspace = true
 # UI-21 TTF 软件光栅化（纯 Rust，无 Freetype 依赖）
 ab_glyph.workspace = true
-
+# S18.4 架构修正：bevy 壳 bin 在 **ti-engine 独立 workspace**（`crates/ti-engine/src/bin/`）——
+# links=alsa 冲突检查 target-independent 且 optional 依赖也进 resolution 图，双渲染期
+# ti-app（macroquad audio 发货壳）与 bevy（dev_tools→rodio→alsa 链）不能同 cargo 图；
+# ti-engine 以 default-features=false 挂 ti-app（关 macroquad-audio），图中只余 bevy 侧 alsa 链。
 # S15.5：渲染快照/视觉回归基线（1080 代码绘制帧 → DEFLATE PNG，`png` 已在 workspace 依赖，
 # 经 ti-platform hd-8bit 进入；此处 dev-dep 供 tests/ 基线门禁直接编码/解码，零新增外部库）
 [dev-dependencies]
@@ -72,7 +75,13 @@ required-features = ["native-shell"]
 # S8.9：HD 资源提升为默认档——默认构建含 `hd-8bit`（RGBA8 真彩帧缓冲 + PNG 解码）。
 # 缺失 `assets_hd_pack` 时 bin 自动回退 RGB565 PCX 原路径（不 panic）。
 # 需要纯 RGB565 时 `--no-default-features` 关闭。
-default = ["hd-8bit", "gpu-render"]
+default = ["hd-8bit", "gpu-render", "macroquad-audio"]
+# S18.4：macroquad 音频拆 feature——bevy 侧（bevy_dev_tools→rodio→cpal→alsa，links=alsa）
+# 与 macroquad 音频（quad-snd→quad-alsa-sys，links=alsa）在同一 cargo 依赖图时 links 冲突
+# （target-independent 检查，S18.4 实测；optional 依赖也进 resolution 图 → ti-app 不能挂
+# bevy 依赖，bevy 壳 bin 落 ti-engine 独立 workspace，以 default-features=false 挂本 crate）。
+# 发货壳（root workspace default 构建）不变；S18.8 切 bevy_audio 后本 feature 随 macroquad 退役删除。
+macroquad-audio = ["macroquad/audio"]
 # wasm/浏览器壳（S2.5）：桌面构建不参与
 wasm-shell = []
 # 桌面 native 壳：std::fs 读本地 data/ 资源（与 wasm 同源），macroquad 原生窗口
@@ -93,6 +102,7 @@ headless = []
 # S7.5：RGBA8 HD 帧缓冲 + PNG 解码（默认关，RGB565 原路径不变；
 # 透传 ti-platform 的 hd-8bit，`png` 随其 optional 依赖进入，EXP-046 门控）
 hd-8bit = ["ti-platform/hd-8bit"]
+
 # S10.4：GPU 化渲染（macroquad 逐精灵 batch + 纹理图集 + alpha 混合 + TTF 字形）。
 # 默认开；legacy CPU 逐像素 blit 路径在 `gpu-render` 关闭时生效（feature 互斥）。
 gpu-render = []

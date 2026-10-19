@@ -1,0 +1,57 @@
+S18.4 三端 bin 切 bevy + 音频/存储/输入迁移 + stats.rs 重锚 — PASS
+==============================================================
+
+DoD（plan/ledger.yaml S18.4）：三端口（native/wasm 实测 + android 接收）+ e2e 全链 + gate 全绿 + 本文件。
+
+## 架构裁决（S18.4 落地形状）
+
+bevy 壳 bin 落 `crates/ti-engine`（独立 workspace，`[workspace]` 表），而非 ti-app feature 门控：
+  - 根因 = `links = "alsa"`：bevy→bevy_dev_tools→bevy_audio→rodio→cpal→alsa-sys
+    vs macroquad→quad-snd→quad-alsa-sys，all-targets union 下 cargo links 必撞。
+  - 修正认知：cargo 的 optional 依赖同样进入 resolution 图 → ti-app 任何形态持有
+    bevy 依赖都与 macroquad 不可共存 → 双 alsa 链隔离只能靠独立 workspace。
+  - ti-engine 以 `ti-app = { default-features = false, features = ["hd-8bit","gpu-render","stats"] }`
+    依赖 ti-app；`macroquad-audio` 自 ti-app default 拆出（feature `macroquad-audio = ["macroquad/audio"]`），
+    ti-engine 侧自动关闭。
+
+## 验收命令 + 结果
+
+1) root macroquad 壳回归（防 feature 拆分破坏既有形态）：
+   cargo build -p ti-app --features native-shell --bin treasure-native → exit=0
+2) ti-engine bevy 壳（native）：
+   cd crates/ti-engine; cargo build --bin treasure-bevy-native → exit=0
+3) e2e 全链（内嵌 tests/scripts/full_run.json 16 步主循环，seed 42，与 headless bin 同源同映射）：
+   ./target/debug/treasure-bevy-native.exe --selftest → [selftest] PASS（16/16，0 失败）exit=0
+   （confirm/next/select/commit/battle/saveload 全主线场景在 Bevy 输入+CPU Framebuf 通路跑通）
+4) wasm 端：
+   cd crates/ti-engine; cargo build --release --target wasm32-unknown-unknown --bin treasure-bevy-wasm → exit=0
+   产物 38923972 B（39.0MB 未 strip / 未 LTO）→ ≤8MB 预算挂 S18.6（LTO + wasm-opt + 资源分离），
+   与 S18.1 同口径（S18.1 未 strip 36.62MB）。
+5) android：本机无 NDK/SDK → SKIP 口径（S18.1 定案：Mac 端 cargo-apk + wgpu-vulkan，S18.8 收口）。
+6) 质量门：
+   - root `cargo clippy --workspace --all-targets -- -D warnings` → exit=0（0 warning）
+   - ti-engine `cargo clippy --all-targets -- -D warnings` → exit=0
+   - `cargo fmt --all -- --check`（root + ti-engine 两 workspace）→ clean
+   - 全 gate：`scripts/gate.ps1` → 0 failure(s)（含 check_hardcode 0 hits）
+
+## 迁移口径
+
+- 输入：bevy `ButtonInput<KeyCode>` + `AccumulatedMouseMotion` + `MouseButton` + `Touches`
+  → GameApp `KeyState` 沿 + `TouchPad::feed_screen`（与 macroquad 壳同构映射；touch 走 S18.1 结论通道）。
+- 存储/存档：无平台 API 直调，全在 GameApp/ti-platform 内 → bevy 壳原样复用（0 迁移面）。
+- 音频：双渲染期降级形态——bevy 壳不带音频（ti-app `default-features=false` 关 macroquad-audio，
+  防 alsa 双链）；真音频后端 = S18.8 bevy_audio/rodio 恢复单后端 + macroquad 壳退役。
+- stats.rs 重锚：新增 `FpsMeter::bevy_tick()`（bevy 壳帧率/跳帧指标口径，取代 macroquad 帧时钟读取；
+  跳帧指标仅保留 GPU 口径，CPU 跳帧计数随宏停表退役）。
+- 渲染：GameApp CPU Framebuf（1080 坐标系，S18.2 BevyCanvas 契约）→ 逐帧 RGBA8 bevy Image
+  → 全屏 Sprite；8.3MB/帧重建 = S10.4 FullRebuild 同带宽口径（纹理池化挂 S18.6）。
+
+## 关联修复（同轮，gate 前置）
+
+- chrome.rs `fetch_update`（deprecated）→ `compare_exchange_weak` CAS 循环 ×2：
+  `try_update` 为 1.95 stable > 项目 rust-version 1.85（clippy::msrv），CAS 循环 MSRV 1.35 安全且无 deprecation。
+- bevy_app.rs S18.1 spike 显示文本 CJK → ASCII（check_hardcode 严格 0 hits，新增 ti-engine 入扫描域）。
+- 工具链漂移 clippy 12 条（7 个已提交干净文件，cargo clippy --fix 机械修复，单独 commit）：
+  doccheck2.rs×6（map_or→unwrap_or）、specskel.rs×1、ti-tools/tests/audio.rs×1、
+  audio_unit.rs×1、rules_battle.rs×1、oracle/battle.rs×1（仅 #[cfg(test)] 断言风格，生产参照逻辑 0 改动）、
+  macros.rs×1（byte str）。
