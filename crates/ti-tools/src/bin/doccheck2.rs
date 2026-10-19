@@ -89,8 +89,8 @@ fn check_audio_state(root: &Path) -> Vec<String> {
         return errors;
     };
     let after = &audio_rs[struct_start..];
-    let brace = after.find('{').map_or(after.len(), |i| i);
-    let close = after[brace..].find('}').map_or(after.len(), |i| i) + brace;
+    let brace = after.find('{').unwrap_or(after.len());
+    let close = after[brace..].find('}').unwrap_or(after.len()) + brace;
     let body = &after[..=close];
     // 解析 `pub <field>: <type>` 行（跳过 /// 文档注释行）
     let known_fields: BTreeSet<String> = body
@@ -474,8 +474,8 @@ fn check_headless_battle_api(root: &Path) -> Vec<String> {
         return vec!["game_app.rs 缺少 `pub struct BattleView` 定义".to_string()];
     };
     let after = &game_app[struct_start..];
-    let brace = after.find('{').map_or(after.len(), |i| i);
-    let close = after[brace..].find('}').map_or(after.len(), |i| i) + brace;
+    let brace = after.find('{').unwrap_or(after.len());
+    let close = after[brace..].find('}').unwrap_or(after.len()) + brace;
     let body = &after[..=close];
     let fields: BTreeSet<String> = body
         .lines()
@@ -821,7 +821,7 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
             continue;
         };
         let tail = &main_map_section[pos..];
-        let close = tail.find('}').map_or(tail.len(), |i| i);
+        let close = tail.find('}').unwrap_or(tail.len());
         if !tail[..=close].contains("\"size\":") {
             errors.push(format!(
                 "scenes.json main_map `{ent}` 缺 `size` 键（QA133：§4.3 实体边长数据驱动，键缺失 = 渲染静默回退旧公式）"
@@ -1645,7 +1645,7 @@ fn ui_motion_params_check(root: &Path, gate_data: &serde_json::Value) -> Vec<Str
         return errors;
     };
     let after = &doc[sec_start..];
-    let sec_end = after.find("\n## ").map_or(after.len(), |i| i);
+    let sec_end = after.find("\n## ").unwrap_or(after.len());
     let section = &after[..sec_end];
     // 文档 §7 表数据行数（`| 名 | NNNms |`）须与 gate_data rows 条数一致。
     let data_rows = section

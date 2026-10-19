@@ -41,7 +41,7 @@ fn bgm_loops_forever_and_sfx_stops() {
     m.render(20, &mut out).expect("渲染成功");
     assert_eq!(m.state(0).map(|s| s.active), Some(true), "BGM 应持续循环");
     assert_eq!(m.state(1).map(|s| s.active), Some(false), "SFX 播完应停止");
-    assert!(out.len() == 20);
+    assert_eq!(out.len(), 20);
 }
 
 #[test]

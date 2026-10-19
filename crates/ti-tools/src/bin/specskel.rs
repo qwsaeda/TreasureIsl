@@ -489,7 +489,7 @@ mod tests {
     fn evidence_shape_roundtrips() {
         let missing = FunctionEvidence::default();
         assert!(missing.file_name.is_none());
-        assert!(missing.lines.is_empty());
+        assert_eq!(missing.lines, [] as [EvidenceLine; 0]);
         assert!(!missing.truncated);
 
         let truncated = FunctionEvidence {

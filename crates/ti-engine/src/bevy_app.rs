@@ -85,7 +85,7 @@ fn spawn_index(mut commands: Commands) {
         Transform::from_translation(Vec3::new(0.0, 160.0, 0.0)),
     ));
     commands.spawn((
-        Text2d::new("Bevy S18.1 spike — index 占位"),
+        Text2d::new("Bevy S18.1 spike index placeholder"),
         TextFont { font_size: FontSize::Px(32.0), ..Default::default() },
         Transform::from_translation(Vec3::new(0.0, -40.0, 0.0)),
     ));

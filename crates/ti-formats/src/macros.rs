@@ -186,7 +186,7 @@ mod tests {
 
     define_format! {
         struct ToyHeader {
-            magic: [u8; 4] = [b'T', b'I', b'T', b'1'],
+            magic: [u8; 4] = *b"TIT1",
             count: u16,
             locked: bool,
         }

@@ -159,7 +159,7 @@ mod tests {
     fn full_battle_invalid_tier() {
         let player = Unit { hp: 100, atk: 10 };
         let (trace, winner, rounds) = oracle_full_battle(0, player, 99);
-        assert!(trace.is_empty());
+        assert_eq!(trace, [] as [(u32, u32); 0]);
         assert_eq!(winner, Side::Player);
         assert_eq!(rounds, 0);
     }

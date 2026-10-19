@@ -53,7 +53,7 @@ fn session_invalid_tier() {
     assert_eq!(s.boss_hp(), 0, "越界档 → 无效战斗");
     assert_eq!(s.outcome(), Some(Side::Player), "无效战斗判玩家胜（无 BOSS 可打）");
     let (trace, w, r) = s.finish();
-    assert!(trace.is_empty());
+    assert_eq!(trace, [] as [(u32, u32); 0]);
     assert_eq!(w, Side::Player);
     assert_eq!(r, 0);
 }

@@ -115,7 +115,7 @@ fn parses_music_lpk_wav_entry() {
     let clip = parse_wav(&wav).expect("WAV 解析成功");
     assert_eq!(clip.sample_rate, 8_000, "F-208：8kHz");
     assert_eq!(clip.bits, 8, "F-208：8bit");
-    assert!(!clip.samples.is_empty());
+    assert_ne!(clip.samples, [] as [i16; 0]);
 }
 
 #[test]
