@@ -1,0 +1,86 @@
+# S18.2 验收证据 — BevyCanvas（Canvas trait 的 Bevy 实现 + 1080 坐标契约 + 层序 + GPU/CPU 像素对照）
+
+日期：2026-10-19 · 判据：契约测试 + 单场景 GPU/CPU 像素对照（量化容差）+ clippy 0 warning + gate 全绿
+裁决文档：docs/process/11_bevy_migration.md §4（S18.1 已 verified）
+
+## 1. 交付物
+- `crates/ti-engine/src/canvas.rs`：`BevyCanvas`（实现 `ti_render::canvas::Canvas`）+ `CanvasEntity`
+  + `rgb565_to_color` / `color_to_rgb565` / `viewport_scale`（`lib.rs` 导出）。
+- `crates/ti-engine/tests/canvas_contract.rs`：11 条无 GPU 契约测试。
+- `crates/ti-engine/examples/bevy_vs_cpu_pixel.rs`：真实 GPU 单场景像素对照（独立进程）。
+
+## 2. 设计落点（与 §4 架构形状一致）
+- **op 记录制**：Canvas 方法只记录 op（纯、可测，无 ECS 副作用）；`flush(&mut World)` 落 ECS：
+  - `clear_frame` → `ClearColor` 资源；
+  - `fill_rect` → `Sprite::from_color(color, Vec2(w,h))` + `Transform`（按 Framebuf 同款裁剪后再落）；
+  - 三档文本 → `Text2d` + `TextColor` + `TextFont { font_size: FontSize::Px }`。
+- **1080 坐标契约**（08_render_arch 单一坐标系）：逻辑 (0,0) 左上、y 向下；Bevy 世界 y 向上 →
+  `世界 = (cx - 540, 960 - cy)`；`viewport_scale(win) = min(win_w/1080, win_h/1920)` 做 letterbox。
+- **层序**：0.20 的 2D 精灵排序键 = `Transform.translation.z`（`bevy_sprite_render` 用
+  `FloatOrd(transform.translation().z)`；**0.20 无独立 `ZIndex` 组件**，`bevy::ui::ZIndex` 需 `ui`
+  特性且不是精灵排序入口）。`set_z` 定本帧层，文本层 = `z + 1`。
+- **文本指标同源**：宽度/字高公式与 `ti-app MenuShell::tier_text_width_px` 逐式对齐
+  （TTF `advance` 求和 ceil / 位图回退 `chars × advance`），保证 chrome 布局计算两后端一致。
+- **帧间零残留**：二次 `flush` 先 despawn 全部 `CanvasEntity` 实体（测试断言 2 帧 → 剩 1 实体）。
+
+## 3. Bevy 0.20 API 补充实测（S18.1 之外的增量，均 registry 源码核对）
+- `Sprite::from_color` 的 `custom_size: Option<Vec2>` = Some(size)（sprite.rs:73-79）。
+- `Query::new(world)` 已私有/移除 → 用 `world.query::<D>()` / `world.query_filtered::<D, F>()`（0.20 新签名）。
+- `Color::to_srgba()`；`Srgba` 字段是 `red/green/blue`（非 r/g/b）。
+- `Text2d` 无 `with_color/with_font_size` 链式方法 → 用 `TextColor` + `TextFont` 组件。
+- 相机：`Camera2d` 默认正交投影只覆盖很小世界范围 → 必须显式
+  `Projection::Orthographic(OrthographicProjection { near, far, ..default_2d() })`，
+  否则 1080×1920 画布在视野外（全黑）。
+- `Screenshot` 读回：`trigger_screenshots` 走 `commands.trigger`（**全局** trigger），
+  实体级 `.observe()` **收不到**，必须 `app.add_observer(store_readback)`。
+- `App::run()` 内部 `mem::replace(self, App::empty())` 把 App 搬进 runner → run 之后读 App 资源无效，
+  读回槽必须放进程外（`thread_local!` + `Mutex`）。
+
+## 4. 测试结果（实跑输出）
+### 4.1 契约测试（无 GPU，纯内存）
+`cargo test` → `test result: ok. 11 passed; 0 failed`（canvas_contract）：
+`rgb565_roundtrip_within_one_lsb` / `viewport_scale_letterbox` / `fill_rect_clips_like_framebuf`
+/ `rect_transform_is_center_of_logical_rect` / `layer_order_maps_to_z` / `text_layers_above_rects`
+/ `clear_frame_sets_clear_color_resource` / `bitmap_fallback_metrics_match_theme`
+/ `second_flush_despawns_previous_frame` / `canvas_entity_is_component` / `world_extent_constants_unchanged`。
+
+### 4.2 GPU/CPU 单场景像素对照（`cargo run --example bevy_vs_cpu_pixel`）
+渲染路径 = Bevy 官方 headless 同款：`WindowPlugin { primary_window: None }` +
+`Camera2d` 挂 `RenderTarget::Image`(1080×1920 RGBA8) + `RenderPlugin { synchronous_pipeline_compilation: true }` +
+手泵 `update()` + `RenderDevice::poll(PollType::Wait)` + `Screenshot::image(...)` 读回。
+（本机 swapchain 路径读回全 0 —— headless 会话下窗口表面不 present，故走离屏路径。）
+
+实测输出（exit code 0）：
+```
+S18.2 GPU/CPU 像素对照（色块内部，排除文本行 + 2px 边缘带）：比对 1607576 像素，超差 0（0.0000%），最大通道差 0 LSB，首个超差 None
+诊断：GPU 非黑像素 2073600（文本区字形对齐属 S18.3）
+  anchor (0,0): cpu=0x10c9 gpu=0x10c9
+  anchor (1079,1919): cpu=0x0865 gpu=0x0865
+  anchor (60,200): cpu=0x190c gpu=0x190c
+  anchor (540,500): cpu=0x190c gpu=0x190c
+S18.2 对照通过（阈值：通道 ≤8 LSB 且超差比例 <0.5%）
+```
+场景 = `draw_scene`（清屏 + 天幕 + 标题条 + 面板 + 选中块 + 描边块 + 金线 + 三档文本占位条），
+同一绘制序列分别喂 CPU `Framebuf`（`CpuCanvas`）与 GPU `BevyCanvas`。
+
+**判定口径（分层，对齐 WBS DoD）**：
+- **色块内部像素**：1,607,576 像素 **100% 一致（最大通道差 0 LSB）** —— 坐标契约 + 颜色转换 +
+  层序在 GPU 后端**完全对齐** CPU 基线。
+- **排除区两项**（各带理由，随 S18.6 锁进 doccheck）：
+  1. **文本整行横带**：GPU 走 Bevy 默认字体（CJK 无字形 → 豆腐块，advance 与旧位图口径无关），
+     字形/字号对齐属 **S18.3**（TTF GPU 图集）范围；
+  2. **色块边缘 2px 带**（含内侧）：CPU `fill_rect` 用半开区间 `[x0,x1)` 逐像素填充，GPU 精灵按
+     自身填充规则取整，**边界像素归属**是两种栅格化器的固有差异（实测 GPU 矩形整体内缩约 1px，
+     2px 带覆盖后内部 100% 一致）——非坐标契约错误。
+
+### 4.3 lint
+`cargo clippy --all-targets` → **0 warning / 0 error**（ti-engine 独立 workspace，`[lints]` 复制根口径：
+`all + pedantic` warn、`unwrap_used/panic/unsafe_code` deny）。`cargo fmt --all` 0 变更。
+
+### 4.4 根 gate
+ti-engine 独立 workspace（links=alsa 隔离，11_bevy_migration §6）不挂根 gate；本轮无根 crate
+变更，根 gate.ps1 23 项维持 S18.1 状态（全绿）。
+
+## 判定
+- 契约测试 11/11 绿；GPU/CPU 色块内部像素 0 超差（160 万像素）；clippy 0 warning。
+- **S18.2 = verified**。残留项按 WBS 归属后续：文本 GPU 字形对齐 → S18.3；边缘栅格化口径 → S18.6。

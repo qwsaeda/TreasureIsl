@@ -12,7 +12,7 @@
 //!   字号 = `FontSize::Px(f32)` 枚举，非裸 f32）
 //! - 退出 = `MessageWriter<AppExit>` 消息制（0.20 `AppExit` 是 Message，无 `trigger()`；
 //!   `App::run` 内部监 `AppExit` 消息自动停循环）
-//! - 音频关（双渲染期 `links = "alsa"` 冲突，11_bevy_migration §6；S18.8 恢复）
+//! - 音频关（双渲染期 `links = "alsa"` 冲突，见 `docs/process/11_bevy_migration.md` §6；S18.8 恢复）
 
 use std::time::Duration;
 
@@ -28,10 +28,16 @@ use bevy::text::{FontSize, TextFont, TextPlugin};
 use bevy::window::WindowResolution;
 use bevy::winit::WinitPlugin;
 
-/// S18.1 spike App：窗口 + 1 色块 + 1 段文字（Startup 系统 spawn）。
+/// S18.1 spike App：窗口 + 1 色块 + 1 段文字（`Startup` 系统 spawn）。
 #[derive(Debug)]
 pub struct SpikeApp {
     app: App,
+}
+
+impl Default for SpikeApp {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SpikeApp {
@@ -57,7 +63,7 @@ impl SpikeApp {
             .add_plugins(RenderPlugin::default())
             .add_plugins(WinitPlugin::default())
             .add_plugins(window)
-            .add_plugins(TextPlugin::default())
+            .add_plugins(TextPlugin)
             .add_systems(Startup, spawn_index)
             .add_systems(Update, exit_after_window);
         // 0.20 拆分：`ClearColor` 资源由应用侧 init（`ViewPlugin` 私有，DefaultPlugins 里才挂）。
@@ -71,7 +77,7 @@ impl SpikeApp {
     }
 }
 
-/// Startup：index 场景占位（1 色块 + 1 段文字；真实场景渲染在 S18.2 BevyCanvas 落地）。
+/// Startup：`index` 场景占位（1 色块 + 1 段文字；真实场景渲染在 S18.2 `BevyCanvas` 落地）。
 fn spawn_index(mut commands: Commands) {
     commands.spawn(Camera2d);
     commands.spawn((
@@ -88,6 +94,7 @@ fn spawn_index(mut commands: Commands) {
 /// Update：累计跑满 5s（≈300 帧@60fps）发 `AppExit` 自动退出
 /// （spike 自检：窗口存活 5s + 无 panic 即 2D 渲染链路在位）。
 /// 0.20 API：`Time::elapsed()` = 累计 Duration（每帧 delta 是 `Time::delta()`）。
+#[allow(clippy::needless_pass_by_value)]
 fn exit_after_window(time: Res<Time>, mut exits: MessageWriter<AppExit>) {
     if time.elapsed() > Duration::from_secs(5) {
         exits.write(AppExit::Success);

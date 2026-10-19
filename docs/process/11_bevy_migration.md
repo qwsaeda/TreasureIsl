@@ -66,7 +66,7 @@
 |---|---|---|
 | S18.0 | 本文定稿 + 签核留痕 + 路由登记 | doccheck 0 + ledger verified + commit |
 | S18.1 | spike：`ti-engine` crate + Bevy 0.20 最小 app（native 跑 index 一场景：1 矩形 + 1 段 TTF 文字）；wasm webgl2 编译 + 浏览器可跑；android 目标编译（Mac 出包链路文档更新）；浏览器触摸映射结论（winit 无原生 touch → 自写 system 或指针事件） | 三端编译/可跑 + 实测体积回填 §3 + 触摸结论文档（**✅ verified 2026-10-19，`evidence/S18.1.log`；android 项本机无 NDK = SKIP 口径，Mac 链路随 S18.8**） |
-| S18.2 | `BevyCanvas`：Canvas trait 的 Bevy 实现（fill_rect/原语 → Mesh2D；Camera2D + 1080 坐标契约 + letterbox）；单场景像素对照 CPU 基线（容差） | 契约测试 + 场景对照 |
+| S18.2 | `BevyCanvas`：Canvas trait 的 Bevy 实现（op 记录制 + `flush` 落 ECS；`fill_rect` → `Sprite::from_color`、三档文本 → `Text2d`、`clear_frame` → `ClearColor`；1080 坐标契约 + `viewport_scale` letterbox；层序用 `Transform.translation.z`）；单场景 GPU/CPU 像素对照 | **✅ verified 2026-10-19**（契约测试 11/11；色块内部 1,607,576 像素 **0 超差 / 最大通道差 0 LSB**；clippy 0 warning；`evidence/S18.2.log`）。残留：文本 GPU 字形对齐→S18.3，边缘栅格化口径→S18.6 |
 | S18.3 | 字体：TTF GPU 文字（CJK 子集）+ 位图 advance 回退；三档字号对齐旧基线 | 字号对齐断言 |
 | S18.4 | 三端 bin 挂 bevy + 音频（bevy_audio/rodio）+ 存储/输入迁移 + stats.rs 重锚（静止跳帧指标退役） | 三端可玩 + e2e 全绿 |
 | S18.5 | z_index 层系统 + 主地图相机 zoom/pan + 轻量粒子（金币光/命中火花）+ 过渡 ease-in-out 落 Bevy（S17.9 纯函数沿用） | 单测 + 视觉验收 |
