@@ -98,3 +98,43 @@
 - `09_render_framework.md`：ti-render 零游戏语义定位不变；新增 ti-engine 一节 S18.2 回写。
 - `docs/style.md` §5.7「现成库」：bevy 例外入清单（签核在本文 §1）。
 - 台账：S18.0–S18.8 逐任务登记（本文 = S18.0 交付物）。
+
+## S18.7b 架构方案（基线源换 Bevy GPU 读回）
+
+**目标**：`assets/render_baseline/*.png`（像素基线）改由 **Bevy GPU 离屏渲染读回**生成，
+门禁的 render-snapshot / visual-regression 从"CPU 自绘版"切到"Bevy 读回版"。
+
+**接缝 = `ti_render::drawlist::DrawList`**（后端无关的绘制命令表）：
+
+```
+ti-app（无 bevy 依赖，headless 跑逻辑）
+   └─ chrome::render_primitives / 运行时绘制 → DrawList（ti-render）
+                                        │
+                          ┌─────────────┴─────────────┐
+                          ▼                           ▼
+        CPU 执行器 ti_render::generic      Bevy 执行器 ti_engine::scene_render
+        （macroquad/位图，S18.8 退役）      （Sprite/Text2d 实体 + 离屏 Image 读回）
+```
+
+**依赖方向约束**（`docs/process/11_bevy_migration.md` §1 + `links=alsa` 隔离）：
+- `ti-engine → ti-render + bevy`；`ti-app` **任何形态都不能持 bevy**（optional 依赖也进
+  resolution 图）→ **基线生成器不能放在 ti-app 的测试里**。
+- 可行落点：`ti-engine` 内独立 bin（既存 `treasure_bevy.rs` 形态）+ 通过
+  `ti_render::drawlist` 与 ti-app 侧产物对接；或 ti-app 产出 DrawList 文件/管道，ti-engine
+  侧 bin 读入 → Bevy 渲染 → 读回 PNG。
+
+**已知像素差风险点**（切换基线源时必须逐项归零，否则基线会"两张皮"）：
+1. **icon 烘焙尺寸**：CPU 按注册表原生 48px 画在 `rect` 左上；Bevy 侧按 `rect` 边长烘焙纹理
+   （字形仍为原生几何）→ `rect` 边长 ≠ 48 时两侧**透明边距**不同（Bevy 精灵居中会偏 8px），
+   须统一为"左上对齐 + 原生 48"或两侧都按 rect 缩放。
+2. **grad steps**：CPU 逐条 `fill_rect`（步进 = h/steps，向下取整 +1 覆盖）；Bevy 逐条 Sprite
+   → 渐变带边界须同口径（步进取整规则）。
+3. **字体档**：`tier` title/body/hint 的字号与 advance（TTF 44/96/28）须两侧同源
+   （`ti_render::text` 是度量单一事实源，Bevy 侧 TextFont 须复用同一档位）。
+4. **z 映射**：CPU 按 `z` 升序画；Bevy 侧 `spawn_draw_list` 把排序后的序号线性映射到
+   [-12, 0]（背景 sprite z=-13）→ 相对层序一致，**绝对深度值不可比**（只用于排序）。
+5. **过渡/亮度帧**：CPU 路径有 `apply_brightness`（翻页亮度）与 crossfade；Bevy 记录模式
+   无 → 基线生成须在**无动效**的确定性帧上取（否则基线不可复现）。
+
+**纪律**：切换基线源前，先用同一帧做 CPU vs Bevy 像素 diff（逐场景、逐原语），
+把 diff 归零后再改门禁指认；`evidence/S18.7b.log` 须含 7 场景 diff=0 的实跑输出。
