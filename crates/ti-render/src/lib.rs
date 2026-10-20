@@ -13,8 +13,10 @@
 pub mod canvas;
 pub mod font;
 pub mod framebuffer;
+pub mod generic;
 pub mod icons;
 pub mod iso;
+pub mod png;
 pub mod primitives;
 pub mod shell;
 pub mod text;

@@ -22,23 +22,20 @@
 //! cargo run -p ti-app --features bevy-shell,native-shell --bin treasure-bevy-native
 //! ```
 
-use bevy::a11y::AccessibilityPlugin;
-use bevy::asset::{AssetPlugin, Assets, RenderAssetUsages};
-use bevy::camera::{Camera2d, ClearColor, OrthographicProjection, Projection};
-use bevy::image::{Image, ImagePlugin};
+use std::path::PathBuf;
+
+use bevy::asset::RenderAssetUsages;
+use bevy::camera::{Camera2d, ClearColor, OrthographicProjection, Projection, RenderTarget};
 use bevy::input::ButtonInput;
 use bevy::input::keyboard::KeyCode;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::input::mouse::MouseButton;
 use bevy::input::touch::Touches;
-use bevy::mesh::MeshPlugin;
 use bevy::prelude::*;
-use bevy::render::RenderPlugin;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::sprite::Sprite;
-use bevy::text::TextPlugin;
-use bevy::window::{Window, WindowPlugin, WindowResolution};
-use bevy::winit::WinitPlugin;
+use bevy::text::Font;
+use bevy::window::{Window, WindowResolution};
 use ti_app::game_app::{GameApp, GameInput, KeyState, Scene};
 use ti_app::menu_shell::parse_font_bytes;
 use ti_app::scenes::SceneKind;
@@ -84,6 +81,75 @@ struct MousePos {
 #[derive(Resource, Default)]
 struct FrameTex(Option<Handle<Image>>);
 
+/// S18.7：离屏截图目标（`--shot` 模式；验证 Bevy 原生渲染真实出画）。
+#[derive(Resource, Clone)]
+struct ShotTarget(Handle<Image>);
+
+/// S18.7：截图读回结果（RGBA8 像素）。
+static SHOT_READBACK: std::sync::Mutex<Option<Vec<u8>>> = std::sync::Mutex::new(None);
+
+/// S18.7：截图请求标记（只发一次）。
+#[derive(Resource, Default)]
+struct ShotDone(bool);
+
+/// S18.7：截图读回 observer（`Screenshot::image` → 像素）。
+#[allow(clippy::needless_pass_by_value)]
+fn store_shot(captured: On<bevy::render::view::screenshot::ScreenshotCaptured>) {
+    let raw: Vec<u8> =
+        captured.image.data.as_ref().map_or_else(Vec::new, |d| d.as_slice().to_vec());
+    if let Ok(mut g) = SHOT_READBACK.lock() {
+        *g = Some(raw);
+    }
+}
+
+/// S18.7：请求一次离屏截图（帧数 ≥3 后）。
+#[allow(clippy::needless_pass_by_value)]
+fn request_shot(
+    mut shot: ResMut<ShotDone>,
+    target: Res<ShotTarget>,
+    frames: Res<bevy::diagnostic::FrameCount>,
+    mut commands: Commands,
+) {
+    if shot.0 || frames.0 < 12 {
+        return;
+    }
+    shot.0 = true;
+    commands.spawn(bevy::render::view::screenshot::Screenshot::image(target.0.clone()));
+}
+
+/// S18.7：读回就绪 → 退出（`--shot` 模式）。
+fn finish_shot(
+    mut exits: MessageWriter<AppExit>,
+    device: Option<Res<bevy::render::renderer::RenderDevice>>,
+) {
+    if let Some(device) = device {
+        let _ = device.wgpu_device().poll(bevy::render::render_resource::PollType::Wait {
+            submission_index: None,
+            timeout: None,
+        });
+    }
+    let ready = SHOT_READBACK
+        .lock()
+        .ok()
+        .and_then(|g| g.clone())
+        .is_some_and(|raw| raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8));
+    if ready {
+        exits.write(AppExit::Success);
+    }
+}
+
+/// S18.7：**Bevy 原生 index 场景**实体（`scene_render::IndexScene`）。
+///
+/// Bevy = 渲染引擎：index 场景直接 spawn Sprite/Text2d 实体，**不产生帧缓冲、
+/// 不上传整帧纹理**；其余场景在 S18.7 迁完前仍走 CPU 纹理（过渡期）。
+#[derive(Resource, Default)]
+struct NativeIndex {
+    /// 已生成的实体句柄（`None` = 未生成）。
+    scene: Option<ti_engine::scene_render::SceneEntities>,
+    /// 已生成时的场景 id（变了 = 需重建）。
+    built_for: Option<usize>,
+}
+
 /// 帧纹理全屏精灵标记（S18.5 相机 zoom/pan 接线：`camera_system` 经此实体驱动
 /// 纹理位移 / 正交 scale；与相机实体区分 = `Without<Camera2d>`）。
 #[derive(Component)]
@@ -99,6 +165,7 @@ fn letterbox() -> f32 {
 
 /// Startup：相机（正交 scale=0.5 letterbox 满铺）+ 占位纹理 + 全屏精灵。
 #[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::needless_pass_by_value)]
 fn spawn_stage(mut commands: Commands, mut assets: ResMut<Assets<Image>>) {
     let scale = letterbox();
     commands.spawn((
@@ -125,7 +192,8 @@ fn spawn_stage(mut commands: Commands, mut assets: ResMut<Assets<Image>>) {
             Color::srgb(0.1, 0.07, 0.05),
             Vec2::from([LOGICAL_W as f32, LOGICAL_H as f32]),
         ),
-        Transform::IDENTITY,
+        // S18.7：CPU 纹理层置于最底（z=-13；原生实体 z∈[-12,-1] 全在其上）。
+        Transform::from_xyz(0.0, 0.0, -13.0),
         FrameSprite,
     ));
 }
@@ -293,6 +361,15 @@ fn render_system(
         return;
     }
     let scene_key = SceneKind::from_legacy(g.scene()).discriminant();
+    if g.scene() == Scene::Index {
+        // S18.7：index = Bevy 原生渲染（实体由 `native_index_system` 维护）；
+        // 本系统不产纹理（双渲染期其余场景仍走 CPU 纹理路径）。
+        g.render();
+        g.shell_mut().last_rendered = Some(g.menu_selected());
+        g.shell_mut().last_rendered_scene = Some(scene_key);
+        g.clear_last_sfx();
+        return;
+    }
     if g.transition_active()
         || g.shell().last_rendered != Some(g.menu_selected())
         || g.shell().last_rendered_scene != Some(scene_key)
@@ -320,6 +397,65 @@ fn render_system(
     }
 }
 
+/// S18.7：Bevy 原生 index 场景维护（**独占系统**：需 `&mut World` 建/销实体）。
+///
+/// - 首次进入 index：按 `scenes.json` 的 `index.primitives` spawn Sprite/Text2d 实体；
+/// - 选择态变化：换卡片底色 / 文字色；
+/// - 离开 index：despawn 原生实体（其余场景走 CPU 纹理过渡路径）。
+fn native_index_system(world: &mut World) {
+    let Some(store) = world.get_resource::<GameStore>() else {
+        return;
+    };
+    let Ok(g) = store.0.lock() else {
+        return;
+    };
+    let scene = g.scene();
+    let selected = g.menu_selected();
+    drop(g);
+
+    let scene_id = usize::try_from(SceneKind::from_legacy(scene).discriminant()).unwrap_or(0);
+    let is_index = scene == Scene::Index;
+    eprintln!("[native] scene = {scene:?} is_index = {is_index}");
+    if !is_index {
+        let mut native = world.remove_resource::<NativeIndex>().unwrap_or_default();
+        if let Some(idx) = native.scene.take() {
+            for (_, e, _) in &idx.selectable {
+                world.despawn(*e);
+            }
+        }
+        native.built_for = None;
+        native.scene = None;
+        world.insert_resource(native);
+        return;
+    }
+    let theme = ti_render::theme::Theme::default();
+    // 取资源（释放 world 借用后再 spawn/despawn，避免 E0499）。
+    let mut native = world.remove_resource::<NativeIndex>().unwrap_or_default();
+    if native.built_for != Some(scene_id) {
+        if let Some(idx) = native.scene.take() {
+            for (_, e, _) in &idx.selectable {
+                world.despawn(*e);
+            }
+        }
+        let font = world
+            .get_resource::<AssetServer>()
+            .map(|server| server.load::<Font>("assets/fonts/lxgw-wenkai-reg.ttf"));
+        // 通用原语表 = 界面（`scenes.json` `index.primitives`）；渲染器不认识场景语义。
+        let prims = ti_core::data::scenes()
+            .ok()
+            .and_then(|s| s.get("index").cloned())
+            .map(|s| s.primitives)
+            .unwrap_or_default();
+        let selected_item = i64::try_from(selected).unwrap_or(-1);
+        let entities =
+            ti_engine::scene_render::spawn_primitives(world, &theme, font, selected_item, &prims);
+        eprintln!("[native] index primitives built: {} selectable", entities.selectable.len());
+        native.scene = Some(entities);
+        native.built_for = Some(scene_id);
+    }
+    world.insert_resource(native);
+}
+
 /// stats（feature `stats`）：fps 打印（S18.4 重锚：静止跳帧指标退役，GPU 口径 = Time delta）。
 #[allow(clippy::needless_pass_by_value)]
 fn stats_system(mut meter: Local<FpsMeter>, time: Res<Time>) {
@@ -332,14 +468,6 @@ fn stats_system(mut meter: Local<FpsMeter>, time: Res<Time>) {
 /// 资源加载（非 wasm 构建）：`std::fs` 读仓库资源（与 macroquad native 壳同源路径）。
 #[cfg(not(target_arch = "wasm32"))]
 fn load_resources(game: &mut GameApp) {
-    use std::path::{Path, PathBuf};
-
-    fn repo_root() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .and_then(Path::parent)
-            .map_or_else(|| PathBuf::from("."), PathBuf::from)
-    }
     fn read_local(name: &str) -> Option<Vec<u8>> {
         std::fs::read(repo_root().join("legacy").join("data").join(name)).ok()
     }
@@ -521,8 +649,14 @@ fn selftest_system(
 }
 
 /// 主：构造壳 + Bevy App（S18.1 实测最小 plugin 链，关 audio）+ 三系统。
+/// 仓库根（资产根 / 证据输出路径）。
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
+}
+
 fn main() {
     let selftest = std::env::args().any(|a| a == "--selftest");
+    let shot = std::env::args().any(|a| a == "--shot");
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);
     // 双渲染期无 bevy 音频：曲目数 0（S18.8 切 bevy_audio 后恢复）。
@@ -538,21 +672,35 @@ fn main() {
         resizable: false,
         ..Default::default()
     };
+    // S18.7：**官方 `DefaultPlugins`**（不再手搓插件表）。
+    //
+    // 教训（EXP-101 待写）：手写插件表漏 `SpritePlugin`/`SpriteRenderPlugin`/
+    // `CameraPlugin`/`CorePipelinePlugin`/`init_asset::<Shader>()` 等 → 实体在但**从未渲染**
+    // （S18.1 spike 的矩形、S18.4 的 CPU 纹理都是黑的，验收只查 exit 0 没看画面）。
+    // 正确用法 = 引擎官方插件组 + 按需 `.set(...)` 覆写。
     let mut app = App::new();
     let _ = app
-        .add_plugins(MinimalPlugins)
-        .add_plugins(TransformPlugin)
-        .add_plugins(AssetPlugin::default())
-        .add_plugins(ImagePlugin::default())
-        .add_plugins(MeshPlugin)
-        .add_plugins(AccessibilityPlugin)
-        .add_plugins(bevy::input::InputPlugin)
-        .add_plugins(RenderPlugin::default())
-        .add_plugins(WinitPlugin::default())
-        .add_plugins(WindowPlugin { primary_window: Some(window), ..Default::default() })
-        .add_plugins(TextPlugin)
+        .add_plugins(
+            bevy::DefaultPlugins
+                .set(bevy::window::WindowPlugin {
+                    // S18.7：`--shot` 离屏模式不建窗口（照 S18.3 example 口径）。
+                    primary_window: if shot { None } else { Some(window) },
+                    ..Default::default()
+                })
+                // 资产根 = 仓库根（字体 `assets/fonts/...`）。
+                .set(bevy::asset::AssetPlugin {
+                    file_path: repo_root().to_string_lossy().to_string(),
+                    ..Default::default()
+                })
+                .set(bevy::render::RenderPlugin {
+                    synchronous_pipeline_compilation: true,
+                    ..Default::default()
+                })
+                .set(bevy::log::LogPlugin { level: bevy::log::Level::WARN, ..Default::default() }),
+        )
         .init_resource::<ClearColor>()
         .init_resource::<MousePos>()
+        .init_resource::<NativeIndex>()
         .insert_resource(GameStore(std::sync::Mutex::new(game)));
     if selftest {
         app.insert_resource(SelfTest { step: 0, repeat: 0, failures: 0, done: false })
@@ -560,7 +708,77 @@ fn main() {
     } else {
         // S18.5：相机系统 = `WorldCam` → Bevy 正交 scale / 精灵位移（渲染前接线）。
         app.add_systems(Update, (input_system, camera_system, render_system, stats_system).chain());
+        app.add_systems(Update, native_index_system.after(render_system));
     }
     app.add_systems(Startup, spawn_stage);
+    if shot {
+        // S18.7：离屏渲染目标（`--shot` 验证 Bevy 原生渲染真实出画）。
+        let mut target_image =
+            Image::new_target_texture(LOGICAL_W, LOGICAL_H, TextureFormat::Rgba8UnormSrgb, None);
+        target_image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+        let target_handle = app.world_mut().resource_mut::<Assets<Image>>().add(target_image);
+        app.insert_resource(ShotTarget(target_handle.clone()));
+        app.world_mut().spawn((
+            Camera2d,
+            RenderTarget::Image(target_handle.into()),
+            Transform::IDENTITY,
+        ));
+        app.init_resource::<ShotDone>()
+            .add_observer(store_shot)
+            .add_systems(Update, (request_shot, finish_shot).chain());
+        // 手动 update 循环 + 设备轮询（照 S18.3 `bevy_text_align` example 口径：
+        // 截图异步完成，需 poll 设备才能拿到结果）。
+        //
+        // ⚠️ `app.finish()` + `app.cleanup()` **不可省**：`finish()` 才会把渲染 app 的
+        // extract 调度启动起来（`RenderAppChannels` 由此就位）；缺它 → extract 阶段
+        // panic「resource does not exist: RenderAppChannels」。
+        app.finish();
+        app.cleanup();
+        for _ in 0..60 {
+            app.update();
+            if let Some(device) = app.world().get_resource::<bevy::render::renderer::RenderDevice>()
+            {
+                let _ = device.wgpu_device().poll(bevy::render::render_resource::PollType::Wait {
+                    submission_index: None,
+                    timeout: None,
+                });
+            }
+            if SHOT_READBACK
+                .lock()
+                .ok()
+                .and_then(|g| g.clone())
+                .is_some_and(|raw| raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8))
+            {
+                break;
+            }
+        }
+        write_shot_png("evidence/bevy_native_index.png");
+        return;
+    }
     app.run();
+}
+
+/// S18.7：把 GPU 读回像素写成 PNG（`--shot` 输出）。
+fn write_shot_png(path: &str) {
+    let Some(raw) = SHOT_READBACK.lock().ok().and_then(|g| g.clone()) else {
+        eprintln!("[shot] 无读回像素（渲染目标未就绪？）");
+        return;
+    };
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..");
+    let out = root.join(path);
+    if let Some(parent) = out.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let nonblack = raw.chunks(4).filter(|c| c[0] > 8 || c[1] > 8 || c[2] > 8).count();
+    let alpha_nonzero = raw.chunks(4).filter(|c| c[3] > 8).count();
+    let first: Vec<String> = raw.chunks(4).take(4).map(|c| format!("{c:?}")).collect();
+    let mid = raw.len() / 4 / 2;
+    let midpx: Vec<String> = raw.chunks(4).skip(mid).take(3).map(|c| format!("{c:?}")).collect();
+    eprintln!("[shot] 非黑像素 = {nonblack} / alpha>8 = {alpha_nonzero} / {}", raw.len() / 4);
+    eprintln!("[shot] 首像素 = {first:?} 中像素 = {midpx:?}");
+    let png = ti_render::png::encode_png_rgba(&raw, LOGICAL_W, LOGICAL_H);
+    match std::fs::write(&out, &png) {
+        Ok(()) => eprintln!("[shot] 已写 {}", out.display()),
+        Err(e) => eprintln!("[shot] 写文件失败: {e}"),
+    }
 }

@@ -536,6 +536,18 @@ pub struct Primitive {
     pub text: String,
     /// i18n key（`kind` = 文本类时优先于 `text`）。
     pub text_key: String,
+    /// 通用参数（`kind` 专属语义；数值/字符串皆可，如 `icon` 的 `icon`=图标名、
+    /// `size`=边长、`grad` 的 `from_token`/`to_token`=配色令牌名）——**布局参数一律走数据**。
+    pub params: BTreeMap<String, serde_json::Value>,
+    /// 显示条件（空 = 总是；`selected` = 仅当所属菜单项被选中；`normal` = 仅未选中）。
+    pub when: String,
+    /// 所属菜单项序号（`-1` = 不属于菜单项；`when` 判定用）。
+    pub item: i64,
+    /// 层序（**负值**，Bevy 相机朝 -Z；越大越靠上 = 后画者在上；见
+    /// `docs/process/12_bevy_usage.md` §4）。
+    pub z: i32,
+    /// 文本档位（`title`/`body`/`hint`；仅 `kind = "text"` 用）。
+    pub tier: String,
 }
 
 /// 单个场景的布局（`assets/data/scenes.json` 的一个条目）。

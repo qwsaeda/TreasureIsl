@@ -53,19 +53,16 @@ fn index_layout_matches_doc() {
         panic!("scenes.json 缺 index");
     };
     assert_eq!(idx.title.h, 96, "index 标题条 h=96（1080 现代版面，S17.2 8pt）");
-    assert_eq!(
-        idx.list.y, 960,
-        "index 列表基线 y=392（1080 现代版面，S17.2 8pt；S15.6 QB101 六行重分布）"
-    );
-    assert_eq!(idx.list.row_h, 88, "index 列表 row_h=224（1080 现代版面，S17.2 8pt）");
-    assert_eq!(idx.list.item_h, 72, "index 列表 item_h=168（1080 现代版面，S17.2 8pt）");
-    // 现代版面不变式：首块顶 = 基线 - highlight_offset = 392-40 = 352，须在标题条（12..108）之下留间隙；
-    // 末块底 = 352 + 5*224 + 168 = 1432，须在尾行（1840）之上。
+    assert_eq!(idx.list.y, 696, "index 列表基线 y=696（1080 现代版面，S18.7 紧凑列）");
+    assert_eq!(idx.list.row_h, 176, "index 列表 row_h=176（1080 现代版面，S18.7 紧凑行距）");
+    assert_eq!(idx.list.item_h, 152, "index 列表 item_h=152（1080 现代版面，S18.7 紧凑卡高）");
+    // 现代版面不变式：首块顶 = 基线 - highlight_offset = 704-0 = 704，须在标题条（12..108）之下留间隙；
+    // 末块底 = 704 + 5*176 + 152 = 1736，须在尾行（1840）之上。
     let top = idx.list.y - idx.list.highlight_offset;
-    assert_eq!(top, 920, "index 首块顶 = 352（1080 现代版面，S17.2 8pt）");
+    assert_eq!(top, 696, "index 首块顶 = 696（1080 现代版面，S18.7 紧凑列）");
     assert!(top >= 108, "index 首块顶 {top} 压标题条（条底 108）");
     let bottom = top + 5 * idx.list.row_h + idx.list.item_h;
-    assert_eq!(bottom, 1432, "index 末块底 = 1432（1080 现代版面，S17.2 8pt）");
+    assert_eq!(bottom, 1728, "index 末块底 = 1728（1080 现代版面，S18.7 紧凑列）");
     assert!(bottom <= 1838, "index 末块底 {bottom} 撞尾行 y=1840");
     let status = idx.extra.get("status").expect("index 缺 status 矩形");
     assert_eq!(status.x, 540, "index status x=540（QB123 屏心居中语义坐标）");
@@ -549,10 +546,10 @@ fn render_scene_1080(scene: &str) -> Vec<u16> {
 }
 
 /// chrome 元素色集合（均 ≠ 羊皮纸底 ~0x10A3）：命中任一即视为「chrome 在该像素画了东西」。
-fn chrome_colors() -> [u16; 8] {
+fn chrome_colors() -> &'static [u16] {
     use ti_app::menu_shell as m;
     use ti_app::scenes::chrome as c;
-    [
+    &[
         m::COLOR_WOOD,
         m::COLOR_GOLD_BRIGHT,
         m::COLOR_MENU_BG,
@@ -560,7 +557,9 @@ fn chrome_colors() -> [u16; 8] {
         c::COLOR_DANGER,
         c::COLOR_PLAYER,
         c::COLOR_LANDMARK,
-        0xFFFF, // chrome::COLOR_TEXT_ON_PARCH
+        c::COLOR_WOOD_WARM, // S18.7 暖木框
+        c::COLOR_GOLD_WARM, // S18.7 暖金标题/选中底
+        0xFFFF,             // chrome::COLOR_TEXT_ON_PARCH
     ]
 }
 
@@ -590,21 +589,21 @@ fn scene_layer_contributes_text_region_pixels() {
         let px = render_scene_1080(scene);
         assert_eq!(px.len(), FB_W * FB_H, "{scene} 帧缓冲应 = 1080×1920");
         if scene == "index" {
-            // S18.6：index 标题区 = **仪式木框**（`ornate_frame` 112,192,856,672），
-            // 替代细标题条 `title_bar`（避免标题重复）→ 断言木框色像素存在。
+            // S18.7：index 标题区 = **仪式木框**（通用原语 `rect` 组合：木框 112,200,856,360
+            // + 金内线 136,224,816,4），替代细标题条 `title_bar`（避免标题重复）。
             let n =
-                region_color_count(&px, 112, 192, 856, 4, ti_app::scenes::chrome::COLOR_WOOD_WARM)
+                region_color_count(&px, 112, 200, 856, 16, ti_app::scenes::chrome::COLOR_WOOD_WARM)
                     + region_color_count(
                         &px,
-                        112,
-                        192,
-                        856,
+                        136,
+                        224,
+                        816,
                         4,
                         ti_app::scenes::chrome::COLOR_GOLD_WARM,
                     );
             assert!(
                 n > 0,
-                "index 仪式木框区（112,192,856,4）无 chrome 像素 —— ornate_frame 未画 / 被盖死"
+                "index 仪式木框区（112,200,856,16 / 136,224,816,4）无 chrome 像素 —— 木框未画 / 被盖死"
             );
             continue;
         }

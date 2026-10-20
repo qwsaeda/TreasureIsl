@@ -169,9 +169,11 @@ fn framebuf_matches_logical_resolution() {
     // 关键是「非背景色 0xFD70、非黑 0x0000」。
     let wood = ti_app::menu_shell::COLOR_WOOD;
     let parch_dark = ti_app::menu_shell::COLOR_PARCH_DARK;
+    // S18.7：index 外框改为**数据驱动**的暖木框（`wood_warm` 令牌）→ 一并接受。
+    let wood_warm = ti_app::scenes::chrome::COLOR_WOOD_WARM;
     assert!(
-        pixels[0] == wood || pixels[0] == parch_dark,
-        "像素(0,0) 应为木纹外框/羊皮纸（非黑非背景），实为 {:#05X}",
+        pixels[0] == wood || pixels[0] == parch_dark || pixels[0] == wood_warm,
+        "像素(0,0) 应为木纹外框/羊皮纸/暖木框（非黑非背景），实为 {:#05X}",
         pixels[0]
     );
 }

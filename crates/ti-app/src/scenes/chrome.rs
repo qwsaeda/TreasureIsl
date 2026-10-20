@@ -14,10 +14,9 @@ use ti_core::data;
 use ti_render::framebuffer::LOGICAL_W_I32;
 use ti_render::theme::Theme;
 // Canvas trait：文本宽度度量（`title_text_width`/`text_width`）在 trait 上，需在作用域内。
-use ti_render::canvas::Canvas;
 
 use crate::scenes::{RenderHost, SceneHost};
-use ti_core::data::{IconDef, ListLayout, Primitive, ui_icons};
+use ti_core::data::{IconDef, Primitive, icon_ids, ui_icons};
 
 // === 颜色常量重导出（从 Theme 默认值，兼容旧导入路径） ===
 
@@ -490,175 +489,72 @@ pub fn nautical_grid(host: &mut dyn SceneHost) {
     with_canvas(host, |c| ti_render::shell::nautical_grid(c, &theme));
 }
 
-/// S18.6 声明式原语 dispatch：读 `scenes.json` 的 `primitives` 表 → 逐项渲染。
+/// S18.7 声明式原语 dispatch（**CPU 执行器**）：`scenes.json` 的 `primitives` 表 → 画布绘制。
 ///
-/// **数据驱动边界**（`docs/process/09_render_framework.md` §5 数据分离）：
-/// - 界面元素 = 数据项（`kind` = 原语名 + 参数），本函数只做 `kind` → 原语 映射；
-/// - 改版面 / 顺序 / 参数 / 配色令牌 = **只改 `scenes.json`**（0 代码改动）；
-/// - 新增**原语种类**才需 1 处代码（此处加一个 arm）——这是不可避免的下界；
-/// - 未知 `kind` = 跳过（不 panic、不画占位色块）：数据可先行、渲染后补。
-pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str) {
-    render_primitives_bg(host, scene_id);
-    render_primitives_fg(host, scene_id);
-}
-
-/// 原语**背景批**（z-order 最底：夜空/星点/月光/海平线）——须在 `scene_shell` 之前画。
-///
-/// 背景类原语若排在 `scene_shell` 之后会盖住 chrome 标题条/外框（`08_render_arch.md`
-/// 契约 1：背景层 → 装饰层 → 内容层）。分类 = [`is_background_primitive`]。
-pub fn render_primitives_bg(host: &mut dyn SceneHost, scene_id: &str) {
+/// 与 Bevy 执行器（`ti_engine::scene_render`）消费**同一份描述** → 双后端同构
+/// （同一 `scenes.json` 出同一画面）。**通用原语只有 6 种**（`rect`/`text`/`icon`/
+/// `grad`/`glow`/`disc`），渲染层**不认识**"菜单""木框"等场景语义 —— 场景语义 = 数据。
+pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64) {
     let layout = scene_layout(scene_id);
     let theme = host.theme().clone();
-    for p in &layout.primitives {
-        if !is_background_primitive(&p.kind) {
+    // 层序：z 升序 = 越大越靠上（调用序即层序，`08_render_arch.md` 契约 1）。
+    let mut prims: Vec<&Primitive> = layout.primitives.iter().collect();
+    prims.sort_by_key(|p| p.z);
+    for p in prims {
+        if !primitive_visible(p, selected) {
             continue;
         }
-        let token = if p.color.is_empty() { None } else { theme.by_name(&p.color) };
-        match p.kind.as_str() {
-            "night_sky" => with_canvas(host, |c| {
-                ti_render::shell::night_sky_gradient(
-                    c,
-                    &theme,
-                    p.rect.x,
-                    p.rect.y,
-                    p.rect.w,
-                    p.rect.h,
-                    token.unwrap_or(theme.bg),
-                    p.param,
-                );
-            }),
-            "star_sky" => with_canvas(host, |c| {
-                ti_render::shell::star_sky(c, &theme, p.rect.x, p.rect.y, p.rect.w, p.rect.h);
-            }),
-            "moon_glow" => with_canvas(host, |c| {
-                ti_render::shell::moon_glow(
-                    c,
-                    &theme,
-                    p.rect.x,
-                    p.rect.y,
-                    p.rect.w,
-                    token.unwrap_or(theme.parch_light),
-                );
-            }),
-            "ocean_horizon" => with_canvas(host, |c| {
-                ti_render::shell::ocean_horizon(
-                    c,
-                    &theme,
-                    p.rect.y,
-                    p.rect.h,
-                    token.unwrap_or(theme.bg),
-                );
-            }),
+        let color = theme.by_name(&p.color).unwrap_or(theme.text_on_parch);
+        let r = p.rect;
+        with_canvas(host, |c| match p.kind.as_str() {
+            "rect" => ti_render::generic::rect(c, r.x, r.y, r.w, r.h, color),
+            "text" => {
+                let content = if p.text_key.is_empty() {
+                    p.text.clone()
+                } else {
+                    crate::i18n::sget(&p.text_key).to_owned()
+                };
+                ti_render::generic::text(c, &content, r.x, r.y, r.w, r.h, &p.tier, color);
+            }
+            "icon" => {
+                let kind = param_str(p, "icon")
+                    .and_then(|name| icon_ids().get(name.as_str()).copied())
+                    .unwrap_or(0);
+                let size = i32::try_from(param_i64(p, "size").unwrap_or(48)).unwrap_or(48);
+                ti_render::generic::icon(c, kind, r.x, r.y, size, color);
+            }
+            "grad" => {
+                let from =
+                    param_str(p, "from_token").and_then(|n| theme.by_name(&n)).unwrap_or(theme.bg);
+                let to =
+                    param_str(p, "to_token").and_then(|n| theme.by_name(&n)).unwrap_or(theme.bg);
+                let steps = i32::try_from(param_i64(p, "steps").unwrap_or(32)).unwrap_or(32);
+                ti_render::generic::grad(c, r.x, r.y, r.w, r.h, from, to, steps);
+            }
+            "glow" => ti_render::generic::glow(c, r.x, r.y, r.w, color),
+            "disc" => ti_render::generic::disc(c, r.x, r.y, r.w, color),
             _ => {}
-        }
-    }
-}
-
-/// 原语是否属**背景类**（z-order 最底层）。
-#[must_use]
-pub fn is_background_primitive(kind: &str) -> bool {
-    matches!(kind, "night_sky" | "star_sky" | "moon_glow" | "ocean_horizon")
-}
-
-/// 原语**前景批**（装饰/内容层：木框/文本/菜单）——须在 `scene_shell` 之后画。
-pub fn render_primitives_fg(host: &mut dyn SceneHost, scene_id: &str) {
-    let layout = scene_layout(scene_id);
-    let theme = host.theme().clone();
-    for p in &layout.primitives {
-        if is_background_primitive(&p.kind) {
-            continue;
-        }
-        let token = if p.color.is_empty() { None } else { theme.by_name(&p.color) };
-        match p.kind.as_str() {
-            "ornate_frame" => with_canvas(host, |c| {
-                ti_render::shell::ornate_frame(
-                    c,
-                    &theme,
-                    p.rect.x,
-                    p.rect.y,
-                    p.rect.w,
-                    p.rect.h,
-                    token.unwrap_or(theme.wood),
-                    theme.gold_bright,
-                );
-            }),
-            "title_text" => render_title_text(host, &theme, p),
-            "body_text" => render_body_text(host, &theme, p),
-            "menu_items" => render_menu_items(host, &theme, &layout.list, p, token),
-            _ => {}
-        }
-    }
-}
-
-/// 原语文本内容：`text_key` 优先（走 i18n），否则用 `text` 原文。
-fn primitive_text(p: &Primitive) -> String {
-    if p.text_key.is_empty() { p.text.clone() } else { crate::i18n::sget(&p.text_key).to_owned() }
-}
-
-/// 原语：标题档文本（`rect` = 文本区，居中绘制；`color` = 令牌名）。
-fn render_title_text(host: &mut dyn SceneHost, theme: &ti_render::theme::Theme, p: &Primitive) {
-    let text = primitive_text(p);
-    if text.is_empty() {
-        return;
-    }
-    let w = host.shell().title_text_width(&text);
-    let x = p.rect.x + (p.rect.w - w) / 2;
-    let color = theme.by_name(&p.color).unwrap_or(theme.gold_bright);
-    draw_title_text(host, &text, x, p.rect.y, color);
-}
-
-/// 原语：正文档文本（`rect` = 文本区，居中绘制；`color` = 令牌名）。
-fn render_body_text(host: &mut dyn SceneHost, theme: &ti_render::theme::Theme, p: &Primitive) {
-    let text = primitive_text(p);
-    if text.is_empty() {
-        return;
-    }
-    let w = host.shell().text_width(&text);
-    let x = p.rect.x + (p.rect.w - w) / 2;
-    let color = theme.by_name(&p.color).unwrap_or(theme.text_on_parch);
-    host.draw_text_colored(&text, x, p.rect.y, color);
-}
-
-/// 原语：菜单项列表。
-///
-/// **几何单源 = `scenes.json` 该场景的 `list` 段**（`ListLayout`：x/y/`row_h`/`item_h`/
-/// `highlight_offset`）——与触摸命中带（`touch::menu_row_at` 读同一份 `list`）**同源**，
-/// 渲染与命中带公式正逆成对（EXP-071/QA101）。原语只声明"有这个元素"与样式
-/// （`color` = 选中态底色令牌名）。
-fn render_menu_items(
-    host: &mut dyn SceneHost,
-    theme: &ti_render::theme::Theme,
-    list: &ListLayout,
-    _p: &Primitive,
-    token: Option<u16>,
-) {
-    let labels = crate::shell_ui::menu_labels();
-    let sel = host.menu_selected();
-    let item_h = list.item_h;
-    let step = if list.row_h > 0 { list.row_h } else { item_h };
-    for (i, label) in labels.iter().enumerate() {
-        // 卡片顶 = 文字基线 y0 + i*row_h − highlight_offset（= 命中带顶，QA101 带形）。
-        let iy = list.y + i32::try_from(i).unwrap_or(0) * step - list.highlight_offset;
-        let chosen = i == sel;
-        let icon_kind = index_menu_icon_def(i).map_or(0, |d| d.id);
-        with_canvas(host, |c| {
-            ti_render::shell::compact_menu_item(
-                c,
-                theme,
-                list.x,
-                iy,
-                list.w,
-                item_h,
-                chosen,
-                icon_kind,
-                token.unwrap_or(theme.gold_bright),
-            );
         });
-        let ty = iy + (item_h - host.shell().glyph_px()) / 2;
-        let w = host.shell().text_width(label);
-        let color = if chosen { theme.black } else { theme.text_on_parch };
-        host.draw_text_colored(label, list.x + 64 + (list.w - 64 - w) / 2, ty, color);
     }
+}
+
+/// 原语可见性（`when` = `selected`/`normal`；`item` = 菜单项序号）。
+fn primitive_visible(p: &Primitive, selected: i64) -> bool {
+    match p.when.as_str() {
+        "selected" => p.item == selected,
+        "normal" => p.item != selected,
+        _ => true,
+    }
+}
+
+/// 原语参数（字符串）。
+fn param_str(p: &Primitive, key: &str) -> Option<String> {
+    p.params.get(key).and_then(|v| v.as_str()).map(str::to_owned)
+}
+
+/// 原语参数（数值）。
+fn param_i64(p: &Primitive, key: &str) -> Option<i64> {
+    p.params.get(key).and_then(serde_json::Value::as_i64)
 }
 
 /// 菜单 icon（兼容出口：委托 `ti_render::icons`，kind 即图标 id）。

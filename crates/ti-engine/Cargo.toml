@@ -44,6 +44,8 @@ ti-core = { path = "../ti-core" }
 # S18.3 字号对齐对照需与 ti-app `MenuShell::draw_ttf_row` 逐式同算法（baseline 偏移按
 # ab_glyph 轮廓算），故直引 ab_glyph（版本与根 workspace 一致 = 0.2，与 ti-render 同一份光栅器）。
 ab_glyph = "0.2"
+# S18.7：原语参数读取（`serde_json::Value` 取值/类型判定）。
+serde_json = "1"
 
 [lints]
 # 独立 workspace 无法继承根 [workspace.lints]，本地复制同口径（风格与根一致）。

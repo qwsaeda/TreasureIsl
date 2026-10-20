@@ -85,18 +85,11 @@ impl Scene for IndexScene {
     /// 外壳之后、菜单之前；双写期（v3.1）v2 菜单几何不动，v3.2 起菜单瘦身后面板
     /// 扩展为完整仪式感区。键缺失 = 该层不画（数据驱动，契约 4）。
     fn render(&mut self, host: &mut dyn SceneHost) {
-        // S18.6 声明式原语：界面元素全部来自 `scenes.json` 的 `primitives` 表
-        // （版面/顺序/参数/配色令牌 = 纯数据；本文件不再逐元素硬编码）。
-        //
-        // **z-order 两批**（`08_render_arch.md` 契约 1：背景层 → 装饰层 → 内容层）：
-        // ① 底色（`scene_base`）→ ② 背景类原语（night_sky/star_sky/moon_glow/ocean_horizon）
-        //    → ③ 外框层（`scene_frame`：航海网格 + 木外框）→ ④ 装饰/内容类原语
-        //    （ornate_frame/title_text/body_text/menu_items）。
-        //    注：index 用**仪式木框**作标题区（替代细标题条 `title_bar`），不重复画标题。
-        chrome::scene_base(host);
-        chrome::render_primitives_bg(host, "index");
-        chrome::scene_frame(host);
-        chrome::render_primitives_fg(host, "index");
+        // S18.7 声明式原语：界面元素全部来自 `scenes.json` 的 `index.primitives`
+        // （通用原语 rect/text/icon/grad/glow/disc；版面/顺序/配色 = 纯数据）。
+        // 绘制顺序 = 原语 `z` 升序（z 越大越靠上；与 Bevy 执行器同构）。
+        let sel = i64::try_from(host.menu_selected()).unwrap_or(-1);
+        chrome::render_primitives(host, "index", sel);
         // 尾行（用户版信息，i18n）
         let layout = chrome::scene_layout("index");
         let status = layout.extra.get("status").copied().unwrap_or_default();

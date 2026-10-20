@@ -402,12 +402,17 @@ mod tests {
                 );
             }
         }
-        // QA101 反例 1（死区）：卡 0 顶 40px 带 y ∈ [y0-offset, y0)——旧式 y<y0 → None，
-        // 新式命中卡 0（渲染卡 0 顶 = y0-offset，带内点按必须可选）
+        // QA101 反例 1（死区）：S18.7 紧凑菜单 `highlight_offset = 0` → **无死区**
+        // （卡顶带 = 命中带起点）；卡 0 顶带上方（y0-20）不命中任何项（点空白无副作用）。
         assert_eq!(
             super::layout::menu_row_at(540.0, y0 - 20.0),
+            None,
+            "卡 0 顶带上方应无命中（S18.7 紧凑菜单无死区）"
+        );
+        assert_eq!(
+            super::layout::menu_row_at(540.0, y0 + 4.0),
             Some(0),
-            "卡 0 顶带（旧死区）应命中卡 0（QA101）"
+            "卡 0 顶带应命中卡 0（QA101 带形）"
         );
         // QA101 反例 2（误选）：卡 1 顶 40px 带——旧式 floor 归 0 误选菜单 0，新式命中卡 1
         let top1 = y0 + step - offset;

@@ -348,3 +348,15 @@
 - **根因**：`ti_render::shell::hint_row` 原写 `cx = screen_cx - w / 2`（**先整除 w 再减**），而测试与 UI 口径是 `(W - w) / 2`（**先减再整除**）。`screen_cx = 540`、`w = 209`（奇数）：前者 `540 - 104 = 436`，后者 `871/2 = 435` → 恒差 `w` 为奇数时的半个像素取整差。奇数宽来自 TSF 文本宽随字形 advance 变化，**不是常量**，所以只在某些文本上暴露；bar 宽度断言、`hint_bar` 双态判据与整屏像素基线被同一个 1px 连带打挂。
 - **解法**：把居中统一到「先减后除」——`cx = (2 * screen_cx - w) / 2`（`screen_cx` 恒为屏心时它严格等于 `(W - w)/2`）。**不要**去改测试口径或重生成基线：测试与 UI 语义（条左缘 = 屏心居中余量）是对的，错的是实现取整顺序。修完 3 套快照**直接 0 diff**，无需重生成基线。
 - **验证**：`hint_bar_width_height_follow_active_font` PASS；3 套快照全部 PASS（0 diff，`assets/{render,forward,hd}_baseline` 未改动）；gate 视觉 3 项 0 失败（evidence/S15.7.log 判据 10）。
+
+### EXP-102 Bevy 手搓插件表 → 实体在但一个像素没画（黑屏也算过验收）
+- **问题**：S18.0–S18.4 的 bevy 壳用 `MinimalPlugins` + 手动 `add_plugins` 列表（漏 `SpritePlugin` / `SpriteRenderPlugin` / `CameraPlugin` / `CorePipelinePlugin` / `init_asset::<Shader>()` / `PipelinedRenderingPlugin`）→ 实体查询得到（sprite=116 text2d=8 camera=2）但**画面全黑**；S18.1 spike 的矩形、S18.4 的 CPU 纹理层其实都没渲染出来，而验收只查 `exit 0` / e2e 16/16（**黑屏也算过**）。
+- **原因**：Bevy 0.20 的 2D 渲染需 `SpritePlugin`（资产/拾取）+ `SpriteRenderPlugin`（**渲染阶段**）+ `CameraPlugin`（相机管理）+ `CorePipelinePlugin`（`Camera2d` + 正交投影）+ `Shader` 资产初始化；手写列表极易漏。漏 `Shader` 初始化 → panic「asset type has not been initialized」；漏 `PipelinedRenderingPlugin` → extract 阶段 panic「resource does not exist: RenderAppChannels」。
+- **解法**：**一律用官方 `bevy::DefaultPlugins` + `.set(...)` 覆写**（AssetPlugin.file_path / RenderPlugin.synchronous_pipeline_compilation / WindowPlugin.primary_window / LogPlugin.level）；禁手搓插件表。新增渲染能力改 `.set(...)`，不列插件。规范落 `docs/process/12_bevy_usage.md` §2。
+- **验证**：`treasure-bevy-native --shot` 离屏读回**非黑像素 = 2072562/2073600**（判据 = 非黑像素 > 0，不是「图片存在」）；`cargo test -p ti-engine --test bevy_native_render` 3 passed；`evidence/bevy_native_index.png` 肉眼可见完整首界面。
+
+### EXP-103 Bevy z 层：可见性要负值、排序是升序（背景最负才在最底）
+- **问题**：Bevy 原生首界面渲染出来只有底色（CPU 纹理层盖住全部）→ 排查发现 z 层两处搞反：① 实体用 `z = 0..11`（正数）**在相机背后**（相机朝 -Z 看，默认正交 `near = 0` → 可见区间 `z < 0`）；② 背景给了 `-1`、前景给 `-12`（**z 升序绘制 = 越大越靠上** → 背景反而在最上）。
+- **原因**：Bevy 0.20 精灵排序键 = `FloatOrd(transform.translation.z)`，**升序绘制 → z 越大越靠上**（与 CPU「调用序即层序」同义）；但可见性由相机朝向与 `near` 决定 → **可见实体须 `z < 0`**。两个规则叠加 ⇒ **背景最负、前景最接近 0**。
+- **解法**：层序值域单一来源 `ti-app/src/z_layers.rs`（`Z_TERRAIN..Z_OVERLAY`），Bevy 侧落位表见 `docs/process/12_bevy_usage.md` §4（背景 -12 → 前景 -1；CPU 纹理层 -13 在最底）。渲染代码不写 z 字面量。
+- **验证**：`--shot` 读回首像素 `[8,20,32]`（夜空深蓝）/ 中像素 `[16,28,49]`（渐变中段）→ 背景在最底且渐变方向正确；画面见 `evidence/bevy_native_index.png`。

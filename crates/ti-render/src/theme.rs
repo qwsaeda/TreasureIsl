@@ -58,6 +58,10 @@ pub struct Theme {
     pub gold_warm: u16,
     /// 夜空深蓝（S18.6 暖色系令牌：Agnes 风格夜空渐变底色 = #1A2942）。
     pub sky_navy: u16,
+    /// 夜空地平线色（S18.7：海天交界更亮的蓝 = #16304F）。
+    pub sky_horizon: u16,
+    /// 月/光晕淡金（S18.7：Agnes 风格月色 = #F2E4C0）。
+    pub moon_pale: u16,
 
     // === 字号 ===
     /// 正文 TTF 字号（px）。
@@ -106,6 +110,8 @@ impl Theme {
             "wood_warm" => self.wood_warm,
             "gold_warm" => self.gold_warm,
             "sky_navy" => self.sky_navy,
+            "sky_horizon" => self.sky_horizon,
+            "moon_pale" => self.moon_pale,
             _ => return None,
         })
     }
@@ -140,6 +146,8 @@ impl Theme {
         wood_warm: 0x8B42,
         gold_warm: 0xFEA0,
         sky_navy: 0x1948,
+        sky_horizon: 0x198A,
+        moon_pale: 0xEF17,
         black: 0x0000,
         // 字号
         font_size: 44,
@@ -212,6 +220,8 @@ impl Theme {
             wood_warm: p.wood_warm.hex().unwrap_or(d.wood_warm),
             gold_warm: p.gold_warm.hex().unwrap_or(d.gold_warm),
             sky_navy: p.sky_navy.hex().unwrap_or(d.sky_navy),
+            sky_horizon: p.sky_horizon.hex().unwrap_or(d.sky_horizon),
+            moon_pale: p.moon_pale.hex().unwrap_or(d.moon_pale),
             font_size: f.font_size.unwrap_or(d.font_size),
             title_font_size: f.title_font_size.unwrap_or(d.title_font_size),
             hint_font_size: f.hint_font_size.unwrap_or(d.hint_font_size),
@@ -284,6 +294,10 @@ pub struct PaletteJson {
     pub gold_warm: Option<Hex16>,
     /// 见 [`Theme::sky_navy`]。
     pub sky_navy: Option<Hex16>,
+    /// 见 [`Theme::sky_horizon`]。
+    pub sky_horizon: Option<Hex16>,
+    /// 见 [`Theme::moon_pale`]。
+    pub moon_pale: Option<Hex16>,
 }
 
 /// 字号组：全部可选（缺失回落 `default`）。

@@ -10,6 +10,7 @@
 
 mod bevy_app;
 pub mod canvas;
+pub mod scene_render;
 
 pub use bevy_app::SpikeApp;
 pub use canvas::{BevyCanvas, CanvasEntity, color_to_rgb565, rgb565_to_color, viewport_scale};

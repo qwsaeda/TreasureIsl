@@ -24,7 +24,9 @@
     "black": "0x0000",
     "wood_warm": "0x8B42",
     "gold_warm": "0xFEA0",
-    "sky_navy": "0x1948"
+    "sky_navy": "0x1948",
+    "sky_horizon": "0x198A",
+    "moon_pale": "0xEF17"
   },
   "fonts": {
     "font_size": 44,

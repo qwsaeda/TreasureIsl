@@ -5181,6 +5181,7 @@ version = "0.1.0"
 dependencies = [
  "ab_glyph",
  "bevy",
+ "serde_json",
  "ti-app",
  "ti-core",
  "ti-platform",

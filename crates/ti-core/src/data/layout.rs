@@ -15,6 +15,7 @@ static SCENES: OnceLock<BTreeMap<String, SceneLayout>> = OnceLock::new();
 ///
 /// # Errors
 /// JSON 语法错误 / 布局字段缺失 / 非法矩形时返回 [`LoadError`]（不 fallback）。
+#[allow(clippy::too_many_lines)]
 pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
     if let Some(v) = SCENES.get() {
         return Ok(v);
@@ -96,6 +97,11 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                     color: pj.color,
                     text: pj.text,
                     text_key: pj.text_key,
+                    params: pj.params,
+                    when: pj.when,
+                    item: pj.item,
+                    z: pj.z,
+                    tier: pj.tier,
                 })
             })
             .collect();
@@ -176,6 +182,21 @@ struct PrimitiveJson {
     /// i18n key（优先于 `text`）。
     #[serde(default)]
     text_key: String,
+    /// 通用参数（数值/字符串皆可）。
+    #[serde(default)]
+    params: BTreeMap<String, serde_json::Value>,
+    /// 显示条件（空 = 总是）。
+    #[serde(default)]
+    when: String,
+    /// 所属菜单项序号（-1 = 不属于菜单项）。
+    #[serde(default)]
+    item: i64,
+    /// 层序（负值；Bevy 相机朝 -Z）。
+    #[serde(default)]
+    z: i32,
+    /// 文本档位（title/body/hint）。
+    #[serde(default)]
+    tier: String,
 }
 
 #[derive(Deserialize, Default)]

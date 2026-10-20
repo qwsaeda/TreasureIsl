@@ -1,0 +1,100 @@
+S18.7a 通用原语架构 + Bevy 原生首界面（数据分离落地） — PASS
+==========================================================================
+
+DoD（plan/ledger.yaml S18.7a）：通用原语闭集门禁全绿 + Bevy 原生首界面非黑像素 +
+双后端同画面 + 规范文档 + evidence/S18.7a.log。
+
+## 架构裁决：通用原语闭集（真数据驱动的边界）
+
+**问题**（用户指出）：初版声明式原语表仍是「场景专属原语」（`ornate_frame`/`menu_items`/
+`night_sky`…）—— 渲染器里写死了"菜单怎么排""木框怎么画"，只是把魔法数字换成了具名参数，
+**不是数据分离**。
+
+**解法**：渲染层只认 **6 种通用原语**，界面 = 这些原语的**数据组合**：
+
+| kind | 语义 | 落地（Bevy / CPU 双后端同构） |
+|---|---|---|
+| `rect` | 实心矩形 | `Sprite::from_color` / `fill_rect` |
+| `text` | 文本（`tier` = title/body/hint） | `Text2d` + GPU TTF / `draw_*_text` |
+| `icon` | 图标（`params.icon` = 图标名） | 烘焙纹理 → `Sprite` / `icons::icon` |
+| `grad` | 垂直渐变（`params.from_token`/`to_token`/`steps`） | N 条 `Sprite` / N 条 `fill_rect` |
+| `glow` | 径向光晕 | 烘焙径向纹理 → `Sprite` / 逐行扫描线 |
+| `disc` | 实心圆盘 | 烘焙圆形纹理 → `Sprite` / 逐行扫描线 |
+
+**数据驱动边界**（可机器判定）：
+- 改版面 / 顺序 / 参数 / 配色 = **只改 `scenes.json`**（渲染代码零改动）；
+- 新增**原语种类**才需 1 处代码（dispatcher 加一个 arm）= 不可避免的下界；
+- 场景语义（"菜单""木框"）**只存在于数据**，渲染层不认识。
+
+## 数据模型（S18.7a）
+
+`ti-core::data::Primitive { kind, rect, param, color, text, text_key, params, when, item, z, tier }`
++ `SceneLayout.primitives: Vec<Primitive>`（有序 = 绘制顺序；`z` 升序 = 越大越靠上）。
+
+- `params: BTreeMap<String, serde_json::Value>`（数值/字符串皆可 → 图标名/尺寸/渐变令牌）；
+- `when` = `selected`/`normal`（按 `item` 过滤 → 选中态**数据化**，不靠代码分支）；
+- `z` = 层序（**负值**：Bevy 相机朝 -Z，`near=0` → 可见实体须 `z<0`；z 升序绘制 = 越大越靠上，
+  故背景最负、前景接近 0；EXP-103）；
+- `color` = **theme 令牌名**（渲染层零裸色值；`check_hardcode` 0 命中）。
+
+## 数据分离门禁（新增 gate 第 24 项 `check_data_driven`）
+
+`scripts/check_data_driven.py`（gate 已挂）判据：
+1. **通用原语闭集**：数据侧 `kind` ∈ 六种；渲染层 `kind` 分支 ∈ 六种；
+2. **渲染层无场景语义**：渲染层源码不得出现场景名 / 场景专属 kind；
+3. **令牌存在性**：原语引用的 theme 令牌必须真实存在（防"令牌拼错 → 静默回退"=
+   今天实测的 `sky_horizon` 不存在 → 海面变米白坑）；
+4. 数据侧 `primitives` 子树不参与 8pt 栅格（装饰细线/星点本就非 8pt；元素位置仍 8pt 排布）。
+
+## 首界面暖金版式（Agnes 效果图对齐）
+
+参考图：`evidence/ui_concept/index_v3_agnes.png`（Agnes Image 2.5 Flash 生成，
+`scripts/agnes_gen.py` + `docs/process/04_tooling.md` §6）。
+
+`scenes.json` `index.primitives` = **94 项通用原语**（外框 4 + 夜空渐变 1 + 星点 32 + 月光晕 1 +
+月盘 1 + 木框 4 + 金内线 4 + 指南针玫瑰 11 + 标题 1 + 副标题 1 + 菜单 30 + 海面 1 + 波光 5）。
+index 场景 Rust 代码 = **0 行绘制**（`chrome::render_primitives` 一行 dispatch）。
+
+## Bevy 原生渲染（S18.7a：引擎当引擎，不是纹理显示器）
+
+- `ti-engine/src/scene_render.rs` = 通用原语执行器：原语 → Bevy 实体
+  （`Sprite` / `Text2d` + GPU TTF / 烘焙 `Image`），**不产生帧缓冲、不上传整帧纹理**。
+- `treasure_bevy` 切官方 `bevy::DefaultPlugins`（禁手搓插件表：漏 `SpritePlugin`/
+  `SpriteRenderPlugin`/`CameraPlugin`/`CorePipelinePlugin`/`Shader` 初始化 → 实体在但零像素，
+  EXP-102）。
+- 离屏验证口径：`--shot`（`Screenshot::image` + 手动 `update` 循环 + 设备轮询），
+  判据 = **非黑像素 > 0**（今天口径：2072562 / 2073600）。
+- 画面：`evidence/bevy_native_index.png`（Bevy 原生）/ `evidence/render_png/index.png`（CPU 同源）→
+  **双后端同画面**（同一份数据，两个执行器）。
+
+## 顺带修掉的既有 bug
+
+- **`ui_icons.json` 解析失败**（S17.3 起图标全 fallback）：`bindings` 里
+  `select_map_row`/`select_role_row`/`main_map_landmark`/`vs_boss_cap` 是**对象**，
+  Rust 侧类型为 `Option<String>` → 整个注册表解析失败 → 图标全变方块。改数据后 6 枚图标正常。
+- **8pt 对齐脚本吃细线**：`round(v/8)*8` 把 1–4px 细线清零（`round(0.5)=0`）→ 装饰细线尺寸
+  保留原值，位置仍 8pt（豁免口径写进 doccheck2）。
+
+## 验收命令 + 结果
+
+1) 数据分离门禁：`python scripts/check_data_driven.py` → OK（闭集 + 无场景语义 + 令牌全存在）
+2) Bevy 原生出画：`treasure-bevy-native --shot` → 非黑像素 2072562/2073600；
+   首像素 `[24,40,65]`（地平线蓝）/ 中像素 `[24,42,70]`（渐变插值中段）
+3) 双后端同画面：`cargo run -p ti-app --features native-shell --bin render-png`
+   → `evidence/render_png/index.png`（与 Bevy 版同画面）
+4) Bevy 契约测试：`cargo test -p ti-engine --test bevy_native_render` → 4 passed
+   （实体数 / 选中态过滤 / 图标烘焙纹理 / 文字色）
+5) `cargo test --workspace` → 0 failed
+6) `cargo clippy --workspace --all-targets -- -D warnings` → exit=0；
+   `cargo clippy -p ti-engine --all-targets -- -D warnings` → exit=0
+7) `cargo fmt --all -- --check`（root + ti-engine）→ clean
+8) `python scripts/check_hardcode.py` → 0 hit；`cargo run -p ti-tools --bin doccheck2` → 0 error
+9) 全 gate：`scripts/gate.ps1` → **0 failure(s)**（含新增第 24 项 `check_data_driven`）
+
+## 残留
+
+- **其余 6 场景**仍是 v2 冷蓝版式 + 旧绘制路径（代码画进 CPU 帧缓冲）→ 迁到通用原语表
+  = S18.7 正文（HD 贴图 + v3 四场景落地同轮）。
+- **CPU 执行器**（`ti-render` 帧缓冲 + `Canvas` trait + 像素基线）待删（S18.8 macroquad 退役同轮）。
+- **滚轮 zoom**（winit `MotionEvent`）未接 → S18.8。
+- **视觉签收**（用户过目首界面）待用户。

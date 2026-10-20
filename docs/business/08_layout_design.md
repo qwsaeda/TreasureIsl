@@ -88,7 +88,7 @@
 | 元素 | 坐标（`scenes.json`） | 说明 |
 |---|---|---|
 | 标题 | `title {y:8, h:96}` | **无 `x` 键**（按文本宽度居中，见上）；标题条高 96（`y=12..108`，S17.2）；标题文字「金银岛」金墨 |
-| 菜单列表 | `list {x:240, y:960, w:600, row_h:88, item_h:72, text_x:304, highlight_offset:40}` | 6 项（新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏）；**紧凑列**（S18.6 暖金版式：居中窄列 600px、行高 88、卡高 72）；首块顶 = `960-40` = **920**；末块底 = `920+5*88+72` = **1432** |
+| 菜单列表 | `list {x:328, y:696, w:424, row_h:176, item_h:152, text_x:360, highlight_offset:0}` | 6 项（新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏）；**紧凑列**（S18.6 暖金版式：居中窄列 600px、行高 88、卡高 72）；首块顶 = `960-40` = **920**；末块底 = `920+5*88+72` = **1432** |
 | 图标列 | `icon {x:144}` | 菜单项图标左缘（S17.3 换 `ui_icons` 罗盘/宝箱/锚/齿轮/书/门） |
 | 状态行 | `status {x:540, y:1840}` | 浅底条 + 深墨字（字体数/音效/模块数）；`status` 走 `extra` 字段；`x=540` 为屏心锚点 |
 | 立绘/动态区 | `portrait_zones [{x:0,y:360,w:1080,h:1310}]` | **代码绘制动态实体**允许落区（QB102：收紧到实渲内容区 360..1670，无 legacy 立绘） |
@@ -99,18 +99,20 @@
 不变式：`920 ≥ 108`（首块不压标题条）、`1432 ≤ 1840`（末块不撞提示行）。
 
 
-**原语表（`scenes.json` `index.primitives`，有序 = 绘制顺序）**：
+**原语表（`scenes.json` `index.primitives`，有序 = 绘制顺序；S18.7 通用原语集）**：
 
-| # | kind | rect | param | color |
-|---|---|---|---|---|
-| 1 | `night_sky` | `{x:0, y:0, w:1080, h:1920}` | `param:2048,` | `sky_navy` |
-| 2 | `star_sky` | `{x:0, y:0, w:1080, h:1920}` | — | — |
-| 3 | `moon_glow` | `{x:832, y:152, w:64, h:64}` | — | `text_on_parch` |
-| 4 | `ocean_horizon` | `{x:0, y:1704, w:1080, h:224}` | — | `bg` |
-| 5 | `ornate_frame` | `{x:112, y:192, w:856, h:672}` | — | `wood_warm` |
-| 6 | `title_text` | `{x:112, y:424, w:856, h:96}` | — | `gold_warm` |
-| 7 | `body_text` | `{x:112, y:600, w:856, h:64}` | — | `text_on_parch` |
-| 8 | `menu_items` | 几何取 `list` 段 | — | `gold_warm` |
+界面 = **通用原语**数组（`rect`/`text`/`icon`/`grad`/`glow`/`disc` 六种）；渲染层只认这六种，
+**不认识**"菜单""木框"等场景语义（场景语义全在数据里）。渲染层契约由
+`scripts/check_data_driven.py` 门禁守护（gate 第 24 项）。
+
+| kind | 用途 | 关键参数 |
+|---|---|---|
+| `rect` | 实心矩形（夜空条带/木框/卡片/星点） | `rect` + `color`（theme 令牌名）+ `z`（层序，负值）+ `when`/`item`（选中态） |
+| `text` | 文本（标题/副标题/菜单项） | `rect`（内居中）+ `tier`（title/body/hint）+ `text`/`text_key` |
+| `icon` | 图标（`ui_icons.json` 注册表） | `params.icon`（图标名）+ `params.size` |
+| `grad` | 垂直渐变 | `params.from_token`/`to_token`/`steps` |
+| `glow` | 径向光晕 | `rect`（圆心 + 半径） |
+| `disc` | 实心圆盘 | `rect`（圆心 + 半径） |
 
 **声明式原语表（S18.6）**：index 场景界面元素 = `scenes.json` `index.primitives` 数组
 （有序 = 绘制顺序；每项 = `kind` + `rect` + `param` + `color` 令牌名 + 文本）。

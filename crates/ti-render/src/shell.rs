@@ -149,7 +149,7 @@ pub fn draw_body_text_secondary(host: &mut dyn Canvas, theme: &Theme, text: &str
 ///
 /// 确定性（无随机数，渲染快照可复现）；26 颗星覆盖全画布，屏心净空
 /// （屏心 50,52 半径 12% 内无星，视觉重心区不被星点干扰）。
-const STARS: &[(u8, u8, u8, bool)] = &[
+pub const STARS: &[(u8, u8, u8, bool)] = &[
     (8, 9, 1, false),
     (22, 5, 2, true),
     (36, 14, 1, false),
@@ -571,9 +571,11 @@ mod tests {
         bitmap_advance: 8,
         bitmap_advance_title: 12,
         bitmap_advance_hint: 6,
-        wood_warm: 22,
-        gold_warm: 23,
-        sky_navy: 24,
+        wood_warm: 25,
+        gold_warm: 26,
+        sky_navy: 27,
+        sky_horizon: 28,
+        moon_pale: 29,
     };
 
     /// 记录型 Canvas：统计 `fill_rect` 次数与面积和（`draw_text` 不记账）。

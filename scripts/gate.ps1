@@ -131,6 +131,16 @@ $hcHits = @($hcOut | Where-Object { $_ -match 'hit\(s\)' })
 $hcHits | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_hardcode (strict; 0 hits required)'
 
+#     22) 数据分离门禁（S18.7：界面 = 数据；渲染层不认场景语义；通用原语闭集）
+$ddOut = & python scripts/check_data_driven.py 2>&1
+$ddHits = @($ddOut | Where-Object { $_ -match 'ERROR' })
+if ($ddHits.Count -gt 0) {
+    $ddHits | ForEach-Object { Write-Host "        $_" }
+    Report $false 'check_data_driven (generic primitives; renderer has no scene semantics)'
+} else {
+    Report $true 'check_data_driven (generic primitives; renderer has no scene semantics)'
+}
+
 # 11) oracle 边界（S8.8）：shell 层 0 个 oracle_* 函数调用（oracle 仅 rules 内部参照物）
 #     check_oracle_boundary.py 区分「oracle_* 函数调用=违规」vs「oracle::xxx::Type 类型重导出=允许」。
 $orbOut = & python scripts/check_oracle_boundary.py --check 2>&1

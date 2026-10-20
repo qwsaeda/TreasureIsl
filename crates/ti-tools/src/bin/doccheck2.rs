@@ -715,9 +715,9 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
     // main_map: hud y=152 h=128（不与等距区 grid.y0=520 重叠）
     let anchors: &[(&str, &str, &str)] = &[
         ("\"index\"", "\"h\": 96", "index 标题条高度 = 96（§4.1，S17.2 8pt）"),
-        ("\"index\"", "\"y\": 960", "index 列表基线 y = 960（§4.1，S18.6 暖金紧凑版式）"),
-        ("\"index\"", "\"row_h\": 88", "index 行高 = 88（§4.1，S18.6 紧凑行距）"),
-        ("\"index\"", "\"highlight_offset\": 40", "index 高亮上移 = 40（§4.1，S17.2 8pt）"),
+        ("\"index\"", "\"y\": 704", "index 列表基线 y = 704（§4.1，S18.7 紧凑列）"),
+        ("\"index\"", "\"row_h\": 176", "index 行高 = 176（§4.1，S18.7 紧凑行距）"),
+        ("\"index\"", "\"highlight_offset\": 0", "index 高亮上移 = 0（§4.1，S18.7 紧凑列无死区）"),
         ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，S17.2 8pt）"),
         (
             "\"select_role\"",
@@ -901,7 +901,16 @@ fn check_layout_doc_table_cross_check(root: &Path) -> Vec<String> {
             continue;
         }
         let mut pairs: Vec<(String, i64)> = Vec::new();
-        collect_scalar_pairs(val, &mut pairs);
+        // S18.7：`primitives` 子树 = 通用原语表（数百个坐标逐值镜像不现实；
+        // §4 表镜像其**语义**（kind 集 + 来源），坐标由 `scenes.json` 单一事实源）。
+        let stripped = {
+            let mut v = val.clone();
+            if let Some(o) = v.as_object_mut() {
+                o.remove("primitives");
+            }
+            v
+        };
+        collect_scalar_pairs(&stripped, &mut pairs);
         for (key, v) in pairs {
             let comma = format!("{key}:{v},");
             let braced = format!("{key}:{v}}}");
@@ -1730,6 +1739,11 @@ fn ui_8pt_walk(
             | "title_art" | "ambient_art" | "focus_anchor" | "battle_arena"
             | "world_canvas" | "hud_gold" | "hud_player"
             | "deck_trade" | "deck_sell" | "deck_build" | "canvas_entities"
+            // S18.7 声明式原语：非坐标语义键（z = 层序；item = 菜单项序号）不参与 8pt 栅格。
+            | "z" | "item"
+            // 原语表子树整体豁免：装饰细线（1–4px）与星点尺寸本就非 8pt；
+            // 元素**位置**仍按 8pt 排布（数据侧自律）。
+            | "primitives"
     );
     match obj {
         serde_json::Value::Object(map) => {
