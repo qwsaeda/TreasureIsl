@@ -84,10 +84,23 @@ struct MousePos {
 #[derive(Resource, Default)]
 struct FrameTex(Option<Handle<Image>>);
 
+/// 帧纹理全屏精灵标记（S18.5 相机 zoom/pan 接线：`camera_system` 经此实体驱动
+/// 纹理位移 / 正交 scale；与相机实体区分 = `Without<Camera2d>`）。
+#[derive(Component)]
+struct FrameSprite;
+
+/// letterbox 基础 scale（窗口物理 → 1080 逻辑；与 S18.4 `spawn_stage` 同式）。
+#[allow(clippy::cast_precision_loss)]
+fn letterbox() -> f32 {
+    let w = WIN_W as f32 / LOGICAL_W as f32;
+    let h = WIN_H as f32 / LOGICAL_H as f32;
+    if w < h { w } else { h }
+}
+
 /// Startup：相机（正交 scale=0.5 letterbox 满铺）+ 占位纹理 + 全屏精灵。
 #[allow(clippy::cast_possible_truncation)]
 fn spawn_stage(mut commands: Commands, mut assets: ResMut<Assets<Image>>) {
-    let scale = (WIN_W as f32 / LOGICAL_W as f32).min(WIN_H as f32 / LOGICAL_H as f32);
+    let scale = letterbox();
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
@@ -113,6 +126,7 @@ fn spawn_stage(mut commands: Commands, mut assets: ResMut<Assets<Image>>) {
             Vec2::from([LOGICAL_W as f32, LOGICAL_H as f32]),
         ),
         Transform::IDENTITY,
+        FrameSprite,
     ));
 }
 
@@ -150,14 +164,30 @@ fn input_system(
     touches: Res<Touches>,
     mut state: Local<InputState>,
 ) {
+    // S18.5：滚轮 zoom + 左键拖拽 pan（仅主地图；逻辑 px = 物理 px / letterbox）。
     mouse_pos.x += acc.delta.x;
     mouse_pos.y += acc.delta.y;
+    let drag = (mouse.pressed(MouseButton::Left), acc.delta);
     acc.delta = bevy::prelude::Vec2::ZERO;
     let window_size = Vec2::new(WIN_W as f32, WIN_H as f32);
 
     let Ok(mut g) = store.0.lock() else {
         return;
     };
+    // S18.5 相机（world_canvas 镜头）：主地图场景才允许 zoom/pan（其它场景相机冻结）。
+    let camera_live = g.scene() == Scene::MainMap;
+    if camera_live {
+        // 滚轮 0.20 event 接线挂 S18.8（winit MotionEvent 面）；键盘 `=`/`-` 同构 zoom（view 中心锚点）。
+        if kb.just_pressed(KeyCode::Equal) {
+            g.camera_zoom_at([540.0, 960.0], 1.25, [LOGICAL_W as f32, LOGICAL_H as f32]);
+        }
+        if kb.just_pressed(KeyCode::Minus) {
+            g.camera_zoom_at([540.0, 960.0], 0.8, [LOGICAL_W as f32, LOGICAL_H as f32]);
+        }
+        if drag.0 {
+            g.camera_pan(drag.1.x / letterbox(), drag.1.y / letterbox());
+        }
+    }
     // 键盘「按住」快照（KeyCode → 语义键，与 macroquad 壳同表）。
     let raw = KeyState {
         up: kb.pressed(KeyCode::ArrowUp),
@@ -221,6 +251,29 @@ fn input_system(
 }
 
 #[allow(clippy::needless_pass_by_value)]
+/// S18.5 相机系统：`WorldCam`（zoom/pan，`game_app::camera_*`）→ Bevy 正交 scale +
+/// 帧纹理精灵位移（`world_canvas` 镜头）。默认 cam=(540,960)/zoom=1 时 = S18.4 IDENTITY 零差。
+fn camera_system(
+    store: Res<GameStore>,
+    mut cameras: Query<&mut Projection, With<Camera2d>>,
+    mut sprite: Query<&mut Transform, (With<FrameSprite>, Without<Camera2d>)>,
+) {
+    let Ok(g) = store.0.lock() else {
+        return;
+    };
+    let cam = *g.world_cam();
+    if let Ok(mut proj) = cameras.single_mut() {
+        if let Projection::Orthographic(o) = &mut *proj {
+            o.scale = letterbox() * cam.zoom;
+        }
+    }
+    if let Ok(mut st) = sprite.single_mut() {
+        st.translation.x = cam.cam[0] - 540.0;
+        st.translation.y = 960.0 - cam.cam[1];
+    }
+}
+
+#[allow(clippy::needless_pass_by_value)]
 /// 渲染系统：GameApp 帧推进 + 静止跳渲染 + Framebuf → RGBA8 纹理。
 fn render_system(
     store: ResMut<GameStore>,
@@ -249,7 +302,9 @@ fn render_system(
         g.shell_mut().last_rendered_scene = Some(scene_key);
         // 双渲染期无 bevy 音频：Sfx 队列清空防积压（S18.8 切 bevy_audio）。
         g.clear_last_sfx();
-        let fb = g.render_to_framebuf().to_vec();
+        // S18.5：实玩纹理 = live Framebuf（含 FX 粒子 + S17.9 交叉淡化 ease；
+        // `render_to_framebuf` 快照稳态口径 = headless 基线/selftest 专用，EXP-079）。
+        let fb = g.shell().fb.as_slice().to_vec();
         let img = Image::new(
             Extent3d { width: LOGICAL_W, height: LOGICAL_H, depth_or_array_layers: 1 },
             TextureDimension::D2,
@@ -503,7 +558,8 @@ fn main() {
         app.insert_resource(SelfTest { step: 0, repeat: 0, failures: 0, done: false })
             .add_systems(Update, (selftest_system, render_system, stats_system).chain());
     } else {
-        app.add_systems(Update, (input_system, render_system, stats_system).chain());
+        // S18.5：相机系统 = `WorldCam` → Bevy 正交 scale / 精灵位移（渲染前接线）。
+        app.add_systems(Update, (input_system, camera_system, render_system, stats_system).chain());
     }
     app.add_systems(Startup, spawn_stage);
     app.run();

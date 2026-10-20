@@ -126,7 +126,8 @@ impl BevyCanvas {
             ttf_title: None,
             ttf_hint: None,
             font: None,
-            z: 0,
+            // S18.5：默认 z 层 = 地形/背景层（`z_layers` 单一值域；`set_z` 切换 FX/文本/HUD 层）。
+            z: ti_app::z_layers::Z_TERRAIN,
             last_readback: None,
             theme,
         }

@@ -1,0 +1,65 @@
+S18.5 z_index 层系统 + 主地图相机 zoom/pan + 轻量粒子 + 过渡 ease-in-out 落 Bevy — PASS
+=======================================================================================
+
+DoD（plan/ledger.yaml S18.5）：相机/粒子单测 + 视觉验收（用户过目留痕）+ gate 全绿 + 本文件。
+
+## 新增纯函数模块（ti-app，单测完备）
+
+1. `crates/ti-app/src/z_layers.rs` — z_index 层系统：
+   - 层值域常量表（Z_TERRAIN=0 / Z_ENTITY=100 / Z_FX=200 / Z_TEXT=300 / Z_HUD=400 / Z_OVERLAY=500，Z_STEP=100 整间距防等值 z-fighting）
+   - `is_bevy_z_range` = i16 可表示校验（BevyCanvas translation.z 契约）
+   - 单测：层序严格单调 / 层间距 = Z_STEP / 全部层值在 i16 值域内
+2. `crates/ti-app/src/world_camera.rs` — 主地图相机 zoom/pan 纯函数模型：
+   - `WorldCam { cam: [f32;2], zoom: f32 }`（世界 px 中心 + 缩放因子）
+   - `zoom_at(anchor, factor, view)` 锚点不变式 / `pan(dx,dy)` 反 zoom / `world_to_screen` / `screen_to_world` / `grid_offset(cell_base)` 网格偏移转换
+   - 单测：默认中心映射 / world↔screen roundtrip / 锚点 zoom 不变 / pan 反 zoom（z=1 步 = z=2 的 2 倍）/ zoom 钳制端点幂等 / grid_offset 具体值
+3. `crates/ti-app/src/particles.rs` — 轻量确定性粒子：
+   - `ParticleFx`（FX 专用 LCG，seed 固定 = 确定性视觉验收；不进业务 RNG）
+   - `spawn_coin_glint`（6 枚金色微漂移亮片，ttl 300–600ms）/ `spawn_hit_spark`（8 枚橙红高速短迹，ttl 120–200ms）
+   - `advance(dt_ms)` 位置积分 + 寿命衰老 + 过期剔除；池上限 POOL_CAP=64 逐最旧
+   - `render_rects()` 渲染 op（z = Z_FX 层；淡出 = RGB565 亮度 4 档量化，CPU Framebuf 无 alpha）
+   - 单测：同 seed 同序列 / 异 seed 分叉 / ttl 耗尽清空 / 池上限逐最旧 / 淡出单调至黑 / advance 位置积分
+
+## 接线（GameApp + Bevy 壳）
+
+- `GameApp` 新增 `world_cam: WorldCam` + `fx: ParticleFx` 字段（Default 初始化）
+- `handle` FX 触发：Attack → `spawn_hit_spark(FX_BATTLE_HIT_POS)`；TradeBuy/Sell 金币变动 → `spawn_coin_glint(FX_COIN_GOLD_POS)`
+- `render()` 每帧 `fx.advance(frame_delta_ms)` + 场景渲染后 `draw_fx()`（z = Z_FX 层，调用序 = 层序）
+- `render_to_framebuf` 快照路径先 `fx.clear()`（EXP-079 稳态口径：像素基线不含 FX）
+- `transition_ease` + `advance_transition_t` → `pub`（Bevy 壳过渡同曲线复用，单一事实源）
+- Bevy 壳（treasure_bevy）：
+  - 键盘 `=`/`-` → `camera_zoom_at`（view 中心锚点，factor 1.25/0.8）；左键拖拽 → `camera_pan`（仅主地图场景）
+  - `camera_system`：`WorldCam` → Bevy `OrthographicProjection.scale = letterbox × zoom` + 帧纹理精灵位移 `(cam[0]-540, 960-cam[1])`（默认 = S18.4 IDENTITY 零差）
+  - 实玩纹理 = live `g.render()` + `g.shell().fb.as_slice()`（含 FX 粒子 + S17.9 交叉淡化 ease；`render_to_framebuf` 快照稳态口径 = headless 基线/selftest 专用）
+  - `BevyCanvas` 默认 z = `Z_TERRAIN`（z_layers 单一值域）
+
+## 验收命令 + 结果
+
+1) 单测：
+   - `cargo test -p ti-app` → 38 passed（含 z_layers 3 + world_camera 6 + particles 6 + game_app 既有）
+   - `cargo test -p ti-engine`（ti-engine workspace）→ 11 passed（canvas_contract 11/11）
+2) e2e 全链回归：
+   - `./target/debug/treasure-bevy-native.exe --selftest` → [selftest] PASS（16/16，0 失败）exit=0
+3) 构建：
+   - root `cargo build -p ti-app --features native-shell` → exit=0
+   - ti-engine `cargo build --bin treasure-bevy-native` → exit=0
+   - ti-engine `cargo build --release --target wasm32-unknown-unknown --bin treasure-bevy-wasm` → exit=0（38.9MB 未 strip）
+4) 质量门：
+   - root `cargo clippy --workspace --all-targets -- -D warnings` → exit=0
+   - ti-engine `cargo clippy --all-targets -- -D warnings` → exit=0
+   - `cargo fmt --all -- --check`（root + ti-engine）→ clean
+   - 全 gate：`scripts/gate.ps1` → 0 failure(s)
+
+## 视觉验收（用户过目留痕）— 待用户执行
+
+运行 `cargo run -p ti-engine --bin treasure-bevy-native`（或 `treasure-bevy-wasm` 浏览器版）：
+- 主地图：键盘 `=`/`-` 缩放（view 中心锚点），左键拖拽平移
+- 战斗场景：Attack 命中 → 橙红火花
+- 交易场景：TradeBuy/Sell 金币变动 → 金色光点
+- 场景切换：S17.9 ease-in-out 交叉淡化（240ms smoothstep）
+
+## 残留
+
+- 滚轮 zoom（winit MotionEvent 面）挂 S18.8（bevy 输入系统完善同轮）
+- CPU terrain 相机接线（`grid_offset` → `terrain_atlas::camera`）挂 S18.6（像素基线重建同轮）
+- 视觉验收（用户过目留痕）待用户执行

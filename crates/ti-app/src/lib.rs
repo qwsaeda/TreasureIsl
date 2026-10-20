@@ -26,6 +26,7 @@ pub mod glyph_raster;
 pub mod hd_manifest;
 pub mod i18n;
 pub mod menu_shell;
+pub mod particles;
 pub mod scenes;
 pub mod shell_ui;
 pub mod sprite_atlas;
@@ -33,6 +34,8 @@ pub mod terrain_atlas;
 pub mod touch;
 pub mod ttf_font;
 pub mod widgets;
+pub mod world_camera;
+pub mod z_layers;
 
 #[cfg(feature = "android-shell")]
 pub mod android_shell;
@@ -45,6 +48,7 @@ pub use error::{Error, Result};
 pub use game_app::{BattleSnapshot, BattleView, GameApp, GameInput, Scene};
 pub use i18n::{sget, sgetf, try_sget};
 pub use menu_shell::MenuShell;
+pub use particles::{FxKind, ParticleFx};
 pub use scenes::{
     EconomyHost, IndexScene, MainMapScene, MapHost, MenuHost, MessageScene, NavHost, RenderHost,
     SaveloadScene, Scene as SceneTrait, SceneHost, SceneKind, SceneRegistry, SceneTransition,
@@ -56,3 +60,5 @@ pub use sprite_atlas::SpriteAtlas;
 pub use terrain_atlas::TerrainAtlas;
 pub use ti_render as render;
 pub use touch::{TouchPad, TouchSample};
+pub use world_camera::{WorldCam, clamp_zoom};
+pub use z_layers::{Z_ENTITY, Z_FX, Z_HUD, Z_OVERLAY, Z_TERRAIN, Z_TEXT};

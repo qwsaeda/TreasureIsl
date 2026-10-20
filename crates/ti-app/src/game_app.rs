@@ -350,6 +350,11 @@ pub struct GameApp {
     pub displayed_player_hp: u32,
     /// 显示用 BOSS HP（平滑插值）。
     pub displayed_boss_hp: u32,
+    /// S18.5：主地图相机 zoom/pan 纯函数模型（`world_canvas` 镜头；Bevy 壳 GPU 侧接线，
+    /// CPU terrain 相机接线挂 S18.6 像素基线重建同轮）。
+    pub world_cam: crate::world_camera::WorldCam,
+    /// S18.5：轻量确定性粒子（金币光/战斗命中火花；FX 专用 LCG，seed = [`FX_SEED`]）。
+    pub fx: crate::particles::ParticleFx,
 }
 
 /// HP 平滑插值（S17.4 时间制）：向目标推进「剩余差值 × 本帧时间占比」，帧率无关；
@@ -371,7 +376,8 @@ fn approach_ms(current: u32, target: u32, frac: f64) -> u32 {
 /// S17.4：过渡进度时间制推进（`MOTION_TRANSITION_MS` 内 delta 占比；f64 中间值 →
 /// f32 末位截断不影响单调性）。delta 按 `u16` 上限封顶（壳层本就 clamp ≤250ms）。
 #[allow(clippy::cast_possible_truncation)]
-fn advance_transition_t(t: f32, delta_ms: u32) -> f32 {
+#[must_use]
+pub fn advance_transition_t(t: f32, delta_ms: u32) -> f32 {
     let denom = f64::from(crate::scenes::chrome::MOTION_TRANSITION_MS.max(1));
     let step = f64::from(u16::try_from(delta_ms.max(1)).unwrap_or(u16::MAX)) / denom;
     t + step as f32
@@ -380,11 +386,20 @@ fn advance_transition_t(t: f32, delta_ms: u32) -> f32 {
 /// S17.9：交叉淡化缓动曲线（smoothstep ease-in-out，`10_ui_redesign` §动效「240ms
 /// ease-in-out」定稿落地；旧 S17.4 为线性，观感生硬）。进度 `t∈[0,1]` → 混合因子
 /// `t²(3−2t)`（端点不变：0→0、1→1，中段前慢后快再收尾；单调不递减，像素插值无回跳）。
+/// S18.5：`pub` = Bevy 壳过渡同曲线复用（单一事实源，双渲染期两侧 ease 不漂移）。
 #[must_use]
-fn transition_ease(t: f32) -> f32 {
+pub fn transition_ease(t: f32) -> f32 {
     let t = t.clamp(0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
 }
+
+/// S18.5：FX 触发坐标常量（1080×1920 逻辑坐标；视觉验收可微调，S18.7 贴图管线接手版面）。
+/// 战斗命中火花 = 战斗场景角色区中心；金币光 = HUD 金币显示区（`08_layout_design.md` HUD 行）。
+pub const FX_BATTLE_HIT_POS: (f32, f32) = (540.0, 880.0);
+/// S18.5：金币光触发坐标（HUD 金币显示区）。
+pub const FX_COIN_GOLD_POS: (f32, f32) = (900.0, 140.0);
+/// S18.5：FX 粒子 LCG 固定 seed（确定性视觉验收；不进业务 RNG `rules::rng::GameRng`）。
+pub const FX_SEED: u64 = 0xC0_FF_EE;
 
 /// 场景切换过渡状态机（EXP-081 → S17.4：真交叉淡化，`MOTION_TRANSITION_MS` 时间制推进）。
 #[derive(Debug, Clone, Default)]
@@ -603,6 +618,8 @@ impl GameApp {
             rendered_once: false,
             displayed_player_hp: 0,
             displayed_boss_hp: 0,
+            world_cam: crate::world_camera::WorldCam::default(),
+            fx: crate::particles::ParticleFx::deterministic(FX_SEED),
             #[cfg(feature = "gpu-render")]
             gpu_renderer: {
                 #[cfg(any(
@@ -1126,7 +1143,21 @@ impl GameApp {
     /// 调用方随后调 `render` 刷新帧缓冲。返回是否发生了场景切换。
     pub fn handle(&mut self, input: GameInput) -> bool {
         let kind = SceneKind::from_legacy(self.scene);
-        route_input(self, kind, input)
+        let gold_before = self.gold;
+        let consumed = route_input(self, kind, input);
+        // S18.5 FX 触发（纯视觉层：不改业务判定；攻击回合 / 金币变动才 spawn）。
+        if consumed {
+            match input {
+                GameInput::Attack => {
+                    self.fx.spawn_hit_spark(FX_BATTLE_HIT_POS.0, FX_BATTLE_HIT_POS.1);
+                }
+                GameInput::TradeBuy(_) | GameInput::TradeSell(_) if self.gold != gold_before => {
+                    self.fx.spawn_coin_glint(FX_COIN_GOLD_POS.0, FX_COIN_GOLD_POS.1);
+                }
+                _ => {}
+            }
+        }
+        consumed
     }
 
     /// S9.5 Command 派发入口：把 [`crate::commands::GameCommand`] 路由到当前场景。
@@ -1138,6 +1169,28 @@ impl GameApp {
         let kind = SceneKind::from_legacy(self.scene);
         let input = GameInput::from(cmd);
         route_input(self, kind, input)
+    }
+
+    /// S18.5：相机平移（壳层把鼠标/触摸拖拽的屏幕 px 步长喂入；世界步 = 屏步 / zoom）。
+    pub fn camera_pan(&mut self, step_x: f32, step_y: f32) {
+        self.world_cam.pan(step_x, step_y);
+    }
+
+    /// S18.5：以 view 空间锚点为中心缩放（滚轮喂入；zoom 钳制 [`crate::world_camera::clamp_zoom`]）。
+    pub fn camera_zoom_at(&mut self, anchor_view: [f32; 2], factor: f32, view: [f32; 2]) {
+        self.world_cam.zoom_at(anchor_view, factor, view);
+    }
+
+    /// S18.5：相机只读视图（Bevy 壳 GPU 侧 zoom/pan 接线）。
+    #[must_use]
+    pub fn world_cam(&self) -> &crate::world_camera::WorldCam {
+        &self.world_cam
+    }
+
+    /// S18.5：FX 只读视图（确定性自检 / 视觉验收）。
+    #[must_use]
+    pub fn fx(&self) -> &crate::particles::ParticleFx {
+        &self.fx
     }
 
     /// 进入主地图（`docs/gamebook.md` §3.3）：初始化 `MapSession` + 贸易/建造会话。
@@ -1241,15 +1294,19 @@ impl GameApp {
     pub fn render(&mut self) {
         // S17.4：动效推进全部时间制（本帧经过毫秒）——帧率无关（旧按帧计数）。
         crate::scenes::chrome::tick_press_flash(self.frame_delta_ms);
+        // S18.5：FX 粒子推进（确定性：同 seed + 同 delta 序列 = 同画面；快照路径先 clear）。
+        self.fx.advance(self.frame_delta_ms);
         // HP 条平滑插值（EXP-085）：每帧向实际值推进，步长 = 差值的 25% 或最小 1。
         self.update_displayed_hp();
         if self.transition.is_none() {
             self.render_scene();
+            self.draw_fx();
             return;
         }
         // 取出过渡态（避开与 `render_scene` 的 `&mut self` 借用冲突）。
         let Some(mut trans) = self.transition.take() else {
             self.render_scene();
+            self.draw_fx();
             return;
         };
         // S17.4：时间制推进（MOTION_TRANSITION_MS=240ms，帧率无关；delta 下限 1ms 防
@@ -1259,6 +1316,7 @@ impl GameApp {
         self.render_scene();
         if done {
             // 终帧：直接显示全新画面（不混合），过渡自然结束。
+            self.draw_fx();
             return;
         }
         match trans.prev.take() {
@@ -1274,6 +1332,15 @@ impl GameApp {
         }
         trans.t = next_t;
         self.transition = Some(trans);
+        self.draw_fx();
+    }
+
+    /// S18.5：FX 粒子渲染（z = [`crate::z_layers::Z_FX`] 层；FX = 强调层 = 场景+chrome 之后绘制，
+    /// 调用序 = 层序；`08_render_arch.md` 契约 1）。淡出 = 亮度 4 档量化（CPU Framebuf 无 alpha）。
+    fn draw_fx(&mut self) {
+        for (x, y, w, h, c) in self.fx.render_rects() {
+            self.shell.fill_rect(x, y, w, h, c);
+        }
     }
 
     /// 实际场景渲染（不含过渡逻辑）。
@@ -1342,6 +1409,9 @@ impl GameApp {
     /// **稳态**亮度 1.0——旧实现 `PAGE_FRAME`=0 时亮度 0.6，三套基线锁的是过渡中间态。
     #[must_use]
     pub fn render_to_framebuf(&mut self) -> &[u16] {
+        // S18.5 快照口径（EXP-079 稳态）：像素基线 / selftest 不含 FX 粒子（clear 后渲染）；
+        // 实玩路径（`render`）粒子照常。
+        self.fx.clear();
         self.transition = None;
         crate::scenes::chrome::reset_animation_state();
         // S17.4：翻页亮度推进到稳态（时间制：一次推进满 `MOTION_PAGE_MS`）。
