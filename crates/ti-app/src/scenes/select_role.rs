@@ -114,43 +114,32 @@ impl Scene for SelectRoleScene {
         }
     }
 
-    /// 角色列表 + 选中高亮 + 导航提示（v2 羊皮纸/木纹/金色系）。
+    /// S18.7d 声明式原语化：版面（夜空 / 左角色立绘锚 / 右 5 行选项 / 提示行）=
+    /// `scenes.json` `select_role.primitives`（行名/简介静态文本 + 选中高亮 `when="selected"`
+    /// 全数据）；运行时 = 按压闪影 + 立绘面板首字母（选中角色 character，`hero_art` 槽中心）。
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("select_role");
-        chrome::scene_shell(host, "select_role", "scene.select_role.title");
         let current = host.character().map_or(0, |c| c.index() as usize);
+        chrome::render_primitives(host, "select_role", i64::try_from(current).unwrap_or(-1));
+        // 按压闪影 / 长摁按压：当前行压暗（金底之上叠 bevel_shadow，`menu_item` 旧态）
         let held = host.press_held();
         let flashing = chrome::press_flash_active();
-        for (i, c) in Character::all().iter().enumerate() {
-            let r = layout.list.item_rect(i);
-            chrome::menu_item(
-                host,
-                r.x,
-                r.y,
-                r.w,
-                r.h,
-                i == current,
-                i == current && (held || flashing),
-            );
-            let ty = r.y + (r.h - host.shell().glyph_px()) / 2; // QA009：字形高按活跃字体（TTF 44px / 位图 12px）
-            chrome::draw_body_text(host, c.label(), layout.list.text_x, ty);
-            // S17.3：角色像位 = 圆环图标（`ui_icons.json` bindings.select_role_row = monogram）
-            // + 首字母叠画（角色名首字符，数据驱动，不用色块当头像）。
-            if let Some(def) = chrome::icon_def("monogram") {
-                if let Some(ix) = layout.extra_scalar.get("icon.x").copied().filter(|v| *v > 0) {
-                    let iy = r.y + (r.h - def.size) / 2;
-                    chrome::ui_icon(host, def.id, ix, iy, i == current);
-                    let letter = c.label().chars().next().map(String::from).unwrap_or_default();
-                    let ly = r.y + (r.h - host.shell().glyph_px()) / 2;
+        if held || flashing {
+            let r = layout.list.item_rect(current);
+            host.fill_rect(r.x, r.y, r.w, r.h, chrome::COLOR_BEVEL_SHADOW);
+        }
+        // 立绘面板首字母（运行时 = 选中角色；`hero_art` 数据槽中心，S17.3 圆环内叠画语义）
+        let picked = host.character().or_else(|| Character::from_index(0));
+        if let Some(c) = picked {
+            let hero = layout.extra.get("hero_art").copied().filter(|r| r.w > 0);
+            let letter = c.label().chars().next().map(String::from).unwrap_or_default();
+            if let Some(h) = hero {
+                if !letter.is_empty() {
                     let lw = host.shell().text_width_px(&letter);
-                    chrome::draw_body_text(host, &letter, ix + (def.size - lw) / 2, ly);
+                    let ly = h.y + (h.h - host.shell().glyph_px()) / 2;
+                    chrome::draw_body_text(host, &letter, h.x + (h.w - lw) / 2, ly);
                 }
             }
-            // S15.6 批次6：第二行简介（i18n `role.desc.<label>`，44px 次级灰蓝墨，主行之下 +56）
-            let desc_key = format!("role.desc.{}", c.label());
-            let desc = crate::i18n::sget(&desc_key);
-            chrome::draw_body_text_secondary(host, desc, layout.list.text_x, ty + 56);
         }
-        chrome::scene_hint(host, "select_role", "scene.select_role.nav_hint");
     }
 }

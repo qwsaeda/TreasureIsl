@@ -101,33 +101,34 @@ impl Scene for SaveloadScene {
         }
     }
 
-    /// 槽位列表 + 每档金/空满标记 + 导航提示（v2 羊皮纸/木纹/金色系）。
-    /// S15.6 QB136 三态卡：有档=金底 / 空档=普通羊皮纸块 / 光标=选中描边（`saveload_cursor`），
-    /// 卡片第二行摘要（有档 = `slot_summary_fmt` 角色/金/回合；空档 = `empty_line`，次级灰蓝墨 +56）。
+    /// S18.7d 声明式原语化：版面（夜空 / 左立绘锚 / 中槽列表 / 右元数据栏 / 提示行）=
+    /// `scenes.json` `saveload.primitives`（光标高亮 = `when="selected"` 行，QB136 三态收编：
+    /// 有档/空档区分改由运行时文案 + 金字号列承担）；运行时 = 按压闪影 +
+    /// 每档文案（`slot.label_fmt`/`slot_summary_fmt`/`hud.gold_fmt`，`list.text_x`/`gold_x` 数据槽）。
     fn render(&mut self, host: &mut dyn SceneHost) {
         // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）
         let layout = chrome::scene_layout("saveload");
-        chrome::scene_shell(host, "saveload", "scene.saveload.title");
         let slots: Vec<SaveSlot> = host.save_slots().to_vec();
+        let cursor = host.saveload_cursor();
+        chrome::render_primitives(host, "saveload", i64::try_from(cursor).unwrap_or(-1));
+        // 按压闪影 / 长摁按压：光标行压暗（金底之上叠 bevel_shadow）
         let held = host.press_held();
         let flashing = chrome::press_flash_active();
-        let cursor = host.saveload_cursor();
+        if (held || flashing) && cursor < slots.len() {
+            let r = layout.list.item_rect(cursor);
+            host.fill_rect(r.x, r.y, r.w, r.h, chrome::COLOR_BEVEL_SHADOW);
+        }
         for (i, s) in slots.iter().enumerate() {
             let r = layout.list.item_rect(i);
-            // 有档 = 金底（可点），空档 = 普通羊皮纸块；光标卡 = 选中描边态（QB136 三态）
-            let chosen = s.version > 0;
-            chrome::menu_item(host, r.x, r.y, r.w, r.h, chosen, chosen && (held || flashing));
-            if i == cursor && !chosen {
-                // 空档光标 = 外圈 2px 选中蓝描边（压普通卡，不盖金字列）
-                chrome::panel(host, r.x - 2, r.y - 2, r.w + 4, r.h + 4);
-            }
             let ty = r.y + (r.h - host.shell().glyph_px()) / 2; // QA009：字形高按活跃字体（TTF 44px / 位图 12px）
             let has_str =
                 if s.version > 0 { i18n::sget("slot.has") } else { i18n::sget("slot.empty") };
             let idx = i + 1;
             let slot_str = i18n::sgetf("slot.label_fmt", &[&idx, &has_str]);
             chrome::draw_body_text(host, &slot_str, layout.list.text_x, ty);
-            // 第二行摘要：有档 = 角色/金/回合（`slot_summary_fmt`）；空档 = `empty_line`
+            // 第二行摘要：有档 = 角色/金/回合（`slot_summary_fmt`）；空档 = `empty_line`。
+            // S18.7d：摘要降提示档（TTF 28px / 位图 8px，`draw_hint_text`）——v3 行高 224 下
+            // 双行 44px 会挤叠（EXP-105 视觉对账），28px 次级墨 + 上移保持层级。
             let summary = if s.version > 0 {
                 i18n::sgetf(
                     "scene.saveload.slot_summary_fmt",
@@ -136,12 +137,11 @@ impl Scene for SaveloadScene {
             } else {
                 i18n::sget("scene.saveload.empty_line").to_string()
             };
-            chrome::draw_body_text_secondary(host, &summary, layout.list.text_x, ty + 56);
+            host.draw_hint_text(&summary, layout.list.text_x, ty + 52, chrome::COLOR_SECONDARY);
             if s.version > 0 {
                 let g = i18n::sgetf("hud.gold_fmt", &[&s.gold]);
                 chrome::draw_body_text(host, &g, layout.list.gold_x, ty);
             }
         }
-        chrome::scene_hint(host, "saveload", "scene.saveload.nav_hint");
     }
 }

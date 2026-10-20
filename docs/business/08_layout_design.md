@@ -83,6 +83,11 @@
 > `-ceil(px_bounds.min.y)` 作 y 偏移使字形墨迹顶边正好落在 `y`（位图回退路径则把
 > `y` 直接当首行位图字顶边）。`title.h` 只喂给 `title_bar` 决定标题条高度，不决定文字位置。
 
+> **S18.7d 例外（4 场景夜空版）**：select_role / select_map / message / saveload 版面已改走
+> `scenes.json` `primitives`（夜空渐变 + 英雄面板 + 选项列 + 海平面 + z20 木框，同 index
+> 视觉语言；`chrome::scene_shell` 不再被这 4 场景调用，标题条 `title_bar` 仅 main_map/vs
+> 保留）。下表 §4.2/§4.5/§4.6 的坐标 = 新数据槽值（运行时内容仍按这些槽落位）。
+
 ### 4.1 index（主菜单）
 
 | 元素 | 坐标（`scenes.json`） | 说明 |
@@ -125,18 +130,23 @@
 
 ### 4.2 select_role / select_map（选择类）
 
+> S18.7d：两场景版面改走 `scenes.json` `primitives`（夜空 + 左英雄面板 + 右选项列 + 海平面 +
+> z20 木框）；下表坐标 = 运行时内容数据槽（行名/简介/图标/选中高亮全在 `primitives`）。
+
 | 元素 | select_role | select_map |
 |---|---|---|
-| 标题 | `title {y:8, h:96}`（无 `x` 键，居中算） | 同左 |
-| 列表 | `list {x:96, y:240, w:896, row_h:304, item_h:256, text_x:248, highlight_offset:40}` | `list {x:96, y:240, w:896, row_h:336, item_h:280, text_x:248, highlight_offset:40}` |
-| 图标列 | `icon {x:144}`（S17.3 角色首字母圆环） | `icon {x:144}`（S17.3 折叠地图） |
-| 首块顶 | `240-40` = 200 | 200 |
-| 项数 × 末块底 | 5 角色卡 → `200+4*304+256` = **1672** | 3 地图卡（`MAP_COUNT=3`，QA139 三方分叉销账）→ `200+2*336+280` = **1252**（QB103：3 卡撑满，S17.2 8pt 整备后空带收窄至 1252..1840） |
-| 锁定标记列 | — | `locked {text_x:920}` |
-| 提示行 | `hint {x:540, y:1840}` | 同左 |
+| 标题 | `title {x:776, y:48, w:440, h:96}`（S18.7d：`x` = 右列中心点，顶部金标题） | `title {x:352, y:48, w:400, h:96}`（S18.7d：`x` = 拼贴区中心点，避开右上月亮） |
+| 列表 | `list {x:560, y:480, w:440, row_h:192, item_h:192, text_x:672, highlight_offset:0}` | `list {x:720, y:480, w:280, row_h:320, item_h:320, text_x:808, highlight_offset:0}` |
+| 图标列 | `icon {x:584}`（行首 monogram 圆环 → JSON 原语；键留作数据槽） | `icon {x:744}`（折叠地图 → JSON 原语） |
+| 首块顶 | `480-0` = **480** | **480** |
+| 项数 × 末块底 | 5 角色卡 → `480+4*192+192` = **1440** | 3 地图卡（`MAP_COUNT=3`，QA139）→ `480+2*320+320` = **1440**（海平面带 1704 之上） |
+| 锁定标记列 | — | `locked {text_x:920}`（QA033 钳制公式不变：卡片右缘 = 1000） |
+| 立绘锚（S18.7d） | `hero_art {x:76, y:130, w:356, h:1190}` | —（地图拼贴区 = 重心区，chrome 全在 `primitives`） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:356, h:1190}}` | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 23 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
+| 提示行 | `hint {x:540, y:1840}` | 同左（JSON 原语 tier hint） |
 | 动态区 | `portrait_zones [{0,240,1080,1460}]` | `portrait_zones [{0,240,1080,960}]` |
 
-不变式：`200 ≥ 108`（不压标题条）、末块底 `≤ 1840`。
+不变式：首块顶 `480 ≥ 108`、末块底 `1440 ≤ 1704`（不越海平面带）、列表右缘 `≤ 1068`（木框内）。
 
 ### 4.3 main_map（主地图，代码等距菱形格 + 代码棋子）
 
@@ -185,25 +195,33 @@
 
 ### 4.5 message（消息/帮助）
 
+> S18.7d：版面改走 `scenes.json` `message.primitives`（夜空 + 左立绘面板 + 右 text_panel
+> + 海平面 + z20 木框；面板/金饰/分割线全 JSON）。下表坐标 = 运行时内容数据槽。
+
 | 元素 | 坐标 | 说明 |
 |---|---|---|
-| 标题 | `title {y:8, h:96}`（无 `x` 键，居中算） | 标题 key = `msg.<kind>` |
-| 正文区 | `body {x:96, y:224, w:896, h:1480}` | 卡片浅块 + 描边细边 + bevel，多页文本；底 = **1704**（S17.2 8pt） |
-| 页码 | `page {x:540, y:1800}` | 页码/总页（`x=540` = 屏心锚点） |
-| 提示行 | `hint {x:540, y:1840}` | 切页/关闭 |
+| 标题 | `title {x:704, y:136, w:600, h:96}`（S18.7d：`x` = text_panel 中心点；标题文本 = 动态 i18n `msg.<kind>`，代码按槽落位） | 顶 wood_warm 头带（原语 z4）内 |
+| 正文区 | `body {x:408, y:192, w:584, h:1128}`（S18.7d v3 text_panel 内区；面板 chrome 在 `primitives`） | 多页文本折行（QA111） |
+| 页码 | `page {x:704, y:1408, w:0, h:0}` | 页码/总页按 `page.x` 中心点排布（QA144 页点行 = `page.y - 48`） |
+| 提示行 | `hint {x:540, y:1840}` | 切页/关闭（JSON 原语 tier hint） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:400, y:230, w:605, h:1210}}` | gate `check_scene_narrative` N8 对账（manifest `focus.bbox_pct{37,12,56,63}` × (1080,1920)） |
 | 动态区 | `portrait_zones [{0,220,1080,1680}]` | 代码绘制动态实体允许落区 |
 
-> FIND-026 设计裁决：`body.h=1480` 是**正文渲染区上界**（`body.y+body.h = 1704 ≤ page.y = 1800`），
+> FIND-026 设计裁决（S18.7d 重锚）：`body.h=1128` 是**正文渲染区上界**（`body.y+body.h = 1320 ≤ page.y = 1408`），
 > **不是行数**；翻页由 `msg_page`/`msg_total` 驱动，`body.h` 仅作版面区间约束。
 
 ### 4.6 saveload（存读档）
 
+> S18.7d：版面改走 `scenes.json` `saveload.primitives`（夜空 + 左立绘锚 + 中槽列表 +
+> 右元数据栏 chrome + 海平面 + z20 木框）；光标高亮 = 原语 `when="selected"` 行。
+
 | 元素 | 坐标 | 说明 |
 |---|---|---|
-| 标题 | `title {y:8, h:96}`（无 `x` 键，居中算） | 「存读档」 |
-| 槽位列表 | `list {x:96, y:240, w:896, row_h:304, item_h:248, text_x:248, highlight_offset:40, gold_x:816}`（QA105 重锚 gold_x；S17.2 8pt：gold_x 820→816） | 5 槽；首块顶 200；末块底 `200+4*304+248` = **1664** |
-| 金币次列 | `list.gold_x` = 816 | 每槽金币数右对齐列（S17.3 数字 label 档） |
-| 提示行 | `hint {x:540, y:1840}` | 选位/读写 |
+| 标题 | `title {x:672, y:48, w:640, h:96}`（S18.7d：`x` = 列表+元数据区中心点） | 「存读档」金标题（原语 tier title） |
+| 槽位列表 | `list {x:360, y:240, w:440, row_h:224, item_h:192, text_x:392, highlight_offset:8, gold_x:872}` | 5 槽；首块顶 `240-8` = **232**；末块底 `232+4*224+192` = **1320**（海平面 1704 之上） |
+| 金币次列 | `list.gold_x` = 872（S18.7d v3 右元数据栏 840..1000 内 +32 衬边；元数据栏 chrome 在 `primitives`） | 每槽金币数（S17.3 数字 label 档） |
+| 提示行 | `hint {x:540, y:1840}` | 选位/读写（JSON 原语 tier hint） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:356, y:230, w:637, h:1210}}` | gate `check_scene_narrative` N8 对账（manifest `focus.bbox_pct{33,12,59,63}` × (1080,1920)，覆盖中列表 + 右元数据栏） |
 | 动态区 | `portrait_zones [{0,240,1080,1450}]` | 代码绘制动态实体允许落区 |
 
 ## 5. 不动的部分

@@ -710,7 +710,8 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
     // S17.2 起锚点 = 航海夜·精修 v2 8pt 值，`docs/process/10_ui_redesign.md` §4 增量）：
     // 公共：标题条 h=96、提示/状态行 y=1840、列表 x=96 w=896
     // index: list y=392 row_h=224 item_h=168 highlight_offset=40，status y=1840
-    // select_role: row_h=304；select_map: row_h=336；saveload: row_h=304 gold_x=816
+    // select_role: row_h=192（S18.7d v3 中央选项列）；select_map: row_h=320（v3 右列 3 卡）；
+    // saveload: row_h=224 gold_x=872（v3 三栏：中槽列表 + 右元数据栏）
     // vs: player_hp 64..512 / boss_hp 576..1024 y=168 w=448 h=48
     // main_map: hud y=152 h=128（不与等距区 grid.y0=520 重叠）
     let anchors: &[(&str, &str, &str)] = &[
@@ -721,15 +722,19 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，S17.2 8pt）"),
         (
             "\"select_role\"",
-            "\"row_h\": 304",
-            "select_role 行高 = 304（§4.2，5 角色卡，S17.2 8pt）",
+            "\"row_h\": 192",
+            "select_role 行高 = 192（§4.2，S18.7d v3 中央选项列，5 角色卡）",
         ),
-        ("\"select_map\"", "\"row_h\": 336", "select_map 行高 = 336（§4.2，3 地图卡，S17.2 8pt）"),
-        ("\"saveload\"", "\"row_h\": 304", "saveload 行高 = 304（§4.6，S17.2 8pt）"),
+        (
+            "\"select_map\"",
+            "\"row_h\": 320",
+            "select_map 行高 = 320（§4.2，S18.7d v3 右列 3 地图卡）",
+        ),
+        ("\"saveload\"", "\"row_h\": 224", "saveload 行高 = 224（§4.6，S18.7d v3 三栏）"),
         (
             "\"saveload\"",
-            "\"gold_x\": 816",
-            "saveload 金字号列 x = 816（§4.6，S17.2 8pt，QA105/QB122 左移防越屏）",
+            "\"gold_x\": 872",
+            "saveload 金字号列 x = 872（§4.6，S18.7d v3 右元数据栏）",
         ),
         (
             "\"vs\"",
@@ -748,7 +753,11 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
             "\"y0\": 520",
             "main_map 等距棋盘 grid.y0 = 520（§4.3，业务几何非 8pt 版面令牌）",
         ),
-        ("\"message\"", "\"h\": 1480", "message 正文区 h = 1480（§4.5，FIND-026 区间约束）"),
+        (
+            "\"message\"",
+            "\"h\": 1128",
+            "message 正文区 h = 1128（§4.5，S18.7d v3 三栏 text_panel 内宽）",
+        ),
     ];
     // 每个场景段单独切片，避免跨场景误匹配（如 select_role 与 select_map 同名 list）
     for &(scene_key, needle, msg) in anchors {
@@ -1736,7 +1745,8 @@ fn ui_8pt_walk(
         "x0" | "y0" | "tile_w" | "tile_h" | "size" | "portrait_zones"
             // v3 场景叙事键（UI 重设计 v3.1 双写，docs/ui-redesign-v3/02 §10：v3 坐标不再 8pt 强制，
             // 约束改由 gate 第 21 项 check_scene_narrative DSL 接管；v2 键仍走 8pt 纪律）
-            | "title_art" | "ambient_art" | "focus_anchor" | "battle_arena"
+            | "title_art" | "ambient_art" | "focus_anchor" | "hero_art"
+            | "battle_arena"
             | "world_canvas" | "hud_gold" | "hud_player"
             | "deck_trade" | "deck_sell" | "deck_build" | "canvas_entities"
             // S18.7 声明式原语：非坐标语义键（z = 层序；item = 菜单项序号）不参与 8pt 栅格。

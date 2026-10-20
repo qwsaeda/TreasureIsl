@@ -136,43 +136,39 @@ impl Scene for SelectMapScene {
         }
     }
 
-    /// 地图列表 + 选中高亮 + 锁定标记 + 导航提示（v2 羊皮纸/木纹/金色系）。
+    /// S18.7d 声明式原语化：版面（夜空 / 左地图拼贴面板 / 右 3 行选项 / 提示行）=
+    /// `scenes.json` `select_map.primitives`（行名 i18n `glmapm0N.Map` + map 图标 + 选中高亮
+    /// 全数据）；运行时 = 按压闪影 + 锁块（锁定态 = `unlocked_mask`，几何走
+    /// `locked.text_x` / 卡片右缘公式，UI-10）。
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("select_map");
-        chrome::scene_shell(host, "select_map", "scene.select_map.title");
         let current = host.map_slot().map_or(0, |m| m.zero_index() as usize);
+        chrome::render_primitives(host, "select_map", i64::try_from(current).unwrap_or(-1));
         let held = host.press_held();
         let flashing = chrome::press_flash_active();
+        if held || flashing {
+            let r = layout.list.item_rect(current);
+            host.fill_rect(r.x, r.y, r.w, r.h, chrome::COLOR_BEVEL_SHADOW);
+        }
+        // UI-10：锁定行 = 深色「锁」块（压卡片右内侧，钳进卡片内不溢出）；
+        // QA033：锁块 x 只走 `scenes.json` `locked.text_x`（1080 数据驱动，契约 4）；
+        // 键缺失/非正 = 不画锁块（旧 176 时代休眠回退值 130 已删，契约 1）。
         for (i, m) in MapSlot::all().iter().enumerate() {
-            let r = layout.list.item_rect(i);
-            let locked = !host.map_unlocked(*m);
-            let chosen = i == current && !locked;
-            chrome::menu_item(host, r.x, r.y, r.w, r.h, chosen, chosen && (held || flashing));
-            let ty = r.y + (r.h - host.shell().glyph_px()) / 2; // QA009：字形高按活跃字体（TTF 44px / 位图 12px）
-            chrome::draw_body_text(host, m.label(), layout.list.text_x, ty);
-            // S17.3：行首折叠地图图标（`ui_icons.json` bindings.select_map_row = map）。
-            if let Some(def) = chrome::icon_def("map") {
-                if let Some(ix) = layout.extra_scalar.get("icon.x").copied().filter(|v| *v > 0) {
-                    let iy = r.y + (r.h - def.size) / 2;
-                    chrome::ui_icon(host, def.id, ix, iy, chosen);
-                }
+            if host.map_unlocked(*m) {
+                continue;
             }
-            if locked {
-                // UI-10：未解锁项 = 深色「锁」块（压按钮右内侧，钳进画布内不溢出）。
-                // QA033：锁块 x 只走 `scenes.json` `locked.text_x`（1080 数据驱动，契约 4）；
-                // 键缺失/非正 = 不画锁块（旧 176 时代休眠回退值 130 已删，契约 1）。
-                let lock_x = layout.extra_scalar.get("locked.text_x").copied().unwrap_or(0);
-                if lock_x > 0 {
-                    // 契约 1（`08_render_arch.md`）：钳制基准用呈现坐标系常量，
-                    // 不得出现 legacy 176 字面量。
-                    // 锁标右界按**卡片右缘**（`item_rect` 的 x+w）而非屏幕宽推导，
-                    // 按钮变窄时锁标随卡片收敛，不会溢出卡片（F12）
-                    let card_right = r.x + r.w;
-                    let lock_w = (card_right - 6 - lock_x).min(40);
-                    host.fill_rect(lock_x, ty, lock_w.max(4), 12, crate::menu_shell::COLOR_WOOD);
-                }
+            let r = layout.list.item_rect(i);
+            let ty = r.y + (r.h - host.shell().glyph_px()) / 2;
+            let lock_x = layout.extra_scalar.get("locked.text_x").copied().unwrap_or(0);
+            if lock_x > 0 {
+                // 契约 1（`08_render_arch.md`）：钳制基准用呈现坐标系常量，
+                // 不得出现 legacy 176 字面量。
+                // 锁标右界按**卡片右缘**（`item_rect` 的 x+w）而非屏幕宽推导，
+                // 按钮变窄时锁标随卡片收敛，不会溢出卡片（F12）
+                let card_right = r.x + r.w;
+                let lock_w = (card_right - 6 - lock_x).min(40);
+                host.fill_rect(lock_x, ty, lock_w.max(4), 12, crate::menu_shell::COLOR_WOOD);
             }
         }
-        chrome::scene_hint(host, "select_map", "scene.select_map.nav_hint");
     }
 }

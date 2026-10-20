@@ -4,7 +4,6 @@ use ti_core::rules::messages::page_text;
 
 use crate::game_app::GameInput;
 use crate::i18n;
-use crate::menu_shell::LOGICAL_W_I32;
 use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
@@ -55,15 +54,21 @@ impl Scene for MessageScene {
         }
     }
 
-    /// 标题 + 当前页文本（QA111 换行）+ 页码（QA124）+ 导航提示（v2 羊皮纸/木纹/金色系）。
+    /// S18.7d 声明式原语化：版面（夜空渐变 / 左侧立绘面板 / 右正文面板 / 页码带 / 海平面 /
+    /// 木框 / 提示行）= `scenes.json` `message.primitives`（z 序 = 绘制序，`render_primitives`
+    /// 统一 dispatch）；运行时内容 = 动态标题（msg 类型 i18n）/ 正文折行（QA111）/
+    /// 页点页码（QA144），全部按数据槽（`title`/`body`/`page`）落位，0 版面坐标代码。
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("message");
+        chrome::render_primitives(host, "message", -1);
         let kind = host.msg_kind().unwrap_or(MsgKind::Help);
-        // 文案 key = `msg.<kind>`（`strings.json` 存中文；直接 `sget(kind.label())`
-        // 会落到裸 key，界面显示英文 "help"，见 evidence/ui_concept/review_all.txt）
-        chrome::scene_shell(host, "message", &format!("msg.{}", kind.label()));
+        // 标题（动态 i18n `msg.<kind>`；数据槽 `title`：x = 面板中心点，y = 顶边基线）
+        let key = format!("msg.{}", kind.label());
+        let title = crate::i18n::sget(&key);
+        let t = layout.title;
+        let tx = t.x - host.shell().text_width_px(title) / 2;
+        host.draw_text_colored(title, tx, t.y, chrome::COLOR_TEXT_ON_WOOD);
         let body = layout.extra.get("body").copied().unwrap_or_default();
-        chrome::panel(host, body.x, body.y, body.w.max(1), body.h.max(1));
         let page = host.msg_page();
         let key = page_text(kind, page);
         let text = i18n::sget(key.as_str());
@@ -87,12 +92,12 @@ impl Scene for MessageScene {
             x_cursor += adv;
             line_width += adv;
         }
-        // QA144：页点（12×12，间距 24；已翻实心白 / 未翻暗底+框）在页码行之上屏心排布；
-        // 中缝分割线 = 触摸左右屏分界（`MSG_SPLIT_X` = 屏中线）的视觉锚（2px 竖线，面板内）。
+        // QA144：页点（12×12，间距 24；已翻实心白 / 未翻暗底+框）按 `page` 数据槽
+        // 中心点（page.x）排布于页码行之上；中缝分割线已入 JSON 原语（z=7 竖线）。
         let total = host.msg_total();
         let dots_n = i32::try_from(total).unwrap_or(0);
         let dots_w = dots_n * 36 - 24;
-        let dots_x = (LOGICAL_W_I32 - dots_w.max(0)) / 2;
+        let dots_x = layout.page.x - dots_w.max(0) / 2;
         let dots_y = layout.page.y - 48;
         for i in 0..dots_n {
             let dx = dots_x + i * 36;
@@ -104,18 +109,11 @@ impl Scene for MessageScene {
                 host.fill_rect(dx + 2, dots_y + 2, 8, 8, chrome::COLOR_MENU_BG);
             }
         }
-        host.fill_rect(
-            LOGICAL_W_I32 / 2,
-            body.y + 8,
-            2,
-            (body.h - 16).max(0),
-            chrome::COLOR_MENU_BORDER,
-        );
         let page_str = i18n::sgetf("scene.message.page", &[&(page + 1), &total]);
         let page_pos = layout.page;
-        let page_x = chrome::centered_body_x(host, &page_str);
+        let page_x = page_pos.x - host.shell().text_width_px(&page_str) / 2;
         chrome::draw_body_text(host, &page_str, page_x, page_pos.y);
-        chrome::scene_hint(host, "message", "scene.message.nav_hint");
+        // 提示行 = JSON 原语（tier hint）；页面翻转亮度帧推进（运行时动效，保留代码）。
         let factor = chrome::page_brightness_factor();
         if factor < 1.0 {
             host.shell_mut().apply_brightness(factor);

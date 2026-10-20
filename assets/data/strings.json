@@ -69,5 +69,8 @@
   "schema_version": 1,
   "slot.empty": "空",
   "slot.has": "有",
-  "slot.label_fmt": "位 {0} {1}"
+  "slot.label_fmt": "位 {0} {1}",
+  "glmapm01.Map": "海图一",
+  "glmapm02.Map": "海图二",
+  "glmapm03.Map": "海图三"
 }

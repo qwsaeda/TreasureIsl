@@ -75,17 +75,17 @@ fn select_scenes_layout_matches_doc() {
     let s = scenes();
     let role = s.get("select_role").expect("scenes.json 缺 select_role");
     assert_eq!(role.title.h, 96, "select_role 标题条 h=96（1080 现代版面，S17.2 8pt）");
-    assert_eq!(role.list.y, 240, "select_role 列表基线 y=240");
-    assert_eq!(role.list.row_h, 304, "select_role row_h=304（S17.2 8pt：5 角色卡）");
-    assert_eq!(role.list.item_h, 256, "select_role item_h=256（S17.2 8pt）");
+    assert_eq!(role.list.y, 480, "select_role 列表基线 y=480（S18.7d v3 右列 5 卡）");
+    assert_eq!(role.list.row_h, 192, "select_role row_h=192（S18.7d v3 中央选项列）");
+    assert_eq!(role.list.item_h, 192, "select_role item_h=192（S18.7d v3）");
     assert_eq!(role.hint.y, 1840, "select_role 提示行 y=1840（QB115/123）");
     let role_top = role.list.y - role.list.highlight_offset;
     assert!(role_top >= 108, "select_role 首块顶 {role_top} 压标题条");
     let map = s.get("select_map").expect("scenes.json 缺 select_map");
     assert_eq!(map.title.h, 96, "select_map 标题条 h=96（1080 现代版面，S17.2 8pt）");
-    assert_eq!(map.list.y, 240, "select_map 列表基线 y=240");
-    assert_eq!(map.list.row_h, 336, "select_map row_h=336（S17.2 8pt；S15.6 QB103，3 地图卡撑满）");
-    assert_eq!(map.list.item_h, 280, "select_map item_h=280（S15.6 QB103）");
+    assert_eq!(map.list.y, 480, "select_map 列表基线 y=480（S18.7d v3 右列 3 卡）");
+    assert_eq!(map.list.row_h, 320, "select_map row_h=320（S18.7d v3；S15.6 QB103 3 地图卡）");
+    assert_eq!(map.list.item_h, 320, "select_map item_h=320（S18.7d v3）");
     assert_eq!(map.hint.y, 1840, "select_map 提示行 y=1840（QB115/123）");
 }
 
@@ -173,16 +173,16 @@ fn message_layout_matches_doc() {
     };
     assert_eq!(msg.title.h, 96, "message 标题条 h=96（1080 现代版面，S17.2 8pt）");
     let body = msg.extra.get("body").expect("message 缺 body 矩形");
-    assert_eq!(body.y, 224, "message 正文区 y=224（1080，S17.2 8pt）");
-    assert_eq!(body.h, 1480, "message 正文区 h=1480（1080，FIND-026 区间约束）");
+    assert_eq!(body.y, 192, "message 正文区 y=192（S18.7d v3 text_panel 内区）");
+    assert_eq!(body.h, 1128, "message 正文区 h=1128（S18.7d v3 text_panel 内高）");
     // body.y + body.h ≤ 1800（正文区上界不越页码行，QA124/144 批次6 重分布）
     assert!(body.y + body.h <= 1800, "message 正文区越页码行 y=1800（FIND-026）");
     let page = msg.page;
-    assert_eq!(page.y, 1800, "message 页码 y=1800（S15.6 批次6，QA144 页点行之上）");
+    assert_eq!(page.y, 1408, "message 页码 y=1408（S18.7d v3，QA144 页点行 = page.y - 48）");
     assert_eq!(msg.hint.y, 1840, "message 提示行 y=1840（QB115/123）");
 }
 
-/// saveload §4.6（S15.6 批次6 + S17.2 8pt）：标题条 h=96，列表基线 y=240 row_h=304 item_h=248（QB136 三态卡），金字列 x=816，提示 y=1840。
+/// saveload §4.6（S18.7d v3 三栏）：列表基线 y=240 row_h=224 item_h=192，金字列 x=872，提示 y=1840。
 #[test]
 fn saveload_layout_matches_doc() {
     let s = scenes();
@@ -191,11 +191,11 @@ fn saveload_layout_matches_doc() {
     };
     assert_eq!(sv.title.h, 96, "saveload 标题条 h=96（1080 现代版面，S17.2 8pt）");
     assert_eq!(sv.list.y, 240, "saveload 列表基线 y=240（1080）");
-    assert_eq!(sv.list.row_h, 304, "saveload 列表 row_h=304（S17.2 8pt，QB136 三态卡）");
-    assert_eq!(sv.list.item_h, 248, "saveload 列表 item_h=248（S17.2 8pt）");
+    assert_eq!(sv.list.row_h, 224, "saveload 列表 row_h=224（S18.7d v3 三栏）");
+    assert_eq!(sv.list.item_h, 192, "saveload 列表 item_h=192（S18.7d v3）");
     assert_eq!(
-        sv.list.gold_x, 816,
-        "saveload 金字号列 x=816（1080，S17.2 8pt；S15.6 QA105 重锚：旧 920 贴右缘越安全距）"
+        sv.list.gold_x, 872,
+        "saveload 金字号列 x=872（S18.7d v3 右元数据栏 840..1000 内 +32 衬边）"
     );
     assert_eq!(sv.hint.y, 1840, "saveload 提示行 y=1840（QB115/123）");
 }
@@ -613,6 +613,15 @@ fn scene_layer_contributes_text_region_pixels() {
             );
             continue;
         }
+        // S18.7d：select_role/select_map/message/saveload 版面 = JSON 原语（夜空系：
+        // 无顶 title_bar；chrome = z20 外木框 + 英雄面板金饰）→ 改判顶木框条。
+        if matches!(scene, "select_role" | "select_map" | "message" | "saveload") {
+            let n =
+                region_color_count(&px, 0, 0, 1080, 12, ti_app::scenes::chrome::COLOR_WOOD_WARM);
+            assert!(n > 0, "{scene} 顶木框条（0,0,1080,12）无 wood_warm 像素 —— 外框未画 / 被盖死");
+            eprintln!("  {scene} 顶木框条 chrome 像素 = {n}");
+            continue;
+        }
         // chrome::title_bar 画 (12,12,W-24,h) 木框 + (16,16,W-32,h-8) 深底 + 左侧金条 + 标题文字。
         let n = region_chrome_count(&px, 16, 16, 1080 - 32, 90);
         assert!(
@@ -650,7 +659,8 @@ fn selected_card_base_is_color_selected() {
         // 选中态底色 = **数据指定**（S18.6：index 走 `menu_items` 原语的 `color` 令牌；
         // 其余场景走 `COLOR_SELECTED`）。契约不变式 = 选中卡底 = 该色 + 未选中区 0 命中（不外溢）。
         let sel = match scene {
-            "index" => ti_render::theme::Theme::default()
+            // S18.7d：index / select_role 选中行底 = JSON 原语 `gold_warm`（数据指定色令牌）
+            "index" | "select_role" => ti_render::theme::Theme::default()
                 .by_name("gold_warm")
                 .unwrap_or(ti_app::menu_shell::COLOR_SELECTED),
             _ => ti_app::menu_shell::COLOR_SELECTED,

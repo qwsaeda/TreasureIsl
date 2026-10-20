@@ -74,6 +74,7 @@
 | S18.7 | HD 贴图管线（新绘 PNG 图标/立绘 → bevy sprite atlas，代码绘制保留回退）+ **v3 四场景在 Bevy 落地**（select_role/select_map/message/saveload；原语 = Bevy 绘制系统，版面数据沿用 scenes.json v3 键） | 四场景验收 + N8 全场景激活 |
 | S18.7a | 通用原语架构 + Bevy 原生首界面（S18.7 前置：界面 = 数据，两后端同构） | **✅ verified 2026-10-20**（渲染层只认 6 种通用原语 rect/text/icon/grad/glow/disc，界面 = `scenes.json` `primitives` 数据组合（94 项）；index 场景 Rust 代码 0 行绘制；Bevy 原生执行器（原语 → Sprite/Text2d/烘焙 Image，无帧缓冲无整帧纹理上传）；双后端同画面（CPU `ti-render::generic` + Bevy `ti_engine::scene_render`）；数据分离门禁第 24 项 `check_data_driven`（闭集 + 渲染层无场景语义 + 令牌存在性）；`docs/process/12_bevy_usage.md` §13；首界面暖金版式（Agnes 效果图对齐）；gate 0 failure；`evidence/S18.7a.log`；**用户视觉签收待用户**） |
 | S18.7c | 绘制目标可插拒（`DrawList`）+ 全 7 场景走 Bevy 实体 | **verified**：场景代码零改动，绘制目标可插拒（CPU 帧缓冲 / `DrawList`）；Bevy 侧不再上传 CPU 帧缓冲，直接实体化（`Sprite`/`Text2d`）；实体按**内容哈希**增量重建（选择态变化即时生效）+ 旧实体按标记清理（无鬼影）；层序 z 有界区间 [-12,0]（在背景 z=-13 之前、深度精度稳定）；离屏采样口径修正（左上角 + 真实中心，旧口径取的是左边缘 → 易误读为「整屏铺满」；EXP-104）；证据：`evidence/bevy_native_index.png` + `evidence/S18.7c.log` |
+| S18.7d | 剩余 4 场景（select_role/select_map/message/saveload）原语化 + v3 focus_anchor N8 全通 | **verified**：4 场景版面全走 `scenes.json` `primitives`（夜空梯度瀔 + 左英雄面板 + 右选项列 + 海平面 + z20 木框，同 index 视觉语言）；场景 .rs 零版式代码（只剩运行时内容：动态文案/锁标/页点/槽位元信/压括闪影）；4 场景 focus_anchor 对账 manifest N8（新增账加 hero_art 免免）；地图名 i18n 补齐（glmapm0N.Map）；基线重生成 4 场景 + SelectRole hd；EXP-105（z 埋控/栏位降级/text_key 存在性） |
 | S18.8 | 收口：macroquad 后端退役（feature 删除 + 依赖树断言）+ 性能目标（native 60fps / wasm 30–60fps）+ release.md | 全 gate + 发布 |
 
 ## 6. 风险与缓解
