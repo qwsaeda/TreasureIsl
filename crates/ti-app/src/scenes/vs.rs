@@ -46,8 +46,10 @@ impl Scene for VsScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("vs");
         chrome::scene_shell(host, "vs", "scene.vs.title");
-        // v3.1 双写：竞技区装饰垫底（battle_arena 键缺失 = 不画，v2 版面不变）。
-        chrome::battle_arena(host, "vs");
+        // S18.7d：竞技区静态外壳 = `scenes.json` `vs.primitives`（= 旧 `shell::battle_arena`
+        // 同几何像素等价：外框发丝 + 水平饰线 + 三层甲板阶梯 + 罗盘饰；血条/回合/结果文本
+        // 仍为运行时内容，叠画于原语之上）。
+        chrome::render_primitives(host, "vs", -1);
         if let Some(b) = host.battle_snapshot() {
             let ph_bar = layout.extra.get("player_hp").copied().unwrap_or_default();
             let bh_bar = layout.extra.get("boss_hp").copied().unwrap_or_default();

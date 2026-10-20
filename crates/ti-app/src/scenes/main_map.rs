@@ -378,9 +378,11 @@ impl Scene for MainMapScene {
                 }
             }
         }
-        // v3 世界画布装饰框（垫底，瓦片叠其上）；缺席即不画。
+        // S18.7d：世界画布静态外壳 = `scenes.json` `main_map.primitives`（= 旧
+        // `shell::world_canvas_frame` 同几何像素等价：外框发丝 + 内金线 + 四角罗盘方块；
+        // 瓦片/实体/HUD 仍为运行时内容）。
         if v3 {
-            chrome::world_canvas_frame(host, "main_map");
+            chrome::render_primitives(host, "main_map", -1);
         }
 
         // HUD：木纹标题条 + 金色 Logo（v2）
