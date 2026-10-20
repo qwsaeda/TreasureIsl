@@ -148,9 +148,10 @@ fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, 
 fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
     let gold = host.gold();
     let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
+    // S18.7f：面板 chrome（menu_bg 块 + menu_border 描边 + bevel 高光/阴影）= JSON 原语
+    // （`main_map.primitives`），此处只画运行时数值（金币）。
     if let Some(rc) = layout.extra.get(chrome::keys::HUD_GOLD) {
         if rc.w > 0 && rc.h > 0 {
-            chrome::panel(host, rc.x, rc.y, rc.w, rc.h);
             chrome::draw_body_text(host, &gold_str, rc.x + 8, rc.y + rc.h / 2 - 22);
         }
     }
@@ -158,19 +159,13 @@ fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
     let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
     if let Some(rc) = layout.extra.get(chrome::keys::HUD_PLAYER) {
         if rc.w > 0 && rc.h > 0 {
-            chrome::panel(host, rc.x, rc.y, rc.w, rc.h);
             chrome::draw_body_text(host, &own_str, rc.x + 8, rc.y + rc.h / 2 - 22);
         }
     }
     // 命令盘 3 键：`key` = v3 布局矩形键（`keys::DECK_*`），`icon_key` = `ui_icons` 注册表名
     // （独立命名空间，与 v2 布局矩形键 `hud_trade` 同名但非布局键，故不绑 `keys::`）。
-    for (key, icon_key, label_key) in [
-        (chrome::keys::DECK_TRADE, "hud_trade", "scene.main_map.hud.trade"),
-        (chrome::keys::DECK_SELL, "hud_sell", "scene.main_map.hud.sell"),
-        (chrome::keys::DECK_BUILD, "hud_build", "scene.main_map.hud.build"),
-    ] {
-        chrome::deck_button(host, "main_map", key, icon_key, label_key);
-    }
+    // S18.7f：底部命令盘 3 键的面板 + 图标 + 标签 = JSON 原语（`main_map.primitives`），
+    // 运行时无内容（点按命中仍走 `hud_hit` 数据槽，不依赖绘制）。
 }
 
 /// S17.8 v2 HUD：羊皮纸 HUD 面板（金币/持有量两行 44px）+ 三经济按钮（QA149）。
@@ -356,12 +351,18 @@ impl Scene for MainMapScene {
         // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）；
         // QA031：统一走 `chrome::scene_layout`（scenes.json 单一读点，契约 4）
         let layout = chrome::scene_layout("main_map");
-        // S15.4：legacy 地形瓦片像素层移除。主地图 = 羊皮纸底 + 航海网格装饰 + 代码绘制等距棋盘（§4.3）
-        chrome::parchment_bg(host);
-        chrome::nautical_grid(host);
-        let gw = host.terrain_grid_w();
-        // S17.8 v3：G 依赖棋盘几何（world_canvas 拟合，缺席回退 v2 静态 grid.*）+ v3 模式判定。
+        // S17.8 v3：v3 模式判定（world_canvas 键在位 = v3；缺席回退 v2 静态 grid.*）。
         let v3 = chrome::has_world_canvas(&layout);
+        // S15.4：legacy 地形瓦片像素层移除。主地图 = 羊皮纸底 + 航海网格装饰 + 代码绘制等距棋盘（§4.3）
+        // S18.7f：夜空底 + 画布框 + HUD/命令盘 chrome = JSON 原语（**必须先于瓦片**：
+        // 夜空渐变是背景层，瓦片/实体叠其上）；v2 回退 = 羊皮纸底 + 航海网格。
+        if v3 {
+            chrome::render_primitives(host, "main_map", -1);
+        } else {
+            chrome::parchment_bg(host);
+            chrome::nautical_grid(host);
+        }
+        let gw = host.terrain_grid_w();
         let bg = chrome::board_fit(&layout, gw);
 
         // 等距棋盘（代码画，1080 呈现层；S17.8 v3：G 依赖拟合进 `world_canvas`（2:1 菱形、
@@ -378,21 +379,18 @@ impl Scene for MainMapScene {
                 }
             }
         }
-        // S18.7d：世界画布静态外壳 = `scenes.json` `main_map.primitives`（= 旧
-        // `shell::world_canvas_frame` 同几何像素等价：外框发丝 + 内金线 + 四角罗盘方块；
-        // 瓦片/实体/HUD 仍为运行时内容）。
-        if v3 {
-            chrome::render_primitives(host, "main_map", -1);
+        // S18.7f：v3 版面外壳（夜空底 + 世界画布框 + HUD 边角面板 + 底部命令盘 + 标题 +
+        // 提示 + 木框）100% 数据驱动 = `scenes.json` `main_map.primitives`（画布框
+        // = 旧 `shell::world_canvas_frame` 同几何像素等价）。瓦片/实体/HUD 数值仍运行时。
+        // v2 回退（v3 键缺席）：羊皮纸底 + 木纹标题条（双写纪律，v3.5 收口删）。
+        if !v3 {
+            chrome::wood_frame(host);
+            chrome::title_bar(host, layout.title.h);
+            let title = i18n::sget("scene.main_map.title");
+            let cx = chrome::centered_title_x(host, title);
+            let title_color = host.theme().text_on_wood;
+            chrome::draw_title_text(host, title, cx, layout.title.y, title_color);
         }
-
-        // HUD：木纹标题条 + 金色 Logo（v2）
-        chrome::wood_frame(host);
-        chrome::title_bar(host, layout.title.h);
-        let title = i18n::sget("scene.main_map.title");
-        // S15.6 QB116：标题 96px 屏心居中（scenes.json 标题 x 缺省语义 = 居中，QA143）
-        let cx = chrome::centered_title_x(host, title);
-        let title_color = host.theme().text_on_wood;
-        chrome::draw_title_text(host, title, cx, layout.title.y, title_color);
 
         // S17.8：v3 边角化 HUD + 底部命令盘 / v2 羊皮纸 HUD 条 + 三按钮（双写，键缺席即 v2）。
         if v3 {

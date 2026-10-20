@@ -45,10 +45,9 @@ impl Scene for VsScene {
     /// 战斗面板（双方 HP 进度条 + 回合 + 结果，v2 羊皮纸/木纹/金色系）。
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("vs");
-        chrome::scene_shell(host, "vs", "scene.vs.title");
-        // S18.7d：竞技区静态外壳 = `scenes.json` `vs.primitives`（= 旧 `shell::battle_arena`
-        // 同几何像素等价：外框发丝 + 水平饰线 + 三层甲板阶梯 + 罗盘饰；血条/回合/结果文本
-        // 仍为运行时内容，叠画于原语之上）。
+        // S18.7f：vs 版面 100% 数据驱动 = `scenes.json` `vs.primitives`（夜空底 + 星点 +
+        // 血条槽底 + 竞技区 + 标题 + 提示 + 木框；`chrome::scene_shell`/`bar_slot`/
+        // `scene_hint` 的代码外壳已全部退役）。运行时内容 = HP 填充 + 回合/结果文本。
         chrome::render_primitives(host, "vs", -1);
         if let Some(b) = host.battle_snapshot() {
             let ph_bar = layout.extra.get("player_hp").copied().unwrap_or_default();
@@ -65,11 +64,10 @@ impl Scene for VsScene {
             let bh_w = bh_bar.w
                 * i32::try_from(hp_fill_pct(host.displayed_boss_hp(), b.boss_hp_max)).unwrap_or(0)
                 / 100;
-            chrome::bar_slot(host, ph_bar.x, ph_bar.y, ph_bar.w, ph_bar.h);
             // 血条语义 = 08_layout_design §2 L52-53（S15.6 B1 裁决②）：玩家青绿 COLOR_PLAYER /
             // BOSS 血红 COLOR_DANGER（旧实现按 §4.4 表互置 + S14 色板，QA003/QA038）。
+            // 槽底 = JSON 原语（`vs.primitives`），此处只画运行时 HP 填充。
             host.fill_rect(ph_bar.x, ph_bar.y, ph_w, ph_bar.h, COLOR_PLAYER);
-            chrome::bar_slot(host, bh_bar.x, bh_bar.y, bh_bar.w, bh_bar.h);
             host.fill_rect(bh_bar.x, bh_bar.y, bh_w, bh_bar.h, COLOR_DANGER);
             let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
             // QA141：回合/结果/空态文本 44px 屏心居中（scenes.json rounds/outcome/empty x=540 = 居中语义）
@@ -99,6 +97,5 @@ impl Scene for VsScene {
             let text_x = chrome::centered_body_x(host, text);
             chrome::draw_body_text(host, text, text_x, em.y);
         }
-        chrome::scene_hint(host, "vs", "scene.vs.hint");
     }
 }

@@ -76,6 +76,7 @@
 | S18.7c | 绘制目标可插拒（`DrawList`）+ 全 7 场景走 Bevy 实体 | **verified**：场景代码零改动，绘制目标可插拒（CPU 帧缓冲 / `DrawList`）；Bevy 侧不再上传 CPU 帧缓冲，直接实体化（`Sprite`/`Text2d`）；实体按**内容哈希**增量重建（选择态变化即时生效）+ 旧实体按标记清理（无鬼影）；层序 z 有界区间 [-12,0]（在背景 z=-13 之前、深度精度稳定）；离屏采样口径修正（左上角 + 真实中心，旧口径取的是左边缘 → 易误读为「整屏铺满」；EXP-104）；证据：`evidence/bevy_native_index.png` + `evidence/S18.7c.log` |
 | S18.7d | 剩余 4 场景（select_role/select_map/message/saveload）原语化 + v3 focus_anchor N8 全通 | **verified**：4 场景版面全走 `scenes.json` `primitives`（夜空梯度瀔 + 左英雄面板 + 右选项列 + 海平面 + z20 木框，同 index 视觉语言）；场景 .rs 零版式代码（只剩运行时内容：动态文案/锁标/页点/槽位元信/压括闪影）；4 场景 focus_anchor 对账 manifest N8（新增账加 hero_art 免免）；地图名 i18n 补齐（glmapm0N.Map）；基线重生成 4 场景 + SelectRole hd；EXP-105（z 埋控/栏位降级/text_key 存在性） |
 | S18.7e | vs / main_map 静态外墙 JSON 化 | **verified**：竞技区（外框发丝 + 扣线 + 三层甲板阶梯 + 罗盘饰）与画布框（外框 + 内金线 + 四角罗盘方块）代码外墙 → `scenes.json` `primitives` 同几作像素（旧基线 **0 diff** = 像素等价证明）；7/7 场景均有原语表 |
+| S18.7f | vs / main_map 剩余代码外壳退役 + 夜空统一 | **verified**：vs（夜空底 + 星点 + 血条槽底 + 竞技区 + 标题/提示 + 木框）、main_map（夜空底 + 画布框 + HUD 边角面板 + 底部命令盘 + 标题/提示 + 木框）全量 JSON 化；`chrome::scene_shell`/`bar_slot`/`scene_hint`/`deck_button` 代码外壳在这 2 场景退役；七场景视觉语言统一（夜空银标）+ 版面坐标 0 代码；EXP-106（原语批次调用位置=层序） |
 | S18.8 | 收口：macroquad 后端退役（feature 删除 + 依赖树断言）+ 性能目标（native 60fps / wasm 30–60fps）+ release.md | 全 gate + 发布 |
 
 ## 6. 风险与缓解
