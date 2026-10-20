@@ -253,6 +253,10 @@ pub enum GameInput {
 pub struct GameApp {
     /// 表现层（帧缓冲/字形/呈现，Index 场景渲染子视图）。
     pub shell: MenuShell,
+    /// 绘制列表（S18.7a 记录模式目标：Bevy 路径）。
+    pub draw_list: ti_render::drawlist::DrawList,
+    /// 是否记录到绘制列表（true = Bevy 路径；false = CPU 帧缓冲）。
+    pub record_draw: bool,
     /// 场景管理器（`rules::main_loop::SceneStack`，状态码语义与业务文档对齐）。
     pub scenes: SceneStack,
     /// 顶层场景。
@@ -572,6 +576,9 @@ impl GameApp {
     pub fn with_upload_mode(screen_w: f32, screen_h: f32, mode: UploadMode) -> Self {
         Self {
             shell: MenuShell::with_upload_mode(screen_w, screen_h, mode),
+            // S18.7a：绘制列表目标（Bevy 路径；初始为 CPU 帧缓冲模式）。
+            draw_list: ti_render::drawlist::DrawList::default(),
+            record_draw: false,
             scenes: SceneStack::new(),
             scene: Scene::Index,
             menu_selected: 0,
@@ -931,6 +938,32 @@ impl GameApp {
     }
 
     /// 设置 RNG 种子（测试用）。
+    /// S18.7a：切换绘制目标模式。
+    ///
+    /// - `true` = **记录模式**：绘制命令进 `绘制列表`（Bevy 路径；实体由 `ti-engine` 转换）；
+    /// - `false` = CPU 帧缓冲模式（macroquad 壳，S18.8 退役后删）。
+    ///
+    /// 切换时同步度量口径（主题 + 三档 TTF）→ 两路径版面完全一致。
+    pub fn set_record_draw(&mut self, on: bool) {
+        if on && !self.record_draw {
+            self.draw_list.theme = self.shell.theme.clone();
+            self.draw_list.ttf = ti_render::drawlist::TtfSet {
+                body: self.shell.ttf_font.clone(),
+                title: self.shell.ttf_title.clone(),
+                hint: self.shell.ttf_hint.clone(),
+            };
+            self.draw_list.clear();
+        }
+        self.record_draw = on;
+    }
+
+    /// S18.7a：取本帧绘制列表（记录模式下有效；CPU 模式下为空）。
+    #[must_use]
+    pub fn draw_list(&self) -> &ti_render::drawlist::DrawList {
+        &self.draw_list
+    }
+
+    /// 设置随机种子（测试可复现）。
     pub fn set_rng_seed(&mut self, seed: u32) {
         self.rng_seed = seed;
         self.rng.set_seed(seed);
@@ -1292,6 +1325,11 @@ impl GameApp {
     ///
     /// 调用方随后调 [`MenuShell::present`] 上屏。
     pub fn render(&mut self) {
+        // S18.7a：记录模式每帧先清空绘制列表（否则命令逐帧堆积 →
+        // 实体 z 越叠越负 → 超出相机 far 平面 被裁切）。
+        if self.record_draw {
+            self.draw_list.clear();
+        }
         // S17.4：动效推进全部时间制（本帧经过毫秒）——帧率无关（旧按帧计数）。
         crate::scenes::chrome::tick_press_flash(self.frame_delta_ms);
         // S18.5：FX 粒子推进（确定性：同 seed + 同 delta 序列 = 同画面；快照路径先 clear）。
@@ -1339,7 +1377,8 @@ impl GameApp {
     /// 调用序 = 层序；`08_render_arch.md` 契约 1）。淡出 = 亮度 4 档量化（CPU Framebuf 无 alpha）。
     fn draw_fx(&mut self) {
         for (x, y, w, h, c) in self.fx.render_rects() {
-            self.shell.fill_rect(x, y, w, h, c);
+            // S18.7a: FX 走**绘制目标**（CPU = 帧缓冲 / Bevy = draw list）→ 两后端一致。
+            self.draw_target().fill_rect(x, y, w, h, c);
         }
     }
 
@@ -1447,28 +1486,10 @@ impl RenderHost for GameApp {
         &mut self.shell
     }
 
-    fn clear_frame(&mut self, color: u16) {
-        self.shell.fb.clear(color);
-    }
-
-    fn fill_rect(&mut self, x: i32, y: i32, w: i32, h: i32, color: u16) {
-        self.shell.fill_rect(x, y, w, h, color);
-    }
-
-    fn draw_text(&mut self, text: &str, x: i32, y: i32) {
-        self.shell.draw_text_row(text, x, y);
-    }
-
-    fn draw_text_colored(&mut self, text: &str, x: i32, y: i32, color: u16) {
-        self.shell.draw_text_row_colored(text, x, y, color);
-    }
-
-    fn draw_title_text(&mut self, text: &str, x: i32, y: i32, color: u16) {
-        self.shell.draw_title_row(text, x, y, color);
-    }
-
-    fn draw_hint_text(&mut self, text: &str, x: i32, y: i32, color: u16) {
-        self.shell.draw_hint_row(text, x, y, color);
+    /// 绘制目标（S18.7a 可插拒）：记录模式 → 绘制列表（Bevy 路径）；
+    /// 否则 → CPU 帧缓冲（macroquad 壳，S18.8 退役后删）。
+    fn draw_target(&mut self) -> &mut dyn ti_render::canvas::Canvas {
+        if self.record_draw { &mut self.draw_list } else { &mut self.shell }
     }
 
     fn pixel_at(&self, x: i32, y: i32) -> u16 {

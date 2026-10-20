@@ -144,10 +144,11 @@ fn finish_shot(
 /// 不上传整帧纹理**；其余场景在 S18.7 迁完前仍走 CPU 纹理（过渡期）。
 #[derive(Resource, Default)]
 struct NativeIndex {
-    /// 已生成的实体句柄（`None` = 未生成）。
-    scene: Option<ti_engine::scene_render::SceneEntities>,
-    /// 已生成时的场景 id（变了 = 需重建）。
-    built_for: Option<usize>,
+    /// 上帧列表**内容哈希**（`None` = 尚未建立）。
+    ///
+    /// S18.7a：列表每帧重录，实体只在**内容变化**时重建
+    /// → 选择态变化立即生效，未变帧零实体开销。
+    content_hash: Option<u64>,
 }
 
 /// 帧纹理全屏精灵标记（S18.5 相机 zoom/pan 接线：`camera_system` 经此实体驱动
@@ -345,9 +346,6 @@ fn camera_system(
 /// 渲染系统：GameApp 帧推进 + 静止跳渲染 + Framebuf → RGBA8 纹理。
 fn render_system(
     store: ResMut<GameStore>,
-    mut assets: ResMut<Assets<Image>>,
-    mut frame_tex: ResMut<FrameTex>,
-    mut sprites: Query<&mut Sprite>,
     time: Res<Time>,
     mut exits: MessageWriter<AppExit>,
 ) {
@@ -361,40 +359,12 @@ fn render_system(
         return;
     }
     let scene_key = SceneKind::from_legacy(g.scene()).discriminant();
-    if g.scene() == Scene::Index {
-        // S18.7：index = Bevy 原生渲染（实体由 `native_index_system` 维护）；
-        // 本系统不产纹理（双渲染期其余场景仍走 CPU 纹理路径）。
-        g.render();
-        g.shell_mut().last_rendered = Some(g.menu_selected());
-        g.shell_mut().last_rendered_scene = Some(scene_key);
-        g.clear_last_sfx();
-        return;
-    }
-    if g.transition_active()
-        || g.shell().last_rendered != Some(g.menu_selected())
-        || g.shell().last_rendered_scene != Some(scene_key)
-    {
-        g.render();
-        g.shell_mut().last_rendered = Some(g.menu_selected());
-        g.shell_mut().last_rendered_scene = Some(scene_key);
-        // 双渲染期无 bevy 音频：Sfx 队列清空防积压（S18.8 切 bevy_audio）。
-        g.clear_last_sfx();
-        // S18.5：实玩纹理 = live Framebuf（含 FX 粒子 + S17.9 交叉淡化 ease；
-        // `render_to_framebuf` 快照稳态口径 = headless 基线/selftest 专用，EXP-079）。
-        let fb = g.shell().fb.as_slice().to_vec();
-        let img = Image::new(
-            Extent3d { width: LOGICAL_W, height: LOGICAL_H, depth_or_array_layers: 1 },
-            TextureDimension::D2,
-            rgb565_to_rgba8(&fb),
-            TextureFormat::Rgba8UnormSrgb,
-            RenderAssetUsages::RENDER_WORLD,
-        );
-        let handle = assets.add(img);
-        frame_tex.0 = Some(handle.clone());
-        if let Ok(mut sprite) = sprites.single_mut() {
-            sprite.image = handle;
-        }
-    }
+    // S18.7a: live path = **draw list** (recorded) -> Bevy entities (`native_index_system` executes).
+    // No framebuffer / no full-frame texture upload (all 7 scenes go through Bevy).
+    g.render();
+    g.shell_mut().last_rendered = Some(g.menu_selected());
+    g.shell_mut().last_rendered_scene = Some(scene_key);
+    g.clear_last_sfx();
 }
 
 /// S18.7：Bevy 原生 index 场景维护（**独占系统**：需 `&mut World` 建/销实体）。
@@ -409,50 +379,33 @@ fn native_index_system(world: &mut World) {
     let Ok(g) = store.0.lock() else {
         return;
     };
-    let scene = g.scene();
-    let selected = g.menu_selected();
+    let list = g.draw_list().clone();
     drop(g);
 
-    let scene_id = usize::try_from(SceneKind::from_legacy(scene).discriminant()).unwrap_or(0);
-    let is_index = scene == Scene::Index;
-    eprintln!("[native] scene = {scene:?} is_index = {is_index}");
-    if !is_index {
-        let mut native = world.remove_resource::<NativeIndex>().unwrap_or_default();
-        if let Some(idx) = native.scene.take() {
-            for (_, e, _) in &idx.selectable {
-                world.despawn(*e);
-            }
-        }
-        native.built_for = None;
-        native.scene = None;
+    // S18.7a: 画制列表 -> Bevy 实体（**覆盖全 7 场景**：
+    // 场景代码不变，绘制目标可插拒 = CPU 帧缓冲 / draw list）。
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    std::hash::Hash::hash(&list.ops, &mut hasher);
+    let content_hash = std::hash::Hasher::finish(&hasher);
+
+    let mut native = world.remove_resource::<NativeIndex>().unwrap_or_default();
+    if native.content_hash == Some(content_hash) {
         world.insert_resource(native);
         return;
     }
-    let theme = ti_render::theme::Theme::default();
-    // 取资源（释放 world 借用后再 spawn/despawn，避免 E0499）。
-    let mut native = world.remove_resource::<NativeIndex>().unwrap_or_default();
-    if native.built_for != Some(scene_id) {
-        if let Some(idx) = native.scene.take() {
-            for (_, e, _) in &idx.selectable {
-                world.despawn(*e);
-            }
-        }
-        let font = world
-            .get_resource::<AssetServer>()
-            .map(|server| server.load::<Font>("assets/fonts/lxgw-wenkai-reg.ttf"));
-        // 通用原语表 = 界面（`scenes.json` `index.primitives`）；渲染器不认识场景语义。
-        let prims = ti_core::data::scenes()
-            .ok()
-            .and_then(|s| s.get("index").cloned())
-            .map(|s| s.primitives)
-            .unwrap_or_default();
-        let selected_item = i64::try_from(selected).unwrap_or(-1);
-        let entities =
-            ti_engine::scene_render::spawn_primitives(world, &theme, font, selected_item, &prims);
-        eprintln!("[native] index primitives built: {} selectable", entities.selectable.len());
-        native.scene = Some(entities);
-        native.built_for = Some(scene_id);
+    // 先按标记清理上帧实体（否则切场景留鬼影）。
+    let stale: Vec<Entity> = world
+        .query_filtered::<Entity, With<ti_engine::scene_render::DrawListEntity>>()
+        .iter(world)
+        .collect();
+    for e in stale {
+        world.despawn(e);
     }
+    let font = world
+        .get_resource::<AssetServer>()
+        .map(|server| server.load::<Font>("assets/fonts/lxgw-wenkai-reg.ttf"));
+    ti_engine::scene_render::spawn_draw_list(world, font, &list);
+    native.content_hash = Some(content_hash);
     world.insert_resource(native);
 }
 
@@ -659,6 +612,10 @@ fn main() {
     let shot = std::env::args().any(|a| a == "--shot");
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);
+    if !selftest {
+        // S18.7a: live path = draw list (Bevy entities); the scene code is unchanged.
+        game.set_record_draw(true);
+    }
     // 双渲染期无 bevy 音频：曲目数 0（S18.8 切 bevy_audio 后恢复）。
     game.shell_mut().set_audio(0, 0);
     if selftest {
@@ -771,11 +728,13 @@ fn write_shot_png(path: &str) {
     }
     let nonblack = raw.chunks(4).filter(|c| c[0] > 8 || c[1] > 8 || c[2] > 8).count();
     let alpha_nonzero = raw.chunks(4).filter(|c| c[3] > 8).count();
-    let first: Vec<String> = raw.chunks(4).take(4).map(|c| format!("{c:?}")).collect();
-    let mid = raw.len() / 4 / 2;
-    let midpx: Vec<String> = raw.chunks(4).skip(mid).take(3).map(|c| format!("{c:?}")).collect();
+    // 采样：左上角 1 点 + **真实屏幕中心**（旧版取的是第 960 行第 0 列
+    // = 左边缘，容易被误读成「整屏被木框色铺满」；EXP-104）。
+    let first: Vec<String> = raw.chunks(4).take(1).map(|c| format!("{c:?}")).collect();
+    let center_idx = ((LOGICAL_H / 2) * LOGICAL_W + LOGICAL_W / 2) as usize;
+    let midpx: Vec<String> = raw.chunks(4).skip(center_idx).take(1).map(|c| format!("{c:?}")).collect();
     eprintln!("[shot] 非黑像素 = {nonblack} / alpha>8 = {alpha_nonzero} / {}", raw.len() / 4);
-    eprintln!("[shot] 首像素 = {first:?} 中像素 = {midpx:?}");
+    eprintln!("[shot] 左上角 = {first:?} 屏幕中心 = {midpx:?}");
     let png = ti_render::png::encode_png_rgba(&raw, LOGICAL_W, LOGICAL_H);
     match std::fs::write(&out, &png) {
         Ok(()) => eprintln!("[shot] 已写 {}", out.display()),

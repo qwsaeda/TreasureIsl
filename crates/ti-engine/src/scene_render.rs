@@ -465,3 +465,103 @@ pub fn known_tokens(theme: &Theme) -> BTreeMap<&'static str, u16> {
     }
     m
 }
+
+/// 绘制列表 → Bevy 实体（**通用执行器**：`DrawList` = 场景绘制命令序列）。
+///
+/// 覆盖**全部 7 场景**（场景代码零改动：绘制目标可插拔 = CPU 帧缓冲 / 绘制列表）。
+/// - `Clear` → `ClearColor` 资源；
+/// - `Rect` → `Sprite::from_color`；
+/// - `Text` → `Text2d` + `TextFont`（GPU TTF）+ `TextColor`（位置：CPU 侧左上角 → Bevy 居中）。
+///
+/// **z 层**：命令序 = 绘制序 → z = `-(总数 - 序)`（负值可见；**越大越靠上** = 后画的在上，
+/// 与 CPU 侧「调用序即层序」同义）。
+/// 画制列表实体标记（S18.7a）：由 `DrawList` 生成的 sprite/text 实体。
+///
+/// 用途：每帧重建前按该标记清理旧实体（否则切场景留鬼影）。
+#[derive(Component)]
+pub struct DrawListEntity;
+
+/// 画制列表 -> Bevy 实体（S18.7a）。
+///
+/// 每个 `DrawOp` -> 一个实体：`Rect` -> `Sprite`（实心定位），`Text` -> `Text2d`（字号档 = CPU 路径同源）；
+/// `Clear` -> `ClearColor` 资源。层序 z 见函数内说明。
+///
+/// 返回生成的实体数。
+pub fn spawn_draw_list(
+    world: &mut World,
+    font: Option<Handle<Font>>,
+    list: &ti_render::drawlist::DrawList,
+) -> usize {
+    let total = list.ops.len();
+    let mut count = 0usize;
+    for (idx, op) in list.ops.iter().enumerate() {
+        // 层序 = 绘制顺序（z 越大越靠上 = EXP-103）；
+        // **有界区间 [-12, 0]**：
+        // - 上界 0 → 始终在背景 sprite（z=-13）之前，背景不遮挡；
+        // - 步长 12/total → 与层数无关，深度精度稳定（不超 far=1000）。
+        let z = -12.0 * ((total - idx) as f32 / total as f32);
+        match op {
+            ti_render::drawlist::DrawOp::Clear(color) => {
+                world.insert_resource(ClearColor(rgb565_to_color(*color)));
+            }
+            ti_render::drawlist::DrawOp::Rect { x, y, w, h, color } => {
+                world.spawn((
+                    DrawListEntity,
+                    Sprite::from_color(rgb565_to_color(*color), Vec2::new(*w as f32, *h as f32)),
+                    Transform::from_translation(
+                        to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0).extend(z),
+                    ),
+                ));
+                count += 1;
+            }
+            ti_render::drawlist::DrawOp::Text { text, x, y, tier, color } => {
+                // 文本宽度 = 与 CPU 路径同源度量（列表自带的 TTF）→ 两后端版面一致。
+                let (width, height) = match tier {
+                    ti_render::drawlist::Tier::Title => (
+                        ti_render::text::tier_text_width(
+                            text,
+                            list.ttf.title.as_ref(),
+                            list.theme.bitmap_advance_title,
+                        ),
+                        list.theme.title_font_size,
+                    ),
+                    ti_render::drawlist::Tier::Hint => (
+                        ti_render::text::tier_text_width(
+                            text,
+                            list.ttf.hint.as_ref(),
+                            list.theme.bitmap_advance_hint,
+                        ),
+                        list.theme.hint_font_size,
+                    ),
+                    ti_render::drawlist::Tier::Body => (
+                        ti_render::text::tier_text_width(
+                            text,
+                            list.ttf.body.as_ref(),
+                            list.theme.bitmap_advance,
+                        ),
+                        list.theme.font_size,
+                    ),
+                };
+                let mut text_font = bevy::text::TextFont {
+                    font_size: FontSize::Px(height as f32),
+                    ..Default::default()
+                };
+                if let Some(handle) = &font {
+                    text_font.font = handle.clone().into();
+                }
+                world.spawn((
+                    DrawListEntity,
+                    Text2d::new(text.clone()),
+                    TextColor(rgb565_to_color(*color)),
+                    text_font,
+                    Transform::from_translation(
+                        to_world(*x as f32 + width as f32 / 2.0, *y as f32 + height as f32 / 2.0)
+                            .extend(z),
+                    ),
+                ));
+                count += 1;
+            }
+        }
+    }
+    count
+}

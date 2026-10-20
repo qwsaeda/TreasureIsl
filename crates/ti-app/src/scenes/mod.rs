@@ -271,26 +271,45 @@ pub trait RenderHost {
         &self.shell().theme
     }
 
+    /// **绘制目标**（S18.7a 可插拒）：CPU 帧缓冲（`MenuShell`）或 **绘制列表**
+    /// （`ti_render::drawlist::DrawList`，Bevy 路径）。
+    ///
+    /// 场景绘制代码**不变**：两种目标用同一套原语命令，
+    /// → CPU / Bevy 两后端同画面。
+    fn draw_target(&mut self) -> &mut dyn ti_render::canvas::Canvas;
+
     /// 清屏到 `color`（565 色；QA120：色值走 `menu_shell` 命名常量，不写内联 hex——
     /// `check_hardcode.py` 布局调用正则已含 `clear_frame`）。
-    fn clear_frame(&mut self, color: u16);
+    fn clear_frame(&mut self, color: u16) {
+        self.draw_target().clear_frame(color);
+    }
 
     /// 填矩形。
-    fn fill_rect(&mut self, x: i32, y: i32, w: i32, h: i32, color: u16);
+    fn fill_rect(&mut self, x: i32, y: i32, w: i32, h: i32, color: u16) {
+        self.draw_target().fill_rect(x, y, w, h, color);
+    }
 
-    /// 绘制一行字形。
-    fn draw_text(&mut self, text: &str, x: i32, y: i32);
+    /// 绘制一行字形（默认墨色 = `INK_COLOR`）。
+    fn draw_text(&mut self, text: &str, x: i32, y: i32) {
+        self.draw_target().draw_text(text, x, y, crate::menu_shell::COLOR_TEXT_ON_PARCH);
+    }
 
     /// 绘制一行**指定墨色**的字形（正文档 44px；S15 深底需白墨）。
-    fn draw_text_colored(&mut self, text: &str, x: i32, y: i32, color: u16);
+    fn draw_text_colored(&mut self, text: &str, x: i32, y: i32, color: u16) {
+        self.draw_target().draw_text(text, x, y, color);
+    }
 
     /// QB115：绘制一行**标题档**字形（TTF 96px / 位图回退 12px @ 26px advance，
     /// `menu_shell::TITLE_FONT_SIZE_PX`；`chrome::draw_title_text` 收敛口）。
-    fn draw_title_text(&mut self, text: &str, x: i32, y: i32, color: u16);
+    fn draw_title_text(&mut self, text: &str, x: i32, y: i32, color: u16) {
+        self.draw_target().draw_title_text(text, x, y, color);
+    }
 
     /// QB115：绘制一行**提示档**字形（TTF 28px / 位图回退 12px @ 8px advance，
     /// `menu_shell::HINT_FONT_SIZE_PX`；hint 行/实体标签/按钮标签/页码收敛口）。
-    fn draw_hint_text(&mut self, text: &str, x: i32, y: i32, color: u16);
+    fn draw_hint_text(&mut self, text: &str, x: i32, y: i32, color: u16) {
+        self.draw_target().draw_hint_text(text, x, y, color);
+    }
 
     /// 读取帧缓冲某像素颜色（供渐变/混合层读取当前状态）。
     fn pixel_at(&self, x: i32, y: i32) -> u16;

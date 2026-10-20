@@ -11,6 +11,7 @@
 //!   调用序，见 `docs/process/08_render_arch.md` §4
 
 pub mod canvas;
+pub mod drawlist;
 pub mod font;
 pub mod framebuffer;
 pub mod generic;

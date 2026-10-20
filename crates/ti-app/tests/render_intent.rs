@@ -254,6 +254,12 @@ impl ti_app::scenes::RenderHost for VsHost {
     fn shell(&self) -> &ti_app::menu_shell::MenuShell {
         &self.shell
     }
+    /// S18.7a: 绘制目标 = 测试宿主的 `MenuShell`（`MenuShell` 实现 `Canvas`）；
+    /// 本宿主已覆盖全部绘制方法（记录 + 写自带帧缓冲），
+    /// 此处仅为满足 trait 契约（场景代码未改动）。
+    fn draw_target(&mut self) -> &mut dyn ti_render::canvas::Canvas {
+        &mut self.shell
+    }
     fn shell_mut(&mut self) -> &mut ti_app::menu_shell::MenuShell {
         &mut self.shell
     }

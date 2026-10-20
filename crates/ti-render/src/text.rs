@@ -61,3 +61,67 @@ pub fn multi_line_metrics(line_count: usize, line_height: i32) -> TextMetrics {
     let height = i32::try_from(line_count).unwrap_or(i32::MAX).saturating_mul(line_height);
     TextMetrics { width: 0, height, line_height }
 }
+
+/// 文本档位（度量口径：标题 / 正文 / 提示）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextTier {
+    /// 标题档（96px；位图回退 advance 26）。
+    Title,
+    /// 正文档（44px；位图回退 advance 12）。
+    Body,
+    /// 提示档（28px；位图回退 advance 8）。
+    Hint,
+}
+
+impl TextTier {
+    /// 位图回退 advance（无 TTF 时的单字宽）。
+    #[must_use]
+    pub fn bitmap_advance(self, theme: &crate::theme::Theme) -> i32 {
+        match self {
+            Self::Title => theme.bitmap_advance_title,
+            Self::Body => theme.bitmap_advance,
+            Self::Hint => theme.bitmap_advance_hint,
+        }
+    }
+
+    /// TTF 字号（px）。
+    #[must_use]
+    pub fn font_px(self, theme: &crate::theme::Theme) -> i32 {
+        match self {
+            Self::Title => theme.title_font_size,
+            Self::Body => theme.font_size,
+            Self::Hint => theme.hint_font_size,
+        }
+    }
+
+    /// 档位对应的 TTF 句柄。
+    #[must_use]
+    pub fn ttf<'a>(
+        self,
+        body: Option<&'a crate::font::TtfFont>,
+        title: Option<&'a crate::font::TtfFont>,
+        hint: Option<&'a crate::font::TtfFont>,
+    ) -> Option<&'a crate::font::TtfFont> {
+        match self {
+            Self::Title => title,
+            Self::Body => body,
+            Self::Hint => hint,
+        }
+    }
+}
+
+/// 文本像素宽（TTF advance 求和 ceil；无 TTF = 字数 × 位图 advance）。
+///
+/// **单一事实源**（S18.7a）：`MenuShell`（CPU 路径）与 `DrawList`（Bevy 路径）共用
+/// → 两后端版面度量完全一致（"两后端同画面"的前提）。
+#[must_use]
+#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+pub fn tier_text_width(text: &str, ttf: Option<&crate::font::TtfFont>, bitmap_advance: i32) -> i32 {
+    if let Some(t) = ttf {
+        let width = text.chars().map(|ch| t.advance(ch)).sum::<f32>();
+        width.ceil() as i32
+    } else {
+        let count = i32::try_from(text.chars().count()).unwrap_or(i32::MAX);
+        count.saturating_mul(bitmap_advance)
+    }
+}
