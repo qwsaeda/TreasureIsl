@@ -515,6 +515,29 @@ impl ListLayout {
     }
 }
 
+/// 声明式场景原语（S18.6 起）：`scenes.json` 的 `primitives` 数组逐项。
+///
+/// **数据驱动边界**（`docs/process/09_render_framework.md` §5 数据分离）：
+/// - 界面元素 = 数据项（`kind` = 原语名 + 参数），消费方只做 `kind` → 原语 dispatch；
+/// - 改版面/顺序/参数/配色令牌 = **只改 `scenes.json`**（0 代码）；
+/// - 新增**原语种类**才需 1 处代码（dispatcher 加一个 arm）——这是不可避免的下界；
+/// - 未知 `kind` = 跳过（不 panic、不画占位），数据可先行、渲染后补。
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Primitive {
+    /// 原语名（dispatcher 键，如 `night_sky` / `moon_glow` / `ornate_frame`）。
+    pub kind: String,
+    /// 主矩形（`x`/`y`/`w`/`h`；语义随 `kind` 变，如圆用 `x`/`y`= 圆心 + `w`= 半径）。
+    pub rect: Rect,
+    /// 副参数（语义随 `kind` 变，如 `radius` / `line` 宽）。
+    pub param: i32,
+    /// 配色令牌名（`theme` 字段名，如 `gold_bright`）；空 = 用原语默认色。
+    pub color: String,
+    /// 文本内容（`kind` = 文本类时用；可为空 = 走 i18n key）。
+    pub text: String,
+    /// i18n key（`kind` = 文本类时优先于 `text`）。
+    pub text_key: String,
+}
+
 /// 单个场景的布局（`assets/data/scenes.json` 的一个条目）。
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SceneLayout {
@@ -540,6 +563,8 @@ pub struct SceneLayout {
     /// §4 立绘允许区清单（`scenes.json` 的 `portrait_zones`，0~N 块；大立绘落点越所有区 = 错位，
     /// `08_layout_design.md` §4.1/§4.2 声明 + `render_intent::large_portraits_respect_layout_zones` 判定）。
     pub portrait_zones: Vec<Rect>,
+    /// 声明式原语表（`scenes.json` 的 `primitives`，有序 = 绘制顺序；缺 = 空 Vec）。
+    pub primitives: Vec<Primitive>,
 }
 
 // ------------------------------------------------------------------- 缓存入口

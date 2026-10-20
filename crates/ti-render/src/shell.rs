@@ -343,6 +343,201 @@ pub fn world_canvas_frame(host: &mut dyn Canvas, theme: &Theme, x: i32, y: i32, 
     host.fill_rect(ox - corner / 2, oy - corner / 2, corner, corner, theme.gold);
 }
 
+// ── S18.6 声明式原语层（数据驱动：几何与配色由 `scenes.json` 原语表给定） ──────
+//
+// 数据分离口径（`docs/process/09_render_framework.md` §5）：本层**不含裸色值**，
+// 颜色一律由调用方（dispatcher）按 theme 令牌名解析后传入；改色 = 改数据。
+
+/// RGB565 通道缩放：`scale_permille` = 千分比（0..=1000 → 0..=100%）。
+/// 连续值 = 渐变无条带（配合行级抖动打散 RGB565 粗色阶台阶）。
+#[must_use]
+#[allow(clippy::cast_possible_truncation)]
+pub fn scale_rgb565(color: u16, scale_permille: u32) -> u16 {
+    let v = u32::from(color);
+    let r = (((v >> 11) & 0x1F) * scale_permille / 1000).min(31);
+    let g = (((v >> 5) & 0x3F) * scale_permille / 1000).min(63);
+    let b = ((v & 0x1F) * scale_permille / 1000).min(31);
+    u16::try_from((r << 11) | (g << 5) | b).unwrap_or(0)
+}
+
+/// 垂直渐变背景：`base` 底色 → 提亮（下沿更亮）；`steps` = 色带级数（数据给，0 = 默认 64）。
+#[allow(clippy::too_many_arguments, clippy::cast_possible_truncation)]
+pub fn night_sky_gradient(
+    host: &mut dyn Canvas,
+    theme: &Theme,
+    left: i32,
+    top: i32,
+    width: i32,
+    height: i32,
+    base: u16,
+    steps: i32,
+) {
+    /// 行级抖动相位（RGB565 粗色阶 → 水平台阶带打散成细噪点）。
+    const DITHER: [u32; 4] = [0, 1, 0, 1];
+    let _ = theme;
+    if width <= 0 || height <= 0 {
+        return;
+    }
+    let x0 = left.max(12);
+    let y0 = top.max(12);
+    let x1 = (left + width).min(LOGICAL_W_I32 - 12);
+    let y1 = (top + height).min(LOGICAL_H_I32 - 12);
+    if x1 <= x0 || y1 <= y0 {
+        return;
+    }
+    let steps = steps.clamp(8, 2048);
+    let step_h = (y1 - y0) / steps;
+    if step_h <= 0 {
+        return;
+    }
+    let steps_u = u32::try_from(steps).unwrap_or(64);
+    for i in 0..steps {
+        let idx = u32::try_from(i).unwrap_or(0);
+        let k = 550 + idx * 450 / steps_u + DITHER[(i.rem_euclid(4)) as usize];
+        host.fill_rect(x0, y0 + i * step_h, x1 - x0, step_h + 1, scale_rgb565(base, k));
+    }
+}
+
+/// 月光晕：同心实心圆，亮度由外到内递增（`color` = 最亮环色）。
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+pub fn moon_glow(host: &mut dyn Canvas, theme: &Theme, cx: i32, cy: i32, radius: i32, color: u16) {
+    /// 同心圆层数。
+    const LAYERS: i32 = 16;
+    let _ = theme;
+    if radius <= 0 {
+        return;
+    }
+    for i in 0..LAYERS {
+        let r = radius * (LAYERS - i) / LAYERS;
+        let k = 120 + u32::try_from(i + 1).unwrap_or(0) * 880 / u32::try_from(LAYERS).unwrap_or(16);
+        let c = scale_rgb565(color, k);
+        for dy in -r..=r {
+            let inside = r * r - dy * dy;
+            if inside < 0 {
+                continue;
+            }
+            let half_w = (inside as f32).sqrt() as i32;
+            host.fill_rect(cx - half_w, cy + dy, half_w * 2, 1, c);
+        }
+    }
+}
+
+/// 海平线剪影：底部色块 + 波浪线。
+pub fn ocean_horizon(host: &mut dyn Canvas, theme: &Theme, top: i32, height: i32, color: u16) {
+    if height <= 0 {
+        return;
+    }
+    let y0 = top.max(12);
+    let y1 = (top + height).min(LOGICAL_H_I32 - 12);
+    if y1 <= y0 {
+        return;
+    }
+    host.fill_rect(12, y0, LOGICAL_W_I32 - 24, y1 - y0, color);
+    for x in (12..LOGICAL_W_I32 - 12).step_by(4) {
+        let wave_y = y0 + ((x / 4) % 3) - 1;
+        host.fill_rect(x, wave_y, 2, 1, theme.parch_light);
+    }
+}
+
+/// 精致木框：木色外框 + 金色内线 + 四角卷角 + 置顶指南针玫瑰。
+#[allow(clippy::too_many_arguments, clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+pub fn ornate_frame(
+    host: &mut dyn Canvas,
+    theme: &Theme,
+    left: i32,
+    top: i32,
+    width: i32,
+    height: i32,
+    frame_color: u16,
+    gold_color: u16,
+) {
+    /// 四角卷角弧长（px）。
+    const CORNER: i32 = 16;
+    /// 指南针玫瑰辐条长度（px）。
+    const ARM: i32 = 20;
+    let _ = theme;
+    if width <= 0 || height <= 0 {
+        return;
+    }
+    let x0 = left.max(12);
+    let y0 = top.max(12);
+    let x1 = (left + width).min(LOGICAL_W_I32 - 12);
+    let y1 = (top + height).min(LOGICAL_H_I32 - 12);
+    if x1 <= x0 || y1 <= y0 {
+        return;
+    }
+    let fw = x1 - x0;
+    let fh = y1 - y0;
+    host.fill_rect(x0, y0, fw, 4, frame_color);
+    host.fill_rect(x0, y1 - 4, fw, 4, frame_color);
+    host.fill_rect(x0, y0, 4, fh, frame_color);
+    host.fill_rect(x1 - 4, y0, 4, fh, frame_color);
+    if fw > 16 && fh > 16 {
+        host.fill_rect(x0 + 8, y0 + 8, fw - 16, 2, gold_color);
+        host.fill_rect(x0 + 8, y1 - 10, fw - 16, 2, gold_color);
+        host.fill_rect(x0 + 8, y0 + 8, 2, fh - 16, gold_color);
+        host.fill_rect(x1 - 10, y0 + 8, 2, fh - 16, gold_color);
+    }
+    for i in 0..CORNER {
+        let t = i as f32 / CORNER as f32;
+        let offset = (t * t * CORNER as f32) as i32;
+        host.fill_rect(x0 + i, y0 + offset, 1, 1, gold_color);
+        host.fill_rect(x0 + offset, y0 + i, 1, 1, gold_color);
+        host.fill_rect(x1 - 1 - i, y0 + offset, 1, 1, gold_color);
+        host.fill_rect(x1 - 1 - offset, y0 + i, 1, 1, gold_color);
+        host.fill_rect(x0 + i, y1 - 1 - offset, 1, 1, gold_color);
+        host.fill_rect(x0 + offset, y1 - 1 - i, 1, 1, gold_color);
+        host.fill_rect(x1 - 1 - i, y1 - 1 - offset, 1, 1, gold_color);
+        host.fill_rect(x1 - 1 - offset, y1 - 1 - i, 1, 1, gold_color);
+    }
+    let cx = (x0 + x1) / 2;
+    let cy = y0 - 24;
+    for i in 0..32 {
+        let angle = i as f32 * std::f32::consts::PI / 16.0;
+        let px = cx + (angle.cos() * ARM as f32) as i32;
+        let py = cy + (angle.sin() * ARM as f32) as i32;
+        host.fill_rect(px, py, 1, 1, gold_color);
+    }
+    host.fill_rect(cx - ARM, cy - 1, ARM * 2, 3, gold_color);
+    host.fill_rect(cx - 1, cy - ARM, 3, ARM * 2, gold_color);
+    host.fill_rect(cx - 3, cy - 3, 6, 6, gold_color);
+}
+
+/// 紧凑菜单项：卡片底 + 细描边 + 左侧图标（`selected_color` = 选中态底色令牌）。
+#[allow(clippy::too_many_arguments)]
+pub fn compact_menu_item(
+    host: &mut dyn Canvas,
+    theme: &Theme,
+    left: i32,
+    top: i32,
+    width: i32,
+    height: i32,
+    chosen: bool,
+    icon_kind: u32,
+    selected_color: u16,
+) {
+    if width <= 0 || height <= 0 {
+        return;
+    }
+    let base_color = if chosen { selected_color } else { theme.menu_bg };
+    host.fill_rect(left, top, width, height, base_color);
+    host.fill_rect(left, top, width, 2, theme.menu_border);
+    host.fill_rect(left, top + height - 2, width, 2, theme.menu_border);
+    host.fill_rect(left, top, 2, height, theme.menu_border);
+    host.fill_rect(left + width - 2, top, 2, height, theme.menu_border);
+    let icon_size = 48i32.min(height - 8);
+    let icon_x = left + 8;
+    let icon_y = top + (height - icon_size) / 2;
+    crate::icons::icon(
+        host,
+        theme,
+        icon_kind,
+        icon_x,
+        icon_y,
+        if chosen { theme.black } else { theme.gold },
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,6 +571,9 @@ mod tests {
         bitmap_advance: 8,
         bitmap_advance_title: 12,
         bitmap_advance_hint: 6,
+        wood_warm: 22,
+        gold_warm: 23,
+        sky_navy: 24,
     };
 
     /// 记录型 Canvas：统计 `fill_rect` 次数与面积和（`draw_text` 不记账）。

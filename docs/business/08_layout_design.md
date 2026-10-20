@@ -88,15 +88,38 @@
 | 元素 | 坐标（`scenes.json`） | 说明 |
 |---|---|---|
 | 标题 | `title {y:8, h:96}` | **无 `x` 键**（按文本宽度居中，见上）；标题条高 96（`y=12..108`，S17.2）；标题文字「金银岛」金墨 |
-| 菜单列表 | `list {x:96, y:392, w:896, row_h:224, item_h:168, text_x:248, highlight_offset:40}` | 6 项（新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏）；首块顶 = `392-40` = **352**；末块底 = `352+5*224+168` = **1640**（S17.2 8pt 整备） |
+| 菜单列表 | `list {x:240, y:960, w:600, row_h:88, item_h:72, text_x:304, highlight_offset:40}` | 6 项（新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏）；**紧凑列**（S18.6 暖金版式：居中窄列 600px、行高 88、卡高 72）；首块顶 = `960-40` = **920**；末块底 = `920+5*88+72` = **1432** |
 | 图标列 | `icon {x:144}` | 菜单项图标左缘（S17.3 换 `ui_icons` 罗盘/宝箱/锚/齿轮/书/门） |
 | 状态行 | `status {x:540, y:1840}` | 浅底条 + 深墨字（字体数/音效/模块数）；`status` 走 `extra` 字段；`x=540` 为屏心锚点 |
 | 立绘/动态区 | `portrait_zones [{x:0,y:360,w:1080,h:1310}]` | **代码绘制动态实体**允许落区（QB102：收紧到实渲内容区 360..1670，无 legacy 立绘） |
-| 仪式标题面板（v3） | `title_art {x:108, y:192, w:864, h:160}` | v3.1 双写：`chrome::title_art_block` 仪式面板（卡底+木纹双描边+bevel+中央罗盘饰），落在标题条底 108 与菜单首块顶 352 之间的**空带** 192..352，不压列表；v3.2 菜单瘦身后扩为完整仪式感区（`ui-redesign-v3/04`） |
+| 仪式标题面板（v3） | `title_art {x:112, y:192, w:856, h:672}` | S18.6 暖金版：`ornate_frame` 精致木框（木色外框 + 金色内线 + 四角卷角 + 置顶指南针玫瑰），与标题/副标题同处 192..864 仪式区 |
 | 星空氛围层（v3） | `ambient_art {x:0, y:0, w:1080, h:1920}` | v3.1 双写：`chrome::star_sky` 确定性 26 星（无 RNG，快照可复现），绘制夹 12px 外框内，z-order 在外壳之后/菜单之前（P-SoT-2） |
 | 视觉重心锚（v3） | `focus_anchor {bbox:{x:108, y:192, w:864, h:672}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` index `focus.bbox_pct` × (1080,1920)）；gate 第 21 项 `check_scene_narrative` N8 对账锚点 |
 
-不变式：`352 ≥ 108`（首块不压标题条）、`1640 ≤ 1840`（末块不撞提示行）。
+不变式：`920 ≥ 108`（首块不压标题条）、`1432 ≤ 1840`（末块不撞提示行）。
+
+
+**原语表（`scenes.json` `index.primitives`，有序 = 绘制顺序）**：
+
+| # | kind | rect | param | color |
+|---|---|---|---|---|
+| 1 | `night_sky` | `{x:0, y:0, w:1080, h:1920}` | `param:2048,` | `sky_navy` |
+| 2 | `star_sky` | `{x:0, y:0, w:1080, h:1920}` | — | — |
+| 3 | `moon_glow` | `{x:832, y:152, w:64, h:64}` | — | `text_on_parch` |
+| 4 | `ocean_horizon` | `{x:0, y:1704, w:1080, h:224}` | — | `bg` |
+| 5 | `ornate_frame` | `{x:112, y:192, w:856, h:672}` | — | `wood_warm` |
+| 6 | `title_text` | `{x:112, y:424, w:856, h:96}` | — | `gold_warm` |
+| 7 | `body_text` | `{x:112, y:600, w:856, h:64}` | — | `text_on_parch` |
+| 8 | `menu_items` | 几何取 `list` 段 | — | `gold_warm` |
+
+**声明式原语表（S18.6）**：index 场景界面元素 = `scenes.json` `index.primitives` 数组
+（有序 = 绘制顺序；每项 = `kind` + `rect` + `param` + `color` 令牌名 + 文本）。
+- **改版面/顺序/参数/配色 = 只改 `scenes.json`**（0 代码）；新增**原语种类**才需 1 处
+  代码（`chrome::render_primitives_bg/fg` dispatcher 加一个 arm）——数据驱动边界。
+- `color` 字段 = `theme` **令牌名**（如 `sky_navy`/`wood_warm`/`gold_warm`/`text_on_parch`）；
+  渲染层零裸色值（`check_hardcode` 门禁）。
+- z-order 两批：背景类原语（`night_sky`/`star_sky`/`moon_glow`/`ocean_horizon`）在
+  `scene_shell` **之前**画，其余（`ornate_frame`/文本/`menu_items`）在其后。
 
 ### 4.2 select_role / select_map（选择类）
 

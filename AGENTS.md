@@ -47,6 +47,7 @@
 | 容器格式（pak/lpk）字段与偏移 | `docs/formats/lucencypackage.md` |
 | 现代化改造 / 移植 / 多端适配 | `docs/modernization.md` |
 | **HD 资产增强 / 超分 / 矢量化 / 多分辨率打包（S7）** | `docs/impl/14_asset_enhancement.md`（方案规格，历史阶段） |
+| **AI 生图（UI 效果图/概念图，S18.7 前置）** | `scripts/agnes_gen.py`（Agnes Image 2.5 Flash；`AGNES_API_KEY` 环境变量；用法见 `docs/process/04_tooling.md` §6） |
 | Android 壳落地 + Mac 出 APK（S5.5） | `android/README.md` |
 | 引入新依赖 / 改 workspace 结构 | `docs/process/01_architecture.md` §4（现成库清单，先查再引）→ `docs/style.md` §5.9 |
 | **报「特定区域贴图错位/覆盖菜单」先逐元素定位** | `cargo run -p ti-app --features native-shell --bin element-dump -- <scene>`（§7 元素级验证法：逐精灵落点/越界判定/像素贡献，定位到具体记录号 + f1 精灵） |

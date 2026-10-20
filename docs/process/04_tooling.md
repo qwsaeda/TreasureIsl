@@ -85,3 +85,39 @@
 - `--check` 模式：只比对「当前产物 == 期望产物」，不一致非 0，**不写文件**；
 - 不依赖环境变量/时钟/随机，除非显式传参；
 - 临时文件写 `tempfile` 并清理，不污染仓库。
+
+## 6. Agnes 生图（`scripts/agnes_gen.py`）
+
+**用途**：UI 效果图/概念图生成（S18.7 HD 贴图管线前置；不入库密钥）。
+
+**环境变量**：`AGNES_API_KEY`（必填；不写入脚本/不入库）。
+
+**用法**：
+
+```sh
+# 文生图（默认 2K + 9:16 竖屏 = 1472×2624）
+python scripts/agnes_gen.py --prompt "..." --out evidence/ui_concept/index_v3.png
+
+# 图生图（参考图 URL）
+python scripts/agnes_gen.py --prompt "..." --out mockup.png --image https://example.com/ref.png
+
+# 尺寸/比例
+python scripts/agnes_gen.py --prompt "..." --out mockup.png --size 2K --ratio 9:16
+```
+
+**模型**：`agnes-image-2.5-flash`（当前全部输出分辨率免费）。
+
+**尺寸档位**：
+
+| ratio | 1K | 2K | 3K | 4K |
+|---|---|---|---|---|
+| `1:1` | 1024² | 2048² | 3072² | 4096² |
+| `9:16` | 736×1312 | 1472×2624 | 2208×3936 | 2944×5248 |
+| `16:9` | 1312×736 | 2624×1472 | 3936×2208 | 5248×2944 |
+
+**API**：`POST https://apihub.agnes-ai.com/v1/images/generations`（OpenAI 兼容格式）。
+
+**注意**：
+- 输出 = URL（默认）或 Base64（`return_base64: true`）；
+- 图生图 = `extra_body.image` 数组（URL 或 Data URI）；
+- 超时建议 60–300s（脚本默认 300s）。

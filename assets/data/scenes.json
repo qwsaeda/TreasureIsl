@@ -1,82 +1,415 @@
 {
   "schema_version": 1,
-
   "index": {
-    "title": { "y": 8, "h": 96 },
-    "list": { "x": 96, "y": 392, "w": 896, "row_h": 224, "item_h": 168, "text_x": 248, "highlight_offset": 40 },
-    "icon": { "x": 144 },
-    "status": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 360, "w": 1080, "h": 1310 }],
-
-    "title_art": { "x": 108, "y": 192, "w": 864, "h": 160 },
-    "ambient_art": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
-    "focus_anchor": { "type": "title_art", "bbox": { "x": 108, "y": 192, "w": 864, "h": 672 } }
+    "title": {
+      "y": 8,
+      "h": 96
+    },
+    "list": {
+      "x": 240,
+      "y": 960,
+      "w": 600,
+      "row_h": 88,
+      "item_h": 72,
+      "text_x": 304,
+      "highlight_offset": 40
+    },
+    "icon": {
+      "x": 144
+    },
+    "status": {
+      "x": 540,
+      "y": 1840
+    },
+    "portrait_zones": [
+      {
+        "x": 0,
+        "y": 360,
+        "w": 1080,
+        "h": 1310
+      }
+    ],
+    "title_art": {
+      "x": 112,
+      "y": 192,
+      "w": 856,
+      "h": 672
+    },
+    "ambient_art": {
+      "x": 0,
+      "y": 0,
+      "w": 1080,
+      "h": 1920
+    },
+    "focus_anchor": {
+      "type": "title_art",
+      "bbox": {
+        "x": 108,
+        "y": 192,
+        "w": 864,
+        "h": 672
+      }
+    },
+    "primitives": [
+      {
+        "kind": "night_sky",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1920
+        },
+        "color": "sky_navy",
+        "param": 2048
+      },
+      {
+        "kind": "star_sky",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 1080,
+          "h": 1920
+        }
+      },
+      {
+        "kind": "moon_glow",
+        "rect": {
+          "x": 832,
+          "y": 152,
+          "w": 64,
+          "h": 64
+        },
+        "color": "text_on_parch"
+      },
+      {
+        "kind": "ocean_horizon",
+        "rect": {
+          "x": 0,
+          "y": 1704,
+          "w": 1080,
+          "h": 224
+        },
+        "color": "bg"
+      },
+      {
+        "kind": "ornate_frame",
+        "rect": {
+          "x": 112,
+          "y": 192,
+          "w": 856,
+          "h": 672
+        },
+        "color": "wood_warm"
+      },
+      {
+        "kind": "title_text",
+        "rect": {
+          "x": 112,
+          "y": 424,
+          "w": 856,
+          "h": 96
+        },
+        "text_key": "scene.index.title",
+        "color": "gold_warm"
+      },
+      {
+        "kind": "body_text",
+        "rect": {
+          "x": 112,
+          "y": 600,
+          "w": 856,
+          "h": 64
+        },
+        "text": "TreasureIsl",
+        "color": "text_on_parch"
+      },
+      {
+        "kind": "menu_items",
+        "color": "gold_warm"
+      }
+    ]
   },
-
   "select_role": {
-    "title": { "y": 8, "h": 96 },
-    "list": { "x": 96, "y": 240, "w": 896, "row_h": 304, "item_h": 256, "text_x": 248, "highlight_offset": 40 },
-    "icon": { "x": 144 },
-    "hint": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 240, "w": 1080, "h": 1460 }]
+    "title": {
+      "y": 8,
+      "h": 96
+    },
+    "list": {
+      "x": 96,
+      "y": 240,
+      "w": 896,
+      "row_h": 304,
+      "item_h": 256,
+      "text_x": 248,
+      "highlight_offset": 40
+    },
+    "icon": {
+      "x": 144
+    },
+    "hint": {
+      "x": 540,
+      "y": 1840
+    },
+    "portrait_zones": [
+      {
+        "x": 0,
+        "y": 240,
+        "w": 1080,
+        "h": 1460
+      }
+    ]
   },
-
   "select_map": {
-    "title": { "y": 8, "h": 96 },
-    "list": { "x": 96, "y": 240, "w": 896, "row_h": 336, "item_h": 280, "text_x": 248, "highlight_offset": 40 },
-    "icon": { "x": 144 },
-    "locked": { "text_x": 920 },
-    "hint": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 240, "w": 1080, "h": 960 }]
+    "title": {
+      "y": 8,
+      "h": 96
+    },
+    "list": {
+      "x": 96,
+      "y": 240,
+      "w": 896,
+      "row_h": 336,
+      "item_h": 280,
+      "text_x": 248,
+      "highlight_offset": 40
+    },
+    "icon": {
+      "x": 144
+    },
+    "locked": {
+      "text_x": 920
+    },
+    "hint": {
+      "x": 540,
+      "y": 1840
+    },
+    "portrait_zones": [
+      {
+        "x": 0,
+        "y": 240,
+        "w": 1080,
+        "h": 960
+      }
+    ]
   },
-
   "main_map": {
-    "title": { "y": 8, "h": 96 },
-    "hud": { "x": 80, "y": 152, "w": 920, "h": 128 },
-    "hud_trade": { "x": 536, "y": 168, "w": 136, "h": 88 },
-    "hud_sell": { "x": 704, "y": 168, "w": 136, "h": 88 },
-    "hud_build": { "x": 856, "y": 168, "w": 136, "h": 88 },
-    "grid": { "x0": 540, "y0": 520, "tile_w": 25, "tile_h": 13 },
-    "player": { "size": 26 },
-    "landmark": { "size": 20 },
-    "boss": { "size": 24 },
-    "hint": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 150, "w": 1080, "h": 1680 }],
-    "world_canvas": { "x": 43, "y": 192, "w": 1004, "h": 1478 },
-    "hud_gold": { "x": 80, "y": 80, "w": 320, "h": 96 },
-    "hud_player": { "x": 680, "y": 80, "w": 320, "h": 96 },
-    "deck_trade": { "x": 240, "y": 1760, "w": 200, "h": 80 },
-    "deck_sell": { "x": 460, "y": 1760, "w": 200, "h": 80 },
-    "deck_build": { "x": 680, "y": 1760, "w": 200, "h": 80 },
-    "canvas_entities": { "player": 100, "landmark": 80, "boss": 96 },
-    "focus_anchor": { "type": "world_canvas", "bbox": { "x": 43, "y": 192, "w": 1004, "h": 1478 } }
+    "title": {
+      "y": 8,
+      "h": 96
+    },
+    "hud": {
+      "x": 80,
+      "y": 152,
+      "w": 920,
+      "h": 128
+    },
+    "hud_trade": {
+      "x": 536,
+      "y": 168,
+      "w": 136,
+      "h": 88
+    },
+    "hud_sell": {
+      "x": 704,
+      "y": 168,
+      "w": 136,
+      "h": 88
+    },
+    "hud_build": {
+      "x": 856,
+      "y": 168,
+      "w": 136,
+      "h": 88
+    },
+    "grid": {
+      "x0": 540,
+      "y0": 520,
+      "tile_w": 25,
+      "tile_h": 13
+    },
+    "player": {
+      "size": 26
+    },
+    "landmark": {
+      "size": 20
+    },
+    "boss": {
+      "size": 24
+    },
+    "hint": {
+      "x": 540,
+      "y": 1840
+    },
+    "portrait_zones": [
+      {
+        "x": 0,
+        "y": 150,
+        "w": 1080,
+        "h": 1680
+      }
+    ],
+    "world_canvas": {
+      "x": 43,
+      "y": 192,
+      "w": 1004,
+      "h": 1478
+    },
+    "hud_gold": {
+      "x": 80,
+      "y": 80,
+      "w": 320,
+      "h": 96
+    },
+    "hud_player": {
+      "x": 680,
+      "y": 80,
+      "w": 320,
+      "h": 96
+    },
+    "deck_trade": {
+      "x": 240,
+      "y": 1760,
+      "w": 200,
+      "h": 80
+    },
+    "deck_sell": {
+      "x": 460,
+      "y": 1760,
+      "w": 200,
+      "h": 80
+    },
+    "deck_build": {
+      "x": 680,
+      "y": 1760,
+      "w": 200,
+      "h": 80
+    },
+    "canvas_entities": {
+      "player": 100,
+      "landmark": 80,
+      "boss": 96
+    },
+    "focus_anchor": {
+      "type": "world_canvas",
+      "bbox": {
+        "x": 43,
+        "y": 192,
+        "w": 1004,
+        "h": 1478
+      }
+    }
   },
-
   "vs": {
-    "title": { "y": 8, "h": 96 },
-    "player_hp": { "x": 64, "y": 168, "w": 448, "h": 48 },
-    "boss_hp": { "x": 576, "y": 168, "w": 448, "h": 48 },
-    "rounds": { "x": 540, "y": 416 },
-    "outcome": { "x": 540, "y": 960 },
-    "empty": { "x": 540, "y": 960 },
-    "hint": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 170, "w": 1080, "h": 1680 }],
-    "battle_arena": { "x": 76, "y": 230, "w": 918, "h": 998 },
-    "focus_anchor": { "type": "battle_arena", "bbox": { "x": 76, "y": 230, "w": 918, "h": 998 } }
+    "title": {
+      "y": 8,
+      "h": 96
+    },
+    "player_hp": {
+      "x": 64,
+      "y": 168,
+      "w": 448,
+      "h": 48
+    },
+    "boss_hp": {
+      "x": 576,
+      "y": 168,
+      "w": 448,
+      "h": 48
+    },
+    "rounds": {
+      "x": 540,
+      "y": 416
+    },
+    "outcome": {
+      "x": 540,
+      "y": 960
+    },
+    "empty": {
+      "x": 540,
+      "y": 960
+    },
+    "hint": {
+      "x": 540,
+      "y": 1840
+    },
+    "portrait_zones": [
+      {
+        "x": 0,
+        "y": 170,
+        "w": 1080,
+        "h": 1680
+      }
+    ],
+    "battle_arena": {
+      "x": 76,
+      "y": 230,
+      "w": 918,
+      "h": 998
+    },
+    "focus_anchor": {
+      "type": "battle_arena",
+      "bbox": {
+        "x": 76,
+        "y": 230,
+        "w": 918,
+        "h": 998
+      }
+    }
   },
-
   "message": {
-    "title": { "y": 8, "h": 96 },
-    "body": { "x": 96, "y": 224, "w": 896, "h": 1480 },
-    "page": { "x": 540, "y": 1800 },
-    "hint": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 220, "w": 1080, "h": 1680 }]
+    "title": {
+      "y": 8,
+      "h": 96
+    },
+    "body": {
+      "x": 96,
+      "y": 224,
+      "w": 896,
+      "h": 1480
+    },
+    "page": {
+      "x": 540,
+      "y": 1800
+    },
+    "hint": {
+      "x": 540,
+      "y": 1840
+    },
+    "portrait_zones": [
+      {
+        "x": 0,
+        "y": 220,
+        "w": 1080,
+        "h": 1680
+      }
+    ]
   },
-
   "saveload": {
-    "title": { "y": 8, "h": 96 },
-    "list": { "x": 96, "y": 240, "w": 896, "row_h": 304, "item_h": 248, "text_x": 248, "highlight_offset": 40, "gold_x": 816 },
-    "hint": { "x": 540, "y": 1840 },
-    "portrait_zones": [{ "x": 0, "y": 240, "w": 1080, "h": 1450 }]
+    "title": {
+      "y": 8,
+      "h": 96
+    },
+    "list": {
+      "x": 96,
+      "y": 240,
+      "w": 896,
+      "row_h": 304,
+      "item_h": 248,
+      "text_x": 248,
+      "highlight_offset": 40,
+      "gold_x": 816
+    },
+    "hint": {
+      "x": 540,
+      "y": 1840
+    },
+    "portrait_zones": [
+      {
+        "x": 0,
+        "y": 240,
+        "w": 1080,
+        "h": 1450
+      }
+    ]
   }
 }

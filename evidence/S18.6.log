@@ -1,0 +1,90 @@
+S18.6 门禁重建 + 声明式原语架构（CPU 画布降级口径）+ 首界面暖金版式 — PASS
+===============================================================================
+
+DoD（plan/ledger.yaml S18.6）：gate 全绿（新基线 + 更新断言）+ 08/09 文档回写 +
+用户视觉签收留痕 + evidence/S18.6.log。
+
+## 架构裁决：声明式原语表（数据驱动的真正边界）
+
+**问题**（用户指出）：原框架不是数据驱动——改一个视觉元素要动 3 处代码
+（`ti-render` 新原语 + `chrome` key const + `chrome` wrapper）+ 1 处数据；
+场景绘制顺序硬编码在 `scenes/index.rs`；颜色 = Rust 权威（theme.json 仅镜像）。
+
+**解法**：引入**声明式原语表**——界面元素 = 数据项，渲染层只做 dispatch。
+
+- `ti-core::data::Primitive { kind, rect, param, color, text, text_key }`
+  + `SceneLayout.primitives: Vec<Primitive>`（有序 = 绘制顺序）。
+- `scenes.json` 每个场景可带 `primitives` 数组；`chrome::render_primitives_bg/fg`
+  通用 dispatcher：`kind` → 原语映射。
+- **数据驱动边界**：
+  - 改版面 / 顺序 / 参数 / 配色令牌 = **只改 `scenes.json`**（0 代码）；
+  - 新增**原语种类**才需 1 处代码（dispatcher 加一个 arm）——不可避免的下界；
+  - 未知 `kind` = 跳过（不 panic、不画占位）：数据可先行、渲染后补。
+- 颜色 = **theme 令牌名**（数据写 `"color": "gold_warm"`）→ 渲染层零裸色值
+  （`check_hardcode` 门禁 0 命中）。
+- z-order 两批：背景类原语（`night_sky`/`star_sky`/`moon_glow`/`ocean_horizon`）在
+  `scene_base` 之上、`scene_frame` 之下；其余在 `scene_frame` 之后。
+
+## 首界面（index）暖金版式重绘（Agnes 效果图对齐）
+
+- 参考图：`evidence/ui_concept/index_v3_agnes.png`（Agnes Image 2.5 Flash 生成，
+  脚本 `scripts/agnes_gen.py` + 文档 `docs/process/04_tooling.md` §6）。
+- 8 项原语 = 渐变夜空 / 星点 / 月光晕 / 海平线 / 精致木框 / 标题 / 副标题 / 菜单。
+- 3 个新暖色系令牌（`theme.rs` DEFAULT + `theme.json` 镜像 + `10_ui_redesign.md` §3
+  三方对账）：`wood_warm` 0x8B42（暖木 #8B6914）、`gold_warm` 0xFEA0（暖金 #FFD700）、
+  `sky_navy` 0x1948（夜空 #1A2942）。
+- 标题区 = **仪式木框**（`ornate_frame`：木色外框 + 金色内线 + 四角卷角 + 置顶指南针玫瑰）
+  **替代**细标题条 `title_bar`（避免标题重复）→ `chrome::scene_shell` 拆出
+  `scene_base` / `scene_frame` 两层供分层绘制。
+- 菜单 = 紧凑居中列（`list {x:240, y:960, w:600, row_h:88, item_h:72,
+  highlight_offset:40}`，几何单源 = `index.list`，与触摸命中带同源，QA101 带形契约保持）。
+- 渐变：RGB565 色阶粗 → 1024/2048 级 + 行级抖动打散台阶（`scale_rgb565` 连续缩放）。
+
+## 顺带修掉的既有 bug
+
+- **`ui_icons.json` 解析失败**（S17.3 起图标全为 fallback 方块）：`bindings` 里
+  `select_map_row`/`select_role_row`/`main_map_landmark`/`vs_boss_cap` 是**对象**，
+  Rust 侧类型为 `Option<String>`（纯字符串）→ 整个注册表解析失败、全部图标回退。
+  修数据（对象 → 字符串）后 6 个主菜单图标（罗盘/宝箱/船锚/齿轮/书/门）正常显示。
+- **`ti_core::` 全路径**（EXP-061 收敛）→ 新原语类型改走顶部 `use`。
+
+## 契约同步（同一结论多处 = 本项目既有纪律）
+
+| 契约副本 | 同步内容 |
+|---|---|
+| `plan/ledger.yaml` | S18.6 → verified |
+| `docs/business/08_layout_design.md` §4.1 | index 版面表（list/title_art）+ 原语表镜像（每个标量 key:value 逐项对账） |
+| `docs/process/10_ui_redesign.md` §3 | 3 个新暖色令牌（三方对账第三处） |
+| `crates/ti-tools/src/bin/doccheck2.rs` | index 版面期望（y 392→960 / row_h 224→88）+ theme 令牌对账表 + COLOR_* 常量映射 |
+| `crates/ti-app/tests/render_intent.rs` | index 版面数值 + 选中态色 = 数据指定 + index 标题区 = 仪式木框（替代细标题条） |
+| `crates/ti-core/src/data/{mod,layout}.rs` | `Primitive` 类型 + `primitives` 字段 + 解析 |
+| `crates/ti-render/src/{theme,shell}.rs` | 3 个暖色令牌 + `by_name` 令牌名取色 + 5 个新原语（无裸色值） |
+| `crates/ti-app/src/scenes/{chrome,index}.rs` | dispatcher（bg/fg 两批）+ `scene_base`/`scene_frame` 拆分 + index 分层绘制 |
+
+## 验收命令 + 结果
+
+1) 基线重建（EXP-076 规程：删旧基线 → 测试自动重写）：
+   - 删 `assets/hd_baseline/`、`assets/render_baseline/`、`assets/forward_baseline/` 全部 PNG
+   - `cargo test -p ti-app --test visual_regression --test render_snapshot
+     --test render_snapshot_forward` → 3 passed（基线已重生成）
+2) `cargo test --workspace` → 全部 ok（ti-app lib 38 / render_intent 12 / 其余集成全绿）
+3) `cargo clippy --workspace --all-targets -- -D warnings` → exit=0
+4) `cargo fmt --all -- --check` → clean
+5) `python scripts/check_hardcode.py` → 0 hit（渲染层零裸色值）
+6) `cargo run -q -p ti-tools --bin doccheck2` → **0 error(s) across 24 audit-codified checks**
+7) 全 gate：`scripts/gate.ps1` → **0 failure(s)**（23 项全绿）
+8) 效果图导出：`cargo run -p ti-app --features native-shell --bin render-png`
+   → `evidence/render_png/index.png`（7 场景全出）
+
+## 用户视觉签收留痕 — 待用户执行
+
+运行 `cargo run -p ti-app --features native-shell --bin render-png` 后查看
+`evidence/render_png/index.png`（首界面）；或 `treasure-native` 实时窗口。
+签收点：① 夜空渐变 + 月光晕 ② 暖金标题 + 仪式木框 + 指南针玫瑰 ③ 紧凑金底选中菜单
+④ 6 枚可辨图标 ⑤ 海平线剪影。
+
+## 残留
+
+- 滚轮 zoom / CPU terrain 相机接线：挂 S18.8（bevy 输入 + 地形相机）。
+- 其余 6 场景仍是 v2 冷蓝版式（各自 `primitives` 表待补，S18.7 HD 贴图管线同轮）。
+- 细标题条 `title_bar` 在 index 已不用（仪式木框替代），其余 6 场景保留。

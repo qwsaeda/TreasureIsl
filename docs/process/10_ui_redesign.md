@@ -39,6 +39,9 @@ parity 与 UI 无关）；三套视觉基线随 S17.2/S17.4 重生成。
 | `danger` | `#FF6B5E` | `0xFB57` | 复用 `COLOR_DANGER` 槽位 | 玩家 HP/失败 |
 | `success` | `#69D58C` | `0x6EA3` | `COLOR_PLAYER` 槽位（theme 字段 `player`） | 胜利/可购、玩家棋子/血条 |
 | `info` | `#45B7D8` | `0x45B6` | 复用 `COLOR_HILITE` 槽位 | 血条槽底/水系 |
+| `wood_warm` | `#8B6914` | `0x8B42` | `COLOR_WOOD_WARM`（S18.6 暖金版式木框；与冷蓝 `wood` 并存） | 暖木框/卡片边 |
+| `gold_warm` | `#FFD700` | `0xFEA0` | `COLOR_GOLD_WARM`（S18.6 暖金版式标题金） | 暖金标题/选中底 |
+| `sky_navy` | `#1A2942` | `0x1948` | `COLOR_SKY_NAVY`（S18.6 夜空渐变底色） | 夜空背景 |
 
 ### 3.1 对比度表（WCAG 2.1 相对亮度，验收 ≥ AA）
 

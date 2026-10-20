@@ -85,37 +85,21 @@ impl Scene for IndexScene {
     /// 外壳之后、菜单之前；双写期（v3.1）v2 菜单几何不动，v3.2 起菜单瘦身后面板
     /// 扩展为完整仪式感区。键缺失 = 该层不画（数据驱动，契约 4）。
     fn render(&mut self, host: &mut dyn SceneHost) {
+        // S18.6 声明式原语：界面元素全部来自 `scenes.json` 的 `primitives` 表
+        // （版面/顺序/参数/配色令牌 = 纯数据；本文件不再逐元素硬编码）。
+        //
+        // **z-order 两批**（`08_render_arch.md` 契约 1：背景层 → 装饰层 → 内容层）：
+        // ① 底色（`scene_base`）→ ② 背景类原语（night_sky/star_sky/moon_glow/ocean_horizon）
+        //    → ③ 外框层（`scene_frame`：航海网格 + 木外框）→ ④ 装饰/内容类原语
+        //    （ornate_frame/title_text/body_text/menu_items）。
+        //    注：index 用**仪式木框**作标题区（替代细标题条 `title_bar`），不重复画标题。
+        chrome::scene_base(host);
+        chrome::render_primitives_bg(host, "index");
+        chrome::scene_frame(host);
+        chrome::render_primitives_fg(host, "index");
+        // 尾行（用户版信息，i18n）
         let layout = chrome::scene_layout("index");
-        chrome::scene_shell(host, "index", "scene.index.title");
-        // v3 叙事层：星空氛围 + 仪式面板（双写，v2 键不变）
-        chrome::star_sky(host, "index");
-        chrome::title_art_block(host, "index");
-        let labels = crate::shell_ui::menu_labels();
-        let sel = host.menu_selected();
-        let held = host.press_held();
-        let flashing = chrome::press_flash_active();
-        // QB126：icon 列（64×64 逻辑盒，三原语 rect 组合；scenes.json `index.icon.x`
-        // 缺失/非正 = 不画 icon 列，契约 4 数据驱动）
-        let icon_x = layout.extra.get("icon").map(|r| r.x).filter(|x| *x > 0);
-        for (i, label) in labels.iter().enumerate() {
-            let r = layout.list.item_rect(i);
-            chrome::menu_item(host, r.x, r.y, r.w, r.h, i == sel, i == sel && (held || flashing));
-            // 文字垂直居中：块高 r.h，字形高 = 正文档（TTF 44px / 位图回退 12px，QA009）
-            let ty = r.y + (r.h - host.shell().glyph_px()) / 2;
-            chrome::draw_body_text(host, label, layout.list.text_x, ty);
-            if let Some(ix) = icon_x {
-                // S17.3：图标走注册表（`ui_icons.json` bindings.index_menu = 菜单序号 → 图标名），
-                // 尺寸/tint 全数据驱动；注册表缺项 = 不画图标（不 panic、不画占位色块）。
-                let def = chrome::index_menu_icon_def(i);
-                if let Some(def) = def {
-                    let iy = r.y + (r.h - def.size) / 2;
-                    chrome::ui_icon(host, def.id, ix, iy, i == sel);
-                }
-            }
-        }
         let status = layout.extra.get("status").copied().unwrap_or_default();
-        // QB150：尾行 = 用户版信息（i18n `scene.index.footer`），经 `hint_row` 单查收敛 +
-        // 提示档（28px）+ 屏心居中（QB123）
         let footer = crate::i18n::sget("scene.index.footer");
         chrome::hint_row(host, footer, status.x + 2, status.y);
     }

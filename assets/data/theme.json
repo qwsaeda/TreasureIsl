@@ -21,7 +21,10 @@
     "title_bar": "0x3A17",
     "selected": "0x4E3D",
     "secondary": "0x9D30",
-    "black": "0x0000"
+    "black": "0x0000",
+    "wood_warm": "0x8B42",
+    "gold_warm": "0xFEA0",
+    "sky_navy": "0x1948"
   },
   "fonts": {
     "font_size": 44,

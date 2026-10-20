@@ -6,7 +6,9 @@ use std::sync::OnceLock;
 
 use serde::Deserialize;
 
-use super::{ListLayout, LoadError, Rect, SCENES_JSON, SCHEMA_VERSION_KEY, SceneLayout, parse};
+use super::{
+    ListLayout, LoadError, Primitive, Rect, SCENES_JSON, SCHEMA_VERSION_KEY, SceneLayout, parse,
+};
 
 static SCENES: OnceLock<BTreeMap<String, SceneLayout>> = OnceLock::new();
 /// 加载场景布局表（首次解析，之后命中缓存）。
@@ -80,6 +82,23 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 Rect::from(rj)
             })
             .collect();
+        // S18.6 声明式原语表（`primitives` 数组；有序 = 绘制顺序；缺 = 空 Vec）。
+        // 单项解析失败（形状不对）= 跳过该项（不 panic、不整场景失败）：数据先行、渲染后补。
+        let primitives: Vec<Primitive> = r
+            .primitives
+            .into_iter()
+            .filter_map(|v| {
+                let pj: PrimitiveJson = serde_json::from_value(v).ok()?;
+                Some(Primitive {
+                    kind: pj.kind,
+                    rect: Rect::from(pj.rect),
+                    param: pj.param,
+                    color: pj.color,
+                    text: pj.text,
+                    text_key: pj.text_key,
+                })
+            })
+            .collect();
         out.insert(
             id.clone(),
             SceneLayout {
@@ -102,6 +121,7 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 extra,
                 extra_scalar,
                 portrait_zones,
+                primitives,
             },
         );
     }
@@ -130,6 +150,32 @@ struct RawScene {
     /// §4 立绘允许区清单（`08_layout_design.md` §4.1/§4.2 声明的大立绘可落区，多块；缺 = 无声明）。
     #[serde(default)]
     portrait_zones: Vec<serde_json::Value>,
+    /// S18.6 声明式原语表（有序 = 绘制顺序；缺 = 空）。
+    #[serde(default)]
+    primitives: Vec<serde_json::Value>,
+}
+
+/// 单个原语的数据形状（`scenes.json` `primitives[]` 一项）。
+#[derive(Deserialize, Default)]
+struct PrimitiveJson {
+    /// 原语名（dispatcher 键）。
+    #[serde(default)]
+    kind: String,
+    /// 主矩形参数。
+    #[serde(default)]
+    rect: RectJson,
+    /// 副参数（语义随 `kind` 变）。
+    #[serde(default)]
+    param: i32,
+    /// 配色令牌名（空 = 原语默认）。
+    #[serde(default)]
+    color: String,
+    /// 文本内容。
+    #[serde(default)]
+    text: String,
+    /// i18n key（优先于 `text`）。
+    #[serde(default)]
+    text_key: String,
 }
 
 #[derive(Deserialize, Default)]

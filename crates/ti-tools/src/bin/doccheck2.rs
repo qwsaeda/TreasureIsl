@@ -715,8 +715,8 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
     // main_map: hud y=152 h=128（不与等距区 grid.y0=520 重叠）
     let anchors: &[(&str, &str, &str)] = &[
         ("\"index\"", "\"h\": 96", "index 标题条高度 = 96（§4.1，S17.2 8pt）"),
-        ("\"index\"", "\"y\": 392", "index 列表基线 y = 392（§4.1，S17.2 8pt）"),
-        ("\"index\"", "\"row_h\": 224", "index 行高 = 224（§4.1，S17.2 8pt）"),
+        ("\"index\"", "\"y\": 960", "index 列表基线 y = 960（§4.1，S18.6 暖金紧凑版式）"),
+        ("\"index\"", "\"row_h\": 88", "index 行高 = 88（§4.1，S18.6 紧凑行距）"),
         ("\"index\"", "\"highlight_offset\": 40", "index 高亮上移 = 40（§4.1，S17.2 8pt）"),
         ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，S17.2 8pt）"),
         (
@@ -1871,6 +1871,9 @@ fn ui_doc_table_check(
         ("COLOR_DANGER", "danger"),
         ("COLOR_BEVEL_SHADOW", "bevel_shadow"),
         ("COLOR_TEXT_ON_PARCH", "text_on_parch"),
+        ("COLOR_WOOD_WARM", "wood_warm"),
+        ("COLOR_GOLD_WARM", "gold_warm"),
+        ("COLOR_SKY_NAVY", "sky_navy"),
     ];
     for line in doc.lines() {
         let parts: Vec<&str> = line.split('`').collect();

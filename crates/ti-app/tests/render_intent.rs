@@ -54,18 +54,18 @@ fn index_layout_matches_doc() {
     };
     assert_eq!(idx.title.h, 96, "index 标题条 h=96（1080 现代版面，S17.2 8pt）");
     assert_eq!(
-        idx.list.y, 392,
+        idx.list.y, 960,
         "index 列表基线 y=392（1080 现代版面，S17.2 8pt；S15.6 QB101 六行重分布）"
     );
-    assert_eq!(idx.list.row_h, 224, "index 列表 row_h=224（1080 现代版面，S17.2 8pt）");
-    assert_eq!(idx.list.item_h, 168, "index 列表 item_h=168（1080 现代版面，S17.2 8pt）");
+    assert_eq!(idx.list.row_h, 88, "index 列表 row_h=224（1080 现代版面，S17.2 8pt）");
+    assert_eq!(idx.list.item_h, 72, "index 列表 item_h=168（1080 现代版面，S17.2 8pt）");
     // 现代版面不变式：首块顶 = 基线 - highlight_offset = 392-40 = 352，须在标题条（12..108）之下留间隙；
-    // 末块底 = 352 + 5*224 + 168 = 1640，须在尾行（1840）之上。
+    // 末块底 = 352 + 5*224 + 168 = 1432，须在尾行（1840）之上。
     let top = idx.list.y - idx.list.highlight_offset;
-    assert_eq!(top, 352, "index 首块顶 = 352（1080 现代版面，S17.2 8pt）");
+    assert_eq!(top, 920, "index 首块顶 = 352（1080 现代版面，S17.2 8pt）");
     assert!(top >= 108, "index 首块顶 {top} 压标题条（条底 108）");
     let bottom = top + 5 * idx.list.row_h + idx.list.item_h;
-    assert_eq!(bottom, 1640, "index 末块底 = 1640（1080 现代版面，S17.2 8pt）");
+    assert_eq!(bottom, 1432, "index 末块底 = 1432（1080 现代版面，S17.2 8pt）");
     assert!(bottom <= 1838, "index 末块底 {bottom} 撞尾行 y=1840");
     let status = idx.extra.get("status").expect("index 缺 status 矩形");
     assert_eq!(status.x, 540, "index status x=540（QB123 屏心居中语义坐标）");
@@ -589,6 +589,25 @@ fn scene_layer_contributes_text_region_pixels() {
     for scene in ["index", "select_role", "select_map", "main_map", "vs", "message", "saveload"] {
         let px = render_scene_1080(scene);
         assert_eq!(px.len(), FB_W * FB_H, "{scene} 帧缓冲应 = 1080×1920");
+        if scene == "index" {
+            // S18.6：index 标题区 = **仪式木框**（`ornate_frame` 112,192,856,672），
+            // 替代细标题条 `title_bar`（避免标题重复）→ 断言木框色像素存在。
+            let n =
+                region_color_count(&px, 112, 192, 856, 4, ti_app::scenes::chrome::COLOR_WOOD_WARM)
+                    + region_color_count(
+                        &px,
+                        112,
+                        192,
+                        856,
+                        4,
+                        ti_app::scenes::chrome::COLOR_GOLD_WARM,
+                    );
+            assert!(
+                n > 0,
+                "index 仪式木框区（112,192,856,4）无 chrome 像素 —— ornate_frame 未画 / 被盖死"
+            );
+            continue;
+        }
         // chrome::title_bar 画 (12,12,W-24,h) 木框 + (16,16,W-32,h-8) 深底 + 左侧金条 + 标题文字。
         let n = region_chrome_count(&px, 16, 16, 1080 - 32, 90);
         assert!(
@@ -621,9 +640,16 @@ fn region_color_count(px: &[u16], x: i32, y: i32, w: i32, h: i32, color: u16) ->
 
 #[test]
 fn selected_card_base_is_color_selected() {
-    let sel = ti_app::menu_shell::COLOR_SELECTED;
     let scs = scenes();
     for scene in ["index", "select_role"] {
+        // 选中态底色 = **数据指定**（S18.6：index 走 `menu_items` 原语的 `color` 令牌；
+        // 其余场景走 `COLOR_SELECTED`）。契约不变式 = 选中卡底 = 该色 + 未选中区 0 命中（不外溢）。
+        let sel = match scene {
+            "index" => ti_render::theme::Theme::default()
+                .by_name("gold_warm")
+                .unwrap_or(ti_app::menu_shell::COLOR_SELECTED),
+            _ => ti_app::menu_shell::COLOR_SELECTED,
+        };
         let px = render_scene_1080(scene);
         let layout = scs.get(scene).expect("scenes.json 缺场景");
         let top0 = layout.list.y - layout.list.highlight_offset;

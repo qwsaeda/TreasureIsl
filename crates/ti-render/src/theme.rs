@@ -51,6 +51,13 @@ pub struct Theme {
     pub secondary: u16,
     /// 清屏黑。
     pub black: u16,
+    /// 暖木色（S18.6 暖色系令牌：Agnes 风格木框；`wood` = 冷蓝旧值保留不动，
+    /// 新场景用本令牌 = 换整套木色风格只改数据）。
+    pub wood_warm: u16,
+    /// 暖金（S18.6 暖色系令牌：Agnes 风格标题金）。
+    pub gold_warm: u16,
+    /// 夜空深蓝（S18.6 暖色系令牌：Agnes 风格夜空渐变底色 = #1A2942）。
+    pub sky_navy: u16,
 
     // === 字号 ===
     /// 正文 TTF 字号（px）。
@@ -68,6 +75,41 @@ pub struct Theme {
 }
 
 impl Theme {
+    /// 按**令牌名**取色（S18.6 数据驱动：`scenes.json` 原语的 `color` 字段写令牌名，
+    /// 换色 = 改数据 / 改 theme.json 镜像，不动渲染代码）。
+    ///
+    /// 未知令牌名 = `None`（消费方回退原语默认色，不 panic）。
+    #[must_use]
+    pub fn by_name(&self, name: &str) -> Option<u16> {
+        Some(match name {
+            "parch_dark" => self.parch_dark,
+            "parch_light" => self.parch_light,
+            "wood" => self.wood,
+            "gold" => self.gold,
+            "gold_glow" => self.gold_glow,
+            "gold_bright" => self.gold_bright,
+            "menu_bg" => self.menu_bg,
+            "menu_border" => self.menu_border,
+            "hilite" => self.hilite,
+            "bevel_hi" => self.bevel_hi,
+            "bevel_shadow" => self.bevel_shadow,
+            "text_on_parch" => self.text_on_parch,
+            "text_on_wood" => self.text_on_wood,
+            "danger" => self.danger,
+            "player" => self.player,
+            "landmark" => self.landmark,
+            "bg" => self.bg,
+            "title_bar" => self.title_bar,
+            "selected" => self.selected,
+            "secondary" => self.secondary,
+            "black" => self.black,
+            "wood_warm" => self.wood_warm,
+            "gold_warm" => self.gold_warm,
+            "sky_navy" => self.sky_navy,
+            _ => return None,
+        })
+    }
+
     /// 默认主题单源常量：`chrome::COLOR_*` 兼容重导出与 `theme.json` 镜像都锚定
     /// 此处（F4 单一事实源：改色只改这里，常量/JSON 自动同步）。
     /// S17.1 航海夜·精修 v2（`docs/process/10_ui_redesign.md` §3 令牌表，8-bit→RGB565 脚本口径）。
@@ -93,6 +135,11 @@ impl Theme {
         title_bar: 0x3A17,
         selected: 0x4E3D,
         secondary: 0x9D30,
+        // S18.6 暖色系令牌（Agnes 风格）：暖木 #8B6914 → 0x8B42；暖金 #FFD700 → 0xFEA0；
+        // 夜空 #1A2942 → 0x1948。
+        wood_warm: 0x8B42,
+        gold_warm: 0xFEA0,
+        sky_navy: 0x1948,
         black: 0x0000,
         // 字号
         font_size: 44,
@@ -162,6 +209,9 @@ impl Theme {
             selected: p.selected.hex().unwrap_or(d.selected),
             secondary: p.secondary.hex().unwrap_or(d.secondary),
             black: p.black.hex().unwrap_or(d.black),
+            wood_warm: p.wood_warm.hex().unwrap_or(d.wood_warm),
+            gold_warm: p.gold_warm.hex().unwrap_or(d.gold_warm),
+            sky_navy: p.sky_navy.hex().unwrap_or(d.sky_navy),
             font_size: f.font_size.unwrap_or(d.font_size),
             title_font_size: f.title_font_size.unwrap_or(d.title_font_size),
             hint_font_size: f.hint_font_size.unwrap_or(d.hint_font_size),
@@ -228,6 +278,12 @@ pub struct PaletteJson {
     pub secondary: Option<Hex16>,
     /// 见 [`Theme::black`]。
     pub black: Option<Hex16>,
+    /// 见 [`Theme::wood_warm`]。
+    pub wood_warm: Option<Hex16>,
+    /// 见 [`Theme::gold_warm`]。
+    pub gold_warm: Option<Hex16>,
+    /// 见 [`Theme::sky_navy`]。
+    pub sky_navy: Option<Hex16>,
 }
 
 /// 字号组：全部可选（缺失回落 `default`）。
