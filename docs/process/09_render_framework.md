@@ -101,6 +101,20 @@ pub struct FontConfig {
 - `touch.rs`（游戏触摸命中，调用 ti-render 的 iso 投影）
 - `shell_ui.rs`（游戏 UI 组件：菜单标签/状态文本）
 
+### 5.1 原语参数语义（`params` / `rect` 约定）
+
+| kind | 关键参数 | 语义（双后端同构） |
+|---|---|---|
+| `rect` | `rect` | 填充矩形（左上 + 宽高） |
+| `text` | `rect` + `tier` + `text`/`text_key` | `rect` **内水平居中**；`tier` = `title`(96px) / `body`(44px) / `hint`(28px)；`text_key` 走 i18n（缺键回退显示 key 本身 → 落库前须核对 `strings.json`） |
+| `icon` | `rect` + `params.icon` | `params.icon` = `ui_icons.json` 图标名；**图标按注册表原生 48px 绘制在 `rect` 左上角**，`rect` 的边长仅表示占位盒（CPU 执行器忽略 `params.size`；Bevy 执行器按 `rect` 边长烘焙纹理，字形仍为原生几何）→ 改图标大小须改 `rect` 边长，不改 `params.size` |
+| `grad` | `params.from_token`/`to_token`/`steps` | 垂直渐变（`steps` 条色带，2..256）；令牌名须在 `theme.by_name` 名单（拼错 → 静默回退 `text_on_parch`） |
+| `glow` | `rect` = **圆心 + 半径** | 径向光晕（`rect.x`/`rect.y` = 圆心，`rect.w` = 半径） |
+| `disc` | `rect` = **圆心 + 半径** | 实心圆盘（同上） |
+
+不变式：`color` 必须是 `theme.by_name` 合法令牌名；`params.icon` 必须在 `ui_icons.json` 注册表内；
+`text_key` 必须在 `strings.json` 内（缺键 = 界面显示裸 key，非静默失败）。
+
 ## 5. 数据分离原则
 
 1. **色板**：**权威 = Rust 默认值**（`ti_render::theme::Theme::default()`）。
