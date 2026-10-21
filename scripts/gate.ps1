@@ -50,14 +50,14 @@ $nativeTarget = 'x86_64-pc-windows-msvc'
 Report ($LASTEXITCODE -eq 0) "cargo build ($nativeTarget)"
 $installed = (@(& rustup target list --installed 2>$null) -join ' ')
 if ($installed -match 'wasm32-unknown-unknown') {
-    # 裸 build 不编 `required-features = ["wasm-shell"]` 的 treasure-wasm（第 4b 项注释的
-    # 既有口径有误：第 4 项并不覆盖 wasm bin）。补 wasm 目标的 feature 门控 clippy
-    # （wasm-shell：wasm bin + 全部集成测试在 wasm32 编译，EXP-104 盲区实证）。
-    & cargo build --workspace --target wasm32-unknown-unknown 2>&1 | Out-Null
+    # S18.8a：**发货 wasm 入口 = ti-engine 的 Bevy 壳**（ti-app 的 macroquad wasm 壳已退役）。
+    # 本项直接构建**交付产物本身**（release wasm）+ 对同一 bin 跑 clippy
+    # （wasm 交付链此前从不被 lint：EXP-104 盲区在 Bevy 壳上重演 → 一并收口）。
+    & cargo build --release --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-wasm --target wasm32-unknown-unknown 2>&1 | Out-Null
     $wasmBuildOk = ($LASTEXITCODE -eq 0)
-    & cargo clippy --target wasm32-unknown-unknown -p ti-app --features wasm-shell --all-targets -- -D warnings 2>&1 | Out-Null
+    & cargo clippy --release --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-wasm --target wasm32-unknown-unknown -- -D warnings 2>&1 | Out-Null
     $wasmClippyOk = ($LASTEXITCODE -eq 0)
-    Report ($wasmBuildOk -and $wasmClippyOk) 'cargo build+clippy (wasm32-unknown-unknown; wasm-shell 门控 bin)'
+    Report ($wasmBuildOk -and $wasmClippyOk) 'cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)'
 } else {
     Skip 'cargo build (wasm32-unknown-unknown)' 'target 未安装，S2.5 解锁'
 }
@@ -72,11 +72,13 @@ if ($installed -match 'aarch64-linux-android') {
 
 # 4b) feature 门控 bin 编译 + lint（EXP-099）
 #     第 1~3 项不带 feature，`required-features = ["native-shell"/"headless"]` 的 bin
-#     （treasure-native / treasure-headless / element-dump / sprite-step / render-png）
+#     （treasure-headless / element-dump / sprite-step / render-png）
 #     从不被编译与 lint —— 它们是**官方排障工具**，静默失效等于没有。
-#     实证：element-dump 曾长期编译失败（4×E0308）而 gate 全绿。wasm bin（treasure-wasm）
-#     由第 4 项 wasm 分支的 feature 门控 clippy 覆盖（EXP-104：wasm-shell 组合的
-#     借用/截断错误 2026-10 实证漏网一次）；android bin 同 android 分支构建行覆盖。
+#     实证：element-dump 曾长期编译失败（4×E0308）而 gate 全绿。S18.8a 起 macroquad
+#     发货壳（treasure-native / treasure-wasm）退役，wasm 交付壳 = ti-engine 的 Bevy 壳，
+#     由第 4 项 wasm 分支构建 + clippy 覆盖；android bin 仍**不被任何行覆盖**
+#     （android 分支构建行没开 `android-shell` feature → bin 被 cargo 跳过，
+#      EXP-107 记录的潜在静默失效，android 壳随 S18.8d 退役）。
 $featOut = & cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless -- -D warnings 2>&1
 Report ($LASTEXITCODE -eq 0) 'clippy feature-gated bins (native-shell/headless; required-features 盲区)'
 if ($LASTEXITCODE -ne 0) { $featOut | Select-Object -Last 30 | ForEach-Object { Write-Host "        $_" } }

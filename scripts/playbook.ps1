@@ -1,4 +1,4 @@
-# 金银岛常用命令集合（按 docs/gamebook.md + AGENTS.md 路由表固化）
+﻿# 金银岛常用命令集合（按 docs/gamebook.md + AGENTS.md 路由表固化）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 cmd [args...]
 #       powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -List
 #
@@ -7,7 +7,7 @@
 #   run-headless     无头回归（tests/scripts/full_run.json 16 步）
 #   run-wasm         构建 + 起本地 HTTP 预览浏览器版
 #   smoke            native+wasm 两端冒烟
-#   gate             全门禁（21 项）
+#   gate             全门禁（22 项）
 #   test             全 workspace 测试
 #   fmt              规范格式化
 #   clippy           lint（-D warnings）
@@ -49,7 +49,7 @@ if (-not $Command -or $Command -eq "-List" -or $Command -eq "--help" -or $Comman
     Write-Host "  run-headless   无头回归（full_run.json）"
     Write-Host "  run-wasm       构建+起本地 HTTP 预览浏览器版"
     Write-Host "  smoke          native+wasm 两端冒烟"
-    Write-Host "  gate           全门禁（21 项）"
+    Write-Host "  gate           全门禁（22 项）"
     Write-Host "  test           全 workspace 测试"
     Write-Host "  fmt            规范格式化"
     Write-Host "  clippy         lint（-D warnings）"
@@ -67,7 +67,8 @@ if (-not $Command -or $Command -eq "-List" -or $Command -eq "--help" -or $Comman
 
 switch ($Command) {
     "run-native" {
-        RunCmd "cargo run -q -p ti-app --features native-shell --bin treasure-native"
+        # S18.8a：发货桌面版 = Bevy 壳（ti-engine 独立 workspace；macroquad 壳已退役）
+        RunCmd "cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native"
     }
     "run-headless" {
         RunCmd "cargo run -q -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json"

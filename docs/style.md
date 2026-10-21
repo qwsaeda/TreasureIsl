@@ -1,6 +1,6 @@
 # 工程规范（Style Guide）
 
-本文件是 Rust 代码的强制规范。与本文件冲突的写法一律返工。选型已定案：**Rust edition 2024 + macroquad**，禁止重新讨论。
+本文件是 Rust 代码的强制规范。与本文件冲突的写法一律返工。选型已定案：**Rust edition 2024 + Bevy 0.20**（渲染引擎；S18.0 推翻旧「macroquad」定案，裁决单一事实源 = `docs/process/11_bevy_migration.md` §1），禁止重新讨论。
 
 ## §5.1 Workspace 布局（内聚：一 crate 一职责，依赖单向）
 
@@ -194,6 +194,11 @@ pub trait Command: Serialize + DeserializeOwned {
 3. 支持 `undo`（用于测试/回滚）。
 
 ### 5.6.5 GPU 渲染约定（S10.4，逐精灵 batch + 纹理图集 + alpha 混合 + TTF）
+
+> **S18.0+ 说明**：本节是 **S10.4 macroquad GPU 渲染**的约定表（历史口径）。
+> S18 起默认交付渲染路径 = **Bevy 壳**（`DrawList` → Bevy 实体，见 `docs/process/08_render_arch.md`
+> 与 `docs/process/11_bevy_migration.md`）；下表仍适用于 macroquad 尚存的路径
+> （CPU/legacy 画布 + android 壳，S18.8d 退役）。**新增代码以 Bevy 口径为准**。
 
 **强制约束**（S10 起，`docs/modernization.md` §1 修订）：
 

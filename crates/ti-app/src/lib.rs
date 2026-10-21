@@ -4,7 +4,7 @@
 //! - [`error`]：跨层错误聚合（`docs/style.md` §5.5），任何子系统的错误在这里
 //!   汇聚成一个类型，入口处统一打印；
 //! - [`glyph_raster`]：真实 `GoldLand.Fnt` 字形 → 墨点位图 + 豆腐块回退
-//!   （`treasure_wasm` 壳与验收测试共用，S2.5 补实）；
+//!   （验收测试与 shell 共用，S2.5 补实）；
 //! - [`audio_prep`]：`music.lpk` 解包 → `parse_wav` → `Mixer` → 可播放 WAV 字节
 //!   （S2.5 补实）与 [`shell_ui`]：壳的菜单表/状态行文本；
 //! - [`game_app`]：可玩交互核心（S5.1，把 `ti-core::rules` 的 13 个玩法模块接进表现层，
@@ -12,7 +12,10 @@
 //! - [`touch`]：触屏输入层（**直接触摸界面元素，不画虚拟按键**，见 `docs/modernization.md` §5）；
 //! - [`i18n`]：文本访问层（`S.get("key")` → `assets/data/strings.json`，S8.3 数据化）。
 //!
-//! 三端入口 bin 见 `src/bin/`（`treasure-wasm` 需 `wasm-shell` feature）。
+//! 三端入口 bin 见 `src/bin/`（`treasure-headless` 需 `headless` feature；
+//! `treasure-android` 需 `android-shell` feature）。S18.8a 起**发货入口 = Bevy 壳**
+//! （`crates/ti-engine/src/bin/treasure_bevy.rs`：`treasure-bevy-native` / `treasure-bevy-wasm`），
+//! 本 crate 的 macroquad native/wasm 壳已退役。
 
 pub mod audio_prep;
 pub mod commands;
@@ -32,7 +35,6 @@ pub mod shell_ui;
 pub mod sprite_atlas;
 pub mod terrain_atlas;
 pub mod touch;
-pub mod ttf_font;
 pub mod widgets;
 pub mod world_camera;
 pub mod z_layers;

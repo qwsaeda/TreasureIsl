@@ -31,10 +31,10 @@
 |---|---|---|
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 15 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
-| [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 12 |
-| [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 9 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101） | 29 |
-| [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 28 |
+  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 13 |
+  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107） | 31 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 33 |
 
 ## 条目索引
 
@@ -100,9 +100,9 @@
 | EXP-056 | tools | | 多帧精灵 HD PNG 分帧命名（NN_hd_fK.png），Rust 侧须按帧列表注入（S7.5 实测；条目实体在 tools.md） |
 | EXP-057 | code | | 门禁脚本判 oracle 须区分「类型重导出=允许」vs「oracle_* 函数调用=禁」（check_oracle_boundary，S8.8） |
 | EXP-058 | process | | 子代理报「已 verified」必须 Test-Path + 实跑复核；台账 verified ↔ evidence ↔ 代码符号三方对账（S9.5 commands.rs 虚报教训，`check_ledger_reality` 第 14 项） |
-| EXP-059 | code | | 地形 camera 钳位负值 + 触摸/渲染坐标系脱节 = 主地图界错乱双 P0（`terrain_camera` 去 `max(0)` 钳位，`grid_cell_at` 走等距投影逆变换，S10.1） |
+| EXP-059 | process | | 地形 camera 钳位负值 + 触摸/渲染坐标系脱节 = 主地图界错乱双 P0（`terrain_camera` 去 `max(0)` 钳位，`grid_cell_at` 走等距投影逆变换，S10.1） |
 | EXP-060 | process | | HD 资产不递归子目录 + 场景 key 碰撞 = HD 全失效 + 切场景残留（`read_dir` 非递归陷阱，注入数须断言=目录全量，S10.2） |
-| EXP-061 | code | | 行内全路径引用（`ti_core::data::balance()`）vs use 声明——子代理风格漂移，改动前读既有 use 块，行内全路径=0（S10.3 教训） |
+| EXP-061 | process | | 行内全路径引用（`ti_core::data::balance()`）vs use 声明——子代理风格漂移，改动前读既有 use 块，行内全路径=0（S10.3 教训） |
 | EXP-063 | process | | doccheck 任务 ID 检查是散文全库扫描：新阶段任务先登记 `plan/ledger.yaml`（pending 即可）再写文档引用；散文范围写法「某阶段 x」会被当 token 抓，写「S10 系列」或逐个编号（S11 登记 S12 WBS 踩坑） |
 | EXP-064 | process | | 子代理只拿到任务书 = 跨会话上下文丢失：会话起点 prompt 必注入仓库绝对路径 + crate 前缀 `ti-`（非 `ty-`）+ 关键符号路径 + 契约锚点 + 当前任务与已 verified 清单，回执逐条对齐否则返工（模块并行 loop 纪律） |
 | EXP-065 | process | | 台账被文件级回退（`git checkout -- <file>`/restore 不进 reflog）会静默丢任务条目：23 条丢失 → doccheck 第 9 项 115 error；兜底 = gate 第 14 项「孤儿 evidence 检测」（`evidence/` 里任务 ID 命名的文件其 ID 必须在台账）+ 长阶段收尾即 commit |
@@ -113,7 +113,7 @@
 | EXP-071 | code | | 列表场景触摸命中带必须与渲染 `item_rect` 公式正逆成对：`touch.rs` 删旧常量/旧 API，新增 `scene_list_bands`/`slot_bands` 从 `ListLayout` 推导，三场景 `on_touch` 改读 `scenes.json`，doccheck2 第 11 项 `check_touch_render_pair` 固化（S11 审计 N3） |
 | EXP-072 | process | | 表现层改触摸/渲染坐标后 `cargo test` 全绿却界面错乱（漏到用户截图才发现）：P4-1 只锁 PCX 解码基准，不锁「场景渲染最终像素」→ `visual_regression` 3 场景逐像素 diff + gate 第 18 项。正文见 `process.md` |
 | EXP-073 | code | | 触摸/渲染 band 数必须 == 渲染行数，禁止硬编码：`select_role.rs` 硬编码 9 条带实渲 5 行，多出的 4 条静默选第 0 角色（EXP-059/071 第 3 次变体）→ band 数走场景常量 `ROLE_COUNT` + doccheck2 第 12 项。正文见 `code.md` |
-| EXP-074 | code | | 数据表迁移必须对拍旧验收视觉：凭空重填 + `-item_h/2` 居中性误解 + 缺 key 静默置 0 + 视觉基准自生成（循环论证）→ `highlight_offset`/`gold_x`/`extra_scalar` + 基准=回归后旧视觉帧（EXP-059/067/071 第 4 次变体）。正文见 `code.md` |
+| EXP-074 | process | | 数据表迁移必须对拍旧验收视觉：凭空重填 + `-item_h/2` 居中性误解 + 缺 key 静默置 0 + 视觉基准自生成（循环论证）→ `highlight_offset`/`gold_x`/`extra_scalar` + 基准=回归后旧视觉帧（EXP-059/067/071 第 4 次变体）。正文见 `code.md` |
 | EXP-075 | process | | HD 精灵洋红框 = **两条路径各一根因**（RGB565 路漏 `idx==0` 跳过 + HD 路软 alpha/漏 blit），S13.5 只修 HD 路，而 native 默认走 RGB565 故"没解决"；**native 默认质量模式才是实机路径**。正文见 `process.md` |
 | EXP-076 | code | | 「贴图覆盖菜单/错位」= 越界裁剪策略错 + 渲染管线无契约：Rust `ox.min(FB_W-1)` 把越界精灵拉回右缘，原版 `sub_5EAA8` 源窗求交为空即**整条不画**；z-order 本身无错 → `clip_rect` 纯函数越界早退 + 契约文档 + 快照门禁。正文见 `code.md` |
 | EXP-077 | process | | 无原版渲染 ground truth 时禁止向用户索要截图（ARM WinCE exe 本机跑不起来；替代证据链=用户指认偏移量/像素对比工具/QEMU 系统模式需 WinCE 镜像；补网格层 a1[247]） |
@@ -138,6 +138,17 @@
 | EXP-099 | process | | `required-features` 门控的 bin（element-dump / sprite-step / render-png / treasure-native / treasure-headless）不被 gate 第 1~3 项编译/lint ⇒ 官方排障工具静默失效（element-dump 长期编不过而 gate 全绿）。解法 = 新增 gate 第 4b 项 `clippy --all-targets --features ti-app/native-shell,ti-app/headless`，门禁计数 21→22。正文见 `process.md` |
 | EXP-100 | process | | 脚本化批量改 import 的正则陷阱：捕获组 `+` 漏单段模块、前缀带尾 `::` + `split('::')[-1]` 得空串把限定名削成裸类型名（43 处全编译失败）；正解 `(?:…::)*`、插入点锚文件顶部 import 区、嵌套 mod 补 `use super::`、逐文件 `cargo check` + 全量 clippy 双跑当裁判。正文见 `process.md` |
 | EXP-101 | process | | `required-features` bin 只在「目标+feature 双命中」时被编译：裸 wasm target build 跳过 treasure-wasm（需 `wasm-shell`），gate 的 clippy 组合又只覆盖 native 侧 feature → 借用错误 + wasm 独有 clippy 3 处旧伤漏网到 `build_wasm.ps1` 才爆；gate 第 4 项 wasm 分支并入 `clippy --features wasm-shell --all-targets` 复合判定。正文见 `process.md` |
+| EXP-107 | process | | 交付壳换引擎时「未被任何门禁行编译的产物」会静默烂掉：android 壳因门禁 android 行不开 `android-shell` feature 被 cargo 跳过（实际早已编译不过），Bevy 交付壳（独立 workspace）的 wasm 分支从未被 clippy 覆盖（首次纳入即暴露 5 处死代码/告警）；解法 = 门禁 wasm 项直接指向交付产物（build + `clippy -D warnings`）+ 死代码当场清理 + 台账符号期望随退役迁移。正文见 `process.md` |
+| EXP-108 | process | | 门禁检查的「行识别条件」写错 → 恒不触发 = 一个不存在的门禁：doccheck2 分卷条数对账用 `.md](` 判行，而首列实为 `[`code.md`](code.md)`（中间有反引号）→ 该检查自落地起一次都没真正执行 → 分卷表条数漂移（code +5 / tools +1）与索引缺 6 行长期无人发现；解法 = 判据改 `](` + 解析失败即报错 + 补齐漂移 + **负测纪律**（新检查上线前故意破坏一次看是否报红）。正文见 `process.md` |
+| EXP-109 | build | | PowerShell 5.1 对「无 BOM 的 UTF-8 .ps1」按 ANSI(GBK) 解析 → 中文提示里的字节被误判成引号 → 整文件 ParserError；仓库里唯二的 `playbook.ps1`（AGENTS 的一键命令入口）+ `smoke.ps1` 缺 BOM → **入口从未跑起来**而门禁不跑这两个脚本（无人发现）；解法 = 补 UTF-8 BOM + CRLF、改完先 ParseFile 语法自检再真跑一次。正文见 `build.md` |
+| EXP-049 | formats | | 容器条目 key→业务名反查必须走三级权威源（mapinfo.ini > exe UTF-16 资源名 > EXTRAS 多键证实名），禁止纯哈希命名（S6.5 实测）。正文见 `formats.md` |
+| EXP-050 | tools | | CJK 路径下 cargo `env!("CARGO_MANIFEST_DIR")` 拼出的路径丢中文 → `fs::read` 报 os error 2；改用 `PathBuf` 逐段拼 + 编译期 `include_str!` 定位仓库根。正文见 `tools.md` |
+| EXP-062 | build | | macroquad `flip_y` 必须端侧固定（native 不翻 / wasm 翻），禁止因「画面反了」反复翻转（S5/S6 后续实测）。正文见 `build.md` |
+| EXP-102 | code | | Bevy 手搓插件表（`MinimalPlugins` + 手动 `add_plugins`）→ 实体在但一个像素没画（黑屏也算过验收）；必须用官方 `DefaultPlugins`。正文见 `code.md` |
+| EXP-103 | code | | Bevy z 层：可见性要负值、排序是升序（背景最负才在最底）；正数 z 在相机背后。正文见 `code.md` |
+| EXP-104 | code | | 离屏截图的采样点标签诱人：把四角采样当成「整屏铺满」，连改 3 处本来正确的代码。正文见 `code.md` |
+| EXP-105 | code | | 原语表 z 层卓埋 / 行高变了栏位没算 / JSON `text_key` 先验存在。正文见 `code.md` |
+| EXP-106 | code | | 原语批次的调用位置 = 层序；背景层必须在运行时内容**之前**画。正文见 `code.md` |
 
 
 ## 条目格式（写新条时照抄）

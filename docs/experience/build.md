@@ -90,5 +90,24 @@
   即 native 不翻转、wasm 翻转。后续遇到画面反向时，先查 frame_delta/窗口尺寸/渲染层级/纹理上传路径，不得先改 `flip_y`。
 - 验证：native 运行主菜单时，顶部标题条和「金银岛」位于屏幕上方，底部状态行位于屏幕下方；全仓 `cargo test` 与 `scripts/gate.ps1` 全绿。
 
+### EXP-109 构建/工具：PowerShell 5.1 对「无 BOM 的 UTF-8 脚本」按 ANSI 解析 → 文档里的一键命令入口根本跑不起来
+- **现象**：S18.8a 改 `scripts/playbook.ps1`（AGENTS.md 里的「常用命令一键入口」）与
+  `scripts/smoke.ps1` 后做语法自检，两份脚本**都报 ParserError**（`字符串缺少终止符` /
+  `ParserError: TerminatorExpectedAtEndOfString`）。实测
+  `powershell -ExecutionPolicy Bypass -File scripts\playbook.ps1 -List` 直接失败 ——
+  **AGENTS.md 写着的一键入口在中文 Windows 上从未跑起来过**（HEAD 版本即如此，非本次引入）。
+- **根因**：PowerShell 5.1 读 `.ps1` 时，**无 BOM 就按系统 ANSI 代码页**（中文 Windows = GBK）
+  解码；文件是 UTF-8 → 汉字被逐字节误判 → 某些字节序列恰好构成引号/反引号 → 整文件语法崩。
+  仓库里 5 个 `.ps1` 只有 `playbook.ps1` / `smoke.ps1` 缺 UTF-8 BOM（其余 3 个都有）→
+  恰好就是这两个含大量中文提示的脚本。门禁**不跑**这两个脚本（gate 只跑 gate.ps1 /
+  flywheel_readme.ps1，两者有 BOM）→ 坏了也没人发现。
+- **解法**：① 两个脚本补 **UTF-8 BOM**（BOM = PS 5.1 认 UTF-8 的唯一可靠信号），
+  换行统一 CRLF，与仓库其余 `.ps1` 一致；② 写/改 `.ps1` 时**必须带 BOM**（写工具若不保留 BOM，
+  改完立刻用 `[Parser]::ParseFile` 做语法自检 + 真跑一次）；③ 文档里给出的命令要**真跑一遍**
+  再写进 AGENTS/发布说明（本次即靠「跑一次 playbook -List」发现入口是死的）。
+- **验证**：`powershell -ExecutionPolicy Bypass -File scripts\playbook.ps1 -List` → exit 0
+  （16 项命令正常列出）；`scripts\smoke.ps1` → exit 0（native 构建 + 全测试 + wasm 构建 +
+  HTTP 端点 200 + unpak + 台账 全绿，「SMOKE RESULT: PASS」）。
+
 
 

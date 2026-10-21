@@ -19,29 +19,37 @@
 
 ## 平台产物
 
-| 平台 | 产物 | 路径 | 体积 (S5.4 后最新) |
+> **S18.8a：发货壳切 Bevy**。桌面/浏览器的**唯一发货入口** = `crates/ti-engine`（独立 workspace）
+> 的 Bevy 壳 `treasure-bevy-native` / `treasure-bevy-wasm`；ti-app 的 macroquad native/wasm 壳
+> （`treasure-native` / `treasure-wasm`）已删除（Android 壳仍在，S18.8d 切 Bevy）。
+> 浏览器页（wasm-bindgen 胶水 + HTML + Bevy 资源管线）属 **S18.8e**，当前 `web/` 只有 wasm 产物与资源。
+
+| 平台 | 产物 | 路径 | 体积 (S18.8a 后最新) |
 |---|---|---|---|
-| 桌面（当前收口） | `treasure-native.exe` | `target/release/` | 见 `evidence/S5.4.log` |
-| 浏览器（当前收口） | `treasure_wasm.wasm` (S6.4 后 745 KB，见 `docs/modernization.md` §9) + JS 壳 + 资源 | `web/` | 见 `evidence/S5.4.log` |
+| 桌面（当前收口） | `treasure-bevy-native.exe` | `crates/ti-engine/target/release/` | 见 `evidence/S18.8a-wasm-size.log` 同目录口径（Bevy 壳体积待 S18.8e 复验） |
+| 浏览器（当前收口，页面待 S18.8e） | `treasure_bevy_wasm.wasm`（Bevy 壳）+ 真实资源（无 JS 壳/HTML） | `web/` | 见 `evidence/S18.8a-wasm-size.log`（预算口径 ≤8 MB，见 `docs/process/11_bevy_migration.md` §3） |
 | Android（后续，Mac 编译） | — | — (S2.6 在 Mac NDK/SDK 工具链出 APK，本机不产出) | — |
 
-完整 sha256 见 `evidence/S4.4.log`（S4.3 时点 wasm 675,016 B）、`evidence/S5.4.log`；S5.6/S6.1~S6.4 完成后 wasm 增长至 745 KB（体积表见 `docs/modernization.md` §9，首屏 308,227 B / 非首屏 250,154 B）。
+完整 sha256 见 `evidence/S4.4.log`（S4.3 时点 wasm 675,016 B）、`evidence/S5.4.log`；S5.6/S6.1~S6.4 完成后 macroquad wasm 增长至 745 KB（体积表见 `docs/modernization.md` §9，首屏 308,227 B / 非首屏 250,154 B）——**该组数字是 macroquad 壳的历史记述**。
 **桌面 + 浏览器为当前可玩收口目标**（S5.1–S5.4：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定）；
 Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译。
 
-### 体积预算达成（见 docs/plan-s4.md §S4.3；S4.3 时点实测，S5.6 及 S6.1~S6.4 完成后最新值见 modernization.md §9）
+### 体积预算达成（历史口径：docs/plan-s4.md §S4.3；**当前预算见 `docs/process/11_bevy_migration.md` §3**）
 
-| 项 | S4.3 实测 | S5.6 及 S6.1~S6.4 完成后 | 预算 | 状态 |
+| 项 | S4.3 实测（macroquad 壳，历史） | S5.6 及 S6.1~S6.4 完成后（历史） | 预算 | 状态 |
 |---|---|---|---|---|
-| wasm 主体 | 675,016 B | 745 KB（modernization §9） | ≤ 800,000 B | PASS |
-| 首屏附属资源 | 102,079 B | 308,227 B（modernization §9 明细） | ≤ 490 KB（modernization 口径；S4.3 时点 ≤ 150,000 B） | PASS |
+| wasm 主体 | 675,016 B | 745 KB（modernization §9） | ≤ 800,000 B（**S18.0 已作废**，新预算 ≤8 MB） | 历史 PASS（口径已换） |
+| 首屏附属资源 | 102,079 B | 308,227 B（modernization §9 明细） | ≤ 490 KB（modernization 口径；S4.3 时点 ≤ 150,000 B） | 历史 PASS（口径已换） |
 | 非首屏 (music.lpk) | 67,737 B | 250,154 B（modernization §9） | ≤ 180 KB（modernization 口径；S4.3 时点 ≤ 100,000 B） | 超 S4.3 时点预算，modernization §9 已重列口径 |
 
 ## 性能说明
 
 - **桌面 60fps**：`--features stats` 实测 avg 60.0/60.0 fps（S4.3 验收值；`evidence/S4.4.log` 复测 60.9/59.3，同口径），主循环脏矩形呈现
-  （静止帧 uploads=0 skipped=60/60，100% 跳帧、零 GPU 上传）。
-- **WASM 体积**：S6 后 745 KB（release，见 `docs/modernization.md` §9），含 macroquad + miniquad gl.js + 真实字体/音效资源，单文件可运行。
+  （静止帧 uploads=0 skipped=60/60，100% 跳帧、零 GPU 上传）——**macroquad 壳的历史口径**。
+  S18.8a 起交付壳 = Bevy（Bevy 内建时钟，静止跳帧指标退役，`stats::FpsMeter::bevy_tick`），
+  新口径的 native/wasm 实测属 **S18.8e**。
+- **WASM 体积**：macroquad 壳 S6 后 745 KB（历史，见 `docs/modernization.md` §9）；**当前交付壳 = Bevy**，
+  体积口径与预算见 `docs/process/11_bevy_migration.md` §3（≤8 MB），实测记录在 `evidence/S18.8a-wasm-size.log`。
   （S1.7b 起 OGG 转码默认不入游戏运行时 —— opus-pure 仅离线 build_assets/mod2ogg 链路开启，见「已知限制」；OGG 走预转码产物播放。）
 - **传输层压缩**：浏览器对 `.wasm` 与 `.js` 普遍启用 gzip/brotli，实际下载体积更小（部署侧关注项）。
 
@@ -92,7 +100,8 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
 - **S6.4 多帧动画**：`filenum INI` 的 `num` 字段是帧数，实测 4 个 `num=5` 精灵
   （14/31/32/37.pcx，高度 199 = 5×40 帧纵向堆叠）；`advance_animation(delta_ms)`
   按毫秒推进，`frame()` 取当前帧号；`GameApp::render` 每帧按 `frame_delta_ms`
-  推进（native+wasm 用 `macroquad::time::get_time()` 算帧耗时）。5 项单测全绿
+  推进（macroquad 壳用 `macroquad::time::get_time()` 算帧耗时；S18.8a 起交付壳 = Bevy，
+  帧耗时取 Bevy 内建时钟 `Time::delta`）。5 项单测全绿
   （多帧切分 / 帧号环绕 / 帧推进 / 多帧 blit 差异 / 静态精灵帧不变）。
 - **S6.5 容器条目业务名修正**：`build_assets` 的 `raw/` 目录与 `manifest.json`
   及 `unpak --out` 导出条目改按**业务名**命名（原为 `<key:08x>.bin` 哈希名，
@@ -103,7 +112,7 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
   单测 `resource_names` 7/7 + `build_assets` 3/3 全绿；注释里 `804615c2.bin`
   改 `glmusic.mod`（`mod_pcm.rs`/`mod2ogg.rs`/`audio_asset.rs`）。
 
-三端产物（S5.4 复测）：
+三端产物（S5.4 复测，**macroquad 壳历史口径**；当前交付产物见上方「平台产物」）：
 
 | 平台 | 产物 | 路径 | sha256 (前 16) |
 |---|---|---|---|
@@ -135,19 +144,20 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
 ### 桌面 (Windows)
 
 ```sh
-cargo build --release -p ti-app --features native-shell
-target/release/treasure-native.exe
-# 资源文件需与 exe 同级：data/{GoldLand.Fnt,font.dat,settings.dat,music.lpk}
+# S18.8a：交付壳 = Bevy（ti-engine 独立 workspace；macroquad 壳已退役）
+cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
+# 资源文件在仓库根的 data/（Bevy 壳按仓库根读 legacy/data 同源资源）
 # S5.1 起：菜单→选人→选图→主地图→贸易/建造→战斗→存读档 全链路可玩
 ```
 
 ### 浏览器 (WASM)
 
 ```sh
+# S18.8a：wasm 交付产物 = Bevy 壳 `treasure-bevy-wasm`（构建 + 拷资源到 web/）
 powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
-cargo run -q -p ti-app --features wasm-shell --bin treasure-wasm   # 或 serve 起 web/
 cargo run -q -p ti-tools --bin serve -- --dir web --port 8080
-# 打开 http://localhost:8080
+# 注意：S18.8a 的 web/ 只有 wasm 产物 + 真实资源；**可打开的 Bevy 浏览器页**
+# （wasm-bindgen JS 胶水 + HTML + 资源管线 + 体积预算复验）属 S18.8e。
 ```
 
 ### Android（Mac 工具链）
@@ -176,7 +186,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 167 任务（152 verified；台账计数随 S8–S18 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 167 任务（153 verified；台账计数随 S8–S18 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`

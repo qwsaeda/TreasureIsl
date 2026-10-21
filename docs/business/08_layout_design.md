@@ -71,10 +71,12 @@
 
 ## 3. 字体
 
-- 方案：开源 CJK 黑体（Noto Sans CJK / 思源黑体），TTF 加载器已支持（`ttf_font.rs`）
+- 方案：开源 CJK 黑体（Noto Sans CJK / 思源黑体），TTF 加载器已支持
+  （`ti_render::font::TtfFont`，ab_glyph 软件光栅化；S18.8a 起 ti-app 的 macroquad 字体包装
+  `ttf_font.rs` 随 macroquad 壳一并退役，现行 TTF 口径唯一事实源 = `ti_render::font::TtfFont`）
 - 1080 呈现层 TTF 字号 **44px**（`menu_shell::FONT_SIZE_PX`）；位图字体回退 advance 12px
   （`GLYPH_ADVANCE`），缺失字体不静默空白（回退并可诊断）
-- 字体文件放 `assets/fonts/`，TTF 加载走 `load_ttf_from_path`（已有）
+- 字体文件放 `assets/fonts/`，TTF 加载走 `TtfFont::from_bytes`（Bevy 壳）/ `load_ttf_from_path`（native）
 
 ## 4. 各场景版面（1080×1920）
 

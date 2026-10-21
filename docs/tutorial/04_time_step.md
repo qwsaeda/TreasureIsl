@@ -138,8 +138,11 @@
 
 ```
 crates/ti-app/src/game_app.rs  — set_frame_delta_ms
-crates/ti-app/src/bin/treasure_native.rs — tick_frame_time
+crates/ti-engine/src/bin/treasure_bevy.rs — 帧耗时取 Bevy 内建时钟（Time::delta）
 ```
+
+> **S18.8a**：交付壳切 Bevy 后，帧耗时不再由手写 `tick_frame_time()`（macroquad 全局时钟）
+> 提供，而是取 Bevy 的 `Time` 资源；`set_frame_delta_ms` 的语义与用途不变。
 
 ### 本项目选择
 

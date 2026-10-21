@@ -1,11 +1,19 @@
-//! S4.3 桌面 60fps 冒烟：以 stats 特性跑 `treasure-wasm`（macroquad 桌面窗口版），
-//! 抓 stdout 的 `[stats]` 行，验证平均 FPS 达到 60 且脏行带跳帧率 > 0。
+//! S4.3 桌面 60fps 冒烟（S18.8a 重锚到 Bevy 发货壳）：跑 `treasure-bevy-native`
+//! （`crates/ti-engine` 独立 workspace 的 Bevy 壳），抓 stdout 的 `[stats]` 行，
+//! 验证平均 FPS 达到 60。
 //!
-//! 用法：`cargo test -p ti-app --features stats --test s43_fps_smoke`
+//! 用法：
+//! ```sh
+//! cargo build --release --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
+//! cargo test -p ti-app --features stats --test s43_fps_smoke
+//! ```
 //! 前提：桌面有 GPU/窗口环境（CI 无头环境跳过）。
 //!
 //! fps 阈值：最近 2 个 1s 窗口 avg >= 40（vsync 60Hz 下限带，重载机波动容忍；
 //! 60fps 达标实证见 evidence/S4.3.log 实测 57.0/60.0/60.0）。
+//!
+//! S18.8a 变更：macroquad 桌面壳（`treasure-native`）退役，发货壳 = Bevy；
+//! 计时器随之换成 Bevy 内建时钟（`stats::FpsMeter::bevy_tick`，静止跳帧指标退役）。
 
 use std::io::BufRead;
 use std::process::{Command, Stdio};
@@ -16,11 +24,16 @@ const WAIT_SECS: u64 = 45;
 
 #[test]
 fn desktop_60fps_with_dirty_rect_skip() {
-    let target = target_dir().join("target").join("release").join("treasure-wasm.exe");
+    let target = target_dir()
+        .join("crates")
+        .join("ti-engine")
+        .join("target")
+        .join("release")
+        .join("treasure-bevy-native.exe");
     if !target.exists() {
         eprintln!(
             "[s4.3] SKIP: 未找到 {}，请先运行 \
-             `cargo build -p ti-app --features stats,wasm-shell --release`",
+             `cargo build --release --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native`",
             target.display()
         );
         return;
@@ -29,7 +42,7 @@ fn desktop_60fps_with_dirty_rect_skip() {
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
-        .expect("启动 treasure-wasm 成功");
+        .expect("启动 treasure-bevy-native 成功");
     let mut child = child;
 
     let stdout = child.stdout.take().expect("stdout 已 pipe");
@@ -76,7 +89,7 @@ fn desktop_60fps_with_dirty_rect_skip() {
             .join(", ")
     );
     // 阈值 40 = vsync 60Hz 下限的可容忍抖动带（CI/重载机 60→40+ 波动，
-    // 见 evidence/S4.3.log；脏矩形跳帧计数是 S4.3 的直接证据，fps 仅防回归）。
+    // 见 evidence/S4.3.log；fps 仅防回归）。
     assert!(stable, "桌面 fps 验收要求最近 2 个 1s 窗口平均 fps >= 40（vsync 60Hz 下限带）");
 }
 

@@ -37,7 +37,10 @@ SYMBOL_EXPECTATIONS = {
     ],
     "S10.4": [
         r"pub\s+struct\s+GpuRenderer",
-        r"pub\s+fn\s+load_ttf",
+        # S10.4 的 `ttf_font.rs load_ttf` = macroquad GPU 字体包装（ti-app），
+        # S18.8a 随 macroquad 发货壳退役（壳删后零引用死代码）→ TTF 口径单一事实源
+        # 迁到 `ti_render::font::TtfFont::from_bytes`（ab_glyph 软件光栅化，CPU↔Bevy 两侧共用）。
+        r"pub\s+fn\s+from_bytes",
     ],
     # 按需追加：新增任务若声明代码符号，在此登记（EXP-058）。
 }

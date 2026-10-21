@@ -54,7 +54,7 @@ ti-app::menu_shell + ti-platform::gfx  帧缓冲 / 视口 / 缩放 / 上屏
 ## 4. 输入接线
 
 ```
-宏（native/wasm/android）读按键/指针
+壳（native/wasm/android）读按键/指针
    ├─ KeyState  → GameApp::poll(&k)          → GameInput → Scene::on_input
    └─ TouchSample（逻辑坐标）→ GameApp::poll_touch → Scene::on_touch
 ```
@@ -82,10 +82,14 @@ ti-app::menu_shell + ti-platform::gfx  帧缓冲 / 视口 / 缩放 / 上屏
 
 ## 7. 三端入口差异
 
+> **S18.8a：发货壳 = Bevy**（`crates/ti-engine` 独立 workspace）。ti-app 的 macroquad
+> native/wasm 壳（`treasure-native` / `treasure-wasm`）已删除；下表「桌面 / 浏览器」两行
+> 已改为 Bevy 壳入口。Android 壳仍是 macroquad（S18.8d 切 Bevy）。
+
 | 端 | bin | 资源来源 | 备注 |
 |---|---|---|---|
-| 桌面 | `treasure-native` | `std::fs::read(legacy/data/...)` | F1 缩放 / F2 滤波 / F3 边框 / F4 画质 |
-| 浏览器 | `treasure-wasm` | `macroquad::file::load_file("assets/...")` | `scripts/build_wasm.ps1` 产 `web/` |
+| 桌面 | `treasure-bevy-native`（ti-engine） | `std::fs` 读仓库 `data/` | F1 缩放 / F2 滤波 / F3 边框 / F4 画质 |
+| 浏览器 | `treasure-bevy-wasm`（ti-engine） | wasm 分支暂无资源加载（资产管线 = S18.8e） | `scripts/build_wasm.ps1` 产 `web/`；可打开的浏览器页属 S18.8e |
 | Android | `treasure-android` | APK `assets/`（macroquad android target 自动映射） | 编译在 Mac，见 `android/README.md` |
 | 无头 | `treasure-headless` | 无（不加载资源） | 跑 `tests/scripts/full_run.json` 回归 |
 

@@ -91,16 +91,18 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 3  cargo test  --workspace
 4  构建（范围随阶段解锁，未解锁的行在脚本里跳过并打印 SKIP）：
      cargo build --workspace --target x86_64-pc-windows-msvc          # S0.1 起
-     cargo build --workspace --target wasm32-unknown-unknown          # S2.5 解锁（需先 rustup target add）
+     cargo build --release --manifest-path crates/ti-engine/Cargo.toml \
+         --bin treasure-bevy-wasm --target wasm32-unknown-unknown     # S2.5 解锁（需先 rustup target add）
      cargo build -p ti-app --target aarch64-linux-android             # S2.6 解锁（需 NDK）
 4b feature 门控 bin 编译 + lint（EXP-099：`required-features` 的 bin 不被 1~3 项覆盖）：
      cargo clippy --workspace --all-targets \
          --features ti-app/native-shell,ti-app/headless -- -D warnings
      （编译并 lint 全部 `required-features = ["native-shell"/"headless"]` 的 bin：
-      treasure-native / treasure-headless / element-dump / sprite-step / render-png。
-      这 5 个 bin 是**官方排障工具**，历史上因 1~3 项不带 feature 而长期不被编译验证，
-      导致 element-dump 编译失败长期静默；wasm / android bin 由 S2.5/S2.6 的 target
-      构建行覆盖，不在本项范围）
+      treasure-headless / element-dump / sprite-step / render-png。
+      这 4 个 bin 是**官方排障工具**，历史上因 1~3 项不带 feature 而长期不被编译验证，
+      导致 element-dump 编译失败长期静默；wasm 交付壳 = ti-engine 的 Bevy 壳
+      （`treasure-bevy-wasm`），由第 4 项 wasm 分支构建 + clippy 覆盖；
+      android bin 仍不被任何行覆盖（EXP-107，随 S18.8d 退役））
 5  占位扫描：Select-String -Path crates/**/*.rs -Pattern 'TODO|FIXME|unimplemented!|todo!|panic!\(' → 0 命中
 6  库代码 unwrap 扫描：同上 Pattern '\.unwrap\(\)|\.expect\('，排除 `tests/` 目录 → 0 命中
     （内联 `#[cfg(test)]` 模块同样禁止 unwrap；本机无 ripgrep，扫描一律用

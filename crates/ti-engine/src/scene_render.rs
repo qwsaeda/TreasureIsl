@@ -487,6 +487,9 @@ pub struct DrawListEntity;
 /// `Clear` -> `ClearColor` 资源。层序 z 见函数内说明。
 ///
 /// 返回生成的实体数。
+// S18.8a：门禁新增 wasm 交付壳 clippy 覆盖（`cargo clippy -D warnings` 覆盖到本 crate），
+// `Handle<Font>` 按值传入但函数体只读（`Text2d` 构造需要 owned clone）→ 显式豁免该 lint。
+#[allow(clippy::needless_pass_by_value)]
 pub fn spawn_draw_list(
     world: &mut World,
     font: Option<Handle<Font>>,

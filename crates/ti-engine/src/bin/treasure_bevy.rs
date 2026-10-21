@@ -32,11 +32,13 @@ use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::input::mouse::MouseButton;
 use bevy::input::touch::Touches;
 use bevy::prelude::*;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::render_resource::TextureFormat;
 use bevy::sprite::Sprite;
 use bevy::text::Font;
 use bevy::window::{Window, WindowResolution};
 use ti_app::game_app::{GameApp, GameInput, KeyState, Scene};
+// S18.8a：`parse_font_bytes` 仅 native 分支用（wasm 分支无 std::fs 资源读）→ 按目标编译。
+#[cfg(not(target_arch = "wasm32"))]
 use ti_app::menu_shell::parse_font_bytes;
 use ti_app::scenes::SceneKind;
 use ti_app::stats::FpsMeter;
@@ -76,10 +78,6 @@ struct MousePos {
     /// 窗口物理像素 y。
     y: f32,
 }
-
-/// 当前帧 RGBA8 纹理句柄（`Sprite.image` 显示目标；旧句柄 refcount 归零自动回收）。
-#[derive(Resource, Default)]
-struct FrameTex(Option<Handle<Image>>);
 
 /// S18.7：离屏截图目标（`--shot` 模式；验证 Bevy 原生渲染真实出画）。
 #[derive(Resource, Clone)]
@@ -164,10 +162,11 @@ fn letterbox() -> f32 {
     if w < h { w } else { h }
 }
 
-/// Startup：相机（正交 scale=0.5 letterbox 满铺）+ 占位纹理 + 全屏精灵。
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::needless_pass_by_value)]
-fn spawn_stage(mut commands: Commands, mut assets: ResMut<Assets<Image>>) {
+/// Startup：相机（正交 scale=0.5 letterbox 满铺）+ 全屏底色精灵。
+///
+/// S18.8a：`S18.7a` 起 7 场景全走 `DrawList` → Bevy 实体（不再有「CPU 帧缓冲 → 整帧纹理上传」路径），
+/// 故占位纹理 + `FrameTex` 资源随之退役（S18.8a 门禁 wasm clippy 覆盖到本壳，死代码清零）。
+fn spawn_stage(mut commands: Commands) {
     let scale = letterbox();
     commands.spawn((
         Camera2d,
@@ -179,15 +178,6 @@ fn spawn_stage(mut commands: Commands, mut assets: ResMut<Assets<Image>>) {
         }),
         Transform::IDENTITY,
     ));
-    let placeholder = Image::new(
-        Extent3d { width: 1, height: 1, depth_or_array_layers: 1 },
-        TextureDimension::D2,
-        vec![0u8; 4],
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::RENDER_WORLD,
-    );
-    let handle = assets.add(placeholder);
-    commands.insert_resource(FrameTex(Some(handle)));
     commands.spawn((
         Sprite::from_color(
             Color::srgb(0.1, 0.07, 0.05),
@@ -197,22 +187,6 @@ fn spawn_stage(mut commands: Commands, mut assets: ResMut<Assets<Image>>) {
         Transform::from_xyz(0.0, 0.0, -13.0),
         FrameSprite,
     ));
-}
-
-/// RGB565 → RGBA8（5/6/5 位展 8 位，与 macroquad 呈现同量化口径）。
-#[allow(clippy::cast_possible_truncation)]
-fn rgb565_to_rgba8(fb: &[u16]) -> Vec<u8> {
-    let mut out = vec![0u8; fb.len() * 4];
-    for (i, c) in fb.iter().enumerate() {
-        let r5 = (c >> 11) & 0x1F;
-        let g6 = (c >> 5) & 0x3F;
-        let b5 = c & 0x1F;
-        out[i * 4] = ((u32::from(r5) * 255) / 31) as u8;
-        out[i * 4 + 1] = ((u32::from(g6) * 255) / 63) as u8;
-        out[i * 4 + 2] = ((u32::from(b5) * 255) / 31) as u8;
-        out[i * 4 + 3] = 0xFF;
-    }
-    out
 }
 
 /// 下一缩放模式（循环，`ScaleMode::ALL` 顺序；与 macroquad 壳同函数口径）。
@@ -611,8 +585,7 @@ fn main() {
     // 渲染进同一 `DrawList`（静态原语 + 运行时内容），再实体化为 Bevy 精灵。
     let scene_id = std::env::args()
         .skip(1)
-        .filter_map(|a| a.strip_prefix("--scene=").map(str::to_owned))
-        .next()
+        .find_map(|a| a.strip_prefix("--scene=").map(str::to_owned))
         .unwrap_or_else(|| "index".to_owned());
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);

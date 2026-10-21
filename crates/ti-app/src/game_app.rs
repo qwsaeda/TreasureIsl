@@ -416,7 +416,7 @@ pub struct TransitionState {
 
 /// 键位快照（壳层把触摸/键映射到这些布尔位，平台无关，`docs/gamebook.md` §3）。
 ///
-/// 各 bin 在每帧从 macroquad 按键状态读取，喂给 [`GameApp::poll`]。
+/// 各壳在每帧从平台按键状态读取（Bevy 壳 = `ButtonInput<KeyCode>`），喂给 [`GameApp::poll`]。
 ///
 /// 用位标志位映射键位状态（8 个独立键位，语义清晰）；
 /// 非状态机，仅输入快照，故 `struct_excessive_bools` 不适用。
@@ -629,19 +629,13 @@ impl GameApp {
             fx: crate::particles::ParticleFx::deterministic(FX_SEED),
             #[cfg(feature = "gpu-render")]
             gpu_renderer: {
-                #[cfg(any(
-                    feature = "wasm-shell",
-                    feature = "native-shell",
-                    feature = "android-shell"
-                ))]
+                // S18.8a：macroquad 发货壳退役后，仅 android 壳仍需真实 GPU API
+                // （Bevy 壳走 ti-engine 自己的渲染器；诊断 bin 不绘制 GPU 帧）。
+                #[cfg(any(feature = "native-shell", feature = "android-shell"))]
                 {
                     ti_platform::gpu_renderer::GpuRenderer::new()
                 }
-                #[cfg(not(any(
-                    feature = "wasm-shell",
-                    feature = "native-shell",
-                    feature = "android-shell"
-                )))]
+                #[cfg(not(any(feature = "native-shell", feature = "android-shell")))]
                 {
                     ti_platform::gpu_renderer::GpuRenderer::new_headless()
                 }
@@ -941,7 +935,7 @@ impl GameApp {
     /// S18.7a：切换绘制目标模式。
     ///
     /// - `true` = **记录模式**：绘制命令进 `绘制列表`（Bevy 路径；实体由 `ti-engine` 转换）；
-    /// - `false` = CPU 帧缓冲模式（macroquad 壳，S18.8 退役后删）。
+    /// - `false` = CPU 帧缓冲模式（诊断 bin 路径；macroquad 发货壳 S18.8a 已退役）。
     ///
     /// 切换时同步度量口径（主题 + 三档 TTF）→ 两路径版面完全一致。
     pub fn set_record_draw(&mut self, on: bool) {
@@ -1487,7 +1481,7 @@ impl RenderHost for GameApp {
     }
 
     /// 绘制目标（S18.7a 可插拒）：记录模式 → 绘制列表（Bevy 路径）；
-    /// 否则 → CPU 帧缓冲（macroquad 壳，S18.8 退役后删）。
+    /// 否则 → CPU 帧缓冲（诊断 bin 路径；macroquad 发货壳 S18.8a 已退役）。
     fn draw_target(&mut self) -> &mut dyn ti_render::canvas::Canvas {
         if self.record_draw { &mut self.draw_list } else { &mut self.shell }
     }

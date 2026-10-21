@@ -10,8 +10,9 @@
 //! - [`SpriteRef`]：逐精灵引用（纹理 id + 图集内 UV rect）。
 //!
 //! TTF 字形（`draw_ttf_text`）：macroquad `draw_text_ex` + `TextParams { font, font_size }`。
-//! 字体子集文件放 `assets/fonts/NotoSansCJK-subset.ttf`；缺失时 `load_ttf` 返回 `None`，
-//! 调用方回退 legacy 点阵字（`ttf_font.rs` 单一事实源，不重复标注）。
+//! 字体子集文件放 `assets/fonts/NotoSansCJK-subset.ttf`；缺失时调用方回退 legacy 点阵字
+//! （TTF 口径单一事实源 = `ti_render::font::TtfFont`；S18.8a 起 Bevy 壳的 TTF 走该实现，
+//! 本 macroquad `draw_ttf_text` 仅剩 android 壳在用）。
 //!
 //! 不引入新 crate 依赖（macroquad 已有）。
 
@@ -127,8 +128,8 @@ impl GpuRenderer {
 
     /// TTF 矢量字形：`draw_text_ex` + `TextParams { font, font_size }`。
     ///
-    /// 字体子集文件 `assets/fonts/NotoSansCJK-subset.ttf`；缺失时 `load_ttf` 返回 `None`，
-    /// 调用方回退 legacy 点阵字（`ttf_font.rs` 单一事实源）。
+    /// 字体子集文件 `assets/fonts/NotoSansCJK-subset.ttf`；缺失时调用方回退 legacy 点阵字
+    /// （TTF 口径单一事实源 = `ti_render::font::TtfFont`）。
     ///
     /// headless 模式：只累加 `draw_calls`，不调 GPU API。
     pub fn draw_ttf_text(&mut self, text: &str, pos: (f32, f32), font: &Font, size: u16) {

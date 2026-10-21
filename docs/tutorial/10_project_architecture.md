@@ -142,7 +142,7 @@ ti-app/src/
   glyph_raster.rs   — 写字机（字形光栅化）
   shell_ui.rs       — 菜单模板（壳 UI 常量）
   i18n.rs           — 翻译（国际化）
-  bin/              — 四端窗口（native/wasm/android/headless）
+  bin/              — android / headless 窗口（native/wasm 发货壳已迁 ti-engine）
 ```
 
 ### SceneHost 8 个子 trait
@@ -160,11 +160,14 @@ SessionHost    — 服务员领班：会话/战斗/消息/存读档
 
 ### 四端入口
 
+> **S18.8a：发货入口 = Bevy 壳**（`crates/ti-engine`，独立 workspace）。
+> ti-app 的 macroquad native/wasm 壳已删除；下表同步为现行形态。
+
 ```
-bin/treasure_native.rs   — 实体店（桌面）
-bin/treasure_wasm.rs     — 外卖店（浏览器）
-bin/treasure_android.rs  — 移动车（Android）
-bin/treasure_headless.rs — 中央厨房（测试/回归）
+ti-engine/src/bin/treasure_bevy.rs — 实体店（桌面 treasure-bevy-native）
+                                   + 外卖店（浏览器 treasure-bevy-wasm，同源分支）
+bin/treasure_android.rs            — 移动车（Android，S18.8d 切 Bevy）
+bin/treasure_headless.rs           — 中央厨房（测试/回归）
 ```
 
 ## 实践练习

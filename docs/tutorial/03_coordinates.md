@@ -1219,8 +1219,10 @@ crates/ti-app/src/scenes/main_map.rs:232 — 场景侧调用（TerrainAtlas::iso
 
 ### 练习 2：逻辑坐标 vs 物理坐标
 
-`menu_shell.rs:284` 定义的 `refit` 函数根据窗口大小更新视口，
-在 `treasure_native.rs:340` 每帧被调用一次。思考：
+`menu_shell.rs` 定义的 `refit` 函数根据窗口大小更新视口，
+在 Bevy 壳（`crates/ti-engine/src/bin/treasure_bevy.rs`）的帧推进里被等价地处理：
+物理窗口尺寸 → `letterbox()` 缩放 + `Camera2d` 正交投影（1080 逻辑坐标系）。
+思考：
 - 如果窗口是逻辑分辨率的 2 倍，`offset_x` 和 `offset_y` 是多少？
 - 如果窗口比逻辑分辨率大但不成整数倍，会发生什么？
 

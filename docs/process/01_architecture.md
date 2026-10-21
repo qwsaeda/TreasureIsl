@@ -103,7 +103,8 @@ pub trait Scene {
 | 序列化（存档/配置） | `serde` + `serde_json` | 1 | 已用；**不要** `bincode`（存档要人可读+可迁移） |
 | 解压 | `flate2` | 1 | 已用 |
 | PNG 解码 | `png` | 0.17 | 已用（HD 资产，可选 feature） |
-| 窗口 / 渲染 | `macroquad` | 0.4 | 已用，三端统一 |
+| 窗口 / 渲染 | `bevy` | 0.20（pin） | **已用**（S18 迁移；裁决见 `docs/process/11_bevy_migration.md` §1） |
+| 窗口 / 渲染（旧） | `macroquad` | 0.4 | S18.8a 起仅剩 android 壳在用（S18.8d 退役）；新增代码**勿用** |
 | OGG/Opus 编码 | `opus-pure` | 0.2 | 已用，纯 Rust |
 | 数据表解析 | `serde_json` + `include_str!` | 1 | 数值/文本表走 JSON，不写进 .rs |
 | **随机** | `rand_pcg` + `rand_core` | =0.9.0 / =0.9.5 | 可复现 PCG64；玩法层禁止 `thread_rng`（S8.7 落地引入；旧自造 MSVC LCG 降级 oracle 历史参照）；未引 `rand` 主 crate |
@@ -140,7 +141,7 @@ assets/data/
 | 层 | native | wasm | android |
 |---|---|---|---|
 | 玩法 | 同一 `ti-core` | 同一 `ti-core` | 同一 `ti-core` |
-| 表现 | `GameApp` + macroquad 窗口 | `GameApp` + WebAudio | `GameApp` + AAudio |
+| 表现 | `GameApp` + Bevy 壳（`ti-engine`） | `GameApp` + Bevy 壳（`ti-engine`） | `GameApp` + macroquad 壳（S18.8d 切 Bevy） |
 | 资源 | `data/` | `web/` 打包 | `assets/` |
 
 三端**共用同一 `GameApp`**，端差异只在 bin 入口的资源加载与音频后端。禁止在玩法/表现层写 `#[cfg(target_os)]` 业务分支。

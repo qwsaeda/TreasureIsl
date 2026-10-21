@@ -46,7 +46,6 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("sprite_atlas.rs", "cjk", "atlas loading diagnostics / assertion messages, not player UI"),
     ("terrain_atlas.rs", "cjk", "terrain pak loading diagnostics / assertion messages, not player UI"),
     ("game_app.rs", "cjk", "runtime error eprintln diagnostics (balance load failures), not player UI"),
-    ("treasure_wasm.rs", "cjk", "wasm shell diagnostic / comments, not in-game UI text"),
     ("element_dump.rs", "cjk", "diagnostic bin: §4 layout zone / bleed terminal output, not in-game UI"),
     ("forward_nav.rs", "cjk", "S14 forward navigation diagnostic prints, not in-game UI text"),
     ("render_png.rs", "cjk", "S14 forward PNG export bin terminal output, not in-game UI text"),

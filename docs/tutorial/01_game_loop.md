@@ -140,66 +140,62 @@ update(dt) 做的事：
 
 ### 本项目游戏循环位置
 
+> **S18.8a：交付壳 = Bevy 壳**（`crates/ti-engine/src/bin/treasure_bevy.rs`，独立 workspace）。
+> ti-app 的 macroquad 桌面/浏览器壳（`treasure_native.rs` / `treasure_wasm.rs`）已退役；
+> 下面的循环对照改指 Bevy 壳的 **ECS 系统链**（概念一一对应，只是宿主从手写 `loop` 换成 Bevy schedule）。
+
 ```
-crates/ti-app/src/bin/treasure_native.rs:337
+crates/ti-engine/src/bin/treasure_bevy.rs（Update 调度链）
 ```
 
 ```rust
-// 首帧强制渲染（画好菜单再进主循环）
-shell.game.render();
+// Bevy 壳：Update 阶段的系统链（.chain() = 严格按序执行）
+(input_system, camera_system, render_system, stats_system).chain()
 
-loop {
-    // 1. 视口跟随窗口尺寸
-    shell.game.shell_mut().refit(screen_width(), screen_height());
+// 1. 帧耗时：Bevy 内建时钟（Time::delta）——对应手写壳的 tick_frame_time()
+let delta_ms = u32::try_from(time.delta().as_millis()).unwrap_or(16).clamp(1, 250);
+g.set_frame_delta_ms(delta_ms);
 
-    // 2. 计算本帧耗时
-    shell.tick_frame_time();
-    shell.game.set_frame_delta_ms(shell.last_frame_ms);
+// 2. 收集输入：Bevy ButtonInput<KeyCode> / MouseButton / Touches → GameApp::poll
+input_system(...);
 
-    // 3. 收集输入 → 更新游戏状态
-    let changed = shell.poll_input();
-    if shell.game.should_quit() { break; }
-    shell.play_last_sfx();
+// 3. 渲染：GameApp 逻辑渲染进 DrawList（绘制目标可插拒）
+g.render();
 
-    // 4. 按需渲染（场景切换/选中变化时重绘）
-    if changed || last_rendered != current_selected || last_rendered_scene != scene_key {
-        shell.game.render();
-    }
-
-    // 5. 呈现到屏幕
-    shell.game.shell_mut().present();
-}
+// 4. 呈现：DrawList → Bevy 实体（Sprite/Text2d），由 Bevy 渲染器上屏
+native_index_system(world);   // .after(render_system)
 ```
 
 ### 职责对应
 
 | 游戏循环职责 | 本项目实现 | 文件位置 |
 |---|---|---|
-| 计算 dt | `tick_frame_time()` + `set_frame_delta_ms()` | `game_app.rs` |
-| 收集输入 | `poll_input()` → `route_input()` | `scenes/mod.rs` |
+| 计算 dt | Bevy `Time::delta()` + `set_frame_delta_ms()` | `treasure_bevy.rs::render_system` |
+| 收集输入 | `input_system` → `GameApp::poll` → `route_input()` | `treasure_bevy.rs` + `scenes/mod.rs` |
 | 更新状态 | 各场景 `on_input()` / `on_touch()` | `scenes/*.rs` |
-| 渲染 | `route_render()` → 各场景 `render()` | `scenes/mod.rs` |
-| 呈现 | `present()` → GPU 纹理上传 | `menu_shell.rs` |
+| 渲染 | `g.render()` → 各场景 `render()` → DrawList | `game_app.rs` + `scenes/mod.rs` |
+| 呈现 | DrawList → Bevy 实体（`native_index_system`）→ Bevy 渲染器 | `ti-engine/src/scene_render.rs` |
 
 ### 设计要点
 
-1. **首帧强制渲染**：避免首帧空白（`treasure_native.rs:332`）
-2. **按需渲染**：场景切换或选中变化时才重绘，静态帧跳帧优化（`treasure_native.rs:357-359`）
-3. **帧时间注入**：`set_frame_delta_ms` 让业务层知道本帧耗时，驱动动画推进
+1. **帧耗时注入**：`set_frame_delta_ms` 让业务层知道本帧耗时，驱动动画推进（`game_app.rs`）
+2. **绘制目标可插拒**：`set_record_draw(true)` → 绘制命令进 DrawList（交 Bevy 实体化）；
+   `false` → CPU 帧缓冲（headless 测试 / 诊断 bin 路径）
+3. **静态帧跳帧**（S17.9）：过渡窗口内逐帧渲染，静止帧仍按变化键跳过重绘
 
 ## 实践练习
 
 ### 练习 1：识别游戏循环
 
-打开 `crates/ti-app/src/bin/treasure_wasm.rs`，找到主循环并标注：
-- 哪里计算 dt
-- 哪里调用 update（输入收集）
-- 哪里调用 render
-- 哪里 present
+打开 `crates/ti-engine/src/bin/treasure_bevy.rs`，找到 Update 调度链并标注：
+- 帧耗时从哪来（Bevy `Time`）
+- 哪里收集输入（`ButtonInput` / `Touches`）
+- 哪里调用渲染（`g.render()`）
+- 绘制命令如何变成屏幕像素（DrawList → 实体 → Bevy 渲染器）
 
 ### 练习 2：理解按需渲染
 
-在 `treasure_native.rs:357` 中，`changed` 变量控制是否重渲染。思考：
+在 `game_app.rs` 的 `last_rendered` / `last_rendered_scene` 双键判断处思考：
 - 如果去掉这个条件，每帧都渲染，会发生什么？
 - 为什么 `last_rendered_scene != scene_key` 也要检查？
 

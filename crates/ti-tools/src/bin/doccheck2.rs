@@ -1292,7 +1292,9 @@ fn check_experience_volume_counts(root: &Path) -> Vec<String> {
         }
         let body = &trimmed[1..trimmed.len() - 1];
         let cols: Vec<&str> = body.split('|').map(str::trim).collect();
-        if cols.len() != 3 || !cols[0].contains(".md](") {
+        // 首列形如 "[`code.md`](code.md)" —— 判据是 `](`（旧写法 `.md](` 永不成立，
+        // 该检查自落地起从未生效 → 条数漂移 code +5 / tools +1 长期无人发现，EXP-108）。
+        if cols.len() != 3 || !cols[0].contains("](") {
             continue;
         }
         let Some(p) = cols[0].find("](") else { continue };

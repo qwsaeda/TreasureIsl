@@ -33,7 +33,7 @@
 | **UI 重设计 v3.5（画面丑的根因=设计数据：地形/暖色板/画布/实体/HUD）** | `docs/ui-redesign-v3/07_v3_5_pass.md`（地形数据 → 棋盘成地图；暖色板；画布贴合；实体图标化；执行链 S18.9~S18.13） |
 | **改渲染代码（sprite_atlas/terrain_atlas/game_app render/越界/透明/z-order）前必读** | `docs/process/08_render_arch.md`（**运行时架构契约**：分层 / 绘制原语 / z-order=调用顺序 / 单一 1080 坐标系 / grep 门禁；gate 第 9 项 doccheck2 `check_runtime_no_legacy_coords` 锚点）<br>`docs/process/07_render_pipeline.md`（legacy 像素管线契约，已降级为逆向参照） |
 | **改 `crates/ti-render/`（渲染框架 crate）代码前必读** | `docs/process/09_render_framework.md`（**ti-render crate 边界契约**：职责与禁止项 / 模块结构 / Theme schema / 迁移映射 / 数据分离原则；注意本 crate **无 z-order 枚举**，层序在 `chrome::scene_shell` 调用序） |
-| **S18 渲染引擎迁移（Bevy 0.20）· 改引擎层/加 bevy 依赖前必读** | `docs/process/11_bevy_migration.md`（**迁移裁决单一事实源**：差距定稿 / 定案推翻签核（macroquad 定案 + 800KB wasm 预算）/ 新预算 / 架构形状（新 crate `ti-engine` + Canvas 后端替换 + 双渲染期）/ WBS S18.0–S18.8 / 风险） |
+| **S18 渲染引擎迁移（Bevy 0.20）· 改引擎层/加 bevy 依赖前必读** | `docs/process/11_bevy_migration.md`（**迁移裁决单一事实源**：差距定稿 / 定案推翻签核（macroquad 定案 + 旧 800KB wasm 预算作废，新预算 **≤8MB**）/ 架构形状（新 crate `ti-engine` + Canvas 后端替换 + 双渲染期）/ WBS S18.0–S18.8 / 风险） |
 | 可玩实现手册（已验证 rules 接进交互壳的接线规格） | `docs/gamebook.md` |
 | 当前可玩范围 / 平台产物 / 已知限制 / 如何运行 | `docs/release.md`（纯 UTF-8，编辑 CJK 内容时勿用 `Set-Content`，见 EXP-051/091） |
 | 防虚报：台账 verified ↔ evidence ↔ 代码符号三方对账 | `docs/check_ledger_reality.md`（EXP-058；gate 第 14 项） |
@@ -61,7 +61,7 @@
 2. **验收才算完成**：任务的验收命令**实跑输出**写入 `evidence/<task>.log` 后，才在 `plan/ledger.yaml` 置 `verified`。⛔ **只贴 gate 总输出不算验收证据** —— `doccheck` 会检查 evidence 是否包含任务自己的判据（第 9 项）。
 3. **进度只由台账驱动**：循环 = 取下一个非 `verified` 任务 → 实现 → 验收 → `scripts/gate.ps1` → 更新台账 → 终止条件见 `docs/loop.md`（推进至 S4.4）。
 4. **结论必须实测**：二进制/格式相关结论写进 `legacy/docs/facts/<分卷>.md` 前必须有脚本证据；推测一律标注 `推测`。
-5. **选型已定案**：Rust edition 2024 + macroquad（见 `docs/style.md`）。不要重新讨论语言/框架。
+5. **选型已定案**：Rust edition 2024 + **Bevy 0.20**（渲染引擎；S18.0 推翻旧「macroquad」定案，见 `docs/process/11_bevy_migration.md` §1 + `docs/style.md`）。macroquad 只剩 android 壳在用（S18.8d 退役）。不要重新讨论语言/框架。
 6. **文档拆分 + 单一事实源**：细节进 `docs/`，本文件只做路由与硬规则。**同一结论只写一处**，其他文档引用 ID（`F-xxx`/`EXP-xxx`/`P0-x`）而非复述。新增文档必须登记进 `docs/README.md` 与本路由表。ID 唯一性与跨文档引用有效性由 `doccheck` 门禁（第 9 项）自动校验。
 
 ## 命令
@@ -86,10 +86,14 @@ cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（ga
 cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 9 项，含跨文档数值断言 + release 台账计数漂移）
 python scripts/check_ledger_reality.py                         # 台账三方对账（gate 第 14 项，verified↔evidence↔代码符号，EXP-058）
 
-# S2.5：构建浏览器产物到 web/（wasm + miniquad gl.js + 真实资源）
+# S2.5：构建浏览器产物到 web/（S18.8a 起 = Bevy 交付壳 `treasure-bevy-wasm` + 真实资源；
+# 浏览器页 wasm-bindgen 胶水 + HTML 属 S18.8e）
 powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
 # 本地预览（wasm 需 HTTP，不能 file://）
 cargo run -q -p ti-tools --bin serve -- --dir web --port 8080
+
+# S18.8a：桌面发货版 = Bevy 壳（ti-engine 独立 workspace；macroquad 壳已退役）
+cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
 
 # S2.7：native + wasm 两端冒烟（本机无 bash，务必用 ps1）
 powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1
@@ -110,6 +114,7 @@ cargo run -q -p ti-tools --bin specskel -- <module> --report     # 只打印统�
 ```
 
 - 构建范围随阶段解锁：native（已解锁）→ wasm（**S2.5 已解锁**）→ android（S2.6 在 **Mac** 装 NDK/SDK + cargo-apk 编译 APK，本机 Windows 不产出，gate SKIP）；gate 按已装 target 自动判定并打印 SKIP。
+- **发货壳 = Bevy（S18.8a 起）**：桌面 `treasure-bevy-native` / 浏览器 `treasure-bevy-wasm`（`crates/ti-engine`，独立 workspace）；ti-app 的 macroquad native/wasm 壳已删除（`macroquad` 仅剩 android 壳在用，S18.8d 退役）。门禁 wasm 项直接构建 + lint 该 Bevy 交付产物。
 - **桌面/浏览器可玩（S5.1–S5.4）已收口**：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定；S0–S14 全 verified，当前活动任务 S16.1（S15.2 已 verified，见 `plan/ledger.yaml`；WBS 详见 `docs/plan-s16-loop.md`）；Android 为后续移动端交付，开发本身不依赖 Android 工具链。
 - S5.5 Android 壳已落地（`android-shell` feature + `treasure-android` bin + `android/README.md`）；APK 实际产出在 Mac，本机 host 形态可编译校验。
 

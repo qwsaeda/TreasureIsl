@@ -335,3 +335,54 @@
   --all-targets -- -D warnings` 0 error（修复前 3 连 error）；gate 第 4 项改复合判定后
   全绿；`build_wasm.ps1` 由 FAIL 转 PASS（产出 web/ 正常）。
 
+### EXP-107 流程/构建：交付壳换引擎时，「未被任何门禁行编译的产物」会静默烂掉（S18.8a 的 android 壳盲区 + Bevy 壳 wasm 分支首次纳入 lint）
+- **现象 1（既有盲区，本切片发现）**：android 壳（`treasure_android.rs` + `android_shell.rs`）
+  **在 S18.8a 改动前就已编译不过** —— `android_shell.rs` 仍调 `hd_manifest::load_hd_pngs_from_manifest`，
+  而该函数早已改名 `collect_hd_pngs_sync`（同步闭包版）。它长期没被发现，因为该 bin 带
+  `required-features = ["android-shell"]`，而门禁的 android 构建行 `cargo build -p ti-app
+  --target aarch64-linux-android` **不开 feature** → cargo 直接跳过该 bin → 门禁全绿。
+  同型盲区 = EXP-099 / EXP-101 的又一次复发。
+- **现象 2（新盲区，本切片首次暴露）**：Bevy 交付壳（`crates/ti-engine`，**独立 workspace**）
+  不在根 workspace 的 `--workspace` 覆盖范围内 → 它的 **wasm 目标分支从未被 clippy 检查过**。
+  S18.8a 把门禁 wasm 项改指 `treasure-bevy-wasm`（build + `clippy -D warnings`）后，一次暴露 5 处：
+  `parse_font_bytes` import 在 wasm 分支未用、`FrameTex` 资源与 `rgb565_to_rgba8` 函数在 S18.7a
+  （CPU 帧缓冲路径退役）后成死代码、`filter_map(..).next()` clippy 告警、`spawn_draw_list` 的
+  `needless_pass_by_value`。
+- **根因**：门禁对「交付产物」的覆盖 = **手工维护的（target × feature）并集**，没有任何机制保证
+  「每个交付产物都被某条 gate 行编译 + lint」。引擎/壳迁移（S18 双渲染期 → 单引擎）时，
+  新产物落在**新 workspace** 里，最容易整块掉出覆盖；而被删的旧产物留下的
+  `required-features` bin 又没人再开 feature 去编。
+- **解法**：① 门禁 wasm 项**直接指向交付产物**（`--manifest-path crates/ti-engine/Cargo.toml
+  --bin treasure-bevy-wasm`，release 构建 + `clippy -D warnings`），交付壳从此有 lint 覆盖；
+  ② 死代码当场清理（`FrameTex` / 占位纹理 / `rgb565_to_rgba8`：S18.7a 后已无 CPU 帧缓冲上传路径）；
+  ③ 门禁注释 + `docs/parity.md` 显式标注 android 壳盲区（该壳随 S18.8d 退役，不在本切片修）；
+  ④ 台账三方对账的符号期望随代码退役迁移（`check_ledger_reality.py` 的 S10.4 期望
+  `pub fn load_ttf` → `pub fn from_bytes`，并写明迁到 `ti_render::font::TtfFont` 的原因）。
+- **验证**：gate 22 项 0 failure（wasm 项 PASS = Bevy wasm 构建 + clippy 双绿）；
+  `--selftest` 16/16 步 0 失败；`--scene=index --shot` 非黑像素 2072562 与 S18.7h 实测**逐位一致**
+  （`evidence/bevy_native_index.png` 无 diff = 删死代码后画面不变）。
+- **纪律（写进 gate.ps1 第 4b 注释）**：**新增/迁移交付产物时，必须同时给它的
+  （target × feature）组合加一条门禁行**；被删壳留下的 `required-features` bin 要么有门禁行覆盖，
+  要么在同一批次内删掉 —— 否则等于没门禁。
+
+### EXP-108 流程/门禁：检查的行识别条件写错 → 恒不触发 = 一个不存在的门禁（分卷条数对账从未生效）
+- **现象**：S18.8a 修 EXP-102 ID 撞号时顺手核对经验库索引，发现 doccheck2 第 17 项
+  「经验库分卷条数对账」（`check_experience_volume_counts`）**自落地起一次都没真正执行过**：
+  它用 `cols[0].contains(".md](")` 判定「这是分卷表行」，而分卷表首列实际写作
+  ``[`code.md`](code.md)`` —— "md" 与 "](" 之间还有一个**反引号** → 子串 ".md](" 永不成立
+  → 每行都 `continue` → 该检查恒返回 0 error。后果是分卷表「条数」列长期漂移无人发现：
+  `code.md` 声明 28 / 实际 33（+5）、`tools.md` 声明 12 / 实际 13（+1），
+  全量索引表还缺 6 行（EXP-049 / EXP-050 / EXP-062 / EXP-102~EXP-106）。
+- **根因**：检查的「行识别」用手写子串而非「解析出字段再验证」；条件写错时**静默跳过全部输入**
+  （不报错、不告警），而门禁只统计 error 数 → 一个恒不触发的检查 = 一个不存在的门禁，
+  还会给人虚假安全感（比没有检查更危险）。这与 EXP-099 / EXP-101 / EXP-107 同族，
+  但更隐蔽：前几次是「某些组合没覆盖」，这次是**一次都没执行过**。
+- **解法**：① 判据从 `.md](` 改为 `](`（首列含 markdown 链接即候选）+ 解析出的文件名必须存在，
+  解析失败即报错（不再静默跳过）；② 补齐漂移：`code.md` 28→33、`tools.md` 12→13、
+  索引表补 6 行 + 修 3 处卷标签（EXP-059/061/074 的正文在 process.md）；③ **负测纪律**：
+  新写的门禁检查上线前必须**故意破坏一次**（把判据写错 / 注入已知坏数据）看它是否报红，
+  否则等于没写 —— 负测就是门禁检查的单元测试。
+- **验证**：把 `code.md` 的声明条数改成 99 → doccheck2 立刻报
+  「分卷表条数列：code.md 声明 99，实际 33（Q016 类漂移…）」→ 改回 33 后 0 error；
+  gate 22 项 0 failure。
+
