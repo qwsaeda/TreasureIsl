@@ -565,6 +565,22 @@ pub fn spawn_draw_list(
                 ));
                 count += 1;
             }
+            ti_render::drawlist::DrawOp::Image { asset, x, y, w, h } => {
+                // S18.8b：贴图原语 → 资产服务器（路径相对 `assets/` 根）。
+                let handle: Handle<Image> = world.resource::<AssetServer>().load(asset.clone());
+                world.spawn((
+                    DrawListEntity,
+                    Sprite {
+                        image: handle,
+                        custom_size: Some(Vec2::new(*w as f32, *h as f32)),
+                        ..Default::default()
+                    },
+                    Transform::from_translation(
+                        to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0).extend(z),
+                    ),
+                ));
+                count += 1;
+            }
         }
     }
     count

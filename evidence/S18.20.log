@@ -1,0 +1,162 @@
+S18.20 验收证据（UI 贴图版式 + 资产管线：image 原语 / ui_assets.py 清单驱动生图 / index 屏按设计图重做）
+日期：2026-10-21
+DoD：渲染层加 image 原语（双后端同构：CPU 解码混合 / Bevy 资产服务器）+ 资产管线 scripts/ui_assets.py（清单 assets/ui_manifest.json 单一事实源 + 角色预设 background/medallion/board/portrait）+ 预览闭环 scripts/ui_preview.ps1 + index 屏按设计图重做（背景/木牌/纹章贴图）+ 门禁（闭集 7 种 + 资产存在与登记校验）+ 修 PNG 解码 RGB 通道错位 + gate 全绿 + evidence/S18.20.log
+
+======================================================================
+[1] image 原语（渲染层第 7 种通用原语，双后端同构）
+======================================================================
+- 框架层（ti-render）：
+  `Canvas::blit_image(asset, x, y, w, h)`（canvas.rs，trait 默认 no-op）
+  `DrawOp::Image { asset, x, y, w, h }`（drawlist.rs：绘制列表只**记录**命令）
+  `framebuffer::blend_rgba_over` + `rgb8_to_565` / `rgb565_to_rgb8`（alpha 混合，纯像素数学）
+- CPU 后端（ti-app）：`menu_shell.rs` 的 Canvas 实现 → 读文件 + PNG 解码 + 最近邻缩放 +
+  alpha 混合进 RGB565 帧缓冲；资源缓存 `ti-app/src/image_cache.rs`（进程级，路径 = 相对仓库根）
+- Bevy 后端（ti-engine）：`scene_render.rs` 的 `DrawOp::Image` → 资产服务器
+  `AssetServer::load(asset)` → `Sprite { image, custom_size }`
+- 数据侧：scenes.json 的 `image` 原语 = `{kind:"image", rect, params:{asset}}`
+- 资产路径口径：**相对仓库根**（如 `assets/ui/board.png`）——Bevy `AssetPlugin.file_path = 仓库根`，
+  CPU 侧 `<仓库根>/<asset>`，两侧同路径 → 同画面。
+
+======================================================================
+[2] 资产管线（scripts/ui_assets.py，清单驱动，可复用）
+======================================================================
+$ python scripts/ui_assets.py verify
+  ui_assets verify: OK（8 个资产，登记/文件/引用三方一致）
+$ python scripts/ui_assets.py build
+  SKIP  bg_night_sea（已存在；--force 可重生成）      ← 幂等
+  SKIP  board / icon_compass / icon_anchor / icon_map / icon_gear / icon_book / icon_door
+  清单已写: assets\ui_manifest.json
+资产清单 `assets/ui_manifest.json`（**单一事实源**）：角色预设 + 资产登记
+  roles: background(9:16,1080×1920,无抠) / medallion(1:1,512,亮度抠) /
+         board(21:9,1024×439,品红抠) / portrait(2:3,512×768,亮度抠)
+  assets: bg_night_sea / board / icon_{compass,anchor,map,gear,book,door}（8 条）
+抠图算法：亮度键（纯黑底 → alpha=亮度，RGB 按 alpha 预乘）/ 品红键（min(r,b)-g 判定 + 软过渡）
+新增资产 = 清单加一条 + `python scripts/ui_assets.py add --name X --role medallion --what "..."`
+预览闭环 `scripts/ui_preview.ps1`（一条命令出图 + 缩略图 + 非黑像素统计）：
+
+======================================================================
+[3] index 屏按设计图重做（设计图：evidence/ui_concept/index_v3_agnes.png）
+======================================================================
+- 背景：AI 夜空海平线全屏贴图（assets/ui/bg_night_sea.png，1080×1920，1.2 MB）
+- 标题面板：雕花木牌贴图（assets/ui/board.png，1024×439 → 120,250,840,360）
+- 罗盘玫瑰：compass 纹章贴图（470,176,140,140，压木牌上沿）
+- 标题/副标题：金色 TTF（金银岛 96px + TreasureIsl 44px）
+- 菜单 6 项：每行 = 纹章贴图 120px 居中（选中 136px 放大）+ 金色标签（未选 brass_light /
+  选 gold_warm）；行距 176，首行顶 704（门禁锚点 §4.1）
+- 尾行：i18n footer（status.y=1840，压在海面上）
+- 版面数据 = assets/data/scenes.json 的 index.primitives（29 条：image 15 + text 14）
+$ powershell scripts/ui_preview.ps1
+  index       nonblack = 2072677 / 2073600
+  select_role nonblack = 2072797 / 2073600
+  select_map  nonblack = 2072382 / 2073600
+  main_map    nonblack = 2073600 / 2073600
+  vs          nonblack = 2073600 / 2073600
+  message     nonblack = 2073600 / 2073600
+  saveload    nonblack = 2073600 / 2073600
+（产物：evidence/bevy_native_<scene>.png + evidence/ui_preview/<scene>.png 缩略图）
+
+======================================================================
+[4] 门禁接线（原语闭集 6 → 7 + 资产存在/登记校验）
+======================================================================
+$ python scripts/check_data_driven.py
+  check_data_driven: OK（通用原语 ['disc','glow','grad','icon','image','rect','text']；渲染层无场景语义；令牌全存在）
+  + 新增：`image` 原语的资产必须（a）文件存在（b）已登记在 assets/ui_manifest.json
+$ cargo run -q -p ti-tools --bin doccheck2 .
+  doccheck2: 0 error(s) across 25 audit-codified checks（Rust 侧双保险：check_primitives_data）
+  + 门禁 wasm 项新增 **native 交付壳 clippy**（`--bin treasure-bevy-native`）——
+    此前只 lint wasm bin → native 侧旧伤（treasure_bevy.rs main() 101 行超限）长期无人看见
+
+======================================================================
+[5] 顺带修：PNG 解码 RGB 通道错位（老 HD 资产全是 RGBA，从未暴露）
+======================================================================
+`ti_platform::hd_png::decode_png_rgba` 对 **RGB（无 alpha）PNG** 只开 EXPAND 时，
+`png` crate 仍按 **3 字节/像素** 输出，而解码器按 **4 字节/像素** 读缓冲 → 通道错位一整像素
+（画面颜色错乱却不报错）。修法：变换集加 `png::Transformations::ALPHA`（强制补 alpha → 恒 RGBA8）。
+→ 这条只被「AI 生成的无 alpha PNG」触发；老 HD 资产都是 RGBA → 潜伏多年。
+
+======================================================================
+[6] 顺带修：三处「机制静默失效」
+======================================================================
+- `--shot` 截图竞态：目标纹理尚未渲染出内容就被截下 → 读回全透明，而旧逻辑只在「非空」时退出
+  → 循环跑完仍写出**空 PNG**（证据静默失真）。现为「空帧允许重截」+ 空帧告警。
+- 交付壳 native 侧从未被 clippy 覆盖（门禁只 lint wasm bin）→ 已在门禁 wasm 项补 native bin。
+- PowerShell 5.1 对「无 BOM 的 UTF-8 .ps1」按 ANSI(GBK) 解析 → 中文提示里的字节被误判成引号
+  → 整文件 ParserError（`playbook.ps1` / `smoke.ps1` 长期如此 → 一键入口在中文 Windows 上跑不起来）。
+  修法：这两个脚本补 UTF-8 BOM（仓库其余 .ps1 本来就有）。
+
+======================================================================
+[7] 全门禁（22 项顶层固定 Report，wasm/android 构建为条件子项）
+=== gate: TreasureIsl (22 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 168 tasks, 154 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 129 docs, 38 facts, 105 experiences, 163 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK（4 表，strings 73 键；main_map.grid 三键 + 全场景 extra 标量正整数）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+        doccheck2: 0 error(s) across 25 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data)
+          WARN i18n 瀛ゅ効 key `glmapm01.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm02.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm03.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.index.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.build`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.sell`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.trade`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.message.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.slot_summary_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_role.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.vs.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+        check_ledger_reality: 全绿（154 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+  PASS  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+        check_forward_closed: C1 业务文档零逆向引用: OK
+        check_forward_closed: C2 表现层零 oracle 引用: OK
+        check_forward_closed: C3 根目录清空 + legacy 在位: OK
+        check_forward_closed: C4 oracle 单点源 + 禁重复 crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 包 D status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P1 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P2 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P3 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P4 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P5 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P6 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 契约 c1_core_public_types.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c2_data_keys.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+        flywheel_readme -Check PASS: 6 条必读 ?, gate 22 项, doccheck2 28 断言, packages 7 包
+  PASS  flywheel-readme (开轮必读脚本完整性)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.65s
+        
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)
+        === check_scene_narrative (UI 叙事约束 DSL v3) ===
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)
+        [2m2026-10-21T11:15:17.571695Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Windows 10 Enterprise LTSC 2021", kernel: "19044", cpu: "Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz", core_count: "4", memory: "15.9 GiB" }
+        [2m2026-10-21T11:15:18.043540Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "NVIDIA GeForce GTX 1050 Ti", vendor: 4318, device: 7298, device_type: DiscreteGpu, device_pci_bus_id: "0000:01:00.0", driver: "NVIDIA", driver_info: "560.94", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+        [2m2026-10-21T11:15:18.620888Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        S18.2 GPU/CPU 鍍忕礌瀵圭収锛堣壊鍧楀唴閮紝鎺掗櫎鏂囨湰妗?+ 2px 杈圭紭甯︼級锛氭瘮瀵?1607576 鍍忕礌锛岃秴宸?0锛?.0000%锛夛紝鏈€澶ч€氶亾宸?0 LSB锛岄涓秴宸?None
+        璇婃柇锛欸PU 闈為粦鍍忕礌 2073600锛堟枃鏈尯瀛楀舰瀵归綈灞?S18.3锛?  anchor (0,0): cpu=0x10c9 gpu=0x10c9
+          anchor (1079,1919): cpu=0x0865 gpu=0x0865
+          anchor (60,200): cpu=0x190c gpu=0x190c
+          anchor (540,500): cpu=0x190c gpu=0x190c
+        S18.2 瀵圭収閫氳繃锛堥槇鍊硷細閫氶亾 鈮? LSB 涓旇秴宸瘮渚?<0.5%锛?
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)
+=== gate: 0 failure(s) ===

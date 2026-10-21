@@ -108,7 +108,9 @@ fn request_shot(
     frames: Res<bevy::diagnostic::FrameCount>,
     mut commands: Commands,
 ) {
-    if shot.0 || frames.0 < 12 {
+    // S18.8b：贴图资产是**异步 IO**（资产服务器读盘）→ 截图帧阈值从 12 提到 40，
+    // 否则截到的是「贴图未加载」的半成品帧。
+    if shot.0 || frames.0 < 40 {
         return;
     }
     shot.0 = true;
@@ -116,8 +118,13 @@ fn request_shot(
 }
 
 /// S18.7：读回就绪 → 退出（`--shot` 模式）。
+///
+/// S18.8b：截图有**竞态** —— 目标纹理尚未渲染出内容就被截下时，读回是全透明的空帧，
+/// 而旧逻辑只在「非空」时退出 → 循环跑完仍写出一张空 PNG（证据静默失真）。
+/// 现改为：空帧 = **允许重截**（`ShotDone` 复位 → 下一帧重新请求），非空才退出。
 fn finish_shot(
     mut exits: MessageWriter<AppExit>,
+    mut shot: ResMut<ShotDone>,
     device: Option<Res<bevy::render::renderer::RenderDevice>>,
 ) {
     if let Some(device) = device {
@@ -126,13 +133,11 @@ fn finish_shot(
             timeout: None,
         });
     }
-    let ready = SHOT_READBACK
-        .lock()
-        .ok()
-        .and_then(|g| g.clone())
-        .is_some_and(|raw| raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8));
-    if ready {
+    let Some(raw) = SHOT_READBACK.lock().ok().and_then(|g| g.clone()) else { return };
+    if raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8) {
         exits.write(AppExit::Success);
+    } else {
+        shot.0 = false;
     }
 }
 
@@ -649,50 +654,66 @@ fn main() {
     }
     app.add_systems(Startup, spawn_stage);
     if shot {
-        // S18.7：离屏渲染目标（`--shot` 验证 Bevy 原生渲染真实出画）。
-        let mut target_image =
-            Image::new_target_texture(LOGICAL_W, LOGICAL_H, TextureFormat::Rgba8UnormSrgb, None);
-        target_image.asset_usage = RenderAssetUsages::RENDER_WORLD;
-        let target_handle = app.world_mut().resource_mut::<Assets<Image>>().add(target_image);
-        app.insert_resource(ShotTarget(target_handle.clone()));
-        app.world_mut().spawn((
-            Camera2d,
-            RenderTarget::Image(target_handle.into()),
-            Transform::IDENTITY,
-        ));
-        app.init_resource::<ShotDone>()
-            .add_observer(store_shot)
-            .add_systems(Update, (request_shot, finish_shot).chain());
-        // 手动 update 循环 + 设备轮询（照 S18.3 `bevy_text_align` example 口径：
-        // 截图异步完成，需 poll 设备才能拿到结果）。
-        //
-        // ⚠️ `app.finish()` + `app.cleanup()` **不可省**：`finish()` 才会把渲染 app 的
-        // extract 调度启动起来（`RenderAppChannels` 由此就位）；缺它 → extract 阶段
-        // panic「resource does not exist: RenderAppChannels」。
-        app.finish();
-        app.cleanup();
-        for _ in 0..60 {
-            app.update();
-            if let Some(device) = app.world().get_resource::<bevy::render::renderer::RenderDevice>()
-            {
-                let _ = device.wgpu_device().poll(bevy::render::render_resource::PollType::Wait {
-                    submission_index: None,
-                    timeout: None,
-                });
-            }
-            if SHOT_READBACK
-                .lock()
-                .ok()
-                .and_then(|g| g.clone())
-                .is_some_and(|raw| raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8))
-            {
-                break;
-            }
-        }
-        write_shot_png(&format!("evidence/bevy_native_{scene_id}.png"));
+        run_shot(&mut app, &scene_id);
         return;
     }
     app.run();
+}
+
+/// S18.7：离屏截图模式（`--shot`）：渲染到离屏目标 → GPU 读回 → 写 `evidence/bevy_native_<scene>.png`。
+///
+/// S18.8b：贴图资产是**异步读盘**（Bevy 资产服务器）→ 每帧 sleep 4ms 让 IO 落地；
+/// 空帧自动重截（`finish_shot` 复位 `ShotDone`）。
+fn run_shot(app: &mut App, scene_id: &str) {
+    // S18.7：离屏渲染目标（`--shot` 验证 Bevy 原生渲染真实出画）。
+    let mut target_image =
+        Image::new_target_texture(LOGICAL_W, LOGICAL_H, TextureFormat::Rgba8UnormSrgb, None);
+    target_image.asset_usage = RenderAssetUsages::RENDER_WORLD;
+    let target_handle = app.world_mut().resource_mut::<Assets<Image>>().add(target_image);
+    app.insert_resource(ShotTarget(target_handle.clone()));
+    app.world_mut().spawn((
+        Camera2d,
+        RenderTarget::Image(target_handle.into()),
+        Transform::IDENTITY,
+    ));
+    app.init_resource::<ShotDone>()
+        .add_observer(store_shot)
+        .add_systems(Update, (request_shot, finish_shot).chain());
+    // 手动 update 循环 + 设备轮询（照 S18.3 `bevy_text_align` example 口径：
+    // 截图异步完成，需 poll 设备才能拿到结果）。
+    //
+    // ⚠️ `app.finish()` + `app.cleanup()` **不可省**：`finish()` 才会把渲染 app 的
+    // extract 调度启动起来（`RenderAppChannels` 由此就位）；缺它 → extract 阶段
+    // panic「resource does not exist: RenderAppChannels」。
+    app.finish();
+    app.cleanup();
+    for _ in 0..60 {
+        app.update();
+        std::thread::sleep(std::time::Duration::from_millis(4));
+        if let Some(device) = app.world().get_resource::<bevy::render::renderer::RenderDevice>() {
+            let _ = device.wgpu_device().poll(bevy::render::render_resource::PollType::Wait {
+                submission_index: None,
+                timeout: None,
+            });
+        }
+        if SHOT_READBACK
+            .lock()
+            .ok()
+            .and_then(|g| g.clone())
+            .is_some_and(|raw| raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8))
+        {
+            break;
+        }
+    }
+    let empty = SHOT_READBACK
+        .lock()
+        .ok()
+        .and_then(|g| g.clone())
+        .is_none_or(|raw| !raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8));
+    if empty {
+        eprintln!("[shot] WARNING: readback still empty (target texture has no content) - evidence unusable");
+    }
+    write_shot_png(&format!("evidence/bevy_native_{scene_id}.png"));
 }
 
 /// S18.7：把 GPU 读回像素写成 PNG（`--shot` 输出）。

@@ -104,11 +104,13 @@
 | `Canvas::fill_rect(x, y, w, h, color)` | 以 1080 空间左上角 + 尺寸填一个矩形 | 外框/面板/棋盘格/棋子/血条/文字底条 |
 | `parchment_bg(theme)` | **组合函数** = 底色 + 垂直渐变行（模块私有 `gradient_row`）×N + 四边暗角（模块私有 `vignette`） | 场景背景（`chrome::parchment_bg` 转发） |
 | `Canvas::draw_text` / `draw_title_text` / `draw_hint_text` | 在 1080 空间起点绘制一行文本（TTF 三档 96/44/28px，回退位图 advance 26/12/8） | 标题/列表项/状态行/HUD/血量数字 |
+| `Canvas::blit_image(asset, x, y, w, h)` | **贴图**（S18.8b）：`asset` = 资产路径（相对仓库根，如 `assets/ui/board.png`），在 1080 空间按目标矩形贴一张 RGBA8 位图（最近邻缩放 + alpha 混合） | 界面背景/木牌/纹章/立绘（位图资产；生产管线见 `13_ui_asset_pipeline.md`） |
 
 > `gradient_row` / `vignette` 是 `parchment_bg` 的**模块私有辅助**（S15.10 收可见性：
 > 原为 `pub` 但零外部调用，属误导性 API）；渐变/暗角通过 `Canvas::fill_rect` 落地。
-> **不存在 `blit_texture`**：全仓无此函数。HD 位图注入走 `ti-platform` 的
-> `gpu_renderer`/PNG 解码路径，**不在视图层原语表内**（引入需先补本文契约，见 §8 反模式 6）。
+> **S18.8b 起 `blit_image` 进入原语表**（此前「不存在 `blit_texture`」——位图只能走
+> `ti-platform` 的 GPU/PNG 路径，视图层无位图入口；现由 `Canvas::blit_image` 统一，
+> 资产路径口径 = 相对仓库根，登记在 `assets/ui_manifest.json`）。
 > `shell.rs` 里的 `wood_frame/title_bar/panel/bar_slot/menu_item/hint_row/nautical_grid/`
 > `menu_icon/draw_*_text` 是**上层组合组件**，不是原语。
 
@@ -256,5 +258,7 @@ gate 三项门禁的**结构合并**（19/19.5 并入 18）留 S15.6 B6 收口�
 3. **禁止**视图层跑业务规则（血量百分比、地图步进行走等必须在 `ti_core`）。
 4. **禁止**在 `scenes/*.rs` 写死场景级坐标（必须读 `scenes.json`）。
 5. **禁止**把 legacy 像素当门禁判据（判据锚代码绘制区，契约 5）。
-6. **禁止**新增第 4 个绘制原语而不先补本文契约（扩展须走文档 + 门禁）。
+6. **禁止**新增绘制原语而不先补本文契约（扩展须走文档 + 门禁；当前 **7** 种：
+   `rect`/`text`/`icon`/`grad`/`glow`/`disc`/`image`；新增即须同步 `09_render_framework.md` §5.1
+   + `scripts/check_data_driven.py` 的闭集 + doccheck2 的 `check_primitives_data`）。
 7. **禁止**"顺手"把 scaling/z-order/裁剪语义揉进单个函数（语义单一性，契约 3）。

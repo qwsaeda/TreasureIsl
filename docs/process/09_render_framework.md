@@ -111,9 +111,13 @@ pub struct FontConfig {
 | `grad` | `params.from_token`/`to_token`/`steps` | 垂直渐变（`steps` 条色带，2..256）；令牌名须在 `theme.by_name` 名单（拼错 → 静默回退 `text_on_parch`） |
 | `glow` | `rect` = **圆心 + 半径** | 径向光晕（`rect.x`/`rect.y` = 圆心，`rect.w` = 半径） |
 | `disc` | `rect` = **圆心 + 半径** | 实心圆盘（同上） |
+| `image` | `rect` + `params.asset` | **贴图**（S18.8b）：`params.asset` = 资产路径（**相对仓库根**，如 `assets/ui/board.png`）；CPU 执行器读文件 + PNG 解码 + 最近邻缩放 + alpha 混合进 RGB565 帧缓冲，Bevy 执行器走**资产服务器**（同一路径口径，壳从仓库根启动）→ 两后端同画面；缺资源 / 解码失败 = **不画**（不 panic） |
 
 不变式：`color` 必须是 `theme.by_name` 合法令牌名；`params.icon` 必须在 `ui_icons.json` 注册表内；
-`text_key` 必须在 `strings.json` 内（缺键 = 界面显示裸 key，非静默失败）。
+`text_key` 必须在 `strings.json` 内（缺键 = 界面显示裸 key，非静默失败）；
+`params.asset` 必须在 `assets/ui_manifest.json` **资产清单**登记且文件真实存在
+（门禁 `check_data_driven` + doccheck2 `check_primitives_data` 双重拦截；
+资产生产/抠图/规范化见 `docs/process/13_ui_asset_pipeline.md`）。
 
 ## 5. 数据分离原则
 

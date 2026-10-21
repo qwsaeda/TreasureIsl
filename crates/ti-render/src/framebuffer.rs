@@ -123,6 +123,45 @@ impl Default for Framebuf {
     }
 }
 
+/// RGB8 → RGB565（位截断口径：与 `assets/data/theme.json` 的 8bit→565 转换脚本同规约）。
+#[must_use]
+pub fn rgb8_to_565(r: u8, g: u8, b: u8) -> u16 {
+    let r5 = u16::from(r >> 3);
+    let g6 = u16::from(g >> 2);
+    let b5 = u16::from(b >> 3);
+    (r5 << 11) | (g6 << 5) | b5
+}
+
+/// RGB565 → RGB8（位扩展口径：与 `rgb8_to_565` 互逆到 5/6/5 精度）。
+#[must_use]
+pub fn rgb565_to_rgb8(c: u16) -> (u8, u8, u8) {
+    let r5 = ((c >> 11) & 0x1F) as u8;
+    let g6 = ((c >> 5) & 0x3F) as u8;
+    let b5 = (c & 0x1F) as u8;
+    ((r5 << 3) | (r5 >> 2), (g6 << 2) | (g6 >> 4), (b5 << 3) | (b5 >> 2))
+}
+
+/// RGBA8 贴图像素**混合**到 RGB565 目标像素（S18.8b `image` 原语）。
+///
+/// `a = 0` = 全透明（目标不变）；`a = 255` = 全覆盖；中间值按 `a/255` 线性插值
+/// （逐通道，量化到 RGB565 的 5/6/5 精度）。
+#[must_use]
+#[allow(clippy::many_single_char_names)] // 通道名 r/g/b/a 是像素语义的标准缩写
+pub fn blend_rgba_over(dst: u16, r: u8, g: u8, b: u8, a: u8) -> u16 {
+    if a == 0 {
+        return dst;
+    }
+    if a == 255 {
+        return rgb8_to_565(r, g, b);
+    }
+    let (dr, dg, db) = rgb565_to_rgb8(dst);
+    let mix = |old: u8, new: u8| -> u8 {
+        let v = u16::from(old) * (255 - u16::from(a)) + u16::from(new) * u16::from(a);
+        u8::try_from((v + 127) / 255).unwrap_or(0)
+    };
+    rgb8_to_565(mix(dr, r), mix(dg, g), mix(db, b))
+}
+
 /// 借用视图（§5.6.6 选用矩阵「缓冲/容器借用视图 → `AsRef/AsMut`」）：
 /// 泛型消费方可把 `Framebuf` 当作 `&[u16]` 直接读。
 /// 手写 `as_slice`/`as_mut_slice` 保留（既有调用点），本 trait 为纯增量。

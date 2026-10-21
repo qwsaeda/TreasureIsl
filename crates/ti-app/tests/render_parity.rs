@@ -171,9 +171,11 @@ fn framebuf_matches_logical_resolution() {
     let parch_dark = ti_app::menu_shell::COLOR_PARCH_DARK;
     // S18.7：index 外框改为**数据驱动**的暖木框（`wood_warm` 令牌）→ 一并接受。
     let wood_warm = ti_app::scenes::chrome::COLOR_WOOD_WARM;
+    // S18.8b：index 改为**贴图版式**（背景图 assets/ui/bg_night_sea.png 全屏铺底）→
+    // (0,0) 不再是木框，而是夜空背景的左上像素 → 判据降为「非黑」（贴图确实铺满了画面）。
     assert!(
-        pixels[0] == wood || pixels[0] == parch_dark || pixels[0] == wood_warm,
-        "像素(0,0) 应为木纹外框/羊皮纸/暖木框（非黑非背景），实为 {:#05X}",
+        pixels[0] == wood || pixels[0] == parch_dark || pixels[0] == wood_warm || pixels[0] != 0,
+        "像素(0,0) 应为木纹外框/羊皮纸/暖木框/背景贴图（非黑），实为 {:#05X}",
         pixels[0]
     );
 }

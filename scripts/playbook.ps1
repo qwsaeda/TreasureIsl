@@ -14,6 +14,8 @@
 #   element-dump     元素级渲染验证（逐精灵落点/越界判定）
 #   sprite-step      逐精灵渲染（EXP-076 用户确认流，输出 4x PNG）
 #   build-wasm       构建浏览器产物到 web/
+#   ui-preview       界面实拍验收（出图 + 缩略图 + 非黑像素统计；参数 = 场景 id）
+#   ui-assets        UI 资产管线（build / add --name --role --what / verify）
 #   serve            起本地静态服务（预览 web/）
 #   push             提交并推送（前置 gate 全绿 + 台账 verified）
 #   ledger           台账校验
@@ -56,6 +58,8 @@ if (-not $Command -or $Command -eq "-List" -or $Command -eq "--help" -or $Comman
     Write-Host "  element-dump   元素级渲染验证（scene + record#）"
     Write-Host "  sprite-step    逐精灵渲染（scene + record#，输出 4x PNG）"
     Write-Host "  build-wasm     构建浏览器产物到 web/"
+    Write-Host "  ui-preview     界面实拍验收（出图 + 缩略图 + 像素统计）"
+    Write-Host "  ui-assets      UI 资产管线（build / add / verify）"
     Write-Host "  serve          起本地静态服务（web/）"
     Write-Host "  push           提交并推送（前置 gate 全绿 + 台账 verified）"
     Write-Host "  ledger         台账校验"
@@ -108,6 +112,16 @@ switch ($Command) {
     }
     "build-wasm" {
         RunCmd "powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1"
+    }
+    "ui-preview" {
+        # 参数：场景 id（index/select_role/...）；不给则全部 7 场景
+        $extra = ""
+        if ($ExtraArgs.Count -gt 0) { $extra = $ExtraArgs -join " " }
+        RunCmd "powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 $extra"
+    }
+    "ui-assets" {
+        # 资产管线：build（补齐缺失）/ add（登记+生成）/ verify（校验）
+        RunCmd "python scripts/ui_assets.py $ExtraArgs"
     }
     "serve" {
         RunCmd "cargo run -q -p ti-tools --bin serve -- --dir web --port 8080"

@@ -43,4 +43,14 @@ pub trait Canvas {
 
     /// 读取帧缓冲某像素颜色。
     fn pixel_at(&self, x: i32, y: i32) -> u16;
+
+    /// 贴图绘制（**资源路径** + 目标矩形；后端各自解析资源）。
+    ///
+    /// 资源路径 = 相对 `assets/` 根的路径（如 `ui/board.png`）：
+    /// - CPU 后端（内存帧缓冲）自行读文件 + 解码 + alpha 混合；
+    /// - 绘制列表后端（[`crate::drawlist::DrawList`]）只**记录**该命令，由 Bevy 侧走资产服务器；
+    /// - 缺资源 / 解码失败 = **不画**（不 panic、不留坑）。
+    ///
+    /// 默认实现为 no-op（仅需像素绘制的轻量画布可继承）。
+    fn blit_image(&mut self, _asset: &str, _x: i32, _y: i32, _w: i32, _h: i32) {}
 }

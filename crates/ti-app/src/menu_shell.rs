@@ -557,4 +557,44 @@ impl Canvas for MenuShell {
         let yi = usize::try_from(y).unwrap_or(0);
         self.fb.as_slice().get(yi.wrapping_mul(w).wrapping_add(xi)).copied().unwrap_or(0)
     }
+
+    /// 贴图（S18.8b `image` 原语）：RGBA8 资源 → 最近邻缩放 + alpha 混合进 RGB565 帧缓冲。
+    ///
+    /// 资源路径 = 相对 `assets/` 根（如 `ui/board.png`）；缺资源 = 不画（不 panic）。
+    #[cfg(feature = "hd-8bit")]
+    fn blit_image(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32) {
+        let Some(img) = crate::image_cache::get(asset) else { return };
+        if w <= 0 || h <= 0 {
+            return;
+        }
+        let iw = i32::try_from(img.width).unwrap_or(0);
+        let ih = i32::try_from(img.height).unwrap_or(0);
+        if iw <= 0 || ih <= 0 {
+            return;
+        }
+        let stride = usize::try_from(LOGICAL_W_I32).unwrap_or(0);
+        let fb = self.fb.as_mut_slice();
+        for dy in 0..h {
+            let sy = (dy * ih / h).clamp(0, ih - 1);
+            let row = y.saturating_add(dy);
+            if !(0..LOGICAL_H_I32).contains(&row) {
+                continue;
+            }
+            for dx in 0..w {
+                let sx = (dx * iw / w).clamp(0, iw - 1);
+                let col = x.saturating_add(dx);
+                if !(0..LOGICAL_W_I32).contains(&col) {
+                    continue;
+                }
+                let src_idx = (usize::try_from(sy).unwrap_or(0) * usize::try_from(iw).unwrap_or(0)
+                    + usize::try_from(sx).unwrap_or(0))
+                    * 4;
+                let Some(px) = img.rgba.get(src_idx..src_idx + 4) else { continue };
+                let dst_idx =
+                    usize::try_from(row).unwrap_or(0) * stride + usize::try_from(col).unwrap_or(0);
+                let Some(dst) = fb.get_mut(dst_idx) else { continue };
+                *dst = ti_render::framebuffer::blend_rgba_over(*dst, px[0], px[1], px[2], px[3]);
+            }
+        }
+    }
 }

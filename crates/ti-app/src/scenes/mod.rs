@@ -289,6 +289,14 @@ pub trait RenderHost {
         self.draw_target().fill_rect(x, y, w, h, color);
     }
 
+    /// 贴图（S18.8b `image` 原语）：资源路径 = 相对仓库根（如 `assets/ui/board.png`）。
+    ///
+    /// CPU 目标 = 帧缓冲（读文件 + 解码 + alpha 混合）；Bevy 目标 = 绘制列表
+    /// （记录命令 → 资产服务器）。缺资源 = 不画（不 panic）。
+    fn blit_image(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32) {
+        self.draw_target().blit_image(asset, x, y, w, h);
+    }
+
     /// 绘制一行字形（默认墨色 = `INK_COLOR`）。
     fn draw_text(&mut self, text: &str, x: i32, y: i32) {
         self.draw_target().draw_text(text, x, y, crate::menu_shell::COLOR_TEXT_ON_PARCH);

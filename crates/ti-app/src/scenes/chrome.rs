@@ -11,6 +11,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use ti_core::data;
 
+use ti_render::canvas::Canvas;
 use ti_render::framebuffer::LOGICAL_W_I32;
 use ti_render::theme::Theme;
 // Canvas trait：文本宽度度量（`title_text_width`/`text_width`）在 trait 上，需在作用域内。
@@ -476,6 +477,12 @@ impl ti_render::canvas::Canvas for HostCanvas<'_> {
     fn pixel_at(&self, x: i32, y: i32) -> u16 {
         <dyn SceneHost as RenderHost>::pixel_at(self.host, x, y)
     }
+
+    /// 贴图（S18.8b `image` 原语）：转发到宿主的绘制目标
+    /// （CPU 帧缓冲 = 解码混合；绘制列表 = 记录命令交 Bevy 资产服务器）。
+    fn blit_image(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32) {
+        <dyn SceneHost as RenderHost>::blit_image(self.host, asset, x, y, w, h);
+    }
 }
 
 /// 在 `host` 上构造本地 [`HostCanvas`] 并交给 `f`（消「返回指向临时值的引用」——
@@ -553,6 +560,13 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
             }
             "glow" => ti_render::generic::glow(c, r.x, r.y, r.w, color),
             "disc" => ti_render::generic::disc(c, r.x, r.y, r.w, color),
+            "image" => {
+                // S18.8b：贴图原语（资源路径 = 相对 `assets/` 根；缺资源 = 不画）。
+                let asset = param_str(p, "asset").unwrap_or_default();
+                if !asset.is_empty() {
+                    c.blit_image(&asset, r.x, r.y, r.w, r.h);
+                }
+            }
             _ => {}
         });
     }

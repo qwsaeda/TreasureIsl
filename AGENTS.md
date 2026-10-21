@@ -49,6 +49,7 @@
 | 现代化改造 / 移植 / 多端适配 | `docs/modernization.md` |
 | **HD 资产增强 / 超分 / 矢量化 / 多分辨率打包（S7）** | `docs/impl/14_asset_enhancement.md`（方案规格，历史阶段） |
 | **写 Bevy 代码前必读（Bevy 0.20 用法规范 / 最佳实践 / 坑位清单）** | `docs/process/12_bevy_usage.md`（**Bevy 使用规范单一事实源**：官方 `DefaultPlugins` 强制 + 1080 坐标换算 + **z 层负值/升序绘制**规则 + GPU Text2d 文本 + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位清单；S18.7 起 Bevy = 唯一渲染引擎） |
+| **做界面（改 scenes.json 版面 / 加美术资产 / 出图验收）** | `docs/process/13_ui_asset_pipeline.md`（**UI 资产管线**：资产清单 `assets/ui_manifest.json` = 单一事实源；`python scripts/ui_assets.py add/build/verify` 生图+抠透明+入库；`powershell scripts/ui_preview.ps1 <scene>` 出图验收；界面数据只引用资产路径，`image` 原语见 `09_render_framework.md` §5.1） |
 | **AI 生图（UI 效果图/概念图，S18.7 前置）** | `scripts/agnes_gen.py`（Agnes Image 2.5 Flash；`AGNES_API_KEY` 环境变量；用法见 `docs/process/04_tooling.md` §6） |
 | Android 壳落地 + Mac 出 APK（S5.5） | `android/README.md` |
 | 引入新依赖 / 改 workspace 结构 | `docs/process/01_architecture.md` §4（现成库清单，先查再引）→ `docs/style.md` §5.9 |

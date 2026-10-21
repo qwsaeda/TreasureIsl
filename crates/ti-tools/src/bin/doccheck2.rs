@@ -1903,9 +1903,101 @@ fn check_render_framework_boundary(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 原语 `params` 校验（icon / image / grad）。
+#[allow(clippy::too_many_arguments)]
+fn check_primitive_params(
+    root: &Path,
+    kind: &str,
+    pr: &serde_json::Map<String, serde_json::Value>,
+    at: &str,
+    tokens: &std::collections::HashSet<String>,
+    icons: &std::collections::HashSet<String>,
+    registered_assets: &std::collections::HashSet<String>,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    if kind == "icon" {
+        if let Some(ic) = pr.get("icon").and_then(|v| v.as_str()) {
+            if !icons.contains(ic) {
+                errors.push(format!(
+                    "{at}: params.icon='{ic}' 不在 ui_icons.json 注册表（会静默跳过）"
+                ));
+            }
+        }
+    }
+    if kind == "image" {
+        errors.extend(check_image_asset(root, registered_assets, pr, at));
+    }
+    if kind == "grad" {
+        for t in ["from_token", "to_token"] {
+            if let Some(tok) = pr.get(t).and_then(|v| v.as_str()) {
+                if !tokens.contains(tok) {
+                    errors.push(format!("{at}: grad {t}='{tok}' 非 theme 合法令牌"));
+                }
+            }
+        }
+        if let Some(st) = pr.get("steps").and_then(serde_json::Value::as_i64) {
+            if !(2..=256).contains(&st) {
+                errors.push(format!("{at}: grad steps={st} 越界（2..256）"));
+            }
+        }
+    }
+    errors
+}
+
+/// 原语 `text` 校验（`text`/`text_key` 存在性 + `tier` 合法值）。
+fn check_primitive_text(
+    obj: &serde_json::Map<String, serde_json::Value>,
+    at: &str,
+    strings: &serde_json::Value,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    let tk = obj.get("text_key").and_then(|v| v.as_str()).unwrap_or("");
+    let tx = obj.get("text").and_then(|v| v.as_str()).unwrap_or("");
+    if tk.is_empty() && tx.is_empty() {
+        errors.push(format!("{at}: text 缺 text/text_key（空内容不画）"));
+    }
+    if !tk.is_empty() && strings.get(tk).is_none() {
+        errors.push(format!("{at}: text_key='{tk}' 不在 strings.json（会显示裸 key）"));
+    }
+    match obj.get("tier").and_then(|v| v.as_str()).unwrap_or("") {
+        "title" | "body" | "hint" => {}
+        other => {
+            errors.push(format!("{at}: tier='{other}' 非法（仅 title/body/hint）"));
+        }
+    }
+    errors
+}
+
+/// S18.8b：`image` 原语的资产校验 —— 文件真实存在 **且** 已登记在资产清单
+/// （`assets/ui_manifest.json` = 资产单一事实源）。
+///
+/// 缺资源 = 静默不画（画面缺件却不报错）→ 前置拦截；未登记 = 资产清单与实际用图脱节。
+fn check_image_asset(
+    root: &Path,
+    registered: &std::collections::HashSet<String>,
+    pr: &serde_json::Map<String, serde_json::Value>,
+    at: &str,
+) -> Vec<String> {
+    match pr.get("asset").and_then(|v| v.as_str()) {
+        None => vec![format!("{at}: image 原语缺 params.asset")],
+        Some("") => vec![format!("{at}: image 原语 params.asset 为空")],
+        Some(a) => {
+            if !root.join(a).is_file() {
+                vec![format!("{at}: image 资源 '{a}' 不存在（相对仓库根；缺资源 = 静默不画）")]
+            } else if !registered.contains(a) {
+                vec![format!(
+                    "{at}: image 资源 '{a}' 未在 assets/ui_manifest.json 登记（资产清单 = 单一事实源）"
+                )]
+            } else {
+                Vec::new()
+            }
+        }
+    }
+}
+
 /// S18.7g：声明式原语表数据合法性（`scenes.json` `primitives[]`）。
 ///
-/// 通用原语只有 6 种（rect/text/icon/grad/glow/disc）；数据侧不变式（`09_render_framework.md` §5.1）：
+/// 通用原语只有 7 种（rect/text/icon/grad/glow/disc/image）；数据侧不变式（`09_render_framework.md` §5.1）：
 /// - `color` 必须是 `theme.by_name` 合法令牌名 —— 拼错 = **静默回退** `text_on_parch`；
 /// - `params.icon` 必须在 `ui_icons.json` 注册表 —— 拼错 = **静默跳过**；
 /// - `text_key` 必须在 `strings.json` —— 缺键 = 界面显示**裸 key**（非静默失败）；
@@ -1914,7 +2006,7 @@ fn check_render_framework_boundary(root: &Path) -> Vec<String> {
 /// 动机：S18.7d~f 七场景 517 条原语落库后，人工自审发现此类错误**不报错**（只改画面不崩），
 /// 故固化为门禁，防后续 JSON 编辑引入静默漂移。
 fn check_primitives_data(root: &Path) -> Vec<String> {
-    const KINDS: [&str; 6] = ["rect", "text", "icon", "grad", "glow", "disc"];
+    const KINDS: [&str; 7] = ["rect", "text", "icon", "grad", "glow", "disc", "image"];
     let mut errors = Vec::new();
     let Some(json_text) = read_file(root, "assets/data/scenes.json") else {
         return vec!["assets/data/scenes.json 不存在，无法校验原语表".to_string()];
@@ -1945,6 +2037,18 @@ fn check_primitives_data(root: &Path) -> Vec<String> {
     let strings: serde_json::Value = read_file(root, "assets/data/strings.json")
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or(serde_json::Value::Null);
+    // S18.8b：资产清单（`assets/ui_manifest.json` = 资产单一事实源）→ 已登记的资产路径集合。
+    let registered_assets: std::collections::HashSet<String> =
+        read_file(root, "assets/ui_manifest.json")
+            .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+            .and_then(|v| {
+                v.get("assets").and_then(|a| a.as_array()).map(|arr| {
+                    arr.iter()
+                        .filter_map(|a| a.get("file").and_then(|f| f.as_str()).map(str::to_string))
+                        .collect()
+                })
+            })
+            .unwrap_or_default();
     for (sid, scene) in json.as_object().into_iter().flatten() {
         let Some(prims) = scene.get("primitives").and_then(|p| p.as_array()) else {
             continue;
@@ -1955,7 +2059,7 @@ fn check_primitives_data(root: &Path) -> Vec<String> {
             let at = format!("{sid}.primitives[{i}]");
             if !KINDS.contains(&kind) {
                 errors.push(format!(
-                    "{at}: kind='{kind}' 非通用原语（仅 rect/text/icon/grad/glow/disc）"
+                    "{at}: kind='{kind}' 非通用原语（仅 rect/text/icon/grad/glow/disc/image）"
                 ));
                 continue;
             }
@@ -1967,45 +2071,18 @@ fn check_primitives_data(root: &Path) -> Vec<String> {
                 }
             }
             if let Some(pr) = obj.get("params").and_then(|v| v.as_object()) {
-                if kind == "icon" {
-                    if let Some(ic) = pr.get("icon").and_then(|v| v.as_str()) {
-                        if !icons.contains(ic) {
-                            errors.push(format!(
-                                "{at}: params.icon='{ic}' 不在 ui_icons.json 注册表（会静默跳过）"
-                            ));
-                        }
-                    }
-                }
-                if kind == "grad" {
-                    for t in ["from_token", "to_token"] {
-                        if let Some(tok) = pr.get(t).and_then(|v| v.as_str()) {
-                            if !tokens.contains(tok) {
-                                errors.push(format!("{at}: grad {t}='{tok}' 非 theme 合法令牌"));
-                            }
-                        }
-                    }
-                    if let Some(st) = pr.get("steps").and_then(serde_json::Value::as_i64) {
-                        if !(2..=256).contains(&st) {
-                            errors.push(format!("{at}: grad steps={st} 越界（2..256）"));
-                        }
-                    }
-                }
+                errors.extend(check_primitive_params(
+                    root,
+                    kind,
+                    pr,
+                    &at,
+                    &tokens,
+                    &icons,
+                    &registered_assets,
+                ));
             }
             if kind == "text" {
-                let tk = obj.get("text_key").and_then(|v| v.as_str()).unwrap_or("");
-                let tx = obj.get("text").and_then(|v| v.as_str()).unwrap_or("");
-                if tk.is_empty() && tx.is_empty() {
-                    errors.push(format!("{at}: text 缺 text/text_key（空内容不画）"));
-                }
-                if !tk.is_empty() && strings.get(tk).is_none() {
-                    errors.push(format!("{at}: text_key='{tk}' 不在 strings.json（会显示裸 key）"));
-                }
-                match obj.get("tier").and_then(|v| v.as_str()).unwrap_or("") {
-                    "title" | "body" | "hint" => {}
-                    other => {
-                        errors.push(format!("{at}: tier='{other}' 非法（仅 title/body/hint）"));
-                    }
-                }
+                errors.extend(check_primitive_text(obj, &at, &strings));
             }
         }
     }

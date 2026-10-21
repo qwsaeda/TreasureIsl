@@ -24,13 +24,19 @@ pub struct HdPng {
 ///
 /// 支持任意色彩类型（`png` crate 归一化为 RGBA8）；非 PNG / 截断 / 解码失败 → `Err`。
 ///
+/// ⚠️ **`Transformations::ALPHA` 不可省**（S18.8b）：RGB（无 alpha 通道）的 PNG 若只开
+/// `EXPAND`，`png` crate 仍按 **3 字节/像素** 输出，而本函数按 **4 字节/像素** 读缓冲
+/// → 通道错位一整像素（画面颜色错乱却不报错）。`ALPHA` 强制补 alpha 通道 → 恒为 RGBA8。
+///
 /// # Errors
 ///
 /// PNG 头无效、像素解码失败或 IO 错误。
 pub fn decode_png_rgba(bytes: &[u8]) -> Result<HdPng, String> {
     let mut decoder = png::Decoder::new(Cursor::new(bytes));
-    // 归一化输出为 RGBA8（调色板/灰度/指数 16 位统一扩展）
-    decoder.set_transformations(png::Transformations::STRIP_16 | png::Transformations::EXPAND);
+    // 归一化输出为 RGBA8（调色板/灰度/指数 16 位统一扩展；`ALPHA` 补 alpha 通道）
+    decoder.set_transformations(
+        png::Transformations::STRIP_16 | png::Transformations::EXPAND | png::Transformations::ALPHA,
+    );
     let mut reader = decoder.read_info().map_err(|e| format!("png 头解析失败: {e}"))?;
     let info = reader.info();
     let width = info.width;

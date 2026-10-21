@@ -58,6 +58,7 @@
 | [ui-redesign-v3/07_v3_5_pass.md](ui-redesign-v3/07_v3_5_pass.md) | **v3.5 真游戏化重设计**（地形数据 + 暖色板 + 画布贴合 + 实体图标化 + HUD/命令盘黄铜化；S18.9~S18.13 执行链；画面丑的根因=设计数据而非渲染/分离） |
 | [process/11_bevy_migration.md](process/11_bevy_migration.md) | **渲染引擎迁移裁决（S18 · Bevy 0.20）**：差距定稿 + 定案推翻签核（macroquad 定案作废 / 旧 800KB 预算作废）+ 新 wasm 预算（≤8MB）+ 架构形状（ti-engine 新 crate + Canvas 后端替换 + 双渲染期）+ WBS S18.0–S18.8 + 风险（改引擎层代码前必读） |
 | [process/12_bevy_usage.md](process/12_bevy_usage.md) | **Bevy 0.20 用法规范 / 最佳实践 / 坑位清单**（官方 `DefaultPlugins` 强制 + 1080 坐标换算 + z 层负值升序绘制 + GPU Text2d + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位；S18.7 起 Bevy = 唯一渲染引擎） |
+| [process/13_ui_asset_pipeline.md](process/13_ui_asset_pipeline.md) | **UI 资产管线**（清单驱动：AI 生图 → 抠透明 → 规范化 → 入库 `assets/ui/`；角色预设 background/medallion/board/portrait；`scripts/ui_assets.py` + `scripts/ui_preview.ps1`；资产清单 = 单一事实源，门禁校验登记与存在） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 

@@ -57,7 +57,11 @@ if ($installed -match 'wasm32-unknown-unknown') {
     $wasmBuildOk = ($LASTEXITCODE -eq 0)
     & cargo clippy --release --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-wasm --target wasm32-unknown-unknown -- -D warnings 2>&1 | Out-Null
     $wasmClippyOk = ($LASTEXITCODE -eq 0)
-    Report ($wasmBuildOk -and $wasmClippyOk) 'cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)'
+    # S18.8b：native 交付壳也纳入 clippy（此前只 lint wasm bin → native 侧旧伤长期没人看见，
+    # 例：treasure_bevy.rs main() 101 行超限）。两个 bin 同源，native 的 cfg 分支要单独过一遍。
+    & cargo clippy --release --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- -D warnings 2>&1 | Out-Null
+    $nativeClippyOk = ($LASTEXITCODE -eq 0)
+    Report ($wasmBuildOk -and $wasmClippyOk -and $nativeClippyOk) 'cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)'
 } else {
     Skip 'cargo build (wasm32-unknown-unknown)' 'target 未安装，S2.5 解锁'
 }

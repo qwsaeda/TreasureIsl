@@ -3,8 +3,8 @@
 """数据分离门禁（S18.7）：界面 = 数据，渲染层不认识场景语义。
 
 判据（任一不满足即 FAIL）：
-1. **通用原语闭集**：渲染层只认 6 个通用 kind（`rect`/`text`/`icon`/`grad`/`glow`/`disc`）；
-   数据侧（`scenes.json`）也不得出现第 7 个 kind。
+1. **通用原语闭集**：渲染层只认 7 个通用 kind（`rect`/`text`/`icon`/`grad`/`glow`/`disc`/`image`）；
+   数据侧（`scenes.json`）也不得出现第 8 个 kind。
 2. **渲染层无场景语义**：渲染层源码不得出现场景名 / 场景专属 kind
    （index/select_role/main_map/vs/saveload/menu_items/ornate_frame/night_sky/...）。
 3. **令牌存在性**：`scenes.json` 原语引用的每个 theme 令牌名必须真实存在
@@ -21,8 +21,8 @@ import re
 import sys
 from pathlib import Path
 
-# 通用原语闭集（渲染层只认这些）。
-GENERIC_KINDS = {"rect", "text", "icon", "grad", "glow", "disc"}
+# 通用原语闭集（渲染层只认这些；S18.8b 新增 `image` 贴图原语）。
+GENERIC_KINDS = {"rect", "text", "icon", "grad", "glow", "disc", "image"}
 
 # 渲染层源码（须无场景语义）。
 RENDERER_FILES = [
@@ -65,6 +65,20 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as e:
         print(f"  ERROR 读 scenes.json 失败: {e}")
         return 1
+    # S18.8b：资产清单（`assets/ui_manifest.json` = 资产单一事实源）→ 已登记的资产路径集合。
+    manifest_path = root / "assets" / "ui_manifest.json"
+    registered_assets: set[str] = set()
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            registered_assets = {
+                a.get("file", "") for a in manifest.get("assets", []) if isinstance(a, dict)
+            }
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"  ERROR 读 assets/ui_manifest.json 失败: {e}")
+            return 1
+    else:
+        errors.append("assets/ui_manifest.json 不存在（资产清单 = 单一事实源，S18.8b）")
     for scene_id, scene in scenes.items():
         if not isinstance(scene, dict):
             continue
@@ -92,6 +106,25 @@ def main() -> int:
                     errors.append(
                         f'scenes.json "{scene_id}".primitives[{i}].{key} = {tok!r} 令牌不存在'
                     )
+            # S18.8b：`image` 原语的资源必须真实存在（路径 = 相对仓库根）
+            # **且已登记在资产清单**（`assets/ui_manifest.json` = 资产单一事实源）。
+            # 缺资源 = 静默不画（画面缺件却无报错）→ 门禁前置拦截。
+            if kind == "image":
+                asset = (p.get("params") or {}).get("asset")
+                if not isinstance(asset, str) or not asset:
+                    errors.append(
+                        f'scenes.json "{scene_id}".primitives[{i}]: image 原语缺 params.asset'
+                    )
+                elif not (root / asset).is_file():
+                    errors.append(
+                        f'scenes.json "{scene_id}".primitives[{i}]: image 资源 {asset!r} 不存在'
+                        f"（相对仓库根；缺资源 = 静默不画）"
+                    )
+                elif asset not in registered_assets:
+                    errors.append(
+                        f'scenes.json "{scene_id}".primitives[{i}]: image 资源 {asset!r} 未在'
+                        f" assets/ui_manifest.json 登记（资产清单 = 单一事实源）"
+                    )
 
     # ② 渲染层：只认通用 kind + 无场景语义
     for rel in RENDERER_FILES:
@@ -107,7 +140,7 @@ def main() -> int:
                 if re.search(rf"\"{kw}\"|'{kw}'", code):
                     errors.append(f"{rel}:{lineno} 渲染层出现场景语义 {kw!r}（须改为数据驱动）")
             for m in re.finditer(r'"([a-z_]+)"\s*=>', code):
-                if m.group(1) not in GENERIC_KINDS and m.group(1) not in ("selected", "normal", "title", "body", "hint", "from_token", "to_token", "icon", "size", "steps"):
+                if m.group(1) not in GENERIC_KINDS and m.group(1) not in ("selected", "normal", "title", "body", "hint", "from_token", "to_token", "icon", "size", "steps", "asset"):
                     errors.append(
                         f"{rel}:{lineno} 渲染层 kind 分支 {m.group(1)!r} 非通用原语"
                         f"（允许：{sorted(GENERIC_KINDS)}）"

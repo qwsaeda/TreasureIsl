@@ -45,7 +45,8 @@ fn scenes() -> std::collections::BTreeMap<String, ti_core::data::SceneLayout> {
     ti_core::data::scenes().expect("scenes.json 解析失败").clone()
 }
 
-/// index §4.1（1080 现代版面，S17.2 航海夜 8pt 整备）：标题条 h=96，列表基线 y=392 row_h=224 item_h=168，尾行 y=1840（QB150）。
+/// index §4.1（1080 现代版面，S17.2 航海夜 8pt 整备；S18.8b 贴图版式）：
+/// 标题条 h=96，菜单首行顶 y=704（纹章 120 + 标签），行距 row_h=176，尾行 y=1840（QB150）。
 #[test]
 fn index_layout_matches_doc() {
     let s = scenes();
@@ -53,16 +54,19 @@ fn index_layout_matches_doc() {
         panic!("scenes.json 缺 index");
     };
     assert_eq!(idx.title.h, 96, "index 标题条 h=96（1080 现代版面，S17.2 8pt）");
-    assert_eq!(idx.list.y, 696, "index 列表基线 y=696（1080 现代版面，S18.7 紧凑列）");
+    assert_eq!(idx.list.y, 704, "index 菜单首行顶 y=704（1080 现代版面，S18.8b 贴图版式）");
     assert_eq!(idx.list.row_h, 176, "index 列表 row_h=176（1080 现代版面，S18.7 紧凑行距）");
-    assert_eq!(idx.list.item_h, 152, "index 列表 item_h=152（1080 现代版面，S18.7 紧凑卡高）");
+    assert_eq!(
+        idx.list.item_h, 160,
+        "index 列表 item_h=160（纹章 120 + 标签上沿；留 16px 行间空档）"
+    );
     // 现代版面不变式：首块顶 = 基线 - highlight_offset = 704-0 = 704，须在标题条（12..108）之下留间隙；
-    // 末块底 = 704 + 5*176 + 152 = 1736，须在尾行（1840）之上。
+    // 末块底 = 704 + 5*176 + 160 = 1744，须在尾行（1840）之上。
     let top = idx.list.y - idx.list.highlight_offset;
-    assert_eq!(top, 696, "index 首块顶 = 696（1080 现代版面，S18.7 紧凑列）");
+    assert_eq!(top, 704, "index 首块顶 = 704（1080 现代版面，S18.8b 贴图版式）");
     assert!(top >= 108, "index 首块顶 {top} 压标题条（条底 108）");
     let bottom = top + 5 * idx.list.row_h + idx.list.item_h;
-    assert_eq!(bottom, 1728, "index 末块底 = 1728（1080 现代版面，S18.7 紧凑列）");
+    assert_eq!(bottom, 1744, "index 末块底 = 1744（1080 现代版面，S18.8b 贴图版式）");
     assert!(bottom <= 1838, "index 末块底 {bottom} 撞尾行 y=1840");
     let status = idx.extra.get("status").expect("index 缺 status 矩形");
     assert_eq!(status.x, 540, "index status x=540（QB123 屏心居中语义坐标）");
@@ -603,22 +607,15 @@ fn scene_layer_contributes_text_region_pixels() {
         let px = render_scene_1080(scene);
         assert_eq!(px.len(), FB_W * FB_H, "{scene} 帧缓冲应 = 1080×1920");
         if scene == "index" {
-            // S18.7：index 标题区 = **仪式木框**（通用原语 `rect` 组合：木框 112,200,856,360
-            // + 金内线 136,224,816,4），替代细标题条 `title_bar`（避免标题重复）。
-            let n =
-                region_color_count(&px, 112, 200, 856, 16, ti_app::scenes::chrome::COLOR_WOOD_WARM)
-                    + region_color_count(
-                        &px,
-                        136,
-                        224,
-                        816,
-                        4,
-                        ti_app::scenes::chrome::COLOR_GOLD_WARM,
-                    );
+            // S18.8b：index 标题区 = **木牌贴图**（`image` 原语：assets/ui/board.png，
+            // 120,250,840,360）→ 判据改为「标题区有暖色（木纹 r>b）像素」——
+            // 既证明贴图被画上，又证明它压住了背景夜空（夜空是冷色 b>r）。
+            let n = region_warm_count(&px, 120, 250, 840, 360);
             assert!(
                 n > 0,
-                "index 仪式木框区（112,200,856,16 / 136,224,816,4）无 chrome 像素 —— 木框未画 / 被盖死"
+                "index 标题区（120,250,840,360）无木牌暖色像素 —— board 贴图未画 / 被盖死"
             );
+            eprintln!("  index 木牌暖色像素 = {n}");
             continue;
         }
         // S18.7d：select_role/select_map/message/saveload 版面 = JSON 原语（夜空系：
@@ -660,21 +657,57 @@ fn region_color_count(px: &[u16], x: i32, y: i32, w: i32, h: i32, color: u16) ->
     n
 }
 
+/// S18.8b：区域内「暖色」像素数（RGB565 解码后 `r > b`）——木纹/金调判据
+/// （夜空背景是冷色 `b > r` → 贴图压上后区域转暖）。
+fn region_warm_count(px: &[u16], x: i32, y: i32, w: i32, h: i32) -> usize {
+    let y0 = y.max(0);
+    let x0 = x.max(0);
+    let y1 = (y + h).min(FB_H as i32);
+    let x1 = (x + w).min(FB_W as i32);
+    let mut n = 0usize;
+    for py in y0..y1.max(y0) {
+        for pxx in x0..x1.max(x0) {
+            let c = px[(py as usize) * FB_W + (pxx as usize)];
+            let r = i32::from((c >> 11) & 0x1F);
+            let b = i32::from(c & 0x1F);
+            if r > b {
+                n += 1;
+            }
+        }
+    }
+    n
+}
+
 #[test]
 fn selected_card_base_is_color_selected() {
     let scs = scenes();
     for scene in ["index", "select_role"] {
-        // 选中态底色 = **数据指定**（S18.6：index 走 `menu_items` 原语的 `color` 令牌；
-        // 其余场景走 `COLOR_SELECTED`）。契约不变式 = 选中卡底 = 该色 + 未选中区 0 命中（不外溢）。
-        let sel = match scene {
-            // S18.7d：index / select_role 选中行底 = JSON 原语 `gold_warm`（数据指定色令牌）
-            "index" | "select_role" => ti_render::theme::Theme::default()
-                .by_name("gold_warm")
-                .unwrap_or(ti_app::menu_shell::COLOR_SELECTED),
-            _ => ti_app::menu_shell::COLOR_SELECTED,
-        };
         let px = render_scene_1080(scene);
         let layout = scs.get(scene).expect("scenes.json 缺场景");
+        if scene == "index" {
+            // S18.8b：index 选中态 = **纹章放大 + 标签变金**（无「金底卡」）→
+            // 判据 = 选中项标签区有 gold_warm 像素，未选中项标签区没有（选中态不外溢）。
+            let gold = ti_render::theme::Theme::default()
+                .by_name("gold_warm")
+                .unwrap_or(ti_app::menu_shell::COLOR_SELECTED);
+            let top0 = layout.list.y;
+            let top1 = top0 + layout.list.row_h;
+            let sel_gold = region_color_count(&px, 240, top0 + 128, 600, 44, gold);
+            let other_gold = region_color_count(&px, 240, top1 + 128, 600, 44, gold);
+            assert!(
+                sel_gold > 0,
+                "index 选中项标签区（顶 {top0}）无 gold_warm 像素（选中标签应变金）"
+            );
+            assert_eq!(
+                other_gold, 0,
+                "index 未选中项标签区（顶 {top1}）不应有 gold_warm 像素（选中态泄漏）"
+            );
+            continue;
+        }
+        // 选中态底色 = **数据指定**（S18.7d v3：select_role 选中行底 = JSON 原语 `gold_warm`）。
+        let sel = ti_render::theme::Theme::default()
+            .by_name("gold_warm")
+            .unwrap_or(ti_app::menu_shell::COLOR_SELECTED);
         let top0 = layout.list.y - layout.list.highlight_offset;
         let top1 = top0 + layout.list.row_h;
         assert!(

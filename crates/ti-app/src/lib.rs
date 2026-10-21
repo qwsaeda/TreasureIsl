@@ -28,6 +28,9 @@ pub mod glyph_raster;
 #[cfg(feature = "hd-8bit")]
 pub mod hd_manifest;
 pub mod i18n;
+/// S18.8b：`image` 原语的 CPU 侧贴图资源缓存（进程级；路径 = 相对 `assets/` 根）。
+#[cfg(feature = "hd-8bit")]
+pub mod image_cache;
 pub mod menu_shell;
 pub mod particles;
 pub mod scenes;

@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "_comment": "UI 资产清单（单一事实源）：角色规格预设 + 资产登记。生成/抠图/规范化走 scripts/ui_assets.py；界面数据（assets/data/scenes.json）只引用 file 路径（相对仓库根）。新增资产 = 本文件加一条 + `python scripts/ui_assets.py build`。",
+  "roles": {
+    "background": {
+      "ratio": "9:16",
+      "target": [
+        1080,
+        1920
+      ],
+      "key": "none",
+      "prompt": "A vertical 9:16 game background, night sky over a calm sea horizon, deep navy blue gradient sky with scattered small warm stars, soft moonlight glow behind thin drifting clouds on the upper right, a subtle dark sea with faint wave highlights at the bottom, warm gold accent glints near the horizon, painterly nautical adventure style, EMPTY center area, absolutely no text, no letters, no logo, no icons, no characters, no UI frames"
+    },
+    "medallion": {
+      "ratio": "1:1",
+      "target": [
+        512,
+        512
+      ],
+      "key": "luma",
+      "prompt": "a single circular gold medallion emblem, ornate thin gold line art, {what} in the center of the medallion, antique brass and gold filigree, glowing gold on a PURE SOLID BLACK background, no text, no letters, no scenery, no texture in the background, high contrast, centered"
+    },
+    "board": {
+      "ratio": "21:9",
+      "target": [
+        1024,
+        439
+      ],
+      "key": "magenta",
+      "prompt": "an ornate carved wooden signboard plaque, dark warm walnut wood with gold filigree carved border and curled corners, a completely EMPTY smooth wooden center panel with no carving inside, horizontal banner shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no shadow, no backdrop, no text, no letters"
+    },
+    "portrait": {
+      "ratio": "2:3",
+      "target": [
+        512,
+        768
+      ],
+      "key": "luma",
+      "prompt": "a character portrait, {what}, heroic fantasy adventure game character art, warm gold rim light, painterly nautical treasure-hunting style, full upper body, glowing gold on a PURE SOLID BLACK background, no text, no letters, no scenery, high contrast, centered"
+    }
+  },
+  "assets": [
+    {
+      "name": "bg_night_sea",
+      "role": "background",
+      "file": "assets/ui/bg_night_sea.png",
+      "params": {},
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "board",
+      "role": "board",
+      "file": "assets/ui/board.png",
+      "params": {},
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_compass",
+      "role": "medallion",
+      "file": "assets/ui/icon_compass.png",
+      "params": {
+        "what": "a compass rose"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_anchor",
+      "role": "medallion",
+      "file": "assets/ui/icon_anchor.png",
+      "params": {
+        "what": "a ship anchor"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_map",
+      "role": "medallion",
+      "file": "assets/ui/icon_map.png",
+      "params": {
+        "what": "a rolled parchment sea chart map"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_gear",
+      "role": "medallion",
+      "file": "assets/ui/icon_gear.png",
+      "params": {
+        "what": "a ship's helm wheel"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_book",
+      "role": "medallion",
+      "file": "assets/ui/icon_book.png",
+      "params": {
+        "what": "an open scroll with curled ends"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_door",
+      "role": "medallion",
+      "file": "assets/ui/icon_door.png",
+      "params": {
+        "what": "an ornate ship cabin door"
+      },
+      "generated_at": "2026-10-21"
+    }
+  ]
+}
