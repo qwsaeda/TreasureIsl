@@ -44,15 +44,11 @@ fn flow_main_map_move_trade_build() {
 
     let start_pos = app.map_pos();
     let gold_before = app.gold();
-    // 移动（主地图 South 方向，开放地形应可移动）
-    app.handle(GameInput::Walk(ti_core::domain::map::Dir::South));
+    // 摇骰沿环岛赛道前进（S19：方向键走格已彻底移除）
+    app.handle(GameInput::Spin);
     let moved = app.map_pos();
-    assert_ne!(moved, start_pos, "开放地形下 South 移动应改变位置");
-    assert_eq!(
-        moved.expect("移动后位置应存在").row,
-        start_pos.expect("初始位置应存在").row + 1,
-        "South 方向 = 行 +1"
-    );
+    assert_ne!(moved, start_pos, "摇骰后应沿赛道前进");
+    assert_eq!(app.scene(), Scene::MainMap, "摇骰落点非 BOSS 格，仍停留主地图");
 
     // 贸易：买 1 件商品 gid=1（价格 20，开局 1000 金）
     let gold0 = app.gold();

@@ -6,6 +6,48 @@
 交互。地图推进玩家与 BOSS 相遇。地图与地形数据来自真实资源（`glmapm0*.Map`，
 格式见 `docs/formats/`），但**玩法规则（移动/触发/卡牌）是本目录定义的设计**。
 
+## 环岛赛道（S19，主玩法 = 大富翁式摇骰前进）
+
+> 玩家是海盗船长，驾船**绕岛航行**：一次操作 = **摇骰定步数 → 沿环岛赛道前进 N 格
+> → 落格结算**。赛道 = 岛屿外岸线环（Moore 轮廓追踪），保留原版地图形状与坐标。
+
+### 赛道数据（单一事实源 `assets/data/board.json`）
+
+| 项 | 设计 |
+|---|---|
+| 赛道 | 每图一条闭合环（m01=45 格 / m02=46 格 / m03=33 格），顺序 = 环绕方向（顺时针） |
+| 生成 | `scripts/extract_board.py`（`terrain.json` 陆格掩码 → Moore 邻域轮廓 → 去重 → 起点旋转到 `player_start` 最近环格）；`--check` 校验一致性 |
+| 空间类型 | `start` / `plain` / `port` / `city` / `event` / `card` / `battle` / `treasure` / `boss`（每图恰 1 起点 + 1 BOSS；港口/城镇 = balance 据点坐标就近吸附；原版特殊地块 event/card/war/MAZE/pool/Castle 按坐标就近吸附） |
+| 分区 | 9 个连续段（`group` 1..9，对齐原版地形类别码 1..9，`legacy/docs/facts/map.md` F-308） |
+| 读档兼容 | 存档仍存行主序格索引；读档位置不在赛道上 = 就近吸附最近赛道格 |
+
+### 摇骰与前进（`rules::board`）
+
+```
+Space（空格）/ 点按「摇骰前进」
+  → 摇骰：步数 = 1..=dice_sides（`balance.board`，默认 6；走 `GameRng` 确定性）
+  → 沿赛道前进 N 格（单向，越过末格回到首格 = 绕岛一圈，`laps` +1）
+  → 落格结算（数值全走 `balance.board`）：
+      绕圈过起点 → 每圈 +`lap_bonus_gold`（默认 150）
+      港口 port   → 提示「可贸易/建造」（经济经 HUD 命令盘）
+      城镇 city   → +`city_gold`（默认 50）
+      事件/卡牌格 → 抽一张卡（`balance.cards` 卡池，`apply_card_effect` 结算）
+      遭遇 battle → 扣 `battle_damage` HP + 失 `battle_gold_loss` 金（默认 30/20）
+      宝藏 treasure → +`treasure_gold`（默认 200）
+      BOSS boss   → 进战斗场景（`combat.md`；击败 BOSS = 跨图推进，下节）
+```
+
+- 落格结果以**提示条**（toast）显示在摇骰按钮下方（文案 `strings.json` `scene.main_map.toast.*`）。
+- 确定性：同 seed + 同摇骰序列 ⇒ 同落格串（可回放，`e2e_board_spin_loop` 判据）。
+
+### 旧移动规则（已彻底移除）
+
+原「方向键逐格自由移动」（`GameInput::Walk` / `MapHost::map_session_move` /
+`GameCommand::Walk` / headless `walk` 动作）已于 S19.1 彻底删除——主地图移动**只保留摇骰
+（`GameInput::Spin`）**，方向键不再产生任何移动；`rules::main_map::MapSession`（地形
+`move_to` / `dispatch`）作为规则数据仍保留供 Landmark 据点结算与旧存档坐标校验，
+但**不再有输入通道驱动它**。主地图界面按赛道渲染（轨道高亮 + 空间标记 + 摇骰按钮）。
+
 ## 地图结构
 
 | 项 | 设计 |
@@ -17,14 +59,16 @@
 
 ## 移动规则
 
+> S19.1 起主地图移动**只有摇骰**（§环岛赛道）：原「方向键逐格自由移动」
+> （`GameInput::Walk`）已彻底删除，方向键不再移动；`rules::main_map` 的
+> 地形 `move_to` 仅作为据点结算的数据底座保留（§据点与事件），无输入通道。
+
 ```
-方向键 / 滑动 → 目标格
-  若 越界 或 不可通行 → 不移动（不消耗回合）
-  否则 移动一格 → 触发「落格结算」（见下）
+摇骰（Space / deck_spin 触摸）→ 骰点 1..=6 → 沿环岛赛道前进 N 格 → 落格结算（见 §环岛赛道）
 ```
 
 - **一格一步**，每步触发一次结算，保持回合制节奏；
-- 不可通行判定来自地形表（不进代码，进 `data/maps.json`）。
+- 不可通行判定由赛道数据决定（`assets/data/board.json`，不进代码）。
 
 ## 据点与事件（落格结算）
 

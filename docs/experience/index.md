@@ -29,7 +29,7 @@
 
 | 卷 | 内容 | 条数 |
 |---|---|---|
-| [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 15 |
+| [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 13 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
@@ -149,6 +149,7 @@
 | EXP-104 | code | | 离屏截图的采样点标签诱人：把四角采样当成「整屏铺满」，连改 3 处本来正确的代码。正文见 `code.md` |
 | EXP-105 | code | | 原语表 z 层卓埋 / 行高变了栏位没算 / JSON `text_key` 先验存在。正文见 `code.md` |
 | EXP-106 | code | | 原语批次的调用位置 = 层序；背景层必须在运行时内容**之前**画。正文见 `code.md` |
+| EXP-110 | formats | | PCX 精灵抠透明不能假设固定键色（原版 PCX = 亮绿键 + dither 混色，非品红）：键色集合 = 亮绿 + 品红 + 四角落采样；AGNES 生图品红底改角落均值 + 容差 70 抠。正文见 `formats.md` |
 
 
 ## 条目格式（写新条时照抄）

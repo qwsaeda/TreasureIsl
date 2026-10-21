@@ -7,7 +7,6 @@
 use serde::Deserialize;
 use ti_app::game_app::{GameApp, GameInput, Scene};
 use ti_core::domain::economy;
-use ti_core::domain::map;
 
 /// 全流程脚本（`tests/scripts/full_run.json`，P3-3 判据）。
 #[derive(Debug, Deserialize)]
@@ -30,9 +29,6 @@ struct Step {
     scene: String,
     /// 期望执行后场景。
     expect: String,
-    /// 移动方向（`action == "walk"` 时用，`Dir` 名字）。
-    #[serde(default)]
-    dir: Option<String>,
     /// 据点事件码（`action == "landmark"` 时用）。
     #[serde(default)]
     code: Option<u32>,
@@ -83,7 +79,7 @@ fn to_input(step: &Step) -> GameInput {
         "msg_prev" => GameInput::MsgPrev,
         "msg_close" => GameInput::MsgClose,
         "saveload_close" => GameInput::SaveloadClose,
-        "walk" => GameInput::Walk(dir_by_name(step.dir.as_deref().unwrap_or_default())),
+        "spin" => GameInput::Spin,
         "landmark" => GameInput::Landmark(step.code.unwrap_or(0)),
         "trade_buy" => GameInput::TradeBuy(step.gid.unwrap_or(0)),
         "trade_sell" => GameInput::TradeSell(step.gid.unwrap_or(0)),
@@ -92,21 +88,6 @@ fn to_input(step: &Step) -> GameInput {
         "load_save" => GameInput::LoadSave(step.slot.unwrap_or(0)),
         other => {
             eprintln!("unknown action: {other}");
-            std::process::exit(1);
-        }
-    }
-}
-
-/// 方向名 → `Dir`。
-fn dir_by_name(name: &str) -> map::Dir {
-    use ti_core::domain::map::Dir;
-    match name {
-        "North" => Dir::North,
-        "West" => Dir::West,
-        "South" => Dir::South,
-        "East" => Dir::East,
-        other => {
-            eprintln!("unknown direction: {other}");
             std::process::exit(1);
         }
     }

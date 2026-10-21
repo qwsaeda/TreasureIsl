@@ -8,11 +8,10 @@
 //!   （返回是否消费了该输入，与 `route_input` 语义一致）。
 //! - [`GameCommand`]：可派发枚举，每个变体 = 一种游戏操作；
 //!   `impl Command for GameCommand` 把各变体委托给 `scenes::route_input`。
-//! - 命令枚举可自由携带参数（`Building`/`Dir`/`u32`/`usize`），
+//! - 命令枚举可自由携带参数（`Building`/`u32`/`usize`），
 //!   与现有 `GameInput` 1:1 对齐，新增变体只需加一个 match 分支。
 
 use ti_core::domain::economy::Building;
-use ti_core::domain::map::Dir;
 
 use crate::game_app::GameInput;
 use crate::scenes::{SceneHost, SceneKind, route_input};
@@ -44,8 +43,8 @@ pub enum GameCommand {
     Prev,
     /// 下一页/下一个（选角/选图）。
     Next,
-    /// 主地图方向移动。
-    Walk(Dir),
+    /// 主地图摇骰前进（沿环岛赛道前进 N 格，`progression.md` §环岛赛道）。
+    Spin,
     /// 主地图据点触发（事件码 1..8）。
     Landmark(u32),
     /// 主地图贸易：买（`gid`）。
@@ -82,7 +81,7 @@ impl From<GameCommand> for GameInput {
             GameCommand::Back => Self::Back,
             GameCommand::Prev => Self::Prev,
             GameCommand::Next => Self::Next,
-            GameCommand::Walk(d) => Self::Walk(d),
+            GameCommand::Spin => Self::Spin,
             GameCommand::Landmark(c) => Self::Landmark(c),
             GameCommand::TradeBuy(g) => Self::TradeBuy(g),
             GameCommand::TradeSell(g) => Self::TradeSell(g),
@@ -113,8 +112,7 @@ impl GameCommand {
     pub const fn has_param(&self) -> bool {
         matches!(
             self,
-            Self::Walk(_)
-                | Self::Landmark(_)
+            Self::Landmark(_)
                 | Self::TradeBuy(_)
                 | Self::TradeSell(_)
                 | Self::Build(_)

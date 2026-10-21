@@ -233,6 +233,15 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             }],
         },
         cards: ti_core::data::CardsCfg { event_chance: 0.5, hand_size: 1, deck: Vec::new() },
+        board: ti_core::data::BoardCfg {
+            dice_sides: 6,
+            max_steps: 6,
+            lap_bonus_gold: 0,
+            battle_damage: 0,
+            battle_gold_loss: 0,
+            treasure_gold: 0,
+            city_gold: 0,
+        },
         messages: ti_core::data::MessagesCfg { pages: std::collections::BTreeMap::new() },
         selection: ti_core::data::SelectionCfg {
             character_count: 5,

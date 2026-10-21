@@ -5,7 +5,6 @@ use ti_app::commands::{Command as Cmd, GameCommand};
 use ti_app::game_app::{GameApp, GameInput, Scene};
 use ti_app::scenes::{MenuHost, SessionHost};
 use ti_core::domain::economy::Building;
-use ti_core::domain::map::Dir;
 
 /// `From<GameCommand> for GameInput` 与 `GameInput` 的 1:1 对齐（穷举校验，§5.6.6）。
 #[test]
@@ -17,7 +16,7 @@ fn command_to_input_is_exhaustive() {
         (GameCommand::Back, GameInput::Back),
         (GameCommand::Prev, GameInput::Prev),
         (GameCommand::Next, GameInput::Next),
-        (GameCommand::Walk(Dir::North), GameInput::Walk(Dir::North)),
+        (GameCommand::Spin, GameInput::Spin),
         (GameCommand::Landmark(6), GameInput::Landmark(6)),
         (GameCommand::TradeBuy(1), GameInput::TradeBuy(1)),
         (GameCommand::TradeSell(2), GameInput::TradeSell(2)),
@@ -49,7 +48,7 @@ fn command_has_param_false_for_paramless() {
 /// 带参命令的 `has_param` 返回 true。
 #[test]
 fn command_has_param_true_for_parameterized() {
-    assert!(GameCommand::Walk(Dir::East).has_param());
+    assert!(!GameCommand::Spin.has_param());
     assert!(GameCommand::Landmark(1).has_param());
     assert!(GameCommand::TradeBuy(3).has_param());
     assert!(GameCommand::Build(Building::Fort).has_param());
@@ -80,10 +79,10 @@ fn dispatch_index_move_and_confirm() {
     assert_eq!(app.scene(), Scene::SelectRole);
 }
 
-/// 主地图：`Walk(North)` 移动玩家位置，不切场景 → false。
+/// 主地图：`Spin`（摇骰）沿环岛赛道前进玩家位置，不切场景 → false。
 /// `Landmark(6)` 触发战斗 → 切 Vs → true。
 #[test]
-fn dispatch_main_map_walk_and_battle() {
+fn dispatch_main_map_spin_and_battle() {
     let mut app = GameApp::new(1080.0, 1920.0);
     // 快进到主地图
     app.handle(GameInput::Confirm);
@@ -94,9 +93,9 @@ fn dispatch_main_map_walk_and_battle() {
     assert_eq!(app.scene(), Scene::MainMap);
 
     let before = app.map_pos();
-    let consumed_walk = app.dispatch(GameCommand::Walk(Dir::North));
-    assert!(!consumed_walk, "Walk 不切场景");
-    assert_ne!(app.map_pos(), before, "North 移动应改变位置");
+    let consumed_spin = app.dispatch(GameCommand::Spin);
+    assert!(!consumed_spin, "Spin 落点非 BOSS 格，不切场景");
+    assert_ne!(app.map_pos(), before, "摇骰应沿赛道前进");
 
     // 据点码 6 = 战斗 → 切 Vs
     let consumed_landmark = app.dispatch(GameCommand::Landmark(6));

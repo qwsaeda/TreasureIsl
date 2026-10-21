@@ -351,19 +351,6 @@ impl ti_app::scenes::MapHost for VsHost {
     fn map_boss_tile(&self) -> Option<ti_core::domain::map::GridPos> {
         None
     }
-    fn map_session_move(
-        &mut self,
-        dir: ti_core::domain::map::Dir,
-    ) -> ti_core::rules::main_map::StepResult {
-        let _ = dir;
-        ti_core::rules::main_map::StepResult {
-            pos: ti_core::domain::map::GridPos::new(0, 0),
-            moved: false,
-            landmark: None,
-            card_event: None,
-            boss: false,
-        }
-    }
     fn map_session_dispatch(&self, _code: u32) -> Option<ti_core::domain::map::SceneTarget> {
         None
     }

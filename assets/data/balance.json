@@ -1,129 +1,300 @@
 {
-  "schema_version": 1,
-
-  "economy": {
-    "gold_max": 999999,
-    "bank_rate": 1.0,
-    "initial_gold": 1000
+ "schema_version": 1,
+ "economy": {
+  "gold_max": 999999,
+  "bank_rate": 1.0,
+  "initial_gold": 1000
+ },
+ "combat": {
+  "player_first": true,
+  "max_rounds": 1000,
+  "player": {
+   "hp": 2000,
+   "atk": 60
   },
-
-    "combat": {
-      "player_first": true,
-      "max_rounds": 1000,
-      "player": { "hp": 2000, "atk": 60 },
-      "damage": {
-        "model": "atk_plus_flat",
-        "flat": 1,
-        "atk_coef": 1.0,
-        "rng_span": 3
-      },
-      "boss_tiers": [
-        { "tier": 0, "hp": 2400,  "atk": 10 },
-        { "tier": 1, "hp": 4800,  "atk": 12 },
-        { "tier": 2, "hp": 7200,  "atk": 14 },
-        { "tier": 3, "hp": 9600,  "atk": 16 },
-        { "tier": 4, "hp": 12000, "atk": 20 }
-      ]
-    },
-
-  "trade": {
-    "markup": 1.5,
-    "goods": [
-      { "id": 1, "name_key": "goods.1", "buy": 20,  "qty_max": 99 },
-      { "id": 2, "name_key": "goods.2", "buy": 76,  "qty_max": 99 },
-      { "id": 3, "name_key": "goods.3", "buy": 95,  "qty_max": 99 },
-      { "id": 4, "name_key": "goods.4", "buy": 114, "qty_max": 99 },
-      { "id": 5, "name_key": "goods.5", "buy": 133, "qty_max": 99 }
-    ]
+  "damage": {
+   "model": "atk_plus_flat",
+   "flat": 1,
+   "atk_coef": 1.0,
+   "rng_span": 3
   },
-
-    "build": {
-      "max_level": 10,
-      "buildings": [
-        { "id": "Castle",     "name_key": "build.castle",     "base_cost": 1000, "gold_max": 20000, "atk_bonus": 10, "hp_bonus": 200 },
-        { "id": "Investment", "name_key": "build.investment", "base_cost": 500,  "gold_max": 12000, "atk_bonus": 5,  "hp_bonus": 100 },
-        { "id": "Bank",       "name_key": "build.bank",       "base_cost": 200,  "gold_max": 5000,  "atk_bonus": 0,  "hp_bonus": 50 },
-        { "id": "Fort",       "name_key": "build.fort",       "base_cost": 800,  "gold_max": 16000, "atk_bonus": 8,  "hp_bonus": 150 }
-      ]
-    },
-
-  "cards": {
-    "event_chance": 0.35,
-    "hand_size": 1,
-    "deck": [
-      { "id": 1, "name_key": "cards.1", "weight": 3, "effect": { "kind": "damage", "value": 10 } },
-      { "id": 2, "name_key": "cards.2", "weight": 2, "effect": { "kind": "heal",   "value": 15 } },
-      { "id": 3, "name_key": "cards.3", "weight": 3, "effect": { "kind": "gold",   "value": 20 } },
-      { "id": 4, "name_key": "cards.4", "weight": 1, "effect": { "kind": "move" } },
-      { "id": 5, "name_key": "cards.5", "weight": 1, "effect": { "kind": "unknown" } }
-    ]
-  },
-
-  "messages": {
-    "pages": { "msgs": 1, "msgl": 1, "msgm": 1, "help": 3, "info": 1 }
-  },
-
-  "save": {
-    "slot_count": 5,
-    "magic": 20011591,
-    "v2_size": 26
-  },
-
-  "selection": {
-    "characters": [
-      { "id": "panda",     "index": 0 },
-      { "id": "tichy",     "index": 1 },
-      { "id": "kidd",      "index": 2 },
-      { "id": "drake",     "index": 3 },
-      { "id": "katharina", "index": 4 }
-    ],
-    "maps": [
-      {
-        "id": "m01",
-        "index": 0,
-        "grid_w": 20,
-        "grid_h": 20,
-        "boss_tier": 0,
-        "player_start": [10, 10],
-        "landmarks": [
-          [2, 2],
-          [17, 17]
-        ],
-        "boss_tile": [5, 5]
-      },
-      {
-        "id": "m02",
-        "index": 1,
-        "grid_w": 20,
-        "grid_h": 20,
-        "boss_tier": 1,
-        "player_start": [10, 10],
-        "landmarks": [
-          [2, 2],
-          [17, 17]
-        ],
-        "boss_tile": [5, 5]
-      },
-      {
-        "id": "m03",
-        "index": 2,
-        "grid_w": 15,
-        "grid_h": 15,
-        "boss_tier": 2,
-        "player_start": [7, 7],
-        "landmarks": [
-          [2, 2],
-          [12, 12]
-        ],
-        "boss_tile": [4, 4]
-      }
-    ]
-  },
-
-  "ui": {
-    "logical_width": 1080,
-    "logical_height": 1920,
-    "glyph_advance": 12,
-    "max_back_steps": 8
+  "boss_tiers": [
+   {
+    "tier": 0,
+    "hp": 2400,
+    "atk": 10
+   },
+   {
+    "tier": 1,
+    "hp": 4800,
+    "atk": 12
+   },
+   {
+    "tier": 2,
+    "hp": 7200,
+    "atk": 14
+   },
+   {
+    "tier": 3,
+    "hp": 9600,
+    "atk": 16
+   },
+   {
+    "tier": 4,
+    "hp": 12000,
+    "atk": 20
+   }
+  ]
+ },
+ "trade": {
+  "markup": 1.5,
+  "goods": [
+   {
+    "id": 1,
+    "name_key": "goods.1",
+    "buy": 20,
+    "qty_max": 99
+   },
+   {
+    "id": 2,
+    "name_key": "goods.2",
+    "buy": 76,
+    "qty_max": 99
+   },
+   {
+    "id": 3,
+    "name_key": "goods.3",
+    "buy": 95,
+    "qty_max": 99
+   },
+   {
+    "id": 4,
+    "name_key": "goods.4",
+    "buy": 114,
+    "qty_max": 99
+   },
+   {
+    "id": 5,
+    "name_key": "goods.5",
+    "buy": 133,
+    "qty_max": 99
+   }
+  ]
+ },
+ "build": {
+  "max_level": 10,
+  "buildings": [
+   {
+    "id": "Castle",
+    "name_key": "build.castle",
+    "base_cost": 1000,
+    "gold_max": 20000,
+    "atk_bonus": 10,
+    "hp_bonus": 200
+   },
+   {
+    "id": "Investment",
+    "name_key": "build.investment",
+    "base_cost": 500,
+    "gold_max": 12000,
+    "atk_bonus": 5,
+    "hp_bonus": 100
+   },
+   {
+    "id": "Bank",
+    "name_key": "build.bank",
+    "base_cost": 200,
+    "gold_max": 5000,
+    "atk_bonus": 0,
+    "hp_bonus": 50
+   },
+   {
+    "id": "Fort",
+    "name_key": "build.fort",
+    "base_cost": 800,
+    "gold_max": 16000,
+    "atk_bonus": 8,
+    "hp_bonus": 150
+   }
+  ]
+ },
+ "cards": {
+  "event_chance": 0.35,
+  "hand_size": 1,
+  "deck": [
+   {
+    "id": 1,
+    "name_key": "cards.1",
+    "weight": 3,
+    "effect": {
+     "kind": "damage",
+     "value": 10
+    }
+   },
+   {
+    "id": 2,
+    "name_key": "cards.2",
+    "weight": 2,
+    "effect": {
+     "kind": "heal",
+     "value": 15
+    }
+   },
+   {
+    "id": 3,
+    "name_key": "cards.3",
+    "weight": 3,
+    "effect": {
+     "kind": "gold",
+     "value": 20
+    }
+   },
+   {
+    "id": 4,
+    "name_key": "cards.4",
+    "weight": 1,
+    "effect": {
+     "kind": "move"
+    }
+   },
+   {
+    "id": 5,
+    "name_key": "cards.5",
+    "weight": 1,
+    "effect": {
+     "kind": "unknown"
+    }
+   }
+  ]
+ },
+ "board": {
+  "dice_sides": 6,
+  "max_steps": 6,
+  "lap_bonus_gold": 150,
+  "battle_damage": 30,
+  "battle_gold_loss": 20,
+  "treasure_gold": 200,
+  "city_gold": 50
+ },
+ "messages": {
+  "pages": {
+   "msgs": 1,
+   "msgl": 1,
+   "msgm": 1,
+   "help": 3,
+   "info": 1
   }
+ },
+ "save": {
+  "slot_count": 5,
+  "magic": 20011591,
+  "v2_size": 26
+ },
+ "selection": {
+  "characters": [
+   {
+    "id": "panda",
+    "index": 0
+   },
+   {
+    "id": "tichy",
+    "index": 1
+   },
+   {
+    "id": "kidd",
+    "index": 2
+   },
+   {
+    "id": "drake",
+    "index": 3
+   },
+   {
+    "id": "katharina",
+    "index": 4
+   }
+  ],
+  "maps": [
+   {
+    "id": "m01",
+    "index": 0,
+    "grid_w": 20,
+    "grid_h": 20,
+    "boss_tier": 0,
+    "player_start": [
+     10,
+     10
+    ],
+    "landmarks": [
+     [
+      2,
+      2
+     ],
+     [
+      17,
+      17
+     ]
+    ],
+    "boss_tile": [
+     5,
+     5
+    ]
+   },
+   {
+    "id": "m02",
+    "index": 1,
+    "grid_w": 20,
+    "grid_h": 20,
+    "boss_tier": 1,
+    "player_start": [
+     10,
+     10
+    ],
+    "landmarks": [
+     [
+      2,
+      2
+     ],
+     [
+      17,
+      17
+     ]
+    ],
+    "boss_tile": [
+     5,
+     5
+    ]
+   },
+   {
+    "id": "m03",
+    "index": 2,
+    "grid_w": 15,
+    "grid_h": 15,
+    "boss_tier": 2,
+    "player_start": [
+     7,
+     7
+    ],
+    "landmarks": [
+     [
+      2,
+      2
+     ],
+     [
+      12,
+      12
+     ]
+    ],
+    "boss_tile": [
+     4,
+     4
+    ]
+   }
+  ]
+ },
+ "ui": {
+  "logical_width": 1080,
+  "logical_height": 1920,
+  "glyph_advance": 12,
+  "max_back_steps": 8
+ }
 }

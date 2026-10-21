@@ -1,0 +1,1139 @@
+{
+ "maps": {
+  "m01": {
+   "grid_h": 20,
+   "grid_w": 20,
+   "spaces": [
+    {
+     "cell": [
+      10,
+      17
+     ],
+     "group": 1,
+     "kind": "start",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      11,
+      16
+     ],
+     "group": 1,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      12,
+      16
+     ],
+     "group": 1,
+     "kind": "event",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      13,
+      15
+     ],
+     "group": 1,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      14,
+      15
+     ],
+     "group": 1,
+     "kind": "card",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      15,
+      15
+     ],
+     "group": 2,
+     "kind": "city",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      15,
+      14
+     ],
+     "group": 2,
+     "kind": "battle",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      16,
+      13
+     ],
+     "group": 2,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      17,
+      12
+     ],
+     "group": 2,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      17,
+      11
+     ],
+     "group": 2,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      17,
+      10
+     ],
+     "group": 3,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      16,
+      9
+     ],
+     "group": 3,
+     "kind": "card",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      17,
+      8
+     ],
+     "group": 3,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      16,
+      7
+     ],
+     "group": 3,
+     "kind": "battle",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      17,
+      6
+     ],
+     "group": 3,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      15,
+      6
+     ],
+     "group": 4,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      15,
+      5
+     ],
+     "group": 4,
+     "kind": "event",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      14,
+      4
+     ],
+     "group": 4,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      14,
+      3
+     ],
+     "group": 4,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      13,
+      2
+     ],
+     "group": 4,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      12,
+      2
+     ],
+     "group": 5,
+     "kind": "battle",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      11,
+      3
+     ],
+     "group": 5,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      10,
+      3
+     ],
+     "group": 5,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      9,
+      3
+     ],
+     "group": 5,
+     "kind": "event",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      8,
+      3
+     ],
+     "group": 5,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      7,
+      2
+     ],
+     "group": 6,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      6,
+      3
+     ],
+     "group": 6,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      5,
+      4
+     ],
+     "group": 6,
+     "kind": "boss",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      4,
+      5
+     ],
+     "group": 6,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      5
+     ],
+     "group": 6,
+     "kind": "port",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      6
+     ],
+     "group": 7,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      7
+     ],
+     "group": 7,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      8
+     ],
+     "group": 7,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      9
+     ],
+     "group": 7,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      10
+     ],
+     "group": 7,
+     "kind": "battle",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      11
+     ],
+     "group": 8,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      2,
+      12
+     ],
+     "group": 8,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      13
+     ],
+     "group": 8,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      14
+     ],
+     "group": 8,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      4,
+      14
+     ],
+     "group": 8,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      5,
+      15
+     ],
+     "group": 9,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      6,
+      16
+     ],
+     "group": 9,
+     "kind": "battle",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      7,
+      17
+     ],
+     "group": 9,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      8,
+      16
+     ],
+     "group": 9,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      9,
+      17
+     ],
+     "group": 9,
+     "kind": "event",
+     "terrain": "L"
+    }
+   ]
+  },
+  "m02": {
+   "grid_h": 20,
+   "grid_w": 20,
+   "spaces": [
+    {
+     "cell": [
+      16,
+      10
+     ],
+     "group": 1,
+     "kind": "start",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      17,
+      9
+     ],
+     "group": 1,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      16,
+      8
+     ],
+     "group": 1,
+     "kind": "event",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      16,
+      7
+     ],
+     "group": 1,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      16,
+      6
+     ],
+     "group": 1,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      15,
+      5
+     ],
+     "group": 1,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      14,
+      4
+     ],
+     "group": 2,
+     "kind": "battle",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      13,
+      3
+     ],
+     "group": 2,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      12,
+      2
+     ],
+     "group": 2,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      11,
+      3
+     ],
+     "group": 2,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      10,
+      2
+     ],
+     "group": 2,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      9,
+      2
+     ],
+     "group": 3,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      8,
+      2
+     ],
+     "group": 3,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      7,
+      3
+     ],
+     "group": 3,
+     "kind": "battle",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      6,
+      3
+     ],
+     "group": 3,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      5,
+      4
+     ],
+     "group": 3,
+     "kind": "boss",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      4,
+      3
+     ],
+     "group": 4,
+     "kind": "port",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      4,
+      4
+     ],
+     "group": 4,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      4,
+      5
+     ],
+     "group": 4,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      6
+     ],
+     "group": 4,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      3,
+      7
+     ],
+     "group": 4,
+     "kind": "battle",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      2,
+      8
+     ],
+     "group": 5,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      9
+     ],
+     "group": 5,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      2,
+      10
+     ],
+     "group": 5,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      11
+     ],
+     "group": 5,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      12
+     ],
+     "group": 5,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      13
+     ],
+     "group": 6,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      14
+     ],
+     "group": 6,
+     "kind": "battle",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      15
+     ],
+     "group": 6,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      4,
+      14
+     ],
+     "group": 6,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      5,
+      15
+     ],
+     "group": 6,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      6,
+      16
+     ],
+     "group": 7,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      7,
+      16
+     ],
+     "group": 7,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      8,
+      17
+     ],
+     "group": 7,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      9,
+      17
+     ],
+     "group": 7,
+     "kind": "battle",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      10,
+      17
+     ],
+     "group": 7,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      11,
+      16
+     ],
+     "group": 8,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      12,
+      16
+     ],
+     "group": 8,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      13,
+      17
+     ],
+     "group": 8,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      13,
+      15
+     ],
+     "group": 8,
+     "kind": "card",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      14,
+      15
+     ],
+     "group": 8,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      15,
+      14
+     ],
+     "group": 9,
+     "kind": "battle",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      16,
+      15
+     ],
+     "group": 9,
+     "kind": "city",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      16,
+      13
+     ],
+     "group": 9,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      17,
+      12
+     ],
+     "group": 9,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      17,
+      11
+     ],
+     "group": 9,
+     "kind": "plain",
+     "terrain": "R"
+    }
+   ]
+  },
+  "m03": {
+   "grid_h": 15,
+   "grid_w": 15,
+   "spaces": [
+    {
+     "cell": [
+      2,
+      7
+     ],
+     "group": 1,
+     "kind": "start",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      2,
+      8
+     ],
+     "group": 1,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      9
+     ],
+     "group": 1,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      10
+     ],
+     "group": 1,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      10
+     ],
+     "group": 2,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      4,
+      11
+     ],
+     "group": 2,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      5,
+      12
+     ],
+     "group": 2,
+     "kind": "battle",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      6,
+      13
+     ],
+     "group": 2,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      7,
+      12
+     ],
+     "group": 3,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      8,
+      13
+     ],
+     "group": 3,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      9,
+      12
+     ],
+     "group": 3,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      10,
+      11
+     ],
+     "group": 4,
+     "kind": "card",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      11,
+      10
+     ],
+     "group": 4,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      12,
+      10
+     ],
+     "group": 4,
+     "kind": "city",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      13,
+      9
+     ],
+     "group": 4,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      13,
+      8
+     ],
+     "group": 5,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      13,
+      7
+     ],
+     "group": 5,
+     "kind": "event",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      12,
+      6
+     ],
+     "group": 5,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      12,
+      5
+     ],
+     "group": 5,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      12,
+      4
+     ],
+     "group": 6,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      11,
+      3
+     ],
+     "group": 6,
+     "kind": "battle",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      10,
+      2
+     ],
+     "group": 6,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      9,
+      2
+     ],
+     "group": 7,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      8,
+      2
+     ],
+     "group": 7,
+     "kind": "event",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      7,
+      2
+     ],
+     "group": 7,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      6,
+      1
+     ],
+     "group": 7,
+     "kind": "card",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      6,
+      2
+     ],
+     "group": 8,
+     "kind": "plain",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      5,
+      3
+     ],
+     "group": 8,
+     "kind": "battle",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      4,
+      2
+     ],
+     "group": 8,
+     "kind": "port",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      3,
+      3
+     ],
+     "group": 8,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      3,
+      4
+     ],
+     "group": 9,
+     "kind": "boss",
+     "terrain": "R"
+    },
+    {
+     "cell": [
+      2,
+      5
+     ],
+     "group": 9,
+     "kind": "plain",
+     "terrain": "L"
+    },
+    {
+     "cell": [
+      2,
+      6
+     ],
+     "group": 9,
+     "kind": "card",
+     "terrain": "L"
+    }
+   ]
+  }
+ },
+ "schema_version": 1
+}

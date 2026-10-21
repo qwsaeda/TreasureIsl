@@ -7,7 +7,7 @@
     { "action": "confirm",   "scene": "SelectRole", "expect": "SelectMap" },
     { "action": "next",      "scene": "SelectMap",  "expect": "SelectMap" },
     { "action": "confirm",   "scene": "SelectMap",  "expect": "MainMap" },
-    { "action": "walk", "dir": "South", "scene": "MainMap", "expect": "MainMap" },
+    { "action": "spin", "scene": "MainMap", "expect": "MainMap" },
     { "action": "trade_buy", "gid": 1,  "scene": "MainMap", "expect": "MainMap" },
     { "action": "trade_sell","gid": 1,  "scene": "MainMap", "expect": "MainMap" },
     { "action": "build", "kind": "Castle", "scene": "MainMap", "expect": "MainMap" },

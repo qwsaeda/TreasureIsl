@@ -1,6 +1,7 @@
 //! 正式实现模块：规则/状态机（唯一事实源在 `docs/business/` + `assets/data/*.json`）。
 
 pub mod battle;
+pub mod board;
 pub mod build;
 pub mod cards;
 pub mod cards_draw;

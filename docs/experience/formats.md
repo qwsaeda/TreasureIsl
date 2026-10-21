@@ -118,3 +118,11 @@
 - **教训**：① 导出层（`build_assets`/`unpak`）的「业务名」与寻址层（`Package::find`/`find_key` 继续用 key）必须分离 —— 运行时继续 key 寻址，仅导出/展示换名；② exe 资源名是带 `\\` 前缀的全路径（`music\glmusic.mod`），容器 key 只由叶名算，反查必须**叶名 + 全路径双候选**否则漏命中；③ `mapinfo.ini` 无扩展名，导出时直接是 `50.pcx` 而非 `mapinfo.ini`。
 - **验证**：单测 `cargo test -p ti-formats --test resource_names` 7/7（ui 122/122 全命名 + mapinfo 闭合 0 失配 + music/cards/goods exe/EXTRAS 命中 + CSV source 列 + 50.pcx 重复行内容合并路径）+ `cargo test -p ti-tools --test build_assets` 3/3（幂等 + manifest 校验仍全绿，raw/ 改业务名后 332 文件）。命名覆盖率 DoD 217/217（ui/m01/m02/cards/music/goods），glpics 余 3 条（F-209 名称哈希型）回落 `unknown-{key:08x}.bin` 并显式标 `unknown`。
 
+
+### EXP-110 格式：PCX 精灵抠透明不能假设固定键色（S19 实测，AGNES 生图 + 原版 PCX 导入）
+- **现象**：scripts/pcx_to_png.py 首版按「品红 (255,0,255)」抠 helm_base.pcx，结果绿色碎点（dither 混色）全拉进画面，键得不干净。
+- **根因**：MS-DOS PCX 惯例透明键 = 调色板**首槽**（常为亮绿 (0,255,0)），不是品红；且老素材 dither/抗锯齿会把键色混进图形边缘 → 单色固定键色必漏。
+- **解法**（scripts/pcx_to_png.py）：键色集合 = 亮绿 + 品红 + **四角落采样色**（keys = {(0,255,0),(255,0,255),corner}）；AGNES 生图（品红底）则改按**角落均值 + 容差 70** 抠（
+ekey 逻辑）。
+- **教训**：抠透明前先采样实际背景色，别套「这年代素材 = 品红键」的想当然（与 ssets_hd 提素材 = 品红键不同，**原版 PCX 是亮绿键**）；dither 混色素材建议直接换 AGNES 重绘（S19 舵轮/骰子即此法）。
+- **验证**：helm.png/dice.png 四角 alpha=0 + 非键像素不透明；主地图 Bevy 截图 evidence/bevy_native_main_map.png 摇骰按钮骰子/舵轮无残留色块。

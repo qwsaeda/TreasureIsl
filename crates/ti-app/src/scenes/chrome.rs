@@ -175,6 +175,8 @@ pub mod keys {
     pub const DECK_SELL: &str = "deck_sell";
     /// v3 底部命令盘「建造」键（extra = `main_map.deck_build`）。
     pub const DECK_BUILD: &str = "deck_build";
+    /// v3 「摇骰前进」主操作按钮（extra = `main_map.deck_spin`，`progression.md` §环岛赛道）。
+    pub const DECK_SPIN: &str = "deck_spin";
     /// v2 HUD 经济按钮「贸易」矩形键（extra = `main_map.hud_trade`）。
     pub const HUD_TRADE: &str = "hud_trade";
     /// v2 HUD 经济按钮「出售」矩形键（extra = `main_map.hud_sell`）。

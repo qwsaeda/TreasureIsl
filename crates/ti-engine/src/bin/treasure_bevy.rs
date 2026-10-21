@@ -244,7 +244,8 @@ fn input_system(
         right: kb.pressed(KeyCode::ArrowRight),
         confirm: kb.pressed(KeyCode::Enter) || kb.pressed(KeyCode::Space),
         back: kb.pressed(KeyCode::Backspace) || kb.pressed(KeyCode::Escape),
-        landmark: kb.pressed(KeyCode::Space),
+        landmark: kb.pressed(KeyCode::KeyE),
+        spin: kb.pressed(KeyCode::Space),
         buy: kb.pressed(KeyCode::KeyT),
         sell: kb.pressed(KeyCode::KeyY),
         build: kb.pressed(KeyCode::KeyB),
@@ -258,6 +259,7 @@ fn input_system(
         confirm: key_edge(raw.confirm, state.prev_keys.confirm),
         back: key_edge(raw.back, state.prev_keys.back),
         landmark: key_edge(raw.landmark, state.prev_keys.landmark),
+        spin: key_edge(raw.spin, state.prev_keys.spin),
         buy: key_edge(raw.buy, state.prev_keys.buy),
         sell: key_edge(raw.sell, state.prev_keys.sell),
         build: key_edge(raw.build, state.prev_keys.build),
@@ -462,7 +464,7 @@ const SELFTEST_STEPS: [(&str, u32); 16] = [
     ("confirm", 1),
     ("next", 1),
     ("confirm", 1),
-    ("walk", 1),
+    ("spin", 1),
     ("trade_buy", 1),
     ("trade_sell", 1),
     ("build", 1),
@@ -499,13 +501,12 @@ const SELFTEST_EXPECT: [&str; 16] = [
 #[allow(clippy::match_same_arms)]
 fn selftest_input(action: &str) -> GameInput {
     use ti_core::domain::economy::Building;
-    use ti_core::domain::map::Dir;
     match action {
         "confirm" => GameInput::Confirm,
         "next" => GameInput::Next,
         "move_down" => GameInput::MoveDown,
         "back" => GameInput::Back,
-        "walk" => GameInput::Walk(Dir::South),
+        "spin" => GameInput::Spin,
         "trade_buy" => GameInput::TradeBuy(1),
         "trade_sell" => GameInput::TradeSell(1),
         "build" => GameInput::Build(Building::Castle),

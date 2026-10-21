@@ -1,0 +1,26 @@
+﻿=== S19.1 彻底只留摇骰：删除方向键走格通道（判据 + 实跑证据） ===
+
+判据（本任务验收点）：
+1) 主地图移动只剩摇骰（GameInput::Spin）；Walk 通道全删：
+   GameInput::Walk(Dir) / GameCommand::Walk(Dir) / MapHost::map_session_move /
+   main_map walk_twards + 触摸滑动 4 臂 / headless "walk" 动作 / forward_nav walk_to_boss。
+   rules::main_map::MapSession（地形 move_to/dispatch）作为数据底座保留（Landmark 据点结算 + 旧存档坐标校验），
+   但不再有输入通道驱动它。
+2) 全 workspace 编译 + 测试 + gate 22 项全绿。
+
+--- 1) Walk 残留 grep（0 命中）---
+src_walk_refs=0   tests_walk_refs=0
+（范围：crates/ti-app/src + crates/ti-engine/src + crates/ti-app/tests，
+  模式 GameInput::Walk|GameCommand::Walk|map_session_move|walk_towards）
+
+--- 2) headless full_run.json（walk 步已改 spin，16 步）实跑 ---
+step 5 OK  spin           MainMap -> MainMap
+full run 16/16 steps, 0 failures (P3-3 criterion met)
+
+--- 3) Bevy 壳 selftest（内嵌同源 16 步主循环）实跑 ---
+[selftest] PASS，16/16 步，0 失败；S5.2 全循环在 Bevy 壳内 e2e 通过。
+
+--- 4) gate 22 项 ---
+=== gate: 0 failure(s) ===
+
+=== S19.1 verified ===

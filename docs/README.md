@@ -101,6 +101,9 @@
 | `scripts/playbook.ps1` | **常用命令一键入口**（16 项命令固化：native 运行 / 无头回归 / wasm / 冒烟 / 门禁 / 测试 / fmt / clippy / 元素验证 / 逐精灵渲染 / 推送前置检查 / 台账 / doccheck / 硬编码扫描；`-List` 列全部；UTF-8 BOM 防 PowerShell 编码错位） |
 | `crates/ti-tools/src/bin/specskel.rs` | spec 骨架半自动生成（S0.7；命令见 `AGENTS.md` 命令节） |
 | `evidence/S0.7.log` | specskel 验收日志（单测 6/6 + 三模块实跑） |
+| `scripts/extract_board.py` | **S19 环岛赛道生成**：`terrain.json` 陆格掩码 → Moore 轮廓 → 去重 → 吸附 balance 据点/BOSS/原版特殊地块 → `assets/data/board.json`（`--check` 校验一致性） |
+| `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
+| `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |
 
 ### 归档参照物（`legacy/docs/`，**S11 已物理归档，不是开发依据也不是验收基准**）
 

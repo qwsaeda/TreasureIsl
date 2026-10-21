@@ -30,16 +30,17 @@ use ti_core::data::balance;
 use ti_core::domain::combat::{Side, Unit};
 use ti_core::domain::economy::{Bank, Building, PriceTable};
 use ti_core::domain::flow::Sfx;
-use ti_core::domain::map::{Dir, GridPos, MapTerrain, SceneTarget};
+use ti_core::domain::map::{GridPos, MapTerrain, SceneTarget};
 use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::battle::BattleSession;
+use ti_core::rules::board::{BoardSession, Landing, Track, TrackSpace};
 use ti_core::rules::build;
 use ti_core::rules::cards;
 use ti_core::rules::cards_draw;
 use ti_core::rules::main_loop::SceneStack;
-use ti_core::rules::main_map::{MapSession, StepResult};
+use ti_core::rules::main_map::MapSession;
 use ti_core::rules::messages::total_pages;
 use ti_core::rules::progression::{CLEARED_BIT, ProgressionState};
 use ti_core::rules::rng;
@@ -209,8 +210,8 @@ pub enum GameInput {
     Prev,
     /// 下一页/下一个（事件码 40）。
     Next,
-    /// 主地图方向移动（`Dir` 参数）。
-    Walk(Dir),
+    /// 主地图：摇骰前进（沿环岛赛道前进 N 格，`docs/business/progression.md` §环岛赛道）。
+    Spin,
     /// 主地图据点触发（`code` = 事件码 1..8，`spec/main_map.md §d`）。
     Landmark(u32),
     /// 主地图贸易：买（`gid`）。
@@ -297,6 +298,13 @@ pub struct GameApp {
     /// 主地图会话（`rules::main_map::MapSession`，`MainMap` 场景时有效；
     /// 卡牌事件走 `balance.cards` + `GameRng`，可复现）。
     pub map_session: MapSession,
+    /// 环岛赛道会话（`rules::board::BoardSession`，`MainMap` 场景时有效）。
+    /// 摇骰 → 沿赛道前进 N 格 → 落格结算（`docs/business/progression.md` §环岛赛道）。
+    pub board: Option<BoardSession>,
+    /// 落格提示条文本（`Some` = 有提示待显示；随帧递减过期）。
+    pub board_toast: Option<String>,
+    /// 落格提示条剩余帧数。
+    pub board_toast_ticks: u32,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// P1-7（M5）：卡牌效果状态（`rules::cards::CardState`，`MainMap` 场景时有效）。
@@ -435,8 +443,10 @@ pub struct KeyState {
     pub confirm: bool,
     /// 返回（Backspace / Escape）。
     pub back: bool,
-    /// 据点触发（Space，主地图）。
+    /// 据点触发（E，主地图）。
     pub landmark: bool,
+    /// 摇骰前进（Space，主地图）。
+    pub spin: bool,
     /// 买（T）。
     pub buy: bool,
     /// 卖（Y）。
@@ -481,17 +491,10 @@ impl GameApp {
                 }
             }
             Scene::MainMap => {
-                if k.up {
-                    changed = self.handle(GameInput::Walk(Dir::North)) || changed;
-                }
-                if k.down {
-                    changed = self.handle(GameInput::Walk(Dir::South)) || changed;
-                }
-                if k.left {
-                    changed = self.handle(GameInput::Walk(Dir::West)) || changed;
-                }
-                if k.right {
-                    changed = self.handle(GameInput::Walk(Dir::East)) || changed;
+                // 环岛赛道玩法（S19）：主地图不再 4 方向自由走位，
+                // 一次操作 = 摇骰（Space）→ 沿赛道前进 N 格 → 落格结算。
+                if k.spin {
+                    changed = self.handle(GameInput::Spin) || changed;
                 }
                 if k.buy {
                     changed = self.handle(GameInput::TradeBuy(1)) || changed;
@@ -598,6 +601,9 @@ impl GameApp {
             owned: Vec::new(),
             bank: Bank::default(),
             map_session: MapSession::new(MapTerrain::open(1, 1), GridPos::new(0, 0), &[]),
+            board: None,
+            board_toast: None,
+            board_toast_ticks: 0,
             buildings: Vec::new(),
             card_state: cards::CardState::default(),
             battle: None,
@@ -1297,6 +1303,13 @@ impl GameApp {
             pool,
             boss_tile,
         );
+        // 环岛赛道（`rules::board`）：赛道数据来自 `assets/data/board.json`
+        // （`scripts/extract_board.py` 生成）；起点 = 赛道 `start` 格；
+        // 读档位置（`start_override`）若不在赛道上 → 就近吸附到最近赛道格。
+        self.board = build_board_session(&map_def.id, start_override);
+        // 玩家位置 = 当前赛道格（S19 环岛赛道）：无赛道时回退 balance `player_start`。
+        self.map_pos =
+            self.board.as_ref().map(BoardSession::pos).or(Some(GridPos::new(start[0], start[1])));
         self.gold = init_gold;
         self.owned = Vec::new();
         self.bank = Bank::new(init_gold);
@@ -1312,6 +1325,107 @@ impl GameApp {
     /// 进入主地图（入口格 = 该图 `player_start`；选图 Confirm 路径，`start_override` = `None`）。
     fn enter_main_map(&mut self) -> bool {
         self.enter_main_map_at(None)
+    }
+
+    /// 摇骰前进（环岛赛道，`docs/business/progression.md` §环岛赛道）：
+    /// 摇骰定步数（`1..=dice_sides`）→ 沿赛道前进 N 格 → 落格结算。
+    ///
+    /// 结算（数值全走 `balance.board`，规则层 `rules::board::Landing` 分派）：
+    /// - 绕岛过起点 → 每圈 `lap_bonus_gold`；
+    /// - 港口 → 提示条（贸易/建造经 HUD 命令盘）；城镇 → `city_gold`；
+    /// - 事件/卡牌格 → 抽一张卡经 `apply_card_effect` 结算；
+    /// - 遭遇格 → 扣 `battle_damage` HP + 失 `battle_gold_loss` 金；
+    /// - 宝藏格 → `treasure_gold`；BOSS 格 → 调用方按 `Landing::Boss` 进战斗场景。
+    ///
+    /// 返回落格类型（`None` = 无赛道，`board` 未构建）。
+    pub fn spin_board(&mut self) -> Option<Landing> {
+        let b = match balance() {
+            Ok(b) => b,
+            Err(_e) => {
+                #[cfg(feature = "stats")]
+                eprintln!("[stats] spin_board: balance.json 加载失败（硬错误，不 fallback）");
+                return None;
+            }
+        };
+        let session = self.board.as_mut()?;
+        let sides = b.board.dice_sides.min(b.board.max_steps);
+        let roll = session.spin(&mut self.rng, sides);
+        let laps_before = session.laps();
+        session.advance(roll);
+        let laps_after = session.laps();
+        self.map_pos = Some(session.pos());
+        // 绕圈补给（大富翁「经过起点」语义）
+        let lap_delta = laps_after.saturating_sub(laps_before);
+        if lap_delta > 0 {
+            let bonus = b.board.lap_bonus_gold.saturating_mul(lap_delta);
+            self.gold = self.gold.saturating_add(bonus).min(b.economy.gold_max);
+        }
+        let landing = session.landing();
+        match landing {
+            Landing::Battle => {
+                self.card_state.hp = self.card_state.hp.saturating_add(b.board.battle_damage);
+                self.gold = self.gold.saturating_sub(b.board.battle_gold_loss);
+                self.board_toast = Some(crate::i18n::sgetf(
+                    "scene.main_map.toast.battle_fmt",
+                    &[&b.board.battle_damage],
+                ));
+                self.board_toast_ticks = 120;
+                self.last_sfx = Some(Sfx::Invalid);
+            }
+            Landing::Treasure => {
+                self.gold = self.gold.saturating_add(b.board.treasure_gold).min(b.economy.gold_max);
+                self.board_toast = Some(crate::i18n::sgetf(
+                    "scene.main_map.toast.treasure_fmt",
+                    &[&b.board.treasure_gold],
+                ));
+                self.board_toast_ticks = 120;
+                self.last_sfx = Some(Sfx::Press);
+            }
+            Landing::City => {
+                self.gold = self.gold.saturating_add(b.board.city_gold).min(b.economy.gold_max);
+                self.board_toast = Some(crate::i18n::sgetf(
+                    "scene.main_map.toast.city_fmt",
+                    &[&b.board.city_gold],
+                ));
+                self.board_toast_ticks = 120;
+                self.last_sfx = Some(Sfx::Press);
+            }
+            Landing::Port => {
+                self.board_toast =
+                    Some(String::from(crate::i18n::sget("scene.main_map.toast.port")));
+                self.board_toast_ticks = 120;
+                self.last_sfx = Some(Sfx::Press);
+            }
+            Landing::Event | Landing::Card => {
+                let pool = cards_draw::CardPool::from_balance();
+                let hand = pool.draw_one(&mut self.rng, b.cards.hand_size.max(1));
+                if let Some(card_id) = hand.first().copied() {
+                    let name_key = b
+                        .cards
+                        .deck
+                        .iter()
+                        .find(|c| c.id == card_id)
+                        .map(|c| c.name_key.clone())
+                        .unwrap_or_default();
+                    if self.apply_card_effect(card_id) {
+                        let card_name = crate::i18n::sget(&name_key);
+                        self.board_toast = Some(crate::i18n::sgetf(
+                            "scene.main_map.toast.card_fmt",
+                            &[&card_name],
+                        ));
+                        self.board_toast_ticks = 120;
+                        self.last_sfx = Some(Sfx::Press);
+                    }
+                }
+            }
+            Landing::Boss => {
+                self.board_toast =
+                    Some(String::from(crate::i18n::sget("scene.main_map.toast.boss")));
+                self.board_toast_ticks = 120;
+            }
+            Landing::Start | Landing::Plain => {}
+        }
+        Some(landing)
     }
 
     /// 渲染当前场景：场景模块绘制（`scenes/*.rs::render`），纯代码绘制
@@ -1330,6 +1444,13 @@ impl GameApp {
         self.fx.advance(self.frame_delta_ms);
         // HP 条平滑插值（EXP-085）：每帧向实际值推进，步长 = 差值的 25% 或最小 1。
         self.update_displayed_hp();
+        // 环岛赛道落格提示条：逐帧衰减（主地图渲染读 `board_toast` 时已过期则不画）。
+        if self.board_toast_ticks > 0 {
+            self.board_toast_ticks -= 1;
+            if self.board_toast_ticks == 0 {
+                self.board_toast = None;
+            }
+        }
         if self.transition.is_none() {
             self.render_scene();
             self.draw_fx();
@@ -1604,10 +1725,6 @@ impl MapHost for GameApp {
         self.map_session.boss_tile()
     }
 
-    fn map_session_move(&mut self, dir: Dir) -> StepResult {
-        self.map_session.move_to(dir, &mut self.rng)
-    }
-
     fn map_session_dispatch(&self, code: u32) -> Option<SceneTarget> {
         self.map_session.dispatch(code)
     }
@@ -1652,6 +1769,26 @@ impl MapHost for GameApp {
         self.msg_page = 0;
         self.msg_total = total_pages(kind);
         self.scene = Scene::Message;
+    }
+
+    fn board_spaces(&self) -> Vec<TrackSpace> {
+        self.board.as_ref().map(|s| s.track().spaces().to_vec()).unwrap_or_default()
+    }
+
+    fn board_index(&self) -> usize {
+        self.board.as_ref().map_or(0, BoardSession::index)
+    }
+
+    fn board_last_roll(&self) -> u32 {
+        self.board.as_ref().map_or(0, BoardSession::last_roll)
+    }
+
+    fn board_spin(&mut self) -> Option<Landing> {
+        self.spin_board()
+    }
+
+    fn board_toast(&self) -> Option<String> {
+        if self.board_toast_ticks > 0 { self.board_toast.clone() } else { None }
     }
 }
 
@@ -1925,6 +2062,51 @@ pub fn map_slot_id(slot: MapSlot) -> &'static str {
     slot.id()
 }
 
+/// 构建环岛赛道会话（`rules::board`）：
+/// - 赛道数据 = `assets/data/board.json`（`scripts/extract_board.py` 生成）；
+/// - 开档（`start_override = None`）= 赛道 `start` 格；
+/// - 读档（`start_override = Some(cell)`）= 该格在赛道上 → 直接定位；不在 → 就近吸附最近赛道格。
+///
+/// 数据缺失/赛道构建失败 = 硬报错（`eprintln` + `None`，不静默 fallback；`docs/business/00_index.md` 口径）。
+fn build_board_session(map_id: &str, start_override: Option<GridPos>) -> Option<BoardSession> {
+    let db = match data::board() {
+        Ok(db) => db,
+        Err(e) => {
+            eprintln!("enter_main_map: board.json 加载失败（硬错误，不 fallback）：{e}");
+            return None;
+        }
+    };
+    let Some(m) = db.map(map_id) else {
+        eprintln!("enter_main_map: board.json 缺 {map_id} 赛道（硬错误，不 fallback）");
+        return None;
+    };
+    let track = match Track::from_map(m) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("enter_main_map: 赛道构建失败（硬错误，不 fallback）：{e}");
+            return None;
+        }
+    };
+    let index = match start_override {
+        Some(cell) => track.index_of(cell).unwrap_or_else(|| nearest_track_index(&track, cell)),
+        None => track.start_index(),
+    };
+    Some(BoardSession::new(track, index))
+}
+
+/// 就近赛道格序号（曼哈顿距离；同距取先出现的序号，确定性）。
+fn nearest_track_index(track: &Track, cell: GridPos) -> usize {
+    let mut best = 0usize;
+    let mut best_d = u32::MAX;
+    for (i, s) in track.spaces().iter().enumerate() {
+        let d = s.cell.row.abs_diff(cell.row) + s.cell.col.abs_diff(cell.col);
+        if d < best_d {
+            best_d = d;
+            best = i;
+        }
+    }
+    best
+}
 #[cfg(test)]
 mod transition_tests {
     use super::transition_ease;

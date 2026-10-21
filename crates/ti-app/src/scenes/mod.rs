@@ -25,11 +25,11 @@ use std::marker::PhantomData;
 
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
-use ti_core::domain::map::{Dir, GridPos, MapTerrain, SceneTarget};
+use ti_core::domain::map::{GridPos, MapTerrain, SceneTarget};
 use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
-use ti_core::rules::main_map::StepResult;
+use ti_core::rules::board::{Landing, TrackSpace};
 
 use crate::game_app::{BattleSnapshot, GameInput, Scene as LegacyScene};
 use crate::menu_shell::MenuShell;
@@ -418,9 +418,6 @@ pub trait MapHost {
     /// BOSS 格坐标（`None` = 本地图无 BOSS 格；P0-2 渲染用，橙红三角标记）。
     fn map_boss_tile(&self) -> Option<GridPos>;
 
-    /// 走一步（宿主内同时借用 `map_session` 与 `rng`，场景层拿不到两个借用）。
-    fn map_session_move(&mut self, dir: Dir) -> StepResult;
-
     /// 事件码 → 场景目标（`rules::main_map::MapSession::dispatch`）。
     fn map_session_dispatch(&self, code: u32) -> Option<SceneTarget>;
 
@@ -432,6 +429,33 @@ pub trait MapHost {
 
     /// 打开指定消息会话（首页 + 总页数 + 切场景）。
     fn open_message(&mut self, kind: MsgKind);
+
+    /// 环岛赛道空间序列（拷贝出，渲染轨道高亮用；`MainMap` 场景时有效，无赛道 = 空）。
+    /// 默认空（非主地图的 fake 宿主无需实现）。
+    fn board_spaces(&self) -> Vec<TrackSpace> {
+        Vec::new()
+    }
+
+    /// 当前所在赛道序号（无赛道 = 0）。
+    fn board_index(&self) -> usize {
+        0
+    }
+
+    /// 上一次摇出的步数（0 = 未摇过）。
+    fn board_last_roll(&self) -> u32 {
+        0
+    }
+
+    /// 摇骰前进 N 格 + 落格结算（`rules::board`）；返回落格类型（`None` = 无赛道）。
+    /// BOSS 落格由调用方按 [`Landing::Boss`] 切战斗场景。默认无赛道。
+    fn board_spin(&mut self) -> Option<Landing> {
+        None
+    }
+
+    /// 落格提示条文本（未过期时 `Some`；场景渲染时画在棋盘下方）。默认无。
+    fn board_toast(&self) -> Option<String> {
+        None
+    }
 }
 
 /// S9.2：经济接口（贸易/建造/银行，`MainMap` 场景会话）。

@@ -10,6 +10,7 @@
 - **S15 业务场景穷举测试阶段**：S0–S14 全 verified（含 S9.1–S9.5 全 verified、S10.0–S10.5 全 verified、S11.1–S11.4 全 verified、S12.0–S12.8 全 verified、S13.1–S13.6 全 verified、S14.0 verified）；S15.1 verified，S15.1 verified、**S15.2 verified**（跨图推进规则定稿 + 落地，S15.2 残留 2 项已闭环 = 通关门禁 `is_cleared` 逐图 + 存档 `unlocked_mask` 逐图写入，见 `evidence/S15.2.log [8]`）。S16（试玩闭环 + 发布 + 设计 sheet）待开工（`docs/plan-s16-loop.md`，WBS S16.1 起）。
   逆向产物已物理归档 `legacy/`（S11.1 verified）；oracle 参照实现唯一源 = `ti-core/src/oracle`（`pub mod oracle` 公开导出，测试直接 `use ti_core::oracle::`）；逐字节重复 crate `legacy/oracle-rust` 已于 S15.8 删除（C4 反向守卫防重引入）。
   模块并行开发 loop 已固化（`docs/process/05_module_parallel.md`）；飞轮流水线已落地（`docs/process/06_flywheel.md` + gate 第 17 项）。
+- **S19 环岛赛道（大富翁式摇骰前进）**：主地图主玩法 = 摇骰定步数 → 沿环岛赛道前进 N 格 → 落格结算（`rules::board` + `assets/data/board.json` + `balance.board`）；**S19.1 方向键自由移动已彻底删除，主地图移动只保留摇骰（`GameInput::Spin`）**。单一事实源 = `docs/business/progression.md` §环岛赛道 + 路由表 S19 条目。
 
 ## 路由表
 
@@ -31,6 +32,7 @@
 | **界面全量重设计 S17（设计令牌 v2 / 8pt 版面 / 图标 14 项 / 动效 4 参数，航海夜·精修）** | `docs/process/10_ui_redesign.md`（S17 规格单一事实源；改 UI 视觉量前必读，与 `08_layout_design.md` 场景坐标实例互锁） |
 | **UI 重设计 v3（真游戏化版面：场景叙事 DSL + 打破 7 场景同模板）** | `docs/ui-redesign-v3/README.md`（01 对标拆解 / 02 场景叙事 DSL 规格 / 03 七场景重设计提案 / 04 index 落地；gate 顶层固定第 22 项（gate.ps1 内注释编号 21）`check_scene_narrative` 锚点 `assets/data/ui_schema/scene_manifest_v3.json`；v3 取代 v2 的「7 场景同模板」前提，色板/字体/动效令牌仍沿用 `10_ui_redesign.md`） |
 | **UI 重设计 v3.5（画面丑的根因=设计数据：地形/暖色板/画布/实体/HUD）** | `docs/ui-redesign-v3/07_v3_5_pass.md`（地形数据 → 棋盘成地图；暖色板；画布贴合；实体图标化；执行链 S18.9~S18.13） |
+| **环岛赛道 / 摇骰前进（S19，主地图主玩法）** | `docs/business/progression.md` §环岛赛道（单一事实源）+ `assets/data/board.json`（赛道数据，`scripts/extract_board.py` 生成）+ `rules::board`（`ti-core`）；改主地图移动/落格结算/轨道数据前必读 |
 | **改渲染代码（sprite_atlas/terrain_atlas/game_app render/越界/透明/z-order）前必读** | `docs/process/08_render_arch.md`（**运行时架构契约**：分层 / 绘制原语 / z-order=调用顺序 / 单一 1080 坐标系 / grep 门禁；gate 第 9 项 doccheck2 `check_runtime_no_legacy_coords` 锚点）<br>`docs/process/07_render_pipeline.md`（legacy 像素管线契约，已降级为逆向参照） |
 | **改 `crates/ti-render/`（渲染框架 crate）代码前必读** | `docs/process/09_render_framework.md`（**ti-render crate 边界契约**：职责与禁止项 / 模块结构 / Theme schema / 迁移映射 / 数据分离原则；注意本 crate **无 z-order 枚举**，层序在 `chrome::scene_shell` 调用序） |
 | **S18 渲染引擎迁移（Bevy 0.20）· 改引擎层/加 bevy 依赖前必读** | `docs/process/11_bevy_migration.md`（**迁移裁决单一事实源**：差距定稿 / 定案推翻签核（macroquad 定案 + 旧 800KB wasm 预算作废，新预算 **≤8MB**）/ 架构形状（新 crate `ti-engine` + Canvas 后端替换 + 双渲染期）/ WBS S18.0–S18.8 / 风险） |

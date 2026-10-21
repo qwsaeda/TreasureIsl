@@ -10,6 +10,7 @@
 //! 集成测试 `crates/ti-core/tests/data_tables.rs`；业务规格 `docs/business/`。
 
 mod balance;
+mod board;
 mod terrain;
 #[allow(unused_imports)]
 use balance::RawBalance;
@@ -21,6 +22,7 @@ mod ui_icons;
 
 // re-export（保持 `ti_core::data::*` 公共 API 不变）
 pub use balance::balance;
+pub use board::{BoardDb, BoardMap, BoardSpace, board};
 pub use controls::controls;
 pub use exhaust::{ExhaustScenarios, exhaust, exhaust_key_counts};
 pub use layout::scenes;
@@ -42,6 +44,8 @@ pub(crate) const STRINGS_JSON: &str = include_str!("../../../../assets/data/stri
 /// 场景布局表（编译期内联）。
 pub(crate) const SCENES_JSON: &str = include_str!("../../../../assets/data/scenes.json");
 pub(crate) const TERRAIN_JSON: &str = include_str!("../../../../assets/data/terrain.json");
+/// 环岛赛道表（编译期内联；`scripts/extract_board.py` 生成）。
+pub(crate) const BOARD_JSON: &str = include_str!("../../../../assets/data/board.json");
 /// 控件表（编译期内联；`scripts/gen_layout.py` 从 `ref/controls.json` 生成，
 /// S8.5 控件层数据源，`docs/impl/14_asset_enhancement.md`）。
 pub(crate) const CONTROLS_JSON: &str = include_str!("../../../../assets/data/controls.json");
@@ -251,6 +255,25 @@ pub struct CardsCfg {
     pub deck: Vec<CardDef>,
 }
 
+/// 赛道参数（`balance.board`）：摇骰定步数 + 落格结算数值。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BoardCfg {
+    /// 骰子面数（步数 `1..=dice_sides`）。
+    pub dice_sides: u32,
+    /// 单次最大步数（`min(dice_sides, max_steps)`）。
+    pub max_steps: u32,
+    /// 每绕岛一圈的补给金币。
+    pub lap_bonus_gold: u32,
+    /// 遭遇格扣血。
+    pub battle_damage: u32,
+    /// 遭遇格损失金币。
+    pub battle_gold_loss: u32,
+    /// 宝藏格获得金币。
+    pub treasure_gold: u32,
+    /// 城镇格获得金币。
+    pub city_gold: u32,
+}
+
 /// 存读档参数（`balance.save`）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SaveCfg {
@@ -409,6 +432,8 @@ pub struct Balance {
     pub build: BuildCfg,
     /// 卡牌参数。
     pub cards: CardsCfg,
+    /// 赛道参数。
+    pub board: BoardCfg,
     /// 消息界面参数。
     pub messages: MessagesCfg,
     /// 选择界面参数。
@@ -687,6 +712,15 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
         trade,
         build,
         cards,
+        board: BoardCfg {
+            dice_sides: raw.board.dice_sides.max(1),
+            max_steps: raw.board.max_steps.max(1),
+            lap_bonus_gold: raw.board.lap_bonus_gold,
+            battle_damage: raw.board.battle_damage,
+            battle_gold_loss: raw.board.battle_gold_loss,
+            treasure_gold: raw.board.treasure_gold,
+            city_gold: raw.board.city_gold,
+        },
         messages: MessagesCfg { pages: raw.messages.pages },
         selection: SelectionCfg {
             character_count: raw.selection.character_count,

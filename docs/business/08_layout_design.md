@@ -174,6 +174,7 @@
 | 命令盘 · 贸易（v3） | `deck_trade {x:240, y:1600, w:200, h:80}` | P-UW4-3 底部命令盘：`chrome::deck_button`（面板 + 图标 + 28px 标签）；点按 = 买商品 1（与键盘 T / v2 `hud_trade` 同语义） |
 | 命令盘 · 出售（v3） | `deck_sell {x:460, y:1600, w:200, h:80}` | 命令盘第 2 键 = 全卖商品 1（键盘 Y / v2 `hud_sell`） |
 | 命令盘 · 建造（v3） | `deck_build {x:680, y:1600, w:200, h:80}` | 命令盘第 3 键 = 造 Castle（键盘 B / v2 `hud_build`） |
+| 摇骰前进 · 主操作（S19） | `deck_spin {x:336, y:1328, w:400, h:120}` | S19 环岛赛道主操作：摇骰 → 沿赛道前进 N 格（`rules::board`，`progression.md` §环岛赛道）；面板 + 骰子/舵轮图标（`assets/ui/dice.png`/`helm.png`）+「摇骰前进」标签（`scene.main_map.hud.spin`）；点按 / 空格 = `GameInput::Spin`；8pt 栅格（x336=42×8、y1328=166×8） |
 | 画布实体比例（v3） | `canvas_entities {player:100, landmark:80, boss:96}` | 实体边长 = `board_fit.tw` × 百分比（100/80/96）：15 格图 tw=32 → 32/26/31；20 格图 tw=24 → 24/19/23；缺席回退 v2 `player.size` 等（QA106） |
 | 视觉重心锚（v3） | `focus_anchor {bbox:{x:43, y:192, w:1004, h:710}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` main_map `focus.bbox_pct{4,10,93,77}` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点 |
 

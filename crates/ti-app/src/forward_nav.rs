@@ -12,13 +12,9 @@
 //! - select_role = Confirm
 //! - select_map = Confirm + Confirm + Next（Next 设第 0 张地图）
 //! - main_map = Confirm + Confirm + Next + Confirm
-//! - vs = main_map + 直走 Boss 格（地图 0 的 player_start=(10,10)，boss_tile=(5,5)，
-//!   10 步北 + 10 步西；每步经 `MapSession::move_to`，落 Boss 格 → `start_battle` → Vs）
+//! - vs = main_map + `start_battle`（S19：摇骰玩法下无「直走 Boss 格」通道，快照导航直接开战斗）
 //! - message = Confirm + Back + MoveDown×3 + Confirm（选项 → Help）
 //! - saveload = MoveDown + Confirm（菜单项 1 → 存读档）
-
-use ti_core::domain::map;
-use ti_core::domain::map::GridPos;
 
 use crate::game_app::{GameApp, GameInput, Scene};
 
@@ -52,9 +48,9 @@ pub fn navigate(app: &mut GameApp, target: &str) -> Scene {
             app.handle(GameInput::Confirm); // SelectRole → SelectMap
             app.handle(GameInput::Next); // SelectMap 选第 0 张地图（设 map_slot）
             app.handle(GameInput::Confirm); // SelectMap → MainMap
-            // 主地图 → 直走 Boss 格（player_start 到 boss_tile 的逐格 move_to，落格触发战斗）
+            // S19：主地图 → 直接开战斗（摇骰玩法下无「直走 Boss 格」通道，快照导航直接 start_battle）
             if !matches!(app.scene(), Scene::Vs) {
-                walk_to_boss(app);
+                crate::scenes::MapHost::start_battle(app);
             }
         }
         "message" => {
@@ -74,58 +70,6 @@ pub fn navigate(app: &mut GameApp, target: &str) -> Scene {
         }
     }
     app.scene()
-}
-
-/// 主地图 → 直走 Boss 格（`player_start` 到 `boss_tile` 逐格 `move_to`，落格触发 `start_battle`）。
-///
-/// 地图 0 数据：`player_start=(10,10)`，`boss_tile=(5,5)` → 需 10 步北 + 10 步西。
-/// 逐格走（非大步跳）保证每步经 `MapSession::move_to` 的卡牌事件/据点判定，
-/// 落 Boss 格那一步 `StepResult::boss=true` → `start_battle` → 切 Vs。
-fn walk_to_boss(app: &mut GameApp) {
-    let Some(boss) = app.map_boss_tile() else {
-        eprintln!("forward_nav: 主地图无 Boss 格（boss_tile=None），无法触发战斗");
-        return;
-    };
-    let Some(start) = app.map_pos() else {
-        eprintln!("forward_nav: 主地图无当前坐标（map_pos=None）");
-        return;
-    };
-    let (dr, dc) = boss_delta(start, boss);
-    let vdir = if dr < 0 { map::Dir::North } else { map::Dir::South };
-    let hdir = if dc < 0 { map::Dir::West } else { map::Dir::East };
-    // 先走差值小的轴（横竖交错，不撞墙），再补差值大的轴
-    for _ in 0..dr.abs().min(dc.abs()) {
-        app.handle(GameInput::Walk(vdir));
-        if matches!(app.scene(), Scene::Vs) {
-            return;
-        }
-        app.handle(GameInput::Walk(hdir));
-        if matches!(app.scene(), Scene::Vs) {
-            return;
-        }
-    }
-    if dr.abs() > dc.abs() {
-        for _ in 0..(dr.abs() - dc.abs()) {
-            app.handle(GameInput::Walk(vdir));
-            if matches!(app.scene(), Scene::Vs) {
-                return;
-            }
-        }
-    } else {
-        for _ in 0..(dc.abs() - dr.abs()) {
-            app.handle(GameInput::Walk(hdir));
-            if matches!(app.scene(), Scene::Vs) {
-                return;
-            }
-        }
-    }
-}
-
-/// `(start → boss)` 的行/列差（带符号：负 = 北/西，正 = 南/东）。
-fn boss_delta(start: GridPos, boss: GridPos) -> (i64, i64) {
-    let dr = i64::from(boss.row) - i64::from(start.row);
-    let dc = i64::from(boss.col) - i64::from(start.col);
-    (dr, dc)
 }
 
 #[cfg(test)]

@@ -9,7 +9,6 @@
 
 use ti_app::game_app::{BattleView, GameApp, GameInput, Scene};
 use ti_core::domain::economy::Building;
-use ti_core::domain::map::Dir;
 use ti_core::domain::selection::{Character, MapSlot};
 
 /// 完整游戏会话：从启动到退出，模拟真实玩家操作序列。
@@ -76,18 +75,18 @@ fn e2e_full_game_session() {
     assert_eq!(app.scene(), Scene::MainMap, "地图确认后应进入主地图");
     assert!(app.map_pos().is_some(), "主地图应有初始位置");
 
-    // ── 阶段 4：主地图移动 ────────────────────────────────────────────
+    // ── 阶段 4：主地图摇骰前进（S19：环岛赛道，方向键走格已彻底移除）──────────
     let mut move_count = 0;
 
-    // 尝试四个方向移动
-    for dir in [Dir::South, Dir::East, Dir::North, Dir::West] {
+    // 摇骰 4 次，沿赛道前进
+    for _ in 0..4 {
         let before = app.map_pos();
-        app.handle(GameInput::Walk(dir));
+        app.handle(GameInput::Spin);
         if app.map_pos() != before {
             move_count += 1;
         }
     }
-    assert!(move_count > 0, "至少应有一个方向可移动");
+    assert!(move_count > 0, "摇骰应至少前进一次");
 
     // ── 阶段 5：贸易系统 ──────────────────────────────────────────────
     // 开局金走 `balance.economy.initial_gold`（S8.1 数据化），期望值从表读，不硬编码
@@ -216,11 +215,14 @@ fn e2e_invalid_inputs_no_crash() {
     app.handle(GameInput::Confirm); // 角色+地图均选 → MainMap
     assert_eq!(app.scene(), Scene::MainMap);
 
-    // 连续移动 100 次不应崩溃
+    // 连续摇骰 100 次不应崩溃（绕圈推进）
     for _ in 0..100 {
-        app.handle(GameInput::Walk(Dir::North));
+        app.handle(GameInput::Spin);
     }
-    assert_eq!(app.scene(), Scene::MainMap, "越界移动不应改变场景");
+    assert!(
+        matches!(app.scene(), Scene::MainMap | Scene::Vs),
+        "摇骰不应跳到无关场景（BOSS 格会开战斗）"
+    );
 
     // 非法贸易（不存在的商品）
     let gold_before = app.gold();
@@ -254,16 +256,12 @@ fn e2e_state_consistency() {
     let _initial_gold = app.gold();
     let _initial_pos = app.map_pos();
 
-    // 执行一系列操作
+    // 执行一系列操作（摇骰前进，确定性种子 123）
     for _ in 0..10 {
-        app.handle(GameInput::Walk(Dir::South));
-        app.handle(GameInput::Walk(Dir::East));
-        app.handle(GameInput::Walk(Dir::North));
-        app.handle(GameInput::Walk(Dir::West));
+        app.handle(GameInput::Spin);
     }
 
-    // 位置应回到原点（如果地形允许）
-    // 注意：如果中间有障碍物，位置可能不同，这里只验证不崩溃
+    // 摇骰沿赛道推进，位置应始终存在（BOSS 格会切战斗，仍属合法）
     assert!(app.map_pos().is_some(), "位置应始终存在");
 
     // 金不应为负
@@ -423,4 +421,61 @@ fn e2e_battle_determinism() {
     assert_eq!(outcome1, outcome2, "相同种子战斗结果应一致");
     assert_eq!(player_hp1, player_hp2, "相同种子玩家 HP 应一致");
     assert_eq!(boss_hp1, boss_hp2, "相同种子 BOSS HP 应一致");
+}
+
+/// S19：环岛赛道摇骰闭环（e2e）：进图 → 赛道会话在位 → 摇骰前进（索引推进 + 位置 = 赛道格 +
+/// 步数值域 + 可复现）→ 多轮摇骰必过起点（圈数 ≥ 1）→ 同 seed 同序列 = 同落格（确定性）。
+#[test]
+fn e2e_board_spin_loop() {
+    let mut app = GameApp::new(1080.0, 1920.0);
+    app.rng_mut().set_seed(7);
+    app.set_rng_seed(7);
+    // 进入主地图（index 新游戏 → 选角色确认 → 选图 M01 确认）
+    app.handle(GameInput::Confirm);
+    app.handle(GameInput::Confirm);
+    app.handle(GameInput::Confirm);
+    assert_eq!(app.scene(), Scene::MainMap, "应进入主地图");
+    let board = app.board.as_ref().expect("主地图应构建环岛赛道（board.json 数据源）");
+    let track_len = board.track().len();
+    assert!(track_len >= 20, "赛道长度 {track_len} 过短");
+    assert_eq!(board.index(), board.track().start_index(), "起始 = 赛道起点");
+    assert_eq!(app.map_pos(), Some(board.pos()), "玩家位置 = 当前赛道格");
+
+    // 摇骰一次：索引推进 + 步数值域 + 位置同步
+    let idx0 = board.index();
+    app.handle(GameInput::Spin);
+    let b1 = app.board.as_ref().expect("摇骰后 board 会话应在位");
+    let roll = b1.last_roll();
+    assert!((1..=6).contains(&roll), "步数应在 1..=6：{roll}");
+    let expected = (idx0 + usize::try_from(roll).unwrap_or(1)) % track_len;
+    assert_eq!(b1.index(), expected, "摇 {roll} 格后索引应 = ({idx0} + {roll}) % {track_len}");
+    assert_eq!(app.map_pos(), Some(b1.pos()), "玩家位置 = 新赛道格");
+
+    // 多轮摇骰（同 seed 可复现）：累计步数 ≥ 赛道长度 → 必过起点（圈数 ≥ 1）
+    for _ in 0..40 {
+        app.handle(GameInput::Spin);
+    }
+    let b2 = app.board.as_ref().expect("摇骰后 board 会话应在位");
+    assert!(b2.laps() >= 1, "40 轮摇骰（期望 ~140 步）应至少过起点一圈：laps={}", b2.laps());
+
+    // 同 seed 复现：两条独立路径同序列 = 同落点
+    let mut a = GameApp::new(1080.0, 1920.0);
+    a.rng_mut().set_seed(7);
+    a.set_rng_seed(7);
+    let mut b = GameApp::new(1080.0, 1920.0);
+    b.rng_mut().set_seed(7);
+    b.set_rng_seed(7);
+    for _ in 0..3 {
+        for _ in 0..3 {
+            a.handle(GameInput::Confirm);
+            b.handle(GameInput::Confirm);
+        }
+        for _ in 0..12 {
+            a.handle(GameInput::Spin);
+            b.handle(GameInput::Spin);
+        }
+        let ab = a.board.as_ref().expect("board 会话应在位");
+        let bb = b.board.as_ref().expect("board 会话应在位");
+        assert_eq!(ab.pos(), bb.pos(), "同 seed 同序列 ⇒ 同落格（确定性）");
+    }
 }

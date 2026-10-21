@@ -12,7 +12,6 @@ use std::panic::{self, AssertUnwindSafe};
 use ti_app::game_app::{GameApp, GameInput, Scene};
 use ti_app::touch::TouchSample;
 use ti_core::domain::economy::Building;
-use ti_core::domain::map::Dir;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::Character;
 use ti_core::rules::rng::GameRng;
@@ -86,7 +85,7 @@ fn random_key_input(rng: &mut GameRng) -> GameInput {
         3 => GameInput::Back,
         4 => GameInput::Prev,
         5 => GameInput::Next,
-        6 => GameInput::Walk(Dir::all()[rng.in_range(4) as usize]),
+        6 => GameInput::Spin,
         7 => GameInput::Landmark(rng.in_range(9)),
         8 => GameInput::TradeBuy(1 + rng.in_range(4)),
         9 => GameInput::TradeSell(1 + rng.in_range(4)),

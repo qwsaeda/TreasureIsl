@@ -18,6 +18,8 @@ pub(crate) struct RawBalance {
     pub(crate) build: RawBuild,
     pub(crate) cards: RawCards,
     #[serde(default)]
+    pub(crate) board: RawBoard,
+    #[serde(default)]
     pub(crate) messages: RawMessages,
     #[serde(default)]
     pub(crate) selection: RawSelection,
@@ -159,6 +161,29 @@ pub(crate) struct RawCards {
     pub(crate) event_chance: f32,
     pub(crate) hand_size: u32,
     pub(crate) deck: Vec<RawCard>,
+}
+
+/// 赛道参数 serde 形状（`balance.board`）。
+#[derive(Deserialize, Default)]
+pub(crate) struct RawBoard {
+    #[serde(default = "default_dice_sides")]
+    pub(crate) dice_sides: u32,
+    #[serde(default = "default_dice_sides")]
+    pub(crate) max_steps: u32,
+    #[serde(default)]
+    pub(crate) lap_bonus_gold: u32,
+    #[serde(default)]
+    pub(crate) battle_damage: u32,
+    #[serde(default)]
+    pub(crate) battle_gold_loss: u32,
+    #[serde(default)]
+    pub(crate) treasure_gold: u32,
+    #[serde(default)]
+    pub(crate) city_gold: u32,
+}
+
+fn default_dice_sides() -> u32 {
+    6
 }
 
 #[derive(Deserialize)]

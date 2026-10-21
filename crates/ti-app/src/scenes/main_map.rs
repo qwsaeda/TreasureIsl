@@ -6,9 +6,9 @@ use ti_core::data;
 use ti_core::data::{SceneLayout, balance};
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
-use ti_core::domain::map::{Dir, GridPos, MapTerrain};
+use ti_core::domain::map::GridPos;
+use ti_core::rules::board::{Landing, SpaceKind};
 use ti_core::rules::build;
-use ti_core::rules::main_map::MapSession;
 use ti_core::rules::trade;
 
 use crate::game_app::GameInput;
@@ -19,41 +19,8 @@ use crate::scenes::{Scene, SceneHost, SceneKind, enter_target};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
 
-/// 单次点按的最大步数（避免一次触摸跨越半张图）。
-const MAX_TOUCH_WALK: u32 = 6;
-
 /// 主地图场景处理器（`MainMap`）。
 pub struct MainMapScene;
-
-/// 从当前位置朝 `to` 逐格移动：优先走差值大的轴，遇阻挡/越界即停（不穿墙）。
-///
-/// 每步经 [`SceneHost::advance`] 的 `Walk` 分支落地（与键盘路径同一实现），
-/// 合法性预检走 `rules::main_map::MapSession::can_walk`。
-fn walk_towards(host: &mut dyn SceneHost, terrain: &MapTerrain, to: GridPos) -> bool {
-    let mut changed = false;
-    for _ in 0..MAX_TOUCH_WALK {
-        let Some(pos) = host.map_pos() else { break };
-        let dr = i64::from(to.row) - i64::from(pos.row);
-        let dc = i64::from(to.col) - i64::from(pos.col);
-        if dr == 0 && dc == 0 {
-            break;
-        }
-        // 行差绝对值 ≥ 列差 → 走纵向，否则走横向
-        let dir = if dr.unsigned_abs() >= dc.unsigned_abs() {
-            if dr < 0 { Dir::North } else { Dir::South }
-        } else if dc < 0 {
-            Dir::West
-        } else {
-            Dir::East
-        };
-        // 预检：不可通行则停下（不穿墙、不越界）
-        if !MapSession::can_walk(terrain, pos, dir) {
-            break;
-        }
-        changed |= host.advance(GameInput::Walk(dir));
-    }
-    changed
-}
 
 /// B 根治：买入走 `TradeLedger` 校验，可玩路径与业务线同一逻辑（双轨语义对齐）。
 fn handle_trade_buy(host: &mut dyn SceneHost, gid: u32) {
@@ -222,31 +189,6 @@ impl Scene for MainMapScene {
 
     fn on_input(&mut self, host: &mut dyn SceneHost, input: GameInput) -> bool {
         match input {
-            GameInput::Walk(dir) => {
-                // `rules::main_map::MapSession::move_to` 行为（几何 + 据点 + 卡牌事件，可复现）
-                let result = host.map_session_move(dir);
-                if result.moved {
-                    host.set_map_pos(Some(result.pos));
-                }
-                // P0-6：BOSS 格落格触发战斗（`progression.md` 落格结算）
-                if result.boss {
-                    host.start_battle();
-                    return true;
-                }
-                // P1-7（M5）：卡牌事件真接进可玩路径——`card_event`（`StepResult`）
-                // 经 `EconomyHost::apply_card_effect` 结算（扣金/加金/扣 HP/加 HP，`rules::cards`）。
-                if let Some(event_id) = result.card_event {
-                    if host.apply_card_effect(event_id) {
-                        host.play_sfx(Sfx::Press);
-                    }
-                }
-                // 落在据点 → 触发事件分派（与 `Landmark` 同路径）
-                if let Some(target) = result.landmark {
-                    host.set_last_dispatch(Some(target));
-                    return enter_target(host, target);
-                }
-                false
-            }
             GameInput::Landmark(code) => {
                 // `rules::main_map::MapSession::dispatch` 行为（事件码 → 场景目标）
                 let target = host.map_session_dispatch(code);
@@ -268,6 +210,18 @@ impl Scene for MainMapScene {
                 handle_build(host, kind);
                 false
             }
+            GameInput::Spin => {
+                // 环岛赛道（`rules::board`，`progression.md` §环岛赛道）：摇骰定步数 → 前进 N 格 → 落格结算。
+                // 落格效果（金/HP/卡/提示条）已由 `board_spin` 结算；BOSS 落格 → 切战斗场景。
+                let Some(landing) = host.board_spin() else {
+                    return false;
+                };
+                if landing == Landing::Boss {
+                    host.start_battle();
+                    return true;
+                }
+                false
+            }
             GameInput::MapBack => {
                 host.enter(SceneKind::Index);
                 true
@@ -278,9 +232,8 @@ impl Scene for MainMapScene {
 
     /// - S15.6 QA149：点 HUD 三按钮（scenes.json `hud_trade`/`hud_sell`/`hud_build`
     ///   矩形）= 买商品 1 / 卖商品 1 / 造 Castle（与键盘 T/Y/B 同语义，0 键盘纯触摸经济闭环）；
-    /// - 点格子 = 朝该格逐格走（每次点按走到能走的最远格，不穿墙）；
-    /// - 点自己所在格 = 触发据点事件（`Landmark(code)`）；
-    /// - 滑动 = 朝该方向走一步。
+    /// - S19：点「摇骰前进」按钮（`deck_spin`）= 摇骰前进；点自己所在格 = 触发据点事件
+    ///   （`Landmark(code)`）；点其它格 / 滑动 = 无动作（移动唯一 = 摇骰）。
     ///
     /// 命中坐标与渲染同坐标系：`grid_cell_at` = `chrome::iso_cell` 的逆
     /// （数据源 = `scenes.json` `main_map.grid.*`，EXP-067 正逆成对；legacy 32/16
@@ -308,6 +261,10 @@ impl Scene for MainMapScene {
                 };
                 // S17.8 v3：底部命令盘（deck_trade/sell/build）优先命中；未命中落回
                 // v2 HUD 按钮（双写兼容——`e2e_touch_economy_loop` 仍按 v2 坐标命中）。
+                // S19：摇骰前进主操作按钮（`deck_spin`）最先命中（主操作优先）。
+                if hud_hit(chrome::keys::DECK_SPIN) {
+                    return host.advance(GameInput::Spin);
+                }
                 if hud_hit(chrome::keys::DECK_TRADE) {
                     return host.advance(GameInput::TradeBuy(1));
                 }
@@ -334,16 +291,14 @@ impl Scene for MainMapScene {
                     return false;
                 };
                 let target = GridPos::new(row, col);
-                // P0-5：点自身格 = 走 dispatch(1)→Msgl（据点菜单），与 business/progression.md L33 对齐
+                // P0-5：点自身格 = 走 dispatch(1)→Msgl（据点菜单）；点其它格 = 无动作（S19 收口：移动唯一 = 摇骰）。
                 if target == cur {
                     return host.advance(GameInput::Landmark(1));
                 }
-                walk_towards(host, &terrain, target)
+                false
             }
-            Gesture::SwipeUp => host.advance(GameInput::Walk(Dir::North)),
-            Gesture::SwipeDown => host.advance(GameInput::Walk(Dir::South)),
-            Gesture::SwipeLeft => host.advance(GameInput::Walk(Dir::West)),
-            Gesture::SwipeRight => host.advance(GameInput::Walk(Dir::East)),
+            // S19 收口：滑动无动作（移动唯一 = 摇骰）。
+            _ => false,
         }
     }
 
@@ -423,7 +378,13 @@ impl Scene for MainMapScene {
             let lbl = i18n::sget("scene.main_map.player_label");
             entity_texts.push((px + s, py, lbl));
         }
+        let spaces = host.board_spaces();
         for (r, c) in host.map_landmarks() {
+            // S19：有环岛赛道时，据点由赛道空间标记接管（下方 `render_track`），
+            // 不再单独画 balance 据点（避免与赛道空间双标记）。
+            if !spaces.is_empty() {
+                continue;
+            }
             let rr = i32::try_from(r).unwrap_or(0);
             let cc = i32::try_from(c).unwrap_or(0);
             let (sx, sy) = chrome::iso_cell_fit(rr, cc, &layout, gw);
@@ -431,7 +392,6 @@ impl Scene for MainMapScene {
             let s = entity_size("landmark");
             let (lx, ly) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
             host.fill_rect(lx, ly, s, s, COLOR_LANDMARK);
-            // S18.12：据点 = 灯塔（beacon）
             chrome::entity_icon(
                 host,
                 "beacon",
@@ -445,22 +405,25 @@ impl Scene for MainMapScene {
             let lbl = i18n::sget("scene.main_map.landmark_label");
             entity_texts.push((lx + s, ly, lbl));
         }
-        // P0-2（M1）：BOSS 格血红标记（方块，`COLOR_DANGER`，与玩家棋子同坐标系）
+        // P0-2（M1）：BOSS 格血红标记（有赛道时由 `render_track` 的 BOSS 空间接管）
         if let Some(bt) = host.map_boss_tile() {
-            let br = i32::try_from(bt.row).unwrap_or(0);
-            let bc = i32::try_from(bt.col).unwrap_or(0);
-            let (sx, sy) = chrome::iso_cell_fit(br, bc, &layout, gw);
-            let (tw, th) = chrome::iso_tile_fit(&layout, gw);
-            let s = entity_size("boss");
-            let (bx, by) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
-            host.fill_rect(bx, by, s, s, crate::menu_shell::COLOR_DANGER);
-            // S18.12：BOSS = 剑（sword）
-            chrome::entity_icon(host, "sword", bx, by, s, crate::menu_shell::COLOR_DANGER);
-            host.fill_rect(bx, by, s, 1, chrome::COLOR_BEVEL_HI);
-            host.fill_rect(bx, by + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
-            let lbl = i18n::sget("scene.main_map.boss_label");
-            entity_texts.push((bx + s, by, lbl));
+            if spaces.is_empty() {
+                let br = i32::try_from(bt.row).unwrap_or(0);
+                let bc = i32::try_from(bt.col).unwrap_or(0);
+                let (sx, sy) = chrome::iso_cell_fit(br, bc, &layout, gw);
+                let (tw, th) = chrome::iso_tile_fit(&layout, gw);
+                let s = entity_size("boss");
+                let (bx, by) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
+                host.fill_rect(bx, by, s, s, crate::menu_shell::COLOR_DANGER);
+                chrome::entity_icon(host, "sword", bx, by, s, crate::menu_shell::COLOR_DANGER);
+                host.fill_rect(bx, by, s, 1, chrome::COLOR_BEVEL_HI);
+                host.fill_rect(bx, by + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
+                let lbl = i18n::sget("scene.main_map.boss_label");
+                entity_texts.push((bx + s, by, lbl));
+            }
         }
+        // S19：环岛赛道（路径连线 + 空间标记 + 骰子数 + 落格提示条）
+        render_track(host, &layout, gw, &mut entity_texts);
 
         // 第二遍：实体标签（28px 提示档，QA142 全部文本最上层）
         for (x, y, lbl) in &entity_texts {
@@ -469,6 +432,110 @@ impl Scene for MainMapScene {
 
         // QA032：hint 行统一走 `chrome::scene_hint`（i18n 单查收敛，EXP-082）
         // S15.6：key = `nav_hint`（`hint` 已并入，`strings.json` 删孤儿）
+    }
+}
+
+/// S19：环岛赛道绘制（`progression.md` §环岛赛道）：路径连线（相邻赛道格 8 邻接，短线段 = 小方块插值）
+/// + 空间标记（分区色菱 + 特殊格图标，图标 `ui_icons.json` 注册表）+ 骰子数（`board_last_roll`）
+/// + 落格提示条（`board_toast`）。全部等距坐标经 `chrome::iso_cell_fit`（同一 1080 坐标系，EXP-067）。
+fn render_track(
+    host: &mut dyn SceneHost,
+    layout: &SceneLayout,
+    gw: u32,
+    entity_texts: &mut Vec<(i32, i32, &str)>,
+) {
+    // 9 分区配色（对齐原版地形类别码 1..9；theme 令牌缺失 = 金暖色兜底）
+    const GROUP_TOKENS: [&str; 9] = [
+        "land_sand",
+        "reef",
+        "sea_shallow",
+        "gold_warm",
+        "moon_pale",
+        "brass",
+        "secondary",
+        "hilite",
+        "danger",
+    ];
+    let spaces = host.board_spaces();
+    if spaces.len() < 2 {
+        return;
+    }
+    let (tw, th) = chrome::iso_tile_fit(layout, gw);
+    let theme = host.theme().clone();
+    let group_color = |g: u8| -> u16 {
+        let idx = ((usize::from(g)).saturating_sub(1)).min(GROUP_TOKENS.len() - 1);
+        theme.by_name(GROUP_TOKENS[idx]).unwrap_or(chrome::COLOR_GOLD_WARM)
+    };
+    // 路径连线（先画线，再画标记，标记盖在线上）
+    let centers: Vec<(i32, i32)> = spaces
+        .iter()
+        .map(|sp| {
+            let r = i32::try_from(sp.cell.row).unwrap_or(0);
+            let c = i32::try_from(sp.cell.col).unwrap_or(0);
+            let (sx, sy) = chrome::iso_cell_fit(r, c, layout, gw);
+            (sx + tw, sy + th)
+        })
+        .collect();
+    for w in centers.windows(2) {
+        let (ax, ay) = (w[0].0, w[0].1);
+        let (bx, by) = (w[1].0, w[1].1);
+        let n = 5;
+        for i in 0..=n {
+            let x = ax + (bx - ax) * i / n;
+            let y = ay + (by - ay) * i / n;
+            host.fill_rect(
+                x - 1,
+                y - 1,
+                3,
+                3,
+                theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM),
+            );
+        }
+    }
+    // 空间标记 + 特殊格图标
+    for (i, sp) in spaces.iter().enumerate() {
+        let (cx, cy) = centers[i];
+        let color = group_color(sp.group);
+        host.fill_rect(cx - 7, cy - 7, 14, 14, color);
+        host.fill_rect(cx - 7, cy - 7, 14, 1, chrome::COLOR_BEVEL_HI);
+        host.fill_rect(cx - 7, cy + 6, 14, 1, chrome::COLOR_BEVEL_SHADOW);
+        let icon = match sp.kind {
+            SpaceKind::Start => Some(("flag", chrome::COLOR_GOLD_WARM)),
+            SpaceKind::Port => Some(("beacon", chrome::COLOR_GOLD_WARM)),
+            SpaceKind::City => Some(("castle", chrome::COLOR_GOLD_WARM)),
+            SpaceKind::Event => Some(("book", ti_render::theme::Theme::DEFAULT.moon_pale)),
+            SpaceKind::Card => Some(("map", ti_render::theme::Theme::DEFAULT.moon_pale)),
+            SpaceKind::Battle | SpaceKind::Boss => Some(("sword", crate::menu_shell::COLOR_DANGER)),
+            SpaceKind::Treasure => Some(("chest", chrome::COLOR_GOLD_WARM)),
+            SpaceKind::Plain => None,
+        };
+        if let Some((name, tint)) = icon {
+            chrome::entity_icon(host, name, cx - 11, cy - 23, 22, tint);
+        }
+        // BOSS / 起点 标签（全部文本最上层，QA142）
+        match sp.kind {
+            SpaceKind::Boss => {
+                let lbl = i18n::sget("scene.main_map.boss_label");
+                entity_texts.push((cx + 12, cy - 8, lbl));
+            }
+            SpaceKind::Start => {
+                let lbl = i18n::sget("scene.main_map.player_label");
+                entity_texts.push((cx + 12, cy - 8, lbl));
+            }
+            _ => {}
+        }
+    }
+    // 骰子数（摇骰按钮上方居中，`board_last_roll` = 0 → 不画）
+    let roll = host.board_last_roll();
+    if roll > 0 {
+        let roll_str = i18n::sgetf("scene.main_map.toast.roll_fmt", &[&roll]);
+        let rx = 540 - host.shell().hint_text_width_px(&roll_str) / 2;
+        host.draw_hint_text(&roll_str, rx, 1296, chrome::COLOR_GOLD_WARM);
+    }
+    // 落格提示条（按钮下方，`board_toast` 过期 = `None`）
+    if let Some(toast) = host.board_toast() {
+        let tx = 540 - host.shell().hint_text_width_px(&toast) / 2;
+        host.draw_hint_text(&toast, tx, 1470, chrome::COLOR_TEXT_ON_PARCH);
     }
 }
 
