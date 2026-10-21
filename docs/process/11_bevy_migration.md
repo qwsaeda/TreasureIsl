@@ -84,6 +84,7 @@
 | S18.11 | 画布贴合棋盘（结构性重排） | **verified**：`world_canvas` {43,192,1004,1478} → {43,192,1004,**710**}（收到 G=20 棋盘外接框）+ focus_anchor/manifest h=37% 同步（N8 对账 0 failure）+ 图表经纬网（7竖+4横 1px 暖暗线）+ 底部海平面环统全场景 + 命令盘 1760→1600 + 提示行 1808→1648（不与波光重叠） |
 | S18.12 | 实体图标化 + 海图美术 + 提示行净空 | **verified**：玩家=`flag`（金）/据点=`beacon`（灯塔）/BOSS=`sword`（`ui_icons` 注册表 48px 原生，`chrome::entity_icon` 中心叠于实体盒，底座保留）；空白区补罗盘玫瑰（72×72 金十字 + 8 方位点）+ 3 段洋流线（`brass_dark`）；5 场景提示行 y 1808→1648（洋面之上，不与波光重叠） |
 | S18.13 | CPU↔Bevy 提示行对齐（S18.7b 解锁） | **verified**：真实差异 = `chrome::scene_hint`→`shell::hint_row` 直写壳帧缓冲（不经 DrawList）→ **Bevy 提示行整行缺失**；修：删 main_map 代码提示行调用（v3 提示行 = JSON 原语 tier=hint y=1648）→ 两侧同源（重测首/末亮行 1602/1858 一致）；**更正 S18.7h 的 18px 锚点偏移结论（测量伪影）**；剩余差异 = 字体光栅化（ab_glyph vs cosmic-text） |
+| S18.14 | Bevy 离屏读回·7 场景对照集（基线源切换前置） | **verified**：`--scene=<id> --shot` 逐场景离屏读回（7/7 非黑像素 ~100%，哈希互异 → 导航生效）；对照表 `evidence/bevy_parity_7scenes.md`（图片不入仓，每张 8MB；代表图 vs/main_map） |
 | S18.8 | 收口：macroquad 后端退役（feature 删除 + 依赖树断言）+ 性能目标（native 60fps / wasm 30–60fps）+ release.md | 全 gate + 发布 |
 
 ## 6. 风险与缓解
