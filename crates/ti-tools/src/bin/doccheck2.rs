@@ -1981,6 +1981,115 @@ fn check_render_framework_boundary(root: &Path) -> Vec<String> {
     errors
 }
 
+/// S18.7g：声明式原语表数据合法性（`scenes.json` `primitives[]`）。
+///
+/// 通用原语只有 6 种（rect/text/icon/grad/glow/disc）；数据侧不变式（`09_render_framework.md` §5.1）：
+/// - `color` 必须是 `theme.by_name` 合法令牌名 —— 拼错 = **静默回退** `text_on_parch`；
+/// - `params.icon` 必须在 `ui_icons.json` 注册表 —— 拼错 = **静默跳过**；
+/// - `text_key` 必须在 `strings.json` —— 缺键 = 界面显示**裸 key**（非静默失败）；
+/// - `grad` 的 `from_token`/`to_token` 合法 + `steps` ∈ 2..256；`text` 的 `tier` ∈ title/body/hint。
+///
+/// 动机：S18.7d~f 七场景 517 条原语落库后，人工自审发现此类错误**不报错**（只改画面不崩），
+/// 故固化为门禁，防后续 JSON 编辑引入静默漂移。
+fn check_primitives_data(root: &Path) -> Vec<String> {
+    const KINDS: [&str; 6] = ["rect", "text", "icon", "grad", "glow", "disc"];
+    let mut errors = Vec::new();
+    let Some(json_text) = read_file(root, "assets/data/scenes.json") else {
+        return vec!["assets/data/scenes.json 不存在，无法校验原语表".to_string()];
+    };
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(&json_text) else {
+        return vec!["assets/data/scenes.json 解析失败".to_string()];
+    };
+    let theme_src = read_file(root, "crates/ti-render/src/theme.rs").unwrap_or_default();
+    let tokens: std::collections::HashSet<String> = theme_src
+        .lines()
+        .filter_map(|l| {
+            let k = l.split_once("=> self.")?.0.trim();
+            let name = k.strip_prefix('"')?;
+            let name = name.split_once('"')?.0;
+            Some(name.to_string())
+        })
+        .collect();
+    let icons: std::collections::HashSet<String> = read_file(root, "assets/data/ui_icons.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| {
+            v.get("icons").and_then(|i| i.as_array()).map(|arr| {
+                arr.iter()
+                    .filter_map(|i| i.get("name").and_then(|n| n.as_str()).map(str::to_string))
+                    .collect()
+            })
+        })
+        .unwrap_or_default();
+    let strings: serde_json::Value = read_file(root, "assets/data/strings.json")
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or(serde_json::Value::Null);
+    for (sid, scene) in json.as_object().into_iter().flatten() {
+        let Some(prims) = scene.get("primitives").and_then(|p| p.as_array()) else {
+            continue;
+        };
+        for (i, p) in prims.iter().enumerate() {
+            let Some(obj) = p.as_object() else { continue };
+            let kind = obj.get("kind").and_then(|k| k.as_str()).unwrap_or("");
+            let at = format!("{sid}.primitives[{i}]");
+            if !KINDS.contains(&kind) {
+                errors.push(format!(
+                    "{at}: kind='{kind}' 非通用原语（仅 rect/text/icon/grad/glow/disc）"
+                ));
+                continue;
+            }
+            if let Some(c) = obj.get("color").and_then(|c| c.as_str()) {
+                if !c.is_empty() && !tokens.contains(c) {
+                    errors.push(format!(
+                        "{at}: color='{c}' 非 theme.by_name 合法令牌（会静默回退 text_on_parch）"
+                    ));
+                }
+            }
+            if let Some(pr) = obj.get("params").and_then(|v| v.as_object()) {
+                if kind == "icon" {
+                    if let Some(ic) = pr.get("icon").and_then(|v| v.as_str()) {
+                        if !icons.contains(ic) {
+                            errors.push(format!(
+                                "{at}: params.icon='{ic}' 不在 ui_icons.json 注册表（会静默跳过）"
+                            ));
+                        }
+                    }
+                }
+                if kind == "grad" {
+                    for t in ["from_token", "to_token"] {
+                        if let Some(tok) = pr.get(t).and_then(|v| v.as_str()) {
+                            if !tokens.contains(tok) {
+                                errors.push(format!("{at}: grad {t}='{tok}' 非 theme 合法令牌"));
+                            }
+                        }
+                    }
+                    if let Some(st) = pr.get("steps").and_then(serde_json::Value::as_i64) {
+                        if !(2..=256).contains(&st) {
+                            errors.push(format!("{at}: grad steps={st} 越界（2..256）"));
+                        }
+                    }
+                }
+            }
+            if kind == "text" {
+                let tk = obj.get("text_key").and_then(|v| v.as_str()).unwrap_or("");
+                let tx = obj.get("text").and_then(|v| v.as_str()).unwrap_or("");
+                if tk.is_empty() && tx.is_empty() {
+                    errors.push(format!("{at}: text 缺 text/text_key（空内容不画）"));
+                }
+                if !tk.is_empty() && strings.get(tk).is_none() {
+                    errors.push(format!("{at}: text_key='{tk}' 不在 strings.json（会显示裸 key）"));
+                }
+                match obj.get("tier").and_then(|v| v.as_str()).unwrap_or("") {
+                    "title" | "body" | "hint" => {}
+                    other => {
+                        errors.push(format!("{at}: tier='{other}' 非法（仅 title/body/hint）"));
+                    }
+                }
+            }
+        }
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -2010,9 +2119,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_std_traits_matrix(&root));
     all_errors.extend(check_render_framework_boundary(&root));
     all_errors.extend(check_ui_redesign_tokens(&root));
+    all_errors.extend(check_primitives_data(&root));
 
     println!(
-        "doccheck2: {} error(s) across 24 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens)",
+        "doccheck2: {} error(s) across 25 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data)",
         all_errors.len()
     );
     for err in &all_errors {
