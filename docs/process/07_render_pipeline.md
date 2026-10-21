@@ -1,5 +1,13 @@
 # 渲染管线契约（legacy 像素管线，Render Pipeline Contract）
 
+> **S18.7b：像素基线机制已退役（不再存在）**。
+> 依旧的 `assets/render_baseline/` / `forward_baseline/` / `hd_baseline/` 三套 golden PNG、
+> `render_snapshot` / `render_snapshot_forward` / `visual_regression` 三个 diff 测试、`visual_baseline.ps1`
+> 与其门禁项、`baseline-mirror-identity` 校验均**已全部删除**。
+> 现行机制：**结构不变式断言**（`tests/render_invariants.rs`，7 场景 × 非黑覆盖率/内容签名互异/暖色板在位/TTF 在位）
+> 与 **CPU↔Bevy 内存对拍**（`bevy-cpu-parity` 门禁项：GPU 真实离屏读回 vs CPU 期望逐像素对照）。
+> 本文中仍有的「基线」词句为**历史记述**，不再是现行机制。
+
 > ⚠️ **状态：降级为逆向参照（S16 渲染线裁决）**。运行时**零 legacy 像素层**：画面 100%
 > 由代码绘制产出，逐像素 PCX blit 已退出热渲染路径。本文的 z-order 文件顺序 / 越界求交裁剪 /
 > PCX 透明位 index 0 三类契约**仅作逆向事实参照与诊断工具依据**，不再是运行时验收基准。

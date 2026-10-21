@@ -1,5 +1,13 @@
 # 渲染架构（Runtime Render Architecture）
 
+> **S18.7b：像素基线机制已退役（不再存在）**。
+> 依旧的 `assets/render_baseline/` / `forward_baseline/` / `hd_baseline/` 三套 golden PNG、
+> `render_snapshot` / `render_snapshot_forward` / `visual_regression` 三个 diff 测试、`visual_baseline.ps1`
+> 与其门禁项、`baseline-mirror-identity` 校验均**已全部删除**。
+> 现行机制：**结构不变式断言**（`tests/render_invariants.rs`，7 场景 × 非黑覆盖率/内容签名互异/暖色板在位/TTF 在位）
+> 与 **CPU↔Bevy 内存对拍**（`bevy-cpu-parity` 门禁项：GPU 真实离屏读回 vs CPU 期望逐像素对照）。
+> 本文中仍有的「基线」词句为**历史记述**，不再是现行机制。
+
 > **单一事实源**：《金银岛》**运行时**渲染架构 —— 分层、绘制原语、z-order（= 调用顺序）、坐标契约。
 > 任何改 `ti-platform/gfx.rs` / `ti-app/scenes/*` / `ti-app/menu_shell.rs` /
 > `ti-app/game_app.rs::render` 的代码，必须先读本文。

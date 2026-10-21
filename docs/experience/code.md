@@ -3,6 +3,9 @@
 > 代码级教训：文档与实现不一致、类型转换陷阱。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 
 ### EXP-015 代码：clippy pedantic 反复触发的模式（workspace `-D warnings`）
+> 注：本文的「基线」记述属**历史**：像素基线机制已于 **S18.7b 退役**（三套 golden PNG + 三个 diff 测试均已删除）；
+> 现行机制 = 结构不变式断言 + CPU↔Bevy 内存对拍。
+
 - **`assert!(false, ...)`** → 触发 `assertions_on_constants`（`all` 组）。改用 `assert!(matches!(ev, Pattern { .. }))` + `if let Pattern { .. } = ev { ... }`，不留不可达分支。
 - **`[T; N]` 栈数组 > 16384 字节** → `large_stack_arrays`（`all`/perf 组）。改用 `Box<[T]>`：`vec![0u16; N].into_boxed_slice()`。
 - **`u32 as f32` / `i32 as f32`** → `cast_precision_loss`（`pedantic` 组）。改法：值已知且小时用 f32 字面量（`const LW: f32 = 176.0;`）；否则在函数上加 `#[allow(clippy::cast_precision_loss)]`。

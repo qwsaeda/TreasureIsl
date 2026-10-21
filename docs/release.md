@@ -1,5 +1,13 @@
 # 金银岛 TreasureIsl — Rust 现代化移植 发布说明
 
+> **S18.7b：像素基线机制已退役（不再存在）**。
+> 依旧的 `assets/render_baseline/` / `forward_baseline/` / `hd_baseline/` 三套 golden PNG、
+> `render_snapshot` / `render_snapshot_forward` / `visual_regression` 三个 diff 测试、`visual_baseline.ps1`
+> 与其门禁项、`baseline-mirror-identity` 校验均**已全部删除**。
+> 现行机制：**结构不变式断言**（`tests/render_invariants.rs`，7 场景 × 非黑覆盖率/内容签名互异/暖色板在位/TTF 在位）
+> 与 **CPU↔Bevy 内存对拍**（`bevy-cpu-parity` 门禁项：GPU 真实离屏读回 vs CPU 期望逐像素对照）。
+> 本文中仍有的「基线」词句为**历史记述**，不再是现行机制。
+
 > **S18.7a 注**：`evidence/render_png/*.png` = **CPU 自绘后端**（`ti-render` 内存帧缓冲 → PNG），**不是 Bevy 输出**；引擎原生首界面 = `evidence/bevy_native_index.png`（`treasure-bevy-native --shot`，GPU 实体渲染 + 读回像素）。像素基线（`assets/*_baseline/`）当前锁的是 **CPU 自绘版**，基线源待迁到 Bevy GPU 读回（S18.7 正文）。
 
 ## 项目概况
@@ -168,7 +176,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 159 任务（149 verified；台账计数随 S8–S18 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 160 任务（150 verified；台账计数随 S8–S18 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`

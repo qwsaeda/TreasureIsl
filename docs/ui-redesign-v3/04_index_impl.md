@@ -1,5 +1,13 @@
 # 04 · index 主菜单 v3 试点落地实现（v3.1 双写）
 
+> **S18.7b：像素基线机制已退役（不再存在）**。
+> 依旧的 `assets/render_baseline/` / `forward_baseline/` / `hd_baseline/` 三套 golden PNG、
+> `render_snapshot` / `render_snapshot_forward` / `visual_regression` 三个 diff 测试、`visual_baseline.ps1`
+> 与其门禁项、`baseline-mirror-identity` 校验均**已全部删除**。
+> 现行机制：**结构不变式断言**（`tests/render_invariants.rs`，7 场景 × 非黑覆盖率/内容签名互异/暖色板在位/TTF 在位）
+> 与 **CPU↔Bevy 内存对拍**（`bevy-cpu-parity` 门禁项：GPU 真实离屏读回 vs CPU 期望逐像素对照）。
+> 本文中仍有的「基线」词句为**历史记述**，不再是现行机制。
+
 **定位**：`03_redesign_proposal.md §3.1` 的 index 试点（v3.3 波次 = 本任务 S17.6 提前落地
 试点层）。**双写纪律**（§3.10）：v2 键（`title`/`list`/`icon`/`status`/`portrait_zones`）
 原值不动，v3 叙事键（`title_art`/`ambient_art`/`focus_anchor`）叠加；v3.5 收口时 v2 键才退役。

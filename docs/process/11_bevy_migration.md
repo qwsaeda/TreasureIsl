@@ -1,5 +1,13 @@
 # 11 · Bevy 渲染引擎迁移裁决（S18）
 
+> **S18.7b：像素基线机制已退役（不再存在）**。
+> 依旧的 `assets/render_baseline/` / `forward_baseline/` / `hd_baseline/` 三套 golden PNG、
+> `render_snapshot` / `render_snapshot_forward` / `visual_regression` 三个 diff 测试、`visual_baseline.ps1`
+> 与其门禁项、`baseline-mirror-identity` 校验均**已全部删除**。
+> 现行机制：**结构不变式断言**（`tests/render_invariants.rs`，7 场景 × 非黑覆盖率/内容签名互异/暖色板在位/TTF 在位）
+> 与 **CPU↔Bevy 内存对拍**（`bevy-cpu-parity` 门禁项：GPU 真实离屏读回 vs CPU 期望逐像素对照）。
+> 本文中仍有的「基线」词句为**历史记述**，不再是现行机制。
+
 **状态**：用户签核（2026-10-19 会话，路线 B「全量迁 Bevy」消息留痕）。
 **定位**：本文是 S18 系列的**裁决单一事实源**：差距结论、版本 pin、新预算、定案推翻记录、
 架构形状、WBS。改引擎层代码前必读（与 `08_render_arch.md` / `09_render_framework.md` 并列）。
@@ -87,6 +95,7 @@
 | S18.14 | Bevy 离屏读回·7 场景对照集（基线源切换前置） | **verified**：`--scene=<id> --shot` 逐场景离屏读回（7/7 非黑像素 ~100%，哈希互异 → 导航生效）；对照表 `evidence/bevy_parity_7scenes.md`（图片不入仓，每张 8MB；代表图 vs/main_map） |
 | S18.15 | 双后端像素 diff 工具 + 量化表 | **verified**：`scripts/bevy_cpu_diff.py`（逐场景重生 Bevy 图→逐像素比较，阈值通道差>2）；量化：差异率 0.68%~2.48%（index 2.384% / vs 2.481% / message 0.681%），最大通道差 231~255（非抗锯麧级），差异行集中在**所有文字行**（标题/行名/标签）→ 指向**文字基线 1~2px 偏移**（逐档可测可修），而非缺元素/错位；对照表 `evidence/bevy_cpu_diff.md` |
 | S18.16 | CPU↔Bevy 内存对拍（无 golden 文件） | **verified**：gate 新项（顶格 Report，项数 21→22）= `cargo run --manifest-path crates/ti-engine/Cargo.toml --example bevy_vs_cpu_pixel`（ti-engine 独立 example：winit 需主线程，不能进 `cargo test`）：真实 GPU 离屏读回 vs CPU 期望逐像素对照，判定通道差 ≤ 8 LSB 且超差 <0.5%（**实测通过**）；退出码 1=FAIL / 2=记名 SKIP（无 GPU）；双后端像素对齐由“基线文件”改为“内存对拍”，不再需要 golden PNG |
+| S18.17 | 基线退役文档收口 | **verified**：12 份活文档插入「S18.7b 基线机制已退役」宣告（启用机制 = 结构不变式断言 + CPU↔Bevy 内存对拍）+ 10 份历史记述文档打退役标注（不改写历史，仅明确它已作废）；全库「基线」词的现行含义只剩「历史记述」 |
 | S18.8 | 收口：macroquad 后端退役（feature 删除 + 依赖树断言）+ 性能目标（native 60fps / wasm 30–60fps）+ release.md | 全 gate + 发布 |
 
 ## 6. 风险与缓解

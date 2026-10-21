@@ -1,5 +1,13 @@
 # 界面全量重设计 · 航海夜·精修（S17，设计规格单一事实源）
 
+> **S18.7b：像素基线机制已退役（不再存在）**。
+> 依旧的 `assets/render_baseline/` / `forward_baseline/` / `hd_baseline/` 三套 golden PNG、
+> `render_snapshot` / `render_snapshot_forward` / `visual_regression` 三个 diff 测试、`visual_baseline.ps1`
+> 与其门禁项、`baseline-mirror-identity` 校验均**已全部删除**。
+> 现行机制：**结构不变式断言**（`tests/render_invariants.rs`，7 场景 × 非黑覆盖率/内容签名互异/暖色板在位/TTF 在位）
+> 与 **CPU↔Bevy 内存对拍**（`bevy-cpu-parity` 门禁项：GPU 真实离屏读回 vs CPU 期望逐像素对照）。
+> 本文中仍有的「基线」词句为**历史记述**，不再是现行机制。
+
 **定位**：S17 全量重设计（用户 2026-10-18 裁决，方向 = A 航海夜·精修）的**设计规格**。
 数值层（色板/栅格/字号/动效/图标）以本文为准；`08_layout_design.md` 在 S17.2 起同步为本文的
 场景坐标实例（表值 = scenes.json 同值纪律不变）。运行时像素 100% 来自 `scenes/chrome.rs`

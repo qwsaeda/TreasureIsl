@@ -1,5 +1,8 @@
 # 06 · main_map 主地图落地记录（v3.1 全量 · S17.8）
 
+> 注：本文的「基线」记述属**历史**：像素基线机制已于 **S18.7b 退役**（三套 golden PNG + 三个 diff 测试均已删除）；
+> 现行机制 = 结构不变式断言 + CPU↔Bevy 内存对拍。
+
 > 03 提案 §3.4「世界画布优先」的落地版。main_map 是 7 场景中死区最大（v2 棋盘
 > y=520..1040 只占中屏一条，上下 280px+ 死区）的场景。v3 = **棋盘当主角**：
 > mood `world_explore`，focus.anchor = `world_canvas`，rhythm = `world_first_hud_corner`。

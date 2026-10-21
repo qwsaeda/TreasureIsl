@@ -1,5 +1,8 @@
 # S11 正向开发收口计划（Forward-Development Closure）
 
+> 注：本文的「基线」记述属**历史**：像素基线机制已于 **S18.7b 退役**（三套 golden PNG + 三个 diff 测试均已删除）；
+> 现行机制 = 结构不变式断言 + CPU↔Bevy 内存对拍。
+
 > **定位**：S11 是「逆向归档 + 业务闭环 + 模块化并行 loop」的收口计划，**已 verified**。
 > 本文含大量 `legacy/` 归档操作与 `oracle` 清零清单（归档操作细节），属操作记录而非设计文档。
 > 当前正向开发入口见 `docs/00_design.md` + `docs/business/`。
