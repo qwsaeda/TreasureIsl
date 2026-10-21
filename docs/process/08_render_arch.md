@@ -227,7 +227,7 @@ gate 三项门禁的**结构合并**（19/19.5 并入 18）留 S15.6 B6 收口�
 | `e2e_render_alignment::disabled_records_never_render` | 关闭标记不产像素 | 迁 `ti_formats` 纯数据断言（`f2/f3` 哨兵解析） |
 | `render_parity::render_sprite_region_matches_tiformats_baseline` | 独立 PCX 解码基线逐像素 | **删除**（无运行时精灵层） |
 | `render_parity_hd::*` | HD RGBA 精灵层 | 保留"帧缓冲尺寸/确定性/非空"，删精灵层相关断言 |
-| `render_snapshot` / `visual_regression` / `render_snapshot_forward` | legacy 精灵层基线 | **重生成**（纯代码渲染器基线） |
+| `render_snapshot` / `visual_regression` / `render_snapshot_forward` | legacy 精灵层基线 | **已退役（S18.7b）生成**（纯代码渲染器基线） |
 
 ---
 

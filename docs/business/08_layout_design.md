@@ -142,7 +142,7 @@
 | 项数 × 末块底 | 5 角色卡 → `480+4*192+192` = **1440** | 3 地图卡（`MAP_COUNT=3`，QA139）→ `480+2*320+320` = **1440**（海平面带 1704 之上） |
 | 锁定标记列 | — | `locked {text_x:920}`（QA033 钳制公式不变：卡片右缘 = 1000） |
 | 立绘锚（S18.7d） | `hero_art {x:76, y:130, w:356, h:1190}` | —（地图拼贴区 = 重心区，chrome 全在 `primitives`） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:356, h:1190}}` | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 23 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:356, h:1190}}` | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 21 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
 | 提示行 | `hint {x:540, y:1840}` | 同左（JSON 原语 tier hint） |
 | 动态区 | `portrait_zones [{0,240,1080,1460}]` | `portrait_zones [{0,240,1080,960}]` |
 

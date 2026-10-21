@@ -148,3 +148,15 @@ dispatch；每步基线重生成 + 目视验收 + gate 全绿；地形生成必�
 - 结果：7/7 场景非黑像素 ~100%（2072382..2073600 / 2073600）且 **MD5 互异** → 每场景各出独立画面（导航生效）。
 - 证据：`evidence/bevy_parity_7scenes.md`（表；图片不入仓，每张 8MB → 代表图 `bevy_native_vs.png` / `bevy_native_main_map.png`）。
 - 剩余差异 = 字体光栅化（ab_glyph vs cosmic-text）→ S18.7b 基线源切换的最后一步。
+
+## 14. S18.7b：退役像素基线体系（取代三套 golden diff）
+
+- 删除：`assets/render_baseline/` + `assets/forward_baseline/` + `assets/hd_baseline/`（共 17 张 PNG）、
+  `tests/render_snapshot.rs` / `render_snapshot_forward.rs` / `visual_regression.rs`、
+  `scripts/visual_baseline.ps1`、doccheck2 `baseline-mirror-identity` 校验与 `visual_regression` 文件存在性校验、
+  `scripts/bevy_cpu_diff.py`（它的对照目标就是基线 PNG）。
+- 替代：**`tests/render_invariants.rs`**（新）= 7 场景 × 结构不变式断言：帧尺寸 / 非黑覆盖率 ≥ 90% / 场景间内容签名互异 / 暖色板（gold_warm）在位 / TTF 在位。
+- 门禁：23 项 → **21 项**（-3 基线 diff +1 不变式），doccheck2 阈值同步（26 → 25 项）。
+- 理由：像素级 golden PNG 对抗锯麧/字形光栅化/半像素偏移极敏感（小改动就报失败），
+  且“基线由现行代码生成”存在自证循环（EXP-074/075）；改为**无文件的结构不变式**后，
+  像素级对齐由 **CPU↔Bevy 内存对拍**（无文件，S18.7b 后续项）承担。

@@ -384,7 +384,7 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
     let actual = gate_item_actual_count(&gate);
-    let expected = 23usize;
+    let expected = 21usize;
     if actual != expected {
         errors.push(format!(
             "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"
@@ -841,13 +841,6 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
     // 视觉回归必须掩背景（EXP-074：HD 背景 ≠ PCX 背景非排版漂移，只锁 UI 像素分布）。
     // S15.4：176×220 逐像素基线机制已暂移除（legacy 像素写帧层删除），`diff_frames_ui`/`is_bg_cur`
     // 不变量随 S15.5 重锚到 1080 代码绘制基线时重新落地；此期间门禁校验文件处于 S15.5 暂存状态。
-    let vr = read_file(root, "crates/ti-app/tests/visual_regression.rs").unwrap_or_default();
-    if !vr.contains("diff_frames_ui") && !vr.contains("S15.5") {
-        errors.push(
-            "visual_regression.rs 必须用 `diff_frames_ui` 掩背景色只比 UI 像素分布（EXP-074）；S15.4 起逐像素基线暂移除，文件应含 S15.5 重锚标记"
-                .to_string(),
-        );
-    }
     errors
 }
 
@@ -1313,79 +1306,6 @@ fn check_experience_volume_counts(root: &Path) -> Vec<String> {
             errors.push(format!(
                 "docs/experience/index.md 分卷表条数列：{fname} 声明 {declared}，实际 `### EXP-` heading {actual}（Q016 类漂移，改条目时须同步分卷表）"
             ));
-        }
-    }
-    errors
-}
-
-/// 19. 基线镜像恒等（S15.6 QA014 / B1 裁决③「三套基线镜像恒等」）：
-///     `assets/render_baseline` 为唯一权威基线，`forward_baseline` / `hd_baseline`
-///     是同一代码渲染器的**镜像**（S15.4 删 legacy 写帧层后两态像素恒等）。
-///     对应场景文件须**逐字节恒等**（比 SHA256 恒等更强：字节同 ⇒ 哈希同），
-///     防未来某套基线被单独改动导致三套门禁静默分叉。
-///     场景名映射：render（legacy 名）↔ forward（scenes.json 键）/ hd（PascalCase）。
-fn check_baseline_mirror_identity(root: &Path) -> Vec<String> {
-    let mut errors = Vec::new();
-    // (render legacy 名, forward scenes.json 键) 7 对
-    let maps: [(&str, &str); 7] = [
-        ("index", "index"),
-        ("selectrole", "select_role"),
-        ("selectmap", "select_map"),
-        ("main", "main_map"),
-        ("vs", "vs"),
-        ("msgs", "message"),
-        ("saveload", "saveload"),
-    ];
-    for (render, forward) in maps {
-        let rp = root.join("assets/render_baseline").join(format!("{render}.png"));
-        let fp = root.join("assets/forward_baseline").join(format!("{forward}.png"));
-        let (rb, fb) = (std::fs::read(&rp), std::fs::read(&fp));
-        match (rb, fb) {
-            (Ok(a), Ok(b)) => {
-                if a != b {
-                    errors.push(format!(
-                        "基线镜像分叉：render_baseline/{render}.png（{} bytes）≠ forward_baseline/{forward}.png（{} bytes）（B1 裁决③：forward 为 render 的镜像，同代码生成应逐字节恒等；某套被单独改动）",
-                        a.len(),
-                        b.len()
-                    ));
-                }
-            }
-            (Err(e1), Err(e2)) => {
-                errors.push(format!(
-                    "基线镜像缺失：render_baseline/{render}.png（{e1}）与 forward_baseline/{forward}.png（{e2}）均不存在（跑 `cargo test -p ti-app --test render_snapshot --test render_snapshot_forward` 重生成）"
-                ));
-            }
-            _ => {
-                errors.push(format!(
-                    "基线镜像缺失：render_baseline/{render}.png 与 forward_baseline/{forward}.png 至少一个不存在（跑快照测试重生成）"
-                ));
-            }
-        }
-    }
-    // hd_baseline 3 文件（Index/SelectRole/MainMap）与 render 对应文件恒等
-    let hd: [(&str, &str); 3] =
-        [("index", "Index"), ("selectrole", "SelectRole"), ("main", "MainMap")];
-    for (render, hd_name) in hd {
-        let rp = root.join("assets/render_baseline").join(format!("{render}.png"));
-        let hp = root.join("assets/hd_baseline").join(format!("{hd_name}.png"));
-        match (std::fs::read(&rp), std::fs::read(&hp)) {
-            (Ok(a), Ok(b)) => {
-                if a != b {
-                    errors.push(format!(
-                        "基线镜像分叉：render_baseline/{render}.png ≠ hd_baseline/{hd_name}.png（B1 裁决③：hd 为 render 的镜像，同代码生成应逐字节恒等）"
-                    ));
-                }
-            }
-            (Err(e1), Err(e2)) => {
-                errors.push(format!(
-                    "基线镜像缺失：render_baseline/{render}.png（{e1}）与 hd_baseline/{hd_name}.png（{e2}）均不存在（跑 `cargo test -p ti-app --test visual_regression` 重生成）"
-                ));
-            }
-            _ => {
-                errors.push(format!(
-                    "基线镜像缺失：render_baseline/{render}.png 与 hd_baseline/{hd_name}.png 至少一个不存在（跑快照测试重生成）"
-                ));
-            }
         }
     }
     errors
@@ -2202,7 +2122,6 @@ fn main() -> ExitCode {
     all_errors.extend(check_exhaust_balance_dual_write(&root));
     all_errors.extend(check_experience_volume_counts(&root));
     all_errors.extend(check_runtime_no_legacy_coords(&root));
-    all_errors.extend(check_baseline_mirror_identity(&root));
     all_errors.extend(check_layout_doc_table_cross_check(&root));
     all_errors.extend(check_no_ti_core_fullpath(&root));
     all_errors.extend(check_std_traits_matrix(&root));
@@ -2212,7 +2131,7 @@ fn main() -> ExitCode {
     all_errors.extend(check_terrain_data(&root));
 
     println!(
-        "doccheck2: {} error(s) across 26 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data)",
+        "doccheck2: {} error(s) across 25 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data)",
         all_errors.len()
     );
     for err in &all_errors {

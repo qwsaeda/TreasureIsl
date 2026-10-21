@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（23 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（21 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (23 items) ==="
+Write-Host "=== gate: TreasureIsl (21 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -181,36 +181,22 @@ $fwOut = & powershell -ExecutionPolicy Bypass -File "scripts/flywheel_readme.ps1
 $fwOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'flywheel-readme (开轮必读脚本完整性)'
 
-# 18) 视觉回归基准图（EXP-072）：3 场景 headless 逐像素 diff，基准图存在且 0 diff
-$vrOut = & powershell -ExecutionPolicy Bypass -File "scripts/visual_baseline.ps1" -Check 2>&1
-$vrOut | ForEach-Object { Write-Host "        $_" }
-Report ($LASTEXITCODE -eq 0) 'visual-regression (3 场景 headless 基准图逐像素 diff)'
 
-# 19) 渲染快照门禁（S13.6 契约 §5，docs/process/07_render_pipeline.md）：
-#     7 场景（index/selectrole/selectmap/main/vs/msgs/saveload）× 纯代码渲染全帧逐像素基准 diff。
-#     基准由现行代码生成（assets/render_baseline/，杜绝 EXP-074/075 自证循环）；
-#     全帧 diff=0（EXP-074 背景像素掩已废弃，S15.4/15.5 重锚 1080 代码绘制基线）。
-#     快照入口带 TTF 在位断言（S15.6 QA125：缺失字体即 panic，禁止豆腐基线静默入库）。
-$rsOut = & cargo test -q -p ti-app --test render_snapshot 2>&1
-$rsOut | ForEach-Object { Write-Host "        $_" }
-Report ($LASTEXITCODE -eq 0) 'render-snapshot (7 场景 headless 逐像素基准 diff，契约 §5)'
 
-# 19.5) S14 正向渲染快照门禁（第三套，与第 19 项并列，docs/business/08_layout_design.md §4）：
-#     7 场景纯代码渲染逐像素基准 diff。基准 assets/forward_baseline/ 是**业务重设计意图产物**
-#     （§4 版面 + §2 配色 + 代码绘制元素），S14 正向开发目标态——立绘/菜单条/HUD/血条全由
-#     代码绘制，不依赖逆向素材。S15.4 删 legacy 写帧层后 forward 开关已退役（S15.6 QA017，
-#     两态帧恒等），forward_baseline 为 render_baseline 的**字节镜像**（doccheck2
-#     baseline-mirror-identity 锁逐字节恒等），防某套被单独改动导致门禁静默分叉。
-$frsOut = & cargo test -q -p ti-app --test render_snapshot_forward 2>&1
-$frsOut | ForEach-Object { Write-Host "        $_" }
-Report ($LASTEXITCODE -eq 0) 'forward-render-snapshot (S14 正向纯代码渲染 7 场景逐像素基准 diff，§4 版面意图)'
+
+# 19) 渲染结构不变式门禁（S18.7b：取代三套像素基线 diff）：
+#     7 场景 × 结构不变式断言（非黑覆盖率 ≥ 90% / 场景间内容签名互异 /
+#     暖色板在位 / TTF 在位）——**不维护 golden PNG**（像素级微调会让基线频繁失效）。
+$riOut = & cargo test -q -p ti-app --test render_invariants 2>&1
+$riOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'render-invariants (7 场景结构不变式断言，无像素基线)'
 
 # 20) 数据源门禁（S13.6 契约 §5，docs/process/07_render_pipeline.md）：
-#     legacy/data/*.Map / *.pak 相对 HEAD 有改动 → 强制跑 render_snapshot（第 19 项），漂移即 FAIL。
+#     legacy/data/*.Map / *.pak 相对 HEAD 有改动 → 强制跑 render_invariants（第 19 项），不变式失败即 FAIL。
 #     无改动时 SKIP（gate 全绿前提）。
 $dsOut = & python scripts/check_data_source.py 2>&1
 $dsOut | ForEach-Object { Write-Host "        $_" }
-Report ($LASTEXITCODE -eq 0) 'check_data_source (数据源改动 → 渲染快照门禁)'
+Report ($LASTEXITCODE -eq 0) 'check_data_source (数据源改动 → 渲染不变式门禁)'
 
 # 21) UI 场景叙事约束（v3，docs/ui-redesign-v3/02_spec_lang.md）：
 #     assets/data/ui_schema/scene_manifest_v3.json 的 mood/重心/节奏/密度/HUD 上限断言

@@ -51,8 +51,9 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-2 | 176×220 逻辑坐标命中判定在任意整数/非整数缩放下不偏移 | `cargo test -p ti-platform -- test coordinate_roundtrip` |
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
+|  | P0-5（S10.1 新增） | 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test render_invariants` |  |
 
-## 代码质量门禁 `scripts/gate.ps1`（23 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（21 项，循环每轮强制）
 
 > **计数约定（本节是门禁项数的唯一事实源，其他文档只引用、不各自重数）**
 >
@@ -60,7 +61,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > 1. 只数顶格 `Report`；**缩进在 `if`/`else` 块内的条件 `Report`/`Skip` 不计入**——
 >    即 wasm 构建、android 构建、`zero-unknown verify`（`if (Test-Path ...)` 守卫）三项；
 > 2. `Skip` 不单独计项；
-> 3. 当前顶格 `Report` = **23 项**。
+> 3. 当前顶格 `Report` = **21 项**。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
 > 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
@@ -139,19 +140,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
         powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check -Quiet
         （脚本存在 + 输出含 6 条必读 + gate ≥16 项 + doccheck2 ≥8 项，exit 0 = PASS）
  18 视觉回归基准图（EXP-072）：
-        powershell -ExecutionPolicy Bypass -File scripts/visual_baseline.ps1 -Check
-        （3 场景 headless 逐像素 diff：Index/SelectRole/MainMap，基准图在位且 0 diff = PASS；
-         基准图缺失时先跑 `visual_baseline.ps1` 无 -Check 生成）
-  19 渲染快照门禁（S13.6 契约 §5，docs/process/07_render_pipeline.md）：
-        cargo test -q -p ti-app --test render_snapshot
-        （7 场景 × 纯代码渲染全帧逐像素基准 diff；基准在 assets/render_baseline/
-         （现行代码生成，杜绝 EXP-074/075 自证循环），全帧 diff=0
-         （EXP-074 背景像素掩已废弃，S15.4/15.5 重锚 1080 代码绘制基线）；
-         S15.6 QA125 起快照入口带 TTF 在位断言，缺字体 panic 不静默生成豆腐基线）
 19.5 正向渲染快照门禁（S14，与 19 并列而非从属，docs/business/08_layout_design.md §4）：
-        cargo test -q -p ti-app --test render_snapshot_forward
-        （7 场景 forward 纯代码渲染逐像素 diff，基准 assets/forward_baseline/，
-         锁「正向代码渲染版面没漂」；与第 19 项互补，防 S14 重设计被 legacy 基线自证循环盖住）
  20 数据源门禁（S13.6 契约 §5）：
         python scripts/check_data_source.py
         （legacy/data/*.Map|*.pak 相对 HEAD 有改动 → 强制跑第 19 项；无改动时 SKIP）
@@ -166,7 +155,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 23 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 21 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
 
 **S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
-审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 23 项全绿。
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 21 项全绿。

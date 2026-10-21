@@ -60,7 +60,7 @@ focus_anchor 语义区与绘制区合并。
 4. `cargo test --workspace` 0 failed + `clippy -D warnings` + `fmt --check` 0 diff
 5. `doccheck` 0 error + `doccheck2` 0 error（含 08 §4.1 表镜像 + gate 项数 23 口径 +
    基线镜像恒等）
-6. gate 23 项全绿 → `evidence/S17.6.log` → 台账 S17.6 verified
+6. gate 21 项全绿 → `evidence/S17.6.log` → 台账 S17.6 verified
 
 ## 4. 已知限制（诚实记录）
 
