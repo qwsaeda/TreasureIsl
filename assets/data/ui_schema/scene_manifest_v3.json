@@ -8,13 +8,30 @@
         "mood": "epic_entry",
         "focus": {
           "anchor": "title_art",
-          "bbox_pct": { "x": 10, "y": 10, "w": 80, "h": 35 }
+          "bbox_pct": {
+            "x": 10,
+            "y": 10,
+            "w": 80,
+            "h": 35
+          }
         },
         "rhythm": {
           "beats": [
-            { "name": "title_art",  "weight": 0.50, "y_pct": 10 },
-            { "name": "menu",       "weight": 0.35, "y_pct": 50 },
-            { "name": "status",     "weight": 0.15, "y_pct": 96 }
+            {
+              "name": "title_art",
+              "weight": 0.5,
+              "y_pct": 10
+            },
+            {
+              "name": "menu",
+              "weight": 0.35,
+              "y_pct": 50
+            },
+            {
+              "name": "status",
+              "weight": 0.15,
+              "y_pct": 96
+            }
           ],
           "rule": "art_to_action_top_down"
         },
@@ -26,8 +43,12 @@
         "permanent_hud_count_max": 0
       },
       "geometry_constraints": {
-        "focus_bbox_must_contain": ["title_art_bbox"],
-        "no_rect_overlap_with": ["focus_anchor"],
+        "focus_bbox_must_contain": [
+          "title_art_bbox"
+        ],
+        "no_rect_overlap_with": [
+          "focus_anchor"
+        ],
         "edge_anchors": {
           "bottom_hint_y_min_pct": 92,
           "hud_edge_tolerance_pct": 5
@@ -41,13 +62,30 @@
         "mood": "hero_choice",
         "focus": {
           "anchor": "portrait_carousel",
-          "bbox_pct": { "x": 7, "y": 12, "w": 33, "h": 62 }
+          "bbox_pct": {
+            "x": 7,
+            "y": 12,
+            "w": 33,
+            "h": 62
+          }
         },
         "rhythm": {
           "beats": [
-            { "name": "portrait_carousel", "weight": 0.50, "y_pct": 12 },
-            { "name": "menu",     "weight": 0.35, "y_pct": 25 },
-            { "name": "hint",     "weight": 0.15, "y_pct": 96 }
+            {
+              "name": "portrait_carousel",
+              "weight": 0.5,
+              "y_pct": 12
+            },
+            {
+              "name": "menu",
+              "weight": 0.35,
+              "y_pct": 25
+            },
+            {
+              "name": "hint",
+              "weight": 0.15,
+              "y_pct": 96
+            }
           ],
           "rule": "side_anchor_center_options"
         },
@@ -59,8 +97,12 @@
         "permanent_hud_count_max": 0
       },
       "geometry_constraints": {
-        "focus_bbox_must_contain": ["hero_art_bbox"],
-        "no_rect_overlap_with": ["focus_anchor"],
+        "focus_bbox_must_contain": [
+          "hero_art_bbox"
+        ],
+        "no_rect_overlap_with": [
+          "focus_anchor"
+        ],
         "edge_anchors": {
           "bottom_hint_y_min_pct": 92,
           "hud_edge_tolerance_pct": 5
@@ -74,13 +116,30 @@
         "mood": "map_overview",
         "focus": {
           "anchor": "map_collage",
-          "bbox_pct": { "x": 7, "y": 12, "w": 52, "h": 62 }
+          "bbox_pct": {
+            "x": 7,
+            "y": 12,
+            "w": 52,
+            "h": 62
+          }
         },
         "rhythm": {
           "beats": [
-            { "name": "map_collage", "weight": 0.50, "y_pct": 12 },
-            { "name": "menu",    "weight": 0.35, "y_pct": 25 },
-            { "name": "hint",    "weight": 0.15, "y_pct": 96 }
+            {
+              "name": "map_collage",
+              "weight": 0.5,
+              "y_pct": 12
+            },
+            {
+              "name": "menu",
+              "weight": 0.35,
+              "y_pct": 25
+            },
+            {
+              "name": "hint",
+              "weight": 0.15,
+              "y_pct": 96
+            }
           ],
           "rule": "side_anchor_center_options"
         },
@@ -92,8 +151,12 @@
         "permanent_hud_count_max": 0
       },
       "geometry_constraints": {
-        "focus_bbox_must_contain": ["map_art_bbox"],
-        "no_rect_overlap_with": ["focus_anchor"],
+        "focus_bbox_must_contain": [
+          "map_art_bbox"
+        ],
+        "no_rect_overlap_with": [
+          "focus_anchor"
+        ],
         "edge_anchors": {
           "bottom_hint_y_min_pct": 92,
           "hud_edge_tolerance_pct": 5
@@ -107,14 +170,35 @@
         "mood": "world_explore",
         "focus": {
           "anchor": "world_canvas",
-          "bbox_pct": { "x": 4, "y": 10, "w": 93, "h": 77 }
+          "bbox_pct": {
+            "x": 4,
+            "y": 10,
+            "w": 93,
+            "h": 37
+          }
         },
         "rhythm": {
           "beats": [
-            { "name": "world_canvas", "weight": 0.55, "y_pct": 10 },
-            { "name": "command_deck", "weight": 0.20, "y_pct": 92 },
-            { "name": "hud_corners",   "weight": 0.15, "y_pct": 4 },
-            { "name": "hint",         "weight": 0.10, "y_pct": 96 }
+            {
+              "name": "world_canvas",
+              "weight": 0.55,
+              "y_pct": 10
+            },
+            {
+              "name": "command_deck",
+              "weight": 0.2,
+              "y_pct": 92
+            },
+            {
+              "name": "hud_corners",
+              "weight": 0.15,
+              "y_pct": 4
+            },
+            {
+              "name": "hint",
+              "weight": 0.1,
+              "y_pct": 96
+            }
           ],
           "rule": "world_first_hud_corner"
         },
@@ -126,8 +210,12 @@
         "permanent_hud_count_max": 3
       },
       "geometry_constraints": {
-        "focus_bbox_must_contain": ["world_canvas_bbox"],
-        "no_rect_overlap_with": ["focus_anchor"],
+        "focus_bbox_must_contain": [
+          "world_canvas_bbox"
+        ],
+        "no_rect_overlap_with": [
+          "focus_anchor"
+        ],
         "edge_anchors": {
           "bottom_hint_y_min_pct": 92,
           "hud_edge_tolerance_pct": 5
@@ -141,14 +229,35 @@
         "mood": "tense_battle",
         "focus": {
           "anchor": "battle_arena",
-          "bbox_pct": { "x": 7, "y": 12, "w": 85, "h": 52 }
+          "bbox_pct": {
+            "x": 7,
+            "y": 12,
+            "w": 85,
+            "h": 52
+          }
         },
         "rhythm": {
           "beats": [
-            { "name": "battle_arena",  "weight": 0.45, "y_pct": 12 },
-            { "name": "command_deck", "weight": 0.30, "y_pct": 87 },
-            { "name": "hp_corners",   "weight": 0.15, "y_pct": 4 },
-            { "name": "rounds_center","weight": 0.10, "y_pct": 31 }
+            {
+              "name": "battle_arena",
+              "weight": 0.45,
+              "y_pct": 12
+            },
+            {
+              "name": "command_deck",
+              "weight": 0.3,
+              "y_pct": 87
+            },
+            {
+              "name": "hp_corners",
+              "weight": 0.15,
+              "y_pct": 4
+            },
+            {
+              "name": "rounds_center",
+              "weight": 0.1,
+              "y_pct": 31
+            }
           ],
           "rule": "arena_center_command_edge"
         },
@@ -160,8 +269,12 @@
         "permanent_hud_count_max": 4
       },
       "geometry_constraints": {
-        "focus_bbox_must_contain": ["battle_arena_bbox"],
-        "no_rect_overlap_with": ["focus_anchor"],
+        "focus_bbox_must_contain": [
+          "battle_arena_bbox"
+        ],
+        "no_rect_overlap_with": [
+          "focus_anchor"
+        ],
         "edge_anchors": {
           "bottom_hint_y_min_pct": 92,
           "hud_edge_tolerance_pct": 5
@@ -175,14 +288,35 @@
         "mood": "reading",
         "focus": {
           "anchor": "text_panel",
-          "bbox_pct": { "x": 37, "y": 12, "w": 56, "h": 63 }
+          "bbox_pct": {
+            "x": 37,
+            "y": 12,
+            "w": 56,
+            "h": 63
+          }
         },
         "rhythm": {
           "beats": [
-            { "name": "text_panel", "weight": 0.55, "y_pct": 12 },
-            { "name": "hero_art", "weight": 0.25, "y_pct": 12 },
-            { "name": "page",     "weight": 0.10, "y_pct": 77 },
-            { "name": "hint",     "weight": 0.10, "y_pct": 96 }
+            {
+              "name": "text_panel",
+              "weight": 0.55,
+              "y_pct": 12
+            },
+            {
+              "name": "hero_art",
+              "weight": 0.25,
+              "y_pct": 12
+            },
+            {
+              "name": "page",
+              "weight": 0.1,
+              "y_pct": 77
+            },
+            {
+              "name": "hint",
+              "weight": 0.1,
+              "y_pct": 96
+            }
           ],
           "rule": "left_hero_right_text"
         },
@@ -194,8 +328,12 @@
         "permanent_hud_count_max": 1
       },
       "geometry_constraints": {
-        "focus_bbox_must_contain": ["body"],
-        "no_rect_overlap_with": ["focus_anchor"],
+        "focus_bbox_must_contain": [
+          "body"
+        ],
+        "no_rect_overlap_with": [
+          "focus_anchor"
+        ],
         "edge_anchors": {
           "bottom_hint_y_min_pct": 92,
           "hud_edge_tolerance_pct": 5
@@ -209,14 +347,35 @@
         "mood": "archive",
         "focus": {
           "anchor": "slot_list_with_meta",
-          "bbox_pct": { "x": 33, "y": 12, "w": 59, "h": 63 }
+          "bbox_pct": {
+            "x": 33,
+            "y": 12,
+            "w": 59,
+            "h": 63
+          }
         },
         "rhythm": {
           "beats": [
-            { "name": "slot_list_with_meta", "weight": 0.55, "y_pct": 12 },
-            { "name": "hero_art", "weight": 0.20, "y_pct": 12 },
-            { "name": "meta",      "weight": 0.15, "y_pct": 12 },
-            { "name": "hint",      "weight": 0.10, "y_pct": 96 }
+            {
+              "name": "slot_list_with_meta",
+              "weight": 0.55,
+              "y_pct": 12
+            },
+            {
+              "name": "hero_art",
+              "weight": 0.2,
+              "y_pct": 12
+            },
+            {
+              "name": "meta",
+              "weight": 0.15,
+              "y_pct": 12
+            },
+            {
+              "name": "hint",
+              "weight": 0.1,
+              "y_pct": 96
+            }
           ],
           "rule": "three_column_left_hero"
         },
@@ -228,8 +387,12 @@
         "permanent_hud_count_max": 1
       },
       "geometry_constraints": {
-        "focus_bbox_must_contain": ["list"],
-        "no_rect_overlap_with": ["focus_anchor"],
+        "focus_bbox_must_contain": [
+          "list"
+        ],
+        "no_rect_overlap_with": [
+          "focus_anchor"
+        ],
         "edge_anchors": {
           "bottom_hint_y_min_pct": 92,
           "hud_edge_tolerance_pct": 5

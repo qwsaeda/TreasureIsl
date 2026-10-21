@@ -3634,7 +3634,7 @@
       "x": 43,
       "y": 192,
       "w": 1004,
-      "h": 1478
+      "h": 710
     },
     "hud_gold": {
       "x": 80,
@@ -3650,19 +3650,19 @@
     },
     "deck_trade": {
       "x": 240,
-      "y": 1760,
+      "y": 1600,
       "w": 200,
       "h": 80
     },
     "deck_sell": {
       "x": 460,
-      "y": 1760,
+      "y": 1600,
       "w": 200,
       "h": 80
     },
     "deck_build": {
       "x": 680,
-      "y": 1760,
+      "y": 1600,
       "w": 200,
       "h": 80
     },
@@ -3677,7 +3677,7 @@
         "x": 43,
         "y": 192,
         "w": 1004,
-        "h": 1478
+        "h": 710
       }
     },
     "primitives": [
@@ -4091,110 +4091,6 @@
         "rect": {
           "x": 43,
           "y": 192,
-          "w": 1004,
-          "h": 2
-        },
-        "color": "wood_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 43,
-          "y": 1668,
-          "w": 1004,
-          "h": 2
-        },
-        "color": "wood_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 43,
-          "y": 192,
-          "w": 2,
-          "h": 1478
-        },
-        "color": "wood_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 1045,
-          "y": 192,
-          "w": 2,
-          "h": 1478
-        },
-        "color": "wood_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 49,
-          "y": 198,
-          "w": 992,
-          "h": 1
-        },
-        "color": "gold_warm",
-        "z": 5,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 49,
-          "y": 1663,
-          "w": 992,
-          "h": 1
-        },
-        "color": "gold_warm",
-        "z": 5,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 49,
-          "y": 198,
-          "w": 1,
-          "h": 1466
-        },
-        "color": "gold_warm",
-        "z": 5,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 1040,
-          "y": 198,
-          "w": 1,
-          "h": 1466
-        },
-        "color": "gold_warm",
-        "z": 5,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 43,
-          "y": 192,
           "w": 12,
           "h": 12
         },
@@ -4425,375 +4321,6 @@
         "item": -1
       },
       {
-        "kind": "rect",
-        "rect": {
-          "x": 240,
-          "y": 1760,
-          "w": 200,
-          "h": 80
-        },
-        "color": "panel_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 240,
-          "y": 1760,
-          "w": 200,
-          "h": 2
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 240,
-          "y": 1838,
-          "w": 200,
-          "h": 2
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 240,
-          "y": 1762,
-          "w": 2,
-          "h": 76
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 438,
-          "y": 1762,
-          "w": 2,
-          "h": 76
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 242,
-          "y": 1762,
-          "w": 196,
-          "h": 1
-        },
-        "color": "brass_light",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 242,
-          "y": 1837,
-          "w": 196,
-          "h": 1
-        },
-        "color": "brass_dark",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 248,
-          "y": 1776,
-          "w": 48,
-          "h": 48
-        },
-        "params": {
-          "icon": "coin",
-          "size": 48
-        },
-        "color": "gold_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 304,
-          "y": 1760,
-          "w": 128,
-          "h": 80
-        },
-        "color": "text_on_parch",
-        "tier": "hint",
-        "z": 9,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.main_map.hud.trade"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 460,
-          "y": 1760,
-          "w": 200,
-          "h": 80
-        },
-        "color": "panel_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 460,
-          "y": 1760,
-          "w": 200,
-          "h": 2
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 460,
-          "y": 1838,
-          "w": 200,
-          "h": 2
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 460,
-          "y": 1762,
-          "w": 2,
-          "h": 76
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 658,
-          "y": 1762,
-          "w": 2,
-          "h": 76
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 462,
-          "y": 1762,
-          "w": 196,
-          "h": 1
-        },
-        "color": "brass_light",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 462,
-          "y": 1837,
-          "w": 196,
-          "h": 1
-        },
-        "color": "brass_dark",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 468,
-          "y": 1776,
-          "w": 48,
-          "h": 48
-        },
-        "params": {
-          "icon": "coin",
-          "size": 48
-        },
-        "color": "gold_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 524,
-          "y": 1760,
-          "w": 128,
-          "h": 80
-        },
-        "color": "text_on_parch",
-        "tier": "hint",
-        "z": 9,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.main_map.hud.sell"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 680,
-          "y": 1760,
-          "w": 200,
-          "h": 80
-        },
-        "color": "panel_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 680,
-          "y": 1760,
-          "w": 200,
-          "h": 2
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 680,
-          "y": 1838,
-          "w": 200,
-          "h": 2
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 680,
-          "y": 1762,
-          "w": 2,
-          "h": 76
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 878,
-          "y": 1762,
-          "w": 2,
-          "h": 76
-        },
-        "color": "brass",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 682,
-          "y": 1762,
-          "w": 196,
-          "h": 1
-        },
-        "color": "brass_light",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 682,
-          "y": 1837,
-          "w": 196,
-          "h": 1
-        },
-        "color": "brass_dark",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 688,
-          "y": 1776,
-          "w": 48,
-          "h": 48
-        },
-        "params": {
-          "icon": "castle",
-          "size": 48
-        },
-        "color": "gold_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 1760,
-          "w": 128,
-          "h": 80
-        },
-        "color": "text_on_parch",
-        "tier": "hint",
-        "z": 9,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.main_map.hud.build"
-      },
-      {
         "kind": "text",
         "rect": {
           "x": 496,
@@ -4809,38 +4336,10 @@
         "text_key": "scene.main_map.title"
       },
       {
-        "kind": "text",
-        "rect": {
-          "x": 0,
-          "y": 1808,
-          "w": 1080,
-          "h": 64
-        },
-        "color": "text_on_parch",
-        "tier": "hint",
-        "z": 11,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.main_map.nav_hint"
-      },
-      {
         "kind": "rect",
         "rect": {
           "x": 0,
           "y": 0,
-          "w": 1080,
-          "h": 12
-        },
-        "color": "wood_warm",
-        "z": 20,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 0,
-          "y": 1908,
           "w": 1080,
           "h": 12
         },
@@ -4908,6 +4407,713 @@
         "z": 9,
         "when": "",
         "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 168,
+          "y": 192,
+          "w": 1,
+          "h": 710
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 294,
+          "y": 192,
+          "w": 1,
+          "h": 710
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 419,
+          "y": 192,
+          "w": 1,
+          "h": 710
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 545,
+          "y": 192,
+          "w": 1,
+          "h": 710
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 670,
+          "y": 192,
+          "w": 1,
+          "h": 710
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 796,
+          "y": 192,
+          "w": 1,
+          "h": 710
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 921,
+          "y": 192,
+          "w": 1,
+          "h": 710
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 43,
+          "y": 334,
+          "w": 1004,
+          "h": 1
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 43,
+          "y": 476,
+          "w": 1004,
+          "h": 1
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 43,
+          "y": 618,
+          "w": 1004,
+          "h": 1
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 43,
+          "y": 760,
+          "w": 1004,
+          "h": 1
+        },
+        "color": "brass_dark",
+        "z": 3,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 43,
+          "y": 192,
+          "w": 1004,
+          "h": 2
+        },
+        "color": "wood_warm",
+        "z": 4,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 43,
+          "y": 192,
+          "w": 2,
+          "h": 710
+        },
+        "color": "wood_warm",
+        "z": 4,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 1045,
+          "y": 192,
+          "w": 2,
+          "h": 710
+        },
+        "color": "wood_warm",
+        "z": 4,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 49,
+          "y": 198,
+          "w": 1,
+          "h": 698
+        },
+        "color": "gold_warm",
+        "z": 5,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 1040,
+          "y": 198,
+          "w": 1,
+          "h": 698
+        },
+        "color": "gold_warm",
+        "z": 5,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 43,
+          "y": 192,
+          "w": 12,
+          "h": 12
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 1035,
+          "y": 192,
+          "w": 12,
+          "h": 12
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 43,
+          "y": 890,
+          "w": 12,
+          "h": 12
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 1035,
+          "y": 890,
+          "w": 12,
+          "h": 12
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 0,
+          "y": 1704,
+          "w": 1080,
+          "h": 216
+        },
+        "color": "sky_horizon",
+        "z": 9,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 120,
+          "y": 1768,
+          "w": 240,
+          "h": 3
+        },
+        "color": "moon_pale",
+        "z": 10,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 424,
+          "y": 1800,
+          "w": 304,
+          "h": 3
+        },
+        "color": "moon_pale",
+        "z": 10,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 760,
+          "y": 1760,
+          "w": 200,
+          "h": 3
+        },
+        "color": "moon_pale",
+        "z": 10,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 200,
+          "y": 1856,
+          "w": 384,
+          "h": 3
+        },
+        "color": "moon_pale",
+        "z": 10,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 640,
+          "y": 1848,
+          "w": 304,
+          "h": 3
+        },
+        "color": "moon_pale",
+        "z": 10,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 240,
+          "y": 1600,
+          "w": 200,
+          "h": 80
+        },
+        "color": "panel_warm",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 240,
+          "y": 1600,
+          "w": 200,
+          "h": 2
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 240,
+          "y": 1678,
+          "w": 200,
+          "h": 2
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 240,
+          "y": 1602,
+          "w": 2,
+          "h": 76
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 438,
+          "y": 1602,
+          "w": 2,
+          "h": 76
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 242,
+          "y": 1602,
+          "w": 196,
+          "h": 1
+        },
+        "color": "brass_light",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 242,
+          "y": 1677,
+          "w": 196,
+          "h": 1
+        },
+        "color": "brass_dark",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "icon",
+        "rect": {
+          "x": 248,
+          "y": 1616,
+          "w": 48,
+          "h": 48
+        },
+        "params": {
+          "icon": "coin",
+          "size": 48
+        },
+        "color": "gold_warm",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "text",
+        "rect": {
+          "x": 304,
+          "y": 1600,
+          "w": 128,
+          "h": 80
+        },
+        "color": "text_on_parch",
+        "tier": "hint",
+        "z": 9,
+        "when": "",
+        "item": -1,
+        "text_key": "scene.main_map.hud.trade"
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 460,
+          "y": 1600,
+          "w": 200,
+          "h": 80
+        },
+        "color": "panel_warm",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 460,
+          "y": 1600,
+          "w": 200,
+          "h": 2
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 460,
+          "y": 1678,
+          "w": 200,
+          "h": 2
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 460,
+          "y": 1602,
+          "w": 2,
+          "h": 76
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 658,
+          "y": 1602,
+          "w": 2,
+          "h": 76
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 462,
+          "y": 1602,
+          "w": 196,
+          "h": 1
+        },
+        "color": "brass_light",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 462,
+          "y": 1677,
+          "w": 196,
+          "h": 1
+        },
+        "color": "brass_dark",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "icon",
+        "rect": {
+          "x": 468,
+          "y": 1616,
+          "w": 48,
+          "h": 48
+        },
+        "params": {
+          "icon": "coin",
+          "size": 48
+        },
+        "color": "gold_warm",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "text",
+        "rect": {
+          "x": 524,
+          "y": 1600,
+          "w": 128,
+          "h": 80
+        },
+        "color": "text_on_parch",
+        "tier": "hint",
+        "z": 9,
+        "when": "",
+        "item": -1,
+        "text_key": "scene.main_map.hud.sell"
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 680,
+          "y": 1600,
+          "w": 200,
+          "h": 80
+        },
+        "color": "panel_warm",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 680,
+          "y": 1600,
+          "w": 200,
+          "h": 2
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 680,
+          "y": 1678,
+          "w": 200,
+          "h": 2
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 680,
+          "y": 1602,
+          "w": 2,
+          "h": 76
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 878,
+          "y": 1602,
+          "w": 2,
+          "h": 76
+        },
+        "color": "brass",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 682,
+          "y": 1602,
+          "w": 196,
+          "h": 1
+        },
+        "color": "brass_light",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 682,
+          "y": 1677,
+          "w": 196,
+          "h": 1
+        },
+        "color": "brass_dark",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "icon",
+        "rect": {
+          "x": 688,
+          "y": 1616,
+          "w": 48,
+          "h": 48
+        },
+        "params": {
+          "icon": "castle",
+          "size": 48
+        },
+        "color": "gold_warm",
+        "z": 8,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "text",
+        "rect": {
+          "x": 744,
+          "y": 1600,
+          "w": 128,
+          "h": 80
+        },
+        "color": "text_on_parch",
+        "tier": "hint",
+        "z": 9,
+        "when": "",
+        "item": -1,
+        "text_key": "scene.main_map.hud.build"
       }
     ]
   },
