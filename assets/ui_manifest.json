@@ -196,6 +196,22 @@
       "params": {},
       "generated_at": "2026-10-21",
       "prompt": "A vertical 9:16 top-down view of a calm dark ocean at night, deep navy blue water with subtle silver moonlight ripples and faint wave crests, no islands, no boats, no horizon line, no text, no letters, no watermark, painterly"
+    },
+    {
+      "name": "bg_battle_sea",
+      "role": "background",
+      "file": "assets/ui/bg_battle_sea.png",
+      "params": {},
+      "generated_at": "2026-10-21",
+      "prompt": "A vertical 9:16 dramatic naval battle scene at night, two sailing ships exchanging cannon fire on a moonlit sea, warm muzzle flashes and smoke, distant thunder clouds, painterly nautical adventure art, empty center space, no text, no letters, no watermark"
+    },
+    {
+      "name": "chart_wide",
+      "role": "board",
+      "file": "assets/ui/chart_wide.png",
+      "params": {},
+      "generated_at": "2026-10-21",
+      "prompt": "a wide antique parchment sea chart filling the whole frame, hand-drawn islands, rhumb lines, compass roses, weathered edges, warm candlelight, top-down view, no text, no letters, no labels, no watermark"
     }
   ]
 }

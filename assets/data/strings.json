@@ -72,5 +72,10 @@
   "slot.label_fmt": "位 {0} {1}",
   "glmapm01.Map": "海图一",
   "glmapm02.Map": "海图二",
-  "glmapm03.Map": "海图三"
+  "glmapm03.Map": "海图三",
+  "role.name.panda": "潘达",
+  "role.name.tichy": "泰奇",
+  "role.name.kidd": "基德",
+  "role.name.drake": "德雷克",
+  "role.name.katharina": "凯瑟琳"
 }
