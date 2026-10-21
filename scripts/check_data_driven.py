@@ -44,6 +44,7 @@ THEME_TOKENS = {
     "text_on_parch", "text_on_wood", "danger", "player", "landmark", "bg",
     "title_bar", "selected", "secondary", "black",
     "wood_warm", "gold_warm", "sky_navy", "sky_horizon", "moon_pale",
+    "panel_warm", "brass", "brass_light", "brass_dark", "sea_deep", "sea_shallow", "reef", "land_sand", "land_sand_light", "land_sand_dark", 
 }
 
 

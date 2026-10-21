@@ -56,6 +56,14 @@ pub struct Theme {
     pub wood_warm: u16,
     /// 深海水色（主地图海面瓦片底色；S18.9）
     pub sea_deep: u16,
+    /// 深暖面板色（HUD/命令盘/英雄面板底色；S18.10）
+    pub panel_warm: u16,
+    /// 黄铜色（面板描边/甲板中层；S18.10）
+    pub brass: u16,
+    /// 黄铜高光（面板凸边/甲板亮层；S18.10）
+    pub brass_light: u16,
+    /// 黄铜阴影（面板凹边/槽底/甲板暗层；S18.10）
+    pub brass_dark: u16,
     /// 浅海水色（岛缘浅滩 / 瓦片顶棱高光；S18.9）
     pub sea_shallow: u16,
     /// 礍石色（岛缘礍岩瓦片；S18.9）
@@ -121,6 +129,10 @@ impl Theme {
             "black" => self.black,
             "wood_warm" => self.wood_warm,
             "sea_deep" => self.sea_deep,
+            "panel_warm" => self.panel_warm,
+            "brass" => self.brass,
+            "brass_light" => self.brass_light,
+            "brass_dark" => self.brass_dark,
             "sea_shallow" => self.sea_shallow,
             "reef" => self.reef,
             "land_sand" => self.land_sand,
@@ -163,6 +175,10 @@ impl Theme {
         // 夜空 #1A2942 → 0x1948。
         wood_warm: 0x8B42,
         sea_deep: 0x108A,
+        panel_warm: 0x18C2,
+        brass: 0x9365,
+        brass_light: 0xCE4A,
+        brass_dark: 0x51E4,
         sea_shallow: 0x1A30,
         reef: 0x4BCD,
         land_sand: 0xFD4D,
@@ -243,6 +259,10 @@ impl Theme {
             black: p.black.hex().unwrap_or(d.black),
             wood_warm: p.wood_warm.hex().unwrap_or(d.wood_warm),
             sea_deep: p.sea_deep.hex().unwrap_or(d.sea_deep),
+            panel_warm: p.panel_warm.hex().unwrap_or(d.panel_warm),
+            brass: p.brass.hex().unwrap_or(d.brass),
+            brass_light: p.brass_light.hex().unwrap_or(d.brass_light),
+            brass_dark: p.brass_dark.hex().unwrap_or(d.brass_dark),
             sea_shallow: p.sea_shallow.hex().unwrap_or(d.sea_shallow),
             reef: p.reef.hex().unwrap_or(d.reef),
             land_sand: p.land_sand.hex().unwrap_or(d.land_sand),
@@ -322,6 +342,14 @@ pub struct PaletteJson {
     pub wood_warm: Option<Hex16>,
     /// 深海水色（主地图海面瓦片底色；S18.9）
     pub sea_deep: Option<Hex16>,
+    /// 深暖面板色（HUD/命令盘/英雄面板底色；S18.10）
+    pub panel_warm: Option<Hex16>,
+    /// 黄铜色（面板描边/甲板中层；S18.10）
+    pub brass: Option<Hex16>,
+    /// 黄铜高光（面板凸边/甲板亮层；S18.10）
+    pub brass_light: Option<Hex16>,
+    /// 黄铜阴影（面板凹边/槽底/甲板暗层；S18.10）
+    pub brass_dark: Option<Hex16>,
     /// 浅海水色（岛缘浅滩 / 瓦片顶棱高光；S18.9）
     pub sea_shallow: Option<Hex16>,
     /// 礍石色（岛缘礍岩瓦片；S18.9）

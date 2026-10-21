@@ -91,3 +91,18 @@ dispatch；每步基线重生成 + 目视验收 + gate 全绿；地形生成必�
 - **门禁**：`doccheck2` 新增第 26 项 `check_terrain_data`（行数/行宽 == balance grid_h/grid_w、
   地形码 ⊆ legend、图例令牌 ∈ theme palette）。
 - **效果**：主地图从"单色冷蓝菱形"变为**航海图**（深蓝海 + 岛缘浅礁 + 暖沙岛 + 金色宝藏格）。
+
+## 9. 实现记录（S18.10 已落地：暖色板铺中景）
+
+- **新增 4 令牌**（theme.rs ↔ theme.json 双写 + `theme_json` 测试锁一致）：
+  `panel_warm 0x18C2`（深暖面板底）/ `brass 0x9365`（描边+甲板中层）/
+  `brass_light 0xCE4A`（凸边/甲板亮层）/ `brass_dark 0x51E4`（凹边/槽底/甲板暗层）。
+- **数据侧换色**（`scenes.json` 7 场景 306 处原语色令牌）：
+  `menu_bg→panel_warm`、`menu_border→brass`、`bevel_hi→brass_light`、
+  `bevel_shadow→brass_dark`、`wood→wood_warm`、`gold→gold_warm`、
+  `gold_bright→gold_warm`、`hilite→brass_dark`；
+  星点（3–5px 小方块）`parch_light→moon_pale`（夜空星更亮）；vs 竞技区底层甲板 → `brass_dark`
+  （形成 暗→亮 的暖色三层阶梯）。
+- **HUD 图标**（数据新增）：`hud_gold` 面板右端 `coin`、`hud_player` 面板右端 `chest`（金色 48px）。
+- **效果**：HUD / 命令盘 / 画布框 / 英雄面板 / 竞技区甲板全部脱离 v2 冷蓝塑料感，
+  统一到"夜空 + 暖金黄铜"语言；主地图读作**黄铜航海仪表盘**。

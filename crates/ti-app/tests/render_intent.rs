@@ -502,12 +502,9 @@ fn key_rects_have_pixels() {
     ti_app::scenes::Scene::render(&mut vs_scene, &mut vs_host);
     // 玩家血条**槽底**（`chrome::bar_slot` 铺 `COLOR_HILITE` 1080 槽位，§4.4 表值）——
     // vs.rs 把槽底宽度置 0 / 坐标偏离 §4.4 时，这条 fill 调用偏离表值，当场抓住。
-    let hilite = ti_app::menu_shell::COLOR_HILITE;
-    let backing = vs_host
-        .fills
-        .iter()
-        .find(|f| f.4 == hilite && f.0 == ph.x && f.1 == ph.y && f.2 == ph.w)
-        .copied();
+    // S18.10：槽底色随色板演进（S18.7f 起槽底 = `vs.primitives` 原语，色 = brass_dark），
+    // 故按**几何**判定（意图 = 槽底矩形符合 §4.4 表值，不锁死具体色值）。
+    let backing = vs_host.fills.iter().find(|f| f.0 == ph.x && f.1 == ph.y && f.2 == ph.w).copied();
     assert!(
         backing.is_some(),
         "vs 玩家血条槽底 fill_rect 未按 §4.4 画 ({},{},{},{})（COLOR_HILITE）—— 宽度 0 / 整段不画 静默偏离",
@@ -565,7 +562,18 @@ fn chrome_colors() -> &'static [u16] {
         c::COLOR_LANDMARK,
         c::COLOR_WOOD_WARM, // S18.7 暖木框
         c::COLOR_GOLD_WARM, // S18.7 暖金标题/选中底
-        0xFFFF,             // chrome::COLOR_TEXT_ON_PARCH
+        // S18.10 暖色板：面板/甲板/海水/沙地令牌（中景换色后的 chrome 色集）
+        c::COLOR_PANEL_WARM,
+        c::COLOR_BRASS,
+        c::COLOR_BRASS_LIGHT,
+        c::COLOR_BRASS_DARK,
+        c::COLOR_SEA_DEEP,
+        c::COLOR_SEA_SHALLOW,
+        c::COLOR_REEF,
+        c::COLOR_LAND_SAND,
+        c::COLOR_LAND_SAND_LIGHT,
+        c::COLOR_LAND_SAND_DARK,
+        0xFFFF, // chrome::COLOR_TEXT_ON_PARCH
     ]
 }
 

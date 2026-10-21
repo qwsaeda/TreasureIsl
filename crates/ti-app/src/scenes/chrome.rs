@@ -66,6 +66,26 @@ pub const COLOR_BLACK: u16 = Theme::DEFAULT.black;
 pub const COLOR_WOOD_WARM: u16 = Theme::DEFAULT.wood_warm;
 /// S18.6 暖金（Agnes 风格标题金；暖色系令牌）。
 pub const COLOR_GOLD_WARM: u16 = Theme::DEFAULT.gold_warm;
+/// 深暖面板底色（S18.10 中景换色）
+pub const COLOR_PANEL_WARM: u16 = Theme::DEFAULT.panel_warm;
+/// 黄铜描边/甲板中层（S18.10）
+pub const COLOR_BRASS: u16 = Theme::DEFAULT.brass;
+/// 黄铜凸边/甲板亮层（S18.10）
+pub const COLOR_BRASS_LIGHT: u16 = Theme::DEFAULT.brass_light;
+/// 黄铜凹边/槽底/甲板暗层（S18.10）
+pub const COLOR_BRASS_DARK: u16 = Theme::DEFAULT.brass_dark;
+/// 深海水色（S18.9 地形瓦片）
+pub const COLOR_SEA_DEEP: u16 = Theme::DEFAULT.sea_deep;
+/// 浅海水色（S18.9 岛缘浅滩）
+pub const COLOR_SEA_SHALLOW: u16 = Theme::DEFAULT.sea_shallow;
+/// 礍石色（S18.9 岛缘礍岩）
+pub const COLOR_REEF: u16 = Theme::DEFAULT.reef;
+/// 陆地沙色（S18.9 岛屿）
+pub const COLOR_LAND_SAND: u16 = Theme::DEFAULT.land_sand;
+/// 陆地浅沙（S18.9 瓦片顶棱）
+pub const COLOR_LAND_SAND_LIGHT: u16 = Theme::DEFAULT.land_sand_light;
+/// 陆地暗沙（S18.9 瓦片交错）
+pub const COLOR_LAND_SAND_DARK: u16 = Theme::DEFAULT.land_sand_dark;
 /// S18.6 夜空深蓝（Agnes 风格夜空渐变底色）。
 pub const COLOR_SKY_NAVY: u16 = Theme::DEFAULT.sky_navy;
 

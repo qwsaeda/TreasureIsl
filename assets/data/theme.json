@@ -32,7 +32,11 @@
     "reef": "0x4BCD",
     "land_sand": "0xFD4D",
     "land_sand_light": "0xFE51",
-    "land_sand_dark": "0xD4CA"
+    "land_sand_dark": "0xD4CA",
+    "panel_warm": "0x18C2",
+    "brass": "0x9365",
+    "brass_light": "0xCE4A",
+    "brass_dark": "0x51E4"
   },
   "fonts": {
     "font_size": 44,
