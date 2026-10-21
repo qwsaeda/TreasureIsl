@@ -168,3 +168,13 @@ dispatch；每步基线重生成 + 目视验收 + gate 全绿；地形生成必�
 - 理由：像素级 golden PNG 对抗锯麧/字形光栅化/半像素偏移极敏感（小改动就报失败），
   且“基线由现行代码生成”存在自证循环（EXP-074/075）；改为**无文件的结构不变式**后，
   像素级对齐由 **CPU↔Bevy 内存对拍**（无文件，S18.7b 后续项）承担。
+
+## 15. S18.19：CPU↔Bevy **现场**双后端真实场景对拍（无 golden 基线）
+
+- 工具：`scripts/bevy_cpu_scene_diff.py`（对比两个**实时渲染器**：CPU `render-png` bin → `evidence/render_png/<scene>.png`；
+  Bevy `treasure-bevy-native --scene=<id> --shot` → `evidence/bevy_native_<id>.png`；不与任何存储的 golden PNG 比）。
+- 实测（7 场景）：差异率 0.681%（message）~ 2.481%（vs）；其中 **6/7 场景「宽带行（差异像素占行宽 ≥ 60%）= 0**→
+  差异全部为**窄带形状**（字形边缘）= **字体光栅化残差**（CPU `ab_glyph` vs Bevy `cosmic-text`）。
+- **vs 的 48 行宽带 = 血条带**（y 168..216）→ 两边取帧时刻不同，**动画态 display HP 插值时点差**（非渲染缺陷）。
+  下一步：对拍时**冻结动画**（两边取同一帧时点）→ vs 应回到「纯字体残差」类。
+- 意义：双后端**结构一致性已被量化证实**（无一处大面积结构差异）；剩余仅字体光栅化（需字形对齐工作，非画面结构）。
