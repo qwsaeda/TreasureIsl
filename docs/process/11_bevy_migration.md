@@ -167,3 +167,44 @@ ti-app（无 bevy 依赖，headless 跑逻辑）
 >   不经 DrawList → **Bevy 路径整行提示行缺失**（CPU 比 Bevy 多 15 行亮像素）；
 > - 修法：**删掉 main_map 的代码提示行调用**（v3 提示行由 JSON 原语画，tier=hint，y=1648）→ 两侧同源；
 >   剩余差异 = **字体光栅化差**（CPU `ab_glyph` vs Bevy `cosmic-text`，已有 `ti-engine/examples/bevy_text_align.rs` 跟进）。
+
+## S18.8 macroquad 退役计划（依赖普查，S18.18 落文）
+
+### 1. 依赖普查（实测，非记忆）
+
+| 层 | 位置 | 依赖 / 用法 |
+|---|---|---|
+| Cargo 根 | `Cargo.toml` | `macroquad = "0.4"`（workspace 继承）；注释已标「S18.8 退役后并回根 workspace」 |
+| Cargo ti-app | `crates/ti-app/Cargo.toml` | `default = ["hd-8bit","gpu-render","macroquad-audio"]`；`macroquad-audio = ["macroquad/audio"]`（只为规避 alsa links 冲突而存） |
+| Cargo ti-engine | `crates/ti-engine/Cargo.toml` | 独立 workspace（因 bevy 的 rodio→alsa 与 macroquad 的 quad-snd→alsa 同 `links=alsa`）；退役后并回根 workspace |
+| ti-platform | `gfx.rs`(25) `gpu_renderer.rs`(21) `ttf_font.rs`(7) `settings.rs`(5) `audio_prep.rs`(4) `audio.rs`(1) `framebuffer.rs`(2) `stats.rs`(2) `drawlist.rs`(1) `hd_manifest.rs`(1) `terrain_atlas.rs`(1) | macroquad **窗口/输入/音频/精灵图标渲染**（`FramePresenter`/`Viewport`/sprite batch/alpha 混合/音频池） |
+| ti-app 壳 | `treasure_wasm.rs`(27) `treasure_native.rs`(14) `android_shell.rs`(9) `treasure_android.rs`(6) `game_app.rs`(3) `lib.rs`(2) `menu_shell.rs`(1) | macroquad **发货壳**（窗口/输入转发/音频接入）；业务与场景渲染不依赖 macroquad（已走 DrawList） |
+| ti-engine | `treasure_bevy.rs`(10) + `bin` | **Bevy 发货壳**（native/wasm 同源分支）—— 退役后的唯一发货壳 |
+
+### 2. 退役步骤（按依赖顺序）
+
+1. **壳层切换**：`treasure_native/wasm/android` 与 `android_shell.rs` 删除，发货入口收进 `ti-engine`（Bevy 壳；native + wasm 已有，补 android 取代）。
+2. **渲染层**：`ti-platform` 的 macroquad 窗口/输入/精灵 batch 路径（`gfx.rs`/`gpu_renderer.rs`）删除；渲染统一走 **DrawList → Bevy 实体**（已完成 S18.7a~f）；`ttf_font`/`framebuffer`/`stats` 等纯数据层保留。
+3. **音频**：`macroquad/audio`（quad-snd）→ `bevy_audio`（rodio）；`ti-platform::audio`的 macroquad 池改 bevy 音频池（或直接由 ti-engine 接管）；`audio_prep` 的资源预备保留。
+4. **workspace 并回**：删 `crates/ti-engine/Cargo.toml` 的 `[workspace]` 表 + 改为 `.workspace` 继承；根 `Cargo.toml` members 加 `crates/ti-engine`；
+   删 `ti-app` 的 `macroquad-audio` feature + `macroquad` 依赖（alsa links 冲突随之消失）。
+5. **wasm 发布**：网页发布从 macroquad wasm 壳换 Bevy wasm 壳（`treasure-bevy-wasm`），重验 **800KB wasm 预算**（S18.3 口径）。
+6. **门禁收口**：新增「依赖树 0 macroquad」断言项（`cargo tree | grep -ci macroquad` = 0）。
+
+### 3. 风险与对策
+
+| 风险 | 对策 |
+|---|---|
+| wasm 包体积超 800KB | S18.3 已测 Bevy wasm 体积；先 strip/LTO/-Oz（S18.6 门禁重建时叠加），再看差额 |
+| 音频链换 bevy_audio 后声音接口不同 | 保留 `ti-platform::audio` 的公共 API（渠道/状态/音量），只换底层 sink |
+| Android 发货壳需 NDK + Bevy android 支持 | 在 Mac 上编译（本机 Windows 不产出 APK）；先保留 android 壳的构建脚本作为退役后的验收点 |
+| 性能（native 60fps / wasm 30–60fps） | 实测（`s43_fps_smoke` 与 wasm 实机测）；退役前先建一个基线数字快照 |
+| ti-platform 的精灵/图标路径与 Bevy 不同 | 渲染已走 DrawList（两侧共一份描述）；删除前用 `bevy-cpu-parity` 门禁项先锁字体/图标差异 |
+
+### 4. 验收判据
+
+- 依赖树 **0 macroquad**（新门禁项断言）；
+- `cargo tree` 中 bevy 与 macroquad 的 alsa 链同存（依赖图不再冲突）→ ti-engine 并回根 workspace；
+- 性能实测：native 60fps / wasm 30–60fps；
+- 三端产物（native exe / wasm / android apk）发布口径更新（`docs/release.md`）；
+- 门禁 22 项全绿（含 `bevy-cpu-parity` 双后端对拍）。
