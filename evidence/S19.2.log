@@ -1,0 +1,34 @@
+=== S19.2 赛道数值打磨（宝藏格实际可达 + 经济不变量固化） ===
+
+判据（本任务验收点）：
+1) 宝藏格缺口修复：原 board.json 三图均 0 treasure 格（`balance.board.treasure_gold` 死数值）；
+   `scripts/extract_board.py` 普通格周期 7→14（event/card/battle 各 2/14 密度不变 + treasure 1/14），
+   重生成 board.json：m01=2 / m02=3 / m03=1 treasure 格，每图 ≥1。
+2) 经济不变量固化（测试）：
+   - `ti-core` `board_cfg_economy_is_sane`：treasure_gold>city_gold>0、battle_damage>0、
+     battle_gold_loss>0、lap_bonus_gold>0、max_steps≥dice_sides≥1。
+   - `rules::board` `board_data_matches_extraction`：每图赛道必含 ≥1 treasure 格。
+3) 数值保持（经校验为健康）：treasure_gold=200 / city_gold=50 / lap_bonus_gold=150 /
+   battle_damage=30 / battle_gold_loss=20（单圈净金为正，遭遇为可控风险）。
+4) 文档同步 `docs/business/progression.md` §经济节奏（S19.2）。
+5) gate 22 项全绿。
+
+--- 1) 重生成后 treasure 分布（python 校验 board.json）---
+[extract_board] m01: 45 格 {'start':1,'plain':20,'event':7,'card':6,'city':1,'battle':6,'treasure':2,'boss':1,'port':1}
+[extract_board] m02: 46 格 {'start':1,'plain':21,'event':6,'card':6,'battle':6,'treasure':3,'boss':1,'port':1,'city':1}
+[extract_board] m03: 33 格 {'start':1,'plain':15,'event':4,'card':5,'battle':4,'city':1,'treasure':1,'port':1,'boss':1}
+[extract_board --check] board.json 与脚本输出一致（幂等）
+
+--- 2) 不变量测试实跑 ---
+cargo test -p ti-core：
+  test rules::board::tests::board_data_matches_extraction ... ok
+  test board_cfg_economy_is_sane ... ok
+  全部 ti-core 测试 0 failed。
+
+--- 3) gate ---
+=== gate: TreasureIsl (22 items) ===
+=== gate: 0 failure(s) ===
+（fmt/clippy/test/build/wasm/占位/unwrap/zero-unknown/台账/doccheck/validate_data/gen_layout/check_hardcode/
+oracle边界/doccheck2/台账对账/业务闭环/模块并行/飞轮/视觉回归/渲染快照/正向渲染快照/数据源/场景叙事约束 全 PASS）
+
+=== S19.2 verified ===

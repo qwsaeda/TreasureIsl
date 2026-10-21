@@ -80,6 +80,28 @@ fn cards_event_chance_in_unit_interval_and_weights_positive() {
 }
 
 #[test]
+fn board_cfg_economy_is_sane() {
+    let bd = &balance().expect("balance").board;
+    // 摇骰步数域：骰面 ≥1 且步数上限不小于骰面（否则步数被截断，骰点无效）
+    assert!(bd.dice_sides >= 1, "dice_sides must be >= 1");
+    assert!(bd.max_steps >= bd.dice_sides, "max_steps < dice_sides 会截断步数");
+    // 遭遇格必须是真实代价（扣 HP + 失金），否则无风险-收益（S19.2 数值打磨）
+    assert!(bd.battle_damage > 0, "battle_damage must be > 0（遭遇扣 HP）");
+    assert!(bd.battle_gold_loss > 0, "battle_gold_loss must be > 0（遭遇失金）");
+    // 奖励梯度：宝藏（大奖）> 城镇（小奖励），且均 > 0（treasure 格 S19.2 起实际可达）
+    assert!(bd.treasure_gold > 0, "treasure_gold must be > 0");
+    assert!(bd.city_gold > 0, "city_gold must be > 0");
+    assert!(
+        bd.treasure_gold > bd.city_gold,
+        "treasure 应大于 city（treasure={} city={}）",
+        bd.treasure_gold,
+        bd.city_gold
+    );
+    // 每圈补给 > 0（绕岛一圈的正向节奏）
+    assert!(bd.lap_bonus_gold > 0, "lap_bonus_gold must be > 0");
+}
+
+#[test]
 fn save_cfg_is_sane() {
     let s = &balance().expect("balance").save;
     assert!(s.slot_count > 0);

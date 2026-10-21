@@ -209,8 +209,12 @@ def build() -> dict:
             kinds[li] = landmark_kinds[i % len(landmark_kinds)]
             taken.add(li)
 
-        # 普通格按固定循环铺事件格（对齐大富翁式棋盘节奏：每 7 格 1 个事件/卡牌/遭遇）
-        cycle = ["plain", "plain", "event", "plain", "card", "plain", "battle"]
+        # 普通格按固定循环铺事件格（对齐大富翁式棋盘节奏：event/card/battle 各 2/14，
+        # treasure 1/14 = 新增「宝藏格」，使 `balance.board.treasure_gold` 实际可达）
+        cycle = [
+            "plain", "plain", "event", "plain", "card", "plain", "battle",
+            "plain", "plain", "event", "plain", "card", "battle", "treasure",
+        ]
         for i, kind in enumerate(kinds):
             if kind == "plain":
                 kinds[i] = cycle[i % len(cycle)]

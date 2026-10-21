@@ -17,7 +17,7 @@
 |---|---|
 | 赛道 | 每图一条闭合环（m01=45 格 / m02=46 格 / m03=33 格），顺序 = 环绕方向（顺时针） |
 | 生成 | `scripts/extract_board.py`（`terrain.json` 陆格掩码 → Moore 邻域轮廓 → 去重 → 起点旋转到 `player_start` 最近环格）；`--check` 校验一致性 |
-| 空间类型 | `start` / `plain` / `port` / `city` / `event` / `card` / `battle` / `treasure` / `boss`（每图恰 1 起点 + 1 BOSS；港口/城镇 = balance 据点坐标就近吸附；原版特殊地块 event/card/war/MAZE/pool/Castle 按坐标就近吸附） |
+| 空间类型 | `start` / `plain` / `port` / `city` / `event` / `card` / `battle` / `treasure` / `boss`（每图恰 1 起点 + 1 BOSS；港口/城镇 = balance 据点坐标就近吸附；原版特殊地块 event/card/war/MAZE/pool/Castle 按坐标就近吸附；**S19.2**：普通格按 14 格周期铺 `event/card/battle` 各 2 + `treasure` 1，使宝藏格实际可达） |
 | 分区 | 9 个连续段（`group` 1..9，对齐原版地形类别码 1..9，`legacy/docs/facts/map.md` F-308） |
 | 读档兼容 | 存档仍存行主序格索引；读档位置不在赛道上 = 就近吸附最近赛道格 |
 
@@ -39,6 +39,20 @@ Space（空格）/ 点按「摇骰前进」
 
 - 落格结果以**提示条**（toast）显示在摇骰按钮下方（文案 `strings.json` `scene.main_map.toast.*`）。
 - 确定性：同 seed + 同摇骰序列 ⇒ 同落格串（可回放，`e2e_board_spin_loop` 判据）。
+
+### 经济节奏（S19.2 数值打磨）
+
+奖励梯度（`balance.board`，单圈期望为正，支撑「攒金 → 贸易/建造 → 打 BOSS」节奏）：
+
+| 项 | 数值 | 定位 |
+|---|---|---|
+| `treasure_gold` | 200 | 大奖（`treasure` 格 S19.2 起实际可达，密度 ~1/14） |
+| `city_gold` | 50 | 小奖励（据点，~1 格/图） |
+| `lap_bonus_gold` | 150 | 每圈固定补给 |
+| `battle_damage` / `battle_gold_loss` | 30 / 20 | 遭遇格真实代价（扣 HP 暂存 + 失金，`card_state.hp` 入战斗前并入） |
+
+- **不变量（测试固化）**：`treasure_gold > city_gold > 0`、`battle_damage > 0`、`battle_gold_loss > 0`、`lap_bonus_gold > 0`、`max_steps ≥ dice_sides ≥ 1`（`ti-core` `board_cfg_economy_is_sane`）；每图赛道必含 ≥1 `treasure` 格（`rules::board` `board_data_matches_extraction`，防宝藏格再变死数值）。
+- 节奏目标：单圈净金 > 0（宝藏 +200 主导），遭遇为可控风险（~2 格/圈失金 40 + 扣 HP 暂存 60），保证 BOSS 战前可攒金建造（`build` 加成 atk/hp）。
 
 ### 旧移动规则（已彻底移除）
 

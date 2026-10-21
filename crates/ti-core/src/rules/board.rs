@@ -381,6 +381,9 @@ mod tests {
             assert!(track.len() >= 20, "{id} 赛道长度 {0} 过短", track.len());
             assert_eq!(track.start_index(), 0, "{id} 起点应为第 0 格");
             assert!(track.boss_index().is_some(), "{id} 应有 BOSS 格");
+            // S19.2：宝藏格必须实际可达（`balance.board.treasure_gold` 非死数值）
+            let has_treasure = track.spaces().iter().any(|s| s.kind == SpaceKind::Treasure);
+            assert!(has_treasure, "{id} 缺宝藏格（treasure_gold 不可达）");
         }
     }
 }

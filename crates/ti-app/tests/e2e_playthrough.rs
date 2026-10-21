@@ -89,15 +89,16 @@ fn e2e_full_game_session() {
     assert!(move_count > 0, "摇骰应至少前进一次");
 
     // ── 阶段 5：贸易系统 ──────────────────────────────────────────────
-    // 开局金走 `balance.economy.initial_gold`（S8.1 数据化），期望值从表读，不硬编码
+    // S19：阶段 4 摇骰已改玩家金（落格结算），故贸易断言以「摇骰后金」为基线（`gold_before_trade`），
+    // 不再假设 = `initial_gold`；`initial_gold` 仅用于阶段 6 银行（银行独立金池，不受赛道摇骰影响）。
     let initial_gold = ti_core::data::balance().map_or(1000, |b| b.economy.initial_gold);
     let gold_before_trade = app.gold();
-    assert_eq!(gold_before_trade, initial_gold, "开局金应等于 balance.economy.initial_gold");
+    assert!(gold_before_trade < initial_gold.saturating_add(1000), "摇骰后金应在合理区间");
 
     // 买入商品 1
     let price1 = app.price_table().lookup(1).unwrap_or(0);
     app.handle(GameInput::TradeBuy(1));
-    assert_eq!(app.gold(), initial_gold.saturating_sub(price1), "买入后金应减少商品1单价");
+    assert_eq!(app.gold(), gold_before_trade.saturating_sub(price1), "买入后金应减少商品1单价");
     assert_eq!(app.owned().len(), 1, "买入后持有量 +1");
 
     // 买入商品 2
@@ -105,7 +106,7 @@ fn e2e_full_game_session() {
     app.handle(GameInput::TradeBuy(2));
     assert_eq!(
         app.gold(),
-        initial_gold.saturating_sub(price1).saturating_sub(price2),
+        gold_before_trade.saturating_sub(price1).saturating_sub(price2),
         "第二次买入后金应再减少商品2单价"
     );
 
