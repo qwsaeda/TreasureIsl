@@ -146,13 +146,13 @@
 | 元素 | select_role | select_map |
 |---|---|---|
 | 标题 | `title {x:776, y:48, w:440, h:96}`（S18.7d：`x` = 右列中心点，顶部金标题） | `title {x:352, y:48, w:400, h:96}`（S18.7d：`x` = 拼贴区中心点，避开右上月亮） |
-| 列表 | `list {x:560, y:480, w:440, row_h:192, item_h:192, text_x:672, highlight_offset:0}` | `list {x:720, y:480, w:280, row_h:320, item_h:320, text_x:808, highlight_offset:0}` |
+| 列表 | `list {x:560, y:480, w:440, row_h:192, item_h:192, text_x:704, highlight_offset:0}` | `list {x:720, y:480, w:280, row_h:320, item_h:320, text_x:808, highlight_offset:0}` |
 | 图标列 | `icon {x:584}`（行首 monogram 圆环 → JSON 原语；键留作数据槽） | `icon {x:744}`（折叠地图 → JSON 原语） |
 | 首块顶 | `480-0` = **480** | **480** |
 | 项数 × 末块底 | 5 角色卡 → `480+4*192+192` = **1440** | 3 地图卡（`MAP_COUNT=3`，QA139）→ `480+2*320+320` = **1440**（海平面带 1704 之上） |
 | 锁定标记列 | — | `locked {text_x:920}`（QA033 钳制公式不变：卡片右缘 = 1000） |
-| 立绘锚（S18.7d） | `hero_art {x:76, y:130, w:356, h:1190}` | —（地图拼贴区 = 重心区，chrome 全在 `primitives`） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:356, h:1190}}` | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 22 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
+| 立绘锚（S18.7d） | `hero_art {x:76, y:130, w:356, h:534}`（S18.20：立绘**贴图** 2:3 区） | —（地图拼贴区 = 重心区，chrome 全在 `primitives`） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:130, w:356, h:534}}`（S18.20 = 立绘区） | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 22 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
 | 提示行 | `hint {x:540, y:1840}` | 同左（JSON 原语 tier hint） |
 | 动态区 | `portrait_zones [{0,240,1080,1460}]` | `portrait_zones [{0,240,1080,960}]` |
 

@@ -618,22 +618,28 @@ fn scene_layer_contributes_text_region_pixels() {
             eprintln!("  index 木牌暖色像素 = {n}");
             continue;
         }
-        // S18.7d：select_role/select_map/message/saveload 版面 = JSON 原语（夜空系：
-        // 无顶 title_bar；chrome = z20 外木框 + 英雄面板金饰）→ 改判顶木框条。
-        if matches!(scene, "select_role" | "select_map" | "message" | "saveload") {
-            let n =
-                region_color_count(&px, 0, 0, 1080, 12, ti_app::scenes::chrome::COLOR_WOOD_WARM);
-            assert!(n > 0, "{scene} 顶木框条（0,0,1080,12）无 wood_warm 像素 —— 外框未画 / 被盖死");
-            eprintln!("  {scene} 顶木框条 chrome 像素 = {n}");
+        // S18.20：index / select_role 改**贴图版式**（AI 夜空背景全屏铺底）→
+        // 判据 = 标题区有「暖色像素」（木牌/立绘贴图把冷色夜空压住）。
+        if matches!(scene, "index" | "select_role") {
+            let region = if scene == "index" { (120, 250, 840, 360) } else { (76, 130, 356, 534) };
+            let n = region_warm_count(&px, region.0, region.1, region.2, region.3);
+            assert!(
+                n > 0,
+                "{scene} 标题/立绘区（{:?}, {:?}）无暖色像素 —— 贴图未画 / 被盖死",
+                region.0,
+                region.1
+            );
+            eprintln!("  {scene} 标题/立绘区暖色像素 = {n}");
             continue;
         }
-        // chrome::title_bar 画 (12,12,W-24,h) 木框 + (16,16,W-32,h-8) 深底 + 左侧金条 + 标题文字。
-        let n = region_chrome_count(&px, 16, 16, 1080 - 32, 90);
+        // S18.20：其余 5 屏 = **贴图背景版式**（AI 夜空 / 俯视夜海全屏铺底，
+        // 旧木框与占位横线已退役）→ 判据 = 非黑覆盖率 ≥ 990‰（贴图铺满画面）。
+        let covered = non_black_permille(&px);
         assert!(
-            n > 0,
-            "{scene} 标题条带（1080 区 16..1064 × 16..106）无 chrome 像素 —— title_bar 未画 / 被整块盖死"
+            covered >= 990,
+            "{scene} 非黑覆盖率 {covered}‰ < 990‰（背景贴图未铺满 / 被整块盖死）"
         );
-        eprintln!("  {scene} 标题条带 chrome 像素 = {n}");
+        eprintln!("  {scene} 背景贴图覆盖率 = {covered}‰");
     }
 }
 
@@ -655,6 +661,13 @@ fn region_color_count(px: &[u16], x: i32, y: i32, w: i32, h: i32, color: u16) ->
         }
     }
     n
+}
+
+/// 非黑像素覆盖率（千分比；整数运算，无浮点转换）——贴图背景版式的判据。
+fn non_black_permille(px: &[u16]) -> u64 {
+    let n = px.iter().filter(|c| **c != 0).count() as u64;
+    let total = px.len().max(1) as u64;
+    n * 1000 / total
 }
 
 /// S18.8b：区域内「暖色」像素数（RGB565 解码后 `r > b`）——木纹/金调判据

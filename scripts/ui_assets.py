@@ -214,7 +214,8 @@ def build_asset(data: dict, asset: dict, force: bool) -> bool:
     if dst.exists() and not force:
         print(f"  SKIP  {name}（已存在；--force 可重生成）")
         return True
-    prompt = role["prompt"]
+    # 提示词优先级：资产自定义 > 角色模板（{占位符} 由 params 填充）
+    prompt = asset.get("prompt") or role["prompt"]
     for k, v in (asset.get("params") or {}).items():
         prompt = prompt.replace("{" + k + "}", str(v))
     print(f"  GEN   {name}（role={role_name} ratio={role['ratio']}）")
@@ -255,6 +256,9 @@ def cmd_add(args: argparse.Namespace) -> int:
         "params": params,
         "generated_at": _dt.date.today().isoformat(),
     }
+    if args.prompt:
+        # 自定义提示词覆盖角色模板（同一角色不同画面：不同背景/不同气质）
+        asset["prompt"] = args.prompt
     data.setdefault("assets", []).append(asset)
     build_asset(data, asset, force=False)
     save_manifest(data)
@@ -341,6 +345,7 @@ def main() -> int:
     a.add_argument("--name", required=True)
     a.add_argument("--role", required=True)
     a.add_argument("--what", help="图案描述（填入提示词的 {what}）")
+    a.add_argument("--prompt", help="自定义提示词（覆盖角色模板；同角色不同画面用）")
     a.add_argument("--params", nargs="*", help="额外参数 k=v（填入提示词的占位符）")
     a.set_defaults(func=cmd_add)
 

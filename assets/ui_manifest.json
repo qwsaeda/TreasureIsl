@@ -29,14 +29,23 @@
       "key": "magenta",
       "prompt": "an ornate carved wooden signboard plaque, dark warm walnut wood with gold filigree carved border and curled corners, a completely EMPTY smooth wooden center panel with no carving inside, horizontal banner shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no shadow, no backdrop, no text, no letters"
     },
+    "mapcard": {
+      "ratio": "4:3",
+      "target": [
+        640,
+        480
+      ],
+      "key": "none",
+      "prompt": "an antique parchment sea chart map card, {what}, hand-drawn coastline, compass rose, depth soundings and rhumb lines, weathered edges, warm candlelight, top-down view filling the whole frame, no text, no letters, no labels, no watermark"
+    },
     "portrait": {
       "ratio": "2:3",
       "target": [
-        512,
-        768
+        384,
+        576
       ],
-      "key": "luma",
-      "prompt": "a character portrait, {what}, heroic fantasy adventure game character art, warm gold rim light, painterly nautical treasure-hunting style, full upper body, glowing gold on a PURE SOLID BLACK background, no text, no letters, no scenery, high contrast, centered"
+      "key": "none",
+      "prompt": "a character portrait of {what}, heroic fantasy adventure game character art, warm gold rim light, painterly nautical treasure-hunting style, three-quarter view, upper body, dramatic painted scene background, no text, no letters, no watermark, high detail"
     }
   },
   "assets": [
@@ -107,6 +116,86 @@
         "what": "an ornate ship cabin door"
       },
       "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_panda",
+      "role": "portrait",
+      "file": "assets/ui/role_panda.png",
+      "params": {
+        "what": "a stout middle-aged merchant captain in a fur-trimmed coat, calculating eyes, gold jewelry"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_tichy",
+      "role": "portrait",
+      "file": "assets/ui/role_tichy.png",
+      "params": {
+        "what": "a weathered old naval captain with a white beard, epaulettes and a peaked captain hat, calm commanding gaze"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_kidd",
+      "role": "portrait",
+      "file": "assets/ui/role_kidd.png",
+      "params": {
+        "what": "a young lean bounty hunter with a hooded cloak, a crossbow strap and a sharp watchful stare"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_drake",
+      "role": "portrait",
+      "file": "assets/ui/role_drake.png",
+      "params": {
+        "what": "a fearsome Caribbean pirate captain with a tricorn hat, jagged beard, red sash and a menacing grin"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_katharina",
+      "role": "portrait",
+      "file": "assets/ui/role_katharina.png",
+      "params": {
+        "what": "an aristocratic young noblewoman with dark curly hair, a deep crimson gown and a proud vengeful expression"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "map_harbour",
+      "role": "mapcard",
+      "file": "assets/ui/map_harbour.png",
+      "params": {
+        "what": "a busy tropical harbour with ships and docks"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "map_open_sea",
+      "role": "mapcard",
+      "file": "assets/ui/map_open_sea.png",
+      "params": {
+        "what": "an open ocean with a lone island and a compass rose"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "map_reef",
+      "role": "mapcard",
+      "file": "assets/ui/map_reef.png",
+      "params": {
+        "what": "a narrow reef strait between two cliffs with sea monsters"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "bg_night_sea_top",
+      "role": "background",
+      "file": "assets/ui/bg_night_sea_top.png",
+      "params": {},
+      "generated_at": "2026-10-21",
+      "prompt": "A vertical 9:16 top-down view of a calm dark ocean at night, deep navy blue water with subtle silver moonlight ripples and faint wave crests, no islands, no boats, no horizon line, no text, no letters, no watermark, painterly"
     }
   ]
 }

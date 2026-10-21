@@ -116,7 +116,10 @@ impl Scene for SelectRoleScene {
 
     /// S18.7d 声明式原语化：版面（夜空 / 左角色立绘锚 / 右 5 行选项 / 提示行）=
     /// `scenes.json` `select_role.primitives`（行名/简介静态文本 + 选中高亮 `when="selected"`
-    /// 全数据）；运行时 = 按压闪影 + 立绘面板首字母（选中角色 character，`hero_art` 槽中心）。
+    /// 全数据）；运行时 = 按压闪影。
+    ///
+    /// S18.20：英雄面板首字母**退役**——英雄区改为**立绘贴图**（`image` 原语，按 item 切换，
+    /// 见 `assets/ui/role_*.png`），叠在立绘上的字母（"p"）已无意义。
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("select_role");
         let current = host.character().map_or(0, |c| c.index() as usize);
@@ -127,19 +130,6 @@ impl Scene for SelectRoleScene {
         if held || flashing {
             let r = layout.list.item_rect(current);
             host.fill_rect(r.x, r.y, r.w, r.h, chrome::COLOR_BEVEL_SHADOW);
-        }
-        // 立绘面板首字母（运行时 = 选中角色；`hero_art` 数据槽中心，S17.3 圆环内叠画语义）
-        let picked = host.character().or_else(|| Character::from_index(0));
-        if let Some(c) = picked {
-            let hero = layout.extra.get("hero_art").copied().filter(|r| r.w > 0);
-            let letter = c.label().chars().next().map(String::from).unwrap_or_default();
-            if let Some(h) = hero {
-                if !letter.is_empty() {
-                    let lw = host.shell().text_width_px(&letter);
-                    let ly = h.y + (h.h - host.shell().glyph_px()) / 2;
-                    chrome::draw_body_text(host, &letter, h.x + (h.w - lw) / 2, ly);
-                }
-            }
         }
     }
 }
