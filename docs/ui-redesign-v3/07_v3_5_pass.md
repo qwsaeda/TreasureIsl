@@ -130,3 +130,13 @@ dispatch；每步基线重生成 + 目视验收 + gate 全绿；地形生成必�
   不再与 `moon_pale` 波光重叠。
 - 注：`ui_icons.json` `bindings` 为**严格结构**（未知键会整体解析失败）→ 实体图标名走
   代码字面量（与 `select_role`/`select_map` 既有模式一致），不新增 bindings 键。
+
+## 12. 实现记录（S18.13 已落地：CPU↔Bevy 提示行对齐）
+
+- **修真实 bug**：`chrome::scene_hint` → `shell::hint_row` 直接写壳帧缓冲（不经 DrawList）→
+  **Bevy 路径整行提示行缺失**。修：删除 main_map 的代码提示行调用，v3 提示行由
+  JSON 原语画（`tier=hint`, y=1648）→ 两侧同源（重测：首/末亮行 1602/1858 一致）。
+- **更正 S18.7h 的锚点结论**：「18px 锚点偏移」是测量伪影（窗口混波光 + 对比旧版面布局），已在
+  `11_bevy_migration.md` 更正；真实差异是提示行未进 DrawList（上述）。
+- **剩余差异** = 字体光栅化（CPU `ab_glyph` vs Bevy `cosmic-text`）→ 属 S18.7b 基线源切换的剩余项
+  （`ti-engine/examples/bevy_text_align.rs` 已有对照工作）。

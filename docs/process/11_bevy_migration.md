@@ -83,6 +83,7 @@
 | S18.10 | 暖色板扩充 + 中景换色 | **verified**：4 新令牌panel_warm/brass/brass_light/brass_dark（theme.rs ↔ theme.json 双写）；数据侧 7 场景 306 处原语色令牌换色（menu_bg→panel_warm / menu_border→brass / bevel_hi→brass_light / bevel_shadow→brass_dark / wood→wood_warm / gold,gold_bright→gold_warm / hilite→brass_dark）+ 星点→moon_pale + vs 甲板暖色阶梯；HUD 新增 coin/chest 图标（面板右端）；中景统一黄铜语言 |
 | S18.11 | 画布贴合棋盘（结构性重排） | **verified**：`world_canvas` {43,192,1004,1478} → {43,192,1004,**710**}（收到 G=20 棋盘外接框）+ focus_anchor/manifest h=37% 同步（N8 对账 0 failure）+ 图表经纬网（7竖+4横 1px 暖暗线）+ 底部海平面环统全场景 + 命令盘 1760→1600 + 提示行 1808→1648（不与波光重叠） |
 | S18.12 | 实体图标化 + 海图美术 + 提示行净空 | **verified**：玩家=`flag`（金）/据点=`beacon`（灯塔）/BOSS=`sword`（`ui_icons` 注册表 48px 原生，`chrome::entity_icon` 中心叠于实体盒，底座保留）；空白区补罗盘玫瑰（72×72 金十字 + 8 方位点）+ 3 段洋流线（`brass_dark`）；5 场景提示行 y 1808→1648（洋面之上，不与波光重叠） |
+| S18.13 | CPU↔Bevy 提示行对齐（S18.7b 解锁） | **verified**：真实差异 = `chrome::scene_hint`→`shell::hint_row` 直写壳帧缓冲（不经 DrawList）→ **Bevy 提示行整行缺失**；修：删 main_map 代码提示行调用（v3 提示行 = JSON 原语 tier=hint y=1648）→ 两侧同源（重测首/末亮行 1602/1858 一致）；**更正 S18.7h 的 18px 锚点偏移结论（测量伪影）**；剩余差异 = 字体光栅化（ab_glyph vs cosmic-text） |
 | S18.8 | 收口：macroquad 后端退役（feature 删除 + 依赖树断言）+ 性能目标（native 60fps / wasm 30–60fps）+ release.md | 全 gate + 发布 |
 
 ## 6. 风险与缓解
@@ -145,16 +146,12 @@ ti-app（无 bevy 依赖，headless 跑逻辑）
 **纪律**：切换基线源前，先用同一帧做 CPU vs Bevy 像素 diff（逐场景、逐原语），
 把 diff 归零后再改门禁指认；`evidence/S18.7b.log` 须含 7 场景 diff=0 的实跑输出。
 
-### S18.7b 实测（字体锚点）—— CPU↔Bevy 提示文字差 18px
+### S18.7b 实测（字体锚点）—— 更正：不是 18px 锚点偏移，是**提示行未进 DrawList**
 
-`--scene=<id>` 冒烟（Bevy 离屏读回 vs CPU 基线，同一 main_map 场景）实测：
-- 复现：`cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
-  -- --scene=main_map --shot` → `evidence/bevy_native_main_map.png`；对照
-  `assets/render_baseline/main.png`（CPU 基线）。
-- 量法：解码两张 PNG，扫 x∈[380,450]（只含提示文字、不含命令盘标签）的**亮文字行**范围。
-- 实测值：CPU `1806..1881`（35 行）/ Bevy `1788..1864`（41 行）→ **Bevy 侧提示文字高 18px**。
-- 机理线索：Bevy `Text2d` 以**矩形中心**锚定（`rect.x+w/2, rect.y+h/2`），CPU
-  `ti_render::generic::text` 以**字形墨迹顶边**落位（`y+(h-glyph_h)/2` + 位图回退 y 偏移）；
-  两套锚点语义不同 → 同档字号下垂直错位（差值随字号档变化）。
-- 待办（S18.7b 主体）：统一锚点口径（Bevy 侧按 CPU 语义补偿 = 文本中心 + 半字形高），
-  再做 7 场景逐场景像素 diff 归零。**未归零前不得切换基线源**（否则基线"两张皮"）。
+> ⚠ **更正（S18.13 实测）**：S18.7h 记录的「CPU↔Bevy 提示文字高 18px」**是测量伪影**（采样窗口混进了波光，且对比的是旧版面布局基线）。
+> 重测（行亮度剖面，x300..800，y1400..1920）实际结论：
+> - **锚点对齐** —— 首亮行 1602 / 末亮行 1858 两侧完全一致；
+> - **真实差异 = 代码画的提示行没进 DrawList**：`chrome::scene_hint` → `shell::hint_row` 直接写**壳自己的帧缓冲**，
+>   不经 DrawList → **Bevy 路径整行提示行缺失**（CPU 比 Bevy 多 15 行亮像素）；
+> - 修法：**删掉 main_map 的代码提示行调用**（v3 提示行由 JSON 原语画，tier=hint，y=1648）→ 两侧同源；
+>   剩余差异 = **字体光栅化差**（CPU `ab_glyph` vs Bevy `cosmic-text`，已有 `ti-engine/examples/bevy_text_align.rs` 跟进）。

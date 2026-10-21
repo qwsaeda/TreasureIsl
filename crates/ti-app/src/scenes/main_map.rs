@@ -469,7 +469,6 @@ impl Scene for MainMapScene {
 
         // QA032：hint 行统一走 `chrome::scene_hint`（i18n 单查收敛，EXP-082）
         // S15.6：key = `nav_hint`（`hint` 已并入，`strings.json` 删孤儿）
-        chrome::scene_hint(host, "main_map", "scene.main_map.nav_hint");
     }
 }
 
