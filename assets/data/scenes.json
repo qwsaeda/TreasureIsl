@@ -2560,9 +2560,9 @@
         "kind": "text",
         "rect": {
           "x": 0,
-          "y": 1808,
+          "y": 1648,
           "w": 1080,
-          "h": 64
+          "h": 56
         },
         "color": "text_on_parch",
         "z": 11,
@@ -3551,9 +3551,9 @@
         "kind": "text",
         "rect": {
           "x": 0,
-          "y": 1808,
+          "y": 1648,
           "w": 1080,
-          "h": 64
+          "h": 56
         },
         "color": "text_on_parch",
         "z": 11,
@@ -5114,6 +5114,214 @@
         "when": "",
         "item": -1,
         "text_key": "scene.main_map.hud.build"
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 430,
+          "y": 1180,
+          "w": 200,
+          "h": 2
+        },
+        "color": "brass_dark",
+        "z": 5,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 610,
+          "y": 1180,
+          "w": 120,
+          "h": 2
+        },
+        "color": "brass_dark",
+        "z": 5,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 300,
+          "y": 1300,
+          "w": 160,
+          "h": 2
+        },
+        "color": "brass_dark",
+        "z": 5,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 440,
+          "y": 1300,
+          "w": 200,
+          "h": 2
+        },
+        "color": "brass_dark",
+        "z": 5,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 620,
+          "y": 1300,
+          "w": 100,
+          "h": 2
+        },
+        "color": "brass_dark",
+        "z": 5,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 150,
+          "y": 1034,
+          "w": 72,
+          "h": 2
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 185,
+          "y": 1000,
+          "w": 2,
+          "h": 72
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 178,
+          "y": 1028,
+          "w": 16,
+          "h": 16
+        },
+        "color": "gold_warm",
+        "z": 7,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 166,
+          "y": 1016,
+          "w": 8,
+          "h": 8
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 206,
+          "y": 1016,
+          "w": 8,
+          "h": 8
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 166,
+          "y": 1056,
+          "w": 8,
+          "h": 8
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 206,
+          "y": 1056,
+          "w": 8,
+          "h": 8
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 150,
+          "y": 1032,
+          "w": 8,
+          "h": 8
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 214,
+          "y": 1032,
+          "w": 8,
+          "h": 8
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 182,
+          "y": 1000,
+          "w": 8,
+          "h": 8
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
+      },
+      {
+        "kind": "rect",
+        "rect": {
+          "x": 182,
+          "y": 1064,
+          "w": 8,
+          "h": 8
+        },
+        "color": "gold_warm",
+        "z": 6,
+        "when": "",
+        "item": -1
       }
     ]
   },
@@ -5585,9 +5793,9 @@
         "kind": "text",
         "rect": {
           "x": 0,
-          "y": 1808,
+          "y": 1648,
           "w": 1080,
-          "h": 64
+          "h": 56
         },
         "color": "text_on_parch",
         "tier": "hint",
@@ -6332,9 +6540,9 @@
         "kind": "text",
         "rect": {
           "x": 0,
-          "y": 1808,
+          "y": 1648,
           "w": 1080,
-          "h": 64
+          "h": 56
         },
         "color": "text_on_parch",
         "z": 11,
@@ -7149,9 +7357,9 @@
         "kind": "text",
         "rect": {
           "x": 0,
-          "y": 1808,
+          "y": 1648,
           "w": 1080,
-          "h": 64
+          "h": 56
         },
         "color": "text_on_parch",
         "z": 11,

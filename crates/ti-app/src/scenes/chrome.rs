@@ -593,6 +593,21 @@ pub fn ui_icon(host: &mut dyn SceneHost, id: u32, x: i32, y: i32, selected: bool
     with_canvas(host, |c| ti_render::icons::icon(c, &theme, id, x, y, tint));
 }
 
+/// 实体图标（`ui_icons.json` 注册表名 + 指定色调；S18.12）。
+///
+/// 图标始终以 **48px 原生尺寸** 绘制（注册表定位），居中于实体盒（`size`）；
+/// 注册表查不到 = 不画图标（不 panic、不占位）。
+pub fn entity_icon(host: &mut dyn SceneHost, name: &str, x: i32, y: i32, size: i32, tint: u16) {
+    let Some(def) = icon_def(name) else {
+        return;
+    };
+    let s = def.size.min(size.max(0));
+    let theme = host.theme().clone();
+    with_canvas(host, |c| {
+        ti_render::icons::icon(c, &theme, def.id, x + (size - s) / 2, y + (size - s) / 2, tint);
+    });
+}
+
 /// 图标元数据取用（`ui_icons.json` 解析失败 = 不画图标，不 panic）。
 #[must_use]
 pub fn icon_def(name: &str) -> Option<IconDef> {

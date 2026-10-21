@@ -415,6 +415,8 @@ impl Scene for MainMapScene {
             // 实体在瓦片绘制盒（2tw × 2th）内居中
             let (px, py) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
             host.fill_rect(px, py, s, s, COLOR_PLAYER);
+            // S18.12：实体图标化（旗 = 玩家船队；48px 原生图标居中于实体盒）
+            chrome::entity_icon(host, "flag", px, py, s, chrome::COLOR_GOLD_WARM);
             // QA142：实体 1px bevel 描边（凸出感，不越实体盒）
             host.fill_rect(px, py, s, 1, chrome::COLOR_BEVEL_HI);
             host.fill_rect(px, py + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
@@ -429,6 +431,15 @@ impl Scene for MainMapScene {
             let s = entity_size("landmark");
             let (lx, ly) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
             host.fill_rect(lx, ly, s, s, COLOR_LANDMARK);
+            // S18.12：据点 = 灯塔（beacon）
+            chrome::entity_icon(
+                host,
+                "beacon",
+                lx,
+                ly,
+                s,
+                ti_render::theme::Theme::DEFAULT.moon_pale,
+            );
             host.fill_rect(lx, ly, s, 1, chrome::COLOR_BEVEL_HI);
             host.fill_rect(lx, ly + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
             let lbl = i18n::sget("scene.main_map.landmark_label");
@@ -443,6 +454,8 @@ impl Scene for MainMapScene {
             let s = entity_size("boss");
             let (bx, by) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
             host.fill_rect(bx, by, s, s, crate::menu_shell::COLOR_DANGER);
+            // S18.12：BOSS = 剑（sword）
+            chrome::entity_icon(host, "sword", bx, by, s, crate::menu_shell::COLOR_DANGER);
             host.fill_rect(bx, by, s, 1, chrome::COLOR_BEVEL_HI);
             host.fill_rect(bx, by + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
             let lbl = i18n::sget("scene.main_map.boss_label");

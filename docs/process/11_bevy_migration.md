@@ -82,6 +82,7 @@
 | S18.9 | 地形数据 + 瓦片按地形取色（世界画布成「地图」） | **verified**：`assets/data/terrain.json`（渲染侧数据；图例全局 + 每图 rows）= 确定性生成（seed = 地图 id sha256：中心衰减岛 + 确定性抖动 + 岛缘浅礁 + BOSS/陆格宝藏 + 起点海面）；6 新暖色令牌（sea_deep/sea_shallow/reef/land_sand/land_sand_light/land_sand_dark，theme.rs ↔ theme.json 双写）；`ti_core::data::terrain()`（新 data/terrain.rs）+ main_map 瓦片按格取色（附约交错 + 降级）；doccheck2 第 26 项 `check_terrain_data`（行数/行宽/地形码/令牌合法性）；基线重生成 |
 | S18.10 | 暖色板扩充 + 中景换色 | **verified**：4 新令牌panel_warm/brass/brass_light/brass_dark（theme.rs ↔ theme.json 双写）；数据侧 7 场景 306 处原语色令牌换色（menu_bg→panel_warm / menu_border→brass / bevel_hi→brass_light / bevel_shadow→brass_dark / wood→wood_warm / gold,gold_bright→gold_warm / hilite→brass_dark）+ 星点→moon_pale + vs 甲板暖色阶梯；HUD 新增 coin/chest 图标（面板右端）；中景统一黄铜语言 |
 | S18.11 | 画布贴合棋盘（结构性重排） | **verified**：`world_canvas` {43,192,1004,1478} → {43,192,1004,**710**}（收到 G=20 棋盘外接框）+ focus_anchor/manifest h=37% 同步（N8 对账 0 failure）+ 图表经纬网（7竖+4横 1px 暖暗线）+ 底部海平面环统全场景 + 命令盘 1760→1600 + 提示行 1808→1648（不与波光重叠） |
+| S18.12 | 实体图标化 + 海图美术 + 提示行净空 | **verified**：玩家=`flag`（金）/据点=`beacon`（灯塔）/BOSS=`sword`（`ui_icons` 注册表 48px 原生，`chrome::entity_icon` 中心叠于实体盒，底座保留）；空白区补罗盘玫瑰（72×72 金十字 + 8 方位点）+ 3 段洋流线（`brass_dark`）；5 场景提示行 y 1808→1648（洋面之上，不与波光重叠） |
 | S18.8 | 收口：macroquad 后端退役（feature 删除 + 依赖树断言）+ 性能目标（native 60fps / wasm 30–60fps）+ release.md | 全 gate + 发布 |
 
 ## 6. 风险与缓解
