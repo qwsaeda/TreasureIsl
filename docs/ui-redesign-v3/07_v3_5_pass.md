@@ -1,0 +1,73 @@
+# 07 · v3.5 界面重设计（真游戏化）：地形数据 + 暖色板 + 画布贴合 + 实体图标化
+
+> 触发：S18.7d~h 后七场景已 **100% 数据驱动**（Bevy ≈ CPU，画面一致），
+> 但**画面仍是 v2 的弱设计** → 问题不在分离/渲染，在**设计数据本身**。
+> 本篇 = 把"设计数据"重做成真游戏级；每条都落到 `scenes.json` / `theme.json` /
+> `balance.json`（代码只留 dispatch）。
+
+## 0. 现状取证（勿凭记忆）
+
+| 症状 | 取证 | 影响 |
+|---|---|---|
+| 棋盘=平铺单色菱形 | 全库无 per-cell 地形类型；`main_map.rs:376` 瓦片恒定 `COLOR_MENU_BG`(0x190C) | 世界画布（76% 屏）读不出"地图" |
+| 中景冷蓝塑料感 | 棋盘/HUD/命令盘用 v2 冷令牌 menu_bg 0x190C / bevel_hi 0x2171 / menu_border 0x3A17 / parch_dark 0x0865 | 暖金语言只覆盖天空+木框，中景割裂 |
+| 画布 65% 空区 | `world_canvas` 1004×1478；G=20 时 board_fit tw=24/th=13 → 棋盘 ≈960×520 | v3 提案"杀死区"未达成 |
+| 实体=方块+小字 | 玩家/据点/BOSS = 纯色方块 + 1px bevel | 无角色感 |
+| 提示行压命令盘 | Bevy 文本锚点与 CPU 差 18px（实测，见 11_bevy_migration §S18.7b 实测） | 交互区重叠 |
+
+## 1. 地形数据（**最高杠杆**：海陆宝藏 → 棋盘成地图）
+
+- `balance.json` `selection.maps[]` 增 `terrain`：**确定性生成**（seed = 地图 id 哈希）
+  的每格地形，枚举：`sea` / `land` / `treasure` / `reef`。
+  - 生成规则：岛 = 以地图中心为心的**椭圆衰减** + 伪随机扰动（固定 seed → 快照可复现）；
+    `treasure` = BOSS 格 + 2 随机陆格；`reef` = 岛缘一圈。
+  - 存储：按行字符串（`"SLT"` 之类，`S`=sea `L`=land `T`=treasure `R`=reef）→ 体积小、可读、可 diff。
+- 瓦片取色：**地形 → 配色令牌**（新增暖色板，见 §2），`main_map.rs` 取色 1 行：
+  `let c = theme.by_name(terrain_color(terrain)).unwrap_or(...)`。
+- 效果：世界画布从"蓝菱形"变"航海图"（深蓝海 / 暖沙陆 / 金宝藏 / 礁石描边）。
+
+## 2. 暖色板扩充（`theme.rs` DEFAULT + `assets/data/theme.json` 同值改）
+
+新增（暖，冷色保留给深底与阴影）：
+`sea_deep` 0x0846 / `sea_mid` 0x0C6B / `sand_warm` 0xB565 / `sand_light` 0xDDC7 /
+`treasure_gold` 0xFEA0 / `brass` 0xA508 / `brass_light` 0xC6AE / `ink_warm` 0x18C3。
+
+映射：HUD/命令盘/画布框 → brass 系；陆块 → sand 系；海块 → sea 系；宝藏 → treasure_gold；
+文字 → ink_warm / parch_light。**棋盘/HUD 不再出现冷蓝 menu_bg/bevel_hi**。
+
+## 3. 画布贴合棋盘（杀空区）
+
+- `world_canvas` 高度改 **G 依赖**：`board_fit` 已算出 tw/th → 画布高 = 棋盘外接高 + 上下留白
+  （各 96px），键值随 G 变 → 键不再是固定矩形 → **改 `board_fit` 输出**（v3 键，DSL 管理）。
+- manifest `main_map.focus.bbox_pct` 同步收窄（N8 对账要求 scenes.json ≡ manifest）。
+- 空出来的下方空间 → 放**航程条**（进度条 + 目的地标记）或直接收进命令盘上沿（视 §5）。
+
+## 4. 实体图标化（占位方块 → 角色感）
+
+- 玩家 = 船、据点 = 灯塔（beacon）、BOSS = 剑/骷髅（sword）—— `ui_icons.json` 已有
+  compass/castle/beacon/sword/flag；用 `icon` 原语（数据）或 `icons::icon`（代码）绘制，
+  取代纯色方块；方块退为**底座**（1px bevel 描边）。
+- 实体标签（你/据/BOSS）字号 28 → 32（label 档）+ 描边/阴影提升可读性。
+
+## 5. HUD / 命令盘（黄铜仪表盘感）
+
+- HUD 角块 = 黄铜渐变（`grad` from brass_light → brass）+ 金饰线 2px + 圆角感（bevel 高光/阴影）；
+  金币块加 coin 图标、持有块加 chest 图标（数据 `icon` 原语）。
+- 命令盘 3 键放大 200×80 → 240×96，选中态金底 + 图标黑，标签 gold_warm。
+- 提示行移到命令盘**下方**并加 32px 净空（修 §0 重叠）。
+
+## 6. 顺带修的既有缺陷
+
+- Bevy 文本锚点与 CPU 差 18px → 统一为 CPU 语义（文本中心 + 半字形高补偿）。
+- `glmapm0N.Map` 已修（海图一/二/三）；继续清 i18n 孤儿 key（WARN 级）。
+
+## 7. 执行顺序（每步 = 台账任务 + 门禁 + 基线重生成）
+
+1. **S18.9** 地形数据（balance.json 生成器 + 瓦片取色）→ 世界画布成"地图"（最大观感收益）
+2. **S18.10** 暖色板扩充 + 中景换色（theme.rs/theme.json + scenes.json + 代码取色）
+3. **S18.11** 画布贴合（board_fit + manifest/N8 同步）
+4. **S18.12** 实体图标化 + HUD/命令盘黄铜化 + 提示行净空
+5. **S18.13** Bevy 文本锚点归零（CPU↔Bevy 像素 diff 归零 → S18.7b 基线源切换解锁）
+
+**不变式**：全部改动走数据（`balance.json` / `theme.json` / `scenes.json`），代码只加
+dispatch；每步基线重生成 + 目视验收 + gate 全绿；地形生成必须**确定性**（seed 固定）。

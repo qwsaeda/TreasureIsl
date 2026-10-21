@@ -344,11 +344,7 @@ fn camera_system(
 
 #[allow(clippy::needless_pass_by_value)]
 /// 渲染系统：GameApp 帧推进 + 静止跳渲染 + Framebuf → RGBA8 纹理。
-fn render_system(
-    store: ResMut<GameStore>,
-    time: Res<Time>,
-    mut exits: MessageWriter<AppExit>,
-) {
+fn render_system(store: ResMut<GameStore>, time: Res<Time>, mut exits: MessageWriter<AppExit>) {
     let delta_ms = u32::try_from(time.delta().as_millis()).unwrap_or(16).clamp(1, 250);
     let Ok(mut g) = store.0.lock() else {
         return;
@@ -610,8 +606,19 @@ fn repo_root() -> PathBuf {
 fn main() {
     let selftest = std::env::args().any(|a| a == "--selftest");
     let shot = std::env::args().any(|a| a == "--shot");
+    // S18.7b：`--scene=<id>`（index/select_role/select_map/main_map/vs/message/saveload）——
+    // Bevy 壳经 `ti_app::forward_nav::navigate` 导航到目标场景，其 DrawList 由场景代码
+    // 渲染进同一 `DrawList`（静态原语 + 运行时内容），再实体化为 Bevy 精灵。
+    let scene_id = std::env::args()
+        .skip(1)
+        .filter_map(|a| a.strip_prefix("--scene=").map(str::to_owned))
+        .next()
+        .unwrap_or_else(|| "index".to_owned());
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);
+    if scene_id != "index" {
+        ti_app::forward_nav::navigate(&mut game, &scene_id);
+    }
     if !selftest {
         // S18.7a: live path = draw list (Bevy entities); the scene code is unchanged.
         game.set_record_draw(true);
@@ -709,7 +716,7 @@ fn main() {
                 break;
             }
         }
-        write_shot_png("evidence/bevy_native_index.png");
+        write_shot_png(&format!("evidence/bevy_native_{scene_id}.png"));
         return;
     }
     app.run();
@@ -732,7 +739,8 @@ fn write_shot_png(path: &str) {
     // = 左边缘，容易被误读成「整屏被木框色铺满」；EXP-104）。
     let first: Vec<String> = raw.chunks(4).take(1).map(|c| format!("{c:?}")).collect();
     let center_idx = ((LOGICAL_H / 2) * LOGICAL_W + LOGICAL_W / 2) as usize;
-    let midpx: Vec<String> = raw.chunks(4).skip(center_idx).take(1).map(|c| format!("{c:?}")).collect();
+    let midpx: Vec<String> =
+        raw.chunks(4).skip(center_idx).take(1).map(|c| format!("{c:?}")).collect();
     eprintln!("[shot] 非黑像素 = {nonblack} / alpha>8 = {alpha_nonzero} / {}", raw.len() / 4);
     eprintln!("[shot] 左上角 = {first:?} 屏幕中心 = {midpx:?}");
     let png = ti_render::png::encode_png_rgba(&raw, LOGICAL_W, LOGICAL_H);

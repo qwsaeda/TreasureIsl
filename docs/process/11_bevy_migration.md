@@ -78,6 +78,7 @@
 | S18.7e | vs / main_map 静态外墙 JSON 化 | **verified**：竞技区（外框发丝 + 扣线 + 三层甲板阶梯 + 罗盘饰）与画布框（外框 + 内金线 + 四角罗盘方块）代码外墙 → `scenes.json` `primitives` 同几作像素（旧基线 **0 diff** = 像素等价证明）；7/7 场景均有原语表 |
 | S18.7f | vs / main_map 剩余代码外壳退役 + 夜空统一 | **verified**：vs（夜空底 + 星点 + 血条槽底 + 竞技区 + 标题/提示 + 木框）、main_map（夜空底 + 画布框 + HUD 边角面板 + 底部命令盘 + 标题/提示 + 木框）全量 JSON 化；`chrome::scene_shell`/`bar_slot`/`scene_hint`/`deck_button` 代码外壳在这 2 场景退役；七场景视觉语言统一（夜空银标）+ 版面坐标 0 代码；EXP-106（原语批次调用位置=层序） |
 | S18.7g | 原语数据合法性固化进 doccheck2 | **verified**：新增 `check_primitives_data`（doccheck2 第 25 项）：6 种 kind / `color` 令牌名 / `params.icon` 注册表 / `grad` 令牌+steps / `tier` / `text_key` 存在性；这些错误在渲染上**不报错**（静默回退/跳过/显示裸 key）→ 现固化为门禁；负测证实（4 类脏数据→ 报错 / 恢复→ 0）；gate 23 项 0 失败（`evidence/S18.7g.log`） |
+| S18.7h | Bevy 壳 `--scene` 导航（7 场景 Bevy 渲染入口）+ 字体锚点差实测 | **verified**：`treasure-bevy-native --scene=<id>` 经 `ti_app::forward_nav::navigate` 导航到任意场景，其 DrawList（静态原语 + 运行时内容）实体化为 Bevy 精灵并离屏读回；实测 main_map/select_role 两场景出画（非黑像素 2073600/2073600）；**实测 CPU↔Bevy 文字锚点差 18px**（提示行：CPU 亮行 1806..1881 vs Bevy 1788..1864）→ 写入方案（风险 #3）与 S18.13 |
 | S18.8 | 收口：macroquad 后端退役（feature 删除 + 依赖树断言）+ 性能目标（native 60fps / wasm 30–60fps）+ release.md | 全 gate + 发布 |
 
 ## 6. 风险与缓解
@@ -139,3 +140,17 @@ ti-app（无 bevy 依赖，headless 跑逻辑）
 
 **纪律**：切换基线源前，先用同一帧做 CPU vs Bevy 像素 diff（逐场景、逐原语），
 把 diff 归零后再改门禁指认；`evidence/S18.7b.log` 须含 7 场景 diff=0 的实跑输出。
+
+### S18.7b 实测（字体锚点）—— CPU↔Bevy 提示文字差 18px
+
+`--scene=<id>` 冒烟（Bevy 离屏读回 vs CPU 基线，同一 main_map 场景）实测：
+- 复现：`cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
+  -- --scene=main_map --shot` → `evidence/bevy_native_main_map.png`；对照
+  `assets/render_baseline/main.png`（CPU 基线）。
+- 量法：解码两张 PNG，扫 x∈[380,450]（只含提示文字、不含命令盘标签）的**亮文字行**范围。
+- 实测值：CPU `1806..1881`（35 行）/ Bevy `1788..1864`（41 行）→ **Bevy 侧提示文字高 18px**。
+- 机理线索：Bevy `Text2d` 以**矩形中心**锚定（`rect.x+w/2, rect.y+h/2`），CPU
+  `ti_render::generic::text` 以**字形墨迹顶边**落位（`y+(h-glyph_h)/2` + 位图回退 y 偏移）；
+  两套锚点语义不同 → 同档字号下垂直错位（差值随字号档变化）。
+- 待办（S18.7b 主体）：统一锚点口径（Bevy 侧按 CPU 语义补偿 = 文本中心 + 半字形高），
+  再做 7 场景逐场景像素 diff 归零。**未归零前不得切换基线源**（否则基线"两张皮"）。

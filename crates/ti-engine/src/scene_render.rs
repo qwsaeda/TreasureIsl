@@ -509,7 +509,8 @@ pub fn spawn_draw_list(
                     DrawListEntity,
                     Sprite::from_color(rgb565_to_color(*color), Vec2::new(*w as f32, *h as f32)),
                     Transform::from_translation(
-                        to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0).extend(z),
+                        to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0)
+                            .extend(z),
                     ),
                 ));
                 count += 1;
