@@ -5,7 +5,7 @@
 原值不动，v3 叙事键（`title_art`/`ambient_art`/`focus_anchor`）叠加；v3.5 收口时 v2 键才退役。
 
 > 本文件 = index 试点的**坐标方案 + 实现记录 + 验收判据**。数值层 = `scenes.json`；
-> 叙事约束层 = `ui_schema/scene_manifest_v3.json`（gate 第 21 项 `check_scene_narrative`）。
+> 叙事约束层 = `ui_schema/scene_manifest_v3.json`（gate 第 22 项 `check_scene_narrative`）。
 
 ---
 
@@ -29,7 +29,7 @@
 |---|---|---|
 | `title_art {x:108, y:192, w:864, h:160}` | 仪式面板绘制区 | 落在标题条底 108 与菜单首块顶 352 之间的**空带**，`chrome::title_art_block` 消费；键缺失/非正 = 不画（契约 4） |
 | `ambient_art {x:0, y:0, w:1080, h:1920}` | 星空绘制区 | `chrome::star_sky` 消费；绘制自动夹 12px 外框内（星不盖 `wood_frame`） |
-| `focus_anchor {bbox:{x:108, y:192, w:864, h:672}}` | 叙事重心区 | 与 manifest index `focus.bbox_pct {10,10,80,35}` × (1080,1920) 恒等；**gate 第 21 项 N8 对账锚点**；运行时零消费（Python 直读 JSON） |
+| `focus_anchor {bbox:{x:108, y:192, w:864, h:672}}` | 叙事重心区 | 与 manifest index `focus.bbox_pct {10,10,80,35}` × (1080,1920) 恒等；**gate 第 22 项 N8 对账锚点**；运行时零消费（Python 直读 JSON） |
 
 **v3.1 → v3.2 演进**（不在本轮）：菜单瘦身后（`list` 项 v3 值 + doccheck2 fidelity 锚同步 +
 08 §4.1 表同步），`title_art` 扩为完整仪式感区（提案 §3.1 的 672 高面板 + 巨字标题），
@@ -60,7 +60,7 @@ focus_anchor 语义区与绘制区合并。
 4. `cargo test --workspace` 0 failed + `clippy -D warnings` + `fmt --check` 0 diff
 5. `doccheck` 0 error + `doccheck2` 0 error（含 08 §4.1 表镜像 + gate 项数 23 口径 +
    基线镜像恒等）
-6. gate 21 项全绿 → `evidence/S17.6.log` → 台账 S17.6 verified
+6. gate 22 项全绿 → `evidence/S17.6.log` → 台账 S17.6 verified
 
 ## 4. 已知限制（诚实记录）
 

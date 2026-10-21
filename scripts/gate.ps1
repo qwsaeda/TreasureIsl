@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（21 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（22 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (21 items) ==="
+Write-Host "=== gate: TreasureIsl (22 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -204,6 +204,19 @@ Report ($LASTEXITCODE -eq 0) 'check_data_source (数据源改动 → 渲染不�
 $snOut = & python scripts/check_scene_narrative.py 2>&1
 $snOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)'
+
+# 21.5) CPU↔Bevy 内存对拍（S18.16，**无 golden 文件**）：
+#     ti-engine 独立 example（S18.2）真实 GPU 离屏渲染 vs `Framebuf` CPU 期望逐像素对照，
+#     判定：通道差 ≤ 8 LSB 且超差比例 < 0.5%；退出码 0=通过 / 1=失败 / 2=无 GPU 读回链路（SKIP）。
+$parityOut = & cargo run -q --manifest-path crates/ti-engine/Cargo.toml --example bevy_vs_cpu_pixel 2>&1
+$parityOut | ForEach-Object { Write-Host "        $_" }
+$parityExit = $LASTEXITCODE
+if ($parityExit -eq 2) {
+    Write-Host "        SKIP: GPU 读回链路不可用（本机无 GPU 设备）"
+}
+# 顶格 Report（项数计量口径：只数第 0 列的 Report）→ 这项固定计入；
+# 退出码 1（对照失败）= FAIL；2（无 GPU）= 记名 SKIP 但不失败（硬件不可验）。
+Report ($parityExit -ne 1) 'bevy-cpu-parity (GPU/CPU 像素对照：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

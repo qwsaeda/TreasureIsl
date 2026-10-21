@@ -234,7 +234,7 @@
   3. `docs/process/07_render_pipeline.md` 渲染契约（路径表/z-order 文件顺序/越界求交/PCX index 0 透明位 + §7 元素级验证法），登记进 `docs/README.md` + `AGENTS.md` 路由表。
   4. `tests/render_snapshot.rs` 7 场景逐像素基准 diff（gate 第 19 项，基准由修复后代码生成杜绝 EXP-074/075 自证循环）+ `scripts/check_data_source.py`（gate 第 20 项，数据源改动→快照门禁）。
   5. `element_dump` 长期诊断 bin（`Cargo.toml` 声明）：逐精灵 blit dump 落点/越界判定/像素贡献，定位「漂的是哪个元素」（契约 §7）。
-- **验证**：`element_dump index` 显示记录 11/20/21（f1=111 越界条）= SKIP、贡献 0 像素；洋红残留 = 0；headless 全流程 16/16 OK；`render_snapshot` 7 场景 diff=0；gate 21 项全绿。
+- **验证**：`element_dump index` 显示记录 11/20/21（f1=111 越界条）= SKIP、贡献 0 像素；洋红残留 = 0；headless 全流程 16/16 OK；`render_snapshot` 7 场景 diff=0；gate 22 项全绿。
 - **教训**：渲染链路关键行为（越界裁剪/透明位/z-order）散在多文件无契约 → 每轮瞎猜。**必须**：(a) 渲染行为提成纯函数可单测；(b) 契约文档登记进路由表，改渲染代码前必读；(c) 快照门禁锁「最终像素」+ 数据源门禁当场拦；(d) 修 bug 前先按 native 真实链路逐层定位（哪条 quality 路 + 越界/透明语义），不靠猜；(e) 报「特定区域错位」先用 `element_dump` 逐元素定位，别全帧 diff 盲猜。
 
 
@@ -246,7 +246,7 @@
   1. 语义色统一迁入 `chrome.rs`（含 RGBA 变体），`menu_shell.rs` 改为 `pub use crate::scenes::chrome::{...}` 单一事实源；测试改为 `semantic_colors_match_doc`。
   2. 新增 `TransitionState`（`FadingOut`→`FadingIn` 两阶段）+ `Framebuf::apply_brightness(factor)` 全帧亮度调制；`NavHost::enter` 自动调 `start_transition()`（step=0.08，约 12 帧完成淡入淡出）；`GameApp::render` 每帧驱动过渡。
   3. `menu_item` 新增 `pressed: bool` 参数：pressed 时 bevel 反转（阴影上/左、高光下/右）= 凹陷实体感；选中项金底叠加正弦微光（`tick_glow_frame` + `blend_color` RGB565 alpha 混合）。
-- **验证**：gate 21 项全绿（`evidence/ui_improvement.log`），视觉回归 3 场景 diff=0，clippy `-D warnings` 0 warning。
+- **验证**：gate 22 项全绿（`evidence/ui_improvement.log`），视觉回归 3 场景 diff=0，clippy `-D warnings` 0 warning。
 - **教训**：UI 视觉改进三件套（色统一 + 过渡动画 + 交互反馈）应作为一个**标准模式**固化：(a) 色彩常量必须单一文件源，禁止两轮设计留双份；(b) 场景切换必须有过渡态（淡入淡出/滑动），禁止硬切；(c) 可交互元素必须有「常态/选中/按下」三态视觉；(d) 微光等周期动画用 `AtomicU32` 帧计数器 + 确定性函数（正弦/hash），**禁止 `static mut`（Rust 2024 `static_mut_refs` 编译错误）+ 禁止 `rand`**；(e) **帧级动画会破坏像素快照确定性**：`render_to_framebuf`（快照入口）必须先 `transition=None` + `reset_animation_state()`，否则基线漂移；改动画后所有快照基线（`assets/forward_baseline/` + `assets/hd_baseline/` + `assets/render_baseline/`）须删除重生成（EXP-076 口径：基线由修复后代码生成，非人工造）。
 
 ### EXP-080 帧级动画 + 像素快照基线漂移（EXP-079 后续）
@@ -254,7 +254,7 @@
 - **现象**：EXP-079 加微光/过渡/翻页动画后，`render_snapshot_forward` 报 index 快照 diff 1758/38720（最大偏差 4），`hd_baseline`/`render_baseline` 同族门禁均漂移；`cargo test` 全绿但快照门禁红。
 - **根因**：像素快照门禁假设「同场景渲染 = 确定性像素」；帧级动画（`GLOW_FRAME` 全局累加 + `TransitionState` 半程态 + `PAGE_FRAME`）让像素依赖「渲染过多少帧」→ 与旧基线必然不同；且 `render_to_framebuf` 未清动画态，跨场景累加值还随测试顺序变。
 - **解法**：(a) 快照入口 `render_to_framebuf` 开头 `transition=None` + `chrome::reset_animation_state()`（微光/翻页计数归零），同一场景快照与历史帧数解耦；(b) 基线由修复后代码重生成：删 `assets/forward_baseline/*.png`、`assets/hd_baseline/*.png`、`assets/render_baseline/*.png` 后首跑门禁自动落盘（测试自带「基准缺失→生成 PASS」分支）；(c) 实机体验路径（`render` + 逐帧 `tick_glow_frame`）保留动画，仅快照路径归零——两路分治，不牺牲表现。
-- **验证**：重生成后 `render_snapshot_forward`/`visual_regression`/`render_snapshot` 全 diff=0；`gate.ps1` 21 项全绿；动画在 native 运行仍可观察（F4 切画质 + 切场景淡入淡出）。
+- **验证**：重生成后 `render_snapshot_forward`/`visual_regression`/`render_snapshot` 全 diff=0；`gate.ps1` 22 项全绿；动画在 native 运行仍可观察（F4 切画质 + 切场景淡入淡出）。
 - **教训**：**加帧级动画 = 必须同步审计所有像素级门禁**：凡「逐像素 diff / 基线图 / 元素 dump」类断言，都要确认其入口是否经过动画计数器；确定性门禁（快照）与体验路径（实机）必须分治——快照入口归零，实机路径保留动画。新增任何 `AtomicU32` 帧计数器时，同步在 `reset_animation_state()` 登记。
 
 ### EXP-081 真交叉淡化 + 首帧黑闪守卫
@@ -262,7 +262,7 @@
 - **现象**：EXP-079 的「淡入淡出」名不副实——`enter()` 先切场景再启动过渡，淡出的是**新**场景（实为「闪黑再亮」）；改为真交叉淡化后 `render_parity` 2 个测试 FAIL（`each_scene_renders_real_content` / `distinct_scenes_produce_distinct_frames`），墨点率为 0，全帧近黑。
 - **根因**：双重。(a) 真交叉淡化需旧画面快照，但 `enter()` 时帧缓冲若**从未渲染过**（首帧、或 `handle()` 连切多场景后才渲染一次，如 `render_parity` 的 `render_select_map`），快照是空白缓冲 → `t=0` 时全帧 = 空白 = 黑屏；(b) 过渡进行中再次 `enter()` 会把「半混合帧」当旧画面重抓，产生递归脏化。
 - **解法**：(a) `Framebuf::snapshot() -> Box<[u16]>` + `crossfade_from(prev, t)` 纯逐像素插值（`t=0` 全旧、`t=1` 全新）；`GameApp.transition` 改单阶段插值 `t += step`，终帧不混合直接显示新画面；(b) **首帧守卫**：`rendered_once` 标志，`render_scene` 末尾置位；`start_transition` 在 `!rendered_once` 时直接 `transition=None` 跳过过渡（无旧画面可混合）；(c) **重入守卫**：过渡已在进行时再次 `enter()` 沿用原 `prev` 只重置 `t=0`，不重抓快照。
-- **验证**：`render_parity` 7/7 通过（墨点率恢复、各场景帧互异）；`render_snapshot_forward` / `render_parity_hd` / `visual_regression` 基线不变（快照路径本就归零过渡态）；`gate.ps1` 21 项全绿。
+- **验证**：`render_parity` 7/7 通过（墨点率恢复、各场景帧互异）；`render_snapshot_forward` / `render_parity_hd` / `visual_regression` 基线不变（快照路径本就归零过渡态）；`gate.ps1` 22 项全绿。
 - **教训**：**(a) 任何基于「上一帧内容」的插值/动画，必须显式处理「上一帧不存在」的状态**——用 `rendered_once` 之类的守卫跳过，而不是让它自然退化成黑屏（黑屏是最难排查的表现，因为「看起来像渲染 bug」实为「状态缺失」）。**(b) 过渡/动画状态要防重入**：连续触发时沿用初始快照而非重抓，否则会把中间混合帧当起点，动画语义漂移。**(c) `enter()`/`start_transition` 的调用顺序**：快照必须在**切场景前**抓（此刻帧缓冲仍持旧像素），但因为快照取的是缓冲内容而非场景 id，切场景后抓同样有效——前提是缓冲未被中间渲染覆盖。
 
 ### EXP-084 TTF 软件光栅化接线（ab_glyph，UI-21）
@@ -286,7 +286,7 @@
   - `scene_shell(host, scene_id, title_key)` = 底 + 框 + 标题条 + 标题文字（动态标题传 `&format!(...)`，如 `message` 的 `msg.<kind>`）；
   - `scene_hint(host, scene_id, hint_key)` = 底条 + 深墨字，**i18n key 只查一次**（同时拿到 `text` 与 `.chars().count()`）。
   - 6 个场景（index/select_role/select_map/saveload/message/vs）改调模板；`on_touch` 里的命中带计算也改用 `scene_layout`（原先每处内联 `ti_core::data::scenes().ok().and_then(...)` 三行）。
-- **验证**：6 场景 `render()` 各减 5~8 行；`hint_row` 双查消失；门禁 21 项全绿，快照基线不变（模板只做等价替换，渲染结果逐像素一致）。
+- **验证**：6 场景 `render()` 各减 5~8 行；`hint_row` 双查消失；门禁 22 项全绿，快照基线不变（模板只做等价替换，渲染结果逐像素一致）。
 - **教训**：**「同一段 ≥4 行的序列在 ≥3 处重复」就是提取信号**，尤其当它同时牵涉「同一数据源多次查询」（本例 `i18n::sget(key)` 查两遍算宽度）。提取时把「重复的查询」一并收敛到只查一次，收益不只是行数，还有每帧的查表 + `String` 分配开销。
 
 ### EXP-083 EXP-051 复发（本轮第二次踩同一坑，必读）
@@ -341,7 +341,7 @@
 - **现象**：把 chrome 外壳抽到独立 crate `ti-render`（零游戏语义、目标是可复用到其它游戏）后，`ti-app` 出现两类编译错：① `Raster::blit` 要 `&mut ti_render::framebuffer::Framebuf`，但 `MenuShell.fb` 是 `ti_platform::gfx::Framebuf`（**两个同名不同型**）；② `ti_render::shell::bar_slot(host: &mut dyn Canvas, …)` 收到的是 `&mut dyn SceneHost`。改完编译通过后，`render_intent::key_rects_have_pixels` 仍红：「vs 玩家血条槽 fill_rect 未按 §4.4 画 (60,170,440,48) — 宽度 0 / 整段不画」。
 - **根因**：两层叠加。**(a)** 框架若直接依赖**具体帧缓冲类型**，就无法同时吃「纯内存帧缓冲」与「平台 GPU 帧缓冲」两类目标，抽象从根上漏。**(b)** 更隐蔽：把 chrome wrapper 的入参从 `&mut dyn SceneHost` 改成 `&mut MenuShell`（或 `host.shell_mut()`）后，像素写入**绕过**了宿主自己的 `RenderHost::fill_rect`，而 `render_intent` 的 `VsHost` 正是靠**覆写 `RenderHost::fill_rect` 把调用记进 `self.fills`** 来做断言的（`impl SceneHost for VsHost {}` 是空的）。于是「真机有像素、测试断言 0 条记录」——**编译绿 ≠ 行为等价**，测试宿主从旁路被摘掉了。
 - **解法**：① 框架侧定义最小像素 trait `PixelSink { fn set_pixel(&mut self, x, y, color) }`，`ti_render::Framebuf` 与 `ti_platform::gfx::Framebuf` 各自实现，`Raster::blit(&mut dyn PixelSink, …)` 只认 trait 不认具体型（可复用到其它游戏/平台的判据）。② 桥接**留在宿主侧且必须走宿主 trait**：`chrome.rs` 内建 `struct HostCanvas<'a> { host: &'a mut dyn SceneHost }` + `impl Canvas for HostCanvas`，像素方法一律 `<dyn SceneHost as RenderHost>::fill_rect(self.host, …)`（**不**写 `self.host.shell_mut().fill_rect`），只读几何（`text_width`/`glyph_height`）才走 `shell()`。③ 因 `&mut HostCanvas{…}` 会触发 E0515（返回指向临时值的引用），用闭包式 `with_canvas(host, |c| …)` 持有桥接体，作用域内借用。④ 顺带**不要**改 `SceneHost` 的 trait 边界，也不要把 `Canvas` 提成 supertrait（会让所有 impl 方都被迫实现）。
-- **验证**：`grep` 框架零游戏语义 0 命中；`key_rects_have_pixels` 恢复 PASS（记录条数回到 5 条血条 fill）；三套快照 0 diff；`cargo clippy --workspace --all-targets -- -D warnings` 0 warning；gate 21 项 0 失败（evidence/S15.7.log 判据 4）。
+- **验证**：`grep` 框架零游戏语义 0 命中；`key_rects_have_pixels` 恢复 PASS（记录条数回到 5 条血条 fill）；三套快照 0 diff；`cargo clippy --workspace --all-targets -- -D warnings` 0 warning；gate 22 项 0 失败（evidence/S15.7.log 判据 4）。
 
 ### EXP-095 居中用 `cx - w/2` 在**奇数宽**时与「先减后除」的测试口径差 1px → 快照整片判漂移
 - **现象**：抽框架后 3 套快照（render_snapshot / forward / visual_regression）同时红，diff 看着像「大改版」；但 `cargo test --workspace` 里只有 1 条 `hint_bar_width_height_follow_active_font` 真实失败：`index 尾行 hint 条宽 0 ≒ hint_text_width_px+8 = 209`。逐层量：条确实画了、高也对，唯独**左缘起点**差 1px，于是「从左缘起数连续 `COLOR_BEVEL_HI` 像素」直接数出 0。
@@ -375,7 +375,7 @@
 - **真正的 bug（读代码才找到，与画面无关）**：① `native_index_system` 用 `built_for` 只在**首帧**建实体 → 选择态变化**不生效**；
   ② 实体无标记组件 → 切场景时旧实体**留鬼影**（改用 `DrawListEntity` 标记 + 内容哈希增量重建）。
 - **验证**：修正采样口径后 —— 左上角 (0,0) = `[139,105,16]`（木框，正确）、中心 (540,960) = `[24,44,74]`（夜空蓝，正确）；
-  `evidence/bevy_native_index.png` 肉眼确认全画面（渐变/星/月+光晕/木框/标题/6 菜单项/波光）齐全；gate 21 项全绿（`evidence/S18.7c.log`）。
+  `evidence/bevy_native_index.png` 肉眼确认全画面（渐变/星/月+光晕/木框/标题/6 菜单项/波光）齐全；gate 22 项全绿（`evidence/S18.7c.log`）。
 
 ### EXP-105 原语表 z 层卓埋 / 行高变了栏位没算 / JSON text_key 先验存在
 - **问题**：S18.7d（剩余 4 场景原语化）视觉对账时捑到 3 个均为「看图才发现」的坑：

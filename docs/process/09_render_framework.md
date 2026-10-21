@@ -8,7 +8,7 @@
 
 | Crate | 职责 | 禁止 |
 |---|---|---|
-| `ti-render` | 帧缓冲 / 绘制原语 / 字体系统 / 主题类型 / 等距投影 / 文本排版 / 场景外壳组件 | 禁止依赖 `ti-app`/`ti-core`/`ti-platform`/`ti-formats`（S15.10 起连资产载体格式也不依赖）；禁止出现游戏语义（场景名/角色/战斗等）。**依赖实测**：仅 `ab_glyph`/`serde`/`serde_json`，由 doccheck2 第 21 项 `render-framework-boundary` 锁定 |
+| `ti-render` | 帧缓冲 / 绘制原语 / 字体系统 / 主题类型 / 等距投影 / 文本排版 / 场景外壳组件 | 禁止依赖 `ti-app`/`ti-core`/`ti-platform`/`ti-formats`（S15.10 起连资产载体格式也不依赖）；禁止出现游戏语义（场景名/角色/战斗等）。**依赖实测**：仅 `ab_glyph`/`serde`/`serde_json`，由 doccheck2 第 22 项 `render-framework-boundary` 锁定 |
 | `ti-app` | 游戏业务渲染（scenes/*.rs）/GameApp 状态机/游戏 UI 组件 | 禁止直接操作帧缓冲像素（须经 `Canvas` trait / `Framebuf` 方法，S15.10）；必须通过 `ti-render` 绘制；**持有格式层 → 框架层的转换点**（如 `menu_shell::parse_font_bytes` 把 `ti_formats::font` 解析结果转成框架中性 `ti_render::font::FontSet`） |
 | `ti-platform` | 平台抽象（窗口/输入/文件系统）+ **呈现层**（脏行跟踪 + 纹理上传，帧缓冲本体不在此，S15.10） | 不重新定义帧缓冲类型（会与 `ti-render` 重复） |
 

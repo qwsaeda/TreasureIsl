@@ -268,7 +268,7 @@
 ### EXP-099 流程：`required-features` 门控的 bin 不被 gate 编译/lint ⇒ 官方排障工具静默失效
 - **现象**：`crates/ti-app/src/bin/element_dump.rs:119-124` 的 `find(|&((zx0,zy0,zx1,zy1),_)| ...)`
   因 `Iterator::find` 传入 `&&T` 而把绑定推成 `&u32`，**4 × E0308 编译失败**；而
-  `scripts/gate.ps1` 连续多轮 **21 项全绿**。`element_dump` 是 AGENTS.md 路由表登记的
+  `scripts/gate.ps1` 连续多轮 **22 项全绿**。`element_dump` 是 AGENTS.md 路由表登记的
   「报『特定区域贴图错位』先逐元素定位」官方工具——排障时才发现它根本编不过。
 - **根因**：`treasure-native` / `treasure-headless` / `element-dump` / `sprite-step` / `render-png`
   五个 bin 都声明了 `required-features = ["native-shell" / "headless"]`。gate 第 1~3 项
@@ -303,7 +303,7 @@
   `use super::`；断言类检查排除自身实现；**改完立刻逐文件 `cargo check` + 最后全量
   `clippy --all-targets`（含 feature 门控 bin）双跑**，让编译器逐处判刑。
 - **验证**：`cargo check -p ti-app --features native-shell,headless` 0 error；
-  `cargo test --workspace` 0 failed；新增 doccheck2 第 21 项 `check_no_ti_core_fullpath`
+  `cargo test --workspace` 0 failed；新增 doccheck2 第 22 项 `check_no_ti_core_fullpath`
   断言该风格不再回潮（本次命中 0）；gate 22 项全绿。
 
 ### EXP-101 流程/构建：`required-features` bin 只在「目标+feature 双命中」时被编译，裸 target 构建是门禁盲区

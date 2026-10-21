@@ -99,7 +99,7 @@
 | 立绘/动态区 | `portrait_zones [{x:0,y:360,w:1080,h:1310}]` | **代码绘制动态实体**允许落区（QB102：收紧到实渲内容区 360..1670，无 legacy 立绘） |
 | 仪式标题面板（v3） | `title_art {x:112, y:192, w:856, h:672}` | S18.6 暖金版：`ornate_frame` 精致木框（木色外框 + 金色内线 + 四角卷角 + 置顶指南针玫瑰），与标题/副标题同处 192..864 仪式区 |
 | 星空氛围层（v3） | `ambient_art {x:0, y:0, w:1080, h:1920}` | v3.1 双写：`chrome::star_sky` 确定性 26 星（无 RNG，快照可复现），绘制夹 12px 外框内，z-order 在外壳之后/菜单之前（P-SoT-2） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:108, y:192, w:864, h:672}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` index `focus.bbox_pct` × (1080,1920)）；gate 第 21 项 `check_scene_narrative` N8 对账锚点 |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:108, y:192, w:864, h:672}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` index `focus.bbox_pct` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点 |
 
 不变式：`920 ≥ 108`（首块不压标题条）、`1432 ≤ 1840`（末块不撞提示行）。
 
@@ -142,7 +142,7 @@
 | 项数 × 末块底 | 5 角色卡 → `480+4*192+192` = **1440** | 3 地图卡（`MAP_COUNT=3`，QA139）→ `480+2*320+320` = **1440**（海平面带 1704 之上） |
 | 锁定标记列 | — | `locked {text_x:920}`（QA033 钳制公式不变：卡片右缘 = 1000） |
 | 立绘锚（S18.7d） | `hero_art {x:76, y:130, w:356, h:1190}` | —（地图拼贴区 = 重心区，chrome 全在 `primitives`） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:356, h:1190}}` | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 21 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:356, h:1190}}` | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 22 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
 | 提示行 | `hint {x:540, y:1840}` | 同左（JSON 原语 tier hint） |
 | 动态区 | `portrait_zones [{0,240,1080,1460}]` | `portrait_zones [{0,240,1080,960}]` |
 
@@ -165,7 +165,7 @@
 | 命令盘 · 出售（v3） | `deck_sell {x:460, y:1600, w:200, h:80}` | 命令盘第 2 键 = 全卖商品 1（键盘 Y / v2 `hud_sell`） |
 | 命令盘 · 建造（v3） | `deck_build {x:680, y:1600, w:200, h:80}` | 命令盘第 3 键 = 造 Castle（键盘 B / v2 `hud_build`） |
 | 画布实体比例（v3） | `canvas_entities {player:100, landmark:80, boss:96}` | 实体边长 = `board_fit.tw` × 百分比（100/80/96）：15 格图 tw=32 → 32/26/31；20 格图 tw=24 → 24/19/23；缺席回退 v2 `player.size` 等（QA106） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:43, y:192, w:1004, h:710}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` main_map `focus.bbox_pct{4,10,93,77}` × (1080,1920)）；gate 第 21 项 `check_scene_narrative` N8 对账锚点 |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:43, y:192, w:1004, h:710}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` main_map `focus.bbox_pct{4,10,93,77}` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点 |
 
 不变式：HUD 底 `280 ≤ 520`（不与等距区 `y0=520` 重叠）；**实体 size ≤ 瓦片行高 `2*tile_h` = 26**（QA106：棋子/据点/BOSS 不越格覆盖邻居——player.size=26 为临界值）。
 
@@ -189,7 +189,7 @@
 | 提示行 | `hint {x:540, y:1840}` | 攻击/返回 |
 | 动态区 | `portrait_zones [{0,170,1080,1680}]` | 玩家/BOSS 代码方块允许落区 |
 | 战斗竞技区（v3） | `battle_arena {x:76, y:230, w:918, h:998}` | v3.1 双写：`chrome::battle_arena` 三层甲板阶梯 + 罗盘饰 + 饰线垫底（z-order 外壳之后、血条/回合文本之前）；血条带 `168..216` 在竞技区顶之上不重叠；8pt 豁免（v3 键，ui-redesign-v3/02 §10） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:918, h:998}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` vs `focus.bbox_pct` × (1080,1920)）；gate 第 21 项 `check_scene_narrative` N8 对账锚点 |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:918, h:998}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` vs `focus.bbox_pct` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点 |
 
 不变式：`player_hp.x+w ≤ 1080`、`boss_hp.x+w ≤ 1080`；**双条互斥**：`boss_hp.x - (player_hp.x+w) ≥ 40`（64..512 / 576..1024，gap=64，QA140/QB120）；`rounds`/`empty`/`outcome` 均不在血条带 `y=168..216` 内。
 

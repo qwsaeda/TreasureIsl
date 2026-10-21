@@ -196,7 +196,7 @@ S11.1（A）/S11.2（B）进 `plan/ledger.yaml`；`docs/README.md` 登记 `07_ui
 5. D `docs/process/05_module_parallel.md`（一轮 4 步 + P1–P6 包划分 + 并行纪律 5 条 + 台账口径）+ `03_templates.md` §7 任务书模板 + `docs/contracts/{00_index,c1,c2,c3}.md`（draft）+ `plan/packages.yaml` + `scripts/check_module_contracts.py` 进 gate **第 16 项（历史时点）**（白名单互斥 / 契约锚点 / 跨包可见面 / draft 残留 WARN）。
 
 **剩余（会话 C 起点）**：
-6. S11-B 验收：gate 16 项全绿（S11 时点，现 21 项）→ tee `evidence/S11.1.log` + `evidence/S11.2.log` → ledger S11.1/S11.2 置 verified（deps 建议改 `[S10.4]`，S10.5 并行不前置）；
+6. S11-B 验收：gate 16 项全绿（S11 时点，现 22 项）→ tee `evidence/S11.1.log` + `evidence/S11.2.log` → ledger S11.1/S11.2 置 verified（deps 建议改 `[S10.4]`，S10.5 并行不前置）；
 7. S12.0 契约冻结轮：`docs/contracts/*` draft→frozen + `plan/packages.yaml` 全票 frozen + 基线标签 `baseline-s12` + 逐包任务书下发；
 8. commit：S10 系列 成果 + S11-A + S11-B 一并 commit（legacy 归档 + oracle 桥 + 业务闭环 + gate 15/16 项历史时点），S12 各包另行 commit。
 
