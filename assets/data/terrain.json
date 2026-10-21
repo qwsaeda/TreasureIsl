@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "legend": {
+    "S": {
+      "name": "sea",
+      "token": "sea_deep",
+      "edge": "sea_shallow"
+    },
+    "R": {
+      "name": "reef",
+      "token": "reef",
+      "edge": "sea_shallow"
+    },
+    "L": {
+      "name": "land",
+      "token": "land_sand",
+      "edge": "land_sand_light",
+      "alt": "land_sand_dark"
+    },
+    "T": {
+      "name": "treasure",
+      "token": "gold_warm",
+      "edge": "land_sand_light"
+    }
+  },
+  "maps": {
+    "m01": {
+      "rows": [
+        "SSSSSSSSSSSSSSSSSSSS",
+        "SSSSSSSSSSSSSSSSSSSS",
+        "SSSSSSRSRRRSRRSSSSSS",
+        "SSSSSRLRRLLLRRRSSSSS",
+        "SSSSSRLLLLLLLRRSSSSS",
+        "SSSSRTLLLLLLLLRLSSSS",
+        "SSSRLLLLLLLLLLLLLSSS",
+        "SSRRLLLLLLLLLLLLRRSS",
+        "SSSLLLLLLLLLLLLLLSSS",
+        "SSSLLLLLLTLLLLLLLLSS",
+        "SSSLLLLLLLSLLLLLLLSS",
+        "SSSRLLLLLLLLLLLLLSSS",
+        "SSRRLTLLLLLLLLLLLSSS",
+        "SSRRLLLLLLLLLLLLSSSS",
+        "SSSRRRLLLLLLLLLLSSSS",
+        "SSSSSLLLLLLLLLLRSSSS",
+        "SSSSSSSLLLRRRRSSSSSS",
+        "SSSSSSRSRSLRRSSSSSSS",
+        "SSSSSSSSSSSSSSSSSSSS",
+        "SSSSSSSSSSSSSSSSSSSS"
+      ]
+    },
+    "m02": {
+      "rows": [
+        "SSSSSSSSSSSSSSSSSSSS",
+        "SSSSSSSSSSSSSSSSSSSS",
+        "SSSSSSSSRLRRSRSSSSSS",
+        "SSSSSSLLRLLLRRRRSSSS",
+        "SSSRRRRLLLLLLRLSSSSS",
+        "SSSSRTLLLLLLLLLRSSSS",
+        "SSSLLLLLLLLLLLLLRSSS",
+        "SSSLLLLTLLLLLLLLRSSS",
+        "SSRRLLLLLLLLLLLLLRSS",
+        "SSRLLLLLLLLLLLLLLRSS",
+        "SSRLLLLLLLSLLLLLRLSS",
+        "SSSRLLLLTLLLLLLLLSSS",
+        "SSRLLLLLLLLLLLLLRSSS",
+        "SSSRLLLLLLLLLLLLSRSS",
+        "SSSSLLLLLLLLLLLLSSSS",
+        "SSSSSLLLLLLLLLRSSSSS",
+        "SSSSSSRRLLRLRLSRSSSS",
+        "SSSSSSSSSLSRRSSSSSSS",
+        "SSSSSSSSSSSSSSSSSSSS",
+        "SSSSSSSSSSSSSSSSSSSS"
+      ]
+    },
+    "m03": {
+      "rows": [
+        "SSSSSSSSSSSSSSS",
+        "SSSSSSSSSSSSSSS",
+        "SSSSSLLLRRRSSSS",
+        "SSSLRLLLLLRSSSS",
+        "SSRLTLLLLLLLSSS",
+        "SSSLLLLLLLLLRSS",
+        "SRRLLLLLLLLLRRS",
+        "SSLLLLLSLLLLLSS",
+        "SSLLLLLLLLLLLRS",
+        "SSRLLLLLLLLLRSS",
+        "SSRRLTLLLLLLSSS",
+        "SSSRLTLLLLRSSSS",
+        "SSSSRRLRLRRSSSS",
+        "SSSSSSSRRRSSSSS",
+        "SSSSSSSSSSSSSSS"
+      ]
+    }
+  }
+}

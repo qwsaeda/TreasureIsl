@@ -54,6 +54,18 @@ pub struct Theme {
     /// 暖木色（S18.6 暖色系令牌：Agnes 风格木框；`wood` = 冷蓝旧值保留不动，
     /// 新场景用本令牌 = 换整套木色风格只改数据）。
     pub wood_warm: u16,
+    /// 深海水色（主地图海面瓦片底色；S18.9）
+    pub sea_deep: u16,
+    /// 浅海水色（岛缘浅滩 / 瓦片顶棱高光；S18.9）
+    pub sea_shallow: u16,
+    /// 礍石色（岛缘礍岩瓦片；S18.9）
+    pub reef: u16,
+    /// 陆地沙色（岛屿瓦片底色；S18.9）
+    pub land_sand: u16,
+    /// 陆地浅沙（瓦片顶棱高光；S18.9）
+    pub land_sand_light: u16,
+    /// 陆地暗沙（瓦片交错变体；S18.9）
+    pub land_sand_dark: u16,
     /// 暖金（S18.6 暖色系令牌：Agnes 风格标题金）。
     pub gold_warm: u16,
     /// 夜空深蓝（S18.6 暖色系令牌：Agnes 风格夜空渐变底色 = #1A2942）。
@@ -108,6 +120,12 @@ impl Theme {
             "secondary" => self.secondary,
             "black" => self.black,
             "wood_warm" => self.wood_warm,
+            "sea_deep" => self.sea_deep,
+            "sea_shallow" => self.sea_shallow,
+            "reef" => self.reef,
+            "land_sand" => self.land_sand,
+            "land_sand_light" => self.land_sand_light,
+            "land_sand_dark" => self.land_sand_dark,
             "gold_warm" => self.gold_warm,
             "sky_navy" => self.sky_navy,
             "sky_horizon" => self.sky_horizon,
@@ -144,6 +162,12 @@ impl Theme {
         // S18.6 暖色系令牌（Agnes 风格）：暖木 #8B6914 → 0x8B42；暖金 #FFD700 → 0xFEA0；
         // 夜空 #1A2942 → 0x1948。
         wood_warm: 0x8B42,
+        sea_deep: 0x108A,
+        sea_shallow: 0x1A30,
+        reef: 0x4BCD,
+        land_sand: 0xFD4D,
+        land_sand_light: 0xFE51,
+        land_sand_dark: 0xD4CA,
         gold_warm: 0xFEA0,
         sky_navy: 0x1948,
         sky_horizon: 0x198A,
@@ -218,6 +242,12 @@ impl Theme {
             secondary: p.secondary.hex().unwrap_or(d.secondary),
             black: p.black.hex().unwrap_or(d.black),
             wood_warm: p.wood_warm.hex().unwrap_or(d.wood_warm),
+            sea_deep: p.sea_deep.hex().unwrap_or(d.sea_deep),
+            sea_shallow: p.sea_shallow.hex().unwrap_or(d.sea_shallow),
+            reef: p.reef.hex().unwrap_or(d.reef),
+            land_sand: p.land_sand.hex().unwrap_or(d.land_sand),
+            land_sand_light: p.land_sand_light.hex().unwrap_or(d.land_sand_light),
+            land_sand_dark: p.land_sand_dark.hex().unwrap_or(d.land_sand_dark),
             gold_warm: p.gold_warm.hex().unwrap_or(d.gold_warm),
             sky_navy: p.sky_navy.hex().unwrap_or(d.sky_navy),
             sky_horizon: p.sky_horizon.hex().unwrap_or(d.sky_horizon),
@@ -290,6 +320,18 @@ pub struct PaletteJson {
     pub black: Option<Hex16>,
     /// 见 [`Theme::wood_warm`]。
     pub wood_warm: Option<Hex16>,
+    /// 深海水色（主地图海面瓦片底色；S18.9）
+    pub sea_deep: Option<Hex16>,
+    /// 浅海水色（岛缘浅滩 / 瓦片顶棱高光；S18.9）
+    pub sea_shallow: Option<Hex16>,
+    /// 礍石色（岛缘礍岩瓦片；S18.9）
+    pub reef: Option<Hex16>,
+    /// 陆地沙色（岛屿瓦片底色；S18.9）
+    pub land_sand: Option<Hex16>,
+    /// 陆地浅沙（瓦片顶棱高光；S18.9）
+    pub land_sand_light: Option<Hex16>,
+    /// 陆地暗沙（瓦片交错变体；S18.9）
+    pub land_sand_dark: Option<Hex16>,
     /// 见 [`Theme::gold_warm`]。
     pub gold_warm: Option<Hex16>,
     /// 见 [`Theme::sky_navy`]。

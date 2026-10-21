@@ -26,7 +26,13 @@
     "gold_warm": "0xFEA0",
     "sky_navy": "0x1948",
     "sky_horizon": "0x198A",
-    "moon_pale": "0xEF17"
+    "moon_pale": "0xEF17",
+    "sea_deep": "0x108A",
+    "sea_shallow": "0x1A30",
+    "reef": "0x4BCD",
+    "land_sand": "0xFD4D",
+    "land_sand_light": "0xFE51",
+    "land_sand_dark": "0xD4CA"
   },
   "fonts": {
     "font_size": 44,

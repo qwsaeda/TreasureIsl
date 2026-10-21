@@ -77,6 +77,17 @@ pub enum MapSlot {
 }
 
 impl MapSlot {
+    /// 地图 id（与 `balance.json` `selection.maps[].id` / `terrain.json` 键一致；
+    /// S18.9 地形查找用）。
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::M01 => "m01",
+            Self::M02 => "m02",
+            Self::M03 => "m03",
+        }
+    }
+
     /// 全部地图槽位（按枚举声明顺序，遍历用）。
     #[must_use]
     pub const fn all() -> [MapSlot; 3] {

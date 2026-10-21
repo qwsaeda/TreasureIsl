@@ -79,6 +79,7 @@
 | S18.7f | vs / main_map 剩余代码外壳退役 + 夜空统一 | **verified**：vs（夜空底 + 星点 + 血条槽底 + 竞技区 + 标题/提示 + 木框）、main_map（夜空底 + 画布框 + HUD 边角面板 + 底部命令盘 + 标题/提示 + 木框）全量 JSON 化；`chrome::scene_shell`/`bar_slot`/`scene_hint`/`deck_button` 代码外壳在这 2 场景退役；七场景视觉语言统一（夜空银标）+ 版面坐标 0 代码；EXP-106（原语批次调用位置=层序） |
 | S18.7g | 原语数据合法性固化进 doccheck2 | **verified**：新增 `check_primitives_data`（doccheck2 第 25 项）：6 种 kind / `color` 令牌名 / `params.icon` 注册表 / `grad` 令牌+steps / `tier` / `text_key` 存在性；这些错误在渲染上**不报错**（静默回退/跳过/显示裸 key）→ 现固化为门禁；负测证实（4 类脏数据→ 报错 / 恢复→ 0）；gate 23 项 0 失败（`evidence/S18.7g.log`） |
 | S18.7h | Bevy 壳 `--scene` 导航（7 场景 Bevy 渲染入口）+ 字体锚点差实测 | **verified**：`treasure-bevy-native --scene=<id>` 经 `ti_app::forward_nav::navigate` 导航到任意场景，其 DrawList（静态原语 + 运行时内容）实体化为 Bevy 精灵并离屏读回；实测 main_map/select_role 两场景出画（非黑像素 2073600/2073600）；**实测 CPU↔Bevy 文字锚点差 18px**（提示行：CPU 亮行 1806..1881 vs Bevy 1788..1864）→ 写入方案（风险 #3）与 S18.13 |
+| S18.9 | 地形数据 + 瓦片按地形取色（世界画布成「地图」） | **verified**：`assets/data/terrain.json`（渲染侧数据；图例全局 + 每图 rows）= 确定性生成（seed = 地图 id sha256：中心衰减岛 + 确定性抖动 + 岛缘浅礁 + BOSS/陆格宝藏 + 起点海面）；6 新暖色令牌（sea_deep/sea_shallow/reef/land_sand/land_sand_light/land_sand_dark，theme.rs ↔ theme.json 双写）；`ti_core::data::terrain()`（新 data/terrain.rs）+ main_map 瓦片按格取色（附约交错 + 降级）；doccheck2 第 26 项 `check_terrain_data`（行数/行宽/地形码/令牌合法性）；基线重生成 |
 | S18.8 | 收口：macroquad 后端退役（feature 删除 + 依赖树断言）+ 性能目标（native 60fps / wasm 30–60fps）+ release.md | 全 gate + 发布 |
 
 ## 6. 风险与缓解

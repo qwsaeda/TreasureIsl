@@ -1925,6 +1925,12 @@ impl SessionHost for GameApp {
 
 impl SceneHost for GameApp {}
 
+/// 地图槽位 → 地图 id（`terrain.json` 键；S18.9 地形查找）。
+#[must_use]
+pub fn map_slot_id(slot: MapSlot) -> &'static str {
+    slot.id()
+}
+
 #[cfg(test)]
 mod transition_tests {
     use super::transition_ease;

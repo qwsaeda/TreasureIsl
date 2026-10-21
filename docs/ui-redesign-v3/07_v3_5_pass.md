@@ -71,3 +71,23 @@
 
 **不变式**：全部改动走数据（`balance.json` / `theme.json` / `scenes.json`），代码只加
 dispatch；每步基线重生成 + 目视验收 + gate 全绿；地形生成必须**确定性**（seed 固定）。
+
+## 8. 实现记录（S18.9 已落地）
+
+- **数据落点**：`assets/data/terrain.json`（渲染侧数据，与 `scenes.json` 同级）=
+  `{schema_version, legend: {码 → {name, token, edge, alt}}, maps: {map_id → {rows: [...]}}}`；
+  业务表 `balance.json` **不动**（地形不参与规则，海陆不设阻挡）。
+- **生成规则**（一次性脚本生成、数据已落库，运行时不重算）：seed = 地图 id 的 sha256 前 8 位
+  → 中心衰减椭圆岛（半径 0.42×grid）+ 确定性抖动（LCG，抖动幅 0.35）→ 岛缘环 = `reef`
+  → BOSS 格 + 2 个陆格 = `treasure` → 玩家起点强制 `sea`（船从海面起航）。
+  ⇒ 同一地图永远同一地形（基线/快照可复现）。
+- **图例 → 配色**（新增 6 令牌，theme.rs ↔ theme.json 双写 + `theme_json` 测试锁一致）：
+  `sea_deep 0x108A` / `sea_shallow 0x1A30` / `reef 0x4BCD` /
+  `land_sand 0xFD4D` / `land_sand_light 0xFE51` / `land_sand_dark 0xD4CA`；
+  `treasure` 复用既有 `gold_warm`。
+- **渲染侧**：`ti_core::data::terrain()`（新 `data/terrain.rs`，`OnceLock` + 硬错误不 fallback）
+  → `main_map.rs` 瓦片循环按格取色（`token` 底色 + `edge` 顶棱；陆地按 (r+c) 奇偶用 `alt` 交错）；
+  地形表缺失/越界 = 回退 v2 单色（不 panic、不空图）。
+- **门禁**：`doccheck2` 新增第 26 项 `check_terrain_data`（行数/行宽 == balance grid_h/grid_w、
+  地形码 ⊆ legend、图例令牌 ∈ theme palette）。
+- **效果**：主地图从"单色冷蓝菱形"变为**航海图**（深蓝海 + 岛缘浅礁 + 暖沙岛 + 金色宝藏格）。

@@ -2090,6 +2090,95 @@ fn check_primitives_data(root: &Path) -> Vec<String> {
     errors
 }
 
+/// S18.9：地形表数据合法性（`assets/data/terrain.json`）。
+///
+/// - 每图 `rows` 行数 == `balance.json` 该图 `grid_h`，每行长度 == `grid_w`；
+/// - 地形码 ⊆ 全局 `legend` 键；
+/// - 图例的 `token`/`edge`/`alt` 必须是 `theme.json` palette 里的合法令牌
+///   （拼错 = 静默回退 `menu_bg`，画面变单色但不报错）。
+fn check_terrain_data(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(terrain_text) = read_file(root, "assets/data/terrain.json") else {
+        return vec!["assets/data/terrain.json 不存在，无法校验地形表".to_string()];
+    };
+    let Ok(terrain) = serde_json::from_str::<serde_json::Value>(&terrain_text) else {
+        return vec!["assets/data/terrain.json 解析失败".to_string()];
+    };
+    let balance = read_file(root, "assets/data/balance.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .unwrap_or(serde_json::Value::Null);
+    let theme = read_file(root, "assets/data/theme.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .unwrap_or(serde_json::Value::Null);
+    let palette = theme.get("palette").cloned().unwrap_or(serde_json::Value::Null);
+    let legend = terrain.get("legend").and_then(|l| l.as_object()).cloned().unwrap_or_default();
+    if legend.is_empty() {
+        errors.push("terrain.json: legend 不得为空".to_string());
+    }
+    for (code, lg) in &legend {
+        for key in ["token", "edge"] {
+            if let Some(tok) = lg.get(key).and_then(|v| v.as_str()) {
+                if palette.get(tok).is_none() {
+                    errors.push(format!(
+                        "terrain.json legend.{code}.{key}='{tok}' 非 theme.json palette 令牌（会静默回退）"
+                    ));
+                }
+            }
+        }
+        if let Some(alt) = lg.get("alt").and_then(|v| v.as_str()) {
+            if palette.get(alt).is_none() {
+                errors.push(format!(
+                    "terrain.json legend.{code}.alt='{alt}' 非 theme.json palette 令牌（会静默回退）"
+                ));
+            }
+        }
+    }
+    let maps = terrain.get("maps").and_then(|m| m.as_object()).cloned().unwrap_or_default();
+    for (id, rows_v) in &maps {
+        let rows: Vec<String> = rows_v
+            .get("rows")
+            .and_then(|r| r.as_array())
+            .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_owned)).collect())
+            .unwrap_or_default();
+        let spec = balance
+            .get("selection")
+            .and_then(|s| s.get("maps"))
+            .and_then(|m| m.as_array())
+            .and_then(|a| {
+                a.iter().find(|m| m.get("id").and_then(|v| v.as_str()) == Some(id.as_str()))
+            });
+        let (Some(spec), false) = (spec, rows.is_empty()) else {
+            if rows.is_empty() {
+                errors.push(format!("terrain.json maps.{id}: rows 不得为空"));
+            }
+            continue;
+        };
+        let gw = spec.get("grid_w").and_then(serde_json::Value::as_i64).unwrap_or(0);
+        let gh = spec.get("grid_h").and_then(serde_json::Value::as_i64).unwrap_or(0);
+        let n_rows = i64::try_from(rows.len()).unwrap_or(-1);
+        if n_rows != gh {
+            errors
+                .push(format!("terrain.json maps.{id}: rows 行数 {n_rows} != balance grid_h {gh}"));
+        }
+        for (i, row) in rows.iter().enumerate() {
+            let n_chars = i64::try_from(row.chars().count()).unwrap_or(-1);
+            if n_chars != gw {
+                errors.push(format!(
+                    "terrain.json maps.{id}.rows[{i}]: 长度 {n_chars} != balance grid_w {gw}"
+                ));
+            }
+            for (c, ch) in row.chars().enumerate() {
+                if !legend.contains_key(&ch.to_string()) {
+                    errors.push(format!(
+                        "terrain.json maps.{id}.rows[{i}][{c}]: 地形码 '{ch}' 不在 legend"
+                    ));
+                }
+            }
+        }
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -2120,9 +2209,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_render_framework_boundary(&root));
     all_errors.extend(check_ui_redesign_tokens(&root));
     all_errors.extend(check_primitives_data(&root));
+    all_errors.extend(check_terrain_data(&root));
 
     println!(
-        "doccheck2: {} error(s) across 25 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data)",
+        "doccheck2: {} error(s) across 26 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/baseline-mirror-identity/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data)",
         all_errors.len()
     );
     for err in &all_errors {

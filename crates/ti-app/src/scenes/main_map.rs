@@ -2,6 +2,7 @@
 //!
 //! 事件分派的跳转结果（`Vs` / `Message`）由路由层 [`crate::scenes::enter_target`]
 //! 处理——那是跨场景的公共跳转点，不属于本场景。
+use ti_core::data;
 use ti_core::data::{SceneLayout, balance};
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
@@ -367,18 +368,13 @@ impl Scene for MainMapScene {
 
         // 等距棋盘（代码画，1080 呈现层；S17.8 v3：G 依赖拟合进 `world_canvas`（2:1 菱形、
         // 8pt 对齐、画布中心对齐），缺席回退 v2 静态 `grid.*`（QB105）；`terrain_grid_w`² 铺满）
+        // S18.9：**按地形取色**（`assets/data/terrain.json` 数据 → theme 令牌）：
+        // 海/礁/陆/宝藏 四类各有底色 + 顶棱高光；陆块按 (r+c) 奇偶交错 `alt` 变体。
+        // 地形表缺失 = 回退 v2 单色（不 panic、不空图）。
         let gw_i = i32::try_from(gw).unwrap_or(0);
         let (tw, th) = (bg.tw, bg.th);
-        if gw_i > 0 && tw > 0 && th > 0 {
-            for r in 0..gw_i {
-                for c in 0..gw_i {
-                    let (sx, sy) = chrome::iso_cell_fit(r, c, &layout, gw);
-                    host.fill_rect(sx, sy, tw * 2, th * 2, crate::menu_shell::COLOR_MENU_BG);
-                    // 格间描边（浅一线，现代棋盘感）
-                    host.fill_rect(sx, sy, tw * 2, 1, crate::menu_shell::COLOR_BEVEL_HI);
-                }
-            }
-        }
+        draw_board(host, &layout, gw, gw_i, tw, th);
+
         // S18.7f：v3 版面外壳（夜空底 + 世界画布框 + HUD 边角面板 + 底部命令盘 + 标题 +
         // 提示 + 木框）100% 数据驱动 = `scenes.json` `main_map.primitives`（画布框
         // = 旧 `shell::world_canvas_frame` 同几何像素等价）。瓦片/实体/HUD 数值仍运行时。
@@ -461,5 +457,59 @@ impl Scene for MainMapScene {
         // QA032：hint 行统一走 `chrome::scene_hint`（i18n 单查收敛，EXP-082）
         // S15.6：key = `nav_hint`（`hint` 已并入，`strings.json` 删孤儿）
         chrome::scene_hint(host, "main_map", "scene.main_map.nav_hint");
+    }
+}
+
+/// S18.9：等距棋盘绘制 —— **按地形取色**（`assets/data/terrain.json` 数据 → theme 令牌）。
+///
+/// 地形表缺失 / 越界 = 回退 v2 单色（不 panic、不空图）。陆地按 (r+c) 奇偶用图例 `alt` 交错。
+fn draw_board(
+    host: &mut dyn SceneHost,
+    layout: &SceneLayout,
+    gw: u32,
+    gw_i: i32,
+    tw: i32,
+    th: i32,
+) {
+    if gw_i <= 0 || tw <= 0 || th <= 0 {
+        return;
+    }
+    if gw_i > 0 && tw > 0 && th > 0 {
+        let map_id = host.map_slot().map(crate::game_app::map_slot_id);
+        let terrain = data::terrain().ok();
+        let theme = host.theme().clone();
+        for r in 0..gw_i {
+            for c in 0..gw_i {
+                let (sx, sy) = chrome::iso_cell_fit(r, c, layout, gw);
+                let (base, edge) = terrain
+                    .and_then(|t| {
+                        let code = t.code_at(
+                            map_id?,
+                            u32::try_from(r).unwrap_or(0),
+                            u32::try_from(c).unwrap_or(0),
+                        )?;
+                        let lg = t.legend_of(code)?;
+                        let mut base =
+                            theme.by_name(&lg.token).unwrap_or(crate::menu_shell::COLOR_MENU_BG);
+                        if let Some(alt) = lg.alt.as_ref() {
+                            if (r + c) % 2 == 0 {
+                                if let Some(c2) = theme.by_name(alt) {
+                                    base = c2;
+                                }
+                            }
+                        }
+                        let edge =
+                            theme.by_name(&lg.edge).unwrap_or(crate::menu_shell::COLOR_BEVEL_HI);
+                        Some((base, edge))
+                    })
+                    .unwrap_or((
+                        crate::menu_shell::COLOR_MENU_BG,
+                        crate::menu_shell::COLOR_BEVEL_HI,
+                    ));
+                host.fill_rect(sx, sy, tw * 2, th * 2, base);
+                // 格间描边（浅一线，现代棋盘感）
+                host.fill_rect(sx, sy, tw * 2, 1, edge);
+            }
+        }
     }
 }

@@ -10,6 +10,7 @@
 //! 集成测试 `crates/ti-core/tests/data_tables.rs`；业务规格 `docs/business/`。
 
 mod balance;
+mod terrain;
 #[allow(unused_imports)]
 use balance::RawBalance;
 mod controls;
@@ -24,6 +25,7 @@ pub use controls::controls;
 pub use exhaust::{ExhaustScenarios, exhaust, exhaust_key_counts};
 pub use layout::scenes;
 pub use strings::{pairs, strings};
+pub use terrain::{TerrainDb, TerrainLegend, TerrainMap, terrain};
 pub use ui_icons::{HudIcon, IconDef, IndexMenuIcon, UiIconBindings, UiIcons, icon_ids, ui_icons};
 
 use std::collections::BTreeMap;
@@ -39,6 +41,7 @@ pub(crate) const BALANCE_JSON: &str = include_str!("../../../../assets/data/bala
 pub(crate) const STRINGS_JSON: &str = include_str!("../../../../assets/data/strings.json");
 /// 场景布局表（编译期内联）。
 pub(crate) const SCENES_JSON: &str = include_str!("../../../../assets/data/scenes.json");
+pub(crate) const TERRAIN_JSON: &str = include_str!("../../../../assets/data/terrain.json");
 /// 控件表（编译期内联；`scripts/gen_layout.py` 从 `ref/controls.json` 生成，
 /// S8.5 控件层数据源，`docs/impl/14_asset_enhancement.md`）。
 pub(crate) const CONTROLS_JSON: &str = include_str!("../../../../assets/data/controls.json");
