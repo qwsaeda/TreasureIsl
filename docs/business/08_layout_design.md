@@ -252,7 +252,7 @@
 | 改动 | 文件 | 说明 |
 |---|---|---|
 | 删逐像素 PCX blit | `sprite_atlas.rs` | 删除 `blit_sprite`/`blit_sprite_rgba`（写帧的逐像素路径）；PCX/图集**解码**保留供诊断工具 |
-| 删场景精灵上屏 | `game_app.rs` | `render`/`render_hd` 不再调 `blit_scene*` |
+| 删场景精灵上屏 | `game_app/render.rs` | `render`/`render_hd` 不再调 `blit_scene*` |
 | 诊断 bin 去 blit | `bin/element_dump.rs` | 改 decode-only 几何诊断（不产像素） |
 | 删 legacy 地形分支 | `terrain_atlas.rs` / `main_map.rs` | 主地图只走代码菱形格 + 代码棋子 |
 | 移除坐标转换契约 | `render_pipeline.rs` | 删 legacy↔1080 缩放函数（无 legacy 像素即无转换需求） |

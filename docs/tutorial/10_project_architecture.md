@@ -134,7 +134,7 @@ ti-core/src/
 
 ```
 ti-app/src/
-  game_app.rs       — 餐厅经理（GameApp + Scene 枚举 + SceneHost 实现）
+  game_app/       — 餐厅经理（GameApp + Scene 枚举 + SceneHost 实现）
   scenes/           — 服务员（index/select_role/select_map/main_map/vs/message/saveload）
   menu_shell.rs     — 摆盘台（帧缓冲/字形/呈现机制）
   sprite_atlas.rs   — 贴纸册（精灵图集）

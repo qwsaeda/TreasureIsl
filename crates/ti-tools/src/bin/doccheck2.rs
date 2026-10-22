@@ -32,7 +32,7 @@
 //!    `06_flywheel.md` 须存在且含「开轮必读清单」「飞轮回写」「停机条件」三关键词；
 //!    `docs/experience/index.md` 须登记 EXP-068。
 //!
-//! 9. **战斗玩家数值数据驱动（EXP-066 闭环）**：`game_app.rs` 的 `start_battle`
+//! 9. **战斗玩家数值数据驱动（EXP-066 闭环）**：`game_app/host.rs` 的 `start_battle`
 //!    不得写死 `Unit { hp: 1000, atk: 150 }`，须读 `balance().combat.player`。
 //!
 //! 10. **飞轮开轮必读脚本（EXP-070）**：`scripts/flywheel_readme.ps1` 存在、
@@ -462,7 +462,7 @@ fn extract_items_claim(line: &str) -> Option<usize> {
 fn check_headless_battle_api(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let headless = read_file(root, "crates/ti-app/src/bin/treasure_headless.rs");
-    let game_app = read_file(root, "crates/ti-app/src/game_app.rs");
+    let game_app = read_file(root, "crates/ti-app/src/game_app/battle.rs");
     let (Some(headless), Some(game_app)) = (headless, game_app) else {
         return vec![
             "treasure_headless.rs 或 game_app.rs 不存在，无法校验 BattleView API 一致性"
@@ -471,7 +471,7 @@ fn check_headless_battle_api(root: &Path) -> Vec<String> {
     };
     // 从 game_app.rs 抽 `pub struct BattleView` 的真实字段名集合
     let Some(struct_start) = game_app.find("pub struct BattleView") else {
-        return vec!["game_app.rs 缺少 `pub struct BattleView` 定义".to_string()];
+        return vec!["game_app/battle.rs 缺少 `pub struct BattleView` 定义".to_string()];
     };
     let after = &game_app[struct_start..];
     let brace = after.find('{').unwrap_or(after.len());
@@ -560,17 +560,17 @@ fn check_flywheel_readback(root: &Path) -> Vec<String> {
     errors
 }
 
-/// 9. 战斗玩家数值数据驱动（EXP-066 闭环）：`game_app.rs` 的 `start_battle`
+/// 9. 战斗玩家数值数据驱动（EXP-066 闭环）：`game_app/host.rs` 的 `start_battle`
 ///    不得写死 `Unit { hp: 1000, atk: 150 }`，须读 `balance().combat.player`。
 ///    机械判据：`game_app.rs` 里 `start_battle` 函数体须含 `balance().combat.player`
 ///    或 `combat.player` 引用（P0-1 修复后闭环验证，防再次回归）。
 fn check_battle_player_data_driven(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
-    let Some(game_app) = read_file(root, "crates/ti-app/src/game_app.rs") else {
-        return vec!["game_app.rs 不存在，无法校验战斗玩家数值数据驱动".to_string()];
+    let Some(game_app) = read_file(root, "crates/ti-app/src/game_app/host.rs") else {
+        return vec!["game_app/host.rs 不存在，无法校验战斗玩家数值数据驱动".to_string()];
     };
     let Some(sb_start) = game_app.find("fn start_battle") else {
-        return vec!["game_app.rs 缺少 `fn start_battle`".to_string()];
+        return vec!["game_app/host.rs 缺少 `fn start_battle`".to_string()];
     };
     // 取 start_battle 函数体（到下一个 `}` 闭合为止，简化取 800 字符窗口，按 char 边界截取；
     // 800 足以覆盖到 `b.combat.player` 引用行（FIND-013 改后引用在函数体中部）
@@ -1173,7 +1173,7 @@ fn check_exhaust_balance_dual_write(root: &Path) -> Vec<String> {
 
 /// 18. 运行时禁 legacy 坐标（S16 渲染线契约 1，`docs/process/08_render_arch.md`）：
 ///     呈现坐标系唯一 = 1080×1920。`ti-platform/gfx.rs`、`ti-app/menu_shell.rs`、
-///     `ti-app/scenes/**`、`ti-app/src/touch.rs`、`ti-app/src/game_app.rs` 与
+///     `ti-app/scenes/**`、`ti-app/src/touch.rs`、`ti-app/src/game_app/` 与
 ///     `ti-core/tests/**` 的**代码**（剔除 `//` / `///` / `//!` 注释与 `#[cfg(test)]`
 ///     模块）不得出现 legacy 尺寸字面量 `176` / `220` —— S15.2 事故根因就是
 ///     legacy 坐标泄漏进运行时（`select_map.rs` 曾写 `176 - text_x - 6` 钳进 176 宽屏）。
@@ -1187,7 +1187,7 @@ fn check_runtime_no_legacy_coords(root: &Path) -> Vec<String> {
         "crates/ti-platform/src/gfx.rs",
         "crates/ti-app/src/menu_shell.rs",
         "crates/ti-app/src/touch.rs",
-        "crates/ti-app/src/game_app.rs",
+        "crates/ti-app/src/game_app",
     ] {
         targets.push(root.join(rel));
     }

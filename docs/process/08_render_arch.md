@@ -10,7 +10,7 @@
 
 > **单一事实源**：《金银岛》**运行时**渲染架构 —— 分层、绘制原语、z-order（= 调用顺序）、坐标契约。
 > 任何改 `ti-platform/gfx.rs` / `ti-app/scenes/*` / `ti-app/menu_shell.rs` /
-> `ti-app/game_app.rs::render` 的代码，必须先读本文。
+> `ti-app/game_app/render.rs::render` 的代码，必须先读本文。
 >
 > **版面数值**（各场景坐标/配色/字号）在 [`../business/08_layout_design.md`](../business/08_layout_design.md)，
 > 本文不重复数值，只定架构。

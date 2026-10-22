@@ -229,7 +229,7 @@ Space（空格）/ 点按「摇骰前进」
 > 实现落点：`crates/ti-core/src/rules/progression.rs`（`ProgressionState`：`initial_unlocked` /
 > `unlocked` / `on_boss_defeated` / `is_cleared` / `can_select` / `from_unlocked` / `min_progression_to_select`
 > / `is_map_defeated` / `unlocked_mask` / `from_mask` / `for_save_restore` + `CLEARED_BIT`（bit 3 通关位））。
-> **app 层已接线**（`crates/ti-app/src/game_app.rs`）：开档 `unlocked_maps = initial_unlocked()`（仅 m01，非全开）；
+> **app 层已接线**（`crates/ti-app/src/game_app/`（S20.0b 拆分后的目录模块））：开档 `unlocked_maps = initial_unlocked()`（仅 m01，非全开）；
 > `battle_step` 胜利钩 = 击败当前图 BOSS → 规则层结算解锁下一图（幂等，失败不加），m03 胜另置 `GameApp.cleared` 通关位；
 > 逐图门禁只读接口 = `GameApp::is_cleared()`（m03 击败位）/ `GameApp::is_map_cleared(m)`；
 > `restore_save` 经 `unlocked_mask` 忠实还原（`mask=0` 旧档退最小前置链，矛盾掩码退链修当前图）；

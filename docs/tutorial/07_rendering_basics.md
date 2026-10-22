@@ -187,7 +187,7 @@ crates/ti-formats/src/font.rs — Font / Charset
 ```
 crates/ti-app/src/sprite_atlas.rs:12 — SpriteAtlas
 crates/ti-app/src/scenes/mod.rs:282   — blit_scene_sprites（SpriteHost 能力定义）
-crates/ti-app/src/game_app.rs:956     — GameApp 侧实现/调用
+crates/ti-app/src/game_app/`（S20.0b 拆分后按模块定位）     — GameApp 侧实现/调用
 ```
 
 ### 帧呈现

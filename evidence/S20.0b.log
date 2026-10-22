@@ -1,0 +1,44 @@
+=== S20.0b game_app.rs 上帝文件拆分（2159 行 → game_app/ 目录 9 模块） ===
+
+判据（本任务验收点）：
+1) `crates/ti-app/src/game_app.rs`（2181 行 / `impl GameApp` 单块 1168 行 / 69 方法 /
+   8 类职责）拆为目录模块 `crates/ti-app/src/game_app/`：
+   `mod`（类型 + 组合根 + 构造）、`state`（状态访问器）、`input`（输入路由）、
+   `render`（渲染 + 动效 + 摄像机）、`assets`（HD 资产注入）、`board`（环岛赛道）、
+   `battle`（战斗会话）、`saveload`（存读档）、`host`（9 个宿主 trait 接线）；
+2) 每个文件 ≤ 900 行（`scripts/code_budget.json` 阈值）、每个模块首部 doc 写明「负责什么 /
+   不负责什么」；
+3) 公共 API 路径**不变**（`ti_app::game_app::{GameApp, GameInput, Scene, BattleView, ...}`），
+   外部调用方零改动；
+4) 行为零变化：全 workspace 测试 86 个测试二进制全绿 + clippy 0 warning + gate 23 项全绿；
+5) 文档同步：`01_architecture.md` / `08_render_arch.md` / `09_render_framework.md` /
+   `progression.md` / `08_layout_design.md` / `release.md` / `gamebook.md` / `style.md`
+   / tutorial 3 篇的 `game_app.rs` 路径引用（教程的行号引用随拆分失效 → 改为模块路径）。
+6) audit 基线：`exempt_files` 里 `game_app.rs` 条目作废（文件已不存在）+ 6 个函数豁免路径不变。
+
+--- 1) 拆分后规模（python scripts/audit_code.py --report）---
+拆分前：215 文件 / 49479 行；最长文件 `game_app.rs` 2159 行；`impl GameApp` 单块 1168 行
+拆分后：223 文件 / 49656 行；`game_app/` 9 模块：mod 484 / state 231 / saveload 138 /
+        input 176 / render 199 / assets 228 / board 330 / battle 125 / host 512
+        ⇒ 最长文件 `game_app/` 内为 host.rs 512 行（阈值 900 ✓）
+全库最长文件：doccheck2.rs 2220（工具侧，已在基线豁免）→ game_app 已从榜首消失 ✓
+
+--- 2) 拆分手法（机械搬运 + 编译收敛）---
+- 按「方法整体（含前置 doc/attr）」解析原文件 → 按职责分桶 → 原文逐行搬移（不改语义）；
+- 私有字段对**子模块可见**（Rust：父模块私有项对其后代可见）⇒ 无需改字段可见性；
+- 跨模块调用点改 `pub(crate)`：`enter_main_map_at` / `enter_main_map`（board.rs）、
+  `restore_save`（saveload.rs）；
+- import 逐模块裁剪：`cargo fix` 去单项未用 + 手工裁 `use crate::scenes::{...}`（按模块
+  实际用到的宿主 trait 收敛）+ 跨模块 trait 方法调用方补 trait（render.rs→RenderHost/
+  SceneHost、state.rs→SpriteHost、board.rs→EconomyHost、input.rs→SceneKind/route_touch）；
+- 踩坑记录：首版按「方法起始行」切段 ⇒ 切在文档注释中间（E0658 expected item after doc
+  comment）；`cargo fix` 在重复定义状态下报 E0592 ⇒ 改用「含 doc/attr 的整体切分」重做。
+
+--- 3) 门禁 ---
+=== gate: TreasureIsl (23 items) ===
+=== gate: 0 failure(s) ===
+（23 项全 PASS；台账 184 任务 / 166 verified / 0 error；doccheck 0 error；doccheck2 0 error
+ —— 其中两条断言的源码路径随拆分改指新模块：BattleView API 一致性 → `game_app/battle.rs`、
+ 战斗玩家数值数据驱动 → `game_app/host.rs`）
+
+=== S20.0b verified ===

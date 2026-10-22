@@ -48,7 +48,7 @@ ti-app::menu_shell + ti-platform::gfx  帧缓冲 / 视口 / 缩放 / 上屏
 - 场景枚举与合法转换：`scenes/mod.rs`（`SceneKind` + `scene_transition!` 宏；转换表业务事实源 = [`07_ui_flow.md`](business/07_ui_flow.md) §1）；
 - 每场景一个 struct：`IndexScene` / `SelectRoleScene` / `SelectMapScene` / `MainMapScene` /
   `VsScene` / `MessageScene` / `SaveloadScene`（`Intro` 与 `Exit` 无独立资源，由 `Index`/清屏处理）；
-- 组合根：`game_app.rs::GameApp` 实现 `SceneHost`，方法全是**一行状态读写**；业务判定在 `scenes/*.rs`；
+- 组合根：`game_app::GameApp` 实现 `SceneHost`，方法全是**一行状态读写**；业务判定在 `scenes/*.rs`；
 - 渲染键：`SceneKind::asset_name()`（场景 `.Map` 精灵资源名），判别值 `discriminant()` 用于静态帧优化。
 
 ## 4. 输入接线

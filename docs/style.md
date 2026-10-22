@@ -344,7 +344,7 @@ REA 在本项目的角色 = **补结构化深度分析的洞**，非次级交叉
 ### 5.12.1 模块职责（内聚）
 
 1. **一个 `.rs` = 一个职责**；文件首部 doc 注释必须写清「本模块负责什么 / 不负责什么」；
-2. **上帝文件判定**：单文件 > 900 行 ⇒ 必须在台账有拆分任务（`crates/ti-app/src/game_app.rs` 是当前已知上帝文件，见基线豁免）；
+2. **上帝文件判定**：单文件 > 900 行 ⇒ 必须在台账有拆分任务（`crates/ti-app/src/game_app.rs`（已于 S20.0b 拆为 `game_app/` 目录模块）；当前已知上帝文件 = `crates/ti-tools/src/bin/doccheck2.rs` 是当前已知上帝文件，见基线豁免）；
 3. **一个 `impl` 块 = 一类职责**：`impl GameApp` 超过 ~600 行 ⇒ 拆子模块（`state` / `board` / `battle` / `saveload` / `host`），职责按「状态 / 领域 / 宿主接线」三类归位；
 4. **依赖方向单向**：`ti-core`（rules 纯函数 + data）← `ti-app`（状态机 + 表现）← `ti-engine`（Bevy 壳）；表现层不得反向依赖 rules 之外的内部实现（`docs/process/01_architecture.md`）。
 

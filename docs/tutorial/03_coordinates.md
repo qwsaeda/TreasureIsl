@@ -1176,7 +1176,7 @@ pub struct Viewport {
 
 ```
 crates/ti-app/src/scenes/mod.rs:291     — 摄像机跟随计算（SpriteHost 能力）
-crates/ti-app/src/game_app.rs:1035      — GameApp 侧调用
+crates/ti-app/src/game_app/`（S20.0b 拆分后按模块定位）      — GameApp 侧调用
 ```
 
 摄像机逻辑：玩家位置变化时，视野偏移使玩家保持在屏幕中央附近。

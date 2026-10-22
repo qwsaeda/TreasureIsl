@@ -58,7 +58,7 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
 把 S3 已 diff 验证的 12 个玩法模块接进 `ti-app` 交互壳，使游戏**从头可玩到尾**，
 并完成呈现层完善（S6）、HD 资产管线（S7）与 S8.0 标准化改造（流程 + 业务文档，见 `docs/plan-s8-refactor.md`）：
 
-- **S5.1 交互状态机**（`GameApp`）：`crates/ti-app/src/game_app.rs` 顶层场景状态机，
+- **S5.1 交互状态机**（`GameApp`）：`crates/ti-app/src/game_app/` 顶层场景状态机，
   把 `menu → selection → main_map → trade/build → battle → saveload` 全链路接通
   （`docs/gamebook.md` 接线规格）。壳层**只编排 UI/输入/渲染**，数值/判定全部委托
    `ti-core::rules` 已验证实现，不重抄公式（EXP-040 确定性约定；当前 RNG 为可播种 PCG，`rand_pcg`，S8.7 落地；旧 MSVC LCG 为 oracle 历史参照）。
@@ -186,7 +186,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 184 任务（165 verified；台账计数随 S8–S19 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 184 任务（166 verified；台账计数随 S8–S19 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`

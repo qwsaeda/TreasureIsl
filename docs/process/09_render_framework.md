@@ -96,7 +96,7 @@ pub struct FontConfig {
 
 **留在 ti-app 的**：
 - `scenes/*.rs`（游戏业务渲染：index/main_map/vs/saveload/...）
-- `game_app.rs`（游戏状态机）
+- `game_app/`（游戏状态机）
 - `forward_nav.rs`（游戏导航）
 - `touch.rs`（游戏触摸命中，调用 ti-render 的 iso 投影）
 - `shell_ui.rs`（游戏 UI 组件：菜单标签/状态文本）

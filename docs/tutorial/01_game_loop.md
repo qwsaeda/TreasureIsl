@@ -173,12 +173,12 @@ native_index_system(world);   // .after(render_system)
 | 计算 dt | Bevy `Time::delta()` + `set_frame_delta_ms()` | `treasure_bevy.rs::render_system` |
 | 收集输入 | `input_system` → `GameApp::poll` → `route_input()` | `treasure_bevy.rs` + `scenes/mod.rs` |
 | 更新状态 | 各场景 `on_input()` / `on_touch()` | `scenes/*.rs` |
-| 渲染 | `g.render()` → 各场景 `render()` → DrawList | `game_app.rs` + `scenes/mod.rs` |
+| 渲染 | `g.render()` → 各场景 `render()` → DrawList | `game_app/` + `scenes/mod.rs` |
 | 呈现 | DrawList → Bevy 实体（`native_index_system`）→ Bevy 渲染器 | `ti-engine/src/scene_render.rs` |
 
 ### 设计要点
 
-1. **帧耗时注入**：`set_frame_delta_ms` 让业务层知道本帧耗时，驱动动画推进（`game_app.rs`）
+1. **帧耗时注入**：`set_frame_delta_ms` 让业务层知道本帧耗时，驱动动画推进（`game_app/`）
 2. **绘制目标可插拒**：`set_record_draw(true)` → 绘制命令进 DrawList（交 Bevy 实体化）；
    `false` → CPU 帧缓冲（headless 测试 / 诊断 bin 路径）
 3. **静态帧跳帧**（S17.9）：过渡窗口内逐帧渲染，静止帧仍按变化键跳过重绘
@@ -195,7 +195,7 @@ native_index_system(world);   // .after(render_system)
 
 ### 练习 2：理解按需渲染
 
-在 `game_app.rs` 的 `last_rendered` / `last_rendered_scene` 双键判断处思考：
+在 `game_app/` 的 `last_rendered` / `last_rendered_scene` 双键判断处思考：
 - 如果去掉这个条件，每帧都渲染，会发生什么？
 - 为什么 `last_rendered_scene != scene_key` 也要检查？
 

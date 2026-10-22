@@ -1,6 +1,5 @@
 {
   "exempt_files": {
-    "crates/ti-app/src/game_app.rs": "S20.1 拆分（state/board/battle/saveload/host 子模块）",
     "crates/ti-tools/src/bin/doccheck2.rs": "S20.1 拆分（按断言族分文件：layout/primitives/scene/data/asset）"
   },
   "exempt_fns": {
@@ -15,5 +14,5 @@
   "max_file_lines": 900,
   "max_fn_lines": 140,
   "max_repeat": 5,
-  "note": "基线 = 2026-10-21 审计时的现状（棘轮起点）。新增违规 ⇒ --check FAIL；整改后从基线删除对应条目。S20.0c 已收敛 toast 三连（7 处 → 1 处 helper），该条豁免清空。"
+  "note": "基线 = 2026-10-21 审计时的现状（棘轮起点）。新增违规 ⇒ --check FAIL；整改后从基线删除对应条目。S20.0c 已收敛 toast 三连（7 处 → 1 处 helper），该条豁免清空；S20.0b 已把 game_app.rs 拆为 game_app/ 目录模块（该文件豁免作废）。"
 }

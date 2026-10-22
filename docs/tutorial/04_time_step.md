@@ -137,7 +137,7 @@
 ### 本项目时间处理
 
 ```
-crates/ti-app/src/game_app.rs  — set_frame_delta_ms
+crates/ti-app/src/game_app/  — set_frame_delta_ms
 crates/ti-engine/src/bin/treasure_bevy.rs — 帧耗时取 Bevy 内建时钟（Time::delta）
 ```
 
@@ -184,7 +184,7 @@ crates/ti-engine/src/bin/treasure_bevy.rs — 帧耗时取 Bevy 内建时钟（T
 
 ### 练习 3：识别动画推进
 
-在 `game_app.rs` 中搜索 `frame_delta` 或 `last_frame_ms`，找到帧时间如何驱动动画。
+在 `game_app/` 中搜索 `frame_delta` 或 `last_frame_ms`，找到帧时间如何驱动动画。
 
 ## 常见坑
 

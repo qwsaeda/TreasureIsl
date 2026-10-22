@@ -33,7 +33,7 @@
 
 ```
 ti-app/src/
-  game_app.rs        组合根：状态字段 + 键位/触摸/帧路由 + impl SceneHost
+  game_app/        组合根：状态字段 + 键位/触摸/帧路由 + impl SceneHost
   scenes/mod.rs      SceneHost 能力接口 + Scene trait + 路由（route_*）
   scenes/<scene>.rs  每场景一个 struct：on_input / on_touch / render
   menu_shell.rs      帧缓冲 / 字形 / 呈现机制（渲染子系统）
@@ -44,7 +44,7 @@ ti-app/src/
 
 1. 场景 struct **不持有** `GameApp`，只持有 `&mut dyn SceneHost`；
 2. `SceneHost` 的每个方法都是**一行状态读写 / 表现转发**，业务判定在 `scenes/*.rs`；
-3. `game_app.rs` 不出现 `handle_X` / `touch_X` / `render_X` 场景分支；
+3. `game_app/` 不出现 `handle_X` / `touch_X` / `render_X` 场景分支；
 4. 场景之间需要同时可变借用两个字段时（如 `map_session` + `rng`），
    由 `SceneHost` 提供**单一能力方法**（`map_session_move`），避免宿主暴露裸字段引用；
 5. **现状（过渡期）**：`SceneHost` 是**单一宽接口**（约 60 方法，`scenes/mod.rs` L355+），
@@ -69,7 +69,7 @@ ti-app/src/
 | `ti-formats` | 资源格式解析/序列化（pak/lpk、PCX、字体、`.Map`、存档） | 真实资产，保留 |
 | `ti-core` | 玩法规则（菜单/选人/选图/地图/贸易/建造/战斗/卡牌/存读档/消息/RNG） | 含 67 处「推测」（2026-10-10 实数，含 oracle+rules+tests），S8 重写 |
 | `ti-platform` | 帧缓冲、输入、音频、存储、设置 | |
-| `ti-app` | 场景状态机、UI 控件、三端 bin（native/wasm/android/headless） | 内部分层见 §1.1；组合根 `game_app.rs` + 场景模块 `scenes/` |
+| `ti-app` | 场景状态机、UI 控件、三端 bin（native/wasm/android/headless） | 内部分层见 §1.1；组合根 `game_app/` + 场景模块 `scenes/` |
 | `ti-tools` | 离线工具：unpak / map2json / build_assets / controls / classify / specskel / doccheck | 工具链落点 |
 
 ## 3. trait 约定

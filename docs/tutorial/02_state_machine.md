@@ -92,7 +92,7 @@ crates/ti-app/src/game_app.rs           — Scene 枚举
 crates/ti-app/src/scenes/mod.rs        — Scene trait + 路由
 ```
 
-### Scene 枚举（game_app.rs:52）
+### Scene 枚举（game_app/`（S20.0b 拆分后按模块定位））
 
 ```rust
 pub enum Scene {
