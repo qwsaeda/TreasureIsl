@@ -426,6 +426,9 @@ impl Scene for MainMapScene {
         // S19：环岛赛道（路径连线 + 空间标记 + 骰子数 + 落格提示条）
         render_track(host, &layout, gw, &mut entity_texts);
 
+        // S19.7：航程条（赛道摊平成进度条：玩家位置 + BOSS 目的地 + 特殊格标记）
+        chrome::voyage_bar(host, "main_map");
+
         // 第二遍：实体标签（28px 提示档，QA142 全部文本最上层）
         for (x, y, lbl) in &entity_texts {
             host.draw_hint_text(lbl, *x, *y, chrome::COLOR_TEXT_ON_PARCH);
@@ -446,17 +449,8 @@ fn render_track(
     entity_texts: &mut Vec<(i32, i32, &str)>,
 ) {
     // 9 分区配色（对齐原版地形类别码 1..9；theme 令牌缺失 = 金暖色兜底）
-    const GROUP_TOKENS: [&str; 9] = [
-        "land_sand",
-        "reef",
-        "sea_shallow",
-        "gold_warm",
-        "moon_pale",
-        "brass",
-        "secondary",
-        "hilite",
-        "danger",
-    ];
+    // S19.7 D2 收敛：分区→令牌表单一事实源 = `chrome::group_color_token`（此前本文件与
+    // `chrome.rs` 各抄一份 ⇒ 改配色必漏一处）。
     let spaces = host.board_spaces();
     if spaces.len() < 2 {
         return;
@@ -464,8 +458,7 @@ fn render_track(
     let (tw, th) = chrome::iso_tile_fit(layout, gw);
     let theme = host.theme().clone();
     let group_color = |g: u8| -> u16 {
-        let idx = ((usize::from(g)).saturating_sub(1)).min(GROUP_TOKENS.len() - 1);
-        theme.by_name(GROUP_TOKENS[idx]).unwrap_or(chrome::COLOR_GOLD_WARM)
+        theme.by_name(chrome::group_color_token(g)).unwrap_or(chrome::COLOR_GOLD_WARM)
     };
     // 路径连线（先画线，再画标记，标记盖在线上）
     let centers: Vec<(i32, i32)> = spaces
@@ -493,13 +486,13 @@ fn render_track(
             );
         }
     }
-    // 空间标记 + 特殊格图标
+    // 空间标记 + 特殊格图标（S19.7 D2：标记 14×14 → 20×20、图标 22 → 28，提升可读性）
     for (i, sp) in spaces.iter().enumerate() {
         let (cx, cy) = centers[i];
         let color = group_color(sp.group);
-        host.fill_rect(cx - 7, cy - 7, 14, 14, color);
-        host.fill_rect(cx - 7, cy - 7, 14, 1, chrome::COLOR_BEVEL_HI);
-        host.fill_rect(cx - 7, cy + 6, 14, 1, chrome::COLOR_BEVEL_SHADOW);
+        host.fill_rect(cx - 10, cy - 10, 20, 20, color);
+        host.fill_rect(cx - 10, cy - 10, 20, 1, chrome::COLOR_BEVEL_HI);
+        host.fill_rect(cx - 10, cy + 9, 20, 1, chrome::COLOR_BEVEL_SHADOW);
         let icon = match sp.kind {
             SpaceKind::Start => Some(("flag", chrome::COLOR_GOLD_WARM)),
             SpaceKind::Port => Some(("beacon", chrome::COLOR_GOLD_WARM)),
@@ -511,7 +504,7 @@ fn render_track(
             SpaceKind::Plain => None,
         };
         if let Some((name, tint)) = icon {
-            chrome::entity_icon(host, name, cx - 11, cy - 23, 22, tint);
+            chrome::entity_icon(host, name, cx - 14, cy - 30, 28, tint);
         }
         // BOSS / 起点 标签（全部文本最上层，QA142）
         match sp.kind {
@@ -534,10 +527,33 @@ fn render_track(
         host.draw_hint_text(&roll_str, rx, 1296, chrome::COLOR_GOLD_WARM);
     }
     // 落格提示条（按钮下方，`board_toast` 过期 = `None`）
-    if let Some(toast) = host.board_toast() {
-        let tx = 540 - host.shell().hint_text_width_px(&toast) / 2;
-        host.draw_hint_text(&toast, tx, 1470, chrome::COLOR_TEXT_ON_PARCH);
-    }
+    render_board_toast(host);
+}
+
+/// 落格提示条（S19.7 D3）：加**底板**（`brass_dark` + 黄铜边）——原实现直接画字飘在海面上，
+/// 对比度不足（其它 HUD 元素都有底板）；底板宽度按文字宽度自适应，8pt 栅格对齐。
+/// 纵向位置 1520（面板 1484..1556）：在摇骰按钮下沿 1448 与命令盘上沿 1600 之间，不重叠。
+fn render_board_toast(host: &mut dyn SceneHost) {
+    let Some(toast) = host.board_toast() else {
+        return;
+    };
+    let tw = host.shell().hint_text_width_px(&toast);
+    let pad = 24;
+    let panel_w = (tw + pad * 2).max(240);
+    let panel_h = 72;
+    let px = 540 - panel_w / 2;
+    let py = 1520 - panel_h / 2;
+    let theme = host.theme().clone();
+    // 底板用 `brass_dark`（`panel_warm` 在深海底上≈隐形 —— RGB565 (24,24,16) 与底图同色）
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    host.fill_rect(px, py, panel_w, panel_h, panel);
+    host.fill_rect(px, py, panel_w, 2, brass);
+    host.fill_rect(px, py + panel_h - 2, panel_w, 2, brass);
+    host.fill_rect(px, py, 2, panel_h, brass);
+    host.fill_rect(px + panel_w - 2, py, 2, panel_h, brass);
+    let tx = 540 - tw / 2;
+    host.draw_hint_text(&toast, tx, 1520, chrome::COLOR_TEXT_ON_PARCH);
 }
 
 /// S18.9：等距棋盘绘制 —— **按地形取色**（`assets/data/terrain.json` 数据 → theme 令牌）。

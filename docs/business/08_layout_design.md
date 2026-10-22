@@ -174,7 +174,9 @@
 | 命令盘 · 贸易（v3） | `deck_trade {x:240, y:1600, w:200, h:80}` | P-UW4-3 底部命令盘：`chrome::deck_button`（面板 + 图标 + 28px 标签）；点按 = 买商品 1（与键盘 T / v2 `hud_trade` 同语义） |
 | 命令盘 · 出售（v3） | `deck_sell {x:460, y:1600, w:200, h:80}` | 命令盘第 2 键 = 全卖商品 1（键盘 Y / v2 `hud_sell`） |
 | 命令盘 · 建造（v3） | `deck_build {x:680, y:1600, w:200, h:80}` | 命令盘第 3 键 = 造 Castle（键盘 B / v2 `hud_build`） |
-| 摇骰前进 · 主操作（S19） | `deck_spin {x:336, y:1328, w:400, h:120}` | S19 环岛赛道主操作：摇骰 → 沿赛道前进 N 格（`rules::board`，`progression.md` §环岛赛道）；面板 + 骰子/舵轮图标（`assets/ui/dice.png`/`helm.png`）+「摇骰前进」标签（`scene.main_map.hud.spin`）；点按 / 空格 = `GameInput::Spin`；8pt 栅格（x336=42×8、y1328=166×8） |
+| 摇骰前进 · 主操作（S19） | `deck_spin {x:336, y:1328, w:400, h:120}` | S19 环岛赛道主操作：摇骰 → 沿赛道前进 N 格（`rules::board`，`progression.md` §环岛赛道）；面板 + 骰子/舵轮图标（`assets/ui/dice.png`/`helm.png`）+「摇骰前进」标签（`scene.main_map.hud.spin`）；点按 / 空格 = `GameInput::Spin`；8pt 栅格（x336=42×8、y1328=166×8）；S19.7 构图：骰子 `dice.png` (360,1352,72,72) + 舵轮 `helm.png` (444,1352,72,72) **相邻成组**（原 helm 在右端 844，中间 280px 空档像两张不相干的图），标签 (536,1328,190,120) |
+| 航程条（S19.7） | `voyage_bar {x:120, y:1056, w:840, h:120}` | S19.7 D1：把环岛赛道**摊平成进度条**（v3.5 §3「空出来的下方空间 → 放航程条（进度条 + 目的地标记）」）：底板 `brass_dark` + 黄铜槽 + 每格一点（分区色，特殊格加亮）+ 玩家标记（`compass` 暖金）+ BOSS 标记（`sword` danger）；底板色**不用 `panel_warm`**（RGB565 (24,24,16) 与深海底图同色 ⇒ 隐形）；8pt 栅格（x120=15×8、y1056=132×8、w840=105×8、h120=15×8） |
+| 落格提示条（S19.7） | 运行时绘制，中心 y=1520（面板 1484..1556） | S19.7 D3：提示条加 `brass_dark` 底板 + 黄铜边框（宽度按文字自适应，最小 240；`panel_warm` 在深海上隐形）；纵向落在摇骰按钮下沿 1448 与命令盘上沿 1600 之间；骰点提示「掷出 N」在 y=1296 |
 | 画布实体比例（v3） | `canvas_entities {player:100, landmark:80, boss:96}` | 实体边长 = `board_fit.tw` × 百分比（100/80/96）：15 格图 tw=32 → 32/26/31；20 格图 tw=24 → 24/19/23；缺席回退 v2 `player.size` 等（QA106） |
 | 视觉重心锚（v3） | `focus_anchor {bbox:{x:43, y:192, w:1004, h:710}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` main_map `focus.bbox_pct{4,10,93,77}` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点 |
 

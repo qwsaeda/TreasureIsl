@@ -22,7 +22,12 @@ $fail = 0
 foreach ($s in $scenes) {
     Write-Host ""
     Write-Host "=== 预览场景: $s ===" -ForegroundColor Cyan
-    & cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --scene=$s --shot 2>&1 |
+    # S19.7 D5：main_map 带运行时状态出图（`--spin=5`，固定 seed=42 ⇒ 可复现，
+    # 且必落在有落格事件的格上 ⇒ 提示条可见 = 验收证据）
+    # 注意：`$extra` 不能带前导空格（否则整个参数变成 " --spin=5" 解析失败）
+    $extra = ''
+    if ($s -eq 'main_map') { $extra = '--spin=5' }
+    & cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --scene=$s --shot $extra 2>&1 |
         Select-String -Pattern '\[shot\]' | ForEach-Object { Write-Host "  $_" }
 
     $png = "evidence\bevy_native_$s.png"

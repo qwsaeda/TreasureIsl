@@ -593,10 +593,27 @@ fn main() {
         .skip(1)
         .find_map(|a| a.strip_prefix("--scene=").map(str::to_owned))
         .unwrap_or_else(|| "index".to_owned());
+    // S19.7 D5：出图带状态（`--spin=N`）—— 摇 N 次骰后再截图 ⇒ 落格提示条 / 航程条可见
+    // （静态出图不含运行时状态，提示条此前无出图证据）。
+    let spin_n = std::env::args()
+        .skip(1)
+        .find_map(|a| a.strip_prefix("--spin=").and_then(|v| v.parse::<u32>().ok()))
+        .unwrap_or(0);
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);
     if scene_id != "index" {
         ti_app::forward_nav::navigate(&mut game, &scene_id);
+    }
+    if spin_n > 0 {
+        // 固定种子（同 S18.4 selftest 口径 seed=42）⇒ 出图可复现（否则每次落点不同，
+        // 可能落在无事件的普通格 ⇒ 提示条时有时无，验收证据不稳定）。
+        game.set_rng_seed(42);
+        for _ in 0..spin_n {
+            game.handle(ti_app::GameInput::Spin);
+        }
+        // S19.7 D5：提示条按帧衰减，而离屏截图的实际捕获帧受贴图异步加载影响（≫120 帧）
+        // ⇒ 出图里提示条已过期。这里顶住衰减，保证出图含提示条（验收证据）。
+        game.hold_board_toast();
     }
     if !selftest {
         // S18.7a: live path = draw list (Bevy entities); the scene code is unchanged.

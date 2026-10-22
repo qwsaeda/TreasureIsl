@@ -1455,6 +1455,17 @@ impl GameApp {
         }
     }
 
+    /// 保持落格提示条常驻（出图取证用）。
+    ///
+    /// S19.7 D5：落格提示条按帧衰减（120 帧），而离屏截图的**实际捕获帧**受贴图异步
+    /// 加载影响（远大于 120 帧）⇒ 提示条在出图里已过期、无法作为验收证据。
+    /// 本方法把衰减计数顶到极大值，使提示条在截图帧仍在（只影响出图模式）。
+    pub fn hold_board_toast(&mut self) {
+        if self.board_toast.is_some() {
+            self.board_toast_ticks = u32::MAX;
+        }
+    }
+
     /// 渲染当前场景：场景模块绘制（`scenes/*.rs::render`），纯代码绘制
     /// （`08_render_arch.md` 契约 2：S15.4 起无 legacy 精灵层叠加）。
     ///

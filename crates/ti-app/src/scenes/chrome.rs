@@ -18,6 +18,7 @@ use ti_render::theme::Theme;
 
 use crate::scenes::{RenderHost, SceneHost};
 use ti_core::data::{IconDef, Primitive, icon_ids, ui_icons};
+use ti_core::rules::board::SpaceKind;
 
 // === 颜色常量重导出（从 Theme 默认值，兼容旧导入路径） ===
 
@@ -177,6 +178,8 @@ pub mod keys {
     pub const DECK_BUILD: &str = "deck_build";
     /// v3 「摇骰前进」主操作按钮（extra = `main_map.deck_spin`，`progression.md` §环岛赛道）。
     pub const DECK_SPIN: &str = "deck_spin";
+    /// v3 航程条矩形键（extra = `main_map.voyage_bar`，S19.7 航程进度条）。
+    pub const VOYAGE_BAR: &str = "voyage_bar";
     /// v2 HUD 经济按钮「贸易」矩形键（extra = `main_map.hud_trade`）。
     pub const HUD_TRADE: &str = "hud_trade";
     /// v2 HUD 经济按钮「出售」矩形键（extra = `main_map.hud_sell`）。
@@ -305,6 +308,86 @@ pub fn world_canvas_frame(host: &mut dyn SceneHost, scene_id: &str) {
     }
     let theme = host.theme().clone();
     with_canvas(host, |c| ti_render::shell::world_canvas_frame(c, &theme, rc.x, rc.y, rc.w, rc.h));
+}
+
+/// 分区号 → 主题色令牌（9 分区配色，对齐原版地形类别码 1..9；`legacy/docs/facts/map.md` F-308）。
+///
+/// 单一事实源（S19.7 D2 收敛）：赛道标记（`main_map.rs`）与航程条（`chrome::voyage_bar`）共用本表
+/// （此前两处各抄一份 ⇒ 改配色必漏一处）。
+#[must_use]
+pub fn group_color_token(group: u8) -> &'static str {
+    const TOKENS: [&str; 9] = [
+        "land_sand",
+        "reef",
+        "sea_shallow",
+        "gold_warm",
+        "moon_pale",
+        "brass",
+        "secondary",
+        "hilite",
+        "danger",
+    ];
+    let i = (usize::from(group).saturating_sub(1)).min(TOKENS.len() - 1);
+    TOKENS[i]
+}
+
+/// S19.7 航程条（`main_map.voyage_bar`）：把环岛赛道**摊平成一条进度条**，
+/// 显示玩家在岛上的位置 + BOSS 目的地 + 特殊格标记。
+///
+/// 业务依据（`docs/business/progression.md` §落格节奏 / §BOSS 触发规则）：
+/// 赛道 = 岛屿外环的有序空间序列；本条 = 「绕岛进度」的可视化载体
+/// （v3.5 §3「空出来的下方空间 → 放航程条（进度条 + 目的地标记）」）。
+///
+/// 画法：底板（`brass_dark`，`panel_warm` 在深海底上隐形）+ 一条黄铜槽 + 每格一个小点（按分区色）+
+/// 玩家标记（`compass` 图标，暖金）+ BOSS 标记（`sword` 图标，danger 色）。
+/// 无赛道（`board_spaces` 空）/ 键缺失 = 不画。
+pub fn voyage_bar(host: &mut dyn SceneHost, scene_id: &str) {
+    let layout = scene_layout(scene_id);
+    let Some(rect) = layout.extra.get(keys::VOYAGE_BAR) else {
+        return;
+    };
+    if rect.w <= 0 || rect.h <= 0 {
+        return;
+    }
+    let spaces = host.board_spaces();
+    if spaces.len() < 2 {
+        return;
+    }
+    let count = i32::try_from(spaces.len()).unwrap_or(0);
+    let player_idx = i32::try_from(host.board_index()).unwrap_or(0).min(count - 1);
+    let theme = host.theme().clone();
+    // 底板用 `brass_dark`（`panel_warm` 在深海底上≈隐形 —— RGB565 (24,24,16) 与底图同色）
+    let panel = theme.by_name("brass_dark").unwrap_or(COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(COLOR_GOLD_WARM);
+    let brass_dark = theme.by_name("brass_dark").unwrap_or(COLOR_GOLD_WARM);
+    let danger = crate::menu_shell::COLOR_DANGER;
+
+    // 底板 + 槽（8pt 栅格：x/y/w/h 已整除）
+    host.fill_rect(rect.x, rect.y, rect.w, rect.h, panel);
+    host.fill_rect(rect.x, rect.y, rect.w, 2, brass);
+    host.fill_rect(rect.x, rect.y + rect.h - 2, rect.w, 2, brass_dark);
+    let track_y = rect.y + rect.h / 2;
+    let pad = 24;
+    let inner_w = rect.w - pad * 2;
+    host.fill_rect(rect.x + pad, track_y - 3, inner_w, 6, brass_dark);
+
+    // 每格一点（按分区色，特殊格加亮）
+    let step = inner_w / count.max(1);
+    for (i, sp) in spaces.iter().enumerate() {
+        let x = rect.x + pad + i32::try_from(i).unwrap_or(0) * step;
+        let c = theme.by_name(group_color_token(sp.group)).unwrap_or(COLOR_GOLD_WARM);
+        let special = !matches!(sp.kind, SpaceKind::Plain);
+        let dot = if special { 10 } else { 6 };
+        host.fill_rect(x, track_y - dot / 2, dot, dot, c);
+    }
+
+    // 玩家标记（暖金 compass）+ BOSS 标记（danger sword）
+    let player_x = rect.x + pad + player_idx * step;
+    entity_icon(host, "compass", player_x - 14, track_y - 40, 28, COLOR_GOLD_WARM);
+    if let Some(boss_i) = spaces.iter().position(|s| s.kind == SpaceKind::Boss) {
+        let boss_x = rect.x + pad + i32::try_from(boss_i).unwrap_or(0) * step;
+        entity_icon(host, "sword", boss_x - 12, track_y + 14, 24, danger);
+    }
 }
 
 /// v3 底部命令盘按钮（`main_map`）：读 `<key>` 矩形（`deck_trade`/`deck_sell`/`deck_build`），
