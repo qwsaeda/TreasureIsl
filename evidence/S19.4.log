@@ -1,0 +1,51 @@
+=== S19.4 落格节奏（类型比例化 + 12 格周期） ===
+
+判据（本任务验收点）：
+1) 落格类型**按比例分配**（`scripts/extract_board.py`：第 k 个普通格取相位 k×12/普通格数）
+   ⇒ 各图落格密度与赛道格数等比（固定周期落在不同长度赛道上会得到不同宝藏/遭遇数量：
+   m02 3 个宝藏 vs m03 1 个 ⇒ 跨图经济节奏失衡）。
+2) 12 格周期落格节奏（plain 5 / event 2 / card 2 / battle 2 / treasure 1），业务理由：
+   - 死格（plain）44%~45% → 39%~40%（终点格才结算 ⇒ 死格 = 白走一格；每次摇骰「有内容」比例 ~55%→~60%）；
+   - 宝藏密度 1/14 → 1/12：宝藏是唯一大额奖励通道（占每图净收入 ~55%），落格期望 0.6 → 0.9 次/图
+     （否则整图不中大奖 ⇒ 见 BOSS 时仅 1150 金，攒金断档）；
+   - 跨图宝藏密度：m03 3% → 6.1%，与 m01/m02 对齐；
+   - 遭遇密度 2/12：实测每图 1.9~2.6 次、暂存扣血 58~77（HP 2000 ⇒ 3~4%）⇒ 仍是可控风险。
+3) `event` 与 `card` 两类落格行为一致（都必抽一张卡）。**`balance.cards.event_chance` 不参与
+   赛道落格结算**（仅用于 legacy 移动路径 `rules::main_map`）—— 评审决定：事件格「概率化」超出
+   「数值打磨」范围，已回退为必抽卡。
+4) 跨图节奏收敛：「见 BOSS 时金」1328~1371（极差 3.2%）。
+5) 测试固化：跨图落格密度不变量（event/card/battle 8%~20%、treasure ≥3%、plain 30%~60%）
+   + 每图 ≥1 宝藏格 + e2e（未现提示 + 抽卡 + 现身切 Vs + 位置=BOSS 格）。
+6) 文档同步 `docs/business/progression.md` §落格节奏（含 14 vs 12 周期业务理由表）+ §经济节奏；
+   台账 S19.4 verified。
+7) gate 22 项全绿。
+
+--- 1) 重生成后落格分布（python 校验 board.json，extract_board --check 幂等）---
+m01 45 格 {'start':1,'plain':18,'city':1,'event':7,'card':7,'battle':6,'boss':1,'port':1,'treasure':3}
+m02 46 格 {'start':1,'plain':20,'event':6,'card':6,'boss':1,'port':1,'battle':7,'city':1,'treasure':3}
+m03 33 格 {'start':1,'plain':13,'event':5,'card':5,'city':1,'battle':4,'port':1,'boss':1,'treasure':2}
+
+--- 2) 跨图节奏实测（蒙特卡洛 2 万次/图，终点格结算，event/card 均必抽卡）---
+map  cells  ev/cd/bt/tr/pl   E[spins] E[gold] E[cards] E[battl] E[treas] E[hp]
+m01  45     7/7/6/3/18       21.1     1339    6.5     2.6     0.9     77
+m02  46     6/6/7/3/20       17.9     1328    5.2     2.0     0.9     60
+m03  33     5/5/4/2/13       15.9     1371    4.9     1.9     0.9     58
+「见 BOSS 时金」极差 = 3.2%（1328 / 1339 / 1371）
+
+--- 3) 测试实跑 ---
+ti-core（cargo test -p ti-core --lib 116 passed / 0 failed）：
+  rules::board::tests::board_landing_rhythm_is_consistent_across_maps （跨图落格密度不变量）
+  rules::board::tests::board_data_matches_extraction （每图 ≥1 宝藏格）
+ti-app：e2e_playthrough::e2e_board_spin_loop （未现提示 + 抽卡 + 现身切 Vs + 位置=BOSS 格）——ok。
+
+--- 4) gate ---
+=== gate: TreasureIsl (22 items) ===
+=== gate: 0 failure(s) ===
+（22 项全 PASS；台账 175 任务 / 161 verified / 0 error；doccheck 0 error；doccheck2 0 error）
+
+--- 5) 附：EXP-111（本轮踩坑回写）---
+用 PowerShell `Set-Content` 改含中文的 `game_app.rs` → GBK 误解码 + 吞掉 160 处换行（文档注释与代码
+并成一行）+ 加 BOM ⇒ 文件结构被静默改写。已 `git checkout` 回滚 + 编辑工具重做（编译/测试复核通过）。
+根因与防复发口径见 `docs/experience/tools.md` §EXP-111（禁任何 cmdlet 写仓库文件）。
+
+=== S19.4 verified ===

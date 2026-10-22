@@ -17,7 +17,7 @@
 |---|---|
 | 赛道 | 每图一条闭合环（m01=45 格 / m02=46 格 / m03=33 格），顺序 = 环绕方向（顺时针） |
 | 生成 | `scripts/extract_board.py`（`terrain.json` 陆格掩码 → Moore 邻域轮廓 → 去重 → 起点旋转到 `player_start` 最近环格）；`--check` 校验一致性 |
-| 空间类型 | `start` / `plain` / `port` / `city` / `event` / `card` / `battle` / `treasure` / `boss`（每图恰 1 起点 + 1 BOSS；港口/城镇 = balance 据点坐标就近吸附；原版特殊地块 event/card/war/MAZE/pool/Castle 按坐标就近吸附；**S19.2**：普通格按 14 格周期铺 `event/card/battle` 各 2 + `treasure` 1，使宝藏格实际可达） |
+| 空间类型 | `start` / `plain` / `port` / `city` / `event` / `card` / `battle` / `treasure` / `boss`（每图恰 1 起点 + 1 BOSS；港口/城镇 = balance 据点坐标就近吸附；原版特殊地块 event/card/war/MAZE/pool/Castle 按坐标就近吸附；**S19.4**：普通格按 **12 格周期**铺 `event/card/battle` 各 2 + `treasure` 1 + `plain` 5，并**按比例分配**（相位 = k×12/普通格数）⇒ 跨图落格密度一致） |
 | 分区 | 9 个连续段（`group` 1..9，对齐原版地形类别码 1..9，`legacy/docs/facts/map.md` F-308） |
 | 读档兼容 | 存档仍存行主序格索引；读档位置不在赛道上 = 就近吸附最近赛道格 |
 
@@ -31,11 +31,14 @@ Space（空格）/ 点按「摇骰前进」
       绕圈过起点 → 每圈 +`lap_bonus_gold`（默认 150）
       港口 port   → 提示「可贸易/建造」（经济经 HUD 命令盘）
       城镇 city   → +`city_gold`（默认 50）
-      事件/卡牌格 → 抽一张卡（`balance.cards` 卡池，`apply_card_effect` 结算）
+      事件/卡牌格 → 抽一张卡（`balance.cards` 卡池，`apply_card_effect` 结算；`event` 与 `card` 两类落格行为一致）
       遭遇 battle → 扣 `battle_damage` HP + 失 `battle_gold_loss` 金（默认 30/20）
       宝藏 treasure → +`treasure_gold`（默认 200）
       BOSS boss   → 见下「BOSS 触发规则」（进战斗场景；`combat.md`；击败 BOSS = 跨图推进，下节）
 ```
+
+> 结算只认**终点格**（大富翁语义：路过不结算，终点才结算）⇒ 每摇骰 1 次 = 1 次落格判定。
+> `balance.cards.event_chance` 只作用于 legacy 移动路径（`rules::main_map`），**不参与赛道落格结算**。
 
 ### BOSS 触发规则（S19.3）
 
@@ -48,16 +51,46 @@ Space（空格）/ 点按「摇骰前进」
 
 **跨图节奏实测**（蒙特卡洛 2 万次，`dice_sides=6`、`boss_min_laps=1`）：
 
-| 地图 | 赛道 | BOSS 序号 | 旧规则 E[摇骰次数] | 新规则 E[摇骰次数] | 新规则 E[见 BOSS 时金] |
+| 地图 | 赛道 | BOSS 序号 | 旧规则 E[摇骰次数] | 新规则 E[摇骰次数] | 新规则 E[见 BOSS 时金]（S19.4 落格节奏后终值） |
 |---|---|---|---|---|---|
-| m01 | 45 格 | 27 | 40.6（靠运气落格） | **21** | 1327 |
-| m02 | 46 格 | 15 | 37.3 | **18** | 1373 |
-| m03 | 33 格 | 30 | 32.1 | **16** | 1286 |
+| m01 | 45 格 | 27 | 40.6（靠运气落格） | **21** | 1339 |
+| m02 | 46 格 | 15 | 37.3 | **18** | 1328 |
+| m03 | 33 格 | 30 | 32.1 | **16** | 1371 |
 
 → 新规则下三图节奏收敛到 16~21 次摇骰（≈ 1 圈半），且到 BOSS 时已攒到 ~1300 金（够 `Investment 500` + `Bank 200` + 存款，`build` 加成 atk/hp 直通战斗）。
 
 - 落格结果以**提示条**（toast）显示在摇骰按钮下方（文案 `strings.json` `scene.main_map.toast.*`）。
 - 确定性：同 seed + 同摇骰序列 ⇒ 同落格串（可回放，`e2e_board_spin_loop` 判据）。
+
+### 落格节奏（S19.4）
+
+**落格类型按比例分配**（`scripts/extract_board.py`）：第 k 个普通格取 12 格周期的相位
+`k×12/普通格数` ⇒ 各图「落格密度」与赛道格数等比（固定周期直接落在不同长度赛道上会得到
+不同的宝藏/遭遇数量 ⇒ 跨图节奏失衡）。
+
+**12 格周期**（`plain` 5 / `event` 2 / `card` 2 / `battle` 2 / `treasure` 1）—— 业务理由：
+
+| 项 | 14 格周期 | 12 格周期 | 业务判断 |
+|---|---|---|---|
+| 死格（`plain`）占比 | 44%~45% | **39%~40%** | 终点格才结算（大富翁语义）⇒ 死格 = 白走一格；每次摇骰「有内容」的比例从 ~55% 提到 ~60% |
+| 宝藏密度（+200 大奖） | 1/14（3%~4.4%） | **1/12（6.1%~6.7%）** | 宝藏是唯一大额奖励通道（占每图净收入 ~55%）⇒ 落格期望 0.6 → **0.9 次/图**，攒金节奏不再断档（否则整图不中大奖 ⇒ 见 BOSS 时仅 1150 金） |
+| 跨图宝藏密度 | m03 仅 3% | **m03 6.1%** | 与 m01/m02 对齐（比例化分配后跨图节奏一致） |
+| 遭遇密度 | 2/14 | 2/12 | 实测每图 1.9~2.6 次、暂存扣血 58~77（玩家 HP 2000 ⇒ 3~4%）⇒ 仍是可控风险 |
+
+**跨图实测**（蒙特卡洛 2 万次/图，`dice_sides=6`、`boss_min_laps=1`、终点格结算）：
+
+| 地图 | 赛道 | 落格分布（event/card/battle/treasure/plain） | 密度 | E[摇骰] | E[抽卡] | E[遭遇] | E[宝藏] | E[见 BOSS 时金] |
+|---|---|---|---|---|---|---|---|---|
+| m01 | 45 格 | 7 / 7 / 6 / 3 / 18 | 15.6% / 15.6% / 13.3% / 6.7% / 40% | 21.1 | 6.5 | 2.6 | 0.9 | 1339 |
+| m02 | 46 格 | 6 / 6 / 7 / 3 / 20 | 13.0% / 13.0% / 15.2% / 6.5% / 43.5% | 17.9 | 5.2 | 2.0 | 0.9 | 1328 |
+| m03 | 33 格 | 5 / 5 / 4 / 2 / 13 | 15.2% / 15.2% / 12.1% / 6.1% / 39.4% | 15.9 | 4.9 | 1.9 | 0.9 | 1371 |
+
+- 「见 BOSS 时金」三图收敛到 **1328~1371（极差 3.2%）** ⇒ 攒金节奏跨图一致。
+- **不变量（测试固化）**：各图 event/card/battle 占比 8%~20%、treasure ≥ 3%、plain 30%~60%
+  （`rules::board` `board_landing_rhythm_is_consistent_across_maps`）；每图 ≥1 宝藏格
+  （`board_data_matches_extraction`，防宝藏格再变死数值）。
+- `event` 与 `card` 两类落格**行为一致**（都必抽一张卡）；两者在赛道上的分布只影响节奏计数，
+  `balance.cards.event_chance` 不参与赛道结算。
 
 ### 经济节奏（S19.2 数值打磨）
 
@@ -65,13 +98,13 @@ Space（空格）/ 点按「摇骰前进」
 
 | 项 | 数值 | 定位 |
 |---|---|---|
-| `treasure_gold` | 200 | 大奖（`treasure` 格 S19.2 起实际可达，密度 ~1/14） |
+| `treasure_gold` | 200 | 大奖（`treasure` 格 S19.2 起实际可达，密度 1/12，见 §落格节奏） |
 | `city_gold` | 50 | 小奖励（据点，~1 格/图） |
 | `lap_bonus_gold` | 150 | 每圈固定补给 |
 | `battle_damage` / `battle_gold_loss` | 30 / 20 | 遭遇格真实代价（扣 HP 暂存 + 失金，`card_state.hp` 入战斗前并入） |
 
 - **不变量（测试固化）**：`treasure_gold > city_gold > 0`、`battle_damage > 0`、`battle_gold_loss > 0`、`lap_bonus_gold > 0`、`max_steps ≥ dice_sides ≥ 1`（`ti-core` `board_cfg_economy_is_sane`）；每图赛道必含 ≥1 `treasure` 格（`rules::board` `board_data_matches_extraction`，防宝藏格再变死数值）；`boss_min_laps ≥ 1`（S19.3 跨图节奏门槛）。
-- 节奏目标：单圈净金 > 0（宝藏 +200 主导），遭遇为可控风险（~2 格/圈失金 40 + 扣 HP 暂存 60），保证 BOSS 战前可攒金建造（`build` 加成 atk/hp）。
+- 节奏目标：单圈净金 > 0（宝藏 +200 主导），遭遇为可控风险（实测每图 1.9~2.6 次遭遇 = 失金 38~52 + 暂存扣血 58~77，玩家 HP 2000 ⇒ 3~4%），保证 BOSS 战前可攒金建造（`build` 加成 atk/hp）。
 - **与 BOSS 门槛的关系**：`boss_min_laps=1` ⇒ 玩家必先绕岛 1 圈才见 BOSS ⇒ 圈补给（+150）+ 沿途宝藏（~2~3 个 ×200）+ 城镇（50）构成「BOSS 战前基金」（实测 ~1300 金），正好支撑 `Investment 500` / `Bank 200` / `Fort 800` 的建造选择。
 
 ### 旧移动规则（已彻底移除）

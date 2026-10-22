@@ -28,7 +28,7 @@
       16
      ],
      "group": 1,
-     "kind": "event",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -46,7 +46,7 @@
       15
      ],
      "group": 1,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -64,7 +64,7 @@
       14
      ],
      "group": 2,
-     "kind": "battle",
+     "kind": "event",
      "terrain": "L"
     },
     {
@@ -73,7 +73,7 @@
       13
      ],
      "group": 2,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -82,7 +82,7 @@
       12
      ],
      "group": 2,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -91,7 +91,7 @@
       11
      ],
      "group": 2,
-     "kind": "event",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -109,7 +109,7 @@
       9
      ],
      "group": 3,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -118,7 +118,7 @@
       8
      ],
      "group": 3,
-     "kind": "battle",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -127,7 +127,7 @@
       7
      ],
      "group": 3,
-     "kind": "treasure",
+     "kind": "card",
      "terrain": "L"
     },
     {
@@ -136,7 +136,7 @@
       6
      ],
      "group": 3,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -145,7 +145,7 @@
       6
      ],
      "group": 4,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "L"
     },
     {
@@ -154,7 +154,7 @@
       5
      ],
      "group": 4,
-     "kind": "event",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -172,7 +172,7 @@
       3
      ],
      "group": 4,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -199,7 +199,7 @@
       3
      ],
      "group": 5,
-     "kind": "plain",
+     "kind": "battle",
      "terrain": "R"
     },
     {
@@ -208,7 +208,7 @@
       3
      ],
      "group": 5,
-     "kind": "plain",
+     "kind": "battle",
      "terrain": "L"
     },
     {
@@ -217,7 +217,7 @@
       3
      ],
      "group": 5,
-     "kind": "event",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -235,7 +235,7 @@
       2
      ],
      "group": 6,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -244,7 +244,7 @@
       3
      ],
      "group": 6,
-     "kind": "battle",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -262,7 +262,7 @@
       5
      ],
      "group": 6,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -289,7 +289,7 @@
       7
      ],
      "group": 7,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -298,7 +298,7 @@
       8
      ],
      "group": 7,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -316,7 +316,7 @@
       10
      ],
      "group": 7,
-     "kind": "battle",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -325,7 +325,7 @@
       11
      ],
      "group": 8,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "L"
     },
     {
@@ -334,7 +334,7 @@
       12
      ],
      "group": 8,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -343,7 +343,7 @@
       13
      ],
      "group": 8,
-     "kind": "event",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -352,7 +352,7 @@
       14
      ],
      "group": 8,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -361,7 +361,7 @@
       14
      ],
      "group": 8,
-     "kind": "card",
+     "kind": "battle",
      "terrain": "R"
     },
     {
@@ -379,7 +379,7 @@
       16
      ],
      "group": 9,
-     "kind": "treasure",
+     "kind": "battle",
      "terrain": "L"
     },
     {
@@ -388,7 +388,7 @@
       17
      ],
      "group": 9,
-     "kind": "plain",
+     "kind": "treasure",
      "terrain": "R"
     },
     {
@@ -397,7 +397,7 @@
       16
      ],
      "group": 9,
-     "kind": "plain",
+     "kind": "treasure",
      "terrain": "L"
     },
     {
@@ -406,7 +406,7 @@
       17
      ],
      "group": 9,
-     "kind": "event",
+     "kind": "treasure",
      "terrain": "L"
     }
    ]
@@ -439,7 +439,7 @@
       8
      ],
      "group": 1,
-     "kind": "event",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -457,7 +457,7 @@
       6
      ],
      "group": 1,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -466,7 +466,7 @@
       5
      ],
      "group": 1,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "L"
     },
     {
@@ -475,7 +475,7 @@
       4
      ],
      "group": 2,
-     "kind": "battle",
+     "kind": "event",
      "terrain": "L"
     },
     {
@@ -484,7 +484,7 @@
       3
      ],
      "group": 2,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -502,7 +502,7 @@
       3
      ],
      "group": 2,
-     "kind": "event",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -520,7 +520,7 @@
       2
      ],
      "group": 3,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -529,7 +529,7 @@
       2
      ],
      "group": 3,
-     "kind": "battle",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -538,7 +538,7 @@
       3
      ],
      "group": 3,
-     "kind": "treasure",
+     "kind": "card",
      "terrain": "L"
     },
     {
@@ -547,7 +547,7 @@
       3
      ],
      "group": 3,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "L"
     },
     {
@@ -583,7 +583,7 @@
       5
      ],
      "group": 4,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -601,7 +601,7 @@
       7
      ],
      "group": 4,
-     "kind": "battle",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -610,7 +610,7 @@
       8
      ],
      "group": 5,
-     "kind": "plain",
+     "kind": "battle",
      "terrain": "R"
     },
     {
@@ -619,7 +619,7 @@
       9
      ],
      "group": 5,
-     "kind": "plain",
+     "kind": "battle",
      "terrain": "L"
     },
     {
@@ -628,7 +628,7 @@
       10
      ],
      "group": 5,
-     "kind": "event",
+     "kind": "battle",
      "terrain": "R"
     },
     {
@@ -646,7 +646,7 @@
       12
      ],
      "group": 5,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -655,7 +655,7 @@
       13
      ],
      "group": 6,
-     "kind": "battle",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -664,7 +664,7 @@
       14
      ],
      "group": 6,
-     "kind": "treasure",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -673,7 +673,7 @@
       15
      ],
      "group": 6,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -682,7 +682,7 @@
       14
      ],
      "group": 6,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "L"
     },
     {
@@ -709,7 +709,7 @@
       16
      ],
      "group": 7,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -727,7 +727,7 @@
       17
      ],
      "group": 7,
-     "kind": "battle",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -736,7 +736,7 @@
       17
      ],
      "group": 7,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "L"
     },
     {
@@ -745,7 +745,7 @@
       16
      ],
      "group": 8,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "L"
     },
     {
@@ -754,7 +754,7 @@
       16
      ],
      "group": 8,
-     "kind": "event",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -763,7 +763,7 @@
       17
      ],
      "group": 8,
-     "kind": "plain",
+     "kind": "battle",
      "terrain": "R"
     },
     {
@@ -772,7 +772,7 @@
       15
      ],
      "group": 8,
-     "kind": "card",
+     "kind": "battle",
      "terrain": "L"
     },
     {
@@ -790,7 +790,7 @@
       14
      ],
      "group": 9,
-     "kind": "treasure",
+     "kind": "battle",
      "terrain": "R"
     },
     {
@@ -808,7 +808,7 @@
       13
      ],
      "group": 9,
-     "kind": "plain",
+     "kind": "treasure",
      "terrain": "L"
     },
     {
@@ -817,7 +817,7 @@
       12
      ],
      "group": 9,
-     "kind": "event",
+     "kind": "treasure",
      "terrain": "R"
     },
     {
@@ -826,7 +826,7 @@
       11
      ],
      "group": 9,
-     "kind": "plain",
+     "kind": "treasure",
      "terrain": "R"
     }
    ]
@@ -859,7 +859,7 @@
       9
      ],
      "group": 1,
-     "kind": "event",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -877,7 +877,7 @@
       10
      ],
      "group": 2,
-     "kind": "card",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -886,7 +886,7 @@
       11
      ],
      "group": 2,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "L"
     },
     {
@@ -895,7 +895,7 @@
       12
      ],
      "group": 2,
-     "kind": "battle",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -922,7 +922,7 @@
       13
      ],
      "group": 3,
-     "kind": "event",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -931,7 +931,7 @@
       12
      ],
      "group": 3,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -940,7 +940,7 @@
       11
      ],
      "group": 4,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -949,7 +949,7 @@
       10
      ],
      "group": 4,
-     "kind": "battle",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -976,7 +976,7 @@
       8
      ],
      "group": 5,
-     "kind": "plain",
+     "kind": "battle",
      "terrain": "R"
     },
     {
@@ -985,7 +985,7 @@
       7
      ],
      "group": 5,
-     "kind": "event",
+     "kind": "battle",
      "terrain": "R"
     },
     {
@@ -1003,7 +1003,7 @@
       5
      ],
      "group": 5,
-     "kind": "card",
+     "kind": "plain",
      "terrain": "R"
     },
     {
@@ -1012,7 +1012,7 @@
       4
      ],
      "group": 6,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -1021,7 +1021,7 @@
       3
      ],
      "group": 6,
-     "kind": "battle",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -1030,7 +1030,7 @@
       2
      ],
      "group": 6,
-     "kind": "plain",
+     "kind": "event",
      "terrain": "R"
     },
     {
@@ -1048,7 +1048,7 @@
       2
      ],
      "group": 7,
-     "kind": "event",
+     "kind": "plain",
      "terrain": "L"
     },
     {
@@ -1057,7 +1057,7 @@
       2
      ],
      "group": 7,
-     "kind": "plain",
+     "kind": "card",
      "terrain": "L"
     },
     {
@@ -1075,7 +1075,7 @@
       2
      ],
      "group": 8,
-     "kind": "battle",
+     "kind": "card",
      "terrain": "R"
     },
     {
@@ -1084,7 +1084,7 @@
       3
      ],
      "group": 8,
-     "kind": "treasure",
+     "kind": "battle",
      "terrain": "L"
     },
     {
@@ -1102,7 +1102,7 @@
       3
      ],
      "group": 8,
-     "kind": "plain",
+     "kind": "battle",
      "terrain": "L"
     },
     {
@@ -1120,7 +1120,7 @@
       5
      ],
      "group": 9,
-     "kind": "plain",
+     "kind": "treasure",
      "terrain": "L"
     },
     {
@@ -1129,7 +1129,7 @@
       6
      ],
      "group": 9,
-     "kind": "card",
+     "kind": "treasure",
      "terrain": "L"
     }
    ]

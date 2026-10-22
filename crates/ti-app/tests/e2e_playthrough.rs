@@ -456,16 +456,23 @@ fn e2e_board_spin_loop() {
     // S19.3：摇骰直到 BOSS 现身（绕满 `boss_min_laps` 圈 + 经过 BOSS 格）→ 切战斗场景
     // 未满圈时经过 BOSS 格 = 「未现身」提示（不切场景），满圈后再经过 = 现身。
     let locked_text = ti_app::sgetf("scene.main_map.toast.boss_locked_fmt", &[&1]);
+    let card_prefix = ti_app::sgetf("scene.main_map.toast.card_fmt", &[&""]).trim_end().to_string();
     let mut saw_locked = false;
+    let mut saw_card = false;
     let mut spins = 1;
     while app.scene() == Scene::MainMap && spins < 120 {
         app.handle(GameInput::Spin);
         spins += 1;
-        if ti_app::scenes::MapHost::board_toast(&app).as_deref() == Some(locked_text.as_str()) {
+        let toast = ti_app::scenes::MapHost::board_toast(&app);
+        if toast.as_deref() == Some(locked_text.as_str()) {
             saw_locked = true;
+        }
+        if toast.as_deref().is_some_and(|t| t.starts_with(&card_prefix)) {
+            saw_card = true;
         }
     }
     assert!(saw_locked, "未绕满圈时经过 BOSS 格应提示「未现身」");
+    assert!(saw_card, "应至少抽到一次卡牌");
     assert_eq!(app.scene(), Scene::Vs, "BOSS 现身后应切战斗场景（{spins} 次摇骰）");
     let b2 = app.board.as_ref().expect("摇骰后 board 会话应在位");
     assert!(b2.at_boss(), "BOSS 现身时位置应停在 BOSS 格");

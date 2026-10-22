@@ -209,15 +209,23 @@ def build() -> dict:
             kinds[li] = landmark_kinds[i % len(landmark_kinds)]
             taken.add(li)
 
-        # 普通格按固定循环铺事件格（对齐大富翁式棋盘节奏：event/card/battle 各 2/14，
-        # treasure 1/14 = 新增「宝藏格」，使 `balance.board.treasure_gold` 实际可达）
+        # 普通格按固定循环铺事件格（对齐大富翁式棋盘节奏）。
+        #
+        # S19.4 落格节奏（12 格周期）：
+        # - event/card/battle 各 2/12（16.7%）+ treasure 1/12（8.3%）+ plain 5/12（41.7%）
+        #   ⇒ 死格（plain）占比 50%→42%；每图宝藏落格期望 ~1.8 次（+200 大奖不再稀有）。
+        # - **按比例分配**：第 k 个普通格取相位 = k * 12 / 普通格数 ⇒ 各类占比与赛道格数
+        #   等比（固定循环直接落在不同长度赛道上会得到不同的宝藏/遭遇数量：
+        #   m02 3 个宝藏 vs m03 1 个 ⇒ 跨图经济节奏失衡）。
         cycle = [
-            "plain", "plain", "event", "plain", "card", "plain", "battle",
-            "plain", "plain", "event", "plain", "card", "battle", "treasure",
+            "plain", "event", "plain", "card", "plain", "battle",
+            "plain", "event", "plain", "card", "battle", "treasure",
         ]
-        for i, kind in enumerate(kinds):
-            if kind == "plain":
-                kinds[i] = cycle[i % len(cycle)]
+        plain_idx = [i for i, kind in enumerate(kinds) if kind == "plain"]
+        n_plain = len(plain_idx)
+        if n_plain:
+            for j, i in enumerate(plain_idx):
+                kinds[i] = cycle[j * len(cycle) // n_plain]
 
         # 9 个连续分区（对齐原版地形类别码 1..9）
         n = len(ring)

@@ -1355,6 +1355,7 @@ impl GameApp {
         let laps_before = session.laps();
         let turn = session.step(&mut self.rng, sides, b.board.boss_min_laps);
         let laps_after = session.laps();
+        let landing = turn.landing;
         self.map_pos = Some(session.pos());
         // 绕圈补给（大富翁「经过起点」语义）
         let lap_delta = laps_after.saturating_sub(laps_before);
@@ -1362,7 +1363,13 @@ impl GameApp {
             let bonus = b.board.lap_bonus_gold.saturating_mul(lap_delta);
             self.gold = self.gold.saturating_add(bonus).min(b.economy.gold_max);
         }
-        let landing = session.landing();
+        self.settle_board_landing(landing, b);
+        self.apply_board_boss(turn.boss, laps_after, b);
+        Some(turn)
+    }
+
+    /// 落格结算（`Landing` → 金 / HP / 卡 / 提示条；数值全走 `balance.board`）。
+    fn settle_board_landing(&mut self, landing: Landing, b: &data::Balance) {
         match landing {
             Landing::Battle => {
                 self.card_state.hp = self.card_state.hp.saturating_add(b.board.battle_damage);
@@ -1399,6 +1406,8 @@ impl GameApp {
                 self.last_sfx = Some(Sfx::Press);
             }
             Landing::Event | Landing::Card => {
+                // 事件格 / 卡牌格 = **必抽卡**（两类落格行为一致；`balance.cards.event_chance`
+                // 不参与赛道结算，仅用于 legacy 移动路径 `rules::main_map`）。
                 let pool = cards_draw::CardPool::from_balance();
                 let hand = pool.draw_one(&mut self.rng, b.cards.hand_size.max(1));
                 if let Some(card_id) = hand.first().copied() {
@@ -1420,12 +1429,15 @@ impl GameApp {
                     }
                 }
             }
-            // BOSS 格本身无金/HP 结算（提示条由下方 `Turn::boss` 分支给出：
+            // BOSS 格本身无金/HP 结算（提示条由 `apply_board_boss` 给出：
             // 未满圈 = 未现 / 满圈 = 现身）；起点格与普通格同样无结算。
             Landing::Boss | Landing::Start | Landing::Plain => {}
         }
-        // BOSS 触发（S19.3）：经过或落在 BOSS 格即遇 BOSS；满 `boss_min_laps` 圈才现身。
-        match turn.boss {
+    }
+
+    /// BOSS 触发提示（S19.3：`Turn::boss` 三态 = 未遇 / 未现 / 现身）。
+    fn apply_board_boss(&mut self, boss: BossTrigger, laps_after: u32, b: &data::Balance) {
+        match boss {
             BossTrigger::None => {}
             BossTrigger::Locked => {
                 let remain = b.board.boss_min_laps.saturating_sub(laps_after).max(1);
@@ -1435,13 +1447,12 @@ impl GameApp {
                 self.last_sfx = Some(Sfx::Invalid);
             }
             BossTrigger::Engaged => {
-                // 位置已在结算前停到 BOSS 格（见上），此处只给提示条
+                // 位置已在规则层停到 BOSS 格（`BoardSession::step` 拦停），此处只给提示条
                 self.board_toast =
                     Some(String::from(crate::i18n::sget("scene.main_map.toast.boss")));
                 self.board_toast_ticks = 120;
             }
         }
-        Some(turn)
     }
 
     /// 渲染当前场景：场景模块绘制（`scenes/*.rs::render`），纯代码绘制

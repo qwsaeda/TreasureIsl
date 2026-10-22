@@ -2,6 +2,13 @@
 
 > 本机工具链与 MCP：IDA/Python/REA/clippy 的用法与已知缺陷。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 
+### EXP-111 工具：PowerShell 5.1 `Get-Content -Raw` + `Set-Content -Encoding utf8` 改含中文的 `.rs` → GBK 误解码 + **吞掉换行**（160 处「文档注释与代码同行」）+ 加 BOM ⇒ 文件结构被静默改写
+- 现象：为改一处 `&b` → `b`（clippy `needless_borrow`）用 `(Get-Content f -Raw) -replace … | Set-Content -NoNewline -Encoding utf8 f` 改 `crates/ti-app/src/game_app.rs`（含大量中文注释）。命令「成功」，但随后 `git diff` 显示 446 插入 / 767 删除、行数从 2148 掉到 1658；正则扫出 **160 行**形如 `/// 说明文字    pub player: Unit,`（文档注释与下一行代码被并成一行）；中文整体变 GBK mojibake；文件头多出 UTF-8 BOM。
+- 根因：Windows PowerShell 5.1 的 `Get-Content` 默认按**系统 ANSI 代码页（本机 GBK）**解码无 BOM 的 UTF-8 文件 ⇒ 字节被重新解释成 GBK 字符；GBK 解码器把 UTF-8 尾字节 + `0x0A` 当作**双字节字符的后半**，于是**换行被吃掉**并留下 U+FFFD；`Set-Content -Encoding utf8` 再把这份 mojibake 写回（PS 5.1 该编码**带 BOM**）。比 EXP-051/083/086/091 更危险：那些是「中文变乱码」可肉眼发现，本例是**代码结构被改写**（行合并）⇒ 编译期才炸，且 `git diff` 噪声极大、极易误判为「自己刚改的」。
+- 解法：① **禁止用任何 PowerShell cmdlet（`Set-Content`/`Out-File`/`Add-Content`/`Get-Content`+重定向）改仓库内含 CJK 的源码/文档**——改文件一律用编辑工具（按唯一子串精确替换），或用 `python` 以 `encoding='utf-8', newline='\n'` 读写；② 真要批量替换，先 `python -c` 脚本化（显式 `encoding='utf-8'` + `newline='\n'`），不要用 cmdlet 管道；③ 已被写坏时：`git checkout -- <file>` 回滚到上一个 commit，再用编辑工具重做（**先确认该文件的在途改动是否已 commit**：本例 S19.4 的改动未 commit ⇒ 回滚会一并丢失，须照原意重做）；④ 回滚后必跑 `cargo build` + `cargo test` 复核（本次回滚丢了 `event_chance_pct` helper，编译报 `E0425` 才暴露）。
+- 验证：2026-10 S19.4 会话实测：写坏后 `git diff --stat` 1213 行变更 / 文件少 490 行、正则命中 160 处行合并；`git checkout` + 编辑工具重做后 `cargo build -p ti-app` 0 error、`cargo test -p ti-app` 39+6 passed / 0 failed、`cargo test -p ti-core --lib` 116 passed / 0 failed。
+- 教训：**在 Windows 上「改文件」这件事本身就是高危操作**——凡是能让 shell 参与写文件（重定向 / cmdlet / 管道到文件）的路径，都要先问「这一步会不会经过 ANSI 代码页」。判定口诀：文件里有没有非 ASCII？只要有，shell 写它就要么显式指定 UTF-8，要么别用 shell 写。
+
 ### EXP-006 工具：本机 Python 环境缺包、`pip` 不在 PATH
 - 现象：`import pefile/capstone` 失败，`pip list` 命令找不到。
 - 根因：miniconda 的 `pip` 未挂进 PATH；精简环境无第三方包。

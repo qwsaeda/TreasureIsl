@@ -31,7 +31,7 @@
 |---|---|---|
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
-  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 13 |
+  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 14 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107） | 31 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 33 |
@@ -150,6 +150,7 @@
 | EXP-105 | code | | 原语表 z 层卓埋 / 行高变了栏位没算 / JSON `text_key` 先验存在。正文见 `code.md` |
 | EXP-106 | code | | 原语批次的调用位置 = 层序；背景层必须在运行时内容**之前**画。正文见 `code.md` |
 | EXP-110 | formats | | PCX 精灵抠透明不能假设固定键色（原版 PCX = 亮绿键 + dither 混色，非品红）：键色集合 = 亮绿 + 品红 + 四角落采样；AGNES 生图品红底改角落均值 + 容差 70 抠。正文见 `formats.md` |
+| EXP-111 | tools | | PowerShell 5.1 `Get-Content -Raw`+`Set-Content -Encoding utf8` 改含 CJK 的源码 = GBK 误解码 + **吞换行**（160 处「注释与代码同行」）+ 加 BOM ⇒ 代码结构被静默改写；禁任何 cmdlet 写仓库文件（用编辑工具或 `python encoding='utf-8', newline='\n'`），已写坏用 `git checkout` 回滚后重做。正文见 `tools.md` |
 
 
 ## 条目格式（写新条时照抄）

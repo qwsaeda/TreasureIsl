@@ -573,4 +573,33 @@ mod tests {
             assert!(has_treasure, "{id} 缺宝藏格（treasure_gold 不可达）");
         }
     }
+
+    #[test]
+    fn board_landing_rhythm_is_consistent_across_maps() {
+        // S19.4 落格节奏：各图「落格类型占比」必须落在同一区间（比例化分配 ⇒ 跨图节奏一致）。
+        // 区间口径（实测占比）：event/card/battle 各 8%~20%，treasure ≥ 3%，plain 30%~60%。
+        let Ok(db) = crate::data::board() else {
+            return;
+        };
+        for (id, m) in &db.maps {
+            let Ok(track) = Track::from_map(m) else {
+                continue;
+            };
+            let n = track.len();
+            let count =
+                |k: SpaceKind| track.spaces().iter().filter(|s| s.kind == k).count() * 100 / n;
+            for (name, kind) in [
+                ("event", SpaceKind::Event),
+                ("card", SpaceKind::Card),
+                ("battle", SpaceKind::Battle),
+            ] {
+                let pct = count(kind);
+                assert!((8..=20).contains(&pct), "{id} {name} 占比 {pct}% 越界（8%~20%）");
+            }
+            let treasure_pct = count(SpaceKind::Treasure);
+            assert!(treasure_pct >= 3, "{id} treasure 占比 {treasure_pct}% < 3%");
+            let plain_pct = count(SpaceKind::Plain);
+            assert!((30..=60).contains(&plain_pct), "{id} plain 占比 {plain_pct}% 越界（30%~60%）");
+        }
+    }
 }
