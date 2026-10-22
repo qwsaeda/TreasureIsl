@@ -41,7 +41,7 @@
 //!
 //! 用法：`cargo run -q -p ti-tools -- doccheck2 [repo_root]`（缺省 `repo_root = "."`）。
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process::ExitCode;
 
@@ -2221,6 +2221,242 @@ fn check_tooling_catalog(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 第 27 项：**工具契约**（把「脚本纪律」从文档约定变成机器红线）。
+///
+/// 动机（EXP-113 复发 + S21 实证）：工具缺位 ⇒ 同一脚本被写多遍；一次性脚本写到
+/// **仓库外**临时目录 ⇒ 完全绕开 `scripts/` 台账登记，事后无人能查。本检查锁四条：
+/// ① **台账登记必须是表格行**且含「幂等/只读」与「退出码」要素（第 26 项只查「出现过」）；
+/// ② **新增工具**（不在棘轮基线 `scripts/tooling_contract_baseline.json` 内）必须自带
+///    **只读模式** + **非 0 退出码**（存量豁免见基线表，每条带整改任务号）；
+/// ③ **一次性脚本落地位置** = `scripts/tmp/`，任务结束必须清空（残留即 FAIL）；
+/// ④ 仓库内（`scripts/`、`legacy/`、`.opencode/`、`target/` 之外）**不得散落** `.py`/`.ps1`。
+fn check_tooling_contract(root: &Path) -> Vec<String> {
+    let mut errors: Vec<String> = Vec::new();
+    let Some(catalog) = read_file(root, "docs/process/14_tooling_catalog.md") else {
+        return vec!["docs/process/14_tooling_catalog.md 不存在，无法校验工具契约".to_string()];
+    };
+    let scripts_dir = root.join("scripts");
+    let Ok(entries) = std::fs::read_dir(&scripts_dir) else {
+        return vec!["scripts/ 目录不存在，无法校验工具契约".to_string()];
+    };
+    let classes = tooling_catalog_classes(&catalog);
+    let waivers = tooling_contract_waivers(root, &mut errors);
+    let mut tools: Vec<(String, String)> = Vec::new();
+    for e in entries.flatten() {
+        let name = e.file_name().to_string_lossy().to_string();
+        if !is_tool_script(&name) {
+            continue;
+        }
+        let src = std::fs::read_to_string(e.path()).unwrap_or_default();
+        tools.push((name, src));
+    }
+    tools.sort();
+    for (name, src) in &tools {
+        errors.extend(check_tooling_contract_one(name, src, &catalog, &classes, &waivers));
+    }
+    errors.extend(check_tooling_tmp_dir(&scripts_dir));
+    errors.extend(check_tooling_stray_scripts(root));
+    errors
+}
+
+/// 台账分类：§3.1 门禁项 / §3.2 长期工具 / §3.3 一次性 / §3.4 取证（分类决定登记要求）。
+fn tooling_catalog_classes(catalog: &str) -> BTreeMap<String, String> {
+    let mut class_of: BTreeMap<String, String> = BTreeMap::new();
+    let mut cur = String::new();
+    for line in catalog.lines() {
+        let t = line.trim_start();
+        if t.starts_with("### 3.1") {
+            cur = "gate".to_string();
+        } else if t.starts_with("### 3.2") {
+            cur = "longterm".to_string();
+        } else if t.starts_with("### 3.3") {
+            cur = "oneshot".to_string();
+        } else if t.starts_with("### 3.4") {
+            cur = "forensic".to_string();
+        } else if t.starts_with("## 4") {
+            cur = String::new();
+        }
+        if cur.is_empty() {
+            continue;
+        }
+        if let Some(rest) = t.strip_prefix('|') {
+            if let Some(cell) = rest.split('|').next() {
+                let key = cell.trim().trim_matches('`');
+                if !key.is_empty() && key != "工具" && !key.starts_with('-') {
+                    class_of.insert(key.to_string(), cur.clone());
+                }
+            }
+        }
+    }
+    class_of
+}
+
+/// 棘轮基线豁免表（存量工具豁免项；新增工具不得入表）。
+fn tooling_contract_waivers(
+    root: &Path,
+    errors: &mut Vec<String>,
+) -> BTreeMap<String, Vec<String>> {
+    let mut waived: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let Some(baseline) = read_file(root, "scripts/tooling_contract_baseline.json") else {
+        errors.push(
+            "scripts/tooling_contract_baseline.json 不存在（工具契约棘轮基线；缺它则存量豁免不可查）"
+                .to_string(),
+        );
+        return waived;
+    };
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(&baseline) else {
+        errors.push("scripts/tooling_contract_baseline.json 解析失败（须为合法 JSON）".to_string());
+        return waived;
+    };
+    if let Some(obj) = v.get("tools").and_then(|t| t.as_object()) {
+        for (name, entry) in obj {
+            let list = entry
+                .get("waived")
+                .and_then(|w| w.as_array())
+                .map(|a| {
+                    a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect::<Vec<String>>()
+                })
+                .unwrap_or_default();
+            waived.insert(name.clone(), list);
+        }
+    }
+    waived
+}
+
+/// 工具脚本判定（`scripts/` 下的 `.py` / `.ps1`；`__` 开头 = 私有模块不计）。
+fn is_tool_script(name: &str) -> bool {
+    let ext = std::path::Path::new(name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase);
+    matches!(ext.as_deref(), Some("py" | "ps1")) && !name.starts_with("__")
+}
+
+/// 单个工具的契约判定（台账表格行 / 登记要素 / 只读模式 / 非 0 退出码）。
+fn check_tooling_contract_one(
+    name: &str,
+    src: &str,
+    catalog: &str,
+    classes: &BTreeMap<String, String>,
+    waivers: &BTreeMap<String, Vec<String>>,
+) -> Vec<String> {
+    let mut errors: Vec<String> = Vec::new();
+    let key = format!("| `{name}` |");
+    let Some(row) = catalog.lines().find(|l| l.trim_start().starts_with('|') && l.contains(&key))
+    else {
+        errors.push(format!(
+            "scripts/{name}: 未登记为台账表格行（| `{name}` | 形式）——工具唯一事实源 = \
+             docs/process/14_tooling_catalog.md §3"
+        ));
+        return errors;
+    };
+    let class = classes.get(name).map_or("unknown", String::as_str);
+    // 一次性 / 取证工具：不做「幂等 + 退出码」声明要求（§1.1 分类决定登记要求）。
+    let strict = matches!(class, "gate" | "longterm");
+    let exemptions = waivers.get(name).cloned().unwrap_or_default();
+    let exempts = |id: &str| exemptions.iter().any(|w| w == id);
+    if strict && !row.contains("幂等") && !row.contains("只读") && !exempts("decl_idempotent") {
+        errors.push(format!(
+            "scripts/{name}: 台账行未声明「幂等/只读」（§3 表格第 4 列 = 幂等与退出码）"
+        ));
+    }
+    if strict
+        && !row.contains("退出")
+        && !row.contains("非 0")
+        && !row.contains("非零")
+        && !exempts("decl_nonzero")
+    {
+        errors.push(format!(
+            "scripts/{name}: 台账行未声明退出码语义（须写明「非 0 退出」或等价表述）"
+        ));
+    }
+    if !strict {
+        return errors;
+    }
+    if !exempts("readonly_mode") {
+        const READONLY: [&str; 7] =
+            ["--check", "-Check", "--verify", "--report", "--list", "--json", "--dry-run"];
+        if !READONLY.iter().any(|pat| src.contains(pat)) {
+            errors.push(format!(
+                "scripts/{name}: 缺只读模式（须提供 --check/--verify/--report 之一，\
+                 见 14_tooling_catalog.md §1.2 工具契约）"
+            ));
+        }
+    }
+    if !exempts("nonzero_exit_code") {
+        const NONZERO: [&str; 7] = [
+            "sys.exit(1",
+            "sys.exit(2",
+            "raise SystemExit(1",
+            "return 1",
+            "else 1",
+            "exit 1",
+            "ExitCode::FAILURE",
+        ];
+        if !NONZERO.iter().any(|pat| src.contains(pat)) {
+            errors.push(format!("scripts/{name}: 缺非 0 退出码（违规时须非 0 退出）"));
+        }
+    }
+    errors
+}
+
+/// 一次性脚本落地位置：`scripts/tmp/` 任务结束必须清空。
+fn check_tooling_tmp_dir(scripts_dir: &Path) -> Vec<String> {
+    let mut errors: Vec<String> = Vec::new();
+    let tmp_dir = scripts_dir.join("tmp");
+    if !tmp_dir.is_dir() {
+        return errors;
+    }
+    let Ok(tmp_entries) = std::fs::read_dir(&tmp_dir) else {
+        return errors;
+    };
+    for e in tmp_entries.flatten() {
+        let fname = e.file_name().to_string_lossy().to_string();
+        if fname != "README.md" && fname != ".gitkeep" {
+            errors.push(format!(
+                "scripts/tmp/{fname}: 一次性脚本残留（落地位置 = scripts/tmp/，\
+                 任务结束必须清理；反复要用的必须提升为 scripts/ 工具并登记台账）"
+            ));
+        }
+    }
+    errors
+}
+
+/// 仓库内不得散落脚本（`scripts/` 与 `legacy/` 之外）。
+fn check_tooling_stray_scripts(root: &Path) -> Vec<String> {
+    const SKIP_DIRS: [&str; 7] =
+        ["scripts", "legacy", ".opencode", ".git", "target", "node_modules", "web"];
+    fn walk(dir: &Path, skip: &[&str], out: &mut Vec<String>) {
+        let Ok(rd) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for e in rd.flatten() {
+            let path = e.path();
+            let name = e.file_name().to_string_lossy().to_string();
+            if path.is_dir() {
+                if !skip.contains(&name.as_str()) {
+                    walk(&path, skip, out);
+                }
+            } else {
+                let ext = path.extension().and_then(|x| x.to_str()).map(str::to_ascii_lowercase);
+                if matches!(ext.as_deref(), Some("py" | "ps1")) {
+                    out.push(path.to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+    let mut stray: Vec<String> = Vec::new();
+    walk(root, &SKIP_DIRS, &mut stray);
+    stray
+        .into_iter()
+        .map(|s| {
+            format!(
+                "{s}: 仓库内散落脚本（工具落 scripts/ 并登记台账；一次性改写脚本落 scripts/tmp/）"
+            )
+        })
+        .collect()
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -2252,9 +2488,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_primitives_data(&root));
     all_errors.extend(check_terrain_data(&root));
     all_errors.extend(check_tooling_catalog(&root));
+    all_errors.extend(check_tooling_contract(&root));
 
     println!(
-        "doccheck2: {} error(s) across 26 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog)",
+        "doccheck2: {} error(s) across 27 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract)",
         all_errors.len()
     );
     for err in &all_errors {

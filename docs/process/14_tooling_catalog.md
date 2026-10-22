@@ -11,8 +11,14 @@
 |---|---|---|---|
 | **门禁项** | 被 `scripts/gate.ps1` 直接调用 | 幂等 + `--check` 只读 + 违规非 0 退出 + 本页登记 | `scripts/` |
 | **长期工具** | 反复执行 / 结论要进文档 / 别人也会用 | 幂等 + `--check` 只读 + 非 0 退出 + 本页登记（含用法） | `scripts/` |
-| **一次性工具** | 一次性改写/清理（迁移、清库） | 必须标注「一次性」+ 用法 + 不进门禁 | `scripts/` |
-| **取证工具** | 只服务 `legacy/` 逆向取证 | 必须标注「不进产品代码」+ 用法 | `scripts/` |
+| **一次性工具** | 一次性改写/清理（迁移、清库） | 必须标注「一次性」+ 用法 + 不进门禁 | `scripts/`（用完即删）或 `scripts/tmp/` |
+| **取证工具** | 只服务 `legacy/` 逆向取证 | 必须标注「不进产品代码」+ 用法 | `scripts/` 或 `legacy/scripts/` |
+
+> **落地位置是硬规则**（`doccheck2` 第 27 项机器判定）：
+> 正式工具落 `scripts/`；一次性改写脚本落 `scripts/tmp/`（**用完即删**）；
+> **禁止写到仓库外**（系统临时目录 / 桌面 / 任何仓库外路径）—— 仓库外的脚本
+> 绕开台账登记与门禁对账，等于没进项目。
+> 仓库内（`scripts/`、`legacy/` 之外）**不得散落** `.py` / `.ps1`。
 
 ### 1.2 新增工具流程（5 步，缺一不可）
 
@@ -21,14 +27,42 @@
    （`04_tooling.md` §1）；
 3. **本页登记**：用途 / 用法（可直接复制的命令）/ 幂等与退出码 / 所属流水线 / 是否门禁项；
 4. **速查表登记**：`04_tooling.md` §1 表 + `docs/README.md` scripts 表；
-5. **自动对账**：`doccheck2` 第 26 项 `check_tooling_catalog`（新增脚本必须在本页出现 ⇒ 漏登记即 FAIL）。
+5. **自动对账**：`doccheck2` 第 26 项 `check_tooling_catalog`（新增脚本必须在本页出现 ⇒ 漏登记即 FAIL）
+   + 第 27 项 `check_tooling_contract`（落地位置 / 表格行 / 登记要素 / 只读模式 + 非 0 退出）。
 
 ### 1.3 临时脚本纪律（EXP-113）
 
-- 临时脚本**只允许**做「一次性改写」（改完仓库即删）；
+- 临时脚本**只允许**做「一次性改写」（改完仓库即删），且**必须落 `scripts/tmp/`**；
+- **禁止写到仓库外**（系统临时目录 / 桌面 / 任何仓库外路径）——那等于绕开登记与对账；
 - 凡是需要**反复跑 / 结论进文档 / 别人也会跑**的 ⇒ **必须**提升为 `scripts/` 工具并按 §1.2 登记；
 - 缺工具的代价是实测过的：同一逻辑被重复写 2~4 遍（修的是副本不是原件）⇒
   **写规范时同步问一句「这条规范要人反复做吗？⇒ 那它得先有脚本」**。
+
+### 1.4 工具契约（4 条，机器可判定）
+
+> `doccheck2` 第 27 项 `check_tooling_contract` 逐条判定（存量豁免见棘轮基线
+> `scripts/tooling_contract_baseline.json`，每条豁免带理由 + 整改任务号）。
+
+| # | 契约 | 判定方式 | 违反后果 |
+|---|---|---|---|
+| 1 | **落地位置** | 正式工具在 `scripts/`；一次性脚本在 `scripts/tmp/` 且用完即删；仓库内无散落 `.py`/`.ps1` | doccheck2 FAIL |
+| 2 | **台账登记 = 表格行** | `scripts/x.py` 必须在 §3.1~§3.4 某张表里有 `\| \`x.py\` \|` 行（§3 第 26 项只查「出现过」） | doccheck2 FAIL |
+| 3 | **登记要素齐全** | 该行须声明「幂等/只读」与退出码语义（「非 0 退出」或等价表述） | doccheck2 FAIL |
+| 4 | **只读模式 + 非 0 退出** | 新增工具（不在棘轮基线内）源码须含 `--check`/`--verify`/`--report` 之一，且违规时非 0 退出 | doccheck2 FAIL |
+
+### 1.5 组合优先（不新增工具的优先序）
+
+动手写脚本前，按此顺序找解法，**命中即停**：
+
+1. **现有工具能直接跑** → 用它（`scripts/playbook.ps1 -List` 列全部命令）；
+2. **现有工具能组合出结果** → 组合（例：`ui_assets.py verify` + `ui_shot_probe.py --crop` + `ui_preview.ps1`）；
+3. **现有工具缺一个能力** → **补齐那个工具**（`scripts/` 新增 + §1.2 登记），
+   **不要**写一次性脚本把它包一层；
+4. 以上都不行（真的一次性改写） → `scripts/tmp/` 写、用完即删。
+
+> **反面教材（EXP-113 + S21 实证）**：`ui_assets.py` 只有单资产入口，于是「批量登记 +
+> 并行生图 + 抠图」被写成临时脚本搬到**仓库外临时目录** ⇒ 台账无登记、门禁查不到、
+> 事后无法复用；正解 = 补 `scripts/ui_asset_batch.py` + `assets/ui_batches/*.json` 规格。
 
 ## 2. 流水线组合（端到端命令序列）
 
@@ -142,6 +176,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 | `code_outline.py` | **源结构清单**（文件 / 顶层项 / 方法 + 行范围 ⇒ 拆分前的模块边界与函数清单） | `python scripts/code_outline.py <file.rs>` / `--crate ti-app` / `--json` / `--check` | 幂等只读；孤立顶层 fn 非 0 |
 | `ui_shot_probe.py` | **出图取样**（区域主色 / 最亮像素 / 裁剪放大 ⇒ UI 出图验收的像素证据） | `python scripts/ui_shot_probe.py <png> --region x,y,w,h` / `--crop x,y,w,h --out` / `--check` | 幂等只读；空帧非 0 |
 | `ui_assets.py` | **UI 资产清单驱动**（add/build/verify/rekey/normalize） | `python scripts/ui_assets.py add --name <n> --role <r> --what "<w>"` / `build` / `verify` / `rekey --name <n>` / `normalize --name <n>` | build 幂等（已生成不重做）；verify 不一致非 0 |
+| `ui_asset_batch.py` | **UI 资产批量工具**（一组资产一次做完：规格登记 → 并行生图 → 抠图 → 审阅拼版；`ui_assets.py` 的批量补位，扣图/生图逻辑**复用** `ui_assets.py` 不重复实现；含**抠图可行性预检**：luma 需纯黑底 / magenta 需品红底，底色不对时报出来而不是事后看图才发现） | `python scripts/ui_asset_batch.py register\|generate\|install\|build\|check\|sheet --spec assets/ui_batches/<batch>.json`（`--check` = check 别名；`generate --workers N --only a,b --force`；`sheet --out <png> --cols N`） | 幂等（register upsert / generate 已有原图跳过 / install 重抠确定）；check 只读，漂移非 0 |
 | `ui_preview.ps1` | **7 屏出图验收**（Bevy 离屏 → `evidence/bevy_native_<scene>.png` + 缩略图 + 非空帧统计） | `powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 [scene...]` | 幂等（重出图）；空帧计入失败 |
 | `agnes_gen.py` | AI 生图底层（`ui_assets.py build` 调用；需 `AGNES_API_KEY`） | 由 `ui_assets.py` 调用；`python scripts/agnes_gen.py "<prompt>" --out <png>` | 生成非幂等（同 prompt 可复现性由模型决定） |
 | `agnes_vision.py` | AI 读图（截图/素材分析 ⇒ 视觉问题取证） | `python scripts/agnes_vision.py <png> "<question>"` | 只读；需 `AGNES_API_KEY` |

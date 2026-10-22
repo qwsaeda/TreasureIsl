@@ -16,6 +16,8 @@
 | `legacy/scripts/vectorize_ui.py` | Python | UI 矢量化 | 是 |
 | `scripts/pack_hd_assets.py` / `verify_hd_manifest.py` | Python | 多分辨率打包 + 校验 | 是 |
 | `crates/ti-tools` 各 bin | Rust | unpack / map2json / build_assets / controls / classify / specskel / doccheck | 是 |
+| `scripts/ui_assets.py` | Python | UI 资产**单资产**入口（add/build/verify/rekey/normalize） | 是 |
+| `scripts/ui_asset_batch.py` | Python | UI 资产**批量**入口（register/generate/install/build/check/sheet，规格驱动 + 抠图可行性预检） | 是 |
 
 > 注：两个 HD manifest 脚本**分工不同，勿混用**——`check_hd_manifest.py` 是**门禁项**（校验 `hd_f1_manifest.json` 与 `assets_hd_pack/1x/ui` 目录一致，EXP-048/060）；`verify_hd_manifest.py` 是 **S7.2 验收辅助**（校验 `manifest_hd.json` 与 `assets_hd` 产物 PNG-32/无缺失/哈希匹配）。二者查不同 manifest 文件、不同产物阶段。
 

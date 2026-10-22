@@ -1,0 +1,33 @@
+# S21.1 main_map 重设计 v4 · 概念设计稿 3 变体 + 多形状节点资产批次 —— 验收证据（2026-10-22）
+
+## 判据 1：3 张概念稿出图（2K 9:16 = 1472×2624，非黑 ≥97%，无乱码文字）
+  python scripts/agnes_gen.py --size 2K --ratio 9:16 --prompt "..." --out evidence/ui_concept/main_map_v4_{a,b,c}.png
+  非黑像素统计（1/16 采样）：a=97.5% / b=99.2% / c=97.7%
+  三版并排对比图：evidence/ui_concept/main_map_v4_compare.png（1444×906）
+  三版特征：A 古典羊皮海图（胡桃木桌面 + 青绿海 + 暖砂岛 + 黄铜环线 + 罗盘玫瑰 + 舵轮钮）
+            B 极简雕版海图（米色纸海 + 钢笔线稿岛 + 虚线航线 + 大舵轮骰点数）
+            C 奇幻夜航（甲板火把 + 发光 token 环 + 宝箱/灯塔/骷髅符号 + 骰子压罗盘）
+  用户拍板：三张都可以用 + 节点不要全圆形（要多形状）+ 海图铺满整屏（消息留痕）。
+
+## 判据 2：15 资产抠图后 alpha bbox 非整幅（抠图生效）
+  python scripts/ui_asset_batch.py check --spec assets/ui_batches/main_map_v4.json
+  → 逐资产 alpha.getbbox()：
+    node_start(12,12,500,500) / node_city(98,80,414,432) / node_port(94,95,418,417)
+    node_event(67,20,444,491) / node_card(104,98,409,412) / node_battle(23,22,489,490)
+    node_treasure(35,56,478,475) / node_boss(89,129,423,383) / node_plain(165,180,347,331)
+    ship_player(9,14,469,491) / btn_spin(19,47,493,465) / compass_rose(71,0,442,449)
+    chart_full(0,0,1080,1920 key=none 不抠) / hud_plaque / deck_plaque（magenta 底，抠图生效）
+  返工记录：hud_plaque/deck_plaque 首版 AI 出图是浅色工作室背景（四角亮度 150/239 > 阈值 58）
+  → 抠图可行性预检（ui_asset_batch check 的 luma 底色预检）报 WARN → 改 plaque 角色 key=magenta
+  + chroma-key 提示词重生 → alpha bbox 不再整幅。
+
+## 判据 3：节点轮廓互异（9 类多形状，非全圆形）
+  圆形（起点罗盘）/ 六边形（城镇）/ 圆角方（港口灯塔）/ 盾形（事件卷轴）/ 菱形（卡牌海图）/
+  尖星（战斗双刀）/ 宝箱形（宝藏）/ 骷髅形（BOSS）/ 铜钉（普通格小素钉）
+
+## 判据 4：ui_asset_batch check 0 error 0 warn
+  ui_asset_batch check: 0 error(s), 0 warn(s)
+
+## 判据 5：ui_assets verify 三方一致
+  ui_assets verify: OK（36 个资产，登记/文件/引用三方一致）
+  批次规格 = assets/ui_batches/main_map_v4.json（声明式：roles.plaque + 15 资产 + 逐资产提示词）

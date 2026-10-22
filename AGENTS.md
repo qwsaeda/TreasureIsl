@@ -11,6 +11,7 @@
   逆向产物已物理归档 `legacy/`（S11.1 verified）；oracle 参照实现唯一源 = `ti-core/src/oracle`（`pub mod oracle` 公开导出，测试直接 `use ti_core::oracle::`）；逐字节重复 crate `legacy/oracle-rust` 已于 S15.8 删除（C4 反向守卫防重引入）。
   模块并行开发 loop 已固化（`docs/process/05_module_parallel.md`）；飞轮流水线已落地（`docs/process/06_flywheel.md` + gate 第 17 项）。
 - **S19 环岛赛道（大富翁式摇骰前进）**：主地图主玩法 = 摇骰定步数 → 沿环岛赛道前进 N 格 → 落格结算（`rules::board` + `assets/data/board.json` + `balance.board`）；**S19.1 方向键自由移动已彻底删除，主地图移动只保留摇骰（`GameInput::Spin`）**。单一事实源 = `docs/business/progression.md` §环岛赛道 + 路由表 S19 条目。
+- **S21 main_map 重设计 v4「羊皮海图桌面」+ 船系统**（2026-10-22 用户：main_map 界面很烂 → 出新的设计渲染图）：**S21.0（脚本纪律强制化：doccheck2 第 27 项工具契约门禁 + `ui_asset_batch.py` 批量资产工具 + 硬规则 10）与 S21.1（概念稿 3 变体 + 15 资产多形状节点批次）已 verified**；**S21.2 船系统业务规格待拍板**（用户提出「开局小船、可升级」——现状无船系统：oracle 0 处 ship/boat、现有升级链仅 4 种建筑，规格须先落 `docs/business/economy.md`）；S21.3~S21.9（版面/交互规格 → 岛屿重绘 → 赛道重绘 → 版面重排 → 交互升级 → 出图验收）待开工。单一事实源 = `plan/ledger.yaml` S21 段 + 批次规格 `assets/ui_batches/main_map_v4.json`；概念稿 = `evidence/ui_concept/main_map_v4_{a,b,c}.png`（gitignored，仅参考）。
 
 ## 路由表
 
@@ -52,7 +53,8 @@
 | **HD 资产增强 / 超分 / 矢量化 / 多分辨率打包（S7）** | `docs/impl/14_asset_enhancement.md`（方案规格，历史阶段） |
 | **写 Bevy 代码前必读（Bevy 0.20 用法规范 / 最佳实践 / 坑位清单）** | `docs/process/12_bevy_usage.md`（**Bevy 使用规范单一事实源**：官方 `DefaultPlugins` 强制 + 1080 坐标换算 + **z 层负值/升序绘制**规则 + GPU Text2d 文本 + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位清单；S18.7 起 Bevy = 唯一渲染引擎） |
 | **做界面（改 scenes.json 版面 / 加美术资产 / 出图验收）** | `docs/process/13_ui_asset_pipeline.md`（**UI 资产管线**：资产清单 `assets/ui_manifest.json` = 单一事实源；`python scripts/ui_assets.py add/build/verify` 生图+抠透明+入库；`powershell scripts/ui_preview.ps1 <scene>` 出图验收；界面数据只引用资产路径，`image` 原语见 `09_render_framework.md` §5.1） |
-| **工具台账 / 流水线组合（scripts/ 全量登记 + 用法）** | `docs/process/14_tooling_catalog.md`（工具唯一事实源：用途 / 用法 / 幂等与退出码 / UI 资产·赛道数据·门禁·逆向 4 条流水线 / 门禁项↔排障工具对照）；新增工具须登记（doccheck2 第 26 项对账） |
+| **工具台账 / 流水线组合（scripts/ 全量登记 + 用法）** | `docs/process/14_tooling_catalog.md`（工具唯一事实源：用途 / 用法 / 幂等与退出码 / UI 资产·赛道数据·门禁·逆向 4 条流水线 / 门禁项↔排障工具对照）；新增工具须登记（doccheck2 第 26 项对账）+ 满足工具契约（第 27 项 `check_tooling_contract`：落地位置 / 表格行 / 登记要素 / 只读模式 + 非 0 退出；一次性脚本落 `scripts/tmp/` 用完即删，**禁止写仓库外**） |
+| **批量做一组 UI 资产（多形状图标 / 一批背景）** | `scripts/ui_asset_batch.py`（register/generate/install/build/check/sheet，规格驱动 `assets/ui_batches/*.json`；含**抠图可行性预检**：luma 需纯黑底 / magenta 需品红底）+ `docs/process/13_ui_asset_pipeline.md` |
 | **AI 生图（UI 效果图/概念图，S18.7 前置）** | `scripts/agnes_gen.py`（Agnes Image 2.5 Flash；`AGNES_API_KEY` 环境变量；用法见 `docs/process/04_tooling.md` §6） |
 | Android 壳落地 + Mac 出 APK（S5.5） | `android/README.md` |
 | 引入新依赖 / 改 workspace 结构 | `docs/process/01_architecture.md` §4（现成库清单，先查再引）→ `docs/style.md` §5.9 |
@@ -70,6 +72,7 @@
 7. **改动面必声明**：每次开发开工前声明「改哪一块」（业务规则 / 数据 / 规则实现 / 表现 / 资产，见 `docs/process/00_index.md` §变更面声明），**跨模块必须写原因**（为何必须同改、为何不能拆成可独立验收子任务）；改动面含「业务规则」时**先在 `docs/business/` 定案再动代码**。不声明 = 返工（同 §分工表「LLM 禁区」）。
 8. **按模块功能开发 + 批量编辑一次编译**：动手前先定**模块边界与函数清单**（一个文件 = 一个职责，见 `docs/process/02_conventions.md` §9）；同一任务的编辑**全部落完再编译一次**，编译报错**一次性收口**——禁「改一处编一次」的探针节奏（编译成本纪律）。
 9. **UI 视觉改动：设计稿先行（A 纪律）**：表现层视觉/版面/配色/控件改动，**先出设计稿/效果图**（`scripts/ui_preview.ps1` 离屏出图或临时原型），**用户确认（消息留痕）后才落码**；任务 dod 必含「用户视觉验收通过」，确认后再改视觉意图须重新过目（`docs/process/00_index.md` §UI 视觉改动：设计稿先行 + EXP-114）；未确认就开工 = 返工。
+10. **脚本纪律（工具缺位才是病）**：动手写脚本前**先查 `docs/process/14_tooling_catalog.md`**（工具唯一事实源）；① 现有工具能跑 → 用；② 现有工具能组合 → 组合；③ 缺能力 → **补 `scripts/` 正式工具** + 按台账 §1.2 登记（幂等 + 只读模式 + 非 0 退出 + 台账 + 速查表），**不许**写一次性脚本包一层；④ 真的一次性改写 → 落 `scripts/tmp/` 且**用完即删**。**禁止写到仓库外**（系统临时目录 / 桌面），仓库内不得散落 `.py`/`.ps1`。违反 = `doccheck2` 第 27 项 `check_tooling_contract` FAIL（落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出）。
 
 ## 命令
 
@@ -122,7 +125,7 @@ cargo run -q -p ti-tools --bin specskel -- <module> --report     # 只打印统�
 
 - 构建范围随阶段解锁：native（已解锁）→ wasm（**S2.5 已解锁**）→ android（S2.6 在 **Mac** 装 NDK/SDK + cargo-apk 编译 APK，本机 Windows 不产出，gate SKIP）；gate 按已装 target 自动判定并打印 SKIP。
 - **发货壳 = Bevy（S18.8a 起）**：桌面 `treasure-bevy-native` / 浏览器 `treasure-bevy-wasm`（`crates/ti-engine`，独立 workspace）；ti-app 的 macroquad native/wasm 壳已删除（`macroquad` 仅剩 android 壳在用，S18.8d 退役）。门禁 wasm 项直接构建 + lint 该 Bevy 交付产物。
-- **桌面/浏览器可玩（S5.1–S5.4）已收口**：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定；S0–S14 全 verified，当前活动任务 S16.1（S15.2 已 verified，见 `plan/ledger.yaml`；WBS 详见 `docs/plan-s16-loop.md`）；Android 为后续移动端交付，开发本身不依赖 Android 工具链。
+- **桌面/浏览器可玩（S5.1–S5.4）已收口**：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定；S0–S14 全 verified，当前活动任务 S21（main_map 重设计 v4 + 船系统：S21.0/S21.1 verified、S21.2 船系统规格待拍板，见 `plan/ledger.yaml`）；Android 为后续移动端交付，开发本身不依赖 Android 工具链。
 - S5.5 Android 壳已落地（`android-shell` feature + `treasure-android` bin + `android/README.md`）；APK 实际产出在 Mac，本机 host 形态可编译校验。
 
 ## REA 逆向 MCP（2026-10 接入）

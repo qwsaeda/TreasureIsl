@@ -59,7 +59,7 @@
 | [process/11_bevy_migration.md](process/11_bevy_migration.md) | **渲染引擎迁移裁决（S18 · Bevy 0.20）**：差距定稿 + 定案推翻签核（macroquad 定案作废 / 旧 800KB 预算作废）+ 新 wasm 预算（≤8MB）+ 架构形状（ti-engine 新 crate + Canvas 后端替换 + 双渲染期）+ WBS S18.0–S18.8 + 风险（改引擎层代码前必读） |
 | [process/12_bevy_usage.md](process/12_bevy_usage.md) | **Bevy 0.20 用法规范 / 最佳实践 / 坑位清单**（官方 `DefaultPlugins` 强制 + 1080 坐标换算 + z 层负值升序绘制 + GPU Text2d + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位；S18.7 起 Bevy = 唯一渲染引擎） |
 | [process/13_ui_asset_pipeline.md](process/13_ui_asset_pipeline.md) | **UI 资产管线**（清单驱动：AI 生图 → 抠透明 → 规范化 → 入库 `assets/ui/`；角色预设 background/medallion/board/portrait；`scripts/ui_assets.py` + `scripts/ui_preview.ps1`；资产清单 = 单一事实源，门禁校验登记与存在） |
-| [process/14_tooling_catalog.md](process/14_tooling_catalog.md) | **工具台账**（`scripts/` 全量登记：用途 / 用法 / 幂等与退出码 / 流水线组合 / 门禁归属）——工具的唯一事实源；新增工具须登记（doccheck2 第 26 项对账） |
+| [process/14_tooling_catalog.md](process/14_tooling_catalog.md) | **工具台账**（`scripts/` 全量登记：用途 / 用法 / 幂等与退出码 / 流水线组合 / 门禁归属）——工具的唯一事实源；新增工具须登记（doccheck2 第 26 项对账）+ 满足**工具契约**（第 27 项 `check_tooling_contract`：落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 
@@ -106,6 +106,7 @@
 | `scripts/code_outline.py` | **源结构清单**（文件 / 顶层项 / 方法 + 行范围）—— 拆分重构前的「模块边界 + 函数清单」（`02_conventions.md` §9.1） |
 | `scripts/board_measure.py` | **赛道节奏 / 跨图难度阶梯实测**（落格分布 + 每次摇骰期望 + BOSS 战生存余量）—— `progression.md` §落格节奏 / §跨图难度阶梯 的数字来源与复测 |
 | `scripts/ui_shot_probe.py` | **出图取样**（区域主色 / 最亮像素 / 裁剪放大）—— UI 出图验收的像素证据 |
+| `scripts/ui_asset_batch.py` | **UI 资产批量工具**（规格驱动：register/generate/install/build/check/sheet）—— 一组资产一次做完，含抠图可行性预检；规格 = `assets/ui_batches/*.json` |
 | `scripts/audit_code.py` | **代码结构审计**（`style.md` §5.12 手段）：文件规模 / 函数长度 / 重复模式；`--check` 违规非 0 退出，阈值与棘轮基线 = `scripts/code_budget.json` |
 | `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
 | `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |

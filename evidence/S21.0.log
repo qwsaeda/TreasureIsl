@@ -1,0 +1,34 @@
+﻿# S21.0 脚本纪律强制化 —— 验收证据（2026-10-22）
+
+## 判据 1：负测 4/4 命中（doccheck2 第 27 项 check_tooling_contract 真能拦）
+故意制造 4 类违规（scripts/new_tool_no_check.py 未登记 + scripts/tmp/one_shot.py 残留 + 仓库根 stray_tool.py 散落），实跑 doccheck2：
+  doccheck2: 4 error(s) across 27 audit-codified checks
+  ERROR scripts/new_tool_no_check.py 未登记到 docs/process/14_tooling_catalog.md（工具唯一事实源）
+  ERROR scripts/new_tool_no_check.py: 未登记为台账表格行（| `new_tool_no_check.py` | 形式）
+  ERROR scripts/tmp/one_shot.py: 一次性脚本残留（落地位置 = scripts/tmp/，任务结束必须清理）
+  ERROR .\stray_tool.py: 仓库内散落脚本（工具落 scripts/ 并登记台账）
+测试文件已清理（scripts/tmp/ 只剩 README.md）。
+
+## 判据 2：正测 doccheck2 27 项 0 error
+  doccheck2: 0 error(s) across 27 audit-codified checks (...tooling-catalog/tooling-contract)
+  （含存量豁免棘轮基线 scripts/tooling_contract_baseline.json 15 条，每条带理由 + 整改任务号 S21.8）
+
+## 判据 3：ui_asset_batch.py check 0 error 0 warn
+  [ui_asset_batch] check spec=assets/ui_batches/main_map_v4.json batch=main_map_v4
+  ui_asset_batch check: 0 error(s), 0 warn(s)
+
+## 判据 4：ui_assets.py verify 三方一致（36 资产）
+  ui_assets verify: OK（36 个资产，登记/文件/引用三方一致）
+
+## 判据 5：gate 23 项 0 failure
+  powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
+  === gate: 0 failure(s) ===（全量输出 tee evidence/gate_s21.log）
+
+## 工具契约要点（14_tooling_catalog.md §1.4 / AGENTS.md 硬规则 10）
+  ① 落地位置：正式工具 scripts/；一次性脚本 scripts/tmp/ 用完即删；禁止写仓库外；仓库内不散落 .py/.ps1
+  ② 台账登记 = 表格行（| `x.py` | 形式）
+  ③ 登记要素齐全（幂等/只读 + 非 0 退出 语义）
+  ④ 新增工具须自带只读模式（--check/--verify/--report）+ 非 0 退出码（存量走棘轮基线）
+
+## 经验回写
+  docs/experience/code.md EXP-115 + index.md 索引行 + 分卷表 code 35→36。

@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "batch": "main_map_v4",
+  "_comment": "main_map 重设计 v4（S21.x）资产批次规格：声明式描述「这一批要哪些资产、什么角色、什么提示词」。`assets/ui_manifest.json` 仍是资产唯一事实源（`ui_asset_batch.py register` 由本规格 upsert 生成）；本规格 = 批次可评审/可 diff/可复现的输入。抠图可行性由 `ui_asset_batch.py check` 预检（luma 需纯黑底 / magenta 需品红底）。",
+  "roles": {
+    "plaque": {
+      "ratio": "21:9",
+      "target": [
+        1024,
+        439
+      ],
+      "key": "magenta",
+      "prompt": "an antique polished brass plaque, {what}, thin gold filigree rim, a completely EMPTY smooth brushed brass center panel, wide horizontal rectangle shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters"
+    }
+  },
+  "assets": [
+    {
+      "name": "chart_full",
+      "role": "background",
+      "file": "assets/ui/chart_full.png",
+      "params": {},
+      "prompt": "Full-bleed antique nautical sea chart, vertical 9:16, hand-drawn aged parchment sea in muted turquoise and teal with fine engraved wave hatching, faint latitude and longitude grid lines, delicate rhumb lines radiating outward, an ornate compass rose in the lower left, a small silhouetted sailing ship in the upper right sea, faint sea monster silhouette, tea stains and foxing spots, torn deckled edges, the outermost frame border is dark walnut wood, the central area is calm empty open water with absolutely no island and no landmass, painterly antique cartography, warm candlelight, no text, no letters, no numbers, no labels"
+    },
+    {
+      "name": "node_start",
+      "role": "medallion",
+      "file": "assets/ui/node_start.png",
+      "params": {},
+      "prompt": "a single round antique brass compass medallion plate with a tiny sailing ship engraved in its center, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "node_city",
+      "role": "medallion",
+      "file": "assets/ui/node_city.png",
+      "params": {},
+      "prompt": "a single hexagonal antique brass badge engraved with a small walled harbour town with two towers, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "node_port",
+      "role": "medallion",
+      "file": "assets/ui/node_port.png",
+      "params": {},
+      "prompt": "a single rounded-square antique brass badge engraved with a lighthouse on a rock, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "node_event",
+      "role": "medallion",
+      "file": "assets/ui/node_event.png",
+      "params": {},
+      "prompt": "a single shield-shaped antique brass badge engraved with a rolled parchment scroll tied with cord, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "node_card",
+      "role": "medallion",
+      "file": "assets/ui/node_card.png",
+      "params": {},
+      "prompt": "a single diamond-shaped antique brass badge engraved with a folded treasure map, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "node_battle",
+      "role": "medallion",
+      "file": "assets/ui/node_battle.png",
+      "params": {},
+      "prompt": "a single spiky eight-pointed antique brass badge engraved with two crossed cutlasses, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "node_treasure",
+      "role": "medallion",
+      "file": "assets/ui/node_treasure.png",
+      "params": {},
+      "prompt": "a single antique brass treasure chest with a domed lid and heavy lock, ornate gold trim, three-quarter view, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "node_boss",
+      "role": "medallion",
+      "file": "assets/ui/node_boss.png",
+      "params": {},
+      "prompt": "a single antique brass human skull badge with crossed bones behind it, menacing, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "node_plain",
+      "role": "medallion",
+      "file": "assets/ui/node_plain.png",
+      "params": {},
+      "prompt": "a single small plain polished brass domed stud rivet, simple domed nail head, no symbol, no engraving, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "ship_player",
+      "role": "medallion",
+      "file": "assets/ui/ship_player.png",
+      "params": {},
+      "prompt": "a single small three-masted pirate galleon with white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "btn_spin",
+      "role": "medallion",
+      "file": "assets/ui/btn_spin.png",
+      "params": {},
+      "prompt": "a single large ornate antique brass ship helm wheel button with eight spokes and a carved bone die fixed in the hub, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "compass_rose",
+      "role": "medallion",
+      "file": "assets/ui/compass_rose.png",
+      "params": {},
+      "prompt": "a single ornate antique brass compass rose medallion with eight points and a fleur-de-lis north tip, engraved with fine radial lines, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "hud_plaque",
+      "role": "plaque",
+      "file": "assets/ui/hud_plaque.png",
+      "params": {},
+      "prompt": "a wide horizontal antique polished brass panel with beveled edges, gold filigree corners and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters"
+    },
+    {
+      "name": "deck_plaque",
+      "role": "plaque",
+      "file": "assets/ui/deck_plaque.png",
+      "params": {},
+      "prompt": "a LONG HORIZONTAL RECTANGULAR antique polished brass button plate, very wide and short, 4 to 1 width to height ratio, straight rectangular edges with slightly rounded corners, gold filigree rim and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters"
+    }
+  ]
+}

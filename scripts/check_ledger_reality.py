@@ -43,6 +43,11 @@ SYMBOL_EXPECTATIONS = {
         r"pub\s+fn\s+from_bytes",
     ],
     # 按需追加：新增任务若声明代码符号，在此登记（EXP-058）。
+    "S21.0": [
+        # 脚本纪律门禁项（doccheck2 第 27 项）+ 批量资产工具（scripts/ui_asset_batch.py，
+        # 非 crates/ 路径 ⇒ 由台账标题与 evidence 佐证，不进符号 grep 范围）。
+        r"fn\s+check_tooling_contract",
+    ],
 }
 
 # 孤儿 evidence 检测：只认「以任务 ID 开头」的证据文件，形如
