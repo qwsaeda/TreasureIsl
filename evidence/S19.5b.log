@@ -1,0 +1,28 @@
+=== S19.5b 跨图难度阶梯【B】= 规则层接线 + 表现层可见（选图屏难度星） ===
+
+判据：
+1) 规则层接线：`rules::progression::boss_tier_of(map) -> Option<u32>`（查
+   `balance.selection.maps[].boss_tier`；查表失败 = `None`，**不 fallback 到猜值**）；
+2) 表现层可见：选图屏（`select_map`）每张地图卡片右上角显示**难度星**（tier+1 颗，1~3 星）
+   ⇒ 玩家在**选图时**即知该图 BOSS 强度，据此决定攒金/建造目标（难度阶梯可见）；
+3) 单测：规则层查询与 balance 目录逐图一致；
+4) 出图人工核对（`scripts/ui_preview.ps1 select_map`）；
+5) gate 全绿。
+
+--- 1) 实现落点 ---
+规则层：`crates/ti-core/src/rules/progression.rs`
+  + `pub fn boss_tier_of(m: MapSlot) -> Option<u32>`（跨图规则的家，读数据层方向正确）
+表现层：`crates/ti-app/src/scenes/select_map.rs`
+  + 每张卡片右上角内侧画 tier+1 颗金色方星（`COLOR_GOLD_WARM` + `COLOR_BRASS_LIGHT` 顶棱）
+  + 锁定图也显示（难度是地图固有属性）
+数据层：**无新增**（阶梯读既有 `balance.selection.maps[].boss_tier`）
+i18n：**无新增**（星用色块画，不引字形/资产）
+
+--- 2) 实跑 ---
+cargo test -p ti-core --test difficulty_ladder → 6 passed / 0 failed
+  （含 `boss_tier_of_matches_balance_catalog`：逐图 tier 与 balance 目录一致）
+出图：`scripts/ui_preview.ps1 select_map` → nonblack = 2072302 / 2073600（无空帧），
+      三张卡右上角 1 / 2 / 3 星（S19.5b 难度可见）
+
+--- 3) 门禁 ---
+（见下）

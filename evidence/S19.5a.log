@@ -1,0 +1,31 @@
+=== S19.5a 跨图难度阶梯【A】= 规格 + 结构不变量（不碰规则/表现层） ===
+
+判据：
+1) 业务规格落文（`docs/business/progression.md` §跨图难度阶梯）：实测阶梯表 + 设计意图 +
+   不变量清单 + 模拟口径声明；
+2) 5 条结构不变量测试（`crates/ti-core/tests/difficulty_ladder.rs`）：难度随 index 严格递增 /
+   tier 有效 / boss_tiers 强度随 tier 递增 / initial_gold ≥ Castle 成本（闭环前置）/
+   每图有 BOSS 格+据点+合法网格；
+3) 结论：**数值不需要改** —— 实测阶梯自洽（见下表），故本子任务只「显式化 + 守护」。
+
+--- 1) 实测阶梯（balance.json + board.json，蒙特卡洛 4 万次/图 seed=42；
+    战斗按 atk_plus_flat 逐回合模拟 seed=11）---
+m01 tier0 BOSS HP2400/ATK10 赛道45格  E[摇骰到BOSS]=21.0  见BOSS时金=1339  有效HP=1923
+    不建造 → 40 回合 余血 1478（77% 余裕）｜造 Castle → 34 回合 余血 1744（82%）
+m02 tier1 BOSS HP4800/ATK12 赛道46格  E[摇骰到BOSS]=17.9  见BOSS时金=1327  有效HP=1940
+    不建造 → 79 回合 余血  898（46% 可过）｜造 Castle → 68 回合 余血 1243（58%）
+m03 tier2 BOSS HP7200/ATK14 赛道33格  E[摇骰到BOSS]=16.0  见BOSS时金=1371  有效HP=1941
+    不建造 → 118 回合 余血  131（7% 勉强）｜造 Castle → 101 回合 余血  602（28% 可过）
+
+结论：
+- 难度单调递增（tier 0→1→2，HP 2400→4800→7200、ATK 10→12→14）✓
+- **难度与准备时间倒挂**：最难的 m03 赛道最短（33 格）、摇骰最少（16 次）⇒ 必须更快攒金并建造；
+- **闭环可成立**：见 BOSS 时金 1327~1371 ≥ Castle 成本 1000 ⇒ 每图都造得起一座 Castle
+  （m03 余血 7% → 28%）⇒ 「攒金→建造→打 BOSS」是难度阶梯的承重结构，不是可选策略。
+
+--- 2) 不变量测试实跑 ---
+cargo test -p ti-core --test difficulty_ladder → test result: ok. 6 passed; 0 failed
+（6 条 = 5 条不变量 + 1 条 `boss_tier_of` 与 balance 目录一致）
+
+--- 3) 门禁 ---
+（见下）

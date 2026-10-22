@@ -2178,6 +2178,44 @@ fn check_terrain_data(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 26. **工具登记对账**（S20.1，EXP-113）
+///
+/// `scripts/` 下每个工具（`.py`/`.ps1`）必须在
+/// `docs/process/14_tooling_catalog.md`（工具唯一事实源）里出现 —— 新增工具漏登记 ⇒ FAIL。
+///
+/// 口径：只查 `scripts/` 顶层（`legacy/scripts/` 是取证工具，登记在 14 台账的 §3.4 段）。
+fn check_tooling_catalog(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(catalog) = read_file(root, "docs/process/14_tooling_catalog.md") else {
+        return vec!["docs/process/14_tooling_catalog.md 不存在，无法校验工具登记".to_string()];
+    };
+    let scripts_dir = root.join("scripts");
+    let Ok(entries) = std::fs::read_dir(&scripts_dir) else {
+        return vec!["scripts/ 目录不存在，无法校验工具登记".to_string()];
+    };
+    let mut tools: Vec<String> = Vec::new();
+    for e in entries.flatten() {
+        let name = e.file_name().to_string_lossy().to_string();
+        let ext = std::path::Path::new(&name)
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(str::to_ascii_lowercase);
+        if matches!(ext.as_deref(), Some("py" | "ps1")) && !name.starts_with("__") {
+            tools.push(name);
+        }
+    }
+    tools.sort();
+    for t in &tools {
+        if !catalog.contains(t.as_str()) {
+            errors.push(format!(
+                "scripts/{t} 未登记到 docs/process/14_tooling_catalog.md（工具唯一事实源；\
+                 新增工具须：幂等 + --check + 非 0 退出 + 台账登记）"
+            ));
+        }
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -2208,9 +2246,10 @@ fn main() -> ExitCode {
     all_errors.extend(check_ui_redesign_tokens(&root));
     all_errors.extend(check_primitives_data(&root));
     all_errors.extend(check_terrain_data(&root));
+    all_errors.extend(check_tooling_catalog(&root));
 
     println!(
-        "doccheck2: {} error(s) across 25 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data)",
+        "doccheck2: {} error(s) across 26 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog)",
         all_errors.len()
     );
     for err in &all_errors {

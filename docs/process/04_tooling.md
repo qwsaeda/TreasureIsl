@@ -20,6 +20,10 @@
 > 注：两个 HD manifest 脚本**分工不同，勿混用**——`check_hd_manifest.py` 是**门禁项**（校验 `hd_f1_manifest.json` 与 `assets_hd_pack/1x/ui` 目录一致，EXP-048/060）；`verify_hd_manifest.py` 是 **S7.2 验收辅助**（校验 `manifest_hd.json` 与 `assets_hd` 产物 PNG-32/无缺失/哈希匹配）。二者查不同 manifest 文件、不同产物阶段。
 
 新增工具**必须**：幂等 + 提供 `--check` 只读模式 + 非 0 退出码，并登记本表 +
+[`docs/README.md`](../README.md)；**详细用法与流水线组合见
+[`14_tooling_catalog.md`](14_tooling_catalog.md)（工具唯一事实源）**。
+
+新增工具**必须**：幂等 + 提供 `--check` 只读模式 + 非 0 退出码，并登记本表 +
 [`docs/README.md`](../README.md)。
 
 ## 2. 工具链（已建 + 待建）

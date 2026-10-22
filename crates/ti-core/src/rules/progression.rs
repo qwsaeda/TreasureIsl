@@ -9,6 +9,18 @@ use crate::domain::selection::MapSlot;
 /// 图推进序列（按 `boss_tier` 升序：m01→m02→m03，末位无下一图）。
 pub const MAP_SEQUENCE: [MapSlot; 3] = [MapSlot::M01, MapSlot::M02, MapSlot::M03];
 
+/// 地图的 BOSS 难度档位（`balance.selection.maps[].boss_tier`，0 起）。
+///
+/// 业务依据（`docs/business/progression.md` §跨图难度阶梯）：地图 index 越大 ⇒ tier 越大
+/// ⇒ BOSS 越强（强度表 `balance.combat.boss_tiers[tier]` = HP/ATK）。
+///
+/// 查表失败（balance 不可用 / 目录缺该图）= `None`（**不 fallback 到猜值**）。
+#[must_use]
+pub fn boss_tier_of(m: MapSlot) -> Option<u32> {
+    let b = crate::data::balance().ok()?;
+    b.selection.maps.iter().find(|def| def.id == m.id()).map(|def| def.boss_tier)
+}
+
 /// 解锁掩码里的**通关位**（bit 3）：m03 BOSS 已击败（通关不新增解锁项，须单独 1 位）。
 pub const CLEARED_BIT: u8 = 0b1000;
 

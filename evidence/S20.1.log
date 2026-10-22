@@ -1,0 +1,40 @@
+=== S20.1 工具纳管（台账 + 3 个长期工具 + 自动对账） ===
+
+判据：
+1) **工具台账** `docs/process/14_tooling_catalog.md`（工具唯一事实源）：`scripts/` 全量工具登记
+   （用途 / 用法 / 幂等与退出码 / 门禁归属 / 所属流水线）+ **4 条流水线组合**（端到端命令序列）+
+   门禁项↔排障工具对照；
+2) **3 个长期工具提升进 `scripts/`**（补规范要求但仓库缺位的动作）：
+   - `code_outline.py` —— 源结构清单（文件 / 顶层项 / 方法 + 行范围）⇒ 支撑
+     `02_conventions.md` §9.1「先定模块边界与函数清单」；
+   - `board_measure.py` —— 赛道节奏 / 跨图难度阶梯实测 + `--check` 防规格漂移；
+   - `ui_shot_probe.py` —— 出图取样（区域主色 / 最亮像素 / 裁剪放大）⇒ UI 出图验收的像素证据；
+3) **自动对账**：`doccheck2` 第 26 项 `check_tooling_catalog`（新增脚本漏登记 ⇒ FAIL）；
+4) **一次性脚本清理**：本会话在仓库外写了 ~40 个一次性脚本（同类重写 2~4 遍）⇒ 已删 162 个
+   （仓库外草稿不留）；凡需反复跑/结论入文档的已提升为长期工具；
+5) 登记同步：`04_tooling.md`（台账指引 + 3 个新工具行）、`docs/README.md`（新文档 + 3 个工具）、
+   `AGENTS.md`（路由表加工具台账行）；
+6) EXP-113 记录「工具缺位 ⇒ 同一脚本写多遍」这条元教训；规范侧补 `02_conventions.md` §9
+   「模块边界与批次节奏」+ `00_index.md` 工作流三条纪律 + `AGENTS.md` 硬规则 8。
+
+--- 1) 审计结果（审计前）---
+scripts/ 34 个工具：已登记 30 个，**未登记 4 个**（bevy_cpu_scene_diff.py / cleanup_opencode_db.py /
+  enhance_portraits.py / pcx_ref.py）⇒ 已在台账 §3.1/§3.3/§3.4 分类登记。
+文档提及但「不存在」的 7 个脚本名：实际在 `legacy/scripts/`（gen_layout.py）或 `ti-tools` 的 cargo bin
+  （classify.py）⇒ **假漂移**（审计口径须多目录查找），非真缺文件。
+
+--- 2) 4 条流水线（台账 §2 的端到端命令序列）---
+A UI 资产：ui_assets.py add → build → rekey/normalize → verify → ui_preview.ps1 出图 → ui_shot_probe.py 取证
+B 环岛赛道：extract_board.py → board_measure.py(--ladder/--check) → cargo test difficulty_ladder → ui_preview main_map
+C 门禁提交：playbook.ps1 -List → fmt/clippy/test → audit_code.py --check → gate.ps1 → check_ledger_reality.py → 证据入 evidence/
+D 逆向取证：pcx_ref.py / pe_rva.py / rgb565.py → 结论入 legacy/docs/facts/
+
+--- 3) 实跑 ---
+python scripts/code_outline.py --check   → PASS（无孤立顶层 fn）
+python scripts/board_measure.py --check  → PASS（规格 tier 与 balance 一致）
+python scripts/ui_shot_probe.py evidence/bevy_native_main_map.png --check → PASS（非空帧）
+cargo run -q -p ti-tools --bin doccheck2 . → 0 error(s) across **26** audit-codified checks（新增 tooling-catalog）
+临时目录一次性脚本：162 个已清理（仓库外草稿不留）
+
+--- 4) 门禁 ---
+（见下）

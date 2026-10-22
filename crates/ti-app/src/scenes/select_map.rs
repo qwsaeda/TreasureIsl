@@ -1,6 +1,7 @@
 //! 地图选择场景（S9 骨架）：输入判定 / 触摸手势 / 绘制三面全部落在本文件。
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::selection::MapSlot;
+use ti_core::rules::progression::boss_tier_of;
 
 use crate::game_app::GameInput;
 use crate::scenes::chrome;
@@ -168,6 +169,26 @@ impl Scene for SelectMapScene {
                 let card_right = r.x + r.w;
                 let lock_w = (card_right - 6 - lock_x).min(40);
                 host.fill_rect(lock_x, ty, lock_w.max(4), 12, crate::menu_shell::COLOR_WOOD);
+            }
+        }
+        // S19.5：选图卡显示 **BOSS 难度星**（`rules::progression::boss_tier_of` → tier+1 颗星，
+        // 0 起 ⇒ 1~3 星）—— 让玩家在**选图时**就知道这张图的 BOSS 强度（难度阶梯可见 ⇒
+        // 据此决定攒金/建造目标）。锁定图也显示（难度是地图固有属性）。
+        for (i, m) in MapSlot::all().iter().enumerate() {
+            let Some(tier) = boss_tier_of(*m) else {
+                continue;
+            };
+            let stars = i32::try_from(tier.saturating_add(1).min(3)).unwrap_or(1);
+            let r = layout.list.item_rect(i);
+            let size = 14;
+            let gap = 6;
+            // 卡片右上角内侧（x 从右往左排，y 居中于卡片上半）
+            let right = r.x + r.w - 12;
+            let top = r.y + 10;
+            for k in 0..stars {
+                let x = right - (stars - 1 - k) * (size + gap);
+                host.fill_rect(x, top, size, size, chrome::COLOR_GOLD_WARM);
+                host.fill_rect(x, top, size, 2, chrome::COLOR_BRASS_LIGHT);
             }
         }
     }
