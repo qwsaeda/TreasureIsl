@@ -34,8 +34,27 @@ Space（空格）/ 点按「摇骰前进」
       事件/卡牌格 → 抽一张卡（`balance.cards` 卡池，`apply_card_effect` 结算）
       遭遇 battle → 扣 `battle_damage` HP + 失 `battle_gold_loss` 金（默认 30/20）
       宝藏 treasure → +`treasure_gold`（默认 200）
-      BOSS boss   → 进战斗场景（`combat.md`；击败 BOSS = 跨图推进，下节）
+      BOSS boss   → 见下「BOSS 触发规则」（进战斗场景；`combat.md`；击败 BOSS = 跨图推进，下节）
 ```
+
+### BOSS 触发规则（S19.3）
+
+| 项 | 规则 | 理由 |
+|---|---|---|
+| 触发时机 | **经过或落在 BOSS 格即遇 BOSS**（不再要求「恰好停在 BOSS 格」） | 33~46 格赛道上「恰好落格」≈ 1/40 量级运气，节奏不可预期（实测 E[摇骰] 32~41 次） |
+| 现身门槛 | 绕岛满 `boss_min_laps` 圈（默认 1）才现身；未满圈 = 「BOSS 尚未现身（还需绕岛 N 圈）」提示，不进战斗 | 跨图节奏对齐 + 保证攒金建造时间（攒金→建造→打 BOSS 闭环） |
+| 拦停 | 现身时位置停到 BOSS 格（被 BOSS 拦停，视觉与位置一致） | 玩家一眼看出「在这打」 |
+| 跨图推进 | 击败 BOSS → 解锁下一图（`MapSlot` / `unlocked_maps`），m03 BOSS = 通关 | 已有实现（`battle_step` → `on_boss_defeated`） |
+
+**跨图节奏实测**（蒙特卡洛 2 万次，`dice_sides=6`、`boss_min_laps=1`）：
+
+| 地图 | 赛道 | BOSS 序号 | 旧规则 E[摇骰次数] | 新规则 E[摇骰次数] | 新规则 E[见 BOSS 时金] |
+|---|---|---|---|---|---|
+| m01 | 45 格 | 27 | 40.6（靠运气落格） | **21** | 1327 |
+| m02 | 46 格 | 15 | 37.3 | **18** | 1373 |
+| m03 | 33 格 | 30 | 32.1 | **16** | 1286 |
+
+→ 新规则下三图节奏收敛到 16~21 次摇骰（≈ 1 圈半），且到 BOSS 时已攒到 ~1300 金（够 `Investment 500` + `Bank 200` + 存款，`build` 加成 atk/hp 直通战斗）。
 
 - 落格结果以**提示条**（toast）显示在摇骰按钮下方（文案 `strings.json` `scene.main_map.toast.*`）。
 - 确定性：同 seed + 同摇骰序列 ⇒ 同落格串（可回放，`e2e_board_spin_loop` 判据）。
@@ -51,8 +70,9 @@ Space（空格）/ 点按「摇骰前进」
 | `lap_bonus_gold` | 150 | 每圈固定补给 |
 | `battle_damage` / `battle_gold_loss` | 30 / 20 | 遭遇格真实代价（扣 HP 暂存 + 失金，`card_state.hp` 入战斗前并入） |
 
-- **不变量（测试固化）**：`treasure_gold > city_gold > 0`、`battle_damage > 0`、`battle_gold_loss > 0`、`lap_bonus_gold > 0`、`max_steps ≥ dice_sides ≥ 1`（`ti-core` `board_cfg_economy_is_sane`）；每图赛道必含 ≥1 `treasure` 格（`rules::board` `board_data_matches_extraction`，防宝藏格再变死数值）。
+- **不变量（测试固化）**：`treasure_gold > city_gold > 0`、`battle_damage > 0`、`battle_gold_loss > 0`、`lap_bonus_gold > 0`、`max_steps ≥ dice_sides ≥ 1`（`ti-core` `board_cfg_economy_is_sane`）；每图赛道必含 ≥1 `treasure` 格（`rules::board` `board_data_matches_extraction`，防宝藏格再变死数值）；`boss_min_laps ≥ 1`（S19.3 跨图节奏门槛）。
 - 节奏目标：单圈净金 > 0（宝藏 +200 主导），遭遇为可控风险（~2 格/圈失金 40 + 扣 HP 暂存 60），保证 BOSS 战前可攒金建造（`build` 加成 atk/hp）。
+- **与 BOSS 门槛的关系**：`boss_min_laps=1` ⇒ 玩家必先绕岛 1 圈才见 BOSS ⇒ 圈补给（+150）+ 沿途宝藏（~2~3 个 ×200）+ 城镇（50）构成「BOSS 战前基金」（实测 ~1300 金），正好支撑 `Investment 500` / `Bank 200` / `Fort 800` 的建造选择。
 
 ### 旧移动规则（已彻底移除）
 

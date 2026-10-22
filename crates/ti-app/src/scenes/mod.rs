@@ -29,7 +29,7 @@ use ti_core::domain::map::{GridPos, MapTerrain, SceneTarget};
 use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
-use ti_core::rules::board::{Landing, TrackSpace};
+use ti_core::rules::board::{TrackSpace, Turn};
 
 use crate::game_app::{BattleSnapshot, GameInput, Scene as LegacyScene};
 use crate::menu_shell::MenuShell;
@@ -446,9 +446,9 @@ pub trait MapHost {
         0
     }
 
-    /// 摇骰前进 N 格 + 落格结算（`rules::board`）；返回落格类型（`None` = 无赛道）。
-    /// BOSS 落格由调用方按 [`Landing::Boss`] 切战斗场景。默认无赛道。
-    fn board_spin(&mut self) -> Option<Landing> {
+    /// 摇骰前进 N 格 + 落格结算（`rules::board`）；返回本回合结果（`None` = 无赛道）。
+    /// BOSS 触发按 `Turn::boss` 判定（`Engaged` = 现身 → 调用方切战斗场景）。默认无赛道。
+    fn board_spin(&mut self) -> Option<Turn> {
         None
     }
 

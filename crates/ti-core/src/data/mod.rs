@@ -272,6 +272,9 @@ pub struct BoardCfg {
     pub treasure_gold: u32,
     /// 城镇格获得金币。
     pub city_gold: u32,
+    /// BOSS 现身所需绕岛圈数（S19.3：0 = 立即可挑战；≥1 = 绕满 N 圈才现身，
+    /// 跨图节奏对齐 + 保证攒金建造时间）。
+    pub boss_min_laps: u32,
 }
 
 /// 存读档参数（`balance.save`）。
@@ -720,6 +723,7 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
             battle_gold_loss: raw.board.battle_gold_loss,
             treasure_gold: raw.board.treasure_gold,
             city_gold: raw.board.city_gold,
+            boss_min_laps: raw.board.boss_min_laps,
         },
         messages: MessagesCfg { pages: raw.messages.pages },
         selection: SelectionCfg {

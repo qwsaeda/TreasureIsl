@@ -32,7 +32,7 @@ pub enum SpaceKind {
     Battle,
     /// 宝藏格（获得金币）。
     Treasure,
-    /// BOSS 格（进入战斗场景）。
+    /// BOSS 格（正好停在 BOSS 格；是否触发战斗由 `Turn::boss` 判「经过即触发 + 圈数门槛」）。
     Boss,
 }
 
@@ -198,6 +198,40 @@ impl Landing {
     }
 }
 
+/// BOSS 触发状态（一次摇骰回合的判定结果）。
+///
+/// S19.3 规则：**经过或落在 BOSS 格即触发**（不再要求「恰好停在 BOSS 格」——
+/// 后者在 33~46 格赛道上等于 1/40 量级的运气，节奏不可预期）；
+/// 但 BOSS 需先绕岛满 `boss_min_laps` 圈才现身（跨图节奏对齐 + 保证攒金建造时间）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BossTrigger {
+    /// 本回合未遇 BOSS。
+    None,
+    /// 经过/落在 BOSS 格，但未达现身门槛（还差若干圈）。
+    Locked,
+    /// BOSS 现身 → 触发战斗场景。
+    Engaged,
+}
+
+impl BossTrigger {
+    /// 是否触发战斗（只有 [`Self::Engaged`] 为真）。
+    #[must_use]
+    pub fn engaged(self) -> bool {
+        matches!(self, Self::Engaged)
+    }
+}
+
+/// 一次摇骰回合的结果（规则层产出，表现层据此派发结算与场景切换）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Turn {
+    /// 摇出的步数（`1..=sides`）。
+    pub roll: u32,
+    /// 落格所在空间的结算类型（`Landing::Boss` = 正好停在 BOSS 格）。
+    pub landing: Landing,
+    /// 本回合的 BOSS 触发状态。
+    pub boss: BossTrigger,
+}
+
 /// 赛道会话（玩家在赛道上的位置 + 摇骰/前进）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BoardSession {
@@ -266,14 +300,9 @@ impl BoardSession {
     /// 绕圈：越过末格回到首格时 `laps` 递增（起点补给由调用方按 `laps` 结算）。
     pub fn advance(&mut self, steps: u32) -> Vec<TrackSpace> {
         let mut passed = Vec::new();
-        if self.track.is_empty() {
-            return passed;
-        }
-        let len = self.track.len();
         for _ in 0..steps {
-            self.index = (self.index + 1) % len;
-            if self.index == 0 {
-                self.laps = self.laps.saturating_add(1);
+            if self.advance_one().is_none() {
+                break;
             }
             if let Some(s) = self.track.space(self.index) {
                 passed.push(s.clone());
@@ -282,10 +311,54 @@ impl BoardSession {
         passed
     }
 
+    /// 前进一格（绕圈回起点则 `laps` +1）；返回落到空间的类型（空赛道 = `None`）。
+    fn advance_one(&mut self) -> Option<SpaceKind> {
+        if self.track.is_empty() {
+            return None;
+        }
+        let len = self.track.len();
+        self.index = (self.index + 1) % len;
+        if self.index == 0 {
+            self.laps = self.laps.saturating_add(1);
+        }
+        self.track.space(self.index).map(|s| s.kind)
+    }
+
     /// 落格结算类型（当前所在空间）。
     #[must_use]
     pub fn landing(&self) -> Landing {
         self.current().map_or(Landing::Plain, |s| Landing::of(s.kind))
+    }
+
+    /// 一次摇骰回合 = 摇骰 → 前进 → 判定 BOSS 触发（S19.3）。
+    ///
+    /// - `sides` = 骰面数（步数 `1..=sides`）；
+    /// - `boss_min_laps` = BOSS 现身所需绕岛圈数（`0` = 立即可挑战）。
+    ///
+    /// BOSS 判定：**本回合经过或落在 BOSS 格**即遇 BOSS；门槛按**经过那一刻**已绕圈数
+    /// 判定（`laps >= boss_min_laps` → 现身，否则未现）——同回合「先过 BOSS 再绕满圈」
+    /// 不算现身（BOSS 现身前经过它只是路过）。
+    ///
+    /// 现身时**停在 BOSS 格**（被 BOSS 拦停，位置与视觉一致）。
+    pub fn step(&mut self, rng: &mut GameRng, sides: u32, boss_min_laps: u32) -> Turn {
+        let roll = self.spin(rng, sides);
+        let mut boss = BossTrigger::None;
+        for _ in 0..roll {
+            let Some(kind) = self.advance_one() else {
+                break;
+            };
+            if kind == SpaceKind::Boss {
+                boss = if self.laps >= boss_min_laps {
+                    BossTrigger::Engaged
+                } else {
+                    BossTrigger::Locked
+                };
+                if boss.engaged() {
+                    break; // 被拦停在 BOSS 格
+                }
+            }
+        }
+        Turn { roll, landing: self.landing(), boss }
     }
 
     /// 是否位于 BOSS 格。
@@ -367,6 +440,120 @@ mod tests {
         s.advance(1);
         assert_eq!(s.landing(), Landing::Boss);
         assert!(s.at_boss());
+    }
+
+    /// 门槛测试专用赛道（10 格：起点@0 + BOSS@8）。
+    ///
+    /// BOSS 在圈内位置早于起点 ⇒ 圈内的首次经过 BOSS 必发生在第 0 圈
+    /// （= `Locked`），绕满 1 圈后的再次经过才是 `Engaged`；赛道 ≥ 7 格
+    /// 保证单次摇骰（1..=6）无法从起点直接越过 BOSS 绕回起点（避免同回合跨圈）。
+    fn gate_track() -> Track {
+        let kinds = [
+            SpaceKind::Start,
+            SpaceKind::Plain,
+            SpaceKind::Plain,
+            SpaceKind::Plain,
+            SpaceKind::Plain,
+            SpaceKind::Plain,
+            SpaceKind::Plain,
+            SpaceKind::Plain,
+            SpaceKind::Boss,
+            SpaceKind::Plain,
+        ];
+        let spaces = kinds
+            .iter()
+            .enumerate()
+            .map(|(i, kind)| TrackSpace {
+                cell: GridPos::new(0, u32::try_from(i).unwrap_or(0)),
+                kind: *kind,
+                group: 1,
+                terrain: 'L',
+            })
+            .collect();
+        Track { spaces }
+    }
+
+    /// 找一个首摇 = `want` 的 seed（构造特定骰点序列用）。
+    fn seed_with_roll(sides: u32, want: u32) -> u32 {
+        for seed in 1..1000 {
+            let mut rng = GameRng::new(seed);
+            if rng.in_range(sides) + 1 == want {
+                return seed;
+            }
+        }
+        0
+    }
+
+    #[test]
+    fn step_boss_locked_until_lap_gate_met() {
+        // S19.3：BOSS 需绕岛满 `boss_min_laps` 圈才现身（跨图节奏对齐）。
+        let mut s = BoardSession::new(gate_track(), 0);
+        let mut rng = GameRng::new(7);
+        let mut saw_locked = false;
+        let mut saw_engaged = false;
+        for _ in 0..40 {
+            let turn = s.step(&mut rng, 6, 1);
+            match turn.boss {
+                BossTrigger::Locked => saw_locked = true,
+                BossTrigger::Engaged => {
+                    saw_engaged = true;
+                    assert!(s.laps() >= 1, "绕满 1 圈后应现身");
+                    break;
+                }
+                BossTrigger::None => {}
+            }
+        }
+        assert!(saw_locked, "未绕满圈时经过 BOSS 应为 Locked");
+        assert!(saw_engaged, "绕满 1 圈后经过 BOSS 应现身");
+    }
+
+    #[test]
+    fn step_gate_is_evaluated_at_crossing_moment() {
+        // 同回合「先过 BOSS 再绕满圈」= 未现身（门槛按经过那一刻的圈数判定）。
+        let mut s = BoardSession::new(gate_track(), 0);
+        s.advance(6); // 位置 = 6：距 BOSS@8 两格，距起点@0 四格
+        let mut rng = GameRng::new(seed_with_roll(6, 6));
+        let turn = s.step(&mut rng, 6, 1);
+        assert_eq!(turn.boss, BossTrigger::Locked, "经过 BOSS 时未绕满圈 → 未现身");
+        assert!(s.laps() >= 1, "本回合稍后才绕满圈（但经过 BOSS 时未满圈）");
+    }
+
+    #[test]
+    fn step_engages_boss_without_gate_and_is_reproducible() {
+        // 门槛 0：经过 BOSS 即现身；同 seed 同步数同结果。
+        let run = |seed: u32| {
+            let mut s = BoardSession::new(demo_track(), 0);
+            let mut rng = GameRng::new(seed);
+            for _ in 0..20 {
+                let turn = s.step(&mut rng, 6, 0);
+                if turn.boss.engaged() {
+                    return (turn.roll, s.index(), s.laps());
+                }
+            }
+            (0, s.index(), s.laps())
+        };
+        let a = run(7);
+        let b = run(7);
+        assert_eq!(a, b, "同 seed 同步数同落点");
+        assert_ne!(a.0, 0, "门槛 0 时经过 BOSS 应现身");
+    }
+
+    #[test]
+    fn step_stops_at_boss_cell_when_engaged() {
+        // 现身时停在 BOSS 格（被拦停）：位置 = BOSS 格，且不越过后续格。
+        let mut s = BoardSession::new(gate_track(), 0);
+        let mut rng = GameRng::new(3);
+        let mut engaged = false;
+        for _ in 0..40 {
+            let turn = s.step(&mut rng, 6, 0);
+            if turn.boss.engaged() {
+                engaged = true;
+                assert!(s.at_boss(), "现身后位置应停在 BOSS 格");
+                assert_eq!(turn.landing, Landing::Boss, "落格类型 = BOSS");
+                break;
+            }
+        }
+        assert!(engaged, "门槛 0 时经过 BOSS 应现身");
     }
 
     #[test]

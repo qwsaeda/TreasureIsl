@@ -99,6 +99,8 @@ fn board_cfg_economy_is_sane() {
     );
     // 每圈补给 > 0（绕岛一圈的正向节奏）
     assert!(bd.lap_bonus_gold > 0, "lap_bonus_gold must be > 0");
+    // S19.3：BOSS 现身门槛 ≥ 1 圈（跨图节奏对齐 + 保证攒金建造时间；0 = 立即可挑战）
+    assert!(bd.boss_min_laps >= 1, "boss_min_laps must be >= 1（跨图节奏对齐）");
 }
 
 #[test]
@@ -263,6 +265,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             battle_gold_loss: 0,
             treasure_gold: 0,
             city_gold: 0,
+            boss_min_laps: 1,
         },
         messages: ti_core::data::MessagesCfg { pages: std::collections::BTreeMap::new() },
         selection: ti_core::data::SelectionCfg {

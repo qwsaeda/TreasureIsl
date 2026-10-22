@@ -180,10 +180,17 @@ pub(crate) struct RawBoard {
     pub(crate) treasure_gold: u32,
     #[serde(default)]
     pub(crate) city_gold: u32,
+    /// BOSS 现身所需绕岛圈数（S19.3；缺省 1 = 绕满 1 圈才现身）。
+    #[serde(default = "default_boss_min_laps")]
+    pub(crate) boss_min_laps: u32,
 }
 
 fn default_dice_sides() -> u32 {
     6
+}
+
+fn default_boss_min_laps() -> u32 {
+    1
 }
 
 #[derive(Deserialize)]

@@ -425,7 +425,8 @@ fn e2e_battle_determinism() {
 }
 
 /// S19：环岛赛道摇骰闭环（e2e）：进图 → 赛道会话在位 → 摇骰前进（索引推进 + 位置 = 赛道格 +
-/// 步数值域 + 可复现）→ 多轮摇骰必过起点（圈数 ≥ 1）→ 同 seed 同序列 = 同落格（确定性）。
+/// 步数值域 + 可复现）→ 绕岛满 `boss_min_laps` 圈 + 经过 BOSS 格 → BOSS 现身切战斗（位置停
+/// BOSS 格）→ 同 seed 同序列 = 同落格（确定性）。
 #[test]
 fn e2e_board_spin_loop() {
     let mut app = GameApp::new(1080.0, 1920.0);
@@ -452,14 +453,26 @@ fn e2e_board_spin_loop() {
     assert_eq!(b1.index(), expected, "摇 {roll} 格后索引应 = ({idx0} + {roll}) % {track_len}");
     assert_eq!(app.map_pos(), Some(b1.pos()), "玩家位置 = 新赛道格");
 
-    // 多轮摇骰（同 seed 可复现）：累计步数 ≥ 赛道长度 → 必过起点（圈数 ≥ 1）
-    for _ in 0..40 {
+    // S19.3：摇骰直到 BOSS 现身（绕满 `boss_min_laps` 圈 + 经过 BOSS 格）→ 切战斗场景
+    // 未满圈时经过 BOSS 格 = 「未现身」提示（不切场景），满圈后再经过 = 现身。
+    let locked_text = ti_app::sgetf("scene.main_map.toast.boss_locked_fmt", &[&1]);
+    let mut saw_locked = false;
+    let mut spins = 1;
+    while app.scene() == Scene::MainMap && spins < 120 {
         app.handle(GameInput::Spin);
+        spins += 1;
+        if ti_app::scenes::MapHost::board_toast(&app).as_deref() == Some(locked_text.as_str()) {
+            saw_locked = true;
+        }
     }
+    assert!(saw_locked, "未绕满圈时经过 BOSS 格应提示「未现身」");
+    assert_eq!(app.scene(), Scene::Vs, "BOSS 现身后应切战斗场景（{spins} 次摇骰）");
     let b2 = app.board.as_ref().expect("摇骰后 board 会话应在位");
-    assert!(b2.laps() >= 1, "40 轮摇骰（期望 ~140 步）应至少过起点一圈：laps={}", b2.laps());
+    assert!(b2.at_boss(), "BOSS 现身时位置应停在 BOSS 格");
+    assert!(b2.laps() >= 1, "BOSS 现身应已绕满 boss_min_laps 圈：laps={}", b2.laps());
+    assert_eq!(app.map_pos(), Some(b2.pos()), "玩家位置 = BOSS 格");
 
-    // 同 seed 复现：两条独立路径同序列 = 同落点
+    // 同 seed 复现：两条独立路径同序列 = 同落点 + 同触发回合
     let mut a = GameApp::new(1080.0, 1920.0);
     a.rng_mut().set_seed(7);
     a.set_rng_seed(7);

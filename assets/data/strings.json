@@ -85,5 +85,6 @@
  "scene.main_map.toast.treasure_fmt": "宝藏：+{0} 金",
  "scene.main_map.toast.city_fmt": "城镇：+{0} 金",
  "scene.main_map.toast.card_fmt": "卡牌：{0}",
- "scene.main_map.toast.roll_fmt": "骰 {0}"
+ "scene.main_map.toast.roll_fmt": "骰 {0}",
+ "scene.main_map.toast.boss_locked_fmt": "BOSS 尚未现身（还需绕岛 {0} 圈）"
 }

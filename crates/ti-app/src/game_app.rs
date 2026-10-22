@@ -35,7 +35,7 @@ use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::battle::BattleSession;
-use ti_core::rules::board::{BoardSession, Landing, Track, TrackSpace};
+use ti_core::rules::board::{BoardSession, BossTrigger, Landing, Track, TrackSpace, Turn};
 use ti_core::rules::build;
 use ti_core::rules::cards;
 use ti_core::rules::cards_draw;
@@ -1330,15 +1330,18 @@ impl GameApp {
     /// 摇骰前进（环岛赛道，`docs/business/progression.md` §环岛赛道）：
     /// 摇骰定步数（`1..=dice_sides`）→ 沿赛道前进 N 格 → 落格结算。
     ///
-    /// 结算（数值全走 `balance.board`，规则层 `rules::board::Landing` 分派）：
+    /// 结算（数值全走 `balance.board`，规则层 `rules::board::Turn`/`Landing` 分派）：
     /// - 绕岛过起点 → 每圈 `lap_bonus_gold`；
     /// - 港口 → 提示条（贸易/建造经 HUD 命令盘）；城镇 → `city_gold`；
     /// - 事件/卡牌格 → 抽一张卡经 `apply_card_effect` 结算；
     /// - 遭遇格 → 扣 `battle_damage` HP + 失 `battle_gold_loss` 金；
-    /// - 宝藏格 → `treasure_gold`；BOSS 格 → 调用方按 `Landing::Boss` 进战斗场景。
+    /// - 宝藏格 → `treasure_gold`；
+    /// - BOSS（S19.3）：**经过或落在 BOSS 格**即遇 BOSS；绕岛满 `boss_min_laps` 圈
+    ///   才现身（`Turn::boss = Engaged` → 调用方进战斗场景），未满圈 = 未现
+    ///   （`Locked` → 提示「还需 N 圈」）；现身时位置停到 BOSS 格（被拦停）。
     ///
-    /// 返回落格类型（`None` = 无赛道，`board` 未构建）。
-    pub fn spin_board(&mut self) -> Option<Landing> {
+    /// 返回本回合结果（`None` = 无赛道，`board` 未构建）。
+    pub fn spin_board(&mut self) -> Option<Turn> {
         let b = match balance() {
             Ok(b) => b,
             Err(_e) => {
@@ -1349,9 +1352,8 @@ impl GameApp {
         };
         let session = self.board.as_mut()?;
         let sides = b.board.dice_sides.min(b.board.max_steps);
-        let roll = session.spin(&mut self.rng, sides);
         let laps_before = session.laps();
-        session.advance(roll);
+        let turn = session.step(&mut self.rng, sides, b.board.boss_min_laps);
         let laps_after = session.laps();
         self.map_pos = Some(session.pos());
         // 绕圈补给（大富翁「经过起点」语义）
@@ -1418,14 +1420,28 @@ impl GameApp {
                     }
                 }
             }
-            Landing::Boss => {
+            // BOSS 格本身无金/HP 结算（提示条由下方 `Turn::boss` 分支给出：
+            // 未满圈 = 未现 / 满圈 = 现身）；起点格与普通格同样无结算。
+            Landing::Boss | Landing::Start | Landing::Plain => {}
+        }
+        // BOSS 触发（S19.3）：经过或落在 BOSS 格即遇 BOSS；满 `boss_min_laps` 圈才现身。
+        match turn.boss {
+            BossTrigger::None => {}
+            BossTrigger::Locked => {
+                let remain = b.board.boss_min_laps.saturating_sub(laps_after).max(1);
+                self.board_toast =
+                    Some(crate::i18n::sgetf("scene.main_map.toast.boss_locked_fmt", &[&remain]));
+                self.board_toast_ticks = 120;
+                self.last_sfx = Some(Sfx::Invalid);
+            }
+            BossTrigger::Engaged => {
+                // 位置已在结算前停到 BOSS 格（见上），此处只给提示条
                 self.board_toast =
                     Some(String::from(crate::i18n::sget("scene.main_map.toast.boss")));
                 self.board_toast_ticks = 120;
             }
-            Landing::Start | Landing::Plain => {}
         }
-        Some(landing)
+        Some(turn)
     }
 
     /// 渲染当前场景：场景模块绘制（`scenes/*.rs::render`），纯代码绘制
@@ -1783,7 +1799,7 @@ impl MapHost for GameApp {
         self.board.as_ref().map_or(0, BoardSession::last_roll)
     }
 
-    fn board_spin(&mut self) -> Option<Landing> {
+    fn board_spin(&mut self) -> Option<Turn> {
         self.spin_board()
     }
 

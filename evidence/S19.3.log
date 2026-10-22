@@ -1,0 +1,41 @@
+=== S19.3 BOSS 触发规则 + 跨图节奏对齐（判据 + 实测证据） ===
+
+判据（本任务验收点）：
+1) BOSS 触发时机：原规则 = 「恰好停在 BOSS 格才触发」——33~46 格赛道上等于 1/40 量级运气，
+   实测 E[摇骰次数] 32~41 次且跨图差异大；改为「**经过或落在 BOSS 格即遇 BOSS**」。
+2) BOSS 现身门槛：`balance.board.boss_min_laps = 1`（绕岛满 1 圈才现身），未满圈 → 提示
+   「BOSS 尚未现身（还需绕岛 N 圈）」且不切战斗；跨图节奏对齐（实测 E[摇骰] 收敛到 16~21）。
+3) 门槛判定时点 = **经过 BOSS 那一刻**的圈数（同回合「先过 BOSS 再绕满圈」= 未现身，
+   回归测试 `step_gate_is_evaluated_at_crossing_moment` 锁定）。
+4) 现身时位置停在 BOSS 格（被拦停，位置与视觉一致）。
+5) 文档同步 `docs/business/progression.md` §BOSS 触发规则 + §经济节奏；台账 S19.3 verified。
+6) gate 22 项全绿。
+
+--- 1) 蒙特卡洛实测（2 万次/图，dice_sides=6，boss_min_laps=1）---
+m01 赛道45格 BOSS@27 | 旧(须恰好落格) E[摇骰]=40.6 金=1060 扣血暂存=37 | 新(经过即触发+1圈门槛) E[摇骰]=21 金=1327 扣血暂存=88
+m02 赛道46格 BOSS@15 | 旧 E[摇骰]=37.3 | 新 E[摇骰]=18 金=1373 扣血暂存=73
+m03 赛道33格 BOSS@30 | 旧 E[摇骰]=32.1 | 新 E[摇骰]=16 金=1286 扣血暂存=61
+→ 三图节奏收敛 16~21 次摇骰（≈1 圈半），到 BOSS 时已攒 ~1300 金（够 Investment 500 + Bank 200 / Fort 800 建造）。
+
+--- 2) 规则层新单测（ti-core，cargo test -p ti-core --lib 115 passed / 0 failed）---
+rules::board::tests::step_boss_locked_until_lap_gate_met   （未满圈=Locked，满圈=Engaged）
+rules::board::tests::step_gate_is_evaluated_at_crossing_moment （门槛按经过那一刻圈数判定）
+rules::board::tests::step_engages_boss_without_gate_and_is_reproducible （门槛 0 + 同 seed 同步数）
+rules::board::tests::step_stops_at_boss_cell_when_engaged  （现身时停在 BOSS 格）
+
+--- 3) e2e（ti-app）---
+e2e_board_spin_loop：断言「未满圈经过 BOSS → 出现未现身提示」「满圈后经过 → 切 Vs 战斗」
+「位置 = BOSS 格」「laps ≥ 1」「同 seed 同落格」——ok。
+
+--- 4) 数据层 ---
+balance.json `board.boss_min_laps = 1`（新增 1 行）；`BoardCfg.boss_min_laps` + `RawBoard` 缺省 1；
+不变量测试加断言 `boss_min_laps >= 1`（跨图节奏门槛不可被静默改成 0）。
+
+--- 5) gate ---
+=== gate: TreasureIsl (22 items) ===
+=== gate: 0 failure(s) ===
+（fmt/clippy/test/build/wasm/占位/unwrap/zero-unknown/台账/doccheck/validate_data/gen_layout/check_hardcode/
+oracle边界/doccheck2/台账对账/业务闭环/模块并行/飞轮/视觉回归/渲染快照/正向渲染快照/数据源/场景叙事约束 全 PASS；
+台账 174 任务 / 160 verified / 0 error；doccheck 0 error）
+
+=== S19.3 verified ===

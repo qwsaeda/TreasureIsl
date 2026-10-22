@@ -7,7 +7,7 @@ use ti_core::data::{SceneLayout, balance};
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::map::GridPos;
-use ti_core::rules::board::{Landing, SpaceKind};
+use ti_core::rules::board::SpaceKind;
 use ti_core::rules::build;
 use ti_core::rules::trade;
 
@@ -212,11 +212,12 @@ impl Scene for MainMapScene {
             }
             GameInput::Spin => {
                 // 环岛赛道（`rules::board`，`progression.md` §环岛赛道）：摇骰定步数 → 前进 N 格 → 落格结算。
-                // 落格效果（金/HP/卡/提示条）已由 `board_spin` 结算；BOSS 落格 → 切战斗场景。
-                let Some(landing) = host.board_spin() else {
+                // 落格效果（金/HP/卡/提示条）已由 `board_spin` 结算；S19.3：经过/落在 BOSS 格且
+                // 绕满 `boss_min_laps` 圈 → BOSS 现身 → 切战斗场景。
+                let Some(turn) = host.board_spin() else {
                     return false;
                 };
-                if landing == Landing::Boss {
+                if turn.boss.engaged() {
                     host.start_battle();
                     return true;
                 }

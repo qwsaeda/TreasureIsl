@@ -174,7 +174,8 @@
   "battle_damage": 30,
   "battle_gold_loss": 20,
   "treasure_gold": 200,
-  "city_gold": 50
+  "city_gold": 50,
+  "boss_min_laps": 1
  },
  "messages": {
   "pages": {
