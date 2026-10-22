@@ -120,6 +120,34 @@ def check_balance(b: dict, problems: list[str]) -> set[str]:
         if x.get("gold_max", 0) <= 0:
             problems.append(f"building {x.get('id')} gold_max 必须 > 0")
 
+    # S21.2 船系统（规格 = docs/business/economy.md §船系统：4 级单向链，
+    # cargo[0]=99 锁现状；cost 严格递增；atk/hp 非递减）
+    bt = b.get("boat", {})
+    levels = bt.get("levels", [])
+    if len(levels) != 4:
+        problems.append(f"boat.levels 须 4 级（小舢板→巡防），实为 {len(levels)}")
+    else:
+        prev_cargo, prev_cost, prev_atk, prev_hp = 0, -1, -1, -1
+        for i, lv in enumerate(levels):
+            keys.add(lv.get("name_key", ""))
+            cargo, cost = lv.get("cargo", 0), lv.get("cost", 0)
+            atk, hp = lv.get("atk", 0), lv.get("hp", 0)
+            if cargo <= 0:
+                problems.append(f"boat.levels[{i}] cargo 必须 > 0")
+            if i == 0:
+                if cost != 0:
+                    problems.append(f"boat.levels[0].cost 必须 = 0（开局小船免费），实为 {cost}")
+                if cargo != 99:
+                    problems.append(f"boat.levels[0].cargo 必须 = 99（锁现状有效贸易上限），实为 {cargo}")
+            else:
+                if cost <= prev_cost:
+                    problems.append(f"boat.levels[{i}].cost={cost} 必须 > 上一级 {prev_cost}（造价严格递增）")
+            if atk < prev_atk or hp < prev_hp:
+                problems.append(f"boat.levels[{i}] atk/hp={atk}/{hp} 不得低于上一级 {prev_atk}/{prev_hp}")
+            if cargo <= prev_cargo:
+                problems.append(f"boat.levels[{i}].cargo={cargo} 必须 > 上一级 {prev_cargo}（货舱严格递增）")
+            prev_cargo, prev_cost, prev_atk, prev_hp = cargo, cost, atk, hp
+
     cd = b.get("cards", {})
     if not (0.0 <= cd.get("event_chance", -1) <= 1.0):
         problems.append(f"cards.event_chance={cd.get('event_chance')} 越界 [0,1]")

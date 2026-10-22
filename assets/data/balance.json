@@ -108,17 +108,54 @@
     "atk_bonus": 0,
     "hp_bonus": 50
    },
-   {
-    "id": "Fort",
-    "name_key": "build.fort",
-    "base_cost": 800,
-    "gold_max": 16000,
-    "atk_bonus": 8,
-    "hp_bonus": 150
-   }
-  ]
- },
- "cards": {
+    {
+     "id": "Fort",
+     "name_key": "build.fort",
+     "base_cost": 800,
+     "gold_max": 16000,
+     "atk_bonus": 8,
+     "hp_bonus": 150
+    }
+   ]
+  },
+  "boat": {
+   "_comment": "S21.2 船系统（规格 = docs/business/economy.md §船系统；规则接线 S21.10）：开局 1 级小舢板（cargo 99 = 现状单次贸易上限，零行为变化）；单向 4 级升级（cost 一次性，立即生效）；cargo = 单次贸易数量上限（effective = min(goods.qty_max, cargo)，S21.10 与 goods.qty_max 400 翻转同步落地）；atk/hp = 累计值，与建筑 Σ 叠加（combat.md §建造加成扩展）。",
+   "levels": [
+    {
+     "level": 1,
+     "name_key": "boat.1",
+     "cost": 0,
+     "cargo": 99,
+     "atk": 0,
+     "hp": 0
+    },
+    {
+     "level": 2,
+     "name_key": "boat.2",
+     "cost": 800,
+     "cargo": 150,
+     "atk": 4,
+     "hp": 80
+    },
+    {
+     "level": 3,
+     "name_key": "boat.3",
+     "cost": 2500,
+     "cargo": 240,
+     "atk": 9,
+     "hp": 180
+    },
+    {
+     "level": 4,
+     "name_key": "boat.4",
+     "cost": 6000,
+     "cargo": 400,
+     "atk": 15,
+     "hp": 320
+    }
+   ]
+  },
+  "cards": {
   "event_chance": 0.35,
   "hand_size": 1,
   "deck": [

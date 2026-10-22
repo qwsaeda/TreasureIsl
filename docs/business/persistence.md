@@ -44,6 +44,9 @@
 - app 侧存档槽（`domain::persistence::SaveSlot`，JSON v2 schema）：S15.2 新增 `unlocked_mask: u8`
   （逐图推进位，bit 0/1/2 = m01/m02/m03 已解锁，bit 3 = CLEARED 通关位，旧档缺字节 = 0 = 退最小前置链）；
   字段口径与读档还原规则 = [`progression.md`](progression.md) §与存档一致（单一事实源）。
+- **v2 → v3（S21.2 船系统，实现 S21.11）**：新增 `boat_level: u8`（1..=4，船等级 1-based，
+  `balance.boat.levels` 有效域）；v2 旧档缺字段 = 迁移补 **1（小船）**，不回退不报错；
+  迁移纯函数、幂等（再迁不变），单测锚点 `save_migrate_v2_to_v3_defaults`。
 
 ## RNG 设计（可复现）
 

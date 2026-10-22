@@ -30,6 +30,10 @@
 
 ## 建造加成（成长机制，`docs/business/economy.md` §建造）
 
+> S21.2 起扩展为「建筑 + 船只」双成长轴：总 atk/hp = 建筑 Σ + 船等级加成
+> （`balance.boat.levels[boat_level].atk/hp`，**累计值直接加**，不经 `× level` 公式；
+> 规格单一事实源 = `economy.md` §船系统，接线 S21.10）。
+
 玩家 atk/hp = 基础值（`balance.combat.player`）+ 已建建筑加成。
 加成数值在 `balance.build.buildings[].atk_bonus` / `hp_bonus`（每级加成，
 `BuildCfg::atk_bonus_at(id, level)` = `atk_bonus × level`，`Σ` 全部建筑）。

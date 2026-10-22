@@ -1,0 +1,36 @@
+# S21.2 船系统业务规格定案 —— 验收证据（2026-10-22）
+
+## 判据 1：规格落文（4 级链表 + 货舱公式 + 造价递增 + 双成长轴 + 存档口径）
+- docs/business/economy.md 新增「## 船系统（Boat，S21.2）」：
+  等级链（小舢板 0/99/0/0 → 双桅快帆船 800/150/4/80 → 三桅大帆船 2500/240/9/180 → 巡防战船 6000/400/15/320）
+  + 规则 6 条（单向升级立即生效 / 单次贸易上限 = min(goods.qty_max, cargo)（1 级 99 = 现状零变化；
+    goods.qty_max 99→400 翻转与 S21.10 规则接线同一步，防中间态）/ 船加成与建筑 Σ 叠加 /
+    不抬 gold_max 不参战 / 存档 v3 boat_level（v2 缺省 1）/ 节奏表）
+  + 不变量表（validate_data 机器判定）+ 可测试规则表（4 单测名先行登记）。
+- docs/business/progression.md §环岛赛道 新增「### 船只（S21.2）」小节
+  （开局小船 / 造船入口 / 航行节奏影响 = 贸易效率 + 战斗余量 / 主地图表现口径 / 存档口径，数值交叉引用 economy.md = 单一事实源）。
+- docs/business/combat.md 建造加成节扩展：总 atk/hp = 建筑 Σ + 船等级加成（累计值直加，规格交叉引用 economy.md）。
+- docs/business/persistence.md §迁移 补 v2→v3（boat_level: u8，1..=4，v2 缺省 1，幂等迁移，单测锚点 save_migrate_v2_to_v3_defaults）。
+
+## 判据 2：数据落地
+- assets/data/balance.json 新增 boat 段（levels 4 条：level/name_key/cost/cargo/atk/hp + _comment 指向规格）；
+- assets/data/strings.json 新增 boat.1..4（小舢板/双桅快帆船/三桅大帆船/巡防战船）5 → 4 键
+  （build.boat 文案键属 S21.12 表现接线，届时登记，先移除防 validate_data 孤儿键 FAIL）。
+
+## 判据 3：validate_data 不变量实跑（正测 + 负测）
+- 正测：`python scripts/validate_data.py` → `validate_data: OK（4 表，strings 91 键）` exit 0
+- 负测（EXP-108 负测纪律）：注入 `boat.levels[0].cargo = 100` → 实报
+  `ERROR boat.levels[0].cargo 必须 = 99（锁现状有效贸易上限），实为 100`，exit 1 ⇒ 校验真拦得住；
+  已还原并复跑正测 0 违规。
+
+## 判据 4：台账 + 文档一致性
+- ledger：200 tasks（S21.0~S21.12），S21.2 verified，deps S21.1 verified，0 error；
+- doccheck：130 docs / 4 assertions / 0 error；
+- S21.10（规则接线）/ S21.11（存档 v3）/ S21.12（船贴图 + 主地图切换 + 造船 UI）已登记，链路完整。
+
+## 判据 5：用户拍板留痕
+- question 工具（S21.2 方案选择）：用户选「B 独立船系统（推荐）」= rules/ship.rs 式独立轴 +
+  货舱容量 + 造价 + atk/hp + 存档 + 主地图船图按等级切换。
+
+## 判据 6：gate 全绿
+- powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 → 0 failure（本证据提交前实跑，见 commit 记录）。
