@@ -456,6 +456,9 @@ pub struct KeyState {
 }
 
 impl GameApp {
+    /// 落格提示条的显示时长（帧，S20.0c 单一入口 `toast()` 引用）。
+    const TOAST_TICKS: u32 = 120;
+
     /// 把按键快照映射为 `GameInput` 事件并逐条 `handle`（平台无关，`docs/gamebook.md` §3）。
     ///
     /// 返回是否发生场景切换（壳层据此强制整帧渲染）。
@@ -1368,42 +1371,55 @@ impl GameApp {
         Some(turn)
     }
 
+    /// 落格提示条 + 音效（提示条三连的**单一入口**）。
+    ///
+    /// S20.0c：`board_toast` + `board_toast_ticks = 120` + `last_sfx` 三连在代码里出现 7 处
+    /// （复制粘贴 ⇒ 改时长/音效必漏一处）⇒ 收敛为单一方法。
+    /// 时长常量 `TOAST_TICKS` = 120 帧（出图取证用 `hold_board_toast` 顶住衰减）。
+    fn toast(&mut self, text: String, sfx: Option<Sfx>) {
+        self.board_toast = Some(text);
+        self.board_toast_ticks = Self::TOAST_TICKS;
+        if let Some(s) = sfx {
+            self.last_sfx = Some(s);
+        }
+    }
+
     /// 落格结算（`Landing` → 金 / HP / 卡 / 提示条；数值全走 `balance.board`）。
     fn settle_board_landing(&mut self, landing: Landing, b: &data::Balance) {
         match landing {
             Landing::Battle => {
                 self.card_state.hp = self.card_state.hp.saturating_add(b.board.battle_damage);
                 self.gold = self.gold.saturating_sub(b.board.battle_gold_loss);
-                self.board_toast = Some(crate::i18n::sgetf(
-                    "scene.main_map.toast.battle_fmt",
-                    &[&b.board.battle_damage],
-                ));
-                self.board_toast_ticks = 120;
-                self.last_sfx = Some(Sfx::Invalid);
+                self.toast(
+                    crate::i18n::sgetf(
+                        "scene.main_map.toast.battle_fmt",
+                        &[&b.board.battle_damage],
+                    ),
+                    Some(Sfx::Invalid),
+                );
             }
             Landing::Treasure => {
                 self.gold = self.gold.saturating_add(b.board.treasure_gold).min(b.economy.gold_max);
-                self.board_toast = Some(crate::i18n::sgetf(
-                    "scene.main_map.toast.treasure_fmt",
-                    &[&b.board.treasure_gold],
-                ));
-                self.board_toast_ticks = 120;
-                self.last_sfx = Some(Sfx::Press);
+                self.toast(
+                    crate::i18n::sgetf(
+                        "scene.main_map.toast.treasure_fmt",
+                        &[&b.board.treasure_gold],
+                    ),
+                    Some(Sfx::Press),
+                );
             }
             Landing::City => {
                 self.gold = self.gold.saturating_add(b.board.city_gold).min(b.economy.gold_max);
-                self.board_toast = Some(crate::i18n::sgetf(
-                    "scene.main_map.toast.city_fmt",
-                    &[&b.board.city_gold],
-                ));
-                self.board_toast_ticks = 120;
-                self.last_sfx = Some(Sfx::Press);
+                self.toast(
+                    crate::i18n::sgetf("scene.main_map.toast.city_fmt", &[&b.board.city_gold]),
+                    Some(Sfx::Press),
+                );
             }
             Landing::Port => {
-                self.board_toast =
-                    Some(String::from(crate::i18n::sget("scene.main_map.toast.port")));
-                self.board_toast_ticks = 120;
-                self.last_sfx = Some(Sfx::Press);
+                self.toast(
+                    String::from(crate::i18n::sget("scene.main_map.toast.port")),
+                    Some(Sfx::Press),
+                );
             }
             Landing::Event | Landing::Card => {
                 // 事件格 / 卡牌格 = **必抽卡**（两类落格行为一致；`balance.cards.event_chance`
@@ -1420,12 +1436,10 @@ impl GameApp {
                         .unwrap_or_default();
                     if self.apply_card_effect(card_id) {
                         let card_name = crate::i18n::sget(&name_key);
-                        self.board_toast = Some(crate::i18n::sgetf(
-                            "scene.main_map.toast.card_fmt",
-                            &[&card_name],
-                        ));
-                        self.board_toast_ticks = 120;
-                        self.last_sfx = Some(Sfx::Press);
+                        self.toast(
+                            crate::i18n::sgetf("scene.main_map.toast.card_fmt", &[&card_name]),
+                            Some(Sfx::Press),
+                        );
                     }
                 }
             }
@@ -1441,16 +1455,14 @@ impl GameApp {
             BossTrigger::None => {}
             BossTrigger::Locked => {
                 let remain = b.board.boss_min_laps.saturating_sub(laps_after).max(1);
-                self.board_toast =
-                    Some(crate::i18n::sgetf("scene.main_map.toast.boss_locked_fmt", &[&remain]));
-                self.board_toast_ticks = 120;
-                self.last_sfx = Some(Sfx::Invalid);
+                self.toast(
+                    crate::i18n::sgetf("scene.main_map.toast.boss_locked_fmt", &[&remain]),
+                    Some(Sfx::Invalid),
+                );
             }
             BossTrigger::Engaged => {
                 // 位置已在规则层停到 BOSS 格（`BoardSession::step` 拦停），此处只给提示条
-                self.board_toast =
-                    Some(String::from(crate::i18n::sget("scene.main_map.toast.boss")));
-                self.board_toast_ticks = 120;
+                self.toast(String::from(crate::i18n::sget("scene.main_map.toast.boss")), None);
             }
         }
     }
@@ -1465,7 +1477,6 @@ impl GameApp {
             self.board_toast_ticks = u32::MAX;
         }
     }
-
     /// 渲染当前场景：场景模块绘制（`scenes/*.rs::render`），纯代码绘制
     /// （`08_render_arch.md` 契约 2：S15.4 起无 legacy 精灵层叠加）。
     ///

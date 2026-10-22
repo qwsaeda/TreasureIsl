@@ -11,11 +11,9 @@
     "crates/ti-engine/src/scene_render.rs::spawn_primitives": "S20.1 拆分（按原语种类拆 fn）",
     "crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity": "S20.1 拆分（按子断言拆 fn）"
   },
-  "exempt_repeats": {
-    "toast 三连（文案+时长+音效）@crates/ti-app/src/game_app.rs": "S20.2 抽 GameApp::toast(text, sfx) 辅助函数（7 处收敛到 1 处）"
-  },
+  "exempt_repeats": {},
   "max_file_lines": 900,
   "max_fn_lines": 140,
   "max_repeat": 5,
-  "note": "基线 = 2026-10-21 审计时的现状（棘轮起点）。新增违规 ⇒ --check FAIL；整改后从基线删除对应条目。"
+  "note": "基线 = 2026-10-21 审计时的现状（棘轮起点）。新增违规 ⇒ --check FAIL；整改后从基线删除对应条目。S20.0c 已收敛 toast 三连（7 处 → 1 处 helper），该条豁免清空。"
 }

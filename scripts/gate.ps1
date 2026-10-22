@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（22 项，见 docs/parity.md）
+﻿# gate.ps1 — 统一门禁（23 项，见 docs/parity.md）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 任一项 FAIL 即以非 0 退出；未到阶段的构建项打印 SKIP 并按通过处理。
 $ErrorActionPreference = 'Continue'
@@ -28,7 +28,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (22 items) ==="
+Write-Host "=== gate: TreasureIsl (23 items) ==="
 
 # 1) format
 & cargo fmt --all -- --check 2>&1 | Out-Null
@@ -203,6 +203,13 @@ Report ($LASTEXITCODE -eq 0) 'render-invariants (7 场景结构不变式断言�
 $dsOut = & python scripts/check_data_source.py 2>&1
 $dsOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_data_source (数据源改动 → 渲染不变式门禁)'
+
+# 22) 代码结构门禁（S20.0c，docs/style.md §5.12）：文件规模（>900 行）/ 函数长度（>140 行）/
+#     重复模式（同一骨架 ≥6 次）；阈值与**棘轮基线** = scripts/code_budget.json
+#     （新增违规 ⇒ FAIL；整改后从基线删除对应条目 ⇒ 只降不升）
+$auditOut = & python scripts/audit_code.py --check 2>&1
+$auditOut | ForEach-Object { Write-Host "        $_" }
+Report ($LASTEXITCODE -eq 0) 'audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)'
 
 # 21) UI 场景叙事约束（v3，docs/ui-redesign-v3/02_spec_lang.md）：
 #     assets/data/ui_schema/scene_manifest_v3.json 的 mood/重心/节奏/密度/HUD 上限断言

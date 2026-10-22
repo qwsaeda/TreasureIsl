@@ -61,7 +61,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 |  | P0-5（S10.1 新增） | 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test render_invariants` |  |
 
-## 代码质量门禁 `scripts/gate.ps1`（22 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（23 项，循环每轮强制）
 
 > **计数约定（本节是门禁项数的唯一事实源，其他文档只引用、不各自重数）**
 >
@@ -69,7 +69,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > 1. 只数顶格 `Report`；**缩进在 `if`/`else` 块内的条件 `Report`/`Skip` 不计入**——
 >    即 wasm 构建、android 构建、`zero-unknown verify`（`if (Test-Path ...)` 守卫）三项；
 > 2. `Skip` 不单独计项；
-> 3. 当前顶格 `Report` = **22 项**。
+> 3. 当前顶格 `Report` = **23 项**。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
 > 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
@@ -78,7 +78,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > **易错点（勿再踩）**：
 > - `gate.ps1` 的**注释编号**（1..20 + 19.5 + 4b，含第 7 项 zero-unknown）与**机器计数**
 >   不一定相等：zero-unknown 是条件项不计；`10a`/`10b`/`10c` 各算 1 项。引用「项数」
->   一律用机器口径 23。
+>   一律用机器口径 24。
 > - `10a`/`10b`/`10c` 是 **3 个独立顶格 `Report`，各算 1 项**，不是「三合一算 1 项」。
 > - 历史计划文档里的 8/10/14/16/18/20 项均为**该阶段时点快照**，不代表当前；引用时须带时点标注。
 > - **`required-features` 的 bin 不被第 1~3 项编译/lint 覆盖**——第 4b 项专门补这个盲区（EXP-099）。
@@ -154,6 +154,9 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
  20 数据源门禁（S13.6 契约 §5）：
         python scripts/check_data_source.py
         （legacy/data/*.Map|*.pak 相对 HEAD 有改动 → 强制跑第 19 项；无改动时 SKIP）
+        （文件规模 >900 行 / 函数长度 >140 行 / 重复模式 ≥6 次；阈值与棘轮基线 = scripts/code_budget.json）
+  22 代码结构门禁（S20.0c，docs/style.md §5.12）：
+        python scripts/audit_code.py --check
   21 UI 场景叙事约束（v3，docs/ui-redesign-v3/02_spec_lang.md）：
         python scripts/check_scene_narrative.py
         （scene_manifest_v3.json N1-N8：Schema 校验 / mood 三元一致 / 重心占屏 ≥20% /
@@ -165,7 +168,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 22 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 23 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
 
 **S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
-审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 22 项全绿。
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 23 项全绿。

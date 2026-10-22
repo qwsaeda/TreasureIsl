@@ -9,7 +9,7 @@ treasure-island/
 ├── Cargo.toml              # [workspace] edition="2024"，[workspace.lints] 集中
 ├── rustfmt.toml            # 全局唯一格式化配置
 ├── clippy.toml
-├── scripts/gate.ps1        # 门禁（parity.md 22 项，PowerShell 本机执行）
+├── scripts/gate.ps1        # 门禁（parity.md 23 项，PowerShell 本机执行）
 ├── crates/
 │   ├── ti-formats/         # 纯二进制格式解析/序列化：pak/lpk/pcx/map/font/save
 │   │   └── src/{pak.rs, pcx.rs, map.rs, font.rs, save.rs, macros.rs, error.rs, ids.rs}

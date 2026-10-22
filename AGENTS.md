@@ -30,7 +30,7 @@
 | **模块并行开发（契约→并行→集成）** | `docs/process/05_module_parallel.md`（一轮 4 步 + 纪律 5 条）+ `docs/contracts/00_index.md` + `plan/packages.yaml`（**包划分的机读唯一源**） |
 | **对抗流水线飞轮（找问题→审计→修复→回写；开轮编排 = `flywheel-kickoff` skill）** | `docs/process/06_flywheel.md`（3 角色 + 开轮必读 6 条 + 停机条件）+ `scripts/flywheel_readme.ps1 -Check` |
 | **界面全量重设计 S17（设计令牌 v2 / 8pt 版面 / 图标 14 项 / 动效 4 参数，航海夜·精修）** | `docs/process/10_ui_redesign.md`（S17 规格单一事实源；改 UI 视觉量前必读，与 `08_layout_design.md` 场景坐标实例互锁） |
-| **UI 重设计 v3（真游戏化版面：场景叙事 DSL + 打破 7 场景同模板）** | `docs/ui-redesign-v3/README.md`（01 对标拆解 / 02 场景叙事 DSL 规格 / 03 七场景重设计提案 / 04 index 落地；gate 顶层固定第 22 项（gate.ps1 内注释编号 21）`check_scene_narrative` 锚点 `assets/data/ui_schema/scene_manifest_v3.json`；v3 取代 v2 的「7 场景同模板」前提，色板/字体/动效令牌仍沿用 `10_ui_redesign.md`） |
+| **UI 重设计 v3（真游戏化版面：场景叙事 DSL + 打破 7 场景同模板）** | `docs/ui-redesign-v3/README.md`（01 对标拆解 / 02 场景叙事 DSL 规格 / 03 七场景重设计提案 / 04 index 落地；gate 顶层固定第 23 项（gate.ps1 内注释编号 21）`check_scene_narrative` 锚点 `assets/data/ui_schema/scene_manifest_v3.json`；v3 取代 v2 的「7 场景同模板」前提，色板/字体/动效令牌仍沿用 `10_ui_redesign.md`） |
 | **UI 重设计 v3.5（画面丑的根因=设计数据：地形/暖色板/画布/实体/HUD）** | `docs/ui-redesign-v3/07_v3_5_pass.md`（地形数据 → 棋盘成地图；暖色板；画布贴合；实体图标化；执行链 S18.9~S18.13） |
 | **环岛赛道 / 摇骰前进（S19，主地图主玩法）** | `docs/business/progression.md` §环岛赛道（单一事实源）+ `assets/data/board.json`（赛道数据，`scripts/extract_board.py` 生成）+ `rules::board`（`ti-core`）；改主地图移动/落格结算/轨道数据前必读 |
 | **改渲染代码（sprite_atlas/terrain_atlas/game_app render/越界/透明/z-order）前必读** | `docs/process/08_render_arch.md`（**运行时架构契约**：分层 / 绘制原语 / z-order=调用顺序 / 单一 1080 坐标系 / grep 门禁；gate 第 9 项 doccheck2 `check_runtime_no_legacy_coords` 锚点）<br>`docs/process/07_render_pipeline.md`（legacy 像素管线契约，已降级为逆向参照） |
@@ -78,7 +78,7 @@ powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 gate         # 全
 powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 test         # 全 workspace 测试
 powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 element-dump index 3  # 元素级验证（场景 + 记录号）
 
-# 每轮循环的门禁：gate.ps1 22 项顶层固定 Report（fmt/clippy/test/build/占位/unwrap/zero-unknown/台账/doccheck/validate_data/gen_layout/check_hardcode/oracle边界/doccheck2/台账对账/业务闭环/模块并行/飞轮/视觉回归/渲染快照/正向渲染快照/数据源/场景叙事约束check_scene_narrative；wasm/android 构建为条件子项不计顶层；zero-unknown 亦条件项（verify.rs 在位才计，QA145））
+# 每轮循环的门禁：gate.ps1 23 项顶层固定 Report（fmt/clippy/test/build/占位/unwrap/zero-unknown/台账/doccheck/validate_data/gen_layout/check_hardcode/oracle边界/doccheck2/台账对账/业务闭环/模块并行/飞轮/视觉回归/渲染快照/正向渲染快照/数据源/场景叙事约束check_scene_narrative；wasm/android 构建为条件子项不计顶层；zero-unknown 亦条件项（verify.rs 在位才计，QA145））
 # 全绿才可把任务置 verified，输出 tee 到 evidence/<id>.log
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 

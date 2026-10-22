@@ -1,0 +1,39 @@
+=== S20.0c 代码结构治理【C】= 重复模式收敛 + audit_code 进 gate（22 → 23 项） ===
+
+判据（本任务验收点）：
+1) 重复模式收敛：落格提示条三连（`board_toast` + `board_toast_ticks = 120` + `last_sfx`）
+   在 `game_app.rs` 出现 **7 处** ⇒ 抽单一入口 `GameApp::toast(text, sfx)`（时长常量
+   `TOAST_TICKS = 120` 收敛到一处）；基线里该条豁免清空；
+2) `scripts/audit_code.py --check` 进 gate（**22 → 23 项**，棘轮防回退）：新增违规 ⇒ FAIL，
+   整改后从 `scripts/code_budget.json` 基线删除对应条目 ⇒ 只降不升；
+3) 门禁项数声称全量同步（`parity.md` = 唯一事实源 + `git.md` / `README.md` / `loop.md` /
+   `AGENTS.md` / `style.md` / `playbook.ps1` / `gate.ps1` 横幅 / `doccheck2` 阈值）；
+4) 位置声明一致性：`check_scene_narrative` 的「第 N 项」位置声明与总数一致
+   （新项插在其前 ⇒ 它成为末项 = 第 23 项；doccheck2 `check_gate_item_count` 断言
+   「任何含 gate 的 N 项 声称」必须 == 机器总数 ⇒ 位置声明与总数不能各说各话）；
+5) gate 23 项全绿。
+
+--- 1) 重复收敛实跑 ---
+python scripts/audit_code.py --report：
+  收敛前：toast 三连 @ game_app.rs × 7（基线豁免 1 条）
+  收敛后：DUP 违规 0 项（豁免清空）；`--check` → PASS 0 退出
+代码：新增 `GameApp::toast(text: String, sfx: Option<Sfx>)` + `const TOAST_TICKS: u32 = 120`；
+     7 处调用点（battle / treasure / city / port / card / boss_locked / boss）统一走该入口。
+
+--- 2) 门禁项数同步（机器口径）---
+scripts/flywheel_readme.ps1 -Check → "gate 23 项"（原 22）
+scripts/gate.ps1：新增顶格 `Report`（第 23 项 = 代码结构门禁，注释编号 22）
+  → [audit_code] PASS：0 项结构违规
+docs/parity.md §代码质量门禁：22 → 23 项 + 清单补第 22 项条目（文件规模/函数长度/重复模式 + 棘轮基线）
+docs/git.md / README.md / loop.md / AGENTS.md / style.md / playbook.ps1 / gate.ps1 横幅：22 → 23
+crates/ti-tools/src/bin/doccheck2.rs：`check_gate_item_count` 期望 22 → 23
+位置声明：`check_scene_narrative` 由「第 22 项」改为「第 23 项」（新项插其前 ⇒ 它是末项，
+  与总数一致 ⇒ doccheck2 的「N 项 声称 == 机器总数」断言成立）。
+
+--- 3) 门禁 ---
+=== gate: TreasureIsl (23 items) ===
+=== gate: 0 failure(s) ===
+（23 项全 PASS，含新增 audit_code 项；台账 184 任务 / 164 verified / 0 error；doccheck 0 error；
+ doccheck2 0 error；flywheel_readme -Check PASS：gate 23 项）
+
+=== S20.0c verified ===
