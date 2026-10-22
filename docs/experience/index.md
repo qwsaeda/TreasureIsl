@@ -33,7 +33,7 @@
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 14 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107） | 31 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 32 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 35 |
 
 ## 条目索引
@@ -153,6 +153,7 @@
 | EXP-111 | tools | | PowerShell 5.1 `Get-Content -Raw`+`Set-Content -Encoding utf8` 改含 CJK 的源码 = GBK 误解码 + **吞换行**（160 处「注释与代码同行」）+ 加 BOM ⇒ 代码结构被静默改写；禁任何 cmdlet 写仓库文件（用编辑工具或 `python encoding='utf-8', newline='\n'`），已写坏用 `git checkout` 回滚后重做。正文见 `tools.md` |
 | EXP-112 | code | | 模块化开发要先定**模块边界 + 函数清单**再落码（机械按行号切会切在 doc 注释中间、会重复定义 ⇒ 返工两遍）；编译节奏要**批量编辑 → 一次编译 → 报错一次性收口**，禁「改一处编一次」的探针节奏（2181 行拆分实测编译 10 次）。正文见 `code.md` |
 | EXP-113 | code | | 工具缺位会逼你把**同一脚本写多遍**（一次性脚本不是规范，工具缺位才是病）：本轮 ~40 个临时脚本里同类被重写 2~4 遍 ⇒ 提升 3 个长期工具（code_outline/board_measure/ui_shot_probe）+ 工具台账 `14_tooling_catalog.md`（含 4 条流水线组合）+ `doccheck2` 第 26 项自动对账。正文见 `code.md` |
+| EXP-114 | process | | UI 视觉改动缺「设计稿确认」门禁 ⇒ 返工全堆在收口阶段（S20.2 先落码后出图）：变更面声明只门控「改哪一块」，不门控「视觉方向是否被用户认可」；解法 = A 纪律固化「设计稿先行」（出图 → 用户确认留痕 → 落码 → ui_preview 验收闭环，00_index.md §UI 视觉改动：设计稿先行 + AGENTS.md 硬规则 9）。正文见 `process.md` |
 
 
 ## 条目格式（写新条时照抄）

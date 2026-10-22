@@ -43,7 +43,7 @@
 
 | 文件 | 内容 |
 |---|---|
-| [`process/00_index.md`](process/00_index.md) | **流程总入口**：LLM/脚本/人工分工表 + 标准工作流 + 任务粒度 |
+| [`process/00_index.md`](process/00_index.md) | **流程总入口**：LLM/脚本/人工分工表 + 标准工作流 + 任务粒度 + 变更面声明 + UI 视觉改动设计稿先行（A 纪律） |
 | [`process/01_architecture.md`](process/01_architecture.md) | 分层与依赖方向 + trait 约定 + **现成库清单（不自造轮子）** + 数据驱动 |
 | [`process/02_conventions.md`](process/02_conventions.md) | 数值/文本数据化 + 门禁红线 + 命名 + 错误 + 测试 + 提交粒度 |
 | [`process/03_templates.md`](process/03_templates.md) | **模版库**：场景/控件/数据表/玩法模块/测试/脚本 六个可复制模版 |
