@@ -168,7 +168,7 @@ fn vs_layout_matches_doc() {
     assert_eq!(oc.y, 960, "vs 战斗结果 y=960（S15.6 批次6 屏心区）");
 }
 
-/// message §4.5（1080 现代版面，S17.2 8pt）：标题条 h=96，正文区 y=224 h=1480（区间约束），页码 540/1800（QA124/144），提示 y=1840。
+/// message §4.5（S20.2 v4 面板语言）：标题条 h=96，正文区 y=768 h=176（面板按内容收缩，区间约束），页码 1008（QA124/144），提示 y=1840。
 #[test]
 fn message_layout_matches_doc() {
     let s = scenes();
@@ -177,16 +177,22 @@ fn message_layout_matches_doc() {
     };
     assert_eq!(msg.title.h, 96, "message 标题条 h=96（1080 现代版面，S17.2 8pt）");
     let body = msg.extra.get("body").expect("message 缺 body 矩形");
-    assert_eq!(body.y, 192, "message 正文区 y=192（S18.7d v3 text_panel 内区）");
-    assert_eq!(body.h, 1128, "message 正文区 h=1128（S18.7d v3 text_panel 内高）");
+    assert_eq!(
+        body.y, 768,
+        "message 正文区 y=768（S20.2 v4 面板语言：面板按内容收缩，正文挂卡片内）"
+    );
+    assert_eq!(body.h, 176, "message 正文区 h=176（S20.2 v4 面板语言：面板按内容收缩）");
     // body.y + body.h ≤ 1800（正文区上界不越页码行，QA124/144 批次6 重分布）
     assert!(body.y + body.h <= 1800, "message 正文区越页码行 y=1800（FIND-026）");
     let page = msg.page;
-    assert_eq!(page.y, 1408, "message 页码 y=1408（S18.7d v3，QA144 页点行 = page.y - 48）");
+    assert_eq!(
+        page.y, 1008,
+        "message 页码 y=1008（S20.2 v4：随卡片收缩上移，QA144 页点行 = page.y - 48）"
+    );
     assert_eq!(msg.hint.y, 1840, "message 提示行 y=1840（QB115/123）");
 }
 
-/// saveload §4.6（S18.7d v3 三栏）：列表基线 y=240 row_h=224 item_h=192，金字列 x=872，提示 y=1840。
+/// saveload §4.6（S20.2 v4 面板语言）：列表基线 y=240 row_h=256 item_h=224（行高加大），金字列 x=792（左移居中），提示 y=1840。
 #[test]
 fn saveload_layout_matches_doc() {
     let s = scenes();
@@ -195,12 +201,9 @@ fn saveload_layout_matches_doc() {
     };
     assert_eq!(sv.title.h, 96, "saveload 标题条 h=96（1080 现代版面，S17.2 8pt）");
     assert_eq!(sv.list.y, 240, "saveload 列表基线 y=240（1080）");
-    assert_eq!(sv.list.row_h, 224, "saveload 列表 row_h=224（S18.7d v3 三栏）");
-    assert_eq!(sv.list.item_h, 192, "saveload 列表 item_h=192（S18.7d v3）");
-    assert_eq!(
-        sv.list.gold_x, 872,
-        "saveload 金字号列 x=872（S18.7d v3 右元数据栏 840..1000 内 +32 衬边）"
-    );
+    assert_eq!(sv.list.row_h, 256, "saveload 列表 row_h=256（S20.2 v4 面板语言：行高加大）");
+    assert_eq!(sv.list.item_h, 224, "saveload 列表 item_h=224（S20.2 v4 面板语言）");
+    assert_eq!(sv.list.gold_x, 792, "saveload 金字号列 x=792（S20.2 v4：列表左移后随栏居中）");
     assert_eq!(sv.hint.y, 1840, "saveload 提示行 y=1840（QB115/123）");
 }
 
@@ -630,10 +633,9 @@ fn scene_layer_contributes_text_region_pixels() {
     }
 }
 
-/// S15.6 QA131：§2「选中卡底 = 0x245C（`COLOR_SELECTED`/`COLOR_GOLD_BRIGHT` 同值）」
-/// 直接像素判据——选中卡（行 0）区**有** 0x245C 底像素，未选中卡（行 1）区**无**
-/// （旧 S14 选中色 0x066F 改回时 `chrome_colors` 8 色表不含 0x066F，区判据仍全绿，
-/// 本直接断言补洞）。
+/// S15.6 QA131（S20.2 v4 面板语言重锚）：选中态判据——index = 选中标签变金（S18.8b）；
+/// select_role = **3px 黄铜边**（`chrome::selected_border`，旧 S18.7d「gold_warm 整块填充底」退役，
+/// 卡底统一 `panel_wood`）：行 0 卡顶缘外 3px 边带**有** `brass` 像素，行 1 卡对应边带**无**（边框不外溢）。
 fn region_color_count(px: &[u16], x: i32, y: i32, w: i32, h: i32, color: u16) -> usize {
     let y0 = y.max(0);
     let x0 = x.max(0);
@@ -679,7 +681,7 @@ fn region_warm_count(px: &[u16], x: i32, y: i32, w: i32, h: i32) -> usize {
 }
 
 #[test]
-fn selected_card_base_is_color_selected() {
+fn selected_state_marker_visible_and_no_leak() {
     let scs = scenes();
     for scene in ["index", "select_role"] {
         let px = render_scene_1080(scene);
@@ -704,21 +706,23 @@ fn selected_card_base_is_color_selected() {
             );
             continue;
         }
-        // 选中态底色 = **数据指定**（S18.7d v3：select_role 选中行底 = JSON 原语 `gold_warm`）。
+        // S20.2 v4 面板语言：选中态 = **3px 黄铜边**（`chrome::selected_border`），
+        // S18.7d「gold_warm 整块填充底」退役（卡底统一 `panel_wood`，只画边不填底）；
+        // 判据 = 行 0 卡顶缘**外** 3px 边带有 `brass` 像素（该带只有选中边框会画）；
+        // 行 1 卡左缘**外** 3px 竖条无（避开行 0 边框触及高度：其外框止于顶+高+边= top1-8 内）。
         let sel = ti_render::theme::Theme::default()
-            .by_name("gold_warm")
-            .unwrap_or(ti_app::menu_shell::COLOR_SELECTED);
+            .by_name("brass")
+            .unwrap_or(ti_app::scenes::chrome::COLOR_BRASS);
         let top0 = layout.list.y - layout.list.highlight_offset;
         let top1 = top0 + layout.list.row_h;
         assert!(
-            region_color_count(&px, layout.list.x, top0, layout.list.w, layout.list.item_h, sel)
-                > 0,
-            "{scene} 选中卡（行 0，顶 {top0}）区无 {sel:#06x} 底像素（QA131：选中卡底 = COLOR_SELECTED）"
+            region_color_count(&px, layout.list.x, top0 - 3, layout.list.w, 3, sel) > 0,
+            "{scene} 选中卡（行 0，顶 {top0}）顶外边带无 {sel:#06x} 像素（S20.2 QA131：选中态 = 3px 黄铜边）"
         );
         assert_eq!(
-            region_color_count(&px, layout.list.x, top1, layout.list.w, layout.list.item_h, sel),
+            region_color_count(&px, layout.list.x - 3, top1 + 10, 3, layout.list.row_h - 20, sel),
             0,
-            "{scene} 未选中卡（行 1，顶 {top1}）区不应有 {sel:#06x}（QA131：选中色泄漏）"
+            "{scene} 未选中卡（行 1，顶 {top1}）左外竖条不应有 {sel:#06x}（S20.2：选中边框泄漏）"
         );
     }
 }

@@ -118,6 +118,17 @@ impl Scene for SaveloadScene {
             let r = layout.list.item_rect(cursor);
             host.fill_rect(r.x, r.y, r.w, r.h, chrome::COLOR_BEVEL_SHADOW);
         }
+        // S20.2 v4 面板语言：槽位 = 深棕木底（scenes.json 原语 `panel_wood`）+ 黄铜细边
+        // （统一走 `chrome::wood_panel`，避免每个面板各画一套边）。
+        for i in 0..slots.len() {
+            let r = layout.list.item_rect(i);
+            chrome::wood_panel(host, r.x, r.y, r.w, r.h);
+        }
+        // 选中项 = 3px 黄铜边（此前整块金色填充，刺眼且抢戏）。
+        if cursor < slots.len() {
+            let r = layout.list.item_rect(cursor);
+            chrome::selected_border(host, r.x, r.y, r.w, r.h, 3);
+        }
         for (i, s) in slots.iter().enumerate() {
             let r = layout.list.item_rect(i);
             let ty = r.y + (r.h - host.shell().glyph_px()) / 2; // QA009：字形高按活跃字体（TTF 44px / 位图 12px）

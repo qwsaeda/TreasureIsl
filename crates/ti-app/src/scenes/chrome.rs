@@ -390,6 +390,47 @@ pub fn voyage_bar(host: &mut dyn SceneHost, scene_id: &str) {
     }
 }
 
+/// 统一面板 chrome（v4 面板语言，S20.2）：**黄铜细边 + 暖棱**。
+///
+/// 底色由 `scenes.json` 原语给（`panel_wood` = 深棕木底，替代 `panel_warm` 的近黑）；
+/// 本函数只补边与棱（代码侧统一 ⇒ 三个场景的面板语言同源，改一处即全局生效）。
+///
+/// 画法：黄铜 2px 四边 + 内上 `brass_light` 1px + 内下 `brass_dark` 1px
+/// （与 `main_map` HUD 面板同款做法，见 `08_layout_design.md` §版面骨架）。
+pub fn wood_panel(host: &mut dyn SceneHost, x: i32, y: i32, w: i32, h: i32) {
+    if w <= 4 || h <= 4 {
+        return;
+    }
+    let theme = host.theme().clone();
+    let brass = theme.by_name("brass").unwrap_or(COLOR_GOLD_WARM);
+    let brass_light = theme.by_name("brass_light").unwrap_or(COLOR_GOLD_WARM);
+    let brass_dark = theme.by_name("brass_dark").unwrap_or(COLOR_GOLD_WARM);
+    host.fill_rect(x, y, w, 2, brass);
+    host.fill_rect(x, y + h - 2, w, 2, brass);
+    host.fill_rect(x, y, 2, h, brass);
+    host.fill_rect(x + w - 2, y, 2, h, brass);
+    host.fill_rect(x + 2, y + 2, w - 4, 1, brass_light);
+    host.fill_rect(x + 2, y + h - 3, w - 4, 1, brass_dark);
+}
+
+/// 选中态边框（v4 面板语言，S20.2）：**3px 黄铜边**（此前 = 整块金色填充，刺眼且抢戏）。
+///
+/// 只画边不填底 ⇒ 面板底色（`panel_wood`）与文字可读性保持不变。
+pub fn selected_border(host: &mut dyn SceneHost, px: i32, py: i32, pw: i32, ph: i32, thick: i32) {
+    if pw <= 4 || ph <= 4 {
+        return;
+    }
+    let theme = host.theme().clone();
+    let brass = theme.by_name("brass").unwrap_or(COLOR_GOLD_WARM);
+    let brass_light = theme.by_name("brass_light").unwrap_or(COLOR_GOLD_WARM);
+    let t = thick.max(2);
+    host.fill_rect(px - t, py - t, pw + t * 2, t, brass);
+    host.fill_rect(px - t, py + ph, pw + t * 2, t, brass);
+    host.fill_rect(px - t, py - t, t, ph + t * 2, brass);
+    host.fill_rect(px + pw, py - t, t, ph + t * 2, brass);
+    host.fill_rect(px - t, py - t, pw + t * 2, 1, brass_light);
+}
+
 /// v3 底部命令盘按钮（`main_map`）：读 `<key>` 矩形（`deck_trade`/`deck_sell`/`deck_build`），
 /// 面板 + 图标（经 `icon_key` 查 `ui_icons` 注册表，如 `hud_trade`）+ `28px` 标签；缺失/非正 = 不画。
 ///

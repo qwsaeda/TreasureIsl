@@ -1,0 +1,1547 @@
+=== S20.2 v4 面板语言 验收证据（实跑输出） ===
+时间: 2026-10-22  宿主: Windows/PowerShell 5.1
+
+--- 1. 收尾修复项（本任务 WIP 遗留 6 gate 失败的根因收口）---
+a) crates/ti-render/src/shell.rs TEST_THEME 补 panel_wood: 47（E0063 编译失败根因）
+b) chrome.rs selected_border 参数改名 x/y/w/h/t -> px/py/pw/ph/t（clippy many_single_char_names）
+c) scripts/check_data_driven.py THEME_TOKENS 集合补 "panel_wood"（原误写成 dict 项致 SyntaxError）
+d) docs/business/08_layout_design.md §4.2/§4.5/§4.6 镜像同步（select_role title x:296 / message title y:704 / page y:1008 / saveload title x:600 / 末块底 1480）
+e) crates/ti-app/tests/render_intent.rs 3 判据重锚 S20.2 值（message body 768/176 + page 1008；saveload row_h 256 / item_h 224 / gold_x 792；QA131 选中态 gold_warm 整块填充 -> 3px 黄铜边 selected_state_marker_visible_and_no_leak）
+f) plan/ledger.yaml 登记 S20.2 + docs/release.md 台账计数 185/169 -> 186/170
+
+--- 2. cargo test --workspace ---
+cargo :    Compiling ti-tools v0.1.0 (C:\閲戦摱宀沑crates\ti-tools)
+所在位置 行:1 字符: 8
++ $out = cargo test --workspace 2>&1 | Out-String; Add-Content -Path "e ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ti...rates\ti-tools):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.82s
+     Running unittests src\lib.rs (target\debug\deps\ti_app-1c1fefe332e1e16d.exe)
+
+running 38 tests
+test error::tests::platform_error_upcasts_transparently ... ok
+test error::tests::formats_error_upcasts_without_loss ... ok
+test game_app::transition_tests::ease_endpoints_and_monotone ... ok
+test particles::tests::advance_moves_particles_by_velocity ... ok
+test particles::tests::deterministic_same_seed_same_sequence ... ok
+test particles::tests::different_seed_diverges ... ok
+test particles::tests::fade_levels_monotone_to_black ... ok
+test particles::tests::pool_cap_evicts_oldest ... ok
+test particles::tests::ttl_expiry_clears_pool ... ok
+test sprite_atlas::tests::advance_animation_drives_frame ... ok
+test sprite_atlas::tests::atlas_missing_f1_returns_none ... ok
+test sprite_atlas::tests::atlas_decode_end_to_end_with_real_pkg ... ok
+test sprite_atlas::tests::filenum_ini_parsing ... ok
+test sprite_atlas::tests::filenum_ini_rejects_empty ... ok
+test terrain_atlas::tests::filenum_ini_parsing_with_attrib ... ok
+test terrain_atlas::tests::iso_projection_matches_f307 ... ok
+test terrain_atlas::tests::terrain_atlas_end_to_end ... ok
+test terrain_atlas::tests::terrain_atlas_missing_tile_returns_none ... ok
+test touch::tests::disabled_pad_never_produces_input ... ok
+test touch::tests::feed_screen_inverts_viewport ... ok
+test sprite_atlas::tests::frame_offset_wraps_around ... ok
+test sprite_atlas::tests::multi_frame_slicing_from_real_pkg ... ok
+test touch::tests::scene_list_bands_match_item_rect ... ok
+test touch::tests::slot_bands_match_item_rect ... ok
+test touch::tests::swipe_direction_recognized ... ok
+test touch::tests::tap_recognized_within_threshold ... ok
+test world_camera::tests::default_center_maps_to_view_center ... ok
+test world_camera::tests::grid_offset_matches_cam_div_cell ... ok
+test world_camera::tests::pan_step_inverse_zoom ... ok
+test world_camera::tests::world_screen_roundtrip ... ok
+test world_camera::tests::zoom_anchor_invariant ... ok
+test world_camera::tests::zoom_clamp_endpoints_idempotent ... ok
+test z_layers::tests::all_layers_in_bevy_z_range ... ok
+test z_layers::tests::layer_spacing_is_z_step ... ok
+test z_layers::tests::layers_strictly_monotone ... ok
+test touch::tests::menu_rows_cover_six_items ... ok
+test touch::tests::grid_cell_inverts_iso_cell ... ok
+test forward_nav::tests::forward_nav_reaches_all_scenes ... ok
+
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests\app_progression_wiring.rs (target\debug\deps\app_progression_wiring-e0f9b61fc9437358.exe)
+
+running 6 tests
+test app_save_load_restores_cleared_gate ... ok
+test app_new_game_starts_with_only_m01_unlocked ... ok
+test app_full_chain_m01_then_m02_unlocks_all_maps ... ok
+test app_boss_victory_unlocks_next_map_and_is_idempotent ... ok
+test app_save_load_restores_mask_faithfully ... ok
+test app_save_load_restores_unlock_chain ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests\audio_prep.rs (target\debug\deps\audio_prep-5315bdcc7c3a727c.exe)
+
+running 5 tests
+test music_lpk_unpacks_five_wav_tracks_and_one_mod ... ok
+test bgm_and_se_selection_match_measured_track_lengths ... ok
+test mixer_output_equals_original_pcm_at_full_volume ... ok
+test prepare_music_is_deterministic ... ok
+test wav_pcm16_round_trips_through_parse_wav ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\commands_test.rs (target\debug\deps\commands_test-5dfa0efe1b39d794.exe)
+
+running 9 tests
+test command_has_param_false_for_paramless ... ok
+test command_has_param_true_for_parameterized ... ok
+test command_to_input_is_exhaustive ... ok
+test dispatch_index_move_and_confirm ... ok
+test dispatch_message_next_and_close ... ok
+test dispatch_main_map_spin_and_battle ... ok
+test command_trait_execute_matches_dispatch ... ok
+test dispatch_saveload_write_and_close ... ok
+test dispatch_vs_attack_does_not_consume ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests\e2e_playthrough.rs (target\debug\deps\e2e_playthrough-750ba1fd718e1010.exe)
+
+running 6 tests
+test e2e_invalid_inputs_no_crash ... ok
+test e2e_full_game_session ... ok
+test e2e_battle_determinism ... ok
+test e2e_state_consistency ... ok
+test e2e_touch_economy_loop ... ok
+test e2e_board_spin_loop ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests\e2e_render_alignment.rs (target\debug\deps\e2e_render_alignment-993ba032ceb914da.exe)
+
+running 3 tests
+test f4_flipped_records_have_symmetric_partner ... ok
+test disabled_records_partitioned_by_f2_f3_sentinel ... ok
+test z_order_lowest_file_index_wins_is_data_preserved ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\fuzz_playtest.rs (target\debug\deps\fuzz_playtest-838ca008b39298c7.exe)
+
+running 4 tests
+test restore_save_invalid_slot_does_not_pollute_character ... ok
+test deterministic_replay ... ok
+test fuzz_single_seed_quick ... ok
+test fuzz_32_seeds ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.26s
+
+     Running tests\game_app_flow.rs (target\debug\deps\game_app_flow-49d0f96db363628d.exe)
+
+running 20 tests
+test compile_fail_illegal_transition_not_constructible ... ok
+test flow_menu_quit ... ok
+test flow_battle_to_menu ... ok
+test flow_landmark_to_battle ... ok
+test flow_main_map_move_trade_build ... ok
+test gesture_threshold_split ... ok
+test iso_touch_matches_move ... ok
+test flow_save_load_roundtrip ... ok
+test flow_menu_to_main_map ... ok
+test flow_message_pages ... ok
+test iso_touch_render_cross_layer ... ok
+test menu_cursor_wraps ... ok
+test scene_discriminants_unique ... ok
+test msg_page_clamped ... ok
+test touch_logical_roundtrip ... ok
+test msg_close_returns_source ... ok
+test widget_visible_filter ... ok
+test widget_hit_bounds ... ok
+test scene_switch_resets_state ... ok
+test menu_item_targets ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests\glyph_raster.rs (target\debug\deps\glyph_raster-f8a29a592cc4492c.exe)
+
+running 6 tests
+test geometric_shapes_stem_from_real_glyphs ... ok
+test draw_path_is_bit_identical_to_glyph_pixel ... ok
+test ink_density_is_plausible_and_not_legacy_noise ... ok
+test missing_chars_fall_back_to_visible_tofu ... ok
+test shell_strings_render_with_known_fallback_only ... ok
+test blit_writes_exactly_the_glyph_pixels_to_the_framebuffer ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests\render_intent.rs (target\debug\deps\render_intent-e68f70d6a8cb041e.exe)
+
+running 12 tests
+test index_layout_matches_doc ... ok
+test main_map_layout_matches_doc ... ok
+test message_layout_matches_doc ... ok
+test saveload_layout_matches_doc ... ok
+test dynamic_entities_land_in_declared_portrait_zones ... ok
+test select_scenes_layout_matches_doc ... ok
+test key_rects_have_pixels ... ok
+test hint_bar_width_height_follow_active_font ... ok
+test vs_layout_matches_doc ... ok
+test selected_state_marker_visible_and_no_leak ... ok
+test text_regions_not_flooded_by_chrome ... ok
+test scene_layer_contributes_text_region_pixels ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.20s
+
+     Running tests\render_invariants.rs (target\debug\deps\render_invariants-4a51de2d31af4d33.exe)
+
+running 1 test
+test render_invariants_all_scenes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.33s
+
+     Running tests\render_parity.rs (target\debug\deps\render_parity-dcc002161df9a09b.exe)
+
+running 6 tests
+test framebuf_matches_logical_resolution ... ok
+test index_scene_renders_real_glyphs_for_title ... ok
+test tiformats_baseline_is_non_empty ... ok
+test distinct_scenes_produce_distinct_frames ... ok
+test each_scene_renders_real_content ... ok
+test render_is_deterministic_per_scene ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.89s
+
+     Running tests\render_parity_gpu.rs (target\debug\deps\render_parity_gpu-928da8b99ba9a5a9.exe)
+
+running 3 tests
+test tests::gpu_renderer_is_headless_in_default_build ... ok
+test tests::index_scene_gpu_draw_calls_positive_with_ui_pak ... ok
+test tests::main_map_scene_gpu_render_deterministic ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.13s
+
+     Running tests\render_parity_hd.rs (target\debug\deps\render_parity_hd-9e9d523ca9215357.exe)
+
+running 5 tests
+test tests::hd_framebuf_matches_logical_resolution ... ok
+test tests::hd_index_scene_renders_real_glyphs_for_title ... ok
+test tests::hd_distinct_scenes_produce_distinct_frames ... ok
+test tests::hd_each_scene_renders_real_content ... ok
+test tests::hd_render_is_deterministic_per_scene ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.43s
+
+     Running tests\s43_fps_smoke.rs (target\debug\deps\s43_fps_smoke-410f7dc051b3a64d.exe)
+
+running 1 test
+test desktop_60fps_with_dirty_rect_skip ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\stats_unit.rs (target\debug\deps\stats_unit-c3b5a05b7d532143.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\transition_freeze_fix.rs (target\debug\deps\transition_freeze_fix-c87e5e9d64c6db62.exe)
+
+running 2 tests
+test steady_state_has_no_active_transition ... ok
+test transition_completes_within_window_and_ends_on_pure_new_scene ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.46s
+
+     Running tests\ttf_software_render.rs (target\debug\deps\ttf_software_render-bda69e449da6c446.exe)
+
+running 6 tests
+test ttf_from_invalid_bytes_returns_none ... ok
+test ttf_deterministic_rendering ... ok
+test ttf_advance_and_line_height ... ok
+test ttf_ink_matrix_pinned ... ok
+test ttf_rasterize_basic_properties ... ok
+test ttf_three_tier_sizes ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests\widgets.rs (target\debug\deps\widgets-990bbd1639422e05.exe)
+
+running 5 tests
+test controls_table_loads_with_expected_counts ... ok
+test unknown_scene_yields_empty ... ok
+test hit_boundary_left_closed_right_open ... ok
+test visible_filters_zero_area ... ok
+test color_of_is_deterministic ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\ti_core-c89e5326107a1b5d.exe)
+
+running 116 tests
+test consts::tests::matches_original_scene_header_fields ... ok
+test domain::combat::tests::hp_fill_bounds ... ok
+test domain::economy::tests::goods_catalog_invariants ... ok
+test domain::economy::tests::seed_price_positive_seed_discounts ... ok
+test domain::economy::tests::seed_price_zero_seed_is_fixed ... ok
+test domain::economy::tests::trade_event_codes_dispatch ... ok
+test domain::economy::tests::placeholder_matches_balance ... ok
+test oracle::battle::tests::boss_hp_table ... ok
+test oracle::battle::tests::damage_zero_atk ... ok
+test oracle::battle::tests::damage_zero_seed ... ok
+test oracle::battle::tests::full_battle_deterministic ... ok
+test oracle::battle::tests::full_battle_invalid_tier ... ok
+test oracle::battle::tests::round_enemy_wins ... ok
+test oracle::battle::tests::round_player_wins ... ok
+test oracle::build::tests::build_cost_levels ... ok
+test oracle::build::tests::build_insufficient ... ok
+test oracle::build::tests::build_invalid_level ... ok
+test oracle::build::tests::build_success ... ok
+test oracle::build::tests::deposit_insufficient ... ok
+test oracle::build::tests::deposit_success ... ok
+test oracle::build::tests::withdraw_cap ... ok
+test oracle::build::tests::withdraw_normal ... ok
+test oracle::main_map::tests::at_landmark ... ok
+test oracle::main_map::tests::dir_roundtrip ... ok
+test oracle::main_map::tests::dispatch_event_codes ... ok
+test oracle::main_map::tests::move_blocked_none ... ok
+test oracle::main_map::tests::move_out_of_bounds_none ... ok
+test oracle::main_map::tests::move_within_bounds ... ok
+test oracle::main_map::tests::pick_dir_all_blocked_none ... ok
+test oracle::main_map::tests::pick_dir_priority ... ok
+test oracle::main_map::tests::walk_multiple_steps ... ok
+test oracle::main_map::tests::walk_zero_steps ... ok
+test oracle::saveload::tests::bad_version ... ok
+test oracle::saveload::tests::migrate_v1_to_v2 ... ok
+test oracle::saveload::tests::read_slot_v1_compatible ... ok
+test oracle::saveload::tests::roundtrip ... ok
+test oracle::saveload::tests::validate_good_save ... ok
+test oracle::saveload::tests::validate_bad_magic ... ok
+test oracle::saveload::tests::validate_too_short ... ok
+test oracle::selection::tests::select_map_locked_invalid ... ok
+test oracle::selection::tests::select_map_unlocked_sets_map ... ok
+test oracle::selection::tests::select_role_sets_character ... ok
+test oracle::selection::tests::selection_flow_15_combinations ... ok
+test oracle::selection::tests::selection_state_new ... ok
+test oracle::trade::tests::goods_catalog_all_5 ... ok
+test oracle::trade::tests::oracle_buy_success ... ok
+test oracle::trade::tests::oracle_buy_insufficient_gold ... ok
+test oracle::trade::tests::oracle_buy_unknown_good ... ok
+test oracle::trade::tests::oracle_sell_no_avg_means_full_price_profit ... ok
+test oracle::trade::tests::oracle_sell_no_stock ... ok
+test oracle::trade::tests::oracle_sell_profit_zero_when_avg_exceeds_price ... ok
+test oracle::trade::tests::oracle_sell_success_with_avg ... ok
+test oracle::trade::tests::oracle_sell_unknown_good ... ok
+test oracle::trade::tests::price_table_lookup ... ok
+test oracle::trade::tests::price_table_placeholder_matches_balance ... ok
+test oracle::trade::tests::trade_event_codes ... ok
+test rules::board::tests::advance_moves_forward_and_wraps ... ok
+test rules::board::tests::landing_reflects_space_kind ... ok
+test rules::board::tests::step_boss_locked_until_lap_gate_met ... ok
+test rules::board::tests::spin_is_in_range_and_reproducible ... ok
+test rules::board::tests::step_engages_boss_without_gate_and_is_reproducible ... ok
+test rules::board::tests::step_gate_is_evaluated_at_crossing_moment ... ok
+test rules::board::tests::board_data_matches_extraction ... ok
+test rules::board::tests::step_stops_at_boss_cell_when_engaged ... ok
+test rules::board::tests::track_from_map_rejects_empty ... ok
+test rules::board::tests::track_from_map_rejects_unknown_kind ... ok
+test rules::cards::tests::engine_all_event_ids ... ok
+test rules::cards::tests::engine_all_event_ids_have_processing_path ... ok
+test rules::cards::tests::engine_apply_damage ... ok
+test rules::cards::tests::engine_apply_gold ... ok
+test rules::cards::tests::engine_apply_heal ... ok
+test rules::cards::tests::engine_apply_move_no_state_change ... ok
+test rules::cards::tests::engine_card_by_id ... ok
+test rules::cards::tests::engine_damage_clamped_to_zero ... ok
+test rules::board::tests::board_landing_rhythm_is_consistent_across_maps ... ok
+test rules::cards::tests::engine_empty_catalog_no_path ... ok
+test rules::cards::tests::engine_event_to_card_direct ... ok
+test rules::cards::tests::engine_event_to_card_empty_catalog_none ... ok
+test rules::cards::tests::engine_event_to_card_wraps ... ok
+test rules::cards::tests::engine_from_balance_reads_real_table ... ok
+test rules::cards::tests::engine_gold_clamped_to_gold_max ... ok
+test rules::cards::tests::engine_heal_clamped_to_hp_max ... ok
+test rules::cards_draw::tests::deck_expose_read_only ... ok
+test rules::cards_draw::tests::draw_respects_hand_size_cap ... ok
+test rules::cards_draw::tests::draw_without_replacement_no_duplicate_within_hand ... ok
+test rules::cards_draw::tests::empty_deck_returns_empty_hand ... ok
+test rules::cards_draw::tests::from_balance_uses_real_table ... ok
+test rules::cards_draw::tests::reproducible_draw_same_seed ... ok
+test rules::cards_draw::tests::zero_hand_size_returns_empty ... ok
+test rules::main_map::tests::at_boss_tile_readonly_check ... ok
+test rules::main_map::tests::boss_tile_move_sets_boss_flag ... ok
+test rules::main_map::tests::boss_tile_takes_priority_over_landmark ... ok
+test rules::main_map::tests::card_event_reproducible_same_seed ... ok
+test rules::main_map::tests::no_boss_tile_boss_flag_false ... ok
+test rules::main_map::tests::session_landmark ... ok
+test rules::main_map::tests::session_dispatch ... ok
+test rules::main_map::tests::session_move_and_walk ... ok
+test rules::main_map::tests::zero_event_chance_never_triggers_card ... ok
+test rules::progression::tests::for_save_restore_contradictory_mask_repairs_current_map ... ok
+test rules::progression::tests::for_save_restore_legacy_mask_zero_falls_back_to_chain ... ok
+test rules::progression::tests::for_save_restore_nonzero_mask_is_faithful ... ok
+test rules::progression::tests::from_unlocked_all_then_m03_clears ... ok
+test rules::progression::tests::is_map_defeated_is_per_map ... ok
+test rules::progression::tests::from_unlocked_feeds_boss_defeat_step ... ok
+test rules::progression::tests::from_unlocked_legacy_anomaly_is_faithful ... ok
+test rules::progression::tests::min_progression_to_select_chain ... ok
+test rules::progression::tests::progression_defeat_m01_unlocks_m02_only ... ok
+test rules::progression::tests::progression_defeat_m02_unlocks_m03 ... ok
+test rules::progression::tests::progression_defeat_m03_clears_game ... ok
+test rules::progression::tests::progression_initial_unlocks_only_m01 ... ok
+test rules::progression::tests::progression_loss_does_not_unlock ... ok
+test rules::progression::tests::progression_unlocks_monotonic ... ok
+test rules::progression::tests::unlocked_mask_round_trip ... ok
+test rules::rng::tests::fill_matches_next ... ok
+test rules::rng::tests::in_range_bounds ... ok
+test rules::rng::tests::set_seed_resets_stream ... ok
+
+test result: ok. 116 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\data_tables.rs (target\debug\deps\data_tables-9921d6017b86a094.exe)
+
+running 18 tests
+test balance_fixture_is_constructible_for_future_rules_tests ... ok
+test balance_json_parses_and_is_populated ... ok
+test board_cfg_economy_is_sane ... ok
+test boss_tier_lookup_in_range_and_out_of_range ... ok
+test cards_event_chance_in_unit_interval_and_weights_positive ... ok
+test build_buildings_lookable_by_id_with_unique_ids ... ok
+test damage_cfg_has_positive_floor_and_span ... ok
+test invalid_json_is_a_hard_error_not_fallback ... ok
+test save_cfg_is_sane ... ok
+test exhaust_scenarios_parses_and_is_populated ... ok
+test list_scenes_have_positive_row_metrics ... ok
+test strings_cover_every_goods_building_and_message_name_key ... ok
+test strings_cover_every_scene_title_and_hint ... ok
+test scenes_table_loads_and_every_game_scene_present ... ok
+test strings_table_loads_and_resolves_keys ... ok
+test trade_goods_have_positive_price_and_qty_cap ... ok
+test ui_cfg_matches_logical_resolution ... ok
+test scene_layout_rects_are_inside_logical_resolution ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\difficulty_ladder.rs (target\debug\deps\difficulty_ladder-d131298839522005.exe)
+
+running 6 tests
+test boss_tier_strength_increases_monotonically ... ok
+test boss_tier_of_matches_balance_catalog ... ok
+test difficulty_tier_increases_with_map_index ... ok
+test every_map_tier_is_within_boss_tier_table ... ok
+test initial_gold_covers_one_power_building ... ok
+test map_catalog_has_boss_and_landmarks ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\exhaust_combat.rs (target\debug\deps\exhaust_combat-22c6237cbbf00b53.exe)
+
+running 4 tests
+test exhaust_fixture_cfg_cross_validation ... ok
+test exhaust_max_rounds_one_edge_case ... ok
+test exhaust_out_of_range_tier_instant_player_win ... ok
+test exhaust_all_tier_seed_combo_invariants ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\exhaust_economy.rs (target\debug\deps\exhaust_economy-384148a4e4e4f697.exe)
+
+running 4 tests
+test exhaust_build_fixture_cross_validation ... ok
+test exhaust_trade_fixture_cross_validation ... ok
+test exhaust_build_all_buildings_full_upgrade_paths ... ok
+test exhaust_trade_all_goods_qty_gold ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\exhaust_main_loop.rs (target\debug\deps\exhaust_main_loop-7f25cfca67bde1bf.exe)
+
+running 2 tests
+test exhaust_main_loop_transition_table_closed ... ok
+test exhaust_main_loop_no_deadlock_within_max_back_steps ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\exhaust_menu.rs (target\debug\deps\exhaust_menu-dc200f19637594ca.exe)
+
+running 5 tests
+test exhaust_menu_all_scenes_all_events ... ok
+test exhaust_menu_cursor_all_counts ... ok
+test exhaust_menu_item_targets_all_indexes ... ok
+test exhaust_msg_all_kinds_all_pages ... ok
+test exhaust_selection_all_combos ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\exhaust_progression.rs (target\debug\deps\exhaust_progression-374d4fb708c317e3.exe)
+
+running 4 tests
+test exhaust_progression_cards_draw_reproducible_all_seeds ... ok
+test exhaust_progression_cards_apply_all_events_states ... ok
+test exhaust_progression_map_can_walk_all_cells_all_dirs ... ok
+test exhaust_progression_map_move_to_invariants ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests\exhaust_random_session.rs (target\debug\deps\exhaust_random_session-a88b8ba0219893f4.exe)
+
+running 2 tests
+test verbose_session_process_readable ... ok
+test random_session_invariants_hold_for_any_choices ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\exhaust_saveload.rs (target\debug\deps\exhaust_saveload-0b9053f8221dba58.exe)
+
+running 4 tests
+test exhaust_from_legacy_slot_all_slots_no_panic ... ok
+test exhaust_saveload_v2_all_slots_migrate_idempotent ... ok
+test exhaust_rng_resume_exact_continuation ... ok
+test exhaust_saveload_json_all_slots_seeds_fields ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\reference_diff_cards.rs (target\debug\deps\reference_diff_cards-6b61d1930c46493c.exe)
+
+running 11 tests
+test cards_effects_clamped ... ok
+test diff_apply_all_combos ... ok
+test cards_weighted_pick_reproducible ... ok
+test cards_same_seed_same_sequence ... ok
+test diff_empty_catalog_no_path ... ok
+test diff_event_to_card_all_combos ... ok
+test semantic_all_event_ids_have_processing_path ... ok
+test semantic_all_event_ids_match ... ok
+test semantic_card_by_id ... ok
+test semantic_damage_heal ... ok
+test semantic_move_and_unknown_no_state_change ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\reference_diff_main_loop.rs (target\debug\deps\reference_diff_main_loop-a86fe7a97a35364c.exe)
+
+running 4 tests
+test scene_state_roundtrip ... ok
+test semantic_back_to_menu ... ok
+test semantic_intro_trigger_battle ... ok
+test diff_all_state_trigger_combinations ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\reference_diff_main_map.rs (target\debug\deps\reference_diff_main_map-7acd81e1f7e14cb2.exe)
+
+running 8 tests
+test map_boss_tile_enters_combat ... ok
+test map_blocked_step_is_noop ... ok
+test map_can_walk_matches_move ... ok
+test map_dir_code_roundtrip ... ok
+test map_iso_projection_formula ... ok
+test map_landmark_dispatch_targets ... ok
+test map_step_triggers_settle_once ... ok
+test map_walk_stops_at_boundary ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\reference_diff_rng.rs (target\debug\deps\reference_diff_rng-ef9ae9cfcdf9944f.exe)
+
+running 7 tests
+test diff_rng_fill_matches_next_varied_lengths ... ok
+test semantic_a_fixed_seed_deterministic ... ok
+test semantic_b_set_seed_changes_sequence ... ok
+test semantic_c_in_range_bounds ... ok
+test semantic_fill_matches_next ... ok
+test value_range_is_15bit ... ok
+test diff_rng_all_seeds_deterministic ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\rules_battle.rs (target\debug\deps\rules_battle-13091141c134b35f.exe)
+
+running 14 tests
+test combat_boss_first_when_disabled ... ok
+test combat_defeat_when_player_hp_zero ... ok
+test combat_boss_tiers_from_balance ... ok
+test combat_invalid_tier_rejected ... ok
+test combat_max_rounds_tiebreak ... ok
+test combat_min_damage_floor ... ok
+test combat_max_rounds_tiebreak_same_hp ... ok
+test combat_player_first ... ok
+test combat_same_seed_same_result ... ok
+test combat_same_seed_same_result_from_balance ... ok
+test combat_victory_no_counterattack ... ok
+test session_from_balance_new_and_step ... ok
+test session_deterministic ... ok
+test session_invalid_tier ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\rules_build.rs (target\debug\deps\rules_build-4730bfded565aa44.exe)
+
+running 13 tests
+test build_debits_and_raises_cap ... ok
+test build_cost_scales_with_level ... ok
+test build_insufficient_no_state_change ... ok
+test build_unknown_building_rejected ... ok
+test build_respects_max_level ... ok
+test build_unlocks_monotonic_cap ... ok
+test build_leveraged_from_balance_table ... ok
+test deposit_insufficient ... ok
+test deposit_withdraw_move_gold ... ok
+test economy_gold_never_exceeds_cap ... ok
+test settle_overflow_moves_excess_to_deposit ... ok
+test settle_overflow_rate_scales ... ok
+test withdraw_clamps_to_deposit ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\rules_messages.rs (target\debug\deps\rules_messages-9fbd3c1de392a604.exe)
+
+running 23 tests
+test menu_cursor_no_out_of_bounds ... ok
+test menu_cursor_wraps ... ok
+test menu_item_targets ... ok
+test menu_reachable_all_scenes ... ok
+test menu_scene_discriminants_unique ... ok
+test menu_state_machine_items ... ok
+test msg_events_on_closed_session_noop ... ok
+test msg_page_clamped ... ok
+test msg_close_returns_source ... ok
+test page_text_help_last_page ... ok
+test msg_page_single_page_kinds_invariant ... ok
+test page_text_help_page_zero ... ok
+test page_text_out_of_bounds_clamped_to_last ... ok
+test page_text_single_page_kind ... ok
+test scene_switch_resets_state ... ok
+test selection_all_flows_full ... ok
+test selection_all_flows_partial_unlocked ... ok
+test selection_locked_map_rejected ... ok
+test selection_map_then_role_completes ... ok
+test selection_reset_after_scene_switch ... ok
+test total_pages_help_from_balance ... ok
+test total_pages_msgl_single_page ... ok
+test total_pages_msgs_single_page ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\rules_saveload.rs (target\debug\deps\rules_saveload-f54e490265b78ec3.exe)
+
+running 14 tests
+test from_state_builds_complete_save ... ok
+test cross_package_state_roundtrip ... ok
+test legacy_slot_out_of_range_clamps_conservative ... ok
+test legacy_save_without_rng_steps_defaults_to_zero ... ok
+test legacy_slot_to_v2 ... ok
+test manager_rng_for_slot_uses_restore_state ... ok
+test migrate_v1_fills_defaults ... ok
+test manager_slot_roundtrip ... ok
+test migration_idempotent ... ok
+test restore_state_unknown_ids_return_none ... ok
+test manager_from_balance_slot_count ... ok
+test rng_mid_stream_restore_continues_exact ... ok
+test rng_seed_restores_stream ... ok
+test save_v2_roundtrip_json ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\rules_saveload_json.rs (target\debug\deps\rules_saveload_json-423c7f5506674906.exe)
+
+running 19 tests
+test character_and_mapslot_from_label_symmetric ... ok
+test cross_package_state_roundtrip ... ok
+test from_state_builds_complete_save ... ok
+test legacy_save_without_rng_steps_defaults_to_zero ... ok
+test legacy_slot_to_v2 ... ok
+test manager_slot_roundtrip ... ok
+test restore_state_unknown_character_returns_none ... ok
+test restore_state_unknown_map_returns_none ... ok
+test rng_mid_stream_restore_continues_exact ... ok
+test rng_same_seed_same_stream ... ok
+test rng_steps_taken_accumulates ... ok
+test manager_from_balance_slot_count ... ok
+test save_migrate_v1_to_v2_defaults ... ok
+test save_migration_idempotent ... ok
+test save_rng_seed_restores_stream ... ok
+test save_roundtrip_preserves_fields ... ok
+test save_roundtrip_preserves_rng_steps ... ok
+test save_unknown_version_rejected ... ok
+test settings_do_not_affect_gameplay ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\rules_trade.rs (target\debug\deps\rules_trade-08941be489981f37.exe)
+
+running 16 tests
+test build_unlocks_monotonic ... ok
+test trade_avg_buy_price_is_cost_over_qty ... ok
+test trade_buy_debits_gold_adds_goods ... ok
+test trade_insufficient_gold ... ok
+test trade_profit_uses_markup_margin ... ok
+test trade_qty_bounds_enforced ... ok
+test trade_sell_clamped_to_gold_cap ... ok
+test trade_sell_credits_gold_removes_goods ... ok
+test trade_leveraged_from_balance_table ... ok
+test trade_overflow_handoff_to_bank_settle ... ok
+test trade_sell_no_cap_when_zero ... ok
+test trade_sell_no_stock ... ok
+test trade_sell_price_from_markup ... ok
+test trade_sell_zero_qty_sells_all ... ok
+test trade_set_gold_cap_midway ... ok
+test trade_unknown_good_rejected ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\save_migration.rs (target\debug\deps\save_migration-4b1953aae004acb8.exe)
+
+running 9 tests
+test byte_layout_is_self_describing ... ok
+test bad_magic_rejected ... ok
+test migrate_v1_json_fills_rng_steps_default_zero ... ok
+test manager_migrate_all_5_slots_from_v1 ... ok
+test migration_preserves_magic_offset ... ok
+test min_size_enforced ... ok
+test v1_bytes_auto_migrate_to_v2_roundtrip ... ok
+test v2_write_read_backward_compat ... ok
+test json_export_import_roundtrip ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\ti_formats-8e036750a41b3e29.exe)
+
+running 48 tests
+test error::tests::io_error_converts_via_from ... ok
+test error::tests::eof_kind_mentions_needed_bytes ... ok
+test error::tests::parse_error_carries_offset_hex_in_display ... ok
+test field::tests::bool_rejects_non_canonical_encoding ... ok
+test field::tests::eof_error_names_field_and_remaining_bytes ... ok
+test field::tests::integers_read_little_endian_and_advance ... ok
+test field::tests::write_roundtrips_through_read ... ok
+test ids::tests::known_measured_kinds_roundtrip ... ok
+test ids::tests::display_none ... ok
+test ids::tests::none_is_default_measured ... ok
+test ini::tests::json_escapes_chinese ... ok
+test ini::tests::parses_sections_and_pairs ... ok
+test ini::tests::rejects_odd_byte_length ... ok
+test ini::tests::roundtrip_is_byte_identical_with_bom ... ok
+test ini::tests::skips_comments_and_blank_lines ... ok
+test lucency::tests::name_key_is_lowercase_djb2_seed_zero ... ok
+test lucency::tests::name_key_matches_measured_keys ... ok
+test lucency::tests::bad_magic_is_rejected ... ok
+test lucency::tests::parse_raw_index_v2005 ... ok
+test macros::tests::magic_mismatch_is_rejected ... ok
+test macros::tests::parse_err_carries_path_and_hex_offset ... ok
+test macros::tests::read_parses_fields_in_order ... ok
+test macros::tests::roundtrip_tests::roundtrip_all_cases ... ok
+test macros::tests::short_input_reports_field_and_missing_bytes ... ok
+test macros::tests::trailing_byte_is_rejected_with_offset ... ok
+test lucency::tests::parse_compressed_index_v2004 ... ok
+test lucency::tests::find_uses_name_key ... ok
+test macros::tests::write_is_source_identical_to_read ... ok
+test mapfile::tests::json_contains_header_fields ... ok
+test mapfile::tests::parses_header_and_words ... ok
+test mapfile::tests::preserves_non_ui_dimensions_in_words_only ... ok
+test mapfile::tests::records_view_yields_exactly_one_control ... ok
+test mapfile::tests::rejects_inconsistent_record_count ... ok
+test mapfile::tests::rejects_ragged_body ... ok
+test mapfile::tests::roundtrip_is_byte_identical ... ok
+test pcx::tests::decodes_literal_rows_with_padding_stride ... ok
+test mapfile::tests::terrain_glmapm_words_are_not_ui_control_layout ... ok
+test pcx::tests::decodes_rle_runs ... ok
+test pcx::tests::rejects_bad_magic_and_depth ... ok
+test pcx::tests::rejects_truncated_scanlines ... ok
+test pcx::tests::trailing_palette_overrides_default ... ok
+test resource_names::tests::register_key_name_assigns_orphan_key ... ok
+test resource_names::tests::register_key_name_does_not_override_existing ... ok
+test resource_names::tests::unknown_key_has_no_name ... ok
+test resource_names::tests::unresolved_mapinfo_recorded_separately ... ok
+test resource_names::tests::export_entries_falls_back_to_unknown_for_unnamed_key ... ok
+test resource_names::tests::export_entries_prefers_named_over_unknown ... ok
+test resource_names::tests::export_csv_lists_non_skipped_entries_in_idx_order ... ok
+
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\font_parity.rs (target\debug\deps\font_parity-e683099b2cce5b56.exe)
+
+running 3 tests
+test glyph_bit_and_row_order_render_readable_shapes ... ok
+test charset_and_glyphs_are_one_to_one ... ok
+test render_sample_text_writes_evidence ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\resource_names.rs (target\debug\deps\resource_names-23f4e7bd3b5c8d34.exe)
+
+running 7 tests
+test duplicate_50_pcx_content_merge_path_covered ... ok
+test mapinfo_filenames_close_over_container_keys ... ok
+test goods_lpk_named_via_exe ... ok
+test cards_lpk_named_via_extras_and_exe ... ok
+test export_csv_has_source_column_and_no_skipped ... ok
+test music_lpk_named_via_exe ... ok
+test ui_pak_all_named_via_mapinfo_and_extras ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\terrain_records.rs (target\debug\deps\terrain_records-c7a474b95da36657.exe)
+
+running 13 tests
+test cell_record_count_matches_grid ... ok
+test connection_marker_is_2_or_4 ... ok
+test connection_c_is_ascending ... ok
+test cell_fields_decode_iso_coords_and_cell_index ... ok
+test connection_records_count_matches ... ok
+test connection_tile_in_mapinfo_range ... ok
+test header_fields_match_grid ... ok
+test link_fields_are_valid_cells_and_kind_codes ... ok
+test missing_cell_is_gw_minus_1 ... ok
+test link_target_is_nearby_cell ... ok
+test sentinel_is_present ... ok
+test roundtrip_byte_identical ... ok
+test trailer_f5_equals_connection_count_plus_one ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\ti_platform-4054416622522c9a.exe)
+
+running 37 tests
+test backend::tests::rect_and_color_are_copy_types ... ok
+test backend::tests::event_coordinates_are_f32_logical_space ... ok
+test error::tests::not_ready_error_is_renderable ... ok
+test error::tests::asset_error_shows_path_and_reason ... ok
+test gfx::tests::all_modes_roundtrip_coordinates ... ok
+test gfx::tests::border_does_not_affect_viewport_math ... ok
+test gfx::tests::border_resolve_uses_backdrop_pixel ... ok
+test gfx::tests::border_skipped_when_game_area_offscreen ... ok
+test gfx::tests::border_style_properties_are_consistent ... ok
+test gfx::tests::coordinate_roundtrip_integer_scale_2x ... ok
+test gfx::tests::coordinate_roundtrip_non_integer_scale ... ok
+test gfx::tests::coordinate_roundtrip_screen_to_logical_then_back ... ok
+test gfx::tests::coordinate_roundtrip_tall_screen_pillarbox ... ok
+test gfx::tests::coordinate_roundtrip_wide_screen_letterbox ... ok
+test gfx::tests::filter_mode_does_not_affect_coordinates ... ok
+test gfx::tests::filter_mode_properties_are_consistent ... ok
+test gfx::tests::framebuf_size_matches_logical_resolution ... ok
+test gfx::tests::integer_scale_is_whole_number_and_centered ... ok
+test gfx::tests::presenter_filter_setter_roundtrips ... ok
+test gfx::tests::scale_mode_properties_are_consistent ... ok
+test gfx::tests::smooth_leaves_letterbox_but_keeps_square_pixels ... ok
+test gfx::tests::stretch_fills_screen_entirely ... ok
+test gfx::tests::stretch_touch_hit_testing_maps_back_to_logical ... ok
+test gfx::tests::zoom_crop_fills_screen_keeping_square_pixels ... ok
+test input::tests::headless_input_poll_drains_queue ... ok
+test input::tests::key_events_pass_through_unchanged ... ok
+test input::tests::translate_roundtrips_through_viewport ... ok
+test input::tests::translate_screen_pointer_down_to_logical ... ok
+test input::tests::virtual_button_hit_test ... ok
+test mod_pcm::tests::rejects_bad_magic_and_short_input ... ok
+test mod_pcm::tests::to_i16_centers_and_scales ... ok
+test mod_pcm::tests::parses_magic_title_and_pcm ... ok
+test gfx::tests::framebuf_default_is_black ... ok
+test ogg_encode::tests::snap_rate_picks_nearest ... ok
+test gfx::tests::framebuf_clear_sets_all_pixels ... ok
+test ogg_encode::tests::encode_is_deterministic ... ok
+test ogg_encode::tests::encode_sine_is_valid_ogg ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests\audio_unit.rs (target\debug\deps\audio_unit-9b727ce4c703ee53.exe)
+
+running 11 tests
+test clipping_prevents_overshoot ... ok
+test looping_channel_wraps_to_zero ... ok
+test empty_clip_is_rejected ... ok
+test duration_and_frame_helpers ... ok
+test multiple_channels_sum ... ok
+test non_looping_channel_auto_stops_at_end ... ok
+test out_of_range_channel_errors ... ok
+test parse_wav_rejects_garbage ... ok
+test play_stop_channel_lifecycle ... ok
+test volume_scales_output ... ok
+test parses_music_lpk_wav_entry ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\gfx_dirty.rs (target\debug\deps\gfx_dirty-1a769e9d57fc920d.exe)
+
+running 7 tests
+test mark_dirty_clips_out_of_bounds ... ok
+test mark_dirty_row_band_semantics ... ok
+test presenter_counts_skipped_frames_without_gpu ... ok
+test new_presenter_is_fully_dirty ... ok
+test fill_rect_marks_dirty_through_presenter ... ok
+test reset_dirty_clears_all_rows ... ok
+test clear_writes_pixels_but_presenter_owns_dirty ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\gpu_renderer_unit.rs (target\debug\deps\gpu_renderer_unit-e71f83938371fc30.exe)
+
+running 3 tests
+test blit_without_atlas_increments_headless_count ... ok
+test headless_renderer_counts_draw_calls ... ok
+test new_renderer_is_not_headless ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\settings_unit.rs (target\debug\deps\settings_unit-a0b4ac9c238e403b.exe)
+
+running 27 tests
+test coordinate_roundtrip_integer_scale_mode ... ok
+test coordinate_roundtrip_smooth_scale ... ok
+test coordinate_roundtrip_p42_full_sweep ... ok
+test filter_mode_from_matches_thin_wrapper ... ok
+test gesture_swipe_down ... ok
+test gesture_swipe_left ... ok
+test gesture_swipe_right ... ok
+test gesture_swipe_up ... ok
+test gesture_tap_small_movement ... ok
+test gesture_tracker_no_down_returns_none ... ok
+test key_bindings_custom_override ... ok
+test key_bindings_defaults_are_set ... ok
+test key_bindings_unknown_action_returns_none ... ok
+test orientation_landscape_logical_size ... ok
+test orientation_landscape_viewport_fits_wide_screen ... ok
+test orientation_portrait_logical_size ... ok
+test scale_mode_integer_floors_to_whole ... ok
+test scale_mode_smooth_keeps_fractional ... ok
+test settings_default_values ... ok
+test settings_viewport_coordinate_roundtrip_landscape ... ok
+test settings_viewport_integer_mode_roundtrip ... ok
+test viewport_from_scale_matches_fit_for_smooth ... ok
+test virtual_keypad_default_layout_hit_down ... ok
+test virtual_keypad_default_layout_hit_left ... ok
+test virtual_keypad_default_layout_hit_right ... ok
+test virtual_keypad_default_layout_hit_up ... ok
+test virtual_keypad_miss_returns_none ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\ti_render-210da8e9945bed04.exe)
+
+running 9 tests
+test shell::tests::battle_arena_deterministic ... ok
+test shell::tests::battle_arena_fixed_paint_count ... ok
+test shell::tests::battle_arena_noop_on_invalid_size ... ok
+test shell::tests::star_sky_deterministic ... ok
+test shell::tests::star_sky_noop_on_invalid_size ... ok
+test shell::tests::title_art_block_compass_only_tall_enough ... ok
+test shell::tests::title_art_block_deterministic ... ok
+test shell::tests::title_art_block_noop_on_invalid_size ... ok
+test shell::tests::wood_frame_draws_four_edges ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\geometry.rs (target\debug\deps\geometry-c0af3e66d9870ac6.exe)
+
+running 8 tests
+test iso_projection_cell_center_offset ... ok
+test iso_projection_degenerate_tile_does_not_panic ... ok
+test menu_item_chosen_has_rivets ... ok
+test iso_projection_round_trip ... ok
+test menu_item_geometry ... ok
+test menu_item_pressed_inverts_bevel ... ok
+test slot_panel_frame_geometry ... ok
+test title_bar_geometry ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\icon_set.rs (target\debug\deps\icon_set-ba91d0cae3c41485.exe)
+
+running 3 tests
+test out_of_range_id_draws_nothing ... ok
+test tint_actually_applies ... ok
+test all_fourteen_ids_are_valid_and_draw_ink ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+     Running tests\motion_snapshot.rs (target\debug\deps\motion_snapshot-3f2a2cd29d0fa9d7.exe)
+
+running 3 tests
+test crossfade_black_to_white_monotone ... ok
+test crossfade_white_to_black_monotone ... ok
+test crossfade_asymmetric_endpoints ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+
+     Running tests\theme_json.rs (target\debug\deps\theme_json-9c6a62220824d297.exe)
+
+running 5 tests
+test hex_accepts_prefixed_unprefixed_and_numeric ... ok
+test malformed_json_falls_back_to_default ... ok
+test partial_json_only_overrides_present_keys ... ok
+test repo_theme_json_declares_every_key ... ok
+test repo_theme_json_matches_default ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\ti_tools-e655dd6d75a9c5fd.exe)
+
+running 21 tests
+test doccheck::tests::accepts_consistent_snapshot ... ok
+test doccheck::tests::accepts_matching_numeric_assertion ... ok
+test doccheck::tests::accepts_task_id_in_ledger ... ok
+test doccheck::tests::detects_gate_only_evidence ... ok
+test doccheck::tests::dod_keywords_ignore_stopwords ... ok
+test doccheck::tests::extracts_dod_keywords ... ok
+test doccheck::tests::gate_only_detector_is_case_insensitive_about_marker ... ok
+test doccheck::tests::rejects_conflicting_numeric_assertion ... ok
+test doccheck::tests::rejects_duplicate_experience_ids ... ok
+test doccheck::tests::rejects_duplicate_fact_ids ... ok
+test doccheck::tests::rejects_reference_to_undefined_experience ... ok
+test doccheck::tests::rejects_reference_to_undefined_fact ... ok
+test doccheck::tests::rejects_task_id_not_in_ledger ... ok
+test ledger::tests::parses_valid_ledger ... ok
+test ledger::tests::rejects_blocked_without_reason ... ok
+test ledger::tests::rejects_duplicate_ids_and_unknown_keys ... ok
+test ledger::tests::rejects_three_failed_rounds ... ok
+test ledger::tests::rejects_unknown_status ... ok
+test ledger::tests::rejects_forward_and_unknown_dependencies ... ok
+test ledger::tests::rejects_verified_without_evidence ... ok
+test ledger::tests::status_roundtrips_through_literals ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\build_assets.rs (target\debug\deps\build_assets-9011ffa68946f396.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\build_hd_assets.rs (target\debug\deps\build_hd_assets-087c4c81bc43e8c7.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\classify.rs (target\debug\deps\classify-28fa6f987aaeeb6c.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\controls.rs (target\debug\deps\controls-1c78ff587c5f94a6.exe)
+
+running 2 tests
+test tests::json_string_escapes_quotes ... ok
+test tests::render_is_ascii_and_roundtrips_counts ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\doccheck.rs (target\debug\deps\doccheck-c720c6a939608580.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\doccheck2.rs (target\debug\deps\doccheck2-479642f34dabe33a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\ledger.rs (target\debug\deps\ledger-ca00f4fbde2381bc.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\map2json.rs (target\debug\deps\map2json-38086acf883e6079.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\mod2ogg.rs (target\debug\deps\mod2ogg-f545c585de434dac.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\serve.rs (target\debug\deps\serve-f7b46da17399313f.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\specskel.rs (target\debug\deps\specskel-241119b5c11ebdea.exe)
+
+running 6 tests
+test tests::evidence_line_detects_strings_and_conditions ... ok
+test tests::evidence_shape_roundtrips ... ok
+test tests::escape_cell_breaks_no_pipes ... ok
+test tests::merges_same_site_kind_rows ... ok
+test tests::parses_addr_style_csv ... ok
+test tests::parses_address_style_csv ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\bin\unpak.rs (target\debug\deps\unpak-705ea73f22ff10fa.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\audio.rs (target\debug\deps\audio-9421b81fff47f249.exe)
+
+running 6 tests
+test set_volume_takes_effect_immediately ... ok
+test bgm_loops_forever_and_sfx_stops ... ok
+test volume_zero_silences_channel ... ok
+test sixteen_channels_max_no_clipping ... ok
+test real_music_lpk_clips_decode ... ok
+test clipping_free_across_all_music_tracks ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\audio_asset.rs (target\debug\deps\audio_asset-5eabe653697ab987.exe)
+
+running 4 tests
+test build_wav_8bit_is_self_consistent ... ok
+test detects_five_wavs_and_one_mod ... ok
+test every_wav_track_is_playable ... ok
+test resample_to_22050_produces_valid_wav ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\build_assets.rs (target\debug\deps\build_assets-05b76479ae2d0e17.exe)
+
+running 3 tests
+test all_scenes_and_maps_exported ... ok
+test manifest_hashes_match_actual_files ... ok
+test build_assets_is_idempotent ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.38s
+
+     Running tests\font_parse.rs (target\debug\deps\font_parse-24539e361ecc64b0.exe)
+
+running 4 tests
+test font_dat_starts_with_utf16_bom ... ok
+test real_font_parses_with_zero_unknown_bytes ... ok
+test glyph_bits_use_low_byte_plus_high_nibble ... ok
+test json_export_matches_structure ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\id_keys.rs (target\debug\deps\id_keys-02858743f18f6faa.exe)
+
+running 4 tests
+test key_vectors_and_ui_ap_structure ... ok
+test mapinfo_filenames_close_over_container_keys ... ok
+test ui_scene_map_record_layout_matches_count ... ok
+test dod_scope_keys_are_all_named ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\ini_parse.rs (target\debug\deps\ini_parse-2a2126a29e5a42cc.exe)
+
+running 3 tests
+test event_ini_entries_have_ids_and_names ... ok
+test cards_ini_has_card_catalog ... ok
+test all_cards_lpk_ini_entries_parse_and_roundtrip ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\map_roundtrip.rs (target\debug\deps\map_roundtrip-4b88f18f4c9b75f5.exe)
+
+running 4 tests
+test json_export_is_reparseable ... ok
+test terrain_maps_use_different_header_dimensions ... ok
+test scene_count_matches_reverse_facts ... ok
+test all_maps_parse_roundtrip_byte_identical ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\pak_key.rs (target\debug\deps\pak_key-b5da5a57c959dc70.exe)
+
+running 4 tests
+test first_entry_signatures_match_reverse_facts ... ok
+test entry_offset_chains_are_contiguous ... ok
+test index_encoding_follows_zlib_magic_not_extension ... ok
+test name_derivable_entries_are_all_explained ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\pcx_ref.rs (target\debug\deps\pcx_ref-8f03e3adc4023f18.exe)
+
+running 3 tests
+test first_ui_pak_entry_matches_f205 ... ok
+test all_image_entries_in_glpics_decode ... ok
+test rust_decoder_matches_python_reference ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.11s
+
+     Running tests\save.rs (target\debug\deps\save-8958cfe59f5c61d0.exe)
+
+running 4 tests
+test save_envelope_roundtrips ... ok
+test settings_rejects_bad_magic_and_length ... ok
+test save_envelope_rejects_truncated_and_bad_magic ... ok
+test settings_dat_roundtrip ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\storage.rs (target\debug\deps\storage-5172e573f4eae3f4.exe)
+
+running 6 tests
+test key_validation_rules ... ok
+test file_store_roundtrip ... ok
+test all_backends_share_identical_semantics ... ok
+test memory_store_roundtrip ... ok
+test overwrite_keeps_single_entry ... ok
+test large_save_blob_roundtrips ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\terrain.rs (target\debug\deps\terrain-a0fa5e8e6df57aba.exe)
+
+running 3 tests
+test ui_maps_are_not_treated_as_terrain ... ok
+test terrain_maps_have_zero_unknown_bytes ... ok
+test all_terrain_maps_roundtrip_byte_identical ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\unpack.rs (target\debug\deps\unpack-c9dd6dec26c828ce.exe)
+
+running 4 tests
+test raw_index_reencodes_byte_identically ... ok
+test p0_3_repack_is_byte_identical ... ok
+test all_entries_inflate_to_nonzero_payloads ... ok
+test p0_1_every_entry_extracts ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+   Doc-tests ti_app
+
+running 1 test
+test crates\ti-app\src\i18n.rs - i18n::sget (line 25) ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test crates\ti-app\src\scenes\mod.rs - scenes::SceneTransition (line 156) - compile fail ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+all doctests ran in 1.19s; merged doctests compilation took 0.28s
+   Doc-tests ti_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ti_formats
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ti_platform
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ti_render
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ti_tools
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+cargo :     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.19s
+所在位置 行:2 字符: 8
++ $out = cargo clippy --workspace --all-targets -- -D warnings 2>&1 | O ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `d...get(s) in 0.19s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+--- 3. cargo clippy --workspace --all-targets -- -D warnings (输出 = 上段空尾 = 0 warning) ---
+
+
+--- 4. doccheck（台账登记 S20.2 后应 0 error） ---
+
+doccheck: 130 docs, 38 facts, 109 experiences, 181 task refs, 4 assertions, 0 error(s)
+
+
+--- 5. doccheck2（布局镜像 + 断言同步，应 0 error） ---
+
+doccheck2: 0 error(s) across 26 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog)
+cargo :   WARN i18n 瀛ゅ効 key `glmapm01.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm02.Ma
+p`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm03.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉
+诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc
+.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S
+8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key
+ `role.desc.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.drake`锛坰trings.json 鏈変絾浠ｇ
+爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN 
+i18n 瀛ゅ効 key `role.name.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.panda`锛坰trings
+.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  WARN i18n 瀛ゅ効 key `scene.index.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map
+.hud.build`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.sell`锛坰trings.json 鏈変絾浠
+ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.spin`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  
+WARN i18n 瀛ゅ効 key `scene.main_map.hud.trade`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.mai
+n_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.toast.battle_fmt`锛坰trin
+gs.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.toast.treasure_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢
+紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.message.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18
+n 瀛ゅ効 key `scene.saveload.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.slo
+t_summary_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.title`锛坰trings.json 鏈変絾浠
+ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  WARN i18n 瀛ゅ効 key `scene.select_map.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.sel
+ect_role.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.vs.title`锛坰trings.json 鏈変絾浠ｇ爜
+鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+所在位置 行:8 字符: 8
++ $out = cargo run -q -p ti-tools --bin doccheck2 2>&1 | Out-String; Ad ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  WARN i18n 瀛ゅ効... 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+
+--- 6. check_data_driven（panel_wood 令牌登记，应 OK） ---
+
+check_data_driven: OK（通用原语 ['disc', 'glow', 'grad', 'icon', 'image', 'rect', 'text']；渲染层无场景语义；令牌全存在）
+
+
+--- 7. scripts/gate.ps1 全门禁 ---
+=== gate: TreasureIsl (23 items) ===
+  FAIL  cargo fmt --check  
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 186 tasks, 170 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 130 docs, 38 facts, 109 experiences, 181 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK（4 表，strings 87 键；main_map.grid 三键 + 全场景 extra 标量正整数）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+        doccheck2: 0 error(s) across 26 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog)
+          WARN i18n 瀛ゅ効 key `glmapm01.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm02.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm03.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.index.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.build`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.sell`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.spin`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.trade`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.toast.battle_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.toast.treasure_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.message.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.slot_summary_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_role.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.vs.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+        check_ledger_reality: 全绿（170 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+  PASS  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+        check_forward_closed: C1 业务文档零逆向引用: OK
+        check_forward_closed: C2 表现层零 oracle 引用: OK
+        check_forward_closed: C3 根目录清空 + legacy 在位: OK
+        check_forward_closed: C4 oracle 单点源 + 禁重复 crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 包 D status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P1 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P2 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P3 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P4 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P5 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P6 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 契约 c1_core_public_types.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c2_data_keys.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+        flywheel_readme -Check PASS: 6 条必读 ?, gate 23 项, doccheck2 29 断言, packages 7 包
+  PASS  flywheel-readme (开轮必读脚本完整性)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.36s
+        
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)
+        === 代码结构审计 ===
+        文件 224 / 总行 49927 / 函数 2513 / trait 22 / 泛型 fn 7 / macro_rules! 6
+        
+        --- 最长 10 个文件 ---
+         2260  crates/ti-tools/src/bin/doccheck2.rs  [豁免]
+          891  crates/ti-app/tests/render_intent.rs
+          871  crates/ti-platform/src/gfx.rs
+          868  crates/ti-app/src/scenes/chrome.rs
+          770  crates/ti-core/src/data/mod.rs
+          763  crates/ti-engine/src/bin/treasure_bevy.rs
+          748  crates/ti-app/src/scenes/mod.rs
+          739  crates/ti-render/src/shell.rs
+          663  crates/ti-tools/src/bin/classify.rs
+          611  crates/ti-app/src/scenes/main_map.rs
+        
+        --- 最长 10 个函数 ---
+          304  crates/ti-core/examples/full_run_demo.rs::main (行 120)  [豁免]
+          189  crates/ti-core/tests/exhaust_random_session.rs::run_random_session (行 71)  [豁免]
+          173  crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session (行 17)  [豁免]
+          173  crates/ti-engine/src/scene_render.rs::spawn_primitives (行 225)  [豁免]
+          155  crates/ti-core/src/data/mod.rs::convert (行 616)  [豁免]
+          143  crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity (行 704)  [豁免]
+          139  crates/ti-app/src/android_shell.rs::run (行 97)
+          133  crates/ti-app/src/scenes/main_map.rs::render (行 307)
+          129  crates/ti-core/examples/random_session_demo.rs::run_one_session (行 185)
+          117  crates/ti-core/src/data/layout.rs::scenes (行 19)
+        
+        --- 违规（阈值：文件 >900 行 / 函数 >140 行 / 重复 >5 次）---
+        文件规模 0 项；函数长度 0 项；重复模式 0 项
+        [audit_code] PASS：0 项结构违规
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)
+        === check_scene_narrative (UI 叙事约束 DSL v3) ===
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)
+        [2m2026-10-22T10:31:26.266249Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Windows 10 Enterprise LTSC 2021", kernel: "19044", cpu: "Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz", core_count: "4", memory: "15.9 GiB" }
+        [2m2026-10-22T10:31:30.483736Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "NVIDIA GeForce GTX 1050 Ti", vendor: 4318, device: 7298, device_type: DiscreteGpu, device_pci_bus_id: "0000:01:00.0", driver: "NVIDIA", driver_info: "560.94", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+        [2m2026-10-22T10:31:30.770004Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        S18.2 GPU/CPU 鍍忕礌瀵圭収锛堣壊鍧楀唴閮紝鎺掗櫎鏂囨湰妗?+ 2px 杈圭紭甯︼級锛氭瘮瀵?1607576 鍍忕礌锛岃秴宸?0锛?.0000%锛夛紝鏈€澶ч€氶亾宸?0 LSB锛岄涓秴宸?None
+        璇婃柇锛欸PU 闈為粦鍍忕礌 2073600锛堟枃鏈尯瀛楀舰瀵归綈灞?S18.3锛?  anchor (0,0): cpu=0x10c9 gpu=0x10c9
+          anchor (1079,1919): cpu=0x0865 gpu=0x0865
+          anchor (60,200): cpu=0x190c gpu=0x190c
+          anchor (540,500): cpu=0x190c gpu=0x190c
+        S18.2 瀵圭収閫氳繃锛堥槇鍊硷細閫氶亾 鈮? LSB 涓旇秴宸瘮渚?<0.5%锛?
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)
+=== gate: 1 failure(s) ===
+
+
+
+--- 8. cargo fmt --all（gate fmt 项收口后）+ gate 复跑 ---
+=== gate: TreasureIsl (23 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 186 tasks, 170 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 130 docs, 38 facts, 109 experiences, 181 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK（4 表，strings 87 键；main_map.grid 三键 + 全场景 extra 标量正整数）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+        doccheck2: 0 error(s) across 26 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog)
+          WARN i18n 瀛ゅ効 key `glmapm01.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm02.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm03.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.index.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.build`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.sell`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.spin`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.trade`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.toast.battle_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.toast.treasure_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.message.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.slot_summary_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_role.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.vs.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+        check_ledger_reality: 全绿（170 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+  PASS  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+        check_forward_closed: C1 业务文档零逆向引用: OK
+        check_forward_closed: C2 表现层零 oracle 引用: OK
+        check_forward_closed: C3 根目录清空 + legacy 在位: OK
+        check_forward_closed: C4 oracle 单点源 + 禁重复 crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 包 D status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P1 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P2 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P3 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P4 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P5 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P6 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 契约 c1_core_public_types.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c2_data_keys.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+        flywheel_readme -Check PASS: 6 条必读 ?, gate 23 项, doccheck2 29 断言, packages 7 包
+  PASS  flywheel-readme (开轮必读脚本完整性)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.37s
+        
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)
+        === 代码结构审计 ===
+        文件 224 / 总行 49927 / 函数 2513 / trait 22 / 泛型 fn 7 / macro_rules! 6
+        
+        --- 最长 10 个文件 ---
+         2264  crates/ti-tools/src/bin/doccheck2.rs  [豁免]
+          887  crates/ti-app/tests/render_intent.rs
+          871  crates/ti-platform/src/gfx.rs
+          868  crates/ti-app/src/scenes/chrome.rs
+          770  crates/ti-core/src/data/mod.rs
+          763  crates/ti-engine/src/bin/treasure_bevy.rs
+          748  crates/ti-app/src/scenes/mod.rs
+          739  crates/ti-render/src/shell.rs
+          663  crates/ti-tools/src/bin/classify.rs
+          611  crates/ti-app/src/scenes/main_map.rs
+        
+        --- 最长 10 个函数 ---
+          304  crates/ti-core/examples/full_run_demo.rs::main (行 120)  [豁免]
+          189  crates/ti-core/tests/exhaust_random_session.rs::run_random_session (行 71)  [豁免]
+          173  crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session (行 17)  [豁免]
+          173  crates/ti-engine/src/scene_render.rs::spawn_primitives (行 225)  [豁免]
+          155  crates/ti-core/src/data/mod.rs::convert (行 616)  [豁免]
+          147  crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity (行 704)  [豁免]
+          139  crates/ti-app/src/android_shell.rs::run (行 97)
+          133  crates/ti-app/src/scenes/main_map.rs::render (行 307)
+          129  crates/ti-core/examples/random_session_demo.rs::run_one_session (行 185)
+          117  crates/ti-core/src/data/layout.rs::scenes (行 19)
+        
+        --- 违规（阈值：文件 >900 行 / 函数 >140 行 / 重复 >5 次）---
+        文件规模 0 项；函数长度 0 项；重复模式 0 项
+        [audit_code] PASS：0 项结构违规
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)
+        === check_scene_narrative (UI 叙事约束 DSL v3) ===
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)
+        [2m2026-10-22T10:33:17.221202Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Windows 10 Enterprise LTSC 2021", kernel: "19044", cpu: "Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz", core_count: "4", memory: "15.9 GiB" }
+        [2m2026-10-22T10:33:17.606547Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "NVIDIA GeForce GTX 1050 Ti", vendor: 4318, device: 7298, device_type: DiscreteGpu, device_pci_bus_id: "0000:01:00.0", driver: "NVIDIA", driver_info: "560.94", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+        [2m2026-10-22T10:33:17.788959Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        S18.2 GPU/CPU 鍍忕礌瀵圭収锛堣壊鍧楀唴閮紝鎺掗櫎鏂囨湰妗?+ 2px 杈圭紭甯︼級锛氭瘮瀵?1607576 鍍忕礌锛岃秴宸?0锛?.0000%锛夛紝鏈€澶ч€氶亾宸?0 LSB锛岄涓秴宸?None
+        璇婃柇锛欸PU 闈為粦鍍忕礌 2073600锛堟枃鏈尯瀛楀舰瀵归綈灞?S18.3锛?  anchor (0,0): cpu=0x10c9 gpu=0x10c9
+          anchor (1079,1919): cpu=0x0865 gpu=0x0865
+          anchor (60,200): cpu=0x190c gpu=0x190c
+          anchor (540,500): cpu=0x190c gpu=0x190c
+        S18.2 瀵圭収閫氳繃锛堥槇鍊硷細閫氶亾 鈮? LSB 涓旇秴宸瘮渚?<0.5%锛?
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)
+=== gate: 0 failure(s) ===
+
+
+
+--- 9. ui_preview 三屏出图（select_role/message/saveload，1080x1920 离屏） ---
+
+=== 预览场景: select_role ===
+  [shot] 闈為粦鍍忕礌 = 2070339 / alpha>8 = 2073600 / 2073600
+  [shot] 宸︿笂瑙?= ["[3, 13, 27, 255]"] 灞忓箷涓績 = ["[12, 29, 49, 255]"]
+  [shot] 宸插啓 C:\閲戦摱宀沑crates\ti-engine\..\..\evidence/bevy_native_select_role.png
+  nonblack = 2070339 / 2073600
+
+=== 预览场景: message ===
+  [shot] 闈為粦鍍忕礌 = 2073588 / alpha>8 = 2073600 / 2073600
+  [shot] 宸︿笂瑙?= ["[3, 13, 27, 255]"] 灞忓箷涓績 = ["[57, 40, 24, 255]"]
+  [shot] 宸插啓 C:\閲戦摱宀沑crates\ti-engine\..\..\evidence/bevy_native_message.png
+  nonblack = 2073588 / 2073600
+
+=== 预览场景: saveload ===
+  [shot] 闈為粦鍍忕礌 = 2073589 / alpha>8 = 2073600 / 2073600
+  [shot] 宸︿笂瑙?= ["[3, 13, 27, 255]"] 灞忓箷涓績 = ["[57, 40, 24, 255]"]
+  [shot] 宸插啓 C:\閲戦摱宀沑crates\ti-engine\..\..\evidence/bevy_native_saveload.png
+  nonblack = 2073589 / 2073600
+
+预览结束：产物在 evidence/bevy_native_*.png + evidence/ui_preview/*.png
+
+

@@ -574,6 +574,7 @@ mod tests {
         wood_warm: 25,
         sea_deep: 41,
         panel_warm: 51,
+        panel_wood: 47,
         brass: 52,
         brass_light: 53,
         brass_dark: 54,

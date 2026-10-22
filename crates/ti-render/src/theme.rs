@@ -58,6 +58,8 @@ pub struct Theme {
     pub sea_deep: u16,
     /// 深暖面板色（HUD/命令盘/英雄面板底色；S18.10）
     pub panel_warm: u16,
+    /// 深棕木底（v4 面板语言：容器底色，替代 `panel_warm` 的近黑）；S20.2。
+    pub panel_wood: u16,
     /// 黄铜色（面板描边/甲板中层；S18.10）
     pub brass: u16,
     /// 黄铜高光（面板凸边/甲板亮层；S18.10）
@@ -130,6 +132,7 @@ impl Theme {
             "wood_warm" => self.wood_warm,
             "sea_deep" => self.sea_deep,
             "panel_warm" => self.panel_warm,
+            "panel_wood" => self.panel_wood,
             "brass" => self.brass,
             "brass_light" => self.brass_light,
             "brass_dark" => self.brass_dark,
@@ -176,6 +179,7 @@ impl Theme {
         wood_warm: 0x8B42,
         sea_deep: 0x108A,
         panel_warm: 0x18C2,
+        panel_wood: 0x3943,
         brass: 0x9365,
         brass_light: 0xCE4A,
         brass_dark: 0x51E4,
@@ -260,6 +264,7 @@ impl Theme {
             wood_warm: p.wood_warm.hex().unwrap_or(d.wood_warm),
             sea_deep: p.sea_deep.hex().unwrap_or(d.sea_deep),
             panel_warm: p.panel_warm.hex().unwrap_or(d.panel_warm),
+            panel_wood: p.panel_wood.hex().unwrap_or(d.panel_wood),
             brass: p.brass.hex().unwrap_or(d.brass),
             brass_light: p.brass_light.hex().unwrap_or(d.brass_light),
             brass_dark: p.brass_dark.hex().unwrap_or(d.brass_dark),
@@ -344,6 +349,8 @@ pub struct PaletteJson {
     pub sea_deep: Option<Hex16>,
     /// 深暖面板色（HUD/命令盘/英雄面板底色；S18.10）
     pub panel_warm: Option<Hex16>,
+    /// 深棕木底（v4 面板语言：容器底色，替代 `panel_warm` 的近黑）；S20.2。
+    pub panel_wood: Option<Hex16>,
     /// 黄铜色（面板描边/甲板中层；S18.10）
     pub brass: Option<Hex16>,
     /// 黄铜高光（面板凸边/甲板亮层；S18.10）

@@ -131,5 +131,13 @@ impl Scene for SelectRoleScene {
             let r = layout.list.item_rect(current);
             host.fill_rect(r.x, r.y, r.w, r.h, chrome::COLOR_BEVEL_SHADOW);
         }
+        // S20.2 v4 面板语言：右列角色项 = 深棕木底（scenes.json 原语 `panel_wood`）+ 黄铜细边；
+        // 选中项 = 3px 黄铜边（此前整块金色填充）。
+        for i in 0..5 {
+            let r = layout.list.item_rect(i);
+            chrome::wood_panel(host, r.x, r.y, r.w, r.h);
+        }
+        let sel = layout.list.item_rect(current);
+        chrome::selected_border(host, sel.x, sel.y, sel.w, sel.h, 3);
     }
 }

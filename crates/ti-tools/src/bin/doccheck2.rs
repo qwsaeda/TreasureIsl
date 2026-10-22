@@ -323,6 +323,7 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
 }
 
 /// 6. **gate 项数声称一致性**：`scripts/gate.ps1` 头注释/横幅 + `docs/parity.md` /
+///    （S20.2 v4 面板语言：坐标随面板语言/死区治理调整，断言值已同步）
 ///    `docs/git.md` / `docs/README.md` 里所有「gate N 项」类声称值，必须 == 实测固定项数
 ///    （`gate.ps1` 顶层不缩进 `Report` 调用数；条件 `Report`/`Skip` 分支不计）。
 ///    豁免项编号（「第 N 项」）/ doccheck2 检查数声称（「N 项检查」）/ playbook 命令数
@@ -711,7 +712,7 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
     // 公共：标题条 h=96、提示/状态行 y=1840、列表 x=96 w=896
     // index: list y=392 row_h=224 item_h=168 highlight_offset=40，status y=1840
     // select_role: row_h=192（S18.7d v3 中央选项列）；select_map: row_h=320（v3 右列 3 卡）；
-    // saveload: row_h=224 gold_x=872（v3 三栏：中槽列表 + 右元数据栏）
+    // saveload: row_h=256 gold_x=792（S20.2 v4 面板语言：行高加大 + 内容左移）
     // vs: player_hp 64..512 / boss_hp 576..1024 y=168 w=448 h=48
     // main_map: hud y=152 h=128（不与等距区 grid.y0=520 重叠）
     let anchors: &[(&str, &str, &str)] = &[
@@ -730,11 +731,15 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
             "\"row_h\": 320",
             "select_map 行高 = 320（§4.2，S18.7d v3 右列 3 地图卡）",
         ),
-        ("\"saveload\"", "\"row_h\": 224", "saveload 行高 = 224（§4.6，S18.7d v3 三栏）"),
         (
             "\"saveload\"",
-            "\"gold_x\": 872",
-            "saveload 金字号列 x = 872（§4.6，S18.7d v3 右元数据栏）",
+            "\"row_h\": 256",
+            "saveload 行高 = 256（§4.6，S20.2 v4 面板语言：行高加大）",
+        ),
+        (
+            "\"saveload\"",
+            "\"gold_x\": 792",
+            "saveload 金字号列 x = 792（§4.6，S20.2 v4：内容左移居中）",
         ),
         (
             "\"vs\"",
@@ -755,8 +760,8 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         ),
         (
             "\"message\"",
-            "\"h\": 1128",
-            "message 正文区 h = 1128（§4.5，S18.7d v3 三栏 text_panel 内宽）",
+            "\"h\": 176",
+            "message 正文区 h = 176（§4.5，S20.2 v4 面板语言：面板按内容收缩）",
         ),
     ];
     // 每个场景段单独切片，避免跨场景误匹配（如 select_role 与 select_map 同名 list）

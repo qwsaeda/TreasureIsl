@@ -61,6 +61,10 @@ impl Scene for MessageScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("message");
         chrome::render_primitives(host, "message", -1);
+        // S20.2 v4 面板语言：消息卡片 = 深棕木底（scenes.json 原语 `panel_wood`）+ 黄铜细边。
+        if let Some(panel) = layout.extra.get("panel") {
+            chrome::wood_panel(host, panel.x, panel.y, panel.w, panel.h);
+        }
         let kind = host.msg_kind().unwrap_or(MsgKind::Help);
         // 标题（动态 i18n `msg.<kind>`；数据槽 `title`：x = 面板中心点，y = 顶边基线）
         let key = format!("msg.{}", kind.label());
