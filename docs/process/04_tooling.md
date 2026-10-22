@@ -37,6 +37,8 @@
 | `scripts/migrate_strings.py` | 把 `.rs` 中命中 `KEY_HINTS` 的中文字面量批量迁到 `strings.json` + 改写调用点为 `sget(key)` | `--report` 只列不写；`--apply` 幂等（已迁过的再跑零改动）；新增文案只需在 KEY_HINTS 加一条再重跑 |
 | `scripts/check_ledger_reality.py` | 台账三方对账（防虚报，S10.0）：ledger `status: verified` 行 ↔ evidence 文件（存在+非空，支持 `+` 多文件）↔ 代码符号（`SYMBOL_EXPECTATIONS` 登记的 DoD 产物在 `crates/*/src` grep）三方一致 | 全绿 0 退出码；任一虚报 FAIL 列命中（gate 第 14 项）；只读幂等；新增任务若 DoD 声明代码产物，往 `SYMBOL_EXPECTATIONS` 登记（EXP-058） |
 
+| `scripts/audit_code.py` | 代码结构审计（`docs/style.md` §5.12 的执行手段）：文件规模（>900 行）/ 函数长度（>140 行）/ 重复模式（同一骨架 ≥N 次） | `--check` 只读检查、违规 ⇒ 非 0 退出码；`--report` 人读报告（永远 0 退出）；`--update-baseline` 写棘轮基线；阈值与基线豁免 = `scripts/code_budget.json`（每条豁免带整改任务号） |
+
 > **gate 项数**（2026-10 扩展，随对抗审计固化）：第 9 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
 > 第 10 项「数据表门禁」= `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（严格 0 命中）。
 > 历史时点 gate 为 8 项（plan-s0-s2/s3/s4 文档保留「当时 8 项」注，勿直接改写）。

@@ -1,0 +1,21 @@
+{
+  "exempt_files": {
+    "crates/ti-app/src/game_app.rs": "S20.1 拆分（state/board/battle/saveload/host 子模块）",
+    "crates/ti-tools/src/bin/doccheck2.rs": "S20.1 拆分（按断言族分文件：layout/primitives/scene/data/asset）"
+  },
+  "exempt_fns": {
+    "crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session": "S20.1 拆分（e2e 按阶段拆 fn）",
+    "crates/ti-core/examples/full_run_demo.rs::main": "S20.1 拆分（演示脚本：按阶段拆 fn）",
+    "crates/ti-core/src/data/mod.rs::convert": "S20.1 拆分（按数据域拆 convert_*）",
+    "crates/ti-core/tests/exhaust_random_session.rs::run_random_session": "S20.1 拆分（穷举驱动：按域拆 fn）",
+    "crates/ti-engine/src/scene_render.rs::spawn_primitives": "S20.1 拆分（按原语种类拆 fn）",
+    "crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity": "S20.1 拆分（按子断言拆 fn）"
+  },
+  "exempt_repeats": {
+    "toast 三连（文案+时长+音效）@crates/ti-app/src/game_app.rs": "S20.2 抽 GameApp::toast(text, sfx) 辅助函数（7 处收敛到 1 处）"
+  },
+  "max_file_lines": 900,
+  "max_fn_lines": 140,
+  "max_repeat": 5,
+  "note": "基线 = 2026-10-21 审计时的现状（棘轮起点）。新增违规 ⇒ --check FAIL；整改后从基线删除对应条目。"
+}

@@ -102,6 +102,7 @@
 | `crates/ti-tools/src/bin/specskel.rs` | spec 骨架半自动生成（S0.7；命令见 `AGENTS.md` 命令节） |
 | `evidence/S0.7.log` | specskel 验收日志（单测 6/6 + 三模块实跑） |
 | `scripts/extract_board.py` | **S19 环岛赛道生成**：`terrain.json` 陆格掩码 → Moore 轮廓 → 去重 → 吸附 balance 据点/BOSS/原版特殊地块 → `assets/data/board.json`（`--check` 校验一致性） |
+| `scripts/audit_code.py` | **代码结构审计**（`style.md` §5.12 手段）：文件规模 / 函数长度 / 重复模式；`--check` 违规非 0 退出，阈值与棘轮基线 = `scripts/code_budget.json` |
 | `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
 | `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |
 

@@ -1,0 +1,44 @@
+=== S20.0a 代码结构治理【A】= 规范 + 工具（style.md §5.12 + audit_code.py + 棘轮基线） ===
+
+判据（本任务验收点）：
+1) 规范落地：`docs/style.md` §5.12「代码结构准则」——模块职责（内聚）/ 纯函数优先 /
+   函数长度与规模 / 重复处理（trait+泛型 > 辅助函数 > 宏）/ 门禁与工具 五节；
+2) 手段落地：`scripts/audit_code.py`（幂等只读 + `--check` 非 0 退出 + `--report` +
+   `--update-baseline`），阈值与棘轮基线 = `scripts/code_budget.json`（每条豁免带整改任务号）；
+3) 基线登记：当前已知结构债全部入基线（2 文件 / 6 函数 / 1 重复项），带整改任务号；
+4) 工具登记：`docs/process/04_tooling.md` §1 表 + `docs/README.md` scripts 表；
+5) gate 全绿。
+
+--- 1) 审计实跑（`python scripts/audit_code.py --report`）---
+规模：215 文件 / 49479 行 / 2497 函数 / trait 22 / 真泛型 fn 7 / macro_rules! 6
+最长文件：doccheck2.rs 2220 / game_app.rs 2159 / render_intent.rs 883 / gfx.rs 871 / data/mod.rs 770
+最长函数：full_run_demo.rs::main 304 / exhaust_random_session.rs::run_random_session 189 /
+        e2e_playthrough.rs::e2e_full_game_session 173 / scene_render.rs::spawn_primitives 173 /
+        data/mod.rs::convert 155 / doccheck2.rs::check_scene_layout_fidelity 143 /
+        main_map.rs::render 130 / android_shell.rs::run 139
+结构债（本次审计定性）：
+  - 上帝文件 2 个：game_app.rs 2159 行（其中 `impl GameApp` 单块 1148 行 / 68 个 pub fn，
+    混合状态+路由+输入+赛道+战斗+存读档+渲染+触摸 8 类职责）/ doccheck2.rs 2220 行（工具侧）；
+  - 函数长度：clippy `too_many_lines` 100 行阈值有 **24 处 `#[allow]` 豁免** ⇒ 阈值形同虚设
+    ⇒ 本任务新增 140 行硬阈值（豁免走基线登记，不再散落 `#[allow]`）；
+  - 重复模式：`board_toast`+`board_toast_ticks=120`+`last_sfx` 三连 7 处（game_app.rs）、
+    `i18n::sget(` 7 处（main_map.rs）⇒ 抽辅助函数（整改任务 S20.0c）；
+  - 纯函数度：`ti-core/src/rules/*` 实测 **0 处 IO / 0 处打印 / 0 处全局可变状态** ⇒ 规则层已是纯函数层 ✓；
+  - 抽象手段：trait 22 个（9 个宿主 trait：Scene/SceneHost/MapHost/MenuHost/SessionHost/
+    NavHost/RenderHost/SpriteHost/EconomyHost）+ SelectionHost 等，trait 化充分 ✓；
+    真泛型 fn 仅 7 个 = 克制使用（`dyn Trait` 够用不泛型，准则 §5.12.4 明确此口径）；
+    macro_rules! 6 个（ti-formats 3 个已落地 + 各处零星），宏只用于语法级重复（§5.4）。
+
+--- 2) 工具实跑 ---
+python scripts/audit_code.py --check   →  [audit_code] PASS：0 项结构违规   (exit 0)
+python scripts/audit_code.py --report  →  人读报告（永远 exit 0）
+基线 = scripts/code_budget.json：
+  max_file_lines=900 / max_fn_lines=140 / max_repeat=5
+  exempt_files（2）：doccheck2.rs（S20.1 拆分）、game_app.rs（S20.1 拆分）
+  exempt_fns（6）：full_run_demo::main / exhaust_random_session::run_random_session /
+                  e2e_full_game_session / scene_render::spawn_primitives / data::convert /
+                  doccheck2::check_scene_layout_fidelity（均 S20.1 拆分）
+  exempt_repeats（1）：toast 三连 @ game_app.rs（S20.2 抽 GameApp::toast）
+
+--- 3) 门禁 ---
+（见下）

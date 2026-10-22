@@ -335,3 +335,44 @@ REA 在本项目的角色 = **补结构化深度分析的洞**，非次级交叉
 **冒烟纪律**（5.11.1 已定，此处重申）：每次用 REA 前先 `open_binary` + 一个轻量调用（如 `search_strings`），通过才继续，失败即退主路径，不浪费回合数（F-319 波动性可用）。
 
 **S4 重建验证探针**：S4.1 开始时花一回合验 `verify_reconstruction` / `evaluate_reconstruction_coverage` 能否吃我们的 evidence bundle —— 如果能，S4.4 的对齐验收就有了机制；如果不能，继续靠 P0~P4 判据 + gate。
+
+## §5.12 代码结构准则（模块职责 / 规模 / 重复 / 抽象）
+
+> 执行手段：`scripts/audit_code.py`（`--check` 只读 + 非 0 退出码；阈值与棘轮基线 = `scripts/code_budget.json`）。
+> 本节只写「怎么写」，实测数字与违规清单由该脚本产出（勿在本文件复述数字，见 §单一事实源）。
+
+### 5.12.1 模块职责（内聚）
+
+1. **一个 `.rs` = 一个职责**；文件首部 doc 注释必须写清「本模块负责什么 / 不负责什么」；
+2. **上帝文件判定**：单文件 > 900 行 ⇒ 必须在台账有拆分任务（`crates/ti-app/src/game_app.rs` 是当前已知上帝文件，见基线豁免）；
+3. **一个 `impl` 块 = 一类职责**：`impl GameApp` 超过 ~600 行 ⇒ 拆子模块（`state` / `board` / `battle` / `saveload` / `host`），职责按「状态 / 领域 / 宿主接线」三类归位；
+4. **依赖方向单向**：`ti-core`（rules 纯函数 + data）← `ti-app`（状态机 + 表现）← `ti-engine`（Bevy 壳）；表现层不得反向依赖 rules 之外的内部实现（`docs/process/01_architecture.md`）。
+
+### 5.12.2 纯函数优先
+
+1. **规则层必须纯**：`ti-core/src/rules/*` 不得有 IO / 打印 / 全局可变状态（现测 0 命中）；需要随机性就**显式传入 `&mut GameRng`**（可回放，见 `docs/business/progression.md` 确定性条款）；
+2. **数值不入函数**（§5.3）：函数签名不出现魔法数字，数值来自 `assets/data/*.json`；
+3. **表现层可以有状态**，但状态变更集中在宿主方法上（`GameApp` / `BattleView`），场景模块只做「读状态 → 画」。
+
+### 5.12.3 函数长度与规模
+
+1. **函数 ≤ 140 行**（严于 clippy `too_many_lines` 的 100 行默认值：clippy 允许 `#[allow]` 豁免，本项不允许）；
+2. **超长函数的正确出路是拆**，不是加 `#[allow(clippy::too_many_lines)]`（现库内 24 处豁免 = 待整改面，见基线）；
+3. 拆不动时（如穷举驱动 / e2e 主流程）按「阶段」拆成多个 `fn` + 一个编排 `fn`，编排 `fn` 只负责串阶段。
+
+### 5.12.4 重复处理（宏 vs 辅助函数 vs trait）
+
+优先级：**trait + 泛型 > 辅助函数 > 宏**。
+
+1. **行为差异 ⇒ trait + 泛型**：同一算法、不同数据源/不同宿主 → 抽 trait（`MapHost` / `SceneHost` / `MenuHost` 等 9 个宿主 trait 是范式）；
+2. **同一段骨架被复制 ≥ 3 次 ⇒ 抽辅助函数**（例：`board_toast` + `board_toast_ticks=120` + `last_sfx` 三连 → 应收敛为 `GameApp::toast(text, sfx)`）；
+3. **宏只用于语法级重复**（§5.4）：`macro_rules!` 落地清单以 `crates/ti-formats/src/macros.rs` 为准；不要用宏包装「有分支的业务逻辑」；
+4. **泛型不是万能**：`dyn Trait` 够用就别泛型（全库真泛型 `fn` 7 个 = 克制使用，不是缺陷；泛型不足只在「同算法不同类型」确有多处时补）。
+
+### 5.12.5 门禁与工具
+
+| 手段 | 位置 | 作用 |
+|---|---|---|
+| `cargo clippy --workspace --all-targets -- -D warnings` | `scripts/gate.ps1` 第 2 项 | pedantic 全量（含 `too_many_lines` 100 行默认阈值） |
+| `python scripts/audit_code.py --check` | `scripts/audit_code.py` + `scripts/code_budget.json` | 文件规模 / 函数长度（140 行）/ 重复模式；**棘轮基线**（新增违规 FAIL，整改后删基线条目） |
+| `docs/process/04_tooling.md` §1 | 工具登记 | 新增工具须幂等 + `--check` + 非 0 退出码 + 登记 |
