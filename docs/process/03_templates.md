@@ -288,6 +288,14 @@ if __name__ == "__main__":
 - assets/data/balance.json key <a.b.c>  ← 数值（不在代码里写死）
 - 可测规则表：本包负责第 <n> 条（见下）
 
+## 改动面声明（必填，`00_index.md` §变更面声明）
+- 业务规则：<docs/business/xxx.md §节 | 无>
+- 数据：<assets/data/xxx.json key | 无>
+- 规则实现：<crates/ti-core/src/rules/xxx.rs | 无>
+- 表现：<crates/ti-app/src/scenes/xxx.rs | crates/ti-render/ | crates/ti-engine/ | 无>
+- 资产：<assets/ui/xxx.png + ui_manifest 登记 | 无>
+- 跨模块原因：<同时动多块时必填：为什么必须同改 / 为什么不能拆成可独立验收子任务>
+
 ## 工程规范
 - docs/process/02_conventions.md（数据驱动/命名/错误/测试）
 - docs/process/03_templates.md §4（玩法模块模版）/ §5（测试模版）

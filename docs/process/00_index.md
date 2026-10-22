@@ -73,6 +73,38 @@
 | [`07_render_pipeline.md`](07_render_pipeline.md) | **legacy 像素管线契约**（路径表 / z-order 文件顺序 / 越界求交裁剪 / PCX 透明位 index 0）；S16 起**降级为逆向参照**——运行时架构见 08 |
 | [`08_render_arch.md`](08_render_arch.md) | **运行时渲染架构**（分层 / 绘制原语 / z-order=调用顺序 / 5 条坐标与像素来源契约 / grep 门禁 / 测试重锚矩阵；改渲染代码前必读） |
 | [`09_render_framework.md`](09_render_framework.md) | **`ti-render` crate 边界契约**（职责/禁止项 / 模块结构 / Theme schema / 从 ti-app 的迁移映射 / 数据分离原则；改 `crates/ti-render/` 代码前必读） |
+| [`10_ui_redesign.md`](10_ui_redesign.md) | **UI 重设计规格（S17 单一事实源）**：设计令牌 v2 / 8pt 版面 / 图标 14 项 / 动效 4 参数（航海夜·精修）；改 UI 视觉量前必读 |
+| [`11_bevy_migration.md`](11_bevy_migration.md) | **Bevy 0.20 迁移裁决单一事实源**（差距定稿 / 定案推翻签核 / 架构形状 / 新 crate `ti-engine` / WBS S18.0–S18.8 / 风险） |
+| [`12_bevy_usage.md`](12_bevy_usage.md) | **Bevy 0.20 用法规范**（官方 `DefaultPlugins` 强制 / 1080 坐标换算 / z 层负值升序 / GPU Text2d 文本 / 离屏截图验收口径 / 已知坑位清单）；写 Bevy 代码前必读 |
+| [`13_ui_asset_pipeline.md`](13_ui_asset_pipeline.md) | **UI 资产管线**（资产清单 `assets/ui_manifest.json` = 单一事实源；`python scripts/ui_assets.py add/build/verify` 生图+抠透明+入库；`powershell scripts/ui_preview.ps1 <scene>` 出图验收） |
+
+## 变更面声明（每次开发必填）
+
+**每个任务开工前必须在任务书 / 台账 dod / 交付说明里声明「改哪一块」**；**跨模块必须写原因**。
+
+### 四块（改动面坐标系）
+
+| 块 | 位置 | 判据 | 谁定 |
+|---|---|---|---|
+| **业务规则** | `docs/business/*.md`（唯一事实源） | 玩法语义/数值/节奏 | **人评审签字**（LLM 只起草） |
+| **数据** | `assets/data/*.json` | 数值与布局表 | 业务规则定案后落表 |
+| **规则实现** | `crates/ti-core/src/rules/*` | 纯函数规则（不碰表现层） | 业务规则 + 数据 |
+| **表现** | `crates/ti-app/src/scenes/*`、`crates/ti-render/`、`crates/ti-engine/` | 渲染 / 交互 / 音效 | 规则层定案后接线 |
+| **资产** | `assets/ui/*` + `assets/ui_manifest.json` | 贴图/图标/字体 | 清单驱动（`scripts/ui_assets.py`） |
+
+### 声明格式（任务书 / 交付说明统一用）
+
+```
+改动面：业务规则=progression.md §落格节奏 | 数据=balance.board | 规则=rules::board | 表现=main_map.rs | 资产=无
+跨模块原因：<为什么必须同时动这几块；为什么不能拆成独立可验收子任务>
+```
+
+### 纪律
+
+1. **不声明 = 违规**：评审/复核阶段发现「改动面未声明」⇒ 任务退回（对齐 §分工表「LLM 禁区 2：不得顺手重构任务范围外的文件」）；
+2. **跨模块必须给原因**：「接口 + 实现 + 数据」三层同改时，必须说明为何不能拆成 `.a`/`.b` 子任务；能拆就拆（`§任务粒度`：一个任务 = 一次能独立验收的改动，触及文件数 ≤ 8，不同时改三层）；
+3. **业务规则先定案**：改动面含「业务规则」时，**先落 `docs/business/` 并评审**，再动代码/数据（对齐 §分工表「业务设计 = 人 + LLM 起草 → 评审签字」）；
+4. **资产先过清单**：改动面含「资产」时，先改 `assets/ui_manifest.json` 再生成，禁止手改 `assets/ui/` 里的成品图（`13_ui_asset_pipeline.md` §4）。
 
 ## 文档治理（与 [`loop.md`](../loop.md) 一致）
 
