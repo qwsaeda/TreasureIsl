@@ -11,7 +11,7 @@
   逆向产物已物理归档 `legacy/`（S11.1 verified）；oracle 参照实现唯一源 = `ti-core/src/oracle`（`pub mod oracle` 公开导出，测试直接 `use ti_core::oracle::`）；逐字节重复 crate `legacy/oracle-rust` 已于 S15.8 删除（C4 反向守卫防重引入）。
   模块并行开发 loop 已固化（`docs/process/05_module_parallel.md`）；飞轮流水线已落地（`docs/process/06_flywheel.md` + gate 第 17 项）。
 - **S19 环岛赛道（大富翁式摇骰前进）**：主地图主玩法 = 摇骰定步数 → 沿环岛赛道前进 N 格 → 落格结算（`rules::board` + `assets/data/board.json` + `balance.board`）；**S19.1 方向键自由移动已彻底删除，主地图移动只保留摇骰（`GameInput::Spin`）**。单一事实源 = `docs/business/progression.md` §环岛赛道 + 路由表 S19 条目。
-- **S21 main_map 重设计 v4「羊皮海图桌面」+ 船系统**（2026-10-22 用户：main_map 界面很烂 → 出新的设计渲染图）：**S21.0（脚本纪律强制化：doccheck2 第 27 项工具契约门禁 + `ui_asset_batch.py` 批量资产工具 + 硬规则 10）与 S21.1（概念稿 3 变体 + 15 资产多形状节点批次）已 verified**；**S21.2 船系统业务规格待拍板**（用户提出「开局小船、可升级」——现状无船系统：oracle 0 处 ship/boat、现有升级链仅 4 种建筑，规格须先落 `docs/business/economy.md`）；S21.3~S21.9（版面/交互规格 → 岛屿重绘 → 赛道重绘 → 版面重排 → 交互升级 → 出图验收）待开工。单一事实源 = `plan/ledger.yaml` S21 段 + 批次规格 `assets/ui_batches/main_map_v4.json`；概念稿 = `evidence/ui_concept/main_map_v4_{a,b,c}.png`（gitignored，仅参考）。
+- **S21 main_map 重设计 v4「羊皮海图桌面」+ 船系统**（2026-10-22 用户：main_map 界面很烂 → 出新的设计渲染图）：**S21.0（脚本纪律强制化：doccheck2 第 27 项工具契约门禁 + `ui_asset_batch.py` 批量资产工具 + 硬规则 10）与 S21.1（概念稿 3 变体 + 15 资产多形状节点批次）已 verified**；**S21.2 船系统规格已定案 verified**（B 独立船轴：4 级 小舢板→双桅→三桅→巡防，造价 0/800/2500/6000，货舱 99/150/240/400 = 单次贸易上限，atk/hp 累计叠加建筑轴；单一事实源 = `docs/business/economy.md` §船系统 + `balance.boat`）；待开工 = S21.10（规则接线 rules/boat + qty 上限 + 战斗加成）→ S21.11（存档 v3）→ S21.12（船贴图×4 + 主地图切换 + 造船 UI）+ S21.3~S21.9（版面/交互规格 → 岛屿重绘 → 赛道重绘 → 版面重排 → 交互升级 → 出图验收）。批次规格 = `assets/ui_batches/main_map_v4.json`；概念稿 = `evidence/ui_concept/main_map_v4_{a,b,c}.png`（gitignored，仅参考）。
 
 ## 路由表
 
