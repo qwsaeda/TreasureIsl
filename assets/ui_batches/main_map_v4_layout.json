@@ -1,0 +1,27 @@
+{
+  "_comment": "main_map v4 规格版面线图（S21.3）：在满屏海图上叠画坐标表 10 个矩形 + 环岛示意。脚本化 = scripts/ui_layout_sheet.py（S21.8 补位：此前为一次性内联命令，EXP-115 同类缺口第 3 次发作）。本规格 = 声明式输入，S21.9 出图验收复用同一规格重出线图。",
+  "out": "evidence/ui_concept/main_map_v4_layout.png",
+  "art": "assets/ui/chart_full.png",
+  "scale": 0.25,
+  "ring": {
+    "cx": 540,
+    "cy": 663,
+    "rx": 430,
+    "ry": 220,
+    "nodes": 9,
+    "color": "#ffd750",
+    "label": "9 分区节点示意（S21.5 赛道）"
+  },
+  "boxes": [
+    { "name": "chart_full 满屏海图 z2", "rect": [0, 0, 1080, 1920], "color": "#78dca0" },
+    { "name": "hud_plaque_l 金币 z3", "rect": [48, 48, 448, 192], "color": "#ebb85a" },
+    { "name": "hud_plaque_r 船/持有 z3", "rect": [584, 48, 448, 192], "color": "#ebb85a" },
+    { "name": "world_canvas 岛+赛道 z5", "rect": [43, 250, 994, 826], "color": "#8cc8ff" },
+    { "name": "voyage_bar 航线进度尺 z6", "rect": [48, 1088, 984, 48], "color": "#ff8c3c" },
+    { "name": "deck_spin 舵轮CTA z7", "rect": [408, 1160, 264, 264], "color": "#ff3c3c" },
+    { "name": "deck_trade z8", "rect": [48, 1440, 312, 136], "color": "#c8dc50" },
+    { "name": "deck_sell z8", "rect": [384, 1440, 312, 136], "color": "#c8dc50" },
+    { "name": "deck_build z8", "rect": [720, 1440, 312, 136], "color": "#c8dc50" },
+    { "name": "toast 提示签条 z9", "rect": [344, 1600, 392, 64], "color": "#ffffff" }
+  ]
+}

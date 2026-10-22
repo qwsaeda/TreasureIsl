@@ -108,6 +108,7 @@
 | `scripts/board_measure.py` | **赛道节奏 / 跨图难度阶梯实测**（落格分布 + 每次摇骰期望 + BOSS 战生存余量）—— `progression.md` §落格节奏 / §跨图难度阶梯 的数字来源与复测 |
 | `scripts/ui_shot_probe.py` | **出图取样**（区域主色 / 最亮像素 / 裁剪放大）—— UI 出图验收的像素证据 |
 | `scripts/ui_asset_batch.py` | **UI 资产批量工具**（规格驱动：register/generate/install/build/check/sheet）—— 一组资产一次做完，含抠图可行性预检；规格 = `assets/ui_batches/*.json` |
+| `scripts/ui_layout_sheet.py` | **UI 版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图，版面评审 / S21.9 出图验收对照；`--check` 只读校验） |
 | `scripts/audit_code.py` | **代码结构审计**（`style.md` §5.12 手段）：文件规模 / 函数长度 / 重复模式；`--check` 违规非 0 退出，阈值与棘轮基线 = `scripts/code_budget.json` |
 | `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
 | `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |
