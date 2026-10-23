@@ -45,32 +45,31 @@ fn scenes() -> std::collections::BTreeMap<String, ti_core::data::SceneLayout> {
     ti_core::data::scenes().expect("scenes.json 解析失败").clone()
 }
 
-/// index §4.1（1080 现代版面，S17.2 航海夜 8pt 整备；S18.8b 贴图版式）：
-/// 标题条 h=96，菜单首行顶 y=704（纹章 120 + 标签），行距 row_h=176，尾行 y=1840（QB150）。
+/// index §4.1（S22 罗盘环；单一事实源 `09_index_compass_spec.md`）：满屏 chart_full + 6 medallion 沿环。
 #[test]
 fn index_layout_matches_doc() {
     let s = scenes();
     let Some(idx) = s.get("index") else {
         panic!("scenes.json 缺 index");
     };
-    assert_eq!(idx.title.h, 96, "index 标题条 h=96（1080 现代版面，S17.2 8pt）");
-    assert_eq!(idx.list.y, 704, "index 菜单首行顶 y=704（1080 现代版面，S18.8b 贴图版式）");
-    assert_eq!(idx.list.row_h, 176, "index 列表 row_h=176（1080 现代版面，S18.7 紧凑行距）");
-    assert_eq!(
-        idx.list.item_h, 160,
-        "index 列表 item_h=160（纹章 120 + 标签上沿；留 16px 行间空档）"
+    let img_asset = |p: &ti_core::data::Primitive, a: &str| {
+        p.kind == "image" && p.params.get("asset").and_then(|v| v.as_str()) == Some(a)
+    };
+    assert!(
+        idx.primitives.iter().any(|p| img_asset(p, "assets/ui/chart_full.png")),
+        "index S22 满屏 chart_full 海图底缺失"
     );
-    // 现代版面不变式：首块顶 = 基线 - highlight_offset = 704-0 = 704，须在标题条（12..108）之下留间隙；
-    // 末块底 = 704 + 5*176 + 160 = 1744，须在尾行（1840）之上。
-    let top = idx.list.y - idx.list.highlight_offset;
-    assert_eq!(top, 704, "index 首块顶 = 704（1080 现代版面，S18.8b 贴图版式）");
-    assert!(top >= 108, "index 首块顶 {top} 压标题条（条底 108）");
-    let bottom = top + 5 * idx.list.row_h + idx.list.item_h;
-    assert_eq!(bottom, 1744, "index 末块底 = 1744（1080 现代版面，S18.8b 贴图版式）");
-    assert!(bottom <= 1838, "index 末块底 {bottom} 撞尾行 y=1840");
+    assert_eq!(
+        idx.primitives
+            .iter()
+            .filter(|p| img_asset(p, "assets/ui/medallion_ring.png") && p.item >= 0 && p.item < 6)
+            .count(),
+        6,
+        "index S22 应 6 枚 medallion（item 0..5）"
+    );
     let status = idx.extra.get("status").expect("index 缺 status 矩形");
-    assert_eq!(status.x, 540, "index status x=540（QB123 屏心居中语义坐标）");
-    assert_eq!(status.y, 1840, "index 尾行 y=1840（1080 现代版面，QB150）");
+    assert_eq!(status.x, 540, "index status x=540（屏心居中）");
+    assert_eq!(status.y, 1840, "index 尾行 y=1840");
 }
 
 /// select_role/select_map §4.2（1080 现代版面，S17.2 8pt）：标题条 h=96，列表基线 y=240，提示行 y=1840（QB115/123）。
@@ -469,14 +468,24 @@ fn key_rects_have_pixels() {
     };
     let bg_index = COLOR_PARCH_DARK; // QA046：判据色引 §2 单一源常量（禁内联 hex）
     shell.fb.clear(bg_index);
-    shell.fill_rect(0, 0, FB_W as i32, layout.title.h, COLOR_TITLE_BAR); // QA046：§2 单一源（S14 内联 0x87BB 已废）
-    // 标题条区应有非背景像素（fill_rect 真画了）
+    // S22 罗盘环：关键区 = item 0 medallion 徽章 rect（坐标 0 时不写像素 → 静默不画）
+    let med = layout
+        .primitives
+        .iter()
+        .find(|p| {
+            p.item == 0
+                && p.params.get("asset").and_then(|v| v.as_str())
+                    == Some("assets/ui/medallion_ring.png")
+        })
+        .expect("index S22 缺 medallion item0");
+    let mr = med.rect;
+    shell.fill_rect(mr.x, mr.y, mr.w, mr.h, COLOR_TITLE_BAR);
     let px = shell.fb.as_slice().to_vec();
-    let title_px = (0..usize::try_from(layout.title.h).unwrap_or(0))
-        .flat_map(|y| (0..FB_W).map(move |x| y * FB_W + x))
-        .filter(|&i| px[i] != bg_index)
+    let ring_px = (mr.y..(mr.y + mr.h))
+        .flat_map(|y| (mr.x..(mr.x + mr.w)).map(move |x| y * FB_W_I32 + x))
+        .filter(|&i| px.get(usize::try_from(i).unwrap_or(0)) != Some(&bg_index))
         .count();
-    assert!(title_px > 0, "index 标题条 fill_rect 后无像素 —— 静默不画");
+    assert!(ring_px > 0, "index S22 medallion 徽章 fill_rect 后无像素 —— 静默不画");
 
     // vs 场景层：走真实 `VsScene::render`（假 SceneHost 录 fill 调用），血条底衬
     // 必须是 §4.4 表值（scenes.json vs.player_hp 1080 矩形）；vs.rs 置 w=0 / 改坐标时这里抓得到
@@ -687,22 +696,26 @@ fn selected_state_marker_visible_and_no_leak() {
         let px = render_scene_1080(scene);
         let layout = scs.get(scene).expect("scenes.json 缺场景");
         if scene == "index" {
-            // S18.8b：index 选中态 = **纹章放大 + 标签变金**（无「金底卡」）→
-            // 判据 = 选中项标签区有 gold_warm 像素，未选中项标签区没有（选中态不外溢）。
+            // S22：选中徽章（item 0）标签区有 gold_warm，未选中（item 1）无（选中态不外溢）
             let gold = ti_render::theme::Theme::default()
                 .by_name("gold_warm")
                 .unwrap_or(ti_app::menu_shell::COLOR_SELECTED);
-            let top0 = layout.list.y;
-            let top1 = top0 + layout.list.row_h;
-            let sel_gold = region_color_count(&px, 240, top0 + 128, 600, 44, gold);
-            let other_gold = region_color_count(&px, 240, top1 + 128, 600, 44, gold);
+            let lbl = |i: i64| {
+                layout
+                    .primitives
+                    .iter()
+                    .find(|p| p.item == i && p.kind == "text")
+                    .expect("index S22 缺 medallion 标签原语")
+            };
+            let (r0, r1) = (lbl(0).rect, lbl(1).rect);
             assert!(
-                sel_gold > 0,
-                "index 选中项标签区（顶 {top0}）无 gold_warm 像素（选中标签应变金）"
+                region_color_count(&px, r0.x, r0.y, r0.w, r0.h, gold) > 0,
+                "index S22 选中徽章 0 标签区无 gold_warm（选中标签应变金）"
             );
             assert_eq!(
-                other_gold, 0,
-                "index 未选中项标签区（顶 {top1}）不应有 gold_warm 像素（选中态泄漏）"
+                region_color_count(&px, r1.x, r1.y, r1.w, r1.h, gold),
+                0,
+                "index S22 未选中徽章 1 标签区有 gold_warm（选中态泄漏）"
             );
             continue;
         }

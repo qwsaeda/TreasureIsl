@@ -61,12 +61,13 @@ impl Scene for IndexScene {
         }
     }
 
-    /// 点菜单行 = 选中该行并立即执行（`docs/modernization.md` §5）。
+    /// 点罗盘环 6 徽章 = 选中该徽章并立即执行（S22「罗盘环标题页」，命中读 `index.primitives`
+    /// 的 `medallion_ring` 原语，与渲染同源）。键盘 ↑↓/Enter 走 [`GameInput::MoveUp`/`Confirm`]。
     fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
         if sample.gesture != Gesture::Tap {
             return false;
         }
-        let Some(idx) = layout::menu_row_at(sample.x, sample.y) else {
+        let Some(idx) = layout::menu_medallion_at(sample.x, sample.y) else {
             return false;
         };
         host.set_menu_selected(idx);

@@ -43,7 +43,7 @@ GAME_SCENES = ["index", "select_role", "select_map", "main_map", "vs", "message"
 
 # §2 mood → (focus.anchor, rhythm.rule) 推荐三元
 MOOD_RECOMMENDATION: dict[str, tuple[set[str], set[str]]] = {
-    "epic_entry":     ({"title_art"},            {"art_to_action_top_down"}),
+    "epic_entry":     ({"title_art", "compass_ring"}, {"art_to_action_top_down"}),
     "hero_choice":    ({"portrait_carousel"},    {"side_anchor_center_options"}),
     "map_overview":   ({"map_collage"},          {"side_anchor_center_options"}),
     "world_explore":  ({"world_canvas"},         {"world_first_hud_corner"}),

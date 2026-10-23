@@ -112,7 +112,7 @@
 | 仪式标题面板（v3） | `title_art {x:112, y:192, w:856, h:672}` | S18.6 暖金版：`ornate_frame` 精致木框（木色外框 + 金色内线 + 四角卷角 + 置顶指南针玫瑰），与标题/副标题同处 192..864 仪式区 |
 | 星空氛围层（v3） | `ambient_art {x:0, y:0, w:1080, h:1920, center_x:50, center_y:52, exclude:12}` | v3.1 双写：`chrome::star_sky` 确定性 26 星（无 RNG，快照可复现），绘制夹 12px 外框内，z-order 在外壳之后/菜单之前（P-SoT-2）；飞轮 R1 ④-05/①-32：星位表 + 屏心净空参数（`center_x`/`center_y`/`exclude` 百分数）数据化 |
 | 星空氛围层 · 星位表（v3） | `ambient_art.stars [{x:8, y:9}, {x:22, y:5}, {x:36, y:14}, {x:52, y:7}, {x:71, y:11}, {x:88, y:6}, {x:15, y:21}, {x:64, y:19}, {x:90, y:23}, {x:6, y:33}, {x:30, y:29}, {x:79, y:31}, {x:94, y:40}, {x:10, y:47}, {x:86, y:51}, {x:18, y:60}, {x:92, y:63}, {x:7, y:72}, {x:38, y:68}, {x:84, y:75}, {x:14, y:84}, {x:62, y:81}, {x:91, y:88}, {x:25, y:91}, {x:48, y:94}, {x:74, y:92}]` | 26 星（百分数 x/y；亮星 = `size:2` + 四向光晕，暗星 = `size:1`；飞轮 R1 ④-05：星位表 = 数据，渲染层只遍历） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:108, y:192, w:864, h:672}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` index `focus.bbox_pct` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点 |
+| 视觉重心锚（S22 罗盘环） | `focus_anchor {type:compass_ring, bbox:{x:65, y:500, w:950, h:941}}` | S22 罗盘环标题页重心区（`ui_schema/scene_manifest_v3.json` index `focus.bbox_pct {6,26,88,49}` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点（坐标单一事实源 = `09_index_compass_spec.md`） |
 
 不变式：`920 ≥ 108`（首块不压标题条）、`1432 ≤ 1840`（末块不撞提示行）。
 

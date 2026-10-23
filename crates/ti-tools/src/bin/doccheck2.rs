@@ -717,9 +717,21 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
     // main_map: hud y=152 h=128（不与等距区 grid.y0=520 重叠）
     let anchors: &[(&str, &str, &str)] = &[
         ("\"index\"", "\"h\": 96", "index 标题条高度 = 96（§4.1，S17.2 8pt）"),
-        ("\"index\"", "\"y\": 704", "index 列表基线 y = 704（§4.1，S18.7 紧凑列）"),
-        ("\"index\"", "\"row_h\": 176", "index 行高 = 176（§4.1，S18.7 紧凑行距）"),
-        ("\"index\"", "\"highlight_offset\": 0", "index 高亮上移 = 0（§4.1，S18.7 紧凑列无死区）"),
+        (
+            "\"index\"",
+            "\"compass_ring\"",
+            "index S22 罗盘环焦点锚 type = compass_ring（§4.1 S22，09_index_compass_spec）",
+        ),
+        (
+            "\"index\"",
+            "medallion_ring",
+            "index S22 罗盘环 6 徽章 = medallion_ring 铜底原语（§4.1 S22）",
+        ),
+        (
+            "\"index\"",
+            "chart_full",
+            "index S22 满屏羊皮海图底 = chart_full（§4.1 S22，与 main_map 统一）",
+        ),
         ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，S17.2 8pt）"),
         (
             "\"select_role\"",

@@ -157,6 +157,30 @@ pub mod layout {
         scene_list_index_at(&bands, x, y)
     }
 
+    /// S22：首页「罗盘环标题页」6 徽章命中 → 返回菜单项索引 0..5。
+    ///
+    /// 命中区几何读 `scenes.json` `index.primitives` 的 `medallion_ring` 原语 `rect`（`item` 0..5），
+    /// 与渲染 `render_primitives` 同一数据源（正逆成对，EXP-071）；`scenes.json` 不可用 → `None`。
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
+    pub fn menu_medallion_at(x: f32, y: f32) -> Option<usize> {
+        let scene = data::scenes().ok()?.get("index")?.clone();
+        let count = i64::try_from(MENU_COUNT).unwrap_or(0);
+        for p in &scene.primitives {
+            let is_medallion = p.params.get("asset").and_then(|v| v.as_str())
+                == Some("assets/ui/medallion_ring.png");
+            if !is_medallion || !(0..count).contains(&p.item) {
+                continue;
+            }
+            let (rx, ry, rw, rh) =
+                (p.rect.x as f32, p.rect.y as f32, p.rect.w as f32, p.rect.h as f32);
+            if x >= rx && x < rx + rw && y >= ry && y < ry + rh {
+                return usize::try_from(p.item).ok();
+            }
+        }
+        None
+    }
+
     /// 场景列表命中带几何（渲染 `item_rect` 公式的浮点镜像，EXP-071/EXP-074）。
     ///
     /// `select_role` / `select_map` / `saveload` 等列表场景的触摸命中与渲染高亮
@@ -366,9 +390,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::cast_precision_loss)] // 测试常量下标 ≤ 20，f32 表示无损
-    fn menu_rows_cover_six_items() {
-        // 坐标读 scenes.json index 段（list.y/row_h/item_h/highlight_offset），与渲染 item_rect 正逆成对
+    #[allow(clippy::cast_precision_loss)]
+    fn menu_medallions_hit_six_items() {
+        // S22 罗盘环：6 枚 image 原语（asset = medallion_ring.png）rect 各命中自身 item；
+        // 环心舵轮区/四角/标题条区 = None。
         let scene = match data::scenes() {
             Ok(v) => match v.get("index") {
                 Some(v) => v,
@@ -379,56 +404,33 @@ mod tests {
                 std::process::abort()
             }
         };
-        let y0 = scene.list.y as f32;
-        let step = scene.list.row_h as f32;
-        let offset = scene.list.highlight_offset as f32;
-        let item_h = scene.list.item_h as f32;
-        for i in 0..6usize {
-            let top = y0 + i as f32 * step - offset;
-            // 卡 i 顶带（含旧死区的卡顶 40px 带）+ 卡底 → 命中卡 i
-            assert_eq!(super::layout::menu_row_at(540.0, top + 4.0), Some(i), "row {i} 卡顶带");
+        let meds: Vec<_> = scene
+            .primitives
+            .iter()
+            .filter(|p| {
+                p.kind == "image"
+                    && p.params.get("asset").and_then(|v| v.as_str())
+                        == Some("assets/ui/medallion_ring.png")
+            })
+            .collect();
+        assert_eq!(meds.len(), 6, "S22 首页应 6 枚 medallion 徽章");
+        for p in &meds {
+            let cx = p.rect.x as f32 + p.rect.w as f32 / 2.0;
+            let cy = p.rect.y as f32 + p.rect.h as f32 / 2.0;
+            let item = usize::try_from(p.item).unwrap_or(0);
             assert_eq!(
-                super::layout::menu_row_at(540.0, top + item_h - 4.0),
-                Some(i),
-                "row {i} 卡底"
+                super::layout::menu_medallion_at(cx, cy),
+                Some(item),
+                "medallion item {item} 中心应命中自身"
             );
-            // 卡间空档（gap）→ 无命中（点在空白，触摸无副作用；QA101 带形）
-            if i + 1 < 6 {
-                let gap_mid = top + item_h + (step - item_h) / 2.0;
-                assert_eq!(
-                    super::layout::menu_row_at(540.0, gap_mid),
-                    None,
-                    "row {i} 卡间空档应无命中（QA101）"
-                );
-            }
         }
-        // QA101 反例 1（死区）：S18.7 紧凑菜单 `highlight_offset = 0` → **无死区**
-        // （卡顶带 = 命中带起点）；卡 0 顶带上方（y0-20）不命中任何项（点空白无副作用）。
         assert_eq!(
-            super::layout::menu_row_at(540.0, y0 - 20.0),
+            super::layout::menu_medallion_at(540.0, 970.0),
             None,
-            "卡 0 顶带上方应无命中（S18.7 紧凑菜单无死区）"
+            "环心舵轮区无 medallion 命中"
         );
-        assert_eq!(
-            super::layout::menu_row_at(540.0, y0 + 4.0),
-            Some(0),
-            "卡 0 顶带应命中卡 0（QA101 带形）"
-        );
-        // QA101 反例 2（误选）：卡 1 顶 40px 带——旧式 floor 归 0 误选菜单 0，新式命中卡 1
-        let top1 = y0 + step - offset;
-        assert_eq!(
-            super::layout::menu_row_at(540.0, top1 + 20.0),
-            Some(1),
-            "卡 1 顶带（旧误选反例）应命中卡 1（QA101）"
-        );
-        assert_eq!(super::layout::menu_row_at(40.0, y0 + 4.0), None, "左边界外");
-        assert_eq!(super::layout::menu_row_at(1040.0, y0 + 4.0), None, "右边界外");
-        assert_eq!(super::layout::menu_row_at(540.0, 10.0), None, "标题条区域");
-        assert_eq!(
-            super::layout::menu_row_at(540.0, y0 + 6.0 * step - offset + item_h + 4.0),
-            None,
-            "超出 6 项"
-        );
+        assert_eq!(super::layout::menu_medallion_at(40.0, 40.0), None, "左上角界外");
+        assert_eq!(super::layout::menu_medallion_at(540.0, 10.0), None, "标题条区无命中");
     }
 
     #[test]

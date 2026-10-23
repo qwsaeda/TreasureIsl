@@ -1,214 +1,17 @@
 {
  "schema_version": 1,
- "index": {
-  "title": {
-   "y": 8,
-   "h": 96
-  },
-  "list": {
-   "x": 240,
-   "y": 704,
-   "w": 600,
-   "row_h": 176,
-   "item_h": 160,
-   "text_x": 240,
-   "highlight_offset": 0
-  },
-  "icon": {
-   "x": 144
-  },
+  "index": {
   "status": {
    "x": 540,
    "y": 1840
   },
-  "portrait_zones": [
-   {
-    "x": 0,
-    "y": 360,
-    "w": 1080,
-    "h": 1310
-   }
-  ],
-  "title_art": {
-   "x": 112,
-   "y": 192,
-   "w": 856,
-   "h": 672
-  },
-  "ambient_art": {
-    "x": 0,
-    "y": 0,
-    "w": 1080,
-    "h": 1920,
-    "center_x": 50,
-    "center_y": 52,
-    "exclude": 12,
-    "stars": [
-     {
-      "x": 8,
-      "y": 9,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 22,
-      "y": 5,
-      "size": 2,
-      "bright": true
-     },
-     {
-      "x": 36,
-      "y": 14,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 52,
-      "y": 7,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 71,
-      "y": 11,
-      "size": 2,
-      "bright": true
-     },
-     {
-      "x": 88,
-      "y": 6,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 15,
-      "y": 21,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 64,
-      "y": 19,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 90,
-      "y": 23,
-      "size": 2,
-      "bright": true
-     },
-     {
-      "x": 6,
-      "y": 33,
-      "size": 2,
-      "bright": true
-     },
-     {
-      "x": 30,
-      "y": 29,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 79,
-      "y": 31,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 94,
-      "y": 40,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 10,
-      "y": 47,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 86,
-      "y": 51,
-      "size": 2,
-      "bright": true
-     },
-     {
-      "x": 18,
-      "y": 60,
-      "size": 2,
-      "bright": true
-     },
-     {
-      "x": 92,
-      "y": 63,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 7,
-      "y": 72,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 38,
-      "y": 68,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 84,
-      "y": 75,
-      "size": 2,
-      "bright": true
-     },
-     {
-      "x": 14,
-      "y": 84,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 62,
-      "y": 81,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 91,
-      "y": 88,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 25,
-      "y": 91,
-      "size": 2,
-      "bright": true
-     },
-     {
-      "x": 48,
-      "y": 94,
-      "size": 1,
-      "bright": false
-     },
-     {
-      "x": 74,
-      "y": 92,
-      "size": 1,
-      "bright": false
-     }
-    ]
-   },
   "focus_anchor": {
-   "type": "title_art",
+   "type": "compass_ring",
    "bbox": {
-    "x": 108,
-    "y": 192,
-    "w": 864,
-    "h": 672
+    "x": 65,
+    "y": 500,
+    "w": 950,
+    "h": 941
    }
   },
   "primitives": [
@@ -220,450 +23,573 @@
      "w": 1080,
      "h": 1920
     },
-    "color": "",
     "z": -13,
-    "when": "",
     "item": -1,
+    "when": "",
+    "color": "",
     "params": {
-     "asset": "assets/ui/bg_night_sea.png"
+     "asset": "assets/ui/chart_full.png"
     }
    },
    {
     "kind": "image",
     "rect": {
-     "x": 120,
-     "y": 250,
-     "w": 840,
-     "h": 360
+     "x": 112,
+     "y": 192,
+     "w": 856,
+     "h": 672
     },
-    "color": "",
     "z": -12,
-    "when": "",
     "item": -1,
+    "when": "",
+    "color": "",
     "params": {
      "asset": "assets/ui/board.png"
     }
    },
    {
-    "kind": "image",
+    "kind": "text",
     "rect": {
-     "x": 470,
-     "y": 176,
-     "w": 140,
-     "h": 140
+     "x": 160,
+     "y": 220,
+     "w": 760,
+     "h": 96
     },
-    "color": "gold",
     "z": -11,
-    "when": "",
     "item": -1,
-    "params": {
-     "asset": "assets/ui/icon_compass.png"
-    }
+    "when": "",
+    "color": "gold_bright",
+    "text": "金银岛",
+    "tier": "title"
    },
    {
     "kind": "text",
     "rect": {
-     "x": 120,
-     "y": 320,
-     "w": 840,
-     "h": 120
+     "x": 160,
+     "y": 336,
+     "w": 760,
+     "h": 48
     },
-    "color": "gold_warm",
-    "z": -10,
-    "when": "",
+    "z": -11,
     "item": -1,
-    "tier": "title",
-    "text_key": "scene.index.title"
+    "when": "",
+    "color": "brass_dark",
+    "text": "Treasure Isl · 航海贸易",
+    "tier": "hint"
    },
    {
-    "kind": "text",
+    "kind": "image",
     "rect": {
-     "x": 120,
-     "y": 470,
-     "w": 840,
-     "h": 56
+     "x": 408,
+     "y": 838,
+     "w": 264,
+     "h": 264
     },
-    "color": "brass_light",
     "z": -9,
-    "when": "",
     "item": -1,
-    "tier": "body",
-    "text": "TreasureIsl"
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/helm.png"
+    }
    },
    {
     "kind": "image",
     "rect": {
-     "x": 480,
-     "y": 704,
-     "w": 120,
-     "h": 120
+     "x": 468,
+     "y": 498,
+     "w": 144,
+     "h": 144
     },
-    "color": "gold",
-    "z": -7,
-    "when": "normal",
+    "z": -8,
     "item": 0,
+    "when": "",
+    "color": "",
     "params": {
-     "asset": "assets/ui/icon_compass.png"
+     "asset": "assets/ui/medallion_ring.png"
     }
    },
    {
-    "kind": "image",
+    "kind": "icon",
     "rect": {
-     "x": 472,
-     "y": 696,
-     "w": 136,
-     "h": 136
+     "x": 492,
+     "y": 522,
+     "w": 96,
+     "h": 96
     },
-    "color": "gold",
     "z": -7,
-    "when": "selected",
     "item": 0,
+    "when": "normal",
+    "color": "gold",
     "params": {
-     "asset": "assets/ui/icon_compass.png"
+     "icon": "compass",
+     "size": 96
     }
    },
    {
-    "kind": "text",
+    "kind": "icon",
     "rect": {
-     "x": 240,
-     "y": 832,
-     "w": 600,
-     "h": 44
+     "x": 492,
+     "y": 522,
+     "w": 96,
+     "h": 96
     },
-    "color": "brass_light",
-    "z": -6,
-    "when": "normal",
+    "z": -7,
     "item": 0,
-    "tier": "body",
-    "text": "新游戏"
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "compass",
+     "size": 96
+    }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 832,
-     "w": 600,
-     "h": 44
+     "x": 468,
+     "y": 654,
+     "w": 144,
+     "h": 40
     },
-    "color": "gold_warm",
     "z": -6,
-    "when": "selected",
     "item": 0,
-    "tier": "body",
-    "text": "新游戏"
+    "when": "normal",
+    "color": "brass_dark",
+    "text": "新游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 468,
+     "y": 654,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 0,
+    "when": "selected",
+    "color": "gold_warm",
+    "text": "新游戏",
+    "tier": "body"
    },
    {
     "kind": "image",
     "rect": {
-     "x": 480,
-     "y": 880,
-     "w": 120,
-     "h": 120
+     "x": 814,
+     "y": 698,
+     "w": 144,
+     "h": 144
     },
-    "color": "gold",
-    "z": -7,
-    "when": "normal",
+    "z": -8,
     "item": 1,
+    "when": "",
+    "color": "",
     "params": {
-     "asset": "assets/ui/icon_anchor.png"
+     "asset": "assets/ui/medallion_ring.png"
     }
    },
    {
-    "kind": "image",
+    "kind": "icon",
     "rect": {
-     "x": 472,
-     "y": 872,
-     "w": 136,
-     "h": 136
+     "x": 838,
+     "y": 722,
+     "w": 96,
+     "h": 96
     },
-    "color": "gold",
     "z": -7,
-    "when": "selected",
     "item": 1,
+    "when": "normal",
+    "color": "gold",
     "params": {
-     "asset": "assets/ui/icon_anchor.png"
+     "icon": "chest",
+     "size": 96
     }
    },
    {
-    "kind": "text",
+    "kind": "icon",
     "rect": {
-     "x": 240,
-     "y": 1008,
-     "w": 600,
-     "h": 44
+     "x": 838,
+     "y": 722,
+     "w": 96,
+     "h": 96
     },
-    "color": "brass_light",
-    "z": -6,
-    "when": "normal",
+    "z": -7,
     "item": 1,
-    "tier": "body",
-    "text": "载入游戏"
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "chest",
+     "size": 96
+    }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 1008,
-     "w": 600,
-     "h": 44
+     "x": 814,
+     "y": 854,
+     "w": 144,
+     "h": 40
     },
-    "color": "gold_warm",
     "z": -6,
-    "when": "selected",
     "item": 1,
-    "tier": "body",
-    "text": "载入游戏"
-   },
-   {
-    "kind": "image",
-    "rect": {
-     "x": 480,
-     "y": 1056,
-     "w": 120,
-     "h": 120
-    },
-    "color": "gold",
-    "z": -7,
     "when": "normal",
-    "item": 2,
-    "params": {
-     "asset": "assets/ui/icon_map.png"
-    }
-   },
-   {
-    "kind": "image",
-    "rect": {
-     "x": 472,
-     "y": 1048,
-     "w": 136,
-     "h": 136
-    },
-    "color": "gold",
-    "z": -7,
-    "when": "selected",
-    "item": 2,
-    "params": {
-     "asset": "assets/ui/icon_map.png"
-    }
+    "color": "brass_dark",
+    "text": "载入游戏",
+    "tier": "body"
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 1184,
-     "w": 600,
-     "h": 44
+     "x": 814,
+     "y": 854,
+     "w": 144,
+     "h": 40
     },
-    "color": "brass_light",
     "z": -6,
-    "when": "normal",
-    "item": 2,
-    "tier": "body",
-    "text": "读取存档"
-   },
-   {
-    "kind": "text",
-    "rect": {
-     "x": 240,
-     "y": 1184,
-     "w": 600,
-     "h": 44
-    },
+    "item": 1,
+    "when": "selected",
     "color": "gold_warm",
-    "z": -6,
-    "when": "selected",
+    "text": "载入游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 814,
+     "y": 1098,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
     "item": 2,
-    "tier": "body",
-    "text": "读取存档"
-   },
-   {
-    "kind": "image",
-    "rect": {
-     "x": 480,
-     "y": 1232,
-     "w": 120,
-     "h": 120
-    },
-    "color": "gold",
-    "z": -7,
-    "when": "normal",
-    "item": 3,
+    "when": "",
+    "color": "",
     "params": {
-     "asset": "assets/ui/icon_gear.png"
+     "asset": "assets/ui/medallion_ring.png"
     }
    },
    {
-    "kind": "image",
+    "kind": "icon",
     "rect": {
-     "x": 472,
-     "y": 1224,
-     "w": 136,
-     "h": 136
+     "x": 838,
+     "y": 1122,
+     "w": 96,
+     "h": 96
     },
-    "color": "gold",
     "z": -7,
+    "item": 2,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "anchor",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 838,
+     "y": 1122,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 2,
     "when": "selected",
-    "item": 3,
+    "color": "text_on_wood",
     "params": {
-     "asset": "assets/ui/icon_gear.png"
+     "icon": "anchor",
+     "size": 96
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 1360,
-     "w": 600,
-     "h": 44
+     "x": 814,
+     "y": 1254,
+     "w": 144,
+     "h": 40
     },
-    "color": "brass_light",
     "z": -6,
+    "item": 2,
     "when": "normal",
-    "item": 3,
-    "tier": "body",
-    "text": "选项设置"
+    "color": "brass_dark",
+    "text": "读取存档",
+    "tier": "body"
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 1360,
-     "w": 600,
-     "h": 44
+     "x": 814,
+     "y": 1254,
+     "w": 144,
+     "h": 40
     },
+    "z": -6,
+    "item": 2,
+    "when": "selected",
     "color": "gold_warm",
-    "z": -6,
-    "when": "selected",
+    "text": "读取存档",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 468,
+     "y": 1298,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
     "item": 3,
-    "tier": "body",
-    "text": "选项设置"
-   },
-   {
-    "kind": "image",
-    "rect": {
-     "x": 480,
-     "y": 1408,
-     "w": 120,
-     "h": 120
-    },
-    "color": "gold",
-    "z": -7,
-    "when": "normal",
-    "item": 4,
+    "when": "",
+    "color": "",
     "params": {
-     "asset": "assets/ui/icon_book.png"
+     "asset": "assets/ui/medallion_ring.png"
     }
    },
    {
-    "kind": "image",
+    "kind": "icon",
     "rect": {
-     "x": 472,
-     "y": 1400,
-     "w": 136,
-     "h": 136
+     "x": 492,
+     "y": 1322,
+     "w": 96,
+     "h": 96
     },
-    "color": "gold",
     "z": -7,
+    "item": 3,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "gear",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 492,
+     "y": 1322,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 3,
     "when": "selected",
-    "item": 4,
+    "color": "text_on_wood",
     "params": {
-     "asset": "assets/ui/icon_book.png"
+     "icon": "gear",
+     "size": 96
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 1536,
-     "w": 600,
-     "h": 44
+     "x": 468,
+     "y": 1454,
+     "w": 144,
+     "h": 40
     },
-    "color": "brass_light",
     "z": -6,
+    "item": 3,
     "when": "normal",
-    "item": 4,
-    "tier": "body",
-    "text": "帮助说明"
+    "color": "brass_dark",
+    "text": "选项设置",
+    "tier": "body"
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 1536,
-     "w": 600,
-     "h": 44
+     "x": 468,
+     "y": 1454,
+     "w": 144,
+     "h": 40
     },
+    "z": -6,
+    "item": 3,
+    "when": "selected",
     "color": "gold_warm",
-    "z": -6,
-    "when": "selected",
+    "text": "选项设置",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 122,
+     "y": 1098,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
     "item": 4,
-    "tier": "body",
-    "text": "帮助说明"
-   },
-   {
-    "kind": "image",
-    "rect": {
-     "x": 480,
-     "y": 1584,
-     "w": 120,
-     "h": 120
-    },
-    "color": "gold",
-    "z": -7,
-    "when": "normal",
-    "item": 5,
+    "when": "",
+    "color": "",
     "params": {
-     "asset": "assets/ui/icon_door.png"
+     "asset": "assets/ui/medallion_ring.png"
     }
    },
    {
-    "kind": "image",
+    "kind": "icon",
     "rect": {
-     "x": 472,
-     "y": 1576,
-     "w": 136,
-     "h": 136
+     "x": 146,
+     "y": 1122,
+     "w": 96,
+     "h": 96
     },
-    "color": "gold",
     "z": -7,
+    "item": 4,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "book",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 146,
+     "y": 1122,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 4,
     "when": "selected",
-    "item": 5,
+    "color": "text_on_wood",
     "params": {
-     "asset": "assets/ui/icon_door.png"
+     "icon": "book",
+     "size": 96
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 1712,
-     "w": 600,
-     "h": 44
+     "x": 122,
+     "y": 1254,
+     "w": 144,
+     "h": 40
     },
-    "color": "brass_light",
     "z": -6,
+    "item": 4,
     "when": "normal",
-    "item": 5,
-    "tier": "body",
-    "text": "离开游戏"
+    "color": "brass_dark",
+    "text": "帮助说明",
+    "tier": "body"
    },
    {
     "kind": "text",
     "rect": {
-     "x": 240,
-     "y": 1712,
-     "w": 600,
-     "h": 44
+     "x": 122,
+     "y": 1254,
+     "w": 144,
+     "h": 40
     },
+    "z": -6,
+    "item": 4,
+    "when": "selected",
     "color": "gold_warm",
-    "z": -6,
-    "when": "selected",
+    "text": "帮助说明",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 122,
+     "y": 698,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
     "item": 5,
-    "tier": "body",
-    "text": "离开游戏"
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/medallion_ring.png"
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 146,
+     "y": 722,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 5,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "door",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 146,
+     "y": 722,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 5,
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "door",
+     "size": 96
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 122,
+     "y": 854,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 5,
+    "when": "normal",
+    "color": "brass_dark",
+    "text": "离开游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 122,
+     "y": 854,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 5,
+    "when": "selected",
+    "color": "gold_warm",
+    "text": "离开游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 260,
+     "y": 1840,
+     "w": 560,
+     "h": 40
+    },
+    "z": -4,
+    "item": -1,
+    "when": "",
+    "color": "brass_dark",
+    "text": "金银岛 v1 · 桌面版",
+    "tier": "hint"
    }
   ]
- },
+  },
  "select_role": {
   "title": {
    "x": 296,

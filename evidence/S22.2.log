@@ -1,0 +1,163 @@
+# S22.2 验收证据（task_close.py 自动生成 2026-10-24）
+
+- 任务标题：首页罗盘环落码：scenes.json index 改罗盘环布局（满屏 chart_full + 标题牌 + 中心 helm + 6 medallion 沿环 + footer）+ manifest index 段（focus=compass_ring/bbox_pct{6,26,88,49}/beats）+ 8pt 径向键豁免 + index.rs/chrome.rs 渲染 + 6 徽章命中 + 白蒙版图标 tint
+- 判据（台账 dod）：改动面=业务规则=无 | 数据=assets/data/scenes.json（index 块：删现 list 竖排 + 加 compass_ring/helm/m0..m5/title_plaque/footer）+ assets/data/ui_schema/scene_manifest_v3.json（index 段 focus=compass_ring + bbox_pct + beats + N6 HUD=0）| 规则=无 | 表现=crates/ti-app/src/scenes/index.rs（on_touch 6 徽章命中 6 MenuAction + 键盘高亮）+ chrome.rs（罗盘环渲染 + 徽章→白蒙版图标 tint）+ 8pt 豁免表登记（compass_ring/helm/m0..m5）| 资产=引用 S22.1 medallion_ring + 已入仓 chart_full/helm/icon_*；跨模块原因=scenes.json focus_anchor(bbox) 与 manifest bbox_pct N8 硬耦合(±1px)必须同改，罗盘环命中判定与渲染同坐标系（EXP-067），拆开即 N8 断链/命中错位；判据=check_scene_narrative N1-N8 0 失败 + 8pt 全过（径向键豁免）+ 出图 index 满屏羊皮海图 + 中心舵轮 + 6 铜徽章可辨 + 图标 tint 上色（非白块/非糊矢量）+ 6 徽章 e2e 命中对应 MenuAction + 键盘 ↑↓/1..6/Enter 高亮态 + 双后端对拍 ≤0.5% + doccheck/doccheck2 0 error + gate 23 项 0 failure + evidence/S22.2.log
+
+## 判据实跑
+
+### `$ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1`
+
+退出码：0
+
+```
+=== gate: TreasureIsl (23 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 206 tasks, 179 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 133 docs, 38 facts, 111 experiences, 201 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK��4 ���strings 91 ����main_map.grid ���� + ȫ���� extra ������������
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json һ�£�2041 ��¼ / 20 ������
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+          WARN i18n 孤儿 key `boat.1`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `boat.2`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `boat.3`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `boat.4`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm01.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm02.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm03.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.desc.drake`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.desc.katharina`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.desc.kidd`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.desc.panda`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.desc.tichy`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.name.drake`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.name.katharina`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.name.kidd`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.name.panda`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `role.name.tichy`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.hud.build`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.hud.sell`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.hud.spin`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.hud.trade`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.battle_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.treasure_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.message.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.saveload.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.saveload.slot_summary_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.saveload.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.select_map.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.select_map.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.select_role.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+        doccheck2: 0 error(s) across 37 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod)
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)
+        check_ledger_reality: ȫ�̣�179 �� verified ������������ͨ�� + 0 ���¶� evidence��
+  PASS  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)
+        check_forward_closed: C1 ҵ���ĵ�����������: OK
+        check_forward_closed: C2 ���ֲ��� oracle ����: OK
+        check_forward_closed: C3 ��Ŀ¼��� + legacy ��λ: OK
+        check_forward_closed: C4 oracle ����Դ + ���ظ� crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 �� D status=draft�����������ǰ��ȫƱ frozen��
+          WARN M4 �� P1 status=draft�����������ǰ��ȫƱ frozen��
+          WARN M4 �� P2 status=draft�����������ǰ��ȫƱ frozen��
+          WARN M4 �� P3 status=draft�����������ǰ��ȫƱ frozen��
+          WARN M4 �� P4 status=draft�����������ǰ��ȫƱ frozen��
+          WARN M4 �� P5 status=draft�����������ǰ��ȫƱ frozen��
+          WARN M4 �� P6 status=draft�����������ǰ��ȫƱ frozen��
+          WARN M4 ��Լ c1_core_public_types.md δ frozen�����������ǰ��ȫƱ frozen��
+          WARN M4 ��Լ c2_data_keys.md δ frozen�����������ǰ��ȫƱ frozen��
+          WARN M4 ��Լ c3_app_host_api.md δ frozen�����������ǰ��ȫƱ frozen��
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+        flywheel_readme -Check PASS: 6 条必读 ✓, gate 23 项, doccheck2 43 断言, packages 7 包
+  PASS  flywheel-readme (开轮必读脚本完整性)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.23s
+        
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)
+        SKIP: legacy/data/ �� .Map/.pak �Ķ�����Ⱦ�����Ž����败��
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)
+        === ����ṹ��� ===
+        �ļ� 224 / ���� 51246 / ���� 2540 / trait 22 / ���� fn 8 / macro_rules! 6
+        
+        --- � 10 ���ļ� ---
+         3262  crates/ti-tools/src/bin/doccheck2.rs  [����]
+          934  crates/ti-app/src/scenes/chrome.rs  [����]
+          900  crates/ti-app/tests/render_intent.rs
+          871  crates/ti-platform/src/gfx.rs
+          790  crates/ti-core/src/data/mod.rs
+          770  crates/ti-render/src/shell.rs
+          766  crates/ti-engine/src/bin/treasure_bevy.rs
+          736  crates/ti-app/src/scenes/mod.rs
+          663  crates/ti-tools/src/bin/classify.rs
+          623  crates/ti-app/src/menu_shell.rs
+        
+        --- � 10 ������ ---
+          304  crates/ti-core/examples/full_run_demo.rs::main (�� 120)  [����]
+          189  crates/ti-core/tests/exhaust_random_session.rs::run_random_session (�� 71)  [����]
+          183  crates/ti-engine/src/scene_render.rs::spawn_primitives (�� 223)  [����]
+          173  crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session (�� 17)  [����]
+          159  crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity (�� 704)  [����]
+          155  crates/ti-core/src/data/mod.rs::convert (�� 636)  [����]
+          133  crates/ti-app/src/scenes/main_map.rs::render (�� 301)
+          132  crates/ti-core/src/data/layout.rs::scenes (�� 20)
+          130  crates/ti-app/src/android_shell.rs::run (�� 97)
+          129  crates/ti-core/examples/random_session_demo.rs::run_one_session (�� 185)
+        
+        --- Υ�棨��ֵ���ļ� >900 �� / ���� >140 �� / �ظ� >5 �Σ�---
+        �ļ���ģ 0 ��������� 0 ��ظ�ģʽ 0 ��
+        [audit_code] PASS��0 ��ṹΥ��
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)
+        === check_scene_narrative (UI ����Լ�� DSL v3) ===
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)
+        [2m2026-10-23T18:00:13.364917Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Windows 10 Enterprise LTSC 2021", kernel: "19044", cpu: "Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz", core_count: "4", memory: "15.9 GiB" }
+        [2m2026-10-23T18:00:13.772010Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "NVIDIA GeForce GTX 1050 Ti", vendor: 4318, device: 7298, device_type: DiscreteGpu, device_pci_bus_id: "0000:01:00.0", driver: "NVIDIA", driver_info: "560.94", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+        [2m2026-10-23T18:00:14.583923Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        S18.2 GPU/CPU 像素对照（色块内部，排除文本框 + 2px 边缘带）：比对 1607576 像素，超差 0（0.0000%），最大通道差 0 LSB，首个超差 None
+        诊断：GPU 非黑像素 2073600（文本区字形对齐属 S18.3）
+          anchor (0,0): cpu=0x10c9 gpu=0x10c9
+          anchor (1079,1919): cpu=0x0865 gpu=0x0865
+          anchor (60,200): cpu=0x190c gpu=0x190c
+          anchor (540,500): cpu=0x190c gpu=0x190c
+        S18.2 对照通过（阈值：通道 ≤8 LSB 且超差比例 <0.5%）
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)
+=== gate: 0 failure(s) ===
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）
+
+--- S22.2 出图/e2e 补充判据（gate 之外的落码验收面）---
+出图：powershell scripts/ui_preview.ps1 index -> evidence/bevy_native_index.png（满屏羊皮海图 + 中心舵轮 + 6 铜质 medallion 沿环 + 图标 tint 上色 + 版本签，非白块/非糊矢量）
+e2e：cargo test -p ti-app --test e2e_playthrough e2e_touch_economy_loop PASS（index item-0 medallion 命中 -> SelectRole）
+touch：cargo test -p ti-app --lib menu_medallions_hit_six_items PASS（6 徽章中心各命中自身 item）
+render_intent：cargo test -p ti-app --test render_intent PASS（12 项，含 S22 index 3 处判据更新）
+键盘：index.rs on_input MoveUp/MoveDown/Confirm 走 menu_selected 循环，驱动 when=selected 标签高亮（compass-ring 无死区）
+

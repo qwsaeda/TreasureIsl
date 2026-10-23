@@ -7,30 +7,30 @@
       "narrative": {
         "mood": "epic_entry",
         "focus": {
-          "anchor": "title_art",
+          "anchor": "compass_ring",
           "bbox_pct": {
-            "x": 10,
-            "y": 10,
-            "w": 80,
-            "h": 35
+            "x": 6,
+            "y": 26,
+            "w": 88,
+            "h": 49
           }
         },
         "rhythm": {
           "beats": [
             {
-              "name": "title_art",
-              "weight": 0.5,
-              "y_pct": 10
-            },
-            {
-              "name": "menu",
-              "weight": 0.35,
+              "name": "compass_ring",
+              "weight": 0.55,
               "y_pct": 50
             },
             {
-              "name": "status",
+              "name": "title_plaque",
+              "weight": 0.3,
+              "y_pct": 11
+            },
+            {
+              "name": "footer",
               "weight": 0.15,
-              "y_pct": 96
+              "y_pct": 95
             }
           ],
           "rule": "art_to_action_top_down"
@@ -43,9 +43,7 @@
         "permanent_hud_count_max": 0
       },
       "geometry_constraints": {
-        "focus_bbox_must_contain": [
-          "title_art_bbox"
-        ],
+        "focus_bbox_must_contain": [],
         "no_rect_overlap_with": [
           "focus_anchor"
         ],

@@ -317,10 +317,22 @@ fn e2e_touch_economy_loop() {
         ((r.x + r.w / 2) as f32, (r.y + r.h / 2) as f32)
     };
 
-    // index 卡 0 = 「新游戏」→ 选角
-    let (x, y) = card_center("index");
-    assert!(tap(&mut app, x, y), "index 卡 0 点按应命中");
-    assert_eq!(app.scene(), Scene::SelectRole, "index 卡 0 应进选角");
+    // index S22 罗盘环：item 0 medallion（新游戏）中心 = 读 primitives 中 item=0 的 medallion rect
+    let (x, y) = {
+        let s = scenes.get("index").expect("scenes.json 缺 index");
+        let med = s
+            .primitives
+            .iter()
+            .find(|p| {
+                p.item == 0
+                    && p.params.get("asset").and_then(|v| v.as_str())
+                        == Some("assets/ui/medallion_ring.png")
+            })
+            .expect("index 缺 medallion item0");
+        (med.rect.x as f32 + med.rect.w as f32 / 2.0, med.rect.y as f32 + med.rect.h as f32 / 2.0)
+    };
+    assert!(tap(&mut app, x, y), "index medallion 0 点按应命中");
+    assert_eq!(app.scene(), Scene::SelectRole, "index medallion 0（新游戏）应进选角");
     // select_role 卡 0 = Panda → 选图
     let (x, y) = card_center("select_role");
     assert!(tap(&mut app, x, y), "select_role 卡 0 点按应命中");
