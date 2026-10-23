@@ -38,13 +38,13 @@
 | 8 | **对抗飞轮开轮**（3 角色 prompt + 100/轮目标 + 停机判据） | 手搓 prompt | 06_flywheel §8 本轮新增 | 文档 + skill 模板 | `docs/process/06_flywheel.md` §8 + `flywheel-kickoff` skill | 已自动化 |
 | 9 | **UI 资产批次生产**（登记 → 并行生图 → 抠图 → 预检 → 拼版） | 写临时脚本（仓库外） | EXP-115 | 脚本 | `scripts/ui_asset_batch.py` | 已自动化 |
 | 10 | **版面线图 / 出图验收**（坐标表线图 + 真实渲染 + 像素取证） | 内联 `python -c` 手搓 | 本轮 S21.3 实证 | 脚本 | `scripts/ui_layout_sheet.py` + `scripts/ui_preview.ps1` + `scripts/ui_shot_probe.py` | 已自动化 |
-| 11 | **读不出的文件静默跳过**（`doccheck` 读文件失败就 continue，坏字节文件整份失声） | 靠「计数漂移」倒查 | EXP-091（release.md 292 处坏字节） | 扩展 `doccheck`（读失败即 ERROR + 列文件名/字节偏移） | 待固化 S21.13 | 待固化 |
-| 12 | **门禁项数声称同步**（一改要手抄 8 处：parity/git/README/loop/AGENTS/style/playbook/横幅） | 手改 8 处 | S20.0c dod 自认牵动 7 处 | 脚本 `--fix`（从权威源实测回写） | 待固化 S21.13 | 待固化 |
-| 13 | **视觉改动「设计稿确认」留痕**（A 纪律） | 留痕只在聊天，dod 手写 | EXP-114；S20.3 dod 自认「暂无机械门禁断言」 | 门禁断言（证据须含确认标记） | 待固化 S21.9 | 待固化 |
-| 14 | **布局规格坐标机器校验**（8pt / N8 往返 / N3-N6 / 与 scenes.json 一致） | 人手算并写进 evidence | S21.3 dod「坐标一致性自证」 | 脚本（解析规格表 → 比对 scenes.json + manifest） | 待固化 S21.6 | 待固化 |
-| 15 | **节点 kind ↔ 资产映射唯一事实源** | 规格文档 → 手工抄进 chrome.rs + manifest | S21.1 批次 15 资产；S21.5 dod | 门禁断言（映射 key 集合 == manifest 资产集合 == 规格表） | 待固化 S21.5 | 待固化 |
-| 16 | **`.ps1` 入口语法 + BOM 自检**（BOM 已由第 3 条覆盖；ParseFile 语法未覆盖） | 无 | EXP-109（playbook/smoke 缺 BOM 从未跑起来） | 脚本（ParseFile 语法自检） | 待固化 S21.13 | 待固化 |
-| 17 | **`src` 内联 `#[cfg(test)]`**（内联单测被占位/unwrap 扫描拦下 ⇒ 白跑一轮 gate） | 靠门禁第 5/6 项事后拦 | EXP-052（连踩 2 次） | 门禁断言（存量豁免棘轮） | 待固化 S21.13 | 待固化 |
+| 11 | **读不出的文件静默跳过**（`doccheck` 读文件失败就 continue，坏字节文件整份失声） | 靠「计数漂移」倒查 | EXP-091（release.md 292 处坏字节） | 扩展 `doccheck`（读失败即 ERROR + 列文件名/字节偏移） | `doccheck::read_docs` 读失败即 ERROR（EXP-091 兜住） | 已自动化 |
+| 12 | **门禁项数声称同步**（一改要手抄 8 处：parity/git/README/loop/AGENTS/style/playbook/横幅） | 手改 8 处 | S20.0c dod 自认牵动 7 处 | 脚本 `--fix`（从权威源实测回写） | `scripts/doc_numbers.py` — `--fix` 回写 8 处，默认只读体检 | 已自动化 |
+| 13 | **视觉改动「设计稿确认」留痕**（A 纪律） | 留痕只在聊天，dod 手写 | EXP-114；S20.3 dod 自认「暂无机械门禁断言」 | 门禁断言（证据须含确认标记） | `doccheck2::check_visual_design_signoff` | 已自动化 |
+| 14 | **布局规格坐标机器校验**（8pt / N8 往返 / N3-N6 / 与 scenes.json 一致） | 人手算并写进 evidence | S21.3 dod「坐标一致性自证」 | 脚本（解析规格表 → 比对 scenes.json + manifest） | `scripts/layout_spec_check.py` | 已自动化 |
+| 15 | **节点 kind ↔ 资产映射唯一事实源** | 规格文档 → 手工抄进 chrome.rs + manifest | S21.1 批次 15 资产；S21.5 dod | 门禁断言（映射 key 集合 == manifest 资产集合 == 规格表） | `doccheck2::check_node_kind_asset_map` | 已自动化 |
+| 16 | **`.ps1` 入口语法 + BOM 自检**（BOM 已由第 3 条覆盖；ParseFile 语法未覆盖） | 无 | EXP-109（playbook/smoke 缺 BOM 从未跑起来） | 脚本（ParseFile 语法自检） | `scripts/check_ps_scripts.ps1` | 已自动化 |
+| 17 | **`src` 内联 `#[cfg(test)]`**（内联单测被占位/unwrap 扫描拦下 ⇒ 白跑一轮 gate） | 靠门禁第 5/6 项事后拦 | EXP-052（连踩 2 次） | 门禁断言（存量豁免棘轮） | `doccheck2::check_no_inline_test_mod` + `process_ratchet.json` | 已自动化 |
 | 18 | **出图逐屏目视核对**（像素证据已自动化，结论仍须人看） | 人看缩略图 | S19.6/S19.7 判据 | 工具给证据 + 人核 | `scripts/ui_preview.ps1` + `ui_shot_probe.py` | 半自动（人核最后一步） |
 | 19 | **模块边界清单留档**（拆上帝文件前的函数清单） | 手工列，不留档 | EXP-112（2181 行拆分编译 10 次） | 扩展 `code_outline.py` 出可留档清单 | `scripts/code_outline.py` | 半自动（清单未留档接口） |
 | 20 | **设计分歧裁决 / 需人裁决项**（飞轮审计桶） | 人工裁决后手写 EXP | 06_flywheel §3 | 飞轮流程（人工裁决）+ `scripts/exp_log.py` 落 EXP | — | 半自动（裁决须人） |

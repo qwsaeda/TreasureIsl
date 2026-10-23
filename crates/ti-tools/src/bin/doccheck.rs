@@ -61,45 +61,53 @@ fn numeric_assertions() -> Vec<NumericAssertion> {
 /// 参与数据一致性扫描的 JSON 数据文件（相对仓库根）。
 const DATA_FILES: &[&str] = &["assets/data/balance.json", "assets/data/strings.json"];
 
-fn read_docs(root: &Path) -> Vec<Doc> {
+fn read_docs(root: &Path, errors: &mut Vec<String>) -> Vec<Doc> {
     let mut docs = Vec::new();
     for entry in DOC_ROOTS {
         let path = root.join(entry);
         if path.is_file() {
-            push_doc(&path, &path, &mut docs);
+            push_doc(&path, &path, &mut docs, errors);
         } else if path.is_dir() {
-            collect(&path, root, &mut docs);
+            collect(&path, root, &mut docs, errors);
         }
     }
     // 数据文件（JSON）也参与数值断言扫描，保证 balance.json 与文档数值一致
     for entry in DATA_FILES {
         let path = root.join(entry);
         if path.is_file() {
-            push_doc(&path, &path, &mut docs);
+            push_doc(&path, &path, &mut docs, errors);
         }
     }
     docs
 }
 
-fn collect(dir: &Path, root: &Path, out: &mut Vec<Doc>) {
+fn collect(dir: &Path, root: &Path, out: &mut Vec<Doc>, errors: &mut Vec<String>) {
     let Ok(entries) = std::fs::read_dir(dir) else { return };
     let mut items: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
     items.sort();
     for path in items {
         if path.is_dir() {
-            collect(&path, root, out);
+            collect(&path, root, out, errors);
         } else {
-            push_doc(&path, root, out);
+            push_doc(&path, root, out, errors);
         }
     }
 }
 
-fn push_doc(path: &Path, root: &Path, out: &mut Vec<Doc>) {
+fn push_doc(path: &Path, root: &Path, out: &mut Vec<Doc>, errors: &mut Vec<String>) {
     let Some(ext) = path.extension().and_then(|e| e.to_str()) else { return };
     if !matches!(ext, "md" | "yaml" | "json") {
         return;
     }
-    let Ok(text) = std::fs::read_to_string(path) else { return };
+    let text = match std::fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) => {
+            // 读失败 = 整份文件从检查视野消失（EXP-091）⇒ 必须显声，不得静默跳过
+            let rel = path.strip_prefix(root).unwrap_or(path).to_string_lossy().replace('\\', "/");
+            errors.push(format!("{rel}: 读取失败（{e}）—— 该文件整份脱离检查视野（EXP-091）"));
+            return;
+        }
+    };
     let rel = path.strip_prefix(root).unwrap_or(path).to_string_lossy().replace('\\', "/");
     out.push(Doc::new(&rel, &text));
 }
@@ -211,7 +219,17 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| PathBuf::from("."), PathBuf::from);
 
-    let docs = read_docs(&root);
+    let mut read_errors: Vec<String> = Vec::new();
+    let docs = read_docs(&root, &mut read_errors);
+    if !read_errors.is_empty() {
+        for e in &read_errors {
+            eprintln!("  READ-ERROR {e}");
+        }
+        eprintln!(
+            "doccheck: {} unreadable file(s) dropped out of the scan (EXP-091)",
+            read_errors.len()
+        );
+    }
     if docs.is_empty() {
         eprintln!(
             "doccheck: no documents found under {} (cwd={:?})",
@@ -227,6 +245,7 @@ fn main() -> ExitCode {
     }
 
     let mut report = check(&docs, &numeric_assertions(), &task_ids);
+    report.errors.extend(read_errors);
     report.errors.extend(check_evidence(&root, &tasks));
     report.errors.extend(check_ledger_counts(&docs, &tasks));
 

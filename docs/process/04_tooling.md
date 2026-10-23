@@ -21,6 +21,9 @@
 | `scripts/ui_layout_sheet.py` | Python | UI **版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图；设计稿评审 / 出图验收对照） | 是 |
 | `scripts/task_close.py` | Python | **任务收口一条命令**（跑判据 → 写证据 → 台账行级置 verified → 同步 release 计数 → 三方对账复验；判据非 0 不改台账） | 是 |
 | `scripts/exp_log.py` | Python | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + 查重 + doccheck 复验） | 是 |
+| `scripts/doc_numbers.py` | Python | **门禁项数 / 台账计数实测回写**（8 处声称点一次改齐；`--fix` 回写） | 是 |
+| `scripts/layout_spec_check.py` | Python | **UI 版面规格三面对账**（规格表 ↔ scenes.json ↔ manifest：坐标 + 8pt + N8 往返） | 是 |
+| `scripts/check_ps_scripts.ps1` | PowerShell | **PS 入口体检**（BOM + ParseFile 语法自检，EXP-109） | 是 |
 
 > 注：两个 HD manifest 脚本**分工不同，勿混用**——`check_hd_manifest.py` 是**门禁项**（校验 `hd_f1_manifest.json` 与 `assets_hd_pack/1x/ui` 目录一致，EXP-048/060）；`verify_hd_manifest.py` 是 **S7.2 验收辅助**（校验 `manifest_hd.json` 与 `assets_hd` 产物 PNG-32/无缺失/哈希匹配）。二者查不同 manifest 文件、不同产物阶段。
 

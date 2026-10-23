@@ -112,6 +112,9 @@
 | `scripts/ui_layout_sheet.py` | **UI 版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图，版面评审 / S21.9 出图验收对照；`--check` 只读校验） |
 | `scripts/task_close.py` | **任务收口一条命令**（跑判据 → 写 `evidence/<id>.log` → 台账行级置 verified → 同步 release 台账计数 → 三方对账复验；判据非 0 则不写证据不改台账） |
 | `scripts/exp_log.py` | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + ID 查重 + doccheck 复验） |
+| `scripts/doc_numbers.py` | **门禁项数 / 台账计数实测回写**（8 处声称点一次改齐；`--fix` 回写，消灭手抄漂移） |
+| `scripts/layout_spec_check.py` | **UI 版面规格三面对账**（规格表 ↔ `scenes.json` ↔ `scene_manifest_v3.json`：坐标 + 8pt + N8 往返 ±1px） |
+| `scripts/check_ps_scripts.ps1` | **PowerShell 入口体检**（UTF-8 BOM + `ParseFile` 真语法自检 ⇒ 拦住「入口从未真跑起来」，EXP-109） |
 | `scripts/audit_code.py` | **代码结构审计**（`style.md` §5.12 手段）：文件规模 / 函数长度 / 重复模式；`--check` 违规非 0 退出，阈值与棘轮基线 = `scripts/code_budget.json` |
 | `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
 | `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |

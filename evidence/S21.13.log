@@ -1,0 +1,61 @@
+# S21.13 流程固化待固化项落地 — 验收证据
+
+日期：2026-10-23　载体：`docs/process/15_process_ledger.md` §2「待固化」行
+
+## 判据 1：§2 待固化行清零（全部转已自动化）
+
+7 条待固化行（11–17）全部落地并置「已自动化」：
+
+| # | 流程 | 载体 |
+|---|---|---|
+| 11 | 读不出的文件静默跳过 | `doccheck::read_docs` 读失败即 ERROR（列文件名；EXP-091 兜住） |
+| 12 | 门禁项数声称同步 | `scripts/doc_numbers.py`（`--fix` 实测回写 8 处声称点，默认只读体检） |
+| 13 | 视觉改动设计稿签收留痕 | `doccheck2::check_visual_design_signoff`（证据须含签收标记，纪律起点 S20.3，纯产资产不算） |
+| 14 | 布局规格坐标机器校验 | `scripts/layout_spec_check.py`（规格↔scenes.json↔manifest 三面对账：键+坐标+8pt+N8 往返） |
+| 15 | 节点 kind↔资产映射唯一源 | `doccheck2::check_node_kind_asset_map`（9 类 kind 集合 ↔ ui_manifest `node_*` 双向对账） |
+| 16 | `.ps1` 入口语法 + BOM 自检 | `scripts/check_ps_scripts.ps1`（UTF-8 BOM + `Parser::ParseFile` 语法自检，EXP-109） |
+| 17 | `src` 内联 `#[cfg(test)]` 拦截 | `doccheck2::check_no_inline_test_mod`（存量 47 文件 `process_ratchet.json` 棘轮豁免，新增零豁免） |
+
+## 判据 2：doccheck2 新增断言负测命中（故意破坏各报红）
+
+`doccheck2` 34 → 37 项（+3 断言：`visual-signoff` / `node-asset-map` / `no-inline-test-mod`；`#35/#36/#37`）。
+负测（临时注入违规 → 断言报红 → git 还原）：
+
+- **负测 1（no-inline-test-mod）**：新增 `crates/ti-app/src/_neg_test_inline.rs`（含 `#[cfg(test)]`，不在 ratchet）→
+  `ERROR ... 内联 #[cfg(test)] 单测（...EXP-052）` ✓ 命中
+- **负测 2（node-asset-map）**：`ui_manifest.json` 注入 `node_zzz`（坏 kind）→
+  `ERROR ui_manifest.json: 节点牌资产 node_zzz 的 kind 不在 9 类集合` ✓ 命中
+- **负测 3（visual-signoff）**：`evidence/S21.3.log` 去掉「用户拍板」标记 →
+  `ERROR ledger.yaml S21.3: 动了版面/配色数据面（scenes/theme）但证据 无用户视觉签收留痕` ✓ 命中
+
+三项均 `git checkout` 还原；还原后 `doccheck2 .` = **0 error(s) across 37 audit-codified checks**。
+
+## 判据 3：门禁项数 / 台账计数零手抄（--fix 实测回写）
+
+`python scripts/doc_numbers.py`（只读体检）：
+```
+  实测：门禁 23 项 / 台账 201 任务（175 verified）
+  声称点与实测一致（0 漂移）
+```
+护栏口径：只回写「当前门禁总数」断言（`全绿（N 项）/全门禁（N 项）/当前 N 项/全局门禁，N 项` 等），
+**排除** 序数（第 N 项）/ 阈值（≥/≤ N 项）/ 历史快照（N 项均为时点快照）/ 他类总数（N 项命令·图标·残留）。
+`--fix` 连跑两次幂等（第二次 0 改动）。
+
+## 判据 4：gate 全绿
+
+`powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` ⇒ **`=== gate: 0 failure(s) ===`**
+（`clippy -D warnings` 全绿；doccheck2 37 项 0 error；check_ledger_reality 全绿；
+check_scene_narrative 0 failure；bevy-cpu-parity 通过。SKIP = android（Mac 产 APK）+ zero-unknown（未解锁）。）
+
+## 工具契约
+
+3 个新工具已按台账 §1.2 三处登记（`14_tooling_catalog.md` §3.2 表行 + `04_tooling.md` §1 + `docs/README.md`）；
+`doccheck2::check_tooling_contract` / `check_tooling_registration` 0 error（含只读模式 + 非 0 退出自检）。
+`scripts/process_ratchet.json` 新增 `inline_test_mod_grandfathered`（47 文件，`_fix_in: S21.13`）+
+沿用 `tooling_registration_grandfathered`。
+
+## 说明
+
+`scripts/layout_spec_check.py` 当前对 `docs/ui-redesign-v3/08_main_map_v4_spec.md` 报 10 处「规格↔scenes.json」差异 =
+S21.3 定稿坐标尚未落进 scenes.json（即 S21.4~S21.7 的待实施工作），属**前向诊断**而非本任务缺陷；
+S21.4~S21.7 落地后该工具转为硬门禁。

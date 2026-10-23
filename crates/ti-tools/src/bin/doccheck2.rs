@@ -3024,6 +3024,178 @@ fn check_process_ledger(root: &Path) -> Vec<String> {
     }
     errors
 }
+/// 第 35 项：**UI 视觉改动的设计稿签收留痕**（A 纪律，EXP-114）。
+///
+/// 动机：EXP-114 —— 视觉改动「先落码后出图」导致返工全堆在收口阶段；`00_index.md` §UI 视觉
+/// 改动要求「出图 → 用户确认（留痕）→ 落码」，但留痕只存在于聊天消息，无机器判定。
+/// 本项要求：**动了视觉数据面**（`scenes.json` / `theme.json` / `assets/ui`）的 verified 任务，
+/// 其 dod 须写明用户视觉确认（过目/验收/确认/签收 之一）—— 否则「没确认就落码」再次复发。
+fn check_visual_design_signoff(root: &Path) -> Vec<String> {
+    // 只看**版面/配色数据面**（scenes/theme）：单纯产资产（assets/ui）不改画面 ⇒ 不要求签收
+    const TOUCH: [&str; 2] = ["scenes.json", "theme.json"];
+    // 签收标记写在**证据**里（留痕的载体是证据，不是 dod 的措辞）
+    const SIGNOFF: [&str; 5] =
+        ["用户视觉验收", "用户视觉过目", "用户视觉确认", "视觉签收", "用户拍板"];
+    let mut errors: Vec<String> = Vec::new();
+    let Some(ledger) = read_file(root, "plan/ledger.yaml") else {
+        return vec!["plan/ledger.yaml 不存在，无法校验视觉签收留痕".to_string()];
+    };
+    for line in ledger.lines() {
+        let Some(rest) = line.trim_start().strip_prefix("- { id: ") else {
+            continue;
+        };
+        let Some((id_raw, _)) = rest.split_once(',') else {
+            continue;
+        };
+        let id = id_raw.trim();
+        if !line.contains("status: verified") {
+            continue;
+        }
+        // 纪律自 S20.3 起强制（A 纪律落地点，EXP-114）
+        let parts: Vec<&str> = id.trim_start_matches('S').split('.').collect();
+        let major: u32 = parts.first().and_then(|m| m.parse().ok()).unwrap_or(0);
+        let minor: u32 = parts.get(1).and_then(|m| m.parse().ok()).unwrap_or(0);
+        if major < 20 || (major == 20 && minor < 3) {
+            continue;
+        }
+        let Some(dod) = line.split("dod: \"").nth(1) else {
+            continue;
+        };
+        let dod = dod.split('"').next().unwrap_or("");
+        if !TOUCH.iter().any(|t| dod.contains(t)) {
+            continue;
+        }
+        // 证据路径 = dod 之后的 evidence: 字段
+        let Some(ev) = line.split("evidence: \"").nth(1) else {
+            continue;
+        };
+        let ev = ev.split('"').next().unwrap_or("").trim();
+        if ev.is_empty() {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(root.join(ev)) else {
+            continue; // 证据缺失 = check_ledger_reality 的职责
+        };
+        if !SIGNOFF.iter().any(|s| text.contains(s)) {
+            errors.push(format!(
+                "ledger.yaml {id}: 动了版面/配色数据面（scenes/theme）但证据 {ev} 无用户视觉签收留痕 \
+                 （须含「用户视觉验收通过」等；00_index.md §UI 视觉改动 = A 纪律，EXP-114）"
+            ));
+        }
+    }
+    errors
+}
+
+/// 第 36 项：**节点 kind ↔ 资产映射唯一事实源**（spec §6 ↔ `ui_manifest.json` ↔ 代码映射）。
+///
+/// 动机（S21.1 批次 15 资产 / S21.5 落码）：9 类节点牌的 kind→资产映射若只写在规格文档，
+/// 落码时手工抄进代码 + manifest ⇒ 抄漏/抄错无断言（渲染找不到图 = 节点画成默认块）。
+/// 本项要求：`ui_manifest.json` 里 `node_*` 资产集合 == 规格 §6 声明的 kind 集合（缺一即 FAIL）。
+fn check_node_kind_asset_map(root: &Path) -> Vec<String> {
+    let mut errors: Vec<String> = Vec::new();
+    let Some(manifest_text) = read_file(root, "assets/ui_manifest.json") else {
+        return vec!["assets/ui_manifest.json 不存在，无法校验节点资产映射".to_string()];
+    };
+    let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&manifest_text) else {
+        return vec!["assets/ui_manifest.json 解析失败".to_string()];
+    };
+    let names: Vec<String> = manifest
+        .get("assets")
+        .and_then(|a| a.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|x| x.get("name").and_then(|n| n.as_str()).map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    let node_assets: Vec<String> =
+        names.iter().filter(|n| n.starts_with("node_")).cloned().collect();
+    if node_assets.is_empty() {
+        return errors; // 尚未引入节点牌资产（v3 之前）⇒ 不判
+    }
+    // 规格文档声明的 kind→资产名（`node_<kind>.png`）
+    let kinds = ["start", "city", "port", "event", "card", "battle", "treasure", "boss", "plain"];
+    for kind in kinds {
+        let want = format!("node_{kind}");
+        if !node_assets.iter().any(|n| n == &want) {
+            errors.push(format!(
+                "ui_manifest.json: 缺节点牌资产 `{want}`（kind={kind}；9 类 kind 集合 = \
+                 规格 08_main_map_v4_spec.md §6 单一事实源）"
+            ));
+        }
+    }
+    for name in &node_assets {
+        let kind = name.trim_start_matches("node_");
+        if !kinds.contains(&kind) {
+            errors.push(format!(
+                "ui_manifest.json: 节点牌资产 `{name}` 的 kind 不在 9 类集合（{kinds:?}）"
+            ));
+        }
+    }
+    errors
+}
+
+/// 第 37 项：**`src` 内不得内联 `#[cfg(test)]` 单测**（EXP-052 连踩 2 次 ⇒ 白跑一轮 gate）。
+///
+/// 动机：内联单测写在 `crates/**/src/**` 里，其中的 `expect`/`panic!` 会被 gate 第 5/6 项
+/// （占位 / unwrap 扫描）拦下 ⇒ 写完跑 gate 才被自己的单测拦白跑一轮。规定单测只放
+/// `crates/*/tests/`（项目既有约定），`src` 内联单测一律提前拦。
+fn check_no_inline_test_mod(root: &Path) -> Vec<String> {
+    let mut errors: Vec<String> = Vec::new();
+    // 棘轮基线：存量内联单测文件豁免（新增文件零豁免）
+    let mut waived: Vec<String> = Vec::new();
+    if let Some(base) = read_file(root, "scripts/process_ratchet.json") {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&base) {
+            if let Some(arr) = v
+                .get("inline_test_mod_grandfathered")
+                .and_then(|g| g.get("files"))
+                .and_then(|f| f.as_array())
+            {
+                waived = arr.iter().filter_map(|x| x.as_str().map(str::to_string)).collect();
+            }
+        }
+    }
+    for e in
+        ["ti-app", "ti-core", "ti-render", "ti-platform", "ti-formats", "ti-tools", "ti-engine"]
+    {
+        let src = root.join("crates").join(e).join("src");
+        if !src.is_dir() {
+            continue;
+        }
+        let mut stack = vec![src];
+        while let Some(dir) = stack.pop() {
+            let Ok(rd) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in rd.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    stack.push(path);
+                    continue;
+                }
+                if path.extension().and_then(|x| x.to_str()) != Some("rs") {
+                    continue;
+                }
+                let Ok(text) = std::fs::read_to_string(&path) else {
+                    continue;
+                };
+                if !text.contains("#[cfg(test)]") {
+                    continue;
+                }
+                let rel =
+                    path.strip_prefix(root).unwrap_or(&path).to_string_lossy().replace('\\', "/");
+                if waived.iter().any(|w| w == &rel) {
+                    continue;
+                }
+                errors.push(format!(
+                    "{rel}: 内联 #[cfg(test)] 单测（单测只放 crates/*/tests/；src 内联会被 gate \
+                     第 5/6 项当占位/unwrap 拦 ⇒ 白跑一轮 gate，EXP-052）"
+                ));
+            }
+        }
+    }
+    errors
+}
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -3060,12 +3232,15 @@ fn main() -> ExitCode {
     all_errors.extend(check_task_change_scope(&root));
     all_errors.extend(check_tooling_registration(&root));
     all_errors.extend(check_process_ledger(&root));
+    all_errors.extend(check_visual_design_signoff(&root));
+    all_errors.extend(check_node_kind_asset_map(&root));
+    all_errors.extend(check_no_inline_test_mod(&root));
     all_errors.extend(check_engine_no_bare_half(&root));
     all_errors.extend(check_select_role_render_loop(&root));
     all_errors.extend(check_render_single_source(&root));
 
     println!(
-        "doccheck2: {} error(s) across 34 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger)",
+        "doccheck2: {} error(s) across 37 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod)",
         all_errors.len()
     );
     for err in &all_errors {
