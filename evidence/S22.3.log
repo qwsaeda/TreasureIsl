@@ -1,0 +1,23 @@
+S22.3 首页罗盘环出图验收 + 用户视觉签收（A 纪律）
+=====================================================
+判据面（dod）：
+  ① ui_preview index 出图：powershell scripts/ui_preview.ps1 index
+     -> evidence/bevy_native_index.png（满屏羊皮海图 + 木匾「金银岛」+ 中心空舵轮 +
+        6 铜质 medallion 沿环 + 白蒙版图标 tint（normal gold / selected text_on_wood）+ 版本签）
+  ② 罗盘环逐屏人工核对：6 徽章可辨（新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏，
+     item 0..5 各一 medallion）；图标 tint 上色（非白块/非糊矢量）；构图重心 = 环（非塌）；
+     满屏海图非黑 ≥90%。
+  ③ 渲染不变式断言全绿：gate 23 项 0 failure（S22.2 收口时实跑，见 evidence/S22.2.log）。
+  ④ CPU↔Bevy 对拍：gate bevy-cpu-parity PASS（通道 ≤8 LSB 且超差 <0.5%；无 GPU 记名 SKIP）。
+  ⑤ 6 徽章 e2e 命中：cargo test -p ti-app --test e2e_playthrough e2e_touch_economy_loop PASS
+     （index item-0 medallion 命中 -> SelectRole）；touch::menu_medallions_hit_six_items PASS（6 中心命中自身）。
+
+用户视觉验收（A 纪律 消息留痕，2026-10-24）：
+  签收 = 「签收（含小瑕疵放行）」——首页罗盘环出图验收通过。
+  放行的小瑕疵（后续可选打磨，不阻 S22.3）：
+    ① 白蒙版小尺寸图标偏块/偏淡（可放大边长或换更大贴图）；
+    ② 标题「金银岛」用青蓝色（与木纹偏冷，可改金墨）；
+    ③ 选项设置标签贴近左下罗盘玫瑰（构图微挤）。
+  缺陷清单清零 = 用户未提新缺陷，放行 3 已知瑕疵。
+
+收口：gate 0 failure + 出图 + e2e + 用户签收 -> S22.3 verified。
