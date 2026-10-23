@@ -46,13 +46,18 @@ use ti_app::touch::TouchPad;
 use ti_platform::gfx::UploadMode;
 use ti_platform::settings::ScaleMode;
 
-/// 窗口物理像素（540×960 = 1080×1920 逻辑竖屏半采样，与 macroquad native 壳同规格）。
-const WIN_W: u32 = 540;
-const WIN_H: u32 = 960;
+/// 窗口物理像素（逻辑竖屏半采样，与 macroquad native 壳同规格；
+/// 飞轮 R1 ③-18：经 `LOGICAL_W/H` 派生，不裸写 540/960）。
+const WIN_W: u32 = LOGICAL_W / 2;
+const WIN_H: u32 = LOGICAL_H / 2;
 
-/// 逻辑画布（`ti_render::framebuffer` 单一事实源）。
-const LOGICAL_W: u32 = 1080;
-const LOGICAL_H: u32 = 1920;
+/// S5.2 同源固定种子（= `tests/scripts/full_run.json seed`；飞轮 R1 ⑥-11：壳内 2 处合一命名
+/// 常量，doccheck2 `check_render_single_source` 对账 JSON ↔ 本常量，改 seed 忘改另一处 = 出图/自检静默不同源）。
+const SELFTEST_SEED: u32 = 42;
+
+/// 逻辑画布（`ti_render::framebuffer` 单一事实源；飞轮 R1 ⑥-05：引擎侧改派生）。
+const LOGICAL_W: u32 = ti_render::framebuffer::LOGICAL_W_I32 as u32;
+const LOGICAL_H: u32 = ti_render::framebuffer::LOGICAL_H_I32 as u32;
 
 /// `GameApp` 存 Resource（系统按 `.chain()` 顺序独占 `Mutex` 借用；0.20 调度可能跑在
 /// worker 线程 → `RefCell`（非 `Sync`）不可，用 `std::sync::Mutex`）。
@@ -183,9 +188,11 @@ fn spawn_stage(mut commands: Commands) {
         }),
         Transform::IDENTITY,
     ));
+    // 飞轮 R1 ①-13：底色走 `Theme::DEFAULT.parch_dark`（§5.1 权威口径：运行时 theme ≡
+    // DEFAULT；CPU 侧同位 = 帧缓冲清屏色），双壳底色同源不漂移。
     commands.spawn((
         Sprite::from_color(
-            Color::srgb(0.1, 0.07, 0.05),
+            ti_engine::canvas::rgb565_to_color(ti_render::theme::Theme::DEFAULT.parch_dark),
             Vec2::from([LOGICAL_W as f32, LOGICAL_H as f32]),
         ),
         // S18.7：CPU 纹理层置于最底（z=-13；原生实体 z∈[-12,-1] 全在其上）。
@@ -227,10 +234,18 @@ fn input_system(
     if camera_live {
         // 滚轮 0.20 event 接线挂 S18.8（winit MotionEvent 面）；键盘 `=`/`-` 同构 zoom（view 中心锚点）。
         if kb.just_pressed(KeyCode::Equal) {
-            g.camera_zoom_at([540.0, 960.0], 1.25, [LOGICAL_W as f32, LOGICAL_H as f32]);
+            g.camera_zoom_at(
+                [LOGICAL_W as f32 / 2.0, LOGICAL_H as f32 / 2.0],
+                1.25,
+                [LOGICAL_W as f32, LOGICAL_H as f32],
+            );
         }
         if kb.just_pressed(KeyCode::Minus) {
-            g.camera_zoom_at([540.0, 960.0], 0.8, [LOGICAL_W as f32, LOGICAL_H as f32]);
+            g.camera_zoom_at(
+                [LOGICAL_W as f32 / 2.0, LOGICAL_H as f32 / 2.0],
+                0.8,
+                [LOGICAL_W as f32, LOGICAL_H as f32],
+            );
         }
         if drag.0 {
             g.camera_pan(drag.1.x / letterbox(), drag.1.y / letterbox());
@@ -318,8 +333,8 @@ fn camera_system(
         }
     }
     if let Ok(mut st) = sprite.single_mut() {
-        st.translation.x = cam.cam[0] - 540.0;
-        st.translation.y = 960.0 - cam.cam[1];
+        st.translation.x = cam.cam[0] - LOGICAL_W as f32 / 2.0;
+        st.translation.y = LOGICAL_H as f32 / 2.0 - cam.cam[1];
     }
 }
 
@@ -416,20 +431,8 @@ fn load_resources(game: &mut GameApp) {
             game.load_hd_pack_from_dir(&hd_dir);
         }
     }
-    for name in [
-        "index.Map",
-        "intro.Map",
-        "selectrole.Map",
-        "selectmap.Map",
-        "main.Map",
-        "vs.Map",
-        "msgs.Map",
-        "saveload.Map",
-    ] {
-        if let Some(bytes) = read_local(name) {
-            game.add_scene(name, &bytes);
-        }
-    }
+    // 飞轮 R1 ⑦-11：legacy `.Map` 场景注入循环已删（`scene_cache` 零读方死字段；
+    // legacy `.Map` 解析归 `legacy/` 参照，契约 1.3）。
 }
 
 /// wasm（双渲染期）：build-only 降级形态——资源链 = S18.8 bevy 资产管线，
@@ -605,9 +608,9 @@ fn main() {
         ti_app::forward_nav::navigate(&mut game, &scene_id);
     }
     if spin_n > 0 {
-        // 固定种子（同 S18.4 selftest 口径 seed=42）⇒ 出图可复现（否则每次落点不同，
+        // 固定种子（同 S18.4 selftest 口径 [`SELFTEST_SEED`]）⇒ 出图可复现（否则每次落点不同，
         // 可能落在无事件的普通格 ⇒ 提示条时有时无，验收证据不稳定）。
-        game.set_rng_seed(42);
+        game.set_rng_seed(SELFTEST_SEED);
         for _ in 0..spin_n {
             game.handle(ti_app::GameInput::Spin);
         }
@@ -622,8 +625,8 @@ fn main() {
     // 双渲染期无 bevy 音频：曲目数 0（S18.8 切 bevy_audio 后恢复）。
     game.shell_mut().set_audio(0, 0);
     if selftest {
-        // S5.2 同源固定种子（full_run.json seed=42），e2e 可复现。
-        game.set_rng_seed(42);
+        // S5.2 同源固定种子（full_run.json seed = [`SELFTEST_SEED`]），e2e 可复现。
+        game.set_rng_seed(SELFTEST_SEED);
     }
 
     let window = Window {

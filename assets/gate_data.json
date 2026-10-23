@@ -14,6 +14,16 @@
       ["按压闪光", "MOTION_PRESS_FLASH_MS"],
       ["血条 lerp", "MOTION_HP_LERP_MS"],
       ["翻页亮度", "MOTION_PAGE_MS"]
+    ],
+    "f32_doc_row": "翻页亮度",
+    "f32_params": [
+      ["MOTION_PAGE_BRIGHTNESS_MIN", "0.6"],
+      ["MOTION_PAGE_BRIGHTNESS_SWING", "0.4"]
+    ],
+    "tick_doc_row": "落格提示条",
+    "tick_const_file": "crates/ti-app/src/game_app/board.rs",
+    "tick_params": [
+      ["TOAST_TICKS", "120"]
     ]
   }
 }

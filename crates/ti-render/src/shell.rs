@@ -145,48 +145,40 @@ pub fn draw_body_text_secondary(host: &mut dyn Canvas, theme: &Theme, text: &str
 // （check_hardcode 门禁：chrome/ti-render 禁裸色值）。矩形非法（w/h ≤ 0）= 不画，
 // 数据驱动由调用方（`chrome::star_sky` / `chrome::title_art_block`）判键。
 
-/// v3 星空常量星位表：`(百分数 x, 百分数 y, 边长 px, 是否亮星)`。
-///
-/// 确定性（无随机数，渲染快照可复现）；26 颗星覆盖全画布，屏心净空
-/// （屏心 50,52 半径 12% 内无星，视觉重心区不被星点干扰）。
-pub const STARS: &[(u8, u8, u8, bool)] = &[
-    (8, 9, 1, false),
-    (22, 5, 2, true),
-    (36, 14, 1, false),
-    (52, 7, 1, false),
-    (71, 11, 2, true),
-    (88, 6, 1, false),
-    (15, 21, 1, false),
-    (64, 19, 1, false),
-    (90, 23, 2, true),
-    (6, 33, 2, true),
-    (30, 29, 1, false),
-    (79, 31, 1, false),
-    (94, 40, 1, false),
-    (10, 47, 1, false),
-    (86, 51, 2, true),
-    (18, 60, 2, true),
-    (92, 63, 1, false),
-    (7, 72, 1, false),
-    (38, 68, 1, false),
-    (84, 75, 2, true),
-    (14, 84, 1, false),
-    (62, 81, 1, false),
-    (91, 88, 1, false),
-    (25, 91, 2, true),
-    (48, 94, 1, false),
-    (74, 92, 1, false),
-];
-
-/// 星域内屏心排除半径（百分数，重心区净空）。
-const STAR_CENTER_EXCLUDE: u8 = 12;
+/// v3 星空星位（`scenes.json` `ambient_art.stars` 数据项；飞轮 R1 ④-05 数据化：
+/// 星位表 = 数据，本函数只遍历，壳层 0 外置值）。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Star {
+    /// 水平位置（百分数 0–100）。
+    pub x: u8,
+    /// 垂直位置（百分数 0–100）。
+    pub y: u8,
+    /// 边长（px；暗星 1 / 亮星 2）。
+    pub size: u8,
+    /// 亮星（带四向 1px 光晕）。
+    pub bright: bool,
+}
 
 /// v3 氛围星空：`rect` 内确定性星点（暗星 1px `parch_light` / 亮星 2px
 /// `gold_glow` + 四向 1px 光晕 `parch_light`）。
 ///
 /// 绘制区夹到 12px 外框内（`wood_frame` 之上层不得覆盖框线）；z-order = 调用序
 /// （`08_render_arch.md` 契约：背景层 → 装饰层 → 内容层）。
-pub fn star_sky(host: &mut dyn Canvas, theme: &Theme, x: i32, y: i32, w: i32, h: i32) {
+/// `center_x/center_y/exclude` = 屏心净空锚点（百分数）+ 排除半径（百分数），
+/// 由数据侧（`scenes.json ambient_art.center_x/center_y/exclude`）给定，0 = 无净空。
+#[allow(clippy::too_many_arguments)]
+pub fn star_sky(
+    host: &mut dyn Canvas,
+    theme: &Theme,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    stars: &[Star],
+    center_x: i32,
+    center_y: i32,
+    exclude: i32,
+) {
     if w <= 0 || h <= 0 {
         return;
     }
@@ -198,16 +190,19 @@ pub fn star_sky(host: &mut dyn Canvas, theme: &Theme, x: i32, y: i32, w: i32, h:
     if x1 <= x0 || y1 <= y0 {
         return;
     }
-    for &(fx, fy, size, bright) in STARS {
+    for s in stars {
         // 屏心净空（P-SoT-2）：跳过排除半径内的星
-        if fx.abs_diff(50) <= STAR_CENTER_EXCLUDE && fy.abs_diff(52) <= STAR_CENTER_EXCLUDE {
+        let dx = i32::from(s.x).saturating_sub(center_x).unsigned_abs();
+        let dy = i32::from(s.y).saturating_sub(center_y).unsigned_abs();
+        let ex = exclude.max(0).unsigned_abs();
+        if dx <= ex && dy <= ex {
             continue;
         }
-        let px = x0 + i32::from(fx) * (x1 - x0) / 100;
-        let py = y0 + i32::from(fy) * (y1 - y0) / 100;
-        let side = i32::from(size);
-        let col = if bright { theme.gold_glow } else { theme.parch_light };
-        if bright {
+        let px = x0 + i32::from(s.x) * (x1 - x0) / 100;
+        let py = y0 + i32::from(s.y) * (y1 - y0) / 100;
+        let side = i32::from(s.size);
+        let col = if s.bright { theme.gold_glow } else { theme.parch_light };
+        if s.bright {
             // 四向光晕（1px）
             host.fill_rect(px - 1, py, 1, 1, theme.parch_light);
             host.fill_rect(px + side, py, 1, 1, theme.parch_light);
@@ -374,6 +369,10 @@ pub fn night_sky_gradient(
 ) {
     /// 行级抖动相位（RGB565 粗色阶 → 水平台阶带打散成细噪点）。
     const DITHER: [u32; 4] = [0, 1, 0, 1];
+    /// 亮度曲线基线（千分比：顶沿 55%；飞轮 R1 ①-23 命名化）。
+    const NIGHT_SKY_BASE_PERMILLE: u32 = 550;
+    /// 亮度曲线斜坡（千分比：下沿 +450 → 100%；同上）。
+    const NIGHT_SKY_SWING_PERMILLE: u32 = 450;
     let _ = theme;
     if width <= 0 || height <= 0 {
         return;
@@ -393,7 +392,9 @@ pub fn night_sky_gradient(
     let steps_u = u32::try_from(steps).unwrap_or(64);
     for i in 0..steps {
         let idx = u32::try_from(i).unwrap_or(0);
-        let k = 550 + idx * 450 / steps_u + DITHER[(i.rem_euclid(4)) as usize];
+        let k = NIGHT_SKY_BASE_PERMILLE
+            + idx * NIGHT_SKY_SWING_PERMILLE / steps_u
+            + DITHER[(i.rem_euclid(4)) as usize];
         host.fill_rect(x0, y0 + i * step_h, x1 - x0, step_h + 1, scale_rgb565(base, k));
     }
 }
@@ -403,13 +404,19 @@ pub fn night_sky_gradient(
 pub fn moon_glow(host: &mut dyn Canvas, theme: &Theme, cx: i32, cy: i32, radius: i32, color: u16) {
     /// 同心圆层数。
     const LAYERS: i32 = 16;
+    /// 亮度曲线基线（千分比：最外环 12%；飞轮 R1 ①-24 命名化）。
+    const MOON_GLOW_BASE_PERMILLE: u32 = 120;
+    /// 亮度曲线斜坡（千分比：第 `i+1` 环 +`880/LAYERS` → 最内 100%；同上）。
+    const MOON_GLOW_SWING_PERMILLE: u32 = 880;
     let _ = theme;
     if radius <= 0 {
         return;
     }
     for i in 0..LAYERS {
         let r = radius * (LAYERS - i) / LAYERS;
-        let k = 120 + u32::try_from(i + 1).unwrap_or(0) * 880 / u32::try_from(LAYERS).unwrap_or(16);
+        let k = MOON_GLOW_BASE_PERMILLE
+            + u32::try_from(i + 1).unwrap_or(0) * MOON_GLOW_SWING_PERMILLE
+                / u32::try_from(LAYERS).unwrap_or(16);
         let c = scale_rgb565(color, k);
         for dy in -r..=r {
             let inside = r * r - dy * dy;
@@ -424,6 +431,12 @@ pub fn moon_glow(host: &mut dyn Canvas, theme: &Theme, cx: i32, cy: i32, radius:
 
 /// 海平线剪影：底部色块 + 波浪线。
 pub fn ocean_horizon(host: &mut dyn Canvas, theme: &Theme, top: i32, height: i32, color: u16) {
+    /// 波浪采样步长（px，飞轮 R1 ①-25 命名化：装饰算法参数）。
+    const WAVE_STEP: i32 = 4;
+    /// 波浪相位周期（整除循环节拍，同上）。
+    const WAVE_PERIOD: i32 = 3;
+    /// 波浪基线上下摆幅（px，同上）。
+    const WAVE_AMPLITUDE: i32 = 1;
     if height <= 0 {
         return;
     }
@@ -433,8 +446,9 @@ pub fn ocean_horizon(host: &mut dyn Canvas, theme: &Theme, top: i32, height: i32
         return;
     }
     host.fill_rect(12, y0, LOGICAL_W_I32 - 24, y1 - y0, color);
-    for x in (12..LOGICAL_W_I32 - 12).step_by(4) {
-        let wave_y = y0 + ((x / 4) % 3) - 1;
+    let step = usize::try_from(WAVE_STEP).unwrap_or(4);
+    for x in (12..LOGICAL_W_I32 - 12).step_by(step) {
+        let wave_y = y0 + ((x / WAVE_STEP) % WAVE_PERIOD) - WAVE_AMPLITUDE;
         host.fill_rect(x, wave_y, 2, 1, theme.parch_light);
     }
 }
@@ -455,6 +469,14 @@ pub fn ornate_frame(
     const CORNER: i32 = 16;
     /// 指南针玫瑰辐条长度（px）。
     const ARM: i32 = 20;
+    /// 木框线宽（px，飞轮 R1 ①-26 命名化）。
+    const ORNATE_FRAME_PX: i32 = 4;
+    /// 金线内缩（px，同上）。
+    const ORNATE_GOLD_INSET: i32 = 8;
+    /// 指南针玫瑰辐条数（32 条 = 11.25° 间隔，同上）。
+    const COMPASS_SPOKES: u32 = 32;
+    /// 指南针顶置偏移（px，框顶上方，同上）。
+    const COMPASS_RISE: i32 = 24;
     let _ = theme;
     if width <= 0 || height <= 0 {
         return;
@@ -468,15 +490,15 @@ pub fn ornate_frame(
     }
     let fw = x1 - x0;
     let fh = y1 - y0;
-    host.fill_rect(x0, y0, fw, 4, frame_color);
-    host.fill_rect(x0, y1 - 4, fw, 4, frame_color);
-    host.fill_rect(x0, y0, 4, fh, frame_color);
-    host.fill_rect(x1 - 4, y0, 4, fh, frame_color);
+    host.fill_rect(x0, y0, fw, ORNATE_FRAME_PX, frame_color);
+    host.fill_rect(x0, y1 - ORNATE_FRAME_PX, fw, ORNATE_FRAME_PX, frame_color);
+    host.fill_rect(x0, y0, ORNATE_FRAME_PX, fh, frame_color);
+    host.fill_rect(x1 - ORNATE_FRAME_PX, y0, ORNATE_FRAME_PX, fh, frame_color);
     if fw > 16 && fh > 16 {
-        host.fill_rect(x0 + 8, y0 + 8, fw - 16, 2, gold_color);
-        host.fill_rect(x0 + 8, y1 - 10, fw - 16, 2, gold_color);
-        host.fill_rect(x0 + 8, y0 + 8, 2, fh - 16, gold_color);
-        host.fill_rect(x1 - 10, y0 + 8, 2, fh - 16, gold_color);
+        host.fill_rect(x0 + ORNATE_GOLD_INSET, y0 + ORNATE_GOLD_INSET, fw - 16, 2, gold_color);
+        host.fill_rect(x0 + ORNATE_GOLD_INSET, y1 - 10, fw - 16, 2, gold_color);
+        host.fill_rect(x0 + ORNATE_GOLD_INSET, y0 + ORNATE_GOLD_INSET, 2, fh - 16, gold_color);
+        host.fill_rect(x1 - 10, y0 + ORNATE_GOLD_INSET, 2, fh - 16, gold_color);
     }
     for i in 0..CORNER {
         let t = i as f32 / CORNER as f32;
@@ -491,9 +513,10 @@ pub fn ornate_frame(
         host.fill_rect(x1 - 1 - offset, y1 - 1 - i, 1, 1, gold_color);
     }
     let cx = (x0 + x1) / 2;
-    let cy = y0 - 24;
-    for i in 0..32 {
-        let angle = i as f32 * std::f32::consts::PI / 16.0;
+    let cy = y0 - COMPASS_RISE;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+    for i in 0..COMPASS_SPOKES {
+        let angle = i as f32 * std::f32::consts::PI / (COMPASS_SPOKES as f32 / 2.0);
         let px = cx + (angle.cos() * ARM as f32) as i32;
         let py = cy + (angle.sin() * ARM as f32) as i32;
         host.fill_rect(px, py, 1, 1, gold_color);
@@ -525,7 +548,8 @@ pub fn compact_menu_item(
     host.fill_rect(left, top + height - 2, width, 2, theme.menu_border);
     host.fill_rect(left, top, 2, height, theme.menu_border);
     host.fill_rect(left + width - 2, top, 2, height, theme.menu_border);
-    let icon_size = 48i32.min(height - 8);
+    // 图标边长 = 原生几何常量（`icons::ICON_SIZE`，飞轮 R1 ⑥-02 单源）按行高收敛。
+    let icon_size = crate::icons::ICON_SIZE.min(height - 8);
     let icon_x = left + 8;
     let icon_y = top + (height - icon_size) / 2;
     crate::icons::icon(
@@ -651,24 +675,31 @@ mod tests {
 
     #[test]
     fn star_sky_deterministic() {
+        // 飞轮 R1 ④-05：星位 = 数据入参（fixture 3 星，覆盖亮/暗 + 净空判定）。
+        let stars = [
+            Star { x: 8, y: 9, size: 1, bright: false },
+            Star { x: 71, y: 11, size: 2, bright: true },
+            Star { x: 50, y: 52, size: 1, bright: false },
+        ];
         let mut host = ModTests::new();
         let canvas = host.as_canvas();
-        star_sky(canvas, &TEST_THEME, 0, 0, 1080, 1920);
+        star_sky(canvas, &TEST_THEME, 0, 0, 1080, 1920, &stars, 50, 52, 12);
         let first = (host.pixels, host.painted);
         host.painted = 0;
         host.pixels = 0;
         let canvas = host.as_canvas();
-        star_sky(canvas, &TEST_THEME, 0, 0, 1080, 1920);
+        star_sky(canvas, &TEST_THEME, 0, 0, 1080, 1920, &stars, 50, 52, 12);
         assert_eq!((host.pixels, host.painted), first);
-        // 外框内 26 星（亮 12 + 暗 14；亮星 3 件/暗星 3 件按占位统计 ≥26）。
-        assert!(host.painted >= 26);
+        // 暗星 1 件 + 亮星 5 件（星点 1 + 4 向光晕）+ 屏心星被净空跳过 = 6。
+        assert_eq!(host.painted, 6);
     }
 
     #[test]
     fn star_sky_noop_on_invalid_size() {
+        let stars = [Star { x: 8, y: 9, size: 1, bright: false }];
         let mut host = ModTests::new();
         let canvas = host.as_canvas();
-        star_sky(canvas, &TEST_THEME, 0, 0, 0, 1920);
+        star_sky(canvas, &TEST_THEME, 0, 0, 0, 1920, &stars, 50, 52, 12);
         assert_eq!(host.painted, 0);
     }
 

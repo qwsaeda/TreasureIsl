@@ -110,25 +110,12 @@ pub async fn run() {
     let mod_count = bundle.as_ref().map_or(0, |b| b.mod_count);
     game.shell_mut().set_audio(total_count, mod_count);
 
-    // 精灵图集（ui.pak → SpriteAtlas）+ 场景 .Map 文件（blit 真实贴图）
+    // 精灵图集（ui.pak → SpriteAtlas）
     if let Some(ui_pak) = read_asset("assets/ui.pak").await {
         game.set_atlas(&ui_pak);
     }
-    let map_names = [
-        "index.Map",
-        "intro.Map",
-        "selectrole.Map",
-        "selectmap.Map",
-        "main.Map",
-        "vs.Map",
-        "msgs.Map",
-        "saveload.Map",
-    ];
-    for name in map_names {
-        if let Some(bytes) = read_asset(&format!("assets/{name}")).await {
-            game.add_scene(name, &bytes);
-        }
-    }
+    // 飞轮 R1 ⑦-11：legacy `.Map` 场景注入循环已删（`scene_cache` 零读方死字段；
+    // legacy `.Map` 解析归 `legacy/` 参照，契约 1.3）。
 
     // S7.5/S8.9 + N7：HD PNG 档（`assets_hd_pack/1x/ui/`）。注入清单来自
     // `assets_hd_pack/hd_f1_manifest.json`（EXP-048/060：注入数 = 目录全量，不硬编码）。
@@ -142,7 +129,11 @@ pub async fn run() {
             None => HdF1Manifest::default(),
         };
         if !manifest.static_f1.is_empty() || !manifest.multiframe_f1.is_empty() {
-            let mut fetch = |name: &str| async move { read_asset(name).await };
+            // 生命周期：`name` 先转 owned 再进 async block（Future 不借用外部 `&str`）。
+            let mut fetch = |name: &str| {
+                let owned = name.to_owned();
+                async move { read_asset(owned.as_str()).await }
+            };
             let mapping = load_hd_pngs_from_manifest(&manifest, &mut fetch).await;
             let expected = manifest_expected_count(&manifest);
             if mapping.len() < expected {

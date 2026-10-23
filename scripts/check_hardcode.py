@@ -25,7 +25,10 @@ import sys
 from pathlib import Path
 
 CJK = re.compile(r"[\u4e00-\u9fff]")
-STR_LIT = re.compile(r'"([^"\\]|\\.)*"')
+# 飞轮 R1 ⑤-05 修复：旧式 `"([^"\\]|\\.)*"` 捕获组只保留 `*` 量词内最后一次迭代
+# （= 字面量末字符），CJK 通道对「以标点/ASCII 结尾」的中文字面量失明（如
+# `…不 fallback）` 只捕获到 `）`）。改用非捕获外层 + 原子式内层，group(1) = 完整字面量内容。
+STR_LIT = re.compile(r'"((?:[^"\\]|\\.)*)"')
 LAYOUT_CALL = re.compile(r"\b(fill_rect|draw_text_row|draw_text|blit|fill)\s*\(")
 COLOR_HEX = re.compile(r"\b0x[0-9A-Fa-f]{4}\b")
 
@@ -45,7 +48,17 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("audio_prep.rs", "cjk", "audio asset diagnostics / test messages, not player-visible UI"),
     ("sprite_atlas.rs", "cjk", "atlas loading diagnostics / assertion messages, not player UI"),
     ("terrain_atlas.rs", "cjk", "terrain pak loading diagnostics / assertion messages, not player UI"),
-    ("game_app.rs", "cjk", "runtime error eprintln diagnostics (balance load failures), not player UI"),
+    ("game_app/", "cjk", "runtime eprintln diagnostics after S20.0b split (board/host/mod/assets), not player UI (flywheel R1 ⑤-06: old `game_app.rs` line no longer matches post-split paths)"),
+    ("scenes/main_map.rs", "cjk", "[stats]-gated TradeBuy/TradeSell/Build hard-error diagnostics, not player UI"),
+    ("scenes/mod.rs", "cjk", "scene_transition! macro 3rd arg is doc-only ($doc -> #[doc] attribute), not player-visible text"),
+    ("bevy_app.rs", "cjk", "Bevy spike shell window title, dev tool, not in-game UI (flywheel R1 ⑤-04 pending human ruling: may move to strings.json later)"),
+    ("treasure_bevy.rs", "cjk", "Bevy delivery shell offscreen/selftest/shot diagnostics + window title, terminal output, not in-game UI"),
+    ("android_shell.rs", "cjk", "Android shell [hd] asset-registration diagnostics, not in-game UI"),
+    ("sprite_step.rs", "cjk", "sprite-step debug bin usage/error/sprite-dump terminal output, not in-game UI"),
+    ("data/mod.rs", "cjk", "balance data validation LoadError wording (crash-diagnostic channel), not display text"),
+    ("hd_png.rs", "cjk", "PNG HD asset loading diagnostics / error wording, not in-game UI"),
+    ("ogg_encode.rs", "cjk", "OGG/Opus encode error diagnostics, not in-game UI"),
+    ("ids.rs", "cjk", "ti-formats ControlKind parse error wording, not in-game UI"),
     ("element_dump.rs", "cjk", "diagnostic bin: §4 layout zone / bleed terminal output, not in-game UI"),
     ("forward_nav.rs", "cjk", "S14 forward navigation diagnostic prints, not in-game UI text"),
     ("render_png.rs", "cjk", "S14 forward PNG export bin terminal output, not in-game UI text"),
@@ -102,11 +115,63 @@ def scan_file(path: Path) -> list[tuple[str, str, int, str]]:
     return hits
 
 
+def selftest() -> int:
+    """飞轮 R1 ⑤-05 回归防线：断言 STR_LIT 捕获组 = 完整字面量内容（非末字符）。
+
+    旧式 `"([^"\\]|\\.)*"` 的捕获组在 `*` 量词内只保留最后一次迭代，
+    导致「以 CJK 标点/ASCII 结尾」的中文字面量漏检（gate 12 CJK 通道失明）。
+    任一断言失败 = 回归，退出码非 0。
+    """
+    failures: list[str] = []
+
+    def expect_cjk_found(src: str, label: str) -> None:
+        found = [m.group(1) for m in STR_LIT.finditer(src) if m.group(1)]
+        hits = [lit for lit in found if CJK.search(lit)]
+        if not hits:
+            failures.append("CJK 字面量漏检: %s (captured=%r)" % (label, found))
+
+    def expect_full_capture(src: str, want: str, label: str) -> None:
+        for m in STR_LIT.finditer(src):
+            if want in (m.group(1) or "") and m.group(1) != want:
+                failures.append("捕获组不完整: %s (captured=%r want=%r)" % (label, m.group(1), want))
+
+    # 1) 关键回归：CJK 字面量以全角括号 `）` 结尾（旧式只捕获 `）` 本身 → 漏检）
+    expect_cjk_found('eprintln!("[stats] xx（硬错误，不 fallback）")', "ends-with-CJK-punct")
+    expect_full_capture(
+        'eprintln!("[stats] xx（硬错误，不 fallback）")',
+        "[stats] xx（硬错误，不 fallback）",
+        "full-capture-punct-end",
+    )
+    # 2) 以汉字结尾（旧式末字符恰好命中，双式都必须命中）
+    expect_cjk_found('let s = "加载失败";', "ends-with-CJK-char")
+    # 3) 以 ASCII 结尾的 CJK 串（旧式也漏检）
+    expect_cjk_found('let t = "地图1号";', "ends-with-ascii")
+    # 4) 转义引号内的 CJK（`\"` 分支）
+    expect_cjk_found('let u = "含\\"引号\\"的中文";', "escaped-quote")
+    # 5) 纯 ASCII 串不得误报 CJK
+    for m in STR_LIT.finditer('let v = "plain ascii";'):
+        if m.group(1) and CJK.search(m.group(1)):
+            failures.append("ASCII 串误报 CJK")
+
+    if failures:
+        for f in failures:
+            print("  selftest FAIL: %s" % f)
+        print("check_hardcode: selftest FAILED (%d)" % len(failures))
+        return 1
+    print("check_hardcode: selftest OK (STR_LIT full-capture + CJK fixtures)")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--warn", action="store_true", help="report but do not fail")
     ap.add_argument("--root", default=".", help="repo root")
+    ap.add_argument("--selftest", action="store_true",
+                    help="flywheel R1 regression: assert STR_LIT captures the full literal")
     args = ap.parse_args()
+
+    if args.selftest:
+        return selftest()
 
     root = Path(args.root).resolve()
     crates = root / "crates"

@@ -151,8 +151,9 @@ impl Scene for SelectMapScene {
             let r = layout.list.item_rect(current);
             host.fill_rect(r.x, r.y, r.w, r.h, chrome::COLOR_BEVEL_SHADOW);
         }
-        // UI-10：锁定行 = 深色「锁」块（压卡片右内侧，钳进卡片内不溢出）；
+        // UI-10：锁定行 = 深色「锁」块（压卡片右内侧，钳进卡片不溢出）；
         // QA033：锁块 x 只走 `scenes.json` `locked.text_x`（1080 数据驱动，契约 4）；
+        // 飞轮 R1 ③-13：几何参数组（inset/max_w/min_w/h）同走 `locked.*` 数据键；
         // 键缺失/非正 = 不画锁块（旧 176 时代休眠回退值 130 已删，契约 1）。
         for (i, m) in MapSlot::all().iter().enumerate() {
             if host.map_unlocked(*m) {
@@ -160,35 +161,57 @@ impl Scene for SelectMapScene {
             }
             let r = layout.list.item_rect(i);
             let ty = r.y + (r.h - host.shell().glyph_px()) / 2;
-            let lock_x = layout.extra_scalar.get("locked.text_x").copied().unwrap_or(0);
-            if lock_x > 0 {
+            let sc = &layout.extra_scalar;
+            let lock_x = sc.get("locked.text_x").copied().unwrap_or(0);
+            let inset = sc.get("locked.inset").copied().unwrap_or(0);
+            let max_w = sc.get("locked.max_w").copied().unwrap_or(0);
+            let min_w = sc.get("locked.min_w").copied().unwrap_or(0);
+            let lock_h = sc.get("locked.h").copied().unwrap_or(0);
+            if lock_x > 0 && max_w > 0 && lock_h > 0 {
                 // 契约 1（`08_render_arch.md`）：钳制基准用呈现坐标系常量，
                 // 不得出现 legacy 176 字面量。
                 // 锁标右界按**卡片右缘**（`item_rect` 的 x+w）而非屏幕宽推导，
                 // 按钮变窄时锁标随卡片收敛，不会溢出卡片（F12）
                 let card_right = r.x + r.w;
-                let lock_w = (card_right - 6 - lock_x).min(40);
-                host.fill_rect(lock_x, ty, lock_w.max(4), 12, crate::menu_shell::COLOR_WOOD);
+                let lock_w = (card_right - inset - lock_x).min(max_w);
+                host.fill_rect(
+                    lock_x,
+                    ty,
+                    lock_w.max(min_w),
+                    lock_h,
+                    crate::menu_shell::COLOR_WOOD,
+                );
             }
         }
         // S19.5：选图卡显示 **BOSS 难度星**（`rules::progression::boss_tier_of` → tier+1 颗星，
         // 0 起 ⇒ 1~3 星）—— 让玩家在**选图时**就知道这张图的 BOSS 强度（难度阶梯可见 ⇒
         // 据此决定攒金/建造目标）。锁定图也显示（难度是地图固有属性）。
+        // 飞轮 R1 ③-14：几何参数组（size/gap/inset/top/max/bevel_px）走 `stars.*` 数据键。
+        let sc = &layout.extra_scalar;
+        let star_size = sc.get("stars.size").copied().unwrap_or(0);
+        let star_gap = sc.get("stars.gap").copied().unwrap_or(0);
+        let star_inset = sc.get("stars.inset").copied().unwrap_or(0);
+        let star_top = sc.get("stars.top").copied().unwrap_or(0);
+        let star_max = sc.get("stars.max").copied().unwrap_or(0);
+        let star_bevel = sc.get("stars.bevel_px").copied().unwrap_or(0);
         for (i, m) in MapSlot::all().iter().enumerate() {
             let Some(tier) = boss_tier_of(*m) else {
                 continue;
             };
-            let stars = i32::try_from(tier.saturating_add(1).min(3)).unwrap_or(1);
+            let stars = i32::try_from(tier.saturating_add(1)).unwrap_or(1).min(star_max);
+            if stars <= 0 || star_size <= 0 {
+                continue;
+            }
             let r = layout.list.item_rect(i);
-            let size = 14;
-            let gap = 6;
             // 卡片右上角内侧（x 从右往左排，y 居中于卡片上半）
-            let right = r.x + r.w - 12;
-            let top = r.y + 10;
+            let right = r.x + r.w - star_inset;
+            let top = r.y + star_top;
             for k in 0..stars {
-                let x = right - (stars - 1 - k) * (size + gap);
-                host.fill_rect(x, top, size, size, chrome::COLOR_GOLD_WARM);
-                host.fill_rect(x, top, size, 2, chrome::COLOR_BRASS_LIGHT);
+                let x = right - (stars - 1 - k) * (star_size + star_gap);
+                host.fill_rect(x, top, star_size, star_size, chrome::COLOR_GOLD_WARM);
+                if star_bevel > 0 {
+                    host.fill_rect(x, top, star_size, star_bevel, chrome::COLOR_BRASS_LIGHT);
+                }
             }
         }
     }

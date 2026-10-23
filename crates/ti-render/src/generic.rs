@@ -110,7 +110,7 @@ pub fn grad(c: &mut dyn Canvas, x: i32, y: i32, w: i32, h: i32, from: u16, to: u
     if w <= 0 || h <= 0 {
         return;
     }
-    let steps = steps.clamp(2, 256);
+    let steps = clamp_grad_steps(steps);
     let step_h = h / steps;
     if step_h <= 0 {
         return;
@@ -122,9 +122,28 @@ pub fn grad(c: &mut dyn Canvas, x: i32, y: i32, w: i32, h: i32, from: u16, to: u
     }
 }
 
+/// 渐变色带级数钳制（2..=256；**双执行器共享**：CPU 端 [`grad`] 与 Bevy 端
+/// `ti_engine::scene_render` 同读，飞轮 R1 ⑥-12 双端不漂移）。
+///
+/// 普通 `fn`（当前工具链 `Ord::max/min` 未 const 稳定，`const fn` 受限）。
+#[must_use]
+pub const fn clamp_grad_steps(steps: i32) -> i32 {
+    if steps < 2 {
+        2
+    } else if steps > 256 {
+        256
+    } else {
+        steps
+    }
+}
+
 /// 原语 `glow`：径向光晕（逐行扫描线；中心亮 → 边缘暗）。
 #[allow(clippy::many_single_char_names, clippy::too_many_arguments)]
 pub fn glow(c: &mut dyn Canvas, cx: i32, cy: i32, radius: i32, color: u16) {
+    /// 光晕亮度基线（千分比：边缘 35%；飞轮 R1 ①-28 命名化）。
+    const GLOW_BASE_PERMILLE: u32 = 350;
+    /// 光晕亮度斜坡（千分比：`t=1` 时中心 +650 → 100%；同上）。
+    const GLOW_SWING_PERMILLE: u32 = 650;
     if radius <= 0 {
         return;
     }
@@ -140,7 +159,11 @@ pub fn glow(c: &mut dyn Canvas, cx: i32, cy: i32, radius: i32, color: u16) {
         let t = 1.0 - dy.abs() as f32 / radius.max(1) as f32;
         // 亮度衰减（按 RGB565 通道缩放，避免整体乘法溢出）。
         #[allow(clippy::cast_possible_truncation)]
-        let level = scale_rgb565(color, 350 + u32::try_from((t * 650.0) as i64).unwrap_or(0));
+        let level = scale_rgb565(
+            color,
+            GLOW_BASE_PERMILLE
+                + u32::try_from((t * GLOW_SWING_PERMILLE as f32) as i64).unwrap_or(0),
+        );
         let _ = (r0, g0, b0);
         c.fill_rect(cx - half_w, cy + dy, half_w * 2, 1, level);
     }

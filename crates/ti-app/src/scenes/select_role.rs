@@ -133,11 +133,13 @@ impl Scene for SelectRoleScene {
         }
         // S20.2 v4 面板语言：右列角色项 = 深棕木底（scenes.json 原语 `panel_wood`）+ 黄铜细边；
         // 选中项 = 3px 黄铜边（此前整块金色填充）。
-        for i in 0..5 {
+        // 飞轮 R1 ⑥-07：循环走 `ROLE_COUNT` 命名常量（与 on_input/触摸带同单源，
+        // 补 doccheck2 EXP-073 band 数门禁对 render 循环字面量的盲区）。
+        for i in 0..ROLE_COUNT as usize {
             let r = layout.list.item_rect(i);
             chrome::wood_panel(host, r.x, r.y, r.w, r.h);
         }
         let sel = layout.list.item_rect(current);
-        chrome::selected_border(host, sel.x, sel.y, sel.w, sel.h, 3);
+        chrome::selected_border(host, sel.x, sel.y, sel.w, sel.h, chrome::PANEL_SELECTED_BORDER_PX);
     }
 }

@@ -10,7 +10,9 @@
 use crate::canvas::Canvas;
 use crate::theme::Theme;
 
-/// 图标逻辑边长（正方形盒）。
+/// 图标逻辑边长（正方形盒；**框架侧单源**，飞轮 R1 ⑥-02：
+/// 数据侧缺省 = `ui_icons.json default_size`，二者须恒等（doccheck2 对账）；
+/// `shell::compact_menu_item` 等框架调用点读本常量，勿再各抄一份 48）。
 pub const ICON_SIZE: i32 = 48;
 
 /// 图标 id（共 14 枚，与 `assets/data/ui_icons.json` 的 `icons[].id` 一一对应）。

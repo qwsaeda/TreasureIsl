@@ -155,7 +155,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 |---|---|---|---|
 | `gate.ps1` | 全门禁 23 项（编译/测试/文档/数据/结构/渲染/台账） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
 | `validate_data.py` | 数据表校验（balance/strings/scenes/controls 必填字段、值域、孤儿 key、grid 三键） | `python scripts/validate_data.py` | 幂等；违规非 0 |
-| `check_hardcode.py` | 硬编码扫描（数值/中文面量） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` | 幂等；严格模式命中即非 0 |
+| `check_hardcode.py` | 硬编码扫描（数值/中文面量） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` / `--selftest`（STR_LIT 全捕获回归自检，飞轮 R1 ⑤-05 起 CJK 通道对全字面量生效） | 幂等；严格模式命中即非 0；`--selftest` 断言失败即非 0 |
 | `check_ledger_reality.py` | 台账三方对账（verified ↔ evidence 文件 ↔ 代码符号） | `python scripts/check_ledger_reality.py` | 幂等只读；虚报即非 0 |
 | `check_oracle_boundary.py` | oracle 边界（shell 层禁 `oracle_*` 调用） | `python scripts/check_oracle_boundary.py --check` / `--report` | 幂等只读；违规非 0 |
 | `check_forward_closed.py` | 业务闭环 C1~C4（零逆向引用 / 单一 oracle 源 / 根目录清空 / 无重复 crate） | `python scripts/check_forward_closed.py --check` | 幂等只读；违规非 0 |

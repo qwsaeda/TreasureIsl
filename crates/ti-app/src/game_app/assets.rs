@@ -12,14 +12,9 @@ impl GameApp {
             self.atlas = Some(atlas);
         }
     }
-    /// 注入已解析的 `.Map` 场景（`name → MapScene`，`render` 时 blit 精灵用）。
-    ///
-    /// 解析失败的场景跳过（不阻塞其他场景渲染）。
-    pub fn add_scene(&mut self, name: &'static str, bytes: &[u8]) {
-        if let Ok(scene) = ti_formats::mapfile::MapScene::parse(name, bytes) {
-            self.scene_cache.insert(name, scene);
-        }
-    }
+    // 飞轮 R1 ⑦-11：`add_scene`（legacy `.Map` → `scene_cache` 注入）已删——
+    // 缓存零读方（S15.4 删 legacy 精灵 blit 后死字段），整条注入链移除
+    // （legacy `.Map` 解析归 `legacy/` 参照，契约 1.3）。
     /// 注入地形（瓦片 pak + 地形 Map），MainMap 场景据此 blit 真实地形（S6.3）。
     ///
     /// 解析失败保持 None（主地图退回占位网格，不黑屏）。
@@ -157,14 +152,21 @@ impl GameApp {
             let f1 = *f1;
             let mut frames: Vec<Vec<u8>> = Vec::new();
             if multiframe_f1.contains(&f1) {
-                for k in 0..5u32 {
-                    let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{k}.png");
-                    if let Some(bytes) = fetch(&name) {
-                        if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
-                            if img.rgba.iter().any(|&b| b > 0) {
-                                frames.push(bytes);
+                // 飞轮 R1 ①-10：帧数 manifest 驱动（`f0..fN` 探测：首个缺帧即止）——
+                // 原 `0..5` 写死假设第 6 帧起静默丢失。
+                let mut frame = 0u32;
+                loop {
+                    let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{frame}.png");
+                    match fetch(&name) {
+                        Some(bytes) => {
+                            if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                                if img.rgba.iter().any(|&b| b > 0) {
+                                    frames.push(bytes);
+                                }
                             }
+                            frame += 1;
                         }
+                        None => break,
                     }
                 }
             } else {

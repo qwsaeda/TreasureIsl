@@ -76,41 +76,61 @@ impl Scene for MessageScene {
         let page = host.msg_page();
         let key = page_text(kind, page);
         let text = i18n::sget(key.as_str());
-        // QA111：正文多行换行——面板内宽（body.w - 8 衬边）按 44px 档逐字 advance 折行，
-        // 行高 52px（44px 字形 + 8px 行距），行数上限按面板高截断（溢出行不画，不越面板）。
-        let budget = body.w - 8;
-        let mut x_cursor = body.x + 4;
-        let mut y_cursor = body.y + 4;
+        // QA111：正文多行换行——面板内宽（body.w - `edge_pad` 衬边）按 44px 档逐字 advance 折行，
+        // 行高 = `body.line_h`（44px 字形 + 8px 行距），行数上限按面板高截断
+        // （溢出行不画，不越面板，reserve = `body.clip_reserve`）。飞轮 R1 ②-07：
+        // 几何参数组全走 `scenes.json` `message.body` 数据键（x_pad/edge_pad/line_h/clip_reserve）。
+        let sc = &layout.extra_scalar;
+        let edge_pad = sc.get("body.edge_pad").copied().unwrap_or(0);
+        let x_pad = sc.get("body.x_pad").copied().unwrap_or(0);
+        let line_h = sc.get("body.line_h").copied().unwrap_or(0);
+        let clip_reserve = sc.get("body.clip_reserve").copied().unwrap_or(0);
+        let budget = body.w - edge_pad;
+        let mut x_cursor = body.x + x_pad;
+        let mut y_cursor = body.y + x_pad;
         let mut line_width = 0i32;
         for ch in text.chars() {
             let adv = host.shell().char_advance_px(ch);
             if line_width + adv > budget {
-                x_cursor = body.x + 4;
-                y_cursor += 52;
+                x_cursor = body.x + x_pad;
+                y_cursor += line_h;
                 line_width = 0;
             }
-            if y_cursor > body.y + body.h - 48 {
+            if y_cursor > body.y + body.h - clip_reserve {
                 break; // QA111：越面板行不画
             }
             chrome::draw_body_text(host, &ch.to_string(), x_cursor, y_cursor);
             x_cursor += adv;
             line_width += adv;
         }
-        // QA144：页点（12×12，间距 24；已翻实心白 / 未翻暗底+框）按 `page` 数据槽
-        // 中心点（page.x）排布于页码行之上；中缝分割线已入 JSON 原语（z=7 竖线）。
+        // QA144：页点（`page_dots.size` 方点、间距 = `page_dots.gap`；已翻实心白 /
+        // 未翻暗底+框）按 `page` 数据槽中心点（page.x）排布于页码行之上
+        // （`page_dots.dy`）；中缝分割线已入 JSON 原语（z=7 竖线）。
+        // 飞轮 R1 ②-07：页点几何组走 `page_dots.*` 数据键。
         let total = host.msg_total();
         let dots_n = i32::try_from(total).unwrap_or(0);
-        let dots_w = dots_n * 36 - 24;
+        let dot_size = sc.get("page_dots.size").copied().unwrap_or(0);
+        let dot_gap = sc.get("page_dots.gap").copied().unwrap_or(0);
+        let dot_dy = sc.get("page_dots.dy").copied().unwrap_or(0);
+        let dot_inner = sc.get("page_dots.inner").copied().unwrap_or(0);
+        let dot_inset = (dot_size - dot_inner) / 2;
+        let dots_w = dots_n * dot_gap - (dot_gap - dot_size);
         let dots_x = layout.page.x - dots_w.max(0) / 2;
-        let dots_y = layout.page.y - 48;
+        let dots_y = layout.page.y - dot_dy;
         for i in 0..dots_n {
-            let dx = dots_x + i * 36;
+            let dx = dots_x + i * dot_gap;
             let is_paged = u32::try_from(i).unwrap_or(0) < page; // i ≥ 0（循环变量），cast 无符号丢失
             if is_paged {
-                host.fill_rect(dx, dots_y, 12, 12, chrome::COLOR_TEXT_ON_PARCH);
+                host.fill_rect(dx, dots_y, dot_size, dot_size, chrome::COLOR_TEXT_ON_PARCH);
             } else {
-                host.fill_rect(dx, dots_y, 12, 12, chrome::COLOR_BEVEL_SHADOW);
-                host.fill_rect(dx + 2, dots_y + 2, 8, 8, chrome::COLOR_MENU_BG);
+                host.fill_rect(dx, dots_y, dot_size, dot_size, chrome::COLOR_BEVEL_SHADOW);
+                host.fill_rect(
+                    dx + dot_inset,
+                    dots_y + dot_inset,
+                    dot_size - dot_inset * 2,
+                    dot_size - dot_inset * 2,
+                    chrome::COLOR_MENU_BG,
+                );
             }
         }
         let page_str = i18n::sgetf("scene.message.page", &[&(page + 1), &total]);

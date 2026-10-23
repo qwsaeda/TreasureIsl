@@ -165,3 +165,38 @@ cargo test --workspace                              → 0 failed（新增 ti-ren
 cargo run -q -p ti-tools --bin doccheck2 .          → 0 error across 21 checks
 scripts/gate.ps1                                    → === gate: 0 failure(s) ===（22 项）
 ```
+---
+
+## 主题飞轮 ·「渲染数据/图片分离」R1（2026-10-22，06_flywheel §8 定向飞轮首开）
+
+靶点主题：渲染数据/图片分离（代码面 = ti-app scenes/game_app + ti-render + ti-engine；
+数据面 = scenes.json/theme.json/terrain.json/balance.json + assets/ui 图片；rules 层不改）
+
+### ① 找问题（目标 100/轮，只读 agent）
+- **97 条**（①色值/数值 33 / ②画不画决策 8 / ③尺寸坐标 18 / ④该图片处代码画 7 / ⑤中文面量 7 / ⑥跨文件重复 12 / ⑦v2v3 残留 12）；清单 = `evidence/flywheel_render_r1_findings.md`
+- **工具链 2 根因**：⑤-05 `check_hardcode.py STR_LIT` 捕获组在 `*` 量词内只留最后 1 字符（CJK 通道全盲，实测「加载失败：{0}」捕获=`}`）；⑤-06 EXEMPT `game_app.rs` 子串对 S20.0b 拆分后 `game_app/*.rs` 失配
+
+### ② 审计（只读 agent）+ 主线程复核
+- 裁决：**真漂移 38 / 误报 28 / 计划内（S21.x）27 / 需人裁决 4**；结论 = `evidence/flywheel_render_r1_audit.md`
+- 特别核对 10 项中：⑤-05/⑤-06 主线程实测坐实（scripts/tmp/verify_str_lit.py 落位 tmp、用完即删）；⑥-08 判误报（Theme::DEFAULT 编译+测试双锁，无漂移路径）；④-02/④-03 误报（09_render_framework §5.1 明文契约 + 潜伏 edge case）
+- 计划内 27 条全部挂 S21.4/5/6/7/12（不本轮修，随台账收口）
+
+### ③ 修复 + 自验（修复 agent，38 条全闭环）
+- 批 A 工具链（6）：STR_LIT 全捕获修复 + `--selftest`（5 fixture）+ EXEMPT 重刷（`game_app/` 前缀 + 11 新行带理由）⇒ 严格模式 0 命中（153 文件）
+- 批 B 数据化/单源（16）：`vs.fx_hit`/`main_map.fx_coin` 入 scenes.json、裸 540/960/1080/1920 派生、`ui_icons.json default_size` 单源、⑥-03 面板公式单源、⑥-07 `0..ROLE_COUNT`、①-04 动效 5 参登记、index stars 数据化、select_map/message/saveload 键入 scenes.json
+- 批 C 机械重构（16）：shell.rs 内联视觉值抽常量、①-06 TOAST_TICKS 登记、①-10 帧数探测、⑥-04/⑦-10/⑦-11 死码删除、③-16 键名常量化
+- 回写：doccheck2 **27→30 项**（新增 `engine-no-bare-half` / `select-role-render-loop` / `render-single-source` + ui_motion 扩 f32/tick 断言）；台账 14_tooling_catalog check_hardcode 行补 `--selftest`
+- 留人裁决 4 条未动：①-01（9 分区令牌表归属）/ ①-12（gold_glow≡gold_bright alias）/ ④-04（14 枚代码图标图片化取舍）/ ⑤-04（窗口标题 i18n 取舍）
+
+### 自验（主线程复跑，非子代理声称）
+```
+cargo run -q -p ti-tools --bin doccheck2 .    → 0 error across 30 checks
+python scripts/check_ledger_reality.py         → 全绿（175 verified）
+python scripts/check_hardcode.py --selftest    → OK
+python scripts/check_hardcode.py               → OK（153 files, 0 hits）
+python scripts/gate.ps1                               → === gate: 0 failure(s) ===（23 项）
+```
+
+### 踩坑
+- 主线程写本条目时误用 PowerShell `Add-Content` 追加 CJK（EXP-111 禁 cmdlet 写仓库文件）；
+  事后 Read 逐行校验内容未损坏（PS 5.1 追加不插 BOM），后续一律用 Edit/Write 工具。

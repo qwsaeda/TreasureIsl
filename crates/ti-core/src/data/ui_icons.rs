@@ -71,9 +71,19 @@ pub struct HudIcon {
     /// 图标名。
     pub icon: String,
 }
+/// 图标缺省边长（JSON 缺 `default_size` 键时的 schema 兜底；须与
+/// `ti_render::icons::ICON_SIZE` 恒等，飞轮 R1 ⑥-02 单源对账见 doccheck2）。
+const fn default_icon_size() -> i32 {
+    48
+}
+
 /// 图标注册表全量。
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct UiIcons {
+    /// 图标原语缺 `size` 参数时的缺省边长（**4 处调用点单源**：`chrome`/Bevy 执行器
+    /// 读本值，`icons.rs ICON_SIZE` 为框架侧原生几何常量；飞轮 R1 ⑥-02）。
+    #[serde(default = "default_icon_size")]
+    pub default_size: i32,
     /// 14 枚图标元数据。
     pub icons: Vec<IconDef>,
     /// 界面元素绑定。

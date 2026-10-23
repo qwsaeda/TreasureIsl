@@ -22,8 +22,6 @@
 //!
 //! 零游戏语义：只认 1080 坐标系、theme 令牌与原语表（`ti_core::data::scenes`）。
 
-use std::collections::BTreeMap;
-
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -277,7 +275,11 @@ pub fn spawn_primitives(
                 let to = param_str(p, "to_token")
                     .and_then(|name| theme.by_name(&name))
                     .unwrap_or(theme.bg);
-                let steps = usize::try_from(param_i64(p, "steps").unwrap_or(32).clamp(2, 256))
+                // 飞轮 R1 ⑥-12：级数钳制走 `generic::clamp_grad_steps`（双执行器同读，参数不漂移）。
+                let steps =
+                    usize::try_from(ti_render::generic::clamp_grad_steps(
+                        i32::try_from(param_i64(p, "steps").unwrap_or(32)).unwrap_or(32),
+                    ))
                     .unwrap_or(32);
                 let band = rect.h as f32 / steps as f32;
                 for i in 0..steps {
@@ -334,7 +336,13 @@ pub fn spawn_primitives(
                 let kind = param_str(p, "icon")
                     .and_then(|name| ti_core::data::icon_ids().get(name.as_str()).copied())
                     .unwrap_or(0);
-                let size = i32::try_from(param_i64(p, "size").unwrap_or(48)).unwrap_or(48);
+                // 飞轮 R1 ⑥-02：缺省边长读注册表 `default_size`（与 CPU 执行器同读，双端不漂移）；
+                // 注册表整体缺失 = 48 crash-safe 兜底（同 ①-07 族口径，框架侧 `icons::ICON_SIZE` 恒等）。
+                let default_size = match ti_core::data::ui_icons() {
+                    Ok(reg) => i64::from(reg.default_size),
+                    Err(_) => 48,
+                };
+                let size = i32::try_from(param_i64(p, "size").unwrap_or(default_size)).unwrap_or(48);
                 let handle =
                     world.resource_mut::<Assets<Image>>().add(bake_icon(kind, size, color));
                 let e = world.spawn((
@@ -423,48 +431,8 @@ fn lerp_rgb565(from: u16, to: u16, t: f32) -> u16 {
     u16::try_from((r << 11) | (gg << 5) | b).unwrap_or(0)
 }
 
-/// 令牌名 → 色（`params` 里的令牌名）。
-fn token_color(theme: &Theme, name: &str) -> Option<u16> {
-    theme.by_name(name)
-}
-
-/// 主题令牌名表（供数据侧校验用：令牌不存在 → 原语跳过，不 panic）。
-#[must_use]
-pub fn known_tokens(theme: &Theme) -> BTreeMap<&'static str, u16> {
-    let mut m = BTreeMap::new();
-    for name in [
-        "bg",
-        "sky_navy",
-        "sky_horizon",
-        "parch_light",
-        "parch_dark",
-        "text_on_parch",
-        "text_on_wood",
-        "wood",
-        "wood_warm",
-        "gold",
-        "gold_glow",
-        "gold_bright",
-        "gold_warm",
-        "menu_bg",
-        "menu_border",
-        "hilite",
-        "bevel_hi",
-        "bevel_shadow",
-        "danger",
-        "player",
-        "landmark",
-        "title_bar",
-        "selected",
-        "secondary",
-        "black",
-    ] {
-        if let Some(c) = token_color(theme, name) {
-            m.insert(name, c);
-        }
-    }
-    m
-}
+// 飞轮 R1 ⑥-04：`known_tokens`/`token_color` 已删（全仓零消费方死导出；
+// 令牌不存在 = `theme.by_name` 返 None → 原语跳过，不 panic，数据侧无需名表）。
 
 /// 绘制列表 → Bevy 实体（**通用执行器**：`DrawList` = 场景绘制命令序列）。
 ///

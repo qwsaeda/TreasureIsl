@@ -32,19 +32,22 @@ use ti_render::theme::Theme;
 pub struct CanvasEntity;
 
 /// 逻辑坐标中心点换算（(x,y,w,h) 左上 → 世界坐标，y 翻转）。
+///
+/// 半值经 `LOGICAL_W_I32/LOGICAL_H_I32` 派生（1080 单源契约，`08_render_arch.md`
+/// 契约 1；飞轮 R1 ③-17：禁止裸 540/960 字面量）。
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 #[inline]
 fn logical_center_to_world(x: i32, y: i32, w: i32, h: i32) -> Vec3 {
     let cx = (i32::min(x, LOGICAL_W_I32).saturating_add(w / 2)) as f32;
     let cy = (i32::min(y, LOGICAL_H_I32).saturating_add(h / 2)) as f32;
-    Vec3::new(cx - 540.0, 960.0 - cy, 0.0)
+    Vec3::new(cx - LOGICAL_W_I32 as f32 / 2.0, LOGICAL_H_I32 as f32 / 2.0 - cy, 0.0)
 }
 
 /// 单点坐标换算（文本左上角 → 世界坐标，y 翻转后由调用方补半高偏移）。
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 #[inline]
 fn logical_point_to_world(x: i32, y: i32) -> Vec2 {
-    Vec2::new(x as f32 - 540.0, 960.0 - y as f32)
+    Vec2::new(x as f32 - LOGICAL_W_I32 as f32 / 2.0, LOGICAL_H_I32 as f32 / 2.0 - y as f32)
 }
 
 /// RGB565（`u16`）→ Bevy `Color`（5→8 位线性扩展，无抖动）。

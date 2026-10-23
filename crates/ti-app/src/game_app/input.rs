@@ -4,9 +4,20 @@
 
 use ti_core::domain::economy::Building;
 
-use super::{FX_BATTLE_HIT_POS, FX_COIN_GOLD_POS, GameApp, GameInput, KeyState, Scene};
+use super::{GameApp, GameInput, KeyState, Scene};
+use crate::scenes::chrome;
 use crate::scenes::{SceneKind, route_input, route_touch};
 use crate::touch::TouchSample;
+
+/// S18.5 FX 触发坐标（飞轮 R1 ③-01/③-02 数据化）：读 `scenes.json`
+/// `vs.fx_hit` / `main_map.fx_coin`（`chrome::keys::FX_HIT`/`FX_COIN`）；
+/// 键缺失 = `(0,0)` crash-safe 兜底（FX 纯视觉层，不影响业务判定，同 ①-07 族口径）。
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+fn fx_pos(scene: &str, key: &str) -> (f32, f32) {
+    let layout = chrome::scene_layout(scene);
+    let r = layout.extra.get(key).copied().unwrap_or_default();
+    (r.x as f32, r.y as f32)
+}
 
 impl GameApp {
     /// 把按键快照映射为 `GameInput` 事件并逐条 `handle`（平台无关，`docs/gamebook.md` §3）。
@@ -124,10 +135,12 @@ impl GameApp {
         if consumed {
             match input {
                 GameInput::Attack => {
-                    self.fx.spawn_hit_spark(FX_BATTLE_HIT_POS.0, FX_BATTLE_HIT_POS.1);
+                    let (x, y) = fx_pos("vs", chrome::keys::FX_HIT);
+                    self.fx.spawn_hit_spark(x, y);
                 }
                 GameInput::TradeBuy(_) | GameInput::TradeSell(_) if self.gold != gold_before => {
-                    self.fx.spawn_coin_glint(FX_COIN_GOLD_POS.0, FX_COIN_GOLD_POS.1);
+                    let (x, y) = fx_pos("main_map", chrome::keys::FX_COIN);
+                    self.fx.spawn_coin_glint(x, y);
                 }
                 _ => {}
             }

@@ -525,6 +525,8 @@ pub struct ListLayout {
     pub highlight_offset: i32,
     /// 次要列文字 x（如 `saveload` 的金字号列；`0` = 未指定，消费方回退旧硬编码）。
     pub gold_x: i32,
+    /// 第二行摘要相对主行文字的 y 偏移（`scenes.json` `list.summary_dy`；飞轮 R1 ③-15 数据化）。
+    pub summary_dy: i32,
 }
 
 impl ListLayout {
@@ -581,6 +583,21 @@ pub struct Primitive {
     pub tier: String,
 }
 
+/// v3 氛围星空星位（`scenes.json` `ambient_art.stars` 一项；飞轮 R1 ④-05 数据化：
+/// 星位表 = 数据，渲染层只遍历，0 外置值）。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+pub struct AmbientStar {
+    /// 水平位置（百分数 0–100）。
+    pub x: u8,
+    /// 垂直位置（百分数 0–100）。
+    pub y: u8,
+    /// 边长（px；暗星 1 / 亮星 2）。
+    pub size: u8,
+    /// 亮星（暗星 = `false`，亮星 = `true`：带四向 1px 光晕）。
+    #[serde(default)]
+    pub bright: bool,
+}
+
 /// 单个场景的布局（`assets/data/scenes.json` 的一个条目）。
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SceneLayout {
@@ -603,6 +620,9 @@ pub struct SceneLayout {
     pub extra: BTreeMap<String, Rect>,
     /// 场景专属标量字段（如 `select_map.locked.text_x`；EXP-074 解析器不得把缺 key 静默置 0）。
     pub extra_scalar: BTreeMap<String, i32>,
+    /// v3 氛围星空星位表（`scenes.json` 场景 `ambient_art.stars`；飞轮 R1 ④-05：
+    /// 星位 = 数据，`ti_render::shell::star_sky` 只遍历。缺 = 空 Vec = 不画星点）。
+    pub ambient_stars: Vec<AmbientStar>,
     /// §4 立绘允许区清单（`scenes.json` 的 `portrait_zones`，0~N 块；大立绘落点越所有区 = 错位，
     /// `08_layout_design.md` §4.1/§4.2 声明 + `render_intent::large_portraits_respect_layout_zones` 判定）。
     pub portrait_zones: Vec<Rect>,

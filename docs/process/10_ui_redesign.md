@@ -131,7 +131,7 @@ main_map HUD 按钮内文字符号、vs 血条端帽。
 
 数字一律用 label 档 + 等宽位（`tabular` 对齐）：HUD 金值、vs 回合数、血条百分比。
 
-## 7. 动效参数表（4 类，统一走 frame timer；参数冻结在此表）
+## 7. 动效参数表（时长 4 参 + 翻页亮度 2 f32 参；统一走 frame timer；参数冻结在此表）
 
 | 动效 | 时长 | 曲线 | 实现挂点 |
 |---|---|---|---|
@@ -139,13 +139,16 @@ main_map HUD 按钮内文字符号、vs 血条端帽。
 | 按压闪光 | 120ms | 线性衰减 | `chrome::flash_press`（现 `press_flash` 计时参数化） |
 | 血条 lerp | 160ms | 线性 | vs `bar_slot` 宽度插值 |
 | 翻页亮度 | 120ms | 线性 | `page_brightness_factor`（现有） |
+| 翻页亮度（f32 参组） | 0.6/0.4 | 下限 0.6 → 1.0（幅值 0.4，线性） | `MOTION_PAGE_BRIGHTNESS_MIN`/`_SWING`（`chrome.rs`；飞轮 R1 ①-04 登记，`gate_data.json ui_motion.f32_params` 锁定） |
+| 落格提示条显示时长 | 120 帧 | 帧制（`TOAST_TICKS`，`board.rs` `toast()` 单一入口；帧→ms 归一属子分歧，最低限度 = 命名常量 + doccheck2 登记，飞轮 R1 ①-06） | `game_app::board::TOAST_TICKS`（`gate_data.json ui_motion.tick_params` 锁定） |
 
 ## 8. 验收锚点（S17.2/S17.4 固化，S17.5 收口）
 
 1. **doccheck2 第 24 项 `check_ui_redesign_tokens`**：
    ① `scenes.json` 全部版面坐标 8pt 整除（`grid.*` 除外，白名单）；
    ② `theme.rs`/`menu_shell` 色板常量值 == §3 表（13 色）；
-   ③ 动效 4 参数 == §7 表（常量锚点）；④ S17.3 后 `ui_icons.json` 14 条注册齐全。
+    ③ 动效参数 == §7 表（常量锚点；4 时长参 + 飞轮 R1 ①-04 翻页亮度 0.6/0.4 f32 参组，
+    `gate_data.json ui_motion.f32_params` 登记）；④ S17.3 后 `ui_icons.json` 14 条注册齐全。
 2. **基线规程**：每阶段代码全绿后重生成三套基线（render_snapshot / forward /
    visual_regression），`doccheck2 baseline-mirror-identity` 保证三套镜像恒等（字节级）。
 3. **负例纪律**：断言先注入坏值验证 FAIL 再还原（S15.9/S15.10 既有规程）。

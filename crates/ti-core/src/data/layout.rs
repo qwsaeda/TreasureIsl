@@ -7,7 +7,8 @@ use std::sync::OnceLock;
 use serde::Deserialize;
 
 use super::{
-    ListLayout, LoadError, Primitive, Rect, SCENES_JSON, SCHEMA_VERSION_KEY, SceneLayout, parse,
+    AmbientStar, ListLayout, LoadError, Primitive, Rect, SCENES_JSON, SCHEMA_VERSION_KEY,
+    SceneLayout, parse,
 };
 
 static SCENES: OnceLock<BTreeMap<String, SceneLayout>> = OnceLock::new();
@@ -105,6 +106,19 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 })
             })
             .collect();
+        // 飞轮 R1 ④-05：v3 氛围星空星位表（`ambient_art.stars` 数组；单项解析失败 = 跳过该项，
+        // 与 `primitives` 同容错口径；缺键 = 空 Vec = 不画星点）。
+        let ambient_stars: Vec<AmbientStar> = r
+            .extra
+            .get("ambient_art")
+            .and_then(|v| v.get("stars"))
+            .and_then(serde_json::Value::as_array)
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| serde_json::from_value::<AmbientStar>(v.clone()).ok())
+                    .collect()
+            })
+            .unwrap_or_default();
         out.insert(
             id.clone(),
             SceneLayout {
@@ -120,6 +134,7 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                     w: r.list.as_ref().map_or(0, |l| l.w),
                     highlight_offset: r.list.as_ref().map_or(0, |l| l.highlight_offset),
                     gold_x: r.list.as_ref().map_or(0, |l| l.gold_x),
+                    summary_dy: r.list.as_ref().map_or(0, |l| l.summary_dy),
                 },
                 hint: r.hint.map_or_else(Rect::default, Rect::from),
                 hud: r.hud.map_or_else(Rect::default, Rect::from),
@@ -128,6 +143,7 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 extra_scalar,
                 portrait_zones,
                 primitives,
+                ambient_stars,
             },
         );
     }
@@ -237,4 +253,7 @@ struct ListJson {
     /// 次要列文字 x（如 saveload 金字号列；EXP-074）。
     #[serde(default)]
     gold_x: i32,
+    /// 第二行摘要 y 偏移（`scenes.json` `list.summary_dy`；飞轮 R1 ③-15）。
+    #[serde(default)]
+    summary_dy: i32,
 }

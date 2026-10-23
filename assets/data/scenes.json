@@ -36,11 +36,172 @@
    "h": 672
   },
   "ambient_art": {
-   "x": 0,
-   "y": 0,
-   "w": 1080,
-   "h": 1920
-  },
+    "x": 0,
+    "y": 0,
+    "w": 1080,
+    "h": 1920,
+    "center_x": 50,
+    "center_y": 52,
+    "exclude": 12,
+    "stars": [
+     {
+      "x": 8,
+      "y": 9,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 22,
+      "y": 5,
+      "size": 2,
+      "bright": true
+     },
+     {
+      "x": 36,
+      "y": 14,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 52,
+      "y": 7,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 71,
+      "y": 11,
+      "size": 2,
+      "bright": true
+     },
+     {
+      "x": 88,
+      "y": 6,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 15,
+      "y": 21,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 64,
+      "y": 19,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 90,
+      "y": 23,
+      "size": 2,
+      "bright": true
+     },
+     {
+      "x": 6,
+      "y": 33,
+      "size": 2,
+      "bright": true
+     },
+     {
+      "x": 30,
+      "y": 29,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 79,
+      "y": 31,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 94,
+      "y": 40,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 10,
+      "y": 47,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 86,
+      "y": 51,
+      "size": 2,
+      "bright": true
+     },
+     {
+      "x": 18,
+      "y": 60,
+      "size": 2,
+      "bright": true
+     },
+     {
+      "x": 92,
+      "y": 63,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 7,
+      "y": 72,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 38,
+      "y": 68,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 84,
+      "y": 75,
+      "size": 2,
+      "bright": true
+     },
+     {
+      "x": 14,
+      "y": 84,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 62,
+      "y": 81,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 91,
+      "y": 88,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 25,
+      "y": 91,
+      "size": 2,
+      "bright": true
+     },
+     {
+      "x": 48,
+      "y": 94,
+      "size": 1,
+      "bright": false
+     },
+     {
+      "x": 74,
+      "y": 92,
+      "size": 1,
+      "bright": false
+     }
+    ]
+   },
   "focus_anchor": {
    "type": "title_art",
    "bbox": {
@@ -1233,9 +1394,21 @@
   "icon": {
    "x": 744
   },
-  "locked": {
-   "text_x": 920
-  },
+   "locked": {
+    "text_x": 920,
+    "inset": 6,
+    "max_w": 40,
+    "min_w": 4,
+    "h": 12
+   },
+   "stars": {
+    "size": 14,
+    "gap": 6,
+    "inset": 12,
+    "top": 10,
+    "max": 3,
+    "bevel_px": 2
+   },
   "hint": {
    "x": 540,
    "y": 1840
@@ -1720,12 +1893,16 @@
    "w": 136,
    "h": 88
   },
-  "hud_build": {
-   "x": 856,
-   "y": 168,
-   "w": 136,
-   "h": 88
-  },
+   "hud_build": {
+    "x": 856,
+    "y": 168,
+    "w": 136,
+    "h": 88
+   },
+   "fx_coin": {
+    "x": 900,
+    "y": 140
+   },
   "grid": {
    "x0": 540,
    "y0": 520,
@@ -3117,13 +3294,17 @@
    "y": 416
   },
   "outcome": {
-   "x": 540,
-   "y": 960
-  },
+    "x": 540,
+    "y": 960
+   },
   "empty": {
-   "x": 540,
-   "y": 960
-  },
+    "x": 540,
+    "y": 960
+   },
+  "fx_hit": {
+    "x": 540,
+    "y": 880
+   },
   "hint": {
    "x": 540,
    "y": 1840
@@ -3419,11 +3600,21 @@
    "h": 96
   },
   "body": {
-   "x": 408,
-   "y": 768,
-   "w": 584,
-   "h": 176
-  },
+    "x": 408,
+    "y": 768,
+    "w": 584,
+    "h": 176,
+    "clip_reserve": 48,
+    "line_h": 52,
+    "x_pad": 4,
+    "edge_pad": 8
+   },
+  "page_dots": {
+    "size": 12,
+    "gap": 36,
+    "dy": 48,
+    "inner": 8
+   },
   "page": {
    "x": 704,
    "y": 1008,
@@ -3534,16 +3725,17 @@
    "w": 640,
    "h": 96
   },
-  "list": {
-   "x": 280,
-   "y": 240,
-   "w": 440,
-   "row_h": 256,
-   "item_h": 224,
-   "text_x": 312,
-   "gold_x": 792,
-   "highlight_offset": 8
-  },
+   "list": {
+    "x": 280,
+    "y": 240,
+    "w": 440,
+    "row_h": 256,
+    "item_h": 224,
+    "text_x": 312,
+    "gold_x": 792,
+    "highlight_offset": 8,
+    "summary_dy": 52
+   },
   "hint": {
    "x": 540,
    "y": 1840

@@ -108,23 +108,6 @@ impl SceneKind {
         }
     }
 
-    /// 场景对应的 `.Map` 精灵资源名（`legacy/docs/design/ui_controls.md` §3）。
-    ///
-    /// `Intro` 复用 `index.Map`；`Exit` 无资源（纯清屏）。
-    #[must_use]
-    pub const fn asset_name(self) -> &'static str {
-        match self {
-            Self::Index | Self::Intro => "index.Map",
-            Self::SelectRole => "selectrole.Map",
-            Self::SelectMap => "selectmap.Map",
-            Self::MainMap => "main.Map",
-            Self::Vs => "vs.Map",
-            Self::Message => "msgs.Map",
-            Self::Saveload => "saveload.Map",
-            Self::Exit => "",
-        }
-    }
-
     /// 场景唯一判别值（0..=8，9 个变体各占一个 i32，无碰撞）。
     ///
     /// 用于壳层静态帧优化（`last_rendered_scene`），替代 `Scene::key()` 的

@@ -27,9 +27,10 @@ fn read_local(rel: &str) -> Option<Vec<u8>> {
     std::fs::read(repo_root().join("legacy/data").join(rel)).ok()
 }
 
-/// 构建 GameApp（字体 + 精灵 + 地形 + 8 场景 .Map），与 `treasure_native.rs` 同源。
+/// 构建 GameApp（字体 + 精灵 + 地形），与 `treasure_native.rs` 同源。
 /// S15.6 QA017：`forward_render` 开关退役后，纯代码渲染是唯一渲染态（注入的
-/// 图集/地形仅存诊断用途，不参与写帧）。
+/// 图集/地形仅存诊断用途，不参与写帧）。飞轮 R1 ⑦-11：`.Map` 场景注入已删
+/// （`scene_cache` 死字段，legacy `.Map` 归 `legacy/` 参照）。
 fn build_app() -> GameApp {
     let mut app = GameApp::new(1080.0, 1920.0);
     // 真实字体（GoldLand.Fnt + font.dat）
@@ -47,21 +48,8 @@ fn build_app() -> GameApp {
     {
         app.set_terrain(&pak, &map_bytes, "glmapm01.Map");
     }
-    let map_names = [
-        "index.Map",
-        "intro.Map",
-        "selectrole.Map",
-        "selectmap.Map",
-        "main.Map",
-        "vs.Map",
-        "msgs.Map",
-        "saveload.Map",
-    ];
-    for name in map_names {
-        if let Some(bytes) = read_local(name) {
-            app.add_scene(name, &bytes);
-        }
-    }
+    // 飞轮 R1 ⑦-11：legacy `.Map` 场景注入循环已删（`scene_cache` 零读方死字段；
+    // legacy `.Map` 解析归 `legacy/` 参照，契约 1.3）。
     app
 }
 

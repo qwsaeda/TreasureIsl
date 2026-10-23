@@ -1626,6 +1626,126 @@ fn ui_motion_params_check(root: &Path, gate_data: &serde_json::Value) -> Vec<Str
             None => errors.push(format!("{const_file} 缺常量 {const_name}（S17.4 动效参数表）")),
         }
     }
+    // 飞轮 R1 ①-04/①-06：f32 动效参数 + 帧制时长参数（独立子检查，防主函数超行）。
+    errors.extend(ui_motion_f32_check(mo, section, &chrome, &const_file, &doc_file));
+    errors.extend(ui_motion_tick_check(root, mo, section, &doc_file));
+    errors
+}
+
+/// 飞轮 R1 ①-04：f32 动效参数锁（翻页亮度下限/幅值，登记源 =
+/// `assets/gate_data.json` `ui_motion.f32_params`，§7 表值与代码常量三方对账）。
+fn ui_motion_f32_check(
+    mo: &serde_json::Value,
+    section: &str,
+    chrome: &str,
+    const_file: &str,
+    doc_file: &str,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(f32_arr) = mo.get("f32_params").and_then(serde_json::Value::as_array) else {
+        return errors;
+    };
+    let f32_doc_row = mo.get("f32_doc_row").and_then(serde_json::Value::as_str).unwrap_or("");
+    let row_line: Vec<&str> = section
+        .lines()
+        .filter(|l| {
+            let t = l.trim_start();
+            t.starts_with('|') && !f32_doc_row.is_empty() && t.contains(f32_doc_row)
+        })
+        .collect();
+    let mut all_values_registered = true;
+    for item in f32_arr {
+        let Some(pair) = item.as_array() else { continue };
+        let Some(const_name) = pair.first().and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        let Some(value_str) = pair.get(1).and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        let Ok(want) = value_str.parse::<f32>() else {
+            errors.push(format!(
+                "gate_data.json ui_motion.f32_params `{value_str}` 非合法 f32 字面量"
+            ));
+            continue;
+        };
+        let got = parse_const_f32(chrome, const_name);
+        match got {
+            Some(v) if (v - want).abs() < 1e-6 => {}
+            Some(v) => errors.push(format!(
+                "{const_name} = {v}，但 gate_data.json ui_motion.f32_params 登记 {want}（飞轮 R1 ①-04：f32 动效参数以登记表为准）"
+            )),
+            None => errors.push(format!("{const_file} 缺 f32 常量 {const_name}（f32_params 登记）")),
+        }
+        if row_line.iter().all(|l| !l.contains(value_str)) {
+            all_values_registered = false;
+        }
+    }
+    if !f32_arr.is_empty() && !all_values_registered {
+        errors.push(format!(
+            "{doc_file} §7 `{f32_doc_row}` 行须含 f32_params 全部登记值（逐值对账）"
+        ));
+    }
+    errors
+}
+
+/// 飞轮 R1 ①-06：帧制时长参数锁（落格提示条 `TOAST_TICKS`，登记源 =
+/// `assets/gate_data.json` `ui_motion.tick_params`，§7 表值与代码常量对账）。
+fn ui_motion_tick_check(
+    root: &Path,
+    mo: &serde_json::Value,
+    section: &str,
+    doc_file: &str,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(tick_arr) = mo.get("tick_params").and_then(serde_json::Value::as_array) else {
+        return errors;
+    };
+    let tick_doc_row = mo.get("tick_doc_row").and_then(serde_json::Value::as_str).unwrap_or("");
+    let Some(tick_file) = mo.get("tick_const_file").and_then(serde_json::Value::as_str) else {
+        errors.push(
+            "gate_data.json ui_motion.tick_const_file 缺失（tick_params 对账锚点）".to_string(),
+        );
+        return errors;
+    };
+    let tick_src = read_file(root, tick_file).unwrap_or_default();
+    let tick_lines: Vec<&str> = section
+        .lines()
+        .filter(|l| {
+            let t = l.trim_start();
+            t.starts_with('|') && !tick_doc_row.is_empty() && t.contains(tick_doc_row)
+        })
+        .collect();
+    let mut all_tick_registered = true;
+    for item in tick_arr {
+        let Some(pair) = item.as_array() else { continue };
+        let Some(const_name) = pair.first().and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        let Some(value_str) = pair.get(1).and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        let got = parse_const_ms(&tick_src, const_name);
+        match (got, value_str.parse::<u32>().ok()) {
+            (Some(code), Some(doc)) if code == doc => {}
+            (Some(code), Some(doc)) => errors.push(format!(
+                "{tick_file} {const_name} = {code} ≠ gate_data.json ui_motion.tick_params 登记 {doc}（飞轮 R1 ①-06 帧制时长参数登记）"
+            )),
+            (Some(_), None) | (None, Some(_)) => errors.push(format!(
+                "gate_data.json ui_motion.tick_params `{value_str}` 与 {tick_file} 常量 {const_name} 对账失败"
+            )),
+            (None, None) => {
+                errors.push(format!("{tick_file} 缺常量 {const_name}（tick_params 登记）"));
+            }
+        }
+        if tick_lines.iter().all(|l| !l.contains(value_str)) {
+            all_tick_registered = false;
+        }
+    }
+    if !tick_arr.is_empty() && !all_tick_registered {
+        errors.push(format!(
+            "{doc_file} §7 `{tick_doc_row}` 行须含 tick_params 登记值（帧制时长参数登记）"
+        ));
+    }
     errors
 }
 
@@ -1656,10 +1776,27 @@ fn parse_const_ms(src: &str, const_name: &str) -> Option<u32> {
     digits.parse::<u32>().ok()
 }
 
+/// 代码文本里 `{const_name}: f32 = 0.6` 的常量值（朴素串解析，不引新依赖）；缺失 = None。
+fn parse_const_f32(src: &str, const_name: &str) -> Option<f32> {
+    let i = src.find(const_name)?;
+    let tail = &src[i..];
+    let eq = tail.find('=')?;
+    if !tail[..eq].contains(':') {
+        return None; // 须是 `: f32 =` 常量声明而非赋值
+    }
+    let digits: String = tail[eq + 1..]
+        .trim_start()
+        .chars()
+        .take_while(|c| c.is_ascii_digit() || matches!(c, '.' | '-' | '+'))
+        .collect();
+    digits.parse::<f32>().ok()
+}
+
 /// ① 8pt 栅格：遍历 scenes.json 各场景标量（豁免业务几何、动态落区、屏心锚点 540
 /// 与 v3 场景叙事键 `title_art`/`ambient_art`/`focus_anchor`/`battle_arena`/`world_canvas`/
 /// `hud_gold`/`hud_player`/`deck_trade`/`deck_sell`/`deck_build`/`canvas_entities`——
-/// v3 约束由 `check_scene_narrative` 接管）。
+/// v3 约束由 `check_scene_narrative` 接管；飞轮 R1 数据化新键 `fx_hit`/`fx_coin`/
+/// `body`/`page_dots`/`locked`/`stars`/`summary_dy` 同口径豁免）。
 fn ui_8pt_walk(
     obj: &serde_json::Value,
     in_exempt: bool,
@@ -1676,6 +1813,10 @@ fn ui_8pt_walk(
             | "battle_arena"
             | "world_canvas" | "hud_gold" | "hud_player"
             | "deck_trade" | "deck_sell" | "deck_build" | "canvas_entities"
+            // 飞轮 R1 数据化新键（FX 触发点 / 页面正文+页点几何组 / 锁块+难度星几何组 /
+            // 摘要行偏移；值照抄原字面量，非 8pt 栅格排版坐标，豁免口径同 v3 叙事键）
+            | "fx_hit" | "fx_coin" | "body" | "page_dots"
+            | "locked" | "stars" | "summary_dy"
             // S18.7 声明式原语：非坐标语义键（z = 层序；item = 菜单项序号）不参与 8pt 栅格。
             | "z" | "item"
             // 原语表子树整体豁免：装饰细线（1–4px）与星点尺寸本就非 8pt；
@@ -1704,7 +1845,8 @@ fn ui_8pt_walk(
                         "scenes.json {scene}: `{key}` = {v} 非 8pt 栅格（10_ui_redesign §4：版面坐标 8 整除；\
                           业务几何 grid.*/size、portrait_zones、屏心锚点 540 与 v3 叙事键 \
                           （title_art/ambient_art/focus_anchor/battle_arena/world_canvas/hud_gold/hud_player/\
-                          deck_trade/deck_sell/deck_build/canvas_entities，ui-redesign-v3/02 §10）已豁免）"
+                          deck_trade/deck_sell/deck_build/canvas_entities，ui-redesign-v3/02 §10）\
+                          + 飞轮 R1 数据化键（fx_hit/fx_coin/body/page_dots/locked/stars/summary_dy）已豁免）"
                     ));
                 }
             }
@@ -2457,6 +2599,118 @@ fn check_tooling_stray_scripts(root: &Path) -> Vec<String> {
         .collect()
 }
 
+/// 飞轮 R1 ⑥-01/③-17/③-18：`ti-engine` 渲染层禁裸 540.0/960.0（屏心半值字面量）——
+/// 一律经 `LOGICAL_W_I32`/`LOGICAL_H_I32`（`ti_render::framebuffer` 单一事实源）派生；
+/// 双守卫：① 裸字面量 0 命中；② 派生式 `as f32 / 2.0` 在位（防「全删了也没派生」假绿）。
+fn check_engine_no_bare_half(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    for file in ["crates/ti-engine/src/canvas.rs", "crates/ti-engine/src/bin/treasure_bevy.rs"] {
+        let Some(src) = read_file(root, file) else {
+            errors.push(format!("{file} 不存在，无法校验 1080 半值派生"));
+            continue;
+        };
+        for needle in ["540.0", "960.0"] {
+            let mut start = 0usize;
+            while let Some(rel) = src[start..].find(needle) {
+                let abs = start + rel;
+                let line_start = src[..abs].rfind('\n').map_or(0, |p| p + 1);
+                let in_comment = src[line_start..abs].contains("//");
+                if !in_comment {
+                    errors.push(format!(
+                        "{file}: 裸 {needle} 字面量（1080 单源契约：屏心锚点须 LOGICAL_W_I32/LOGICAL_H_I32 半值派生）"
+                    ));
+                }
+                start = abs + needle.len();
+            }
+        }
+        if !src.contains("as f32 / 2.0") {
+            errors.push(format!("{file}: 缺 `as f32 / 2.0` 半值派生（飞轮 R1 ③-17 归一口径）"));
+        }
+    }
+    errors
+}
+
+/// 飞轮 R1 ⑥-07：`select_role.rs` 渲染循环须走 `ROLE_COUNT` 命名常量
+/// （EXP-073 band 数门禁只锁 `scene_list_bands` 入参，render 循环的字面量 5 是其盲区）。
+fn check_select_role_render_loop(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let src = read_file(root, "crates/ti-app/src/scenes/select_role.rs").unwrap_or_default();
+    if src.contains("0..5") {
+        errors.push(
+            "select_role.rs 仍含 `0..5` 字面量循环（EXP-073 盲区：须 0..ROLE_COUNT 单源）"
+                .to_string(),
+        );
+    }
+    if !src.contains("0..ROLE_COUNT") {
+        errors.push(
+            "select_role.rs 缺 `0..ROLE_COUNT`（render 循环角色数须与 band 门禁同单源）"
+                .to_string(),
+        );
+    }
+    errors
+}
+
+/// 飞轮 R1 ⑥-02/⑥-11 单源对账：
+/// ① `ui_icons.json default_size` == `ti_render::icons::ICON_SIZE`（图标缺省边长双端恒等）；
+/// ② `tests/scripts/full_run.json seed` == `treasure_bevy.rs` 的 `SELFTEST_SEED` 命名常量
+/// （S5.2 同源固定种子：改 seed 忘改另一处 = 出图/自检静默不同源）。
+fn check_render_single_source(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    // ① 图标缺省边长
+    let icons_json = read_file(root, "assets/data/ui_icons.json").unwrap_or_default();
+    let ui_json: serde_json::Value =
+        serde_json::from_str(&icons_json).unwrap_or(serde_json::Value::Null);
+    if let Some(ds) = ui_json.get("default_size").and_then(serde_json::Value::as_i64) {
+        let icons_rs = read_file(root, "crates/ti-render/src/icons.rs").unwrap_or_default();
+        if let Some(cap) = icons_rs.find("pub const ICON_SIZE: i32 = ").and_then(|i| {
+            icons_rs[i + "pub const ICON_SIZE: i32 = ".len()..].split_whitespace().next()
+        }) {
+            if let Ok(code_v) = cap.parse::<i64>() {
+                if code_v != ds {
+                    errors.push(format!(
+                        "ui_icons.json default_size = {ds} ≠ ti_render::icons ICON_SIZE = {code_v}（⑥-02 图标缺省边长双端须恒等）"
+                    ));
+                }
+            }
+        } else {
+            errors.push(
+                "ti_render/src/icons.rs 缺 `pub const ICON_SIZE`（⑥-02 框架侧单源）".to_string(),
+            );
+        }
+    } else {
+        errors.push(
+            "ui_icons.json 缺顶层 `default_size` 键（⑥-02 图标缺省边长数据单源）".to_string(),
+        );
+    }
+    // ② 自检种子
+    let full_run = read_file(root, "tests/scripts/full_run.json").unwrap_or_default();
+    let fr: serde_json::Value = serde_json::from_str(&full_run).unwrap_or(serde_json::Value::Null);
+    if let Some(seed_json) = fr.get("seed").and_then(serde_json::Value::as_i64) {
+        let bevy_bin =
+            read_file(root, "crates/ti-engine/src/bin/treasure_bevy.rs").unwrap_or_default();
+        let code_seed = bevy_bin
+            .find("const SELFTEST_SEED: u32 = ")
+            .and_then(|i| {
+                bevy_bin[i + "const SELFTEST_SEED: u32 = ".len()..]
+                    .split(|c: char| !c.is_ascii_digit())
+                    .next()
+            })
+            .and_then(|s| s.parse::<i64>().ok());
+        match code_seed {
+            Some(v) if v == seed_json => {}
+            Some(v) => errors.push(format!(
+                "treasure_bevy.rs SELFTEST_SEED = {v} ≠ tests/scripts/full_run.json seed = {seed_json}（⑥-11 同源固定种子对账）"
+            )),
+            None => errors.push(
+                "treasure_bevy.rs 缺 `SELFTEST_SEED` 命名常量（⑥-11：种子须单源命名）".to_string(),
+            ),
+        }
+    } else {
+        errors.push("tests/scripts/full_run.json 缺 `seed` 键（⑥-11 对账锚点）".to_string());
+    }
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -2489,9 +2743,12 @@ fn main() -> ExitCode {
     all_errors.extend(check_terrain_data(&root));
     all_errors.extend(check_tooling_catalog(&root));
     all_errors.extend(check_tooling_contract(&root));
+    all_errors.extend(check_engine_no_bare_half(&root));
+    all_errors.extend(check_select_role_render_loop(&root));
+    all_errors.extend(check_render_single_source(&root));
 
     println!(
-        "doccheck2: {} error(s) across 27 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract)",
+        "doccheck2: {} error(s) across 30 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source)",
         all_errors.len()
     );
     for err in &all_errors {

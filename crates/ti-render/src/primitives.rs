@@ -47,11 +47,16 @@ fn vignette(host: &mut dyn Canvas, theme: &Theme, vig: i32) {
 ///
 /// 1080×1920 下**逐像素 `fill_rect(1,1)` 会卡死**（旧棋盘 4 层 = 828 万次/帧）。
 /// 改：底色整帧 1 次 + 渐变逐行整行（~1920 次）+ 暗角整条。
+/// 视觉调参值命名化（飞轮 R1 ①-30：02_conventions「数值进数据或命名常量」底线口径）。
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 pub fn parchment_bg(host: &mut dyn Canvas, theme: &Theme) {
+    /// 垂直渐变强度（顶→底混入 `parch_light` 的比例，0.18；同 ①-30）。
+    const PARCHMENT_GRAD_STRENGTH: f32 = 0.18;
+    /// 暗角条宽（px，上下整条压深；同 ①-30）。
+    const PARCHMENT_VIGNETTE_PX: i32 = 36;
     host.fill_rect(0, 0, LOGICAL_W_I32, LOGICAL_H_I32, theme.parch_dark);
     for py in 0..LOGICAL_H_I32 {
-        gradient_row(host, theme, py, 0.18);
+        gradient_row(host, theme, py, PARCHMENT_GRAD_STRENGTH);
     }
-    vignette(host, theme, 36);
+    vignette(host, theme, PARCHMENT_VIGNETTE_PX);
 }

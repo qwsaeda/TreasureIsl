@@ -27,8 +27,6 @@ mod state;
 
 pub use battle::BattleView;
 
-use std::collections::HashMap;
-
 use ti_core::data;
 use ti_core::domain::combat::Side;
 use ti_core::domain::economy::{Bank, Building, PriceTable};
@@ -247,8 +245,8 @@ pub struct GameApp {
     /// 精灵图集（`ui.pak` 的 120 个 PCX 贴图 + 解码缓存，`legacy/docs/design/ui_controls.md` §3）。
     /// 入口 bin 启动时注入，`render_scene` 据此 blit 真实贴图。
     pub atlas: Option<SpriteAtlas>,
-    /// 已解析的 `.Map` 场景缓存（`scene_name → MapScene`，渲染时 blit 用）。
-    pub scene_cache: HashMap<&'static str, ti_formats::mapfile::MapScene>,
+    /// 已解析的 `.Map` 场景缓存已随飞轮 R1 ⑦-11 删除（零读方死字段；
+    /// legacy `.Map` 解析归 `legacy/` 参照，契约 1.3）。
     /// 地形图集（`glmap_m0*.pak` 瓦片 + 解码缓存，S6.3）。
     pub terrain_atlas: Option<crate::terrain_atlas::TerrainAtlas>,
     /// S6.4：本帧经过毫秒（壳层每帧传入，驱动精灵动画帧推进）。
@@ -276,11 +274,6 @@ pub struct GameApp {
     /// S18.5：轻量确定性粒子（金币光/战斗命中火花；FX 专用 LCG，seed = [`FX_SEED`]）。
     pub fx: crate::particles::ParticleFx,
 }
-/// S18.5：FX 触发坐标常量（1080×1920 逻辑坐标；视觉验收可微调，S18.7 贴图管线接手版面）。
-/// 战斗命中火花 = 战斗场景角色区中心；金币光 = HUD 金币显示区（`08_layout_design.md` HUD 行）。
-pub const FX_BATTLE_HIT_POS: (f32, f32) = (540.0, 880.0);
-/// S18.5：金币光触发坐标（HUD 金币显示区）。
-pub const FX_COIN_GOLD_POS: (f32, f32) = (900.0, 140.0);
 /// S18.5：FX 粒子 LCG 固定 seed（确定性视觉验收；不进业务 RNG `rules::rng::GameRng`）。
 pub const FX_SEED: u64 = 0xC0_FF_EE;
 /// HP 平滑插值（S17.4 时间制）：向目标推进「剩余差值 × 本帧时间占比」，帧率无关；
@@ -416,7 +409,6 @@ impl GameApp {
             quit: false,
             last_dispatch: None,
             atlas: None,
-            scene_cache: HashMap::new(),
             terrain_atlas: None,
             frame_delta_ms: 0,
             terrain_map: None,

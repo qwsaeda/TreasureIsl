@@ -127,7 +127,7 @@ impl Scene for SaveloadScene {
         // 选中项 = 3px 黄铜边（此前整块金色填充，刺眼且抢戏）。
         if cursor < slots.len() {
             let r = layout.list.item_rect(cursor);
-            chrome::selected_border(host, r.x, r.y, r.w, r.h, 3);
+            chrome::selected_border(host, r.x, r.y, r.w, r.h, chrome::PANEL_SELECTED_BORDER_PX);
         }
         for (i, s) in slots.iter().enumerate() {
             let r = layout.list.item_rect(i);
@@ -137,9 +137,10 @@ impl Scene for SaveloadScene {
             let idx = i + 1;
             let slot_str = i18n::sgetf("slot.label_fmt", &[&idx, &has_str]);
             chrome::draw_body_text(host, &slot_str, layout.list.text_x, ty);
-            // 第二行摘要：有档 = 角色/金/回合（`slot_summary_fmt`）；空档 = `empty_line`。
+            // 第二行摘要（`slot_summary_fmt`）；空档 = `empty_line`。
             // S18.7d：摘要降提示档（TTF 28px / 位图 8px，`draw_hint_text`）——v3 行高 224 下
             // 双行 44px 会挤叠（EXP-105 视觉对账），28px 次级墨 + 上移保持层级。
+            // 飞轮 R1 ③-15：摘要 y 偏移走 `list.summary_dy` 数据键。
             let summary = if s.version > 0 {
                 i18n::sgetf(
                     "scene.saveload.slot_summary_fmt",
@@ -148,7 +149,12 @@ impl Scene for SaveloadScene {
             } else {
                 i18n::sget("scene.saveload.empty_line").to_string()
             };
-            host.draw_hint_text(&summary, layout.list.text_x, ty + 52, chrome::COLOR_SECONDARY);
+            host.draw_hint_text(
+                &summary,
+                layout.list.text_x,
+                ty + layout.list.summary_dy,
+                chrome::COLOR_SECONDARY,
+            );
             if s.version > 0 {
                 let g = i18n::sgetf("hud.gold_fmt", &[&s.gold]);
                 chrome::draw_body_text(host, &g, layout.list.gold_x, ty);

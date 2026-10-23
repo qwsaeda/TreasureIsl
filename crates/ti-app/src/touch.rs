@@ -484,6 +484,7 @@ mod tests {
             w: 136,
             highlight_offset: 10,
             gold_x: 0,
+            summary_dy: 0,
         };
         let bands = super::layout::scene_list_bands(20.0, 20.0 + 136.0, 50.0, 30.0, 26.0, 10.0, 5);
         for i in 0..5usize {
@@ -515,6 +516,7 @@ mod tests {
             w: 166,
             highlight_offset: 10,
             gold_x: 100,
+            summary_dy: 0,
         };
         let bands = super::layout::slot_bands(10.0, 10.0 + 166.0, 40.0, 40.0, 26.0, 10.0, 5);
         for i in 0..5usize {

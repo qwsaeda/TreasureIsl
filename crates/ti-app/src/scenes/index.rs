@@ -92,8 +92,10 @@ impl Scene for IndexScene {
         chrome::render_primitives(host, "index", sel);
         // 尾行（用户版信息，i18n）
         let layout = chrome::scene_layout("index");
-        let status = layout.extra.get("status").copied().unwrap_or_default();
+        // 飞轮 R1 ③-16：`status` 键并入 `chrome::keys` 键治理；`hint_row` 条体屏心居中
+        // （忽略 x 入参，0 传参 = 无死偏移）。
+        let status = layout.extra.get(chrome::keys::STATUS).copied().unwrap_or_default();
         let footer = crate::i18n::sget("scene.index.footer");
-        chrome::hint_row(host, footer, status.x + 2, status.y);
+        chrome::hint_row(host, footer, 0, status.y);
     }
 }

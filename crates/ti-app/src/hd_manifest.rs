@@ -51,13 +51,67 @@ pub fn collect_hd_pngs_sync(
         }
     }
     for f1 in manifest.multiframe_f1.iter().copied() {
-        for frame in 0..5u32 {
+        // 飞轮 R1 ①-10：帧数 = `f0..fN` 探测（首个缺帧即止；原 `0..5` 写死假设）。
+        let mut frame = 0u32;
+        loop {
             let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{frame}.png");
-            let Some(bytes) = fetch(&name) else { continue };
-            if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
-                if img.rgba.iter().any(|&b| b > 0) {
-                    map.entry(f1).or_default().push((frame, bytes));
+            match fetch(&name) {
+                Some(bytes) => {
+                    if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                        if img.rgba.iter().any(|&b| b > 0) {
+                            map.entry(f1).or_default().push((frame, bytes));
+                        }
+                    }
+                    frame += 1;
                 }
+                None => break,
+            }
+        }
+    }
+    map.into_iter()
+        .map(|(f1, mut frames)| {
+            frames.sort_by_key(|(n, _)| *n);
+            (f1, frames.into_iter().map(|(_, b)| b).collect())
+        })
+        .collect()
+}
+
+/// N7（EXP-048/060）：manifest 驱动 HD PNG 注入的 **async 版**（android 壳
+/// `read_asset` 闭包）；语义与 [`collect_hd_pngs_sync`] 完全一致（静态 1 帧 +
+/// 多帧 `f0..fN` 探测，首个缺帧即止；解码失败/全透明帧跳过，不 panic）。
+pub async fn load_hd_pngs_from_manifest<F, Fut>(
+    manifest: &HdF1Manifest,
+    fetch: &mut F,
+) -> Vec<(u32, Vec<Vec<u8>>)>
+where
+    F: FnMut(&str) -> Fut,
+    Fut: std::future::Future<Output = Option<Vec<u8>>>,
+{
+    use std::collections::BTreeMap;
+    let mut map: BTreeMap<u32, Vec<(u32, Vec<u8>)>> = BTreeMap::new();
+    for f1 in manifest.static_f1.iter().copied() {
+        let name = format!("assets_hd_pack/1x/ui/{f1}_hd.png");
+        let Some(bytes) = fetch(&name).await else { continue };
+        if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+            if img.rgba.iter().any(|&b| b > 0) {
+                map.entry(f1).or_default().push((0, bytes));
+            }
+        }
+    }
+    for f1 in manifest.multiframe_f1.iter().copied() {
+        let mut frame = 0u32;
+        loop {
+            let name = format!("assets_hd_pack/1x/ui/{f1}_hd_f{frame}.png");
+            match fetch(&name).await {
+                Some(bytes) => {
+                    if let Ok(img) = ti_platform::hd_png::decode_png_rgba(&bytes) {
+                        if img.rgba.iter().any(|&b| b > 0) {
+                            map.entry(f1).or_default().push((frame, bytes));
+                        }
+                    }
+                    frame += 1;
+                }
+                None => break,
             }
         }
     }

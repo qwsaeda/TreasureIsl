@@ -3,7 +3,8 @@
 //! 绘制函数已抽取到 [`ti_render::shell`] / [`ti_render::primitives`] / [`ti_render::iso`]，
 //! 本模块保留：
 //! - 状态管理（翻页/按下闪烁动画帧计数）
-//! - 场景外壳组合函数（`scene_shell` / `centered_title_x` 等）
+//! - 场景外壳组合函数（`scene_base` / `scene_frame` 拆分壳 + `centered_title_x` 等；
+//!   `scene_shell` 旧组合入口已随原语化退役，飞轮 R1 ⑦-10）
 //! - 颜色/字号常量重导出（从 [`ti_render::Theme`] 默认值，兼容旧导入路径）
 //!
 //! 坐标系：1080×1920 呈现层像素（`menu_shell::LOGICAL_W_I32`/`LOGICAL_H_I32`）。
@@ -105,6 +106,10 @@ pub const MOTION_PRESS_FLASH_MS: u32 = 120;
 pub const MOTION_HP_LERP_MS: u32 = 160;
 /// 翻页亮度渐入时长（ms，线性）。
 pub const MOTION_PAGE_MS: u32 = 120;
+/// 翻页亮度**下限**（飞轮 R1 ①-04：动效参数表登记，`gate_data.json ui_motion` 锁定）。
+pub const MOTION_PAGE_BRIGHTNESS_MIN: f32 = 0.6;
+/// 翻页亮度**幅值**（`下限 + 已历时占比 × 幅值` → 1.0；同上源）。
+pub const MOTION_PAGE_BRIGHTNESS_SWING: f32 = 0.4;
 
 static PAGE_MS_LEFT: AtomicU32 = AtomicU32::new(0);
 static PRESS_FLASH_MS_LEFT: AtomicU32 = AtomicU32::new(0);
@@ -197,6 +202,18 @@ pub mod keys {
     pub const TITLE_ART: &str = "title_art";
     /// v3 战斗竞技区装饰矩形键（extra = `vs.battle_arena`）。
     pub const BATTLE_ARENA: &str = "battle_arena";
+    /// S18.5 FX 战斗命中火花触发点（extra = `vs.fx_hit`；飞轮 R1 ③-01 数据化）。
+    pub const FX_HIT: &str = "fx_hit";
+    /// S18.5 FX 金币光触发点（extra = `main_map.fx_coin`；飞轮 R1 ③-02 数据化）。
+    pub const FX_COIN: &str = "fx_coin";
+    /// v3 星空层屏心净空锚点 x（`extra_scalar` = `ambient_art.center_x`；飞轮 R1 ①-32）。
+    pub const AMB_CENTER_X: &str = "ambient_art.center_x";
+    /// v3 星空层屏心净空锚点 y（= `ambient_art.center_y`；同上）。
+    pub const AMB_CENTER_Y: &str = "ambient_art.center_y";
+    /// v3 星空层屏心净空半径（百分数，= `ambient_art.exclude`；同上）。
+    pub const AMB_EXCLUDE: &str = "ambient_art.exclude";
+    /// index 尾行（用户版信息）矩形键（extra = `index.status`；飞轮 R1 ③-16 键治理并入本模块）。
+    pub const STATUS: &str = "status";
 }
 
 /// 等距投影：`(row, col)` → 呈现层坐标。
@@ -452,13 +469,8 @@ pub fn deck_button(
     panel(host, r.x, r.y, r.w, r.h);
     let label = crate::i18n::sget(label_key);
     let icon = hud_icon_def(icon_key);
-    let (label_x, icon_x) = match icon.as_ref() {
-        Some(def) if r.w >= def.size + 8 => {
-            let ix = r.x + 8;
-            (ix + def.size + 8, Some((def.id, def.size, ix)))
-        }
-        _ => (r.x + (r.w - host.shell().hint_text_width_px(label)) / 2, None),
-    };
+    let rect = *r;
+    let (label_x, icon_x) = layout_icon_label(host, &rect, label, icon.as_ref());
     if let Some((id, size, ix)) = icon_x {
         ui_icon(host, id, ix, r.y + (r.h - size) / 2, false);
     }
@@ -466,25 +478,37 @@ pub fn deck_button(
     host.draw_hint_text(label, label_x, ly, COLOR_TEXT_ON_PARCH);
 }
 
-/// **场景外壳**：深色底 + 航海网格装饰 + 卡片边框 + 标题条 + 标题文字。
-pub fn scene_shell(host: &mut dyn SceneHost, scene_id: &str, title_key: &str) {
-    let layout = scene_layout(scene_id);
-    scene_base(host);
-    scene_frame(host);
-    title_bar(host, layout.title.h);
-    let title = crate::i18n::sget(title_key);
-    let cx = centered_title_x(host, title);
-    let color = host.theme().text_on_wood;
-    draw_title_text(host, title, cx, layout.title.y, color);
+/// HUD/deck 按钮「图标 + 标签」排布（**单一事实源公式**，飞轮 R1 ⑥-03：`deck_button` 与
+/// `main_map::render_hud_button` 双调用点收口）：宽足（`r.w ≥ size + 8`）→ 图标左置
+/// （`x + 8`）+ 标签起于图标右缘；不足 → 标签纯文字居中。返回 `(label_x, (id, size, icon_x))`。
+#[must_use]
+pub fn layout_icon_label(
+    host: &mut dyn SceneHost,
+    r: &data::Rect,
+    label: &str,
+    icon: Option<&IconDef>,
+) -> (i32, Option<(u32, i32, i32)>) {
+    match icon {
+        Some(def) if r.w >= def.size + 8 => {
+            let ix = r.x + 8;
+            (ix + def.size + 8, Some((def.id, def.size, ix)))
+        }
+        _ => (r.x + (r.w - host.shell().hint_text_width_px(label)) / 2, None),
+    }
 }
 
-/// 场景外壳**底色层**（纯色 + 垂直渐变 + 暗角）——可被背景类原语覆盖
-/// （S18.6 声明式原语：背景类原语在底色之上、外框之下）。
+/// v4 面板语言「选中边框」单一厚度（3px 黄铜边，S20.2；飞轮 R1 ⑥-07 单参源：
+/// `select_role`/`saveload` 双调用点引用，勿再各抄一份）。
+pub const PANEL_SELECTED_BORDER_PX: i32 = 3;
+
+/// 场景外壳**底色层**（纯色 + 垂直渐变 + 暗角）——可被背景类原语覆盖（底色之上、外框之下）。
+/// 飞轮 R1 ⑦-10：零生产调用（场景绘制全走原语表），保留为拆分便利组合壳，doc 标注勿当已完成。
 pub fn scene_base(host: &mut dyn SceneHost) {
     parchment_bg(host);
 }
 
 /// 场景外壳**外框层**（航海网格 + 木外框）——在背景类原语之上。
+/// 飞轮 R1 ⑦-10：同 [`scene_base`] 保留口径（零生产调用，拆分便利组合壳）。
 pub fn scene_frame(host: &mut dyn SceneHost) {
     nautical_grid(host);
     wood_frame(host);
@@ -522,17 +546,17 @@ pub fn tick_page_frame(delta_ms: u32) {
     }
 }
 
-/// 获取当前翻页动画亮度因子（0.6 → 1.0 线性，时长 [`MOTION_PAGE_MS`]；
-/// 倒计时耗尽 = 1.0 稳态）。
+/// 获取当前翻页动画亮度因子（[`MOTION_PAGE_BRIGHTNESS_MIN`] → 1.0 线性（幅值
+/// [`MOTION_PAGE_BRIGHTNESS_SWING`]），时长 [`MOTION_PAGE_MS`]；倒计时耗尽 = 1.0 稳态）。
 #[must_use]
 pub fn page_brightness_factor() -> f32 {
     let left = PAGE_MS_LEFT.load(Ordering::Relaxed);
     if left >= MOTION_PAGE_MS {
-        return 0.6;
+        return MOTION_PAGE_BRIGHTNESS_MIN;
     }
     let full = f32::from(u16::try_from(MOTION_PAGE_MS).unwrap_or(0));
     let done = f32::from(u16::try_from(MOTION_PAGE_MS - left).unwrap_or(0)) / full;
-    0.6 + done * 0.4
+    MOTION_PAGE_BRIGHTNESS_MIN + done * MOTION_PAGE_BRIGHTNESS_SWING
 }
 
 // === 兼容包装函数（旧签名，内部调用 ti-render） ===
@@ -673,7 +697,14 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
                 let kind = param_str(p, "icon")
                     .and_then(|name| icon_ids().get(name.as_str()).copied())
                     .unwrap_or(0);
-                let size = i32::try_from(param_i64(p, "size").unwrap_or(48)).unwrap_or(48);
+                // 飞轮 R1 ⑥-02：缺省边长读 `ui_icons.json` 注册表单源（`default_size`）；
+                // 注册表整体缺失 = 48 crash-safe 兜底（同 ①-07 族口径，框架侧 `icons::ICON_SIZE` 恒等）。
+                let default_size = match ui_icons() {
+                    Ok(reg) => i64::from(reg.default_size),
+                    Err(_) => 48,
+                };
+                let size =
+                    i32::try_from(param_i64(p, "size").unwrap_or(default_size)).unwrap_or(48);
                 ti_render::generic::icon(c, kind, r.x, r.y, size, color);
             }
             "grad" => {
@@ -766,28 +797,6 @@ pub fn hud_icon_def(hud_key: &str) -> Option<IconDef> {
     ui_icons().ok().and_then(|t| t.hud_icon(hud_key)).cloned()
 }
 
-/// 菜单项。
-pub fn menu_item(
-    host: &mut dyn SceneHost,
-    left: i32,
-    top: i32,
-    width: i32,
-    height: i32,
-    chosen: bool,
-    pressed: bool,
-) {
-    let theme = host.theme().clone();
-    with_canvas(host, |c| {
-        ti_render::shell::menu_item(c, &theme, left, top, width, height, chosen, pressed);
-    });
-}
-
-/// 血条槽位。
-pub fn bar_slot(host: &mut dyn SceneHost, x: i32, y: i32, w: i32, h: i32) {
-    let theme = host.theme().clone();
-    with_canvas(host, |c| ti_render::shell::bar_slot(c, &theme, x, y, w, h));
-}
-
 /// 内容面板。
 pub fn panel(host: &mut dyn SceneHost, x: i32, y: i32, w: i32, h: i32) {
     let theme = host.theme().clone();
@@ -823,8 +832,8 @@ pub fn hint_row(host: &mut dyn SceneHost, text: &str, _x: i32, y: i32) {
 // （不 panic、不占位色块，与 icon 列 / 实体 size 同判据）。
 
 /// v3 氛围星空层：读 `scenes.json` 该场景的 `ambient_art` 矩形，缺失/非正 = 不画。
-///
-/// z-order（调用序）：`scene_shell`（底/网格/框/标题条）之后、内容（菜单/血条）之前。
+/// 飞轮 R1 ④-05/①-32：星位表 + 屏心净空全读 `ambient_art` 数据（`ambient_stars` +
+/// `extra_scalar` 的 `ambient_art.center_x/center_y/exclude`），渲染层只遍历；缺 = 不画。
 pub fn star_sky(host: &mut dyn SceneHost, scene_id: &str) {
     let layout = scene_layout(scene_id);
     let Some(art) = layout.extra.get(keys::AMBIENT_ART) else {
@@ -833,8 +842,23 @@ pub fn star_sky(host: &mut dyn SceneHost, scene_id: &str) {
     if art.w <= 0 || art.h <= 0 {
         return;
     }
+    let stars: Vec<ti_render::shell::Star> = layout
+        .ambient_stars
+        .iter()
+        .map(|a| ti_render::shell::Star { x: a.x, y: a.y, size: a.size, bright: a.bright })
+        .collect();
+    if stars.is_empty() {
+        return;
+    }
+    let s = &layout.extra_scalar;
+    // crash-safe：键缺失 = 无净空（0），与「0 = 关闭」语义同向（①-07 族口径）。
+    let cx = s.get(keys::AMB_CENTER_X).copied().unwrap_or(0);
+    let cy = s.get(keys::AMB_CENTER_Y).copied().unwrap_or(0);
+    let ex = s.get(keys::AMB_EXCLUDE).copied().unwrap_or(0);
     let theme = host.theme().clone();
-    with_canvas(host, |c| ti_render::shell::star_sky(c, &theme, art.x, art.y, art.w, art.h));
+    with_canvas(host, |c| {
+        ti_render::shell::star_sky(c, &theme, art.x, art.y, art.w, art.h, &stars, cx, cy, ex);
+    });
 }
 
 /// v3 仪式感标题艺术面板：读 `scenes.json` 该场景的 `title_art` 矩形，缺失/非正 = 不画。

@@ -1,5 +1,6 @@
 {
-  "_comment": "S17.3 UI 图标注册表（10_ui_redesign.md §5 数值源）：icons = 14 枚图标元数据（id 锚定 ti_render::icons 的 ICON_* 常量，size = 逻辑边长，tint_* = theme 令牌名）；bindings = 界面元素 → 图标名 的游戏侧映射（改界面换图标只改本文件，不改 Rust 代码）。",
+  "_comment": "S17.3 UI 图标注册表（10_ui_redesign.md §5 数值源）：icons = 14 枚图标元数据（id 锚定 ti_render::icons 的 ICON_* 常量，size = 逻辑边长，tint_* = theme 令牌名）；bindings = 界面元素 → 图标名 的游戏侧映射（改界面换图标只改本文件，不改 Rust 代码）。default_size = 图标原语缺 `size` 参数时的缺省边长（飞轮 R1 ⑥-02：4 处调用点单源，须与 ti_render::icons::ICON_SIZE 恒等）。",
+  "default_size": 48,
   "icons": [
     {
       "name": "compass",

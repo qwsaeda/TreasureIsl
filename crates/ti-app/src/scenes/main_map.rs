@@ -97,13 +97,7 @@ fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, 
     chrome::panel(host, r.x, r.y, r.w, r.h);
     let label = i18n::sget(label_key);
     let icon = chrome::hud_icon_def(key);
-    let (label_x, icon_x) = match icon.as_ref() {
-        Some(def) if r.w >= def.size + 8 => {
-            let ix = r.x + 8;
-            (ix + def.size + 8, Some((def.id, def.size, ix)))
-        }
-        _ => (r.x + (r.w - host.shell().hint_text_width_px(label)) / 2, None),
-    };
+    let (label_x, icon_x) = chrome::layout_icon_label(host, &r, label, icon.as_ref());
     if let Some((id, size, ix)) = icon_x {
         chrome::ui_icon(host, id, ix, r.y + (r.h - size) / 2, false);
     }
