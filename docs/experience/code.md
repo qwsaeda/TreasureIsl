@@ -1,4 +1,4 @@
-﻿# 经验库 · code
+# 经验库 · code
 
 > 代码级教训：文档与实现不一致、类型转换陷阱。条目 ID 全局唯一（EXP-NNN），维护规则与全量索引见 docs/experience/index.md。
 

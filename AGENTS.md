@@ -55,6 +55,7 @@
 | **写 Bevy 代码前必读（Bevy 0.20 用法规范 / 最佳实践 / 坑位清单）** | `docs/process/12_bevy_usage.md`（**Bevy 使用规范单一事实源**：官方 `DefaultPlugins` 强制 + 1080 坐标换算 + **z 层负值/升序绘制**规则 + GPU Text2d 文本 + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位清单；S18.7 起 Bevy = 唯一渲染引擎） |
 | **做界面（改 scenes.json 版面 / 加美术资产 / 出图验收）** | `docs/process/13_ui_asset_pipeline.md`（**UI 资产管线**：资产清单 `assets/ui_manifest.json` = 单一事实源；`python scripts/ui_assets.py add/build/verify` 生图+抠透明+入库；`powershell scripts/ui_preview.ps1 <scene>` 出图验收；界面数据只引用资产路径，`image` 原语见 `09_render_framework.md` §5.1） |
 | **工具台账 / 流水线组合（scripts/ 全量登记 + 用法）** | `docs/process/14_tooling_catalog.md`（工具唯一事实源：用途 / 用法 / 幂等与退出码 / UI 资产·赛道数据·门禁·逆向 4 条流水线 / 门禁项↔排障工具对照）；新增工具须登记（doccheck2 第 26 项对账）+ 满足工具契约（第 27 项 `check_tooling_contract`：落地位置 / 表格行 / 登记要素 / 只读模式 + 非 0 退出；一次性脚本落 `scripts/tmp/` 用完即删，**禁止写仓库外**） |
+| **流程固化台账（哪些纪律已被机器兜住；收口 / EXP 登记走一条命令）** | `docs/process/15_process_ledger.md`（人反复要做的动作 = 纪律执行状态面：已自动化 / 半自动 / 待固化（必带台账任务号）/ 一次性；载体 = `scripts/task_close.py`（收口一条命令：跑判据→写证据→置 verified→同步计数→三方对账）/ `scripts/exp_log.py`（EXP 3 处改齐）；doccheck2 第 31~34 项守住：BOM/UTF-8/乱码 / 改动面声明 / 工具 3 处登记 / 台账自洽） |
 | **批量做一组 UI 资产（多形状图标 / 一批背景）** | `scripts/ui_asset_batch.py`（register/generate/install/build/check/sheet，规格驱动 `assets/ui_batches/*.json`；含**抠图可行性预检**：luma 需纯黑底 / magenta 需品红底）+ `docs/process/13_ui_asset_pipeline.md` |
 | **AI 生图（UI 效果图/概念图，S18.7 前置）** | `scripts/agnes_gen.py`（Agnes Image 2.5 Flash；`AGNES_API_KEY` 环境变量；用法见 `docs/process/04_tooling.md` §6） |
 | Android 壳落地 + Mac 出 APK（S5.5） | `android/README.md` |

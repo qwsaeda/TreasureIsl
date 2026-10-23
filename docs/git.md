@@ -1,4 +1,4 @@
-﻿# 推送规范（git push conventions）
+# 推送规范（git push conventions）
 
 远端：`origin` = `https://github.com/qwsaeda/TreasureIsl.git`，主干 **`master`**（本仓无 `main`；⛔ 不要 `git push -u origin main`，refspec 不匹配）。
 

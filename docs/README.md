@@ -61,6 +61,7 @@
 | [process/12_bevy_usage.md](process/12_bevy_usage.md) | **Bevy 0.20 用法规范 / 最佳实践 / 坑位清单**（官方 `DefaultPlugins` 强制 + 1080 坐标换算 + z 层负值升序绘制 + GPU Text2d + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位；S18.7 起 Bevy = 唯一渲染引擎） |
 | [process/13_ui_asset_pipeline.md](process/13_ui_asset_pipeline.md) | **UI 资产管线**（清单驱动：AI 生图 → 抠透明 → 规范化 → 入库 `assets/ui/`；角色预设 background/medallion/board/portrait；`scripts/ui_assets.py` + `scripts/ui_preview.ps1`；资产清单 = 单一事实源，门禁校验登记与存在） |
 | [process/14_tooling_catalog.md](process/14_tooling_catalog.md) | **工具台账**（`scripts/` 全量登记：用途 / 用法 / 幂等与退出码 / 流水线组合 / 门禁归属）——工具的唯一事实源；新增工具须登记（doccheck2 第 26 项对账）+ 满足**工具契约**（第 27 项 `check_tooling_contract`：落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出） |
+| [process/15_process_ledger.md](process/15_process_ledger.md) | **流程固化台账**（人反复要做的开发动作 = 纪律执行状态面：每条流程登记 人工做法 / 复发证据 / 自动化形态 / 载体 / 状态（已自动化·半自动·待固化·一次性）；**纪律不执行 = 纪律不存在** ⇒ 待固化必须带台账任务号；载体 = `scripts/task_close.py`（收口一条命令）/ `scripts/exp_log.py`（EXP 一条命令）/ doccheck2 第 31~34 项（文本完整性 / 改动面声明 / 工具 3 处登记 / 台账自洽）） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 
@@ -109,6 +110,8 @@
 | `scripts/ui_shot_probe.py` | **出图取样**（区域主色 / 最亮像素 / 裁剪放大）—— UI 出图验收的像素证据 |
 | `scripts/ui_asset_batch.py` | **UI 资产批量工具**（规格驱动：register/generate/install/build/check/sheet）—— 一组资产一次做完，含抠图可行性预检；规格 = `assets/ui_batches/*.json` |
 | `scripts/ui_layout_sheet.py` | **UI 版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图，版面评审 / S21.9 出图验收对照；`--check` 只读校验） |
+| `scripts/task_close.py` | **任务收口一条命令**（跑判据 → 写 `evidence/<id>.log` → 台账行级置 verified → 同步 release 台账计数 → 三方对账复验；判据非 0 则不写证据不改台账） |
+| `scripts/exp_log.py` | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + ID 查重 + doccheck 复验） |
 | `scripts/audit_code.py` | **代码结构审计**（`style.md` §5.12 手段）：文件规模 / 函数长度 / 重复模式；`--check` 违规非 0 退出，阈值与棘轮基线 = `scripts/code_budget.json` |
 | `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
 | `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |

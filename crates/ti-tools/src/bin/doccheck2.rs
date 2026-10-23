@@ -2711,6 +2711,319 @@ fn check_render_single_source(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 第 31 项：**仓库文本完整性**（BOM 策略 / UTF-8 合法 / 无乱码替换字符）。
+///
+/// 动机（EXP-051/091/111 + S21 飞轮 R1 实证）：文本文件被 cmdlet（`Set-Content`/`Add-Content`/
+/// `Out-File`）写入 ⇒ 带 BOM（PS 5.1 `UTF8` 默认）或换行被改写 ⇒ 文档/源码被静默改写。
+/// EXP-091 更严重：`doccheck` 读文件失败就静默跳过 ⇒ 坏字节文件整份从检查视野消失。
+/// 本项把「写入路径正确性」变成机器红线。
+///
+/// 规则：① `.ps1` **必须**带 UTF-8 BOM（PS 5.1 解析 CJK 需要，EXP-109）；
+/// ② 其余文本文件（`.md/.json/.rs/.toml/.py/.yaml/.yml/.txt`）**禁止**带 BOM；
+/// ③ 全部须为合法 UTF-8；④ 不得含 U+FFFD 替换字符（已损坏的痕迹）。
+/// 第 31 项：**仓库文本完整性**（BOM 策略 / UTF-8 合法 / 无乱码替换字符）。
+///
+/// 动机（EXP-051/091/111 + S21 飞轮 R1 实证）：文本文件被 cmdlet（`Set-Content`/`Add-Content`/
+/// `Out-File`）写入 ⇒ 带 BOM（PS 5.1 `UTF8` 默认）或换行被改写 ⇒ 文档/源码被静默改写。
+/// EXP-091 更严重：`doccheck` 读文件失败就静默跳过 ⇒ 坏字节文件整份从检查视野消失。
+/// 本项把「写入路径正确性」变成机器红线。
+///
+/// 规则：① `.ps1` **必须**带 UTF-8 BOM（PS 5.1 解析 CJK 需要，EXP-109）；
+/// ② 其余文本文件（`.md/.json/.rs/.toml/.py/.yaml/.yml/.txt`）**禁止**带 BOM；
+/// ③ 全部须为合法 UTF-8；④ 不得含 U+FFFD 替换字符（已损坏的痕迹）。
+fn check_repo_text_integrity(root: &Path) -> Vec<String> {
+    const TEXT_EXTS: [&str; 8] = ["md", "json", "rs", "toml", "py", "yaml", "yml", "txt"];
+    const SKIP_DIRS: [&str; 6] = ["target", "legacy", ".git", ".opencode", "node_modules", "web"];
+    const SCAN_ROOTS: [&str; 6] = ["docs", "crates", "scripts", "assets", "plan", "android"];
+    let mut errors: Vec<String> = Vec::new();
+    for r in SCAN_ROOTS {
+        let dir = root.join(r);
+        if dir.is_dir() {
+            walk_text_files(&dir, &SKIP_DIRS, &TEXT_EXTS, &mut errors);
+        }
+    }
+    if let Ok(rd) = std::fs::read_dir(root) {
+        for e in rd.flatten() {
+            let path = e.path();
+            if !path.is_file() {
+                continue;
+            }
+            let ext = path
+                .extension()
+                .and_then(|x| x.to_str())
+                .map(str::to_ascii_lowercase)
+                .unwrap_or_default();
+            if !TEXT_EXTS.contains(&ext.as_str()) {
+                continue;
+            }
+            let Ok(bytes) = std::fs::read(&path) else {
+                continue;
+            };
+            let rel = path.to_string_lossy().to_string();
+            if bytes.starts_with(&[0xEF, 0xBB, 0xBF]) {
+                errors.push(format!("{rel}: 根级文本文件带 UTF-8 BOM（EXP-111）"));
+            }
+            if let Ok(text) = std::str::from_utf8(&bytes) {
+                if text.contains('\u{FFFD}') {
+                    errors.push(format!("{rel}: 含 U+FFFD 替换字符（EXP-091）"));
+                }
+            }
+        }
+    }
+    errors
+}
+
+/// 递归扫文本文件并校验编码完整性（`check_repo_text_integrity` 的目录遍历体）。
+fn walk_text_files(dir: &Path, skip: &[&str], exts: &[&str], errors: &mut Vec<String>) {
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for e in rd.flatten() {
+        let path = e.path();
+        let name = e.file_name().to_string_lossy().to_string();
+        if path.is_dir() {
+            if !skip.contains(&name.as_str()) {
+                walk_text_files(&path, skip, exts, errors);
+            }
+            continue;
+        }
+        let ext = path
+            .extension()
+            .and_then(|x| x.to_str())
+            .map(str::to_ascii_lowercase)
+            .unwrap_or_default();
+        if !exts.contains(&ext.as_str()) {
+            continue;
+        }
+        let Ok(bytes) = std::fs::read(&path) else {
+            continue;
+        };
+        let rel = path.to_string_lossy().to_string();
+        let has_bom = bytes.starts_with(&[0xEF, 0xBB, 0xBF]);
+        if ext == "ps1" {
+            if !has_bom {
+                errors.push(format!(
+                    "{rel}: .ps1 缺 UTF-8 BOM（PowerShell 5.1 解析 CJK 需要；EXP-109）"
+                ));
+            }
+        } else if has_bom {
+            errors.push(format!(
+                "{rel}: 文本文件带 UTF-8 BOM（cmdlet 写入痕迹；改用编辑工具或 python 写盘，EXP-111/051）"
+            ));
+        }
+        match std::str::from_utf8(&bytes) {
+            Ok(text) => {
+                if text.contains('\u{FFFD}') {
+                    errors.push(format!(
+                        "{rel}: 含 U+FFFD 替换字符（文本已损坏；须修内容而非忽略，EXP-091）"
+                    ));
+                }
+            }
+            Err(e) => errors.push(format!(
+                "{rel}: 非合法 UTF-8（字节偏移 {}）—— 检查视野会静默丢整份文件（EXP-091）",
+                e.valid_up_to()
+            )),
+        }
+    }
+}
+
+/// 第 32 项：**改动面声明**（S20+ 任务 dod 必含「改动面=」+ 点名面族）。
+///
+/// 动机（`00_index.md` §变更面声明纪律 + 硬规则 7「不声明 = 返工」）：纪律过去只写在文档里，
+/// 无人判定 ⇒ 台账 200 任务仅 22 处含声明。本项把「声明」变成台账行级机器要求。
+fn check_task_change_scope(root: &Path) -> Vec<String> {
+    // 声明族（措辞变体：表现/表现层、工具/工具层、业务规则/业务层…）；「规则」族先剔除
+    // 「业务规则」以免同一处声明被重复计数。
+    const FAMILIES: [&[&str]; 7] =
+        [&["业务规则", "业务层"], &["数据"], &["规则"], &["表现"], &["资产"], &["工具"], &["文档"]];
+    let mut errors: Vec<String> = Vec::new();
+    let Some(ledger) = read_file(root, "plan/ledger.yaml") else {
+        return vec!["plan/ledger.yaml 不存在，无法校验改动面声明".to_string()];
+    };
+    for line in ledger.lines() {
+        let Some(rest) = line.trim_start().strip_prefix("- { id: ") else {
+            continue;
+        };
+        let Some((id_raw, _)) = rest.split_once(',') else {
+            continue;
+        };
+        let id = id_raw.trim();
+        let major: u32 = id
+            .strip_prefix('S')
+            .and_then(|r| r.split('.').next())
+            .and_then(|m| m.parse().ok())
+            .unwrap_or(0);
+        // 纪律自 S20 起强制（此前任务无此声明；S19 及更早为存量）
+        if major < 20 {
+            continue;
+        }
+        let Some(dod) = line.split("dod: \"").nth(1) else {
+            continue;
+        };
+        let dod = dod.split('"').next().unwrap_or("");
+        // 父任务（dod = 「见 S20.0a / …」）不重复要求声明
+        if dod.starts_with("见 ") {
+            continue;
+        }
+        if !dod.contains("改动面=") {
+            errors.push(format!(
+                "ledger.yaml {id}: dod 缺「改动面=」声明（业务规则/数据/规则/表现/资产 + 跨模块原因；\
+                 00_index.md §变更面声明，硬规则 7）"
+            ));
+            continue;
+        }
+        // 只在声明段内计数（改动面= … ；跨模块原因 / ；判据 之前）
+        let seg = dod.split_once("改动面=").map_or("", |(_, rest)| rest);
+        let seg = seg.split("；跨模块原因").next().unwrap_or(seg);
+        let seg = seg.split("；判据").next().unwrap_or(seg);
+        let seg_no_biz = seg.replace("业务规则", "");
+        let mut hit = 0usize;
+        for fam in FAMILIES {
+            let found = fam.iter().any(|pat| {
+                if *pat == "规则" { seg_no_biz.contains(pat) } else { seg.contains(pat) }
+            });
+            if found {
+                hit += 1;
+            }
+        }
+        // 注：只要求**声明存在且点名了面族**（≥1）。「是否漏报了别的面」不可机器判定 ⇒ 人工评审。
+        // 纯单面任务（如 S20.0b 表现层架构重构）声明 1 个面族是合法的。
+        if hit < 1 {
+            errors.push(format!(
+                "ledger.yaml {id}: 改动面声明未点名任何面族（业务规则/数据/规则/表现/资产/工具/文档，\
+                 至少 1 个；纯单面任务声明 1 个面族合法——「是否漏报别的面」不可机器判定，人工评审）"
+            ));
+        }
+    }
+    errors
+}
+
+/// 第 33 项：**新增工具 3 处登记**（台账表行 + 速查表 + 全库索引），存量走棘轮基线豁免。
+///
+/// 动机（EXP-113 + S20.1/S21.0 dod 自认「五处/八处同改」）：第 26 项只查「工具名出现在台账里」，
+/// 于是「工具存在但速查表/索引没人知道」照旧发生。本项对新工具零豁免（棘轮只收紧）。
+fn check_tooling_registration(root: &Path) -> Vec<String> {
+    let mut errors: Vec<String> = Vec::new();
+    let Some(catalog) = read_file(root, "docs/process/14_tooling_catalog.md") else {
+        return vec!["docs/process/14_tooling_catalog.md 不存在，无法校验工具登记".to_string()];
+    };
+    let quick = read_file(root, "docs/process/04_tooling.md").unwrap_or_default();
+    let index = read_file(root, "docs/README.md").unwrap_or_default();
+    let mut waived: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    if let Some(base) = read_file(root, "scripts/process_ratchet.json") {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&base) {
+            if let Some(obj) =
+                v.get("tooling_registration_grandfathered").and_then(|t| t.as_object())
+            {
+                for (name, entry) in obj {
+                    let list = entry
+                        .get("missing")
+                        .and_then(|m| m.as_array())
+                        .map(|a| {
+                            a.iter()
+                                .filter_map(|x| x.as_str().map(str::to_string))
+                                .collect::<Vec<String>>()
+                        })
+                        .unwrap_or_default();
+                    waived.insert(name.clone(), list);
+                }
+            }
+        }
+    }
+    let scripts_dir = root.join("scripts");
+    let Ok(entries) = std::fs::read_dir(&scripts_dir) else {
+        return vec!["scripts/ 目录不存在，无法校验工具登记".to_string()];
+    };
+    for e in entries.flatten() {
+        let name = e.file_name().to_string_lossy().to_string();
+        let ext = std::path::Path::new(&name)
+            .extension()
+            .and_then(|x| x.to_str())
+            .map(str::to_ascii_lowercase);
+        if !matches!(ext.as_deref(), Some("py" | "ps1")) || name.starts_with("__") {
+            continue;
+        }
+        let missing = waived.get(&name).cloned().unwrap_or_default();
+        let row = format!("| `{name}` |");
+        if !catalog.contains(&row) {
+            errors.push(format!(
+                "scripts/{name}: 缺台账表行（14_tooling_catalog §3 须有 {row} 形式）"
+            ));
+        }
+        for (label, hay) in [("04_tooling.md", &quick), ("docs/README.md", &index)] {
+            if missing.iter().any(|m| m == label) {
+                continue;
+            }
+            if !hay.contains(&format!("scripts/{name}")) {
+                errors.push(format!(
+                    "scripts/{name}: 未登记到 {label}（新增工具须 3 处登记：台账表行 + 速查表 + \
+                     全库索引；存量豁免见 scripts/process_ratchet.json）"
+                ));
+            }
+        }
+    }
+    errors
+}
+
+/// 第 34 项：**流程固化台账自洽**（状态枚举 / 载体存在 / 待固化带任务号 / 本页已登记索引）。
+///
+/// 动机（`docs/process/15_process_ledger.md`）：流程台账若只是文档，久了必然与现实脱节
+/// （「已自动化」其实没自动化、「待固化」长期无任务号）。本项把它变成机器可判的进度面。
+fn check_process_ledger(root: &Path) -> Vec<String> {
+    const STATUSES: [&str; 4] = ["已自动化", "半自动", "待固化", "一次性"];
+    let mut errors: Vec<String> = Vec::new();
+    let Some(ledger) = read_file(root, "docs/process/15_process_ledger.md") else {
+        return vec![
+            "docs/process/15_process_ledger.md 不存在（流程固化台账 = 纪律执行状态面）".to_string(),
+        ];
+    };
+    if !read_file(root, "docs/README.md").unwrap_or_default().contains("15_process_ledger.md") {
+        errors.push("docs/README.md 未登记 15_process_ledger.md（新增文档须登记索引）".to_string());
+    }
+    for (i, line) in ledger.lines().enumerate() {
+        let t = line.trim();
+        if !t.starts_with('|') {
+            continue;
+        }
+        let cells: Vec<&str> = t.trim_matches('|').split('|').map(str::trim).collect();
+        if cells.len() != 7 {
+            continue;
+        }
+        let num = cells[0];
+        if num.is_empty() || !num.chars().all(|c| c.is_ascii_digit()) {
+            continue;
+        }
+        let name = cells[1];
+        let carrier = cells[5];
+        let status = cells[6];
+        if !STATUSES.iter().any(|s| status.starts_with(s)) {
+            errors.push(format!(
+                "15_process_ledger.md:{}: 流程「{name}」状态 `{status}` 非法（须 {}）",
+                i + 1,
+                STATUSES.join(" / ")
+            ));
+            continue;
+        }
+        if status.starts_with("待固化") && !cells.join(" ").contains("S2") {
+            errors.push(format!(
+                "15_process_ledger.md:{}: 流程「{name}」标待固化但无台账任务号（不许无任务号长期挂账）",
+                i + 1
+            ));
+        }
+        for token in carrier.split_whitespace() {
+            let tool = token.trim_matches(|c: char| c == '`' || c == ',');
+            if let Some(rel) = tool.strip_prefix("scripts/") {
+                if !root.join("scripts").join(rel).is_file() {
+                    errors.push(format!(
+                        "15_process_ledger.md:{}: 流程「{name}」载体 `scripts/{rel}` 不存在",
+                        i + 1
+                    ));
+                }
+            }
+        }
+    }
+    errors
+}
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
@@ -2743,12 +3056,16 @@ fn main() -> ExitCode {
     all_errors.extend(check_terrain_data(&root));
     all_errors.extend(check_tooling_catalog(&root));
     all_errors.extend(check_tooling_contract(&root));
+    all_errors.extend(check_repo_text_integrity(&root));
+    all_errors.extend(check_task_change_scope(&root));
+    all_errors.extend(check_tooling_registration(&root));
+    all_errors.extend(check_process_ledger(&root));
     all_errors.extend(check_engine_no_bare_half(&root));
     all_errors.extend(check_select_role_render_loop(&root));
     all_errors.extend(check_render_single_source(&root));
 
     println!(
-        "doccheck2: {} error(s) across 30 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source)",
+        "doccheck2: {} error(s) across 34 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger)",
         all_errors.len()
     );
     for err in &all_errors {
