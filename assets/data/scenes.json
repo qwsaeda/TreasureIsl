@@ -252,7 +252,7 @@
      "w": 140,
      "h": 140
     },
-    "color": "",
+    "color": "gold",
     "z": -11,
     "when": "",
     "item": -1,
@@ -298,7 +298,7 @@
      "w": 120,
      "h": 120
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "normal",
     "item": 0,
@@ -314,7 +314,7 @@
      "w": 136,
      "h": 136
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "selected",
     "item": 0,
@@ -360,7 +360,7 @@
      "w": 120,
      "h": 120
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "normal",
     "item": 1,
@@ -376,7 +376,7 @@
      "w": 136,
      "h": 136
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "selected",
     "item": 1,
@@ -422,7 +422,7 @@
      "w": 120,
      "h": 120
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "normal",
     "item": 2,
@@ -438,7 +438,7 @@
      "w": 136,
      "h": 136
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "selected",
     "item": 2,
@@ -484,7 +484,7 @@
      "w": 120,
      "h": 120
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "normal",
     "item": 3,
@@ -500,7 +500,7 @@
      "w": 136,
      "h": 136
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "selected",
     "item": 3,
@@ -546,7 +546,7 @@
      "w": 120,
      "h": 120
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "normal",
     "item": 4,
@@ -562,7 +562,7 @@
      "w": 136,
      "h": 136
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "selected",
     "item": 4,
@@ -608,7 +608,7 @@
      "w": 120,
      "h": 120
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "normal",
     "item": 5,
@@ -624,7 +624,7 @@
      "w": 136,
      "h": 136
     },
-    "color": "",
+    "color": "gold",
     "z": -7,
     "when": "selected",
     "item": 5,

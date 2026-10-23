@@ -107,11 +107,11 @@ pub struct FontConfig {
 |---|---|---|
 | `rect` | `rect` | 填充矩形（左上 + 宽高） |
 | `text` | `rect` + `tier` + `text`/`text_key` | `rect` **内水平居中**；`tier` = `title`(96px) / `body`(44px) / `hint`(28px)；`text_key` 走 i18n（缺键回退显示 key 本身 → 落库前须核对 `strings.json`） |
-| `icon` | `rect` + `params.icon` | `params.icon` = `ui_icons.json` 图标名；**图标按注册表原生 48px 绘制在 `rect` 左上角**，`rect` 的边长仅表示占位盒（CPU 执行器忽略 `params.size`；Bevy 执行器按 `rect` 边长烘焙纹理，字形仍为原生几何）→ 改图标大小须改 `rect` 边长，不改 `params.size` |
+| `icon` | `rect` + `params.icon` | `params.icon` = `ui_icons.json` 图标名；**图标按注册表原生 48px 绘制在 `rect` 左上角**，`rect` 的边长仅表示占位盒（CPU 执行器忽略 `params.size`；Bevy 执行器按 `rect` 边长烘焙纹理，字形仍为原生几何）→ 改图标大小须改 `rect` 边长，不改 `params.size`。（**S21.14 起**：若该图标在 `ui_icons.json` 带 `image` 字段 → 画 `assets/ui/icon_*.png` **白蒙版** + `color` 令牌 tint 上色（两后端 `blit_image_tint`），`chrome::icon_*` 代码矢量仅作**缺图 crash-safe 回退**；白蒙版由 `scripts/ui_icons.py` 从 `assets/ui_batches/icon_v1.json` 生成） |
 | `grad` | `params.from_token`/`to_token`/`steps` | 垂直渐变（`steps` 条色带，2..256）；令牌名须在 `theme.by_name` 名单（拼错 → 静默回退 `text_on_parch`） |
 | `glow` | `rect` = **圆心 + 半径** | 径向光晕（`rect.x`/`rect.y` = 圆心，`rect.w` = 半径） |
 | `disc` | `rect` = **圆心 + 半径** | 实心圆盘（同上） |
-| `image` | `rect` + `params.asset` | **贴图**（S18.8b）：`params.asset` = 资产路径（**相对仓库根**，如 `assets/ui/board.png`）；CPU 执行器读文件 + PNG 解码 + 最近邻缩放 + alpha 混合进 RGB565 帧缓冲，Bevy 执行器走**资产服务器**（同一路径口径，壳从仓库根启动）→ 两后端同画面；缺资源 / 解码失败 = **不画**（不 panic） |
+| `image` | `rect` + `params.asset` | **贴图**（S18.8b）：`params.asset` = 资产路径（**相对仓库根**，如 `assets/ui/board.png`）；CPU 执行器读文件 + PNG 解码 + 最近邻缩放 + alpha 混合进 RGB565 帧缓冲，Bevy 执行器走**资产服务器**（同一路径口径，壳从仓库根启动）→ 两后端同画面；缺资源 / 解码失败 = **不画**（不 panic）。（**S21.14**：可选 `params.color` = tint 令牌名，贴图按该令牌 RGB **multiply 上色**（`blit_image_tint`）；缺省/空 = 白色=不上色恒等。白蒙版资产 × tint 令牌 = 同图多色的图标/船贴图管线） |
 
 不变式：`color` 必须是 `theme.by_name` 合法令牌名；`params.icon` 必须在 `ui_icons.json` 注册表内；
 `text_key` 必须在 `strings.json` 内（缺键 = 界面显示裸 key，非静默失败）；

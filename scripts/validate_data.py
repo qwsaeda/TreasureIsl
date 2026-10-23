@@ -18,8 +18,10 @@
      记录数一致。
    V1 `main_map.grid` 段必须含 `x0`/`y0`/`tile_w`/`tile_h` 四键，且均为 >0 的整数字面量
       （`chrome::iso_cell`/`iso_tile` 等距投影依赖此四键，S15.3 1080 重锚后 `step` 改 `tile_w`/`tile_h`）。
-  V2 全场景 `extra` 中的非 Rect 标量键（int/float 值）必须是 >0 的整数字面量
-     （`extra_scalar` 抽取判据一致，防静默丢）。
+   V2 全场景 `extra` 中的非 Rect 标量键（int/float 值）必须是 >0 的整数字面量
+      （`extra_scalar` 抽取判据一致，防静默丢）。
+   V3（S21.14）`ui_icons.json icons[].image`（如 `assets/ui/icon_compass.png`）指向的白蒙版须在位
+      （缺文件 = 图标 `blit_image_tint` 静默不画；资产由 `scripts/ui_icons.py` 生成）。
 
 退出码：0 = PASS；1 = FAIL（列出违规项）。
 
@@ -345,6 +347,29 @@ def check_v2(scenes: dict, problems: list[str]) -> None:
                             problems.append(f"V2: {sid}.{key}.{fk} = {fv!r} 非正整数字面量")
 
 
+def check_ui_icons(root: Path, problems: list[str]) -> None:
+    """S21.14：`ui_icons.json icons[].image`（如 `assets/ui/icon_compass.png`）指向的白蒙版须在位。
+
+    缺文件 = 图标 `blit_image_tint` 静默不画（回归）；资产由 `scripts/ui_icons.py` 生成。
+    """
+    reg = root / "assets/data/ui_icons.json"
+    if not reg.is_file():
+        return
+    try:
+        v = json.loads(reg.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        problems.append(f"ui_icons.json 读取失败：{e}")
+        return
+    for ic in v.get("icons", []):
+        img = ic.get("image")
+        if img and not (root / img).is_file():
+            problems.append(
+                f"ui_icons.json `{ic.get('name', '?')}`.image = `{img}` 但资产缺失"
+                "（跑 `python scripts/ui_icons.py` 生成，S21.14）"
+            )
+
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="数据表兜底校验（gate 第 10a 项统一入口）")
     ap.add_argument("--root", type=Path, default=Path("."))
@@ -378,6 +403,7 @@ def main() -> int:
             check_v1(main_map, problems)
         check_v2(scenes, problems)
     check_controls(root, problems)
+    check_ui_icons(root, problems)
 
     for p in problems:
         print(f"ERROR {p}")

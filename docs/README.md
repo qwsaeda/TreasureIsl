@@ -110,6 +110,7 @@
 | `scripts/ui_shot_probe.py` | **出图取样**（区域主色 / 最亮像素 / 裁剪放大）—— UI 出图验收的像素证据 |
 | `scripts/ui_asset_batch.py` | **UI 资产批量工具**（规格驱动：register/generate/install/build/check/sheet）—— 一组资产一次做完，含抠图可行性预检；规格 = `assets/ui_batches/*.json` |
 | `scripts/ui_layout_sheet.py` | **UI 版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图，版面评审 / S21.9 出图验收对照；`--check` 只读校验） |
+| `scripts/ui_icons.py` | **UI 图标白蒙版生成器**（S21.14 图标图片化 ④-04：读 `assets/ui_batches/icon_v1.json` 48 原生几何 → PIL 最近邻放大 512 白蒙版 `assets/ui/icon_*.png`；`--check` 字节幂等 + 注册表 `image→文件` 对账） |
 | `scripts/task_close.py` | **任务收口一条命令**（跑判据 → 写 `evidence/<id>.log` → 台账行级置 verified → 同步 release 台账计数 → 三方对账复验；判据非 0 则不写证据不改台账） |
 | `scripts/exp_log.py` | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + ID 查重 + doccheck 复验） |
 | `scripts/doc_numbers.py` | **门禁项数 / 台账计数实测回写**（8 处声称点一次改齐；`--fix` 回写，消灭手抄漂移） |

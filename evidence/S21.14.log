@@ -1,0 +1,55 @@
+# S21.14 图标图片化 ④-04 全量落地 · 验收证据
+
+**用户拍板（留痕）**：2026-10-23 用户「把 14 张图标图 + tint 管线全量落地」+「按 B 归位」（生成/校验 → Python，只保留 Rust 运行时 blit_image_tint 跨层 tint 契约）。
+**改动面**：表现（`blit_image_tint` 两后端 + icon/image 原语 tint）+ 数据（`ui_icons.json` image 字段 + `scenes.json` 13 处 color=gold）+ 资产（14 白蒙版 + `icon_v1.json` 规格）+ 工具（`ui_icons.py`）+ 契约文档（09 §5.1 / 10 §5）。
+
+## 判据实跑输出
+
+### 判据 1 · 14 白蒙版生成 + 幂等（ui_icons.py）
+```
+$ python scripts/ui_icons.py            # 生成/覆盖 14 张到 assets/ui/icon_*.png
+wrote icon_compass.png（512×512 白蒙版）  …  wrote icon_monogram.png（512×512 白蒙版）  （14 张）
+$ python scripts/ui_icons.py --check     # 字节幂等 + 注册表 image→文件
+ui_icons --check: PASS（14 白蒙版 + 注册表一致）
+```
+几何单一事实源 = `assets/ui_batches/icon_v1.json`（48 原生盒 ink/carve，抄自 `crates/ti-render/src/icons.rs`）。
+
+### 判据 2 · 双后端 tint 像素对拍（bevy-cpu-parity）
+```
+gate 项「bevy-cpu-parity (GPU/CPU 像素对照：通道 ≤8 LSB 且超差 <0.5%)」= PASS
+```
+CPU 执行器 `menu_shell::blit_image_tint`（RGB×tint multiply，`0xFFFF` 白=恒等）≡ Bevy `scene_render` 的 `Sprite.color = tint≠白 ? rgb565_to_color : WHITE`。白 tint 恒等保证非图标贴图不受影响。
+
+### 判据 3 · 出图像素（白蒙版 × gold tint，非代码色块）
+- `evidence/bevy_native_index.png` / `evidence/bevy_native_select_map.png`（Bevy 离屏出图）
+- 罗盘/图标中心像素 = (254, 201, 171) gold，落在深色背景上 —— 白蒙版 alpha × gold 令牌 tint 上色成功（旧代码矢量 = 直接画 gold 矩形，无「白蒙版 × 色」的独立可上色通路）。
+
+### 判据 4 · 数据完整性（validate_data V3）
+```
+$ python scripts/validate_data.py
+validate_data: OK（4 表，strings 91 键；main_map.grid 三键 + 全场景 extra 标量正整数）
+```
+V3 新增：`ui_icons.json icons[].image`（如 `assets/ui/icon_compass.png`）指向的白蒙版须在位（缺 = 图标 blit_image_tint 静默不画回归）。
+
+### 判据 5 · doccheck2 37 项 0 error
+```
+$ cargo run -q -p ti-tools --bin doccheck2 .
+doccheck2: 0 error(s) across 37 audit-codified checks（…no-inline-test-mod）
+```
+第 38 项 `check_icon_image_assets` 已并入 Python（`ui_icons.py --check` + `validate_data.py` V3），doccheck2 回 37。
+
+### 判据 6 · gate 23 项 0 failure
+```
+$ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
+=== gate: 0 failure(s) ===
+  PASS cargo clippy -D warnings / clippy feature-gated bins / wasm / native
+  PASS doccheck(0) / doccheck2(37,0) / audit_code(0) / check_ledger_reality / bevy-cpu-parity
+```
+（本任务触发并已收口 4 项 FAIL：clippy×2 = 新 tint 代码 5 lint〔menu_shell u16→u8 截断/冗余闭包 + chrome.rs redundant closure〕；doccheck = S21.14 台账登记 + release.md 计数漂移；audit_code = chrome.rs 934 行入 code_budget.json 限期拆分豁免。）
+
+## 归位说明（B）
+- 生成/校验 = Python（`scripts/ui_icons.py` + `validate_data.py` V3，工具契约 3 处登记：14_tooling_catalog §3.2 / 04_tooling §1 / README）
+- Rust 只留运行时 `blit_image_tint` 跨层 tint 契约（`Canvas` trait 默认 no-op + `DrawOp::Image.tint` + 两后端上色）；`icons.rs` 代码矢量降级为缺图 crash-safe 回退。
+- 原 Rust 生成 bin `crates/ti-render/src/bin/gen_icon_pngs.rs` 已删。
+
+evidence 收口人：Agnes-3.0-flash / 2026-10-23

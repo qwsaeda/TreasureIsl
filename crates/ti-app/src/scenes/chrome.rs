@@ -633,6 +633,11 @@ impl ti_render::canvas::Canvas for HostCanvas<'_> {
     fn blit_image(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32) {
         <dyn SceneHost as RenderHost>::blit_image(self.host, asset, x, y, w, h);
     }
+
+    /// 贴图 + 色调（S21.14 图标图片化跨层 tint）：转发到宿主的绘制目标。
+    fn blit_image_tint(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32, tint: u16) {
+        <dyn SceneHost as RenderHost>::blit_image_tint(self.host, asset, x, y, w, h, tint);
+    }
 }
 
 /// 在 `host` 上构造本地 [`HostCanvas`] 并交给 `f`（消「返回指向临时值的引用」——
@@ -694,8 +699,10 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
                 ti_render::generic::text(c, &content, r.x, r.y, r.w, r.h, &p.tier, color);
             }
             "icon" => {
-                let kind = param_str(p, "icon")
-                    .and_then(|name| icon_ids().get(name.as_str()).copied())
+                let icon_name = param_str(p, "icon");
+                let kind = icon_name
+                    .as_deref()
+                    .and_then(|name| icon_ids().get(name).copied())
                     .unwrap_or(0);
                 // 飞轮 R1 ⑥-02：缺省边长读 `ui_icons.json` 注册表单源（`default_size`）；
                 // 注册表整体缺失 = 48 crash-safe 兜底（同 ①-07 族口径，框架侧 `icons::ICON_SIZE` 恒等）。
@@ -705,6 +712,14 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
                 };
                 let size =
                     i32::try_from(param_i64(p, "size").unwrap_or(default_size)).unwrap_or(48);
+                // S21.14：注册表 `image` 贴图（跨层 tint=`color`）优先；缺 image/缺资产 = 代码矢量回退
+                if let Some(def) = icon_name.as_deref().and_then(icon_def) {
+                    if let Some(asset) = def.image.as_deref() {
+                        let s = def.size.min(size.max(0));
+                        c.blit_image_tint(asset, r.x, r.y, s, s, color);
+                        return;
+                    }
+                }
                 ti_render::generic::icon(c, kind, r.x, r.y, size, color);
             }
             "grad" => {
@@ -719,9 +734,16 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
             "disc" => ti_render::generic::disc(c, r.x, r.y, r.w, color),
             "image" => {
                 // S18.8b：贴图原语（资源路径 = 相对 `assets/` 根；缺资源 = 不画）。
+                // S21.14：`p.color`（主题令牌）非空 = 贴图 **tint**（白蒙版 × 色）；空 = 白（无色调，
+                // 背景/多色图不受影响）⇒ 白蒙版图标经 `color` 上色，非图标贴图保持原样。
                 let asset = param_str(p, "asset").unwrap_or_default();
                 if !asset.is_empty() {
-                    c.blit_image(&asset, r.x, r.y, r.w, r.h);
+                    let tint = if p.color.is_empty() {
+                        0xFFFF
+                    } else {
+                        theme.by_name(&p.color).unwrap_or(0xFFFF)
+                    };
+                    c.blit_image_tint(&asset, r.x, r.y, r.w, r.h, tint);
                 }
             }
             _ => {}
@@ -761,7 +783,17 @@ pub fn menu_icon(host: &mut dyn SceneHost, kind: usize, x: i32, y: i32) {
 pub fn ui_icon(host: &mut dyn SceneHost, id: u32, x: i32, y: i32, selected: bool) {
     let theme = host.theme().clone();
     let tint = if selected { theme.text_on_wood } else { theme.gold };
-    with_canvas(host, |c| ti_render::icons::icon(c, &theme, id, x, y, tint));
+    with_canvas(host, |c| {
+        // S21.14：注册表 `image` 贴图（跨层 tint）优先；缺 image/缺资产 = 代码矢量回退
+        if let Some(def) = icon_def_by_id(id) {
+            if let Some(asset) = def.image.as_deref() {
+                let s = def.size.min(ti_render::icons::ICON_SIZE);
+                c.blit_image_tint(asset, x, y, s, s, tint);
+                return;
+            }
+        }
+        ti_render::icons::icon(c, &theme, id, x, y, tint);
+    });
 }
 
 /// 实体图标（`ui_icons.json` 注册表名 + 指定色调；S18.12）。
@@ -773,16 +805,26 @@ pub fn entity_icon(host: &mut dyn SceneHost, name: &str, x: i32, y: i32, size: i
         return;
     };
     let s = def.size.min(size.max(0));
+    let (ox, oy) = (x + (size - s) / 2, y + (size - s) / 2);
+    // S21.14：注册表 `image` 贴图（跨层 tint）优先；缺 image/缺资产 = 代码矢量回退
+    if let Some(asset) = def.image.as_deref() {
+        with_canvas(host, |c| c.blit_image_tint(asset, ox, oy, s, s, tint));
+        return;
+    }
     let theme = host.theme().clone();
-    with_canvas(host, |c| {
-        ti_render::icons::icon(c, &theme, def.id, x + (size - s) / 2, y + (size - s) / 2, tint);
-    });
+    with_canvas(host, |c| ti_render::icons::icon(c, &theme, def.id, ox, oy, tint));
 }
 
 /// 图标元数据取用（`ui_icons.json` 解析失败 = 不画图标，不 panic）。
 #[must_use]
 pub fn icon_def(name: &str) -> Option<IconDef> {
     ui_icons().ok().and_then(|t| t.icon(name)).cloned()
+}
+
+/// 按 id 取图标元数据（`ui_icon` 等按序号取图标的场景；S21.14 图片化用）。
+#[must_use]
+pub fn icon_def_by_id(id: u32) -> Option<IconDef> {
+    ui_icons().ok().and_then(|t| t.icons.iter().find(|i| i.id == id)).cloned()
 }
 
 /// 注册表按 id 取用（主菜单等按序号取图标的场景）。

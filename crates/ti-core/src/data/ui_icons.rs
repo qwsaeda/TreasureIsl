@@ -29,6 +29,10 @@ pub struct IconDef {
     pub tint_default: String,
     /// 选中态 tint 的 theme 令牌名。
     pub tint_selected: String,
+    /// S21.14 图标图片化：贴图资产路径（相对仓库根，如 `assets/ui/icon_compass.png`）。
+    /// `None` = 无贴图（回退 `ti_render::icons` 代码矢量，crash-safe）。blit 时按 `tint` 上色。
+    #[serde(default)]
+    pub image: Option<String>,
 }
 
 /// 界面元素 → 图标名 的绑定（游戏侧语义）。

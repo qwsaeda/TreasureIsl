@@ -561,8 +561,17 @@ impl Canvas for MenuShell {
     /// 贴图（S18.8b `image` 原语）：RGBA8 资源 → 最近邻缩放 + alpha 混合进 RGB565 帧缓冲。
     ///
     /// 资源路径 = 相对 `assets/` 根（如 `ui/board.png`）；缺资源 = 不画（不 panic）。
+    /// S21.14：无色调 = 委托 [`Self::blit_image_tint`] 传白（`0xFFFF` 恒等）。
     #[cfg(feature = "hd-8bit")]
     fn blit_image(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32) {
+        self.blit_image_tint(asset, x, y, w, h, 0xFFFF);
+    }
+
+    /// 贴图 + 色调（S21.14 图标图片化跨层 tint）：源像素 RGB 按 `tint` multiply（`0xFFFF` 白 = 恒等），
+    /// alpha 不变，再 alpha 混合进 RGB565 帧缓冲 —— 与 Bevy 侧 `Sprite.color` 乘纹理同口径。
+    #[cfg(feature = "hd-8bit")]
+    #[allow(clippy::many_single_char_names)]
+    fn blit_image_tint(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32, tint: u16) {
         let Some(img) = crate::image_cache::get(asset) else { return };
         if w <= 0 || h <= 0 {
             return;
@@ -572,6 +581,7 @@ impl Canvas for MenuShell {
         if iw <= 0 || ih <= 0 {
             return;
         }
+        let (tr, tg, tb) = rgb565_to_rgb8(tint);
         let stride = usize::try_from(LOGICAL_W_I32).unwrap_or(0);
         let fb = self.fb.as_mut_slice();
         for dy in 0..h {
@@ -593,8 +603,21 @@ impl Canvas for MenuShell {
                 let dst_idx =
                     usize::try_from(row).unwrap_or(0) * stride + usize::try_from(col).unwrap_or(0);
                 let Some(dst) = fb.get_mut(dst_idx) else { continue };
-                *dst = ti_render::framebuffer::blend_rgba_over(*dst, px[0], px[1], px[2], px[3]);
+                // 源 RGB × tint（u16 累加防溢出；白 tint = 恒等），alpha 通道不变
+                let r = u8::try_from((u16::from(px[0]) * u16::from(tr)) / 255).unwrap_or(0);
+                let g = u8::try_from((u16::from(px[1]) * u16::from(tg)) / 255).unwrap_or(0);
+                let b = u8::try_from((u16::from(px[2]) * u16::from(tb)) / 255).unwrap_or(0);
+                *dst = ti_render::framebuffer::blend_rgba_over(*dst, r, g, b, px[3]);
             }
         }
     }
+}
+
+/// RGB565 → RGB8（S21.14 CPU 侧贴图 tint multiply 用；`0xFFFF` → (255,255,255) 恒等）。
+#[cfg(feature = "hd-8bit")]
+fn rgb565_to_rgb8(c: u16) -> (u8, u8, u8) {
+    let r = u8::try_from(((c >> 11) & 0x1F) * 255 / 31).unwrap_or(0);
+    let g = u8::try_from(((c >> 5) & 0x3F) * 255 / 63).unwrap_or(0);
+    let b = u8::try_from((c & 0x1F) * 255 / 31).unwrap_or(0);
+    (r, g, b)
 }

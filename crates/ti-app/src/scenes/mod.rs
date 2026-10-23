@@ -280,6 +280,11 @@ pub trait RenderHost {
         self.draw_target().blit_image(asset, x, y, w, h);
     }
 
+    /// 贴图 + 色调（S21.14 图标图片化跨层 tint）：转发到绘制目标（Bevy = 记录命令 / CPU = 帧缓冲 multiply）。
+    fn blit_image_tint(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32, tint: u16) {
+        self.draw_target().blit_image_tint(asset, x, y, w, h, tint);
+    }
+
     /// 绘制一行字形（默认墨色 = `INK_COLOR`）。
     fn draw_text(&mut self, text: &str, x: i32, y: i32) {
         self.draw_target().draw_text(text, x, y, crate::menu_shell::COLOR_TEXT_ON_PARCH);

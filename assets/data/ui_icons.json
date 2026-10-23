@@ -6,6 +6,7 @@
       "name": "compass",
       "id": 0,
       "size": 48,
+      "image": "assets/ui/icon_compass.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -13,6 +14,7 @@
       "name": "chest",
       "id": 1,
       "size": 48,
+      "image": "assets/ui/icon_chest.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -20,6 +22,7 @@
       "name": "anchor",
       "id": 2,
       "size": 48,
+      "image": "assets/ui/icon_anchor.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -27,6 +30,7 @@
       "name": "gear",
       "id": 3,
       "size": 48,
+      "image": "assets/ui/icon_gear.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -34,6 +38,7 @@
       "name": "book",
       "id": 4,
       "size": 48,
+      "image": "assets/ui/icon_book.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -41,6 +46,7 @@
       "name": "door",
       "id": 5,
       "size": 48,
+      "image": "assets/ui/icon_door.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -48,6 +54,7 @@
       "name": "coin",
       "id": 6,
       "size": 48,
+      "image": "assets/ui/icon_coin.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -55,6 +62,7 @@
       "name": "sword",
       "id": 7,
       "size": 48,
+      "image": "assets/ui/icon_sword.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -62,6 +70,7 @@
       "name": "castle",
       "id": 8,
       "size": 48,
+      "image": "assets/ui/icon_castle.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -69,6 +78,7 @@
       "name": "beacon",
       "id": 9,
       "size": 48,
+      "image": "assets/ui/icon_beacon.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -76,6 +86,7 @@
       "name": "heart",
       "id": 10,
       "size": 48,
+      "image": "assets/ui/icon_heart.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -83,6 +94,7 @@
       "name": "flag",
       "id": 11,
       "size": 48,
+      "image": "assets/ui/icon_flag.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -90,6 +102,7 @@
       "name": "map",
       "id": 12,
       "size": 48,
+      "image": "assets/ui/icon_map.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     },
@@ -97,6 +110,7 @@
       "name": "monogram",
       "id": 13,
       "size": 48,
+      "image": "assets/ui/icon_monogram.png",
       "tint_default": "gold",
       "tint_selected": "text_on_wood"
     }

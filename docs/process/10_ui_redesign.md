@@ -96,7 +96,12 @@ parity 与 UI 无关）；三套视觉基线随 S17.2/S17.4 重生成。
 > 全部增量落 `scenes.json`（S17.2），`08_layout_design.md` §4 各表同值同步；
 > `doccheck2 check_scene_layout_fidelity` 锚点随改。
 
-## 5. 图标 14 项（代码矢量绘制，`chrome::icon_*`；注册表 `assets/data/ui_icons.json`）
+## 5. 图标 14 项（**S21.14 起 = 白蒙版贴图 + tint 上色**；`chrome::icon_*` 代码矢量仅缺图回退；注册表 `assets/data/ui_icons.json`）
+
+> **图片化（④-04，2026-10-23 用户拍板）**：14 枚图标不再靠代码矢量逐像素画，改画 `assets/ui/icon_<name>.png`
+> **白蒙版**（512，48 原生几何最近邻放大，`scripts/ui_icons.py` 从 `assets/ui_batches/icon_v1.json` 生成）
+> × `color` 令牌 tint 上色（`blit_image_tint`，两后端一致）。几何单一事实源 = `icon_v1.json`（抄自 `icons.rs`）；
+> 改几何改 spec + 重跑 `ui_icons.py`，`icons.rs` 只留 crash-safe 回退。
 
 | # | 名称 | 绘制要点（chrome 函数 id） | 出现场景 |
 |---|---|---|---|
@@ -116,7 +121,8 @@ parity 与 UI 无关）；三套视觉基线随 S17.2/S17.4 重生成。
 | 14 | `monogram` | 角色首字母 + 圆环（6 角色复用，字母走数据） | select_role 像位 |
 
 规格：逻辑尺寸 48×48（可缩放调用），单色 = `gold`，选中态 = `blue` 底 + `text_hi` 图；
-注册表字段 `{ name, chrome_fn, size, tint_default, tint_selected }`。
+注册表字段 `{ name, chrome_fn, size, tint_default, tint_selected }`（**S21.14 起 + `image`** = 白蒙版路径
+`assets/ui/icon_<name>.png`；`chrome_fn` 仅作缺图回退）。
 替代目标：index 菜单图标列（现 `menu_icon` 色块）、select_role 像位（现色块）、
 main_map HUD 按钮内文字符号、vs 血条端帽。
 

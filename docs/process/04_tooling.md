@@ -19,6 +19,7 @@
 | `scripts/ui_assets.py` | Python | UI 资产**单资产**入口（add/build/verify/rekey/normalize） | 是 |
 | `scripts/ui_asset_batch.py` | Python | UI 资产**批量**入口（register/generate/install/build/check/sheet，规格驱动 + 抠图可行性预检） | 是 |
 | `scripts/ui_layout_sheet.py` | Python | UI **版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图；设计稿评审 / 出图验收对照） | 是 |
+| `scripts/ui_icons.py` | Python | **UI 图标白蒙版生成器**（S21.14：读 `assets/ui_batches/icon_v1.json` 48 原生几何 → PIL 放大 512 白蒙版 `assets/ui/icon_*.png`；`--check` 字节幂等 + 注册表对账） | 是 |
 | `scripts/task_close.py` | Python | **任务收口一条命令**（跑判据 → 写证据 → 台账行级置 verified → 同步 release 计数 → 三方对账复验；判据非 0 不改台账） | 是 |
 | `scripts/exp_log.py` | Python | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + 查重 + doccheck 复验） | 是 |
 | `scripts/doc_numbers.py` | Python | **门禁项数 / 台账计数实测回写**（8 处声称点一次改齐；`--fix` 回写） | 是 |

@@ -53,4 +53,10 @@ pub trait Canvas {
     ///
     /// 默认实现为 no-op（仅需像素绘制的轻量画布可继承）。
     fn blit_image(&mut self, _asset: &str, _x: i32, _y: i32, _w: i32, _h: i32) {}
+
+    /// 贴图 + 色调（**RGB565 multiply**）：`tint = 0xFFFF`（白）= 无色调（同 [`Self::blit_image`]）。
+    ///
+    /// S21.14 图标图片化：白蒙版贴图在 blit 时乘上色，使同一张 PNG 可切「默认金 / 选中白 /
+    /// 危险红」等墨色（跨层 tint，`09_render_framework.md` §5.1）。默认 no-op（轻量画布继承）。
+    fn blit_image_tint(&mut self, _asset: &str, _x: i32, _y: i32, _w: i32, _h: i32, _tint: u16) {}
 }

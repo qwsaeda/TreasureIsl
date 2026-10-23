@@ -1,6 +1,7 @@
 {
   "exempt_files": {
-    "crates/ti-tools/src/bin/doccheck2.rs": "S20.1 拆分（按断言族分文件：layout/primitives/scene/data/asset）"
+    "crates/ti-tools/src/bin/doccheck2.rs": "S20.1 拆分（按断言族分文件：layout/primitives/scene/data/asset）",
+    "crates/ti-app/src/scenes/chrome.rs": "S21.14 tint 契约跨层接入（blit_image_tint + icon/image 原语 image 上色）使 934 行；限期 S22 拆 scenes/chrome/{icons_draw,track,primitives} 子模块后删本条"
   },
   "exempt_fns": {
     "crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session": "S20.1 拆分（e2e 按阶段拆 fn）",

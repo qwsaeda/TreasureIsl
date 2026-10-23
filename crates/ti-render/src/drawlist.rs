@@ -44,7 +44,7 @@ pub enum DrawOp {
         /// 颜色（RGB565）。
         color: u16,
     },
-    /// 贴图（资源路径 + 目标矩形；Bevy 侧走资产服务器，CPU 侧读文件解码）。
+    /// 贴图（资源路径 + 目标矩形 + 色调；Bevy 侧走资产服务器，CPU 侧读文件解码）。
     Image {
         /// 资源路径（相对 `assets/` 根，如 `ui/board.png`）。
         asset: String,
@@ -56,6 +56,8 @@ pub enum DrawOp {
         w: i32,
         /// 目标高。
         h: i32,
+        /// 色调（RGB565；`0xFFFF` 白 = 无色调，S21.14 图标图片化跨层 tint）。
+        tint: u16,
     },
 }
 
@@ -163,7 +165,11 @@ impl Canvas for DrawList {
     }
 
     fn blit_image(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32) {
-        self.ops.push(DrawOp::Image { asset: asset.to_owned(), x, y, w, h });
+        self.ops.push(DrawOp::Image { asset: asset.to_owned(), x, y, w, h, tint: 0xFFFF });
+    }
+
+    fn blit_image_tint(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32, tint: u16) {
+        self.ops.push(DrawOp::Image { asset: asset.to_owned(), x, y, w, h, tint });
     }
 
     fn pixel_at(&self, _x: i32, _y: i32) -> u16 {

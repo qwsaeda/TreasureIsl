@@ -533,13 +533,21 @@ pub fn spawn_draw_list(
                 ));
                 count += 1;
             }
-            ti_render::drawlist::DrawOp::Image { asset, x, y, w, h } => {
+            ti_render::drawlist::DrawOp::Image { asset, x, y, w, h, tint } => {
                 // S18.8b：贴图原语 → 资产服务器（路径相对 `assets/` 根）。
+                // S21.14：白蒙版贴图跨层 tint —— `tint=0xFFFF`（白）= 无色调（背景/多色图不受影响），
+                // 非白 = 该色 RGB multiply（Sprite.color 默认 blend 乘纹理）⇒ 同图可切墨色。
                 let handle: Handle<Image> = world.resource::<AssetServer>().load(asset.clone());
+                let color = if *tint == 0xFFFF {
+                    Color::WHITE
+                } else {
+                    rgb565_to_color(*tint)
+                };
                 world.spawn((
                     DrawListEntity,
                     Sprite {
                         image: handle,
+                        color,
                         custom_size: Some(Vec2::new(*w as f32, *h as f32)),
                         ..Default::default()
                     },
