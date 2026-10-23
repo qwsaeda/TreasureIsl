@@ -1,0 +1,25 @@
+{
+ "version": 1,
+ "batch": "index_compass",
+ "_comment": "首页 S22「罗盘环标题页」资产批次规格（S22.1）：1 枚圆形黄铜徽章 medallion_ring（6 菜单共用铜底，中心空面板供白蒙版图标叠放）。`assets/ui_manifest.json` = 资产唯一事实源（`ui_asset_batch.py register` 由本规格 upsert）；抠图 = luma（纯黑底）。声明式 = 可评审/可 diff/可复现。",
+ "roles": {
+  "medallion": {
+   "ratio": "1:1",
+   "target": [
+    512,
+    512
+   ],
+   "key": "luma",
+   "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon"
+  }
+ },
+ "assets": [
+  {
+   "name": "medallion_ring",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring.png",
+   "params": {},
+   "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon"
+  }
+ ]
+}

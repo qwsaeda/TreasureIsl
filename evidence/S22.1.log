@@ -1,0 +1,35 @@
+# S22.1 首页罗盘环资产 · 验收证据
+
+**改动面**：资产 = `assets/ui/medallion_ring.png`（1 枚圆形黄铜徽章，6 菜单共用铜底）+ 批次规格 `assets/ui_batches/index_compass.json` + `ui_manifest.json` 登记；顺带补齐 ④-04 的 14 白蒙版 `icon_*.png` 中 8 张未登记孤儿（chest/coin/sword/castle/beacon/heart/flag/monogram）入 `ui_manifest.json`。
+
+## 判据实跑
+
+### 判据 1 · medallion_ring 生成 + 抠图（ui_asset_batch）
+```
+$ python scripts/ui_asset_batch.py register --spec assets/ui_batches/index_compass.json
+  ADD medallion_ring   清单已写 assets/ui_manifest.json
+$ python scripts/ui_asset_batch.py generate --spec ...   # agnes_gen（AGNES_API_KEY）
+  GEN medallion_ring: OK
+$ python scripts/ui_asset_batch.py install --spec ...    # luma 抠图（纯黑底→透明）
+  规范化 -> assets/ui/medallion_ring.png (512, 512)
+$ python scripts/ui_asset_batch.py check --spec ...
+  ui_asset_batch check: 0 error(s), 0 warn(s)
+```
+资产 = 512×512 圆形黄铜徽章（beveled gold rim + rivets + 凹陷空面板），center 可叠白蒙版图标（`blit_image_tint` 上色）。
+
+### 判据 2 · 资产清单三方一致（ui_assets.py verify）
+```
+$ python scripts/ui_assets.py verify
+  ui_assets verify: OK（45 资产，登记/文件/引用三方一致）
+```
+含新登记 `medallion_ring` + 补齐 8 张 ④-04 白蒙版孤儿图标 → 0 孤儿（此前 `ui_assets verify` 报 8 孤儿 = ④-04 漏登记，本任务一并清）。
+
+### 判据 3 · 与 icon_* 叠放比例自洽
+`medallion_ring` 512×512，`icon_*` 白蒙版 512×512（48 原生最近邻放大）→ S22.2 落码时徽章 blit 144×144、图标 blit 其内 ~96×96 居中（同 1:1，无形变）。
+
+### 判据 4 · 门禁
+```
+gate: 0 failure(s)（资产改动后全门禁复核）
+```
+
+evidence 收口人：Agnes-3.0-flash / 2026-10-23

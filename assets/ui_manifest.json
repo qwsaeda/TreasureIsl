@@ -18,7 +18,7 @@
         512
       ],
       "key": "luma",
-      "prompt": "a single circular gold medallion emblem, ornate thin gold line art, {what} in the center of the medallion, antique brass and gold filigree, glowing gold on a PURE SOLID BLACK background, no text, no letters, no scenery, no texture in the background, high contrast, centered"
+      "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
     "board": {
       "ratio": "21:9",
@@ -125,6 +125,78 @@
         "what": "an ornate ship cabin door"
       },
       "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_chest",
+      "role": "medallion",
+      "file": "assets/ui/icon_chest.png",
+      "params": {
+        "what": "treasure chest (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_coin",
+      "role": "medallion",
+      "file": "assets/ui/icon_coin.png",
+      "params": {
+        "what": "double-ring coin (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_sword",
+      "role": "medallion",
+      "file": "assets/ui/icon_sword.png",
+      "params": {
+        "what": "crossed swords (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_castle",
+      "role": "medallion",
+      "file": "assets/ui/icon_castle.png",
+      "params": {
+        "what": "castle with three merlons (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_beacon",
+      "role": "medallion",
+      "file": "assets/ui/icon_beacon.png",
+      "params": {
+        "what": "lighthouse beacon (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_heart",
+      "role": "medallion",
+      "file": "assets/ui/icon_heart.png",
+      "params": {
+        "what": "heart / HP (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_flag",
+      "role": "medallion",
+      "file": "assets/ui/icon_flag.png",
+      "params": {
+        "what": "turn-flag (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_monogram",
+      "role": "medallion",
+      "file": "assets/ui/icon_monogram.png",
+      "params": {
+        "what": "role monogram ring (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
     },
     {
       "name": "role_panda",
@@ -361,6 +433,14 @@
       "params": {},
       "prompt": "a LONG HORIZONTAL RECTANGULAR antique polished brass button plate, very wide and short, 4 to 1 width to height ratio, straight rectangular edges with slightly rounded corners, gold filigree rim and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
       "generated_at": "2026-10-22"
+    },
+    {
+      "name": "medallion_ring",
+      "role": "medallion",
+      "file": "assets/ui/medallion_ring.png",
+      "params": {},
+      "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-23"
     }
   ]
 }
