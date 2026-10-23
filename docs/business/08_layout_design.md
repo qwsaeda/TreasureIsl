@@ -100,6 +100,8 @@
 
 ### 4.1 index（主菜单）
 
+> **S22（首页重设计「罗盘环标题页」）起坐标单一事实源 = [`ui-redesign-v3/09_index_compass_spec.md`](../ui-redesign-v3/09_index_compass_spec.md)**（C 罗盘环 + 羊皮海图底：满屏 `chart_full` + 中心空舵轮 `helm` + 6 铜质 medallion 沿环（白蒙版图标 gold tint）+ 版本签；`focus_anchor` = `compass_ring {65,500,950,941}` ↔ `bbox_pct {6,26,88,49}`）。下表为 S22 前旧竖排列表版式（S22.2 落码后按新规格退役）。
+
 | 元素 | 坐标（`scenes.json`） | 说明 |
 |---|---|---|
 | 标题 | `title {y:8, h:96}` | **无 `x` 键**（按文本宽度居中，见上）；标题条高 96（`y=12..108`，S17.2）；标题文字「金银岛」金墨 |

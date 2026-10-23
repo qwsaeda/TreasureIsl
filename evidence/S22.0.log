@@ -1,0 +1,44 @@
+# S22.0 首页重设计「罗盘环标题页」版面与交互规格定案 · 验收证据
+
+**用户拍板（留痕）**：2026-10-23 用户「首页界面是个屎」→ question 工具选 **C 方向「游戏化罗盘导航」** +
+**羊皮海图底（与 main_map v4 统一）** + 「先定案规格」；随后「中心舵轮 = 放空舵轮（金银岛 logo 字由上方木牌承载），其它（图标映射沿用现有 / medallion 144 / 环半径 400）照规格确认」。
+
+## 判据实跑
+
+### 判据 1 · 规格落文（docs/ui-redesign-v3/09_index_compass_spec.md）
+新文档 §0~§9 齐全：设计意图（C 罗盘环 + 羊皮海图）+ 层结构 z2/z3/z5/z9 + 逐元素坐标表 11 行
+（`chart_full` 满屏 / `title_plaque {160,128,760,320}` / `compass_ring {65,500,950,941}` / `helm {408,838,264,264}` 空舵轮 /
+6 枚 `m0..m5` medallion 沿环 R=400 / `footer {344,1816,392,64}`）+ 信息架构（mood=epic_entry / focus=compass_ring /
+beats 和=1.0 / N6 HUD=0）+ 交互契约（6 徽章 rect 命中 6 MenuAction + 键盘 ↑↓/1..6/Enter + 高亮态外圈 gold）+
+门禁耦合（N8/N3/N4/8pt 径向豁免/原语闭集/资产登记）+ 资产接线（chart_full/helm 已入仓，medallion_ring 待 S22.1）+
+改动面声明 + 与旧首页差异 + 出图验收口径。
+
+### 判据 2 · 坐标一致性自证
+- N8：`compass_ring {65,500,950,941}` ↔ `bbox_pct {6,26,88,49}`：6×10.8=64.8→65 / 26×19.2=499.2→500 /
+  88×10.8=950.4→950 / 49×19.2=940.8→941，全 ±1px 内 ✓
+- N3 焦点面积 = 88×49 = 43.12% ≥ 20% ✓
+- N4 beats[0]=compass_ring 权重 0.55 ≥0.30，和 = 0.55+0.30+0.15 = 1.00 ✓
+- 8pt：`title_plaque {160,128,760,320}` + `footer {344,1816,392,64}` + 徽章 144 全 8 整除 ✓；
+  `compass_ring`/`helm`/`m0..m5` = 径向布局键，入 8pt 豁免表（同 main_map `world_canvas` v3 叙事键口径）
+- 原语闭集：只用既有 7 原语（`image`/`text`/`rect`），不新增 kind ✓
+
+### 判据 3 · 版面线图（概念稿，设计稿先行 A 纪律）
+`python scripts/ui_layout_sheet.py --spec assets/ui_batches/index_compass_layout.json` →
+`evidence/ui_concept/index_compass_layout.png`（罗盘环 6 徽章 + 中心舵轮 + 顶牌 + footer）+
+AI 氛围概念 `evidence/ui_concept/index_compass_concept.png`（gitignored，仅参考）。
+
+### 判据 4 · 文档登记（硬规则 6）
+- `docs/README.md` 全库索引 + 本路由表 = `09_index_compass_spec.md` 登记
+- `AGENTS.md` 路由表加 S22 首页行 + 当前状态（S22 待开工 + 概念稿）
+- `docs/business/08_layout_design.md` §4.1 index 加 S22 镜像注（坐标单一事实源 = 09_index_compass_spec）
+- `plan/ledger.yaml` 登记 S22.0/S22.1/S22.2/S22.3（台账 202→206）
+
+### 判据 5 · 门禁
+```
+doccheck: 133 docs, 38 facts, 201 task refs, 4 assertions, 0 error(s)
+doccheck2: 0 error(s) across 37 audit-codified checks
+audit_code: PASS 0 结构违规
+gate: 0 failure(s)
+```
+
+evidence 收口人：Agnes-3.0-flash / 2026-10-23

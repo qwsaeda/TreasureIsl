@@ -1,0 +1,27 @@
+{
+ "_comment": "index 首页重设计 C 方向「游戏化罗盘导航」版面线图（设计稿先行，A 纪律；落码前用户确认）。背景 = bg_night_sea；中心 = helm.png 舵轮 medallion（金银岛 logo）；6 项菜单 = 罗盘环 6 方向位的铜质 medallion 徽章（白蒙版图标+tint）+ 标签。中心 cy=980 使 6 环（r360）落在 y620~1340，避开底部 footer。此规格 = S21.x index 重设计定案前的坐标草图，非最终数值。",
+ "out": "evidence/ui_concept/index_compass_layout.png",
+ "art": "assets/ui/bg_night_sea.png",
+ "scale": 0.25,
+ "ring": {
+   "cx": 540,
+   "cy": 980,
+   "rx": 360,
+   "ry": 360,
+   "nodes": 6,
+   "color": "#ffd750",
+   "label": "罗盘环 · 6 方向菜单"
+ },
+ "boxes": [
+  { "name": "bg_night_sea 全屏 z1", "rect": [0, 0, 1080, 1920], "color": "#78dca0" },
+  { "name": "title_plaque 金银岛 z3", "rect": [162, 150, 756, 300], "color": "#ebb85a" },
+  { "name": "helm_center 舵轮logo z5", "rect": [402, 842, 276, 276], "color": "#ff3c3c" },
+  { "name": "m0 新游戏 z6", "rect": [470, 550, 140, 140], "color": "#ff8c3c" },
+  { "name": "m1 载入游戏 z6", "rect": [782, 730, 140, 140], "color": "#ff8c3c" },
+  { "name": "m2 读取存档 z6", "rect": [782, 1090, 140, 140], "color": "#ff8c3c" },
+  { "name": "m3 选项设置 z6", "rect": [470, 1270, 140, 140], "color": "#ff8c3c" },
+  { "name": "m4 帮助说明 z6", "rect": [158, 1090, 140, 140], "color": "#ff8c3c" },
+  { "name": "m5 离开游戏 z6", "rect": [158, 730, 140, 140], "color": "#ff8c3c" },
+  { "name": "footer 状态签 z9", "rect": [344, 1836, 392, 52], "color": "#ffffff" }
+ ]
+}
