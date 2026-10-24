@@ -281,6 +281,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             glyph_advance: 1,
             max_back_steps: 1,
         },
+        board_group_tokens: Vec::new(),
     };
     assert_eq!(b.combat.boss(0).map(|x| x.hp), Some(10));
 }

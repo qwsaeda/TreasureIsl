@@ -1,0 +1,30 @@
+S23.0 飞轮 R1 留人裁决 3 条数据化落地（渲染数据/图片分离主题）
+=================================================================
+3 条「留人裁决」finding（evidence/flywheel_render_r1_findings.md）按用户 2026-10-23 拍板「全→数据化/图片化」落地：
+
+①-01 赛道 9 分区→令牌表入数据（severity 高）
+- chrome.rs:319 `const TOKENS:[&str;9]` 写死 → 主源数据化到 balance.json `board_group_tokens`（9 令牌）
+- 代码 `chrome::group_color_token(group)` 只 dispatch `tokens[group-1]`；balance 缺失/空 = 硬编码 9 令牌 crash-safe 回退（同 S21.14 图标矢量回退口径）
+- 三面对账：balance.json（board_group_tokens）+ ti-core Balance/board_group_tokens 字段（RawBalance + convert + data_tables 测试字面量）+ chrome 主源 dispatch
+- 赛道标记（main_map.rs）与航程条（chrome::voyage_bar）共用同一数据源（签名不变，callers 零改）
+
+①-12 色板同值有意别名守卫（severity 低）
+- theme.json 色板 4 组有意同值别名（0x0865 bg 深底族 / 0x3A17 wood 木色族 / 0xFE55 gold 金字族 / 0x4E3D 亮金族），曾「两令牌同值语义模糊」
+- 裁决 = 保留为有意别名 + 显式登记（非拆值/合并：by_name 索引表位移风险）：数据化到 gate_data.json `palette_aliases`（4 组，单一事实源）
+- doccheck2 `check_ui_redesign_tokens` 新增 `ui_palette_alias_check`：同值令牌组未声明 = ERROR（防新撞色令牌未登记）
+- 人读镜像：10_ui_redesign.md §3.0 同值令牌组表
+
+⑤-04 发货窗口标题 i18n 面量归零（severity 低）
+- treasure_bevy.rs:634 窗口标题 CJK 面量 → 主源 strings.json `app.window_title`
+- `window_title()` 读 `ti_core::data::pairs()` 取 app.window_title；缺表/缺键 = crash-safe 回退（同 S21.14 口径）
+- bevy_app.rs:49 `SpikeApp` 标题 = 开发 spike 标识（非发货 UI），保留 CJK 标记（豁免：dev-spike 标识符）
+
+验收判据（实跑）：
+- gate 23 项 0 failure（含新 ui_palette_alias_check 4 组 0 漂移 + doccheck2 0 error）
+- cargo build --workspace exit 0 + wasm32 build+clippy（-D warnings）exit 0
+- balance.json / strings.json validate_data OK（strings 92 项）
+- ①-01 回退口径：balance 缺失仍返回 9 令牌（无 panic）；⑤-04 回退：strings 缺失仍出窗口标题（无 panic）
+
+改动面声明：业务规则=无 | 数据=balance.json + gate_data.json + strings.json（3 数据面）| 规则=无 |
+表现=chrome.rs group_color_token（数据主源 + 回退）+ treasure_bevy.rs window_title()（数据主源 + 回退）|
+资产=无；跨模块原因=每条 finding 都跨「数据面 + 代码主源 + crash-safe 回退（/测试字面量 / doccheck2 断言 / 文档镜像）」多面，少一处即「数据改了代码没跟 / 代码改了数据没登记 / 撞色未守卫」。

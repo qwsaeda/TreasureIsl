@@ -631,7 +631,7 @@ fn main() {
 
     let window = Window {
         resolution: WindowResolution::new(WIN_W, WIN_H),
-        title: "金银岛 TreasureIsl（Bevy）".to_owned(),
+        title: window_title(),
         resizable: false,
         ..Default::default()
     };
@@ -763,4 +763,16 @@ fn write_shot_png(path: &str) {
         Ok(()) => eprintln!("[shot] 已写 {}", out.display()),
         Err(e) => eprintln!("[shot] 写文件失败: {e}"),
     }
+}
+
+/// 窗口标题（飞轮 R1 ⑤-04 i18n 面量归零）：主源 = `strings.json app.window_title`；
+/// 缺表/缺键 = crash-safe 回退（同 S21.14 图标代码矢量回退口径）。
+fn window_title() -> String {
+    ti_core::data::pairs()
+        .iter()
+        .find(|pair| pair.0 == "app.window_title")
+        .map_or_else(
+            || "金银岛 TreasureIsl（Bevy）".to_owned(),
+            |pair| pair.1.to_string(),
+        )
 }

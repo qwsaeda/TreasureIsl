@@ -51,6 +51,20 @@ parity 与 UI 无关）；三套视觉基线随 S17.2/S17.4 重生成。
 | `gold_warm` | `#FFD700` | `0xFEA0` | `COLOR_GOLD_WARM`（S18.6 暖金版式标题金） | 暖金标题/选中底 |
 | `sky_navy` | `#1A2942` | `0x1948` | `COLOR_SKY_NAVY`（S18.6 夜空渐变底色） | 夜空背景 |
 
+### 3.0 同值令牌组（有意别名，飞轮 R1 ①-12 数据化）
+
+`theme.json` 色板有 4 组**有意同值别名**（语义家族共用一色），已数据化到 `assets/gate_data.json`
+`palette_aliases`（单一事实源），`doccheck2 check_ui_redesign_tokens` 守卫「同值组须声明」——新撞色令牌未登记即 ERROR：
+
+| 同值 | 有意别名字母表 | 语义家族 |
+|---|---|---|
+| `0x0865` | `bg` = `parch_dark` = `bevel_shadow` | 深底族（页面底/暗角共用） |
+| `0x3A17` | `wood` = `menu_border` = `title_bar` | 木色族（外框/描边/标题条共用） |
+| `0xFE55` | `gold` = `text_on_wood` = `landmark` | 金字族（强调/木上白字/地标共用） |
+| `0x4E3D` | `gold_glow` = `gold_bright` = `selected` | 亮金族（高亮光晕/选中底/亮星共用） |
+
+（①-12 = 上述「亮金族」曾「两令牌同值语义模糊」；裁决 = 保留为有意别名并显式登记 + 机器守卫，非拆值/合并（by_name 索引表位移风险）。）
+
 ### 3.1 对比度表（WCAG 2.1 相对亮度，验收 ≥ AA）
 
 | 前景/底 | 比值 | 判定 |

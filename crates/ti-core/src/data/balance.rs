@@ -19,6 +19,10 @@ pub(crate) struct RawBalance {
     pub(crate) cards: RawCards,
     #[serde(default)]
     pub(crate) board: RawBoard,
+    /// 赛道 9 分区 → 主题色令牌表（飞轮 R1 ①-01 数据化：`chrome::group_color_token` 主源；
+    /// 缺省/空 = 代码 9 令牌 crash-safe 回退）。
+    #[serde(default)]
+    pub(crate) board_group_tokens: Vec<String>,
     #[serde(default)]
     pub(crate) messages: RawMessages,
     #[serde(default)]

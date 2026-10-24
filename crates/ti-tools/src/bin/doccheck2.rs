@@ -1391,6 +1391,7 @@ fn check_ui_redesign_tokens(root: &Path) -> Vec<String> {
     if !gate_data.is_null() {
         errors.extend(ui_icon_registry_check(root, &gate_data));
         errors.extend(ui_motion_params_check(root, &gate_data));
+        errors.extend(ui_palette_alias_check(root, &gate_data));
     }
     errors
 }
@@ -1889,6 +1890,50 @@ fn ui_8pt_check(root: &Path) -> Vec<String> {
 }
 
 /// ② 色板三方恒等：`theme.json` == `Theme::DEFAULT` == `10_ui_redesign.md` §3 表。
+/// 飞轮 R1 ①-12：`theme.json` 色板**同值令牌组（别名）**须显式声明在 `gate_data.palette_aliases`
+/// （有意别名 = `bg` 深底族 / `wood` 木色族 / `gold` 金字族 / `gold_bright` 亮金族，各 3 令牌撞值）；
+/// 出现**未声明**的同值组 = 真漂移（新令牌撞色未登记）。
+fn ui_palette_alias_check(root: &Path, gate_data: &serde_json::Value) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(text) = read_file(root, "assets/data/theme.json") else {
+        return errors;
+    };
+    let Ok(theme) = serde_json::from_str::<serde_json::Value>(&text) else {
+        return errors;
+    };
+    let Some(palette) = theme.get("palette").and_then(|v| v.as_object()) else {
+        return errors;
+    };
+    // 值 → 令牌名集合（同值组 = 别名族）
+    let mut by_val: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for (name, val) in palette {
+        by_val.entry(val.to_string()).or_default().push(name.clone());
+    }
+    // 声明的有意别名副集（每组成员集合化，无序比对）
+    let declared: Vec<std::collections::BTreeSet<String>> = gate_data
+        .get("palette_aliases")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|g| g.as_array())
+                .map(|members| {
+                    members.iter().filter_map(|m| m.as_str().map(String::from)).collect()
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    for (val, names) in by_val.into_iter().filter(|(_, n)| n.len() > 1) {
+        let set: std::collections::BTreeSet<String> = names.iter().cloned().collect();
+        if !declared.contains(&set) {
+            errors.push(format!(
+                "theme.json 色板同值组 [{names:?}]（值 {val}）未在 gate_data.palette_aliases 声明为有意别名（飞轮 R1 ①-12：撞色须显式登记）"
+            ));
+        }
+    }
+    errors
+}
+
 fn ui_palette_triple_check(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(theme_json_text) = read_file(root, "assets/data/theme.json") else {

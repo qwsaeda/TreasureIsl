@@ -329,11 +329,13 @@ pub fn world_canvas_frame(host: &mut dyn SceneHost, scene_id: &str) {
 
 /// 分区号 → 主题色令牌（9 分区配色，对齐原版地形类别码 1..9；`legacy/docs/facts/map.md` F-308）。
 ///
-/// 单一事实源（S19.7 D2 收敛）：赛道标记（`main_map.rs`）与航程条（`chrome::voyage_bar`）共用本表
-/// （此前两处各抄一份 ⇒ 改配色必漏一处）。
+/// 单一事实源（S19.7 D2 收敛 + 飞轮 R1 ①-01 数据化）：赛道标记（`main_map.rs`）与航程条
+/// （`chrome::voyage_bar`）共用本表；令牌表主源 = `balance.json board_group_tokens`（可改数据），
+/// 代码只做 `tokens[group-1]` dispatch；balance 缺失/空 = 硬编码 9 令牌 crash-safe 回退
+/// （同 S21.14 图标代码矢量回退口径）。
 #[must_use]
 pub fn group_color_token(group: u8) -> &'static str {
-    const TOKENS: [&str; 9] = [
+    const FALLBACK: [&str; 9] = [
         "land_sand",
         "reef",
         "sea_shallow",
@@ -344,8 +346,17 @@ pub fn group_color_token(group: u8) -> &'static str {
         "hilite",
         "danger",
     ];
-    let i = (usize::from(group).saturating_sub(1)).min(TOKENS.len() - 1);
-    TOKENS[i]
+    let i = (usize::from(group).saturating_sub(1)).min(FALLBACK.len() - 1);
+    if let Ok(b) = data::balance() {
+        let tokens = &b.board_group_tokens;
+        if !tokens.is_empty() {
+            let j = (usize::from(group).saturating_sub(1)).min(tokens.len() - 1);
+            if let Some(t) = tokens.get(j) {
+                return t.as_str();
+            }
+        }
+    }
+    FALLBACK[i]
 }
 
 /// S19.7 航程条（`main_map.voyage_bar`）：把环岛赛道**摊平成一条进度条**，

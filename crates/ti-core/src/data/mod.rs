@@ -445,6 +445,9 @@ pub struct Balance {
     pub save: SaveCfg,
     /// UI 参数。
     pub ui: UiCfg,
+    /// 赛道 9 分区 → 主题色令牌表（飞轮 R1 ①-01 数据化；`chrome::group_color_token` 主源，
+    /// 缺省/空 = 代码 9 令牌 crash-safe 回退）。
+    pub board_group_tokens: Vec<String>,
 }
 
 // ------------------------------------------------------- serde 中间层（JSON 形状）
@@ -786,5 +789,6 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
             glyph_advance: raw.ui.glyph_advance,
             max_back_steps: raw.ui.max_back_steps,
         },
+        board_group_tokens: raw.board_group_tokens.clone(),
     })
 }

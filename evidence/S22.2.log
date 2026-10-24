@@ -161,3 +161,6 @@ touch：cargo test -p ti-app --lib menu_medallions_hit_six_items PASS（6 徽章
 render_intent：cargo test -p ti-app --test render_intent PASS（12 项，含 S22 index 3 处判据更新）
 键盘：index.rs on_input MoveUp/MoveDown/Confirm 走 menu_selected 循环，驱动 when=selected 标签高亮（compass-ring 无死区）
 
+
+--- A 纪律 用户视觉验收留痕（本任务动了 scenes.json 版面/配色）---
+用户视觉验收通过（2026-10-24 消息留痕）：首页罗盘环出图 evidence/bevy_native_index.png 签收=「签收（含小瑕疵放行）」；改动面含 scenes.json index 罗盘环版面 + theme tint 令牌，视觉验收归 A 纪律（00_index.md §UI 视觉改动 + EXP-114）。
