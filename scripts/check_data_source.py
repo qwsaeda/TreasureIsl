@@ -6,6 +6,7 @@
 
 用法：
   python scripts/check_data_source.py            # 有数据源改动 → 跑 render_snapshot，要求全绿
+  python scripts/check_data_source.py --check    # 只读门禁（契约别名；默认行为即只读，不写文件）
   python scripts/check_data_source.py --skip     # 数据源无改动时 SKIP（gate 全绿前提）
 
 退出码：0 = PASS/SKIP，1 = FAIL（数据源改动且快照漂移）。
@@ -54,6 +55,9 @@ def run_render_snapshot() -> bool:
 
 
 def main() -> int:
+    # S21.8 工具契约：--check = 只读门禁别名（默认行为即只读判定，不写文件；漂移非 0 退出）
+    if "--check" in sys.argv:
+        print("NOTE: --check = 只读门禁模式（本工具默认即只读；数据源改动且快照漂移时非 0 退出）")
     skip = "--skip" in sys.argv
     if not data_source_changed():
         print("SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发")

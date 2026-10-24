@@ -172,13 +172,14 @@ fn run_random_session(b: &ti_core::data::Balance, rng: &mut GameRng, session: u3
         ));
     }
 
-    // [4] 随机买卖（数量在 [0, qty_max]，金不足被拒 = 状态不变）
+    // [4] 随机买卖（数量在 [0, 有效上限]，金不足被拒 = 状态不变）
     let mut ledger = TradeLedger::new(b.trade.clone(), host.gold, &[], b.economy.gold_max);
     let gold_trade0 = host.gold;
     let trade_note = match b.trade.goods.first() {
         None => "无商品".to_string(),
         Some(good) => {
-            let qty = rng.in_range(good.qty_max + 1); // 0..=qty_max
+            // 有效上限 = min(目录 qty_max, 船舱 cargo)；1 级船 = 99 = 现状（0 漂移）
+            let qty = rng.in_range(ledger.qty_cap(good.id).saturating_add(1)); // 0..=有效上限
             let note = match ledger.buy(good.id, qty) {
                 Ok(tr) => format!(
                     "买 {qty} × 商品#{}({}) 单价 {} → 金 {gold_trade0}→{}（实扣 {}）",

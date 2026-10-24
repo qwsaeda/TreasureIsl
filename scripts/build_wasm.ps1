@@ -1,5 +1,7 @@
 ﻿# S18.8a：构建 wasm 交付产物到 web/（**Bevy 壳**）。
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
+#       powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1 -Check
+#       （-Check = S21.8 工具契约只读前置体检：不构建 / 不拷贝 / 不写 evidence，前置缺失 ⇒ 非 0 退出）
 #
 # S18.8a 变更：发货 wasm 入口 = `crates/ti-engine` 的 Bevy 壳 `treasure-bevy-wasm`
 # （ti-app 的 macroquad wasm 壳 `treasure-wasm` 已退役，miniquad 的 gl.js / quad-snd 的
@@ -7,7 +9,7 @@
 # 本脚本职责：**构建 wasm 交付产物 + 拷贝资源 + 记录体积**。
 # 浏览器发布链（wasm-bindgen JS 胶水 + HTML 页面 + Bevy 资源管线 + 800 KB 预算复验）
 # 属 S18.8e；本脚本产出的 `web/` 暂不含可打开的 Bevy 页面（勿当可玩站点）。
-param()
+param([switch]$Check)
 
 $ErrorActionPreference = 'Continue'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -16,6 +18,25 @@ Set-Location $repoRoot
 $target = 'wasm32-unknown-unknown'
 $outDir = 'web'
 $engineManifest = 'crates\ti-engine\Cargo.toml'
+
+# S21.8 工具契约只读模式：-Check = 前置体检（rustup target / 交付壳 manifest / 首屏资源在位；
+# 不构建 / 不拷贝 / 不写 evidence；任一前置缺失 ⇒ 非 0 退出）
+if ($Check) {
+    $ok = $true
+    if (((& rustup target list --installed 2>$null) -join ' ') -notmatch $target) {
+        Write-Host "  FAIL  未安装 $target" -ForegroundColor Red
+        $ok = $false
+    }
+    if (-not (Test-Path $engineManifest)) {
+        Write-Host "  FAIL  缺交付壳 manifest: $engineManifest" -ForegroundColor Red
+        $ok = $false
+    }
+    # 注意：data/ 资源缺失不是致命项（构建流程对缺失资源打 SKIP 继续，见下方资源拷贝段；
+    # S11.1 起 data/ 已归档 legacy/data/，本脚本按 SKIP 口径运行）
+    if (-not $ok) { exit 1 }
+    Write-Host "  OK  -Check 前置体检通过（$target 已装 + 交付壳 manifest + 首屏资源在位；只读未构建）"
+    exit 0
+}
 
 function Say([string]$msg) { Write-Host "  $msg" }
 

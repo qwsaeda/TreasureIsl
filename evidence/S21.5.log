@@ -1,0 +1,62 @@
+S21.5 赛道重绘（main_map v4「羊皮海图桌面」· 黄铜航线 + 9 类多形状节点牌 + 玩家船 + 航线进度尺）
+=====================================================================================
+改动面（硬规则 7）：业务规则=无 | 数据=assets/data/scenes.json（main_map 段 2 键：
+`track_node {size:90}` / `track_ship {size:150}`，单位 = 占瓦片半宽的百分比）|
+规则=无 | 表现=crates/ti-app/src/scenes/main_map.rs（`render_track` 重写 + `draw_route_line`）
++ crates/ti-app/src/scenes/chrome.rs（`node_asset` 映射表 + `voyage_bar` 重做 +
+`asset_dest_rect`/`asset_present`/`voyage_sectors`）| 资产=引用**已入仓** 9 枚节点牌
+（`assets/ui/node_{start,city,port,event,card,battle,treasure,boss,plain}.png`）
++ `assets/ui/ship_player.png`（本任务未新增资产）。
+跨模块原因：节点画法在表现层、节点位置来自 board.json（数据层）、牌面素材在资产层、
+kind→资产映射是门禁 `check_node_kind_asset_map` 的唯一事实源 ⇒ 四者必须同源对齐。
+
+落码内容（S21.5 标题四项）：
+① **黄铜航线实线**：`TRACK_LINE_W=4`，相邻赛道格中心连线（替代原 5×3 点阵）。
+② **9 类多形状节点牌**：每赛道格 blit 一枚 PNG 牌（9 种图案各异：圆/六边/圆角方/盾/菱/
+   尖星/宝箱/骷髅/铜钉）。**kind→资产唯一事实源** = `chrome.rs::node_asset(SpaceKind)`
+   → `NodeAsset{path, visible_px}`：start→node_start(488) / city→node_city(352) /
+   port→node_port(324) / event→node_event(471) / card→node_card(314) /
+   battle→node_battle(468) / treasure→node_treasure(443) / boss→node_boss(334) /
+   plain→node_plain(182)。贴图缺失 = 不画（`asset_present` crash-safe，不 panic）。
+③ **玩家船 sprite**：当前格画 `ship_player.png`（1 级顶替口径；按 `boat_level` 切 4 张船图
+   = S21.12 域）；无赛道时回退旧绿方块 + `flag` 代码图标。
+④ **航线进度尺重做**：`voyage_bar` 由「45 点噪声条」改为 **1 条黄铜航线带 + 9 个扇区段
+   （分区连续段 → `voyage_sectors`，段间露黄铜）+ 玩家船标 + ☠ BOSS 终标**；
+   内部数值走命名常量（VOYAGE_PAD/SLOT_H/SECTOR_H/SECTOR_GAP），随 rect 自适应。
+   节点牌/船标边长 = 数据百分比 × `board_fit.tw` ⇒ 随棋盘缩放（world_canvas 改 v4 尺寸自动放大）。
+
+规格坐标口径说明（重要，勿当漂移）：
+- `voyage_bar` 矩形**仍在 v3 坐标**（`{120,1056,840,120}`）。迁到 spec §2 的
+  `{48,1088,984,48}` 会触发 doccheck2 第 20 项（`08_layout_design.md` §4.3 ↔ scenes.json
+  镜像对账）FAIL —— 故**版面坐标整体迁到 v4 = S21.6 任务域**（scenes.json + md 镜像同改）。
+  进度尺画法已做成随矩形自适应 ⇒ S21.6 换坐标即自动生效。
+- 数据面只加 `size` 叶键（不加锚点/数值叶键）：doccheck2 第 20 项要求每个数值叶键在
+  `08_layout_design.md` §4.3 有镜像串；`size` 为唯一白名单叶键（已实测）。
+
+验收判据（实跑）：
+1. **出图对比**（`scripts/ui_preview.ps1 main_map` → `evidence/ui_preview/main_map.png`
+   + `evidence/bevy_native_main_map.png`）：**45 枚多形状黄铜牌沿岛缘可辨**（人工逐屏核对）
+   + **航线连续**（黄铜实线贯通全程）+ **玩家船在当前格**（带「你」标签）+ 进度尺 =
+   黄铜带 + 9 扇区 + 船标 + ☠ BOSS 终标。
+2. **kind↔资产映射表唯一事实源**：落点 `chrome.rs::node_asset`（代码侧唯一）；
+   数据侧 `ui_manifest.json` 9 个 `node_*` 名齐全 ⇒ doccheck2 `check_node_kind_asset_map` PASS。
+3. **双后端 CPU↔Bevy 像素对拍 ≤0.5%**：gate 第 21 项 `bevy-cpu-parity` **PASS**。
+4. `cargo test --workspace` 0 failed；`cargo clippy --workspace --all-targets --features
+   ti-app/native-shell,ti-app/headless -- -D warnings` 0 warning（新增函数均 <100 行）。
+5. `scripts/gate.ps1` 23 项 **0 failure**（doccheck2 37 项 0 error + check_scene_narrative
+   N1-N8 0 失败 + 三方对账 0 缺口 + audit_code 0 违规 + check_hardcode 0 命中）。
+
+遗留（归后续任务，非本任务域）：
+- S21.6：满屏 `chart_full` 海图底 + 顶部双铜牌 + 大号摇骰 CTA + 底部三键铜牌
+  （当前仍 v3 夜空底）+ `voyage_bar` 迁 v4 坐标（须同步 `08_layout_design.md` §4.3 镜像）。
+- S21.7：点节点 = 高亮 + 信息签（节点命中判定 + 文案 key）。
+- S21.12：玩家船按 `boat_level` 切 boat_1..4 贴图 + 建造面板「造船」入口。
+
+## 用户视觉验收（A 纪律 / EXP-114）
+
+**用户视觉验收通过**（2026-10-24，消息留痕）：用户过目
+`evidence/ui_preview/main_map.png`（+ `evidence/bevy_native_main_map.png` 同源）后选择
+「签收，通过」—— 确认 45 枚多形状黄铜节点牌沿岛缘可辨 + 黄铜航线实线贯通全程
+（起点「你」在左下、☠ BOSS 在顶）+ 航线进度尺 = 黄铜带 9 扇区 + 船标 + ☠ BOSS 终标，
+并确认底图未满屏 / CTA 未换大舵轮属 S21.6 版面域（不在本任务验收范围）。
+

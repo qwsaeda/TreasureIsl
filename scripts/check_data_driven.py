@@ -12,10 +12,11 @@
 4. **版面数值不在渲染层**：渲染层不得出现 1080/1920 之外的版面魔数
    （坐标/尺寸只能来自数据或 theme 令牌）。
 
-用法：python scripts/check_data_driven.py（exit 0 = 通过）
+用法：python scripts/check_data_driven.py（exit 0 = 通过；--check = 只读门禁别名，默认行为即只读）
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -55,6 +56,10 @@ def strip_comments(line: str) -> str:
 
 
 def main() -> int:
+    # S21.8 工具契约：--check = 只读门禁别名（默认行为即只读校验，不写文件；违规非 0 退出）
+    ap = argparse.ArgumentParser(description="数据分离门禁（S18.7）")
+    ap.add_argument("--check", action="store_true", help="只读模式（默认行为即只读门禁，保留契约别名）")
+    ap.parse_args()
     root = Path(__file__).resolve().parent.parent
     errors: list[str] = []
 

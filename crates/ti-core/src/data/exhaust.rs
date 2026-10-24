@@ -87,10 +87,13 @@ pub struct ExhaustBossTier {
 /// 经济域穷举空间。
 #[derive(Debug, Clone, Deserialize)]
 pub struct ExhaustTrade {
-    /// `qty` 相对 `qty_max` 的偏移档位（对全 5 商品统一套用，逐商品取自己的 `qty_max` 再偏移）。
+    /// `qty` 相对**有效上限**（`min(goods.qty_max, 船舱 cargo)`）的偏移档位
+    /// （对全 5 商品统一套用，逐商品/逐船级取自己的有效上限再偏移）。
     pub qty_offset_levels: Vec<i32>,
     /// 偏移档位说明（与 `qty_offset_levels` 等长，仅用于测试输出报告，不参与计算）。
     pub qty_offset_labels: Vec<String>,
+    /// 船等级档位（S21.10：单次贸易上限随船舱容量放大；`1` = 开局小舢板 = 现状）。
+    pub boat_levels: Vec<u32>,
     /// `gold` 相对 `price` 的偏移档位。
     pub gold_offset_levels: Vec<i32>,
     /// 偏移档位说明（与 `gold_offset_levels` 等长，仅用于测试输出报告，不参与计算）。
@@ -303,6 +306,7 @@ pub fn exhaust_key_counts() -> BTreeMap<&'static str, usize> {
     BTreeMap::from([
         ("combat.seeds", e.combat.seeds.len()),
         ("trade.qty_offset", e.trade.qty_offset_levels.len()),
+        ("trade.boat_levels", e.trade.boat_levels.len()),
         ("build.fixture.buildings", e.build.fixture.buildings.len()),
         ("saveload.seeds", e.saveload.seeds.len()),
         ("menu.item_target_indexes", e.menu.item_target_indexes.len()),

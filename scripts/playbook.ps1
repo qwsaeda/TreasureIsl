@@ -1,6 +1,8 @@
 ﻿# 金银岛常用命令集合（按 docs/gamebook.md + AGENTS.md 路由表固化）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 cmd [args...]
 #       powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -List
+#       powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -Check
+#       （-Check = S21.8 工具契约只读开关：被转发目标在位性体检，不执行任何被转发工具；缺失 ⇒ 非 0 退出）
 #
 # 命令清单：
 #   run-native       运行桌面版（默认开 HD 真彩，F4 切画质 / F1 缩放 / F2 滤波 / F3 边框）
@@ -25,6 +27,8 @@
 
 $ErrorActionPreference = "Continue"
 $Command = $args[0]
+# S21.8 工具契约：-Check = 只读开关别名（内部 health-check 命令，不进 -List 16 条用户命令清单）
+if ($Command -eq "-Check") { $Command = "check" }
 $ExtraArgs = @()
 if ($args.Count -gt 1) { $ExtraArgs = $args[1..($args.Count - 1)] }
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
@@ -153,6 +157,22 @@ switch ($Command) {
     }
     "check-hardcode" {
         RunCmd "python scripts/check_hardcode.py"
+    }
+    "check" {
+        # S21.8 工具契约只读体检：被转发目标在位性（不执行任何被转发工具；缺失 ⇒ 非 0 退出）
+        $targets = @(
+            'scripts\gate.ps1', 'scripts\smoke.ps1', 'scripts\build_wasm.ps1', 'scripts\ui_preview.ps1',
+            'scripts\ui_assets.py', 'scripts\check_hardcode.py', 'scripts\check_ps_scripts.ps1',
+            'crates\ti-app\Cargo.toml', 'crates\ti-engine\Cargo.toml', 'tests\scripts\full_run.json'
+        )
+        $missing = @($targets | Where-Object { -not (Test-Path $_) })
+        if ($missing.Count -gt 0) {
+            Write-Host "  check: 转发目标缺失" -ForegroundColor Red
+            $missing | ForEach-Object { Write-Host "    $_" }
+            exit 1
+        }
+        Write-Host "  check: OK（$($targets.Count) 个转发目标在位；只读未执行任何被转发工具）"
+        exit 0
     }
     default {
         Write-Host "未知命令: $Command" -ForegroundColor Red

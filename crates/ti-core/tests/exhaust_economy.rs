@@ -1,8 +1,9 @@
 //! S15.1 经济域业务场景穷举测试（`exhaust_economy`）。
 //!
 //! 枚举空间全部由 `assets/data/exhaust_scenarios.json`（`ti_core::data::exhaust()`）驱动：
-//! - 贸易侧：balance.json 全 5 商品 × `qty` 偏移档（JSON `trade.qty_offset_levels`，
-//!   逐商品取自己的 `qty_max` 再偏移）× `gold` 偏移档（JSON `trade.gold_offset_levels`）
+//! - 贸易侧：balance.json 全 5 商品 × 船等级档（JSON `trade.boat_levels`，货舱容量读
+//!   `balance.boat.levels`）× `qty` 偏移档（JSON `trade.qty_offset_levels`，相对**有效上限**
+//!   `min(goods.qty_max, cargo)` 偏移）× `gold` 偏移档（JSON `trade.gold_offset_levels`）
 //! - 建造侧：balance.json 全 4 建筑 × 逐档升级 `0..max_level`（`max_level` 读真实表，不硬编码）
 //! - 夹具隔离假值：JSON `trade.fixture`/`build.fixture` 驱动，双轨交叉验证
 //!
@@ -10,8 +11,12 @@
 //! - `buy`：`InsufficientGold`/`QtyOutOfRange` 命中路径与独立手算一致
 //! - `sell`：`gold_left`/`overflow` 精确值与独立手算一致；全程 `gold ≤ gold_cap`
 //! - `build`：`build_cost`/`gold_cap()`/`bank().gold` 逐档对账；满级后 `InvalidLevel`
+//!
+//! S21.10 船系统接入后：单次贸易有效上限 = `min(goods.qty_max, 船舱 cargo)`；
+//! **1 级船（cargo 99）时有效上限 = 99 = 旧 `qty_max` ⇒ 1 级组合与旧版逐条同结果（0 漂移）**。
 
 use ti_core::data::{BuildCfg, BuildingDef, GoodsDef, TradeCfg, balance, exhaust};
+use ti_core::rules::boat::BoatSession;
 use ti_core::rules::build::{Bank, BuildErr, BuildManager};
 use ti_core::rules::trade::{TradeErr, TradeLedger};
 
@@ -21,28 +26,44 @@ fn f64_round_to_u32(x: f64, y: f64) -> u32 {
     (x * y).round().min(f64::from(u32::MAX)) as u32
 }
 
-/// 贸易侧穷举：全 5 商品 × `qty` 全偏移档 × `gold` 全偏移档（档位由 JSON 驱动，非硬编码 5/4 档）。
+/// 贸易侧穷举：全 5 商品 × 船等级档 × `qty` 全偏移档 × `gold` 全偏移档
+/// （档位由 JSON 驱动，非硬编码）。
 #[test]
 fn exhaust_trade_all_goods_qty_gold() {
     let es = exhaust().expect("exhaust_scenarios.json 有效");
+    let b = balance().expect("balance.json 有效");
     let cfg = real_trade_cfg();
-    let gold_cap = balance().expect("balance.json 有效").economy.gold_max;
+    let gold_cap = b.economy.gold_max;
     let markup = cfg.markup;
     let mut combos: u32 = 0;
 
     for good in &cfg.goods {
         let price = good.buy;
-        let cap_qty = good.qty_max;
         let sell_unit = f64_round_to_u32(f64::from(price), f64::from(markup));
 
-        for &qty_off in &es.trade.qty_offset_levels {
-            let Some(qty) = apply_offset(cap_qty, qty_off) else {
-                continue; // 越界偏移（如 qty_max=1 时取 qty_max-1）跳过，不强行构造 0/负值
-            };
-            for &gold_off in &es.trade.gold_offset_levels {
-                combos += check_trade_combo(
-                    &cfg, good.id, price, cap_qty, sell_unit, qty, gold_off, gold_cap, markup,
+        for &boat_level in &es.trade.boat_levels {
+            let boat = BoatSession::new(b.boat.clone(), boat_level);
+            let cargo = boat.cargo();
+            assert!(cargo > 0, "船等级 {boat_level} 货舱容量须 > 0");
+            // 有效上限 = min(目录 qty_max, 船舱 cargo)（S21.10 船舱钳制）
+            let cap_qty = good.qty_max.min(cargo);
+            if boat_level == 1 {
+                assert_eq!(
+                    cap_qty, 99,
+                    "1 级船有效上限 = 99 = 旧 qty_max（1 级 ≡ 现状，组合逐条同结果）"
                 );
+            }
+
+            for &qty_off in &es.trade.qty_offset_levels {
+                let Some(qty) = apply_offset(cap_qty, qty_off) else {
+                    continue; // 越界偏移（如 qty_max=1 时取 qty_max-1）跳过，不强行构造 0/负值
+                };
+                for &gold_off in &es.trade.gold_offset_levels {
+                    combos += check_trade_combo(
+                        &cfg, good.id, price, cap_qty, sell_unit, qty, gold_off, gold_cap, markup,
+                        cargo,
+                    );
+                }
             }
         }
     }
@@ -64,9 +85,11 @@ fn check_trade_combo(
     gold_off: i32,
     gold_cap: u32,
     _markup: f32,
+    cargo: u32,
 ) -> u32 {
     let gold = apply_offset_u32(price, gold_off);
     let mut ledger = TradeLedger::new(cfg.clone(), gold, &[], gold_cap);
+    ledger.set_cargo_cap(cargo);
     let mut count: u32 = 0;
 
     // ── buy 侧不变式 ──
@@ -103,6 +126,7 @@ fn check_trade_combo(
     let sellable_qty = qty.min(cap_qty);
     if sellable_qty > 0 {
         let mut ledger = TradeLedger::new(cfg.clone(), 0, &[(gid, sellable_qty)], gold_cap);
+        ledger.set_cargo_cap(cargo);
         let gain = sell_unit.saturating_mul(sellable_qty);
         let raw = 0u32.saturating_add(gain);
         let (expected_gold, expected_overflow) = if gold_cap > 0 {
@@ -164,6 +188,8 @@ fn exhaust_trade_fixture_cross_validation() {
                 qty_max: g.qty_max,
             })
             .collect(),
+        // 夹具不接船（货舱不限）⇒ 有效上限 = 目录 qty_max（与旧版同口径）
+        default_cargo_cap: 0,
     };
 
     for c in &fx.cases {

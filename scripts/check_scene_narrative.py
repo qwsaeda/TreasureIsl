@@ -23,11 +23,13 @@
 退出码：0 = PASS；1 = FAIL（列出违规项）；2 = SKIP（manifest 文件不存在）。
 
 用法：
-  python scripts/check_scene_narrative.py
+  python scripts/check_scene_narrative.py            # 只读门禁（默认即只读，不写文件）
+  python scripts/check_scene_narrative.py --check    # 只读门禁（契约别名，行为同默认）
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -228,6 +230,10 @@ def check_scenes_json_focus_anchor(manifest: dict, scenes_json: dict) -> tuple[i
 
 
 def main() -> int:
+    # S21.8 工具契约：--check = 只读门禁别名（默认行为即只读校验，不写文件；违规非 0 退出）
+    ap = argparse.ArgumentParser(description="UI 场景叙事约束门禁（gate 第 22 项，v3）")
+    ap.add_argument("--check", action="store_true", help="只读模式（默认行为即只读门禁，保留契约别名）")
+    ap.parse_args()
     if not MANIFEST_PATH.is_file():
         print(f"SKIP  check_scene_narrative (manifest 不存在: {MANIFEST_PATH.name})")
         return 2

@@ -29,6 +29,15 @@ import re
 import sys
 from pathlib import Path
 
+# S21.8：Windows 控制台默认 GBK；待迁移字面量可含非 GBK 字符（如 ✖）⇒ 崩溃。
+# 输出流统一 errors="replace"（非可编码字符打成 ?，不崩），行为不变（只输出容错）。
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(errors="replace")
+        except (ValueError, OSError):
+            pass
+
 CJK = re.compile(r"[\u4e00-\u9fff]")
 STR_LIT = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
@@ -167,6 +176,9 @@ def main() -> int:
 
     # 1) 写 strings.json（保留既有）
     sp = root / "assets/data/strings.json"
+    if not sp.is_file():
+        print("migrate_strings: ERROR strings.json 不存在（%s）" % sp)
+        return 1
     with sp.open(encoding="utf-8") as fh:
         strings = json.load(fh)
     added = 0

@@ -151,14 +151,30 @@ def main() -> int:
         default=[],
         help="图生图输入图像 URL（可多次指定）",
     )
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="只读前置体检（S21.8 工具契约）：AGNES_API_KEY 在位 + 输出目录在位；不生图 / 不写文件，前置缺失 ⇒ 非 0 退出",
+    )
     args = ap.parse_args()
 
     api_key = os.environ.get("AGNES_API_KEY", "")
+    out_path = Path(args.out)
+    if args.check:
+        ok = True
+        if not api_key:
+            print("[agnes --check] FAIL 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
+            ok = False
+        if not out_path.parent.exists():
+            print(f"[agnes --check] FAIL 输出目录不存在: {out_path.parent}", file=sys.stderr)
+            ok = False
+        if ok:
+            print("[agnes --check] OK（AGNES_API_KEY 在位 + 输出目录在位；只读未生图 / 未写文件）")
+        return 0 if ok else 1
     if not api_key:
         print("[agnes] 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
         return 1
 
-    out_path = Path(args.out)
     generate(
         prompt=args.prompt,
         out_path=out_path,

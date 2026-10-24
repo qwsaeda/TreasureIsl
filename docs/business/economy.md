@@ -18,7 +18,7 @@
 ## 商品与价格
 
 > 以下为**示例节选**（3 种），完整数值（5 种商品，id 1..5）以 `assets/data/balance.json` 为准。
-> ⚠️ 下表 id/name_key/数值为设计示例，**与 balance.json 实际值不同**；实际以 assets/data/balance.json 为准（数字 id 1..5、name_key=goods.N、buy=20/76/95/114/133、qty_max=99）。
+> ⚠️ 下表 id/name_key/数值为设计示例，**与 balance.json 实际值不同**；实际以 assets/data/balance.json 为准（数字 id 1..5、name_key=goods.N、buy=20/76/95/114/133、qty_max=400）。
 
 ```jsonc
 "trade": {
@@ -99,9 +99,12 @@
    ```
    effective_qty_max(goods, boat_level) = min(goods.qty_max, boat.levels[boat_level].cargo)
    ```
-   - **1 级 cargo=99 = 现状**（目录 `goods.qty_max` 现为 99，min 后有效上限不变 ⇒ 开局零差异）；
+   - **1 级 cargo=99 = 现状**（目录 `goods.qty_max` 现为 **400**，min 后 1 级有效上限 = min(400, 99) = 99 ⇒ 与旧行为逐条一致，开局零差异）；
    - `goods.qty_max` 99→400 的目录数据翻转**必须与规则接线同一步落地**（S21.10），
      否则中间态 = 「上限突然变 400」（回归）。S21.10 判据含「cargo[0]=99 时行为 ≡ 现状」。
+     **S21.10 已落地**（`rules/boat.rs` + `rules/trade.rs` 有效上限 `min(qty_max, cargo)`
+     + `rules/battle.rs` 加成叠加 + 目录翻转 400 同一步）：4 单测绿 + 1 级切片穷举 0 漂移
+     （`assert cap_qty == 99` 锁定）。
    - 2~4 级 cargo>99 ⇒ 换船后单次可买/卖更多 ⇒ 贸易效率是换船的核心收益（大船 = 少跑几趟）。
 3. **战斗加成**：船 `atk`/`hp` 与建筑加成**叠加**（`combat.md` §建造加成公式扩展：
    总 atk = 建筑 Σ + 船 atk；总 hp 同；BOSS 战与遭遇战均生效）。
@@ -147,7 +150,10 @@
 ## 与实现的接口
 
 - 玩法：`rules::trade`（`TradeLedger`）、`rules::build`（`BuildManager`）（已落地，S8.3.b verified）；
-  **`rules::boat`（船系统）未落地 —— S21.10 接线**（数值读 `balance.boat`，cargo 上限进 `rules::trade`
-  数量钳制，atk/hp 叠加进 `combat.md` §建造加成公式；规格 = 本文「船系统（Boat，S21.2）」节）；
+  **`rules::boat`（船系统）已落地 —— S21.10 verified**（`rules/boat.rs` = `BoatSession`
+  单向升级链 + `cargo/atk/hp` 查询，数值读 `balance.boat`；cargo 上限进 `rules/trade`
+  有效上限 `min(qty_max, cargo)`，atk/hp 叠加进 `combat.md` §建造加成公式；
+  规格 = 本文「船系统（Boat，S21.2）」节；S21.11 存档 v3 持久化 `boat_level`、
+  S21.12 表现层船贴图 + 建造面板「造船」入口接线）；
 - 数值注入：会话构造时接收 `&balance::Balance`，测试可注假值；
 - 表现层只读 `TradeLedger` / `BuildManager` 的只读视图来画 UI，不重算价格。

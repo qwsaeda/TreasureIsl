@@ -209,6 +209,56 @@ pub struct TradeCfg {
     pub markup: f32,
     /// 商品目录。
     pub goods: Vec<GoodsDef>,
+    /// 默认货舱上限（单次贸易数量上限的船侧约束；`0` = 不限，仅受商品目录 `qty_max` 约束）。
+    ///
+    /// = `balance.boat.levels[1].cargo`（1 级小舢板 = 现状有效上限 99），
+    /// 即「未接入 [`crate::rules::boat::BoatSession`] 时」的兜底口径
+    /// （`docs/business/economy.md` §船系统规则 2：`effective = min(goods.qty_max, cargo)`）。
+    pub default_cargo_cap: u32,
+}
+
+/// 船等级条目（`balance.boat.levels[]`）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoatLevel {
+    /// 等级（1 起，单向升级链）。
+    pub level: u32,
+    /// 文本 key（`boat.1`..`boat.4`）。
+    pub name_key: String,
+    /// 升到本级的造价（1 级 = 0，开局默认船免费）。
+    pub cost: u32,
+    /// 货舱容量（= 单次贸易数量上限）。
+    pub cargo: u32,
+    /// 战斗 atk 加成（**累计值**，直接加，不经 `× level` 公式）。
+    pub atk: u32,
+    /// 战斗 hp 加成（**累计值**，直接加）。
+    pub hp: u32,
+}
+
+/// 船系统参数（`balance.boat`；规格 = `docs/business/economy.md` §船系统）。
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct BoatCfg {
+    /// 等级链（按 `level` 升序，1..=N）。
+    pub levels: Vec<BoatLevel>,
+}
+
+impl BoatCfg {
+    /// 按等级查条目（越界 → `None`）。
+    #[must_use]
+    pub fn level(&self, level: u32) -> Option<&BoatLevel> {
+        self.levels.iter().find(|l| l.level == level)
+    }
+
+    /// 最高等级（表空 → 0）。
+    #[must_use]
+    pub fn max_level(&self) -> u32 {
+        self.levels.iter().map(|l| l.level).max().unwrap_or(0)
+    }
+
+    /// 起始等级条目（1 级小舢板；表无 1 级 → `None`）。
+    #[must_use]
+    pub fn start_level(&self) -> Option<&BoatLevel> {
+        self.level(1)
+    }
 }
 
 /// 建造参数（`balance.build`）。
@@ -433,6 +483,8 @@ pub struct Balance {
     pub trade: TradeCfg,
     /// 建造参数。
     pub build: BuildCfg,
+    /// 船系统参数。
+    pub boat: BoatCfg,
     /// 卡牌参数。
     pub cards: CardsCfg,
     /// 赛道参数。
@@ -670,6 +722,41 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
         )));
     }
 
+    let boat = BoatCfg {
+        levels: raw
+            .boat
+            .levels
+            .into_iter()
+            .map(|l| {
+                if l.cargo == 0 {
+                    return Err(LoadError::Schema(format!(
+                        "boat.levels[{}].cargo = 0（货舱容量必须 > 0，否则单次贸易上限为 0）",
+                        l.level
+                    )));
+                }
+                Ok(BoatLevel {
+                    level: l.level,
+                    name_key: l.name_key,
+                    cost: l.cost,
+                    cargo: l.cargo,
+                    atk: l.atk,
+                    hp: l.hp,
+                })
+            })
+            .collect::<Result<Vec<_>, LoadError>>()?,
+    };
+    // 船等级链必须唯一且含 1 级（起始小舢板）；缺段 = 硬错误（`02_conventions.md` §4.4）
+    let mut seen_levels: Vec<u32> = boat.levels.iter().map(|l| l.level).collect();
+    seen_levels.sort_unstable();
+    seen_levels.dedup();
+    if seen_levels.len() != boat.levels.len() {
+        return Err(LoadError::Schema("boat.levels 等级号必须唯一".to_string()));
+    }
+    let start_cargo = boat
+        .start_level()
+        .map(|l| l.cargo)
+        .ok_or_else(|| LoadError::Schema("boat.levels 缺 1 级（起始小舢板）".to_string()))?;
+
     let trade = TradeCfg {
         markup: raw.trade.markup,
         goods: raw
@@ -686,6 +773,8 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
                 Ok(GoodsDef { id: g.id, name_key: g.name_key, buy: g.buy, qty_max: g.qty_max })
             })
             .collect::<Result<Vec<_>, LoadError>>()?,
+        // 兜底货舱上限 = 1 级小舢板货舱（= 现状有效上限；接入 BoatSession 后由其覆盖）
+        default_cargo_cap: start_cargo,
     };
 
     let build = BuildCfg {
@@ -737,6 +826,7 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
         },
         trade,
         build,
+        boat,
         cards,
         board: BoardCfg {
             dice_sides: raw.board.dice_sides.max(1),

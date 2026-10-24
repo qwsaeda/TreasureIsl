@@ -1903,6 +1903,12 @@
    "landmark": 80,
    "boss": 96
   },
+  "track_node": {
+   "size": 90
+  },
+  "track_ship": {
+   "size": 150
+  },
   "focus_anchor": {
    "type": "world_canvas",
    "bbox": {

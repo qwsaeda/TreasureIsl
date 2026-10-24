@@ -168,6 +168,8 @@ def main() -> int:
     ap.add_argument("--root", default=".", help="repo root")
     ap.add_argument("--selftest", action="store_true",
                     help="flywheel R1 regression: assert STR_LIT captures the full literal")
+    ap.add_argument("--check", action="store_true",
+                    help="门禁模式（S21.8 工具契约只读开关；默认严格行为即只读扫描，命中非 0 退出）")
     args = ap.parse_args()
 
     if args.selftest:

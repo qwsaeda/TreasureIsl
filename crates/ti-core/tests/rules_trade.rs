@@ -37,6 +37,7 @@ fn cfg() -> ti_core::data::TradeCfg {
             GoodsDef { id: 1, name_key: "goods.1".into(), buy: 20, qty_max: 10 },
             GoodsDef { id: 2, name_key: "goods.2".into(), buy: 50, qty_max: 5 },
         ],
+        default_cargo_cap: 0,
     }
 }
 
@@ -132,7 +133,12 @@ fn trade_leveraged_from_balance_table() {
     let r = l.buy(gid, 1).expect("buy from real table");
     assert_eq!(r.amount, price, "成交额须等于 JSON 里的 buy");
     assert_eq!(l.owned(gid), 1);
-    assert_eq!(l.qty_cap(gid), b.trade.goods[0].qty_max, "上限来自 JSON");
+    assert_eq!(l.goods_qty_max(gid), b.trade.goods[0].qty_max, "目录上限来自 JSON");
+    assert_eq!(
+        l.qty_cap(gid),
+        b.trade.goods[0].qty_max.min(b.trade.default_cargo_cap),
+        "有效上限 = min(qty_max, 船舱)（1 级货舱 = 现状 99）"
+    );
 }
 
 #[test]

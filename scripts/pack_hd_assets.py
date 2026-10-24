@@ -18,7 +18,9 @@
 
 多帧动画（_f0~_f4）与九宫格（_9s）同样进 4 档。
 用法：python scripts/pack_hd_assets.py [--no-webp]
+      python scripts/pack_hd_assets.py --check   # 只读校验：源在位 + pack 产物/哈希一致（不写文件）
 零新增依赖（标准库 + Pillow）。
+退出码：0 = 成功/校验通过；1 = 无法删除 pack 目录 / --check 校验失败（缺源、未打包、哈希漂移）。
 """
 import json
 import shutil
@@ -103,7 +105,40 @@ def save_png(rgba: bytes, w: int, h: int, path: Path) -> None:
     Image.frombytes("RGBA", (w, h), rgba).save(path)
 
 
+def check() -> int:
+    """S21.8 工具契约只读模式：源在位 + pack 产物与 manifest 一致（不写任何文件）。"""
+    if not MANIFEST_SRC.is_file():
+        print(f"[pack_hd_assets --check] ERROR 缺 manifest 源: {MANIFEST_SRC}")
+        return 1
+    manifest_src = json.loads(MANIFEST_SRC.read_text())
+    missing_src = [rel for rel in sorted(manifest_src) if not (REPO / rel).is_file()]
+    if missing_src:
+        print(f"[pack_hd_assets --check] FAIL 缺源文件 {len(missing_src)} 个（首 10）: {missing_src[:10]}")
+        return 1
+    out_manifest = PACK / "manifest_hd.json"
+    if not out_manifest.is_file():
+        print("[pack_hd_assets --check] FAIL 未打包（缺 assets_hd_pack/manifest_hd.json，先跑默认模式）")
+        return 1
+    packed = json.loads(out_manifest.read_text())
+    missing_pack = [k for k in sorted(packed) if not (PACK / k).is_file()]
+    if missing_pack:
+        print(f"[pack_hd_assets --check] FAIL pack 产物缺失 {len(missing_pack)} 个（首 10）: {missing_pack[:10]}")
+        return 1
+    bad_hash = []
+    for k, meta in sorted(packed.items()):
+        fnv = meta.get("fnv1a64", "")
+        if fnv and fnv1a64((PACK / k).read_bytes()) != fnv:
+            bad_hash.append(k)
+    if bad_hash:
+        print(f"[pack_hd_assets --check] FAIL 哈希漂移 {len(bad_hash)} 个（首 10）: {bad_hash[:10]}")
+        return 1
+    print(f"[pack_hd_assets --check] OK（{len(manifest_src)} 源在位；{len(packed)} pack 产物 + 哈希一致；只读未写文件）")
+    return 0
+
+
 def main() -> int:
+    if "--check" in sys.argv:
+        return check()
     from PIL import Image
 
     no_webp = "--no-webp" in sys.argv

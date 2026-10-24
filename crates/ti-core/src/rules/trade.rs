@@ -19,7 +19,7 @@ pub enum TradeErr {
     UnknownGood,
     /// 无库存（持有量为 0）。
     NoStock,
-    /// 数量越界（`qty > qty_max` 或 `qty == 0`）。
+    /// 数量越界（`qty > 有效上限 min(qoods.qty_max, cargo_cap)` 或 `qty == 0`）。
     QtyOutOfRange,
 }
 
@@ -64,6 +64,10 @@ pub fn sell_price(buy: u32, markup: f32) -> u32 {
 ///
 /// `gold_cap` 来自 `balance.economy.gold_max`（`0` = 无上限，卖出加金时不做钳制）。
 /// 卖出加金钳到 `gold_cap` 后溢出部分由调用方经 [`BuildManager::settle_overflow`](crate::rules::build::BuildManager::settle_overflow) 处理。
+///
+/// **单次贸易数量上限** = `min(goods.qty_max, cargo_cap)`（`docs/business/economy.md`
+/// §船系统规则 2）：`cargo_cap` 是船舱容量，由 [`crate::rules::boat::BoatSession::cargo`]
+/// 注入（默认 = 1 级小舢板货舱 = 现状有效上限 ⇒ 1 级行为与旧版一致）。
 #[derive(Debug, Clone)]
 pub struct TradeLedger {
     /// 持有量（`goods_id → qty`）。
@@ -76,15 +80,25 @@ pub struct TradeLedger {
     cfg: TradeCfg,
     /// 金量上限（`balance.economy.gold_max`；`0` = 不限制）。
     gold_cap: u32,
+    /// 船舱上限（单次贸易数量上限的船侧约束；`0` = 不限）。
+    cargo_cap: u32,
 }
 
 impl TradeLedger {
     /// 新建贸易账本（注入配置 + 初始金 + 初始持有 + 金量上限）。
     ///
     /// `gold_cap` 来自 `balance.economy.gold_max`；`0` 表示不限制（卖出加金不钳制）。
+    /// 船舱上限取 `cfg.default_cargo_cap`（1 级小舢板货舱 = 现状有效上限）。
     #[must_use]
     pub fn new(cfg: TradeCfg, gold: u32, goods: &[(u32, u32)], gold_cap: u32) -> Self {
-        Self { goods: goods.to_vec(), gold, buy_cost: Vec::new(), cfg, gold_cap }
+        Self {
+            goods: goods.to_vec(),
+            gold,
+            buy_cost: Vec::new(),
+            cargo_cap: cfg.default_cargo_cap,
+            cfg,
+            gold_cap,
+        }
     }
 
     /// 新建贸易账本（金量上限 = 0，不限制）。
@@ -131,10 +145,44 @@ impl TradeLedger {
         Some(f64_to_u32(v).unwrap_or(g.buy))
     }
 
-    /// 持有量上限（`qty_max`；不存在 → 0）。
+    /// 商品目录原始持有上限（`balance.trade.goods[].qty_max`；不存在 → 0）。
+    #[must_use]
+    pub fn goods_qty_max(&self, gid: u32) -> u32 {
+        self.good_def(gid).map_or(0, |g| g.qty_max)
+    }
+
+    /// 单次贸易数量上限（有效上限）= `min(goods.qty_max, cargo_cap)`。
+    ///
+    /// `cargo_cap == 0`（不限）时 = `goods.qty_max`（`docs/business/economy.md`
+    /// §船系统规则 2 的 `effective = min(goods.qty_max, cargo)`）；不存在 → 0。
     #[must_use]
     pub fn qty_cap(&self, gid: u32) -> u32 {
-        self.good_def(gid).map_or(0, |g| g.qty_max)
+        let goods_max = self.goods_qty_max(gid);
+        if self.cargo_cap == 0 { goods_max } else { goods_max.min(self.cargo_cap) }
+    }
+
+    /// 当前船舱上限（`0` = 不限，仅受商品目录 `qty_max` 约束）。
+    #[must_use]
+    pub fn cargo_cap(&self) -> u32 {
+        self.cargo_cap
+    }
+
+    /// 设置船舱上限（造船后由 [`crate::rules::boat::BoatSession`] 注入；`0` = 不限）。
+    pub fn set_cargo_cap(&mut self, cap: u32) {
+        self.cargo_cap = cap;
+    }
+
+    /// 扣金（造船等一次性支出用）。
+    ///
+    /// # Errors
+    ///
+    /// [`TradeErr::InsufficientGold`]：`gold < amount`（失败状态不变）。
+    pub fn debit(&mut self, amount: u32) -> Result<(), TradeErr> {
+        if self.gold < amount {
+            return Err(TradeErr::InsufficientGold);
+        }
+        self.gold -= amount;
+        Ok(())
     }
 
     /// 买入均价（累计成本 / 持有量；无记录 → 0）。
@@ -155,7 +203,8 @@ impl TradeLedger {
     /// # Errors
     ///
     /// - [`TradeErr::UnknownGood`]：`gid` 不在目录；
-    /// - [`TradeErr::QtyOutOfRange`]：`qty == 0` 或 `owned + qty > qty_max`；
+    /// - [`TradeErr::QtyOutOfRange`]：`qty == 0` 或 `owned + qty > 有效上限`
+    ///   （`min(goods.qty_max, cargo_cap)`）；
     /// - [`TradeErr::InsufficientGold`]：`gold < cost`。
     pub fn buy(&mut self, gid: u32, qty: u32) -> Result<TradeResult, TradeErr> {
         let price = self.buy_price(gid).ok_or(TradeErr::UnknownGood)?;
@@ -174,6 +223,9 @@ impl TradeLedger {
 
     /// 卖出 `qty` 件（`qty == 0` 视为卖出全部持有，符合 UI 直觉）。
     ///
+    /// 成交数量 = `min(qty 或 持有量, 持有量, 有效上限 min(qoods.qty_max, cargo_cap))`
+    /// （单次贸易数量上限对买卖两侧一致生效）。
+    ///
     /// 成功：`gold += sell_price × qty`，`goods[gid].qty -= qty`，
     /// 按比例扣减 `buy_cost`。若设置了 `gold_cap > 0`，结算后
     /// 金币钳制到 `gold_cap`（溢出走银行，由调用方经
@@ -189,7 +241,8 @@ impl TradeLedger {
             return Err(TradeErr::NoStock);
         }
         let price = self.sell_price(gid).ok_or(TradeErr::UnknownGood)?;
-        let qty = if qty == 0 { owned } else { qty.min(owned) };
+        let cap = self.qty_cap(gid);
+        let qty = if qty == 0 { owned } else { qty.min(owned) }.min(cap);
         let gain = price.saturating_mul(qty);
         let raw = self.gold.saturating_add(gain);
         let (new_gold, overflow) = if self.gold_cap > 0 {

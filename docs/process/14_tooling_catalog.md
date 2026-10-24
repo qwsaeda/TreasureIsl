@@ -161,7 +161,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 | `check_forward_closed.py` | 业务闭环 C1~C4（零逆向引用 / 单一 oracle 源 / 根目录清空 / 无重复 crate） | `python scripts/check_forward_closed.py --check` | 幂等只读；违规非 0 |
 | `check_module_contracts.py` | 模块并行契约（包白名单互斥 / 契约锚点 / 跨 crate 可见面） | `python scripts/check_module_contracts.py --check` | 幂等只读；违规非 0（WARN 级除外） |
 | `check_scene_narrative.py` | UI 场景叙事约束 DSL v3（mood / 重心 / 节奏权重 / HUD 上限 / 死区 / focus_anchor 对账） | `python scripts/check_scene_narrative.py` | 幂等只读；违规非 0 |
-| `check_data_source.py` | 数据源门禁（`legacy/data/*` 相对 HEAD 变动 ⇒ 强制跑渲染快照） | `python scripts/check_data_source.py` | 幂等只读 |
+| `check_data_source.py` | 数据源门禁（`legacy/data/*` 相对 HEAD 变动 ⇒ 强制跑渲染快照） | `python scripts/check_data_source.py`（`--check` = 只读门禁别名） | 幂等只读；数据源改动且快照漂移 ⇒ 非 0 退出 |
 | `check_data_driven.py` | 数据驱动（渲染层不得认业务语义） | `python scripts/check_data_driven.py` | 幂等只读；违规非 0 |
 | `check_hd_manifest.py` | HD manifest ↔ `assets_hd_pack/1x/ui` 目录一致（EXP-048/060） | `python scripts/check_hd_manifest.py --check` / `--report` | 幂等只读；漂移非 0 |
 | `audit_code.py` | **代码结构**（文件 >900 行 / 函数 >140 行 / 重复模式 ≥6 次；棘轮基线 `scripts/code_budget.json`） | `python scripts/audit_code.py --check` / `--report` / `--update-baseline` | 幂等只读；新增违规非 0 |
@@ -184,17 +184,17 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 | `doc_numbers.py` | **门禁项数 / 台账计数 实测回写**（一改要手抄 8 处的漂移源：parity/git/README/loop/AGENTS/style/playbook/gate 横幅；门禁项数口径 = `gate.ps1` 顶层 `Report` 数（与 doccheck2 同口径），台账计数 = ledger 实测） | `python scripts/doc_numbers.py`（只读体检，漂移即非 0）/ `--fix`（实测回写）/ `--fix --dry-run` | 幂等（回写后再测 0 漂移）；漂移未修 ⇒ 退出 1 |
 | `layout_spec_check.py` | **UI 版面规格三面对账**（规格表 → `scenes.json` → `scene_manifest_v3.json`：键↔坐标一致 + 8pt + N8 像素往返 ±1px + N3 焦点面积；规格表是坐标单一事实源，人工校验易漏） | `python scripts/layout_spec_check.py --spec docs/ui-redesign-v3/08_main_map_v4_spec.json [--scene main_map]` | 幂等只读；漂移非 0 |
 | `check_ps_scripts.ps1` | **PowerShell 入口体检**（UTF-8 BOM 校验 + `Parser::ParseFile` 真语法自检 ⇒ 拦住「缺 BOM 入口从未真跑起来」，EXP-109） | `powershell -ExecutionPolicy Bypass -File scripts/check_ps_scripts.ps1`（`-Check` 别名） | 幂等只读；不合格非 0 |
-| `ui_preview.ps1` | **7 屏出图验收**（Bevy 离屏 → `evidence/bevy_native_<scene>.png` + 缩略图 + 非空帧统计） | `powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 [scene...]` | 幂等（重出图）；空帧计入失败 |
-| `agnes_gen.py` | AI 生图底层（`ui_assets.py build` 调用；需 `AGNES_API_KEY`） | 由 `ui_assets.py` 调用；`python scripts/agnes_gen.py "<prompt>" --out <png>` | 生成非幂等（同 prompt 可复现性由模型决定） |
-| `agnes_vision.py` | AI 读图（截图/素材分析 ⇒ 视觉问题取证） | `python scripts/agnes_vision.py <png> "<question>"` | 只读；需 `AGNES_API_KEY` |
-| `pcx_to_png.py` | 原版 PCX → PNG（贴图转码） | `python scripts/pcx_to_png.py <in.pcx> <out.png>` | 幂等（解码确定） |
-| `pack_hd_assets.py` | HD 资产打包（`assets_hd_pack/`） | `python scripts/pack_hd_assets.py [--no-webp]` | 幂等（同一输入同一产物） |
-| `migrate_strings.py` | i18n 迁移（`.rs` 中文面量 → `strings.json`） | `python scripts/migrate_strings.py --report` / `--apply` | `--apply` 幂等（已迁过零改动） |
+| `ui_preview.ps1` | **7 屏出图验收**（Bevy 离屏 → `evidence/bevy_native_<scene>.png` + 缩略图 + 非空帧统计） | `powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 [scene...]` / `-Check [scene...]` | 幂等（重出图）；未出图 / 空帧 ⇒ 非 0 退出；`-Check` 只读验收既有出图（不重渲染 / 不写缩略图，失败非 0 退出） |
+| `agnes_gen.py` | AI 生图底层（`ui_assets.py build` 调用；需 `AGNES_API_KEY`） | 由 `ui_assets.py` 调用；`python scripts/agnes_gen.py "<prompt>" --out <png>` / `--check` | 生成非幂等（同 prompt 可复现性由模型决定）；生图失败 / 缺 KEY ⇒ 非 0 退出；`--check` 只读前置体检（不生图 / 不写文件，前置缺失非 0 退出） |
+| `agnes_vision.py` | AI 读图（截图/素材分析 ⇒ 视觉问题取证） | `python scripts/agnes_vision.py <png> "<question>"` / `--check` | 只读分析；缺 KEY / 缺图 ⇒ 非 0 退出；`--check` 前置体检（不调 API / 不写文件，前置缺失非 0 退出） |
+| `pcx_to_png.py` | 原版 PCX → PNG（贴图转码） | `python scripts/pcx_to_png.py <in.pcx> <out.png>` / `--check` | 幂等（解码确定）；src 缺失 ⇒ 非 0 退出；`--check` 只读校验（产物缺失/漂移 ⇒ 非 0 退出） |
+| `pack_hd_assets.py` | HD 资产打包（`assets_hd_pack/`） | `python scripts/pack_hd_assets.py [--no-webp]` / `--check` | 幂等（同一输入同一产物）；pack 目录删除失败 ⇒ 非 0 退出；`--check` 只读校验（缺源/未打包/哈希漂移 ⇒ 非 0 退出） |
+| `migrate_strings.py` | i18n 迁移（`.rs` 中文面量 → `strings.json`） | `python scripts/migrate_strings.py --report` / `--apply` | `--apply` 幂等（已迁过零改动）；apply 缺 `strings.json` ⇒ 非 0 退出；`--report` 只读 |
 | `verify_hd_manifest.py` | HD manifest ↔ `assets_hd/` 产物 PNG 一致性**验收辅助**（与 `check_hd_manifest.py` 分工：前者对 `assets_hd_pack/1x/ui` 目录（门禁项），本工具对 `manifest_hd.json` 产物（一次性验收）） | `python scripts/verify_hd_manifest.py` | 幂等只读；不一致非 0 |
-| `bevy_cpu_scene_diff.py` | 双后端**现场**像素对拍（CPU 帧缓冲 vs Bevy 离屏，7 场景） | `python scripts/bevy_cpu_scene_diff.py` | 幂等（重出两边再比）；写 `evidence/bevy_cpu_scene_diff.md` |
-| `build_wasm.ps1` | wasm 构建（→ `web/`，Bevy 交付壳） | `powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1` | 幂等（重构建覆盖） |
+| `bevy_cpu_scene_diff.py` | 双后端**现场**像素对拍（CPU 帧缓冲 vs Bevy 离屏，7 场景） | `python scripts/bevy_cpu_scene_diff.py` / `--check` | 幂等（重出两边再比）；写 `evidence/bevy_cpu_scene_diff.md`；`--check` 只读比对既有输出（不重生 / 不写报告，缺输出 ⇒ 非 0 退出） |
+| `build_wasm.ps1` | wasm 构建（→ `web/`，Bevy 交付壳） | `powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1` / `-Check` | 幂等（重构建覆盖）；缺 target / 构建失败 ⇒ 非 0 退出；`-Check` 只读前置体检（不构建 / 不拷贝，前置缺失非 0 退出） |
 | `smoke.ps1` | native + wasm 冒烟 | `powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1` | 幂等；失败非 0 |
-| `playbook.ps1` | 常用命令一键入口（16 条） | `powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -List` / `<cmd>` | 转发到对应工具 |
+| `playbook.ps1` | 常用命令一键入口（16 条） | `powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -List` / `<cmd>` / `-Check` | 幂等只读转发器（判定 / 退出码由被转发工具承担）；未知命令 / 转发失败 ⇒ 非 0 退出；`-Check` = 被转发目标在位性只读体检（不执行被转发工具，缺失非 0 退出） |
 
 ### 3.3 一次性工具（标注：不做门禁 / 用完即弃）
 

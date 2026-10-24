@@ -110,7 +110,31 @@ def compare(cpu, bev):
             "wide_rows": wide}
 
 
+def check_mode():
+    """S21.8 tooling-contract readonly mode: compare existing PNG pairs only (no regen, no report write; missing output => non-zero exit)."""
+    print("# bevy_cpu_scene_diff --check (readonly: existing PNG pairs only, nothing written)")
+    print("| scene | diff px | diff % | max ch diff | diff rows | row span | wide rows (>=60% width) |")
+    print("|---|---|---|---|---|---|---|")
+    missing = 0
+    for sid in SCENES:
+        cpu, bev = os.path.join(CPU_PNG, f"{sid}.png"), os.path.join(BEVY_PNG, f"bevy_native_{sid}.png")
+        if not (os.path.isfile(cpu) and os.path.isfile(bev)):
+            missing += 1
+            print(f"| {sid} | output missing | - | - | - | - | - |")
+            continue
+        m = compare(cpu, bev)
+        print(f"| {sid} | {m['diff']} / {m['total']} | {m['ratio']*100:.3f}% | {m['maxd']} | {m['rows']} | "
+              f"y {m['top']}..{m['bot']} | {m['wide_rows']} |")
+    if missing:
+        print(f"bevy_cpu_scene_diff --check: FAIL ({missing} scene outputs missing; run default mode first)")
+        return 1
+    print("bevy_cpu_scene_diff --check: OK (7 scene pairs compared, readonly, nothing written)")
+    return 0
+
+
 def main():
+    if "--check" in sys.argv:
+        return check_mode()
     lines = ["# S18.19\uff1aCPU\u2194Bevy \u73b0\u573a\u53cc\u540e\u7aef\u771f\u5b9e\u573a\u666f\u5bf9\u62cd\uff08\u65e0 golden \u57fa\u7ebf\uff09", "",
              "\u5bf9\u6bd4\u4e24\u4e2a**\u5b9e\u65f6\u6e32\u67d3\u5668**\uff1aCPU `render-png` bin \u2192 `evidence/render_png/<scene>.png`\uff1b",
              "Bevy `treasure-bevy-native --scene=<id> --shot` \u2192 `evidence/bevy_native_<id>.png`\u3002\u5de5\u5177\uff1a`scripts/bevy_cpu_scene_diff.py`\u3002",

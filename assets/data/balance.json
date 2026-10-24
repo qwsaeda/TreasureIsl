@@ -53,31 +53,31 @@
     "id": 1,
     "name_key": "goods.1",
     "buy": 20,
-    "qty_max": 99
+    "qty_max": 400
    },
    {
     "id": 2,
     "name_key": "goods.2",
     "buy": 76,
-    "qty_max": 99
+    "qty_max": 400
    },
    {
     "id": 3,
     "name_key": "goods.3",
     "buy": 95,
-    "qty_max": 99
+    "qty_max": 400
    },
    {
     "id": 4,
     "name_key": "goods.4",
     "buy": 114,
-    "qty_max": 99
+    "qty_max": 400
    },
    {
     "id": 5,
     "name_key": "goods.5",
     "buy": 133,
-    "qty_max": 99
+    "qty_max": 400
    }
   ]
  },
@@ -119,7 +119,7 @@
   ]
  },
  "boat": {
-  "_comment": "S21.2 船系统（规格 = docs/business/economy.md §船系统；规则接线 S21.10）：开局 1 级小舢板（cargo 99 = 现状单次贸易上限，零行为变化）；单向 4 级升级（cost 一次性，立即生效）；cargo = 单次贸易数量上限（effective = min(goods.qty_max, cargo)，S21.10 与 goods.qty_max 400 翻转同步落地）；atk/hp = 累计值，与建筑 Σ 叠加（combat.md §建造加成扩展）。",
+   "_comment": "S21.2 船系统（规格 = docs/business/economy.md §船系统；规则接线 S21.10 已落地）：开局 1 级小舢板（cargo 99 = 现状单次贸易上限，零行为变化）；单向 4 级升级（cost 一次性，立即生效）；cargo = 单次贸易数量上限（effective = min(goods.qty_max, cargo)，S21.10 已与 goods.qty_max 400 翻转同步落地）；atk/hp = 累计值，与建筑 Σ 叠加（combat.md §建造加成扩展）。",
   "levels": [
    {
     "level": 1,

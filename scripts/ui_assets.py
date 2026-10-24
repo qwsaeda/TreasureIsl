@@ -334,7 +334,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="UI 资产管线（清单驱动）")
-    sub = ap.add_subparsers(dest="cmd", required=True)
+    # S21.8 工具契约：--check = 只读模式顶层别名（等价 verify：清单 ↔ 文件 ↔ 引用三方校验，
+    # 不写任何文件；漂移非 0 退出）。子命令 verify 行为不变。
+    ap.add_argument("--check", action="store_true",
+                    help="只读模式别名 = verify（校验清单 ↔ 文件 ↔ scenes.json 引用，不写文件）")
+    sub = ap.add_subparsers(dest="cmd")
 
     b = sub.add_parser("build", help="补齐清单里缺失的资产（幂等）")
     b.add_argument("--force", action="store_true", help="已存在也重生成")
@@ -363,8 +367,16 @@ def main() -> int:
     args = ap.parse_args()
     if getattr(args, "params", None):
         args.params = dict(p.split("=", 1) for p in args.params if "=" in p)
-    UI_DIR.mkdir(parents=True, exist_ok=True)
-    CONCEPT_DIR.mkdir(parents=True, exist_ok=True)
+    cmd = getattr(args, "cmd", None)
+    if cmd is None:
+        if args.check:
+            # --check：纯只读路径（跳过目录创建，不写任何文件）
+            return cmd_verify(args)
+        ap.print_help()
+        return 1
+    if not args.check:
+        UI_DIR.mkdir(parents=True, exist_ok=True)
+        CONCEPT_DIR.mkdir(parents=True, exist_ok=True)
     return args.func(args)
 
 

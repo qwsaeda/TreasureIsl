@@ -1,0 +1,170 @@
+=== gate: TreasureIsl (23 items) ===
+  PASS  cargo fmt --check
+  PASS  cargo clippy -D warnings
+  PASS  cargo test --workspace
+  PASS  cargo build (x86_64-pc-windows-msvc)
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)
+  SKIP  zero-unknown verify  (S1.x 格式解析器就绪后解锁)
+        ledger: 207 tasks, 183 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate
+        doccheck: 133 docs, 38 facts, 111 experiences, 202 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)
+        validate_data: OK（4 表，strings 92 键；main_map.grid 三键 + 全场景 extra 标量正整数）
+  PASS  validate_data (assets/data/*.json)
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)
+  PASS  check_hardcode (strict; 0 hits required)
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)
+        doccheck2: 0 error(s) across 37 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod)
+          WARN i18n 瀛ゅ効 key `app.window_title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `boat.1`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `boat.2`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `boat.3`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `boat.4`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm01.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm02.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `glmapm03.Map`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.desc.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.drake`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.katharina`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.kidd`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.panda`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `role.name.tichy`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.index.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.build`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.sell`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.spin`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.hud.trade`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.toast.battle_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.main_map.toast.treasure_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.message.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.slot_summary_fmt`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.saveload.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_map.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.select_role.nav_hint`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?  WARN i18n 瀛ゅ効 key `scene.vs.title`锛坰trings.json 鏈変絾浠ｇ爜鏈紩鐢紝S8.x 鏁版嵁鍖栬縼绉诲墠娓呯悊锛?
+  PASS  doccheck2 (audit-codified doc?code/data consistency)
+        check_ledger_reality: 全绿（183 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+  PASS  check_ledger_reality (台账三方对账：verified?evidence?代码符号)
+        check_forward_closed: C1 业务文档零逆向引用: OK
+        check_forward_closed: C2 表现层零 oracle 引用: OK
+        check_forward_closed: C3 根目录清空 + legacy 在位: OK
+        check_forward_closed: C4 oracle 单点源 + 禁重复 crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 包 D status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P1 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P2 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P3 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P4 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P5 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P6 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 契约 c1_core_public_types.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c2_data_keys.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)
+        flywheel_readme -Check PASS: 6 条必读 ?, gate 23 项, doccheck2 43 断言, packages 7 包
+  PASS  flywheel-readme (开轮必读脚本完整性)
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.49s
+        
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)
+        === 代码结构审计 ===
+        文件 226 / 总行 52266 / 函数 2589 / trait 22 / 泛型 fn 8 / macro_rules! 6
+        
+        --- 最长 10 个文件 ---
+         3308  crates/ti-tools/src/bin/doccheck2.rs  [豁免]
+         1104  crates/ti-app/src/scenes/chrome.rs  [豁免]
+          900  crates/ti-app/tests/render_intent.rs
+          884  crates/ti-core/src/data/mod.rs
+          871  crates/ti-platform/src/gfx.rs
+          777  crates/ti-engine/src/bin/treasure_bevy.rs
+          771  crates/ti-app/src/scenes/main_map.rs
+          770  crates/ti-render/src/shell.rs
+          736  crates/ti-app/src/scenes/mod.rs
+          663  crates/ti-tools/src/bin/classify.rs
+        
+        --- 最长 10 个函数 ---
+          304  crates/ti-core/examples/full_run_demo.rs::main (行 120)  [豁免]
+          194  crates/ti-core/src/data/mod.rs::convert (行 691)  [豁免]
+          190  crates/ti-core/tests/exhaust_random_session.rs::run_random_session (行 71)  [豁免]
+          183  crates/ti-engine/src/scene_render.rs::spawn_primitives (行 225)  [豁免]
+          173  crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session (行 17)  [豁免]
+          159  crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity (行 704)  [豁免]
+          137  crates/ti-app/src/scenes/main_map.rs::render (行 301)
+          132  crates/ti-core/src/data/layout.rs::scenes (行 20)
+          130  crates/ti-app/src/android_shell.rs::run (行 97)
+          129  crates/ti-core/examples/random_session_demo.rs::run_one_session (行 185)
+        
+        --- 违规（阈值：文件 >900 行 / 函数 >140 行 / 重复 >5 次）---
+        文件规模 0 项；函数长度 0 项；重复模式 0 项
+        [audit_code] PASS：0 项结构违规
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)
+        === check_scene_narrative (UI 叙事约束 DSL v3) ===
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)
+        [2m2026-10-24T12:48:02.757620Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Windows 10 Enterprise LTSC 2021", kernel: "19044", cpu: "Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz", core_count: "4", memory: "15.9 GiB" }
+        [2m2026-10-24T12:48:03.130971Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "NVIDIA GeForce GTX 1050 Ti", vendor: 4318, device: 7298, device_type: DiscreteGpu, device_pci_bus_id: "0000:01:00.0", driver: "NVIDIA", driver_info: "560.94", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+        [2m2026-10-24T12:48:03.294187Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        ICU4X data error: No segmentation model for language: ja
+        S18.2 GPU/CPU 鍍忕礌瀵圭収锛堣壊鍧楀唴閮紝鎺掗櫎鏂囨湰妗?+ 2px 杈圭紭甯︼級锛氭瘮瀵?1607576 鍍忕礌锛岃秴宸?0锛?.0000%锛夛紝鏈€澶ч€氶亾宸?0 LSB锛岄涓秴宸?None
+        璇婃柇锛欸PU 闈為粦鍍忕礌 2073600锛堟枃鏈尯瀛楀舰瀵归綈灞?S18.3锛?  anchor (0,0): cpu=0x10c9 gpu=0x10c9
+          anchor (1079,1919): cpu=0x0865 gpu=0x0865
+          anchor (60,200): cpu=0x190c gpu=0x190c
+          anchor (540,500): cpu=0x190c gpu=0x190c
+        S18.2 瀵圭収閫氳繃锛堥槇鍊硷細閫氶亾 鈮? LSB 涓旇秴宸瘮渚?<0.5%锛?
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)
+=== gate: 0 failure(s) ===
+
+================================================================================
+S21.10 任务判据专项证据（船系统规则层接线）
+================================================================================
+[1] 4 条新增单测（crates/ti-core/tests/rules_boat.rs）实跑结果：
+cargo.exe :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+所在位置 行:1 字符: 398
++ ... "; $parts += ((& cargo test -p ti-core --test rules_boat 2>&1 | Out-S ...
++                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.05s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running tests\rules_boat.rs (target\debug\deps\rules_boat-e1a48eed9c0808f3.exe)
+
+running 4 tests
+test boat_upgrade_debits_and_raises ... ok
+test combat_bonus_includes_boat ... ok
+test trade_qty_capped_by_boat_cargo ... ok
+test boat_level_monotonic ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+[2] 既有 trade/battle 穷举回归（exhaust_economy.rs / exhaust_random_session.rs）：
+    - exhaust_trade_all_goods_qty_gold 重锚为「全 5 商品 × 船等级档 1..=4（货舱读 balance.boat）× qty 偏移档 [-2,-1,0,+1,+2]（相对有效上限 min(qty_max, cargo)）× gold 偏移档」→ ok
+    - 1 级 ≡ 现状：boat_level=1 时有效上限 = min(400, cargo 99) = 99 = 旧 qty_max（测试内 assert cap_qty == 99），1 级组合与旧版逐条同结果（0 漂移）
+    - 2/3/4 级新增覆盖：有效上限 150 / 240 / 400（qty 档位 148..152 / 238..242 / 398..402，覆盖到 400 上限）
+    - exhaust_trade_fixture_cross_validation（夹具隔离假值）→ ok
+cargo.exe :    Compiling ti-core v0.1.0 (C:\閲戦摱宀沑crates\ti-core)
+所在位置 行:1 字符: 1025
++ ... $parts += ((& cargo test -p ti-core --test exhaust_economy --test exh ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ti...crates\ti-core):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.77s
+     Running tests\exhaust_economy.rs (target\debug\deps\exhaust_economy-c6750ea81fd0993a.exe)
+
+running 4 tests
+test exhaust_build_fixture_cross_validation ... ok
+test exhaust_trade_fixture_cross_validation ... ok
+test exhaust_build_all_buildings_full_upgrade_paths ... ok
+test exhaust_trade_all_goods_qty_gold ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\exhaust_random_session.rs (target\debug\deps\exhaust_random_session-d358970cf7af9baa.exe)
+
+running 2 tests
+test verbose_session_process_readable ... ok
+test random_session_invariants_hold_for_any_choices ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+[3] 数据翻转（同一步落地）：
+    - assets/data/balance.json trade.goods[1..5].qty_max：99 → 400（5 处）
+    - assets/data/balance.json boat.levels：4 级表 S21.2 已存在，数值未改（1/0/99/0/0, 2/800/150/4/80, 3/2500/240/9/180, 4/6000/400/15/320）
+    - assets/data/exhaust_scenarios.json trade 段：新增 boat_levels [1,2,3,4]（qty 偏移档改为相对有效上限）
+    - crates/ti-core/src/data/{balance.rs,mod.rs}：RawBalance.boat / Balance.boat / BoatCfg / BoatLevel / TradeCfg.default_cargo_cap（= 1 级 cargo 99 = 现状兜底口径）
+[4] validate_data.py：validate_data: OK（4 表，strings 92 键；main_map.grid 三键 + 全场景 extra 标量正整数）
+
+[5] cargo fmt --all：OK；cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless -- -D warnings：0 warning
+[6] cargo test --workspace：全部 test result ok，0 failed（含 4 条新增单测）
+[7] scripts/gate.ps1：=== gate: 0 failure(s) ===（23 项顶层；2 项条件 SKIP：android 构建（本机无 NDK/SDK）、zero-unknown verify（verify.rs 未在位））

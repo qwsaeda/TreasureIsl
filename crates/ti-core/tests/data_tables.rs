@@ -244,6 +244,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
                 buy: 1,
                 qty_max: 9,
             }],
+            default_cargo_cap: 0,
         },
         build: ti_core::data::BuildCfg {
             max_level: 3,
@@ -256,6 +257,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
                 hp_bonus: 0,
             }],
         },
+        boat: ti_core::data::BoatCfg { levels: Vec::new() },
         cards: ti_core::data::CardsCfg { event_chance: 0.5, hand_size: 1, deck: Vec::new() },
         board: ti_core::data::BoardCfg {
             dice_sides: 6,
@@ -296,6 +298,7 @@ fn exhaust_scenarios_parses_and_is_populated() {
     assert!(!e.combat.seeds.is_empty(), "combat.seeds must not be empty");
     assert!(!e.combat.player_variants.is_empty(), "combat.player_variants must not be empty");
     assert!(!e.trade.qty_offset_levels.is_empty(), "trade.qty_offset_levels must not be empty");
+    assert!(!e.trade.boat_levels.is_empty(), "trade.boat_levels must not be empty");
     assert!(!e.trade.gold_offset_levels.is_empty(), "trade.gold_offset_levels must not be empty");
     assert!(!e.build.fixture.buildings.is_empty(), "build.fixture.buildings must not be empty");
     assert!(!e.saveload.seeds.is_empty(), "saveload.seeds must not be empty");
@@ -318,11 +321,12 @@ fn exhaust_scenarios_parses_and_is_populated() {
     assert!(e.progression.card_event_id_max > 0, "progression.card_event_id_max must be > 0");
 
     // 组合数对账（与 `exhaust_*.rs` 里的断言同口径，防 JSON 档位改动后测试静默失配）
-    // 逐 key 对账 `exhaust_key_counts()` 全部 9 个返回值（不能只断言 1 个，
+    // 逐 key 对账 `exhaust_key_counts()` 全部 10 个返回值（不能只断言 1 个，
     // 否则 JSON 档位改动后其余 key 会静默失配而测试不报）
     let counts = ti_core::data::exhaust_key_counts();
     assert_eq!(counts.get("combat.seeds"), Some(&e.combat.seeds.len()));
     assert_eq!(counts.get("trade.qty_offset"), Some(&e.trade.qty_offset_levels.len()));
+    assert_eq!(counts.get("trade.boat_levels"), Some(&e.trade.boat_levels.len()));
     assert_eq!(counts.get("build.fixture.buildings"), Some(&e.build.fixture.buildings.len()));
     assert_eq!(counts.get("saveload.seeds"), Some(&e.saveload.seeds.len()));
     assert_eq!(counts.get("menu.item_target_indexes"), Some(&e.menu.item_target_indexes.len()));

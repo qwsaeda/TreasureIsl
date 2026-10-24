@@ -356,6 +356,9 @@ impl Scene for MainMapScene {
 
         // 第一遍：实体填充（玩家棋子 + 据点 + BOSS），记录它们的文本落点。
         let mut entity_texts: Vec<(i32, i32, &str)> = Vec::new();
+        // S21.5：有环岛赛道时，玩家标记 = **船**（当前格，`render_track` 内画）；
+        // **无赛道**（v2 回退）= 绿方块 + `flag` 代码图标。
+        let spaces = host.board_spaces();
         if let Some(pos) = host.map_pos() {
             let pr = i32::try_from(pos.row).unwrap_or(0);
             let pc = i32::try_from(pos.col).unwrap_or(0);
@@ -364,16 +367,17 @@ impl Scene for MainMapScene {
             let s = entity_size("player");
             // 实体在瓦片绘制盒（2tw × 2th）内居中
             let (px, py) = (sx + (tw * 2 - s) / 2, sy + (th * 2 - s) / 2);
-            host.fill_rect(px, py, s, s, COLOR_PLAYER);
-            // S18.12：实体图标化（旗 = 玩家船队；48px 原生图标居中于实体盒）
-            chrome::entity_icon(host, "flag", px, py, s, chrome::COLOR_GOLD_WARM);
-            // QA142：实体 1px bevel 描边（凸出感，不越实体盒）
-            host.fill_rect(px, py, s, 1, chrome::COLOR_BEVEL_HI);
-            host.fill_rect(px, py + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
-            let lbl = i18n::sget("scene.main_map.player_label");
-            entity_texts.push((px + s, py, lbl));
+            if spaces.is_empty() {
+                host.fill_rect(px, py, s, s, COLOR_PLAYER);
+                // S18.12：实体图标化（旗 = 玩家船队；48px 原生图标居中于实体盒）
+                chrome::entity_icon(host, "flag", px, py, s, chrome::COLOR_GOLD_WARM);
+                // QA142：实体 1px bevel 描边（凸出感，不越实体盒）
+                host.fill_rect(px, py, s, 1, chrome::COLOR_BEVEL_HI);
+                host.fill_rect(px, py + s - 1, s, 1, chrome::COLOR_BEVEL_SHADOW);
+                let lbl = i18n::sget("scene.main_map.player_label");
+                entity_texts.push((px + s, py, lbl));
+            }
         }
-        let spaces = host.board_spaces();
         for (r, c) in host.map_landmarks() {
             // S19：有环岛赛道时，据点由赛道空间标记接管（下方 `render_track`），
             // 不再单独画 balance 据点（避免与赛道空间双标记）。
@@ -433,28 +437,46 @@ impl Scene for MainMapScene {
     }
 }
 
-/// S19：环岛赛道绘制（`progression.md` §环岛赛道）：路径连线（相邻赛道格 8 邻接，短线段 = 小方块插值）
-/// + 空间标记（分区色菱 + 特殊格图标，图标 `ui_icons.json` 注册表）+ 骰子数（`board_last_roll`）
-/// + 落格提示条（`board_toast`）。全部等距坐标经 `chrome::iso_cell_fit`（同一 1080 坐标系，EXP-067）。
+/// v4 黄铜航线线宽（px；实线；实现几何，非版面坐标）。
+const TRACK_LINE_W: i32 = 4;
+
+/// 黄铜航线实线（相邻赛道格中心连线；沿线等距铺线宽方块 ⇒ 连续实线）。
+fn draw_route_line(host: &mut dyn SceneHost, centers: &[(i32, i32)], width: i32, color: u16) {
+    let half = width / 2;
+    for w in centers.windows(2) {
+        let (ax, ay) = (w[0].0, w[0].1);
+        let (bx, by) = (w[1].0, w[1].1);
+        let (dx, dy) = (bx - ax, by - ay);
+        let steps = dx.abs().max(dy.abs()).max(1);
+        for i in 0..=steps {
+            let x = ax + dx * i / steps;
+            let y = ay + dy * i / steps;
+            host.fill_rect(x - half, y - half, width, width, color);
+        }
+    }
+}
+
+/// S21.5 v4 环岛赛道绘制：**黄铜航线实线 + 45 枚多形状节点牌 + 玩家船**。
+///
+/// - 航线：相邻赛道格中心连线（theme 令牌 `brass`），先画线后压牌 ⇒ 线在牌下、牌间露出；
+/// - 节点牌：`SpaceKind` → `chrome::node_asset`（**唯一事实源** = 规格 §6：9 类多形状黄铜牌）；
+/// - 玩家船：`ship_player` 贴图落在当前格（缺资产 = 代码 `flag` 图标回退）。
+///
+/// 坐标全部经 `chrome::iso_cell_fit`（与命中判定同源，EXP-067 正逆成对）。
 fn render_track(
     host: &mut dyn SceneHost,
     layout: &SceneLayout,
     gw: u32,
     entity_texts: &mut Vec<(i32, i32, &str)>,
 ) {
-    // 9 分区配色（对齐原版地形类别码 1..9；theme 令牌缺失 = 金暖色兜底）
-    // S19.7 D2 收敛：分区→令牌表单一事实源 = `chrome::group_color_token`（此前本文件与
-    // `chrome.rs` 各抄一份 ⇒ 改配色必漏一处）。
     let spaces = host.board_spaces();
     if spaces.len() < 2 {
         return;
     }
     let (tw, th) = chrome::iso_tile_fit(layout, gw);
     let theme = host.theme().clone();
-    let group_color = |g: u8| -> u16 {
-        theme.by_name(chrome::group_color_token(g)).unwrap_or(chrome::COLOR_GOLD_WARM)
-    };
-    // 路径连线（先画线，再画标记，标记盖在线上）
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    // 节点中心（等距菱形中心 = 格子绘制盒中心；与 `iso_cell_fit` 同源）
     let centers: Vec<(i32, i32)> = spaces
         .iter()
         .map(|sp| {
@@ -464,63 +486,50 @@ fn render_track(
             (sx + tw, sy + th)
         })
         .collect();
-    for w in centers.windows(2) {
-        let (ax, ay) = (w[0].0, w[0].1);
-        let (bx, by) = (w[1].0, w[1].1);
-        let n = 5;
-        for i in 0..=n {
-            let x = ax + (bx - ax) * i / n;
-            let y = ay + (by - ay) * i / n;
-            host.fill_rect(
-                x - 1,
-                y - 1,
-                3,
-                3,
-                theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM),
-            );
-        }
-    }
-    // 空间标记 + 特殊格图标（S19.7 D2：标记 14×14 → 20×20、图标 22 → 28，提升可读性）
+
+    // 1) 黄铜航线实线
+    draw_route_line(host, &centers, TRACK_LINE_W, brass);
+
+    // 2) 45 枚节点牌（可见外接框归一化 ⇒ 9 类牌视觉大小一致、形状各异）
+    let edge = chrome::node_edge_px(layout, gw);
     for (i, sp) in spaces.iter().enumerate() {
         let (cx, cy) = centers[i];
-        let color = group_color(sp.group);
-        host.fill_rect(cx - 10, cy - 10, 20, 20, color);
-        host.fill_rect(cx - 10, cy - 10, 20, 1, chrome::COLOR_BEVEL_HI);
-        host.fill_rect(cx - 10, cy + 9, 20, 1, chrome::COLOR_BEVEL_SHADOW);
-        let icon = match sp.kind {
-            SpaceKind::Start => Some(("flag", chrome::COLOR_GOLD_WARM)),
-            SpaceKind::Port => Some(("beacon", chrome::COLOR_GOLD_WARM)),
-            SpaceKind::City => Some(("castle", chrome::COLOR_GOLD_WARM)),
-            SpaceKind::Event => Some(("book", ti_render::theme::Theme::DEFAULT.moon_pale)),
-            SpaceKind::Card => Some(("map", ti_render::theme::Theme::DEFAULT.moon_pale)),
-            SpaceKind::Battle | SpaceKind::Boss => Some(("sword", crate::menu_shell::COLOR_DANGER)),
-            SpaceKind::Treasure => Some(("chest", chrome::COLOR_GOLD_WARM)),
-            SpaceKind::Plain => None,
-        };
-        if let Some((name, tint)) = icon {
-            chrome::entity_icon(host, name, cx - 14, cy - 30, 28, tint);
-        }
-        // BOSS / 起点 标签（全部文本最上层，QA142）
-        match sp.kind {
-            SpaceKind::Boss => {
-                let lbl = i18n::sget("scene.main_map.boss_label");
-                entity_texts.push((cx + 12, cy - 8, lbl));
-            }
-            SpaceKind::Start => {
-                let lbl = i18n::sget("scene.main_map.player_label");
-                entity_texts.push((cx + 12, cy - 8, lbl));
-            }
-            _ => {}
+        let def = chrome::node_asset(sp.kind);
+        let (dx, dy, dw, dh) = chrome::asset_dest_rect(cx, cy, edge, def.visible_px);
+        host.blit_image(def.path, dx, dy, dw, dh);
+    }
+
+    // 3) BOSS 标签（全部文本最上层，QA142）
+    for (i, sp) in spaces.iter().enumerate() {
+        if sp.kind == SpaceKind::Boss {
+            let (cx, cy) = centers[i];
+            let lbl = i18n::sget("scene.main_map.boss_label");
+            entity_texts.push((cx + 12, cy - 8, lbl));
         }
     }
-    // 骰子数（摇骰按钮上方居中，`board_last_roll` = 0 → 不画）
+
+    // 4) 玩家船（当前格；缺资产 = 代码 `flag` 图标回退）
+    let idx = host.board_index().min(spaces.len() - 1);
+    let (cx, cy) = centers[idx];
+    let ship_edge = chrome::ship_edge_px(layout, gw);
+    let (dx, dy, dw, dh) =
+        chrome::asset_dest_rect(cx, cy, ship_edge, chrome::SHIP_PLAYER_VISIBLE_PX);
+    if chrome::asset_present(chrome::SHIP_PLAYER_ASSET) {
+        host.blit_image(chrome::SHIP_PLAYER_ASSET, dx, dy, dw, dh);
+    } else {
+        chrome::entity_icon(host, "flag", dx, dy, dw, chrome::COLOR_GOLD_WARM);
+    }
+    let lbl = i18n::sget("scene.main_map.player_label");
+    entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
+
+    // 5) 骰子数（摇骰按钮上方居中，`board_last_roll` = 0 → 不画）
     let roll = host.board_last_roll();
     if roll > 0 {
         let roll_str = i18n::sgetf("scene.main_map.toast.roll_fmt", &[&roll]);
         let rx = 540 - host.shell().hint_text_width_px(&roll_str) / 2;
         host.draw_hint_text(&roll_str, rx, 1296, chrome::COLOR_GOLD_WARM);
     }
-    // 落格提示条（按钮下方，`board_toast` 过期 = `None`）
+    // 6) 落格提示条（按钮下方，`board_toast` 过期 = `None`）
     render_board_toast(host);
 }
 

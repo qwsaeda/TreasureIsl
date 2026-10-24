@@ -19,7 +19,7 @@ use ti_render::theme::Theme;
 
 use crate::scenes::{RenderHost, SceneHost};
 use ti_core::data::{IconDef, Primitive, icon_ids, ui_icons};
-use ti_core::rules::board::SpaceKind;
+use ti_core::rules::board::{SpaceKind, TrackSpace};
 
 // === 颜色常量重导出（从 Theme 默认值，兼容旧导入路径） ===
 
@@ -185,6 +185,10 @@ pub mod keys {
     pub const DECK_SPIN: &str = "deck_spin";
     /// v3 航程条矩形键（extra = `main_map.voyage_bar`，S19.7 航程进度条）。
     pub const VOYAGE_BAR: &str = "voyage_bar";
+    /// v4 赛道节点牌边长键（`extra_scalar` = `main_map.track_node.size`；占瓦片半宽百分比）。
+    pub const TRACK_NODE: &str = "track_node";
+    /// v4 玩家船标边长键（`extra_scalar` = `main_map.track_ship.size`；占瓦片半宽百分比）。
+    pub const TRACK_SHIP: &str = "track_ship";
     /// v2 HUD 经济按钮「贸易」矩形键（extra = `main_map.hud_trade`）。
     pub const HUD_TRADE: &str = "hud_trade";
     /// v2 HUD 经济按钮「出售」矩形键（extra = `main_map.hud_sell`）。
@@ -359,15 +363,147 @@ pub fn group_color_token(group: u8) -> &'static str {
     FALLBACK[i]
 }
 
-/// S19.7 航程条（`main_map.voyage_bar`）：把环岛赛道**摊平成一条进度条**，
-/// 显示玩家在岛上的位置 + BOSS 目的地 + 特殊格标记。
+// === v4 环岛赛道：节点牌资产映射 + 航线进度尺（S21.5） ===
+//
+// 单一事实源 = `docs/ui-redesign-v3/08_main_map_v4_spec.md` §6：
+// `SpaceKind` 9 类 ↔ `assets/ui/node_{start,city,port,event,card,battle,treasure,boss,plain}.png`
+// 多形状实心黄铜牌（S21.1 已入仓）；玩家 = `ship_player`（1 级顶替口径，按 `boat_level`
+// 切 4 张船图 = S21.12）。
+
+/// 贴图源画布边长（px；S21.1 批次 `medallion` 角色 = 512×512；9 张节点牌 + 玩家船同规格）。
+pub const ASSET_SOURCE_PX: i32 = 512;
+
+/// 玩家船贴图（S21.5：1 级顶替口径；`boat_{1..4}.png` 待 S21.12）。
+pub const SHIP_PLAYER_ASSET: &str = "assets/ui/ship_player.png";
+
+/// 玩家船可见外接框边长（源像素；S21.1 批次抠图后 alpha 包围盒实测）。
+pub const SHIP_PLAYER_VISIBLE_PX: i32 = 477;
+
+/// 节点牌视觉边长缺省百分比（占瓦片半宽；`main_map.track_node.size` 缺失时的回退）。
+const NODE_EDGE_PCT_FALLBACK: i32 = 100;
+
+/// 玩家船视觉边长缺省百分比（占瓦片半宽；`main_map.track_ship.size` 缺失时的回退）。
+const SHIP_EDGE_PCT_FALLBACK: i32 = 150;
+
+/// v4 航线进度尺：左右内边距（px；8pt 栅格）。
+const VOYAGE_PAD: i32 = 24;
+/// v4 航线进度尺：黄铜航线带厚度（px；8pt 栅格；= 扇区段高 ⇒ 段间露出黄铜航线）。
+const VOYAGE_SLOT_H: i32 = 24;
+/// v4 航线进度尺：扇区段高度（px；8pt 栅格）。
+const VOYAGE_SECTOR_H: i32 = 24;
+/// v4 航线进度尺：扇区间隙（px；8pt 栅格）。
+const VOYAGE_SECTOR_GAP: i32 = 8;
+
+/// 节点牌资产（kind → 贴图；**唯一事实源** = 规格 §6）。
+#[derive(Debug, Clone, Copy)]
+pub struct NodeAsset {
+    /// 资产路径（相对仓库根；`blit_image` 口径）。
+    pub path: &'static str,
+    /// 抠图后可见外接框边长（源像素）——等比缩放到统一视觉边长用。
+    pub visible_px: i32,
+}
+
+/// 节点 kind → 节点牌资产（**唯一事实源**，S21.5；规格 `08_main_map_v4_spec.md` §6）。
 ///
-/// 业务依据（`docs/business/progression.md` §落格节奏 / §BOSS 触发规则）：
-/// 赛道 = 岛屿外环的有序空间序列；本条 = 「绕岛进度」的可视化载体
-/// （v3.5 §3「空出来的下方空间 → 放航程条（进度条 + 目的地标记）」）。
+/// 9 类 kind ↔ 9 张多形状黄铜牌（圆/六边/圆角方/盾/菱/尖星/宝箱/骷髅/铜钉）；
+/// 缺资产 = `blit_image` 静默不画（不 panic、不占位）。
+#[must_use]
+pub fn node_asset(kind: SpaceKind) -> NodeAsset {
+    match kind {
+        SpaceKind::Start => NodeAsset { path: "assets/ui/node_start.png", visible_px: 488 },
+        SpaceKind::City => NodeAsset { path: "assets/ui/node_city.png", visible_px: 352 },
+        SpaceKind::Port => NodeAsset { path: "assets/ui/node_port.png", visible_px: 324 },
+        SpaceKind::Event => NodeAsset { path: "assets/ui/node_event.png", visible_px: 471 },
+        SpaceKind::Card => NodeAsset { path: "assets/ui/node_card.png", visible_px: 314 },
+        SpaceKind::Battle => NodeAsset { path: "assets/ui/node_battle.png", visible_px: 468 },
+        SpaceKind::Treasure => NodeAsset { path: "assets/ui/node_treasure.png", visible_px: 443 },
+        SpaceKind::Boss => NodeAsset { path: "assets/ui/node_boss.png", visible_px: 334 },
+        SpaceKind::Plain => NodeAsset { path: "assets/ui/node_plain.png", visible_px: 182 },
+    }
+}
+
+/// 等比贴图目标矩形（**可见外接框归一化**）：可见边长 = `edge_px`，中心 (cx, cy)，无形变。
 ///
-/// 画法：底板（`brass_dark`，`panel_warm` 在深海底上隐形）+ 一条黄铜槽 + 每格一个小点（按分区色）+
-/// 玩家标记（`compass` 图标，暖金）+ BOSS 标记（`sword` 图标，danger 色）。
+/// 9 张节点牌的 alpha 包围盒差异大（182~488 px），按整幅 512×512 拉伸会让「铜钉」牌缩成
+/// 一小点 ⇒ 统一按可见外接框等比缩放，9 类牌视觉大小一致、形状各异。
+#[must_use]
+pub fn asset_dest_rect(cx: i32, cy: i32, edge_px: i32, visible_px: i32) -> (i32, i32, i32, i32) {
+    let side = (ASSET_SOURCE_PX * edge_px / visible_px.max(1)).max(1);
+    (cx - side / 2, cy - side / 2, side, side)
+}
+
+/// 贴图是否在位（缺资产 = 回退代码矢量图标的唯一判据；缺资源 = 不画，不 panic）。
+#[must_use]
+pub fn asset_present(asset: &str) -> bool {
+    #[cfg(feature = "hd-8bit")]
+    {
+        crate::image_cache::get(asset).is_some()
+    }
+    #[cfg(not(feature = "hd-8bit"))]
+    {
+        let _ = asset;
+        true
+    }
+}
+
+/// 画布相对边长（`extra_scalar` = `<key>.size`，**占瓦片半宽的百分比** × `board_fit.tw`）。
+///
+/// 百分比口径 = 随棋盘缩放（v3 `world_canvas` tw=24 ⇒ 1× = 24px；v4 tw=48 ⇒ 1× = 48px）；
+/// 相邻赛道格中心距 = 1 个瓦片半宽 ⇒ 100% 即「牌与牌刚好相接」。
+fn track_edge_px(layout: &data::SceneLayout, g: u32, key: &str, fallback_pct: i32) -> i32 {
+    let pct = layout
+        .extra_scalar
+        .get(&format!("{key}.{}", keys::SIZE_SUFFIX))
+        .copied()
+        .filter(|v| *v > 0)
+        .unwrap_or(fallback_pct);
+    let tw = board_fit(layout, g).tw;
+    (tw * pct / 100).max(1)
+}
+
+/// v4 节点牌可见边长（px）：`main_map.track_node.size`（瓦片半宽百分比）× `board_fit.tw`。
+#[must_use]
+pub fn node_edge_px(layout: &data::SceneLayout, g: u32) -> i32 {
+    track_edge_px(layout, g, keys::TRACK_NODE, NODE_EDGE_PCT_FALLBACK)
+}
+
+/// v4 玩家船可见边长（px）：`main_map.track_ship.size`（瓦片半宽百分比）× `board_fit.tw`。
+#[must_use]
+pub fn ship_edge_px(layout: &data::SceneLayout, g: u32) -> i32 {
+    track_edge_px(layout, g, keys::TRACK_SHIP, SHIP_EDGE_PCT_FALLBACK)
+}
+
+/// 赛道分区连续段（`(group, 起始序号, 结束序号)`；`board.json` 分区 1..9 连续 ⇒ 9 段）。
+fn voyage_sectors(spaces: &[TrackSpace]) -> Vec<(u8, usize, usize)> {
+    let mut out: Vec<(u8, usize, usize)> = Vec::new();
+    for (i, sp) in spaces.iter().enumerate() {
+        match out.last_mut() {
+            Some(last) if last.0 == sp.group => last.2 = i,
+            _ => out.push((sp.group, i, i)),
+        }
+    }
+    out
+}
+
+/// 进度尺槽位左缘 x（第 `i` 格；`inner_x` 起均分）。
+fn voyage_slot_x(inner_x: i32, inner_w: i32, count: i32, i: i32) -> i32 {
+    inner_x + inner_w * i / count.max(1)
+}
+
+/// 进度尺槽位中心 x（第 `i` 格）。
+fn voyage_slot_center(inner_x: i32, inner_w: i32, count: i32, i: i32) -> i32 {
+    inner_x + inner_w * (2 * i + 1) / (2 * count.max(1))
+}
+
+/// S21.5 v4 航线进度尺（`main_map.voyage_bar`）：把环岛赛道**摊平**为
+/// **1 条黄铜航线 + 9 个分区扇区段 + 玩家船标 + BOSS 终标**（替代 S19.7 的 45 点噪声条）。
+///
+/// 业务依据（`docs/business/progression.md` §环岛赛道）：赛道 = 岛屿外环的有序空间序列；
+/// 本条 = 「绕岛进度」的可视化载体（分区 = `board.json` 的 `group` 1..9，连续段 = 扇区段）。
+///
+/// 画法：底板（`brass_dark`，`panel_warm` 在深海底上隐形）+ 黄铜航线槽 + 分区色扇区段
+/// + 玩家船贴图 + BOSS 骷髅牌（缺贴图 = 代码矢量图标回退）。
+///
 /// 无赛道（`board_spaces` 空）/ 键缺失 = 不画。
 pub fn voyage_bar(host: &mut dyn SceneHost, scene_id: &str) {
     let layout = scene_layout(scene_id);
@@ -390,31 +526,54 @@ pub fn voyage_bar(host: &mut dyn SceneHost, scene_id: &str) {
     let brass_dark = theme.by_name("brass_dark").unwrap_or(COLOR_GOLD_WARM);
     let danger = crate::menu_shell::COLOR_DANGER;
 
-    // 底板 + 槽（8pt 栅格：x/y/w/h 已整除）
+    // 底板 + 黄铜边（8pt 栅格：x/y/w/h 已整除）
     host.fill_rect(rect.x, rect.y, rect.w, rect.h, panel);
     host.fill_rect(rect.x, rect.y, rect.w, 2, brass);
     host.fill_rect(rect.x, rect.y + rect.h - 2, rect.w, 2, brass_dark);
     let track_y = rect.y + rect.h / 2;
-    let pad = 24;
-    let inner_w = rect.w - pad * 2;
-    host.fill_rect(rect.x + pad, track_y - 3, inner_w, 6, brass_dark);
+    let inner_x = rect.x + VOYAGE_PAD;
+    let inner_w = rect.w - VOYAGE_PAD * 2;
+    if inner_w <= 0 {
+        return;
+    }
+    // 1 条黄铜航线（环岛摊平 = 水平实线）
+    host.fill_rect(inner_x, track_y - VOYAGE_SLOT_H / 2, inner_w, VOYAGE_SLOT_H, brass);
 
-    // 每格一点（按分区色，特殊格加亮）
-    let step = inner_w / count.max(1);
-    for (i, sp) in spaces.iter().enumerate() {
-        let x = rect.x + pad + i32::try_from(i).unwrap_or(0) * step;
-        let c = theme.by_name(group_color_token(sp.group)).unwrap_or(COLOR_GOLD_WARM);
-        let special = !matches!(sp.kind, SpaceKind::Plain);
-        let dot = if special { 10 } else { 6 };
-        host.fill_rect(x, track_y - dot / 2, dot, dot, c);
+    // 9 个扇区段（分区色；段间留缝露出黄铜航线）
+    for (group, s, e) in voyage_sectors(&spaces) {
+        let x0 = voyage_slot_x(inner_x, inner_w, count, i32::try_from(s).unwrap_or(0))
+            + VOYAGE_SECTOR_GAP / 2;
+        let x1 = voyage_slot_x(inner_x, inner_w, count, i32::try_from(e + 1).unwrap_or(0))
+            - VOYAGE_SECTOR_GAP / 2;
+        let w = x1 - x0;
+        if w <= 0 {
+            continue;
+        }
+        let c = theme.by_name(group_color_token(group)).unwrap_or(COLOR_GOLD_WARM);
+        host.fill_rect(x0, track_y - VOYAGE_SECTOR_H / 2, w, VOYAGE_SECTOR_H, c);
     }
 
-    // 玩家标记（暖金 compass）+ BOSS 标记（danger sword）
-    let player_x = rect.x + pad + player_idx * step;
-    entity_icon(host, "compass", player_x - 14, track_y - 40, 28, COLOR_GOLD_WARM);
+    // 玩家船标（船贴图；缺资产 = 代码 `compass` 图标回退）
+    let marker = (rect.h / 2).clamp(16, 32);
+    let player_x = voyage_slot_center(inner_x, inner_w, count, player_idx);
+    let (sx, sy, sw, sh) = asset_dest_rect(player_x, track_y, marker, SHIP_PLAYER_VISIBLE_PX);
+    if asset_present(SHIP_PLAYER_ASSET) {
+        host.blit_image(SHIP_PLAYER_ASSET, sx, sy, sw, sh);
+    } else {
+        entity_icon(host, "compass", sx, sy, sw, COLOR_GOLD_WARM);
+    }
+
+    // BOSS 终标（骷髅牌；缺资产 = 代码 `sword` 图标回退）
     if let Some(boss_i) = spaces.iter().position(|s| s.kind == SpaceKind::Boss) {
-        let boss_x = rect.x + pad + i32::try_from(boss_i).unwrap_or(0) * step;
-        entity_icon(host, "sword", boss_x - 12, track_y + 14, 24, danger);
+        let boss = node_asset(SpaceKind::Boss);
+        let boss_x =
+            voyage_slot_center(inner_x, inner_w, count, i32::try_from(boss_i).unwrap_or(0));
+        let (bx, by, bw, bh) = asset_dest_rect(boss_x, track_y, marker, boss.visible_px);
+        if asset_present(boss.path) {
+            host.blit_image(boss.path, bx, by, bw, bh);
+        } else {
+            entity_icon(host, "sword", bx, by, bw, danger);
+        }
     }
 }
 

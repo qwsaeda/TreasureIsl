@@ -25,6 +25,7 @@
   "trade": {
     "qty_offset_levels": [-2, -1, 0, 1, 2],
     "qty_offset_labels": ["-2", "-1", "0", "+1", "+2"],
+    "boat_levels": [1, 2, 3, 4],
     "gold_offset_levels": [-100, -10, 0, 10, 100],
     "gold_offset_labels": ["-100", "-10", "0", "+10", "+100"],
     "fixture": {

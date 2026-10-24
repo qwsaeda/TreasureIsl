@@ -15,6 +15,38 @@ Set-Location $repoRoot
 $scenes = @('index', 'select_role', 'select_map', 'main_map', 'vs', 'message', 'saveload')
 if ($args.Count -gt 0) { $scenes = $args }
 
+# S21.8 工具契约只读模式：-Check = 既有出图验收（不重渲染 / 不写缩略图；缺图 / 空帧 ⇒ 非 0 退出）
+# 用法：powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 -Check [scene...]
+if ($args -contains '-Check') {
+    $checkScenes = @($args | Where-Object { $_ -ne '-Check' })
+    if ($checkScenes.Count -eq 0) { $checkScenes = @('index', 'select_role', 'select_map', 'main_map', 'vs', 'message', 'saveload') }
+    $fail = 0
+    foreach ($s in $checkScenes) {
+        $png = "evidence\bevy_native_$s.png"
+        if (-not (Test-Path $png)) {
+            Write-Host "  FAIL  缺出图 $png（先跑默认模式出图）" -ForegroundColor Red
+            $fail++
+            continue
+        }
+        $pyCheck = @"
+from PIL import Image
+im = Image.open(r'$png').convert('RGB')
+data = im.tobytes()
+nb = sum(1 for i in range(0, len(data), 3) if data[i] > 8 or data[i + 1] > 8 or data[i + 2] > 8)
+print(f'  [$s] nonblack = {nb} / {im.width * im.height}')
+raise SystemExit(1 if nb == 0 else 0)
+"@
+        $pyCheck | python -
+        if ($LASTEXITCODE -ne 0) { Write-Host "  FAIL  $s 空帧（或无 PIL）" -ForegroundColor Red; $fail++ }
+    }
+    if ($fail -gt 0) {
+        Write-Host "-Check 结束：$fail 个场景未通过（只读：未重渲染 / 未写缩略图）" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "-Check 结束：既有出图全部在位且非空帧（只读，未写文件）"
+    exit 0
+}
+
 $thumbDir = 'evidence\ui_preview'
 if (-not (Test-Path $thumbDir)) { New-Item -ItemType Directory -Path $thumbDir | Out-Null }
 

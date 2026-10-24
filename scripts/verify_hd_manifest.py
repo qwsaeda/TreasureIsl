@@ -1,13 +1,22 @@
 # -*- coding: utf-8 -*-
-"""S7.2 验收辅助：校验 manifest_hd.json 与 assets_hd 产物一致（PNG-32、无缺失、哈希匹配）。"""
+"""S7.2 验收辅助：校验 manifest_hd.json 与 assets_hd 产物一致（PNG-32、无缺失、哈希匹配）。
+
+用法：
+  python scripts/verify_hd_manifest.py            # 只读校验（默认即只读，不写文件；不一致非 0 退出）
+  python scripts/verify_hd_manifest.py --check   # 只读校验（S21.8 工具契约别名，行为同默认）
+"""
 import json
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-MANIFEST = REPO / "manifest_hd.json"
+MANIFEST = REPO / "assets_hd" / "manifest_hd.json"  # S7.2 产物落 assets_hd/ 同目录（S21.8：原根目录路径已不存在）
 
 
 def main() -> None:
+    # S21.8 工具契约：--check = 只读校验别名（默认行为即只读校验，不写文件；不一致非 0 退出）
+    if "--check" in sys.argv[1:]:
+        print("[verify_hd] --check 只读校验模式（默认行为，不写文件）")
     data = json.loads(MANIFEST.read_text())
     checked = 0
     missing = []

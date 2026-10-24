@@ -22,7 +22,35 @@
 
 use crate::data::{self, CombatCfg, DamageCfg};
 use crate::domain::combat::{Side, Unit};
+use crate::rules::boat::BoatSession;
 use crate::rules::rng::GameRng;
+
+/// 战斗加成（`docs/business/combat.md` §建造加成扩展）。
+///
+/// **总 atk / 总 hp = 建筑 Σ + 船累计值**：建筑加成 = `atk_bonus × level` 逐建筑求和
+/// （[`crate::rules::build::BuildManager::build_atk_bonus`]），
+/// 船加成 = `balance.boat.levels[level].atk/hp`（**累计值，直接加**，不经 `× level`）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct CombatBonus {
+    /// atk 加成合计。
+    pub atk: u32,
+    /// hp 加成合计。
+    pub hp: u32,
+}
+
+impl CombatBonus {
+    /// 合成战斗加成（建筑 Σ + 船累计值；两者直接相加）。
+    #[must_use]
+    pub fn combine(build_atk: u32, build_hp: u32, boat: &BoatSession) -> Self {
+        Self { atk: build_atk.saturating_add(boat.atk()), hp: build_hp.saturating_add(boat.hp()) }
+    }
+
+    /// 把加成叠加到基础单位（`base + bonus`；卡牌临时扣血等仍由调用方处理）。
+    #[must_use]
+    pub fn apply(self, base: Unit) -> Unit {
+        Unit { hp: base.hp.saturating_add(self.hp), atk: base.atk.saturating_add(self.atk) }
+    }
+}
 
 /// 战斗会话：`CombatCfg` + `GameRng` + 双方 HP + 回合数 + 结果。
 ///
@@ -84,6 +112,21 @@ impl BattleSession {
     ) -> Result<Self, crate::data::LoadError> {
         let cfg = load_cfg()?;
         Ok(Self::new_with_cfg(cfg, seed, player, boss_tier))
+    }
+
+    /// 新建会话并叠加战斗加成（建筑 Σ + 船累计值 → 玩家单位）。
+    ///
+    /// 等价于 `new_with_cfg(cfg, seed, bonus.apply(base), boss_tier)`：
+    /// 玩家 atk/hp = 基础值 + [`CombatBonus`]（`docs/business/combat.md` §建造加成）。
+    #[must_use]
+    pub fn new_with_bonus(
+        cfg: CombatCfg,
+        seed: u32,
+        base: Unit,
+        boss_tier: u32,
+        bonus: CombatBonus,
+    ) -> Self {
+        Self::new_with_cfg(cfg, seed, bonus.apply(base), boss_tier)
     }
 
     /// 显式 `CombatCfg` 注入（测试 / 自定义战斗参数，不读 `balance`）。

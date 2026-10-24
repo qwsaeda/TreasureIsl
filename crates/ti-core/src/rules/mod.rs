@@ -2,6 +2,7 @@
 
 pub mod battle;
 pub mod board;
+pub mod boat;
 pub mod build;
 pub mod cards;
 pub mod cards_draw;

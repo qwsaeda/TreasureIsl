@@ -1,0 +1,50 @@
+S21.8 存量工具契约豁免清零
+=============================
+改动面（硬规则 7）：业务规则=无 | 数据=`scripts/tooling_contract_baseline.json`
+（`tools` 清空为 `{}`，version 2 + 注释记录 S21.8 清零；**文件保留** ——
+doccheck2 缺文件即 ERROR）| 规则=无 | 表现=无 | 资产=无 |
+工具=`scripts/` 下 15 个存量工具（补只读模式 + 非 0 退出语义）+ 台账
+`docs/process/14_tooling_catalog.md` §3 要素补齐（10 行）。
+跨模块原因：基线豁免 = 「允许不合规」的临时状态；棘轮只允许收紧不允许放宽，
+清零后新增工具一律硬约束 ⇒ 基线清空必须与「工具本身合规 + 台账要素齐」同批落地。
+
+豁免基线现状：基线 **15 个工具 / 36 条豁免 id**（任务书所述 16 = 含基线文件本身）。
+逐条整改（工具 → 只读模式 → 退出码 → 台账行）：
+
+| 工具 | 只读模式 | 退出码语义 | 台账行 |
+|---|---|---|---|
+| `check_data_driven.py` | `--check` 别名（默认即只读门禁） | 已有（违规 1） | 已含「幂等只读；违规非 0」 |
+| `check_scene_narrative.py` | `--check` 别名 | 已有 | 已有 |
+| `check_hardcode.py` | argparse `--check`（严格模式别名） | 已有 | 已有 |
+| `check_data_source.py` | `--check` 别名 | 源码 `return 1`（原豁免 stale） | 补「漂移 ⇒ 非 0 退出」 |
+| `verify_hd_manifest.py` | `--check` 别名 | `SystemExit(1)` | 已有 |
+| `ui_assets.py` | 顶层 `--check` = verify 别名（跳过 mkdir，纯只读） | 已有 | 已有 |
+| `migrate_strings.py` | `--report` 已合契约（豁免 stale，零改动） | apply 缺 `strings.json` 显式 1 | 补「apply 缺 strings.json ⇒ 非 0」 |
+| `pcx_to_png.py` | `--check`（内存重导出比对，不写盘） | 缺 src / 校验失败 1 | 补「src 缺失 / --check 漂移 ⇒ 非 0」 |
+| `pack_hd_assets.py` | `--check`（源在位 + 产物/哈希对账，不写文件） | 已有 | 补「--check 缺源/未打包/哈希漂移 ⇒ 非 0」 |
+| `bevy_cpu_scene_diff.py` | `--check`（仅比对既有两侧 PNG，不重生/不写报告） | 缺输出 1 | 补「--check 缺输出 ⇒ 非 0」 |
+| `build_wasm.ps1` | `-Check` 前置体检（target/manifest 在位） | 已有 `exit 1` | 补「-Check 只读前置体检」 |
+| `ui_preview.ps1` | `-Check` 验收既有出图（不重渲染/不写缩略图） | 已有 `exit 1` | 补「-Check 只读验收，失败非 0」 |
+| `playbook.ps1` | `-Check` = health-check（被转发目标在位性，不执行被转发工具） | 已有 `exit 1` | 补「幂等只读转发器；未知命令/转发失败 ⇒ 非 0」 |
+| `agnes_gen.py` | `--check` 前置体检（KEY + 输出目录在位；不生图/不调 API） | 已有 `sys.exit(1)` | 补「失败/缺 KEY ⇒ 非 0；--check 只读」 |
+| `agnes_vision.py` | `--check` 前置体检（KEY + 图片在位；不调 API） | 已有 `sys.exit(1)` | 补「缺 KEY/缺图 ⇒ 非 0；--check 前置」 |
+
+口径裁定（2 处，沿用既有先例，未新造口径、未放宽门禁）：
+- `layout_spec_check.py` 沿用「--check = 默认行为，保留别名」口径；
+- `build_wasm.ps1` 对 `data/` 资源缺失按脚本自身语义 **SKIP 继续**（不误判致命）。
+
+顺手修的 2 个**存量真 bug**（工具本会崩，非行为变更）：
+1. `verify_hd_manifest.py` 的 MANIFEST 指向不存在的根目录 `manifest_hd.json`
+   （实际在 `assets_hd/manifest_hd.json`）⇒ 工具原本直接崩，已修；
+2. `migrate_strings.py --report` 待迁字面量含 `✖` ⇒ GBK 控制台 `UnicodeEncodeError`
+   exit 1 ⇒ 加 stdout/stderr `reconfigure(errors="replace")`（输出容错，不改判定行为）。
+
+验收判据（实跑）：
+1. **baseline tools 清空** = `{}`（文件保留，version 2 注释记 S21.8 清零）。
+2. **doccheck2 第 27 项 `check_tooling_contract` 0 error（无豁免）** —— 全 37 项 0 error。
+3. **各工具只读模式实跑**（15 工具逐一实跑，贴摘要）：全部 exit 0（成功态）
+   + 负测（缺 src / 缺输出 / 缺 KEY / 假场景 / 未知命令）⇒ exit 1；
+   且只读模式**不改任何文件**（`bevy_cpu_scene_diff.py` 报告哈希前后不变、
+   `pack_hd_assets.py` manifest 哈希前后不变、`ui_preview.ps1 -Check` 7 场景无缩略图新写）。
+4. **工具行为不变**：既有默认用法/输出格式未改（只加只读开关，不改默认路径）。
+5. `cargo test --workspace` 0 failed；`scripts/gate.ps1` 23 项 **0 failure**。

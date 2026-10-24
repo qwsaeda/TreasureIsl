@@ -16,6 +16,8 @@ pub(crate) struct RawBalance {
     pub(crate) combat: RawCombat,
     pub(crate) trade: RawTrade,
     pub(crate) build: RawBuild,
+    #[serde(default)]
+    pub(crate) boat: RawBoat,
     pub(crate) cards: RawCards,
     #[serde(default)]
     pub(crate) board: RawBoard,
@@ -158,6 +160,28 @@ pub(crate) struct RawBuilding {
     /// 每级战斗 hp 加成（成长机制，缺省 0）。
     #[serde(default)]
     pub(crate) hp_bonus: u32,
+}
+
+/// 船系统 serde 形状（`balance.boat`；规格 = `docs/business/economy.md` §船系统）。
+#[derive(Deserialize, Default)]
+pub(crate) struct RawBoat {
+    #[serde(default)]
+    pub(crate) levels: Vec<RawBoatLevel>,
+}
+
+/// 船等级条目 serde 形状（`balance.boat.levels[]`）。
+#[derive(Deserialize)]
+pub(crate) struct RawBoatLevel {
+    pub(crate) level: u32,
+    pub(crate) name_key: String,
+    /// 升到本级的造价（1 级 = 0，开局默认）。
+    pub(crate) cost: u32,
+    /// 货舱容量（= 单次贸易数量上限）。
+    pub(crate) cargo: u32,
+    /// 战斗 atk 加成（累计值，直接加）。
+    pub(crate) atk: u32,
+    /// 战斗 hp 加成（累计值，直接加）。
+    pub(crate) hp: u32,
 }
 
 #[derive(Deserialize)]

@@ -84,16 +84,38 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--max-tokens", type=int, default=2048)
     ap.add_argument("--out", default=None, help="结果写入文件（可选）")
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="只读前置体检（S21.8 工具契约）：AGNES_API_KEY 在位 + 输入图片在位；不调 API / 不写文件，前置缺失 ⇒ 非 0 退出",
+    )
     args = ap.parse_args()
 
     api_key = os.environ.get("AGNES_API_KEY", "")
+    images = [Path(p) for p in args.image]
+    if args.image_dir:
+        images.extend(sorted(Path(args.image_dir).glob(args.glob)))
+
+    if args.check:
+        ok = True
+        if not api_key:
+            print("[agnes-vision --check] FAIL 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
+            ok = False
+        if not images:
+            print("[agnes-vision --check] FAIL 没有待分析图片（--image / --image-dir）", file=sys.stderr)
+            ok = False
+        missing = [str(p) for p in images if not p.exists()]
+        if missing:
+            print(f"[agnes-vision --check] FAIL 图片不存在: {missing}", file=sys.stderr)
+            ok = False
+        if ok:
+            print(f"[agnes-vision --check] OK（AGNES_API_KEY 在位 + {len(images)} 张图在位；只读未调 API / 未写文件）")
+        return 0 if ok else 1
+
     if not api_key:
         print("[agnes-vision] 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
         return 1
 
-    images = [Path(p) for p in args.image]
-    if args.image_dir:
-        images.extend(sorted(Path(args.image_dir).glob(args.glob)))
     if not images:
         print("[agnes-vision] 没有待分析图片", file=sys.stderr)
         return 1
