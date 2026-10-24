@@ -105,29 +105,39 @@ fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, 
     host.draw_hint_text(label, label_x, ly, chrome::COLOR_TEXT_ON_PARCH);
 }
 
-/// S17.8 v3 HUD：顶左 `hud_gold` 金币 + 顶右 `hud_player` 持有量（P-Hades-1 边角化）
-/// + 底部三键命令盘（P-UW4-3，`chrome::deck_button`）。各部分键缺失/非正 = 该部分不画。
+/// S21.6 v4 HUD：顶角双铜牌（`hud_plaque_l` 金币 / `hud_plaque_r` 船·持有量）+
+/// 底部三键铜牌（JSON 原语 `deck_plaque` 贴图，点击命中仍走 `deck_*` 数据键）。
+///
+/// 各铜牌键缺失 = 回退 v3 边角矩形（`hud_gold`/`hud_player`）；再缺失 = 该部分不画。
+///
+/// 运行时只画数值文本（金币数 / 持有量），面板 = `main_map.primitives` 原语。
 fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
     let gold = host.gold();
     let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
-    // S18.7f：面板 chrome（menu_bg 块 + menu_border 描边 + bevel 高光/阴影）= JSON 原语
-    // （`main_map.primitives`），此处只画运行时数值（金币）。
-    if let Some(rc) = layout.extra.get(chrome::keys::HUD_GOLD) {
-        if rc.w > 0 && rc.h > 0 {
-            chrome::draw_body_text(host, &gold_str, rc.x + 8, rc.y + rc.h / 2 - 22);
-        }
-    }
     let owned = host.owned_total();
     let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
-    if let Some(rc) = layout.extra.get(chrome::keys::HUD_PLAYER) {
+    let mut plaque_text = |rc: &data::Rect, s: &str| {
+        // 文本落铜牌右半（左侧 = 96/64px 图标区）：x = 牌左 + 176，基线 = 牌心 - 22
+        chrome::draw_body_text(host, s, rc.x + 176, rc.y + rc.h / 2 - 22);
+    };
+    if let Some(rc) = layout
+        .extra
+        .get(chrome::keys::HUD_PLAQUE_L)
+        .or_else(|| layout.extra.get(chrome::keys::HUD_GOLD))
+    {
         if rc.w > 0 && rc.h > 0 {
-            chrome::draw_body_text(host, &own_str, rc.x + 8, rc.y + rc.h / 2 - 22);
+            plaque_text(rc, &gold_str);
         }
     }
-    // 命令盘 3 键：`key` = v3 布局矩形键（`keys::DECK_*`），`icon_key` = `ui_icons` 注册表名
-    // （独立命名空间，与 v2 布局矩形键 `hud_trade` 同名但非布局键，故不绑 `keys::`）。
-    // S18.7f：底部命令盘 3 键的面板 + 图标 + 标签 = JSON 原语（`main_map.primitives`），
-    // 运行时无内容（点按命中仍走 `hud_hit` 数据槽，不依赖绘制）。
+    if let Some(rc) = layout
+        .extra
+        .get(chrome::keys::HUD_PLAQUE_R)
+        .or_else(|| layout.extra.get(chrome::keys::HUD_PLAYER))
+    {
+        if rc.w > 0 && rc.h > 0 {
+            plaque_text(rc, &own_str);
+        }
+    }
 }
 
 /// S17.8 v2 HUD：羊皮纸 HUD 面板（金币/持有量两行 44px）+ 三经济按钮（QA149）。
@@ -527,25 +537,27 @@ fn render_track(
     if roll > 0 {
         let roll_str = i18n::sgetf("scene.main_map.toast.roll_fmt", &[&roll]);
         let rx = 540 - host.shell().hint_text_width_px(&roll_str) / 2;
-        host.draw_hint_text(&roll_str, rx, 1296, chrome::COLOR_GOLD_WARM);
+        let ry = layout.extra.get(chrome::keys::DECK_SPIN).map_or(1296, |r| r.y - 24);
+        host.draw_hint_text(&roll_str, rx, ry, chrome::COLOR_GOLD_WARM);
     }
-    // 6) 落格提示条（按钮下方，`board_toast` 过期 = `None`）
+    // 6) 落格提示签条（S21.6 v4 = `hint` 键中心；`board_toast` 过期 = `None`）
     render_board_toast(host);
 }
 
-/// 落格提示条（S19.7 D3）：加**底板**（`brass_dark` + 黄铜边）——原实现直接画字飘在海面上，
-/// 对比度不足（其它 HUD 元素都有底板）；底板宽度按文字宽度自适应，8pt 栅格对齐。
-/// 纵向位置 1520（面板 1484..1556）：在摇骰按钮下沿 1448 与命令盘上沿 1600 之间，不重叠。
+/// 落格提示签条（S19.7 D3 底板 + S21.6 v4 位置）：`brass_dark` 底板 + 黄铜边框，
+/// 宽按字自适应（最小 392）；中心 = `hint` 键（v4 = (540,1632)，spec §2 签条 {344,1600,392,64}）。
 fn render_board_toast(host: &mut dyn SceneHost) {
     let Some(toast) = host.board_toast() else {
         return;
     };
+    let layout = chrome::scene_layout("main_map");
+    let ty = if layout.hint.y > 0 { layout.hint.y } else { 1632 };
     let tw = host.shell().hint_text_width_px(&toast);
     let pad = 24;
-    let panel_w = (tw + pad * 2).max(240);
-    let panel_h = 72;
+    let panel_w = (tw + pad * 2).max(392);
+    let panel_h = 64;
     let px = 540 - panel_w / 2;
-    let py = 1520 - panel_h / 2;
+    let py = ty - panel_h / 2;
     let theme = host.theme().clone();
     // 底板用 `brass_dark`（`panel_warm` 在深海底上≈隐形 —— RGB565 (24,24,16) 与底图同色）
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -556,7 +568,7 @@ fn render_board_toast(host: &mut dyn SceneHost) {
     host.fill_rect(px, py, 2, panel_h, brass);
     host.fill_rect(px + panel_w - 2, py, 2, panel_h, brass);
     let tx = 540 - tw / 2;
-    host.draw_hint_text(&toast, tx, 1520, chrome::COLOR_TEXT_ON_PARCH);
+    host.draw_hint_text(&toast, tx, ty, chrome::COLOR_TEXT_ON_PARCH);
 }
 
 /// S18.9：等距棋盘绘制 —— **按地形取色**（`assets/data/terrain.json` 数据 → theme 令牌）。

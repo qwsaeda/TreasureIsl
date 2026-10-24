@@ -1832,8 +1832,8 @@
     "h": 88
    },
    "fx_coin": {
-    "x": 900,
-    "y": 140
+     "x": 272,
+     "y": 144
    },
   "grid": {
    "x0": 540,
@@ -1851,8 +1851,8 @@
    "size": 24
   },
   "hint": {
-   "x": 540,
-   "y": 1840
+    "x": 540,
+    "y": 1632
   },
   "portrait_zones": [
    {
@@ -1863,10 +1863,10 @@
    }
   ],
   "world_canvas": {
-   "x": 43,
-   "y": 192,
-   "w": 1004,
-   "h": 710
+    "x": 43,
+    "y": 250,
+    "w": 994,
+    "h": 826
   },
   "hud_gold": {
    "x": 80,
@@ -1880,23 +1880,35 @@
    "w": 320,
    "h": 96
   },
+  "hud_plaque_l": {
+   "x": 48,
+   "y": 48,
+   "w": 448,
+   "h": 192
+  },
+  "hud_plaque_r": {
+   "x": 584,
+   "y": 48,
+   "w": 448,
+   "h": 192
+  },
   "deck_trade": {
-   "x": 240,
-   "y": 1600,
-   "w": 200,
-   "h": 80
+    "x": 48,
+    "y": 1440,
+    "w": 312,
+    "h": 136
   },
   "deck_sell": {
-   "x": 460,
-   "y": 1600,
-   "w": 200,
-   "h": 80
+    "x": 384,
+    "y": 1440,
+    "w": 312,
+    "h": 136
   },
   "deck_build": {
-   "x": 680,
-   "y": 1600,
-   "w": 200,
-   "h": 80
+    "x": 720,
+    "y": 1440,
+    "w": 312,
+    "h": 136
   },
   "canvas_entities": {
    "player": 100,
@@ -1912,10 +1924,10 @@
   "focus_anchor": {
    "type": "world_canvas",
    "bbox": {
-    "x": 43,
-    "y": 192,
-    "w": 1004,
-    "h": 710
+     "x": 43,
+     "y": 250,
+     "w": 994,
+     "h": 826
    }
   },
   "primitives": [
@@ -1932,259 +1944,75 @@
     "when": "",
     "item": -1,
     "params": {
-     "asset": "assets/ui/bg_night_sea_top.png"
+     "asset": "assets/ui/chart_full.png"
     }
-   },
+    },
    {
     "kind": "image",
     "rect": {
-     "x": 60,
-     "y": 240,
-     "w": 960,
-     "h": 412
+     "x": 48,
+     "y": 48,
+     "w": 448,
+     "h": 192
     },
     "color": "",
     "z": 3,
     "when": "",
     "item": -1,
     "params": {
-     "asset": "assets/ui/chart_wide.png"
+     "asset": "assets/ui/hud_plaque.png"
     }
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 192,
-     "w": 12,
-     "h": 12
     },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
    {
-    "kind": "rect",
+    "kind": "icon",
     "rect": {
-     "x": 1035,
-     "y": 192,
-     "w": 12,
-     "h": 12
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 1658,
-     "w": 12,
-     "h": 12
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 1035,
-     "y": 1658,
-     "w": 12,
-     "h": 12
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 80,
-     "y": 80,
-     "w": 320,
+     "x": 104,
+     "y": 96,
+     "w": 96,
      "h": 96
     },
-    "color": "panel_warm",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 80,
-     "y": 80,
-     "w": 320,
-     "h": 2
+    "params": {
+     "icon": "coin",
+     "size": 96
     },
-    "color": "brass",
-    "z": 7,
+    "color": "gold_warm",
+    "z": 4,
     "when": "",
     "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 80,
-     "y": 174,
-     "w": 320,
-     "h": 2
     },
-    "color": "brass",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
    {
-    "kind": "rect",
+    "kind": "image",
     "rect": {
-     "x": 80,
-     "y": 82,
-     "w": 2,
-     "h": 92
+     "x": 584,
+     "y": 48,
+     "w": 448,
+     "h": 192
     },
-    "color": "brass",
-    "z": 7,
+    "color": "",
+    "z": 3,
     "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 398,
-     "y": 82,
-     "w": 2,
-     "h": 92
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/hud_plaque.png"
+    }
     },
-    "color": "brass",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
    {
-    "kind": "rect",
+    "kind": "icon",
     "rect": {
-     "x": 82,
-     "y": 82,
-     "w": 316,
-     "h": 1
-    },
-    "color": "brass_light",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 82,
-     "y": 173,
-     "w": 316,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 680,
-     "y": 80,
-     "w": 320,
+     "x": 640,
+     "y": 96,
+     "w": 96,
      "h": 96
     },
-    "color": "panel_warm",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 680,
-     "y": 80,
-     "w": 320,
-     "h": 2
+    "params": {
+     "icon": "chest",
+     "size": 96
     },
-    "color": "brass",
-    "z": 7,
+    "color": "gold_warm",
+    "z": 4,
     "when": "",
     "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 680,
-     "y": 174,
-     "w": 320,
-     "h": 2
     },
-    "color": "brass",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 680,
-     "y": 82,
-     "w": 2,
-     "h": 92
-    },
-    "color": "brass",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 998,
-     "y": 82,
-     "w": 2,
-     "h": 92
-    },
-    "color": "brass",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 682,
-     "y": 82,
-     "w": 316,
-     "h": 1
-    },
-    "color": "brass_light",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 682,
-     "y": 173,
-     "w": 316,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
    {
     "kind": "text",
     "rect": {
@@ -2199,1015 +2027,179 @@
     "when": "",
     "item": -1,
     "text_key": "scene.main_map.title"
-   },
+    },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 408,
+     "y": 1160,
+     "w": 264,
+     "h": 264
+    },
+    "color": "",
+    "z": 7,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/btn_spin.png"
+    }
+    },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 48,
+     "y": 1440,
+     "w": 312,
+     "h": 136
+    },
+    "color": "",
+    "z": 8,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/deck_plaque.png"
+    }
+    },
    {
     "kind": "icon",
     "rect": {
-     "x": 344,
-     "y": 104,
-     "w": 48,
-     "h": 48
+     "x": 96,
+     "y": 1480,
+     "w": 64,
+     "h": 64
     },
     "params": {
      "icon": "coin",
-     "size": 48
-    },
-    "color": "gold_warm",
-    "z": 9,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "icon",
-    "rect": {
-     "x": 944,
-     "y": 104,
-     "w": 48,
-     "h": 48
-    },
-    "params": {
-     "icon": "chest",
-     "size": 48
-    },
-    "color": "gold_warm",
-    "z": 9,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 168,
-     "y": 192,
-     "w": 1,
-     "h": 710
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 294,
-     "y": 192,
-     "w": 1,
-     "h": 710
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 419,
-     "y": 192,
-     "w": 1,
-     "h": 710
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 545,
-     "y": 192,
-     "w": 1,
-     "h": 710
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 670,
-     "y": 192,
-     "w": 1,
-     "h": 710
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 796,
-     "y": 192,
-     "w": 1,
-     "h": 710
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 921,
-     "y": 192,
-     "w": 1,
-     "h": 710
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 334,
-     "w": 1004,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 476,
-     "w": 1004,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 618,
-     "w": 1004,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 760,
-     "w": 1004,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 3,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 192,
-     "w": 2,
-     "h": 710
-    },
-    "color": "wood_warm",
-    "z": 4,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 1045,
-     "y": 192,
-     "w": 2,
-     "h": 710
-    },
-    "color": "wood_warm",
-    "z": 4,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 49,
-     "y": 198,
-     "w": 1,
-     "h": 698
-    },
-    "color": "gold_warm",
-    "z": 5,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 1040,
-     "y": 198,
-     "w": 1,
-     "h": 698
-    },
-    "color": "gold_warm",
-    "z": 5,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 192,
-     "w": 12,
-     "h": 12
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 1035,
-     "y": 192,
-     "w": 12,
-     "h": 12
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 43,
-     "y": 890,
-     "w": 12,
-     "h": 12
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 1035,
-     "y": 890,
-     "w": 12,
-     "h": 12
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 240,
-     "y": 1600,
-     "w": 200,
-     "h": 80
-    },
-    "color": "panel_warm",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 240,
-     "y": 1600,
-     "w": 200,
-     "h": 2
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 240,
-     "y": 1678,
-     "w": 200,
-     "h": 2
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 240,
-     "y": 1602,
-     "w": 2,
-     "h": 76
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 438,
-     "y": 1602,
-     "w": 2,
-     "h": 76
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 242,
-     "y": 1602,
-     "w": 196,
-     "h": 1
-    },
-    "color": "brass_light",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 242,
-     "y": 1677,
-     "w": 196,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "icon",
-    "rect": {
-     "x": 248,
-     "y": 1616,
-     "w": 48,
-     "h": 48
-    },
-    "params": {
-     "icon": "coin",
-     "size": 48
+     "size": 64
     },
     "color": "gold_warm",
     "z": 8,
     "when": "",
     "item": -1
-   },
+    },
    {
     "kind": "text",
     "rect": {
-     "x": 304,
-     "y": 1600,
+     "x": 184,
+     "y": 1440,
      "w": 128,
-     "h": 80
+     "h": 136
     },
-    "color": "text_on_parch",
+    "color": "text_on_wood",
     "tier": "hint",
     "z": 9,
     "when": "",
     "item": -1,
     "text_key": "scene.main_map.hud.trade"
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 460,
-     "y": 1600,
-     "w": 200,
-     "h": 80
     },
-    "color": "panel_warm",
+   {
+    "kind": "image",
+    "rect": {
+     "x": 384,
+     "y": 1440,
+     "w": 312,
+     "h": 136
+    },
+    "color": "",
     "z": 8,
     "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 460,
-     "y": 1600,
-     "w": 200,
-     "h": 2
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/deck_plaque.png"
+    }
     },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 460,
-     "y": 1678,
-     "w": 200,
-     "h": 2
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 460,
-     "y": 1602,
-     "w": 2,
-     "h": 76
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 658,
-     "y": 1602,
-     "w": 2,
-     "h": 76
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 462,
-     "y": 1602,
-     "w": 196,
-     "h": 1
-    },
-    "color": "brass_light",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 462,
-     "y": 1677,
-     "w": 196,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
    {
     "kind": "icon",
     "rect": {
-     "x": 468,
-     "y": 1616,
-     "w": 48,
-     "h": 48
+     "x": 432,
+     "y": 1480,
+     "w": 64,
+     "h": 64
     },
     "params": {
      "icon": "coin",
-     "size": 48
+     "size": 64
     },
     "color": "gold_warm",
     "z": 8,
     "when": "",
     "item": -1
-   },
+    },
    {
     "kind": "text",
     "rect": {
-     "x": 524,
-     "y": 1600,
+     "x": 520,
+     "y": 1440,
      "w": 128,
-     "h": 80
+     "h": 136
     },
-    "color": "text_on_parch",
+    "color": "text_on_wood",
     "tier": "hint",
     "z": 9,
     "when": "",
     "item": -1,
     "text_key": "scene.main_map.hud.sell"
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 680,
-     "y": 1600,
-     "w": 200,
-     "h": 80
     },
-    "color": "panel_warm",
+   {
+    "kind": "image",
+    "rect": {
+     "x": 720,
+     "y": 1440,
+     "w": 312,
+     "h": 136
+    },
+    "color": "",
     "z": 8,
     "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 680,
-     "y": 1600,
-     "w": 200,
-     "h": 2
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/deck_plaque.png"
+    }
     },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 680,
-     "y": 1678,
-     "w": 200,
-     "h": 2
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 680,
-     "y": 1602,
-     "w": 2,
-     "h": 76
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 878,
-     "y": 1602,
-     "w": 2,
-     "h": 76
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 682,
-     "y": 1602,
-     "w": 196,
-     "h": 1
-    },
-    "color": "brass_light",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 682,
-     "y": 1677,
-     "w": 196,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
    {
     "kind": "icon",
     "rect": {
-     "x": 688,
-     "y": 1616,
-     "w": 48,
-     "h": 48
+     "x": 768,
+     "y": 1480,
+     "w": 64,
+     "h": 64
     },
     "params": {
      "icon": "castle",
-     "size": 48
+     "size": 64
     },
     "color": "gold_warm",
     "z": 8,
     "when": "",
     "item": -1
-   },
+    },
    {
     "kind": "text",
     "rect": {
-     "x": 744,
-     "y": 1600,
+     "x": 856,
+     "y": 1440,
      "w": 128,
-     "h": 80
+     "h": 136
     },
-    "color": "text_on_parch",
+    "color": "text_on_wood",
     "tier": "hint",
     "z": 9,
     "when": "",
     "item": -1,
     "text_key": "scene.main_map.hud.build"
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 430,
-     "y": 1180,
-     "w": 200,
-     "h": 2
-    },
-    "color": "brass_dark",
-    "z": 5,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 610,
-     "y": 1180,
-     "w": 120,
-     "h": 2
-    },
-    "color": "brass_dark",
-    "z": 5,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 300,
-     "y": 1300,
-     "w": 160,
-     "h": 2
-    },
-    "color": "brass_dark",
-    "z": 5,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 440,
-     "y": 1300,
-     "w": 200,
-     "h": 2
-    },
-    "color": "brass_dark",
-    "z": 5,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 620,
-     "y": 1300,
-     "w": 100,
-     "h": 2
-    },
-    "color": "brass_dark",
-    "z": 5,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 150,
-     "y": 1034,
-     "w": 72,
-     "h": 2
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 185,
-     "y": 1000,
-     "w": 2,
-     "h": 72
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 178,
-     "y": 1028,
-     "w": 16,
-     "h": 16
-    },
-    "color": "gold_warm",
-    "z": 7,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 166,
-     "y": 1016,
-     "w": 8,
-     "h": 8
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 206,
-     "y": 1016,
-     "w": 8,
-     "h": 8
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 166,
-     "y": 1056,
-     "w": 8,
-     "h": 8
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 206,
-     "y": 1056,
-     "w": 8,
-     "h": 8
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 150,
-     "y": 1032,
-     "w": 8,
-     "h": 8
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 214,
-     "y": 1032,
-     "w": 8,
-     "h": 8
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 182,
-     "y": 1000,
-     "w": 8,
-     "h": 8
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 182,
-     "y": 1064,
-     "w": 8,
-     "h": 8
-    },
-    "color": "gold_warm",
-    "z": 6,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 336,
-     "y": 1328,
-     "w": 400,
-     "h": 120
-    },
-    "color": "panel_warm",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 336,
-     "y": 1328,
-     "w": 400,
-     "h": 2
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 336,
-     "y": 1446,
-     "w": 400,
-     "h": 2
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 336,
-     "y": 1330,
-     "w": 2,
-     "h": 116
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 734,
-     "y": 1330,
-     "w": 2,
-     "h": 116
-    },
-    "color": "brass",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 338,
-     "y": 1330,
-     "w": 396,
-     "h": 1
-    },
-    "color": "brass_light",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 338,
-     "y": 1445,
-     "w": 396,
-     "h": 1
-    },
-    "color": "brass_dark",
-    "z": 8,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "image",
-    "rect": {
-     "x": 360,
-     "y": 1352,
-     "w": 72,
-     "h": 72
-    },
-    "color": "",
-    "z": 9,
-    "when": "",
-    "item": -1,
-    "params": {
-     "asset": "assets/ui/dice.png"
     }
-   },
-   {
-    "kind": "image",
-    "rect": {
-     "x": 444,
-     "y": 1352,
-     "w": 72,
-     "h": 72
-    },
-    "color": "",
-    "z": 9,
-    "when": "",
-    "item": -1,
-    "params": {
-     "asset": "assets/ui/helm.png"
-    }
-   },
-   {
-    "kind": "text",
-    "rect": {
-     "x": 536,
-     "y": 1328,
-     "w": 190,
-     "h": 120
-    },
-    "color": "text_on_parch",
-    "z": 9,
-    "when": "",
-    "item": -1,
-    "tier": "hint",
-    "text_key": "scene.main_map.hud.spin"
-   }
   ],
   "deck_spin": {
-   "x": 336,
-   "y": 1328,
-   "w": 400,
-   "h": 120
+    "x": 408,
+    "y": 1160,
+    "w": 264,
+    "h": 264
   },
   "voyage_bar": {
-   "x": 120,
-   "y": 1056,
-   "w": 840,
-   "h": 120
+    "x": 48,
+    "y": 1088,
+    "w": 984,
+    "h": 48
   }
  },
  "vs": {

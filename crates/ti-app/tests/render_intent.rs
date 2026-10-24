@@ -92,7 +92,7 @@ fn select_scenes_layout_matches_doc() {
     assert_eq!(map.hint.y, 1840, "select_map 提示行 y=1840（QB115/123）");
 }
 
-/// main_map §4.3（1080 现代版面，S17.2 8pt）：标题条 h=96，HUD y=152 h=128（与等距区 y0=520 不重叠，QB105 重锚），提示 y=1840。
+/// main_map §4.3（S21.6 v4「羊皮海图桌面」）：标题 h=96，v4 版面键 = `08_main_map_v4_spec.md` §2 坐标表。
 #[test]
 fn main_map_layout_matches_doc() {
     let s = scenes();
@@ -100,29 +100,39 @@ fn main_map_layout_matches_doc() {
         panic!("scenes.json 缺 main_map");
     };
     assert_eq!(main.title.h, 96, "main_map 标题条 h=96（1080 现代版面，S17.2 8pt）");
-    assert_eq!(main.hud.y, 152, "main_map HUD y=152（1080 现代版面，S17.2 8pt）");
-    assert_eq!(main.hud.h, 128, "main_map HUD h=128（1080，44px 字 2 行，S17.2 8pt）");
+    assert_eq!(main.hud.y, 152, "main_map HUD y=152（v2 回退键保留，§4.3）");
+    assert_eq!(main.hud.h, 128, "main_map HUD h=128（v2 回退键，§4.3）");
     assert!(main.hud.y + main.hud.h <= 520, "main_map HUD 与等距区 y0=520 重叠（QB105 重锚）");
-    assert_eq!(main.hint.y, 1840, "main_map 提示行 y=1840（QB115/123）");
-    // S15.6 QA133：实体 size 键在位（键缺失时 main_map.rs 静默回退 16×8/12×6/18×9
-    // 旧公式，render_intent/doccheck2 全绿 —— 键本身须被守护）
+    assert_eq!(main.hint.y, 1632, "main_map 提示签条 y=1632（S21.6 v4）");
+    // S21.6 v4 版面键（§4.3 S21.6 坐标表：主焦点 / 双铜牌 / 舵轮 CTA / 进度尺）
+    let ex = &main.extra;
+    let rect = |k: &str| ex.get(k).map(|r| (r.x, r.y, r.w, r.h));
+    assert_eq!(
+        rect("world_canvas"),
+        Some((43, 250, 994, 826)),
+        "main_map world_canvas v4（§4.3 S21.6）"
+    );
+    assert_eq!(
+        rect("voyage_bar"),
+        Some((48, 1088, 984, 48)),
+        "main_map voyage_bar v4（§4.3 S21.6）"
+    );
+    let v4_keys = ["hud_plaque_l", "hud_plaque_r", "deck_spin"];
+    assert!(v4_keys.iter().all(|k| ex.get(*k).is_some()), "main_map 缺 v4 键（双铜牌 / 舵轮 CTA）");
+    // S15.6 QA133：实体 size 键在位（键缺失时 main_map.rs 静默回退旧公式 —— 键本身须被守护）
     let extra = &main.extra_scalar;
     for k in ["player.size", "landmark.size", "boss.size"] {
-        let Some(v) = extra.get(k) else {
-            panic!("scenes.json main_map 缺实体 size 键 `{k}`（QA133：§4.3 实体边长数据驱动键）");
-        };
-        assert!(*v > 0, "main_map `{k}` = {v} 应为正整数（§4.3 实体边长）");
+        assert!(
+            extra.get(k).is_some_and(|v| *v > 0),
+            "main_map 缺实体 size 键或 ≤0：`{k}`（QA133）"
+        );
     }
     // S15.6 QB105/QA106：实体 size ≤ 瓦片行高（2*tile_h）——棋子/据点/BOSS 不越格
     let tile_h = extra.get("grid.tile_h").copied().unwrap_or(0);
     assert!(tile_h > 0, "main_map grid.tile_h 应为正（QB105 重锚数据在位）");
     for k in ["player.size", "landmark.size", "boss.size"] {
         let v = extra.get(k).copied().expect("实体 size 键在位（QA133）");
-        assert!(
-            v <= 2 * tile_h,
-            "main_map `{k}` = {v} > 2*tile_h = {}（QA106：实体边长须 ≤ 瓦片行高，否则越格覆盖邻居）",
-            2 * tile_h
-        );
+        assert!(v <= 2 * tile_h, "main_map `{k}` = {v} > 2*tile_h（QA106：实体边长 ≤ 瓦片行高）");
     }
 }
 
@@ -137,28 +147,15 @@ fn vs_layout_matches_doc() {
     assert_eq!(vs.title.h, 96, "vs 标题条 h=96（1080 现代版面，S17.2 8pt）");
     let ph = vs.extra.get("player_hp").expect("vs 缺 player_hp 矩形");
     let bh = vs.extra.get("boss_hp").expect("vs 缺 boss_hp 矩形");
-    assert_eq!(ph.x, 64, "vs 玩家血条 x=64（1080，S17.2 8pt；S15.6 QB120 解重叠）");
-    assert_eq!(ph.w, 448, "vs 玩家血条 w=448（1080，64..512，S17.2 8pt）");
-    assert_eq!(ph.h, 48, "vs 玩家血条 h=48（1080）");
-    assert_eq!(ph.y, 168, "vs 玩家血条 y=168（1080，S17.2 8pt）");
-    assert_eq!(bh.x, 576, "vs BOSS 血条 x=576（1080，S17.2 8pt；S15.6 QB120 解重叠）");
-    assert_eq!(bh.y, 168, "vs BOSS 血条 y=168（1080，S17.2 8pt）");
+    assert_eq!((ph.x, ph.y, ph.w, ph.h), (64, 168, 448, 48), "vs 玩家血条（§4.4，QB120 解重叠）");
+    assert_eq!((bh.x, bh.y, bh.w, bh.h), (576, 168, 448, 48), "vs BOSS 血条（§4.4）");
     assert!(ph.x + ph.w <= 1080, "vs 玩家血条右缘越屏 1080");
     assert!(bh.x + bh.w <= 1080, "vs BOSS 血条右缘越屏 1080");
     // S15.6 QA140 互斥不变式（§4.4）：双条 gap ≥ 40（64..512 / 576..1024，gap=64）
-    assert!(
-        bh.x - (ph.x + ph.w) >= 40,
-        "vs 双血条 gap < 40（QA140 互斥不变式：player_hp 右缘 {} + 40 须 ≤ boss_hp.x {}）",
-        ph.x + ph.w,
-        bh.x
-    );
+    assert!(bh.x - (ph.x + ph.w) >= 40, "vs 双血条 gap < 40（QA140 互斥不变式）");
     // QA140：empty（「击键」提示）不得落在血条带 y=168..216（与双条撞行）
     let em = vs.extra.get("empty").expect("vs 缺 empty 矩形");
-    assert!(
-        em.y < 168 || em.y >= 168 + 48,
-        "vs empty y={} 落在血条带 168..216（QA140：应挪出血条带）",
-        em.y
-    );
+    assert!(em.y < 168 || em.y >= 168 + 48, "vs empty 撞血条带 168..216（QA140）");
     let rd = vs.extra.get("rounds").expect("vs 缺 rounds 矩形");
     assert_eq!(rd.x, 540, "vs 回合数 x=540（QA141 屏心居中语义坐标）");
     assert_eq!(rd.y, 416, "vs 回合数 y=416（S17.2 8pt：血条带之下首屏区）");
@@ -176,18 +173,10 @@ fn message_layout_matches_doc() {
     };
     assert_eq!(msg.title.h, 96, "message 标题条 h=96（1080 现代版面，S17.2 8pt）");
     let body = msg.extra.get("body").expect("message 缺 body 矩形");
-    assert_eq!(
-        body.y, 768,
-        "message 正文区 y=768（S20.2 v4 面板语言：面板按内容收缩，正文挂卡片内）"
-    );
-    assert_eq!(body.h, 176, "message 正文区 h=176（S20.2 v4 面板语言：面板按内容收缩）");
+    assert_eq!((body.y, body.h), (768, 176), "message 正文区（S20.2 v4 面板语言：按内容收缩）");
     // body.y + body.h ≤ 1800（正文区上界不越页码行，QA124/144 批次6 重分布）
     assert!(body.y + body.h <= 1800, "message 正文区越页码行 y=1800（FIND-026）");
-    let page = msg.page;
-    assert_eq!(
-        page.y, 1008,
-        "message 页码 y=1008（S20.2 v4：随卡片收缩上移，QA144 页点行 = page.y - 48）"
-    );
+    assert_eq!(msg.page.y, 1008, "message 页码 y=1008（S20.2 v4 随卡片收缩上移，QA144）");
     assert_eq!(msg.hint.y, 1840, "message 提示行 y=1840（QB115/123）");
 }
 

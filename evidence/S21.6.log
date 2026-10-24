@@ -1,0 +1,54 @@
+S21.6 main_map 版面重排 v4（满屏羊皮海图 + 顶角双铜牌 + 舵轮 CTA + 底部三键铜牌 + 进度尺/签条迁移）
+=============================================================================================
+改动面（硬规则 7）：业务规则=无 | 数据=assets/data/scenes.json（main_map 段：8 数据键改值
++ 2 新键 hud_plaque_l/r + focus_anchor.bbox + 95 原语 → 16 原语）+
+assets/data/ui_schema/scene_manifest_v3.json（main_map 段 focus.bbox_pct{4,13,92,43} +
+beats 4 拍重锚 + edge_anchors.bottom_hint 92→85）| 规则=无 | 表现=main_map.rs
+（render_hud_v3 → 双铜牌键 + 骰点 y 键驱动 + 签条 hint 键驱动）+ chrome.rs（keys 模块
++HUD_PLAQUE_L/R/HINT）| 资产=引用已入仓 chart_full/hud_plaque/deck_plaque/btn_spin；
+跨模块原因=N8 门禁把 scenes.json focus_anchor.bbox 与 manifest bbox_pct 硬耦合（±1px），
+改画布矩形必须三处同改（JSON 键 + manifest + md 镜像），否则 check_scene_narrative FAIL。
+
+落码内容（S21.6 标题五项）：
+① **满屏海图底**：`chart_full` image {0,0,1080,1920} z2 替代 v3 的
+   bg_night_sea_top + chart_wide + 经纬网 12 线 + 罗盘角方块（海图美术已烘焙）。
+② **顶部双铜牌**：`hud_plaque` 贴图 ×2（`hud_plaque_l` {48,48,448,192} 金币 /
+   `hud_plaque_r` {584,48,448,192} 船·持有量）+ coin/chest 图标 96×96；
+   运行时数值文本 `chrome.rs` 读新键（缺键回退 v3 `hud_gold`/`hud_player`）。
+③ **大号摇骰 CTA**：`btn_spin` image {408,1160,264,264} z7（替代 v3 336,1328,400,120 面板 +
+   dice/helm 双图 + 标签）；骰点「掷出 N」= 运行时画在 `deck_spin.y - 24`（= 1136，键驱动）。
+④ **底部三键铜牌**：`deck_plaque` 贴图 ×3（贸易 {48,1440,312,136} / 出售 {384,1440,312,136} /
+   建造 {720,1440,312,136}）+ 图标 64×64 + 标签；命中矩形 = 同数据键（点按语义不变）。
+⑤ **中段空区填满 + 迁位**：`world_canvas` → {43,250,994,826}（岛 + 赛道随 board_fit 放大
+   tw 24→48）；`voyage_bar` → {48,1088,984,48}；落格签条 → `hint` 键中心 (540,1632)
+   （签条 {344,1600,392,64}，最小宽 392）；`fx_coin` → 顶左铜牌中心 (272,144)。
+
+门禁耦合三同改（规格 §5）：
+- **N8**：`focus_anchor {bbox:{43,250,994,826}}` ↔ `bbox_pct {4,13,92,43}`
+  （4×10.8=43.2→43 / 13×19.2=249.6→250 / 92×10.8=993.6→994 / 43×19.2=825.6→826，全 ±1 内）。
+- **N4**：beats 4 拍（world_canvas 0.50 / command_cta 0.20 / hud_corners 0.15 / hint 0.15，和 = 1.0，
+  beats[0] = focus.anchor）。
+- **doccheck2 第 20 项镜像**：`08_layout_design.md` §4.3 表同步 v4 值（新增 hud_plaque_* /
+  v4 deck_* / hint 1632 / fx_coin / focus_anchor 行；v2/v3 回退键值保留）。
+- **第 19 项 fidelity 锚**：保留 v2 锚（hud y:152/h:128、grid y0:520 键仍在位）+ 新增 6 个
+  v4 锚（hud_plaque_l / btn_spin / deck_plaque / y:250 / w:994 / y:1440）。
+- **8pt**：新键全 8 整除（48/584/448/192、408/1160/264、48/384/720/1440/312/136、48/1088/984、
+  540/1632、272/144）；`world_canvas`/`focus_anchor` = 8pt 豁免键（v3 叙事键表）。
+- 测试 `render_intent.rs main_map_layout_matches_doc` 断言重锚 v4（hint 1840→1632 +
+  world_canvas/voyage_bar/铜牌键断言；文件压回 889 行 < 900 上限，audit_code PASS）。
+
+验收判据（实跑）：
+1. `python scripts/check_scene_narrative.py` **0 failure**（N1-N8 全过，N8 新 bbox 对账 ✓）。
+2. `scripts/gate.ps1` 23 项 **0 failure**（doccheck2 37 项 0 error + 三方对账 + bevy-cpu-parity）。
+3. 出图（`scripts/ui_preview.ps1 main_map` → `evidence/ui_preview/main_map.png`）：满屏羊皮海图
+   （帆船/罗盘玫瑰/波浪可见，无夜空底残留）+ 顶角双铜牌（金 1050 / 持有 0 种）+ 岛剪影 45
+   节点牌（随 tw 放大）+ 黄铜 9 扇区进度尺 + 大号舵轮 CTA + 底部三键铜牌 + 「城镇：+50 金」签条
+   （S19 摇骰后态）+ 「地图」标题。
+4. 交互 0 回归：`e2e_touch_economy_loop`（v2 `hud_*` 键双写保留，数据驱动命中）+
+   `e2e_board_spin_loop`（键盘 `Spin`）全绿；cargo test --workspace 0 failed。
+
+## 用户视觉验收（A 纪律 / EXP-114）
+
+**用户视觉验收通过**（2026-10-25，消息留痕）：用户过目 v4 出图后选择「签收，继续（推荐）」
+—— 确认满屏海图 + 双铜牌 + 岛剪影节点牌 + 9 扇区进度尺 + 舵轮 CTA + 三键铜牌 + 签条版面，
+并指示继续 S21.7（节点点击交互：信息签/高亮）。

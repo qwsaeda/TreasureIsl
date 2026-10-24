@@ -189,6 +189,12 @@ pub mod keys {
     pub const TRACK_NODE: &str = "track_node";
     /// v4 玩家船标边长键（`extra_scalar` = `main_map.track_ship.size`；占瓦片半宽百分比）。
     pub const TRACK_SHIP: &str = "track_ship";
+    /// v4 顶左铜牌（金币）矩形键（extra = `main_map.hud_plaque_l`，S21.6 满屏海图版）。
+    pub const HUD_PLAQUE_L: &str = "hud_plaque_l";
+    /// v4 顶右铜牌（船/持有量）矩形键（extra = `main_map.hud_plaque_r`，S21.6）。
+    pub const HUD_PLAQUE_R: &str = "hud_plaque_r";
+    /// 提示行锚点键（extra = `main_map.hint`；S21.6 v4 = 落格提示签条中心 (540,1632)）。
+    pub const HINT: &str = "hint";
     /// v2 HUD 经济按钮「贸易」矩形键（extra = `main_map.hud_trade`）。
     pub const HUD_TRADE: &str = "hud_trade";
     /// v2 HUD 经济按钮「出售」矩形键（extra = `main_map.hud_sell`）。

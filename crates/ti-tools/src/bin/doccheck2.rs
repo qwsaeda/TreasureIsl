@@ -762,14 +762,36 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         (
             "\"main_map\"",
             "\"y\": 152",
-            "main_map HUD y = 152（§4.3，S17.2 8pt，与等距区 520 不重叠）",
+            "main_map HUD y = 152（§4.3，S17.2 8pt，v2 回退键保留；v4 主版面 = S21.6 锚）",
         ),
-        ("\"main_map\"", "\"h\": 128", "main_map HUD h = 128（§4.3，S17.2 8pt）"),
+        ("\"main_map\"", "\"h\": 128", "main_map HUD h = 128（§4.3，v2 回退键保留）"),
         (
             "\"main_map\"",
             "\"y0\": 520",
-            "main_map 等距棋盘 grid.y0 = 520（§4.3，业务几何非 8pt 版面令牌）",
+            "main_map 等距棋盘 grid.y0 = 520（§4.3，v2 回退业务几何非 8pt 版面令牌）",
         ),
+        (
+            "\"main_map\"",
+            "\"hud_plaque_l\"",
+            "main_map S21.6 v4 顶左铜牌 = hud_plaque_l（§4.3 S21.6，满屏海图版双铜牌）",
+        ),
+        (
+            "\"main_map\"",
+            "btn_spin",
+            "main_map S21.6 v4 舵轮 CTA 原语 = btn_spin 贴图（§4.3 S21.6，大号黄铜舵轮）",
+        ),
+        (
+            "\"main_map\"",
+            "deck_plaque",
+            "main_map S21.6 v4 底部三键铜牌 = deck_plaque 贴图（§4.3 S21.6）",
+        ),
+        (
+            "\"main_map\"",
+            "\"y\": 250",
+            "main_map S21.6 v4 world_canvas/focus_anchor y = 250（§4.3 S21.6）",
+        ),
+        ("\"main_map\"", "\"w\": 994", "main_map S21.6 v4 world_canvas w = 994（§4.3 S21.6）"),
+        ("\"main_map\"", "\"y\": 1440", "main_map S21.6 v4 底部三键铜牌 y = 1440（§4.3 S21.6）"),
         (
             "\"message\"",
             "\"h\": 176",
