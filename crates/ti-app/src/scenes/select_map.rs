@@ -9,8 +9,9 @@ use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
 
-/// 地图槽数（`MapSlot::all()` 长度，`spec/menu.md §c`）。
-const MAP_COUNT: u32 = 3;
+/// 地图槽数（域出口 `MapSlot::count()` = `MapSlot::all()` 长度，B11 单一事实源；
+/// `spec/menu.md §c`）。
+const MAP_COUNT: u32 = MapSlot::count();
 
 /// 地图选择场景处理器（`SelectMap`）。
 pub struct SelectMapScene;

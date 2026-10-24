@@ -1,4 +1,6 @@
 //! S18.7：**Bevy 原生渲染**契约测试（通用原语 → Bevy 实体，无帧缓冲/无纹理上传）。
+//! S22：index = 罗盘环标题页（medallion/底图 = `image` 原语走生产 drawlist；本契约测试
+//! 只经 `spawn_primitives` spawn rect/icon/text，故 medallion 不在此计数）。
 //!
 //! 判据：
 //! ① `spawn_primitives` 按 `scenes.json` 的 `index.primitives` 生成实体（Sprite/Text2d）；
@@ -51,34 +53,36 @@ fn spawn(app: &mut App, selected: i64) -> SceneEntities {
 fn generic_primitives_spawn_bevy_entities() {
     let mut app = app_with_theme();
     let entities = spawn(&mut app, 0);
-    // 6 个菜单项 ×（选中卡 + 图标 + 文字）= 13 个可选元素（选中 3 + 未选 5×2）。
-    assert_eq!(entities.selectable.len(), 13, "可选元素数（6 菜单项 × 图标/文字 + 选中卡）");
-    // 文本走 Text2d（GPU 字体）。
+    // S22 罗盘环 index：medallion/底图/舵轮 = `image` 原语（spawn_primitives 走 catch-all 不 spawn，
+    // 走 drawlist 生产路径）；本契约测试只 spawn rect/icon/text → 选中 0 时可见 =
+    // 6 图标（5 常态 item1-5 + 1 选中 item0）+ 6 标签（同 when 过滤）= 12 个可选元素（无 Card）。
+    assert_eq!(entities.selectable.len(), 12, "S22 罗盘环 index 可选元素 = 6 图标 + 6 标签");
+    // 文本走 Text2d（GPU 字体）：6 标签 + 标题/副标题/尾行 = 9。
     let text_entity_count = app.world_mut().query::<&Text2d>().iter(app.world()).count();
     assert!(
-        text_entity_count >= 8,
-        "原生渲染须有 Text2d 实体（标题+副标题+6 菜单文字），实得 {text_entity_count}"
+        text_entity_count >= 6,
+        "原生渲染须有 Text2d 实体（标题+副标题+标签+尾行），实得 {text_entity_count}"
     );
-    // 精灵实体（背景/木框/星点/图标等）。
+    // 精灵实体（图标烘焙等）。
     let sprite_count = app.world_mut().query::<&Sprite>().iter(app.world()).count();
-    assert!(sprite_count > 50, "原生渲染须有大量 Sprite 实体，实得 {sprite_count}");
+    assert!(sprite_count >= 6, "原生渲染须有图标 Sprite 实体（≥6），实得 {sprite_count}");
 }
 
 #[test]
 fn selection_switches_visible_elements() {
     let mut app = app_with_theme();
     let entities = spawn(&mut app, 0);
-    // 选中卡（when=selected）仅在选中时存在。
-    let cards: Vec<_> =
-        entities.selectable.iter().filter(|(_, _, k)| *k == SelectableKind::Card).collect();
-    assert_eq!(cards.len(), 1, "选中时仅 1 张选中卡");
-    let card_entity = cards[0].1;
-    let card_color = app.world().get::<Sprite>(card_entity).expect("卡 Sprite").color;
-    assert_eq!(
-        card_color,
-        ti_engine::canvas::rgb565_to_color(theme().gold_warm),
-        "选中卡底 = 数据指定令牌（gold_warm）"
-    );
+    // S22 罗盘环：无「选中卡」（medallion = image 原语，走生产 drawlist，不在此契约 spawn）。
+    // 选中态 = 该徽章**标签变金（gold_warm）**；未选中徽章标签 = 常态（brass_dark）。
+    let labels: Vec<_> =
+        entities.selectable.iter().filter(|(_, _, k)| *k == SelectableKind::Label).collect();
+    let gold_warm = ti_engine::canvas::rgb565_to_color(theme().gold_warm);
+    let brass_dark = ti_engine::canvas::rgb565_to_color(theme().brass_dark);
+    let label_color = |e: Entity| app.world().get::<TextColor>(e).map(|c| c.0);
+    let selected_gold = labels.iter().filter(|(_, e, _)| label_color(*e) == Some(gold_warm)).count();
+    let normal_brass = labels.iter().filter(|(_, e, _)| label_color(*e) == Some(brass_dark)).count();
+    assert_eq!(selected_gold, 1, "选中徽章 0 标签 = gold_warm（1 个）");
+    assert_eq!(normal_brass, 5, "未选中徽章 1-5 标签 = brass_dark（5 个）");
 }
 
 #[test]
@@ -96,7 +100,7 @@ fn icons_baked_to_gpu_images() {
     );
     let images = app.world().resource::<Assets<Image>>();
     let baked = images.get(sprite.image.id()).expect("烘焙纹理在位");
-    assert_eq!(baked.width(), 64, "图标烘焙尺寸 = 数据 `params.size`（64）");
+    assert_eq!(baked.width(), 96, "图标烘焙尺寸 = 数据 `params.size`（96，S21.14 白蒙版）");
 }
 
 #[test]
@@ -106,11 +110,11 @@ fn text_elements_use_text_color_component() {
     let labels: Vec<_> =
         entities.selectable.iter().filter(|(_, _, k)| *k == SelectableKind::Label).collect();
     assert!(!labels.is_empty(), "菜单文字须存在");
-    // 未选中项的文字色 = theme 令牌（`text_on_parch`）；选中项 = 黑（数据指定）。
+    // S22 罗盘环：未选中徽章标签色 = theme 令牌（`brass_dark`）（旧 index 为 text_on_parch）。
     let has_unselected = labels.iter().any(|(_, e, _)| {
         app.world()
             .get::<TextColor>(*e)
-            .is_some_and(|c| c.0 == ti_engine::canvas::rgb565_to_color(theme().text_on_parch))
+            .is_some_and(|c| c.0 == ti_engine::canvas::rgb565_to_color(theme().brass_dark))
     });
-    assert!(has_unselected, "未选中菜单文字色须 = theme 令牌 text_on_parch");
+    assert!(has_unselected, "未选中徽章标签色须 = theme 令牌 brass_dark");
 }

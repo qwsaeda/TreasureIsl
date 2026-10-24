@@ -732,7 +732,9 @@ fn run_shot(app: &mut App, scene_id: &str) {
         .and_then(|g| g.clone())
         .is_none_or(|raw| !raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8));
     if empty {
-        eprintln!("[shot] WARNING: readback still empty (target texture has no content) - evidence unusable");
+        eprintln!(
+            "[shot] WARNING: readback still empty (target texture has no content) - evidence unusable"
+        );
     }
     write_shot_png(&format!("evidence/bevy_native_{scene_id}.png"));
 }
@@ -771,8 +773,5 @@ fn window_title() -> String {
     ti_core::data::pairs()
         .iter()
         .find(|pair| pair.0 == "app.window_title")
-        .map_or_else(
-            || "金银岛 TreasureIsl（Bevy）".to_owned(),
-            |pair| pair.1.to_string(),
-        )
+        .map_or_else(|| "金银岛 TreasureIsl（Bevy）".to_owned(), |pair| pair.1.to_string())
 }

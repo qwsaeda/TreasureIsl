@@ -65,10 +65,17 @@ pub struct MenuShell {
     pub fb_rgba: FramebufRgba,
 }
 
-/// QA128：内置 TTF 三档的**进程级**缓存（同字节只读盘 + 只解析一次；模块级 static，
-/// 关联 `static` 不允许进 impl 块）。
-static BUILTIN_TTF_SET: std::sync::OnceLock<(Option<TtfFont>, Option<TtfFont>, Option<TtfFont>)> =
-    std::sync::OnceLock::new();
+/// QA128：内置 TTF 三档的**进程级**缓存（同字节只读盘 + 每档字号只解析一次；
+/// B5：字号三档 = theme 值（`title_font_size/font_size/hint_font_size`），缓存按字号三元组
+/// 键控——换 theme.json 字号 = 换键重建，不污染旧档；`BTreeMap`（const 构造）+ `Mutex`
+/// 模块级 `static`，锁中毒回落无缓存构建，crash-safe 不 panic）。
+#[allow(clippy::type_complexity)]
+static BUILTIN_TTF_CACHE: std::sync::Mutex<
+    std::collections::BTreeMap<
+        (i32, i32, i32),
+        (Option<TtfFont>, Option<TtfFont>, Option<TtfFont>),
+    >,
+> = std::sync::Mutex::new(std::collections::BTreeMap::new());
 
 impl MenuShell {
     /// 构建壳：清空帧缓冲、按当前窗口尺寸建立视口。
@@ -84,7 +91,10 @@ impl MenuShell {
         fb.clear(0x0000);
         let settings = Settings::default_settings();
         let vp = settings.viewport(screen_w, screen_h);
-        let (ttf_title, ttf_font, ttf_hint) = Self::builtin_ttf_set();
+        // B5：先读 theme（字号单一事实源 = theme.json，缺失/坏 → `Theme::default()` crash-safe），
+        // 内置 TTF 三档按 theme 字号惰性构建。
+        let theme = Self::load_theme();
+        let (ttf_title, ttf_font, ttf_hint) = Self::builtin_ttf_set(&theme);
         Self {
             fb,
             vp,
@@ -100,21 +110,35 @@ impl MenuShell {
             last_rendered: None,
             last_rendered_scene: None,
             settings,
-            theme: Self::load_theme(),
+            theme,
             #[cfg(feature = "hd-8bit")]
             fb_rgba: FramebufRgba::new(),
         }
     }
 
-    /// 进程级 TTF 三档（标题 96 / 正文 44 / 提示 28）。
+    /// 进程级 TTF 三档（标题/正文/提示，字号 = theme 值，B5 数据驱动）。
+    /// `LazyLock` 键控缓存：首次命中才构建；同字号三元组只构建一次（同字节只读盘）。
     #[must_use]
-    fn builtin_ttf_set() -> (Option<TtfFont>, Option<TtfFont>, Option<TtfFont>) {
-        let cached = BUILTIN_TTF_SET.get_or_init(Self::load_builtin_ttf);
-        (cached.0.clone(), cached.1.clone(), cached.2.clone())
+    fn builtin_ttf_set(theme: &Theme) -> (Option<TtfFont>, Option<TtfFont>, Option<TtfFont>) {
+        let key = (theme.title_font_size, theme.font_size, theme.hint_font_size);
+        {
+            let Ok(guard) = BUILTIN_TTF_CACHE.lock() else {
+                // 锁中毒（panic 残留）= 走无缓存构建，crash-safe 不 panic
+                return Self::build_builtin_ttf(theme);
+            };
+            if let Some(cached) = guard.get(&key) {
+                return (cached.0.clone(), cached.1.clone(), cached.2.clone());
+            }
+        }
+        let set = Self::build_builtin_ttf(theme);
+        if let Ok(mut guard) = BUILTIN_TTF_CACHE.lock() {
+            guard.entry(key).or_insert((set.0.clone(), set.1.clone(), set.2.clone()));
+        }
+        set
     }
 
-    /// 内置 TTF 自动加载（`assets/fonts/lxgw-wenkai-reg.ttf` → 三档）。
-    fn load_builtin_ttf() -> (Option<TtfFont>, Option<TtfFont>, Option<TtfFont>) {
+    /// 内置 TTF 自动加载（`assets/fonts/lxgw-wenkai-reg.ttf` → 三档，字号 = theme，B5）。
+    fn build_builtin_ttf(theme: &Theme) -> (Option<TtfFont>, Option<TtfFont>, Option<TtfFont>) {
         let path = Self::repo_root().map(|root| root.join("assets/fonts/lxgw-wenkai-reg.ttf"));
         let Some(p) = path else {
             eprintln!(
@@ -129,11 +153,11 @@ impl MenuShell {
             return (None, None, None);
         };
         #[allow(clippy::cast_precision_loss)]
-        let title_size = 96.0f32;
+        let title_size = theme.title_font_size as f32;
         #[allow(clippy::cast_precision_loss)]
-        let body_size = 44.0f32;
+        let body_size = theme.font_size as f32;
         #[allow(clippy::cast_precision_loss)]
-        let hint_size = 28.0f32;
+        let hint_size = theme.hint_font_size as f32;
         let title = TtfFont::from_bytes(&bytes, title_size);
         let body = TtfFont::from_bytes(&bytes, body_size);
         let hint = TtfFont::from_bytes(&bytes, hint_size);
@@ -199,21 +223,21 @@ impl MenuShell {
     #[must_use]
     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_precision_loss)]
     pub fn text_width_px(&self, text: &str) -> i32 {
-        Self::tier_text_width_px(text, self.ttf_font.as_ref(), 12)
+        Self::tier_text_width_px(text, self.ttf_font.as_ref(), self.theme.bitmap_advance)
     }
 
     /// 标题档文本宽。
     #[must_use]
     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_precision_loss)]
     pub fn title_text_width_px(&self, text: &str) -> i32 {
-        Self::tier_text_width_px(text, self.ttf_title.as_ref(), 26)
+        Self::tier_text_width_px(text, self.ttf_title.as_ref(), self.theme.bitmap_advance_title)
     }
 
     /// 提示档文本宽。
     #[must_use]
     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_precision_loss)]
     pub fn hint_text_width_px(&self, text: &str) -> i32 {
-        Self::tier_text_width_px(text, self.ttf_hint.as_ref(), 8)
+        Self::tier_text_width_px(text, self.ttf_hint.as_ref(), self.theme.bitmap_advance_hint)
     }
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]

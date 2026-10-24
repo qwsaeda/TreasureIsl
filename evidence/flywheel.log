@@ -200,3 +200,34 @@ python scripts/gate.ps1                               → === gate: 0 failure(s)
 ### 踩坑
 - 主线程写本条目时误用 PowerShell `Add-Content` 追加 CJK（EXP-111 禁 cmdlet 写仓库文件）；
   事后 Read 逐行校验内容未损坏（PS 5.1 追加不插 BOM），后续一律用 Edit/Write 工具。
+
+---
+
+## 定向飞轮 R2 · 主题「渲染数据/图片分离」（2026-10-24）
+
+### ① 找问题（目标 100/轮，只读 agent；本轮 32 条 = 不足 100 → 主题接近收敛）
+- 32 条（③场景级坐标/尺寸 12 / ⑥跨文件重复常量 9 / ④该图片处 4 / ⑦v2v3 残留 3 / ①色值 4）；真漂移集中在 main_map 赛道·提示条·HUD 一族 + menu_shell 字号/advance + ti-engine 画布副本 + ROLE/MAP 计数。
+- ⑤ i18n 面量 + ④ 图标主体（S21.14）+ group_color_token FALLBACK（S23.0）已收敛，跳过。
+
+### ② 审计 + 主线程复核（top-4 B5/B7/B8/B11 亲测坐实）
+- 真漂移（独立，本轮修）：B5/B6 menu_shell 字号/advance 裸字面量；B7 touch medallion 命中用裸 asset 路径（S22.2 引入）；B8 ti-engine 画布 f32 副本无锁；B11 ROLE/MAP count 硬编码 vs 域枚举。
+- A 类（main_map 场景几何 A1-A4/A9/A16）→ 归 **S21.4-S21.6 main_map 重排**（已登记 pending，不本轮修）；C 类（chrome/shell 组件几何）= **契约 4 允许项**（组件几何可写死，非漂移）。
+- 附带发现：`bevy_native_render` 4 项契约测试按**旧竖排 index** 写（选 13 元素 / 图标 64 / 标签 text_on_parch），S22.2 罗盘环 index + S21.14 图标 96 后失配 = **存量测试债**（ti-engine 独立 workspace，根 gate 未捕获）。
+
+### ③ 修复 + 自验（修复 agent，独立真漂移 5 项全闭环 + 4 存量测试改写）
+- B5/B6：menu_shell `title/body/hint_size` + 位图 advance 改读 `Theme`（`with_upload_mode` 先读 theme 再实例化 TTF；`BUILTIN_TTF_SET` 字号脱钩 OnceLock → 带 theme 的 BTreeMap 缓存，锁中毒回落 crash-safe）。
+- B7：scenes.json index 6 条 medallion image 原语 `params.badge=true`（行手术）；`menu_medallion_at` 改判 `params.badge`（资产换图不再静默失配）+ 测试同步。
+- B8：scene_render `LOGICAL_W/H` 改派生自 `ti_render::framebuffer::LOGICAL_W_I32/H`（删本地 1080.0/1920.0 字面量 + 补 §5 同值锁口径）。
+- B11：ti-core 域侧加 `Character::count()`/`MapSlot::count()`；select_role/select_map 本地 const 改 = 域出口；doccheck2 `check_scene_band_count` 接受 `= Character::count()`。
+- 4 存量测试：bevy_native_render 改写 S22 罗盘环口径（可选元素 12=6 图标+6 标签 无 Card；图标烘焙 96；标签色 gold_warm/brass_dark）。
+
+### 自验（主线程复跑，非子代理声称）
+```
+powershell -File scripts/gate.ps1                → gate: 0 failure(s)（23 项）
+cargo test --manifest-path crates/ti-engine/Cargo.toml → 全 0 failed（bevy_native_render 4 + 11）
+python scripts/check_ledger_reality.py           → 全绿（182 verified）
+```
+
+### 停机判定
+- R2 独立真漂移（非 main_map 重排域）**清零**；A 类归 S21.4-S21.6（未收敛 → 待 S21.x 收口后 R3 复扫确认 0）。
+- ④ 留人裁决 4 条全闭环：④-04=S21.14（图标图片化）/ ①-01·①-12·⑤-04=S23.0（令牌表·别名守卫·窗口标题 i18n）。

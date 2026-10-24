@@ -27,6 +27,14 @@ impl Character {
         [Self::Panda, Self::Tichy, Self::Kidd, Self::Drake, Self::Katharina]
     }
 
+    /// 角色总数（= `all()` 长度；表现层循环/导航计数的单一事实源，B11：
+    /// 域层加角色 → 本出口自动 +1，消费方不再各自硬编码镜像计数）。
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub const fn count() -> u32 {
+        Self::all().len() as u32
+    }
+
     /// 角色索引（0..=4；存档字段 `character` = 本值 +1）。
     #[must_use]
     pub const fn index(self) -> u32 {
@@ -92,6 +100,14 @@ impl MapSlot {
     #[must_use]
     pub const fn all() -> [MapSlot; 3] {
         [Self::M01, Self::M02, Self::M03]
+    }
+
+    /// 地图槽总数（= `all()` 长度；表现层循环/导航计数的单一事实源，B11：
+    /// 域层加图 → 本出口自动 +1，消费方不再各自硬编码镜像计数）。
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub const fn count() -> u32 {
+        Self::all().len() as u32
     }
 
     /// 地图编号（`1..=3`，存档字段 `map_slot` = 本值）。

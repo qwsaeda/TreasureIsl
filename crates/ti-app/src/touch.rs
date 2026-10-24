@@ -161,14 +161,16 @@ pub mod layout {
     ///
     /// 命中区几何读 `scenes.json` `index.primitives` 的 `medallion_ring` 原语 `rect`（`item` 0..5），
     /// 与渲染 `render_primitives` 同一数据源（正逆成对，EXP-071）；`scenes.json` 不可用 → `None`。
+    /// B7：徽章判定走标识键 `params.badge == true`（不依赖资产文件名——S22.1 换 medallion
+    /// 资产图时命中不静默失配）。
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn menu_medallion_at(x: f32, y: f32) -> Option<usize> {
         let scene = data::scenes().ok()?.get("index")?.clone();
         let count = i64::try_from(MENU_COUNT).unwrap_or(0);
         for p in &scene.primitives {
-            let is_medallion = p.params.get("asset").and_then(|v| v.as_str())
-                == Some("assets/ui/medallion_ring.png");
+            let is_medallion =
+                p.params.get("badge").and_then(serde_json::Value::as_bool) == Some(true);
             if !is_medallion || !(0..count).contains(&p.item) {
                 continue;
             }
@@ -392,7 +394,7 @@ mod tests {
     #[test]
     #[allow(clippy::cast_precision_loss)]
     fn menu_medallions_hit_six_items() {
-        // S22 罗盘环：6 枚 image 原语（asset = medallion_ring.png）rect 各命中自身 item；
+        // S22 罗盘环：6 枚 image 原语（B7 标识键 params.badge = true）rect 各命中自身 item；
         // 环心舵轮区/四角/标题条区 = None。
         let scene = match data::scenes() {
             Ok(v) => match v.get("index") {
@@ -409,8 +411,7 @@ mod tests {
             .iter()
             .filter(|p| {
                 p.kind == "image"
-                    && p.params.get("asset").and_then(|v| v.as_str())
-                        == Some("assets/ui/medallion_ring.png")
+                    && p.params.get("badge").and_then(serde_json::Value::as_bool) == Some(true)
             })
             .collect();
         assert_eq!(meds.len(), 6, "S22 首页应 6 枚 medallion 徽章");

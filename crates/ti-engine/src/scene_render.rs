@@ -28,12 +28,14 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::text::{Font, FontSize, TextColor};
 
 use crate::canvas::rgb565_to_color;
+use ti_render::framebuffer::{LOGICAL_H_I32, LOGICAL_W_I32};
 use ti_render::theme::Theme;
 
-/// 逻辑画布尺寸（1080×1920 单一坐标系，`08_render_arch.md` 契约）。
-const LOGICAL_W: f32 = 1080.0;
-/// 逻辑画布高度。
-const LOGICAL_H: f32 = 1920.0;
+/// 逻辑画布宽（1080×1920 单一坐标系，`08_render_arch.md` 契约；
+/// B8：从 ti-render `framebuffer` 单一 i32 源派生 f32，不再本地裸字面量副本）。
+const LOGICAL_W: f32 = LOGICAL_W_I32 as f32;
+/// 逻辑画布高度（同 B8 派生口径）。
+const LOGICAL_H: f32 = LOGICAL_H_I32 as f32;
 
 /// 逻辑 → Bevy 世界换算：`world = (cx - 540, 960 - cy)`（y 翻转，S18.2 契约）。
 #[inline]
@@ -276,11 +278,10 @@ pub fn spawn_primitives(
                     .and_then(|name| theme.by_name(&name))
                     .unwrap_or(theme.bg);
                 // 飞轮 R1 ⑥-12：级数钳制走 `generic::clamp_grad_steps`（双执行器同读，参数不漂移）。
-                let steps =
-                    usize::try_from(ti_render::generic::clamp_grad_steps(
-                        i32::try_from(param_i64(p, "steps").unwrap_or(32)).unwrap_or(32),
-                    ))
-                    .unwrap_or(32);
+                let steps = usize::try_from(ti_render::generic::clamp_grad_steps(
+                    i32::try_from(param_i64(p, "steps").unwrap_or(32)).unwrap_or(32),
+                ))
+                .unwrap_or(32);
                 let band = rect.h as f32 / steps as f32;
                 for i in 0..steps {
                     let t = i as f32 / (steps - 1) as f32;
@@ -342,7 +343,8 @@ pub fn spawn_primitives(
                     Ok(reg) => i64::from(reg.default_size),
                     Err(_) => 48,
                 };
-                let size = i32::try_from(param_i64(p, "size").unwrap_or(default_size)).unwrap_or(48);
+                let size =
+                    i32::try_from(param_i64(p, "size").unwrap_or(default_size)).unwrap_or(48);
                 let handle =
                     world.resource_mut::<Assets<Image>>().add(bake_icon(kind, size, color));
                 let e = world.spawn((
@@ -538,11 +540,7 @@ pub fn spawn_draw_list(
                 // S21.14：白蒙版贴图跨层 tint —— `tint=0xFFFF`（白）= 无色调（背景/多色图不受影响），
                 // 非白 = 该色 RGB multiply（Sprite.color 默认 blend 乘纹理）⇒ 同图可切墨色。
                 let handle: Handle<Image> = world.resource::<AssetServer>().load(asset.clone());
-                let color = if *tint == 0xFFFF {
-                    Color::WHITE
-                } else {
-                    rgb565_to_color(*tint)
-                };
+                let color = if *tint == 0xFFFF { Color::WHITE } else { rgb565_to_color(*tint) };
                 world.spawn((
                     DrawListEntity,
                     Sprite {
@@ -552,7 +550,8 @@ pub fn spawn_draw_list(
                         ..Default::default()
                     },
                     Transform::from_translation(
-                        to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0).extend(z),
+                        to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0)
+                            .extend(z),
                     ),
                 ));
                 count += 1;

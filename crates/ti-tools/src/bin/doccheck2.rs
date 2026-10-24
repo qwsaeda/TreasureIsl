@@ -1086,7 +1086,8 @@ fn check_scene_band_count(root: &Path) -> Vec<String> {
             "select_role.rs scene_list_bands band 数参数为 `{last_arg}`，必须 == Character::all().len()（= 5）或 ROLE_COUNT（EXP-073）"
         ));
     }
-    // 若走常量，验证常量值 == 5
+    // 若走常量，验证常量值 == 5（B11 起允许域出口 `Character::count()` 单源派生，
+    // 其编译期值仍 = `Character::all().len()` = 5，域层加角色时门禁报错引导同步）
     if last_arg.contains("ROLE_COUNT") {
         let Some(role_const_pos) = src.find("const ROLE_COUNT") else {
             errors.push("select_role.rs 引用 ROLE_COUNT 但未定义该常量".to_string());
@@ -1095,9 +1096,9 @@ fn check_scene_band_count(root: &Path) -> Vec<String> {
         let after_const = &src[role_const_pos..];
         let const_line_end = after_const.find(';').unwrap_or(0);
         let const_decl = &after_const[..=const_line_end];
-        if !const_decl.contains("= 5") {
+        if !const_decl.contains("= 5") && !const_decl.contains("= Character::count()") {
             errors.push(format!(
-                "select_role.rs ROLE_COUNT 常量值 ≠ 5（声明: `{const_decl}`），必须 == Character::all().len()（EXP-073）"
+                "select_role.rs ROLE_COUNT 常量值 ≠ 5（声明: `{const_decl}`），必须 == Character::all().len()（= 5，EXP-073）或域出口 Character::count()（B11）"
             ));
         }
     }

@@ -106,7 +106,8 @@
     "when": "",
     "color": "",
     "params": {
-     "asset": "assets/ui/medallion_ring.png"
+     "asset": "assets/ui/medallion_ring.png",
+      "badge": true
     }
    },
    {
@@ -186,7 +187,8 @@
     "when": "",
     "color": "",
     "params": {
-     "asset": "assets/ui/medallion_ring.png"
+     "asset": "assets/ui/medallion_ring.png",
+      "badge": true
     }
    },
    {
@@ -266,7 +268,8 @@
     "when": "",
     "color": "",
     "params": {
-     "asset": "assets/ui/medallion_ring.png"
+     "asset": "assets/ui/medallion_ring.png",
+      "badge": true
     }
    },
    {
@@ -346,7 +349,8 @@
     "when": "",
     "color": "",
     "params": {
-     "asset": "assets/ui/medallion_ring.png"
+     "asset": "assets/ui/medallion_ring.png",
+      "badge": true
     }
    },
    {
@@ -426,7 +430,8 @@
     "when": "",
     "color": "",
     "params": {
-     "asset": "assets/ui/medallion_ring.png"
+     "asset": "assets/ui/medallion_ring.png",
+      "badge": true
     }
    },
    {
@@ -506,7 +511,8 @@
     "when": "",
     "color": "",
     "params": {
-     "asset": "assets/ui/medallion_ring.png"
+     "asset": "assets/ui/medallion_ring.png",
+      "badge": true
     }
    },
    {

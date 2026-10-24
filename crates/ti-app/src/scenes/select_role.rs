@@ -8,8 +8,9 @@ use crate::scenes::{Scene, SceneHost, SceneKind};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
 
-/// 角色数（`Character::all()` 长度，`spec/menu.md §b`）。
-const ROLE_COUNT: u32 = 5;
+/// 角色数（域出口 `Character::count()` = `Character::all()` 长度，B11 单一事实源；
+/// `spec/menu.md §b`）。
+const ROLE_COUNT: u32 = Character::count();
 
 /// 角色选择场景处理器（`SelectRole`）。
 pub struct SelectRoleScene;
