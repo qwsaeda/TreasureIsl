@@ -1,0 +1,40 @@
+S21.4 岛屿重绘（main_map v4「羊皮海图桌面」z5 世界画布 · 岛屿剪影）
+=====================================================================
+改动面（硬规则 7）：业务规则=无 | 数据=无（`terrain.json` 已定，未改）| 规则=无 |
+表现=`crates/ti-app/src/scenes/main_map.rs`（`draw_board` 重做 → `IslandCtx` +
+`draw_island_bases` + `draw_island_decor` 三段）| 资产=无。
+跨模块原因：瓦片画法在表现层、地形在数据层，二者同源（同一 `terrain.json`）必须同步核对。
+
+落码内容（S21.4 标题四项）：
+① **只画陆地/礁石/宝藏格**（海洋格 `S` 不画 → 巨型蓝菱形消失）；
+② **墨线海岸描边**（`theme.wood_warm` 暖墨棕 1px；所有非海格的临海边 ⇒ 岛外轮廓连续；
+   陆↔礁交界不画线）；
+③ **礁石浅滩环**（礁格向可见块外扩 3px 浅滩带，`legend.edge` = `sea_shallow`）；
+④ **陆内确定性纹理**（FNV-1a 变体哈希定点短划，`legend.edge` = `land_sand_light`；
+   **禁 RNG** ⇒ 快照/像素对拍可复现）。
+
+规格落地口径（S21.3 §0 + `08_main_map_v4_spec.md`）：
+- v4 岛屿 = **暖砂剪影** ⇒ `legend.alt` 的 (r+c) 奇偶棋盘变体退役（v3「现代棋盘感」残留）；
+  `alt` 字段保留不删（S21.8 存量豁免清零时统一处置）。
+- 可见块口径：等距格底 = `2tw × 2th` 矩形，**下半被后画邻块覆盖** ⇒ 每格可见面 = 顶半
+  `2tw × th`；装饰一律画在可见块上，坐标与 `chrome::iso_cell_fit` 同源（EXP-067 正逆成对）。
+- 可见块 4 边邻居：上 = `(r-1,c)`/`(r,c-1)`、下 = `(r+1,c)`/`(r,c+1)`、左 = `(r+1,c-1)`、
+  右 = `(r-1,c+1)`（半砖错位布局）⇒ 海岸线连续。
+
+验收判据（实跑）：
+1. 出图对比（`scripts/ui_preview.ps1 main_map` → `evidence/bevy_native_main_map.png`）：
+   - 岛屿剪影可读 = 岛区 `land_sand` 命中 19992/52000 采样点（38% 暖砂面）；
+   - 无海洋色块 = 岛区 `sea_deep(0x108A)` 命中 **0**/52000 采样点；
+   - 海岸线连续 = `ink(wood_warm)` 481 点 + `sea_shallow` 浅滩环 1425 点在位；
+     （量化脚本：RGB565→RGB888 换算后按 ±2 LSB 容差计数）
+2. 双后端 CPU↔Bevy 像素对拍：gate 第 21 项 `bevy-cpu-parity` **PASS**（通道 ≤8 LSB 且超差 <0.5%）。
+3. `cargo test --workspace` 0 failed（gate 内跑）；`cargo clippy --workspace --all-targets
+   --features ti-app/native-shell,ti-app/headless -- -D warnings` 0 warning（拆函数后 `draw_board`
+   103 行 → 拆 `IslandCtx` + `draw_island_bases` + `draw_island_decor` 三段，各 <100 行）。
+4. `scripts/gate.ps1` 23 项 **0 failure**（含 doccheck2 37 项 0 error + check_scene_narrative N1-N8 0 失败
+   + check_ledger_reality 全绿 + 三方对账 0 缺口）。
+
+遗留（归后续任务，非本任务域）：
+- S21.5 赛道重绘：45 个赛道格标记仍是 v3 小方块（出图可见岛上的白/粉/青色小块）→ 换黄铜节点牌。
+- S21.6 版面重排：满屏 `chart_full` 海图底 + 顶角铜牌 + 舵轮 CTA + 三键铜牌（当前仍 v3 夜空底）。
+- `legend.alt` 字段退役但保留（S21.8 存量豁免清零统一处置）。
