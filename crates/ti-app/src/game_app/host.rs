@@ -248,6 +248,47 @@ impl MapHost for GameApp {
     fn boat_level(&self) -> u8 {
         GameApp::boat_level(self)
     }
+
+    fn build_panel_open(&self) -> bool {
+        self.build_panel_open
+    }
+
+    fn set_build_panel_open(&mut self, open: bool) {
+        self.build_panel_open = open;
+    }
+
+    fn build_panel_sel(&self) -> u8 {
+        self.build_panel_sel
+    }
+
+    fn set_build_panel_sel(&mut self, sel: u8) {
+        self.build_panel_sel = sel;
+    }
+
+    /// S21.12 造船：走 `rules::boat::BoatSession::upgrade`（单向升级链 + 扣金 + 抬加成），
+    /// 成功后把差额从钱包扣掉（与建筑建造同一钱包口径）。
+    fn boat_upgrade(&mut self) -> bool {
+        let before = self.bank_gold();
+        let mut gold = before;
+        let res = self.boat.upgrade(&mut gold);
+        match res {
+            Ok(_) => {
+                let spent = before.saturating_sub(gold);
+                self.spend_bank_gold(spent);
+                true
+            }
+            Err(_) => false,
+        }
+    }
+
+    fn boat_next_cost(&self) -> Option<u32> {
+        self.boat.next_cost()
+    }
+
+    fn set_board_toast(&mut self, msg: String) {
+        self.board_toast = Some(msg);
+        self.board_toast_ticks = 120; // = board.rs TOAST_TICKS 口径（120 帧寿命，S21.7）
+    }
 }
 impl EconomyHost for GameApp {
     fn price_of(&self, gid: u32) -> Option<u32> {

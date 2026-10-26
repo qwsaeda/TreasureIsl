@@ -122,7 +122,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 # 3) 结构审计（文件规模 / 函数长度 / 重复模式，棘轮基线）
 python scripts/audit_code.py --check
-# 4) 全门禁（23 项；含上面三件套 + 文档/数据/资产/结构/渲染）
+# 4) 全门禁（28 项；含上面三件套 + 文档/数据/资产/结构/渲染）
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 5) 台账三方对账（verified ↔ evidence ↔ 代码符号）
 python scripts/check_ledger_reality.py
@@ -153,7 +153,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 
 | 工具 | 用途 | 用法 | 幂等 / 退出码 |
 |---|---|---|---|
-| `gate.ps1` | 全门禁 23 项（编译/测试/文档/数据/结构/渲染/台账） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
+| `gate.ps1` | 全门禁 28 项（编译/测试/文档/数据/结构/渲染/台账） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
 | `validate_data.py` | 数据表校验（balance/strings/scenes/controls 必填字段、值域、孤儿 key、grid 三键） | `python scripts/validate_data.py` | 幂等；违规非 0 |
 | `check_hardcode.py` | 硬编码扫描（数值/中文面量） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` / `--selftest`（STR_LIT 全捕获回归自检，飞轮 R1 ⑤-05 起 CJK 通道对全字面量生效） | 幂等；严格模式命中即非 0；`--selftest` 断言失败即非 0 |
 | `check_ledger_reality.py` | 台账三方对账（verified ↔ evidence 文件 ↔ 代码符号） | `python scripts/check_ledger_reality.py` | 幂等只读；虚报即非 0 |
@@ -161,6 +161,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 | `check_forward_closed.py` | 业务闭环 C1~C4（零逆向引用 / 单一 oracle 源 / 根目录清空 / 无重复 crate） | `python scripts/check_forward_closed.py --check` | 幂等只读；违规非 0 |
 | `check_module_contracts.py` | 模块并行契约（包白名单互斥 / 契约锚点 / 跨 crate 可见面） | `python scripts/check_module_contracts.py --check` | 幂等只读；违规非 0（WARN 级除外） |
 | `check_scene_narrative.py` | UI 场景叙事约束 DSL v3（mood / 重心 / 节奏权重 / HUD 上限 / 死区 / focus_anchor 对账） | `python scripts/check_scene_narrative.py` | 幂等只读；违规非 0 |
+| `check_code_standards.py` | 代码标准机器检查（`16_code_standards.md` 执行矩阵前 4 行：CS-1 资产单源 / CS-2 文件职责声明 / CS-3 参数命名 / CS-4 场景窄接缝 + 棘轮基线 `process_ratchet.json::code_standards`） | `python scripts/check_code_standards.py --check`（门禁）/ `--report`（明细）/ `--update-baseline`（写豁免） | 幂等只读；新增违例超基线 ⇒ 退出 1 |
 | `check_data_source.py` | 数据源门禁（`legacy/data/*` 相对 HEAD 变动 ⇒ 强制跑渲染快照） | `python scripts/check_data_source.py`（`--check` = 只读门禁别名） | 幂等只读；数据源改动且快照漂移 ⇒ 非 0 退出 |
 | `check_data_driven.py` | 数据驱动（渲染层不得认业务语义） | `python scripts/check_data_driven.py` | 幂等只读；违规非 0 |
 | `check_hd_manifest.py` | HD manifest ↔ `assets_hd_pack/1x/ui` 目录一致（EXP-048/060） | `python scripts/check_hd_manifest.py --check` / `--report` | 幂等只读；漂移非 0 |
@@ -186,6 +187,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 | `check_ps_scripts.ps1` | **PowerShell 入口体检**（UTF-8 BOM 校验 + `Parser::ParseFile` 真语法自检 ⇒ 拦住「缺 BOM 入口从未真跑起来」，EXP-109） | `powershell -ExecutionPolicy Bypass -File scripts/check_ps_scripts.ps1`（`-Check` 别名） | 幂等只读；不合格非 0 |
 | `ui_preview.ps1` | **7 屏出图验收**（Bevy 离屏 → `evidence/bevy_native_<scene>.png` + 缩略图 + 非空帧统计） | `powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 [scene...]` / `-Check [scene...]` | 幂等（重出图）；未出图 / 空帧 ⇒ 非 0 退出；`-Check` 只读验收既有出图（不重渲染 / 不写缩略图，失败非 0 退出） |
 | `agnes_gen.py` | AI 生图底层（`ui_assets.py build` 调用；需 `AGNES_API_KEY`） | 由 `ui_assets.py` 调用；`python scripts/agnes_gen.py "<prompt>" --out <png>` / `--check` | 生成非幂等（同 prompt 可复现性由模型决定）；生图失败 / 缺 KEY ⇒ 非 0 退出；`--check` 只读前置体检（不生图 / 不写文件，前置缺失非 0 退出） |
+| `agnes_video.py` | **AI 视频生成**（Agnes Video 2.5 Flash；异步任务：创建 → 轮询 → 下载；需 `AGNES_API_KEY`） | `python scripts/agnes_video.py --prompt "..." --out <mp4> [--seconds 5] [--ratio 16:9] [--mode text]` / `--check` / `--video-id <id>`（直接轮询已有任务） | 生成非幂等（模型输出不重复）；任务创建/轮询/下载失败 ⇒ 非 0 退出；`--check` 只读前置体检（不创建任务 / 不写文件，前置缺失非 0 退出） |
 | `agnes_vision.py` | AI 读图（截图/素材分析 ⇒ 视觉问题取证） | `python scripts/agnes_vision.py <png> "<question>"` / `--check` | 只读分析；缺 KEY / 缺图 ⇒ 非 0 退出；`--check` 前置体检（不调 API / 不写文件，前置缺失非 0 退出） |
 | `pcx_to_png.py` | 原版 PCX → PNG（贴图转码） | `python scripts/pcx_to_png.py <in.pcx> <out.png>` / `--check` | 幂等（解码确定）；src 缺失 ⇒ 非 0 退出；`--check` 只读校验（产物缺失/漂移 ⇒ 非 0 退出） |
 | `pack_hd_assets.py` | HD 资产打包（`assets_hd_pack/`） | `python scripts/pack_hd_assets.py [--no-webp]` / `--check` | 幂等（同一输入同一产物）；pack 目录删除失败 ⇒ 非 0 退出；`--check` 只读校验（缺源/未打包/哈希漂移 ⇒ 非 0 退出） |
@@ -213,7 +215,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 
 ## 4. 门禁项 ↔ 工具对照（排障入口）
 
-`scripts/gate.ps1` 的 23 项按域分组，**每组对应的排障工具**如下（门禁清单本身见
+`scripts/gate.ps1` 的 28 项按域分组，**每组对应的排障工具**如下（门禁清单本身见
 [`../parity.md`](../parity.md) §代码质量门禁）：
 
 | 域 | 门禁项 | 排障工具 |

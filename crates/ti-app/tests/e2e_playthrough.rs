@@ -362,7 +362,7 @@ fn e2e_touch_economy_loop() {
     assert!(app.gold() > gold_before_sell, "触摸卖出后金应增加");
     assert_eq!(app.owned().len(), 0, "全卖后持有量清零");
 
-    // ③ 建造臂：造 Castle（键盘 B 同语义）
+    // ③ 建造臂（S21.12）：建造按钮 = 开建造面板 → 点条目 0（城堡，开面板即选中）= 确认
     let castle_cost = ti_core::rules::build::cost_of(
         &ti_core::data::balance().expect("balance.json 加载").build,
         Building::Castle,
@@ -370,12 +370,41 @@ fn e2e_touch_economy_loop() {
     let bank_before = app.bank().gold;
     let (x, y) = hud_center("hud_build");
     tap(&mut app, x, y);
-    assert_eq!(app.buildings().len(), 1, "触摸建造后建筑 +1");
+    assert!(app.build_panel_open, "点建造按钮应开建造面板");
+    assert_eq!(app.buildings().len(), 0, "面板确认前不建造");
+    let (ex, ey, ew, eh) = ti_app::scenes::chrome::build_entry_rect(0);
+    tap(&mut app, (ex + ew / 2) as f32, (ey + eh / 2) as f32);
+    assert!(!app.build_panel_open, "确认城堡条目后面板应关闭");
+    assert_eq!(app.buildings().len(), 1, "面板建造后建筑 +1");
     assert_eq!(
         app.bank().gold,
         bank_before.saturating_sub(castle_cost),
-        "触摸建造后银行金 = 前值 - Castle 成本"
+        "面板建造后银行金 = 前值 - Castle 成本"
     );
+
+    // ④ 造船臂（S21.12）：开面板 → 点条目 4（造船）= 选中 → 再点 = 确认 → 船级 1→2
+    // 前序城堡建造已把银行金耗完，测试直接注资（面板造船验证结算通路，不验证经济平衡）
+    let boat_cost = ti_core::data::balance()
+        .expect("balance.json 加载")
+        .boat
+        .level(2)
+        .expect("boat 表缺 2 级")
+        .cost;
+    app.bank.gold += 5000;
+    let bank_before_boat = app.bank().gold;
+    let (x, y) = hud_center("hud_build");
+    tap(&mut app, x, y);
+    let (ex, ey, ew, eh) = ti_app::scenes::chrome::build_entry_rect(4);
+    tap(&mut app, (ex + ew / 2) as f32, (ey + eh / 2) as f32);
+    assert_eq!(app.build_panel_sel, 4, "点造船条目应选中");
+    tap(&mut app, (ex + ew / 2) as f32, (ey + eh / 2) as f32);
+    assert_eq!(app.boat_level(), 2, "造船后船级 1→2");
+    assert_eq!(
+        app.bank().gold,
+        bank_before_boat.saturating_sub(boat_cost),
+        "造船后银行金 = 前值 - 2 级造价"
+    );
+    assert!(!app.build_panel_open, "造船成功后面板应关闭");
 }
 
 /// E2E 战斗完整性：多次战斗结果应一致（固定种子）。

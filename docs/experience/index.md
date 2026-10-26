@@ -34,7 +34,7 @@
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 14 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 10 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 32 |
-  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 37 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 38 |
 
 ## 条目索引
 
@@ -156,6 +156,7 @@
 | EXP-114 | process | | UI 视觉改动缺「设计稿确认」门禁 ⇒ 返工全堆在收口阶段（S20.2 先落码后出图）：变更面声明只门控「改哪一块」，不门控「视觉方向是否被用户认可」；解法 = A 纪律固化「设计稿先行」（出图 → 用户确认留痕 → 落码 → ui_preview 验收闭环，00_index.md §UI 视觉改动：设计稿先行 + AGENTS.md 硬规则 9）。正文见 `process.md` |
 | EXP-115 | code | | 脚本纪律「读得到 ≠ 跑不掉」：规范只落文档层 ⇒ 仓库外临时脚本照样写、门禁照样全绿（EXP-113 复发）；解法 = 纪律**落成门禁项**（doccheck2 第 27 项 `check_tooling_contract`：落地位置 / 台账表格行 / 登记要素 / 只读模式+非 0 退出，存量走棘轮基线）+ 补齐工具缺口（`ui_asset_batch.py` + `assets/ui_batches/*.json` 规格，含抠图可行性预检）+ AGENTS 硬规则 10 + 台账 §1.4 工具契约 / §1.5 组合优先；负测 4/4 命中。正文见 `code.md` |
 | EXP-116 | code | | o.scale 与 shell vp.scale() 互为倒数却直接赋值 ⇒ 实机 area=270×480（画布 1080×1920 只显示中央 1/4、4× 放大），拖大窗口内容反而变小；门禁只验离屏 shot（1080×1920 目标、scale=1.0 恒正确）⇒ 潜伏 6 阶段未被抓；修 o.scale=1/(vp.scale()×zoom)，判据改读渲染真值 o.area（画布恒完整 + px/unit 随窗口翻倍，旧实现必 FAIL 可证伪），口径卡写进 12_bevy_usage.md 单一事实源 正文见 `code.md` |
+| EXP-117 | code | | input_system 的 MousePos = AccumulatedMouseMotion delta 累加（初值=窗口左上 0,0），位置 = 光标相对启动时位置的位移而非绝对位置；光标不在左上角启动时所有命中偏移 → 首页 6 徽章一个都点不动。修：改用 Window::cursor_position() 绝对位置（逻辑像素），delta 累加仅作光标移出窗口时的回落。与 EXP-116 同类（单位口径错：注释写物理像素但 Bevy delta 实为逻辑像素）。门禁只验离屏 shot ⇒ 点击路径从未实测。 正文见 `code.md` |
 
 ## 条目格式（写新条时照抄）
 

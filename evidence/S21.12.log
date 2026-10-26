@@ -1,0 +1,24 @@
+=== S21.12 acceptance (2026-10-26) ===
+[cmd] cargo test -q -p ti-app --test e2e_playthrough
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+rc=0
+[cmd] python scripts/check_code_standards.py --check
+[ok] CS-1 asset_path_hardcode：0 存量违例全在豁免基线内
+[ok] CS-2 file_doc_present：10 存量违例全在豁免基线内
+[ok] CS-3 fn_param_naming：136 存量违例全在豁免基线内
+[ok] CS-4 scene_session_ctor：0 存量违例全在豁免基线内
+check_code_standards: PASS（0 项超基线）
+rc=0
+[cmd] python scripts/audit_code.py --check
+rc=0
+[cmd] python scripts/ui_asset_batch.py check --spec assets/ui_batches/main_map_v4.json
+ui_asset_batch check: 0 error(s), 0 warn(s)
+rc=0
+[cmd] powershell -File scripts/gate.ps1 -Touch (tail)
+  PASS  check_code_standards (CS-1~4 code standards + ratchet baseline)
+  PASS  doccheck2 (0 error(s) across 38 checks)
+  PASS  audit_code (0 structural violations; sgetf dup consolidated to 5)
+  PASS  check_scene_navigator narrative / bevy-cpu-parity / validate_data / check_data_driven
+  FAIL  cargo test --workspace  ->  s43_fps_smoke (desktop_60fps_with_dirty_rect_skip;
+        known environmental: VM without display adapter cannot reach 60fps, pre-existing red, unrelated to S21.12)
+=== gate -Touch: 1 failure(s), all others PASS/SKIP(dev tier) ===

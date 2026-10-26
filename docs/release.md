@@ -156,6 +156,17 @@ cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-nat
 # 4× 放大画布中央 1/4（`o.area`=270×480），拖大窗口内容反而变小；改后 `o.area`
 # =1080×1920（画布完整可见）+ 窗口变大时内容等比放大。口径卡见
 # `docs/process/12_bevy_usage.md` §3。
+# 2026-10-26 修（S24.1 / EXP-117）：首页点击失灵 = 指针位置用 delta 累加而非窗口
+# 绝对光标位置（光标不在左上角启动时命中全偏）→ 改用 `Window::cursor_position()`
+#（逻辑像素）。诊断 flag：`--resizetest`（机器判定：程序化翻倍窗口 → `o.area` 恒等
+# 画布 + px/unit 翻倍，退出码 0=PASS）/ `--resizeprobe`（活体探针：画面左上角 +
+# 控制台实时 `win/sf/vp/mode/zoom/area`）。
+# 2026-10-26 功能（S21.12）：主地图「建造面板」上线——点 HUD/deck 建造按钮开面板
+#（4 建筑 + 「造船」第 5 入口；点选条目→再点确认，键盘 ↑↓/Enter/Back 同语义），
+# 玩家船标按船等级切 4 张船图（小舢板→双桅→三桅→巡防，`assets/ui/boat_1..4.png`）；
+# 造船走 `rules::boat` 单向升级（扣金 + 货舱/攻防立即生效，满级/缺金有提示条）。
+# 另：代码标准三件套（`docs/process/16_code_standards.md` + `check_code_standards.py`
+# 4 项机器检查 + 棘轮基线）入门禁。
 ```
 
 ### 浏览器 (WASM)
@@ -194,7 +205,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 208 任务（190 verified；台账计数随 S8–S21 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 210 任务（192 verified；台账计数随 S8–S21 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`

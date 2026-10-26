@@ -323,15 +323,32 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
 }
 
 /// 6. **gate 项数声称一致性**：`scripts/gate.ps1` 头注释/横幅 + `docs/parity.md` /
-///    （S20.2 v4 面板语言：坐标随面板语言/死区治理调整，断言值已同步）
-///    `docs/git.md` / `docs/README.md` 里所有「gate N 项」类声称值，必须 == 实测固定项数
-///    （`gate.ps1` 顶层不缩进 `Report` 调用数；条件 `Report`/`Skip` 分支不计）。
+///    `docs/git.md` / `docs/README.md` 里所有「gate N 项」类声称值，必须 == 实测项数。
+///    实测口径（S24.1 分档感知，FIND-304-B 修复）：按 **Report 调用点的项名去重**计数——
+///    分档后 `Report` 调用被缩进进 `if (Tier)` 块，且条件 if/else 分支共享同一项名
+///    （`check_data_driven` 的 `Report $false`/`Report $true` 两分支 = 1 项），故取
+///    「行内首个引号串 = 项名」提取并去重，与档位无关、与条件分支无关。
 ///    豁免项编号（「第 N 项」）/ doccheck2 检查数声称（「N 项检查」）/ playbook 命令数
-///    声称（「N 项命令」），上下文区分「gate 项数」vs「doccheck2 项数」。
+///    声称（「N 项命令」）不在此口径内，上下文区分「gate 项数」vs「doccheck2 项数」。
 fn gate_item_actual_count(gate: &str) -> usize {
-    // 固定项 = 顶层（不缩进）`Report` 调用数；条件分支（if 块内缩进的
-    // `Report`/`Skip`）不计。实测 gate.ps1 = 22 固定 + 3 条件 Skip。
-    gate.lines().filter(|l| l.starts_with("Report ")).count()
+    use std::collections::BTreeSet;
+    let mut names: BTreeSet<String> = BTreeSet::new();
+    for line in gate.lines() {
+        let t = line.trim_start();
+        // 只数 `Report ` 调用（`Skip` / `function Report` 定义不计）
+        if !t.starts_with("Report ") {
+            continue;
+        }
+        let rest = &t["Report ".len()..];
+        let first = rest.find(|c| ['\'', '"'].contains(&c));
+        let last = rest.rfind(|c| ['\'', '"'].contains(&c));
+        if let (Some(s), Some(e)) = (first, last) {
+            if e > s + 1 {
+                names.insert(rest[s + 1..e].to_string());
+            }
+        }
+    }
+    names.len()
 }
 
 /// 抽「紧邻 `项` 前的数字 + 数字左边是非数字字符（行首/空白/全角括号等）」的声称值。
@@ -385,7 +402,7 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
     let actual = gate_item_actual_count(&gate);
-    let expected = 23usize;
+    let expected = 28usize; // 按项名去重口径（S24.1 分档 + S25 check_code_standards 入 28）；门禁结构变化时同步
     if actual != expected {
         errors.push(format!(
             "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"
@@ -3220,6 +3237,181 @@ fn check_node_kind_asset_map(root: &Path) -> Vec<String> {
 /// 动机：内联单测写在 `crates/**/src/**` 里，其中的 `expect`/`panic!` 会被 gate 第 5/6 项
 /// （占位 / unwrap 扫描）拦下 ⇒ 写完跑 gate 才被自己的单测拦白跑一轮。规定单测只放
 /// `crates/*/tests/`（项目既有约定），`src` 内联单测一律提前拦。
+/// 单个检查项实现签名（`fn(仓库根) -> 错误列表`）。
+type CheckFn = fn(&Path) -> Vec<String>;
+
+/// `doccheck2` 检查项**实现注册表**（id → 实现）。
+///
+/// id 与 `assets/gate_data.json` 的 `doccheck2_checks[].id` 一一对应（双向自校验见
+/// `check_check_inventory_consistency`）：**清单/计数/打印文案单一事实源 = JSON**，
+/// 本表只登记「id → Rust 实现」；新增一项 = JSON 加一行 + 本表加一行（+ 实现 fn）。
+const RUST_CHECKS: &[(&str, CheckFn)] = &[
+    ("audio", check_audio_state),
+    ("oracle", check_shell_oracle),
+    ("lcg", check_lcg_hex),
+    ("landmark", check_landmark_threshold),
+    ("i18n", check_i18n_orphans),
+    ("gate-items", check_gate_item_count),
+    ("headless-battle-api", check_headless_battle_api),
+    ("flywheel-readback", check_flywheel_readback),
+    ("battle-player-data-driven", check_battle_player_data_driven),
+    ("flywheel-script", check_flywheel_script),
+    ("touch-render-pair", check_touch_render_pair),
+    ("hd-sprite-transparency", check_hd_sprite_transparency),
+    ("scene-layout-fidelity", check_scene_layout_fidelity),
+    ("scene-band-count", check_scene_band_count),
+    ("save-slot-map-slot-basis", check_save_slot_map_slot_basis),
+    ("exhaust-balance-dual-write", check_exhaust_balance_dual_write),
+    ("experience-volume-counts", check_experience_volume_counts),
+    ("runtime-no-legacy-coords", check_runtime_no_legacy_coords),
+    ("layout-doc-table-cross-check", check_layout_doc_table_cross_check),
+    ("no-ti-core-fullpath", check_no_ti_core_fullpath),
+    ("std-traits-matrix", check_std_traits_matrix),
+    ("render-framework-boundary", check_render_framework_boundary),
+    ("ui-redesign-tokens", check_ui_redesign_tokens),
+    ("primitives-data", check_primitives_data),
+    ("terrain-data", check_terrain_data),
+    ("tooling-catalog", check_tooling_catalog),
+    ("tooling-contract", check_tooling_contract),
+    ("engine-no-bare-half", check_engine_no_bare_half),
+    ("select-role-render-loop", check_select_role_render_loop),
+    ("render-single-source", check_render_single_source),
+    ("repo-text-integrity", check_repo_text_integrity),
+    ("task-change-scope", check_task_change_scope),
+    ("tooling-registration", check_tooling_registration),
+    ("process-ledger", check_process_ledger),
+    ("visual-signoff", check_visual_design_signoff),
+    ("node-asset-map", check_node_kind_asset_map),
+    ("no-inline-test-mod", check_no_inline_test_mod),
+];
+
+/// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：
+/// 命中处后一个字符不得是字母/数字/下划线）；`forbid` = 禁止出现（普通子串）。
+fn doccheck2_grep_checks(root: &Path, gate_data: &serde_json::Value) -> Vec<String> {
+    let mut errors: Vec<String> = Vec::new();
+    let Some(list) = gate_data.get("doccheck2_checks").and_then(|v| v.as_array()) else {
+        errors.push(
+            "assets/gate_data.json 缺 `doccheck2_checks` 清单（检查项单一事实源）".to_string(),
+        );
+        return errors;
+    };
+    for entry in list {
+        if entry.get("impl").and_then(|v| v.as_str()) != Some("grep") {
+            continue;
+        }
+        let id = entry.get("id").and_then(|v| v.as_str()).unwrap_or("?");
+        let Some(rules) = entry.get("rules").and_then(|v| v.as_array()) else {
+            errors.push(format!("doccheck2_checks[{id}] 缺 `rules`（grep 项须声明断言规则）"));
+            continue;
+        };
+        for rule in rules {
+            let file = rule.get("file").and_then(|v| v.as_str()).unwrap_or("");
+            let text = read_file(root, file).unwrap_or_default();
+            if text.is_empty() {
+                errors.push(format!("doccheck2_checks[{id}]: 文件不存在或读失败 {file}"));
+                continue;
+            }
+            // `.rs` 断言只查**代码**（跳过 `//`/`///`/`//!` 注释行）：约定守卫不该被
+            // 「记录反例的注释」误伤（如 `bevy_ortho_scale` 的反例留档）。
+            let is_rust = std::path::Path::new(file)
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("rs"));
+            let code = if is_rust {
+                text.lines()
+                    .filter(|l| {
+                        let t = l.trim_start();
+                        !(t.starts_with("//") || t.starts_with("/*") || t.starts_with('*'))
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            } else {
+                text.clone()
+            };
+            for needle in rule
+                .get("require")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_str()).collect::<Vec<_>>())
+                .unwrap_or_default()
+            {
+                // 词边界只对「以标识符字符结尾」的 needle 生效（`o.area` 须排除 `o.area_x`）；
+                // 以 `(` 等结尾的 needle 用普通包含（否则 `fn x(` 后面接参数类型即误判）。
+                let boundary =
+                    needle.chars().next_back().is_some_and(|c| c.is_alphanumeric() || c == '_');
+                let hit = if boundary {
+                    code.match_indices(needle).any(|(i, _)| {
+                        code[i + needle.len()..]
+                            .chars()
+                            .next()
+                            .is_none_or(|c| !(c.is_alphanumeric() || c == '_'))
+                    })
+                } else {
+                    code.contains(needle)
+                };
+                if !hit {
+                    errors.push(format!(
+                        "doccheck2_checks[{id}]: {file} 缺必需内容 `{needle}`（口径/守卫失位）"
+                    ));
+                }
+            }
+            for needle in rule
+                .get("forbid")
+                .and_then(|v| v.as_array())
+                .map(|a| a.iter().filter_map(|x| x.as_str()).collect::<Vec<_>>())
+                .unwrap_or_default()
+            {
+                if code.contains(needle) {
+                    errors.push(format!(
+                        "doccheck2_checks[{id}]: {file} 含禁止内容 `{needle}`（违反约定）"
+                    ));
+                }
+            }
+        }
+    }
+    errors
+}
+
+/// 清单双向自校验：JSON 清单（`impl: "rust"` 的 id）必须与 Rust 实现注册表**完全一致**
+/// （少登记 = 实现白跑；多登记 = 清单漂移）。
+fn check_check_inventory_consistency(gate_data: &serde_json::Value, errors: &mut Vec<String>) {
+    let Some(list) = gate_data.get("doccheck2_checks").and_then(|v| v.as_array()) else {
+        errors.push("assets/gate_data.json 缺 `doccheck2_checks` 清单（单一事实源）".to_string());
+        return;
+    };
+    let data_rust: Vec<&str> = list
+        .iter()
+        .filter(|e| e.get("impl").and_then(|v| v.as_str()) == Some("rust"))
+        .filter_map(|e| e.get("id").and_then(|v| v.as_str()))
+        .collect();
+    let table: Vec<&str> = RUST_CHECKS.iter().map(|(id, _)| *id).collect();
+    for id in &data_rust {
+        if !table.contains(id) {
+            errors
+                .push(format!("doccheck2_checks[{id}] 在 JSON 清单里但无 Rust 实现（登记未落地）"));
+        }
+    }
+    for id in &table {
+        if !data_rust.contains(id) {
+            errors.push(format!(
+                "doccheck2 实现 `{id}` 未登记进 JSON 清单（清单漂移，assets/gate_data.json）"
+            ));
+        }
+    }
+}
+
+/// 清单 id 列表（打印用；数据缺失时回落为空）。
+fn check_inventory_ids(gate_data: &serde_json::Value) -> Vec<String> {
+    gate_data
+        .get("doccheck2_checks")
+        .and_then(|v| v.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|e| e.get("id").and_then(|v| v.as_str()))
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn check_no_inline_test_mod(root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
     // 棘轮基线：存量内联单测文件豁免（新增文件零豁免）
@@ -3281,47 +3473,23 @@ fn main() -> ExitCode {
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);
 
     let mut all_errors: Vec<String> = Vec::new();
-    all_errors.extend(check_audio_state(&root));
-    all_errors.extend(check_shell_oracle(&root));
-    all_errors.extend(check_lcg_hex(&root));
-    all_errors.extend(check_landmark_threshold(&root));
-    all_errors.extend(check_i18n_orphans(&root));
-    all_errors.extend(check_gate_item_count(&root));
-    all_errors.extend(check_headless_battle_api(&root));
-    all_errors.extend(check_flywheel_readback(&root));
-    all_errors.extend(check_battle_player_data_driven(&root));
-    all_errors.extend(check_flywheel_script(&root));
-    all_errors.extend(check_touch_render_pair(&root));
-    all_errors.extend(check_scene_band_count(&root));
-    all_errors.extend(check_scene_layout_fidelity(&root));
-    all_errors.extend(check_hd_sprite_transparency(&root));
-    all_errors.extend(check_save_slot_map_slot_basis(&root));
-    all_errors.extend(check_exhaust_balance_dual_write(&root));
-    all_errors.extend(check_experience_volume_counts(&root));
-    all_errors.extend(check_runtime_no_legacy_coords(&root));
-    all_errors.extend(check_layout_doc_table_cross_check(&root));
-    all_errors.extend(check_no_ti_core_fullpath(&root));
-    all_errors.extend(check_std_traits_matrix(&root));
-    all_errors.extend(check_render_framework_boundary(&root));
-    all_errors.extend(check_ui_redesign_tokens(&root));
-    all_errors.extend(check_primitives_data(&root));
-    all_errors.extend(check_terrain_data(&root));
-    all_errors.extend(check_tooling_catalog(&root));
-    all_errors.extend(check_tooling_contract(&root));
-    all_errors.extend(check_repo_text_integrity(&root));
-    all_errors.extend(check_task_change_scope(&root));
-    all_errors.extend(check_tooling_registration(&root));
-    all_errors.extend(check_process_ledger(&root));
-    all_errors.extend(check_visual_design_signoff(&root));
-    all_errors.extend(check_node_kind_asset_map(&root));
-    all_errors.extend(check_no_inline_test_mod(&root));
-    all_errors.extend(check_engine_no_bare_half(&root));
-    all_errors.extend(check_select_role_render_loop(&root));
-    all_errors.extend(check_render_single_source(&root));
+    // 检查清单（id 列表 / 计数 / 打印文案）单一事实源 = `assets/gate_data.json`；
+    // Rust 侧只登记 id → 实现（`RUST_CHECKS`），双向自校验防漂移。
+    let mut gate_data_errors: Vec<String> = Vec::new();
+    let gate_data = load_gate_data(&root, &mut gate_data_errors);
+    all_errors.extend(gate_data_errors);
+    check_check_inventory_consistency(&gate_data, &mut all_errors);
+    for (_id, f) in RUST_CHECKS {
+        all_errors.extend(f(&root));
+    }
+    all_errors.extend(doccheck2_grep_checks(&root, &gate_data));
 
+    let ids = check_inventory_ids(&gate_data);
     println!(
-        "doccheck2: {} error(s) across 37 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod)",
-        all_errors.len()
+        "doccheck2: {} error(s) across {} audit-codified checks ({})",
+        all_errors.len(),
+        ids.len(),
+        ids.join("/")
     );
     for err in &all_errors {
         println!("  ERROR {err}");

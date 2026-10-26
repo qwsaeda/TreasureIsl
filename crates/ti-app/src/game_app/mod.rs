@@ -128,6 +128,8 @@ pub enum GameInput {
     TradeSell(u32),
     /// 主地图建造（`kind`）。
     Build(Building),
+    /// S21.12 主地图造船（船系统单向升级，`rules::boat::BoatSession`；与 4 建筑并列第 5 入口）。
+    BoatUpgrade,
     /// 战斗：攻击（推进一回合）。
     Attack,
     /// 存读档：读（`slot` 索引 0..2）。
@@ -218,6 +220,12 @@ pub struct GameApp {
     /// S21.7 赛道节点预览选中（`Some(index)` = 该节点高亮 + 信息签；只读预览不移动，
     /// 摇骰时清空；主地图场景时有效，非主地图 = `None`）。
     pub track_node_sel: Option<usize>,
+    /// S21.12 建造面板是否打开（主地图场景时有效；`false` = 关闭）。
+    ///
+    /// 面板 = 4 建筑 + 「造船」第 5 入口（`docs/business/economy.md` §船系统 规则 1）。
+    pub build_panel_open: bool,
+    /// S21.12 建造面板当前选中项（0..=4 = 城堡/投资/银行/要塞/造船）。
+    pub build_panel_sel: u8,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// P1-7（M5）：卡牌效果状态（`rules::cards::CardState`，`MainMap` 场景时有效）。
@@ -401,6 +409,8 @@ impl GameApp {
             board_toast: None,
             board_toast_ticks: 0,
             track_node_sel: None,
+            build_panel_open: false,
+            build_panel_sel: 0,
             buildings: Vec::new(),
             card_state: cards::CardState::default(),
             battle: None,

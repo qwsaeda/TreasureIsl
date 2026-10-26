@@ -2,38 +2,246 @@
   "version": 1,
   "_comment": "流程固化棘轮基线（docs/process/15_process_ledger.md §2 的存量豁免）：只豁免「2026-10-22 之前落地」的工具/流程，**新增工具与新增流程零豁免**（棘轮只收紧不放宽）。豁免须带理由 + 整改任务号；存量清零后本表可删。",
   "tooling_registration_grandfathered": {
-    "agnes_vision.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量：登记在 14 台账 §3.2，速查表/索引未列", "fix_in": "S21.13" },
-    "bevy_cpu_scene_diff.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量", "fix_in": "S21.13" },
-    "board_measure.py": { "missing": ["04_tooling.md"], "reason": "存量", "fix_in": "S21.13" },
-    "check_data_driven.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（门禁项，台账已登记）", "fix_in": "S21.13" },
-    "check_data_source.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "check_forward_closed.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "check_hardcode.py": { "missing": ["docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "check_hd_manifest.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "check_ledger_reality.py": { "missing": ["docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "check_module_contracts.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "check_oracle_boundary.py": { "missing": ["docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "check_scene_narrative.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "cleanup_opencode_db.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（一次性工具）", "fix_in": "S21.13" },
-    "code_outline.py": { "missing": ["04_tooling.md"], "reason": "存量", "fix_in": "S21.13" },
-    "enhance_portraits.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（一次性工具）", "fix_in": "S21.13" },
-    "extract_board.py": { "missing": ["04_tooling.md"], "reason": "存量", "fix_in": "S21.13" },
-    "flywheel_readme.ps1": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "gate.ps1": { "missing": ["docs/README.md"], "reason": "存量（门禁本体）", "fix_in": "S21.13" },
-    "migrate_strings.py": { "missing": ["docs/README.md"], "reason": "存量", "fix_in": "S21.13" },
-    "pack_hd_assets.py": { "missing": ["docs/README.md"], "reason": "存量", "fix_in": "S21.13" },
-    "pcx_ref.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（取证工具）", "fix_in": "S21.13" },
-    "pcx_to_png.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量", "fix_in": "S21.13" },
-    "pe_rva.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（取证工具）", "fix_in": "S21.13" },
-    "playbook.ps1": { "missing": ["04_tooling.md"], "reason": "存量", "fix_in": "S21.13" },
-    "rgb565.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量（取证工具）", "fix_in": "S21.13" },
-    "smoke.ps1": { "missing": ["docs/README.md"], "reason": "存量", "fix_in": "S21.13" },
-    "ui_preview.ps1": { "missing": ["04_tooling.md"], "reason": "存量", "fix_in": "S21.13" },
-    "ui_shot_probe.py": { "missing": ["04_tooling.md"], "reason": "存量", "fix_in": "S21.13" },
-    "validate_data.py": { "missing": ["docs/README.md"], "reason": "存量（门禁项）", "fix_in": "S21.13" },
-    "verify_hd_manifest.py": { "missing": ["04_tooling.md", "docs/README.md"], "reason": "存量", "fix_in": "S21.13" },
-    "build_wasm.ps1": { "missing": ["docs/README.md"], "reason": "存量", "fix_in": "S21.13" },
-    "agnes_gen.py": { "missing": ["docs/README.md"], "reason": "存量（AI 生图底层）", "fix_in": "S21.13" }
+    "agnes_vision.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量：登记在 14 台账 §3.2，速查表/索引未列",
+      "fix_in": "S21.13"
+    },
+    "bevy_cpu_scene_diff.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "board_measure.py": {
+      "missing": [
+        "04_tooling.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "check_data_driven.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项，台账已登记）",
+      "fix_in": "S21.13"
+    },
+    "check_data_source.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "check_forward_closed.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "check_hardcode.py": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "check_hd_manifest.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "check_ledger_reality.py": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "check_module_contracts.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "check_oracle_boundary.py": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "check_scene_narrative.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "cleanup_opencode_db.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（一次性工具）",
+      "fix_in": "S21.13"
+    },
+    "code_outline.py": {
+      "missing": [
+        "04_tooling.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "enhance_portraits.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（一次性工具）",
+      "fix_in": "S21.13"
+    },
+    "extract_board.py": {
+      "missing": [
+        "04_tooling.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "flywheel_readme.ps1": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "gate.ps1": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁本体）",
+      "fix_in": "S21.13"
+    },
+    "migrate_strings.py": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "pack_hd_assets.py": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "pcx_ref.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（取证工具）",
+      "fix_in": "S21.13"
+    },
+    "pcx_to_png.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "pe_rva.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（取证工具）",
+      "fix_in": "S21.13"
+    },
+    "playbook.ps1": {
+      "missing": [
+        "04_tooling.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "rgb565.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量（取证工具）",
+      "fix_in": "S21.13"
+    },
+    "smoke.ps1": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "ui_preview.ps1": {
+      "missing": [
+        "04_tooling.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "ui_shot_probe.py": {
+      "missing": [
+        "04_tooling.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "validate_data.py": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量（门禁项）",
+      "fix_in": "S21.13"
+    },
+    "verify_hd_manifest.py": {
+      "missing": [
+        "04_tooling.md",
+        "docs/README.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "build_wasm.ps1": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量",
+      "fix_in": "S21.13"
+    },
+    "agnes_gen.py": {
+      "missing": [
+        "docs/README.md"
+      ],
+      "reason": "存量（AI 生图底层）",
+      "fix_in": "S21.13"
+    }
   },
   "inline_test_mod_grandfathered": {
     "_comment": "src 内联 #[cfg(test)] 单测的存量豁免（EXP-052：内联单测会被 gate 第 5/6 项当占位/unwrap 拦 ⇒ 白跑一轮 gate）。新增文件零豁免；存量整改挂 S21.13。",
@@ -85,5 +293,597 @@
       "crates/ti-tools/src/doccheck.rs",
       "crates/ti-tools/src/ledger.rs"
     ]
+  },
+  "code_standards": {
+    "cs1_asset_grandfathered": {},
+    "cs2_doc_grandfathered": {
+      "crates/ti-core/src/oracle/battle.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/build.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/main_loop.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/main_map.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/menu.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/messages.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/render.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/saveload.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/selection.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/trade.rs": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      }
+    },
+    "cs3_param_grandfathered": {
+      "crates/ti-app/src/game_app/board.rs::apply_board_boss": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/game_app/board.rs::settle_board_landing": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/game_app/host.rs::set_track_node_sel": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/game_app/input.rs::poll": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/game_app/mod.rs::advance_transition_t": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/game_app/mod.rs::transition_ease": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/game_app/state.rs::is_map_cleared": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/hd_manifest.rs::manifest_expected_count": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/menu_shell.rs::blit_image": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/menu_shell.rs::blit_image_tint": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/menu_shell.rs::crossfade_from": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/menu_shell.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/menu_shell.rs::rgb565_to_rgb8": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/particles.rs::push_particle": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::blit_image": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::blit_image_tint": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::board_fit": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::entity_size_fit": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::iso_cell_fit": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::iso_tile_fit": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::node_edge_px": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::panel": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::param_i64": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::param_str": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::primitive_visible": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::ship_edge_px": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::track_edge_px": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::voyage_slot_center": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::voyage_slot_x": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::with_canvas": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/chrome.rs::wood_panel": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/main_map_island.rs::code_at": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/main_map_island.rs::is_sea": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/main_map_island.rs::island_cell_hash": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/main_map_node.rs::track_node_effect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/mod.rs::blit_image": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/mod.rs::blit_image_tint": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/mod.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/scenes/mod.rs::from_legacy": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/touch.rs::near": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/world_camera.rs::screen_to_world": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/world_camera.rs::world_to_screen": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-app/src/z_layers.rs::is_bevy_z_range": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/data/layout.rs::from": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/data/mod.rs::fmt": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/data/mod.rs::item_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/data/mod.rs::item_text_pos": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/domain/render.rs::fmt": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/domain/selection.rs::from_index": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/main_loop.rs::oracle_next_state": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/main_map.rs::oracle_move": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/main_map.rs::oracle_walk": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/oracle/saveload.rs::oracle_migrate_v1_to_v2": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/board.rs::space": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/build.rs::f64_to_u32": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/cards.rs::data_to_card_effect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/cards_draw.rs::draw_one": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/main_loop.rs::push_scene": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/main_loop.rs::set_state": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/main_map.rs::can_walk": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/main_map.rs::move_to": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/main_map.rs::step_move": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/main_map.rs::walk": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/main_map.rs::walk_steps": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/menu.rs::set_scene": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/messages.rs::kind_key": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/progression.rs::boss_tier_of": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/progression.rs::can_select": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/progression.rs::is_map_defeated": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/progression.rs::min_progression_to_select": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/progression.rs::on_boss_defeated": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/rng.rs::advance": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/rng.rs::in_range": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/rng.rs::seq": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/rng.rs::set_seed": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/rng.rs::srand": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/saveload.rs::scene_id_label": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/saveload.rs::set_slot": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/saveload_json.rs::legacy_character_label": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/saveload_json.rs::legacy_map_label": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/saveload_json.rs::scene_id_label": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/saveload_json.rs::set_slot": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/selection.rs::select_map": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-core/src/rules/trade.rs::f64_to_u32": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/bin/resizeprobe.rs::mode_tag": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/canvas.rs::color_to_rgb565": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/canvas.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/canvas.rs::logical_center_to_world": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/canvas.rs::set_z": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/scene_render.rs::fill": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/scene_render.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/scene_render.rs::lerp_rgb565": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/scene_render.rs::param_i64": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/scene_render.rs::param_str": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/scene_render.rs::rgb565_to_rgb8": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-formats/src/error.rs::fmt": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-formats/src/ids.rs::fmt": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-formats/src/ids.rs::from_str": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-formats/src/ini.rs::json_escape": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-formats/src/terrain.rs::cell_record": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-formats/src/terrain.rs::type1_record": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-platform/src/audio.rs::new": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-platform/src/gfx.rs::approx_eq": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-platform/src/gfx.rs::mark_dirty": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-platform/src/gfx.rs::rgb565_to_color": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-platform/src/gfx.rs::rgb565_to_rgba8": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-platform/src/gfx.rs::rgba8_to_rgba8_quad": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-platform/src/input.rs::approx_eq": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-platform/src/settings.rs::in_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/canvas.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/drawlist.rs::blit_image": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/drawlist.rs::blit_image_tint": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/drawlist.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/framebuffer.rs::blend_rgba_over": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/framebuffer.rs::crossfade_from": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/framebuffer.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/framebuffer.rs::rgb565_to_rgb8": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/framebuffer.rs::rgb8_to_565": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/generic.rs::disc": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/generic.rs::glow": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/generic.rs::grad": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/generic.rs::icon": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/generic.rs::lerp_rgb565": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/generic.rs::rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/generic.rs::rgb565_to_rgb8": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/icons.rs::ring": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/shell.rs::bar_slot": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/shell.rs::battle_arena": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/shell.rs::fill_rect": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/shell.rs::panel": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/shell.rs::title_art_block": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-render/src/shell.rs::world_canvas_frame": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-tools/src/bin/controls.rs::json_str": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-tools/src/bin/controls.rs::render": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      },
+      "crates/ti-tools/src/bin/unpak.rs::pct": {
+        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
+        "fix_in": "S25.1"
+      }
+    },
+    "cs4_scene_grandfathered": {}
   }
 }

@@ -82,12 +82,13 @@ struct InputState {
     touch: TouchPad,
 }
 
-/// 鼠标位置积分（`AccumulatedMouseMotion` 每帧 delta 自积，初值 = 窗口左上 (0,0)）。
+/// 指针位置（**窗口逻辑像素**；2026-10-26 EXP-117：由窗口绝对光标位置 `Window::cursor_position()`
+/// 覆盖，delta 累加仅作光标移出窗口时的回落）。
 #[derive(Resource, Default)]
 struct MousePos {
-    /// 窗口物理像素 x。
+    /// 窗口逻辑像素 x（bevy 0.20 = 物理 ÷ `scale_factor`）。
     x: f32,
-    /// 窗口物理像素 y。
+    /// 窗口逻辑像素 y。
     y: f32,
 }
 
@@ -255,9 +256,22 @@ fn input_system(
     mut state: Local<InputState>,
     window: Query<&Window>,
 ) {
-    // S18.5：滚轮 zoom + 左键拖拽 pan（仅主地图；逻辑 px = 物理 px / 当前 `vp.scale()`）。
+    // S18.5：滚轮 zoom + 左键拖拽 pan（仅主地图；逻辑 px / 当前 `vp.scale()` = 逻辑画布单位）。
+    // 2026-10-26（用户报「首页每个按键点击都没反应」，EXP-117）：指针位置改取窗口**绝对**
+    // 光标位置 `Window::cursor_position()`（bevy 0.20 = **逻辑**像素，winit 物理 ÷ scale_factor）。
+    // 旧实现只累加 `AccumulatedMouseMotion` 的 delta ⇒ 位置 = 「光标相对**启动时**位置的位移」
+    // 而非绝对位置 ⇒ 光标不在窗口左上角启动时全部命中偏移（首页 6 徽章一个都点不动）。
+    // delta 累加仅作光标移出窗口时的回落（此时 `cursor_position()` = None）。
     mouse_pos.x += acc.delta.x;
     mouse_pos.y += acc.delta.y;
+    if let Some(c) = window
+        .single()
+        .ok()
+        .and_then(bevy::window::Window::cursor_position)
+    {
+        mouse_pos.x = c.x;
+        mouse_pos.y = c.y;
+    }
     let drag = (mouse.pressed(MouseButton::Left), acc.delta);
     acc.delta = bevy::prelude::Vec2::ZERO;
     // 2026-10-26 窗口缩放跟随：F1 重算 `vp` 用**当前**窗口**逻辑**尺寸。

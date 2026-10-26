@@ -84,6 +84,7 @@ fn to_input(step: &Step) -> GameInput {
         "trade_buy" => GameInput::TradeBuy(step.gid.unwrap_or(0)),
         "trade_sell" => GameInput::TradeSell(step.gid.unwrap_or(0)),
         "build" => GameInput::Build(building_by_name(step.kind.as_deref().unwrap_or_default())),
+        "boat_upgrade" => GameInput::BoatUpgrade,
         "write_save" => GameInput::WriteSave(step.slot.unwrap_or(0)),
         "load_save" => GameInput::LoadSave(step.slot.unwrap_or(0)),
         other => {

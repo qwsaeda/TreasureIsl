@@ -379,8 +379,62 @@ pub fn group_color_token(group: u8) -> &'static str {
 /// 贴图源画布边长（px；S21.1 批次 `medallion` 角色 = 512×512；9 张节点牌 + 玩家船同规格）。
 pub const ASSET_SOURCE_PX: i32 = 512;
 
-/// 玩家船贴图（S21.5：1 级顶替口径；`boat_{1..4}.png` 待 S21.12）。
+/// 4 级船贴图（`boat_level - 1` 索引：1..=4 → `boat_{1..4}.png` = 小舢板/双桅/三桅/巡防；
+/// S21.12 批次生成，规格 `assets/ui_batches/main_map_v4.json`）。
+pub const BOAT_ASSETS: [&str; 4] = [
+    "assets/ui/boat_1.png",
+    "assets/ui/boat_2.png",
+    "assets/ui/boat_3.png",
+    "assets/ui/boat_4.png",
+];
+
+/// 玩家船通用图（S21.5 入仓；当前级船图缺失时的回退链第二环 ⇒ crash-safe 不空图）。
 pub const SHIP_PLAYER_ASSET: &str = "assets/ui/ship_player.png";
+
+/// 按船等级取玩家船贴图（等级越界 = 1 级通用船）。
+#[must_use]
+pub fn boat_asset(boat_level: u8) -> &'static str {
+    let idx = usize::from(boat_level.saturating_sub(1)).min(BOAT_ASSETS.len() - 1);
+    BOAT_ASSETS[idx]
+}
+
+/// S21.12 建造面板：面板框（1080×1920 居中；768×640 @ (144,640)，8pt 栅格 8 倍数）。
+/// 布局 = 标题 64 + 条目 5×96 + 底部提示 96 = 640。
+pub const BUILD_PANEL: (i32, i32, i32, i32) = (144, 640, 768, 640);
+/// 面板标题条高度。
+pub const BUILD_PANEL_HEADER_H: i32 = 64;
+/// 单条目的命中/绘制高度（5 条：城堡/投资/银行/要塞/造船）。
+pub const BUILD_PANEL_ENTRY_H: i32 = 96;
+/// 条目内边距（左右 24；条目命中框 = 面板内缩 24，条内垂直留白 8）。
+pub const BUILD_PANEL_PAD: i32 = 24;
+/// 面板条目数（4 建筑 + 造船第 5 入口，`economy.md` §船系统 规则 1）。
+pub const BUILD_PANEL_ENTRIES: usize = 5;
+/// 末条目序号（u8 选中域 0..=4；面板选中状态与键盘钳制用）。
+pub const BUILD_LAST_ENTRY: u8 = 4;
+
+/// S21.12 建造面板条目图标（0..3 = 城堡/投资/银行/要塞白蒙版图标；资产路径单一读点，§1 禁硬编码）。
+pub const BUILD_ENTRY_ICONS: [&str; 4] = [
+    "assets/ui/icon_castle.png",
+    "assets/ui/icon_coin.png",
+    "assets/ui/icon_chest.png",
+    "assets/ui/icon_beacon.png",
+];
+
+/// 面板第 `entry` 条目的命中框（8pt 栅格；`entry` ≥ 条目数 = 末条）。
+#[must_use]
+pub fn build_entry_rect(entry: usize) -> (i32, i32, i32, i32) {
+    let (bx, by, bw, _bh) = BUILD_PANEL;
+    let clamped = entry.min(BUILD_PANEL_ENTRIES - 1);
+    let row_y =
+        by + BUILD_PANEL_HEADER_H + BUILD_PANEL_ENTRY_H * i32::try_from(clamped).unwrap_or(0);
+    (bx + BUILD_PANEL_PAD, row_y + 8, bw - BUILD_PANEL_PAD * 2, BUILD_PANEL_ENTRY_H - 16)
+}
+
+/// 摇骰点数标签（`board_last_roll` > 0 时画在舵轮 CTA 上方；`scene.main_map.toast.roll_fmt`）。
+#[must_use]
+pub fn roll_label(roll: u32) -> String {
+    crate::i18n::sgetf("scene.main_map.toast.roll_fmt", &[&roll])
+}
 
 /// 玩家船可见外接框边长（源像素；S21.1 批次抠图后 alpha 包围盒实测）。
 pub const SHIP_PLAYER_VISIBLE_PX: i32 = 477;
@@ -577,10 +631,14 @@ pub fn voyage_bar(host: &mut dyn SceneHost, scene_id: &str) {
     }
 
     // 玩家船标（船贴图；缺资产 = 代码 `compass` 图标回退）
+    // S21.12：船贴图按 `boat_level` 切 4 张（1 级 = 通用船顶替）。
     let marker = (rect.h / 2).clamp(16, 32);
     let player_x = voyage_slot_center(inner_x, inner_w, count, player_idx);
     let (sx, sy, sw, sh) = asset_dest_rect(player_x, track_y, marker, SHIP_PLAYER_VISIBLE_PX);
-    if asset_present(SHIP_PLAYER_ASSET) {
+    let ship_asset = boat_asset(host.boat_level());
+    if asset_present(ship_asset) {
+        host.blit_image(ship_asset, sx, sy, sw, sh);
+    } else if asset_present(SHIP_PLAYER_ASSET) {
         host.blit_image(SHIP_PLAYER_ASSET, sx, sy, sw, sh);
     } else {
         entity_icon(host, "compass", sx, sy, sw, COLOR_GOLD_WARM);

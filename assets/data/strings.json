@@ -100,5 +100,13 @@
  "schema_version": 1,
  "slot.empty": "空",
  "slot.has": "有",
- "slot.label_fmt": "位 {0} {1}"
+ "slot.label_fmt": "位 {0} {1}",
+ "scene.main_map.build.boat": "造船",
+ "scene.main_map.build.panel_title": "建造",
+ "scene.main_map.build.hint": "点选条目 · 再点确认 · 返回关闭",
+ "scene.main_map.build.cost_fmt": "金 {0}",
+ "scene.main_map.build.next_boat": "升级 {0} · {1} 金",
+ "scene.main_map.build.boat_up_fmt": "船已升级为 {0}",
+ "scene.main_map.build.need_gold": "金币不足",
+ "boat.max": "已满级"
 }

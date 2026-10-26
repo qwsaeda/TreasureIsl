@@ -114,10 +114,7 @@ fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, 
 ///
 /// 运行时只画数值文本（金币数 / 持有量），面板 = `main_map.primitives` 原语。
 fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
-    let gold = host.gold();
-    let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
-    let owned = host.owned_total();
-    let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
+    let (gold_str, own_str) = hud_labels(host);
     let mut plaque_text = |rc: &data::Rect, s: &str| {
         // 文本落铜牌右半（左侧 = 96/64px 图标区）：x = 牌左 + 176，基线 = 牌心 - 22
         chrome::draw_body_text(host, s, rc.x + 176, rc.y + rc.h / 2 - 22);
@@ -145,11 +142,8 @@ fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
 /// S17.8 v2 HUD：羊皮纸 HUD 面板（金币/持有量两行 44px）+ 三经济按钮（QA149）。
 fn render_hud_v2(host: &mut dyn SceneHost, layout: &SceneLayout) {
     chrome::panel(host, layout.hud.x, layout.hud.y, layout.hud.w, layout.hud.h);
-    let gold = host.gold();
-    let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&gold]);
+    let (gold_str, own_str) = hud_labels(host);
     chrome::draw_body_text(host, &gold_str, layout.hud.x + 4, layout.hud.y + 2);
-    let owned = host.owned_total();
-    let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&owned]);
     chrome::draw_body_text(host, &own_str, layout.hud.x + 4, layout.hud.y + 56);
     for (key, label_key) in [
         (chrome::keys::HUD_TRADE, "scene.main_map.hud.trade"),
@@ -188,12 +182,219 @@ fn handle_build(host: &mut dyn SceneHost, kind: Building) {
     }
 }
 
+/// S21.12 建造面板条目 → `Building`（第 5 项 = 造船，`None`）。
+fn build_entry_kind(entry: usize) -> Option<Building> {
+    [Building::Castle, Building::Investment, Building::Bank, Building::Fort].get(entry).copied()
+}
+
+/// 建筑条目文案键（`strings.json` 既有键，与 HUD/面板同一文案源）。
+fn build_entry_name_key(kind: Building) -> &'static str {
+    match kind {
+        Building::Castle => "build.castle",
+        Building::Investment => "build.investment",
+        Building::Bank => "build.bank",
+        Building::Fort => "build.fort",
+    }
+}
+
+/// HUD 双铜牌经济文案（金币 / 持有量；归并 `hud.gold_fmt`+`hud.owned_fmt` 两处重复取值，
+/// 文案键单一读点 = 本 helper，`audit_code` 重复模式去重）。
+fn hud_labels(host: &dyn SceneHost) -> (String, String) {
+    let gold_str = i18n::sgetf("scene.main_map.hud.gold_fmt", &[&host.gold()]);
+    let own_str = i18n::sgetf("scene.main_map.hud.owned_fmt", &[&host.owned_total()]);
+    (gold_str, own_str)
+}
+
+/// 面板条目右侧「造价 / 下一级」文案（建筑 = `build.cost_fmt`；造船 = `build.next_boat` / 满级）。
+fn build_right_label(host: &dyn SceneHost, cfg: &data::BuildCfg, entry: usize) -> String {
+    if let Some(kind) = build_entry_kind(entry) {
+        return i18n::sgetf(
+            "scene.main_map.build.cost_fmt",
+            &[&build::cost_of(cfg, kind).to_string()],
+        );
+    }
+    let level = host.boat_level();
+    match host.boat_next_cost() {
+        Some(cost) => {
+            let next_key = format!("boat.{}", level + 1);
+            i18n::sgetf(
+                "scene.main_map.build.next_boat",
+                &[&i18n::sget(&next_key).to_string(), &cost.to_string()],
+            )
+        }
+        None => i18n::sget("boat.max").to_string(),
+    }
+}
+
+/// 造船成功提示条文案（`build.boat_up_fmt`）。
+fn boat_upgrade_toast(name: &str) -> String {
+    let name_arg = name.to_string();
+    i18n::sgetf("scene.main_map.build.boat_up_fmt", &[&name_arg])
+}
+
+/// 面板条目图标（4 建筑 = `chrome::BUILD_ENTRY_ICONS` 图标表；造船 = 当前级船图，缺图回退链在渲染侧）。
+fn build_entry_icon(host: &dyn SceneHost, entry: usize) -> &'static str {
+    chrome::BUILD_ENTRY_ICONS
+        .get(entry)
+        .copied()
+        .unwrap_or_else(|| chrome::boat_asset(host.boat_level()))
+}
+
+/// S21.12 打开建造面板（选中复位第 0 项；面板渲染/交互由后续帧与点按接管）。
+fn open_build_panel(host: &mut dyn SceneHost) {
+    host.set_build_panel_sel(0);
+    host.set_build_panel_open(true);
+    host.play_sfx(Sfx::Press);
+}
+
+/// S21.12 面板当前选中项（越界 = 末条目；选中域 0..=`BUILD_LAST_ENTRY`）。
+fn panel_sel_clamped(host: &dyn SceneHost) -> usize {
+    usize::from(host.build_panel_sel().min(chrome::BUILD_LAST_ENTRY))
+}
+
+/// S21.12 建造面板点按：命中条目 = 选中；再点已选中条目 = 确认；点面板外 = 关闭。
+fn handle_build_panel_tap(host: &mut dyn SceneHost, px: i32, py: i32) -> bool {
+    let (bx, by, bw, bh) = chrome::BUILD_PANEL;
+    if px < bx || py < by || px >= bx + bw || py >= by + bh {
+        host.set_build_panel_open(false);
+        return true;
+    }
+    let sel = panel_sel_clamped(host);
+    for i in 0..chrome::BUILD_PANEL_ENTRIES {
+        let (ex, ey, ew, eh) = chrome::build_entry_rect(i);
+        if (ex..(ex + ew)).contains(&px) && (ey..(ey + eh)).contains(&py) {
+            if i == sel {
+                confirm_build_panel(host, i);
+            } else {
+                host.set_build_panel_sel(u8::try_from(i).unwrap_or(chrome::BUILD_LAST_ENTRY));
+                host.play_sfx(Sfx::Press);
+            }
+            return true;
+        }
+    }
+    false
+}
+
+/// S21.12 确认面板条目：0..3 = 建筑（`GameInput::Build` 既有事件 → `handle_build` 扣金/记录口径）；
+/// 4 = 造船（`GameInput::BoatUpgrade` 事件 → `handle_boat_upgrade`；成功关面板，失败保持打开 + 提示条说明原因）。
+fn confirm_build_panel(host: &mut dyn SceneHost, entry: usize) {
+    if let Some(kind) = build_entry_kind(entry) {
+        host.set_build_panel_open(false);
+        host.set_track_node_sel(None);
+        let _ = host.advance(GameInput::Build(kind));
+    } else {
+        host.set_track_node_sel(None);
+        let before = host.boat_level();
+        let _ = host.advance(GameInput::BoatUpgrade);
+        if host.boat_level() != before {
+            host.set_build_panel_open(false);
+        }
+    }
+}
+
+/// S21.12 造船（`GameInput::BoatUpgrade` 事件处理）：走 `rules::boat` 单向升级链
+/// （扣金 + 抬 cargo/atk/hp 立即生效）；失败 = 提示条说明原因（金不足 / 已满级）。
+fn handle_boat_upgrade(host: &mut dyn SceneHost) {
+    if host.boat_next_cost().is_none() {
+        host.set_board_toast(i18n::sget("boat.max").to_string());
+        host.play_sfx(Sfx::Invalid);
+        return;
+    }
+    if host.boat_upgrade() {
+        let key = format!("boat.{}", host.boat_level());
+        let name = i18n::sget(&key);
+        host.set_board_toast(boat_upgrade_toast(name));
+        host.play_sfx(Sfx::Press);
+    } else {
+        host.set_board_toast(i18n::sget("scene.main_map.build.need_gold").to_string());
+        host.play_sfx(Sfx::Invalid);
+    }
+}
+
+/// S21.12 建造面板渲染（主地图覆盖层；标题 + 5 条目 + 底部提示，toast 同底板风格）。
+fn render_build_panel(host: &mut dyn SceneHost) {
+    let (bx, by, bw, bh) = chrome::BUILD_PANEL;
+    let theme = host.theme().clone();
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    host.fill_rect(bx, by, bw, bh, panel);
+    host.fill_rect(bx, by, bw, 2, brass);
+    host.fill_rect(bx, by + bh - 2, bw, 2, brass);
+    host.fill_rect(bx, by, 2, bh, brass);
+    host.fill_rect(bx + bw - 2, by, 2, bh, brass);
+    host.draw_title_text(
+        i18n::sget("scene.main_map.build.panel_title"),
+        bx + 24,
+        by + 16,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    // §4.4 数据加载失败 = 硬错误（不进 fallback）：跳过本帧面板（`handle_build` 同一口径）
+    let b = match balance() {
+        Ok(b) => b,
+        Err(_e) => {
+            #[cfg(feature = "stats")]
+            eprintln!("[stats] Build panel: balance.json 加载失败，跳过本帧面板");
+            return;
+        }
+    };
+    let sel = panel_sel_clamped(host);
+    for i in 0..chrome::BUILD_PANEL_ENTRIES {
+        let (ex, ey, ew, eh) = chrome::build_entry_rect(i);
+        if i == sel {
+            host.fill_rect(ex, ey, ew, eh, brass);
+        }
+        // 图标（白蒙版 + gold tint；造船 = 当前级船图；缺失 = 跳过，名称仍在）
+        let icon = build_entry_icon(host, i);
+        if chrome::asset_present(icon) {
+            host.blit_image_tint(icon, ex + 16, ey + eh / 2 - 28, 56, 56, chrome::COLOR_GOLD_WARM);
+        }
+        // 名称（左）
+        let name = build_entry_kind(i).map_or_else(
+            || i18n::sget("scene.main_map.build.boat").to_string(),
+            |k| i18n::sget(build_entry_name_key(k)).to_string(),
+        );
+        host.draw_text(&name, ex + 88, ey + 16);
+        // 造价 / 下一级（右；文案键归并 `build_right_label`）
+        let right = build_right_label(host, &b.build, i);
+        host.draw_hint_text(&right, ex + ew - 320, ey + 56, chrome::COLOR_TEXT_ON_PARCH);
+    }
+    host.draw_hint_text(
+        i18n::sget("scene.main_map.build.hint"),
+        bx + 24,
+        by + bh - 48,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+}
+
 impl Scene for MainMapScene {
     fn kind(&self) -> SceneKind {
         SceneKind::MainMap
     }
 
     fn on_input(&mut self, host: &mut dyn SceneHost, input: GameInput) -> bool {
+        // S21.12 建造面板键盘控制（↑↓ 选 / Enter 确认 / Back 关闭；面板打开时吞掉其它输入）
+        if host.build_panel_open() {
+            match input {
+                GameInput::MoveUp => {
+                    let n = host.build_panel_sel();
+                    host.set_build_panel_sel(if n == 0 { chrome::BUILD_LAST_ENTRY } else { n - 1 });
+                    host.play_sfx(Sfx::Press);
+                }
+                GameInput::MoveDown => {
+                    let n = host.build_panel_sel();
+                    host.set_build_panel_sel(if n >= chrome::BUILD_LAST_ENTRY { 0 } else { n + 1 });
+                    host.play_sfx(Sfx::Press);
+                }
+                GameInput::Confirm => {
+                    let sel = panel_sel_clamped(host);
+                    confirm_build_panel(host, sel);
+                }
+                GameInput::Back => host.set_build_panel_open(false),
+                // 面板确认动作：落入下方主分发（`handle_boat_upgrade` 落 toast/音效）
+                GameInput::BoatUpgrade => {}
+                _ => return false,
+            }
+        }
         match input {
             GameInput::Landmark(code) => {
                 // `rules::main_map::MapSession::dispatch` 行为（事件码 → 场景目标）
@@ -216,6 +417,10 @@ impl Scene for MainMapScene {
                 handle_build(host, kind);
                 false
             }
+            GameInput::BoatUpgrade => {
+                handle_boat_upgrade(host);
+                false
+            }
             GameInput::Spin => {
                 // 环岛赛道（`rules::board`，`progression.md` §环岛赛道）：摇骰定步数 → 前进 N 格 → 落格结算。
                 // 落格效果（金/HP/卡/提示条）已由 `board_spin` 结算；S19.3：经过/落在 BOSS 格且
@@ -225,6 +430,8 @@ impl Scene for MainMapScene {
                 };
                 // S21.7：摇骰 = 移动唯一入口 ⇒ 预览选中清空（落点脉冲由 toast 窗口接管）。
                 host.set_track_node_sel(None);
+                // S21.12：离开主地图状态（摇骰/进战斗）前关闭建造面板
+                host.set_build_panel_open(false);
                 if turn.boss.engaged() {
                     host.start_battle();
                     return true;
@@ -232,6 +439,7 @@ impl Scene for MainMapScene {
                 false
             }
             GameInput::MapBack => {
+                host.set_build_panel_open(false);
                 host.enter(SceneKind::Index);
                 true
             }
@@ -268,6 +476,10 @@ impl Scene for MainMapScene {
                             && (r.y..(r.y + r.h)).contains(&py)
                     })
                 };
+                // S21.12：建造面板打开时 = 面板交互优先（点面板外 = 关闭，不再穿透）
+                if host.build_panel_open() {
+                    return handle_build_panel_tap(host, px, py);
+                }
                 // S17.8 v3：底部命令盘（deck_trade/sell/build）优先命中；未命中落回
                 // v2 HUD 按钮（双写兼容——`e2e_touch_economy_loop` 仍按 v2 坐标命中）。
                 // S19：摇骰前进主操作按钮（`deck_spin`）最先命中（主操作优先）。
@@ -281,7 +493,8 @@ impl Scene for MainMapScene {
                     return host.advance(GameInput::TradeSell(1));
                 }
                 if hud_hit(chrome::keys::DECK_BUILD) {
-                    return host.advance(GameInput::Build(Building::Castle));
+                    open_build_panel(host);
+                    return true;
                 }
                 if hud_hit(chrome::keys::HUD_TRADE) {
                     return host.advance(GameInput::TradeBuy(1));
@@ -290,7 +503,8 @@ impl Scene for MainMapScene {
                     return host.advance(GameInput::TradeSell(1));
                 }
                 if hud_hit(chrome::keys::HUD_BUILD) {
-                    return host.advance(GameInput::Build(Building::Castle));
+                    open_build_panel(host);
+                    return true;
                 }
                 // S21.7：点赛道节点 = 高亮 + 信息签（只读预览，不移动）；点自身所在格
                 // = 据点菜单（P0-5 保留）。命中判定与渲染同坐标系（EXP-067：节点中心 =
@@ -547,12 +761,16 @@ fn render_track(
     }
 
     // 4) 玩家船（当前格；缺资产 = 代码 `flag` 图标回退）
+    //    S21.12：船贴图按 `boat_level` 切 4 张（1 级 = 通用船顶替）。
     let idx = host.board_index().min(spaces.len() - 1);
     let (cx, cy) = centers[idx];
     let ship_edge = chrome::ship_edge_px(layout, gw);
     let (dx, dy, dw, dh) =
         chrome::asset_dest_rect(cx, cy, ship_edge, chrome::SHIP_PLAYER_VISIBLE_PX);
-    if chrome::asset_present(chrome::SHIP_PLAYER_ASSET) {
+    let ship_asset = chrome::boat_asset(host.boat_level());
+    if chrome::asset_present(ship_asset) {
+        host.blit_image(ship_asset, dx, dy, dw, dh);
+    } else if chrome::asset_present(chrome::SHIP_PLAYER_ASSET) {
         host.blit_image(chrome::SHIP_PLAYER_ASSET, dx, dy, dw, dh);
     } else {
         chrome::entity_icon(host, "flag", dx, dy, dw, chrome::COLOR_GOLD_WARM);
@@ -587,12 +805,16 @@ fn render_track(
     // 5) 骰子数（摇骰按钮上方居中，`board_last_roll` = 0 → 不画）
     let roll = host.board_last_roll();
     if roll > 0 {
-        let roll_str = i18n::sgetf("scene.main_map.toast.roll_fmt", &[&roll]);
+        let roll_str = chrome::roll_label(roll);
         let rx = 540 - host.shell().hint_text_width_px(&roll_str) / 2;
         let ry = layout.extra.get(chrome::keys::DECK_SPIN).map_or(1296, |r| r.y - 24);
         host.draw_hint_text(&roll_str, rx, ry, chrome::COLOR_GOLD_WARM);
     }
     // 6) 落格提示签条（S21.6 v4 = `hint` 键中心；`board_toast` 过期 = `None`）
+    // 6.5) S21.12 建造面板覆盖层（状态在 `GameApp`；关闭 = 不画）
+    if host.build_panel_open() {
+        render_build_panel(host);
+    }
     render_board_toast(host);
 }
 

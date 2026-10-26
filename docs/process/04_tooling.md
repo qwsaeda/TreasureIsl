@@ -51,6 +51,7 @@
 | `scripts/check_ledger_reality.py` | 台账三方对账（防虚报，S10.0）：ledger `status: verified` 行 ↔ evidence 文件（存在+非空，支持 `+` 多文件）↔ 代码符号（`SYMBOL_EXPECTATIONS` 登记的 DoD 产物在 `crates/*/src` grep）三方一致 | 全绿 0 退出码；任一虚报 FAIL 列命中（gate 第 14 项）；只读幂等；新增任务若 DoD 声明代码产物，往 `SYMBOL_EXPECTATIONS` 登记（EXP-058） |
 
 | `scripts/audit_code.py` | 代码结构审计（`docs/style.md` §5.12 的执行手段）：文件规模（>900 行）/ 函数长度（>140 行）/ 重复模式（同一骨架 ≥N 次） | `--check` 只读检查、违规 ⇒ 非 0 退出码；`--report` 人读报告（永远 0 退出）；`--update-baseline` 写棘轮基线；阈值与基线豁免 = `scripts/code_budget.json`（每条豁免带整改任务号） |
+| `scripts/check_code_standards.py` | 代码标准 4 项机器检查（`16_code_standards.md` 执行矩阵：CS-1 资产路径单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数禁单字母 / CS-4 场景层窄接缝禁构造会话；规模维度归 `audit_code.py`，不重复） | `--check` 门禁判定（违例超基线 ⇒ 非 0）；`--report` 明细（恒 0）；`--update-baseline` 写豁免（棘轮只收紧）；基线 = `scripts/process_ratchet.json::code_standards`（每条带 `reason`+`fix_in`） |
 
 > **gate 项数**（2026-10 扩展，随对抗审计固化）：第 9 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
 > 第 10 项「数据表门禁」= `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（严格 0 命中）。
@@ -136,3 +137,37 @@ python scripts/agnes_gen.py --prompt "..." --out mockup.png --size 2K --ratio 9:
 - 输出 = URL（默认）或 Base64（`return_base64: true`）；
 - 图生图 = `extra_body.image` 数组（URL 或 Data URI）；
 - 超时建议 60–300s（脚本默认 300s）。
+
+## 7. Agnes 视频（`scripts/agnes_video.py`）
+
+**用途**：教程动效 / 概念演示视频生成（异步任务：创建 → 轮询 → 下载）。
+
+**环境变量**：`AGNES_API_KEY`（同生图）。
+
+**用法**：
+
+```sh
+# 文生视频（默认 5s + 16:9）
+python scripts/agnes_video.py --prompt "..." --out evidence/tutorial/demo.mp4
+
+# 自定义时长 + 画幅
+python scripts/agnes_video.py --prompt "..." --out demo.mp4 --seconds 8 --ratio 4:3
+
+# 直接轮询已有任务
+python scripts/agnes_video.py --prompt "..." --out demo.mp4 --video-id task_XXX
+```
+
+**模型**：`agnes-video-2.5-flash`（720P；当前限时免费）。
+
+**画幅**：
+
+| aspect_ratio | 输出像素 |
+|---|---|
+| `16:9` | 1280×704 |
+| `4:3` | 960×720 |
+| `1:1` | 720×720 |
+| `9:16` | 720×1280 |
+
+**异步轮询**：创建任务后立即返回 `video_id`；脚本自动轮询（2s 间隔）直至 `status=completed`（典型 3–6 分钟）。
+
+**API**：`POST /v1/videos` + `GET /agnesapi?video_id=...&model_name=agnes-video-2.5-flash`。

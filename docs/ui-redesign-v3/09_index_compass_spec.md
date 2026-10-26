@@ -136,5 +136,5 @@
 
 - `ui_preview.ps1 index` 出 `evidence/bevy_native_index.png`：满屏羊皮海图 + 中心舵轮 + 6 铜徽章可辨 + 图标 tint 上色（非白块/非糊矢量）；
 - 6 徽章 e2e 命中（点 m0..m5 各触发对应 `MenuAction`）+ 键盘 ↑↓/1..6/Enter 高亮态正确；
-- 双后端 CPU↔Bevy 像素对拍 ≤0.5% + N8/N3/N4 0 失败 + 8pt 全过（径向键豁免）+ gate 23 项 0 failure；
+- 双后端 CPU↔Bevy 像素对拍 ≤0.5% + N8/N3/N4 0 失败 + 8pt 全过（径向键豁免）+ gate 全 项 0 failure；
 - **用户视觉验收通过（消息留痕，A 纪律）**。

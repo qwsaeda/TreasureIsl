@@ -460,6 +460,40 @@ pub trait MapHost {
     fn boat_level(&self) -> u8 {
         1
     }
+
+    /// S21.12 建造面板是否打开（默认关闭）。
+    fn build_panel_open(&self) -> bool {
+        false
+    }
+
+    /// S21.12 打开 / 关闭建造面板（默认 no-op）。
+    fn set_build_panel_open(&mut self, _open: bool) {}
+
+    /// S21.12 建造面板选中项（0..=4 = 城堡/投资/银行/要塞/造船；默认 0）。
+    fn build_panel_sel(&self) -> u8 {
+        0
+    }
+
+    /// S21.12 建造面板选中项 setter（默认 no-op）。
+    fn set_build_panel_sel(&mut self, _sel: u8) {}
+
+    /// S21.12 造船（船系统单向升级：扣金 + 抬 cargo/atk/hp，立即生效）。
+    ///
+    /// 返回 `true` = 升级成功；`false` = 金不够 / 已满级（场景层给提示文案）。
+    /// 默认 no-op（fake 宿主不实现 ⇒ 造船永远失败，不影响其它场景）。
+    fn boat_upgrade(&mut self) -> bool {
+        false
+    }
+
+    /// S21.12 下一级船造价（`None` = 已满级；面板第 5 条目显示 / 满级置灰用）。
+    /// 默认 `None`（fake 宿主 = 满级口径，不影响其它场景）。
+    fn boat_next_cost(&self) -> Option<u32> {
+        None
+    }
+
+    /// S21.12 落格提示条 setter（主地图提示签同一展示通道，120 帧寿命）。
+    /// 默认 no-op。
+    fn set_board_toast(&mut self, _msg: String) {}
 }
 
 /// S9.2：经济接口（贸易/建造/银行，`MainMap` 场景会话）。

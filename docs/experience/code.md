@@ -530,3 +530,6 @@ S24.0（约 6 个阶段）。连带影响：S21 用户评审「main_map 界面�
    窗口/设备相关行为须有一条**实机路径**证据（本次用真 OS 级 `SetWindowPos` resize + 屏幕截屏）。
 4. **口径类结论要写进单一事实源**：`12_bevy_usage.md` 原写「`scale` = letterbox = min(w/1080,h/1920)」
    即错误源头（照抄即错）。口径须带**单位标注 + 对照表 + 可观测真值字段**。
+
+### EXP-117 代码：指针位置用 delta 累加而非窗口绝对光标位置 ⇒ 首页所有按键点击失灵（光标不在左上角启动时命中全偏）
+现象：用户报首页每个按键点击都没反应。根因：input_system 的 MousePos 是 AccumulatedMouseMotion delta 的累加（初值=窗口左上 0,0），指针位置 = 光标相对启动时位置的位移，而非绝对位置；用户光标不在窗口左上角启动时命中全偏。修：优先取 Window::cursor_position()（bevy 0.20 = 逻辑像素，winit 物理÷scale_factor），delta 累加仅作光标移出窗口（cursor_position=None）时的回落。注释还写物理像素（实际逻辑像素）= 与 EXP-116 同类单位口径错。实测：合成 SetCursorPos+mouse_event 点击新游戏徽章 → 场景跳到选择角色 ✓。教训：① delta 累加 ≠ 绝对位置，指针类输入必须取绝对光标位置；② 门禁只验离屏 shot ⇒ 点击路径从未实测；③ 单位口径（物理 vs 逻辑像素）须注释正确，同类问题在 EXP-116 也出现过。

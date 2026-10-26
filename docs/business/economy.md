@@ -94,7 +94,7 @@
 ### 规则（定稿）
 
 1. **单向升级**：只能升不能降；`cost` 一次性付清，**立即生效**；满级后入口置灰
-   （无操作）。升级动作 = 建造面板「造船/换船」条目（文案键 `build.boat`，随 S21.12 表现接线登记 `strings.json`；与 4 种建筑并列的第 5 入口）。
+   （无操作）。升级动作 = 建造面板「造船/换船」条目（文案键 `scene.main_map.build.boat`，随 S21.12 表现接线登记 `strings.json`；与 4 种建筑并列的第 5 入口）。
 2. **货舱容量 = 单次贸易数量上限**：
    ```
    effective_qty_max(goods, boat_level) = min(goods.qty_max, boat.levels[boat_level].cargo)

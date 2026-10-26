@@ -9,7 +9,7 @@
 | **理解游戏怎么设计/架构/模块化（第一入口）** | [`00_design.md`](00_design.md)（正向设计总览：核心循环 + 数据分层 + 5 crate 架构 + 9 场景 + 7 模块包 + 窄接口；不读 legacy/） |
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 23 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 28 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
@@ -54,7 +54,7 @@
 | [process/08_render_arch.md](process/08_render_arch.md) | **运行时渲染架构**（分层/绘制原语/z-order=调用顺序/5 条坐标与像素来源契约/grep 门禁/测试重锚矩阵；改渲染代码必读） |
 | [process/09_render_framework.md](process/09_render_framework.md) | **`ti-render` crate 边界契约**（职责与禁止项/模块结构/Theme schema/迁移映射/数据分离原则；改 `crates/ti-render/` 代码前必读） |
 | [process/10_ui_redesign.md](process/10_ui_redesign.md) | **界面全量重设计·航海夜精修规格（S17 单一事实源）**：设计令牌 v2（色板 13 色/8pt 栅格/字号阶/动效 4 参数/图标 14 项）+ 7 场景版面增量 + 对比度 AA 表 + 验收锚点（改 UI 视觉量前必读） |
-| [ui-redesign-v3/README.md](ui-redesign-v3/README.md) | **UI 重设计 v3 · 真游戏化版面**（对标拆解 01 + 场景叙事 DSL 规格 02 + 7 场景重设计提案 03 + index 落地 04 + vs 落地 05 + main_map 全量落地 06；gate 第 23 项 `check_scene_narrative` 锚点；v2 的"7 场景同模板"前提由 v3 取代） |
+| [ui-redesign-v3/README.md](ui-redesign-v3/README.md) | **UI 重设计 v3 · 真游戏化版面**（对标拆解 01 + 场景叙事 DSL 规格 02 + 7 场景重设计提案 03 + index 落地 04 + vs 落地 05 + main_map 全量落地 06；gate 第 28 项 `check_scene_narrative` 锚点；v2 的"7 场景同模板"前提由 v3 取代） |
 | [ui-redesign-v3/07_v3_5_pass.md](ui-redesign-v3/07_v3_5_pass.md) | **v3.5 真游戏化重设计**（地形数据 + 暖色板 + 画布贴合 + 实体图标化 + HUD/命令盘黄铜化；S18.9~S18.13 执行链；画面丑的根因=设计数据而非渲染/分离） |
 | [ui-redesign-v3/08_main_map_v4_spec.md](ui-redesign-v3/08_main_map_v4_spec.md) | **main_map 重设计 v4「羊皮海图桌面」版面与交互规格**（S21.3 定案：满屏海图 `chart_full` + 顶角双铜牌 + 岛只画陆/礁/宝 + 黄铜航线多形状节点牌 + 船玩家 + 舵轮 CTA；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 交互契约；坐标单一事实源，镜像 `business/08_layout_design.md` §4.3；落码 = S21.4~S21.7/S21.12） |
 | [ui-redesign-v3/09_index_compass_spec.md](ui-redesign-v3/09_index_compass_spec.md) | **首页 index 重设计「罗盘环标题页」版面与交互规格**（S22.0：C 方向罗盘导航 + 羊皮海图底与 main_map v4 统一；满屏 `chart_full` + 中心舵轮 `helm` + 6 铜质 medallion 沿环（白蒙版图标 gold tint）+ 版本签；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 6 徽章命中契约；坐标单一事实源；落码 = S22.1 出 medallion_ring 资产 / S22.2 落码 / S22.3 出图验收） |
@@ -63,6 +63,7 @@
 | [process/13_ui_asset_pipeline.md](process/13_ui_asset_pipeline.md) | **UI 资产管线**（清单驱动：AI 生图 → 抠透明 → 规范化 → 入库 `assets/ui/`；角色预设 background/medallion/board/portrait；`scripts/ui_assets.py` + `scripts/ui_preview.ps1`；资产清单 = 单一事实源，门禁校验登记与存在） |
 | [process/14_tooling_catalog.md](process/14_tooling_catalog.md) | **工具台账**（`scripts/` 全量登记：用途 / 用法 / 幂等与退出码 / 流水线组合 / 门禁归属）——工具的唯一事实源；新增工具须登记（doccheck2 第 26 项对账）+ 满足**工具契约**（第 27 项 `check_tooling_contract`：落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出） |
 | [process/15_process_ledger.md](process/15_process_ledger.md) | **流程固化台账**（人反复要做的开发动作 = 纪律执行状态面：每条流程登记 人工做法 / 复发证据 / 自动化形态 / 载体 / 状态（已自动化·半自动·待固化·一次性）；**纪律不执行 = 纪律不存在** ⇒ 待固化必须带台账任务号；载体 = `scripts/task_close.py`（收口一条命令）/ `scripts/exp_log.py`（EXP 一条命令）/ doccheck2 第 31~34 项（文本完整性 / 改动面声明 / 工具 3 处登记 / 台账自洽）） |
+| [process/16_code_standards.md](process/16_code_standards.md) | **代码标准执行矩阵**（架构/耦合/内聚/命名/重构 各维度 → 机器检查映射：CS-1 资产单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数命名 / CS-4 场景窄接缝 = `scripts/check_code_standards.py`（四项 CS 检查）+ 规模归 `audit_code.py` + lint 红线归门禁；棘轮基线 `process_ratchet.json::code_standards`，新增代码零豁免——写码/提交前对照执行矩阵） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 
@@ -120,6 +121,8 @@
 | `scripts/audit_code.py` | **代码结构审计**（`style.md` §5.12 手段）：文件规模 / 函数长度 / 重复模式；`--check` 违规非 0 退出，阈值与棘轮基线 = `scripts/code_budget.json` |
 | `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
 | `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |
+| `scripts/agnes_gen.py` | Agnes AI 生图（`agnes-image-2.5-flash`，`AGNES_API_KEY`；用法见 `docs/process/04_tooling.md` §6） |
+| `scripts/agnes_video.py` | **Agnes AI 视频**（`agnes-video-2.5-flash` 异步任务：创建→轮询→下载；`AGNES_API_KEY`；`--check` 只读前置体检） |
 
 ### 归档参照物（`legacy/docs/`，**S11 已物理归档，不是开发依据也不是验收基准**）
 

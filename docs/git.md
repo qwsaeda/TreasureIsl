@@ -49,7 +49,7 @@ fmt: 全库规范 CRLF→LF 行尾（rustfmt newline_style=Unix）+ modernizatio
 
 ```
 [ ] git status 无意外文件；data/ 二进制与 evidence/ 按 .gitignore 策略
-[ ] powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 全绿（23 项）
+[ ] powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 全绿（28 项）
 [ ] plan/ledger.yaml 目标任务 verified + evidence/<task>.log 已写
 [ ] commit 消息符合 <scope>: 格式
 [ ] 推送 `master`（本仓无 main）；任务分支合入后删远端 task/*

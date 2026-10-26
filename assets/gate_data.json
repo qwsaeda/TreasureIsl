@@ -57,26 +57,86 @@
    ]
   ]
  },
- "palette_aliases": [
-  [
-   "parch_dark",
-   "bevel_shadow",
-   "bg"
+  "palette_aliases": [
+   [
+    "parch_dark",
+    "bevel_shadow",
+    "bg"
+   ],
+   [
+    "wood",
+    "menu_border",
+    "title_bar"
+   ],
+   [
+    "gold",
+    "text_on_wood",
+    "landmark"
+   ],
+   [
+    "gold_glow",
+    "gold_bright",
+    "selected"
+   ]
   ],
-  [
-   "wood",
-   "menu_border",
-   "title_bar"
-  ],
-  [
-   "gold",
-   "text_on_wood",
-   "landmark"
-  ],
-  [
-   "gold_glow",
-   "gold_bright",
-   "selected"
+  "doccheck2_checks": [
+   {"id": "audio", "impl": "rust"},
+   {"id": "oracle", "impl": "rust"},
+   {"id": "lcg", "impl": "rust"},
+   {"id": "landmark", "impl": "rust"},
+   {"id": "i18n", "impl": "rust"},
+   {"id": "gate-items", "impl": "rust"},
+   {"id": "headless-battle-api", "impl": "rust"},
+   {"id": "flywheel-readback", "impl": "rust"},
+   {"id": "battle-player-data-driven", "impl": "rust"},
+   {"id": "flywheel-script", "impl": "rust"},
+   {"id": "touch-render-pair", "impl": "rust"},
+   {"id": "hd-sprite-transparency", "impl": "rust"},
+   {"id": "scene-layout-fidelity", "impl": "rust"},
+   {"id": "scene-band-count", "impl": "rust"},
+   {"id": "save-slot-map-slot-basis", "impl": "rust"},
+   {"id": "exhaust-balance-dual-write", "impl": "rust"},
+   {"id": "experience-volume-counts", "impl": "rust"},
+   {"id": "runtime-no-legacy-coords", "impl": "rust"},
+   {"id": "layout-doc-table-cross-check", "impl": "rust"},
+   {"id": "no-ti-core-fullpath", "impl": "rust"},
+   {"id": "std-traits-matrix", "impl": "rust"},
+   {"id": "render-framework-boundary", "impl": "rust"},
+   {"id": "ui-redesign-tokens", "impl": "rust"},
+   {"id": "primitives-data", "impl": "rust"},
+   {"id": "terrain-data", "impl": "rust"},
+   {"id": "tooling-catalog", "impl": "rust"},
+   {"id": "tooling-contract", "impl": "rust"},
+   {"id": "engine-no-bare-half", "impl": "rust"},
+   {"id": "select-role-render-loop", "impl": "rust"},
+   {"id": "render-single-source", "impl": "rust"},
+   {"id": "repo-text-integrity", "impl": "rust"},
+   {"id": "task-change-scope", "impl": "rust"},
+   {"id": "tooling-registration", "impl": "rust"},
+   {"id": "process-ledger", "impl": "rust"},
+   {"id": "visual-signoff", "impl": "rust"},
+   {"id": "node-asset-map", "impl": "rust"},
+   {"id": "no-inline-test-mod", "impl": "rust"},
+   {
+    "id": "bevy-camera-scale-convention",
+    "impl": "grep",
+    "rules": [
+     {
+      "file": "crates/ti-engine/src/bin/treasure_bevy.rs",
+      "require": ["fn bevy_ortho_scale(", "= bevy_ortho_scale("],
+      "forbid": ["o.scale = g.shell().vp.scale()", "o.scale = vp.scale()", "o.scale = letterbox("]
+     },
+     {
+      "file": "crates/ti-engine/src/bin/resizetest.rs",
+      "require": ["o.area"],
+      "forbid": []
+     },
+     {
+      "file": "docs/process/12_bevy_usage.md",
+      "require": ["世界单位/像素", "o.area"],
+      "forbid": []
+     }
+    ]
+   }
   ]
- ]
-}
+ }
