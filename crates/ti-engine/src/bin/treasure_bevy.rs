@@ -2,7 +2,8 @@
 //!
 //! 架构（`docs/process/11_bevy_migration.md` §4）：
 //! - **逻辑**：完整 `GameApp`（场景流转/战斗/经济/存档；`render_to_framebuf` 纯 CPU，0 漂移）；
-//! - **呈现**：Bevy 2D（`Camera2d` + `Projection::Orthographic(scale=0.5)` letterbox 1080×1920
+//! - **呈现**：Bevy 2D（`Camera2d` + `Projection::Orthographic(scale)`；`scale` = **世界单位/像素**
+//!   = 1/(letterbox 视口比 × zoom)，见 `bevy_ortho_scale` 口径卡）letterbox 1080×1920
 //!   + 逐帧 RGBA8 `Image` + `Sprite`，带宽口径 = S10.4 macroquad `FullRebuild`；
 //!     S18.7 v3 场景落 Bevy 原生绘制后消除逐帧上传）；
 //! - **输入**：Bevy 0.20 输入 API（`ButtonInput<KeyCode>` / `ButtonInput<MouseButton>` /
@@ -22,9 +23,11 @@
 //! cargo run -p ti-app --features bevy-shell,native-shell --bin treasure-bevy-native
 //! ```
 
+mod resizeprobe;
 mod resizetest;
 
-use resizetest::{ResizeTest, resizetest_system};
+use resizeprobe::attach_probe;
+use resizetest::attach_resizetest;
 
 use std::path::PathBuf;
 
@@ -168,13 +171,17 @@ struct NativeIndex {
 #[derive(Component)]
 struct FrameSprite;
 
-/// letterbox 基础 scale（窗口物理 → 1080 逻辑；与 S18.4 `spawn_stage` 同式）。
+/// letterbox 基础 scale（shell 视口比 = **像素/逻辑单位**；与 S18.4 `spawn_stage` 同式）。
 #[allow(clippy::cast_precision_loss)]
 fn letterbox() -> f32 {
     letterbox_size(WIN_W as f32, WIN_H as f32)
 }
 
-/// 任意窗口物理尺寸的 letterbox scale（`min(w/1080, h/1920)`；2026-10-26 窗口缩放跟随）。
+/// 任意窗口物理尺寸的 letterbox 视口比（`min(w/1080, h/1920)` = 像素/逻辑单位；
+/// 2026-10-26 窗口缩放跟随）。
+///
+/// ⚠️ 口径：这是 **shell 视口比**（`Viewport::fit` 同值），**不是** Bevy 正交 `scale`；
+/// Bevy 侧取其倒数（见 [`bevy_ortho_scale`]）。
 #[allow(clippy::cast_precision_loss)]
 fn letterbox_size(window_w: f32, window_h: f32) -> f32 {
     let w = window_w / LOGICAL_W as f32;
@@ -182,12 +189,29 @@ fn letterbox_size(window_w: f32, window_h: f32) -> f32 {
     if w < h { w } else { h }
 }
 
-/// Startup：相机（正交 scale=0.5 letterbox 满铺）+ 全屏底色精灵。
+/// Bevy 2D 正交 `scale`（**世界单位/像素**）= letterbox 视口比与 `WorldCam` zoom 的倒数积。
+///
+/// 口径依据（bevy 0.20 实测，勿改）：
+/// - `OrthographicProjection.scale` = 世界单位/像素；可见世界区域 = `scale × 视口 px`
+///   （`OrthographicProjection.area` 为 pub 字段，运行时可直接读出实际值）；
+/// - shell 视口比 `vp.scale()` = 像素/逻辑单位 ⇒ 二者互为倒数；
+/// - `WorldCam.zoom` 大 = 放大（可见世界收缩）⇒ 与 `scale` 反比。
+///
+/// ⇒ `o.scale = 1 / (px_per_unit × zoom)`。
+///
+/// 反例留档（EXP-115）：2026-10-26 曾误取 `o.scale = vp.scale()`（540×960 窗口下
+/// `area=270×480` = 画布中央 1/4、4× 放大；拖大窗口时内容反而变小 ⇒「画面不跟着缩放」）。
+fn bevy_ortho_scale(px_per_unit: f32, zoom: f32) -> f32 {
+    1.0 / (px_per_unit * zoom)
+}
+
+/// Startup：相机（正交 scale = letterbox 视口比的**倒数** = 世界单位/像素）+ 全屏底色精灵。
 ///
 /// S18.8a：`S18.7a` 起 7 场景全走 `DrawList` → Bevy 实体（不再有「CPU 帧缓冲 → 整帧纹理上传」路径），
 /// 故占位纹理 + `FrameTex` 资源随之退役（S18.8a 门禁 wasm clippy 覆盖到本壳，死代码清零）。
 fn spawn_stage(mut commands: Commands) {
-    let scale = letterbox();
+    // 540×960 窗口 ⇒ 视口比 0.5 px/逻辑单位 ⇒ Bevy 正交 scale = 1/0.5 = 2.0（世界单位/像素）。
+    let scale = bevy_ortho_scale(letterbox(), 1.0);
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
@@ -339,9 +363,9 @@ fn input_system(
 
 #[allow(clippy::needless_pass_by_value)]
 /// 窗口缩放跟随系统（用户 2026-10-26 报告：桌面版不随窗口缩放）：`resizable` 窗口
-/// 尺寸变化时按当前物理尺寸重建 shell `vp`（屏幕 px → 1080 逻辑反变换），鼠标/触摸
-/// 命中判定自动跟上；相机正交 scale 由 `camera_system` 读 `vp.scale()` 驱动
-/// （默认 Smooth = `min(w/1080, h/1920)` letterbox，内容恒完整可见 + 居中）。
+/// 尺寸变化时按当前逻辑尺寸重建 shell `vp`（屏幕 px → 1080 逻辑反变换），鼠标/触摸
+/// 命中判定自动跟上；相机正交 scale 由 `camera_system` 按 `bevy_ortho_scale` 推导
+/// （取 `vp.scale()` 的**倒数** ⇒ 画布恒完整可见 + 内容随窗口等比缩放）。
 fn window_resize_system(
     store: ResMut<GameStore>,
     mut last_wh: Local<(f32, f32)>,
@@ -370,9 +394,10 @@ fn window_resize_system(
 /// S18.5 相机系统：`WorldCam`（zoom/pan，`game_app::camera_*`）→ Bevy 正交 scale +
 /// 帧纹理精灵位移（`world_canvas` 镜头）。默认 cam=(540,960)/zoom=1 时 = S18.4 IDENTITY 零差。
 ///
-/// 2026-10-26（用户报告「桌面版不随窗口缩放」）：正交 scale 改读 **shell `vp.scale()`**
-/// （`window_resize_system` 随窗口尺寸变化重建；默认 Smooth = `min(w/1080, h/1920)`
-/// letterbox，内容恒完整可见 + 居中），与鼠标/触摸输入同一反变换源，画/摸不错位。
+/// 2026-10-26（用户报告「桌面版不随窗口缩放」）：正交 scale 改由 **shell 视口比** 推导，
+/// 但**取倒数**（Bevy `o.scale` = 世界单位/像素，shell `vp.scale()` = 像素/逻辑单位），
+/// 见 [`bevy_ortho_scale`] 口径卡。效果：画布恒完整可见（letterbox），
+/// 且**内容随窗口尺寸等比缩放**（窗口变大 → 可见世界不变 → 1 逻辑单位占更多物理像素）。
 fn camera_system(
     store: Res<GameStore>,
     mut cameras: Query<&mut Projection, With<Camera2d>>,
@@ -382,7 +407,7 @@ fn camera_system(
         return;
     };
     let cam = *g.world_cam();
-    let scale = g.shell().vp.scale() * cam.zoom;
+    let scale = bevy_ortho_scale(g.shell().vp.scale(), cam.zoom);
     if let Ok(mut proj) = cameras.single_mut() {
         if let Projection::Orthographic(o) = &mut *proj {
             o.scale = scale;
@@ -646,8 +671,13 @@ fn main() {
     let selftest = std::env::args().any(|a| a == "--selftest");
     let shot = std::env::args().any(|a| a == "--shot");
     let resizetest = std::env::args().any(|a| a == "--resizetest");
+    let resizeprobe = std::env::args().any(|a| a == "--resizeprobe");
     if resizetest && (shot || selftest) {
         eprintln!("[resizetest] 与 --shot/--selftest 互斥（需要真窗口）");
+        std::process::exit(2);
+    }
+    if resizeprobe && (shot || selftest) {
+        eprintln!("[resizeprobe] 与 --shot/--selftest 互斥（需要真窗口）");
         std::process::exit(2);
     }
     // S18.7b：`--scene=<id>`（index/select_role/select_map/main_map/vs/message/saveload）——
@@ -742,9 +772,13 @@ fn main() {
         );
         app.add_systems(Update, native_index_system.after(render_system));
         if resizetest {
-            // 机器判定：程序化翻倍窗口 → 相机正交 scale 须同步翻倍（见 `resizetest_system`）。
-            app.insert_resource(ResizeTest { frame: 0, s1: 0.0, s2: 0.0, resized: false, done: false })
-                .add_systems(Update, resizetest_system.after(camera_system));
+            // 机器判定：程序化翻倍窗口 → ①画布恒完整可见（`o.area`≈1080×1920）
+            // ②内容随窗口等比放大（px/unit 翻倍）；见 `resizetest_system`。
+            attach_resizetest(&mut app);
+        }
+        if resizeprobe {
+            // 活体探针：画面左上角实时 `win/sf/vp/mode/zoom/area`（见 `resizeprobe.rs`）。
+            attach_probe(&mut app);
         }
     }
     app.add_systems(Startup, spawn_stage);

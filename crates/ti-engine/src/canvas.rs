@@ -69,6 +69,9 @@ pub fn rgb565_to_color(value: u16) -> Color {
 
 /// 视窗逻辑尺寸 → 相机 scale（letterbox：内容恒 1080×1920 完整可见，
 /// 富余边距 = 清屏色条）。
+///
+/// ⚠️ 口径 = **像素/逻辑单位**（shell 视口比）；Bevy 正交 `scale` 取其**倒数**
+/// （`12_bevy_usage.md` §3 口径卡）。
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn viewport_scale(window_w: f32, window_h: f32) -> f32 {

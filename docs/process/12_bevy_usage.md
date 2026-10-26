@@ -80,7 +80,18 @@ app.add_plugins(
   ```
 
 - 相机 = `Camera2d` + `Projection::Orthographic(OrthographicProjection { scale, ..default_2d() })`；
-  `scale` = letterbox = `min(win_w / 1080, win_h / 1920)`（内容恒完整可见，富余边 = 清屏色条）。
+  **⚠️ `scale` 语义 = 世界单位/像素**（不是像素/逻辑单位！）——bevy 0.20 实测
+  （`OrthographicProjection.update`：`area = scale × 视口 px`；`area` 为 pub 字段，运行时可直读）：
+
+  | 量 | 口径 | 540×960 窗口时的值 |
+  |---|---|---|
+  | `o.scale`（Bevy 正交） | **世界单位/像素** | `2.0`（= 1/0.5） |
+  | `vp.scale()`（shell 视口比 / `Viewport::fit`） | 像素/逻辑单位 | `0.5` |
+
+  ⇒ 二者互为**倒数**：`o.scale = 1 / (vp.scale() × zoom)`（`zoom` 大 = 放大 ⇒ 可见世界收缩）。
+  取反的后果（EXP-115）：`area = 270×480` = 画布中央 1/4（4× 放大），窗口变大时内容反而变小。
+  判据请读**渲染真值** `o.area`（≈1080×1920 = 画布完整可见），不要只看 `o.scale` 数值。
+  窗口尺寸变化时 `window_resize_system` 重建 `vp`，`camera_system` 据此改写 `o.scale`。
 
 ---
 

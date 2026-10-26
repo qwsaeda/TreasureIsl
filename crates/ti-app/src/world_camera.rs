@@ -8,8 +8,9 @@
 //! - `zoom_at` 锚点不变（锚点下世界点在 zoom 前后停在同一点）；
 //! - 确定性：无 RNG / 无时间 → 相机单测可复现（DoD 判据）。
 //!
-//! 接线（S18.5）：Bevy 壳 = GPU 侧 zoom（`OrthographicProjection.scale`）+ 平移
-//! （sprite 位移）；`grid_offset` 预留 CPU terrain 相机（`terrain_atlas::camera`）接线，
+//! 接线（S18.5）：Bevy 壳 = GPU 侧 zoom（`OrthographicProjection.scale` = 世界单位/像素 ⇒
+//! 与 `zoom` **反比**：放大 ⇒ 可见世界收缩）+ 平移（sprite 位移）；
+//! `grid_offset` 预留 CPU terrain 相机（`terrain_atlas::camera`）接线，
 //! 落地挂 S18.6 像素基线重建（`08_render_arch` 回写同轮）。
 
 /// zoom 下限（缩小端）。

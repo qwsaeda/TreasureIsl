@@ -151,6 +151,11 @@ cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-nat
 # 窗口可拖拽/最大化：内容恒 1080×1920 逻辑画布 letterbox 等比跟随（默认 Smooth；
 # F1 = 等比/整数倍/拉伸/裁剪 循环，F4 切画质）——2026-10-26 窗口缩放跟随
 # （`window_resize_system` 重建 shell `vp`，相机与输入同源不错位）
+# 2026-10-26 修（S24.0 / EXP-116）：相机正交 `o.scale` 语义 = 世界单位/像素（与 shell
+# 视口比 `vp.scale()` 互为倒数）⇒ `o.scale = 1/(vp.scale()×zoom)`。改前实机长期
+# 4× 放大画布中央 1/4（`o.area`=270×480），拖大窗口内容反而变小；改后 `o.area`
+# =1080×1920（画布完整可见）+ 窗口变大时内容等比放大。口径卡见
+# `docs/process/12_bevy_usage.md` §3。
 ```
 
 ### 浏览器 (WASM)
@@ -189,7 +194,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 207 任务（189 verified；台账计数随 S8–S21 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 208 任务（190 verified；台账计数随 S8–S21 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`
