@@ -22,6 +22,10 @@
 //! cargo run -p ti-app --features bevy-shell,native-shell --bin treasure-bevy-native
 //! ```
 
+mod resizetest;
+
+use resizetest::{ResizeTest, resizetest_system};
+
 use std::path::PathBuf;
 
 use bevy::asset::RenderAssetUsages;
@@ -232,10 +236,12 @@ fn input_system(
     mouse_pos.y += acc.delta.y;
     let drag = (mouse.pressed(MouseButton::Left), acc.delta);
     acc.delta = bevy::prelude::Vec2::ZERO;
-    // 2026-10-26 窗口缩放跟随：F1 重算 `vp` 用**当前**窗口**物理**尺寸（壳坐标系 =
-    // 物理 px：鼠标/触摸 delta 与 `WindowResolution` 均物理；`win.size()` 是逻辑 px，勿用）。
+    // 2026-10-26 窗口缩放跟随：F1 重算 `vp` 用**当前**窗口**逻辑**尺寸。
+    // 坐标空间口径（bevy 0.20 实测）：相机投影 = 逻辑视口（`camera.rs: logical_viewport_size`），
+    // 鼠标/触摸 = 逻辑像素（`bevy_winit: 物理坐标 ÷ scale_factor`）⇒ `vp` 必须用逻辑尺寸，
+    // 任何 DPI 下输入/渲染同源；`physical_*` 只在 scale_factor≠1 时与逻辑不等，勿用。
     let window_size = match window.single() {
-        Ok(win) => Vec2::new(win.physical_width() as f32, win.physical_height() as f32),
+        Ok(win) => Vec2::new(win.width(), win.height()),
         Err(_) => Vec2::new(WIN_W as f32, WIN_H as f32),
     };
 
@@ -344,9 +350,11 @@ fn window_resize_system(
     let Ok(win) = window.single() else {
         return;
     };
-    // 壳的屏幕坐标约定 = 窗口**物理**像素（鼠标/winit delta、`WindowResolution` 均物理）；
-    // `win.size()` 是逻辑像素（高 DPI 下 ≠ 物理），必须用物理访问器。
-    let wh = (win.physical_width() as f32, win.physical_height() as f32);
+    // 坐标空间口径（bevy 0.20 实测，勿改回 physical）：
+    // - 相机 2D 投影 = **逻辑**视口（`bevy_render/camera.rs`：`logical_viewport_size` → `update`）；
+    // - 鼠标/触摸输入 = **逻辑**像素（`bevy_winit`：物理坐标 ÷ scale_factor）；
+    // ⇒ shell `vp` 必须用**逻辑**尺寸重建，任意 DPI 下输入与渲染同源。
+    let wh = (win.width(), win.height());
     if *last_wh == wh {
         return;
     }
@@ -637,6 +645,11 @@ fn repo_root() -> PathBuf {
 fn main() {
     let selftest = std::env::args().any(|a| a == "--selftest");
     let shot = std::env::args().any(|a| a == "--shot");
+    let resizetest = std::env::args().any(|a| a == "--resizetest");
+    if resizetest && (shot || selftest) {
+        eprintln!("[resizetest] 与 --shot/--selftest 互斥（需要真窗口）");
+        std::process::exit(2);
+    }
     // S18.7b：`--scene=<id>`（index/select_role/select_map/main_map/vs/message/saveload）——
     // Bevy 壳经 `ti_app::forward_nav::navigate` 导航到目标场景，其 DrawList 由场景代码
     // 渲染进同一 `DrawList`（静态原语 + 运行时内容），再实体化为 Bevy 精灵。
@@ -728,6 +741,11 @@ fn main() {
                 .chain(),
         );
         app.add_systems(Update, native_index_system.after(render_system));
+        if resizetest {
+            // 机器判定：程序化翻倍窗口 → 相机正交 scale 须同步翻倍（见 `resizetest_system`）。
+            app.insert_resource(ResizeTest { frame: 0, s1: 0.0, s2: 0.0, resized: false, done: false })
+                .add_systems(Update, resizetest_system.after(camera_system));
+        }
     }
     app.add_systems(Startup, spawn_stage);
     if shot {
