@@ -8,8 +8,10 @@
 //! - `e2e_playthrough.rs`：完整会话连续性（一个测试跑完整局游戏）
 
 use ti_app::game_app::{BattleView, GameApp, GameInput, Scene};
+use ti_app::scenes::MapHost;
 use ti_core::domain::economy::Building;
 use ti_core::domain::selection::{Character, MapSlot};
+use ti_core::rules::board::SpaceKind;
 
 /// 完整游戏会话：从启动到退出，模拟真实玩家操作序列。
 #[allow(clippy::too_many_lines)]
@@ -511,4 +513,93 @@ fn e2e_board_spin_loop() {
         let bb = b.board.as_ref().expect("board 会话应在位");
         assert_eq!(ab.pos(), bb.pos(), "同 seed 同序列 ⇒ 同落格（确定性）");
     }
+}
+
+/// E2E 赛道节点预览（S21.7）：点非己节点 = 选中高亮 + 信息签（只读：不移动、不切场景）；
+/// 摇骰 = 清空预览选中 + 落格 toast 窗口（落点脉冲）；点自身格 = 据点分派（P0-5，收尾步）。
+/// 信息签文案 = kind → `scene.main_map.node.<kind>` 解析（断言非键名回退）。
+#[allow(clippy::cast_precision_loss)] // 1080 呈现坐标 i32 → f32 触摸坐标
+#[test]
+fn e2e_track_node_preview() {
+    let mut app = GameApp::new(1080.0, 1920.0);
+    app.rng_mut().set_seed(7);
+    app.set_rng_seed(7);
+    // index S22 罗盘环 item0 → 选角卡 0 → 选图卡 0 → 主地图（数据驱动命中，同 e2e_touch_economy_loop）
+    let scenes = ti_core::data::scenes().expect("scenes.json 加载");
+    let tap = |app: &mut GameApp, x: f32, y: f32| {
+        let s = ti_app::touch::TouchSample { gesture: ti_platform::settings::Gesture::Tap, x, y };
+        app.poll_touch(Some(s))
+    };
+    let card_center = |scene_id: &str| -> (f32, f32) {
+        let s = scenes.get(scene_id).expect("scenes.json 缺场景");
+        let top = s.list.y - s.list.highlight_offset;
+        (s.list.x as f32 + s.list.w as f32 / 2.0, top as f32 + s.list.item_h as f32 / 2.0)
+    };
+    let (x, y) = {
+        let s = scenes.get("index").expect("scenes.json 缺 index");
+        let med = s
+            .primitives
+            .iter()
+            .find(|p| {
+                p.item == 0
+                    && p.params.get("asset").and_then(|v| v.as_str())
+                        == Some("assets/ui/medallion_ring.png")
+            })
+            .expect("index 缺 medallion item0");
+        (med.rect.x as f32 + med.rect.w as f32 / 2.0, med.rect.y as f32 + med.rect.h as f32 / 2.0)
+    };
+    assert!(tap(&mut app, x, y), "index medallion 0 点按应命中");
+    let (x, y) = card_center("select_role");
+    assert!(tap(&mut app, x, y), "选角卡 0 点按应命中");
+    let (x, y) = card_center("select_map");
+    assert!(tap(&mut app, x, y), "选图卡 0 点按应命中");
+    assert_eq!(app.scene(), Scene::MainMap, "应进主地图");
+
+    let spaces = app.board_spaces();
+    assert!(spaces.len() >= 8, "赛道应 ≥8 节点（实际 {}）", spaces.len());
+    let cur = app.board_index();
+    let target = (cur + 1) % spaces.len();
+    // 节点中心 px（EXP-067 与渲染同源：`iso_cell_fit` + 瓦片半边；terrain/layout 会话内不变 ⇒ 闭包不捕获 app）
+    let layout = ti_app::scenes::chrome::scene_layout("main_map");
+    let gw = app.map_terrain().map_or(0, |t| t.grid_w);
+    let node_xy = |i: usize| -> (f32, f32) {
+        let sp = &spaces[i];
+        let r = i32::try_from(sp.cell.row).unwrap_or(0);
+        let c = i32::try_from(sp.cell.col).unwrap_or(0);
+        let (sx, sy) = ti_app::scenes::chrome::iso_cell_fit(r, c, &layout, gw);
+        let (tw, th) = ti_app::scenes::chrome::iso_tile_fit(&layout, gw);
+        ((sx + tw) as f32, (sy + th) as f32)
+    };
+
+    // ① 点非己节点 = 预览选中（只读：不动、不切场景）
+    let (nx, ny) = node_xy(target);
+    assert!(tap(&mut app, nx, ny), "节点点按应命中");
+    assert_eq!(app.track_node_sel(), Some(target), "预览选中 = 被点节点");
+    assert_eq!(app.board_index(), cur, "只读预览：位置不动");
+    assert_eq!(app.scene(), Scene::MainMap, "预览选中不切场景");
+    // 信息签文案 = kind → 标签键解析（i18n 非回退；命中 kind → 文案判据）
+    let key = ti_app::scenes::main_map_node::node_label_key(spaces[target].kind);
+    assert_ne!(ti_app::i18n::sget(key), key, "信息签标签键应解析：{key}");
+
+    // ② 摇骰 = 清空预览选中 + 落格 toast 窗口（落点脉冲；Plain/Start/BOSS 无结算 = 无 toast 属设计）
+    app.set_track_node_sel(Some(target));
+    app.handle(GameInput::Spin);
+    assert!(app.board_last_roll() > 0, "摇骰应有骰点值");
+    assert_eq!(app.track_node_sel(), None, "摇骰后清空预览选中");
+    match spaces[app.board_index()].kind {
+        SpaceKind::Plain | SpaceKind::Start | SpaceKind::Boss => {}
+        _ => assert!(app.board_toast().is_some(), "落格 toast 应在位（落点脉冲窗口）"),
+    }
+
+    // ③ 摇骰后再点节点仍有效（不锁死预览）
+    let target2 = (app.board_index() + 1) % spaces.len();
+    let (nx, ny) = node_xy(target2);
+    assert!(tap(&mut app, nx, ny), "摇骰后节点点按应命中");
+    assert_eq!(app.track_node_sel(), Some(target2), "摇骰后再次预览选中");
+
+    // ④ 点自身格 = 据点分派（P0-5，与 `rules::main_map::dispatch(1)` 同口径收尾）
+    let dispatch = app.map_session_dispatch(1);
+    let (ox, oy) = node_xy(app.board_index());
+    assert!(tap(&mut app, ox, oy), "自身格点按应命中");
+    assert_eq!(app.last_dispatch, dispatch, "点自身格分派据点（与 dispatch(1) 一致）");
 }

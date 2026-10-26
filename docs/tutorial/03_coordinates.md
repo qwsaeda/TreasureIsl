@@ -54,6 +54,8 @@
   屏幕   = 把照片印出来的大相纸（640×480）
 ```
 
+![摄像机 → 画布 → 屏幕 链路图](../../evidence/tutorial/03_camera_viewport.png)
+
 **关键结论：画布 ≠ 地图**
 
 ```
@@ -428,6 +430,8 @@ Smooth（本章上面讲的）              ZoomCrop（现代手游最常用）
 | `Stretch` | 宽高各拉各的，填满 100% | **无** | **画面变形** |
 | `ZoomCrop` | 等比放大到铺满，溢出的**裁掉** | **无** | 边缘视野变少（4:5 → 20:9 约裁 44% 宽） |
 
+![4 种缩放模式对比：Smooth / Integer / Stretch / ZoomCrop](../../evidence/tutorial/03_scale_modes.png)
+
 **为什么现在的手机游戏基本没黑边**：
 
 ```
@@ -539,6 +543,8 @@ Smooth（本章上面讲的）              ZoomCrop（现代手游最常用）
   只有 ▓ 和 ░，边界锐利          整条斜边被 ▒ 填满 → 发虚
   像素画风                      像蒙了一层灰
 ```
+
+![Nearest vs Linear 像素放大对比](../../evidence/tutorial/03_filter_nearest_vs_linear.png)
 
 #### 第三步：本项目为什么默认 Nearest
 
@@ -709,6 +715,8 @@ crates/ti-core/src/consts.rs           — LOGICAL_WIDTH / LOGICAL_HEIGHT（u32�
 ```
 
 **所以"斜"不是为了好看，是为了看到侧面。** 纯俯视把世界压成了一张平面图，所有物体都只剩一个顶面，看不出立体感。
+
+![俯视 vs 等距 2:1 投影对比](../../evidence/tutorial/03_isometric_vs_topdown.png)
 
 #### 二、为什么游戏用等距
 

@@ -38,6 +38,8 @@ use crate::touch::TouchSample;
 pub mod chrome;
 pub mod index;
 pub mod main_map;
+pub mod main_map_island;
+pub mod main_map_node;
 pub mod message;
 pub mod saveload;
 pub mod select_map;
@@ -444,6 +446,15 @@ pub trait MapHost {
     fn board_toast(&self) -> Option<String> {
         None
     }
+
+    /// S21.7 赛道节点预览选中（`Some(index)` = 该节点高亮 + 信息签；只读预览不移动，
+    /// 摇骰时清空）。默认无（非主地图的 fake 宿主无需实现）。
+    fn track_node_sel(&self) -> Option<usize> {
+        None
+    }
+
+    /// 设置 / 清空赛道节点预览选中（默认 no-op）。
+    fn set_track_node_sel(&mut self, _v: Option<usize>) {}
 }
 
 /// S9.2：经济接口（贸易/建造/银行，`MainMap` 场景会话）。

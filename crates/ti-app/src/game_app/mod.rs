@@ -211,6 +211,9 @@ pub struct GameApp {
     pub board_toast: Option<String>,
     /// 落格提示条剩余帧数。
     pub board_toast_ticks: u32,
+    /// S21.7 赛道节点预览选中（`Some(index)` = 该节点高亮 + 信息签；只读预览不移动，
+    /// 摇骰时清空；主地图场景时有效，非主地图 = `None`）。
+    pub track_node_sel: Option<usize>,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// P1-7（M5）：卡牌效果状态（`rules::cards::CardState`，`MainMap` 场景时有效）。
@@ -391,6 +394,7 @@ impl GameApp {
             board: None,
             board_toast: None,
             board_toast_ticks: 0,
+            track_node_sel: None,
             buildings: Vec::new(),
             card_state: cards::CardState::default(),
             battle: None,

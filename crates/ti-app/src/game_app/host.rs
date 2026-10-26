@@ -236,6 +236,14 @@ impl MapHost for GameApp {
     fn board_toast(&self) -> Option<String> {
         if self.board_toast_ticks > 0 { self.board_toast.clone() } else { None }
     }
+
+    fn track_node_sel(&self) -> Option<usize> {
+        self.track_node_sel
+    }
+
+    fn set_track_node_sel(&mut self, v: Option<usize>) {
+        self.track_node_sel = v;
+    }
 }
 impl EconomyHost for GameApp {
     fn price_of(&self, gid: u32) -> Option<u32> {

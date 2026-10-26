@@ -1,0 +1,52 @@
+S21.7 交互升级（点赛道节点 = 高亮 + 信息签 + 落点脉冲 + 提示签条）
+=================================================================
+改动面（硬规则 7）：业务规则=无（点节点 = 只读查看，不改规则）| 数据=assets/data/strings.json
+（新增 9 键 `scene.main_map.node.{start,city,port,event,card,battle,treasure,boss,plain}` 扁平键）|
+规则=无 | 表现=crates/ti-app/src/scenes/main_map.rs（on_touch 节点命中 + on_input 摇骰清空 +
+render 高亮环/信息签/落点脉冲）+ crates/ti-app/src/scenes/main_map_node.rs（**新增**：节点标签键 +
+确定性产出文案 + 签条式面板绘制）+ crates/ti-app/src/scenes/chrome.rs（`draw_node_ring` 高亮环）+
+crates/ti-app/src/game_app/{mod.rs,host.rs}（`track_node_sel` 瞬态状态）+ scenes/mod.rs
+（MapHost 契约）| 资产=无；跨模块原因：命中判定必须与渲染同坐标系（EXP-067 正逆成对：节点中心 =
+`chrome::iso_cell_fit` + 瓦片半边，数据源同一 `board_spaces`），瞬态选中态按既有
+`board_toast`/`last_dispatch` 范式落宿主（`MapHost` 契约 + GameApp 字段），场景层只读写契约。
+
+落码内容（S21.7 标题四项）：
+① **点赛道节点 = 高亮 + 信息签**：命中半径 = 节点牌可见边长/2 + 8px（与渲染同源
+   `chrome::node_edge_px`）；命中非自身节点 ⇒ `track_node_sel = Some(i)`；
+   渲染 = `gold_warm` 2px 高亮环（牌框每侧外扩 3px）+ **签条式信息签**（`brass_dark` 底板 +
+   黄铜边，锚定节点上方，越上沿翻到下方，宽按字自适应最小 240，中心 = 节点中心）。
+   信息签文案 = 标签行 `scene.main_map.node.<kind>` + 产出行（城市/宝藏/遭遇读
+   `balance.board` 定值复用 `toast.city_fmt`/`treasure_fmt`/`battle_fmt`；事件/卡牌/BOSS =
+   随机或未定 ⇒ **不臆测数值**，只显标签）。
+   **只读预览**：不动、不切场景（移动唯一 = 摇骰，S19 收口不破）。
+② **摇骰后落点脉冲**：toast 窗口（120 帧）内在当前格画同款高亮环 = 「1 拍」脉冲；
+   摇骰同时清空预览选中（`set_track_node_sel(None)`）。
+③ **提示签条沿用**（S19.7 D3 底板）：v4 位置 = `hint` 键中心 (540,1632)，S21.6 已迁。
+④ **点自己格 = 据点菜单（保留 P0-5）**：命中自身节点 ⇒ `Landmark(1)`（与既有格命中同语义）。
+
+验收判据（实跑）：
+1. **e2e 新增 `e2e_track_node_preview`**（crates/ti-app/tests/e2e_playthrough.rs）：4 组断言全绿
+   ① 点非己节点 ⇒ `track_node_sel == Some(target)` + 位置不变 + 场景不变 + **信息签标签键解析**
+      （`sget(key) != key` ⇒ 非键名回退 = 命中 kind → 文案判据）；
+   ② 摇骰 ⇒ 骰点值 > 0 + 预览选中清空 + 落格 toast 窗口（Plain/Start/BOSS 无结算 = 无 toast
+      属设计，按 kind 分支断言）；
+   ③ 摇骰后再点节点仍可选中（不锁死预览）；
+   ④ 点自身格 ⇒ `last_dispatch == map_session_dispatch(1)`（据点分派，P0-5 不回归）。
+2. **现有交互 0 回归**：`e2e_touch_economy_loop`（贸易/出售/建造三臂）+ `e2e_board_spin_loop` +
+   `e2e_battle_determinism` + 全 workspace 测试 0 failed。
+3. `cargo clippy --workspace --all-targets --features ti-app/native-shell,ti-app/headless
+   -- -D warnings` 0 warning；`cargo fmt --all --check` 0 差异。
+4. `scripts/gate.ps1` 23 项 **0 failure**（doccheck2 37 项 0 error + check_hardcode 0 命中 +
+   audit_code 0 违规 + 三方对账 0 缺口）。
+5. **代码规模纪律**：`main_map.rs` 911 → 617 行（岛绘段拆 `scenes/main_map_island.rs`，
+   节点信息签拆 `scenes/main_map_node.rs` ⇒ 一个文件一个职责，audit_code 文件/函数/DUP 三阈全过）。
+
+文档同步：`docs/business/08_layout_design.md` §4.3 = 版面坐标镜像（本次无坐标变更，仅新增
+交互语义）；交互契约单一事实源 = `docs/ui-redesign-v3/08_main_map_v4_spec.md` §4「点格语义」
+（本次按该规格落码，未改规格）。
+
+## 视觉验收归属
+
+本次为**交互语义**变更（点选态高亮 + 信息签），静态出图不含点选态 ⇒ 视觉终态验收归
+**S21.9**（7 屏出图 + 用户视觉签收，A 纪律）。本任务判据不含用户签收项（数据面仅
+`strings.json` 文案键，非 scenes/theme 版面数据面 ⇒ doccheck2 `visual-signoff` 门禁不触发）。

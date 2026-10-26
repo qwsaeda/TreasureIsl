@@ -15,6 +15,8 @@ use crate::game_app::GameInput;
 use crate::i18n;
 use crate::menu_shell::{COLOR_LANDMARK, COLOR_PLAYER};
 use crate::scenes::chrome;
+use crate::scenes::main_map_island;
+use crate::scenes::main_map_node;
 use crate::scenes::{Scene, SceneHost, SceneKind, enter_target};
 use crate::touch::{TouchSample, layout};
 use ti_platform::settings::Gesture;
@@ -221,6 +223,8 @@ impl Scene for MainMapScene {
                 let Some(turn) = host.board_spin() else {
                     return false;
                 };
+                // S21.7：摇骰 = 移动唯一入口 ⇒ 预览选中清空（落点脉冲由 toast 窗口接管）。
+                host.set_track_node_sel(None);
                 if turn.boss.engaged() {
                     host.start_battle();
                     return true;
@@ -288,6 +292,30 @@ impl Scene for MainMapScene {
                 if hud_hit(chrome::keys::HUD_BUILD) {
                     return host.advance(GameInput::Build(Building::Castle));
                 }
+                // S21.7：点赛道节点 = 高亮 + 信息签（只读预览，不移动）；点自身所在格
+                // = 据点菜单（P0-5 保留）。命中判定与渲染同坐标系（EXP-067：节点中心 =
+                // `iso_cell_fit` + 瓦片半边，`board_spaces` 数据源同一）。
+                let spaces = host.board_spaces();
+                if spaces.len() >= 2 {
+                    let gw = host.terrain_grid_w();
+                    let (tw, th) = chrome::iso_tile_fit(&l, gw);
+                    let hit_r = chrome::node_edge_px(&l, gw) / 2 + 8;
+                    let cur = host.board_index();
+                    for (i, sp) in spaces.iter().enumerate() {
+                        let r = i32::try_from(sp.cell.row).unwrap_or(0);
+                        let c = i32::try_from(sp.cell.col).unwrap_or(0);
+                        let (sx, sy) = chrome::iso_cell_fit(r, c, &l, gw);
+                        let dx = (sx + tw - px).abs();
+                        let dy = (sy + th - py).abs();
+                        if dx <= hit_r && dy <= hit_r {
+                            if i == cur {
+                                return host.advance(GameInput::Landmark(1));
+                            }
+                            host.set_track_node_sel(Some(i));
+                            return true;
+                        }
+                    }
+                }
                 let Some(terrain) = host.map_terrain() else {
                     return false;
                 };
@@ -333,7 +361,7 @@ impl Scene for MainMapScene {
         // 地形表缺失 = 回退 v2 单色（不 panic、不空图）。
         let gw_i = i32::try_from(gw).unwrap_or(0);
         let (tw, th) = (bg.tw, bg.th);
-        draw_board(host, &layout, gw, gw_i, tw, th);
+        main_map_island::draw_board(host, &layout, gw, gw_i, tw, th);
 
         // S18.7f：v3 版面外壳（夜空底 + 世界画布框 + HUD 边角面板 + 底部命令盘 + 标题 +
         // 提示 + 木框）100% 数据驱动 = `scenes.json` `main_map.primitives`（画布框
@@ -532,6 +560,30 @@ fn render_track(
     let lbl = i18n::sget("scene.main_map.player_label");
     entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
 
+    // 4.5) S21.7：节点预览选中（`gold_warm` 高亮环 + 信息签）+ 落点脉冲（toast 窗口内
+    // 当前格画环，「1 拍」= `board_toast` 120 帧寿命）。
+    let gold_warm = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
+    if let Some(i) = host.track_node_sel() {
+        if i < spaces.len() {
+            let (nx, ny) = centers[i];
+            let def = chrome::node_asset(spaces[i].kind);
+            chrome::draw_node_ring(host, nx, ny, edge, def.visible_px, gold_warm);
+            main_map_node::draw_node_card(
+                host,
+                nx,
+                ny - edge / 2,
+                ny + edge / 2,
+                spaces[i].kind,
+                &theme,
+            );
+        }
+    }
+    if host.board_toast().is_some() && idx < spaces.len() {
+        let (nx, ny) = centers[idx];
+        let def = chrome::node_asset(spaces[idx].kind);
+        chrome::draw_node_ring(host, nx, ny, edge, def.visible_px, gold_warm);
+    }
+
     // 5) 骰子数（摇骰按钮上方居中，`board_last_roll` = 0 → 不画）
     let roll = host.board_last_roll();
     if roll > 0 {
@@ -569,215 +621,4 @@ fn render_board_toast(host: &mut dyn SceneHost) {
     host.fill_rect(px + panel_w - 2, py, 2, panel_h, brass);
     let tx = 540 - tw / 2;
     host.draw_hint_text(&toast, tx, ty, chrome::COLOR_TEXT_ON_PARCH);
-}
-
-/// S18.9：等距棋盘绘制 —— **按地形取色**（`assets/data/terrain.json` 数据 → theme 令牌）。
-///
-/// 地形表缺失 / 越界 = 回退 v2 单色（不 panic、不空图）。陆地按 (r+c) 奇偶用图例 `alt` 交错。
-/// S21.4 岛屿重绘：只画陆/礁/宝格（海洋格不画 → 巨型蓝菱形消失）+ 墨线海岸描边 +
-/// 礁石浅滩环 + 陆内确定性纹理（`terrain.json` 为唯一数据源；`legend.edge` = 边饰色：
-/// reef→`sea_shallow` 浅滩环 / land·treasure→`land_sand_light` 陆内纹理）。
-///
-/// 可见块口径：等距格底 = `2tw × 2th` 矩形，但**下半被后画的邻块覆盖** ⇒ 每格的可见
-/// 面 = 顶半 `2tw × th`；装饰（墨线/浅滩环/纹理）一律画在可见块上，坐标与
-/// `chrome::iso_cell_fit` 同源（EXP-067 正逆成对）。
-///
-/// 可见块的 4 边邻居（共享整边）：上 = `(r-1,c)`/`(r,c-1)`、下 = `(r+1,c)`/`(r,c+1)`、
-/// 左 = `(r+1,c-1)`、右 = `(r-1,c+1)`（半砖错位布局）。
-const ISLAND_INK_TOKEN: &str = "wood_warm";
-const ISLAND_INK_PX: i32 = 1;
-const ISLAND_REEF_SHALLOWS_PX: i32 = 3;
-const ISLAND_TEXTURE_LEN: i32 = 4;
-const ISLAND_TEXTURE_INSET: i32 = 3;
-/// 海洋格码（`terrain.json` legend `S`）；不画 = 岛屿剪影。
-const ISLAND_SEA_CODE: char = 'S';
-/// 礁石格码（legend `R`）。
-const ISLAND_REEF_CODE: char = 'R';
-
-/// 确定性格哈希（FNV-1a 变体；**禁 RNG** → 陆内纹理在快照/像素对拍中可复现）。
-fn island_cell_hash(r: i32, c: i32) -> u32 {
-    let mut h: u32 = 2_166_136_261;
-    for b in r.to_le_bytes().into_iter().chain(c.to_le_bytes()) {
-        h ^= u32::from(b);
-        h = h.wrapping_mul(16_777_619);
-    }
-    h
-}
-
-/// 画岛屿（`terrain.json` 驱动）：底色 → 墨线海岸 → 礁石浅滩环 → 陆内纹理。
-/// S21.4 岛屿绘制上下文（地形查询 + 主题色 + 墨线色）。
-struct IslandCtx<'a> {
-    /// 地形表（缺 = 全海 ⇒ 不画）。
-    terrain: Option<&'a data::TerrainDb>,
-    /// 当前地图 id（缺 = 全海 ⇒ 不画）。
-    map_id: Option<&'a str>,
-    /// 主题（色令牌）。
-    theme: &'a ti_render::theme::Theme,
-    /// 墨线海岸色（`wood_warm` 暖墨棕；缺令牌 = 回退面板底色）。
-    ink: u16,
-}
-
-impl IslandCtx<'_> {
-    /// 地形码（缺表/缺图/越界 = 海）。
-    fn code_at(&self, r: i32, c: i32) -> char {
-        let (Some(t), Some(mid)) = (self.terrain, self.map_id) else {
-            return ISLAND_SEA_CODE;
-        };
-        let (Ok(rr), Ok(cc)) = (u32::try_from(r), u32::try_from(c)) else {
-            return ISLAND_SEA_CODE;
-        };
-        t.code_at(mid, rr, cc).unwrap_or(ISLAND_SEA_CODE)
-    }
-
-    /// 是否海洋格（不画 → 岛屿剪影）。
-    fn is_sea(&self, r: i32, c: i32) -> bool {
-        self.code_at(r, c) == ISLAND_SEA_CODE
-    }
-
-    /// 图例（地形类别 → 令牌）。
-    fn legend(&self, code: char) -> Option<&data::TerrainLegend> {
-        self.terrain.and_then(|t| t.legend_of(code))
-    }
-
-    /// 图例令牌色（缺令牌 = 面板底色回退）。
-    fn token_color(&self, token: &str) -> u16 {
-        self.theme.by_name(token).unwrap_or(crate::menu_shell::COLOR_MENU_BG)
-    }
-}
-
-/// 画岛屿（`terrain.json` 驱动）：底色 → 墨线海岸 → 礁石浅滩环 → 陆内纹理。
-fn draw_board(
-    host: &mut dyn SceneHost,
-    layout: &SceneLayout,
-    gw: u32,
-    gw_i: i32,
-    tw: i32,
-    th: i32,
-) {
-    if gw_i <= 0 || tw <= 0 || th <= 0 {
-        return;
-    }
-    let theme = host.theme().clone();
-    let ctx = IslandCtx {
-        terrain: data::terrain().ok(),
-        map_id: host.map_slot().map(crate::game_app::map_slot_id),
-        theme: &theme,
-        ink: theme.by_name(ISLAND_INK_TOKEN).unwrap_or(crate::menu_shell::COLOR_MENU_BG),
-    };
-    draw_island_bases(host, layout, gw, gw_i, tw, th, &ctx);
-    draw_island_decor(host, layout, gw, gw_i, tw, th, &ctx);
-}
-
-/// pass 1：底色（陆/礁/宝格；海洋格跳过 → 岛屿剪影）。
-///
-/// v4 岛屿 = **暖砂剪影**（S21.3 §0）：`legend.alt` 的 (r+c) 奇偶棋盘变体退役
-/// （v3「现代棋盘感」残留），陆面统一 `token` 色 + 确定性纹理；`alt` 字段保留
-/// （不删数据，S21.8 存量豁免清零时统一处置）。
-fn draw_island_bases(
-    host: &mut dyn SceneHost,
-    layout: &SceneLayout,
-    gw: u32,
-    gw_i: i32,
-    tw: i32,
-    th: i32,
-    ctx: &IslandCtx<'_>,
-) {
-    for r in 0..gw_i {
-        for c in 0..gw_i {
-            let code = ctx.code_at(r, c);
-            if code == ISLAND_SEA_CODE {
-                continue;
-            }
-            let (sx, sy) = chrome::iso_cell_fit(r, c, layout, gw);
-            let base = ctx
-                .legend(code)
-                .map_or_else(|| crate::menu_shell::COLOR_MENU_BG, |l| ctx.token_color(&l.token));
-            host.fill_rect(sx, sy, tw * 2, th * 2, base);
-        }
-    }
-}
-
-/// pass 2：装饰（墨线海岸 / 礁石浅滩环 / 陆内纹理）——画在可见块（顶半）上，
-/// 顶层绘制 ⇒ 不被邻块底色覆盖（海岸线连续）。
-fn draw_island_decor(
-    host: &mut dyn SceneHost,
-    layout: &SceneLayout,
-    gw: u32,
-    gw_i: i32,
-    tw: i32,
-    th: i32,
-    ctx: &IslandCtx<'_>,
-) {
-    let bw = tw * 2;
-    let bh = th;
-    for r in 0..gw_i {
-        for c in 0..gw_i {
-            let code = ctx.code_at(r, c);
-            if code == ISLAND_SEA_CODE {
-                continue;
-            }
-            let (sx, sy) = chrome::iso_cell_fit(r, c, layout, gw);
-            let edge_color = ctx.legend(code).map(|l| ctx.token_color(&l.edge));
-            let up_sea = ctx.is_sea(r - 1, c) || ctx.is_sea(r, c - 1);
-            let down_sea = ctx.is_sea(r + 1, c) || ctx.is_sea(r, c + 1);
-            let left_sea = ctx.is_sea(r + 1, c - 1);
-            let right_sea = ctx.is_sea(r - 1, c + 1);
-
-            // 墨线海岸描边：**所有非海格**的临海边（岛的外轮廓连续；陆↔礁交界不画线）。
-            if up_sea {
-                host.fill_rect(sx, sy, bw, ISLAND_INK_PX, ctx.ink);
-            }
-            if down_sea {
-                host.fill_rect(sx, sy + bh - ISLAND_INK_PX, bw, ISLAND_INK_PX, ctx.ink);
-            }
-            if left_sea {
-                host.fill_rect(sx, sy, ISLAND_INK_PX, bh, ctx.ink);
-            }
-            if right_sea {
-                host.fill_rect(sx + bw - ISLAND_INK_PX, sy, ISLAND_INK_PX, bh, ctx.ink);
-            }
-
-            if code == ISLAND_REEF_CODE {
-                // 礁石浅滩环：向可见块外扩的浅滩带（`legend.edge` = sea_shallow）。
-                let shallow = edge_color.unwrap_or(ctx.theme.sea_shallow);
-                if up_sea {
-                    host.fill_rect(
-                        sx,
-                        sy - ISLAND_REEF_SHALLOWS_PX,
-                        bw,
-                        ISLAND_REEF_SHALLOWS_PX,
-                        shallow,
-                    );
-                }
-                if down_sea {
-                    host.fill_rect(sx, sy + bh, bw, ISLAND_REEF_SHALLOWS_PX, shallow);
-                }
-                if left_sea {
-                    host.fill_rect(
-                        sx - ISLAND_REEF_SHALLOWS_PX,
-                        sy,
-                        ISLAND_REEF_SHALLOWS_PX,
-                        bh,
-                        shallow,
-                    );
-                }
-                if right_sea {
-                    host.fill_rect(sx + bw, sy, ISLAND_REEF_SHALLOWS_PX, bh, shallow);
-                }
-                continue;
-            }
-
-            // 陆内确定性纹理：哈希定点的短划（`legend.edge` = land_sand_light 浅砂颗粒）。
-            let Some(tex) = edge_color else { continue };
-            let span_x = (bw - ISLAND_TEXTURE_INSET * 2 - ISLAND_TEXTURE_LEN).max(1);
-            let span_y = (bh - ISLAND_TEXTURE_INSET * 2).max(1);
-            for h in [island_cell_hash(r, c), island_cell_hash(c, r)] {
-                let ox = ISLAND_TEXTURE_INSET
-                    + i32::try_from(h % u32::try_from(span_x).unwrap_or(1)).unwrap_or(0);
-                let oy = ISLAND_TEXTURE_INSET
-                    + i32::try_from((h >> 8) % u32::try_from(span_y).unwrap_or(1)).unwrap_or(0);
-                host.fill_rect(sx + ox, sy + oy, ISLAND_TEXTURE_LEN, 1, tex);
-            }
-        }
-    }
 }

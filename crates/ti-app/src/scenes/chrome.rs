@@ -452,6 +452,23 @@ pub fn asset_present(asset: &str) -> bool {
     }
 }
 
+/// S21.7 节点高亮环（`gold_warm` 2px 外圈，节点牌可见框每侧外扩 3px；预览选中 / 落点脉冲共用）。
+pub fn draw_node_ring(
+    host: &mut dyn SceneHost,
+    cx: i32,
+    cy: i32,
+    edge: i32,
+    visible_px: i32,
+    color: u16,
+) {
+    let (dx, dy, dw, dh) = asset_dest_rect(cx, cy, edge, visible_px);
+    let r = 3;
+    host.fill_rect(dx - r, dy - r, dw + 2 * r, 2, color);
+    host.fill_rect(dx - r, dy + dh + r - 2, dw + 2 * r, 2, color);
+    host.fill_rect(dx - r, dy - r, 2, dh + 2 * r, color);
+    host.fill_rect(dx + dw + r - 2, dy - r, 2, dh + 2 * r, color);
+}
+
 /// 画布相对边长（`extra_scalar` = `<key>.size`，**占瓦片半宽的百分比** × `board_fit.tw`）。
 ///
 /// 百分比口径 = 随棋盘缩放（v3 `world_canvas` tw=24 ⇒ 1× = 24px；v4 tw=48 ⇒ 1× = 48px）；
