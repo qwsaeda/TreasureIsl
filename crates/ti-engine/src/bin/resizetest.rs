@@ -61,13 +61,13 @@ pub fn resizetest_system(
             let pass = test.s1 > 0.0 && test.s2 > test.s1 * 1.8 && test.s2 < test.s1 * 2.2;
             if pass {
                 println!(
-                    "[resizetest] PASS（s1={:.3} → s2={:.3}，窗口翻倍后相机正交 scale 同步翻倍）",
+                    "[resizetest] PASS (s1={:.3} -> s2={:.3}; camera ortho scale doubled with window)",
                     test.s1, test.s2
                 );
                 exits.write(AppExit::Success);
             } else {
                 eprintln!(
-                    "[resizetest] FAIL（s1={:.3} s2={:.3} resized={}；窗口缩放未驱动相机）",
+                    "[resizetest] FAIL (s1={:.3} s2={:.3} resized={}; window resize did not drive camera)",
                     test.s1, test.s2, test.resized
                 );
                 exits.write(AppExit::error());
