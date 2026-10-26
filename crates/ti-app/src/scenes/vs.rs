@@ -67,8 +67,45 @@ impl Scene for VsScene {
             // 血条语义 = 08_layout_design §2 L52-53（S15.6 B1 裁决②）：玩家青绿 COLOR_PLAYER /
             // BOSS 血红 COLOR_DANGER（旧实现按 §4.4 表互置 + S14 色板，QA003/QA038）。
             // 槽底 = JSON 原语（`vs.primitives`），此处只画运行时 HP 填充。
-            host.fill_rect(ph_bar.x, ph_bar.y, ph_w, ph_bar.h, COLOR_PLAYER);
-            host.fill_rect(bh_bar.x, bh_bar.y, bh_w, bh_bar.h, COLOR_DANGER);
+            // S26.3：填充 + 黄铜描边 + 名字标签 + 数值（消除「裸色块」观感；
+            // 文案键 `scene.vs.hp_*`，`{0}/{1}` 占位 = 当前/上限）。
+            let theme = host.theme().clone();
+            let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+            let pl_label = i18n::sget("scene.vs.hp_player");
+            let bo_label = i18n::sget("scene.vs.hp_boss");
+            let pl_num = i18n::sgetf("scene.vs.hp_fmt", &[&b.player_hp, &b.player_hp_max]);
+            let bo_num = i18n::sgetf("scene.vs.hp_fmt", &[&b.boss_hp, &b.boss_hp_max]);
+            for (bar, label, num, right_align) in
+                [(&ph_bar, pl_label, pl_num, false), (&bh_bar, bo_label, bo_num, true)]
+            {
+                let fill_w = if bar == &ph_bar { ph_w } else { bh_w };
+                let fill_color = if bar == &ph_bar { COLOR_PLAYER } else { COLOR_DANGER };
+                host.fill_rect(bar.x, bar.y, fill_w, bar.h, fill_color);
+                // 黄铜描边（4 边 2px，内嵌槽沿）
+                host.fill_rect(bar.x, bar.y, bar.w, 2, brass);
+                host.fill_rect(bar.x, bar.y + bar.h - 2, bar.w, 2, brass);
+                host.fill_rect(bar.x, bar.y, 2, bar.h, brass);
+                host.fill_rect(bar.x + bar.w - 2, bar.y, 2, bar.h, brass);
+                // 标签（槽上沿；右对齐 = BOSS 侧贴槽右缘）
+                let ly = bar.y - 32;
+                if right_align {
+                    host.draw_hint_text(
+                        label,
+                        bar.x + bar.w - host.shell().hint_text_width_px(label),
+                        ly,
+                        chrome::COLOR_TEXT_ON_PARCH,
+                    );
+                } else {
+                    host.draw_hint_text(label, bar.x, ly, chrome::COLOR_TEXT_ON_PARCH);
+                }
+                // 数值（槽内右缘，留 8px 内缩）
+                host.draw_hint_text(
+                    &num,
+                    bar.x + bar.w - 8 - host.shell().hint_text_width_px(&num),
+                    bar.y + (bar.h - host.shell().hint_glyph_px()) / 2,
+                    chrome::COLOR_TEXT_ON_PARCH,
+                );
+            }
             let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
             // QA141：回合/结果/空态文本 44px 屏心居中（scenes.json rounds/outcome/empty x=540 = 居中语义）
             let rd_x = chrome::centered_body_x(host, &rd);

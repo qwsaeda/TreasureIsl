@@ -70,8 +70,10 @@ impl Scene for MessageScene {
         let key = format!("msg.{}", kind.label());
         let title = crate::i18n::sget(&key);
         let t = layout.title;
+        // S26.3：标题色 `text_on_wood`（金 0xFE55）压在 `wood_warm` 金条上 = 金上金低对比；
+        // 改 `COLOR_TEXT_ON_PARCH`（亮奶油 0xF7BA）压中金条 = 暖调高对比（深棕/蓝 出板或闷，弃用）。
         let tx = t.x - host.shell().text_width_px(title) / 2;
-        host.draw_text_colored(title, tx, t.y, chrome::COLOR_TEXT_ON_WOOD);
+        host.draw_text_colored(title, tx, t.y, chrome::COLOR_TEXT_ON_PARCH);
         let body = layout.extra.get("body").copied().unwrap_or_default();
         let page = host.msg_page();
         let key = page_text(kind, page);

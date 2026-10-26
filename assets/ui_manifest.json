@@ -473,6 +473,42 @@
    "params": {},
    "generated_at": "2026-10-26",
    "prompt": "a single armoured patrol warship with four gun ports, steel plated hull and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+  },
+  {
+   "name": "island_m01",
+   "role": "island",
+   "file": "assets/ui/island_m01.png",
+   "params": {
+    "map": "m01",
+    "grid": 20,
+    "canvas": "994x826"
+   },
+   "generated_at": "2026-10-26",
+   "generator": "scripts/ui_islands.py"
+  },
+  {
+   "name": "island_m02",
+   "role": "island",
+   "file": "assets/ui/island_m02.png",
+   "params": {
+    "map": "m02",
+    "grid": 20,
+    "canvas": "994x826"
+   },
+   "generated_at": "2026-10-26",
+   "generator": "scripts/ui_islands.py"
+  },
+  {
+   "name": "island_m03",
+   "role": "island",
+   "file": "assets/ui/island_m03.png",
+   "params": {
+    "map": "m03",
+    "grid": 15,
+    "canvas": "994x826"
+   },
+   "generated_at": "2026-10-26",
+   "generator": "scripts/ui_islands.py"
   }
  ]
 }

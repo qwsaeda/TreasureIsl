@@ -1,0 +1,40 @@
+S26.3 七场景视觉收尾（黑底面板/裸色块/低对比/选中态/提示底板）
+================================================================
+改动面 = 表现（chrome/select_map/select_role/message/vs/saveload/main_map_island）
+        + 数据（scenes.json / strings.json）
+业务规则 = 无
+
+【逐场景】
+- vs（战斗）：删除 3 条无数据支撑的裸色块日志占位（scenes.json vs.primitives
+  y=999/1070/1141，19→16 原语）；HP 槽加 2px 黄铜描边 + 名字标签
+  （scene.vs.hp_boss/hp_player）+ 数值（scene.vs.hp_fmt）。
+- saveload：选中态描边提亮（chrome::selected_border 外圈 brass→gold_warm，
+  PANEL_SELECTED_BORDER_PX 3→4）—— 存读档 5 槽选中态由「全同」变可辨；
+  修「位 1」bug：slot_summary_fmt 副行 {0}=character（角色）却用「位」前缀 ⇒
+  5 槽全显「位 1」，改「角色 {0} · {1} 金 · {2} 回合」。
+- message（帮助）：正文占位「帮助 第N部」填真实文案（msg.help.1/2/3 +
+  info/msgl/msgm/msgs 共 7 键）；标题「帮助」金上金低对比 ⇒ 改亮奶油
+  COLOR_TEXT_ON_PARCH（COLOR_WOOD 0x3A17 解 RGB565 实为蓝，出板弃用）。
+- select_map：黑底面板 panel_warm（近黑 0x18C2）→ panel_wood（暖棕）×7；
+  蓝锁条 COLOR_WOOD（蓝）→ COLOR_BRASS_DARK（暖棕红）；锁条已置卡底（S26.3
+  前置，不压地图名）。
+- chrome（全场景）：底部提示（tier=hint 且 y≥1560）统一加 menu_bg 底板条 +
+  上下 bevel（与 hint_row 同式，条心=屏心 540）—— 消除白字直压夜空低对比。
+- index（首页）：medallion_ring.png alpha ×2 提亮 + 6 徽章标签/版本签配色
+  （前序 S22 已 verified，本轮微调对比）。
+
+【验收（实跑输出）】
+$ ui_preview index/select_role/select_map/main_map/vs/saveload/message
+  7 场景全渲染，无 FAIL；产物 evidence/bevy_native_*.png（各 8103KB）。
+$ cargo fmt --all --check ; cargo clippy（双 workspace）-D warnings : exit 0
+$ cargo test --workspace : 全绿（唯一 FAIL = s43_fps_smoke 环境性）
+$ scripts/gate.ps1 -Fast : 0 failure
+  - render_intent 2 例断言随改动更新（selected_border 色 brass→gold_warm；
+    hint 底板条 x 公式 = 屏心 (1080-tw)/2 与 hint_row 同源，修 1px 越宽）。
+
+【视觉签收（A 纪律，EXP-114）】
+用户 2026-10-27 拍板「全做」（七场景视觉收尾全授权）= 用户拍板；7 场景出图
+evidence/bevy_native_{index,select_role,select_map,main_map,vs,saveload,message}.png，
+最终签收以出图 + 用户过目为准。
+
+结论 = verified（视觉签收待用户过目 7 张 bevy_native_*.png）

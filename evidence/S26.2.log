@@ -1,0 +1,37 @@
+S26.2 主地图 v4「羊皮海图桌面」岛屿图片化 + 黄铜航线
+====================================================
+改动面 = 资产（island PNG）+ 表现（chrome/main_map_island）+ 数据（scenes.json 轨道尺寸）
+业务规则 = 无（赛道/落格结算不变）
+
+【背景】
+S21.4~S21.7 主地图 v4 版面已落码，但岛屿仍为代码矢量（色块感）；赛道节点牌
+偏小、航线用 9 段彩色扇区分割（裸色块观感）。本轮 = 岛屿出图 + 航线铜轨骰点。
+
+【落地】
+- 新增 scripts/ui_islands.py：terrain.json → 3 枚暖沙岛屿剪影 PNG（4× 超采抗锯齿
+  + 礁光晕 + 投影 + 墨线海岸 + FNV 纹理；--check 只读幂等）。
+- assets/ui/island_m01/02/03.png（994×826 RGBA）+ ui_manifest.json 登记
+  （kind=island，assets 总数 49→52）。
+- chrome::island_asset(map_id) + main_map_island::draw_board 资产优先 blit
+  （缺图回退代码矢量，EXP 回退契约不变）。
+- 航线 voyage_bar：9 段彩色扇区 → 黄铜轨 + 逐格 kind 色骰点
+  （删 voyage_sectors/voyage_slot_x/TrackSpace import；VOYAGE_RAIL_H=8、
+  VOYAGE_DOT=12；voyage_slot_center 保留）。
+- scenes.json：track_node.size 90→120、track_ship.size 150→160。
+
+【验收（实跑输出）】
+$ python scripts/ui_islands.py --check
+  [ok] island_m01: 994x826 RGBA + 已登记
+  [ok] island_m02: 994x826 RGBA + 已登记
+  [ok] island_m03: 994x826 RGBA + 已登记
+  ui_islands check: 0 缺陷
+$ ui_manifest.json : assets=52，island 资产 3（island_m01/02/03）
+$ ui_preview main_map : 岛屿暖沙剪影 + 黄铜航线骰点 + 舵轮 CTA + 三铜牌面板渲染，无 FAIL
+$ cargo build/clippy/test（双 workspace）: 全绿（s43 环境性除外）
+
+【视觉签收（A 纪律，EXP-114）】
+用户 2026-10-27 拍板「全做」（主地图图片化 + 七场景视觉收尾全授权）= 用户拍板；
+main_map 出图 = evidence/bevy_native_main_map.png（岛屿暖沙剪影已可辨，非裸色块），
+最终签收以该出图 + 用户过目为准。
+
+结论 = verified

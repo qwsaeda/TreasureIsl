@@ -90,7 +90,7 @@ impl IslandCtx<'_> {
 /// 画岛屿（`terrain.json` 驱动）：底色 → 墨线海岸 → 礁石浅滩环 → 陆内纹理。
 pub(crate) fn draw_board(
     host: &mut dyn SceneHost,
-    layout: &SceneLayout,
+    layout: &data::SceneLayout,
     gw: u32,
     gw_i: i32,
     tw: i32,
@@ -98,6 +98,19 @@ pub(crate) fn draw_board(
 ) {
     if gw_i <= 0 || tw <= 0 || th <= 0 {
         return;
+    }
+    // S26.2 岛屿图片化：`island_m0X`（`scripts/ui_islands.py` 按同 `board_fit` 几何生成）
+    // 1:1 贴入 `world_canvas`（节点牌/航线/船仍 = 代码层，命中判定不破）；
+    // 资产缺失 / 键缺失 / 地图 id 无对应资产 = 回退代码绘制（不 panic、不空图）。
+    if let Some(mid) = host.map_slot().map(crate::game_app::map_slot_id) {
+        if let Some(path) = chrome::island_asset(mid) {
+            if chrome::asset_present(path) {
+                if let Some(c) = layout.extra.get(chrome::keys::WORLD_CANVAS) {
+                    host.blit_image(path, c.x, c.y, c.w, c.h);
+                    return;
+                }
+            }
+        }
     }
     let theme = host.theme().clone();
     let ctx = IslandCtx {

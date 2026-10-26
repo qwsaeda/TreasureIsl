@@ -19,7 +19,7 @@ use ti_render::theme::Theme;
 
 use crate::scenes::{RenderHost, SceneHost};
 use ti_core::data::{IconDef, Primitive, icon_ids, ui_icons};
-use ti_core::rules::board::{SpaceKind, TrackSpace};
+use ti_core::rules::board::SpaceKind;
 
 // === 颜色常量重导出（从 Theme 默认值，兼容旧导入路径） ===
 
@@ -447,12 +447,10 @@ const SHIP_EDGE_PCT_FALLBACK: i32 = 150;
 
 /// v4 航线进度尺：左右内边距（px；8pt 栅格）。
 const VOYAGE_PAD: i32 = 24;
-/// v4 航线进度尺：黄铜航线带厚度（px；8pt 栅格；= 扇区段高 ⇒ 段间露出黄铜航线）。
-const VOYAGE_SLOT_H: i32 = 24;
-/// v4 航线进度尺：扇区段高度（px；8pt 栅格）。
-const VOYAGE_SECTOR_H: i32 = 24;
-/// v4 航线进度尺：扇区间隙（px；8pt 栅格）。
-const VOYAGE_SECTOR_GAP: i32 = 8;
+/// S26.2 航线进度尺：黄铜槽厚度（px；8pt 栅格）。
+const VOYAGE_RAIL_H: i32 = 8;
+/// S26.2 航线进度尺：每格点边长（px；8pt 栅格）。
+const VOYAGE_DOT: i32 = 12;
 
 /// 节点牌资产（kind → 贴图；**唯一事实源** = 规格 §6）。
 #[derive(Debug, Clone, Copy)]
@@ -480,6 +478,18 @@ pub fn node_asset(kind: SpaceKind) -> NodeAsset {
         SpaceKind::Boss => NodeAsset { path: "assets/ui/node_boss.png", visible_px: 334 },
         SpaceKind::Plain => NodeAsset { path: "assets/ui/node_plain.png", visible_px: 182 },
     }
+}
+
+/// S26.2 岛屿图片化资产（地图 id → 资产路径；`scripts/ui_islands.py` 按 `terrain.json` +
+/// `world_canvas` 同几何生成 3 张，`ui_manifest.json` 登记；缺 = 调用方回退代码绘制）。
+#[must_use]
+pub fn island_asset(map_id: &str) -> Option<&'static str> {
+    Some(match map_id {
+        "m01" => "assets/ui/island_m01.png",
+        "m02" => "assets/ui/island_m02.png",
+        "m03" => "assets/ui/island_m03.png",
+        _ => return None,
+    })
 }
 
 /// 等比贴图目标矩形（**可见外接框归一化**）：可见边长 = `edge_px`，中心 (cx, cy)，无形变。
@@ -550,35 +560,19 @@ pub fn ship_edge_px(layout: &data::SceneLayout, g: u32) -> i32 {
     track_edge_px(layout, g, keys::TRACK_SHIP, SHIP_EDGE_PCT_FALLBACK)
 }
 
-/// 赛道分区连续段（`(group, 起始序号, 结束序号)`；`board.json` 分区 1..9 连续 ⇒ 9 段）。
-fn voyage_sectors(spaces: &[TrackSpace]) -> Vec<(u8, usize, usize)> {
-    let mut out: Vec<(u8, usize, usize)> = Vec::new();
-    for (i, sp) in spaces.iter().enumerate() {
-        match out.last_mut() {
-            Some(last) if last.0 == sp.group => last.2 = i,
-            _ => out.push((sp.group, i, i)),
-        }
-    }
-    out
-}
-
-/// 进度尺槽位左缘 x（第 `i` 格；`inner_x` 起均分）。
-fn voyage_slot_x(inner_x: i32, inner_w: i32, count: i32, i: i32) -> i32 {
-    inner_x + inner_w * i / count.max(1)
-}
-
 /// 进度尺槽位中心 x（第 `i` 格）。
 fn voyage_slot_center(inner_x: i32, inner_w: i32, count: i32, i: i32) -> i32 {
     inner_x + inner_w * (2 * i + 1) / (2 * count.max(1))
 }
 
-/// S21.5 v4 航线进度尺（`main_map.voyage_bar`）：把环岛赛道**摊平**为
-/// **1 条黄铜航线 + 9 个分区扇区段 + 玩家船标 + BOSS 终标**（替代 S19.7 的 45 点噪声条）。
+/// S21.5/S26.2 v4 航线进度尺（`main_map.voyage_bar`）：把环岛赛道**摊平**为
+/// **1 条黄铜槽 + 每格一色点（分区色）+ 玩家船标 + BOSS 终标**（规格 §2；
+/// S26.2 起 9 扇区色带 → 每格点，消除「一排裸色块」观感）。
 ///
 /// 业务依据（`docs/business/progression.md` §环岛赛道）：赛道 = 岛屿外环的有序空间序列；
-/// 本条 = 「绕岛进度」的可视化载体（分区 = `board.json` 的 `group` 1..9，连续段 = 扇区段）。
+/// 本条 = 「绕岛进度」的可视化载体（分区 = `board.json` 的 `group` 1..9）。
 ///
-/// 画法：底板（`brass_dark`，`panel_warm` 在深海底上隐形）+ 黄铜航线槽 + 分区色扇区段
+/// 画法：底板（`brass_dark`，`panel_warm` 在深海底上隐形）+ 黄铜槽 + 每格点（分区色）
 /// + 玩家船贴图 + BOSS 骷髅牌（缺贴图 = 代码矢量图标回退）。
 ///
 /// 无赛道（`board_spaces` 空）/ 键缺失 = 不画。
@@ -613,21 +607,14 @@ pub fn voyage_bar(host: &mut dyn SceneHost, scene_id: &str) {
     if inner_w <= 0 {
         return;
     }
-    // 1 条黄铜航线（环岛摊平 = 水平实线）
-    host.fill_rect(inner_x, track_y - VOYAGE_SLOT_H / 2, inner_w, VOYAGE_SLOT_H, brass);
+    // 1 条黄铜槽（环岛摊平 = 水平细槽，8pt 栅格）
+    host.fill_rect(inner_x, track_y - VOYAGE_RAIL_H / 2, inner_w, VOYAGE_RAIL_H, brass);
 
-    // 9 个扇区段（分区色；段间留缝露出黄铜航线）
-    for (group, s, e) in voyage_sectors(&spaces) {
-        let x0 = voyage_slot_x(inner_x, inner_w, count, i32::try_from(s).unwrap_or(0))
-            + VOYAGE_SECTOR_GAP / 2;
-        let x1 = voyage_slot_x(inner_x, inner_w, count, i32::try_from(e + 1).unwrap_or(0))
-            - VOYAGE_SECTOR_GAP / 2;
-        let w = x1 - x0;
-        if w <= 0 {
-            continue;
-        }
-        let c = theme.by_name(group_color_token(group)).unwrap_or(COLOR_GOLD_WARM);
-        host.fill_rect(x0, track_y - VOYAGE_SECTOR_H / 2, w, VOYAGE_SECTOR_H, c);
+    // S26.2：每格一点（分区色；替代 9 扇区色带 —— 粗色块观感消除）
+    for (i, sp) in spaces.iter().enumerate() {
+        let c = theme.by_name(group_color_token(sp.group)).unwrap_or(COLOR_GOLD_WARM);
+        let cx = voyage_slot_center(inner_x, inner_w, count, i32::try_from(i).unwrap_or(0));
+        host.fill_rect(cx - VOYAGE_DOT / 2, track_y - VOYAGE_DOT / 2, VOYAGE_DOT, VOYAGE_DOT, c);
     }
 
     // 玩家船标（船贴图；缺资产 = 代码 `compass` 图标回退）
@@ -683,19 +670,20 @@ pub fn wood_panel(host: &mut dyn SceneHost, x: i32, y: i32, w: i32, h: i32) {
 
 /// 选中态边框（v4 面板语言，S20.2）：**3px 黄铜边**（此前 = 整块金色填充，刺眼且抢戏）。
 ///
-/// 只画边不填底 ⇒ 面板底色（`panel_wood`）与文字可读性保持不变。
+/// S26.3：外圈改用 `gold_warm`（亮金，深面板上可见；旧 `brass` 中调与 `wood_panel` 边框
+/// 同色 ⇒ 存读档 5 槽外观全同、选中不可辨）；只画边不填底 ⇒ 面板底色与文字可读性不变。
 pub fn selected_border(host: &mut dyn SceneHost, px: i32, py: i32, pw: i32, ph: i32, thick: i32) {
     if pw <= 4 || ph <= 4 {
         return;
     }
     let theme = host.theme().clone();
-    let brass = theme.by_name("brass").unwrap_or(COLOR_GOLD_WARM);
+    let gold_warm = theme.by_name("gold_warm").unwrap_or(COLOR_GOLD_WARM);
     let brass_light = theme.by_name("brass_light").unwrap_or(COLOR_GOLD_WARM);
     let t = thick.max(2);
-    host.fill_rect(px - t, py - t, pw + t * 2, t, brass);
-    host.fill_rect(px - t, py + ph, pw + t * 2, t, brass);
-    host.fill_rect(px - t, py - t, t, ph + t * 2, brass);
-    host.fill_rect(px + pw, py - t, t, ph + t * 2, brass);
+    host.fill_rect(px - t, py - t, pw + t * 2, t, gold_warm);
+    host.fill_rect(px - t, py + ph, pw + t * 2, t, gold_warm);
+    host.fill_rect(px - t, py - t, t, ph + t * 2, gold_warm);
+    host.fill_rect(px + pw, py - t, t, ph + t * 2, gold_warm);
     host.fill_rect(px - t, py - t, pw + t * 2, 1, brass_light);
 }
 
@@ -750,7 +738,7 @@ pub fn layout_icon_label(
 
 /// v4 面板语言「选中边框」单一厚度（3px 黄铜边，S20.2；飞轮 R1 ⑥-07 单参源：
 /// `select_role`/`saveload` 双调用点引用，勿再各抄一份）。
-pub const PANEL_SELECTED_BORDER_PX: i32 = 3;
+pub const PANEL_SELECTED_BORDER_PX: i32 = 4;
 
 /// 场景外壳**底色层**（纯色 + 垂直渐变 + 暗角）——可被背景类原语覆盖（底色之上、外框之下）。
 /// 飞轮 R1 ⑦-10：零生产调用（场景绘制全走原语表），保留为拆分便利组合壳，doc 标注勿当已完成。
@@ -947,6 +935,17 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
                 } else {
                     crate::i18n::sget(&p.text_key).to_owned()
                 };
+                // S26.3 底部提示底板：tier=hint 且落屏底区（y≥1560）先画 `menu_bg` 条 + 上下 bevel
+                // （与 `hint_row` 完全同源：条宽 = 提示文本宽 + 8，条心 = 屏心 540；
+                // 消除「白字直压夜空/海图」低对比通病）
+                if p.tier == "hint" && r.y >= 1560 {
+                    let tw = c.hint_text_width(&content) + 8;
+                    let th = c.hint_glyph_height() + 4;
+                    let cx = (LOGICAL_W_I32 - tw) / 2;
+                    c.fill_rect(cx, r.y - 2, tw, th, theme.menu_bg);
+                    c.fill_rect(cx, r.y - 2, tw, 1, theme.bevel_hi);
+                    c.fill_rect(cx, r.y - 2 + th - 1, tw, 1, theme.bevel_shadow);
+                }
                 ti_render::generic::text(c, &content, r.x, r.y, r.w, r.h, &p.tier, color);
             }
             "icon" => {

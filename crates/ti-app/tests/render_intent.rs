@@ -708,13 +708,13 @@ fn selected_state_marker_visible_and_no_leak() {
             );
             continue;
         }
-        // S20.2 v4 面板语言：选中态 = **3px 黄铜边**（`chrome::selected_border`），
-        // S18.7d「gold_warm 整块填充底」退役（卡底统一 `panel_wood`，只画边不填底）；
-        // 判据 = 行 0 卡顶缘**外** 3px 边带有 `brass` 像素（该带只有选中边框会画）；
-        // 行 1 卡左缘**外** 3px 竖条无（避开行 0 边框触及高度：其外框止于顶+高+边= top1-8 内）。
+        // S20.2 v4 面板语言：选中态 = **黄铜/亮金边**（`chrome::selected_border`，S26.3 外圈
+        // `gold_warm`，此前 = 整块金色填充，刺眼且抢戏；卡底统一 `panel_wood`，只画边不填底）；
+        // 判据 = 行 0 卡顶缘**外** 边带有 `gold_warm` 像素（该带只有选中边框会画）；
+        // 行 1 卡左缘**外** 竖条无（避开行 0 边框触及高度：其外框止于顶+高+边= top1-8 内）。
         let sel = ti_render::theme::Theme::default()
-            .by_name("brass")
-            .unwrap_or(ti_app::scenes::chrome::COLOR_BRASS);
+            .by_name("gold_warm")
+            .unwrap_or(ti_app::scenes::chrome::COLOR_GOLD_WARM);
         let top0 = layout.list.y - layout.list.highlight_offset;
         let top1 = top0 + layout.list.row_h;
         assert!(

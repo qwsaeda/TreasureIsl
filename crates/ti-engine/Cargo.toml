@@ -10,6 +10,10 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
+# S24.1：resizetest.rs 是 treasure_bevy 壳的子模块（`mod resizetest;`），不是独立 bin
+# —— 关掉 src/bin/ 自动 bin 探测，否则 cargo 把它当第三个 bin 编译（`super::` 越 crate 根
+# 必编译失败，且 gate 只构建声明 bin 时此错潜伏不报）。
+autobins = false
 description = "S18：Bevy 呈现后端（Canvas trait 的 Bevy 实现 + 相机/层/粒子）；零游戏语义，与 ti-render 对等定位（docs/process/11_bevy_migration.md §4）"
 
 [lib]
@@ -31,7 +35,11 @@ path = "src/bin/treasure_bevy.rs"
 # - "bevy_text"（0.20 特性名是 bevy_text 非 bevy_text_2d）
 # - "touch"（触摸输入；浏览器触摸映射 S18.1 结论据此）
 # 双渲染期 audio 特性关着（links=alsa 冲突）；S18.8 并回根 workspace 后恢复 "audio"。
-bevy = { version = "0.20", default-features = false, features = ["2d", "bevy_text", "touch", "keyboard", "mouse"] }
+# S26.1：complex_script_segmentation = parley/complex-scripts —— 不开时 parley 只用
+# 东南亚四语 icu 数据集（new_southeast_asian，无中日文 cjdict）⇒ 每帧 CJK 断词打
+# 「ICU4X data error: No segmentation model for language: ja」（debug 实测 24 行刷屏），
+# 且中文词级断行退化为整段不断。开了 = 完整 icu 字典（含 cjdict），报错消失 + 断行正确。
+bevy = { version = "0.20", default-features = false, features = ["2d", "bevy_text", "touch", "keyboard", "mouse", "complex_script_segmentation"] }
 ti-render = { path = "../ti-render" }
 # S18.4：bevy 壳 bin 挂本 workspace（架构修正：links=alsa 冲突检查 target-independent 且
 # optional 依赖也进 resolution 图 → 双渲染期 macroquad(audio 发货壳) 与 bevy(dev_tools→rodio

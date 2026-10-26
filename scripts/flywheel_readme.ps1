@@ -112,27 +112,25 @@ function Read-GateItems {
     param([string]$path)
     $text = Get-Content -Path $path -Raw -Encoding UTF8
     $items = @()
-    $itemNum = 0
+    # 与 doccheck2 gate_item_actual_count **同口径**（S26.3 修正）：数**全部** `Report ` 调用
+    # （trim 后开头，含 tier 条件块内缩进的 Report）按「行内首个引号串 = 项名」去重。
+    # 旧实现只数顶格 `^Report`（漏掉条件块内缩进项）⇒ 12 vs 实际 28 误报，已废。
+    $names = [System.Collections.Generic.List[string]]::new()
     foreach ($line in ($text -split "`n")) {
-        $trimmed = $line.TrimStart()
-        # 与 doccheck2 gate_item_actual_count 同口径：只数**顶层**（第 0 列、不缩进）的
-        # `Report` 调用 = 实际固定门禁项（当前 21 项）。条件分支（if/else 块内缩进的
-        # Report/Skip，如 wasm/android 构建、zero-unknown）不计入固定项，Skip 不单独计项。
-        # 用原始行（未 TrimStart）判定是否顶格，避免把条件缩进行误算进去。
-        if ($line -match "^Report\b") {
-            $itemNum++
-            # 提取引号内的描述
-            $desc = $trimmed
-            if ($trimmed -match "Report\s+\(.*\)\s+'(.+?)'") {
-                $desc = $Matches[1]
-            }
-            elseif ($trimmed -match 'Report\s+\(.*\)\s+"(.+?)"') {
-                $desc = $Matches[1]
-            }
-            # 顶层 Report 一一对应固定项，描述不重复
-            $items += @{ n = $itemNum; desc = $desc }
+        $t = $line.TrimStart()
+        if (-not $t.StartsWith('Report ')) { continue }
+        $rest = $t.Substring('Report '.Length)
+        $first = -1
+        for ($i = 0; $i -lt $rest.Length; $i++) { if ($rest[$i] -eq [char]39 -or $rest[$i] -eq [char]34) { $first = $i; break } }
+        $last = -1
+        for ($i = $rest.Length - 1; $i -ge 0; $i--) { if ($rest[$i] -eq [char]39 -or $rest[$i] -eq [char]34) { $last = $i; break } }
+        if ($first -ge 0 -and $last -gt $first + 1) {
+            $name = $rest.Substring($first + 1, $last - $first - 1)
+            if (-not $names.Contains($name)) { $names.Add($name) }
         }
     }
+    $itemNum = 0
+    foreach ($n in $names) { $itemNum++; $items += @{ n = $itemNum; desc = $n } }
     return $items
 }
 

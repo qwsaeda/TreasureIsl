@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
-  "index": {
+ "index": {
   "status": {
    "x": 540,
    "y": 1840
@@ -58,7 +58,7 @@
     "z": -11,
     "item": -1,
     "when": "",
-    "color": "gold_bright",
+    "color": "text_on_wood",
     "text": "金银岛",
     "tier": "title"
    },
@@ -73,7 +73,7 @@
     "z": -11,
     "item": -1,
     "when": "",
-    "color": "brass_dark",
+    "color": "text_on_wood",
     "text": "Treasure Isl · 航海贸易",
     "tier": "hint"
    },
@@ -107,7 +107,7 @@
     "color": "",
     "params": {
      "asset": "assets/ui/medallion_ring.png",
-      "badge": true
+     "badge": true
     }
    },
    {
@@ -155,7 +155,7 @@
     "z": -6,
     "item": 0,
     "when": "normal",
-    "color": "brass_dark",
+    "color": "text_on_parch",
     "text": "新游戏",
     "tier": "body"
    },
@@ -188,7 +188,7 @@
     "color": "",
     "params": {
      "asset": "assets/ui/medallion_ring.png",
-      "badge": true
+     "badge": true
     }
    },
    {
@@ -236,7 +236,7 @@
     "z": -6,
     "item": 1,
     "when": "normal",
-    "color": "brass_dark",
+    "color": "text_on_parch",
     "text": "载入游戏",
     "tier": "body"
    },
@@ -269,7 +269,7 @@
     "color": "",
     "params": {
      "asset": "assets/ui/medallion_ring.png",
-      "badge": true
+     "badge": true
     }
    },
    {
@@ -317,7 +317,7 @@
     "z": -6,
     "item": 2,
     "when": "normal",
-    "color": "brass_dark",
+    "color": "text_on_parch",
     "text": "读取存档",
     "tier": "body"
    },
@@ -350,7 +350,7 @@
     "color": "",
     "params": {
      "asset": "assets/ui/medallion_ring.png",
-      "badge": true
+     "badge": true
     }
    },
    {
@@ -398,7 +398,7 @@
     "z": -6,
     "item": 3,
     "when": "normal",
-    "color": "brass_dark",
+    "color": "text_on_parch",
     "text": "选项设置",
     "tier": "body"
    },
@@ -431,7 +431,7 @@
     "color": "",
     "params": {
      "asset": "assets/ui/medallion_ring.png",
-      "badge": true
+     "badge": true
     }
    },
    {
@@ -479,7 +479,7 @@
     "z": -6,
     "item": 4,
     "when": "normal",
-    "color": "brass_dark",
+    "color": "text_on_parch",
     "text": "帮助说明",
     "tier": "body"
    },
@@ -512,7 +512,7 @@
     "color": "",
     "params": {
      "asset": "assets/ui/medallion_ring.png",
-      "badge": true
+     "badge": true
     }
    },
    {
@@ -560,7 +560,7 @@
     "z": -6,
     "item": 5,
     "when": "normal",
-    "color": "brass_dark",
+    "color": "text_on_parch",
     "text": "离开游戏",
     "tier": "body"
    },
@@ -590,12 +590,12 @@
     "z": -4,
     "item": -1,
     "when": "",
-    "color": "brass_dark",
+    "color": "text_on_wood",
     "text": "金银岛 v1 · 桌面版",
     "tier": "hint"
    }
   ]
-  },
+ },
  "select_role": {
   "title": {
    "x": 296,
@@ -1326,21 +1326,21 @@
   "icon": {
    "x": 744
   },
-   "locked": {
-    "text_x": 920,
-    "inset": 6,
-    "max_w": 40,
-    "min_w": 4,
-    "h": 12
-   },
-   "stars": {
-    "size": 14,
-    "gap": 6,
-    "inset": 12,
-    "top": 10,
-    "max": 3,
-    "bevel_px": 2
-   },
+  "locked": {
+   "text_x": 920,
+   "inset": 6,
+   "max_w": 40,
+   "min_w": 4,
+   "h": 12
+  },
+  "stars": {
+   "size": 14,
+   "gap": 6,
+   "inset": 12,
+   "top": 10,
+   "max": 3,
+   "bevel_px": 2
+  },
   "hint": {
    "x": 540,
    "y": 1840
@@ -1378,7 +1378,7 @@
      "w": 562,
      "h": 1190
     },
-    "color": "panel_warm",
+    "color": "panel_wood",
     "z": 4
    },
    {
@@ -1437,7 +1437,7 @@
      "w": 400,
      "h": 280
     },
-    "color": "panel_warm",
+    "color": "panel_wood",
     "z": 4
    },
    {
@@ -1459,7 +1459,7 @@
      "w": 400,
      "h": 280
     },
-    "color": "panel_warm",
+    "color": "panel_wood",
     "z": 4
    },
    {
@@ -1481,7 +1481,7 @@
      "w": 400,
      "h": 280
     },
-    "color": "panel_warm",
+    "color": "panel_wood",
     "z": 4
    },
    {
@@ -1503,7 +1503,7 @@
      "w": 280,
      "h": 320
     },
-    "color": "panel_warm",
+    "color": "panel_wood",
     "z": 4
    },
    {
@@ -1591,7 +1591,7 @@
      "w": 280,
      "h": 320
     },
-    "color": "panel_warm",
+    "color": "panel_wood",
     "z": 4
    },
    {
@@ -1679,7 +1679,7 @@
      "w": 280,
      "h": 320
     },
-    "color": "panel_warm",
+    "color": "panel_wood",
     "z": 4
    },
    {
@@ -1825,16 +1825,16 @@
    "w": 136,
    "h": 88
   },
-   "hud_build": {
-    "x": 856,
-    "y": 168,
-    "w": 136,
-    "h": 88
-   },
-   "fx_coin": {
-     "x": 272,
-     "y": 144
-   },
+  "hud_build": {
+   "x": 856,
+   "y": 168,
+   "w": 136,
+   "h": 88
+  },
+  "fx_coin": {
+   "x": 272,
+   "y": 144
+  },
   "grid": {
    "x0": 540,
    "y0": 520,
@@ -1851,8 +1851,8 @@
    "size": 24
   },
   "hint": {
-    "x": 540,
-    "y": 1632
+   "x": 540,
+   "y": 1632
   },
   "portrait_zones": [
    {
@@ -1863,10 +1863,10 @@
    }
   ],
   "world_canvas": {
-    "x": 43,
-    "y": 250,
-    "w": 994,
-    "h": 826
+   "x": 43,
+   "y": 250,
+   "w": 994,
+   "h": 826
   },
   "hud_gold": {
    "x": 80,
@@ -1893,22 +1893,22 @@
    "h": 192
   },
   "deck_trade": {
-    "x": 48,
-    "y": 1440,
-    "w": 312,
-    "h": 136
+   "x": 48,
+   "y": 1440,
+   "w": 312,
+   "h": 136
   },
   "deck_sell": {
-    "x": 384,
-    "y": 1440,
-    "w": 312,
-    "h": 136
+   "x": 384,
+   "y": 1440,
+   "w": 312,
+   "h": 136
   },
   "deck_build": {
-    "x": 720,
-    "y": 1440,
-    "w": 312,
-    "h": 136
+   "x": 720,
+   "y": 1440,
+   "w": 312,
+   "h": 136
   },
   "canvas_entities": {
    "player": 100,
@@ -1916,18 +1916,18 @@
    "boss": 96
   },
   "track_node": {
-   "size": 90
+   "size": 120
   },
   "track_ship": {
-   "size": 150
+   "size": 160
   },
   "focus_anchor": {
    "type": "world_canvas",
    "bbox": {
-     "x": 43,
-     "y": 250,
-     "w": 994,
-     "h": 826
+    "x": 43,
+    "y": 250,
+    "w": 994,
+    "h": 826
    }
   },
   "primitives": [
@@ -1946,7 +1946,7 @@
     "params": {
      "asset": "assets/ui/chart_full.png"
     }
-    },
+   },
    {
     "kind": "image",
     "rect": {
@@ -1962,7 +1962,7 @@
     "params": {
      "asset": "assets/ui/hud_plaque.png"
     }
-    },
+   },
    {
     "kind": "icon",
     "rect": {
@@ -1979,7 +1979,7 @@
     "z": 4,
     "when": "",
     "item": -1
-    },
+   },
    {
     "kind": "image",
     "rect": {
@@ -1995,7 +1995,7 @@
     "params": {
      "asset": "assets/ui/hud_plaque.png"
     }
-    },
+   },
    {
     "kind": "icon",
     "rect": {
@@ -2012,7 +2012,7 @@
     "z": 4,
     "when": "",
     "item": -1
-    },
+   },
    {
     "kind": "text",
     "rect": {
@@ -2027,7 +2027,7 @@
     "when": "",
     "item": -1,
     "text_key": "scene.main_map.title"
-    },
+   },
    {
     "kind": "image",
     "rect": {
@@ -2043,7 +2043,7 @@
     "params": {
      "asset": "assets/ui/btn_spin.png"
     }
-    },
+   },
    {
     "kind": "image",
     "rect": {
@@ -2059,7 +2059,7 @@
     "params": {
      "asset": "assets/ui/deck_plaque.png"
     }
-    },
+   },
    {
     "kind": "icon",
     "rect": {
@@ -2076,7 +2076,7 @@
     "z": 8,
     "when": "",
     "item": -1
-    },
+   },
    {
     "kind": "text",
     "rect": {
@@ -2091,7 +2091,7 @@
     "when": "",
     "item": -1,
     "text_key": "scene.main_map.hud.trade"
-    },
+   },
    {
     "kind": "image",
     "rect": {
@@ -2107,7 +2107,7 @@
     "params": {
      "asset": "assets/ui/deck_plaque.png"
     }
-    },
+   },
    {
     "kind": "icon",
     "rect": {
@@ -2124,7 +2124,7 @@
     "z": 8,
     "when": "",
     "item": -1
-    },
+   },
    {
     "kind": "text",
     "rect": {
@@ -2139,7 +2139,7 @@
     "when": "",
     "item": -1,
     "text_key": "scene.main_map.hud.sell"
-    },
+   },
    {
     "kind": "image",
     "rect": {
@@ -2155,7 +2155,7 @@
     "params": {
      "asset": "assets/ui/deck_plaque.png"
     }
-    },
+   },
    {
     "kind": "icon",
     "rect": {
@@ -2172,7 +2172,7 @@
     "z": 8,
     "when": "",
     "item": -1
-    },
+   },
    {
     "kind": "text",
     "rect": {
@@ -2187,19 +2187,19 @@
     "when": "",
     "item": -1,
     "text_key": "scene.main_map.hud.build"
-    }
+   }
   ],
   "deck_spin": {
-    "x": 408,
-    "y": 1160,
-    "w": 264,
-    "h": 264
+   "x": 408,
+   "y": 1160,
+   "w": 264,
+   "h": 264
   },
   "voyage_bar": {
-    "x": 48,
-    "y": 1088,
-    "w": 984,
-    "h": 48
+   "x": 48,
+   "y": 1088,
+   "w": 984,
+   "h": 48
   }
  },
  "vs": {
@@ -2224,17 +2224,17 @@
    "y": 416
   },
   "outcome": {
-    "x": 540,
-    "y": 960
-   },
+   "x": 540,
+   "y": 960
+  },
   "empty": {
-    "x": 540,
-    "y": 960
-   },
+   "x": 540,
+   "y": 960
+  },
   "fx_hit": {
-    "x": 540,
-    "y": 880
-   },
+   "x": 540,
+   "y": 880
+  },
   "hint": {
    "x": 540,
    "y": 1840
@@ -2415,45 +2415,6 @@
    {
     "kind": "rect",
     "rect": {
-     "x": 122,
-     "y": 1141,
-     "w": 826,
-     "h": 71
-    },
-    "color": "brass_dark",
-    "z": 4,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 214,
-     "y": 1070,
-     "w": 642,
-     "h": 71
-    },
-    "color": "panel_warm",
-    "z": 4,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
-     "x": 305,
-     "y": 999,
-     "w": 459,
-     "h": 71
-    },
-    "color": "brass_light",
-    "z": 4,
-    "when": "",
-    "item": -1
-   },
-   {
-    "kind": "rect",
-    "rect": {
      "x": 507,
      "y": 478,
      "w": 56,
@@ -2530,21 +2491,21 @@
    "h": 96
   },
   "body": {
-    "x": 408,
-    "y": 768,
-    "w": 584,
-    "h": 176,
-    "clip_reserve": 48,
-    "line_h": 52,
-    "x_pad": 4,
-    "edge_pad": 8
-   },
+   "x": 408,
+   "y": 768,
+   "w": 584,
+   "h": 176,
+   "clip_reserve": 48,
+   "line_h": 52,
+   "x_pad": 4,
+   "edge_pad": 8
+  },
   "page_dots": {
-    "size": 12,
-    "gap": 36,
-    "dy": 48,
-    "inner": 8
-   },
+   "size": 12,
+   "gap": 36,
+   "dy": 48,
+   "inner": 8
+  },
   "page": {
    "x": 704,
    "y": 1008,
@@ -2655,17 +2616,17 @@
    "w": 640,
    "h": 96
   },
-   "list": {
-    "x": 280,
-    "y": 240,
-    "w": 440,
-    "row_h": 256,
-    "item_h": 224,
-    "text_x": 312,
-    "gold_x": 792,
-    "highlight_offset": 8,
-    "summary_dy": 52
-   },
+  "list": {
+   "x": 280,
+   "y": 240,
+   "w": 440,
+   "row_h": 256,
+   "item_h": 224,
+   "text_x": 312,
+   "gold_x": 792,
+   "highlight_offset": 8,
+   "summary_dy": 52
+  },
   "hint": {
    "x": 540,
    "y": 1840

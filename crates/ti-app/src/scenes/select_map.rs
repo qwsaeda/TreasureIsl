@@ -161,27 +161,25 @@ impl Scene for SelectMapScene {
                 continue;
             }
             let r = layout.list.item_rect(i);
-            let ty = r.y + (r.h - host.shell().glyph_px()) / 2;
             let sc = &layout.extra_scalar;
             let lock_x = sc.get("locked.text_x").copied().unwrap_or(0);
             let inset = sc.get("locked.inset").copied().unwrap_or(0);
             let max_w = sc.get("locked.max_w").copied().unwrap_or(0);
             let min_w = sc.get("locked.min_w").copied().unwrap_or(0);
             let lock_h = sc.get("locked.h").copied().unwrap_or(0);
+            // S26.3：锁条 = 卡片**底部**（旧 = 卡片垂直中心，与地图名同带 ⇒ 盖住「海图三」
+            // 中横，观感「海图二×2」（2026-10-26 用户报告误判源）；底部与名字/星标互不重叠。
+            let ty = r.y + r.h - lock_h - 12;
             if lock_x > 0 && max_w > 0 && lock_h > 0 {
                 // 契约 1（`08_render_arch.md`）：钳制基准用呈现坐标系常量，
                 // 不得出现 legacy 176 字面量。
                 // 锁标右界按**卡片右缘**（`item_rect` 的 x+w）而非屏幕宽推导，
                 // 按钮变窄时锁标随卡片收敛，不会溢出卡片（F12）
+                // S26.3：锁条色 `COLOR_WOOD`（0x3A17 解 RGB565 实为蓝）出航海暖调，
+                // 改 `COLOR_BRASS_DARK`（深棕红 0x51E4）—— 锁标守暖色板。
                 let card_right = r.x + r.w;
                 let lock_w = (card_right - inset - lock_x).min(max_w);
-                host.fill_rect(
-                    lock_x,
-                    ty,
-                    lock_w.max(min_w),
-                    lock_h,
-                    crate::menu_shell::COLOR_WOOD,
-                );
+                host.fill_rect(lock_x, ty, lock_w.max(min_w), lock_h, chrome::COLOR_BRASS_DARK);
             }
         }
         // S19.5：选图卡显示 **BOSS 难度星**（`rules::progression::boss_tier_of` → tier+1 颗星，
