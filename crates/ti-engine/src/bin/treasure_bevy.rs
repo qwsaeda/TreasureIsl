@@ -167,8 +167,14 @@ struct FrameSprite;
 /// letterbox 基础 scale（窗口物理 → 1080 逻辑；与 S18.4 `spawn_stage` 同式）。
 #[allow(clippy::cast_precision_loss)]
 fn letterbox() -> f32 {
-    let w = WIN_W as f32 / LOGICAL_W as f32;
-    let h = WIN_H as f32 / LOGICAL_H as f32;
+    letterbox_size(WIN_W as f32, WIN_H as f32)
+}
+
+/// 任意窗口物理尺寸的 letterbox scale（`min(w/1080, h/1920)`；2026-10-26 窗口缩放跟随）。
+#[allow(clippy::cast_precision_loss)]
+fn letterbox_size(window_w: f32, window_h: f32) -> f32 {
+    let w = window_w / LOGICAL_W as f32;
+    let h = window_h / LOGICAL_H as f32;
     if w < h { w } else { h }
 }
 
@@ -209,6 +215,7 @@ fn next_scale_mode(cur: ScaleMode) -> ScaleMode {
 }
 
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::too_many_arguments)] // 系统参数天然 8 个（+2026-10-26 窗口缩放跟随加 `Query<&Window>`）
 /// 输入系统：键盘沿 + F1–F4 + 指针（触屏优先/鼠标兜底）→ `GameApp` 逻辑。
 fn input_system(
     store: ResMut<GameStore>,
@@ -218,13 +225,19 @@ fn input_system(
     mouse: Res<ButtonInput<MouseButton>>,
     touches: Res<Touches>,
     mut state: Local<InputState>,
+    window: Query<&Window>,
 ) {
-    // S18.5：滚轮 zoom + 左键拖拽 pan（仅主地图；逻辑 px = 物理 px / letterbox）。
+    // S18.5：滚轮 zoom + 左键拖拽 pan（仅主地图；逻辑 px = 物理 px / 当前 `vp.scale()`）。
     mouse_pos.x += acc.delta.x;
     mouse_pos.y += acc.delta.y;
     let drag = (mouse.pressed(MouseButton::Left), acc.delta);
     acc.delta = bevy::prelude::Vec2::ZERO;
-    let window_size = Vec2::new(WIN_W as f32, WIN_H as f32);
+    // 2026-10-26 窗口缩放跟随：F1 重算 `vp` 用**当前**窗口**物理**尺寸（壳坐标系 =
+    // 物理 px：鼠标/触摸 delta 与 `WindowResolution` 均物理；`win.size()` 是逻辑 px，勿用）。
+    let window_size = match window.single() {
+        Ok(win) => Vec2::new(win.physical_width() as f32, win.physical_height() as f32),
+        Err(_) => Vec2::new(WIN_W as f32, WIN_H as f32),
+    };
 
     let Ok(mut g) = store.0.lock() else {
         return;
@@ -248,7 +261,10 @@ fn input_system(
             );
         }
         if drag.0 {
-            g.camera_pan(drag.1.x / letterbox(), drag.1.y / letterbox());
+            // 窗口缩放跟随：物理 px → 逻辑 px 除**当前** `vp.scale()`（窗口尺寸变化时
+            // `window_resize_system` 已重建 `vp`；固定 540×960 壳 ≡ 旧 `letterbox()` 0.5）。
+            let vp_scale = g.shell().vp.scale();
+            g.camera_pan(drag.1.x / vp_scale, drag.1.y / vp_scale);
         }
     }
     // 键盘「按住」快照（KeyCode → 语义键，与 macroquad 壳同表）。
@@ -316,8 +332,39 @@ fn input_system(
 }
 
 #[allow(clippy::needless_pass_by_value)]
+/// 窗口缩放跟随系统（用户 2026-10-26 报告：桌面版不随窗口缩放）：`resizable` 窗口
+/// 尺寸变化时按当前物理尺寸重建 shell `vp`（屏幕 px → 1080 逻辑反变换），鼠标/触摸
+/// 命中判定自动跟上；相机正交 scale 由 `camera_system` 读 `vp.scale()` 驱动
+/// （默认 Smooth = `min(w/1080, h/1920)` letterbox，内容恒完整可见 + 居中）。
+fn window_resize_system(
+    store: ResMut<GameStore>,
+    mut last_wh: Local<(f32, f32)>,
+    window: Query<&Window>,
+) {
+    let Ok(win) = window.single() else {
+        return;
+    };
+    // 壳的屏幕坐标约定 = 窗口**物理**像素（鼠标/winit delta、`WindowResolution` 均物理）；
+    // `win.size()` 是逻辑像素（高 DPI 下 ≠ 物理），必须用物理访问器。
+    let wh = (win.physical_width() as f32, win.physical_height() as f32);
+    if *last_wh == wh {
+        return;
+    }
+    *last_wh = wh;
+    let Ok(mut g) = store.0.lock() else {
+        return;
+    };
+    let mode = g.shell().scale_mode();
+    g.shell_mut().set_scale_mode(mode, wh.0, wh.1);
+}
+
+#[allow(clippy::needless_pass_by_value)]
 /// S18.5 相机系统：`WorldCam`（zoom/pan，`game_app::camera_*`）→ Bevy 正交 scale +
 /// 帧纹理精灵位移（`world_canvas` 镜头）。默认 cam=(540,960)/zoom=1 时 = S18.4 IDENTITY 零差。
+///
+/// 2026-10-26（用户报告「桌面版不随窗口缩放」）：正交 scale 改读 **shell `vp.scale()`**
+/// （`window_resize_system` 随窗口尺寸变化重建；默认 Smooth = `min(w/1080, h/1920)`
+/// letterbox，内容恒完整可见 + 居中），与鼠标/触摸输入同一反变换源，画/摸不错位。
 fn camera_system(
     store: Res<GameStore>,
     mut cameras: Query<&mut Projection, With<Camera2d>>,
@@ -327,9 +374,10 @@ fn camera_system(
         return;
     };
     let cam = *g.world_cam();
+    let scale = g.shell().vp.scale() * cam.zoom;
     if let Ok(mut proj) = cameras.single_mut() {
         if let Projection::Orthographic(o) = &mut *proj {
-            o.scale = letterbox() * cam.zoom;
+            o.scale = scale;
         }
     }
     if let Ok(mut st) = sprite.single_mut() {
@@ -632,7 +680,9 @@ fn main() {
     let window = Window {
         resolution: WindowResolution::new(WIN_W, WIN_H),
         title: window_title(),
-        resizable: false,
+        // 2026-10-26（用户报告「桌面版不随窗口缩放」）：窗口可拖拽/最大化，
+        // 内容 letterbox 跟随（`window_resize_system` 重建 `vp` + `camera_system` 读 `vp.scale()`）。
+        resizable: true,
         ..Default::default()
     };
     // S18.7：**官方 `DefaultPlugins`**（不再手搓插件表）。
@@ -670,7 +720,13 @@ fn main() {
             .add_systems(Update, (selftest_system, render_system, stats_system).chain());
     } else {
         // S18.5：相机系统 = `WorldCam` → Bevy 正交 scale / 精灵位移（渲染前接线）。
-        app.add_systems(Update, (input_system, camera_system, render_system, stats_system).chain());
+        // 2026-10-26：`window_resize_system` 最先跑（窗口尺寸变 → 重建 `vp`），
+        // 本帧 input/camera 即读到新 `vp`（画/摸同源不错位）。
+        app.add_systems(
+            Update,
+            (window_resize_system, input_system, camera_system, render_system, stats_system)
+                .chain(),
+        );
         app.add_systems(Update, native_index_system.after(render_system));
     }
     app.add_systems(Startup, spawn_stage);

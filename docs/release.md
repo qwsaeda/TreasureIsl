@@ -148,6 +148,9 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
 cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
 # 资源文件在仓库根的 data/（Bevy 壳按仓库根读 legacy/data 同源资源）
 # S5.1 起：菜单→选人→选图→主地图→贸易/建造→战斗→存读档 全链路可玩
+# 窗口可拖拽/最大化：内容恒 1080×1920 逻辑画布 letterbox 等比跟随（默认 Smooth；
+# F1 = 等比/整数倍/拉伸/裁剪 循环，F4 切画质）——2026-10-26 窗口缩放跟随
+# （`window_resize_system` 重建 shell `vp`，相机与输入同源不错位）
 ```
 
 ### 浏览器 (WASM)
@@ -186,7 +189,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 207 任务（188 verified；台账计数随 S8–S21 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 207 任务（189 verified；台账计数随 S8–S21 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`

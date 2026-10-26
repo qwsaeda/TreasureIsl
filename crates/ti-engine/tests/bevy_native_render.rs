@@ -79,8 +79,10 @@ fn selection_switches_visible_elements() {
     let gold_warm = ti_engine::canvas::rgb565_to_color(theme().gold_warm);
     let brass_dark = ti_engine::canvas::rgb565_to_color(theme().brass_dark);
     let label_color = |e: Entity| app.world().get::<TextColor>(e).map(|c| c.0);
-    let selected_gold = labels.iter().filter(|(_, e, _)| label_color(*e) == Some(gold_warm)).count();
-    let normal_brass = labels.iter().filter(|(_, e, _)| label_color(*e) == Some(brass_dark)).count();
+    let selected_gold =
+        labels.iter().filter(|(_, e, _)| label_color(*e) == Some(gold_warm)).count();
+    let normal_brass =
+        labels.iter().filter(|(_, e, _)| label_color(*e) == Some(brass_dark)).count();
     assert_eq!(selected_gold, 1, "选中徽章 0 标签 = gold_warm（1 个）");
     assert_eq!(normal_brass, 5, "未选中徽章 1-5 标签 = brass_dark（5 个）");
 }
