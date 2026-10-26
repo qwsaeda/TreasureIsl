@@ -199,6 +199,7 @@ fn build_slot(app: &GameApp) -> SaveSlot {
         position: app.map_pos().map_or(0, |p| p.index(20)),
         rng_steps: 0,
         unlocked_mask: 0,
+        boat_level: 1,
     }
 }
 
@@ -296,6 +297,7 @@ fn restore_save_invalid_slot_does_not_pollute_character() {
         position: 0,
         rng_steps: 0,
         unlocked_mask: 0,
+        boat_level: 1,
     };
     app.restore_save(bad);
 
@@ -315,6 +317,7 @@ fn restore_save_invalid_slot_does_not_pollute_character() {
         position: 0,
         rng_steps: 0,
         unlocked_mask: 0,
+        boat_level: 1,
     };
     app.restore_save(good);
     assert_eq!(app.scene(), Scene::MainMap, "合法 restore_save 应进主地图");

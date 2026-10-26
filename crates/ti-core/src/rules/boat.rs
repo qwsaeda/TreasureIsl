@@ -77,6 +77,21 @@ impl BoatSession {
         self.cfg.max_level()
     }
 
+    /// 数值配置只读快照（存档恢复 / 成本查询用；`balance.boat` 单一事实源）。
+    #[must_use]
+    pub fn cfg(&self) -> &BoatCfg {
+        &self.cfg
+    }
+
+    /// S21.11 读档恢复船等级（按存档 `boat_level` 重建会话；越界钳到合法区间）。
+    ///
+    /// 与 [`Self::upgrade`]（单向升级链）**语义分开**：读档 = 还原历史状态，不是降级操作；
+    /// 建造升级仍只能走 `upgrade`（单向）。
+    #[must_use]
+    pub fn restored(cfg: BoatCfg, level: u32) -> Self {
+        Self::new(cfg, level)
+    }
+
     /// 当前等级的名称 key（表现层取文本用；缺表项 → 空串）。
     #[must_use]
     pub fn name_key(&self) -> &str {

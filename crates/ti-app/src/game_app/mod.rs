@@ -36,6 +36,7 @@ use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::BoardSession;
+use ti_core::rules::boat::BoatSession;
 use ti_core::rules::cards;
 use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::main_map::MapSession;
@@ -207,6 +208,9 @@ pub struct GameApp {
     /// 环岛赛道会话（`rules::board::BoardSession`，`MainMap` 场景时有效）。
     /// 摇骰 → 沿赛道前进 N 格 → 落格结算（`docs/business/progression.md` §环岛赛道）。
     pub board: Option<BoardSession>,
+    /// S21.11 船会话（`rules::boat::BoatSession`；等级链 1..=4，全局账号级；存档持久化
+    /// `SaveSlot::boat_level`，读档按存档值恢复）。
+    pub boat: BoatSession,
     /// 落格提示条文本（`Some` = 有提示待显示；随帧递减过期）。
     pub board_toast: Option<String>,
     /// 落格提示条剩余帧数。
@@ -392,6 +396,8 @@ impl GameApp {
             bank: Bank::default(),
             map_session: MapSession::new(MapTerrain::open(1, 1), GridPos::new(0, 0), &[]),
             board: None,
+            boat: BoatSession::from_balance()
+                .unwrap_or_else(|_| BoatSession::new(data::BoatCfg::default(), 1)),
             board_toast: None,
             board_toast_ticks: 0,
             track_node_sel: None,

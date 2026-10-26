@@ -244,6 +244,10 @@ impl MapHost for GameApp {
     fn set_track_node_sel(&mut self, v: Option<usize>) {
         self.track_node_sel = v;
     }
+
+    fn boat_level(&self) -> u8 {
+        GameApp::boat_level(self)
+    }
 }
 impl EconomyHost for GameApp {
     fn price_of(&self, gid: u32) -> Option<u32> {

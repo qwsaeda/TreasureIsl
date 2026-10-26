@@ -14,7 +14,7 @@ use ti_core::domain::persistence::{MIN_SAVE_SIZE, REC_MAGIC, SaveErr, SaveSlot};
 use ti_core::oracle::saveload::{
     oracle_migrate_v1_to_v2, oracle_read_slot, oracle_read_slot_v1, oracle_write_slot,
 };
-use ti_core::rules::saveload::{SaveManager, SaveSlotV2};
+use ti_core::rules::saveload::{SaveManager, SaveSlotV2, SaveSlotV3};
 
 /// 构造 v1 存档字节（18 字节：2B 前缀 + 4B 魔数 + 4B character + 4B `map_slot` + 4B position）。
 ///
@@ -74,6 +74,7 @@ fn v2_write_read_backward_compat() {
         position: 42,
         rng_steps: 0,
         unlocked_mask: 0,
+        boat_level: 1,
     };
     let v2_bytes = oracle_write_slot(&slot);
     assert_eq!(v2_bytes.len(), 26, "v2 布局 = 26 字节");
@@ -130,6 +131,7 @@ fn json_export_import_roundtrip() {
             position: i * 7,
             rng_steps: 0,
             unlocked_mask: 0,
+            boat_level: 1,
         };
         mgr.set_slot(i as usize, SaveSlotV2::from_legacy_slot(&legacy));
     }
@@ -160,6 +162,7 @@ fn byte_layout_is_self_describing() {
         position: 777,
         rng_steps: 0,
         unlocked_mask: 0,
+        boat_level: 1,
     };
     let bytes = oracle_write_slot(&slot);
     assert_eq!(bytes.len(), MIN_SAVE_SIZE, "v2 布局 = 26 字节");
@@ -264,4 +267,51 @@ fn migrate_v1_json_fills_rng_steps_default_zero() {
     let s2 = SaveSlotV2::from_json(json2).expect("解析");
     let m2 = s2.migrate();
     assert_eq!(m2.rng_steps, 42, "已有 rng_steps 不被迁移覆盖（幂等）");
+}
+
+// ---- S21.11：v2 → v3 迁移（船等级 `boat_level` 缺省 1 = 小舢板；纯函数幂等；v3 原样） ----
+
+/// S21.11 (1)：v2 旧档迁移到 v3 ⇒ `boat_level` 缺省 **1（小舢板）**，其余字段原样承接。
+#[test]
+fn save_migrate_v2_to_v3_defaults_boat_level() {
+    let json =
+        r#"{"version":2,"character":"drake","map":"m01","gold":1050,"boat_level_ignored":9}"#;
+    let v2 = SaveSlotV2::from_json(json).expect("v2 JSON 解析成功");
+    let v3 = SaveSlotV3::migrate_v2_to_v3(&v2);
+    assert!(v3.is_v3(), "迁移后 version=3");
+    assert_eq!(v3.boat_level, 1, "v2 旧档缺 boat_level → 缺省 1（小舢板）");
+    assert_eq!(v3.character, v2.character, "角色字段原样承接");
+    assert_eq!(v3.map, v2.map, "地图字段原样承接");
+    assert_eq!(v3.gold, v2.gold, "金币字段原样承接");
+}
+
+/// S21.11 (2)：迁移**幂等** —— `migrate(migrate(x)) == migrate(x)`（再迁不变）。
+#[test]
+fn save_migrate_v3_is_idempotent() {
+    let v2 = SaveSlotV2::new("drake".to_owned(), "m01".to_owned());
+    let once = SaveSlotV3::migrate_v2_to_v3(&v2).migrate();
+    let twice = once.clone().migrate();
+    assert_eq!(once, twice, "迁移幂等：再迁不变");
+    assert_eq!(once.boat_level, 1, "幂等后船等级仍为 1");
+}
+
+/// S21.11 (3)：已是 v3 的档**原样返回**（不覆盖已有 `boat_level`）。
+#[test]
+fn save_migrate_v3_keeps_existing_boat_level() {
+    let json = r#"{"version":3,"character":"drake","map":"m01","gold":0,"boat_level":3}"#;
+    let v3 = SaveSlotV3::from_json(json).expect("v3 JSON 解析成功");
+    let migrated = v3.clone().migrate();
+    assert_eq!(migrated, v3, "v3 原样返回（不覆盖 boat_level）");
+    assert_eq!(migrated.boat_level, 3, "已有船等级 3 不被迁移覆盖");
+}
+
+/// S21.11 (4)：v2 旧档 JSON（**无 `boat_level` 字段**）读回 = **1（小舢板）**，零报错
+/// （serde `default = 1` 缺省口径 = `docs/business/persistence.md` §迁移 v3）。
+#[test]
+fn save_v2_json_without_boat_level_reads_as_level_1() {
+    let json = r#"{"version":2,"character":4,"gold":500,"map_slot":1,"position":42}"#;
+    let slot: SaveSlot = serde_json::from_str(json).expect("v2 旧档应解析成功");
+    assert_eq!(slot.boat_level, 1, "v2 旧档缺 boat_level → 缺省 1（小舢板）");
+    assert_eq!(slot.version, 2, "旧档版本号保持 2（迁移前）");
+    assert_eq!(slot.gold, 500, "其余字段不受影响");
 }

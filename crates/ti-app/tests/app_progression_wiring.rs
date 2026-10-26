@@ -144,6 +144,7 @@ fn app_save_load_restores_unlock_chain() {
         position: 123,
         rng_steps: 0,
         unlocked_mask: 0,
+        boat_level: 1,
     };
     app.write_save_slot(0, save);
     app.restore_save(app.save_slots()[0]);
@@ -174,6 +175,7 @@ fn app_save_load_restores_unlock_chain() {
         position: 0,
         rng_steps: 0,
         unlocked_mask: 0,
+        boat_level: 1,
     };
     app2.write_save_slot(0, save2);
     app2.restore_save(app2.save_slots()[0]);
@@ -199,6 +201,7 @@ fn app_save_load_restores_mask_faithfully() {
         position: 7,
         rng_steps: 0,
         unlocked_mask: 0b0011,
+        boat_level: 1,
     };
     app.write_save_slot(0, save);
     app.restore_save(app.save_slots()[0]);
@@ -228,6 +231,7 @@ fn app_save_load_restores_cleared_gate() {
         position: 0,
         rng_steps: 0,
         unlocked_mask: 0b1111,
+        boat_level: 1,
     };
     app.write_save_slot(0, save);
     app.restore_save(app.save_slots()[0]);

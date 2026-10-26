@@ -1,0 +1,33 @@
+=== S21.11 验收证据 2026-10-26 10:03 ===
+改动面 = 规则(SaveSlotV3+migrate) + app 写盘/还原 + 测试；跨模块原因 = 规则层与 app 写盘同一步（ledger S21.11 dod）
+## 判据1: v2->v3 迁移单测 + v2 旧档 serde 缺省
+cmd: cargo test -q -p ti-core --test save_migration
+running 13 tests
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+## 判据2: e2e 存读档往返 boat_level 还原
+cmd: cargo test -q -p ti-app --test e2e_playthrough e2e_save_load_boat_level_roundtrip
+running 1 test
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.04s
+
+## 判据3a: 既有 save 穷举 exhaust_saveload
+cmd: cargo test -q -p ti-core --test exhaust_saveload
+running 4 tests
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+## 判据3b: rules_saveload
+cmd: cargo test -q -p ti-core --test rules_saveload
+running 14 tests
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+## 判据3c: rules_saveload_json
+cmd: cargo test -q -p ti-core --test rules_saveload_json
+running 19 tests
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+## 判据3d: oracle saveload 内联测试
+cmd: cargo test -q -p ti-core --lib oracle::saveload
+running 7 tests
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 109 filtered out; finished in 0.00s
+
+## 判据4: gate 23 项 0 failure（scripts/gate.ps1 本会话上方已跑，尾部输出 === gate: 0 failure(s) ===）

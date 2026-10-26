@@ -293,6 +293,116 @@ impl SaveSlotV2 {
     }
 }
 
+/// S21.11 存档槽位（v3 = v2 + `boat_level` 船等级；JSON 显式字段）。
+///
+/// 迁移口径（`docs/business/persistence.md` §迁移 v3）：v2 旧档无 `boat_level` ⇒ 缺省
+/// **1（小舢板）**（读档零报错，不臆造船等级）；船等级全局账号级（不随跨图重置）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SaveSlotV3 {
+    /// 版本号（v3 恒 3；v1/v2 → 迁移补 3）。
+    #[serde(default = "default_version_v3")]
+    pub version: u32,
+    /// 角色 id（稳定字符串，如 `"drake"`）。
+    pub character: String,
+    /// 地图 id（如 `"m01"`）。
+    pub map: String,
+    /// 退出时所在场景（`"Index"`/`"MainMap"` 等，与 `SceneId` 变体名一致）。
+    #[serde(default = "default_scene")]
+    pub scene: String,
+    /// 玩家所在格。
+    #[serde(default)]
+    pub position: GridPos,
+    /// 金币。
+    #[serde(default)]
+    pub gold: u32,
+    /// 玩家 HP。
+    #[serde(default)]
+    pub hp: u32,
+    /// 已建建筑 id 列表（稳定字符串，如 `"Castle"`）。
+    #[serde(default)]
+    pub buildings: Vec<String>,
+    /// 持有商品（id + 数量）。
+    #[serde(default)]
+    pub goods: Vec<GoodsSave>,
+    /// RNG 当前种子（读档后 `GameRng::restore_state(rng_seed, rng_steps)` 续流）。
+    #[serde(default = "default_rng_seed")]
+    pub rng_seed: u32,
+    /// RNG 已消费 `next_u64` 次数（精确续流；旧存档缺省 → 0 = 种子重置语义）。
+    #[serde(default)]
+    pub rng_steps: u128,
+    /// 银行存金（v1 缺省 → 迁移补 0）。
+    #[serde(default)]
+    pub bank: u32,
+    /// 已解锁地图 id 列表。
+    #[serde(default)]
+    pub unlocked_maps: Vec<String>,
+    /// S21.11 船等级（1..=4；旧档缺省 = 1 小舢板）。
+    #[serde(default = "default_boat_level_v3")]
+    pub boat_level: u8,
+}
+
+/// v1/v2 旧档迁移到 v3 时的缺省版本号。
+fn default_version_v3() -> u32 {
+    3
+}
+
+/// v2 旧档（无 `boat_level`）缺省船等级 = 1（小舢板）。
+fn default_boat_level_v3() -> u8 {
+    1
+}
+
+impl SaveSlotV3 {
+    /// v2 → v3 迁移（**纯函数、幂等**）：补 `version=3` + `boat_level=1`（小舢板）；
+    /// 其余字段原样承接（不臆造船等级）。
+    #[must_use]
+    pub fn migrate_v2_to_v3(v2: &SaveSlotV2) -> Self {
+        Self {
+            version: 3,
+            character: v2.character.clone(),
+            map: v2.map.clone(),
+            scene: v2.scene.clone(),
+            position: v2.position,
+            gold: v2.gold,
+            hp: v2.hp,
+            buildings: v2.buildings.clone(),
+            goods: v2.goods.clone(),
+            rng_seed: v2.rng_seed,
+            rng_steps: v2.rng_steps,
+            bank: v2.bank,
+            unlocked_maps: v2.unlocked_maps.clone(),
+            boat_level: default_boat_level_v3(),
+        }
+    }
+
+    /// 自迁移（v1/v2 → v3；已是 v3 ⇒ 原样返回 ⇒ 幂等）。
+    #[must_use]
+    pub fn migrate(mut self) -> Self {
+        if self.version < 3 {
+            self.version = 3;
+            self.boat_level = default_boat_level_v3();
+        }
+        self
+    }
+
+    /// 是否已迁移到 v3（`version == 3`）。
+    #[must_use]
+    pub fn is_v3(&self) -> bool {
+        self.version == 3
+    }
+
+    /// 序列化存档为 JSON 字符串（人可读、可 diff；失败返回空串，不 panic）。
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
+    /// 从 JSON 解析存档槽（缺字段走 `#[serde(default)]`；解析失败 → `None`，不 panic）。
+    #[must_use]
+    pub fn from_json(json: &str) -> Option<Self> {
+        serde_json::from_str(json).ok()
+    }
+}
+
 /// 存档管理器：持有槽位列表 + JSON 序列化/反序列化 + 迁移 + RNG 续流。
 ///
 /// 槽位数走 `balance.save.slot_count`（`from_balance` 注入，`docs/business/persistence.md`）；

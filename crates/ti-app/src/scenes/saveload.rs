@@ -13,9 +13,10 @@ use ti_platform::settings::Gesture;
 /// 存读档场景处理器（`Saveload`）。
 pub struct SaveloadScene;
 
-/// N4：写档版本号固定 = v2（2），与 `domain::persistence::REC_MAGIC` 配套的
-/// v2 格式标识；不再读 `balance().save.v2_size`（那是槽字节大小，与版本号语义无关）。
-const WRITE_VERSION: u32 = 2;
+/// N4：写档版本号固定 = v3（3，S21.11 加 `boat_level` 船等级；v2 旧档读回 = 小舢板缺省 1），
+/// 与 `domain::persistence::REC_MAGIC` 配套的版本标识；不再读 `balance().save.v2_size`
+/// （那是槽字节大小，与版本号语义无关）。
+const WRITE_VERSION: u32 = 3;
 
 impl Scene for SaveloadScene {
     fn kind(&self) -> SceneKind {
@@ -50,6 +51,8 @@ impl Scene for SaveloadScene {
                     position,
                     rng_steps,
                     unlocked_mask: host.unlocked_mask(),
+                    // S21.11：船等级逐档写入（全局账号级；旧档缺此字段 ⇒ 读回 = 1 小舢板）。
+                    boat_level: host.boat_level(),
                 };
                 if host.save_slots().len() > slot {
                     host.write_save_slot(slot, data);

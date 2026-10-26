@@ -455,6 +455,11 @@ pub trait MapHost {
 
     /// 设置 / 清空赛道节点预览选中（默认 no-op）。
     fn set_track_node_sel(&mut self, _v: Option<usize>) {}
+
+    /// S21.11 船等级（存档字段 `SaveSlot::boat_level` 读口径；1..=4，默认 1 = 小舢板）。
+    fn boat_level(&self) -> u8 {
+        1
+    }
 }
 
 /// S9.2：经济接口（贸易/建造/银行，`MainMap` 场景会话）。

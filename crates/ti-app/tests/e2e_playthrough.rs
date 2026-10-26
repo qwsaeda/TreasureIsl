@@ -8,7 +8,7 @@
 //! - `e2e_playthrough.rs`：完整会话连续性（一个测试跑完整局游戏）
 
 use ti_app::game_app::{BattleView, GameApp, GameInput, Scene};
-use ti_app::scenes::MapHost;
+use ti_app::scenes::{MapHost, MenuHost};
 use ti_core::domain::economy::Building;
 use ti_core::domain::selection::{Character, MapSlot};
 use ti_core::rules::board::SpaceKind;
@@ -513,6 +513,29 @@ fn e2e_board_spin_loop() {
         let bb = b.board.as_ref().expect("board 会话应在位");
         assert_eq!(ab.pos(), bb.pos(), "同 seed 同序列 ⇒ 同落格（确定性）");
     }
+}
+
+/// E2E 存档 v3（S21.11）：船等级逐档写入 + 读档还原（旧档缺字段 ⇒ 小舢板，零报错）。
+#[test]
+fn e2e_save_load_boat_level_roundtrip() {
+    let mut app = GameApp::new(1080.0, 1920.0);
+    app.rng_mut().set_seed(7);
+    app.set_rng_seed(7);
+    // 主菜单 → 存读档场景（菜单项 1）
+    app.set_menu_selected(1);
+    app.handle(GameInput::Confirm);
+    assert_eq!(app.scene(), Scene::Saveload, "应进存读档场景");
+    // ① 1 级（小舢板）写槽 0
+    app.handle(GameInput::WriteSave(0));
+    assert_eq!(app.save_slots()[0].boat_level, 1, "写档应带船等级 1（小舢板）");
+    // ② 升到 2 级再写槽 0
+    app.set_boat_level(2);
+    app.handle(GameInput::WriteSave(0));
+    assert_eq!(app.save_slots()[0].boat_level, 2, "写档应带船等级 2");
+    // ③ 降回 1 级后读档 ⇒ 船等级还原为 2
+    app.set_boat_level(1);
+    app.handle(GameInput::LoadSave(0));
+    assert_eq!(app.boat_level(), 2, "读档应还原船等级 2");
 }
 
 /// E2E 赛道节点预览（S21.7）：点非己节点 = 选中高亮 + 信息签（只读：不移动、不切场景）；

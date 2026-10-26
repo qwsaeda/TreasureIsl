@@ -7,6 +7,7 @@ use ti_core::domain::economy::Bank;
 use ti_core::domain::map::GridPos;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot};
+use ti_core::rules::boat::BoatSession;
 use ti_core::rules::progression::{CLEARED_BIT, ProgressionState};
 use ti_core::rules::rng;
 
@@ -17,6 +18,16 @@ impl GameApp {
     #[must_use]
     pub fn save_slots(&self) -> &[SaveSlot] {
         &self.save_slots
+    }
+    /// S21.11 船等级（存档字段 `SaveSlot::boat_level` 的唯一读口径；1..=4）。
+    #[must_use]
+    pub fn boat_level(&self) -> u8 {
+        u8::try_from(self.boat.level()).unwrap_or(1).max(1)
+    }
+    /// S21.11 设置船等级（读档恢复 / 测试往返用；越界由 `BoatSession` 钳到合法区间）。
+    pub fn set_boat_level(&mut self, level: u32) {
+        let cfg = self.boat.cfg().clone();
+        self.boat = BoatSession::restored(cfg, level);
     }
     /// 写入存档槽（越界忽略，测试 / 存档往返用）。
     pub fn write_save_slot(&mut self, slot: usize, data: SaveSlot) {
@@ -50,6 +61,8 @@ impl GameApp {
         let prev_bank = self.bank;
         let prev_unlocked_maps = self.unlocked_maps.clone();
         let prev_rng = self.rng.clone();
+        // S21.11：船等级也进快照（读档失败回滚时一并还原，避免半初始化态）。
+        let prev_boat_level = self.boat_level();
         let char_idx = data.character.saturating_sub(1);
         if usize::try_from(char_idx).is_ok_and(|i| i < char_count) {
             if let Some(ch) = Character::from_index(char_idx) {
@@ -98,6 +111,7 @@ impl GameApp {
                 self.bank = prev_bank;
                 self.unlocked_maps = prev_unlocked_maps;
                 self.rng = prev_rng;
+                self.set_boat_level(u32::from(prev_boat_level));
                 self.scene = Scene::SelectRole;
                 return;
             }
@@ -109,5 +123,7 @@ impl GameApp {
         } else {
             self.scene = Scene::SelectRole;
         }
+        // S21.11：船等级按存档恢复（旧档缺字段 ⇒ serde 缺省 1 = 小舢板，零报错）。
+        self.set_boat_level(u32::from(data.boat_level.max(1)));
     }
 }

@@ -32,6 +32,16 @@ pub struct SaveSlot {
     /// `map_slot`，读档会退回仅 m01，跨图进度丢失；位掩码 1 字节即可保住整条解锁链。
     #[serde(default)]
     pub unlocked_mask: u8,
+    /// S21.11 船等级（1..=4；`rules::boat::BoatSession` 等级链；`balance.boat` 数值单一事实源）。
+    /// v2 旧档缺此字段 ⇒ 缺省 **1（小舢板）**，读档零报错（迁移口径 = `docs/business/persistence.md`
+    /// §迁移 v3）；全局账号级（不随跨图重置）。
+    #[serde(default = "default_boat_level")]
+    pub boat_level: u8,
+}
+
+/// S21.11 旧档（v2，无 `boat_level`）缺省船等级 = 1（小舢板）。
+fn default_boat_level() -> u8 {
+    1
 }
 
 impl Default for SaveSlot {
@@ -44,6 +54,7 @@ impl Default for SaveSlot {
             position: 0,
             rng_steps: 0,
             unlocked_mask: 0,
+            boat_level: 1,
         }
     }
 }
