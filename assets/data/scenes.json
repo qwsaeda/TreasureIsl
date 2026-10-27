@@ -1,2888 +1,2888 @@
 {
-  "schema_version": 1,
-  "index": {
-    "status": {
-      "x": 540,
-      "y": 1840
-    },
-    "focus_anchor": {
-      "type": "compass_ring",
-      "bbox": {
-        "x": 65,
-        "y": 500,
-        "w": 950,
-        "h": 941
-      }
-    },
-    "primitives": [
-      {
-        "kind": "image",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "w": 1080,
-          "h": 1920
-        },
-        "z": -13,
-        "item": -1,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/chart_full.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 112,
-          "y": 192,
-          "w": 856,
-          "h": 672
-        },
-        "z": -12,
-        "item": -1,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/board.png"
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 160,
-          "y": 220,
-          "w": 760,
-          "h": 96
-        },
-        "z": -11,
-        "item": -1,
-        "when": "",
-        "color": "text_on_wood",
-        "text": "金银岛",
-        "tier": "title"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 160,
-          "y": 336,
-          "w": 760,
-          "h": 48
-        },
-        "z": -11,
-        "item": -1,
-        "when": "",
-        "color": "text_on_wood",
-        "text": "Treasure Isl · 航海贸易",
-        "tier": "hint"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 408,
-          "y": 838,
-          "w": 264,
-          "h": 264
-        },
-        "z": -9,
-        "item": -1,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/helm.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 468,
-          "y": 498,
-          "w": 144,
-          "h": 144
-        },
-        "z": -8,
-        "item": 0,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/medallion_ring.png",
-          "badge": true,
-          "pick_key": 1,
-          "pick_index": 0
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 492,
-          "y": 522,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 0,
-        "when": "normal",
-        "color": "gold",
-        "params": {
-          "icon": "compass",
-          "size": 96
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 492,
-          "y": 522,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 0,
-        "when": "selected",
-        "color": "text_on_wood",
-        "params": {
-          "icon": "compass",
-          "size": 96
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 468,
-          "y": 654,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 0,
-        "when": "normal",
-        "color": "text_on_parch",
-        "text": "新游戏",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 468,
-          "y": 654,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 0,
-        "when": "selected",
-        "color": "gold_warm",
-        "text": "新游戏",
-        "tier": "body"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 814,
-          "y": 698,
-          "w": 144,
-          "h": 144
-        },
-        "z": -8,
-        "item": 1,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/medallion_ring.png",
-          "badge": true,
-          "pick_key": 1,
-          "pick_index": 1
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 838,
-          "y": 722,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 1,
-        "when": "normal",
-        "color": "gold",
-        "params": {
-          "icon": "chest",
-          "size": 96
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 838,
-          "y": 722,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 1,
-        "when": "selected",
-        "color": "text_on_wood",
-        "params": {
-          "icon": "chest",
-          "size": 96
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 814,
-          "y": 854,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 1,
-        "when": "normal",
-        "color": "text_on_parch",
-        "text": "载入游戏",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 814,
-          "y": 854,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 1,
-        "when": "selected",
-        "color": "gold_warm",
-        "text": "载入游戏",
-        "tier": "body"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 814,
-          "y": 1098,
-          "w": 144,
-          "h": 144
-        },
-        "z": -8,
-        "item": 2,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/medallion_ring.png",
-          "badge": true,
-          "pick_key": 1,
-          "pick_index": 2
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 838,
-          "y": 1122,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 2,
-        "when": "normal",
-        "color": "gold",
-        "params": {
-          "icon": "anchor",
-          "size": 96
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 838,
-          "y": 1122,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 2,
-        "when": "selected",
-        "color": "text_on_wood",
-        "params": {
-          "icon": "anchor",
-          "size": 96
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 814,
-          "y": 1254,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 2,
-        "when": "normal",
-        "color": "text_on_parch",
-        "text": "读取存档",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 814,
-          "y": 1254,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 2,
-        "when": "selected",
-        "color": "gold_warm",
-        "text": "读取存档",
-        "tier": "body"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 468,
-          "y": 1298,
-          "w": 144,
-          "h": 144
-        },
-        "z": -8,
-        "item": 3,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/medallion_ring.png",
-          "badge": true,
-          "pick_key": 1,
-          "pick_index": 3
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 492,
-          "y": 1322,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 3,
-        "when": "normal",
-        "color": "gold",
-        "params": {
-          "icon": "gear",
-          "size": 96
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 492,
-          "y": 1322,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 3,
-        "when": "selected",
-        "color": "text_on_wood",
-        "params": {
-          "icon": "gear",
-          "size": 96
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 468,
-          "y": 1454,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 3,
-        "when": "normal",
-        "color": "text_on_parch",
-        "text": "选项设置",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 468,
-          "y": 1454,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 3,
-        "when": "selected",
-        "color": "gold_warm",
-        "text": "选项设置",
-        "tier": "body"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 122,
-          "y": 1098,
-          "w": 144,
-          "h": 144
-        },
-        "z": -8,
-        "item": 4,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/medallion_ring.png",
-          "badge": true,
-          "pick_key": 1,
-          "pick_index": 4
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 146,
-          "y": 1122,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 4,
-        "when": "normal",
-        "color": "gold",
-        "params": {
-          "icon": "book",
-          "size": 96
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 146,
-          "y": 1122,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 4,
-        "when": "selected",
-        "color": "text_on_wood",
-        "params": {
-          "icon": "book",
-          "size": 96
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 122,
-          "y": 1254,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 4,
-        "when": "normal",
-        "color": "text_on_parch",
-        "text": "帮助说明",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 122,
-          "y": 1254,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 4,
-        "when": "selected",
-        "color": "gold_warm",
-        "text": "帮助说明",
-        "tier": "body"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 122,
-          "y": 698,
-          "w": 144,
-          "h": 144
-        },
-        "z": -8,
-        "item": 5,
-        "when": "",
-        "color": "",
-        "params": {
-          "asset": "assets/ui/medallion_ring.png",
-          "badge": true,
-          "pick_key": 1,
-          "pick_index": 5
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 146,
-          "y": 722,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 5,
-        "when": "normal",
-        "color": "gold",
-        "params": {
-          "icon": "door",
-          "size": 96
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 146,
-          "y": 722,
-          "w": 96,
-          "h": 96
-        },
-        "z": -7,
-        "item": 5,
-        "when": "selected",
-        "color": "text_on_wood",
-        "params": {
-          "icon": "door",
-          "size": 96
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 122,
-          "y": 854,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 5,
-        "when": "normal",
-        "color": "text_on_parch",
-        "text": "离开游戏",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 122,
-          "y": 854,
-          "w": 144,
-          "h": 40
-        },
-        "z": -6,
-        "item": 5,
-        "when": "selected",
-        "color": "gold_warm",
-        "text": "离开游戏",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 260,
-          "y": 1840,
-          "w": 560,
-          "h": 40
-        },
-        "z": -4,
-        "item": -1,
-        "when": "",
-        "color": "text_on_wood",
-        "text": "金银岛 v1 · 桌面版",
-        "tier": "hint"
-      }
-    ]
+ "schema_version": 1,
+ "index": {
+  "status": {
+   "x": 540,
+   "y": 1840
   },
-  "select_role": {
-    "title": {
-      "x": 296,
-      "y": 48,
-      "w": 440,
-      "h": 96
+  "focus_anchor": {
+   "type": "compass_ring",
+   "bbox": {
+    "x": 65,
+    "y": 500,
+    "w": 950,
+    "h": 941
+   }
+  },
+  "primitives": [
+   {
+    "kind": "image",
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1920
     },
-    "list": {
-      "x": 600,
-      "y": 480,
-      "w": 400,
-      "row_h": 192,
-      "item_h": 192,
-      "text_x": 744,
-      "highlight_offset": 0
-    },
-    "icon": {
-      "x": 584
-    },
-    "hint": {
-      "x": 540,
-      "y": 1840
-    },
-    "portrait_zones": [
-      {
-        "x": 0,
-        "y": 240,
-        "w": 1080,
-        "h": 1460
-      }
-    ],
-    "primitives": [
-      {
-        "kind": "image",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "w": 1080,
-          "h": 1920
-        },
-        "color": "",
-        "z": -13,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/bg_night_sea.png"
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 76,
-          "y": 860,
-          "w": 440,
-          "h": 240
-        },
-        "color": "panel_wood",
-        "z": -12,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 76,
-          "y": 184,
-          "w": 440,
-          "h": 664
-        },
-        "color": "",
-        "z": -11,
-        "when": "selected",
-        "item": 0,
-        "params": {
-          "asset": "assets/ui/role_panda.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 76,
-          "y": 184,
-          "w": 440,
-          "h": 664
-        },
-        "color": "",
-        "z": -11,
-        "when": "selected",
-        "item": 1,
-        "params": {
-          "asset": "assets/ui/role_tichy.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 76,
-          "y": 184,
-          "w": 440,
-          "h": 664
-        },
-        "color": "",
-        "z": -11,
-        "when": "selected",
-        "item": 2,
-        "params": {
-          "asset": "assets/ui/role_kidd.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 76,
-          "y": 184,
-          "w": 440,
-          "h": 664
-        },
-        "color": "",
-        "z": -11,
-        "when": "selected",
-        "item": 3,
-        "params": {
-          "asset": "assets/ui/role_drake.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 76,
-          "y": 184,
-          "w": 440,
-          "h": 664
-        },
-        "color": "",
-        "z": -11,
-        "when": "selected",
-        "item": 4,
-        "params": {
-          "asset": "assets/ui/role_katharina.png"
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 76,
-          "y": 184,
-          "w": 440,
-          "h": 6
-        },
-        "color": "brass",
-        "z": -10,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 510,
-          "y": 184,
-          "w": 6,
-          "h": 664
-        },
-        "color": "brass",
-        "z": -10,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 76,
-          "y": 184,
-          "w": 6,
-          "h": 664
-        },
-        "color": "brass",
-        "z": -10,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 76,
-          "y": 184,
-          "w": 440,
-          "h": 6
-        },
-        "color": "brass",
-        "z": -10,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 510,
-          "y": 184,
-          "w": 6,
-          "h": 664
-        },
-        "color": "brass",
-        "z": -12,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 510,
-          "y": 184,
-          "w": 6,
-          "h": 664
-        },
-        "color": "brass",
-        "z": -11,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 886,
-          "w": 400,
-          "h": 96
-        },
-        "color": "gold_warm",
-        "z": -10,
-        "when": "selected",
-        "item": 0,
-        "tier": "title",
-        "text_key": "role.name.panda"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 990,
-          "w": 400,
-          "h": 56
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "selected",
-        "item": 0,
-        "tier": "hint",
-        "text_key": "role.desc.panda"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 886,
-          "w": 400,
-          "h": 96
-        },
-        "color": "gold_warm",
-        "z": -10,
-        "when": "selected",
-        "item": 1,
-        "tier": "title",
-        "text_key": "role.name.tichy"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 990,
-          "w": 400,
-          "h": 56
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "selected",
-        "item": 1,
-        "tier": "hint",
-        "text_key": "role.desc.tichy"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 886,
-          "w": 400,
-          "h": 96
-        },
-        "color": "gold_warm",
-        "z": -10,
-        "when": "selected",
-        "item": 2,
-        "tier": "title",
-        "text_key": "role.name.kidd"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 990,
-          "w": 400,
-          "h": 56
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "selected",
-        "item": 2,
-        "tier": "hint",
-        "text_key": "role.desc.kidd"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 886,
-          "w": 400,
-          "h": 96
-        },
-        "color": "gold_warm",
-        "z": -10,
-        "when": "selected",
-        "item": 3,
-        "tier": "title",
-        "text_key": "role.name.drake"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 990,
-          "w": 400,
-          "h": 56
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "selected",
-        "item": 3,
-        "tier": "hint",
-        "text_key": "role.desc.drake"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 886,
-          "w": 400,
-          "h": 96
-        },
-        "color": "gold_warm",
-        "z": -10,
-        "when": "selected",
-        "item": 4,
-        "tier": "title",
-        "text_key": "role.name.katharina"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 96,
-          "y": 990,
-          "w": 400,
-          "h": 56
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "selected",
-        "item": 4,
-        "tier": "hint",
-        "text_key": "role.desc.katharina"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 600,
-          "y": 480,
-          "w": 400,
-          "h": 192
-        },
-        "color": "panel_wood",
-        "z": -12,
-        "when": "",
-        "item": -1,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 0
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 620,
-          "y": 504,
-          "w": 96,
-          "h": 144
-        },
-        "color": "",
-        "z": -10,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/role_panda.png"
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 536,
-          "w": 280,
-          "h": 44
-        },
-        "color": "text_on_parch",
-        "z": -10,
-        "when": "",
-        "item": 0,
-        "tier": "body",
-        "text_key": "role.name.panda"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 592,
-          "w": 280,
-          "h": 44
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "",
-        "item": 0,
-        "tier": "hint",
-        "text_key": "role.desc.panda"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 600,
-          "y": 672,
-          "w": 400,
-          "h": 192
-        },
-        "color": "panel_wood",
-        "z": -12,
-        "when": "",
-        "item": -1,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 1
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 620,
-          "y": 696,
-          "w": 96,
-          "h": 144
-        },
-        "color": "",
-        "z": -10,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/role_tichy.png"
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 728,
-          "w": 280,
-          "h": 44
-        },
-        "color": "text_on_parch",
-        "z": -10,
-        "when": "",
-        "item": 1,
-        "tier": "body",
-        "text_key": "role.name.tichy"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 784,
-          "w": 280,
-          "h": 44
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "",
-        "item": 1,
-        "tier": "hint",
-        "text_key": "role.desc.tichy"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 600,
-          "y": 864,
-          "w": 400,
-          "h": 192
-        },
-        "color": "panel_wood",
-        "z": -12,
-        "when": "",
-        "item": -1,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 2
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 620,
-          "y": 888,
-          "w": 96,
-          "h": 144
-        },
-        "color": "",
-        "z": -10,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/role_kidd.png"
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 920,
-          "w": 280,
-          "h": 44
-        },
-        "color": "text_on_parch",
-        "z": -10,
-        "when": "",
-        "item": 2,
-        "tier": "body",
-        "text_key": "role.name.kidd"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 976,
-          "w": 280,
-          "h": 44
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "",
-        "item": 2,
-        "tier": "hint",
-        "text_key": "role.desc.kidd"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 600,
-          "y": 1056,
-          "w": 400,
-          "h": 192
-        },
-        "color": "panel_wood",
-        "z": -12,
-        "when": "",
-        "item": -1,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 3
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 620,
-          "y": 1080,
-          "w": 96,
-          "h": 144
-        },
-        "color": "",
-        "z": -10,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/role_drake.png"
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 1112,
-          "w": 280,
-          "h": 44
-        },
-        "color": "text_on_parch",
-        "z": -10,
-        "when": "",
-        "item": 3,
-        "tier": "body",
-        "text_key": "role.name.drake"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 1168,
-          "w": 280,
-          "h": 44
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "",
-        "item": 3,
-        "tier": "hint",
-        "text_key": "role.desc.drake"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 600,
-          "y": 1248,
-          "w": 400,
-          "h": 192
-        },
-        "color": "panel_wood",
-        "z": -12,
-        "when": "",
-        "item": -1,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 4
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 620,
-          "y": 1272,
-          "w": 96,
-          "h": 144
-        },
-        "color": "",
-        "z": -10,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/role_katharina.png"
-        }
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 1304,
-          "w": 280,
-          "h": 44
-        },
-        "color": "text_on_parch",
-        "z": -10,
-        "when": "",
-        "item": 4,
-        "tier": "body",
-        "text_key": "role.name.katharina"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 744,
-          "y": 1360,
-          "w": 280,
-          "h": 44
-        },
-        "color": "brass_light",
-        "z": -10,
-        "when": "",
-        "item": 4,
-        "tier": "hint",
-        "text_key": "role.desc.katharina"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 76,
-          "y": 48,
-          "w": 440,
-          "h": 96
-        },
-        "color": "gold_warm",
-        "z": -10,
-        "when": "",
-        "item": -1,
-        "tier": "title",
-        "text_key": "scene.select_role.title"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 0,
-          "y": 1648,
-          "w": 1080,
-          "h": 56
-        },
-        "color": "text_on_parch",
-        "z": -10,
-        "when": "",
-        "item": -1,
-        "tier": "body",
-        "text_key": "scene.select_role.nav_hint"
-      }
-    ],
-    "focus_anchor": {
-      "type": "portrait_carousel",
-      "bbox": {
-        "x": 76,
-        "y": 130,
-        "w": 356,
-        "h": 534
-      }
-    },
-    "hero_art": {
-      "x": 76,
-      "y": 184,
-      "w": 440,
-      "h": 664
+    "z": -13,
+    "item": -1,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/chart_full.png"
     }
-  },
-  "select_map": {
-    "title": {
-      "x": 352,
-      "y": 48,
-      "w": 400,
-      "h": 96
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 112,
+     "y": 192,
+     "w": 856,
+     "h": 672
     },
-    "list": {
-      "x": 720,
-      "y": 480,
-      "w": 280,
-      "row_h": 320,
-      "item_h": 320,
-      "text_x": 808,
-      "highlight_offset": 0
-    },
-    "icon": {
-      "x": 744
-    },
-    "locked": {
-      "text_x": 920,
-      "inset": 6,
-      "max_w": 40,
-      "min_w": 4,
-      "h": 12
-    },
-    "stars": {
-      "size": 14,
-      "gap": 6,
-      "inset": 12,
-      "top": 10,
-      "max": 3,
-      "bevel_px": 2
-    },
-    "hint": {
-      "x": 540,
-      "y": 1840
-    },
-    "portrait_zones": [
-      {
-        "x": 0,
-        "y": 240,
-        "w": 1080,
-        "h": 960
-      }
-    ],
-    "primitives": [
-      {
-        "kind": "image",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "w": 1080,
-          "h": 1920
-        },
-        "color": "",
-        "z": 3,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/bg_night_sea.png"
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 76,
-          "y": 130,
-          "w": 562,
-          "h": 1190
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 96,
-          "y": 240,
-          "w": 400,
-          "h": 280
-        },
-        "color": "",
-        "z": 5,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/map_harbour.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 156,
-          "y": 560,
-          "w": 400,
-          "h": 280
-        },
-        "color": "",
-        "z": 5,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/map_open_sea.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 216,
-          "y": 880,
-          "w": 400,
-          "h": 280
-        },
-        "color": "",
-        "z": 5,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/map_reef.png"
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 96,
-          "y": 240,
-          "w": 400,
-          "h": 280
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 96,
-          "y": 240,
-          "w": 400,
-          "h": 2
-        },
-        "color": "gold_warm",
-        "z": 5
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 156,
-          "y": 560,
-          "w": 400,
-          "h": 280
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 156,
-          "y": 560,
-          "w": 400,
-          "h": 2
-        },
-        "color": "gold_warm",
-        "z": 5
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 216,
-          "y": 880,
-          "w": 400,
-          "h": 280
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 216,
-          "y": 880,
-          "w": 400,
-          "h": 2
-        },
-        "color": "gold_warm",
-        "z": 5
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 720,
-          "y": 480,
-          "w": 280,
-          "h": 320
-        },
-        "color": "panel_wood",
-        "z": 4,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 0
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 720,
-          "y": 480,
-          "w": 280,
-          "h": 320
-        },
-        "color": "gold_warm",
-        "z": 9,
-        "when": "selected",
-        "item": 0,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 0
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 744,
-          "y": 608,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "map",
-          "size": 64
-        },
-        "color": "brass",
-        "z": 10,
-        "when": "normal",
-        "item": 0
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 744,
-          "y": 608,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "map",
-          "size": 64
-        },
-        "color": "black",
-        "z": 10,
-        "when": "selected",
-        "item": 0
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 808,
-          "y": 608,
-          "w": 168,
-          "h": 44
-        },
-        "color": "text_on_parch",
-        "z": 10,
-        "when": "normal",
-        "item": 0,
-        "text_key": "glmapm01.Map",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 808,
-          "y": 608,
-          "w": 168,
-          "h": 44
-        },
-        "color": "black",
-        "z": 10,
-        "when": "selected",
-        "item": 0,
-        "text_key": "glmapm01.Map",
-        "tier": "body"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 720,
-          "y": 800,
-          "w": 280,
-          "h": 320
-        },
-        "color": "panel_wood",
-        "z": 4,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 1
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 720,
-          "y": 800,
-          "w": 280,
-          "h": 320
-        },
-        "color": "gold_warm",
-        "z": 9,
-        "when": "selected",
-        "item": 1,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 1
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 744,
-          "y": 928,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "map",
-          "size": 64
-        },
-        "color": "brass",
-        "z": 10,
-        "when": "normal",
-        "item": 1
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 744,
-          "y": 928,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "map",
-          "size": 64
-        },
-        "color": "black",
-        "z": 10,
-        "when": "selected",
-        "item": 1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 808,
-          "y": 928,
-          "w": 168,
-          "h": 44
-        },
-        "color": "text_on_parch",
-        "z": 10,
-        "when": "normal",
-        "item": 1,
-        "text_key": "glmapm02.Map",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 808,
-          "y": 928,
-          "w": 168,
-          "h": 44
-        },
-        "color": "black",
-        "z": 10,
-        "when": "selected",
-        "item": 1,
-        "text_key": "glmapm02.Map",
-        "tier": "body"
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 720,
-          "y": 1120,
-          "w": 280,
-          "h": 320
-        },
-        "color": "panel_wood",
-        "z": 4,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 2
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 720,
-          "y": 1120,
-          "w": 280,
-          "h": 320
-        },
-        "color": "gold_warm",
-        "z": 9,
-        "when": "selected",
-        "item": 2,
-        "params": {
-          "pick_key": 2,
-          "pick_index": 2
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 744,
-          "y": 1248,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "map",
-          "size": 64
-        },
-        "color": "brass",
-        "z": 10,
-        "when": "normal",
-        "item": 2
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 744,
-          "y": 1248,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "map",
-          "size": 64
-        },
-        "color": "black",
-        "z": 10,
-        "when": "selected",
-        "item": 2
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 808,
-          "y": 1248,
-          "w": 168,
-          "h": 44
-        },
-        "color": "text_on_parch",
-        "z": 10,
-        "when": "normal",
-        "item": 2,
-        "text_key": "glmapm03.Map",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 808,
-          "y": 1248,
-          "w": 168,
-          "h": 44
-        },
-        "color": "black",
-        "z": 10,
-        "when": "selected",
-        "item": 2,
-        "text_key": "glmapm03.Map",
-        "tier": "body"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 352,
-          "y": 48,
-          "w": 400,
-          "h": 96
-        },
-        "color": "gold_warm",
-        "z": 8,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.select_map.title",
-        "tier": "body",
-        "text": ""
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 0,
-          "y": 1648,
-          "w": 1080,
-          "h": 56
-        },
-        "color": "text_on_parch",
-        "z": 11,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.select_map.nav_hint",
-        "tier": "hint",
-        "text": ""
-      }
-    ],
-    "focus_anchor": {
-      "type": "map_collage",
-      "bbox": {
-        "x": 76,
-        "y": 230,
-        "w": 562,
-        "h": 1190
-      }
+    "z": -12,
+    "item": -1,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/board.png"
     }
-  },
-  "main_map": {
-    "title": {
-      "y": 8,
-      "h": 96
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 160,
+     "y": 220,
+     "w": 760,
+     "h": 96
     },
-    "hud": {
-      "x": 80,
-      "y": 152,
-      "w": 920,
-      "h": 128
+    "z": -11,
+    "item": -1,
+    "when": "",
+    "color": "text_on_wood",
+    "text": "金银岛",
+    "tier": "title"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 160,
+     "y": 336,
+     "w": 760,
+     "h": 48
     },
-    "hud_trade": {
-      "x": 536,
-      "y": 168,
-      "w": 136,
-      "h": 88
+    "z": -11,
+    "item": -1,
+    "when": "",
+    "color": "text_on_wood",
+    "text": "Treasure Isl · 航海贸易",
+    "tier": "hint"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 408,
+     "y": 838,
+     "w": 264,
+     "h": 264
     },
-    "hud_sell": {
-      "x": 704,
-      "y": 168,
-      "w": 136,
-      "h": 88
-    },
-    "hud_build": {
-      "x": 856,
-      "y": 168,
-      "w": 136,
-      "h": 88
-    },
-    "fx_coin": {
-      "x": 272,
-      "y": 144
-    },
-    "grid": {
-      "x0": 540,
-      "y0": 520,
-      "tile_w": 25,
-      "tile_h": 13
-    },
-    "player": {
-      "size": 26
-    },
-    "landmark": {
-      "size": 20
-    },
-    "boss": {
-      "size": 24
-    },
-    "hint": {
-      "x": 540,
-      "y": 1632
-    },
-    "portrait_zones": [
-      {
-        "x": 0,
-        "y": 150,
-        "w": 1080,
-        "h": 1680
-      }
-    ],
-    "world_canvas": {
-      "x": 43,
-      "y": 250,
-      "w": 994,
-      "h": 826
-    },
-    "hud_gold": {
-      "x": 80,
-      "y": 80,
-      "w": 320,
-      "h": 96
-    },
-    "hud_player": {
-      "x": 680,
-      "y": 80,
-      "w": 320,
-      "h": 96
-    },
-    "hud_plaque_l": {
-      "x": 48,
-      "y": 48,
-      "w": 448,
-      "h": 192
-    },
-    "hud_plaque_r": {
-      "x": 584,
-      "y": 48,
-      "w": 448,
-      "h": 192
-    },
-    "deck_trade": {
-      "x": 48,
-      "y": 1440,
-      "w": 312,
-      "h": 136
-    },
-    "deck_sell": {
-      "x": 384,
-      "y": 1440,
-      "w": 312,
-      "h": 136
-    },
-    "deck_build": {
-      "x": 720,
-      "y": 1440,
-      "w": 312,
-      "h": 136
-    },
-    "canvas_entities": {
-      "player": 100,
-      "landmark": 80,
-      "boss": 96
-    },
-    "track_node": {
-      "size": 120
-    },
-    "track_ship": {
-      "size": 160
-    },
-    "focus_anchor": {
-      "type": "world_canvas",
-      "bbox": {
-        "x": 43,
-        "y": 250,
-        "w": 994,
-        "h": 826
-      }
-    },
-    "primitives": [
-      {
-        "kind": "image",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "w": 1080,
-          "h": 1920
-        },
-        "color": "",
-        "z": 2,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/chart_full.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 48,
-          "y": 48,
-          "w": 448,
-          "h": 192
-        },
-        "color": "",
-        "z": 3,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/hud_plaque.png"
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 104,
-          "y": 96,
-          "w": 96,
-          "h": 96
-        },
-        "params": {
-          "icon": "coin",
-          "size": 96
-        },
-        "color": "gold_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 584,
-          "y": 48,
-          "w": 448,
-          "h": 192
-        },
-        "color": "",
-        "z": 3,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/hud_plaque.png"
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 640,
-          "y": 96,
-          "w": 96,
-          "h": 96
-        },
-        "params": {
-          "icon": "chest",
-          "size": 96
-        },
-        "color": "gold_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 496,
-          "y": 40,
-          "w": 88,
-          "h": 44
-        },
-        "color": "gold_warm",
-        "tier": "body",
-        "z": 6,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.main_map.title"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 408,
-          "y": 1160,
-          "w": 264,
-          "h": 264
-        },
-        "color": "",
-        "z": 7,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/btn_spin.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 48,
-          "y": 1440,
-          "w": 312,
-          "h": 136
-        },
-        "color": "",
-        "z": 8,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/deck_plaque.png"
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 96,
-          "y": 1480,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "coin",
-          "size": 64
-        },
-        "color": "gold_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 184,
-          "y": 1440,
-          "w": 128,
-          "h": 136
-        },
-        "color": "text_on_wood",
-        "tier": "hint",
-        "z": 9,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.main_map.hud.trade"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 384,
-          "y": 1440,
-          "w": 312,
-          "h": 136
-        },
-        "color": "",
-        "z": 8,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/deck_plaque.png"
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 432,
-          "y": 1480,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "coin",
-          "size": 64
-        },
-        "color": "gold_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 520,
-          "y": 1440,
-          "w": 128,
-          "h": 136
-        },
-        "color": "text_on_wood",
-        "tier": "hint",
-        "z": 9,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.main_map.hud.sell"
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 720,
-          "y": 1440,
-          "w": 312,
-          "h": 136
-        },
-        "color": "",
-        "z": 8,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/deck_plaque.png"
-        }
-      },
-      {
-        "kind": "icon",
-        "rect": {
-          "x": 768,
-          "y": 1480,
-          "w": 64,
-          "h": 64
-        },
-        "params": {
-          "icon": "castle",
-          "size": 64
-        },
-        "color": "gold_warm",
-        "z": 8,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 856,
-          "y": 1440,
-          "w": 128,
-          "h": 136
-        },
-        "color": "text_on_wood",
-        "tier": "hint",
-        "z": 9,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.main_map.hud.build"
-      }
-    ],
-    "deck_spin": {
-      "x": 408,
-      "y": 1160,
-      "w": 264,
-      "h": 264
-    },
-    "voyage_bar": {
-      "x": 48,
-      "y": 1088,
-      "w": 984,
-      "h": 48
+    "z": -9,
+    "item": -1,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/helm.png"
     }
-  },
-  "vs": {
-    "title": {
-      "y": 8,
-      "h": 96
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 468,
+     "y": 498,
+     "w": 144,
+     "h": 144
     },
-    "player_hp": {
-      "x": 64,
-      "y": 168,
-      "w": 448,
-      "h": 48
-    },
-    "boss_hp": {
-      "x": 576,
-      "y": 168,
-      "w": 448,
-      "h": 48
-    },
-    "rounds": {
-      "x": 540,
-      "y": 416
-    },
-    "outcome": {
-      "x": 540,
-      "y": 960
-    },
-    "empty": {
-      "x": 540,
-      "y": 960
-    },
-    "fx_hit": {
-      "x": 540,
-      "y": 880
-    },
-    "hint": {
-      "x": 540,
-      "y": 1840
-    },
-    "portrait_zones": [
-      {
-        "x": 0,
-        "y": 170,
-        "w": 1080,
-        "h": 1680
-      }
-    ],
-    "battle_arena": {
-      "x": 76,
-      "y": 230,
-      "w": 918,
-      "h": 998
-    },
-    "focus_anchor": {
-      "type": "battle_arena",
-      "bbox": {
-        "x": 76,
-        "y": 230,
-        "w": 918,
-        "h": 998
-      }
-    },
-    "primitives": [
-      {
-        "kind": "image",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "w": 1080,
-          "h": 1920
-        },
-        "color": "",
-        "z": 3,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/bg_night_sea.png"
-        }
-      },
-      {
-        "kind": "image",
-        "rect": {
-          "x": 92,
-          "y": 246,
-          "w": 886,
-          "h": 966
-        },
-        "color": "",
-        "z": 4,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/bg_battle_sea.png"
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 64,
-          "y": 168,
-          "w": 448,
-          "h": 48
-        },
-        "color": "brass_dark",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 68,
-          "y": 172,
-          "w": 440,
-          "h": 2
-        },
-        "color": "brass_dark",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 576,
-          "y": 168,
-          "w": 448,
-          "h": 48
-        },
-        "color": "brass_dark",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 580,
-          "y": 172,
-          "w": 440,
-          "h": 2
-        },
-        "color": "brass_dark",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 76,
-          "y": 230,
-          "w": 918,
-          "h": 2
-        },
-        "color": "wood_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 76,
-          "y": 1226,
-          "w": 918,
-          "h": 2
-        },
-        "color": "wood_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 76,
-          "y": 230,
-          "w": 2,
-          "h": 998
-        },
-        "color": "wood_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 992,
-          "y": 230,
-          "w": 2,
-          "h": 998
-        },
-        "color": "wood_warm",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 92,
-          "y": 895,
-          "w": 886,
-          "h": 1
-        },
-        "color": "brass_dark",
-        "z": 4,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 507,
-          "y": 478,
-          "w": 56,
-          "h": 2
-        },
-        "color": "gold_warm",
-        "z": 5,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 534,
-          "y": 465,
-          "w": 2,
-          "h": 28
-        },
-        "color": "gold_warm",
-        "z": 5,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 532,
-          "y": 476,
-          "w": 6,
-          "h": 6
-        },
-        "color": "gold_warm",
-        "z": 5,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 396,
-          "y": 48,
-          "w": 288,
-          "h": 44
-        },
-        "color": "gold_warm",
-        "tier": "body",
-        "z": 5,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.vs.title"
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 0,
-          "y": 1648,
-          "w": 1080,
-          "h": 56
-        },
-        "color": "text_on_parch",
-        "tier": "hint",
-        "z": 11,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.vs.hint"
-      }
-    ]
-  },
-  "message": {
-    "title": {
-      "x": 704,
-      "y": 704,
-      "w": 600,
-      "h": 96
-    },
-    "body": {
-      "x": 408,
-      "y": 768,
-      "w": 584,
-      "h": 176,
-      "clip_reserve": 48,
-      "line_h": 52,
-      "x_pad": 4,
-      "edge_pad": 8
-    },
-    "page_dots": {
-      "size": 12,
-      "gap": 36,
-      "dy": 48,
-      "inner": 8
-    },
-    "page": {
-      "x": 704,
-      "y": 1008,
-      "w": 0,
-      "h": 0
-    },
-    "hint": {
-      "x": 540,
-      "y": 1840
-    },
-    "portrait_zones": [
-      {
-        "x": 0,
-        "y": 220,
-        "w": 1080,
-        "h": 1680
-      }
-    ],
-    "primitives": [
-      {
-        "kind": "image",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "w": 1080,
-          "h": 1920
-        },
-        "color": "",
-        "z": 3,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/bg_night_sea.png"
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 400,
-          "y": 704,
-          "w": 608,
-          "h": 336
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 402,
-          "y": 708,
-          "w": 604,
-          "h": 48
-        },
-        "color": "wood_warm",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 402,
-          "y": 756,
-          "w": 604,
-          "h": 4
-        },
-        "color": "gold_warm",
-        "z": 5,
-        "when": "",
-        "item": -1
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 0,
-          "y": 1648,
-          "w": 1080,
-          "h": 56
-        },
-        "color": "text_on_parch",
-        "z": 11,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.message.nav_hint",
-        "tier": "hint",
-        "text": ""
-      }
-    ],
-    "focus_anchor": {
-      "type": "text_panel",
-      "bbox": {
-        "x": 400,
-        "y": 230,
-        "w": 605,
-        "h": 1210
-      }
-    },
-    "panel": {
-      "x": 400,
-      "y": 704,
-      "w": 608,
-      "h": 336
+    "z": -8,
+    "item": 0,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/medallion_ring.png",
+     "badge": true,
+     "pick_key": 1,
+     "pick_index": 0
     }
-  },
-  "saveload": {
-    "title": {
-      "x": 600,
-      "y": 48,
-      "w": 640,
-      "h": 96
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 492,
+     "y": 522,
+     "w": 96,
+     "h": 96
     },
-    "list": {
-      "x": 280,
-      "y": 240,
-      "w": 440,
-      "row_h": 256,
-      "item_h": 224,
-      "text_x": 312,
-      "gold_x": 792,
-      "highlight_offset": 8,
-      "summary_dy": 52
-    },
-    "hint": {
-      "x": 540,
-      "y": 1840
-    },
-    "portrait_zones": [
-      {
-        "x": 0,
-        "y": 240,
-        "w": 1080,
-        "h": 1450
-      }
-    ],
-    "primitives": [
-      {
-        "kind": "image",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "w": 1080,
-          "h": 1920
-        },
-        "color": "",
-        "z": 3,
-        "when": "",
-        "item": -1,
-        "params": {
-          "asset": "assets/ui/bg_night_sea.png"
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 280,
-          "y": 240,
-          "w": 440,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4,
-        "params": {
-          "pick_key": 3,
-          "pick_index": 0
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 760,
-          "y": 752,
-          "w": 160,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 760,
-          "y": 240,
-          "w": 160,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 280,
-          "y": 1008,
-          "w": 440,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4,
-        "params": {
-          "pick_key": 3,
-          "pick_index": 3
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 280,
-          "y": 496,
-          "w": 440,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4,
-        "params": {
-          "pick_key": 3,
-          "pick_index": 1
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 760,
-          "y": 1008,
-          "w": 160,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 760,
-          "y": 496,
-          "w": 160,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 280,
-          "y": 1264,
-          "w": 440,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4,
-        "params": {
-          "pick_key": 3,
-          "pick_index": 4
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 280,
-          "y": 752,
-          "w": 440,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4,
-        "params": {
-          "pick_key": 3,
-          "pick_index": 2
-        }
-      },
-      {
-        "kind": "rect",
-        "rect": {
-          "x": 760,
-          "y": 1264,
-          "w": 160,
-          "h": 224
-        },
-        "color": "panel_wood",
-        "z": 4
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 354,
-          "y": 48,
-          "w": 640,
-          "h": 96
-        },
-        "color": "gold_warm",
-        "z": 8,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.saveload.title",
-        "tier": "body",
-        "text": ""
-      },
-      {
-        "kind": "text",
-        "rect": {
-          "x": 0,
-          "y": 1648,
-          "w": 1080,
-          "h": 56
-        },
-        "color": "text_on_parch",
-        "z": 11,
-        "when": "",
-        "item": -1,
-        "text_key": "scene.saveload.nav_hint",
-        "tier": "hint",
-        "text": ""
-      }
-    ],
-    "focus_anchor": {
-      "type": "slot_list_with_meta",
-      "bbox": {
-        "x": 356,
-        "y": 230,
-        "w": 637,
-        "h": 1210
-      }
+    "z": -7,
+    "item": 0,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "compass",
+     "size": 96
     }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 492,
+     "y": 522,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 0,
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "compass",
+     "size": 96
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 468,
+     "y": 654,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 0,
+    "when": "normal",
+    "color": "text_on_parch",
+    "text": "新游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 468,
+     "y": 654,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 0,
+    "when": "selected",
+    "color": "gold_warm",
+    "text": "新游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 814,
+     "y": 698,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
+    "item": 1,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/medallion_ring.png",
+     "badge": true,
+     "pick_key": 1,
+     "pick_index": 1
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 838,
+     "y": 722,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 1,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "chest",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 838,
+     "y": 722,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 1,
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "chest",
+     "size": 96
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 814,
+     "y": 854,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 1,
+    "when": "normal",
+    "color": "text_on_parch",
+    "text": "载入游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 814,
+     "y": 854,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 1,
+    "when": "selected",
+    "color": "gold_warm",
+    "text": "载入游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 814,
+     "y": 1098,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
+    "item": 2,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/medallion_ring.png",
+     "badge": true,
+     "pick_key": 1,
+     "pick_index": 2
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 838,
+     "y": 1122,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 2,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "anchor",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 838,
+     "y": 1122,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 2,
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "anchor",
+     "size": 96
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 814,
+     "y": 1254,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 2,
+    "when": "normal",
+    "color": "text_on_parch",
+    "text": "读取存档",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 814,
+     "y": 1254,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 2,
+    "when": "selected",
+    "color": "gold_warm",
+    "text": "读取存档",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 468,
+     "y": 1298,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
+    "item": 3,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/medallion_ring.png",
+     "badge": true,
+     "pick_key": 1,
+     "pick_index": 3
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 492,
+     "y": 1322,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 3,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "gear",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 492,
+     "y": 1322,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 3,
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "gear",
+     "size": 96
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 468,
+     "y": 1454,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 3,
+    "when": "normal",
+    "color": "text_on_parch",
+    "text": "选项设置",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 468,
+     "y": 1454,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 3,
+    "when": "selected",
+    "color": "gold_warm",
+    "text": "选项设置",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 122,
+     "y": 1098,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
+    "item": 4,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/medallion_ring.png",
+     "badge": true,
+     "pick_key": 1,
+     "pick_index": 4
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 146,
+     "y": 1122,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 4,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "book",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 146,
+     "y": 1122,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 4,
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "book",
+     "size": 96
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 122,
+     "y": 1254,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 4,
+    "when": "normal",
+    "color": "text_on_parch",
+    "text": "帮助说明",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 122,
+     "y": 1254,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 4,
+    "when": "selected",
+    "color": "gold_warm",
+    "text": "帮助说明",
+    "tier": "body"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 122,
+     "y": 698,
+     "w": 144,
+     "h": 144
+    },
+    "z": -8,
+    "item": 5,
+    "when": "",
+    "color": "",
+    "params": {
+     "asset": "assets/ui/medallion_ring.png",
+     "badge": true,
+     "pick_key": 1,
+     "pick_index": 5
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 146,
+     "y": 722,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 5,
+    "when": "normal",
+    "color": "gold",
+    "params": {
+     "icon": "door",
+     "size": 96
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 146,
+     "y": 722,
+     "w": 96,
+     "h": 96
+    },
+    "z": -7,
+    "item": 5,
+    "when": "selected",
+    "color": "text_on_wood",
+    "params": {
+     "icon": "door",
+     "size": 96
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 122,
+     "y": 854,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 5,
+    "when": "normal",
+    "color": "text_on_parch",
+    "text": "离开游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 122,
+     "y": 854,
+     "w": 144,
+     "h": 40
+    },
+    "z": -6,
+    "item": 5,
+    "when": "selected",
+    "color": "gold_warm",
+    "text": "离开游戏",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 260,
+     "y": 1840,
+     "w": 560,
+     "h": 40
+    },
+    "z": -4,
+    "item": -1,
+    "when": "",
+    "color": "text_on_wood",
+    "text": "金银岛 v1 · 桌面版",
+    "tier": "hint"
+   }
+  ]
+ },
+ "select_role": {
+  "title": {
+   "x": 296,
+   "y": 48,
+   "w": 440,
+   "h": 96
+  },
+  "list": {
+   "x": 600,
+   "y": 480,
+   "w": 400,
+   "row_h": 192,
+   "item_h": 192,
+   "text_x": 744,
+   "highlight_offset": 0
+  },
+  "icon": {
+   "x": 584
+  },
+  "hint": {
+   "x": 540,
+   "y": 1840
+  },
+  "portrait_zones": [
+   {
+    "x": 0,
+    "y": 240,
+    "w": 1080,
+    "h": 1460
+   }
+  ],
+  "primitives": [
+   {
+    "kind": "image",
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1920
+    },
+    "color": "",
+    "z": -13,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/bg_night_sea.png"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 76,
+     "y": 860,
+     "w": 440,
+     "h": 240
+    },
+    "color": "panel_wood",
+    "z": -12,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 76,
+     "y": 184,
+     "w": 440,
+     "h": 664
+    },
+    "color": "",
+    "z": -11,
+    "when": "selected",
+    "item": 0,
+    "params": {
+     "asset": "assets/ui/role_panda.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 76,
+     "y": 184,
+     "w": 440,
+     "h": 664
+    },
+    "color": "",
+    "z": -11,
+    "when": "selected",
+    "item": 1,
+    "params": {
+     "asset": "assets/ui/role_tichy.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 76,
+     "y": 184,
+     "w": 440,
+     "h": 664
+    },
+    "color": "",
+    "z": -11,
+    "when": "selected",
+    "item": 2,
+    "params": {
+     "asset": "assets/ui/role_kidd.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 76,
+     "y": 184,
+     "w": 440,
+     "h": 664
+    },
+    "color": "",
+    "z": -11,
+    "when": "selected",
+    "item": 3,
+    "params": {
+     "asset": "assets/ui/role_drake.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 76,
+     "y": 184,
+     "w": 440,
+     "h": 664
+    },
+    "color": "",
+    "z": -11,
+    "when": "selected",
+    "item": 4,
+    "params": {
+     "asset": "assets/ui/role_katharina.png"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 76,
+     "y": 184,
+     "w": 440,
+     "h": 6
+    },
+    "color": "brass",
+    "z": -10,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 510,
+     "y": 184,
+     "w": 6,
+     "h": 664
+    },
+    "color": "brass",
+    "z": -10,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 76,
+     "y": 184,
+     "w": 6,
+     "h": 664
+    },
+    "color": "brass",
+    "z": -10,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 76,
+     "y": 184,
+     "w": 440,
+     "h": 6
+    },
+    "color": "brass",
+    "z": -10,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 510,
+     "y": 184,
+     "w": 6,
+     "h": 664
+    },
+    "color": "brass",
+    "z": -12,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 510,
+     "y": 184,
+     "w": 6,
+     "h": 664
+    },
+    "color": "brass",
+    "z": -11,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 886,
+     "w": 400,
+     "h": 96
+    },
+    "color": "gold_warm",
+    "z": -10,
+    "when": "selected",
+    "item": 0,
+    "tier": "title",
+    "text_key": "role.name.panda"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 990,
+     "w": 400,
+     "h": 56
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "selected",
+    "item": 0,
+    "tier": "hint",
+    "text_key": "role.desc.panda"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 886,
+     "w": 400,
+     "h": 96
+    },
+    "color": "gold_warm",
+    "z": -10,
+    "when": "selected",
+    "item": 1,
+    "tier": "title",
+    "text_key": "role.name.tichy"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 990,
+     "w": 400,
+     "h": 56
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "selected",
+    "item": 1,
+    "tier": "hint",
+    "text_key": "role.desc.tichy"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 886,
+     "w": 400,
+     "h": 96
+    },
+    "color": "gold_warm",
+    "z": -10,
+    "when": "selected",
+    "item": 2,
+    "tier": "title",
+    "text_key": "role.name.kidd"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 990,
+     "w": 400,
+     "h": 56
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "selected",
+    "item": 2,
+    "tier": "hint",
+    "text_key": "role.desc.kidd"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 886,
+     "w": 400,
+     "h": 96
+    },
+    "color": "gold_warm",
+    "z": -10,
+    "when": "selected",
+    "item": 3,
+    "tier": "title",
+    "text_key": "role.name.drake"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 990,
+     "w": 400,
+     "h": 56
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "selected",
+    "item": 3,
+    "tier": "hint",
+    "text_key": "role.desc.drake"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 886,
+     "w": 400,
+     "h": 96
+    },
+    "color": "gold_warm",
+    "z": -10,
+    "when": "selected",
+    "item": 4,
+    "tier": "title",
+    "text_key": "role.name.katharina"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 96,
+     "y": 990,
+     "w": 400,
+     "h": 56
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "selected",
+    "item": 4,
+    "tier": "hint",
+    "text_key": "role.desc.katharina"
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 600,
+     "y": 480,
+     "w": 400,
+     "h": 192
+    },
+    "color": "panel_wood",
+    "z": -12,
+    "when": "",
+    "item": -1,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 0
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 620,
+     "y": 504,
+     "w": 96,
+     "h": 144
+    },
+    "color": "",
+    "z": -10,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/role_panda.png"
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 536,
+     "w": 280,
+     "h": 44
+    },
+    "color": "text_on_parch",
+    "z": -10,
+    "when": "",
+    "item": 0,
+    "tier": "body",
+    "text_key": "role.name.panda"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 592,
+     "w": 280,
+     "h": 44
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "",
+    "item": 0,
+    "tier": "hint",
+    "text_key": "role.desc.panda"
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 600,
+     "y": 672,
+     "w": 400,
+     "h": 192
+    },
+    "color": "panel_wood",
+    "z": -12,
+    "when": "",
+    "item": -1,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 1
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 620,
+     "y": 696,
+     "w": 96,
+     "h": 144
+    },
+    "color": "",
+    "z": -10,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/role_tichy.png"
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 728,
+     "w": 280,
+     "h": 44
+    },
+    "color": "text_on_parch",
+    "z": -10,
+    "when": "",
+    "item": 1,
+    "tier": "body",
+    "text_key": "role.name.tichy"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 784,
+     "w": 280,
+     "h": 44
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "",
+    "item": 1,
+    "tier": "hint",
+    "text_key": "role.desc.tichy"
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 600,
+     "y": 864,
+     "w": 400,
+     "h": 192
+    },
+    "color": "panel_wood",
+    "z": -12,
+    "when": "",
+    "item": -1,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 2
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 620,
+     "y": 888,
+     "w": 96,
+     "h": 144
+    },
+    "color": "",
+    "z": -10,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/role_kidd.png"
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 920,
+     "w": 280,
+     "h": 44
+    },
+    "color": "text_on_parch",
+    "z": -10,
+    "when": "",
+    "item": 2,
+    "tier": "body",
+    "text_key": "role.name.kidd"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 976,
+     "w": 280,
+     "h": 44
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "",
+    "item": 2,
+    "tier": "hint",
+    "text_key": "role.desc.kidd"
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 600,
+     "y": 1056,
+     "w": 400,
+     "h": 192
+    },
+    "color": "panel_wood",
+    "z": -12,
+    "when": "",
+    "item": -1,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 3
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 620,
+     "y": 1080,
+     "w": 96,
+     "h": 144
+    },
+    "color": "",
+    "z": -10,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/role_drake.png"
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 1112,
+     "w": 280,
+     "h": 44
+    },
+    "color": "text_on_parch",
+    "z": -10,
+    "when": "",
+    "item": 3,
+    "tier": "body",
+    "text_key": "role.name.drake"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 1168,
+     "w": 280,
+     "h": 44
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "",
+    "item": 3,
+    "tier": "hint",
+    "text_key": "role.desc.drake"
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 600,
+     "y": 1248,
+     "w": 400,
+     "h": 192
+    },
+    "color": "panel_wood",
+    "z": -12,
+    "when": "",
+    "item": -1,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 4
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 620,
+     "y": 1272,
+     "w": 96,
+     "h": 144
+    },
+    "color": "",
+    "z": -10,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/role_katharina.png"
+    }
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 1304,
+     "w": 280,
+     "h": 44
+    },
+    "color": "text_on_parch",
+    "z": -10,
+    "when": "",
+    "item": 4,
+    "tier": "body",
+    "text_key": "role.name.katharina"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 744,
+     "y": 1360,
+     "w": 280,
+     "h": 44
+    },
+    "color": "brass_light",
+    "z": -10,
+    "when": "",
+    "item": 4,
+    "tier": "hint",
+    "text_key": "role.desc.katharina"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 76,
+     "y": 48,
+     "w": 440,
+     "h": 96
+    },
+    "color": "gold_warm",
+    "z": -10,
+    "when": "",
+    "item": -1,
+    "tier": "title",
+    "text_key": "scene.select_role.title"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 0,
+     "y": 1648,
+     "w": 1080,
+     "h": 56
+    },
+    "color": "text_on_parch",
+    "z": -10,
+    "when": "",
+    "item": -1,
+    "tier": "body",
+    "text_key": "scene.select_role.nav_hint"
+   }
+  ],
+  "focus_anchor": {
+   "type": "portrait_carousel",
+   "bbox": {
+    "x": 76,
+    "y": 130,
+    "w": 356,
+    "h": 534
+   }
+  },
+  "hero_art": {
+   "x": 76,
+   "y": 184,
+   "w": 440,
+   "h": 664
   }
+ },
+ "select_map": {
+  "title": {
+   "x": 352,
+   "y": 48,
+   "w": 400,
+   "h": 96
+  },
+  "list": {
+   "x": 720,
+   "y": 480,
+   "w": 280,
+   "row_h": 320,
+   "item_h": 320,
+   "text_x": 808,
+   "highlight_offset": 0
+  },
+  "icon": {
+   "x": 744
+  },
+  "locked": {
+   "text_x": 920,
+   "inset": 6,
+   "max_w": 40,
+   "min_w": 4,
+   "h": 12
+  },
+  "stars": {
+   "size": 14,
+   "gap": 6,
+   "inset": 12,
+   "top": 10,
+   "max": 3,
+   "bevel_px": 2
+  },
+  "hint": {
+   "x": 540,
+   "y": 1840
+  },
+  "portrait_zones": [
+   {
+    "x": 0,
+    "y": 240,
+    "w": 1080,
+    "h": 960
+   }
+  ],
+  "primitives": [
+   {
+    "kind": "image",
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1920
+    },
+    "color": "",
+    "z": 3,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/bg_night_sea.png"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 76,
+     "y": 130,
+     "w": 562,
+     "h": 1190
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 96,
+     "y": 240,
+     "w": 400,
+     "h": 280
+    },
+    "color": "",
+    "z": 5,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/map_harbour.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 156,
+     "y": 560,
+     "w": 400,
+     "h": 280
+    },
+    "color": "",
+    "z": 5,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/map_open_sea.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 216,
+     "y": 880,
+     "w": 400,
+     "h": 280
+    },
+    "color": "",
+    "z": 5,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/map_reef.png"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 96,
+     "y": 240,
+     "w": 400,
+     "h": 280
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 96,
+     "y": 240,
+     "w": 400,
+     "h": 2
+    },
+    "color": "gold_warm",
+    "z": 5
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 156,
+     "y": 560,
+     "w": 400,
+     "h": 280
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 156,
+     "y": 560,
+     "w": 400,
+     "h": 2
+    },
+    "color": "gold_warm",
+    "z": 5
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 216,
+     "y": 880,
+     "w": 400,
+     "h": 280
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 216,
+     "y": 880,
+     "w": 400,
+     "h": 2
+    },
+    "color": "gold_warm",
+    "z": 5
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 720,
+     "y": 480,
+     "w": 280,
+     "h": 320
+    },
+    "color": "panel_wood",
+    "z": 4,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 0
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 720,
+     "y": 480,
+     "w": 280,
+     "h": 320
+    },
+    "color": "gold_warm",
+    "z": 9,
+    "when": "selected",
+    "item": 0,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 0
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 744,
+     "y": 608,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "map",
+     "size": 64
+    },
+    "color": "brass",
+    "z": 10,
+    "when": "normal",
+    "item": 0
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 744,
+     "y": 608,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "map",
+     "size": 64
+    },
+    "color": "black",
+    "z": 10,
+    "when": "selected",
+    "item": 0
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 808,
+     "y": 608,
+     "w": 168,
+     "h": 44
+    },
+    "color": "text_on_parch",
+    "z": 10,
+    "when": "normal",
+    "item": 0,
+    "text_key": "glmapm01.Map",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 808,
+     "y": 608,
+     "w": 168,
+     "h": 44
+    },
+    "color": "black",
+    "z": 10,
+    "when": "selected",
+    "item": 0,
+    "text_key": "glmapm01.Map",
+    "tier": "body"
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 720,
+     "y": 800,
+     "w": 280,
+     "h": 320
+    },
+    "color": "panel_wood",
+    "z": 4,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 1
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 720,
+     "y": 800,
+     "w": 280,
+     "h": 320
+    },
+    "color": "gold_warm",
+    "z": 9,
+    "when": "selected",
+    "item": 1,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 1
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 744,
+     "y": 928,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "map",
+     "size": 64
+    },
+    "color": "brass",
+    "z": 10,
+    "when": "normal",
+    "item": 1
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 744,
+     "y": 928,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "map",
+     "size": 64
+    },
+    "color": "black",
+    "z": 10,
+    "when": "selected",
+    "item": 1
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 808,
+     "y": 928,
+     "w": 168,
+     "h": 44
+    },
+    "color": "text_on_parch",
+    "z": 10,
+    "when": "normal",
+    "item": 1,
+    "text_key": "glmapm02.Map",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 808,
+     "y": 928,
+     "w": 168,
+     "h": 44
+    },
+    "color": "black",
+    "z": 10,
+    "when": "selected",
+    "item": 1,
+    "text_key": "glmapm02.Map",
+    "tier": "body"
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 720,
+     "y": 1120,
+     "w": 280,
+     "h": 320
+    },
+    "color": "panel_wood",
+    "z": 4,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 2
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 720,
+     "y": 1120,
+     "w": 280,
+     "h": 320
+    },
+    "color": "gold_warm",
+    "z": 9,
+    "when": "selected",
+    "item": 2,
+    "params": {
+     "pick_key": 2,
+     "pick_index": 2
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 744,
+     "y": 1248,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "map",
+     "size": 64
+    },
+    "color": "brass",
+    "z": 10,
+    "when": "normal",
+    "item": 2
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 744,
+     "y": 1248,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "map",
+     "size": 64
+    },
+    "color": "black",
+    "z": 10,
+    "when": "selected",
+    "item": 2
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 808,
+     "y": 1248,
+     "w": 168,
+     "h": 44
+    },
+    "color": "text_on_parch",
+    "z": 10,
+    "when": "normal",
+    "item": 2,
+    "text_key": "glmapm03.Map",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 808,
+     "y": 1248,
+     "w": 168,
+     "h": 44
+    },
+    "color": "black",
+    "z": 10,
+    "when": "selected",
+    "item": 2,
+    "text_key": "glmapm03.Map",
+    "tier": "body"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 352,
+     "y": 48,
+     "w": 400,
+     "h": 96
+    },
+    "color": "gold_warm",
+    "z": 8,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.select_map.title",
+    "tier": "body",
+    "text": ""
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 0,
+     "y": 1648,
+     "w": 1080,
+     "h": 56
+    },
+    "color": "text_on_parch",
+    "z": 11,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.select_map.nav_hint",
+    "tier": "hint",
+    "text": ""
+   }
+  ],
+  "focus_anchor": {
+   "type": "map_collage",
+   "bbox": {
+    "x": 76,
+    "y": 230,
+    "w": 562,
+    "h": 1190
+   }
+  }
+ },
+ "main_map": {
+  "title": {
+   "y": 8,
+   "h": 96
+  },
+  "hud": {
+   "x": 80,
+   "y": 152,
+   "w": 920,
+   "h": 128
+  },
+  "hud_trade": {
+   "x": 536,
+   "y": 168,
+   "w": 136,
+   "h": 88
+  },
+  "hud_sell": {
+   "x": 704,
+   "y": 168,
+   "w": 136,
+   "h": 88
+  },
+  "hud_build": {
+   "x": 856,
+   "y": 168,
+   "w": 136,
+   "h": 88
+  },
+  "fx_coin": {
+   "x": 272,
+   "y": 144
+  },
+  "grid": {
+   "x0": 540,
+   "y0": 520,
+   "tile_w": 25,
+   "tile_h": 13
+  },
+  "player": {
+   "size": 26
+  },
+  "landmark": {
+   "size": 20
+  },
+  "boss": {
+   "size": 24
+  },
+  "hint": {
+   "x": 540,
+   "y": 1632
+  },
+  "portrait_zones": [
+   {
+    "x": 0,
+    "y": 150,
+    "w": 1080,
+    "h": 1680
+   }
+  ],
+  "world_canvas": {
+   "x": 43,
+   "y": 250,
+   "w": 994,
+   "h": 826
+  },
+  "hud_gold": {
+   "x": 80,
+   "y": 80,
+   "w": 320,
+   "h": 96
+  },
+  "hud_player": {
+   "x": 680,
+   "y": 80,
+   "w": 320,
+   "h": 96
+  },
+  "hud_plaque_l": {
+   "x": 48,
+   "y": 48,
+   "w": 448,
+   "h": 192
+  },
+  "hud_plaque_r": {
+   "x": 584,
+   "y": 48,
+   "w": 448,
+   "h": 192
+  },
+  "deck_trade": {
+   "x": 48,
+   "y": 1440,
+   "w": 312,
+   "h": 136
+  },
+  "deck_sell": {
+   "x": 384,
+   "y": 1440,
+   "w": 312,
+   "h": 136
+  },
+  "deck_build": {
+   "x": 720,
+   "y": 1440,
+   "w": 312,
+   "h": 136
+  },
+  "canvas_entities": {
+   "player": 100,
+   "landmark": 80,
+   "boss": 96
+  },
+  "track_node": {
+   "size": 120
+  },
+  "track_ship": {
+   "size": 160
+  },
+  "focus_anchor": {
+   "type": "world_canvas",
+   "bbox": {
+    "x": 43,
+    "y": 250,
+    "w": 994,
+    "h": 826
+   }
+  },
+  "primitives": [
+   {
+    "kind": "image",
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1920
+    },
+    "color": "",
+    "z": 2,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/chart_full.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 48,
+     "y": 48,
+     "w": 448,
+     "h": 192
+    },
+    "color": "",
+    "z": 3,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/hud_plaque.png"
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 104,
+     "y": 96,
+     "w": 96,
+     "h": 96
+    },
+    "params": {
+     "icon": "coin",
+     "size": 96
+    },
+    "color": "gold_warm",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 584,
+     "y": 48,
+     "w": 448,
+     "h": 192
+    },
+    "color": "",
+    "z": 3,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/hud_plaque.png"
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 640,
+     "y": 96,
+     "w": 96,
+     "h": 96
+    },
+    "params": {
+     "icon": "chest",
+     "size": 96
+    },
+    "color": "gold_warm",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 496,
+     "y": 40,
+     "w": 88,
+     "h": 44
+    },
+    "color": "gold_warm",
+    "tier": "body",
+    "z": 6,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.main_map.title"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 408,
+     "y": 1160,
+     "w": 264,
+     "h": 264
+    },
+    "color": "",
+    "z": 7,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/btn_spin.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 48,
+     "y": 1440,
+     "w": 312,
+     "h": 136
+    },
+    "color": "",
+    "z": 8,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/deck_plaque.png"
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 96,
+     "y": 1480,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "coin",
+     "size": 64
+    },
+    "color": "gold_warm",
+    "z": 8,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 184,
+     "y": 1440,
+     "w": 128,
+     "h": 136
+    },
+    "color": "text_on_wood",
+    "tier": "hint",
+    "z": 9,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.main_map.hud.trade"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 384,
+     "y": 1440,
+     "w": 312,
+     "h": 136
+    },
+    "color": "",
+    "z": 8,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/deck_plaque.png"
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 432,
+     "y": 1480,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "coin",
+     "size": 64
+    },
+    "color": "gold_warm",
+    "z": 8,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 520,
+     "y": 1440,
+     "w": 128,
+     "h": 136
+    },
+    "color": "text_on_wood",
+    "tier": "hint",
+    "z": 9,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.main_map.hud.sell"
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 720,
+     "y": 1440,
+     "w": 312,
+     "h": 136
+    },
+    "color": "",
+    "z": 8,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/deck_plaque.png"
+    }
+   },
+   {
+    "kind": "icon",
+    "rect": {
+     "x": 768,
+     "y": 1480,
+     "w": 64,
+     "h": 64
+    },
+    "params": {
+     "icon": "castle",
+     "size": 64
+    },
+    "color": "gold_warm",
+    "z": 8,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 856,
+     "y": 1440,
+     "w": 128,
+     "h": 136
+    },
+    "color": "text_on_wood",
+    "tier": "hint",
+    "z": 9,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.main_map.hud.build"
+   }
+  ],
+  "deck_spin": {
+   "x": 408,
+   "y": 1160,
+   "w": 264,
+   "h": 264
+  },
+  "voyage_bar": {
+   "x": 48,
+   "y": 1088,
+   "w": 984,
+   "h": 48
+  }
+ },
+ "vs": {
+  "title": {
+   "y": 8,
+   "h": 96
+  },
+  "player_hp": {
+   "x": 64,
+   "y": 168,
+   "w": 448,
+   "h": 48
+  },
+  "boss_hp": {
+   "x": 576,
+   "y": 168,
+   "w": 448,
+   "h": 48
+  },
+  "rounds": {
+   "x": 540,
+   "y": 416
+  },
+  "outcome": {
+   "x": 540,
+   "y": 960
+  },
+  "empty": {
+   "x": 540,
+   "y": 960
+  },
+  "fx_hit": {
+   "x": 540,
+   "y": 880
+  },
+  "hint": {
+   "x": 540,
+   "y": 1840
+  },
+  "portrait_zones": [
+   {
+    "x": 0,
+    "y": 170,
+    "w": 1080,
+    "h": 1680
+   }
+  ],
+  "battle_arena": {
+   "x": 76,
+   "y": 230,
+   "w": 918,
+   "h": 998
+  },
+  "focus_anchor": {
+   "type": "battle_arena",
+   "bbox": {
+    "x": 76,
+    "y": 230,
+    "w": 918,
+    "h": 998
+   }
+  },
+  "primitives": [
+   {
+    "kind": "image",
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1920
+    },
+    "color": "",
+    "z": 3,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/bg_night_sea.png"
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 92,
+     "y": 246,
+     "w": 886,
+     "h": 966
+    },
+    "color": "",
+    "z": 4,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/bg_battle_sea.png"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 64,
+     "y": 168,
+     "w": 448,
+     "h": 48
+    },
+    "color": "brass_dark",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 68,
+     "y": 172,
+     "w": 440,
+     "h": 2
+    },
+    "color": "brass_dark",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 576,
+     "y": 168,
+     "w": 448,
+     "h": 48
+    },
+    "color": "brass_dark",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 580,
+     "y": 172,
+     "w": 440,
+     "h": 2
+    },
+    "color": "brass_dark",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 76,
+     "y": 230,
+     "w": 918,
+     "h": 2
+    },
+    "color": "wood_warm",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 76,
+     "y": 1226,
+     "w": 918,
+     "h": 2
+    },
+    "color": "wood_warm",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 76,
+     "y": 230,
+     "w": 2,
+     "h": 998
+    },
+    "color": "wood_warm",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 992,
+     "y": 230,
+     "w": 2,
+     "h": 998
+    },
+    "color": "wood_warm",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 92,
+     "y": 895,
+     "w": 886,
+     "h": 1
+    },
+    "color": "brass_dark",
+    "z": 4,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 507,
+     "y": 478,
+     "w": 56,
+     "h": 2
+    },
+    "color": "gold_warm",
+    "z": 5,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 534,
+     "y": 465,
+     "w": 2,
+     "h": 28
+    },
+    "color": "gold_warm",
+    "z": 5,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 532,
+     "y": 476,
+     "w": 6,
+     "h": 6
+    },
+    "color": "gold_warm",
+    "z": 5,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 396,
+     "y": 48,
+     "w": 288,
+     "h": 44
+    },
+    "color": "gold_warm",
+    "tier": "body",
+    "z": 5,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.vs.title"
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 0,
+     "y": 1648,
+     "w": 1080,
+     "h": 56
+    },
+    "color": "text_on_parch",
+    "tier": "hint",
+    "z": 11,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.vs.hint"
+   }
+  ]
+ },
+ "message": {
+  "title": {
+   "x": 704,
+   "y": 704,
+   "w": 600,
+   "h": 96
+  },
+  "body": {
+   "x": 408,
+   "y": 768,
+   "w": 584,
+   "h": 176,
+   "clip_reserve": 48,
+   "line_h": 52,
+   "x_pad": 4,
+   "edge_pad": 8
+  },
+  "page_dots": {
+   "size": 12,
+   "gap": 36,
+   "dy": 48,
+   "inner": 8
+  },
+  "page": {
+   "x": 704,
+   "y": 1008,
+   "w": 0,
+   "h": 0
+  },
+  "hint": {
+   "x": 540,
+   "y": 1840
+  },
+  "portrait_zones": [
+   {
+    "x": 0,
+    "y": 220,
+    "w": 1080,
+    "h": 1680
+   }
+  ],
+  "primitives": [
+   {
+    "kind": "image",
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1920
+    },
+    "color": "",
+    "z": 3,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/bg_night_sea.png"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 400,
+     "y": 704,
+     "w": 608,
+     "h": 336
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 402,
+     "y": 708,
+     "w": 604,
+     "h": 48
+    },
+    "color": "wood_warm",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 402,
+     "y": 756,
+     "w": 604,
+     "h": 4
+    },
+    "color": "gold_warm",
+    "z": 5,
+    "when": "",
+    "item": -1
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 0,
+     "y": 1648,
+     "w": 1080,
+     "h": 56
+    },
+    "color": "text_on_parch",
+    "z": 11,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.message.nav_hint",
+    "tier": "hint",
+    "text": ""
+   }
+  ],
+  "focus_anchor": {
+   "type": "text_panel",
+   "bbox": {
+    "x": 400,
+    "y": 230,
+    "w": 605,
+    "h": 1210
+   }
+  },
+  "panel": {
+   "x": 400,
+   "y": 704,
+   "w": 608,
+   "h": 336
+  }
+ },
+ "saveload": {
+  "title": {
+   "x": 600,
+   "y": 48,
+   "w": 640,
+   "h": 96
+  },
+  "list": {
+   "x": 280,
+   "y": 240,
+   "w": 440,
+   "row_h": 256,
+   "item_h": 224,
+   "text_x": 312,
+   "gold_x": 792,
+   "highlight_offset": 8,
+   "summary_dy": 52
+  },
+  "hint": {
+   "x": 540,
+   "y": 1840
+  },
+  "portrait_zones": [
+   {
+    "x": 0,
+    "y": 240,
+    "w": 1080,
+    "h": 1450
+   }
+  ],
+  "primitives": [
+   {
+    "kind": "image",
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1920
+    },
+    "color": "",
+    "z": 3,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/bg_night_sea.png"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 280,
+     "y": 240,
+     "w": 440,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4,
+    "params": {
+     "pick_key": 3,
+     "pick_index": 0
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 760,
+     "y": 752,
+     "w": 160,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 760,
+     "y": 240,
+     "w": 160,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 280,
+     "y": 1008,
+     "w": 440,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4,
+    "params": {
+     "pick_key": 3,
+     "pick_index": 3
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 280,
+     "y": 496,
+     "w": 440,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4,
+    "params": {
+     "pick_key": 3,
+     "pick_index": 1
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 760,
+     "y": 1008,
+     "w": 160,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 760,
+     "y": 496,
+     "w": 160,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 280,
+     "y": 1264,
+     "w": 440,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4,
+    "params": {
+     "pick_key": 3,
+     "pick_index": 4
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 280,
+     "y": 752,
+     "w": 440,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4,
+    "params": {
+     "pick_key": 3,
+     "pick_index": 2
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 760,
+     "y": 1264,
+     "w": 160,
+     "h": 224
+    },
+    "color": "panel_wood",
+    "z": 4
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 354,
+     "y": 48,
+     "w": 640,
+     "h": 96
+    },
+    "color": "gold_warm",
+    "z": 8,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.saveload.title",
+    "tier": "body",
+    "text": ""
+   },
+   {
+    "kind": "text",
+    "rect": {
+     "x": 0,
+     "y": 1648,
+     "w": 1080,
+     "h": 56
+    },
+    "color": "text_on_parch",
+    "z": 11,
+    "when": "",
+    "item": -1,
+    "text_key": "scene.saveload.nav_hint",
+    "tier": "hint",
+    "text": ""
+   }
+  ],
+  "focus_anchor": {
+   "type": "slot_list_with_meta",
+   "bbox": {
+    "x": 356,
+    "y": 230,
+    "w": 637,
+    "h": 1210
+   }
+  }
+ }
 }
