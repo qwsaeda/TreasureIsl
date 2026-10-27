@@ -122,6 +122,60 @@ pub fn swipe_dir_from(distance: Vec2, threshold: f32) -> u8 {
     }
 }
 
+/// 1080 空间的拾取矩形（纯几何输入；壳侧从 `scenes.json` 原语组装，引擎层零游戏语义）。
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PickRect {
+    /// 目标族键（`pick_key`）。
+    pub key: u32,
+    /// 目标项下标（`pick_index`；-1 = 无）。
+    pub index: i32,
+    /// 层序（越大越靠上；同点多矩形取 `z` 最大者）。
+    pub z: i32,
+    /// 左上 x（1080 逻辑坐标）。
+    pub x: f32,
+    /// 左上 y。
+    pub y: f32,
+    /// 宽。
+    pub w: f32,
+    /// 高。
+    pub h: f32,
+}
+
+/// 纯几何命中（**P0 根因的可测核心**）：窗口逻辑像素 `(px,py)` 经 `canvas_w`×`canvas_h`
+/// letterbox 换算到 1080 逻辑坐标，取**包含该点的、`z` 最大的** [`PickRect`]。
+///
+/// 之所以要手动几何命中（而非 `bevy_picking` mesh 后端）：1080 拾取标记是 `Sprite`
+/// （无 `Mesh2d`/`Mesh3d`/`SimplifiedMesh`），`bevy_picking` 的 mesh 射线只拾取后者（`ray_cast`
+/// `MeshFilter`），`Sprite` **从未被拾取** ⇒「菜单按键无响应」。本函数 = 该几何的单一事实源，
+/// 可无头单测（不依赖渲染 / 指针）。
+#[must_use]
+pub fn hit_1080_pick(
+    win_w: f32,
+    win_h: f32,
+    px: f32,
+    py: f32,
+    canvas_w: f32,
+    canvas_h: f32,
+    rects: &[PickRect],
+) -> Option<(u32, i32)> {
+    let scale = f32::min(win_w / canvas_w, win_h / canvas_h);
+    if scale <= 0.0 {
+        return None;
+    }
+    let off_x = (win_w - canvas_w * scale) / 2.0;
+    let off_y = (win_h - canvas_h * scale) / 2.0;
+    let x = (px - off_x) / scale;
+    let y = (py - off_y) / scale;
+    let mut best: Option<(i32, u32, i32)> = None; // (z, key, index)
+    for r in rects {
+        let inside = x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+        if inside && best.is_none_or(|(bz, _, _)| r.z >= bz) {
+            best = Some((r.z, r.key, r.index));
+        }
+    }
+    best.map(|(_, k, i)| (k, i))
+}
+
 /// 注册拾取层：门控 + pending 资源 + [`PickEvent`]（message）+ 观察者 + flush 系统。
 pub fn register_pick(app: &mut App) {
     app.init_resource::<PickActivity>()

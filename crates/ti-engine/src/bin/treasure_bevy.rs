@@ -556,9 +556,105 @@ fn pick_event_system(store: ResMut<GameStore>, mut picker: MessageReader<ti_engi
     let Ok(mut g) = store.0.lock() else {
         return;
     };
+    let log_hits = std::env::var("TI_LOG_HITS").is_ok();
     for ev in picker.read() {
         let hit = HitData { key: ev.key, index: ev.index, swipe: ev.swipe };
         let _ = g.poll_hit(Some(hit));
+        if log_hits {
+            eprintln!("[hit] key={} index={} swipe={} scene={:?}", ev.key, ev.index, ev.swipe, g.scene());
+        }
+    }
+}
+
+/// S29.3 P0（用户报「菜单按键无响应」根因）：**1080 层手动 tap 命中**。
+///
+/// `bevy_picking` 的 mesh 后端只拾取 `Mesh2d`/`Mesh3d`/`SimplifiedMesh`（`ray_cast:117`），
+/// 1080 拾取标记是 `Sprite`（无 `Mesh2d`）⇒ **从未被拾取** ⇒ 菜单/选图/存档 1080 层点不动。
+/// 本系统补 1080 几何命中：左键 tap → 窗口逻辑 px 转 1080 letterbox 坐标 → 落在哪个
+/// `pick_key>0`（且未迁 `bevy_ui`）原语矩形 → 发 [`PickEvent`]（`pick_event_system` → `poll_hit`）。
+///
+/// 与 `bevy_ui` 命中层**不双发**：一个物理点击要么落在已迁 `bevy_ui` 的格（`bevy_picking` 拾取，
+/// 1080 层该原语 `ui_layer` 已跳过）要么落在未迁的 1080 矩形（本系统命中，`bevy_ui` 层无该格）。
+#[allow(clippy::needless_pass_by_value)]
+fn manual_1080_hit_system(
+    store: Res<GameStore>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    mouse_pos: Res<MousePos>,
+    window: Query<&Window>,
+    mut picker: MessageWriter<ti_engine::pick::PickEvent>,
+) {
+    if !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+    let Ok(g) = store.0.lock() else {
+        return;
+    };
+    let scene_key = scene_json_key(g.scene());
+    let dbg = std::env::var("TI_LOG_HITS").is_ok();
+    drop(g);
+    if scene_key.is_empty() {
+        return;
+    }
+    // 窗口逻辑 px → 1080 letterbox 坐标（画布恒完整可见，居中）。
+    let Ok(win) = window.single() else {
+        return;
+    };
+    // 该场景 `pick_key>0` 且未迁 bevy_ui 的原语矩形（1080 空间；`z` 越大越靠上）。
+    let mut rects: Vec<ti_engine::pick::PickRect> = Vec::new();
+    if let Ok(scenes) = ti_core::data::scenes() {
+        if let Some(sc) = scenes.get(scene_key) {
+            for p in &sc.primitives {
+                let key = p
+                    .params
+                    .get("pick_key")
+                    .and_then(serde_json::Value::as_u64)
+                    .and_then(|v| u32::try_from(v).ok())
+                    .unwrap_or(0);
+                if key == 0 {
+                    continue;
+                }
+                if p
+                    .params
+                    .get("ui_layer")
+                    .and_then(serde_json::Value::as_str)
+                    == Some("bevy_ui")
+                {
+                    continue;
+                }
+                let index = p
+                    .params
+                    .get("pick_index")
+                    .and_then(serde_json::Value::as_i64)
+                    .and_then(|v| i32::try_from(v).ok())
+                    .unwrap_or_else(|| i32::try_from(p.item).unwrap_or(-1));
+                rects.push(ti_engine::pick::PickRect {
+                    key,
+                    index,
+                    z: p.z,
+                    x: p.rect.x as f32,
+                    y: p.rect.y as f32,
+                    w: p.rect.w as f32,
+                    h: p.rect.h as f32,
+                });
+            }
+        }
+    }
+    let canvas_w = ti_render::framebuffer::LOGICAL_W_I32 as f32;
+    let canvas_h = ti_render::framebuffer::LOGICAL_H_I32 as f32;
+    let hit = ti_engine::pick::hit_1080_pick(
+        win.width(),
+        win.height(),
+        mouse_pos.x,
+        mouse_pos.y,
+        canvas_w,
+        canvas_h,
+        &rects,
+    );
+    if let Some((key, index)) = hit {
+        picker.write(ti_engine::pick::PickEvent { key, index, swipe: ti_engine::pick::SWIPE_NONE });
+        if dbg {
+            eprintln!("[hit1080] key={key} index={index} @win({:.0},{:.0})", mouse_pos.x, mouse_pos.y);
+        }
     }
 }
 
@@ -987,7 +1083,10 @@ fn main() {
         // S29.2（B1）：Bevy 拾取层（`pick.rs`：`PickTarget` 指针事件 → `PickEvent`）+
         // 命中→逻辑（`pick_event_system` 消费 `PickEvent` → `poll_hit`）。
         ti_engine::pick::register_pick(&mut app);
-        app.add_systems(Update, pick_event_system);
+        // S29.3 P0：1080 层手动 tap 命中（`Sprite` 标记不被 bevy_picking 拾取；几何命中兜底）。
+        // 须在 `input_system`（更新 `MousePos`）之后、`pick_event_system`（排空 `PickEvent`）之前。
+        app.add_systems(Update, manual_1080_hit_system.after(input_system));
+        app.add_systems(Update, pick_event_system.after(manual_1080_hit_system));
         // S29.3（B1）：per-scene `bevy_ui` chrome（自动布局；换场景/换选中重建）。
         app.init_resource::<ChromeUi>();
         app.add_systems(Update, chrome_ui_system.after(render_system));

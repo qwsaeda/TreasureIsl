@@ -19,6 +19,7 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::color::Color;
 use bevy::prelude::*;
 use bevy::text::{FontSize, FontSource, TextColor, TextFont};
+use bevy::picking::Pickable;
 use bevy::ui::prelude::{ImageNode, NodeImageMode};
 use bevy::ui::IsDefaultUiCamera;
 
@@ -90,13 +91,19 @@ pub fn build_list_chrome(
 ) -> ListChrome {
     // 全屏根（bevy_ui 树须有铺满屏幕的根；`%` 布局据此相对屏幕）
     let root = commands
-        .spawn(Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            display: Display::Flex,
-            position_type: PositionType::Relative,
-            ..Node::default()
-        })
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                display: Display::Flex,
+                position_type: PositionType::Relative,
+                ..Node::default()
+            },
+            // S29.3：UI 根节点**铺满屏幕** ⇒ 默认可拾取会**吃掉所有指针事件**
+            // （`should_block_lower` = true）⇒ 1080 层的拾取标记（如 index 6 徽章）收不到点击
+            // ⇒「菜单按键无响应」。`Pickable::IGNORE` = 拾取完全忽略本实体（不挡下层、不发事件）。
+            Pickable::IGNORE,
+        ))
         .id();
 
     // 右侧面板（`%` 定位 + 宽 ⇒ resize 自动重排；竖排 flex + 行间距）
@@ -117,6 +124,8 @@ pub fn build_list_chrome(
                 ..Node::default()
             },
             BackgroundColor(Color::srgba(0.10, 0.07, 0.03, 0.82)),
+            // 面板容器本身不拾取（行节点才是命中目标）；否则面板区域会挡住下层 1080 拾取标记。
+            Pickable::IGNORE,
             ChildOf(root),
         ))
         .id();
@@ -229,15 +238,22 @@ pub fn build_proof_panel(
     button_label: &str,
 ) -> Entity {
     // 全屏根（bevy_ui 树须有铺满屏幕的根，`%` 布局据此相对屏幕）
+    //
+    // S29.3 P0（用户报「菜单按键无响应」）：全屏根默认 `Pickable`（`should_block_lower`=true）
+    // 会**吃掉所有指针事件** ⇒ 1080 层徽章/卡片等拾取标记收不到点击（本面板是未迁场景的占位，
+    // 铺满屏幕挡在它们之上）。证明面板全部节点挂 `Pickable::IGNORE` = 拾取完全忽略（不挡下层、不发事件）。
     let root = commands
-        .spawn(Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            display: Display::Flex,
-            flex_direction: FlexDirection::Column,
-            position_type: PositionType::Relative,
-            ..Node::default()
-        })
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                position_type: PositionType::Relative,
+                ..Node::default()
+            },
+            Pickable::IGNORE,
+        ))
         .id();
 
     // 右上角绝对定位浮动卡（暖棕底 + 圆角 + 内边距 + 子间距；`ChildOf` 挂 root = 0.20 层级口径）
@@ -259,6 +275,7 @@ pub fn build_proof_panel(
                 ..Node::default()
             },
             BackgroundColor(Color::srgba(0.10, 0.07, 0.03, 0.82)),
+            Pickable::IGNORE,
             ChildOf(root),
         ))
         .id();
@@ -274,6 +291,7 @@ pub fn build_proof_panel(
         Text(title.to_string()),
         TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(28.0), ..default() },
         TextColor(Color::srgb(0.95, 0.85, 0.60)),
+        Pickable::IGNORE,
         ChildOf(panel),
     ));
 
@@ -290,6 +308,7 @@ pub fn build_proof_panel(
                 ..Node::default()
             },
             BackgroundColor(Color::srgb(0.72, 0.45, 0.16)),
+            Pickable::IGNORE,
             ChildOf(panel),
         ))
         .id();
@@ -297,6 +316,7 @@ pub fn build_proof_panel(
         Text(button_label.to_string()),
         TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(24.0), ..default() },
         TextColor(Color::srgb(0.15, 0.10, 0.05)),
+        Pickable::IGNORE,
         ChildOf(button),
     ));
 
