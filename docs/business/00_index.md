@@ -33,6 +33,7 @@
 | [`economy.md`](economy.md) | 贸易 / 建造 / 银行 | 商品、价格、买卖、建筑升级、金上限 |
 | [`combat.md`](combat.md) | 战斗 | BOSS 档、伤害模型、回合流程、胜负 |
 | [`progression.md`](progression.md) | 地图 / 据点 / 卡牌事件 / 跨图推进 | 网格地图、移动、探索事件、卡牌、地图解锁链与通关判定 |
+| [`territory.md`](territory.md) | **领地 / 副本 / 对手（v5）** | 领地格 vs 功能格、10 类岛与专属副本、占领/交钱/攻占/升级加固、5 席位（≥1 玩家 + 4 AI）、热座、存档 v4 |
 | [`persistence.md`](persistence.md) | 存读档 / 设置 / RNG | 存档字段、迁移、RNG 可复现 |
 | [`07_ui_flow.md`](07_ui_flow.md) | **UI 流程（S11 新增）** | 场景流/控件/键盘触摸输入/消息分页/UI 约束；表现层并行开发唯一依据 |
 | [`08_layout_design.md`](08_layout_design.md) | **界面版面（S14 新增）** | 9 场景版面 + 配色表 + 字体 + 可测规则；**版面/坐标/配色的单一事实源**，改 `scenes.json` 前必读 |

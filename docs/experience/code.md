@@ -533,3 +533,21 @@ S24.0（约 6 个阶段）。连带影响：S21 用户评审「main_map 界面�
 
 ### EXP-117 代码：指针位置用 delta 累加而非窗口绝对光标位置 ⇒ 首页所有按键点击失灵（光标不在左上角启动时命中全偏）
 现象：用户报首页每个按键点击都没反应。根因：input_system 的 MousePos 是 AccumulatedMouseMotion delta 的累加（初值=窗口左上 0,0），指针位置 = 光标相对启动时位置的位移，而非绝对位置；用户光标不在窗口左上角启动时命中全偏。修：优先取 Window::cursor_position()（bevy 0.20 = 逻辑像素，winit 物理÷scale_factor），delta 累加仅作光标移出窗口（cursor_position=None）时的回落。注释还写物理像素（实际逻辑像素）= 与 EXP-116 同类单位口径错。实测：合成 SetCursorPos+mouse_event 点击新游戏徽章 → 场景跳到选择角色 ✓。教训：① delta 累加 ≠ 绝对位置，指针类输入必须取绝对光标位置；② 门禁只验离屏 shot ⇒ 点击路径从未实测；③ 单位口径（物理 vs 逻辑像素）须注释正确，同类问题在 EXP-116 也出现过。
+
+### EXP-118 代码：RGB565 token 名不暗示色相（COLOR_WOOD=蓝 / panel_warm=近黑）：选色必须先解码 RGB 校验
+- **现象**：S26.3 选色踩坑三连——`COLOR_WOOD`(0x3A17) 以为是深棕，实解 RGB565 = (57,64,189) **蓝**；`panel_warm`(0x18C2) 以为是暖棕面板，实解 = (24,28,16) **近黑**（「黑底面板」观感源头）；选图蓝锁条同根因。按「token 名字像棕色」选色 = 必错。
+- **根因**：theme.json 的 token 名是历史语义名（wood/gold/warm…），航海夜色板（S17）重调色后 RGB565 值与名字语义已漂移；「航海夜」暗色档多为冷调（蓝/橄榄），暖棕只有 wood_warm/brass_dark/panel_wood 少数几个。
+- **解法**：选色前**必须把 RGB565 解成 RGB 写进注释**（如 `COLOR_WOOD` 0x3A17 = (57,64,189) 蓝）；需要暖深棕用 `brass_dark`(0x51E4=(82,28,32)) 或 `panel_wood`(0x3943)，**不要**用 `wood`/`panel_warm`；色板单一事实源 = `assets/data/theme.json`，解码结果以实测为准。
+- **验证**：本轮全量解码 theme.json palette（wood=蓝 / panel_warm=近黑 / panel_wood=橄榄棕 / brass_dark=暖棕红 / wood_warm=暖棕）；选图面板改 panel_wood 出图 = 暖棕（evidence/bevy_native_select_map.png）。
+
+### EXP-121 代码：同一视觉元素两条代码路径几何公式差 1px（屏心 vs 盒心）：像素判据才抓得住
+- **现象**：S26.3 给底部提示（JSON 原语 tier=hint 且 y≥1560）加 menu_bg 底板条时，新代码按「文本盒居中」算 x（`r.x + r.w/2 - tw/2`），而 index 尾行已有 `chrome::hint_row`（按**屏心** `(1080-tw)/2` 居中）也在画同一条 bar ⇒ 奇数宽 tw 时两 bar 左缘差 1px，像素判据「条宽 = hint_text_width+8 = 209」实测 210 ⇒ render_intent FAIL。
+- **根因**：同一视觉元素（提示 bar）的几何公式散在两条代码路径，整数除法次序不同（`tw/2` 先除 vs `(1080-tw)/2` 后除）⇒ 奇数宽差 1px；肉眼看不出，只有像素级宽度判据抓得住。
+- **解法**：底板条 x 改用与 `hint_row` **完全同源**的屏心公式 `(LOGICAL_W_I32 - tw) / 2`；规范 = 「同一视觉元素的几何（宽/心/边）单一事实源，第二条路径必须复用同一公式，不得各自推导」。
+- **验证**：`cargo test -p ti-app --test render_intent hint_bar_width_height_follow_active_font` PASS（条宽 209）；两条 bar 重合无 1px 越宽。
+
+### EXP-122 代码：选中态边框色必须区别于面板基础边框色，否则选中不可辨（saveload 5 槽全同）
+- **现象**：存读档 5 个槽位外观全同、选中态不可辨——`chrome::wood_panel`（面板，画 brass 边框）与 `chrome::selected_border`（选中态，也画 brass 边框）同色 ⇒ 选中卡与未选中卡边框无差异。
+- **根因**：面板基础边框与选中指示边框共用 `brass` token，缺「选中态必须与基础态可区分」的判据（视觉层级 = 颜色亮度/线宽至少一维拉开）。
+- **解法**：`selected_border` 外圈改用 `gold_warm`（亮金 0xFEA0）+ 线宽 3→4px（`PANEL_SELECTED_BORDER_PX`）；规范 = 选中/高亮指示色必须比载体面板边框**更亮或更粗**，且测试判据用指示色本身（`region_color_count(gold_warm) > 0`）而非载体色。
+- **验证**：`cargo test -p ti-app --test render_intent selected_state_marker_visible_and_no_leak` PASS（行 0 顶外带 gold_warm > 0，行 1 左侧无泄漏）；出图 evidence/bevy_native_saveload.png 槽 1 亮金厚边可辨。

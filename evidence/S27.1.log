@@ -1,0 +1,53 @@
+S27.1 · main_map v5「中央据点岛 + 环形格子环」版面与交互规格定案
+=====================================================================
+日期：2026-10-27
+任务：S27.1（plan/ledger.yaml）
+产物：docs/ui-redesign-v3/10_main_map_v5_spec.md（新增，174 行 / 10 章）
+改动面：业务规则=无（领地规则 = docs/business/territory.md）| 数据=无 | 规则=无 |
+        表现=规格定义（层序/命中/资产映射，不写码）| 资产=引用已入仓 + 登记 13 张待 S27.2
+
+--- 判据 1：文档结构与关键要素 ---
+spec lines=174 sections=10
+contains[31 张] = True
+contains[R = 474] = True
+contains[96 × 120] = True
+contains[island_home] = True
+contains[{160,400,760,760}] = True
+contains[{408,1336,264,264}] = True
+contains[N8] = True
+contains[8pt] = True
+contains[资产接线] = True
+
+--- 判据 2：坐标自证（8pt + 环几何 + N3 焦点面积）---
+8pt check: 9 rects, non-8pt = NONE
+  （world_canvas {16,248,1048,1064} / hud {48,48,448,192}+{584,48,448,192} /
+    island_home {160,400,760,760} / deck_spin {408,1336,264,264} /
+    三键 {48,384,720,1608,312,136} / toast {344,1760,392,64}）
+ring: R=474 circumference=2978.2px, 31 cards x 96px = 2976px, spacing=96.1px (>=96? True)
+  ⇒ 31 张 96×120 卡在环上相切不重叠（周长 2978.2 ≥ 31×96 = 2976）
+ring outer bounds: x 18..1062 y 246..1314（贴屏，避开顶部 HUD 240 与底部 CTA 1336）
+central island 760x760 at (160,400): center=(540,780) radius=380; ring inner radius=414 gap=34px
+  ⇒ 中央岛与环心同心，内切留 34px 空隙
+focus area pct = 53.77% (N3 >=20% ? True)
+bbox_pct derivation: x=1.48% y=12.92% w=97.04% h=55.42%
+  ⇒ N8 口径：scenes.json focus_anchor.bbox {16,248,1048,1064} ↔ manifest bbox_pct
+    {x:1,y:12,w:97,h:56}；落码时由 scripts/layout_spec_check.py 复算回写（禁手抄）
+
+--- 判据 3：文档登记三处 ---
+  docs/README.md contains[10_main_map_v5_spec.md] = True
+  AGENTS.md contains[10_main_map_v5_spec.md] = True
+  （第三处 = docs/business/08_layout_design.md §4.4 镜像：随 S27.4 落码时同改，
+    规格 §8 已列出与 v4 的逐项差异表）
+
+--- 判据 4：用户视觉签收（设计稿层）---
+用户视觉签收：**用户视觉验收通过**（设计稿层）——2026-10-27 用户在概念稿三变体中拍板
+  变体 B（圆环卡片 + 中央大岛插画，evidence/ui_concept/main_map_v5_b.png）、中央岛 = 可点击
+  据点岛、9 类岛清单 + BOSS 无畏号要塞、格子 = 领地格 + 功能格并存、每区大富翁式固定构成、
+  每类岛一个专属副本场景、对手 = 活 AI 回合（4 AI）+ 选角 ≥1 玩家（消息留痕，见 S27.0.log）。
+  本任务只定案**规格**（不落码、不改 scenes.json/theme.json）；实现层视觉验收 = S27.5
+  （出图 + 逐屏核对 + 缺陷清单清零）。
+
+--- 判据 5：门禁 ---
+scripts/gate.ps1：27 PASS + 2 SKIP + 1 FAIL（s43_fps_smoke = 本机远程 VM 环境项，
+  S24.0 已实测非本次引入；本次为纯文档改动）
+doccheck：0 error(s)   doccheck2：0 error(s)   ledger：227 tasks / 195 verified

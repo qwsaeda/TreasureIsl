@@ -58,6 +58,7 @@
 | [ui-redesign-v3/07_v3_5_pass.md](ui-redesign-v3/07_v3_5_pass.md) | **v3.5 真游戏化重设计**（地形数据 + 暖色板 + 画布贴合 + 实体图标化 + HUD/命令盘黄铜化；S18.9~S18.13 执行链；画面丑的根因=设计数据而非渲染/分离） |
 | [ui-redesign-v3/08_main_map_v4_spec.md](ui-redesign-v3/08_main_map_v4_spec.md) | **main_map 重设计 v4「羊皮海图桌面」版面与交互规格**（S21.3 定案：满屏海图 `chart_full` + 顶角双铜牌 + 岛只画陆/礁/宝 + 黄铜航线多形状节点牌 + 船玩家 + 舵轮 CTA；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 交互契约；坐标单一事实源，镜像 `business/08_layout_design.md` §4.3；落码 = S21.4~S21.7/S21.12） |
 | [ui-redesign-v3/09_index_compass_spec.md](ui-redesign-v3/09_index_compass_spec.md) | **首页 index 重设计「罗盘环标题页」版面与交互规格**（S22.0：C 方向罗盘导航 + 羊皮海图底与 main_map v4 统一；满屏 `chart_full` + 中心舵轮 `helm` + 6 铜质 medallion 沿环（白蒙版图标 gold tint）+ 版本签；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 6 徽章命中契约；坐标单一事实源；落码 = S22.1 出 medallion_ring 资产 / S22.2 落码 / S22.3 出图验收） |
+| [ui-redesign-v3/10_main_map_v5_spec.md](ui-redesign-v3/10_main_map_v5_spec.md) | **main_map 重设计 v5「中央据点岛 + 环形格子环」版面与交互规格**（S27.1 定案：31 张岛型卡环（每格 = 领地/功能点，卡面插画 + 归属色带 + 加固等级）+ 中央可点击玩家据点岛 + 10 类海盗岛（港口城/灯塔礁/藏宝沉船/海盗老巢/帆船坞/军需商岛/骷髅崖/火山岛/灯船站/无畏号要塞）；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 点卡交互契约（交钱/攻占/进副本/升级加固）；坐标单一事实源，镜像 `business/08_layout_design.md` §4.4；规则 = `business/territory.md`；落码 = S27.2 资产 / S27.3 数据 / S27.4 表现 / S27.5 出图） |
 | [process/11_bevy_migration.md](process/11_bevy_migration.md) | **渲染引擎迁移裁决（S18 · Bevy 0.20）**：差距定稿 + 定案推翻签核（macroquad 定案作废 / 旧 800KB 预算作废）+ 新 wasm 预算（≤8MB）+ 架构形状（ti-engine 新 crate + Canvas 后端替换 + 双渲染期）+ WBS S18.0–S18.8 + 风险（改引擎层代码前必读） |
 | [process/12_bevy_usage.md](process/12_bevy_usage.md) | **Bevy 0.20 用法规范 / 最佳实践 / 坑位清单**（官方 `DefaultPlugins` 强制 + 1080 坐标换算 + z 层负值升序绘制 + GPU Text2d + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位；S18.7 起 Bevy = 唯一渲染引擎） |
 | [process/13_ui_asset_pipeline.md](process/13_ui_asset_pipeline.md) | **UI 资产管线**（清单驱动：AI 生图 → 抠透明 → 规范化 → 入库 `assets/ui/`；角色预设 background/medallion/board/portrait；`scripts/ui_assets.py` + `scripts/ui_preview.ps1`；资产清单 = 单一事实源，门禁校验登记与存在） |
@@ -75,6 +76,7 @@
 | [`business/combat.md`](business/combat.md) | 战斗：伤害模型（自主设计非逆向）、回合流程、胜负判定 |
 | [`business/progression.md`](business/progression.md) | 地图网格/等距投影/移动规则/据点/卡牌事件（可复现抽牌）/跨图推进（地图解锁链 + 通关判定） |
 | [`business/persistence.md`](business/persistence.md) | 存档 v2 JSON schema + 迁移 + 可复现 RNG + 设置 |
+| [`business/territory.md`](business/territory.md) | **领地 / 副本 / 对手（v5 单一事实源）**：领地格 vs 功能格、10 类岛 + 专属副本、占领 / 交钱 / 攻占 / 升级加固、5 席位（选角 ≥1 玩家 + 4 AI）、热座、存档 v4、经济接入 |
 | [`business/07_ui_flow.md`](business/07_ui_flow.md) | **UI 流程**：场景流 / 控件 / 键盘触摸输入 / 消息分页（表现层并行开发依据） |
 | [`business/08_layout_design.md`](business/08_layout_design.md) | **界面版面（1080）**：7 场景 1080×1920 版面 + 配色 + 字体 + 可测规则；**版面/坐标/配色单一事实源**（= `scenes.json` 同值） |
 

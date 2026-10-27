@@ -232,6 +232,20 @@ for _ in 0..60 {
 - wasm 构建时 `file_path` 不可用（浏览器无文件系统）→ wasm 侧走 `assets/` 相对 URL
   （S18.8 资源管线同轮处理）。
 
+### 9.6 CJK 文本每帧刷 ICU4X 错（EXP-119，S26.1 实测）
+bevy 0.20 文本走 parley → icu_segmenter：**未开 `complex_script_segmentation` feature 时
+回退 `new_southeast_asian()` 字典（仅 My/Km/Lo/Th），CJK 词元分词逐词未命中** ⇒ debug 态
+每帧打 `ICU4X data error: No segmentation model for language: ja`（`ja` = CJK 字典键，zh 亦
+走此键；每场景 ~24 行）。**CJK 文本应用必开**：bevy `features += ["complex_script_segmentation"]`
+（→ parley/complex-scripts → 完整 ICU 字典含 cjdict）。判据 = 跑任一实机命令 grep
+`No segmentation model` = 0 行。
+
+### 9.7 `src/bin/*.rs` 子模块互引 = 隐式第 3 bin（EXP-120）
+cargo auto-roots 把 `src/bin/` 每个 `.rs` 都探测为独立 bin；当某 bin 文件同时被另一 bin
+以 `mod` 引用（如 `treasure_bevy` 的 `mod resizetest;`）时，`--all-targets` 编译到它即爆
+E0433（too many `super`）+ E0601（缺 main）。**bin 文件互引子模块的布局必须
+`[package] autobins = false`**（ti-engine 已配；gate 只编译声明 bin 时该坑潜伏）。
+
 ---
 
 ## 10. 性能与体积预算

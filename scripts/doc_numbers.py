@@ -55,6 +55,8 @@ _OTHER_BEFORE = re.compile(r"(残留|图标|各算)\s*$")
 _THRESHOLD = re.compile(r"[≥<=]{1,2}\s*$")
 # 历史快照 / 阶段时点值（「均为该阶段时点快照」「历史上因…」）——不得回写
 _SNAPSHOT = re.compile(r"快照|时点|历史上|各算|单列")
+# 非门禁的「N 项」语境（EXP-118）：doccheck2 / doccheck / 其它工具自身的项数
+_NOT_GATE_COUNT = re.compile(r"doccheck2?\s*(?:第\s*)?\d*\s*(?:→|->|~|项)|check_code_standards\.py`?\s*\d+|check_code_standards\.py\s*\d+")
 
 
 def _is_gate_total(line: str, m: re.Match) -> bool:
@@ -75,6 +77,8 @@ def _is_gate_total(line: str, m: re.Match) -> bool:
         return False  # 「≥ N 项」「≤ N 项」= 下限/上限断言
     if _SNAPSHOT.search(line):
         return False  # 历史时点快照，非当前值
+    if _NOT_GATE_COUNT.search(line[max(0, m.start() - 40): m.start() + 1]):
+        return False  # 「doccheck2 34→12 项」「check_code_standards.py 12 项」= 其它工具项数
     if not _GATE_CTX.search(line):
         return False  # 本行与门禁无关
     return True
@@ -93,10 +97,25 @@ def claim_sites(rel: str, text: str, gate_total: int) -> list[tuple[int, re.Matc
 
 
 def gate_item_count() -> int:
-    """与 doccheck2::gate_item_actual_count 同口径：顶层（不缩进）`Report ` 调用数。"""
+    """与 doccheck2::gate_item_actual_count **同口径**：`Report ` 调用名去重计数。
+
+    ⚠️ 历史坑（EXP-118）：旧实现只数「顶层（不缩进）`Report ` 行」= 12，与 doccheck2
+    的真实口径（任意缩进 + 调用名去重，`Skip` 与 `function Report` 不计）= 28 不一致
+    ⇒ `--fix` 会把全库声称的 28 项回写成 12 ⇒ doccheck2 立即报「门禁项数声称漂移」。
+    现改为与 doccheck2 逐字对齐（同名调用去重）。
+    """
     if not GATE.is_file():
         return 0
-    return sum(1 for line in GATE.read_text(encoding="utf-8").splitlines() if line.startswith("Report "))
+    names: set[str] = set()
+    for line in GATE.read_text(encoding="utf-8").splitlines():
+        trimmed = line.lstrip()
+        if not trimmed.startswith("Report "):
+            continue
+        rest = trimmed[len("Report "):]
+        quotes = [i for i, ch in enumerate(rest) if ch in "'\""]
+        if len(quotes) >= 2 and quotes[-1] > quotes[0] + 1:
+            names.add(rest[quotes[0] + 1:quotes[-1]])
+    return len(names)
 
 
 def ledger_counts() -> tuple[int, int]:

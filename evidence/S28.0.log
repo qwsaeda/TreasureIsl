@@ -1,0 +1,52 @@
+S28.0 · 领地系统业务规格定案（docs/business/territory.md）
+=====================================================================
+日期：2026-10-27
+任务：S28.0（plan/ledger.yaml）
+产物：docs/business/territory.md（新增，189 行 / 12 章）
+改动面：业务规则=**有**（领地 / 副本 / 对手 / 经济接入 / 存档 v4 = 本文件单一事实源）|
+        数据=无（数值先落文档，落码时写 balance.json / board.json / strings.json）|
+        规则=无 | 表现=无 | 资产=无
+
+用户原话（触发）：
+  「每一格，有岛屿或城镇等等的，用户到这个一格时可以进入一个副本，如果是别人占领的可交钱或
+    攻占，如果是自己的领地，可以升级加固，这就是原来的玩法」
+  「每局不是有4个AI玩家」 / 「可以选至少一个玩家」
+原版依据（逆向参照，非验收基准）：docs/impl/04_economy.md §2.1 Fort（据点/堡垒）造价 800 +
+  控件 button_capture + button_build；docs/impl/07_ui_controls.md 另有 button_notcapture
+  ⇒ 原版确有「占领据点」业务线，移植时丢失，本任务补回。
+
+--- 判据 1：文档结构与关键要素 ---
+territory.md lines=189 sections=12
+isle archetypes=10: ['harbour', 'lighthouse', 'wreck', 'pirate_lair', 'shipyard',
+                    'trading_post', 'skull_cliff', 'volcano', 'lightship', 'boss_fort']
+  （= 港口城/灯塔礁/藏宝沉船/海盗老巢/帆船坞/军需商岛/骷髅崖/火山岛/灯船站 + 无畏号要塞）
+settle 3 branches present = True
+  （无主 → 进入副本占领 / 属他人 → 交钱 or 攻占 / 属自己 → 升级加固）
+formulas present = ['toll(T, L)', 'upgrade_cost(T,L)', 'production(T, L)', 'defense(T, L)']
+unit-test table rows = 23（§10 可测规则表，≥12 条要求）
+seats rule (>=1 player + 4 AI) = True
+save v4 fields = ['seats', 'territories', 'current_seat']
+open items U1..U5 = 5（副本玩法细纲 / 过路费量级 / 分区排布 / AI 难度 / 热座）
+
+--- 判据 2：跨文档同步（progression.md v5 段 + 三处登记）---
+  docs/business/progression.md contains[territory.md] = True
+  docs/business/00_index.md contains[territory.md] = True
+  docs/README.md contains[territory.md] = True
+  AGENTS.md contains[business/territory.md] = True
+progression.md 新增「v5 赛道结构（进行中，S28.0 定案 / S28.3 数据 / S28.1 规则）」段：
+  31 格 = 起点 1 + 领地格 20（10 类岛 ×2）+ 功能格 9（事件 3/卡牌 3/宝藏 2/BOSS 1）；
+  格子两分 / 归属 / 对手 / 落格三支 / 节奏需重算（board_measure.py）均落文。
+
+--- 判据 3：门禁 ---
+scripts/gate.ps1：27 PASS + 2 SKIP + 1 FAIL（s43_fps_smoke = 本机远程 VM 环境项，
+  S24.0 已实测非本次引入；本次为纯文档改动）
+doccheck：136 docs / 38 facts / 119 experiences / 222 task refs / 4 assertions / 0 error(s)
+doccheck2：38 项 / 0 error(s)
+ledger：227 tasks / 195 verified（+3 本批任务后 198）
+
+--- 附：本批附带修复（工具 bug，EXP-118）---
+scripts/doc_numbers.py 的 gate 项数口径与 doccheck2::gate_item_actual_count 不一致
+  （旧实现只数顶层 `Report ` 行 = 12；真值 = 按调用名去重 = 28）⇒ `--fix` 会把全库
+  声称的 28 项回写成 12，触发 doccheck2「门禁项数声称漂移」。已改为与 doccheck2 逐字
+  对齐（同名调用去重 + 排除 doccheck2/check_code_standards 的非门禁项数），
+  实测：门禁 28 项 / 台账 227 任务（195 verified）→ 0 漂移。

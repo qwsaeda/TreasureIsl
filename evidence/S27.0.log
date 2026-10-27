@@ -1,0 +1,36 @@
+S27.0 · 主地图重设计 v5 设计稿（3 变体出图 + 用户拍板留痕）
+=====================================================================
+日期：2026-10-27
+任务：S27.0（plan/ledger.yaml）
+改动面：业务规则=无 | 数据=无 | 规则=无 | 表现=无（仅设计稿，不落码）| 资产=无
+
+--- 判据 1：3 张 9:16 概念稿出图（evidence/ui_concept/main_map_v5_{a,b,c}.png）---
+main_map_v5_a.png exists=True size=5274453B
+main_map_v5_b.png exists=True size=5514545B
+main_map_v5_c.png exists=True size=5693289B
+生成命令（Agnes Image 2.5 Flash，AGNES_API_KEY 在位）：
+  python scripts/agnes_gen.py --prompt <变体提示词> --out evidence/ui_concept/main_map_v5_a.png --size 2K --ratio 9:16
+  （同法 b / c；三变体分别 = 矩形格子环 / 圆环卡片 / 上岛下弧）
+
+--- 判据 2：用户选定版式 + 9 类岛清单确认（消息留痕，A 纪律）---
+用户答复（question 工具留痕）：
+  1) 棋盘形态 = 混合：中央大岛插画 + 周边格子环
+  2) 岛屿类型清单 = 港口城 / 灯塔礁 / 藏宝沉船 / 海盗老巢 / 帆船坞 / 军需商岛 /
+     骷髅崖 / 火山岛 / 灯船站 + BOSS 无畏号要塞岛
+  3) 美术来源 = 新做海盗风分岛资产（不复原原版瓦片）
+  4) 二次拍板：版式 = **B 圆环卡片**（evidence/ui_concept/main_map_v5_b.png）
+  5) 中央大岛 = **可点击的据点岛**
+  6) 分区构成 = **大富翁式固定构成**（每区 1 城镇 + 1 港口 + 普通/事件/战斗/宝藏）
+  7) 格子分类 = 领地格 + 功能格并存
+  8) 副本形态 = 每类岛一个专属副本场景
+  9) 对手 = 活的对手机制（AI 回合）；每局 4 个 AI 玩家；可选至少一个玩家
+→ 上述 3~9 项的业务结论落在 S28.0 的 docs/business/territory.md（单一事实源），
+  版面结论落在 S27.1 的 docs/ui-redesign-v3/10_main_map_v5_spec.md。
+
+--- 判据 3：门禁 ---
+scripts/gate.ps1（28 项）：27 PASS + 2 SKIP（android 交叉编译 / zero-unknown verify）
++ 1 FAIL = s43_fps_smoke（本机远程 VM 图形/显示环境项，S24.0 已实测非本次引入：
+git stash 回退 HEAD 后同测同样 FAILED；本次改动为纯文档 + 概念稿，不触碰渲染/时序代码）。
+doccheck：136 docs / 38 facts / 119 experiences / 222 task refs / 4 assertions / 0 error(s)
+doccheck2：38 项审计检查 / 0 error(s)（本任务新增 2 份文档的跨文档引用全部有效）
+ledger：227 tasks / 195 verified（+3 本任务后 198）

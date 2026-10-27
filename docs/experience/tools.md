@@ -124,3 +124,10 @@
 - 验证：2026-10 S16 登记会话实测：release.md 坏字节 292 处、`read_to_string` 失败可复现；计数行字节级修为「117 任务：110 verified」后 doccheck 仍 0 error（文件仍被跳过，行为不变=无回归）；坏字节全部修好后该行将首次真正进入 `check_ledger_counts` 校验（117/110 与 ledger 一致）。
 - 教训：**门禁里「读不到文件」必须显式失败，不许静默 skip**——静默 skip 让 release.md 的计数漂移躲过检查多轮；同类模式（`read_to_string` + `else return`）在 doccheck2/check_ledger_reality 里也要排查一遍。
 - 解决记录（2026-10）：子项 ③(a)「release.md 坏字节全量修复」已完成——未走字节逐替，而是从 git 历史取最后干净版（commit `24c5716`，UTF-8 严格解码 0 坏字节）为基底，重排瘦身成纯 UTF-8（14135→12581 字节，无 BOM），保留工作区唯一在途 WIP 行（ledger 117/110）。修复后 doccheck 重新纳管该文件（docs 计数 114→115），0 error。子项 ③(b)「doccheck 增加文档可解码性检查（读不到/含非法 UTF-8 → FAIL 而非静默跳过）」**仍未做**，如需落地另立台账任务。
+
+### EXP-123 工具：工具声称与某判据「同口径」必须逐字复刻其计数逻辑（flywheel 顶格 Report 数 vs doccheck2 全 Report 去重漂移）
+- **现象**：`scripts/flywheel_readme.ps1 -Check` FAIL「gate 项仅 12（要求 ≥21）」——但其注释自称「与 doccheck2 gate_item_actual_count 同口径」。实际 doccheck2 数**全部** `Report ` 调用（trim 开头、按项名去重 = 28），flywheel 旧实现只数**顶格** `^Report\b`（=12）⇒ 口径漂移误报。
+- **根因**：gate.ps1 早期全顶格 Report，flywheel 解析器按「顶格 = 固定项」实现；S24.1 门禁分档后 Report 调用大量移入 tier 条件块（缩进），顶格数静默跌到 12；`≥21` 下限挡到最后才暴露。声称「同口径」但实现不同口径 = 工具契约漂移。
+- **解法**：flywheel 的 `Read-GateItems` 改成与 doccheck2 `gate_item_actual_count` 完全一致（`trim StartsWith 'Report '` + 行内首个引号串去重）⇒ 28 ≥ 21 PASS。规范 = **任何工具声称与某判据「同口径」时，必须逐字复刻其计数/提取逻辑，并在 -Check 下限里引用同一期望值**；改 gate 结构后必须同时跑所有「同口径」消费方。
+- **验证**：`powershell -File scripts/flywheel_readme.ps1 -Check` PASS（gate 28 项 = doccheck2 `check_gate_item_count` 期望 28）；`cargo run -p ti-tools --bin doccheck2` 0 error。
+- **同源复发（2026-10-27，S27/S28 批次）**：`scripts/doc_numbers.py` 的 `gate_item_count()` 复刻了**旧 flywheel 口径**（只数顶格 `Report ` 行 = 12）⇒ 跑 `--fix` 会把全库声称的 **28 项回写成 12**（parity.md / git.md / README.md / gate.ps1 / playbook.ps1 / style.md / loop.md 同时被污染）⇒ doccheck2 立刻报 5 处「门禁项数声称漂移（声称 12，实测 28）」。已改：①`gate_item_count()` 改为与 doccheck2 逐字对齐（任意缩进 + 行内首个引号串**按名去重** = 28）②`_is_gate_total()` 增负例护栏：排除 `doccheck2 34→12 项` / `check_code_standards.py 12 项` 等**非门禁项数**语境（否则 `--fix` 会把这些也改成 28）。规范 = **修一个「同口径」工具后必须清点全部同口径消费方**（本次：flywheel ✅ → doc_numbers ❌ → 已修），且**回写类工具必须带负例护栏**，否则一次 `--fix` 能同时污染 7 个文件。

@@ -111,3 +111,15 @@
 
 
 
+
+### EXP-119 构建：bevy 文本 CJK 分词每帧刷 ICU4X 错：须开 complex_script_segmentation（parley 完整 CJK 字典）
+- **现象**：bevy 0.20（parley 文本引擎）渲染 CJK 文本时，debug 态每帧打 `ICU4X data error: No segmentation model for language: ja`（`ja` = CJK 字典键，zh 亦走此键），每场景 ~24 行刷屏。
+- **根因**：parley 的 icu_segmenter 仅在启用 complex-scripts feature 时构建完整字典（含 cjdict）；否则回退 `new_southeast_asian()`（只有 My/Km/Lo/Th 四语言），CJK 词元分词全部未命中 ⇒ 逐词打错。bevy 的 feature 名 = `complex_script_segmentation`（默认不含）。
+- **解法**：`ti-engine/Cargo.toml` 的 bevy features 加 `"complex_script_segmentation"`（→ parley/complex-scripts → 完整 ICU 字典）。这是 bevy CJK 文本应用的**必开 feature**，写进 `docs/process/12_bevy_usage.md` 坑位清单。
+- **验证**：`cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --resizetest` 输出 grep `No segmentation model|ICU4X data error` = 0 行（改前 debug ~24 行/场景）；resizetest PASS。
+
+### EXP-120 构建：cargo 自动探测 src/bin/*.rs 为独立 bin：子模块互引 E0433/E0601，须 autobins=false
+- **现象**：`crates/ti-engine` 在 `src/bin/` 声明 2 个 bin（`treasure_bevy.rs` + `resizetest.rs`），resizetest 同时作为主模块的子模块（`mod resizetest;`）被 `treasure_bevy` 引用 ⇒ E0433（too many `super`）+ E0601（缺 main）。此前 gate 只编译声明 bin 所以潜伏。
+- **根因**：cargo auto-roots 会把 `src/bin/*.rs` 每个文件都探测为独立 bin；当某 bin 文件同时是另一 bin 的子模块时，作为独立 bin 编译必然缺 main / 多 super。`--all-targets`（clippy/test）才会编译到这个第 3 个被探测目标并爆错。
+- **解法**：`[package] autobins = false` 关自动探测（保留显式 `[[bin]]` 声明）。任何「bin 文件互引子模块」的布局都必须配 `autobins = false`。
+- **验证**：`cargo clippy -q --manifest-path crates/ti-engine/Cargo.toml --all-targets -- -D warnings` = exit 0；`--resizetest` 相机验算 PASS（area 1080×1920，px/unit 0.5→1.0）。
