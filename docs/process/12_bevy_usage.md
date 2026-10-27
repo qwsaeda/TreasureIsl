@@ -246,6 +246,35 @@ cargo auto-roots 把 `src/bin/` 每个 `.rs` 都探测为独立 bin；当某 bin
 E0433（too many `super`）+ E0601（缺 main）。**bin 文件互引子模块的布局必须
 `[package] autobins = false`**（ti-engine 已配；gate 只编译声明 bin 时该坑潜伏）。
 
+### 9.8 bevy_ui 启用（S29.1，B1 定案）—— 0.20 实测坑位
+B1（`docs/process/17_layout_engine.md`）把 UI+命中+重排全进 Bevy。启用 `bevy_ui` 在 0.20 实测：
+
+- **feature 必开**：bevy `2d` 特性**不含** UI；`Cargo.toml` bevy `features += ["bevy_ui"]`
+  （=`bevy_internal/bevy_ui`，连带 `bevy_ui` core + `bevy_ui_render` 渲染管线，都在
+  `DefaultPlugins` 内自动注册）。缺 feature → 无 `Node`/`Text`/`UiPlugin`，代码不过。
+- **UI 相机 = `IsDefaultUiCamera`**：`commands.spawn((Camera2d, IsDefaultUiCamera,
+  Camera { order: 1, clear_color: ClearColorConfig::None, ..default() }, Transform::IDENTITY))`。
+  `order` 高于游戏世界相机（0）+ `clear None` 才叠在世界上面不覆盖世界。
+- **`Button`/`Interaction` 已废弃**（0.20 标 `#[doc(hidden)]`，post-0.20 删）：交互一律走
+  **`bevy_picking`**（S29.2）；证明面板只 spawn「按钮外观」（`Node`+`Text`+`BackgroundColor`），
+  **不**挂 `Button` 标记。
+- **没有 `Entity::spawn`/`set_parent`**（0.20 移除）：层级一律 **`ChildOf(parent)` 组件**
+  （`bevy::hierarchy`，在 prelude）；`EntityCommands` 的 `with_children` 可用但
+  `bevy::ecs::entity::EntityCommands` import 不解析（E0432）→ 别 import，用 `commands.spawn` 即可。
+- **`Node` 字段全 inline**（0.20 重构，无 `margin/padding` 子 struct 名变化）：`Node {
+  position_type, left/right/top/bottom/width/height: Val, align_items, justify_content,
+  padding: UiRect, border_radius: BorderRadius, row_gap, ..default() }`；`Val::Px/Percent/Auto`；
+  `UiRect::px(l,r,t,b)`；`BorderRadius::px(tl,tr,br,bl)`。背景色 = **独立组件 `BackgroundColor`**
+  （不是 `Node` 字段）。
+- **`Text`/`TextFont`**：`TextFont { font_size: FontSize::Px(28.0), ..default() }`（`FontSize`
+  是枚举 `Px/Vw/Vh/VMin/VMax/Rem`，**不是** `Option<f32>`）；`Text::from_label` 简写可用。
+- **`GlobalTransform.translation` 是方法**（0.20）：`transform.translation().x`，不是字段。
+- **headless 布局证据 = `ComputedNode` 探针**：bevy_ui 布局由 taffy 算出
+  `bevy::ui::ComputedNode`（每已布局节点一个）。`--shot` 离屏无法靠像素验证 UI 叠加
+  （UI 相机与 shot 相机同 `RenderTarget::Image` 的合成时序不可靠）→ **证据口径 = 跑 N 帧后
+  `Query<&ComputedNode>` 计数 > 0**（= 自动布局真跑了）。ti-engine `--shot` 内置
+  `ui_probe_system` 打 `[ui] bevy_ui probe: node=N text=N abs=N computed_layout=N`。
+
 ---
 
 ## 10. 性能与体积预算

@@ -236,6 +236,61 @@ fn spawn_stage(mut commands: Commands) {
     ));
 }
 
+/// S29.1（B1）：`bevy_ui` UI 相机 + 最小证明面板（叠在 1080 游戏世界之上；证明 UI 相机分层
+/// + `bevy_ui` 渲染 + resize 自动重排）。仅 live/`--shot` 路径注册，`--selftest` 不加（保像素对拍口径）。
+fn spawn_ui_chrome(mut commands: Commands, shot: Option<Res<ShotTarget>>) {
+    let cam = ti_engine::ui::spawn_ui_camera(&mut commands);
+    // `--shot` 离屏模式：UI 相机绑到同一离屏目标（`RenderTarget::Image`）⇒ bevy_ui 叠层进截图。
+    if let Some(st) = shot {
+        commands.entity(cam).insert(RenderTarget::Image(st.0.clone().into()));
+    }
+    // 返回 UI 根实体（S29.2 挂 bevy_picking/交互用；本任务先 `let _` 消 must_use 告警）。
+    let _root = ti_engine::ui::build_proof_panel(&mut commands, "S29 · bevy_ui", "resize me");
+}
+
+/// S29.1：bevy_ui 布局探针（headless 证据：自动布局是否真跑了、树是否建了）。
+///
+/// `--shot` 离屏模式跑 5 帧后打一行日志：`Node`/`Text` 实体数 + 绝对定位面板的 `GlobalTransform`。
+/// 证明 bevy_ui 管线（Node/Text 布局系统）在本壳生效，非仅编译通过。
+#[derive(Resource, Default)]
+struct UiProbe {
+    frames: u32,
+    logged: bool,
+}
+
+fn ui_probe_system(
+    mut probe: ResMut<UiProbe>,
+    nodes: Query<(&Node, Option<&GlobalTransform>)>,
+    texts: Query<&Text>,
+    computed: Query<&bevy::ui::ComputedNode>,
+) {
+    probe.frames += 1;
+    if probe.logged || probe.frames < 5 {
+        return;
+    }
+    probe.logged = true;
+    let mut abs = 0usize;
+    for (node, gt) in &nodes {
+        if node.position_type == PositionType::Absolute {
+            abs += 1;
+            if let Some(transform) = gt {
+                eprintln!(
+                    "[ui] bevy_ui abs panel @ ({:.0},{:.0}) world",
+                    transform.translation().x,
+                    transform.translation().y
+                );
+            }
+        }
+    }
+    let computed_count = computed.iter().count();
+    eprintln!(
+        "[ui] bevy_ui probe: node={} text={} abs={abs} computed_layout={computed_count} frame={}",
+        nodes.iter().count(),
+        texts.iter().count(),
+        probe.frames
+    );
+}
+
 /// 下一缩放模式（循环，`ScaleMode::ALL` 顺序；与 macroquad 壳同函数口径）。
 fn next_scale_mode(cur: ScaleMode) -> ScaleMode {
     let all = ScaleMode::ALL;
@@ -796,6 +851,11 @@ fn main() {
         }
     }
     app.add_systems(Startup, spawn_stage);
+    if !selftest {
+        // S29.1（B1）：bevy_ui UI 相机 + 最小证明面板（live/shot 路径；selftest 不加，保像素对拍口径）。
+        // Startup 顺序 = 添加序（spawn_stage 先建游戏相机，spawn_ui_chrome 后建 UI 相机叠层）。
+        app.add_systems(Startup, spawn_ui_chrome);
+    }
     if shot {
         run_shot(&mut app, &scene_id);
         return;
@@ -822,6 +882,8 @@ fn run_shot(app: &mut App, scene_id: &str) {
     app.init_resource::<ShotDone>()
         .add_observer(store_shot)
         .add_systems(Update, (request_shot, finish_shot).chain());
+    // S29.1：bevy_ui 布局探针（headless 证据）
+    app.init_resource::<UiProbe>().add_systems(Update, ui_probe_system);
     // 手动 update 循环 + 设备轮询（照 S18.3 `bevy_text_align` example 口径：
     // 截图异步完成，需 poll 设备才能拿到结果）。
     //

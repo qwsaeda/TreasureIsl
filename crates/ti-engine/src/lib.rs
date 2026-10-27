@@ -11,9 +11,11 @@
 mod bevy_app;
 pub mod canvas;
 pub mod scene_render;
+pub mod ui;
 
 pub use bevy_app::SpikeApp;
 pub use canvas::{BevyCanvas, CanvasEntity, color_to_rgb565, rgb565_to_color, viewport_scale};
+pub use ui::{build_proof_panel, spawn_ui_camera};
 
 /// 构建 S18.1 spike 最小 Bevy App（窗口 540×960 竖屏逻辑 1080×1920，
 /// 渲染 1 矩形 + 1 段文字；native 实跑 / wasm-webgl2 / android-vulkan 编译验证）。

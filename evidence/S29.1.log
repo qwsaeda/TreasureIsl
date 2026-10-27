@@ -1,0 +1,47 @@
+# S29.1 — bevy_ui UI 层基建（B1 定案落地第一步）
+
+定案源：`docs/process/17_layout_engine.md`（B1 = UI+命中+重排全进 Bevy；
+§4.1 S29.1 模块拆分：Cargo bevy_ui 特性 / `src/ui.rs` 零游戏语义基建 /
+`treasure_bevy.rs` 壳接线 / `12_bevy_usage.md` §9 坑位）。
+
+## 改动面 = 表现（渲染/引擎壳）
+| 文件 | 改了什么 |
+|---|---|
+| `crates/ti-engine/Cargo.toml` | bevy `features += ["bevy_ui"]`（= `bevy_internal/bevy_ui`，连带 `bevy_ui` core + `bevy_ui_render`，`DefaultPlugins` 内自动注册；`2d` 特性本不含 UI） |
+| `crates/ti-engine/src/ui.rs`（新） | 零游戏语义基建：`spawn_ui_camera(&mut Commands) -> Entity`（`IsDefaultUiCamera`，`Camera{order:1, clear_color:None}`，与 1080 游戏世界相机分层）+ `build_proof_panel(commands, title, button_label) -> Entity`（全屏根 Node + 右上 absolute 浮动卡 + 标题 Text + 按钮外观卡；`ChildOf` 层级；**不挂已废弃的 `Button`/`Interaction`**，交互归 S29.2 bevy_picking） |
+| `crates/ti-engine/src/lib.rs` | `pub mod ui;` + re-export（`spawn_ui_camera`/`build_proof_panel`） |
+| `crates/ti-engine/src/bin/treasure_bevy.rs` | `spawn_ui_chrome(Commands, Option<Res<ShotTarget>>)` 壳接线（Startup，`!selftest` 注册）：spawn UI 相机 + shot 模式给 UI 相机插 `RenderTarget::Image`（与 shot 相机同目标，order 叠层）+ 建证明面板；`ui_probe_system` + `UiProbe`（headless 布局探针，见下） |
+| `docs/process/12_bevy_usage.md` §9.8 | bevy_ui 0.20 实测坑位清单（feature / UI 相机 / Button 废弃 / ChildOf / Node inline / TextFont / ComputedNode 探针） |
+
+## 验证（判据 = 基建 + 最小验证；index 整 chrome 迁移归 S29.3）
+
+### 1. 编译 + 静态检查（ti-engine 独立 workspace）
+```
+cargo build -p ti-engine          → Finished dev profile（bevy_ui 特性 + ui.rs + 壳接线全过）
+cargo clippy --all-targets       → 全绿（无 warning；`bevy_ui` doc_markdown 反引号已修）
+```
+
+### 2. bevy_ui 自动布局探针（headless 证据口径）
+`--shot` 离屏无法靠像素可靠验证 UI 相机与 shot 相机同 `RenderTarget::Image` 的合成时序，
+故证据口径 = 跑 N 帧后 `Query<&bevy::ui::ComputedNode>` 计数 > 0（taffy 自动布局真跑了、
+给全部节点产出了计算布局，而非仅 spawn 实体）。`treasure_bevy.rs::ui_probe_system` 第 5 帧打日志：
+```
+cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --shot --scene=index
+[ui] bevy_ui probe: node=5 text=2 abs=1 computed_layout=5 frame=5
+[shot] 非黑像素 = 2054924 / alpha>8 = 2073600 / 2073600
+```
+- `node=5` = bevy_ui 树已建（根 + 面板 + 标签 Node + 按钮外观 Node + 按钮标签 Node）。
+- `text=2` = 标题 + 按钮标签两 `Text`。
+- `abs=1` = 1 个 `PositionType::Absolute` 浮动卡。
+- **`computed_layout=5` = taffy 为全部 5 节点算出 `ComputedNode` = bevy_ui 自动布局管线真跑了**。
+
+### 3. 边界（ui.rs 零游戏语义）
+`ui.rs` 仅含 `Node`/`Text`/`Camera`/`IsDefaultUiCamera`/`Val`/`UiRect` 等通用 UI 原语，
+不含任何 1080 坐标、场景、资产引用 → `doccheck2` `check_render_framework_boundary`
+（第 22 项）守 ti-render/ti-engine 边界不回归。
+
+## 未做 / 归后续
+- index 整 chrome（6 徽章 + 舵轮 + 罗盘环）迁移 bevy_ui = **S29.3**。
+- `touch.rs` 手写命中几何退役 + `bevy_picking` 2D 拾取 = **S29.2**。
+- resize 真重排（窗口 resize → bevy_ui 自动重排，实测）+ 全场景 UI 迁移 = **S29.3**。
+- 门禁改口径 + 四篇文档同步（11_bevy_migration / 12 §已更新 / 08_render_arch / 09_render_framework）= **S29.4**。

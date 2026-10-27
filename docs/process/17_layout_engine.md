@@ -73,6 +73,28 @@
 其 UI chrome/命中改走 S29.1~S29.2 的 bevy_ui + picking；S28.6 副本场景 UI 直接 bevy_ui 建（S29.3）。
 **依赖调整**：S27.4 不再前置「S29.1 求解器」，改前置「S29.2 命中层」（若命中要 picking）。
 
+### 4.1 S29.1 模块拆分（执行拆分：模块 / 职责 / 步骤）
+
+**模块与职责（一个文件 = 一个职责，02_conventions §9）**：
+
+| 模块 | 文件 | 职责 |
+|---|---|---|
+| 依赖开关 | `crates/ti-engine/Cargo.toml` | bevy 特性加 `"bevy_ui"`（编译进 `Node`/`Text`/`IsDefaultUiCamera`/`ComputedNode`；`Button`/`Interaction` 在 0.20 已废弃不挂，交互归 S29.2 `bevy_picking`，见 12 §9.8） |
+| UI 基建（零游戏语义） | `crates/ti-engine/src/ui.rs`（新增） | `spawn_ui_camera`（`(Camera2d, IsDefaultUiCamera, Camera{order:1, clear_color:None})` 叠游戏相机之上）+ `build_proof_panel`（通用浮动 bevy_ui 面板：`Node` flex + `BackgroundColor` + `Text` + 按钮外观卡〔**不**挂 0.20 已废弃的 `Button` 标记〕，不含场景名/文案语义；`ChildOf` 层级） |
+| 壳接线（游戏层） | `crates/ti-engine/src/bin/treasure_bevy.rs` | `spawn_stage` 后调用 `ui::spawn_ui_camera` + `ui::build_proof_panel`（live 路径；`--selftest` 不加，保像素对拍口径不变） |
+| 用法/坑位 | `docs/process/12_bevy_usage.md` §9 | 记「双相机 UI/世界分层」：UI 相机 order=1 + `clear_color=None`（不清屏，游戏世界透出）+ UI 树走屏幕像素、游戏世界走 1080 正交 `o.scale` |
+
+**步骤（批量编辑一次编译，禁探针节奏，硬规则 8）**：
+1. `Cargo.toml` 加 `bevy_ui` 特性 → 2. 建 `ui.rs`（相机 + 面板 helper）→ 3. `lib.rs` `pub mod ui;` → 4. `treasure_bevy.rs` 接线 →
+5. **一次** `cargo build -p ti-engine` 收口 → 6. `--shot index` 离屏跑 + `ui_probe_system` 打 `[ui] bevy_ui probe: …computed_layout=N`（**证据口径 = `ComputedNode` 计数 > 0**：taffy 自动布局真跑了；离屏像素无法可靠合成 UI 相机，见 12 §9.8）→
+ 7. `12_bevy_usage.md` §9.8 记坑位 → 8. 证据 + 台账 S29.1 verified + doccheck/doccheck2 + commit/push。
+
+**S29.1 判据（收窄为「基建 + 最小验证」，index 整 chrome 迁移归 S29.3）**：
+`cargo build -p ti-engine` 绿 + `ui_probe_system` 打 `computed_layout>0`（bevy_ui 树已建 + taffy 自动布局真跑，
+离屏像素不合成 UI 相机故不作判据）+
+`ui.rs` 零游戏语义（doccheck2 框架边界）+ 证据 `evidence/S29.1.log`。resize 真重排实测 + index 全 chrome
+迁移 = S29.3 判据（不在本任务）。
+
 ## 5. 文本 / 图片等比缩放（B1 承接）
 
 - **UI 层**：`bevy_ui` 文本（`Text`）与图片（`UiImage`）随 UI 相机/视口缩放；bevy_ui 自动布局处理重排。
