@@ -113,5 +113,11 @@
  "scene.main_map.build.need_gold": "金币不足",
  "boat.max": "已满级",
  "scene.select_map.locked": "未解锁",
- "scene.select_map.open": "可进入"
+ "scene.select_map.open": "可进入",
+ "scene.index.medallion.0": "新游戏",
+ "scene.index.medallion.1": "载入游戏",
+ "scene.index.medallion.2": "读取存档",
+ "scene.index.medallion.3": "选项设置",
+ "scene.index.medallion.4": "帮助说明",
+ "scene.index.medallion.5": "离开游戏"
 }

@@ -487,6 +487,7 @@ fn build_scene_chrome(
         SceneKind::SelectRole => build_select_role_chrome(commands, server, font, g),
         SceneKind::Saveload => Some(build_saveload_chrome(commands, font, g)),
         SceneKind::SelectMap => Some(build_select_map_chrome(commands, font, g)),
+        SceneKind::Index => build_index_chrome(commands, server, font, g),
         // 未迁场景：保留 S29.1 的证明面板占位（bevy_ui 层可见 + 可 resize 验证）；
         // 随各场景迁移逐个换成真实 chrome。
         _ => Some(ti_engine::ui::build_proof_panel(
@@ -496,6 +497,141 @@ fn build_scene_chrome(
             "resize me",
         )),
     }
+}
+
+/// 首页 6 徽章径向环（**参数化**：环心 + 半径 + 60° 步进算 6 格中心 `%`，不逐格手写像素）。
+/// 每格 = `medallion_ring.png` 底 + 白蒙版图标（`gold`/选中 `text_on_wood` 跨层 tint）+ 文案，
+/// 挂 `PickTarget` key=1 index=0..5（**UI 相机层**命中；1080 层该场景徽章原语已标 `ui_layer` 跳过）。
+#[allow(clippy::too_many_lines)]
+fn build_index_chrome(
+    commands: &mut Commands,
+    server: &AssetServer,
+    font: &Handle<Font>,
+    g: &GameApp,
+) -> Option<Entity> {
+    const ICONS: [&str; 6] = ["compass", "chest", "anchor", "gear", "book", "door"];
+    // 徽章底图 = 读 index 场景数据（首个 `pick_key=1` 原语 `params.asset`，单一事实源，壳侧不硬编码资产路径）
+    let medallion_asset = ti_core::data::scenes()
+        .ok()
+        .and_then(|scenes| scenes.get("index"))
+        .and_then(|sc| {
+            sc.primitives
+                .iter()
+                .find(|p| p.params.get("pick_key").and_then(serde_json::Value::as_u64) == Some(1))
+        })
+        .and_then(|p| p.params.get("asset").and_then(serde_json::Value::as_str))
+        .map(str::to_owned)?;
+    let root = commands
+        .spawn((
+            bevy::ui::Node {
+                width: bevy::ui::Val::Percent(100.0),
+                height: bevy::ui::Val::Percent(100.0),
+                display: bevy::ui::Display::Flex,
+                position_type: bevy::ui::PositionType::Relative,
+                ..Default::default()
+            },
+            bevy::picking::Pickable::IGNORE,
+        ))
+        .id();
+    let selected = g.menu_selected();
+    let theme = ti_render::theme::Theme::DEFAULT;
+    let gold = ti_engine::canvas::rgb565_to_color(theme.gold);
+    let on_wood = ti_engine::canvas::rgb565_to_color(theme.text_on_wood);
+    // 环参数（1080 单源：画布尺寸走 `LOGICAL_*` 常量，不裸写 1080/1920/540）：
+    // 环心 (画布半宽, 970)、半径 400、6 格 60° 步进（0 = 顶）。
+    let cw = ti_render::framebuffer::LOGICAL_W_I32 as f32;
+    let ch = ti_render::framebuffer::LOGICAL_H_I32 as f32;
+    let cx = cw / 2.0 / cw * 100.0; // 环心 x = 屏心（50%）
+    let cy = 970.0 / ch * 100.0; // 环心 y
+    let rx = 400.0 / cw * 100.0; // 环半径 x（`%` 宽）
+    let ry = 400.0 / ch * 100.0; // 环半径 y（`%` 高）
+    let cell_w = 144.0 / cw * 100.0;
+    let cell_h = 144.0 / ch * 100.0;
+    let mut cell_entities = Vec::with_capacity(6);
+    for (i, icon_name) in (0..6usize).zip(ICONS.iter()) {
+        let deg = -90.0f32 + i as f32 * 60.0;
+        let angle = deg * std::f32::consts::PI / 180.0;
+        let x_pct = cx + rx * angle.cos();
+        let y_pct = cy + ry * angle.sin();
+        let is_sel = i == selected;
+        let tint = if is_sel { on_wood } else { gold };
+        // 格节点（绝对定位，中心 = 环心 + 半径向量）
+        let cell = commands
+            .spawn((
+                bevy::ui::Node {
+                    width: bevy::ui::Val::Percent(cell_w),
+                    height: bevy::ui::Val::Percent(cell_h),
+                    position_type: bevy::ui::PositionType::Absolute,
+                    left: bevy::ui::Val::Percent(x_pct - cell_w / 2.0),
+                    top: bevy::ui::Val::Percent(y_pct - cell_h / 2.0),
+                    ..Default::default()
+                },
+                ChildOf(root),
+            ))
+            .id();
+        // 徽章底图（铺满格）
+        commands.spawn((
+            bevy::ui::Node {
+                width: bevy::ui::Val::Percent(100.0),
+                height: bevy::ui::Val::Percent(100.0),
+                position_type: bevy::ui::PositionType::Absolute,
+                ..Default::default()
+            },
+            bevy::ui::prelude::ImageNode {
+                image: server.load(medallion_asset.clone()),
+                color: bevy::color::Color::WHITE,
+                image_mode: bevy::ui::prelude::NodeImageMode::Stretch,
+                ..Default::default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            ChildOf(cell),
+        ));
+        // 图标（格中心 50%×50%，白蒙版 × 跨层 tint）
+        commands.spawn((
+            bevy::ui::Node {
+                width: bevy::ui::Val::Percent(50.0),
+                height: bevy::ui::Val::Percent(50.0),
+                position_type: bevy::ui::PositionType::Absolute,
+                left: bevy::ui::Val::Percent(25.0),
+                top: bevy::ui::Val::Percent(25.0),
+                ..Default::default()
+            },
+            bevy::ui::prelude::ImageNode {
+                image: server.load(format!("assets/ui/icon_{icon_name}.png")),
+                color: tint,
+                image_mode: bevy::ui::prelude::NodeImageMode::Stretch,
+                ..Default::default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            ChildOf(cell),
+        ));
+        // 文案（格下方居中）
+        let label_key = format!("scene.index.medallion.{i}");
+        let label = ti_app::i18n::sget(&label_key);
+        commands.spawn((
+            bevy::ui::Node {
+                width: bevy::ui::Val::Percent(cell_w),
+                height: bevy::ui::Val::Auto,
+                position_type: bevy::ui::PositionType::Absolute,
+                left: bevy::ui::Val::Percent(x_pct - cell_w / 2.0),
+                top: bevy::ui::Val::Percent(y_pct + cell_h / 2.0 + 0.4),
+                ..Default::default()
+            },
+            bevy::prelude::Text(label.to_string()),
+            bevy::text::TextFont {
+                font: bevy::text::FontSource::Handle(font.clone()),
+                font_size: bevy::text::FontSize::Px(22.0),
+                ..Default::default()
+            },
+            bevy::prelude::TextColor(if is_sel { on_wood } else { gold }),
+            bevy::picking::Pickable::IGNORE,
+            ChildOf(root),
+        ));
+        commands.entity(cell).insert(ti_engine::pick::PickTarget { key: 1, index: i32::try_from(i).unwrap_or(-1) });
+        cell_entities.push(cell);
+    }
+    let _ = &cell_entities; // 格实体挂 PickTarget 即命中目标（子节点已 IGNORE）
+    Some(root)
 }
 
 /// 选角 5 行列表（缩略图 + 两级文案 + 选中态）；行挂 `PickTarget` key=2。

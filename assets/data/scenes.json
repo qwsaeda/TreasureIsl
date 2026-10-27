@@ -109,7 +109,8 @@
      "asset": "assets/ui/medallion_ring.png",
      "badge": true,
      "pick_key": 1,
-     "pick_index": 0
+     "pick_index": 0,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -126,7 +127,8 @@
     "color": "gold",
     "params": {
      "icon": "compass",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -143,7 +145,8 @@
     "color": "text_on_wood",
     "params": {
      "icon": "compass",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -159,7 +162,10 @@
     "when": "normal",
     "color": "text_on_parch",
     "text": "新游戏",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -174,7 +180,10 @@
     "when": "selected",
     "color": "gold_warm",
     "text": "新游戏",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "image",
@@ -192,7 +201,8 @@
      "asset": "assets/ui/medallion_ring.png",
      "badge": true,
      "pick_key": 1,
-     "pick_index": 1
+     "pick_index": 1,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -209,7 +219,8 @@
     "color": "gold",
     "params": {
      "icon": "chest",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -226,7 +237,8 @@
     "color": "text_on_wood",
     "params": {
      "icon": "chest",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -242,7 +254,10 @@
     "when": "normal",
     "color": "text_on_parch",
     "text": "载入游戏",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -257,7 +272,10 @@
     "when": "selected",
     "color": "gold_warm",
     "text": "载入游戏",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "image",
@@ -275,7 +293,8 @@
      "asset": "assets/ui/medallion_ring.png",
      "badge": true,
      "pick_key": 1,
-     "pick_index": 2
+     "pick_index": 2,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -292,7 +311,8 @@
     "color": "gold",
     "params": {
      "icon": "anchor",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -309,7 +329,8 @@
     "color": "text_on_wood",
     "params": {
      "icon": "anchor",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -325,7 +346,10 @@
     "when": "normal",
     "color": "text_on_parch",
     "text": "读取存档",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -340,7 +364,10 @@
     "when": "selected",
     "color": "gold_warm",
     "text": "读取存档",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "image",
@@ -358,7 +385,8 @@
      "asset": "assets/ui/medallion_ring.png",
      "badge": true,
      "pick_key": 1,
-     "pick_index": 3
+     "pick_index": 3,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -375,7 +403,8 @@
     "color": "gold",
     "params": {
      "icon": "gear",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -392,7 +421,8 @@
     "color": "text_on_wood",
     "params": {
      "icon": "gear",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -408,7 +438,10 @@
     "when": "normal",
     "color": "text_on_parch",
     "text": "选项设置",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -423,7 +456,10 @@
     "when": "selected",
     "color": "gold_warm",
     "text": "选项设置",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "image",
@@ -441,7 +477,8 @@
      "asset": "assets/ui/medallion_ring.png",
      "badge": true,
      "pick_key": 1,
-     "pick_index": 4
+     "pick_index": 4,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -458,7 +495,8 @@
     "color": "gold",
     "params": {
      "icon": "book",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -475,7 +513,8 @@
     "color": "text_on_wood",
     "params": {
      "icon": "book",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -491,7 +530,10 @@
     "when": "normal",
     "color": "text_on_parch",
     "text": "帮助说明",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -506,7 +548,10 @@
     "when": "selected",
     "color": "gold_warm",
     "text": "帮助说明",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "image",
@@ -524,7 +569,8 @@
      "asset": "assets/ui/medallion_ring.png",
      "badge": true,
      "pick_key": 1,
-     "pick_index": 5
+     "pick_index": 5,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -541,7 +587,8 @@
     "color": "gold",
     "params": {
      "icon": "door",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -558,7 +605,8 @@
     "color": "text_on_wood",
     "params": {
      "icon": "door",
-     "size": 96
+     "size": 96,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -574,7 +622,10 @@
     "when": "normal",
     "color": "text_on_parch",
     "text": "离开游戏",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -589,7 +640,10 @@
     "when": "selected",
     "color": "gold_warm",
     "text": "离开游戏",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",

@@ -1,0 +1,45 @@
+S29.3d 验收证据（index 首页 6 徽章径向环迁 bevy_ui + 数据驱动资产/环参数）
+
+## 落码
+- `build_index_chrome`（`treasure_bevy.rs`）：**参数化径向环**（环心/半径/60° 步进算 6 格中心 `%`，
+  不逐格手写像素）。每格 = `medallion_ring.png` 底 + 白蒙版图标（跨层 tint `gold`/选中 `text_on_wood`）
+  + 文案 + 选中态，挂 `PickTarget` key=1 index=0..5（子节点 `Pickable::IGNORE`，事件落到格节点）。
+- **数据驱动资产**：徽章底图 = 读 index 场景数据（`pick_key=1` 原语 `params.asset`）⇒ 壳侧不硬编码资产
+  路径（CS-1 合规；与 select_role 的 `role_*.png` 同源纪律）。
+- **环尺寸走 `LOGICAL_*` 常量**（不裸写 1080/1920/540，bevy-camera-scale-convention 合规）。
+- 新增 i18n 键 `scene.index.medallion.0..5`（新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏）。
+- 30 徽章原语（image PK=1 + 逐徽章 icon×2/text×2，item∈0..5）标 `ui_layer:"bevy_ui"`（indent=1 规范形）；
+  背景 chart_full / board / 舵轮 helm / 标题 / 版本尾行**不标**（仍 1080）。
+- 与 1080 层不双发（已迁徽章 1080 层 `ui_layer` 跳过 + `manual_1080_hit_system` 跳过 `ui_layer`）。
+
+## 判据 1：gate 全绿（仅 s43_fps_smoke = 本 VM 无 GPU 环境项）
+```
+27 PASS + 1 FAIL(fps 环境项) + SKIP
+```
+
+## 判据 2：--shot index 出图（bevy_ui 6 徽章 + 1080 羊皮海图/舵轮同帧叠加）
+```
+[ui] bevy_ui probe: node=25 text=6 computed_layout=25   # 6 格 × (格+底图+图标) + 6 文案 + 根
+6 徽章中心像素均非黑（bevy_ui 徽章渲染在环位）；舵轮 (540,970) 金色；背景/羊皮海图透出
+```
+
+## 判据 3：e2e 点击路由（logic 半程）
+```
+test e2e_touch_economy_loop ... ok   # index medallion 0 → poll_hit key=1 → 选角 → 选图 → 主地图
+test result: ok. 8 passed; 0 failed
+```
+
+## 判据 4：代码标准
+```
+check_code_standards: PASS（CS-1 资产路径 0 新增违例 = 徽章底图数据驱动）
+doccheck2: 0 error（bevy-camera-scale-convention：环尺寸走 LOGICAL_* 常量，不裸写 1080/1920/540）
+```
+
+## 视觉签收（A 纪律，EXP-114）
+用户拍板（2026-10-27）：「全部做完，能正式上线玩，你自己测试验证通过」⇒ S29.3d 视觉签收以 agent
+机器判据代（--shot 出图 + 像素采样 + e2e + gate 全绿）；index 径向环逐场景过目 + main_map/vs/message
+响应式迁移 + resize 多视口实测重排归 S29.5 收口。
+
+## 残留（归 S29.3 主体 / S29.5）
+main_map（HUD 面板）、vs（战斗卡）、message（帮助正文）的 bevy_ui 响应式迁移未做——保留 1080 渲染
++ 1080 手动拾取/键盘（可玩）；resize 多视口实测重排 + 门禁改口径 + 四篇文档同步 = S29.4/S29.5。
