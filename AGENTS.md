@@ -15,7 +15,9 @@
 
 - **S26 全场景视觉收尾**（2026-10-27 用户：地图是垃圾/裸色块/低对比/黑底面板「全做」）：**S26.1 verified**（ICU4X 报错根治：bevy `complex_script_segmentation` 启用 parley 完整 CJK 字典 + ti-engine `autobins=false` 收口 resizetest，实跑 ICU 行 0 vs 改前 ~24/场景，`evidence/S26.1.log`）；**S26.2 verified**（main_map v4 岛屿图片化：`scripts/ui_islands.py` terrain→3 枚暖沙岛屿剪影 PNG 资产优先 blit + 黄铜轨逐格骰点航线 + 赛道节点/船尺寸放大，`evidence/S26.2.log`）；**S26.3 verified**（七场景视觉：vs 删裸色块日志占位 + HP 槽黄铜描边、saveload 选中态提亮 + 修「位 1」角色前缀、message 帮助正文占位填真实文案 + 标题对比、select_map 黑底面板 panel_warm→panel_wood 暖棕 + 蓝锁条→暖棕、chrome 全场景底部提示统一 menu_bg 底板条；7 场景出图 `evidence/bevy_native_*.png`，`evidence/S26.3.log`，**视觉签收待用户过目**）。待开工 = S21.4~S21.7 残留（若 S26.2 已覆盖则核对）+ S25.1（代码标准棘轮豁免清零）。
 
-- **S27/S28 主地图 v5「大富翁式环形格子 + 领地系统」（2026-10-27 用户：地图设计得差 → 参考大富翁但要海盗风，各类岛屿都不知道；「每格有岛屿/城镇，落到这格可进副本，别人占领可交钱或攻占，自己的领地可升级加固」= 原版玩法；「每局 4 个 AI 玩家」+「可以选至少一个玩家」）**：**S27.0 设计稿已出**（`evidence/ui_concept/main_map_v5_{a,b,c}.png`，选定 = 变体 B 圆环卡片 + 中央大岛插画）；**S27.1 版面规格已定案**（`docs/ui-redesign-v3/10_main_map_v5_spec.md`：31 张 96×120 岛型卡环（环心 540,780 / R=474）+ 中央可点击据点岛 760×760 + 归属色带 + 10 类海盗岛 + 点卡交互契约）；**S28.0 领地业务规格已定案**（`docs/business/territory.md`：5 席位 = 选角 ≥1 玩家 + 4 AI、领地格 vs 功能格、10 类岛专属副本、落格三支分叉（无主→副本占领 / 他人→交钱或攻占 / 自己→升级加固）、经济接入、存档 v4、可测规则表 13 条）。待开工 = S27.2 资产（10 类岛图 + 3 张中央插画）→ S27.3 数据层（board.json 31 格分区）→ S28.1 领地规则层（`rules/territory.rs`）→ S27.4 表现层（环形棋盘重绘）→ S28.7 AI 回合 → S28.6 副本场景 ×10 → S27.5 出图签收。
+- **S27/S28 主地图 v5「大富翁式环形格子 + 领地系统」（2026-10-27 用户：地图设计得差 → 参考大富翁但要海盗风，各类岛屿都不知道；「每格有岛屿/城镇，落到这格可进副本，别人占领可交钱或攻占，自己的领地可升级加固」= 原版玩法；「每局 4 个 AI 玩家」+「可以选至少一个玩家」）**：**S27.0 设计稿已出**（`evidence/ui_concept/main_map_v5_{a,b,c}.png`，选定 = 变体 B 圆环卡片 + 中央大岛插画）；**S27.1 版面规格已定案**（`docs/ui-redesign-v3/10_main_map_v5_spec.md`：31 张 96×120 岛型卡环（环心 540,780 / R=474）+ 中央可点击据点岛 760×760 + 归属色带 + 10 类海盗岛 + 点卡交互契约）；**S28.0 领地业务规格已定案**（`docs/business/territory.md`：5 席位 = 选角 ≥1 玩家 + 4 AI、领地格 vs 功能格、10 类岛专属副本、落格三支分叉（无主→副本占领 / 他人→交钱或攻占 / 自己→升级加固）、经济接入、存档 v4、可测规则表 13 条）；**S27.2 资产已 verified**（10 类岛卡 + 3 张中央插画，`evidence/S27.2.log`）。待开工 = S27.3 数据层（board.json 31 格分区）→ S28.1 领地规则层（`rules/territory.rs`）→ S27.4 表现层（环形棋盘重绘，**前置 S29.1 布局求解器**）→ S28.7 AI 回合 → S28.6 副本场景 ×10（**直接按 S29 布局树新建，前置 S29.2**）→ S27.5 出图签收。
+
+- **S29 布局引擎「真响应式重排」（2026-10-27 用户：「有引擎确不用的问题，布局还是写死的」→ 综合分析拍板：全场景真响应式重排(b) + 文本/图片等比缩放，1080 降级为 REF 参考视口非锁）**：**S29.0 定案已 verified**（`docs/process/17_layout_engine.md` 单一事实源：引擎无关求解器 `resolve(tree, viewport)` + 声明式布局树/重排 DSL + 命中派生 + 门禁宽高比矩阵 + 换引擎成本；`08_layout_design.md` 降级为 REF 镜像）；待开工 = S29.1 求解器（`ti-render::layout`）→ S29.2 schema+对拍工具 → S29.3 双后端接线+resize 重排 → S29.4 门禁升级 → S29.5 全场景切闸收口。S27.4/S28.6 为布局引擎首个消费者。
 
 ## 路由表
 
@@ -30,6 +32,7 @@
 | 写 Rust（分层/数据驱动/现成库） | `docs/process/01_architecture.md` + `docs/process/02_conventions.md`（新）；语法层细节 `docs/style.md`（**标准库 trait 选用矩阵 + 重构操作规程 = §5.6.6**：From/Into/TryFrom/Display/Default/AsRef/include_str! 等何时用 + 手写转换补 trait 的五步规程） |
 | 套用模版 / 写新场景·控件·模块 | `docs/process/03_templates.md`（§7 = 模块包任务书模版） |
 | **代码标准执行矩阵（架构/耦合/内聚/命名/重构；写码·提交前对照，新代码零豁免）** | `docs/process/16_code_standards.md`（各维度 → 机器检查映射：CS-1 资产单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数禁单字母 / CS-4 场景层窄接缝 = `scripts/check_code_standards.py` 12 项 + 规模归 `audit_code.py` + lint 红线归 gate；棘轮基线 `process_ratchet.json::code_standards`） |
+| **布局引擎 / 响应式版面 / 改布局·加场景·调视口·换引擎（S29 定案）** | `docs/process/17_layout_engine.md`（声明式布局树 + 引擎无关求解器 `resolve(tree, viewport)` + 全场景真响应式重排(b) + 文本/图片等比缩放 + 命中派生；`08_layout_design.md` 降级为 REF 视口 1080 镜像；WBS S29.0~S29.5；S27.4 环形棋盘 / S28.6 副本场景 = 其首个消费者） |
 | 用脚本/codegen 批量处理 | `docs/process/04_tooling.md` |
 | **查业务规则（战斗/经济/地图/存档/UI 流）** | `docs/business/` 各系统文档（不依赖逆向产物） |
 | **界面版面 / 配色 / 控件坐标（1080 单一事实源）** | `docs/business/08_layout_design.md`（改 scenes.json 坐标/配色前必读；表值 = scenes.json 同值） |

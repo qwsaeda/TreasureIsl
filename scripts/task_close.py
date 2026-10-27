@@ -149,6 +149,14 @@ def sync_release_counts() -> bool:
 
 
 def main() -> int:
+    # GBK 控制台打印 Unicode（如 check_ledger_reality 的「≈」）会崩（EXP-125）：
+    # 保留控制台编码，但让不可编码字符降级为 ?，工具不因回显崩溃。
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(errors="replace")
+            except Exception:
+                pass
     ap = argparse.ArgumentParser(description="任务收口：跑判据 → 写证据 → 置 verified → 同步计数 → 对账")
     ap.add_argument("--task", required=True, help="台账任务 id（如 S21.4）")
     ap.add_argument("--cmd", action="append", default=[], help="判据命令（可重复，按序实跑）")

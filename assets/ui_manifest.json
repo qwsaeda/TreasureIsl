@@ -1,514 +1,662 @@
 {
- "version": 1,
- "_comment": "UI 资产清单（单一事实源）：角色规格预设 + 资产登记。生成/抠图/规范化走 scripts/ui_assets.py；界面数据（assets/data/scenes.json）只引用 file 路径（相对仓库根）。新增资产 = 本文件加一条 + `python scripts/ui_assets.py build`。",
- "roles": {
-  "background": {
-   "ratio": "9:16",
-   "target": [
-    1080,
-    1920
-   ],
-   "key": "none",
-   "prompt": "A vertical 9:16 game background, night sky over a calm sea horizon, deep navy blue gradient sky with scattered small warm stars, soft moonlight glow behind thin drifting clouds on the upper right, a subtle dark sea with faint wave highlights at the bottom, warm gold accent glints near the horizon, painterly nautical adventure style, EMPTY center area, absolutely no text, no letters, no logo, no icons, no characters, no UI frames"
+  "version": 1,
+  "_comment": "UI 资产清单（单一事实源）：角色规格预设 + 资产登记。生成/抠图/规范化走 scripts/ui_assets.py；界面数据（assets/data/scenes.json）只引用 file 路径（相对仓库根）。新增资产 = 本文件加一条 + `python scripts/ui_assets.py build`。",
+  "roles": {
+    "background": {
+      "ratio": "9:16",
+      "target": [
+        1080,
+        1920
+      ],
+      "key": "none",
+      "prompt": "A vertical 9:16 game background, night sky over a calm sea horizon, deep navy blue gradient sky with scattered small warm stars, soft moonlight glow behind thin drifting clouds on the upper right, a subtle dark sea with faint wave highlights at the bottom, warm gold accent glints near the horizon, painterly nautical adventure style, EMPTY center area, absolutely no text, no letters, no logo, no icons, no characters, no UI frames"
+    },
+    "medallion": {
+      "ratio": "1:1",
+      "target": [
+        512,
+        512
+      ],
+      "key": "luma",
+      "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    "board": {
+      "ratio": "21:9",
+      "target": [
+        1024,
+        439
+      ],
+      "key": "magenta",
+      "prompt": "an ornate carved wooden signboard plaque, dark warm walnut wood with gold filigree carved border and curled corners, a completely EMPTY smooth wooden center panel with no carving inside, horizontal banner shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no shadow, no backdrop, no text, no letters"
+    },
+    "mapcard": {
+      "ratio": "4:3",
+      "target": [
+        640,
+        480
+      ],
+      "key": "none",
+      "prompt": "an antique parchment sea chart map card, {what}, hand-drawn coastline, compass rose, depth soundings and rhumb lines, weathered edges, warm candlelight, top-down view filling the whole frame, no text, no letters, no labels, no watermark"
+    },
+    "portrait": {
+      "ratio": "2:3",
+      "target": [
+        384,
+        576
+      ],
+      "key": "none",
+      "prompt": "a character portrait of {what}, heroic fantasy adventure game character art, warm gold rim light, painterly nautical treasure-hunting style, three-quarter view, upper body, dramatic painted scene background, no text, no letters, no watermark, high detail"
+    },
+    "plaque": {
+      "ratio": "21:9",
+      "target": [
+        1024,
+        439
+      ],
+      "key": "magenta",
+      "prompt": "an antique polished brass plaque, {what}, thin gold filigree rim, a completely EMPTY smooth brushed brass center panel, wide horizontal rectangle shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters"
+    },
+    "isle": {
+      "ratio": "3:4",
+      "target": [
+        512,
+        640
+      ],
+      "key": "none",
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: {what} filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+    },
+    "island_home": {
+      "ratio": "1:1",
+      "target": [
+        1024,
+        1024
+      ],
+      "key": "magenta",
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, {theme}, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
+    }
   },
-  "medallion": {
-   "ratio": "1:1",
-   "target": [
-    512,
-    512
-   ],
-   "key": "luma",
-   "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon"
-  },
-  "board": {
-   "ratio": "21:9",
-   "target": [
-    1024,
-    439
-   ],
-   "key": "magenta",
-   "prompt": "an ornate carved wooden signboard plaque, dark warm walnut wood with gold filigree carved border and curled corners, a completely EMPTY smooth wooden center panel with no carving inside, horizontal banner shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no shadow, no backdrop, no text, no letters"
-  },
-  "mapcard": {
-   "ratio": "4:3",
-   "target": [
-    640,
-    480
-   ],
-   "key": "none",
-   "prompt": "an antique parchment sea chart map card, {what}, hand-drawn coastline, compass rose, depth soundings and rhumb lines, weathered edges, warm candlelight, top-down view filling the whole frame, no text, no letters, no labels, no watermark"
-  },
-  "portrait": {
-   "ratio": "2:3",
-   "target": [
-    384,
-    576
-   ],
-   "key": "none",
-   "prompt": "a character portrait of {what}, heroic fantasy adventure game character art, warm gold rim light, painterly nautical treasure-hunting style, three-quarter view, upper body, dramatic painted scene background, no text, no letters, no watermark, high detail"
-  },
-  "plaque": {
-   "ratio": "21:9",
-   "target": [
-    1024,
-    439
-   ],
-   "key": "magenta",
-   "prompt": "an antique polished brass plaque, {what}, thin gold filigree rim, a completely EMPTY smooth brushed brass center panel, wide horizontal rectangle shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters"
-  }
- },
- "assets": [
-  {
-   "name": "bg_night_sea",
-   "role": "background",
-   "file": "assets/ui/bg_night_sea.png",
-   "params": {},
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "board",
-   "role": "board",
-   "file": "assets/ui/board.png",
-   "params": {},
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "icon_compass",
-   "role": "medallion",
-   "file": "assets/ui/icon_compass.png",
-   "params": {
-    "what": "a compass rose"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "icon_anchor",
-   "role": "medallion",
-   "file": "assets/ui/icon_anchor.png",
-   "params": {
-    "what": "a ship anchor"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "icon_map",
-   "role": "medallion",
-   "file": "assets/ui/icon_map.png",
-   "params": {
-    "what": "a rolled parchment sea chart map"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "icon_gear",
-   "role": "medallion",
-   "file": "assets/ui/icon_gear.png",
-   "params": {
-    "what": "a ship's helm wheel"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "icon_book",
-   "role": "medallion",
-   "file": "assets/ui/icon_book.png",
-   "params": {
-    "what": "an open scroll with curled ends"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "icon_door",
-   "role": "medallion",
-   "file": "assets/ui/icon_door.png",
-   "params": {
-    "what": "an ornate ship cabin door"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "icon_chest",
-   "role": "medallion",
-   "file": "assets/ui/icon_chest.png",
-   "params": {
-    "what": "treasure chest (white mask, ui_icons.py)"
-   },
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "icon_coin",
-   "role": "medallion",
-   "file": "assets/ui/icon_coin.png",
-   "params": {
-    "what": "double-ring coin (white mask, ui_icons.py)"
-   },
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "icon_sword",
-   "role": "medallion",
-   "file": "assets/ui/icon_sword.png",
-   "params": {
-    "what": "crossed swords (white mask, ui_icons.py)"
-   },
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "icon_castle",
-   "role": "medallion",
-   "file": "assets/ui/icon_castle.png",
-   "params": {
-    "what": "castle with three merlons (white mask, ui_icons.py)"
-   },
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "icon_beacon",
-   "role": "medallion",
-   "file": "assets/ui/icon_beacon.png",
-   "params": {
-    "what": "lighthouse beacon (white mask, ui_icons.py)"
-   },
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "icon_heart",
-   "role": "medallion",
-   "file": "assets/ui/icon_heart.png",
-   "params": {
-    "what": "heart / HP (white mask, ui_icons.py)"
-   },
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "icon_flag",
-   "role": "medallion",
-   "file": "assets/ui/icon_flag.png",
-   "params": {
-    "what": "turn-flag (white mask, ui_icons.py)"
-   },
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "icon_monogram",
-   "role": "medallion",
-   "file": "assets/ui/icon_monogram.png",
-   "params": {
-    "what": "role monogram ring (white mask, ui_icons.py)"
-   },
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "role_panda",
-   "role": "portrait",
-   "file": "assets/ui/role_panda.png",
-   "params": {
-    "what": "a stout middle-aged merchant captain in a fur-trimmed coat, calculating eyes, gold jewelry"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "role_tichy",
-   "role": "portrait",
-   "file": "assets/ui/role_tichy.png",
-   "params": {
-    "what": "a weathered old naval captain with a white beard, epaulettes and a peaked captain hat, calm commanding gaze"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "role_kidd",
-   "role": "portrait",
-   "file": "assets/ui/role_kidd.png",
-   "params": {
-    "what": "a young lean bounty hunter with a hooded cloak, a crossbow strap and a sharp watchful stare"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "role_drake",
-   "role": "portrait",
-   "file": "assets/ui/role_drake.png",
-   "params": {
-    "what": "a fearsome Caribbean pirate captain with a tricorn hat, jagged beard, red sash and a menacing grin"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "role_katharina",
-   "role": "portrait",
-   "file": "assets/ui/role_katharina.png",
-   "params": {
-    "what": "an aristocratic young noblewoman with dark curly hair, a deep crimson gown and a proud vengeful expression"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "map_harbour",
-   "role": "mapcard",
-   "file": "assets/ui/map_harbour.png",
-   "params": {
-    "what": "a busy tropical harbour with ships and docks"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "map_open_sea",
-   "role": "mapcard",
-   "file": "assets/ui/map_open_sea.png",
-   "params": {
-    "what": "an open ocean with a lone island and a compass rose"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "map_reef",
-   "role": "mapcard",
-   "file": "assets/ui/map_reef.png",
-   "params": {
-    "what": "a narrow reef strait between two cliffs with sea monsters"
-   },
-   "generated_at": "2026-10-21"
-  },
-  {
-   "name": "bg_night_sea_top",
-   "role": "background",
-   "file": "assets/ui/bg_night_sea_top.png",
-   "params": {},
-   "generated_at": "2026-10-21",
-   "prompt": "A vertical 9:16 top-down view of a calm dark ocean at night, deep navy blue water with subtle silver moonlight ripples and faint wave crests, no islands, no boats, no horizon line, no text, no letters, no watermark, painterly"
-  },
-  {
-   "name": "bg_battle_sea",
-   "role": "background",
-   "file": "assets/ui/bg_battle_sea.png",
-   "params": {},
-   "generated_at": "2026-10-21",
-   "prompt": "A vertical 9:16 dramatic naval battle scene at night, two sailing ships exchanging cannon fire on a moonlit sea, warm muzzle flashes and smoke, distant thunder clouds, painterly nautical adventure art, empty center space, no text, no letters, no watermark"
-  },
-  {
-   "name": "chart_wide",
-   "role": "board",
-   "file": "assets/ui/chart_wide.png",
-   "params": {},
-   "generated_at": "2026-10-21",
-   "prompt": "a wide antique parchment sea chart filling the whole frame, hand-drawn islands, rhumb lines, compass roses, weathered edges, warm candlelight, top-down view, no text, no letters, no labels, no watermark"
-  },
-  {
-   "name": "dice",
-   "role": "board",
-   "file": "assets/ui/dice.png",
-   "params": {
-    "what": "a nautical six-sided die with anchor engraving"
-   },
-   "prompt": "A single classic six-sided gaming die in a nautical pirate style: warm gold/brass die with dark carved pips, small anchor engraving, slight isometric 3D view, flat clean vector game-icon look, centered, on a PURE SOLID MAGENTA background, no text, no letters, no scenery, high contrast",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "helm",
-   "role": "board",
-   "file": "assets/ui/helm.png",
-   "params": {
-    "what": "a wooden ship's steering wheel (helm)"
-   },
-   "prompt": "A classic wooden ship's steering wheel (helm) with 8 spokes and a gold/brass central hub, front view, clean flat vector game-icon look, warm brown wood and gold metal, centered, on a PURE SOLID MAGENTA background, no text, no letters, no scenery, high contrast",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "chart_full",
-   "role": "background",
-   "file": "assets/ui/chart_full.png",
-   "params": {},
-   "prompt": "Full-bleed antique nautical sea chart, vertical 9:16, hand-drawn aged parchment sea in muted turquoise and teal with fine engraved wave hatching, faint latitude and longitude grid lines, delicate rhumb lines radiating outward, an ornate compass rose in the lower left, a small silhouetted sailing ship in the upper right sea, faint sea monster silhouette, tea stains and foxing spots, torn deckled edges, the outermost frame border is dark walnut wood, the central area is calm empty open water with absolutely no island and no landmass, painterly antique cartography, warm candlelight, no text, no letters, no numbers, no labels",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_start",
-   "role": "medallion",
-   "file": "assets/ui/node_start.png",
-   "params": {},
-   "prompt": "a single round antique brass compass medallion plate with a tiny sailing ship engraved in its center, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_city",
-   "role": "medallion",
-   "file": "assets/ui/node_city.png",
-   "params": {},
-   "prompt": "a single hexagonal antique brass badge engraved with a small walled harbour town with two towers, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_port",
-   "role": "medallion",
-   "file": "assets/ui/node_port.png",
-   "params": {},
-   "prompt": "a single rounded-square antique brass badge engraved with a lighthouse on a rock, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_event",
-   "role": "medallion",
-   "file": "assets/ui/node_event.png",
-   "params": {},
-   "prompt": "a single shield-shaped antique brass badge engraved with a rolled parchment scroll tied with cord, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_card",
-   "role": "medallion",
-   "file": "assets/ui/node_card.png",
-   "params": {},
-   "prompt": "a single diamond-shaped antique brass badge engraved with a folded treasure map, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_battle",
-   "role": "medallion",
-   "file": "assets/ui/node_battle.png",
-   "params": {},
-   "prompt": "a single spiky eight-pointed antique brass badge engraved with two crossed cutlasses, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_treasure",
-   "role": "medallion",
-   "file": "assets/ui/node_treasure.png",
-   "params": {},
-   "prompt": "a single antique brass treasure chest with a domed lid and heavy lock, ornate gold trim, three-quarter view, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_boss",
-   "role": "medallion",
-   "file": "assets/ui/node_boss.png",
-   "params": {},
-   "prompt": "a single antique brass human skull badge with crossed bones behind it, menacing, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "node_plain",
-   "role": "medallion",
-   "file": "assets/ui/node_plain.png",
-   "params": {},
-   "prompt": "a single small plain polished brass domed stud rivet, simple domed nail head, no symbol, no engraving, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "ship_player",
-   "role": "medallion",
-   "file": "assets/ui/ship_player.png",
-   "params": {},
-   "prompt": "a single small three-masted pirate galleon with white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "btn_spin",
-   "role": "medallion",
-   "file": "assets/ui/btn_spin.png",
-   "params": {},
-   "prompt": "a single large ornate antique brass ship helm wheel button with eight spokes and a carved bone die fixed in the hub, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "compass_rose",
-   "role": "medallion",
-   "file": "assets/ui/compass_rose.png",
-   "params": {},
-   "prompt": "a single ornate antique brass compass rose medallion with eight points and a fleur-de-lis north tip, engraved with fine radial lines, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "hud_plaque",
-   "role": "plaque",
-   "file": "assets/ui/hud_plaque.png",
-   "params": {},
-   "prompt": "a wide horizontal antique polished brass panel with beveled edges, gold filigree corners and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "deck_plaque",
-   "role": "plaque",
-   "file": "assets/ui/deck_plaque.png",
-   "params": {},
-   "prompt": "a LONG HORIZONTAL RECTANGULAR antique polished brass button plate, very wide and short, 4 to 1 width to height ratio, straight rectangular edges with slightly rounded corners, gold filigree rim and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
-   "generated_at": "2026-10-22"
-  },
-  {
-   "name": "medallion_ring",
-   "role": "medallion",
-   "file": "assets/ui/medallion_ring.png",
-   "params": {},
-   "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon",
-   "generated_at": "2026-10-23"
-  },
-  {
-   "name": "boat_1",
-   "file": "assets/ui/boat_1.png",
-   "role": "medallion",
-   "params": {},
-   "generated_at": "2026-10-26",
-   "prompt": "a single small open fishing skiff with one short mast and a plain brown sail, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-  },
-  {
-   "name": "boat_2",
-   "file": "assets/ui/boat_2.png",
-   "role": "medallion",
-   "params": {},
-   "generated_at": "2026-10-26",
-   "prompt": "a single two-masted fast schooner with two white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-  },
-  {
-   "name": "boat_3",
-   "file": "assets/ui/boat_3.png",
-   "role": "medallion",
-   "params": {},
-   "generated_at": "2026-10-26",
-   "prompt": "a single three-masted large galleon with three white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-  },
-  {
-   "name": "boat_4",
-   "file": "assets/ui/boat_4.png",
-   "role": "medallion",
-   "params": {},
-   "generated_at": "2026-10-26",
-   "prompt": "a single armoured patrol warship with four gun ports, steel plated hull and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-  },
-  {
-   "name": "island_m01",
-   "role": "island",
-   "file": "assets/ui/island_m01.png",
-   "params": {
-    "map": "m01",
-    "grid": 20,
-    "canvas": "994x826"
-   },
-   "generated_at": "2026-10-26",
-   "generator": "scripts/ui_islands.py"
-  },
-  {
-   "name": "island_m02",
-   "role": "island",
-   "file": "assets/ui/island_m02.png",
-   "params": {
-    "map": "m02",
-    "grid": 20,
-    "canvas": "994x826"
-   },
-   "generated_at": "2026-10-26",
-   "generator": "scripts/ui_islands.py"
-  },
-  {
-   "name": "island_m03",
-   "role": "island",
-   "file": "assets/ui/island_m03.png",
-   "params": {
-    "map": "m03",
-    "grid": 15,
-    "canvas": "994x826"
-   },
-   "generated_at": "2026-10-26",
-   "generator": "scripts/ui_islands.py"
-  }
- ]
+  "assets": [
+    {
+      "name": "bg_night_sea",
+      "role": "background",
+      "file": "assets/ui/bg_night_sea.png",
+      "params": {},
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "board",
+      "role": "board",
+      "file": "assets/ui/board.png",
+      "params": {},
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_compass",
+      "role": "medallion",
+      "file": "assets/ui/icon_compass.png",
+      "params": {
+        "what": "a compass rose"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_anchor",
+      "role": "medallion",
+      "file": "assets/ui/icon_anchor.png",
+      "params": {
+        "what": "a ship anchor"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_map",
+      "role": "medallion",
+      "file": "assets/ui/icon_map.png",
+      "params": {
+        "what": "a rolled parchment sea chart map"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_gear",
+      "role": "medallion",
+      "file": "assets/ui/icon_gear.png",
+      "params": {
+        "what": "a ship's helm wheel"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_book",
+      "role": "medallion",
+      "file": "assets/ui/icon_book.png",
+      "params": {
+        "what": "an open scroll with curled ends"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_door",
+      "role": "medallion",
+      "file": "assets/ui/icon_door.png",
+      "params": {
+        "what": "an ornate ship cabin door"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "icon_chest",
+      "role": "medallion",
+      "file": "assets/ui/icon_chest.png",
+      "params": {
+        "what": "treasure chest (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_coin",
+      "role": "medallion",
+      "file": "assets/ui/icon_coin.png",
+      "params": {
+        "what": "double-ring coin (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_sword",
+      "role": "medallion",
+      "file": "assets/ui/icon_sword.png",
+      "params": {
+        "what": "crossed swords (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_castle",
+      "role": "medallion",
+      "file": "assets/ui/icon_castle.png",
+      "params": {
+        "what": "castle with three merlons (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_beacon",
+      "role": "medallion",
+      "file": "assets/ui/icon_beacon.png",
+      "params": {
+        "what": "lighthouse beacon (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_heart",
+      "role": "medallion",
+      "file": "assets/ui/icon_heart.png",
+      "params": {
+        "what": "heart / HP (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_flag",
+      "role": "medallion",
+      "file": "assets/ui/icon_flag.png",
+      "params": {
+        "what": "turn-flag (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "icon_monogram",
+      "role": "medallion",
+      "file": "assets/ui/icon_monogram.png",
+      "params": {
+        "what": "role monogram ring (white mask, ui_icons.py)"
+      },
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "role_panda",
+      "role": "portrait",
+      "file": "assets/ui/role_panda.png",
+      "params": {
+        "what": "a stout middle-aged merchant captain in a fur-trimmed coat, calculating eyes, gold jewelry"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_tichy",
+      "role": "portrait",
+      "file": "assets/ui/role_tichy.png",
+      "params": {
+        "what": "a weathered old naval captain with a white beard, epaulettes and a peaked captain hat, calm commanding gaze"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_kidd",
+      "role": "portrait",
+      "file": "assets/ui/role_kidd.png",
+      "params": {
+        "what": "a young lean bounty hunter with a hooded cloak, a crossbow strap and a sharp watchful stare"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_drake",
+      "role": "portrait",
+      "file": "assets/ui/role_drake.png",
+      "params": {
+        "what": "a fearsome Caribbean pirate captain with a tricorn hat, jagged beard, red sash and a menacing grin"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "role_katharina",
+      "role": "portrait",
+      "file": "assets/ui/role_katharina.png",
+      "params": {
+        "what": "an aristocratic young noblewoman with dark curly hair, a deep crimson gown and a proud vengeful expression"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "map_harbour",
+      "role": "mapcard",
+      "file": "assets/ui/map_harbour.png",
+      "params": {
+        "what": "a busy tropical harbour with ships and docks"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "map_open_sea",
+      "role": "mapcard",
+      "file": "assets/ui/map_open_sea.png",
+      "params": {
+        "what": "an open ocean with a lone island and a compass rose"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "map_reef",
+      "role": "mapcard",
+      "file": "assets/ui/map_reef.png",
+      "params": {
+        "what": "a narrow reef strait between two cliffs with sea monsters"
+      },
+      "generated_at": "2026-10-21"
+    },
+    {
+      "name": "bg_night_sea_top",
+      "role": "background",
+      "file": "assets/ui/bg_night_sea_top.png",
+      "params": {},
+      "generated_at": "2026-10-21",
+      "prompt": "A vertical 9:16 top-down view of a calm dark ocean at night, deep navy blue water with subtle silver moonlight ripples and faint wave crests, no islands, no boats, no horizon line, no text, no letters, no watermark, painterly"
+    },
+    {
+      "name": "bg_battle_sea",
+      "role": "background",
+      "file": "assets/ui/bg_battle_sea.png",
+      "params": {},
+      "generated_at": "2026-10-21",
+      "prompt": "A vertical 9:16 dramatic naval battle scene at night, two sailing ships exchanging cannon fire on a moonlit sea, warm muzzle flashes and smoke, distant thunder clouds, painterly nautical adventure art, empty center space, no text, no letters, no watermark"
+    },
+    {
+      "name": "chart_wide",
+      "role": "board",
+      "file": "assets/ui/chart_wide.png",
+      "params": {},
+      "generated_at": "2026-10-21",
+      "prompt": "a wide antique parchment sea chart filling the whole frame, hand-drawn islands, rhumb lines, compass roses, weathered edges, warm candlelight, top-down view, no text, no letters, no labels, no watermark"
+    },
+    {
+      "name": "dice",
+      "role": "board",
+      "file": "assets/ui/dice.png",
+      "params": {
+        "what": "a nautical six-sided die with anchor engraving"
+      },
+      "prompt": "A single classic six-sided gaming die in a nautical pirate style: warm gold/brass die with dark carved pips, small anchor engraving, slight isometric 3D view, flat clean vector game-icon look, centered, on a PURE SOLID MAGENTA background, no text, no letters, no scenery, high contrast",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "helm",
+      "role": "board",
+      "file": "assets/ui/helm.png",
+      "params": {
+        "what": "a wooden ship's steering wheel (helm)"
+      },
+      "prompt": "A classic wooden ship's steering wheel (helm) with 8 spokes and a gold/brass central hub, front view, clean flat vector game-icon look, warm brown wood and gold metal, centered, on a PURE SOLID MAGENTA background, no text, no letters, no scenery, high contrast",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "chart_full",
+      "role": "background",
+      "file": "assets/ui/chart_full.png",
+      "params": {},
+      "prompt": "Full-bleed antique nautical sea chart, vertical 9:16, hand-drawn aged parchment sea in muted turquoise and teal with fine engraved wave hatching, faint latitude and longitude grid lines, delicate rhumb lines radiating outward, an ornate compass rose in the lower left, a small silhouetted sailing ship in the upper right sea, faint sea monster silhouette, tea stains and foxing spots, torn deckled edges, the outermost frame border is dark walnut wood, the central area is calm empty open water with absolutely no island and no landmass, painterly antique cartography, warm candlelight, no text, no letters, no numbers, no labels",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_start",
+      "role": "medallion",
+      "file": "assets/ui/node_start.png",
+      "params": {},
+      "prompt": "a single round antique brass compass medallion plate with a tiny sailing ship engraved in its center, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_city",
+      "role": "medallion",
+      "file": "assets/ui/node_city.png",
+      "params": {},
+      "prompt": "a single hexagonal antique brass badge engraved with a small walled harbour town with two towers, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_port",
+      "role": "medallion",
+      "file": "assets/ui/node_port.png",
+      "params": {},
+      "prompt": "a single rounded-square antique brass badge engraved with a lighthouse on a rock, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_event",
+      "role": "medallion",
+      "file": "assets/ui/node_event.png",
+      "params": {},
+      "prompt": "a single shield-shaped antique brass badge engraved with a rolled parchment scroll tied with cord, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_card",
+      "role": "medallion",
+      "file": "assets/ui/node_card.png",
+      "params": {},
+      "prompt": "a single diamond-shaped antique brass badge engraved with a folded treasure map, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_battle",
+      "role": "medallion",
+      "file": "assets/ui/node_battle.png",
+      "params": {},
+      "prompt": "a single spiky eight-pointed antique brass badge engraved with two crossed cutlasses, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_treasure",
+      "role": "medallion",
+      "file": "assets/ui/node_treasure.png",
+      "params": {},
+      "prompt": "a single antique brass treasure chest with a domed lid and heavy lock, ornate gold trim, three-quarter view, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_boss",
+      "role": "medallion",
+      "file": "assets/ui/node_boss.png",
+      "params": {},
+      "prompt": "a single antique brass human skull badge with crossed bones behind it, menacing, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "node_plain",
+      "role": "medallion",
+      "file": "assets/ui/node_plain.png",
+      "params": {},
+      "prompt": "a single small plain polished brass domed stud rivet, simple domed nail head, no symbol, no engraving, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "ship_player",
+      "role": "medallion",
+      "file": "assets/ui/ship_player.png",
+      "params": {},
+      "prompt": "a single small three-masted pirate galleon with white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "btn_spin",
+      "role": "medallion",
+      "file": "assets/ui/btn_spin.png",
+      "params": {},
+      "prompt": "a single large ornate antique brass ship helm wheel button with eight spokes and a carved bone die fixed in the hub, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "compass_rose",
+      "role": "medallion",
+      "file": "assets/ui/compass_rose.png",
+      "params": {},
+      "prompt": "a single ornate antique brass compass rose medallion with eight points and a fleur-de-lis north tip, engraved with fine radial lines, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "hud_plaque",
+      "role": "plaque",
+      "file": "assets/ui/hud_plaque.png",
+      "params": {},
+      "prompt": "a wide horizontal antique polished brass panel with beveled edges, gold filigree corners and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "deck_plaque",
+      "role": "plaque",
+      "file": "assets/ui/deck_plaque.png",
+      "params": {},
+      "prompt": "a LONG HORIZONTAL RECTANGULAR antique polished brass button plate, very wide and short, 4 to 1 width to height ratio, straight rectangular edges with slightly rounded corners, gold filigree rim and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
+      "generated_at": "2026-10-22"
+    },
+    {
+      "name": "medallion_ring",
+      "role": "medallion",
+      "file": "assets/ui/medallion_ring.png",
+      "params": {},
+      "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon",
+      "generated_at": "2026-10-23"
+    },
+    {
+      "name": "boat_1",
+      "file": "assets/ui/boat_1.png",
+      "role": "medallion",
+      "params": {},
+      "generated_at": "2026-10-26",
+      "prompt": "a single small open fishing skiff with one short mast and a plain brown sail, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "boat_2",
+      "file": "assets/ui/boat_2.png",
+      "role": "medallion",
+      "params": {},
+      "generated_at": "2026-10-26",
+      "prompt": "a single two-masted fast schooner with two white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "boat_3",
+      "file": "assets/ui/boat_3.png",
+      "role": "medallion",
+      "params": {},
+      "generated_at": "2026-10-26",
+      "prompt": "a single three-masted large galleon with three white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "boat_4",
+      "file": "assets/ui/boat_4.png",
+      "role": "medallion",
+      "params": {},
+      "generated_at": "2026-10-26",
+      "prompt": "a single armoured patrol warship with four gun ports, steel plated hull and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+    },
+    {
+      "name": "island_m01",
+      "role": "island",
+      "file": "assets/ui/island_m01.png",
+      "params": {
+        "map": "m01",
+        "grid": 20,
+        "canvas": "994x826"
+      },
+      "generated_at": "2026-10-26",
+      "generator": "scripts/ui_islands.py"
+    },
+    {
+      "name": "island_m02",
+      "role": "island",
+      "file": "assets/ui/island_m02.png",
+      "params": {
+        "map": "m02",
+        "grid": 20,
+        "canvas": "994x826"
+      },
+      "generated_at": "2026-10-26",
+      "generator": "scripts/ui_islands.py"
+    },
+    {
+      "name": "island_m03",
+      "role": "island",
+      "file": "assets/ui/island_m03.png",
+      "params": {
+        "map": "m03",
+        "grid": 15,
+        "canvas": "994x826"
+      },
+      "generated_at": "2026-10-26",
+      "generator": "scripts/ui_islands.py"
+    },
+    {
+      "name": "isle_harbour",
+      "role": "isle",
+      "file": "assets/ui/isle_harbour.png",
+      "params": {
+        "what": "a walled harbour town island with two stone towers, wooden docks and small fishing boats"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a walled harbour town island with two stone towers, wooden docks and small fishing boats filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_lighthouse",
+      "role": "isle",
+      "file": "assets/ui/isle_lighthouse.png",
+      "params": {
+        "what": "a white lighthouse island on a jagged rocky reef with a broken ship mast"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a white lighthouse island on a jagged rocky reef with a broken ship mast filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_wreck",
+      "role": "isle",
+      "file": "assets/ui/isle_wreck.png",
+      "params": {
+        "what": "a half-sunken galleon wreck island on a sandbar with spilled treasure chests"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a half-sunken galleon wreck island on a sandbar with spilled treasure chests filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_pirate_lair",
+      "role": "isle",
+      "file": "assets/ui/isle_pirate_lair.png",
+      "params": {
+        "what": "a dark rocky pirate lair island with a cave mouth, skull totem and tattered black flag"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a dark rocky pirate lair island with a cave mouth, skull totem and tattered black flag filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_shipyard",
+      "role": "isle",
+      "file": "assets/ui/isle_shipyard.png",
+      "params": {
+        "what": "a shipyard island with a wooden slipway and two half-built galleons on the beach"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a shipyard island with a wooden slipway and two half-built galleons on the beach filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_trading_post",
+      "role": "isle",
+      "file": "assets/ui/isle_trading_post.png",
+      "params": {
+        "what": "a trading outpost island with cargo crates, barrels and a striped market awning"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a trading outpost island with cargo crates, barrels and a striped market awning filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_skull_cliff",
+      "role": "isle",
+      "file": "assets/ui/isle_skull_cliff.png",
+      "params": {
+        "what": "a bleached skull cliff island with a wrecked longboat and bone stakes"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a bleached skull cliff island with a wrecked longboat and bone stakes filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_volcano",
+      "role": "isle",
+      "file": "assets/ui/isle_volcano.png",
+      "params": {
+        "what": "a smoking volcano island with a glowing lava crater and obsidian rocks"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a smoking volcano island with a glowing lava crater and obsidian rocks filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_lightship",
+      "role": "isle",
+      "file": "assets/ui/isle_lightship.png",
+      "params": {
+        "what": "a lantern ship island with a tall mast light moored on a small sandbar"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a lantern ship island with a tall mast light moored on a small sandbar filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "isle_boss_fort",
+      "role": "isle",
+      "file": "assets/ui/isle_boss_fort.png",
+      "params": {
+        "what": "a black stone fortress island with heavy cannons, a spiked iron gate and skull banners"
+      },
+      "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a black stone fortress island with heavy cannons, a spiked iron gate and skull banners filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "island_home_m01",
+      "role": "island_home",
+      "file": "assets/ui/island_home_m01.png",
+      "params": {
+        "theme": "coral reef archipelago theme, turquoise lagoons, coral shelves and white sand spits"
+      },
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoons, coral shelves and white sand spits, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "island_home_m02",
+      "role": "island_home",
+      "file": "assets/ui/island_home_m02.png",
+      "params": {
+        "theme": "volcanic black island theme, dark basalt cliffs, a smoking crater and ash dunes"
+      },
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a smoking crater and ash dunes, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "generated_at": "2026-10-27"
+    },
+    {
+      "name": "island_home_m03",
+      "role": "island_home",
+      "file": "assets/ui/island_home_m03.png",
+      "params": {
+        "theme": "bone reef theme, pale bleached cliffs, wrecked hulls and a giant skull carved into the rock"
+      },
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs, wrecked hulls and a giant skull carved into the rock, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "generated_at": "2026-10-27"
+    }
+  ]
 }

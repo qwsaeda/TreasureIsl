@@ -1,0 +1,37 @@
+S27.2 · v5 资产：10 类岛卡面底图 + 3 张中央据点岛插画
+=====================================================================
+日期：2026-10-27
+任务：S27.2（plan/ledger.yaml）
+产物：assets/ui/isle_{harbour,lighthouse,wreck,pirate_lair,shipyard,
+       trading_post,skull_cliff,volcano,lightship,boss_fort}.png ×10（512×640，key=none 整幅卡面）
+       assets/ui/island_home_m01/02/03.png ×3（1024×1024，品红抠透明，浮海图用）
+批次规格：assets/ui_batches/main_map_v5.json（声明式；ui_manifest.json 为资产唯一事实源）
+
+--- 判据 1：批次生成链（register → generate → install → check）---
+[ui_asset_batch] register spec=assets/ui_batches/main_map_v5.json
+  role isle（ratio=3:4 key=none） / role island_home（ratio=1:1 key=magenta）
+  UPSERT ×13
+[ui_asset_batch] generate --workers 4：13/13 OK（AGNES_API_KEY 在位，Agnes Image 2.5 Flash）
+  isle_harbour/lighthouse/wreck/pirate_lair/shipyard/trading_post/skull_cliff/
+  volcano/lightship/boss_fort + island_home_m01/m02/m03 = OK
+[ui_asset_batch] install：13/13 OK → assets/ui/
+[ui_asset_batch] check：0 error(s), 0 warn(s)
+拼版验收图：evidence/ui_concept/main_map_v5_sheet.png（13 项）
+
+--- 判据 2：资产形态口径 ---
+· 10 类岛卡面 = **整幅卡面底图**（羊皮纹理 + 黄铜边框 + 岛插画 + 底部 1/4 素羊皮留白
+  已烘焙进图，key=none 不抠透明）⇒ 代码只叠：归属色带（留白区 16px）+ 卡名 + 等级角标
+  （规格 §2 卡面构成已同步：资产 = 卡面底图，非透明小 vignette）。
+· 3 张中央据点岛 = 品红抠透明（alpha bbox 非整幅 ✓），m01 珊瑚礁 / m02 火山列岛 /
+  m03 骸骨礁（与 territory.md §3 岛型色/主题一致）。
+· 10 类岛原型互异（人工核对拼版：港城/灯塔/沉船/老巢/船坞/商岛/骷髅崖/火山/灯船/
+  黑石要塞 轮廓+地标互不相同 ✓；同系羊皮卡面风格统一，可辨度 = 本任务要消灭的
+  「各类岛屿都不知道」根因）。
+
+--- 判据 3：门禁 ---
+scripts/gate.ps1 -Fast：0 failure
+doccheck：0 error(s)   doccheck2：0 error(s)   ledger：227 tasks / 199 verified
+
+注：初版 10 张用 magenta 抠透明（vignette 口径），Agnes 8/10 未服从品红底指令
+⇒ 改 key=none 整幅卡面口径（与代码卡面构成同步调整，规格 §2 已改）；
+   3 张中央岛品红底服从良好，维持透明抠图。

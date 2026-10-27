@@ -535,10 +535,10 @@ S24.0（约 6 个阶段）。连带影响：S21 用户评审「main_map 界面�
 现象：用户报首页每个按键点击都没反应。根因：input_system 的 MousePos 是 AccumulatedMouseMotion delta 的累加（初值=窗口左上 0,0），指针位置 = 光标相对启动时位置的位移，而非绝对位置；用户光标不在窗口左上角启动时命中全偏。修：优先取 Window::cursor_position()（bevy 0.20 = 逻辑像素，winit 物理÷scale_factor），delta 累加仅作光标移出窗口（cursor_position=None）时的回落。注释还写物理像素（实际逻辑像素）= 与 EXP-116 同类单位口径错。实测：合成 SetCursorPos+mouse_event 点击新游戏徽章 → 场景跳到选择角色 ✓。教训：① delta 累加 ≠ 绝对位置，指针类输入必须取绝对光标位置；② 门禁只验离屏 shot ⇒ 点击路径从未实测；③ 单位口径（物理 vs 逻辑像素）须注释正确，同类问题在 EXP-116 也出现过。
 
 ### EXP-118 代码：RGB565 token 名不暗示色相（COLOR_WOOD=蓝 / panel_warm=近黑）：选色必须先解码 RGB 校验
-- **现象**：S26.3 选色踩坑三连——`COLOR_WOOD`(0x3A17) 以为是深棕，实解 RGB565 = (57,64,189) **蓝**；`panel_warm`(0x18C2) 以为是暖棕面板，实解 = (24,28,16) **近黑**（「黑底面板」观感源头）；选图蓝锁条同根因。按「token 名字像棕色」选色 = 必错。
+- **现象**：S26.3 选色踩坑三连——`COLOR_WOOD`(0x3A17) 以为是深棕，实解 RGB565 = (57,64,189) **蓝**；`panel_warm`(0x18C2) 以为是暖棕面板，实解 = (24,24,16) **近黑**（「黑底面板」观感源头）；选图蓝锁条同根因。按「token 名字像棕色」选色 = 必错。
 - **根因**：theme.json 的 token 名是历史语义名（wood/gold/warm…），航海夜色板（S17）重调色后 RGB565 值与名字语义已漂移；「航海夜」暗色档多为冷调（蓝/橄榄），暖棕只有 wood_warm/brass_dark/panel_wood 少数几个。
-- **解法**：选色前**必须把 RGB565 解成 RGB 写进注释**（如 `COLOR_WOOD` 0x3A17 = (57,64,189) 蓝）；需要暖深棕用 `brass_dark`(0x51E4=(82,28,32)) 或 `panel_wood`(0x3943)，**不要**用 `wood`/`panel_warm`；色板单一事实源 = `assets/data/theme.json`，解码结果以实测为准。
-- **验证**：本轮全量解码 theme.json palette（wood=蓝 / panel_warm=近黑 / panel_wood=橄榄棕 / brass_dark=暖棕红 / wood_warm=暖棕）；选图面板改 panel_wood 出图 = 暖棕（evidence/bevy_native_select_map.png）。
+- **解法**：选色前**必须把 RGB565 解成 RGB 写进注释**（如 `COLOR_WOOD` 0x3A17 = (57,64,189) 蓝，一律 `scripts/rgb565.py` `back_rgb` 口径）；需要暖深棕用 `brass_dark`(0x51E4=(82,60,32)) 或 `panel_wood`(0x3943=(57,40,24))，**不要**用 `wood`/`panel_warm`；色板单一事实源 = `assets/data/theme.json`，解码结果以实测为准。
+- **验证**：本轮全量解码 theme.json palette（wood=蓝 / panel_warm=近黑 / panel_wood=深暖棕 / brass_dark=暖棕 / wood_warm=暖棕金 / gold_warm=(255,214,0) 纯亮金，`scripts/rgb565.py` 口径）；选图面板改 panel_wood 出图 = 暖棕（evidence/bevy_native_select_map.png）。
 
 ### EXP-121 代码：同一视觉元素两条代码路径几何公式差 1px（屏心 vs 盒心）：像素判据才抓得住
 - **现象**：S26.3 给底部提示（JSON 原语 tier=hint 且 y≥1560）加 menu_bg 底板条时，新代码按「文本盒居中」算 x（`r.x + r.w/2 - tw/2`），而 index 尾行已有 `chrome::hint_row`（按**屏心** `(1080-tw)/2` 居中）也在画同一条 bar ⇒ 奇数宽 tw 时两 bar 左缘差 1px，像素判据「条宽 = hint_text_width+8 = 209」实测 210 ⇒ render_intent FAIL。

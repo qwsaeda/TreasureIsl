@@ -242,6 +242,57 @@ fn check_landmark_threshold(root: &Path) -> Vec<String> {
     errors
 }
 
+/// 收集单份 Rust 源码里 `sget("key")` / `sgetf("key", …)` 的字面量 key（整文本扫描，
+/// 支持多行书写：`(` 与字符串字面量之间允许任意空白/换行；标识符 `sget`/`sgetf` 边界
+/// 判定避免 `xsget` 类前缀误配；key 读到 `"` 或换行为止——Rust 普通字符串字面量不跨行）。
+fn collect_sget_keys(text: &str, out: &mut BTreeSet<String>) {
+    let bytes = text.as_bytes();
+    let mut i = 0usize;
+    while let Some(rel) = text[i..].find("sget") {
+        let start = i + rel;
+        let after = start + 4;
+        if start > 0 {
+            let prev = bytes[start - 1];
+            if prev.is_ascii_alphanumeric() || prev == b'_' {
+                i = after;
+                continue;
+            }
+        }
+        let mut cursor = after;
+        if cursor < bytes.len() && bytes[cursor] == b'f' {
+            cursor += 1; // sgetf
+        }
+        while cursor < bytes.len()
+            && matches!(bytes[cursor], b' ' | b'\t' | b'\n')
+        {
+            cursor += 1;
+        }
+        if cursor >= bytes.len() || bytes[cursor] != b'(' {
+            i = after;
+            continue;
+        }
+        cursor += 1;
+        while cursor < bytes.len()
+            && matches!(bytes[cursor], b' ' | b'\t' | b'\n')
+        {
+            cursor += 1;
+        }
+        if cursor >= bytes.len() || bytes[cursor] != b'"' {
+            i = after;
+            continue;
+        }
+        cursor += 1;
+        let key_start = cursor;
+        while cursor < bytes.len() && bytes[cursor] != b'"' && bytes[cursor] != b'\n' {
+            cursor += 1;
+        }
+        if cursor < bytes.len() && bytes[cursor] == b'"' {
+            out.insert(text[key_start..cursor].to_string());
+        }
+        i = after;
+    }
+}
+
 /// 5. i18n 一致性：代码里 `sget`/`sgetf`/`MenuItem.key` 用的 key 必须都存在于
 ///    `strings.json`（缺失 key 会让界面显示裸 key）；反向 `strings.json` 里未被引用
 ///    的 key 以 WARN 打印（不阻塞门禁，S8.x 数据化迁移前清理；`schema_*` 与旧命名空间豁免）。
@@ -260,26 +311,38 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
         })
         .collect();
 
-    // 收集代码里 `sget(`/`sgetf(`/`MenuItem.key` 的字面量 key
+    // 收集代码里 `sget`/`sgetf` 的字面量 key。
+    // 盲区修复（S26 审计 Q031/Q032）：旧实现按**行**找 `sget("`，多行书写
+    //   i18n::sgetf(\n        "key",\n        &[...],\n    )
+    // 会漏掉（`sgetf(` 行尾无 `"`）⇒ 假孤儿。改整文本扫描：定位 `sget`/`sgetf` 标识符，
+    // 跳过 `(` 与引号间的任意空白/换行再读 key。
     let mut used_keys: BTreeSet<String> = BTreeSet::new();
     for text in read_rs_tree(&root.join("crates/ti-app/src")) {
+        collect_sget_keys(&text, &mut used_keys);
+        // `MenuItem { key: "…", … }` const 表里直接写死的 i18n key（单行）
         for line in text.lines() {
-            for call in ["sget(", "sgetf("] {
-                let Some(start) = line.find(call) else { continue };
-                let after = &line[start + call.len()..];
-                let Some(q) = after.find('"') else { continue };
-                let inner = &after[q + 1..];
-                let Some(end) = inner.find('"') else { continue };
-                used_keys.insert(inner[..end].to_string());
-            }
-            // `MenuItem { key: "…", … }` const 表里直接写死的 i18n key
-            if line.contains("key:") {
-                let rest = &line[line.find("key:").unwrap_or(0)..];
+            if let Some(ki) = line.find("key:") {
+                let rest = &line[ki + 4..];
                 let Some(q) = rest.find('"') else { continue };
                 let inner = &rest[q + 1..];
                 let Some(end) = inner.find('"') else { continue };
                 used_keys.insert(inner[..end].to_string());
             }
+        }
+    }
+    // 盲区修复（Q032）：`scenes.json` 原语 `text_key` 也是 i18n key 消费方（旧实现只扫
+    // ti-app/src ⇒ 仅 JSON 引用的 key 被误报孤儿）。并入 used_keys。
+    if let Some(scn) = read_file(root, "assets/data/scenes.json") {
+        for line in scn.lines() {
+            let t = line.trim();
+            let Some(ki) = t.find("\"text_key\"") else { continue };
+            let rest = &t[ki + "\"text_key\"".len()..];
+            let Some(co) = rest.find(':') else { continue };
+            let after = &rest[co + 1..];
+            let Some(q) = after.find('"') else { continue };
+            let inner = &after[q + 1..];
+            let Some(end) = inner.find('"') else { continue };
+            used_keys.insert(inner[..end].to_string());
         }
     }
     // 代码用了但 JSON 没有的 key → 缺失（界面会显示裸 key，可见异常）—— 失败级

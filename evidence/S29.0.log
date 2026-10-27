@@ -1,0 +1,34 @@
+# S29.0 验收证据 — 布局引擎定案（docs/process/17_layout_engine.md）
+
+用户 2026-10-27 拍板链：
+1. 「有引擎确不用的问题，布局还是写死的」→ 要求综合分析（最大化引擎便利与稳定 + 保留换引擎余地），落地范围 = 全场景一次性迁移。
+2. 「全静态 1080 定位布局还是绑死的？」→ 答：画布 1080 是特性（稳定性+换引擎成本最低），画布内定位 S29 拔掉（求解器算坐标）。
+3. 「真响应式」→ 拔 1080 锁并入 S29；响应式档位 = 全场景真重排(b)；文本/图片 = 等比缩放。
+
+## 定案（单一事实源 = docs/process/17_layout_engine.md）
+- 定案 D = 引擎无关布局求解器 + 全场景真响应式重排(b) + 文本/图片等比缩放；bevy_ui 永久弃用（三条硬约束），bevy_picking 仅 Bevy 侧可选 hover。
+- 1080×1920 降级为 **REF 参考视口**（设计原点/CPU 帧缓冲固定尺寸/像素对拍锚/8pt 断言空间），非锁；实际视口 VP 作 `resolve(tree, VP)` 参数。
+- 求解器 `ti-render::layout`（纯函数、引擎无关、零外部依赖仅 serde）：`resolve(tree,VP) → Resolved{rects, hits, s}`。
+- 缩放律：`s = clamp(scale_by(VP), s_min, s_max)`，默认 fit；字号/图片 sprite_scale 走 s；8pt 在 REF(s=1) 断言。
+- 重排 DSL：`reflow { when(闭集), overrides(闭集) }`，每场景 ≤5 条。
+- 命中 = 同一棵解析树逆查询（`HitTree`），`touch.rs` 手写几何函数逐场景退役。
+- 门禁：新增 `layout_matrix` headless 项（宽高比矩阵 REF/4:5/3:4/1:1/16:9/21:9/min）；N8/8pt/layout-doc-table 改求解器断言；`08_layout_design.md` 降级为 REF 镜像。
+- 迁移：全场景双轨（旧 rect 段保留 fallback，逐场景 `layout_active` 切闸）；10 副本场景直接按 layout 段新建（前置 S29.2）。
+
+## 台账登记
+- `plan/ledger.yaml` 新增 S29.0~S29.5（S29.0 = verified 本任务；S29.1~S29.5 pending）；
+  S29 块置于 S27.0 之前（依赖物理列在前）；S27.4 deps 补 S29.1、S28.6 deps 补 S29.2。
+- 台账实测：`ledger: 233 tasks, 200 verified, 0 error(s)`（S29.0 证据文件 = 本文件）。
+
+## 文档登记
+- `docs/README.md`：新增 process/17_layout_engine.md 行（16_code_standards 之后）。
+- `AGENTS.md`：路由表新增 S29 行 + 当前状态区 S29 bullet；S27/S28 状态行更正（S27.2 verified、S27.4 前置 S29.1、S28.6 前置 S29.2）。
+
+## 门禁实测（S29.0 判据）
+- `cargo run -p ti-tools --bin doccheck` → 0 error（137 docs, 228 task refs）。
+- `cargo run -p ti-tools --bin doccheck2 .` → 0 error（38 audit-codified checks）。
+  （i18n 孤儿 key WARN 为既有项，与本批无关）
+- `python scripts/doc_numbers.py` 体检 + `--fix` → 回写 docs/release.md 台账计数 227/199 → 233/200（门禁 28 项不变）。
+- `cargo run -p ti-tools --bin ledger -- plan/ledger.yaml` → 233 tasks, 200 verified, 0 error。
+
+判据达成 = 定案文档落地 + 台账 S29.0~S29.5 登记 + doccheck/doccheck2 0 ERROR + 本证据文件。S29.0 verified。
