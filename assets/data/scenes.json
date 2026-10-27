@@ -1579,7 +1579,8 @@
     "z": 4,
     "params": {
      "pick_key": 2,
-     "pick_index": 0
+     "pick_index": 0,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -1596,7 +1597,8 @@
     "item": 0,
     "params": {
      "pick_key": 2,
-     "pick_index": 0
+     "pick_index": 0,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -1609,7 +1611,8 @@
     },
     "params": {
      "icon": "map",
-     "size": 64
+     "size": 64,
+     "ui_layer": "bevy_ui"
     },
     "color": "brass",
     "z": 10,
@@ -1626,7 +1629,8 @@
     },
     "params": {
      "icon": "map",
-     "size": 64
+     "size": 64,
+     "ui_layer": "bevy_ui"
     },
     "color": "black",
     "z": 10,
@@ -1646,7 +1650,10 @@
     "when": "normal",
     "item": 0,
     "text_key": "glmapm01.Map",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -1661,7 +1668,10 @@
     "when": "selected",
     "item": 0,
     "text_key": "glmapm01.Map",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "rect",
@@ -1675,7 +1685,8 @@
     "z": 4,
     "params": {
      "pick_key": 2,
-     "pick_index": 1
+     "pick_index": 1,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -1692,7 +1703,8 @@
     "item": 1,
     "params": {
      "pick_key": 2,
-     "pick_index": 1
+     "pick_index": 1,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -1705,7 +1717,8 @@
     },
     "params": {
      "icon": "map",
-     "size": 64
+     "size": 64,
+     "ui_layer": "bevy_ui"
     },
     "color": "brass",
     "z": 10,
@@ -1722,7 +1735,8 @@
     },
     "params": {
      "icon": "map",
-     "size": 64
+     "size": 64,
+     "ui_layer": "bevy_ui"
     },
     "color": "black",
     "z": 10,
@@ -1742,7 +1756,10 @@
     "when": "normal",
     "item": 1,
     "text_key": "glmapm02.Map",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -1757,7 +1774,10 @@
     "when": "selected",
     "item": 1,
     "text_key": "glmapm02.Map",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "rect",
@@ -1771,7 +1791,8 @@
     "z": 4,
     "params": {
      "pick_key": 2,
-     "pick_index": 2
+     "pick_index": 2,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -1788,7 +1809,8 @@
     "item": 2,
     "params": {
      "pick_key": 2,
-     "pick_index": 2
+     "pick_index": 2,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -1801,7 +1823,8 @@
     },
     "params": {
      "icon": "map",
-     "size": 64
+     "size": 64,
+     "ui_layer": "bevy_ui"
     },
     "color": "brass",
     "z": 10,
@@ -1818,7 +1841,8 @@
     },
     "params": {
      "icon": "map",
-     "size": 64
+     "size": 64,
+     "ui_layer": "bevy_ui"
     },
     "color": "black",
     "z": 10,
@@ -1838,7 +1862,10 @@
     "when": "normal",
     "item": 2,
     "text_key": "glmapm03.Map",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -1853,7 +1880,10 @@
     "when": "selected",
     "item": 2,
     "text_key": "glmapm03.Map",
-    "tier": "body"
+    "tier": "body",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",

@@ -1,0 +1,37 @@
+S29.3c 验收证据（select_map 3 卡片迁 bevy_ui + 锁/开放态 i18n 键）
+
+## 落码
+- `build_select_map_chrome`（`PanelSide::Right` 右卡片列表：卡片名 i18n `glmapm0N.Map`=海图一/二/三
+  + 锁态/开放态 `scene.select_map.locked/open` + 选中高亮）+ `attach_row_pick`（逐行挂 `PickTarget` key=2）。
+  `build_scene_chrome` 按场景派发（role/saveload/select_map），`build_scene_chrome` 拆到 <100 行。
+- 新增 i18n 键 `scene.select_map.locked`=未解锁 / `scene.select_map.open`=可进入（strings.json 平坦键，
+  `scene.*` 前缀免孤儿检查，validate_data OK）。
+- select_map 18 卡片原语（base rect PK=2 + 逐卡 icon/text，item∈{0,1,2}）标 `ui_layer:"bevy_ui"`
+  （indent=1 规范形；左地图预览 #2/#3/#4 + 背景 + 标题/nav 不标，仍 1080）。
+- `select_map::render` 加 `if host.chrome_in_bevy_ui() { return; }`（跳过 1080 锁条/BOSS 星/按压闪影，bevy_ui 画卡片）。
+
+## 判据 1：gate 全绿（仅 s43_fps_smoke = 本 VM 无 GPU 环境项）
+```
+27 PASS + 1 FAIL(fps 环境项) + SKIP(android/zero-unknown)
+```
+
+## 判据 2：--shot select_map 出图（bevy_ui 右卡片 + 1080 夜空底/左地图预览同帧叠加）
+```
+[ui] bevy_ui probe: node=15 text=7 computed_layout=15   # 3 卡片 × (行+文案列+2字) + 根/面板/标题
+[shot] 非黑像素 = 2073520 / 2073600                       # 1080 世界仍在（UI 层未清屏/未挡渲染）
+```
+
+## 判据 3：e2e 点击路由（logic 半程）
+```
+test e2e_touch_economy_loop ... ok   # 含 select_map 卡 poll_hit key=2 index=0 → MainMap
+test result: ok. 8 passed; 0 failed
+```
+
+## 视觉签收（A 纪律，EXP-114）
+用户拍板（2026-10-27）：「全部做完，能正式上线玩，你自己测试验证通过」⇒ S29.3c 视觉签收以 agent
+机器判据代（--shot 出图 + 像素采样 + e2e + gate 全绿）；最终 bevy_ui 排版逐场景过目归 S29.5 收口。
+
+## 残留（归 S29.3 主体 / S29.5）
+index（径向 6 徽章环 + 中央舵轮）、main_map（HUD 面板）、vs（战斗卡）、message（帮助正文）的 bevy_ui
+响应式迁移未做——保留 1080 渲染 + 1080 手动拾取（可玩）；index 径向环建议随 main_map v5（S27.4）
+参数化一并做；resize 多视口实测重排 + 门禁改口径 + 四篇文档同步 = S29.4/S29.5。

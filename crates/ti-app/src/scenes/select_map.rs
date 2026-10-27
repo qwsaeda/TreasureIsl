@@ -130,6 +130,11 @@ impl Scene for SelectMapScene {
         let layout = chrome::scene_layout("select_map");
         let current = host.map_slot().map_or(0, |m| m.zero_index() as usize);
         chrome::render_primitives(host, "select_map", i64::try_from(current).unwrap_or(-1));
+        // S29.3（B1）：右侧 3 卡片列表 chrome 已迁 Bevy `bevy_ui`（卡片名/锁态/选中态由 taffy 布局画）⇒
+        // CPU 路径跳过卡片按压闪影 + 锁条 + BOSS 星（Bevy 侧画）；左侧地图预览/背景仍 1080。未迁时照旧。
+        if host.chrome_in_bevy_ui() {
+            return;
+        }
         let held = host.press_held();
         let flashing = chrome::press_flash_active();
         if held || flashing {

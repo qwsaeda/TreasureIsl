@@ -46,7 +46,7 @@ use ti_app::game_app::{GameApp, GameInput, HitData, KeyState, Scene};
 // S18.8a：`parse_font_bytes` 仅 native 分支用（wasm 分支无 std::fs 资源读）→ 按目标编译。
 #[cfg(not(target_arch = "wasm32"))]
 use ti_app::menu_shell::parse_font_bytes;
-use ti_app::scenes::{SceneKind, SessionHost};
+use ti_app::scenes::{SceneKind, SelectionHost, SessionHost};
 use ti_app::stats::FpsMeter;
 use ti_platform::gfx::UploadMode;
 use ti_platform::settings::ScaleMode;
@@ -473,6 +473,9 @@ struct ChromeUi {
 ///
 /// 意图数据在壳侧组装（`ti-core` 域 + `strings.json` + 资产路径），
 /// `ti-engine::ui` 侧保持零游戏语义（只认「行 = 图 + 两行字 + 选中态」）。
+/// S29.3：按当前场景建 `bevy_ui` chrome（**自动布局**：行位置/高度由 taffy 算，
+/// 不手写像素行；面板宽 `%` ⇒ resize 真重排）。意图数据在壳侧组装
+/// （`ti-core` 域 + `strings`/i18n + 资产路径），`ti-engine::ui` 侧保持零游戏语义。
 fn build_scene_chrome(
     commands: &mut Commands,
     server: &AssetServer,
@@ -481,75 +484,9 @@ fn build_scene_chrome(
     g: &GameApp,
 ) -> Option<Entity> {
     match scene {
-        SceneKind::SelectRole => {
-            let strings = ti_core::data::strings().ok()?;
-            let selected = g.character().map_or(0usize, |c| c.index() as usize);
-            let rows: Vec<ti_engine::ui::ChromeRow> =
-                ti_core::domain::selection::Character::all()
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, ch)| {
-                        let label = ch.label();
-                        let name_key = format!("role.name.{label}");
-                        let desc_key = format!("role.desc.{label}");
-                        ti_engine::ui::ChromeRow {
-                            image: Some(server.load(format!("assets/ui/role_{label}.png"))),
-                            line1: strings.get(&name_key).to_owned(),
-                            line2: strings.get(&desc_key).to_owned(),
-                            selected: idx == selected,
-                        }
-                    })
-                    .collect();
-            let chrome = ti_engine::ui::build_list_chrome(commands, font, "", &rows);
-            // 行可拾取（**UI 相机层**：bevy_ui 拾取后端免 marker，事件沿 `ChildOf` 冒泡到行节点）。
-            // 1080 层不再挂这些行的拾取标记（`spawn_pick_layer` 跳过 `ui_layer=bevy_ui` 原语），
-            // 否则同一行会双发命中事件。
-            for (idx, row_entity) in chrome.rows.iter().enumerate() {
-                commands.entity(*row_entity).insert(ti_engine::pick::PickTarget {
-                    key: 2,
-                    index: i32::try_from(idx).unwrap_or(-1),
-                });
-            }
-            Some(chrome.root)
-        }
-        // S29.3：存读档 5 槽位列表迁 bevy_ui（槽文案全 i18n；有档/空档三态 + 光标选中态）。
-        SceneKind::Saveload => {
-            let slots: Vec<_> = g.save_slots().to_vec();
-            let cursor = g.saveload_cursor();
-            let rows: Vec<ti_engine::ui::ChromeRow> = slots
-                .iter()
-                .enumerate()
-                .map(|(i, s)| {
-                    let has = s.version > 0;
-                    let state = ti_app::i18n::sget(if has { "slot.has" } else { "slot.empty" });
-                    let idx = i + 1;
-                    let line1 = ti_app::i18n::sgetf("slot.label_fmt", &[&idx, &state]);
-                    let line2 = if has {
-                        ti_app::i18n::sgetf(
-                            "scene.saveload.slot_summary_fmt",
-                            &[&s.character, &s.gold, &s.rng_steps],
-                        )
-                    } else {
-                        ti_app::i18n::sget("scene.saveload.empty_line").to_string()
-                    };
-                    ti_engine::ui::ChromeRow { image: None, line1, line2, selected: i == cursor }
-                })
-                .collect();
-            let chrome = ti_engine::ui::build_list_chrome_pos(
-                commands,
-                font,
-                ti_app::i18n::sget("scene.saveload.title"),
-                &rows,
-                ti_engine::ui::PanelSide::Left,
-            );
-            for (idx, row_entity) in chrome.rows.iter().enumerate() {
-                commands.entity(*row_entity).insert(ti_engine::pick::PickTarget {
-                    key: 3,
-                    index: i32::try_from(idx).unwrap_or(-1),
-                });
-            }
-            Some(chrome.root)
-        }
+        SceneKind::SelectRole => build_select_role_chrome(commands, server, font, g),
+        SceneKind::Saveload => Some(build_saveload_chrome(commands, font, g)),
+        SceneKind::SelectMap => Some(build_select_map_chrome(commands, font, g)),
         // 未迁场景：保留 S29.1 的证明面板占位（bevy_ui 层可见 + 可 resize 验证）；
         // 随各场景迁移逐个换成真实 chrome。
         _ => Some(ti_engine::ui::build_proof_panel(
@@ -558,6 +495,120 @@ fn build_scene_chrome(
             "S29 · bevy_ui",
             "resize me",
         )),
+    }
+}
+
+/// 选角 5 行列表（缩略图 + 两级文案 + 选中态）；行挂 `PickTarget` key=2。
+fn build_select_role_chrome(
+    commands: &mut Commands,
+    server: &AssetServer,
+    font: &Handle<Font>,
+    g: &GameApp,
+) -> Option<Entity> {
+    let strings = ti_core::data::strings().ok()?;
+    let selected = g.character().map_or(0usize, |c| c.index() as usize);
+    let rows: Vec<ti_engine::ui::ChromeRow> = ti_core::domain::selection::Character::all()
+        .iter()
+        .enumerate()
+        .map(|(idx, ch)| {
+            let label = ch.label();
+            let name_key = format!("role.name.{label}");
+            let desc_key = format!("role.desc.{label}");
+            ti_engine::ui::ChromeRow {
+                image: Some(server.load(format!("assets/ui/role_{label}.png"))),
+                line1: strings.get(&name_key).to_owned(),
+                line2: strings.get(&desc_key).to_owned(),
+                selected: idx == selected,
+            }
+        })
+        .collect();
+    let chrome = ti_engine::ui::build_list_chrome(commands, font, "", &rows);
+    attach_row_pick(commands, &chrome, 2);
+    Some(chrome.root)
+}
+
+/// 存读档 5 槽列表（i18n 槽文案 + 有档/空档 + 光标选中态）；行挂 `PickTarget` key=3。
+fn build_saveload_chrome(
+    commands: &mut Commands,
+    font: &Handle<Font>,
+    g: &GameApp,
+) -> Entity {
+    let slots: Vec<_> = g.save_slots().to_vec();
+    let cursor = g.saveload_cursor();
+    let rows: Vec<ti_engine::ui::ChromeRow> = slots
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let has = s.version > 0;
+            let state = ti_app::i18n::sget(if has { "slot.has" } else { "slot.empty" });
+            let idx = i + 1;
+            let line1 = ti_app::i18n::sgetf("slot.label_fmt", &[&idx, &state]);
+            let line2 = if has {
+                ti_app::i18n::sgetf(
+                    "scene.saveload.slot_summary_fmt",
+                    &[&s.character, &s.gold, &s.rng_steps],
+                )
+            } else {
+                ti_app::i18n::sget("scene.saveload.empty_line").to_string()
+            };
+            ti_engine::ui::ChromeRow { image: None, line1, line2, selected: i == cursor }
+        })
+        .collect();
+    let chrome = ti_engine::ui::build_list_chrome_pos(
+        commands,
+        font,
+        ti_app::i18n::sget("scene.saveload.title"),
+        &rows,
+        ti_engine::ui::PanelSide::Left,
+    );
+    attach_row_pick(commands, &chrome, 3);
+    chrome.root
+}
+
+/// 选图 3 卡片列表（卡片名 i18n `glmapm0N.Map` + 锁/开放态 + 选中高亮）；行挂 `PickTarget` key=2。
+fn build_select_map_chrome(
+    commands: &mut Commands,
+    font: &Handle<Font>,
+    g: &GameApp,
+) -> Entity {
+    let current = g.map_slot().map_or(0usize, |m| m.zero_index() as usize);
+    let rows: Vec<ti_engine::ui::ChromeRow> =
+        ti_core::domain::selection::MapSlot::all()
+            .iter()
+            .enumerate()
+            .map(|(i, m)| {
+                let name_key = format!("glmap{}.Map", m.id());
+                let line1 = ti_app::i18n::sget(&name_key).to_string();
+                let locked = !g.map_unlocked(*m);
+                let line2 =
+                    ti_app::i18n::sget(if locked { "scene.select_map.locked" } else { "scene.select_map.open" }).to_string();
+                ti_engine::ui::ChromeRow {
+                    image: None,
+                    line1,
+                    line2,
+                    selected: i == current,
+                }
+            })
+            .collect();
+    let chrome = ti_engine::ui::build_list_chrome_pos(
+        commands,
+        font,
+        ti_app::i18n::sget("scene.select_map.title"),
+        &rows,
+        ti_engine::ui::PanelSide::Right,
+    );
+    attach_row_pick(commands, &chrome, 2);
+    chrome.root
+}
+
+/// 给列表 chrome 的逐行挂 `PickTarget`（**UI 相机层**命中：`bevy_ui` 拾取后端免 marker，
+/// 事件落到挂 `PickTarget` 的行节点；1080 层该场景原语已标 `ui_layer` 跳过，不双发）。
+fn attach_row_pick(commands: &mut Commands, chrome: &ti_engine::ui::ListChrome, key: u32) {
+    for (idx, row_entity) in chrome.rows.iter().enumerate() {
+        commands.entity(*row_entity).insert(ti_engine::pick::PickTarget {
+            key,
+            index: i32::try_from(idx).unwrap_or(-1),
+        });
     }
 }
 
@@ -578,6 +629,7 @@ fn chrome_ui_system(
     let sel_key = match scene {
         SceneKind::SelectRole => g.character().map_or(0usize, |c| c.index() as usize),
         SceneKind::Saveload => g.saveload_cursor(),
+        SceneKind::SelectMap => g.map_slot().map_or(0usize, |m| m.zero_index() as usize),
         _ => 0,
     };
     let key = (scene.discriminant(), sel_key);
