@@ -1,0 +1,15 @@
+# S29.0-void 验收证据 — 删除遗留求解器（原「引擎无关布局求解器」方向作废，被 B1 全 bevy_ui 取代）
+
+## 动作
+- 删除 `crates/ti-render/src/layout.rs`（含内联 `#[cfg(test)]`，触发 doccheck2 `no-inline-test-mod` 门禁）。
+- 撤 `crates/ti-render/src/lib.rs` 的 `pub mod layout;` + `pub use layout::{...}` 重导出。
+- 保留 `docs/process/17_layout_engine.md`（已重写为 B1 定案，单一事实源）。
+
+## 判据（S29.0-void dod）
+- `cargo build -q -p ti-render` 绿（无 layout 引用残留）。
+- `cargo test -q -p ti-render` 5 passed 0 failed（layout 内联单测随文件删除，其余模块单测通过）。
+- `cargo clippy -q -p ti-render --all-targets` 无告警。
+- `cargo run -p ti-tools --bin doccheck2 .` → 0 error（38 项；`no-inline-test-mod` 恢复绿）。
+- doccheck 0 error。
+
+判定 S29.0-void verified。

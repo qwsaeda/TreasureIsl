@@ -65,7 +65,7 @@
 | [process/14_tooling_catalog.md](process/14_tooling_catalog.md) | **工具台账**（`scripts/` 全量登记：用途 / 用法 / 幂等与退出码 / 流水线组合 / 门禁归属）——工具的唯一事实源；新增工具须登记（doccheck2 第 26 项对账）+ 满足**工具契约**（第 27 项 `check_tooling_contract`：落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出） |
 | [process/15_process_ledger.md](process/15_process_ledger.md) | **流程固化台账**（人反复要做的开发动作 = 纪律执行状态面：每条流程登记 人工做法 / 复发证据 / 自动化形态 / 载体 / 状态（已自动化·半自动·待固化·一次性）；**纪律不执行 = 纪律不存在** ⇒ 待固化必须带台账任务号；载体 = `scripts/task_close.py`（收口一条命令）/ `scripts/exp_log.py`（EXP 一条命令）/ doccheck2 第 31~34 项（文本完整性 / 改动面声明 / 工具 3 处登记 / 台账自洽）） |
 | [process/16_code_standards.md](process/16_code_standards.md) | **代码标准执行矩阵**（架构/耦合/内聚/命名/重构 各维度 → 机器检查映射：CS-1 资产单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数命名 / CS-4 场景窄接缝 = `scripts/check_code_standards.py`（四项 CS 检查）+ 规模归 `audit_code.py` + lint 红线归门禁；棘轮基线 `process_ratchet.json::code_standards`，新增代码零豁免——写码/提交前对照执行矩阵） |
-| [process/17_layout_engine.md](process/17_layout_engine.md) | **布局引擎定案（S29 · 单一事实源）**：声明式布局树 + 引擎无关求解器（`resolve(tree, viewport)`）+ 全场景真响应式重排(b) + 文本/图片等比缩放 + 命中派生（`08_layout_design.md` 降级为 REF 视口 1080 镜像；改布局/加场景/调视口/换引擎前必读；WBS S29.0~S29.5） |
+| [process/17_layout_engine.md](process/17_layout_engine.md) | **布局引擎定案（S29 · B1 全 bevy_ui 响应式 · 单一事实源）**：UI + 命中 + 重排全进 Bevy（`bevy_ui` 自动布局 + 窗口 resize + `bevy_picking` 2D 拾取）；3 条约定松绑签核（逻辑层仅 UI 交互层进 Bevy / `bevy-cpu-parity` 改口径只保游戏世界 / UI chrome 转 Bevy 代码而游戏内容仍数据驱动）；游戏世界保持 1080 正交 + 数据驱动（换引擎友好）；原「引擎无关求解器」方向已作废（WBS S29.0~S29.5，改布局/加场景/调视口/换引擎前必读） |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
 

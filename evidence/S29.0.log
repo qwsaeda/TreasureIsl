@@ -32,3 +32,14 @@
 - `cargo run -p ti-tools --bin ledger -- plan/ledger.yaml` → 233 tasks, 200 verified, 0 error。
 
 判据达成 = 定案文档落地 + 台账 S29.0~S29.5 登记 + doccheck/doccheck2 0 ERROR + 本证据文件。S29.0 verified。
+
+--- 更新 2026-10-27：定案推翻（B1 全 bevy_ui 响应式）---
+用户澄清「真响应式」= **Bevy 引擎自带响应式（bevy_ui 自动布局 + resize + bevy_picking），不是自造求解器**。
+原「引擎无关布局求解器」方向（`ti-render::layout` + 布局树 + 重排 DSL）**作废**：
+- `docs/process/17_layout_engine.md` 重写为 **B1 定案**（UI + 命中 + 重排全进 Bevy）。
+- 3 条既有约定松绑签核：① 逻辑层 bevy-free（仅 UI 交互层进 Bevy，逻辑核心仍 bevy-free）；
+  ② 双渲染像素对拍改口径（`bevy-cpu-parity` 只保游戏世界，UI 层 Bevy-only）；③ 场景=数据部分松绑（UI chrome → bevy_ui 代码，游戏内容仍数据驱动）。
+- 台账 S29 WBS 重写为 B1：S29.0（本）/ S29.0-void（删遗留 layout.rs）/ S29.1（bevy_ui 基建）/ S29.2（bevy_picking 命中）/ S29.3（全场景 UI 迁移）/ S29.4（门禁改口径 + 四篇文档同步）/ S29.5（收口）。
+- S27.4 前置改 S29.2（命中层）；S28.6 前置改 S29.3（UI 迁移）。
+- 「换引擎成本」按 B1 重估（17 §3）：UI/命中层绑 Bevy，换引擎需重写；游戏内容数据 + 逻辑核心仍存活。
+S29.0 维持 verified（B1 定案文档落地 + 台账 + doccheck/doccheck2 0 ERROR + 本追加记录）。
