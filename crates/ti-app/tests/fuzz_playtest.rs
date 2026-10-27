@@ -9,13 +9,11 @@
 
 use std::panic::{self, AssertUnwindSafe};
 
-use ti_app::game_app::{GameApp, GameInput, Scene};
-use ti_app::touch::TouchSample;
+use ti_app::game_app::{GameApp, GameInput, HitData, Scene};
 use ti_core::domain::economy::Building;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::Character;
 use ti_core::rules::rng::GameRng;
-use ti_platform::settings::Gesture;
 
 /// 每局步数。
 const STEPS: u32 = 2000;
@@ -98,21 +96,16 @@ fn random_key_input(rng: &mut GameRng) -> GameInput {
     }
 }
 
-/// 从 `rng` 取一个伪随机触摸采样（手势 + 1080×1920 逻辑坐标）。
-fn random_touch(rng: &mut GameRng) -> TouchSample {
-    let gestures = [
-        Gesture::Tap,
-        Gesture::SwipeUp,
-        Gesture::SwipeRight,
-        Gesture::SwipeLeft,
-        Gesture::SwipeDown,
-    ];
-    TouchSample {
-        gesture: gestures[rng.in_range(5) as usize],
-        // S15.6 QA108：呈现层逻辑坐标 = 1080×1920（`menu_shell` LOGICAL_W/H_I32 契约 1；
-        // 旧 176×220 逻辑盒使 40% 触摸通路探的是 1080 失效区，触摸几何回归零覆盖）
-        x: f32::from(u16::try_from(rng.in_range(1080)).unwrap_or(0)),
-        y: f32::from(u16::try_from(rng.in_range(1920)).unwrap_or(0)),
+/// 从 `rng` 取一个伪随机命中（S29.2 B1：`poll_hit` 消费 [`HitData`]；Bevy 拾取层产出的
+/// 归一命中 = 目标键 `key` + 元素 `index` + 四向 `swipe` 码）。覆盖 `key 0..=7`（0 = 无元素 /
+/// 空白，4..7 = 主地图 HUD）与 `swipe 0..=4`。`in_range` 返回 `u32`；`index`/`swipe` 的小值域
+/// 截断/回绕属测试取模意图，pedantic cast 豁免。
+#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+fn random_hit(rng: &mut GameRng) -> HitData {
+    HitData {
+        key: rng.in_range(8),
+        index: rng.in_range(11) as i32 - 1,
+        swipe: rng.in_range(5) as u8,
     }
 }
 
@@ -145,8 +138,8 @@ fn run_playtest(seed: u32) -> SeedResult {
                 let input = random_key_input(&mut rng);
                 let _ = app.handle(input);
             } else {
-                let sample = random_touch(&mut rng);
-                let _ = app.poll_touch(Some(sample));
+                let hit = random_hit(&mut rng);
+                let _ = app.poll_hit(Some(hit));
             }
 
             // 存档往返：每 500 步做一次 save→load，断言字段一致
@@ -265,8 +258,8 @@ fn record_scene_sequence(seed: u32) -> Vec<i32> {
             let input = random_key_input(&mut rng);
             let _ = app.handle(input);
         } else {
-            let sample = random_touch(&mut rng);
-            let _ = app.poll_touch(Some(sample));
+            let hit = random_hit(&mut rng);
+            let _ = app.poll_hit(Some(hit));
         }
     }
     seq

@@ -181,7 +181,6 @@ fn flow_menu_quit() {
 // ── P6 表现层包：`docs/business/07_ui_flow.md §6` 12 条可测规则（逐条具名） ──
 
 use ti_app::scenes::{SceneKind, SceneTransition, SessionHost, markers};
-use ti_app::touch::layout;
 use ti_platform::gfx::Viewport;
 use ti_platform::settings::Gesture;
 
@@ -328,63 +327,11 @@ fn touch_logical_roundtrip() {
     assert!((ry2 - ly2).abs() < 1e-2, "y 往返不一致：{ly2} → {ry2}");
 }
 
-/// 规则 8 `iso_touch_matches_move`：主地图点按命中格 == 渲染格。
-///
-/// S15.6 QA025 重锚（`08_render_arch.md` 契约 5 / EXP-067），S17.8 v3 再锚：渲染侧 =
-/// `chrome::iso_cell_fit`（v3 世界画布 `board_fit` G 依赖拟合，缺席回退 `main_map.grid.*`，
-/// 无 legacy 32/16 投影、无 (88,110) 摄像机——S15.4 已删层），触摸侧 = `grid_cell_at`
-/// （同 G `board_fit` 逆解，`iso_cell_fit` 的逆）。渲染格点像素喂给触摸逆变换，必须逆解回原格。
-#[test]
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap
-)]
-fn iso_touch_matches_move() {
-    use ti_app::scenes::chrome;
-    let scene = ti_core::data::scenes()
-        .expect("scenes.json")
-        .get("main_map")
-        .cloned()
-        .expect("scenes.json main_map");
-    let (row, col) = (3u32, 2u32);
-    let (sx, sy) = chrome::iso_cell_fit(row as i32, col as i32, &scene, 20);
-    let hit = layout::grid_cell_at(sx as f32, sy as f32, 20, 20);
-    assert_eq!(hit, Some((row, col)), "渲染格点像素 ({sx},{sy}) 应逆解回原格，实际 {hit:?}");
-}
-
-/// EXP-067 跨层一致性（S15.6 QA025 重锚，S17.8 v3 再锚）：触摸命中格 == 渲染该格实际像素所在格。
-///
-/// 渲染侧 `chrome::iso_cell_fit`（v3 `board_fit` G 依赖拟合，缺席回退 scenes.json `grid.*`）把格点
-/// 画到 1080 呈现层；触摸侧 `grid_cell_at`（同 G `board_fit` 严格逆，同数据源）对该像素逆解，
-/// 全格遍历必须命中同一格（`iso_cell_fit(iso_grid_cell_at(p)) == p`，EXP-067 正逆成对）。
-#[test]
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap
-)]
-fn iso_touch_render_cross_layer() {
-    use ti_app::scenes::chrome;
-    let scene = ti_core::data::scenes()
-        .expect("scenes.json")
-        .get("main_map")
-        .cloned()
-        .expect("scenes.json main_map");
-    for r in 0..20u32 {
-        for c in 0..20u32 {
-            let (sx, sy) = chrome::iso_cell_fit(r as i32, c as i32, &scene, 20);
-            let hit = layout::grid_cell_at(sx as f32, sy as f32, 20, 20);
-            assert_eq!(
-                hit,
-                Some((r, c)),
-                "格 ({r},{c}) 渲染像素 ({sx},{sy}) 逆解应回 ({r},{c})，实际 {hit:?}"
-            );
-        }
-    }
-}
+// 规则 8 `iso_touch_matches_move` / EXP-067 跨层一致性（渲染格点像素 == 触摸命中格）：
+// S29.2（B1）起命中几何退役 —— 渲染格点像素与拾取标记的对账改由 **Bevy 拾取层**
+// （`ti_engine::pick` `PickTarget`，`scenes.json` `pick_key` 数据驱动）+ doccheck2 数据对账兜底；
+// 原 `layout::grid_cell_at`（`iso_cell_fit` 严格逆）已删，故本规则的两条几何逆测试随之退役
+// （活体拾取验收 = S29.5）。
 
 /// 规则 9 `gesture_threshold_split`：位移 <20 判点按、≥20 判滑动。
 #[test]

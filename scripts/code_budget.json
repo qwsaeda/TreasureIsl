@@ -1,7 +1,8 @@
 {
   "exempt_files": {
     "crates/ti-tools/src/bin/doccheck2.rs": "S20.1 拆分（按断言族分文件：layout/primitives/scene/data/asset）",
-    "crates/ti-app/src/scenes/chrome.rs": "S21.14 tint 契约跨层接入（blit_image_tint + icon/image 原语 image 上色）使 934 行；限期 S22 拆 scenes/chrome/{icons_draw,track,primitives} 子模块后删本条"
+    "crates/ti-app/src/scenes/chrome.rs": "S21.14 tint 契约跨层接入（blit_image_tint + icon/image 原语 image 上色）使 934 行；限期 S22 拆 scenes/chrome/{icons_draw,track,primitives} 子模块后删本条",
+    "crates/ti-engine/src/bin/treasure_bevy.rs": "S29.1 bevy_ui 壳接线（ui_probe/spawn_ui_chrome）+ S29.2 拾取层壳接线（pick_event_system/scene_json_key/spawn_pick_layer 调用）使 987 行；壳私有 `GameStore` 使抽取受限，限期 S29.3/S29.5 全场景 bevy_ui 迁移重构壳（命中/布局全进 bevy_ui + 壳拆分）后删本条"
   },
   "exempt_fns": {
     "crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session": "S20.1 拆分（e2e 按阶段拆 fn）",

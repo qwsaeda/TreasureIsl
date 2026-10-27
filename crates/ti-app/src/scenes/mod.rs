@@ -6,7 +6,7 @@
 //!   （8 个子 trait 的 supertrait 聚合），只保留键位映射（`poll`）、触摸入口
 //!   （`poll_touch`）、帧调度（`render`）。
 //! - `scenes/*.rs` = **场景模块**：每个场景一个 struct，实现 [`Scene`]，
-//!   持有该场景的输入判定（`on_input`）、触摸手势（`on_touch`）与绘制（`render`）。
+//!   持有该场景的输入判定（`on_input`）、拾取命中（`on_hit`）与绘制（`render`）。
 //! - 场景 struct **不持有** `GameApp`，只持有 `&mut dyn SceneHost`，
 //!   因此业务判定与渲染细节真正离开组合根，`game_app.rs` 不再有
 //!   `handle_X` / `touch_X` / `render_X` 巨大分支。
@@ -31,9 +31,8 @@ use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{TrackSpace, Turn};
 
-use crate::game_app::{BattleSnapshot, GameInput, Scene as LegacyScene};
+use crate::game_app::{BattleSnapshot, GameInput, HitData, Scene as LegacyScene};
 use crate::menu_shell::MenuShell;
-use crate::touch::TouchSample;
 
 pub mod chrome;
 pub mod index;
@@ -658,9 +657,10 @@ pub trait Scene {
     /// 处理一个归一输入事件。返回是否发生了场景切换。
     fn on_input(&mut self, host: &mut dyn SceneHost, input: GameInput) -> bool;
 
-    /// 处理一次完成的触摸手势（默认不消费）。
-    fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
-        let _ = (host, sample);
+    /// S29.2：处理一次完成的拾取命中（[`HitData`]：`key`/`index` = 被点元素，`swipe` = 滑动方向；
+    /// 默认不消费）。命中/几何全在 Bevy 拾取层，本方法只消费归一事件。
+    fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
+        let _ = (host, hit);
         false
     }
 
@@ -710,22 +710,22 @@ pub fn route_input(host: &mut dyn SceneHost, kind: SceneKind, input: GameInput) 
     }
 }
 
-/// 路由：一次触摸手势交给 `kind` 对应场景的 [`Scene::on_touch`]。
+/// 路由：一次拾取命中交给 `kind` 对应场景的 [`Scene::on_hit`]（S29.2）。
 #[must_use]
-pub fn route_touch(host: &mut dyn SceneHost, kind: SceneKind, sample: &TouchSample) -> bool {
+pub fn route_hit(host: &mut dyn SceneHost, kind: SceneKind, hit: &HitData) -> bool {
     match kind {
         SceneKind::Intro => {
             host.enter(SceneKind::Index);
             true
         }
         SceneKind::Exit => false,
-        SceneKind::Index => IndexScene.on_touch(host, sample),
-        SceneKind::SelectRole => SelectRoleScene.on_touch(host, sample),
-        SceneKind::SelectMap => SelectMapScene.on_touch(host, sample),
-        SceneKind::MainMap => MainMapScene.on_touch(host, sample),
-        SceneKind::Vs => VsScene.on_touch(host, sample),
-        SceneKind::Message => MessageScene.on_touch(host, sample),
-        SceneKind::Saveload => SaveloadScene.on_touch(host, sample),
+        SceneKind::Index => IndexScene.on_hit(host, hit),
+        SceneKind::SelectRole => SelectRoleScene.on_hit(host, hit),
+        SceneKind::SelectMap => SelectMapScene.on_hit(host, hit),
+        SceneKind::MainMap => MainMapScene.on_hit(host, hit),
+        SceneKind::Vs => VsScene.on_hit(host, hit),
+        SceneKind::Message => MessageScene.on_hit(host, hit),
+        SceneKind::Saveload => SaveloadScene.on_hit(host, hit),
     }
 }
 
@@ -747,7 +747,7 @@ pub fn route_render(host: &mut dyn SceneHost, kind: SceneKind) {
 
 /// 场景注册表（迁移进度探针 + 显式路由入口）。
 ///
-/// 真正的路由已由 [`route_input`] / [`route_touch`] / [`route_render`] 承担；
+/// 真正的路由已由 [`route_input`] / [`route_hit`] / [`route_render`] 承担；
 /// 本 struct 只保留「当前激活场景」这一可观测状态，供壳层/HUD 查询。
 pub struct SceneRegistry {
     /// 当前激活场景（`None` = 未初始化）。

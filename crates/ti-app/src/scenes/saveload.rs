@@ -3,12 +3,10 @@ use ti_core::domain::flow::Sfx;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::MapSlot;
 
-use crate::game_app::GameInput;
+use crate::game_app::{GameInput, HitData};
 use crate::i18n;
 use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
-use crate::touch::{TouchSample, layout};
-use ti_platform::settings::Gesture;
 
 /// 存读档场景处理器（`Saveload`）。
 pub struct SaveloadScene;
@@ -68,39 +66,24 @@ impl Scene for SaveloadScene {
         }
     }
 
-    /// 点有档的槽 = 读档；点空槽 = 存档；下滑 = 关闭。
-    #[allow(clippy::cast_precision_loss)]
-    fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
-        match sample.gesture {
-            Gesture::Tap => {
-                // N3：命中带与渲染 `item_rect` 同公式（scenes.json saveload 段），正逆成对
-                // QA031：统一走 `chrome::scene_layout`（scenes.json 单一读点，契约 4）
-                let scene = chrome::scene_layout("saveload");
-                let bands = layout::slot_bands(
-                    scene.list.x as f32,
-                    scene.list.x as f32 + scene.list.w as f32,
-                    scene.list.y as f32,
-                    scene.list.row_h as f32,
-                    scene.list.item_h as f32,
-                    scene.list.highlight_offset as f32,
-                    host.save_slots().len(),
-                );
-                let Some(slot) = layout::slot_band_index_at(&bands, sample.x, sample.y) else {
-                    return false;
-                };
-                // 有档（version > 0）→ 读档；空槽 → 存档
-                let has = host.save_slots().get(slot).is_some_and(|s| s.version > 0);
-                chrome::flash_press();
-                // S15.6 QB136：三态卡（has/empty/cursor）——点选先落光标（卡片描边态），再推进
-                host.set_saveload_cursor(slot);
-                if has {
-                    host.advance(GameInput::LoadSave(slot))
-                } else {
-                    host.advance(GameInput::WriteSave(slot))
-                }
-            }
-            Gesture::SwipeDown => host.advance(GameInput::SaveloadClose),
-            _ => false,
+    /// S29.2：点有档的槽（`pick_key=3`，`hit.index` = 槽位）= 读档；点空槽 = 存档；下滑 = 关闭。
+    fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
+        if hit.swipe == 2 {
+            return host.advance(GameInput::SaveloadClose);
+        }
+        if hit.swipe != 0 || hit.key != 3 {
+            return false;
+        }
+        let slot = usize::try_from(hit.index.max(0)).unwrap_or(0);
+        // 有档（version > 0）→ 读档；空槽 → 存档
+        let has = host.save_slots().get(slot).is_some_and(|s| s.version > 0);
+        chrome::flash_press();
+        // S15.6 QB136：三态卡（has/empty/cursor）——点选先落光标（卡片描边态），再推进
+        host.set_saveload_cursor(slot);
+        if has {
+            host.advance(GameInput::LoadSave(slot))
+        } else {
+            host.advance(GameInput::WriteSave(slot))
         }
     }
 

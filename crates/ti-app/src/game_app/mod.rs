@@ -147,6 +147,22 @@ pub enum GameInput {
     /// 主地图回主菜单（回 `Index`）。
     MapBack,
 }
+
+/// S29.2：拾取命中事件（B1：命中/几何进 Bevy 拾取层，逻辑核心消费归一事件，headless 可测）。
+///
+/// 由 Bevy 壳从 [`ti_engine::pick::PickEvent`] 映射（或 headless 测试直接构造）；
+/// `key`/`index` = 被点元素（数据 `pick_key`/`pick_index`，opaque；语义按场景解释），
+/// `swipe` = 滑动方向（`0` = 点按 / 无滑动，`1..=4` = 上/下/左/右，与
+/// `ti_engine::pick::SWIPE_*` 对齐）。替代旧 `TouchSample`（手势 + 坐标 → 手写几何逆）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct HitData {
+    /// 目标族键（`0` = 无元素命中 / 任意点按 / 空白）。
+    pub key: u32,
+    /// 目标项下标（`-1` = 无）。
+    pub index: i32,
+    /// 滑动方向（`0` = 点按；`1`/`2`/`3`/`4` = 上/下/左/右）。
+    pub swipe: u8,
+}
 /// 交互壳：把 `ti-core::rules` 的 13 个玩法模块接进表现层（`docs/gamebook.md` §2/§3）。
 ///
 /// - `shell`：复用 [`MenuShell`] 的帧缓冲/字形/呈现机制（`Index` 场景渲染子视图）；

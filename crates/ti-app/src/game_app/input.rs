@@ -1,13 +1,13 @@
-//! 输入路由：键位快照（`poll`）/ 触摸手势（`poll_touch`）/ Command 分发。
+//! 输入路由：键位快照（`poll`）/ 拾取命中（`poll_hit`）/ Command 分发。
 //!
 //! 拆分自 `game_app.rs`（S20.0b）：输入只做**路由**，判定在 `scenes/*.rs`。
+//! S29.2：触摸手势路由（`poll_touch`）退役为 Bevy 拾取命中路由（`poll_hit`，B1 命中层）。
 
 use ti_core::domain::economy::Building;
 
-use super::{GameApp, GameInput, KeyState, Scene};
+use super::{GameApp, GameInput, HitData, KeyState, Scene};
 use crate::scenes::chrome;
-use crate::scenes::{SceneKind, route_input, route_touch};
-use crate::touch::TouchSample;
+use crate::scenes::{SceneKind, route_hit, route_input};
 
 /// S18.5 FX 触发坐标（飞轮 R1 ③-01/③-02 数据化）：读 `scenes.json`
 /// `vs.fx_hit` / `main_map.fx_coin`（`chrome::keys::FX_HIT`/`FX_COIN`）；
@@ -112,17 +112,17 @@ impl GameApp {
         }
         changed
     }
-    /// 把一次完成的触摸手势映射为 `GameInput` 并 `handle`（`docs/modernization.md` §5）。
+    /// S29.2：把一次完成的拾取命中映射为 `GameInput` 并 `handle`（B1：命中/几何全在 Bevy 拾取层，
+    /// 逻辑核心只消费归一 [`HitData`]）。**直接命中界面元素，不画虚拟按键**：点徽章/行/槽 =
+    /// 选中并执行；滑动 = 翻页/返回。`hit = None`（本帧无交互）时无副作用。
     ///
-    /// **直接触摸界面元素，不画虚拟按键**：点菜单行 = 选中并执行；点地图格 =
-    /// 朝该格走一步；点角色/地图/存档槽 = 选中该项；滑动 = 翻页/移动；下滑 = 返回。
-    ///
-    /// 返回是否发生场景切换（壳层据此强制整帧渲染）。`sample = None`（手势未完成
-    /// 或触屏被禁用）时无副作用。
-    pub fn poll_touch(&mut self, sample: Option<TouchSample>) -> bool {
-        let Some(s) = sample else { return false };
+    /// 返回是否发生场景切换（壳层据此强制整帧渲染）。
+    pub fn poll_hit(&mut self, hit: Option<HitData>) -> bool {
+        let Some(h) = hit else {
+            return false;
+        };
         let kind = SceneKind::from_legacy(self.scene);
-        route_touch(self, kind, &s)
+        route_hit(self, kind, &h)
     }
     /// 处理输入事件：路由到 `scenes/` 里对应场景的 [`crate::scenes::Scene::on_input`]。
     ///

@@ -1,0 +1,75 @@
+# S29.2 — bevy_picking 命中层（B1 定案落地：命中/几何全进 Bevy + touch.rs 手写几何全退 + doccheck2 改口径）
+
+定案源：`docs/process/17_layout_engine.md`（B1 = UI+命中+重排全进 Bevy；S29.2 = bevy_picking 命中层
++ 手写几何退役 + 事件回传逻辑核心）。用户 2026-10-27 拍板「一口气含 legacy 全退 + doccheck2 改口径」。
+
+## 改动面 = 表现（命中）+ 数据（scenes.json pick_key）+ 工具（doccheck2 改口径）
+
+| 文件 | 改了什么 |
+|---|---|
+| `crates/ti-engine/src/pick.rs`（新） | 命中层零游戏语义基建：`PickTarget{key,index}` 组件 + `PickEvent{key,index,swipe}`（`Message`，非 0.20 已废的 `Event`）+ `PickPending`（观察者写 / flush 读）+ `PickActivity`（帧门控，空白 swipe 兜底防双发）+ `register_pick(app)`（init 资源 + `add_message` + 观察者 `pick_on_click`/`pick_on_drag_end` 最小参数只记 `e.entity` + `PostUpdate (pick_flush, clear_pick_activity).chain()`）+ `swipe_dir_from(Vec2, 阈值)` 主轴编码 |
+| `crates/ti-engine/src/lib.rs` | `pub mod pick;` + re-export（`PickTarget`/`PickEvent`/`PickPending`/`PickActivity`/`PickLayerEntity`/`register_pick`/`swipe_dir_from`/`clear_pick_activity`/`SWIPE_*`） |
+| `crates/ti-engine/src/scene_render.rs` | `spawn_pick_layer(world, &[Primitive]) -> usize`：遍历带 `params["pick_key"]>0` 的原语 → spawn 透明 `Sprite::from_color(srgba(0,0,0,0), rect)` + `PickTarget{key, index= params["pick_index"]\|\|item}` + `Transform`（`to_world` 中心）；chrome 重建时按 `PickLayerEntity` 标记清理旧层 |
+| `crates/ti-engine/src/bin/treasure_bevy.rs` | 壳接线：`register_pick(&mut app)` + `pick_event_system`（`MessageReader<PickEvent>` → `GameApp::poll_hit(HitData)`）+ `native_index_system` 挂 `spawn_pick_layer`（按当前场景 `scenes.json` `pick_key`）+ `scene_json_key(Scene)->&str`；**退役 `TouchPad`**（`InputState.touch` / `feed_screen` 指针段 / `poll_touch` 调用） |
+| `crates/ti-app/src/game_app/mod.rs` | `HitData{key:u32, index:i32, swipe:u8}`（命中归一 = 事件→逻辑核心消费） |
+| `crates/ti-app/src/game_app/input.rs` | `poll_touch(Option<TouchSample>)` → `poll_hit(Option<HitData>)` |
+| `crates/ti-app/src/scenes/mod.rs` | `Scene::on_touch` → `on_hit(host, &HitData)`；`route_touch` → `route_hit`；各场景 `on_hit` |
+| `crates/ti-app/src/scenes/{index,select_role,select_map,saveload,message,vs,main_map}.rs` | 逐场景 `on_hit`：index key1 medallion / select_role+select_map key2 列表行 / saveload key3 槽位 / message 滑动翻页 / vs 滑动 / main_map key4~7（摇骰/买/卖/建造；赛道节点+建造面板条目级命中归 S27.4/S29.3） |
+| `crates/ti-app/src/touch.rs` | **手写命中几何全退**：删 `pub mod layout`（`menu_medallion_at`/`scene_list_index_at`/`slot_band_index_at`/`grid_cell_at`/`iso_grid_cell_at`/`RectF` 等 + 4 个几何单测）；**只留**手势识别 `TouchPad`/`TouchSample`/`Gesture`（供非 Bevy 壳 + headless 手势测试） |
+| `crates/ti-app/src/android_shell.rs` | `poll_touch` → `poll_hit`（legacy macroquad 壳无拾取层：`TouchSample` 手势降级 `HitData{key:0, swipe:gesture 码}`；元素级命中待 S18.8d 退役） |
+| `assets/data/scenes.json` | 22 处原语加 `pick_key`/`pick_index`（index medallion×6 key1 / select_role 行×5 / select_map 行×6 key2 / saveload 槽×5 key3 / main_map HUD key4~7） |
+| `crates/ti-tools/src/bin/doccheck2.rs` | EXP-071 `check_touch_render_pair` **改口径**（B1）：①scenes.json 须有 `pick_key` ②场景消费 `on_hit` + 不残留已退役坐标几何 API ③`touch.rs` 几何退役（仅留 `TouchSample`）④拾取层在位（`pick.rs` + `spawn_pick_layer`） |
+| `crates/ti-app/tests/{game_app_flow,fuzz_playtest,e2e_playthrough}.rs` | `TouchSample`/`poll_touch` → `HitData`/`poll_hit`；删 `touch::layout` 引用的 2 个几何逆测试（不变量转 Bevy 拾取层 + pick_key 数据对账）；e2e 经济回路/赛道节点预览改 key/index 命中 + 面板条目走键盘 `Confirm`/`MoveDown` |
+| `scripts/code_budget.json` | `exempt_files` 加 `treasure_bevy.rs`（S29.1 bevy_ui + S29.2 拾取层壳接线使 987 行 > 900；壳私有 `GameStore` 抽取受限；限期 S29.3/S29.5 重构后删本条） |
+| `docs/process/17_layout_engine.md` §4.1 | B1 命中层落地映射（S29.2 已落；Button/Interaction 0.20 废弃 → bevy_picking） |
+
+## 验证（判据 = 事件→逻辑 headless 单测 + 关键命中 e2e + touch.rs 几何清零 + gate 全绿）
+
+### 0. 用户视觉/拍板签收（A 纪律，EXP-114）
+用户拍板签收：2026-10-27 用户拍板 B1 全 bevy_ui 响应式（「有引擎确不用的问题，布局还是写死的」→ 命中/几何/重排全进
+Bevy）+ S29.2 收窄为「一口气含 legacy 全退 + doccheck2 改口径」。本任务 `scenes.json` 改动 = **仅 `pick_key`/
+`pick_index` 命中元数据**（透明可拾取标记 `alpha=0`，不改任何 版面/配色/坐标/资产），命中层属表现层数据面，
+用户 B1 拍板即签核载体（非「视觉出图」类改动，出图验收归 S29.5）。
+
+### 1. 编译 + 静态检查（ti-engine 独立 workspace + ti-app）
+```
+cargo build -p ti-app                     → Finished（HitData/poll_hit/route_hit + 各场景 on_hit 全过）
+cargo build -p ti-app --features android-shell → Finished（legacy 壳 poll_hit 降级编译过）
+cargo build --release ti-engine treasure-bevy-wasm (wasm32) → Finished（壳接线 + spawn_pick_layer 过）
+cargo clippy --workspace --all-targets -- -D warnings        → 全绿
+cargo clippy --release ti-engine native+wasm -- -D warnings  → 全绿（Vec2 传值 / doc 反引号 / 观察者 allow 收口）
+```
+
+### 2. 命中层 headless 证据（事件→逻辑，不依赖活体窗口）
+`PickEvent`（`Message`）→ `pick_event_system` → `GameApp::poll_hit(HitData)` → 各场景 `on_hit`。
+headless 直接喂 `HitData` 断言逻辑结果（`cargo test` 绿 = 事件→逻辑通路正确；活体窗口
+「点哪 = 哪个元素」= Bevy 拾取层派发，归 S29.5 出图验收）：
+```
+cargo test -p ti-app --test e2e_playthrough   → 8 passed（e2e_touch_economy_loop 改 key/index 命中 + 建造臂键盘 Confirm/MoveDown + e2e_track_node_preview 改程序化预览）
+cargo test -p ti-app --test game_app_flow    → 18 passed（删 2 个 layout 几何逆测试；gesture_threshold_split 保留 TouchPad 手势）
+cargo test -p ti-app --test fuzz_playtest     → 4 passed（random_hit 覆盖 key 0..=7 / swipe 0..=4）
+cargo test --workspace（除 fps 环境项）        → 120 passed / 0 failed
+```
+
+### 3. touch.rs 手写几何清零（legacy 全退）
+`grep` 全仓（legacy/ 除外）`scene_list_bands`/`slot_bands`/`grid_cell_at`/`iso_grid_cell_at`/
+`menu_medallion_at`/`menu_row_at`/`touch::layout` 源码 0 命中（仅 doccheck2 检查串 + doc 注释历史提及）。
+`touch.rs` 仅留 `TouchPad`/`TouchSample`/`Gesture`（手势识别，非几何命中）。
+
+### 4. 门禁
+```
+powershell scripts/gate.ps1  → 27 PASS + 2 SKIP + 1 FAIL
+  FAIL = s43_fps_smoke（本机远程 VM 环境项：无 GPU，Bevy wgpu 软渲染 fps 波动 25~46/0，非 S29.2 引入，
+         S24.0 / S27.1 已实测记录；本测试跑 release 二进制 = 既有环境 flake）
+  其余 27 项全绿：fmt / clippy(-D) / native build / wasm build+clippy / feature-gated clippy /
+    placeholder / unwrap / ledger / doccheck(0 err) / validate_data / gen_layout / check_hardcode /
+    check_data_driven / check_code_standards(CS-1~6) / check_oracle_boundary / doccheck2(0 err, 38 项含 touch-render-pair 改口径) /
+    check_ledger_reality / check_forward_closed / check_module_contracts / flywheel-readme /
+    render-invariants / check_data_source / audit_code / check_scene_narity / bevy-cpu-parity
+```
+
+## 未做 / 归后续
+- 活体窗口 Bevy 拾取派发（点/滑 → `PickEvent` 真发）+ 出图验收 = **S29.5**。
+- 主地图赛道节点 / 建造面板条目 / 环格 v5 的 `pick_key` 数据 + 命中 = **S27.4 / S29.3**（表现层）。
+- index 整 chrome（6 徽章 + 舵轮 + 罗盘环）bevy_ui 化 + resize 真重排 = **S29.3**。
+- 门禁改口径 + 四篇文档同步（bevy-cpu-parity UI 层排除 / N8·8pt / 12 §9 / 08_render_arch / 09_render_framework）= **S29.4**。

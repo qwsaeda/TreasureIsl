@@ -2,12 +2,10 @@
 use ti_core::domain::messages::MsgKind;
 use ti_core::rules::messages::page_text;
 
-use crate::game_app::GameInput;
+use crate::game_app::{GameInput, HitData};
 use crate::i18n;
 use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
-use crate::touch::{TouchSample, layout};
-use ti_platform::settings::Gesture;
 
 /// 消息/帮助场景处理器（`Message`）。
 pub struct MessageScene;
@@ -37,20 +35,20 @@ impl Scene for MessageScene {
         }
     }
 
-    /// 左半屏 = 关闭；右半屏 = 下一页；上滑 = 下一页；下滑 = 上一页
-    /// （`docs/modernization.md` §5 翻页表）。
-    fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
-        match sample.gesture {
-            Gesture::Tap => {
-                if sample.x < layout::MSG_SPLIT_X {
-                    host.advance(GameInput::MsgClose)
-                } else {
+    /// S29.2：上滑 = 下一页；下滑 = 上一页（`docs/modernization.md` §5 翻页表）。点按（`key=0`
+    /// 无元素）兜底 = 下一页；关闭仍走键盘 [`GameInput::MsgClose`]（左右半屏分区命中待
+    /// S29.3/S27.4 补 message 分区 `pick_key` 数据）。
+    fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
+        match hit.swipe {
+            1 => host.advance(GameInput::MsgNext),
+            2 => host.advance(GameInput::MsgPrev),
+            _ => {
+                if hit.swipe == 0 {
                     host.advance(GameInput::MsgNext)
+                } else {
+                    false
                 }
             }
-            Gesture::SwipeUp => host.advance(GameInput::MsgNext),
-            Gesture::SwipeDown => host.advance(GameInput::MsgPrev),
-            _ => false,
         }
     }
 

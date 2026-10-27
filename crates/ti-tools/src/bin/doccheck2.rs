@@ -262,9 +262,7 @@ fn collect_sget_keys(text: &str, out: &mut BTreeSet<String>) {
         if cursor < bytes.len() && bytes[cursor] == b'f' {
             cursor += 1; // sgetf
         }
-        while cursor < bytes.len()
-            && matches!(bytes[cursor], b' ' | b'\t' | b'\n')
-        {
+        while cursor < bytes.len() && matches!(bytes[cursor], b' ' | b'\t' | b'\n') {
             cursor += 1;
         }
         if cursor >= bytes.len() || bytes[cursor] != b'(' {
@@ -272,9 +270,7 @@ fn collect_sget_keys(text: &str, out: &mut BTreeSet<String>) {
             continue;
         }
         cursor += 1;
-        while cursor < bytes.len()
-            && matches!(bytes[cursor], b' ' | b'\t' | b'\n')
-        {
+        while cursor < bytes.len() && matches!(bytes[cursor], b' ' | b'\t' | b'\n') {
             cursor += 1;
         }
         if cursor >= bytes.len() || bytes[cursor] != b'"' {
@@ -696,44 +692,82 @@ fn check_flywheel_script(root: &Path) -> Vec<String> {
     errors
 }
 
-/// 11. 触摸/渲染正逆成对（EXP-071）：列表场景的 `on_touch` 必须用
-///     `scene_list_bands` / `slot_bands`（从 `ListLayout` 推导），
-///     不得残留旧的 `list_index_at` / `slot_at` 调用。
+/// 11. 命中/渲染成对（EXP-071 重定基线，S29.2 B1）：「点到哪个元素」的正逆成对已从
+///     `touch::layout` 坐标几何（已退役）迁到 **Bevy 拾取层 + 数据驱动**（`ti_engine::pick`
+///     `PickTarget` + `scenes.json` `pick_key`/`pick_index` → `HitData` → `on_hit`/`route_hit`）。
+///     门禁 = ①命中几何数据化（scenes.json 有 `pick_key`）；②场景消费归一命中（`on_hit`，
+///     不残留已退役坐标几何 API）；③`touch.rs` 坐标几何退役（仅留手势识别）；④拾取层在位
+///     （`pick.rs` + `spawn_pick_layer`）。
 fn check_touch_render_pair(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
+    // ① 命中几何数据化：scenes.json 须有 `pick_key`（`PickTarget` 键源）。
+    let scenes = read_file(root, "assets/data/scenes.json").unwrap_or_default();
+    if !scenes.contains("pick_key") {
+        errors.push(
+            "scenes.json 缺 `pick_key`（S29.2 B1：命中几何数据化，`ti_engine::pick` `PickTarget` 键源缺失）"
+                .to_string(),
+        );
+    }
+    // ② 场景消费归一命中（`on_hit`/`HitData`），已退役坐标几何 API 不得残留。
     for rel in [
         "crates/ti-app/src/scenes/select_role.rs",
         "crates/ti-app/src/scenes/select_map.rs",
         "crates/ti-app/src/scenes/saveload.rs",
+        "crates/ti-app/src/scenes/main_map.rs",
     ] {
         let src = read_file(root, rel).unwrap_or_default();
-        let has_old_api = src.contains("list_index_at") && !src.contains("scene_list_index_at")
-            || src.contains("slot_at(") && !src.contains("slot_band_index_at");
-        if has_old_api {
-            errors.push(format!("{rel} 仍残留旧触摸 API list_index_at/slot_at（EXP-071 应改用 scene_list_bands/slot_bands）"));
+        if src.contains("fn on_touch") {
+            errors.push(format!("{rel} 仍残留旧 `on_touch`（S29.2 B1 应改归一命中 `on_hit`）"));
         }
-        let has_bands = src.contains("scene_list_bands") || src.contains("slot_bands");
-        if !has_bands {
-            errors
-                .push(format!("{rel} 未使用 scene_list_bands/slot_bands（EXP-071 正逆成对缺失）"));
+        for old in [
+            "scene_list_bands",
+            "slot_bands",
+            "scene_list_index_at",
+            "slot_band_index_at",
+            "grid_cell_at",
+            "iso_grid_cell_at",
+            "menu_medallion_at",
+            "menu_row_at",
+        ] {
+            if src.contains(old) {
+                errors.push(format!(
+                    "{rel} 残留已退役坐标几何 API `{old}`（EXP-071 S29.2 应数据驱动 `pick_key` + `on_hit`）"
+                ));
+            }
         }
     }
+    // ③ touch.rs 坐标几何退役（EXP-071 重定基线：本模块仅留手势识别 `TouchPad`/`TouchSample`/`Gesture`）。
     let touch_src = read_file(root, "crates/ti-app/src/touch.rs").unwrap_or_default();
-    if touch_src.contains("LIST_Y0") || touch_src.contains("SLOT_Y0") {
-        errors.push("touch.rs 仍残留旧常量 LIST_Y0/SLOT_Y0（EXP-071 应已移除）".to_string());
+    for gone in [
+        "LIST_Y0",
+        "SLOT_Y0",
+        "grid.x0",
+        "grid_cell_at",
+        "scene_list_bands",
+        "slot_bands",
+        "mod layout",
+    ] {
+        if touch_src.contains(gone) {
+            errors.push(format!(
+                "touch.rs 残留已退役坐标几何 `{gone}`（S29.2 B1：命中几何进 Bevy 拾取层，touch.rs 仅留手势识别）"
+            ));
+        }
     }
-    // S15.6 QA025：主地图触摸↔渲染正逆成对锚点（EXP-067）——触摸逆变换须读
-    // scenes.json `grid.*`（与渲染 `chrome::iso_cell` 同数据源，无 legacy 32/16 + camera 分裂）。
-    if !touch_src.contains("grid.x0") {
+    if !touch_src.contains("TouchSample") {
         errors.push(
-            "touch.rs 等距逆变换未读 scenes.json `grid.*`（QA022/QA023：触摸与渲染须共用 grid 数据源，EXP-067 正逆成对）"
+            "touch.rs 缺手势识别 `TouchSample`（S29.2：本模块供非 Bevy 壳与 headless 手势测试）"
                 .to_string(),
         );
     }
-    let main_map_src = read_file(root, "crates/ti-app/src/scenes/main_map.rs").unwrap_or_default();
-    if !main_map_src.contains("grid_cell_at") {
+    // ④ 拾取层在位：`pick.rs`（`PickTarget`/`PickEvent`）+ `scene_render`（`spawn_pick_layer`）。
+    let pick_src = read_file(root, "crates/ti-engine/src/pick.rs").unwrap_or_default();
+    if !pick_src.contains("PickTarget") || !pick_src.contains("PickEvent") {
+        errors.push("ti-engine pick.rs 缺 `PickTarget`/`PickEvent`（S29.2 B1 拾取层）".to_string());
+    }
+    let scene_render = read_file(root, "crates/ti-engine/src/scene_render.rs").unwrap_or_default();
+    if !scene_render.contains("spawn_pick_layer") {
         errors.push(
-            "main_map.rs 触摸命中未走 scenes.json 派生的 grid_cell_at（QA025：主地图触摸↔渲染正逆成对锚点缺失）"
+            "scene_render.rs 缺 `spawn_pick_layer`（S29.2：`pick_key` 原语 → Bevy 拾取标记）"
                 .to_string(),
         );
     }

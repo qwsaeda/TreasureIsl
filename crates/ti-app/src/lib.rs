@@ -58,7 +58,7 @@ pub use scenes::{
     EconomyHost, IndexScene, MainMapScene, MapHost, MenuHost, MessageScene, NavHost, RenderHost,
     SaveloadScene, Scene as SceneTrait, SceneHost, SceneKind, SceneRegistry, SceneTransition,
     SelectMapScene, SelectRoleScene, SelectionHost, SessionHost, SpriteHost, VsScene, markers,
-    route_input, route_render, route_touch,
+    route_hit, route_input, route_render,
 };
 pub use shell_ui::{MENU, MenuItem};
 pub use sprite_atlas::SpriteAtlas;

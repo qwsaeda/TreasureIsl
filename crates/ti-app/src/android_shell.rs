@@ -12,7 +12,7 @@
 //! `screen_width/height` 每帧 refit）。
 
 use crate::audio_prep::{MusicBundle, prepare_music, wav_pcm16};
-use crate::game_app::GameApp;
+use crate::game_app::{GameApp, HitData};
 use crate::menu_shell::parse_font_bytes;
 use crate::scenes::SceneKind;
 use crate::touch::TouchPad;
@@ -182,11 +182,15 @@ pub async fn run() {
         let frame_delta_ms = u32::try_from(delta).unwrap_or(16).clamp(1, 250);
         game.set_frame_delta_ms(frame_delta_ms);
 
-        // 触屏输入 → GameApp.poll_touch → 场景跳转
+        // 触屏输入 → GameApp.poll_hit → 场景跳转。
+        // S29.2（legacy 路径）：Android macroquad 壳无 Bevy 拾取层 → 手势（TouchPad）降级为
+        // `HitData { key:0（无元素）, swipe }`：仅四向滑动可达逻辑，元素级命中待 S18.8d 退役。
         let (mx, my) = mouse_position();
         let down = is_mouse_button_pressed(MouseButton::Left);
         let sample = touch.feed_screen(&game.shell().vp, mx, my, down);
-        let changed = game.poll_touch(sample);
+        let hit =
+            sample.map(|s| HitData { key: 0, index: -1, swipe: gesture_swipe_code(s.gesture) });
+        let changed = game.poll_hit(hit);
 
         if game.should_quit() {
             break;
@@ -240,4 +244,15 @@ fn play_last_sfx(game: &mut GameApp, se: Option<&Sound>) {
         }
     }
     game.clear_last_sfx();
+}
+
+/// S29.2：[`ti_platform::settings::Gesture`] → `HitData::swipe` 码（0=tap，1=上，2=下，3=左，4=右）。
+fn gesture_swipe_code(gesture: ti_platform::settings::Gesture) -> u8 {
+    match gesture {
+        ti_platform::settings::Gesture::Tap => 0,
+        ti_platform::settings::Gesture::SwipeUp => 1,
+        ti_platform::settings::Gesture::SwipeDown => 2,
+        ti_platform::settings::Gesture::SwipeLeft => 3,
+        ti_platform::settings::Gesture::SwipeRight => 4,
+    }
 }

@@ -37,19 +37,17 @@ use bevy::input::ButtonInput;
 use bevy::input::keyboard::KeyCode;
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::input::mouse::MouseButton;
-use bevy::input::touch::Touches;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::sprite::Sprite;
 use bevy::text::Font;
 use bevy::window::{Window, WindowResolution};
-use ti_app::game_app::{GameApp, GameInput, KeyState, Scene};
+use ti_app::game_app::{GameApp, GameInput, HitData, KeyState, Scene};
 // S18.8a：`parse_font_bytes` 仅 native 分支用（wasm 分支无 std::fs 资源读）→ 按目标编译。
 #[cfg(not(target_arch = "wasm32"))]
 use ti_app::menu_shell::parse_font_bytes;
 use ti_app::scenes::SceneKind;
 use ti_app::stats::FpsMeter;
-use ti_app::touch::TouchPad;
 use ti_platform::gfx::UploadMode;
 use ti_platform::settings::ScaleMode;
 
@@ -72,14 +70,15 @@ const LOGICAL_H: u32 = ti_render::framebuffer::LOGICAL_H_I32 as u32;
 struct GameStore(std::sync::Mutex<GameApp>);
 
 /// 输入沿状态（`Local`：与 macroquad 壳 `poll_input` 同表，`docs/gamebook.md` §3）。
+///
+/// S29.2（B1）：`touch`（`TouchPad` 手势 pad）退役 —— 命中/手势全走 Bevy 拾取层
+/// （`pick_event_system` 消费 `PickEvent` → `poll_hit`）。
 #[derive(Default)]
 struct InputState {
     /// 上一帧「按住」按键快照（沿 = 当前 && !上一帧）。
     prev_keys: KeyState,
     /// 上一帧 F1–F4 状态（功能键沿触发）。
     prev_function_keys: [bool; 4],
-    /// 触屏指针 pad（屏幕像素 → 逻辑坐标手势归一）。
-    touch: TouchPad,
 }
 
 /// 指针位置（**窗口逻辑像素**；2026-10-26 EXP-117：由窗口绝对光标位置 `Window::cursor_position()`
@@ -248,10 +247,10 @@ fn spawn_ui_chrome(mut commands: Commands, shot: Option<Res<ShotTarget>>) {
     let _root = ti_engine::ui::build_proof_panel(&mut commands, "S29 · bevy_ui", "resize me");
 }
 
-/// S29.1：bevy_ui 布局探针（headless 证据：自动布局是否真跑了、树是否建了）。
+/// S29.1：`bevy_ui` 布局探针（headless 证据：自动布局是否真跑了、树是否建了）。
 ///
 /// `--shot` 离屏模式跑 5 帧后打一行日志：`Node`/`Text` 实体数 + 绝对定位面板的 `GlobalTransform`。
-/// 证明 bevy_ui 管线（Node/Text 布局系统）在本壳生效，非仅编译通过。
+/// 证明 `bevy_ui` 管线（`Node`/`Text` 布局系统）在本壳生效，非仅编译通过。
 #[derive(Resource, Default)]
 struct UiProbe {
     frames: u32,
@@ -307,7 +306,6 @@ fn input_system(
     mut acc: ResMut<AccumulatedMouseMotion>,
     kb: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
-    touches: Res<Touches>,
     mut state: Local<InputState>,
     window: Query<&Window>,
 ) {
@@ -416,18 +414,34 @@ fn input_system(
     }
     state.prev_function_keys = [f1, f2, f3, f4];
     state.prev_keys = raw;
+}
 
-    // 指针：触屏优先（bevy touch 特性，S18.1 结论），否则鼠标（winit 在触屏设备
-    // 合成指针事件，触摸映射结论同源）。
-    let mut pointer_down =
-        mouse.just_pressed(MouseButton::Left) || mouse.pressed(MouseButton::Left);
-    let mut pointer_pos = Vec2::new(mouse_pos.x, mouse_pos.y);
-    if let Some(t) = touches.iter().next() {
-        pointer_pos = t.position();
-        pointer_down = true;
+/// S29.2：场景 → `scenes.json` 键（读该场景 `primitives` 的 `pick_key` 挂拾取标记；
+/// `Intro`/`Exit` 无场景数据 = 空串 = 不挂拾取层）。
+fn scene_json_key(scene: Scene) -> &'static str {
+    match scene {
+        Scene::Index => "index",
+        Scene::SelectRole => "select_role",
+        Scene::SelectMap => "select_map",
+        Scene::MainMap => "main_map",
+        Scene::Vs => "vs",
+        Scene::Message => "message",
+        Scene::Saveload => "saveload",
+        Scene::Intro | Scene::Exit => "",
     }
-    let sample = state.touch.feed_screen(&g.shell().vp, pointer_pos.x, pointer_pos.y, pointer_down);
-    g.poll_touch(sample);
+}
+
+/// S29.2（B1）：Bevy 拾取命中 → 逻辑（`poll_hit`）。消费 [`PickEvent`]（tap/swipe）→
+/// `GameApp::poll_hit(HitData)`。命中/几何全在 Bevy 拾取层（`pick.rs`），本系统只做事件→逻辑。
+#[allow(clippy::needless_pass_by_value)]
+fn pick_event_system(store: ResMut<GameStore>, mut picker: MessageReader<ti_engine::pick::PickEvent>) {
+    let Ok(mut g) = store.0.lock() else {
+        return;
+    };
+    for ev in picker.read() {
+        let hit = HitData { key: ev.key, index: ev.index, swipe: ev.swipe };
+        let _ = g.poll_hit(Some(hit));
+    }
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -522,6 +536,7 @@ fn native_index_system(world: &mut World) {
         return;
     };
     let list = g.draw_list().clone();
+    let scene_key = scene_json_key(g.scene());
     drop(g);
 
     // S18.7a: 画制列表 -> Bevy 实体（**覆盖全 7 场景**：
@@ -535,9 +550,9 @@ fn native_index_system(world: &mut World) {
         world.insert_resource(native);
         return;
     }
-    // 先按标记清理上帧实体（否则切场景留鬼影）。
+    // 先按标记清理上帧实体（否则切场景留鬼影）：绘制列表 + 拾取标记一并清。
     let stale: Vec<Entity> = world
-        .query_filtered::<Entity, With<ti_engine::scene_render::DrawListEntity>>()
+        .query_filtered::<Entity, Or<(With<ti_engine::scene_render::DrawListEntity>, With<ti_engine::pick::PickLayerEntity>)>>()
         .iter(world)
         .collect();
     for e in stale {
@@ -547,6 +562,13 @@ fn native_index_system(world: &mut World) {
         .get_resource::<AssetServer>()
         .map(|server| server.load::<Font>("assets/fonts/lxgw-wenkai-reg.ttf"));
     ti_engine::scene_render::spawn_draw_list(world, font, &list);
+    // S29.2：拾取层（该场景 `primitives` 带 `pick_key` 者挂透明可拾取标记 + `PickTarget`）。
+    let pick_prims: Vec<ti_core::data::Primitive> = ti_core::data::scenes()
+        .ok()
+        .and_then(|m| m.get(scene_key))
+        .map(|s| s.primitives.clone())
+        .unwrap_or_default();
+    let _n_pick = ti_engine::scene_render::spawn_pick_layer(world, &pick_prims);
     native.content_hash = Some(content_hash);
     world.insert_resource(native);
 }
@@ -840,6 +862,10 @@ fn main() {
                 .chain(),
         );
         app.add_systems(Update, native_index_system.after(render_system));
+        // S29.2（B1）：Bevy 拾取层（`pick.rs`：`PickTarget` 指针事件 → `PickEvent`）+
+        // 命中→逻辑（`pick_event_system` 消费 `PickEvent` → `poll_hit`）。
+        ti_engine::pick::register_pick(&mut app);
+        app.add_systems(Update, pick_event_system);
         if resizetest {
             // 机器判定：程序化翻倍窗口 → ①画布恒完整可见（`o.area`≈1080×1920）
             // ②内容随窗口等比放大（px/unit 翻倍）；见 `resizetest_system`。

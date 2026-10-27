@@ -1,12 +1,13 @@
-//! 主菜单场景（S9 骨架）：输入判定 / 触摸手势 / 绘制三面全部落在本文件，
+//! 主菜单场景（S9 骨架）：输入判定 / 拾取命中 / 绘制三面全部落在本文件，
 //! 宿主只提供状态读写能力（`SceneHost`）。
 use ti_core::domain::flow::Sfx;
 
-use crate::game_app::GameInput;
+use crate::game_app::{GameInput, HitData};
 use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
-use crate::touch::{TouchSample, layout};
-use ti_platform::settings::Gesture;
+
+/// 主菜单项数（`spec/menu.md §a` case 0..=5；键盘循环走此常量，与数据 6 枚徽章同单源）。
+const MENU_COUNT: usize = 6;
 
 /// 主菜单场景处理器（`Index`）。
 pub struct IndexScene;
@@ -23,14 +24,12 @@ impl Scene for IndexScene {
         match input {
             GameInput::MoveUp => {
                 let cur = host.menu_selected();
-                host.set_menu_selected(
-                    cur.wrapping_add(layout::MENU_COUNT - 1) % layout::MENU_COUNT,
-                );
+                host.set_menu_selected(cur.wrapping_add(MENU_COUNT - 1) % MENU_COUNT);
                 false
             }
             GameInput::MoveDown => {
                 let cur = host.menu_selected();
-                host.set_menu_selected((cur + 1) % layout::MENU_COUNT);
+                host.set_menu_selected((cur + 1) % MENU_COUNT);
                 false
             }
             GameInput::Confirm => {
@@ -61,15 +60,18 @@ impl Scene for IndexScene {
         }
     }
 
-    /// 点罗盘环 6 徽章 = 选中该徽章并立即执行（S22「罗盘环标题页」，命中读 `index.primitives`
-    /// 的 `medallion_ring` 原语，与渲染同源）。键盘 ↑↓/Enter 走 [`GameInput::MoveUp`/`Confirm`]。
-    fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
-        if sample.gesture != Gesture::Tap {
+    /// S29.2：点罗盘环 6 徽章（`pick_key=1` medallion）= 选中该徽章并立即执行（命中由 Bevy
+    /// 拾取层给出 `hit.index`，与渲染 `medallion_ring` 原语 `pick_key` 同源）。键盘
+    /// ↑↓/Enter 走 [`GameInput::MoveUp`/`Confirm`]。无滑动动作（swipe 忽略）。
+    fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
+        if hit.swipe != 0 {
             return false;
         }
-        let Some(idx) = layout::menu_medallion_at(sample.x, sample.y) else {
+        // key=1 = 首页 medallion（数据 `pick_key`）；index = 徽章 0..5。
+        if hit.key != 1 {
             return false;
-        };
+        }
+        let idx = usize::try_from(hit.index.max(0)).unwrap_or(0);
         host.set_menu_selected(idx);
         chrome::flash_press();
         host.advance(GameInput::Confirm)

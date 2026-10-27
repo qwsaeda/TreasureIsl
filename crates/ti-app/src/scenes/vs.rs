@@ -1,13 +1,11 @@
 //! 战斗场景（S9 骨架）：回合推进 / 战斗面板绘制。
 use ti_core::domain::combat::{Side, hp_fill_pct};
 
-use crate::game_app::GameInput;
+use crate::game_app::{GameInput, HitData};
 use crate::i18n;
 use crate::scenes::chrome;
 use crate::scenes::chrome::{COLOR_DANGER, COLOR_PLAYER};
 use crate::scenes::{Scene, SceneHost, SceneKind};
-use crate::touch::TouchSample;
-use ti_platform::settings::Gesture;
 
 /// 战斗场景处理器（`Vs`）。
 pub struct VsScene;
@@ -32,13 +30,11 @@ impl Scene for VsScene {
         }
     }
 
-    /// 点任意处 = 攻击一回合；下滑 = 退出战斗。
-    fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
-        match sample.gesture {
-            Gesture::Tap | Gesture::SwipeUp | Gesture::SwipeLeft | Gesture::SwipeRight => {
-                host.advance(GameInput::Attack)
-            }
-            Gesture::SwipeDown => host.advance(GameInput::Back),
+    /// S29.2：点任意处（`key=0`）/ 上·左·右滑 = 攻击一回合；下滑 = 退出战斗。
+    fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
+        match hit.swipe {
+            2 => host.advance(GameInput::Back),
+            _ => host.advance(GameInput::Attack),
         }
     }
 

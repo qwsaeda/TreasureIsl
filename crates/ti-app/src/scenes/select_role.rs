@@ -1,12 +1,10 @@
-//! 角色选择场景（S9 骨架）：输入判定 / 触摸手势 / 绘制三面全部落在本文件。
+//! 角色选择场景（S9 骨架）：输入判定 / 拾取命中 / 绘制三面全部落在本文件。
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::selection::Character;
 
-use crate::game_app::GameInput;
+use crate::game_app::{GameInput, HitData};
 use crate::scenes::chrome;
 use crate::scenes::{Scene, SceneHost, SceneKind};
-use crate::touch::{TouchSample, layout};
-use ti_platform::settings::Gesture;
 
 /// 角色数（域出口 `Character::count()` = `Character::all()` 长度，B11 单一事实源；
 /// `spec/menu.md §b`）。
@@ -85,34 +83,20 @@ impl Scene for SelectRoleScene {
         }
     }
 
-    /// 点某行 = 选中该角色并确认；下滑 = 返回。
-    #[allow(clippy::cast_precision_loss)]
-    fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
-        match sample.gesture {
-            Gesture::Tap => {
-                // N3：命中带与渲染 `item_rect` 同公式（scenes.json select_role 段），正逆成对
-                let scene = chrome::scene_layout("select_role");
-                let bands = layout::scene_list_bands(
-                    scene.list.x as f32,
-                    scene.list.x as f32 + scene.list.w as f32,
-                    scene.list.y as f32,
-                    scene.list.row_h as f32,
-                    scene.list.item_h as f32,
-                    scene.list.highlight_offset as f32,
-                    ROLE_COUNT as usize,
-                );
-                let Some(i) = layout::scene_list_index_at(&bands, sample.x, sample.y) else {
-                    return false;
-                };
-                let picked = Character::from_index(u32::try_from(i).unwrap_or(0));
-                host.set_character(picked);
-                host.selection_mut().character = picked;
-                chrome::flash_press();
-                host.advance(GameInput::Confirm)
-            }
-            Gesture::SwipeDown => host.advance(GameInput::Back),
-            _ => false,
+    /// S29.2：点某行（`pick_key=2` 角色行，`hit.index` = 行下标）= 选中该角色并确认；下滑 = 返回。
+    fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
+        if hit.swipe == 2 {
+            return host.advance(GameInput::Back);
         }
+        if hit.swipe != 0 || hit.key != 2 {
+            return false;
+        }
+        let i = usize::try_from(hit.index.max(0)).unwrap_or(0);
+        let picked = Character::from_index(u32::try_from(i).unwrap_or(0));
+        host.set_character(picked);
+        host.selection_mut().character = picked;
+        chrome::flash_press();
+        host.advance(GameInput::Confirm)
     }
 
     /// S18.7d 声明式原语化：版面（夜空 / 左角色立绘锚 / 右 5 行选项 / 提示行）=

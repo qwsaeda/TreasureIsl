@@ -436,6 +436,51 @@ fn lerp_rgb565(from: u16, to: u16, t: f32) -> u16 {
 // 飞轮 R1 ⑥-04：`known_tokens`/`token_color` 已删（全仓零消费方死导出；
 // 令牌不存在 = `theme.by_name` 返 None → 原语跳过，不 panic，数据侧无需名表）。
 
+/// S29.2：数据驱动拾取层 —— 给可交互原语 spawn **透明可拾取标记** + [`crate::pick::PickTarget`]。
+///
+/// 读原语 `params["pick_key"]`（u32，`>0` = 可交互；0 / 缺失 = 不挂）；`key` = opaque 目标键，
+/// 语义由 ti-app `route_hit` 解释（本层零游戏语义）。标记 = 原语 `rect` 处的全透明
+/// `Sprite`（几何可被 `bevy_picking` 拾取，alpha=0 不影响画面），`index` = 原语 `item`。
+///
+/// 返回挂出的标记数（`--shot` / 探针日志用）。
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+pub fn spawn_pick_layer(world: &mut World, prims: &[ti_core::data::Primitive]) -> usize {
+    use crate::pick::{PickLayerEntity, PickTarget};
+
+    let mut count = 0usize;
+    for p in prims {
+        let key = p
+            .params
+            .get("pick_key")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|v| u32::try_from(v).ok())
+            .unwrap_or(0);
+        if key == 0 || p.rect.w <= 0 || p.rect.h <= 0 {
+            continue;
+        }
+        // `pick_index` 显式下标（缺省 = 原语 `item`）：行定义 rect 无 item，数据侧显式给。
+        let index = p
+            .params
+            .get("pick_index")
+            .and_then(serde_json::Value::as_i64)
+            .and_then(|v| i32::try_from(v).ok())
+            .unwrap_or_else(|| i32::try_from(p.item).unwrap_or(-1));
+        let cx = p.rect.x as f32 + p.rect.w as f32 / 2.0;
+        let cy = p.rect.y as f32 + p.rect.h as f32 / 2.0;
+        world.spawn((
+            PickLayerEntity,
+            PickTarget { key, index },
+            Sprite::from_color(
+                bevy::color::Color::srgba(0.0, 0.0, 0.0, 0.0),
+                Vec2::new(p.rect.w as f32, p.rect.h as f32),
+            ),
+            Transform::from_translation(to_world(cx, cy).extend(0.0)),
+        ));
+        count += 1;
+    }
+    count
+}
+
 /// 绘制列表 → Bevy 实体（**通用执行器**：`DrawList` = 场景绘制命令序列）。
 ///
 /// 覆盖**全部 7 场景**（场景代码零改动：绘制目标可插拔 = CPU 帧缓冲 / 绘制列表）。

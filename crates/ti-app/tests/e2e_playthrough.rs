@@ -7,7 +7,7 @@
 //! - `game_app_flow.rs`：单模块流程验证（每个测试独立）
 //! - `e2e_playthrough.rs`：完整会话连续性（一个测试跑完整局游戏）
 
-use ti_app::game_app::{BattleView, GameApp, GameInput, Scene};
+use ti_app::game_app::{BattleView, GameApp, GameInput, HitData, Scene};
 use ti_app::scenes::{MapHost, MenuHost};
 use ti_core::domain::economy::Building;
 use ti_core::domain::selection::{Character, MapSlot};
@@ -300,80 +300,53 @@ fn e2e_touch_economy_loop() {
     let mut app = GameApp::new(1080.0, 1920.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
-    let scenes = ti_core::data::scenes().expect("scenes.json 加载");
-    // 单次点按（显式传 `&mut GameApp`，闭包不捕获 app，避免可变借用在作用域内滞留）
-    let tap = |app: &mut GameApp, x: f32, y: f32| {
-        let s = ti_app::touch::TouchSample { gesture: ti_platform::settings::Gesture::Tap, x, y };
-        app.poll_touch(Some(s))
+    // S29.2 B1：命中 = Bevy 拾取层产出的归一 [`HitData`]（`key`/`index`/`swipe`），不再喂坐标。
+    // 单次命中（显式传 `&mut GameApp`，闭包不捕获 app，避免可变借用在作用域内滞留）
+    let hit = |app: &mut GameApp, key: u32, index: i32| {
+        app.poll_hit(Some(HitData { key, index, swipe: 0 }))
     };
-    // 卡 0 命中中心：`ListLayout::item_rect` 同式（顶 = y - highlight_offset）
-    let card_center = |scene_id: &str| -> (f32, f32) {
-        let s = scenes.get(scene_id).expect("scenes.json 缺场景");
-        let top = s.list.y - s.list.highlight_offset;
-        (s.list.x as f32 + s.list.w as f32 / 2.0, top as f32 + s.list.item_h as f32 / 2.0)
-    };
-    // HUD 按钮中心（scenes.json main_map extra 矩形）
-    let hud_center = |key: &str| -> (f32, f32) {
-        let main = scenes.get("main_map").expect("scenes.json 缺 main_map");
-        let r = main.extra.get(key).expect("main_map 缺 HUD 按钮矩形");
-        ((r.x + r.w / 2) as f32, (r.y + r.h / 2) as f32)
-    };
+    // pick_key 约定（`scenes.json` `pick_key`/`pick_index` 数据驱动，`ti_engine::pick`）：
+    // 1 = index 罗盘环 medallion（index 0..5）；2 = select_role/select_map 列表行；
+    // 4/5/6/7 = 主地图 HUD（摇骰/买/卖/建造面板）。
+    let _scenes = ti_core::data::scenes().expect("scenes.json 加载");
 
-    // index S22 罗盘环：item 0 medallion（新游戏）中心 = 读 primitives 中 item=0 的 medallion rect
-    let (x, y) = {
-        let s = scenes.get("index").expect("scenes.json 缺 index");
-        let med = s
-            .primitives
-            .iter()
-            .find(|p| {
-                p.item == 0
-                    && p.params.get("asset").and_then(|v| v.as_str())
-                        == Some("assets/ui/medallion_ring.png")
-            })
-            .expect("index 缺 medallion item0");
-        (med.rect.x as f32 + med.rect.w as f32 / 2.0, med.rect.y as f32 + med.rect.h as f32 / 2.0)
-    };
-    assert!(tap(&mut app, x, y), "index medallion 0 点按应命中");
+    // index S22 罗盘环 medallion 0（新游戏）→ 选角
+    assert!(hit(&mut app, 1, 0), "index medallion 0 命中应返回 true");
     assert_eq!(app.scene(), Scene::SelectRole, "index medallion 0（新游戏）应进选角");
     // select_role 卡 0 = Panda → 选图
-    let (x, y) = card_center("select_role");
-    assert!(tap(&mut app, x, y), "select_role 卡 0 点按应命中");
+    assert!(hit(&mut app, 2, 0), "select_role 卡 0 命中应返回 true");
     assert_eq!(app.scene(), Scene::SelectMap, "选角卡 0 应进选图");
     // select_map 卡 0 = M01 → 主地图
-    let (x, y) = card_center("select_map");
-    assert!(tap(&mut app, x, y), "select_map 卡 0 点按应命中");
+    assert!(hit(&mut app, 2, 0), "select_map 卡 0 命中应返回 true");
     assert_eq!(app.scene(), Scene::MainMap, "选图卡 0 应进主地图");
     assert!(app.map_pos().is_some(), "主地图应有初始位置");
 
     let initial_gold = ti_core::data::balance().expect("balance.json 加载").economy.initial_gold;
     let price1 = app.price_table().lookup(1).unwrap_or(0);
 
-    // ① 贸易臂：买商品 1（键盘 T 同语义；HUD 臂不切场景，poll_touch 返回 false 属正常，
+    // ① 贸易臂：买商品 1（键盘 T 同语义；HUD 臂不切场景，命中不切场景返回属正常，
     // 命中判据 = 下方状态断言）
-    let (x, y) = hud_center("hud_trade");
-    tap(&mut app, x, y);
+    hit(&mut app, 5, 1);
     assert_eq!(app.gold(), initial_gold.saturating_sub(price1), "触摸贸易后金 = 开局金 - 单价");
     assert_eq!(app.owned().len(), 1, "触摸贸易后持有量 +1");
 
     // ② 卖出臂：全卖商品 1（键盘 Y 同语义）
     let gold_before_sell = app.gold();
-    let (x, y) = hud_center("hud_sell");
-    tap(&mut app, x, y);
+    hit(&mut app, 6, 1);
     assert!(app.gold() > gold_before_sell, "触摸卖出后金应增加");
     assert_eq!(app.owned().len(), 0, "全卖后持有量清零");
 
-    // ③ 建造臂（S21.12）：建造按钮 = 开建造面板 → 点条目 0（城堡，开面板即选中）= 确认
+    // ③ 建造臂（S21.12）：建造按钮（key 7）= 开建造面板 → 条目 0（城堡，开面板即选中）确认。
+    // 面板条目级命中 = S29.3 拾取层落地；此处用键盘 `Confirm` 确认当前选中（开面板 sel=0）。
     let castle_cost = ti_core::rules::build::cost_of(
         &ti_core::data::balance().expect("balance.json 加载").build,
         Building::Castle,
     );
     let bank_before = app.bank().gold;
-    let (x, y) = hud_center("hud_build");
-    tap(&mut app, x, y);
+    hit(&mut app, 7, -1);
     assert!(app.build_panel_open, "点建造按钮应开建造面板");
     assert_eq!(app.buildings().len(), 0, "面板确认前不建造");
-    let (ex, ey, ew, eh) = ti_app::scenes::chrome::build_entry_rect(0);
-    tap(&mut app, (ex + ew / 2) as f32, (ey + eh / 2) as f32);
+    app.handle(GameInput::Confirm);
     assert!(!app.build_panel_open, "确认城堡条目后面板应关闭");
     assert_eq!(app.buildings().len(), 1, "面板建造后建筑 +1");
     assert_eq!(
@@ -382,7 +355,7 @@ fn e2e_touch_economy_loop() {
         "面板建造后银行金 = 前值 - Castle 成本"
     );
 
-    // ④ 造船臂（S21.12）：开面板 → 点条目 4（造船）= 选中 → 再点 = 确认 → 船级 1→2
+    // ④ 造船臂（S21.12）：开面板 → 下移选中条目 4（造船）→ 确认 → 船级 1→2
     // 前序城堡建造已把银行金耗完，测试直接注资（面板造船验证结算通路，不验证经济平衡）
     let boat_cost = ti_core::data::balance()
         .expect("balance.json 加载")
@@ -392,12 +365,12 @@ fn e2e_touch_economy_loop() {
         .cost;
     app.bank.gold += 5000;
     let bank_before_boat = app.bank().gold;
-    let (x, y) = hud_center("hud_build");
-    tap(&mut app, x, y);
-    let (ex, ey, ew, eh) = ti_app::scenes::chrome::build_entry_rect(4);
-    tap(&mut app, (ex + ew / 2) as f32, (ey + eh / 2) as f32);
-    assert_eq!(app.build_panel_sel, 4, "点造船条目应选中");
-    tap(&mut app, (ex + ew / 2) as f32, (ey + eh / 2) as f32);
+    hit(&mut app, 7, -1);
+    for _ in 0..4 {
+        app.handle(GameInput::MoveDown);
+    }
+    assert_eq!(app.build_panel_sel, 4, "下移 4 次应选中造船条目");
+    app.handle(GameInput::Confirm);
     assert_eq!(app.boat_level(), 2, "造船后船级 1→2");
     assert_eq!(
         app.bank().gold,
@@ -567,66 +540,34 @@ fn e2e_save_load_boat_level_roundtrip() {
     assert_eq!(app.boat_level(), 2, "读档应还原船等级 2");
 }
 
-/// E2E 赛道节点预览（S21.7）：点非己节点 = 选中高亮 + 信息签（只读：不移动、不切场景）；
-/// 摇骰 = 清空预览选中 + 落格 toast 窗口（落点脉冲）；点自身格 = 据点分派（P0-5，收尾步）。
-/// 信息签文案 = kind → `scene.main_map.node.<kind>` 解析（断言非键名回退）。
-#[allow(clippy::cast_precision_loss)] // 1080 呈现坐标 i32 → f32 触摸坐标
+/// E2E 赛道节点预览（S21.7）：预览选中 = 只读（不移动、不切场景）；摇骰 = 清空预览选中 +
+/// 落格 toast 窗口（落点脉冲）；自身格 = 据点分派（P0-5，收尾步）。信息签文案 = kind →
+/// `scene.main_map.node.<kind>` 解析（断言非键名回退）。
+/// S29.2 B1：赛道节点坐标拾取（点节点 = 预览选中）归 **Bevy 拾取层**（S29.3 落地
+/// `main_map` 赛道节点 `pick_key`）；此处预览选中经 `set_track_node_sel` 程序化驱动，
+/// 保留下游行为断言（只读 / 摇骰清空 / 落格 toast / 自身格分派），坐标拾取活体验收 = S29.5。
 #[test]
 fn e2e_track_node_preview() {
     let mut app = GameApp::new(1080.0, 1920.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
-    // index S22 罗盘环 item0 → 选角卡 0 → 选图卡 0 → 主地图（数据驱动命中，同 e2e_touch_economy_loop）
-    let scenes = ti_core::data::scenes().expect("scenes.json 加载");
-    let tap = |app: &mut GameApp, x: f32, y: f32| {
-        let s = ti_app::touch::TouchSample { gesture: ti_platform::settings::Gesture::Tap, x, y };
-        app.poll_touch(Some(s))
+    // index S22 罗盘环 medallion 0 → 选角卡 0 → 选图卡 0 → 主地图（S29.2 归一命中，同 e2e_touch_economy_loop）
+    let hit = |app: &mut GameApp, key: u32, index: i32| {
+        app.poll_hit(Some(HitData { key, index, swipe: 0 }))
     };
-    let card_center = |scene_id: &str| -> (f32, f32) {
-        let s = scenes.get(scene_id).expect("scenes.json 缺场景");
-        let top = s.list.y - s.list.highlight_offset;
-        (s.list.x as f32 + s.list.w as f32 / 2.0, top as f32 + s.list.item_h as f32 / 2.0)
-    };
-    let (x, y) = {
-        let s = scenes.get("index").expect("scenes.json 缺 index");
-        let med = s
-            .primitives
-            .iter()
-            .find(|p| {
-                p.item == 0
-                    && p.params.get("asset").and_then(|v| v.as_str())
-                        == Some("assets/ui/medallion_ring.png")
-            })
-            .expect("index 缺 medallion item0");
-        (med.rect.x as f32 + med.rect.w as f32 / 2.0, med.rect.y as f32 + med.rect.h as f32 / 2.0)
-    };
-    assert!(tap(&mut app, x, y), "index medallion 0 点按应命中");
-    let (x, y) = card_center("select_role");
-    assert!(tap(&mut app, x, y), "选角卡 0 点按应命中");
-    let (x, y) = card_center("select_map");
-    assert!(tap(&mut app, x, y), "选图卡 0 点按应命中");
+    assert!(hit(&mut app, 1, 0), "index medallion 0 命中应返回 true");
+    assert!(hit(&mut app, 2, 0), "选角卡 0 命中应返回 true");
+    assert!(hit(&mut app, 2, 0), "选图卡 0 命中应返回 true");
     assert_eq!(app.scene(), Scene::MainMap, "应进主地图");
 
     let spaces = app.board_spaces();
     assert!(spaces.len() >= 8, "赛道应 ≥8 节点（实际 {}）", spaces.len());
     let cur = app.board_index();
     let target = (cur + 1) % spaces.len();
-    // 节点中心 px（EXP-067 与渲染同源：`iso_cell_fit` + 瓦片半边；terrain/layout 会话内不变 ⇒ 闭包不捕获 app）
-    let layout = ti_app::scenes::chrome::scene_layout("main_map");
-    let gw = app.map_terrain().map_or(0, |t| t.grid_w);
-    let node_xy = |i: usize| -> (f32, f32) {
-        let sp = &spaces[i];
-        let r = i32::try_from(sp.cell.row).unwrap_or(0);
-        let c = i32::try_from(sp.cell.col).unwrap_or(0);
-        let (sx, sy) = ti_app::scenes::chrome::iso_cell_fit(r, c, &layout, gw);
-        let (tw, th) = ti_app::scenes::chrome::iso_tile_fit(&layout, gw);
-        ((sx + tw) as f32, (sy + th) as f32)
-    };
 
-    // ① 点非己节点 = 预览选中（只读：不动、不切场景）
-    let (nx, ny) = node_xy(target);
-    assert!(tap(&mut app, nx, ny), "节点点按应命中");
-    assert_eq!(app.track_node_sel(), Some(target), "预览选中 = 被点节点");
+    // ① 预览选中非己节点 = 只读（不动、不切场景）
+    app.set_track_node_sel(Some(target));
+    assert_eq!(app.track_node_sel(), Some(target), "预览选中 = 目标节点");
     assert_eq!(app.board_index(), cur, "只读预览：位置不动");
     assert_eq!(app.scene(), Scene::MainMap, "预览选中不切场景");
     // 信息签文案 = kind → 标签键解析（i18n 非回退；命中 kind → 文案判据）
@@ -643,15 +584,14 @@ fn e2e_track_node_preview() {
         _ => assert!(app.board_toast().is_some(), "落格 toast 应在位（落点脉冲窗口）"),
     }
 
-    // ③ 摇骰后再点节点仍有效（不锁死预览）
+    // ③ 摇骰后再选中仍有效（不锁死预览）
     let target2 = (app.board_index() + 1) % spaces.len();
-    let (nx, ny) = node_xy(target2);
-    assert!(tap(&mut app, nx, ny), "摇骰后节点点按应命中");
+    app.set_track_node_sel(Some(target2));
     assert_eq!(app.track_node_sel(), Some(target2), "摇骰后再次预览选中");
 
-    // ④ 点自身格 = 据点分派（P0-5，与 `rules::main_map::dispatch(1)` 同口径收尾）
+    // ④ 自身格 = 据点分派（P0-5，与 `rules::main_map::dispatch(1)` 同口径收尾；
+    // 坐标点自身格拾取 = S29.3，此处经 `Landmark(1)` 输入走同源分派口径）
+    app.handle(GameInput::Landmark(1));
     let dispatch = app.map_session_dispatch(1);
-    let (ox, oy) = node_xy(app.board_index());
-    assert!(tap(&mut app, ox, oy), "自身格点按应命中");
-    assert_eq!(app.last_dispatch, dispatch, "点自身格分派据点（与 dispatch(1) 一致）");
+    assert_eq!(app.last_dispatch, dispatch, "自身格分派据点（与 dispatch(1) 一致）");
 }

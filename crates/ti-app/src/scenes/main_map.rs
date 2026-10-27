@@ -6,20 +6,17 @@ use ti_core::data;
 use ti_core::data::{SceneLayout, balance};
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
-use ti_core::domain::map::GridPos;
 use ti_core::rules::board::SpaceKind;
 use ti_core::rules::build;
 use ti_core::rules::trade;
 
-use crate::game_app::GameInput;
+use crate::game_app::{GameInput, HitData};
 use crate::i18n;
 use crate::menu_shell::{COLOR_LANDMARK, COLOR_PLAYER};
 use crate::scenes::chrome;
 use crate::scenes::main_map_island;
 use crate::scenes::main_map_node;
 use crate::scenes::{Scene, SceneHost, SceneKind, enter_target};
-use crate::touch::{TouchSample, layout};
-use ti_platform::settings::Gesture;
 
 /// 主地图场景处理器（`MainMap`）。
 pub struct MainMapScene;
@@ -252,29 +249,6 @@ fn panel_sel_clamped(host: &dyn SceneHost) -> usize {
     usize::from(host.build_panel_sel().min(chrome::BUILD_LAST_ENTRY))
 }
 
-/// S21.12 建造面板点按：命中条目 = 选中；再点已选中条目 = 确认；点面板外 = 关闭。
-fn handle_build_panel_tap(host: &mut dyn SceneHost, px: i32, py: i32) -> bool {
-    let (bx, by, bw, bh) = chrome::BUILD_PANEL;
-    if px < bx || py < by || px >= bx + bw || py >= by + bh {
-        host.set_build_panel_open(false);
-        return true;
-    }
-    let sel = panel_sel_clamped(host);
-    for i in 0..chrome::BUILD_PANEL_ENTRIES {
-        let (ex, ey, ew, eh) = chrome::build_entry_rect(i);
-        if (ex..(ex + ew)).contains(&px) && (ey..(ey + eh)).contains(&py) {
-            if i == sel {
-                confirm_build_panel(host, i);
-            } else {
-                host.set_build_panel_sel(u8::try_from(i).unwrap_or(chrome::BUILD_LAST_ENTRY));
-                host.play_sfx(Sfx::Press);
-            }
-            return true;
-        }
-    }
-    false
-}
-
 /// S21.12 确认面板条目：0..3 = 建筑（`GameInput::Build` 既有事件 → `handle_build` 扣金/记录口径）；
 /// 4 = 造船（`GameInput::BoatUpgrade` 事件 → `handle_boat_upgrade`；成功关面板，失败保持打开 + 提示条说明原因）。
 fn confirm_build_panel(host: &mut dyn SceneHost, entry: usize) {
@@ -447,104 +421,22 @@ impl Scene for MainMapScene {
         }
     }
 
-    /// - S15.6 QA149：点 HUD 三按钮（scenes.json `hud_trade`/`hud_sell`/`hud_build`
-    ///   矩形）= 买商品 1 / 卖商品 1 / 造 Castle（与键盘 T/Y/B 同语义，0 键盘纯触摸经济闭环）；
-    /// - S19：点「摇骰前进」按钮（`deck_spin`）= 摇骰前进；点自己所在格 = 触发据点事件
-    ///   （`Landmark(code)`）；点其它格 / 滑动 = 无动作（移动唯一 = 摇骰）。
-    ///
-    /// 命中坐标与渲染同坐标系：`grid_cell_at` = `chrome::iso_cell` 的逆
-    /// （数据源 = `scenes.json` `main_map.grid.*`，EXP-067 正逆成对；legacy 32/16
-    /// 投影 + (88,110) 摄像机已退出运行时，S15.6 QA022/023）。
-    #[allow(clippy::cast_possible_truncation)] // HUD 臂：1080 呈现坐标 f32 → i32 命中判定
-    fn on_touch(&mut self, host: &mut dyn SceneHost, sample: &TouchSample) -> bool {
-        let Some(cur) = host.map_pos() else {
+    /// S29.2：主地图拾取命中（`pick_key` 数据驱动）。完整 HUD 三经济臂 / 摇骰 CTA / 赛道节点 /
+    /// 建造面板的 `pick_key` 数据 + 命中随 **S27.4（v5 环形棋盘）/ S29.3（全场景 `bevy_ui` 迁移）**
+    /// 补齐；本任务（S29.2）先接**基础臂**：`key 4..=7` = 摇骰/买/卖/建造（与键盘 Space/T/Y/B 同
+    /// 语义），`key=0`（无标注）/ 滑动 = 无动作（S19：移动唯一 = 摇骰）。
+    fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
+        if hit.swipe != 0 {
             return false;
-        };
-        match sample.gesture {
-            Gesture::Tap => {
-                // S15.6 QA149：HUD 三经济臂——先命中 scenes.json 三个 extra 按钮矩形
-                // （渲染同一坐标系，契约 4 数据驱动；语义 = 键盘 T/Y/B，game_app.rs poll），
-                // 未命中落回下方网格点按逻辑。
-                let l = chrome::scene_layout("main_map");
-                let px = sample.x as i32;
-                let py = sample.y as i32;
-                let hud_hit = |key: &str| -> bool {
-                    l.extra.get(key).is_some_and(|r| {
-                        r.w > 0
-                            && r.h > 0
-                            && (r.x..(r.x + r.w)).contains(&px)
-                            && (r.y..(r.y + r.h)).contains(&py)
-                    })
-                };
-                // S21.12：建造面板打开时 = 面板交互优先（点面板外 = 关闭，不再穿透）
-                if host.build_panel_open() {
-                    return handle_build_panel_tap(host, px, py);
-                }
-                // S17.8 v3：底部命令盘（deck_trade/sell/build）优先命中；未命中落回
-                // v2 HUD 按钮（双写兼容——`e2e_touch_economy_loop` 仍按 v2 坐标命中）。
-                // S19：摇骰前进主操作按钮（`deck_spin`）最先命中（主操作优先）。
-                if hud_hit(chrome::keys::DECK_SPIN) {
-                    return host.advance(GameInput::Spin);
-                }
-                if hud_hit(chrome::keys::DECK_TRADE) {
-                    return host.advance(GameInput::TradeBuy(1));
-                }
-                if hud_hit(chrome::keys::DECK_SELL) {
-                    return host.advance(GameInput::TradeSell(1));
-                }
-                if hud_hit(chrome::keys::DECK_BUILD) {
-                    open_build_panel(host);
-                    return true;
-                }
-                if hud_hit(chrome::keys::HUD_TRADE) {
-                    return host.advance(GameInput::TradeBuy(1));
-                }
-                if hud_hit(chrome::keys::HUD_SELL) {
-                    return host.advance(GameInput::TradeSell(1));
-                }
-                if hud_hit(chrome::keys::HUD_BUILD) {
-                    open_build_panel(host);
-                    return true;
-                }
-                // S21.7：点赛道节点 = 高亮 + 信息签（只读预览，不移动）；点自身所在格
-                // = 据点菜单（P0-5 保留）。命中判定与渲染同坐标系（EXP-067：节点中心 =
-                // `iso_cell_fit` + 瓦片半边，`board_spaces` 数据源同一）。
-                let spaces = host.board_spaces();
-                if spaces.len() >= 2 {
-                    let gw = host.terrain_grid_w();
-                    let (tw, th) = chrome::iso_tile_fit(&l, gw);
-                    let hit_r = chrome::node_edge_px(&l, gw) / 2 + 8;
-                    let cur = host.board_index();
-                    for (i, sp) in spaces.iter().enumerate() {
-                        let r = i32::try_from(sp.cell.row).unwrap_or(0);
-                        let c = i32::try_from(sp.cell.col).unwrap_or(0);
-                        let (sx, sy) = chrome::iso_cell_fit(r, c, &l, gw);
-                        let dx = (sx + tw - px).abs();
-                        let dy = (sy + th - py).abs();
-                        if dx <= hit_r && dy <= hit_r {
-                            if i == cur {
-                                return host.advance(GameInput::Landmark(1));
-                            }
-                            host.set_track_node_sel(Some(i));
-                            return true;
-                        }
-                    }
-                }
-                let Some(terrain) = host.map_terrain() else {
-                    return false;
-                };
-                let cell = layout::grid_cell_at(sample.x, sample.y, terrain.grid_w, terrain.grid_h);
-                let Some((row, col)) = cell else {
-                    return false;
-                };
-                let target = GridPos::new(row, col);
-                // P0-5：点自身格 = 走 dispatch(1)→Msgl（据点菜单）；点其它格 = 无动作（S19 收口：移动唯一 = 摇骰）。
-                if target == cur {
-                    return host.advance(GameInput::Landmark(1));
-                }
-                false
+        }
+        match hit.key {
+            4 => host.advance(GameInput::Spin),
+            5 => host.advance(GameInput::TradeBuy(1)),
+            6 => host.advance(GameInput::TradeSell(1)),
+            7 => {
+                open_build_panel(host);
+                true
             }
-            // S19 收口：滑动无动作（移动唯一 = 摇骰）。
             _ => false,
         }
     }
