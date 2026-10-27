@@ -15,9 +15,11 @@
 //! 故本面板的「按钮」只做**视觉**（Node + 背景 + 圆角 + 文本），不挂 `Button` 标记；点击接线归 S29.2。
 
 use bevy::camera::ClearColorConfig;
+use bevy::camera::visibility::RenderLayers;
 use bevy::color::Color;
 use bevy::prelude::*;
-use bevy::text::{FontSize, TextColor, TextFont};
+use bevy::text::{FontSize, FontSource, TextColor, TextFont};
+use bevy::ui::prelude::{ImageNode, NodeImageMode};
 use bevy::ui::IsDefaultUiCamera;
 
 /// 生成 UI 相机（叠在游戏正交相机之上；`order=1` + `clear_color=None` 不清屏，游戏世界透出）。
@@ -30,6 +32,11 @@ pub fn spawn_ui_camera(commands: &mut Commands) -> Entity {
         .spawn((
             Camera2d,
             IsDefaultUiCamera,
+            // S29.3：UI 相机**只画 UI**（`RenderLayers` 隔离到 1 层）——
+            // 否则它是普通 `Camera2d`，会把 1080 世界按 1:1 再渲一遍盖在正确缩放的世界上
+            // （活体窗口 = 画面错位；`--shot` = 目标被清掉只剩 UI）。
+            // bevy_ui 的 UI pass 不受 `RenderLayers` 约束 ⇒ UI 节点仍在默认层 0 即可被 UI pass 画出。
+            RenderLayers::layer(1),
             Camera {
                 order: 1,
                 clear_color: ClearColorConfig::None,
@@ -40,12 +47,187 @@ pub fn spawn_ui_camera(commands: &mut Commands) -> Entity {
         .id()
 }
 
+/// 列表 chrome 的**意图数据**（一行 = 缩略图 + 标题 + 副标题 + 选中态；零游戏语义，
+/// 具体文案/资产由调用方（壳）从 `ti_core` 域 + `strings` + 资产路径组装传入，S29.3）。
+#[derive(Debug, Clone)]
+pub struct ChromeRow {
+    /// 行缩略图（已预载的 bevy 图片 handle；`None` = 该行无缩略图）。
+    ///
+    /// **0.20 注意**：UI 图片组件是 [`bevy::ui::ImageNode`]（`ImageNode::new(handle)`），
+    /// **不是** 旧版 Bevy 的 `Image` 组件、也不是 `Sprite`（`Sprite` 是 1080 世界层用的）。
+    pub image: Option<Handle<Image>>,
+    /// 行标题（tier = body 字号）。
+    pub line1: String,
+    /// 行副标题/简介（tier = hint 字号）。
+    pub line2: String,
+    /// 是否选中行（高亮底色）。
+    pub selected: bool,
+}
+
+/// 列表 chrome 产物（根实体 + 逐行实体；调用方可给行挂命中标记 `PickTarget`）。
+#[derive(Debug, Clone)]
+pub struct ListChrome {
+    /// 全屏根实体（换场景时 despawn 整棵子树）。
+    pub root: Entity,
+    /// 逐行实体（顺序 = 行序；挂 `PickTarget` 即该行可拾取）。
+    pub rows: Vec<Entity>,
+}
+
+/// 建 **自动布局列表 chrome**（S29.3 B1：行位置/高度由 `taffy` flex 算，不手写像素行；
+/// 面板宽 `%` ⇒ resize 自动重排）。零游戏语义：`title`/各行由调用方传入。
+///
+/// 布局意图：右侧绝对定位竖排面板（`right`/`width` 用 `%` ⇒ resize 贴边不漂移），
+/// 面板 = `flex column` + 行间距；每行 = `flex row`（缩略图 + 文案列），选中行换高亮底色。
+///
+/// **字体**：`font` = 项目 CJK 字体句柄（`load_project_font`）。**不给会出豆腐块** ——
+/// `TextFont::font` 默认 `Handle::default()`（无字形）⇒ 中文全变 □□（S29.3 实测）。
+#[must_use]
+pub fn build_list_chrome(
+    commands: &mut Commands,
+    font: &Handle<Font>,
+    title: &str,
+    rows: &[ChromeRow],
+) -> ListChrome {
+    // 全屏根（bevy_ui 树须有铺满屏幕的根；`%` 布局据此相对屏幕）
+    let root = commands
+        .spawn(Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            display: Display::Flex,
+            position_type: PositionType::Relative,
+            ..Node::default()
+        })
+        .id();
+
+    // 右侧面板（`%` 定位 + 宽 ⇒ resize 自动重排；竖排 flex + 行间距）
+    let panel = commands
+        .spawn((
+            Node {
+                display: Display::Flex,
+                position_type: PositionType::Absolute,
+                top: Val::Percent(4.0),
+                right: Val::Percent(3.0),
+                width: Val::Percent(34.0),
+                height: Val::Auto,
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Stretch,
+                padding: UiRect::px(16.0, 16.0, 16.0, 16.0),
+                border_radius: BorderRadius::px(12.0, 12.0, 12.0, 12.0),
+                row_gap: Val::Px(12.0),
+                ..Node::default()
+            },
+            BackgroundColor(Color::srgba(0.10, 0.07, 0.03, 0.82)),
+            ChildOf(root),
+        ))
+        .id();
+
+    // 面板标题（空串 = 不建标题节点；标题已在别处画的场景用）
+    if !title.is_empty() {
+        commands.spawn((
+            Node {
+                display: Display::Flex,
+                align_items: AlignItems::Center,
+                ..Node::default()
+            },
+            Text(title.to_string()),
+            TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(26.0), ..default() },
+            TextColor(Color::srgb(0.95, 0.85, 0.60)),
+            ChildOf(panel),
+        ));
+    }
+
+    // 逐行：flex row（缩略图 + 文案列）；taffy 算行高/位置（不写像素行）
+    let mut row_entities = Vec::with_capacity(rows.len());
+    for row in rows {
+        row_entities.push(build_chrome_row(commands, font, row, panel));
+    }
+
+    ListChrome { root, rows: row_entities }
+}
+
+/// 列表 chrome 的**单行**（flex row = 缩略图 + 文案列；选中行换黄铜底色）。返回行实体。
+fn build_chrome_row(
+    commands: &mut Commands,
+    font: &Handle<Font>,
+    row: &ChromeRow,
+    panel: Entity,
+) -> Entity {
+    let row_bg = if row.selected {
+        Color::srgb(0.72, 0.45, 0.16) // 选中 = 黄铜高亮
+    } else {
+        Color::srgba(0.0, 0.0, 0.0, 0.0) // 非选中 = 透明
+    };
+    let row_node = commands
+        .spawn((
+            Node {
+                display: Display::Flex,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(12.0),
+                padding: UiRect::px(8.0, 8.0, 8.0, 8.0),
+                border_radius: BorderRadius::px(8.0, 8.0, 8.0, 8.0),
+                ..Node::default()
+            },
+            BackgroundColor(row_bg),
+            ChildOf(panel),
+        ))
+        .id();
+
+    // 缩略图（bevy_ui 内用 `ImageNode`（0.20 API；非旧 `Image`/`Sprite`）+ 定尺寸 `Node`；
+    // `NodeImageMode::Stretch` = 铺满节点、忽略原图比例）
+    if let Some(img) = &row.image {
+        commands.spawn((
+            Node {
+                width: Val::Px(72.0),
+                height: Val::Px(96.0),
+                ..Node::default()
+            },
+            ImageNode {
+                image: img.clone(),
+                image_mode: NodeImageMode::Stretch,
+                ..Default::default()
+            },
+            ChildOf(row_node),
+        ));
+    }
+
+    // 文案列（标题 + 副标题；taffy 自动换行/高度）
+    let text_col = commands
+        .spawn((
+            Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::FlexStart,
+                ..Node::default()
+            },
+            ChildOf(row_node),
+        ))
+        .id();
+    commands.spawn((
+        Text(row.line1.clone()),
+        TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(20.0), ..default() },
+        TextColor(Color::srgb(0.95, 0.90, 0.78)),
+        ChildOf(text_col),
+    ));
+    commands.spawn((
+        Text(row.line2.clone()),
+        TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(15.0), ..default() },
+        TextColor(Color::srgb(0.70, 0.62, 0.48)),
+        ChildOf(text_col),
+    ));
+    row_node
+}
+
 /// 通用浮动 `bevy_ui` 面板（全屏根 flex + 右上角绝对定位卡，`%` 定位 ⇒ resize 时贴角不漂移）。
 ///
 /// 返回根 `Node` 实体（S29.2 起用于挂命中/交互；S29.3 起按场景建 chrome）。
 /// 零游戏语义：`title`/`button_label` 为调用方传入的通用文本。
 #[must_use]
-pub fn build_proof_panel(commands: &mut Commands, title: &str, button_label: &str) -> Entity {
+pub fn build_proof_panel(
+    commands: &mut Commands,
+    font: &Handle<Font>,
+    title: &str,
+    button_label: &str,
+) -> Entity {
     // 全屏根（bevy_ui 树须有铺满屏幕的根，`%` 布局据此相对屏幕）
     let root = commands
         .spawn(Node {
@@ -90,7 +272,7 @@ pub fn build_proof_panel(commands: &mut Commands, title: &str, button_label: &st
             ..Node::default()
         },
         Text(title.to_string()),
-        TextFont { font_size: FontSize::Px(28.0), ..default() },
+        TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(28.0), ..default() },
         TextColor(Color::srgb(0.95, 0.85, 0.60)),
         ChildOf(panel),
     ));
@@ -113,7 +295,7 @@ pub fn build_proof_panel(commands: &mut Commands, title: &str, button_label: &st
         .id();
     commands.spawn((
         Text(button_label.to_string()),
-        TextFont { font_size: FontSize::Px(24.0), ..default() },
+        TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(24.0), ..default() },
         TextColor(Color::srgb(0.15, 0.10, 0.05)),
         ChildOf(button),
     ));

@@ -12,8 +12,14 @@
 | `docs/process/18_asset_content_pipeline.md`（新） | 行业三档（①绝对坐标/②意图+自动布局/③参数化）+ 总纲「不手写像素」+ 本项目终态（UI=bevy_ui S29.3 / 地图=参数化 S27.4 / scenes 退元素清单）+ 资产登记标准 + scenes 序列化纪律 + 音频口径 + 执行链 WBS |
 | `docs/README.md` + `AGENTS.md` 路由表 + `docs/process/14_tooling_catalog.md` | 定案文档登记 + validate_data 行补两个新检查项 |
 | `docs/experience/{code.md,tools.md,index.md}` | 回写遗留 EXP-124（改数据文件须原格式回注，禁整文件重序列化）/ EXP-125（Windows 控制台 CJK 打印须 PYTHONIOENCODING=utf-8） |
-
 ## 验证（判据 = 负测命中 + 0 error + gate）
+
+### 0. 用户拍板签收（A 纪律，EXP-114）
+用户拍板签收：2026-10-27 用户就「统一资产管理 / 资源加载标准 / scenes.json 手写不行」拍板「都要做」，
+并选定「意图 + 自动布局引擎（auto-layout / constraint）」方向（优点最多）。本任务 `scenes.json` 改动 =
+**仅新增 `ui_layer` 命中/迁移标记（S29.3 chrome 迁 bevy_ui 用，见 S29.3a）+ `pick_key` 命中元数据（S29.2）**，
+**不改任何 版面/配色/坐标/资产**；用户该次拍板即签核载体（非「视觉出图」类改动，出图验收归 S29.3/S29.5）。
+
 ### 1. check_asset_registry 双向同步（负测 2/2）
 ```
 # 临时加未登记 PNG → 应 FAIL（disk→registry 漏登记）

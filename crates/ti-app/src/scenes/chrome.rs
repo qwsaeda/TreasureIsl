@@ -921,8 +921,15 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
     // 层序：z 升序 = 越大越靠上（调用序即层序，`08_render_arch.md` 契约 1）。
     let mut prims: Vec<&Primitive> = layout.primitives.iter().collect();
     prims.sort_by_key(|p| p.z);
+    // S29.3（B1）：已迁 bevy_ui 的 chrome 原语跳过（`params["ui_layer"] == "bevy_ui"`）——
+    // Bevy 壳由 `ti-engine` 的 bevy_ui 层画这些 chrome（避免 1080 + bevy_ui 双画）；
+    // CPU 路径（无 bevy_ui 的后端）照旧画。
+    let skip_migrated = host.chrome_in_bevy_ui();
     for p in prims {
         if !primitive_visible(p, selected) {
+            continue;
+        }
+        if skip_migrated && param_str(p, "ui_layer").as_deref() == Some("bevy_ui") {
             continue;
         }
         let color = theme.by_name(&p.color).unwrap_or(theme.text_on_parch);

@@ -80,8 +80,10 @@
 | [`09_render_framework.md`](09_render_framework.md) | **`ti-render` crate 边界契约**（职责/禁止项 / 模块结构 / Theme schema / 从 ti-app 的迁移映射 / 数据分离原则；改 `crates/ti-render/` 代码前必读） |
 | [`10_ui_redesign.md`](10_ui_redesign.md) | **UI 重设计规格（S17 单一事实源）**：设计令牌 v2 / 8pt 版面 / 图标 14 项 / 动效 4 参数（航海夜·精修）；改 UI 视觉量前必读 |
 | [`11_bevy_migration.md`](11_bevy_migration.md) | **Bevy 0.20 迁移裁决单一事实源**（差距定稿 / 定案推翻签核 / 架构形状 / 新 crate `ti-engine` / WBS S18.0–S18.8 / 风险） |
-| [`12_bevy_usage.md`](12_bevy_usage.md) | **Bevy 0.20 用法规范**（官方 `DefaultPlugins` 强制 / 1080 坐标换算 / z 层负值升序 / GPU Text2d 文本 / 离屏截图验收口径 / 已知坑位清单）；写 Bevy 代码前必读 |
+| [`12_bevy_usage.md`](12_bevy_usage.md) | **Bevy 0.20 用法规范 · 总览/通用**（官方 `DefaultPlugins` 强制 / 1080 坐标换算 / z 层负值升序 / GPU Text2d 文本 / 离屏截图验收口径 / 已知坑位清单）；写 Bevy 代码前必读；主题用量大者拆独立篇（见下两篇） |
 | [`13_ui_asset_pipeline.md`](13_ui_asset_pipeline.md) | **UI 资产管线**（资产清单 `assets/ui_manifest.json` = 单一事实源；`python scripts/ui_assets.py add/build/verify` 生图+抠透明+入库；`powershell scripts/ui_preview.ps1 <scene>` 出图验收） |
+| [`19_bevy_ui.md`](19_bevy_ui.md) | **bevy_ui 专题**（UI 相机分层 / `Node`+`Text`+**`ImageNode`** / taffy 自动布局=意图化不手写像素 / resize 真重排 / `ComputedNode` 探针证据 / 0.20 坑位）；改 UI chrome·加控件·改版面坐标前必读 |
+| [`20_bevy_picking.md`](20_bevy_picking.md) | **bevy_picking 专题**（0.20 拾取结构（无 `PickingSection`）/ 指针事件 / **`Message` 取代 `Event`** / 本项目命中契约 `PickTarget`·`PickEvent`·`HitData` / 数据化命中 `pick_key` / 坑位）；改命中·加可点元素前必读 |
 
 ## 变更面声明（每次开发必填）
 

@@ -169,6 +169,14 @@ impl GameApp {
         }
         self.record_draw = on;
     }
+    /// S29.3（B1 定案）：切换「UI chrome 是否由 Bevy `bevy_ui` 绘制」。
+    ///
+    /// - `true` = Bevy 发货壳（`ti-engine`）：场景层**跳过**已迁 chrome 的原语
+    ///   （`params["ui_layer"] == "bevy_ui"`），那些 chrome 由 `bevy_ui` 层画（不双画）；
+    /// - `false` = 无 `bevy_ui` 的后端（Android macroquad 壳）= CPU 路径照旧。
+    pub fn set_chrome_in_bevy_ui(&mut self, on: bool) {
+        self.chrome_in_bevy_ui = on;
+    }
     /// S18.7a：取本帧绘制列表（记录模式下有效；CPU 模式下为空）。
     #[must_use]
     pub fn draw_list(&self) -> &ti_render::drawlist::DrawList {

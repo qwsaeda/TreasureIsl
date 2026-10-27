@@ -109,6 +109,11 @@ impl Scene for SelectRoleScene {
         let layout = chrome::scene_layout("select_role");
         let current = host.character().map_or(0, |c| c.index() as usize);
         chrome::render_primitives(host, "select_role", i64::try_from(current).unwrap_or(-1));
+        // S29.3（B1）：右侧列表 chrome 已迁 Bevy `bevy_ui`（行位置由 taffy 算，不手写像素）⇒
+        // CPU 路径跳过行的木底/选中边/按压闪影（Bevy 侧画）；未迁时照旧。
+        if host.chrome_in_bevy_ui() {
+            return;
+        }
         // 按压闪影 / 长摁按压：当前行压暗（金底之上叠 bevel_shadow，`menu_item` 旧态）
         let held = host.press_held();
         let flashing = chrome::press_flash_active();

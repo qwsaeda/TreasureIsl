@@ -243,8 +243,7 @@ fn spawn_ui_chrome(mut commands: Commands, shot: Option<Res<ShotTarget>>) {
     if let Some(st) = shot {
         commands.entity(cam).insert(RenderTarget::Image(st.0.clone().into()));
     }
-    // 返回 UI 根实体（S29.2 挂 bevy_picking/交互用；本任务先 `let _` 消 must_use 告警）。
-    let _root = ti_engine::ui::build_proof_panel(&mut commands, "S29 · bevy_ui", "resize me");
+    // S29.3：chrome 树由 `chrome_ui_system` 按场景建（此处只建 UI 相机）。
 }
 
 /// S29.1：`bevy_ui` 布局探针（headless 证据：自动布局是否真跑了、树是否建了）。
@@ -262,6 +261,7 @@ fn ui_probe_system(
     nodes: Query<(&Node, Option<&GlobalTransform>)>,
     texts: Query<&Text>,
     computed: Query<&bevy::ui::ComputedNode>,
+    cameras: Query<(&bevy::camera::Camera, &bevy::camera::Projection)>,
 ) {
     probe.frames += 1;
     if probe.logged || probe.frames < 5 {
@@ -288,6 +288,32 @@ fn ui_probe_system(
         texts.iter().count(),
         probe.frames
     );
+    // S29.3：布局**尺寸**证据（`computed_layout` 只证明「算了布局」，不证明「尺寸非 0」）。
+    // UI 在离屏目标不显示的最常见根因 = 布局尺寸为 0（`Val::Percent` 对着 0 视口解析）。
+    let mut max_w = 0.0f32;
+    let mut max_h = 0.0f32;
+    for cn in &computed {
+        max_w = max_w.max(cn.size.x);
+        max_h = max_h.max(cn.size.y);
+    }
+    eprintln!("[ui] bevy_ui layout size: max_node={max_w:.0}x{max_h:.0} px");
+    for (cam, proj) in &cameras {
+        let vp = match proj {
+            bevy::camera::Projection::Orthographic(o) => {
+                format!("ortho scale={:.3}", o.scale)
+            }
+            _ => "other".to_owned(),
+        };
+        let target = cam
+            .computed
+            .target_info
+            .as_ref()
+            .map_or_else(|| "none".to_owned(), |t| format!("{:?}", t.physical_size));
+        eprintln!(
+            "[ui] camera order={} active={} viewport={:?} target={target} {vp}",
+            cam.order, cam.is_active, cam.viewport,
+        );
+    }
 }
 
 /// 下一缩放模式（循环，`ScaleMode::ALL` 顺序；与 macroquad 壳同函数口径）。
@@ -429,6 +455,98 @@ fn scene_json_key(scene: Scene) -> &'static str {
         Scene::Saveload => "saveload",
         Scene::Intro | Scene::Exit => "",
     }
+}
+
+/// S29.3（B1）：per-scene `bevy_ui` chrome 载体（UI chrome 迁 `bevy_ui` 后的生命周期）。
+///
+/// 换场景 / 换选中项 → 拆旧树 + 重建（bevy 0.20 `despawn` 递归 despawn `ChildOf` 子树）。
+#[derive(Resource, Default)]
+struct ChromeUi {
+    /// 已建 chrome 根实体（`None` = 本场景无 `bevy_ui` chrome）。
+    root: Option<Entity>,
+    /// 已建 chrome 的（场景判别, 选中下标）——变了才重建（避免每帧重建）。
+    built: Option<(i32, usize)>,
+}
+
+/// S29.3（B1）：按当前场景建 `bevy_ui` chrome（**自动布局**：行位置/高度由 taffy 算，
+/// 不手写像素行；面板宽 `%` ⇒ resize 真重排）。
+///
+/// 意图数据在壳侧组装（`ti-core` 域 + `strings.json` + 资产路径），
+/// `ti-engine::ui` 侧保持零游戏语义（只认「行 = 图 + 两行字 + 选中态」）。
+fn build_scene_chrome(
+    commands: &mut Commands,
+    server: &AssetServer,
+    font: &Handle<Font>,
+    scene: SceneKind,
+    selected: usize,
+) -> Option<Entity> {
+    match scene {
+        SceneKind::SelectRole => {
+            let strings = ti_core::data::strings().ok()?;
+            let rows: Vec<ti_engine::ui::ChromeRow> =
+                ti_core::domain::selection::Character::all()
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, ch)| {
+                        let label = ch.label();
+                        let name_key = format!("role.name.{label}");
+                        let desc_key = format!("role.desc.{label}");
+                        ti_engine::ui::ChromeRow {
+                            image: Some(server.load(format!("assets/ui/role_{label}.png"))),
+                            line1: strings.get(&name_key).to_owned(),
+                            line2: strings.get(&desc_key).to_owned(),
+                            selected: idx == selected,
+                        }
+                    })
+                    .collect();
+            let chrome = ti_engine::ui::build_list_chrome(commands, font, "", &rows);
+            // 行可拾取（**UI 相机层**：bevy_ui 拾取后端免 marker，事件沿 `ChildOf` 冒泡到行节点）。
+            // 1080 层不再挂这些行的拾取标记（`spawn_pick_layer` 跳过 `ui_layer=bevy_ui` 原语），
+            // 否则同一行会双发命中事件。
+            for (idx, row_entity) in chrome.rows.iter().enumerate() {
+                commands.entity(*row_entity).insert(ti_engine::pick::PickTarget {
+                    key: 2,
+                    index: i32::try_from(idx).unwrap_or(-1),
+                });
+            }
+            Some(chrome.root)
+        }
+        // 未迁场景：保留 S29.1 的证明面板占位（bevy_ui 层可见 + 可 resize 验证）；
+        // 随各场景迁移逐个换成真实 chrome。
+        _ => Some(ti_engine::ui::build_proof_panel(
+            commands,
+            font,
+            "S29 · bevy_ui",
+            "resize me",
+        )),
+    }
+}
+
+/// S29.3：per-scene `bevy_ui` chrome 系统（换场景 / 换选中 → 拆旧建新）。
+#[allow(clippy::needless_pass_by_value)]
+fn chrome_ui_system(
+    mut commands: Commands,
+    mut chrome: ResMut<ChromeUi>,
+    server: Res<AssetServer>,
+    store: ResMut<GameStore>,
+) {
+    // 系统参数按 Bevy 惯例传值（`Res`/`ResMut` 本身即引用语义容器）。
+    let Ok(g) = store.0.lock() else {
+        return;
+    };
+    let scene = SceneKind::from_legacy(g.scene());
+    let selected = g.character().map_or(0usize, |c| c.index() as usize);
+    let key = (scene.discriminant(), selected);
+    if chrome.built == Some(key) {
+        return;
+    }
+    if let Some(old) = chrome.root.take() {
+        commands.entity(old).despawn();
+    }
+    // S29.3：CJK 字体（不给 ⇒ 中文豆腐块 □□；`complex_script_segmentation` 特性已开）
+    let font = ti_engine::canvas::BevyCanvas::load_project_font(&server, "assets/");
+    chrome.root = build_scene_chrome(&mut commands, &server, &font, scene, selected);
+    chrome.built = Some(key);
 }
 
 /// S29.2（B1）：Bevy 拾取命中 → 逻辑（`poll_hit`）。消费 [`PickEvent`]（tap/swipe）→
@@ -803,6 +921,10 @@ fn main() {
     if !selftest {
         // S18.7a: live path = draw list (Bevy entities); the scene code is unchanged.
         game.set_record_draw(true);
+        // S29.3（B1）：UI chrome 迁 bevy_ui（场景层跳过已迁 chrome 原语 → bevy_ui 层画，
+        // 避免 1080 + bevy_ui 双画）。**selftest 不开** —— CPU↔Bevy 对拍口径只保游戏世界
+        // （UI 层改口径归 S29.4）。
+        game.set_chrome_in_bevy_ui(true);
     }
     // 双渲染期无 bevy 音频：曲目数 0（S18.8 切 bevy_audio 后恢复）。
     game.shell_mut().set_audio(0, 0);
@@ -866,6 +988,9 @@ fn main() {
         // 命中→逻辑（`pick_event_system` 消费 `PickEvent` → `poll_hit`）。
         ti_engine::pick::register_pick(&mut app);
         app.add_systems(Update, pick_event_system);
+        // S29.3（B1）：per-scene `bevy_ui` chrome（自动布局；换场景/换选中重建）。
+        app.init_resource::<ChromeUi>();
+        app.add_systems(Update, chrome_ui_system.after(render_system));
         if resizetest {
             // 机器判定：程序化翻倍窗口 → ①画布恒完整可见（`o.area`≈1080×1920）
             // ②内容随窗口等比放大（px/unit 翻倍）；见 `resizetest_system`。

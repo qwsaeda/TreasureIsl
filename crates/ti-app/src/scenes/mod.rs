@@ -256,11 +256,24 @@ pub trait RenderHost {
     }
 
     /// **绘制目标**（S18.7a 可插拒）：CPU 帧缓冲（`MenuShell`）或 **绘制列表**
-    /// （`ti_render::drawlist::DrawList`，Bevy 路径）。
+    /// （`ti_render::drawlist::DrawList`，Bevy 路径）
     ///
     /// 场景绘制代码**不变**：两种目标用同一套原语命令，
-    /// → CPU / Bevy 两后端同画面。
+    /// ⇒ CPU / Bevy 两后端同画面。
     fn draw_target(&mut self) -> &mut dyn ti_render::canvas::Canvas;
+
+    /// S29.3（B1 定案）：**UI chrome 是否已迁到 Bevy `bevy_ui`**。
+    ///
+    /// 默认 `false` = CPU 路径照旧（Android macroquad 壳等无 `bevy_ui` 的后端）；
+    /// Bevy 发货壳置 `true` ⇒ 场景层**跳过已迁 chrome 的原语**
+    /// （`params["ui_layer"] == "bevy_ui"`），那些 chrome 由 `ti-engine` 的 `bevy_ui` 层绘制
+    /// （避免 1080 与 `bevy_ui` **双画**）。
+    ///
+    /// 口径：`ti-engine` = Bevy 壳（UI chrome 进 `bevy_ui`，`docs/process/19_bevy_ui.md`）；
+    /// 本方法只回答「在不在 Bevy 侧」，不含任何游戏语义。
+    fn chrome_in_bevy_ui(&self) -> bool {
+        false
+    }
 
     /// 清屏到 `color`（565 色；QA120：色值走 `menu_shell` 命名常量，不写内联 hex——
     /// `check_hardcode.py` 布局调用正则已含 `clear_frame`）。

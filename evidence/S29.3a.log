@@ -1,0 +1,79 @@
+# S29.3a — S29.3 第一增量：select_role 列表 chrome 迁 bevy_ui（自动布局）+ 3 个根因修复
+
+定案源：`docs/process/19_bevy_ui.md`（bevy_ui 专题）/ `20_bevy_picking.md`（bevy_picking 专题）/
+`18_asset_content_pipeline.md`（「不手写像素」总纲）/ `17_layout_engine.md`（B1 架构）。
+
+## 触发与根因（用户报「跑起来还是老程序」→ 实测出 3 个根因）
+
+用户 2026-10-27 跑 `cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native`
+发现「还是老程序」⇒ 排查后定位 **3 个根因**（S29.1/S29.2 的 bevy_ui 层**从未真正渲染**）：
+
+| # | 根因 | 症状 | 修法 |
+|---|---|---|---|
+| ① | **bevy `bevy_ui` 特性只含核心（布局），渲染管线在独立特性 `bevy_ui_render`**；`DefaultPlugins` 仅在 `#[cfg(feature="bevy_ui_render")]` 下挂 `UiRenderPlugin` | 布局跑（`ComputedNode` 有值）但**零像素** ⇒ 现场看起来「完全没生效」 | `features += ["bevy_ui", "bevy_ui_render"]` |
+| ② | UI 相机是**普通 `Camera2d`** ⇒ 它的世界 pass 会把 1080 世界按 `scale=1.0` 再画一遍（活体窗口错位）/ **清掉离屏目标**（`--shot` 只剩 UI） | 截图里 1080 立绘/矩形消失，只剩一块均匀底色 | UI 相机加 `RenderLayers::layer(1)`（bevy_ui 的 UI pass 不受 `RenderLayers` 约束 ⇒ UI 节点仍留在层 0） |
+| ③ | `TextFont.font` 是 **`FontSource` 枚举**（非 `Handle<Font>`），默认值 = 无字形 | 中文全渲染成豆腐块 □□（英文照出，迷惑性极强） | `FontSource::Handle(load_project_font(...))` 显式给字体 |
+
+## 改动面 = 表现（UI chrome）+ 数据（scenes.json `ui_layer` 标记）+ 文档
+
+| 文件 | 改了什么 |
+|---|---|
+| `crates/ti-engine/Cargo.toml` | bevy `features += ["bevy_ui_render"]`（根因①） |
+| `crates/ti-engine/src/ui.rs` | `build_list_chrome`（**flex column 竖排**：面板 `%` 定位 + 行间距；行 = flex row（`ImageNode` 缩略图 + 文案列）；选中行换黄铜底色）→ 返回 `ListChrome{root, rows}`（行实体供挂 `PickTarget`）；`build_proof_panel`/`build_list_chrome` 均接字体句柄（根因③）；`spawn_ui_camera` 加 `RenderLayers::layer(1)`（根因②） |
+| `crates/ti-engine/src/bin/treasure_bevy.rs` | `ChromeUi` 资源 + `chrome_ui_system`（按场景/选中重建，换场景 despawn 旧树）+ `build_scene_chrome`（select_role 行 = `Character::all()` + `strings.json` + `role_*.png` 缩略图 + `PickTarget{key:2,index}`）→ **命中搬到 UI 层**；探针扩「布局尺寸 + 相机接线」两行 |
+| `crates/ti-app/src/scenes/mod.rs` | `RenderHost::chrome_in_bevy_ui()`（默认 false = CPU 后端照旧） |
+| `crates/ti-app/src/game_app/{mod,state,host}.rs` | `GameApp.chrome_in_bevy_ui` + `set_chrome_in_bevy_ui` + host 实现 |
+| `crates/ti-app/src/scenes/chrome.rs` | `render_primitives` 跳过 `params["ui_layer"]=="bevy_ui"` 原语（1080 层不双画） |
+| `crates/ti-app/src/scenes/select_role.rs` | 已迁 bevy_ui 时跳过行木底/选中边/按压闪影（代码绘制件，非原语） |
+| `crates/ti-engine/src/scene_render.rs` | `spawn_pick_layer` 跳过 `ui_layer` 原语（1080 层不重复挂命中 ⇒ 同一元素只发一次命中事件） |
+| `assets/data/scenes.json` | select_role 20 原语加 `ui_layer: "bevy_ui"`（5 行底框 + 5 缩略图 + 10 行文案；**坐标未动**，仍 indent=1 规范形） |
+| `docs/process/19_bevy_ui.md`（新） | bevy_ui 专题：feature（**`bevy_ui` ≠ `bevy_ui_render`**）/ UI 相机分层 + `RenderLayers` 隔离 / `Node` 字段 / 文本 + `FontSource` / **UI 图片 = `ImageNode`** / 自动布局意图化范式 / chrome 迁移三联动 / 探针证据 / 0.20 坑位 13 条 |
+| `docs/process/20_bevy_picking.md`（新） | bevy_picking 专题：0.20 拾取结构 / 指针事件 / **`Message` 取代 `Event`** / 本项目命中契约 / 数据化命中 / 观察者参数最小化 / 坑位 |
+| `docs/process/12_bevy_usage.md` | 保留为**总览 + 通用**（插件组/坐标/z 层/离屏截图/预算）+ 专题分篇索引（既有交叉引用零改动） |
+| `docs/README.md` / `docs/process/00_index.md` / `AGENTS.md` 路由表 | 两篇新文档登记 |
+
+## 验证（判据 = 出图含 bevy_ui 自动布局列表 + 1080 世界同帧正确 + 门禁）
+
+### 0. 用户拍板签收（A 纪律，EXP-114）
+用户拍板签收：2026-10-27 用户就「布局写死 / 手写坐标不行」拍板 **B1 = 意图 + 自动布局引擎（auto-layout / constraint）**
+（「这个是优点最多了」）+ S29.3 全场景 UI 迁移 bevy_ui。本增量 = 该决策的**首个场景落地**：
+**不改视觉设计**（沿用既有 5 行列表设计：缩略图 + 名称 + 简介 + 选中高亮），只把**实现机制**从
+「1080 手写行坐标（`list.y`/`row_h`）」换成「bevy_ui flex column 自动布局」——即用户拍板的「不手写像素」方向本身。
+出图（`evidence/bevy_native_select_role.png`）为该方向的**可视证据**；其余 8 场景的逐屏视觉核对 = S29.3/S29.5 出图验收。
+
+### 1. 出图（`--shot` 离屏）：bevy_ui 列表与 1080 立绘**同帧正确叠加**
+```
+cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --shot --scene=select_role
+[ui] bevy_ui probe: node=27 text=10 abs=1 computed_layout=27 frame=5      ← 27 节点全部算出布局（taffy 真跑）
+[ui] bevy_ui layout size: max_node=1080x1920 px                          ← 布局尺寸非 0（补了「尺寸」证据维度）
+[ui] camera order=0 active=true viewport=None target=UVec2(1080, 1920) ortho scale=1.000   ← shot 相机
+[ui] camera order=0 active=true viewport=None target=none ortho scale=2.000                  ← 游戏相机（letterbox）
+[ui] camera order=1 active=true viewport=None target=UVec2(1080, 1920) ortho scale=1.000   ← UI 相机（RenderLayers 隔离）
+[shot] 非黑像素 = 2070867 / alpha>8 = 2073600 / 2073600
+→ evidence/bevy_native_select_role.png
+```
+像素取样（PNG 直读，三处关键位）：
+```
+立绘区(296,516)      = (107,74,59)   ← 1080 立绘在（根因②修好后不再被 UI 相机清掉）
+夜空(60,60)          = (0,10,26)     ← 1080 背景在
+面板行1缩略(745,150)  = (74,37,21)    ← bevy_ui 选中行黄铜高亮在
+```
+肉眼核对（`evidence/bevy_native_select_role.png`）：左半 = 1080 世界（标题「选择角色」+ 潘达立绘 + 姓名板 + 底部提示）；
+右半 = **bevy_ui 自动布局竖排 5 行**（缩略图 + 名称 + 简介，首行黄铜高亮），**行位置由 taffy 算、无手写 `list.y`/`row_h`**。
+
+### 2. 命中搬 UI 层（不双发）
+- 已迁 chrome 的 1080 拾取标记**不再挂**（`spawn_pick_layer` 跳过 `ui_layer` 原语）；bevy_ui 行节点直接挂 `PickTarget{key:2,index}`。
+- bevy_ui 拾取后端**免 marker**（`bevy_ui` picking backend 对同 render target 的指针做 UI 节点树命中测试），事件沿 `ChildOf` 冒泡到行节点。
+
+### 3. 门禁
+```
+doccheck 0 error / doccheck2 0 error / validate_data OK（scenes.json 仍 indent=1 规范形）/ check_code_standards OK /
+audit_code OK / cargo fmt + clippy(-D) 绿 / cargo test --workspace 120 passed（唯一 FAIL = s43_fps_smoke = 本 VM 无 GPU 环境项）
+scripts/gate.ps1 → 27 PASS + 2 SKIP + 1 FAIL（s43_fps_smoke = VM 环境项，S24.0/S27.1 已记录）
+```
+
+## 未做 / 归后续
+- 其余 8 场景 chrome 迁移（index 罗盘环/select_map/saveload/main_map HUD/…）+ resize 多视口实测重排 = **S29.3 主体**。
+- 未迁场景暂用 S29.1 证明面板占位（右上角「S29 · bevy_ui」卡）—— 随迁移逐个替换。
+- 门禁改口径（`bevy-cpu-parity` UI 层排除）+ 四篇文档同步 = **S29.4**；地图参数化 = **S27.4**。
+- 活体窗口的点击/滑动 → UI 层命中派发实测（headless 只验到事件契约层）= **S29.5**。

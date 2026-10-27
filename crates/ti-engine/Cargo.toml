@@ -41,7 +41,7 @@ path = "src/bin/treasure_bevy.rs"
 # 且中文词级断行退化为整段不断。开了 = 完整 icu 字典（含 cjdict），报错消失 + 断行正确。
 # S29.1（B1）：+ "bevy_ui"（Node/Layout/Text/Button/IsDefaultUiCamera；UI 相机分层叠游戏世界之上，
 # UI 树走屏幕像素自动布局 + resize 重排；游戏世界仍 1080 正交 o.scale。定案 docs/process/17_layout_engine.md）。
-bevy = { version = "0.20", default-features = false, features = ["2d", "bevy_ui", "bevy_text", "touch", "keyboard", "mouse", "complex_script_segmentation"] }
+bevy = { version = "0.20", default-features = false, features = ["2d", "bevy_ui", "bevy_ui_render", "bevy_text", "touch", "keyboard", "mouse", "complex_script_segmentation"] }
 ti-render = { path = "../ti-render" }
 # S18.4：bevy 壳 bin 挂本 workspace（架构修正：links=alsa 冲突检查 target-independent 且
 # optional 依赖也进 resolution 图 → 双渲染期 macroquad(audio 发货壳) 与 bevy(dev_tools→rodio

@@ -458,6 +458,16 @@ pub fn spawn_pick_layer(world: &mut World, prims: &[ti_core::data::Primitive]) -
         if key == 0 || p.rect.w <= 0 || p.rect.h <= 0 {
             continue;
         }
+        // S29.3（B1）：已迁 bevy_ui 的 chrome 原语**不在 1080 层挂拾取标记**——
+        // 它在 UI 相机层（屏幕像素）由 bevy_ui 节点直接拾取；两处都挂 = 同一行双事件。
+        if p
+            .params
+            .get("ui_layer")
+            .and_then(serde_json::Value::as_str)
+            == Some("bevy_ui")
+        {
+            continue;
+        }
         // `pick_index` 显式下标（缺省 = 原语 `item`）：行定义 rect 无 item，数据侧显式给。
         let index = p
             .params

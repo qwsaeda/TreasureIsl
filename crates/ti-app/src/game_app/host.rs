@@ -57,6 +57,12 @@ impl RenderHost for GameApp {
         if self.record_draw { &mut self.draw_list } else { &mut self.shell }
     }
 
+    /// S29.3（B1）：UI chrome 是否已迁 Bevy `bevy_ui`（Bevy 壳 = true ⇒ 场景层跳过
+    /// 已迁 chrome 原语，避免 1080 与 `bevy_ui` 双画；CPU 路径 = false 照旧）。
+    fn chrome_in_bevy_ui(&self) -> bool {
+        self.chrome_in_bevy_ui
+    }
+
     fn pixel_at(&self, x: i32, y: i32) -> u16 {
         let w = crate::menu_shell::LOGICAL_W_USIZE;
         let h = crate::menu_shell::LOGICAL_H_I32;

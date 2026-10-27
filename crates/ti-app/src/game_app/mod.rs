@@ -183,6 +183,9 @@ pub struct GameApp {
     pub draw_list: ti_render::drawlist::DrawList,
     /// 是否记录到绘制列表（true = Bevy 路径；false = CPU 帧缓冲）。
     pub record_draw: bool,
+    /// S29.3（B1）：UI chrome 是否由 Bevy `bevy_ui` 绘制（true = 已迁 `bevy_ui` 的原语
+    /// 由 `ti-engine` 画，场景层跳过，避免双画；false = CPU 路径照旧）。
+    pub chrome_in_bevy_ui: bool,
     /// 场景管理器（`rules::main_loop::SceneStack`，状态码语义与业务文档对齐）。
     pub scenes: SceneStack,
     /// 顶层场景。
@@ -400,6 +403,7 @@ impl GameApp {
             // S18.7a：绘制列表目标（Bevy 路径；初始为 CPU 帧缓冲模式）。
             draw_list: ti_render::drawlist::DrawList::default(),
             record_draw: false,
+            chrome_in_bevy_ui: false,
             scenes: SceneStack::new(),
             scene: Scene::Index,
             menu_selected: 0,

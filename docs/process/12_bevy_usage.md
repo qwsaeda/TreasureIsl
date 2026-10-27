@@ -15,6 +15,14 @@
 > 本文件是**用法层**：写 Bevy 代码前必读（与 `08_render_arch.md` 渲染契约、
 > `09_render_framework.md` 框架边界互锁）。
 
+### 专题分篇（本文 = 总览 + 通用约定；用量大的主题独立成篇）
+
+| 篇 | 主题 | 何时看 |
+|---|---|---|
+| [`12_bevy_usage.md`](12_bevy_usage.md)（本文） | **通用约定**：插件组 / 坐标契约 / z 层 / 元素落地 / 文本 / 离屏截图 / 输入 / 性能预算 / 代码组织 / 验收口径 / 原语闭集 | 写任何 Bevy 代码前 |
+| [`19_bevy_ui.md`](19_bevy_ui.md) | **bevy_ui 专题**：UI 相机分层 / `Node`+`Text`+**`ImageNode`** / taffy 自动布局（意图化，不手写像素）/ resize 重排 / `ComputedNode` 探针 / 0.20 坑位 | 改 UI chrome、加控件、改版面坐标（S29.1~S29.3） |
+| [`20_bevy_picking.md`](20_bevy_picking.md) | **bevy_picking 专题**：0.20 拾取结构 / 指针事件 / **`Message` 取代 `Event`** / 本项目命中事件契约（`PickTarget`/`PickEvent`/`HitData`）/ 数据化命中 / 坑位 | 改命中、加可点元素、接事件（S29.2） |
+
 ---
 
 ## 1. 版本与特性（pin）
@@ -246,34 +254,15 @@ cargo auto-roots 把 `src/bin/` 每个 `.rs` 都探测为独立 bin；当某 bin
 E0433（too many `super`）+ E0601（缺 main）。**bin 文件互引子模块的布局必须
 `[package] autobins = false`**（ti-engine 已配；gate 只编译声明 bin 时该坑潜伏）。
 
-### 9.8 bevy_ui 启用（S29.1，B1 定案）—— 0.20 实测坑位
-B1（`docs/process/17_layout_engine.md`）把 UI+命中+重排全进 Bevy。启用 `bevy_ui` 在 0.20 实测：
+### 9.8 bevy_ui / bevy_picking 专题（已拆独立成篇）
 
-- **feature 必开**：bevy `2d` 特性**不含** UI；`Cargo.toml` bevy `features += ["bevy_ui"]`
-  （=`bevy_internal/bevy_ui`，连带 `bevy_ui` core + `bevy_ui_render` 渲染管线，都在
-  `DefaultPlugins` 内自动注册）。缺 feature → 无 `Node`/`Text`/`UiPlugin`，代码不过。
-- **UI 相机 = `IsDefaultUiCamera`**：`commands.spawn((Camera2d, IsDefaultUiCamera,
-  Camera { order: 1, clear_color: ClearColorConfig::None, ..default() }, Transform::IDENTITY))`。
-  `order` 高于游戏世界相机（0）+ `clear None` 才叠在世界上面不覆盖世界。
-- **`Button`/`Interaction` 已废弃**（0.20 标 `#[doc(hidden)]`，post-0.20 删）：交互一律走
-  **`bevy_picking`**（S29.2）；证明面板只 spawn「按钮外观」（`Node`+`Text`+`BackgroundColor`），
-  **不**挂 `Button` 标记。
-- **没有 `Entity::spawn`/`set_parent`**（0.20 移除）：层级一律 **`ChildOf(parent)` 组件**
-  （`bevy::hierarchy`，在 prelude）；`EntityCommands` 的 `with_children` 可用但
-  `bevy::ecs::entity::EntityCommands` import 不解析（E0432）→ 别 import，用 `commands.spawn` 即可。
-- **`Node` 字段全 inline**（0.20 重构，无 `margin/padding` 子 struct 名变化）：`Node {
-  position_type, left/right/top/bottom/width/height: Val, align_items, justify_content,
-  padding: UiRect, border_radius: BorderRadius, row_gap, ..default() }`；`Val::Px/Percent/Auto`；
-  `UiRect::px(l,r,t,b)`；`BorderRadius::px(tl,tr,br,bl)`。背景色 = **独立组件 `BackgroundColor`**
-  （不是 `Node` 字段）。
-- **`Text`/`TextFont`**：`TextFont { font_size: FontSize::Px(28.0), ..default() }`（`FontSize`
-  是枚举 `Px/Vw/Vh/VMin/VMax/Rem`，**不是** `Option<f32>`）；`Text::from_label` 简写可用。
-- **`GlobalTransform.translation` 是方法**（0.20）：`transform.translation().x`，不是字段。
-- **headless 布局证据 = `ComputedNode` 探针**：bevy_ui 布局由 taffy 算出
-  `bevy::ui::ComputedNode`（每已布局节点一个）。`--shot` 离屏无法靠像素验证 UI 叠加
-  （UI 相机与 shot 相机同 `RenderTarget::Image` 的合成时序不可靠）→ **证据口径 = 跑 N 帧后
-  `Query<&ComputedNode>` 计数 > 0**（= 自动布局真跑了）。ti-engine `--shot` 内置
-  `ui_probe_system` 打 `[ui] bevy_ui probe: node=N text=N abs=N computed_layout=N`。
+- **bevy_ui**（UI 相机 / `Node` / `Text` / **`ImageNode`** / taffy 自动布局 / resize 重排 / `ComputedNode` 探针）
+  → 全文见 **[`19_bevy_ui.md`](19_bevy_ui.md)**。
+- **bevy_picking**（0.20 拾取结构 / 指针事件 / `Message` 取代 `Event` / 命中事件契约）
+  → 全文见 **[`20_bevy_picking.md`](20_bevy_picking.md)**。
+- 通用仍适用：`Button`/`Interaction` 在 0.20 已废弃（交互一律走 `bevy_picking`）；无 `Entity::spawn`/`set_parent`
+  （层级用 `ChildOf(parent)`）；`Node` 字段全 inline（背景色是独立组件 `BackgroundColor`）；
+  `FontSize` 是枚举不是 `Option<f32>`；`GlobalTransform.translation` 是方法；离屏像素验证 UI 不可靠（证据 = `ComputedNode` 探针）。
 
 ---
 
