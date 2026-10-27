@@ -157,6 +157,7 @@ y% = cy + ry·sin(angle_i)      // cy/ry = 环心/半径 y（`%` 高，屏幕 y 
 | 9.8-10 | **`bevy_ui` ≠ `bevy_ui_render`：只开前者 = 布局跑但零像素**（S29.3 实测） | 两个都开；`DefaultPlugins` 仅在 `bevy_ui_render` 下挂 `UiRenderPlugin` |
 | 9.8-11 | **UI 相机必须 `RenderLayers::layer(1)` 隔离**（否则重渲世界/清掉离屏目标） | `bevy::camera::visibility::RenderLayers`（非 prelude）；UI pass 不受该约束 |
 | 9.8-12 | **`ComputedNode` 计数 > 0 不等于「画出来了」** | 证据须加**布局尺寸**（`ComputedNode.size`）+ 像素采样（截图取样点）；S29.3 探针已扩：`[ui] bevy_ui layout size: max_node=WxH px` |
+| 9.8-13 | **bevy_ui UI 相机叠在 1080 世界相机之上（`order=1` 不清屏）⇒ 同屏位的 bevy_ui 节点会**遮住** 1080 动态内容** | 游戏世界场景（vs HP 条 / main_map 棋盘+实体+HUD 数值）的 chrome 与 world **层叠** ⇒ 不能把 chrome 迁 bevy_ui 而 1080 动态内容留在 world（会被遮）。B1「游戏世界保持 1080」⇒ vs/main_map 整体留 1080；只有 chrome 与 world 不重叠的纯 UI 场景（index/role/map/saveload/message）可迁 bevy_ui（S29.3 实测判定） |
 | 9.8-13 | **`TextFont.font` 是 `FontSource` 枚举；不给字体 = 中文豆腐块 □□** | `FontSource::Handle(font.clone())` + `load_project_font` |
 
 ## 10. 相关文档

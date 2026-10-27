@@ -1,0 +1,50 @@
+S29.3e 验收证据（message 帮助面板迁 bevy_ui + vs/main_map 遮挡判定留 1080）
+
+## message 迁移（S29.3 第五增量）
+- `build_message_chrome`（`treasure_bevy.rs`）：暖棕面板 + 动态标题（`msg.<kind>`）+ 正文（`bevy_ui`
+  自动折行，取代 1080 逐字折行）+ 页点（`total` 个方点，`i < page` 实心）+ 页码 + 底部提示行。
+  翻页/换页类型经 `chrome_ui_system` 按 `msg_page*16 + kind 序` 重建。`msg_text_child`/`_abs` 助手
+  收口（函数 < 140 行，audit_code 合规；参数 `app` 非单字母，CS-3 合规）。
+- 4 消息原语（面板 rect + 分隔条 + 提示行）标 `ui_layer:"bevy_ui"`（indent=1 规范形）；
+  `message::render` 加 `chrome_in_bevy_ui` 守卫（跳过 1080 运行时面板/标题/正文/页点/页码）。
+- 复用既有 i18n 键（`msg.*`/`scene.message.*`，0 新增键）。
+
+## vs / main_map 遮挡判定（留 1080，关键 B1 结论）
+bevy_ui UI 相机叠在 1080 世界相机之上（`order=1` + 不清屏）⇒ **同屏位的 bevy_ui 节点会遮住 1080
+动态内容**。vs（HP 条叠在战斗底 + 卡片上）、main_map（HUD 牌 / 棋盘 / 实体 / toast / HUD 数值 相互层叠）
+= chrome 与 world 层叠的**游戏世界场景** ⇒ 迁 chrome 到 bevy_ui 会遮住 1080 HP 填充 / 棋盘值（实测验证：
+曾把 vs/main_map 静态结构迁 bevy_ui，1080 动态内容被遮）。判定记 `19_bevy_ui.md` 坑位 **9.8-13**；
+vs/main_map 已回退 1080（`ui_layer` 撤销 + `build_scene_chrome` 分支移除 + 通用 `spawn_bevy_ui_prims` 助手删）。
+B1「游戏内容仍 1080 数据驱动」⇒ 这两场景整体留 1080 = 正确口径。
+
+## 判据 1：gate 全绿（仅 s43_fps_smoke = 本 VM 无 GPU 环境项）
+```
+27 PASS + 1 FAIL(fps 环境项) + SKIP
+```
+
+## 判据 2：--shot message 出图（bevy_ui 面板 + 1080 夜空底同帧叠加）
+```
+[ui] bevy_ui probe: node=10 text=4 computed_layout=10   # 根/面板/标题/正文/页点行/N点/页码/提示
+面板像素暖棕、夜空底透出
+```
+
+## 判据 3：e2e（logic 半程，message 翻页/关闭走键盘 swipe，未受影响）
+```
+test e2e_touch_economy_loop ... ok
+test result: ok. 8 passed; 0 failed
+```
+
+## 判据 4：代码标准
+```
+check_code_standards: PASS（build_message_chrome 参数 app 非单字母，CS-3 0 新增）
+audit_code: PASS（build_message_chrome < 140 行，helper 收口）
+```
+
+## 视觉签收（A 纪律，EXP-114）
+用户拍板（2026-10-27）：「全部做完，能正式上线玩，你自己测试验证通过」⇒ S29.3e 视觉签收以 agent
+机器判据代；message 面板逐场景过目 + vs/main_map 若需全 bevy_ui（含 1080 动态内容活体化）归 S29.5。
+
+## S29.3 主体收口结论
+可点/纯 UI 场景全迁 bevy_ui：**index / select_role / select_map / saveload / message**（5 场景）。
+游戏世界场景（chrome 与 world 层叠，bevy_ui 会遮 1080 动态内容）：**vs / main_map 留 1080**（9.8-13 判定）。
+残留 = S29.5：resize 多视口实测重排 + 门禁改口径 + 四篇文档同步（vs/main_map 若要全 bevy_ui = 1080 动态内容活体化，属大改）。

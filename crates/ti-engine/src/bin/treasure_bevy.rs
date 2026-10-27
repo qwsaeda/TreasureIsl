@@ -47,6 +47,8 @@ use ti_app::game_app::{GameApp, GameInput, HitData, KeyState, Scene};
 #[cfg(not(target_arch = "wasm32"))]
 use ti_app::menu_shell::parse_font_bytes;
 use ti_app::scenes::{SceneKind, SelectionHost, SessionHost};
+use ti_core::domain::messages::MsgKind;
+use ti_core::rules::messages::page_text;
 use ti_app::stats::FpsMeter;
 use ti_platform::gfx::UploadMode;
 use ti_platform::settings::ScaleMode;
@@ -488,6 +490,10 @@ fn build_scene_chrome(
         SceneKind::Saveload => Some(build_saveload_chrome(commands, font, g)),
         SceneKind::SelectMap => Some(build_select_map_chrome(commands, font, g)),
         SceneKind::Index => build_index_chrome(commands, server, font, g),
+        SceneKind::Message => Some(build_message_chrome(commands, font, g)),
+        // vs / main_map = **游戏世界场景**（chrome 与 world 层叠：vs HP 填充 / main_map 棋盘 +
+        // 实体 + toast + HUD 数值 在 1080 层；bevy_ui UI 相机叠在 1080 之上 ⇒ 把 chrome 迁 bevy_ui
+        // 会**遮住** 1080 动态内容）。B1「游戏世界保持 1080」⇒ 这两场景 chrome 仍 1080 画。
         // 未迁场景：保留 S29.1 的证明面板占位（bevy_ui 层可见 + 可 resize 验证）；
         // 随各场景迁移逐个换成真实 chrome。
         _ => Some(ti_engine::ui::build_proof_panel(
@@ -634,6 +640,165 @@ fn build_index_chrome(
     Some(root)
 }
 
+/// 消息/帮助场景：面板 + 动态标题（`msg.<kind>`）+ 正文（`bevy_ui` 自动折行）+ 页点 + 页码。
+/// 翻页/换页类型时经 `chrome_ui_system` 重建。
+fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &GameApp) -> Entity {
+    let root = commands
+        .spawn((
+            bevy::ui::Node {
+                width: bevy::ui::Val::Percent(100.0),
+                height: bevy::ui::Val::Percent(100.0),
+                display: bevy::ui::Display::Flex,
+                position_type: bevy::ui::PositionType::Relative,
+                ..Default::default()
+            },
+            bevy::picking::Pickable::IGNORE,
+        ))
+        .id();
+    let kind = app.msg_kind().unwrap_or(MsgKind::Help);
+    let page = app.msg_page();
+    let total = app.msg_total();
+    let title_key = format!("msg.{}", kind.label());
+    let title = ti_app::i18n::sget(&title_key);
+    let body_key = page_text(kind, page);
+    let body = ti_app::i18n::sget(&body_key);
+    let page_str = ti_app::i18n::sgetf("scene.message.page", &[&(page + 1), &total]);
+    let cw = ti_render::framebuffer::LOGICAL_W_I32 as f32;
+    let ch = ti_render::framebuffer::LOGICAL_H_I32 as f32;
+    // 面板（1080 rect 400,704,608,336 → `%`；暖棕底 + flex column）
+    let panel = commands
+        .spawn((
+            bevy::ui::Node {
+                width: bevy::ui::Val::Percent(608.0 / cw * 100.0),
+                height: bevy::ui::Val::Percent(336.0 / ch * 100.0),
+                position_type: bevy::ui::PositionType::Absolute,
+                left: bevy::ui::Val::Percent(400.0 / cw * 100.0),
+                top: bevy::ui::Val::Percent(704.0 / ch * 100.0),
+                display: bevy::ui::Display::Flex,
+                flex_direction: bevy::ui::FlexDirection::Column,
+                align_items: bevy::ui::AlignItems::Center,
+                justify_content: bevy::ui::JustifyContent::Center,
+                padding: bevy::ui::UiRect::px(24.0, 24.0, 24.0, 24.0),
+                row_gap: bevy::ui::Val::Px(14.0),
+                border_radius: bevy::ui::BorderRadius::px(12.0, 12.0, 12.0, 12.0),
+                ..Default::default()
+            },
+            bevy::ui::BackgroundColor(bevy::color::Color::srgba(0.24, 0.16, 0.09, 0.92)),
+            bevy::picking::Pickable::IGNORE,
+            ChildOf(root),
+        ))
+        .id();
+    // 标题 / 正文（自动折行）/ 页码（面板内 flex column 子）
+    msg_text_child(commands, panel, font, title.to_string(), None, 30.0, bevy::color::Color::srgb(0.97, 0.88, 0.70));
+    msg_text_child(commands, panel, font, body.to_string(), Some(92.0), 20.0, bevy::color::Color::srgb(0.92, 0.86, 0.72));
+    // 页点（`total` 个方点；`i < page` 实心，否则暗底）
+    let dots_row = commands
+        .spawn((
+            bevy::ui::Node {
+                display: bevy::ui::Display::Flex,
+                flex_direction: bevy::ui::FlexDirection::Row,
+                justify_content: bevy::ui::JustifyContent::Center,
+                column_gap: bevy::ui::Val::Px(8.0),
+                ..Default::default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            ChildOf(panel),
+        ))
+        .id();
+    for i in 0..total {
+        let filled = i < page;
+        let color = if filled {
+            bevy::color::Color::srgb(0.97, 0.88, 0.70)
+        } else {
+            bevy::color::Color::srgb(0.15, 0.10, 0.06)
+        };
+        commands.spawn((
+            bevy::ui::Node {
+                width: bevy::ui::Val::Px(10.0),
+                height: bevy::ui::Val::Px(10.0),
+                border_radius: bevy::ui::BorderRadius::px(2.0, 2.0, 2.0, 2.0),
+                ..Default::default()
+            },
+            bevy::ui::BackgroundColor(color),
+            bevy::picking::Pickable::IGNORE,
+            ChildOf(dots_row),
+        ));
+    }
+    msg_text_child(commands, panel, font, page_str, None, 18.0, bevy::color::Color::srgb(0.70, 0.62, 0.48));
+    // 底部提示行（全宽绝对定位）
+    let hint = ti_app::i18n::sget("scene.message.nav_hint");
+    msg_text_child_abs(commands, root, font, hint.to_string(), 86.0, 18.0, bevy::color::Color::srgb(0.70, 0.62, 0.48));
+    root
+}
+
+/// 面板内 flex 子：居中文本（`width_pct` = 占父宽百分比，`None` = auto）。
+fn msg_text_child(
+    commands: &mut Commands,
+    parent: Entity,
+    font: &Handle<Font>,
+    content: String,
+    width_pct: Option<f32>,
+    size: f32,
+    color: bevy::color::Color,
+) {
+    let mut node = bevy::ui::Node {
+        display: bevy::ui::Display::Flex,
+        justify_content: bevy::ui::JustifyContent::Center,
+        align_items: bevy::ui::AlignItems::Center,
+        ..Default::default()
+    };
+    if let Some(w) = width_pct {
+        node.width = bevy::ui::Val::Percent(w);
+        node.height = bevy::ui::Val::Auto;
+    }
+    commands.spawn((
+        node,
+        bevy::prelude::Text(content),
+        bevy::text::TextFont {
+            font: bevy::text::FontSource::Handle(font.clone()),
+            font_size: bevy::text::FontSize::Px(size),
+            ..Default::default()
+        },
+        bevy::prelude::TextColor(color),
+        bevy::picking::Pickable::IGNORE,
+        ChildOf(parent),
+    ));
+}
+
+/// 全宽绝对定位文本（底部提示行；`top_pct` = 顶边 `%`）。
+fn msg_text_child_abs(
+    commands: &mut Commands,
+    parent: Entity,
+    font: &Handle<Font>,
+    content: String,
+    top_pct: f32,
+    size: f32,
+    color: bevy::color::Color,
+) {
+    commands.spawn((
+        bevy::ui::Node {
+            width: bevy::ui::Val::Percent(100.0),
+            height: bevy::ui::Val::Percent(3.0),
+            position_type: bevy::ui::PositionType::Absolute,
+            left: bevy::ui::Val::Percent(0.0),
+            top: bevy::ui::Val::Percent(top_pct),
+            display: bevy::ui::Display::Flex,
+            justify_content: bevy::ui::JustifyContent::Center,
+            align_items: bevy::ui::AlignItems::Center,
+            ..Default::default()
+        },
+        bevy::prelude::Text(content),
+        bevy::text::TextFont {
+            font: bevy::text::FontSource::Handle(font.clone()),
+            font_size: bevy::text::FontSize::Px(size),
+            ..Default::default()
+        },
+        bevy::prelude::TextColor(color),
+        bevy::picking::Pickable::IGNORE,
+        ChildOf(parent),
+    ));
+}
+
 /// 选角 5 行列表（缩略图 + 两级文案 + 选中态）；行挂 `PickTarget` key=2。
 fn build_select_role_chrome(
     commands: &mut Commands,
@@ -748,6 +913,7 @@ fn attach_row_pick(commands: &mut Commands, chrome: &ti_engine::ui::ListChrome, 
     }
 }
 
+
 /// S29.3：per-scene `bevy_ui` chrome 系统（换场景 / 换选中 → 拆旧建新）。
 #[allow(clippy::needless_pass_by_value)]
 fn chrome_ui_system(
@@ -766,6 +932,12 @@ fn chrome_ui_system(
         SceneKind::SelectRole => g.character().map_or(0usize, |c| c.index() as usize),
         SceneKind::Saveload => g.saveload_cursor(),
         SceneKind::SelectMap => g.map_slot().map_or(0usize, |m| m.zero_index() as usize),
+        // 消息：翻页 / 换类型 ⇒ 重建（`page*16 + kind 序`）
+        SceneKind::Message => {
+            let kind = g.msg_kind().unwrap_or(MsgKind::Help);
+            let kind_idx = MsgKind::all().iter().position(|k| *k == kind).unwrap_or(0);
+            g.msg_page() as usize * 16 + kind_idx
+        }
         _ => 0,
     };
     let key = (scene.discriminant(), sel_key);

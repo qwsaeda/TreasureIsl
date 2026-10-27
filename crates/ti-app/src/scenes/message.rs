@@ -59,6 +59,11 @@ impl Scene for MessageScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("message");
         chrome::render_primitives(host, "message", -1);
+        // S29.3（B1）：消息面板（面板/标题/正文自动折行/页点/页码/提示）已迁 Bevy `bevy_ui`
+        // ⇒ CPU 路径跳过运行时面板绘制（Bevy 侧画）；未迁时照旧。
+        if host.chrome_in_bevy_ui() {
+            return;
+        }
         // S20.2 v4 面板语言：消息卡片 = 深棕木底（scenes.json 原语 `panel_wood`）+ 黄铜细边。
         if let Some(panel) = layout.extra.get("panel") {
             chrome::wood_panel(host, panel.x, panel.y, panel.w, panel.h);

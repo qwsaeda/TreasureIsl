@@ -2206,7 +2206,8 @@
     "z": 6,
     "when": "",
     "item": -1,
-    "text_key": "scene.main_map.title"
+    "text_key": "scene.main_map.title",
+    "params": {}
    },
    {
     "kind": "image",
@@ -2270,7 +2271,8 @@
     "z": 9,
     "when": "",
     "item": -1,
-    "text_key": "scene.main_map.hud.trade"
+    "text_key": "scene.main_map.hud.trade",
+    "params": {}
    },
    {
     "kind": "image",
@@ -2318,7 +2320,8 @@
     "z": 9,
     "when": "",
     "item": -1,
-    "text_key": "scene.main_map.hud.sell"
+    "text_key": "scene.main_map.hud.sell",
+    "params": {}
    },
    {
     "kind": "image",
@@ -2366,7 +2369,8 @@
     "z": 9,
     "when": "",
     "item": -1,
-    "text_key": "scene.main_map.hud.build"
+    "text_key": "scene.main_map.hud.build",
+    "params": {}
    }
   ],
   "deck_spin": {
@@ -2486,7 +2490,8 @@
     "color": "brass_dark",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2499,7 +2504,8 @@
     "color": "brass_dark",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2512,7 +2518,8 @@
     "color": "brass_dark",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2525,7 +2532,8 @@
     "color": "brass_dark",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2538,7 +2546,8 @@
     "color": "wood_warm",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2551,7 +2560,8 @@
     "color": "wood_warm",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2564,7 +2574,8 @@
     "color": "wood_warm",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2577,7 +2588,8 @@
     "color": "wood_warm",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2590,7 +2602,8 @@
     "color": "brass_dark",
     "z": 4,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2603,7 +2616,8 @@
     "color": "gold_warm",
     "z": 5,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2616,7 +2630,8 @@
     "color": "gold_warm",
     "z": 5,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "rect",
@@ -2629,7 +2644,8 @@
     "color": "gold_warm",
     "z": 5,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {}
    },
    {
     "kind": "text",
@@ -2644,7 +2660,8 @@
     "z": 5,
     "when": "",
     "item": -1,
-    "text_key": "scene.vs.title"
+    "text_key": "scene.vs.title",
+    "params": {}
    },
    {
     "kind": "text",
@@ -2659,7 +2676,8 @@
     "z": 11,
     "when": "",
     "item": -1,
-    "text_key": "scene.vs.hint"
+    "text_key": "scene.vs.hint",
+    "params": {}
    }
   ]
  },
@@ -2730,7 +2748,10 @@
      "h": 336
     },
     "color": "panel_wood",
-    "z": 4
+    "z": 4,
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "rect",
@@ -2741,7 +2762,10 @@
      "h": 48
     },
     "color": "wood_warm",
-    "z": 4
+    "z": 4,
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "rect",
@@ -2754,7 +2778,10 @@
     "color": "gold_warm",
     "z": 5,
     "when": "",
-    "item": -1
+    "item": -1,
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    },
    {
     "kind": "text",
@@ -2770,7 +2797,10 @@
     "item": -1,
     "text_key": "scene.message.nav_hint",
     "tier": "hint",
-    "text": ""
+    "text": "",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
    }
   ],
   "focus_anchor": {
