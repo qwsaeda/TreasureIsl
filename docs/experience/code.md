@@ -551,3 +551,17 @@ S24.0（约 6 个阶段）。连带影响：S21 用户评审「main_map 界面�
 - **根因**：面板基础边框与选中指示边框共用 `brass` token，缺「选中态必须与基础态可区分」的判据（视觉层级 = 颜色亮度/线宽至少一维拉开）。
 - **解法**：`selected_border` 外圈改用 `gold_warm`（亮金 0xFEA0）+ 线宽 3→4px（`PANEL_SELECTED_BORDER_PX`）；规范 = 选中/高亮指示色必须比载体面板边框**更亮或更粗**，且测试判据用指示色本身（`region_color_count(gold_warm) > 0`）而非载体色。
 - **验证**：`cargo test -p ti-app --test render_intent selected_state_marker_visible_and_no_leak` PASS（行 0 顶外带 gold_warm > 0，行 1 左侧无泄漏）；出图 evidence/bevy_native_saveload.png 槽 1 亮金厚边可辨。
+
+### EXP-124 代码：改数据文件须按原对象格式回注，禁整文件重序列化
+**坑**：S29.2 一次性脚本 `s292_pick_data.py` 给 scenes.json 加 pick_key 时，用 `json.dump(obj, indent=2)` 整文件重写；而 scenes.json 原为 `indent=1` 序列化。整文件被重排缩进 → 5672 行 diff churn（实际数据改动仅 44 行 pick_key + 少量 null→{}）。
+
+**根因**：改「手工维护的大 JSON」时，脚本没有保留原文件的序列化形态（缩进/键序），直接用自己默认参数重 dump 全文件。
+
+**正解（数据修改纪律）**：
+1. 读原对象（`json.load`），**只定点回注要改的字段**（不重排键序）。
+2. 用**与原文件一致的参数**写出：本项目数据表 = `json.dumps(obj, ensure_ascii=False, indent=1)`（scenes.json 已确认逐字节可复现）。
+3. 写后验证：重新 `json.dumps` 与写出的文件逐字节一致（规范形不变量）。
+
+**机器兜底**：gate `validate_data.py` `check_scenes_canonical`（第 10a 项）守「scenes.json 须 indent=1 逐字节规范形」——任何整文件重排缩进/改键序 = FAIL。见 `docs/process/18_asset_content_pipeline.md` §4。
+
+**通用化**：改任何「手工维护 + 非生成物」的数据文件前，先确认其规范序列化形态（`json.dumps(loads(x)) == x` 用哪个 indent），改完用同参写出。一次性脚本（`scripts/tmp/`）尤须遵守，用完即删。

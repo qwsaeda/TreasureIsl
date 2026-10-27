@@ -154,7 +154,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 | 工具 | 用途 | 用法 | 幂等 / 退出码 |
 |---|---|---|---|
 | `gate.ps1` | 全门禁 28 项（编译/测试/文档/数据/结构/渲染/台账） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
-| `validate_data.py` | 数据表校验（balance/strings/scenes/controls 必填字段、值域、孤儿 key、grid 三键） | `python scripts/validate_data.py` | 幂等；违规非 0 |
+| `validate_data.py` | 数据表校验（balance/strings/scenes/controls/theme 必填字段、值域、孤儿 key、grid 三键）+ **`check_scenes_canonical`**（scenes.json 须 indent=1 逐字节规范形，防整文件 churn，S29.2 §18）+ **`check_asset_registry`**（全类型资产 disk↔registry 双向同步：UI 图=`ui_manifest.json`、字体/音频=`assets/registry.json`，S29.2 §18） | `python scripts/validate_data.py` | 幂等只读；违规非 0（gate 第 10a 项） |
 | `check_hardcode.py` | 硬编码扫描（数值/中文面量） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` / `--selftest`（STR_LIT 全捕获回归自检，飞轮 R1 ⑤-05 起 CJK 通道对全字面量生效） | 幂等；严格模式命中即非 0；`--selftest` 断言失败即非 0 |
 | `check_ledger_reality.py` | 台账三方对账（verified ↔ evidence 文件 ↔ 代码符号） | `python scripts/check_ledger_reality.py` | 幂等只读；虚报即非 0 |
 | `check_oracle_boundary.py` | oracle 边界（shell 层禁 `oracle_*` 调用） | `python scripts/check_oracle_boundary.py --check` / `--report` | 幂等只读；违规非 0 |

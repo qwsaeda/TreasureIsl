@@ -33,6 +33,7 @@
 | 套用模版 / 写新场景·控件·模块 | `docs/process/03_templates.md`（§7 = 模块包任务书模版） |
 | **代码标准执行矩阵（架构/耦合/内聚/命名/重构；写码·提交前对照，新代码零豁免）** | `docs/process/16_code_standards.md`（各维度 → 机器检查映射：CS-1 资产单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数禁单字母 / CS-4 场景层窄接缝 = `scripts/check_code_standards.py` 12 项 + 规模归 `audit_code.py` + lint 红线归 gate；棘轮基线 `process_ratchet.json::code_standards`） |
 | **布局引擎 / 响应式版面 / 改布局·加场景·调视口·换引擎（S29 定案 = B1 全 bevy_ui 响应式）** | `docs/process/17_layout_engine.md`（B1：UI + 命中 + 重排全进 Bevy = `bevy_ui` 自动布局 + 窗口 resize + `bevy_picking` 2D 拾取；3 条约定松绑签核（逻辑层仅 UI 交互层进 Bevy / `bevy-cpu-parity` 改口径只保游戏世界 / UI chrome 转 Bevy 代码而游戏内容仍 1080 数据驱动）+ 换引擎成本重估；原「引擎无关求解器」方向已作废；WBS S29.0~S29.5；S27.4 环形棋盘 / S28.6 副本场景 UI = 其消费者） |
+| **资产登记 / 资源加载标准 / 版面坐标写在哪 / 加资产·加地图（不手写像素 + 统一资产管理）** | `docs/process/18_asset_content_pipeline.md`（行业三档 ①绝对坐标/②意图+自动布局/③参数化 + 总纲「不手写像素」；本项目终态 UI=bevy_ui 自动布局 S29.3 / 地图=参数化 S27.4 / scenes.json 退成元素清单；**资产登记标准** = UI 图 `ui_manifest.json` + 字体/音频 `assets/registry.json`，gate `validate_data` `check_asset_registry` 全类型 disk↔registry 双向同步 + `check_scenes_canonical` 守 scenes.json indent=1 规范形；音频口径 = 发货无声 S18.8；改资产/资源加载/版面坐标/加地图前必读） |
 | 用脚本/codegen 批量处理 | `docs/process/04_tooling.md` |
 | **查业务规则（战斗/经济/地图/存档/UI 流）** | `docs/business/` 各系统文档（不依赖逆向产物） |
 | **界面版面 / 配色 / 控件坐标（1080 单一事实源）** | `docs/business/08_layout_design.md`（改 scenes.json 坐标/配色前必读；表值 = scenes.json 同值） |

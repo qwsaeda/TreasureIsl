@@ -131,3 +131,15 @@
 - **解法**：flywheel 的 `Read-GateItems` 改成与 doccheck2 `gate_item_actual_count` 完全一致（`trim StartsWith 'Report '` + 行内首个引号串去重）⇒ 28 ≥ 21 PASS。规范 = **任何工具声称与某判据「同口径」时，必须逐字复刻其计数/提取逻辑，并在 -Check 下限里引用同一期望值**；改 gate 结构后必须同时跑所有「同口径」消费方。
 - **验证**：`powershell -File scripts/flywheel_readme.ps1 -Check` PASS（gate 28 项 = doccheck2 `check_gate_item_count` 期望 28）；`cargo run -p ti-tools --bin doccheck2` 0 error。
 - **同源复发（2026-10-27，S27/S28 批次）**：`scripts/doc_numbers.py` 的 `gate_item_count()` 复刻了**旧 flywheel 口径**（只数顶格 `Report ` 行 = 12）⇒ 跑 `--fix` 会把全库声称的 **28 项回写成 12**（parity.md / git.md / README.md / gate.ps1 / playbook.ps1 / style.md / loop.md 同时被污染）⇒ doccheck2 立刻报 5 处「门禁项数声称漂移（声称 12，实测 28）」。已改：①`gate_item_count()` 改为与 doccheck2 逐字对齐（任意缩进 + 行内首个引号串**按名去重** = 28）②`_is_gate_total()` 增负例护栏：排除 `doccheck2 34→12 项` / `check_code_standards.py 12 项` 等**非门禁项数**语境（否则 `--fix` 会把这些也改成 28）。规范 = **修一个「同口径」工具后必须清点全部同口径消费方**（本次：flywheel ✅ → doc_numbers ❌ → 已修），且**回写类工具必须带负例护栏**，否则一次 `--fix` 能同时污染 7 个文件。
+
+### EXP-125 工具：Windows 控制台 CJK 打印须设 PYTHONIOENCODING=utf-8
+**坑**：本机 Windows PowerShell 5.1 控制台默认 GBK 代码页；Python 打印 CJK 到 stdout 时 `UnicodeEncodeError: 'gbk' codec can't encode`（整个脚本栈崩溃，或 `[...]` 里非 CJK 的符号如 `↔`(U+2194) 触发 `illegal multibyte sequence`）。
+
+**根因**：`PYTHONIOENCODING` 未设时，Python stdout 编码回落到控制台代码页（GBK），无法编码 CJK / 特殊 Unicode。
+
+**正解**：
+1. 跑任何会打印 CJK 的 Python 前，先 `$env:PYTHONIOENCODING="utf-8"`（PowerShell 每命令需重设，或写进脚本头）。
+2. 把输出重定向到 UTF-8 文件再读（`Out-File -Encoding utf8`），而非直接让 CJK 走控制台。
+3. 工具脚本内部 `print` 前可 `sys.stdout.reconfigure(encoding="utf-8")`（防御性）。
+
+**关联**：`docs/tutorial/06_input_system.md` 曾被 cmdlet 写入带 UTF-8 BOM（gate doccheck2 报「文本文件非 UTF-8 BOM（cmdlet 写入痕迹）」）——同一族「Windows 编码」坑，写盘用编辑工具/python 写 UTF-8（无 BOM），勿用 `Set-Content` 默认编码。见 EXP-051/091。

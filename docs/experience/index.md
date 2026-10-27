@@ -31,10 +31,10 @@
 |---|---|---|
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
-  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 15 |
+  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 16 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 12 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 32 |
-  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 41 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 42 |
 
 ## 条目索引
 
@@ -163,6 +163,8 @@
 | EXP-121 | code | | 提示 bar 双画：盒心 r.x+r.w/2-tw/2 vs 屏心 (1080-tw)/2，奇数宽差 1px；同元素几何必须单一事实源 正文见 `code.md` |
 | EXP-122 | code | | wood_panel 与 selected_border 共用 brass ⇒ 选中不可辨；外圈改 gold_warm + 4px，判据用指示色 region_color_count 正文见 `code.md` |
 | EXP-123 | tools | | flywheel_readme 旧解析只数顶格 ^Report=12，doccheck2 全 Report 去重=28；改 gate 结构后须同跑所有同口径消费方 正文见 `tools.md` |
+| EXP-124 | code | | 一次性脚本给 scenes.json 加字段误用 json.dump(indent=2) 整文件重写（原 indent=1）→ 5672 行 churn；纪律=读原对象→定点回注→json.dumps(indent=1) 写出，gate check_scenes_canonical 守规范形（§18） 正文见 `code.md` |
+| EXP-125 | tools | | PowerShell 5.1 控制台 GBK 代码页，Python 打印 CJK/特殊符号 UnicodeEncodeError 崩栈；跑 CJK Python 先设 \utf-8=utf-8，或重定向 UTF-8 文件（同族：cmdlet 写盘带 BOM = EXP-051/091） 正文见 `tools.md` |
 
 ## 条目格式（写新条时照抄）
 

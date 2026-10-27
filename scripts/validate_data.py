@@ -33,7 +33,9 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -369,6 +371,79 @@ def check_ui_icons(root: Path, problems: list[str]) -> None:
             )
 
 
+def check_scenes_canonical(root: Path, problems: list[str]) -> None:
+    """②止血（S29.2 EXP-124 配套）：`scenes.json` 须是 indent=1 逐字节规范形。
+
+    手工/脚本改版面数据走「读原对象→定点回注→json.dumps(indent=1) 写出」纪律；
+    整文件被重排缩进（如误用 indent=2 重序列化）会 5000+ 行 churn（S29.2 曾误改），
+    本项把「规范形」变成机器不变量：任何破坏缩进/键序的写法都 FAIL。
+    """
+    p = root / "assets/data/scenes.json"
+    if not p.is_file():
+        return  # 缺文件 = 上面的 load 已报
+    raw = p.read_text(encoding="utf-8")
+    try:
+        obj = json.loads(raw)
+    except json.JSONDecodeError as e:
+        problems.append(f"scenes.json JSON 语法错误 {e}")
+        return
+    canon = json.dumps(obj, ensure_ascii=False, indent=1)
+    if raw != canon and raw.rstrip("\n") != canon:
+        problems.append(
+            "scenes.json 非 indent=1 逐字节规范形（整文件被重排缩进/改键序 = churn）。"
+            "改数据须「读原对象→定点回注→json.dumps(obj, ensure_ascii=False, indent=1) 写出」。"
+        )
+
+
+def _sync(registered: list[str], disk: set[str], label: str, problems: list[str]) -> None:
+    """双向同步：登记的须盘上有（盘缺）+ 盘上的须登记（未登记）= 集合相等。"""
+    reg_set = set(registered)
+    for missing in sorted(reg_set - disk):
+        problems.append(f"{label} 登记了 `{missing}` 但磁盘缺失（registry→disk 悬挂引用）")
+    for unreg in sorted(disk - reg_set):
+        problems.append(f"{label} 磁盘有 `{unreg}` 但未登记（disk→registry 漏登记）")
+
+
+def check_asset_registry(root: Path, problems: list[str]) -> None:
+    """①统一资产登记（gate 10a 扩展）：全类型资产 disk<->registry 双向同步。
+
+    - UI 图像登记源 = `assets/ui_manifest.json`（`assets[].file`），与 `assets/ui/*.png` 双向同步；
+    - 字体/音频登记源 = `assets/registry.json`（fonts/audio），与 `assets/fonts/*`、`assets/audio/*` 双向同步。
+    新增资产 = 登记到对应 registry（gate 兜底：盘上有未登记 / 登记了盘上无 = FAIL）。
+    """
+    # ① UI 图像：ui_manifest <-> assets/ui/*.png
+    man = root / "assets/ui_manifest.json"
+    if man.is_file():
+        try:
+            m = json.loads(man.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            problems.append(f"ui_manifest.json 读取失败：{e}")
+            m = {}
+        img_reg = [a.get("file") for a in m.get("assets", []) if a.get("file")]
+        img_disk = {
+            os.path.relpath(p, root).replace(os.sep, "/")
+            for p in glob.glob(str(root / "assets/ui/*.png"))
+        }
+        _sync(img_reg, img_disk, "ui_manifest(图像)", problems)
+
+    # ② 字体/音频：registry.json <-> assets/fonts|audio/*
+    reg = root / "assets/registry.json"
+    if reg.is_file():
+        try:
+            r = json.loads(reg.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            problems.append(f"registry.json 读取失败：{e}")
+            r = {}
+        for section in ("fonts", "audio"):
+            entries = r.get(section, []) or []
+            registered = [e.get("path") for e in entries if e.get("path")]
+            disk = {
+                os.path.relpath(p, root).replace(os.sep, "/")
+                for p in glob.glob(str(root / f"assets/{section}/*"))
+            }
+            _sync(registered, disk, f"registry({section})", problems)
+
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="数据表兜底校验（gate 第 10a 项统一入口）")
@@ -404,6 +479,8 @@ def main() -> int:
         check_v2(scenes, problems)
     check_controls(root, problems)
     check_ui_icons(root, problems)
+    check_scenes_canonical(root, problems)
+    check_asset_registry(root, problems)
 
     for p in problems:
         print(f"ERROR {p}")
@@ -411,7 +488,10 @@ def main() -> int:
         print(f"validate_data: {len(problems)} problem(s)")
         return 1
     n_str = len([k for k in loaded.get("strings.json", {}) if k != "schema_version"])
-    print(f"validate_data: OK（{len(loaded)} 表，strings {n_str} 键；main_map.grid 三键 + 全场景 extra 标量正整数）")
+    print(
+        f"validate_data: OK（{len(loaded)} 表，strings {n_str} 键；main_map.grid 三键 + 全场景 extra 标量正整数"
+        " + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）"
+    )
     return 0
 
 

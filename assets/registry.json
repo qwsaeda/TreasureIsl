@@ -1,0 +1,13 @@
+{
+ "version": 1,
+ "_comment": "资产登记（字体/音频的存在性单一事实源；UI 图像登记在 ui_manifest.json，不在此重复——gate check_asset_registry 统一做全类型 disk<->registry 双向同步）。新增字体/音频 = 在此登记（gate 校验：登记的须在盘 / 盘上的须登记）。音频当前为空 = 发货桌面/浏览器无声（S18.8 切 bevy_audio 前），legacy macroquad 壳亦无音频文件。",
+ "fonts": [
+  {
+   "path": "assets/fonts/lxgw-wenkai-reg.ttf",
+   "role": "cjk_ui",
+   "format": "ttf",
+   "_note": "唯一 CJK UI 字体（LXGW WenKai）。Bevy GPU 图集 S18.3 / native parse_font_bytes 同源。"
+  }
+ ],
+ "audio": []
+}
