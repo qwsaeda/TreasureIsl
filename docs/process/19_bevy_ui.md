@@ -116,6 +116,24 @@ commands.spawn((
   故已迁 chrome 必须整段（含命中）搬到 UI 层，不能「画在 UI、命中留在 1080」。
 - CPU 后端（Android macroquad 壳）无 bevy_ui ⇒ 迁移开关须**按后端可关**（本项目 = `GameApp::set_chrome_in_bevy_ui`，默认关）。
 
+### 7.2 参数化径向环（index 6 徽章，S29.3d）
+
+列表/卡片 chrome 用 flex 竖排（`build_list_chrome`/`build_list_chrome_pos`）。**环形菜单**（index 罗盘环 6 徽章）
+用**参数化**定位：环心 + 半径 + 60° 步进算 6 格中心 `%`（不逐格手写像素，B1 ③ 参数化档）：
+
+```
+angle_i = -90° + i·60°        // 0 = 顶
+x% = cx + rx·cos(angle_i)      // cx/rx = 环心/半径 x（`%` 宽）
+y% = cy + ry·sin(angle_i)      // cy/ry = 环心/半径 y（`%` 高，屏幕 y 向下）
+```
+
+- 环心/半径/格尺寸**走 `LOGICAL_*` 常量**换算（不裸写 1080/1920/540，`bevy-camera-scale-convention`）；
+  窗口 resize 时各格按 `%` 跟随视口重排（9:16 默认尺寸下与 1080 环位对齐）。
+- 每格 = `ImageNode`（徽章底 + 白蒙版图标，图标 `color` 跨层 tint `gold`/选中 `text_on_wood`）+ 文案；
+  **格节点**挂 `PickTarget`（`key=1`），格内**子节点全 `Pickable::IGNORE`**（否则 `PointerClick` 落到子节点
+  解析不到 `PickTarget`，见 `20_bevy_picking.md` 20-10）。
+- 徽章底图路径 = **读场景数据**（`pick_key=1` 原语 `params.asset`），壳侧不硬编码资产路径（CS-1）。
+
 ## 8. 证据口径（headless）
 
 - `--shot` 离屏无法靠像素可靠验证 UI 叠加（UI 相机与 shot 相机同 `RenderTarget::Image` 的合成时序不可靠）
