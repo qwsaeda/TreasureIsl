@@ -1,0 +1,48 @@
+﻿S29.3b 验收证据（P0「菜单按键无响应」双根因根治 + saveload 迁 bevy_ui）
+
+## 根因（用户报「菜单按键无响应」）
+① bevy_ui 全屏根节点默认 `Pickable`（`should_block_lower`=true）：`build_hover_map`（bevy_picking
+   hover.rs）对无 `Pickable` 组件的实体「默认插入 + break」⇒ 未迁场景的证明面板 / 列表 chrome 的
+   全屏 UI 节点挡掉下层 1080 拾取标记。修 = 这些装饰/容器节点挂 `Pickable::IGNORE`（不挡下层、不发事件）。
+② 更深根因：`bevy_picking` mesh 射线后端只拾取 `Mesh2d`/`Mesh3d`/`SimplifiedMesh`
+   （`bevy_picking/mesh_picking/ray_cast` 的 `MeshFilter`）；1080 拾取标记是 `Sprite`（无 `Mesh2d`）
+   ⇒ **从未被拾取** ⇒ index/select_map/saveload 的 1080 层命中全死（即使 UI 层不挡也点不动）。
+   修 = 纯几何 `hit_1080_pick`（窗口逻辑 px 经 letterbox 换算 1080 → 取包含点且 z 最大的 pick_key 矩形）
+   + `manual_1080_hit_system`（左键 tap → `PickEvent`），与 bevy_ui 命中层不双发。
+
+## 判据 1：pick_1080 命中几何 4 条无头单测（ti-engine，EXP-052 移入 tests/）
+```
+test hit_index_medallion ... ok     # 窗口(270,285)=1080(540,570) 徽章 item0 → (key=1,index=0)
+test miss_outside ... ok            # 矩形外 → None
+test topmost_z_wins ... ok          # 同点多矩形取 z 最大
+test letterbox_offset ... ok        # 非 9:16 窗口 pillarbox offset 命中正确
+test result: ok. 4 passed; 0 failed
+```
+
+## 判据 2：e2e 点击路由（logic 半程 = 命中 → poll_hit → 场景跳转）
+```
+test e2e_touch_economy_loop ... ok   # index medallion 0→选角→选图→主地图 + HUD 臂（trade/build/boat）
+test result: ok. 8 passed; 0 failed
+```
+
+## 判据 3：gate 全绿（仅 s43_fps_smoke = 本 VM 无 GPU 环境项，S24.0/S27.1 已记）
+```
+27 PASS + 1 FAIL(s43_fps_smoke 环境项) + SKIP(android/zero-unknown)
+```
+
+## 判据 4：saveload bevy_ui 出图（1080 夜空底 + bevy_ui 左槽面板同帧叠加）
+```
+[ui] bevy_ui probe: node=23 text=11 computed_layout=23   # 5 槽行 × (行+文案列+2字) + 根/面板/标题
+[shot] 非黑像素 = 2073591 / 2073600                        # 1080 世界仍在（UI 层未清屏/未挡渲染）
+像素采样：夜空(0,10,26) / 右元数据暖棕(57,40,24) / 左槽面板区有内容 → 1080 与 bevy_ui 同帧正确叠加
+```
+
+## 视觉签收（A 纪律，EXP-114）
+用户拍板（2026-10-27）：「全部做完，能正式上线玩，你自己测试验证通过，中间不要停，不要问」
+⇒ S29.3b 视觉签收以 agent 机器判据代（--shot saveload 出图 + 像素采样 + 无头单测 + e2e + gate 全绿）；
+最终 bevy_ui 排版逐场景过目归 S29.5 收口时用户一并确认。saveload 槽位文案全 i18n（无硬编码），
+选中态/有档/空档三态经 `pick_1080` + e2e 逻辑判据覆盖。
+
+## 残留（归 S29.3 主体 / S29.5）
+select_map（卡片 + BOSS 星 + 锁条）、index（径向 6 徽章环）、main_map/vs/message 的 bevy_ui 响应式迁移
+未做——保留 1080 渲染 + 1080 手动拾取（可玩）；响应式 bevy_ui 版面 + resize 多视口实测重排 = S29.5 收口。

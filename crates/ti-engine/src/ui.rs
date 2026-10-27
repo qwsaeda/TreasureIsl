@@ -75,9 +75,9 @@ pub struct ListChrome {
 }
 
 /// 建 **自动布局列表 chrome**（S29.3 B1：行位置/高度由 `taffy` flex 算，不手写像素行；
-/// 面板宽 `%` ⇒ resize 自动重排）。零游戏语义：`title`/各行由调用方传入。
+/// 面板宽/边距用 `%` ⇒ resize 自动重排）。零游戏语义：`title`/各行由调用方传入。
 ///
-/// 布局意图：右侧绝对定位竖排面板（`right`/`width` 用 `%` ⇒ resize 贴边不漂移），
+/// 布局意图：一侧绝对定位竖排面板（`right`/`width` 用 `%` ⇒ resize 贴边不漂移），
 /// 面板 = `flex column` + 行间距；每行 = `flex row`（缩略图 + 文案列），选中行换高亮底色。
 ///
 /// **字体**：`font` = 项目 CJK 字体句柄（`load_project_font`）。**不给会出豆腐块** ——
@@ -88,6 +88,27 @@ pub fn build_list_chrome(
     font: &Handle<Font>,
     title: &str,
     rows: &[ChromeRow],
+) -> ListChrome {
+    build_list_chrome_pos(commands, font, title, rows, PanelSide::Right)
+}
+
+/// 面板贴边方位（`%` 定位 ⇒ resize 自动重排，不手写像素）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PanelSide {
+    /// 右侧贴边（`right`/`width` = %）。
+    Right,
+    /// 左侧贴边（`left`/`width` = %）。
+    Left,
+}
+
+/// 建自动布局列表 chrome（面板方位/宽可配；行内容同 [`build_list_chrome`]）。
+#[must_use]
+pub fn build_list_chrome_pos(
+    commands: &mut Commands,
+    font: &Handle<Font>,
+    title: &str,
+    rows: &[ChromeRow],
+    side: PanelSide,
 ) -> ListChrome {
     // 全屏根（bevy_ui 树须有铺满屏幕的根；`%` 布局据此相对屏幕）
     let root = commands
@@ -106,23 +127,31 @@ pub fn build_list_chrome(
         ))
         .id();
 
-    // 右侧面板（`%` 定位 + 宽 ⇒ resize 自动重排；竖排 flex + 行间距）
+    // 侧边面板（`%` 定位 + 宽 ⇒ resize 自动重排；竖排 flex + 行间距）
+    let mut node = Node {
+        display: Display::Flex,
+        position_type: PositionType::Absolute,
+        top: Val::Percent(4.0),
+        width: Val::Percent(34.0),
+        height: Val::Auto,
+        flex_direction: FlexDirection::Column,
+        align_items: AlignItems::Stretch,
+        padding: UiRect::px(16.0, 16.0, 16.0, 16.0),
+        border_radius: BorderRadius::px(12.0, 12.0, 12.0, 12.0),
+        row_gap: Val::Px(12.0),
+        ..Node::default()
+    };
+    match side {
+        PanelSide::Right => {
+            node.right = Val::Percent(3.0);
+        }
+        PanelSide::Left => {
+            node.left = Val::Percent(3.0);
+        }
+    }
     let panel = commands
         .spawn((
-            Node {
-                display: Display::Flex,
-                position_type: PositionType::Absolute,
-                top: Val::Percent(4.0),
-                right: Val::Percent(3.0),
-                width: Val::Percent(34.0),
-                height: Val::Auto,
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Stretch,
-                padding: UiRect::px(16.0, 16.0, 16.0, 16.0),
-                border_radius: BorderRadius::px(12.0, 12.0, 12.0, 12.0),
-                row_gap: Val::Px(12.0),
-                ..Node::default()
-            },
+            node,
             BackgroundColor(Color::srgba(0.10, 0.07, 0.03, 0.82)),
             // 面板容器本身不拾取（行节点才是命中目标）；否则面板区域会挡住下层 1080 拾取标记。
             Pickable::IGNORE,
@@ -141,6 +170,7 @@ pub fn build_list_chrome(
             Text(title.to_string()),
             TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(26.0), ..default() },
             TextColor(Color::srgb(0.95, 0.85, 0.60)),
+            Pickable::IGNORE,
             ChildOf(panel),
         ));
     }
@@ -183,6 +213,9 @@ fn build_chrome_row(
 
     // 缩略图（bevy_ui 内用 `ImageNode`（0.20 API；非旧 `Image`/`Sprite`）+ 定尺寸 `Node`；
     // `NodeImageMode::Stretch` = 铺满节点、忽略原图比例）
+    // S29.3：子节点挂 `Pickable::IGNORE` —— 否则它是行内**最上层可悬停**实体，`PointerClick`
+    // 会落在子节点（无 `PickTarget`）而非行节点 ⇒ 命中解析不到。IGNORE 后行节点 = 该区唯一
+    // 可拾取实体，事件正确落到挂 `PickTarget` 的行上。
     if let Some(img) = &row.image {
         commands.spawn((
             Node {
@@ -195,6 +228,7 @@ fn build_chrome_row(
                 image_mode: NodeImageMode::Stretch,
                 ..Default::default()
             },
+            Pickable::IGNORE,
             ChildOf(row_node),
         ));
     }
@@ -208,6 +242,7 @@ fn build_chrome_row(
                 align_items: AlignItems::FlexStart,
                 ..Node::default()
             },
+            Pickable::IGNORE,
             ChildOf(row_node),
         ))
         .id();
@@ -215,12 +250,14 @@ fn build_chrome_row(
         Text(row.line1.clone()),
         TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(20.0), ..default() },
         TextColor(Color::srgb(0.95, 0.90, 0.78)),
+        Pickable::IGNORE,
         ChildOf(text_col),
     ));
     commands.spawn((
         Text(row.line2.clone()),
         TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(15.0), ..default() },
         TextColor(Color::srgb(0.70, 0.62, 0.48)),
+        Pickable::IGNORE,
         ChildOf(text_col),
     ));
     row_node

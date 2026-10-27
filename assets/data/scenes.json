@@ -2764,7 +2764,8 @@
     "z": 4,
     "params": {
      "pick_key": 3,
-     "pick_index": 0
+     "pick_index": 0,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -2801,7 +2802,8 @@
     "z": 4,
     "params": {
      "pick_key": 3,
-     "pick_index": 3
+     "pick_index": 3,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -2816,7 +2818,8 @@
     "z": 4,
     "params": {
      "pick_key": 3,
-     "pick_index": 1
+     "pick_index": 1,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -2853,7 +2856,8 @@
     "z": 4,
     "params": {
      "pick_key": 3,
-     "pick_index": 4
+     "pick_index": 4,
+     "ui_layer": "bevy_ui"
     }
    },
    {
@@ -2868,7 +2872,8 @@
     "z": 4,
     "params": {
      "pick_key": 3,
-     "pick_index": 2
+     "pick_index": 2,
+     "ui_layer": "bevy_ui"
     }
    },
    {

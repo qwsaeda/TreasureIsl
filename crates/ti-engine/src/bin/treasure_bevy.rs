@@ -46,7 +46,7 @@ use ti_app::game_app::{GameApp, GameInput, HitData, KeyState, Scene};
 // S18.8a：`parse_font_bytes` 仅 native 分支用（wasm 分支无 std::fs 资源读）→ 按目标编译。
 #[cfg(not(target_arch = "wasm32"))]
 use ti_app::menu_shell::parse_font_bytes;
-use ti_app::scenes::SceneKind;
+use ti_app::scenes::{SceneKind, SessionHost};
 use ti_app::stats::FpsMeter;
 use ti_platform::gfx::UploadMode;
 use ti_platform::settings::ScaleMode;
@@ -478,11 +478,12 @@ fn build_scene_chrome(
     server: &AssetServer,
     font: &Handle<Font>,
     scene: SceneKind,
-    selected: usize,
+    g: &GameApp,
 ) -> Option<Entity> {
     match scene {
         SceneKind::SelectRole => {
             let strings = ti_core::data::strings().ok()?;
+            let selected = g.character().map_or(0usize, |c| c.index() as usize);
             let rows: Vec<ti_engine::ui::ChromeRow> =
                 ti_core::domain::selection::Character::all()
                     .iter()
@@ -506,6 +507,44 @@ fn build_scene_chrome(
             for (idx, row_entity) in chrome.rows.iter().enumerate() {
                 commands.entity(*row_entity).insert(ti_engine::pick::PickTarget {
                     key: 2,
+                    index: i32::try_from(idx).unwrap_or(-1),
+                });
+            }
+            Some(chrome.root)
+        }
+        // S29.3：存读档 5 槽位列表迁 bevy_ui（槽文案全 i18n；有档/空档三态 + 光标选中态）。
+        SceneKind::Saveload => {
+            let slots: Vec<_> = g.save_slots().to_vec();
+            let cursor = g.saveload_cursor();
+            let rows: Vec<ti_engine::ui::ChromeRow> = slots
+                .iter()
+                .enumerate()
+                .map(|(i, s)| {
+                    let has = s.version > 0;
+                    let state = ti_app::i18n::sget(if has { "slot.has" } else { "slot.empty" });
+                    let idx = i + 1;
+                    let line1 = ti_app::i18n::sgetf("slot.label_fmt", &[&idx, &state]);
+                    let line2 = if has {
+                        ti_app::i18n::sgetf(
+                            "scene.saveload.slot_summary_fmt",
+                            &[&s.character, &s.gold, &s.rng_steps],
+                        )
+                    } else {
+                        ti_app::i18n::sget("scene.saveload.empty_line").to_string()
+                    };
+                    ti_engine::ui::ChromeRow { image: None, line1, line2, selected: i == cursor }
+                })
+                .collect();
+            let chrome = ti_engine::ui::build_list_chrome_pos(
+                commands,
+                font,
+                ti_app::i18n::sget("scene.saveload.title"),
+                &rows,
+                ti_engine::ui::PanelSide::Left,
+            );
+            for (idx, row_entity) in chrome.rows.iter().enumerate() {
+                commands.entity(*row_entity).insert(ti_engine::pick::PickTarget {
+                    key: 3,
                     index: i32::try_from(idx).unwrap_or(-1),
                 });
             }
@@ -535,8 +574,13 @@ fn chrome_ui_system(
         return;
     };
     let scene = SceneKind::from_legacy(g.scene());
-    let selected = g.character().map_or(0usize, |c| c.index() as usize);
-    let key = (scene.discriminant(), selected);
+    // 重建键 = 场景判别 + 场景相关选中态（选角 = 角色序 / 存读档 = 光标；变化才拆旧建新）。
+    let sel_key = match scene {
+        SceneKind::SelectRole => g.character().map_or(0usize, |c| c.index() as usize),
+        SceneKind::Saveload => g.saveload_cursor(),
+        _ => 0,
+    };
+    let key = (scene.discriminant(), sel_key);
     if chrome.built == Some(key) {
         return;
     }
@@ -545,7 +589,7 @@ fn chrome_ui_system(
     }
     // S29.3：CJK 字体（不给 ⇒ 中文豆腐块 □□；`complex_script_segmentation` 特性已开）
     let font = ti_engine::canvas::BevyCanvas::load_project_font(&server, "assets/");
-    chrome.root = build_scene_chrome(&mut commands, &server, &font, scene, selected);
+    chrome.root = build_scene_chrome(&mut commands, &server, &font, scene, &g);
     chrome.built = Some(key);
 }
 

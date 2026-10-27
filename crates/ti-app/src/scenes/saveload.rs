@@ -97,6 +97,11 @@ impl Scene for SaveloadScene {
         let slots: Vec<SaveSlot> = host.save_slots().to_vec();
         let cursor = host.saveload_cursor();
         chrome::render_primitives(host, "saveload", i64::try_from(cursor).unwrap_or(-1));
+        // S29.3（B1）：槽位列表 chrome 已迁 Bevy `bevy_ui`（行位置由 taffy 算，不手写像素）⇒
+        // CPU 路径跳过槽位木底/选中边/按压闪影/槽文案（Bevy 侧画）；未迁时照旧。
+        if host.chrome_in_bevy_ui() {
+            return;
+        }
         // 按压闪影 / 长摁按压：光标行压暗（金底之上叠 bevel_shadow）
         let held = host.press_held();
         let flashing = chrome::press_flash_active();
