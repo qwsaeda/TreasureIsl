@@ -1,10 +1,8 @@
-// oracle：战斗系统差分基准，测试专用（S11 起降级为纯基准函数）。
-//
-// **类型已迁至 [`crate::domain::combat`]**（S11 归档改造：业务类型不该住在逆向目录）。
-// 本模块只保留从伪代码直译的**差分基准行为函数**（BOSS 档表 / 单回合 / 整场），
-// 供 `tests/diff_battle.rs` 与 `rules::battle` 对拍。
-//
-// 业务规则以 `docs/business/combat.md` 为准；本 oracle 是**历史参照**，不是规则来源。
+//! oracle 战斗差分基准（S11 降级为纯基准函数；类型在 domain::combat）。
+//!
+//! 差分基准 = 从 `legacy/docs/spec/*.md` 伪代码直译的纯函数，供 `tests/diff_*.rs` 对账
+//! 正向实现（`rules::`）；本模块**不参与运行时**，S11 起物理归档 `legacy/` 前保留为对照基准。
+
 
 pub use crate::domain::combat::{Side, Unit};
 

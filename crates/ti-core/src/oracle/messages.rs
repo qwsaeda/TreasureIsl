@@ -1,9 +1,8 @@
-// oracle：消息分页状态机差分基准，测试专用（S11 起降级为纯基准函数）。
-//
-// **类型已迁至 [`crate::domain::messages`]**（S11 归档改造）。
-// 本模块只保留从伪代码直译的**差分基准行为函数**（分页转换 / 可达种类）。
-//
-// 业务规则以 `docs/business/loop_core.md` §消息为准；页数以 `balance.messages.pages` 为准。
+//! oracle 消息分页状态机差分基准（S11 降级为纯基准函数；类型在 domain::messages）。
+//!
+//! 差分基准 = 从 `legacy/docs/spec/*.md` 伪代码直译的纯函数，供 `tests/diff_*.rs` 对账
+//! 正向实现（`rules::`）；本模块**不参与运行时**，S11 起物理归档 `legacy/` 前保留为对照基准。
+
 
 pub use crate::domain::messages::{MsgEvent, MsgKind, MsgPage};
 

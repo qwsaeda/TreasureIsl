@@ -1,9 +1,8 @@
-// oracle：贸易差分基准，测试专用（S11 起降级为纯基准函数）。
-//
-// **类型已迁至 [`crate::domain::economy`]**（S11 归档改造）。
-// 本模块只保留从伪代码直译的**差分基准行为函数**（买入 / 卖出结算 / 事件码分派）。
-//
-// 业务规则以 `docs/business/economy.md` 为准；价格数值以 `balance.json` 为准（可调）。
+//! oracle 贸易差分基准（S11 降级为纯基准函数；类型在 domain::economy）。
+//!
+//! 差分基准 = 从 `legacy/docs/spec/*.md` 伪代码直译的纯函数，供 `tests/diff_*.rs` 对账
+//! 正向实现（`rules::`）；本模块**不参与运行时**，S11 起物理归档 `legacy/` 前保留为对照基准。
+
 
 pub use crate::domain::economy::{
     GOODS_CATALOG, Goods, PriceTable, TRADE_EVENT_CODES, TradeEvent, trade_event_from_code,

@@ -1,10 +1,8 @@
-// oracle：存档二进制编解码差分基准，测试专用（S11 起降级为纯基准函数）。
-//
-// **类型已迁至 [`crate::domain::persistence`]**（S11 归档改造）。
-// 本模块只保留**二进制存档路径**的差分基准函数（校验 / v1→v2 迁移 / 读写）。
-// 正式存档格式是 **JSON v2**（`rules::saveload_json`），二进制路径仅供历史对拍。
-//
-// 业务规则以 `docs/business/persistence.md` 为准。
+//! oracle 存档二进制编解码差分基准（S11 降级为纯基准函数；类型在 domain::persistence）。
+//!
+//! 差分基准 = 从 `legacy/docs/spec/*.md` 伪代码直译的纯函数，供 `tests/diff_*.rs` 对账
+//! 正向实现（`rules::`）；本模块**不参与运行时**，S11 起物理归档 `legacy/` 前保留为对照基准。
+
 
 pub use crate::domain::persistence::{MIN_SAVE_SIZE, REC_MAGIC, SaveErr, SaveSlot};
 

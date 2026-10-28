@@ -1,9 +1,8 @@
-// oracle：场景切换状态机差分基准，测试专用（S11 起降级为纯基准函数）。
-//
-// **类型已迁至 [`crate::domain::flow`]**（S11 归档改造）。
-// 本模块只保留从伪代码直译的**差分基准函数**（状态码 + 触发事件 → 新状态/目标场景）。
-//
-// 业务规则以 `docs/business/loop_core.md` §场景图为准。
+//! oracle 场景切换状态机差分基准（S11 降级为纯基准函数；类型在 domain::flow）。
+//!
+//! 差分基准 = 从 `legacy/docs/spec/*.md` 伪代码直译的纯函数，供 `tests/diff_*.rs` 对账
+//! 正向实现（`rules::`）；本模块**不参与运行时**，S11 起物理归档 `legacy/` 前保留为对照基准。
+
 
 pub use crate::domain::flow::{SceneId, SceneState};
 

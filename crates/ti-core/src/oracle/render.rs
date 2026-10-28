@@ -1,10 +1,8 @@
-// oracle：场景装载/渲染管线差分基准，测试专用（S11 起降级为纯基准函数）。
-//
-// **类型已迁至 [`crate::domain::render`]**（S11 归档改造）。
-// 本模块只保留**装载校验**的差分基准函数（容器存在性 / gl.rec 魔数 / glmapm 探测）。
-// 渲染管线本身是现代实现（GPU 逐精灵 batch，见 `docs/modernization.md` §1）。
-//
-// 资源格式事实见 `docs/reverse/formats/lucencypackage.md`。
+//! oracle 场景装载/渲染管线差分基准（S11 降级为纯基准函数；类型在 domain::render）。
+//!
+//! 差分基准 = 从 `legacy/docs/spec/*.md` 伪代码直译的纯函数，供 `tests/diff_*.rs` 对账
+//! 正向实现（`rules::`）；本模块**不参与运行时**，S11 起物理归档 `legacy/` 前保留为对照基准。
+
 
 pub use crate::domain::render::{
     RenderError, RenderPlan, ResourceContainer, ResourceRef, SceneAsset,

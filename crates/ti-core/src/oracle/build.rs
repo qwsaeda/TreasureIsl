@@ -1,10 +1,8 @@
-// oracle：建造/银行差分基准，测试专用（S11 起降级为纯基准函数）。
-//
-// 业务规则以 `docs/business/economy.md` 为准；造价以 `balance.json` 为准（可调）。
-//
-// 类型分工（P2 经济域收口）：`Building` 域类型来自 `domain::economy`；
-// 银行与错误类型是 oracle 差分基准专用形态（含 `deposit` 追踪与
-// `UnknownBuilding` 变体），正式实现用 `rules::build::{Bank, BuildErr}`。
+//! oracle 建造/银行差分基准（S11 降级为纯基准函数；类型在 domain::economy）。
+//!
+//! 差分基准 = 从 `legacy/docs/spec/*.md` 伪代码直译的纯函数，供 `tests/diff_*.rs` 对账
+//! 正向实现（`rules::`）；本模块**不参与运行时**，S11 起物理归档 `legacy/` 前保留为对照基准。
+
 
 pub use crate::domain::economy::Building;
 
