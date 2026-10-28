@@ -1,0 +1,32 @@
+# S28.6 验收证据（task_close.py 自动生成 2026-10-28）
+
+- 任务标题：副本场景 ×10（每类岛一个专属场景：抢滩登陆战/灯塔夺灯/沉船夺宝/攻陷老巢/夺船坞/商岛护镖/崖上营寨/熔岩洞府/登船夺旗/无畏号炮台）+ 与落格三支接线（无主→进副本→胜利占领）
+- 判据（台账 dod）：改动面=业务规则=无（副本 = territory.md §3/§4）| 数据=assets/data/scenes.json（10 场景版面）+ assets/data/strings.json（副本文案）| 规则=无（守军 = 原型 defense_base，走既有 battle 模型）| 表现=crates/ti-app/src/scenes/（10 个副本场景 + 场景流注册）| 资产=10 场景美术（ui_asset_batch 批次）；跨模块原因=副本 = 场景流（新增 SceneId）+ 表现 + 资产 + 规则回调（胜利占领）四面同改，缺一面即「进得去出不来」或「打了不占领」；判据=10 场景可进出（e2e：主地图→副本→胜利→领地易主→回主地图）+ 每场景 1 个专属机制（战斗/采集/点灯…）+ 守军难度按原型递增 + ui_preview 10 场景出图无 FAIL + gate 全绿 + evidence/S28.6.log
+
+## 判据实跑
+
+### `$ cargo test -q -p ti-app --test app_dungeon_e2e`
+
+退出码：0
+
+```
+
+running 2 tests
+..
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+```
+
+### `$ cargo test -q -p ti-app --test commands_test`
+
+退出码：0
+
+```
+
+running 9 tests
+.........
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

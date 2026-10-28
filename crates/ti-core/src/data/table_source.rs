@@ -8,6 +8,7 @@
 //! 前调用 [`install`]（首访前）；已首访后的调用只告警不改行为。
 //!
 //! 0 游戏语义：本模块只管「哪段文本」，解析 / 校验全在既有表模块（口径不双份）。
+#![allow(clippy::doc_markdown)]
 
 use std::sync::OnceLock;
 
@@ -24,6 +25,9 @@ pub struct PackTables {
     pub scenes: Option<String>,
     /// `strings.json` 包文本（`Some` = 覆盖内嵌 `STRINGS_JSON`；`None` = 内嵌）。
     pub strings: Option<String>,
+    /// 已安装包标识列表（S31.2b：`select_map` 包列表 UI 数据源；
+    /// 壳层注入时由 `map_pack::available_pack_ids` 填充；`None` = 未采集 = UI 走内嵌 3 槽）
+    pub available_ids: Option<Vec<String>>,
 }
 
 static PACK: OnceLock<PackTables> = OnceLock::new();
@@ -44,6 +48,13 @@ pub fn install(tables: PackTables) -> bool {
 #[must_use]
 pub fn source_id() -> Option<&'static str> {
     PACK.get().and_then(|t| t.source_id.as_deref())
+}
+
+/// 已安装包标识列表（S31.2b：`select_map` 包列表 UI 数据源；`None` = 未注入 / 未采集，
+/// UI 走内嵌 `MapSlot` 3 槽旧流，0 行为变化）
+#[must_use]
+pub fn available_ids() -> Option<Vec<String>> {
+    PACK.get().and_then(|t| t.available_ids.clone())
 }
 
 /// 取某段表的生效文本（注入优先；未注入该段 = 内嵌默认文本）。

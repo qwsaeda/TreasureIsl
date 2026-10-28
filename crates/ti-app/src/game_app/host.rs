@@ -157,6 +157,15 @@ impl SelectionHost for GameApp {
     fn enter_main_map(&mut self) -> bool {
         GameApp::enter_main_map(self)
     }
+
+    // S31.2b：包清单 / 注入源 = `ti_core::data::table_source` 注入面（壳层首访前采集）。
+    fn map_pack_ids(&self) -> Option<Vec<String>> {
+        ti_core::data::table_source::available_ids()
+    }
+
+    fn active_map_pack(&self) -> Option<String> {
+        ti_core::data::table_source::source_id().map(str::to_owned)
+    }
 }
 impl MapHost for GameApp {
     fn map_pos(&self) -> Option<GridPos> {
@@ -309,7 +318,7 @@ impl MapHost for GameApp {
 
     /// S28.6 是否正在领地主副本战斗（`vs` 场景 Back 路由：副本 = 回主地图，BOSS 战 = 回主菜单）。
     fn in_dungeon_battle(&self) -> bool {
-        self.battle.as_ref().is_some_and(|b| b.dungeon.is_some())
+        self.battle.as_ref().is_some_and(|b| b.dungeon.is_some() || b.dungeon_battle)
     }
 
     /// S28.6 确认进入待决副本（`pending_dungeon` 在位时切守军战；缺省 `false`）。
@@ -327,6 +336,9 @@ impl MapHost for GameApp {
             return false;
         };
         self.start_dungeon_battle(cell, isle, 1);
+        // S28.6：副本战与 BOSS 战同走 `vs` 场景驱动（`battle_step` 钩在 vs `on_input`）；
+        // 漏切 = 战斗挂起不推进（`dungeon` 在位但无输入面）。
+        self.scene = Scene::Vs;
         true
     }
 
@@ -570,6 +582,9 @@ impl SessionHost for GameApp {
                 self.battle_won = matches!(b.outcome, Some(Side::Player));
                 let dungeon = b.dungeon.clone();
                 b.dungeon = None;
+                if dungeon.is_some() {
+                    b.dungeon_battle = true;
+                }
                 if let Some((cell, isle, _level)) = dungeon {
                     // S28.6 副本战（territory.md §4/§9）：胜利 = 占领（两格 + 首占奖励）；
                     // 失败 = 现状不变。BOSS 推进钩与副本结算互斥（`b.dungeon` 在位 = 副本战）。

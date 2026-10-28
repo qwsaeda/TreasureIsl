@@ -5,7 +5,12 @@
 use ti_core::domain::combat::{Side, Unit};
 use ti_core::rules::battle::BattleSession;
 
-use super::GameApp;
+use ti_core::data::CombatCfg;
+use ti_core::data::balance;
+use ti_core::rules::cards::CardState;
+use ti_core::rules::territory::TerritoryRules;
+
+use super::{GameApp, Scene};
 
 /// 战斗会话封装（持 `rules::battle::BattleSession`，壳层只编排）。
 #[derive(Debug, Clone)]
@@ -22,6 +27,12 @@ pub struct BattleView {
     pub player_hp: u32,
     /// BOSS 当前 HP（`step` 后同步，`BattleSession::boss_hp` 镜像）。
     pub boss_hp: u32,
+    /// S28.6 副本战斗标记（`Some((格序号, 岛原型, 等级))` = 领地主副本战斗，敌方 =
+    /// `rules::territory::defender_unit`；`None` = BOSS 战斗。战斗结束钩据此分结算）。
+    pub dungeon: Option<(u32, String, u8)>,
+    /// S28.6 副本战持久标记（终局后 `dungeon` 被 `battle_step` 消费置 `None`，
+    /// 本标记保「本局 = 副本战」语义，`vs` 场景 Back 路由据此区分 副本→主地图 / BOSS→主菜单）。
+    pub dungeon_battle: bool,
     /// 胜方（`step` 后同步，`None` = 未结束）。
     pub outcome: Option<Side>,
     /// 玩家初始 HP（血条分母，`Unit.hp`）。
@@ -48,7 +59,31 @@ impl BattleView {
             player_hp: player.hp,
             boss_hp,
             outcome,
+            dungeon: None,
+            dungeon_battle: false,
         })
+    }
+
+    /// 副本守军战会话（S28.6 / territory.md §9：敌方 = 调用方注入的守军 [`Unit`]，
+    /// 数值 = `rules::territory::defender_unit`；伤害模型同 BOSS 战（`CombatCfg` + seed 确定性）。
+    #[must_use]
+    pub fn new_dungeon(cfg: &CombatCfg, seed: u32, player: Unit, enemy: Unit) -> Self {
+        let session = BattleSession::new_with_enemy(cfg.clone(), seed, player, enemy);
+        let outcome = session.outcome();
+        let boss_hp = session.boss_hp();
+        Self {
+            player_hp_max: player.hp,
+            boss_hp_max: boss_hp,
+            player,
+            boss_tier: 0,
+            session,
+            rounds: 0,
+            player_hp: player.hp,
+            boss_hp,
+            outcome,
+            dungeon: None,
+            dungeon_battle: true,
+        }
     }
 
     /// 是否结束。
@@ -91,5 +126,35 @@ impl GameApp {
     #[must_use]
     pub fn battle(&self) -> Option<&BattleView> {
         self.battle.as_ref()
+    }
+
+    /// S28.6 开一场领地主副本战斗（敌方 = `rules::territory::defender_unit(isle, level)`；
+    /// 数值全走 `balance`：玩家单位同 `start_battle` 成长口径（建筑加成 + 卡牌减益），
+    /// 伤害模型同 BOSS 战（`rules::battle`，确定性 = 同 seed 同轨迹，territory.md §9）。
+    /// 数据缺失 = 硬错误 eprintln + return（`02_conventions.md` §4.4，不 fallback）。
+    pub fn start_dungeon_battle(&mut self, cell: u32, isle: &str, level: u8) {
+        let seed = self.rng.next().unsigned_abs();
+        let b = match balance() {
+            Ok(b) => b,
+            Err(_e) => {
+                eprintln!("start_dungeon_battle: balance.json 加载失败（硬错误，不 fallback）");
+                return;
+            }
+        };
+        let Some(player) = b.combat.player else {
+            eprintln!("start_dungeon_battle: balance.combat.player 缺失（硬错误，不 fallback）");
+            return;
+        };
+        let player_atk = player.atk.saturating_add(self.build_atk_bonus());
+        let player_hp =
+            player.hp.saturating_add(self.build_hp_bonus()).saturating_sub(self.card_state.hp);
+        let player_unit = Unit { hp: player_hp, atk: player_atk };
+        self.card_state = CardState::default();
+        let enemy = TerritoryRules::new(b).defender_unit(isle, level);
+        let mut view = BattleView::new_dungeon(&b.combat, seed, player_unit, enemy);
+        view.dungeon = Some((cell, String::from(isle), level));
+        self.battle = Some(view);
+        self.battle_won = false;
+        self.scene = Scene::Vs;
     }
 }

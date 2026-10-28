@@ -84,9 +84,14 @@ fn available_ids_and_default_pointer() {
     let root = packs_root();
     let ids = map_pack::available_pack_ids(&root);
     assert!(ids.iter().any(|id| id == "m01"), "S31.1 已装包 m01 须在册（实得 {ids:?}）");
-    assert!(!ids.iter().any(|id| id == "_template"), "_template 骨架无 manifest，不入清单");
+    // `_template` 骨架带 manifest（id=`_template`，schema 合规）⇒ 在清单内；
+    // 但其 `map.json` 缺段 ⇒ `read_pack_tables` 的 board 段 = None（§6 内嵌回退，不 panic）。
+    assert!(
+        map_pack::read_pack_tables(&root, "_template").is_some_and(|t| t.board_json.is_none()),
+        "_template 空包可读且 board 段缺 ⇒ 回退内嵌（§6 语义）"
+    );
     let default = map_pack::default_pack_id(&root);
-    assert!(default.is_some(), ".default 指针或首个已装包须可定位（S31.1 产物 .default=m01）");
+    assert_eq!(default.as_deref(), Some("m01"), ".default 指针 = m01（S31.1 产物）");
 }
 
 /// 注入接缝：`install` 首访前生效（`table_text` 取注入文本）、迟注入忽略。
@@ -103,6 +108,7 @@ fn install_before_first_access_wins() {
         board: Some(injected_board.to_owned()),
         scenes: None,
         strings: None,
+        available_ids: None,
     });
     assert!(accepted, "首次表访问前 install 须生效");
     assert_eq!(table_source::source_id(), Some("m99"));

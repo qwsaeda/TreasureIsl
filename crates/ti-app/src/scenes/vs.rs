@@ -22,8 +22,13 @@ impl Scene for VsScene {
                 false
             }
             GameInput::Back => {
-                // 战斗结束/中途退出 → 回主菜单（`spec/battle.md §d`，状态码 25→0）
-                host.enter(SceneKind::Index);
+                // S28.6：副本战结束/中途退出 = 回主地图（落格续局，territory.md §4）；
+                // BOSS 战 = 回主菜单（`spec/battle.md §d`，状态码 25→0）
+                if host.in_dungeon_battle() {
+                    host.enter(SceneKind::MainMap);
+                } else {
+                    host.enter(SceneKind::Index);
+                }
                 true
             }
             _ => false,

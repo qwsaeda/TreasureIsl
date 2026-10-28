@@ -546,6 +546,12 @@ impl Scene for MainMapScene {
                 host.enter(SceneKind::Index);
                 true
             }
+            // S28.6：落无主领地格后的待决副本入口（`pending_dungeon` 在位时 Confirm = 进守军战；
+            // 缺位 no-op，主地图 Confirm 无其它语义）
+            GameInput::Confirm => {
+                host.confirm_dungeon();
+                false
+            }
             _ => false,
         }
     }
