@@ -23,6 +23,7 @@ pub fn node_label_key(kind: SpaceKind) -> &'static str {
         K::Event => "scene.main_map.node.event",
         K::Card => "scene.main_map.node.card",
         K::Battle => "scene.main_map.node.battle",
+        K::Territory => "scene.main_map.node.territory",
         K::Treasure => "scene.main_map.node.treasure",
         K::Boss => "scene.main_map.node.boss",
     }

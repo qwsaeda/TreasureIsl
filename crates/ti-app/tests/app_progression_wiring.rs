@@ -134,14 +134,23 @@ fn app_full_chain_m01_then_m02_unlocks_all_maps() {
 #[test]
 fn app_save_load_restores_unlock_chain() {
     let b = ti_core::data::balance().expect("balance.json 加载失败");
-    // 存档 map_slot=1（M02）→ 恢复 [m01, m02]；position=123（行主序格索引）+ gold=500
+    // 存档 map_slot=1（M02）→ 恢复 [m01, m02]；position = m02 赛道起点格行主序索引 + gold=500
+    // （S28.3 31 格环：位置按「在赛道上」取档，读档精确吸附，无歧义）
+    let gw = b.selection.maps.iter().find(|m| m.index == 1).map_or(20, |d| d.grid_w);
+    let start_cell = ti_core::data::board()
+        .expect("board.json")
+        .map("m02")
+        .expect("m02")
+        .spaces
+        .first()
+        .expect("起点格");
     let mut app = GameApp::new(1080.0, 1920.0);
     let save = SaveSlot {
         version: 2,
         character: 1,
         gold: 500,
         map_slot: 1,
-        position: 123,
+        position: start_cell.row * gw + start_cell.col,
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
@@ -158,11 +167,10 @@ fn app_save_load_restores_unlock_chain() {
     // Q007：读档恢复存档值（不被 enter_main_map 的 initial_gold 覆写）
     assert_eq!(app.gold(), 500, "读档后金应恢复存档值（Q007）");
     assert_eq!(app.bank().gold, 500, "读档后银行金应恢复存档值（Q007）");
-    let gw = b.selection.maps.iter().find(|m| m.index == 1).map_or(1, |d| d.grid_w);
     assert_eq!(
         app.map_pos(),
-        Some(ti_core::domain::map::GridPos::new(123 / gw, 123 % gw)),
-        "读档后位置应恢复存档格索引（行主序）"
+        Some(ti_core::domain::map::GridPos::new(start_cell.row, start_cell.col)),
+        "读档后位置应精确吸附到存档赛道格（31 格环）"
     );
 
     // 旧档回归：存档 map_slot=2（M03）→ 全解锁（多解锁值可回读）

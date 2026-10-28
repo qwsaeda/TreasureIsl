@@ -25,6 +25,9 @@ pub(crate) struct RawBalance {
     /// 缺省/空 = 代码 9 令牌 crash-safe 回退）。
     #[serde(default)]
     pub(crate) board_group_tokens: Vec<String>,
+    /// 领地系统参数（S28.3：`docs/business/territory.md` §3/§4.1）。
+    #[serde(default)]
+    pub(crate) territory: RawTerritory,
     #[serde(default)]
     pub(crate) messages: RawMessages,
     #[serde(default)]
@@ -266,4 +269,115 @@ pub fn balance() -> Result<&'static Balance, LoadError> {
     let raw: RawBalance = parse(BALANCE_JSON, "balance.json")?;
     let val = convert(raw)?;
     Ok(BALANCE.get_or_init(|| val))
+}
+
+/// 领地系统 serde 形状（`balance.territory`，S28.3；缺省 = 代码回退值）。
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct RawTerritory {
+    /// 加固等级全局上限（§3 表按原型可降）。
+    #[serde(default = "default_max_level")]
+    pub(crate) max_level: u32,
+    /// 过路费每级系数（`toll(T,L) = toll_base * (1 + toll_per_level * L)`）。
+    #[serde(default)]
+    pub(crate) toll_per_level: f32,
+    /// 加固成本每级系数。
+    #[serde(default)]
+    pub(crate) upgrade_cost_per_level: f32,
+    /// 产出每级系数。
+    #[serde(default)]
+    pub(crate) production_per_level: f32,
+    /// 守军每级系数。
+    #[serde(default)]
+    pub(crate) defense_per_level: f32,
+    /// 首占奖励（金）。
+    #[serde(default)]
+    pub(crate) first_capture_bonus: u32,
+    /// 副本守军 atk 系数（`atk = defense × 系数`，S28.6 副本战斗；缺省 0.5）。
+    #[serde(default = "default_dungeon_attack_coef")]
+    pub(crate) dungeon_attack_coef: f32,
+    /// 据点岛升级参数（与领地加固同公式族）。
+    #[serde(default)]
+    pub(crate) home_upgrade: RawHomeUpgrade,
+    /// 10 类岛 → 主题色令牌（棋盘分区色带 / 副本氛围 / 据点 HUD 三处同源）。
+    #[serde(default)]
+    pub(crate) isle_tokens: Vec<String>,
+    /// AI 席位策略参数（§6）。
+    #[serde(default)]
+    pub(crate) ai: RawTerritoryAi,
+    /// 10 类岛原型（§3 表）。
+    #[serde(default)]
+    pub(crate) prototypes: Vec<RawTerritoryPrototype>,
+}
+
+/// 据点岛升级 serde 形状（`balance.territory.home_upgrade`）。
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct RawHomeUpgrade {
+    /// 基础成本（金）。
+    #[serde(default)]
+    pub(crate) base_cost: u32,
+    /// 每级成本系数。
+    #[serde(default)]
+    pub(crate) per_level: f32,
+    /// 等级上限。
+    #[serde(default)]
+    pub(crate) max_level: u32,
+}
+
+/// AI 策略参数 serde 形状（`balance.territory.ai`）。
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct RawTerritoryAi {
+    /// 攻占阈值：对方领地防守强度低于此值 ⇒ 选择攻占（否则交钱）。
+    #[serde(default)]
+    pub(crate) attack_threshold: f32,
+    /// 交钱偏好（0..1，越高越倾向交钱）。
+    #[serde(default)]
+    pub(crate) toll_aversion: f32,
+    /// 升级优先阈值：自己领地收益低于此值 ⇒ 优先升级。
+    #[serde(default)]
+    pub(crate) upgrade_priority: f32,
+}
+
+/// 单个岛原型 serde 形状（`balance.territory.prototypes[]`）。
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct RawTerritoryPrototype {
+    /// 原型 id（`harbour` … `boss_fort`）。
+    pub(crate) id: String,
+    /// 岛名 i18n 键（`isle.<id>`）。
+    #[serde(default)]
+    pub(crate) name_key: String,
+    /// 专属副本场景 id（`raid_beach` … `fort_boss`）。
+    #[serde(default)]
+    pub(crate) dungeon_id: String,
+    /// 副本名 i18n 键（`dungeon.<id>`）。
+    #[serde(default)]
+    pub(crate) dungeon_name_key: String,
+    /// 守军名（显示用）。
+    #[serde(default)]
+    pub(crate) guard: String,
+    /// 占领后产出语义（显示用）。
+    #[serde(default)]
+    pub(crate) benefit: String,
+    /// 加固等级上限（§3 表）。
+    #[serde(default)]
+    pub(crate) max_level: u32,
+    /// 过路费基值。
+    #[serde(default)]
+    pub(crate) toll_base: u32,
+    /// 加固成本基值。
+    #[serde(default)]
+    pub(crate) upgrade_cost_base: u32,
+    /// 每圈产出基值。
+    #[serde(default)]
+    pub(crate) production_base: u32,
+    /// 守军基值（战斗 HP 基线）。
+    #[serde(default)]
+    pub(crate) defense_base: u32,
+}
+
+fn default_max_level() -> u32 {
+    3
+}
+
+fn default_dungeon_attack_coef() -> f32 {
+    0.5
 }

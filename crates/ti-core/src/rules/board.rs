@@ -32,6 +32,8 @@ pub enum SpaceKind {
     Battle,
     /// 宝藏格（获得金币）。
     Treasure,
+    /// 领地格（S28：岛型领地，`docs/business/territory.md` §4 三支分叉结算）。
+    Territory,
     /// BOSS 格（正好停在 BOSS 格；是否触发战斗由 `Turn::boss` 判「经过即触发 + 圈数门槛」）。
     Boss,
 }
@@ -49,6 +51,7 @@ impl SpaceKind {
             Self::Card => "card",
             Self::Battle => "battle",
             Self::Treasure => "treasure",
+            Self::Territory => "territory",
             Self::Boss => "boss",
         }
     }
@@ -65,6 +68,7 @@ impl SpaceKind {
             "card" => Self::Card,
             "battle" => Self::Battle,
             "treasure" => Self::Treasure,
+            "territory" => Self::Territory,
             "boss" => Self::Boss,
             _ => return None,
         })
@@ -82,6 +86,8 @@ pub struct TrackSpace {
     pub group: u8,
     /// 地形码（`S`/`R`/`L`/`T`）。
     pub terrain: char,
+    /// 岛原型 id（S28：领地格有值，`balance.territory.prototypes[].id`；功能格 = `None`）。
+    pub isle: Option<String>,
 }
 
 /// 赛道（有序空间序列）。
@@ -109,6 +115,7 @@ impl Track {
                 kind,
                 group: s.group,
                 terrain: s.terrain,
+                isle: s.isle.clone(),
             });
         }
         Ok(Self { spaces })
@@ -176,6 +183,8 @@ pub enum Landing {
     Battle,
     /// 宝藏格：得金。
     Treasure,
+    /// 领地格：按 `rules::territory` 三支分叉（无主副本 / 他人交钱或攻占 / 自己升级）。
+    Territory,
     /// BOSS 格：进入战斗场景。
     Boss,
 }
@@ -193,6 +202,7 @@ impl Landing {
             SpaceKind::Card => Self::Card,
             SpaceKind::Battle => Self::Battle,
             SpaceKind::Treasure => Self::Treasure,
+            SpaceKind::Territory => Self::Territory,
             SpaceKind::Boss => Self::Boss,
         }
     }
@@ -375,24 +385,55 @@ mod tests {
 
     fn demo_track() -> Track {
         let spaces = vec![
-            TrackSpace { cell: GridPos::new(0, 0), kind: SpaceKind::Start, group: 1, terrain: 'L' },
-            TrackSpace { cell: GridPos::new(0, 1), kind: SpaceKind::Plain, group: 1, terrain: 'L' },
-            TrackSpace { cell: GridPos::new(1, 1), kind: SpaceKind::Card, group: 1, terrain: 'L' },
+            TrackSpace {
+                cell: GridPos::new(0, 0),
+                kind: SpaceKind::Start,
+                group: 1,
+                terrain: 'L',
+                isle: None,
+            },
+            TrackSpace {
+                cell: GridPos::new(0, 1),
+                kind: SpaceKind::Plain,
+                group: 1,
+                terrain: 'L',
+                isle: None,
+            },
+            TrackSpace {
+                cell: GridPos::new(1, 1),
+                kind: SpaceKind::Card,
+                group: 1,
+                terrain: 'L',
+                isle: None,
+            },
             TrackSpace {
                 cell: GridPos::new(1, 0),
                 kind: SpaceKind::Battle,
                 group: 1,
                 terrain: 'L',
+                isle: None,
             },
-            TrackSpace { cell: GridPos::new(2, 0), kind: SpaceKind::Boss, group: 1, terrain: 'L' },
+            TrackSpace {
+                cell: GridPos::new(2, 0),
+                kind: SpaceKind::Boss,
+                group: 1,
+                terrain: 'L',
+                isle: None,
+            },
         ];
         Track { spaces }
     }
 
     #[test]
     fn track_from_map_rejects_unknown_kind() {
-        let spaces =
-            vec![BoardSpace { row: 0, col: 0, kind: "nope".into(), group: 1, terrain: 'L' }];
+        let spaces = vec![BoardSpace {
+            row: 0,
+            col: 0,
+            kind: "nope".into(),
+            group: 1,
+            terrain: 'L',
+            isle: None,
+        }];
         assert!(Track::from_map(&BoardMap { grid_w: 1, grid_h: 1, spaces }).is_err());
     }
 
@@ -468,6 +509,7 @@ mod tests {
                 kind: *kind,
                 group: 1,
                 terrain: 'L',
+                isle: None,
             })
             .collect();
         Track { spaces }
@@ -576,8 +618,10 @@ mod tests {
 
     #[test]
     fn board_landing_rhythm_is_consistent_across_maps() {
-        // S19.4 落格节奏：各图「落格类型占比」必须落在同一区间（比例化分配 ⇒ 跨图节奏一致）。
-        // 区间口径（实测占比）：event/card/battle 各 8%~20%，treasure ≥ 3%，plain 30%~60%。
+        // S19.4 落格节奏 → S28.3 改版 v5 31 格环（`docs/business/territory.md` §2 构成定案）：
+        // 各图「落格类型占比」必须一致（31 格定构 ⇒ 跨图节奏恒同）。
+        // 区间口径（v5 实测）：event 4/31=12%、card 3/31=9%（各 8%~20%）、treasure 2/31=6%（≥3%）；
+        // territory 20/31=64%、boss 1/31=3%、battle/plain = 0（v5 遭遇并入领地副本，§9）。
         let Ok(db) = crate::data::board() else {
             return;
         };
@@ -588,18 +632,19 @@ mod tests {
             let n = track.len();
             let count =
                 |k: SpaceKind| track.spaces().iter().filter(|s| s.kind == k).count() * 100 / n;
-            for (name, kind) in [
-                ("event", SpaceKind::Event),
-                ("card", SpaceKind::Card),
-                ("battle", SpaceKind::Battle),
-            ] {
+            for (name, kind) in [("event", SpaceKind::Event), ("card", SpaceKind::Card)] {
                 let pct = count(kind);
                 assert!((8..=20).contains(&pct), "{id} {name} 占比 {pct}% 越界（8%~20%）");
             }
             let treasure_pct = count(SpaceKind::Treasure);
             assert!(treasure_pct >= 3, "{id} treasure 占比 {treasure_pct}% < 3%");
-            let plain_pct = count(SpaceKind::Plain);
-            assert!((30..=60).contains(&plain_pct), "{id} plain 占比 {plain_pct}% 越界（30%~60%）");
+            let territory_pct = count(SpaceKind::Territory);
+            assert_eq!(
+                territory_pct, 64,
+                "{id} territory 占比 {territory_pct}%（v5 31 格 = 20/31）"
+            );
+            assert_eq!(count(SpaceKind::Battle), 0, "{id} v5 无遭遇格（并入领地副本）");
+            assert_eq!(count(SpaceKind::Plain), 0, "{id} v5 无 plain 格");
         }
     }
 }

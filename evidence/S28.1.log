@@ -1,0 +1,6 @@
+S28.1 领地规则层（crates/ti-core/src/rules/territory.rs + tests/territory_rules.rs，§10 规则表 1-11 + S28.7 AI 回合 + S28.6 守军战斗）
+判据 = territory_rules 15 测 + selection_seats 4 测 全绿 + clippy -D warnings 通过（gate 2026-10-28）
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+---- doccheck2 ----
+doccheck2: 0 error(s) across 38 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/fl

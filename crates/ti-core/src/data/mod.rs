@@ -9,9 +9,10 @@
 //!
 //! 集成测试 `crates/ti-core/tests/data_tables.rs`；业务规格 `docs/business/`。
 
-mod balance;
+pub mod balance;
 mod board;
 mod terrain;
+pub(crate) mod territory_cfg;
 #[allow(unused_imports)]
 use balance::RawBalance;
 mod controls;
@@ -500,8 +501,13 @@ pub struct Balance {
     /// 赛道 9 分区 → 主题色令牌表（飞轮 R1 ①-01 数据化；`chrome::group_color_token` 主源，
     /// 缺省/空 = 代码 9 令牌 crash-safe 回退）。
     pub board_group_tokens: Vec<String>,
+    /// 领地系统参数（S28.3：`docs/business/territory.md` §3/§4.1）。
+    pub territory: TerritoryCfg,
 }
 
+// ------------------------------------------------------- 领地系统（S28.3）re-export
+
+pub use territory_cfg::{HomeUpgradeCfg, TerritoryAiCfg, TerritoryCfg, TerritoryPrototypeCfg};
 // ------------------------------------------------------- serde 中间层（JSON 形状）
 
 /// 文本表 serde 中间层（JSON 形状：`string→string` 映射 + `schema_version`）。
@@ -879,6 +885,7 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
             glyph_advance: raw.ui.glyph_advance,
             max_back_steps: raw.ui.max_back_steps,
         },
+        territory: territory_cfg::convert(raw.territory.clone()),
         board_group_tokens: raw.board_group_tokens.clone(),
     })
 }

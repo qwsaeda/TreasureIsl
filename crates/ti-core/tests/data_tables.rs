@@ -284,6 +284,27 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             max_back_steps: 1,
         },
         board_group_tokens: Vec::new(),
+        territory: ti_core::data::TerritoryCfg {
+            max_level: 3,
+            toll_per_level: 0.25,
+            upgrade_cost_per_level: 0.3,
+            production_per_level: 0.5,
+            defense_per_level: 0.4,
+            first_capture_bonus: 150,
+            dungeon_attack_coef: 0.5,
+            home_upgrade: ti_core::data::HomeUpgradeCfg {
+                base_cost: 200,
+                per_level: 0.35,
+                max_level: 3,
+            },
+            isle_tokens: Vec::new(),
+            ai: ti_core::data::TerritoryAiCfg {
+                attack_threshold: 0.6,
+                toll_aversion: 0.5,
+                upgrade_priority: 0.3,
+            },
+            prototypes: Vec::new(),
+        },
     };
     assert_eq!(b.combat.boss(0).map(|x| x.hp), Some(10));
 }

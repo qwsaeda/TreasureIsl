@@ -17,6 +17,8 @@
 //! 迁移（`docs/business/persistence.md` §迁移）：v1 缺 `version`/`bank`/`rng_seed` →
 //! 补默认（`version=2`、`bank=0`、`rng_seed` 默认种子）；迁移纯函数幂等可测。
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::domain::economy::Bank;
@@ -391,6 +393,152 @@ impl SaveSlotV3 {
     }
 
     /// 序列化存档为 JSON 字符串（人可读、可 diff；失败返回空串，不 panic）。
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
+    /// 从 JSON 解析存档槽（缺字段走 `#[serde(default)]`；解析失败 → `None`，不 panic）。
+    #[must_use]
+    pub fn from_json(json: &str) -> Option<Self> {
+        serde_json::from_str(json).ok()
+    }
+}
+
+// ------------------------------------------------------- 存档 v4（S28.2 领地系统）
+
+/// 席位存档（`docs/business/territory.md` §8：每席位独立金币/位置/建筑/船等级）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SeatSave {
+    /// 角色 id（`balance.selection.characters[].id`，如 `"drake"`）。
+    pub character: String,
+    /// 玩家席位（`false` = AI 席位）。
+    pub is_player: bool,
+    /// 该席位金币。
+    pub gold: u32,
+    /// 该席位赛道格索引（`board.json` 0 起；`0` = 起点）。
+    pub position: u32,
+    /// 船等级（1..=4；缺省 1 小舢板）。
+    #[serde(default = "default_boat_level_v3")]
+    pub boat_level: u8,
+    /// 该席位已建建筑 id 列表（建筑 = 个人成长线，§9）。
+    #[serde(default)]
+    pub buildings: Vec<String>,
+}
+
+/// 领地存档条目（`map → [格索引 → {owner_seat, level}]`，§8；无主格 = 缺省不写）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TerritorySave {
+    /// 地图 id（如 `"m01"`）。
+    pub map: String,
+    /// 格索引 → `{owner_seat, level}`（`owner_seat` = 席位下标 `0..4`）。
+    pub cells: BTreeMap<u32, (u8, u8)>,
+}
+
+/// 存档槽位（v4 = v3 + 多席位 + 领地图；`docs/business/territory.md` §8）。
+///
+/// 迁移口径：v3 → v4 缺省 = **单席位（主角色）+ 4 个 AI 补位 + 空领地图 + `current_seat = 0`**；
+/// v2 → v3 迁移链保持不变。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SaveSlotV4 {
+    /// 版本号（v4 恒 4；v1..v3 → 迁移补 4）。
+    #[serde(default = "default_version_v4")]
+    pub version: u32,
+    /// 角色 id（v4 保留 = 主玩家席位角色；席位全量在 `seats`）。
+    pub character: String,
+    /// 地图 id（如 `"m01"`）。
+    pub map: String,
+    /// 退出时所在场景。
+    #[serde(default = "default_scene")]
+    pub scene: String,
+    /// 主玩家所在格（v4 起席位位置走 `seats[].position`；本字段保留 v3 兼容）。
+    #[serde(default)]
+    pub position: GridPos,
+    /// 主玩家金币（v4 起走 `seats[]`；本字段保留 v3 兼容）。
+    #[serde(default)]
+    pub gold: u32,
+    /// 主玩家 HP。
+    #[serde(default)]
+    pub hp: u32,
+    /// 已建建筑 id 列表（v4 起走 `seats[].buildings`；本字段保留 v3 兼容）。
+    #[serde(default)]
+    pub buildings: Vec<String>,
+    /// 持有商品（id + 数量）。
+    #[serde(default)]
+    pub goods: Vec<GoodsSave>,
+    /// RNG 当前种子。
+    #[serde(default = "default_rng_seed")]
+    pub rng_seed: u32,
+    /// RNG 已消费 `next_u64` 次数。
+    #[serde(default)]
+    pub rng_steps: u128,
+    /// 银行存金。
+    #[serde(default)]
+    pub bank: u32,
+    /// 已解锁地图 id 列表。
+    #[serde(default)]
+    pub unlocked_maps: Vec<String>,
+    /// 船等级（1..=4；缺省 1）。
+    #[serde(default = "default_boat_level_v3")]
+    pub boat_level: u8,
+    /// S28.2 席位全量（缺省 = 空；读档按 §8 迁移口径补单席位 + 4 AI）。
+    #[serde(default)]
+    pub seats: Vec<SeatSave>,
+    /// S28.2 领地图（缺省 = 空 = 全图无主）。
+    #[serde(default)]
+    pub territories: Vec<TerritorySave>,
+    /// S28.2 当前轮到哪个席位（热座交接用；缺省 0）。
+    #[serde(default)]
+    pub current_seat: u8,
+}
+
+/// v4 缺省版本号。
+fn default_version_v4() -> u32 {
+    4
+}
+
+impl SaveSlotV4 {
+    /// v3 → v4 迁移（**纯函数、幂等**；§8 缺省口径 = 单席位（主角色，玩家）+ 4 AI 补位 +
+    /// 空领地图 + `current_seat = 0`；席位金币/位置/建筑/船等级从 v3 单角色字段承接）。
+    #[must_use]
+    pub fn migrate_v3_to_v4(v3: &SaveSlotV3) -> Self {
+        Self {
+            version: 4,
+            character: v3.character.clone(),
+            map: v3.map.clone(),
+            scene: v3.scene.clone(),
+            position: v3.position,
+            gold: v3.gold,
+            hp: v3.hp,
+            buildings: v3.buildings.clone(),
+            goods: v3.goods.clone(),
+            rng_seed: v3.rng_seed,
+            rng_steps: v3.rng_steps,
+            bank: v3.bank,
+            unlocked_maps: v3.unlocked_maps.clone(),
+            boat_level: v3.boat_level,
+            seats: Vec::new(),
+            territories: Vec::new(),
+            current_seat: 0,
+        }
+    }
+
+    /// 自迁移（v1..v3 → v4；已是 v4 ⇒ 原样返回 ⇒ 幂等）。
+    #[must_use]
+    pub fn migrate(mut self) -> Self {
+        if self.version < 4 {
+            self.version = 4;
+        }
+        self
+    }
+
+    /// 是否已迁移到 v4（`version == 4`）。
+    #[must_use]
+    pub fn is_v4(&self) -> bool {
+        self.version == 4
+    }
+
+    /// 序列化存档为 JSON 字符串（失败返回空串，不 panic）。
     #[must_use]
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).unwrap_or_default()

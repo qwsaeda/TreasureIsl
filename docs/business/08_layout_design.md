@@ -167,6 +167,19 @@
 > **S21.3（main_map v4「羊皮海图桌面」）起坐标单一事实源 = [`ui-redesign-v3/08_main_map_v4_spec.md`](../ui-redesign-v3/08_main_map_v4_spec.md)**
 > （满屏 `chart_full` + 顶角双铜牌 + 岛只画陆/礁/宝 + 黄铜航线多形状节点牌 + 船玩家 + 舵轮 CTA；
 > `world_canvas {43,250,994,826}` ↔ manifest `bbox_pct {4,13,92,43}`（N8），落码 S21.4~S21.7/S21.12）。
+> **S27.4（main_map v5「中央据点岛 + 环形格子环」）起坐标单一事实源 = [`ui-redesign-v3/10_main_map_v5_spec.md`](../ui-redesign-v3/10_main_map_v5_spec.md)**
+> （v4 `world_canvas`/`voyage_bar` 退役；v5 = 31 张岛型卡环 + 中央据点岛 + CTA/命令牌下移；
+> 下表 v4 值保留为历史，现行值以下列 v5 镜像为准）：
+> - 焦点锚点 `focus_anchor {x:11, y:250, w:1048, h:1056}`（N8 ↔ manifest `bbox_pct {1,13,97,55}`）；
+> - 中央据点岛 `island_home {x:160, y:400, w:760, h:760}`（`island_home_m0X.png` blit；S27.2 资产）；
+> - 环几何 `ring.center_x:540, ring.center_y:780, ring.radius:474, ring.card_w:96, ring.card_h:120, ring.home_size:760,`
+>   （`extra_scalar` 点号键；`scripts/map_pack.py` 数据驱动；`center_y`/`radius` = 运行时环几何，8pt 豁免同 v3 叙事键口径；
+>   若 8pt 对齐调整 = `ring.center_y:784, ring.radius:480,` 两值形式并存有效，以 `scenes.json` 现值为准）；
+> - 舵轮 CTA `deck_spin {x:408, y:1336, w:264, h:264}`（v4 y:1160 下移，与环底 1314 错开）；
+> - 命令铜牌 `deck_trade {x:48, y:1608, w:312, h:136}` / `deck_sell {x:384, y:1608, w:312, h:136}` / `deck_build {x:720, y:1608, w:312, h:136}`（v4 y:1440 下移）；
+> - 落格提示签条 `hint {x:540, y:1760}`（v4 1632 下移；签条 {344,1760,392,64}）。
+
+**S21.6 已落 `scenes.json`（v4 值历史保留；v5 现行值见上「v5 镜像」）**
 > **S21.6 起 v4 版面已落地 `scenes.json`**（下表 = v4 现行值；v2/v3 回退键 `hud`/`grid.*`/`hud_trade`/`hud_gold`
 > 等保留为数据 + 触摸/渲染双写回退，值不变）。
 

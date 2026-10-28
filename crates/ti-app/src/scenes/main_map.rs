@@ -6,7 +6,7 @@ use ti_core::data;
 use ti_core::data::{SceneLayout, balance};
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
-use ti_core::rules::board::SpaceKind;
+use ti_core::rules::board::{SpaceKind, TrackSpace};
 use ti_core::rules::build;
 use ti_core::rules::trade;
 
@@ -266,6 +266,135 @@ fn confirm_build_panel(host: &mut dyn SceneHost, entry: usize) {
     }
 }
 
+/// v4 黄铜航线线宽（px；实线；实现几何，非版面坐标）。
+const TRACK_LINE_W: i32 = 4;
+
+/// 黄铜航线实线（相邻赛道格中心连线；沿线等距铺线宽方块 ⇒ 连续实线）。
+fn draw_route_line(host: &mut dyn SceneHost, centers: &[(i32, i32)], width: i32, color: u16) {
+    let half = width / 2;
+    for w in centers.windows(2) {
+        let (ax, ay) = (w[0].0, w[0].1);
+        let (bx, by) = (w[1].0, w[1].1);
+        let (dx, dy) = (bx - ax, by - ay);
+        let steps = dx.abs().max(dy.abs()).max(1);
+        for i in 0..=steps {
+            let x = ax + dx * i / steps;
+            let y = ay + dy * i / steps;
+            host.fill_rect(x - half, y - half, width, width, color);
+        }
+    }
+}
+
+/// S21.5 v4 环岛赛道绘制：**黄铜航线实线 + 45 枚多形状节点牌 + 玩家船**。
+///
+/// - 航线：相邻赛道格中心连线（theme 令牌 `brass`），先画线后压牌 ⇒ 线在牌下、牌间露出；
+/// - 节点牌：`SpaceKind` → `chrome::node_asset`（**唯一事实源** = 规格 §6：9 类多形状黄铜牌）；
+/// - 玩家船：`ship_player` 贴图落在当前格（缺资产 = 代码 `flag` 图标回退）。
+///
+/// 坐标全部经 `chrome::iso_cell_fit`（与命中判定同源，EXP-067 正逆成对）。
+fn render_track(
+    host: &mut dyn SceneHost,
+    layout: &SceneLayout,
+    gw: u32,
+    entity_texts: &mut Vec<(i32, i32, &str)>,
+) {
+    let spaces = host.board_spaces();
+    if spaces.len() < 2 {
+        return;
+    }
+    let (tw, th) = chrome::iso_tile_fit(layout, gw);
+    let theme = host.theme().clone();
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    // 节点中心（等距菱形中心 = 格子绘制盒中心；与 `iso_cell_fit` 同源）
+    let centers: Vec<(i32, i32)> = spaces
+        .iter()
+        .map(|sp| {
+            let r = i32::try_from(sp.cell.row).unwrap_or(0);
+            let c = i32::try_from(sp.cell.col).unwrap_or(0);
+            let (sx, sy) = chrome::iso_cell_fit(r, c, layout, gw);
+            (sx + tw, sy + th)
+        })
+        .collect();
+
+    // 1) 黄铜航线实线
+    draw_route_line(host, &centers, TRACK_LINE_W, brass);
+
+    // 2) 45 枚节点牌（可见外接框归一化 ⇒ 9 类牌视觉大小一致、形状各异）
+    let edge = chrome::node_edge_px(layout, gw);
+    for (i, sp) in spaces.iter().enumerate() {
+        let (cx, cy) = centers[i];
+        let def = chrome::node_asset(sp.kind);
+        let (dx, dy, dw, dh) = chrome::asset_dest_rect(cx, cy, edge, def.visible_px);
+        host.blit_image(def.path, dx, dy, dw, dh);
+    }
+
+    // 3) BOSS 标签（全部文本最上层，QA142）
+    for (i, sp) in spaces.iter().enumerate() {
+        if sp.kind == SpaceKind::Boss {
+            let (cx, cy) = centers[i];
+            let lbl = i18n::sget("scene.main_map.boss_label");
+            entity_texts.push((cx + 12, cy - 8, lbl));
+        }
+    }
+
+    // 4) 玩家船（当前格；缺资产 = 代码 `flag` 图标回退）
+    //    S21.12：船贴图按 `boat_level` 切 4 张（1 级 = 通用船顶替）。
+    let idx = host.board_index().min(spaces.len() - 1);
+    let (cx, cy) = centers[idx];
+    let ship_edge = chrome::ship_edge_px(layout, gw);
+    let (dx, dy, dw, dh) =
+        chrome::asset_dest_rect(cx, cy, ship_edge, chrome::SHIP_PLAYER_VISIBLE_PX);
+    let ship_asset = chrome::boat_asset(host.boat_level());
+    if chrome::asset_present(ship_asset) {
+        host.blit_image(ship_asset, dx, dy, dw, dh);
+    } else if chrome::asset_present(chrome::SHIP_PLAYER_ASSET) {
+        host.blit_image(chrome::SHIP_PLAYER_ASSET, dx, dy, dw, dh);
+    } else {
+        chrome::entity_icon(host, "flag", dx, dy, dw, chrome::COLOR_GOLD_WARM);
+    }
+    let lbl = i18n::sget("scene.main_map.player_label");
+    entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
+
+    // 4.5) S21.7：节点预览选中（`gold_warm` 高亮环 + 信息签）+ 落点脉冲（toast 窗口内
+    // 当前格画环，「1 拍」= `board_toast` 120 帧寿命）。
+    let gold_warm = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
+    if let Some(i) = host.track_node_sel() {
+        if i < spaces.len() {
+            let (nx, ny) = centers[i];
+            let def = chrome::node_asset(spaces[i].kind);
+            chrome::draw_node_ring(host, nx, ny, edge, def.visible_px, gold_warm);
+            main_map_node::draw_node_card(
+                host,
+                nx,
+                ny - edge / 2,
+                ny + edge / 2,
+                spaces[i].kind,
+                &theme,
+            );
+        }
+    }
+    if host.board_toast().is_some() && idx < spaces.len() {
+        let (nx, ny) = centers[idx];
+        let def = chrome::node_asset(spaces[idx].kind);
+        chrome::draw_node_ring(host, nx, ny, edge, def.visible_px, gold_warm);
+    }
+
+    // 5) 骰子数（摇骰按钮上方居中，`board_last_roll` = 0 → 不画）
+    let roll = host.board_last_roll();
+    if roll > 0 {
+        let roll_str = chrome::roll_label(roll);
+        let rx = 540 - host.shell().hint_text_width_px(&roll_str) / 2;
+        let ry = layout.extra.get(chrome::keys::DECK_SPIN).map_or(1296, |r| r.y - 24);
+        host.draw_hint_text(&roll_str, rx, ry, chrome::COLOR_GOLD_WARM);
+    }
+    // 6) 落格提示签条（S21.6 v4 = `hint` 键中心；`board_toast` 过期 = `None`）
+    // 6.5) S21.12 建造面板覆盖层（状态在 `GameApp`；关闭 = 不画）
+    if host.build_panel_open() {
+        render_build_panel(host);
+    }
+    render_board_toast(host);
+}
+
 /// S21.12 造船（`GameInput::BoatUpgrade` 事件处理）：走 `rules::boat` 单向升级链
 /// （扣金 + 抬 cargo/atk/hp 立即生效）；失败 = 提示条说明原因（金不足 / 已满级）。
 fn handle_boat_upgrade(host: &mut dyn SceneHost) {
@@ -458,16 +587,16 @@ impl Scene for MainMapScene {
             chrome::nautical_grid(host);
         }
         let gw = host.terrain_grid_w();
-        let bg = chrome::board_fit(&layout, gw);
-
-        // 等距棋盘（代码画，1080 呈现层；S17.8 v3：G 依赖拟合进 `world_canvas`（2:1 菱形、
-        // 8pt 对齐、画布中心对齐），缺席回退 v2 静态 `grid.*`（QB105）；`terrain_grid_w`² 铺满）
-        // S18.9：**按地形取色**（`assets/data/terrain.json` 数据 → theme 令牌）：
-        // 海/礁/陆/宝藏 四类各有底色 + 顶棱高光；陆块按 (r+c) 奇偶交错 `alt` 变体。
-        // 地形表缺失 = 回退 v2 单色（不 panic、不空图）。
-        let gw_i = i32::try_from(gw).unwrap_or(0);
-        let (tw, th) = (bg.tw, bg.th);
-        main_map_island::draw_board(host, &layout, gw, gw_i, tw, th);
+        // S27.4 v5：`world_canvas` 在位 = v3 ⇒ **环形棋盘**（`render_v5_ring`：中央据点岛 +
+        // 31 张岛型/功能卡环 + 玩家船；几何 = `chrome::ring_geom` 数据驱动，`10_main_map_v5_spec.md`）。
+        // v2 回退（`world_canvas` 缺席，dormant）= 等距岛屿 + 等距赛道（`terrain_grid_w`² G 依赖
+        // 拟合进 `world_canvas` 2:1 菱形，缺席回退静态 `grid.*`）。
+        if !v3 {
+            let bg = chrome::board_fit(&layout, gw);
+            let gw_i = i32::try_from(gw).unwrap_or(0);
+            let (tw, th) = (bg.tw, bg.th);
+            main_map_island::draw_board(host, &layout, gw, gw_i, tw, th);
+        }
 
         // S18.7f：v3 版面外壳（夜空底 + 世界画布框 + HUD 边角面板 + 底部命令盘 + 标题 +
         // 提示 + 木框）100% 数据驱动 = `scenes.json` `main_map.primitives`（画布框
@@ -565,11 +694,14 @@ impl Scene for MainMapScene {
                 entity_texts.push((bx + s, by, lbl));
             }
         }
-        // S19：环岛赛道（路径连线 + 空间标记 + 骰子数 + 落格提示条）
-        render_track(host, &layout, gw, &mut entity_texts);
-
-        // S19.7：航程条（赛道摊平成进度条：玩家位置 + BOSS 目的地 + 特殊格标记）
-        chrome::voyage_bar(host, "main_map");
+        if v3 {
+            // S27.4 v5 环形棋盘：中央据点岛 + 31 张卡环 + 玩家船 + 选中环 + 骰/落格签条。
+            render_v5_ring(host, &layout, &mut entity_texts);
+        } else {
+            // S19：等距环岛赛道（路径连线 + 空间标记 + 骰子数 + 落格提示条）+ S19.7 航程条（v2 dormant）
+            render_track(host, &layout, gw, &mut entity_texts);
+            chrome::voyage_bar(host, "main_map");
+        }
 
         // 第二遍：实体标签（28px 提示档，QA142 全部文本最上层）
         for (x, y, lbl) in &entity_texts {
@@ -581,143 +713,138 @@ impl Scene for MainMapScene {
     }
 }
 
-/// v4 黄铜航线线宽（px；实线；实现几何，非版面坐标）。
-const TRACK_LINE_W: i32 = 4;
-
-/// 黄铜航线实线（相邻赛道格中心连线；沿线等距铺线宽方块 ⇒ 连续实线）。
-fn draw_route_line(host: &mut dyn SceneHost, centers: &[(i32, i32)], width: i32, color: u16) {
-    let half = width / 2;
-    for w in centers.windows(2) {
-        let (ax, ay) = (w[0].0, w[0].1);
-        let (bx, by) = (w[1].0, w[1].1);
-        let (dx, dy) = (bx - ax, by - ay);
-        let steps = dx.abs().max(dy.abs()).max(1);
-        for i in 0..=steps {
-            let x = ax + dx * i / steps;
-            let y = ay + dy * i / steps;
-            host.fill_rect(x - half, y - half, width, width, color);
-        }
-    }
-}
-
-/// S21.5 v4 环岛赛道绘制：**黄铜航线实线 + 45 枚多形状节点牌 + 玩家船**。
-///
-/// - 航线：相邻赛道格中心连线（theme 令牌 `brass`），先画线后压牌 ⇒ 线在牌下、牌间露出；
-/// - 节点牌：`SpaceKind` → `chrome::node_asset`（**唯一事实源** = 规格 §6：9 类多形状黄铜牌）；
-/// - 玩家船：`ship_player` 贴图落在当前格（缺资产 = 代码 `flag` 图标回退）。
-///
-/// 坐标全部经 `chrome::iso_cell_fit`（与命中判定同源，EXP-067 正逆成对）。
-fn render_track(
+fn render_v5_ring(
     host: &mut dyn SceneHost,
     layout: &SceneLayout,
-    gw: u32,
     entity_texts: &mut Vec<(i32, i32, &str)>,
 ) {
     let spaces = host.board_spaces();
-    if spaces.len() < 2 {
+    let count = spaces.len();
+    if count < 2 {
         return;
     }
-    let (tw, th) = chrome::iso_tile_fit(layout, gw);
     let theme = host.theme().clone();
-    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
-    // 节点中心（等距菱形中心 = 格子绘制盒中心；与 `iso_cell_fit` 同源）
-    let centers: Vec<(i32, i32)> = spaces
-        .iter()
-        .map(|sp| {
-            let r = i32::try_from(sp.cell.row).unwrap_or(0);
-            let c = i32::try_from(sp.cell.col).unwrap_or(0);
-            let (sx, sy) = chrome::iso_cell_fit(r, c, layout, gw);
-            (sx + tw, sy + th)
-        })
-        .collect();
+    let gold_warm = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_BRASS);
 
-    // 1) 黄铜航线实线
-    draw_route_line(host, &centers, TRACK_LINE_W, brass);
-
-    // 2) 45 枚节点牌（可见外接框归一化 ⇒ 9 类牌视觉大小一致、形状各异）
-    let edge = chrome::node_edge_px(layout, gw);
-    for (i, sp) in spaces.iter().enumerate() {
-        let (cx, cy) = centers[i];
-        let def = chrome::node_asset(sp.kind);
-        let (dx, dy, dw, dh) = chrome::asset_dest_rect(cx, cy, edge, def.visible_px);
-        host.blit_image(def.path, dx, dy, dw, dh);
-    }
-
-    // 3) BOSS 标签（全部文本最上层，QA142）
-    for (i, sp) in spaces.iter().enumerate() {
-        if sp.kind == SpaceKind::Boss {
-            let (cx, cy) = centers[i];
-            let lbl = i18n::sget("scene.main_map.boss_label");
-            entity_texts.push((cx + 12, cy - 8, lbl));
+    // 1) 中央据点岛（运行时 blit `island_home_<mid>.png` @ `island_home` 矩形；缺图 = 不画，不占位）
+    if let Some(mid) = host.map_slot().map(crate::game_app::map_slot_id) {
+        let path = chrome::central_island_path(mid);
+        if chrome::asset_present(&path) {
+            let (ix, iy, iw, ih) = layout
+                .extra
+                .get(chrome::keys::ISLAND_HOME)
+                .map_or((160, 400, 760, 760), |r| (r.x, r.y, r.w, r.h));
+            host.blit_image(&path, ix, iy, iw, ih);
         }
     }
 
-    // 4) 玩家船（当前格；缺资产 = 代码 `flag` 图标回退）
-    //    S21.12：船贴图按 `boat_level` 切 4 张（1 级 = 通用船顶替）。
-    let idx = host.board_index().min(spaces.len() - 1);
-    let (cx, cy) = centers[idx];
-    let ship_edge = chrome::ship_edge_px(layout, gw);
-    let (dx, dy, dw, dh) =
-        chrome::asset_dest_rect(cx, cy, ship_edge, chrome::SHIP_PLAYER_VISIBLE_PX);
+    // 2) 31 张卡环（领地格 = isle 整幅卡面；功能格 = 羊皮卡底 + node_ 牌）
+    for (index, space) in spaces.iter().enumerate() {
+        draw_ring_card(host, space, index, count, layout, &theme, brass);
+    }
+
+    // 3) 玩家船（落在 board_index 卡；缺资产 = 代码 flag 回退；船边长随卡宽缩放，非硬编码）
+    let idx = host.board_index().min(count - 1);
+    let (cx, cy) = chrome::ring_card_center(idx, count, layout);
+    let ship_edge: i32 = chrome::ring_geom(layout).w * 83 / 100;
     let ship_asset = chrome::boat_asset(host.boat_level());
     if chrome::asset_present(ship_asset) {
-        host.blit_image(ship_asset, dx, dy, dw, dh);
-    } else if chrome::asset_present(chrome::SHIP_PLAYER_ASSET) {
-        host.blit_image(chrome::SHIP_PLAYER_ASSET, dx, dy, dw, dh);
+        host.blit_image(ship_asset, cx - ship_edge / 2, cy - ship_edge / 2, ship_edge, ship_edge);
     } else {
-        chrome::entity_icon(host, "flag", dx, dy, dw, chrome::COLOR_GOLD_WARM);
+        chrome::entity_icon(
+            host,
+            "flag",
+            cx - ship_edge / 2,
+            cy - ship_edge / 2,
+            ship_edge,
+            gold_warm,
+        );
     }
     let lbl = i18n::sget("scene.main_map.player_label");
     entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
 
-    // 4.5) S21.7：节点预览选中（`gold_warm` 高亮环 + 信息签）+ 落点脉冲（toast 窗口内
-    // 当前格画环，「1 拍」= `board_toast` 120 帧寿命）。
-    let gold_warm = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
-    if let Some(i) = host.track_node_sel() {
-        if i < spaces.len() {
-            let (nx, ny) = centers[i];
-            let def = chrome::node_asset(spaces[i].kind);
-            chrome::draw_node_ring(host, nx, ny, edge, def.visible_px, gold_warm);
-            main_map_node::draw_node_card(
-                host,
-                nx,
-                ny - edge / 2,
-                ny + edge / 2,
-                spaces[i].kind,
-                &theme,
-            );
+    // 4) 选中高亮（track_node_sel = 预览选中卡；金环 3px 外扩）
+    if let Some(sel) = host.track_node_sel() {
+        if sel < count {
+            let (sx, sy, sw, sh) = chrome::ring_card_rect(sel, count, layout);
+            host.fill_rect(sx - 4, sy - 4, sw + 8, 3, gold_warm);
+            host.fill_rect(sx - 4, sy + sh + 1, sw + 8, 3, gold_warm);
+            host.fill_rect(sx - 4, sy - 4, 3, sh + 8, gold_warm);
+            host.fill_rect(sx + sw + 1, sy - 4, 3, sh + 8, gold_warm);
         }
     }
-    if host.board_toast().is_some() && idx < spaces.len() {
-        let (nx, ny) = centers[idx];
-        let def = chrome::node_asset(spaces[idx].kind);
-        chrome::draw_node_ring(host, nx, ny, edge, def.visible_px, gold_warm);
-    }
 
-    // 5) 骰子数（摇骰按钮上方居中，`board_last_roll` = 0 → 不画）
+    // 5) 骰子数（摇骰按钮上方；board_last_roll = 0 不画）
     let roll = host.board_last_roll();
     if roll > 0 {
         let roll_str = chrome::roll_label(roll);
         let rx = 540 - host.shell().hint_text_width_px(&roll_str) / 2;
-        let ry = layout.extra.get(chrome::keys::DECK_SPIN).map_or(1296, |r| r.y - 24);
-        host.draw_hint_text(&roll_str, rx, ry, chrome::COLOR_GOLD_WARM);
+        let ry = layout.extra.get(chrome::keys::DECK_SPIN).map_or(1312, |r| r.y - 24);
+        host.draw_hint_text(&roll_str, rx, ry, gold_warm);
     }
-    // 6) 落格提示签条（S21.6 v4 = `hint` 键中心；`board_toast` 过期 = `None`）
-    // 6.5) S21.12 建造面板覆盖层（状态在 `GameApp`；关闭 = 不画）
+    // 6) 建造面板 + 落格提示签条（v5 不画航程进度尺）
     if host.build_panel_open() {
         render_build_panel(host);
     }
     render_board_toast(host);
 }
 
-/// 落格提示签条（S19.7 D3 底板 + S21.6 v4 位置）：`brass_dark` 底板 + 黄铜边框，
-/// 宽按字自适应（最小 392）；中心 = `hint` 键（v4 = (540,1632)，spec §2 签条 {344,1600,392,64}）。
+/// S27.4 v5 单卡绘制：领地格 = `isle_<id>.png` 整幅卡面；功能格 / 缺图 = 羊皮卡底 + `node_` 牌。
+fn draw_ring_card(
+    host: &mut dyn SceneHost,
+    space: &TrackSpace,
+    index: usize,
+    count: usize,
+    layout: &SceneLayout,
+    theme: &ti_render::theme::Theme,
+    brass: u16,
+) {
+    let (x, y, w, h) = chrome::ring_card_rect(index, count, layout);
+    if space.kind == SpaceKind::Territory {
+        if let Some(isle) = &space.isle {
+            let path = chrome::isle_card_path(isle);
+            if chrome::asset_present(&path) {
+                host.blit_image(&path, x, y, w, h);
+                return;
+            }
+        }
+    }
+    // 功能格 / 领地缺图回退：羊皮卡底 + node_ 黄铜牌（可见框 ≈ 87% 卡宽，随卡宽缩放）
+    draw_feature_card_base(host, x, y, w, h, theme, brass);
+    let def = chrome::node_asset(space.kind);
+    let (cx, cy) = chrome::ring_card_center(index, count, layout);
+    let medallion_edge: i32 = chrome::ring_geom(layout).w * 87 / 100;
+    let (mx, my, mw, mh) = chrome::asset_dest_rect(cx, cy, medallion_edge, def.visible_px);
+    host.blit_image(def.path, mx, my, mw, mh);
+}
+
+/// S27.4 v5 功能卡羊皮卡底（`panel_warm` 暖面板 + `brass` 2px 边）；node_ 牌再叠其上。
+fn draw_feature_card_base(
+    host: &mut dyn SceneHost,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    theme: &ti_render::theme::Theme,
+    brass: u16,
+) {
+    let base = theme.by_name("panel_warm").unwrap_or(chrome::COLOR_PANEL_WARM);
+    host.fill_rect(x, y, w, h, base);
+    host.fill_rect(x, y, w, 2, brass);
+    host.fill_rect(x, y + h - 2, w, 2, brass);
+    host.fill_rect(x, y, 2, h, brass);
+    host.fill_rect(x + w - 2, y, 2, h, brass);
+}
+
+/// 落格提示签条（`brass_dark` 底板 + 黄铜边框，S27.4 v5 位置）：宽按字自适应（最小 392）；
+/// 中心 = `hint` 键（v5 = (540,1760)，三键之下；`layout.hint.y ≤ 0` = 回退 1760）。
 fn render_board_toast(host: &mut dyn SceneHost) {
     let Some(toast) = host.board_toast() else {
         return;
     };
     let layout = chrome::scene_layout("main_map");
-    let ty = if layout.hint.y > 0 { layout.hint.y } else { 1632 };
+    let ty = if layout.hint.y > 0 { layout.hint.y } else { 1760 };
     let tw = host.shell().hint_text_width_px(&toast);
     let pad = 24;
     let panel_w = (tw + pad * 2).max(392);

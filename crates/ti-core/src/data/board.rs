@@ -27,6 +27,8 @@ pub struct BoardSpace {
     pub group: u8,
     /// 地形码（`S`/`R`/`L`/`T`，与 `terrain.json` 同码表）。
     pub terrain: char,
+    /// 岛原型 id（S28.3：`balance.territory.prototypes[].id`；领地格有值，功能格 = `None`）。
+    pub isle: Option<String>,
 }
 
 /// 一张地图的赛道（有序空间序列 + 网格尺寸）。
@@ -61,6 +63,8 @@ struct RawSpace {
     kind: String,
     group: u8,
     terrain: String,
+    #[serde(default)]
+    isle: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,6 +103,7 @@ pub fn board() -> Result<&'static BoardDb, LoadError> {
                 kind: s.kind,
                 group: s.group,
                 terrain,
+                isle: s.isle,
             });
         }
         maps.insert(id, BoardMap { grid_w: m.grid_w, grid_h: m.grid_h, spaces });

@@ -157,3 +157,38 @@ fn transition_map(
     }
     (next, Some(Sfx::Press))
 }
+
+// ------------------------------------------------------- S28.4 席位多选（`docs/business/territory.md` §1）
+
+use crate::rules::territory::SeatPool;
+
+/// 席位多选不变量（§1）：玩家选 **≥1** 名角色为**玩家席**，其余角色自动补 AI 席，合计 5。
+///
+/// `seats` = 玩家选中的角色列表（0..=4 唯一；顺序 = 角色 index 升序）；
+/// `count` = 可选角色数（`balance.selection.character_count`，缺省 5）。
+///
+/// 返回音效（`Sfx::Invalid` = 状态未变的无效操作）。
+#[must_use]
+pub fn seat_toggle(seats: &mut Vec<Character>, ch: Character, count: u32) -> Sfx {
+    if ch.index() >= count {
+        return Sfx::Invalid;
+    }
+    if seats.contains(&ch) {
+        // 取消玩家席：最后一名玩家不可取消（§1 不变量 players ≥ 1）
+        if seats.len() == 1 {
+            return Sfx::Invalid;
+        }
+        seats.retain(|c| *c != ch);
+        return Sfx::Press;
+    }
+    seats.push(ch);
+    seats.sort_by_key(|c| c.index());
+    Sfx::Press
+}
+
+/// 玩家选中的席位角色 → 席位池（§1：`players + ai = 5`；未选中角色自动 AI）。
+#[must_use]
+pub fn seat_pool(seats: &[Character]) -> SeatPool {
+    let indexes: Vec<u32> = seats.iter().map(|c| c.index()).collect();
+    SeatPool::build(&indexes)
+}

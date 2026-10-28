@@ -185,6 +185,8 @@ pub mod keys {
     pub const DECK_SPIN: &str = "deck_spin";
     /// v3 航程条矩形键（extra = `main_map.voyage_bar`，S19.7 航程进度条）。
     pub const VOYAGE_BAR: &str = "voyage_bar";
+    /// v5 中央据点岛矩形键（extra = `main_map.island_home`，`10_main_map_v5_spec.md` §3）。
+    pub const ISLAND_HOME: &str = "island_home";
     /// v4 赛道节点牌边长键（`extra_scalar` = `main_map.track_node.size`；占瓦片半宽百分比）。
     pub const TRACK_NODE: &str = "track_node";
     /// v4 玩家船标边长键（`extra_scalar` = `main_map.track_ship.size`；占瓦片半宽百分比）。
@@ -193,7 +195,7 @@ pub mod keys {
     pub const HUD_PLAQUE_L: &str = "hud_plaque_l";
     /// v4 顶右铜牌（船/持有量）矩形键（extra = `main_map.hud_plaque_r`，S21.6）。
     pub const HUD_PLAQUE_R: &str = "hud_plaque_r";
-    /// 提示行锚点键（extra = `main_map.hint`；S21.6 v4 = 落格提示签条中心 (540,1632)）。
+    /// 提示行锚点键（extra = `main_map.hint`；S27.4 v5 = 落格提示签条中心 (540,1760)，三键之下）。
     pub const HINT: &str = "hint";
     /// v2 HUD 经济按钮「贸易」矩形键（extra = `main_map.hud_trade`）。
     pub const HUD_TRADE: &str = "hud_trade";
@@ -477,6 +479,7 @@ pub fn node_asset(kind: SpaceKind) -> NodeAsset {
         SpaceKind::Treasure => NodeAsset { path: "assets/ui/node_treasure.png", visible_px: 443 },
         SpaceKind::Boss => NodeAsset { path: "assets/ui/node_boss.png", visible_px: 334 },
         SpaceKind::Plain => NodeAsset { path: "assets/ui/node_plain.png", visible_px: 182 },
+        SpaceKind::Territory => NodeAsset { path: "assets/ui/node_plain.png", visible_px: 314 },
     }
 }
 
@@ -490,6 +493,97 @@ pub fn island_asset(map_id: &str) -> Option<&'static str> {
         "m03" => "assets/ui/island_m03.png",
         _ => return None,
     })
+}
+
+// ── S27.4 v5 环形棋盘（`10_main_map_v5_spec.md` §2） ─────────────────────────────
+// 几何 = **数据驱动**：`main_map.ring.{center_x,center_y,radius,card_w,card_h}`（scenes.json
+// `extra_scalar` 点号键）；**换图 / 调环几何只改数据，不改 Rust**。下述常量仅作数据缺键回退
+// （项目「缺键 = 回退」惯例），非单一事实源。
+
+/// 环心缺省（`540, 784`；`main_map.ring.center_x/center_y` 缺失时回退；8pt 栅格，屏心 x=540 豁免）。
+pub const RING_CENTER: (i32, i32) = (540, 784);
+/// 环半径缺省（`480`；`main_map.ring.radius` 缺失时回退；`2πr/31 ≈ 97` ⇒ 相邻 96 宽卡留 1px 缝）。
+pub const RING_RADIUS: i32 = 480;
+/// 卡宽缺省（`96`；`main_map.ring.card_w` 缺失时回退）。
+pub const RING_CARD_W: i32 = 96;
+/// 卡高缺省（`120`；`main_map.ring.card_h` 缺失时回退）。
+pub const RING_CARD_H: i32 = 120;
+
+/// v5 环形几何（读 `main_map.ring.{center_x,center_y,radius,card_w,card_h}`，缺键 = 常量回退）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RingGeom {
+    /// 环心 x（1080 坐标系）。
+    pub cx: i32,
+    /// 环心 y（1080 坐标系）。
+    pub cy: i32,
+    /// 环半径（卡中心落此圆；`2πr/格数` 决定相邻卡间距）。
+    pub r: i32,
+    /// 卡宽（px）。
+    pub w: i32,
+    /// 卡高（px）。
+    pub h: i32,
+}
+
+/// 读环形几何（`extra_scalar` 点号键；缺键 = [`RING_CENTER`]/[`RING_RADIUS`]/[`RING_CARD_W`] 回退）。
+#[must_use]
+pub fn ring_geom(layout: &data::SceneLayout) -> RingGeom {
+    let s = &layout.extra_scalar;
+    RingGeom {
+        cx: s.get("ring.center_x").copied().unwrap_or(RING_CENTER.0),
+        cy: s.get("ring.center_y").copied().unwrap_or(RING_CENTER.1),
+        r: s.get("ring.radius").copied().filter(|v| *v > 0).unwrap_or(RING_RADIUS),
+        w: s.get("ring.card_w").copied().filter(|v| *v > 0).unwrap_or(RING_CARD_W),
+        h: s.get("ring.card_h").copied().filter(|v| *v > 0).unwrap_or(RING_CARD_H),
+    }
+}
+
+/// 环形坐标取整（f64 → i32；钳制到 ±2.1e7 后转换，`rules::battle` 同口径的局部 allow）。
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn round_coord(value: f64) -> i32 {
+    i32::try_from(value.round().clamp(-21_474_836.0, 21_474_836.0) as i64).unwrap_or(0)
+}
+
+/// 第 `index` 张卡中心（`θ = -90° + index·(360°/count)`，index=0 = 顶部起点，顺时针；
+/// `count` = 赛道格数；几何 = [`ring_geom`]）。
+#[must_use]
+pub fn ring_card_center(index: usize, count: usize, layout: &data::SceneLayout) -> (i32, i32) {
+    let g = ring_geom(layout);
+    let count_f = f32::from(u16::try_from(count.max(1)).unwrap_or(1));
+    let index_f = f32::from(u16::try_from(index).unwrap_or(0));
+    let radius_f = f32::from(i16::try_from(g.r).unwrap_or(0));
+    let rad = (-90.0 + index_f * 360.0 / count_f) * std::f32::consts::PI / 180.0;
+    let dx = round_coord(f64::from(radius_f) * f64::from(rad.cos()));
+    let dy = round_coord(f64::from(radius_f) * f64::from(rad.sin()));
+    (g.cx + dx, g.cy + dy)
+}
+
+/// 第 `index` 张卡矩形（卡宽高 = [`ring_geom`]，中心 = [`ring_card_center`]）。
+#[must_use]
+pub fn ring_card_rect(
+    index: usize,
+    count: usize,
+    layout: &data::SceneLayout,
+) -> (i32, i32, i32, i32) {
+    let g = ring_geom(layout);
+    let (cx, cy) = ring_card_center(index, count, layout);
+    (cx - g.w / 2, cy - g.h / 2, g.w, g.h)
+}
+
+/// 岛型领地卡面资产路径（**按命名约定** `assets/ui/isle_<isle_id>.png`）。
+///
+/// `isle_id` = `board.json` 的 `isle` 字段（数据）；资产由 S27.2 脚本按同名生成 ⇒
+/// **换图 / 加岛型不改 Rust**（缺图由调用方 `asset_present` 判 → 回退功能牌）。
+#[must_use]
+pub fn isle_card_path(isle: &str) -> String {
+    format!("assets/ui/isle_{isle}.png")
+}
+
+/// v5 中央据点岛资产路径（**按命名约定** `assets/ui/island_home_<map_id>.png`）。
+///
+/// `map_id` 运行时来自 `map_slot()`（数据/运行态）⇒ 换图不改 Rust（缺图 = 调用方回退代码圆盘）。
+#[must_use]
+pub fn central_island_path(map_id: &str) -> String {
+    format!("assets/ui/island_home_{map_id}.png")
 }
 
 /// 等比贴图目标矩形（**可见外接框归一化**）：可见边长 = `edge_px`，中心 (cx, cy)，无形变。

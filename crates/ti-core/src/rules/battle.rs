@@ -150,6 +150,36 @@ impl BattleSession {
         }
     }
 
+    /// 自定义敌方单位（S28.6 副本守军战 / 攻占战：敌方 hp/atk 由调用方注入，
+    /// 数值走 `rules::territory::defender_unit`，不硬编码；确定性同 `from_balance`）。
+    #[must_use]
+    pub fn new_with_enemy(cfg: CombatCfg, seed: u32, player: Unit, enemy: Unit) -> Self {
+        let (outcome, round) = if enemy.hp == 0 { (Some(Side::Player), 0) } else { (None, 0) };
+        Self {
+            cfg,
+            rng: GameRng::new(seed),
+            player_hp: player.hp,
+            player_atk: player.atk,
+            enemy_hp: enemy.hp,
+            enemy_atk: enemy.atk,
+            round,
+            outcome,
+        }
+    }
+
+    /// 副本守军战（`balance.combat` + 自定义敌方；数值单一事实源，加载失败 = 硬错误）。
+    ///
+    /// # Errors
+    ///
+    /// [`crate::data::LoadError`]：`balance.json` 缺失 / 解析失败。
+    pub fn dungeon_from_balance(
+        seed: u32,
+        player: Unit,
+        enemy: Unit,
+    ) -> Result<Self, crate::data::LoadError> {
+        Ok(Self::new_with_enemy(load_cfg()?, seed, player, enemy))
+    }
+
     /// 当前 BOSS HP（只读）。
     #[must_use]
     pub fn boss_hp(&self) -> u32 {

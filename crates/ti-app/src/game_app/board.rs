@@ -177,27 +177,21 @@ impl GameApp {
                 self.card_state.hp = self.card_state.hp.saturating_add(b.board.battle_damage);
                 self.gold = self.gold.saturating_sub(b.board.battle_gold_loss);
                 self.toast(
-                    crate::i18n::sgetf(
-                        "scene.main_map.toast.battle_fmt",
-                        &[&b.board.battle_damage],
-                    ),
+                    i18n_fmt("scene.main_map.toast.battle_fmt", &[&b.board.battle_damage]),
                     Some(Sfx::Invalid),
                 );
             }
             Landing::Treasure => {
                 self.gold = self.gold.saturating_add(b.board.treasure_gold).min(b.economy.gold_max);
                 self.toast(
-                    crate::i18n::sgetf(
-                        "scene.main_map.toast.treasure_fmt",
-                        &[&b.board.treasure_gold],
-                    ),
+                    i18n_fmt("scene.main_map.toast.treasure_fmt", &[&b.board.treasure_gold]),
                     Some(Sfx::Press),
                 );
             }
             Landing::City => {
                 self.gold = self.gold.saturating_add(b.board.city_gold).min(b.economy.gold_max);
                 self.toast(
-                    crate::i18n::sgetf("scene.main_map.toast.city_fmt", &[&b.board.city_gold]),
+                    i18n_fmt("scene.main_map.toast.city_fmt", &[&b.board.city_gold]),
                     Some(Sfx::Press),
                 );
             }
@@ -223,7 +217,7 @@ impl GameApp {
                     if self.apply_card_effect(card_id) {
                         let card_name = crate::i18n::sget(&name_key);
                         self.toast(
-                            crate::i18n::sgetf("scene.main_map.toast.card_fmt", &[&card_name]),
+                            i18n_fmt("scene.main_map.toast.card_fmt", &[&card_name]),
                             Some(Sfx::Press),
                         );
                     }
@@ -232,6 +226,21 @@ impl GameApp {
             // BOSS 格本身无金/HP 结算（提示条由 `apply_board_boss` 给出：
             // 未满圈 = 未现 / 满圈 = 现身）；起点格与普通格同样无结算。
             Landing::Boss | Landing::Start | Landing::Plain => {}
+            Landing::Territory => {
+                // S28 领地格（`docs/business/territory.md` §4 三支分叉）：先显领地信息签
+                // （岛名 i18n `isle.<id>`）；占领/交钱/攻占/升级的结算菜单 = S28.6/7 接线。
+                let sp = self.board.as_ref().and_then(BoardSession::current).cloned();
+                if let Some(sp) = sp {
+                    let isle_name = sp.isle.as_deref().map_or_else(
+                        || crate::i18n::sget("scene.main_map.node.territory").to_string(),
+                        |isle| crate::i18n::sget(&format!("isle.{isle}")).to_string(),
+                    );
+                    self.toast(
+                        i18n_fmt("scene.main_map.toast.territory_fmt", &[&isle_name]),
+                        Some(Sfx::Press),
+                    );
+                }
+            }
         }
     }
     /// BOSS 触发提示（S19.3：`Turn::boss` 三态 = 未遇 / 未现 / 现身）。
@@ -241,7 +250,7 @@ impl GameApp {
             BossTrigger::Locked => {
                 let remain = b.board.boss_min_laps.saturating_sub(laps_after).max(1);
                 self.toast(
-                    crate::i18n::sgetf("scene.main_map.toast.boss_locked_fmt", &[&remain]),
+                    i18n_fmt("scene.main_map.toast.boss_locked_fmt", &[&remain]),
                     Some(Sfx::Invalid),
                 );
             }
@@ -262,6 +271,11 @@ impl GameApp {
         }
     }
 }
+/// i18n 取文案（重复模式收敛：`audit_code` 重复模式 >5 即违例；单一入口）。
+fn i18n_fmt(key: &str, args: &[&dyn std::fmt::Display]) -> String {
+    crate::i18n::sgetf(key, args)
+}
+
 /// 构建环岛赛道会话（`rules::board`）：
 /// - 赛道数据 = `assets/data/board.json`（`scripts/extract_board.py` 生成）；
 /// - 开档（`start_override = None`）= 赛道 `start` 格；

@@ -119,7 +119,7 @@
   ]
  },
  "boat": {
-   "_comment": "S21.2 船系统（规格 = docs/business/economy.md §船系统；规则接线 S21.10 已落地）：开局 1 级小舢板（cargo 99 = 现状单次贸易上限，零行为变化）；单向 4 级升级（cost 一次性，立即生效）；cargo = 单次贸易数量上限（effective = min(goods.qty_max, cargo)，S21.10 已与 goods.qty_max 400 翻转同步落地）；atk/hp = 累计值，与建筑 Σ 叠加（combat.md §建造加成扩展）。",
+  "_comment": "S21.2 船系统（规格 = docs/business/economy.md §船系统；规则接线 S21.10 已落地）：开局 1 级小舢板（cargo 99 = 现状单次贸易上限，零行为变化）；单向 4 级升级（cost 一次性，立即生效）；cargo = 单次贸易数量上限（effective = min(goods.qty_max, cargo)，S21.10 已与 goods.qty_max 400 翻转同步落地）；atk/hp = 累计值，与建筑 Σ 叠加（combat.md §建造加成扩展）。",
   "levels": [
    {
     "level": 1,
@@ -225,6 +225,169 @@
   "hilite",
   "danger"
  ],
+ "territory": {
+  "max_level": 3,
+  "toll_per_level": 0.25,
+  "upgrade_cost_per_level": 0.3,
+  "production_per_level": 0.5,
+  "defense_per_level": 0.4,
+  "first_capture_bonus": 150,
+  "home_upgrade": {
+   "base_cost": 200,
+   "per_level": 0.35,
+   "max_level": 3
+  },
+  "isle_tokens": [
+   "isle_coral",
+   "isle_sand",
+   "isle_gold",
+   "isle_dark",
+   "isle_teal",
+   "isle_olive",
+   "isle_bone",
+   "isle_ember",
+   "isle_mist",
+   "isle_black"
+  ],
+  "ai": {
+   "attack_threshold": 0.6,
+   "toll_aversion": 0.5,
+   "upgrade_priority": 0.3
+  },
+  "prototypes": [
+   {
+    "id": "harbour",
+    "name_key": "isle.harbour",
+    "dungeon_id": "raid_beach",
+    "dungeon_name_key": "dungeon.raid_beach",
+    "guard": "海盗水手",
+    "benefit": "贸易抽成",
+    "max_level": 3,
+    "toll_base": 90,
+    "upgrade_cost_base": 120,
+    "production_base": 60,
+    "defense_base": 20
+   },
+   {
+    "id": "lighthouse",
+    "name_key": "isle.lighthouse",
+    "dungeon_id": "take_lighthouse",
+    "dungeon_name_key": "dungeon.take_lighthouse",
+    "guard": "走私贩",
+    "benefit": "航行加速",
+    "max_level": 2,
+    "toll_base": 70,
+    "upgrade_cost_base": 100,
+    "production_base": 45,
+    "defense_base": 16
+   },
+   {
+    "id": "wreck",
+    "name_key": "isle.wreck",
+    "dungeon_id": "salvage_wreck",
+    "dungeon_name_key": "dungeon.salvage_wreck",
+    "guard": "守宝骷髅",
+    "benefit": "宝藏金",
+    "max_level": 3,
+    "toll_base": 110,
+    "upgrade_cost_base": 140,
+    "production_base": 85,
+    "defense_base": 24
+   },
+   {
+    "id": "pirate_lair",
+    "name_key": "isle.pirate_lair",
+    "dungeon_id": "storm_lair",
+    "dungeon_name_key": "dungeon.storm_lair",
+    "guard": "头目亲卫",
+    "benefit": "掠夺金",
+    "max_level": 3,
+    "toll_base": 130,
+    "upgrade_cost_base": 160,
+    "production_base": 100,
+    "defense_base": 30
+   },
+   {
+    "id": "shipyard",
+    "name_key": "isle.shipyard",
+    "dungeon_id": "seize_shipyard",
+    "dungeon_name_key": "dungeon.seize_shipyard",
+    "guard": "船坞工头",
+    "benefit": "造船折扣",
+    "max_level": 2,
+    "toll_base": 80,
+    "upgrade_cost_base": 110,
+    "production_base": 55,
+    "defense_base": 18
+   },
+   {
+    "id": "trading_post",
+    "name_key": "isle.trading_post",
+    "dungeon_id": "escort_trade",
+    "dungeon_name_key": "dungeon.escort_trade",
+    "guard": "私掠队",
+    "benefit": "贸易利润+",
+    "max_level": 3,
+    "toll_base": 120,
+    "upgrade_cost_base": 150,
+    "production_base": 90,
+    "defense_base": 26
+   },
+   {
+    "id": "skull_cliff",
+    "name_key": "isle.skull_cliff",
+    "dungeon_id": "camp_cliff",
+    "dungeon_name_key": "dungeon.camp_cliff",
+    "guard": "骷髅兵",
+    "benefit": "战利品",
+    "max_level": 2,
+    "toll_base": 85,
+    "upgrade_cost_base": 115,
+    "production_base": 60,
+    "defense_base": 19
+   },
+   {
+    "id": "volcano",
+    "name_key": "isle.volcano",
+    "dungeon_id": "lava_vault",
+    "dungeon_name_key": "dungeon.lava_vault",
+    "guard": "熔岩守卫",
+    "benefit": "熔金",
+    "max_level": 3,
+    "toll_base": 125,
+    "upgrade_cost_base": 150,
+    "production_base": 95,
+    "defense_base": 28
+   },
+   {
+    "id": "lightship",
+    "name_key": "isle.lightship",
+    "dungeon_id": "board_lightship",
+    "dungeon_name_key": "dungeon.board_lightship",
+    "guard": "灯船船员",
+    "benefit": "骰点+1",
+    "max_level": 2,
+    "toll_base": 75,
+    "upgrade_cost_base": 105,
+    "production_base": 50,
+    "defense_base": 17
+   },
+   {
+    "id": "boss_fort",
+    "name_key": "isle.boss_fort",
+    "dungeon_id": "fort_boss",
+    "dungeon_name_key": "dungeon.fort_boss",
+    "guard": "BOSS 舰队",
+    "benefit": "通关关键",
+    "max_level": 3,
+    "toll_base": 150,
+    "upgrade_cost_base": 180,
+    "production_base": 120,
+    "defense_base": 34
+   }
+  ],
+  "dungeon_attack_coef": 0.5
+ },
  "messages": {
   "pages": {
    "msgs": 1,

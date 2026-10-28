@@ -1,401 +1,401 @@
 {
-  "schema_version": 3,
-  "scenes": {
-    "index": {
-      "scene_id": "index",
-      "version": "3.0",
-      "narrative": {
-        "mood": "epic_entry",
-        "focus": {
-          "anchor": "compass_ring",
-          "bbox_pct": {
-            "x": 6,
-            "y": 26,
-            "w": 88,
-            "h": 49
-          }
-        },
-        "rhythm": {
-          "beats": [
-            {
-              "name": "compass_ring",
-              "weight": 0.55,
-              "y_pct": 50
-            },
-            {
-              "name": "title_plaque",
-              "weight": 0.3,
-              "y_pct": 11
-            },
-            {
-              "name": "footer",
-              "weight": 0.15,
-              "y_pct": 95
-            }
-          ],
-          "rule": "art_to_action_top_down"
-        },
-        "info_density": {
-          "center_max_per_row": 0,
-          "edge_min_per_row": 1,
-          "dead_zone_max_pct": 15
-        },
-        "permanent_hud_count_max": 0
-      },
-      "geometry_constraints": {
-        "focus_bbox_must_contain": [],
-        "no_rect_overlap_with": [
-          "focus_anchor"
-        ],
-        "edge_anchors": {
-          "bottom_hint_y_min_pct": 92,
-          "hud_edge_tolerance_pct": 5
-        }
-      }
+ "schema_version": 3,
+ "scenes": {
+  "index": {
+   "scene_id": "index",
+   "version": "3.0",
+   "narrative": {
+    "mood": "epic_entry",
+    "focus": {
+     "anchor": "compass_ring",
+     "bbox_pct": {
+      "x": 6,
+      "y": 26,
+      "w": 88,
+      "h": 49
+     }
     },
-    "select_role": {
-      "scene_id": "select_role",
-      "version": "3.0",
-      "narrative": {
-        "mood": "hero_choice",
-        "focus": {
-          "anchor": "portrait_carousel",
-          "bbox_pct": {
-            "x": 7.04,
-            "y": 6.77,
-            "w": 32.96,
-            "h": 27.81
-          }
-        },
-        "rhythm": {
-          "beats": [
-            {
-              "name": "portrait_carousel",
-              "weight": 0.5,
-              "y_pct": 12
-            },
-            {
-              "name": "menu",
-              "weight": 0.35,
-              "y_pct": 25
-            },
-            {
-              "name": "hint",
-              "weight": 0.15,
-              "y_pct": 96
-            }
-          ],
-          "rule": "side_anchor_center_options"
-        },
-        "info_density": {
-          "center_max_per_row": 5,
-          "edge_min_per_row": 1,
-          "dead_zone_max_pct": 15
-        },
-        "permanent_hud_count_max": 0
+    "rhythm": {
+     "beats": [
+      {
+       "name": "compass_ring",
+       "weight": 0.55,
+       "y_pct": 50
       },
-      "geometry_constraints": {
-        "focus_bbox_must_contain": [
-          "hero_art_bbox"
-        ],
-        "no_rect_overlap_with": [
-          "focus_anchor"
-        ],
-        "edge_anchors": {
-          "bottom_hint_y_min_pct": 92,
-          "hud_edge_tolerance_pct": 5
-        }
+      {
+       "name": "title_plaque",
+       "weight": 0.3,
+       "y_pct": 11
+      },
+      {
+       "name": "footer",
+       "weight": 0.15,
+       "y_pct": 95
       }
+     ],
+     "rule": "art_to_action_top_down"
     },
-    "select_map": {
-      "scene_id": "select_map",
-      "version": "3.0",
-      "narrative": {
-        "mood": "map_overview",
-        "focus": {
-          "anchor": "map_collage",
-          "bbox_pct": {
-            "x": 7,
-            "y": 12,
-            "w": 52,
-            "h": 62
-          }
-        },
-        "rhythm": {
-          "beats": [
-            {
-              "name": "map_collage",
-              "weight": 0.5,
-              "y_pct": 12
-            },
-            {
-              "name": "menu",
-              "weight": 0.35,
-              "y_pct": 25
-            },
-            {
-              "name": "hint",
-              "weight": 0.15,
-              "y_pct": 96
-            }
-          ],
-          "rule": "side_anchor_center_options"
-        },
-        "info_density": {
-          "center_max_per_row": 3,
-          "edge_min_per_row": 1,
-          "dead_zone_max_pct": 15
-        },
-        "permanent_hud_count_max": 0
-      },
-      "geometry_constraints": {
-        "focus_bbox_must_contain": [
-          "map_art_bbox"
-        ],
-        "no_rect_overlap_with": [
-          "focus_anchor"
-        ],
-        "edge_anchors": {
-          "bottom_hint_y_min_pct": 92,
-          "hud_edge_tolerance_pct": 5
-        }
-      }
+    "info_density": {
+     "center_max_per_row": 0,
+     "edge_min_per_row": 1,
+     "dead_zone_max_pct": 15
     },
-    "main_map": {
-      "scene_id": "main_map",
-      "version": "3.0",
-      "narrative": {
-        "mood": "world_explore",
-        "focus": {
-          "anchor": "world_canvas",
-          "bbox_pct": {
-            "x": 4,
-            "y": 13,
-            "w": 92,
-            "h": 43
-          }
-        },
-        "rhythm": {
-          "beats": [
-            {
-              "name": "world_canvas",
-              "weight": 0.5,
-              "y_pct": 40
-            },
-            {
-              "name": "command_cta",
-              "weight": 0.2,
-              "y_pct": 66
-            },
-            {
-              "name": "hud_corners",
-              "weight": 0.15,
-              "y_pct": 6
-            },
-            {
-              "name": "hint",
-              "weight": 0.15,
-              "y_pct": 90
-            }
-          ],
-          "rule": "world_first_hud_corner"
-        },
-        "info_density": {
-          "center_max_per_row": 3,
-          "edge_min_per_row": 1,
-          "dead_zone_max_pct": 10
-        },
-        "permanent_hud_count_max": 3
-      },
-      "geometry_constraints": {
-        "focus_bbox_must_contain": [
-          "world_canvas_bbox"
-        ],
-        "no_rect_overlap_with": [
-          "focus_anchor"
-        ],
-        "edge_anchors": {
-          "bottom_hint_y_min_pct": 85,
-          "hud_edge_tolerance_pct": 5
-        }
-      }
-    },
-    "vs": {
-      "scene_id": "vs",
-      "version": "3.0",
-      "narrative": {
-        "mood": "tense_battle",
-        "focus": {
-          "anchor": "battle_arena",
-          "bbox_pct": {
-            "x": 7,
-            "y": 12,
-            "w": 85,
-            "h": 52
-          }
-        },
-        "rhythm": {
-          "beats": [
-            {
-              "name": "battle_arena",
-              "weight": 0.45,
-              "y_pct": 12
-            },
-            {
-              "name": "command_deck",
-              "weight": 0.3,
-              "y_pct": 87
-            },
-            {
-              "name": "hp_corners",
-              "weight": 0.15,
-              "y_pct": 4
-            },
-            {
-              "name": "rounds_center",
-              "weight": 0.1,
-              "y_pct": 31
-            }
-          ],
-          "rule": "arena_center_command_edge"
-        },
-        "info_density": {
-          "center_max_per_row": 3,
-          "edge_min_per_row": 1,
-          "dead_zone_max_pct": 10
-        },
-        "permanent_hud_count_max": 4
-      },
-      "geometry_constraints": {
-        "focus_bbox_must_contain": [
-          "battle_arena_bbox"
-        ],
-        "no_rect_overlap_with": [
-          "focus_anchor"
-        ],
-        "edge_anchors": {
-          "bottom_hint_y_min_pct": 92,
-          "hud_edge_tolerance_pct": 5
-        }
-      }
-    },
-    "message": {
-      "scene_id": "message",
-      "version": "3.0",
-      "narrative": {
-        "mood": "reading",
-        "focus": {
-          "anchor": "text_panel",
-          "bbox_pct": {
-            "x": 37,
-            "y": 12,
-            "w": 56,
-            "h": 63
-          }
-        },
-        "rhythm": {
-          "beats": [
-            {
-              "name": "text_panel",
-              "weight": 0.55,
-              "y_pct": 12
-            },
-            {
-              "name": "hero_art",
-              "weight": 0.25,
-              "y_pct": 12
-            },
-            {
-              "name": "page",
-              "weight": 0.1,
-              "y_pct": 77
-            },
-            {
-              "name": "hint",
-              "weight": 0.1,
-              "y_pct": 96
-            }
-          ],
-          "rule": "left_hero_right_text"
-        },
-        "info_density": {
-          "center_max_per_row": 1,
-          "edge_min_per_row": 1,
-          "dead_zone_max_pct": 15
-        },
-        "permanent_hud_count_max": 1
-      },
-      "geometry_constraints": {
-        "focus_bbox_must_contain": [
-          "body"
-        ],
-        "no_rect_overlap_with": [
-          "focus_anchor"
-        ],
-        "edge_anchors": {
-          "bottom_hint_y_min_pct": 92,
-          "hud_edge_tolerance_pct": 5
-        }
-      }
-    },
-    "saveload": {
-      "scene_id": "saveload",
-      "version": "3.0",
-      "narrative": {
-        "mood": "archive",
-        "focus": {
-          "anchor": "slot_list_with_meta",
-          "bbox_pct": {
-            "x": 33,
-            "y": 12,
-            "w": 59,
-            "h": 63
-          }
-        },
-        "rhythm": {
-          "beats": [
-            {
-              "name": "slot_list_with_meta",
-              "weight": 0.55,
-              "y_pct": 12
-            },
-            {
-              "name": "hero_art",
-              "weight": 0.2,
-              "y_pct": 12
-            },
-            {
-              "name": "meta",
-              "weight": 0.15,
-              "y_pct": 12
-            },
-            {
-              "name": "hint",
-              "weight": 0.1,
-              "y_pct": 96
-            }
-          ],
-          "rule": "three_column_left_hero"
-        },
-        "info_density": {
-          "center_max_per_row": 5,
-          "edge_min_per_row": 1,
-          "dead_zone_max_pct": 15
-        },
-        "permanent_hud_count_max": 1
-      },
-      "geometry_constraints": {
-        "focus_bbox_must_contain": [
-          "list"
-        ],
-        "no_rect_overlap_with": [
-          "focus_anchor"
-        ],
-        "edge_anchors": {
-          "bottom_hint_y_min_pct": 92,
-          "hud_edge_tolerance_pct": 5
-        }
-      }
+    "permanent_hud_count_max": 0
+   },
+   "geometry_constraints": {
+    "focus_bbox_must_contain": [],
+    "no_rect_overlap_with": [
+     "focus_anchor"
+    ],
+    "edge_anchors": {
+     "bottom_hint_y_min_pct": 92,
+     "hud_edge_tolerance_pct": 5
     }
+   }
+  },
+  "select_role": {
+   "scene_id": "select_role",
+   "version": "3.0",
+   "narrative": {
+    "mood": "hero_choice",
+    "focus": {
+     "anchor": "portrait_carousel",
+     "bbox_pct": {
+      "x": 7.04,
+      "y": 6.77,
+      "w": 32.96,
+      "h": 27.81
+     }
+    },
+    "rhythm": {
+     "beats": [
+      {
+       "name": "portrait_carousel",
+       "weight": 0.5,
+       "y_pct": 12
+      },
+      {
+       "name": "menu",
+       "weight": 0.35,
+       "y_pct": 25
+      },
+      {
+       "name": "hint",
+       "weight": 0.15,
+       "y_pct": 96
+      }
+     ],
+     "rule": "side_anchor_center_options"
+    },
+    "info_density": {
+     "center_max_per_row": 5,
+     "edge_min_per_row": 1,
+     "dead_zone_max_pct": 15
+    },
+    "permanent_hud_count_max": 0
+   },
+   "geometry_constraints": {
+    "focus_bbox_must_contain": [
+     "hero_art_bbox"
+    ],
+    "no_rect_overlap_with": [
+     "focus_anchor"
+    ],
+    "edge_anchors": {
+     "bottom_hint_y_min_pct": 92,
+     "hud_edge_tolerance_pct": 5
+    }
+   }
+  },
+  "select_map": {
+   "scene_id": "select_map",
+   "version": "3.0",
+   "narrative": {
+    "mood": "map_overview",
+    "focus": {
+     "anchor": "map_collage",
+     "bbox_pct": {
+      "x": 7,
+      "y": 12,
+      "w": 52,
+      "h": 62
+     }
+    },
+    "rhythm": {
+     "beats": [
+      {
+       "name": "map_collage",
+       "weight": 0.5,
+       "y_pct": 12
+      },
+      {
+       "name": "menu",
+       "weight": 0.35,
+       "y_pct": 25
+      },
+      {
+       "name": "hint",
+       "weight": 0.15,
+       "y_pct": 96
+      }
+     ],
+     "rule": "side_anchor_center_options"
+    },
+    "info_density": {
+     "center_max_per_row": 3,
+     "edge_min_per_row": 1,
+     "dead_zone_max_pct": 15
+    },
+    "permanent_hud_count_max": 0
+   },
+   "geometry_constraints": {
+    "focus_bbox_must_contain": [
+     "map_art_bbox"
+    ],
+    "no_rect_overlap_with": [
+     "focus_anchor"
+    ],
+    "edge_anchors": {
+     "bottom_hint_y_min_pct": 92,
+     "hud_edge_tolerance_pct": 5
+    }
+   }
+  },
+  "main_map": {
+   "scene_id": "main_map",
+   "version": "3.0",
+   "narrative": {
+    "mood": "world_explore",
+    "focus": {
+     "anchor": "world_canvas",
+     "bbox_pct": {
+      "x": 1,
+      "y": 13,
+      "w": 97,
+      "h": 55
+     }
+    },
+    "rhythm": {
+     "beats": [
+      {
+       "name": "world_canvas",
+       "weight": 0.55,
+       "y_pct": 41
+      },
+      {
+       "name": "command_cta",
+       "weight": 0.2,
+       "y_pct": 76
+      },
+      {
+       "name": "hud_corners",
+       "weight": 0.15,
+       "y_pct": 6
+      },
+      {
+       "name": "hint",
+       "weight": 0.1,
+       "y_pct": 92
+      }
+     ],
+     "rule": "world_first_hud_corner"
+    },
+    "info_density": {
+     "center_max_per_row": 3,
+     "edge_min_per_row": 1,
+     "dead_zone_max_pct": 10
+    },
+    "permanent_hud_count_max": 3
+   },
+   "geometry_constraints": {
+    "focus_bbox_must_contain": [
+     "world_canvas_bbox"
+    ],
+    "no_rect_overlap_with": [
+     "focus_anchor"
+    ],
+    "edge_anchors": {
+     "bottom_hint_y_min_pct": 85,
+     "hud_edge_tolerance_pct": 5
+    }
+   }
+  },
+  "vs": {
+   "scene_id": "vs",
+   "version": "3.0",
+   "narrative": {
+    "mood": "tense_battle",
+    "focus": {
+     "anchor": "battle_arena",
+     "bbox_pct": {
+      "x": 7,
+      "y": 12,
+      "w": 85,
+      "h": 52
+     }
+    },
+    "rhythm": {
+     "beats": [
+      {
+       "name": "battle_arena",
+       "weight": 0.45,
+       "y_pct": 12
+      },
+      {
+       "name": "command_deck",
+       "weight": 0.3,
+       "y_pct": 87
+      },
+      {
+       "name": "hp_corners",
+       "weight": 0.15,
+       "y_pct": 4
+      },
+      {
+       "name": "rounds_center",
+       "weight": 0.1,
+       "y_pct": 31
+      }
+     ],
+     "rule": "arena_center_command_edge"
+    },
+    "info_density": {
+     "center_max_per_row": 3,
+     "edge_min_per_row": 1,
+     "dead_zone_max_pct": 10
+    },
+    "permanent_hud_count_max": 4
+   },
+   "geometry_constraints": {
+    "focus_bbox_must_contain": [
+     "battle_arena_bbox"
+    ],
+    "no_rect_overlap_with": [
+     "focus_anchor"
+    ],
+    "edge_anchors": {
+     "bottom_hint_y_min_pct": 92,
+     "hud_edge_tolerance_pct": 5
+    }
+   }
+  },
+  "message": {
+   "scene_id": "message",
+   "version": "3.0",
+   "narrative": {
+    "mood": "reading",
+    "focus": {
+     "anchor": "text_panel",
+     "bbox_pct": {
+      "x": 37,
+      "y": 12,
+      "w": 56,
+      "h": 63
+     }
+    },
+    "rhythm": {
+     "beats": [
+      {
+       "name": "text_panel",
+       "weight": 0.55,
+       "y_pct": 12
+      },
+      {
+       "name": "hero_art",
+       "weight": 0.25,
+       "y_pct": 12
+      },
+      {
+       "name": "page",
+       "weight": 0.1,
+       "y_pct": 77
+      },
+      {
+       "name": "hint",
+       "weight": 0.1,
+       "y_pct": 96
+      }
+     ],
+     "rule": "left_hero_right_text"
+    },
+    "info_density": {
+     "center_max_per_row": 1,
+     "edge_min_per_row": 1,
+     "dead_zone_max_pct": 15
+    },
+    "permanent_hud_count_max": 1
+   },
+   "geometry_constraints": {
+    "focus_bbox_must_contain": [
+     "body"
+    ],
+    "no_rect_overlap_with": [
+     "focus_anchor"
+    ],
+    "edge_anchors": {
+     "bottom_hint_y_min_pct": 92,
+     "hud_edge_tolerance_pct": 5
+    }
+   }
+  },
+  "saveload": {
+   "scene_id": "saveload",
+   "version": "3.0",
+   "narrative": {
+    "mood": "archive",
+    "focus": {
+     "anchor": "slot_list_with_meta",
+     "bbox_pct": {
+      "x": 33,
+      "y": 12,
+      "w": 59,
+      "h": 63
+     }
+    },
+    "rhythm": {
+     "beats": [
+      {
+       "name": "slot_list_with_meta",
+       "weight": 0.55,
+       "y_pct": 12
+      },
+      {
+       "name": "hero_art",
+       "weight": 0.2,
+       "y_pct": 12
+      },
+      {
+       "name": "meta",
+       "weight": 0.15,
+       "y_pct": 12
+      },
+      {
+       "name": "hint",
+       "weight": 0.1,
+       "y_pct": 96
+      }
+     ],
+     "rule": "three_column_left_hero"
+    },
+    "info_density": {
+     "center_max_per_row": 5,
+     "edge_min_per_row": 1,
+     "dead_zone_max_pct": 15
+    },
+    "permanent_hud_count_max": 1
+   },
+   "geometry_constraints": {
+    "focus_bbox_must_contain": [
+     "list"
+    ],
+    "no_rect_overlap_with": [
+     "focus_anchor"
+    ],
+    "edge_anchors": {
+     "bottom_hint_y_min_pct": 92,
+     "hud_edge_tolerance_pct": 5
+    }
+   }
   }
+ }
 }

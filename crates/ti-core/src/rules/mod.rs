@@ -16,4 +16,5 @@ pub mod rng;
 pub mod saveload;
 pub mod saveload_json;
 pub mod selection;
+pub mod territory;
 pub mod trade;

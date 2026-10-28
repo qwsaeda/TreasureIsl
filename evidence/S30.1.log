@@ -1,0 +1,33 @@
+S30.1 地图打包标准与工具（「不手写像素：声明意图/数据，引擎算坐标」③参数化执行面）
+=========================================================================
+改动面 = 工具（scripts/map_pack.py）+ 数据（assets/maps/*.json 描述符 + _template.json 共享版面）+ 文档（18/14/04/README）
+业务规则 = 无
+
+【背景】
+用户 2026-10-28「没有标准地图打包工具？换地图每次都要改代码 + 手工编辑 scenes.json/*.json？」⇒ 缺口 = 缺「一张图 =
+一个描述符 + 一条命令」的入口。本任务建标准 + 工具，消除「换图/改环几何要手改多份 JSON + Rust」。
+
+【落地】
+- 描述符：`assets/maps/<id>.json`（逐图内容 = board.json maps.<id> 格序 + 岛型 + 中央岛资产引用；m01/m02/m03 已 bootstrap）
+  + `assets/maps/_template.json`（main_map v5 共享版面 = ring 几何 + world_canvas + island_home + deck CTA/三键 + manifest focus/bbox_pct + beats）。
+- 工具：`scripts/map_pack.py`（幂等 + 只读 + 非 0 退出，工具契约 4 条）：
+  - `sync`：描述符 → board.json maps.<id>；模板 → scenes.json main_map（ring/world_canvas/island_home/deck_* + CTA·三键 primitives）
+    + manifest scenes.main_map（focus.bbox_pct + rhythm.beats）；indent=1 规范形写出（与 check_scenes_canonical 同口径，防整文件 churn）。
+  - `check`/`--check`：只读重推 → 与实际 diff（board/scenes/manifest 漂移 或 描述符引用资产未在 ui_manifest 登记 ⇒ 非 0）。
+  - `add <id>`：生成骨架描述符。
+- 效果：**加图/换图/改环几何 = 改 `assets/maps/*.json` 或 `_template.json` + 一条 `sync`，不改 Rust、不散改多份 JSON**。
+- 登记：`14_tooling_catalog.md` §3.2 + §2.6 流水线 + `04_tooling.md` §1 速查表 + `docs/README.md` scripts 表 +
+  `18_asset_content_pipeline.md` §7（地图打包标准定案）。
+
+【验收（实跑输出）】
+$ python scripts/map_pack.py sync && python scripts/map_pack.py check
+  map_pack check: 0 漂移（board/scenes/manifest 与描述符·模板一致 + 资产已登记）
+$ python scripts/map_pack.py sync   # 二次重跑 = 逐字节幂等（check 仍 0 漂移）
+$ python scripts/validate_data.py    # scenes.json 仍 indent=1 规范形（工具 dump 与 check_scenes_canonical 同口径）
+  OK
+$ python scripts/check_scene_narrative.py --check   # 模板写出的 focus.bbox_pct {1,13,97,55} ↔ scenes focus_anchor N8 一致
+  0 failure
+$ cargo run -p ti-tools --bin doccheck2   # 工具契约（第 26/27 项：scripts/ 落地 + 台账行 + --check + 非 0 退出）
+  0 error
+
+结论 = verified（地图打包标准定案 + map_pack.py 工具 + 描述符/模板 + 台账三处登记 + 幂等/只读/非 0 退出 + 0 漂移）

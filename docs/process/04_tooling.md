@@ -21,6 +21,7 @@
 | `scripts/ui_layout_sheet.py` | Python | UI **版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图；设计稿评审 / 出图验收对照） | 是 |
  | `scripts/ui_icons.py` | Python | **UI 图标白蒙版生成器**（S21.14：读 `assets/ui_batches/icon_v1.json` 48 原生几何 → PIL 放大 512 白蒙版 `assets/ui/icon_*.png`；`--check` 字节幂等 + 注册表对账） | 是 |
  | `scripts/ui_islands.py` | Python | **岛屿剪影资产生成器**（S26.2：`terrain.json` 陆格掩码 → 3 枚暖沙岛屿剪影 PNG 994×826 抗锯齿+礁光晕+投影 → `assets/ui/island_m0*.png` + `ui_manifest.json` kind=island；运行时资产优先 blit 缺图回退；`--check` 只读幂等） | 否 |
+| `scripts/map_pack.py` | Python | **地图打包标准**（S30/S27.4：`assets/maps/` 逐图描述符 + `_template.json` 共享版面 → `sync` 回注 board.json/scenes.json/manifest + 资产登记对账；`--check` 漂移非 0） | 否 |
 | `scripts/task_close.py` | Python | **任务收口一条命令**（跑判据 → 写证据 → 台账行级置 verified → 同步 release 计数 → 三方对账复验；判据非 0 不改台账） | 是 |
 | `scripts/exp_log.py` | Python | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + 查重 + doccheck 复验） | 是 |
 | `scripts/doc_numbers.py` | Python | **门禁项数 / 台账计数实测回写**（8 处声称点一次改齐；`--fix` 回写） | 是 |

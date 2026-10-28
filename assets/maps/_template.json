@@ -1,0 +1,84 @@
+{
+ "_comment": "main_map v5「环形棋盘」共享版面（S30 地图打包标准·单一事实源）。本文件驱动 scenes.json main_map 版面键 + scene_manifest_v3.json main_map.focus/beats。改环几何/CTA/键位 = 改这里，跑 `python scripts/map_pack.py sync`，不改 Rust。逐图内容在 assets/maps/<id>.json。",
+ "main_map": {
+  "ring": {
+   "center_x": 540,
+   "center_y": 784,
+   "radius": 480,
+   "card_w": 96,
+   "card_h": 120
+  },
+  "world_canvas": {
+   "x": 11,
+   "y": 250,
+   "w": 1048,
+   "h": 1056
+  },
+  "island_home": {
+   "x": 160,
+   "y": 400,
+   "w": 760,
+   "h": 760
+  },
+  "hint_y": 1760,
+  "deck": {
+   "spin": {
+    "x": 408,
+    "y": 1336,
+    "w": 264,
+    "h": 264
+   },
+   "trade": {
+    "x": 48,
+    "y": 1608,
+    "w": 312,
+    "h": 136
+   },
+   "sell": {
+    "x": 384,
+    "y": 1608,
+    "w": 312,
+    "h": 136
+   },
+   "build": {
+    "x": 720,
+    "y": 1608,
+    "w": 312,
+    "h": 136
+   }
+  },
+  "deck_offsets": {
+   "icon_dx": 48,
+   "icon_dy": 40,
+   "text_dy": 0
+  },
+  "manifest_focus_bbox_pct": {
+   "x": 1,
+   "y": 13,
+   "w": 97,
+   "h": 55
+  },
+  "manifest_beats": [
+   {
+    "name": "world_canvas",
+    "weight": 0.55,
+    "y_pct": 41
+   },
+   {
+    "name": "command_cta",
+    "weight": 0.2,
+    "y_pct": 76
+   },
+   {
+    "name": "hud_corners",
+    "weight": 0.15,
+    "y_pct": 6
+   },
+   {
+    "name": "hint",
+    "weight": 0.1,
+    "y_pct": 92
+   }
+  ]
+ }
+}

@@ -120,6 +120,7 @@
 | `scripts/ui_layout_sheet.py` | **UI 版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图，版面评审 / S21.9 出图验收对照；`--check` 只读校验） |
  | `scripts/ui_icons.py` | **UI 图标白蒙版生成器**（S21.14 图标图片化 ④-04：读 `assets/ui_batches/icon_v1.json` 48 原生几何 → PIL 最近邻放大 512 白蒙版 `assets/ui/icon_*.png`；`--check` 字节幂等 + 注册表 `image→文件` 对账） |
  | `scripts/ui_islands.py` | **岛屿剪影资产生成器**（S26.2 主地图岛屿图片化：`terrain.json` 陆格掩码 → 3 枚暖沙岛屿剪影 PNG 994×826（4× 超采抗锯齿 + 礁光晕 + 投影）→ `assets/ui/island_m0*.png` + `ui_manifest.json` kind=island；运行时 `chrome::island_asset` 资产优先 blit、缺图代码矢量回退；`--check` 只读幂等） |
+| `scripts/map_pack.py` | **地图打包标准**（S30/S27.4：地图逐图描述符 `assets/maps/<id>.json` + 共享版面 `_template.json` → 回注 board.json / scenes.json main_map（ring/CTA）/ manifest + 资产登记对账；`sync` 幂等 + `--check` 漂移非 0；「不手写像素：声明意图/数据，引擎算坐标」执行面） |
 | `scripts/task_close.py` | **任务收口一条命令**（跑判据 → 写 `evidence/<id>.log` → 台账行级置 verified → 同步 release 台账计数 → 三方对账复验；判据非 0 则不写证据不改台账） |
 | `scripts/exp_log.py` | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + ID 查重 + doccheck 复验） |
 | `scripts/doc_numbers.py` | **门禁项数 / 台账计数实测回写**（8 处声称点一次改齐；`--fix` 回写，消灭手抄漂移） |

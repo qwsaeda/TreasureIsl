@@ -1,0 +1,47 @@
+S27.4 主地图 v5 表现层「环形棋盘重绘」（31 张 96×120 岛型/功能卡环 + 中央据点岛）
+=========================================================================
+改动面 = 表现（main_map.rs/chrome.rs 环形渲染）+ 数据（scenes.json/manifest/board.json 经 map_pack）+ 工具（map_pack.py，归 S30.1）
+业务规则 = 无（点卡交钱/攻占/进副本/升级 + 分区色带 = 领地交互，归 S28 territory 状态；本任务只做**可读的环形棋盘**，不改玩法）
+
+【背景】
+用户 2026-10-28「main_map 界面地图小 看都看不见」⇒ 根因 = v4 等距小菱形（g=20 tw=24px，节点牌 ~28px、
+航线 4px）画在高噪声装饰海图上，可玩内容读起来小且糊（v5 规格 §0 早已记「v4 节点牌 ~30px ⇒ 类型不可辨」）。
+用户拍板「直接上 v5（B 圆环卡片 + 中央大岛）+ 地图打包标准/工具（不手写像素，换图不改 Rust、不散改 JSON）」。
+
+【落地】
+- chrome.rs：v5 环形几何**数据驱动**（`ring_geom` 读 `main_map.ring.{center_x,center_y,radius,card_w,card_h}`，
+  缺键才回退常量；`ring_card_center`/`ring_card_rect`）+ 卡面/中央岛资产**按命名约定**（`isle_card_path` =
+  `isle_<isle_id>.png`，isle_id 来自 board.json 数据；`central_island_path` = `island_home_<map_id>.png`）⇒ 换图/加岛型不改 Rust。
+- main_map.rs：`render_v5_ring`（中央据点岛 blit + 31 张卡环〔领地格 = isle 整幅卡面 / 功能格 = 羊皮卡底 +
+  node_ 黄铜牌〕+ 玩家船 + 选中高亮 + 骰点/落格签条）；v3 路径替换等距 `draw_board`+`render_track`（v2 dormant 保留）。
+- 数据：`scenes.json main_map`（ring/world_canvas/island_home/focus_anchor + deck_spin/三键下移 + CTA·三键
+  primitives 同步 + hint.y）+ `scene_manifest_v3.json main_map`（focus.bbox_pct {1,13,97,55} + rhythm.beats）+
+  `board.json maps.{m01,m02,m03}`（31 格带 isle，S28.3 数据），全部由 `scripts/map_pack.py sync` 从
+  `assets/maps/*.json` 描述符 + `_template.json` 幂等生成（8pt 对齐：ring.center_y=784 / radius=480）。
+- 工具：`scripts/map_pack.py`（`sync` 幂等回注 / `check`/`--check` 只读对账漂移非 0 / `add <id>` 骨架）
+  = S30「不手写像素：声明意图/数据，引擎算坐标」执行面（另见 S30.1 条目）。
+
+【验收（实跑输出）】
+$ python scripts/map_pack.py sync && python scripts/map_pack.py check
+  map_pack check: 0 漂移（board/scenes/manifest 与描述符·模板一致 + 资产已登记）
+$ python scripts/check_scene_narrative.py --check
+  N8 0 failure（main_map focus_anchor.bbox {11,250,1048,1056} ≡ manifest bbox_pct {1,13,97,55} × 1080×1920 ±1px）
+$ python scripts/validate_data.py
+  OK（scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）
+$ python scripts/check_code_standards.py --check
+  PASS（0 项超基线；新代码无 CS-3 单字母参数）
+$ cargo run -p ti-tools --bin doccheck2
+  doccheck2: 0 error(s) across 38 checks（main_map v5 锚点 ring/world_canvas1048/三键1608/island_home 全命中）
+$ cargo test -p ti-app main_map_layout_matches_doc
+  1 passed（world_canvas = (11,250,1048,1056) + island_home 键在位 + hint.y=1760）
+$ cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --shot --scene=main_map
+  [shot] 已写 evidence/bevy_native_main_map.png（31 张岛型/功能卡环 + 中央据点岛 + 玩家船 + CTA/三键下移，卡面可辨）
+
+【视觉签收（A 纪律）】
+main_map 出图 = evidence/bevy_native_main_map.png（v5 环形棋盘：31 卡环 + 中央岛，节点可辨，非 v4 小菱形）；
+用户拍板「直接上 v5」= 用户确认目标版式，最终签收以该出图 + 用户过目为准（S27.5 出图验收）。
+
+【范围说明（不越界 S28）】
+点卡命中→信息签（交钱/攻占/进副本/升级）+ 分区色带（归属色）需 territory 状态（`rules::territory` 已落 S28.1，
+但运行流未接席位/归属）⇒ 归 S28.x；本任务 = 表现层可读环形棋盘 + 数据驱动 + 地图打包工具。
+结论 = verified（表现层环形棋盘可读 + 几何/资产数据驱动 + map_pack 工具登记）

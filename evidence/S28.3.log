@@ -1,0 +1,5 @@
+S28.3 数据层 v5（board.json 三图 31 格环〔起点1 + 领地20 = 10类岛×2 相邻 + 功能10 = 事件4/卡3/宝2/BOSS1〕+ balance.territory 10 原型/公式系数/AI 参数/isle_tokens + strings 岛名/副本名 + validate_data 全绿）
+判据 = v5_track_has_31_cells_composition（三图 31 格构成 + 10 类岛各 2 格注册）全绿 + validate_data OK + 8pt/场景叙事门禁绿
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+doccheck2: 0 error(s) across 38 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/fl

@@ -103,15 +103,16 @@ fn main_map_layout_matches_doc() {
     assert_eq!(main.hud.y, 152, "main_map HUD y=152（v2 回退键保留，§4.3）");
     assert_eq!(main.hud.h, 128, "main_map HUD h=128（v2 回退键，§4.3）");
     assert!(main.hud.y + main.hud.h <= 520, "main_map HUD 与等距区 y0=520 重叠（QB105 重锚）");
-    assert_eq!(main.hint.y, 1632, "main_map 提示签条 y=1632（S21.6 v4）");
-    // S21.6 v4 版面键（§4.3 S21.6 坐标表：主焦点 / 双铜牌 / 舵轮 CTA / 进度尺）
+    assert_eq!(main.hint.y, 1760, "main_map 提示签条 y=1760（S27.4 v5，三键之下）");
+    // S27.4 v5 版面键（§4.4：主焦点环外接框 / 双铜牌 / 舵轮 CTA / 环形几何 / 中央岛）
     let ex = &main.extra;
     let rect = |k: &str| ex.get(k).map(|r| (r.x, r.y, r.w, r.h));
     assert_eq!(
         rect("world_canvas"),
-        Some((43, 250, 994, 826)),
-        "main_map world_canvas v4（§4.3 S21.6）"
+        Some((11, 250, 1048, 1056)),
+        "main_map world_canvas v5 环外接框（§4.4 S27.4）"
     );
+    assert!(ex.get("island_home").is_some(), "main_map v5 缺 island_home 中央岛键（§4.4）");
     assert_eq!(
         rect("voyage_bar"),
         Some((48, 1088, 984, 48)),

@@ -902,10 +902,24 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         (
             "\"main_map\"",
             "\"y\": 250",
-            "main_map S21.6 v4 world_canvas/focus_anchor y = 250（§4.3 S21.6）",
+            "main_map S27.4 v5 world_canvas/focus_anchor y = 250（§4.4 S27.4，环外接框，template 生成）",
         ),
-        ("\"main_map\"", "\"w\": 994", "main_map S21.6 v4 world_canvas w = 994（§4.3 S21.6）"),
-        ("\"main_map\"", "\"y\": 1440", "main_map S21.6 v4 底部三键铜牌 y = 1440（§4.3 S21.6）"),
+        (
+            "\"main_map\"",
+            "\"w\": 1048",
+            "main_map S27.4 v5 world_canvas w = 1048（§4.4 S27.4，环外接框；旧 v4 994 已退役）",
+        ),
+        (
+            "\"main_map\"",
+            "\"y\": 1608",
+            "main_map S27.4 v5 底部三键铜牌 y = 1608（§4.4 S27.4，让位给环；旧 v4 1440 已退役）",
+        ),
+        (
+            "\"main_map\"",
+            "\"ring\"",
+            "main_map S27.4 v5 环形几何数据键 main_map.ring（§4.4，数据驱动，map_pack 生成）",
+        ),
+        ("\"main_map\"", "island_home", "main_map S27.4 v5 中央据点岛键 island_home（§4.4）"),
         (
             "\"message\"",
             "\"h\": 176",
@@ -1969,6 +1983,9 @@ fn ui_8pt_walk(
             | "locked" | "stars" | "summary_dy"
             // S18.7 声明式原语：非坐标语义键（z = 层序；item = 菜单项序号）不参与 8pt 栅格。
             | "z" | "item"
+            // S27.4 v5 环形棋盘运行时几何（`main_map.ring.*`：环心/半径/卡宽高/据点尺寸；
+            // 非 8pt 栅格排版坐标，口径同 v3 叙事键；`10_main_map_v5_spec.md` §2）
+            | "ring.center_y" | "ring.radius"
             // 原语表子树整体豁免：装饰细线（1–4px）与星点尺寸本就非 8pt；
             // 元素**位置**仍按 8pt 排布（数据侧自律）。
             | "primitives"
