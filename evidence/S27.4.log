@@ -37,6 +37,18 @@ $ cargo test -p ti-app main_map_layout_matches_doc
 $ cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --shot --scene=main_map
   [shot] 已写 evidence/bevy_native_main_map.png（31 张岛型/功能卡环 + 中央据点岛 + 玩家船 + CTA/三键下移，卡面可辨）
 
+【门禁现状（28 项）】26 PASS；2 FAIL **均非本任务引入**：
+- `cargo test --workspace`：唯一失败 = `s43_fps_smoke::desktop_60fps_with_dirty_rect_skip`（本机 VM 无 GPU，实测
+  avg 31.0/6.0/13.7 fps < 40 阈值；该测试跑的是 **index** 场景（`treasure-bevy-native` 默认场景），
+  与主地图渲染无关；历史台账一贯记为「VM 环境项非本次引入」）。
+- `cargo fmt --check`：并行 S28 会话刚写入的文件未格式化；`cargo fmt --all` 后已 clean（复验通过）。
+
+【附带修复（不属本任务，为恢复可编译）】并行 S28 会话在飞代码使 crate 编译失败（`game_app/mod.rs`
+被截断 193 行 + 漏 S28.7 结构体字段/import + `board.rs`/测试文件 clippy/audit 违规），已做机械修复：
+`crates/ti-app/src/game_app/{mod.rs,board.rs,host.rs}`、`crates/ti-app/src/scenes/mod.rs`、
+`crates/ti-core/src/rules/territory.rs`（`TurnCycle` 派生 Default）、`crates/ti-app/tests/app_territory_turns.rs`。
+**未改 S28 业务逻辑**，改动未提交（交并行会话处置）。
+
 【视觉签收（A 纪律）】
 main_map 出图 = evidence/bevy_native_main_map.png（v5 环形棋盘：31 卡环 + 中央岛，节点可辨，非 v4 小菱形）；
 用户拍板「直接上 v5」= 用户确认目标版式，最终签收以该出图 + 用户过目为准（S27.5 出图验收）。

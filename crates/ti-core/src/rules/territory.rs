@@ -578,7 +578,7 @@ impl TerritoryApply for TerritoryState {
 // ------------------------------------------------------- S28.7 AI 回合（§6：AI 与玩家同规则）
 
 /// 席位轮转（§1 回合顺序 = 角色 index 升序；5 席循环）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TurnCycle {
     /// 当前轮到的席位。
     pub current: SeatIdx,

@@ -30,6 +30,7 @@ use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{TrackSpace, Turn};
+use ti_core::rules::territory::Ownership;
 
 use crate::game_app::{BattleSnapshot, GameInput, HitData, Scene as LegacyScene};
 use crate::menu_shell::MenuShell;
@@ -463,6 +464,16 @@ pub trait MapHost {
     /// 摇骰时清空）。默认无（非主地图的 fake 宿主无需实现）。
     fn track_node_sel(&self) -> Option<usize> {
         None
+    }
+
+    /// S28.7 某赛道格的领地归属（`territory.md` §4；`MainMap` = 当前账本；无领地 = `None`）。
+    fn territory_ownership(&self, _idx: u32) -> Option<Ownership> {
+        None
+    }
+
+    /// S28.7 当前轮到的席位（§1：5 席顺序 = 角色 index 升序；`MainMap` 前 = 0）。
+    fn turn_seat(&self) -> u8 {
+        0
     }
 
     /// 设置 / 清空赛道节点预览选中（默认 no-op）。

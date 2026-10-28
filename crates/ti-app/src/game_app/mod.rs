@@ -42,6 +42,7 @@ use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::main_map::MapSession;
 use ti_core::rules::progression::ProgressionState;
 use ti_core::rules::rng::GameRng;
+use ti_core::rules::territory::{TerritoryState, TurnCycle};
 
 use crate::menu_shell::MenuShell;
 
@@ -236,6 +237,9 @@ pub struct GameApp {
     pub board_toast: Option<String>,
     /// 落格提示条剩余帧数。
     pub board_toast_ticks: u32,
+    /// S28.7 最近一次 AI 行动提示（独立于玩家落格 toast 的展示通道；不覆盖玩家签条，
+    /// 主地图 v5 渲染可挂独立一行 = AI 回合可见反馈，territory.md §6）。
+    pub last_ai_toast: Option<String>,
     /// S21.7 赛道节点预览选中（`Some(index)` = 该节点高亮 + 信息签；只读预览不移动，
     /// 摇骰时清空；主地图场景时有效，非主地图 = `None`）。
     pub track_node_sel: Option<usize>,
@@ -307,6 +311,14 @@ pub struct GameApp {
     pub world_cam: crate::world_camera::WorldCam,
     /// S18.5：轻量确定性粒子（金币光/战斗命中火花；FX 专用 LCG，seed = [`FX_SEED`]）。
     pub fx: crate::particles::ParticleFx,
+    /// S28.7 领地账本（`rules::territory::TerritoryState`，`MainMap` 场景时有效；开档/切图时构建）。
+    pub territory: Option<TerritoryState>,
+    /// S28.7 各席位金币（`[u32; 5]`，§1 席位独立经济；主玩家金 = 本席位值，`gold` 字段保留主席镜像）。
+    pub seat_gold: [u32; 5],
+    /// S28.7 席位轮转（§1：5 席顺序 = 角色 index 升序；`current` = 当前轮到谁）。
+    pub turn_cycle: TurnCycle,
+    /// S28.7 AI 席赛道会话（`[5]`；主玩家席走 `board` 字段，AI 席各持独立位置/圈数）。
+    pub ai_sessions: [Option<BoardSession>; 5],
 }
 /// S18.5：FX 粒子 LCG 固定 seed（确定性视觉验收；不进业务 RNG `rules::rng::GameRng`）。
 pub const FX_SEED: u64 = 0xC0_FF_EE;
@@ -459,6 +471,12 @@ impl GameApp {
             displayed_boss_hp: 0,
             world_cam: crate::world_camera::WorldCam::default(),
             fx: crate::particles::ParticleFx::deterministic(FX_SEED),
+            // S28.7 领地/席位初值（`territory.md` §1：单席位开局，领地空账本）。
+            territory: None,
+            seat_gold: [0; 5],
+            turn_cycle: TurnCycle::default(),
+            ai_sessions: core::array::from_fn(|_| None),
+            last_ai_toast: None,
             #[cfg(feature = "gpu-render")]
             gpu_renderer: {
                 // S18.8a：macroquad 发货壳退役后，仅 android 壳仍需真实 GPU API

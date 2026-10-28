@@ -161,5 +161,10 @@
  "isle.boss_fort.guard": "BOSS 舰队",
  "isle.boss_fort.benefit": "通关关键",
  "scene.main_map.node.territory": "领地岛",
- "scene.main_map.toast.territory_fmt": "落到 {0}（领地格：可进副本占领 / 交钱或攻占 / 升级加固）"
+ "scene.main_map.toast.territory_fmt": "落到 {0}（领地格：可进副本占领 / 交钱或攻占 / 升级加固）",
+ "scene.main_map.toast.ai_dungeon_fmt": "{0} 占領 {1}（首占 +{2}）",
+ "scene.main_map.toast.ai_toll_fmt": "{0} は {1} に通行料 {2} を支払った",
+ "scene.main_map.toast.ai_siege_fmt": "{0} は {1} の {2} を奪取した（守備は 1 級に降格）",
+ "scene.main_map.toast.ai_collect_fmt": "{0} は {1} の産出 {2} を受領",
+ "scene.main_map.toast.ai_upgrade_fmt": "{0} は {1} を強化し {2} 級に"
 }

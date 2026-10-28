@@ -16,6 +16,7 @@ use ti_core::rules::board::{BoardSession, TrackSpace, Turn};
 use ti_core::rules::cards;
 use ti_core::rules::messages::total_pages;
 use ti_core::rules::progression::{CLEARED_BIT, ProgressionState};
+use ti_core::rules::territory::Ownership;
 use ti_core::rules::trade;
 
 use super::{BattleSnapshot, BattleView, GameApp, GameInput, Scene};
@@ -229,6 +230,14 @@ impl MapHost for GameApp {
 
     fn board_index(&self) -> usize {
         self.board.as_ref().map_or(0, BoardSession::index)
+    }
+
+    fn territory_ownership(&self, idx: u32) -> Option<Ownership> {
+        self.territory.as_ref().and_then(|t| t.ownership(idx)).copied()
+    }
+
+    fn turn_seat(&self) -> u8 {
+        self.turn_cycle.current
     }
 
     fn board_last_roll(&self) -> u32 {

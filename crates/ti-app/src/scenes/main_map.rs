@@ -824,17 +824,17 @@ fn draw_feature_card_base(
     host: &mut dyn SceneHost,
     x: i32,
     y: i32,
-    w: i32,
-    h: i32,
+    width: i32,
+    height: i32,
     theme: &ti_render::theme::Theme,
     brass: u16,
 ) {
     let base = theme.by_name("panel_warm").unwrap_or(chrome::COLOR_PANEL_WARM);
-    host.fill_rect(x, y, w, h, base);
-    host.fill_rect(x, y, w, 2, brass);
-    host.fill_rect(x, y + h - 2, w, 2, brass);
-    host.fill_rect(x, y, 2, h, brass);
-    host.fill_rect(x + w - 2, y, 2, h, brass);
+    host.fill_rect(x, y, width, height, base);
+    host.fill_rect(x, y, width, 2, brass);
+    host.fill_rect(x, y + height - 2, width, 2, brass);
+    host.fill_rect(x, y, 2, height, brass);
+    host.fill_rect(x + width - 2, y, 2, height, brass);
 }
 
 /// 落格提示签条（`brass_dark` 底板 + 黄铜边框，S27.4 v5 位置）：宽按字自适应（最小 392）；

@@ -8,10 +8,15 @@ use ti_core::data::balance;
 use ti_core::domain::economy::Bank;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::map::{GridPos, MapTerrain};
+use ti_core::domain::selection::Character;
 use ti_core::domain::selection::MapSlot;
 use ti_core::rules::board::{BoardSession, BossTrigger, Landing, Track, Turn};
 use ti_core::rules::cards_draw;
 use ti_core::rules::main_map::MapSession;
+use ti_core::rules::territory::{
+    DungeonOutcome, SeatIdx, SeatPool, SettleAction, SiegeOutcome, TerritoryApply, TerritoryRules,
+    TerritoryState, TurnCycle,
+};
 
 use super::{GameApp, Scene};
 use crate::scenes::EconomyHost;
@@ -100,6 +105,9 @@ impl GameApp {
         // （`scripts/extract_board.py` 生成）；起点 = 赛道 `start` 格；
         // 读档位置（`start_override`）若不在赛道上 → 就近吸附到最近赛道格。
         self.board = build_board_session(&map_def.id, start_override);
+        // S28.7 领地系统初始化（territory.md §1：主玩家 = 已选角色，其余自动 AI 席；
+        // 领地账本 = 该图赛道全无主；AI 席各持独立赛道会话，位置 = 起点格）
+        self.init_territory(&map_def.id, b);
         // 玩家位置 = 当前赛道格（S19 环岛赛道）：无赛道时回退 balance `player_start`。
         self.map_pos =
             self.board.as_ref().map(BoardSession::pos).or(Some(GridPos::new(start[0], start[1])));
@@ -156,8 +164,186 @@ impl GameApp {
         }
         self.settle_board_landing(landing, b);
         self.apply_board_boss(turn.boss, laps_after, b);
+        // S28.7：玩家回合结束 ⇒ 轮转到后续 AI 席自动行动（§6），回到玩家席
+        self.run_ai_turns(b);
         Some(turn)
     }
+
+    /// S28.7 领地/席位初始化（§1：席位池 = 已选角色（玩家）+ 其余 4 AI；账本全无主；
+    /// AI 席赛道会话 = 起点格；金币 = 初始金）。`enter_main_map_at` / 读档共用。
+    fn init_territory(&mut self, map_id: &str, bal: &data::Balance) {
+        let db = match data::board() {
+            Ok(db) => db,
+            Err(_e) => {
+                self.territory = None;
+                return;
+            }
+        };
+        let Some(map_def) = db.map(map_id) else {
+            self.territory = None;
+            return;
+        };
+        let Ok(terr) = TerritoryState::new(map_def, bal) else {
+            eprintln!("enter_main_map: 领地账本构建失败（硬错误，不 fallback）");
+            self.territory = None;
+            return;
+        };
+        self.territory = Some(terr);
+        // 席位池：主玩家 = 已选角色（缺 = 首角色 panda），其余自动 AI（§1 不变量 players+ai=5）
+        let player_idx = self.selection.character.map_or(0, Character::index);
+        let pool = SeatPool::build(&[player_idx.min(4)]);
+        let mut cycle = TurnCycle::new(&pool);
+        cycle.current = u8::try_from(player_idx.min(4)).unwrap_or(0);
+        self.turn_cycle = cycle;
+        self.seat_gold = [bal.economy.initial_gold; 5];
+        // AI 席赛道会话：与主玩家同起点（各席独立位置/圈数）
+        let Some(bd) = self.board.as_ref() else {
+            self.ai_sessions = core::array::from_fn(|_| None);
+            return;
+        };
+        for i in 0..5 {
+            let seat = u8::try_from(i).unwrap_or(0);
+            let is_player = pool.get(seat).is_some_and(|s| s.is_player);
+            self.ai_sessions[i] = if is_player {
+                None
+            } else {
+                Some(BoardSession::new(bd.track().clone(), bd.index()))
+            };
+        }
+    }
+
+    /// S28.7 AI 连续段（§6）：从当前席位轮转，AI 席自动行动（摇骰 + 前进 + 落格结算），
+    /// 直到下一个玩家席（单玩家局 = 4 个 AI 连动后回玩家）。
+    fn run_ai_turns(&mut self, bal: &data::Balance) {
+        let Some(mut terr) = self.territory.take() else {
+            return;
+        };
+        let rules = TerritoryRules::new(bal);
+        let sides = bal.board.dice_sides.min(bal.board.max_steps);
+        // 玩家回合刚结束 ⇒ 先轮转离开当前（玩家）席；多玩家局 = 停在下一玩家席（热座交接）
+        self.turn_cycle.advance();
+        for _ in 0..5 {
+            let seat = self.turn_cycle.current;
+            if self.turn_cycle.is_player_seat(seat) {
+                break;
+            }
+            let Some(sess) = self.ai_sessions[seat as usize].as_mut() else {
+                self.turn_cycle.advance();
+                continue;
+            };
+            let roll = sess.spin(&mut self.rng, sides);
+            sess.advance(roll);
+            let idx = u32::try_from(sess.index()).unwrap_or(0);
+            self.settle_ai_landing(bal, &mut terr, &rules, seat, idx);
+            self.turn_cycle.advance();
+        }
+        self.territory = Some(terr);
+    }
+
+    /// S28.7 席位金币入账（钳制 `balance.economy.gold_max`；§1 席位独立经济）。
+    fn credit_seat_gold(&mut self, seat: SeatIdx, amount: u32, bal: &data::Balance) {
+        let idx = seat as usize;
+        self.seat_gold[idx] = self.seat_gold[idx].saturating_add(amount).min(bal.economy.gold_max);
+    }
+
+    /// S28.7 AI 落格结算（§6：与玩家同一分支表，策略只选分支；战斗类 = 阈值确定性：
+    /// 无主 = 副本自动胜利（U1 副本场景未建，AI 走确定性占领）；攻占 = 策略阈值通过 ⇒ 胜利；
+    /// 交钱 / 产出 / 加固 = 直接账本变更 + 提示签条（主地图可见反馈））。
+    #[allow(clippy::too_many_lines)] // S28.7 AI 落格分支（战场/副本/交钱/加固）同表，拆分会割裂结算语义
+    fn settle_ai_landing(
+        &mut self,
+        b: &data::Balance,
+        terr: &mut TerritoryState,
+        rules: &TerritoryRules<'_>,
+        seat: u8,
+        idx: u32,
+    ) {
+        let gold = self.seat_gold[seat as usize];
+        let turn = rules.ai_turn(terr, seat, idx, gold);
+        let name = ai_seat_name(seat, b);
+        let isle_name = terr
+            .isle_cells_by_index(idx)
+            .map_or(String::new(), |isle| crate::i18n::sget(&format!("isle.{isle}")).to_string());
+        match turn.action {
+            SettleAction::EnterDungeon => {
+                let bonus = terr.apply_dungeon(rules, idx, seat, DungeonOutcome::Win);
+                self.credit_seat_gold(seat, bonus, b);
+                self.last_ai_toast = Some(i18n_fmt(
+                    "scene.main_map.toast.ai_dungeon_fmt",
+                    &[
+                        &name as &dyn std::fmt::Display,
+                        &isle_name as &dyn std::fmt::Display,
+                        &bonus as &dyn std::fmt::Display,
+                    ],
+                ));
+            }
+            SettleAction::PayToll => {
+                let Some(owner) = terr.ownership(idx).and_then(|o| o.owner) else {
+                    return;
+                };
+                if owner == seat {
+                    return;
+                }
+                let toll = terr.apply_pay_toll(rules, idx, seat);
+                self.seat_gold[seat as usize] = self.seat_gold[seat as usize].saturating_sub(toll);
+                self.credit_seat_gold(owner, toll, b);
+                let owner_name = ai_seat_name(owner, b);
+                self.last_ai_toast = Some(i18n_fmt(
+                    "scene.main_map.toast.ai_toll_fmt",
+                    &[
+                        &name as &dyn std::fmt::Display,
+                        &owner_name as &dyn std::fmt::Display,
+                        &toll as &dyn std::fmt::Display,
+                    ],
+                ));
+            }
+            SettleAction::Siege => {
+                let prev = terr.ownership(idx).and_then(|o| o.owner);
+                terr.apply_siege(rules, idx, seat, SiegeOutcome::Win);
+                let owner_txt = prev.map_or_else(|| String::from("无主"), |o| ai_seat_name(o, b));
+                self.last_ai_toast = Some(i18n_fmt(
+                    "scene.main_map.toast.ai_siege_fmt",
+                    &[
+                        &name as &dyn std::fmt::Display,
+                        &owner_txt as &dyn std::fmt::Display,
+                        &isle_name as &dyn std::fmt::Display,
+                    ],
+                ));
+            }
+            SettleAction::Collect => {
+                let amt = terr.apply_collect(rules, idx, seat);
+                self.credit_seat_gold(seat, amt, b);
+                self.last_ai_toast = Some(i18n_fmt(
+                    "scene.main_map.toast.ai_collect_fmt",
+                    &[
+                        &name as &dyn std::fmt::Display,
+                        &isle_name as &dyn std::fmt::Display,
+                        &amt as &dyn std::fmt::Display,
+                    ],
+                ));
+            }
+            SettleAction::Upgrade => {
+                let level_before = terr.ownership(idx).map_or(1, |o| o.level.max(1));
+                if terr.apply_upgrade(rules, idx, seat) {
+                    let cost = rules
+                        .upgrade_cost_at(terr.isle_cells_by_index(idx).unwrap_or(""), level_before);
+                    self.seat_gold[seat as usize] =
+                        self.seat_gold[seat as usize].saturating_sub(cost);
+                    let level_after = terr.ownership(idx).map_or(level_before, |o| o.level);
+                    self.last_ai_toast = Some(i18n_fmt(
+                        "scene.main_map.toast.ai_upgrade_fmt",
+                        &[
+                            &name as &dyn std::fmt::Display,
+                            &isle_name as &dyn std::fmt::Display,
+                            &level_after as &dyn std::fmt::Display,
+                        ],
+                    ));
+                }
+            }
+            SettleAction::Maxed => {}
+        }
+    }
+
     /// 落格提示条 + 音效（提示条三连的**单一入口**）。
     ///
     /// S20.0c：`board_toast` + `board_toast_ticks = 120` + `last_sfx` 三连在代码里出现 7 处
@@ -319,4 +505,11 @@ fn nearest_track_index(track: &Track, cell: GridPos) -> usize {
         }
     }
     best
+}
+
+/// S28.7 AI 席位名（`role.name.<character>` i18n；越界 = 空串）。
+fn ai_seat_name(seat: u8, _b: &data::Balance) -> String {
+    Character::from_index(u32::from(seat)).map_or_else(String::new, |ch| {
+        crate::i18n::sget(&format!("role.name.{}", ch.label())).to_string()
+    })
 }
