@@ -122,6 +122,11 @@
 - `docs/style.md` §5.7「现成库」：bevy 例外入清单（签核在本文 §1）。
 - 台账：S18.0–S18.8 逐任务登记（本文 = S18.0 交付物）。
 
+> **S29 补充（UI 层）**：S18 迁移把「游戏世界」整体搬到 Bevy（7 场景 `DrawList` → Bevy 实体）；
+> **S29（B1）**再把 **UI chrome 迁 `bevy_ui`**（taffy 自动布局 + `bevy_picking` 命中），
+> 裁决与迁移面（纯 UI 场景迁 / 游戏世界场景留 1080）见 [`17_layout_engine.md`](17_layout_engine.md)
+> 与 [`19_bevy_ui.md`](19_bevy_ui.md) / [`20_bevy_picking.md`](20_bevy_picking.md)。
+
 ## S18.7b 架构方案（基线源换 Bevy GPU 读回）
 
 **目标**：`assets/render_baseline/*.png`（像素基线）改由 **Bevy GPU 离屏渲染读回**生成，

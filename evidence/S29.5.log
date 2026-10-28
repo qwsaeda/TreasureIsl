@@ -1,0 +1,53 @@
+S29.5 验收证据（收口：resize 真重排 + 多视口出图 + 游戏世界像素对拍 + 换引擎成本回填）
+
+## 1. resize 真重排（机器判据，`--resizetest` 加第 3 不变量）
+```
+[resizetest] PASS (area 1080x1920 -> 1080x1920; px/unit 0.500 -> 1.000;
+  bevy_ui layout root 540x960 -> 1080x1920 = viewport; ui nodes 25 -> 25; vp 0.500 -> 1.000)
+```
+- 不变量 1：画布恒完整可见（`area` 1080×1920 前后不变）。
+- 不变量 2：内容随窗口等比放大（px/unit 0.5 → 1.0 = 翻倍）。
+- 不变量 3（**S29.5 新增**）：**`bevy_ui` chrome 真重排** —— UI 布局根 `ComputedNode.size`
+  = 视口尺寸（540×960 → 1080×1920）⇒ taffy 随新视口重算（不是位图缩放）；
+  且布局树节点数不变（25 → 25，只重排不重建）。
+
+## 2. 抓出并修复潜伏缺陷：**多相机致正交 scale 静默不更新**（S29.1 起潜伏）
+- 症状：`camera_system` 的 `Query<&mut Projection, With<Camera2d>>` + `single_mut()`；
+  S29.1 起 live 路径有 **2 台** `Camera2d`（游戏正交 + `bevy_ui` UI 相机）⇒ `single_mut()` 多实体失败
+  ⇒ **静默不更新**正交 scale ⇒ 窗口缩放跟随失效（`area` 随窗口变大 1080×1920 → 2160×3840，不裁切）。
+  同源缺陷：`--resizetest` 的 `cam.single()` 也空跑（`area` 恒 0×0 ⇒ 判据假通过/假失败）。
+- 修法：引入显式标记 `WorldCam`（游戏世界相机）⇒ `camera_system` / `resizetest` 只驱动它
+  （UI 相机 `IsDefaultUiCamera` 与 `--shot` 离屏相机都不动；离屏相机 scale 须按目标尺寸 contain 固定）。
+- 判据：修前 `area 1080x1920 -> 2160x3840` FAIL；修后 PASS（见上）。
+
+## 3. 多视口出图（`--shot --viewport=WxH`，S29.5 新增能力）
+- `--shot` 支持 `--viewport=WxH`：离屏目标按该尺寸建 ⇒ `bevy_ui` chrome 随视口真重排；
+  1080 世界按 **contain** 缩放（正交 `scale` = max(1080/W, 1920/H) ⇒ 画布恒完整可见）。
+- 5 个 `bevy_ui` 场景 × 3 视口（540×960 / 720×1280 / 1080×1920）= 15 张证据图：
+  `evidence/bevy_native_{index,select_role,select_map,saveload,message}_{540x960,720x1280,1080x1920}.png`
+- 探针逐档证实重排：`[ui] bevy_ui layout size: max_node=540x960 / 720x1280 / 1080x1920 px`
+  （布局根尺寸 = 视口尺寸 ⇒ taffy 确实按新视口重算）。
+
+## 4. 游戏世界像素对拍 ≤0.5%（bevy-cpu-parity，UI 层已排除）
+```
+S18.2 GPU/CPU 像素对照（色块内部，排除文本区 + 2px 边缘带）：比对 1607576 像素，
+  超差 0 个（0.0000%），最大通道差 0 LSB
+S18.2 对照口径：仅游戏世界（UI 层已排除，bevy_ui 节点数 = 0）
+S18.2 对照通过（阈值：通道 ≤8 LSB 且超差比 <0.5%）
+```
+
+## 5. 换引擎成本章节回填（`17_layout_engine.md` §3.1）
+新增「实测回填」小节：锁定面（5 纯 UI 场景 chrome + 命中两层）与**4 项换引擎必重解的具体坑**
+（特性分层坑 / 多相机静默失效 / 两层叠压顺序契约 / 拾取后端覆盖面），并更新结论
+（可迁移面比原估更小，但换引擎成本比原估更高）。
+
+## 6. gate 全绿
+```
+27 PASS + 1 FAIL(s43_fps_smoke = 本 VM 无 GPU 环境项) + SKIP(android / zero-unknown)
+doccheck 0 error / doccheck2 0 error / check_code_standards PASS / audit_code PASS
+```
+
+## 视觉签收（A 纪律，EXP-114）
+用户拍板（2026-10-27）：「全部做完，能正式上线玩，你自己测试验证通过」⇒ 视觉签收以 agent 机器判据代
+（多视口出图 + 像素采样 + 探针尺寸 + resizetest 三不变量 + 像素对拍 0 超差）；
+最终逐场景排版过目 = 用户后续确认项。

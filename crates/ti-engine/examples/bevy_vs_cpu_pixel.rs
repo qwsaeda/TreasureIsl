@@ -350,6 +350,22 @@ fn main() {
         println!("  anchor ({x},{y}): cpu={:#06x} gpu={:#06x}", expected[idx], actual[idx]);
     }
 
+    // S29.5（S29.4 门禁改口径）：**UI 层排除** —— 本对照只覆盖**游戏世界**。
+    // 机器断言：对照世界里**不存在 `bevy_ui` 节点**（`Node` 组件 = bevy_ui 布局节点）。
+    // 理由：S29.3 起 UI chrome 走 `bevy_ui`（taffy 自动布局 + `bevy_ui` 渲染管线），
+    // CPU 侧 `Framebuf` **没有对应实现** ⇒ 若把 UI 层纳入对照必然全量超差。
+    // 故本例保持「纯游戏世界」对照口径，并在此断言 UI 层确实缺席（有人误加 chrome 时立即 FAIL）。
+    let ui_nodes = app
+        .world_mut()
+        .query::<&bevy::ui::Node>()
+        .iter(app.world())
+        .count();
+    if ui_nodes > 0 {
+        eprintln!("S18.2 对照失败：UI 层未排除（检测到 {ui_nodes} 个 bevy_ui 节点）—— 对照口径只覆盖游戏世界");
+        std::process::exit(1);
+    }
+    println!("S18.2 对照口径：仅游戏世界（UI 层已排除，bevy_ui 节点数 = {ui_nodes}）");
+
     if max_diff > 8 {
         eprintln!("S18.2 对照失败：最大通道差 {max_diff} LSB（阈值 8）");
         std::process::exit(1);

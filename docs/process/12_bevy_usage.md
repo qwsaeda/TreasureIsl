@@ -231,7 +231,7 @@ for _ in 0..60 {
 
 ### 9.4 已知未接
 - **滚轮 zoom**：`MotionEvent` 未接（键盘 `=`/`-` 临时替代）→ S18.8。
-- **其余 6 场景**仍走 CPU 纹理路径（index 已 Bevy 原生）→ S18.7 逐场景迁移。
+- ~~**其余 6 场景**仍走 CPU 纹理路径（index 已 Bevy 原生）~~ → **S18.7a 已全场景 Bevy 原生**（7 场景走 `DrawList` → Bevy 实体）。
 - **CPU 帧缓冲执行器**（`ti-render/src/framebuffer.rs` + `Canvas` trait + 像素基线）待删 →
   S18.8（macroquad 退役同轮删净）。
 
@@ -254,7 +254,15 @@ cargo auto-roots 把 `src/bin/` 每个 `.rs` 都探测为独立 bin；当某 bin
 E0433（too many `super`）+ E0601（缺 main）。**bin 文件互引子模块的布局必须
 `[package] autobins = false`**（ti-engine 已配；gate 只编译声明 bin 时该坑潜伏）。
 
-### 9.8 bevy_ui / bevy_picking 专题（已拆独立成篇）
+### 9.8 bevy_ui / bevy_picking 专题（已拆独立成篇，**已启用**）
+
+- **bevy_ui 已启用**（S29.1~S29.5）：UI chrome 迁 `bevy_ui` 自动布局（taffy）+ 命中走 `bevy_picking`；
+  裁决见 [`17_layout_engine.md`](17_layout_engine.md)（B1）。迁移面 = 纯 UI 场景
+  （index / select_role / select_map / saveload / message）；**游戏世界场景（vs / main_map）留 1080**
+  （chrome 与 world 层叠 ⇒ `bevy_ui` 叠层会遮住 1080 动态内容，见 [`19_bevy_ui.md`](19_bevy_ui.md) 9.8-13）。
+- 多相机口径：live 路径有**多台 `Camera2d`**（游戏世界相机 `WorldCam` / `bevy_ui` UI 相机 / `--shot`
+  离屏相机）⇒ 查询**必须显式标记**（`With<WorldCam>`），否则 `single()`/`single_mut()` 多实体失败
+  ⇒ **静默不更新**（S29.5 实测踩坑：S29.1 起窗口缩放跟随失效）。
 
 - **bevy_ui**（UI 相机 / `Node` / `Text` / **`ImageNode`** / taffy 自动布局 / resize 重排 / `ComputedNode` 探针）
   → 全文见 **[`19_bevy_ui.md`](19_bevy_ui.md)**。

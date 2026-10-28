@@ -1,0 +1,33 @@
+S29.4 验收证据（门禁改口径 + 四篇文档同步）
+
+## 1. bevy-cpu-parity 加「UI 层排除」（只保游戏世界对拍）
+- `crates/ti-engine/examples/bevy_vs_cpu_pixel.rs`：对照口径**显式机器化**——对照结束后断言
+  对照世界里 `bevy_ui` 节点数 = 0（`bevy::ui::Node` 组件计数）；> 0 ⇒ 立即 FAIL
+  （有人误把 chrome 加进对照 ⇒ 口径破防当场抓住）。
+  理由：S29.3 起 UI chrome 走 `bevy_ui`（taffy 自动布局 + `bevy_ui` 渲染管线），
+  CPU 侧 `Framebuf` **无对应实现** ⇒ UI 层纳入对照必然全量超差。
+- `scripts/gate.ps1`：该项描述改「**【仅游戏世界，UI 层已排除】**」。
+
+## 2. check_scene_narrative N8/8pt 口径（S29.3/S29.4 不改判据 + 口径写明）
+- `scripts/check_scene_narrative.py` 头部写明：原语 `rect` 仍是 **1080 版面规格**（单一事实源）；
+  已迁 chrome 的原语另带 `params.ui_layer = "bevy_ui"`（**只表达呈现层归属，不改几何**）
+  ⇒ N1~N8 判据照旧成立。实测：N8 全绿（0 违例）。
+
+## 3. 四篇文档与 B1 一致（无矛盾）
+- `12_bevy_usage.md`：§9.4「其余 6 场景仍走 CPU 纹理路径」标**已退役**（S18.7a 全场景 Bevy 原生）；
+  §9.8 bevy_ui 专题标注「**已启用**」+ 迁移面（纯 UI 场景 5 个 / 游戏世界场景留 1080）
+  + 多相机口径（须显式标记 `WorldCam`，否则 `single_mut()` 多实体静默失效）。
+- `11_bevy_migration.md`：加 S29 UI 层补充段（S18 迁游戏世界 → S29 迁 UI chrome，指向 17/19/20）。
+- `08_render_arch.md`：加**契约 0b（UI 层）**：两层（游戏世界 1080 / UI chrome 屏幕像素）不混坐标系
+  + 已迁 chrome 命中搬 UI 层 + UI 层叠在世界层之上 ⇒ 同屏位遮住 1080 动态内容（chrome 与 world 层叠的
+  场景不得只迁 chrome）。
+- `09_render_framework.md`：加 S29 chrome 归属：纯 UI 场景 chrome 由 `bevy_ui` 画（`ti-engine/src/ui.rs`
+  零游戏语义），`ti-render` 仍负责游戏世界层；vs/main_map chrome 仍在 `ti-render` 侧。
+
+## 判据
+```
+gate 全绿（27 PASS + 1 FAIL(s43_fps_smoke 环境项) + SKIP）
+doccheck: 140 docs, 38 facts, 121 experiences, 234 task refs, 4 assertions, 0 error(s)
+doccheck2: 0 error(s) across 38 audit-codified checks
+bevy-cpu-parity: PASS（对照口径：仅游戏世界，UI 层已排除，bevy_ui 节点数 = 0）
+```

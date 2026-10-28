@@ -291,7 +291,7 @@ if (Tier 'late') {
 } else { $parityExit = 0; Skip 'bevy-cpu-parity' 'dev tier（-Touch/--fast）' }
 # 顶格 Report（项数计量口径：只数第 0 列的 Report）→ 这项固定计入；
 # 退出码 1（对照失败）= FAIL；2（无 GPU）= 记名 SKIP 但不失败（硬件不可验）。
-Report ($parityExit -ne 1) 'bevy-cpu-parity (GPU/CPU 像素对照：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)'
+Report ($parityExit -ne 1) 'bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

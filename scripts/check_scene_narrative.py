@@ -20,6 +20,12 @@
   N8 scenes.json focus_anchor.bbox 与 DSL focus.bbox_pct × (1080, 1920) 一致
      （v3.1 起执行；v3.0 阶段 scenes.json 无 focus_anchor 键时 SKIP）
 
+S29.3/S29.4 口径（bevy_ui 迁移后，本门禁**不改判据**）：
+  - scenes.json 的原语 `rect` 仍是**1080 版面规格**（单一事实源）；已迁 `bevy_ui` 的 chrome
+    原语另带 `params.ui_layer = "bevy_ui"` 标记（表示「该元素的呈现层 = UI 层」），
+    **rect 坐标不变** ⇒ N8 对账照旧成立（UI 层按同一批数值换算 `%`）。
+  - 标记只表达「呈现层归属」，不改几何、不改节奏/重心断言 ⇒ N1~N8 判据全部照旧。
+
 退出码：0 = PASS；1 = FAIL（列出违规项）；2 = SKIP（manifest 文件不存在）。
 
 用法：

@@ -90,6 +90,12 @@ pub struct FontConfig {
 | `menu_shell.rs` 字号常量 | `theme.rs` FontConfig | 数据驱动 |
 | `scenes.json` 版面坐标 | ti-render 的 Layout 类型 | 数据实例 |
 
+> **S29 补充（UI chrome 归属）**：S29.3（B1）起，**纯 UI 场景**（index / select_role / select_map /
+> saveload / message）的 chrome 由 `bevy_ui` 绘制（`crates/ti-engine/src/ui.rs`，**零游戏语义**，
+> 数据与文案仍归 `ti-core` / `ti-app`）；`ti-render` 仍负责**游戏世界层**（1080 原语 / 画布 / 主题）。
+> **游戏世界场景（vs / main_map）chrome 仍在 `ti-render` 侧**（chrome 与 world 层叠 ⇒ 迁 `bevy_ui` 会遮住
+> 1080 动态内容，见 [`19_bevy_ui.md`](19_bevy_ui.md) 9.8-13）。
+
 > **迁移尚未完成的部分**（勿当已完成）：`chrome.rs` 的 `scene_shell`/`wood_frame`/
 > `title_bar`/… 仍是转发层而非搬迁；`chrome.rs` 与 `touch.rs` 各保留一份 `iso_cell`/
 > `iso_grid_cell_at`，与 `ti-render::iso::IsoProjection` 三份并存。

@@ -173,6 +173,15 @@ struct NativeIndex {
 #[derive(Component)]
 struct FrameSprite;
 
+/// **游戏世界相机**标记（S29.5）。
+///
+/// live 路径有 3 台 `Camera2d`：游戏正交（`spawn_stage`）/ `bevy_ui` UI 相机（`IsDefaultUiCamera`）
+/// / 离屏截图相机（`--shot` 的 `RenderTarget::Image`，其正交 scale 须按目标尺寸 contain 固定）。
+/// 三者用「相机类型」区分不可靠（`single_mut()` 多实体时**静默失败** ⇒ S29.1 起
+/// `camera_system` 不再更新世界相机正交 scale ⇒ 窗口缩放跟随失效）⇒ 用显式标记锁定世界相机。
+#[derive(Component)]
+struct WorldCam;
+
 /// letterbox 基础 scale（shell 视口比 = **像素/逻辑单位**；与 S18.4 `spawn_stage` 同式）。
 #[allow(clippy::cast_precision_loss)]
 fn letterbox() -> f32 {
@@ -216,6 +225,7 @@ fn spawn_stage(mut commands: Commands) {
     let scale = bevy_ortho_scale(letterbox(), 1.0);
     commands.spawn((
         Camera2d,
+        WorldCam,
         Projection::Orthographic(OrthographicProjection {
             scale,
             near: 0.0,
@@ -1101,7 +1111,11 @@ fn window_resize_system(
 /// 且**内容随窗口尺寸等比缩放**（窗口变大 → 可见世界不变 → 1 逻辑单位占更多物理像素）。
 fn camera_system(
     store: Res<GameStore>,
-    mut cameras: Query<&mut Projection, With<Camera2d>>,
+    // S29.5：只驱动**游戏世界相机**（`WorldCam` 标记）—— UI 相机（`IsDefaultUiCamera`）与
+    // 离屏截图相机（`--shot` 的 `RenderTarget::Image`，scale 须按目标尺寸 contain 固定）都不动。
+    // 旧口径 `Query<&mut Projection, With<Camera2d>>` + `single_mut()`：S29.1 起有 2 台相机 ⇒
+    // 多实体 ⇒ `single_mut()` 失败 ⇒ **静默不更新**正交 scale ⇒ 窗口缩放跟随失效。
+    mut cameras: Query<&mut Projection, With<WorldCam>>,
     mut sprite: Query<&mut Transform, (With<FrameSprite>, Without<Camera2d>)>,
 ) {
     let Ok(g) = store.0.lock() else {
@@ -1398,10 +1412,9 @@ fn main() {
         .unwrap_or_else(|| "index".to_owned());
     // S19.7 D5：出图带状态（`--spin=N`）—— 摇 N 次骰后再截图 ⇒ 落格提示条 / 航程条可见
     // （静态出图不含运行时状态，提示条此前无出图证据）。
-    let spin_n = std::env::args()
-        .skip(1)
-        .find_map(|a| a.strip_prefix("--spin=").and_then(|v| v.parse::<u32>().ok()))
-        .unwrap_or(0);
+    // S29.5：多视口出图（`--shot --viewport=WxH`）：离屏目标按该尺寸 ⇒ bevy_ui chrome 真重排。
+    let viewport = arg_value("--viewport=").and_then(|v| parse_viewport(&v));
+    let spin_n = arg_value("--spin=").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0);
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);
     if scene_id != "index" {
@@ -1511,25 +1524,54 @@ fn main() {
         app.add_systems(Startup, spawn_ui_chrome);
     }
     if shot {
-        run_shot(&mut app, &scene_id);
+        run_shot(&mut app, &scene_id, viewport);
         return;
     }
     app.run();
+}
+
+/// 取命令行里 `--<prefix><value>` 形式的参数值（S29.5：参数解析收敛）。
+fn arg_value(prefix: &str) -> Option<String> {
+    std::env::args()
+        .skip(1)
+        .find_map(|a| a.strip_prefix(prefix).map(str::to_owned))
+}
+
+/// 解析 `--viewport=WxH`（S29.5 多视口出图；非法 = None = 默认 1080×1920）。
+fn parse_viewport(spec: &str) -> Option<(u32, u32)> {
+    let (w_raw, h_raw) = spec.split_once('x')?;
+    let w = w_raw.trim().parse::<u32>().ok()?;
+    let h = h_raw.trim().parse::<u32>().ok()?;
+    if w == 0 || h == 0 {
+        return None;
+    }
+    Some((w, h))
 }
 
 /// S18.7：离屏截图模式（`--shot`）：渲染到离屏目标 → GPU 读回 → 写 `evidence/bevy_native_<scene>.png`。
 ///
 /// S18.8b：贴图资产是**异步读盘**（Bevy 资产服务器）→ 每帧 sleep 4ms 让 IO 落地；
 /// 空帧自动重截（`finish_shot` 复位 `ShotDone`）。
-fn run_shot(app: &mut App, scene_id: &str) {
+fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
     // S18.7：离屏渲染目标（`--shot` 验证 Bevy 原生渲染真实出画）。
+    // S29.5：`viewport` = 多视口出图（`--viewport=WxH`）⇒ 目标按该尺寸建 ⇒
+    // bevy_ui chrome 随视口**真重排**（taffy 重算 `%`/flex）；1080 世界按 contain 缩放
+    // （正交 `scale` = max(1080/W, 1920/H) ⇒ 画布恒完整可见，不裁切）。
+    let (target_w, target_h) = viewport.unwrap_or((LOGICAL_W, LOGICAL_H));
     let mut target_image =
-        Image::new_target_texture(LOGICAL_W, LOGICAL_H, TextureFormat::Rgba8UnormSrgb, None);
+        Image::new_target_texture(target_w, target_h, TextureFormat::Rgba8UnormSrgb, None);
     target_image.asset_usage = RenderAssetUsages::RENDER_WORLD;
     let target_handle = app.world_mut().resource_mut::<Assets<Image>>().add(target_image);
     app.insert_resource(ShotTarget(target_handle.clone()));
+    let contain_scale = (LOGICAL_W as f32 / target_w as f32).max(LOGICAL_H as f32 / target_h as f32);
     app.world_mut().spawn((
         Camera2d,
+        Projection::Orthographic(OrthographicProjection {
+            scale: contain_scale,
+            near: 0.0,
+            far: 1000.0,
+            ..OrthographicProjection::default_2d()
+        }),
         RenderTarget::Image(target_handle.into()),
         Transform::IDENTITY,
     ));
@@ -1574,11 +1616,12 @@ fn run_shot(app: &mut App, scene_id: &str) {
             "[shot] WARNING: readback still empty (target texture has no content) - evidence unusable"
         );
     }
-    write_shot_png(&format!("evidence/bevy_native_{scene_id}.png"));
+    let suffix = viewport.map_or_else(String::new, |(w, h)| format!("_{w}x{h}"));
+    write_shot_png(&format!("evidence/bevy_native_{scene_id}{suffix}.png"), target_w, target_h);
 }
 
 /// S18.7：把 GPU 读回像素写成 PNG（`--shot` 输出）。
-fn write_shot_png(path: &str) {
+fn write_shot_png(path: &str, width: u32, height: u32) {
     let Some(raw) = SHOT_READBACK.lock().ok().and_then(|g| g.clone()) else {
         eprintln!("[shot] 无读回像素（渲染目标未就绪？）");
         return;
@@ -1593,12 +1636,12 @@ fn write_shot_png(path: &str) {
     // 采样：左上角 1 点 + **真实屏幕中心**（旧版取的是第 960 行第 0 列
     // = 左边缘，容易被误读成「整屏被木框色铺满」；EXP-104）。
     let first: Vec<String> = raw.chunks(4).take(1).map(|c| format!("{c:?}")).collect();
-    let center_idx = ((LOGICAL_H / 2) * LOGICAL_W + LOGICAL_W / 2) as usize;
+    let center_idx = ((height / 2) * width + width / 2) as usize;
     let midpx: Vec<String> =
         raw.chunks(4).skip(center_idx).take(1).map(|c| format!("{c:?}")).collect();
     eprintln!("[shot] 非黑像素 = {nonblack} / alpha>8 = {alpha_nonzero} / {}", raw.len() / 4);
     eprintln!("[shot] 左上角 = {first:?} 屏幕中心 = {midpx:?}");
-    let png = ti_render::png::encode_png_rgba(&raw, LOGICAL_W, LOGICAL_H);
+    let png = ti_render::png::encode_png_rgba(&raw, width, height);
     match std::fs::write(&out, &png) {
         Ok(()) => eprintln!("[shot] 已写 {}", out.display()),
         Err(e) => eprintln!("[shot] 写文件失败: {e}"),
