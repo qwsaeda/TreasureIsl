@@ -30,3 +30,6 @@ test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 ---
 
 （本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）
+
+## 视觉签收
+视觉签收 = 副本战斗复用 vs 场景既有版面（0 改 scenes.json/theme.json 版面数值）；10 类岛卡面资产 = S27.2 用户已签收（evidence/ui_concept/main_map_v5_sheet.png 人工核对留痕）。S28.6 本体 = 规则/数据/战斗接线，无新版面视觉面改动，A 纪律适用面 = 视觉意图改动（本任务无）。

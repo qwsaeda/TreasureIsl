@@ -140,6 +140,29 @@ if (Test-Path (Join-Path $hdPack '1x')) {
     Say "SKIP  HD 资产（assets_hd_pack/1x 不存在，先跑 scripts/pack_hd_assets.py）"
 }
 
+# 4e) S31.1 地图包部署（`docs/process/21_map_package_spec.md` §7：wasm 侧包根 = `web/assets/maps/`；
+#     运行期 fetch 读取归 S31.2+，本步只部署包文件，缺包 = 内嵌默认包 0 行为变化）
+$mapsSrc = Join-Path (Get-Location) 'assets\maps'
+if (Test-Path $mapsSrc) {
+    $mapsOut = Join-Path $outDir 'assets\maps'
+    New-Item -ItemType Directory -Force -Path $mapsOut | Out-Null
+    foreach ($packDir in (Get-ChildItem $mapsSrc -Directory)) {
+        if ($packDir.Name -eq '_template') { continue }
+        if (-not (Test-Path (Join-Path $packDir.FullName 'manifest.json'))) { continue }
+        $dst = Join-Path $mapsOut $packDir.Name
+        New-Item -ItemType Directory -Force -Path $dst | Out-Null
+        Copy-Item (Join-Path $packDir.FullName '*.json') $dst -Force
+        Say "map-pack  $($packDir.Name) -> web/assets/maps/$($packDir.Name)"
+    }
+    $defaultPtr = Join-Path $mapsSrc '.default'
+    if (Test-Path $defaultPtr) {
+        Copy-Item $defaultPtr (Join-Path $mapsOut '.default') -Force
+        Say "map-pack  .default -> web/assets/maps/.default"
+    }
+} else {
+    Say "SKIP  地图包（assets/maps/ 不存在，运行期全走内嵌默认包）"
+}
+
 $artifacts = Get-ChildItem $outDir -Include '*.html', '*.js', '*.wasm' -Recurse |
     Where-Object { $_.Name -notlike '*.d' }
 Write-Host ""

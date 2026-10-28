@@ -1,0 +1,57 @@
+[
+ {
+  "file": "assets/ui/isle_boss_fort.png",
+  "sha256": "a9956aaf733a5e5656bc647cc564c71afdf5b1ab6d8c1f085aa3f04ebd6d6df3",
+  "bytes": 617354
+ },
+ {
+  "file": "assets/ui/isle_harbour.png",
+  "sha256": "5ce2da7e89e55e96d2cd1f22d8406c0a6849935ffc303472317d9b780cf23271",
+  "bytes": 609735
+ },
+ {
+  "file": "assets/ui/isle_lighthouse.png",
+  "sha256": "7ea10d08747f91ce229dad0d14d9b0c1d9043d0a620f3045ab304aba6ef4a601",
+  "bytes": 573351
+ },
+ {
+  "file": "assets/ui/isle_lightship.png",
+  "sha256": "5e399b32b71610353f088b5d72db4da7614037b9a6b5cfb302d10fcaf32dc952",
+  "bytes": 578525
+ },
+ {
+  "file": "assets/ui/isle_pirate_lair.png",
+  "sha256": "8c46c5854d65fdb9b4e73af3f6c73784dee8de67f11c1553353147624eb322cb",
+  "bytes": 580899
+ },
+ {
+  "file": "assets/ui/isle_shipyard.png",
+  "sha256": "7cdd4936d4590a4b76af69627d032a73ca5990809008774261e180898fc9f8cd",
+  "bytes": 613608
+ },
+ {
+  "file": "assets/ui/isle_skull_cliff.png",
+  "sha256": "c4a56d49242b8b85cdf12abcb777fa5c7c1c14d52a9713f96f74aae49fdf5e55",
+  "bytes": 594393
+ },
+ {
+  "file": "assets/ui/isle_trading_post.png",
+  "sha256": "0639c0152f4486cc9035ac0603b6e9e8d95ce420708b7c9b62d5cf828d31e565",
+  "bytes": 622441
+ },
+ {
+  "file": "assets/ui/isle_volcano.png",
+  "sha256": "93df4f6666c8122fd6f7037e2ababaaeaf9a2e3c96f07fa05924942ab908f5ea",
+  "bytes": 587719
+ },
+ {
+  "file": "assets/ui/isle_wreck.png",
+  "sha256": "e0ce78fc4a0b877ce5f732a6013c3eab9fb4b738bcc86a74cad6aa3d870c787e",
+  "bytes": 651010
+ },
+ {
+  "file": "assets/ui/island_home_m03.png",
+  "sha256": "45481919016b9bc440188f116133f9348124f224bdc9f2ba0300363406444477",
+  "bytes": 1452286
+ }
+]

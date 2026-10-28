@@ -1,0 +1,305 @@
+{
+ "grid_w": 20,
+ "grid_h": 20,
+ "spaces": [
+  {
+   "cell": [
+    10,
+    0
+   ],
+   "group": 1,
+   "kind": "start",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    11,
+    1
+   ],
+   "group": 1,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "harbour"
+  },
+  {
+   "cell": [
+    13,
+    1
+   ],
+   "group": 1,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "harbour"
+  },
+  {
+   "cell": [
+    15,
+    2
+   ],
+   "group": 3,
+   "kind": "event",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    16,
+    3
+   ],
+   "group": 2,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "lighthouse"
+  },
+  {
+   "cell": [
+    17,
+    5
+   ],
+   "group": 2,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "lighthouse"
+  },
+  {
+   "cell": [
+    18,
+    6
+   ],
+   "group": 4,
+   "kind": "card",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    18,
+    8
+   ],
+   "group": 3,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "wreck"
+  },
+  {
+   "cell": [
+    18,
+    10
+   ],
+   "group": 3,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "wreck"
+  },
+  {
+   "cell": [
+    18,
+    12
+   ],
+   "group": 5,
+   "kind": "treasure",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    18,
+    13
+   ],
+   "group": 4,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "pirate_lair"
+  },
+  {
+   "cell": [
+    17,
+    15
+   ],
+   "group": 4,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "pirate_lair"
+  },
+  {
+   "cell": [
+    15,
+    16
+   ],
+   "group": 3,
+   "kind": "event",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    14,
+    17
+   ],
+   "group": 5,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "shipyard"
+  },
+  {
+   "cell": [
+    12,
+    18
+   ],
+   "group": 5,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "shipyard"
+  },
+  {
+   "cell": [
+    10,
+    18
+   ],
+   "group": 6,
+   "kind": "boss",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    9,
+    18
+   ],
+   "group": 6,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "trading_post"
+  },
+  {
+   "cell": [
+    7,
+    18
+   ],
+   "group": 6,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "trading_post"
+  },
+  {
+   "cell": [
+    5,
+    17
+   ],
+   "group": 3,
+   "kind": "event",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    4,
+    16
+   ],
+   "group": 7,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "skull_cliff"
+  },
+  {
+   "cell": [
+    2,
+    15
+   ],
+   "group": 7,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "skull_cliff"
+  },
+  {
+   "cell": [
+    1,
+    13
+   ],
+   "group": 5,
+   "kind": "treasure",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    1,
+    12
+   ],
+   "group": 8,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "volcano"
+  },
+  {
+   "cell": [
+    1,
+    10
+   ],
+   "group": 8,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "volcano"
+  },
+  {
+   "cell": [
+    1,
+    8
+   ],
+   "group": 4,
+   "kind": "card",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    1,
+    6
+   ],
+   "group": 9,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "lightship"
+  },
+  {
+   "cell": [
+    2,
+    5
+   ],
+   "group": 9,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "lightship"
+  },
+  {
+   "cell": [
+    3,
+    3
+   ],
+   "group": 10,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "boss_fort"
+  },
+  {
+   "cell": [
+    4,
+    2
+   ],
+   "group": 10,
+   "kind": "territory",
+   "terrain": "R",
+   "isle": "boss_fort"
+  },
+  {
+   "cell": [
+    6,
+    1
+   ],
+   "group": 3,
+   "kind": "event",
+   "terrain": "R"
+  },
+  {
+   "cell": [
+    8,
+    1
+   ],
+   "group": 4,
+   "kind": "card",
+   "terrain": "R"
+  }
+ ]
+}

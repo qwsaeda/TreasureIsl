@@ -147,19 +147,23 @@ powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1        # native + was
 powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 开轮必读清单
 ```
 
-### 2.6 地图打包流水线（S30 标准：声明意图/数据，引擎算坐标）
+### 2.6 地图打包流水线（S31 标准：一张图 = 一个可分发的自包含包）
 
-> 单一事实源 = `assets/maps/<id>.json`（逐图内容：格序 + 岛型）+ `assets/maps/_template.json`
-> （main_map v5 共享版面：环几何 / CTA·键位 / 焦点）。**加图 / 换图 / 改环几何 = 改描述符或模板 +
-> 一条 `sync`，不改 Rust、不散改多份 JSON**。规范 = [`18_asset_content_pipeline.md`](18_asset_content_pipeline.md) §地图打包。
+> 单一事实源 = `assets/maps/<id>/`（**已装包**：`manifest.json`/`map.json`/`layout.json`/`strings.json`/`assets/`）
+> + `dist/maps/<id>.map-pack/`（**可分发件**）。格式与不变量 = [`21_map_package_spec.md`](21_map_package_spec.md)。
+> 效果：**加图 / 换图 = 出一包 + 装上（+ 运行期切包），不改 Rust、不手改多份 JSON**。
 
 ```powershell
-# 1) 加一张新图：生成骨架描述符 → 补 spaces（格序/岛型）+ 建 isle/central 资产
-python scripts/map_pack.py add m04
-# 2) 幂等回注：描述符 → board.json 该图 + 模板 → scenes.json main_map + manifest focus/beats
-python scripts/map_pack.py sync
-# 3) 只读对账（漂移 / 缺资产登记 ⇒ 非 0；可挂门禁）
-python scripts/map_pack.py --check
+# 1) 出一包（已装包 → 可分发件；带 sha256 清单）
+python scripts/map_pack.py pack m01
+# 2) 校验包（schema/兼容/资产齐+哈希/31 格不变量 I1~I8 ⇒ 违规非 0）
+python scripts/map_pack.py verify dist/maps/m01.map-pack
+# 3) 装上（进 assets/maps/<id>/ + 接线默认包数据/资产登记/文案合并）
+python scripts/map_pack.py install dist/maps/m01.map-pack
+# 4) 列出已装包（id / version / data_version / 校验结果）
+python scripts/map_pack.py list
+# 5) 已装态 ↔ 内嵌默认数据漂移对账（只读）
+python scripts/map_pack.py check
 ```
 
 ## 3. 逐工具台账
@@ -170,7 +174,7 @@ python scripts/map_pack.py --check
 |---|---|---|---|
 | `gate.ps1` | 全门禁 28 项（编译/测试/文档/数据/结构/渲染/台账） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
 | `validate_data.py` | 数据表校验（balance/strings/scenes/controls/theme 必填字段、值域、孤儿 key、grid 三键）+ **`check_scenes_canonical`**（scenes.json 须 indent=1 逐字节规范形，防整文件 churn，S29.2 §18）+ **`check_asset_registry`**（全类型资产 disk↔registry 双向同步：UI 图=`ui_manifest.json`、字体/音频=`assets/registry.json`，S29.2 §18） | `python scripts/validate_data.py` | 幂等只读；违规非 0（gate 第 10a 项） |
-| `check_hardcode.py` | 硬编码扫描（数值/中文面量） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` / `--selftest`（STR_LIT 全捕获回归自检，飞轮 R1 ⑤-05 起 CJK 通道对全字面量生效） | 幂等；严格模式命中即非 0；`--selftest` 断言失败即非 0 |
+| `check_hardcode.py` | 硬编码扫描（数值/中文面量；`EXEMPT` 带理由豁免：oracle 冻结层 / CLI 输出 / 诊断 eprintln，含 S31.2 `data/map_pack.rs`+`data/table_source.rs` 注入诊断） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` / `--selftest`（STR_LIT 全捕获回归自检，飞轮 R1 ⑤-05 起 CJK 通道对全字面量生效） | 幂等；严格模式命中即非 0；`--selftest` 断言失败即非 0 |
 | `check_ledger_reality.py` | 台账三方对账（verified ↔ evidence 文件 ↔ 代码符号） | `python scripts/check_ledger_reality.py` | 幂等只读；虚报即非 0 |
 | `check_oracle_boundary.py` | oracle 边界（shell 层禁 `oracle_*` 调用） | `python scripts/check_oracle_boundary.py --check` / `--report` | 幂等只读；违规非 0 |
 | `check_forward_closed.py` | 业务闭环 C1~C4（零逆向引用 / 单一 oracle 源 / 根目录清空 / 无重复 crate） | `python scripts/check_forward_closed.py --check` | 幂等只读；违规非 0 |
@@ -196,9 +200,8 @@ python scripts/map_pack.py --check
 | `ui_layout_sheet.py` | **UI 版面线图**（规格驱动：`assets/ui_batches/*_layout.json` 底图 + 逐元素矩形 + 可选环岛示意 ⇒ 合成「坐标表线图」供版面评审 / 出图验收对照；与 `ui_asset_batch.py sheet`（资产拼版）分工 = 本工具画**版面矩形叠层**，与 `ui_preview.ps1`（真实渲染）分工 = 设计稿线图 vs 落码后渲染） | `python scripts/ui_layout_sheet.py --spec assets/ui_batches/<name>_layout.json`（渲染）/ `--check`（只读校验规格，违规非 0）/ `--out <png> --scale 0.3` | 幂等（同规格 + 同底图 ⇒ 逐像素一致）；`--check` 只读 |
  | `ui_icons.py` | **UI 图标白蒙版生成器**（S21.14 图标图片化 ④-04：读几何 spec `assets/ui_batches/icon_v1.json`（48 原生盒 ink/carve，抄自 `ti-render/icons.rs`）→ PIL 最近邻放大 512 白蒙版 → `assets/ui/icon_*.png`；运行时 `blit_image_tint` 按 tint 上色，缺图 = 代码矢量回退。生 14 张是低频脚本活故用 Python，必须 Rust 的只有运行时 tint 管线） | `python scripts/ui_icons.py`（生成/覆盖）/ `--check`（只读：重渲染字节比对幂等 + 资产在位 + 注册表 `ui_icons.json image→文件`，漂移/缺失非 0） | 幂等（同 spec ⇒ 同字节；重跑 = 覆盖同内容）；`--check` 只读，漂移非 0 |
  | `ui_islands.py` | **岛屿剪影资产生成器**（S26.2 主地图岛屿图片化：`assets/data/terrain.json` 陆格掩码 → 3 枚暖沙岛屿剪影 PNG，4× 超采抗锯齿 + 礁光晕 + 投影 + 墨线海岸 + FNV 纹理；994×826 RGBA `assets/ui/island_m01/02/03.png` + 注册 `ui_manifest.json` kind=island；运行时 `chrome::island_asset` 资产优先 blit，缺图 = 代码矢量回退） | `python scripts/ui_islands.py`（生成/覆盖 3 岛 + 登记 manifest）/ `--check`（只读：重渲染字节比对幂等 + 资产在位 + manifest 登记，漂移/缺失非 0） | 幂等（同 terrain ⇒ 同字节；重跑 = 覆盖同内容）；`--check` 只读，漂移非 0 |
-| `map_pack.py` | **地图打包标准**（S30/S27.3：一张图 = 描述符 `assets/maps/<id>.json` + 共享模板 `_template.json`；`sync` 幂等回注 board.json 格序列/岛型 + scenes.json `main_map`（ring/world_canvas/island_home/deck_* + CTA·三键 primitives）+ manifest `main_map`（focus.bbox_pct + rhythm.beats）+ 资产登记对账（`isle_<id>`/`island_home_<id>` 须已在 `ui_manifest.json`）；加图/换图/改环几何 = 改描述符/模板 + `sync`，不改 Rust | `python scripts/map_pack.py sync` / `check` / `add <id>` | 幂等（sync 重放同结果）；只读 `--check` 漂移/缺登记非 0 退出 |
 | `task_close.py` | **任务收口一条命令**（跑判据 → 写 `evidence/<id>.log` → 台账**行级**置 verified → 同步 release.md 台账计数 → 跑 `check_ledger_reality.py` 复验；**判据非 0 就不写证据不改台账** ⇒ 虚报防线内置；`docs/process/15_process_ledger.md` 第 1 条流程的载体） | `python scripts/task_close.py --task S21.4 --cmd "cargo test --workspace"`（`--cmd` 可重复）/ `--no-run`（证据已在，只翻台账）/ `--check`（只读体检） | 幂等（同任务重跑 = 重写证据 + 不重复加 rounds）；判据非 0 ⇒ 退出 1 且不改台账 |
-| `map_pack.py` | **地图打包标准**（S30 / `18_asset_content_pipeline`「不手写像素：声明意图/数据，引擎算坐标」：一张图 = `assets/maps/<id>.json` 描述符 + 共享版面 `assets/maps/_template.json`，**幂等展开**成 `board.json` 该图段 + `scenes.json` main_map（`ring`/`world_canvas`/`island_home`/`deck_*` + CTA·三键 primitives）+ `scene_manifest_v3.json` main_map.focus/beats + 资产登记校验。⇒ **加图/换图/改环几何 = 改描述符或模板 + 一条 `sync`，不改 Rust、不散改多份 JSON**） | `python scripts/map_pack.py sync`（幂等回注）/ `check`（`--check` 别名，只读对账，board/scenes/manifest 漂移或资产缺登记 ⇒ 非 0）/ `add <id>`（生成骨架描述符） | 幂等（同描述符 + 模板 ⇒ 逐字节一致）；`check` 只读，漂移/缺登记 ⇒ 非 0 退出 |
+| `map_pack.py` | **地图包工具**（S31 / `21_map_package_spec.md`：**一张图 = 一个自包含可分发包**，取代 S30.1 扁平描述符 `assets/maps/<id>.json`（已归档 `legacy/data/maps_s301/`）。已装包 = `assets/maps/<id>/`（`manifest.json`/`map.json`/`layout.json`/`strings.json` + 默认包指针 `.default` + `_template/` 骨架）；`pack` = 已装包 → 可分发件 `dist/maps/<id>.map-pack/`(+zip，含池资产副本 `pool/` + `POOL_INDEX.json` 哈希索引)；`verify` = 校验包（schema/兼容/资产齐+哈希/31 格不变量 I1~I8，违规非 0）；`install` = 装包 + 接线（board.json 回注 + 池资产登记只读对账）；`add <id>` = 从 `_template` 引导新包骨架；`uninstall`/`list`；`check` = 已装态 ↔ 内嵌默认数据漂移对账（只读）；`sync` = 全部包 map→board.json + 默认包 layout→scenes/manifest/strings | `python scripts/map_pack.py pack <id>` / `verify <path>` / `install <path>` / `add <id>` / `uninstall <id>` / `list` / `check` / `sync`（`check`/`verify` 只读） | 幂等（pack 同输入同产物 / install upsert / sync 重放同结果）；`verify`/`check` 违规/漂移 ⇒ 非 0 退出 |
 | `exp_log.py` | **EXP 条目一条命令登记**（分卷正文 + `index.md` 索引行 + 分卷「条数」列 3 处一次改齐；ID 查重；条数从分卷文件 `### EXP-` 标题**实测**回填而非 +1 猜；收尾跑 `doccheck` 复验） | `python scripts/exp_log.py --volume code --id EXP-<N> --title "标题" --summary "索引摘要" --body "正文"`（`--body-file` 读文件）/ `--check`（只读查重） | 幂等（同 id 再跑 = 查重拦截，不重复写）；查重/对账失败 ⇒ 退出 1 |
 | `doc_numbers.py` | **门禁项数 / 台账计数 实测回写**（一改要手抄 8 处的漂移源：parity/git/README/loop/AGENTS/style/playbook/gate 横幅；门禁项数口径 = `gate.ps1` 顶层 `Report` 数（与 doccheck2 同口径），台账计数 = ledger 实测） | `python scripts/doc_numbers.py`（只读体检，漂移即非 0）/ `--fix`（实测回写）/ `--fix --dry-run` | 幂等（回写后再测 0 漂移）；漂移未修 ⇒ 退出 1 |
 | `layout_spec_check.py` | **UI 版面规格三面对账**（规格表 → `scenes.json` → `scene_manifest_v3.json`：键↔坐标一致 + 8pt + N8 像素往返 ±1px + N3 焦点面积；规格表是坐标单一事实源，人工校验易漏） | `python scripts/layout_spec_check.py --spec docs/ui-redesign-v3/08_main_map_v4_spec.json [--scene main_map]` | 幂等只读；漂移非 0 |

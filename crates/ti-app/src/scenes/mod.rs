@@ -402,6 +402,17 @@ pub trait SelectionHost {
     /// 返回 `false` = 数据校验失败（`balance` 缺条目 / 坐标越界），调用方
     /// （如 `restore_save`）据此回滚已写字段，避免半初始化态（FIND-204）。
     fn enter_main_map(&mut self) -> bool;
+
+    /// S31.2b：已装地图包标识列表（`table_source` 注入时由壳层采集；
+    /// 未注入包时走内嵌 `MapSlot` 3 槽旧流（选图场景包列表无行为变化）
+    fn map_pack_ids(&self) -> Option<Vec<String>> {
+        None
+    }
+
+    /// S31.2b：注入源包 id（未注入 = 纯内嵌默认包；日志与出图证据用）
+    fn active_map_pack(&self) -> Option<String> {
+        None
+    }
 }
 
 /// S9.2：主地图会话接口（移动/贸易/建造/事件分派）。

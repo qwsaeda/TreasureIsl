@@ -5,6 +5,7 @@
 
 use ti_core::data;
 use ti_core::data::balance;
+use ti_core::data::table_source;
 use ti_core::domain::combat::{Side, Unit};
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
@@ -160,11 +161,11 @@ impl SelectionHost for GameApp {
 
     // S31.2b：包清单 / 注入源 = `ti_core::data::table_source` 注入面（壳层首访前采集）。
     fn map_pack_ids(&self) -> Option<Vec<String>> {
-        ti_core::data::table_source::available_ids()
+        table_source::available_ids()
     }
 
     fn active_map_pack(&self) -> Option<String> {
-        ti_core::data::table_source::source_id().map(str::to_owned)
+        table_source::source_id().map(str::to_owned)
     }
 }
 impl MapHost for GameApp {

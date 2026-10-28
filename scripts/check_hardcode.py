@@ -56,6 +56,8 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("android_shell.rs", "cjk", "Android shell [hd] asset-registration diagnostics, not in-game UI"),
     ("sprite_step.rs", "cjk", "sprite-step debug bin usage/error/sprite-dump terminal output, not in-game UI"),
     ("data/mod.rs", "cjk", "balance data validation LoadError wording (crash-diagnostic channel), not display text"),
+    ("data/map_pack.rs", "cjk", "S31.2 map-pack runtime load diagnostics (manifest reject / section fallback eprintln), not display text"),
+    ("data/table_source.rs", "cjk", "S31.2 table-injection late-install warning (crash-diagnostic channel), not display text"),
     ("hd_png.rs", "cjk", "PNG HD asset loading diagnostics / error wording, not in-game UI"),
     ("ogg_encode.rs", "cjk", "OGG/Opus encode error diagnostics, not in-game UI"),
     ("ids.rs", "cjk", "ti-formats ControlKind parse error wording, not in-game UI"),

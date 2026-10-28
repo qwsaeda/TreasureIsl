@@ -178,6 +178,10 @@
 > - 舵轮 CTA `deck_spin {x:408, y:1336, w:264, h:264}`（v4 y:1160 下移，与环底 1314 错开）；
 > - 命令铜牌 `deck_trade {x:48, y:1608, w:312, h:136}` / `deck_sell {x:384, y:1608, w:312, h:136}` / `deck_build {x:720, y:1608, w:312, h:136}`（v4 y:1440 下移）；
 > - 落格提示签条 `hint {x:540, y:1760}`（v4 1632 下移；签条 {344,1760,392,64}）。
+> - **来源层级（S31 地图包）**：以上 v5 现行值的**运行期事实源 = 已装包内 `layout.json`**
+>   （`assets/maps/<id>/`；规范 [`../process/21_map_package_spec.md`](../process/21_map_package_spec.md) §3.2）；
+>   `scenes.json main_map` = **构建期默认包**（内嵌 fallback，无包/未激活时生效）。
+>   改版面 = 改包内 `layout.json` + `python scripts/map_pack.py install`（不动 Rust）；本表随之镜像。
 
 **S21.6 已落 `scenes.json`（v4 值历史保留；v5 现行值见上「v5 镜像」）**
 > **S21.6 起 v4 版面已落地 `scenes.json`**（下表 = v4 现行值；v2/v3 回退键 `hud`/`grid.*`/`hud_trade`/`hud_gold`

@@ -33,10 +33,13 @@ fn re_enter_main_map_rebuilds_board_session() {
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::MainMap, "Confirm 进主地图");
     let first = app.board_index();
-    // 切图 = 回 `select_map` 再进（`enter_main_map_at(None)` 全量重建 board/territory 会话）。
-    app.handle(GameInput::Back);
-    app.handle(GameInput::Back);
-    assert_eq!(app.scene(), Scene::SelectMap, "双 Back 回选图");
+    // 切图 = `MapBack` 回主菜单 → 再进选图 → 重进主地图（`enter_main_map_at(None)`
+    // 全量重建 board/territory 会话；主地图 `Back` = 关建造面板，非导航）。
+    app.handle(GameInput::MapBack);
+    assert_eq!(app.scene(), Scene::Index, "MapBack 回主菜单");
+    app.handle(GameInput::Confirm);
+    app.handle(GameInput::Confirm);
+    assert_eq!(app.scene(), Scene::SelectMap, "双 Confirm 到选图");
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::MainMap, "再 Confirm 重进主地图");
     assert_eq!(app.board_index(), first, "同槽重进 = 会话重建后起点一致");

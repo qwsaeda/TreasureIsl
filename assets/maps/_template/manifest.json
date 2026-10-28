@@ -1,0 +1,14 @@
+{
+ "schema": "map-pack/1",
+ "id": "_template",
+ "version": "0.0.0",
+ "data_version": "board-v5",
+ "note": "scaffold only; fill map.json + assets then verify",
+ "assets": [],
+ "invariants": {
+  "spaces": 31,
+  "start": 1,
+  "territory": 20,
+  "boss": 1
+ }
+}

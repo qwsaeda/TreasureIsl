@@ -1,0 +1,32 @@
+# S31.1 地图包工具 + 已装包 + 可分发件 — 验收证据
+# 判据：verify 三包 0 违规 + check 0 漂移 + dist zip verify 过 + 幂等 + 门禁
+# 采集：2026-10-28
+
+## 1. 工具（scripts/map_pack.py，8 子命令）
+pack / verify / install / uninstall / list / add / check / sync
+- 幂等 + check/verify 只读 + 违规/漂移非 0 退出 + GBK 控制台安全输出（⇒ 换 -> 防 UnicodeEncodeError）
+
+## 2. 已装包（assets/maps/）
+m01/ m02/ m03/（各 manifest.json + map.json + layout.json + strings.json）
++ .default = m01 + _template/ 骨架（id=_template，schema 合规，map.json 缺段 ⇒ board 段回退内嵌）
+
+## 3. 可分发件（dist/maps/）
+m01.map-pack/ + m01.map-pack.zip（含 pool/ 池资产副本 + POOL_INDEX.json 哈希索引）
+m02 / m03 同构
+
+## 4. 实测判据（2026-10-28）
+- map_pack list → m01/m02/m03 全 OK（v1.0.0 data=board-v5）
+- verify dist/maps/m01.map-pack.zip → 0 违规（schema/兼容/I1~I8 全过）
+- verify dist/maps/m02.map-pack.zip → 0 违规
+- verify dist/maps/m03.map-pack.zip → 0 违规
+- check → 0 漂移（3 已装包 vs board.json；默认包 m01 vs 布局数据）
+
+## 5. 归档
+S30.1 扁平描述符（assets/maps/*.json + _template.json）归档 legacy/data/maps_s301/；
+14_tooling_catalog 删旧行并入单一 map_pack 行。
+
+## 6. 门禁
+cargo build/clippy/test 全绿（fps 环境项除外）+ doccheck/doccheck2 0 error + 台账 245 任务 0 error
++ 视觉签收豁免（S31.1 = 打包产物非视觉面改动：0 改 scenes.json/theme.json 版面数值，
+  已装包 layout.json = 抄自当前 scenes.json 逐字节一致 = 0 版面漂移，用户无视觉可见变化）
+⇒ S31.1 verified

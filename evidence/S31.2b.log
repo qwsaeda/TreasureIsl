@@ -1,0 +1,44 @@
+# S31.2b 运行期换图残留收口（select_map 包列表 UI + 切包会话重建 + 注入清单可观测）— 验收证据
+# 判据：台账 S31.2b dod（select_map 包列表 UI + 切包后 GameApp 会话重建 + wasm fetch 部署链就位）
+# 采集：2026-10-28
+
+## 1. 数据注入层扩展（crates/ti-core/src/data/）
+- table_source.rs：`PackTables.available_ids`（壳层注入时由 `map_pack::available_pack_ids` 填充）
+  + `available_ids()` 可观测面（`None` = 未注入 = UI 走内嵌 3 槽旧流，0 行为变化）
+- 未注入时 `map_pack_ids` / `active_map_pack` 全 `None`（0 回归）
+
+## 2. 壳层采集（crates/ti-engine/src/bin/treasure_bevy.rs）
+apply_map_pack 注入时一并采集 `available_pack_ids(root)` 填入 `PackTables.available_ids`
+（日志含「已装包清单 N 项」）
+
+## 3. 窄接缝（crates/ti-app/src/scenes/mod.rs + game_app/host.rs）
+- `SelectionHost::map_pack_ids` / `active_map_pack` 默认方法（`None`/`None`，fake 宿主 0 影响）
+- `GameApp` 实现委托 `ti_core::data::table_source`（EXP-061 口径：顶部 use，0 内联全路径）
+
+## 4. select_map 包列表 UI（crates/ti-app/src/scenes/select_map.rs）
+- 注入清单在位 + 注入源在位 ⇒ 当前选中行若对应槽位在已装包清单内 ⇒ 画金色底边条
+  （「此图有地图包直读」的可见信号；包 id 与内嵌槽位同键空间 m01/m02/m03）
+- 未注入 = 该段 0 行为变化（`packs.is_some() && active.is_some()` 双闸）
+
+## 5. 切包后 GameApp 会话重建
+- 路径 = `MapBack` 回主菜单 → 选图 → 重进主地图（`enter_main_map_at(None)` 全量重建
+  `build_board_session` + `init_territory`；注入合并表 ⇒ 会话跟包走）
+- 主地图 `Back` = 关建造面板（非导航），测试已按实际口径走 `MapBack`
+
+## 6. e2e（crates/ti-app/tests/map_pack_select_e2e.rs，3 项全过）
+map_pack_ids_none_without_injection（未注入 = 0 回归）/
+re_enter_main_map_rebuilds_board_session（切图重进会话重建）/
+select_map_input_surface_no_panic（输入面 0 行为变化）
+
+## 7. 出图验收（TI_MAP=m03 --shot select_map）
+[map-pack] 已注入 m03（显式）+ bevy_ui probe node=15 text=7 + 非黑像素 2073520（真渲染）
+TI_MAP=m02 --shot main_map 同口径过（S31.2 证据已含）
+
+## 8. 残留
+wasm 侧 fetch 运行期读取 = 后续（v1 部署链 `build_wasm.ps1` 4e 段已通 `web/assets/maps/`，
+fetch 接线归后续任务；wasm 壳当前 = 无包时全内嵌默认，0 行为变化）
+
+## 9. 门禁
+cargo fmt/clippy -D 0 + 全 workspace test 全绿（fps 环境项除外）+ 3 项新 e2e 过
++ doccheck/doccheck2 0 error + 台账 245 任务 0 error + gate 全绿（s43_fps_smoke = VM 环境项）
+⇒ S31.2b verified

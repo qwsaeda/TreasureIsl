@@ -82,6 +82,12 @@
 | [`11_bevy_migration.md`](11_bevy_migration.md) | **Bevy 0.20 迁移裁决单一事实源**（差距定稿 / 定案推翻签核 / 架构形状 / 新 crate `ti-engine` / WBS S18.0–S18.8 / 风险） |
 | [`12_bevy_usage.md`](12_bevy_usage.md) | **Bevy 0.20 用法规范 · 总览/通用**（官方 `DefaultPlugins` 强制 / 1080 坐标换算 / z 层负值升序 / GPU Text2d 文本 / 离屏截图验收口径 / 已知坑位清单）；写 Bevy 代码前必读；主题用量大者拆独立篇（见下两篇） |
 | [`13_ui_asset_pipeline.md`](13_ui_asset_pipeline.md) | **UI 资产管线**（资产清单 `assets/ui_manifest.json` = 单一事实源；`python scripts/ui_assets.py add/build/verify` 生图+抠透明+入库；`powershell scripts/ui_preview.ps1 <scene>` 出图验收） |
+| [`14_tooling_catalog.md`](14_tooling_catalog.md) | **工具台账**（`scripts/` 全量登记 = 工具唯一事实源 + 4 类工具的登记要求 + 工具契约 4 条 + 门禁↔工具对照表） |
+| [`15_process_ledger.md`](15_process_ledger.md) | **流程固化台账**（人反复要做的动作 = 纪律执行状态面：已自动化/半自动/待固化（必带台账任务号）；收口走 `scripts/task_close.py`） |
+| [`16_code_standards.md`](16_code_standards.md) | **代码标准执行矩阵**（架构/内聚/命名/重构 → 机器检查映射；CS-1 资产单源 / CS-2 文件职责声明 / CS-3 参数命名 / CS-4 场景窄接缝；新代码零豁免） |
+| [`17_layout_engine.md`](17_layout_engine.md) | **布局引擎规范（S29 定案 B1）**：UI + 命中 + 重排全进 Bevy（`bevy_ui` 自动布局 + resize 重排 + `bevy_picking` 2D 拾取）；游戏世界保持 1080 正交 + 数据驱动 |
+| [`18_asset_content_pipeline.md`](18_asset_content_pipeline.md) | **资产/内容数据管线总纲**（行业三档 ①绝对坐标/②意图+自动布局/③参数化 + 总纲「不手写像素：声明意图/数据，引擎算坐标」+ 资产登记标准 + scenes.json 序列化纪律） |
+| [`21_map_package_spec.md`](21_map_package_spec.md) | **地图包规范 v1**（一张图 = 一个自包含可分发包：包格式 / `manifest.json` 字段 / 版本兼容 / sha256 完整性 / 31 格不变量 / 运行期加载契约与失败回退 / 工具与产物落点）；加图·换图前必读 |
 | [`19_bevy_ui.md`](19_bevy_ui.md) | **bevy_ui 专题**（UI 相机分层 / `Node`+`Text`+**`ImageNode`** / taffy 自动布局=意图化不手写像素 / resize 真重排 / `ComputedNode` 探针证据 / 0.20 坑位）；改 UI chrome·加控件·改版面坐标前必读 |
 | [`20_bevy_picking.md`](20_bevy_picking.md) | **bevy_picking 专题**（0.20 拾取结构（无 `PickingSection`）/ 指针事件 / **`Message` 取代 `Event`** / 本项目命中契约 `PickTarget`·`PickEvent`·`HitData` / 数据化命中 `pick_key` / 坑位）；改命中·加可点元素前必读 |
 

@@ -29,7 +29,7 @@ mod resizetest;
 use resizeprobe::attach_probe;
 use resizetest::attach_resizetest;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::{Camera2d, ClearColor, OrthographicProjection, Projection, RenderTarget};
@@ -1390,11 +1390,88 @@ fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
 
+/// S31.2 地图包运行期注入（`docs/process/21_map_package_spec.md` §7 选 B）：
+/// `TI_MAP=<id>` 环境变量（缺 = `.default` 指针包；再缺 = 纯内嵌默认包，0 行为变化）。
+/// 须在**首次表访问前**调用（`table_source::install` 迟注入 = 忽略 + 告警）。
+/// 无包可定位（目录缺 / 无 manifest）= 静默走内嵌默认包（wasm 部署侧常态，不打日志）。
+fn apply_map_pack(root: &Path) {
+    use ti_core::data::map_pack;
+    use ti_core::data::table_source;
+
+    let requested: Option<String> = std::env::var("TI_MAP").ok();
+    let explicit = requested.is_some();
+    let Some(map_id) = requested.or_else(|| map_pack::default_pack_id(root)) else {
+        return;
+    };
+    let tables = map_pack::read_pack_tables(root, &map_id);
+    let Some(tables) = tables else {
+        eprintln!("[map-pack] TI_MAP={map_id} 缺包/不合规 ⇒ 内嵌默认包（§6 回退）");
+        return;
+    };
+    // 逐段预检（缺段 / 非对象 = 该段回退内嵌，不整包失败）。
+    let available = map_pack::available_pack_ids(root);
+    let available_len = available.len();
+    let effective = table_source::PackTables {
+        source_id: Some(tables.id.clone()),
+        board: tables
+            .board_json
+            .filter(|raw| map_pack::precheck_table(raw, map_pack::table_key::BOARD)),
+        scenes: tables
+            .scenes_json
+            .filter(|raw| map_pack::precheck_table(raw, map_pack::table_key::SCENES)),
+        strings: tables
+            .strings_json
+            .filter(|raw| map_pack::precheck_table(raw, map_pack::table_key::STRINGS)),
+        available_ids: Some(available.clone()),
+    };
+    if table_source::install(effective) {
+        let requested_mode = if explicit { "显式" } else { "默认包指针" };
+        eprintln!(
+            "[map-pack] 已注入 {map_id}（{requested_mode}；board/scenes/strings 段注入 + 缺段内嵌回退；已装包清单 {available_len} 项）"
+        );
+    }
+}
+
+/// 启动参数解析（`main` 前置：0 校验逻辑外的参数面，`main` 保短）。
+#[derive(Debug, Clone)]
+struct Args {
+    /// 互斥模式标志（`--resizetest` / `--resizeprobe` / `--shot` / `--selftest`）。
+    mode_flags: Vec<String>,
+    /// 目标场景（`--scene=<id>`，缺 = `index`）。
+    scene_id: String,
+    /// 多视口出图（`--viewport=WxH`，S29.5；缺 = 壳默认视口）。
+    viewport: Option<(u32, u32)>,
+    /// 摇骰次数（`--spin=N`，S19.7 D5；缺 = 0）。
+    spin_n: u32,
+}
+
+impl Args {
+    /// 解析 `std::env::args()`（未知 `--k=v` 忽略，口径 = 既有 `arg_value` 行为）。
+    fn parse() -> Self {
+        Self {
+            mode_flags: [
+                "--selftest",
+                "--shot",
+                "--resizetest",
+                "--resizeprobe",
+            ]
+            .iter()
+            .filter(|m| std::env::args().any(|a| a == **m))
+            .map(|m| (*m).to_owned())
+            .collect(),
+            scene_id: arg_value("--scene=").unwrap_or_else(|| "index".to_owned()),
+            viewport: arg_value("--viewport=").and_then(|v| parse_viewport(&v)),
+            spin_n: arg_value("--spin=").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0),
+        }
+    }
+}
+
 fn main() {
-    let selftest = std::env::args().any(|a| a == "--selftest");
-    let shot = std::env::args().any(|a| a == "--shot");
-    let resizetest = std::env::args().any(|a| a == "--resizetest");
-    let resizeprobe = std::env::args().any(|a| a == "--resizeprobe");
+    let args = Args::parse();
+    let selftest = args.mode_flags.contains(&"--selftest".to_owned());
+    let shot = args.mode_flags.contains(&"--shot".to_owned());
+    let resizetest = args.mode_flags.contains(&"--resizetest".to_owned());
+    let resizeprobe = args.mode_flags.contains(&"--resizeprobe".to_owned());
     if resizetest && (shot || selftest) {
         eprintln!("[resizetest] 与 --shot/--selftest 互斥（需要真窗口）");
         std::process::exit(2);
@@ -1403,18 +1480,11 @@ fn main() {
         eprintln!("[resizeprobe] 与 --shot/--selftest 互斥（需要真窗口）");
         std::process::exit(2);
     }
-    // S18.7b：`--scene=<id>`（index/select_role/select_map/main_map/vs/message/saveload）——
-    // Bevy 壳经 `ti_app::forward_nav::navigate` 导航到目标场景，其 DrawList 由场景代码
-    // 渲染进同一 `DrawList`（静态原语 + 运行时内容），再实体化为 Bevy 精灵。
-    let scene_id = std::env::args()
-        .skip(1)
-        .find_map(|a| a.strip_prefix("--scene=").map(str::to_owned))
-        .unwrap_or_else(|| "index".to_owned());
-    // S19.7 D5：出图带状态（`--spin=N`）—— 摇 N 次骰后再截图 ⇒ 落格提示条 / 航程条可见
-    // （静态出图不含运行时状态，提示条此前无出图证据）。
-    // S29.5：多视口出图（`--shot --viewport=WxH`）：离屏目标按该尺寸 ⇒ bevy_ui chrome 真重排。
-    let viewport = arg_value("--viewport=").and_then(|v| parse_viewport(&v));
-    let spin_n = arg_value("--spin=").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0);
+    let scene_id = args.scene_id;
+    let viewport = args.viewport;
+    // S31.2：地图包注入（须先于 `GameApp` 构造 / 任何表访问；缺包 = 内嵌默认，0 行为变化）。
+    apply_map_pack(&repo_root().join("assets").join("maps"));
+    let spin_n = args.spin_n;
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);
     if scene_id != "index" {

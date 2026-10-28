@@ -1,0 +1,25 @@
+# S31.0 地图包标准 v1 规格定案 — 验收证据
+# 判据：doccheck 0 error / doccheck2 0 error / 路由表·速查表·目录 3 处登记 / 规格与实测数据一致
+# 采集：2026-10-28
+
+## 1. 定案文档（单一事实源）
+- docs/process/21_map_package_spec.md（新，12 节：包目录结构 / manifest 字段 / I1~I8 不变量表 /
+  资产双来源 source=pack/pool / 版本兼容 map-pack/1 + board-v5 / 失败回退 §6 / §7 运行期加载契约
+  （选 B：ti-core data 可注入源 + 包路径直读 web/assets/maps/<id>/）/ §8 工具流水线）
+
+## 2. 对齐引用（5 处）
+- docs/process/18_asset_content_pipeline.md §7 → 降级指针（指 21，不双份）
+- docs/process/17_layout_engine.md → S31 地图包关联段
+- docs/process/14_tooling_catalog.md → 并入单一 map_pack 行（删 S30.1 旧描述符行）
+- docs/process/04_tooling.md → 速查表 map_pack 行
+- AGENTS.md → 路由表「加地图 / 换地图 / 出一张地图包」行 + 文档目录
+
+## 3. 规格与实测数据一致性（I5 修正）
+- 实测三图 board.json：start@0、boss@15（= 31//2 环半周）、末格 = card（非 boss）
+  ⇒ 规格 I5 定案「BOSS 在环半周 spaces[31//2]，末格无不变量」（非「末格 = boss」）
+- 10 类岛各 2 格同 group / 31 格 = start1 + territory20 + 功能9 + boss1 全部实测一致
+
+## 4. 门禁
+- doccheck: 0 error（S31.0/S31.1/S31.2 任务引用已进台账 plan/ledger.yaml）
+- doccheck2: 0 error（38 审计固化检查项）
+- 结论：规格定案 + 5 处对齐 + 台账登记 + 门禁 0 error ⇒ S31.0 verified

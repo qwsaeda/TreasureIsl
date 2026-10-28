@@ -68,22 +68,20 @@
 | ③地图参数化（环格几何生成器） | **S27.4**（前置 `board.json` 分区数据 S27.3） | 已落（环形棋盘 `chrome::ring_geom` + 地图打包工具 `scripts/map_pack.py`，本文 §7） |
 | ⑤音频（bevy_audio + 音频资产） | **S18.8** | 待开工 |
 
-## 7. 地图打包标准（③ 参数化的落地铁件，S30 执行面）
+## 7. 地图打包标准 → 见 21 号规范
 
-**总纲「不手写像素：声明意图/数据，引擎算坐标」落到地图**：一张图 = **一个描述符**，
-加图 / 换图 / 改环几何 = **改描述符 + 一条命令**，不改 Rust、不散改多份 JSON。
+**总纲「不手写像素：声明意图/数据，引擎算坐标」落到地图**（一张图 = 一个可分发的自包含包、
+换图 = 装包 + 切包）的**格式 / 清单字段 / 版本兼容 / 完整性 / 运行期加载契约 / 失败回退**，
+唯一事实源 = [`21_map_package_spec.md`](21_map_package_spec.md)；本文只保留总纲与三档定位。
 
-| 件 | 角色 | 说明 |
-|---|---|---|
-| `assets/maps/<id>.json` | 逐图内容唯一事实源 | `board`（格序 + 岛型 `isle`）→ `board.json maps.<id>`；`isle_assets`/`central_asset` → 资产登记校验 |
-| `assets/maps/_template.json` | main_map 共享版面 | `ring`（环心/R/卡宽高）+ `world_canvas`/`island_home`/`deck_*`（CTA·键位）+ manifest focus/bbox_pct·beats → `scenes.json main_map` + `scene_manifest_v3.json main_map` |
-| `scripts/map_pack.py` | 幂等生成器 | `sync` 展开描述符/模板 → 上面各文件（`indent=1` 规范形，逐字节幂等）；`--check` 只读对账（board/scenes/manifest 漂移 或 资产缺登记 ⇒ 非 0）；`add <id>` 骨架 |
+| 角色 | 落点 |
+|---|---|
+| 地图包**格式与流程**规范 | [`21_map_package_spec.md`](21_map_package_spec.md)（§1~§12） |
+| 打包工具 | `scripts/map_pack.py`（`pack`/`verify`/`install`/`uninstall`/`list`/`check`；台账见 `14_tooling_catalog.md` §3.2） |
+| 已装包 / 可分发件 | `assets/maps/<id>/`（已装态，运行期直读）/ `dist/maps/<id>.map-pack/`（可分发件） |
 
-**几何数据驱动**：环形棋盘几何 = `scenes.json main_map.ring.*`（`extra_scalar` 点号键）；
-呈现层 `chrome::ring_geom` 读它，缺键才回退常量 ⇒ **改环几何只改模板，不动 Rust**。
-卡面/中央岛资产按命名约定 `isle_<isle_id>.png` / `island_home_<map_id>.png`（`isle_id`/`map_id`
-来自数据）⇒ **加岛型 / 加图不改 Rust**（缺图由 `asset_present` 判 → 回退）。
+**几何数据驱动**（不变）：环形棋盘几何 = `main_map.ring.*`（`extra_scalar` 点号键）；
+呈现层 `chrome::ring_geom` 读它，缺键才回退常量 ⇒ 改环几何只改数据，不动 Rust。
+卡面/中央岛资产按命名约定 `isle_<isle_id>.png` / `island_home_<map_id>.png`（id 来自数据）
+⇒ 加岛型 / 加图不改 Rust。
 
-**工作流**：加新图 → `python scripts/map_pack.py add m04`（骨架）→ 补 `board.spaces`（格序/岛型）+
-生成 `isle_*.png`/`island_home_m04.png` 并登记 `ui_manifest.json` → `python scripts/map_pack.py sync` →
-`python scripts/map_pack.py --check`（对账）。改环几何/CTA → 改 `_template.json` + `sync`。

@@ -103,6 +103,13 @@
 其 UI chrome/命中改走 S29.1~S29.2 的 bevy_ui + picking；S28.6 副本场景 UI 直接 bevy_ui 建（S29.3）。
 **依赖调整**：S27.4 不再前置「S29.1 求解器」，改前置「S29.2 命中层」（若命中要 picking）。
 
+**与 S31 地图包的关系（S27.4 之后）**：地图 = **参数化**档（③）——环几何/焦点/CTA 等参数
+**来自已装包内 `layout.json`**（`assets/maps/<id>/`；规范
+[`21_map_package_spec.md`](21_map_package_spec.md)），运行期经 `ti_core::data` 可注入源切换
+（`activate_pack(id)`），`scenes.json` 为内嵌默认包。
+⇒ **换图只换包不改 Rust**；本文「游戏世界保持 1080 正交 + 数据驱动」的口径不变（数据源从
+`scenes.json` 扩为「包优先、默认包兜底」）。
+
 ### 4.1 S29.1 模块拆分（执行拆分：模块 / 职责 / 步骤）
 
 **模块与职责（一个文件 = 一个职责，02_conventions §9）**：

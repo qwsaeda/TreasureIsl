@@ -1,0 +1,459 @@
+{
+ "schema": "map-pack/1",
+ "id": "m01",
+ "version": "1.0.0",
+ "data_version": "board-v5",
+ "central_asset": "island_home_m01",
+ "isle_assets": [
+  "boss_fort",
+  "harbour",
+  "lighthouse",
+  "lightship",
+  "pirate_lair",
+  "shipyard",
+  "skull_cliff",
+  "trading_post",
+  "volcano",
+  "wreck"
+ ],
+ "map": {
+  "grid_w": 20,
+  "grid_h": 20,
+  "spaces": [
+   {
+    "cell": [
+     10,
+     0
+    ],
+    "group": 1,
+    "kind": "start",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     11,
+     1
+    ],
+    "group": 1,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "harbour"
+   },
+   {
+    "cell": [
+     13,
+     1
+    ],
+    "group": 1,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "harbour"
+   },
+   {
+    "cell": [
+     15,
+     2
+    ],
+    "group": 3,
+    "kind": "event",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     16,
+     3
+    ],
+    "group": 2,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "lighthouse"
+   },
+   {
+    "cell": [
+     17,
+     5
+    ],
+    "group": 2,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "lighthouse"
+   },
+   {
+    "cell": [
+     18,
+     6
+    ],
+    "group": 4,
+    "kind": "card",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     18,
+     8
+    ],
+    "group": 3,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "wreck"
+   },
+   {
+    "cell": [
+     18,
+     10
+    ],
+    "group": 3,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "wreck"
+   },
+   {
+    "cell": [
+     18,
+     12
+    ],
+    "group": 5,
+    "kind": "treasure",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     18,
+     13
+    ],
+    "group": 4,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "pirate_lair"
+   },
+   {
+    "cell": [
+     17,
+     15
+    ],
+    "group": 4,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "pirate_lair"
+   },
+   {
+    "cell": [
+     15,
+     16
+    ],
+    "group": 3,
+    "kind": "event",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     14,
+     17
+    ],
+    "group": 5,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "shipyard"
+   },
+   {
+    "cell": [
+     12,
+     18
+    ],
+    "group": 5,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "shipyard"
+   },
+   {
+    "cell": [
+     10,
+     18
+    ],
+    "group": 6,
+    "kind": "boss",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     9,
+     18
+    ],
+    "group": 6,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "trading_post"
+   },
+   {
+    "cell": [
+     7,
+     18
+    ],
+    "group": 6,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "trading_post"
+   },
+   {
+    "cell": [
+     5,
+     17
+    ],
+    "group": 3,
+    "kind": "event",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     4,
+     16
+    ],
+    "group": 7,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "skull_cliff"
+   },
+   {
+    "cell": [
+     2,
+     15
+    ],
+    "group": 7,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "skull_cliff"
+   },
+   {
+    "cell": [
+     1,
+     13
+    ],
+    "group": 5,
+    "kind": "treasure",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     1,
+     12
+    ],
+    "group": 8,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "volcano"
+   },
+   {
+    "cell": [
+     1,
+     10
+    ],
+    "group": 8,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "volcano"
+   },
+   {
+    "cell": [
+     1,
+     8
+    ],
+    "group": 4,
+    "kind": "card",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     1,
+     6
+    ],
+    "group": 9,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "lightship"
+   },
+   {
+    "cell": [
+     2,
+     5
+    ],
+    "group": 9,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "lightship"
+   },
+   {
+    "cell": [
+     3,
+     3
+    ],
+    "group": 10,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "boss_fort"
+   },
+   {
+    "cell": [
+     4,
+     2
+    ],
+    "group": 10,
+    "kind": "territory",
+    "terrain": "L",
+    "isle": "boss_fort"
+   },
+   {
+    "cell": [
+     6,
+     1
+    ],
+    "group": 3,
+    "kind": "event",
+    "terrain": "L"
+   },
+   {
+    "cell": [
+     8,
+     1
+    ],
+    "group": 4,
+    "kind": "card",
+    "terrain": "L"
+   }
+  ]
+ },
+ "layout": {
+  "ring": {
+   "center_x": 540,
+   "center_y": 784,
+   "radius": 480,
+   "card_w": 96,
+   "card_h": 120
+  },
+  "world_canvas": {
+   "x": 11,
+   "y": 250,
+   "w": 1048,
+   "h": 1056
+  },
+  "island_home": {
+   "x": 160,
+   "y": 400,
+   "w": 760,
+   "h": 760
+  },
+  "hint": {
+   "x": 540,
+   "y": 1760
+  },
+  "deck_trade": {
+   "x": 48,
+   "y": 1608,
+   "w": 312,
+   "h": 136
+  },
+  "deck_sell": {
+   "x": 384,
+   "y": 1608,
+   "w": 312,
+   "h": 136
+  },
+  "deck_build": {
+   "x": 720,
+   "y": 1608,
+   "w": 312,
+   "h": 136
+  },
+  "focus_anchor": {
+   "type": "world_canvas",
+   "bbox": {
+    "x": 11,
+    "y": 250,
+    "w": 1048,
+    "h": 1056
+   }
+  },
+  "focus_bbox_pct": {
+   "x": 1,
+   "y": 13,
+   "w": 97,
+   "h": 55
+  }
+ },
+ "strings": {
+  "glmapm01.Map": "海图一"
+ },
+ "assets": [
+  {
+   "file": "assets/ui/isle_boss_fort.png",
+   "source": "pool",
+   "sha256": "a9956aaf733a5e5656bc647cc564c71afdf5b1ab6d8c1f085aa3f04ebd6d6df3",
+   "bytes": 617354
+  },
+  {
+   "file": "assets/ui/isle_harbour.png",
+   "source": "pool",
+   "sha256": "5ce2da7e89e55e96d2cd1f22d8406c0a6849935ffc303472317d9b780cf23271",
+   "bytes": 609735
+  },
+  {
+   "file": "assets/ui/isle_lighthouse.png",
+   "source": "pool",
+   "sha256": "7ea10d08747f91ce229dad0d14d9b0c1d9043d0a620f3045ab304aba6ef4a601",
+   "bytes": 573351
+  },
+  {
+   "file": "assets/ui/isle_lightship.png",
+   "source": "pool",
+   "sha256": "5e399b32b71610353f088b5d72db4da7614037b9a6b5cfb302d10fcaf32dc952",
+   "bytes": 578525
+  },
+  {
+   "file": "assets/ui/isle_pirate_lair.png",
+   "source": "pool",
+   "sha256": "8c46c5854d65fdb9b4e73af3f6c73784dee8de67f11c1553353147624eb322cb",
+   "bytes": 580899
+  },
+  {
+   "file": "assets/ui/isle_shipyard.png",
+   "source": "pool",
+   "sha256": "7cdd4936d4590a4b76af69627d032a73ca5990809008774261e180898fc9f8cd",
+   "bytes": 613608
+  },
+  {
+   "file": "assets/ui/isle_skull_cliff.png",
+   "source": "pool",
+   "sha256": "c4a56d49242b8b85cdf12abcb777fa5c7c1c14d52a9713f96f74aae49fdf5e55",
+   "bytes": 594393
+  },
+  {
+   "file": "assets/ui/isle_trading_post.png",
+   "source": "pool",
+   "sha256": "0639c0152f4486cc9035ac0603b6e9e8d95ce420708b7c9b62d5cf828d31e565",
+   "bytes": 622441
+  },
+  {
+   "file": "assets/ui/isle_volcano.png",
+   "source": "pool",
+   "sha256": "93df4f6666c8122fd6f7037e2ababaaeaf9a2e3c96f07fa05924942ab908f5ea",
+   "bytes": 587719
+  },
+  {
+   "file": "assets/ui/isle_wreck.png",
+   "source": "pool",
+   "sha256": "e0ce78fc4a0b877ce5f732a6013c3eab9fb4b738bcc86a74cad6aa3d870c787e",
+   "bytes": 651010
+  },
+  {
+   "file": "assets/ui/island_home_m01.png",
+   "source": "pool",
+   "sha256": "fef5178474e61f71279b9a9d5f04661f6fa93849366a412731f9acc70aa0bb73",
+   "bytes": 1226619
+  }
+ ],
+ "invariants": {
+  "spaces": 31,
+  "start": 1,
+  "territory": 20,
+  "boss": 1
+ }
+}

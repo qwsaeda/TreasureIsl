@@ -1,0 +1,44 @@
+# S31.2 运行期换图（规格 §7 选 B 契约·数据注入层）— 验收证据
+# 判据：7 项集成测试 + TI_MAP 切包出图 0 硬错误 + 缺包回退 0 panic + build_wasm 4e 部署链
+# 采集：2026-10-28
+
+## 1. 数据注入层（crates/ti-core/src/data/）
+- map_pack.rs（新）：MapPackTables 包路径直读（manifest.json 校验 schema=map-pack/1 +
+  data_version=board-v5 + id=目录名，三拒）；available_pack_ids / default_pack_id（.default 指针）；
+  read_pack_tables 三段 = 内嵌默认表 upsert 包段（board=maps.<id> / scenes=main_map 场景键 /
+  strings 顶层键；**保留其余内嵌图/场景/文案，只替换本包段**——注入 m02 不丢 m01/m03，
+  否则默认选 m01 时 board.json 缺 m01 赛道 = 硬错误，首测即抓到已修）
+- table_source.rs（新）：注入接缝（首访前 install 生效 / 迟注入忽略 + eprintln 告警；
+  board()/scenes()/strings() 三访问器 hook table_text，未注入 = 内嵌 0 行为变化）
+- board.rs / layout.rs / strings.rs：三访问器解析前查 table_source::table_text
+
+## 2. 壳接线（crates/ti-engine/src/bin/treasure_bevy.rs）
+apply_map_pack：TI_MAP=<id> 环境变量 > .default 指针包 > 纯内嵌默认（0 行为变化）；
+逐段 precheck（缺段/非对象 = 该段回退内嵌）；须先于 GameApp 构造 / 任何表访问。
+main() 参数解析抽 Args::parse（main 141→<140 行，audit_code 函数长度预算合规）。
+
+## 3. 集成测试（crates/ti-core/tests/map_pack.rs，7 项全过）
+pack_manifest_rejects_bad_schema / _bad_data_version / _id_mismatch（三拒）
+installed_pack_reads_three_sections / missing_pack_falls_back_to_embedded /
+available_ids_and_default_pointer / install_before_first_access_wins
+
+## 4. 运行期切包出图（native 真跑，2026-10-28）
+- TI_MAP=m02 --shot --scene=main_map → [map-pack] 已注入 m02（显式；board/scenes/strings 段注入）
+  + 主地图真渲染（bevy_ui probe node=5）0 硬错误
+- TI_MAP=m03 同口径过；无 TI_MAP → 默认包指针 m01 注入过
+- TI_MAP=zz_missing → [map-pack] 缺包/不合规 ⇒ 内嵌默认包（§6 回退，0 panic，index 正常渲染）
+- evidence/bevy_native_main_map.png 出图非黑像素 2056308（main_map 真渲染）
+
+## 5. 部署链（scripts/build_wasm.ps1 4e 段）
+assets/maps/<id>/*.json + .default → web/assets/maps/（Parser 语法自检 OK；
+wasm 侧 fetch 运行期读取 = 残留 S31.2b）
+
+## 6. 残留（S31.2b，台账已注）
+select_map 包列表 UI + 切包后 GameApp 会话重建 + wasm fetch 运行期读取
+（v1 只落数据注入层 + 部署链；UI/fetch 归后续，避免与并行 S28 同文件冲突）
+
+## 7. 门禁
+cargo fmt/clippy -D 0 + 全 workspace test 全绿（fps 环境项除外）+ 7 项新测试过
++ audit_code 函数长度合规 + check_hardcode 豁免登记（data/map_pack + table_source 诊断）
++ doccheck/doccheck2 0 error + gate 全绿（s43_fps_smoke = VM 环境项非本次引入）
+⇒ S31.2 verified

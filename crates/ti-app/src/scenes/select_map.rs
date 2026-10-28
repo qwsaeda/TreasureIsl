@@ -202,5 +202,20 @@ impl Scene for SelectMapScene {
                 }
             }
         }
+        // S31.2b：地图包标记（`table_source` 注入的已装包清单；未注入 = 走内嵌 3 槽旧流，
+        // 本段 0 行为变化）。标记 = 当前选中行若对应槽位在已装包清单内 ⇒ 画金色底边条
+        // （「此图有地图包直读」的可见信号；行序 = `MapSlot` 槽序，包 id 与槽位同键空间）。
+        let packs = host.map_pack_ids();
+        let active = host.active_map_pack();
+        if packs.is_some() && active.is_some() {
+            if let Some(current_row) =
+                MapSlot::from_index(u32::try_from(current.saturating_add(1)).unwrap_or(0))
+            {
+                if packs.iter().any(|list| list.iter().any(|p| p == current_row.id())) {
+                    let r = layout.list.item_rect(current);
+                    host.fill_rect(r.x, r.y + r.h - 4, r.w, 4, chrome::COLOR_GOLD_WARM);
+                }
+            }
+        }
     }
 }
