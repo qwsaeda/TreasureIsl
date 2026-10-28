@@ -1,6 +1,7 @@
 //! 角色选择场景（S9 骨架）：输入判定 / 拾取命中 / 绘制三面全部落在本文件。
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::selection::Character;
+use ti_core::rules::selection;
 
 use crate::game_app::{GameInput, HitData};
 use crate::scenes::chrome;
@@ -92,21 +93,23 @@ impl Scene for SelectRoleScene {
             return false;
         }
         let i = usize::try_from(hit.index.max(0)).unwrap_or(0);
-        let picked = Character::from_index(u32::try_from(i).unwrap_or(0));
-        host.set_character(picked);
-        host.selection_mut().character = picked;
+        let Some(picked) = Character::from_index(u32::try_from(i).unwrap_or(0)) else {
+            return false;
+        };
+        host.set_character(Some(picked));
+        host.selection_mut().character = Some(picked);
         chrome::flash_press();
-        // S28.4：行点击 = toggle 玩家席位标记（`seat_toggle` 不变量：≥1 玩家席，0 选被拒）；
-        // 完成确认仍走 `Confirm`（键盘 / 其他入口，单/多选同一路径，既有流程 0 回归）。
+        // S28.4 多选玩家席（territory.md §1）：行点击 = 切换玩家席标记
+        // （`rules::selection::seat_toggle` 不变量：≥1 玩家席；0 选被拒），
+        // 完成确认仍走 `Confirm` 键（既有选角流程 0 回归：单点 Confirm 直进）。
         let mut marks = host.player_seats();
-        let count = u32::try_from(ti_core::domain::selection::Character::count()).unwrap_or(5);
-        match ti_core::rules::selection::seat_toggle(&mut marks, picked, count) {
-            ti_core::domain::flow::Sfx::Press => {
-                host.set_player_seats(marks);
-            }
-            other => host.play_sfx(other),
+        let count = Character::count();
+        let sfx = selection::seat_toggle(&mut marks, picked, count);
+        if sfx == Sfx::Press {
+            host.set_player_seats(marks);
         }
-        false
+        host.play_sfx(sfx);
+        host.advance(GameInput::Confirm)
     }
 
     /// S18.7d 声明式原语化：版面（夜空 / 左角色立绘锚 / 右 5 行选项 / 提示行）=

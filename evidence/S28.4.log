@@ -1,0 +1,32 @@
+# S28.4 验收证据（task_close.py 自动生成 2026-10-28）
+
+- 任务标题：选角 ≥1 玩家 + 4 AI 席位：rules/selection 多选席位（players+ai=5）+ 选角 UI 多选态（已选/未选=AI 徽记）+ 热座「开始回合」交接提示
+- 判据（台账 dod）：改动面=业务规则=无（席位规则 = territory.md §1）| 数据=assets/data/strings.json（席位/AI/交接提示）| 规则=crates/ti-core/src/rules/selection.rs（SeatSet：选 ≥1 → 补 AI 至 5；顺序 = characters[].index）| 表现=crates/ti-app/src/scenes/select_role.rs（多选 + AI 徽记）+ main_map.rs（热座交接确认）| 资产=无；跨模块原因=选角界面（表现）与席位拆分（规则）必须同批，否则选了 2 人仍按 1 人开局；判据=单测（选 1 ⇒ 4 AI / 选 3 ⇒ 2 AI / 选 5 ⇒ 0 AI / 席位顺序 = index 升序 / 0 选被拒）+ e2e 选角多选 + 热座交接提示出现 + 既有选角流程 0 回归 + gate 全绿 + evidence/S28.4.log
+
+## 判据实跑
+
+### `$ cargo test -q -p ti-app --test app_seats_e2e`
+
+退出码：0
+
+```
+
+running 3 tests
+...
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+```
+
+### `$ cargo test -q -p ti-app --test e2e_playthrough`
+
+退出码：0
+
+```
+
+running 8 tests
+........
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

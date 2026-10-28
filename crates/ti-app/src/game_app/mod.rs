@@ -242,7 +242,7 @@ pub struct GameApp {
     pub last_ai_toast: Option<String>,
     /// S28.4 玩家席位标记（`territory.md` §1：触摸行点选 toggle；空 = 单选旧流回退
     /// 主角色单席；非空 = 多选玩家席 + 其余自动 AI，`rules::selection::seat_pool`）。
-    pub seat_marks: Vec<ti_core::domain::selection::Character>,
+    pub seat_marks: Vec<Character>,
     /// S28.6 待确认的副本入口（`Some(格序号)` = 落格提示在位，主地图 `Confirm` 进副本战；
     /// 再次摇骰 / 其他行动 = 自动清除（新落格覆盖，territory.md §4 玩家选择权））。
     pub pending_dungeon: Option<u32>,

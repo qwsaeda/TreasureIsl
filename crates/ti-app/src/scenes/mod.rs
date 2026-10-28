@@ -490,12 +490,12 @@ pub trait MapHost {
     }
 
     /// S28.4 玩家席位标记（`territory.md` §1；空 = 单选旧流；fake 宿主缺省空）。
-    fn player_seats(&self) -> Vec<ti_core::domain::selection::Character> {
+    fn player_seats(&self) -> Vec<Character> {
         Vec::new()
     }
 
     /// S28.4 玩家席位标记写入（`select_role` 触摸行点选 toggle 后回写）。
-    fn set_player_seats(&mut self, _seats: Vec<ti_core::domain::selection::Character>) {}
+    fn set_player_seats(&mut self, _seats: Vec<Character>) {}
 
     /// S28.6 是否正在领地主副本战斗（`vs` 场景 Back 路由：副本 = 回主地图，BOSS 战 = 回主菜单）。
     fn in_dungeon_battle(&self) -> bool {

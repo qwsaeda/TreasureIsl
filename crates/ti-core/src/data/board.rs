@@ -13,6 +13,7 @@ use std::sync::OnceLock;
 use serde::Deserialize;
 
 use super::{BOARD_JSON, LoadError, parse};
+use super::{map_pack, table_source};
 
 /// 赛道空间（`board.json` 的 `spaces[]` 一项）。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,7 +90,10 @@ pub fn board() -> Result<&'static BoardDb, LoadError> {
     if let Some(v) = BOARD.get() {
         return Ok(v);
     }
-    let value = parse(BOARD_JSON, "board.json")?;
+    let value = parse(
+        table_source::table_text(map_pack::table_key::BOARD, BOARD_JSON).as_ref(),
+        "board.json",
+    )?;
     let raw: RawDb = serde_json::from_value(value)
         .map_err(|e| LoadError::Schema(format!("board.json bad shape: {e}")))?;
     let mut maps = BTreeMap::new();

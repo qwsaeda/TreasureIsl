@@ -13,6 +13,7 @@ use ti_core::domain::selection::MapSlot;
 use ti_core::rules::board::{BoardSession, BossTrigger, Landing, Track, Turn};
 use ti_core::rules::cards_draw;
 use ti_core::rules::main_map::MapSession;
+use ti_core::rules::selection;
 use ti_core::rules::territory::{
     DungeonOutcome, SeatIdx, SeatPool, SettleAction, SiegeOutcome, TerritoryApply, TerritoryRules,
     TerritoryState, TurnCycle,
@@ -196,7 +197,7 @@ impl GameApp {
         let pool = if self.seat_marks.is_empty() {
             SeatPool::build(&[player_idx.min(4)])
         } else {
-            ti_core::rules::selection::seat_pool(&self.seat_marks)
+            selection::seat_pool(&self.seat_marks)
         };
         let mut cycle = TurnCycle::new(&pool);
         // 当前席 = 最低序号玩家席（确定性开局，§1 顺序 = index 升序）
@@ -254,12 +255,19 @@ impl GameApp {
             self.turn_cycle.advance();
         }
         self.territory = Some(terr);
-    
+
         // S28.4 热座交接（§1）：轮转到玩家席 + 玩家 ≥2 ⇒ 交接提示（`last_ai_toast` 通道展示）
-        let players: u8 = (0..5u8).filter(|i| self.turn_cycle.is_player_seat(*i)).count() as u8;
+        let players = u8::try_from((0..5u8).filter(|i| self.turn_cycle.is_player_seat(*i)).count())
+            .unwrap_or(0);
         if players >= 2 && self.turn_cycle.is_player_seat(self.turn_cycle.current) {
-            self.last_ai_toast = Some(crate::i18n::sget("scene.main_map.toast.handoff").to_string());
-        }}
+            let hint = crate::i18n::sget("scene.main_map.toast.handoff");
+            self.last_ai_toast = if hint.contains("scene.main_map") {
+                Some("热座交接：轮到玩家席（按确认摇骰开始回合）".to_string())
+            } else {
+                Some(hint.to_string())
+            };
+        }
+    }
 
     /// S28.7 席位金币入账（钳制 `balance.economy.gold_max`；§1 席位独立经济）。
     fn credit_seat_gold(&mut self, seat: SeatIdx, amount: u32, bal: &data::Balance) {

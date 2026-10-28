@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use super::{
     AmbientStar, ListLayout, LoadError, Primitive, Rect, SCENES_JSON, SCHEMA_VERSION_KEY,
-    SceneLayout, parse,
+    SceneLayout, map_pack, parse, table_source,
 };
 
 static SCENES: OnceLock<BTreeMap<String, SceneLayout>> = OnceLock::new();
@@ -21,7 +21,10 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
     if let Some(v) = SCENES.get() {
         return Ok(v);
     }
-    let raw_map: BTreeMap<String, serde_json::Value> = parse(SCENES_JSON, "scenes.json")?;
+    let raw_map: BTreeMap<String, serde_json::Value> = parse(
+        table_source::table_text(map_pack::table_key::SCENES, SCENES_JSON).as_ref(),
+        "scenes.json",
+    )?;
     let mut raw = BTreeMap::new();
     for (k, v) in raw_map {
         if k == SCHEMA_VERSION_KEY {

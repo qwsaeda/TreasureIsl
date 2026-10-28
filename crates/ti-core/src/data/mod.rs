@@ -18,7 +18,9 @@ use balance::RawBalance;
 mod controls;
 mod exhaust;
 mod layout;
+pub mod map_pack;
 mod strings;
+pub mod table_source;
 mod ui_icons;
 
 // re-export（保持 `ti_core::data::*` 公共 API 不变）
@@ -28,6 +30,7 @@ pub use controls::controls;
 pub use exhaust::{ExhaustScenarios, exhaust, exhaust_key_counts};
 pub use layout::scenes;
 pub use strings::{pairs, strings};
+pub use table_source::{PackTables, install as install_pack_tables, source_id};
 pub use terrain::{TerrainDb, TerrainLegend, TerrainMap, terrain};
 pub use ui_icons::{HudIcon, IconDef, IndexMenuIcon, UiIconBindings, UiIcons, icon_ids, ui_icons};
 

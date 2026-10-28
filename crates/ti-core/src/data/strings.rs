@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
-use super::{LoadError, SCHEMA_VERSION_KEY, STRINGS_JSON, Strings, parse};
+use super::{LoadError, SCHEMA_VERSION_KEY, STRINGS_JSON, Strings, map_pack, parse, table_source};
 
 static STRINGS: OnceLock<Strings> = OnceLock::new();
 /// 文案键值对快照（首次调用解析，之后命中缓存）；供 i18n 遍历用。
@@ -24,7 +24,10 @@ pub fn strings() -> Result<&'static Strings, LoadError> {
     if let Some(v) = STRINGS.get() {
         return Ok(v);
     }
-    let raw: BTreeMap<String, serde_json::Value> = parse(STRINGS_JSON, "strings.json")?;
+    let raw: BTreeMap<String, serde_json::Value> = parse(
+        table_source::table_text(map_pack::table_key::STRINGS, STRINGS_JSON).as_ref(),
+        "strings.json",
+    )?;
     let mut map = BTreeMap::new();
     for (k, v) in raw {
         if k == SCHEMA_VERSION_KEY {
@@ -46,7 +49,8 @@ pub fn strings() -> Result<&'static Strings, LoadError> {
 
 /// 仅供 [`pairs`] 使用的「加载或回退空表」入口（`pairs` 非 Result 语义）。
 fn load_strings_table() -> Strings {
-    match parse::<BTreeMap<String, serde_json::Value>>(STRINGS_JSON, "strings.json") {
+    let text = table_source::table_text(map_pack::table_key::STRINGS, STRINGS_JSON);
+    match parse::<BTreeMap<String, serde_json::Value>>(text.as_ref(), "strings.json") {
         Ok(raw) => {
             let mut map = BTreeMap::new();
             for (k, v) in raw {

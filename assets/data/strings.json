@@ -169,14 +169,6 @@
  "scene.main_map.toast.ai_upgrade_fmt": "{0} は {1} を強化し {2} 級に",
  "scene.main_map.toast.dungeon_fmt": "落入无主 {0}：确认键进入副本（胜利 = 占领）",
  "scene.main_map.toast.dungeon_fail": "副本失败，現状維持",
- "scene": {
-  "main_map": {
-   "toast": {
-    "handoff": "热座交接：轮到玩家席（按确认摇骰开始回合）"
-   }
-  },
-  "select_role": {
-   "seat_hint": "点行标记玩家席；未标记 = AI 对手"
-  }
- }
+ "scene.main_map.toast.handoff": "热座交接：轮到玩家席（按确认摇骰开始回合）",
+ "scene.select_role.seat_hint": "点行标记玩家席；未标记 = AI 对手"
 }
