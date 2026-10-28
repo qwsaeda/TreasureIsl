@@ -793,7 +793,30 @@ fn render_v5_ring(
     if host.build_panel_open() {
         render_build_panel(host);
     }
+    // 7) 摇骰 CTA 轴心骰点（`dice.png`；S27.5 用户报「没有筛子」= CTA 只有空舵轮；
+    // 舵轮本体 = `scenes.json` 原语（更早画），此处补轴心骰点，与卡环区无重叠）。
+    render_spin_die(host, layout);
     render_board_toast(host);
+}
+
+/// S27.5 摇骰 CTA 轴心骰点（`dice.png`，1080 游戏世界层）。
+///
+/// 摇骰按钮本体贴图 = `scenes.json` 原语（`deck_spin` 区域），这里只补轴心上的
+/// 骰点（用户 2026-10-28 报「没有筛子」= CTA 只有空舵轮，看不见骰子，不知能否摇）。
+///
+/// 资产来源 = `assets/ui/dice.png`（`ui_manifest.json` `dice` role=board，S21.1
+/// 入仓但此前零消费）。缺图 = 不画（不抛异常）。
+fn render_spin_die(host: &mut dyn SceneHost, layout: &SceneLayout) {
+    let Some(rc) = layout.extra.get(chrome::keys::DECK_SPIN) else {
+        return;
+    };
+    if !chrome::asset_present(chrome::DICE_ASSET) {
+        return;
+    }
+    let edge = rc.w * chrome::DICE_EDGE_RATIO / 100;
+    let dx = rc.x + (rc.w - edge) / 2;
+    let dy = rc.y + (rc.h - edge) / 2;
+    host.blit_image(chrome::DICE_ASSET, dx, dy, edge, edge);
 }
 
 /// S27.4 v5 单卡绘制：领地格 = `isle_<id>.png` 整幅卡面；功能格 / 缺图 = 羊皮卡底 + `node_` 牌。

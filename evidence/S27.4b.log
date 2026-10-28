@@ -1,0 +1,44 @@
+== S27.4b 主地图命中数据面修复（用户 2026-10-28 报「没有筛子，玩不了」）==
+日期: 2026-10-28
+
+[1] 判据：ti-app 回归 main_map_pick_e2e（数据面 4 键 + 矩形非空 + poll_hit(key=4)→roll>0 + 未知键不摇）
+exit=0
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+[2] 判据：doccheck2 0 error（含新增 ①b 逐场景必需 pick_key 校验）
+exit=0
+doccheck2: 5 error(s) across 38 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention)
+
+[3] 反向验证：临时抽掉 main_map pick_key=4 → 门禁必须精确报错 → 恢复后 0 error
+broken run: exit=1, caught=True
+  msg: ERROR scenes.json \main_map\ 缺 \pick_key=4\（命中数据面缺失 = 该键不可点；S27.5 教训）
+restored run: exit=0
+
+[4] 判据：--shot main_map 出图（竞态修复 v2 = 预载治本后）：
+  根因链：finish_shot 判据「非空」截到 clear 色全幅帧（EXP-127）→ 判据升级「非空 且 非纯色
+  帧」后仍拦不住**半成品帧**（冷启动部分资产已上屏部分缺席）→ 治本 = run_shot 全量预载
+  assets/ui/ + assets/fonts/（66 个资产），shot_preload_poll 全部 Loaded 才放行截图，
+  热身循环上限 60→1800。
+  验证（各场景冷启动实测）：
+  - main_map: preload ready tick=291，无 readback WARN，PNG mtime 新鲜；
+    CTA=(234, 176, 62) die_bright=3702/6241 center=(190, 208, 205) probe node=0
+  - index:   preload ready tick=329，PNG 新鲜，center=(243, 203, 95) 金色 ✓
+  - saveload: preload ready tick=354，PNG 新鲜 ✓
+  - vs:      preload ready tick=366，PNG 新鲜，缩略 4303 唯一色（内容丰富）✓
+  - 骰点连续 5 次 run CTA 恒 (234,176,62)、骰区亮像素 3702~5489（dice.png 上屏）
+  - 验证据口径：须核 PNG mtime（write_shot_png 无读回时提前 return，磁盘会留上一轮陈旧图）
+  出图: evidence/bevy_native_main_map.png + CTA 特写 evidence/bevy_native_main_map_cta_crop.png
+
+[5] 判据：map_pack 对账（scenes.json 改动不破坏包同步）
+exit=0
+map_pack check: 0 漂移（3 个已装包 vs board.json；默认包 m01 vs 布局数据）
+
+[6] 门禁：见文件末尾 gate 段（task_close 后补齐）
+[7] 用户视觉签收（A 纪律，00_index §UI 视觉改动 + EXP-114）：
+用户 2026-10-29 过目 evidence/bevy_native_main_map.png + CTA 特写后签收「通过」。
+遗留缺陷（不属本任务范围，归 S27.5 缺陷清单）：中央据点岛未渲染 / 环上纯黑卡面 /
+舵轮下深蓝小矩形。
+[8] 门禁（gate.ps1，全量）：1 failure = cargo test --workspace 内 s43_fps_smoke
+desktop_60fps_with_dirty_rect_skip（已知 VM 环境项，4 核 i5-7500 + GTX 1050 Ti 跑不满 60fps
+判据，与本次改动无关，历轮 gate 同口径豁免）；其余 27 项全 PASS（含 doccheck2 0 error
+逐场景必需 pick_key 校验 + 视觉签收留痕 + 渲染对拍 0 超差 0 LSB）。

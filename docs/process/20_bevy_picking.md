@@ -63,7 +63,7 @@
 - 行定义类原语（无 `item`）须显式给 `pick_index`（例：列表行底框 = 行下标）。
 - 命中键约定（ti-app 解释，opaque 键）：`1` = index 罗盘环徽章；`2` = select_role/select_map 列表行；`3` = saveload 槽位；
   `4/5/6/7` = 主地图 HUD（摇骰/买/卖/建造）。**键语义不在 ti-engine 硬编码**（`key` 是不透明数）。
-- 门禁：doccheck2 `touch-render-pair` 项守「`scenes.json` 有 `pick_key` + 场景消费 `on_hit` + `touch.rs` 几何退役 + 拾取层在位」。
+- 门禁：doccheck2 `touch-render-pair` 项守「`scenes.json` 有 `pick_key` + **逐场景必需键集合**（`index`↔1 / `select_role`·`select_map`↔2 / `saveload`↔3 / `main_map`↔4·5·6·7，数据面缺键 = FAIL，S27.5 教训）+ 场景消费 `on_hit` + `touch.rs` 几何退役 + 拾取层在位」。
 
 ## 7. 坑位清单（实测）
 

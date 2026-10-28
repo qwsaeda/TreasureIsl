@@ -2222,7 +2222,8 @@
     "when": "",
     "item": -1,
     "params": {
-     "asset": "assets/ui/btn_spin.png"
+     "asset": "assets/ui/btn_spin.png",
+     "pick_key": 4
     }
    },
    {
@@ -2238,7 +2239,8 @@
     "when": "",
     "item": -1,
     "params": {
-     "asset": "assets/ui/deck_plaque.png"
+     "asset": "assets/ui/deck_plaque.png",
+     "pick_key": 5
     }
    },
    {
@@ -2287,7 +2289,8 @@
     "when": "",
     "item": -1,
     "params": {
-     "asset": "assets/ui/deck_plaque.png"
+     "asset": "assets/ui/deck_plaque.png",
+     "pick_key": 6
     }
    },
    {
@@ -2336,7 +2339,8 @@
     "when": "",
     "item": -1,
     "params": {
-     "asset": "assets/ui/deck_plaque.png"
+     "asset": "assets/ui/deck_plaque.png",
+     "pick_key": 7
     }
    },
    {

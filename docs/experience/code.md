@@ -565,3 +565,10 @@ S24.0（约 6 个阶段）。连带影响：S21 用户评审「main_map 界面�
 **机器兜底**：gate `validate_data.py` `check_scenes_canonical`（第 10a 项）守「scenes.json 须 indent=1 逐字节规范形」——任何整文件重排缩进/改键序 = FAIL。见 `docs/process/18_asset_content_pipeline.md` §4。
 
 **通用化**：改任何「手工维护 + 非生成物」的数据文件前，先确认其规范序列化形态（`json.dumps(loads(x)) == x` 用哪个 indent），改完用同参写出。一次性脚本（`scripts/tmp/`）尤须遵守，用完即删。
+
+### EXP-126 代码：命中数据面缺失，旧门禁只查 pick_key 字样即放行
+现象：主地图摇骰 CTA/贸易/出售/建造四键点不动，渲染正常（舵轮贴图在位）。
+根因：B1 命中几何数据化后，命中矩形唯一来源 = scenes.json 原语 params.pick_key（spawn_pick_layer 只认 >0 键）；main_map 场景数据面 0 个 pick_key ⇒ 拾取层收 0 矩形。门禁 touch-render-pair 的 ① 条只查 scenes.json 含 pick_key 子串（其他场景有即放行），场景级缺失漏抓。
+解法：数据面补 pick_key 4/5/6/7（canonical indent=1 写回）；doccheck2 加 ①b 逐场景必需键集合（index↔1 / select_role·select_map↔2 / saveload↔3 / main_map↔4·5·6·7，缺键即 FAIL）；ti-app tests main_map_pick_e2e 锚数据面 4 键 + poll_hit(key=4) → roll>0 回归。
+验证：cargo test -p ti-app --test main_map_pick_e2e 0 failed；删掉任一必需键 → doccheck2 立即报「scenes.json 场景缺 pick_key=N」。
+教训：数据驱动命中链（数据面→拾取层→on_hit）三段任何一段缺失都是静默失效，门禁必须对账「消费面用到的键 ⊆ 数据面声明的键」，不能只查文件级子串存在。

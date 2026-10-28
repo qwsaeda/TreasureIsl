@@ -3,7 +3,6 @@
 //! 差分基准 = 从 `legacy/docs/spec/*.md` 伪代码直译的纯函数，供 `tests/diff_*.rs` 对账
 //! 正向实现（`rules::`）；本模块**不参与运行时**，S11 起物理归档 `legacy/` 前保留为对照基准。
 
-
 /// 菜单场景枚举。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuScene {

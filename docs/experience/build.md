@@ -123,3 +123,18 @@
 - **根因**：cargo auto-roots 会把 `src/bin/*.rs` 每个文件都探测为独立 bin；当某 bin 文件同时是另一 bin 的子模块时，作为独立 bin 编译必然缺 main / 多 super。`--all-targets`（clippy/test）才会编译到这个第 3 个被探测目标并爆错。
 - **解法**：`[package] autobins = false` 关自动探测（保留显式 `[[bin]]` 声明）。任何「bin 文件互引子模块」的布局都必须配 `autobins = false`。
 - **验证**：`cargo clippy -q --manifest-path crates/ti-engine/Cargo.toml --all-targets -- -D warnings` = exit 0；`--resizetest` 相机验算 PASS（area 1080×1920，px/unit 0.5→1.0）。
+
+### EXP-127 构建：截图判据「非空」≠「有内容」：冷启动截到相机 clear 色全幅帧静默出灰图
+现象：treasure-bevy-native --shot --scene=main_map 出全灰 (43,44,47) 图；同命令重跑又正常；index 场景正常 ⇒ 全局管线好，间歇性。\n定位：显式 TI_MAP=m01 与 .default 指针两条注入路径代码等价（default_pack_id 有 trim）；layout 子集二分 8 组全部正常——键相关性为假相关；分界点是冷/热缓存，锁 finish_shot 判据。\n根因：判据「非空」无法区分 clear 色帧与真内容帧；且无帧上限兜底。\n解法：finish_shot 判据升级「非空 且 非纯色帧」（新增 is_blank_frame：单一 RGB 占比 ≥99% = 未就绪）+ 600 帧强制退出兜底（WARN 告警）。\n验证：连跑 3 次 --shot main_map，CTA 恒 (234,176,62) + 骰点区 3702~4402 亮像素 + 无 WARN。\n教训：证据管线的判据必须区分「帧非空」与「帧有内容」；间歇性失败先分冷/热缓存再怀疑数据链。
+
+**2026-10-29 补（同题第二根因）：**「非空 且 非纯色帧」判据仍拦不住**半成品帧**——
+冷启动（二进制刚重建/VM 杀毒逐文件扫描）时资产服务器只加载了**部分**贴图，截到的帧
+部分资产上屏、部分缺席（CTA 色是中间态、中心像素发黑），既非纯色也非完整，内容判据
+照单全收。治本 = 
+un_shot 建装时把 ssets/ui/(65 png, 28MB) + ssets/fonts/
+全量 load_untyped 预载，shot_preload_poll 逐帧轮询 LoadState 全部 Loaded
+后才放行 
+equest_shot（实测 VM 冷启动 ~290 帧就绪；热身循环上限 60→1800 帧，
+原 60 帧内只加载了 31/66 就到循环上限 = readback 永远空 + write_shot_png 提前
+return 留下**上一轮的陈旧 PNG**，像素检查「看起来对」其实是旧文件——验证据必须
+对 mtime）。

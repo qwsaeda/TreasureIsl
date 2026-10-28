@@ -393,6 +393,17 @@ pub const BOAT_ASSETS: [&str; 4] = [
 /// 玩家船通用图（S21.5 入仓；当前级船图缺失时的回退链第二环 ⇒ crash-safe 不空图）。
 pub const SHIP_PLAYER_ASSET: &str = "assets/ui/ship_player.png";
 
+/// S27.5：骰子贴图（`ui_manifest.json` `dice` role=board）。
+///
+/// 用途 = 摇骰 CTA 轴心骰点（用户 2026-10-28 报「没有筛子」= CTA 只有空舵轮，
+/// 看不见骰子 ⇒ 不知能否摇）。资产自 S21.1 入仓但此前**零消费**。
+pub const DICE_ASSET: &str = "assets/ui/dice.png";
+
+/// S27.5：摇骰 CTA 骰点图边长占 `deck_spin` 矩形边长的百分比（轴心居中）。
+///
+/// 数值口径 = 264px × 30% ≈ 79px（8pt 栅格取整）。
+pub const DICE_EDGE_RATIO: i32 = 30;
+
 /// 按船等级取玩家船贴图（等级越界 = 1 级通用船）。
 #[must_use]
 pub fn boat_asset(boat_level: u8) -> &'static str {

@@ -114,17 +114,78 @@ fn store_shot(captured: On<bevy::render::view::screenshot::ScreenshotCaptured>) 
     }
 }
 
+/// S27.5：shot 模式资产预载状态（句柄清单 + 全部 Loaded 就绪旗）。
+///
+/// 根因（EXP-127 后续实测）：冷启动时截图帧阈值（40 帧）内资产服务器可能只加载了
+/// **部分**贴图 ⇒ 截到「半成品帧」（部分资产上屏、部分缺席，既非纯色也非完整，
+/// `is_blank_frame` 纯色判据拦不住）。治本 = `run_shot` 建装时先把 `assets/ui/` +
+/// `assets/fonts/` 全量 `load_untyped`，本系统逐帧轮询 `LoadState`，全部 `Loaded`
+/// （或个别 `Failed`，不死等，内容判据仍兜底）后 `ready = true`，`request_shot`
+/// 才允许请求截图。
+#[derive(Resource)]
+struct ShotPreload {
+    handles: Vec<bevy::asset::UntypedHandle>,
+    ready: bool,
+}
+
+/// S27.5：逐帧轮询预载状态（`request_shot` 前置，见 [`ShotPreload`]）。
+#[allow(clippy::needless_pass_by_value)]
+fn shot_preload_poll(
+    server: Res<bevy::asset::AssetServer>,
+    mut preload: ResMut<ShotPreload>,
+    mut tick: Local<usize>,
+) {
+    if preload.ready {
+        return;
+    }
+    *tick += 1;
+    let mut all_settled = true;
+    let mut failed = 0usize;
+    let mut hist: std::collections::BTreeMap<&'static str, usize> = std::collections::BTreeMap::new();
+    for h in &preload.handles {
+        let name = match server.load_state(h) {
+            bevy::asset::LoadState::Loaded => "Loaded",
+            bevy::asset::LoadState::Failed(_) => {
+                failed += 1;
+                "Failed"
+            }
+            bevy::asset::LoadState::Loading => "Loading",
+            bevy::asset::LoadState::NotLoaded => "NotLoaded",
+        };
+        *hist.entry(name).or_insert(0) += 1;
+        if name != "Loaded" && name != "Failed" {
+            all_settled = false;
+        }
+    }
+    if *tick % 100 == 0 {
+        eprintln!("[shot] preload tick={} hist={hist:?}", *tick);
+    }
+    if all_settled {
+        if failed > 0 {
+            eprintln!("[shot] WARN: {failed} 个预载资产 Failed（不死等，内容判据仍兜底）");
+        }
+        eprintln!("[shot] preload ready at tick={}", *tick);
+        preload.ready = true;
+    }
+}
+
 /// S18.7：请求一次离屏截图（帧数 ≥3 后）。
 #[allow(clippy::needless_pass_by_value)]
 fn request_shot(
     mut shot: ResMut<ShotDone>,
     target: Res<ShotTarget>,
     frames: Res<bevy::diagnostic::FrameCount>,
+    preload: Res<ShotPreload>,
     mut commands: Commands,
 ) {
     // S18.8b：贴图资产是**异步 IO**（资产服务器读盘）→ 截图帧阈值从 12 提到 40，
     // 否则截到的是「贴图未加载」的半成品帧。
     if shot.0 || frames.0 < 40 {
+        return;
+    }
+    // S27.5：预载未就绪 = 不截（冷启动部分资产已上屏、部分缺席 = 「半成品帧」，
+    // 纯色判据拦不住；治本 = 等 `assets/ui/` + `assets/fonts/` 全部 Loaded）。
+    if !preload.ready {
         return;
     }
     shot.0 = true;
@@ -136,11 +197,26 @@ fn request_shot(
 /// S18.8b：截图有**竞态** —— 目标纹理尚未渲染出内容就被截下时，读回是全透明的空帧，
 /// 而旧逻辑只在「非空」时退出 → 循环跑完仍写出一张空 PNG（证据静默失真）。
 /// 现改为：空帧 = **允许重截**（`ShotDone` 复位 → 下一帧重新请求），非空才退出。
+///
+/// S27.5（用户报「没有筛子」排查中实测）：**非空 ≠ 有内容** —— 冷启动（首次 build /
+/// 冷 OS 缓存）时 wgpu 管线与贴图未就绪，截到的是**相机 clear 色全幅帧**（如
+/// `(43,44,47)`），按旧判据「任一像素 >8」即算非空 → 静默写出全灰空图（`main_map`
+/// 连续两次；热缓存后同命令自愈）。判据升级为「非空 **且非纯色帧**」：单一 RGB 颜色
+/// 占比 ≥99% 视为未就绪，重截直到真内容（600 帧兜底防死循环）。
+#[allow(clippy::needless_pass_by_value)]
 fn finish_shot(
     mut exits: MessageWriter<AppExit>,
     mut shot: ResMut<ShotDone>,
+    frames: Res<bevy::diagnostic::FrameCount>,
     device: Option<Res<bevy::render::renderer::RenderDevice>>,
 ) {
+    // 兜底（S27.5）：600 帧（~10s）仍无内容帧 = 资产/渲染异常，强制退出并告警
+    // （证据可能失真——但死循环更不可接受；正常场景数帧内即就绪）。
+    if frames.0 > 600 {
+        eprintln!("[shot] WARN: 600 帧内未截到内容帧（贴图/管线未就绪？），强制退出");
+        exits.write(AppExit::Success);
+        return;
+    }
     if let Some(device) = device {
         let _ = device.wgpu_device().poll(bevy::render::render_resource::PollType::Wait {
             submission_index: None,
@@ -148,11 +224,24 @@ fn finish_shot(
         });
     }
     let Some(raw) = SHOT_READBACK.lock().ok().and_then(|g| g.clone()) else { return };
-    if raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8) {
+    let has_content = raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8)
+        && !is_blank_frame(&raw);
+    if has_content {
         exits.write(AppExit::Success);
     } else {
         shot.0 = false;
     }
+}
+
+/// S27.5：纯色帧判定（单一 RGB 颜色占比 ≥99% = 相机 clear 色未就绪帧）。
+fn is_blank_frame(raw: &[u8]) -> bool {
+    let mut counts: std::collections::HashMap<[u8; 3], u32> = std::collections::HashMap::new();
+    let mut total: u32 = 0;
+    for c in raw.chunks_exact(4) {
+        *counts.entry([c[0], c[1], c[2]]).or_insert(0) += 1;
+        total += 1;
+    }
+    counts.values().copied().max().is_some_and(|max| max * 100 >= total * 99)
 }
 
 /// S18.7：**Bevy 原生 index 场景**实体（`scene_render::IndexScene`）。
@@ -501,17 +590,15 @@ fn build_scene_chrome(
         SceneKind::SelectMap => Some(build_select_map_chrome(commands, font, g)),
         SceneKind::Index => build_index_chrome(commands, server, font, g),
         SceneKind::Message => Some(build_message_chrome(commands, font, g)),
-        // vs / main_map = **游戏世界场景**（chrome 与 world 层叠：vs HP 填充 / main_map 棋盘 +
-        // 实体 + toast + HUD 数值 在 1080 层；bevy_ui UI 相机叠在 1080 之上 ⇒ 把 chrome 迁 bevy_ui
-        // 会**遮住** 1080 动态内容）。B1「游戏世界保持 1080」⇒ 这两场景 chrome 仍 1080 画。
-        // 未迁场景：保留 S29.1 的证明面板占位（bevy_ui 层可见 + 可 resize 验证）；
-        // 随各场景迁移逐个换成真实 chrome。
-        _ => Some(ti_engine::ui::build_proof_panel(
-            commands,
-            font,
-            "S29 · bevy_ui",
-            "resize me",
-        )),
+        // vs / main_map / Intro / Exit = **游戏世界场景 / 无场景数据**（chrome 与 world
+        // 层叠：vs HP 填充 / main_map 棋盘 + 实体 + toast + HUD 数值 在 1080 层；bevy_ui
+        // UI 相机叠在 1080 之上 ⇒ 把 chrome 迁 bevy_ui 会**遮住** 1080 动态内容）。
+        // B1「游戏世界保持 1080」⇒ 这两场景 chrome 仍 1080 画。
+        // S27.5（用户 2026-10-28 报「红圈 = S29·bevy_ui 探针面板碍事」）：S29.1 证明面板
+        // 退役 —— 未迁场景 = 该场景 0 个 bevy_ui 节点（`None`），不再挂占位面板。
+        // resize 验证口径改走 `--resizetest`（`ComputedNode` 第 3 不变量，S29.5）+
+        // `--resizeprobe` 活体探针，正常玩法画面 0 干扰。
+        _ => None,
     }
 }
 
@@ -1622,6 +1709,7 @@ fn parse_viewport(spec: &str) -> Option<(u32, u32)> {
 ///
 /// S18.8b：贴图资产是**异步读盘**（Bevy 资产服务器）→ 每帧 sleep 4ms 让 IO 落地；
 /// 空帧自动重截（`finish_shot` 复位 `ShotDone`）。
+/// S27.5：启动时全量预载 `ui/`+`fonts/`（治冷启动半成品帧），就绪后才允许截图。
 fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
     // S18.7：离屏渲染目标（`--shot` 验证 Bevy 原生渲染真实出画）。
     // S29.5：`viewport` = 多视口出图（`--viewport=WxH`）⇒ 目标按该尺寸建 ⇒
@@ -1645,9 +1733,39 @@ fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
         RenderTarget::Image(target_handle.into()),
         Transform::IDENTITY,
     ));
+    // S27.5：资产预载（治冷启动「半成品帧」，EXP-127 后续实测）：`assets/ui/` +
+    // `assets/fonts/` 全量 `load_untyped`，`shot_preload_poll` 全部 Loaded 才放行
+    // 截图请求（`is_blank_frame` 纯色判据 + 600 帧兜底保留为纵深防御）。
+    let mut handles: Vec<bevy::asset::UntypedHandle> = Vec::new();
+    let server = app.world().resource::<bevy::asset::AssetServer>().clone();
+    let repo = repo_root();
+    let mut dirs = vec![repo.join("assets/ui"), repo.join("assets/fonts")];
+    while let Some(dir) = dirs.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                dirs.push(p);
+            } else {
+                let rel =
+                    p.strip_prefix(&repo).unwrap_or(&p).to_string_lossy().replace('\\', "/");
+                match p.extension().and_then(|e| e.to_str()) {
+                    Some("ttf" | "otf") => {
+                        handles.push(server.load::<Font>(rel).into());
+                    }
+                    Some("png") => {
+                        handles.push(server.load::<Image>(rel).into());
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    eprintln!("[shot] 预载 {} 个资产（ui/ + fonts/）", handles.len());
+    app.insert_resource(ShotPreload { handles, ready: false });
     app.init_resource::<ShotDone>()
         .add_observer(store_shot)
-        .add_systems(Update, (request_shot, finish_shot).chain());
+        .add_systems(Update, (shot_preload_poll, request_shot, finish_shot).chain());
     // S29.1：bevy_ui 布局探针（headless 证据）
     app.init_resource::<UiProbe>().add_systems(Update, ui_probe_system);
     // 手动 update 循环 + 设备轮询（照 S18.3 `bevy_text_align` example 口径：
@@ -1658,7 +1776,9 @@ fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
     // panic「resource does not exist: RenderAppChannels」。
     app.finish();
     app.cleanup();
-    for _ in 0..60 {
+    // S27.5：循环上限 1800（冷启动 VM 上逐文件杀毒扫描实测 ~60 帧只加载 31/66）。
+    // 正常路径 = 预载就绪 → 截图 → 读回非空 break（通常数十帧）；上限只兜底异常。
+    for _ in 0..1800 {
         app.update();
         std::thread::sleep(std::time::Duration::from_millis(4));
         if let Some(device) = app.world().get_resource::<bevy::render::renderer::RenderDevice>() {

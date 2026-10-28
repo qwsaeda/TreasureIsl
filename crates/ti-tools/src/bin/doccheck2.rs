@@ -695,9 +695,11 @@ fn check_flywheel_script(root: &Path) -> Vec<String> {
 /// 11. 命中/渲染成对（EXP-071 重定基线，S29.2 B1）：「点到哪个元素」的正逆成对已从
 ///     `touch::layout` 坐标几何（已退役）迁到 **Bevy 拾取层 + 数据驱动**（`ti_engine::pick`
 ///     `PickTarget` + `scenes.json` `pick_key`/`pick_index` → `HitData` → `on_hit`/`route_hit`）。
-///     门禁 = ①命中几何数据化（scenes.json 有 `pick_key`）；②场景消费归一命中（`on_hit`，
-///     不残留已退役坐标几何 API）；③`touch.rs` 坐标几何退役（仅留手势识别）；④拾取层在位
-///     （`pick.rs` + `spawn_pick_layer`）。
+///     门禁 = ①命中几何数据化（scenes.json 有 `pick_key` + **逐场景必需键集合**，
+///     S27.5 教训：`main_map` `on_hit` 消费 4..=7 但该场景数据面 0 个 `pick_key`
+///     ⇒ 主地图四键全不可点，旧门禁只查文件含 `pick_key` 字样即放行）；②场景消费
+///     归一命中（`on_hit`，不残留已退役坐标几何 API）；③`touch.rs` 坐标几何退役
+///     （仅留手势识别）；④拾取层在位（`pick.rs` + `spawn_pick_layer`）。
 fn check_touch_render_pair(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     // ① 命中几何数据化：scenes.json 须有 `pick_key`（`PickTarget` 键源）。
@@ -708,6 +710,8 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
                 .to_string(),
         );
     }
+    // ①b 逐场景必需命中键（S27.5 教训固化，独立函数防本函数超长）。
+    check_scene_required_pick_keys(&scenes, &mut errors);
     // ② 场景消费归一命中（`on_hit`/`HitData`），已退役坐标几何 API 不得残留。
     for rel in [
         "crates/ti-app/src/scenes/select_role.rs",
@@ -772,6 +776,47 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
         );
     }
     errors
+}
+
+/// ①b 逐场景必需命中键（S27.5 教训固化）：场景消费面（`on_hit`）用到的键在数据面
+/// 必须存在，缺 = 该键不可点。键语义 = `20_bevy_picking.md` §6 约定
+/// （1=index 罗盘环徽章 / 2=列表行 / 3=存档槽 / 4..=7=主地图摇骰·买·卖·建造）。
+fn check_scene_required_pick_keys(scenes: &str, errors: &mut Vec<String>) {
+    const SCENE_REQUIRED_PICK_KEYS: &[(&str, &[u64])] = &[
+        ("index", &[1]),
+        ("select_role", &[2]),
+        ("select_map", &[2]),
+        ("saveload", &[3]),
+        ("main_map", &[4, 5, 6, 7]),
+    ];
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(scenes) else {
+        return;
+    };
+    for (scene_name, required) in SCENE_REQUIRED_PICK_KEYS {
+        let mut present: Vec<u64> = Vec::new();
+        if let Some(prims) = json
+            .get(*scene_name)
+            .and_then(|s| s.get("primitives"))
+            .and_then(serde_json::Value::as_array)
+        {
+            for prim in prims {
+                if let Some(k) = prim
+                    .get("params")
+                    .and_then(|q| q.get("pick_key"))
+                    .and_then(serde_json::Value::as_u64)
+                {
+                    present.push(k);
+                }
+            }
+        }
+        for key in *required {
+            if !present.contains(key) {
+                errors.push(format!(
+                    "scenes.json `{scene_name}` 缺 `pick_key={key}`（命中数据面缺失 = 该键不可点；S27.5 教训）"
+                ));
+            }
+        }
+    }
 }
 
 /// 13. HD 精灵透明门禁（EXP-075 洋红框）。S15.4 重锚：legacy 逐像素 CPU blit 层
