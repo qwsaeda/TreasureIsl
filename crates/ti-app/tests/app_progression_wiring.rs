@@ -154,9 +154,11 @@ fn app_save_load_restores_unlock_chain() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     app.write_save_slot(0, save);
-    app.restore_save(app.save_slots()[0]);
+    app.restore_save(app.save_slots()[0].clone());
     assert_eq!(app.scene(), Scene::MainMap, "读档应进主地图");
     assert_eq!(app.map_slot(), Some(MapSlot::M02));
     assert_eq!(
@@ -184,9 +186,11 @@ fn app_save_load_restores_unlock_chain() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     app2.write_save_slot(0, save2);
-    app2.restore_save(app2.save_slots()[0]);
+    app2.restore_save(app2.save_slots()[0].clone());
     assert_eq!(app2.map_slot(), Some(MapSlot::M03));
     assert_eq!(
         app2.unlocked_maps,
@@ -210,9 +214,11 @@ fn app_save_load_restores_mask_faithfully() {
         rng_steps: 0,
         unlocked_mask: 0b0011,
         boat_level: 1,
+
+        v4: None,
     };
     app.write_save_slot(0, save);
-    app.restore_save(app.save_slots()[0]);
+    app.restore_save(app.save_slots()[0].clone());
     assert_eq!(app.map_slot(), Some(MapSlot::M01));
     assert_eq!(
         app.unlocked_maps,
@@ -240,9 +246,11 @@ fn app_save_load_restores_cleared_gate() {
         rng_steps: 0,
         unlocked_mask: 0b1111,
         boat_level: 1,
+
+        v4: None,
     };
     app.write_save_slot(0, save);
-    app.restore_save(app.save_slots()[0]);
+    app.restore_save(app.save_slots()[0].clone());
     assert_eq!(
         app.unlocked_maps,
         vec![MapSlot::M01, MapSlot::M02, MapSlot::M03],

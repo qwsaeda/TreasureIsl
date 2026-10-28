@@ -147,9 +147,9 @@ fn run_playtest(seed: u32) -> SeedResult {
                 let slot = build_slot(&app);
                 let mut restored = GameApp::new(1080.0, 1920.0);
                 restored.set_rng_seed(seed);
-                restored.write_save_slot(0, slot);
-                restored.restore_save(slot);
-                let slot_after = restored.save_slots()[0];
+                restored.write_save_slot(0, slot.clone());
+                restored.restore_save(slot.clone());
+                let slot_after = restored.save_slots()[0].clone();
                 if slot_after != slot {
                     save_corruptions = save_corruptions.saturating_add(1);
                 }
@@ -193,6 +193,7 @@ fn build_slot(app: &GameApp) -> SaveSlot {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+        v4: None,
     }
 }
 
@@ -291,6 +292,8 @@ fn restore_save_invalid_slot_does_not_pollute_character() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     app.restore_save(bad);
 
@@ -311,6 +314,8 @@ fn restore_save_invalid_slot_does_not_pollute_character() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     app.restore_save(good);
     assert_eq!(app.scene(), Scene::MainMap, "合法 restore_save 应进主地图");

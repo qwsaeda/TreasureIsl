@@ -120,6 +120,8 @@ fn legacy_slot_to_v2() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     let v2 = ti_core::rules::saveload_json::from_legacy_slot(&legacy);
     assert!(v2.is_v2());

@@ -24,7 +24,7 @@ impl Scene for SaveloadScene {
     fn on_input(&mut self, host: &mut dyn SceneHost, input: GameInput) -> bool {
         match input {
             GameInput::LoadSave(slot) => {
-                let Some(data) = host.save_slots().get(slot).copied() else {
+                let Some(data) = host.save_slots().get(slot).cloned() else {
                     return false;
                 };
                 host.restore_save(data);
@@ -51,6 +51,7 @@ impl Scene for SaveloadScene {
                     unlocked_mask: host.unlocked_mask(),
                     // S21.11：船等级逐档写入（全局账号级；旧档缺此字段 ⇒ 读回 = 1 小舢板）。
                     boat_level: host.boat_level(),
+                    v4: host.save_v4_ext().map(Box::new),
                 };
                 if host.save_slots().len() > slot {
                     host.write_save_slot(slot, data);

@@ -17,8 +17,6 @@
 //! 迁移（`docs/business/persistence.md` §迁移）：v1 缺 `version`/`bank`/`rng_seed` →
 //! 补默认（`version=2`、`bank=0`、`rng_seed` 默认种子）；迁移纯函数幂等可测。
 
-use std::collections::BTreeMap;
-
 use serde::{Deserialize, Serialize};
 
 use crate::domain::economy::Bank;
@@ -407,34 +405,9 @@ impl SaveSlotV3 {
 
 // ------------------------------------------------------- 存档 v4（S28.2 领地系统）
 
-/// 席位存档（`docs/business/territory.md` §8：每席位独立金币/位置/建筑/船等级）。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SeatSave {
-    /// 角色 id（`balance.selection.characters[].id`，如 `"drake"`）。
-    pub character: String,
-    /// 玩家席位（`false` = AI 席位）。
-    pub is_player: bool,
-    /// 该席位金币。
-    pub gold: u32,
-    /// 该席位赛道格索引（`board.json` 0 起；`0` = 起点）。
-    pub position: u32,
-    /// 船等级（1..=4；缺省 1 小舢板）。
-    #[serde(default = "default_boat_level_v3")]
-    pub boat_level: u8,
-    /// 该席位已建建筑 id 列表（建筑 = 个人成长线，§9）。
-    #[serde(default)]
-    pub buildings: Vec<String>,
-}
+pub use crate::domain::persistence::{SeatSave, TerritorySave};
 
-/// 领地存档条目（`map → [格索引 → {owner_seat, level}]`，§8；无主格 = 缺省不写）。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TerritorySave {
-    /// 地图 id（如 `"m01"`）。
-    pub map: String,
-    /// 格索引 → `{owner_seat, level}`（`owner_seat` = 席位下标 `0..4`）。
-    pub cells: BTreeMap<u32, (u8, u8)>,
-}
-
+/// 席位存档 / 领地存档条目类型家 = `domain::persistence`（S28.2；单一事实源）。
 /// 存档槽位（v4 = v3 + 多席位 + 领地图；`docs/business/territory.md` §8）。
 ///
 /// 迁移口径：v3 → v4 缺省 = **单席位（主角色）+ 4 个 AI 补位 + 空领地图 + `current_seat = 0`**；

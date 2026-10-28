@@ -94,13 +94,20 @@ fn dispatch_main_map_spin_and_battle() {
 
     let before = app.map_pos();
     let consumed_spin = app.dispatch(GameCommand::Spin);
-    assert!(!consumed_spin, "Spin 落点非 BOSS 格，不切场景");
-    assert_ne!(app.map_pos(), before, "摇骰应沿赛道前进");
-
-    // 据点码 6 = 战斗 → 切 Vs
-    let consumed_landmark = app.dispatch(GameCommand::Landmark(6));
-    assert!(consumed_landmark, "Landmark(6) 应切到 Vs");
-    assert_eq!(app.scene(), Scene::Vs);
+    let dungeon_active = app.battle().is_some_and(|v| v.dungeon.is_some());
+    if dungeon_active {
+        // S28.6：落格 = 无主领地格 ⇒ 自动进副本守军战（`start_dungeon_battle` 直接切 Vs；
+        // dispatch 消费标记 = 场景自身消费，副本切场景不经 dispatch 返回值）
+        assert_eq!(app.scene(), Scene::Vs, "副本战在 vs 场景");
+        assert_ne!(app.map_pos(), before, "摇骰应沿赛道前进");
+    } else {
+        assert!(!consumed_spin, "Spin 落点非 BOSS 格 / 无主领地格，不切场景");
+        assert_ne!(app.map_pos(), before, "摇骰应沿赛道前进");
+        // 据点码 6 = 战斗 → 切 Vs
+        let consumed_landmark = app.dispatch(GameCommand::Landmark(6));
+        assert!(consumed_landmark, "Landmark(6) 应切到 Vs");
+        assert_eq!(app.scene(), Scene::Vs);
+    }
 }
 
 /// 战斗场景：`Attack` 推进回合，不切场景 → false（战斗未结束时）。

@@ -89,6 +89,8 @@ fn legacy_slot_to_v2() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     let v2 = SaveSlotV2::from_legacy_slot(&legacy);
     assert!(v2.is_v2());
@@ -109,6 +111,8 @@ fn legacy_slot_out_of_range_clamps_conservative() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     let v2 = SaveSlotV2::from_legacy_slot(&legacy);
     assert_eq!(v2.character, "panda", "character=0（无角色）保守落首角色");
@@ -122,6 +126,8 @@ fn legacy_slot_out_of_range_clamps_conservative() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     let v2 = SaveSlotV2::from_legacy_slot(&legacy);
     assert_eq!(v2.character, "panda", "character 越界保守落首角色（不 panic）");

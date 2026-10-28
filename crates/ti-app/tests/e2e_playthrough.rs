@@ -171,7 +171,7 @@ fn e2e_full_game_session() {
     assert_eq!(app.scene(), Scene::Saveload, "应进入存读档");
 
     app.handle(GameInput::WriteSave(0));
-    let saved = app.save_slots()[0];
+    let saved = app.save_slots()[0].clone();
     assert_eq!(saved.character, 1, "存档角色应为 Panda");
 
     app.handle(GameInput::LoadSave(0));
@@ -279,8 +279,8 @@ fn e2e_state_consistency() {
     app.handle(GameInput::Confirm);
     app.handle(GameInput::WriteSave(0));
 
-    let _saved_gold = app.save_slots()[0].gold;
-    let _saved_char = app.save_slots()[0].character;
+    let _saved_gold = app.save_slots()[0].clone().gold;
+    let _saved_char = app.save_slots()[0].clone().character;
 
     // 读档后状态应恢复
     app.handle(GameInput::LoadSave(0));
@@ -529,11 +529,11 @@ fn e2e_save_load_boat_level_roundtrip() {
     assert_eq!(app.scene(), Scene::Saveload, "应进存读档场景");
     // ① 1 级（小舢板）写槽 0
     app.handle(GameInput::WriteSave(0));
-    assert_eq!(app.save_slots()[0].boat_level, 1, "写档应带船等级 1（小舢板）");
+    assert_eq!(app.save_slots()[0].clone().boat_level, 1, "写档应带船等级 1（小舢板）");
     // ② 升到 2 级再写槽 0
     app.set_boat_level(2);
     app.handle(GameInput::WriteSave(0));
-    assert_eq!(app.save_slots()[0].boat_level, 2, "写档应带船等级 2");
+    assert_eq!(app.save_slots()[0].clone().boat_level, 2, "写档应带船等级 2");
     // ③ 降回 1 级后读档 ⇒ 船等级还原为 2
     app.set_boat_level(1);
     app.handle(GameInput::LoadSave(0));

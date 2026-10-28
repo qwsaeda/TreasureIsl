@@ -12,6 +12,7 @@ use ti_core::rules::progression::{CLEARED_BIT, ProgressionState};
 use ti_core::rules::rng;
 
 use super::{GameApp, Scene};
+use crate::scenes::MapHost;
 
 impl GameApp {
     /// 存档槽位列表（只读）。
@@ -125,5 +126,10 @@ impl GameApp {
         }
         // S21.11：船等级按存档恢复（旧档缺字段 ⇒ serde 缺省 1 = 小舢板，零报错）。
         self.set_boat_level(u32::from(data.boat_level.max(1)));
+        // S28.2 存档 v4 扩展（territory.md §8）：席位金 / 当前席 / 领地账本还原
+        // （旧档 `v4 = None` ⇒ 无操作，零报错；越界/不匹配图宽松丢弃）。
+        if let Some(ext) = data.v4 {
+            self.restore_v4_ext(&ext);
+        }
     }
 }

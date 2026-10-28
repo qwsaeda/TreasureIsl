@@ -156,7 +156,7 @@ fn flow_save_load_roundtrip() {
 
     // 写档（槽 0）
     app.handle(GameInput::WriteSave(0));
-    let saved_slot = app.save_slots()[0];
+    let saved_slot = app.save_slots()[0].clone();
     assert_eq!(saved_slot.gold, 1000, "写档应保存当前金（开局 1000）");
     assert_eq!(saved_slot.character, 1, "写档角色 = Panda(index 0 + 1)");
 

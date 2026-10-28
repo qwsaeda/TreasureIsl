@@ -27,7 +27,7 @@ use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::map::{GridPos, MapTerrain, SceneTarget};
 use ti_core::domain::messages::MsgKind;
-use ti_core::domain::persistence::SaveSlot;
+use ti_core::domain::persistence::{SaveSlot, SaveSlotV4Ext};
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{TrackSpace, Turn};
 use ti_core::rules::territory::Ownership;
@@ -474,6 +474,29 @@ pub trait MapHost {
     /// S28.7 当前轮到的席位（§1：5 席顺序 = 角色 index 升序；`MainMap` 前 = 0）。
     fn turn_seat(&self) -> u8 {
         0
+    }
+
+    /// S28.2 存档 v4 扩展捕获（territory.md §8：5 席金/位置 + 领地图 + 当前席；无领地会话 = `None`）。
+    fn save_v4_ext(&self) -> Option<SaveSlotV4Ext> {
+        None
+    }
+
+    /// S28.2 存档 v4 扩展还原（席位金 / 当前席 / 领地账本；fake 宿主缺省 no-op）。
+    fn restore_v4_ext(&mut self, _ext: &SaveSlotV4Ext) {}
+
+    /// S28.2 某席位金币（`seat` 0..=4；越界 = 0）。
+    fn seat_gold_of(&self, _seat: u8) -> u32 {
+        0
+    }
+
+    /// S28.6 是否正在领地主副本战斗（`vs` 场景 Back 路由：副本 = 回主地图，BOSS 战 = 回主菜单）。
+    fn in_dungeon_battle(&self) -> bool {
+        false
+    }
+
+    /// S28.6 确认进入待决副本（`pending_dungeon` 在位时切守军战，返回 `true` = 已消费；缺省 `false`）。
+    fn confirm_dungeon(&mut self) -> bool {
+        false
     }
 
     /// 设置 / 清空赛道节点预览选中（默认 no-op）。

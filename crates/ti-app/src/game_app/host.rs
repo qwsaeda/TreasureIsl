@@ -10,13 +10,15 @@ use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::map::{GridPos, MapTerrain, SceneTarget};
 use ti_core::domain::messages::MsgKind;
-use ti_core::domain::persistence::SaveSlot;
+use ti_core::domain::persistence::{SaveSlot, SaveSlotV4Ext, SeatSave, TerritorySave};
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{BoardSession, TrackSpace, Turn};
 use ti_core::rules::cards;
 use ti_core::rules::messages::total_pages;
 use ti_core::rules::progression::{CLEARED_BIT, ProgressionState};
-use ti_core::rules::territory::Ownership;
+use ti_core::rules::territory::{
+    DungeonOutcome, Ownership, TerritoryApply, TerritoryRules, TerritoryState,
+};
 use ti_core::rules::trade;
 
 use super::{BattleSnapshot, BattleView, GameApp, GameInput, Scene};
@@ -304,6 +306,112 @@ impl MapHost for GameApp {
         self.board_toast = Some(msg);
         self.board_toast_ticks = 120; // = board.rs TOAST_TICKS 口径（120 帧寿命，S21.7）
     }
+
+    /// S28.6 是否正在领地主副本战斗（`vs` 场景 Back 路由：副本 = 回主地图，BOSS 战 = 回主菜单）。
+    fn in_dungeon_battle(&self) -> bool {
+        self.battle.as_ref().is_some_and(|b| b.dungeon.is_some())
+    }
+
+    /// S28.6 确认进入待决副本（`pending_dungeon` 在位时切守军战；缺省 `false`）。
+    fn confirm_dungeon(&mut self) -> bool {
+        let Some(cell) = self.pending_dungeon.take() else {
+            return false;
+        };
+        let Some(sess) = self.board.as_ref() else {
+            return false;
+        };
+        let Some(sp) = sess.current().cloned() else {
+            return false;
+        };
+        let Some(isle) = sp.isle.as_deref() else {
+            return false;
+        };
+        self.start_dungeon_battle(cell, isle, 1);
+        true
+    }
+
+    /// S28.2 存档 v4 扩展捕获（`territory.md` §8）：5 席（角色 index 升序，主玩家 = 已选角色）
+    /// 金/位置/船 + 当前图领地图（无主格不写）+ 当前席位。
+    fn save_v4_ext(&self) -> Option<SaveSlotV4Ext> {
+        let b = data::balance().ok()?;
+        let player_idx =
+            u8::try_from(self.selection.character.map_or(0, Character::index).min(4)).unwrap_or(0);
+        let seats = (0u8..5)
+            .map(|i| {
+                let position = if i == player_idx {
+                    self.board.as_ref().map_or(0, BoardSession::position_index)
+                } else {
+                    self.ai_sessions[i as usize].as_ref().map_or(0, BoardSession::position_index)
+                };
+                SeatSave {
+                    character: b
+                        .selection
+                        .characters
+                        .get(i as usize)
+                        .map_or(String::new(), |ch| ch.id.clone()),
+                    is_player: i == player_idx,
+                    gold: self.seat_gold[i as usize],
+                    position,
+                    boat_level: if i == player_idx { self.boat_level() } else { 1 },
+                    buildings: Vec::new(),
+                }
+            })
+            .collect();
+        let territories = self
+            .territory
+            .as_ref()
+            .map(|t| {
+                let map_id = self.map_slot.map_or(String::new(), |ms| ms.id().to_string());
+                let cells = t
+                    .snapshot()
+                    .into_iter()
+                    .filter_map(|(cell, (owner, level))| owner.map(|o| (cell, (o, level))))
+                    .collect();
+                vec![TerritorySave { map: map_id, cells }]
+            })
+            .unwrap_or_default();
+        Some(SaveSlotV4Ext { seats, territories, current_seat: self.turn_cycle.current })
+    }
+
+    /// S28.2 存档 v4 扩展还原（§8）：席位金 + 当前席 + 当前图领地账本（越界/不匹配图 = 宽松丢弃）。
+    fn restore_v4_ext(&mut self, ext: &SaveSlotV4Ext) {
+        for (i, seat) in ext.seats.iter().enumerate().take(5) {
+            self.seat_gold[i] = seat.gold;
+        }
+        if ext.current_seat < 5 {
+            self.turn_cycle.current = ext.current_seat;
+        }
+        let map_id = self.map_slot.map_or(String::new(), |ms| ms.id().to_string());
+        for terr in &ext.territories {
+            if terr.map != map_id {
+                continue;
+            }
+            let Ok(bal) = data::balance() else {
+                continue;
+            };
+            let Ok(db) = data::board() else {
+                continue;
+            };
+            let Some(map_def) = db.map(&terr.map) else {
+                continue;
+            };
+            let snapshot = terr
+                .cells
+                .iter()
+                .map(|(cell, (owner, level))| (*cell, (Some(*owner), *level)))
+                .collect();
+            match TerritoryState::restore(map_def, bal, snapshot) {
+                Ok(state) => self.territory = Some(state),
+                Err(_e) => eprintln!("restore_v4_ext: 领地账本还原失败（宽松丢弃）"),
+            }
+            break;
+        }
+    }
+
+    /// S28.2 某席位金币（越界 = 0）。
+    fn seat_gold_of(&self, seat: u8) -> u32 {
+        self.seat_gold.get(seat as usize).copied().unwrap_or(0)
+    }
 }
 impl EconomyHost for GameApp {
     fn price_of(&self, gid: u32) -> Option<u32> {
@@ -450,7 +558,18 @@ impl SessionHost for GameApp {
             b.step();
             if b.outcome.is_some() {
                 self.battle_won = matches!(b.outcome, Some(Side::Player));
-                if self.battle_won {
+                let dungeon = b.dungeon.clone();
+                b.dungeon = None;
+                if let Some((cell, isle, _level)) = dungeon {
+                    // S28.6 副本战（territory.md §4/§9）：胜利 = 占领（两格 + 首占奖励）；
+                    // 失败 = 现状不变。BOSS 推进钩与副本结算互斥（`b.dungeon` 在位 = 副本战）。
+                    if self.battle_won {
+                        self.last_sfx = Some(Sfx::Victory);
+                        self.settle_dungeon_win(cell, &isle);
+                    } else {
+                        self.toast_dungeon_fail(&isle);
+                    }
+                } else if self.battle_won {
                     self.last_sfx = Some(Sfx::Victory);
                     // 跨图推进（`business/progression.md`）：击败当前图 BOSS → 解锁下一图。
                     // 结算走规则层（`from_unlocked` 重建 + `on_boss_defeated`，幂等）：
@@ -566,3 +685,33 @@ impl SessionHost for GameApp {
     }
 }
 impl SceneHost for GameApp {}
+impl GameApp {
+    /// S28.6 副本胜利结算（territory.md §4）：占领该岛两格（level = 1）+ 首占奖励入玩家席金币。
+    fn settle_dungeon_win(&mut self, cell: u32, isle: &str) {
+        let Ok(b) = data::balance() else {
+            eprintln!("settle_dungeon_win: balance.json 加载失败（硬错误，不 fallback）");
+            return;
+        };
+        let Some(mut terr) = self.territory.take() else {
+            return;
+        };
+        let rules = TerritoryRules::new(b);
+        let seat = self.turn_cycle.current;
+        let bonus = terr.apply_dungeon(&rules, cell, seat, DungeonOutcome::Win);
+        if bonus > 0 {
+            self.seat_gold[seat as usize] =
+                self.seat_gold[seat as usize].saturating_add(bonus).min(b.economy.gold_max);
+        }
+        self.territory = Some(terr);
+        let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
+        self.board_toast = Some(format!("占领 {isle_name}（首占 +{bonus}）"));
+        self.board_toast_ticks = 240;
+    }
+
+    /// S28.6 副本失败提示（§4：失败 = 现状不变，无账本变更）。
+    fn toast_dungeon_fail(&mut self, isle: &str) {
+        let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
+        self.board_toast = Some(format!("副本失败：{isle_name} 现状不变"));
+        self.board_toast_ticks = 240;
+    }
+}

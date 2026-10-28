@@ -50,6 +50,8 @@ pub fn oracle_migrate_v1_to_v2(s: &SaveSlot) -> SaveSlot {
         rng_steps: s.rng_steps,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     }
 }
 
@@ -90,6 +92,8 @@ pub fn oracle_read_slot(bytes: &[u8]) -> Result<SaveSlot, SaveErr> {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     })
 }
 
@@ -144,6 +148,8 @@ pub fn oracle_read_slot_v1(bytes: &[u8]) -> Result<SaveSlot, SaveErr> {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     })
 }
 
@@ -168,6 +174,8 @@ mod tests {
             rng_steps: 0,
             unlocked_mask: 0,
             boat_level: 1,
+
+            v4: None,
         };
         let bytes = oracle_write_slot(&slot);
         assert_eq!(oracle_validate_save(&bytes), Ok(()), "有效存档应通过校验");
@@ -201,6 +209,8 @@ mod tests {
                             rng_steps: 0,
                             unlocked_mask: 0,
                             boat_level: 1,
+
+                            v4: None,
                         };
                         let bytes = oracle_write_slot(&slot);
                         let read = oracle_read_slot(&bytes).unwrap_or_default();
@@ -225,6 +235,8 @@ mod tests {
             rng_steps: 0,
             unlocked_mask: 0,
             boat_level: 1,
+
+            v4: None,
         };
         let migrated = oracle_migrate_v1_to_v2(&v1);
         assert_eq!(migrated.version, 2, "v1 迁移后 version 应为 2");

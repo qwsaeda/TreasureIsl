@@ -283,6 +283,12 @@ impl BoardSession {
         self.track.space(self.index)
     }
 
+    /// S28.2 席位存档读口径：当前赛道格序号（`board.json` 0 起；`save_slots` v4 `seats[].position`）。
+    #[must_use]
+    pub fn position_index(&self) -> u32 {
+        u32::try_from(self.index).unwrap_or(0)
+    }
+
     /// 上一次摇出的步数（`0` = 还没摇过）。
     #[must_use]
     pub fn last_roll(&self) -> u32 {

@@ -1,4 +1,21 @@
-S28.2 存档 v4（rules/saveload.rs SaveSlotV4 + SeatSave/TerritorySave + migrate_v3_to_v4_defaults + 往返还原；§10 规则 12/13）
-判据 = save_migrate_v3_to_v4_defaults + save_roundtrip_restores_territories 全绿（territory_rules 内）
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+# S28.2 验收证据（task_close.py 自动生成 2026-10-28）
+
+- 任务标题：存档 v4：SaveSlotV4（seats[]：角色/类型/金/位置/船/建筑 + territories：map→格→{owner_seat,level} + current_seat）+ v3→v4 迁移（单席位 + 空领地）+ 往返还原
+- 判据（台账 dod）：改动面=业务规则=无（口径 = territory.md §8）| 数据=assets/data/balance.json（save 段口径）| 规则=crates/ti-core/src/rules/saveload*.rs（SaveSlotV4 + migrate_v3_to_v4 纯函数幂等 + 单测）| 表现=crates/ti-app/src/scenes/saveload.rs（写盘逐席位 + 领地）| 资产=无；跨模块原因=规则层结构与 app 侧写盘两侧必须同一步，否则「存了读不回」；判据=新增 3 单测（v3→v4 缺省=单席位+空领地+current_seat=0 / 幂等 / v4 原样）+ e2e 存读档往返（归属/各席位金/当前席位还原）+ 旧档（v2/v3）读回 0 报错 + gate 全绿 + evidence/S28.2.log
+
+## 判据实跑
+
+### `$ cargo test -q -p ti-app --test saveload_v4_roundtrip`
+
+退出码：0
+
+```
+
+running 2 tests
+..
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

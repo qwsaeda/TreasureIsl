@@ -4,7 +4,7 @@
 //! 编解码实现（`rules::saveload_json`）走 serde JSON v2，迁移规则在 `rules::saveload`。
 
 /// 存档槽位（JSON v2 schema，业务文档 `docs/business/persistence.md` §字段）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SaveSlot {
     /// 存档版本（v1=1 / v2=2；`rules::saveload::migrate_v1_to_v2` 处理迁移）。
     pub version: u32,
@@ -37,11 +37,65 @@ pub struct SaveSlot {
     /// §迁移 v3）；全局账号级（不随跨图重置）。
     #[serde(default = "default_boat_level")]
     pub boat_level: u8,
+    /// S28.2 v4 扩展（`None` = v3 及更早档；旧档读回零报错，迁移口径 = `rules::saveload::migrate_v3_to_v4`）。
+    #[serde(default)]
+    pub v4: Option<std::boxed::Box<SaveSlotV4Ext>>,
 }
 
 /// S21.11 旧档（v2，无 `boat_level`）缺省船等级 = 1（小舢板）。
 fn default_boat_level() -> u8 {
     1
+}
+
+// ------------------------------------------------------- 存档 v4 扩展（S28.2 领地系统）
+
+/// 席位存档（`docs/business/territory.md` §8：每席位独立金币/位置/建筑/船等级）。
+///
+/// 类型家 = domain（`rules::saveload::SeatSave` 为再导出；单一事实源 = 本定义）。
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SeatSave {
+    /// 角色 id（`balance.selection.characters[].id`，如 `"drake"`）。
+    pub character: String,
+    /// 玩家席位（`false` = AI 席位）。
+    pub is_player: bool,
+    /// 该席位金币。
+    pub gold: u32,
+    /// 该席位赛道格索引（`board.json` 0 起；`0` = 起点）。
+    pub position: u32,
+    /// 船等级（1..=4；缺省 1 小舢板）。
+    #[serde(default = "default_boat_level_v3")]
+    pub boat_level: u8,
+    /// 该席位已建建筑 id 列表（建筑 = 个人成长线，§9）。
+    #[serde(default)]
+    pub buildings: Vec<String>,
+}
+
+/// 领地存档条目（`map → [格索引 → {owner_seat, level}]`，§8；无主格 = 缺省不写）。
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct TerritorySave {
+    /// 地图 id（如 `"m01"`）。
+    pub map: String,
+    /// 格索引 → `{owner_seat, level}`（`owner_seat` = 席位下标 `0..4`）。
+    pub cells: std::collections::BTreeMap<u32, (u8, u8)>,
+}
+
+/// v4 扩展缺省船等级（与 `default_boat_level` 同口径）。
+fn default_boat_level_v3() -> u8 {
+    1
+}
+
+/// 存档 v4 扩展位（territory.md §8：多席位 + 领地图 + 当前席位；`None` = v3 及更早）。
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SaveSlotV4Ext {
+    /// 5 席位全量（§1：players+ai=5；顺序 = 角色 index 升序）。
+    #[serde(default)]
+    pub seats: Vec<SeatSave>,
+    /// 领地图（`map → 格 → {owner, level}`；空 = 全图无主）。
+    #[serde(default)]
+    pub territories: Vec<TerritorySave>,
+    /// 当前轮到哪个席位（热座交接；缺省 0）。
+    #[serde(default)]
+    pub current_seat: u8,
 }
 
 impl Default for SaveSlot {
@@ -55,6 +109,7 @@ impl Default for SaveSlot {
             rng_steps: 0,
             unlocked_mask: 0,
             boat_level: 1,
+            v4: None,
         }
     }
 }

@@ -36,7 +36,7 @@ fn v1_bytes_auto_migrate_to_v2_roundtrip() {
     let v1_bytes = make_v1_bytes(3, 2, 100);
     assert_eq!(v1_bytes.len(), 18, "v1 布局 = 18 字节");
 
-    // 步骤 2：v1 兼容读 → SaveSlot{version=1, gold=0, character=3, map_slot=2, position=100}
+    // 步骤 2：v1 兼容读 → SaveSlot{version=1, gold=0, character=3, map_slot=2, position=100
     let v1_slot = oracle_read_slot_v1(&v1_bytes).expect("v1 字节应解析成功");
     assert_eq!(v1_slot.version, 1, "v1 兼容读默认 version=1");
     assert_eq!(v1_slot.character, 3);
@@ -75,6 +75,8 @@ fn v2_write_read_backward_compat() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     let v2_bytes = oracle_write_slot(&slot);
     assert_eq!(v2_bytes.len(), 26, "v2 布局 = 26 字节");
@@ -132,6 +134,8 @@ fn json_export_import_roundtrip() {
             rng_steps: 0,
             unlocked_mask: 0,
             boat_level: 1,
+
+            v4: None,
         };
         mgr.set_slot(i as usize, SaveSlotV2::from_legacy_slot(&legacy));
     }
@@ -163,6 +167,8 @@ fn byte_layout_is_self_describing() {
         rng_steps: 0,
         unlocked_mask: 0,
         boat_level: 1,
+
+        v4: None,
     };
     let bytes = oracle_write_slot(&slot);
     assert_eq!(bytes.len(), MIN_SAVE_SIZE, "v2 布局 = 26 字节");
