@@ -296,48 +296,6 @@
   },
   "code_standards": {
     "cs1_asset_grandfathered": {},
-    "cs2_doc_grandfathered": {
-      "crates/ti-core/src/oracle/battle.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/build.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/main_loop.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/main_map.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/menu.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/messages.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/render.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/saveload.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/selection.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      },
-      "crates/ti-core/src/oracle/trade.rs": {
-        "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
-        "fix_in": "S25.1"
-      }
-    },
     "cs3_param_grandfathered": {
       "crates/ti-app/src/game_app/board.rs::apply_board_boss": {
         "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",

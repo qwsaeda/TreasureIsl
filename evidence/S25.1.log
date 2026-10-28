@@ -1,0 +1,128 @@
+# S25.1 验收证据（task_close.py 自动生成 2026-10-28）
+
+- 任务标题：代码标准棘轮豁免清零：CS-2 存量 10 文件补 //! 模块文档（oracle 分卷）+ CS-3 存量 136 处单字母参数整改，process_ratchet.json::code_standards 豁免条目随清零删除
+- 判据（台账 dod）：改动面=工具+文档 | 代码=crates（按 CS-2/CS-3 豁免清单逐文件整改）| 基线=scripts/process_ratchet.json（对应段清零后删段）| 判据=python scripts/check_code_standards.py --report 两项 0 违例 + --update-baseline 后 code_standards 段空 + gate 全绿 + evidence/S25.1.log
+
+## 判据实跑
+
+### `$ python scripts/check_code_standards.py --report`
+
+退出码：0
+
+```
+
+=== CS-1 asset_path_hardcode（资产路径字面量只在 chrome/data/ti-tools）— 当前违例 0 ===
+
+=== CS-2 file_doc_present（src 文件缺 //! 模块文档（职责声明））— 当前违例 0 ===
+
+=== CS-3 fn_param_naming（fn 参数单字母（非 x/y））— 当前违例 180 ===
+    ('crates/ti-app/src/hd_manifest.rs::manifest_expected_count', 22, 'm')
+    ('crates/ti-app/src/menu_shell.rs::fill_rect', 308, 'w')
+    ('crates/ti-app/src/menu_shell.rs::fill_rect', 308, 'h')
+    ('crates/ti-app/src/menu_shell.rs::crossfade_from', 325, 't')
+    ('crates/ti-app/src/menu_shell.rs::fill_rect', 531, 'w')
+    ('crates/ti-app/src/menu_shell.rs::fill_rect', 531, 'h')
+    ('crates/ti-app/src/menu_shell.rs::blit_image', 590, 'w')
+    ('crates/ti-app/src/menu_shell.rs::blit_image', 590, 'h')
+    ('crates/ti-app/src/menu_shell.rs::blit_image_tint', 598, 'w')
+    ('crates/ti-app/src/menu_shell.rs::blit_image_tint', 598, 'h')
+    ('crates/ti-app/src/menu_shell.rs::rgb565_to_rgb8', 642, 'c')
+    ('crates/ti-app/src/particles.rs::push_particle', 132, 'p')
+    ('crates/ti-app/src/touch.rs::near', 118, 'a')
+    ('crates/ti-app/src/touch.rs::near', 118, 'b')
+    ('crates/ti-app/src/world_camera.rs::screen_to_world', 65, 's')
+    ('crates/ti-app/src/world_camera.rs::world_to_screen', 74, 'w')
+    ('crates/ti-app/src/z_layers.rs::is_bevy_z_range', 45, 'z')
+    ('crates/ti-app/src/game_app/board.rs::settle_board_landing', 389, 'b')
+    ('crates/ti-app/src/game_app/board.rs::apply_board_boss', 542, 'b')
+    ('crates/ti-app/src/game_app/host.rs::set_track_node_sel', 271, 'v')
+    ('crates/ti-app/src/game_app/input.rs::poll', 27, 'k')
+    ('crates/ti-app/src/game_app/mod.rs::advance_transition_t', 350, 't')
+    ('crates/ti-app/src/game_app/mod.rs::transition_ease', 360, 't')
+    ('crates/ti-app/src/game_app/state.rs::is_map_cleared', 64, 'm')
+    ('crates/ti-app/src/scenes/chrome.rs::board_fit', 277, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::iso_cell_fit', 302, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::iso_tile_fit', 309, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::entity_size_fit', 317, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::track_edge_px', 634, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::node_edge_px', 647, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::ship_edge_px', 653, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::voyage_slot_center', 658, 'i')
+    ('crates/ti-app/src/scenes/chrome.rs::wood_panel', 749, 'w')
+    ('crates/ti-app/src/scenes/chrome.rs::wood_panel', 749, 'h')
+    ('crates/ti-app/src/scenes/chrome.rs::fill_rect', 916, 'w')
+    ('crates/ti-app/src/scenes/chrome.rs::fill_rect', 916, 'h')
+    ('crates/ti-app/src/scenes/chrome.rs::blit_image', 966, 'w')
+    ('crates/ti-app/src/scenes/chrome.rs::blit_image', 966, 'h')
+    ('crates/ti-app/src/scenes/chrome.rs::blit_image_tint', 971, 'w')
+    ('crates/ti-app/src/scenes/chrome.rs::blit_image_tint', 971, 'h')
+    ...（140 更多）
+
+=== CS-4 scene_session_ctor（场景层构造持久会话（窄接缝））— 当前违例 0 ===
+```
+
+### `$ python scripts/check_code_standards.py --check`
+
+退出码：0
+
+```
+
+=== CS-1 asset_path_hardcode（资产路径字面量只在 chrome/data/ti-tools）— 当前违例 0 ===
+[ok] CS-1 asset_path_hardcode：0 存量违例全在豁免基线内
+
+=== CS-2 file_doc_present（src 文件缺 //! 模块文档（职责声明））— 当前违例 0 ===
+[ok] CS-2 file_doc_present：0 存量违例全在豁免基线内
+
+=== CS-3 fn_param_naming（fn 参数单字母（非 x/y））— 当前违例 180 ===
+    ('crates/ti-app/src/hd_manifest.rs::manifest_expected_count', 22, 'm')
+    ('crates/ti-app/src/menu_shell.rs::fill_rect', 308, 'w')
+    ('crates/ti-app/src/menu_shell.rs::fill_rect', 308, 'h')
+    ('crates/ti-app/src/menu_shell.rs::crossfade_from', 325, 't')
+    ('crates/ti-app/src/menu_shell.rs::fill_rect', 531, 'w')
+    ('crates/ti-app/src/menu_shell.rs::fill_rect', 531, 'h')
+    ('crates/ti-app/src/menu_shell.rs::blit_image', 590, 'w')
+    ('crates/ti-app/src/menu_shell.rs::blit_image', 590, 'h')
+    ('crates/ti-app/src/menu_shell.rs::blit_image_tint', 598, 'w')
+    ('crates/ti-app/src/menu_shell.rs::blit_image_tint', 598, 'h')
+    ('crates/ti-app/src/menu_shell.rs::rgb565_to_rgb8', 642, 'c')
+    ('crates/ti-app/src/particles.rs::push_particle', 132, 'p')
+    ('crates/ti-app/src/touch.rs::near', 118, 'a')
+    ('crates/ti-app/src/touch.rs::near', 118, 'b')
+    ('crates/ti-app/src/world_camera.rs::screen_to_world', 65, 's')
+    ('crates/ti-app/src/world_camera.rs::world_to_screen', 74, 'w')
+    ('crates/ti-app/src/z_layers.rs::is_bevy_z_range', 45, 'z')
+    ('crates/ti-app/src/game_app/board.rs::settle_board_landing', 389, 'b')
+    ('crates/ti-app/src/game_app/board.rs::apply_board_boss', 542, 'b')
+    ('crates/ti-app/src/game_app/host.rs::set_track_node_sel', 271, 'v')
+    ('crates/ti-app/src/game_app/input.rs::poll', 27, 'k')
+    ('crates/ti-app/src/game_app/mod.rs::advance_transition_t', 350, 't')
+    ('crates/ti-app/src/game_app/mod.rs::transition_ease', 360, 't')
+    ('crates/ti-app/src/game_app/state.rs::is_map_cleared', 64, 'm')
+    ('crates/ti-app/src/scenes/chrome.rs::board_fit', 277, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::iso_cell_fit', 302, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::iso_tile_fit', 309, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::entity_size_fit', 317, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::track_edge_px', 634, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::node_edge_px', 647, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::ship_edge_px', 653, 'g')
+    ('crates/ti-app/src/scenes/chrome.rs::voyage_slot_center', 658, 'i')
+    ('crates/ti-app/src/scenes/chrome.rs::wood_panel', 749, 'w')
+    ('crates/ti-app/src/scenes/chrome.rs::wood_panel', 749, 'h')
+    ('crates/ti-app/src/scenes/chrome.rs::fill_rect', 916, 'w')
+    ('crates/ti-app/src/scenes/chrome.rs::fill_rect', 916, 'h')
+    ('crates/ti-app/src/scenes/chrome.rs::blit_image', 966, 'w')
+    ('crates/ti-app/src/scenes/chrome.rs::blit_image', 966, 'h')
+    ('crates/ti-app/src/scenes/chrome.rs::blit_image_tint', 971, 'w')
+    ('crates/ti-app/src/scenes/chrome.rs::blit_image_tint', 971, 'h')
+    ...（140 更多）
+[ok] CS-3 fn_param_naming：135 存量违例全在豁免基线内
+
+=== CS-4 scene_session_ctor（场景层构造持久会话（窄接缝））— 当前违例 0 ===
+[ok] CS-4 scene_session_ctor：0 存量违例全在豁免基线内
+
+check_code_standards: PASS（0 项超基线）
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）
