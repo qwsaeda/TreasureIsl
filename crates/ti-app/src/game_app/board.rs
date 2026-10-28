@@ -141,6 +141,7 @@ impl GameApp {
     ///
     /// 返回本回合结果（`None` = 无赛道，`board` 未构建）。
     pub fn spin_board(&mut self) -> Option<Turn> {
+        self.pending_dungeon = None; // S28.6：新摇骰 = 旧副本入口失效（落格后按新落格重设）
         let b = match balance() {
             Ok(b) => b,
             Err(_e) => {
@@ -191,9 +192,24 @@ impl GameApp {
         self.territory = Some(terr);
         // 席位池：主玩家 = 已选角色（缺 = 首角色 panda），其余自动 AI（§1 不变量 players+ai=5）
         let player_idx = self.selection.character.map_or(0, Character::index);
-        let pool = SeatPool::build(&[player_idx.min(4)]);
+        // S28.4：多选玩家席优先（`seat_marks` 非空 = 触摸行点选标记）；空 = 单选旧流回退。
+        let pool = if self.seat_marks.is_empty() {
+            SeatPool::build(&[player_idx.min(4)])
+        } else {
+            ti_core::rules::selection::seat_pool(&self.seat_marks)
+        };
         let mut cycle = TurnCycle::new(&pool);
-        cycle.current = u8::try_from(player_idx.min(4)).unwrap_or(0);
+        // 当前席 = 最低序号玩家席（确定性开局，§1 顺序 = index 升序）
+        cycle.current = {
+            let mut cur = u8::try_from(player_idx.min(4)).unwrap_or(0);
+            for i in 0..5u8 {
+                if pool.get(i).is_some_and(|s| s.is_player) {
+                    cur = i;
+                    break;
+                }
+            }
+            cur
+        };
         self.turn_cycle = cycle;
         self.seat_gold = [bal.economy.initial_gold; 5];
         // AI 席赛道会话：与主玩家同起点（各席独立位置/圈数）
@@ -238,7 +254,12 @@ impl GameApp {
             self.turn_cycle.advance();
         }
         self.territory = Some(terr);
-    }
+    
+        // S28.4 热座交接（§1）：轮转到玩家席 + 玩家 ≥2 ⇒ 交接提示（`last_ai_toast` 通道展示）
+        let players: u8 = (0..5u8).filter(|i| self.turn_cycle.is_player_seat(*i)).count() as u8;
+        if players >= 2 && self.turn_cycle.is_player_seat(self.turn_cycle.current) {
+            self.last_ai_toast = Some(crate::i18n::sget("scene.main_map.toast.handoff").to_string());
+        }}
 
     /// S28.7 席位金币入账（钳制 `balance.economy.gold_max`；§1 席位独立经济）。
     fn credit_seat_gold(&mut self, seat: SeatIdx, amount: u32, bal: &data::Balance) {
@@ -409,23 +430,103 @@ impl GameApp {
                     }
                 }
             }
-            // BOSS 格本身无金/HP 结算（提示条由 `apply_board_boss` 给出：
-            // 未满圈 = 未现 / 满圈 = 现身）；起点格与普通格同样无结算。
+
             Landing::Boss | Landing::Start | Landing::Plain => {}
             Landing::Territory => {
-                // S28 领地格（`docs/business/territory.md` §4 三支分叉）：先显领地信息签
-                // （岛名 i18n `isle.<id>`）；占领/交钱/攻占/升级的结算菜单 = S28.6/7 接线。
-                let sp = self.board.as_ref().and_then(BoardSession::current).cloned();
-                if let Some(sp) = sp {
-                    let isle_name = sp.isle.as_deref().map_or_else(
-                        || crate::i18n::sget("scene.main_map.node.territory").to_string(),
-                        |isle| crate::i18n::sget(&format!("isle.{isle}")).to_string(),
-                    );
+                self.settle_territory_landing(b);
+            }
+        }
+    }
+
+    /// S28.6 领地格落格三支分叉（territory.md §4）：无主 → 副本守军战（切 vs，胜利占领在
+    /// 战斗钩结算）；他人 → 交过路费；自己 → 升级加固（金足）/ 产出领取（金不足或满级）。
+    fn settle_territory_landing(&mut self, balance: &data::Balance) {
+        let Some(sess) = self.board.as_ref() else {
+            return;
+        };
+        let Some(sp) = sess.current().cloned() else {
+            return;
+        };
+        let Some(isle) = sp.isle.as_deref() else {
+            return;
+        };
+        let cell = u32::try_from(sess.index()).unwrap_or(0);
+        let Some(mut terr) = self.territory.take() else {
+            return;
+        };
+        let rules = TerritoryRules::new(balance);
+        let seat = self.turn_cycle.current;
+        let my_name = self.selection.character.map_or_else(String::new, |ch| {
+            crate::i18n::sget(&format!("role.name.{}", ch.label())).to_string()
+        });
+        let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
+        match terr.ownership(cell).and_then(|o| o.owner) {
+            None => {
+                // 无主 → 副本入口待确认（§4 玩家选择权：提示签条 + `Confirm` 进副本战；
+                // 胜利占领 + 首占奖励在战斗钩 `battle_step` 结算）
+                self.territory = Some(terr);
+                self.pending_dungeon = Some(cell);
+                self.toast(
+                    i18n_fmt("scene.main_map.toast.dungeon_fmt", &[&isle_name]),
+                    Some(Sfx::Press),
+                );
+            }
+            Some(owner) if owner != seat => {
+                // 他人 → 交过路费（§4.2：产出归所有方；攻占选项 = 玩家选择 UI 增量）
+                let toll = terr.apply_pay_toll(&rules, cell, seat);
+                self.seat_gold[seat as usize] = self.seat_gold[seat as usize].saturating_sub(toll);
+                self.credit_seat_gold(owner, toll, balance);
+                let owner_name = ai_seat_name(owner, balance);
+                self.toast(
+                    i18n_fmt(
+                        "scene.main_map.toast.ai_toll_fmt",
+                        &[
+                            &my_name as &dyn std::fmt::Display,
+                            &owner_name as &dyn std::fmt::Display,
+                            &toll as &dyn std::fmt::Display,
+                        ],
+                    ),
+                    Some(Sfx::Press),
+                );
+                self.territory = Some(terr);
+            }
+            Some(owner) => {
+                // 自己 → 升级加固（金足）/ 产出领取（金不足或满级）（§4.1/§4.3）
+                let level_before = terr.ownership(cell).map_or(1, |o| o.level.max(1));
+                let cost = rules.upgrade_cost_at(isle, level_before);
+                let afford = self.seat_gold[owner as usize] >= cost;
+                // 先判金再应用（`apply_upgrade` 有状态变更，金不足不得先改账本）
+                if afford && terr.apply_upgrade(&rules, cell, owner) {
+                    self.seat_gold[owner as usize] =
+                        self.seat_gold[owner as usize].saturating_sub(cost);
+                    let level_after = terr.ownership(cell).map_or(level_before, |o| o.level);
                     self.toast(
-                        i18n_fmt("scene.main_map.toast.territory_fmt", &[&isle_name]),
+                        i18n_fmt(
+                            "scene.main_map.toast.ai_upgrade_fmt",
+                            &[
+                                &my_name as &dyn std::fmt::Display,
+                                &isle_name as &dyn std::fmt::Display,
+                                &level_after as &dyn std::fmt::Display,
+                            ],
+                        ),
+                        Some(Sfx::Press),
+                    );
+                } else {
+                    let amt = terr.apply_collect(&rules, cell, owner);
+                    self.credit_seat_gold(owner, amt, balance);
+                    self.toast(
+                        i18n_fmt(
+                            "scene.main_map.toast.ai_collect_fmt",
+                            &[
+                                &my_name as &dyn std::fmt::Display,
+                                &isle_name as &dyn std::fmt::Display,
+                                &amt as &dyn std::fmt::Display,
+                            ],
+                        ),
                         Some(Sfx::Press),
                     );
                 }
+                self.territory = Some(terr);
             }
         }
     }

@@ -240,6 +240,9 @@ pub struct GameApp {
     /// S28.7 最近一次 AI 行动提示（独立于玩家落格 toast 的展示通道；不覆盖玩家签条，
     /// 主地图 v5 渲染可挂独立一行 = AI 回合可见反馈，territory.md §6）。
     pub last_ai_toast: Option<String>,
+    /// S28.4 玩家席位标记（`territory.md` §1：触摸行点选 toggle；空 = 单选旧流回退
+    /// 主角色单席；非空 = 多选玩家席 + 其余自动 AI，`rules::selection::seat_pool`）。
+    pub seat_marks: Vec<ti_core::domain::selection::Character>,
     /// S28.6 待确认的副本入口（`Some(格序号)` = 落格提示在位，主地图 `Confirm` 进副本战；
     /// 再次摇骰 / 其他行动 = 自动清除（新落格覆盖，territory.md §4 玩家选择权））。
     pub pending_dungeon: Option<u32>,
@@ -481,6 +484,7 @@ impl GameApp {
             ai_sessions: core::array::from_fn(|_| None),
             last_ai_toast: None,
             pending_dungeon: None,
+            seat_marks: Vec::new(),
             #[cfg(feature = "gpu-render")]
             gpu_renderer: {
                 // S18.8a：macroquad 发货壳退役后，仅 android 壳仍需真实 GPU API

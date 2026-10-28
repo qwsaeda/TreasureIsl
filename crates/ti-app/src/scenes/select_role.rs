@@ -96,7 +96,17 @@ impl Scene for SelectRoleScene {
         host.set_character(picked);
         host.selection_mut().character = picked;
         chrome::flash_press();
-        host.advance(GameInput::Confirm)
+        // S28.4：行点击 = toggle 玩家席位标记（`seat_toggle` 不变量：≥1 玩家席，0 选被拒）；
+        // 完成确认仍走 `Confirm`（键盘 / 其他入口，单/多选同一路径，既有流程 0 回归）。
+        let mut marks = host.player_seats();
+        let count = u32::try_from(ti_core::domain::selection::Character::count()).unwrap_or(5);
+        match ti_core::rules::selection::seat_toggle(&mut marks, picked, count) {
+            ti_core::domain::flow::Sfx::Press => {
+                host.set_player_seats(marks);
+            }
+            other => host.play_sfx(other),
+        }
+        false
     }
 
     /// S18.7d 声明式原语化：版面（夜空 / 左角色立绘锚 / 右 5 行选项 / 提示行）=

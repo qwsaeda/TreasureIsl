@@ -412,6 +412,16 @@ impl MapHost for GameApp {
     fn seat_gold_of(&self, seat: u8) -> u32 {
         self.seat_gold.get(seat as usize).copied().unwrap_or(0)
     }
+
+    /// S28.4 玩家席位标记（空 = 单选旧流）。
+    fn player_seats(&self) -> Vec<Character> {
+        self.seat_marks.clone()
+    }
+
+    /// S28.4 玩家席位标记写入（触摸行点选 toggle）。
+    fn set_player_seats(&mut self, seats: Vec<Character>) {
+        self.seat_marks = seats;
+    }
 }
 impl EconomyHost for GameApp {
     fn price_of(&self, gid: u32) -> Option<u32> {
