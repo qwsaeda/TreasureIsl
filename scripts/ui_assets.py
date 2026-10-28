@@ -22,7 +22,8 @@
 ```
 
 角色（role）= 资产规格预设：生图比例 + 目标尺寸 + 抠图模式 + 提示词模板。
-抠图模式：`none`（不抠）/ `luma`（纯黑底 → 亮度抠 alpha）/ `magenta`（品红底 → 品红度抠 alpha）。
+抠图模式：`none`（不抠）/ `luma`（纯黑底 → 亮度抠 alpha）/ `magenta`（品红底 → 品红度抠 alpha）/
+`magenta_clean`（品红底 → alpha + **去污染**：反预乘 + 预乘缩放 + 边缘腐蚀 ⇒ 消边缘紫圈）。
 
 用法：
     python scripts/ui_assets.py build              # 补齐清单里缺失的资产（幂等）
@@ -182,6 +183,85 @@ def key_magenta(src: pathlib.Path, dst: pathlib.Path, target: tuple[int, int]) -
     _save_normalized(out, dst, target)
 
 
+def _estimate_magenta_bg(im: Image.Image) -> tuple[int, int, int]:
+    """估计抠图底色（品红）：取全透明像素的中位数。
+
+    生图模型常把纯品红压暗（实测 #FF00FF → 约 (118,0,118)）并带边缘阴影，
+    故不能硬编码 255,0,255；用中位数估背景才能正确反预乘。
+    """
+    pixels = im.load()
+    samples: list[tuple[int, int, int]] = []
+    for y in range(0, im.height, 8):
+        for x in range(0, im.width, 8):
+            r, g, b, a = pixels[x, y]
+            if a == 0:
+                samples.append((r, g, b))
+    if not samples:
+        return (255, 0, 255)
+    count = len(samples)
+    medians = [sorted(sample[channel] for sample in samples)[count // 2] for channel in range(3)]
+    return (medians[0], medians[1], medians[2])
+
+
+def key_magenta_clean(src: pathlib.Path, dst: pathlib.Path, target: tuple[int, int]) -> None:
+    """品红底 → alpha=0 **+ 去紫边**（`key_magenta` 的加固版，既有 `key_magenta` 行为不变）。
+
+    背景：品红抠图在物体边缘留下一圈半透明像素，其 RGB 混着底色 —— 生图模型常把浅水
+    **真的渐变到品红底**（实测渐隐带宽 8~11px @2048），叠在浅色海图上 = 一圈可见紫轮廓。
+    三步消掉它：
+
+    ① **收紧 alpha 阈值**（hi=32 / lo=8）：品红渐隐带整体判透明 ⇒ 紫圈整段被切掉
+       （比 `key_magenta` 的 60/20 切得更狠，故边缘会收 1~2px，可接受）；
+    ② **去色溢 despill**：半透明像素按品红增量等量扣 r/b（保留真实色相，不放大亮度 ——
+       品红度启发式的 alpha ≠ 真实覆盖率，按 alpha 反预乘会把品红**放大**成亮圈）；
+    ③ **预乘缩放**：预乘后缩放 ⇒ RGBA 直缩放的串色边也不产生。
+    """
+    source = Image.open(src).convert("RGB")
+    width, height = source.size
+    rgba = Image.new("RGBA", (width, height))
+    target_pixels, source_pixels = rgba.load(), source.load()
+    for y in range(height):
+        for x in range(width):
+            r, g, b = source_pixels[x, y]
+            mag = min(r, b) - g
+            if mag >= 32:
+                alpha = 0
+            elif mag <= 8:
+                alpha = 255
+            else:
+                alpha = (32 - mag) * 255 // 24
+            if 0 < alpha < 255:
+                cut = mag // 2
+                r = max(0, r - cut)
+                b = max(0, b - cut)
+            target_pixels[x, y] = (r, g, b, alpha)
+
+    # 预乘 → 缩放（缩放后反预乘），避免 RGBA 直缩放的串色边
+    premultiplied = Image.new("RGBA", (width, height))
+    pre_pixels, rgba_pixels = premultiplied.load(), rgba.load()
+    for y in range(height):
+        for x in range(width):
+            r, g, b, alpha = rgba_pixels[x, y]
+            pre_pixels[x, y] = (r * alpha // 255, g * alpha // 255, b * alpha // 255, alpha)
+    tw, th = target
+    premultiplied.thumbnail((tw, th), Image.LANCZOS)
+    resized = premultiplied.convert("RGBA")
+    resized_pixels = resized.load()
+    for y in range(resized.height):
+        for x in range(resized.width):
+            r, g, b, alpha = resized_pixels[x, y]
+            if alpha == 0:
+                resized_pixels[x, y] = (0, 0, 0, 0)
+            elif alpha < 255:
+                resized_pixels[x, y] = (
+                    min(255, r * 255 // alpha),
+                    min(255, g * 255 // alpha),
+                    min(255, b * 255 // alpha),
+                    alpha,
+                )
+    _save_normalized(resized, dst, target)
+
+
 def _save_normalized(im: Image.Image, dst: pathlib.Path, target: tuple[int, int]) -> None:
     """规范化：缩放到目标尺寸（等比裁切/填充由缩略图近似）+ RGBA8 + 存盘。"""
     tw, th = target
@@ -198,7 +278,12 @@ def key_none(src: pathlib.Path, dst: pathlib.Path, target: tuple[int, int]) -> N
     _save_normalized(im, dst, target)
 
 
-KEYERS = {"none": key_none, "luma": key_luma, "magenta": key_magenta}
+KEYERS = {
+    "none": key_none,
+    "luma": key_luma,
+    "magenta": key_magenta,
+    "magenta_clean": key_magenta_clean,
+}
 
 
 # ────────────────────────────── 命令 ──────────────────────────────

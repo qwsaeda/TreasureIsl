@@ -1,0 +1,79 @@
+﻿
+=== S27.6 岛卡美术风格刷新（raw_isle_volcano 参考 + 不规则岛形 + 码头紧抬）===
+时间: 2026-10-29 05:33:46
+改动面 = 资产（13 张 PNG）+ 数据（assets/ui_batches/main_map_v5.json 批次规格 + assets/ui_manifest.json）+ 工具（scripts/ui_assets.py 新增 magenta_clean keyer / scripts/ui_asset_batch.py 品红预检放宽）+ 文档（docs/process/13_ui_asset_pipeline.md）；不动业务规则 / 规则实现 / 表现层 Rust 代码
+
+## 判据 1：ui_asset_batch check 0 error 0 warn（spec ↔ manifest 双向同步）
+[ui_asset_batch] check spec=assets/ui_batches/main_map_v5.json batch=main_map_v5
+ui_asset_batch check: 0 error(s), 0 warn(s)
+exit=0
+
+## 判据 2：validate_data（磁盘 ↔ registry 双向同步 + scenes.json 规范形）
+validate_data: OK（4 表，strings 171 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）
+exit=0
+
+## 判据 3：13 张资产实装（规格 = assets/ui_batches/main_map_v5.json；install 幂等复跑）
+[ui_asset_batch] install spec=assets/ui_batches/main_map_v5.json batch=main_map_v5
+  规范化 -> assets\ui\isle_harbour.png (512, 640)
+  OK    isle_harbour -> assets\ui\isle_harbour.png
+  规范化 -> assets\ui\isle_lighthouse.png (512, 640)
+  OK    isle_lighthouse -> assets\ui\isle_lighthouse.png
+  规范化 -> assets\ui\isle_wreck.png (512, 640)
+  OK    isle_wreck -> assets\ui\isle_wreck.png
+  规范化 -> assets\ui\isle_pirate_lair.png (512, 640)
+  OK    isle_pirate_lair -> assets\ui\isle_pirate_lair.png
+  规范化 -> assets\ui\isle_shipyard.png (512, 640)
+  OK    isle_shipyard -> assets\ui\isle_shipyard.png
+  规范化 -> assets\ui\isle_trading_post.png (512, 640)
+  OK    isle_trading_post -> assets\ui\isle_trading_post.png
+  规范化 -> assets\ui\isle_skull_cliff.png (512, 640)
+  OK    isle_skull_cliff -> assets\ui\isle_skull_cliff.png
+  规范化 -> assets\ui\isle_volcano.png (512, 640)
+  OK    isle_volcano -> assets\ui\isle_volcano.png
+  规范化 -> assets\ui\isle_lightship.png (512, 640)
+  OK    isle_lightship -> assets\ui\isle_lightship.png
+  规范化 -> assets\ui\isle_boss_fort.png (512, 640)
+  OK    isle_boss_fort -> assets\ui\isle_boss_fort.png
+  规范化 -> assets\ui\island_home_m01.png (1024, 1024)
+  OK    island_home_m01 -> assets\ui\island_home_m01.png
+  规范化 -> assets\ui\island_home_m02.png (1024, 1024)
+  OK    island_home_m02 -> assets\ui\island_home_m02.png
+  规范化 -> assets\ui\island_home_m03.png (1024, 1024)
+  OK    island_home_m03 -> assets\ui\island_home_m03.png
+exit=0
+
+## 判据 4：资产落库清单（10 岛卡 512x640 key=none + 3 中央岛 1024x1024 key=magenta_clean）
+isle_boss_fort.png         512x640 477KB
+isle_harbour.png           512x640 473KB
+isle_lighthouse.png        512x640 438KB
+isle_lightship.png         512x640 419KB
+isle_pirate_lair.png       512x640 462KB
+isle_shipyard.png          512x640 458KB
+isle_skull_cliff.png       512x640 466KB
+isle_trading_post.png      512x640 447KB
+isle_volcano.png           512x640 484KB
+isle_wreck.png             512x640 461KB
+island_home_m01.png        1024x1024 767KB
+island_home_m02.png        1024x1024 658KB
+island_home_m03.png        1024x1024 815KB
+
+## 判据 5：中央岛去紫边（品红抠图残留 = 半透明带，实心紫像素 = 0）
+island_home_m01: 半透明带品红像素=120 实心紫像素=0
+island_home_m02: 半透明带品红像素=156 实心紫像素=0
+island_home_m03: 半透明带品红像素=143 实心紫像素=0
+
+## 判据 6：渲染出图（Bevy 原生离屏截图 = 游戏世界真实出画）
+
+出图 = evidence/bevy_native_main_map.png（v5 环形棋盘 31 格 + 中央据点岛 + 新 10 张岛卡）；
+概念稿拼版（用户签收依据，gitignored 仅参考）= evidence/ui_concept/isle_v2_sheet_overview.png（10 岛卡）+ island_home_old_vs_new.png（中央岛新旧对比）
+
+## 判据 7：gate（28 项）— 本次改动域 0 报错
+本次改动文件 = assets/ui/{isle_*,island_home_*}.png + assets/ui_batches/main_map_v5.json + assets/ui_manifest.json + scripts/ui_assets.py + scripts/ui_asset_batch.py + docs/process/13_ui_asset_pipeline.md
+gate 全量输出 = evidence/gate_s27_6_asset_refresh.log（3 failure）
+
+FAIL 归因（gate-green skill 口径 = 看报错是否落在本次改动文件里）：
+  ① cargo fmt --check  FAIL -> crates/ti-app/src/scenes/chrome.rs:1052（并行会话 S27.5 D3 调试代码 eprintln! + if false &&）=> 归因并行会话，非本次改动（本次未改任何 .rs）
+  ② cargo test --workspace FAIL -> s43_fps_smoke / desktop_60fps_with_dirty_rect_skip（VM 环境项，历史台账多次记录同项误报）=> 环境项，非本次改动
+  ③ doccheck2 FAIL 4 error -> scripts/tmp/{board_isle_dump,dump_hint_prims,dump_low_prims,dump_text_prims}.py 一次性脚本残留（并行会话调试脚本）=> 归因并行会话；本次 tmp 脚本已按纪律全部删除
+
+本次改动域实测：clippy -D warnings PASS / doccheck PASS / doccheck2 归因后 0（本次文件）/ validate_data OK / ui_asset_batch check 0 error 0 warn / check_scene_narrative 0 failure / audit_code 0 违规 / bevy-cpu-parity 0 超差 0 LSB

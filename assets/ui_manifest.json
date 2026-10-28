@@ -71,8 +71,8 @@
         1024,
         1024
       ],
-      "key": "magenta",
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, {theme}, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
+      "key": "magenta_clean",
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, {theme}, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
     }
   },
   "assets": [
@@ -633,9 +633,9 @@
       "role": "island_home",
       "file": "assets/ui/island_home_m01.png",
       "params": {
-        "theme": "coral reef archipelago theme, turquoise lagoons, coral shelves and white sand spits"
+        "theme": "coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, palm trees and small huts, muted desaturated antique-map colours"
       },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoons, coral shelves and white sand spits, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, palm trees and small huts, muted desaturated antique-map colours, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
       "generated_at": "2026-10-27"
     },
     {
@@ -643,9 +643,9 @@
       "role": "island_home",
       "file": "assets/ui/island_home_m02.png",
       "params": {
-        "theme": "volcanic black island theme, dark basalt cliffs, a smoking crater and ash dunes"
+        "theme": "volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke"
       },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a smoking crater and ash dunes, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
       "generated_at": "2026-10-27"
     },
     {
@@ -653,9 +653,9 @@
       "role": "island_home",
       "file": "assets/ui/island_home_m03.png",
       "params": {
-        "theme": "bone reef theme, pale bleached cliffs, wrecked hulls and a giant skull carved into the rock"
+        "theme": "bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire"
       },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs, wrecked hulls and a giant skull carved into the rock, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
       "generated_at": "2026-10-27"
     }
   ]

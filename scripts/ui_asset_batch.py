@@ -278,7 +278,7 @@ def cmd_check(spec: dict, _args: argparse.Namespace) -> int:
                         f"{name}: 原图底色偏亮（四角均亮 {corner:.0f} > {LUMA_CUTOFF}）"
                         f" ⇒ luma 抠图可能失效，建议提示词要求纯黑底并重生"
                     )
-            elif key == "magenta":
+            elif key.startswith("magenta"):
                 frac = _magenta_stats(raw)
                 if frac < 0.05:
                     warns.append(

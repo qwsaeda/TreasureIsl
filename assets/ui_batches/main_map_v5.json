@@ -2,18 +2,19 @@
  "version": 1,
  "batch": "main_map_v5",
  "_comment": "main_map 重设计 v5（S27.x）资产批次规格：10 类海盗岛**卡面底图**（整幅卡面，不抠透明 —— 岛图自带羊皮底与黄铜边框，代码只叠归属色带/名/等级）+ 3 张中央据点岛插画（品红抠透明，浮在海图上）。`assets/ui_manifest.json` 仍是资产唯一事实源（`ui_asset_batch.py register` 由本规格 upsert 生成）；本规格 = 批次可评审可 diff/可复现的输入。抠图可行性由 `ui_asset_batch.py check` 预检（magenta 需纯品红底）。规格源 = docs/ui-redesign-v3/10_main_map_v5_spec.md §7；业务源 = docs/business/territory.md §3（10 类岛 id 与副本守军）。",
+ "_style_ref_s27_6": "S27.6 风格刷新（2026-10-29 用户：风格色彩以 raw_isle_volcano 参考 + 海岛随机形状 + 格子紧抬=停靠码头）：10 类岛卡 + 3 张中央据点岛统一改为暗玄武岩 + 暖沙 + teal 浅海 + 羊皮底 + 黄铜边框 + 3/4 俯视的旧羊皮航海图风格；岛形 = 不规则自然随机小陆（非正圆/正多边形，如过河踏石）；海岸收紧贴陆（极简开阔水面）+ 岸边小码头泊船（停靠码头语义）。风格令牌全部编码进 roles.*.prompt 文本（图生图参考 = 一次性产出手段；文本 = 可复现源）。概念稿已用户签收（evidence/ui_concept/isle_v2_*.png + island_home_old_vs_new.png，gitignored 仅参考）。",
  "roles": {
   "isle": {
    "ratio": "3:4",
    "target": [512, 640],
    "key": "none",
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: {what} filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: {what} seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   "island_home": {
    "ratio": "1:1",
    "target": [1024, 1024],
-   "key": "magenta",
-   "prompt": "a large pirate island seen from a high three-quarter aerial view, {theme}, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
+   "key": "magenta_clean",
+   "prompt": "a large pirate island seen from a high three-quarter aerial view, {theme}, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
   }
  },
  "assets": [
@@ -21,92 +22,118 @@
    "name": "isle_harbour",
    "role": "isle",
    "file": "assets/ui/isle_harbour.png",
-   "params": {"what": "a walled harbour town island with two stone towers, wooden docks and small fishing boats"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a walled harbour town island with two stone towers, wooden docks and small fishing boats filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a walled harbour town with two stone towers, a stone gate, wooden docks and several fishing boats plus one galleon moored at the dock"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a walled harbour town with two stone towers, a stone gate, wooden docks and several fishing boats plus one galleon moored at the dock seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_lighthouse",
    "role": "isle",
    "file": "assets/ui/isle_lighthouse.png",
-   "params": {"what": "a white lighthouse island on a jagged rocky reef with a broken ship mast"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a white lighthouse island on a jagged rocky reef with a broken ship mast filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a white lighthouse standing on a jagged rocky reef with a broken ship mast nearby"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a white lighthouse standing on a jagged rocky reef with a broken ship mast nearby seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_wreck",
    "role": "isle",
    "file": "assets/ui/isle_wreck.png",
-   "params": {"what": "a half-sunken galleon wreck island on a sandbar with spilled treasure chests"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a half-sunken galleon wreck island on a sandbar with spilled treasure chests filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a half-sunken galleon wreck lying on its side on a sandy sandbar reef, tilted broken masts, spilled wooden treasure chests and scattered gold coins on the sand (no volcano, no lava, no fire)"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a half-sunken galleon wreck lying on its side on a sandy sandbar reef, tilted broken masts, spilled wooden treasure chests and scattered gold coins on the sand (no volcano, no lava, no fire) seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_pirate_lair",
    "role": "isle",
    "file": "assets/ui/isle_pirate_lair.png",
-   "params": {"what": "a dark rocky pirate lair island with a cave mouth, skull totem and tattered black flag"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a dark rocky pirate lair island with a cave mouth, skull totem and tattered black flag filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a dark rocky pirate lair with a cave mouth, a skull totem and a tattered black flag on the cliff"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a dark rocky pirate lair with a cave mouth, a skull totem and a tattered black flag on the cliff seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_shipyard",
    "role": "isle",
    "file": "assets/ui/isle_shipyard.png",
-   "params": {"what": "a shipyard island with a wooden slipway and two half-built galleons on the beach"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a shipyard island with a wooden slipway and two half-built galleons on the beach filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a shipyard with a wooden slipway and two half-built galleons on the beach"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a shipyard with a wooden slipway and two half-built galleons on the beach seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_trading_post",
    "role": "isle",
    "file": "assets/ui/isle_trading_post.png",
-   "params": {"what": "a trading outpost island with cargo crates, barrels and a striped market awning"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a trading outpost island with cargo crates, barrels and a striped market awning filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a trading outpost with cargo crates, barrels and a striped market awning on a sandy beach"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a trading outpost with cargo crates, barrels and a striped market awning on a sandy beach seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_skull_cliff",
    "role": "isle",
    "file": "assets/ui/isle_skull_cliff.png",
-   "params": {"what": "a bleached skull cliff island with a wrecked longboat and bone stakes"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a bleached skull cliff island with a wrecked longboat and bone stakes filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a bleached skull cliff with a wrecked longboat and bone stakes on pale rock"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a bleached skull cliff with a wrecked longboat and bone stakes on pale rock seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_volcano",
    "role": "isle",
    "file": "assets/ui/isle_volcano.png",
-   "params": {"what": "a smoking volcano island with a glowing lava crater and obsidian rocks"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a smoking volcano island with a glowing lava crater and obsidian rocks filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a smoking volcano with a glowing orange-red lava crater and lava channels running down, obsidian rocks on the sand"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a smoking volcano with a glowing orange-red lava crater and lava channels running down, obsidian rocks on the sand seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_lightship",
    "role": "isle",
    "file": "assets/ui/isle_lightship.png",
-   "params": {"what": "a lantern ship island with a tall mast light moored on a small sandbar"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a lantern ship island with a tall mast light moored on a small sandbar filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "an old lantern lightship - a wooden ship with a tall mast carrying a glowing lantern light - moored beside a small jagged rocky sandbar"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: an old lantern lightship - a wooden ship with a tall mast carrying a glowing lantern light - moored beside a small jagged rocky sandbar seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "isle_boss_fort",
    "role": "isle",
    "file": "assets/ui/isle_boss_fort.png",
-   "params": {"what": "a black stone fortress island with heavy cannons, a spiked iron gate and skull banners"},
-   "prompt": "a vertical portrait game card illustration in antique cartography ink and watercolor: a black stone fortress island with heavy cannons, a spiked iron gate and skull banners filling the whole frame as a close-up aerial view, warm sand beach and teal shallow water, aged parchment texture background, a thin dark brass border frame around the card edges, the lower quarter of the card is empty plain parchment with no drawing, no text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+   "params": {
+    "what": "a black stone fortress with heavy cannons, a spiked iron gate and tattered skull banners, built on a jagged irregular rocky islet (no circular wall ring around the island)"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a black stone fortress with heavy cannons, a spiked iron gate and tattered skull banners, built on a jagged irregular rocky islet (no circular wall ring around the island) seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
   },
   {
    "name": "island_home_m01",
    "role": "island_home",
    "file": "assets/ui/island_home_m01.png",
-   "params": {"theme": "coral reef archipelago theme, turquoise lagoons, coral shelves and white sand spits"},
-   "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoons, coral shelves and white sand spits, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
+   "params": {
+    "theme": "coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, palm trees and small huts, muted desaturated antique-map colours"
+   },
+   "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, palm trees and small huts, muted desaturated antique-map colours, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
   },
   {
    "name": "island_home_m02",
    "role": "island_home",
    "file": "assets/ui/island_home_m02.png",
-   "params": {"theme": "volcanic black island theme, dark basalt cliffs, a smoking crater and ash dunes"},
-   "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a smoking crater and ash dunes, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
+   "params": {
+    "theme": "volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke"
+   },
+   "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
   },
   {
    "name": "island_home_m03",
    "role": "island_home",
    "file": "assets/ui/island_home_m03.png",
-   "params": {"theme": "bone reef theme, pale bleached cliffs, wrecked hulls and a giant skull carved into the rock"},
-   "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs, wrecked hulls and a giant skull carved into the rock, antique cartography ink and watercolor, warm sand beach, teal shallow reef, a black-sailed galleon anchored offshore, tiny buildings and palms on the island, soft drop shadow, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
+   "params": {
+    "theme": "bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire"
+   },
+   "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
   }
  ]
 }
