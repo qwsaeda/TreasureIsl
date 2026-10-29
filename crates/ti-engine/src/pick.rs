@@ -109,11 +109,7 @@ pub fn swipe_dir_from(distance: Vec2, threshold: f32) -> u8 {
         return SWIPE_NONE;
     }
     if distance.abs().x >= distance.abs().y {
-        if distance.x > 0.0 {
-            SWIPE_RIGHT
-        } else {
-            SWIPE_LEFT
-        }
+        if distance.x > 0.0 { SWIPE_RIGHT } else { SWIPE_LEFT }
     } else if distance.y > 0.0 {
         // 屏幕像素 y 向下为正 = 游戏 1080 坐标 y 向下 = 下滑。
         SWIPE_DOWN
@@ -183,10 +179,7 @@ pub fn register_pick(app: &mut App) {
         .add_message::<PickEvent>()
         .add_observer(pick_on_click)
         .add_observer(pick_on_drag_end)
-        .add_systems(
-            PostUpdate,
-            (pick_flush, clear_pick_activity).chain(),
-        );
+        .add_systems(PostUpdate, (pick_flush, clear_pick_activity).chain());
 }
 
 /// 观察者：点按（press+release 同一可拾取实体）→ 记实体进 [`PickPending`]。

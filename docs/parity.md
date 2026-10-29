@@ -61,7 +61,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 |  | P0-5（S10.1 新增） | 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test render_invariants` |  |
 
-## 代码质量门禁 `scripts/gate.ps1`（28 项，循环每轮强制）
+## 代码质量门禁 `scripts/gate.ps1`（29 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项）
 
 > **计数约定（本节是门禁项数的唯一事实源，其他文档只引用、不各自重数）**
 >
@@ -69,7 +69,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > 1. 只数顶格 `Report`；**缩进在 `if`/`else` 块内的条件 `Report`/`Skip` 不计入**——
 >    即 wasm 构建、android 构建、`zero-unknown verify`（`if (Test-Path ...)` 守卫）三项；
 > 2. `Skip` 不单独计项；
-> 3. 当前顶格 `Report` = **28 项**。
+> 3. 当前顶格 `Report` = **29 项**（S31.3 起 = 28 + 第 22 项 wasm 浏览器端 e2e；数字对不上时以机器输出为准）。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
 > 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
@@ -91,7 +91,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 3  cargo test  --workspace
 4  构建（范围随阶段解锁，未解锁的行在脚本里跳过并打印 SKIP）：
      cargo build --workspace --target x86_64-pc-windows-msvc          # S0.1 起
-     cargo build --release --manifest-path crates/ti-engine/Cargo.toml \
+     cargo build --release -p ti-engine \
          --bin treasure-bevy-wasm --target wasm32-unknown-unknown     # S2.5 解锁（需先 rustup target add）
      cargo build -p ti-app --target aarch64-linux-android             # S2.6 解锁（需 NDK）
 4b feature 门控 bin 编译 + lint（EXP-099：`required-features` 的 bin 不被 1~3 项覆盖）：

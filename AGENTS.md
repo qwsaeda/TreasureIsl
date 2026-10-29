@@ -23,12 +23,15 @@
 
 - **S31 地图包（Map Package）标准 v1（2026-10-28 用户：「现在是打包规范，标准在哪，打包的产物在哪」→「我让你制定的标准」→ 拍板 B = 运行期换图全链路 → 执行顺序 ①文档规范 ②打包工具 ③全部对齐）**：**S31.0 规格定案已 verified**（`docs/process/21_map_package_spec.md` 单一事实源：一张图 = 一个可分发包 `assets/maps/<id>/{manifest,map,layout,strings}.json` + `.default` 默认包指针 + `_template/` 骨架；资产双来源 `source=pack/pool`（专属入包自带，共享池 `assets/ui/` 登记 + 哈希照验）；I1~I8 不变量（31 格 = start1+territory20+功能9+boss1 / 10 类岛各 2 格同区 / **BOSS 在环半周 spaces[31//2]**（非末格，实测三图 boss@15）/ 8pt / 资产哈希 / N8 焦点 ±1px）+ 版本兼容（`map-pack/1` + `board-v5` 不符即拒）+ 失败回退（缺包 → 构建期内嵌默认包数据）；§7 运行期加载契约（选 B）+ §8 工具流水线；18/17/14/04/README/路由表全对齐，`evidence/S31.0.log`）；**S31.1 工具 + 产物已 verified**（`scripts/map_pack.py` 8 子命令 pack/verify/install/uninstall/list/add/check/sync + 已装包 `assets/maps/{m01,m02,m03}/` + `dist/maps/*.map-pack(+zip)` 可分发件（含池资产副本 + POOL_INDEX 哈希索引）；verify 0 违规 / check 0 漂移 / dist zip verify 过；S30.1 扁平描述符归档 `legacy/data/maps_s301/`，`evidence/S31.1.log`）；**S31.2 运行期换图·数据注入层已 verified**（`ti-core::data::map_pack`（包路径直读 + manifest schema/版本/id 三拒 + 三段表**内嵌默认表 upsert 合并**（注入 m02 不丢 m01/m03 内嵌图，只替换本包段））+ `table_source` 注入接缝（首访前 `install` 生效 / 迟注入忽略告警；`board()`/`scenes()`/`strings()` 三访问器 hook，未注入 = 内嵌 0 行为变化）+ 壳 `apply_map_pack`（`TI_MAP=<id>` > `.default` 指针 > 纯内嵌，逐段 precheck 缺段回退）+ 7 项集成测试 + `build_wasm.ps1` 4e 段部署链（`assets/maps/<id>/` → `web/assets/maps/<id>/`）；`TI_MAP=m02 --shot main_map` 真渲染 0 硬错误 + 缺包回退 0 panic，`evidence/S31.2.log`）；**S31.2b 残留已 verified**（select_map 包列表 UI（已装包 ∩ 内嵌槽位金边条标记，未注入 0 行为变化）+ 切包会话重建路径（`MapBack`→选图→重进，`enter_main_map_at(None)` 全量重建 board/territory）+ `SelectionHost::map_pack_ids`/`active_map_pack` 窄接缝 + 3 项 e2e，`evidence/S31.2b.log`；wasm fetch 运行期读取 = 后续，部署链已通）。
 
+- **Linux 迁移续工（2026-10-29 用户拍板「loop 完」）**：`docs/migration_linux.md` §4 补「Linux 门禁兼容已落地」注（gate 28 项在 Ubuntu 24.04 全绿，`evidence/linux_gate_green.log`）：①`gate.ps1` `python`→`$py`（Linux 映射 `python3`，Windows 行为不变）+ 占位/unwrap 扫描 `(?i)[/\\]` 路径分隔双兼容 ②系统依赖 `pkg-config`+`libudev-dev`+`libwayland-dev` ③`pcx_ref` 测试 python3 自动探测。同轮门禁对账修复：`theme.rs` 10 类 `isle_*` 令牌进 `Theme` 字段+`by_name`+`DEFAULT`（theme.json 三方对账齐）+ `vs_proto.rs` CS-1 资产路径迁 `chrome::VS_*` 单源常量（参数窄接缝 `RenderHost`）+ `combat.side.player` i18n + `bevy_native_render` 测试锚定 S22 现行数据 + `code_budget.json`/`process_ratchet.json` 棘轮基线补登（main_map.rs/data-mod.rs 超限文件 + 2 超限函数 + CS-3 局部 `fn out`）+ `wasm_browser_e2e.py` 工具契约 3 处登记（14 台账 + 04 速查 + README 索引）。**gate 28 项 0 failure**（含 GPU bevy-cpu-parity：Intel HD 630 + Mesa Vulkan 真跑，超差 0 LSB）。
+
 ## 路由表
 
 > 全库索引见 `docs/README.md`。本表只列「开工前必读」的入口。
 
 | 你要做的事 | 读 |
 |---|---|
+| **迁移 Linux / 换机器续工（先读这个）** | `docs/migration_linux.md`（在途改动清单 = tracked-M + untracked-? 混合，只提交 tracked 会丢工作；Linux 环境准备 + `pwsh` 命令差异 + CRLF/无头 GPU 风险 + 迁移后续工序列） |
 | **理解游戏怎么设计/架构/模块化（第一入口）** | `docs/00_design.md`（正向设计总览：核心循环 + 数据分层 + crate 架构 + 9 场景 + 模块包 + 窄接口；**不读 legacy/**） |
 | **新开工 / 参与开发（先读这个）** | `docs/process/00_index.md`（分工表：谁做什么 + 标准工作流）+ `docs/business/00_index.md`（业务唯一事实源） |
 | **任何开工动作之前** | `docs/loop.md` + `plan/ledger.yaml` + `docs/README.md` |
@@ -48,6 +51,7 @@
 | **UI 重设计 v3（真游戏化版面：场景叙事 DSL + 打破 7 场景同模板）** | `docs/ui-redesign-v3/README.md`（01 对标拆解 / 02 场景叙事 DSL 规格 / 03 七场景重设计提案 / 04 index 落地；gate 的 `check_scene_narrative` 项（gate.ps1 内注释编号 21）锚点 `assets/data/ui_schema/scene_manifest_v3.json`；v3 取代 v2 的「7 场景同模板」前提，色板/字体/动效令牌仍沿用 `10_ui_redesign.md`） |
 | **UI 重设计 v3.5（画面丑的根因=设计数据：地形/暖色板/画布/实体/HUD）** | `docs/ui-redesign-v3/07_v3_5_pass.md`（地形数据 → 棋盘成地图；暖色板；画布贴合；实体图标化；执行链 S18.9~S18.13） |
 | **main_map 重设计 v4「羊皮海图桌面」（S21.3 定案坐标/交互/资产接线；改 main_map 版面/节点牌/船/舵轮 CTA 前必读）** | `docs/ui-redesign-v3/08_main_map_v4_spec.md`（逐元素坐标表 + N8/8pt 门禁耦合 + 资产接线 + 交互契约；单一事实源，镜像 `business/08_layout_design.md` §4.3；落码 = S21.4 岛屿重绘 / S21.5 赛道重绘 / S21.6 版面重排 / S21.7 交互 / S21.12 船贴图） |
+| **VS 对战场景重设计 v6「道具 + 现代化回合制」（S27.7；改 vs 版面/道具/动作/回合演出前必读）** | `docs/ui-redesign-v3/11_vs_spec.md`（问题诊断 + 战斗动作 攻击/道具/防御 + 4 道具 + 资产批次 `vs_v1`（boss_captain/hero_back/deck_battle/item_*）+ **5 套候选版式 A/B/C/D/E** 选型（引擎真实渲染图 `TI_VS_PROTO` 原型出图）+ 落地 WBS）；业务规则单一事实源 = `business/combat.md` §战斗动作；数值 = `balance.combat.items`） |
 | **main_map 重设计 v5「中央据点岛 + 环形格子环」（S27.1 定案坐标/交互/资产接线；改 main_map 版面/环形格子/中央据点岛/点卡交互前必读）** | `docs/ui-redesign-v3/10_main_map_v5_spec.md`（31 张岛型卡环 96×120 + 中央可点击据点岛 760×760 + 10 类海盗岛 + 归属色带 + 逐元素坐标表 + N8/8pt 门禁耦合 + 点卡交互契约（交钱/攻占/进副本/升级加固）；单一事实源，镜像 `business/08_layout_design.md` §4.4；业务规则 = `business/territory.md`；落码 = S27.2 资产 / S27.3 数据 / S27.4 表现 / S27.5 出图） |
 | **领地系统（v5 业务单一事实源：每格 = 领地/功能点，占领/交钱/攻占/升级加固 + 10 类岛专属副本 + 4 AI 对手席位）** | `docs/business/territory.md`（席位与选角 ≥1 玩家 / 领地格 vs 功能格 / 31 格赛道 / 10 类岛与副本 / 落格三支分叉 / 经济接入 / 存档 v4 / 可测规则表）+ `assets/data/board.json` + `rules::territory`（`ti-core`）；改领地/副本/AI/存档前必读 |
 | **首页 index 重设计「罗盘环标题页」（S22.0 定案坐标/交互/资产接线；改首页版面/罗盘环/徽章/舵轮前必读）** | `docs/ui-redesign-v3/09_index_compass_spec.md`（C 方向 + 羊皮海图底与 main_map v4 统一：满屏 `chart_full` + 中心舵轮 `helm` + 6 铜质 medallion 沿环（白蒙版图标 gold tint）+ 版本签；逐元素坐标表 + N8/8pt 径向键豁免 + 资产接线 + 6 徽章命中契约；单一事实源；落码 = S22.1 出 `medallion_ring` 资产 / S22.2 落码 / S22.3 出图验收） |
@@ -124,8 +128,8 @@ powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
 # 本地预览（wasm 需 HTTP，不能 file://）
 cargo run -q -p ti-tools --bin serve -- --dir web --port 8080
 
-# S18.8a：桌面发货版 = Bevy 壳（ti-engine 独立 workspace；macroquad 壳已退役）
-cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
+# S18.8a：桌面发货版 = Bevy 壳（ti-engine 已并入根 workspace，S27.7；macroquad 壳已退役）
+cargo run -q -p ti-engine --bin treasure-bevy-native
 
 # S2.7：native + wasm 两端冒烟（本机无 bash，务必用 ps1）
 powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1
@@ -146,7 +150,7 @@ cargo run -q -p ti-tools --bin specskel -- <module> --report     # 只打印统�
 ```
 
 - 构建范围随阶段解锁：native（已解锁）→ wasm（**S2.5 已解锁**）→ android（S2.6 在 **Mac** 装 NDK/SDK + cargo-apk 编译 APK，本机 Windows 不产出，gate SKIP）；gate 按已装 target 自动判定并打印 SKIP。
-- **发货壳 = Bevy（S18.8a 起）**：桌面 `treasure-bevy-native` / 浏览器 `treasure-bevy-wasm`（`crates/ti-engine`，独立 workspace）；ti-app 的 macroquad native/wasm 壳已删除（`macroquad` 仅剩 android 壳在用，S18.8d 退役）。门禁 wasm 项直接构建 + lint 该 Bevy 交付产物。
+- **发货壳 = Bevy（S18.8a 起）**：桌面 `treasure-bevy-native` / 浏览器 `treasure-bevy-wasm`（`crates/ti-engine`，**S27.7 起并入根 workspace**，统一由根 `Cargo.toml` 管理）；ti-app 的 macroquad native/wasm 壳已删除（`macroquad` 仅剩 android 壳在用，S18.8d 退役）。门禁 wasm 项直接构建 + lint 该 Bevy 交付产物。
 - **桌面/浏览器可玩（S5.1–S5.4）已收口**：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定；S0–S14 全 verified，当前活动任务 S21（main_map 重设计 v4 + 船系统：S21.0/S21.1 verified、S21.2 船系统规格待拍板，见 `plan/ledger.yaml`）；Android 为后续移动端交付，开发本身不依赖 Android 工具链。
 - S5.5 Android 壳已落地（`android-shell` feature + `treasure-android` bin + `android/README.md`）；APK 实际产出在 Mac，本机 host 形态可编译校验。
 

@@ -1,0 +1,42 @@
+=== S31.3 wasm 浏览器端 e2e 收口证据 ===
+
+--- 1. 改动面声明 ---
+表现（bevy_ui 行鼠标命中：删 4 个调试观察者 debug_click_log/_diag/_press/_release + 消费
+PointerHits 的调试系统 = 隐藏阻塞）+ 工具（scripts/wasm_browser_e2e.py 升级 4 层判据 + L4 增量场景切换）
+跨模块原因：命中链路（UiPickingPlugin 拾取行 Node → PickTarget → PickEvent → poll_hit
+→ on_hit → set_map_slot + Confirm → enter_main_map）须与 e2e 判据同批固化
+
+--- 2. 关键修复点 ---
+① 删 crates/ti-engine/src/bin/treasure_bevy.rs 4 个调试观察者（消费 PointerClick 但不发
+  PickEvent 的调试桩；其中 PointerHits 消费系统饿死 build_over_map = 隐藏阻塞）
+② 摘 crates/ti-engine/Cargo.toml web-sys console 特性（调试用，非运行时需要）
+③ 摘根 Cargo.toml bevy mesh_picking 冗余特性（2d → picking → ui_picking 已含）
+④ 用户报「选图点不动/选完地图不能玩」根因 = 点了未解锁的 m02/m03 卡片（index 1/2）
+  → map_unlocked 正确拒绝（设计行为）；点 m01（index 0，唯一初始解锁）= 端到端切 main_map
+
+--- 3. 浏览器 e2e 实跑（4 层判据）---
+[wasm-browser-e2e] 截图 -> /disk/workspaces/treasureIsl/evidence/wasm_browser_e2e.png
+{
+  "L1_start": true,
+  "L2_render": true,
+  "L2_assets": true,
+  "L3_input": true,
+  "L4_scene": true,
+  "detail": {
+    "L1_start": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
+    "L2_render": {
+      "ok": true,
+      "bright_ratio": 74.9
+    },
+    "L3_input": {
+      "after": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
+      "page_errors": []
+    },
+    "L4_scene": {
+      "before": 17.7,
+      "after": 78.1,
+      "transitioned": true
+    }
+  }
+}
+[wasm-browser-e2e] PASS（L1 实例化=True / L2 渲染=True 资产=True / L3 交互=True / L4 场景切换=True）

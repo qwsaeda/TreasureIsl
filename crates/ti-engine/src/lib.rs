@@ -17,7 +17,7 @@ pub mod ui;
 pub use bevy_app::SpikeApp;
 pub use canvas::{BevyCanvas, CanvasEntity, color_to_rgb565, rgb565_to_color, viewport_scale};
 pub use pick::{
-    PickActivity, PickEvent, PickLayerEntity, PickPending, PickTarget, PICK_KEY_NONE, SWIPE_DOWN,
+    PICK_KEY_NONE, PickActivity, PickEvent, PickLayerEntity, PickPending, PickTarget, SWIPE_DOWN,
     SWIPE_LEFT, SWIPE_NONE, SWIPE_RIGHT, SWIPE_UP, clear_pick_activity, register_pick,
     swipe_dir_from,
 };

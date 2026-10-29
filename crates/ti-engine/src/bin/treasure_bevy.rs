@@ -29,7 +29,13 @@ mod resizetest;
 use resizeprobe::attach_probe;
 use resizetest::attach_resizetest;
 
-use std::path::{Path, PathBuf};
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+use std::path::PathBuf;
+
+#[cfg(target_arch = "wasm32")]
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::{Camera2d, ClearColor, OrthographicProjection, Projection, RenderTarget};
@@ -47,11 +53,134 @@ use ti_app::game_app::{GameApp, GameInput, HitData, KeyState, Scene};
 #[cfg(not(target_arch = "wasm32"))]
 use ti_app::menu_shell::parse_font_bytes;
 use ti_app::scenes::{SceneKind, SelectionHost, SessionHost};
+use ti_app::stats::FpsMeter;
 use ti_core::domain::messages::MsgKind;
 use ti_core::rules::messages::page_text;
-use ti_app::stats::FpsMeter;
 use ti_platform::gfx::UploadMode;
 use ti_platform::settings::ScaleMode;
+
+/// S31.2b（wasm）：浏览器 fetch 预取地图包文件 → [`MemoryPackReader`]（`21_map_package_spec.md` §7）。
+///
+/// 0 新依赖：`js-sys` / `wasm-bindgen` / `wasm-bindgen-futures` / `web-sys` 已随
+/// bevy 0.20 进 wasm 依赖树（`ti-engine/Cargo.toml` `[target.'cfg(target_arch = "wasm32")']`
+/// 显式引用既有版本；native 构建下本模块 `cfg` 门控不编译，0 影响）。
+#[cfg(target_arch = "wasm32")]
+mod map_pack_fetch {
+    use std::collections::BTreeMap;
+
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_futures::JsFuture;
+    use web_sys::Window;
+
+    use ti_core::data::map_pack::MemoryPackReader;
+
+    /// 浏览器 fetch 一个文本文件（404 / 网络错 / 非 2xx = `None`，不 panic；§6 回退语义）。
+    ///
+    /// 实现口径（0 新依赖）：`window.fetch(url)` → `JsFuture::from(promise)`
+    /// （`wasm-bindgen-futures`）→ `Response.text()` → `JsFuture` 再 await。
+    async fn fetch_text(window: &Window, url: &str) -> Option<String> {
+        let promise = window.fetch_with_str(url);
+        let response: wasm_bindgen::JsValue = JsFuture::from(promise).await.ok()?;
+        let response: web_sys::Response = response.dyn_into::<web_sys::Response>().ok()?;
+        let status = response.status();
+        if !(200..500).contains(&status) {
+            return None;
+        }
+        let text_promise = response.text().ok()?;
+        let text: wasm_bindgen::JsValue = JsFuture::from(text_promise).await.ok()?;
+        text.as_string()
+    }
+
+    /// 已装包 id 清单（`assets/maps/index.json`，构建期由 `scripts/build_wasm.ps1`
+    /// 4e 段从 `assets/maps/` 目录树生成；浏览器无目录列举，缺该文件 = 空清单，§6 回退内嵌）。
+    ///
+    /// `index.json` 形状 = `{ "schema": "map-pack-index/1", "default": "<id>|null", "ids": ["m01", ...] }`
+    /// （字典序；`.default` 指针内容也镜像进来，`pick_pack_id` 免二次 fetch）。
+    async fn pack_index(window: &Window, root: &str) -> Vec<String> {
+        let Some(raw) = fetch_text(window, &format!("{root}/index.json")).await else {
+            return Vec::new();
+        };
+        let Ok(serde_json::Value::Object(fields)) = serde_json::from_str(&raw) else {
+            return Vec::new();
+        };
+        let Ok(serde_json::Value::Array(ids)) =
+            serde_json::from_value(fields.get("ids").cloned().unwrap_or_default())
+        else {
+            return Vec::new();
+        };
+        let mut candidates: Vec<String> =
+            ids.into_iter().filter_map(|v| v.as_str().map(str::to_owned)).collect();
+        candidates.sort();
+        candidates
+    }
+
+    /// 默认包指针（`index.json` 的 `default` 字段；`build_wasm.ps1` 4e 段镜像 `.default` 内容）。
+    async fn default_pack_ptr(window: &Window, root: &str) -> Option<String> {
+        let raw = fetch_text(window, &format!("{root}/index.json")).await?;
+        let Ok(serde_json::Value::Object(fields)) = serde_json::from_str(&raw) else {
+            return None;
+        };
+        fields.get("default").and_then(serde_json::Value::as_str).map(str::to_owned)
+    }
+
+    /// 选定包 id（`TI_MAP` 显式 > `.default` 指针包 > 首装包；全缺 = `None`，§6 回退）。
+    ///
+    /// wasm 侧无 `std::env`（`std::env::var` 在 wasm 上 panic），`requested` 由壳层
+    /// 经 URL 参数 / 构建期指针注入（`21_map_package_spec.md` §7 wasm 口径）。
+    async fn pick_pack_id(
+        window: &Window,
+        root: &str,
+        requested: Option<String>,
+    ) -> Option<String> {
+        if requested.is_some() {
+            return requested;
+        }
+        // 默认指针包（`index.json.default` 镜像 `.default`；指针目标须 manifest 在位）。
+        if let Some(want) = default_pack_ptr(window, root).await {
+            if !want.is_empty()
+                && fetch_text(window, &format!("{root}/{want}/manifest.json")).await.is_some()
+            {
+                return Some(want);
+            }
+        }
+        pack_index(window, root).await.into_iter().next()
+    }
+
+    /// wasm 侧 fetch 实现：预取选定包三段表 → [`MemoryPackReader`]。
+    ///
+    /// 预取键约定（同 [`MemoryPackReader`]）：`<map_id>/<file>`；manifest 缺失 = `None`
+    /// （壳层走内嵌默认包，§6）。
+    pub async fn fetch_pack_reader(
+        window: &Window,
+        root: &str,
+        requested: Option<String>,
+    ) -> Option<MemoryPackReader> {
+        let map_id = pick_pack_id(window, root, requested).await?;
+        let pack_ids = pack_index(window, root).await;
+        let manifest_url = format!("{root}/{map_id}/manifest.json");
+        let map_url = format!("{root}/{map_id}/map.json");
+        let layout_url = format!("{root}/{map_id}/layout.json");
+        let strings_url = format!("{root}/{map_id}/strings.json");
+        // 先取 manifest（合规性硬门槛；缺 = 整包拒绝，§6）。
+        let manifest = fetch_text(window, &manifest_url).await?;
+        // 三路预取（缺段 = 不进表，该段回退内嵌，§6；包文件 KB 级，顺序 await 足够）。
+        let map_raw = fetch_text(window, &map_url).await;
+        let layout_raw = fetch_text(window, &layout_url).await;
+        let strings_raw = fetch_text(window, &strings_url).await;
+        let mut files = BTreeMap::new();
+        files.insert(format!("{map_id}/manifest.json"), manifest);
+        if let Some(content) = map_raw {
+            files.insert(format!("{map_id}/map.json"), content);
+        }
+        if let Some(content) = layout_raw {
+            files.insert(format!("{map_id}/layout.json"), content);
+        }
+        if let Some(content) = strings_raw {
+            files.insert(format!("{map_id}/strings.json"), content);
+        }
+        Some(MemoryPackReader::new(files, pack_ids))
+    }
+}
 
 /// 窗口物理像素（逻辑竖屏半采样，与 macroquad native 壳同规格；
 /// 飞轮 R1 ③-18：经 `LOGICAL_W/H` 派生，不裸写 540/960）。
@@ -141,7 +270,8 @@ fn shot_preload_poll(
     *tick += 1;
     let mut all_settled = true;
     let mut failed = 0usize;
-    let mut hist: std::collections::BTreeMap<&'static str, usize> = std::collections::BTreeMap::new();
+    let mut hist: std::collections::BTreeMap<&'static str, usize> =
+        std::collections::BTreeMap::new();
     for h in &preload.handles {
         let name = match server.load_state(h) {
             bevy::asset::LoadState::Loaded => "Loaded",
@@ -224,8 +354,8 @@ fn finish_shot(
         });
     }
     let Some(raw) = SHOT_READBACK.lock().ok().and_then(|g| g.clone()) else { return };
-    let has_content = raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8)
-        && !is_blank_frame(&raw);
+    let has_content =
+        raw.chunks(4).any(|c| c[0] > 8 || c[1] > 8 || c[2] > 8) && !is_blank_frame(&raw);
     if has_content {
         exits.write(AppExit::Success);
     } else {
@@ -444,11 +574,7 @@ fn input_system(
     // delta 累加仅作光标移出窗口时的回落（此时 `cursor_position()` = None）。
     mouse_pos.x += acc.delta.x;
     mouse_pos.y += acc.delta.y;
-    if let Some(c) = window
-        .single()
-        .ok()
-        .and_then(bevy::window::Window::cursor_position)
-    {
+    if let Some(c) = window.single().ok().and_then(bevy::window::Window::cursor_position) {
         mouse_pos.x = c.x;
         mouse_pos.y = c.y;
     }
@@ -708,29 +834,34 @@ fn build_index_chrome(
             bevy::picking::Pickable::IGNORE,
             ChildOf(cell),
         ));
-        // 文案（格下方居中）
+        // 文案（格下方居中；S27.5：加 `brass_dark` 名牌底 + 居中，解决「标签压海图看不清」）
         let label_key = format!("scene.index.medallion.{i}");
         let label = ti_app::i18n::sget(&label_key);
         commands.spawn((
             bevy::ui::Node {
-                width: bevy::ui::Val::Percent(cell_w),
+                min_width: bevy::ui::Val::Percent(cell_w),
                 height: bevy::ui::Val::Auto,
                 position_type: bevy::ui::PositionType::Absolute,
                 left: bevy::ui::Val::Percent(x_pct - cell_w / 2.0),
                 top: bevy::ui::Val::Percent(y_pct + cell_h / 2.0 + 0.4),
+                padding: bevy::ui::UiRect::axes(bevy::ui::Val::Px(10.0), bevy::ui::Val::Px(4.0)),
+                justify_content: bevy::ui::JustifyContent::Center,
                 ..Default::default()
             },
+            bevy::ui::BackgroundColor(ti_engine::canvas::rgb565_to_color(theme.brass_dark)),
             bevy::prelude::Text(label.to_string()),
             bevy::text::TextFont {
                 font: bevy::text::FontSource::Handle(font.clone()),
-                font_size: bevy::text::FontSize::Px(22.0),
+                font_size: bevy::text::FontSize::Px(24.0),
                 ..Default::default()
             },
             bevy::prelude::TextColor(if is_sel { on_wood } else { gold }),
             bevy::picking::Pickable::IGNORE,
             ChildOf(root),
         ));
-        commands.entity(cell).insert(ti_engine::pick::PickTarget { key: 1, index: i32::try_from(i).unwrap_or(-1) });
+        commands
+            .entity(cell)
+            .insert(ti_engine::pick::PickTarget { key: 1, index: i32::try_from(i).unwrap_or(-1) });
         cell_entities.push(cell);
     }
     let _ = &cell_entities; // 格实体挂 PickTarget 即命中目标（子节点已 IGNORE）
@@ -786,8 +917,24 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
         ))
         .id();
     // 标题 / 正文（自动折行）/ 页码（面板内 flex column 子）
-    msg_text_child(commands, panel, font, title.to_string(), None, 30.0, bevy::color::Color::srgb(0.97, 0.88, 0.70));
-    msg_text_child(commands, panel, font, body.to_string(), Some(92.0), 20.0, bevy::color::Color::srgb(0.92, 0.86, 0.72));
+    msg_text_child(
+        commands,
+        panel,
+        font,
+        title.to_string(),
+        None,
+        30.0,
+        bevy::color::Color::srgb(0.97, 0.88, 0.70),
+    );
+    msg_text_child(
+        commands,
+        panel,
+        font,
+        body.to_string(),
+        Some(92.0),
+        20.0,
+        bevy::color::Color::srgb(0.92, 0.86, 0.72),
+    );
     // 页点（`total` 个方点；`i < page` 实心，否则暗底）
     let dots_row = commands
         .spawn((
@@ -803,28 +950,28 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
         ))
         .id();
     for i in 0..total {
-        let filled = i < page;
-        let color = if filled {
-            bevy::color::Color::srgb(0.97, 0.88, 0.70)
-        } else {
-            bevy::color::Color::srgb(0.15, 0.10, 0.06)
-        };
-        commands.spawn((
-            bevy::ui::Node {
-                width: bevy::ui::Val::Px(10.0),
-                height: bevy::ui::Val::Px(10.0),
-                border_radius: bevy::ui::BorderRadius::px(2.0, 2.0, 2.0, 2.0),
-                ..Default::default()
-            },
-            bevy::ui::BackgroundColor(color),
-            bevy::picking::Pickable::IGNORE,
-            ChildOf(dots_row),
-        ));
+        msg_page_dot(commands, dots_row, i < page);
     }
-    msg_text_child(commands, panel, font, page_str, None, 18.0, bevy::color::Color::srgb(0.70, 0.62, 0.48));
+    msg_text_child(
+        commands,
+        panel,
+        font,
+        page_str,
+        None,
+        18.0,
+        bevy::color::Color::srgb(0.70, 0.62, 0.48),
+    );
     // 底部提示行（全宽绝对定位）
     let hint = ti_app::i18n::sget("scene.message.nav_hint");
-    msg_text_child_abs(commands, root, font, hint.to_string(), 86.0, 18.0, bevy::color::Color::srgb(0.70, 0.62, 0.48));
+    msg_text_child_abs(
+        commands,
+        root,
+        font,
+        hint.to_string(),
+        86.0,
+        18.0,
+        bevy::color::Color::srgb(0.70, 0.62, 0.48),
+    );
     root
 }
 
@@ -863,6 +1010,26 @@ fn msg_text_child(
 }
 
 /// 全宽绝对定位文本（底部提示行；`top_pct` = 顶边 `%`）。
+/// 消息面板页点（10×10 圆角方点；`filled` = 实心金，否则暗棕底）。
+fn msg_page_dot(commands: &mut Commands, parent: Entity, filled: bool) {
+    let color = if filled {
+        bevy::color::Color::srgb(0.97, 0.88, 0.70)
+    } else {
+        bevy::color::Color::srgb(0.15, 0.10, 0.06)
+    };
+    commands.spawn((
+        bevy::ui::Node {
+            width: bevy::ui::Val::Px(10.0),
+            height: bevy::ui::Val::Px(10.0),
+            border_radius: bevy::ui::BorderRadius::px(2.0, 2.0, 2.0, 2.0),
+            ..Default::default()
+        },
+        bevy::ui::BackgroundColor(color),
+        bevy::picking::Pickable::IGNORE,
+        ChildOf(parent),
+    ));
+}
+
 fn msg_text_child_abs(
     commands: &mut Commands,
     parent: Entity,
@@ -926,13 +1093,9 @@ fn build_select_role_chrome(
 }
 
 /// 存读档 5 槽列表（i18n 槽文案 + 有档/空档 + 光标选中态）；行挂 `PickTarget` key=3。
-fn build_saveload_chrome(
-    commands: &mut Commands,
-    font: &Handle<Font>,
-    g: &GameApp,
-) -> Entity {
-    let slots: Vec<_> = g.save_slots().to_vec();
-    let cursor = g.saveload_cursor();
+fn build_saveload_chrome(commands: &mut Commands, font: &Handle<Font>, game: &GameApp) -> Entity {
+    let slots: Vec<_> = game.save_slots().to_vec();
+    let cursor = game.saveload_cursor();
     let rows: Vec<ti_engine::ui::ChromeRow> = slots
         .iter()
         .enumerate()
@@ -964,30 +1127,24 @@ fn build_saveload_chrome(
 }
 
 /// 选图 3 卡片列表（卡片名 i18n `glmapm0N.Map` + 锁/开放态 + 选中高亮）；行挂 `PickTarget` key=2。
-fn build_select_map_chrome(
-    commands: &mut Commands,
-    font: &Handle<Font>,
-    g: &GameApp,
-) -> Entity {
-    let current = g.map_slot().map_or(0usize, |m| m.zero_index() as usize);
-    let rows: Vec<ti_engine::ui::ChromeRow> =
-        ti_core::domain::selection::MapSlot::all()
-            .iter()
-            .enumerate()
-            .map(|(i, m)| {
-                let name_key = format!("glmap{}.Map", m.id());
-                let line1 = ti_app::i18n::sget(&name_key).to_string();
-                let locked = !g.map_unlocked(*m);
-                let line2 =
-                    ti_app::i18n::sget(if locked { "scene.select_map.locked" } else { "scene.select_map.open" }).to_string();
-                ti_engine::ui::ChromeRow {
-                    image: None,
-                    line1,
-                    line2,
-                    selected: i == current,
-                }
+fn build_select_map_chrome(commands: &mut Commands, font: &Handle<Font>, game: &GameApp) -> Entity {
+    let current = game.map_slot().map_or(0usize, |m| m.zero_index() as usize);
+    let rows: Vec<ti_engine::ui::ChromeRow> = ti_core::domain::selection::MapSlot::all()
+        .iter()
+        .enumerate()
+        .map(|(i, m)| {
+            let name_key = format!("glmap{}.Map", m.id());
+            let line1 = ti_app::i18n::sget(&name_key).to_string();
+            let locked = !game.map_unlocked(*m);
+            let line2 = ti_app::i18n::sget(if locked {
+                "scene.select_map.locked"
+            } else {
+                "scene.select_map.open"
             })
-            .collect();
+            .to_string();
+            ti_engine::ui::ChromeRow { image: None, line1, line2, selected: i == current }
+        })
+        .collect();
     let chrome = ti_engine::ui::build_list_chrome_pos(
         commands,
         font,
@@ -999,17 +1156,19 @@ fn build_select_map_chrome(
     chrome.root
 }
 
-/// 给列表 chrome 的逐行挂 `PickTarget`（**UI 相机层**命中：`bevy_ui` 拾取后端免 marker，
-/// 事件落到挂 `PickTarget` 的行节点；1080 层该场景原语已标 `ui_layer` 跳过，不双发）。
+/// 给列表 chrome 的逐**行 `Node` 实体**挂 `PickTarget`（S31.2d 根治「`bevy_ui` 行鼠标点不动」）。
+///
+/// `bevy_ui` 0.20 有自带拾取后端 `UiPickingPlugin`（`"2d"` 特性链自动启用）：
+/// `PointerClick` 观察者直接拾取 `Node` 实体（无需 `Mesh2d` marker），
+/// `pick_flush` 按被点实体查 `PickTarget` ⇒ 挂在行 Node 上即可命中。
+/// 1080 层该场景原语已标 `ui_layer` 跳过，不双发。
 fn attach_row_pick(commands: &mut Commands, chrome: &ti_engine::ui::ListChrome, key: u32) {
     for (idx, row_entity) in chrome.rows.iter().enumerate() {
-        commands.entity(*row_entity).insert(ti_engine::pick::PickTarget {
-            key,
-            index: i32::try_from(idx).unwrap_or(-1),
-        });
+        commands
+            .entity(*row_entity)
+            .insert(ti_engine::pick::PickTarget { key, index: i32::try_from(idx).unwrap_or(-1) });
     }
 }
-
 
 /// S29.3：per-scene `bevy_ui` chrome 系统（换场景 / 换选中 → 拆旧建新）。
 #[allow(clippy::needless_pass_by_value)]
@@ -1052,18 +1211,28 @@ fn chrome_ui_system(
 
 /// S29.2（B1）：Bevy 拾取命中 → 逻辑（`poll_hit`）。消费 [`PickEvent`]（tap/swipe）→
 /// `GameApp::poll_hit(HitData)`。命中/几何全在 Bevy 拾取层（`pick.rs`），本系统只做事件→逻辑。
+/// Bevy 系统参数按惯例传值（`ResMut` 为引用语义容器；`clippy::needless_pass_by_value` 例外）。
 #[allow(clippy::needless_pass_by_value)]
-fn pick_event_system(store: ResMut<GameStore>, mut picker: MessageReader<ti_engine::pick::PickEvent>) {
+fn pick_event_system(
+    store: ResMut<GameStore>,
+    mut picker: MessageReader<ti_engine::pick::PickEvent>,
+) {
     let Ok(mut g) = store.0.lock() else {
         return;
     };
     let log_hits = std::env::var("TI_LOG_HITS").is_ok();
     for ev in picker.read() {
         let hit = HitData { key: ev.key, index: ev.index, swipe: ev.swipe };
-        let _ = g.poll_hit(Some(hit));
         if log_hits {
-            eprintln!("[hit] key={} index={} swipe={} scene={:?}", ev.key, ev.index, ev.swipe, g.scene());
+            eprintln!(
+                "[hit] key={} index={} swipe={} scene={:?}",
+                ev.key,
+                ev.index,
+                ev.swipe,
+                g.scene()
+            );
         }
+        let _ = g.poll_hit(Some(hit));
     }
 }
 
@@ -1114,12 +1283,7 @@ fn manual_1080_hit_system(
                 if key == 0 {
                     continue;
                 }
-                if p
-                    .params
-                    .get("ui_layer")
-                    .and_then(serde_json::Value::as_str)
-                    == Some("bevy_ui")
-                {
+                if p.params.get("ui_layer").and_then(serde_json::Value::as_str) == Some("bevy_ui") {
                     continue;
                 }
                 let index = p
@@ -1154,7 +1318,10 @@ fn manual_1080_hit_system(
     if let Some((key, index)) = hit {
         picker.write(ti_engine::pick::PickEvent { key, index, swipe: ti_engine::pick::SWIPE_NONE });
         if dbg {
-            eprintln!("[hit1080] key={key} index={index} @win({:.0},{:.0})", mouse_pos.x, mouse_pos.y);
+            eprintln!(
+                "[hit1080] key={key} index={index} @win({:.0},{:.0})",
+                mouse_pos.x, mouse_pos.y
+            );
         }
     }
 }
@@ -1270,10 +1437,14 @@ fn native_index_system(world: &mut World) {
         return;
     }
     // 先按标记清理上帧实体（否则切场景留鬼影）：绘制列表 + 拾取标记一并清。
-    let stale: Vec<Entity> = world
-        .query_filtered::<Entity, Or<(With<ti_engine::scene_render::DrawListEntity>, With<ti_engine::pick::PickLayerEntity>)>>()
-        .iter(world)
-        .collect();
+    let stale: Vec<Entity> =
+        world
+            .query_filtered::<Entity, Or<(
+                With<ti_engine::scene_render::DrawListEntity>,
+                With<ti_engine::pick::PickLayerEntity>,
+            )>>()
+            .iter(world)
+            .collect();
     for e in stale {
         world.despawn(e);
     }
@@ -1471,8 +1642,8 @@ fn selftest_system(
     }
 }
 
-/// 主：构造壳 + Bevy App（S18.1 实测最小 plugin 链，关 audio）+ 三系统。
-/// 仓库根（资产根 / 证据输出路径）。
+/// 仓库根（native = 资产 fs 读 / 证据输出；wasm 侧仅编译期 `env!` 占位，
+/// Bevy 浏览器 Fetch 后端按页面 URL 相对读 `web/assets/...`，native-only 调用点门控）。
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
@@ -1481,35 +1652,79 @@ fn repo_root() -> PathBuf {
 /// `TI_MAP=<id>` 环境变量（缺 = `.default` 指针包；再缺 = 纯内嵌默认包，0 行为变化）。
 /// 须在**首次表访问前**调用（`table_source::install` 迟注入 = 忽略 + 告警）。
 /// 无包可定位（目录缺 / 无 manifest）= 静默走内嵌默认包（wasm 部署侧常态，不打日志）。
+///
+/// 平台分派：native = `std::fs` 直读（现状行为 0 变化）；wasm = 浏览器 fetch 预取
+/// （[`apply_map_pack_wasm`]，`docs/process/21_map_package_spec.md` §7 wasm 口径）。
+#[cfg(not(target_arch = "wasm32"))]
 fn apply_map_pack(root: &Path) {
-    use ti_core::data::map_pack;
-    use ti_core::data::table_source;
+    use ti_core::data::map_pack::{FsPackReader, PackReader, default_pack_id_with};
 
+    let reader: &dyn PackReader = &FsPackReader::new(root);
     let requested: Option<String> = std::env::var("TI_MAP").ok();
     let explicit = requested.is_some();
-    let Some(map_id) = requested.or_else(|| map_pack::default_pack_id(root)) else {
+    let Some(map_id) = requested.or_else(|| default_pack_id_with(reader)) else {
         return;
     };
-    let tables = map_pack::read_pack_tables(root, &map_id);
-    let Some(tables) = tables else {
-        eprintln!("[map-pack] TI_MAP={map_id} 缺包/不合规 ⇒ 内嵌默认包（§6 回退）");
+    inject_pack_tables(reader, &map_id, explicit);
+}
+
+/// S31.2b（wasm）：浏览器侧运行期换图（`21_map_package_spec.md` §7 wasm 口径）：
+/// fetch 预取（`index.json` / `.default` / 选定包三段表）→ [`MemoryPackReader`] →
+/// 逐段预检注入。`TI_MAP` 在 wasm 侧无 `std::env`（会 panic）⇒ 显式选包走
+/// 页面 URL 参数 `?map=<id>`（由胶水 HTML 读进 `window.location`，壳层经
+/// `js_sys` 读取；缺 = `.default` 指针 / 首装包）。全失败 = 静默内嵌默认包（§6 回退）。
+#[cfg(target_arch = "wasm32")]
+fn apply_map_pack() {
+    use wasm_bindgen::JsCast;
+    use web_sys::Window;
+
+    let Some(window) = js_sys::global().dyn_into::<Window>().ok() else {
         return;
     };
-    // 逐段预检（缺段 / 非对象 = 该段回退内嵌，不整包失败）。
-    let available = map_pack::available_pack_ids(root);
+    // 显式选包：`?map=<id>` URL 参数（胶水 HTML 读进全局；缺 = `.default` 指针 / 首装包）。
+    let requested = js_sys::Reflect::get(&js_sys::global(), &"ti_map_requested".into())
+        .ok()
+        .and_then(|v| v.as_string());
+    // 显式选包标记（闭包 move 前先存，`requested` 本身可被闭包消费后不再借用）。
+    let explicit = requested.is_some();
+    // 异步预取（wasm 单线程；`spawn_local` 驱动，fetch 完成后立即注入——
+    // 首帧渲染前 `AssetServer` 已就绪，`table_source::install` 尚未首访，时序成立）。
+    wasm_bindgen_futures::spawn_local(async move {
+        let Some(reader) =
+            map_pack_fetch::fetch_pack_reader(&window, "assets/maps", requested).await
+        else {
+            return;
+        };
+        let Some(map_id) = reader.pack_id() else {
+            return;
+        };
+        inject_pack_tables(&reader, &map_id, explicit);
+    });
+}
+
+/// wasm / native 共用的注入段（reader 版；逐段预检 + `table_source::install`，0 平台分叉）。
+fn inject_pack_tables(
+    reader: &dyn ti_core::data::map_pack::PackReader,
+    map_id: &str,
+    explicit: bool,
+) {
+    use ti_core::data::map_pack::{
+        available_pack_ids_with, precheck_table, read_pack_tables_with, table_key,
+    };
+    use ti_core::data::table_source;
+
+    let Some(tables) = read_pack_tables_with(reader, map_id) else {
+        eprintln!("[map-pack] {map_id} 缺包/不合规 ⇒ 内嵌默认包（§6 回退）");
+        return;
+    };
+    let available = available_pack_ids_with(reader);
     let available_len = available.len();
     let effective = table_source::PackTables {
         source_id: Some(tables.id.clone()),
-        board: tables
-            .board_json
-            .filter(|raw| map_pack::precheck_table(raw, map_pack::table_key::BOARD)),
-        scenes: tables
-            .scenes_json
-            .filter(|raw| map_pack::precheck_table(raw, map_pack::table_key::SCENES)),
-        strings: tables
-            .strings_json
-            .filter(|raw| map_pack::precheck_table(raw, map_pack::table_key::STRINGS)),
-        available_ids: Some(available.clone()),
+        board: tables.board_json.filter(|raw| precheck_table(raw, table_key::BOARD)),
+        scenes: tables.scenes_json.filter(|raw| precheck_table(raw, table_key::SCENES)),
+        strings: tables.strings_json.filter(|raw| precheck_table(raw, table_key::STRINGS)),
+        available_ids: Some(available),
     };
     if table_source::install(effective) {
         let requested_mode = if explicit { "显式" } else { "默认包指针" };
@@ -1534,26 +1749,49 @@ struct Args {
 
 impl Args {
     /// 解析 `std::env::args()`（未知 `--k=v` 忽略，口径 = 既有 `arg_value` 行为）。
+    /// wasm 侧无 CLI 进程（`std::env::args` panic）⇒ 缺省参数（index 场景 / 无模式标志）。
     fn parse() -> Self {
-        Self {
-            mode_flags: [
-                "--selftest",
-                "--shot",
-                "--resizetest",
-                "--resizeprobe",
-            ]
-            .iter()
-            .filter(|m| std::env::args().any(|a| a == **m))
-            .map(|m| (*m).to_owned())
-            .collect(),
-            scene_id: arg_value("--scene=").unwrap_or_else(|| "index".to_owned()),
-            viewport: arg_value("--viewport=").and_then(|v| parse_viewport(&v)),
-            spin_n: arg_value("--spin=").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0),
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self {
+                mode_flags: ["--selftest", "--shot", "--resizetest", "--resizeprobe"]
+                    .iter()
+                    .filter(|m| std::env::args().any(|a| a == **m))
+                    .map(|m| (*m).to_owned())
+                    .collect(),
+                scene_id: arg_value("--scene=").unwrap_or_else(|| "index".to_owned()),
+                viewport: arg_value("--viewport=").and_then(|v| parse_viewport(&v)),
+                spin_n: arg_value("--spin=").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0),
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self { mode_flags: Vec::new(), scene_id: "index".to_owned(), viewport: None, spin_n: 0 }
         }
     }
 }
 
+/// 入口：bin crate 的 `main` = Rust 启动函数。
+/// - native：命令参数 + 仓库 fs 地图包 + Bevy 主循环（行为 0 变化）。
+/// - wasm：`main` 编译为 `_start`，浏览器 `init()` 实例化时 start section 自动驱动
+///   → `run()` → `App::run()`（winit web 后端建 `#game` canvas + 事件循环）。
+///   显式选包经 `window.ti_map_requested` 读回（`apply_map_pack` wasm 版）。
 fn main() {
+    run();
+}
+
+/// wasm 入口：浏览器 JS 胶水 `init()` 后由 wasm-bindgen start section 自动调用
+/// （`#[wasm_bindgen(start)]`；0 参数——显式选包经 `window.ti_map_requested` 读回）。
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(start)]
+pub fn start() {
+    run();
+}
+
+/// 共用启动体（native `main` 调；wasm `start` 调；0 平台分叉主体）。
+/// 启动配置段（CLI 解析 + App 插件装配）拆入 `build_app`（本函数 = 游戏装配 + 系统注册 + 分派）。
+#[allow(clippy::too_many_lines)]
+fn run() {
     let args = Args::parse();
     let selftest = args.mode_flags.contains(&"--selftest".to_owned());
     let shot = args.mode_flags.contains(&"--shot".to_owned());
@@ -1561,16 +1799,21 @@ fn main() {
     let resizeprobe = args.mode_flags.contains(&"--resizeprobe".to_owned());
     if resizetest && (shot || selftest) {
         eprintln!("[resizetest] 与 --shot/--selftest 互斥（需要真窗口）");
+        #[cfg(not(target_arch = "wasm32"))]
         std::process::exit(2);
     }
     if resizeprobe && (shot || selftest) {
         eprintln!("[resizeprobe] 与 --shot/--selftest 互斥（需要真窗口）");
+        #[cfg(not(target_arch = "wasm32"))]
         std::process::exit(2);
     }
     let scene_id = args.scene_id;
     let viewport = args.viewport;
     // S31.2：地图包注入（须先于 `GameApp` 构造 / 任何表访问；缺包 = 内嵌默认，0 行为变化）。
+    #[cfg(not(target_arch = "wasm32"))]
     apply_map_pack(&repo_root().join("assets").join("maps"));
+    #[cfg(target_arch = "wasm32")]
+    apply_map_pack();
     let spin_n = args.spin_n;
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);
@@ -1578,57 +1821,49 @@ fn main() {
         ti_app::forward_nav::navigate(&mut game, &scene_id);
     }
     if spin_n > 0 {
-        // 固定种子（同 S18.4 selftest 口径 [`SELFTEST_SEED`]）⇒ 出图可复现（否则每次落点不同，
-        // 可能落在无事件的普通格 ⇒ 提示条时有时无，验收证据不稳定）。
+        // 固定种子（同 S18.4 selftest 口径 [`SELFTEST_SEED`]）⇒ 出图可复现。
         game.set_rng_seed(SELFTEST_SEED);
         for _ in 0..spin_n {
             game.handle(ti_app::GameInput::Spin);
         }
-        // S19.7 D5：提示条按帧衰减，而离屏截图的实际捕获帧受贴图异步加载影响（≫120 帧）
-        // ⇒ 出图里提示条已过期。这里顶住衰减，保证出图含提示条（验收证据）。
         game.hold_board_toast();
     }
     if !selftest {
-        // S18.7a: live path = draw list (Bevy entities); the scene code is unchanged.
         game.set_record_draw(true);
-        // S29.3（B1）：UI chrome 迁 bevy_ui（场景层跳过已迁 chrome 原语 → bevy_ui 层画，
-        // 避免 1080 + bevy_ui 双画）。**selftest 不开** —— CPU↔Bevy 对拍口径只保游戏世界
-        // （UI 层改口径归 S29.4）。
         game.set_chrome_in_bevy_ui(true);
     }
-    // 双渲染期无 bevy 音频：曲目数 0（S18.8 切 bevy_audio 后恢复）。
     game.shell_mut().set_audio(0, 0);
     if selftest {
-        // S5.2 同源固定种子（full_run.json seed = [`SELFTEST_SEED`]），e2e 可复现。
         game.set_rng_seed(SELFTEST_SEED);
     }
 
-    let window = Window {
+    #[allow(unused_mut)]
+    let mut window = Window {
         resolution: WindowResolution::new(WIN_W, WIN_H),
         title: window_title(),
-        // 2026-10-26（用户报告「桌面版不随窗口缩放」）：窗口可拖拽/最大化，
-        // 内容 letterbox 跟随（`window_resize_system` 重建 `vp` + `camera_system` 读 `vp.scale()`）。
         resizable: true,
         ..Default::default()
     };
-    // S18.7：**官方 `DefaultPlugins`**（不再手搓插件表）。
-    //
-    // 教训（EXP-101 待写）：手写插件表漏 `SpritePlugin`/`SpriteRenderPlugin`/
-    // `CameraPlugin`/`CorePipelinePlugin`/`init_asset::<Shader>()` 等 → 实体在但**从未渲染**
-    // （S18.1 spike 的矩形、S18.4 的 CPU 纹理都是黑的，验收只查 exit 0 没看画面）。
-    // 正确用法 = 引擎官方插件组 + 按需 `.set(...)` 覆写。
+    // wasm 侧绑定页面 `#game` canvas（Bevy `Window.canvas` CSS 选择器，仅 web 生效；
+    // native 平台该字段 Default = None，行为 0 变化）。
+    #[cfg(target_arch = "wasm32")]
+    {
+        window.canvas = Some("#game".to_owned());
+    }
     let mut app = App::new();
     let _ = app
         .add_plugins(
             bevy::DefaultPlugins
                 .set(bevy::window::WindowPlugin {
-                    // S18.7：`--shot` 离屏模式不建窗口（照 S18.3 example 口径）。
                     primary_window: if shot { None } else { Some(window) },
                     ..Default::default()
                 })
-                // 资产根 = 仓库根（字体 `assets/fonts/...`）。
+                // 资产根：native = 仓库根；wasm = 部署根（Bevy 浏览器 Fetch 后端按 URL 相对）。
                 .set(bevy::asset::AssetPlugin {
+                    #[cfg(not(target_arch = "wasm32"))]
                     file_path: repo_root().to_string_lossy().to_string(),
+                    #[cfg(target_arch = "wasm32")]
+                    file_path: String::new(),
                     ..Default::default()
                 })
                 .set(bevy::render::RenderPlugin {
@@ -1645,39 +1880,27 @@ fn main() {
         app.insert_resource(SelfTest { step: 0, repeat: 0, failures: 0, done: false })
             .add_systems(Update, (selftest_system, render_system, stats_system).chain());
     } else {
-        // S18.5：相机系统 = `WorldCam` → Bevy 正交 scale / 精灵位移（渲染前接线）。
-        // 2026-10-26：`window_resize_system` 最先跑（窗口尺寸变 → 重建 `vp`），
-        // 本帧 input/camera 即读到新 `vp`（画/摸同源不错位）。
         app.add_systems(
             Update,
             (window_resize_system, input_system, camera_system, render_system, stats_system)
                 .chain(),
         );
         app.add_systems(Update, native_index_system.after(render_system));
-        // S29.2（B1）：Bevy 拾取层（`pick.rs`：`PickTarget` 指针事件 → `PickEvent`）+
-        // 命中→逻辑（`pick_event_system` 消费 `PickEvent` → `poll_hit`）。
         ti_engine::pick::register_pick(&mut app);
-        // S29.3 P0：1080 层手动 tap 命中（`Sprite` 标记不被 bevy_picking 拾取；几何命中兜底）。
-        // 须在 `input_system`（更新 `MousePos`）之后、`pick_event_system`（排空 `PickEvent`）之前。
         app.add_systems(Update, manual_1080_hit_system.after(input_system));
         app.add_systems(Update, pick_event_system.after(manual_1080_hit_system));
-        // S29.3（B1）：per-scene `bevy_ui` chrome（自动布局；换场景/换选中重建）。
         app.init_resource::<ChromeUi>();
         app.add_systems(Update, chrome_ui_system.after(render_system));
+
         if resizetest {
-            // 机器判定：程序化翻倍窗口 → ①画布恒完整可见（`o.area`≈1080×1920）
-            // ②内容随窗口等比放大（px/unit 翻倍）；见 `resizetest_system`。
             attach_resizetest(&mut app);
         }
         if resizeprobe {
-            // 活体探针：画面左上角实时 `win/sf/vp/mode/zoom/area`（见 `resizeprobe.rs`）。
             attach_probe(&mut app);
         }
     }
     app.add_systems(Startup, spawn_stage);
     if !selftest {
-        // S29.1（B1）：bevy_ui UI 相机 + 最小证明面板（live/shot 路径；selftest 不加，保像素对拍口径）。
-        // Startup 顺序 = 添加序（spawn_stage 先建游戏相机，spawn_ui_chrome 后建 UI 相机叠层）。
         app.add_systems(Startup, spawn_ui_chrome);
     }
     if shot {
@@ -1688,13 +1911,21 @@ fn main() {
 }
 
 /// 取命令行里 `--<prefix><value>` 形式的参数值（S29.5：参数解析收敛）。
+/// wasm 侧无 CLI 进程（`std::env::args` panic）⇒ 恒 `None`（缺省参数口径）。
+#[cfg(not(target_arch = "wasm32"))]
 fn arg_value(prefix: &str) -> Option<String> {
-    std::env::args()
-        .skip(1)
-        .find_map(|a| a.strip_prefix(prefix).map(str::to_owned))
+    std::env::args().skip(1).find_map(|a| a.strip_prefix(prefix).map(str::to_owned))
+}
+
+#[cfg(target_arch = "wasm32")]
+#[allow(unused_variables)]
+#[allow(dead_code)]
+fn arg_value(_prefix: &str) -> Option<String> {
+    None
 }
 
 /// 解析 `--viewport=WxH`（S29.5 多视口出图；非法 = None = 默认 1080×1920）。
+#[allow(dead_code)]
 fn parse_viewport(spec: &str) -> Option<(u32, u32)> {
     let (w_raw, h_raw) = spec.split_once('x')?;
     let w = w_raw.trim().parse::<u32>().ok()?;
@@ -1721,7 +1952,8 @@ fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
     target_image.asset_usage = RenderAssetUsages::RENDER_WORLD;
     let target_handle = app.world_mut().resource_mut::<Assets<Image>>().add(target_image);
     app.insert_resource(ShotTarget(target_handle.clone()));
-    let contain_scale = (LOGICAL_W as f32 / target_w as f32).max(LOGICAL_H as f32 / target_h as f32);
+    let contain_scale =
+        (LOGICAL_W as f32 / target_w as f32).max(LOGICAL_H as f32 / target_h as f32);
     app.world_mut().spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
@@ -1747,8 +1979,7 @@ fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
             if p.is_dir() {
                 dirs.push(p);
             } else {
-                let rel =
-                    p.strip_prefix(&repo).unwrap_or(&p).to_string_lossy().replace('\\', "/");
+                let rel = p.strip_prefix(&repo).unwrap_or(&p).to_string_lossy().replace('\\', "/");
                 match p.extension().and_then(|e| e.to_str()) {
                     Some("ttf" | "otf") => {
                         handles.push(server.load::<Font>(rel).into());
@@ -1807,7 +2038,15 @@ fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
         );
     }
     let suffix = viewport.map_or_else(String::new, |(w, h)| format!("_{w}x{h}"));
-    write_shot_png(&format!("evidence/bevy_native_{scene_id}{suffix}.png"), target_w, target_h);
+    // S27.7：出图文件名覆盖（`TI_SHOT_NAME`）——同一场景出多张对比图（VS 5 套版式选型）
+    // 时不互相覆盖；未设置 = 原口径 `evidence/bevy_native_<scene><suffix>.png`。
+    let path = match std::env::var("TI_SHOT_NAME") {
+        Ok(name) if !name.trim().is_empty() => {
+            format!("evidence/{}{suffix}.png", name.trim())
+        }
+        _ => format!("evidence/bevy_native_{scene_id}{suffix}.png"),
+    };
+    write_shot_png(&path, target_w, target_h);
 }
 
 /// S18.7：把 GPU 读回像素写成 PNG（`--shot` 输出）。

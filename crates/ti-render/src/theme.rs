@@ -84,6 +84,28 @@ pub struct Theme {
     pub sky_horizon: u16,
     /// 月/光晕淡金（S18.7：Agnes 风格月色 = #F2E4C0）。
     pub moon_pale: u16,
+    /// 领地 10 类岛色带（S27.3：`balance.territory.isle_tokens` ↔ theme.json `palette.isle_*`；
+    /// `by_name` 唯一读点，换色只改 theme.json）。
+    /// 领地岛色带·港口城（`isle_coral`）。
+    pub isle_coral: u16,
+    /// 领地岛色带·灯塔（`isle_sand`）。
+    pub isle_sand: u16,
+    /// 领地岛色带·沉船（`isle_gold`）。
+    pub isle_gold: u16,
+    /// 领地岛色带·海盗巢穴（`isle_dark`）。
+    pub isle_dark: u16,
+    /// 领地岛色带·船坞（`isle_teal`）。
+    pub isle_teal: u16,
+    /// 领地岛色带·贸易站（`isle_olive`）。
+    pub isle_olive: u16,
+    /// 领地岛色带·骷髅崖（`isle_bone`）。
+    pub isle_bone: u16,
+    /// 领地岛色带·火山（`isle_ember`）。
+    pub isle_ember: u16,
+    /// 领地岛色带·雾岛（`isle_mist`）。
+    pub isle_mist: u16,
+    /// 领地岛色带·BOSS 据点（`isle_black`）。
+    pub isle_black: u16,
 
     // === 字号 ===
     /// 正文 TTF 字号（px）。
@@ -107,6 +129,20 @@ impl Theme {
     /// 未知令牌名 = `None`（消费方回退原语默认色，不 panic）。
     #[must_use]
     pub fn by_name(&self, name: &str) -> Option<u16> {
+        // S27.3 领地岛色带：10 类 `isle_*` 令牌（`balance.territory.isle_tokens` 序）。
+        match name {
+            "isle_coral" => return Some(self.isle_coral),
+            "isle_sand" => return Some(self.isle_sand),
+            "isle_gold" => return Some(self.isle_gold),
+            "isle_dark" => return Some(self.isle_dark),
+            "isle_teal" => return Some(self.isle_teal),
+            "isle_olive" => return Some(self.isle_olive),
+            "isle_bone" => return Some(self.isle_bone),
+            "isle_ember" => return Some(self.isle_ember),
+            "isle_mist" => return Some(self.isle_mist),
+            "isle_black" => return Some(self.isle_black),
+            _ => {}
+        }
         Some(match name {
             "parch_dark" => self.parch_dark,
             "parch_light" => self.parch_light,
@@ -192,6 +228,18 @@ impl Theme {
         sky_navy: 0x1948,
         sky_horizon: 0x198A,
         moon_pale: 0xEF17,
+        // S27.3 领地 10 类岛色带（与 `assets/data/theme.json` `palette.isle_*` 逐值镜像，
+        // 序 = `balance.territory.isle_tokens`：coral/sand/gold/dark/teal/olive/bone/ember/mist/black）。
+        isle_coral: 0xDAC8,
+        isle_sand: 0xE652,
+        isle_gold: 0xFE47,
+        isle_dark: 0x4163,
+        isle_teal: 0x3D54,
+        isle_olive: 0x8C07,
+        isle_bone: 0xEEF7,
+        isle_ember: 0xE365,
+        isle_mist: 0xA5B7,
+        isle_black: 0x20E3,
         black: 0x0000,
         // 字号
         font_size: 44,
@@ -277,6 +325,16 @@ impl Theme {
             sky_navy: p.sky_navy.hex().unwrap_or(d.sky_navy),
             sky_horizon: p.sky_horizon.hex().unwrap_or(d.sky_horizon),
             moon_pale: p.moon_pale.hex().unwrap_or(d.moon_pale),
+            isle_coral: p.isle_coral.hex().unwrap_or(d.isle_coral),
+            isle_sand: p.isle_sand.hex().unwrap_or(d.isle_sand),
+            isle_gold: p.isle_gold.hex().unwrap_or(d.isle_gold),
+            isle_dark: p.isle_dark.hex().unwrap_or(d.isle_dark),
+            isle_teal: p.isle_teal.hex().unwrap_or(d.isle_teal),
+            isle_olive: p.isle_olive.hex().unwrap_or(d.isle_olive),
+            isle_bone: p.isle_bone.hex().unwrap_or(d.isle_bone),
+            isle_ember: p.isle_ember.hex().unwrap_or(d.isle_ember),
+            isle_mist: p.isle_mist.hex().unwrap_or(d.isle_mist),
+            isle_black: p.isle_black.hex().unwrap_or(d.isle_black),
             font_size: f.font_size.unwrap_or(d.font_size),
             title_font_size: f.title_font_size.unwrap_or(d.title_font_size),
             hint_font_size: f.hint_font_size.unwrap_or(d.hint_font_size),
@@ -375,6 +433,26 @@ pub struct PaletteJson {
     pub sky_horizon: Option<Hex16>,
     /// 见 [`Theme::moon_pale`]。
     pub moon_pale: Option<Hex16>,
+    /// 领地岛色带·港口城（`balance.territory.isle_tokens[0]` = `isle_coral`）。
+    pub isle_coral: Option<Hex16>,
+    /// 领地岛色带·灯塔（`isle_tokens[1]` = `isle_sand`）。
+    pub isle_sand: Option<Hex16>,
+    /// 领地岛色带·沉船（`isle_tokens[2]` = `isle_gold`）。
+    pub isle_gold: Option<Hex16>,
+    /// 领地岛色带·海盗巢穴（`isle_tokens[3]` = `isle_dark`）。
+    pub isle_dark: Option<Hex16>,
+    /// 领地岛色带·船坞（`isle_tokens[4]` = `isle_teal`）。
+    pub isle_teal: Option<Hex16>,
+    /// 领地岛色带·贸易站（`isle_tokens[5]` = `isle_olive`）。
+    pub isle_olive: Option<Hex16>,
+    /// 领地岛色带·骷髅崖（`isle_tokens[6]` = `isle_bone`）。
+    pub isle_bone: Option<Hex16>,
+    /// 领地岛色带·火山（`isle_tokens[7]` = `isle_ember`）。
+    pub isle_ember: Option<Hex16>,
+    /// 领地岛色带·雾岛（`isle_tokens[8]` = `isle_mist`）。
+    pub isle_mist: Option<Hex16>,
+    /// 领地岛色带·BOSS 据点（`isle_tokens[9]` = `isle_black`）。
+    pub isle_black: Option<Hex16>,
 }
 
 /// 字号组：全部可选（缺失回落 `default`）。

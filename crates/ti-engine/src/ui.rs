@@ -13,15 +13,19 @@
 //!
 //! 注：Bevy 0.20 的 `Button`/`Interaction` 标记已弃用（0.20 起交互改走 `bevy_picking`，S29.2），
 //! 故本面板的「按钮」只做**视觉**（Node + 背景 + 圆角 + 文本），不挂 `Button` 标记；点击接线归 S29.2。
+//!
+//! **S31.2d（2026-10-29）命中修正**：`bevy_ui` 0.20 自带 `UiPickingPlugin`（`"2d"` 特性链启用），
+//! `PointerClick` 直接拾取 `Node` 实体（无需 `Mesh2d` marker）。`attach_row_pick` 把 `PickTarget`
+//! 挂在行 `Node` 实体上即可（`pick_flush` 按被点实体查 `PickTarget`）。
 
 use bevy::camera::ClearColorConfig;
 use bevy::camera::visibility::RenderLayers;
 use bevy::color::Color;
+use bevy::picking::Pickable;
 use bevy::prelude::*;
 use bevy::text::{FontSize, FontSource, TextColor, TextFont};
-use bevy::picking::Pickable;
-use bevy::ui::prelude::{ImageNode, NodeImageMode};
 use bevy::ui::IsDefaultUiCamera;
+use bevy::ui::prelude::{ImageNode, NodeImageMode};
 
 /// 生成 UI 相机（叠在游戏正交相机之上；`order=1` + `clear_color=None` 不清屏，游戏世界透出）。
 ///
@@ -38,11 +42,7 @@ pub fn spawn_ui_camera(commands: &mut Commands) -> Entity {
             // （活体窗口 = 画面错位；`--shot` = 目标被清掉只剩 UI）。
             // bevy_ui 的 UI pass 不受 `RenderLayers` 约束 ⇒ UI 节点仍在默认层 0 即可被 UI pass 画出。
             RenderLayers::layer(1),
-            Camera {
-                order: 1,
-                clear_color: ClearColorConfig::None,
-                ..default()
-            },
+            Camera { order: 1, clear_color: ClearColorConfig::None, ..default() },
             Transform::IDENTITY,
         ))
         .id()
@@ -65,12 +65,15 @@ pub struct ChromeRow {
     pub selected: bool,
 }
 
-/// 列表 chrome 产物（根实体 + 逐行实体；调用方可给行挂命中标记 `PickTarget`）。
+/// 列表 chrome 产物（根实体 + 逐行 `Node` 实体；调用方给行实体挂 `PickTarget` 即可命中）。
+///
+/// S31.2d（2026-10-29）：`bevy_ui` 自带 `UiPickingPlugin` 直接拾取 `Node` 实体，
+/// 无需 `Mesh2d` marker。`rows` = 行 `Node` 实体，挂 `PickTarget` 后鼠标点击生效。
 #[derive(Debug, Clone)]
 pub struct ListChrome {
     /// 全屏根实体（换场景时 despawn 整棵子树）。
     pub root: Entity,
-    /// 逐行实体（顺序 = 行序；挂 `PickTarget` 即该行可拾取）。
+    /// 逐行实体（顺序 = 行序；挂 `PickTarget` 即该行可点）。
     pub rows: Vec<Entity>,
 }
 
@@ -162,13 +165,13 @@ pub fn build_list_chrome_pos(
     // 面板标题（空串 = 不建标题节点；标题已在别处画的场景用）
     if !title.is_empty() {
         commands.spawn((
-            Node {
-                display: Display::Flex,
-                align_items: AlignItems::Center,
-                ..Node::default()
-            },
+            Node { display: Display::Flex, align_items: AlignItems::Center, ..Node::default() },
             Text(title.to_string()),
-            TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(26.0), ..default() },
+            TextFont {
+                font: FontSource::Handle(font.clone()),
+                font_size: FontSize::Px(26.0),
+                ..default()
+            },
             TextColor(Color::srgb(0.95, 0.85, 0.60)),
             Pickable::IGNORE,
             ChildOf(panel),
@@ -184,7 +187,8 @@ pub fn build_list_chrome_pos(
     ListChrome { root, rows: row_entities }
 }
 
-/// 列表 chrome 的**单行**（flex row = 缩略图 + 文案列；选中行换黄铜底色）。返回行实体。
+/// 列表 chrome 的**单行**（flex row = 缩略图 + 文案列；选中行换黄铜底色）。
+/// 返回行 `Node` 实体（调用方挂 `PickTarget` 即可命中，`UiPickingPlugin` 直接拾取 `Node`）。
 fn build_chrome_row(
     commands: &mut Commands,
     font: &Handle<Font>,
@@ -218,11 +222,7 @@ fn build_chrome_row(
     // 可拾取实体，事件正确落到挂 `PickTarget` 的行上。
     if let Some(img) = &row.image {
         commands.spawn((
-            Node {
-                width: Val::Px(72.0),
-                height: Val::Px(96.0),
-                ..Node::default()
-            },
+            Node { width: Val::Px(72.0), height: Val::Px(96.0), ..Node::default() },
             ImageNode {
                 image: img.clone(),
                 image_mode: NodeImageMode::Stretch,
@@ -248,18 +248,27 @@ fn build_chrome_row(
         .id();
     commands.spawn((
         Text(row.line1.clone()),
-        TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(20.0), ..default() },
+        TextFont {
+            font: FontSource::Handle(font.clone()),
+            font_size: FontSize::Px(20.0),
+            ..default()
+        },
         TextColor(Color::srgb(0.95, 0.90, 0.78)),
         Pickable::IGNORE,
         ChildOf(text_col),
     ));
     commands.spawn((
         Text(row.line2.clone()),
-        TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(15.0), ..default() },
+        TextFont {
+            font: FontSource::Handle(font.clone()),
+            font_size: FontSize::Px(15.0),
+            ..default()
+        },
         TextColor(Color::srgb(0.70, 0.62, 0.48)),
         Pickable::IGNORE,
         ChildOf(text_col),
     ));
+
     row_node
 }
 
@@ -326,7 +335,11 @@ pub fn build_proof_panel(
             ..Node::default()
         },
         Text(title.to_string()),
-        TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(28.0), ..default() },
+        TextFont {
+            font: FontSource::Handle(font.clone()),
+            font_size: FontSize::Px(28.0),
+            ..default()
+        },
         TextColor(Color::srgb(0.95, 0.85, 0.60)),
         Pickable::IGNORE,
         ChildOf(panel),
@@ -351,7 +364,11 @@ pub fn build_proof_panel(
         .id();
     commands.spawn((
         Text(button_label.to_string()),
-        TextFont { font: FontSource::Handle(font.clone()), font_size: FontSize::Px(24.0), ..default() },
+        TextFont {
+            font: FontSource::Handle(font.clone()),
+            font_size: FontSize::Px(24.0),
+            ..default()
+        },
         TextColor(Color::srgb(0.15, 0.10, 0.05)),
         Pickable::IGNORE,
         ChildOf(button),
