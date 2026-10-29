@@ -135,26 +135,35 @@ def main() -> int:
         checks["L3_input"] = {"after": after, "page_errors": page_errors}
 
         # ── L4 场景切换：select_map 鼠标点 m01 卡片 ⇒ main_map（增量判据）──
-        # 先确保在 select_map（L3 的 Space 可能已推进到 main_map，用 Back 退回）
-        for _ in range(3):
+        # 从任意场景走 Enter 链直达 select_map（menu_selected 持久化；select_role/select_map
+        # 的 Confirm 都是幂等推进/确认 ⇒ 无 Back 死锁、无状态歧义；Back 在 main_map = 回
+        # select_map 后若再按 Back = 回 select_role，且 Back 在 select_role 无效 ⇒ 死锁风险）。
+        for _ in range(4):
             if bright_ratio() < 40.0:  # 已在 select_map（≈17.7%）
                 break
-            page.keyboard.press("Back")
-            page.wait_for_timeout(2_000)
+            page.keyboard.press("Enter")
+            page.wait_for_timeout(3_000)
         before_bright = bright_ratio()
         # m01 卡片 = select_map 右侧面板顶行（540×960 视口：x≈430, y≈100）
         # 慢点（down/up 分帧）：bevy_picking 的 PointerClick = press 帧 + release 帧同实体，
-        # 快速 click 两动作可能落同一帧 ⇒ 无 Click。
-        page.mouse.move(430, 100)
-        page.wait_for_timeout(1_000)
-        page.mouse.down()
-        page.wait_for_timeout(500)
-        page.mouse.up()
-        page.wait_for_timeout(5_000)
+        # 快速 click 两动作可能落同一帧 ⇒ 无 Click。首次不命中重试一次（选图卡点击偶发
+        # 丢 Click 的兜底；两次都不中 = 判据 FAIL，不静默放行）。
+        clicked = False
+        for attempt in range(2):
+            page.mouse.move(430, 100)
+            page.wait_for_timeout(1_000)
+            page.mouse.down()
+            page.wait_for_timeout(500)
+            page.mouse.up()
+            page.wait_for_timeout(5_000)
+            clicked = bright_ratio() > 40.0
+            if clicked:
+                break
         after_bright = bright_ratio()
         checks["L4_scene"] = {
             "before": round(before_bright, 1),
             "after": round(after_bright, 1),
+            "clicked": clicked,
             "transitioned": before_bright < 40.0 and after_bright > 40.0,
         }
 

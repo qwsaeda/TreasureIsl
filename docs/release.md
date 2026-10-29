@@ -19,14 +19,14 @@
 
 ## 平台产物
 
-> **S18.8a：发货壳切 Bevy**。桌面/浏览器的**唯一发货入口** = `crates/ti-engine`（独立 workspace）
+> **S18.8a：发货壳切 Bevy**。桌面/浏览器的**唯一发货入口** = `crates/ti-engine`（S27.7 起并入根 workspace）
 > 的 Bevy 壳 `treasure-bevy-native` / `treasure-bevy-wasm`；ti-app 的 macroquad native/wasm 壳
 > （`treasure-native` / `treasure-wasm`）已删除（Android 壳仍在，S18.8d 切 Bevy）。
 > 浏览器页（wasm-bindgen 胶水 + HTML + Bevy 资源管线）属 **S18.8e**，当前 `web/` 只有 wasm 产物与资源。
 
 | 平台 | 产物 | 路径 | 体积 (S18.8a 后最新) |
 |---|---|---|---|
-| 桌面（当前收口） | `treasure-bevy-native.exe` | `crates/ti-engine/target/release/` | 见 `evidence/S18.8a-wasm-size.log` 同目录口径（Bevy 壳体积待 S18.8e 复验） |
+| 桌面（当前收口） | `treasure-bevy-native.exe` | `target/release/`（S27.7 起并入根 workspace，产物落根 `target/`） | 见 `evidence/S18.8a-wasm-size.log` 同目录口径（Bevy 壳体积待 S18.8e 复验） |
 | 浏览器（当前收口，页面待 S18.8e） | `treasure_bevy_wasm.wasm`（Bevy 壳）+ 真实资源（无 JS 壳/HTML） | `web/` | 见 `evidence/S18.8a-wasm-size.log`（预算口径 ≤8 MB，见 `docs/process/11_bevy_migration.md` §3） |
 | Android（后续，Mac 编译） | — | — (S2.6 在 Mac NDK/SDK 工具链出 APK，本机不产出) | — |
 
@@ -145,7 +145,7 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
 
 ```sh
 # S18.8a：交付壳 = Bevy（ti-engine 独立 workspace；macroquad 壳已退役）
-cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
+cargo run -q -p ti-engine --bin treasure-bevy-native
 # 资源文件在仓库根的 data/（Bevy 壳按仓库根读 legacy/data 同源资源）
 # S5.1 起：菜单→选人→选图→主地图→贸易/建造→战斗→存读档 全链路可玩
 # 窗口可拖拽/最大化：内容恒 1080×1920 逻辑画布 letterbox 等比跟随（默认 Smooth；
@@ -205,7 +205,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 247 任务（228 verified；台账计数随 S8–S27 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 249 任务（231 verified；台账计数随 S8–S31 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`

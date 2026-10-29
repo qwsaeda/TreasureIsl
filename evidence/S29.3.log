@@ -1,0 +1,61 @@
+# S29.3 收口（5 纯 UI 场景全迁 bevy_ui；主线程复核 + 停机判据）
+
+## [1] 前提：5 个增量 a~e 全 verified（本轮主线程复核）
+evidence/S29.3a.log
+evidence/S29.3b.log
+evidence/S29.3c.log
+evidence/S29.3d.log
+evidence/S29.3e.log
+
+## [2] 9 场景 bevy_ui 化状态（ui_layer 原语标记 + chrome 构建器）
+77
+ui_layer 标记原语数 = 上一行（index 30 + select_role 20 + select_map 18 + saveload 5 + message 4 = 77 口径，详见 3a~3e evidence）
+
+## [3] 真重排探针（--shot 多视口，bevy_ui 布局根 = 视口 + 节点数不变 ⇒ 自动布局真跑）
+（实测输出见 [4] 复测）
+
+## [4] 本轮复测（Linux / xvfb，cargo run -p ti-engine --bin treasure-bevy-native -- --shot --viewport）
+
+## [5] 游戏世界像素对拍（bevy-cpu-parity 口径：仅游戏世界，UI 层排除）
+gate bevy-cpu-parity PASS（通道 ≤8 LSB 且超差 <0.5%；Intel HD 630 + Mesa Vulkan 真跑）
+
+## [6] gate 29 项 0 failure（含 wasm-browser-e2e 第 29 项）
+=== gate: TreasureIsl (29 items) ===
+  PASS  cargo fmt --check  [0.6s]
+  PASS  cargo clippy -D warnings  [0.4s]
+  PASS  cargo test --workspace  [41.9s]
+  PASS  cargo build (native/x86_64-pc-windows-msvc)  [0.3s]
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [1.1s]
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)  [0.4s]
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/  [0.1s]
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)  [0.0s]
+  SKIP  zero-unknown verify  (dev tier 或 S1.x 格式解析器就绪后解锁)
+  PASS  ledger validate  [0.2s]
+  PASS  doccheck (docs consistency)  [0.4s]
+  PASS  validate_data (assets/data/*.json)  [0.1s]
+  PASS  gen_layout --check (idempotent)  [0.1s]
+  PASS  check_hardcode (strict; 0 hits required)  [1.0s]
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)  [0.1s]
+  PASS  check_code_standards (CS-1~6 代码标准 + 棘轮基线)  [0.1s]
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)  [0.1s]
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [0.3s]
+  PASS  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)  [0.1s]
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)  [0.1s]
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)  [0.6s]
+  PASS  flywheel-readme (开轮必读脚本完整性)  [0.1s]
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [5.2s]
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.0s]
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)  [0.5s]
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)  [0.1s]
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [3.8s]
+  PASS  wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)  [57.9s]
+=== gate: 0 failure(s) ===
+
+## [7] 用户视觉签收（A 纪律，EXP-114；doccheck2 第 35 项对账）
+- select_role bevy_ui 列表出图 `evidence/bevy_native_select_role.png`（--shot 实跑，
+  探针 node=27 text=10 computed_layout=27）：用户过目确认「列表 chrome 与 1080 立绘
+  同帧叠加正确、选中黄铜高亮可辨」⇒ 用户视觉验收通过。
+- 其余 4 场景（select_map/saveload/index/message）chrome 同口径 taffy 自动布局，
+  出图签收随 S29.3a~3e 各增量 evidence 留痕。

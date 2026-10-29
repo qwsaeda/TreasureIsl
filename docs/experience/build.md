@@ -138,3 +138,98 @@ equest_shot（实测 VM 冷启动 ~290 帧就绪；热身循环上限 60→1800 
 原 60 帧内只加载了 31/66 就到循环上限 = readback 永远空 + write_shot_png 提前
 return 留下**上一轮的陈旧 PNG**，像素检查「看起来对」其实是旧文件——验证据必须
 对 mtime）。
+
+### EXP-128 构建：把独立子 workspace 并回根 workspace 会引爆两条隐藏依赖冲突（bevy 子 crate 版本漂移 + `links=alsa` 互斥）
+- **现象**（S27.7，用户要求「crates 内项目统一由根 `Cargo.toml` 管理」）：把 `crates/ti-engine` 并入根 workspace 后，`cargo metadata` 连续三次解析失败：
+  ① `failed to select a version for bevy_clipboard ... required by bevy_text v0.20.1 ... previously selected bevy_clipboard v0.20.0`；
+  ② 同型错误在钉 `bevy = "=0.20.0"` 后依旧（`bevy_internal 0.20.0 → bevy_dev_tools ^0.20.0 → bevy_text 0.20.1 → bevy_clipboard ^0.20.1`）；
+  ③ `failed to select a version for quad-alsa-sys ... package quad-alsa-sys links to the native library alsa, but it conflicts with a previous package which links to alsa as well: alsa-sys v0.3.1 ← bevy_audio ← bevy_dev_tools ← bevy_internal`。
+- **根因**：
+  ① **版本漂移**：子 workspace 有自己的 `Cargo.lock`（钉住 bevy 全家 0.20.0）；并回根后根 lock 无 bevy 条目 ⇒ cargo 重新解析时给 `bevy_text`/`bevy_dev_tools` 选了 0.20.1，而 `bevy_internal 0.20.0` 要 `bevy_clipboard ^0.20.0` ⇒ 同族版本互斥。
+  ② **`links=alsa` 互斥（历史冲突复现）**：bevy 0.20 的 `bevy_internal` 把 `bevy_dev_tools`（→ `bevy_audio` → `rodio` → `cpal` → `alsa` → **`alsa-sys`，links=alsa**）声明为**可选依赖**，Cargo 的解析图**包含未启用的可选依赖** ⇒ alsa 链恒在图内；而 `ti-app` 的 `android-shell = [..., "macroquad/audio"]` 让 `macroquad` 的 `quad-snd` → **`quad-alsa-sys`，links=alsa** 也进图 ⇒ 两个 `links=alsa` 的包同图 ⇒ 解析期直接报错（与 S18.1 当年拆子 workspace 的原因同源）。
+- **解法**：
+  ① bevy **精确钉版** `bevy = { version = "=0.20.0", ... }`（根 `[workspace.dependencies]`），并把子 workspace 的旧 `Cargo.lock`（钉住 bevy 全家 0.20.0）作为根 lock 的起点迁移 ⇒ 版本族一致；
+  ② **去掉图内第二条 alsa 链**：`ti-app` 的 `android-shell` feature 去掉 `"macroquad/audio"`（`quad-snd` 不再进图），`android_shell.rs` 改用**本地音频桩**（`Sound`/`PlaySoundParams`/`load_sound_from_bytes`/`play_sound` 的空实现）⇒ 口径同 S18.8/S30.0「发货无声」，android 壳待 S18.8d 退役；
+  ③ 子 workspace 的 `[workspace]` 表删除 + 改 `.workspace` 继承；`[profile.release] strip` 迁到根（子 workspace 的 profile 会被 Cargo 忽略）；脚本/文档命令统一 `-p ti-engine`；wasm 产物路径从 `crates/ti-engine/target/` 改根 `target/`。
+- **验证**：`cargo metadata`（根，全依赖解析）exit 0；根 `Cargo.lock` 含 `alsa-sys`（bevy 侧）且**无** `quad-alsa-sys`；bevy 全家 = 0.20.0。
+- **教训**：
+  1. **子 workspace 的 `Cargo.lock` 是隐形依赖契约**——并回根前先把它的版本钉迁移过去，否则重新解析必炸（版本漂移）；
+  2. **`links` 冲突按「解析图」算，不按「实际编译」算**——可选依赖里的原生库也算数 ⇒ 合并前先查两条原生库链（`cargo tree` 找 `links`），冲突方只能留一条；
+  3. 合并后**产物路径、profile、脚本命令三处都会变**（`crates/x/target/` → 根 `target/`；子 profile 失效），必须同步改脚本与文档，否则门禁/发布链静默取不到产物。
+  4. 写文件到仓库别用 PowerShell 的 `>` 重定向（PS 5.1 默认写 UTF-16 ⇒ cargo 报 `stream did not contain valid UTF-8`）；用 `cmd /c "git show ... > file"` 保持原始字节（EXP-125 同族）。
+
+### EXP-129 构建/工具：换机器（Windows→Linux）续工三条坑（CRLF 归一化 + 无头 GPU + pwsh 命令差异）
+- **现象**（S27.7，用户准备迁 Linux 续工，要求总结在途工作进文档）：
+  ① 仓库 Windows 侧 `core.autocrlf=true` 且**无 `.gitattributes`**；Linux 侧 `git clone` 会按 Linux 默认把 CRLF 文件归一化成 LF ⇒ `doccheck2` 的 BOM/CRLF/UTF-8 门禁误报（`assets/data/strings.json` 等是 CRLF）；
+  ② `--shot`（离屏出图）依赖 wgpu GPU 上下文，Linux 无显示器 = 无上下文 ⇒ 出图失败/黑图；
+  ③ 全项目脚本是 `.ps1`（`gate.ps1`/`playbook.ps1`/`smoke.ps1`/`build_wasm.ps1`/`ui_preview.ps1`），Linux 无 `powershell.exe`，且部分脚本含 Windows 专属段（IDA/REA、`D:\`、`cmd /c`）。
+- **解法**：
+  ① 迁移二选一：**整目录拷贝**（含 `.git` + 未跟踪文件，字节原样零丢失）或 **Linux 设 `git config core.autocrlf input`** / 补 `.gitattributes`（`* text=auto`）+ `git add --renormalize .`；迁移后先跑 `pwsh -File scripts/gate.ps1` 验证；
+  ② `--shot` 用 `xvfb-run -s "-screen 0 1280x800x24" ...` + mesa 软件渲染（lavapipe），或确保有 X/Wayland 会话；`s43_fps_smoke` 需真窗口（无 GPU 可豁免）；
+  ③ Linux 用 **`pwsh -File scripts/X.ps1`**（无 `-ExecutionPolicy Bypass` 概念——那是 Windows 专属）；逆向相关段（IDA/REA）跳过；路径分隔 `/`。
+- **教训**：
+  1. **未跟踪（?）文件是迁移最容易丢的部分**——在途工作常是 tracked-M + untracked-? 混合，只 `git add` 已跟踪文件再 clone 会丢新文件（如 `vs_proto.rs`、`vs_v1.json`、新资产 PNG、渲染图）；迁移前先 `git status --porcelain` 甄别，要么整目录拷贝要么 `git add -A`；
+  2. **`core.autocrlf` 是跨机器隐形契约**——无 `.gitattributes` 时换机器必然 CRLF/LF 漂移，触发的门禁误报会被误判成内容回归；
+  3. **工具命令的「Windows 专属参数」要按平台剔除**（`-ExecutionPolicy`、`cmd /c`、反斜杠路径），换机器后先跑一条全门禁再开工。
+
+
+
+### EXP-130 构建/工具：wasm 浏览器 e2e 三条坑（PointerHits 消费饿死 hover map + 快速 click 同帧丢 PointerClick + WebGL canvas 不能 2D drawImage 读像素）
+- **现象**（S31.3，用户报「选图点不动/选完地图不能玩」）：
+  ① bevy_ui 行鼠标点击在浏览器不生效，反复加调试系统后仍「点不动」，删了调试系统反而通了；
+  ② 点「未解锁」的 m02/m03 卡片没反应，误判为命中 bug，实为 `map_unlocked` 正确拒绝（设计行为）；
+  ③ Playwright 快速 `mouse.click` 偶发不触发 `PointerClick`；WebGL canvas 用 2D `drawImage`+`getImageData` 读像素恒 0（全黑误报）。
+- **根因**：
+  ① **任何 `MessageReader<PointerHits>` 系统（PreUpdate/Update 调试探针）会消费掉 `PointerHits` 消息 ⇒ bevy 自己的 `build_over_map`（hover map 构建）收不到命中 ⇒ `PointerClick` 永不发**。bevy_picking 的事件链 = `ui_picking` 后端产 `PointerHits` → `generate_hovermap` 消费建 `HoverMap` → `pointer_events` 发 `PointerPress/Click/Release`；调试系统插队读消息 = 饿死官方管线。诊断只能挂**观察者**（`On<PointerClick>` 等事件侧），不能读中间消息；
+  ② 初始档仅 m01 解锁（`ProgressionState::initial_unlocked()`），选图卡 index 1/2 = m02/m03 锁拒 → `play_sfx(Invalid)` 无场景变化，观感 = 「点不动」；
+  ③ `PointerClick` = press 帧 + release 帧**同一实体**；快速 click 两动作可能同帧内被合并/丢帧 ⇒ 无 Click。bevy_ui 0.20 的 `PointerClick` 还带 `auto_propagate`（沿祖先后代传播），一物理点击可发多个 Click（行节点 + 祖先 + window 实体）——命中解析层（`pick_flush`）按被点实体查 `PickTarget` 天然去重，**不需要在观察者层去重**；
+  ④ WebGL canvas（`preserveDrawingBuffer=false`）在 `requestAnimationFrame` 外读 2D 像素 = 全黑。e2e 判据采样一律走 **Playwright `page.screenshot()` + PIL**，不用 `canvas.getContext('2d')` 桥读。
+- **解法**：
+  ① 删调试系统/观察者后必须**重跑浏览器实探**再下结论（`eprintln!` 在 wasm 走 `console.error`，headless 探针可捕获；`bevy LogPlugin level=WARN` 只滤 log crate，`eprintln` 不受影响）；
+  ② e2e L4 判据 = 「select_map 亮像素比 < 40%（≈17.7%）→ 鼠标点 m01（右侧面板顶行，540×960 视口 x≈430 y≈100）→ 亮像素比 > 40%（main_map ≈78%）」增量断言；点击用 `move → wait 1s → down → wait 500ms → up` 分帧慢点；
+  ③ Playwright 浏览器缺省自动探测 `~/.cache/ms-playwright/chromium-*/`（node-playwright 与 python-playwright 共享缓存目录），`TI_CHROMIUM_PATH` 显式覆盖；
+  ④ 「选图点不动」类报告先分诊：点的是哪张卡（index）× 该卡解锁态（`unlocked_maps`），再查命中链（`UiPickingPlugin` 拾取行 `Node` → `PickTarget` → `PickEvent` → `poll_hit`）。
+- **验证**：`python3 scripts/wasm_browser_e2e.py --check`（L4 before=17.7% after=78.1% PASS）+ gate 第 22 项 `wasm-browser-e2e`（无 Playwright 环境 = 记名 SKIP）+ `docs/migration_linux.md` §3 浏览器 e2e 依赖行（playwright + pillow + chromium 探测路径）。
+
+
+### EXP-131 构建/工具：gate.ps1 Linux 化两条坑（cargo 不在默认 PATH + $env:PATH 拼接 ParserError）
+- **现象**（S31.3，Linux 续工跑 `pwsh -File scripts/gate.ps1`）：
+  ① 第 1 项 `cargo fmt --check` FAIL，报错「The term 'cargo' is not recognized」——本机 cargo 装在 `~/.cargo/bin`，
+    Linux 默认 shell PATH 不含它，而 gate.ps1 全文直呼 `& cargo ...`（Windows 侧靠 rustup 初始化已入 PATH，从不暴露）；
+  ② 第一次修补时写 `$env:PATH = "$cargoBin:$env:PATH"` 触发 pwsh **ParserError**：`':' was not followed by a valid
+    variable name character`——PowerShell 字符串插值里 `$cargoBin:` 的 `:` 被解析成作用域分隔符（`$scope:name` 语法）。
+- **根因**：
+  ① gate.ps1 的脚本项已经做了跨平台映射（`$py`：Windows=python / Linux=python3，见脚本头注释 19 行），
+    但 **cargo 从未做过同等映射**——WASM target 装好 ≠ cargo 在 PATH（`rustup target add` 只写 registry）；
+    换机器后第一个踩的就是「文档里写 `export PATH` 才能跑 gate」的隐性前提；
+  ② PowerShell 变量引用 `$x:y` 中 `:` 是**作用域前缀**（`$env:PATH`、`$script:fail` 合法），
+    裸变量名后跟 `:` + 非合法作用域词 = 直接 ParserError（不是运行时错，是整个脚本解析失败）；
+    字符串里要拼 `$var:` 必须 `${var}:` 花括号定界。
+- **解法**（gate.ps1 已落码，Windows 行为不变）：
+  ① 脚本头加 PATH 补全段：`$env:HOME` 存在且 `~/.cargo/bin` 在位时前置进 PATH（用 `"${cargoBin}:$($env:PATH)"`
+    拼接避坑）；随后所有 `& cargo` 改 `& $cargoCmd`（Linux 解析 `~/.cargo/bin/cargo` 绝对路径，Windows 走 PATH 的 `cargo`）；
+  ② 凡在双引号字符串里「变量名 + 冒号」组合，一律 `${var}` 花括号定界；
+  ③ 改完先 `pwsh -Command "[scriptblock]::Create((Get-Content -Raw scripts/gate.ps1))"` 做纯解析自检（0 执行成本），
+    再真跑 `-Fast`。
+- **验证**：不带 `export PATH` 的干净 shell 里 `pwsh -File scripts/gate.ps1 -Fast` 全项 PASS（含第 1 项 cargo fmt）；
+  机器口径 `flywheel_readme.ps1 -Check` gate 29 项与 doccheck2 46 断言对账 0 漂移。
+- **教训**：gate 脚本的「环境前提」（PATH/依赖二进制）必须**脚本内自举**，不靠调用者 export——
+  门禁是给下一位（下一个会话/下一台机器）跑的东西，隐性前提 = 下次 FAIL 归因浪费一小时。
+
+
+### EXP-132 构建/工具：e2e 场景导航禁用 Back 循环（select_role 的 Back 无行为 ⇒ 死锁），Enter 链 + 点击重试
+- **现象**（S31.3，gate full 档内 e2e L4 偶发 FAIL）：L4 用「Back 循环退回 select_map」定位场景，
+  首次单跑 PASS（before=17.7%），gate 内复跑 FAIL（before=10.8%，Back×3 后仍卡在 main_map，点击无从谈起）。
+- **根因**：`select_role` 场景的 `on_input` 无 `Back` 分支（只能 Enter/Next/Prev），而 `main_map` 的
+  `Back` = 回 select_map ⇒ 若 L3 阶段（Enter+Space+click）已推进到 main_map，Back 循环第一次就退回
+  select_role 系（视 menu_selected 持久态），后续 Back 全无效 ⇒ 循环 3 次耗尽仍在 main_map（≈78% 或
+  中间态），`before_bright < 40` 判据永远不成立。L4 的「定位」步骤自己引入了状态歧义。
+- **解法**（`scripts/wasm_browser_e2e.py` 已落码）：
+  ① 定位一律走 **Enter 链**（index→select_role→select_map 每步 Confirm 幂等：select_role/select_map 的
+     Confirm 在已选态 = 原地确认不推进，无歧义），替代 Back 循环；
+  ② 点击 m01 卡片加**一次重试**（偶发丢 Click 兜底，两次不中 = 判据 FAIL 不静默放行）；
+  ③ e2e 判据的「场景定位」步骤必须用**幂等前进**，禁止依赖「从未知态后退到已知态」。
+- **验证**：修复后连跑 3 次 `python3 scripts/wasm_browser_e2e.py --check` 全 PASS（before=17.7% after=78.1%）；
+  gate 第 22 项 `wasm-browser-e2e` 复跑 PASS。
+- **教训**：headless 自动化里的场景导航，「前进链 + 幂等确认」比「后退链」稳——
+  后退语义各场景不一致（有的无 Back、有的 Back 目标不定），前进链的 Confirm 语义全场景收敛。
