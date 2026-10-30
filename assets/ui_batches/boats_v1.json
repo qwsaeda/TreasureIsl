@@ -1,0 +1,54 @@
+{
+ "version": 1,
+ "batch": "boats_v1",
+ "_comment": "S27.5 玩家船重出（原 bug：boats_v1 前身用 luma 抠图 + 黄铜浮雕画法 ⇒ 船体暗部被按亮度抠成半透明，52px 缩放下变成幽灵船）。本批次改 **magenta 抠图 + 实色彩绘**（木壳/米色帆/黑旗），主色不与品红冲突 ⇒ alpha 干净。资产唯一事实源仍是 assets/ui_manifest.json。",
+ "roles": {
+  "boat": {
+   "ratio": "1:1",
+   "target": [
+    512,
+    512
+   ],
+   "key": "magenta",
+   "prompt": "a single {what}, side view facing right, painted wooden hull in warm brown and deep red, plain cream canvas sails, bold thick OPAQUE flat colors, crisp clean solid silhouette with hard edges, no transparency anywhere inside the boat, the boat is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no wave, no backdrop, no text, no letters, no numbers, centered, game asset sprite"
+  }
+ },
+ "assets": [
+  {
+   "name": "boat_1",
+   "role": "boat",
+   "file": "assets/ui/boat_1.png",
+   "params": {
+    "what": "small open fishing skiff with one short mast and a single patched cream sail"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "boat_2",
+   "role": "boat",
+   "file": "assets/ui/boat_2.png",
+   "params": {
+    "what": "two-masted fast schooner with two cream sails and a small black pennant"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "boat_3",
+   "role": "boat",
+   "file": "assets/ui/boat_3.png",
+   "params": {
+    "what": "three-masted large galleon with three cream sails and a black pennant"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "boat_4",
+   "role": "boat",
+   "file": "assets/ui/boat_4.png",
+   "params": {
+    "what": "armoured patrol warship with four gun ports, dark steel plated hull and a black pennant"
+   },
+   "prompt": ""
+  }
+ ]
+}

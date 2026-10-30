@@ -1,0 +1,43 @@
+# Linux 门禁全绿快照（2026-10-29 迁移后续工）
+
+## gate.ps1 全量（28 项，0 failure）
+=== gate: TreasureIsl (28 items) ===
+  PASS  cargo fmt --check  [0.6s]
+  PASS  cargo clippy -D warnings  [0.4s]
+  PASS  cargo test --workspace  [49.8s]
+  PASS  cargo build (native/x86_64-pc-windows-msvc)  [0.8s]
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [1.9s]
+  SKIP  cargo build (aarch64-linux-android)  (S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)  [0.6s]
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/  [0.2s]
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)  [0.1s]
+  SKIP  zero-unknown verify  (dev tier 或 S1.x 格式解析器就绪后解锁)
+  PASS  ledger validate  [0.4s]
+  PASS  doccheck (docs consistency)  [0.8s]
+  PASS  validate_data (assets/data/*.json)  [0.1s]
+  PASS  gen_layout --check (idempotent)  [0.2s]
+  PASS  check_hardcode (strict; 0 hits required)  [1.9s]
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)  [0.1s]
+  PASS  check_code_standards (CS-1~6 代码标准 + 棘轮基线)  [0.2s]
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)  [0.1s]
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [0.4s]
+  PASS  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)  [0.1s]
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)  [0.1s]
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)  [0.8s]
+  PASS  flywheel-readme (开轮必读脚本完整性)  [0.2s]
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [5.7s]
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.0s]
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)  [0.5s]
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)  [0.1s]
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [3.9s]
+=== gate: 0 failure(s) ===
+
+## 关键修复记录（本 session）
+- gate.ps1：python→$py（Linux python3 映射）+ 占位/unwrap 扫描路径分隔 (?i)[/\\] 双兼容
+- check_code_standards：vs_proto.rs CS-1 资产路径迁 chrome::VS_* 单源常量 + 窄接缝参数改 RenderHost
+- theme.rs：isle_* 10 令牌进 Theme 字段 + by_name + DEFAULT + theme.json 三方对账
+- pcx_ref 测试：python3 探测；bevy_native_render 测试锚定 S22 现行数据（text_on_parch）
+- code_budget/process_ratchet 棘轮基线补登（main_map.rs/data-mod.rs 超限 + CS-3 局部 fn out）
+- strings.json：combat.side.player（我方）i18n 化
+- wasm_browser_e2e.py 工具契约 3 处登记（14 台账 + 04 速查 + README 索引）

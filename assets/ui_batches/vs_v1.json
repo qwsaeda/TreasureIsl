@@ -1,0 +1,126 @@
+{
+ "version": 1,
+ "batch": "vs_v1",
+ "_comment": "S27.7 VS 对战界面改版（用户 2026-10-29：对战界面应有道具特效/现代化回合制/多出几套）试点资产。角色：boss=敌方船长全身立绘（magenta_clean 抠图）、hero_back=背身玩家立绘、deck=夜间甲板 3/4 俯视背景（满幅，不抠）、item=四种战斗道具图标。资产唯一事实源仍是 assets/ui_manifest.json。",
+ "roles": {
+  "boss": {
+   "ratio": "2:3",
+   "target": [
+    600,
+    900
+   ],
+   "key": "magenta_clean",
+   "prompt": "a single {what}, full body standing front view, dramatic rim light from the left, 18th century pirate captain, torn dark navy coat with tarnished brass buttons, blood red sash, tricorn hat, weathered angry face, painted old nautical chart illustration style, warm sand and dark basalt palette, crisp hard edges, the figure is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no backdrop, no text, no letters, no numbers, centered, game character sprite"
+  },
+  "hero_back": {
+   "ratio": "2:3",
+   "target": [
+    600,
+    900
+   ],
+   "key": "magenta_clean",
+   "prompt": "a single {what}, seen from behind, three quarter view, 18th century pirate captain, worn brown leather coat, scarf blowing in the wind, painted old nautical chart illustration style, warm sand and dark basalt palette, crisp hard edges, the figure is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no backdrop, no text, no letters, no numbers, centered, game character sprite"
+  },
+  "deck": {
+   "ratio": "9:16",
+   "target": [
+    1080,
+    1920
+   ],
+   "key": "none",
+   "prompt": "{what}, three quarter overhead perspective, wet plank deck, cannons and coiled ropes, brass fittings, lanterns glowing warm orange, stormy night sea beyond the railings, painted old nautical chart illustration style, dark basalt and warm sand palette, cinematic rim lighting, no characters, no people, no text, no letters, no numbers, full bleed game background"
+  },
+  "item": {
+   "ratio": "1:1",
+   "target": [
+    256,
+    256
+   ],
+   "key": "magenta_clean",
+   "prompt": "a single {what}, game inventory icon, chunky readable silhouette, painted old nautical chart illustration style, warm sand and dark basalt palette with brass accents, thick dark outline, the object is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no backdrop, no text, no letters, no numbers, centered, game asset icon"
+  }
+ },
+ "assets": [
+  {
+   "name": "boss_captain",
+   "role": "boss",
+   "file": "assets/ui/boss_captain.png",
+   "params": {
+    "what": "towering pirate captain boss holding a huge curved cutlass, skull emblem belt buckle"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "hero_back",
+   "role": "hero_back",
+   "file": "assets/ui/hero_back.png",
+   "params": {
+    "what": "pirate captain hero holding a cutlass ready to strike"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "deck_battle",
+   "role": "deck",
+   "file": "assets/ui/deck_battle.png",
+   "params": {
+    "what": "empty pirate ship main deck at night"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "item_keg",
+   "role": "item",
+   "file": "assets/ui/item_keg.png",
+   "params": {
+    "what": "wooden powder keg with brass bands and a short lit fuse"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "item_medkit",
+   "role": "item",
+   "file": "assets/ui/item_medkit.png",
+   "params": {
+    "what": "rolled canvas medical kit with a red cross bandage and a small glass bottle"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "item_rum",
+   "role": "item",
+   "file": "assets/ui/item_rum.png",
+   "params": {
+    "what": "dark glass rum bottle with a wax sealed cork and a parchment label"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "item_smoke",
+   "role": "item",
+   "file": "assets/ui/item_smoke.png",
+   "params": {
+    "what": "round iron smoke bomb with a lit fuse and a small smoke puff"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "icon_cutlass",
+   "role": "item",
+   "file": "assets/ui/icon_cutlass.png",
+   "params": {
+    "what": "curved pirate cutlass blade with a brass guard and worn leather grip"
+   },
+   "prompt": ""
+  },
+  {
+   "name": "icon_shield",
+   "role": "item",
+   "file": "assets/ui/icon_shield.png",
+   "params": {
+    "what": "round wooden buckler shield with brass rim and iron boss"
+   },
+   "prompt": ""
+  }
+ ]
+}

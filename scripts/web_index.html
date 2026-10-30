@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- S31.2c：Bevy 浏览器壳入口（build_wasm.ps1 部署到 web/index.html；勿手改，改源 = 改本文件）。
+     结构：canvas #game（bevy winit 按 `Window.canvas` 选择器绑定）+ importmap
+     （wasm 的 miniquad 遗留 "env" 模块导入 → 本地 env-stub.js）+ module script。-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>金银岛 TreasureIsl</title>
+<style>
+html, body { margin: 0; height: 100%; background: #14100b; overflow: hidden; }
+#game { width: 100vw; height: 100vh; display: block; touch-action: none; }
+#status { position: fixed; left: 0; right: 0; bottom: 0; padding: 6px 12px;
+  background: rgba(20,16,11,.85); color: #c9b287; font: 12px/1.5 monospace;
+  white-space: nowrap; overflow: hidden; }
+</style>
+<!-- wasm 二进制的 "env" 模块导入（miniquad 遗留宿主 FFI，S18.8b/c 根除后删除）
+     经 importmap 解析到本地 stub；bevy 主循环走 winit/wgpu 不经过 env。 -->
+<script type="importmap">
+{ "imports": { "env": "./env-stub.js" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="status">加载中…</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

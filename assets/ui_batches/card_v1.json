@@ -1,0 +1,25 @@
+{
+ "version": 1,
+ "batch": "card_v1",
+ "_comment": "S27.5 环形卡基材批次（main_map v5 卡面 = 径向旋转矩形卡，概念稿变体 B）：白蒙版圆角卡板，运行时 `blit_image_rot` 旋转 + `blit_image_tint` 上色（领地卡底 = parchment 系令牌 / 功能卡底 = panel_wood / 归属色带 = isle_* 令牌）。luma 角色要求纯黑底（ui_asset_batch check 预检）。资产唯一事实源仍是 assets/ui_manifest.json（register 由本规格 upsert）。",
+ "roles": {
+  "cardmask": {
+   "ratio": "3:4",
+   "target": [
+    384,
+    512
+   ],
+   "key": "luma",
+   "prompt": "a single plain solid pure WHITE rounded rectangle panel with soft slightly rounded corners, flat even white fill, crisp clean edges, the panel fills most of the frame and is perfectly centered, the panel is the ONLY object in the image, isolated on a PURE SOLID BLACK background, no shadow, no glow, no highlight, no gradient, no text, no letters, no numbers, no decoration, no border ornament"
+  }
+ },
+ "assets": [
+  {
+   "name": "card_panel",
+   "role": "cardmask",
+   "file": "assets/ui/card_panel.png",
+   "params": {},
+   "prompt": "a single plain solid pure WHITE rounded rectangle panel with soft slightly rounded corners, flat even white fill, crisp clean edges, the panel fills most of the frame and is perfectly centered, the panel is the ONLY object in the image, isolated on a PURE SOLID BLACK background, no shadow, no glow, no highlight, no gradient, no text, no letters, no numbers, no decoration, no border ornament"
+  }
+ ]
+}
