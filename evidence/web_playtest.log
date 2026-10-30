@@ -1,5 +1,5 @@
 [web-playtest] url=http://127.0.0.1:8080
-  web 产物: index=8de692efa1f5 wasm=1943ea5a1bef
+  web 产物: index=8de692efa1f5 wasm=0813e6cce5d3
   L1 status="运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）"（实例化活体证明）
   L2 首帧墨点=12%（体积启发，阈值 >5 = 非全黑/非空白）
   L3/L4 按键 3×Enter 后墨点序列=[12,100,100,100]（变化帧 1/3）

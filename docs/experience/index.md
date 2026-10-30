@@ -32,7 +32,7 @@
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 16 |
-  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 18 |
+  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 19 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 32 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 43 |
 
@@ -172,6 +172,7 @@
 | EXP-130 | build | | wasm 浏览器 e2e 三条坑：① 任何 `MessageReader<PointerHits>` 调试系统会**消费** `PointerHits` ⇒ 饿死 bevy `build_over_map` ⇒ `PointerClick` 永不发（诊断只挂事件侧观察者，不读中间消息）；② 快速 `mouse.click` 可能同帧丢 `PointerClick`（press/release 须分帧）；③ WebGL canvas 不能 2D `drawImage` 读像素（恒 0）⇒ e2e 采样走 `page.screenshot()` + PIL。 正文见 `build.md` |
 | EXP-131 | build | | gate.ps1 Linux 化两条坑：① cargo 在 `~/.cargo/bin` 但不在 Linux 默认 PATH ⇒ gate 第 1 项 `cargo fmt` 直接 FAIL（Windows 靠 rustup 初始化从不暴露）⇒ 脚本头 PATH 自举 + `& $cargoCmd` 全替换；② `$env:PATH = "$cargoBin:$env:PATH"` 触发 pwsh **ParserError**（`$var:` 的 `:` 被解析成作用域前缀） ⇒ 字符串里变量+冒号必须 `${var}` 花括号定界；改完先 `[scriptblock]::Create` 纯解析自检。正文见 `build.md` |
 | EXP-132 | build | | e2e 场景导航禁用 Back 循环（select_role 无 Back 分支 ⇒ main_map 退回后死锁）：定位一律走 Enter 幂等前进链（index→select_role→select_map 的 Confirm 已选态原地不推进） + 点击加一次重试；headless 场景导航原则 = 幂等前进 > 后退链（后退语义各场景不一致）。正文见 `build.md` |
+| EXP-133 | build | | wasm32 无文件系统 ⇒ asset_present() 恒 false ⇒ v5 环/岛/骰全灭；L4 亮像素比被 chart_full 亮背景掩盖 ⇒ 漏网，补 L5「环资产实取」层 正文见 `build.md` |
 
 ## 条目格式（写新条时照抄）
 

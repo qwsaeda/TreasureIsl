@@ -386,68 +386,68 @@
   {
    "file": "assets/ui/isle_boss_fort.png",
    "source": "pool",
-   "sha256": "a9956aaf733a5e5656bc647cc564c71afdf5b1ab6d8c1f085aa3f04ebd6d6df3",
-   "bytes": 617354
+   "sha256": "efea984c38863fa24377a4785a2dbbd32a4a0ec804b6bc9104e52b1de0a1ebc7",
+   "bytes": 488696
   },
   {
    "file": "assets/ui/isle_harbour.png",
    "source": "pool",
-   "sha256": "5ce2da7e89e55e96d2cd1f22d8406c0a6849935ffc303472317d9b780cf23271",
-   "bytes": 609735
+   "sha256": "2e40cc2e3ab07010a85fa689a8ec874d8e3405da8a3cf257196f77d3de45c838",
+   "bytes": 484603
   },
   {
    "file": "assets/ui/isle_lighthouse.png",
    "source": "pool",
-   "sha256": "7ea10d08747f91ce229dad0d14d9b0c1d9043d0a620f3045ab304aba6ef4a601",
-   "bytes": 573351
+   "sha256": "60d6fd260bb39c6a7d750ab26b8eef540dea1a91467fbd29e2394edb9371d052",
+   "bytes": 449238
   },
   {
    "file": "assets/ui/isle_lightship.png",
    "source": "pool",
-   "sha256": "5e399b32b71610353f088b5d72db4da7614037b9a6b5cfb302d10fcaf32dc952",
-   "bytes": 578525
+   "sha256": "dee324ae66081853c7228487006aefa9b72530595d570b323be9c86bc1c2be13",
+   "bytes": 429754
   },
   {
    "file": "assets/ui/isle_pirate_lair.png",
    "source": "pool",
-   "sha256": "8c46c5854d65fdb9b4e73af3f6c73784dee8de67f11c1553353147624eb322cb",
-   "bytes": 580899
+   "sha256": "161a6903fb2a64fadab8fc7083499de12c457770c584579eae0b8537d56c6d7b",
+   "bytes": 473530
   },
   {
    "file": "assets/ui/isle_shipyard.png",
    "source": "pool",
-   "sha256": "7cdd4936d4590a4b76af69627d032a73ca5990809008774261e180898fc9f8cd",
-   "bytes": 613608
+   "sha256": "866bc77a70e9fac8e6b0c32b8314f290bb7248a73f884b827a025369a1bdf600",
+   "bytes": 469514
   },
   {
    "file": "assets/ui/isle_skull_cliff.png",
    "source": "pool",
-   "sha256": "c4a56d49242b8b85cdf12abcb777fa5c7c1c14d52a9713f96f74aae49fdf5e55",
-   "bytes": 594393
+   "sha256": "cbabec93b6d0d7cf763435958d87c9dc90aea33e589c9fe0d4a878f3c5b18fc8",
+   "bytes": 477815
   },
   {
    "file": "assets/ui/isle_trading_post.png",
    "source": "pool",
-   "sha256": "0639c0152f4486cc9035ac0603b6e9e8d95ce420708b7c9b62d5cf828d31e565",
-   "bytes": 622441
+   "sha256": "b556272066dbd213a82782997b437c5f486736c004a304647458316f0abea43a",
+   "bytes": 458709
   },
   {
    "file": "assets/ui/isle_volcano.png",
    "source": "pool",
-   "sha256": "93df4f6666c8122fd6f7037e2ababaaeaf9a2e3c96f07fa05924942ab908f5ea",
-   "bytes": 587719
+   "sha256": "d9aa78071bc07457cf4bcd19f1d6faab5613d569f7f41882575119554bf282ec",
+   "bytes": 496484
   },
   {
    "file": "assets/ui/isle_wreck.png",
    "source": "pool",
-   "sha256": "e0ce78fc4a0b877ce5f732a6013c3eab9fb4b738bcc86a74cad6aa3d870c787e",
-   "bytes": 651010
+   "sha256": "c0942915d05554094364354e11a2ea3e8facc4727163c4dd5e37b9f909e06deb",
+   "bytes": 472107
   },
   {
    "file": "assets/ui/island_home_m01.png",
    "source": "pool",
-   "sha256": "fef5178474e61f71279b9a9d5f04661f6fa93849366a412731f9acc70aa0bb73",
-   "bytes": 1226619
+   "sha256": "f22bfaeae1c8d5ac0d29a5c2ef09c24097f0161b52512df01ac82119e514b231",
+   "bytes": 1266821
   }
  ],
  "invariants": {

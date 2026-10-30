@@ -233,3 +233,34 @@ return 留下**上一轮的陈旧 PNG**，像素检查「看起来对」其实�
   gate 第 22 项 `wasm-browser-e2e` 复跑 PASS。
 - **教训**：headless 自动化里的场景导航，「前进链 + 幂等确认」比「后退链」稳——
   后退语义各场景不一致（有的无 Back、有的 Back 目标不定），前进链的 Confirm 语义全场景收敛。
+
+### EXP-133 构建：wasm 上 asset_present() 因走 std::fs 恒 false ⇒ v5 环形棋盘整体不渲染；且亮像素比判据被亮背景掩盖 ⇒ 门禁漏网（L5 环资产实取层补齐）
+- **现象**（S32.13，用户报「选完地图后主地图没渲染出来，也没有玩」）：浏览器 wasm 版进 main_map 后，
+  只有 `chart_full` 羊皮海图底 + HUD + 旗标 +「起点·补给」名牌 + 罗盘/舵轮/三键，
+  **31 张岛型卡环 / 中央据点岛 / 骰点全灭**；native 同一份源码 `--shot --scene=main_map`
+  渲染出完整 v5 环 ⇒ 数据/几何/绘制逻辑全对，**纯 wasm 环境差异**。
+- **根因**：`chrome::asset_present()`（`crates/ti-app/src/scenes/chrome.rs`）在 `hd-8bit` 特性下
+  返回 `image_cache::get(asset).is_some()`，而 `image_cache::get` 走 `std::fs::read`
+  —— **wasm32 无文件系统 ⇒ 恒 `None` ⇒ `asset_present` 恒 false**。
+  `render_v5_ring`（`main_map.rs`）的卡环/中央岛/骰点/船贴图**全部 gate 在 `asset_present`
+  ⇒ wasm 全跳过**（船退化成 `entity_icon("flag")` 小旗，正是截图里那面旗）；
+  而 `render_primitives` 的 `image` 原语**不经过** `asset_present` ⇒ 背景/HUD/按钮照常渲染。
+  也就是说：**同一个函数在 native 与 wasm 语义分叉，而 wasm 分支恒为「缺资产」**。
+- **解法**：① `asset_present()` 按 `#[cfg(target_arch = "wasm32")]` 分流 —— wasm 直接返回 `true`
+  （wasm 的贴图由 Bevy `AssetServer` 经 HTTP 取，缺资产 = **不画不 panic**，与
+  `render_primitives` 的 `image` 原语同口径，语义交给渲染层承担）；
+  ② **门禁补判据**：`scripts/wasm_browser_e2e.py` 加 L5「环资产实取」层
+  （`isle_*.png` + `island_home_*.png` + `card_panel.png` 各 ≥1 个 2xx）。
+- **验证**：
+  ① **反向实证**（最硬的一条）：把 wasm 分支临时改回 `false` 重建 wasm ⇒
+     `wasm_browser_e2e.py --check` 报 **L5 FAIL（isle=0 island_home=0 card_panel=0）退出码 1**，
+     而 **L4 仍 PASS（亮像素比 78.1% = 与用户坏图完全同值）** ⇒ 既坐实根因，又证明 L4 对本缺陷**完全盲**；
+  ② 修复后连跑 3 次 `python3 scripts/wasm_browser_e2e.py --check` 全 PASS（L5: isle=10 / island_home=1 / card_panel=1）；
+  ③ native `xvfb-run -a ... --shot --scene=main_map` 仍出完整 v5 环（0 回归）；
+  ④ 浏览器截图与 native 截图逐元素一致（31 卡环 + 中央据点岛 + 骰点 + 船）。
+- **教训**：① **「存在性判据」不能建在目标平台没有的能力上** —— 用 `std::fs` 判「资产在不在」
+  在 wasm 恒假，这类门必须按目标平台分流或改由**渲染层**回答（谁真正加载谁负责答）；
+  ② **「画面非空/够亮」类判据会被亮背景掩盖** —— 回归断言要盯**「该出现的具体资产/元素是否真被取到」**，
+  不能盯「整体亮不亮」（亮背景 + 内容全灭 = 照样 PASS）；
+  ③ **能反向证伪的测试才算测试**：本次 L5 的价值不来自「修复后 PASS」，而来自
+  「故意改坏后 FAIL」——正例谁都会写，负例才证明断言有效。

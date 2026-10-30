@@ -72,7 +72,16 @@ def main() -> int:
         # 本机 chromium 装在 /root/.cache/ms-playwright/chromium-1228（node-playwright 探针同路径）；
         # 缺省 = playwright 自带 headless shell（未装则 launch 失败）。
         exe = os.environ.get("TI_CHROMIUM_PATH")
-        launch_kwargs = dict(headless=True, args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
+        # S32.1：显式钉死 ANGLE-SwiftShader（`--use-angle=swiftshader`）—— 少了它时
+        # Chromium 会在 GLES/ANGLE 后端间随机切换，而 **GLES 后端的 wgpu blit pipeline
+        # 着色器翻译偶发失败**（`wgpu_hal::gles::device` 报错 ⇒ 画面半死 ⇒ L2/L4 假 FAIL）。
+        # 显式钉死后端 = 消除该环境随机性（环境限制，非 wasm 缺陷）。
+        launch_kwargs = dict(
+            headless=True,
+            args=["--use-gl=swiftshader", "--use-angle=swiftshader",
+                  "--enable-unsafe-swiftshader", "--disable-gpu-watchdog",
+                  "--disable-dev-shm-usage"],
+        )
         if exe:
             launch_kwargs["executable_path"] = exe
         else:

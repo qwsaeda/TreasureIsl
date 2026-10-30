@@ -1,0 +1,298 @@
+=== gate: TreasureIsl (33 items) ===
+  PASS  cargo fmt --check  [0.9s]
+  PASS  cargo clippy -D warnings  [18.7s]
+  PASS  cargo test --workspace  [227.4s]
+  PASS  cargo build (native/x86_64-pc-windows-msvc)  [0.8s]
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [28.5s]
+  SKIP  cargo build (aarch64-linux-android)  (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)  [13.0s]
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/  [0.3s]
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)  [0.0s]
+  SKIP  zero-unknown verify  (dev tier 或 S1.x 格式解析器就绪后解锁)
+        ledger: 263 tasks, 249 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate  [0.5s]
+        doccheck: 148 docs, 38 facts, 129 experiences, 257 task refs, 4 assertions, 2 error(s)
+          ERROR docs/release.md:228 台账任务总数声明 262，ledger 实测 263（第 5 轮审计 Q021 固化）
+          ERROR docs/release.md:228 verified 计数声明 248，ledger 实测 249
+  FAIL  doccheck (docs consistency)  [1.6s]  
+        validate_data: OK（4 表，strings 179 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）
+  PASS  validate_data (assets/data/*.json)  [0.2s]
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)  [0.1s]
+  PASS  check_hardcode (strict; 0 hits required)  [1.1s]
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)  [0.1s]
+        
+        === CS-1 asset_path_hardcode（资产路径字面量只在 chrome/data/ti-tools）— 当前违例 0 ===
+        [ok] CS-1 asset_path_hardcode：0 存量违例全在豁免基线内
+        
+        === CS-2 file_doc_present（src 文件缺 //! 模块文档（职责声明））— 当前违例 0 ===
+        [ok] CS-2 file_doc_present：0 存量违例全在豁免基线内
+        
+        === CS-3 fn_param_naming（fn 参数单字母（非 x/y））— 当前违例 179 ===
+            ('crates/ti-core/src/domain/selection.rs::from_index', 52, 'i')
+            ('crates/ti-core/src/domain/selection.rs::from_index', 135, 'i')
+            ('crates/ti-core/src/domain/render.rs::fmt', 80, 'f')
+            ('crates/ti-core/src/data/mod.rs::fmt', 72, 'f')
+            ('crates/ti-core/src/data/mod.rs::item_text_pos', 624, 'i')
+            ('crates/ti-core/src/data/mod.rs::item_rect', 633, 'i')
+            ('crates/ti-core/src/data/layout.rs::from', 234, 'r')
+            ('crates/ti-core/src/oracle/saveload.rs::oracle_migrate_v1_to_v2', 40, 's')
+            ('crates/ti-core/src/oracle/main_map.rs::oracle_move', 21, 'd')
+            ('crates/ti-core/src/oracle/main_map.rs::oracle_walk', 66, 'd')
+            ('crates/ti-core/src/oracle/main_loop.rs::oracle_next_state', 30, 's')
+            ('crates/ti-core/src/rules/saveload_json.rs::legacy_character_label', 149, 'n')
+            ('crates/ti-core/src/rules/saveload_json.rs::legacy_map_label', 155, 'n')
+            ('crates/ti-core/src/rules/saveload_json.rs::scene_id_label', 160, 's')
+            ('crates/ti-core/src/rules/saveload_json.rs::set_slot', 358, 's')
+            ('crates/ti-core/src/rules/cards_draw.rs::draw_one', 112, 'n')
+            ('crates/ti-core/src/rules/selection.rs::select_map', 76, 'm')
+            ('crates/ti-core/src/rules/messages.rs::kind_key', 55, 'k')
+            ('crates/ti-core/src/rules/progression.rs::boss_tier_of', 19, 'm')
+            ('crates/ti-core/src/rules/progression.rs::can_select', 57, 'm')
+            ('crates/ti-core/src/rules/progression.rs::on_boss_defeated', 66, 'm')
+            ('crates/ti-core/src/rules/progression.rs::min_progression_to_select', 104, 'm')
+            ('crates/ti-core/src/rules/progression.rs::is_map_defeated', 115, 'm')
+            ('crates/ti-core/src/rules/saveload.rs::scene_id_label', 141, 's')
+            ('crates/ti-core/src/rules/saveload.rs::set_slot', 566, 's')
+            ('crates/ti-core/src/rules/main_map.rs::step_move', 51, 'd')
+            ('crates/ti-core/src/rules/main_map.rs::move_to', 157, 'd')
+            ('crates/ti-core/src/rules/main_map.rs::walk', 203, 'd')
+            ('crates/ti-core/src/rules/main_map.rs::walk_steps', 245, 'd')
+            ('crates/ti-core/src/rules/main_map.rs::can_walk', 262, 'd')
+            ('crates/ti-core/src/rules/trade.rs::f64_to_u32', 47, 'v')
+            ('crates/ti-core/src/rules/rng.rs::advance', 60, 'n')
+            ('crates/ti-core/src/rules/rng.rs::srand', 74, 's')
+            ('crates/ti-core/src/rules/rng.rs::seq', 86, 'n')
+            ('crates/ti-core/src/rules/rng.rs::set_seed', 114, 's')
+            ('crates/ti-core/src/rules/rng.rs::in_range', 144, 'n')
+            ('crates/ti-core/src/rules/rng.rs::advance', 184, 'n')
+            ('crates/ti-core/src/rules/menu.rs::set_scene', 26, 's')
+            ('crates/ti-core/src/rules/cards.rs::data_to_card_effect', 210, 'e')
+            ('crates/ti-core/src/rules/build.rs::f64_to_u32', 41, 'v')
+            ...（139 更多）
+        [ok] CS-3 fn_param_naming：134 存量违例全在豁免基线内
+        
+        === CS-4 scene_session_ctor（场景层构造持久会话（窄接缝））— 当前违例 0 ===
+        [ok] CS-4 scene_session_ctor：0 存量违例全在豁免基线内
+        
+        check_code_standards: PASS（0 项超基线）
+  PASS  check_code_standards (CS-1~6 代码标准 + 棘轮基线)  [0.2s]
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)  [0.1s]
+  PASS  no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描)  [0.3s]
+          WARN i18n 孤儿 key `app.window_title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `boat.1`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `boat.2`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `boat.3`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `boat.4`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `combat.item.keg`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `combat.item.medkit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `combat.item.rum`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `combat.item.smoke`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.board_lightship`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.camp_cliff`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.escort_trade`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.fort_boss`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.lava_vault`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.raid_beach`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.salvage_wreck`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.seize_shipyard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.storm_lair`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `dungeon.take_lighthouse`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.boss_fort`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.boss_fort.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.boss_fort.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.harbour`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.harbour.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.harbour.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lighthouse`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lighthouse.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lighthouse.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lightship`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lightship.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lightship.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.pirate_lair`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.pirate_lair.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.pirate_lair.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.shipyard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.shipyard.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.shipyard.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.skull_cliff`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.skull_cliff.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.skull_cliff.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.trading_post`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.trading_post.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.trading_post.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.volcano`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.volcano.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.volcano.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.wreck`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.wreck.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.wreck.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.0`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.1`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.2`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.3`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.4`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.5`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.hud.spin`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.nav_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.battle`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.boss`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.card`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.city`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.event`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.plain`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.port`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.start`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.territory`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.treasure`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_collect_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_dungeon_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_siege_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_toll_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_upgrade_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.boss_locked_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.card_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.dungeon_fail`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.dungeon_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.territory_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.select_map.locked`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.select_map.open`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.select_role.seat_hint`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+        doccheck2: 0 error(s) across 38 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention)
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [1.2s]
+        check_ledger_reality: 1 项虚报
+          FAIL  [orphan] 孤儿 evidence `evidence/S32.13.gate.log`：任务 `S32.13.gate` 不在 plan/ledger.yaml（台账可能被文件级回退丢条目）
+  FAIL  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)  [0.1s]  
+        check_forward_closed: C1 业务文档零逆向引用: OK
+        check_forward_closed: C2 表现层零 oracle 引用: OK
+        check_forward_closed: C3 根目录清空 + legacy 在位: OK
+        check_forward_closed: C4 oracle 单点源 + 禁重复 crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)  [0.1s]
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 包 D status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P1 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P2 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P3 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P4 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P5 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P6 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 契约 c1_core_public_types.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c2_data_keys.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)  [0.6s]
+        flywheel_readme -Check PASS: 6 条必读 ✓, gate 33 项, doccheck2 46 断言, packages 7 包
+  PASS  flywheel-readme (开轮必读脚本完整性)  [0.6s]
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.36s
+        
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [8.3s]
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.0s]
+        === 代码结构审计 ===
+        文件 263 / 总行 62342 / 函数 3012 / trait 24 / 泛型 fn 8 / macro_rules! 6
+        
+        --- 最长 10 个文件 ---
+         3664  crates/ti-tools/src/bin/doccheck2.rs  [豁免]
+         2117  crates/ti-engine/src/bin/treasure_bevy.rs  [豁免]
+         1412  crates/ti-app/src/scenes/chrome.rs  [豁免]
+          998  crates/ti-app/src/scenes/main_map.rs  [豁免]
+          942  crates/ti-core/src/data/mod.rs  [豁免]
+          890  crates/ti-app/tests/render_intent.rs
+          870  crates/ti-app/src/scenes/mod.rs
+          780  crates/ti-render/src/shell.rs
+          743  crates/ti-app/src/game_app/host.rs
+          663  crates/ti-tools/src/bin/classify.rs
+        
+        --- 最长 10 个函数 ---
+          304  crates/ti-core/examples/full_run_demo.rs::main (行 120)  [豁免]
+          218  crates/ti-core/src/data/mod.rs::convert (行 725)  [豁免]
+          195  crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity (行 863)  [豁免]
+          190  crates/ti-core/tests/exhaust_random_session.rs::run_random_session (行 71)  [豁免]
+          183  crates/ti-engine/src/scene_render.rs::spawn_primitives (行 225)  [豁免]
+          173  crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session (行 19)  [豁免]
+          140  crates/ti-app/src/scenes/main_map.rs::render (行 580)
+          135  crates/ti-core/src/data/layout.rs::scenes (行 20)
+          135  crates/ti-engine/src/bin/treasure_bevy.rs::build_index_chrome (行 742)
+          134  crates/ti-app/src/android_shell.rs::run (行 127)
+        
+        --- 违规（阈值：文件 >900 行 / 函数 >140 行 / 重复 >5 次）---
+        文件规模 0 项；函数长度 0 项；重复模式 0 项
+        [audit_code] PASS：0 项结构违规
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)  [0.5s]
+        === check_scene_narrative (UI 叙事约束 DSL v3) ===
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)  [0.1s]
+        [2m2026-10-30T13:59:22.822059Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Linux (Ubuntu 24.04)", kernel: "6.17.0-14-generic", cpu: "Intel(R) Core(TM) i5-7400 CPU @ 3.00GHz", core_count: "4", memory: "15.5 GiB" }
+        [2m2026-10-30T13:59:23.095784Z[0m [31mERROR[0m [2mwgpu_hal::vulkan::instance[0m[2m:[0m GENERAL [Loader Message (0x0)]
+        	loader_scanned_icd_add: Could not get 'vkCreateInstance' via 'vk_icdGetInstanceProcAddr' for ICD libGLX_nvidia.so.0
+        [2m2026-10-30T13:59:23.095886Z[0m [31mERROR[0m [2mwgpu_hal::vulkan::instance[0m[2m:[0m 	objects: (type: INSTANCE, hndl: 0x5f177a039b00, name: ?)
+        [2m2026-10-30T13:59:23.111566Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "Intel(R) HD Graphics 630 (KBL GT2)", vendor: 32902, device: 22802, device_type: IntegratedGpu, device_pci_bus_id: "0000:00:02.0", driver: "Intel open-source Mesa driver", driver_info: "Mesa 25.2.8-0ubuntu0.24.04.4", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+        [2m2026-10-30T13:59:23.348588Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+        S18.2 GPU/CPU 像素对照（色块内部，排除文本框 + 2px 边缘带）：比对 1607576 像素，超差 0（0.0000%），最大通道差 0 LSB，首个超差 None
+        诊断：GPU 非黑像素 2073600（文本区字形对齐属 S18.3）
+          anchor (0,0): cpu=0x10c9 gpu=0x10c9
+          anchor (1079,1919): cpu=0x0865 gpu=0x0865
+          anchor (60,200): cpu=0x190c gpu=0x190c
+          anchor (540,500): cpu=0x190c gpu=0x190c
+        S18.2 对照口径：仅游戏世界（UI 层已排除，bevy_ui 节点数 = 0）
+        S18.2 对照通过（阈值：通道 ≤8 LSB 且超差比例 <0.5%）
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [12.0s]
+        {
+          "L1_start": true,
+          "L2_render": true,
+          "L2_assets": true,
+          "L3_input": true,
+          "L4_scene": true,
+          "L5_ring_assets": true,
+          "detail": {
+            "L1_start": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
+            "L2_render": {
+              "ok": true,
+              "bright_ratio": 74.9
+            },
+            "L3_input": {
+              "after": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
+              "page_errors": []
+            },
+            "L4_scene": {
+              "before": 17.7,
+              "after": 68.0,
+              "clicked": true,
+              "transitioned": true,
+              "crashed": false
+            },
+            "L5_ring_assets": {
+              "isle": 10,
+              "island_home": 1,
+              "card_panel": 1,
+              "ok": true,
+              "skipped": false
+            }
+          }
+        }
+        [wasm-browser-e2e] PASS（L1 实例化=True / L2 渲染=True 资产=True / L3 交互=True / L4 场景切换=True / L5 环资产=True）
+  PASS  wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)  [58.9s]
+        [web-playtest] url=http://127.0.0.1:8080
+          web 产物: index=8de692efa1f5 wasm=0813e6cce5d3
+          L1 status="运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）"（实例化活体证明）
+          L2 首帧墨点=12%（体积启发，阈值 >5 = 非全黑/非空白）
+          L3/L4 按键 3×Enter 后墨点序列=[12,100,100,100]（变化帧 1/3）
+          终态 status="运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）" console致命错误=0 页面异常=0
+        [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
+  PASS  browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言)  [28.8s]
+        === playtest-loop（S16.2 试玩闭环 4 报告聚合；--check 只读模式）===
+          [OK ] fuzz_playtest:      Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-e269f49fb7d66219)
+          [OK ] full_run: full run 16/16 steps, 0 failures (P3-3 criterion met)
+          [OK ] render_invariants:      Running tests/render_invariants.rs (/disk/target/debug/deps/render_invariants-97c17fb3bff4f70a)
+          [OK ] web_playtest: [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
+          归因清单：确定性测试缺陷=0（4 报告全 0 失败）/ 可机械漂移=0（无新增 doccheck2 断言）/ 设计分歧=0（无新增 EXP）
+        playtest-loop: PASS（4 报告 0 失败；停机需连续 3 轮收敛 + evidence/S16.2.log 记录，主线程复核）
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [40.4s]
+=== gate: 2 failure(s) ===

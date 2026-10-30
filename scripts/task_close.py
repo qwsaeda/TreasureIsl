@@ -37,7 +37,7 @@ LEDGER = ROOT / "plan" / "ledger.yaml"
 RELEASE = ROOT / "docs" / "release.md"
 EVIDENCE_DIR = ROOT / "evidence"
 
-TASK_RE = re.compile(r"^\s*-\s*\{\s*id:\s*(?P<id>[A-Za-z0-9_.]+)\s*,")
+TASK_RE = re.compile(r"^\s*-\s*\{\s*id:\s*(?P<id>[A-Za-z0-9_.\-]+)\s*,")
 
 
 def read_ledger_tasks() -> list[tuple[int, str, str]]:

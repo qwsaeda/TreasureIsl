@@ -136,7 +136,7 @@
 | `scripts/layout_spec_check.py` | **UI 版面规格三面对账**（规格表 ↔ `scenes.json` ↔ `scene_manifest_v3.json`：坐标 + 8pt + N8 往返 ±1px） |
 | `scripts/check_ps_scripts.ps1` | **PowerShell 入口体检**（UTF-8 BOM + `ParseFile` 真语法自检 ⇒ 拦住「入口从未真跑起来」，EXP-109） |
 | `scripts/audit_code.py` | **代码结构审计**（`style.md` §5.12 手段）：文件规模 / 函数长度 / 重复模式；`--check` 违规非 0 退出，阈值与棘轮基线 = `scripts/code_budget.json` |
-| `scripts/wasm_browser_e2e.py` | **Bevy wasm 浏览器端 e2e**（Playwright 无头 Chromium 3 层：L1 实例化 = `env-stub.js` 覆盖 wasm env 导入 + start 段跑通 / L2 渲染 = 资产 fetch 全 2xx + 画面非全黑 / L3 交互 = 键盘+鼠标不抛异常；与 native `e2e_playthrough` 互补；`--check` 只读打印判据，失败非 0 退出） |
+| `scripts/wasm_browser_e2e.py` | **Bevy wasm 浏览器端 e2e**（Playwright 无头 Chromium 5 层：L1 实例化 = `env-stub.js` 覆盖 wasm env 导入 + start 段跑通 / L2 渲染 = 资产 fetch 全 2xx + 画面非全黑 / L3 交互 = 键盘+鼠标不抛异常 / L4 场景切换 = 选图卡鼠标点 ⇒ 切 main_map（增量亮像素比）/ **L5 环资产实取 = v5 环形棋盘贴图确实被取到（`isle_*`/`island_home_*`/`card_panel` 各 ≥1 个 2xx）——防「背景太亮掩盖环缺失」回归漏网**；与 native `e2e_playthrough` 互补；`--check` 只读打印判据，失败非 0 退出） |
 | `scripts/web_playtest.cjs` | **浏览器真运行时试玩（S16.1）**：Node + Playwright CDP 按键驱动 菜单→选人→选图→主地图（console 致命错误=0 + 截图墨点 + 场景流转帧变化；`node scripts/web_playtest.cjs`，需 `serve` 在跑） |
 | `scripts/playtest_loop.py` | **试玩闭环 4 报告聚合（S16.2）**：fuzz_playtest / full_run / render_invariants / web_playtest 一次跑全 + 归因三分类清单（`08_playtest_loop.md` 执行面；停机 = 连续 3 轮收敛 + evidence/S16.2.log 主线程复核） || `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
 | `scripts/publish_web.ps1` | **一键发布 publish-web（S16.3）**：gate 全绿前置 → build_wasm → 本地 serve 静态断言 → 发布历史入 `release.md` → `git worktree` 推 gh-pages → 线上 URL 复跑 `web_playtest`；线上不可达 = 实测定态降级登记（不静默绕过）；`-Check` 只读前置体检 |

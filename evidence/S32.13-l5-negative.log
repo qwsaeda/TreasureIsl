@@ -1,0 +1,42 @@
+=== S32.13 L5 反向实证（负例）：wasm 分支临时改 false 重建的 wasm ===
+=== 源码状态：crates/ti-app/src/scenes/chrome.rs 的 wasm32 分支临时返回 false（还原缺陷）===
+=== 命令：python3 scripts/wasm_browser_e2e.py --check ===
+=== 期望：L5 FAIL（退出码 1），且 L4 仍 PASS（证明原判据盲区）===
+
+[wasm-browser-e2e] FAIL  L5 环资产未取到：isle_*=0 island_home_*=0 card_panel=0（v5 环形棋盘贴图未发请求 ⇒ 疑似 `asset_present()` 在 wasm 恒 false，见 crates/ti-app/src/scenes/chrome.rs）
+{
+  "L1_start": true,
+  "L2_render": true,
+  "L2_assets": true,
+  "L3_input": true,
+  "L4_scene": true,
+  "L5_ring_assets": false,
+  "detail": {
+    "L1_start": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
+    "L2_render": {
+      "ok": true,
+      "bright_ratio": 74.9
+    },
+    "L3_input": {
+      "after": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
+      "page_errors": []
+    },
+    "L4_scene": {
+      "before": 17.7,
+      "after": 78.1,
+      "clicked": true,
+      "transitioned": true,
+      "crashed": false
+    },
+    "L5_ring_assets": {
+      "isle": 0,
+      "island_home": 0,
+      "card_panel": 0,
+      "ok": false,
+      "skipped": false
+    }
+  }
+}
+[wasm-browser-e2e] FAIL（L1 实例化=True / L2 渲染=True 资产=True / L3 交互=True / L4 场景切换=True / L5 环资产=False）
+
+=== 退出码：1 （期望 1）===
