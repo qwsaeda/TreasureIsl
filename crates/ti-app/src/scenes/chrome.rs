@@ -703,16 +703,34 @@ pub fn asset_dest_rect(cx: i32, cy: i32, edge_px: i32, visible_px: i32) -> (i32,
 }
 
 /// 贴图是否在位（缺资产 = 回退代码矢量图标的唯一判据；缺资源 = 不画，不 panic）。
+///
+/// **S32.1（wasm 环渲染根治）**：wasm32 目标**无文件系统** ⇒ [`crate::image_cache::get`]
+/// （走 `std::fs::read`）恒 `None` ⇒ 本函数恒 `false` ⇒ `main_map` v5 环形棋盘的
+/// 31 张卡环 / 中央据点岛 / 骰点 / 船贴图**全部被跳过**（wasm 上只剩 fill/text 名牌
+/// + 图标回退，肉眼 = 「主地图没渲染」）。
+///
+/// wasm 的贴图实际由 Bevy `AssetServer` 经 HTTP 取（`ti_engine::scene_render`），
+/// 缺资产 = **不画、不 panic**（与 `render_primitives` 的 `image` 原语同口径，且该口径
+/// 已由背景/HUD 资产在 wasm 上 200 渲染实证）⇒ wasm32 直接返回 `true`，
+/// 「缺资产不画」的语义交给渲染层承担。
 #[must_use]
 pub fn asset_present(asset: &str) -> bool {
-    #[cfg(feature = "hd-8bit")]
-    {
-        crate::image_cache::get(asset).is_some()
-    }
-    #[cfg(not(feature = "hd-8bit"))]
+    #[cfg(target_arch = "wasm32")]
     {
         let _ = asset;
         true
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        #[cfg(feature = "hd-8bit")]
+        {
+            crate::image_cache::get(asset).is_some()
+        }
+        #[cfg(not(feature = "hd-8bit"))]
+        {
+            let _ = asset;
+            true
+        }
     }
 }
 

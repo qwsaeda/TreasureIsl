@@ -32,7 +32,7 @@
 | 你要做的事 | 读 |
 |---|---|
 | **迁移 Linux / 换机器续工（先读这个）** | `docs/migration_linux.md`（在途改动清单 = tracked-M + untracked-? 混合，只提交 tracked 会丢工作；Linux 环境准备 + `pwsh` 命令差异 + CRLF/无头 GPU 风险 + 迁移后续工序列） |
-| **开发管理平台（TI Dev Console，纯管理 / 辅助开发；与游戏运行时解耦）** | [`docs/process/22_dev_platform.md`](docs/process/22_dev_platform.md)（定位/边界/架构/数据源/双审计协议/北极星判据/不做清单）+ [`docs/plan-s32-platform.md`](docs/plan-s32-platform.md)（WBS，S32.0a 起；按阶段门顺序验收，每任务完成起两个对抗子代理审计完成度）+ 启动 `cargo run -p ti-console`（S32.1 起；crate = `crates/ti-devmeta`（共享层）+ `crates/ti-console`（平台本体），根 `Cargo.toml` members 在册） |
+| **开发管理平台（TI Dev Console，纯管理 / 辅助开发；与游戏运行时解耦）** | [`docs/process/22_dev_platform.md`](docs/process/22_dev_platform.md)（定位/边界/架构/数据源/双审计协议/北极星判据/不做清单）+ [`docs/plan-s32-platform.md`](docs/plan-s32-platform.md)（WBS，S32.0a 起；按阶段门顺序验收，每任务完成起两个对抗子代理审计完成度）+ 启动 `cargo run -p ti-console`（S32.1 起；crate = `crates/ti-devmeta`（共享层）+ `crates/ti-console`（平台本体），根 `Cargo.toml` members 在册）。**进度：S32.1~S32.3 全 verified**（S32.3 = 看板 UI v1 左菜单 7 页（含设计图页 `evidence/ui_concept/` AI 设计稿 + 地图页 `GET /api/map` 地图包管理面，2026-10-30 增量），双审计 r3 0/0/0 收敛；S32.3 顺带修 `map_pack.py` 草稿包健壮性（15 号第 24 行已固化）） |
 | **理解游戏怎么设计/架构/模块化（第一入口）** | `docs/00_design.md`（正向设计总览：核心循环 + 数据分层 + crate 架构 + 9 场景 + 模块包 + 窄接口；**不读 legacy/**） |
 | **新开工 / 参与开发（先读这个）** | `docs/process/00_index.md`（分工表：谁做什么 + 标准工作流）+ `docs/business/00_index.md`（业务唯一事实源） |
 | **任何开工动作之前** | `docs/loop.md` + `plan/ledger.yaml` + `docs/README.md` |

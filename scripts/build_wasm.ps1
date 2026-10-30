@@ -22,6 +22,10 @@ $outDir = 'web'
 # 脚本不再硬编码 `target/`，动态解析 cargo 实际 target 目录（Windows 机器若 CARGO_TARGET_DIR
 # 覆盖则同样适用）。
 $engineManifest = 'crates\ti-engine\Cargo.toml'
+# Linux 兼容（docs/migration_linux.md §3）：非 Windows 无 `python`（只有 python3）；
+# 与 gate.ps1 §2 同一口径 —— Windows 上 $py = python，行为不变。
+$py = 'python'
+if ($PSVersionTable.OS -notlike '*Windows*') { $py = 'python3' }
 $targetDir = (& cargo metadata --no-deps --format-version 1 2>$null |
     ConvertFrom-Json).target_directory
 if (-not $targetDir) { $targetDir = 'target' }
@@ -182,7 +186,7 @@ if (Test-Path (Join-Path $hdPack '1x')) {
 $mapsSrc = Join-Path (Get-Location) 'assets\maps'
 if (Test-Path $mapsSrc) {
     # S31.2b：生成浏览器侧包清单（幂等；index.json 缺 = 浏览器走内嵌默认包 §6 回退）。
-    python scripts/map_pack.py index
+    & $py scripts/map_pack.py index
     $mapsOut = Join-Path $outDir 'assets\maps'
     New-Item -ItemType Directory -Force -Path $mapsOut | Out-Null
     foreach ($packDir in (Get-ChildItem $mapsSrc -Directory)) {

@@ -3,7 +3,7 @@ S18.8a wasm 体积记录（2026-10-30）
 预算判定（wasm 主体 ≤8 MB，11_bevy_migration §3）属 S18.8e；本文件只记录实测值。
 
 == wasm 主体 ==
-treasure_bevy_wasm.wasm      48,764,856 B
+treasure_bevy_wasm.wasm      48,763,448 B
 
 == 首屏附属资源（不含 wasm 主体）==
 index.html                        1,257 B
