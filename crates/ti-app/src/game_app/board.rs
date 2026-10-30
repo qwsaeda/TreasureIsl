@@ -15,9 +15,10 @@ use ti_core::rules::cards_draw;
 use ti_core::rules::main_map::MapSession;
 use ti_core::rules::selection;
 use ti_core::rules::territory::{
-    DungeonOutcome, SeatIdx, SeatPool, SettleAction, SiegeOutcome, TerritoryApply, TerritoryRules,
+    DungeonOutcome, SeatIdx, SeatPool, SettleAction, TerritoryApply, TerritoryRules,
     TerritoryState, TurnCycle,
 };
+use ti_core::rules::territory_v2::{self, SeatState};
 
 use super::{GameApp, Scene};
 use crate::scenes::EconomyHost;
@@ -148,6 +149,7 @@ impl GameApp {
     /// 返回本回合结果（`None` = 无赛道，`board` 未构建）。
     pub fn spin_board(&mut self) -> Option<Turn> {
         self.pending_dungeon = None; // S28.6：新摇骰 = 旧副本入口失效（落格后按新落格重设）
+        self.pending_siege = None; // S33.5：新摇骰 = 旧攻占选择失效（同上）
         let b = match balance() {
             Ok(b) => b,
             Err(_e) => {
@@ -218,6 +220,10 @@ impl GameApp {
         };
         self.turn_cycle = cycle;
         self.seat_gold = [bal.economy.initial_gold; 5];
+        // S33.4 席位舰队人手/武器初始（`territory.md` §11 U4：船 1 级 ≈ 20 水手 + 5 武器；
+        // `balance.manpower.initial_crew/arms` 单一事实源；驻军初始 0）。
+        self.seat_crew = [bal.manpower.initial_crew; 5];
+        self.seat_arms = [bal.manpower.initial_arms; 5];
         // AI 席赛道会话：与主玩家同起点（各席独立位置/圈数）
         let Some(bd) = self.board.as_ref() else {
             self.ai_sessions = core::array::from_fn(|_| None);
@@ -275,7 +281,7 @@ impl GameApp {
     }
 
     /// S28.7 席位金币入账（钳制 `balance.economy.gold_max`；§1 席位独立经济）。
-    fn credit_seat_gold(&mut self, seat: SeatIdx, amount: u32, bal: &data::Balance) {
+    pub(crate) fn credit_seat_gold(&mut self, seat: SeatIdx, amount: u32, bal: &data::Balance) {
         let idx = seat as usize;
         self.seat_gold[idx] = self.seat_gold[idx].saturating_add(amount).min(bal.economy.gold_max);
     }
@@ -293,12 +299,16 @@ impl GameApp {
         idx: u32,
     ) {
         let gold = self.seat_gold[seat as usize];
-        let turn = rules.ai_turn(terr, seat, idx, gold);
+        let crew = self.seat_crew[seat as usize];
+        let arms = self.seat_arms[seat as usize];
+        // S33.6：v2 AI 决策用**兵力模型**（`ai_policy_v2`：强舰队 → Siege / 弱 → PayToll），
+        // 非旧 `attack_threshold × base` 纯阈值（攻守都耗兵力，须真实比较）。
+        let action = territory_v2::ai_policy_v2(b, terr, seat, idx, gold, crew, arms);
         let name = ai_seat_name(seat, b);
         let isle_name = terr
             .isle_cells_by_index(idx)
             .map_or(String::new(), |isle| crate::i18n::sget(&format!("isle.{isle}")).to_string());
-        match turn.action {
+        match action {
             SettleAction::EnterDungeon => {
                 let bonus = terr.apply_dungeon(rules, idx, seat, DungeonOutcome::Win);
                 self.credit_seat_gold(seat, bonus, b);
@@ -332,11 +342,24 @@ impl GameApp {
                 ));
             }
             SettleAction::Siege => {
+                // S33.6：v2 攻占 = 一次性确定性结算（`territory_v2::assault`，兵力模型），
+                // 非旧 `apply_siege(..., Win)` 纯胜利（不耗兵力）。AI 战后驻军自定 = 战后舰队 1/3 守。
                 let prev = terr.ownership(idx).and_then(|o| o.owner);
-                terr.apply_siege(rules, idx, seat, SiegeOutcome::Win);
+                let new_garrison = crew / 3;
+                let mut sstate = SeatState::new(gold, crew, arms, u32::from(self.boat_level()));
+                sstate.position = idx;
+                let outcome = territory_v2::assault(b, &mut sstate, terr, idx, seat, new_garrison);
+                self.seat_gold[seat as usize] = sstate.gold;
+                self.seat_crew[seat as usize] = sstate.crew;
+                self.seat_arms[seat as usize] = sstate.arms;
+                let won = matches!(outcome, territory_v2::AssaultOutcome::Win { .. });
                 let owner_txt = prev.map_or_else(|| String::from("无主"), |o| ai_seat_name(o, b));
                 self.last_ai_toast = Some(i18n_fmt(
-                    "scene.main_map.toast.ai_siege_fmt",
+                    if won {
+                        "scene.main_map.toast.ai_siege_fmt"
+                    } else {
+                        "scene.main_map.toast.ai_siege_fail_fmt"
+                    },
                     &[
                         &name as &dyn std::fmt::Display,
                         &owner_txt as &dyn std::fmt::Display,
@@ -383,7 +406,7 @@ impl GameApp {
     /// S20.0c：`board_toast` + `board_toast_ticks = 120` + `last_sfx` 三连在代码里出现 7 处
     /// （复制粘贴 ⇒ 改时长/音效必漏一处）⇒ 收敛为单一方法。
     /// 时长常量 `TOAST_TICKS` = 120 帧（出图取证用 `hold_board_toast` 顶住衰减）。
-    fn toast(&mut self, text: String, sfx: Option<Sfx>) {
+    pub(crate) fn toast(&mut self, text: String, sfx: Option<Sfx>) {
         self.board_toast = Some(text);
         self.board_toast_ticks = Self::TOAST_TICKS;
         if let Some(s) = sfx {
@@ -485,23 +508,22 @@ impl GameApp {
                 );
             }
             Some(owner) if owner != seat => {
-                // 他人 → 交过路费（§4.2：产出归所有方；攻占选项 = 玩家选择 UI 增量）
-                let toll = terr.apply_pay_toll(&rules, cell, seat);
-                self.seat_gold[seat as usize] = self.seat_gold[seat as usize].saturating_sub(toll);
-                self.credit_seat_gold(owner, toll, balance);
+                // S33.5 玩家攻占 UI：落他人领地格 = 二选一（交钱 / 攻占），不自动交。
+                // 主地图 `Confirm` = 攻占（进 VS 攻占战报），`Back` = 交过路费（§4.2 产出归所有方）。
+                // AI 落他人格仍自动交（`settle_ai_landing` 分支，S28.7）。
+                self.territory = Some(terr);
+                self.pending_siege = Some((cell, owner));
                 let owner_name = ai_seat_name(owner, balance);
                 self.toast(
                     i18n_fmt(
-                        "scene.main_map.toast.ai_toll_fmt",
+                        "scene.main_map.toast.siege_choice_fmt",
                         &[
-                            &my_name as &dyn std::fmt::Display,
                             &owner_name as &dyn std::fmt::Display,
-                            &toll as &dyn std::fmt::Display,
+                            &isle_name as &dyn std::fmt::Display,
                         ],
                     ),
                     Some(Sfx::Press),
                 );
-                self.territory = Some(terr);
             }
             Some(owner) => {
                 // 自己 → 升级加固（金足）/ 产出领取（金不足或满级）（§4.1/§4.3）
@@ -572,7 +594,7 @@ impl GameApp {
     }
 }
 /// i18n 取文案（重复模式收敛：`audit_code` 重复模式 >5 即违例；单一入口）。
-fn i18n_fmt(key: &str, args: &[&dyn std::fmt::Display]) -> String {
+pub(super) fn i18n_fmt(key: &str, args: &[&dyn std::fmt::Display]) -> String {
     crate::i18n::sgetf(key, args)
 }
 
@@ -622,7 +644,7 @@ fn nearest_track_index(track: &Track, cell: GridPos) -> usize {
 }
 
 /// S28.7 AI 席位名（`role.name.<character>` i18n；越界 = 空串）。
-fn ai_seat_name(seat: u8, _b: &data::Balance) -> String {
+pub(super) fn ai_seat_name(seat: u8, _b: &data::Balance) -> String {
     Character::from_index(u32::from(seat)).map_or_else(String::new, |ch| {
         crate::i18n::sget(&format!("role.name.{}", ch.label())).to_string()
     })

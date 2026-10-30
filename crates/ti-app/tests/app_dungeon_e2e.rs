@@ -68,7 +68,7 @@ fn dungeon_win_occupies_isle_cells() {
         for idx in terr.isle_cells(&isle) {
             assert_eq!(
                 terr.ownership(*idx).copied(),
-                Some(Ownership { owner: Some(my_seat), level: 1 }),
+                Some(Ownership { owner: Some(my_seat), level: 1, garrison: 0 }),
                 "副本胜利 = 占领该岛格 {idx}"
             );
         }

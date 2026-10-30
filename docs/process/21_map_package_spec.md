@@ -99,6 +99,13 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
   treasure/territory/boss`）；**未知 kind = 硬失败**（不 fallback）。
 - `isle` 仅 `kind=territory` 有值；`isle_id` 必须已注册于 `balance.territory.prototypes`。
 - `cell` = 等距格坐标（保留原版地图形状；表现层 v5 环用格序，格坐标供规则层沿用）。
+- **v2（2026-10-30 用户定案）新增**：
+  - `events[]`：**每图配特有随机事件**（海事类，如暗礁流 / 洋流 / 海市蜃楼；`territory.md` §6），
+    与 `balance.events` 常用集合并；每项 `{ id, kind, params }`。
+  - `merchants[]`：**每图必有武器商人 + 奴隶商人**（`territory.md` §7）；每项 `{ id: "weapon"|"slave", cell, price_mult }`。
+  - 逐格 `terrain`/`building`：领地格的地形（金矿/渔业/水果/礁石）+ 建筑初始等级
+    （`territory.md` §4.2，产出 = f(地形, 建筑等级)）。
+  - 不变量（`verify` 加查）：每图 `merchants` 含 `weapon` 与 `slave` 各 ≥1；`events[]` 非空。
 
 ### 3.2 `layout.json`（版面参数）
 环几何 + 焦点 + 中央岛 + CTA/键位；键名与 `scenes.json` `main_map` 对齐（同一键空间）。
@@ -182,6 +189,23 @@ python scripts/map_pack.py verify m01        # 裸 id = 已装包目录（S32.3 
 python scripts/map_pack.py install dist/maps/m01.map-pack
 python scripts/map_pack.py list
 ```
+
+
+### 8.1 平台编辑器导入面（S32.14 ②，2026-10-30）
+
+`22_dev_platform` 看板「地图」页内置**环形画布编辑器**（31 节点 SVG + 点节点改 kind/isle + 环几何输入
++ I1~I8 前端实时校验条〔前端判定 = 本 §5 I1~I8 的轻量镜像，**权威判定仍 = `verify_pack`〕）：
+
+- 编辑结果 = 内存 4 文件 JSON（manifest/map/layout/strings），点「导入」走 `POST /api/map/import`
+  （**免鉴权**，内网自用例外见 22 号 §10.1）→ 平台**唯一写点** `repo/import.rs` 写
+  `assets/maps/<id>/` 四文件（`id` 白名单 `^[a-z0-9_]{1,16}$` + canonicalize 前缀断言防穿越）→
+  同进程 **先判后回注**（审计 r1 修）：`verify <id>`（I1~I8 终判含 I7 资产哈希）`PASS` 才 `sync`（回注 `board.json` `maps` 段）；`verify` `FAIL` = 不 `sync`（`board.json` 不留坏 `maps` 段，包目录保留供修复重导）；违规 = 响应 `errors` 如实上报，**不静默绕过**
+- 口径：平台**只**经这一个口子写 `assets/maps/`（`write_whitelist` 扩 `assets/maps/`），
+  其余 `assets/` 游戏产物仍 0 平台写盘（北极星收敛为「唯一写点」）；导入后的**发布链**不变
+  （`pack <id>` 出可分发件 `dist/maps/<id>.map-pack/`，`install` 装机，浏览器运行期 `TI_MAP=<id>` 切包）。
+- **AI 岛型生图**（C 方案叠加面）：复用 `scripts/agnes_gen.py`（设计图页已接入，0 新依赖），
+  概念图落 `evidence/ui_concept/`（白名单 `evidence/` 前缀，不碰 `assets/`）；要进包时走
+  `ui_assets.py add`（抠图 + 登记 `ui_manifest`）后包 `isle_assets` 指过去（I7 哈希由 `pack` 自动算）。
 
 ## 9. 产物落点
 

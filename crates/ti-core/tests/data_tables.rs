@@ -307,6 +307,9 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             },
             prototypes: Vec::new(),
         },
+        manpower: ti_core::data::ManpowerCfg::default(),
+        events: ti_core::data::EventCfg::default(),
+        merchants: ti_core::data::MerchantCfg::default(),
     };
     assert_eq!(b.combat.boss(0).map(|x| x.hp), Some(10));
 }

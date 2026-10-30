@@ -1,0 +1,153 @@
+# S33.2 验收证据（task_close.py 自动生成 2026-10-30）
+
+- 任务标题：领地 v2 数据层：balance.json 加 manpower/events/merchants 段 + map.json 逐格地形/建筑 + 每图 events[]/merchants[]（武器/奴隶各≥1）+ validate_data 断言 + map_pack verify 不变量
+- 判据（台账 dod）：改动面=业务规则/规则/数据/表现（见 docs/plan-s33-territory-v2.md 阶段表）；判据=该阶段单测全绿 + 文档对齐 + evidence/S33.2.log + gate 相关项 PASS
+
+## 判据实跑
+
+### `$ cargo test -p ti-core --lib data::board::`
+
+退出码：0
+
+```
+
+running 2 tests
+test data::board::tests::all_maps_have_v2_events_and_merchants ... ok
+test data::board::tests::parses_v2_fields_per_map ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 137 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.13s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ cargo test -p ti-core --lib force::`
+
+退出码：0
+
+```
+
+running 7 tests
+test rules::force::tests::attrition_caps_at_zero ... ok
+test rules::force::tests::attacker_power_wins ... ok
+test rules::force::tests::armed_caps_at_crew ... ok
+test rules::force::tests::both_sides_attrition ... ok
+test rules::force::tests::defender_wins_on_tie_or_higher ... ok
+test rules::force::tests::deterministic_same_input_same_result ... ok
+test rules::force::tests::power_weights_armed_over_barehand ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 132 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ cargo test -p ti-core --lib events::`
+
+退出码：0
+
+```
+
+running 7 tests
+test rules::events::tests::blacksmith_marks_merchant_buy ... ok
+test rules::events::tests::shipwreck_losses_are_pct_fields ... ok
+test rules::events::tests::rescue_adds_crew ... ok
+test rules::events::tests::deterministic_same_event_same_effect ... ok
+test rules::events::tests::wind_god_extra_roll_when_jump_zero ... ok
+test rules::events::tests::treasure_wreck_grants_gold_and_arms ... ok
+test rules::events::tests::wind_god_jump_when_nonzero ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 132 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ cargo test -p ti-core --lib merchant::`
+
+退出码：0
+
+```
+
+running 7 tests
+test rules::merchant::tests::buy_arms_insufficient_gold ... ok
+test rules::merchant::tests::buy_arms_debits_and_adds_capped_at_crew ... ok
+test rules::merchant::tests::buy_arms_one_per_person_cap ... ok
+test rules::merchant::tests::buy_crew_at_capacity_rejected ... ok
+test rules::merchant::tests::buy_crew_capped_at_boat_capacity ... ok
+test rules::merchant::tests::buy_crew_insufficient_gold ... ok
+test rules::merchant::tests::zero_price_clamped ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 132 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ python3 scripts/validate_data.py`
+
+退出码：0
+
+```
+validate_data: OK（4 表，strings 179 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）
+```
+
+### `$ python3 scripts/map_pack.py verify assets/maps/m01`
+
+退出码：0
+
+```
+map_pack verify: assets/maps/m01 -> 0 违规（schema/兼容/I1~I9 全过）
+```
+
+### `$ python3 scripts/map_pack.py verify assets/maps/m02`
+
+退出码：0
+
+```
+map_pack verify: assets/maps/m02 -> 0 违规（schema/兼容/I1~I9 全过）
+```
+
+### `$ python3 scripts/map_pack.py verify assets/maps/m03`
+
+退出码：0
+
+```
+map_pack verify: assets/maps/m03 -> 0 违规（schema/兼容/I1~I9 全过）
+```
+
+### `$ python3 scripts/map_pack.py verify assets/maps/m04`
+
+退出码：0
+
+```
+map_pack verify: assets/maps/m04 -> 0 违规（schema/兼容/I1~I9 全过）
+```
+
+### `$ python3 scripts/map_pack.py check`
+
+退出码：0
+
+```
+map_pack check: 0 漂移（4 个已装包 vs board.json；默认包 m01 vs 布局数据）
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

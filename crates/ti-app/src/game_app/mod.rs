@@ -38,11 +38,13 @@ use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::BoardSession;
 use ti_core::rules::boat::BoatSession;
 use ti_core::rules::cards;
+use ti_core::rules::force::Force;
 use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::main_map::MapSession;
 use ti_core::rules::progression::ProgressionState;
 use ti_core::rules::rng::GameRng;
-use ti_core::rules::territory::{TerritoryState, TurnCycle};
+use ti_core::rules::territory::{SeatIdx, TerritoryState, TurnCycle};
+use ti_core::rules::territory_v2::AssaultOutcome;
 
 use crate::menu_shell::MenuShell;
 
@@ -102,6 +104,49 @@ pub struct BattleSnapshot {
     pub player_hp_max: u32,
     /// BOSS 初始 HP（血条分母，`balance.combat.boss_tiers[tier].hp`）。
     pub boss_hp_max: u32,
+}
+
+/// S33.5 攻占战报（`Vs` 场景时有效；`assault` 一次性确定性结算，非 HP 回合制）。
+///
+/// 攻方 = 席位舰队（人手+武器）；守方 = 驻军 `G` + 建筑防御 `defense(T,L)`（`territory.md` §4）。
+/// 渲染层读快照（攻/守兵力 + 结果）；结算经 [`GameApp::settle_siege`] 一次完成。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SiegeView {
+    /// 被攻格序号。
+    pub cell: u32,
+    /// 岛原型 id（`harbour`/`lighthouse`/…）。
+    pub isle: String,
+    /// 守方席位（`0..=4`）。
+    pub owner: SeatIdx,
+    /// 攻方（当前席）舰队（结算前快照，渲染兵力条）。
+    pub attacker: Force,
+    /// 守方兵力 = 驻军 + 建筑防御（结算前快照）。
+    pub defender: Force,
+    /// 结算结果（`None` = 未结算；`Some` = 已出结果，渲染结果行）。
+    pub outcome: Option<AssaultOutcome>,
+    /// 攻方席位（当前席，结算写回 `seat_gold/crew/arms` 用）。
+    pub seat: SeatIdx,
+}
+
+/// S33.5 攻占战报快照（渲染层只读，避免借用重叠）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SiegeSnapshot {
+    /// 被攻格序号。
+    pub cell: u32,
+    /// 岛原型 id。
+    pub isle: String,
+    /// 守方席位。
+    pub owner: SeatIdx,
+    /// 攻方舰队人手。
+    pub attacker_crew: u32,
+    /// 攻方舰队武器。
+    pub attacker_arms: u32,
+    /// 守方兵力（驻军+建筑防御）人手。
+    pub defender_crew: u32,
+    /// 守方兵力武器（= 建筑防御数）。
+    pub defender_arms: u32,
+    /// 结算结果（`None` = 未结算；`Some(胜)` = 已出结果）。
+    pub won: Option<bool>,
 }
 /// 归一输入事件（壳层负责把触摸/键/拖拽映射到这些变体，`docs/gamebook.md` §3）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -246,6 +291,12 @@ pub struct GameApp {
     /// S28.6 待确认的副本入口（`Some(格序号)` = 落格提示在位，主地图 `Confirm` 进副本战；
     /// 再次摇骰 / 其他行动 = 自动清除（新落格覆盖，territory.md §4 玩家选择权））。
     pub pending_dungeon: Option<u32>,
+    /// S33.5 待确认的攻占选择（`Some((格序号, 守方席))` = 落**他人**领地格后玩家二选一：
+    /// 主地图 `Confirm` = 攻占（进 VS 攻占战报），`Back` = 交过路费；再次摇骰 = 自动清除）。
+    pub pending_siege: Option<(u32, SeatIdx)>,
+    /// S33.5 攻占战报视图（`Vs` 场景时有效；`assault` 是**一次性确定性结算**，非 HP 回合制，
+    /// 所以不复用 [`BattleView`]——攻方舰队 vs 守方驻军+建筑防御，Attack 结算一次出结果）。
+    pub siege_view: Option<SiegeView>,
     /// S21.7 赛道节点预览选中（`Some(index)` = 该节点高亮 + 信息签；只读预览不移动，
     /// 摇骰时清空；主地图场景时有效，非主地图 = `None`）。
     pub track_node_sel: Option<usize>,
@@ -321,6 +372,10 @@ pub struct GameApp {
     pub territory: Option<TerritoryState>,
     /// S28.7 各席位金币（`[u32; 5]`，§1 席位独立经济；主玩家金 = 本席位值，`gold` 字段保留主席镜像）。
     pub seat_gold: [u32; 5],
+    /// S33.4 v5 各席位舰队人手（`[u32; 5]`，§4.1 守恒；驻军在 `territory.garrison_map`）。
+    pub seat_crew: [u32; 5],
+    /// S33.4 v5 各席位舰队武器（`[u32; 5]`）。
+    pub seat_arms: [u32; 5],
     /// S28.7 席位轮转（§1：5 席顺序 = 角色 index 升序；`current` = 当前轮到谁）。
     pub turn_cycle: TurnCycle,
     /// S28.7 AI 席赛道会话（`[5]`；主玩家席走 `board` 字段，AI 席各持独立位置/圈数）。
@@ -480,10 +535,14 @@ impl GameApp {
             // S28.7 领地/席位初值（`territory.md` §1：单席位开局，领地空账本）。
             territory: None,
             seat_gold: [0; 5],
+            seat_crew: [0; 5],
+            seat_arms: [0; 5],
             turn_cycle: TurnCycle::default(),
             ai_sessions: core::array::from_fn(|_| None),
             last_ai_toast: None,
             pending_dungeon: None,
+            pending_siege: None,
+            siege_view: None,
             seat_marks: Vec::new(),
             #[cfg(feature = "gpu-render")]
             gpu_renderer: {

@@ -7,7 +7,7 @@
 
 子命令：
   pack <id>            已装包 → 可分发件 `dist/maps/<id>.map-pack/`（+ `.zip`），写 sha256 清单
-  verify <path>        校验包：schema/兼容/资产齐+哈希/不变量 I1~I8 -> 违规非 0
+  verify <path>        校验包：schema/兼容/资产齐+哈希/不变量 I1~I9 -> 违规非 0
   install <path>       装包 → `assets/maps/<id>/` + 接线（默认包数据 / 资产登记 / 文案合并）
   uninstall <id>       卸包（保留构建期默认包数据引用）
   list                 列出已装包（id / version / data_version / 校验结果）
@@ -103,7 +103,7 @@ def pack_id_of(pack_dir: Path) -> str:
     return str(manifest.get("id", pack_dir.name))
 
 
-# ----------------------------------------------------------------- 校验（I1~I8）
+# ----------------------------------------------------------------- 校验（I1~I9）
 
 
 def verify_pack(pack_dir: Path) -> list[str]:
@@ -170,6 +170,23 @@ def verify_pack(pack_dir: Path) -> list[str]:
         problems.append("I5 首格不是 start（格序 = 前进方向）")
     if spaces and kinds[len(spaces) // 2] != "boss":
         problems.append(f"I5 环半周（第 {len(spaces) // 2} 格）不是 boss")
+
+    # I9：每图 events[]/merchants[]（territory.md §6/§7；S33.2）
+    events = map_data.get("events") or []
+    if not events:
+        problems.append("I9 events[] 为空（每图必须配特有随机事件）")
+    merchants = map_data.get("merchants") or []
+    merchant_ids = {str(m.get("id", "")) for m in merchants}
+    if "weapon" not in merchant_ids:
+        problems.append("I9 merchants 缺武器商人（id=weapon）")
+    if "slave" not in merchant_ids:
+        problems.append("I9 merchants 缺奴隶商人（id=slave）")
+    # 领地格逐格：领地格必须有 building（初始等级 ≥1）；功能格无 isle
+    for i, s in enumerate(spaces):
+        if s.get("isle") and (not isinstance(s.get("building"), int) or s.get("building", 0) < 1):
+            problems.append(f"I9 spaces[{i}] 领地格缺 building（初始等级 ≥1）")
+        if s.get("isle") and not s.get("resource"):
+            problems.append(f"I9 spaces[{i}] 领地格缺 resource（产出地形）")
 
     # I6：环几何 8pt
     ring = (manifest.get("layout") or {}).get("ring") or {}
@@ -307,7 +324,7 @@ def cmd_verify(path: Path) -> int:
         for item in problems:
             print(f"  [FAIL] {item}")
         return 1
-    print(f"map_pack verify: {path} -> 0 违规（schema/兼容/I1~I8 全过）")
+    print(f"map_pack verify: {path} -> 0 违规（schema/兼容/I1~I9 全过）")
     return 0
 
 

@@ -193,6 +193,34 @@ def check_balance(b: dict, problems: list[str]) -> set[str]:
         if not m.get("player_start"):
             problems.append(f"selection.maps {m.get('id')} player_start 不得为空")
 
+    # S33.2 领地 v2：balance.manpower / events / merchants 段
+    mp = b.get("manpower", {})
+    if mp.get("weapon_coef", 0) <= 0:
+        problems.append("manpower.weapon_coef 必须 > 0（武装战力系数）")
+    if mp.get("barehand_coef", 0) <= 0:
+        problems.append("manpower.barehand_coef 必须 > 0（徒手战力系数）")
+    if not (0 <= mp.get("loss_pct", -1) <= 10000):
+        problems.append(f"manpower.loss_pct={mp.get('loss_pct')} 越界 [0,10000]（万分比）")
+    if not (0 <= mp.get("weapon_loss_pct", -1) <= 10000):
+        problems.append(f"manpower.weapon_loss_pct={mp.get('weapon_loss_pct')} 越界 [0,10000]（万分比）")
+    if mp.get("initial_crew", 0) <= 0:
+        problems.append("manpower.initial_crew 必须 > 0（开局人手）")
+    if mp.get("initial_arms", 0) <= 0:
+        problems.append("manpower.initial_arms 必须 > 0（开局武器）")
+    ev = b.get("events", {})
+    for f in ("crew_loss_pct", "arms_loss_pct", "gold_loss_pct"):
+        if not (0 <= ev.get(f, -1) <= 10000):
+            problems.append(f"events.{f}={ev.get(f)} 越界 [0,10000]（万分比）")
+    if ev.get("treasure_gold", 0) <= 0:
+        problems.append("events.treasure_gold 必须 > 0")
+    if ev.get("rescue_crew", 0) <= 0:
+        problems.append("events.rescue_crew 必须 > 0")
+    mc = b.get("merchants", {})
+    if mc.get("weapon_price", 0) <= 0:
+        problems.append("merchants.weapon_price 必须 > 0")
+    if mc.get("slave_price", 0) <= 0:
+        problems.append("merchants.slave_price 必须 > 0")
+
     return keys
 
 

@@ -32,7 +32,7 @@
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 16 |
-  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 19 |
+  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 26 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 32 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 43 |
 
@@ -173,6 +173,13 @@
 | EXP-131 | build | | gate.ps1 Linux 化两条坑：① cargo 在 `~/.cargo/bin` 但不在 Linux 默认 PATH ⇒ gate 第 1 项 `cargo fmt` 直接 FAIL（Windows 靠 rustup 初始化从不暴露）⇒ 脚本头 PATH 自举 + `& $cargoCmd` 全替换；② `$env:PATH = "$cargoBin:$env:PATH"` 触发 pwsh **ParserError**（`$var:` 的 `:` 被解析成作用域前缀） ⇒ 字符串里变量+冒号必须 `${var}` 花括号定界；改完先 `[scriptblock]::Create` 纯解析自检。正文见 `build.md` |
 | EXP-132 | build | | e2e 场景导航禁用 Back 循环（select_role 无 Back 分支 ⇒ main_map 退回后死锁）：定位一律走 Enter 幂等前进链（index→select_role→select_map 的 Confirm 已选态原地不推进） + 点击加一次重试；headless 场景导航原则 = 幂等前进 > 后退链（后退语义各场景不一致）。正文见 `build.md` |
 | EXP-133 | build | | wasm32 无文件系统 ⇒ asset_present() 恒 false ⇒ v5 环/岛/骰全灭；L4 亮像素比被 chart_full 亮背景掩盖 ⇒ 漏网，补 L5「环资产实取」层 正文见 `build.md` |
+| EXP-134 | build | | 确定性 VS + 双方必损 + 一人一把武器 + 事件效果双字段 + 商人上限；模块自包含 cfg 单测注值 正文见 `build.md` |
+| EXP-135 | build | | 确定性 VS + 双方必损 + 一人一把武器 + 事件效果双字段 + 商人上限；模块自包含 cfg 单测注值 正文见 `build.md` |
+| EXP-136 | build | | 数据段增量 serde default 回退 + 每图事件/商人不变量 I9 + 地图包字段传播链（map.json→manifest.map→board.json） 正文见 `build.md` |
+| EXP-137 | build | | 驻军按领地计一次（两格不重复）+ 攻占败交双倍 + 守方兵力=驻军+建筑防御 + 多人同格只打前一个 正文见 `build.md` |
+| EXP-138 | build | | v5 = v4 + 席位人手/武器 + 领地驻军；迁移补默认资源 + 空驻军；守恒=舰队+Σ驻军(按领地) 正文见 `build.md` |
+| EXP-139 | build | | 攻占非 HP 回合制（一次性确定性）+ 落他人格二选一（Confirm/Back）+ 守方兵力同源 + 驻军显示 + 席位资源初始化 正文见 `build.md` |
+| EXP-140 | build | | AI 攻占判定=兵力模型（force::resolve 预测）+ 攻占结算复用玩家同口径 assault + 驻军自定 1/3 + 胜负双 toast + 测试种子法 正文见 `build.md` |
 
 ## 条目格式（写新条时照抄）
 

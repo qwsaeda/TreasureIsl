@@ -131,6 +131,28 @@
 | 等级单调（不可降级；满级无操作；金不够拒绝） | `boat_level_monotonic` |
 | 船加成与建筑加成叠加进战斗 | `combat_bonus_includes_boat` |
 
+## 资源（人手 / 武器，v2 新增，2026-10-30 用户定案）
+
+> 领地/攻占战斗从 HP 回合制改为**人手 + 武器**兵力模型（见 [`territory.md`](territory.md) §4 / [`combat.md`](combat.md) §兵力模型）。
+> 本节 = 资源来源/消耗/商人，数值单一事实源 = `balance.manpower` / `balance.weapons`。
+
+| 资源 | 来源 | 消耗 | 说明 |
+|---|---|---|---|
+| **人手（水手）** `crew` | 奴隶商人购买 + 随机事件（流浪儿 / 孤岛救援）+ 初始 | 留驻军 `G` + 战斗损耗 | 船等级 = **人手容量上限**（船越大可带越多）；`territory.md` §4.1 |
+| **武器** `arms` | 武器商人购买 + 随机事件（宝藏沉船）+ 初始 | 战斗损耗 | **一人一把**：武器 > 人手 = 多余无效，瓶颈 = 人手 |
+
+### 商人（每图必备）
+
+| 商人 | 卖 | 价格 | 规则 |
+|---|---|---|---|
+| **武器商人** | 武器 | `balance.weapons.price` | **每张地图必有**；花金币买武器；上限 = 人手（一人一把，多余无效） |
+| **奴隶商人** | 人手 | `balance.manpower.price` | 花金币买人手；上限 = 船容量 |
+
+- **每图必有武器商人 + 奴隶商人**（`map.json`/`manifest` 商人格，`territory.md` §7）。
+- 不变量：`人手 ≤ 船容量`（船等级上限）；`武器 ≤ 人手`（一人一把，多余无意义）。
+- 可测试规则：`crew_bought_from_slave_merchant` / `arms_bought_from_weapon_merchant` /
+  `crew_capped_by_boat_capacity` / `arms_capped_at_crew`（`rules/merchant.rs`，落码时登记）。
+
 ## 可测试规则
 
 | 规则 | 单测 |

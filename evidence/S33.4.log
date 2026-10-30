@@ -1,0 +1,100 @@
+# S33.4 验收证据（task_close.py 自动生成 2026-10-30）
+
+- 任务标题：领地 v2 存档 v5：席位人手/武器 + 领地驻军 + v4→v5 迁移（单席+默认资源+空领地）+ 往返还原
+- 判据（台账 dod）：改动面=业务规则/规则/数据/表现（见 docs/plan-s33-territory-v2.md 阶段表）；判据=该阶段单测全绿 + 文档对齐 + evidence/S33.4.log + gate 相关项 PASS
+
+## 判据实跑
+
+### `$ cargo test -p ti-core --test territory_rules -- save_migrate_v4_to_v5_defaults save_v5_roundtrip`
+
+退出码：0
+
+```
+
+running 2 tests
+test save_migrate_v4_to_v5_defaults ... ok
+test save_v5_roundtrip_restores_resources_and_garrisons ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running tests/territory_rules.rs (/disk/target/debug/deps/territory_rules-fc06f566175dd7b6)
+```
+
+### `$ cargo test -p ti-core --lib territory_v2::`
+
+退出码：0
+
+```
+
+running 16 tests
+test rules::territory_v2::tests::armed_power_caps_at_manpower ... ok
+test rules::territory_v2::tests::defeat_when_player_bankrupt_ends_game ... ok
+test rules::territory_v2::tests::bankrupt_empties_all_territories ... ok
+test rules::territory_v2::tests::capture_loss_keeps_ownership ... ok
+test rules::territory_v2::tests::capture_wins_takes_both_cells_of_isle ... ok
+test rules::territory_v2::tests::garrison_change_conserves_manpower ... ok
+test rules::territory_v2::tests::feature_tiles_not_capturable ... ok
+test rules::territory_v2::tests::later_arrival_decides_duel_previous ... ok
+test rules::territory_v2::tests::paying_toll_transfers_output_to_owner ... ok
+test rules::territory_v2::tests::duel_loser_pays_and_loses_crew ... ok
+test rules::territory_v2::tests::siege_loss_pays_double_toll ... ok
+test rules::territory_v2::tests::siege_win_recaptures_with_level_one ... ok
+test rules::territory_v2::tests::victory_when_all_opponents_bankrupt ... ok
+test rules::territory_v2::tests::territory_not_sellable ... ok
+test rules::territory_v2::tests::upgrade_caps_at_isle_max_level ... ok
+test rules::territory_v2::tests::upgrade_raises_output_defense_and_toll ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 139 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ cargo test -p ti-app --test saveload_v4_roundtrip`
+
+退出码：0
+
+```
+
+running 2 tests
+test v3_slot_reads_back_without_error_and_empty_territory ... ok
+test v4_roundtrip_restores_ownership_seat_gold_and_turn ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+     Running tests/saveload_v4_roundtrip.rs (/disk/target/debug/deps/saveload_v4_roundtrip-5ca463f1f2c28af2)
+```
+
+### `$ python3 scripts/validate_data.py`
+
+退出码：0
+
+```
+validate_data: OK（4 表，strings 179 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）
+```
+
+### `$ cargo run -q -p ti-tools --bin doccheck`
+
+退出码：0
+
+```
+doccheck: 149 docs, 38 facts, 133 experiences, 265 task refs, 4 assertions, 0 error(s)
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

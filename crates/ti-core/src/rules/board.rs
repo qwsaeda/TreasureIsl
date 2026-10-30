@@ -439,13 +439,33 @@ mod tests {
             group: 1,
             terrain: 'L',
             isle: None,
+            resource: None,
+            building: 0,
         }];
-        assert!(Track::from_map(&BoardMap { grid_w: 1, grid_h: 1, spaces }).is_err());
+        assert!(
+            Track::from_map(&BoardMap {
+                grid_w: 1,
+                grid_h: 1,
+                spaces,
+                events: Vec::new(),
+                merchants: Vec::new(),
+            })
+            .is_err()
+        );
     }
 
     #[test]
     fn track_from_map_rejects_empty() {
-        assert!(Track::from_map(&BoardMap { grid_w: 1, grid_h: 1, spaces: Vec::new() }).is_err());
+        assert!(
+            Track::from_map(&BoardMap {
+                grid_w: 1,
+                grid_h: 1,
+                spaces: Vec::new(),
+                events: Vec::new(),
+                merchants: Vec::new(),
+            })
+            .is_err()
+        );
     }
 
     #[test]

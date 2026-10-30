@@ -28,6 +28,15 @@ pub(crate) struct RawBalance {
     /// 领地系统参数（S28.3：`docs/business/territory.md` §3/§4.1）。
     #[serde(default)]
     pub(crate) territory: RawTerritory,
+    /// 领地 v2 战力系数（`balance.manpower`；S33.2；缺省 = 代码回退）。
+    #[serde(default)]
+    pub(crate) manpower: RawManpower,
+    /// 领地 v2 海事事件参数（`balance.events`；S33.2；缺省 = 代码回退）。
+    #[serde(default)]
+    pub(crate) events: RawEvents,
+    /// 领地 v2 商人价格（`balance.merchants`；S33.2；缺省 = 代码回退）。
+    #[serde(default)]
+    pub(crate) merchants: RawMerchants,
     #[serde(default)]
     pub(crate) messages: RawMessages,
     #[serde(default)]
@@ -339,6 +348,63 @@ pub(crate) struct RawTerritory {
     /// 10 类岛原型（§3 表）。
     #[serde(default)]
     pub(crate) prototypes: Vec<RawTerritoryPrototype>,
+}
+
+/// 领地 v2 战力系数 serde 形状（`balance.manpower`，S33.2；缺省 = 代码回退）。
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct RawManpower {
+    /// 武装人手战力系数（每人）。
+    #[serde(default)]
+    pub(crate) weapon_coef: u32,
+    /// 徒手人手战力系数（每人）。
+    #[serde(default)]
+    pub(crate) barehand_coef: u32,
+    /// 每战人手损耗（万分比）。
+    #[serde(default)]
+    pub(crate) loss_pct: u32,
+    /// 每战武器损耗（万分比）。
+    #[serde(default)]
+    pub(crate) weapon_loss_pct: u32,
+    /// 初始人手（v5 迁移默认源）。
+    #[serde(default)]
+    pub(crate) initial_crew: u32,
+    /// 初始武器（v5 迁移默认源）。
+    #[serde(default)]
+    pub(crate) initial_arms: u32,
+}
+
+/// 领地 v2 海事事件参数 serde 形状（`balance.events`，S33.2；缺省 = 代码回退）。
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct RawEvents {
+    /// 翻车/风浪：人手损耗（万分比）。
+    #[serde(default)]
+    pub(crate) crew_loss_pct: u32,
+    /// 翻车/风浪：武器损耗（万分比）。
+    #[serde(default)]
+    pub(crate) arms_loss_pct: u32,
+    /// 翻车/风浪：金币损耗（万分比）。
+    #[serde(default)]
+    pub(crate) gold_loss_pct: u32,
+    /// 遇宝藏沉船：金币奖励。
+    #[serde(default)]
+    pub(crate) treasure_gold: u32,
+    /// 遇宝藏沉船：武器奖励。
+    #[serde(default)]
+    pub(crate) treasure_arms: u32,
+    /// 流浪儿/孤岛救援：加入人手。
+    #[serde(default)]
+    pub(crate) rescue_crew: u32,
+}
+
+/// 领地 v2 商人价格 serde 形状（`balance.merchants`，S33.2；缺省 = 代码回退）。
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct RawMerchants {
+    /// 武器单价（金）。
+    #[serde(default)]
+    pub(crate) weapon_price: u32,
+    /// 人手（水手）单价（金）。
+    #[serde(default)]
+    pub(crate) slave_price: u32,
 }
 
 /// 据点岛升级 serde 形状（`balance.territory.home_upgrade`）。

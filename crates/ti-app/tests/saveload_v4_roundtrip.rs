@@ -33,7 +33,7 @@ fn v4_roundtrip_restores_ownership_seat_gold_and_turn() {
     let mut terr = TerritoryState::new(map_def, bal).expect("领地账本构建");
     // 取该图一个领地格塞归属（测试面合法输入 = `mutate`）
     let first_cell = terr.snapshot().keys().next().copied().expect("领地图至少一格");
-    terr.mutate(first_cell, Ownership { owner: Some(2), level: 3 });
+    terr.mutate(first_cell, Ownership { owner: Some(2), level: 3, garrison: 0 });
     app.territory = Some(terr);
     app.seat_gold[1] = 500;
     app.turn_cycle.current = 2;
@@ -63,7 +63,7 @@ fn v4_roundtrip_restores_ownership_seat_gold_and_turn() {
     let restored = fresh.territory.as_ref().expect("读档后领地账本应在位");
     assert_eq!(
         restored.ownership(first_cell).copied(),
-        Some(Ownership { owner: Some(2), level: 3 }),
+        Some(Ownership { owner: Some(2), level: 3, garrison: 0 }),
         "归属还原"
     );
     assert_eq!(fresh.seat_gold[1], 500, "席位金还原");

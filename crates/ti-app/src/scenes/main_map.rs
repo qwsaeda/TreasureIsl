@@ -547,11 +547,18 @@ impl Scene for MainMapScene {
                 true
             }
             // S28.6：落无主领地格后的待决副本入口（`pending_dungeon` 在位时 Confirm = 进守军战；
-            // 缺位 no-op，主地图 Confirm 无其它语义）
+            // 缺位 no-op，主地图 Confirm 无其它语义）。S33.5：落他人领地格后的待决攻占
+            // （`pending_siege` 在位时 Confirm = 进攻占战报）——优先级 = 攻占 > 副本（不同格）。
             GameInput::Confirm => {
-                host.confirm_dungeon();
-                false
+                if host.confirm_siege() {
+                    true
+                } else {
+                    host.confirm_dungeon();
+                    false
+                }
             }
+            // S33.5：落他人领地格后的待决攻占，`Back` = 放弃攻占交过路费（`pending_siege` 在位）。
+            GameInput::Back => host.pay_siege_toll(),
             _ => false,
         }
     }
@@ -867,6 +874,35 @@ fn draw_ring_card(
                         band,
                         rot,
                     );
+                }
+                // S33.5 驻军显示：已占领格（`territory_ownership` 有 owner）在色带下挂
+                // 「驻军 N」小签（`brass_dark` 底 + 黄铜边 + 金字，水平文字可读）。
+                let idx = u32::try_from(index).unwrap_or(u32::MAX);
+                if let Some(own) = host.territory_ownership(idx) {
+                    if own.owner.is_some() {
+                        let g_txt =
+                            i18n::sgetf("scene.main_map.node.garrison_fmt", &[&own.garrison]);
+                        let panel_w = host.shell().hint_text_width_px(&g_txt) + 20;
+                        let panel_h = 28;
+                        // 挂色带下缘（卡心沿局部 +y 平移卡高×0.42）
+                        let (gx, gy) = chrome::rotate_local_offset(
+                            x + w / 2,
+                            y + h / 2,
+                            0,
+                            h * 420 / 1000,
+                            rot,
+                        );
+                        let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+                        host.fill_rect(gx - panel_w / 2, gy - panel_h / 2, panel_w, panel_h, panel);
+                        host.fill_rect(gx - panel_w / 2, gy - panel_h / 2, panel_w, 2, brass);
+                        host.fill_rect(gx - panel_w / 2, gy + panel_h / 2 - 2, panel_w, 2, brass);
+                        host.draw_hint_text(
+                            &g_txt,
+                            gx - panel_w / 2 + 10,
+                            gy - (host.shell().hint_glyph_px()) / 2,
+                            chrome::COLOR_TEXT_ON_PARCH,
+                        );
+                    }
                 }
                 return;
             }

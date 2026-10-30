@@ -6,11 +6,14 @@
 use std::collections::BTreeMap;
 
 use ti_core::data::{Balance, BoardMap, balance, board};
-use ti_core::rules::saveload::{SaveSlotV2, SaveSlotV3, SaveSlotV4, TerritorySave};
+use ti_core::rules::saveload::{
+    SaveSlotV2, SaveSlotV3, SaveSlotV4, SaveSlotV5, SeatSave, TerritorySave,
+};
 use ti_core::rules::territory::{
     DungeonOutcome, SeatIdx, SeatPool, SettleAction, SiegeOutcome, TerritoryApply, TerritoryRules,
     TerritoryState, TurnCycle,
 };
+use ti_core::rules::territory_v2::SeatState;
 
 /// 测试基建：m01 赛道 + 余额表 + 全新领地账本。
 fn fixture() -> (BoardMap, &'static Balance, TerritoryState) {
@@ -309,7 +312,11 @@ fn save_roundtrip_restores_territories() {
     // 进 v4 存档
     let v2p = SaveSlotV2::new("panda".to_owned(), "m01".to_owned());
     let mut v4 = SaveSlotV4::migrate_v3_to_v4(&SaveSlotV3::migrate_v2_to_v3(&v2p));
-    v4.territories.push(TerritorySave { map: "m01".to_owned(), cells: owned.clone() });
+    v4.territories.push(TerritorySave {
+        map: "m01".to_owned(),
+        cells: owned.clone(),
+        garrisons: Default::default(),
+    });
     v4.current_seat = 3;
     let json = v4.to_json();
     let back = SaveSlotV4::from_json(&json).expect("v4 JSON 往返");
@@ -420,4 +427,94 @@ fn ai_turn_uses_same_settlement_table() {
     let own = rules.ai_turn(&state, ai_seat, cell, gold);
     assert!(matches!(own.action, SettleAction::Collect | SettleAction::Maxed), "自己格 = 领产出");
     assert_eq!(own.result.gold_in, state.apply_collect(&rules, cell, ai_seat), "产出金额 = 同公式");
+}
+
+/// §8/§10：v4 → v5 迁移 = 席位补默认人手/武器 + 领地驻军空（`save_migrate_v4_to_v5_defaults`）。
+#[test]
+fn save_migrate_v4_to_v5_defaults() {
+    let v2p = SaveSlotV2::new("panda".to_owned(), "m01".to_owned());
+    let mut v4 = SaveSlotV4::migrate_v3_to_v4(&SaveSlotV3::migrate_v2_to_v3(&v2p));
+    // v4 席位 crew/arms 为 0（serde default 缺省）。
+    v4.seats.push(SeatSave {
+        character: "panda".to_owned(),
+        is_player: true,
+        gold: 500,
+        position: 0,
+        boat_level: 1,
+        buildings: Vec::new(),
+        crew: 0,
+        arms: 0,
+    });
+    let v5 = SaveSlotV5::migrate_v4_to_v5(&v4);
+    assert_eq!(v5.version, 5, "迁移补版本号 5");
+    assert_eq!(v5.seats[0].crew, 20, "迁移补默认人手（船 1 级 ≈ 20）");
+    assert_eq!(v5.seats[0].arms, 5, "迁移补默认武器");
+    assert_eq!(v5.seats[0].gold, 500, "金币保留");
+    assert!(v5.territories.is_empty(), "迁移 = 空领地图");
+    // 幂等：再迁不变
+    assert_eq!(v5.clone().migrate(), v5, "v5 自迁移幂等");
+}
+
+/// §8/§10：存档往返还原归属/金币/人手/武器/驻军/当前席位（`save_roundtrip_restores_territories`）。
+#[test]
+fn save_v5_roundtrip_restores_resources_and_garrisons() {
+    let (_map, bal, mut state) = fixture();
+    let db = board().expect("board.json");
+    let _m01 = db.map("m01").expect("m01");
+    let rules = TerritoryRules::new(bal);
+    // 席 2 占领 harbour（L1 + 驻军 8）；席 3 占领 volcano（L2 + 驻军 5）。
+    let harbour = state.isle_cells("harbour")[0];
+    let volcano = state.isle_cells("volcano")[0];
+    state.apply_dungeon(&rules, harbour, 2, DungeonOutcome::Win);
+    state.apply_dungeon(&rules, volcano, 3, DungeonOutcome::Win);
+    assert!(state.apply_upgrade(&rules, volcano, 3));
+    // 设驻军（守恒：从舰队分出）
+    let mut seat2 = SeatState::new(1000, 30, 20, 0);
+    let mut seat3 = SeatState::new(1000, 30, 20, 0);
+    let _ = ti_core::rules::territory_v2::capture_cell(&mut seat2, &mut state, harbour, 2, 8);
+    let _ = ti_core::rules::territory_v2::set_garrison(&mut seat3, &mut state, volcano, 3, 5);
+    // 进 v5 存档
+    let v2p = SaveSlotV2::new("panda".to_owned(), "m01".to_owned());
+    let v4 = SaveSlotV4::migrate_v3_to_v4(&SaveSlotV3::migrate_v2_to_v3(&v2p));
+    let mut v5 = SaveSlotV5::migrate_v4_to_v5(&v4);
+    v5.seats.push(SeatSave {
+        character: "panda".to_owned(),
+        is_player: true,
+        gold: 1000,
+        position: 0,
+        boat_level: 1,
+        buildings: Vec::new(),
+        crew: seat2.crew,
+        arms: seat2.arms,
+    });
+    v5.seats.push(SeatSave {
+        character: "tichy".to_owned(),
+        is_player: false,
+        gold: 1000,
+        position: 0,
+        boat_level: 1,
+        buildings: Vec::new(),
+        crew: seat3.crew,
+        arms: seat3.arms,
+    });
+    let owned: std::collections::BTreeMap<u32, (u8, u8)> = state
+        .snapshot()
+        .into_iter()
+        .filter(|(_, (owner, _))| owner.is_some())
+        .map(|(k, (owner, level))| (k, (owner.unwrap_or(0), level)))
+        .collect();
+    v5.territories.push(TerritorySave {
+        map: "m01".to_owned(),
+        cells: owned.clone(),
+        garrisons: state.garrison_map(),
+    });
+    v5.current_seat = 3;
+    // JSON 往返
+    let json = v5.to_json();
+    let back = SaveSlotV5::from_json(&json).expect("v5 JSON 往返");
+    assert_eq!(back.version, 5);
+    assert_eq!(back.seats[0].crew, seat2.crew, "人手往返");
+    assert_eq!(back.seats[0].arms, seat2.arms, "武器往返");
+    assert_eq!(back.territories[0].garrisons.get(&harbour), Some(&8), "驻军往返");
+    assert_eq!(back.current_seat, 3, "当前席位往返");
 }

@@ -111,13 +111,21 @@ pub struct Ownership {
     pub owner: Option<SeatIdx>,
     /// 加固等级（`0` = 无主 / 未加固；`1..=上限` = 已加固）。
     pub level: u8,
+    /// 驻军人手（v2 §4.1：占领者自定，从席位人手池分出；`0` = 无驻军）。
+    pub garrison: u32,
 }
 
 impl Ownership {
     /// 无主初始态。
     #[must_use]
     pub const fn unowned() -> Self {
-        Self { owner: None, level: 0 }
+        Self { owner: None, level: 0, garrison: 0 }
+    }
+
+    /// 占领态（v2：驻军由占领者自定）。
+    #[must_use]
+    pub const fn occupied(owner: SeatIdx, level: u8, garrison: u32) -> Self {
+        Self { owner: Some(owner), level, garrison }
     }
 }
 
@@ -173,6 +181,36 @@ impl TerritoryState {
         self.isle_map.get(isle).map_or(&[], Vec::as_slice)
     }
 
+    /// 某席位占有的全部格序号（破产清空 / 存档导出用；升序）。
+    #[must_use]
+    pub fn owned_indices(&self, seat: SeatIdx) -> Vec<u32> {
+        self.cells.iter().filter(|(_, o)| o.owner == Some(seat)).map(|(k, _)| *k).collect()
+    }
+
+    /// 某席位驻军总量（§4.1 守恒：每**领地**（岛）只计一次驻军，两格同领地不重复计数）。
+    #[must_use]
+    pub fn garrison_total(&self, seat: SeatIdx) -> u32 {
+        self.isle_map
+            .iter()
+            .filter(|(_, cells)| {
+                cells.iter().any(|c| self.cells.get(c).and_then(|o| o.owner) == Some(seat))
+            })
+            .map(|(_, cells)| {
+                cells.first().and_then(|c| self.cells.get(c)).map_or(0, |o| o.garrison)
+            })
+            .sum()
+    }
+
+    /// 全部占领格 → 驻军映射（存档 v5 `garrisons`；无主格不写）。
+    #[must_use]
+    pub fn garrison_map(&self) -> BTreeMap<u32, u32> {
+        self.cells
+            .iter()
+            .filter(|(_, o)| o.owner.is_some())
+            .map(|(k, o)| (*k, o.garrison))
+            .collect()
+    }
+
     /// 第 `idx` 格所属岛原型（领地格 = `Some`；功能格 / 起点 = `None`）。
     #[must_use]
     pub fn isle_cells_by_index(&self, idx: u32) -> Option<&str> {
@@ -204,7 +242,7 @@ impl TerritoryState {
         let mut state = Self::new(map, balance)?;
         for (k, (owner, level)) in snapshot {
             if state.cells.contains_key(&k) {
-                state.cells.insert(k, Ownership { owner, level });
+                state.cells.insert(k, Ownership { owner, level, garrison: 0 });
             }
         }
         Ok(state)
@@ -517,7 +555,7 @@ impl TerritoryApply for TerritoryState {
         let bonus = rules.first_capture_bonus(was_unowned);
         let cells: Vec<u32> = self.isle_cells(isle).to_vec();
         for cell in cells {
-            self.mutate(cell, Ownership { owner: Some(seat), level: 1 });
+            self.mutate(cell, Ownership { owner: Some(seat), level: 1, garrison: 0 });
         }
         bonus
     }
@@ -535,7 +573,7 @@ impl TerritoryApply for TerritoryState {
         let isle = self.isle_cells_by_index(idx).unwrap_or("");
         let cells: Vec<u32> = self.isle_cells(isle).to_vec();
         for cell in cells {
-            self.mutate(cell, Ownership { owner: Some(seat), level: 1 });
+            self.mutate(cell, Ownership { owner: Some(seat), level: 1, garrison: 0 });
         }
     }
 
@@ -560,7 +598,10 @@ impl TerritoryApply for TerritoryState {
         }
         let cells: Vec<u32> = self.isle_cells(isle).to_vec();
         for cell in cells {
-            self.mutate(cell, Ownership { owner: Some(seat), level: own.level + 1 });
+            self.mutate(
+                cell,
+                Ownership { owner: Some(seat), level: own.level + 1, garrison: own.garrison },
+            );
         }
         true
     }

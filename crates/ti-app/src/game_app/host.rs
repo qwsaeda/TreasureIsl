@@ -15,14 +15,17 @@ use ti_core::domain::persistence::{SaveSlot, SaveSlotV4Ext, SeatSave, TerritoryS
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{BoardSession, TrackSpace, Turn};
 use ti_core::rules::cards;
+use ti_core::rules::force::Force;
 use ti_core::rules::messages::total_pages;
 use ti_core::rules::progression::{CLEARED_BIT, ProgressionState};
 use ti_core::rules::territory::{
     DungeonOutcome, Ownership, TerritoryApply, TerritoryRules, TerritoryState,
 };
+use ti_core::rules::territory_v2::{self, AssaultOutcome, SeatState};
 use ti_core::rules::trade;
 
-use super::{BattleSnapshot, BattleView, GameApp, GameInput, Scene};
+use super::board::{ai_seat_name, i18n_fmt};
+use super::{BattleSnapshot, BattleView, GameApp, GameInput, Scene, SiegeSnapshot, SiegeView};
 use crate::menu_shell::MenuShell;
 use crate::scenes::SceneKind;
 use crate::scenes::{
@@ -343,6 +346,136 @@ impl MapHost for GameApp {
         true
     }
 
+    /// S33.5 确认攻占（`pending_siege` 在位）：构造攻占战报视图（`siege_view`），进 `Vs` 场景。
+    /// 结算不在此时——`Vs` 场景 `Attack` 触发 [`GameApp::settle_siege`]（一次性确定性）。
+    /// 返回 `true` = 已消费（切场景）；缺省 `false`。
+    fn confirm_siege(&mut self) -> bool {
+        let Some((cell, owner)) = self.pending_siege.take() else {
+            return false;
+        };
+        let Some(terr) = self.territory.take() else {
+            return false;
+        };
+        let Ok(b) = data::balance() else {
+            self.territory = Some(terr);
+            return false;
+        };
+        let seat = self.turn_cycle.current;
+        let rules = TerritoryRules::new(b);
+        let Some(isle) = terr.isle_cells_by_index(cell).map(str::to_string) else {
+            self.territory = Some(terr);
+            return false;
+        };
+        let own = terr.ownership(cell).copied().unwrap_or(Ownership::unowned());
+        let defense_units = rules.defense_at(&isle, own.level.max(1));
+        // 守方兵力 = 驻军 + 建筑防御（§4 攻占公式，`territory_v2::assault` 同口径）。
+        let defender = Force::new(own.garrison.saturating_add(defense_units), defense_units);
+        let attacker = Force::new(self.seat_crew[seat as usize], self.seat_arms[seat as usize]);
+        self.territory = Some(terr);
+        self.siege_view =
+            Some(SiegeView { cell, isle, owner, attacker, defender, outcome: None, seat });
+        self.scene = Scene::Vs;
+        true
+    }
+
+    /// S33.5 放弃攻占（`pending_siege` 在位时主地图 `Back`）：交过路费（§4.2），清待决。
+    /// 返回 `true` = 已消费（交钱提示已出）。
+    fn pay_siege_toll(&mut self) -> bool {
+        let Some((cell, owner)) = self.pending_siege.take() else {
+            return false;
+        };
+        let Some(mut terr) = self.territory.take() else {
+            return false;
+        };
+        let Ok(b) = data::balance() else {
+            self.territory = Some(terr);
+            return false;
+        };
+        let rules = TerritoryRules::new(b);
+        let seat = self.turn_cycle.current;
+        let toll = terr.apply_pay_toll(&rules, cell, seat);
+        self.seat_gold[seat as usize] = self.seat_gold[seat as usize].saturating_sub(toll);
+        self.credit_seat_gold(owner, toll, b);
+        let isle_name = terr
+            .isle_cells_by_index(cell)
+            .map_or(String::new(), |isle| crate::i18n::sget(&format!("isle.{isle}")).to_string());
+        let my_name = self.selection.character.map_or_else(String::new, |ch| {
+            crate::i18n::sget(&format!("role.name.{}", ch.label())).to_string()
+        });
+        let owner_name = ai_seat_name(owner, b);
+        self.territory = Some(terr);
+        self.toast(
+            i18n_fmt(
+                "scene.main_map.toast.ai_toll_fmt",
+                &[
+                    &my_name as &dyn std::fmt::Display,
+                    &owner_name as &dyn std::fmt::Display,
+                    &toll as &dyn std::fmt::Display,
+                ],
+            ),
+            Some(Sfx::Press),
+        );
+        let _ = isle_name;
+        true
+    }
+
+    /// S33.5 攻占战报快照（`Vs` 渲染层只读；`None` = 非攻占战）。
+    fn siege_snapshot(&self) -> Option<SiegeSnapshot> {
+        self.siege_view.as_ref().map(|v| SiegeSnapshot {
+            cell: v.cell,
+            isle: v.isle.clone(),
+            owner: v.owner,
+            attacker_crew: v.attacker.crew,
+            attacker_arms: v.attacker.arms,
+            defender_crew: v.defender.crew,
+            defender_arms: v.defender.arms,
+            won: v.outcome.as_ref().map(|o| matches!(o, AssaultOutcome::Win { .. })),
+        })
+    }
+
+    /// S33.5 结算攻占战（`Vs` 场景 `Attack` 一次性）：`territory_v2::assault` 确定性结算，
+    /// 写回席位资源（`seat_gold/crew/arms`）+ 领地账本（占领两格 / 守方驻军减员）。
+    fn settle_siege(&mut self) {
+        let Some(view) = self.siege_view.take() else {
+            return;
+        };
+        let Some(mut terr) = self.territory.take() else {
+            return;
+        };
+        let Ok(b) = data::balance() else {
+            self.siege_view = Some(view);
+            self.territory = Some(terr);
+            return;
+        };
+        let seat = self.turn_cycle.current;
+        // 攻占后重定驻军 = 战后舰队的 1/3（`territory.md` §4：占领者自定；默认留 1/3 守）。
+        let new_garrison = self.seat_crew[seat as usize] / 3;
+        let mut sstate = SeatState::new(
+            self.seat_gold[seat as usize],
+            self.seat_crew[seat as usize],
+            self.seat_arms[seat as usize],
+            u32::from(self.boat_level()),
+        );
+        sstate.position = view.cell;
+        let outcome =
+            territory_v2::assault(b, &mut sstate, &mut terr, view.cell, seat, new_garrison);
+        // 写回席位资源（assault 已扣攻占败双倍过路费 / 战损）。
+        self.seat_gold[seat as usize] = sstate.gold;
+        self.seat_crew[seat as usize] = sstate.crew;
+        self.seat_arms[seat as usize] = sstate.arms;
+        self.territory = Some(terr);
+        // 战报保留结果供渲染（再 Attack = 已结算 no-op，Back = 回主地图）。
+        self.siege_view = Some(SiegeView { outcome: Some(outcome), ..view });
+        self.last_sfx = match &self.siege_view {
+            Some(v)
+                if v.outcome.as_ref().is_some_and(|o| matches!(o, AssaultOutcome::Win { .. })) =>
+            {
+                Some(Sfx::Victory)
+            }
+            _ => Some(Sfx::Invalid),
+        };
+    }
+
     /// S28.2 存档 v4 扩展捕获（`territory.md` §8）：5 席（角色 index 升序，主玩家 = 已选角色）
     /// 金/位置/船 + 当前图领地图（无主格不写）+ 当前席位。
     fn save_v4_ext(&self) -> Option<SaveSlotV4Ext> {
@@ -367,6 +500,8 @@ impl MapHost for GameApp {
                     position,
                     boat_level: if i == player_idx { self.boat_level() } else { 1 },
                     buildings: Vec::new(),
+                    crew: self.seat_crew[i as usize],
+                    arms: self.seat_arms[i as usize],
                 }
             })
             .collect();
@@ -380,16 +515,20 @@ impl MapHost for GameApp {
                     .into_iter()
                     .filter_map(|(cell, (owner, level))| owner.map(|o| (cell, (o, level))))
                     .collect();
-                vec![TerritorySave { map: map_id, cells }]
+                let garrisons = t.garrison_map();
+                vec![TerritorySave { map: map_id, cells, garrisons }]
             })
             .unwrap_or_default();
         Some(SaveSlotV4Ext { seats, territories, current_seat: self.turn_cycle.current })
     }
 
-    /// S28.2 存档 v4 扩展还原（§8）：席位金 + 当前席 + 当前图领地账本（越界/不匹配图 = 宽松丢弃）。
+    /// S28.2/S33.4 存档扩展还原（§8）：席位金/人手/武器 + 当前席 + 当前图领地账本 + 驻军
+    /// （越界/不匹配图 = 宽松丢弃）。
     fn restore_v4_ext(&mut self, ext: &SaveSlotV4Ext) {
         for (i, seat) in ext.seats.iter().enumerate().take(5) {
             self.seat_gold[i] = seat.gold;
+            self.seat_crew[i] = seat.crew;
+            self.seat_arms[i] = seat.arms;
         }
         if ext.current_seat < 5 {
             self.turn_cycle.current = ext.current_seat;
@@ -414,7 +553,20 @@ impl MapHost for GameApp {
                 .map(|(cell, (owner, level))| (*cell, (Some(*owner), *level)))
                 .collect();
             match TerritoryState::restore(map_def, bal, snapshot) {
-                Ok(state) => self.territory = Some(state),
+                Ok(mut state) => {
+                    // v5：回填驻军（格在账本且已占领；越界/无主格静默忽略）。
+                    for (cell, g) in &terr.garrisons {
+                        if let Some(o) = state.ownership(*cell) {
+                            if o.owner.is_some() {
+                                state.mutate(
+                                    *cell,
+                                    Ownership { owner: o.owner, level: o.level, garrison: *g },
+                                );
+                            }
+                        }
+                    }
+                    self.territory = Some(state);
+                }
                 Err(_e) => eprintln!("restore_v4_ext: 领地账本还原失败（宽松丢弃）"),
             }
             break;

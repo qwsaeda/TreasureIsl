@@ -11,6 +11,7 @@
 
 pub mod balance;
 mod board;
+pub(crate) mod manpower_cfg;
 mod terrain;
 pub(crate) mod territory_cfg;
 #[allow(unused_imports)]
@@ -531,10 +532,17 @@ pub struct Balance {
     pub board_group_tokens: Vec<String>,
     /// 领地系统参数（S28.3：`docs/business/territory.md` §3/§4.1）。
     pub territory: TerritoryCfg,
+    /// 领地 v2 战力系数（`balance.manpower`；S33.2）。
+    pub manpower: crate::data::manpower_cfg::ManpowerCfg,
+    /// 领地 v2 海事事件参数（`balance.events`；S33.2）。
+    pub events: crate::data::manpower_cfg::EventCfg,
+    /// 领地 v2 商人价格（`balance.merchants`；S33.2）。
+    pub merchants: crate::data::manpower_cfg::MerchantCfg,
 }
 
 // ------------------------------------------------------- 领地系统（S28.3）re-export
 
+pub use manpower_cfg::{EventCfg, ManpowerCfg, MerchantCfg};
 pub use territory_cfg::{HomeUpgradeCfg, TerritoryAiCfg, TerritoryCfg, TerritoryPrototypeCfg};
 // ------------------------------------------------------- serde 中间层（JSON 形状）
 
@@ -938,5 +946,8 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
         },
         territory: territory_cfg::convert(raw.territory.clone()),
         board_group_tokens: raw.board_group_tokens.clone(),
+        manpower: raw.manpower.clone().into(),
+        events: raw.events.clone().into(),
+        merchants: raw.merchants.clone().into(),
     })
 }

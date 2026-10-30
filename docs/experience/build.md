@@ -264,3 +264,55 @@ return 留下**上一轮的陈旧 PNG**，像素检查「看起来对」其实�
   不能盯「整体亮不亮」（亮背景 + 内容全灭 = 照样 PASS）；
   ③ **能反向证伪的测试才算测试**：本次 L5 的价值不来自「修复后 PASS」，而来自
   「故意改坏后 FAIL」——正例谁都会写，负例才证明断言有效。
+
+### EXP-134 构建：领地 v2 规则层基础（兵力模型/事件/商人）设计决策
+S33.1 规则层基础（rules/force.rs + events.rs + merchant.rs）五个设计决策，后阶段（S33.3 攻占/多人同格、S33.5 VS、S33.6 AI）直接复用：
+① 确定性 VS：战力比较定胜负（攻方战力>守方胜，否则守方防守优势胜），不消耗 GameRng（同兵力同结果可复现）。
+② 双方必损：人手按 loss_pct、武器按 weapon_loss_pct 掉（万分比，saturating_sub 防下溢）；胜者也损（战损是常态）。
+③ 一人一把武器：武装 = min(人手, 武器)，武器>人手 = 多余武器无效（瓶颈=人手）；人手可>或<武器（徒手战力折减）。
+④ 事件效果双字段：损耗=百分比字段（*_loss_pct，调用方按实际资源算）+ 奖励=绝对增量字段（gold/crew/arms_delta）；避免绝对占位。
+⑤ 商人上限：武器≤人手（一人一把）、人手≤船容量（船越大带越多）；金币不足/已达上限=拒绝（不扣金不发货）。
+⑥ 模块自包含：每个规则模块带自己的 Cfg 结构体（default_cfg + 单测注值），不依赖 balance 全量解析 ⇒ 单测快、可独立验证。
+
+### EXP-135 构建：领地 v2 规则层基础（兵力模型/事件/商人）设计决策
+S33.1 规则层基础（rules/force.rs + events.rs + merchant.rs）六个设计决策，后阶段（S33.3 攻占/多人同格、S33.5 VS、S33.6 AI）直接复用：
+① 确定性 VS：战力比较定胜负（攻方战力>守方胜，否则守方防守优势胜），不消耗 GameRng（同兵力同结果可复现）。
+② 双方必损：人手按 loss_pct、武器按 weapon_loss_pct 掉（万分比，saturating_sub 防下溢）；胜者也损（战损是常态）。
+③ 一人一把武器：武装 = min(人手, 武器)，武器>人手 = 多余武器无效（瓶颈=人手）；人手可>或<武器（徒手战力折减）。
+④ 事件效果双字段：损耗=百分比字段（*_loss_pct，调用方按实际资源算）+ 奖励=绝对增量字段（gold/crew/arms_delta）；避免绝对占位。
+⑤ 商人上限：武器≤人手（一人一把）、人手≤船容量（船越大带越多）；金币不足/已达上限=拒绝（不扣金不发货）。
+⑥ 模块自包含：每个规则模块带自己的 Cfg 结构体（default_cfg + 单测注值），不依赖 balance 全量解析 ⇒ 单测快、可独立验证。
+
+### EXP-136 构建：领地 v2 数据层（S33.2）设计决策
+S33.2 数据层（balance.manpower/events/merchants 段 + map.json 逐格 resource/building + events[]/merchants[]）六个设计决策，后阶段（S33.3 规则重做、S33.4 存档 v5）直接复用：\n① 数据段增量：balance.json 新段用 serde default（Raw 结构体缺省 = 代码默认值回退），旧 balance.json 无新段照样加载（0 行为变化）。\n② 0=未提供语义：Raw→Cfg 转换用 pick(v, default)，0（serde default 缺省）取默认值，非 0 取用户值（越界钳制）；避免把缺省误当合法 0。\n③ f32 配置类型只用 PartialEq 不 derive Eq（MapMerchant.price_mult 先例；TerritoryCfg 同惯例）。\n④ 地图包字段传播链：map.json == manifest.map == board.json maps.<id>（sync 全量回注 + check 漂移对账）；加字段需三处同改，sync 一条命令重算。\n⑤ 每图不变量 I9：events[] 非空 + merchants 含 weapon/slave 各≥1 + 领地格 building≥1 + resource 非空（map_pack verify 机器判定）。\n⑥ 数据访问器加字段不破既有调用（BoardSpace/BoardMap 新增字段带 serde default，旧 board.json 无新字段仍解析）。
+
+
+### EXP-137 构建：领地 v2 规则层（S33.3）设计决策
+S33.3 领地规则重做（rules/territory_v2.rs：驻军自定/攻占/破产/多人同格/不可占领格）五个设计决策，后阶段（S33.4 存档 v5、S33.5 表现、S33.6 AI）直接复用：
+⑦ 驻军按领地计一次：两类岛两格同属一个领地，驻军只记一次（garrison_total 按 isle_map 去重，两格不重复计数）⇒ 守恒检验「舰队 + Σ驻军(按领地) = 总人手」。
+⑧ 攻占守方兵力 = (驻军G + 建筑防御defense, defense)：建筑提供 defense 名武装守军，驻军为徒手（武器跟舰队）；战力 = defense×2 + G×1。
+⑨ 攻占胜：O=攻方，L=1，重定驻军（从战后舰队分出，守恒）；攻占败：交双倍过路费（惩罚），守方驻军按战后剩余减员。
+⑩ 破产：金币归零+出局+全部占领格变空（owned_indices 用 BTreeMap 键，勿用 enumerate 值——格索引非 0..N 连续）。
+⑪ 多人同格：previous_occupant 返回序列中紧邻前一个（只打前一个，不跳打）；胜利=唯一存活席，失败=玩家破产直接结束。
+
+### EXP-138 构建：领地 v2 存档 v5（S33.4）设计决策
+S33.4 存档 v5（SeatSave.crew/arms + TerritorySave.garrisons + SaveSlotV5 迁移）三个设计决策，后阶段（S33.5 表现、S33.6 AI）直接复用：
+⑫ v5 = v4 + 席位人手/武器 + 领地驻军：SeatSave 加 crew/arms（serde default 缺省 = 0 表示 v4 无资源），TerritorySave 加 garrisons（格→驻军，无驻军不写）——v4 旧档解析即得默认（迁移隐式）。
+⑬ SaveSlotV5.migrate_v4_to_v5：crew/arms=0（v4 缺省）补 balance.manpower.initial_crew/arms（20/5），territories.garrisons 清空；幂等（再迁不变）。
+⑭ 守恒数据模型：seat.crew = 舰队人手（不含驻军），驻军在 territory.garrison_map（按格）；garrison_total 按领地（岛）去重两格。存档还原 = seat_gold/crew/arms + territory.restore + garrisons 回填（越界/无主格静默）。
+
+### EXP-139 构建：领地 v2 表现层（S33.5）设计决策
+S33.5 表现层（玩家攻占 UI + VS 攻占战报 + 驻军显示）五个设计决策，后阶段（S33.6 AI）直接复用：
+⑮ 攻占非 HP 回合制：assault 是一次性确定性结算（兵力模型），不复用 BattleView；独立 SiegeView 战报（攻方舰队 vs 守方驻军+建筑防御），Vs 场景 Attack 结算一次出结果，Back 回主地图（再 Attack = no-op）。
+⑯ 落他人格 = 玩家二选一：pending_siege = Some((cell, owner))，Confirm = 进攻占战报，Back = 交过路费（pay_siege_toll 复用 apply_pay_toll）；再次摇骰 = 自动清除（同 pending_dungeon 生命周期）。
+⑰ 守方兵力口径与规则层同源：confirm_siege 构造 SiegeView 时用 TerritoryRules::defense_at 算防御数（= garrison + defense, defense），与 territory_v2::assault 完全一致 ⇒ 渲染快照=结算输入（不重算不漂移）。
+⑱ 驻军显示 = 归属色带下挂「驻军 N」小签（territory_ownership(idx) 有 owner 才画，按卡旋转定位 rotate_local_offset），水平文字可读；功能格/无主格不画。
+⑲ 席位资源初始化归 init_territory：seat_crew/arms = balance.manpower.initial_crew/arms（存档 v5 迁移同源），开档即守恒（舰队 + Σ驻军 = 初始人手）。
+
+### EXP-140 构建：领地 v2 AI 回合（S33.6）设计决策
+S33.6 AI 回合（兵力模型攻占判定 + 驻军自定）五个设计决策，收官复用：
+⑳ v2 AI 攻占判定 = 兵力模型：ai_policy_v2 用 force::resolve 预测（强舰队战力>守方 → Siege；弱 → PayToll），非旧 attack_threshold×base 纯阈值——因为 v2 攻守都耗兵力（必损），纯阈值无法反映真实胜负，必须真实比较。
+㉑ AI 攻占结算复用玩家同口径：settle_ai_landing 的 Siege 分支不再用旧 apply_siege(..., Win)（纯胜利不耗兵力），改用 territory_v2::assault（一次性确定性 + 必损 + 重定驻军），与玩家 confirm_siege 完全同函数（同状态同结果）。
+㉒ AI 驻军自定 = 战后舰队 1/3 留守（同玩家 settle_siege 的 /3 约定，守恒：crew + Σgarrison = 初始 - 战损）。
+㉓ AI 回合可见反馈：settle_ai_landing 按胜负选 ai_siege_fmt（奪取）/_fail_fmt（失敗）双 toast，last_ai_toast 通道（主地图独立行）可见；AI 摇骰/占领/交钱/产出也经该通道。
+㉔ 测试种子法：AI 强舰队（500/500）+ 玩家占全部领地格（弱驻军 5）⇒ 40 次玩家摇骰内必观察到 AI 攻占 toast（确定性足够，不依赖精确落格）；人手守恒断言 = Σseat_crew ≤ 5×初始。

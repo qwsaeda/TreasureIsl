@@ -1,551 +1,571 @@
 {
- "schema_version": 1,
- "economy": {
-  "gold_max": 999999,
-  "bank_rate": 1.0,
-  "initial_gold": 1000
- },
- "combat": {
-  "player_first": true,
-  "max_rounds": 1000,
-  "player": {
-   "hp": 2000,
-   "atk": 60
+  "schema_version": 1,
+  "economy": {
+    "gold_max": 999999,
+    "bank_rate": 1.0,
+    "initial_gold": 1000
   },
-  "damage": {
-   "model": "atk_plus_flat",
-   "flat": 1,
-   "atk_coef": 1.0,
-   "rng_span": 3
+  "combat": {
+    "player_first": true,
+    "max_rounds": 1000,
+    "player": {
+      "hp": 2000,
+      "atk": 60
+    },
+    "damage": {
+      "model": "atk_plus_flat",
+      "flat": 1,
+      "atk_coef": 1.0,
+      "rng_span": 3
+    },
+    "boss_tiers": [
+      {
+        "tier": 0,
+        "hp": 2400,
+        "atk": 10
+      },
+      {
+        "tier": 1,
+        "hp": 4800,
+        "atk": 12
+      },
+      {
+        "tier": 2,
+        "hp": 7200,
+        "atk": 14
+      },
+      {
+        "tier": 3,
+        "hp": 9600,
+        "atk": 16
+      },
+      {
+        "tier": 4,
+        "hp": 12000,
+        "atk": 20
+      }
+    ],
+    "defend_reduction_pct": 50,
+    "items": [
+      {
+        "id": "keg",
+        "name_key": "combat.item.keg",
+        "carry": 3,
+        "effect": {
+          "kind": "damage",
+          "value": 300
+        }
+      },
+      {
+        "id": "medkit",
+        "name_key": "combat.item.medkit",
+        "carry": 3,
+        "effect": {
+          "kind": "heal_pct",
+          "value": 25
+        }
+      },
+      {
+        "id": "rum",
+        "name_key": "combat.item.rum",
+        "carry": 2,
+        "effect": {
+          "kind": "atk_buff",
+          "value": 50,
+          "rounds": 3
+        }
+      },
+      {
+        "id": "smoke",
+        "name_key": "combat.item.smoke",
+        "carry": 2,
+        "effect": {
+          "kind": "stagger"
+        }
+      }
+    ]
   },
-  "boss_tiers": [
-   {
-    "tier": 0,
-    "hp": 2400,
-    "atk": 10
-   },
-   {
-    "tier": 1,
-    "hp": 4800,
-    "atk": 12
-   },
-   {
-    "tier": 2,
-    "hp": 7200,
-    "atk": 14
-   },
-   {
-    "tier": 3,
-    "hp": 9600,
-    "atk": 16
-   },
-   {
-    "tier": 4,
-    "hp": 12000,
-    "atk": 20
-   }
+  "manpower": {
+    "weapon_coef": 2,
+    "barehand_coef": 1,
+    "loss_pct": 1500,
+    "weapon_loss_pct": 2000,
+    "initial_crew": 20,
+    "initial_arms": 5
+  },
+  "events": {
+    "crew_loss_pct": 1000,
+    "arms_loss_pct": 1000,
+    "gold_loss_pct": 500,
+    "treasure_gold": 200,
+    "treasure_arms": 3,
+    "rescue_crew": 4
+  },
+  "merchants": {
+    "weapon_price": 50,
+    "slave_price": 30
+  },
+  "trade": {
+    "markup": 1.5,
+    "goods": [
+      {
+        "id": 1,
+        "name_key": "goods.1",
+        "buy": 20,
+        "qty_max": 400
+      },
+      {
+        "id": 2,
+        "name_key": "goods.2",
+        "buy": 76,
+        "qty_max": 400
+      },
+      {
+        "id": 3,
+        "name_key": "goods.3",
+        "buy": 95,
+        "qty_max": 400
+      },
+      {
+        "id": 4,
+        "name_key": "goods.4",
+        "buy": 114,
+        "qty_max": 400
+      },
+      {
+        "id": 5,
+        "name_key": "goods.5",
+        "buy": 133,
+        "qty_max": 400
+      }
+    ]
+  },
+  "build": {
+    "max_level": 10,
+    "buildings": [
+      {
+        "id": "Castle",
+        "name_key": "build.castle",
+        "base_cost": 1000,
+        "gold_max": 20000,
+        "atk_bonus": 10,
+        "hp_bonus": 200
+      },
+      {
+        "id": "Investment",
+        "name_key": "build.investment",
+        "base_cost": 500,
+        "gold_max": 12000,
+        "atk_bonus": 5,
+        "hp_bonus": 100
+      },
+      {
+        "id": "Bank",
+        "name_key": "build.bank",
+        "base_cost": 200,
+        "gold_max": 5000,
+        "atk_bonus": 0,
+        "hp_bonus": 50
+      },
+      {
+        "id": "Fort",
+        "name_key": "build.fort",
+        "base_cost": 800,
+        "gold_max": 16000,
+        "atk_bonus": 8,
+        "hp_bonus": 150
+      }
+    ]
+  },
+  "boat": {
+    "_comment": "S21.2 船系统（规格 = docs/business/economy.md §船系统；规则接线 S21.10 已落地）：开局 1 级小舢板（cargo 99 = 现状单次贸易上限，零行为变化）；单向 4 级升级（cost 一次性，立即生效）；cargo = 单次贸易数量上限（effective = min(goods.qty_max, cargo)，S21.10 已与 goods.qty_max 400 翻转同步落地）；atk/hp = 累计值，与建筑 Σ 叠加（combat.md §建造加成扩展）。",
+    "levels": [
+      {
+        "level": 1,
+        "name_key": "boat.1",
+        "cost": 0,
+        "cargo": 99,
+        "atk": 0,
+        "hp": 0
+      },
+      {
+        "level": 2,
+        "name_key": "boat.2",
+        "cost": 800,
+        "cargo": 150,
+        "atk": 4,
+        "hp": 80
+      },
+      {
+        "level": 3,
+        "name_key": "boat.3",
+        "cost": 2500,
+        "cargo": 240,
+        "atk": 9,
+        "hp": 180
+      },
+      {
+        "level": 4,
+        "name_key": "boat.4",
+        "cost": 6000,
+        "cargo": 400,
+        "atk": 15,
+        "hp": 320
+      }
+    ]
+  },
+  "cards": {
+    "event_chance": 0.35,
+    "hand_size": 1,
+    "deck": [
+      {
+        "id": 1,
+        "name_key": "cards.1",
+        "weight": 3,
+        "effect": {
+          "kind": "damage",
+          "value": 10
+        }
+      },
+      {
+        "id": 2,
+        "name_key": "cards.2",
+        "weight": 2,
+        "effect": {
+          "kind": "heal",
+          "value": 15
+        }
+      },
+      {
+        "id": 3,
+        "name_key": "cards.3",
+        "weight": 3,
+        "effect": {
+          "kind": "gold",
+          "value": 20
+        }
+      },
+      {
+        "id": 4,
+        "name_key": "cards.4",
+        "weight": 1,
+        "effect": {
+          "kind": "move"
+        }
+      },
+      {
+        "id": 5,
+        "name_key": "cards.5",
+        "weight": 1,
+        "effect": {
+          "kind": "unknown"
+        }
+      }
+    ]
+  },
+  "board": {
+    "dice_sides": 6,
+    "max_steps": 6,
+    "lap_bonus_gold": 150,
+    "battle_damage": 30,
+    "battle_gold_loss": 20,
+    "treasure_gold": 200,
+    "city_gold": 50,
+    "boss_min_laps": 1
+  },
+  "board_group_tokens": [
+    "land_sand",
+    "reef",
+    "sea_shallow",
+    "gold_warm",
+    "moon_pale",
+    "brass",
+    "secondary",
+    "hilite",
+    "danger"
   ],
-  "defend_reduction_pct": 50,
-  "items": [
-   {
-    "id": "keg",
-    "name_key": "combat.item.keg",
-    "carry": 3,
-    "effect": {
-     "kind": "damage",
-     "value": 300
-    }
-   },
-   {
-    "id": "medkit",
-    "name_key": "combat.item.medkit",
-    "carry": 3,
-    "effect": {
-     "kind": "heal_pct",
-     "value": 25
-    }
-   },
-   {
-    "id": "rum",
-    "name_key": "combat.item.rum",
-    "carry": 2,
-    "effect": {
-     "kind": "atk_buff",
-     "value": 50,
-     "rounds": 3
-    }
-   },
-   {
-    "id": "smoke",
-    "name_key": "combat.item.smoke",
-    "carry": 2,
-    "effect": {
-     "kind": "stagger"
-    }
-   }
-  ]
- },
- "trade": {
-  "markup": 1.5,
-  "goods": [
-   {
-    "id": 1,
-    "name_key": "goods.1",
-    "buy": 20,
-    "qty_max": 400
-   },
-   {
-    "id": 2,
-    "name_key": "goods.2",
-    "buy": 76,
-    "qty_max": 400
-   },
-   {
-    "id": 3,
-    "name_key": "goods.3",
-    "buy": 95,
-    "qty_max": 400
-   },
-   {
-    "id": 4,
-    "name_key": "goods.4",
-    "buy": 114,
-    "qty_max": 400
-   },
-   {
-    "id": 5,
-    "name_key": "goods.5",
-    "buy": 133,
-    "qty_max": 400
-   }
-  ]
- },
- "build": {
-  "max_level": 10,
-  "buildings": [
-   {
-    "id": "Castle",
-    "name_key": "build.castle",
-    "base_cost": 1000,
-    "gold_max": 20000,
-    "atk_bonus": 10,
-    "hp_bonus": 200
-   },
-   {
-    "id": "Investment",
-    "name_key": "build.investment",
-    "base_cost": 500,
-    "gold_max": 12000,
-    "atk_bonus": 5,
-    "hp_bonus": 100
-   },
-   {
-    "id": "Bank",
-    "name_key": "build.bank",
-    "base_cost": 200,
-    "gold_max": 5000,
-    "atk_bonus": 0,
-    "hp_bonus": 50
-   },
-   {
-    "id": "Fort",
-    "name_key": "build.fort",
-    "base_cost": 800,
-    "gold_max": 16000,
-    "atk_bonus": 8,
-    "hp_bonus": 150
-   }
-  ]
- },
- "boat": {
-  "_comment": "S21.2 船系统（规格 = docs/business/economy.md §船系统；规则接线 S21.10 已落地）：开局 1 级小舢板（cargo 99 = 现状单次贸易上限，零行为变化）；单向 4 级升级（cost 一次性，立即生效）；cargo = 单次贸易数量上限（effective = min(goods.qty_max, cargo)，S21.10 已与 goods.qty_max 400 翻转同步落地）；atk/hp = 累计值，与建筑 Σ 叠加（combat.md §建造加成扩展）。",
-  "levels": [
-   {
-    "level": 1,
-    "name_key": "boat.1",
-    "cost": 0,
-    "cargo": 99,
-    "atk": 0,
-    "hp": 0
-   },
-   {
-    "level": 2,
-    "name_key": "boat.2",
-    "cost": 800,
-    "cargo": 150,
-    "atk": 4,
-    "hp": 80
-   },
-   {
-    "level": 3,
-    "name_key": "boat.3",
-    "cost": 2500,
-    "cargo": 240,
-    "atk": 9,
-    "hp": 180
-   },
-   {
-    "level": 4,
-    "name_key": "boat.4",
-    "cost": 6000,
-    "cargo": 400,
-    "atk": 15,
-    "hp": 320
-   }
-  ]
- },
- "cards": {
-  "event_chance": 0.35,
-  "hand_size": 1,
-  "deck": [
-   {
-    "id": 1,
-    "name_key": "cards.1",
-    "weight": 3,
-    "effect": {
-     "kind": "damage",
-     "value": 10
-    }
-   },
-   {
-    "id": 2,
-    "name_key": "cards.2",
-    "weight": 2,
-    "effect": {
-     "kind": "heal",
-     "value": 15
-    }
-   },
-   {
-    "id": 3,
-    "name_key": "cards.3",
-    "weight": 3,
-    "effect": {
-     "kind": "gold",
-     "value": 20
-    }
-   },
-   {
-    "id": 4,
-    "name_key": "cards.4",
-    "weight": 1,
-    "effect": {
-     "kind": "move"
-    }
-   },
-   {
-    "id": 5,
-    "name_key": "cards.5",
-    "weight": 1,
-    "effect": {
-     "kind": "unknown"
-    }
-   }
-  ]
- },
- "board": {
-  "dice_sides": 6,
-  "max_steps": 6,
-  "lap_bonus_gold": 150,
-  "battle_damage": 30,
-  "battle_gold_loss": 20,
-  "treasure_gold": 200,
-  "city_gold": 50,
-  "boss_min_laps": 1
- },
- "board_group_tokens": [
-  "land_sand",
-  "reef",
-  "sea_shallow",
-  "gold_warm",
-  "moon_pale",
-  "brass",
-  "secondary",
-  "hilite",
-  "danger"
- ],
- "territory": {
-  "max_level": 3,
-  "toll_per_level": 0.25,
-  "upgrade_cost_per_level": 0.3,
-  "production_per_level": 0.5,
-  "defense_per_level": 0.4,
-  "first_capture_bonus": 150,
-  "home_upgrade": {
-   "base_cost": 200,
-   "per_level": 0.35,
-   "max_level": 3
+  "territory": {
+    "max_level": 3,
+    "toll_per_level": 0.25,
+    "upgrade_cost_per_level": 0.3,
+    "production_per_level": 0.5,
+    "defense_per_level": 0.4,
+    "first_capture_bonus": 150,
+    "home_upgrade": {
+      "base_cost": 200,
+      "per_level": 0.35,
+      "max_level": 3
+    },
+    "isle_tokens": [
+      "isle_coral",
+      "isle_sand",
+      "isle_gold",
+      "isle_dark",
+      "isle_teal",
+      "isle_olive",
+      "isle_bone",
+      "isle_ember",
+      "isle_mist",
+      "isle_black"
+    ],
+    "ai": {
+      "attack_threshold": 0.6,
+      "toll_aversion": 0.5,
+      "upgrade_priority": 0.3
+    },
+    "prototypes": [
+      {
+        "id": "harbour",
+        "name_key": "isle.harbour",
+        "dungeon_id": "raid_beach",
+        "dungeon_name_key": "dungeon.raid_beach",
+        "guard": "海盗水手",
+        "benefit": "贸易抽成",
+        "max_level": 3,
+        "toll_base": 90,
+        "upgrade_cost_base": 120,
+        "production_base": 60,
+        "defense_base": 20
+      },
+      {
+        "id": "lighthouse",
+        "name_key": "isle.lighthouse",
+        "dungeon_id": "take_lighthouse",
+        "dungeon_name_key": "dungeon.take_lighthouse",
+        "guard": "走私贩",
+        "benefit": "航行加速",
+        "max_level": 2,
+        "toll_base": 70,
+        "upgrade_cost_base": 100,
+        "production_base": 45,
+        "defense_base": 16
+      },
+      {
+        "id": "wreck",
+        "name_key": "isle.wreck",
+        "dungeon_id": "salvage_wreck",
+        "dungeon_name_key": "dungeon.salvage_wreck",
+        "guard": "守宝骷髅",
+        "benefit": "宝藏金",
+        "max_level": 3,
+        "toll_base": 110,
+        "upgrade_cost_base": 140,
+        "production_base": 85,
+        "defense_base": 24
+      },
+      {
+        "id": "pirate_lair",
+        "name_key": "isle.pirate_lair",
+        "dungeon_id": "storm_lair",
+        "dungeon_name_key": "dungeon.storm_lair",
+        "guard": "头目亲卫",
+        "benefit": "掠夺金",
+        "max_level": 3,
+        "toll_base": 130,
+        "upgrade_cost_base": 160,
+        "production_base": 100,
+        "defense_base": 30
+      },
+      {
+        "id": "shipyard",
+        "name_key": "isle.shipyard",
+        "dungeon_id": "seize_shipyard",
+        "dungeon_name_key": "dungeon.seize_shipyard",
+        "guard": "船坞工头",
+        "benefit": "造船折扣",
+        "max_level": 2,
+        "toll_base": 80,
+        "upgrade_cost_base": 110,
+        "production_base": 55,
+        "defense_base": 18
+      },
+      {
+        "id": "trading_post",
+        "name_key": "isle.trading_post",
+        "dungeon_id": "escort_trade",
+        "dungeon_name_key": "dungeon.escort_trade",
+        "guard": "私掠队",
+        "benefit": "贸易利润+",
+        "max_level": 3,
+        "toll_base": 120,
+        "upgrade_cost_base": 150,
+        "production_base": 90,
+        "defense_base": 26
+      },
+      {
+        "id": "skull_cliff",
+        "name_key": "isle.skull_cliff",
+        "dungeon_id": "camp_cliff",
+        "dungeon_name_key": "dungeon.camp_cliff",
+        "guard": "骷髅兵",
+        "benefit": "战利品",
+        "max_level": 2,
+        "toll_base": 85,
+        "upgrade_cost_base": 115,
+        "production_base": 60,
+        "defense_base": 19
+      },
+      {
+        "id": "volcano",
+        "name_key": "isle.volcano",
+        "dungeon_id": "lava_vault",
+        "dungeon_name_key": "dungeon.lava_vault",
+        "guard": "熔岩守卫",
+        "benefit": "熔金",
+        "max_level": 3,
+        "toll_base": 125,
+        "upgrade_cost_base": 150,
+        "production_base": 95,
+        "defense_base": 28
+      },
+      {
+        "id": "lightship",
+        "name_key": "isle.lightship",
+        "dungeon_id": "board_lightship",
+        "dungeon_name_key": "dungeon.board_lightship",
+        "guard": "灯船船员",
+        "benefit": "骰点+1",
+        "max_level": 2,
+        "toll_base": 75,
+        "upgrade_cost_base": 105,
+        "production_base": 50,
+        "defense_base": 17
+      },
+      {
+        "id": "boss_fort",
+        "name_key": "isle.boss_fort",
+        "dungeon_id": "fort_boss",
+        "dungeon_name_key": "dungeon.fort_boss",
+        "guard": "BOSS 舰队",
+        "benefit": "通关关键",
+        "max_level": 3,
+        "toll_base": 150,
+        "upgrade_cost_base": 180,
+        "production_base": 120,
+        "defense_base": 34
+      }
+    ],
+    "dungeon_attack_coef": 0.5
   },
-  "isle_tokens": [
-   "isle_coral",
-   "isle_sand",
-   "isle_gold",
-   "isle_dark",
-   "isle_teal",
-   "isle_olive",
-   "isle_bone",
-   "isle_ember",
-   "isle_mist",
-   "isle_black"
-  ],
-  "ai": {
-   "attack_threshold": 0.6,
-   "toll_aversion": 0.5,
-   "upgrade_priority": 0.3
+  "messages": {
+    "pages": {
+      "msgs": 1,
+      "msgl": 1,
+      "msgm": 1,
+      "help": 3,
+      "info": 1
+    }
   },
-  "prototypes": [
-   {
-    "id": "harbour",
-    "name_key": "isle.harbour",
-    "dungeon_id": "raid_beach",
-    "dungeon_name_key": "dungeon.raid_beach",
-    "guard": "海盗水手",
-    "benefit": "贸易抽成",
-    "max_level": 3,
-    "toll_base": 90,
-    "upgrade_cost_base": 120,
-    "production_base": 60,
-    "defense_base": 20
-   },
-   {
-    "id": "lighthouse",
-    "name_key": "isle.lighthouse",
-    "dungeon_id": "take_lighthouse",
-    "dungeon_name_key": "dungeon.take_lighthouse",
-    "guard": "走私贩",
-    "benefit": "航行加速",
-    "max_level": 2,
-    "toll_base": 70,
-    "upgrade_cost_base": 100,
-    "production_base": 45,
-    "defense_base": 16
-   },
-   {
-    "id": "wreck",
-    "name_key": "isle.wreck",
-    "dungeon_id": "salvage_wreck",
-    "dungeon_name_key": "dungeon.salvage_wreck",
-    "guard": "守宝骷髅",
-    "benefit": "宝藏金",
-    "max_level": 3,
-    "toll_base": 110,
-    "upgrade_cost_base": 140,
-    "production_base": 85,
-    "defense_base": 24
-   },
-   {
-    "id": "pirate_lair",
-    "name_key": "isle.pirate_lair",
-    "dungeon_id": "storm_lair",
-    "dungeon_name_key": "dungeon.storm_lair",
-    "guard": "头目亲卫",
-    "benefit": "掠夺金",
-    "max_level": 3,
-    "toll_base": 130,
-    "upgrade_cost_base": 160,
-    "production_base": 100,
-    "defense_base": 30
-   },
-   {
-    "id": "shipyard",
-    "name_key": "isle.shipyard",
-    "dungeon_id": "seize_shipyard",
-    "dungeon_name_key": "dungeon.seize_shipyard",
-    "guard": "船坞工头",
-    "benefit": "造船折扣",
-    "max_level": 2,
-    "toll_base": 80,
-    "upgrade_cost_base": 110,
-    "production_base": 55,
-    "defense_base": 18
-   },
-   {
-    "id": "trading_post",
-    "name_key": "isle.trading_post",
-    "dungeon_id": "escort_trade",
-    "dungeon_name_key": "dungeon.escort_trade",
-    "guard": "私掠队",
-    "benefit": "贸易利润+",
-    "max_level": 3,
-    "toll_base": 120,
-    "upgrade_cost_base": 150,
-    "production_base": 90,
-    "defense_base": 26
-   },
-   {
-    "id": "skull_cliff",
-    "name_key": "isle.skull_cliff",
-    "dungeon_id": "camp_cliff",
-    "dungeon_name_key": "dungeon.camp_cliff",
-    "guard": "骷髅兵",
-    "benefit": "战利品",
-    "max_level": 2,
-    "toll_base": 85,
-    "upgrade_cost_base": 115,
-    "production_base": 60,
-    "defense_base": 19
-   },
-   {
-    "id": "volcano",
-    "name_key": "isle.volcano",
-    "dungeon_id": "lava_vault",
-    "dungeon_name_key": "dungeon.lava_vault",
-    "guard": "熔岩守卫",
-    "benefit": "熔金",
-    "max_level": 3,
-    "toll_base": 125,
-    "upgrade_cost_base": 150,
-    "production_base": 95,
-    "defense_base": 28
-   },
-   {
-    "id": "lightship",
-    "name_key": "isle.lightship",
-    "dungeon_id": "board_lightship",
-    "dungeon_name_key": "dungeon.board_lightship",
-    "guard": "灯船船员",
-    "benefit": "骰点+1",
-    "max_level": 2,
-    "toll_base": 75,
-    "upgrade_cost_base": 105,
-    "production_base": 50,
-    "defense_base": 17
-   },
-   {
-    "id": "boss_fort",
-    "name_key": "isle.boss_fort",
-    "dungeon_id": "fort_boss",
-    "dungeon_name_key": "dungeon.fort_boss",
-    "guard": "BOSS 舰队",
-    "benefit": "通关关键",
-    "max_level": 3,
-    "toll_base": 150,
-    "upgrade_cost_base": 180,
-    "production_base": 120,
-    "defense_base": 34
-   }
-  ],
-  "dungeon_attack_coef": 0.5
- },
- "messages": {
-  "pages": {
-   "msgs": 1,
-   "msgl": 1,
-   "msgm": 1,
-   "help": 3,
-   "info": 1
+  "save": {
+    "slot_count": 5,
+    "magic": 20011591,
+    "v2_size": 26
+  },
+  "selection": {
+    "characters": [
+      {
+        "id": "panda",
+        "index": 0
+      },
+      {
+        "id": "tichy",
+        "index": 1
+      },
+      {
+        "id": "kidd",
+        "index": 2
+      },
+      {
+        "id": "drake",
+        "index": 3
+      },
+      {
+        "id": "katharina",
+        "index": 4
+      }
+    ],
+    "maps": [
+      {
+        "id": "m01",
+        "index": 0,
+        "grid_w": 20,
+        "grid_h": 20,
+        "boss_tier": 0,
+        "player_start": [
+          10,
+          10
+        ],
+        "landmarks": [
+          [
+            2,
+            2
+          ],
+          [
+            17,
+            17
+          ]
+        ],
+        "boss_tile": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": "m02",
+        "index": 1,
+        "grid_w": 20,
+        "grid_h": 20,
+        "boss_tier": 1,
+        "player_start": [
+          10,
+          10
+        ],
+        "landmarks": [
+          [
+            2,
+            2
+          ],
+          [
+            17,
+            17
+          ]
+        ],
+        "boss_tile": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": "m03",
+        "index": 2,
+        "grid_w": 15,
+        "grid_h": 15,
+        "boss_tier": 2,
+        "player_start": [
+          7,
+          7
+        ],
+        "landmarks": [
+          [
+            2,
+            2
+          ],
+          [
+            12,
+            12
+          ]
+        ],
+        "boss_tile": [
+          4,
+          4
+        ]
+      }
+    ]
+  },
+  "ui": {
+    "logical_width": 1080,
+    "logical_height": 1920,
+    "glyph_advance": 12,
+    "max_back_steps": 8
   }
- },
- "save": {
-  "slot_count": 5,
-  "magic": 20011591,
-  "v2_size": 26
- },
- "selection": {
-  "characters": [
-   {
-    "id": "panda",
-    "index": 0
-   },
-   {
-    "id": "tichy",
-    "index": 1
-   },
-   {
-    "id": "kidd",
-    "index": 2
-   },
-   {
-    "id": "drake",
-    "index": 3
-   },
-   {
-    "id": "katharina",
-    "index": 4
-   }
-  ],
-  "maps": [
-   {
-    "id": "m01",
-    "index": 0,
-    "grid_w": 20,
-    "grid_h": 20,
-    "boss_tier": 0,
-    "player_start": [
-     10,
-     10
-    ],
-    "landmarks": [
-     [
-      2,
-      2
-     ],
-     [
-      17,
-      17
-     ]
-    ],
-    "boss_tile": [
-     5,
-     5
-    ]
-   },
-   {
-    "id": "m02",
-    "index": 1,
-    "grid_w": 20,
-    "grid_h": 20,
-    "boss_tier": 1,
-    "player_start": [
-     10,
-     10
-    ],
-    "landmarks": [
-     [
-      2,
-      2
-     ],
-     [
-      17,
-      17
-     ]
-    ],
-    "boss_tile": [
-     5,
-     5
-    ]
-   },
-   {
-    "id": "m03",
-    "index": 2,
-    "grid_w": 15,
-    "grid_h": 15,
-    "boss_tier": 2,
-    "player_start": [
-     7,
-     7
-    ],
-    "landmarks": [
-     [
-      2,
-      2
-     ],
-     [
-      12,
-      12
-     ]
-    ],
-    "boss_tile": [
-     4,
-     4
-    ]
-   }
-  ]
- },
- "ui": {
-  "logical_width": 1080,
-  "logical_height": 1920,
-  "glyph_advance": 12,
-  "max_back_steps": 8
- }
 }

@@ -32,7 +32,7 @@ use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{TrackSpace, Turn};
 use ti_core::rules::territory::Ownership;
 
-use crate::game_app::{BattleSnapshot, GameInput, HitData, Scene as LegacyScene};
+use crate::game_app::{BattleSnapshot, GameInput, HitData, Scene as LegacyScene, SiegeSnapshot};
 use crate::menu_shell::MenuShell;
 
 pub mod chrome;
@@ -535,6 +535,24 @@ pub trait MapHost {
     fn confirm_dungeon(&mut self) -> bool {
         false
     }
+
+    /// S33.5 确认攻占（`pending_siege` 在位：切 `Vs` 攻占战报，返回 `true` = 已消费；缺省 `false`）。
+    fn confirm_siege(&mut self) -> bool {
+        false
+    }
+
+    /// S33.5 放弃攻占交过路费（`pending_siege` 在位：`Back` 清待决 + 交钱，返回 `true` = 已消费；缺省 `false`）。
+    fn pay_siege_toll(&mut self) -> bool {
+        false
+    }
+
+    /// S33.5 攻占战报快照（`Vs` 场景时有效；`None` = 非攻占战）。
+    fn siege_snapshot(&self) -> Option<SiegeSnapshot> {
+        None
+    }
+
+    /// S33.5 结算攻占战（`Vs` 场景 `Attack`：一次性确定性 `assault`，写回席位资源 + 领地账本）。
+    fn settle_siege(&mut self) {}
 
     /// 设置 / 清空赛道节点预览选中（默认 no-op）。
     fn set_track_node_sel(&mut self, _v: Option<usize>) {}

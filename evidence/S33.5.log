@@ -1,0 +1,131 @@
+# S33.5 验收证据（task_close.py 自动生成 2026-10-30）
+
+- 任务标题：领地 v2 表现层：玩家攻占 UI（交钱/攻占二选一）+ VS 界面按格类×地图（攻占=船队攻打建筑/副本=登岛/BOSS=炮台/遭遇=对决，自动动效）+ 驻军显示
+- 判据（台账 dod）：改动面=业务规则/规则/数据/表现（见 docs/plan-s33-territory-v2.md 阶段表）；判据=该阶段单测全绿 + 文档对齐 + evidence/S33.5.log + gate 相关项 PASS
+
+## 判据实跑
+
+### `$ cargo test -p ti-app --test app_siege_e2e`
+
+退出码：0
+
+```
+
+running 5 tests
+test confirm_siege_enters_vs_report ... ok
+test landing_other_owned_sets_pending_siege ... ok
+test back_pays_toll_clears_siege ... ok
+test siege_attack_settles_once ... ok
+test siege_strong_attacker_wins ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.29s
+     Running tests/app_siege_e2e.rs (/disk/target/debug/deps/app_siege_e2e-86f15adb54f19ec2)
+```
+
+### `$ cargo test -p ti-app --test app_dungeon_e2e`
+
+退出码：0
+
+```
+
+running 2 tests
+test dungeon_entry_wires_defender_battle ... ok
+test dungeon_win_occupies_isle_cells ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+     Running tests/app_dungeon_e2e.rs (/disk/target/debug/deps/app_dungeon_e2e-a4bc63c71492295c)
+```
+
+### `$ cargo test -p ti-app --test app_territory_turns`
+
+退出码：0
+
+```
+
+running 2 tests
+test ai_turns_run_after_player_spin ... ok
+test ai_landing_settlement_is_deterministic ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+     Running tests/app_territory_turns.rs (/disk/target/debug/deps/app_territory_turns-667bedc021b6fcab)
+```
+
+### `$ cargo test -p ti-core --lib territory_v2::`
+
+退出码：0
+
+```
+
+running 16 tests
+test rules::territory_v2::tests::armed_power_caps_at_manpower ... ok
+test rules::territory_v2::tests::defeat_when_player_bankrupt_ends_game ... ok
+test rules::territory_v2::tests::capture_loss_keeps_ownership ... ok
+test rules::territory_v2::tests::bankrupt_empties_all_territories ... ok
+test rules::territory_v2::tests::capture_wins_takes_both_cells_of_isle ... ok
+test rules::territory_v2::tests::garrison_change_conserves_manpower ... ok
+test rules::territory_v2::tests::feature_tiles_not_capturable ... ok
+test rules::territory_v2::tests::later_arrival_decides_duel_previous ... ok
+test rules::territory_v2::tests::paying_toll_transfers_output_to_owner ... ok
+test rules::territory_v2::tests::siege_win_recaptures_with_level_one ... ok
+test rules::territory_v2::tests::siege_loss_pays_double_toll ... ok
+test rules::territory_v2::tests::territory_not_sellable ... ok
+test rules::territory_v2::tests::victory_when_all_opponents_bankrupt ... ok
+test rules::territory_v2::tests::upgrade_caps_at_isle_max_level ... ok
+test rules::territory_v2::tests::upgrade_raises_output_defense_and_toll ... ok
+test rules::territory_v2::tests::duel_loser_pays_and_loses_crew ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 139 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ python3 scripts/validate_data.py`
+
+退出码：0
+
+```
+validate_data: OK（4 表，strings 188 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）
+```
+
+### `$ python3 scripts/map_pack.py check`
+
+退出码：0
+
+```
+map_pack check: 0 漂移（4 个已装包 vs board.json；默认包 m01 vs 布局数据）
+```
+
+### `$ cargo run -q -p ti-tools --bin doccheck`
+
+退出码：0
+
+```
+doccheck: 149 docs, 38 facts, 134 experiences, 265 task refs, 4 assertions, 0 error(s)
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

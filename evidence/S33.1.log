@@ -1,0 +1,94 @@
+# S33.1 验收证据（task_close.py 自动生成 2026-10-30）
+
+- 任务标题：领地 v2 规则层基础：rules/force.rs（兵力模型：武装=min(人手,武器)、战力=武装×weapon_coef+徒手×barehand_coef、确定性 VS、双方必损 pct）+ rules/events.rs（海事事件：风神保佑/翻车/宝藏沉船/风浪/铁匠/流浪儿/孤岛救援，效果=百分比损耗+绝对增量双字段）+ rules/merchant.rs（武器≤人手一人一把 / 人手≤船容量，金币不足拒绝）
+- 判据（台账 dod）：改动面=业务规则/规则/数据/表现（见 docs/plan-s33-territory-v2.md 阶段表）；判据=该阶段单测全绿 + 文档对齐 + evidence/S33.1.log + gate 相关项 PASS
+
+## 判据实跑
+
+### `$ cargo test -p ti-core --lib force::`
+
+退出码：0
+
+```
+
+running 7 tests
+test rules::force::tests::armed_caps_at_crew ... ok
+test rules::force::tests::attacker_power_wins ... ok
+test rules::force::tests::both_sides_attrition ... ok
+test rules::force::tests::attrition_caps_at_zero ... ok
+test rules::force::tests::defender_wins_on_tie_or_higher ... ok
+test rules::force::tests::deterministic_same_input_same_result ... ok
+test rules::force::tests::power_weights_armed_over_barehand ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 130 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+   Compiling ti-core v0.1.0 (/disk/workspaces/treasureIsl/crates/ti-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.30s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ cargo test -p ti-core --lib events::`
+
+退出码：0
+
+```
+
+running 7 tests
+test rules::events::tests::deterministic_same_event_same_effect ... ok
+test rules::events::tests::shipwreck_losses_are_pct_fields ... ok
+test rules::events::tests::blacksmith_marks_merchant_buy ... ok
+test rules::events::tests::rescue_adds_crew ... ok
+test rules::events::tests::wind_god_extra_roll_when_jump_zero ... ok
+test rules::events::tests::treasure_wreck_grants_gold_and_arms ... ok
+test rules::events::tests::wind_god_jump_when_nonzero ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 130 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ cargo test -p ti-core --lib merchant::`
+
+退出码：0
+
+```
+
+running 7 tests
+test rules::merchant::tests::buy_arms_debits_and_adds_capped_at_crew ... ok
+test rules::merchant::tests::buy_arms_one_per_person_cap ... ok
+test rules::merchant::tests::buy_arms_insufficient_gold ... ok
+test rules::merchant::tests::buy_crew_capped_at_boat_capacity ... ok
+test rules::merchant::tests::buy_crew_insufficient_gold ... ok
+test rules::merchant::tests::zero_price_clamped ... ok
+test rules::merchant::tests::buy_crew_at_capacity_rejected ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 130 filtered out; finished in 0.00s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src/lib.rs (/disk/target/debug/deps/ti_core-efe1848c568055ce)
+```
+
+### `$ cargo run -q -p ti-tools --bin doccheck`
+
+退出码：0
+
+```
+doccheck: 149 docs, 38 facts, 131 experiences, 265 task refs, 4 assertions, 0 error(s)
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

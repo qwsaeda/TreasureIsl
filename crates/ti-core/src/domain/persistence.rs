@@ -47,9 +47,9 @@ fn default_boat_level() -> u8 {
     1
 }
 
-// ------------------------------------------------------- 存档 v4 扩展（S28.2 领地系统）
+// ------------------------------------------------------- 存档 v4/v5 扩展（S28.2/S33.4 领地系统）
 
-/// 席位存档（`docs/business/territory.md` §8：每席位独立金币/位置/建筑/船等级）。
+/// 席位存档（`docs/business/territory.md` §8：每席位独立金币/位置/建筑/船等级 + v5 人手/武器）。
 ///
 /// 类型家 = domain（`rules::saveload::SeatSave` 为再导出；单一事实源 = 本定义）。
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -68,6 +68,12 @@ pub struct SeatSave {
     /// 该席位已建建筑 id 列表（建筑 = 个人成长线，§9）。
     #[serde(default)]
     pub buildings: Vec<String>,
+    /// v5 舰队人手（**不含**驻军；驻军分别在 `TerritorySave.garrisons`，守恒 §4.1）。
+    #[serde(default = "default_v5_crew")]
+    pub crew: u32,
+    /// v5 舰队武器。
+    #[serde(default = "default_v5_arms")]
+    pub arms: u32,
 }
 
 /// 领地存档条目（`map → [格索引 → {owner_seat, level}]`，§8；无主格 = 缺省不写）。
@@ -77,11 +83,24 @@ pub struct TerritorySave {
     pub map: String,
     /// 格索引 → `{owner_seat, level}`（`owner_seat` = 席位下标 `0..4`）。
     pub cells: std::collections::BTreeMap<u32, (u8, u8)>,
+    /// v5 格索引 → 驻军人手（`territory.md` §4.1；无驻军格 = 缺省不写）。
+    #[serde(default)]
+    pub garrisons: std::collections::BTreeMap<u32, u32>,
 }
 
 /// v4 扩展缺省船等级（与 `default_boat_level` 同口径）。
 fn default_boat_level_v3() -> u8 {
     1
+}
+
+/// v5 缺省舰队人手（§11 U4：船 1 级 ≈ 20 水手；v4 存档迁移默认值）。
+fn default_v5_crew() -> u32 {
+    20
+}
+
+/// v5 缺省舰队武器（v4 存档迁移默认值）。
+fn default_v5_arms() -> u32 {
+    5
 }
 
 /// 存档 v4 扩展位（territory.md §8：多席位 + 领地图 + 当前席位；`None` = v3 及更早）。

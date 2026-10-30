@@ -524,6 +524,149 @@ impl SaveSlotV4 {
     }
 }
 
+// ------------------------------------------------------- 存档 v5（S33.4 领地 v2）
+
+/// 存档槽位（v5 = v4 + 席位人手/武器 + 领地驻军；`docs/business/territory.md` §8）。
+///
+/// 迁移口径：v4 → v5 = 席位补默认人手/武器（`balance.manpower.initial_crew/arms`）+ 领地驻军空；
+/// v3 → v4 迁移链保持不变。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SaveSlotV5 {
+    /// 版本号（v5 恒 5；v1..v4 → 迁移补 5）。
+    #[serde(default = "default_version_v5")]
+    pub version: u32,
+    /// 角色 id（主玩家席位角色；席位全量在 `seats`）。
+    pub character: String,
+    /// 地图 id（如 `"m01"`）。
+    pub map: String,
+    /// 退出时所在场景。
+    #[serde(default = "default_scene")]
+    pub scene: String,
+    /// 主玩家所在格（v4 起席位位置走 `seats[].position`；保留 v3 兼容）。
+    #[serde(default)]
+    pub position: GridPos,
+    /// 主玩家金币（v4 起走 `seats[]`；保留 v3 兼容）。
+    #[serde(default)]
+    pub gold: u32,
+    /// 主玩家 HP。
+    #[serde(default)]
+    pub hp: u32,
+    /// 已建建筑 id 列表（v4 起走 `seats[].buildings`；保留 v3 兼容）。
+    #[serde(default)]
+    pub buildings: Vec<String>,
+    /// 持有商品（id + 数量）。
+    #[serde(default)]
+    pub goods: Vec<GoodsSave>,
+    /// RNG 当前种子。
+    #[serde(default = "default_rng_seed")]
+    pub rng_seed: u32,
+    /// RNG 已消费 `next_u64` 次数。
+    #[serde(default)]
+    pub rng_steps: u128,
+    /// 银行存金。
+    #[serde(default)]
+    pub bank: u32,
+    /// 已解锁地图 id 列表。
+    #[serde(default)]
+    pub unlocked_maps: Vec<String>,
+    /// 船等级（1..=4；缺省 1）。
+    #[serde(default = "default_boat_level_v3")]
+    pub boat_level: u8,
+    /// 席位全量（缺省 = 空；读档按 §8 迁移口径补单席位 + 4 AI）。
+    #[serde(default)]
+    pub seats: Vec<SeatSave>,
+    /// 领地图（缺省 = 空 = 全图无主）。
+    #[serde(default)]
+    pub territories: Vec<TerritorySave>,
+    /// 当前轮到哪个席位（热座交接用；缺省 0）。
+    #[serde(default)]
+    pub current_seat: u8,
+}
+
+/// v5 缺省版本号。
+fn default_version_v5() -> u32 {
+    5
+}
+
+impl SaveSlotV5 {
+    /// v4 → v5 迁移（**纯函数、幂等**；§8 缺省口径 = 席位补默认人手/武器 + 领地驻军空；
+    /// v4 席位 `crew/arms` 为 0（serde default）时补 `balance.manpower.initial_crew/arms`）。
+    #[must_use]
+    pub fn migrate_v4_to_v5(v4: &SaveSlotV4) -> Self {
+        let default_crew = crate::data::balance().map_or(20, |b| b.manpower.initial_crew);
+        let default_arms = crate::data::balance().map_or(5, |b| b.manpower.initial_arms);
+        let seats = v4
+            .seats
+            .iter()
+            .cloned()
+            .map(|mut s| {
+                if s.crew == 0 {
+                    s.crew = default_crew;
+                }
+                if s.arms == 0 {
+                    s.arms = default_arms;
+                }
+                s
+            })
+            .collect();
+        let territories = v4
+            .territories
+            .iter()
+            .cloned()
+            .map(|mut t| {
+                t.garrisons.clear();
+                t
+            })
+            .collect();
+        Self {
+            version: 5,
+            character: v4.character.clone(),
+            map: v4.map.clone(),
+            scene: v4.scene.clone(),
+            position: v4.position,
+            gold: v4.gold,
+            hp: v4.hp,
+            buildings: v4.buildings.clone(),
+            goods: v4.goods.clone(),
+            rng_seed: v4.rng_seed,
+            rng_steps: v4.rng_steps,
+            bank: v4.bank,
+            unlocked_maps: v4.unlocked_maps.clone(),
+            boat_level: v4.boat_level,
+            seats,
+            territories,
+            current_seat: v4.current_seat,
+        }
+    }
+
+    /// 自迁移（v1..v4 → v5；已是 v5 ⇒ 原样返回 ⇒ 幂等）。
+    #[must_use]
+    pub fn migrate(mut self) -> Self {
+        if self.version < 5 {
+            self.version = 5;
+        }
+        self
+    }
+
+    /// 是否已迁移到 v5（`version == 5`）。
+    #[must_use]
+    pub fn is_v5(&self) -> bool {
+        self.version == 5
+    }
+
+    /// 序列化存档为 JSON 字符串（失败返回空串，不 panic）。
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
+    /// 从 JSON 解析存档槽（缺字段走 `#[serde(default)]`；解析失败 → `None`，不 panic）。
+    #[must_use]
+    pub fn from_json(json: &str) -> Option<Self> {
+        serde_json::from_str(json).ok()
+    }
+}
+
 /// 存档管理器：持有槽位列表 + JSON 序列化/反序列化 + 迁移 + RNG 续流。
 ///
 /// 槽位数走 `balance.save.slot_count`（`from_balance` 注入，`docs/business/persistence.md`）；
