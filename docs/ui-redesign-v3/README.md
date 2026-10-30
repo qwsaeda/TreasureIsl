@@ -13,6 +13,11 @@ v2 (`10_ui_redesign.md`) 是配色/字号/图标局部精修，**v3 是版面结
 | 4 | `04_index_impl.md` | index 主菜单落地实现（scenes.json + chrome.rs 改动） |
 | 5 | `05_vs_impl.md` | vs 战斗落地实现（battle_arena 竞技区装饰层 + 双写键 + 像素证据 + v3.4 后续波） |
 | 6 | `06_main_map_impl.md` | main_map 全量落地（board_fit G 依赖棋盘拟合 + HUD 边角化 + 底部命令盘 + 重锚 e2e + v3.5 收口） |
+| 7 | `07_v3_5_pass.md` | v3.5 视觉数据化（地形/暖色板/画布/实体/HUD） |
+| 8 | `08_main_map_v4_spec.md` | main_map 重设计 v4「羊皮海图桌面」版面规格 |
+| 9 | `09_index_compass_spec.md` | index 重设计「罗盘环标题页」版面规格 |
+| 10 | `10_main_map_v5_spec.md` | main_map 重设计 v5「中央据点岛 + 环形格子环」版面规格 |
+| 11 | `11_vs_spec.md` | **VS 对战场景重设计 v6「道具 + 现代化回合制」**（S27.7：动作 攻击/道具/防御 + 4 道具 + 5 套候选版式选型） |
 | — | `../../assets/data/ui_schema/scene_manifest_v3.schema.json` | 场景清单 JSON Schema（DSL 的机读形态） |
 
 ## 与既有规范的关系

@@ -746,14 +746,21 @@ fn render_v5_ring(
     }
 
     // 2) 31 张卡环（领地格 = isle 整幅卡面；功能格 = 羊皮卡底 + node_ 牌）
-    for (index, space) in spaces.iter().enumerate() {
-        draw_ring_card(host, space, index, count, layout, &theme, brass);
+    // 绘制序 = **按卡心 y 升序**（上方卡先画、下方卡后画）⇒ 相邻卡重叠时呈「牌叠」层次，
+    // 而非按 index 顺序的杂乱穿插（概念稿变体 B 的环形牌语言）。
+    let mut order: Vec<usize> = (0..count).collect();
+    order.sort_by_key(|i| chrome::ring_card_center(*i, count, layout).1);
+    for index in order {
+        draw_ring_card(host, &spaces[index], index, count, layout, &theme, brass);
     }
 
     // 3) 玩家船（落在 board_index 卡；缺资产 = 代码 flag 回退；船边长随卡宽缩放，非硬编码）
+    // S27.5 整改：83% → 55% 卡宽（原 79px 盖住 96px 整卡 ⇒ 玩家渲染「盖卡」问题；改作船标不遮岛面）。
+    // S27.5 二轮：船**不随卡旋转**（船是「谁在这格」的标记，正立更易认）+ 卡内侧挂**岛名牌**
+    // （未旋转水平文字；卡本身径向旋转 90/180° 时文字仍可读）。
     let idx = host.board_index().min(count - 1);
     let (cx, cy) = chrome::ring_card_center(idx, count, layout);
-    let ship_edge: i32 = chrome::ring_geom(layout).w * 83 / 100;
+    let ship_edge: i32 = chrome::ring_geom(layout).w * 55 / 100;
     let ship_asset = chrome::boat_asset(host.boat_level());
     if chrome::asset_present(ship_asset) {
         host.blit_image(ship_asset, cx - ship_edge / 2, cy - ship_edge / 2, ship_edge, ship_edge);
@@ -769,6 +776,7 @@ fn render_v5_ring(
     }
     let lbl = i18n::sget("scene.main_map.player_label");
     entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
+    draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
 
     // 4) 选中高亮（track_node_sel = 预览选中卡；金环 3px 外扩）
     if let Some(sel) = host.track_node_sel() {
@@ -819,7 +827,12 @@ fn render_spin_die(host: &mut dyn SceneHost, layout: &SceneLayout) {
     host.blit_image(chrome::DICE_ASSET, dx, dy, edge, edge);
 }
 
-/// S27.4 v5 单卡绘制：领地格 = `isle_<id>.png` 整幅卡面；功能格 / 缺图 = 羊皮卡底 + `node_` 牌。
+/// S27.4 v5 单卡绘制：领地格 = `isle_<id>.png` 整幅卡面（**径向旋转**）；功能格 = 旋转卡底板
+/// （`card_panel` 白蒙版 × `panel_wood`）+ 旋转 `node_` 铜牌。
+///
+/// S27.5 二轮（概念稿变体 B 对齐）：卡面按方位角旋转（[`chrome::ring_card_rotation_mdeg`]），
+/// 卡底缘叠**归属色带**（`card_panel` 蒙版 × `isle_*` 令牌，随卡旋转）——色带用蒙版 blit 而非
+/// `fill_rect`，因为矩形填充不支持旋转。
 fn draw_ring_card(
     host: &mut dyn SceneHost,
     space: &TrackSpace,
@@ -830,40 +843,131 @@ fn draw_ring_card(
     brass: u16,
 ) {
     let (x, y, w, h) = chrome::ring_card_rect(index, count, layout);
+    let rot = chrome::ring_card_rotation_mdeg(index, count);
     if space.kind == SpaceKind::Territory {
         if let Some(isle) = &space.isle {
             let path = chrome::isle_card_path(isle);
             if chrome::asset_present(&path) {
-                host.blit_image(&path, x, y, w, h);
+                host.blit_image_rot(&path, x, y, w, h, 0xFFFF, rot);
+                // 归属色带（卡面下缘素羊皮留白区；高 = 卡高 1/4，左右各内缩 8%）。
+                // 色带心 = **卡心沿卡的局部 +y 方向平移**（局部偏移须随卡旋转到屏幕坐标，
+                // 否则旋转卡上的色带会「漂」到卡外 —— 按 (x,y,w,h) 直算矩形是错的）。
+                let (band_screen_x, band_screen_y) =
+                    chrome::rotate_local_offset(x + w / 2, y + h / 2, 0, h * 225 / 1000, rot);
+                let bw = w * 84 / 100;
+                let bh = h * 25 / 100;
+                let band = theme.by_name(&isle_token_color(isle)).unwrap_or(theme.parch_light);
+                if chrome::asset_present(chrome::CARD_PANEL_ASSET) {
+                    host.blit_image_rot(
+                        chrome::CARD_PANEL_ASSET,
+                        band_screen_x - bw / 2,
+                        band_screen_y - bh / 2,
+                        bw,
+                        bh,
+                        band,
+                        rot,
+                    );
+                }
                 return;
             }
         }
     }
-    // 功能格 / 领地缺图回退：羊皮卡底 + node_ 黄铜牌（可见框 ≈ 87% 卡宽，随卡宽缩放）
-    draw_feature_card_base(host, x, y, w, h, theme, brass);
+    // 功能格 / 领地缺图回退：旋转卡底板（黄铜描边层 = 外扩 4px 同蒙版 × brass）
+    draw_rot_card_base(host, x, y, w, h, rot, theme, brass);
     let def = chrome::node_asset(space.kind);
     let (cx, cy) = chrome::ring_card_center(index, count, layout);
-    let medallion_edge: i32 = chrome::ring_geom(layout).w * 87 / 100;
+    let medallion_edge: i32 = w * 62 / 100;
     let (mx, my, mw, mh) = chrome::asset_dest_rect(cx, cy, medallion_edge, def.visible_px);
-    host.blit_image(def.path, mx, my, mw, mh);
+    if chrome::asset_present(def.path) {
+        host.blit_image_rot(def.path, mx, my, mw, mh, 0xFFFF, rot);
+    }
 }
 
-/// S27.4 v5 功能卡羊皮卡底（`panel_warm` 暖面板 + `brass` 2px 边）；node_ 牌再叠其上。
-fn draw_feature_card_base(
+/// S27.5：旋转卡底板（`card_panel` 白蒙版三层：黄铜外框 / 暖棕卡面 / 顶部高光内描边）。
+#[allow(clippy::too_many_arguments)]
+fn draw_rot_card_base(
     host: &mut dyn SceneHost,
     x: i32,
     y: i32,
-    width: i32,
-    height: i32,
+    w: i32,
+    h: i32,
+    rot_mdeg: i32,
     theme: &ti_render::theme::Theme,
     brass: u16,
 ) {
-    let base = theme.by_name("panel_warm").unwrap_or(chrome::COLOR_PANEL_WARM);
-    host.fill_rect(x, y, width, height, base);
-    host.fill_rect(x, y, width, 2, brass);
-    host.fill_rect(x, y + height - 2, width, 2, brass);
-    host.fill_rect(x, y, 2, height, brass);
-    host.fill_rect(x + width - 2, y, 2, height, brass);
+    if !chrome::asset_present(chrome::CARD_PANEL_ASSET) {
+        return;
+    }
+    // 外扩 6px 的黄铜底 ⇒ 只露出 3px 边框（蒙版自身圆角让边框自然收角）
+    host.blit_image_rot(chrome::CARD_PANEL_ASSET, x - 6, y - 6, w + 12, h + 12, brass, rot_mdeg);
+    let wood = theme.by_name("panel_wood").unwrap_or(chrome::COLOR_PANEL_WARM);
+    host.blit_image_rot(chrome::CARD_PANEL_ASSET, x, y, w, h, wood, rot_mdeg);
+}
+
+/// S27.5：当前格**岛名牌**（未旋转水平文字，挂在卡内侧；卡旋转不影响可读性）。
+///
+/// 用户 2026-10-29「各类岛屿都不知道」⇒ 玩家所在格必须有名字；牌心 = 卡心沿环心方向内移
+/// `卡高 × 0.85 + 24`，宽按字自适应（最小 160），`brass_dark` 底 + 黄铜描边 + 金字。
+#[allow(clippy::too_many_arguments)]
+fn draw_card_name_plate(
+    host: &mut dyn SceneHost,
+    space: &TrackSpace,
+    plate_center_x: i32,
+    plate_center_y: i32,
+    layout: &SceneLayout,
+    theme: &ti_render::theme::Theme,
+    brass: u16,
+    text_color: u16,
+) {
+    let name = match space.isle.as_deref() {
+        Some(isle) => chrome::isle_name(isle),
+        None => chrome::space_name(space.kind),
+    };
+    let tw = host.shell().hint_text_width_px(&name);
+    let panel_w = (tw + 48).max(160);
+    let panel_h = 56;
+    let g = chrome::ring_geom(layout);
+    // 卡心 → 环心方向的单位向量（卡在环外，内移即朝环心）
+    let dx = f64::from(g.cx - plate_center_x);
+    let dy = f64::from(g.cy - plate_center_y);
+    let len = (dx * dx + dy * dy).sqrt().max(1.0);
+    // 牌贴卡内缘（卡半高 + 8 缝 + 牌半高）⇒ 视觉上「挂」在卡上，不与卡分离
+    let offset = f64::from(g.h) * 0.5 + 8.0 + f64::from(panel_h) * 0.5;
+    let px = plate_center_x + round_to_i32(dx / len * offset) - panel_w / 2;
+    let py = plate_center_y + round_to_i32(dy / len * offset) - panel_h / 2;
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    host.fill_rect(px, py, panel_w, panel_h, panel);
+    host.fill_rect(px, py, panel_w, 2, brass);
+    host.fill_rect(px, py + panel_h - 2, panel_w, 2, brass);
+    host.fill_rect(px, py, 2, panel_h, brass);
+    host.fill_rect(px + panel_w - 2, py, 2, panel_h, brass);
+    host.draw_hint_text(&name, px + 24, py + (panel_h - 28) / 2, text_color);
+}
+
+/// f64 → i32（四舍五入；环几何换算用，越界钳制后转换）。
+#[allow(clippy::cast_possible_truncation)]
+fn round_to_i32(value: f64) -> i32 {
+    value.round().clamp(-21_474_836.0, 21_474_836.0) as i32
+}
+
+/// S27.5：`isle_id` → 归属色带色令牌（prototype 序 = `balance.territory.isle_tokens` 序，
+/// `S27.2` 资产按同名生成；S28 归属覆盖后此令牌仍为「无主默认」卡底/色带色）。
+#[allow(clippy::match_same_arms)]
+fn isle_token_color(isle: &str) -> String {
+    let key = match isle {
+        "harbour" => "isle_coral",
+        "lighthouse" => "isle_sand",
+        "wreck" => "isle_gold",
+        "pirate_lair" => "isle_dark",
+        "shipyard" => "isle_teal",
+        "trading_post" => "isle_olive",
+        "skull_cliff" => "isle_bone",
+        "volcano" => "isle_ember",
+        "lightship" => "isle_mist",
+        "boss_fort" => "isle_black",
+        _ => "isle_sand",
+    };
+    key.to_owned()
 }
 
 /// 落格提示签条（`brass_dark` 底板 + 黄铜边框，S27.4 v5 位置）：宽按字自适应（最小 392）；

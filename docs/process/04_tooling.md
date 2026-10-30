@@ -54,7 +54,10 @@
 
 | `scripts/audit_code.py` | 代码结构审计（`docs/style.md` §5.12 的执行手段）：文件规模（>900 行）/ 函数长度（>140 行）/ 重复模式（同一骨架 ≥N 次） | `--check` 只读检查、违规 ⇒ 非 0 退出码；`--report` 人读报告（永远 0 退出）；`--update-baseline` 写棘轮基线；阈值与基线豁免 = `scripts/code_budget.json`（每条豁免带整改任务号） |
 | `scripts/check_code_standards.py` | 代码标准 4 项机器检查（`16_code_standards.md` 执行矩阵：CS-1 资产路径单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数禁单字母 / CS-4 场景层窄接缝禁构造会话；规模维度归 `audit_code.py`，不重复） | `--check` 门禁判定（违例超基线 ⇒ 非 0）；`--report` 明细（恒 0）；`--update-baseline` 写豁免（棘轮只收紧）；基线 = `scripts/process_ratchet.json::code_standards`（每条带 `reason`+`fix_in`） |
-
+| `scripts/wasm_browser_e2e.py` | Bevy wasm 浏览器端 e2e（Playwright 无头 Chromium 3 层：L1 实例化 / L2 渲染 / L3 交互，与 native `e2e_playthrough` 互补） | `--check` 只读打印判据（0 新产物）；默认断言 3 层全绿，失败非 0；需 `serve` 静态服务在跑 |
+| `scripts/web_playtest.cjs` | 浏览器真运行时试玩（S16.1：Node + Playwright CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言） | `node scripts/web_playtest.cjs [--url ...]`；失败非 0；需 `serve` 在跑 + node playwright |
+| `scripts/playtest_loop.py` | 试玩闭环 4 报告聚合（S16.2：fuzz/full_run/render_invariants/web_playtest + 归因三分类清单；`08_playtest_loop.md` 执行面） | `--check` 只读打印判据（0 新产物）；全 0 失败 = 0 退出；任一失败非 0；web 缺 serve/node = SKIP |
+| `scripts/publish_web.ps1` | 一键发布（S16.3：gate 全绿前置 + build_wasm + 本地静态断言 + release.md 发布历史 + gh-pages 线上复跑 web_playtest；线上不可达 = 降级登记不静默绕过） | `-Check` 只读前置体检；全链路失败非 0 |
 > **gate 项数**（2026-10 扩展，随对抗审计固化）：第 9 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
 > 第 10 项「数据表门禁」= `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（严格 0 命中）。
 > 历史时点 gate 为 8 项（plan-s0-s2/s3/s4 文档保留「当时 8 项」注，勿直接改写）。

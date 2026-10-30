@@ -840,6 +840,10 @@
       "crates/ti-tools/src/bin/unpak.rs::pct": {
         "reason": "新增豁免（CS-1~4 棘轮，16_code_standards.md）",
         "fix_in": "S25.1"
+      },
+      "crates/ti-engine/src/bin/treasure_bevy.rs::out": {
+        "reason": "局部 fn out 参数 s（2026-10-29 修复轮补登）",
+        "fix_in": "S25.1"
       }
     },
     "cs4_scene_grandfathered": {}

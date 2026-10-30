@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（29 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e）
+﻿# gate.ps1 — 统一门禁（31 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop）
 # 用法：
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1            # 全量（收口用；语义不变）
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 -Touch     # 开发期：跳过纯构建/grep 项
@@ -16,7 +16,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
 # Linux 兼容（docs/migration_linux.md §3）：非 Windows 无 `python`（只有 python3）。
-# 29 项里所有脚本项经 `& $py` 调用；Windows 上 $py = python，行为不变。
+# 31 项里所有脚本项经 `& $py` 调用；Windows 上 $py = python，行为不变。
 $py = 'python'
 if ($PSVersionTable.OS -notlike '*Windows*') { $py = 'python3' }
 # Linux 迁移口径：cargo 在 ~/.cargo/bin（不在默认 PATH）→ 绝对路径；Windows 走 PATH 的 cargo。
@@ -71,7 +71,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (29 items) ==="
+Write-Host "=== gate: TreasureIsl (31 items) ==="
 
 # 1) format
 & $cargoCmd fmt --all -- --check 2>&1 | Out-Null
@@ -321,7 +321,7 @@ $e2eOut = & $py scripts/wasm_browser_e2e.py --check 2>&1
 $e2eOut | ForEach-Object { Write-Host "        $_" }
 $e2eExit = $LASTEXITCODE
 # 无 serve / 无 Playwright / 无 Pillow ⇒ 记名 SKIP（硬件/环境不可验，同 GPU bevy-cpu-parity 口径）；
-# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，29 项）。
+# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，31 项）。
 $e2eEnvMissing = $e2eOut -match "FAIL  本机无 playwright|ModuleNotFoundError"
 if (-not $e2eEnvMissing) {
     Report ($e2eExit -eq 0) 'wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)'
@@ -329,6 +329,29 @@ if (-not $e2eEnvMissing) {
     Write-Host "        SKIP: 本机无 Playwright（pip install playwright pillow）"
     Skip 'wasm-browser-e2e' '本机无 Playwright 环境（pip install playwright pillow）'
 }
+
+# 23) 浏览器真运行时试玩（S16.1 web_playtest：CDP 按键驱动 菜单→选人→选图→主地图，
+#     console 致命错误=0 + 截图墨点>阈值 + 场景切换帧有变化；Node + playwright 可复用
+#     S31.3 同款 chromium 缓存；无 node/playwright/serve ⇒ 记名 SKIP，有前置且失败 ⇒ FAIL）。
+$npOut = & node scripts/web_playtest.cjs --url http://127.0.0.1:8080/ 2>&1
+$npOut | ForEach-Object { Write-Host "        $_" }
+$npExit = $LASTEXITCODE
+$npEnvMissing = $npOut -match "playwright 不可用|Cannot find module 'playwright'|ECONNREFUSED"
+if (-not $npEnvMissing) {
+    Report ($npExit -eq 0) 'browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言)'
+} else {
+    Write-Host "        SKIP: 本机无 Node playwright 或 serve 未跑"
+    Skip 'browser-playtest' '本机无 Node playwright / serve 未跑（npm i playwright + cargo run -p ti-tools --bin serve --dir web）'
+}
+
+# 24) 试玩闭环 loop（S16.2 playtest-loop：4 份运行时报告聚合
+#     fuzz_playtest / full_run / render_invariants / web_playtest；docs/process/08_playtest_loop.md 单一事实源）：
+#     4 报告全 0 失败 = 本试戏轮无新缺陷；停机 = 连续 3 轮收敛（evidence/S16.2.log 记录 + 主线程复核，EXP-038/058）。
+#     web 报告缺 serve/node/playwright = 记名 SKIP（同 GPU 口径）；native 3 报告任一失败 ⇒ FAIL。
+$plOut = & $py scripts/playtest_loop.py --check 2>&1
+$plOut | ForEach-Object { Write-Host "        $_" }
+$plExit = $LASTEXITCODE
+Report ($plExit -eq 0) 'playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

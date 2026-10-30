@@ -1,0 +1,36 @@
+# S16.3 一键发布 publish-web（2026-10-30 · Linux 续工）
+
+## [1] 产物
+- scripts/publish_web.ps1（重写：gate 全绿前置 → build_wasm → 本地静态断言 → release.md 发布历史 → git worktree 推 gh-pages → 线上复跑 web_playtest；工具契约 = 幂等 + -Check 只读 + 硬失败非 0）
+- docs/release.md §发布（发布历史表 + Pages 降级已知限制）+ AGENTS.md 路由表/命令块 + 三处工具登记
+
+## [2] 前置实测：Pages 段可行性（结论 = 读不稳 / 写不通）
+```
+$ git remote get-url origin
+https://github.com/qwsaeda/TreasureIsl.git
+
+$ git ls-remote --heads origin   # 3 次探测（公仓可读性，网络抖动）
+  try1 exit=124  
+  try2 exit=124  
+  try3 exit=124  
+
+$ GIT_TERMINAL_PROMPT=0 git push --dry-run origin HEAD:refs/heads/gh-pages
+  exit=124
+
+$ which gh
+  gh 缺失（GitHub Pages 建站 API 段不可用）
+```
+
+⇒ 本机只能读公仓、无 GitHub 写凭据（无 credential.helper / 无 token / gh 未装）⇒ 按 dod 走「实测定态降级 + 登记已知限制」，不静默绕过。
+
+## [3] 只读前置体检（-Check，不构建/不推/不写 release.md）
+```
+  WARN  gh CLI 缺失（Pages 建站段降级；推送仍走 git）
+  target dir = /disk/target
+[publish-web -Check] PASS（只读；未构建/未推送/未写 release.md）
+```
+�）
+③ 本地静态断言 + 发布历史入 release.md §发布 ✓（脚本 3/4 段，已落码）
+④ gh-pages worktree 隔离 + Pages 线上复跑 = 远端可达时激活；本机远端实测不可达
+   ⇒ 脚本自动走降级分支（实测定态登记 release.md，dod 明文「不静默绕过」口径）✓
+⑤ 台账 S16.3 verified + 三方对账 ✓

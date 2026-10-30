@@ -21,7 +21,7 @@
 //! `Enemy`（兜底，同回合判 `Defeat`，与胜负判定表一致）。
 
 use crate::data::{self, CombatCfg, DamageCfg};
-use crate::domain::combat::{Side, Unit};
+use crate::domain::combat::{CombatAction, ItemEffect, Side, Unit};
 use crate::rules::boat::BoatSession;
 use crate::rules::rng::GameRng;
 
@@ -61,11 +61,18 @@ pub struct BattleSession {
     cfg: CombatCfg,
     rng: GameRng,
     player_hp: u32,
+    player_hp_max: u32,
     player_atk: u32,
     enemy_hp: u32,
     enemy_atk: u32,
     round: u32,
     outcome: Option<Side>,
+    /// 剩余生效回合数（朗姆酒增益，S27.7；`0` = 无增益）。
+    atk_buff_rounds: u32,
+    /// 增益百分比（`50` = ×1.5；`atk_buff_rounds == 0` 时不生效）。
+    atk_buff_pct: u32,
+    /// 敌方下一次反击落空（烟雾弹，S27.7；消耗一次即清）。
+    enemy_staggered: bool,
 }
 
 /// 从 `balance.combat` 读战斗参数（数值单一事实源；加载失败时**硬错误**，
@@ -142,11 +149,15 @@ impl BattleSession {
             cfg,
             rng: GameRng::new(seed),
             player_hp: player.hp,
+            player_hp_max: player.hp,
             player_atk: player.atk,
             enemy_hp,
             enemy_atk,
             round,
             outcome,
+            atk_buff_rounds: 0,
+            atk_buff_pct: 0,
+            enemy_staggered: false,
         }
     }
 
@@ -159,11 +170,15 @@ impl BattleSession {
             cfg,
             rng: GameRng::new(seed),
             player_hp: player.hp,
+            player_hp_max: player.hp,
             player_atk: player.atk,
             enemy_hp: enemy.hp,
             enemy_atk: enemy.atk,
             round,
             outcome,
+            atk_buff_rounds: 0,
+            atk_buff_pct: 0,
+            enemy_staggered: false,
         }
     }
 
@@ -186,6 +201,24 @@ impl BattleSession {
         self.enemy_hp
     }
 
+    /// 当前玩家 HP（只读；S27.7 血量回复后调用方需要读回）。
+    #[must_use]
+    pub fn player_hp(&self) -> u32 {
+        self.player_hp
+    }
+
+    /// 玩家初始 HP（回复上限；`S27.7` `heal_pct` 的分母）。
+    #[must_use]
+    pub fn player_hp_max(&self) -> u32 {
+        self.player_hp_max
+    }
+
+    /// 剩余增益回合数（`0` = 无增益；测试与 HUD 用）。
+    #[must_use]
+    pub fn atk_buff_rounds(&self) -> u32 {
+        self.atk_buff_rounds
+    }
+
     /// 当前回合数（只读）。
     #[must_use]
     pub fn round(&self) -> u32 {
@@ -198,56 +231,116 @@ impl BattleSession {
         self.outcome
     }
 
-    /// 单步回合（`docs/business/combat.md` 回合流程，参数全走 `cfg` + `rng`，确定性）。
+    /// 单步回合（默认动作 = 攻击；等价于 `step_with(CombatAction::Attack)`）。
     ///
-    /// 按 `cfg.player_first` 定顺序（默认 `true`）：
-    /// - `true`：先结算玩家对 BOSS 伤害，`boss_hp==0` → `Player` 胜（不再反击）；否则 BOSS 反击结算玩家；
-    /// - `false`：先结算 BOSS 对玩家伤害，`player_hp==0` → `Enemy` 胜（不再反击）；否则玩家结算 BOSS。
-    ///
-    /// 兜底规则：`player_hp==0` 判 `Enemy` 胜；`max_rounds` 仍平局 → `Enemy`（与胜负判定表一致）。
-    /// 已结束的会话 → 返回当前 HP + 已定结果，不再推进。
+    /// 保留旧 API 语义：`docs/business/combat.md` 回合流程，参数全走 `cfg` + `rng`，确定性。
     #[must_use]
     pub fn step(&mut self) -> (u32, u32, Option<Side>) {
+        self.step_with(CombatAction::Attack)
+    }
+
+    /// 单步回合（S27.7：动作 = 攻击 / 防御 / 道具，`docs/business/combat.md` §战斗动作）。
+    ///
+    /// 结算顺序（两种先手分支同构）：
+    /// 1. 按 `cfg.player_first` 决定先结算谁；
+    /// 2. 玩家动作（攻击 / 防御 / 道具）→ 敌 HP 归零即 `Player` 胜，不再反击；
+    /// 3. 敌方反击（`Stagger` 消耗 1 次落空；`Defend` 按 `defend_reduction_pct` 减伤）
+    ///    → 玩家 HP 归零即 `Enemy` 胜；
+    /// 4. 回合末增益计数 −1（使用道具当回合不计）。
+    ///
+    /// 确定性：道具结算**不消耗随机数**（`GameRng` 状态不变），同 seed + 同动作序列 ⇒ 同轨迹。
+    /// 已结束的会话 → 返回当前 HP + 已定结果，不再推进。
+    #[must_use]
+    pub fn step_with(&mut self, action: CombatAction) -> (u32, u32, Option<Side>) {
         if let Some(w) = self.outcome {
             return (self.player_hp, self.enemy_hp, Some(w));
         }
         self.round += 1;
-        if self.cfg.player_first {
-            // 玩家先手：结算对 BOSS 伤害
-            let pdmg = deal_damage(self.player_atk, &self.cfg.damage, &mut self.rng);
-            self.enemy_hp = self.enemy_hp.saturating_sub(pdmg);
+        let defending = matches!(action, CombatAction::Defend);
+        let buffed_now = if self.cfg.player_first {
+            let applied = self.apply_player_action(action);
             if self.enemy_hp == 0 {
                 self.outcome = Some(Side::Player);
                 return (self.player_hp, self.enemy_hp, self.outcome);
             }
-            // BOSS 反击
-            let edmg = deal_damage(self.enemy_atk, &self.cfg.damage, &mut self.rng);
-            self.player_hp = self.player_hp.saturating_sub(edmg);
+            self.enemy_strike(defending);
             if self.player_hp == 0 {
                 self.outcome = Some(Side::Enemy);
-            } else if self.round >= self.cfg.max_rounds {
-                // 兜底：超回合上限仍未分胜负 → `Enemy`（`docs/business/combat.md` 胜负判定表）
-                self.outcome = Some(Side::Enemy);
             }
+            applied
         } else {
-            // BOSS 先手：结算对玩家伤害
-            let edmg = deal_damage(self.enemy_atk, &self.cfg.damage, &mut self.rng);
-            self.player_hp = self.player_hp.saturating_sub(edmg);
+            self.enemy_strike(defending);
             if self.player_hp == 0 {
                 self.outcome = Some(Side::Enemy);
                 return (self.player_hp, self.enemy_hp, self.outcome);
             }
-            // 玩家反击
-            let pdmg = deal_damage(self.player_atk, &self.cfg.damage, &mut self.rng);
-            self.enemy_hp = self.enemy_hp.saturating_sub(pdmg);
+            let applied = self.apply_player_action(action);
             if self.enemy_hp == 0 {
                 self.outcome = Some(Side::Player);
-            } else if self.round >= self.cfg.max_rounds {
-                // 兜底：超回合上限仍未分胜负 → `Enemy`（`docs/business/combat.md` 胜负判定表）
-                self.outcome = Some(Side::Enemy);
             }
+            applied
+        };
+        if self.outcome.is_none() && self.round >= self.cfg.max_rounds {
+            // 兜底：超回合上限仍未分胜负 → `Enemy`（`docs/business/combat.md` 胜负判定表）
+            self.outcome = Some(Side::Enemy);
+        }
+        // 回合末增益时效（使用当回合不计；`rounds` = 剩余生效攻击次数）
+        if !buffed_now && self.atk_buff_rounds > 0 {
+            self.atk_buff_rounds -= 1;
         }
         (self.player_hp, self.enemy_hp, self.outcome)
+    }
+
+    /// 玩家动作结算（返回「本回合是否是增益道具」，供回合末时效判定）。
+    fn apply_player_action(&mut self, action: CombatAction) -> bool {
+        match action {
+            CombatAction::Attack => {
+                let atk = self.buffed_atk();
+                let pdmg = deal_damage(atk, &self.cfg.damage, &mut self.rng);
+                self.enemy_hp = self.enemy_hp.saturating_sub(pdmg);
+            }
+            CombatAction::Defend => {}
+            CombatAction::Item(effect) => match effect {
+                ItemEffect::Damage(v) => {
+                    // 固定伤害：不吃 atk、不吃随机（不推进 `GameRng`）
+                    self.enemy_hp = self.enemy_hp.saturating_sub(v);
+                }
+                ItemEffect::HealPct(pct) => {
+                    let heal = self.player_hp_max.saturating_mul(pct.min(100)) / 100;
+                    self.player_hp = self.player_hp.saturating_add(heal).min(self.player_hp_max);
+                }
+                ItemEffect::AtkBuff { pct, rounds } => {
+                    self.atk_buff_pct = pct;
+                    self.atk_buff_rounds = rounds;
+                    return true;
+                }
+                ItemEffect::Stagger => self.enemy_staggered = true,
+            },
+        }
+        false
+    }
+
+    /// 敌方反击（`Stagger` 落空 / `Defend` 减伤；确定性走 `GameRng`）。
+    fn enemy_strike(&mut self, defending: bool) {
+        if self.enemy_staggered {
+            // 烟雾弹：本次反击落空，消耗 1 次（不消耗随机数）
+            self.enemy_staggered = false;
+            return;
+        }
+        let mut edmg = deal_damage(self.enemy_atk, &self.cfg.damage, &mut self.rng);
+        if defending {
+            let keep = 100u32.saturating_sub(self.cfg.defend_reduction_pct.min(100));
+            edmg = edmg.saturating_mul(keep) / 100;
+        }
+        self.player_hp = self.player_hp.saturating_sub(edmg);
+    }
+
+    /// 增益后的 atk（无增益 = 原值；`pct` 按百分比向上取整到整数伤害由伤害模型统一处理）。
+    fn buffed_atk(&self) -> u32 {
+        if self.atk_buff_rounds == 0 || self.atk_buff_pct == 0 {
+            return self.player_atk;
+        }
+        self.player_atk.saturating_mul(100u32.saturating_add(self.atk_buff_pct)) / 100
     }
 
     /// 整场战斗（从当前状态跑完全部回合，返回 `(每回合 HP 轨迹, 胜方, 回合数)`）。

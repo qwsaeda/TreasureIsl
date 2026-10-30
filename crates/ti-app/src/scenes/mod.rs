@@ -45,6 +45,7 @@ pub mod saveload;
 pub mod select_map;
 pub mod select_role;
 pub mod vs;
+pub mod vs_proto;
 
 pub use index::IndexScene;
 pub use main_map::MainMapScene;
@@ -298,6 +299,23 @@ pub trait RenderHost {
     /// 贴图 + 色调（S21.14 图标图片化跨层 tint）：转发到绘制目标（Bevy = 记录命令 / CPU = 帧缓冲 multiply）。
     fn blit_image_tint(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32, tint: u16) {
         self.draw_target().blit_image_tint(asset, x, y, w, h, tint);
+    }
+
+    /// 贴图 + 色调 + 旋转（S27.5 `main_map` v5 环形卡径向旋转；`rot_mdeg` = 毫度，顺时针）。
+    ///
+    /// 转发到**绘制目标**（Bevy = 记录旋转命令 / 无旋转能力的 CPU 后端 = 默认退化为不旋转）。
+    #[allow(clippy::too_many_arguments)]
+    fn blit_image_rot(
+        &mut self,
+        asset: &str,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        tint: u16,
+        rot_mdeg: i32,
+    ) {
+        self.draw_target().blit_image_rot(asset, x, y, w, h, tint, rot_mdeg);
     }
 
     /// 绘制一行字形（默认墨色 = `INK_COLOR`）。

@@ -107,6 +107,38 @@ pub(crate) struct RawCombat {
     pub(crate) player: Option<RawPlayerUnit>,
     pub(crate) damage: RawDamage,
     pub(crate) boss_tiers: Vec<RawBoss>,
+    /// 防御动作的反击减伤百分比（S27.7；缺省 50）。
+    #[serde(default = "default_defend_reduction")]
+    pub(crate) defend_reduction_pct: u32,
+    /// 战斗道具表（S27.7；缺省空表 = 无道具可用）。
+    #[serde(default)]
+    pub(crate) items: Vec<RawCombatItem>,
+}
+
+/// `defend_reduction_pct` 缺省值（与 `docs/business/combat.md` §战斗动作一致）。
+pub(crate) fn default_defend_reduction() -> u32 {
+    50
+}
+
+/// 战斗道具条目（`balance.combat.items[]`，S27.7）。
+#[derive(Deserialize)]
+pub(crate) struct RawCombatItem {
+    pub(crate) id: String,
+    pub(crate) name_key: String,
+    /// 携带上限（件）。
+    #[serde(default)]
+    pub(crate) carry: u32,
+    pub(crate) effect: RawItemEffect,
+}
+
+/// 道具效果 serde 形状（`kind` 决定用哪个字段，S27.7）。
+#[derive(Deserialize)]
+pub(crate) struct RawItemEffect {
+    pub(crate) kind: String,
+    #[serde(default)]
+    pub(crate) value: u32,
+    #[serde(default)]
+    pub(crate) rounds: u32,
 }
 
 #[derive(Deserialize)]

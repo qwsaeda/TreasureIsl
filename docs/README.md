@@ -9,7 +9,8 @@
 | **理解游戏怎么设计/架构/模块化（第一入口）** | [`00_design.md`](00_design.md)（正向设计总览：核心循环 + 数据分层 + 5 crate 架构 + 9 场景 + 7 模块包 + 窄接口；不读 legacy/） |
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 28 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| **迁移 Linux / 换机器续工（会话总结 + 迁移操作 + 续工序列）** | [`migration_linux.md`](migration_linux.md)（迁移前二选一：整目录拷贝 or add -A 提交；在途 tracked-M + untracked-? 文件清单；Linux 环境准备 + `pwsh` 命令差异 + CRLF/无头 GPU 风险点 + 迁移后第一条命令序列；S27.7 进度快照） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 31 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
@@ -50,6 +51,7 @@
 | [`process/04_tooling.md`](process/04_tooling.md) | 工具链现状 + 待建脚本（codegen/校验/硬编码扫描）+ 幂等要求 |
 | [process/05_module_parallel.md](process/05_module_parallel.md) | **模块并行开发 loop**（一轮 4 步 + 包划分 + 并行纪律 5 条 + §4.5 开轮必读/规范回执；机读白名单 plan/packages.yaml） |
 | [process/06_flywheel.md](process/06_flywheel.md) | **对抗流水线飞轮**（找问题/审计/修复 3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件；EXP-068 单一事实源） |
+| [process/08_playtest_loop.md](process/08_playtest_loop.md) | **试玩闭环 loop**（S16.2：试戏/归因/修复/复测 4 角色 + 4 份运行时报告 fuzz_playtest/full_run/visual_regression/web_playtest + 归因三分类回写 + 3 轮收敛停机；开轮必读与回写口径复用 06_flywheel，不重造） |
 | [process/07_render_pipeline.md](process/07_render_pipeline.md) | **legacy 像素管线契约**（路径表/z-order 文件顺序/越界求交裁剪/PCX 透明位 index 0；S16 起降级为逆向参照，gate 第 19/20 项锚点） |
 | [process/08_render_arch.md](process/08_render_arch.md) | **运行时渲染架构**（分层/绘制原语/z-order=调用顺序/5 条坐标与像素来源契约/grep 门禁/测试重锚矩阵；改渲染代码必读） |
 | [process/09_render_framework.md](process/09_render_framework.md) | **`ti-render` crate 边界契约**（职责与禁止项/模块结构/Theme schema/迁移映射/数据分离原则；改 `crates/ti-render/` 代码前必读） |
@@ -59,6 +61,7 @@
 | [ui-redesign-v3/08_main_map_v4_spec.md](ui-redesign-v3/08_main_map_v4_spec.md) | **main_map 重设计 v4「羊皮海图桌面」版面与交互规格**（S21.3 定案：满屏海图 `chart_full` + 顶角双铜牌 + 岛只画陆/礁/宝 + 黄铜航线多形状节点牌 + 船玩家 + 舵轮 CTA；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 交互契约；坐标单一事实源，镜像 `business/08_layout_design.md` §4.3；落码 = S21.4~S21.7/S21.12） |
 | [ui-redesign-v3/09_index_compass_spec.md](ui-redesign-v3/09_index_compass_spec.md) | **首页 index 重设计「罗盘环标题页」版面与交互规格**（S22.0：C 方向罗盘导航 + 羊皮海图底与 main_map v4 统一；满屏 `chart_full` + 中心舵轮 `helm` + 6 铜质 medallion 沿环（白蒙版图标 gold tint）+ 版本签；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 6 徽章命中契约；坐标单一事实源；落码 = S22.1 出 medallion_ring 资产 / S22.2 落码 / S22.3 出图验收） |
 | [ui-redesign-v3/10_main_map_v5_spec.md](ui-redesign-v3/10_main_map_v5_spec.md) | **main_map 重设计 v5「中央据点岛 + 环形格子环」版面与交互规格**（S27.1 定案：31 张岛型卡环（每格 = 领地/功能点，卡面插画 + 归属色带 + 加固等级）+ 中央可点击玩家据点岛 + 10 类海盗岛（港口城/灯塔礁/藏宝沉船/海盗老巢/帆船坞/军需商岛/骷髅崖/火山岛/灯船站/无畏号要塞）；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 点卡交互契约（交钱/攻占/进副本/升级加固）；坐标单一事实源，镜像 `business/08_layout_design.md` §4.4；规则 = `business/territory.md`；落码 = S27.2 资产 / S27.3 数据 / S27.4 表现 / S27.5 出图） |
+| [ui-redesign-v3/11_vs_spec.md](ui-redesign-v3/11_vs_spec.md) | **VS 对战场景重设计规格 v6「道具 + 现代化回合制」**（S27.7：战斗动作升级 = 攻击/道具/防御 + 4 道具（火药桶/医疗包/朗姆酒/烟雾弹，数值走 `balance.combat.items`，规则走 `rules::battle::step_with`）；问题诊断 + 资产批次 `vs_v1` + **5 套候选版式 A/B/C/D/E**（选型 = 引擎真实渲染图 `TI_VS_PROTO` 原型出图）+ 落地 WBS；业务规则单一事实源 = `business/combat.md` §战斗动作） |
 | [process/11_bevy_migration.md](process/11_bevy_migration.md) | **渲染引擎迁移裁决（S18 · Bevy 0.20）**：差距定稿 + 定案推翻签核（macroquad 定案作废 / 旧 800KB 预算作废）+ 新 wasm 预算（≤8MB）+ 架构形状（ti-engine 新 crate + Canvas 后端替换 + 双渲染期）+ WBS S18.0–S18.8 + 风险（改引擎层代码前必读） |
 | [process/12_bevy_usage.md](process/12_bevy_usage.md) | **Bevy 0.20 用法规范 / 最佳实践 / 坑位清单**（官方 `DefaultPlugins` 强制 + 1080 坐标换算 + z 层负值升序绘制 + GPU Text2d + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位；S18.7 起 Bevy = 唯一渲染引擎） |
 | [process/13_ui_asset_pipeline.md](process/13_ui_asset_pipeline.md) | **UI 资产管线**（清单驱动：AI 生图 → 抠透明 → 规范化 → 入库 `assets/ui/`；角色预设 background/medallion/board/portrait；`scripts/ui_assets.py` + `scripts/ui_preview.ps1`；资产清单 = 单一事实源，门禁校验登记与存在） |
@@ -68,6 +71,7 @@
 | [process/17_layout_engine.md](process/17_layout_engine.md) | **布局引擎定案（S29 · B1 全 bevy_ui 响应式 · 单一事实源）**：UI + 命中 + 重排全进 Bevy（`bevy_ui` 自动布局 + 窗口 resize + `bevy_picking` 2D 拾取）；3 条约定松绑签核（逻辑层仅 UI 交互层进 Bevy / `bevy-cpu-parity` 改口径只保游戏世界 / UI chrome 转 Bevy 代码而游戏内容仍数据驱动）；游戏世界保持 1080 正交 + 数据驱动（换引擎友好）；原「引擎无关求解器」方向已作废（WBS S29.0~S29.5，改布局/加场景/调视口/换引擎前必读） |
 | [process/18_asset_content_pipeline.md](process/18_asset_content_pipeline.md) | **资产与内容数据管线定案（单一事实源）**：行业三档（①绝对坐标 / ②意图+自动布局 / ③参数化）+ 总纲「不手写像素」；本项目终态（UI=bevy_ui 自动布局 S29.3 / 地图=参数化 S27.4 / scenes.json 退成元素清单）；**资产登记标准**（UI 图=`ui_manifest.json`、字体/音频=`assets/registry.json`，gate `validate_data` `check_asset_registry` 全类型 disk↔registry 双向同步 + `check_scenes_canonical` 守 scenes.json indent=1 规范形）；音频口径（发货无声，S18.8 切 bevy_audio）。改资产/资源加载/版面坐标/加地图前必读 |
 | [process/21_map_package_spec.md](process/21_map_package_spec.md) | **地图包规范 v1（单一事实源）**：一张图 = 一个自包含可分发包（`assets/maps/<id>/`：`manifest.json`/`map.json`/`layout.json`/`strings.json`/`assets/`）；`manifest.json` 字段（schema·id·version·data_version 兼容声明·map·layout·strings·assets[sha256+bytes]·invariants）/ 不变量 I1~I8（31 格构成·10 类岛各 2 格相邻·8pt·资产哈希齐·N8 往返）/ 失败语义（不兼容或哈希不符 ⇒ 拒绝安装或跳过该包；运行期回退内嵌默认包）/ **运行期加载契约**（Bevy 资产根直读包 + `ti_core::data` 可注入源 + `activate_pack(id)` 切包，无注入 = 内嵌默认）/ 工具 `scripts/map_pack.py`（`pack`/`verify`/`install`/`uninstall`/`list`/`check`）+ 产物落点（已装包 `assets/maps/<id>/` + 可分发件 `dist/maps/<id>.map-pack/`）。加图·换图·改环几何前必读 |
+| [process/22_dev_platform.md](process/22_dev_platform.md) | **开发管理平台（TI Dev Console）定案（单一事实源）**：与游戏运行时解耦，纯管理 + 辅助开发；定位/不做清单 / 文件系统即数据库 / 只读默认 + 命令白名单 / 数据源（ledger·docs·evidence·assets·maps）/ 能力矩阵 P0~P3 / **双审计协议**（A 完成度 + B 一致性，连续 2 轮 0 新发现 = 通过，3 轮未过拆子任务）/ 北极星判据。WBS = [`plan-s32-platform.md`](plan-s32-platform.md)；进度 = `plan/ledger.yaml` |
 | [process/19_bevy_ui.md](process/19_bevy_ui.md) | **bevy_ui 专题（单一事实源）**：UI 相机分层（`IsDefaultUiCamera` order=1/clear None）/ `Node` 字段全 inline / `Text`+`TextFont` / **UI 图片 = `ImageNode`**（0.20 新 API，非旧 `Image`/`Sprite`）/ **taffy 自动布局 = 意图化（flex column+gap+% 定位，resize 真重排，不手写像素）** / `ComputedNode` 探针证据口径 / 0.20 坑位清单。改 UI chrome·加控件·改版面坐标前必读 |
 | [process/20_bevy_picking.md](process/20_bevy_picking.md) | **bevy_picking 专题（单一事实源）**：0.20 拾取结构（无 `PickingSection`/`PickingHandler`；`Pickable`+`MeshPickingSettings`）/ 指针事件（`PointerClick`=tap、`PointerDragEnd.distance`=swipe）/ **0.20 `Message` 取代 `Event`**（`add_message`+`MessageWriter::write`+`MessageReader::read`）/ 本项目命中契约（`PickTarget`/`PickEvent`/`HitData`/`register_pick`/`swipe_dir_from`）/ 数据化命中（`scenes.json` `pick_key`/`pick_index`）/ 观察者参数最小化 / 坑位清单。改命中·加可点元素前必读 |
 
@@ -105,6 +109,7 @@
 | [`plan-s12-parallel.md`](plan-s12-parallel.md) | **S12 模块化并行 WBS**（一轮 4 步执行：S12.0 契约冻结 → P1–P5 并行 → S12.6 集成；W2 起 P6 表现层） |
 | [`pipeline.md`](pipeline.md) | TEST-AUDIT-FIX 多代理协作循环（**已被 [`process/06_flywheel.md`](process/06_flywheel.md) 取代**，仅存历史） |
 | [`plan-s16-loop.md`](plan-s16-loop.md) | **S16 试玩闭环 + 发布 + 设计 sheet**（WIP 草稿，S16 尚未登记台账，勿当依据） |
+| [`plan-s32-platform.md`](plan-s32-platform.md) | **S32 开发管理平台 WBS**（TI Dev Console：P0 只读骨架 → P1 执行与审计 → P2 辅助开发 → P3 部署可选；每任务 = 实现 → 自验 → 双审计 → 台账 verified；定案 = `process/22_dev_platform.md`） |
 
 ### 工具与产出物索引
 
@@ -128,7 +133,10 @@
 | `scripts/layout_spec_check.py` | **UI 版面规格三面对账**（规格表 ↔ `scenes.json` ↔ `scene_manifest_v3.json`：坐标 + 8pt + N8 往返 ±1px） |
 | `scripts/check_ps_scripts.ps1` | **PowerShell 入口体检**（UTF-8 BOM + `ParseFile` 真语法自检 ⇒ 拦住「入口从未真跑起来」，EXP-109） |
 | `scripts/audit_code.py` | **代码结构审计**（`style.md` §5.12 手段）：文件规模 / 函数长度 / 重复模式；`--check` 违规非 0 退出，阈值与棘轮基线 = `scripts/code_budget.json` |
-| `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
+| `scripts/wasm_browser_e2e.py` | **Bevy wasm 浏览器端 e2e**（Playwright 无头 Chromium 3 层：L1 实例化 = `env-stub.js` 覆盖 wasm env 导入 + start 段跑通 / L2 渲染 = 资产 fetch 全 2xx + 画面非全黑 / L3 交互 = 键盘+鼠标不抛异常；与 native `e2e_playthrough` 互补；`--check` 只读打印判据，失败非 0 退出） |
+| `scripts/web_playtest.cjs` | **浏览器真运行时试玩（S16.1）**：Node + Playwright CDP 按键驱动 菜单→选人→选图→主地图（console 致命错误=0 + 截图墨点 + 场景流转帧变化；`node scripts/web_playtest.cjs`，需 `serve` 在跑） |
+| `scripts/playtest_loop.py` | **试玩闭环 4 报告聚合（S16.2）**：fuzz_playtest / full_run / render_invariants / web_playtest 一次跑全 + 归因三分类清单（`08_playtest_loop.md` 执行面；停机 = 连续 3 轮收敛 + evidence/S16.2.log 主线程复核） || `scripts/pcx_to_png.py` | 原版 PCX → 透明 PNG（亮绿/品红/角落色三键；导入 `assets/ui/`） |
+| `scripts/publish_web.ps1` | **一键发布 publish-web（S16.3）**：gate 全绿前置 → build_wasm → 本地 serve 静态断言 → 发布历史入 `release.md` → `git worktree` 推 gh-pages → 线上 URL 复跑 `web_playtest`；线上不可达 = 实测定态降级登记（不静默绕过）；`-Check` 只读前置体检 |
 | `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |
 | `scripts/agnes_gen.py` | Agnes AI 生图（`agnes-image-2.5-flash`，`AGNES_API_KEY`；用法见 `docs/process/04_tooling.md` §6） |
 | `scripts/agnes_video.py` | **Agnes AI 视频**（`agnes-video-2.5-flash` 异步任务：创建→轮询→下载；`AGNES_API_KEY`；`--check` 只读前置体检） |

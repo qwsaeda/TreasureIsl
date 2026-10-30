@@ -44,6 +44,45 @@
     "hp": 12000,
     "atk": 20
    }
+  ],
+  "defend_reduction_pct": 50,
+  "items": [
+   {
+    "id": "keg",
+    "name_key": "combat.item.keg",
+    "carry": 3,
+    "effect": {
+     "kind": "damage",
+     "value": 300
+    }
+   },
+   {
+    "id": "medkit",
+    "name_key": "combat.item.medkit",
+    "carry": 3,
+    "effect": {
+     "kind": "heal_pct",
+     "value": 25
+    }
+   },
+   {
+    "id": "rum",
+    "name_key": "combat.item.rum",
+    "carry": 2,
+    "effect": {
+     "kind": "atk_buff",
+     "value": 50,
+     "rounds": 3
+    }
+   },
+   {
+    "id": "smoke",
+    "name_key": "combat.item.smoke",
+    "carry": 2,
+    "effect": {
+     "kind": "stagger"
+    }
+   }
   ]
  },
  "trade": {

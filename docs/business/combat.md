@@ -67,13 +67,42 @@ damage = round(atk * atk_coef) + rand_offset()    // rand_offset ∈ [0, rng_spa
 ## 回合流程
 
 ```
-玩家确认攻击
-  → 玩家按 damage 模型结算对 BOSS 的伤害
+玩家选择动作（攻击 / 道具 / 防御，见 §战斗动作）
+  → 玩家动作结算（攻击 = damage 模型；道具 = 该道具效果；防御 = 本回合减伤）
   → 若 BOSS.hp == 0 → Victory，战斗结束
-  → 否则 BOSS 按 damage 模型结算对玩家的伤害
+  → 否则 BOSS 按 damage 模型结算对玩家的伤害（烟雾弹落空 / 防御减伤在此生效）
   → 若 player.hp == 0 → Defeat，战斗结束
   → 否则回合数 +1，回到等待输入
 ```
+
+## 战斗动作（S27.7 起：攻击 / 道具 / 防御）
+
+> 用户 2026-10-29 定案：战斗不再是「点哪都是普攻」，每回合从三种动作里选一种。
+> 数值单一事实源 = `assets/data/balance.json → combat.items` / `combat.defend_reduction_pct`；
+> 规则实现 = `rules::battle::BattleSession::step_with(CombatAction)`（`step()` ≡ `step_with(Attack)`）；
+> 效果词汇 = `domain::combat::ItemEffect`（规则只消费效果，不查表）。
+
+| 动作 | 语义 | 备注 |
+|---|---|---|
+| 攻击 `Attack` | 按 §伤害模型 结算对敌伤害 | 旧行为，默认动作 |
+| 防御 `Defend` | 本回合敌方反击伤害 ×（1 − `defend_reduction_pct`） | 减值只作用于**当回合**反击，不跨回合累积 |
+| 道具 `Item(effect)` | 结算该道具效果，**不消耗随机数** | 道具不改变 `GameRng` 状态 ⇒ 同 seed 同操作序列仍同结果 |
+
+### 道具表（4 种，`balance.combat.items[]`）
+
+| id | 名称键 | 效果 `effect` | 携带上限 `carry` | 数值 | 设计意图 |
+|---|---|---|---|---|---|
+| `keg` | `combat.item.keg` | `damage 300` | 3 | 固定 300 | 稳定爆发，不吃 atk/随机（低成长玩家的兜底伤害） |
+| `medkit` | `combat.item.medkit` | `heal_pct 25` | 3 | 回 25% 上限 HP（不超上限） | 拉长回合数，配合防御打消耗 |
+| `rum` | `combat.item.rum` | `atk_buff {pct:50, rounds:3}` | 2 | 3 回合内 atk ×1.5 | 增益铺垫，收益随 atk 成长放大 |
+| `smoke` | `combat.item.smoke` | `stagger` | 2 | 敌方下一次反击落空 | 关键回合免伤（每个只能挡 1 次） |
+
+- **结算顺序**（每回合固定）：① 玩家动作 → ② 敌 HP 归零即胜（不再反击）→ ③ 敌方反击（`stagger` 消耗 1 次 / `Defend` 减伤 / `atk_buff` 已在①生效）→ ④ 回合末 `atk_buff.rounds` −1（到 0 失效）。
+- **buff 时效**：`atk_buff` 从**使用当回合**起算，覆盖当回合的攻击；`rounds` 递减发生在回合末。
+- **携带与获得**：携带上限见 `carry`；获取途径 = 贸易港「军械」购买 + 卡牌事件（S28 领地副本同样消耗同一背包）。背包随存档持久化（`persistence.md`）。
+- **不做的**：不做冷却/能量条（道具靠数量约束，保持可测）；不做敌方用道具（敌方只有普攻，回合演出另算）。
+
+## 胜负判定
 
 ## 胜负判定
 
@@ -94,6 +123,12 @@ damage = round(atk * atk_coef) + rand_offset()    // rand_offset ∈ [0, rng_spa
 | player.hp==0 判 Defeat | `combat_defeat_when_player_hp_zero` |
 | max_rounds 兜底判胜负 | `combat_max_rounds_tiebreak` |
 | 越界 tier ⇒ 无效战斗 | `combat_invalid_tier_rejected`（`session_invalid_tier`） |
+| 火药桶伤害固定 300，不吃 atk/随机 | `combat_item_damage_is_fixed` |
+| 医疗包回 25% 上限、不超上限 | `combat_item_heal_capped` |
+| 朗姆酒 3 回合 atk×1.5，到期失效 | `combat_item_atk_buff_expires` |
+| 烟雾弹只挡 1 次反击 | `combat_item_stagger_once` |
+| 防御当回合反击减半 | `combat_defend_halves_counter` |
+| 道具不消耗随机数（同 seed 同轨迹） | `combat_item_keeps_rng_state` |
 
 ## 数值平衡指引（非规则，供调参参考）
 

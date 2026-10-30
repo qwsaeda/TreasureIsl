@@ -23,7 +23,7 @@ use bevy::prelude::*;
 use bevy::ui::ComputedNode;
 use bevy::window::Window;
 
-use super::{camera_system, GameStore, WorldCam, LOGICAL_H, LOGICAL_W};
+use super::{GameStore, LOGICAL_H, LOGICAL_W, WorldCam, camera_system};
 
 /// 接线：插入判据资源 + 判据系统（`main` 只留一行调用，避免 `main()` 触
 /// clippy `too_many_lines`）。

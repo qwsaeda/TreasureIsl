@@ -73,18 +73,19 @@ fn selection_switches_visible_elements() {
     let mut app = app_with_theme();
     let entities = spawn(&mut app, 0);
     // S22 罗盘环：无「选中卡」（medallion = image 原语，走生产 drawlist，不在此契约 spawn）。
-    // 选中态 = 该徽章**标签变金（gold_warm）**；未选中徽章标签 = 常态（brass_dark）。
+    // 选中态 = 该徽章**标签变金（gold_warm）**；未选中徽章标签 = 常态（`text_on_parch`，
+    // 数据 = scenes.json index 段 item1..5 的 text 原语 `when=normal` color）。
     let labels: Vec<_> =
         entities.selectable.iter().filter(|(_, _, k)| *k == SelectableKind::Label).collect();
     let gold_warm = ti_engine::canvas::rgb565_to_color(theme().gold_warm);
-    let brass_dark = ti_engine::canvas::rgb565_to_color(theme().brass_dark);
+    let text_on_parch = ti_engine::canvas::rgb565_to_color(theme().text_on_parch);
     let label_color = |e: Entity| app.world().get::<TextColor>(e).map(|c| c.0);
     let selected_gold =
         labels.iter().filter(|(_, e, _)| label_color(*e) == Some(gold_warm)).count();
-    let normal_brass =
-        labels.iter().filter(|(_, e, _)| label_color(*e) == Some(brass_dark)).count();
+    let normal_parch =
+        labels.iter().filter(|(_, e, _)| label_color(*e) == Some(text_on_parch)).count();
     assert_eq!(selected_gold, 1, "选中徽章 0 标签 = gold_warm（1 个）");
-    assert_eq!(normal_brass, 5, "未选中徽章 1-5 标签 = brass_dark（5 个）");
+    assert_eq!(normal_parch, 5, "未选中徽章 1-5 标签 = text_on_parch（5 个）");
 }
 
 #[test]
@@ -112,11 +113,12 @@ fn text_elements_use_text_color_component() {
     let labels: Vec<_> =
         entities.selectable.iter().filter(|(_, _, k)| *k == SelectableKind::Label).collect();
     assert!(!labels.is_empty(), "菜单文字须存在");
-    // S22 罗盘环：未选中徽章标签色 = theme 令牌（`brass_dark`）（旧 index 为 text_on_parch）。
+    // S22 罗盘环：未选中徽章标签色 = theme 令牌（`text_on_parch`）（scenes.json index 段
+    // item1..5 text 原语 `when=normal` color；选中 = `gold_warm`）。
     let has_unselected = labels.iter().any(|(_, e, _)| {
         app.world()
             .get::<TextColor>(*e)
-            .is_some_and(|c| c.0 == ti_engine::canvas::rgb565_to_color(theme().brass_dark))
+            .is_some_and(|c| c.0 == ti_engine::canvas::rgb565_to_color(theme().text_on_parch))
     });
-    assert!(has_unselected, "未选中徽章标签色须 = theme 令牌 brass_dark");
+    assert!(has_unselected, "未选中徽章标签色须 = theme 令牌 text_on_parch");
 }

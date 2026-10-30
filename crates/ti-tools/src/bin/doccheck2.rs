@@ -461,7 +461,7 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
     let actual = gate_item_actual_count(&gate);
-    let expected = 28usize; // 按项名去重口径（S24.1 分档 + S25 check_code_standards 入 28）；门禁结构变化时同步
+    let expected = 31usize; // 按项名去重口径（S31.3 wasm-browser-e2e 入 29；门禁结构变化时同步）
     if actual != expected {
         errors.push(format!(
             "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"

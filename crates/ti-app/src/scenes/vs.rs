@@ -45,6 +45,12 @@ impl Scene for VsScene {
 
     /// 战斗面板（双方 HP 进度条 + 回合 + 结果，v2 羊皮纸/木纹/金色系）。
     fn render(&mut self, host: &mut dyn SceneHost) {
+        // S27.7 选型期：环境变量 `TI_VS_PROTO=a|b|c|d|e` ⇒ 走 5 套候选版式原型渲染
+        // （`scenes::vs_proto`）；未设置 = 正式版式（旧布局不变）。
+        if let Some(variant) = crate::scenes::vs_proto::selected_variant() {
+            crate::scenes::vs_proto::render(host, variant);
+            return;
+        }
         let layout = chrome::scene_layout("vs");
         // S18.7f：vs 版面 100% 数据驱动 = `scenes.json` `vs.primitives`（夜空底 + 星点 +
         // 血条槽底 + 竞技区 + 标题 + 提示 + 木框；`chrome::scene_shell`/`bar_slot`/

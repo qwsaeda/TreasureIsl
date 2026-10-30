@@ -116,7 +116,7 @@
 
 | 模块 | 文件 | 职责 |
 |---|---|---|
-| 依赖开关 | `crates/ti-engine/Cargo.toml` | bevy 特性加 `"bevy_ui"`（编译进 `Node`/`Text`/`IsDefaultUiCamera`/`ComputedNode`；`Button`/`Interaction` 在 0.20 已废弃不挂，交互归 S29.2 `bevy_picking`，见 12 §9.8） |
+| 依赖开关 | 根 `Cargo.toml` `[workspace.dependencies]`（S27.7 起 ti-engine 并回根 workspace，bevy 特性登记在根） | bevy 特性加 `"bevy_ui"`（编译进 `Node`/`Text`/`IsDefaultUiCamera`/`ComputedNode`；`Button`/`Interaction` 在 0.20 已废弃不挂，交互归 S29.2 `bevy_picking`，见 12 §9.8） |
 | UI 基建（零游戏语义） | `crates/ti-engine/src/ui.rs`（新增） | `spawn_ui_camera`（`(Camera2d, IsDefaultUiCamera, Camera{order:1, clear_color:None})` 叠游戏相机之上）+ `build_proof_panel`（通用浮动 bevy_ui 面板：`Node` flex + `BackgroundColor` + `Text` + 按钮外观卡〔**不**挂 0.20 已废弃的 `Button` 标记〕，不含场景名/文案语义；`ChildOf` 层级） |
 | 壳接线（游戏层） | `crates/ti-engine/src/bin/treasure_bevy.rs` | `spawn_stage` 后调用 `ui::spawn_ui_camera` + `ui::build_proof_panel`（live 路径；`--selftest` 不加，保像素对拍口径不变） |
 | 用法/坑位 | `docs/process/12_bevy_usage.md` §9 | 记「双相机 UI/世界分层」：UI 相机 order=1 + `clear_color=None`（不清屏，游戏世界透出）+ UI 树走屏幕像素、游戏世界走 1080 正交 `o.scale` |

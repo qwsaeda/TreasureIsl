@@ -54,9 +54,33 @@ pub trait Canvas {
     /// 默认实现为 no-op（仅需像素绘制的轻量画布可继承）。
     fn blit_image(&mut self, _asset: &str, _x: i32, _y: i32, _w: i32, _h: i32) {}
 
-    /// 贴图 + 色调（**RGB565 multiply**）：`tint = 0xFFFF`（白）= 无色调（同 [`Self::blit_image`]）。
+    /// 贴图 + 色调（**RGB565 multiply**）：`tint = 0xFFFF`（白）= 无色调（同 [`blit_image`]）。
     ///
     /// S21.14 图标图片化：白蒙版贴图在 blit 时乘上色，使同一张 PNG 可切「默认金 / 选中白 /
     /// 危险红」等墨色（跨层 tint，`09_render_framework.md` §5.1）。默认 no-op（轻量画布继承）。
     fn blit_image_tint(&mut self, _asset: &str, _x: i32, _y: i32, _w: i32, _h: i32, _tint: u16) {}
+
+    /// 贴图 + 色调 + **绕自身中心旋转**（S27.5：`main_map` v5 环形卡径向旋转）。
+    ///
+    /// - `tint` 语义同 [`blit_image_tint`]（`0xFFFF` = 无色调）；
+    /// - `rot_mdeg` = 屏幕坐标系（y 向下）**顺时针**旋转，单位**毫度**（`90_000` = 90°）；
+    ///   `0` = 不旋转；
+    /// - 旋转围绕**目标矩形中心**（`x + w/2, y + h/2`），矩形本身仍按未旋转口径给出。
+    ///
+    /// 默认实现退化为不旋转的 [`Self::blit_image_tint`]（无旋转能力的后端 = 视觉降级，
+    /// 不 panic、不缺图；`ti-engine` 的 Bevy 后端用 `Sprite` 旋转变换实现真旋转）。
+    #[allow(clippy::too_many_arguments)]
+    fn blit_image_rot(
+        &mut self,
+        asset: &str,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        tint: u16,
+        rot_mdeg: i32,
+    ) {
+        let _ = rot_mdeg;
+        self.blit_image_tint(asset, x, y, w, h, tint);
+    }
 }

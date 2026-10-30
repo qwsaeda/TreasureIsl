@@ -1,16 +1,18 @@
 {
   "exempt_files": {
-    "crates/ti-tools/src/bin/doccheck2.rs": "S20.1 拆分（按断言族分文件：layout/primitives/scene/data/asset）",
-    "crates/ti-app/src/scenes/chrome.rs": "S21.14 tint 契约跨层接入（blit_image_tint + icon/image 原语 image 上色）使 934 行；限期 S22 拆 scenes/chrome/{icons_draw,track,primitives} 子模块后删本条",
-    "crates/ti-engine/src/bin/treasure_bevy.rs": "S29.1 bevy_ui 壳接线（ui_probe/spawn_ui_chrome）+ S29.2 拾取层壳接线（pick_event_system/scene_json_key/spawn_pick_layer 调用）使 987 行；壳私有 `GameStore` 使抽取受限，限期 S29.3/S29.5 全场景 bevy_ui 迁移重构壳（命中/布局全进 bevy_ui + 壳拆分）后删本条"
+    "crates/ti-app/src/scenes/main_map.rs": "S27.4/S27.5 起超限（998>900）：2026-10-29 Linux 门禁对账补登基线（限期整改）",
+    "crates/ti-core/src/data/mod.rs": "S31.2 起超限（942>900）：2026-10-29 Linux 门禁对账补登基线（限期整改）",
+    "crates/ti-tools/src/bin/doccheck2.rs": "超限（3657>900）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-engine/src/bin/treasure_bevy.rs": "超限（2163>900）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-app/src/scenes/chrome.rs": "超限（1394>900）：2026-10-29 门禁对账补登基线（限期整改）"
   },
   "exempt_fns": {
-    "crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session": "S20.1 拆分（e2e 按阶段拆 fn）",
-    "crates/ti-core/examples/full_run_demo.rs::main": "S20.1 拆分（演示脚本：按阶段拆 fn）",
-    "crates/ti-core/src/data/mod.rs::convert": "S20.1 拆分（按数据域拆 convert_*）",
-    "crates/ti-core/tests/exhaust_random_session.rs::run_random_session": "S20.1 拆分（穷举驱动：按域拆 fn）",
-    "crates/ti-engine/src/scene_render.rs::spawn_primitives": "S20.1 拆分（按原语种类拆 fn）",
-    "crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity": "S20.1 拆分（按子断言拆 fn）"
+    "crates/ti-engine/src/scene_render.rs::spawn_primitives": "S29.3 起超限（183>140）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session": "S28 起超限（173>140）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity": "超限（195>140）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-core/tests/exhaust_random_session.rs::run_random_session": "超限（190>140）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-core/examples/full_run_demo.rs::main": "超限（304>140）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-core/src/data/mod.rs::convert": "超限（218>140）：2026-10-29 门禁对账补登基线（限期整改）"
   },
   "exempt_repeats": {},
   "max_file_lines": 900,

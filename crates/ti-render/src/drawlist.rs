@@ -58,6 +58,8 @@ pub enum DrawOp {
         h: i32,
         /// 色调（RGB565；`0xFFFF` 白 = 无色调，S21.14 图标图片化跨层 tint）。
         tint: u16,
+        /// 绕目标矩形中心顺时针旋转（**毫度**；`0` = 不旋转，S27.5 环形卡径向）。
+        rot_mdeg: i32,
     },
 }
 
@@ -165,11 +167,33 @@ impl Canvas for DrawList {
     }
 
     fn blit_image(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32) {
-        self.ops.push(DrawOp::Image { asset: asset.to_owned(), x, y, w, h, tint: 0xFFFF });
+        self.ops.push(DrawOp::Image {
+            asset: asset.to_owned(),
+            x,
+            y,
+            w,
+            h,
+            tint: 0xFFFF,
+            rot_mdeg: 0,
+        });
     }
 
     fn blit_image_tint(&mut self, asset: &str, x: i32, y: i32, w: i32, h: i32, tint: u16) {
-        self.ops.push(DrawOp::Image { asset: asset.to_owned(), x, y, w, h, tint });
+        self.ops.push(DrawOp::Image { asset: asset.to_owned(), x, y, w, h, tint, rot_mdeg: 0 });
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn blit_image_rot(
+        &mut self,
+        asset: &str,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        tint: u16,
+        rot_mdeg: i32,
+    ) {
+        self.ops.push(DrawOp::Image { asset: asset.to_owned(), x, y, w, h, tint, rot_mdeg });
     }
 
     fn pixel_at(&self, _x: i32, _y: i32) -> u16 {

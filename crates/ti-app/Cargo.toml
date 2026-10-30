@@ -81,7 +81,11 @@ native-shell = []
 # APK 在 Mac（已装 NDK/SDK + cargo-apk）编译，见 docs/plan-s5.md §S5.5。
 # S18.8a：macroquad 库 + 其音频后端（quad-snd）随 android 壳下沉为 optional 依赖
 # （默认构建不再有 alsa 原生库链接）；S18.8d android 壳切 Bevy 后本 feature 一并退役。
-android-shell = ["dep:macroquad", "macroquad/audio"]
+# S27.7：ti-engine 并回根 workspace ⇒ `macroquad/audio`（quad-snd → `links=alsa`）与 bevy
+# 的 alsa 链（bevy_dev_tools→bevy_audio→rodio→cpal→alsa-sys）在同一依赖图内冲突
+# （解析期 links 互斥，实测报 `quad-alsa-sys` vs `alsa-sys`）⇒ **android 壳暂不发声**
+# （口径同 S18.8/S30.0「发货无声」；android 壳待 S18.8d 退役）。详见 docs/experience/build.md。
+android-shell = ["dep:macroquad"]
 # S4.3 性能诊断：主循环每秒打印平均 FPS + 呈现器上传/跳帧计数
 stats = []
 # S1.7b：MOD → OGG/Opus 在线转码（默认关闭，build_assets 离线预转码产物直接播放；

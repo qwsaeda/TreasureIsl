@@ -460,12 +460,7 @@ pub fn spawn_pick_layer(world: &mut World, prims: &[ti_core::data::Primitive]) -
         }
         // S29.3（B1）：已迁 bevy_ui 的 chrome 原语**不在 1080 层挂拾取标记**——
         // 它在 UI 相机层（屏幕像素）由 bevy_ui 节点直接拾取；两处都挂 = 同一行双事件。
-        if p
-            .params
-            .get("ui_layer")
-            .and_then(serde_json::Value::as_str)
-            == Some("bevy_ui")
-        {
+        if p.params.get("ui_layer").and_then(serde_json::Value::as_str) == Some("bevy_ui") {
             continue;
         }
         // `pick_index` 显式下标（缺省 = 原语 `item`）：行定义 rect 无 item，数据侧显式给。
@@ -590,12 +585,22 @@ pub fn spawn_draw_list(
                 ));
                 count += 1;
             }
-            ti_render::drawlist::DrawOp::Image { asset, x, y, w, h, tint } => {
+            ti_render::drawlist::DrawOp::Image { asset, x, y, w, h, tint, rot_mdeg } => {
                 // S18.8b：贴图原语 → 资产服务器（路径相对 `assets/` 根）。
                 // S21.14：白蒙版贴图跨层 tint —— `tint=0xFFFF`（白）= 无色调（背景/多色图不受影响），
                 // 非白 = 该色 RGB multiply（Sprite.color 默认 blend 乘纹理）⇒ 同图可切墨色。
+                // S27.5：`rot_mdeg` = 绕目标矩形中心顺时针旋转（毫度）；屏幕 y 向下、世界 y 向上
+                // （`to_world` 翻转）⇒ 世界角 = **取反**（`-θ`），同角度下屏幕/世界视觉一致。
                 let handle: Handle<Image> = world.resource::<AssetServer>().load(asset.clone());
                 let color = if *tint == 0xFFFF { Color::WHITE } else { rgb565_to_color(*tint) };
+                let mut transform = Transform::from_translation(
+                    to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0).extend(z),
+                );
+                if *rot_mdeg != 0 {
+                    #[allow(clippy::cast_precision_loss)]
+                    let rad = -(*rot_mdeg as f32) * 0.001;
+                    transform.rotation = Quat::from_rotation_z(rad);
+                }
                 world.spawn((
                     DrawListEntity,
                     Sprite {
@@ -604,10 +609,7 @@ pub fn spawn_draw_list(
                         custom_size: Some(Vec2::new(*w as f32, *h as f32)),
                         ..Default::default()
                     },
-                    Transform::from_translation(
-                        to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0)
-                            .extend(z),
-                    ),
+                    transform,
                 ));
                 count += 1;
             }

@@ -25,6 +25,41 @@ pub enum Side {
     Enemy,
 }
 
+/// 战斗道具效果（S27.7：`docs/business/combat.md` §道具表）。
+///
+/// **规则只消费效果，不查表**：哪个道具带哪个效果 = `balance.combat.items[]`（数据），
+/// 效果语义 = 本枚举（规则），两者不耦合 ⇒ 调数值/加道具不改 `rules::battle`。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ItemEffect {
+    /// 对敌固定伤害（不吃 atk、不吃随机）。
+    Damage(u32),
+    /// 按上限百分比回复自身 HP（结算时钳到上限，`pct > 100` 按 100 计）。
+    HealPct(u32),
+    /// 若干回合内 atk 按百分比提升（`rounds` = 生效的攻击次数）。
+    AtkBuff {
+        /// 提升百分比（`50` = ×1.5）。
+        pct: u32,
+        /// 生效回合数（使用当回合不计）。
+        rounds: u32,
+    },
+    /// 敌方下一次反击落空（消耗 1 次）。
+    Stagger,
+}
+
+/// 玩家回合动作（S27.7：`docs/business/combat.md` §战斗动作）。
+///
+/// `Attack` 是默认动作 = 旧行为（`BattleSession::step()` ≡ `step_with(Attack)`）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CombatAction {
+    /// 普通攻击（走 §伤害模型）。
+    #[default]
+    Attack,
+    /// 防御（当回合敌方反击减伤，`balance.combat.defend_reduction_pct`）。
+    Defend,
+    /// 使用道具（结算该道具效果）。
+    Item(ItemEffect),
+}
+
 /// S15.6 QA141：HP 血条填充宽度百分比（0..=100，整数）。
 ///
 /// `displayed` = 显示 HP（EXP-085 平滑插值），`max` = 满血值。

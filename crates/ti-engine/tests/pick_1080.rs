@@ -9,24 +9,20 @@
 //!
 //! 单测只落 `crates/*/tests/`（EXP-052：src 内联 `#[cfg(test)]` 会被当占位白跑）。
 
-use ti_engine::pick::{hit_1080_pick, PickRect};
+use ti_engine::pick::{PickRect, hit_1080_pick};
 
 /// 540×960 窗口（9:16）↔ 1080×1920 画布：scale=0.5、offset=0。
 /// index 徽章 item0（1080 中心 540,570）→ 窗口逻辑 (270,285)。
 #[test]
 fn hit_index_medallion() {
-    let rects = [PickRect {
-        key: 1, index: 0, z: -8, x: 468.0, y: 498.0, w: 144.0, h: 144.0,
-    }];
+    let rects = [PickRect { key: 1, index: 0, z: -8, x: 468.0, y: 498.0, w: 144.0, h: 144.0 }];
     assert_eq!(hit_1080_pick(540.0, 960.0, 270.0, 285.0, 1080.0, 1920.0, &rects), Some((1, 0)));
 }
 
 /// 点落在矩形外 = 无命中。
 #[test]
 fn miss_outside() {
-    let rects = [PickRect {
-        key: 1, index: 0, z: -8, x: 468.0, y: 498.0, w: 144.0, h: 144.0,
-    }];
+    let rects = [PickRect { key: 1, index: 0, z: -8, x: 468.0, y: 498.0, w: 144.0, h: 144.0 }];
     // 窗口 (10,10) = 1080 (20,20)，远离新游戏徽章。
     assert_eq!(hit_1080_pick(540.0, 960.0, 10.0, 10.0, 1080.0, 1920.0, &rects), None);
 }

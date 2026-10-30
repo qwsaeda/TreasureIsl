@@ -212,6 +212,8 @@ fn exhaust_fixture_cfg_cross_validation() {
                             .iter()
                             .map(|t| BossTier { tier: t.tier, hp: t.hp, atk: t.atk })
                             .collect(),
+                        defend_reduction_pct: 50,
+                        items: Vec::new(),
                     };
                     let player = Unit { hp: fx.player_hp, atk: fx.player_atk };
                     let mut a = BattleSession::new_with_cfg(cfg.clone(), seed, player, tier);

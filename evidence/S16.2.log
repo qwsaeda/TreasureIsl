@@ -1,0 +1,55 @@
+# S16.2 试玩 agent 闭环 loop（2026-10-30 · Linux 续工）
+
+## 产物
+- docs/process/08_playtest_loop.md（4 角色：试戏/归因/修复/复测 + 4 份运行时报告 + 归因三分类回写 + 3 轮收敛停机；开轮必读复用 06_flywheel；登记 docs/README.md）
+- scripts/playtest_loop.py（4 报告聚合 + 三分类清单；工具契约 3 处登记：14_tooling_catalog §3.2 + 04_tooling + docs/README）
+- scripts/gate.ps1 第 24 项 playtest-loop（4 报告全 0 失败 = PASS；native 任一失败 = FAIL；web 缺 serve/node/playwright = 记名 SKIP）
+- scripts/playbook.ps1 playtest-loop 命令
+
+## 判据实跑（第 1/3 轮收敛；主线程独立复核 EXP-038/058）
+
+### 4 报告（serve :8080 在跑）
+$ cargo test -p ti-app --test fuzz_playtest
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.22s
+
+$ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json
+full run 16/16 steps, 0 failures (P3-3 criterion met)
+
+$ cargo test -p ti-app --test render_invariants
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.07s
+
+$ node scripts/web_playtest.cjs --url http://127.0.0.1:8080/
+[web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
+
+### playtest_loop.py 聚合（4 报告 + 三分类清单）
+=== playtest-loop（S16.2 试玩闭环 4 报告聚合；--check 只读模式）===
+  [OK ] fuzz_playtest:      Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-38770d44ab59b2fb)
+  [OK ] full_run: full run 16/16 steps, 0 failures (P3-3 criterion met)
+  [OK ] render_invariants:      Running tests/render_invariants.rs (/disk/target/debug/deps/render_invariants-bc9355dfbbe87e16)
+  [OK ] web_playtest: [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
+  归因清单：确定性测试缺陷=0（4 报告全 0 失败）/ 可机械漂移=0（无新增 doccheck2 断言）/ 设计分歧=0（无新增 EXP）
+playtest-loop: PASS（4 报告 0 失败；停机需连续 3 轮收敛 + evidence/S16.2.log 记录，主线程复核）
+聚合退出码 = 0（0 = 4 报告全 0 失败）
+
+### 停机口径
+三轮收敛齐备（第 1/2/3 轮全 0 失败，主线程独立复核 EXP-038/058）⇒ 停机判据满足（08_playtest_loop.md §4：0 新缺陷 / 0 未决 / 0 残留 ×3 轮）。
+
+## 第 2/3 轮收敛复跑（00:36 UTC）
+=== playtest-loop（S16.2 试玩闭环 4 报告聚合；--check 只读模式）===
+  [OK ] fuzz_playtest:      Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-38770d44ab59b2fb)
+  [OK ] full_run: full run 16/16 steps, 0 failures (P3-3 criterion met)
+  [OK ] render_invariants:      Running tests/render_invariants.rs (/disk/target/debug/deps/render_invariants-bc9355dfbbe87e16)
+  [OK ] web_playtest: [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
+  归因清单：确定性测试缺陷=0（4 报告全 0 失败）/ 可机械漂移=0（无新增 doccheck2 断言）/ 设计分歧=0（无新增 EXP）
+playtest-loop: PASS（4 报告 0 失败；停机需连续 3 轮收敛 + evidence/S16.2.log 记录，主线程复核）
+聚合退出码 = 0
+
+## 第 3/3 轮收敛复跑（00:36 UTC）
+=== playtest-loop（S16.2 试玩闭环 4 报告聚合；--check 只读模式）===
+  [OK ] fuzz_playtest:      Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-38770d44ab59b2fb)
+  [OK ] full_run: full run 16/16 steps, 0 failures (P3-3 criterion met)
+  [OK ] render_invariants:      Running tests/render_invariants.rs (/disk/target/debug/deps/render_invariants-bc9355dfbbe87e16)
+  [OK ] web_playtest: [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
+  归因清单：确定性测试缺陷=0（4 报告全 0 失败）/ 可机械漂移=0（无新增 doccheck2 断言）/ 设计分歧=0（无新增 EXP）
+playtest-loop: PASS（4 报告 0 失败；停机需连续 3 轮收敛 + evidence/S16.2.log 记录，主线程复核）
+聚合退出码 = 0

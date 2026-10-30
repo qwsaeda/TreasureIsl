@@ -11,6 +11,12 @@
 //! | player.hp==0 判 Defeat | `combat_defeat_when_player_hp_zero` |
 //! | `max_rounds` 兜底判胜负 | `combat_max_rounds_tiebreak` / `combat_max_rounds_tiebreak_same_hp` |
 //! | 越界 tier ⇒ 无效战斗 | `combat_invalid_tier_rejected`（`session_invalid_tier`） |
+//! | 火药桶伤害固定 300，不吃 atk/随机 | `combat_item_damage_is_fixed` |
+//! | 医疗包回 25% 上限、不超上限 | `combat_item_heal_capped` |
+//! | 朗姆酒 3 回合 atk×1.5，到期失效 | `combat_item_atk_buff_expires` |
+//! | 烟雾弹只挡 1 次反击 | `combat_item_stagger_once` |
+//! | 防御当回合反击减半 | `combat_defend_halves_counter` |
+//! | 道具不消耗随机数（同 seed 同轨迹） | `combat_item_keeps_rng_state` |
 //!
 //! 置于集成测试目录，豁免门禁的 `unwrap`/`expect` 扫描（EXP-052）；
 //! `cfg.boss(0)` 在 `test_cfg()` 恒有档 0，`expect` 在此安全。
@@ -19,7 +25,7 @@
 //! 不经逆向参照路径重导出（S12.1 消除战斗域对逆向路径的依赖）。
 
 use ti_core::data::{BossTier, CombatCfg, DamageCfg};
-use ti_core::domain::combat::{Side, Unit};
+use ti_core::domain::combat::{CombatAction, ItemEffect, Side, Unit};
 use ti_core::rules::battle::BattleSession;
 
 /// 测试用战斗参数（不读 `balance`，隔离 RNG 行为；BOSS 档 0 与 `balance.json` 同值）。
@@ -30,7 +36,17 @@ fn test_cfg() -> CombatCfg {
         player: None,
         damage: DamageCfg { flat: 1, atk_coef: 1.0, rng_span: 3 },
         boss_tiers: vec![BossTier { tier: 0, hp: 50_000, atk: 10 }],
+        defend_reduction_pct: 50,
+        items: Vec::new(),
     }
+}
+
+/// 无随机浮动的战斗参数（S27.7 道具/防御用例夹具：伤害可精确断言）。
+fn deterministic_cfg() -> CombatCfg {
+    let mut cfg = test_cfg();
+    cfg.damage.rng_span = 0;
+    cfg.boss_tiers = vec![BossTier { tier: 0, hp: 50_000, atk: 10 }];
+    cfg
 }
 
 #[test]
@@ -211,4 +227,97 @@ fn combat_boss_tiers_from_balance() {
     let invalid = BattleSession::from_balance(0, player, 5).expect("balance.json 有效");
     assert_eq!(invalid.boss_hp(), 0, "档 5 越界 → 无效战斗");
     assert_eq!(invalid.outcome(), Some(Side::Player), "越界档判玩家胜（无 BOSS 可打）");
+}
+
+/// S27.7：火药桶伤害固定（不吃 atk、不吃随机）——`docs/business/combat.md` §道具表。
+#[test]
+fn combat_item_damage_is_fixed() {
+    let cfg = deterministic_cfg();
+    let boss = cfg.boss(0).expect("test_cfg 恒有档 0");
+    // 玩家 atk=1（普攻只掉 1 血），火药桶固定 300 ⇒ 掉 300 而非 1
+    let player = Unit { hp: 1_000, atk: 1 };
+    let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
+    let (_ph, eh, _) = s.step_with(CombatAction::Item(ItemEffect::Damage(300)));
+    assert_eq!(eh, boss.hp - 300, "火药桶固定 300 伤害（不吃 atk/随机）");
+}
+
+/// S27.7：医疗包按上限百分比回复，且不超上限。
+///
+/// 夹具：BOSS atk = 100（无随机）；每回合结算顺序 = 玩家动作 → 敌方反击
+/// ⇒ 每次道具回合都会在回复后再挨一下，期望值已按此顺序推算。
+#[test]
+fn combat_item_heal_capped() {
+    let mut cfg = deterministic_cfg();
+    cfg.boss_tiers = vec![BossTier { tier: 0, hp: 50_000, atk: 100 }];
+    let player = Unit { hp: 1_000, atk: 1 };
+    let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
+    // 防御回合：反击 100 → 减半 50 ⇒ 玩家 HP 1000 → 950
+    let _ = s.step_with(CombatAction::Defend);
+    assert_eq!(s.player_hp(), 950, "防御减半：100 → 50");
+    // 医疗包 20% 上限 = 200：950 + 200 = 1150 ⇒ 钳到上限 1000 ⇒ 再挨反击 100 ⇒ 900
+    let _ = s.step_with(CombatAction::Item(ItemEffect::HealPct(20)));
+    assert_eq!(s.player_hp(), 900, "回复被上限钳制（封顶 1000）后被反击 100");
+    assert!(s.player_hp() <= player.hp, "回复不超上限");
+    // 再来一轮：850 + 500（50% 请求）⇒ 仍钳到 1000 ⇒ 反击 100 ⇒ 900（证明是封顶而非溢出）
+    let _ = s.step_with(CombatAction::Defend);
+    assert_eq!(s.player_hp(), 850);
+    let _ = s.step_with(CombatAction::Item(ItemEffect::HealPct(50)));
+    assert_eq!(s.player_hp(), 900, "50% 请求同样被上限钳制（不溢出上限）");
+}
+
+/// S27.7：朗姆酒增益覆盖 3 次攻击后失效。
+#[test]
+fn combat_item_atk_buff_expires() {
+    let mut cfg = deterministic_cfg();
+    cfg.boss_tiers = vec![BossTier { tier: 0, hp: 50_000, atk: 0 }];
+    let player = Unit { hp: 10_000, atk: 100 };
+    let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
+    // 用道具（不吃当回合攻击）⇒ 第 2 回合起第一次攻击吃到增益
+    let _ = s.step_with(CombatAction::Item(ItemEffect::AtkBuff { pct: 50, rounds: 3 }));
+    assert_eq!(s.atk_buff_rounds(), 3, "增益剩 3 回合（使用当回合不计）");
+    // 第 2 回合：增益生效（100 × 1.5 = 150）
+    let (_p, eh1, _) = s.step_with(CombatAction::Attack);
+    assert_eq!(eh1, 50_000 - 150, "第 1 次攻击吃 50% 增益");
+    let (_p, eh2, _) = s.step_with(CombatAction::Attack);
+    assert_eq!(eh2, 50_000 - 300, "第 2 次攻击仍吃增益");
+    let (_p, eh3, _) = s.step_with(CombatAction::Attack);
+    assert_eq!(eh3, 50_000 - 450, "第 3 次攻击吃最后一次增益");
+    let (_p, eh4, _) = s.step_with(CombatAction::Attack);
+    assert_eq!(eh4, 50_000 - 450 - 100, "第 4 次攻击增益已到期（回到原 atk）");
+    assert_eq!(s.atk_buff_rounds(), 0, "增益计数归零");
+}
+
+/// S27.7：烟雾弹只挡 1 次反击（下一回合恢复正常掉血）。
+#[test]
+fn combat_item_stagger_once() {
+    let cfg = deterministic_cfg();
+    let player = Unit { hp: 1_000, atk: 1 };
+    let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
+    // 烟雾弹回合：敌方反击落空 ⇒ 玩家 HP 不变
+    let (ph, _eh, _) = s.step_with(CombatAction::Item(ItemEffect::Stagger));
+    assert_eq!(ph, player.hp, "烟雾弹当回合敌方反击落空");
+    // 下一回合正常反击
+    let (ph2, _eh2, _) = s.step_with(CombatAction::Attack);
+    assert_eq!(ph2, player.hp - 10, "烟雾弹只挡 1 次，下一回合正常挨打");
+}
+
+/// S27.7：防御动作当回合反击减半（`defend_reduction_pct = 50`）。
+#[test]
+fn combat_defend_halves_counter() {
+    let cfg = deterministic_cfg();
+    let player = Unit { hp: 1_000, atk: 1 };
+    let mut s = BattleSession::new_with_cfg(cfg, 1, player, 0);
+    let (ph, _eh, _) = s.step_with(CombatAction::Defend);
+    assert_eq!(ph, player.hp - 5, "防御当回合反击伤害减半（BOSS atk=10 → 5）");
+}
+
+/// S27.7：道具不消耗随机数 ⇒ 同 seed + 同动作序列 ⇒ 同轨迹。
+#[test]
+fn combat_item_keeps_rng_state() {
+    let player = Unit { hp: 1_000, atk: 20 };
+    let mut a = BattleSession::new_with_cfg(test_cfg(), 77, player, 0);
+    let mut b = BattleSession::new_with_cfg(test_cfg(), 77, player, 0);
+    let _ = a.step_with(CombatAction::Item(ItemEffect::Damage(300)));
+    let _ = b.step_with(CombatAction::Item(ItemEffect::Damage(300)));
+    assert_eq!(a.finish(), b.finish(), "道具回合不推进 RNG ⇒ 后续轨迹一致");
 }

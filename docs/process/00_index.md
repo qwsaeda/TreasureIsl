@@ -90,6 +90,7 @@
 | [`21_map_package_spec.md`](21_map_package_spec.md) | **地图包规范 v1**（一张图 = 一个自包含可分发包：包格式 / `manifest.json` 字段 / 版本兼容 / sha256 完整性 / 31 格不变量 / 运行期加载契约与失败回退 / 工具与产物落点）；加图·换图前必读 |
 | [`19_bevy_ui.md`](19_bevy_ui.md) | **bevy_ui 专题**（UI 相机分层 / `Node`+`Text`+**`ImageNode`** / taffy 自动布局=意图化不手写像素 / resize 真重排 / `ComputedNode` 探针证据 / 0.20 坑位）；改 UI chrome·加控件·改版面坐标前必读 |
 | [`20_bevy_picking.md`](20_bevy_picking.md) | **bevy_picking 专题**（0.20 拾取结构（无 `PickingSection`）/ 指针事件 / **`Message` 取代 `Event`** / 本项目命中契约 `PickTarget`·`PickEvent`·`HitData` / 数据化命中 `pick_key` / 坑位）；改命中·加可点元素前必读 |
+| [`22_dev_platform.md`](22_dev_platform.md) | **开发管理平台（TI Dev Console）定案**（与游戏运行时解耦，纯管理 + 辅助开发：定位/不做清单 / 文件系统即数据库的写面边界 / 零游戏依赖的依赖图断言 / HTTP 选型 / 命令白名单 / 数据源 / 页面与能力矩阵 / **双审计协议与载体** / 安全 / 北极星判据的测量口径）；WBS = [`plan-s32-platform.md`](../plan-s32-platform.md) |
 
 ## 变更面声明（每次开发必填）
 
@@ -104,6 +105,8 @@
 | **规则实现** | `crates/ti-core/src/rules/*` | 纯函数规则（不碰表现层） | 业务规则 + 数据 |
 | **表现** | `crates/ti-app/src/scenes/*`、`crates/ti-render/`、`crates/ti-engine/` | 渲染 / 交互 / 音效 | 规则层定案后接线 |
 | **资产** | `assets/ui/*` + `assets/ui_manifest.json` | 贴图/图标/字体 | 清单驱动（`scripts/ui_assets.py`） |
+| **工具** | `crates/ti-tools/`、`crates/ti-devmeta/`、`crates/ti-console/`、`scripts/` | 脚本/工具行为（幂等 + 只读模式 + 非 0 退出） | 工具台账登记（`14_tooling_catalog.md`）+ 工具契约断言 |
+| **文档** | `docs/**`、`AGENTS.md`、`plan/*.yaml` | 规范 / 计划 / 台账文字 | `doccheck` + `doccheck2`（索引登记 / ID 唯一 / 计数一致） |
 
 ### 声明格式（任务书 / 交付说明统一用）
 

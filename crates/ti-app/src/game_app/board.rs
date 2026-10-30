@@ -45,6 +45,11 @@ impl GameApp {
             }
         };
         let init_gold = b.economy.initial_gold;
+        // S27.5 D1：首次进场 map_slot=None（shot 导航/新开局路径），兜底设 M01；
+        // 否则 main_map 渲染侧 host.map_slot() 永远 None ⇒ 中央据点岛不画。
+        if self.map_slot.is_none() {
+            self.map_slot = MapSlot::from_index(0);
+        }
         let zero_index = self.map_slot.map_or(0, MapSlot::zero_index);
         let Some(map_def) = b.selection.maps.iter().find(|m| m.index == zero_index) else {
             #[cfg(feature = "stats")]

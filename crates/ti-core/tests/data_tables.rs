@@ -235,6 +235,8 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             player: None,
             damage: DamageCfg { flat: 1, atk_coef: 1.0, rng_span: 1 },
             boss_tiers: vec![BossTier { tier: 0, hp: 10, atk: 1 }],
+            defend_reduction_pct: 50,
+            items: Vec::new(),
         },
         trade: ti_core::data::TradeCfg {
             markup: 1.0,

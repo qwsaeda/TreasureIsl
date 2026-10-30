@@ -343,7 +343,8 @@ def _install_dir(src: Path) -> int:
     _wire_board(manifest)
     if not DEFAULT_PTR.is_file():
         DEFAULT_PTR.write_text(map_id + "\n", encoding="utf-8", newline="\n")
-    print(f"map_pack install: {map_id} → {dest.relative_to(ROOT)}（board.json 已接线）")
+    write_pack_index()  # S31.2b：浏览器侧包清单（index.json）与已装态对齐（幂等）
+    print(f"map_pack install: {map_id} → {dest.relative_to(ROOT)}（board.json 已接线 + index.json 更新）")
     return 0
 
 
@@ -377,6 +378,7 @@ def cmd_uninstall(map_id: str) -> int:
         if remaining:
             DEFAULT_PTR.write_text(remaining[0].name + "\n", encoding="utf-8", newline="\n")
             print(f"map_pack uninstall: 默认包指针 → {remaining[0].name}")
+    write_pack_index()  # S31.2b：index.json 与卸包后已装态对齐
     print(f"map_pack uninstall: 已卸 {map_id}（构建期默认数据引用保留，运行期该包缺失 → 回退默认包数据）")
     return 0
 
@@ -517,6 +519,40 @@ def cmd_add(map_id: str) -> int:
     return 0
 
 
+def write_pack_index() -> Path:
+    """生成 `assets/maps/index.json`（`map-pack-index/1`，`build_wasm.ps1` 4e 段部署进
+    `web/assets/maps/`，浏览器侧运行期枚举已装包；缺 = 内嵌默认包 §6 回退）。
+
+    形状 = `{ "schema", "default", "ids" }`：
+    - `default` = `.default` 指针内容（缺 = `null`；指针目标不合规时壳层回退 `ids[0]`）；
+    - `ids` = 全部已装包 id（字典序，`manifest.json` 在位的目录）。
+    幂等（同输入同产物）；无已装包 = 写空清单（壳层 §6 回退，不报错）。
+    """
+    ids = sorted(pack_dir.name for pack_dir in installed_packs())
+    default_id = None
+    if DEFAULT_PTR.is_file():
+        candidate = DEFAULT_PTR.read_text(encoding="utf-8").strip()
+        if candidate in ids:
+            default_id = candidate
+    index = MAPS_DIR / "index.json"
+    dump_canonical(
+        index,
+        {"schema": "map-pack-index/1", "default": default_id, "ids": ids},
+    )
+    return index
+
+
+def cmd_index() -> int:
+    """生成 `assets/maps/index.json`（浏览器侧包清单；幂等，与 install/uninstall 后状态对齐）。"""
+    index = write_pack_index()
+    ids = installed_packs()
+    print(
+        f"map_pack index: {index.relative_to(ROOT)}（{len(ids)} 个已装包；"
+        f"default = {DEFAULT_PTR.read_text(encoding='utf-8').strip() if DEFAULT_PTR.is_file() else '无'}）"
+    )
+    return 0
+
+
 # ----------------------------------------------------------------- CLI
 
 
@@ -536,6 +572,7 @@ def main(argv: list[str]) -> int:
     p_add.add_argument("id")
     sub.add_parser("check", help="已装态 vs 默认数据漂移对账（只读）")
     sub.add_parser("sync", help="从已装包回注构建期默认数据")
+    sub.add_parser("index", help="生成 assets/maps/index.json（浏览器侧包清单，幂等）")
     args = parser.parse_args(argv[1:])
 
     if args.cmd == "pack":
@@ -554,6 +591,8 @@ def main(argv: list[str]) -> int:
         return cmd_check()
     if args.cmd == "sync":
         return cmd_sync()
+    if args.cmd == "index":
+        return cmd_index()
     parser.print_help()
     return 2
 

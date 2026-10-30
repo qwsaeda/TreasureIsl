@@ -24,7 +24,13 @@ fn repo_root() -> PathBuf {
 fn rust_decoder_matches_python_reference() {
     let root = repo_root();
     let script = root.join("scripts").join("pcx_ref.py");
-    let py = std::env::var("PYTHON").unwrap_or_else(|_| "python".to_string());
+    // 环境变量 `PYTHON` 可覆盖（CI 矩阵）；默认先试 `python3`（Linux/macOS 无 `python`，
+    // docs/migration_linux.md §3），再回退 `python`（Windows）。
+    let py = std::env::var("PYTHON").unwrap_or_else(|_| {
+        // 探测 `python3`（Linux/macOS）是否存在于 PATH；否则回退 `python`（Windows）。
+        let probe = Command::new("python3").arg("--version").output();
+        if probe.is_ok() { "python3".to_owned() } else { "python".to_owned() }
+    });
     let tmp = std::env::temp_dir().join("ti_pcx_ref");
     let _ = fs::create_dir_all(&tmp);
 

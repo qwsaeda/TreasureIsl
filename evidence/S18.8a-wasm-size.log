@@ -1,14 +1,15 @@
-﻿S18.8a wasm 体积记录（2026-10-21）
+S18.8a wasm 体积记录（2026-10-30）
 口径：Bevy 交付壳 	reasure-bevy-wasm（release，strip=symbols，S18.6 门禁重建时叠加 LTO/wasm-opt）。
 预算判定（wasm 主体 ≤8 MB，11_bevy_migration §3）属 S18.8e；本文件只记录实测值。
 
 == wasm 主体 ==
-treasure_bevy_wasm.wasm      49,839,026 B
+treasure_bevy_wasm.wasm      59,674,164 B
 
 == 首屏附属资源（不含 wasm 主体）==
+index.html                        1,257 B
 font.dat                          2,034 B
-glmapm01.Map                     17,148 B
 glmap_m01.pak                    39,609 B
+glmapm01.Map                     17,148 B
 glpics.pak                       87,027 B
 GoldLand.Fnt                     24,384 B
 index.Map                           780 B
@@ -21,18 +22,21 @@ selectrole.Map                    1,788 B
 settings.dat                          8 B
 ui.pak                          102,369 B
 vs.Map                            2,388 B
-首屏附属合计                          289,331 B
+首屏附属合计                          290,588 B
 
 == 非首屏资源 ==
+fonts                                 1 B
+maps                                  1 B
+ui                                    1 B
 background.Map                      276 B
 Bigcard.Map                       5,124 B
 build.Map                         1,836 B
 card.Map                          1,500 B
 cards.lpk                        34,000 B
 castle.Map                        4,116 B
+glmap_m02.pak                    30,315 B
 glmapm02.Map                     18,948 B
 glmapm03.Map                      8,976 B
-glmap_m02.pak                    30,315 B
 goods.lpk                           469 B
 help.Map                          2,460 B
 information.Map                   3,780 B

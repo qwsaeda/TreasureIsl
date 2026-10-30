@@ -1,10 +1,10 @@
 //! S4.3 桌面 60fps 冒烟（S18.8a 重锚到 Bevy 发货壳）：跑 `treasure-bevy-native`
-//! （`crates/ti-engine` 独立 workspace 的 Bevy 壳），抓 stdout 的 `[stats]` 行，
+//! （`crates/ti-engine` 的 Bevy 壳，S27.7 起并入根 workspace），抓 stdout 的 `[stats]` 行，
 //! 验证平均 FPS 达到 60。
 //!
 //! 用法：
 //! ```sh
-//! cargo build --release --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native
+//! cargo build --release -p ti-engine --bin treasure-bevy-native
 //! cargo test -p ti-app --features stats --test s43_fps_smoke
 //! ```
 //! 前提：桌面有 GPU/窗口环境（CI 无头环境跳过）。
@@ -24,16 +24,11 @@ const WAIT_SECS: u64 = 45;
 
 #[test]
 fn desktop_60fps_with_dirty_rect_skip() {
-    let target = target_dir()
-        .join("crates")
-        .join("ti-engine")
-        .join("target")
-        .join("release")
-        .join("treasure-bevy-native.exe");
+    let target = target_dir().join("target").join("release").join("treasure-bevy-native.exe");
     if !target.exists() {
         eprintln!(
             "[s4.3] SKIP: 未找到 {}，请先运行 \
-             `cargo build --release --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native`",
+             `cargo build --release -p ti-engine --bin treasure-bevy-native`",
             target.display()
         );
         return;

@@ -151,7 +151,7 @@ dispatch；每步基线重生成 + 目视验收 + gate 全绿；地形生成必�
 
 ## 13. S18.14：Bevy 离屏读回·7 场景对照集
 
-- 命令：`cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --scene=<id> --shot`
+- 命令：`cargo run -p ti-engine --bin treasure-bevy-native -- --scene=<id> --shot`
   → `evidence/bevy_native_<id>.png`（Bevy GPU 离屏 Image 读回）。
 - 结果：7/7 场景非黑像素 ~100%（2072382..2073600 / 2073600）且 **MD5 互异** → 每场景各出独立画面（导航生效）。
 - 证据：`evidence/bevy_parity_7scenes.md`（表；图片不入仓，每张 8MB → 代表图 `bevy_native_vs.png` / `bevy_native_main_map.png`）。

@@ -34,25 +34,25 @@
    {
     "kind": "image",
     "rect": {
-     "x": 112,
-     "y": 192,
-     "w": 856,
-     "h": 672
+     "x": 168,
+     "y": 48,
+     "w": 744,
+     "h": 224
     },
     "z": -12,
     "item": -1,
     "when": "",
     "color": "",
     "params": {
-     "asset": "assets/ui/board.png"
+     "asset": "assets/ui/hud_plaque.png"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 160,
-     "y": 220,
-     "w": 760,
+     "x": 168,
+     "y": 72,
+     "w": 744,
      "h": 96
     },
     "z": -11,
@@ -65,9 +65,9 @@
    {
     "kind": "text",
     "rect": {
-     "x": 160,
-     "y": 336,
-     "w": 760,
+     "x": 168,
+     "y": 168,
+     "w": 744,
      "h": 48
     },
     "z": -11,
@@ -2252,7 +2252,7 @@
      "h": 64
     },
     "params": {
-     "icon": "coin",
+     "icon": "chest",
      "size": 64
     },
     "color": "gold_warm",

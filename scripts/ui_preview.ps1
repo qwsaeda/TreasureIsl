@@ -59,7 +59,7 @@ foreach ($s in $scenes) {
     # 注意：`$extra` 不能带前导空格（否则整个参数变成 " --spin=5" 解析失败）
     $extra = ''
     if ($s -eq 'main_map') { $extra = '--spin=5' }
-    & cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --scene=$s --shot $extra 2>&1 |
+    & cargo run -q -p ti-engine --bin treasure-bevy-native -- --scene=$s --shot $extra 2>&1 |
         Select-String -Pattern '\[shot\]' | ForEach-Object { Write-Host "  $_" }
 
     $png = "evidence\bevy_native_$s.png"

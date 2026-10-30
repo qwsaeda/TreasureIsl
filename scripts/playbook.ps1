@@ -9,7 +9,7 @@
 #   run-headless     无头回归（tests/scripts/full_run.json 16 步）
 #   run-wasm         构建 + 起本地 HTTP 预览浏览器版
 #   smoke            native+wasm 两端冒烟
-#   gate             全门禁（28 项）
+#   gate             全门禁（31 项）
 #   test             全 workspace 测试
 #   fmt              规范格式化
 #   clippy           lint（-D warnings）
@@ -55,7 +55,7 @@ if (-not $Command -or $Command -eq "-List" -or $Command -eq "--help" -or $Comman
     Write-Host "  run-headless   无头回归（full_run.json）"
     Write-Host "  run-wasm       构建+起本地 HTTP 预览浏览器版"
     Write-Host "  smoke          native+wasm 两端冒烟"
-    Write-Host "  gate           全门禁（28 项）"
+    Write-Host "  gate           全门禁（31 项）"
     Write-Host "  test           全 workspace 测试"
     Write-Host "  fmt            规范格式化"
     Write-Host "  clippy         lint（-D warnings）"
@@ -65,6 +65,8 @@ if (-not $Command -or $Command -eq "-List" -or $Command -eq "--help" -or $Comman
     Write-Host "  ui-preview     界面实拍验收（出图 + 缩略图 + 像素统计）"
     Write-Host "  ui-assets      UI 资产管线（build / add / verify）"
     Write-Host "  serve          起本地静态服务（web/）"
+    Write-Host "  web-playtest   浏览器真运行时试玩（S16.1，serve 需先在跑）"
+    Write-Host "  playtest-loop  试玩闭环 4 报告聚合（S16.2，web 报告需 serve 在跑）"
     Write-Host "  push           提交并推送（前置 gate 全绿 + 台账 verified）"
     Write-Host "  ledger         台账校验"
     Write-Host "  doccheck       文档一致性"
@@ -76,7 +78,7 @@ if (-not $Command -or $Command -eq "-List" -or $Command -eq "--help" -or $Comman
 switch ($Command) {
     "run-native" {
         # S18.8a：发货桌面版 = Bevy 壳（ti-engine 独立 workspace；macroquad 壳已退役）
-        RunCmd "cargo run -q --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native"
+        RunCmd "cargo run -q -p ti-engine --bin treasure-bevy-native"
     }
     "run-headless" {
         RunCmd "cargo run -q -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json"
@@ -129,6 +131,14 @@ switch ($Command) {
     }
     "serve" {
         RunCmd "cargo run -q -p ti-tools --bin serve -- --dir web --port 8080"
+    }
+    "web-playtest" {
+        # S16.1 浏览器真运行时试玩（CDP 按键驱动；serve 需先在跑）
+        RunCmd "node scripts/web_playtest.cjs"
+    }
+    "playtest-loop" {
+        # S16.2 试玩闭环 4 报告聚合（08_playtest_loop.md；web 报告需 serve 在跑）
+        RunCmd "python3 scripts/playtest_loop.py"
     }
     "push" {
         # 前置检查：gate 全绿 + 工作区无意外文件

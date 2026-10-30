@@ -17,7 +17,16 @@ Set-Location $repoRoot
 
 $target = 'wasm32-unknown-unknown'
 $outDir = 'web'
+# S27.7：ti-engine 并回根 workspace ⇒ 产物落**根** target 目录（不再是 crates/ti-engine/target/）。
+# 2026-10-29：cargo 统一 target 目录 = /disk/target（`.cargo/config.toml` `[build] target-dir`）；
+# 脚本不再硬编码 `target/`，动态解析 cargo 实际 target 目录（Windows 机器若 CARGO_TARGET_DIR
+# 覆盖则同样适用）。
 $engineManifest = 'crates\ti-engine\Cargo.toml'
+$targetDir = (& cargo metadata --no-deps --format-version 1 2>$null |
+    ConvertFrom-Json).target_directory
+if (-not $targetDir) { $targetDir = 'target' }
+# 路径拼接跨平台（Windows 反斜杠 / Linux 正斜杠；docs/migration_linux.md §4）
+$wasmOut = Join-Path (Join-Path (Join-Path $targetDir $target) 'release') 'treasure-bevy-wasm.wasm'
 
 # S21.8 工具契约只读模式：-Check = 前置体检（rustup target / 交付壳 manifest / 首屏资源在位；
 # 不构建 / 不拷贝 / 不写 evidence；任一前置缺失 ⇒ 非 0 退出）
@@ -49,13 +58,27 @@ if ($installed -notmatch $target) {
 Say "OK  target $target"
 
 # 2) 编译（release；交付产物口径 = release wasm）
-Say "cargo build --release --manifest-path $engineManifest --bin treasure-bevy-wasm --target $target ..."
-& cargo build --release --manifest-path $engineManifest --bin treasure-bevy-wasm --target $target 2>&1 |
+Say "cargo build --release -p ti-engine --bin treasure-bevy-wasm --target $target ..."
+& cargo build --release -p ti-engine --bin treasure-bevy-wasm --target $target 2>&1 |
     Select-Object -Last 15 | ForEach-Object { Say $_ }
 if ($LASTEXITCODE -ne 0) { Write-Host "  FAIL  cargo build" -ForegroundColor Red; exit 1 }
 
+# 2b) S31.2c：wasm-bindgen 胶水（裸 WebAssembly.instantiate 不导函数名，必须生成
+#      匹配版本的 .js 绑定 + .d.ts；CLI 须与 lock 的 wasm-bindgen 0.2.129 同版本，
+#      缺失时自动 cargo install 匹配版）
+$wbWasm = $wasmOut
+& wasm-bindgen --version 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Say "wasm-bindgen CLI 缺失 → 自动安装（cargo install wasm-bindgen-cli --version 0.2.129）"
+    & cargo install wasm-bindgen-cli --version 0.2.129 2>&1 |
+        Select-Object -Last 3 | ForEach-Object { Say "  $($_)" }
+}
+& wasm-bindgen $wbWasm --target web --out-dir $outDir 2>&1 |
+    Select-Object -Last 5 | ForEach-Object { Say "  wasm-bindgen: $_" }
+if ($LASTEXITCODE -ne 0) { Write-Host "  FAIL  wasm-bindgen" -ForegroundColor Red; exit 1 }
+
 # 3) 拷贝 wasm 到 web/
-$wasmIn = "crates\ti-engine\target\$target\release\treasure-bevy-wasm.wasm"
+$wasmIn = $wasmOut
 if (-not (Test-Path $wasmIn)) { Write-Host "  FAIL  未找到 $wasmIn" -ForegroundColor Red; exit 1 }
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 Say "拷贝 wasm 到 $outDir\ ..."
@@ -63,13 +86,27 @@ Copy-Item $wasmIn (Join-Path $outDir 'treasure_bevy_wasm.wasm') -Force
 
 # 3b) 清掉 macroquad 时代的遗留壳文件（gl.js / audio.js / treasure_wasm.wasm / index.html）：
 #     它们属于已退役的 macroquad wasm 壳，留着会让人误以为 web/ 仍可玩。
-foreach ($stale in @('gl.js', 'audio.js', 'treasure_wasm.wasm', 'index.html')) {
+foreach ($stale in @('gl.js', 'audio.js', 'treasure_wasm.wasm')) {
     $p = Join-Path $outDir $stale
     if (Test-Path $p) {
         Remove-Item $p -Force
         Say "移除遗留 $stale（macroquad 壳产物，S18.8a 退役）"
     }
 }
+
+# 3c) S31.2c：浏览器入口页（index.html + main.js；wasm-bindgen 胶水由 2b 段生成
+#      的 treasure_bevy_wasm.js 驱动）
+$htmlSrc = Join-Path $PSScriptRoot 'web_index.html'
+$jsSrc = Join-Path $PSScriptRoot 'web_main.js'
+Copy-Item $htmlSrc (Join-Path $outDir 'index.html') -Force
+Copy-Item $jsSrc (Join-Path $outDir 'main.js') -Force
+# S31.2c：env-stub（wasm "env" 模块占位，miniquad 遗留宿主 FFI；S18.8b/c 根除后删除）
+$stubSrc = Join-Path $PSScriptRoot 'env-stub.js'
+if (Test-Path $stubSrc) {
+    Copy-Item $stubSrc (Join-Path $outDir 'env-stub.js') -Force
+    Say "entry  env-stub.js -> $outDir\"
+}
+Say "entry  index.html + main.js -> $outDir\"
 
 # 4) 拷贝真实资源（Bevy 资产管线落地的输入；S18.8e 接进 Bevy 壳的资源加载）
 #    美术**不转码**——PCX 已是 RLE+调色板的最优压缩，且 .Map 按精灵索引寻址，
@@ -144,6 +181,8 @@ if (Test-Path (Join-Path $hdPack '1x')) {
 #     运行期 fetch 读取归 S31.2+，本步只部署包文件，缺包 = 内嵌默认包 0 行为变化）
 $mapsSrc = Join-Path (Get-Location) 'assets\maps'
 if (Test-Path $mapsSrc) {
+    # S31.2b：生成浏览器侧包清单（幂等；index.json 缺 = 浏览器走内嵌默认包 §6 回退）。
+    python scripts/map_pack.py index
     $mapsOut = Join-Path $outDir 'assets\maps'
     New-Item -ItemType Directory -Force -Path $mapsOut | Out-Null
     foreach ($packDir in (Get-ChildItem $mapsSrc -Directory)) {
@@ -159,8 +198,32 @@ if (Test-Path $mapsSrc) {
         Copy-Item $defaultPtr (Join-Path $mapsOut '.default') -Force
         Say "map-pack  .default -> web/assets/maps/.default"
     }
+    # S31.2b：浏览器侧已装包清单（`map_pack.py index` 生成；壳层 `map_pack_fetch` 读它
+    # 枚举包 + 选默认包，缺 = 内嵌默认包 §6 回退）
+    $indexJson = Join-Path $mapsSrc 'index.json'
+    if (Test-Path $indexJson) {
+        Copy-Item $indexJson (Join-Path $mapsOut 'index.json') -Force
+        Say "map-pack  index.json -> web/assets/maps/index.json"
+    }
 } else {
     Say "SKIP  地图包（assets/maps/ 不存在，运行期全走内嵌默认包）"
+}
+
+# 4f) S31.2c：Bevy 资产服务器（wasm HttpWasmAssetReader）fetch 根 = `web/assets/`，
+#     按 URL 相对读 `assets/fonts/` + `assets/ui/`（`bevy::asset::AssetPlugin.file_path` 空串
+#     = 部署根）；native 壳走 std::fs 不经过本段。缺目录 = 字体/UI 贴图降级不 panic。
+$bevyAssetDirs = @('fonts', 'ui')
+foreach ($ad in $bevyAssetDirs) {
+    $srcDir = Join-Path (Get-Location) "assets\$ad"
+    if (Test-Path $srcDir) {
+        $dstDir = Join-Path $outDir "assets\$ad"
+        New-Item -ItemType Directory -Force -Path $dstDir | Out-Null
+        Copy-Item (Join-Path $srcDir '*') $dstDir -Force -Recurse
+        $n = (Get-ChildItem $dstDir -File).Count
+        Say "bevy-assets  $ad -> web/assets/$ad（$n 个文件）"
+    } else {
+        Say "SKIP  bevy-assets $ad（assets/$ad/ 不存在）"
+    }
 }
 
 $artifacts = Get-ChildItem $outDir -Include '*.html', '*.js', '*.wasm' -Recurse |

@@ -16,8 +16,38 @@ use crate::game_app::{GameApp, HitData};
 use crate::menu_shell::parse_font_bytes;
 use crate::scenes::SceneKind;
 use crate::touch::TouchPad;
-use macroquad::audio::{PlaySoundParams, Sound, load_sound_from_bytes, play_sound};
 use macroquad::prelude::*;
+
+/// Android 壳音频桩（S27.7：workspace 合并后 `macroquad/audio` → `quad-snd` → `links=alsa`
+/// 与 bevy 的 alsa 链在根 workspace 同一依赖图内冲突 ⇒ 不再链接 quad-snd）。
+///
+/// 口径：**发货无声**（同 S18.8 / S30.0 音频口径），android 壳待 S18.8d 退役；
+/// 本桩只保留接口形状（类型 + 空实现），不静默假音频（曲目数如实为 0）。
+mod audio_stub {
+    /// 音频句柄（桩：仅类型占位）。
+    #[derive(Debug, Clone)]
+    pub struct Sound;
+
+    /// 播放参数（桩：仅类型占位）。
+    #[derive(Debug, Clone, Copy)]
+    pub struct PlaySoundParams {
+        /// 是否循环播放。
+        pub looped: bool,
+        /// 音量（0.0..=1.0）。
+        pub volume: f32,
+    }
+
+    /// 载入音频字节（桩：恒失败 ⇒ 壳以 0 曲目运行）。
+    #[allow(clippy::unused_async)]
+    pub async fn load_sound_from_bytes(_bytes: &[u8]) -> Result<Sound, ()> {
+        Err(())
+    }
+
+    /// 播放（桩：空实现）。
+    pub fn play_sound(_sound: Sound, _params: PlaySoundParams) {}
+}
+
+use audio_stub::{PlaySoundParams, Sound, load_sound_from_bytes, play_sound};
 
 /// BGM 音量（0.0..=1.0）。
 const BGM_VOLUME: f32 = 0.5;

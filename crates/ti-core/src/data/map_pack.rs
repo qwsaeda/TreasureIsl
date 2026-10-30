@@ -22,6 +22,62 @@ use serde::Deserialize;
 
 use super::{LoadError, SCHEMA_VERSION_KEY};
 
+/// 地图包文件 IO 抽象（S31.2b：跨平台读包面）。
+///
+/// 背景：`map_pack` 原实现直读 `std::fs`（`read_dir`/`read_to_string`/`is_file`），
+/// wasm 浏览器里无文件系统 ⇒ 读包静默失败 ⇒ 运行期换图在浏览器端失效。
+/// 本 trait 把 IO 收敛为两个方法，`std::fs` 实现（native）与 `fetch` 实现（wasm）
+/// 各注册一份；合并逻辑（[`merge_board_upsert`] 等）与校验逻辑（[`check_pack_manifest`]）
+/// 保持纯 std 不变（0 平台分叉）。
+pub trait PackReader {
+    /// 包根下已装包 id 清单（`manifest.json` 在位的目录名；字典序；缺目录 = 空清单）。
+    fn list_packs(&self) -> Vec<String>;
+    /// 读包 `<id>/<file>` 的 UTF-8 文本；缺文件 = `None`（调用方按段回退内嵌）。
+    fn read_file(&self, map_id: &str, file: &str) -> Option<String>;
+}
+
+/// `std::fs` 后端（native / android）：包根 = 本地文件系统目录。
+pub struct FsPackReader {
+    root: PathBuf,
+}
+
+impl FsPackReader {
+    /// 以包根目录构造（`assets/maps` 或 `TI_MAP_ROOT` 覆盖值）。
+    #[must_use]
+    pub fn new(root: impl Into<PathBuf>) -> Self {
+        Self { root: root.into() }
+    }
+}
+
+impl PackReader for FsPackReader {
+    fn list_packs(&self) -> Vec<String> {
+        let Ok(entries) = std::fs::read_dir(&self.root) else {
+            return Vec::new();
+        };
+        entries
+            .filter_map(std::result::Result::ok)
+            .filter(|entry| entry.path().is_dir())
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .filter(|id| self.root.join(id).join("manifest.json").is_file())
+            .collect()
+    }
+
+    fn read_file(&self, map_id: &str, file: &str) -> Option<String> {
+        let path = self.root.join(map_id).join(file);
+        if path.is_file() { std::fs::read_to_string(&path).ok() } else { None }
+    }
+}
+
+/// 平台默认 reader（native / android = [`FsPackReader`]；包根 = [`pack_root`]）。
+///
+/// wasm 侧不经此函数（fetch 实现在 ti-engine 壳层，`apply_map_pack` 按 `cfg` 分发，
+/// 见 `docs/process/21_map_package_spec.md` §7）。
+pub fn default_reader() -> &'static dyn PackReader {
+    use std::sync::OnceLock;
+    static READER: OnceLock<FsPackReader> = OnceLock::new();
+    READER.get_or_init(|| FsPackReader::new(pack_root()))
+}
+
 /// 地图包 schema 标识（spec §6 版本兼容；`manifest.json` `schema` 字段须等值，不符即拒）。
 pub const MAP_PACK_SCHEMA: &str = "map-pack/1";
 /// 地图包数据版本（spec §6；`manifest.json` `data_version` 须 = `board-v5`，不符即拒）。
@@ -85,35 +141,99 @@ pub fn check_pack_manifest(raw: &str, map_id: &str) -> Result<RawPackManifest, L
 /// 包根目录的已装包 id 清单（`_template` 等缺 manifest 的目录跳过；字典序）。
 ///
 /// 目录不存在 = 空清单（回退内嵌默认包，不报错——wasm 部署侧无包目录是常态）。
+/// 平台差异：native / android = [`default_reader`]（`std::fs`）；wasm 侧不经此函数
+/// （fetch 实现在 ti-engine 壳层，`docs/process/21_map_package_spec.md` §7）。
 #[must_use]
 pub fn available_pack_ids(root: &Path) -> Vec<String> {
-    let Ok(entries) = std::fs::read_dir(root) else {
-        return Vec::new();
-    };
-    entries
-        .filter_map(std::result::Result::ok)
-        .filter(|entry| entry.path().is_dir())
-        .map(|entry| entry.file_name().to_string_lossy().into_owned())
-        .filter(|id| (root.join(id).join("manifest.json")).is_file())
+    available_pack_ids_with(&FsPackReader::new(root))
+}
+
+/// 已装包 id 清单（reader 版；签名同 [`available_pack_ids`]，IO 走 [`PackReader`]）。
+#[must_use]
+pub fn available_pack_ids_with(reader: &dyn PackReader) -> Vec<String> {
+    reader
+        .list_packs()
+        .into_iter()
+        .filter(|id| reader.read_file(id, "manifest.json").is_some())
         .collect()
 }
 
 /// 默认包 id（`<root>/.default` 指针文件；缺 = 首个已装包；无已装包 = `None`）。
+///
+/// 平台差异：native / android = [`default_reader`] 直读；wasm = 浏览器无本地文件系统，
+/// 读包走 ti-engine 壳层 fetch reader（`docs/process/21_map_package_spec.md` §7），
+/// 本函数在 wasm 侧返回 `None`（缺包 = 内嵌默认包，§6 回退，不打日志）。
+///
+/// `root` 参数保留 = native 侧显式指定包根（`FsPackReader::new(root)`），
+/// 与 `TI_MAP_ROOT` 环境变量语义一致（壳层 `pack_root()` 解析后传入）。
 #[must_use]
 pub fn default_pack_id(root: &Path) -> Option<String> {
-    if let Ok(pointer) = std::fs::read_to_string(root.join(".default")) {
-        let want = pointer.trim().to_owned();
-        if !want.is_empty() && (root.join(&want).join("manifest.json")).is_file() {
-            return Some(want);
-        }
+    default_pack_id_with(&FsPackReader::new(root))
+}
+
+/// 默认包 id（reader 版；签名同 [`default_pack_id`]，IO 走 [`PackReader`]）。
+///
+/// 根级文件（`.default` 指针）约定 `map_id` 传空串。
+#[must_use]
+pub fn default_pack_id_with(reader: &dyn PackReader) -> Option<String> {
+    let raw = reader.read_file("", ".default")?;
+    let want = raw.trim().to_owned();
+    if !want.is_empty() && reader.read_file(&want, "manifest.json").is_some() {
+        return Some(want);
     }
-    available_pack_ids(root).into_iter().next()
+    available_pack_ids_with(reader).into_iter().next()
+}
+
+/// 内存后端（纯 std，零平台依赖）：已预取好的包文件表 → [`PackReader`]。
+///
+/// wasm 侧用法（`docs/process/21_map_package_spec.md` §7）：壳层先经浏览器 fetch
+/// 预取包文件进 `BTreeMap`，再用本后端驱动 [`read_pack_tables_with`] /
+/// [`available_pack_ids_with`] / [`default_pack_id_with`]（0 新依赖、可单测）。
+#[derive(Debug, Default, Clone)]
+pub struct MemoryPackReader {
+    /// 键 = `<map_id>/<file>`；`map_id` 空串 = 包根级文件（`.default`）。
+    files: BTreeMap<String, String>,
+    /// 已装包 id 清单（`list_packs` 直接返回；缺 manifest 的 id 由调用方 `read_file` 过滤）。
+    pack_ids: Vec<String>,
+}
+
+impl MemoryPackReader {
+    /// 以预取文件表 + 已装包清单构造（`pack_ids` 须字典序，同 [`PackReader::list_packs`] 口径）。
+    #[must_use]
+    pub fn new(files: BTreeMap<String, String>, pack_ids: Vec<String>) -> Self {
+        Self { files, pack_ids }
+    }
+
+    /// 文件表（`<map_id>/<file>` → 文本；测试断言 / 预取结果导出用）。
+    #[must_use]
+    pub fn files(&self) -> &BTreeMap<String, String> {
+        &self.files
+    }
+
+    /// 本 reader 承载的选定包 id（`files` 键首段去重；缺 = `None`，§6 回退）。
+    #[must_use]
+    pub fn pack_id(&self) -> Option<String> {
+        self.files.keys().find_map(|k| k.split_once('/').map(|(id, _)| id.to_owned()))
+    }
+}
+
+impl PackReader for MemoryPackReader {
+    fn list_packs(&self) -> Vec<String> {
+        self.pack_ids.clone()
+    }
+
+    fn read_file(&self, map_id: &str, file: &str) -> Option<String> {
+        let key = if map_id.is_empty() { file.to_owned() } else { format!("{map_id}/{file}") };
+        self.files.get(&key).cloned()
+    }
 }
 
 /// 从包路径直读三段表（spec §7 运行期加载契约）。
 ///
 /// 包根 = `root/<id>/`，须含 `manifest.json`（合规）；`map.json`/`layout.json`/
 /// `strings.json` 各自可选（缺段 = 该段 `None`，`table_source` 按段回退内嵌）。
+/// IO 走 [`FsPackReader`]（native = `std::fs`）；wasm 侧由 ti-engine 壳层 fetch reader
+/// 驱动 [`read_pack_tables_with`]（`docs/process/21_map_package_spec.md` §7）。
 ///
 /// 注入文本为**内嵌默认表 upsert 包段**（整表形状；保留其余内嵌图/场景/文案，
 /// 只替换本包自己的段）：
@@ -126,23 +246,22 @@ pub fn default_pack_id(root: &Path) -> Option<String> {
 /// （调用方回退内嵌默认包，§6；不 panic）。
 #[must_use]
 pub fn read_pack_tables(root: &Path, map_id: &str) -> Option<MapPackTables> {
-    let pack_dir = root.join(map_id);
-    let manifest_path = pack_dir.join("manifest.json");
-    if !manifest_path.is_file() {
-        return None;
-    }
-    let manifest_raw = std::fs::read_to_string(&manifest_path).ok()?;
+    read_pack_tables_with(&FsPackReader::new(root), map_id)
+}
+
+/// 从包路径直读三段表（reader 版；签名同 [`read_pack_tables`]，IO 走 [`PackReader`]）。
+#[must_use]
+pub fn read_pack_tables_with(reader: &dyn PackReader, map_id: &str) -> Option<MapPackTables> {
+    let manifest_raw = reader.read_file(map_id, "manifest.json")?;
     if check_pack_manifest(&manifest_raw, map_id).is_err() {
         eprintln!("[map-pack] {map_id}: manifest 校验失败（schema/版本/id）⇒ 回退内嵌默认包");
         return None;
     }
     // 注入文本 = **内嵌默认表 upsert 包段**（整表形状；保留其余内嵌图/场景/文案，
     // 只替换本包自己的段——否则注入 m02 会丢 m01/m03 内嵌图，默认选 m01 时硬错误）。
-    let board_json =
-        merge_board_upsert(read_section(&pack_dir.join("map.json")).as_deref(), map_id);
-    let scenes_json = merge_scenes_upsert(read_section(&pack_dir.join("layout.json")).as_deref());
-    let strings_json =
-        merge_strings_upsert(read_section(&pack_dir.join("strings.json")).as_deref());
+    let board_json = merge_board_upsert(reader.read_file(map_id, "map.json").as_deref(), map_id);
+    let scenes_json = merge_scenes_upsert(reader.read_file(map_id, "layout.json").as_deref());
+    let strings_json = merge_strings_upsert(reader.read_file(map_id, "strings.json").as_deref());
     Some(MapPackTables { id: map_id.to_owned(), board_json, scenes_json, strings_json })
 }
 
@@ -185,11 +304,6 @@ fn merge_strings_upsert(strings_raw: Option<&str>) -> Option<String> {
         }
     }
     serde_json::to_string(&strings).ok()
-}
-
-/// 读单段表文件（缺失 = `None`，不报错；调用方按段回退内嵌）。
-fn read_section(path: &Path) -> Option<String> {
-    if path.is_file() { std::fs::read_to_string(path).ok() } else { None }
 }
 
 /// 包根目录（`TI_MAP_ROOT` 环境变量 > `assets/maps`，壳层相对 CWD 跑；0 硬编码绝对路径）。

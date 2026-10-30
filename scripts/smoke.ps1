@@ -2,8 +2,8 @@
 # 用法：powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1
 # 退出码 0 = 全绿，非 0 = 失败
 #
-# S18.8a 变更：发货壳 = Bevy（`crates/ti-engine` 独立 workspace）：
-#   - native = `treasure-bevy-native`（ti-engine manifest）
+# S18.8a 变更：发货壳 = Bevy（`crates/ti-engine`，S27.7 起并入根 workspace）：
+#   - native = `treasure-bevy-native`（根 workspace 的 ti-engine 成员）
 #   - wasm   = `treasure-bevy-wasm`（web/treasure_bevy_wasm.wasm）
 # macroquad 壳（treasure-native / treasure-wasm / gl.js / audio.js）已退役 → 不再冒烟。
 
@@ -16,13 +16,13 @@ Write-Host "=== smoke: native + wasm 两端冒烟（S18.8a：发货壳 = Bevy）
 Write-Host ""
 Write-Host "[1/6] cargo build --workspace (native) + Bevy 交付壳"
 cargo build --workspace 2>&1 | Select-Object -Last 1
-cargo build --manifest-path crates\ti-engine\Cargo.toml --bin treasure-bevy-native 2>&1 | Select-Object -Last 1
+cargo build -p ti-engine --bin treasure-bevy-native 2>&1 | Select-Object -Last 1
 
 # 2. 测试
 Write-Host ""
 Write-Host "[2/6] cargo test --workspace (+ ti-engine)"
 cargo test --workspace 2>&1 | Select-String "test result:" | ForEach-Object { "  $($_.Line)" }
-cargo test --manifest-path crates\ti-engine\Cargo.toml 2>&1 | Select-String "test result:" | ForEach-Object { "  $($_.Line)" }
+cargo test -p ti-engine 2>&1 | Select-String "test result:" | ForEach-Object { "  $($_.Line)" }
 
 # 3. wasm 构建
 Write-Host ""

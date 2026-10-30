@@ -611,6 +611,16 @@ mod tests {
         sky_navy: 27,
         sky_horizon: 28,
         moon_pale: 29,
+        isle_coral: 30,
+        isle_sand: 31,
+        isle_gold: 32,
+        isle_dark: 33,
+        isle_teal: 34,
+        isle_olive: 35,
+        isle_bone: 36,
+        isle_ember: 37,
+        isle_mist: 38,
+        isle_black: 39,
     };
 
     /// 记录型 Canvas：统计 `fill_rect` 次数与面积和（`draw_text` 不记账）。

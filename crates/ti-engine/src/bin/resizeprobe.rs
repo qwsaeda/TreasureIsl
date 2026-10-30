@@ -9,12 +9,12 @@
 //! 数字不动 = 链路卡住，数字动但画面观感不变 = 视觉口径问题，另查。
 //! 探针文本/输出全 ASCII（`check_hardcode` 约束）。
 
-use bevy::prelude::*;
 use bevy::camera::{Camera2d, Projection};
+use bevy::prelude::*;
 use bevy::sprite::Text2d;
 use bevy::text::{FontSize, TextColor, TextFont};
 
-use super::{camera_system, GameStore, LOGICAL_H, LOGICAL_W};
+use super::{GameStore, LOGICAL_H, LOGICAL_W, camera_system};
 use ti_platform::settings::ScaleMode;
 
 /// `--resizeprobe` 开关（`main` 按 CLI 参数插入；未开启时系统零开销早退）。
@@ -42,10 +42,7 @@ pub fn spawn_probe(mut commands: Commands) {
         ProbeText,
         Text2d::new("resizeprobe: waiting...".to_string()),
         TextColor(Color::WHITE),
-        TextFont {
-            font_size: FontSize::Px(24.0),
-            ..Default::default()
-        },
+        TextFont { font_size: FontSize::Px(24.0), ..Default::default() },
         Transform::from_translation(Vec3::new(
             -(LOGICAL_W as f32) / 2.0 + 28.0,
             LOGICAL_H as f32 / 2.0 - 40.0,
@@ -89,15 +86,18 @@ pub fn probe_system(
         win.width().clamp(0.0, f32::MAX).round() as u32,
         win.height().clamp(0.0, f32::MAX).round() as u32,
     );
-    let area_txt = area.map_or_else(|| "area=n/a".to_owned(), |a| {
-        format!(
-            "area={:.0}x{:.0}@({:.0},{:.0})",
-            a.max.x - a.min.x,
-            a.max.y - a.min.y,
-            a.min.x,
-            a.min.y
-        )
-    });
+    let area_txt = area.map_or_else(
+        || "area=n/a".to_owned(),
+        |a| {
+            format!(
+                "area={:.0}x{:.0}@({:.0},{:.0})",
+                a.max.x - a.min.x,
+                a.max.y - a.min.y,
+                a.min.x,
+                a.min.y
+            )
+        },
+    );
     let line = format!(
         "win={}x{} sf={} vp={:.3} mode={} zoom={:.2} {area_txt}",
         wu,

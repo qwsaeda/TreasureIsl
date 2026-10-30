@@ -3,7 +3,7 @@
 
 \u5bf9\u6bd4\u4e24\u4e2a**\u5b9e\u65f6\u6e32\u67d3\u5668**\u7684\u8f93\u51fa\uff08\u4e0d\u662f\u4e0e\u5b58\u50a8\u7684 golden PNG \u6bd4\uff09\uff1a
 - CPU\uff1a`cargo run -q -p ti-app --features native-shell --bin render-png` \u2192 `evidence/render_png/<scene>.png`\uff081080\u00d71920\uff09
-- Bevy\uff1a`cargo run --manifest-path crates/ti-engine/Cargo.toml --bin treasure-bevy-native -- --scene=<id> --shot` \u2192 `evidence/bevy_native_<id>.png`
+- Bevy\uff1a`cargo run -p ti-engine --bin treasure-bevy-native -- --scene=<id> --shot` \u2192 `evidence/bevy_native_<id>.png`
 
 \u7528\u9014\uff1a\u91cf\u5316\u53cc\u540e\u7aef\u5728 7 \u4e2a\u771f\u5b9e\u573a\u666f\u7684\u50cf\u7d20\u4e00\u81f4\u6027\uff0c\u5e76\u533a\u5206\u5dee\u5f02\u7c7b\u578b\uff1a
 - **\u5b57\u4f53\u5149\u6805\u5316\u6b8b\u5dee**\uff08CPU ab_glyph vs Bevy cosmic-text\uff09\u2192 \u9010\u884c\u5c0f\u5e26\u5f62\u72b6\u5dee\u5f02\uff08\u6bcf\u884c\u5dee\u5f02\u5bbd\u5ea6\u5c0f\uff09\uff1b
@@ -73,7 +73,7 @@ def ensure(sid):
         run(["cargo", "run", "-q", "-p", "ti-app", "--features", "native-shell", "--bin", "render-png"])
     bev = os.path.join(BEVY_PNG, f"bevy_native_{sid}.png")
     if not os.path.isfile(bev):
-        run(["cargo", "run", "-q", "--manifest-path", "crates/ti-engine/Cargo.toml",
+        run(["cargo", "run", "-q", "-p", "ti-engine",
              "--bin", "treasure-bevy-native", "--", f"--scene={sid}", "--shot"])
     return cpu, bev
 

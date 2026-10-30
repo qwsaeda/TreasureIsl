@@ -390,6 +390,43 @@ pub const BOAT_ASSETS: [&str; 4] = [
     "assets/ui/boat_4.png",
 ];
 
+// === S27.7 VS 对战（vs_v1 批次资产）：场景层禁字面量（CS-1），资产路径单源登记 ===
+
+/// VS 场景卡面面板（圆角白蒙版，`vs_proto` 版式 B/E 手牌 + 面板底）。
+pub const VS_CARD_PANEL: &str = "assets/ui/card_panel.png";
+/// VS 场景舵轮（回合徽章底 + 道具转盘轴心）。
+pub const VS_HELM: &str = "assets/ui/helm.png";
+/// 道具图标·火药桶（`vs_v1` 批次；`combat.item.keg`）。
+pub const VS_ITEM_KEG: &str = "assets/ui/item_keg.png";
+/// 道具图标·医疗包（`vs_v1` 批次；`combat.item.medkit`）。
+pub const VS_ITEM_MEDKIT: &str = "assets/ui/item_medkit.png";
+/// 道具图标·朗姆酒（`vs_v1` 批次；`combat.item.rum`）。
+pub const VS_ITEM_RUM: &str = "assets/ui/item_rum.png";
+/// 道具图标·烟雾弹（`vs_v1` 批次；`combat.item.smoke`）。
+pub const VS_ITEM_SMOKE: &str = "assets/ui/item_smoke.png";
+/// VS 动作图标·攻击（刀）。
+pub const VS_ICON_CUTLASS: &str = "assets/ui/icon_cutlass.png";
+/// VS 动作图标·防御（盾）。
+pub const VS_ICON_SHIELD: &str = "assets/ui/icon_shield.png";
+/// VS 通用锚点图标（血环环心）。
+pub const VS_ICON_ANCHOR: &str = "assets/ui/icon_anchor.png";
+/// BOSS 立绘（`vs_v1` 批次）。
+pub const VS_BOSS_CAPTAIN: &str = "assets/ui/boss_captain.png";
+/// 玩家背身立绘（`vs_v1` 批次）。
+pub const VS_HERO_BACK: &str = "assets/ui/hero_back.png";
+/// 夜间甲板背景（版式 A/D）。
+pub const VS_DECK_BATTLE: &str = "assets/ui/deck_battle.png";
+/// 夜间海面背景（版式 B/E）。
+pub const VS_BG_NIGHT_SEA: &str = "assets/ui/bg_night_sea.png";
+/// 海战海面背景（版式 C）。
+pub const VS_BG_BATTLE_SEA: &str = "assets/ui/bg_battle_sea.png";
+/// 玩家船（阵营标识，版式 C）。
+pub const VS_SHIP_PLAYER: &str = "assets/ui/ship_player.png";
+/// 黄铜指挥台底板（版式 E 底部）。
+pub const VS_DECK_PLAQUE: &str = "assets/ui/deck_plaque.png";
+/// 角色立绘·基德（版式 E 我方半身像）。
+pub const VS_ROLE_KIDD: &str = "assets/ui/role_kidd.png";
+
 /// 玩家船通用图（S21.5 入仓；当前级船图缺失时的回退链第二环 ⇒ crash-safe 不空图）。
 pub const SHIP_PLAYER_ASSET: &str = "assets/ui/ship_player.png";
 
@@ -595,6 +632,64 @@ pub fn isle_card_path(isle: &str) -> String {
 #[must_use]
 pub fn central_island_path(map_id: &str) -> String {
     format!("assets/ui/island_home_{map_id}.png")
+}
+
+/// S27.5 通用圆角卡板白蒙版（`card_v1` 批次生成；运行时 `blit_image_rot` + tint 上色）。
+///
+/// 一份蒙版吃三种卡面：领地卡底（parchment 系）、功能卡底（`panel_wood`）、归属色带（`isle_*`）。
+pub const CARD_PANEL_ASSET: &str = "assets/ui/card_panel.png";
+
+/// S27.5 第 `index` 张卡的径向旋转（**毫度**，屏幕坐标系顺时针；`0` = 顶部起点朝上）。
+///
+/// 概念稿变体 B 的环卡语言：卡「上缘」指向环外 ⇒ 旋转角 = 该格在环上的方位角
+/// （`index · 360° / count`）。`3/9 点位置` 卡自然转 90°，`底部`转 180°（径向一致）。
+#[must_use]
+pub fn ring_card_rotation_mdeg(index: usize, count: usize) -> i32 {
+    let count_i = i32::try_from(count.max(1)).unwrap_or(1);
+    let index_i = i32::try_from(index).unwrap_or(0);
+    index_i.saturating_mul(360_000) / count_i
+}
+
+/// 岛型 id → 显示名（`isle.<id>` i18n；缺键回退原 id，不 panic）。
+#[must_use]
+pub fn isle_name(isle: &str) -> String {
+    let key = format!("isle.{isle}");
+    let name = crate::i18n::sget(&key);
+    if name == key { isle.to_owned() } else { name.to_owned() }
+}
+
+/// 赛道格类型 → 显示名（`scene.main_map.node.<kind>` i18n；功能格无岛型时用）。
+#[must_use]
+pub fn space_name(kind: SpaceKind) -> String {
+    let key = match kind {
+        SpaceKind::Start => "scene.main_map.node.start",
+        SpaceKind::City => "scene.main_map.node.city",
+        SpaceKind::Port => "scene.main_map.node.port",
+        SpaceKind::Event => "scene.main_map.node.event",
+        SpaceKind::Card => "scene.main_map.node.card",
+        SpaceKind::Battle => "scene.main_map.node.battle",
+        SpaceKind::Treasure => "scene.main_map.node.treasure",
+        SpaceKind::Boss => "scene.main_map.node.boss",
+        SpaceKind::Plain => "scene.main_map.node.plain",
+        SpaceKind::Territory => "scene.main_map.node.territory",
+    };
+    crate::i18n::sget(key).to_owned()
+}
+
+/// 局部偏移 → 屏幕坐标（S27.5：旋转卡上的子元素定位）。
+///
+/// 输入 `(cx, cy)` = 卡心，`(dx, dy)` = 子元素相对卡心的**卡的局部偏移**（+y = 卡的下方），
+/// `rot_mdeg` = 卡的顺时针旋转角（毫度，屏幕坐标系 y 向下）。返回旋转后的屏幕坐标：
+/// 局部 +y 方向映射为 `(−sinθ, cosθ)`（θ = 90° 时卡的「下方」朝屏幕左侧 = 指向环心）。
+#[must_use]
+pub fn rotate_local_offset(cx: i32, cy: i32, dx: i32, dy: i32, rot_mdeg: i32) -> (i32, i32) {
+    let theta = f64::from(rot_mdeg) * 0.001 * std::f64::consts::PI / 180.0;
+    let (sin, cos) = theta.sin_cos();
+    let fx = f64::from(dx);
+    let fy = f64::from(dy);
+    let rx = fx * cos - fy * sin;
+    let ry = fx * sin + fy * cos;
+    (cx.saturating_add(round_coord(rx)), cy.saturating_add(round_coord(ry)))
 }
 
 /// 等比贴图目标矩形（**可见外接框归一化**）：可见边长 = `edge_px`，中心 (cx, cy)，无形变。
@@ -1049,8 +1144,11 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
                 };
                 // S26.3 底部提示底板：tier=hint 且落屏底区（y≥1560）先画 `menu_bg` 条 + 上下 bevel
                 // （与 `hint_row` 完全同源：条宽 = 提示文本宽 + 8，条心 = 屏心 540；
-                // 消除「白字直压夜空/海图」低对比通病）
-                if p.tier == "hint" && r.y >= 1560 {
+                // 消除「白字直压夜空/海图」低对比通病）。
+                // S27.5 D3：排除 `hud.` 前缀文本（main_map 三块铜牌标签 y=1608 也 ≥1560，
+                // 误画 menu_bg 深蓝底条 = 舵轮下深蓝矩形根因）。
+                if p.tier == "hint" && r.y >= 1560 && !p.text_key.starts_with("scene.main_map.hud.")
+                {
                     let tw = c.hint_text_width(&content) + 8;
                     let th = c.hint_glyph_height() + 4;
                     let cx = (LOGICAL_W_I32 - tw) / 2;

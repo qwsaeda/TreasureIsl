@@ -185,7 +185,7 @@ ti-app（无 bevy 依赖，headless 跑逻辑）
 |---|---|---|
 | Cargo 根 | `Cargo.toml` | `macroquad = "0.4"`（workspace 继承）；注释已标「S18.8 退役后并回根 workspace」 |
 | Cargo ti-app | `crates/ti-app/Cargo.toml` | `default = ["hd-8bit","gpu-render","macroquad-audio"]`；`macroquad-audio = ["macroquad/audio"]`（只为规避 alsa links 冲突而存） |
-| Cargo ti-engine | `crates/ti-engine/Cargo.toml` | 独立 workspace（因 bevy 的 rodio→alsa 与 macroquad 的 quad-snd→alsa 同 `links=alsa`）；退役后并回根 workspace |
+| Cargo ti-engine | `crates/ti-engine/Cargo.toml` | **S27.7 已并回根 workspace**（删 `[workspace]` 表 + 改 `.workspace` 继承；bevy 版本/特性登记在根 `Cargo.toml` `[workspace.dependencies]`）；原独立理由 = `links=alsa` 冲突（bevy rodio→alsa vs macroquad quad-snd→alsa），macroquad 音频下沉为 `android-shell` 可选 feature 后前提消失 |
 | ti-platform | `gfx.rs`(25) `gpu_renderer.rs`(21) `ttf_font.rs`(7) `settings.rs`(5) `audio_prep.rs`(4) `audio.rs`(1) `framebuffer.rs`(2) `stats.rs`(2) `drawlist.rs`(1) `hd_manifest.rs`(1) `terrain_atlas.rs`(1) | macroquad **窗口/输入/音频/精灵图标渲染**（`FramePresenter`/`Viewport`/sprite batch/alpha 混合/音频池） |
 | ti-app 壳 | `treasure_wasm.rs`(27) `treasure_native.rs`(14) `android_shell.rs`(9) `treasure_android.rs`(6) `game_app.rs`(3) `lib.rs`(2) `menu_shell.rs`(1) | macroquad **发货壳**（窗口/输入转发/音频接入）；业务与场景渲染不依赖 macroquad（已走 DrawList） |
 | ti-engine | `treasure_bevy.rs`(10) + `bin` | **Bevy 发货壳**（native/wasm 同源分支）—— 退役后的唯一发货壳 |
@@ -202,8 +202,8 @@ ti-app（无 bevy 依赖，headless 跑逻辑）
    —— **S18.8a 已完成 native/wasm 部分**（`treasure_native.rs`/`treasure_wasm.rs` + 对应 `[[bin]]` 删除，发货入口 = `treasure-bevy-native`/`treasure-bevy-wasm`）；android 侧留 S18.8d。
 2. **渲染层**：`ti-platform` 的 macroquad 窗口/输入/精灵 batch 路径（`gfx.rs`/`gpu_renderer.rs`）删除；渲染统一走 **DrawList → Bevy 实体**（已完成 S18.7a~f）；`ttf_font`/`framebuffer`/`stats` 等纯数据层保留。
 3. **音频**：`macroquad/audio`（quad-snd）→ `bevy_audio`（rodio）；`ti-platform::audio`的 macroquad 池改 bevy 音频池（或直接由 ti-engine 接管）；`audio_prep` 的资源预备保留。
-4. **workspace 并回**：删 `crates/ti-engine/Cargo.toml` 的 `[workspace]` 表 + 改为 `.workspace` 继承；根 `Cargo.toml` members 加 `crates/ti-engine`；
-   删 `ti-app` 的 `macroquad-audio` feature + `macroquad` 依赖（alsa links 冲突随之消失）。
+4. **workspace 并回**：~~删 `crates/ti-engine/Cargo.toml` 的 `[workspace]` 表 + 改为 `.workspace` 继承；根 `Cargo.toml` members 加 `crates/ti-engine`；~~删 `ti-app` 的 `macroquad-audio` feature + `macroquad` 依赖（alsa links 冲突随之消失）。
+   —— **S27.7 已完成**（用户 2026-10-29：crates 内项目统一由根 `Cargo.toml` 管理）：`crates/ti-engine` 并入根 workspace（成员表 + `bevy` 依赖登记在根）、`[profile.release] strip` 迁到根、脚本/文档命令改 `-p ti-engine`；macroquad 仍留 ti-app 的 `android-shell` 可选 feature（alsa 链不进默认构建）。
 5. **wasm 发布**：网页发布从 macroquad wasm 壳换 Bevy wasm 壳（`treasure-bevy-wasm`），重验 **wasm 主体 ≤8 MB 预算**（S18.0 重立口径，见 §3；旧 800KB 预算已作废）。
 6. **门禁收口**：新增「依赖树 0 macroquad」断言项（`cargo tree | grep -ci macroquad` = 0）。
 

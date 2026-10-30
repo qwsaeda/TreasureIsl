@@ -1,6 +1,13 @@
 # build artifacts
 target/
+/disk/target/
 *.pdb
+
+# 密钥（AGNES_API_KEY 等；不入库）
+.env
+
+# 发布产物（build_windows / build_wasm 可重新产出，不入版本库）
+/dist/
 
 # IDE
 .idea/
@@ -50,3 +57,5 @@ __pycache__/
 # S15.6 视觉审计草稿（一次性渲染 dump，非正式 evidence；正式 evidence = evidence/S15.x.log）
 /evidence/render_png/
 /evidence/ui_concept/
+# publish_web.ps1 的 gh-pages 隔离工作树（每次发布后清理）
+.git-worktrees/

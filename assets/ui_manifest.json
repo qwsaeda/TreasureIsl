@@ -73,6 +73,60 @@
       ],
       "key": "magenta_clean",
       "prompt": "a large pirate island seen from a high three-quarter aerial view, {theme}, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
+    },
+    "cardmask": {
+      "ratio": "3:4",
+      "target": [
+        384,
+        512
+      ],
+      "key": "luma",
+      "prompt": "a single plain solid pure WHITE rounded rectangle panel with soft slightly rounded corners, flat even white fill, crisp clean edges, the panel fills most of the frame and is perfectly centered, the panel is the ONLY object in the image, isolated on a PURE SOLID BLACK background, no shadow, no glow, no highlight, no gradient, no text, no letters, no numbers, no decoration, no border ornament"
+    },
+    "boat": {
+      "ratio": "1:1",
+      "target": [
+        512,
+        512
+      ],
+      "key": "magenta",
+      "prompt": "a single {what}, side view facing right, painted wooden hull in warm brown and deep red, plain cream canvas sails, bold thick OPAQUE flat colors, crisp clean solid silhouette with hard edges, no transparency anywhere inside the boat, the boat is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no wave, no backdrop, no text, no letters, no numbers, centered, game asset sprite"
+    },
+    "boss": {
+      "ratio": "2:3",
+      "target": [
+        600,
+        900
+      ],
+      "key": "magenta_clean",
+      "prompt": "a single {what}, full body standing front view, dramatic rim light from the left, 18th century pirate captain, torn dark navy coat with tarnished brass buttons, blood red sash, tricorn hat, weathered angry face, painted old nautical chart illustration style, warm sand and dark basalt palette, crisp hard edges, the figure is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no backdrop, no text, no letters, no numbers, centered, game character sprite"
+    },
+    "hero_back": {
+      "ratio": "2:3",
+      "target": [
+        600,
+        900
+      ],
+      "key": "magenta_clean",
+      "prompt": "a single {what}, seen from behind, three quarter view, 18th century pirate captain, worn brown leather coat, scarf blowing in the wind, painted old nautical chart illustration style, warm sand and dark basalt palette, crisp hard edges, the figure is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no backdrop, no text, no letters, no numbers, centered, game character sprite"
+    },
+    "deck": {
+      "ratio": "9:16",
+      "target": [
+        1080,
+        1920
+      ],
+      "key": "none",
+      "prompt": "{what}, three quarter overhead perspective, wet plank deck, cannons and coiled ropes, brass fittings, lanterns glowing warm orange, stormy night sea beyond the railings, painted old nautical chart illustration style, dark basalt and warm sand palette, cinematic rim lighting, no characters, no people, no text, no letters, no numbers, full bleed game background"
+    },
+    "item": {
+      "ratio": "1:1",
+      "target": [
+        256,
+        256
+      ],
+      "key": "magenta_clean",
+      "prompt": "a single {what}, game inventory icon, chunky readable silhouette, painted old nautical chart illustration style, warm sand and dark basalt palette with brass accents, thick dark outline, the object is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no backdrop, no text, no letters, no numbers, centered, game asset icon"
     }
   },
   "assets": [
@@ -463,32 +517,40 @@
     {
       "name": "boat_1",
       "file": "assets/ui/boat_1.png",
-      "role": "medallion",
-      "params": {},
+      "role": "boat",
+      "params": {
+        "what": "small open fishing skiff with one short mast and a single patched cream sail"
+      },
       "generated_at": "2026-10-26",
       "prompt": "a single small open fishing skiff with one short mast and a plain brown sail, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
     {
       "name": "boat_2",
       "file": "assets/ui/boat_2.png",
-      "role": "medallion",
-      "params": {},
+      "role": "boat",
+      "params": {
+        "what": "two-masted fast schooner with two cream sails and a small black pennant"
+      },
       "generated_at": "2026-10-26",
       "prompt": "a single two-masted fast schooner with two white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
     {
       "name": "boat_3",
       "file": "assets/ui/boat_3.png",
-      "role": "medallion",
-      "params": {},
+      "role": "boat",
+      "params": {
+        "what": "three-masted large galleon with three cream sails and a black pennant"
+      },
       "generated_at": "2026-10-26",
       "prompt": "a single three-masted large galleon with three white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
     {
       "name": "boat_4",
       "file": "assets/ui/boat_4.png",
-      "role": "medallion",
-      "params": {},
+      "role": "boat",
+      "params": {
+        "what": "armoured patrol warship with four gun ports, dark steel plated hull and a black pennant"
+      },
       "generated_at": "2026-10-26",
       "prompt": "a single armoured patrol warship with four gun ports, steel plated hull and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
@@ -633,30 +695,119 @@
       "role": "island_home",
       "file": "assets/ui/island_home_m01.png",
       "params": {
-        "theme": "coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, palm trees and small huts, muted desaturated antique-map colours"
+        "theme": "coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, dense palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the lagoon), muted desaturated antique-map colours"
       },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, palm trees and small huts, muted desaturated antique-map colours, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
-      "generated_at": "2026-10-27"
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, dense palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the lagoon, muted desaturated antique-map colours, antique cartography ink and watercolor, high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "generated_at": "2026-10-29"
     },
     {
       "name": "island_home_m02",
       "role": "island_home",
       "file": "assets/ui/island_home_m02.png",
       "params": {
-        "theme": "volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke"
+        "theme": "volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, dense dark palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the dark lagoon)"
       },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
-      "generated_at": "2026-10-27"
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, dense dark palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the dark lagoon, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "generated_at": "2026-10-29"
     },
     {
       "name": "island_home_m03",
       "role": "island_home",
       "file": "assets/ui/island_home_m03.png",
       "params": {
-        "theme": "bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire"
+        "theme": "bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, pale palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the pale lagoon)"
       },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
-      "generated_at": "2026-10-27"
+      "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, pale palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the pale lagoon, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "card_panel",
+      "role": "cardmask",
+      "file": "assets/ui/card_panel.png",
+      "params": {},
+      "prompt": "a single plain solid pure WHITE rounded rectangle panel with soft slightly rounded corners, flat even white fill, crisp clean edges, the panel fills most of the frame and is perfectly centered, the panel is the ONLY object in the image, isolated on a PURE SOLID BLACK background, no shadow, no glow, no highlight, no gradient, no text, no letters, no numbers, no decoration, no border ornament",
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "boss_captain",
+      "role": "boss",
+      "file": "assets/ui/boss_captain.png",
+      "params": {
+        "what": "towering pirate captain boss holding a huge curved cutlass, skull emblem belt buckle"
+      },
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "hero_back",
+      "role": "hero_back",
+      "file": "assets/ui/hero_back.png",
+      "params": {
+        "what": "pirate captain hero holding a cutlass ready to strike"
+      },
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "deck_battle",
+      "role": "deck",
+      "file": "assets/ui/deck_battle.png",
+      "params": {
+        "what": "empty pirate ship main deck at night"
+      },
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "item_keg",
+      "role": "item",
+      "file": "assets/ui/item_keg.png",
+      "params": {
+        "what": "wooden powder keg with brass bands and a short lit fuse"
+      },
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "item_medkit",
+      "role": "item",
+      "file": "assets/ui/item_medkit.png",
+      "params": {
+        "what": "rolled canvas medical kit with a red cross bandage and a small glass bottle"
+      },
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "item_rum",
+      "role": "item",
+      "file": "assets/ui/item_rum.png",
+      "params": {
+        "what": "dark glass rum bottle with a wax sealed cork and a parchment label"
+      },
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "item_smoke",
+      "role": "item",
+      "file": "assets/ui/item_smoke.png",
+      "params": {
+        "what": "round iron smoke bomb with a lit fuse and a small smoke puff"
+      },
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "icon_cutlass",
+      "role": "item",
+      "file": "assets/ui/icon_cutlass.png",
+      "params": {
+        "what": "curved pirate cutlass blade with a brass guard and worn leather grip"
+      },
+      "generated_at": "2026-10-29"
+    },
+    {
+      "name": "icon_shield",
+      "role": "item",
+      "file": "assets/ui/icon_shield.png",
+      "params": {
+        "what": "round wooden buckler shield with brass rim and iron boss"
+      },
+      "generated_at": "2026-10-29"
     }
   ]
 }
