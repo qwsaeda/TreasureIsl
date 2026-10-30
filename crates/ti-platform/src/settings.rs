@@ -223,8 +223,8 @@ pub struct KeyBindings {
 impl KeyBindings {
     /// 默认绑定（原版键位）：`up/down/left/right/confirm/cancel`。
     ///
-    /// 键码值为 macroquad `KeyCode` 的 u32 数值（见 `macroquad::KeyCode` 文档），
-    /// 平台层只做透传，不做语义解释。
+    /// 键码值为不透明 `u32` 数值（历史口径 = macroquad `KeyCode`；S18.8b 起
+    /// 平台层只做透传，不做语义解释，Bevy 壳自持键映射）。
     #[must_use]
     pub fn defaults() -> Self {
         let mut b = Self { map: BTreeMap::new() };
@@ -293,24 +293,6 @@ impl FilterMode {
         let all = Self::ALL;
         let i = all.iter().position(|&m| m == self).unwrap_or(0);
         all[(i + 1) % all.len()]
-    }
-
-    /// 对应 miniquad 的 `FilterMode`（经 `macroquad::miniquad` 再导出）。
-    ///
-    /// `From<FilterMode> for miniquad::FilterMode` 的薄封装（§5.6.6 操作规程）。
-    #[must_use]
-    pub fn to_miniquad(self) -> macroquad::miniquad::FilterMode {
-        macroquad::miniquad::FilterMode::from(self)
-    }
-}
-
-impl From<FilterMode> for macroquad::miniquad::FilterMode {
-    /// 项目 `FilterMode` → miniquad `FilterMode`（2 变体 1:1，零损失，§5.6.6 选用矩阵）。
-    fn from(mode: FilterMode) -> Self {
-        match mode {
-            FilterMode::Nearest => Self::Nearest,
-            FilterMode::Linear => Self::Linear,
-        }
     }
 }
 

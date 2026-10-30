@@ -5,7 +5,7 @@
 
 ## 1. 管理规约
 
-### 1.1 工具四类（分类决定登记要求）
+### 1.1 工具五类（分类决定登记要求）
 
 | 类 | 判定 | 必须满足 | 目录位置 |
 |---|---|---|---|
@@ -13,6 +13,7 @@
 | **长期工具** | 反复执行 / 结论要进文档 / 别人也会用 | 幂等 + `--check` 只读 + 非 0 退出 + 本页登记（含用法） | `scripts/` |
 | **一次性工具** | 一次性改写/清理（迁移、清库） | 必须标注「一次性」+ 用法 + 不进门禁 | `scripts/`（用完即删）或 `scripts/tmp/` |
 | **取证工具** | 只服务 `legacy/` 逆向取证 | 必须标注「不进产品代码」+ 用法 | `scripts/` 或 `legacy/scripts/` |
+| **cargo bin / crate 工具**（S32.1 起） | Rust workspace 成员 crate 的可执行入口（`cargo run -p <crate>`；与 `scripts/` 流水线的分工 = 台账解析/HTTP 服务等库化能力 + 平台本体） | 本页 §3.5 登记 + 依赖图断言（`cargo tree -p <crate>` 不含游戏 crate，22 号 §11.2 机器兜底面）+ 根 `Cargo.toml` members 在册 | `crates/<name>/`（`[[bin]]` 或 crate 本体） |
 
 > **落地位置是硬规则**（`doccheck2` 第 27 项机器判定）：
 > 正式工具落 `scripts/`；一次性改写脚本落 `scripts/tmp/`（**用完即删**）；
@@ -22,7 +23,7 @@
 
 ### 1.2 新增工具流程（5 步，缺一不可）
 
-1. **放 `scripts/`**（不许散落在别处；临时目录只放"一次性改写"脚本）；
+1. **放 `scripts/`**（不许散落在别处；临时目录只放"一次性改写"脚本；cargo bin / crate 工具放 `crates/<name>/`，见 §3.5）；
 2. **满足工具契约**：幂等（连跑两次结果一致）+ 提供 `--check` 只读模式 + 违规时**非 0 退出码**
    （`04_tooling.md` §1）；
 3. **本页登记**：用途 / 用法（可直接复制的命令）/ 幂等与退出码 / 所属流水线 / 是否门禁项；
@@ -45,10 +46,10 @@
 
 | # | 契约 | 判定方式 | 违反后果 |
 |---|---|---|---|
-| 1 | **落地位置** | 正式工具在 `scripts/`；一次性脚本在 `scripts/tmp/` 且用完即删；仓库内无散落 `.py`/`.ps1` | doccheck2 FAIL |
-| 2 | **台账登记 = 表格行** | `scripts/x.py` 必须在 §3.1~§3.4 某张表里有 `\| \`x.py\` \|` 行（§3 第 26 项只查「出现过」） | doccheck2 FAIL |
+| 1 | **落地位置** | 正式工具在 `scripts/`；一次性脚本在 `scripts/tmp/` 且用完即删；cargo bin / crate 工具在 `crates/<name>/`（S32.1 起，§3.5）；仓库内无散落 `.py`/`.ps1` | doccheck2 FAIL |
+| 2 | **台账登记 = 表格行** | `scripts/x.py` 必须在 §3.1~§3.4 某张表里有 `\| \`x.py\` \|` 行（§3 第 26 项只查「出现过」）；cargo bin / crate 工具须在 §3.5 登记 | doccheck2 FAIL |
 | 3 | **登记要素齐全** | 该行须声明「幂等/只读」与退出码语义（「非 0 退出」或等价表述） | doccheck2 FAIL |
-| 4 | **只读模式 + 非 0 退出** | 新增工具（不在棘轮基线内）源码须含 `--check`/`--verify`/`--report` 之一，且违规时非 0 退出 | doccheck2 FAIL |
+| 4 | **只读模式 + 非 0 退出** | 新增工具（不在棘轮基线内）源码须含 `--check`/`--verify`/`--report` 之一，且违规时非 0 退出；**豁免 = cargo bin / crate 工具类**（§3.5，服务形态 bin：只读/写面语义由 22 号 §4.2 白名单 + §10.3 执行面接管，`check_tooling_contract` 实扫面 = `scripts/` 的 `.py`/`.ps1`，不含 `crates/`） | doccheck2 FAIL |
 
 ### 1.5 组合优先（不新增工具的优先序）
 
@@ -122,7 +123,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 # 3) 结构审计（文件规模 / 函数长度 / 重复模式，棘轮基线）
 python scripts/audit_code.py --check
-# 4) 全门禁（28 项；含上面三件套 + 文档/数据/资产/结构/渲染）
+# 4) 全门禁（33 项；含上面三件套 + 文档/数据/资产/结构/渲染）
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 5) 台账三方对账（verified ↔ evidence ↔ 代码符号）
 python scripts/check_ledger_reality.py
@@ -156,8 +157,10 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check   # 
 ```powershell
 # 1) 出一包（已装包 → 可分发件；带 sha256 清单）
 python scripts/map_pack.py pack m01
-# 2) 校验包（schema/兼容/资产齐+哈希/31 格不变量 I1~I8 ⇒ 违规非 0）
+# 2) 校验包（schema/兼容/资产齐+哈希/31 格不变量 I1~I8 ⇒ 违规非 0；
+#    参数面：可分发件/zip 路径，或**裸 id = 已装包目录** `assets/maps/<id>`）
 python scripts/map_pack.py verify dist/maps/m01.map-pack
+python scripts/map_pack.py verify m01        # 裸 id（平台制作指引面）
 # 3) 装上（进 assets/maps/<id>/ + 接线默认包数据/资产登记/文案合并）
 python scripts/map_pack.py install dist/maps/m01.map-pack
 # 4) 列出已装包（id / version / data_version / 校验结果）
@@ -172,7 +175,7 @@ python scripts/map_pack.py check
 
 | 工具 | 用途 | 用法 | 幂等 / 退出码 |
 |---|---|---|---|
-| `gate.ps1` | 全门禁 28 项（编译/测试/文档/数据/结构/渲染/台账） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
+| `gate.ps1` | 全门禁 33 项（编译/测试/文档/数据/结构/渲染/台账） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
 | `validate_data.py` | 数据表校验（balance/strings/scenes/controls/theme 必填字段、值域、孤儿 key、grid 三键）+ **`check_scenes_canonical`**（scenes.json 须 indent=1 逐字节规范形，防整文件 churn，S29.2 §18）+ **`check_asset_registry`**（全类型资产 disk↔registry 双向同步：UI 图=`ui_manifest.json`、字体/音频=`assets/registry.json`，S29.2 §18） | `python scripts/validate_data.py` | 幂等只读；违规非 0（gate 第 10a 项） |
 | `check_hardcode.py` | 硬编码扫描（数值/中文面量；`EXEMPT` 带理由豁免：oracle 冻结层 / CLI 输出 / 诊断 eprintln，含 S31.2 `data/map_pack.rs`+`data/table_source.rs` 注入诊断） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` / `--selftest`（STR_LIT 全捕获回归自检，飞轮 R1 ⑤-05 起 CJK 通道对全字面量生效） | 幂等；严格模式命中即非 0；`--selftest` 断言失败即非 0 |
 | `check_ledger_reality.py` | 台账三方对账（verified ↔ evidence 文件 ↔ 代码符号） | `python scripts/check_ledger_reality.py` | 幂等只读；虚报即非 0 |
@@ -218,6 +221,7 @@ python scripts/map_pack.py check
 | `wasm_browser_e2e.py` | **Bevy wasm 浏览器端 e2e**（Playwright 无头 Chromium 4 层：L1 实例化 = env-stub.js 覆盖全部 env 导入 + start 段跑通 / L2 渲染 = 资产 fetch 全 2xx + 画面非全黑（截图像素采样）/ L3 交互 = 键盘+鼠标不抛异常 / L4 场景切换 = select_map 鼠标点 m01 卡片 ⇒ 切 main_map（增量亮像素比判据）） | `python3 scripts/wasm_browser_e2e.py [--url http://host:port/]` / `--check`（只读：打印判据不截图） | 幂等（同 URL 同产物）；写 `evidence/wasm_browser_e2e.png`；`--check` 只读；任一层断言失败 ⇒ 非 0 退出；依赖 `serve`（`cargo run -p ti-tools --bin serve -- --dir web --port 8080`）在跑 + Playwright Chromium（缺省自动探测 `~/.cache/ms-playwright/chromium-*/`，`TI_CHROMIUM_PATH` 可覆盖）+ Pillow（L2/L4 截图像素采样） |
 | `web_playtest.cjs` | **浏览器真运行时试玩**（S16.1：Node + Playwright CDP 按键驱动 菜单→选人→选图→主地图；L1 status 活体 + L2 截图墨点 + L3/L4 3×Enter 场景流转帧变化 + console 致命错误=0） | `node scripts/web_playtest.cjs [--url http://host:port/] [--out evidence/web_playtest.log]` | 幂等（结果/截图重跑覆盖）；写 `evidence/web_playtest.png` + `.log`；失败非 0；依赖 `serve` 在跑 + Node playwright（`TI_CHROMIUM_PATH` 可覆盖，缺省自动探测 `~/.cache/ms-playwright/chromium-*/`） |
 | `playtest_loop.py` | **试玩闭环 4 报告聚合**（S16.2：`docs/process/08_playtest_loop.md` 执行面——fuzz_playtest / full_run / render_invariants / web_playtest 一次跑全 + 归因三分类清单） | `python3 scripts/playtest_loop.py` / `--check`（只读：打印判据 + 三分类，0 新产物） | 幂等只读；4 报告全 0 失败 = 0 退出；任一 native 报告失败 ⇒ 非 0；web 报告缺 serve/node/playwright = 记名 SKIP 不 FAIL；停机 = 连续 3 轮收敛 + evidence/S16.2.log 记录（主线程复核，EXP-038/058） || `build_wasm.ps1` | wasm 构建（→ `web/`，Bevy 交付壳） | `powershell -ExecutionPolicy Bypass -File scripts/build_wasm.ps1` / `-Check` | 幂等（重构建覆盖）；缺 target / 构建失败 ⇒ 非 0 退出；`-Check` 只读前置体检（不构建 / 不拷贝，前置缺失非 0 退出） |
+| `build_apk.sh` | **Android APK 构建（S2.6/S18.8d）**：本机 Linux + NDK r25b 交叉编译（x86_64/aarch64-linux-android）→ cdylib .so → APK 组装（manifest aapt2 link + resources.arsc + 最小 classes.dex + .so STORE + 仓内资产 assets/ui+fonts+maps 入 APK assets 段）→ zipalign -p -f 4 → apksig SignV2 v1+v2 签名 → dist/TreasureIsl.apk；装机 = adb install + legacy/data push /sdcard/TI/data/ | `bash scripts/build_apk.sh [aarch64 或 x86_64]`（默认 x86_64） | 幂等（重编 .so + 重打包）；NDK 路径硬编码 /tmp/opencode/android-ndk-r25b（本机实测）；.so 未 strip = 装机可跑 |
 | `publish_web.ps1` | **一键发布 publish-web（S16.3）**：gate 全绿前置 → build_wasm 重建 `web/` → 本地 `serve` 静态断言（index/wasm/js 200 + content-type）→ 发布历史（sha256 + git short sha + 日期）入 `release.md`「发布」节 → `git worktree` 推 `gh-pages`（不污染 master）→ 线上 URL 复跑 `web_playtest` 全交互 0 失败；Pages/远端不可达 = 实测定态降级登记 release.md 已知限制（不静默绕过） | `pwsh -File scripts/publish_web.ps1` / `-Check`（只读前置体检：不构建/不推/不写 release.md） | 幂等（重跑覆盖发布历史行）；前置 gate 非全绿 ⇒ 非 0 退出；线上不可达 = 记名降级非 FAIL |
 | `smoke.ps1` | native + wasm 冒烟 | `powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1` | 幂等；失败非 0 |
 | `playbook.ps1` | 常用命令一键入口（16 条） | `powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -List` / `<cmd>` / `-Check` | 幂等只读转发器（判定 / 退出码由被转发工具承担）；未知命令 / 转发失败 ⇒ 非 0 退出；`-Check` = 被转发目标在位性只读体检（不执行被转发工具，缺失非 0 退出） |
@@ -237,9 +241,19 @@ python scripts/map_pack.py check
 | `pe_rva.py` | PE 文件 RVA / 节区查询（逆向地址定位） | `python scripts/pe_rva.py ...` |
 | `rgb565.py` | 8-bit hex ↔ RGB565（R11G5B10）换算 | `python scripts/rgb565.py ...` |
 
+### 3.5 cargo bin / crate 工具（S32.1 起，`crates/` 内可执行入口）
+
+| 工具 | 用途 | 用法 |
+|---|---|---|
+| `ti-console`（`crates/ti-console`） | **TI Dev Console 平台本体**（S32 开发管理平台，纯管理/辅助开发；与游戏运行时解耦，定案 = `docs/process/22_dev_platform.md`）：静态壳 + `/api/health`（S32.1 骨架）+ 单实例锁 + 命令白名单（`console_commands.json`）+ 数据源（`console_sources.json`）；后续 S32.2~S32.9 逐页 | `cargo run -p ti-console`（默认 `127.0.0.1:8787`；非回环须 `--host` + `TI_CONSOLE_TOKEN`） |
+| `ti-devmeta`（`crates/ti-devmeta`） | 平台共享层（台账解析 + 静态 HTTP，纯 std 0 游戏依赖；`ledger.rs` 从 `ti-tools` 上提的单实现） | 库 crate（无 bin；`cargo test -p ti-devmeta` 验证台账解析行为对齐） |
+
+> 依赖图断言（22 号 §11.2）：`cargo tree -p ti-console` 不得含 `ti-core`/`ti-platform`/`ti-app`/
+> `ti-engine`/`ti-render`/`bevy`/`macroquad`；违规 = 平台与游戏运行时耦合，返工。
+
 ## 4. 门禁项 ↔ 工具对照（排障入口）
 
-`scripts/gate.ps1` 的 28 项按域分组，**每组对应的排障工具**如下（门禁清单本身见
+`scripts/gate.ps1` 的 33 项按域分组，**每组对应的排障工具**如下（门禁清单本身见
 [`../parity.md`](../parity.md) §代码质量门禁）：
 
 | 域 | 门禁项 | 排障工具 |

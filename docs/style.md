@@ -9,7 +9,7 @@ treasure-island/
 ├── Cargo.toml              # [workspace] edition="2024"，[workspace.lints] 集中
 ├── rustfmt.toml            # 全局唯一格式化配置
 ├── clippy.toml
-├── scripts/gate.ps1        # 门禁（parity.md 31 项，PowerShell 本机执行）
+├── scripts/gate.ps1        # 门禁（parity.md 33 项，PowerShell 本机执行）
 ├── crates/
 │   ├── ti-formats/         # 纯二进制格式解析/序列化：pak/lpk/pcx/map/font/save
 │   │   └── src/{pak.rs, pcx.rs, map.rs, font.rs, save.rs, macros.rs, error.rs, ids.rs}
@@ -219,7 +219,7 @@ pub trait Command: Serialize + DeserializeOwned {
 
 | 目的 | 用 | 项目规则 |
 |---|---|---|
-| 零损失值转换 | `From<T> for U`（自动派生 `Into`/`&Into`） | 只在**目标类型**侧写 `From`，调用侧 `.into()`/`U::from(x)`；反向转换另写对称 `From`，不手写 `to_x()` 自由函数。先例：`ControlKind`↔`u32`（`ti-formats/src/ids.rs`）、`RectJson→Rect`（`ti-core/src/data/layout.rs`）、`GameCommand→GameInput`（`ti-app/src/commands.rs`）、`FilterMode→miniquad`（`ti-platform/src/settings.rs`） |
+| 零损失值转换 | `From<T> for U`（自动派生 `Into`/`&Into`） | 只在**目标类型**侧写 `From`，调用侧 `.into()`/`U::from(x)`；反向转换另写对称 `From`，不手写 `to_x()` 自由函数。先例：`ControlKind`↔`u32`（`ti-formats/src/ids.rs`）、`RectJson→Rect`（`ti-core/src/data/layout.rs`）、`GameCommand→GameInput`（`ti-app/src/commands.rs`）、`FilterMode`（`ti-platform/src/settings.rs`，S18.8b 起 miniquad 薄封装已删；滤波 = Bevy 壳自持 `wgpu::FilterMode` 映射） |
 | 可失败值转换 | `TryFrom<T>`（自动派生 `TryInto`） | 错误用编译器生成的 `#[error_generic]`（edition 2024，免手写错误类型）；需命名错误时 `TryFrom` + `map_err` 到 crate `Error` |
 | 数据驱动回退 | `from_index/from_code/from_label → Option`（house 风格，**保留**） | 驱动表枚举（`MapSlot`/`Character`/`Dir`/`Flow`…）的 const 友好回退构造器保持 `Option` 不迁移；**const 不受 `TryFrom` 限制时**才优先 `TryFrom`，不两种并存 |
 | 字符串解析 | `FromStr` | 配合 `.parse()`；`ControlKind` 为参考（`Err = String`，语义名特判 + 数值解析）；需要命名错误时 `type Err = <named>` |

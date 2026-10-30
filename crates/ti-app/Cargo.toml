@@ -13,7 +13,6 @@ thiserror.workspace = true
 # **android 壳专用 optional 依赖**（S2.6 资源 IO 走 macroquad::file::load_file 的
 # APK assets 后端 + 音频走 quad-snd；android 壳本身在 S18.8d 才退役）。
 # macroquad 库依赖的**完全**退役（连 ti-platform 一并）属 S18.8b/S18.8c 范围。
-macroquad = { workspace = true, optional = true }
 ti-core.workspace = true
 ti-formats.workspace = true
 ti-platform.workspace = true
@@ -40,10 +39,6 @@ name = "treasure-headless"
 path = "src/bin/treasure_headless.rs"
 required-features = ["headless"]
 
-[[bin]]
-name = "treasure-android"
-path = "src/bin/treasure_android.rs"
-required-features = ["android-shell"]
 
 # S13.6（契约 §7）：元素级渲染验证 bin —— 逐精灵 blit dump 落点/越界判定/像素贡献。
 # 与 render_snapshot（gate 第 19 项全帧 diff）互补：全帧 diff 锁「整体没漂」，
@@ -76,16 +71,6 @@ default = ["hd-8bit", "gpu-render"]
 # `treasure-wasm`）退役后，发货入口 = ti-engine 的 Bevy 壳（`treasure-bevy-native` /
 # `treasure-bevy-wasm`）；本 feature 仅供**官方排障 bin** 使用（gate 第 4b 项编译 + lint 覆盖）。
 native-shell = []
-# S2.6 Android 壳：macroquad native（NDK ANativeWindow + AAudio）+ 资源读 APK assets
-# （macroquad::file::load_file 的 android 后端）。本机 Windows 不编译此 target，
-# APK 在 Mac（已装 NDK/SDK + cargo-apk）编译，见 docs/plan-s5.md §S5.5。
-# S18.8a：macroquad 库 + 其音频后端（quad-snd）随 android 壳下沉为 optional 依赖
-# （默认构建不再有 alsa 原生库链接）；S18.8d android 壳切 Bevy 后本 feature 一并退役。
-# S27.7：ti-engine 并回根 workspace ⇒ `macroquad/audio`（quad-snd → `links=alsa`）与 bevy
-# 的 alsa 链（bevy_dev_tools→bevy_audio→rodio→cpal→alsa-sys）在同一依赖图内冲突
-# （解析期 links 互斥，实测报 `quad-alsa-sys` vs `alsa-sys`）⇒ **android 壳暂不发声**
-# （口径同 S18.8/S30.0「发货无声」；android 壳待 S18.8d 退役）。详见 docs/experience/build.md。
-android-shell = ["dep:macroquad"]
 # S4.3 性能诊断：主循环每秒打印平均 FPS + 呈现器上传/跳帧计数
 stats = []
 # S1.7b：MOD → OGG/Opus 在线转码（默认关闭，build_assets 离线预转码产物直接播放；

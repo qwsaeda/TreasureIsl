@@ -5,9 +5,10 @@
 
 pub mod doccheck;
 pub mod hash;
-pub mod ledger;
 
 pub use doccheck::{
     Doc, NumericAssertion, Report as DocReport, check, dod_keywords, evidence_is_gate_only,
 };
-pub use ledger::{Report, Status, Task, missing_evidence, validate};
+/// S32.1：台账解析已上提 `ti-devmeta`（单实现），本 crate 改薄 re-export
+/// （`bin/ledger.rs` 的 `ti_tools::validate` / `ti_tools::missing_evidence` 行为对齐）。
+pub use ti_devmeta::{Report, Status, Task, missing_evidence, validate};

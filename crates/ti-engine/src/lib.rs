@@ -13,6 +13,8 @@ pub mod canvas;
 pub mod pick;
 pub mod scene_render;
 pub mod ui;
+/// S27.7：VS 对战舞台（横版对峙范式：Bevy 实体 + 动效骨架）。
+pub mod vs_duel;
 
 pub use bevy_app::SpikeApp;
 pub use canvas::{BevyCanvas, CanvasEntity, color_to_rgb565, rgb565_to_color, viewport_scale};

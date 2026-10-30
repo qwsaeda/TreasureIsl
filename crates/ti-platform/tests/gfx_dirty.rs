@@ -5,7 +5,8 @@
 //! 本文件因此改测 presenter 的脏行状态机；`present` 在 `!has_dirty` 时累加 skipped
 //! 并返回（无 GPU 路径）。
 //!
-//! `present` 的脏帧上传路径需要 GPU 上下文（macroquad），故只测**无 GPU 路径**。
+//! S18.8b：GL 呈现层随 macroquad 退役删除，`present` 现为纯脏行状态机 + 计数
+//! （无 GPU 依赖，全路径可测）。
 
 use ti_platform::FB_PIXELS;
 use ti_platform::gfx::{FramePresenter, Viewport};

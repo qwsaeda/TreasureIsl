@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TI Dev Console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #14161f;
+    --panel: #1d2030;
+    --panel2: #232740;
+    --ink: #e8eaf2;
+    --muted: #9aa0b8;
+    --accent: #7ec8e3;
+    --ok: #58c47a;
+    --warn: #e0b345;
+    --err: #e06060;
+    --border: #2e3350;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    margin: 0; background: var(--bg); color: var(--ink); font-size: 14px;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 16px; font-weight: 600; margin: 0; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .layout { display: flex; }
+  .rail {
+    width: 210px; flex: 0 0 210px; background: var(--panel);
+    border-right: 1px solid var(--border); padding: 14px 10px;
+    position: sticky; top: 0; align-self: flex-start; max-height: 100vh; overflow-y: auto;
+  }
+  .rail .grp { font-size: 11px; color: var(--muted); letter-spacing: 1px; padding: 12px 10px 4px; }
+  .rail .grp:first-child { padding-top: 2px; }
+  nav button {
+    display: block; width: 100%; text-align: left;
+    background: none; border: none; color: var(--muted); font-size: 14px;
+    padding: 8px 12px; cursor: pointer; border-radius: 8px;
+    border-left: 3px solid transparent;
+  }
+  nav button:hover { background: var(--panel2); }
+  nav button.active { color: var(--accent); border-left-color: var(--accent); background: var(--panel2); }
+  main { padding: 16px 20px 40px; flex: 1; min-width: 0; }
+  @media (max-width: 860px) {
+    .layout { flex-direction: column; }
+    .rail { width: 100%; flex: none; max-height: none; position: static; display: flex; flex-wrap: wrap; gap: 4px; }
+    .rail .grp { width: 100%; padding: 8px 10px 0; }
+    nav button { width: auto; border-left: none; }
+    nav button.active { border-bottom: 2px solid var(--accent); }
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 14px; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .stat { background: var(--panel2); border-radius: 8px; padding: 12px; }
+  .stat .num { font-size: 22px; font-weight: 700; }
+  .stat .lbl { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  tr:hover td { background: rgba(126, 200, 227, 0.06); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .tag.verified { background: rgba(88, 196, 122, 0.15); color: var(--ok); }
+  .tag.pending { background: rgba(224, 179, 69, 0.15); color: var(--warn); }
+  .tag.blocked { background: rgba(224, 96, 96, 0.15); color: var(--err); }
+  .tag.in_progress { background: rgba(126, 200, 227, 0.15); color: var(--accent); }
+  .bar { height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--ok); }
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: var(--muted); }
+  input[type="search"], select, input[type="password"] {
+    background: var(--panel2); border: 1px solid var(--border); color: var(--ink);
+    border-radius: 6px; padding: 7px 10px; font-size: 13px;
+  }
+  .file { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .file:hover { color: var(--accent); }
+  .asset-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .asset-tag {
+    font-size: 12px; padding: 3px 10px; border-radius: 12px; cursor: pointer;
+    background: var(--panel2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .asset-tag:hover { color: var(--ink); }
+  .asset-tag.on { background: rgba(126, 200, 227, 0.15); color: var(--accent); border-color: var(--accent); }
+  .asset-tag .n { opacity: 0.65; margin-left: 4px; }
+  .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .asset-group { grid-column: 1 / -1; font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.5px; margin-top: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  .asset-cell {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px; cursor: zoom-in; transition: border-color 0.15s;
+  }
+  .asset-cell:hover { border-color: var(--accent); }
+  .asset-cell img { width: 100%; height: 84px; object-fit: contain; background: #0d0f17; border-radius: 6px; cursor: zoom-in; }
+  .asset-cell .nm { font-size: 11px; margin-top: 6px; color: var(--ink); word-break: break-all; }
+  .asset-cell .rl { font-size: 10px; color: var(--muted); }
+  .asset-cell .ts { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .meta-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-row .k { color: var(--muted); }
+  .meta-row pre { margin: 0; font-size: 11px; color: var(--ink); white-space: pre-wrap; word-break: break-all; max-width: 420px; }
+  #lightbox {
+    position: fixed; inset: 0; background: rgba(8, 9, 15, 0.88); z-index: 99;
+    display: none; align-items: center; justify-content: center; cursor: zoom-out;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img { max-width: 92vw; max-height: 88vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.6); }
+  #lightbox .lb-cap {
+    position: absolute; bottom: 18px; left: 0; right: 0; text-align: center;
+    color: var(--muted); font-size: 12px; pointer-events: none;
+  }
+  #lightbox .lb-cap b { color: var(--ink); font-weight: 600; }
+  .foot { color: var(--muted); font-size: 12px; margin-top: 18px; line-height: 1.6; }
+  code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .empty { color: var(--muted); padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TI Dev Console</h1>
+  <span class="sub">开发管理平台（纯管理 / 辅助开发；定案 = docs/process/22_dev_platform.md）</span>
+</header>
+<div class="layout">
+<aside class="rail">
+  <div class="grp">看板</div>
+  <nav id="nav">
+    <button data-page="overview" class="active">概览</button>
+    <button data-page="tasks">任务</button>
+    <button data-page="evidence">证据</button>
+    <button data-page="assets">资产</button>
+    <button data-page="design">设计图</button>
+    <button data-page="map">地图</button>
+  </nav>
+  <div class="grp">平台</div>
+  <nav>
+    <button data-page="settings">设置</button>
+  </nav>
+</aside>
+<main>
+  <!-- 概览 -->
+  <section id="page-overview">
+    <div class="card">
+      <h2>台账进度</h2>
+      <div class="grid" id="ov-stats"></div>
+      <div style="margin-top:14px">
+        <div class="row"><span class="k">verified / 总任务</span><span id="ov-pct">—</span></div>
+        <div class="bar"><div id="ov-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>当前面</h2>
+      <div class="row"><span class="k">下一任务（deps 全 verified）</span><span id="ov-next">—</span></div>
+      <div class="row"><span class="k">已装地图包</span><span id="ov-maps">—</span></div>
+      <div class="row"><span class="k">UI 资产</span><span id="ov-ui">—</span></div>
+      <div class="row"><span class="k">数据源（console_sources.json）</span><span id="ov-src">—</span></div>
+    </div>
+  </section>
+
+  <!-- 任务 -->
+  <section id="page-tasks" hidden>
+    <div class="card">
+      <h2>台账全表（plan/ledger.yaml）</h2>
+      <div class="toolbar" style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="search" id="task-q" placeholder="搜索 id / 标题 / dod…">
+        <select id="task-status">
+          <option value="">全部状态</option>
+          <option value="verified">verified</option>
+          <option value="pending">pending</option>
+          <option value="in_progress">in_progress</option>
+          <option value="blocked">blocked</option>
+        </select>
+        <span style="color:var(--muted);align-self:center" id="task-count"></span>
+      </div>
+      <table>
+        <thead><tr><th style="width:90px">id</th><th>title / dod（截断）</th><th style="width:110px">status</th><th style="width:60px">rounds</th></tr></thead>
+        <tbody id="task-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 证据 -->
+  <section id="page-evidence" hidden>
+    <div class="card">
+      <h2>evidence/ 清单（验收证据 / 截图 / 日志）</h2>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="search" id="ev-q" placeholder="过滤文件名…">
+        <span style="color:var(--muted);align-self:center" id="ev-count"></span>
+      </div>
+      <div id="ev-list" style="max-height:420px;overflow:auto"></div>
+    </div>
+    <div class="card">
+      <h2>双审计报告（evidence/console/audit-*.md，§7.3 四行机器字段）</h2>
+      <p style="color:var(--muted);margin-top:0">收敛口径 = 0 新发现 + 0 误报 + 0 残留 连续 2 轮（22 号 §7.4）。</p>
+      <table>
+        <thead><tr><th>报告</th><th style="width:110px">task</th><th style="width:55px">round</th><th style="width:45px">侧</th><th style="width:70px">总判定</th><th style="width:55px">新发现</th><th style="width:45px">误报</th><th style="width:45px">残留</th></tr></thead>
+        <tbody id="audit-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 资产（图片预览） -->
+  <section id="page-assets" hidden>
+    <div class="card">
+      <h2>UI 资产（assets/ui_manifest.json，图片预览）</h2>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="search" id="asset-q" placeholder="搜索名称 / 角色 / 文件…" style="min-width:240px">
+        <span style="color:var(--muted);align-self:center" id="asset-count"></span>
+      </div>
+      <div id="asset-tags" class="asset-tags" style="margin-bottom:12px"></div>
+      <div id="asset-grid" class="asset-grid"></div>
+    </div>
+    <div class="card">
+      <h2>元数据（点击网格图片）</h2>
+      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+        <img id="asset-preview" alt="" style="max-width:520px;max-height:420px;object-fit:contain;background:#0d0f17;border:1px solid var(--border);border-radius:8px;display:none">
+        <div id="asset-meta" style="min-width:260px;flex:1"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 设计图（AI 生成设计稿，evidence/ui_concept） -->
+  <section id="page-design" hidden>
+    <div class="card">
+      <h2>设计图（evidence/ui_concept/，AI 生成设计稿，非运行截图）</h2>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="search" id="design-q" placeholder="搜索文件名 / 组别…" style="min-width:240px">
+        <span style="color:var(--muted);align-self:center" id="design-count"></span>
+      </div>
+      <div id="design-tags" class="asset-tags" style="margin-bottom:12px"></div>
+      <div id="design-grid" class="asset-grid"></div>
+    </div>
+  </section>
+
+  <!-- 地图（地图包管理面：浏览 + 制作指引，制作走 scripts/map_pack.py，平台 0 写操作） -->
+  <section id="page-map" hidden>
+    <div class="card">
+      <h2>地图（地图包，21 号标准 <code>assets/maps/&lt;id&gt;/</code>；浏览只读，制作走 <code>scripts/map_pack.py</code>）</h2>
+      <div id="map-default" style="margin-bottom:10px;color:var(--muted)"></div>
+      <div id="map-list"></div>
+    </div>
+    <div class="card">
+      <h2>制作指引（<code>scripts/map_pack.py</code> 工具链，21 号 §8）</h2>
+      <pre style="overflow-x:auto">python3 scripts/map_pack.py add mXX    # 从 _template 骨架新建
+python3 scripts/map_pack.py sync        # 全量重算 board.json maps 段（幂等；无 map 键的草稿包跳过）
+python3 scripts/map_pack.py pack mXX    # 出可分发包 → dist/maps/mXX.map-pack
+python3 scripts/map_pack.py install mXX # 装到 assets/maps/（+ .default 指针）
+python3 scripts/map_pack.py verify mXX  # 校验 I1~I8（裸 id = 已装包目录；31 格 / BOSS@15 / 哈希）
+python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿）</pre>
+      <div style="color:var(--muted);font-size:13px">
+        标准单一事实源 = <code>docs/process/21_map_package_spec.md</code>（包格式 + I1~I8 不变量 + 运行期加载契约）；
+        切包 = 选图界面 <code>TI_MAP=&lt;id&gt;</code> / <code>.default</code> 指针（S31.2b）。
+      </div>
+    </div>
+  </section>
+
+  <!-- 设置 -->
+  <section id="page-settings" hidden>
+    <div class="card">
+      <h2>平台会话</h2>
+      <div class="row"><span class="k">token 在环境</span><span id="set-token">—</span></div>
+      <div class="row"><span class="k">写操作开关（默认关）</span><span id="set-write">—</span></div>
+      <div class="row"><span class="k">单实例锁</span><code>evidence/console/.lock</code></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <input type="password" id="set-token-input" placeholder="TI_CONSOLE_TOKEN（存 sessionStorage）" style="min-width:320px">
+        <button id="set-token-save" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:7px 14px;cursor:pointer">保存（sessionStorage）</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    只读平台（写操作 = S32.4 起 POST + X-TI-Token）；数据源 = console_sources.json（10 条白名单，22 号 §5）；
+    「0 游戏产物变更」判定 = repo::snapshot 内容级指纹（22 号 §8，禁用 git status --porcelain）。
+  </div>
+</main>
+<div id="lightbox" aria-label="图片放大预览"><img id="lightbox-img" alt=""><div class="lb-cap" id="lightbox-cap"></div></div>
+</div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'settings'];
+
+document.querySelectorAll('.rail nav button').forEach((btn) => {
+  btn.addEventListener('click', () => showPage(btn.dataset.page));
+});
+
+function showPage(name) {
+  document.querySelectorAll('.rail nav button').forEach((b) => b.classList.toggle('active', b.dataset.page === name));
+  pages.forEach((p) => { $('page-' + p).hidden = p !== name; });
+  if (name === 'overview' && !loaded.overview) loadOverview();
+  if (name === 'tasks' && !loaded.tasks) loadTasks();
+  if (name === 'evidence' && !loaded.evidence) loadEvidence();
+  if (name === 'assets' && !loaded.assets) loadAssets();
+  if (name === 'design' && !loaded.design) loadDesign();
+  if (name === 'map' && !loaded.map) loadMap();
+  if (name === 'settings' && !loaded.settings) loadSettings();
+}
+const loaded = {};
+
+async function api(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(path + ' → ' + r.status);
+  return r.json();
+}
+
+async function loadOverview() {
+  loaded.overview = true;
+  try {
+    const o = await api('/api/overview');
+    const v = o.ledger.verified, t = o.ledger.total_tasks;
+    $('ov-stats').innerHTML = [
+      ['总任务', t], ['verified', v], ['errors', o.ledger.errors],
+      ['next_task', o.ledger.next_task || '—'],
+    ].map(([k, n]) => `<div class="stat"><div class="num">${n}</div><div class="lbl">${k}</div></div>`).join('');
+    const pct = t ? Math.round(v / t * 100) : 0;
+    $('ov-pct').textContent = `${v} / ${t}（${pct}%）`;
+    $('ov-bar').style.width = pct + '%';
+    $('ov-maps').textContent = String(o.maps.installed);
+    $('ov-ui').textContent = String(o.ui_assets.count);
+    $('ov-src').textContent = String(o.sources.repo_sources) + ' 条白名单';
+  } catch (e) {
+    $('ov-stats').innerHTML = `<div class="empty">/api/overview 不可用：${e}</div>`;
+  }
+}
+
+let taskCache = [];
+async function loadTasks() {
+  loaded.tasks = true;
+  try {
+    const d = await api('/api/tasks');
+    taskCache = d.tasks;
+    renderTasks();
+  } catch (e) {
+    $('task-rows').innerHTML = `<tr><td colspan="4" class="empty">/api/tasks 不可用：${e}</td></tr>`;
+  }
+}
+function renderTasks() {
+  const q = $('task-q').value.toLowerCase();
+  const st = $('task-status').value;
+  const rows = taskCache.filter((t) =>
+    (!st || t.status === st) &&
+    (!q || (t.id + ' ' + t.title + ' ' + t.dod_excerpt).toLowerCase().includes(q)));
+  $('task-count').textContent = `${rows.length} / ${taskCache.length}`;
+  $('task-rows').innerHTML = rows.slice(0, 400).map((t) =>
+    `<tr><td class="file">${t.id}</td><td><div>${esc(t.title)}</div><div style="color:var(--muted);font-size:12px;margin-top:2px">${esc(t.dod_excerpt)}</div></td><td><span class="tag ${t.status}">${t.status}</span></td><td>${t.rounds}</td></tr>`
+  ).join('');
+}
+$('task-q').addEventListener('input', renderTasks);
+$('task-status').addEventListener('change', renderTasks);
+
+async function loadEvidence() {
+  loaded.evidence = true;
+  try {
+    const d = await api('/api/evidence');
+    window.evCache = d.files;
+    renderEvidence();
+    const au = await api('/api/audit');
+    renderAudit(au);
+  } catch (e) {
+    $('ev-list').innerHTML = `<div class="empty">/api/evidence 不可用：${e}</div>`;
+  }
+}
+function renderEvidence() {
+  const q = $('ev-q').value.toLowerCase();
+  const files = (window.evCache || []).filter((f) => f.toLowerCase().includes(q));
+  $('ev-count').textContent = files.length + ' 项';
+  $('ev-list').innerHTML = files.slice(0, 400).map((f) =>
+    `<div class="file" style="padding:5px 0">${f}</div>`).join('') || '<div class="empty">无匹配</div>';
+}
+$('ev-q').addEventListener('input', renderEvidence);
+
+function renderAudit(au) {
+  const rows = (au.reports || []).slice().reverse(); // 最新 round 在前
+  $('audit-rows').innerHTML = rows.map((r) =>
+    `<tr><td class="file">${r.file}</td><td>${esc(r.task)}</td><td>${esc(r.round)}</td><td>${esc(r.side)}</td>
+     <td>${esc(r.verdict || '—')}</td><td>${r.new ?? '—'}</td><td>${r.false_pos ?? '—'}</td><td>${r.residual ?? '—'}</td></tr>`
+  ).join('') || '<tr><td colspan="8" class="empty">evidence/console/ 下无 audit-*.md 报告</td></tr>';
+}
+
+async function loadAssets() {
+  loaded.assets = true;
+  try {
+    const d = await api('/api/assets');
+    window.assetCache = d.ui_manifest.assets || [];
+    window.assetTagFilter = '';
+    const roles = Array.from(new Set(window.assetCache.map((a) => a.role || '').filter(Boolean))).sort();
+    const counts = {};
+    window.assetCache.forEach((a) => { const r = a.role || '未分类'; counts[r] = (counts[r] || 0) + 1; });
+    $('asset-tags').innerHTML =
+      `<span class="asset-tag on" data-role="">全部<span class="n">${window.assetCache.length}</span></span>` +
+      roles.map((r) => `<span class="asset-tag" data-role="${esc(r)}">${esc(r)}<span class="n">${counts[r] || 0}</span></span>`).join('');
+    document.querySelectorAll('.asset-tag').forEach((tg) => {
+      tg.addEventListener('click', () => {
+        window.assetTagFilter = tg.dataset.role;
+        document.querySelectorAll('.asset-tag').forEach((x) => x.classList.toggle('on', x === tg));
+        renderAssets();
+      });
+    });
+    renderAssets();
+  } catch (e) {
+    $('asset-grid').innerHTML = `<div class="empty" style="grid-column:1/-1">/api/assets 不可用：${e}</div>`;
+  }
+}
+function assetUrl(a) {
+  // 图片 = 白名单直读面（console_sources.json 的 assets/ui/ 目录项前缀，22 号 §10.2）。
+  return '/' + (a.file || '').replace(/^\//, '');
+}
+function cellHtml(a) {
+  const gi = window.assetCache.indexOf(a);
+  const ts = a.generated_at || '';
+  return `<div class="asset-cell" data-i="${gi}">
+    <img src="${assetUrl(a)}" loading="lazy" onerror="this.style.opacity=0.25" alt="${esc(a.name)}">
+    <div class="nm">${esc(a.name)}</div><div class="rl">${esc(a.role || '')}</div>
+    ${ts ? `<div class="ts">${esc(ts)}</div>` : ''}
+  </div>`;
+}
+function renderAssets() {
+  const q = $('asset-q').value.toLowerCase();
+  const tag = window.assetTagFilter || '';
+  const list = (window.assetCache || []).filter((a) =>
+    (!tag || (a.role || '未分类') === tag) &&
+    (!q || (a.name + ' ' + (a.role || '') + ' ' + a.file).toLowerCase().includes(q)));
+  $('asset-count').textContent = list.length + ' / ' + ((window.assetCache || []).length);
+  // 时间倒序（generated_at 降序；空日期沉底；同日按名称稳序防抖动）。
+  const sorted = list.slice().sort((x, y) => {
+    const tx = x.generated_at || '';
+    const ty = y.generated_at || '';
+    if (tx !== ty) return tx < ty ? 1 : -1;
+    return (x.name || '').localeCompare(y.name || '');
+  });
+  const groups = [];
+  if (!tag) {
+    const byRole = {};
+    sorted.forEach((a) => { const r = a.role || '未分类'; (byRole[r] = byRole[r] || []).push(a); });
+    Object.keys(byRole).sort().forEach((r) => groups.push([r, byRole[r]]));
+  }
+  $('asset-grid').innerHTML = (groups.length
+    ? groups.map(([r, arr]) =>
+        `<div class="asset-group">${esc(r)}（${arr.length}）</div>` + arr.map((a) => cellHtml(a)).join('')).join('')
+    : tag
+      ? sorted.map((a) => cellHtml(a)).join('')
+      : '') || '<div class="empty" style="grid-column:1/-1">无匹配</div>';
+  bindCells();
+}
+function bindCells() {
+  document.querySelectorAll('.asset-cell').forEach((c) => {
+    c.addEventListener('click', () => {
+      const a = (window.assetCache || [])[c.dataset.i];
+      if (!a) return;
+      showAsset(a);
+      openLightbox(a);
+    });
+  });
+}
+function showAsset(a) {
+  const img = $('asset-preview');
+  img.src = assetUrl(a);
+  img.style.display = 'block';
+  $('asset-meta').innerHTML = [
+    ['名称', a.name], ['角色', a.role || '—'], ['文件', a.file || '—'],
+    ['生成时间', a.generated_at || '—'], ['生成器', a.generator || '—'],
+  ].map(([k, v]) => `<div class="meta-row"><span class="k">${k}</span><span>${esc(v)}</span></div>`).join('')
+   + (a.params && Object.keys(a.params).length
+     ? `<div class="meta-row"><span class="k">params</span><pre>${esc(JSON.stringify(a.params))}</pre></div>` : '')
+   + (a.prompt ? `<div class="meta-row"><span class="k">prompt</span><pre>${esc(a.prompt)}</pre></div>` : '');
+}
+function openLightbox(a) {
+  $('lightbox-img').src = assetUrl(a);
+  $('lightbox-cap').innerHTML = `<b>${esc(a.name)}</b> · ${esc(a.role || '')} · ${esc(a.file || '')}`;
+  $('lightbox').classList.add('open');
+}
+$('lightbox').addEventListener('click', (e) => {
+  if (e.target === $('lightbox') || e.target.id === 'lightbox-img' || e.target.id === 'lightbox-cap') {
+    $('lightbox').classList.remove('open');
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') $('lightbox').classList.remove('open');
+});
+$('asset-q').addEventListener('input', renderAssets);
+
+function designGroup(name) {
+  // 地图/界面设计稿的组别归类（按文件名关键词，22 号 §6.1 设计图页口径）。
+  const n = name.toLowerCase();
+  if (n.startsWith('main_map')) return '主地图';
+  if (n.startsWith('index') || n.startsWith('compass')) return '首页';
+  if (n.startsWith('isle') || n.startsWith('island') || n.startsWith('map_') || n.startsWith('crop_')) return '岛型/地图';
+  if (n.startsWith('vs')) return '对战';
+  if (n.startsWith('saveload') || n.startsWith('select') || n.startsWith('message') || n.startsWith('board')) return '界面';
+  if (n.startsWith('asset_sheet') || n.startsWith('batch_sheet') || n.includes('sheet')) return '资产表';
+  return '其他';
+}
+async function loadDesign() {
+  loaded.design = true;
+  try {
+    const d = await api('/api/evidence?sub=ui_concept');
+    // 设计图 = AI 生成设计稿（evidence/ui_concept/，非运行截图）；子目录枚举走
+    // /api/evidence?sub=ui_concept（白名单 evidence/ 目录项前缀，0 越界）。
+    window.designCache = (d.files || []).filter((f) => f.endsWith('.png'));
+    window.designGroupFilter = '';
+    const groups = {};
+    window.designCache.forEach((f) => {
+      const g = designGroup(f.split('/').pop());
+      (groups[g] = groups[g] || []).push(f);
+    });
+    const order = ['主地图', '首页', '岛型/地图', '对战', '界面', '资产表', '其他'];
+    $('design-tags').innerHTML =
+      `<span class="asset-tag on" data-g="">全部<span class="n">${window.designCache.length}</span></span>` +
+      order.filter((g) => groups[g]).map((g) =>
+        `<span class="asset-tag" data-g="${g}">${g}<span class="n">${groups[g].length}</span></span>`).join('');
+    document.querySelectorAll('#design-tags .asset-tag').forEach((tg) => {
+      tg.addEventListener('click', () => {
+        window.designGroupFilter = tg.dataset.g;
+        document.querySelectorAll('#design-tags .asset-tag').forEach((x) => x.classList.toggle('on', x === tg));
+        renderDesign();
+      });
+    });
+    renderDesign();
+  } catch (e) {
+    $('design-grid').innerHTML = `<div class="empty">设计图不可用：${e}</div>`;
+  }
+}
+function renderDesign() {
+  const q = $('design-q').value.toLowerCase();
+  const g = window.designGroupFilter || '';
+  const list = (window.designCache || []).filter((f) => {
+    const base = f.split('/').pop();
+    return (!g || designGroup(base) === g) && (!q || (f + ' ' + designGroup(base)).toLowerCase().includes(q));
+  });
+  // 时间倒序（文件 mtime 无 API 面 ⇒ 按文件名里批次数字倒序 + 名称稳序；口径 = 设计稿归档序）。
+  $('design-count').textContent = list.length + ' / ' + ((window.designCache || []).length);
+  $('design-grid').innerHTML = list.slice(0, 120).map((f) =>
+    `<div class="asset-cell" data-f="${esc(f)}">
+       <img src="/${esc(f)}" loading="lazy" alt="${esc(f)}" style="height:120px">
+       <div class="nm">${esc(f.split('/').pop())}</div>
+       <div class="rl">${esc(designGroup(f.split('/').pop()))}</div>
+     </div>`).join('') || '<div class="empty" style="grid-column:1/-1">ui_concept 下无设计稿</div>';
+  document.querySelectorAll('#design-grid .asset-cell').forEach((c) => {
+    c.addEventListener('click', () => {
+      const f = c.dataset.f;
+      $('lightbox-img').src = '/' + f;
+      $('lightbox-cap').innerHTML = `<b>${f.split('/').pop()}</b> · ${designGroup(f.split('/').pop())}`;
+      $('lightbox').classList.add('open');
+    });
+  });
+}
+$('design-q').addEventListener('input', renderDesign);
+
+async function loadMap() {
+  loaded.map = true;
+  try {
+    const d = await api('/api/map');
+    const valid = (d.packs || []).filter((p) => p.valid);
+    const empty = (d.packs || []).length - valid.length;
+    const def = d.default ? '默认包 = ' + d.default : '无默认包（.default 缺失）';
+    $('map-default').innerHTML = def + ' · 已装 ' + d.count + ' 包（有效 ' + valid.length + (empty ? ' + 空骨架 ' + empty : '') + '）';
+    $('map-list').innerHTML = (d.packs || []).map((p) => {
+      if (!p.manifest_present) {
+        return '<div class="asset-cell"><div class="nm">' + esc(p.id) + '</div><div class="rl">' + esc(p.note || '空骨架') + '</div></div>';
+      }
+      if (!p.valid) {
+        return '<div class="asset-cell" style="width:auto;min-width:280px"><div class="nm"><b>' + esc(p.id) + '</b> · 草稿</div><div class="rl">' + esc(p.draft_note || 'manifest 无 map 键') + '</div></div>';
+      }
+      const ring = p.ring && p.ring.center ? ('环心(' + p.ring.center[0] + ',' + p.ring.center[1] + ') R=' + p.ring.r) : '无环几何';
+      return '<div class="asset-cell" style="width:auto;min-width:280px">'
+        + '<div class="nm"><b>' + esc(p.id) + '</b> ' + esc(String(p.version || '')) + ' · ' + esc(String(p.data_version || '')) + '</div>'
+        + '<div class="rl">中央岛 = ' + esc(String(p.central_asset || '-')) + ' · 岛型 ' + p.isle_assets + ' 类 · 31 格 ' + p.spaces + ' · 资产 ' + p.assets_count + '</div>'
+        + '<div class="rl">' + ring + (p.schema ? ' · ' + esc(String(p.schema)) : '') + '</div>'
+        + '</div>';
+    }).join('');
+  } catch (e) {
+    $('map-list').innerHTML = '<div class="empty">地图包不可用：' + esc(String(e)) + '</div>';
+  }
+}
+
+async function loadSettings() {
+  loaded.settings = true;
+  try {
+    const s = await api('/api/session');
+    $('set-token').textContent = s.token_present ? '在位（环境）' : '无';
+    $('set-write').textContent = s.write_enabled_default ? '开' : '关';
+  } catch (e) {
+    $('set-token').textContent = '不可用：' + e;
+  }
+  $('set-token-save').addEventListener('click', () => {
+    const v = $('set-token-input').value;
+    if (v) sessionStorage.setItem('ti_console_token', v);
+    else sessionStorage.removeItem('ti_console_token');
+    $('set-token').textContent = v ? '已存 sessionStorage（写操作 = S32.4 起生效）' : '已清';
+  });
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+showPage('overview');
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+# S16.4 新内容设计 sheet 模版（2026-10-30 · Linux 续工）
+
+## [1] 产物
+- docs/process/03_templates.md §8「内容设计 sheet 模版（Canvas 概念落地）」：四段式 A/B/C/D + 套用后必做 4 项
+- assets/maps/m04/（map_pack add m04 31 格骨架：layout/manifest/strings；verify 预期不合规 = B/C 段未填完，真内容落地后转合规）
+- docs/design-sheets/README.md（目录约定）+ docs/design-sheets/m04.sheet.md（模版填法示例，dod = 只落模版不实现真内容）
+- docs/README.md 新增 §8 索引行；scripts/map_pack.py verify 入参口径修正（包目录/zip，非 id）
+
+## [2] 判据实跑
+### map_pack add m04
+```
+map_pack add: m04 已安装（先 uninstall 再 add）
+```
+
+### 三处登记 + 文档漂移
+```
+doccheck: 148 docs, 38 facts, 128 experiences, 254 task refs, 4 assertions, 0 error(s)
+0
+```
+### 三方对账
+check_ledger_reality: 全绿（235 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+=== gate: TreasureIsl (31 items) ===
+  PASS  cargo fmt --check  [0.7s]
+  PASS  cargo clippy -D warnings  [0.4s]
+  FAIL  cargo test --workspace  [42.9s]  
+  PASS  cargo build (native/x86_64-pc-windows-msvc)  [1.5s]
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [1.1s]
+  PASS  cargo build (aarch64-linux-android)  [11.0s]
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)  [3.2s]
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/  [0.1s]
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)  [0.0s]
+  SKIP  zero-unknown verify  (dev tier 或 S1.x 格式解析器就绪后解锁)
+  PASS  ledger validate  [0.2s]
+  PASS  doccheck (docs consistency)  [0.5s]
+  PASS  validate_data (assets/data/*.json)  [0.1s]
+  PASS  gen_layout --check (idempotent)  [0.1s]
+  PASS  check_hardcode (strict; 0 hits required)  [1.0s]
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)  [0.1s]
+  PASS  check_code_standards (CS-1~6 代码标准 + 棘轮基线)  [0.1s]
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)  [0.1s]
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [0.3s]
+  PASS  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)  [0.1s]
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)  [0.1s]
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)  [0.6s]
+  PASS  flywheel-readme (开轮必读脚本完整性)  [0.1s]
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [5.4s]
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.0s]
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)  [0.5s]
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)  [0.1s]
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [3.6s]
+  PASS  wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)  [72.9s]
+  PASS  browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言)  [30.9s]
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [38.8s]
+=== gate: 1 failure(s) ===
+/usr/bin/bash: line 2: assets/maps/_template/manifest.json: Permission denied
+/usr/bin/bash: line 2: _template: command not found
+### 顺带修复（S16.4 前  被并行会话误改为 m04 草稿 ⇒ 回归  0.0.0，map_pack 集成测试转绿）
+```
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+```
+
+### gate 全量（31 项 0 failure）
+=== gate: TreasureIsl (31 items) ===
+  PASS  cargo fmt --check  [0.6s]
+  PASS  cargo clippy -D warnings  [0.4s]
+  PASS  cargo test --workspace  [58.3s]
+  PASS  cargo build (native/x86_64-pc-windows-msvc)  [0.3s]
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [1.2s]
+  PASS  cargo build (aarch64-linux-android)  [0.2s]
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)  [0.4s]
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/  [0.1s]
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)  [0.0s]
+  SKIP  zero-unknown verify  (dev tier 或 S1.x 格式解析器就绪后解锁)
+  PASS  ledger validate  [0.2s]
+  PASS  doccheck (docs consistency)  [0.5s]
+  PASS  validate_data (assets/data/*.json)  [0.1s]
+  PASS  gen_layout --check (idempotent)  [0.1s]
+  PASS  check_hardcode (strict; 0 hits required)  [1.1s]
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)  [0.1s]
+  PASS  check_code_standards (CS-1~6 代码标准 + 棘轮基线)  [0.1s]
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)  [0.1s]
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [0.3s]
+  PASS  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)  [0.1s]
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)  [0.1s]
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)  [0.6s]
+  PASS  flywheel-readme (开轮必读脚本完整性)  [0.1s]
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [5.4s]
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.0s]
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)  [0.5s]
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)  [0.1s]
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [5.0s]
+  PASS  wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)  [58.7s]
+  PASS  browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言)  [28.6s]
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [35.3s]
+=== gate: 0 failure(s) ===
+
+### 三方对账
+check_ledger_reality: 全绿（235 个 verified 任务三方对账通过 + 0 个孤儿 evidence）

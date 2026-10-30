@@ -48,6 +48,17 @@ serde_json.workspace = true
 # 版本对齐 lock 里 bevy 0.20 传递依赖（wasm-bindgen 0.2.129 / js-sys 0.3.106 /
 # wasm-bindgen-futures 0.4.79 / web-sys 0.3.106），native 构建下这些 crate 不进 wasm 目标产物
 # （模块 `#[cfg(target_arch = "wasm32")]` 门控，0 native 影响）。
+# S18.8d：Bevy android 壳（NDK 交叉编译 aarch64-linux-android；NDK 工具链本地
+# /tmp/opencode/android-ndk-r25b，见 docs/migration_linux.md §4）。bevy 0.20 的 android
+# 壳 feature = bevy_android -> winit/android-native-activity -> android-activity（JNI
+# 符号由 winit 自带，本壳 0 手写 JNI；活动生命周期由 winit 的 android backend 接管）。
+[target.'cfg(target_os = "android")'.dependencies]
+# bevy/wgpu 开 `gles` 后端（redroid 无 Vulkan ICD，EGL/OpenGL 软渲染是 redroid 可用路径）。
+# wgpu 直连（版本与 bevy_render 传递依赖 30 同族）：`gles` feature 经 wgpu 依赖传递到
+# wgpu-hal；bevy_render 的 wgpu 默认开 vulkan+dx12+metal（feature 合并不互斥，双后端共存）。
+bevy = { version = "=0.20.0", default-features = false, features = ["2d", "bevy_ui", "bevy_ui_render", "bevy_text", "touch", "keyboard", "mouse", "complex_script_segmentation", "android-native-activity"] }
+wgpu = { version = "30", default-features = false, features = ["std", "wgsl", "dx12", "metal", "vulkan", "gles", "fragile-send-sync-non-atomic-wasm"] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
 wasm-bindgen = "0.2"

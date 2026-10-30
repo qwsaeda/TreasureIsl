@@ -1,0 +1,20 @@
+[package]
+name = "ti-console"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "TI Dev Console：开发管理平台（纯管理 / 辅助开发；与游戏运行时解耦，S32 定案见 docs/process/22_dev_platform.md）"
+
+[[bin]]
+name = "ti-console"
+path = "src/main.rs"
+
+[dependencies]
+ti-devmeta = { path = "../ti-devmeta" }
+# 纯管理面：只引共享层 + JSON（数据源适配 S32.2 起）；
+# 依赖图断言（DoD）：不含 ti-core/ti-platform/ti-app/ti-engine/ti-render/bevy/macroquad。
+serde_json.workspace = true
+
+[lints]
+workspace = true

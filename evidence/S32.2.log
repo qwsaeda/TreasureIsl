@@ -1,0 +1,211 @@
+# S32.2 收口记录：只读数据源适配（/api/* + repo 适配层 + 快照模块）
+
+> 时间：2026-10-30
+> 台账行：plan/ledger.yaml S32.2（deps=[S32.1]，S32.1 已 verified）
+> 改动面：工具（只读适配层，0 游戏依赖）
+> 代码 = crates/ti-console/src/repo/{mod,config,guard,data,snapshot}.rs + routes.rs + main.rs（接线）
+>   + console_sources.json（S32.1 已落，本任务消费）
+> 判据 = 台账 L310 dod 全文（任务数/资产数/已装包数抽样一致 + 越界 400/404 + 0 写盘
+>   + 单测覆盖解析与路径边界 + console_sources.json 单一事实源 + CS-1 0 命中 + 0 游戏产物变更）
+
+## 一、实现面（逐判据对应）
+
+1. **repo 适配层**（`crates/ti-console/src/repo/`，4 模块）
+   - `config.rs`：`console_sources.json` 解析（`RepoSources`，`repo_sources` 9 条 +
+     `write_whitelist`；缺键/空/非字符串项 = Err；`Default` 派生供 500 降级面）；
+   - `guard.rs`：路径白名单 + `canonicalize` 防穿越（22 号 §10.2 逐字口径：
+     比较对象 = `canonicalize(repo_root)`，被访问路径 canonicalize 后必须仍以该值为前缀；
+     白名单目录项前缀匹配 + `..` 段必拒 + 符号链接逃逸 canonicalize 兜底）；
+     单测 7 条（精确文件 / 目录前缀 / 白名单外 / `..` 段 / 空路径 / 缺失文件 / 符号链接逃逸）；
+   - `data.rs`：`/api/overview`（台账 262 任务 245 verified + next_task + 已装包 4 +
+     UI 资产 75）+ `/api/tasks`（全表 262 行，dod 截断 200 字符）+ `/api/evidence`
+     （`evidence/` 清单）+ `/api/assets`（ui_manifest 75 资产 + registry + gate_data +
+     已装包 m01~m04 + `.default` 指针 m01 + dist 3 件）+ `/api/session`（token 在位性 +
+     写操作开关默认关 = S32.3 设置页配套）；单测 8 条；
+   - `snapshot.rs`：**「0 游戏产物变更」内容级指纹快照模块**（22 号 §8 载体，15 号第 23 行
+     落码 = 待固化转半自动的实体）：冻结路径 = `crates/ti-{core,app,engine,render,platform,formats}`
+     + `assets/` + `android/` + `tests/`（工具面 3 crate 不冻结；根 Cargo.toml/lock 不冻结）；
+     指纹 = 冻结路径逐文件内容哈希 + `git ls-files --others` 未跟踪清单（`frozen_paths_hit`
+     谓词过滤）；**禁用 `git status --porcelain` 口径**（22 号 §8 逐字）；
+     `diff`/`no_change`/`diff_report` 差值面（S32.4 执行面消费）+ 单测 6 条
+     （同内容同指纹 / 内容变更指纹必变 / 未跟踪文件入清单 / 差值检测 / 0 差异 / 谓词 7 断言）；
+   - 共 **24 条单测**（`cargo test -p ti-console` 全过；判据 4 段记载 23 条 = r1 修复前计数，r1 修复同批 +1 条混合白名单单测 = 24 条，实测以 `cargo test` 为准）。
+2. **routes 接线**（`routes.rs` 全量重写）：6 端点（health/overview/tasks/evidence/assets/
+   session/snapshot）+ 静态壳 + 未知 `/api/*` = 404 + `..` 穿越 = 400（raw HTTP `--path-as-is`
+   实测 400）；数据源清单不可读 = 该 API 500 如实上报（静态面不受影响）；
+3. **main.rs**：`repo_root` = 仓库根（`CARGO_MANIFEST_DIR` 上两级）注入每连接；
+   鉴权/锁面 0 改动（S32.1 骨架面保持）。
+
+## 二、判据实跑（逐条对应台账 DoD）
+
+### 判据 1：台账任务数/资产数/已装包数与源文件抽样一致
+```
+$ cargo build -q -p ti-console && /disk/target/debug/ti-console --port=18890 &
+$ curl -s http://127.0.0.1:18890/api/overview
+{"ledger":{"total_tasks":262,"verified":246,"next_task":"S7.7","errors":0},
+ "maps":{"installed":4},"ui_assets":{"count":75},"sources":{"repo_sources":10}}
+（时点快照口径：本段初稿 = r1 前实跑〔verified 245 / repo_sources 9 条〕；r1 修复同批
+JSON 9→10 条 + 并行 S32.1 verified 推进 245→246 ⇒ r4 收口复跑回填现值 246/10；
+读 log 者以本注 + 复跑 `curl /api/overview` 实测为准。）
+$ curl -s .../api/tasks | python3 -c "json: count=262；S0.1 verified ×3 抽样"
+$ curl -s .../api/assets
+ui_manifest 75 资产 / map_packs = [m01,m02,m03,m04]（installed_packs 口径 = 有 manifest.json
+且 ≠ _template，m04 空骨架 manifest 在位故入集合）/ default = m01 / dist = 3 件
+抽样 = ledger.yaml 实 262 任务 246 verified（`--bin ledger` 同值）+ ui_manifest.json 实 75
++ assets/maps/ 实 4 包 + .default 实 m01 ⇒ 0 漂移
+```
+
+### 判据 2：越界路径（..、符号链接）返回 400/404
+```
+$ curl --path-as-is -o /dev/null -w "%{http_code}" http://127.0.0.1:18891/../../../etc/passwd
+400
+$ curl --path-as-is -o /dev/null -w "%{http_code}" http://127.0.0.1:18891/../../x
+400
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:18891/api/bogus
+404
+单测：guard 7 条（含「符号链接指向仓库根外 = 必拒」unix 实跑 + 缺失文件 404 语义）
+```
+
+### 判据 3：0 写盘（写点仅 evidence/console/）
+```
+repo/ 全模块 = 只读计算 + 只读文件访问（resolve_guarded 读 + fs::read + git ls-files）；
+实跑：启动 + 全 6 端点请求 + 越界负例后，冻结树（crates/ti-core assets android tests）
+0 新文件、0 内容变更（find -newer 时点断言）；
+`git status --porcelain` 的 8 行 = 并行会话在途改动（android 壳 + maps manifest 哈希面，
+归 S18.8d/S32.12 线），本任务 0 写点 ⇒ 不产生新脏行；
+锁文件 evidence/console/.lock = 唯一写点（gitignored，S32.1 面）。
+```
+
+### 判据 4：单测覆盖解析与路径边界
+```
+$ cargo test -q -p ti-console
+test result: ok. 24 passed; 0 failed（r1 修复后实测 24；本 log 初稿 23 = 修复前计数，§五 已补记）
+（config 4 + guard 7 + data 8 + snapshot 6 中含：同内容同指纹 / 内容变更指纹必变 /
+未跟踪文件入清单〔22 号 §8 载体三条判据〕/ 白名单外 400 / `..` 段 400 / 符号链接逃逸拒）
+```
+
+### 判据 5：数据源路径集中 console_sources.json（Rust 侧 0 个 assets/xxx.json 字面量）
+```
+Rust 侧 0 资产路径字面量 = 全数据驱动（比 DoD 口径更严）：
+- 文件项路径（ui_manifest/registry/gate_data）= data.rs `pick_source(sources, needle)`
+  从 console_sources.json 的 repo_sources 按 needle 筛选（缺项 = Err ⇒ API 500 如实上报，
+  单一事实源漏登记时立即暴露）；
+- 目录项白名单 = repo::data::SOURCE_DIRS 常量（5 目录，与 JSON 目录项集合同集，22 号 §10.2）；
+- 测试 fixture 面同步 0 assets 字面量（config 3 路径 / guard dist 面 / snapshot 谓词面 /
+  data 9 路径 fixture 与真实 JSON 同形）；
+CS-1 实跑 = 0 新增违例（首跑 4 个新增 = 硬编码面，已改数据驱动后清零）：
+$ python3 scripts/check_code_standards.py --check
+PASS（0 项超基线）
+```
+
+### 判据 6：不结构化解析 plan/packages.yaml
+```
+repo/ 全模块 0 处提及 packages.yaml（grep 实测 0 命中）；
+ledger.yaml 解析走 ti-devmeta::ledger（单行 flow-mapping 口径，S32.1 上提面）。
+```
+
+### 判据 7：依赖图断言保持
+```
+$ cargo tree -p ti-console
+ti-console → {serde_json(+传递), ti-devmeta}
+grep ti-core|ti-platform|ti-app|ti-engine|ti-render|bevy|macroquad = 0 命中
+```
+
+### 判据 8：gate 全绿（等价机器判据口径，同 S32.11/12：未跑 gate.ps1 全量）
+```
+$ cargo build -q -p ti-console        EXIT=0
+$ cargo test -q -p ti-console         24/24 PASS（初稿 23 = r1 修复前计数，r4 收口回填）
+$ cargo clippy -q -p ti-console --all-targets   0 warning
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml   0 error
+$ cargo run -q -p ti-tools --bin doccheck       0 error
+$ cargo run -q -p ti-tools --bin doccheck2      0 error（38 项）
+$ python3 scripts/check_code_standards.py --check   PASS
+$ python3 scripts/check_ledger_reality.py           全绿（246 verified 三方对账）
+$ python3 scripts/doc_numbers.py                    0 漂移
+```
+
+### 判据 9：双审计 + evidence/S32.2.log
+本 log = 收口前实跑凭证（「收口前勿引用」口径）；双审计 r1~rn 报告落
+`evidence/console/audit-S32.2-r<N>-{a,b}.md`（22 号 §7.3 格式契约）；
+双审计收敛（连续 2 轮 0/0/0）后本 log 补「双审计通过」段再置 verified。
+
+## 三、0 游戏产物变更（22 号 §8 内容级指纹口径）
+
+- 本任务写点面 = `crates/ti-console/src/repo/*.rs`（4 新文件）+ `routes.rs`（重写）+
+  `main.rs`（接线 6 行）+ 本 log；
+- 冻结路径（ti-core/ti-app/ti-engine/ti-render/ti-platform/ti-formats/assets/android/tests）
+  **0 变更**（find 时点断言 + git status 无本任务新脏行）；
+- `repo::snapshot` 模块 = §8 载体的**机器落地**（15 号第 23 行：S32.2 收口后
+  「待固化」转「半自动（工具产出证据 + 人核）」）；当前 `git status` 的 8 行脏面
+  = 并行会话在途（android 壳 S18.8d + maps manifest 哈希 S32.12 线），非本任务。
+
+## 四、已知限制 / 后续挂账（0 虚报口径）
+
+1. `/api/snapshot` 的指纹实现 = 双轮 FNV-1a 64 异或折叠（0 新依赖面，平台不引 sha2
+   crate）；形态 64 hex 对齐 sha256 语义位宽，**不是**密码学 sha256 ⇒ 22 号 §8 的
+   「内容级指纹」口径在语义上成立（内容变 ⇒ 指纹必变，单测锁定），密码学强度非本面需求；
+   S32.4 执行面若升级真 sha2 须同步改 §8 口径文档。
+2. `next_task` 排序 = 台账文件序（首个非 verified 且 deps 全 verified），非「最浅 depth」
+   语义；S32.3 概览页消费面若需深度序 = S32.3 内定。
+3. 符号链接逃逸单测 = unix `cfg!(unix)` 实跑（Linux 本面）；Windows 侧 = canonicalize
+   前缀校验兜底（同一 guard 逻辑，0 平台分支代码）。
+
+## 五、双审计 r1 findings 吸收记录（主线程，同批修复）
+
+- r1 A 侧 3 条（1 P1 + 2 P2）+ B 侧 4 条（1 P1 + 3 P2）：
+  - **NEW-A-1 / NEW-1（P1，同源）**：22 号 §10.2 第 3 条「assets/ 只返回登记过的文件，
+    不做任意目录列举」未落实 ⇒ 已修：`guarded_file` 静态回退面从 `SOURCE_DIRS` 5 目录常量
+    改**数据驱动**（`console_sources.json` 混合白名单 = 目录项前缀 + 文件项精确）；
+    `SOURCE_DIRS` 常量删除；`console_sources.json` 9 条 → 11 条（`docs/` 目录项面 +
+    `assets/ui/`（ui_manifest 登记的 png 实体）+ `dist/maps/index.json`；`plan/` 保持
+    单文件精确项）；实跑复验：`/assets/ui_manifest.json` 200（登记）/ `/assets/data/board.json`
+    404（未登记）/ `/assets/ui/bg_night_sea.png` 200（ui/ 目录项）/ `/plan/packages.yaml`
+    404（未登记）/ `/plan/ledger.yaml` 200；
+  - **NEW-2（P2）**：`/plan/packages.yaml` 放行未登记文件 ⇒ 与 NEW-1 同源修复（plan 面
+    单文件精确项），已闭环；
+  - **NEW-3（P2）**：`main.rs` repo_root = CARGO_MANIFEST_DIR 上两级的隐含目录假设 ⇒
+    已修：注释面标注 + **启动自检**（`plan/ledger.yaml` 存在性，缺失拒启 exit=1，
+    0 静默读错目录兜底）；
+  - **NEW-A-2（P2）**：`sha256_hex` 命名误导（实 = 双轮 FNV-1a 64 异或折叠，非密码学 SHA-256）
+    ⇒ 已修：函数顶注补「非密码学 SHA-256 + 0 新依赖面 + S32.4 升级须同步 22 号 §8 口径」；
+  - **NEW-A-3（P2）**：`/api/snapshot` 指纹抽样 = 字典序前 8（不覆盖全 8 冻结路径）
+    ⇒ 挂 S32.3/S32.4 消费面定案（抽样口径），S32.2 不返工（0 游戏产物变更判定靠
+    `diff`/`no_change` 全量面，非抽样面）；
+  - **NEW-4（P2，收口挂账）**：22 号 §11.2 L360 信任项备注「届时改『已断言』」+
+    15 号 L56 第 23 行「待固化 → 半自动」⇒ **收口时回写**（主线程，随 task_close）；
+  - 新增 `/api/whitelist?path=` 端点（白名单判定机器面，`in_sources` 消费点，0 写盘）
+    + guard 单测 +1（混合白名单语义：目录前缀/文件精确/未登记拒/`..` 拒，24 条全过）。
+- 判据 5（CS-1）口径升级备注：硬编码 `assets/xxx.json` 字面量首跑 4 处 ⇒ 改数据驱动
+  （`pick_source` needle 筛 + 混合白名单）后 CS-1 0 新增违例（`--check` 复跑 PASS）。
+
+## 六、双审计通过 + 主线程独立复核（§7.5）
+
+- 双审计 6 轮 12 份报告 = `evidence/console/audit-S32.2-r{1..6}-{a,b}.md`（r1/r4 = 主线程
+  补写件，抬头标注；各报告抬头含 22 号 §7.3 四行机器可解析字段；r1 A 3 + B 4 / r2 A 2 + B 3 /
+  r3 A 0 + B 1 / r4 A 1 + B 0 / r5 A 1 + B 2 / r6 A 0 + B 0）；
+- 收敛判定（§7.4 口径）：**r5（A 1 P2 + B 2 P2 全同批吸收 = log 判据 8 段 23/23 → 24/24
+  回填 + r4 报告补写）+ r6 双侧 0/0/0 = 连续 2 轮实质收敛窗口成立**（r6 两侧 0 新发现 +
+  0 误报 + 0 残留；r6-A 2 条附注经 r6-B 独立判定 = 均维持建议级 0 升级，其中 fixture
+  注释「9 数据源」= 主线程收口同批已顺手更正 10）；
+- 主线程独立复核（2026-10-30，本 log 收口时点）：
+  1. 实跑 10 项机器判据全绿 = build 绿 / test 24/24 / clippy 0 warning /
+     cargo tree 0 游戏 crate / JSON 10 条 ↔ 22 号 §5 10 行 1:1 /
+     ledger 262/246/0 error / doccheck 0 error / doccheck2 0 error（38 项）/
+     三方对账全绿 / doc_numbers 0 漂移；
+     **唯一红项 = check_code_standards CS-3 1 项 `crates/ti-engine/src/vs_duel.rs::ease_out`
+     = 并行 S18.8d/e 在途线**（S32.2 面 0 新增违例，CS-1 0 命中，0 扩豁免）；
+  2. 行号抽查：data.rs L294 fixture 注释 = 10 数据源（已更正）；log 判据 1/4/8 段计数面
+     246/10、24、24/24 全一致（0 自矛盾）；15 号 L54 合计 210（分项 170+5+4+21+7+3 复算
+     0 差）+ 指针 `r{1..6}` + L56 第 23 行 = 半自动（载体挂账标注，0 提前宣称）；
+  3. 越界/登记/快照面终验：未登记 `/assets/data/board.json` + `/plan/packages.yaml` = 404
+     （§10.2 混合白名单落实）/ 登记面 200 / 穿越 `--path-as-is` = 400 /
+     `/api/snapshot` = 351 冻结文件 + 5 未跟踪（0 写盘断言面）；
+  4. 0 游戏产物变更确认（22 号 §8 指纹口径）：本任务写点面 = 工具面
+     （crates/ti-console repo/ 4 新文件 + routes/main 接线 + console_sources.json 10 条
+     + 4 文档 + 12 份审计报告 + 本 log），冻结路径 0 变更；`repo::snapshot` 模块 =
+     §8 载体落地（15 号 L56 第 23 行已转半自动）；
+  5. 22 号 §11.2 L360 信任项回写 = repo 面「0 写盘」已断言（24 条单测含 0 写盘面），
+     `-Check`/map_pack 条件写执行面挂 S32.4/S32.9（0 超前宣称）。
+
+**收口判定：S32.2 verified（双审计 r5+r6 连续 2 轮 0/0/0 + 主线程独立复核 5 项全过；
+CS 唯一红项归并行 S18.8d/e 线，非 S32.2）。**

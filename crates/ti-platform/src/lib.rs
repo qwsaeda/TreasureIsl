@@ -3,14 +3,21 @@
 //! 设计（`docs/style.md` §5.6）：
 //! - 后端用**关联类型 + 泛型**注入，不用 `dyn`（热路径零虚调用）；
 //! - 所有实现共享同一套 trait，因此 `HeadlessBackend`（测试）与
-//!   `MacroquadBackend`（三端）可互换，回归测试不依赖窗口/声卡。
+//!   渲染后端（三端）可互换，回归测试不依赖窗口/声卡。
+//!
+//! S18.8b（macroquad 退役上洗）：`macroquad` 依赖整体删除。
+//! - `gfx`：GL 呈现层（纹理上传 / 全屏 quad / 边框填充）删；
+//!   `FramePresenter` 保留为脏行状态机 + 计数（stats 观测口径不变）。
+//! - `gpu_renderer`：GL 逐精灵 blit 删；保留图集抽象 `SpriteRef` + 计数
+//!   （真实上屏 = ti-engine Bevy 壳，S18.8a 起）。
+//! - `settings`：`FilterMode` 薄封装改挂 bevy `TextureFilter`（2 变体 1:1）。
 
 pub mod audio;
 pub mod audio_asset;
 pub mod backend;
 pub mod error;
 pub mod gfx;
-/// S10.4：GPU 化逐精灵 batch 渲染（macroquad draw_texture + 纹理图集 + alpha 混合）。
+/// S10.4：GPU 化逐精灵 batch 渲染（图集抽象 + 计数；GL 呈现 S18.8b 起由 Bevy 壳承担）。
 pub mod gpu_renderer;
 /// S7.5：HD 资产 PNG 解码（feature `hd-8bit` 门控，默认不编译）。
 #[cfg(feature = "hd-8bit")]

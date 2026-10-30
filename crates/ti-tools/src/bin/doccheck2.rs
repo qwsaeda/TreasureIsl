@@ -461,7 +461,7 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
     let actual = gate_item_actual_count(&gate);
-    let expected = 31usize; // 按项名去重口径（S31.3 wasm-browser-e2e 入 29；门禁结构变化时同步）
+    let expected = 33usize; // 按项名去重口径（S31.3 wasm-browser-e2e 入 29；2026-10-30 并行会话新增第 33 项 ⇒ 32→33，门禁结构变化时同步）
     if actual != expected {
         errors.push(format!(
             "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"
@@ -1540,8 +1540,8 @@ fn check_std_traits_matrix(root: &Path) -> Vec<String> {
         ),
         (
             "crates/ti-platform/src/settings.rs",
-            "impl From<FilterMode> for macroquad::miniquad::FilterMode",
-            "FilterMode → miniquad 零损失转换（§5.6.6 先例）",
+            "pub enum FilterMode",
+            "FilterMode 滤波枚举（S18.8b 起 miniquad 薄封装已删；滤波映射 = Bevy 壳自持 wgpu FilterMode）",
         ),
         (
             "crates/ti-render/src/framebuffer.rs",
@@ -3260,7 +3260,14 @@ fn check_process_ledger(root: &Path) -> Vec<String> {
             ));
             continue;
         }
-        if status.starts_with("待固化") && !cells.join(" ").contains("S2") {
+        // 任务号 = 台账行 id 字串（`S<数字>`，如 S21.13 / S32.2）。
+        // 旧实现硬编码 "S2" 前缀（S19 时代 S1~S21 的写法），S32 系列任务号不含子串 "S2"
+        // ⇒ S32.x 的待固化行永远无法通过（第 6 轮审计 P2 实证），改为通用台账 id 模式。
+        let joined = cells.join(" ");
+        let has_task_id = joined.split_whitespace().any(|w| {
+            w.strip_prefix('S').is_some_and(|rest| rest.starts_with(|c: char| c.is_ascii_digit()))
+        });
+        if status.starts_with("待固化") && !has_task_id {
             errors.push(format!(
                 "15_process_ledger.md:{}: 流程「{name}」标待固化但无台账任务号（不许无任务号长期挂账）",
                 i + 1

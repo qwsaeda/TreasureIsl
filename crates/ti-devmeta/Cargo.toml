@@ -1,0 +1,13 @@
+[package]
+name = "ti-devmeta"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "开发管理平台的共享层：台账（ledger）解析 + 静态 HTTP（纯 std，0 游戏依赖）"
+
+[dependencies]
+# 纯 std：不引 serde/serde_json/游戏 crate（S32.1 依赖图断言面）
+
+[lints]
+workspace = true

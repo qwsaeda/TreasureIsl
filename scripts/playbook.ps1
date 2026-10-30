@@ -9,7 +9,7 @@
 #   run-headless     无头回归（tests/scripts/full_run.json 16 步）
 #   run-wasm         构建 + 起本地 HTTP 预览浏览器版
 #   smoke            native+wasm 两端冒烟
-#   gate             全门禁（31 项）
+#   gate             全门禁（33 项）
 #   test             全 workspace 测试
 #   fmt              规范格式化
 #   clippy           lint（-D warnings）
@@ -55,7 +55,7 @@ if (-not $Command -or $Command -eq "-List" -or $Command -eq "--help" -or $Comman
     Write-Host "  run-headless   无头回归（full_run.json）"
     Write-Host "  run-wasm       构建+起本地 HTTP 预览浏览器版"
     Write-Host "  smoke          native+wasm 两端冒烟"
-    Write-Host "  gate           全门禁（31 项）"
+    Write-Host "  gate           全门禁（33 项）"
     Write-Host "  test           全 workspace 测试"
     Write-Host "  fmt            规范格式化"
     Write-Host "  clippy         lint（-D warnings）"

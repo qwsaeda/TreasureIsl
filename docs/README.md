@@ -10,9 +10,10 @@
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
 | **迁移 Linux / 换机器续工（会话总结 + 迁移操作 + 续工序列）** | [`migration_linux.md`](migration_linux.md)（迁移前二选一：整目录拷贝 or add -A 提交；在途 tracked-M + untracked-? 文件清单；Linux 环境准备 + `pwsh` 命令差异 + CRLF/无头 GPU 风险点 + 迁移后第一条命令序列；S27.7 进度快照） |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 31 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 33 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
+| [process/03_templates.md §8 + docs/design-sheets/](process/03_templates.md) | **内容设计 sheet 模版（Canvas 概念落地，S16.4）**：加新地图/新岛类/新剧情 = 一张设计 sheet （四段式 A 业务定案 / B 数据 key 契约 / C 场景资源接线 / D 验收锚点 33 项门禁）；空样例 `assets/maps/m04/`（`map_pack add m04` 骨架，真内容落地后 verify 合规）+ `docs/design-sheets/m04.sheet.md`（模版填法示例，dod = 本任务只落模版不实现真内容） |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
 | **模块并行开发（契约→并行→集成）** | [`process/05_module_parallel.md`](process/05_module_parallel.md)（一轮 4 步 + 包划分 + 纪律 + §4.5 开轮必读）+ [`contracts/`](contracts/00_index.md) + `plan/packages.yaml` |
 | **对抗流水线飞轮（找问题→审计→修复→回写）** | [`process/06_flywheel.md`](process/06_flywheel.md)（3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件，EXP-068） |
@@ -71,7 +72,7 @@
 | [process/17_layout_engine.md](process/17_layout_engine.md) | **布局引擎定案（S29 · B1 全 bevy_ui 响应式 · 单一事实源）**：UI + 命中 + 重排全进 Bevy（`bevy_ui` 自动布局 + 窗口 resize + `bevy_picking` 2D 拾取）；3 条约定松绑签核（逻辑层仅 UI 交互层进 Bevy / `bevy-cpu-parity` 改口径只保游戏世界 / UI chrome 转 Bevy 代码而游戏内容仍数据驱动）；游戏世界保持 1080 正交 + 数据驱动（换引擎友好）；原「引擎无关求解器」方向已作废（WBS S29.0~S29.5，改布局/加场景/调视口/换引擎前必读） |
 | [process/18_asset_content_pipeline.md](process/18_asset_content_pipeline.md) | **资产与内容数据管线定案（单一事实源）**：行业三档（①绝对坐标 / ②意图+自动布局 / ③参数化）+ 总纲「不手写像素」；本项目终态（UI=bevy_ui 自动布局 S29.3 / 地图=参数化 S27.4 / scenes.json 退成元素清单）；**资产登记标准**（UI 图=`ui_manifest.json`、字体/音频=`assets/registry.json`，gate `validate_data` `check_asset_registry` 全类型 disk↔registry 双向同步 + `check_scenes_canonical` 守 scenes.json indent=1 规范形）；音频口径（发货无声，S18.8 切 bevy_audio）。改资产/资源加载/版面坐标/加地图前必读 |
 | [process/21_map_package_spec.md](process/21_map_package_spec.md) | **地图包规范 v1（单一事实源）**：一张图 = 一个自包含可分发包（`assets/maps/<id>/`：`manifest.json`/`map.json`/`layout.json`/`strings.json`/`assets/`）；`manifest.json` 字段（schema·id·version·data_version 兼容声明·map·layout·strings·assets[sha256+bytes]·invariants）/ 不变量 I1~I8（31 格构成·10 类岛各 2 格相邻·8pt·资产哈希齐·N8 往返）/ 失败语义（不兼容或哈希不符 ⇒ 拒绝安装或跳过该包；运行期回退内嵌默认包）/ **运行期加载契约**（Bevy 资产根直读包 + `ti_core::data` 可注入源 + `activate_pack(id)` 切包，无注入 = 内嵌默认）/ 工具 `scripts/map_pack.py`（`pack`/`verify`/`install`/`uninstall`/`list`/`check`）+ 产物落点（已装包 `assets/maps/<id>/` + 可分发件 `dist/maps/<id>.map-pack/`）。加图·换图·改环几何前必读 |
-| [process/22_dev_platform.md](process/22_dev_platform.md) | **开发管理平台（TI Dev Console）定案（单一事实源）**：与游戏运行时解耦，纯管理 + 辅助开发；定位/不做清单 / 文件系统即数据库 / 只读默认 + 命令白名单 / 数据源（ledger·docs·evidence·assets·maps）/ 能力矩阵 P0~P3 / **双审计协议**（A 完成度 + B 一致性，连续 2 轮 0 新发现 = 通过，3 轮未过拆子任务）/ 北极星判据。WBS = [`plan-s32-platform.md`](plan-s32-platform.md)；进度 = `plan/ledger.yaml` |
+| [process/22_dev_platform.md](process/22_dev_platform.md) | **开发管理平台（TI Dev Console）定案（单一事实源）**：与游戏运行时解耦，纯管理 + 辅助开发；定位/不做清单 / 文件系统即数据库 / 只读默认 + 命令白名单 / 数据源（ledger·docs·evidence·assets·maps）/ 能力矩阵 P0~P3 / **双审计协议**（A 完成度 + B 一致性；收敛判据 = 0 新发现 + 0 误报 + 0 残留且连续 2 轮，见 22 号 §7.4）/ 北极星判据与测量口径。WBS = [`plan-s32-platform.md`](plan-s32-platform.md)；进度 = `plan/ledger.yaml` |
 | [process/19_bevy_ui.md](process/19_bevy_ui.md) | **bevy_ui 专题（单一事实源）**：UI 相机分层（`IsDefaultUiCamera` order=1/clear None）/ `Node` 字段全 inline / `Text`+`TextFont` / **UI 图片 = `ImageNode`**（0.20 新 API，非旧 `Image`/`Sprite`）/ **taffy 自动布局 = 意图化（flex column+gap+% 定位，resize 真重排，不手写像素）** / `ComputedNode` 探针证据口径 / 0.20 坑位清单。改 UI chrome·加控件·改版面坐标前必读 |
 | [process/20_bevy_picking.md](process/20_bevy_picking.md) | **bevy_picking 专题（单一事实源）**：0.20 拾取结构（无 `PickingSection`/`PickingHandler`；`Pickable`+`MeshPickingSettings`）/ 指针事件（`PointerClick`=tap、`PointerDragEnd.distance`=swipe）/ **0.20 `Message` 取代 `Event`**（`add_message`+`MessageWriter::write`+`MessageReader::read`）/ 本项目命中契约（`PickTarget`/`PickEvent`/`HitData`/`register_pick`/`swipe_dir_from`）/ 数据化命中（`scenes.json` `pick_key`/`pick_index`）/ 观察者参数最小化 / 坑位清单。改命中·加可点元素前必读 |
 
@@ -117,6 +118,8 @@
 |---|---|
 | `scripts/playbook.ps1` | **常用命令一键入口**（16 项命令固化：native 运行 / 无头回归 / wasm / 冒烟 / 门禁 / 测试 / fmt / clippy / 元素验证 / 逐精灵渲染 / 推送前置检查 / 台账 / doccheck / 硬编码扫描；`-List` 列全部；UTF-8 BOM 防 PowerShell 编码错位） |
 | `crates/ti-tools/src/bin/specskel.rs` | spec 骨架半自动生成（S0.7；命令见 `AGENTS.md` 命令节） |
+| `crates/ti-devmeta` | S32.1 平台共享层（台账解析 + 静态 HTTP，纯 std 0 游戏依赖；`ledger.rs` 上提自 `ti-tools`） |
+| `crates/ti-console` | **S32 TI Dev Console 平台本体**（纯管理/辅助开发，与游戏运行时解耦；S32.1 骨架 = 静态壳 + `/api/health` + 单实例锁 + 命令白名单 `console_commands.json`；定案 = `process/22_dev_platform.md`；`cargo run -p ti-console`） |
 | `evidence/S0.7.log` | specskel 验收日志（单测 6/6 + 三模块实跑） |
 | `scripts/extract_board.py` | **S19 环岛赛道生成**：`terrain.json` 陆格掩码 → Moore 轮廓 → 去重 → 吸附 balance 据点/BOSS/原版特殊地块 → `assets/data/board.json`（`--check` 校验一致性） |
 | `scripts/code_outline.py` | **源结构清单**（文件 / 顶层项 / 方法 + 行范围）—— 拆分重构前的「模块边界 + 函数清单」（`02_conventions.md` §9.1） |

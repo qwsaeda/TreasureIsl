@@ -1,22 +1,23 @@
-//! 2026-10-26 窗口缩放跟随（用户报告「桌面版不随窗口缩放」）的**机器判定**模式。
-//!
-//! `--resizetest` 启动真窗口 → 读初值**实际可见世界区域**（Bevy 0.20
-//! `OrthographicProjection.area`，pub 字段）→ 程序化把窗口物理分辨率翻倍 → 再读一次 →
-//! 断言两条不变量：
-//!
-//! 1. **画布恒完整可见**：`area ≈ 1080×1920`（letterbox，内容不裁切）；
-//! 2. **内容随窗口等比放大**：`px/unit = 窗口逻辑宽 / area 宽` 翻倍
-//!    （窗口变大 ⇒ 1 逻辑单位占更多物理像素 ⇒ 画面跟着缩放）。
-//! 3. **（S29.5）`bevy_ui` chrome 真重排**：UI 布局根 `ComputedNode.size` = 视口尺寸
-//!    （初值 = win1、翻倍后 = win2）⇒ taffy 随新视口重算（不是位图缩放）；
-//!    且布局树节点数不变（只重排，不重建）。
-//!
-//! 判据取 `area`（渲染真值）而非 `o.scale`（内部量），故对 `o.scale` 口径写反**必然 FAIL**
-//! （EXP-115：曾把 `o.scale` 误取为 `vp.scale()`，540×960 下 `area=270×480` = 4× 放大）。
-//!
-//! PASS = 退出码 0，FAIL = 非 0（与 `--selftest` 同判据口径）。
-//! 从 `treasure_bevy.rs` 拆出（该文件有 900 行棘轮上限，`audit_code` 对账）；本模块只含
-//! `--resizetest` 的资源 + 系统，经 `mod resizetest;` 挂进壳。
+//! `--resizetest` 窗口缩放跟随机器判定模式（画布恒 1080×1920 + 内容等比放大双不变量断言）。
+// 2026-10-26 窗口缩放跟随（用户报告「桌面版不随窗口缩放」）的**机器判定**模式。
+//
+// `--resizetest` 启动真窗口 → 读初值**实际可见世界区域**（Bevy 0.20
+// `OrthographicProjection.area`，pub 字段）→ 程序化把窗口物理分辨率翻倍 → 再读一次 →
+// 断言两条不变量：
+//
+// 1. **画布恒完整可见**：`area ≈ 1080×1920`（letterbox，内容不裁切）；
+// 2. **内容随窗口等比放大**：`px/unit = 窗口逻辑宽 / area 宽` 翻倍
+//    （窗口变大 ⇒ 1 逻辑单位占更多物理像素 ⇒ 画面跟着缩放）。
+// 3. **（S29.5）`bevy_ui` chrome 真重排**：UI 布局根 `ComputedNode.size` = 视口尺寸
+//    （初值 = win1、翻倍后 = win2）⇒ taffy 随新视口重算（不是位图缩放）；
+//    且布局树节点数不变（只重排，不重建）。
+//
+// 判据取 `area`（渲染真值）而非 `o.scale`（内部量），故对 `o.scale` 口径写反**必然 FAIL**
+// （EXP-115：曾把 `o.scale` 误取为 `vp.scale()`，540×960 下 `area=270×480` = 4× 放大）。
+//
+// PASS = 退出码 0，FAIL = 非 0（与 `--selftest` 同判据口径）。
+// 从 `treasure_bevy.rs` 拆出（该文件有 900 行棘轮上限，`audit_code` 对账）；本模块只含
+// `--resizetest` 的资源 + 系统，经 `mod resizetest;` 挂进壳。
 
 use bevy::camera::Projection;
 use bevy::prelude::*;

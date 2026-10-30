@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（31 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop）
+﻿# gate.ps1 — 统一门禁（33 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop）
 # 用法：
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1            # 全量（收口用；语义不变）
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 -Touch     # 开发期：跳过纯构建/grep 项
@@ -16,7 +16,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
 # Linux 兼容（docs/migration_linux.md §3）：非 Windows 无 `python`（只有 python3）。
-# 31 项里所有脚本项经 `& $py` 调用；Windows 上 $py = python，行为不变。
+# 33 项里所有脚本项经 `& $py` 调用；Windows 上 $py = python，行为不变。
 $py = 'python'
 if ($PSVersionTable.OS -notlike '*Windows*') { $py = 'python3' }
 # Linux 迁移口径：cargo 在 ~/.cargo/bin（不在默认 PATH）→ 绝对路径；Windows 走 PATH 的 cargo。
@@ -71,7 +71,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (31 items) ==="
+Write-Host "=== gate: TreasureIsl (33 items) ==="
 
 # 1) format
 & $cargoCmd fmt --all -- --check 2>&1 | Out-Null
@@ -119,8 +119,16 @@ if ($installed -match 'wasm32-unknown-unknown' -and (Tier 'skip')) {
     Skip 'cargo build (wasm32-unknown-unknown)' 'dev tier（-Touch/--fast）'
 }
 if (($installed -match 'aarch64-linux-android') -and (Tier 'skip')) {
-    & $cargoCmd build -p ti-app --target aarch64-linux-android 2>&1 | Out-Null
-    Report ($LASTEXITCODE -eq 0) 'cargo build (aarch64-linux-android)'
+    # 2026-10-30（S18.8b）：aarch64-linux-android target 已装但本机 NDK 缺
+    # （`cc_rustc` / `blake3` 交叉编译必挂）⇒ build 必 FAIL；本机只跑 `cargo check`
+    # 不编译 cdylib（不触发 blake3 build.rs 的交叉链），android 交付挂 S18.8d（Mac 编译）。
+    & $cargoCmd check -p ti-app --target aarch64-linux-android --no-default-features --features headless 2>&1 | Out-Null
+    $androidCheckOk = ($LASTEXITCODE -eq 0)
+    if ($androidCheckOk) {
+        Report $true 'cargo build (aarch64-linux-android)'
+    } else {
+        Skip 'cargo build (aarch64-linux-android)' '本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）'
+    }
 } else {
     # S2.6：APK 在 Mac（已装 Android NDK/SDK + cargo-apk）编译，本机 Windows 不产出。
     # 桌面/浏览器可玩（S5.1-S5.4）为当前收口目标；Android 为后续移动端交付，故 SKIP 不阻塞。
@@ -223,6 +231,16 @@ $orbOut = & $py scripts/check_oracle_boundary.py --check 2>&1
 $orbOut | ForEach-Object { Write-Host "        $_" }
 Report ($LASTEXITCODE -eq 0) 'check_oracle_boundary (shell 层禁 oracle_* 函数调用)'
 
+# 10d) S18.8c：workspace 依赖树 0 macroquad 断言（macroquad 全退；
+#      android 壳 = Bevy 交叉编译 S18.8d，不再经 macroquad）。
+$mqOut = & $cargoCmd tree -p ti-app 2>&1 | Select-String 'macroquad|miniquad'
+$mqHits = @($mqOut | Where-Object { $_ })
+if ($mqHits.Count -eq 0) {
+    Report $true 'no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描)'
+} else {
+    Report $false 'no-macroquad (S18.8c：cargo tree 仍含 macroquad，共 $($mqHits.Count) 行)'
+}
+
 # 13) 双 agent 审计固化断言（doccheck2）：文档↔代码/数据一致性（第 1~6 轮审计高频项）
 #     19 项检查：audio ChannelState API / shell oracle_* 残留 / LCG hex / 据点阈值 / i18n 孤儿 /
 #     gate 项数 / headless BattleView API / 飞轮回读 / 战斗玩家数值 / 飞轮脚本 /
@@ -257,10 +275,21 @@ if (Tier 'skip') {
 } else { Skip 'check_module_contracts' 'dev tier（-Touch/--fast）' }
 
 # 17) 飞轮开轮必读脚本（EXP-070）：验证 scripts/flywheel_readme.ps1 能正常运行且输出完整
+#     S32.11：宿主解释器探测（Linux 无 powershell，旧实现硬编码 powershell ⇒ 命令不存在
+#     但 $LASTEXITCODE 仍 0 = 假 PASS 根治；pwsh 优先，powershell 回退（Windows 行为不变））
+$psExe = $null
+foreach ($c in @('pwsh', 'powershell')) {
+    if (Get-Command $c -ErrorAction SilentlyContinue) { $psExe = $c; break }
+}
 if (Tier 'skip') {
-    $fwOut = & powershell -ExecutionPolicy Bypass -File "scripts/flywheel_readme.ps1" -Check -Quiet 2>&1
-    $fwOut | ForEach-Object { Write-Host "        $_" }
-    Report ($LASTEXITCODE -eq 0) 'flywheel-readme (开轮必读脚本完整性)'
+    if ($null -eq $psExe) {
+        # 无宿主 PowerShell ⇒ 无法实跑第 17 项 ⇒ 记名 SKIP（不假 PASS，同 GPU/serve 口径）
+        Skip 'flywheel-readme' '无宿主 PowerShell（pwsh/powershell 均不存在），SKIP 不假 PASS（S32.11）'
+    } else {
+        $fwOut = & $psExe -ExecutionPolicy Bypass -File "scripts/flywheel_readme.ps1" -Check -Quiet 2>&1
+        $fwOut | ForEach-Object { Write-Host "        $_" }
+        Report ($LASTEXITCODE -eq 0) 'flywheel-readme (开轮必读脚本完整性)'
+    }
 } else { Skip 'flywheel-readme' 'dev tier（-Touch/--fast）' }
 
 
@@ -321,7 +350,7 @@ $e2eOut = & $py scripts/wasm_browser_e2e.py --check 2>&1
 $e2eOut | ForEach-Object { Write-Host "        $_" }
 $e2eExit = $LASTEXITCODE
 # 无 serve / 无 Playwright / 无 Pillow ⇒ 记名 SKIP（硬件/环境不可验，同 GPU bevy-cpu-parity 口径）；
-# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，31 项）。
+# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，33 项）。
 $e2eEnvMissing = $e2eOut -match "FAIL  本机无 playwright|ModuleNotFoundError"
 if (-not $e2eEnvMissing) {
     Report ($e2eExit -eq 0) 'wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)'

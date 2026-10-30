@@ -42,6 +42,9 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("ti-tools/", "cjk", "CLI tool: terminal output text, not in-game UI"),
     ("treasure_headless.rs", "cjk", "headless smoke CLI prints (P3-3 machine check), not in-game UI"),
     ("treasure_android.rs", "cjk", "Android shell diagnostic prints, not in-game UI"),
+    # S32（ti-console/ti-devmeta）：开发管理平台 = CLI 诊断/锁/HTTP 错误文本，非玩家 UI（口径同 ti-tools/）
+    ("ti-console/", "cjk", "S32 dev console: lock/HTTP/binding diagnostic prints, not in-game UI"),
+    ("ti-devmeta/", "cjk", "S32 dev-meta shared layer: HTTP/ledger diagnostic prints, not in-game UI"),
     ("settings.rs", "cjk", "storage config key names, not display text"),
     ("mod_pcm.rs", "cjk", "PCM format diagnostics, debug prints only"),
     ("audio.rs", "cjk", "WAV parse error descriptions, not player-visible UI"),
@@ -53,6 +56,7 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("scenes/mod.rs", "cjk", "scene_transition! macro 3rd arg is doc-only ($doc -> #[doc] attribute), not player-visible text"),
     ("bevy_app.rs", "cjk", "Bevy spike shell window title, dev tool, not in-game UI (flywheel R1 ⑤-04 pending human ruling: may move to strings.json later)"),
     ("treasure_bevy.rs", "cjk", "Bevy delivery shell offscreen/selftest/shot diagnostics + window title, terminal output, not in-game UI"),
+    ("android_entry.rs", "cjk", "S18.8d Android JNI 入口诊断文本（android-activity 壳 crate include!；native 目标 cfg-gated 不编译），not in-game UI"),
     ("android_shell.rs", "cjk", "Android shell [hd] asset-registration diagnostics, not in-game UI"),
     ("sprite_step.rs", "cjk", "sprite-step debug bin usage/error/sprite-dump terminal output, not in-game UI"),
     ("data/mod.rs", "cjk", "balance data validation LoadError wording (crash-diagnostic channel), not display text"),

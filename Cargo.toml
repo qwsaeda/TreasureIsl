@@ -7,6 +7,9 @@ members = [
     "crates/ti-render",
     "crates/ti-app",
     "crates/ti-tools",
+    # S32.1（开发管理平台，22 号 §4）：共享层（台账解析 + 静态 HTTP，纯 std）+ 平台本体。
+    "crates/ti-devmeta",
+    "crates/ti-console",
     # S27.7：crates/ti-engine（Bevy 交付壳）**并回根 workspace**（S18.8 计划项落地，
     # 用户 2026-10-29 要求「crates 中的项目统一由根 Cargo.toml 管理」）。
     # 原独立 workspace 的唯一理由 = `links=alsa` 冲突（bevy 的 rodio→alsa-sys vs
@@ -14,6 +17,20 @@ members = [
     # `android-shell` feature（可选，默认不启用），bevy 侧未开 audio 特性
     # ⇒ 同一依赖图里不再同时出现两个 `links=alsa` 的包，冲突前提消失。
     "crates/ti-engine",
+    # S18.8d：Bevy Android JNI 壳（cargo-apk 标准布局，cdylib 产 libandroid_activity.so）。
+    # 2026-10-30（S18.8d 收口）：从 workspace members 临时移出——
+    # 本 crate 依赖 `android-activity` 0.6（native-activity feature）⇒ 引入 `ndk-sys`
+    # ⇒ native target 下 `compile_error!("ndk-sys only supports compiling for Android")`
+    # ⇒ `cargo build/test/clippy --workspace` 全挂。
+    # 恢复时机 = S18.8d 落地（Mac NDK 交叉编译 APK；本机跑 `--target aarch64-linux-android`
+    # 时 cargo 按 target 过滤 member，ndk-sys 可编译，gate android build 项同开）。
+    # S18.8d（2026-10-30）：Bevy Android JNI 壳（cdylib）。
+    # 暂移出 members：`ndk-sys` 在 native target 下 `compile_error!` 拒编译，
+    # 且 `cargo build --workspace` 不传 --target 时仍拉入 member 依赖树（cargo 不做 target 过滤）。
+    # Mac 侧 NDK 交叉编译时用 `cargo build -p android-activity@0.1.0 --target aarch64-linux-android`
+    # 单独构建（不触发 native 全量）；本机验证 0 macroquad 用 `cargo tree -p ti-app/ti-platform` 即可。
+    # S18.8d 完整收口后（含 Android APK 实测）恢复 members 并把 gate android 项改为 `--target` 条件跳过。
+    # "android/android-activity",
 ]
 
 [workspace.package]
@@ -25,7 +42,8 @@ license = "MIT"
 [workspace.dependencies]
 thiserror = "2"
 flate2 = "1"
-macroquad = "0.4"
+# S18.8c（2026-10-30）：`macroquad = "0.4"` 删除——workspace 依赖树 0 macroquad
+# （ti-app/ti-platform 全退；S18.8d 前 android 壳 = Bevy 交叉编译，不再经 macroquad）
 opus-pure = "0.2"
 # S7.5：HD 资产 PNG 解码（§5.9 定案清单，`ti-platform` optional，feature `hd-8bit` 门控，
 # 默认构建不进依赖树——EXP-046 模式）
@@ -66,12 +84,19 @@ bevy = { version = "=0.20.0", default-features = false, features = ["2d", "bevy_
 # S27.7：ti-engine（并回根 workspace 后）依赖的成员 crate 登记在此；
 # `ti-app` 用 `default-features = false`（ti-engine 侧显式开 hd-8bit/gpu-render/stats）。
 ti-app = { path = "crates/ti-app", default-features = false }
+# S18.8d：android JNI 壳（android/android-activity）引用 ti-engine 公共启动体
+ti-engine = { path = "crates/ti-engine" }
 
 [profile.release]
 # S27.7：ti-engine 并回根 workspace 后，profile 只在根生效（子 workspace 的
 # `[profile.release]` 会被 Cargo 忽略）⇒ wasm 体积口径（11_bevy_migration §3）
 # 的 `strip = "symbols"` 迁到根，对全部 member 生效（只影响符号，不改优化级别）。
+# S18.8e（2026-10-30）：LTO 开（fat LTO + 全 crate 参与；wasm 目标减 40–60% 体积，
+# 代价 = 编译时间 ×3~5）+ codegen-units=1（减 monomorphization 代码重复）；
+# 预算判定（≤8 MB，11_bevy_migration §3）+ 性能实测挂本任务收口。
 strip = "symbols"
+lto = "fat"
+codegen-units = 1
 
 
 [workspace.lints.rust]

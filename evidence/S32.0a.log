@@ -1,0 +1,143 @@
+# S32.0a + S32.0b 收口记录（22 号双审计收敛收口）
+
+> 时间：2026-10-30
+> 依据：22 号 §7.4 收敛判据（0 新发现 + 0 误报 + 0 残留，连续 2 轮）+ §7.5 主线程独立复核
+> 收口范围：S32.0a（定案文档本体）+ S32.0b（双审计收敛收口），同批收口
+> （S32.0b 收口对象 = S32.0a 的双审计收敛；两行共用本份复核记录，两处落盘）
+
+## 一、收敛判定（§7.4 连续 2 轮 0/0/0）
+
+有效审计轮次时间线（evidence/console/audit-S32.0a-r4~r17 各 a/b；r1~r3 = 拆分前任务 id 祖父条款；
+r2-b/r6-b = 占位文件，值域外不计轮）：
+
+| 轮 | A 侧 总判定/新发现/误报/残留 | B 侧 总判定/新发现/误报/残留 | 是否 0/0/0（双侧） |
+|---|---|---|---|
+| r13 | PASS 0/0/0 | FAIL 2/0/1 | 否（B 侧 2 P2） |
+| r14 | PASS 0/0/0 | FAIL 1/0/0 | 否（B 侧 1 P2 = 15 号 L54 计数漂移） |
+| r15 | PASS 0/0/0 | PASS 1/0/0 | 否（B 侧 NEW-01 报告份数基准 P2） |
+| r16 | **PASS 0/0/0** | **PASS 0/0/0** | **是** |
+| r17 | **PASS 0/0/0** | **PASS 0/0/0** | **是** |
+
+**r16 + r17 = 连续 2 轮 0/0/0 ⇒ §7.4 收敛判据首次满足。**
+（r15 B 侧 1 P2 NEW-01 已由第 15 版文档修复（22 号 §7.3 补「轮次完整性口径」段），r16 复核实测 CLOSED。）
+
+## 二、主线程独立复核记录（§7.5，逐条实跑）
+
+复核动作 = 主线程自己跑 DoD 命令 + 抽查子代理引用的行号/文件确实存在（不只写「已复核」）。
+
+### 复核 1：doccheck（DoD 判据「doccheck 0 error」）
+
+```
+$ cargo run -q -p ti-tools --bin doccheck
+doccheck: 148 docs, 38 facts, 128 experiences, 256 task refs, 4 assertions, 0 error(s)
+EXIT=0
+```
+（注：复核执行时点 1 处 release.md 计数漂移（238 vs 239）由 doc_numbers 回写后 0 error）
+
+### 复核 2：doccheck2（DoD 判据「doccheck2 0 error」）
+
+```
+$ cargo run -q -p ti-tools --bin doccheck2
+doccheck2: 0 error(s) across 38 audit-codified checks
+EXIT=0
+```
+仅 i18n 孤儿 key WARN × 14（归属 S8.x 数据化迁移在途线，非 error，非 S32 面）
+
+### 复核 3：ledger（DoD 判据「ledger 0 error」）
+
+```
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml
+ledger: 262 tasks, 239 verified, 0 error(s)
+  evidence: ok
+EXIT=0
+```
+S32 段 13 行 deps 全前向 DAG（S32.11 deps=[] / S32.12 deps=[S32.11] / S32.1 deps=[S32.0b]）；
+最大 rounds = 1（无 rounds>=3 行，ledger.rs L237 红线不触）
+
+### 复核 4：check_code_standards
+
+```
+$ python3 scripts/check_code_standards.py --check
+check_code_standards: PASS（0 项超基线）
+```
+
+### 复核 5：check_ledger_reality（三方对账 verified↔evidence↔代码符号，EXP-058）
+
+```
+$ python3 scripts/check_ledger_reality.py
+check_ledger_reality: 全绿（239 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+```
+
+### 复核 6：doc_numbers（数值漂移检查）
+
+```
+$ python3 scripts/doc_numbers.py
+  实测：门禁 33 项 / 台账 262 任务（239 verified）
+  声称点与实测一致（0 漂移）
+```
+
+### 复核 7：map_pack.py list + check（只读）
+
+```
+$ python3 scripts/map_pack.py list
+  m01  v1.0.0 data=board-v5  违规 22 项  assets/maps/m01
+  m02  v1.0.0 data=board-v5  违规 22 项  assets/maps/m02
+  m03  v1.0.0 data=board-v5  违规 22 项  assets/maps/m03
+  m04  v0.1.0-draft data=board-v5  违规 11 项  assets/maps/m04
+$ python3 scripts/map_pack.py check
+map_pack check: 0 漂移（4 个已装包 vs board.json；默认包 m01 vs 布局数据）
+```
+m01~m03 各 22 项 I7 违规 = **HEAD 既有**（S32.12 跟踪项，台账 pending，非 S32.0a/b 引入）；
+m04 11 项 = S16.4 在途空骨架（未入库，check 对无 map.json 的包恒通过），
+S32.12 DoD 已含 m04 处置三段口径（无 map.json 恒通过 / 填后先 sync / 已 install 报漂移先 uninstall）。
+
+### 复核 8：行号/文件抽查（子代理引用的关键位置确实存在）
+
+- `docs/process/22_dev_platform.md` L264（§8「0 游戏产物变更」行，显式禁用 porcelain）✓
+- `docs/process/22_dev_platform.md` L218-220（§7.3 轮次完整性口径段，NEW-01 修复落点）✓
+- `plan/ledger.yaml` L305（S32.0a 行，status=in_progress，rounds=1）✓
+- `plan/ledger.yaml` L306（S32.0b 行，deps=[S32.0a]，status=in_progress）✓
+- `docs/process/15_process_ledger.md` L54（第 21 行，计数 170，报告指针 r{4..17}）✓
+- `evidence/console/` 盘上报告 = 34 份（r1~r3 祖父 6 + r4~r17 各 a/b 26 + r2-b/r6-b 占位 2）✓
+- r16-a/r16-b/r17-a/r17-b 四行块均落首 fence 内，值域 PASS ✓（逐份 grep 命中）
+
+### 复核 9：15 号 L54 计数 170 可复算
+
+逐份读 evidence/console/*.md 四行块「新发现: N」：
+r1 38（祖父 12A+26B）+ r2 16 + r3 29（8A+21B）+ r4 22（12A+10B）+ r5 25（11A+14B）
++ r6-A 9（B 占位不计）+ r7 7（4A+3B）+ r8 3（1A+2B）+ r9 3（1A+2B）+ r10 4（2A+2B）
++ r11 6（3A+3B）+ r12 4（2A+2B）+ r13 2（0A+2B）+ r14 1（0A+1B）+ r15 1（0A+1B）
++ r16 0 + r17 0 = **170**，与 15 号 L54 声称值一致 ✓
+
+### 复核 10：0 游戏产物变更（§8 内容级 sha256 指纹口径）
+
+本收口动作（S32.0a/b verified）= 纯文档/台账/审计证据落盘，**0 游戏产物文件变更**：
+冻结路径（crates/ti-core、crates/ti-app、crates/ti-engine、crates/ti-render、
+crates/ti-platform、crates/ti-formats、assets/、android/、tests/）本次收口未改任一文件。
+工具面变更（crates/ti-tools）= 仅 doccheck2 校验器勘误
+（check_process_ledger 通用 S<数字> 模式，第 6 轮审计 P2 修复）+ gate-items 阈值 32→33
+（并行会话 33 项同步线，非 S32 引入），均在「工具面」= §8 口径不在冻结范围。
+门禁既有副作用路径（evidence/web_playtest.{log,png}、evidence/font_render.txt）本次 0 触发
+（未跑 gate.ps1）。
+
+## 三、收口动作（本 log 写完后执行）
+
+1. `python3 scripts/task_close.py --task S32.0a --no-run`（判据已在上方实跑，`--no-run` = 证据已在，只翻台账 + 同步计数）
+2. `python3 scripts/task_close.py --task S32.0b --no-run`（同批；S32.0b 判据 = 连续 2 轮 0/0/0 已满足 + 主线程复核 = 本 log）
+3. 两条均须 EXIT=0 + 台账 status 改 verified + rounds 保持 1（task_close.py 幂等，verified 已置不重复加 rounds）
+
+## 四、残留跟踪面（非 S32.0a/b 收口对象，单独立项）
+
+| 项 | 归属 | 现状 |
+|---|---|---|
+| m01~m03 I7 资产哈希漂移（各 22 项违规） | S32.12（deps=[S32.11]，pending） | HEAD 既有，已立项 |
+| m04 空骨架 11 项 | S16.4（在途）+ S32.12 处置口径已注 | 不入库则 check 恒通过 |
+| gate 第 17 项 flywheel-readme Linux 假 PASS（硬编码 powershell） | S32.11（deps=[]，pending） | 已立项，未开工 |
+| i18n 孤儿 key × 14 WARN | S8.x 数据化迁移在途线 | 非 S32 面 |
+
+## 五、证据清单
+
+- `evidence/console/audit-S32.0a-r16-{a,b}.md` + `r17-{a,b}.md`（连续 2 轮 0/0/0，收敛判定直接依据）
+- `evidence/console/audit-S32.0a-r{4..17}-*.md`（14 轮全量报告，含 r2-b/r6-b 占位 2 份）
+- `evidence/console/audit-S32.0-r{1,2,3}-*.md`（拆分前祖父条款 6 份）
+- 本文件（`evidence/S32.0a.log` + `evidence/S32.0b.log`，同批收口共用一份复核记录，两处落盘）

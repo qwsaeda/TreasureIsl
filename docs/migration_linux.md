@@ -141,11 +141,12 @@ ui-redesign-v3/{07_v3_5_pass,README}.md}`、`AGENTS.md`。
 | 产物路径 | `crates/ti-engine/target/release/` | **根 `target/release/`**（并回 workspace 后） |
 | 路径分隔 | 反斜杠 `\` | 正斜杠 `/` |
 
-> **Linux 门禁兼容已落地（2026-10-29 续工实测，`evidence/linux_gate_green.log` gate 28 项 0 failure）**：
+> **Linux 门禁兼容已落地（2026-10-29 续工实测，`evidence/linux_gate_green.log` gate 31 项 0 failure）**：
 > ① `gate.ps1` 内 `python` 自动映射 `python3`（`$py` 变量，Windows 行为不变）+ 占位/unwrap 扫描
 > 路径分隔 `(?i)[/\\]` 双兼容（Linux 正斜杠）；② 系统依赖 = `pkg-config` + `libudev-dev` +
 > `libwayland-dev`（`sudo apt-get install` 一次）；③ `pcx_ref` 测试自动探测 `python3`；
-> ④ 门禁 28 项在 Linux 全绿（含 GPU bevy-cpu-parity：本机 Intel HD 630 + Mesa Vulkan 真跑）。
+> ④ 门禁 31 项在 Linux 全绿（含 GPU bevy-cpu-parity：本机 Intel HD 630 + Mesa Vulkan 真跑）。
+> ⑤ **修复已落码（S32.11，`evidence/S32.11.log`，verified 待双审计收敛）**：gate 第 17 项 `flywheel-readme` 原在 Linux 上**假 PASS**（`scripts/gate.ps1` 硬编码 `powershell`，本机无该命令但 `$LASTEXITCODE` 仍 0；`$py` 映射只覆盖 Python，不覆盖 PowerShell）；S32.11 改为宿主解释器探测（`pwsh` 优先 → `powershell` 回退，Windows 行为不变）+ 无宿主时记名 SKIP 不假 PASS。见 22 号 §4.3。
 
 > `-ExecutionPolicy Bypass` 是 Windows 概念，Linux pwsh 不需要。`.ps1` 脚本内 Windows 专属段
 > （`D:\soft\IDA`、`cmd /c` 等）在 Linux 下要跳过（逆向相关，游戏开发不跑）。

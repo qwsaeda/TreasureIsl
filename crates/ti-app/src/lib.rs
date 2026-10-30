@@ -42,8 +42,8 @@ pub mod widgets;
 pub mod world_camera;
 pub mod z_layers;
 
-#[cfg(feature = "android-shell")]
-pub mod android_shell;
+// S18.8c：`android_shell` mod 随 macroquad 壳退役删除；S18.8d = Bevy android 壳
+// （`android/android-activity` crate 经 include! 复用 ti-engine Bevy 壳源）
 
 #[cfg(feature = "stats")]
 pub mod stats;

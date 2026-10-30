@@ -59,3 +59,15 @@ __pycache__/
 /evidence/ui_concept/
 # publish_web.ps1 的 gh-pages 隔离工作树（每次发布后清理）
 .git-worktrees/
+
+# S32 开发管理平台（TI Dev Console）运行时敏感/临时文件（证据与报告仍入库）
+/evidence/console/token
+/evidence/console/.lock
+/evidence/console/logs/
+
+# 第三方 node 依赖（playwright 等；不入库）
+/node_modules/
+
+# S18.8d 在途：Bevy Android JNI 壳（cargo-apk 标准布局）——本机无 NDK，
+android/android-activity/
+evidence/console/_mock/

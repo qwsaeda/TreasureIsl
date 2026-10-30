@@ -262,7 +262,7 @@ pub async fn run() {
 /// 起循环 BGM（Android 首次交互后出声，无桌面自动播放限制差异）。
 fn start_bgm(bgm: &Option<Sound>) {
     if let Some(sound) = bgm {
-        play_sound(sound, PlaySoundParams { looped: true, volume: BGM_VOLUME });
+        play_sound(sound.clone(), PlaySoundParams { looped: true, volume: BGM_VOLUME });
     }
 }
 
@@ -270,7 +270,7 @@ fn start_bgm(bgm: &Option<Sound>) {
 fn play_last_sfx(game: &mut GameApp, se: Option<&Sound>) {
     if game.last_sfx().is_some() {
         if let Some(sound) = se {
-            play_sound(sound, PlaySoundParams { looped: false, volume: SE_VOLUME });
+            play_sound(sound.clone(), PlaySoundParams { looped: false, volume: SE_VOLUME });
         }
     }
     game.clear_last_sfx();

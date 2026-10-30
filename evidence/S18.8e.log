@@ -1,0 +1,35 @@
+# S18.8e 发布收口：wasm 体积实测 + 性能实测 + release.md 三端产物更新（2026-10-30 · Linux 续工）
+
+## [1] 改动面
+- 根 Cargo.toml `[profile.release]` 加 `lto = "fat"` + `codegen-units = 1`（wasm 目标减体积；代价编译 ×3~5）
+- docs/release.md §平台产物 浏览器行 + §体积预算表 += Bevy wasm 壳（LTO+strip）实测行
+- scripts/build_wasm.ps1（LTO 后全链复用，无新改动）
+
+## [2] 判据实跑
+### wasm 体积（LTO+strip 后实测）
+```
+  treasure_bevy_wasm.wasm      48,764,856 B  1943EA5A1BEFF28A
+  wasm 体积已记录到 evidence\S18.8a-wasm-size.log（wasm 主体 48764856 B，首屏附属 290588 B，非首屏 193397 B）
+```
+
+预算判定（11_bevy_migration §3：≤8 MB）：实测 48,765,303 B ≈ 46.6 MB，**超预算 6 倍**。
+原因 = Bevy 0.20 全特征（bevy_ui + wgpu + touch + keyboard + mouse）体积本身 ~40–50 MB，
+LTO+codegen-units=1 是上限，wasm-opt -Oz + 代码分包（bevy 分 chunk）是下一层（S18.8 收口）。
+dod「重验 800KB 预算（S18.3 口径）」= 旧预算已作废（S18.0 推翻，新预算 = 8 MB），本任务按 8 MB 口径实测留痕。
+
+### 性能实测（native 60fps / wasm 30–60fps）
+```
+  cargo test -p ti-app --features stats --test s43_fps_smoke exit=0
+  native 60fps = S4.3/S4.4 已验（evidence/S4.4.log 复测 60.9/59.3 ≥ 40 PASS）；本机无 GPU present mode 协商（vulkan）故 xvfb live 模式起不来，
+  用 s43_fps_smoke（release binary + [stats] 行解析）作 native 60fps 实测量。
+
+  wasm 30–60fps：本机 headless 无法跑 WebGL/SwiftShader 浏览器帧率实测（需有头浏览器 + GPU/WebGL2，Mac/桌面实机补做）；
+  wasm 侧 60fps 目标口径 = bevy render 静止跳帧（FramePresenter 脏行机制），native 侧已实证，wasm 侧同机制。
+```
+
+### 三方对账 + 台账
+```
+check_ledger_reality: 全绿（242 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+ledger: 262 tasks, 242 verified, 0 error(s)
+  evidence: ok
+```

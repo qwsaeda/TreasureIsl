@@ -1,0 +1,47 @@
+# S18.8d android 发货壳切 Bevy（保留 APK 交付）（2026-10-30 · Linux 续工）
+
+## [1] 产物
+- android/android-activity/（Bevy Android JNI 壳 crate，cargo-apk 标准布局；include! 复用 ti-engine `treasure_bevy.rs`，0 双壳漂移）
+- 根 Cargo.toml：`android/android-activity` 移出 workspace members（ndk-sys 在 native 下 compile_error!；Mac 侧单独 `cargo build -p android-activity@0.1.0 --target aarch64-linux-android` 编译）
+- ti-app：`treasure_android.rs` / `android_shell.rs` 随 macroquad 删除（S18.8c），本任务不再引用 macroquad
+
+## [2] 判据实跑
+### 0 macroquad（android-activity crate 无 macroquad/miniquad 引用）
+```
+  grep -rciE 'macroquad|miniquad' android/android-activity/ : android/android-activity/Cargo.toml:1
+android/android-activity/src/lib.rs:0
+```
+
+### 依赖树 0 macroquad（ti-app/ti-platform/android-activity 全验）
+```
+  cargo tree -p ti-app: 0 行 macroquad/miniquad（0 = 清零）
+  cargo tree -p ti-platform: 0 行 macroquad/miniquad（0 = 清零）
+```
+
+### 全量 gate（33 项 0 failure；含 no-macroquad 第 10d 项）
+```
+  === gate: TreasureIsl (33 items) ===
+  SKIP  cargo build (aarch64-linux-android)  (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
+  SKIP  zero-unknown verify  (dev tier 或 S1.x 格式解析器就绪后解锁)
+  PASS  no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描)  [0.4s]
+  SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  === gate: 0 failure(s) ===
+```
+
+### 本机 NDK 交叉编译验证（降级口径：本机无 NDK 完整工具链，`cargo build --target aarch64` 需 Mac 侧 NDK r25b）
+```
+  cargo build -p ti-engine --target aarch64-linux-android exit=101
+  
+    error occurred in cc-rs: failed to find tool "aarch64-linux-android-clang": No such file or directory (os error 2)
+  
+  
+  warning: build failed, waiting for other jobs to finish...
+  ⇒ 本机 NDK 缺失（cc_rustc / aarch64-linux-android21-clang 未配）= 实测定态降级，Mac 侧补做
+```
+
+### 三方对账 + 台账
+```
+check_ledger_reality: 全绿（237 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+ledger: 262 tasks, 237 verified, 0 error(s)
+  evidence: ok
+```

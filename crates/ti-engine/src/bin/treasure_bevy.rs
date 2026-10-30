@@ -25,6 +25,13 @@
 
 mod resizeprobe;
 mod resizetest;
+#[cfg(target_os = "android")]
+/// S18.8d：Android JNI 入口（`android-activity` 壳 crate 编译期 `include!` 本文件；
+///  native 目标不编译，`#[cfg(target_os = "android")]` 门控）。
+#[cfg(target_os = "android")]
+pub(crate) mod android_entry {
+    include!("android_entry.rs");
+}
 
 use resizeprobe::attach_probe;
 use resizetest::attach_resizetest;
@@ -1473,9 +1480,20 @@ fn stats_system(mut meter: Local<FpsMeter>, time: Res<Time>) {
 }
 
 /// 资源加载（非 wasm 构建）：`std::fs` 读仓库资源（与 macroquad native 壳同源路径）。
+/// Android 下 `repo_root` = 工作目录（APK 部署态无仓库 fs）：`read_local` 全缺失，
+/// `load_resources` 降级跑（全 `None` 早退，游戏走内嵌默认资源，0 panic；
+/// 资产链完整形态 = S18.8e Bevy 资产管线 APK assets 后端）。
 #[cfg(not(target_arch = "wasm32"))]
 fn load_resources(game: &mut GameApp) {
     fn read_local(name: &str) -> Option<Vec<u8>> {
+        #[cfg(target_os = "android")]
+        {
+            // S2.6：APK 运行态无仓库 fs；资产经 adb push 部署：
+            // legacy/data 全量 → /sdcard/TI/data/（构建脚本 `scripts/build_apk.sh` 部署，
+            // 目录形态保留源目录名 `data`）。缺失 = None 早退降级（0 panic，内嵌默认资源）。
+            std::fs::read(format!("/sdcard/TI/data/{name}")).ok()
+        }
+        #[cfg(not(target_os = "android"))]
         std::fs::read(repo_root().join("legacy").join("data").join(name)).ok()
     }
     if let (Some(font), Some(charset)) = (read_local("GoldLand.Fnt"), read_local("font.dat")) {
@@ -1645,6 +1663,13 @@ fn selftest_system(
 /// 仓库根（native = 资产 fs 读 / 证据输出；wasm 侧仅编译期 `env!` 占位，
 /// Bevy 浏览器 Fetch 后端按页面 URL 相对读 `web/assets/...`，native-only 调用点门控）。
 fn repo_root() -> PathBuf {
+    #[cfg(target_os = "android")]
+    {
+        // S2.6：资产经 adb push 到 /sdcard/TI_REPO（`assets_hd_pack/1x` 等目录形态）；
+        // 缺失 = fs 读全 `None` 早退降级（0 panic）。
+        PathBuf::from("/sdcard/TI_REPO")
+    }
+    #[cfg(not(target_os = "android"))]
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
 
@@ -1858,15 +1883,20 @@ fn run() {
                     primary_window: if shot { None } else { Some(window) },
                     ..Default::default()
                 })
-                // 资产根：native = 仓库根；wasm = 部署根（Bevy 浏览器 Fetch 后端按 URL 相对）。
+                // 资产根：native = 仓库根；android = 空（Bevy android 资产后端走 APK
+                // assets 段 `AAssetManager` 直读，`file_path` 须空）；wasm = 部署根。
                 .set(bevy::asset::AssetPlugin {
-                    #[cfg(not(target_arch = "wasm32"))]
+                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
                     file_path: repo_root().to_string_lossy().to_string(),
-                    #[cfg(target_arch = "wasm32")]
+                    #[cfg(any(target_arch = "wasm32", target_os = "android"))]
                     file_path: String::new(),
                     ..Default::default()
                 })
                 .set(bevy::render::RenderPlugin {
+                    // Android 模拟器软渲染（gralloc_x86/Mesa）实测：downlevel limits 反而
+                    // 触发 D3D compute shader / device lost（wgpu 软渲染路径无 D3D 支持，
+                    // downlevel 档假设 WebGPU 基线不成立）⇒ 保持默认 limits（native 0 行为变化）。
+                    render_creation: bevy::render::RenderPlugin::default().render_creation,
                     synchronous_pipeline_compilation: true,
                     ..Default::default()
                 })

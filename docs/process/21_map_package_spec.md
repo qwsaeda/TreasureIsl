@@ -178,6 +178,7 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
 # 加图 / 换图 = 出一包 + 装上
 python scripts/map_pack.py pack m01
 python scripts/map_pack.py verify dist/maps/m01.map-pack
+python scripts/map_pack.py verify m01        # 裸 id = 已装包目录（S32.3 平台制作指引面）
 python scripts/map_pack.py install dist/maps/m01.map-pack
 python scripts/map_pack.py list
 ```

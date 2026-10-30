@@ -12,6 +12,9 @@ $ErrorActionPreference = 'Continue'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
+# Python 解释器（Windows = python；Linux/macOS = python3；同 gate.ps1 `$py` 口径）
+$py = if ($env:OS -eq 'Windows_NT') { 'python' } else { 'python3' }
+
 $scenes = @('index', 'select_role', 'select_map', 'main_map', 'vs', 'message', 'saveload')
 if ($args.Count -gt 0) { $scenes = $args }
 
@@ -22,21 +25,25 @@ if ($args -contains '-Check') {
     if ($checkScenes.Count -eq 0) { $checkScenes = @('index', 'select_role', 'select_map', 'main_map', 'vs', 'message', 'saveload') }
     $fail = 0
     foreach ($s in $checkScenes) {
-        $png = "evidence\bevy_native_$s.png"
+        $png = Join-Path 'evidence' "bevy_native_$s.png"
         if (-not (Test-Path $png)) {
             Write-Host "  FAIL  缺出图 $png（先跑默认模式出图）" -ForegroundColor Red
             $fail++
             continue
         }
-        $pyCheck = @"
+        # 单引号 here-string（@'...'@）= 不插值 ⇒ Python 代码里的 $i / $png 不被 PS 展开
+        $pyCheckCode = @'
 from PIL import Image
-im = Image.open(r'$png').convert('RGB')
+import sys
+png = sys.argv[1]
+scene = sys.argv[2]
+im = Image.open(png).convert('RGB')
 data = im.tobytes()
 nb = sum(1 for i in range(0, len(data), 3) if data[i] > 8 or data[i + 1] > 8 or data[i + 2] > 8)
-print(f'  [$s] nonblack = {nb} / {im.width * im.height}')
+print(f'  [{scene}] nonblack = {nb} / {im.width * im.height}')
 raise SystemExit(1 if nb == 0 else 0)
-"@
-        $pyCheck | python -
+'@
+        $pyCheckCode | & $py - $png $s
         if ($LASTEXITCODE -ne 0) { Write-Host "  FAIL  $s 空帧（或无 PIL）" -ForegroundColor Red; $fail++ }
     }
     if ($fail -gt 0) {
@@ -47,7 +54,7 @@ raise SystemExit(1 if nb == 0 else 0)
     exit 0
 }
 
-$thumbDir = 'evidence\ui_preview'
+$thumbDir = Join-Path 'evidence' 'ui_preview'
 if (-not (Test-Path $thumbDir)) { New-Item -ItemType Directory -Path $thumbDir | Out-Null }
 
 $fail = 0
@@ -59,26 +66,42 @@ foreach ($s in $scenes) {
     # 注意：`$extra` 不能带前导空格（否则整个参数变成 " --spin=5" 解析失败）
     $extra = ''
     if ($s -eq 'main_map') { $extra = '--spin=5' }
-    & cargo run -q -p ti-engine --bin treasure-bevy-native -- --scene=$s --shot $extra 2>&1 |
+    # Linux 无 DISPLAY（headless CI）时 main_map / vs 场景需真窗口 ⇒ 自动包 xvfb-run
+    # （Windows / 有 DISPLAY 时直连，行为不变）。
+    $cargoArgs = @('run', '-q', '-p', 'ti-engine', '--bin', 'treasure-bevy-native',
+                   '--', "--scene=$s", '--shot')
+    if ($extra) { $cargoArgs += $extra }
+    $useXvfb = ($env:OS -ne 'Windows_NT') -and (-not $env:DISPLAY) -and (Get-Command xvfb-run -ErrorAction SilentlyContinue)
+    if ($useXvfb) {
+        $cmd = @('xvfb-run', '-a', 'cargo') + $cargoArgs
+    } else {
+        $cmd = @('cargo') + $cargoArgs
+    }
+    & $cmd[0] $cmd[1..($cmd.Length - 1)] 2>&1 |
         Select-String -Pattern '\[shot\]' | ForEach-Object { Write-Host "  $_" }
 
-    $png = "evidence\bevy_native_$s.png"
+    $png = Join-Path 'evidence' "bevy_native_$s.png"
     if (-not (Test-Path $png)) {
         Write-Host "  FAIL  未产出 $png" -ForegroundColor Red
         $fail++
         continue
     }
     # 统计 + 缩略图（用 PIL；无 PIL 则只报尺寸）
-    $py = @"
+    $thumbPath = (Join-Path $thumbDir "$s.png")
+    # 单引号 here-string（不插值）；路径经 argv 传入（免 PS 变量展开问题）
+    $pyCode = @'
 from PIL import Image
-im = Image.open(r'$png').convert('RGB')
+import sys
+png = sys.argv[1]
+thumb = sys.argv[2]
+im = Image.open(png).convert('RGB')
 data = im.tobytes()
 nb = sum(1 for i in range(0, len(data), 3) if data[i] > 8 or data[i + 1] > 8 or data[i + 2] > 8)
 print(f'  nonblack = {nb} / {im.width * im.height}' + ('  <-- EMPTY FRAME!' if nb == 0 else ''))
 im.thumbnail((540, 960))
-im.save(r'$thumbDir\$s.png')
-"@
-    $py | python -
+im.save(thumb)
+'@
+    $pyCode | & $py - $png $thumbPath
     if ($LASTEXITCODE -ne 0) { Write-Host "  WARN  统计失败（无 PIL？）" -ForegroundColor Yellow }
 }
 

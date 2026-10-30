@@ -63,6 +63,8 @@ serde.workspace = true
 serde_json.workspace = true
 # S8.7：FNV 哈希库化（hash.rs 的 fnv1a64 走 fnv crate，替手写）
 fnv.workspace = true
+# S32.1：台账解析上提 ti-devmeta（单实现），ti-tools 改薄 re-export（bin/ledger.rs 行为对齐）。
+ti-devmeta = { path = "../ti-devmeta" }
 
 [lints]
 workspace = true

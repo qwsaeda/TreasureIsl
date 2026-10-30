@@ -454,10 +454,9 @@ impl MenuShell {
         self.settings.border_style
     }
 
-    /// 切换边框装饰样式。
+    /// 切换边框装饰样式（S18.8b：GL 呈现层退役后 = 纯设置项，Bevy 壳自持边框渲染）。
     pub fn set_border_style(&mut self, style: BorderStyle) {
         self.settings.border_style = style;
-        ti_platform::gfx::set_border_style(style);
     }
 
     /// 循环切换边框样式并返回新值。

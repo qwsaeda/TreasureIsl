@@ -16,6 +16,8 @@
 | `legacy/scripts/vectorize_ui.py` | Python | UI 矢量化 | 是 |
 | `scripts/pack_hd_assets.py` / `verify_hd_manifest.py` | Python | 多分辨率打包 + 校验 | 是 |
 | `crates/ti-tools` 各 bin | Rust | unpack / map2json / build_assets / controls / classify / specskel / doccheck | 是 |
+| `crates/ti-devmeta` | Rust | 平台共享层（台账解析 + 静态 HTTP，纯 std；`ledger.rs` 上提自 ti-tools 的单实现） | 库（无 bin） |
+| `crates/ti-console` | Rust | **TI Dev Console 平台本体**（S32 开发管理平台；静态壳 + `/api/health` + 单实例锁 + 命令白名单；S32.1 骨架） | 是（`cargo run -p ti-console`） |
 | `scripts/ui_assets.py` | Python | UI 资产**单资产**入口（add/build/verify/rekey/normalize） | 是 |
 | `scripts/ui_asset_batch.py` | Python | UI 资产**批量**入口（register/generate/install/build/check/sheet，规格驱动 + 抠图可行性预检） | 是 |
 | `scripts/ui_layout_sheet.py` | Python | UI **版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图；设计稿评审 / 出图验收对照） | 是 |
@@ -57,6 +59,7 @@
 | `scripts/wasm_browser_e2e.py` | Bevy wasm 浏览器端 e2e（Playwright 无头 Chromium 3 层：L1 实例化 / L2 渲染 / L3 交互，与 native `e2e_playthrough` 互补） | `--check` 只读打印判据（0 新产物）；默认断言 3 层全绿，失败非 0；需 `serve` 静态服务在跑 |
 | `scripts/web_playtest.cjs` | 浏览器真运行时试玩（S16.1：Node + Playwright CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言） | `node scripts/web_playtest.cjs [--url ...]`；失败非 0；需 `serve` 在跑 + node playwright |
 | `scripts/playtest_loop.py` | 试玩闭环 4 报告聚合（S16.2：fuzz/full_run/render_invariants/web_playtest + 归因三分类清单；`08_playtest_loop.md` 执行面） | `--check` 只读打印判据（0 新产物）；全 0 失败 = 0 退出；任一失败非 0；web 缺 serve/node = SKIP |
+| `scripts/build_apk.sh` | Android APK 构建（S2.6/S18.8d：NDK 交叉编译 .so + APK 组装 + zipalign + SignV2 签名；装机 adb install + 资产 push） | 默认 x86_64；NDK 硬编码 /tmp/opencode/android-ndk-r25b |
 | `scripts/publish_web.ps1` | 一键发布（S16.3：gate 全绿前置 + build_wasm + 本地静态断言 + release.md 发布历史 + gh-pages 线上复跑 web_playtest；线上不可达 = 降级登记不静默绕过） | `-Check` 只读前置体检；全链路失败非 0 |
 > **gate 项数**（2026-10 扩展，随对抗审计固化）：第 9 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
 > 第 10 项「数据表门禁」= `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（严格 0 命中）。

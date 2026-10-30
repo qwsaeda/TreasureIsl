@@ -2,9 +2,18 @@
 //!
 //! 呈现坐标系唯一 = 1080×1920（legacy 176×220 已退出运行时）；本模块提供：
 //! - 帧缓冲本体在渲染框架 crate（`ti_render::framebuffer::{Framebuf, FramebufRgba}`，S15.10 单源）；
-//! - [`FramePresenter`]：持续纹理呈现器（S4.3 脏行带部分上传，静止帧零 GPU）；
+//! - [`FramePresenter`]：**脏行跟踪状态机**（S4.3 脏行带优化 + S18.8b 上洗：
+//!   纹理上传/GL 呈现层在 S18.8a 起由 ti-engine 的 Bevy 壳承担，本类只保留
+//!   脏行状态与上传/跳帧计数（`stats` 观测口径不变，S18.4 注：Bevy 壳走
+//!   逐帧 RGBA8 `Image`，脏行计数退化为诊断计数，静止帧语义不变）；
 //! - [`Viewport`]：屏幕 ↔ 逻辑坐标的等比缩放（letterbox/pillarbox），
 //!   保证任意窗口尺寸下坐标互逆（P4-2 命中判定不偏移）。
+//!
+//! S18.8b（macroquad 退役）：GL 呈现（`present_framebuffer` / 纹理上传 /
+//! 全屏 quad / 边框填充）整体删除——唯一真实上屏调用方 = 已退役的
+//! macroquad 发货壳；现存活调用方（`MenuShell::present` / android 壳）在
+//! Bevy 壳渲染期不消费（Bevy 壳走 ti-engine 自己的渲染器，`MenuShell`
+//! 只负责 CPU 帧缓冲与脏行标记）。
 
 use crate::settings::{FilterMode, ScaleMode};
 
@@ -25,7 +34,7 @@ const LH_I32: i32 = 1920;
 
 // 帧缓冲类型归属（S15.10 单源）：帧缓冲本体在渲染框架 crate
 // （`ti_render::framebuffer::Framebuf` / `FramebufRgba`），本模块只做**呈现层**：
-// 脏行跟踪 + 纹理上传 + 屏幕变换。渲染框架不依赖本 crate（可复用到其他游戏）。
+// 脏行跟踪 + 屏幕变换。渲染框架不依赖本 crate（可复用到其他游戏）。
 
 /// S7.5（feature `hd-8bit`）：RGBA8 像素（`0xAARRGGBB`）→ RGBA8 四元组（供纹理上传）。
 ///
@@ -51,23 +60,7 @@ pub fn png_rgba_to_framebuf_u32(rgba: [u8; 4]) -> u32 {
     0xFF00_0000u32 | u32::from(rgba[0]) << 16 | u32::from(rgba[1]) << 8 | u32::from(rgba[2])
 }
 
-/// RGB565 → `Color`（macroquad 用 f32 RGBA，通道范围 0.0~1.0）。
-///
-/// 原版帧缓冲是 RGB565，这里做标准位扩展（`r5<<3|r5>>2`），可视作无损。
-#[must_use]
-pub fn rgb565_to_color(p: u16) -> macroquad::color::Color {
-    let r5 = f32::from((p >> 11) & 0x1F);
-    let g6 = f32::from((p >> 5) & 0x3F);
-    let b5 = f32::from(p & 0x1F);
-    macroquad::color::Color::new(
-        (r5 * (255.0 / 31.0)) / 255.0,
-        (g6 * (255.0 / 63.0)) / 255.0,
-        (b5 * (255.0 / 31.0)) / 255.0,
-        1.0,
-    )
-}
-
-/// RGB565 → RGBA8 四元组（供纹理上传）。
+/// RGB565 → RGBA8 四元组（供纹理上传 / CPU 侧像素观测）。
 #[must_use]
 pub fn rgb565_to_rgba8(p: u16) -> [u8; 4] {
     let r5 = ((p >> 11) & 0x1F) as u8;
@@ -76,60 +69,21 @@ pub fn rgb565_to_rgba8(p: u16) -> [u8; 4] {
     [(r5 << 3) | (r5 >> 2), (g6 << 2) | (g6 >> 4), (b5 << 3) | (b5 >> 2), 255]
 }
 
-/// 用 `ti_render::framebuffer::Framebuf` 的像素绘制到 macroquad 窗口（无状态单帧版）。
+/// 呈现器（S18.8b 上洗后）：脏行跟踪状态机 + 上传/跳帧计数。
 ///
-/// 每帧新建纹理并整帧上传；[`FramePresenter`] 提供复用纹理 + 脏行带
-/// 部分上传的高性能版本（S4.3）。本函数保留用于不需要持续呈现器的
-/// 一次性场景（测试 / 截帧）。
-///
-/// 逻辑分辨率 `LOGICAL_W × LOGICAL_H` 与窗口尺寸解耦，四个角点经
-/// [`Viewport::logical_to_screen`] 映射，窗口比例差异体现为
-/// letterbox / pillarbox。**必须传入视口**：浏览器侧 canvas 会被拉伸到窗口
-/// 尺寸，若仍按 176×220 直接绘制，画面只会缩在左上角。
-pub fn present_framebuffer(fb: &ti_render::framebuffer::Framebuf, vp: &Viewport) {
-    use macroquad::texture::Texture2D;
-
-    let mut bytes: Vec<u8> = Vec::with_capacity(FB_PIXELS * 4);
-    for &p in fb.as_slice() {
-        bytes.extend_from_slice(&rgb565_to_rgba8(p));
-    }
-    let width_u16 = u16::try_from(CANVAS_W).unwrap_or(0);
-    let height_u16 = u16::try_from(CANVAS_H).unwrap_or(0);
-    let texture = Texture2D::from_rgba8(width_u16, height_u16, &bytes);
-    draw_quad(&texture, vp);
-}
-
-/// 持续呈现器（S4.3 纹理批处理）：单张纹理 + 逐帧按脏行带部分上传。
-///
-/// 与逐帧 `from_rgba8` 相比：
-/// - 零分配（RGBA8 缓存与纹理在构造时一次分配）；
-/// - 帧无脏行 → 整帧跳过上传与绘制（静止画面零 GPU 工作）；
-/// - 帧有脏行 → 只转换脏行带内的像素，`update_part` 一次部分上传，
-///   绘制一次全屏 quad（纹理未更新部分保留 GPU 旧值）。
-///
-/// 典型用法：shell 主循环每帧 `presenter.present(&fb, &vp)`。
-///
-/// **上传策略**（[`UploadMode`]，构造时选定）：
-/// - [`UploadMode::Partial`]（默认，wasm 路径）：脏行带 `update_part`/`update_from_bytes`
-///   部分上传，复用首帧创建的纹理。
-/// - [`UploadMode::FullRebuild`]（native 桌面路径）：每个脏帧**整帧 `from_rgba8` 重建纹理**。
-///   native macroquad 桌面下复用纹理的 `update_*` 不会重新进本帧批次（`from_rgba8`
-///   内部 `texture_batcher.add_unbatched` 而 `update_*` 不重标记），部分上传不反映到
-///   屏幕（EXP-045）；重建纹理虽放弃"未更新行保留 GPU 旧值"的部分上传优化，但
-///   [`FramePresenter::has_dirty`] 的**静止帧整帧 skip 仍成立**（菜单静止时 0 GPU 工作），
-///   脏帧 ≤220 行全帧上传代价可忽略。
+/// S4.3 脏行带优化口径不变（静止帧 0 标记 = `skipped` 计数）；
+/// 纹理上传/GL 呈现随 macroquad 退役整体删除（唯一上屏调用方 =
+/// 已退役的 macroquad 发货壳，S18.8a；Bevy 壳走 ti-engine 渲染器，
+/// 不消费本类）。`MenuShell::present` 在 Bevy 渲染期退化为
+/// 「只清脏行 + 计数」的诊断占位（stats 口径：上传帧 = 脏帧数）。
 pub struct FramePresenter {
-    /// 纹理槽（`None` = 尚未创建，首次 present 惰性创建）。
-    texture: Option<macroquad::texture::Texture2D>,
-    /// 全帧 RGBA8 缓存（未脏行保留上次转换值，仅脏行带重写）。
-    cache: Vec<u8>,
-    /// 上传策略（构造时选定）。
+    /// 上传策略（构造时选定；S18.8b 后只作诊断标签，不影响行为）。
     mode: UploadMode,
-    /// 已执行 GPU 上传的帧数（脏帧计数）。
+    /// 已执行的「脏帧」计数（`present` 时 `has_dirty` 为真则 +1）。
     uploads: u64,
-    /// 纹理采样滤波（S6.1：最近邻=像素锐利 / 线性=平滑）。
+    /// 纹理采样滤波（S6.1：最近邻=像素锐利 / 线性=平滑；诊断保留）。
     filter: FilterMode,
-    /// 因无脏行而整帧跳过的帧数。
+    /// 因无脏行而跳过的帧数。
     skipped: u64,
     /// 逐行脏标记（1920 行；S15.10 从帧缓冲迁入 —— 脏行跟踪是**上传带宽优化**，
     /// 属呈现层职责，帧缓冲本体只管像素，在 `ti_render::framebuffer`）。
@@ -141,7 +95,7 @@ pub struct FramePresenter {
 pub enum UploadMode {
     /// 部分上传（复用首帧纹理）；wasm 路径。
     Partial,
-    /// 整帧重建（每脏帧 `from_rgba8` 新建纹理）；native 桌面路径（EXP-045）。
+    /// 整帧重建（每脏帧新建纹理）；native 桌面路径（EXP-045）。
     FullRebuild,
 }
 
@@ -153,7 +107,7 @@ impl Default for UploadMode {
 }
 
 impl FramePresenter {
-    /// 新建呈现器（无 GPU 工作，可离屏构造；纹理在首次 present 时惰性创建）。
+    /// 新建呈现器（无 GPU 工作；S18.8b 后 = 脏行状态机，可离屏构造）。
     /// 默认 [`UploadMode::Partial`]（wasm 路径）。
     #[must_use]
     pub fn new() -> Self {
@@ -164,12 +118,10 @@ impl FramePresenter {
     #[must_use]
     pub fn with_mode(mode: UploadMode) -> Self {
         Self {
-            texture: None,
-            cache: vec![0u8; FB_PIXELS * 4],
             mode,
             uploads: 0,
-            skipped: 0,
             filter: FilterMode::default(),
+            skipped: 0,
             dirty_rows: [true; LH_I32 as usize],
         }
     }
@@ -239,150 +191,35 @@ impl FramePresenter {
         self.mode
     }
 
-    /// 呈现一帧：按脏行带转换 + 部分上传，绘制全屏 quad，清脏标记。
+    /// 呈现一帧（S18.8b 上洗后语义）：脏帧计数 + 清脏行；静止帧只计 skip。
     ///
-    /// - `Partial`（wasm）：无脏行时直接返回（不调任何 GPU 接口）。
-    /// - `FullRebuild`（native）：无脏行时**仍 `draw_quad` 复用上次纹理**（不重建、
-    ///   不转像素）——native macroquad 纹理批处理每帧重组，不重绘就露出黑底（EXP-045）；
-    ///   仅保留「无脏帧不转像素」的优化，`skipped` 仍计数用于诊断。
-    ///
-    /// 有脏行时按 mode 转换 + 上传，成功后清本呈现器的脏行标记（[`FramePresenter::reset_dirty`]。
-    pub fn present(&mut self, fb: &ti_render::framebuffer::Framebuf, vp: &Viewport) {
-        if !self.has_dirty() {
-            self.skipped += 1;
-            if self.mode == UploadMode::FullRebuild {
-                // native：静止帧也重绘 quad（复用上次纹理），否则黑底。
-                // 纹理须已存在（首帧脏时已建）；从未有过脏帧则无纹理可画。
-                if let Some(tex) = self.texture.as_ref() {
-                    draw_quad(tex, vp);
-                }
-            }
-            return;
-        }
-        let width_u16 = u16::try_from(CANVAS_W).unwrap_or(0);
-        let height_u16 = u16::try_from(CANVAS_H).unwrap_or(0);
-        let (first, last) = self.dirty_row_range();
-        let first = first.clamp(0, LH_I32);
-        let last = last.min(LH_I32 - 1).max(first);
-        let stride = usize::try_from(CANVAS_W).unwrap_or(1) * 4;
-        let px = fb.as_slice();
-        for row in first..=last {
-            let Ok(r) = usize::try_from(row) else {
-                continue;
-            };
-            let base = r * stride;
-            for (i, &p) in px[r * CANVAS_W as usize..(r + 1) * CANVAS_W as usize].iter().enumerate()
-            {
-                let b = rgb565_to_rgba8(p);
-                self.cache[base + i * 4..base + i * 4 + 4].copy_from_slice(&b);
-            }
-        }
-        if self.mode == UploadMode::FullRebuild {
-            // native 桌面：每脏帧整帧 from_rgba8 重建纹理（EXP-045，update_* 不重进批次）。
-            // 行主序 bytes 前部 = 逻辑顶（y=0），与 draw_quad 的 V=0 在顶映射一致 → 不翻转。
-            let texture =
-                macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache);
-            texture.set_filter(self.filter.into());
-            self.texture = Some(texture);
-            if let Some(tex) = self.texture.as_ref() {
-                draw_quad(tex, vp);
-            }
+    /// - 纹理上传 / GL 呈现随 macroquad 退役删除（Bevy 壳不消费本方法；
+    ///   调用方 = `MenuShell::present` 诊断占位 + android 壳（S18.8d 退役））。
+    /// - `skipped` / `uploads` 计数口径不变（stats 观测 + 脏行带优化语义保留）。
+    pub fn present(&mut self, _fb: &ti_render::framebuffer::Framebuf, _vp: &Viewport) {
+        if self.has_dirty() {
+            self.uploads += 1;
+            self.reset_dirty();
         } else {
-            let texture = self.texture.get_or_insert_with(|| {
-                macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache)
-            });
-            texture.set_filter(self.filter.into());
-            if first == 0 && last == LH_I32 - 1 {
-                texture.update_from_bytes(u32::from(width_u16), u32::from(height_u16), &self.cache);
-            } else {
-                let band_h = u16::try_from(last - first + 1).unwrap_or(height_u16);
-                let band_start = usize::try_from(first).map_or(0, |f| f.saturating_mul(stride));
-                let band_end = usize::try_from(last)
-                    .map_or(0, |l| (l.saturating_add(1)).saturating_mul(stride));
-                let img = macroquad::texture::Image {
-                    bytes: self.cache[band_start..band_end].to_vec(),
-                    width: width_u16,
-                    height: band_h,
-                };
-                texture.update_part(&img, 0, first, i32::from(width_u16), last - first + 1);
-            }
-            draw_quad(texture, vp);
+            self.skipped += 1;
         }
-        self.reset_dirty();
-        self.uploads += 1;
     }
 
-    /// 切换纹理采样滤波（S6.1）。下一次 present 生效。
+    /// 切换纹理采样滤波（S6.1，诊断保留；Bevy 壳自持滤波设置）。
     pub fn set_filter(&mut self, filter: FilterMode) {
         self.filter = filter;
     }
 
-    /// S7.5（feature `hd-8bit`）：RGBA8 帧缓冲版的呈现（`FramebufRgba` → 纹理上传）。
-    ///
-    /// 与 [`present`](FramePresenter::present) 同语义（脏行带部分上传 / 整帧重建），
-    /// 差异只在像素源：`FramebufRgba` 已是 RGBA8（`0xAARRGGBB`），直接解包写缓存，
-    /// 无需 565→888 转换。
+    /// S7.5（feature `hd-8bit`）：RGBA8 帧缓冲版的呈现（S18.8b 上洗后同
+    /// [`present`](FramePresenter::present) 语义：脏帧计数 + 清脏行）。
     #[cfg(feature = "hd-8bit")]
-    pub fn present_rgba(&mut self, fb: &ti_render::framebuffer::FramebufRgba, vp: &Viewport) {
-        if !self.has_dirty() {
-            self.skipped += 1;
-            if self.mode == UploadMode::FullRebuild {
-                // native：静止帧也重绘 quad（复用上次纹理），否则黑底（EXP-045）。
-                if let Some(tex) = self.texture.as_ref() {
-                    draw_quad(tex, vp);
-                }
-            }
-            return;
-        }
-        let width_u16 = u16::try_from(CANVAS_W).unwrap_or(0);
-        let height_u16 = u16::try_from(CANVAS_H).unwrap_or(0);
-        let (first, last) = self.dirty_row_range();
-        let first = first.clamp(0, LH_I32);
-        let last = last.min(LH_I32 - 1).max(first);
-        let stride = usize::try_from(CANVAS_W).unwrap_or(1) * 4;
-        let px = fb.as_slice();
-        for row in first..=last {
-            let Ok(r) = usize::try_from(row) else {
-                continue;
-            };
-            let base = r * stride;
-            for (i, &p) in px[r * CANVAS_W as usize..(r + 1) * CANVAS_W as usize].iter().enumerate()
-            {
-                let b = rgba8_to_rgba8_quad(p);
-                self.cache[base + i * 4..base + i * 4 + 4].copy_from_slice(&b);
-            }
-        }
-        if self.mode == UploadMode::FullRebuild {
-            let texture =
-                macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache);
-            texture.set_filter(self.filter.into());
-            self.texture = Some(texture);
-            if let Some(tex) = self.texture.as_ref() {
-                draw_quad(tex, vp);
-            }
+    pub fn present_rgba(&mut self, _fb: &ti_render::framebuffer::FramebufRgba, _vp: &Viewport) {
+        if self.has_dirty() {
+            self.uploads += 1;
+            self.reset_dirty();
         } else {
-            let texture = self.texture.get_or_insert_with(|| {
-                macroquad::texture::Texture2D::from_rgba8(width_u16, height_u16, &self.cache)
-            });
-            texture.set_filter(self.filter.into());
-            if first == 0 && last == LH_I32 - 1 {
-                texture.update_from_bytes(u32::from(width_u16), u32::from(height_u16), &self.cache);
-            } else {
-                let band_h = u16::try_from(last - first + 1).unwrap_or(height_u16);
-                let band_start = usize::try_from(first).map_or(0, |f| f.saturating_mul(stride));
-                let band_end = usize::try_from(last)
-                    .map_or(0, |l| (l.saturating_add(1)).saturating_mul(stride));
-                let img = macroquad::texture::Image {
-                    bytes: self.cache[band_start..band_end].to_vec(),
-                    width: width_u16,
-                    height: band_h,
-                };
-                texture.update_part(&img, 0, first, i32::from(width_u16), last - first + 1);
-            }
-            draw_quad(texture, vp);
+            self.skipped += 1;
         }
-        self.reset_dirty();
-        self.uploads += 1;
     }
 
     /// 当前滤波模式。
@@ -391,7 +228,7 @@ impl FramePresenter {
         self.filter
     }
 
-    /// 已执行 GPU 上传的帧数（脏帧计数，供 stats / 诊断）。
+    /// 已执行的 GPU 上传的帧数（脏帧计数，供 stats / 诊断）。
     #[must_use]
     pub fn uploads(&self) -> u64 {
         self.uploads
@@ -408,80 +245,6 @@ impl Default for FramePresenter {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// 用给定纹理绘制全屏 quad（`present_framebuffer` 与 `FramePresenter` 共用）。
-///
-/// UV 映射（EXP-045）：native macroquad 桌面 GL 后端 `from_rgba8` 把行主序 bytes 前部
-/// （逻辑顶 y=0）作纹理 V=1（顶），故屏顶配 V=1、屏底配 V=0，逻辑顶在屏顶、逻辑底在屏底。
-/// 填充 letterbox / pillarbox 边框区（S6.2）。
-///
-/// 边框区 = 整屏减去游戏区。做法：先把**整屏**填成边框色，再用游戏区
-/// quad 覆盖中间部分 —— 顺序上等价于「边框在底、画面在上」，且不需要
-/// 分 4 段（上/下/左/右）分别算矩形，天然处理 Stretch/ZoomCrop 裁剪模式
-/// （此时游戏区可能溢出屏幕，整屏填充即为正确的边框表现）。
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-fn fill_border(x0: f32, y0: f32, x1: f32, y1: f32) {
-    let sw = macroquad::window::screen_width();
-    let sh = macroquad::window::screen_height();
-    // 游戏区完全在屏外（理论上不会发生，ZoomCrop 至少露出一边）→ 不画边框
-    if x1 <= 0.0 || y1 <= 0.0 || x0 >= sw || y0 >= sh {
-        return;
-    }
-    // 全屏填边框色；随后 draw_quad 的画面 quad 覆盖其上
-    macroquad::shapes::draw_rectangle(0.0, 0.0, sw, sh, border_color());
-}
-
-/// 当前边框色（RGB565 → macroquad Color）。
-///
-/// 由 [`set_border_style`] 设置；默认深蓝（与游戏主背景一致）。
-fn border_color() -> macroquad::color::Color {
-    let rgb = BORDER_STYLE.with(std::cell::Cell::get).rgb565();
-    let [r, g, b, _a] = rgb565_to_rgba8(rgb);
-    // u8 0..=255 -> f32 0.0..=1.0
-    macroquad::color::Color::new(
-        f32::from(r) / 255.0,
-        f32::from(g) / 255.0,
-        f32::from(b) / 255.0,
-        1.0,
-    )
-}
-
-thread_local! {
-    /// 当前边框样式（BorderStyle，线程局部；GUI 主循环单线程）。
-    static BORDER_STYLE: std::cell::Cell<crate::settings::BorderStyle> =
-        const { std::cell::Cell::new(crate::settings::BorderStyle::DeepBlue) };
-}
-
-/// 设置边框装饰样式（S6.2，下次 present 生效）。
-pub fn set_border_style(style: crate::settings::BorderStyle) {
-    BORDER_STYLE.with(|s| s.set(style));
-}
-
-/// 当前边框装饰样式。
-#[must_use]
-pub fn border_style() -> crate::settings::BorderStyle {
-    BORDER_STYLE.with(std::cell::Cell::get)
-}
-
-fn draw_quad(texture: &macroquad::texture::Texture2D, vp: &Viewport) {
-    // 行主序 bytes 前部 = 逻辑顶（y=0）；`flip_y` 处理 native 与 wasm 纹理 V 语义
-    // 相反（EXP-045/047）。`const` 须置于函数首，避免 clippy items_after_statements。
-    const IS_WASM: bool = cfg!(target_arch = "wasm32");
-    let (x0, y0) = vp.logical_to_screen(0.0, 0.0);
-    let (x1, y1) = vp.logical_to_screen(LW, LH);
-    // S6.2：先把 letterbox / pillarbox 边框区填成主题色，再画画面。
-    // 边框区 = 游戏区外扩 1px 的整屏矩形（避免与画面边缘产生接缝）。
-    fill_border(x0, y0, x1, y1);
-    // 用 `draw_texture_ex`（宏观 API，自带正确纹理 V 方向 + 批处理）替代手工
-    // `Mesh`+`draw_mesh`：手工 mesh 的弱引用纹理在 native 桌面 GL 下不进批次、
-    // 不渲染，整屏只剩深蓝边框 → 看起来黑屏（EXP-047）。
-    let params = macroquad::texture::DrawTextureParams {
-        dest_size: Some(macroquad::prelude::vec2(x1 - x0, y1 - y0)),
-        flip_y: IS_WASM,
-        ..Default::default()
-    };
-    macroquad::texture::draw_texture_ex(texture, x0, y0, macroquad::color::WHITE, params);
 }
 
 /// 屏幕坐标 ↔ 逻辑坐标(176×220)的等比缩放变换。
@@ -830,31 +593,31 @@ mod tests {
         assert_eq!(BorderStyle::DeepBlue.resolve(0x001F), 0x0010, "DeepBlue 用固定色");
     }
 
-    /// 边框填充不得污染游戏区：边框矩形（整屏）先画，游戏区 quad 后画并覆盖。
-    /// 本测试验证 `fill_border` 的前置判定——游戏区完全出屏时不画边框。
+    /// S18.8b：`present` 上洗后语义 = 脏帧计数（S4.3 脏行带优化口径不变）。
     #[test]
-    fn border_skipped_when_game_area_offscreen() {
-        // 游戏区完全在屏幕左侧之外 → offset 使 x1 <= 0（呈现区宽 LW=1080，offset 取 -2000）
-        let vp = Viewport::from_scale(1.0, -2000.0, 0.0, LW, LH);
-        let (_x0, _y0) = vp.logical_to_screen(0.0, 0.0);
-        let (x1, _y1) = vp.logical_to_screen(LW, LH);
-        assert!(x1 <= 0.0, "构造的游戏区应在屏外，实际 x1={x1}");
-        // fill_border 在此情形直接 return（不画），游戏区像素不受影响
-        assert_eq!(BorderStyle::DeepBlue.resolve(0x1234), 0x0010, "边框色解析正常");
+    fn presenter_counts_dirty_frames_and_skips_clean_ones() {
+        let fb = ti_render::framebuffer::Framebuf::new();
+        let vp = Viewport::fit(1080.0, 1920.0);
+        let mut p = FramePresenter::new();
+        assert!(p.has_dirty(), "新呈现器全脏（首帧必计数）");
+        p.present(&fb, &vp);
+        assert_eq!(p.uploads(), 1, "首帧脏 → uploads=1");
+        assert_eq!(p.skipped(), 0);
+        assert!(!p.has_dirty(), "present 后脏行清零");
+        p.present(&fb, &vp);
+        assert_eq!(p.uploads(), 1, "静止帧不重复计数");
+        assert_eq!(p.skipped(), 1, "静止帧计 skip");
+        p.mark_all_dirty();
+        p.present(&fb, &vp);
+        assert_eq!((p.uploads(), p.skipped()), (2, 1));
     }
 
-    /// 边框填充后游戏区仍能正确反变换（P4-2 不变式不受边框影响）。
+    /// S18.8b 上洗回归：GL 呈现（边框填充/纹理 quad）整体删除，
+    /// 边框样式解析口径不变（`BorderStyle::resolve` 纯函数，与呈现无关）。
     #[test]
-    fn border_does_not_affect_viewport_math() {
-        for s in BorderStyle::ALL {
-            let vp = Viewport::with_mode(1080.0, 2400.0, ScaleMode::Smooth, false);
-            let (sx, sy) = vp.logical_to_screen(88.0, 110.0);
-            let (lx, ly) = vp.screen_to_logical(sx, sy);
-            assert!(
-                (lx - 88.0).abs() < 1e-2 && (ly - 110.0).abs() < 1e-2,
-                "{s:?} 边框不应影响坐标往返"
-            );
-        }
+    fn border_style_resolve_is_presenter_independent() {
+        assert_eq!(BorderStyle::DeepBlue.resolve(0x1234), 0x0010);
+        assert_eq!(BorderStyle::Black.resolve(0x1234), 0x0000);
     }
 
     #[test]

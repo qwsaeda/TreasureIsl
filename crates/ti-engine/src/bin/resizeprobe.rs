@@ -1,13 +1,14 @@
-//! `--resizeprobe` 活体探针（2026-10-26 用户报「窗口能拖但画面不跟着缩放」，需零歧义验证）：
-//!
-//! - 画面左上角（1080×1920 画布坐标）`Text2d` 实时显示
-//!   `win=逻辑宽x高 sf=DPI vp=正交scale mode=缩放档 zoom=镜头倍率`；
-//! - 控制台每 30 帧打一行（有 console 的跑法可见）。
-//!
-//! 判读：拖窗口时 `win=` 与 `vp=` 必须联动变化（winit Resized → `Window` 组件 →
-//! `window_resize_system` 重建 shell `vp` → `camera_system` 写相机正交 scale）；
-//! 数字不动 = 链路卡住，数字动但画面观感不变 = 视觉口径问题，另查。
-//! 探针文本/输出全 ASCII（`check_hardcode` 约束）。
+//! `--resizeprobe` 活体缩放探针（画面左上角 Text2d 实时显示 win/sf/vp 三值，控制台每 30 帧打一行）。
+// `--resizeprobe` 活体探针（2026-10-26 用户报「窗口能拖但画面不跟着缩放」，需零歧义验证）：
+//
+// - 画面左上角（1080×1920 画布坐标）`Text2d` 实时显示
+//   `win=逻辑宽x高 sf=DPI vp=正交scale mode=缩放档 zoom=镜头倍率`；
+// - 控制台每 30 帧打一行（有 console 的跑法可见）。
+//
+// 判读：拖窗口时 `win=` 与 `vp=` 必须联动变化（winit Resized → `Window` 组件 →
+// `window_resize_system` 重建 shell `vp` → `camera_system` 写相机正交 scale）；
+// 数字不动 = 链路卡住，数字动但画面观感不变 = 视觉口径问题，另查。
+// 探针文本/输出全 ASCII（`check_hardcode` 约束）。
 
 use bevy::camera::{Camera2d, Projection};
 use bevy::prelude::*;

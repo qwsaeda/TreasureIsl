@@ -1,0 +1,79 @@
+{
+  "_comment": "S32.1 命令白名单机器真源（22 号 §4.2 人读视图的机器侧；S32.6 对账断言 id 集合 + 默认启用列 + 写面列（前缀形态条目按前缀匹配，不展开模板：close_run 写面第 3 项 `evidence/` = 运行时按台账 id 展开为 evidence/<task>.log））。参数只接受枚举/id，不接受自由字符串；--cmd 取值 = 本文件的 id（未登记 = 400）。",
+  "commands": [
+    {
+      "id": "gate",
+      "runner": "pwsh",
+      "script": "scripts/gate.ps1",
+      "args": ["-File", "scripts/gate.ps1"],
+      "enum_param": { "name": "tier", "values": ["fast", "touch", "full"], "arg_map": { "fast": ["-Fast"], "touch": ["-Touch"], "full": [] } },
+      "writes": ["evidence/web_playtest.log", "evidence/web_playtest.png", "evidence/font_render.txt"],
+      "enabled_by_default": true
+    },
+    {
+      "id": "close_check",
+      "runner": "python3",
+      "script": "scripts/task_close.py",
+      "args": ["--check"],
+      "writes": [],
+      "enabled_by_default": true
+    },
+    {
+      "id": "close_run",
+      "runner": "python3",
+      "script": "scripts/task_close.py",
+      "args": [],
+      "writes": ["plan/ledger.yaml", "docs/release.md", "evidence/"],
+      "enabled_by_default": false,
+      "requires_flag": "--enable-write"
+    },
+    {
+      "id": "exp_check",
+      "runner": "python3",
+      "script": "scripts/exp_log.py",
+      "args": ["--check"],
+      "writes": [],
+      "enabled_by_default": true
+    },
+    {
+      "id": "build_check",
+      "runner": "pwsh",
+      "script": "scripts/build_wasm.ps1",
+      "args": ["-Check"],
+      "writes": [],
+      "enabled_by_default": true
+    },
+    {
+      "id": "serve_web",
+      "runner": "self",
+      "script": "",
+      "args": ["--dir", "web"],
+      "writes": [],
+      "enabled_by_default": true
+    },
+    {
+      "id": "mappack_verify",
+      "runner": "python3",
+      "script": "scripts/map_pack.py",
+      "args": ["verify"],
+      "writes": [],
+      "enabled_by_default": true
+    },
+    {
+      "id": "mappack_check",
+      "runner": "python3",
+      "script": "scripts/map_pack.py",
+      "args": ["check"],
+      "writes": [],
+      "enabled_by_default": true
+    },
+    {
+      "id": "audit_book",
+      "runner": "self",
+      "script": "",
+      "args": [],
+      "writes": ["evidence/console/"],
+      "enabled_by_default": true
+    }
+  ]
+}

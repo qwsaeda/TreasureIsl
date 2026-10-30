@@ -1,0 +1,49 @@
+=== S32.3 看板 UI v1 · 验收实跑记录（2026-10-30T09:43:16Z）===
+
+[1] 静态面（原生 JS + CSS，无 npm；视觉规范 = web/theme.css 航海夜令牌，单一事实源）
+    文件：web/index.html + web/theme.css + web/app.js（+ 一次性验收辅助 web/_shotpage.js，验收后删）
+
+[2] 浏览器实测 0 console error（chromium headless --enable-logging=stderr，6 页逐页截图）
+    p-overview: CONSOLE 行=0
+0，error/uncaught=0
+0
+    p-tasks: CONSOLE 行=0
+0，error/uncaught=0
+0
+    p-evidence: CONSOLE 行=0
+0，error/uncaught=0
+0
+    p-audit: CONSOLE 行=0
+0，error/uncaught=0
+0
+    p-settings: CONSOLE 行=0
+0，error/uncaught=0
+0
+    p-design: CONSOLE 行=0
+0，error/uncaught=0
+0
+
+[3] 首屏 <2s（22 号 §8 口径）：
+    浏览器侧 navigationStart → /api/overview 数据上屏（ov-stats 填充）= 97 ms（?measure=1 实跑）
+    接口侧 curl 5 次（s）：0.021743 0.011593 0.011587 0.010613 0.011667 
+    接口侧中位数 = 11.6 ms
+
+[4] 截图（evidence/console/）：
+    -rw-r--r-- 1 root root 157651 Oct 30 09:42 evidence/console/web_audit.png
+    -rw-r--r-- 1 root root 221925 Oct 30 09:42 evidence/console/web_design.png
+    -rw-r--r-- 1 root root 157126 Oct 30 09:42 evidence/console/web_evidence.png
+    -rw-r--r-- 1 root root 140995 Oct 30 09:42 evidence/console/web_overview.png
+    -rw-r--r-- 1 root root 112080 Oct 30 09:42 evidence/console/web_settings.png
+    -rw-r--r-- 1 root root 158232 Oct 30 09:42 evidence/console/web_tasks.png
+
+[5] 页面数据与 /api 抽样一致：
+    /api/overview: next_task=S7.7 total=262 ui_assets=75 maps=4
+    /api/tasks: 262 行（台账 262 一致）
+    /api/evidence: 296 份
+    /api/audit: 70 份报告
+    /api/assets: ui_manifest 75 枚 / map_packs 4 个
+
+[6] 视觉签收（硬规则 9 留痕）：概念稿 v2 用户 2026-10-30 签收通过（问答留痕「v2 通过（推荐）」）；
+    签收对象 = evidence/console/ui-p0-sitesheet.png + 01~08 单页图；
+    规范 = web/theme.css 13 色航海夜令牌 + 8pt 栅格（对齐 10_ui_redesign.md §3 设计令牌 v2）；
+    图片网页内直查（灯箱）= 用户 2026-10-30 要求，已实现（证据/资产/设计稿三页 img 点击放大）。

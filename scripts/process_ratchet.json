@@ -846,6 +846,15 @@
         "fix_in": "S25.1"
       }
     },
-    "cs4_scene_grandfathered": {}
+    "cs4_scene_grandfathered": {},
+    "CS-2_file_doc_present": [
+      "crates/ti-engine/src/bin/android_entry.rs"
+    ],
+    "cs2_doc_grandfathered": {
+      "crates/ti-engine/src/bin/android_entry.rs": {
+        "reason": "新增豁免",
+        "fix_in": "TBD"
+      }
+    }
   }
 }

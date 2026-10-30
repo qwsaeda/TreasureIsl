@@ -61,7 +61,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 |  | P0-5（S10.1 新增） | 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test render_invariants` |  |
 
-## 代码质量门禁 `scripts/gate.ps1`（31 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
+## 代码质量门禁 `scripts/gate.ps1`（33 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
 
 > **计数约定（本节是门禁项数的唯一事实源，其他文档只引用、不各自重数）**
 >
@@ -69,7 +69,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > 1. 只数顶格 `Report`；**缩进在 `if`/`else` 块内的条件 `Report`/`Skip` 不计入**——
 >    即 wasm 构建、android 构建、`zero-unknown verify`（`if (Test-Path ...)` 守卫）三项；
 > 2. `Skip` 不单独计项；
-> 3. 当前顶格 `Report` = **31 项**（S31.3 起 = 28 + 第 22 项 wasm 浏览器端 e2e；数字对不上时以机器输出为准）。
+> 3. 当前顶格 `Report` = **33 项**（S31.3 起 = 28 + 第 22 项 wasm 浏览器端 e2e；数字对不上时以机器输出为准）。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
 > 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
@@ -168,7 +168,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 31 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 33 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
 
 **S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
-审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 31 项全绿。
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 33 项全绿。

@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TI Dev Console · 概念稿 ui-p0</title>
+<style>
+  /* 平台视觉规范（S32 游戏辅助平台主题 = 「航海夜·精修」，对齐游戏 10_ui_redesign.md §3 设计令牌 v2）：
+     深海军蓝夜色底 + 黄铜/暖金强调 + 羊皮纸白正文。改色/改字号只改本表（单一事实源），禁止散落硬编码。 */
+  :root {
+    /* 底与面板（game bg0/bg1/surface/bevel_hi/stroke 对齐） */
+    --bg0: #0C0E16; --bg1: #151827; --surface: #1B2033; --bevel: #262C45; --stroke: #39415E;
+    /* 强调（game gold/gold_warm/blue） */
+    --gold: #FFC857; --gold-warm: #FFD700; --blue: #4FC3F7;
+    /* 文字（game text_hi/text_mid/text_lo） */
+    --tx: #F4F1E8; --tx-mid: #9AA3C0; --tx-lo: #5A6178;
+    /* 语义（game success/danger/info） */
+    --ok: #69D58C; --bad: #FF6B5E; --info: #45B7D8;
+    --r: 10px; /* 圆角 8pt 栅格 */
+    --gap: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 50% -10%, var(--bg1), var(--bg0) 60%);
+    color: var(--tx); font: 14px/1.55 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  .mono { font-family: ui-monospace, Consolas, monospace; }
+  .sm { font-size: 12px; }
+  .dim { color: var(--tx-mid); }
+  /* 顶栏 = 黄铜木框观感 */
+  .topbar { display: flex; align-items: center; gap: 14px; padding: 12px 20px;
+            background: linear-gradient(180deg, #2A3147, #1B2033);
+            border-bottom: 2px solid var(--stroke); box-shadow: 0 2px 10px #0008; position: sticky; top: 0; z-index: 9; }
+  .topbar .logo { font-weight: 800; color: var(--gold); letter-spacing: 1px; font-size: 15px; }
+  .topbar .logo .sub { color: var(--tx-mid); font-weight: 400; font-size: 12px; letter-spacing: 0; }
+  .topbar .spacer { flex: 1; }
+  .topbar .chip { font-size: 12px; border: 1px solid var(--stroke); border-radius: 999px;
+                  padding: 3px 12px; color: var(--tx-mid); background: var(--surface); }
+  .topbar .chip.gold { color: var(--gold); border-color: #6b5423; }
+  .shell { display: grid; grid-template-columns: 210px 1fr; min-height: calc(100vh - 56px); }
+  /* 侧栏 = 羊皮纸暗面板 */
+  .nav { background: linear-gradient(180deg, var(--surface), #151926); border-right: 1px solid var(--stroke); padding: 16px 0; }
+  .nav .grp { font-size: 11px; color: var(--tx-lo); text-transform: uppercase; letter-spacing: 1.5px; padding: 10px 20px 4px; }
+  .nav button { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--tx-mid);
+               padding: 9px 20px; font: inherit; cursor: pointer; border-left: 3px solid transparent; }
+  .nav button:hover { color: var(--tx); background: var(--bevel); }
+  .nav button.on { border-left-color: var(--gold); color: var(--gold); background: var(--bevel); font-weight: 600; }
+  main { padding: 20px 24px 60px; max-width: 1220px; }
+  .page { display: block; }
+  .page.hidden { display: none; }
+  h1 { font-size: 19px; margin: 2px 0 14px; font-weight: 700; color: var(--tx); }
+  h1 small { color: var(--tx-mid); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  /* 卡片 = 羊皮纸面 + 凸起 bevel */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: var(--gap); }
+  .stat { background: var(--surface); border: 1px solid var(--stroke); border-top: 2px solid var(--bevel);
+          border-radius: var(--r); padding: 12px 14px; }
+  .stat .k { font-size: 12px; color: var(--tx-mid); }
+  .stat .v { font-size: 24px; font-weight: 800; color: var(--tx); }
+  .stat .s { font-size: 11px; color: var(--tx-lo); }
+  .panel { background: var(--surface); border: 1px solid var(--stroke); border-top: 2px solid var(--bevel);
+          border-radius: var(--r); padding: 14px; margin-bottom: 12px; }
+  .panel h3 { margin: 0 0 10px; font-size: 14px; color: var(--gold); }
+  .bar-wrap { margin: 10px 0 16px; }
+  .bar { height: 16px; background: var(--bevel); border: 1px solid var(--stroke); border-radius: 8px; overflow: hidden; }
+  .bar .fill { display: block; height: 100%; background: linear-gradient(90deg, #8B6914, var(--gold));
+               color: #14161c; font-size: 10px; font-weight: 700; text-align: right;
+               padding-right: 6px; display: flex; align-items: center; justify-content: flex-end; min-width: 26px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+  .ctl-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  select, input[type=text] { background: var(--bevel); color: var(--tx); border: 1px solid var(--stroke);
+      border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; }
+  select:focus, input:focus { outline: 1px solid var(--gold); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--tx-mid); font-weight: 600; font-size: 12px; padding: 6px 8px;
+       border-bottom: 1px solid var(--stroke); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+  td { padding: 6px 8px; border-bottom: 1px solid #232941; vertical-align: top; }
+  tr { cursor: pointer; }
+  tr:hover td { background: var(--bevel); }
+  tr.dim td { color: var(--tx-lo); }
+  tr.open td { background: #2c3350; }
+  .tag { display: inline-block; border-radius: 4px; padding: 1px 8px; font-size: 12px; border: 1px solid; }
+  .st-verified { background: #14301f; color: var(--ok); border-color: #1e4a2f; }
+  .st-pending { background: #33290f; color: var(--gold); border-color: #5c4d1d; }
+  .st-in_progress { background: #0f2a3a; color: var(--blue); border-color: #1d4459; }
+  .st-blocked { background: #3a1512; color: var(--bad); border-color: #5c221c; }
+  #task-detail { border-left: 3px solid var(--gold); }
+  #task-detail pre { background: var(--bevel); padding: 10px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; color: var(--tx); }
+  #task-detail.hidden { display: none; }
+  .filter-bar { margin: 10px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  /* 图片证据网格（游戏内容可直查，用户要求） */
+  .ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .ev-grid figure, .asset-grid figure { margin: 0; background: var(--bevel); border: 1px solid var(--stroke);
+        border-radius: 8px; overflow: hidden; }
+  .ev-grid img { width: 100%; height: 120px; object-fit: cover; background: #0a0c12; display: block; cursor: zoom-in; }
+  .ev-grid figcaption { padding: 6px 8px; font-size: 11px; color: var(--tx-mid); }
+  .ev-lists { columns: 2; column-gap: 24px; }
+  .ev-lists li { margin: 2px 0; color: var(--tx-mid); }
+  .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  .asset-grid img { width: 100%; height: 72px; object-fit: contain; background: #fff2; border-radius: 4px; padding: 4px; }
+  .asset-grid figcaption { font-size: 10px; margin-top: 4px; color: var(--tx-mid); text-align: center; }
+  .packs li { margin: 6px 0; }
+  .kv { color: var(--tx-mid); font-size: 12px; margin: 4px 0; }
+  .kv b { color: var(--tx); font-weight: 600; }
+  .switch { display: flex; align-items: center; gap: 8px; }
+  .switch input { width: 16px; height: 16px; accent-color: var(--gold); }
+  /* 设计稿查看页（/design） */
+  .design-sec { margin-bottom: 28px; }
+  .design-sec h3 { color: var(--gold); margin: 0 0 6px; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .sw { background: var(--surface); border: 1px solid var(--stroke); border-radius: 8px; padding: 10px; }
+  .sw .box { height: 44px; border-radius: 6px; border: 1px solid var(--stroke); margin-bottom: 8px; }
+  .sw .name { font-weight: 700; font-size: 13px; }
+  .sw .hex { font-family: ui-monospace, monospace; font-size: 12px; color: var(--tx-mid); }
+  .sw .use { font-size: 11px; color: var(--tx-lo); }
+  .design-imgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .design-imgs figure { margin: 0; background: var(--surface); border: 1px solid var(--stroke); border-radius: 8px; overflow: hidden; }
+  .design-imgs img { width: 100%; display: block; }
+  .design-imgs figcaption { padding: 8px 10px; font-size: 12px; color: var(--tx-mid); }
+  /* 灯箱：网页内直接看图（游戏内容可直查） */
+  #lightbox { display: none; position: fixed; inset: 0; background: #000d; z-index: 99; cursor: zoom-out;
+              align-items: center; justify-content: center; }
+  #lightbox.on { display: flex; }
+  #lightbox img { max-width: 92vw; max-height: 90vh; border-radius: 6px; box-shadow: 0 8px 40px #000c; }
+  #lightbox .cap { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; color: var(--tx-mid); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="logo">⚓ TI DEV CONSOLE <span class="sub">金银岛 · 开发管理台</span></span>
+  <span class="ver" style="font-size:12px;color:var(--tx-lo)">S32.0 · 概念稿 ui-p0（数据 = 本仓库 127.0.0.1:8787 实时 /api）</span>
+  <span class="spacer"></span>
+  <span class="chip gold">127.0.0.1:8787</span>
+  <span class="chip">只读模式</span>
+</div>
+<div class="shell">
+  <nav class="nav">
+    <div class="grp">看板</div>
+    <button data-page="p-overview">概览</button>
+    <button data-page="p-tasks">任务</button>
+    <button data-page="p-evidence">证据</button>
+    <button data-page="p-audit">审计</button>
+    <div class="grp">P1 / P2</div>
+    <button data-page="p-gate" class="on">门禁</button>
+    <button data-page="p-assets">资产</button>
+    <button data-page="p-docs">文档</button>
+    <button data-page="p-build">构建</button>
+    <div class="grp">平台</div>
+    <button data-page="p-design">设计稿</button>
+    <button data-page="p-settings">设置</button>
+  </nav>
+  <main>
+    <section id="p-overview" class="page hidden">
+      <h1>概览<small>当前阶段 / 下一任务 / 门禁 / 审计（北极星：首屏 2s 内见关键信息）</small></h1>
+      <div class="cards" id="ov-stats"></div>
+      <div class="panel bar-wrap">
+        <div class="kv"><b>台账进度</b>（verified / total）</div>
+        <div class="bar"><div class="fill" id="ov-progress"></div></div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <h3>下一任务（取件序）</h3>
+          <div class="kv" id="ov-next"><b id="ov-next-b">S32.3</b> 看板 UI v1 —— 本概念稿对应任务；后续 = S32.4（门禁执行）→ S32.5（审计编排）→ S32.6（收口）</div>
+        </div>
+        <div class="panel">
+          <h3>门禁 / 审计（P1 起实装，当前占位）</h3>
+          <div class="kv" id="ov-gate"></div>
+          <div class="kv" id="ov-audit"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="p-tasks" class="page hidden">
+      <h1>任务<small>台账全表（筛选 status / 阶段 / 关键词；行点击展开 dod 全文）</small></h1>
+      <div class="filter-bar">
+        <select id="sel-status">
+          <option value="all">全部 status</option>
+          <option value="pending">pending</option>
+          <option value="verified">verified</option>
+          <option value="in_progress">in_progress</option>
+          <option value="blocked">blocked</option>
+        </select>
+        <select id="sel-stage">
+          <option value="all">全部 stage</option>
+          <option>S0</option><option>S1</option><option>S2</option><option>S3</option>
+          <option>S7</option><option>S15</option><option>S16</option><option>S17</option><option>S18</option>
+          <option>S21</option><option>S22</option><option>S26</option><option>S27</option><option>S28</option>
+          <option>S29</option><option>S30</option><option>S31</option><option value="S32">S32</option>
+        </select>
+        <input type="text" id="task-search" placeholder="搜索 id / 标题 / dod…" style="flex:1;min-width:200px">
+        <span class="dim sm" id="task-count"></span>
+      </div>
+      <div class="panel" style="max-height:520px;overflow:auto;padding:0">
+        <table>
+          <thead><tr><th style="width:64px">id</th><th>title</th><th style="width:110px">status</th><th style="width:140px">deps</th><th style="width:130px">evidence</th></tr></thead>
+          <tbody id="task-rows"></tbody>
+        </table>
+      </div>
+      <div class="panel" id="task-detail" style="display:none">
+        <h3><span id="task-detail-id"></span></h3>
+        <pre id="task-detail-body"></pre>
+      </div>
+    </section>
+
+    <section id="p-evidence" class="page hidden">
+      <h1>证据<small>evidence/ 浏览 · 图片网页内直查（点击 = 灯箱放大）· 缺失告警</small></h1>
+      <div class="kv" id="ev-count"></div>
+      <div class="panel"><h3>截图 / 图片证据（点击放大）</h3><div class="ev-grid" id="ev-imgs"></div></div>
+      <div class="panel"><h3>日志 / 文本证据（抽样）</h3><div class="ev-lists" id="ev-logs"></div></div>
+    </section>
+
+    <section id="p-audit" class="page hidden">
+      <h1>审计<small>双审计报告 + 收敛轮次 + 未闭环 findings（机械判定 = 22 号 §7.3/§7.4）</small></h1>
+      <div class="panel">
+        <h3>已收敛任务（连续 2 轮 0 新发现 + 0 误报 + 0 残留）</h3>
+        <table id="audit-table"></table>
+        <div class="kv" id="audit-open"></div>
+      </div>
+      <div class="panel">
+        <h3>任务书 / 粘贴归档（P1 实装 = S32.5）</h3>
+        <div id="audit-books"></div>
+      </div>
+    </section>
+
+    <section id="p-gate" class="page">
+      <h1>门禁<small>fast / touch / full 分档执行 + 轮询日志 + 历史（P1 = S32.4，占位页）</small></h1>
+      <div class="panel">
+        <h3>执行档位（占位）</h3>
+        <div class="kv">P1（S32.4）实装后 = 档位选择 + 启动/停止 + 实时日志轮询 + 历史（evidence/console/logs/gate-&lt;ts&gt;.log）。</div>
+        <div class="kv">口径：fast / touch = <b>开发档</b>（多项 SKIP），<b>不构成 gate 全绿证据</b>；「gate 全绿」= 无参数全量（22 号 §4.2）。</div>
+      </div>
+    </section>
+
+    <section id="p-assets" class="page hidden">
+      <h1>资产<small>UI 清单缩略图（网页内直查） + registry.json + 地图包（只读；P2 = S32.7 校验状态）</small></h1>
+      <div class="kv" id="as-count"></div>
+      <div class="panel"><h3>UI 资产（ui_manifest.json，前 20 枚）</h3><div class="asset-grid" id="as-grid"></div></div>
+      <div class="two-col">
+        <div class="panel"><h3>已装地图包（assets/maps/）</h3><ul class="packs" id="as-packs"></ul><div class="kv" id="as-default"></div></div>
+        <div class="panel"><h3>校验状态（P2 实装）</h3><div id="as-verify"></div></div>
+      </div>
+    </section>
+
+    <section id="p-docs" class="page hidden">
+      <h1>文档<small>全文检索 + EXP/F-ID/任务 ID 反查（P2 = S32.8，占位页）</small></h1>
+      <div class="panel">
+        <h3>检索框（占位）</h3>
+        <div class="kv">P2（S32.8）实装：关键词全文命中（docs/ 含 experience/）+ <code>EXP-xxx</code> / <code>F-xxx</code> / 任务 ID 反查（引用列表含 文件:行）。</div>
+        <div class="kv">单一事实源链：业务 = docs/business/ · 地图包 = 21 号 · 资产管线 = 18 号 · 平台 = 22 号。</div>
+      </div>
+    </section>
+
+    <section id="p-build" class="page hidden">
+      <h1>构建<small>build_wasm.ps1 -Check 只读体检 + web/ 产物清单 + 平台静态服务预览（P2 = S32.9）</small></h1>
+      <div class="panel">
+        <h3>体检（占位）</h3>
+        <div class="kv">P2（S32.9）实装：只读体检（0 写盘）+ 非法参数 400 + 0 游戏产物变更（22 号 §8 内容级指纹）。</div>
+        <div class="kv">web/ 产物清单（文件名 + 体积）前后一致 = 平台不做完整构建 ⇒ 天然不变。</div>
+      </div>
+    </section>
+
+    <section id="p-design" class="page hidden">
+      <h1>设计稿<small>平台视觉规范（航海夜·精修） + 全部页面效果图（网页内直查）</small></h1>
+      <div class="panel">
+        <h3>视觉规范 = 游戏「航海夜·精修」主题（对齐 10_ui_redesign.md §3 设计令牌 v2）</h3>
+        <div class="swatches">
+          <div class="sw"><div class="box" style="background:#0C0E16"></div><div class="name">bg0 深底</div><div class="hex">#0C0E16</div><div class="use">页面底（拉层次）</div></div>
+          <div class="sw"><div class="box" style="background:#151827"></div><div class="name">bg1 夜色顶</div><div class="hex">#151827</div><div class="use">顶部渐变 / 顶栏</div></div>
+          <div class="sw"><div class="box" style="background:#1B2033"></div><div class="name">surface 面板</div><div class="hex">#1B2033</div><div class="use">卡片 / 面板底</div></div>
+          <div class="sw"><div class="box" style="background:#262C45"></div><div class="name">bevel 凸起</div><div class="hex">#262C45</div><div class="use">卡片顶边 / 输入底</div></div>
+          <div class="sw"><div class="box" style="background:#39415E"></div><div class="name">stroke 黄铜框</div><div class="hex">#39415E</div><div class="use">外框 / 描边</div></div>
+          <div class="sw"><div class="box" style="background:#FFC857"></div><div class="name">gold 主强调</div><div class="hex">#FFC857</div><div class="use">导航选中 / 标题 / 进度</div></div>
+          <div class="sw"><div class="box" style="background:#FFD700"></div><div class="name">gold-warm 暖金</div><div class="hex">#FFD700</div><div class="use">进度条渐变头 / 高亮</div></div>
+          <div class="sw"><div class="box" style="background:#4FC3F7"></div><div class="name">blue 交互</div><div class="hex">#4FC3F7</div><div class="use">链接 / 在途态</div></div>
+          <div class="sw"><div class="box" style="background:#F4F1E8"></div><div class="name">text_hi 羊皮白</div><div class="hex">#F4F1E8</div><div class="use">正文 / 标题</div></div>
+          <div class="sw"><div class="box" style="background:#9AA3C0"></div><div class="name">text_mid 次级</div><div class="hex">#9AA3C0</div><div class="use">次级文字 / 说明</div></div>
+          <div class="sw"><div class="box" style="background:#5A6178"></div><div class="name">text_lo 置灰</div><div class="hex">#5A6178</div><div class="use">禁用 / 已验收行</div></div>
+          <div class="sw"><div class="box" style="background:#69D58C"></div><div class="name">success 胜</div><div class="hex">#69D58C</div><div class="use">已验收 / PASS</div></div>
+          <div class="sw"><div class="box" style="background:#FF6B5E"></div><div class="name">danger 败</div><div class="hex">#FF6B5E</div><div class="use">阻塞 / 失败</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>页面效果图（S32.3 五页 + 两占位）</h3>
+        <div class="design-imgs">
+          <figure><img src="/_mock/01_overview.png" alt="01 概览"><figcaption>01 · 概览（北极星首屏）</figcaption></figure>
+          <figure><img src="/_mock/02_tasks.png" alt="02 任务"><figcaption>02 · 任务（台账全表 + 筛选）</figcaption></figure>
+          <figure><img src="/_mock/03_evidence.png" alt="03 证据"><figcaption>03 · 证据（图片直查 + 灯箱）</figcaption></figure>
+          <figure><img src="/_mock/04_audit.png" alt="04 审计"><figcaption>04 · 审计（收敛轮次表）</figcaption></figure>
+          <figure><img src="/_mock/05_settings.png" alt="05 设置"><figcaption>05 · 设置（token + 写操作开关）</figcaption></figure>
+          <figure><img src="/_mock/06_gate_placeholder.png" alt="06 门禁"><figcaption>06 · 门禁（P1 占位）</figcaption></figure>
+          <figure><img src="/_mock/07_assets_placeholder.png" alt="07 资产"><figcaption>07 · 资产（P2 占位）</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="p-settings" class="page hidden">
+      <h1>设置<small>token 粘贴（sessionStorage）+ 写操作开关 + 平台信息</small></h1>
+      <div class="panel">
+        <h3>鉴权</h3>
+        <div class="ctl-row">
+          <input type="text" id="set-token" placeholder="X-TI-Token（远程 --host 场景；本机 127.0.0.1 免 token）" style="flex:1">
+        </div>
+        <div class="switch"><input type="checkbox" id="set-write" disabled><span class="sm">启用写操作（默认关；需 --enable-write + token，P1 起开放）</span></div>
+        <div class="kv" id="set-token-state"></div>
+      </div>
+      <div class="panel">
+        <h3>平台信息</h3>
+        <div class="kv" id="set-info"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="lightbox"><img id="lightbox-img" alt=""><div class="cap" id="lightbox-cap"></div></div>
+
+<script src="app.js"></script>
+<script>
+  /* 设计稿 / 证据 / 资产图片点击 → 灯箱（网页内直查图片，用户要求） */
+  const lb = document.getElementById("lightbox");
+  const lbImg = document.getElementById("lightbox-img");
+  const lbCap = document.getElementById("lightbox-cap");
+  document.querySelectorAll(".ev-grid img, .design-imgs img").forEach((img) => {
+    img.addEventListener("click", () => {
+      lbImg.src = img.src;
+      lbCap.textContent = img.alt || img.src;
+      lb.classList.add("on");
+    });
+  });
+  lb.addEventListener("click", () => lb.classList.remove("on"));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") lb.classList.remove("on"); });
+</script>
+</body>
+</html>

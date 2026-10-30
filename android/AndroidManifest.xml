@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 金银岛 TreasureIsl — Android APK 清单（cargo-apk 标准布局，S5.5 / S2.6）
-     包名 com.example.treasureisland 为占位，Mac 侧 `cargo apk create` 时按自定义包名覆盖。
-     minSdk 21（Android 5.0），targetSdk 34。横竖屏自适应（不锁方向，P4-2 letterbox）。 -->
+<!-- 金银岛 TreasureIsl — Android APK 清单（cargo-apk 标准布局，S2.6 / S18.8d 切 Bevy）
+     S18.8d：android 壳 = winit `android-native-activity` 后端
+     （`android-activity` crate 导出 `JNI_OnLoad` + NativeActivity 生命周期 → `android_main`），
+     入口 Activity = `android.app.NativeActivity`（Android 内建，0 自定义 Java/Kotlin 类，
+     `libname=android_activity` = cdylib `libandroid_activity.so` 去前缀/后缀）。
+     包名 com.example.treasureisland 占位（release 可换自有包名；keystore 用 debug 签名）。
+     minSdk 21（Android 5.0），targetSdk 34。不锁方向（P4-2 letterbox 自适应）。 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.treasureisland"
     android:versionCode="1"
     android:versionName="0.1.0">
 
-    <!-- 音频输出（macroquad 的 AAudio 后端；无网络权限，游戏全离线可玩） -->
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- 无网络权限（游戏全离线可玩；bevy 资产管线本地 APK assets 直读） -->
 
     <uses-sdk
         android:minSdkVersion="21"
@@ -20,19 +23,20 @@
     <application
         android:label="金银岛 TreasureIsl"
         android:allowBackup="true"
-        android:icon="@drawable/icon"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
 
-        <!--
-            入口 Activity：cargo-apk 在 android/android-activity/ 生成的 miniquad JNI 壳。
-            这里的 activity 全限定名需与 android/android-activity/Cargo.toml 的
-            包名 + 你的 Activity 类一致（cargo apk create 自动生成，默认
-            `.AppActivity`；本仓模板沿用该约定，见 android/README.md）。
-        -->
+        <!-- S18.8d 入口：NativeActivity（winit android-native-activity 壳约定）；
+             android:extractNativeLibs="false" = .so 直接映射执行（API 23+ 支持，
+             minSdk 21 兼容口径 = 默认 true 解压亦可，此处显式 false 减安装耗时）。 -->
         <activity
-            android:name=".AppActivity"
+            android:name="android.app.NativeActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|keyboardHidden">
+            android:extractNativeLibs="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:hardwareAccelerated="true">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="android_activity" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

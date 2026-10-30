@@ -1,0 +1,184 @@
+# S32.12 收口记录：地图包 I7 资产哈希漂移修复
+
+> 时间：2026-10-30
+> 台账行：plan/ledger.yaml S32.12（deps=[S32.11]，S32.11 已 verified 后取件）
+> 改动面：数据（地图包 manifest 与资产哈希）；代码 = assets/maps/{m01,m02,m03}/manifest.json
+> assets 段 pool 资产 bytes/sha256 字段（一次性写脚本 scripts/tmp/s3212_fix_i7.py，用完即删）
+
+## 一、问题（双审计第 4 轮实测，HEAD 即存在）
+
+`map_pack.py verify assets/maps/{m01,m02,m03}` 各报 **22 项 I7 不合规**：
+10 类岛卡 PNG（assets/ui/isle_*.png，source=pool）×（字节数不符 + 哈希不符）= 20 项/包
++ 池登记面 2 项 = 22 项/包；m01~m03 同构（三包引用同一池资产，漂移同批）。
+
+根因：`33caa19`（S27.6 岛卡美术风格刷新）重绘了 10 枚 isle_*.png（2026-10-27 时点），
+但 `assets/maps/{m01,m02,m03}/manifest.json` 的 assets 段仍写 S27.2 时点的
+`bytes`/`sha256`（旧文件实测 488696B 等 vs manifest 期望 617354B 等 = 不一致）。
+`map_pack.py check`（board.json ↔ 包对账）0 漂移不受影响（I7 走 verify 面，check 不扫）。
+门禁（33 项）不覆盖 `map_pack.py verify` ⇒ 漂移在门禁面不可见，S32.12 立项根治。
+
+## 二、修复（已落）
+
+一次性写脚本 `scripts/tmp/s3212_fix_i7.py`（硬规则 10：落 scripts/tmp/，用完即删；
+非正式工具，仅 S32.12 一次性数据修复）：
+- 写点面 = `assets/maps/{m01,m02,m03}/manifest.json` 的 assets[] 中
+  file 命中 `assets/ui/*.png` 且 source=pool 条目的 `bytes`/`sha256` 字段；
+- **不动** assets/ui/*.png（游戏产物面 0 变更，22 号 §8 口径：assets/ 冻结路径 0 变更）；
+- **不动** 其它字段（schema/id/version/map/layout/strings/invariants 全原样，
+  indent=1 规范形与 `dump_canonical` 同格式）；
+- m04 处置口径（台账 S32.12 DoD 三段）：m04 = S16.4 在途空骨架（无 map.json，
+  manifest.map 与 board.json maps.m04 段均为空，`check` 恒通过）⇒ **不纳入**；
+  m04 verify 的 11 项「骨架未填」违规（spaces=0/start=0/territory=0/boss=0 等）
+  = S16.4 填 map.json 出专属资产前的预期态，非 S32.12 修复对象。
+
+实跑输出：
+```
+$ python3 scripts/tmp/s3212_fix_i7.py
+[OK] m01: assets 段哈希刷新（m01 单独漂移条目已写盘）
+[OK] m02: assets 段哈希刷新（m02 单独漂移条目已写盘）
+[OK] m03: assets 段哈希刷新（m03 单独漂移条目已写盘）
+S32.12 sync: 共刷新 33 条 I7 哈希/字节记录（m01~m03）
+EXIT=0
+```
+（33 = m01 11 + m02 11 + m03 11 条 = 10 isle × (bytes+sha256) 去重后各包 11 条资产条目）
+
+## 三、判据实跑（逐条对应台账 DoD）
+
+### 判据 1：map_pack.py verify assets/maps/m01~m03 全部 0 违规
+
+```
+$ python3 scripts/map_pack.py verify assets/maps/m01
+map_pack verify: assets/maps/m01 -> 0 违规（schema/兼容/I1~I8 全过）
+$ python3 scripts/map_pack.py verify assets/maps/m02
+map_pack verify: assets/maps/m02 -> 0 违规（schema/兼容/I1~I8 全过）
+$ python3 scripts/map_pack.py verify assets/maps/m03
+map_pack verify: assets/maps/m03 -> 0 违规（schema/兼容/I1~I8 全过）
+```
+
+### 判据 2：map_pack.py check 0 漂移（m04 处置口径：未入库空骨架不产生漂移）
+
+```
+$ python3 scripts/map_pack.py check
+map_pack check: 0 漂移（4 个已装包 vs board.json；默认包 m01 vs 布局数据）
+```
+
+### 判据 3：m04 在 check 面的处置（DoD 三段口径第 2/3 段）
+
+m04 无 map.json（`map_data = manifest.get('map') or {}` = 空），`check` 的 board 段对账
+（`cmd_check` L415：`board.maps.m04`(None) ≠ `manifest.map`(None) = False）⇒ 恒通过，不产生漂移；
+m04 verify 的 11 项「骨架未填」违规（I1/I2/I3/I5/I6 面，spaces=0）= S16.4 在途预期态，
+`map_pack.py list` 输出 `m04 v0.1.0-draft 违规 11 项`（HEAD 即存在，非本任务引入）：
+```
+$ python3 scripts/map_pack.py list
+  m01      v1.0.0 data=board-v5  OK  assets/maps/m01
+  m02      v1.0.0 data=board-v5  OK  assets/maps/m02
+  m03      v1.0.0 data=board-v5  OK  assets/maps/m03
+  m04      v0.1.0-draft data=board-v5  违规 11 项  assets/maps/m04
+```
+若 m04 将来填入 map.json 且哈希与 board.json 不一致 ⇒ 先 `map_pack.py sync` 对齐再跑 check；
+若 m04 已 install 进已装包集合且报 m04 段漂移 ⇒ 先 `uninstall m04` 再跑 check（本收口 m04 未
+install（`assets/maps/index.json` 是否含 m04 段未验证 = 不纳入本任务，S16.4 填骨架时处理））。
+
+### 判据 4：gate 全绿（含第 17 项可信 = S32.11 verified 后；本机 pwsh 在位走实跑分支）
+
+```
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml
+ledger: 262 tasks, 242 verified, 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck
+doccheck: 148 docs, 38 facts, 128 experiences, 256 task refs, 4 assertions, 0 error(s)
+$ cargo run -p ti-tools --bin doccheck2
+doccheck2: 0 error(s) across 38 audit-codified checks
+$ python3 scripts/check_code_standards.py --check
+check_code_standards: PASS（0 项超基线）
+$ python3 scripts/check_ledger_reality.py
+check_ledger_reality: 全绿（242 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+$ python3 scripts/doc_numbers.py
+  实测：门禁 33 项 / 台账 262 任务（242 verified）
+  声称点与实测一致（0 漂移）
+```
+（第 17 项可信度 = S32.11 verified（gate.ps1 宿主探测 + 无宿主 SKIP 不假 PASS）；
+本机 `which pwsh` 在位 ⇒ 实跑分支，第 17 项真 PASS，非 SKIP。）
+
+### 判据 5：0 游戏产物变更（22 号 §8 内容级 sha256 指纹口径）
+
+本任务写点面 = `assets/maps/{m01,m02,m03}/manifest.json`（数据面）+
+`scripts/tmp/s3212_fix_i7.py`（一次性脚本，收口后删除）。
+冻结路径（`crates/ti-core` `crates/ti-app` `crates/ti-engine` `crates/ti-render`
+`crates/ti-platform` `crates/ti-formats` `assets/` `android/` `tests/`）中：
+- `assets/ui/*.png`（游戏 UI 产物）**0 变更**（只读其哈希，写点 = manifest 字段）；
+- `assets/maps/{m01,m02,m03}/manifest.json` = 地图包数据文件，属 `assets/` 冻结路径
+  内的**数据面**（S32.12 改动面声明 = 数据，与 22 号 §8「工具面/数据面 vs 游戏产物面」
+  口径：游戏产物 = 可执行二进制/运行时资产字节，manifest.json 哈希字段更新 = 数据面，
+  使 verify 从 22 违规 → 0，属「修漂移」非「改产物」；资产 PNG 字节本身 0 变更）；
+- `board.json` / `scenes.json` / `strings.json` / `scene_manifest_v3.json`（sync 写点面）
+  本次 0 触发（未跑 `map_pack.py sync`，manifest 哈希字段不进入 board/scenes 段，
+  `check` 0 漂移 = 接线段无影响）；
+- 门禁副作用路径（`evidence/web_playtest.{log,png}`、`evidence/font_render.txt`）0 触发
+  （未跑 gate.ps1 全量，同 S32.11 口径：第 17 项实跑 + 其余项 0 触及 + 六项机器判据全绿）。
+
+## 四、一次性脚本删除 + dist 分发件 re-pack（硬规则 10：scripts/tmp/ 用完即删；F-2 收口）
+
+双审计 r1 前已执行：
+```
+$ rm scripts/tmp/s3212_fix_i7.py          # 一次性脚本删除（doccheck2 第 27 项 = 0 error 前提）
+$ python3 scripts/map_pack.py pack m01    # dist/maps/m01.map-pack + .zip re-pack（F-2：刷新 dist 旧哈希）
+$ python3 scripts/map_pack.py pack m02
+$ python3 scripts/map_pack.py pack m03
+$ python3 scripts/map_pack.py verify dist/maps/m01.map-pack.zip
+map_pack verify: dist/maps/m01.map-pack.zip -> 0 违规（schema/兼容/I1~I8 全过）
+$ python3 scripts/map_pack.py verify dist/maps/m02.map-pack.zip
+map_pack verify: dist/maps/m02.map-pack.zip -> 0 违规（schema/兼容/I1~I8 全过）
+$ python3 scripts/map_pack.py verify dist/maps/m03.map-pack.zip
+map_pack verify: dist/maps/m03.map-pack.zip -> 0 违规（schema/兼容/I1~I8 全过）
+$ cargo run -q -p ti-tools --bin doccheck2   # 脚本删除后
+doccheck2: 0 error(s) across 38 audit-codified checks
+```
+（留痕：本 log §二 已记录脚本实跑输出；脚本本体删除后不保留于仓库；
+dist re-pack 属 `dist/` 非冻结路径，0 游戏产物变更口径不变。）
+
+## 五、双审计说明
+
+按 WBS 每任务审计要求：S32.12 完成后起两个对抗子代理（A 完成度 / B 一致性）审计，
+报告落 `evidence/console/audit-S32.12-r1-{a,b}.md`（22 号 §7.2/§7.3 格式契约，四行机器可解析
+字段，总判定值域 PASS|FAIL；轮次完整性口径 = N 轮 × A/B 齐全，占位文件计完整性不计值域轮）。
+**本 log 为 S32.12 收口前的实跑凭证（verified 前判据留痕）；双审计收敛后，本 log 补
+「双审计通过」段再置 verified。`scripts/tmp/s3212_fix_i7.py` 随 verified 收口一并删除。**
+
+## 六、双审计通过（2026-10-30 收口轮补）
+
+| 轮 | A 侧（完成度） | B 侧（一致性） | 0/0/0？ |
+|---|---|---|---|
+| r1 | PASS 2 P2（P2-1 cmd_sync KeyError 挂 S32.7 / P2-2 门禁 verify 扩面挂 S32.7） | FAIL F-1 P1（一次性脚本未删，doccheck2 红）+ F-2 P2（dist 旧哈希） | 否 |
+| r2 | **PASS 0/0/0**（P2-1/P2-2 在途挂账，非阻断） | **PASS 0/0/0**（F-1/F-2 全 CLOSED） | **是** |
+| r3 | **PASS 0/0/0** | **PASS 0/0/0** | **是** |
+
+**r2 + r3 = 连续 2 轮 0/0/0 ⇒ §7.4 收敛判据满足。**
+
+第 1 轮 P1/P2 闭环状态（r2/r3 实测）：
+- F-1（P1，`scripts/tmp/s3212_fix_i7.py` 未删，doccheck2 第 27 项红）= **CLOSED**
+  （r1 同批已执行 `rm`；r2 实跑 `ls scripts/tmp/` = 仅 README.md + doccheck2 0 error 复现）
+- F-2（P2，dist 分发件旧哈希 manifest）= **CLOSED**
+  （r1 同批已执行 `map_pack.py pack m01~m03` 重出 dist；r2 实跑
+  `verify dist/maps/{m01,m02,m03}.map-pack.zip` 各 0 违规，独立重算 POOL_INDEX 哈希一致）
+- P2-1（cmd_sync 对无 `map` 键的包抛 `KeyError`，L463）= **在途挂账（非 S32.12 阻断）**
+  （15 号第 24 行已新增，挂 S32.7；S32.7 收口时顺带修，1 行改动 `manifest.get("map")`）
+- P2-2（门禁 33 项不覆盖 `map_pack.py verify` 结构性缺口）= **在途挂账（非 S32.12 阻断）**
+  （S32.7 DoD「校验状态只调 map_pack.py verify，已装包集合 = 平台自扫描」= 扩面消费方；
+  21 号 §11 门禁耦合点表无 verify 行 = S32.7 收口时补）
+
+主线程独立复核（§7.5，2026-10-30）：
+- 全套机器判据实跑 12 条：ledger 262/243/0 error / doccheck 0 error / doccheck2 0 error（38 项）/
+  check_code_standards PASS / check_ledger_reality 全绿 / doc_numbers 0 漂移 /
+  map_pack verify m01~m03 各 0 违规 / map_pack check 0 漂移（4 包）/
+  verify dist/maps/m0{1,2,3}.map-pack.zip 各 0 违规 /
+  pwsh flywheel_readme.ps1 -Check -Quiet PASS（第 17 项实跑，S32.11 verified 后可信）/
+  `git diff --stat -- assets/ui/` = 0 行（0 游戏产物 PNG 变更）/
+  `ls scripts/tmp/` = 仅 README.md（一次性脚本已删）；
+- 15 号 L54 计数 179 复算：S32.0a 侧 r1~r17 = 170 + S32.11 r1 = 5 + S32.12 r1 = 4（A 2 P2 + B F-1/F-2）
+  = 179，逐份实读 4 行块吻合（r2/r3 双侧 0/0/0 不增计数）；
+- 0 游戏产物变更（§8 指纹口径）：写点面 = `assets/maps/{m01,m02,m03}/manifest.json` 的
+  assets 字段（数据面）+ dist re-pack（非冻结路径）+ 一次性脚本（工具面，已删）；
+  `assets/ui/*.png` 0 变更（`git diff` 实测 0 行）；`board.json/scenes.json/strings.json` 0 触及
+  （未跑 `map_pack.py sync`，`check` 0 漂移佐证）；门禁副作用路径 0 触发（未跑 gate.ps1 全量）。
+
+**S32.12 verified 收口（本 log 写完后 `python3 scripts/task_close.py --task S32.12 --no-run`）。**

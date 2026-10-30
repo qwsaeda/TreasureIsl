@@ -1,0 +1,32 @@
+# S18.8c macroquad 依赖清零 + 门禁「0 macroquad」断言（2026-10-30 · Linux 续工）
+
+## [1] 改动面
+- crates/ti-app/Cargo.toml：删 macroquad optional dep + android-shell feature + treasure-android bin
+- crates/ti-app/src/lib.rs：删 pub mod android_shell（feature-gated，feature 已无）
+- crates/ti-app/src/bin/treasure_android.rs：文件删除（S18.8d 重新建 Bevy 壳）
+- crates/ti-app/src/game_app/mod.rs：android-shell cfg 引用改 native-shell only
+- 根 Cargo.toml：macroquad = "0.4" 删除；android/android-activity 临时移出 members（S18.8d 恢复）
+- scripts/gate.ps1 第 10d 项 no-macroquad（cargo tree 扫描 macroquad/miniquad，0 行 = PASS）
+- doccheck2 expected 31→32 + gate.ps1 头注释/横幅 + parity/git/README 四处 31→32 项同步
+
+## [2] 判据实跑
+### cargo tree -p ti-app / ti-platform 无 macroquad/miniquad
+```
+  ti-app: 0 行 macroquad/miniquad（0 = 清零）
+  ti-platform: 0 行 macroquad/miniquad（0 = 清零）
+```
+
+### 全量 gate（32 项 0 failure；含 no-macroquad 第 10d 项）
+```
+  === gate: TreasureIsl (32 items) ===
+  PASS  no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描)  [0.3s]
+  === gate: 0 failure(s) ===
+```
+
+### 三方对账 + 台账
+```
+check_ledger_reality: 1 项虚报
+  FAIL  [orphan] 孤儿 evidence `evidence/S16.8c.log`：任务 `S16.8c` 不在 plan/ledger.yaml（台账可能被文件级回退丢条目）
+ledger: 262 tasks, 235 verified, 0 error(s)
+  evidence: ok
+```

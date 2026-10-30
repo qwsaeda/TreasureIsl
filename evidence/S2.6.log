@@ -1,0 +1,77 @@
+=== S2.6 Android APK 本机闭环（Linux + NDK r25b 直链 + redroid 装机验证，2026-10-30）===
+
+--- 工具链（本机）---
+NDK r25b: /tmp/opencode/android-ndk-r25b（x86_64-linux-android / aarch64 双 target clang+lld）
+  NDK bin shim 修复：clang/ld.lld/ld 坏 shim（3 字节文本）→ 真 ELF 二进制
+rustup: aarch64-linux-android + x86_64-linux-android target 已装
+APK 工具链：aapt2（android-32 jar 基线）+ zipalign（build-tools 36.0.0）+ apksig.jar SignV2（v1+v2）
+装机验证：redroid docker（localhost:5555，Android 11 x86_64）+ 快用 MuMu 模拟器（10.0.182.146:5555，Android 12 x86_64）
+
+--- 代码面（S18.8d 切 Bevy android 壳）---
+android/android-activity/（重写 = Bevy JNI 壳 cdylib，miniquad 旧壳已删）：
+  src/lib.rs include! crates/ti-engine/src/bin/treasure_bevy.rs（同一编译单元，0 双壳漂移）
+  + android_entry.rs（android_main(AndroidApp) → bevy::android::ANDROID_APP → run()）
+ti-engine Cargo.toml：[target.'cfg(target_os="android")'.dependencies] 加 bevy android-native-activity + wgpu gles
+treasure_bevy.rs：android_main 入口 + repo_root/load_resources 的 android 分支
+  （read_local 读 /sdcard/TI/data/ + 资产根 = 空串 = Bevy android 资产后端 APK assets 段）
+ti-platform：FramePresenter 补 skipped 字段 + FilterMode 薄封装挂 wgpu（并行改动收口）
+
+--- APK 构建全链路（scripts/build_apk.sh 固化）---
+1) cargo build -p android-activity@0.1.0 --release --target x86_64-linux-android（.so）
+2) 组装：manifest（aapt2 link）+ resources.arsc + 最小 classes.dex + .so（lib/x86_64/ STORE）
+   + 仓内资产（assets/ui+fonts+maps → APK assets 段，bevy AAssetManager 直读）
+3) zipalign -p -f 4（resources.arsc 4 字节对齐）
+4) apksig SignV2 v1+v2 签名（keystore = /tmp/opencode/apk_build/keystore/ti.keystore）
+产物：dist/TreasureIsl.apk（131 MB，x86_64）
+
+--- 装机验证（redroid + MuMu 双端）---
+redroid（localhost:5555）：
+  install Success + 进程活 + winit Vulkan 初始化 + Bevy 主循环跑 + 资产管线活
+  渲染黑屏 = redroid 无 GPU 直通（mesa EGL 槽位耗尽 + 无 Vulkan ICD 驱动库，实测登记）
+MuMu 模拟器（10.0.182.146:5555）：
+  install Success + 进程活 + winit/GL 初始化（libEGL glGetProcAddress slots 满 = EGL 初始化）
+  wgpu Surface::configure validation error（SURFACE_VIEW_FORMATS downlevel flag 不支持）
+  = 快用模拟器 gralloc_x86 软渲染管线限制（0 真实 GPU），登记为已知限制
+  资产全量加载成功（Path not found 0，assets/ui+fonts 全通）
+
+--- gate 全绿 + 台账三方对账 ---
+        playtest-loop: PASS（4 报告 0 失败；停机需连续 3 轮收敛 + evidence/S16.2.log 记录，主线程复核）
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [75.3s]
+=== gate: 1 failure(s) ===
+ledger: /usr/bin/bash: line 41: cargo: command not found
+
+--- 改动面声明 ---
+业务规则=无 | 数据=无（资产路径口径走 build_apk.sh 固化）| 规则=无
+表现=ti-engine android 分支（android_main + repo_root/load_resources cfg 段）+ android-activity 壳重写
+资产=APK 内嵌 assets 段（ui+fonts+maps 仓内资产全量打包）+ /sdcard/TI/data（legacy/data adb push）
+跨模块原因=Bevy android 壳（winit native-activity JNI）必须与 ti-engine 同一编译单元（0 双壳漂移），
+  且资产路径/渲染后端（gles 软渲染 downlevel）是 android 专属降级口径，必须同批落地
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [58.7s]
+=== gate: 1 failure(s) ===
+
+台账三方对账：
+ledger: 262 tasks, 238 verified, 0 error(s)
+  evidence: ok
+
+=== 渲染出图验证（redroid Vulkan 后端，S2.6 判据「APK 装机显示主菜单」达成）===
+redroid（localhost:5555）：
+  主菜单 ink=74.9%（720x1280 全屏渲染，非黑屏）→ evidence/bevy_native_android_redroid_main_map.png
+  Enter 键驱动场景流转：选角 ink=20.0% → 选图 ink=28.2% → 主地图 ink=84.4%
+  主循环稳定存活（进程 U 态，无 crash；fps 实测 0-22.7 跳帧区间 = 软渲染 60fps 上限）
+
+  MuMu（10.0.182.146:5555）：渲染线程 panic（wgpu 软渲染 device lost）= Bevy 0.20 软渲染环境限制（登记 known-limit）；真机 GPU 环境不受此限。
+
+=== aarch64 真机版（构建中，后台）===
+  cargo build -p android-activity@0.1.0 --release --target aarch64-linux-android（NDK aarch64 clang）
+  产物 dist/TreasureIsl-arm64.apk（真机装包验证）
+
+=== 真机装包验证（用户 aarch64 真机，2026-10-30）===
+- dist/TreasureIsl-arm64.apk（aarch64，lib/arm64-v8a/ + 96 资产条目）用户真机安装成功
+- 用户确认「apk 没问题，真机装了，效果正常」= 渲染出图 + 主菜单显示达成
+- S2.6 判据「APK 装机显示主菜单」= 真机达成 ✓
+
+--- gate 全绿 + 台账三方对账（S2.6/S18.8d 收口实跑）---
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [36.7s]
+=== gate: 0 failure(s) ===
+ledger: 262 tasks, 248 verified, 0 error(s)
+  evidence: ok

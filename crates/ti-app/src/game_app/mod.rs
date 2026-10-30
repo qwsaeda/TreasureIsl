@@ -489,11 +489,11 @@ impl GameApp {
             gpu_renderer: {
                 // S18.8a：macroquad 发货壳退役后，仅 android 壳仍需真实 GPU API
                 // （Bevy 壳走 ti-engine 自己的渲染器；诊断 bin 不绘制 GPU 帧）。
-                #[cfg(any(feature = "native-shell", feature = "android-shell"))]
+                #[cfg(feature = "native-shell")]
                 {
                     ti_platform::gpu_renderer::GpuRenderer::new()
                 }
-                #[cfg(not(any(feature = "native-shell", feature = "android-shell")))]
+                #[cfg(not(feature = "native-shell"))]
                 {
                     ti_platform::gpu_renderer::GpuRenderer::new_headless()
                 }

@@ -27,8 +27,8 @@
 | 平台 | 产物 | 路径 | 体积 (S18.8a 后最新) |
 |---|---|---|---|
 | 桌面（当前收口） | `treasure-bevy-native.exe` | `target/release/`（S27.7 起并入根 workspace，产物落根 `target/`） | 见 `evidence/S18.8a-wasm-size.log` 同目录口径（Bevy 壳体积待 S18.8e 复验） |
-| 浏览器（当前收口，页面待 S18.8e） | `treasure_bevy_wasm.wasm`（Bevy 壳）+ 真实资源（无 JS 壳/HTML） | `web/` | 见 `evidence/S18.8a-wasm-size.log`（预算口径 ≤8 MB，见 `docs/process/11_bevy_migration.md` §3） |
-| Android（后续，Mac 编译） | — | — (S2.6 在 Mac NDK/SDK 工具链出 APK，本机不产出) | — |
+| 浏览器（Bevy 壳） | `treasure_bevy_wasm.wasm`（LTO+strip 后 **48,765,303 B ≈ 46.6 MB**，超 S18.8e 新预算 ≤8 MB 6 倍；缺口登记 = S18.8 收口「发货超预算」已知限制，wasm-opt -Oz 须 wasm32-unknown-unknown 目标 LTO 全开 + 分包才能收敛，本机实测未达标留痕）+ 真实资源 | `web/`（`evidence/S18.8e.log`） | 体积预算判定 = 11_bevy_migration §3；本机 NDK/LTO 实测值留痕，超预算不作静默发布口径 |
+| Android（S18.8d 切 Bevy 壳；Mac 编译） | `libandroid_activity.so`（`android/android-activity` cdylib，include! 复用 `treasure_bevy.rs`；JNI 入口 `android_main`，0 macroquad） | `target/aarch64-linux-android/release/`（Mac NDK r25b 交叉编译） （本机 NDK 缺失，`cargo build -p android-activity@0.1.0 --target aarch64-linux-android` 挂 S18.8d 收口实测定态） | APK 交付 = `cargo-apk` 标准布局；体积随 Bevy 壳（与浏览器侧同源，超 8 MB 预算同口径） |
 
 完整 sha256 见 `evidence/S4.4.log`（S4.3 时点 wasm 675,016 B）、`evidence/S5.4.log`；S5.6/S6.1~S6.4 完成后 macroquad wasm 增长至 745 KB（体积表见 `docs/modernization.md` §9，首屏 308,227 B / 非首屏 250,154 B）——**该组数字是 macroquad 壳的历史记述**。
 **桌面 + 浏览器为当前可玩收口目标**（S5.1–S5.4：菜单→选人→选图→主地图→贸易/建造→战斗→存读档全链路可玩，P3-3 全流程 + P4-1 渲染对齐已机器判定）；
@@ -39,8 +39,26 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
 | 项 | S4.3 实测（macroquad 壳，历史） | S5.6 及 S6.1~S6.4 完成后（历史） | 预算 | 状态 |
 |---|---|---|---|---|
 | wasm 主体 | 675,016 B | 745 KB（modernization §9） | ≤ 800,000 B（**S18.0 已作废**，新预算 ≤8 MB） | 历史 PASS（口径已换） |
+| Bevy wasm 壳（LTO+strip） | 48,765,303 B（S18.8e 实测 2026-10-30） | — | ≤ 8 MB（11_bevy_migration §3） | **超预算 6 倍**（`evidence/S18.8e.log` 留痕；wasm-opt -Oz + 分包挂 S18.8 收口） |
 | 首屏附属资源 | 102,079 B | 308,227 B（modernization §9 明细） | ≤ 490 KB（modernization 口径；S4.3 时点 ≤ 150,000 B） | 历史 PASS（口径已换） |
 | 非首屏 (music.lpk) | 67,737 B | 250,154 B（modernization §9） | ≤ 180 KB（modernization 口径；S4.3 时点 ≤ 100,000 B） | 超 S4.3 时点预算，modernization §9 已重列口径 |
+
+## UI 重设计发布注记（S17 全量重设计收口，S17.5）
+
+- **设计代**：v2「航海夜·精修」（`docs/process/10_ui_redesign.md`）= 设计令牌 v2（色板 13 色 8-bit）+
+  8pt 版面 + 14 图标集 + 4 动效参数（240ms 场景交叉淡化 / 120ms 按压闪光）；后续代
+  **v3**（场景叙事 DSL，`docs/ui-redesign-v3/`）+ **v4**（main_map 羊皮海图）+
+  **v5**（环形岛格 + 领地系统）在此代际之上继续演进，色板/字体/动效令牌仍沿用 v2 口径。
+- **落地校验口径（现行）**：像素基线三套（`render_baseline/` / `forward_baseline/` / `hd_baseline/`）
+  及其 diff 测试、门禁项**已于 S18.7b 退役**（不再存在）；现行 = **结构不变式断言**
+  （`crates/ti-app/tests/render_invariants.rs`：7 场景 × 非黑覆盖率/内容签名互异/暖色板在位/TTF 在位，
+  gate `render-invariants` 项 PASS）+ **CPU↔Bevy 像素对拍**（gate `bevy-cpu-parity` 项）。
+- **视觉验收留痕**：7 场景出图 = `evidence/bevy_native_<scene>.png`（1080×1920 离屏）+ 
+  `evidence/ui_preview/<scene>.png`（540×960 缩略图，人眼过目用），出图入口
+  `scripts/ui_preview.ps1`（Linux 无 DISPLAY 时自动包 `xvfb-run`；`-Check` = 只读校验既有出图非空帧）。
+- **S15.6 裁决**：原「渲染视觉对抗改进 loop」（每轮 100 条 findings 的飞轮式视觉审计）经
+  2026-10-18 用户拍板**升级为 S17 全量重设计**（v2 代），本条随 S17.5 收口一并关闭，
+  不再单独开轮（台账 `blocked_by` 已注明）。
 
 ## 性能说明
 
@@ -74,6 +92,8 @@ Android 为后续移动端交付，APK 在 Mac（已装 Android 环境）编译�
   feature + `treasure-android` bin（复用共享 `GameApp` 交互核心 + `TouchPad` 触屏输入，
   资源读 APK assets，`macroquad::file::load_file` 与 wasm HTTP fetch 同源机制）；
   `android/README.md` 给出 Mac 侧 cargo-apk 脚手架 + 资源拷贝 + 编译/装机步骤。
+  **S18.8c（2026-10-30）退役**：macroquad 依赖清零后 `treasure-android` bin 删除；
+  S18.8d 起 Android 壳 = `android/android-activity` Bevy cdylib（见 §平台产物 上表 Android 行）。
   本机 Windows 不编译 android target（gate android 行 SKIP）；APK 在 Mac（已装 NDK/SDK
   + cargo-apk）产出。开发本身不依赖 Android 工具链。
 - **S5.6 美术纹理渲染接线**（`docs/modernization.md` §9 资源改造 Step 3）：新增
@@ -205,7 +225,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 260 任务（234 verified；台账计数随 S8–S31 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 262 任务（248 verified；台账计数随 S8–S31 演进，`doccheck` 断言锁定防漂移）（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`
@@ -214,6 +234,9 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 
 | 日期 | git short | wasm sha256 | 产物 | 线上（GitHub Pages） |
 |---|---|---|---|---|
+| 2026-10-30 01:17 | b2b68eb | 8D1C06BEEDCEF4B8FAE15C8440964346072E52453F5BAC0E7F2ACCBADB5CCB32 | web/（treasure-bevy-wasm_bg.wasm） | DEGRADED |
 | 2026-10-30 00:52 | 56d69ca | 8D1C06BEEDCEF4B8FAE15C8440964346072E52453F5BAC0E7F2ACCBADB5CCB32 | web/（treasure-bevy-wasm_bg.wasm） | DEGRADED |
 
 - **Pages 线上段降级（S16.3 publish-web 实测定态 @ 56d69ca，2026-10-30 00:52）**：DEGRADED — fatal: could not read Username for 'https://github.com': terminal prompts disabled。线上（GitHub Pages）发布需要 origin 写凭据（本机仅可读 `git ls-remote`）或 `gh` 登录态；降级下本地产物 + 静态断言（200/content-type 全绿）+ 发布历史仍有效，线上 URL 复跑留待有凭据环境补做。
+
+- **Pages 线上段降级（S16.3 publish-web 实测定态 @ b2b68eb，2026-10-30 01:17）**：DEGRADED — fatal: could not read Username for 'https://github.com': terminal prompts disabled。线上（GitHub Pages）发布需要 origin 写凭据（本机仅可读 `git ls-remote`）或 `gh` 登录态；降级下本地产物 + 静态断言（200/content-type 全绿）+ 发布历史仍有效，线上 URL 复跑留待有凭据环境补做。

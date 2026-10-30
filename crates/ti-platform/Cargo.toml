@@ -8,7 +8,9 @@ description = "平台抽象层：gfx/input/audio/storage/clock trait（后端实
 
 [dependencies]
 thiserror.workspace = true
-macroquad.workspace = true
+# S18.8b（macroquad 退役）：原 `macroquad` 依赖删；`FilterMode` 薄封装改挂
+# bevy `TextureFilter`（settings.rs §5.6.6；2 变体 1:1，版本与 ti-engine 同族）。
+bevy.workspace = true
 ti-core.workspace = true
 ti-formats.workspace = true
 ti-render.workspace = true

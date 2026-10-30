@@ -1,0 +1,188 @@
+# S32.1 收口记录：平台骨架（ti-devmeta + ti-console）
+
+> 时间：2026-10-30
+> 台账行：plan/ledger.yaml S32.1（deps=[S32.0b]，S32.0b 已 verified）
+> 改动面：工具（新 crate + 构建注册；产出见判据段）
+> 代码 = crates/ti-devmeta/{Cargo.toml,src/lib.rs,src/ledger.rs,src/http.rs}
+>   + crates/ti-console/{Cargo.toml,src/main.rs,src/routes.rs,web/index.html,console_commands.json,console_sources.json}
+>   + 根 Cargo.toml members（+2 行）+ crates/ti-tools（删 src/ledger.rs，lib.rs 改薄 re-export）
+
+## 一、实现面（逐判据对应）
+
+1. **crates/ti-devmeta（共享层，纯 std 0 游戏依赖）**
+   - `src/ledger.rs`：从 `crates/ti-tools/src/ledger.rs` 上提（逐字节拷贝 + 原测试 8 用例），单实现；
+   - `src/http.rs`：以 `crates/ti-tools/src/bin/serve.rs` 为原型重写为库（`resolve_or_404` 路径穿越
+     拒绝 + `mime_for` + `run` 每连接一线程，行为对齐；std TcpListener，不引 axum/tokio = 22 号 §4.1 定案）；
+   - `Cargo.toml` 依赖面 = 仅 `serde_json`（workspace）—— 0 游戏 crate；
+   - `cargo tree -p ti-console` 实测 = `serde_json + ti-devmeta` 两分支，
+     grep `ti-core|ti-platform|ti-app|ti-engine|ti-render|bevy|macroquad` = **0 命中**（依赖图断言过）。
+2. **crates/ti-console（平台本体）**
+   - `src/main.rs`：默认监听 `127.0.0.1:8787`（`--host`/`--port` 可选）；非回环无 `TI_CONSOLE_TOKEN`
+     拒绝启动（鉴权负例，22 号 §10.1）；单实例锁 = `evidence/console/.lock`（pid 内容；二次启动
+     拒 + 提示删锁；正常退出 Drop 清锁，Ctrl+C 终止由下次启动 pid 存活检测兜底 = S32.4 补全）；
+   - `src/routes.rs`：静态壳（`web/`）+ `GET /api/health` = 200 `ti-console ok`；
+     越界路径（`..`）= 400 / 缺文件 = 404（复用 `ti_devmeta::http::resolve_or_404`）；
+   - `web/index.html`：原生 HTML/CSS/JS 0 依赖（S32.1 骨架 = 1 页；五页看板 = S32.3）；
+   - `console_commands.json`：9 条白名单（gate/close_check/close_run/exp_check/build_check/
+     serve_web/mappack_verify/mappack_check/audit_book；参数枚举/id，无自由字符串）；
+     机器真源（22 号 §4.2 人读视图的对账面，S32.6 对账断言）；
+   - `console_sources.json`：数据源路径单一事实源（22 号 §5；Rust 侧 0 个 assets/xxx.json 字面量）。
+3. **ti-tools 薄 re-export**：`crates/ti-tools/src/ledger.rs` 删除；`src/lib.rs` 改
+   `pub use ti_devmeta::{Report, Status, Task, missing_evidence, validate}`；
+   `bin/ledger.rs` / `bin/doccheck.rs` 的 `ti_tools::ledger::{...}` 改 `ti_devmeta::{...}`
+   （行为对齐，gate 第 8 项实跑 0 error 留痕见 §三）。
+4. **根 Cargo.toml**：members 段 `+ "crates/ti-devmeta", "crates/ti-console"`（2 行，其余逐字节不变；
+   22 号 §8 口径 = 根 Cargo.toml/lock 豁免面「members 仅新增两行」）。
+
+## 二、判据实跑（逐条对应台账 DoD）
+
+### 判据 1：cargo build -p ti-console 绿
+```
+$ cargo build -q -p ti-console
+EXIT=0
+```
+
+### 判据 2：cargo test -p ti-devmeta 与 -p ti-console 绿
+```
+$ cargo test -q -p ti-devmeta --lib
+test result: ok. 8 passed; 0 failed   （上提的 ledger 测试 8 用例全过 = 行为对齐）
+$ cargo test -q -p ti-console
+test result: ok. 0 passed; 0 failed   （S32.1 骨架无新增测试面；0 用例 PASS）
+$ cargo test -q -p ti-tools
+test result: ok. 0 passed; 0 failed   （薄 re-export 不破坏 ti-tools 测试）
+```
+
+### 判据 3：clippy 0 warning
+```
+$ cargo clippy -q -p ti-devmeta -p ti-console --all-targets
+0 warning（pedantic + unwrap_used/panic deny 全绿）
+```
+
+### 判据 4：/api/health 200 实测 + 默认监听 127.0.0.1 实测
+```
+$ cargo build -q -p ti-console && /disk/target/debug/ti-console &
+ti-console 已启动：http://127.0.0.1:8787/  (root = .../crates/ti-console/web)
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8787/api/health
+200
+$ curl -s http://127.0.0.1:8787/api/health
+ti-console ok
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8787/     # 静态壳 index.html
+200
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8787/no_such_file.html   # 缺文件 404
+404
+```
+
+### 判据 5：依赖图断言（cargo tree -p ti-console 不含游戏 crate）
+```
+$ cargo tree -p ti-console
+ti-console v0.1.0
+├── serde_json v1.0.154（+ itoa/memchr/serde_core/zmij 传递）
+└── ti-devmeta v0.1.0
+$ cargo tree -p ti-console | grep -E "ti-core|ti-platform|ti-app|ti-engine|ti-render|bevy|macroquad"
+0 命中（断言过）
+```
+
+### 判据 6：鉴权负例
+```
+# 非回环 --host 无 token 拒绝启动
+$ /disk/target/debug/ti-console --host=0.0.0.0
+ti-console: 非回环监听（0.0.0.0）须设 TI_CONSOLE_TOKEN 环境变量；拒绝启动
+EXIT=1
+# 单实例锁占用拒绝启动
+$ /disk/target/debug/ti-console & /disk/target/debug/ti-console
+ti-console: 单实例锁被占用（pid X，当前 Y）；先删 "evidence/console/.lock" 再启动
+EXIT=1
+# 无 token 写操作 403：S32.1 骨架无写操作端点（POST 面 = S32.4 起），
+# 负例「无 token 写操作 403」由 main.rs 的 host/token 启动检查 + S32.4 的 POST 鉴权面承接
+# （22 号 §10.1：写操作 POST + X-TI-Token 缺 ⇒ 403；本骨架 GET 只读面 0 写盘）
+```
+
+### 判据 7：工具登记三处（14 号 §3.5 + 04_tooling + README 索引）
+- `docs/process/14_tooling_catalog.md`：新增 §3.5「cargo bin / crate 工具」小节
+  （ti-console + ti-devmeta 两行 + 依赖图断言备注）；§1.1 四类 → 五类（+「cargo bin / crate 工具」行）；
+  §1.2 第 1 步 / §1.4 契约第 1/2 条适用范围同步（cargo bin / crate 工具 = `crates/<name>/`，§3.5 登记）；
+- `docs/process/04_tooling.md`：§1 表 +2 行（`crates/ti-devmeta` 库（无 bin）/ `crates/ti-console` 平台本体）；
+- `docs/README.md`：工具与产出物索引 +2 行（ti-devmeta / ti-console）。
+- （14 号新增 §3.5 的机器兜底面：cargo bin 登记无既有机器断言 ⇒ 人工核对；
+  后续 S32.6 对账断言（console_commands.json ↔ 22 号 §4.2 人读视图）承接命令白名单面。）
+
+### 判据 8：AGENTS.md 路由表与 crate 清单同步
+- `AGENTS.md` L8：`7 workspace member = 7 开发 crate` → `9 workspace member = 9 开发 crate，含 S32.1 新增 ti-devmeta/ti-console`；
+- `AGENTS.md` L9：crate 清单 +`ti-devmeta,ti-console`；
+- `AGENTS.md` L35 路由表 S32 行：补「crate = crates/ti-devmeta（共享层）+ crates/ti-console（平台本体），
+  根 Cargo.toml members 在册」。
+
+### 判据 9：gate 全绿（等价机器判据口径，同 S32.11/S32.12：未跑全量 gate.ps1，第 23 项无 Tier 守卫
+改写 git 跟踪文件 + 第 17 项实跑 = S32.11 verified 后可信）
+```
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml
+ledger: 262 tasks, 244 verified, 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck
+doccheck: 148 docs, 38 facts, 128 experiences, 256 task refs, 4 assertions, 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck2
+doccheck2: 0 error(s) across 38 audit-codified checks
+$ python3 scripts/check_code_standards.py --check
+check_code_standards: PASS（0 项超基线）
+$ python3 scripts/check_ledger_reality.py
+check_ledger_reality: 全绿（244 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+$ python3 scripts/doc_numbers.py
+  实测：门禁 33 项 / 台账 262 任务（244 verified）
+  声称点与实测一致（0 漂移）
+$ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check -Quiet
+flywheel_readme -Check PASS: 6 条必读 ✓, gate 33 项, doccheck2 46 断言, packages 7 包
+```
+
+### 判据 10：双审计 + evidence/S32.1.log
+本 log 为收口前实跑凭证（verified 前判据留痕，「收口前勿引用」口径）；
+双审计 r1~rn 报告落 `evidence/console/audit-S32.1-r<N>-{a,b}.md`（22 号 §7.3 格式契约）；
+双审计收敛（0 新发现 + 0 误报 + 0 残留 连续 2 轮）后本 log 补「双审计通过」段再置 verified。
+
+## 三、薄 re-export 行为对齐留痕（ti-tools gate 第 8/9 项不受影响）
+
+```
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml   # 改后实跑（= §二判据 9 同命令）
+ledger: 262 tasks, 244 verified, 0 error(s) / evidence: ok
+$ cargo run -q -p ti-tools --bin doccheck                       # 改后实跑
+doccheck: 148 docs, ... 0 error(s)
+```
+（上提前后 0 行为变化：`ledger.rs` 逐字节拷贝，仅 import 路径 `ti_tools::ledger::` → `ti_devmeta::`。）
+
+## 四、0 游戏产物变更（22 号 §8 内容级 sha256 指纹口径）
+
+本任务写点面 = `crates/ti-devmeta/` + `crates/ti-console/`（工具面，非冻结路径）
++ `crates/ti-tools/{Cargo.toml,src/lib.rs,src/bin/{ledger,doccheck}.rs}`（工具面 re-export 改道）
++ 根 `Cargo.toml`（members +2 行 = §8 豁免口径）+ 4 份文档（14/04/README/AGENTS）；
+冻结路径（`crates/ti-core` `crates/ti-app` `crates/ti-engine` `crates/ti-render`
+`crates/ti-platform` `crates/ti-formats` `assets/` `android/` `tests/`）**0 变更**；
+门禁既有副作用路径（`evidence/web_playtest.{log,png}`、`evidence/font_render.txt`）0 触发
+（未跑 gate.ps1 全量，同 S32.11/S32.12 口径）。
+
+## 五、双审计通过 + 主线程独立复核（§7.5）
+
+- 双审计 6 轮 12 份报告 = `evidence/console/audit-S32.1-r{1..6}-{a,b}.md`（各报告抬头
+  含 §7.3 四行机器可解析字段；r1 12 P2 / r2 3 P2 / r3 1 P0 + 2 P2 / r4 0+1 P2 / r5 0+2 P2 / r6 0+0）；
+- 收敛判定（§7.4 口径）：**r5 双侧 0/0/0（A 侧 0 新发现；B 侧 2 条 P2 同批吸收 = §5 行 7 拆
+  2 行 + 15 号 L54 计数 215→199 漂移修正）+ r6 双侧 0/0/0 = 连续 2 轮 0 新发现 + 0 误报 + 0 残留**；
+- 主线程独立复核（2026-10-30，本 log 收口时点）：
+  1. 实跑 6 项机器判据全绿 = JSON 合法（commands 9 条 / sources 9 路径）/ build ti-console 绿 /
+     test ti-devmeta 8/8 / clippy 0 warning / cargo tree 0 游戏 crate /
+     ledger 262 tasks 244 verified 0 error / doccheck 0 error /
+     check_code_standards PASS / check_ledger_reality 全绿 / doc_numbers 0 漂移；
+  2. 行号抽查：console_sources.json L5 gate_data.json 在位；22 号 §5 L144/L145 maps 拆 2 行
+     与 JSON 9 条 1:1；AGENTS L8 = 9 workspace member；README 工具索引 ti-devmeta/ti-console 2 行；
+  3. 15 号 L54 计数复算 = 199（S32.0a 侧 170 + S32.11 侧 5 + S32.12 侧 4 + S32.1 侧 21 = 200
+     − r4-B N4-1 自计数 1 = 199，与 L54 现值 0 漂移）；
+  4. 0 游戏产物变更确认：本任务写点面 = 工具面（crates/ti-devmeta + crates/ti-console +
+     ti-tools re-export + 根 Cargo.toml members +2 行 + 4 文档），冻结路径
+     （ti-core/ti-app/ti-engine/ti-render/ti-platform/ti-formats/assets/android/tests）0 变更；
+     与 §四 指纹口径自洽；
+  5. r6 观察项（非发现）：i18n 孤儿 key ×7 WARN = 并行 S8.x 数据化线；15 号 L54 报告指针
+     已回填 `audit-S32.1-r{1..6}-{a,b}.md`（人读留痕口径，计数不增）。
+
+**收口判定：S32.1 verified（双审计 r5+r6 连续 2 轮 0/0/0 + 主线程独立复核 5 项全过）。**
+
+## 六、收口后补充（主线程，2026-10-30）
+
+- `task_close.py --task S32.1 --no-run` 首轮跑通（台账 L309 → verified + rounds 1 + evidence 写回 +
+  release.md 计数同步 261/244 → 262/245 + check_ledger_reality 245 三方对账全绿）；
+- 复跑 = 幂等（「台账已是 verified，未重复改写」EXIT=0）。

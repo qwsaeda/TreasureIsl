@@ -13,8 +13,8 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use ti_devmeta::{Status, Task, validate};
 use ti_tools::doccheck::{Doc, NumericAssertion, check, dod_keywords, evidence_is_gate_only};
-use ti_tools::ledger::{Status, Task, validate};
 
 /// 参与扫描的文档根（相对仓库根）。
 /// S11 归档后 `legacy/docs/facts/` 仍登记 F-NNN 事实（只读参照物，允许被引用）。

@@ -287,7 +287,12 @@ def cmd_pack(map_id: str) -> int:
 
 
 def cmd_verify(path: Path) -> int:
-    """只读校验包（违规非 0）。"""
+    """只读校验包（违规非 0）。
+
+    参数面（S32.3 平台制作指引使用面）：裸 id（如 `m01`）= 解析为已装包目录
+    `assets/maps/<id>`；目录路径 / `.map-pack` / `.zip` = 原有行为不变。"""
+    if not path.exists() and (MAPS_DIR / path.name / "manifest.json").is_file():
+        path = MAPS_DIR / path.name
     if path.is_file() and path.suffix == ".zip":
         import tempfile
 
@@ -412,6 +417,12 @@ def cmd_check() -> int:
     for pack_dir in packs:
         manifest = load_json(pack_dir / "manifest.json")
         map_id = str(manifest["id"])
+        # 无 `map` 键的包（草稿态）= 不参与回注（cmd_sync 跳过）⇒ 对账亦跳过
+        # （board.json 不应有 maps.<id> 段；若有 = 脏残留，报漂移）。
+        if "map" not in manifest:
+            if map_id in board.get("maps", {}):
+                problems.append(f"board.json maps.{map_id} 残留（已装包 {pack_dir.name} 无 map 键，不应有回注段）")
+            continue
         if board.get("maps", {}).get(map_id) != manifest.get("map"):
             problems.append(f"board.json maps.{map_id} 与已装包 {pack_dir.name}/map.json 漂移")
     try:
@@ -458,9 +469,17 @@ def cmd_sync() -> int:
         print("map_pack sync: 无已装包 -> 无可回注内容", file=sys.stderr)
         return 1
     board = load_json(BOARD_JSON)
+    # 回注 = 全量重算：清 `maps` 段再逐包回注（旧回注残留 / 已卸包脏段 随 sync 清零；
+    # 幂等 = 已装包不变时 sync 前后 board.json 逐字节一致）。
+    board["maps"] = {}
     for pack_dir in installed_packs():
         manifest = load_json(pack_dir / "manifest.json")
-        board.setdefault("maps", {})[str(manifest["id"])] = json.loads(json.dumps(manifest["map"]))
+        # 无 `map` 键的包（如 m04 在途草稿态）= 跳过本包回注（口径 = `verify_pack`/
+        # `cmd_check` 的 `.get` 容错；旧 `manifest["map"]` 下标对草稿包直接 KeyError，
+        # 15 号第 24 行待固化项 = S32.12 A 侧 P2-1）。
+        if "map" not in manifest:
+            continue
+        board["maps"][str(manifest.get("id", pack_dir.name))] = json.loads(json.dumps(manifest["map"]))
     default_manifest = load_json(default_pack() / "manifest.json")
     default_id = str(default_manifest["id"])
     layout = default_manifest.get("layout") or {}

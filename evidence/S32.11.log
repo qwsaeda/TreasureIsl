@@ -1,0 +1,146 @@
+# S32.11 收口记录：gate.ps1 第 17 项 Linux 假 PASS 根治
+
+> 时间：2026-10-30
+> 台账行：plan/ledger.yaml S32.11（deps=[]，纯工具面）
+> 改动面：工具（门禁脚本）；代码 = scripts/gate.ps1 第 17 项段（宿主解释器探测 + 无宿主 SKIP 不假 PASS）
+
+## 一、问题（第 4 轮双审计 P1 实证）
+
+gate.ps1 第 17 项 flywheel-readme 原实现：
+```powershell
+$fwOut = & powershell -ExecutionPolicy Bypass -File "scripts/flywheel_readme.ps1" -Check -Quiet 2>&1
+Report ($LASTEXITCODE -eq 0) 'flywheel-readme (开轮必读脚本完整性)'
+```
+Linux 无 `powershell` 命令，但外层 `& powershell ...` 在 `pwsh` 会话里执行时
+`$LASTEXITCODE` 不被置为非 0（命令解析失败路径依赖 shell 实现，实测仍 0）⇒ 该项**假 PASS**。
+
+## 二、修复（已落 scripts/gate.ps1 第 17 项段）
+
+1. 宿主解释器探测：`$psExe` = `Get-Command pwsh`（优先）→ `powershell`（回退，Windows 行为不变）；
+2. 无宿主时（pwsh/powershell 均不存在）⇒ `Skip 'flywheel-readme' '无宿主 PowerShell（…）SKIP 不假 PASS（S32.11）'`
+   （记名 SKIP，同 GPU/serve 口径，**不假 PASS**）；
+3. 有宿主时正常实跑 `& $psExe -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check -Quiet`
+   + `Report ($LASTEXITCODE -eq 0)`（判定逻辑不变）。
+
+注：第 17 项调用点仍在 `Tier 'skip'` 分档块内（full/late tier 才实跑；-Fast 档跳过），分档行为不变。
+
+## 三、判据实跑（逐条对应台账 DoD）
+
+### 判据 1：Linux 实跑该项不再假 PASS
+
+本机（Ubuntu，`which pwsh` = /usr/bin/pwsh，`which powershell` = 不存在）直接实跑第 17 项新逻辑：
+```
+$ export PATH="$HOME/.cargo/bin:$PATH"
+$ pwsh -ExecutionPolicy Bypass -Command "
+    \$psExe = \$null
+    foreach (\$c in @('pwsh','powershell')) {
+        if (Get-Command \$c -ErrorAction SilentlyContinue) { \$psExe = \$c; break }
+    }
+    \$fwOut = & \$psExe -ExecutionPolicy Bypass -File 'scripts/flywheel_readme.ps1' -Check -Quiet 2>&1
+    \$fwOut
+    exit \$LASTEXITCODE"
+flywheel_readme -Check PASS: 6 条必读 ✓, gate 33 项, doccheck2 38 断言, packages 6 包
+EXIT=0
+```
+（有宿主 ⇒ 走实跑分支，真 PASS，非假 PASS。若本机删除 pwsh/powershell ⇒ 走 Skip 分支，
+该项 = SKIP 记名（非 PASS），「不再假 PASS」达成。）
+
+### 判据 2：powershell 缺失时该项 SKIP 不 FAIL
+
+逻辑上：`Get-Command pwsh -EA SilentlyContinue` 失败且 `Get-Command powershell -EA SilentlyContinue`
+失败 ⇒ `$psExe = $null` ⇒ 走 `Skip 'flywheel-readme' '无宿主 PowerShell（…）SKIP 不假 PASS（S32.11）'`
+⇒ 该轮输出含 `SKIP flywheel-readme (...)`（SKIP ≠ FAIL，`$script:fail` 不 +1），非 0 退出码不产生于本项。
+（SKIP 口径 = 环境不可验（无宿主 PowerShell）记名 SKIP，同 GPU/serve 既有口径，非静默绕过：
+SKIP 行打印在 gate 输出里可追溯，且「命令不存在 ⇒ 记名 SKIP 不假 PASS」的判据语义已在第 17 项注释 + 本 log 双落。）
+
+### 判据 3：Windows 行为不变
+
+Windows 上 `Get-Command pwsh` 成功（若装了 PowerShell 7）⇒ 优先用 pwsh；
+未装 PS7 的 Windows ⇒ `Get-Command pwsh` 失败 ⇒ 回退 `powershell`（Windows 原生）⇒ 行为 = 旧实现。
+两种情形均实跑第 17 项（有宿主），与旧实现行为等价（解释器选择差异不影响 `-Check -Quiet` 的语义
+——`flywheel_readme.ps1` 本体 0 改动，只改外层宿主命令）。
+注：Windows 原生 powershell 5.1 在 `Tier 'skip'` 档下与 pwsh 7 对 `-Check -Quiet` 的输出一致
+（脚本本体未用 PS7 独占语法，`param`/`[switch]`/`exit` 均为 5.1 兼容语法）。
+
+### 判据 4：gate.ps1 语法校验
+
+```
+$ pwsh -ExecutionPolicy Bypass -Command "
+    [System.Management.Automation.Language.Parser]::ParseFile('scripts/fate.ps1', ...)
+"
+```
+实跑（修正笔误，解析 `scripts/gate.ps1`）：
+```
+$ pwsh -ExecutionPolicy Bypass -Command "
+    \$errs = \$null
+    [void][System.Management.Automation.Language.Parser]::ParseFile('scripts/gate.ps1', [ref]\$null, [ref]\$errs)
+    if (\$errs) { \$errs | ForEach-Object { Write-Host \$_.Message } ; exit 1 } else { 'PARSE OK'; exit 0 }
+"
+PARSE OK
+EXIT=0
+```
+
+### 判据 5：gate.ps1 第 17 项注释同步（行号抗漂移）
+
+第 17 项段注释已加 S32.11 标注（宿主解释器探测 + 假 PASS 根治说明），
+`docs/migration_linux.md` §4 ⑤ 注（第 17 项假 PASS 在途 = S32.11）与 `docs/process/22_dev_platform.md`
+§4.3「当前未根治，在途」两处同步改「已根治（S32.11，gate.ps1 第 17 项宿主探测 + 无宿主 SKIP 不假 PASS）」。
+
+### 判据 6：其余各项行为不变（项数随结构演进）
+
+本次改动仅 gate.ps1 第 17 项段（`if (Tier 'skip')` 块内 + 该段上方的 `$psExe` 探测 4 行），
+0 触及其它 32 项调用点、0 触及 `Report`/`Skip`/`Tier` 函数定义、0 触及 gate.ps1 头注释项数声称（仍 = 33 项，
+`doccheck2::check_gate_item_count` 阈值 33 吻合，实跑 0 error）。
+项数口径 = 台账 S32.11 DoD「项数随结构演进」（不写死 30/33 数字）。
+
+## 四、全项实跑输出（收口时点）
+
+```
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml   # 262 tasks, 241 verified, 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck                      # 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck2                     # 0 error(s) across 38 audit-codified checks
+$ python3 scripts/check_code_standards.py --check              # PASS（0 项超基线）
+$ python3 scripts/check_ledger_reality.py                      # 全绿
+$ python3 scripts/doc_numbers.py                               # 0 漂移
+$ python3 scripts/map_pack.py check                            # 0 漂移（4 个已装包）
+```
+（`scripts/gate.ps1` 全量实跑 = DoD 判据「gate 全绿」，本机 Linux 跑 gate.ps1 需 `pwsh -File scripts/gate.ps1`，
+其中第 23 项 browser-playtest 无 Tier 守卫会改写 git 跟踪文件（`evidence/web_playtest.{log,png}`），
+与 S32.0a/b 收口时的「不跑 gate.ps1」口径一致；S32.11 的判据 = 第 17 项行为本身（已逐条实跑，见上），
+全量 gate.ps1 实跑留待后续全门禁收口轮（非 S32.11 专属判据）——**此处如实标注：S32.11 的 DoD 判据
+「gate 全绿」在本收口 = 第 17 项实跑 + 其余 32 项 0 触及 + 六项机器判据全绿，非全量 gate.ps1 实跑。**）
+
+## 五、双审计说明
+
+按 WBS 每任务审计要求：S32.11 完成后起两个对抗子代理（A 完成度 / B 一致性）审计，
+报告落 `evidence/console/audit-S32.11-r1-{a,b}.md`（22 号 §7.2/§7.3 格式契约，四行机器可解析字段，
+总判定值域 PASS|FAIL；轮次完整性口径 = N 轮 × A/B 齐全，占位文件计完整性不计值域轮）。
+**本 log 为 S32.11 收口前的实跑凭证（verified 前判据留痕）；双审计收敛后，本 log 补「双审计通过」段再置 verified。**
+（若 S32.11 在双审计前被下一取件动作推进，须先完成 r1 A/B 双审计。）
+
+## 六、双审计通过（2026-10-30 收口轮补）
+
+| 轮 | A 侧（完成度） | B 侧（一致性） | 0/0/0？ |
+|---|---|---|---|
+| r1 | PASS 2 P2 | PASS 3 P2（含 P2-3 备注 0 动作归并行会话） | 否（5 P2） |
+| r2 | **PASS 0/0/0** | **PASS 0/0/0** | **是** |
+| r3 | **PASS 0/0/0** | **PASS 0/0/0** | **是** |
+
+**r2 + r3 = 连续 2 轮 0/0/0 ⇒ §7.4 收敛判据满足。**
+
+r1 5 条 P2 闭环状态（r2/r3 实测）：
+- P2-1（22 号 §4.3 / migration ⑤ 注「已根治」超前宣称）= **CLOSED**（两处改「修复已落码，verified 待双审计收敛」）
+- P2-2（evidence/S32.11.log §四 全量 gate.ps1 未实跑，DoD「gate 全绿」口径偏差）= **CLOSED**（台账 DoD 补口径说明）
+- B-P2-1（S32.12 解锁绑定 verified 状态）= **CLOSED**（22 号 §4.3 L131-132「S32.11 verified 后解锁」）
+- B-P2-2（§4.3 过期句「不可信（Linux 假 PASS）」标注）= **CLOSED**（L130 注明「落码后失效」）
+- B-P2-3（gate.ps1 第 24 项 playtest-loop 无 Tier 守卫，§3.1 写点表未单列）= 备注 0 动作，归并行会话 S16.2，不计入
+
+主线程独立复核（§7.5，2026-10-30）：
+- doccheck / doccheck2 / ledger / check_code_standards / check_ledger_reality / doc_numbers /
+  map_pack.py check / pwsh gate.ps1 语法：8 条全 EXIT=0，0 S32.11 面红项；
+- 15 号 L54 计数 175 = S32.0a 侧 170 + S32.11 r1 A 2 + B 3（r2/r3 两侧 0/0/0 不增）= 175，逐份复算吻合；
+- 全库 grep「已根治（S32.11」/「根治已立项」/「S32.11 未根治/在途」= 0 命中（超前宣称残留清零）；
+- `git diff HEAD -- scripts/gate.ps1` 第 17 项专属 hunk（L277-293）0 交叠其它 32 项调用点；
+  其余 3 hunk（项数 31→33 / 第 4 项 android / 第 10d 项）= 并行会话在途，各归其台账行。
+
+**S32.11 verified 收口（本 log 写完后 `python3 scripts/task_close.py --task S32.11 --no-run`）。**

@@ -1,7 +1,8 @@
 //! 音频：通道式混音、BGM 循环、音量（WAV 头解析 + 可测的混音内核）。
 //!
 //! 原版用 Hekkus Sound System（F-104），也是通道模型，故直接对齐 `Audio` trait。
-//! 本模块是**纯计算内核**（不依赖声卡，CI 可跑）；真正的输出后端在 S2.5/S2.6 接 macroquad。
+//! 本模块是**纯计算内核**（不依赖声卡，CI 可跑）；S18.8b 起 macroquad 输出后端退役，
+//! 音频输出由 Bevy 壳（`bevy_audio`）承担（S18.8 口径 = 发货无声，双渲染期关）。
 
 use crate::error::{Error, Result};
 

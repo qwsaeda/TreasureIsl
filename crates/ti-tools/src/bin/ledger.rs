@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use ti_tools::validate;
+use ti_devmeta::validate;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -37,7 +37,7 @@ fn main() -> ExitCode {
     }
 
     let mut failed = !report.ok();
-    let missing = ti_tools::missing_evidence(&report.tasks, base);
+    let missing = ti_devmeta::missing_evidence(&report.tasks, base);
     if missing.is_empty() {
         println!("  evidence: ok");
     } else {

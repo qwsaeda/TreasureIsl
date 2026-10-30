@@ -1,0 +1,19 @@
+# S18.8b ti-platform 上洗（GL 呈现删 / macroquad 退役，2026-10-30 · Linux 续工）
+
+## [1] 产物
+- crates/ti-platform/src/gfx.rs：GL 呈现层（纹理上传/全屏 quad/边框填充/present_framebuffer）整体删除
+  - FramePresenter 保留为**脏行状态机 + 上传/跳帧计数**（stats 观测口径不变，S18.4 注：Bevy 壳走逐帧 RGBA8 Image，脏行计数 = 诊断占位）
+  - 删除：（macroquad Color 专用）/  /  /  /  / 边框 thread_local
+  - 保留：（脏行跟踪 + uploads/skipped 计数）+ （P4-2 坐标变换）+  + 
+- crates/ti-platform/src/gpu_renderer.rs：GL 逐精灵 blit（draw_texture_ex/draw_text_ex）整体删除
+  - 保留 （图集抽象：纹理 id + UV rect）+ （headless 计数 + 图集句柄）+ （= 计数，测试判据  不变）
+  - 删除： /  / （TTF 由 Bevy 壳  + GPU Text2d 承担）
+- crates/ti-platform/src/settings.rs：（macroquad miniquad 薄封装）→ 删；键码注释改「历史口径 = macroquad KeyCode，S18.8b 起只做透传」
+- crates/ti-platform/Cargo.toml： 删除（bevy 保留 = S18.8c 收口前提）
+- crates/ti-app/src/menu_shell.rs： 去 GL 副作用（纯设置项，Bevy 壳自持边框渲染）
+- crates/ti-app/src/game_app/mod.rs： 保留（ 脏行标记口径不变；Bevy 壳走  诊断占位）
+
+## [2] 判据实跑
+### 编译
+### 全 workspace 测试
+### cargo test -p ti-platform

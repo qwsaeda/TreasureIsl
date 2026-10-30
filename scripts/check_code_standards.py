@@ -77,8 +77,11 @@ def cs1_asset_violations():
     out = []
     for p in iter_src_rs():
         rp = rel(p)
+        # 允许驻留：chrome.rs（资产表单一读点）/ ti-core data 层 / ti-tools 工具链 /
+        # ti-console+ti-devmeta（S32 开发管理平台 = 仓库元数据读取工具链，同 ti-tools 口径）
         if ("chrome.rs" in rp and "scenes" in rp) or rp.startswith("crates/ti-core/src/data/") \
-                or rp.startswith("crates/ti-tools/"):
+                or rp.startswith("crates/ti-tools/") or rp.startswith("crates/ti-console/") \
+                or rp.startswith("crates/ti-devmeta/"):
             continue
         for i, line in enumerate(read(p), 1):
             if is_comment(line):

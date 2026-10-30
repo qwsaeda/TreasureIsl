@@ -1,55 +1,56 @@
-//! S10.4：GPU 化逐精灵 batch 渲染（macroquad `draw_texture` + 纹理图集 + alpha 混合）。
+//! S10.4：GPU 化逐精灵 batch 渲染（`draw_texture` + 纹理图集 + alpha 混合）。
+//!
+//! S18.8b（macroquad 退役上洗）：GL 呈现层整体删除——`blit_sprite` /
+//! `blit_terrain_tile` / `draw_ttf_text` 的真实 GPU 调用（macroquad
+//! `draw_texture_ex` / `draw_text_ex`）随 macroquad 依赖退役；
+//! 本类保留**图集抽象 + headless 计数语义**（`SpriteRef` = 图集内像素 rect；
+//! `draw_calls` = 逐精灵调用计数，headless 测试判据 `> 0` 不变），
+//! 真实上屏由 ti-engine 的 Bevy 壳承担（S18.8a 起，`bevy_sprite` 图集
+//! + `ImageNode` 逐精灵，与 S10.4 同口径 = 逐精灵 batch 减少 draw call）。
 //!
 //! 设计（`docs/style.md` §5.6.5）：
-//! - [`GpuRenderer`]：持有 macroquad `Texture2D` 图集（`from_rgba8` / `load_texture_from_image`）；
-//!   逐精灵 `blit_sprite` 走 `draw_texture_ex`（macroquad 内部自动 batch，减少 draw call）；
-//!   alpha 混合：macroquad 默认 `Blend::Alpha`（SrcAlpha/DstAlpha），HD PNG 透明通道自动混合
-//!   （不再 `png_rgba_to_framebuf_u32` 丢 A）。
+//! - [`GpuRenderer`]：图集引用（`SpriteRef` = 纹理 id + 图集内 UV rect）；
+//!   逐精灵 `blit_sprite` = 计数（headless 测试判据）；
+//!   真实渲染路径 = Bevy 壳（`ti_engine::canvas::BevyCanvas` + sprite atlas）。
 //! - headless / 无 GPU 后端时退化为 no-op（只记 draw call 计数，不实际上传），
 //!   保证 headless 测试可跑（`GpuRenderer::is_headless` 判据）。
 //! - [`SpriteRef`]：逐精灵引用（纹理 id + 图集内 UV rect）。
 //!
-//! TTF 字形（`draw_ttf_text`）：macroquad `draw_text_ex` + `TextParams { font, font_size }`。
-//! 字体子集文件放 `assets/fonts/NotoSansCJK-subset.ttf`；缺失时调用方回退 legacy 点阵字
-//! （TTF 口径单一事实源 = `ti_render::font::TtfFont`；S18.8a 起 Bevy 壳的 TTF 走该实现，
-//! 本 macroquad `draw_ttf_text` 仅剩 android 壳在用）。
-//!
-//! 不引入新 crate 依赖（macroquad 已有）。
-
-use macroquad::prelude::Rect;
-use macroquad::text::Font;
-use macroquad::texture::Texture2D;
+//! TTF 字形：Bevy 壳走 `ti_render::font::TtfFont` + GPU Text2d（S18.7a 口径）；
+//! 本模块不再持 macroquad `Font` / `draw_text_ex`。
 
 /// `flip_y` 端侧约定（native 不翻 / wasm 翻，见 `blit_sprite` 注释与 EXP-062）。
 const IS_WASM: bool = cfg!(target_arch = "wasm32");
 
 /// 逐精灵引用：图集纹理 id + 图集内像素 rect（UV 转换由调用方完成）。
 ///
-/// `texture` 为 macroquad `Texture2D` 的 `id()`（`u32`），
-/// `rect` 为 `(x, y, w, h)` 像素单位（图集内局部坐标）。
+/// `texture` 为图集纹理 id（`u32`，Bevy 壳 = sprite atlas 句柄；
+/// CPU 诊断路径 = 序号占位），`rect` 为 `(x, y, w, h)` 像素单位（图集内局部坐标）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SpriteRef {
-    /// macroquad 纹理 id（`Texture2D::id()`）。
+    /// 图集纹理 id（Bevy 壳 sprite atlas 句柄；headless = 序号）。
     pub texture: u32,
     /// 图集内像素 rect `(x, y, w, h)`。
     pub rect: (i32, i32, i32, i32),
 }
 
-/// GPU 渲染器（S10.4）：逐精灵 batch + 纹理图集 + alpha 混合。
+/// GPU 渲染器（S10.4 + S18.8b 上洗）：逐精灵 batch + 纹理图集 + alpha 混合。
 ///
-/// headless 模式（`new_headless`）：不实际调用 macroquad GPU API，
-/// 只累加 `draw_calls` 计数，供 headless 测试断言 `draw_calls > 0`。
+/// S18.8b 后语义 = **图集抽象 + 计数**（GL 呈现由 Bevy 壳承担）：
+/// - `blit_sprite` / `blit_terrain_tile` = 逐精灵计数（headless 测试判据 `draw_calls > 0` 不变）；
+/// - `headless` 模式：no-op，只记 draw call 数；
+/// - `atlas`：图集纹理句柄（`None` 时 blit 仍计数，不 panic）。
 pub struct GpuRenderer {
     /// 是否 headless 模式（true = no-op，只记 draw call 数）。
     headless: bool,
-    /// 已执行的 draw call 数（headless 模式供测试断言）。
+    /// 已执行的 blit 调用数（headless 模式供测试断言；Bevy 壳自持真实 draw call）。
     pub draw_calls: u64,
-    /// 图集纹理（可选；`None` 时 blit 走 `headless` no-op 路径）。
-    atlas: Option<Texture2D>,
+    /// 图集纹理句柄（`None` 时 blit 走计数路径；Bevy 壳 = sprite atlas 纹理 id）。
+    atlas: Option<u32>,
 }
 
 impl GpuRenderer {
-    /// 新建 GPU 渲染器（默认 headless = false，可实际调 macroquad GPU API）。
+    /// 新建 GPU 渲染器（S18.8b：不再持 GL 纹理对象，图集句柄经 [`set_atlas`] 注入）。
     #[must_use]
     pub fn new() -> Self {
         Self { headless: false, draw_calls: 0, atlas: None }
@@ -67,58 +68,27 @@ impl GpuRenderer {
         self.headless
     }
 
-    /// 注入图集纹理（`Texture2D`，`from_rgba8` / `load_texture_from_image` 产出）。
-    pub fn set_atlas(&mut self, atlas: Texture2D) {
+    /// 注入图集纹理句柄（Bevy 壳 = sprite atlas 纹理 id；历史调用方传 `Texture2D`
+    /// 的 API 已随 macroquad 退役，S18.8b 起句柄 = 不透明 `u32`）。
+    pub fn set_atlas(&mut self, atlas: u32) {
         self.atlas = Some(atlas);
     }
 
-    /// 图集纹理（只读，`None` 时 blit 退化为 no-op）。
+    /// 图集纹理句柄（只读，`None` 时 blit 退化为计数）。
     #[must_use]
-    pub fn atlas(&self) -> Option<&Texture2D> {
-        self.atlas.as_ref()
+    pub fn atlas(&self) -> Option<u32> {
+        self.atlas
     }
 
-    /// 逐精灵 blit：`dst` 为逻辑屏坐标，`src` 为图集内 rect。
+    /// 逐精灵 blit 计数（S18.8b：真实 GPU `draw_texture_ex` 已随 macroquad 退役；
+    /// 本方法 = 逐精灵调用计数，headless 测试判据 `draw_calls > 0` 不变；
+    /// 真实上屏 = Bevy 壳 sprite atlas + `ImageNode` 逐精灵 batch，同 S10.4 口径）。
     ///
-    /// 走 macroquad `draw_texture_ex`（内部自动 batch，减少 draw call）；
-    /// alpha 混合由 macroquad 默认 `Blend::Alpha`（SrcAlpha/DstAlpha）处理，
-    /// HD PNG 透明通道自动混合（不再丢 A）。
-    ///
-    /// headless 模式：只累加 `draw_calls`，不调 GPU API。
-    #[allow(clippy::cast_precision_loss)]
-    pub fn blit_sprite(&mut self, dst: (i32, i32), src: &SpriteRef) {
-        if self.headless {
-            self.draw_calls += 1;
-            return;
-        }
-        let Some(atlas) = self.atlas.as_ref() else {
-            self.draw_calls += 1;
-            return;
-        };
-        let (sx, sy, sw, sh) = src.rect;
-        let (dx, dy) = dst;
-        // Q022/EXP-062：flip_y 端侧固定约定（native 不翻 / wasm 翻），与 gfx.rs FramePresenter 同机制。
-        // native（cfg!(target_arch != "wasm32")）flip_y=false；wasm（target_arch="wasm32"）flip_y=true。
-        // 禁止因「画面反了」手动翻转，否则反复横跳（EXP-062）。
-        let params = macroquad::texture::DrawTextureParams {
-            source: Some(Rect {
-                x: sx as f32,
-                y: sy as f32,
-                w: (sw as f32).max(1.0),
-                h: (sh as f32).max(1.0),
-            }),
-            dest_size: Some(macroquad::prelude::vec2((sw as f32).max(1.0), (sh as f32).max(1.0))),
-            flip_y: IS_WASM,
-            ..Default::default()
-        };
-        macroquad::texture::draw_texture_ex(
-            atlas,
-            dx as f32,
-            dy as f32,
-            macroquad::color::WHITE,
-            params,
-        );
+    /// `flip_y` 端侧约定（EXP-062）：`IS_WASM` 常量保留 = 端侧纹理 V 方向
+    /// （native 不翻 / wasm 翻），供 Bevy 壳图集 UV 构造时复用同一口径。
+    pub fn blit_sprite(&mut self, _dst: (i32, i32), _src: &SpriteRef) {
         self.draw_calls += 1;
+        let _ = IS_WASM;
     }
 
     /// 地形瓦片 blit（同 `blit_sprite` 机制，语义别名）。
@@ -126,24 +96,7 @@ impl GpuRenderer {
         self.blit_sprite(dst, tile);
     }
 
-    /// TTF 矢量字形：`draw_text_ex` + `TextParams { font, font_size }`。
-    ///
-    /// 字体子集文件 `assets/fonts/NotoSansCJK-subset.ttf`；缺失时调用方回退 legacy 点阵字
-    /// （TTF 口径单一事实源 = `ti_render::font::TtfFont`）。
-    ///
-    /// headless 模式：只累加 `draw_calls`，不调 GPU API。
-    pub fn draw_ttf_text(&mut self, text: &str, pos: (f32, f32), font: &Font, size: u16) {
-        if self.headless {
-            self.draw_calls += 1;
-            return;
-        }
-        let params =
-            macroquad::text::TextParams { font: Some(font), font_size: size, ..Default::default() };
-        macroquad::text::draw_text_ex(text, pos.0, pos.1, params);
-        self.draw_calls += 1;
-    }
-
-    /// 已执行的 draw call 数（headless 测试判据：`> 0` 证明路径走到）。
+    /// 已执行的 blit 调用数（headless 测试判据：`> 0` 证明路径走到）。
     #[must_use]
     pub fn draw_call_count(&self) -> u64 {
         self.draw_calls

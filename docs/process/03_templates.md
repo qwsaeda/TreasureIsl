@@ -343,3 +343,55 @@ if __name__ == "__main__":
 
 **并行纪律提示**：台账 `verified` 与 `evidence` 由集成轮统一给（见 [`05_module_parallel.md`](05_module_parallel.md) §5），
 包会话回报「包内绿」即可；越界或触碰契约 → 立即停手并回报，不许自行扩大白名单。
+
+## 8. 内容设计 sheet 模版（Canvas 概念落地；S16.4）
+
+**目标**：让「加一张新地图 / 加一类新岛 / 加一段新剧情内容」= 一张设计 sheet 填到底，
+不口口相传、不散改 5 处 JSON。sheet = 业务定案 → 数据 key → 场景/资源接线 → 验收锚点，四段式。
+
+> 本 sheet 是**设计段**（先定「做成什么样」）；实现段仍走 §7 模块包任务书（定「谁来拆怎么做」）。
+> 单一事实源仍分住 `docs/business/`（规则）+ `assets/`（数据）+ `assets/maps/`（地图包，见
+> [`21_map_package_spec.md`](21_map_package_spec.md)），本模版不新增事实源，只做「一张纸」的编排。
+
+```markdown
+# 内容设计 sheet：<新地图 m0X / 新岛类 / 新内容>（S<轮>.<n>）
+
+## A. 业务定案（docs/business/ 先定案，再动数据 —— 硬规则 7）
+| 项 | 定案值 | 事实源（改哪节） |
+|---|---|---|
+| 玩法参数 | <例：31 格 = 起点1+领地20+功能9+BOSS1> | `docs/business/<module>.md` §<节> |
+| 数值 | <例：造价/售价/货舱/伤害 走 balance> | `assets/data/balance.json` `<段>` |
+| 可测规则 | <逐条列，每条将有一个对应用例> | `docs/business/<module>.md` 可测规则表 +1 行 |
+
+## B. 数据 key 契约（挂 `c2`：数据面白名单 + key 命名）
+| 文件 | 新增 key / 段 | 值（设计值） | 校验锚点 |
+|---|---|---|---|
+| `assets/data/board.json`（或 `assets/maps/<id>/map.json`） | `spaces[].district` / `kind` | <例：isle=pirate_lair> | `validate_data` + `map_pack verify`（I1~I8 不变量） |
+| `assets/data/strings.json` | `isle.<kind>.name` / `district.<id>.name` | <例：海盗老巢> | `check_hardcode`（渲染层 0 中文字面量） |
+| `assets/data/balance.json` | `<段>.<field>` | <设计值> | `validate_data`（数值域 + 三面对账） |
+
+## C. 场景 / 资源接线（挂 `07_render_pipeline` + `element-dump` §7 元素级验证）
+| 接线点 | 资产 / 原语 | 验收命令 |
+|---|---|---|
+| 地图卡面 | `assets/ui/isle_<kind>.png`（`ui_asset_batch.py` 出图 + 清单登记） | `ui_assets.py verify` + `element-dump main_map <record#>` |
+| 中央据点 | `island_home_<id>` | 同上 |
+| scenes.json 原语 | `main_map` 增/改 `<原语>` | `gen_layout --check` + `check_scene_narrative` |
+
+## D. 验收锚点（三面对账 + 门禁）
+- [ ] `validate_data`（数据 schema + 数值域）
+- [ ] `python3 scripts/map_pack.py verify assets/maps/<id>`（入参 = 包目录或 zip，非 id）（I1~I8：31 格 / 10 类岛各 2 格 / BOSS@15 / 资产哈希）
+- [ ] `doccheck2`（doc↔code/data 漂移 + 台账计数）
+- [ ] `render_invariants` / `bevy-cpu-parity`（渲染层结构 + 像素）
+- [ ] `tests/e2e_playthrough`（全流程 16 步 0 失败）
+- [ ] 出图签收：`--shot` 逐屏 + 用户过目（A 纪律，视觉改动先设计稿后落码）
+
+## E. 空样例（本 sheet 的落地形态，可复制）
+- `assets/maps/m04/`（`_template` 前缀骨架：31 格 + 专属资产待出 + strings 区名待填）
+  = 新地图的最小可 `verify` 起点；填完 B/C 两段后 `map_pack sync + verify` 即可装包。
+```
+
+**套用后必须做**：
+- [ ] sheet 落 `docs/design-sheets/<内容名>.md`（新目录，一张内容一张 sheet；勿塞进 business/ 正文）
+- [ ] B 段所有 key 先入 `assets/` 数据（`map_pack add <id>` 起步）再渲染，保证「有数据无渲染」可先被门禁抓
+- [ ] D 段 6 项全绿后才把关联台账任务置 `verified`（验收才算完成，硬规则 2）
+- [ ] 本模版只定「设计段怎么编排」，**不替 `docs/business/` 定业务数值**（数值先定案再进 B 段）

@@ -1,0 +1,14 @@
+{
+ "schema": "map-pack/1",
+ "id": "m04",
+ "version": "0.1.0-draft",
+ "data_version": "board-v5",
+ "note": "S16.4 设计 sheet 空样例：31 格骨架已就位；内容待按 docs/process/03_templates.md §8 内容设计 sheet 填写（岛类/专属资产/中央据点/strings 区名）",
+ "assets": [],
+ "invariants": {
+  "spaces": 31,
+  "start": 1,
+  "territory": 20,
+  "boss": 1
+ }
+}

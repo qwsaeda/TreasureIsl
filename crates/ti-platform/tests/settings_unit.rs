@@ -186,15 +186,18 @@ fn key_bindings_unknown_action_returns_none() {
     assert_eq!(kb.get("fly"), None);
 }
 
-/// §5.6.6：`From<FilterMode> for miniquad::FilterMode` 零损失映射。
-/// `to_miniquad` 薄封装与 `From` 必须逐位一致（宏展开后等价，防薄封装漂移）。
+/// S18.8b：`to_miniquad`（macroquad）已删；滤波 = `Nearest`/`Linear` 2 变体
+/// （S18.8c 起由 Bevy 壳自持 `wgpu::FilterMode` 映射，ti-platform 不再暴露薄封装）。
+/// 保留测试 = 项目 `FilterMode` 枚举的 `ALL`/`next` 循环完整性（与 §5.6.6 选用矩阵对账）。
 #[test]
-fn filter_mode_from_matches_thin_wrapper() {
+fn filter_mode_enum_integrity() {
     use ti_platform::settings::FilterMode;
-    for fm in [FilterMode::Nearest, FilterMode::Linear] {
-        let via_from: macroquad::miniquad::FilterMode = macroquad::miniquad::FilterMode::from(fm);
-        assert_eq!(via_from, fm.to_miniquad(), "From 与薄封装 to_miniquad 应一致：{fm:?}");
+    for fm in FilterMode::ALL {
+        assert!(!fm.label().is_empty(), "{fm:?} 缺标签");
     }
+    assert_eq!(FilterMode::Nearest.next(), FilterMode::Linear);
+    assert_eq!(FilterMode::Linear.next(), FilterMode::Nearest, "滤波应循环");
+    assert_eq!(FilterMode::default(), FilterMode::Nearest);
 }
 
 // ── Settings 综合 ────────────────────────────────────────────────────────────

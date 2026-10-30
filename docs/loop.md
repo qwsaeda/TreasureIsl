@@ -14,7 +14,7 @@ tasks:
     title: 建 cargo workspace + 门禁
     status: pending       # pending | in_progress | blocked | verified
     deps: []              # 依赖任务 ID，全部 verified 才可取用
-    dod: "scripts/gate.ps1 全绿（当前 31 项，随 S8/S9/S10 演进）"       # 验收判据（抄自 WBS）
+    dod: "scripts/gate.ps1 全绿（当前 33 项，随 S8/S9/S10 演进）"       # 验收判据（抄自 WBS）
     evidence: null        # verified 后填 evidence/<id>.log 相对路径
     blocked_by: null      # blocked 时填原因
     rounds: 0             # 已失败验收轮数，>=3 必须拆子任务
@@ -32,7 +32,7 @@ tasks:
 1. 读 ledger → 选第一个 deps 全部 verified 且 status != verified 的任务
 2. 实现（按 WBS 产出物落地，禁止留占位实现）
 3. 跑该任务的验收命令 → 输出存 evidence/<id>.log
-4. 跑 scripts/gate.ps1（全局门禁，31 项）
+4. 跑 scripts/gate.ps1（全局门禁，33 项）
 5. gate 全绿 → ledger 置 verified + evidence；否则 rounds+=1，按规则拆解/标记 blocked
 6. 输出进度报告：verified/total、阻塞项、下一轮目标
 7. 回到 1
@@ -43,13 +43,13 @@ tasks:
 1. ledger 中全部任务 `verified`；
 2. `docs/parity.md` 的 P0~P4 五级标准全部 pass（各自校验命令产出报告存 `evidence/`）;
 3. 三端产物生成：桌面 exe、wasm 站点、APK；
-4. `scripts/gate.ps1` 31 项全绿，占位扫描 0 命中。
+4. `scripts/gate.ps1` 33 项全绿，占位扫描 0 命中。
 
 ## 4. 卡死与回退
 
 | 情况 | 处置 |
 |---|---|
-| 验收连续失败 3 轮 | 拆子任务，原任务转 `blocked`，`blocked_by` 写具体缺口 |
+| 验收连续失败 3 轮 | 拆子任务（`Sx.y.a` / `Sx.y.b` 形式）：**原行删除或 `rounds` 归零**（台账校验器 `crates/ti-tools/src/ledger.rs` 对 `rounds >= 3` 直接报 error ⇒ 保留 `rounds=3` 会让门禁第 8 项红）；拆分出的子任务 `rounds` 从 **1** 起算（拆分动作计 1 轮，不继承失败轮数） |
 | 发现计划与实测冲突 | 以实测为准 → 更新 `legacy/docs/facts/index.md`，再改 WBS/台账，**不许静默绕过** |
 | 踩到新坑（工具/格式/平台） | 立即写入 `docs/experience/index.md`（格式见该文件），并在任务 evidence 中引用 |
 | 需要暂停（外部依赖缺失） | 任务标 `blocked`，继续推进无依赖任务，不空转 |
@@ -90,7 +90,7 @@ tasks:
 
 1. **分支模型**：每会话开工前 `git checkout -b task/<id>`（从基线或最新 main 切出）；完成任务、gate 全绿后合回 `main`（fast-forward 或普通 merge，不许 `--force`）。合并冲突由发起合并的会话解决。
 2. **ledger 只改自己任务的行**：状态流转、`evidence`、`rounds`、`blocked_by` 仅限本会话认领的任务 ID；不重排文件、不改他人条目。合并时 ledger 冲突按「两边各保留自己任务行的最终态」处理，必要时合并后跑 `cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` 校验。
-3. **gate 的归属判定**：gate 31 项是全 workspace 检查，别人半成品代码可能导致 FAIL。工作途中可随时跑 gate 自检；**但只有当你任务的产出物已落地、且 FAIL 项与你文件域无关时，才可忽略该 FAIL**。置 `verified` 前必须：已合并（或 rebase 到最新 main）且 gate 31 项全绿。
+3. **gate 的归属判定**：gate 33 项是全 workspace 检查，别人半成品代码可能导致 FAIL。工作途中可随时跑 gate 自检；**但只有当你任务的产出物已落地、且 FAIL 项与你文件域无关时，才可忽略该 FAIL**。置 `verified` 前必须：已合并（或 rebase 到最新 main）且 gate 33 项全绿。
 4. **共享文件按「最后合并者负责对齐」**：`crates/*/src/lib.rs`、`mod.rs`、`Cargo.toml`、`AGENTS.md` 等不可避免的注册点，改动最小化（只加自己的一行注册），合并冲突就地解决后必须重跑受影响的测试。
 5. **cargo 并发**：`target/` 目录锁会让并行构建排队，属正常现象，不要杀掉对方的 cargo 进程。
 6. **经验与事实库**：`docs/experience/index.md`、`legacy/docs/facts/index.md` 可能被多方追加——只在文件**末尾追加**自己的条目（不改动既有行），冲突概率最低；已有的坑不许静默绕过。
