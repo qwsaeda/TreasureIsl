@@ -102,6 +102,7 @@
   .asset-cell .nm { font-size: 11px; margin-top: 6px; color: var(--ink); word-break: break-all; }
   .asset-cell .rl { font-size: 10px; color: var(--muted); }
   .asset-cell .ts { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .asset-cell .id { font-size: 10px; color: var(--accent); font-family: ui-monospace, monospace; margin-top: 2px; opacity: 0.85; }
   .meta-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
   .meta-row:last-child { border-bottom: none; }
   .meta-row .k { color: var(--muted); }
@@ -117,6 +118,18 @@
     color: var(--muted); font-size: 12px; pointer-events: none;
   }
   #lightbox .lb-cap b { color: var(--ink); font-weight: 600; }
+  #lightbox .lb-id {
+    position: absolute; bottom: 40px; left: 0; right: 0; text-align: center;
+    color: var(--accent); font-size: 15px; font-family: ui-monospace, monospace; pointer-events: none;
+  }
+  #lightbox .lb-actions {
+    position: absolute; top: 18px; right: 18px; display: flex; gap: 8px;
+  }
+  #lightbox .lb-actions button {
+    background: var(--panel2); border: 1px solid var(--border); color: var(--ink);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 12px;
+  }
+  #lightbox .lb-actions button:hover { border-color: var(--accent); color: var(--accent); }
   .foot { color: var(--muted); font-size: 12px; margin-top: 18px; line-height: 1.6; }
   code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
   .empty { color: var(--muted); padding: 20px; text-align: center; }
@@ -229,8 +242,11 @@
   <section id="page-design" hidden>
     <div class="card">
       <h2>设计图（evidence/ui_concept/，AI 生成设计稿，非运行截图）</h2>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
         <input type="search" id="design-q" placeholder="搜索文件名 / 组别…" style="min-width:240px">
+        <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;cursor:pointer">
+          <input type="checkbox" id="design-mid"> 含中间产物（raw_ / tmp_）
+        </label>
         <span style="color:var(--muted);align-self:center" id="design-count"></span>
       </div>
       <div id="design-tags" class="asset-tags" style="margin-bottom:12px"></div>
@@ -238,12 +254,43 @@
     </div>
   </section>
 
-  <!-- 地图（地图包管理面：浏览 + 制作指引，制作走 scripts/map_pack.py，平台 0 写操作） -->
+  <!-- 地图（地图包管理面：浏览 + 环形画布编辑器 + 导入，21 号标准） -->
   <section id="page-map" hidden>
     <div class="card">
-      <h2>地图（地图包，21 号标准 <code>assets/maps/&lt;id&gt;/</code>；浏览只读，制作走 <code>scripts/map_pack.py</code>）</h2>
+      <h2>地图包（21 号标准 <code>assets/maps/&lt;id&gt;/</code>）</h2>
       <div id="map-default" style="margin-bottom:10px;color:var(--muted)"></div>
       <div id="map-list"></div>
+      <button id="map-edit-btn" style="margin-top:12px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">＋ 新建 / 编辑地图（环形画布）</button>
+    </div>
+    <div class="card" id="map-editor" hidden>
+      <h2>地图编辑器（环形画布 · I1~I8 实时校验 · 导入落盘）</h2>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div>
+          <label style="font-size:12px;color:var(--muted)">包 id</label>
+          <input id="ed-id" value="m04" style="width:100%;box-sizing:border-box;margin-top:4px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-top:8px">环心 x</label>
+          <input id="ed-cx" type="number" value="540" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-top:6px">环心 y</label>
+          <input id="ed-cy" type="number" value="784" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-top:6px">半径 R</label>
+          <input id="ed-r" type="number" value="480" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-top:6px">卡宽</label>
+          <input id="ed-cw" type="number" value="96" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-top:6px">卡高</label>
+          <input id="ed-ch" type="number" value="120" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        </div>
+        <div style="flex:1;min-width:360px">
+          <svg id="ed-canvas" viewBox="0 0 1080 1920" style="width:100%;height:520px;background:#0d0f17;border:1px solid var(--border);border-radius:8px"></svg>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">点环上节点改 kind/isle（弹窗选）；首格 = start，第 15 格 = boss（I5）；岛型每类 2 格同 group（I3）</div>
+        </div>
+      </div>
+      <div id="ed-spaces" style="margin-top:14px;max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:6px"></div>
+      <div id="ed-validate" style="margin-top:12px;font-size:12px"></div>
+      <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+        <button id="ed-validate-btn" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">校验 I1~I8</button>
+        <button id="ed-import-btn" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">导入到 assets/maps/（POST /api/map/import）</button>
+        <span id="ed-import-msg" style="color:var(--muted);font-size:12px"></span>
+      </div>
     </div>
     <div class="card">
       <h2>制作指引（<code>scripts/map_pack.py</code> 工具链，21 号 §8）</h2>
@@ -279,13 +326,31 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
     「0 游戏产物变更」判定 = repo::snapshot 内容级指纹（22 号 §8，禁用 git status --porcelain）。
   </div>
 </main>
-<div id="lightbox" aria-label="图片放大预览"><img id="lightbox-img" alt=""><div class="lb-cap" id="lightbox-cap"></div></div>
+<div id="lightbox" aria-label="图片放大预览"><img id="lightbox-img" alt=""><div class="lb-id" id="lightbox-id"></div><div class="lb-cap" id="lightbox-cap"></div><div class="lb-actions"><button id="lb-copy">复制 AI 引用</button><button id="lb-copy-prompt">复制修改提示词</button></div></div>
 </div>
 
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
 const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'settings'];
+
+/* 图片短 ID（大写下划线形，如 MM_3 / IDX_1；组代码 + 组内序号；同组递增，好记、可直接口述给 AI）。
+ * 确定性派生：按组别分桶，桶内按文件名排序 ⇒ 刷新/重启 ID 稳定不变。 */
+const GROUP_CODE = { '主地图': 'MM', '首页': 'IDX', '岛型/地图': 'ISLE', '对战': 'VS', '界面': 'UI', '资产表': 'SHEET', '其他': 'X' };
+function assignDesignIds() {
+  const byGroup = {};
+  (window.designCache || []).forEach((f) => {
+    const base = f.split('/').pop();
+    const g = designGroup(base);
+    (byGroup[g] = byGroup[g] || []).push(base);
+  });
+  window.designIds = {};
+  Object.entries(byGroup).forEach(([g, bases]) => {
+    bases.sort().forEach((b, i) => {
+      window.designIds[b] = `${GROUP_CODE[g] || 'X'}_${i + 1}`; // 如 IDX_1 / MM_3
+    });
+  });
+}
 
 document.querySelectorAll('.rail nav button').forEach((btn) => {
   btn.addEventListener('click', () => showPage(btn.dataset.page));
@@ -477,7 +542,7 @@ function openLightbox(a) {
   $('lightbox').classList.add('open');
 }
 $('lightbox').addEventListener('click', (e) => {
-  if (e.target === $('lightbox') || e.target.id === 'lightbox-img' || e.target.id === 'lightbox-cap') {
+  if (e.target === $('lightbox') || e.target.id === 'lightbox-img') {
     $('lightbox').classList.remove('open');
   }
 });
@@ -504,7 +569,9 @@ async function loadDesign() {
     // 设计图 = AI 生成设计稿（evidence/ui_concept/，非运行截图）；子目录枚举走
     // /api/evidence?sub=ui_concept（白名单 evidence/ 目录项前缀，0 越界）。
     window.designCache = (d.files || []).filter((f) => f.endsWith('.png'));
+    assignDesignIds();
     window.designGroupFilter = '';
+    window.designShowMid = false; // 默认只正式稿（raw_/tmp_ = 中间产物，隐藏；13 号 §设计稿归档规范）
     const groups = {};
     window.designCache.forEach((f) => {
       const g = designGroup(f.split('/').pop());
@@ -527,31 +594,79 @@ async function loadDesign() {
     $('design-grid').innerHTML = `<div class="empty">设计图不可用：${e}</div>`;
   }
 }
+function isMidProduct(base) {
+  // 中间产物 = raw_（未抠图原图）/ tmp_（临时中间稿）前缀（13 号 §设计稿归档规范）。
+  return base.startsWith('raw_') || base.startsWith('tmp_');
+}
 function renderDesign() {
   const q = $('design-q').value.toLowerCase();
   const g = window.designGroupFilter || '';
+  const showMid = window.designShowMid !== false;
   const list = (window.designCache || []).filter((f) => {
     const base = f.split('/').pop();
+    if (!showMid && isMidProduct(base)) return false; // 默认隐藏中间产物
     return (!g || designGroup(base) === g) && (!q || (f + ' ' + designGroup(base)).toLowerCase().includes(q));
   });
   // 时间倒序（文件 mtime 无 API 面 ⇒ 按文件名里批次数字倒序 + 名称稳序；口径 = 设计稿归档序）。
-  $('design-count').textContent = list.length + ' / ' + ((window.designCache || []).length);
-  $('design-grid').innerHTML = list.slice(0, 120).map((f) =>
-    `<div class="asset-cell" data-f="${esc(f)}">
-       <img src="/${esc(f)}" loading="lazy" alt="${esc(f)}" style="height:120px">
-       <div class="nm">${esc(f.split('/').pop())}</div>
-       <div class="rl">${esc(designGroup(f.split('/').pop()))}</div>
-     </div>`).join('') || '<div class="empty" style="grid-column:1/-1">ui_concept 下无设计稿</div>';
+  const midN = (window.designCache || []).filter((f) => isMidProduct(f.split('/').pop())).length;
+  $('design-count').textContent = window.designShowMid === false
+    ? list.length + ' / ' + (window.designCache.length) + '（藏中间产物 ' + midN + '）'
+    : list.length + ' / ' + (window.designCache || []).length;
+  $('design-grid').innerHTML = list.slice(0, 120).map((f) => {
+    const base = f.split('/').pop();
+    const g = designGroup(base);
+    const did = (window.designIds && window.designIds[base]) || '';
+    // 卡 = 缩略侧车（`.thumb.png`，ui_thumb.py 生成，~53KB vs 原图 4-6MB）；
+    // 侧车缺失时 fallback 原图（onerror 换 src，不崩）；lightbox 放大 = 读原图。
+    const thumb = f.replace(/\.png$/, '.thumb.png');
+    return `<div class="asset-cell" data-f="${esc(f)}">
+       <img src="/${esc(thumb)}" onerror="this.onerror=null;this.src='/${esc(f)}'" loading="lazy" alt="${esc(f)}" style="height:120px">
+       <div class="nm">${esc(base)}</div>
+       <div class="id">${did}</div>
+       <div class="rl">${esc(g)}</div>
+     </div>`;
+  }).join('') || '<div class="empty" style="grid-column:1/-1">ui_concept 下无设计稿</div>';
   document.querySelectorAll('#design-grid .asset-cell').forEach((c) => {
     c.addEventListener('click', () => {
       const f = c.dataset.f;
-      $('lightbox-img').src = '/' + f;
-      $('lightbox-cap').innerHTML = `<b>${f.split('/').pop()}</b> · ${designGroup(f.split('/').pop())}`;
-      $('lightbox').classList.add('open');
+      openDesignLightbox(f);
     });
   });
 }
+function openDesignLightbox(f) {
+  const base = f.split('/').pop();
+  const g = designGroup(base);
+  const did = (window.designIds && window.designIds[base]) || '';
+  $('lightbox-img').src = '/' + f;
+  $('lightbox-id').textContent = did;
+  $('lightbox-cap').innerHTML = `<b>${esc(base)}</b> · ${esc(g)} · <code>${esc(f)}</code>`;
+  window._lbDesignRef = { did, base, g, file: f };
+  $('lb-copy').onclick = () => copyText(`${did}（= ${base}，组别 ${g}，路径 ${f}）：设计不对，需要重画`);
+  $('lb-copy-prompt').onclick = () => copyText(genPromptFor(base));
+  $('lightbox').classList.add('open');
+}
+function genPromptFor(base) {
+  // 给 AI 生图用的修改提示词模板（带图片引用 ID + 现状文件路径）。
+  const r = window._lbDesignRef || {};
+  return `请重画设计图 ${r.did || ''}（现有文件 ${r.file || ''}，组别 ${r.g || ''}）。保持航海夜·精修视觉规范（色板 docs/process/10_ui_redesign.md），输出到 evidence/ui_concept/，命名沿用 ${base.split('_')[0]}_ 前缀。`;
+}
+function copyText(t) {
+  navigator.clipboard.writeText(t).then(
+    () => flash('已复制'),
+    () => { window.prompt('复制失败，手动复制：', t); }
+  );
+}
+let _flashTimer = 0;
+function flash(msg) {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:#0d0f17;padding:6px 14px;border-radius:6px;z-index:999;font-size:13px;font-weight:600';
+  document.body.appendChild(el);
+  clearTimeout(_flashTimer);
+  _flashTimer = setTimeout(() => el.remove(), 1600);
+}
 $('design-q').addEventListener('input', renderDesign);
+$('design-mid').addEventListener('change', (e) => { window.designShowMid = e.target.checked; renderDesign(); });
 
 async function loadMap() {
   loaded.map = true;
@@ -579,6 +694,238 @@ async function loadMap() {
     $('map-list').innerHTML = '<div class="empty">地图包不可用：' + esc(String(e)) + '</div>';
   }
 }
+
+/* ==== 地图编辑器（环形画布 + I1~I8 前端判定 + 导入落盘，S32.14） ==== */
+/* I1~I8 前端镜像（与 map_pack.py verify_pack 逐条对齐；权威实现 = map_pack.py，前端 = 轻量镜像）：
+   I1 31 格 / I2 start1+territory20+func9+boss1 / I3 每岛 2 格同 group / I4 isle∈值域(10 类)
+   / I5 首格 start + 第 15 格 boss / I6 ring 8pt / I7 资产齐（导入后端算） / I8 world_canvas≡bbox_pct×(1080,1920)±1px */
+const ED_ISLES = ['boss_fort','harbour','lighthouse','lightship','pirate_lair','shipyard','skull_cliff','trading_post','volcano','wreck'];
+const ED_KINDS = ['start','territory','event','card','treasure','boss'];
+let edState = null; // { id, spaces[31], ring, canvas }
+
+function edDefaultState() {
+  // 默认格序/岛型/group = 照抄 m01 实测（verify 全绿基准）：
+  // kind 31 格 = start@0 + territory20 + func9(event4+card3+treasure2) + boss@15；
+  // isle 标签 = 10 岛×2 交替排在 territory 段（boss@15 无 isle 标签；功能格无 isle）。
+  const kindSeq = ['start','territory','territory','event','territory','territory','card','territory','territory','treasure','territory','territory','event','territory','territory','boss','territory','territory','event','territory','territory','treasure','territory','territory','card','territory','territory','territory','territory','event','card'];
+  const isleSeq = [null,'harbour','harbour',null,'lighthouse','lighthouse',null,'wreck','wreck',null,'pirate_lair','pirate_lair',null,'shipyard','shipyard',null,'trading_post','trading_post',null,'skull_cliff','skull_cliff',null,'volcano','volcano',null,'lightship','lightship','boss_fort','boss_fort',null,null];
+  const grpSeq   = [1,1,1,3,2,2,4,3,3,5,4,4,3,5,5,6,6,6,3,7,7,5,8,8,4,9,9,10,10,3,4];
+  const spaces = kindSeq.map((kind, i) => ({ idx: i, kind, isle: isleSeq[i] || null, group: grpSeq[i], cell: [10,0], terrain: 'L' }));
+  return { id: 'm04', spaces, ring: { center_x: 540, center_y: 784, radius: 480, card_w: 96, card_h: 120 },
+           canvas: { x: 11, y: 250, w: 1048, h: 1056 } };
+}
+
+function edValidate() {
+  // 前端 I1~I8 判定（I7 资产齐/哈希 = 导入后端算，前端只校验数据结构）
+  const st = edState;
+  const issues = [];
+  const kinds = st.spaces.map((s) => s.kind);
+  const cnt = {};
+  kinds.forEach((k) => { cnt[k] = (cnt[k] || 0) + 1; });
+  // I1
+  if (st.spaces.length !== 31) issues.push('I1 格数=' + st.spaces.length + '（期望 31）');
+  // I2：start1 + territory20 + func9(event+card+treasure+port+city…) + boss1
+  const funcN = (cnt.event||0) + (cnt.card||0) + (cnt.treasure||0) + (cnt.port||0) + (cnt.city||0);
+  if ((cnt.start||0) !== 1) issues.push('I2 start=' + (cnt.start||0) + '（期望 1）');
+  if ((cnt.territory||0) !== 20) issues.push('I2 territory=' + (cnt.territory||0) + '（期望 20）');
+  if (funcN !== 9) issues.push('I2 功能格=' + funcN + '（期望 9）');
+  if ((cnt.boss||0) !== 1) issues.push('I2 boss=' + (cnt.boss||0) + '（期望 1）');
+  // I3：每岛 2 格同 group
+  const isleCnt = {}, isleGrp = {};
+  st.spaces.forEach((s) => { if (s.isle) { isleCnt[s.isle] = (isleCnt[s.isle]||0)+1; (isleGrp[s.isle]=isleGrp[s.isle]||new Set()).add(s.group); } });
+  if (Object.keys(isleCnt).length !== 10) issues.push('I3 岛型数=' + Object.keys(isleCnt).length + '（期望 10）');
+  for (const [isle, c] of Object.entries(isleCnt)) {
+    if (c !== 2) issues.push('I3 岛 ' + isle + ' = ' + c + ' 格（期望 2）');
+    if (isleGrp[isle] && isleGrp[isle].size !== 1) issues.push('I3 岛 ' + isle + ' 两格不同 group');
+  }
+  // I4：isle ∈ 10 类值域
+  st.spaces.forEach((s, i) => { if (s.isle && ED_ISLES.indexOf(s.isle) < 0) issues.push('I4 格' + i + ' isle=' + s.isle + ' 不在 10 类值域'); });
+  // I5：首格 start + 第 15 格 boss
+  if (st.spaces[0] && st.spaces[0].kind !== 'start') issues.push('I5 首格不是 start');
+  if (st.spaces[15] && st.spaces[15].kind !== 'boss') issues.push('I5 第 15 格不是 boss');
+  // I6：ring 8pt（center_x 屏心 540 豁免）
+  const r = st.ring;
+  ['center_y','radius','card_w','card_h'].forEach((k) => { if (typeof r[k] === 'number' && r[k] % 8 !== 0) issues.push('I6 ring.' + k + '=' + r[k] + ' 非 8 整除'); });
+  // I8：world_canvas ≡ focus_bbox_pct × (1080,1920) ±1px（导入时 canvas 由 pct 正算往返恒等；
+  // 前端同口径做 ±1px 逐维校验 = 与 verify_pack 一致，防前端全过但导入被 I8 拒（审计 r1 修））
+  const LAYOUT = { x: 11, y: 250, w: 1048, h: 1056 };
+  const pctOf = (px, dim) => Math.round(px / dim * 100);
+  for (const [k, dim] of [['x', 1080], ['y', 1920], ['w', 1080], ['h', 1920]]) {
+    const want = Math.round(pctOf(LAYOUT[k], dim) / 100 * dim);
+    if (Math.abs(want - LAYOUT[k]) > 1) issues.push('I8 world_canvas.' + k + ' = ' + LAYOUT[k] + '（bbox 往返超差 >1px）');
+  }
+  return issues;
+}
+
+function edRenderCanvas() {
+  const st = edState;
+  const svg = $('ed-canvas');
+  const ring = st.ring;
+  const N = st.spaces.length;
+  let g = '';
+  // 环
+  g += '<circle cx="' + ring.center_x + '" cy="' + ring.center_y + '" r="' + ring.radius + '" fill="none" stroke="#3a4155" stroke-width="2"/>';
+  // 中央据点岛
+  g += '<circle cx="' + ring.center_x + '" cy="' + ring.center_y + '" r="120" fill="#1a2233" stroke="#c9a15a" stroke-width="2"/>';
+  g += '<text x="' + ring.center_x + '" y="' + ring.center_y + '" text-anchor="middle" fill="#c9a15a" font-size="20">中央岛</text>';
+  // 31 节点（序 = 前进方向；格 0 = 顶，顺时针）
+  for (let i = 0; i < N; i++) {
+    const theta = (i / N) * Math.PI * 2 - Math.PI / 2;
+    const x = ring.center_x + ring.radius * Math.cos(theta);
+    const y = ring.center_y + ring.radius * Math.sin(theta);
+    const s = st.spaces[i];
+    let color = '#3a4155';
+    if (s.kind === 'start') color = '#3fb950';
+    else if (s.kind === 'boss') color = '#d05454';
+    else if (s.kind === 'territory') color = s.isle ? '#c9a15a' : '#8a6d3b';
+    else color = '#4a90d9';
+    g += '<g class="ed-node" data-idx="' + i + '" style="cursor:pointer">'
+      + '<rect x="' + (x - ring.card_w/2) + '" y="' + (y - ring.card_h/2) + '" width="' + ring.card_w + '" height="' + ring.card_h
+      + '" rx="8" fill="' + color + '" opacity="' + (s.kind==='territory' && !s.isle ? 0.5 : 0.9) + '" stroke="#0d0f17" stroke-width="2"/>'
+      + '<text x="' + x + '" y="' + (y - 4) + '" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">' + i + '</text>'
+      + '<text x="' + x + '" y="' + (y + 14) + '" text-anchor="middle" fill="#fff" font-size="11">' + s.kind + '</text>'
+      + '</g>';
+  }
+  svg.innerHTML = g;
+  // 节点交互
+  svg.querySelectorAll('.ed-node').forEach((n) => {
+    n.addEventListener('click', () => edEditNode(parseInt(n.dataset.idx, 10)));
+  });
+}
+
+function edEditNode(idx) {
+  const st = edState;
+  const s = st.spaces[idx];
+  let kind = prompt('格 ' + idx + ' kind（start/territory/event/card/treasure/boss）：', s.kind || '');
+  if (kind == null) return;
+  kind = kind.trim();
+  if (!ED_KINDS.includes(kind) && kind !== 'port' && kind !== 'city') { alert('非法 kind（值域：' + ED_KINDS.join('/') + '/port/city）'); return; }
+  s.kind = kind;
+  if (kind === 'territory') {
+    let isle = prompt('格 ' + idx + ' isle（10 类岛之一）：', s.isle || '');
+    if (isle == null) return;
+    isle = isle.trim();
+    if (isle && ED_ISLES.indexOf(isle) < 0) { alert('isle 不在 10 类值域：' + ED_ISLES.join(', ')); return; }
+    s.isle = isle || null;
+    let grp = prompt('格 ' + idx + ' group（同岛须同 group）：', String(s.group || 1));
+    if (grp != null) s.group = parseInt(grp, 10) || 1;
+  } else {
+    s.isle = null;
+  }
+  edRenderCanvas();
+  edRenderTable();
+  edValidateBar();
+}
+
+function edRenderTable() {
+  const st = edState;
+  let h = '<table style="width:100%;font-size:12px;border-collapse:collapse"><tr><th style="text-align:left;padding:4px">#</th><th>kind</th><th>isle</th><th>group</th><th>terrain</th></tr>';
+  st.spaces.forEach((s, i) => {
+    h += '<tr style="border-top:1px solid var(--border)"><td style="padding:4px">' + i + '</td><td>' + s.kind + '</td><td>' + (s.isle || '-') + '</td><td>' + s.group + '</td><td>' + s.terrain + '</td></tr>';
+  });
+  h += '</table>';
+  $('ed-spaces').innerHTML = h;
+}
+
+function edValidateBar() {
+  const issues = edValidate();
+  const bar = $('ed-validate');
+  if (issues.length === 0) {
+    bar.innerHTML = '<span style="color:#3fb950;font-weight:600">I1~I8 全过（前端判定；导入后 map_pack.py verify 终判含 I7 资产哈希）</span>';
+  } else {
+    bar.innerHTML = '<span style="color:#d05454">未过 ' + issues.length + ' 项：</span><ul style="margin:6px 0 0 18px;color:#d05454">' + issues.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+  }
+}
+
+function edReadInputs() {
+  const st = edState;
+  st.id = $('ed-id').value.trim() || st.id;
+  st.ring.center_x = parseInt($('ed-cx').value, 10) || st.ring.center_x;
+  st.ring.center_y = parseInt($('ed-cy').value, 10) || st.ring.center_y;
+  st.ring.radius = parseInt($('ed-r').value, 10) || st.ring.radius;
+  st.ring.card_w = parseInt($('ed-cw').value, 10) || st.ring.card_w;
+  st.ring.card_h = parseInt($('ed-ch').value, 10) || st.ring.card_h;
+}
+
+function edSyncInputs() {
+  const st = edState;
+  $('ed-id').value = st.id;
+  $('ed-cx').value = st.ring.center_x;
+  $('ed-cy').value = st.ring.center_y;
+  $('ed-r').value = st.ring.radius;
+  $('ed-cw').value = st.ring.card_w;
+  $('ed-ch').value = st.ring.card_h;
+}
+
+async function edImport() {
+  edReadInputs();
+  const issues = edValidate();
+  if (issues.length > 0) {
+    edValidateBar();
+    alert('I1~I8 未过（' + issues.length + ' 项），拒绝导入：\n' + issues.join('\n') + '\n（修好再导入；或终端 map_pack.py verify 详查）');
+    return;
+  }
+  // 生成 4 文件 JSON（manifest/map/layout/strings）
+  const st = edState;
+  const manifest = {
+    schema: 'map-pack/1', id: st.id, version: '1.0.0', data_version: 'board-v5',
+    central_asset: 'island_home_' + st.id,
+    isle_assets: ED_ISLES.slice(),
+    map: { grid_w: 20, grid_h: 20, spaces: st.spaces.map((s) => ({ cell: s.cell, group: s.group, kind: s.kind, terrain: s.terrain, ...(s.isle ? { isle: s.isle } : {}) })) },
+    layout: {
+      ring: st.ring,
+      world_canvas: st.canvas,
+      island_home: { x: 160, y: 400, w: 760, h: 760 },
+      hint: { x: 540, y: 1760 },
+      deck_trade: { x: 48, y: 1608, w: 312, h: 136 },
+      deck_sell: { x: 384, y: 1608, w: 312, h: 136 },
+      deck_build: { x: 720, y: 1608, w: 312, h: 136 },
+      focus_anchor: { type: 'world_canvas', bbox: { x: st.canvas.x, y: st.canvas.y, w: st.canvas.w, h: st.canvas.h } },
+      focus_bbox_pct: { x: Math.round(st.canvas.x / 1080 * 100), y: Math.round(st.canvas.y / 1920 * 100), w: Math.round(st.canvas.w / 1080 * 100), h: Math.round(st.canvas.h / 1920 * 100) }
+    },
+    strings: { ['glmap' + st.id + '.Map']: st.id },
+    assets: [],
+    invariants: { spaces: 31, start: 1, territory: 20, feature: 9, boss: 1, isle_kinds: 10 }
+  };
+  const payload = { manifest, map: manifest.map, layout: manifest.layout, strings: manifest.strings };
+  $('ed-import-msg').textContent = '导入中…';
+  try {
+    const resp = await fetch('/api/map/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const out = await resp.json();
+    if (!resp.ok || !out.ok) {
+      $('ed-import-msg').textContent = '失败：' + (out.error || out.errors || ('HTTP ' + resp.status));
+      $('ed-import-msg').style.color = '#d05454';
+      return;
+    }
+    $('ed-import-msg').textContent = '导入成功：' + JSON.stringify(out.written || out.synced || out) + '（已跑 map_pack.py sync + verify）';
+    $('ed-import-msg').style.color = '#3fb950';
+    loadMap();
+  } catch (e) {
+    $('ed-import-msg').textContent = '导入异常：' + e;
+    $('ed-import-msg').style.color = '#d05454';
+  }
+}
+
+function openMapEditor() {
+  edState = edDefaultState();
+  edSyncInputs();
+  edRenderCanvas();
+  edRenderTable();
+  edValidateBar();
+  $('map-editor').hidden = false;
+  $('map-editor').scrollIntoView({ behavior: 'smooth' });
+}
+$('map-edit-btn').addEventListener('click', openMapEditor);
+$('ed-validate-btn').addEventListener('click', () => { edReadInputs(); edRenderCanvas(); edValidateBar(); });
+$('ed-import-btn').addEventListener('click', edImport);
+['ed-cx','ed-cy','ed-r','ed-cw','ed-ch'].forEach((id) => {
+  $(id).addEventListener('change', () => { edReadInputs(); edRenderCanvas(); edValidateBar(); });
+});
+
 
 async function loadSettings() {
   loaded.settings = true;

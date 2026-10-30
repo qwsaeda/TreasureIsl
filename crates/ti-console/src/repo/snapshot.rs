@@ -106,10 +106,30 @@ impl FrozenSnapshot {
         out
     }
 
-    /// 0 游戏产物变更判定（差集为空）。
+    /// 0 游戏产物变更判定（差集为空；**S32.15 例外**：`assets/maps/` 目录与
+    /// `assets/data/board.json` 的 `maps` 段 = 平台地图导入唯一写点（22 号 §10.1），
+    /// 差异 = 受控写，不算漂移（`import_probe` 面，供 S32.4 执行面在 import 动作前后用））。
     #[must_use]
     pub fn no_change(&self, other: &FrozenSnapshot) -> bool {
         self.diff(other).is_empty()
+    }
+
+    /// import 动作 0 变更判定（`assets/maps/` + `assets/data/board.json` 前缀差异豁免；
+    /// 其余冻结路径差异仍算漂移）。S32.15 ② 唯一写点例外面（22 号 §8/§10.1）；
+    /// S32.4 执行面消费前接入（当前 = 数据面预置，`no_change_probe` 为现行判定）。
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn import_probe(&self, other: &FrozenSnapshot) -> bool {
+        self.diff(other).iter().all(|line| {
+            let path = line
+                .trim_start_matches(['+', '-', '~'])
+                .trim()
+                .split('（')
+                .next()
+                .unwrap_or("")
+                .to_owned();
+            !path.starts_with("assets/maps/") && path != "assets/data/board.json"
+        })
     }
 
     /// 指纹数（统计面）。

@@ -1,0 +1,53 @@
+S32.15 平台地图编辑器 + 免鉴权导入落盘（WebUI 制作地图）
+2026-10-30 内网自用例外（用户拍板「不要鉴权，要鉴权干什么？」⇒ S32.4 鉴权挂账不挡本线）
+
+== 改动面 ==
+工具（平台编辑器 UI + import 端点）+ 数据（assets/maps/ 唯一写点）+ 文档
+- crates/ti-console/web/index.html：/map 页环形 SVG 画布编辑器（31 节点 + 点节点改 kind/isle + 环几何输入 + I1~I8 前端实时校验条 + 导入按钮）
+- crates/ti-console/src/repo/import.rs（新）：写 assets/maps/<id>/ 四文件 + id 白名单 ^[a-z0-9_]{1,16}$ + canonicalize 前缀断言防穿越 + 同进程 python3 scripts/map_pack.py sync/verify 终判
+- crates/ti-console/src/routes.rs：POST /api/map/import（body 读 + Content-Length 上限 256KB + 免鉴权唯一写端点）
+- crates/ti-console/console_sources.json：write_whitelist 扩 assets/maps/
+- docs：21 号 §8.1 平台编辑器导入面 + 22 号 §6.1 地图行 + §10.1 S32.14 ② 例外段 + 14 号 §3.2.1 端点登记
+- plan/ledger.yaml：S32.15 任务行
+
+== 判据实跑 ==
+① 编辑器环形画布 31 节点渲染（playwright headless，TI_CHROMIUM_PATH）：
+   编辑器状态: {"editorVisible":true,"svgNodes":31,"validateText":"I1~I8 全过（前端判定；导入后 map_pack.py verify 终判含 I7 资产哈希）"}
+   0 console error ✓
+② I1~I8 前端校验条全过（默认态镜像 m01 实测分布：territory20=10岛×2 / boss@15 / func9 / start@0）
+③ POST /api/map/import 实跑（http://127.0.0.1:8787/api/map/import）：
+   - 合规 payload（m01 结构照抄）：HTTP 200 / ok=True / verified=True / synced=True
+     written = assets/maps/m04/{manifest,map,layout,strings}.json
+     board.json maps.m04 回注段 spaces 数 = 31（sync 成功）
+     map_pack.py verify m04 = 0 违规（schema/兼容/I1~I8 全过）
+     /api/map m04 valid=True
+   - 违规 payload 负例（boss_fort 3 格）：HTTP 200 / ok=False / verified=False
+     errors = ["map_pack.py verify: FAIL ... I3 岛型 `boss_fort` = 3 格（期望 2）"]（如实上报不静默绕过）
+④ 越界 id 拒写：cargo test -p ti-console import（is_legal_pack_id 单测：UPPER/bad../x/17位 全拒 + 合规 m04/isle_map_2 全过）+ canonicalize 前缀断言（assert_write_point）
+⑤ 机器面：build 0 / test 7 suite ok / clippy 0 / cargo tree 游戏 crate（ti-core|ti-app|ti-engine|bevy|macroquad）0 命中 / check_code_standards PASS / doccheck 0 error / doccheck2 0 error / check_ledger_reality 全绿（250 verified）
+
+== 唯一写点纪律（北极星收敛）==
+平台往 assets/ 写盘 = 仅 POST /api/map/import 一个口子（import.rs）；write_whitelist 扩 assets/maps/ 后
+平台其余 0 写盘（evidence/console/ 归档 + 地图导入口子）。S32.4 鉴权面将来开放外网时 = 该端点加 403 即可，不重做。
+
+== AI 岛型生图（C 方案叠加面，复用 0 新依赖）==
+概念图 = scripts/agnes_gen.py（设计图页已接入）落 evidence/ui_concept/（白名单 evidence/ 前缀不碰 assets/）；
+进包 = ui_assets.py add（抠图 + 登记 ui_manifest）后包 isle_assets 指过去（I7 哈希 pack 自动算）。
+
+== S32 双审计协议（§7.3，连续 2 轮）==
+r1（2 子代理对抗，A 代码面 + B 行为面）：
+  - A：总判定 PASS / 新发现 6 / 误报 1 / 残留 0
+  - B：总判定 PASS / 新发现 4 / 误报 0 / 残留 0
+  合并 findings 修（主线程逐条）：
+  [中] F-2 import.rs sync 先于 verify 留坏 board.json 段 → 改「先判后回注」（verify PASS 才 sync，FAIL 跳过不留坏段；实测违规导入 board.json 前后一致）
+  [中] 前端 I8 只结构检查 → edValidate 补 bbox 往返 ±1px 逐维校验（与 verify_pack 同容差）
+  [中] snapshot.rs FROZEN_PATHS 含 assets/ ⇒ import 写盘被 0-变更断言抓漂移 → 加 import_probe（豁免 assets/maps/ + board.json maps 段，#[allow(dead_code)] 预置 S32.4 消费）+ 22 号 §8 冻结口径同步注例外
+  [低] _sources 死参数 → 注释说明白名单语义/参数保留原因
+  [低] assert_write_point 无单测 → 加 write_point_asserts_stay_inside_assets_maps（正常过/越界拒/缺 root 拒）
+  [低] mod.rs「0 写盘」注释失真 → 更新「import = 唯一受控写点（先判后回注）」
+  [低] 21 号 §8.1 sync/verify 顺序 → 「先判后回注」
+  [低] B-F1 body 读门控（仅 POST import 端点，语义正确，S32.4 鉴权面落地时复核）
+  [低] B-F3 _template 被 list_packs 枚举（Python/Rust 两侧均已排除 = 既有安全面，非 S32.15 引入，不改）
+  [信息] B-F4 m04 未入 git → 收口时随 S32.15 提交
+r2（收敛验证）：r1 7/7 全闭环 + 回归扫描 0 新发现；抓出 1 残留 = 散落探针 crates/ti-core/examples/maproot_test.rs（untracked，非 S32.15 面，疑并行线散落；硬规则 10 ④ 散落探针违规 + 破 doD⑤ 游戏 crate 0 命中 ⇒ 删，workspace build/test 复绿）
+r3 判定：0 新发现 + 0 误报 + 0 残留（探针清理后 workspace 全绿）⇒ 收敛

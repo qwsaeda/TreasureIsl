@@ -12,7 +12,8 @@
     "assets/ui/"
   ],
   "write_whitelist": [
-    "evidence/console/"
+    "evidence/console/",
+    "assets/maps/"
   ],
   "_comment": "S32.2 数据源路径单一事实源（22 号 §5 逐行 1:1；§10.2「assets/ 只返回登记过的文件，不做任意目录列举」= 本清单的 assets/* 项 + assets/ui/（ui_manifest 登记的 png 实体，目录项前缀）+ assets/maps/（包目录）；plan/ = 单文件精确项（packages.yaml 未登记 = 平台不结构化解析 ⇒ 直读亦不放行）；dist/maps/ = 目录项前缀（*.map-pack 可分发件，存在才展示，缺失不报错，22 号 §5）；写点白名单 = evidence/console/（平台归档目录），其余 0 写盘。"
 }

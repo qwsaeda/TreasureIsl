@@ -11,10 +11,13 @@
 //!   纯计算：冻结路径逐文件 sha256 + 未跟踪文件清单，忽略 `.gitignore` 命中文件，
 //!   禁用 `git status --porcelain` 口径）。
 //!
-//! 本模块 **0 游戏依赖 + 0 写盘**（写点仅 `evidence/console/` = 平台归档目录，
-//! 快照对比报告由调用方落盘，本模块自身只做只读计算）。
+//! 本模块 **0 游戏依赖**；只读面（`config`/`guard`/`data`/`snapshot`）自身 0 写盘（写点仅
+//! `evidence/console/` = 平台归档目录，快照对比报告由调用方落盘）；`import` = S32.15 ② **唯一受控写点**
+//! （`POST /api/map/import` 落 `assets/maps/<id>/` 四文件 + 同进程 `map_pack.py verify/sync`〔先判后回注〕，
+//! 平台其余 0 写盘，北极星「0 游戏产物变更」的受控例外，22 号 §10.1 + `snapshot::import_probe` 豁免面）。
 
 pub mod config;
 pub mod data;
 pub mod guard;
+pub mod import;
 pub mod snapshot;
