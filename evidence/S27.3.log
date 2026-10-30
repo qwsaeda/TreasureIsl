@@ -1,0 +1,6 @@
+# S27.3 收口（v5 数据层）
+> 本任务由 S28.3 实现并取代（31 格 v5 数据层方案：起点1+领地20=10类岛×2相邻+功能9=事件3/卡牌3/宝藏2/BOSS1，
+> 取代原「9 分区 + BOSS 区」分区环方案；色令牌 = balance.territory.isle_tokens[10] ↔ theme.isle_* 三方对账，
+> 岛名/功能名 = strings.json，均随 S28.3 同批落地）。
+> 2026-10-29 Linux 迁移台账对账：主线程复核 S28.3 判据（validate_data + board_measure --check + cargo test --workspace 0 failed + gate 全绿）
+> 全部覆盖本任务 dod ⇒ 本条置 verified，证据引 S28.3。
