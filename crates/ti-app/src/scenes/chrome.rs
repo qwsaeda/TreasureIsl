@@ -718,7 +718,7 @@ pub fn asset_present(asset: &str) -> bool {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = asset;
-        true
+        false
     }
     #[cfg(not(target_arch = "wasm32"))]
     {

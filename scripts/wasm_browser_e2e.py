@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """wasm_browser_e2e.py — Bevy wasm 浏览器端 e2e（Playwright 无头 Chromium）。
 
-**行业口径**（wasm 交付物 4 层验证，与 `gate.ps1` native 层 `e2e_playthrough`
+**行业口径**（wasm 交付物 5 层验证，与 `gate.ps1` native 层 `e2e_playthrough`
 互补）：
   L1 实例化 = 无 missing-import（`env-stub.js` 覆盖 wasm 全部 env 导入）
      + start section 跑通（Bevy 主循环启动）；
@@ -10,10 +10,18 @@
   L3 交互 = 键盘（Enter 确认 / Space 摇骰）+ 鼠标点击不抛异常；
   L4 场景切换 = 键盘走到 select_map 后鼠标点击 m01 卡片 ⇒ 切到 main_map
      （增量判据：点击前亮像素比 < 40%（select_map ≈ 17.7%）且点击后 > 40%
-     （main_map ≈ 78%）；慢点 down/up 分帧，防同帧 press+release 丢 Click）。
+     （main_map ≈ 78%）；慢点 down/up 分帧，防同帧 press+release 丢 Click）；
+  L5 环资产实取 = main_map 的 v5 环形棋盘贴图**确实被 HTTP 取到**（`isle_*.png`
+     领地卡 + `island_home_*.png` 中央据点岛 + `card_panel.png` 卡板，各 ≥1 个 2xx）。
+
+  **L5 为何必要**（S32.1 实证）：L4 的「亮像素比」判据**会被背景掩盖**——main_map 的
+  `chart_full` 羊皮海图底本身就亮（≈78%），故「环/岛/骰全灭但背景照亮」时 L4 仍
+  PASS ⇒ 回归漏网（S32.1 根因 = `chrome::asset_present()` 在 wasm 恒 false ⇒
+  `render_v5_ring` 跳过卡环/中央岛/骰 ⇒ 用户报「主地图没渲染、玩不了」）。
+  L5 直接断言「环资产被取到」，把该类回归从「肉眼才能发现」降为「门禁自动拦」。
 
 用法：
-  python3 scripts/wasm_browser_e2e.py            # 全 4 层（断言 L1+L2+L3+L4）
+  python3 scripts/wasm_browser_e2e.py            # 全 5 层（断言 L1~L5）
   python3 scripts/wasm_browser_e2e.py --check    # 只读：不截图、打印判据（0 新产物）
   python3 scripts/wasm_browser_e2e.py --url=http://host:port/
 
@@ -89,7 +97,10 @@ def main() -> int:
         def on_response(resp) -> None:
             u = resp.url
             if "/assets/" in u or "treasure-bevy-wasm" in u:
-                asset_status[u.rsplit("8080/", 1)[-1] if "8080" in u else u] = resp.status
+                # 键 = 资源**文件名**（basename）：跨端口/跨路径稳定（L5 按前缀匹配
+                # `isle_*.png` 等），不因 URL 形态变化而失效。
+                key = u.split("?", 1)[0].rsplit("/", 1)[-1]
+                asset_status[key] = resp.status
 
         page.on("console", on_console)
         page.on("pageerror", on_pageerror)
@@ -202,6 +213,48 @@ def main() -> int:
             ok = True
             degraded = True
 
+        # ── L5 环资产实取：main_map v5 环形棋盘贴图确实被 HTTP 取到 ──
+        # L4 的亮像素比会被 `chart_full` 亮背景掩盖 ⇒ 环/岛/骰全灭时 L4 仍 PASS（S32.1
+        # 回归漏网根因）。L5 直接断言「环资产 2xx」，把该类回归变成门禁可拦。
+        l5 = {"isle": 0, "island_home": 0, "card_panel": 0, "ok": False, "skipped": True}
+        if not l4_crashed:
+            def ring_counts() -> dict[str, int]:
+                return {
+                    "isle": sum(1 for k, v in asset_status.items()
+                                if k.startswith("isle_") and v == 200),
+                    "island_home": sum(1 for k, v in asset_status.items()
+                                       if k.startswith("island_home") and v == 200),
+                    "card_panel": sum(1 for k, v in asset_status.items()
+                                      if k == "card_panel.png" and v == 200),
+                }
+
+            # Bevy AssetServer 异步取 ⇒ 轮询等落地（上限 20s）。
+            counts = ring_counts()
+            for _ in range(20):
+                if counts["isle"] > 0 and counts["island_home"] > 0 and counts["card_panel"] > 0:
+                    break
+                try:
+                    page.wait_for_timeout(1_000)
+                except Exception:
+                    # SwiftShader GPU 子进程在 L5 轮询期间退出（环境限制，同 L4 口径）。
+                    degraded = True
+                    break
+                counts = ring_counts()
+            l5 = {
+                "isle": counts["isle"],
+                "island_home": counts["island_home"],
+                "card_panel": counts["card_panel"],
+                "ok": counts["isle"] > 0 and counts["island_home"] > 0 and counts["card_panel"] > 0,
+                "skipped": False,
+            }
+            if not l5["ok"]:
+                print("[wasm-browser-e2e] FAIL  L5 环资产未取到："
+                      f"isle_*={l5['isle']} island_home_*={l5['island_home']} "
+                      f"card_panel={l5['card_panel']}"
+                      "（v5 环形棋盘贴图未发请求 ⇒ 疑似 `asset_present()` 在 wasm 恒 false，"
+                      "见 crates/ti-app/src/scenes/chrome.rs）")
+        checks["L5_ring_assets"] = l5
+
         if not args.check:
             Path(args.out).parent.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=args.out)
@@ -215,12 +268,15 @@ def main() -> int:
     l2a = not checks["L2_assets"]["fail"]
     l3 = not checks["L3_input"]["page_errors"]
     l4 = checks.get("L4_scene", {}).get("transitioned", False)
+    l5chk = checks.get("L5_ring_assets", {})
+    l5 = True if l5chk.get("skipped") else bool(l5chk.get("ok"))
     print(json.dumps({"L1_start": l1, "L2_render": l2r, "L2_assets": l2a, "L3_input": l3,
-                      "L4_scene": l4,
-                      "detail": {k: checks[k] for k in ("L1_start", "L2_render", "L3_input", "L4_scene")}},
+                      "L4_scene": l4, "L5_ring_assets": l5,
+                      "detail": {k: checks[k] for k in ("L1_start", "L2_render", "L3_input",
+                                                        "L4_scene", "L5_ring_assets")}},
                      ensure_ascii=False, indent=2, default=str))
-    ok = l1 and l2r and l2a and l3 and l4
-    print(f"[wasm-browser-e2e] {'PASS' if ok else 'FAIL'}（L1 实例化={l1} / L2 渲染={l2r} 资产={l2a} / L3 交互={l3} / L4 场景切换={l4}）")
+    ok = l1 and l2r and l2a and l3 and l4 and l5
+    print(f"[wasm-browser-e2e] {'PASS' if ok else 'FAIL'}（L1 实例化={l1} / L2 渲染={l2r} 资产={l2a} / L3 交互={l3} / L4 场景切换={l4} / L5 环资产={l5}）")
     if console_errors:
         print(f"[wasm-browser-e2e] console 硬错误 {len(console_errors)} 条（前 5）:")
         for e in console_errors[:5]:
