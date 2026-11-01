@@ -162,7 +162,7 @@
 
 不变式：首块顶 `480 ≥ 108`、末块底 `1440 ≤ 1704`（不越海平面带）、列表右缘 `≤ 1068`（木框内）。
 
-### 4.3 main_map（主地图，代码等距菱形格 + 代码棋子）
+### 4.3 main_map（主地图；本节 = **v2 历史版面**〔代码等距菱形格 + 代码棋子〕，现行坐标单一事实源 = 下注 v4/v5 spec）
 
 > **S21.3（main_map v4「羊皮海图桌面」）起坐标单一事实源 = [`ui-redesign-v3/08_main_map_v4_spec.md`](../ui-redesign-v3/08_main_map_v4_spec.md)**
 > （满屏 `chart_full` + 顶角双铜牌 + 岛只画陆/礁/宝 + 黄铜航线多形状节点牌 + 船玩家 + 舵轮 CTA；
@@ -172,9 +172,10 @@
 > 下表 v4 值保留为历史，现行值以下列 v5 镜像为准）：
 > - 焦点锚点 `focus_anchor {x:11, y:250, w:1048, h:1056}`（N8 ↔ manifest `bbox_pct {1,13,97,55}`）；
 > - 中央据点岛 `island_home {x:160, y:400, w:760, h:760}`（`island_home_m0X.png` blit；S27.2 资产）；
-> - 环几何 `ring.center_x:540, ring.center_y:780, ring.radius:474, ring.card_w:96, ring.card_h:120, ring.home_size:760,`
->   （`extra_scalar` 点号键；`scripts/map_pack.py` 数据驱动；`center_y`/`radius` = 运行时环几何，8pt 豁免同 v3 叙事键口径；
->   若 8pt 对齐调整 = `ring.center_y:784, ring.radius:480,` 两值形式并存有效，以 `scenes.json` 现值为准）；
+> - 环几何（运行时 = 已装包 `layout.json` 回注）`ring.center_x:540, ring.center_y:784, ring.radius:480, ring.card_w:96, ring.card_h:120, ring.home_size:760,`
+>   （`scripts/map_pack.py` 数据驱动；`center_y`/`radius` = 运行时环几何，8pt 豁免同 v3 叙事键口径；**784/480 = 现行**，8pt 对齐已落地）；
+> - `scenes.json` `extra_scalar` 仍存**构建期默认点号键** `ring.center_x:540, ring.center_y:780, ring.radius:474, ring.card_w:96, ring.card_h:120, ring.home_size:760,`
+>   （内嵌 fallback 值，未装包/未激活时生效；装包后运行期由 `layout.json` 的 `ring.*` 覆盖 = 784/480）；
 > - 舵轮 CTA `deck_spin {x:408, y:1336, w:264, h:264}`（v4 y:1160 下移，与环底 1314 错开）；
 > - 命令铜牌 `deck_trade {x:48, y:1608, w:312, h:136}` / `deck_sell {x:384, y:1608, w:312, h:136}` / `deck_build {x:720, y:1608, w:312, h:136}`（v4 y:1440 下移）；
 > - 落格提示签条 `hint {x:540, y:1760}`（v4 1632 下移；签条 {344,1760,392,64}）。

@@ -134,7 +134,7 @@
 
 ## 5. 文本 / 图片等比缩放（B1 承接）
 
-- **UI 层**：`bevy_ui` 文本（`Text`）与图片（`UiImage`）随 UI 相机/视口缩放；bevy_ui 自动布局处理重排。
+- **UI 层**：`bevy_ui` 文本（`Text`）与图片（`ImageNode`，0.20 新 API）随 UI 相机/视口缩放；bevy_ui 自动布局处理重排。
 - **游戏世界**：sprite 尺寸随相机 `o.scale`（EXP-116/117 已固化 `o.scale` 语义）；1080 为**游戏内容**设计锚。
 - 缩放律沿用 §等比（`s` 驱动字号/图片）；bevy_ui 场景自动，游戏世界走 `o.scale`。
 

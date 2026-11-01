@@ -98,6 +98,11 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | `mappack_verify` | `python3` + `scripts/map_pack.py verify <path>` | `path` = 平台按**自己的已装包扫描**（`assets/maps/*/manifest.json` 存在且目录名 ≠ `_template`）内部拼出的 `assets/maps/<id>` | 无 | 是 |
 | `mappack_check` | `python3` + `scripts/map_pack.py check` | 无 | 无 | 是 |
 | `audit_book` | 平台自身 | `--task <台账 id> --round <n> --role <a\|b>` | 只写 `evidence/console/` | 是 |
+| `build_apk` | `python3` + `scripts/build_artifacts.py run apk`（= `build_apk.sh` + 构建后 `apk_audit.py --apk` 复检，S35.1 24 号 §4.1） | 无（kind 固定 `apk`；后台执行，日志落 `evidence/console/logs/` gitignored） | `dist/TreasureIsl-arm64.apk` + `evidence/console/logs/`（gitignored） | 是 |
+| `build_wasm` | `python3` + `scripts/build_artifacts.py run wasm`（= `build_wasm.ps1`） | 无（后台执行） | `web/` + `evidence/console/logs/`（gitignored） | 是 |
+| `build_native` | `python3` + `scripts/build_artifacts.py run native`（= `cargo build treasure-bevy-native`） | 无（后台执行） | `target/` + `evidence/console/logs/`（gitignored） | 是 |
+| `build_list` | `python3` + `scripts/build_artifacts.py list` | 无（只读） | 无 | 是 |
+| `build_check` | `python3` + `scripts/build_artifacts.py check` | 无（只读前置体检；非 0 = 前置缺失） | 无 | 是 |
 
 - **默认启用列的机器真源** = `console_commands.json` 的 `enabled_by_default` 字段；
   **会改仓库跟踪文件（台账 / `docs/` / `assets/` / `evidence/` 根）的写动作默认关闭**（当前仅 `close_run` 一条，
@@ -114,6 +119,13 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 - **禁止 2**：`sh -c` / `cmd /c` 字符串拼接；一律 `Command::new(程序).args([...])` 逐参数传递。
 - **禁止 3**：平台执行**完整构建**（会重写 `web/` 与 git 跟踪的 `evidence/S18.8a-wasm-size.log`）
   ⇒ 只提供 `-Check` 体检；产物预览走平台自身静态服务。
+- **构建编排例外（S35.1，24 号 §4.1，2026-11-01 用户拍板「构建集成到平台 = 辅助开发」）**：
+  `build_apk` / `build_wasm` / `build_native` = 调 `scripts/build_artifacts.py run <kind>`（**编排器**，
+  构建本体仍走既有脚本 `build_apk.sh` / `build_wasm.ps1` / cargo = 工具契约不变），**后台执行**
+  （日志落 `evidence/console/logs/` gitignored，不污染仓库）；构建后**自动复检**
+  （APK = `apk_audit.py --apk` 24 号判据①②，FAIL 非 0 如实上报）。与禁止 3 的边界 = 禁止 3 针对
+  「平台自身直接重写 `web/` 产物 + git 跟踪证据」，S35.1 例外 = 走**白名单 id 后台执行既有脚本**
+  （写面登记 = `dist/`/`web/`/`target/` + gitignored 日志，不写 git 跟踪的 `evidence/*.log`）。
 
 ### 4.3 Linux / Windows 命令映射
 
@@ -165,8 +177,10 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | 证据 | `evidence/` 浏览 + 缺失告警 + 双审计报告清单（`audit-*.md` 文件 + §7.3 四行机器字段：task/round/侧/新发现/误报/残留，`GET /api/audit`） | P0 |
 | 门禁 | 分档执行 + 轮询日志 + 历史 | P1（S32.4） |
 | 资产 | UI 图片预览（`ui_manifest` 全量登记图（登记数随资产批次增长，S32.3 快照 = 75 张） + **标签分组 = role + 时间倒序** `generated_at` 降序 + **lightbox 点击放大** + 元数据含 AI prompt 原文；图片直读 = `assets/ui/` 白名单前缀，`GET /api/assets`）/ 校验状态 | P0（S32.3 看板 v1）+ P2（S32.7 校验状态） |
-| 设计图 | AI 生成设计稿浏览（`evidence/ui_concept/`，**非运行截图**；`GET /api/evidence?sub=ui_concept` 子目录枚举 + 白名单直读 + 组别标签〔主地图/首页/岛型·地图/对战/界面/资产表/其他〕+ lightbox 放大） | P0（S32.3） |
-| 地图 | 地图包管理面（`assets/maps/<id>/` 已装包清单 + 描述符摘要〔schema/id/version/data_version/中央岛/岛型数/31 格不变量/环几何/资产数〕+ `.default` 指针 + 制作指引 `scripts/map_pack.py` 命令面 + 21 号标准链接；`GET /api/map`，**只读浏览**，制作写操作走 `map_pack.py` 工具链、平台 0 写盘） | P0（S32.3） |
+| 设计图 | AI 生成设计稿浏览（`evidence/ui_concept/`，**非运行截图**；`GET /api/evidence?sub=ui_concept` 子目录枚举〔**滤除 `.thumb.png` 侧车**〕+ 白名单直读 + 组别标签〔主地图/首页/岛型·地图/对战/界面/资产表/其他〕+ lightbox 放大。**默认只展示正式稿**：`raw_`（未抠原图）/`tmp_`（临时试稿）前缀 = 中间产物隐藏（`#design-mid` 勾选展开），命名口径 = 13 号 §2.1。**压缩预览**：卡读 `.thumb.png` 侧车（480px PNG-8，~53KB vs 原图 4-6MB）、lightbox 读原图，口径 = 13 号 §4.0） | P0（S32.3） |
+ | 地图 | 地图包管理面（`assets/maps/<id>/` 已装包清单 + 描述符摘要〔schema/id/version/data_version/中央岛/岛型数/31 格不变量/环几何/资产数〕+ `.default` 指针 + 制作指引 `scripts/map_pack.py` 命令面 + 21 号标准链接；`GET /api/map` 只读浏览） + **地图编辑器**（环形 SVG 画布 31 节点 + 点节点改 kind/isle + 环几何输入 + I1~I9 前端实时校验条〔镜像 `map_pack.py verify_pack`，权威实现 = `map_pack.py`〕+ 生成 4 文件 JSON） + **`POST /api/map/import`**（S32.14 ② 免鉴权导入落盘面：写 `assets/maps/<id>/` 四文件 + 同进程 `map_pack.py sync` 回注 + `verify` 终判 I1~I9〔含 I7 资产哈希〕，违规 = `errors` 如实上报不静默绕过；写点纪律 = 21 号 §8 平台编辑器口径 + 本号 §10.1 唯一写点例外） | P0（S32.3 只读）+ S32.14（编辑器 + import） |
+| 测试 | 游戏测试标杆（`GET /api/tests`：`assets/data/test_manifest.json` 机读清单 + evidence 存在性对账）——门禁 33 项总览（读 `evidence/gate.log` Report 行）+ **分组树 级(L1–L4)→类→型** + 点测试看**步骤/阶段**（解析 evidence 日志关键行）+ **截图证据**（evidence/ 清单匹配 `.png`，lightbox 放大）；只读，0 写盘 | P0（S32.3 看板 v1 增量，23 号 §6） |
+| APK 体积 | APK/产物体积构成体检（`GET /api/apk-size`：`scripts/apk_audit.py --apk` 只读 = 判据① .so 压缩率 <90% + ② 未引用 UI 0 进包 + 目录构成表 + 引用集计数；`GET /api/build` = `build_artifacts.py list` 产物清单 + 最近构建日志尾行）。**平台不执行构建**（只读体检，22 号 §1 边界）；构建触发走 §4.2 白名单 id `build_apk`/`build_wasm`/`build_native`（后台执行，日志落 `evidence/console/logs/` gitignored）。判据单一事实源 = 24 号 `docs/process/24_apk_size_std.md`（S35.0）；构建编排 = 24 号 §4.1（S35.1） | P0（S35.0 只读页 + S35.1 构建编排面） |
 | 文档 | 全文检索 + ID 反查 | P2（S32.8） |
 | 构建 | `build_wasm -Check` 体检结果 + 产物清单 + `web/` 预览 | P2（S32.9） |
 | 设置 | token 粘贴（存 `sessionStorage`）+ 写操作开关 + 平台信息 | P0（S32.3，与 `GET /api/session` 配套） |
@@ -273,7 +287,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | 每任务双审计可追溯 | — | 每轮 A/B 报告落盘 + 收敛轮次表 + 未闭环 findings 计数（§7.4 三条判据） |
 | 平台自身质量 | 0 违规 | 既有门禁自动覆盖（见 §11.2）+ `cargo test -p ti-console` / `-p ti-devmeta` 实跑 |
 | 快照纪律有载体 | 0 空判 | 「0 游戏产物变更」的内容级指纹快照由 **`crates/ti-console` 的快照模块实现**（S32.2 落地；登记见 `docs/process/15_process_ledger.md` 第 23 行，状态 = **待固化（挂 S32.2，S32.2 完成前不得当载体断言）**）⇒ 纪律不悬空 |
-| **0 游戏产物变更** | 0 差异 | **增量口径 + 内容级快照（会话相对）**：动作前后各取一次冻结路径的**内容指纹**并逐文件比对，差集为空。指纹 = 每个文件 `sha256`（忽略 `.gitignore` 命中的文件）+ 未跟踪文件清单；**不能用 `git status --porcelain`**（它只给路径 + 状态码，不含内容 ⇒ 已脏文件再改内容时快照不变 = 口径失效，见第 4 轮 P1）。冻结路径 = `crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets/ android/ tests/`（游戏产物面；工具面 `crates/ti-tools crates/ti-devmeta crates/ti-console` **不在冻结范围**，S32.1 改 `ti-tools` 由 `cargo run -p ti-tools --bin ledger` 0 error 断言行为不变）。**根 `Cargo.toml` / `Cargo.lock` 不在冻结路径**（S32.1 必须新增 workspace member ⇒ 会改二者；口径 = 「`Cargo.toml` 的 `members` 段仅允许新增 `crates/ti-devmeta` / `crates/ti-console` 两行，其余逐字节一致；`Cargo.lock` 仅允许新增对应 package 条目」）。**门禁既有副作用路径** `evidence/web_playtest.{log,png}`、`evidence/font_render.txt` 只记录不判定（§3.1），但必须写进执行日志并提示。`web/` 产物清单（文件名 + 体积）前后一致（平台不执行完整构建 ⇒ 天然不变） |
+| **0 游戏产物变更** | 0 差异 | **增量口径 + 内容级快照（会话相对）**：动作前后各取一次冻结路径的**内容指纹**并逐文件比对，差集为空。指纹 = 每个文件 `sha256`（忽略 `.gitignore` 命中的文件）+ 未跟踪文件清单；**不能用 `git status --porcelain`**（它只给路径 + 状态码，不含内容 ⇒ 已脏文件再改内容时快照不变 = 口径失效，见第 4 轮 P1）。冻结路径 = `crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets/ android/ tests/`（游戏产物面；**S32.15 例外**：`assets/maps/` 目录 + `assets/data/board.json` 的 `maps` 段 = 平台地图导入唯一写点（§10.1），import 动作前后快照用 `snapshot::import_probe` 判定（豁免这两处差异，其余冻结路径差异仍算漂移）；工具面 `crates/ti-tools crates/ti-devmeta crates/ti-console` **不在冻结范围**，S32.1 改 `ti-tools` 由 `cargo run -p ti-tools --bin ledger` 0 error 断言行为不变）。**根 `Cargo.toml` / `Cargo.lock` 不在冻结路径**（S32.1 必须新增 workspace member ⇒ 会改二者；口径 = 「`Cargo.toml` 的 `members` 段仅允许新增 `crates/ti-devmeta` / `crates/ti-console` 两行，其余逐字节一致；`Cargo.lock` 仅允许新增对应 package 条目」）。**门禁既有副作用路径** `evidence/web_playtest.{log,png}`、`evidence/font_render.txt` 只记录不判定（§3.1），但必须写进执行日志并提示。`web/` 产物清单（文件名 + 体积）前后一致（平台不执行完整构建 ⇒ 天然不变） |
 
 > `web/` 与 `dist/` 被 `.gitignore` 忽略 ⇒ **`git status` 不能作为「0 游戏产物变更」的证据**（EXP-058 反虚报口径）。
 
@@ -305,6 +319,12 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
   浏览器侧：用户在「设置」里粘贴 token → 存 `sessionStorage`（关闭即失）→ 写操作带 `X-TI-Token` 头；
 - 请求方法白名单：只读 `GET`；写操作 `POST` + `X-TI-Token`（缺 token ⇒ 403）；请求体上限 64 KiB；
   只接受 `Content-Type: application/json`。
+- **S32.14 ② 内网自用例外（地图导入免鉴权，2026-10-30 用户拍板「不要鉴权」）**：平台定位 = 内网开发机自用
+  （`10.0.182.131:8787`），S32.4 鉴权/POST token 面维持挂账不阻塞本线。`POST /api/map/import` = **免 token 的唯一写端点**，
+  写点唯一且受控（`repo/import.rs`：只写 `assets/maps/<id>/{manifest,map,layout,strings}.json` 四文件，`id` 白名单
+  `^[a-z0-9_]{1,16}$` 防穿越 + canonicalize 前缀断言 + 同进程 `map_pack.py sync/verify` 终判 I1~I9）；
+  `write_whitelist` 扩 `assets/maps/`（`console_sources.json`，平台其余 0 写盘，北极星「0 游戏产物变更」
+  收敛为「唯一写点 = 地图导入口子」）。**将来真开放外网时 S32.4 补 `X-TI-Token` 鉴权 = 在该端点加 403 面即可，不重做**。
 
 ### 10.2 路径面
 
@@ -315,6 +335,20 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
   （S32.2 起落实面 = `console_sources.json` **混合白名单**〔目录项前缀 + 文件项精确〕数据驱动，
   上列 5 目录名 = 语义面；逐文件放行以 JSON 清单为准，白名单判定器 = `repo::guard::check_relative`。）
   - **png 实体直读口径**（S32.3 资产页消费面）：`ui_manifest.json` 登记的图片实体 = `assets/ui/` 目录项前缀放行（白名单 10 条之一），浏览器以 `http://host/assets/ui/<name>.png` 直读（content-type = `image/png`，`ti-devmeta::http::mime_for` 面）；未登记文件（如 `assets/data/*.json`）404 拒。
+  - **白名单直读缓存协商口径**（S32.13，2026-10-30）：仓库白名单直读（`/evidence/...` `/assets/ui/...`
+    等，非静态壳）响应带 `ETag`（FNV-1a 内容指纹 + 长度）+ `Cache-Control: max-age=604800, public`；
+    浏览器二次请求带 `If-None-Match` 命中 = **304 空 body**（省流量，文件改 ⇒ 指纹变 ⇒ 自动失效）。
+    网页静态壳（`index.html`，`web_root` 面）仍 `Cache-Control: no-store`（改即生效，不缓存旧版）。
+    实现 = `routes.rs` `cached_response` + `content_fingerprint`（0 外部依赖，FNV-1a 纯 std）。
+    设计稿侧车压缩面 = 13 号 §4.0（`ui_thumb.py` 生成 `.thumb.png`，卡读侧车、lightbox 读原图）。
+  - **gzip 传输压缩口径（按 MIME 分流，S32.13，2026-10-30）**：响应面**仅文本类 MIME**
+    （`text/*` / `application/json` / xml / javascript / yaml）在客户端 `Accept-Encoding: gzip`
+    且 body > 64B 时压（`Content-Encoding: gzip` + `Vary: Accept-Encoding`）；**已压缩二进制
+    （`image/*` / wasm / octet-stream）不压** —— PNG 内部已 zlib，再过 gzip 实测省 -0.0%（白费 CPU）。
+    实测收益：`index.html` 省 69%（33.7→10.5KB）/ JSON 省 85~93% / YAML 省 65%。
+    实现 = `routes.rs` `header_body(want_gzip)` + `is_compressible_mime` + `gzip_body`
+    （flate2，**workspace 已登记依赖，0 新增外部 crate**；压失败兜底原样返回不阻断）。
+    304 空 body 不压（浏览器已缓存原对象）。
 
 ### 10.3 执行面
 

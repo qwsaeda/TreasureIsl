@@ -59,7 +59,7 @@ pub struct EventEffect {
 impl MaritimeEvent {
     /// 计算效果（确定性；损耗 = pct 字段，奖励 = 绝对字段）。
     #[must_use]
-    pub fn effect(&self, cfg: &EventCfg) -> EventEffect {
+    pub fn effect(self, cfg: EventCfg) -> EventEffect {
         match self {
             Self::WindGod { jump_cells } => EventEffect {
                 gold_delta: 0,
@@ -68,8 +68,8 @@ impl MaritimeEvent {
                 gold_loss_pct: 0,
                 crew_loss_pct: 0,
                 arms_loss_pct: 0,
-                extra_roll: *jump_cells == 0,
-                jump_cells: *jump_cells,
+                extra_roll: jump_cells == 0,
+                jump_cells,
                 merchant_buy: false,
             },
             Self::Shipwreck | Self::Storm => EventEffect {
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn wind_god_extra_roll_when_jump_zero() {
         let e = MaritimeEvent::WindGod { jump_cells: 0 };
-        let fx = e.effect(&cfg());
+        let fx = e.effect(cfg());
         assert!(fx.extra_roll);
         assert_eq!(fx.jump_cells, 0);
         assert_eq!(fx.crew_loss_pct, 0);
@@ -140,14 +140,14 @@ mod tests {
     #[test]
     fn wind_god_jump_when_nonzero() {
         let e = MaritimeEvent::WindGod { jump_cells: -3 };
-        let fx = e.effect(&cfg());
+        let fx = e.effect(cfg());
         assert!(!fx.extra_roll);
         assert_eq!(fx.jump_cells, -3);
     }
 
     #[test]
     fn treasure_wreck_grants_gold_and_arms() {
-        let fx = MaritimeEvent::TreasureWreck.effect(&cfg());
+        let fx = MaritimeEvent::TreasureWreck.effect(cfg());
         assert_eq!(fx.gold_delta, 200);
         assert_eq!(fx.arms_delta, 3);
         assert_eq!(fx.gold_loss_pct, 0);
@@ -155,21 +155,21 @@ mod tests {
 
     #[test]
     fn rescue_adds_crew() {
-        let fx = MaritimeEvent::IslandRescue.effect(&cfg());
+        let fx = MaritimeEvent::IslandRescue.effect(cfg());
         assert_eq!(fx.crew_delta, 4);
-        let fx2 = MaritimeEvent::Urchin.effect(&cfg());
+        let fx2 = MaritimeEvent::Urchin.effect(cfg());
         assert_eq!(fx2.crew_delta, 4);
     }
 
     #[test]
     fn blacksmith_marks_merchant_buy() {
-        let fx = MaritimeEvent::Blacksmith.effect(&cfg());
+        let fx = MaritimeEvent::Blacksmith.effect(cfg());
         assert!(fx.merchant_buy);
     }
 
     #[test]
     fn shipwreck_losses_are_pct_fields() {
-        let fx = MaritimeEvent::Shipwreck.effect(&cfg());
+        let fx = MaritimeEvent::Shipwreck.effect(cfg());
         assert_eq!(fx.crew_loss_pct, 1000);
         assert_eq!(fx.arms_loss_pct, 1000);
         assert_eq!(fx.gold_loss_pct, 500);
@@ -179,8 +179,8 @@ mod tests {
     #[test]
     fn deterministic_same_event_same_effect() {
         assert_eq!(
-            MaritimeEvent::WindGod { jump_cells: 2 }.effect(&cfg()),
-            MaritimeEvent::WindGod { jump_cells: 2 }.effect(&cfg())
+            MaritimeEvent::WindGod { jump_cells: 2 }.effect(cfg()),
+            MaritimeEvent::WindGod { jump_cells: 2 }.effect(cfg())
         );
     }
 }

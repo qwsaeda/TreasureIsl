@@ -1,0 +1,40 @@
+# S34.2 验收证据（task_close.py 自动生成 2026-11-01）
+
+- 任务标题：v6 渲染层终码：render_v6_elem 默认路径（不规则岛 + 格子紧围岛 + 海洋底 + 缆绳 + 船/舵轮/罗盘 + 缺图蓝色海洋回退）+ render_intent main_map 非黑覆盖率阈值 980‰（v6 有黑色 AI 元素属正常）
+- 判据（台账 dod）：改动面=表现 | 代码=crates/ti-app/src/scenes/main_map.rs（render_v6_elem 默认路径 + V6_SEA_BLUE 满屏回退）+ render_intent.rs（main_map 阈值 980‰）| 判据=--shot main_map 出图 0 硬错误 + render_intent main_map 非黑 ≥980‰ + gate 全绿 + evidence/S34.2.log
+
+## 判据实跑
+
+### `$ /root/.cargo/bin/cargo test -p ti-app --test render_intent`
+
+退出码：0
+
+```
+
+running 12 tests
+test index_layout_matches_doc ... ok
+test main_map_layout_matches_doc ... ok
+test message_layout_matches_doc ... ok
+test saveload_layout_matches_doc ... ok
+test dynamic_entities_land_in_declared_portrait_zones ... ok
+test select_scenes_layout_matches_doc ... ok
+test hint_bar_width_height_follow_active_font ... ok
+test key_rects_have_pixels ... ok
+test vs_layout_matches_doc ... ok
+test selected_state_marker_visible_and_no_leak ... ok
+test text_regions_not_flooded_by_chrome ... ok
+test scene_layer_contributes_text_region_pixels ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.67s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.54s
+     Running tests/render_intent.rs (/disk/target/debug/deps/render_intent-f66f6f794ab2d4db)
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

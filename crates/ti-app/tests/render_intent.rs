@@ -382,6 +382,9 @@ impl ti_app::scenes::EconomyHost for VsHost {
     fn bank_gold(&self) -> u32 {
         0
     }
+    fn bank_deposit(&self) -> u32 {
+        0
+    }
     fn spend_bank_gold(&mut self, _amount: u32) {}
     fn build_increment(&mut self, _kind: ti_core::domain::economy::Building) {}
 }
@@ -623,10 +626,13 @@ fn scene_layer_contributes_text_region_pixels() {
         }
         // S18.20：其余 5 屏 = **贴图背景版式**（AI 夜空 / 俯视夜海全屏铺底，
         // 旧木框与占位横线已退役）→ 判据 = 非黑覆盖率 ≥ 990‰（贴图铺满画面）。
+        // main_map S33/v6（2026-10-31）：v6 不规则岛渲染默认路径，海蓝底 + 岛/格/
+        // 绳索等有黑色像素的 AI 元素 ⇒ 阈值降到 980‰（仍须「不黑屏」，容忍有黑元素）。
+        let threshold: u64 = if scene == "main_map" { 980 } else { 990 };
         let covered = non_black_permille(&px);
         assert!(
-            covered >= 990,
-            "{scene} 非黑覆盖率 {covered}‰ < 990‰（背景贴图未铺满 / 被整块盖死）"
+            covered >= threshold,
+            "{scene} 非黑覆盖率 {covered}‰ < {threshold}‰（背景贴图未铺满 / 被整块盖死）"
         );
         eprintln!("  {scene} 背景贴图覆盖率 = {covered}‰");
     }

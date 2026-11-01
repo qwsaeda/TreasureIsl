@@ -9,8 +9,8 @@ use crate::data::balance::RawManpower;
 use crate::data::balance::RawMerchants;
 
 /// 0 = 未提供（serde default 缺省），取默认值；非 0 = 用户值（越界钳制由调用方做）。
-fn pick(v: u32, default: u32) -> u32 {
-    if v == 0 { default } else { v }
+fn pick(user_value: u32, default: u32) -> u32 {
+    if user_value == 0 { default } else { user_value }
 }
 
 /// 战力系数（`balance.manpower`；`rules::force` 消费）。
@@ -44,15 +44,15 @@ impl Default for ManpowerCfg {
 }
 
 impl From<RawManpower> for ManpowerCfg {
-    fn from(r: RawManpower) -> Self {
+    fn from(raw: RawManpower) -> Self {
         let d = Self::default();
         Self {
-            weapon_coef: pick(r.weapon_coef, d.weapon_coef),
-            barehand_coef: pick(r.barehand_coef, d.barehand_coef),
-            loss_pct: pick(r.loss_pct, d.loss_pct).min(10000),
-            weapon_loss_pct: pick(r.weapon_loss_pct, d.weapon_loss_pct).min(10000),
-            initial_crew: pick(r.initial_crew, d.initial_crew),
-            initial_arms: pick(r.initial_arms, d.initial_arms),
+            weapon_coef: pick(raw.weapon_coef, d.weapon_coef),
+            barehand_coef: pick(raw.barehand_coef, d.barehand_coef),
+            loss_pct: pick(raw.loss_pct, d.loss_pct).min(10000),
+            weapon_loss_pct: pick(raw.weapon_loss_pct, d.weapon_loss_pct).min(10000),
+            initial_crew: pick(raw.initial_crew, d.initial_crew),
+            initial_arms: pick(raw.initial_arms, d.initial_arms),
         }
     }
 }
@@ -88,15 +88,15 @@ impl Default for EventCfg {
 }
 
 impl From<RawEvents> for EventCfg {
-    fn from(r: RawEvents) -> Self {
+    fn from(raw: RawEvents) -> Self {
         let d = Self::default();
         Self {
-            crew_loss_pct: pick(r.crew_loss_pct, d.crew_loss_pct).min(10000),
-            arms_loss_pct: pick(r.arms_loss_pct, d.arms_loss_pct).min(10000),
-            gold_loss_pct: pick(r.gold_loss_pct, d.gold_loss_pct).min(10000),
-            treasure_gold: pick(r.treasure_gold, d.treasure_gold),
-            treasure_arms: pick(r.treasure_arms, d.treasure_arms),
-            rescue_crew: pick(r.rescue_crew, d.rescue_crew),
+            crew_loss_pct: pick(raw.crew_loss_pct, d.crew_loss_pct).min(10000),
+            arms_loss_pct: pick(raw.arms_loss_pct, d.arms_loss_pct).min(10000),
+            gold_loss_pct: pick(raw.gold_loss_pct, d.gold_loss_pct).min(10000),
+            treasure_gold: pick(raw.treasure_gold, d.treasure_gold),
+            treasure_arms: pick(raw.treasure_arms, d.treasure_arms),
+            rescue_crew: pick(raw.rescue_crew, d.rescue_crew),
         }
     }
 }
@@ -117,11 +117,11 @@ impl Default for MerchantCfg {
 }
 
 impl From<RawMerchants> for MerchantCfg {
-    fn from(r: RawMerchants) -> Self {
+    fn from(raw: RawMerchants) -> Self {
         let d = Self::default();
         Self {
-            weapon_price: pick(r.weapon_price, d.weapon_price),
-            slave_price: pick(r.slave_price, d.slave_price),
+            weapon_price: pick(raw.weapon_price, d.weapon_price),
+            slave_price: pick(raw.slave_price, d.slave_price),
         }
     }
 }

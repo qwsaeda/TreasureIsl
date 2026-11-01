@@ -12,9 +12,30 @@
     "crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity": "超限（195>140）：2026-10-29 门禁对账补登基线（限期整改）",
     "crates/ti-core/tests/exhaust_random_session.rs::run_random_session": "超限（190>140）：2026-10-29 门禁对账补登基线（限期整改）",
     "crates/ti-core/examples/full_run_demo.rs::main": "超限（304>140）：2026-10-29 门禁对账补登基线（限期整改）",
-    "crates/ti-core/src/data/mod.rs::convert": "超限（218>140）：2026-10-29 门禁对账补登基线（限期整改）"
+    "crates/ti-core/src/data/mod.rs::convert": "超限（218>140）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-app/src/scenes/main_map.rs::render_v6_proto": {
+      "reason": "v6 in-progress (2026-10-31)",
+      "fix_in": "TBD"
+    },
+    "crates/ti-app/src/scenes/main_map.rs::render": {
+      "reason": "v6 in-progress (2026-10-31)",
+      "fix_in": "TBD"
+    }
   },
-  "exempt_repeats": {},
+  "exempt_repeats": {
+    "i18n 文案取值 sgetf@crates/ti-app/src/scenes/main_map.rs": {
+      "reason": "v6/vs_v2 in-progress (2026-10-31)",
+      "fix_in": "TBD"
+    },
+    "i18n 文案取值 sgetf@crates/ti-app/src/scenes/vs.rs": {
+      "reason": "v6/vs_v2 in-progress (2026-10-31)",
+      "fix_in": "TBD"
+    },
+    "i18n 文案取值 sgetf@crates/ti-app/src/scenes/vs_anim_proto.rs": {
+      "reason": "v6/vs_v2 in-progress (2026-10-31)",
+      "fix_in": "TBD"
+    }
+  },
   "max_file_lines": 900,
   "max_fn_lines": 140,
   "max_repeat": 5,

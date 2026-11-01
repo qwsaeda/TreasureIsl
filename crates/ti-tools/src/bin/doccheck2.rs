@@ -179,16 +179,60 @@ fn read_rs_tree(dir: &Path) -> Vec<String> {
     out
 }
 
-/// 3. LCG 乘数 hex 误算检查：`impl/10_rng.md` 与 `impl/06_cards_events.md` 是 LCG hex
-///    权威记录处，若出现误算旧值 `0x3443D`（应为 `0x343FD`）即报错。
+/// 收集 `assets/data/` 下所有 JSON 的 i18n `*_key` 字段值（`name_key`/`text_key`/
+/// `dungeon_name_key` 数据驱动 i18n key 消费方；Q014：balance.json 的
+/// `boat.*`/`combat.item.*`/`isle.*` 经 `name_key` 间接引用，旧实现未扫 ⇒ 假孤儿 WARN 噪音）。
+/// 白名单限定 i18n 字段：`hud_key`（`ui_icons.json`）是**图标注册表键**非 strings.json 键，不得收。
+fn collect_data_key_values(root: &Path, out: &mut BTreeSet<String>) {
+    const I18N_KEY_FIELDS: [&str; 3] = ["name_key", "text_key", "dungeon_name_key"];
+    let dir = root.join("assets/data");
+    let Ok(entries) = std::fs::read_dir(&dir) else { return };
+    for e in entries.flatten() {
+        let p = e.path();
+        if p.extension().and_then(|x| x.to_str()) != Some("json") {
+            continue;
+        }
+        let Ok(t) = std::fs::read_to_string(&p) else { continue };
+        // 逐行找 `"<i18n_key_field>": "value"`（indent=1 规范形，值单行字符串）。
+        for line in t.lines() {
+            let Some(q) = line.find('"') else { continue };
+            let key = &line[q + 1..];
+            let Some(eq) = key.find('"') else { continue };
+            let field = &key[..eq];
+            if !I18N_KEY_FIELDS.contains(&field) {
+                continue;
+            }
+            let rest = &line[q + 1 + eq + 1..];
+            let Some(colon) = rest.find(':') else { continue };
+            let after = &rest[colon + 1..];
+            let Some(vq) = after.find('"') else { continue };
+            let v = &after[vq + 1..];
+            let Some(end) = v.find('"') else { continue };
+            out.insert(v[..end].to_string());
+        }
+    }
+}
+
+/// 3. LCG 乘数 hex 误算检查：`impl/10_rng.md`、`impl/06_cards_events.md` 与
+///    `legacy/docs/facts/tools.md`（F-320）是 LCG hex
+///    权威记录处，若出现误算旧值 `0x3443D`（应为 `0x343FD`）即报错；
+///    十进制裸值 `*214013`（同行无 `0x343FD`）亦报错（Q019，项目约定 hex 记录）。
 fn check_lcg_hex(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
-    for rel in ["docs/impl/10_rng.md", "docs/impl/06_cards_events.md"] {
+    for rel in ["docs/impl/10_rng.md", "docs/impl/06_cards_events.md", "legacy/docs/facts/tools.md"]
+    {
         let Some(text) = read_file(root, rel) else { continue };
         for (i, line) in text.lines().enumerate() {
             if line.contains("0x3443D") {
                 errors.push(format!(
                     "{rel}:{} 出现 LCG 乘数误算 hex 0x3443D（应为 0x343FD）：{}",
+                    i + 1,
+                    line.trim()
+                ));
+            }
+            if line.contains("*214013") && !line.contains("0x343FD") {
+                errors.push(format!(
+                    "{rel}:{} LCG 乘数写成十进制 `*214013`（项目约定 hex `0x343FD`；十进制仅可作括号注释）：{}",
                     i + 1,
                     line.trim()
                 ));
@@ -341,6 +385,9 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
             used_keys.insert(inner[..end].to_string());
         }
     }
+    // 盲区修复（Q014）：`assets/data/*.json` 数据驱动 `*_key`（name_key/text_key/
+    // dungeon_name_key）也是 i18n key 消费方（balance.json boat.*/combat.item.*/isle.*）。
+    collect_data_key_values(root, &mut used_keys);
     // 代码用了但 JSON 没有的 key → 缺失（界面会显示裸 key，可见异常）—— 失败级
     for k in &used_keys {
         if !json_keys.contains(k) {

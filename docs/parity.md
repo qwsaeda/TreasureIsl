@@ -17,9 +17,9 @@
 | P0-1 | 每个容器（`ui.pak`/`glpics.pak`/`glmap_m0*.pak`/`*.lpk`）条目提取率 100% | `cargo run -p ti-tools -- unpack --check-all` → extracted == total |
 | P0-2 | 每个格式解析器 **0 未知字节**（文件 100% 字段被定义，否则报错） | `cargo run -p ti-tools -- verify --zero-unknown` → 全格式 pass |
 | P0-3 | 解包后**重打包逐字节一致** | `--repack` 输出 sha256 == 原文件 sha256 |
-| P0-4 | PCX 解码像素与**独立参考实现**逐像素一致 | `cargo test -p ti-formats --test pcx_parity` |
-| P0-5（S10.1 新增）| 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test touch_render_same_coords`：点按棋子 → 实际移动方向一致 |
-| P0-6（S10.2 新增）| HD 递归加载 100% 注入（`load_hd_pack_from_dir` 递归子目录） | `cargo test -p ti-app --test hd_inject_full`：注入计数 == `assets_hd_pack` 全量 PNG |
+| P0-4 | PCX 解码像素与**独立参考实现**逐像素一致 | `cargo test -p ti-tools --test pcx_ref`（Rust 解码器 vs `scripts/pcx_ref.py` 独立参考，`pcx_ref.rs` 3 用例） |
+| P0-5（S10.1 新增）| 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | 已并入 doccheck2 `check_touch_render_pair`（门禁 doccheck2 项；原 `touch_render_same_coords` 集成测试已退役） |
+| P0-6（S10.2 新增）| HD 递归加载 100% 注入（`load_hd_pack_from_dir` 递归子目录） | `cargo test -p ti-app --test render_parity_hd`（HD RGBA8 渲染路径逐像素对齐，`hd-8bit` feature）；原 `hd_inject_full` 集成测试已退役 |
 
 ## P1 数据对齐
 
@@ -78,7 +78,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > **易错点（勿再踩）**：
 > - `gate.ps1` 的**注释编号**（1..20 + 19.5 + 4b，含第 7 项 zero-unknown）与**机器计数**
 >   不一定相等：zero-unknown 是条件项不计；`10a`/`10b`/`10c` 各算 1 项。引用「项数」
->   一律用机器口径 24。
+>   一律用机器口径 33。
 > - `10a`/`10b`/`10c` 是 **3 个独立顶格 `Report`，各算 1 项**，不是「三合一算 1 项」。
 > - 历史计划文档里的 8/10/14/16/18/20 项均为**该阶段时点快照**，不代表当前；引用时须带时点标注。
 > - **`required-features` 的 bin 不被第 1~3 项编译/lint 覆盖**——第 4b 项专门补这个盲区（EXP-099）。

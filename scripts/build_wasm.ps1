@@ -214,17 +214,37 @@ if (Test-Path $mapsSrc) {
 }
 
 # 4f) S31.2c：Bevy 资产服务器（wasm HttpWasmAssetReader）fetch 根 = `web/assets/`，
-#     按 URL 相对读 `assets/fonts/` + `assets/ui/`（`bevy::asset::AssetPlugin.file_path` 空串
-#     = 部署根）；native 壳走 std::fs 不经过本段。缺目录 = 字体/UI 贴图降级不 panic。
-$bevyAssetDirs = @('fonts', 'ui')
+#     按 URL 相对读 `assets/fonts/` + `assets/ui/` + `assets/audio/`（`bevy::asset::AssetPlugin.file_path`
+#     空串 = 部署根）；native 壳走 std::fs 不经过本段。缺目录 = 字体/UI 贴图降级不 panic。
+# S34（2026-11-01）：+ audio（原版音乐/SFX，registry.audio 登记，发货无声撤销）。
+$bevyAssetDirs = @('fonts', 'ui', 'audio')
 foreach ($ad in $bevyAssetDirs) {
     $srcDir = Join-Path (Get-Location) "assets\$ad"
     if (Test-Path $srcDir) {
         $dstDir = Join-Path $outDir "assets\$ad"
-        New-Item -ItemType Directory -Force -Path $dstDir | Out-Null
-        Copy-Item (Join-Path $srcDir '*') $dstDir -Force -Recurse
-        $n = (Get-ChildItem $dstDir -File).Count
-        Say "bevy-assets  $ad -> web/assets/$ad（$n 个文件）"
+        # S35.0（24 号 APK/产物体积标准）：只部署「引擎引用集」——`scripts/apk_audit.py --refset`
+        # 单一事实源（代码字面量 + format! 动态前缀 + 地图岛 kind + registry audio）；未引用图 0 进产物。
+        $refset = & python3 (Join-Path (Get-Location) "scripts\apk_audit.py") --refset 2>$null
+        if ($LASTEXITCODE -eq 0 -and $refset) {
+            $refs = $refset | ConvertFrom-Json
+            $list = @($refs.$ad) + @($refs.legacy)
+            foreach ($rel in $list) {
+                $src = Join-Path (Get-Location) $rel
+                if (-not (Test-Path $src -PathType Leaf)) { continue }
+                $dst = Join-Path $outDir $rel
+                $dstParent = Split-Path $dst -Parent
+                if (-not (Test-Path $dstParent)) { New-Item -ItemType Directory -Force -Path $dstParent | Out-Null }
+                Copy-Item $src $dst -Force
+            }
+            $n = (Get-ChildItem $dstDir -File -Recurse).Count
+            Say "bevy-assets  $ad -> web/assets/$ad（$n 个文件，引用集裁剪）"
+        } else {
+            # 工具缺位/无 python3 = 回退全量（保守不砍；EXP：构建环境差异不静默降级体积口径）
+            New-Item -ItemType Directory -Force -Path $dstDir | Out-Null
+            Copy-Item (Join-Path $srcDir '*') $dstDir -Force -Recurse
+            $n = (Get-ChildItem $dstDir -File).Count
+            Say "WARN bevy-assets $ad 引用集工具不可用 ⇒ 回退全量（$n 文件；体积口径漂移，24 号标准③）"
+        }
     } else {
         Say "SKIP  bevy-assets $ad（assets/$ad/ 不存在）"
     }

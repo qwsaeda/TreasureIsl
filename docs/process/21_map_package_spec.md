@@ -85,6 +85,8 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
 | `layout` | ✓ | 版面参数（环几何等） | 8pt 校验（§5） |
 | `strings` | ✓ | 该图文案（键 → 值） | 键在 `strings.json` 键空间内 |
 | `assets` | ✓ | 包用到的资产索引：`file` + `source`（`pack`=包内自带 / `pool`=共享池）+ `sha256` + `bytes` | 两种来源都在位 + 哈希一致 + 字节数一致 |
+| `central_asset` | ✓ | **中央据点岛**资产 id（`island_home_<id>`，v5 中央岛；= `assets[]` 一项的 `file` 基名） | 与 `assets[]` 存在项对应 + 在 `ui_manifest.json` 登记 |
+| `isle_assets` | ✓ | **10 类岛资产 id 列表**（`boss_fort`/`harbour`/…，长度 = `isle_kinds`；每项对应 `assets/ui/isle_<id>.png`） | 与 `assets[]` 存在项对应 + 长度 = `invariants.isle_kinds` |
 | `invariants` | ✓ | 该包自述的构成（工具据此做交叉校验） | 与 `map.spaces` 实测一致 |
 
 > 哈希口径 = **SHA-256**（小写 hex）；与 `assets_hd_pack/manifest_hd.json` 的 `fnv1a64` 并存
@@ -103,7 +105,8 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
   - `events[]`：**每图配特有随机事件**（海事类，如暗礁流 / 洋流 / 海市蜃楼；`territory.md` §6），
     与 `balance.events` 常用集合并；每项 `{ id, kind, params }`。
   - `merchants[]`：**每图必有武器商人 + 奴隶商人**（`territory.md` §7）；每项 `{ id: "weapon"|"slave", cell, price_mult }`。
-  - 逐格 `terrain`/`building`：领地格的地形（金矿/渔业/水果/礁石）+ 建筑初始等级
+  - 逐格 `terrain`/`resource`/`building`：领地格的地形（金矿/渔业/水果/礁石）+ 产出地形
+    `resource`（`fishing`/`reef`/`gold`…，`territory.md` §4.2 每格地形专属产出）+ 建筑初始等级
     （`territory.md` §4.2，产出 = f(地形, 建筑等级)）。
   - 不变量（`verify` 加查）：每图 `merchants` 含 `weapon` 与 `slave` 各 ≥1；`events[]` 非空。
 
@@ -140,9 +143,10 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
 | I6 | 环几何 8pt | `ring.center_y`/`radius`/`card_w`/`card_h` 8 整除（`center_x` 屏心 540 豁免） |
 | I7 | 资产齐全 + 哈希一致 | manifest `assets[]` 每项（`source=pack` 与 `source=pool` 都算）：文件在位、`bytes` 一致、`sha256` 一致 |
 | I8 | 焦点 N8 往返 | `layout.world_canvas` ≡ manifest `focus.bbox_pct` × (1080,1920) ±1px |
+| I9 | 内容齐备 | `events[]` 非空（每图必配特有随机事件）；`merchants` 含 `weapon` 与 `slave` 各 ≥1；每个领地格（`isle`）有 `building`（初始等级 ≥1）+ `resource`（产出地形） |
 
 > I1~I5 = 赛道结构不变量（`docs/business/territory.md` §2 的数据面）；I6~I8 = 版面/完整性不变量
-> （与 `check_scene_narrative` N8、`doccheck2` 8pt 同一口径）。
+> （与 `check_scene_narrative` N8、`doccheck2` 8pt 同一口径）；I9 = 内容不变量（S33.2 领地/事件/商人）。
 
 ## 6. 版本与兼容 + 失败语义
 
@@ -152,7 +156,7 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
 | `data_version` 不受支持 | 同上 |
 | `version` 较低（降级安装） | 允许，`install` 记警告；`version` 较高 ⇒ 需 `--force` |
 | 资产缺失 / 哈希不符 / 字节数不符 | **拒绝安装**（工具非 0）/ 运行期**跳过该包** |
-| 不变量 I1~I8 任一不满足 | **拒绝安装**（工具非 0）/ 运行期**跳过该包** |
+| 不变量 I1~I9 任一不满足 | **拒绝安装**（工具非 0）/ 运行期**跳过该包** |
 | 运行期该包加载失败 / 未就绪 | **回退内嵌默认包**（`scenes.json` + `board.json` 内嵌版）⇒ **可玩性优先，不崩** |
 
 > 「跳过该包」= 不激活，继续用当前激活包；「回退内嵌默认包」= 无激活包时的兜底。
@@ -162,11 +166,32 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
 | 环节 | 契约 |
 |---|---|
 | 资产根 | Bevy `AssetPlugin.file_path` = 仓库根（native）/ 部署根（wasm）⇒ 包目录**按相对路径直读** |
-| 加载时机 | 启动后异步加载已装包的 `manifest.json` → `map.json`/`layout.json`/`strings.json` → 校验（I1~I8）→ 注入数据层 |
+| 加载时机 | 启动后异步加载已装包的 `manifest.json` → `map.json`/`layout.json`/`strings.json` → 校验（I1~I9）→ 注入数据层 |
 | 首帧 | **不阻塞首帧**：未就绪先用内嵌默认包（现状行为），就绪后热切 |
 | 注入点 | `ti_core::data` 访问器（`board()`/`scenes()`/`strings()`/`terrain()`）**可注入源**；**无注入 = 现状内嵌**（零回归） |
 | 切包 | `data::activate_pack(id)` → 数据层换源 + 表现层重取 `layout`；规则层零改造（生产路径吃 `&BoardMap` 参数） |
 | 打包边界 | 数据 = 运行期可换（需注入通道）；**资产** = 运行期按路径加载（`web/` 部署链须拷贝 `assets/maps/<id>/`） |
+
+## 7a. 地图制作完整流程（2026-10-31 用户「固定地图的制作流程」→ 定案）
+
+**流程 = 固定 6 步顺序，不可跳**（跳步 = 返工：跳键控 = 白块 / 跳登记 = 漏登记 FAIL /
+跳迭看 = A 纪律违反 / 跳打包 = 地图不可分发）：
+
+1. **规格定案**：`12_main_map_v6_vs_v2_spec.md`（版面/交互/判据）+ `territory.md`（规则）
+   + `13_user_requirements_ledger.md`（用户要求总账）——**先定案再动手**（A 纪律）。
+2. **元素创作**：`agnes_gen.py` 生成元素（白底）+ `key_v6_elements.py` 键控透明
+   （创作范围 = `18_asset_content_pipeline.md` §3a：风格统一羊皮/黄铜手绘 + 禁写实照片）。
+3. **登记**：`ui_asset_batch.py register` → `ui_manifest.json`（`source=pool` 共享池）
+   + `assets/ui_batches/<batch>.json` 批次规格（CS-1 资产单源）。
+4. **迭看**：合成稿 + 引擎渲染（`--shot`）落 `ui_concept/` 顶层 + `ui_thumb.py` 侧车
+   （§2.1a 归档）→ **用户确认留痕**（A 纪律，未确认不落终码）。
+5. **落码**：确认后接正式路径（`main_map.rs` / `vs.rs`），数据驱动（环/格/岛从 `map.json` 读）。
+6. **打包**：`map_pack.py pack/verify/install` 出 `dist/maps/<id>.map-pack/` + 装上
+   `assets/maps/<id>/`（`source=pack` 专属资产入包；`source=pool` 不入包）。
+
+**范围划定**（用户「划定范围」）：本流程只覆盖**地图/UI 设计**（`ui-redesign-v3` + `assets/ui` +
+`assets/maps`）。**不碰**：平台代码（`ti-console`/`ti-devmeta`/S32 平台任务）、业务规则数值
+（`balance.json`/`economy.md`）、引擎核心（`ti-engine` 渲染管线）——跨范围必须写原因（硬规则 7）。
 
 ## 8. 工具与流水线
 
@@ -175,7 +200,7 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
 | 子命令 | 作用 | 幂等/退出码 |
 |---|---|---|
 | `pack <id>` | 已装包/源 → **可分发件** `dist/maps/<id>.map-pack/`（+ `.zip`），写清单哈希 | 幂等（同输入同产物）；失败非 0 |
-| `verify <path>` | 校验包：schema/兼容/资产齐+哈希/I1~I8 | 只读；违规非 0 |
+| `verify <path>` | 校验包：schema/兼容/资产齐+哈希/I1~I9 | 只读；违规非 0 |
 | `install <path>` | 装包 → `assets/maps/<id>/` + 接线（默认包数据 / 资产登记 / 文案合并） | 幂等（upsert）；违规非 0 |
 | `uninstall <id>` | 卸包（保留默认包数据引用） | 幂等；不存在即 0 |
 | `list` | 列出已装包（id / version / data_version / 校验结果） | 只读 |
@@ -194,12 +219,12 @@ python scripts/map_pack.py list
 ### 8.1 平台编辑器导入面（S32.14 ②，2026-10-30）
 
 `22_dev_platform` 看板「地图」页内置**环形画布编辑器**（31 节点 SVG + 点节点改 kind/isle + 环几何输入
-+ I1~I8 前端实时校验条〔前端判定 = 本 §5 I1~I8 的轻量镜像，**权威判定仍 = `verify_pack`〕）：
++ I1~I9 前端实时校验条〔前端判定 = 本 §5 I1~I9 的轻量镜像（内容类 I9 由 `verify` 权威判），**权威判定仍 = `verify_pack`〕）：
 
 - 编辑结果 = 内存 4 文件 JSON（manifest/map/layout/strings），点「导入」走 `POST /api/map/import`
   （**免鉴权**，内网自用例外见 22 号 §10.1）→ 平台**唯一写点** `repo/import.rs` 写
   `assets/maps/<id>/` 四文件（`id` 白名单 `^[a-z0-9_]{1,16}$` + canonicalize 前缀断言防穿越）→
-  同进程 **先判后回注**（审计 r1 修）：`verify <id>`（I1~I8 终判含 I7 资产哈希）`PASS` 才 `sync`（回注 `board.json` `maps` 段）；`verify` `FAIL` = 不 `sync`（`board.json` 不留坏 `maps` 段，包目录保留供修复重导）；违规 = 响应 `errors` 如实上报，**不静默绕过**
+  同进程 **先判后回注**（审计 r1 修）：`verify <id>`（I1~I9 终判含 I7 资产哈希）`PASS` 才 `sync`（回注 `board.json` `maps` 段）；`verify` `FAIL` = 不 `sync`（`board.json` 不留坏 `maps` 段，包目录保留供修复重导）；违规 = 响应 `errors` 如实上报，**不静默绕过**
 - 口径：平台**只**经这一个口子写 `assets/maps/`（`write_whitelist` 扩 `assets/maps/`），
   其余 `assets/` 游戏产物仍 0 平台写盘（北极星收敛为「唯一写点」）；导入后的**发布链**不变
   （`pack <id>` 出可分发件 `dist/maps/<id>.map-pack/`，`install` 装机，浏览器运行期 `TI_MAP=<id>` 切包）。

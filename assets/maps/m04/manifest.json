@@ -71,10 +71,12 @@
  "data_version": "board-v5",
  "id": "m04",
  "invariants": {
-  "boss": 1,
   "spaces": 31,
   "start": 1,
-  "territory": 20
+  "territory": 20,
+  "feature": 9,
+  "boss": 1,
+  "isle_kinds": 10
  },
  "isle_assets": [
   "boss_fort",

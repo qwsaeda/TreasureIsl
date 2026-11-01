@@ -3,10 +3,10 @@
 //!
 //! - `/api/health` = 200 文本（骨架面）；
 //! - `/api/overview` `/api/tasks` `/api/evidence`（含 `?sub=<dir>` 子目录枚举，
-//!   设计图页 `sub=ui_concept`）`/api/assets` `/api/session` `/api/audit`
+//!   设计图页 `sub=ui_concept`）`/api/assets` `/api/tests` `/api/session` `/api/audit`
 //!   `/api/map` = 只读数据源适配（`repo::data`，22 号 §5/§10.2；路径全过 `resolve_guarded`
 //!   白名单 + canonicalize 防穿越；0 写盘）；
-//! - S32.3 静态面（`web/`）= 看板 UI v1（左菜单分组 7 页 = 概览/任务/证据/资产/设计图/地图/设置；
+//! - S32.3 静态面（`web/`）= 看板 UI v1（左菜单分组 8 页 = 概览/任务/证据/资产/设计图/地图/测试/设置；
 //!   原生 JS + CSS 全内联无 npm；视觉令牌 = 游戏「航海夜·精修」，内联于 `index.html` `<style>`
 //!   （对齐 `docs/process/10_ui_redesign.md` §3 设计令牌 v2；单文件交付，0 外部静态资源依赖）；
 //!   图片（证据/资产/设计稿/地图描述符资产）走 `/` 仓库白名单直读，网页内直查 + 灯箱）；
@@ -73,17 +73,14 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
     }
 
     // POST /api/map/import：读 body（编辑器出描述符 → 落盘 + 回注，S32.14 ② 唯一写点）。
-    let request_body: Vec<u8> = if method == "POST" && content_length > 0 && content_length <= 262_144 {
-        let mut buf = vec![0u8; content_length.min(262_144) as usize];
-        let complete = std::io::Read::read_exact(&mut reader, &mut buf).is_ok();
-        if complete {
-            buf
+    let request_body: Vec<u8> =
+        if method == "POST" && content_length > 0 && content_length <= 262_144 {
+            let mut buf = vec![0u8; content_length.min(262_144) as usize];
+            let complete = std::io::Read::read_exact(&mut reader, &mut buf).is_ok();
+            if complete { buf } else { Vec::new() }
         } else {
             Vec::new()
-        }
-    } else {
-        Vec::new()
-    };
+        };
 
     let gz = accept_gzip;
     // POST /api/map/import = S32.14 ② 唯一写点（编辑器描述符 → 落 assets/maps/<id>/ + 回注）。
@@ -101,14 +98,19 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
             let path_param = query.strip_prefix("path=").unwrap_or("").to_owned();
             json200(&data::whitelist_probe(repo_root, &path_param), gz)
         }
-        "/api/audit" => api_500_or_json(load_json(repo_root, |s| data::audit_list(repo_root, s)), gz),
+        "/api/audit" => {
+            api_500_or_json(load_json(repo_root, |s| data::audit_list(repo_root, s)), gz)
+        }
         "/api/map" => {
             api_500_or_json(load_json(repo_root, |s| data::map_packs_detail(repo_root, s)), gz)
         }
-        "/api/snapshot" => {
-            json200(&data::snapshot(repo_root, &load_sources_opt(repo_root).unwrap_or_default()), gz)
+        "/api/snapshot" => json200(
+            &data::snapshot(repo_root, &load_sources_opt(repo_root).unwrap_or_default()),
+            gz,
+        ),
+        "/api/overview" => {
+            api_500_or_json(load_json(repo_root, |s| data::overview(repo_root, s)), gz)
         }
-        "/api/overview" => api_500_or_json(load_json(repo_root, |s| data::overview(repo_root, s)), gz),
         "/api/tasks" => api_500_or_json(load_json(repo_root, |s| data::tasks(repo_root, s)), gz),
         "/api/evidence" => {
             let query = url.split('?').nth(1).unwrap_or("");
@@ -116,6 +118,19 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
             api_500_or_json(load_json(repo_root, |s| data::evidence_list(repo_root, s, &sub)), gz)
         }
         "/api/assets" => api_500_or_json(load_json(repo_root, |s| data::assets(repo_root, s)), gz),
+        "/api/tests" => api_500_or_json(load_json(repo_root, |s| data::tests(repo_root, s)), gz),
+        "/api/build" => {
+            let mut run: Option<&str> = None;
+            if let Some(q) = url.split('?').nth(1) {
+                if let Some(v) = q.split('&').find_map(|kv| kv.strip_prefix("run=")) {
+                    run = Some(v);
+                }
+            }
+            api_500_or_json(load_json(repo_root, |s| data::build_artifacts(repo_root, s, run)), gz)
+        }
+        "/api/apk-size" => {
+            api_500_or_json(load_json(repo_root, |s| data::apk_size(repo_root, s)), gz)
+        }
         _ => static_or_repo_file(web_root, clean, repo_root, &if_none_match, gz),
     };
 
@@ -155,7 +170,14 @@ fn handle_map_import(repo_root: &Path, body: &[u8], want_gzip: bool) -> Vec<u8> 
     };
     let sources = load_sources_opt(repo_root).unwrap_or_default();
     let result = import::import_map_pack(repo_root, &sources, &payload);
-    header_body("application/json", result.to_string().as_bytes(), "200 OK", "no-store", None, want_gzip)
+    header_body(
+        "application/json",
+        result.to_string().as_bytes(),
+        "200 OK",
+        "no-store",
+        None,
+        want_gzip,
+    )
 }
 
 fn api_500_or_json(result: Result<Value, String>, want_gzip: bool) -> Vec<u8> {
@@ -163,7 +185,14 @@ fn api_500_or_json(result: Result<Value, String>, want_gzip: bool) -> Vec<u8> {
         Ok(value) => json200(&value, want_gzip),
         Err(err) => {
             let body = format!(r#"{{"error":"{}"}}"#, err.replace('"', "\\\""));
-            header_body("application/json", body.as_bytes(), "500 Internal Server Error", "no-store", None, want_gzip)
+            header_body(
+                "application/json",
+                body.as_bytes(),
+                "500 Internal Server Error",
+                "no-store",
+                None,
+                want_gzip,
+            )
         }
     }
 }
@@ -189,7 +218,14 @@ fn static_or_repo_file(
 ) -> Vec<u8> {
     if clean.starts_with("/api/") {
         // S32.2 未覆盖的 /api/* = 404（无该端点；写操作 POST = S32.4）。
-        return header_body("text/plain", b"404: unknown api endpoint", "404 Not Found", "no-store", None, want_gzip);
+        return header_body(
+            "text/plain",
+            b"404: unknown api endpoint",
+            "404 Not Found",
+            "no-store",
+            None,
+            want_gzip,
+        );
     }
     if let Some(path) = resolve_or_404(web_root, clean) {
         if let Ok(body) = std::fs::read(&path) {
@@ -204,11 +240,25 @@ fn static_or_repo_file(
             let fp = content_fingerprint(&v.1);
             return cached_response(mime, &v.1, &fp, if_none_match, want_gzip);
         }
-        return header_body("text/plain", b"404: not found", "404 Not Found", "no-store", None, want_gzip);
+        return header_body(
+            "text/plain",
+            b"404: not found",
+            "404 Not Found",
+            "no-store",
+            None,
+            want_gzip,
+        );
     }
     // `..` 穿越 = 400 拒绝（与 22 号 §10.2 + guard::check_relative 同口径）。
     if clean.contains("..") {
-        return header_body("text/plain", b"400: path traversal rejected", "400 Bad Request", "no-store", None, want_gzip);
+        return header_body(
+            "text/plain",
+            b"400: path traversal rejected",
+            "400 Bad Request",
+            "no-store",
+            None,
+            want_gzip,
+        );
     }
     // 静态面缺失 + 白名单面也拒 = 404。
     header_body("text/plain", b"404: not found", "404 Not Found", "no-store", None, want_gzip)
@@ -274,8 +324,8 @@ fn is_compressible_mime(mime: &str) -> bool {
 
 /// gzip 压缩（flate2，level 6；0 外部新增依赖 = workspace 已登记）。
 fn gzip_body(body: &[u8]) -> Vec<u8> {
-    use flate2::write::GzEncoder;
     use flate2::Compression;
+    use flate2::write::GzEncoder;
     use std::io::Write;
     let mut enc = GzEncoder::new(Vec::new(), Compression::new(6));
     if enc.write_all(body).is_ok() {
@@ -310,11 +360,20 @@ fn cached_response(
     let norm = etag.trim_start_matches("W/").trim_matches('"');
     let hit = if_none_match.iter().any(|v| {
         let vn = v.trim();
-        vn == etag || vn.trim_matches('"') == norm || vn.trim_start_matches("W/").trim_matches('"') == norm
+        vn == etag
+            || vn.trim_matches('"') == norm
+            || vn.trim_start_matches("W/").trim_matches('"') == norm
     });
     if hit {
         // 304 空 body（不压；浏览器已缓存原对象）。
-        return header_body("text/plain", b"", "304 Not Modified", "max-age=604800, public", Some(etag), false);
+        return header_body(
+            "text/plain",
+            b"",
+            "304 Not Modified",
+            "max-age=604800, public",
+            Some(etag),
+            false,
+        );
     }
     header_body(mime, body, "200 OK", "max-age=604800, public", Some(etag), want_gzip)
 }

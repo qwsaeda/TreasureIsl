@@ -1,13 +1,39 @@
 {
- "version": 1,
- "_comment": "资产登记（字体/音频的存在性单一事实源；UI 图像登记在 ui_manifest.json，不在此重复——gate check_asset_registry 统一做全类型 disk<->registry 双向同步）。新增字体/音频 = 在此登记（gate 校验：登记的须在盘 / 盘上的须登记）。音频当前为空 = 发货桌面/浏览器无声（S18.8 切 bevy_audio 前），legacy macroquad 壳亦无音频文件。",
- "fonts": [
-  {
-   "path": "assets/fonts/lxgw-wenkai-reg.ttf",
-   "role": "cjk_ui",
-   "format": "ttf",
-   "_note": "唯一 CJK UI 字体（LXGW WenKai）。Bevy GPU 图集 S18.3 / native parse_font_bytes 同源。"
-  }
- ],
- "audio": []
+  "version": 1,
+  "_comment": "资产登记（字体/音频的存在性单一事实源；UI 图像登记在 ui_manifest.json，不在此重复——gate check_asset_registry 统一做全类型 disk<->registry 双向同步）。新增字体/音频 = 在此登记（gate 校验：登记的须在盘 / 盘上的须登记）。音频当前为空 = 发货桌面/浏览器无声（S18.8 切 bevy_audio 前），legacy macroquad 壳亦无音频文件。",
+  "fonts": [
+    {
+      "path": "assets/fonts/lxgw-wenkai-reg.ttf",
+      "role": "cjk_ui",
+      "format": "ttf",
+      "_note": "唯一 CJK UI 字体（LXGW WenKai）。Bevy GPU 图集 S18.3 / native parse_font_bytes 同源。"
+    }
+  ],
+  "audio": [
+    {
+      "path": "assets/audio/glmusic.wav",
+      "role": "bgm",
+      "format": "wav",
+      "loop": true,
+      "_note": "原版背景音乐（glmusic.mod → assets_out/audio/glmusic.ogg Opus → 本 WAV 转码；S34 用户 2026-11-01 拍板补原版音频，发货无声 S18.8 撤销）"
+    },
+    {
+      "path": "assets/audio/press.wav",
+      "role": "sfx_press",
+      "format": "wav",
+      "_note": "原版按钮音效（legacy/assets_raw/music/press.wav）"
+    },
+    {
+      "path": "assets/audio/invalid.wav",
+      "role": "sfx_invalid",
+      "format": "wav",
+      "_note": "原版无效操作音效（legacy/assets_raw/music/invalid.wav）"
+    },
+    {
+      "path": "assets/audio/victory.wav",
+      "role": "sfx_victory",
+      "format": "wav",
+      "_note": "原版胜利音效（legacy/assets_raw/music/victory.wav）"
+    }
+  ]
 }

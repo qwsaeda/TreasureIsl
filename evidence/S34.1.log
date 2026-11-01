@@ -1,0 +1,26 @@
+# S34.1 验收证据（task_close.py 自动生成 2026-11-01）
+
+- 任务标题：v6 布局 JSON 生成工具 + 31 格坐标导出：scripts/compose_main_map_v6.py（凸包弧长等分 + 径向外推贴沿，--seed 固定可复现 + --export-layout 导出 assets/data/main_map_v6_layout.json）+ 布局 JSON 在仓 + validate_data 断言
+- 判据（台账 dod）：改动面=工具+数据 | 工具=scripts/compose_main_map_v6.py（--check 只读 + 幂等 + 非 0 退出，工具契约 14_tooling_catalog 已登记）| 数据=assets/data/main_map_v6_layout.json（31 格 cx/cy + island/ship/helm/compass rect）| 判据=compose_main_map_v6.py --check 0 违规 + 布局 JSON 在位 + validate_data 全绿 + gate 全绿 + evidence/S34.1.log
+
+## 判据实跑
+
+### `$ python3 scripts/compose_main_map_v6.py --check`
+
+退出码：0
+
+```
+[compose] check: out=ok seed=20261031
+```
+
+### `$ python3 scripts/validate_data.py`
+
+退出码：0
+
+```
+validate_data: OK（4 表，strings 209 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

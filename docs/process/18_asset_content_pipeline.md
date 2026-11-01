@@ -34,7 +34,7 @@
 **登记源（按类型分，无重复登记）：**
 | 类型 | 登记源 | 加载标准 | 磁盘目录 |
 |---|---|---|---|
-| UI 图像 | `assets/ui_manifest.json`（`assets[].file`，65 图 + 8 role + 生成参数） | Bevy `AssetServer().load()`（async handle，相对 `assets/` 根） | `assets/ui/*.png` |
+| UI 图像 | `assets/ui_manifest.json`（`assets[].file`，97 图 + 16 role + 生成参数；以清单为准） | Bevy `AssetServer().load()`（async handle，相对 `assets/` 根） | `assets/ui/*.png` |
 | 字体 | `assets/registry.json` `fonts`（1 TTF） | Bevy GPU 图集 S18.3 / native `parse_font_bytes` | `assets/fonts/*` |
 | 音频 | `assets/registry.json` `audio`（**当前空 = 发货无声**） | legacy macroquad `quad-snd`（Bevy 壳双渲染期关，S18.8 切 `bevy_audio` 前 0 轨） | `assets/audio/*`（不存在） |
 
@@ -44,6 +44,48 @@
 - 数据表：`assets/data/*.json` 经 `ti_core::data` typed loader（`&'static` 缓存 + `LoadError` 快速失败，无 unwrap）。
 
 **纪律：新增资产 = 登记到对应 registry（gate 双向同步兜底）+ 只按路径引用（`check_hardcode` 拦资产路径硬编码）。**
+
+## 3a. AI 生图创作范围（2026-10-31 用户「划定范围 / 固化生图创作范围」→ 定案）
+
+**总纲：AI 生图只做「元素级创作 + 参考概念」，不直接出「终态界面 / 终码资产」。**
+创作范围按「能生成 / 不能生成 / 风格统一 / 禁区」四栏固化，防用户迭看反复返工
+（EXP-141/142/143：写实照片背景、动漫角色、乱放图、占屏太小——全是范围没限定）。
+
+### 能生成（AI 元素级）
+
+| 用途 | 例子 | 工具 |
+|---|---|---|
+| 界面**元素**（白底/键控，引擎/PIL 组合） | 木片格子、岛、舵轮、罗盘、船、生物、人物立绘、状态框 | `agnes_gen.py` + `key_v6_elements.py` |
+| 全景**背景**（满屏，不键控） | 海洋、甲板、战斗类型背景（siege/dungeon/boss） | `agnes_gen.py` |
+| 概念稿（方向参考） | 变体 A/B/C、布局稿 | `agnes_gen.py` |
+
+### 不能生成（必须程序/数据/引擎做）
+
+- **精确布局**（环心/半径/格径/坐标）= `scripts/compose_*.py` + 引擎 `chrome::ring_geom` 算，
+  不靠 AI 生图定位（AI 构图不可控 ⇒ 判据不可机检）。
+- **数值/文案**（兵力、战报、嘲讽）= `balance.json` + `i18n` 数据，非 AI 自由发挥。
+- **运行终态界面** = 引擎真实渲染（`--shot`），AI 概念稿只作方向参考（用户「AI 概念稿不算数」）。
+
+### 风格统一（用户多次拍板，硬性）
+
+1. **游戏统一风 = 羊皮纸手绘 + 黄铜/暖木**（S27.7 裁定「弃写实照片 → 游戏统一风」）。
+   **禁止**写实照片背景 / 纯 3D 渲染 / 冷灰蓝无色调。
+2. **动漫适中**（用户「动漫化不要太成人化」）：少年漫大眼，非成人写实、非幼稚过头。
+3. **同主题背景连贯**：4 帧同主题（羊皮底 + 黄铜罗盘边框），result 可加氛围但**保留底框**。
+4. **角色一致性**：一帧定角色 → 其余帧图生图锚定（EXP-141 ②）；装扮强约束（三角帽/白衬衫/破披风）。
+
+### 禁区（禁止）
+
+- 禁写实照片风（违反风格统一，S27.7 已裁定，VS v2 首版踩过）。
+- 禁「AI 元素硬编码路径在 Rust」（CS-1 资产单源：路径走 `chrome::*` 常量 + `ui_manifest` 登记）。
+- 禁迭看图落子目录 / 新开顶层目录（§2.1a 归档：顶层 + 侧车）。
+- 禁 AI 生成后不键控直接 blit（引擎不抠白 ⇒ `key_v6_elements.py` 必跑）。
+
+### 生图 → 入库流程（每条固定）
+
+`agnes_gen.py 生成（白底）` → `key_v6_elements.py 键控透明` → `ui_asset_batch.py register`
+（登记 `ui_manifest.json`）→ `ui_thumb.py` 侧车 → 迭看（用户确认留痕）→ 落终码。
+**顺序不可跳**（跳键控 = 白块；跳登记 = 漏登记 FAIL；跳侧车 = 平台看不到）。
 
 ## 4. scenes.json 序列化纪律（②止血，防整文件 churn）
 
@@ -64,9 +106,9 @@
 |---|---|---|
 | ②止血 gate（scenes 规范形 + 资产双向同步） | 本文 §3/§4，`validate_data.py` `check_scenes_canonical`/`check_asset_registry`（gate 10a） | 已落 |
 | ①资产 registry（`assets/registry.json` 字体/音频） | 本文 §3 | 已落 |
-| ②根治：UI 坐标出 scenes.json 绝对像素 → bevy_ui 意图 | **S29.3**（`17_layout_engine.md`） | 待开工 |
+| ②根治：UI 坐标出 scenes.json 绝对像素 → bevy_ui 意图 | **S29.3**（`17_layout_engine.md`） | 已落（S29.3 全场景 UI + 命中 + 真重排，见 `19_bevy_ui.md`） |
 | ③地图参数化（环格几何生成器） | **S27.4**（前置 `board.json` 分区数据 S27.3） | 已落（环形棋盘 `chrome::ring_geom` + 地图打包工具 `scripts/map_pack.py`，本文 §7） |
-| ⑤音频（bevy_audio + 音频资产） | **S18.8** | 待开工 |
+| ⑤音频（bevy_audio + 音频资产） | **S18.8** | 已落（S18.8 bevy_audio 切换；音频资产 = 发货无声口径 `registry.audio` 空，S30.0） |
 
 ## 7. 地图打包标准 → 见 21 号规范
 

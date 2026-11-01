@@ -22,7 +22,7 @@ VS 是**单场定胜负**的高潮场景：**英雄 + 水手对战，自动动�
 徒手   unarmed  = 人手 − 武装              # 人手 > 武器 = 未武装（战力折减）
 
 战力   power    = armed × weapon_coef + unarmed × barehand_coef
-                 # weapon_coef > barehand_coef；数值在 balance.combat.manpower
+                 # weapon_coef > barehand_coef；数值在 balance.manpower
 ```
 
 - **一人一把武器**：武器 > 水手没意义（无徒可持），瓶颈 = 水手；水手可 > 或 < 武器。
@@ -39,7 +39,7 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 ```
 
 - **不消耗随机数**（同 seed 同兵力 ⇒ 同结果；`rules::rng::GameRng` 可播种复现）。
-- **双方必损**：胜败双方都损武器 + 水手（按 `balance.combat.manpower.loss_pct`，
+- **双方必损**：胜败双方都损武器 + 水手（按 `balance.manpower.loss_pct`，
   建议 10~20% 人手 + 部分武器）。
 
 ### 结算顺序
@@ -59,7 +59,8 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 
 > 用户 2026-10-30：「VS 界面是按地图、按不同类格有变化的」。VS 场景不是单一模板，
 > 按**战斗类型（格类）**出不同画面 + 按**地图**换主题资产。设计单一事实源 =
-> `ui-redesign-v3/11_vs_spec.md` §4（5 套版式选型）。
+> `ui-redesign-v3/12_main_map_v6_vs_v2_spec.md` §2（VS v2 重设计，2026-10-31 用户否决旧稿后定案）；
+> `11_vs_spec.md` §4（5 套版式 A/B/C/D/E）已降级为版式选型参考（该文档 §2 注记「被 v2 兵力模型取代」）。
 
 | 战斗类型（格类） | VS 画面 | 主题资产 |
 |---|---|---|
@@ -72,18 +73,16 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 - **按地图换主题**：每张图 `map.json`/`manifest` 带 VS 主题（背景/氛围/BOSS 造型），
   VS 场景读包主题（与换图同源，`21_map_package_spec.md`）。
 - **自动动效**：双方列阵 → 对攻（炮火/刀光）→ 损耗结算 → 结果横幅；全程自动，无逐回合输入。
-- 落地按选定版式（`11_vs_spec.md` §4 选型）逐格类出图。
+- 落地按 `12_main_map_v6_vs_v2_spec.md` §2（VS v2 重设计）逐格类出图。
 
 ## 参数（在 `assets/data/balance.json`）
 
 ```jsonc
-"combat": {
-  "manpower": {
-    "weapon_coef": 2.0,        // 武装人手战力系数
-    "barehand_coef": 0.5,      // 徒手人手战力系数
-    "loss_pct": 0.15,          // 每战双方人手损耗比例
-    "weapon_loss_pct": 0.2     // 每战双方武器损耗比例
-  }
+"manpower": {
+  "weapon_coef": 2,          // 武装人手战力系数（整数倍）
+  "barehand_coef": 1,        // 徒手人手战力系数（整数倍）
+  "loss_pct": 1500,          // 每战双方人手损耗比例（**万分比 u32**，1500 = 15%）
+  "weapon_loss_pct": 2000    // 每战双方武器损耗比例（万分比，2000 = 20%）
 }
 ```
 

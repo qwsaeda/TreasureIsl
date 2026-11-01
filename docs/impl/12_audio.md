@@ -112,7 +112,7 @@ mute_factor = 0.0 if muted else 1.0
 
 ```
 play_bgm(bgm):
-    if bgm_channel.state == Playing:
+    if bgm_channel.active:                     // 真实 struct ChannelState{active:bool,...}（audio.rs）
         fade_out(bgm_channel, 500ms)     // 淡出当前
     load_source(bgm_channel, bgm)
     set_volume(bgm_channel, bgm_volume * master_volume)
@@ -188,39 +188,27 @@ steal_oldest_channel():
 ### 5.3 Rust 实现
 
 ```rust
-pub struct SfxPlayer {
-    channels: [AudioChannel; 8],
-    sfx_volume: f32,
-    master_volume: f32,
+/// 真实实现（crates/ti-platform/src/audio.rs `Mixer`；无 `SfxPlayer`——旧设计名已废）。
+pub struct Mixer {
+    channels: Vec<ChannelState>,   // 动态 n（非固定 [AudioChannel; 8]）
+    clips: Vec<Option<Clip>>,      // 双平行数组（channels 与 clips 同长；Clip = 采样集）
 }
 
-impl SfxPlayer {
-    pub fn play(&mut self, sfx: Sfx, resources: &AudioResourceMap) {
-        let data = match resources.sfx.get(&sfx) {
-            Some(d) => d,
-            None => return,
-        };
-        let channel = self.find_idle_channel()
-            .unwrap_or_else(|| self.steal_oldest_channel());
-        channel.load(data);
-        channel.set_volume(self.sfx_volume * self.master_volume);
-        channel.play_once();
-    }
+impl Mixer {
+    /// 新建最多 `n` 个通道。
+    pub fn new(n: usize) -> Self;
 
-    fn find_idle_channel(&self) -> Option<&mut AudioChannel> {
-        self.channels.iter_mut().find(|c| c.state == ChannelState::Idle)
-    }
+    /// 在 `ch` 通道播放 `clip`（`volume` 0..=255；`looping` 循环；通道越界 = Err）。
+    pub fn play(&mut self, ch: usize, clip: Clip, volume: u8, looping: bool) -> Result<()>;
 
-    fn steal_oldest_channel(&mut self) -> &mut AudioChannel {
-        // 抢占最旧通道
-        let idx = self.channels.iter()
-            .enumerate()
-            .min_by_key(|(_, c)| c.start_time)
-            .map(|(i, _)| i)
-            .unwrap_or(0);
-        self.channels[idx].stop();
-        &mut self.channels[idx]
-    }
+    /// 停止通道（复位 active=false）。
+    pub fn stop(&mut self, ch: usize) -> Result<()>;
+
+    /// 读通道状态（`ChannelState{active,volume,position,looping}`）。
+    pub fn state(&self, ch: usize) -> Option<&ChannelState>;
+
+    /// 活跃通道数（`channels.iter().filter(|c| c.active)`）。
+    pub fn active_count(&self) -> usize;
 }
 ```
 

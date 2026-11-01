@@ -1,9 +1,9 @@
-S18.8a wasm 体积记录（2026-10-30）
+S18.8a wasm 体积记录（2026-11-01）
 口径：Bevy 交付壳 	reasure-bevy-wasm（release，strip=symbols，S18.6 门禁重建时叠加 LTO/wasm-opt）。
 预算判定（wasm 主体 ≤8 MB，11_bevy_migration §3）属 S18.8e；本文件只记录实测值。
 
 == wasm 主体 ==
-treasure_bevy_wasm.wasm      48,763,448 B
+treasure_bevy_wasm.wasm      49,704,399 B
 
 == 首屏附属资源（不含 wasm 主体）==
 index.html                        1,257 B
@@ -25,6 +25,7 @@ vs.Map                            2,388 B
 首屏附属合计                          290,588 B
 
 == 非首屏资源 ==
+audio                                 1 B
 fonts                                 1 B
 maps                                  1 B
 ui                                    1 B

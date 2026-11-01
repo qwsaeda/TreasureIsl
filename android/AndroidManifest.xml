@@ -21,17 +21,21 @@
     <uses-feature android:name="android.hardware.screen.landscape" android:required="false" />
 
     <application
-        android:label="金银岛 TreasureIsl"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="true"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
 
         <!-- S18.8d 入口：NativeActivity（winit android-native-activity 壳约定）；
-             android:extractNativeLibs="false" = .so 直接映射执行（API 23+ 支持，
-             minSdk 21 兼容口径 = 默认 true 解压亦可，此处显式 false 减安装耗时）。 -->
+             2026-11-01（真机/MuMu 实测闪退）：`extractNativeLibs` 改 **true**——
+             `false`（.so 直接 mmap 执行）要求 .so 未压缩 + 16KB 对齐（zipalign 仅 -p 4），
+             且 arm 转译（MuMu/redroid x86_64 跑 arm64）需解压加载 ⇒ false 报
+             INSTALL_FAILED_NO_MATCHING_ABIS / 真机闪退；true = 解压兼容（转译 + 未对齐）。 -->
         <activity
             android:name="android.app.NativeActivity"
             android:exported="true"
-            android:extractNativeLibs="false"
+            android:extractNativeLibs="true"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:hardwareAccelerated="true">
             <meta-data

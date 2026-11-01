@@ -1,0 +1,33 @@
+# S15.6 验收证据（task_close.py 自动生成 2026-10-30）
+
+- 任务标题：渲染视觉对抗改进 loop（用户 2026-10-17：现 1080 纯代码渲染视觉「是屎」，以渲染架构 + UI/UX 为靶开飞轮：每轮 100 条 findings → 审计裁决 → 修复 + 回写 → 基线重锚，循环直至用户满意 + 飞轮 §4 三判据收敛；用户底线 ≥50 轮，收敛提前则以 §4 为准并如实报轮数）【2026-10-18 用户裁决：升级为 S17 全量重设计（航海夜·精修），S15.6 由 S17.5 收口时一并解决，本条不再单独开轮】
+- 判据（台账 dod）：evidence/flywheel.log 逐轮记录（第 N 轮：找问题 N 条 / 审计 M 真漂移 / 修复 K 项 + 主线程复核 + gate 全绿 + 三套基线重生成 diff=0）；每轮修复后视觉重锚（render_snapshot/render_snapshot_forward/visual_regression 基线重生成 + render_intent 判据同步）；停机 = 用户视觉验收通过 且 飞轮 §4 三判据收敛（收敛早于 50 轮如实记录，不早停虚报）；可机械判定项逐条固化 doccheck2 断言，设计分歧回写 EXP", evidence: null, blocked_by: "被 S17 全量重设计取代（2026-10-18 用户拍板）；2026-10-30 S17.5 收口：裁决为已解决（closed note = S17 v2 代全量重设计已落地 + 现行结构不变式断言口径，见 docs/release.md §UI 重设计发布注记）
+
+## 判据实跑
+
+### `$ python3 -c "
+import re
+text=open('plan/ledger.yaml').read()
+for sub in ['S17.3','S17.4','S17.6','S17.9']:
+    m=re.search(r'id: '+sub+r'[^\n]*status: (\w+)', text)
+    assert m and m.group(1)=='verified', f'{sub} 未 verified（S17 重设计未落地）'
+print('S17 重设计已落地（S17.3/4/6/9 verified）：S15.6 裁决为已解决')
+"`
+
+退出码：0
+
+```
+S17 重设计已落地（S17.3/4/6/9 verified）：S15.6 裁决为已解决
+```
+
+### `$ cargo run -q -p ti-tools --bin doccheck`
+
+退出码：0
+
+```
+doccheck: 149 docs, 38 facts, 136 experiences, 265 task refs, 4 assertions, 0 error(s)
+```
+
+---
+
+（本文件由 `scripts/task_close.py` 生成：证据先于状态，判据非 0 不改台账）

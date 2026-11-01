@@ -1,0 +1,16 @@
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Blocking waiting for file lock on build directory
+   Compiling ti-engine v0.1.0 (/disk/workspaces/treasureIsl/crates/ti-engine)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 35.27s
+     Running tests/audio.rs (/disk/target/debug/deps/audio-843211b9e085ad5f)
+
+running 3 tests
+test audio_dir_matches_registry ... ok
+test registry_has_bgm_and_three_sfx ... ok
+test audio_files_exist_and_are_valid_wav ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

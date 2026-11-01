@@ -1,0 +1,52 @@
+=== S35.0 判据实跑记录（2026-11-01）===
+
+[1] bash -n scripts/build_apk.sh
+PASS（bash 语法 0）
+
+[2] apk_audit.py --refset（引擎引用集）
+ui 文件数: 90 | fonts: 1 | audio: 4
+PASS（ui 非空，含 v6 13 + vs_v2 9 张全引用件）
+
+[3] apk_audit.py --refset-unused（应识别 8 项未引用图）
+未引用 ui 文件数: 8
+  1.83 MB assets/ui/bg_night_sea_top.png
+  0.67 MB assets/ui/map_harbour.png
+  0.67 MB assets/ui/map_reef.png
+  0.64 MB assets/ui/board.png
+  0.62 MB assets/ui/map_open_sea.png
+  0.37 MB assets/ui/compass_rose.png
+  0.24 MB assets/ui/hud_plaque.png
+  0.21 MB assets/ui/btn_spin.png
+PASS（8 项 = 24 号 §1 事实澄清清单）
+
+[4] build_apk.sh 实跑（复用 .so + 引用集打包 + [4/5] 审计）
+[1/5] 复用现有 .so（/disk/target/aarch64-linux-android/release/libandroid_activity.so；--force 强制重编）
+[2/5] aapt2 link（manifest 每次重跑）…
+[3/5] 打包 + 签名…
+assets 引用集打包：98 文件（ui 90 / fonts 1 / audio 4；未引用不进包）
+APK 组装完成
+[4/5] 体积审计（scripts/apk_audit.py --apk）…
+OK: .so 压缩率 38%（Deflate）；APK 压缩后 146.0 MB；未引用 UI 漂移 0
+[5/5] 产物
+exit=0
+
+[5] 新 APK 判据①②
+OK: .so 压缩率 38%（Deflate）；APK 压缩后 146.0 MB；未引用 UI 漂移 0
+APK 体积: 146M （改前 184M → 现 146M）
+
+[6] cargo build -p ti-console + /api/apk-size 实测
+build PASS（0 error）
+（端点已在 [6a] 实测 PASS：built=True verdict=PASS so_ratio=0.384 total=146.0MB refset ui=90）
+
+[7] 最终判据复跑
+OK: .so 压缩率 38%（Deflate）；APK 压缩后 146.0 MB；未引用 UI 漂移 0
+gate 门禁 = 另起 gate-green 任务跑（本任务自验已全过，见上 1-7）
+
+[8] clippy/fmt 收口（S35.0 改动域）
+clippy error 数 = 0
+fmt PASS（S35.0 域 0 残留）
+
+[9] /api/apk-size 终验
+verdict=PASS built=True so_ratio=0.384 total=146.0MB refset ui=90（平台页数据源实测通过）
+
+=== S35.0 自验全过；gate 全门禁 = 另起 gate-green 任务 ===

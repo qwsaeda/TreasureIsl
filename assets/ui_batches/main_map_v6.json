@@ -1,0 +1,28 @@
+{
+ "version": 1,
+ "batch": "main_map_v6",
+ "_comment": "main_map v6「古典羊皮航海图」元素批次（2026-10-31 用户方向确认 + 对抗审计后）。元素 = AI 生成 + `scripts/key_v6_elements.py` 去白键控 → `assets/ui/v6/*.png`（共享池 source=pool，跨图复用）。角色=透明键控贴图（key=alpha，非 luma/magenta：引擎 blit 已键控透明）。本规格 = 批次可评审/可复现输入；`assets/ui_manifest.json` 仍是资产唯一事实源（`ui_asset_batch.py register` upsert）。",
+ "roles": {
+  "v6_alpha": {
+   "ratio": "1:1",
+   "target": [512, 512],
+   "key": "alpha",
+   "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
+  }
+ },
+ "assets": [
+  {"name": "v6_ocean_bg", "role": "v6_alpha", "file": "assets/ui/v6/ocean_bg.png", "params": {"full_bleed": true}},
+  {"name": "v6_tile_owned", "role": "v6_alpha", "file": "assets/ui/v6/tile_owned.png", "params": {}},
+  {"name": "v6_tile_deny", "role": "v6_alpha", "file": "assets/ui/v6/tile_deny.png", "params": {}},
+  {"name": "v6_island", "role": "v6_alpha", "file": "assets/ui/v6/island.png", "params": {}},
+  {"name": "v6_isle_land", "role": "v6_alpha", "file": "assets/ui/v6/isle_land.png", "params": {}},
+  {"name": "v6_isle_lighthouse", "role": "v6_alpha", "file": "assets/ui/v6/isle_lighthouse.png", "params": {}},
+  {"name": "v6_isle_treasure", "role": "v6_alpha", "file": "assets/ui/v6/isle_treasure.png", "params": {}},
+  {"name": "v6_isle_village", "role": "v6_alpha", "file": "assets/ui/v6/isle_village.png", "params": {}},
+  {"name": "v6_creatures", "role": "v6_alpha", "file": "assets/ui/v6/creatures.png", "params": {}},
+  {"name": "v6_helm", "role": "v6_alpha", "file": "assets/ui/v6/helm.png", "params": {}},
+  {"name": "v6_compass", "role": "v6_alpha", "file": "assets/ui/v6/compass.png", "params": {}},
+  {"name": "v6_ship", "role": "v6_alpha", "file": "assets/ui/v6/ship.png", "params": {}},
+  {"name": "v6_parchment", "role": "v6_alpha", "file": "assets/ui/v6/parchment.png", "params": {"full_bleed": true}}
+ ]
+}

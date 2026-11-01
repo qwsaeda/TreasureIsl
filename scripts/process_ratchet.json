@@ -291,7 +291,12 @@
       "crates/ti-tools/src/bin/doccheck2.rs",
       "crates/ti-tools/src/bin/specskel.rs",
       "crates/ti-tools/src/doccheck.rs",
-      "crates/ti-tools/src/ledger.rs"
+      "crates/ti-tools/src/ledger.rs",
+      "crates/ti-core/src/rules/force.rs",
+      "crates/ti-core/src/data/board.rs",
+      "crates/ti-core/src/rules/events.rs",
+      "crates/ti-core/src/rules/territory_v2.rs",
+      "crates/ti-core/src/rules/merchant.rs"
     ]
   },
   "code_standards": {

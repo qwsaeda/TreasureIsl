@@ -235,7 +235,14 @@ def verify_pack(pack_dir: Path) -> list[str]:
 
     # invariants 自述 vs 实测
     inv = manifest.get("invariants") or {}
-    for key, actual in (("spaces", len(spaces)), ("start", start_n), ("territory", terr_n), ("boss", boss_n)):
+    for key, actual in (
+        ("spaces", len(spaces)),
+        ("start", start_n),
+        ("territory", terr_n),
+        ("feature", feat_n),
+        ("boss", boss_n),
+        ("isle_kinds", len(isle_count)),
+    ):
         if key in inv and inv[key] != actual:
             problems.append(f"invariants.{key} = {inv[key]}（实测 {actual}）")
     return problems

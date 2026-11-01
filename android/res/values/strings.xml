@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- S18.8d 应用名（@string/app_name 资源引用，launcher 经 PackageManager 读 resources 一定取到；硬编码 label 经 aapt2 link 后部分 launcher 读不到）。 -->
+<resources>
+    <string name="app_name">金银岛 TreasureIsl</string>
+</resources>

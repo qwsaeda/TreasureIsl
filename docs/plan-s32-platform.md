@@ -36,6 +36,9 @@
 | S32.9 | S32.3 | 构建**只读体检**（`build_wasm.ps1 -Check`）+ `web/` 产物清单 + 平台自身静态服务预览 | 只跑 `-Check`（不构建/不拷贝/不写 evidence）；非法参数 400；0 游戏产物变更（22 号 §8 内容级指纹口径） |
 | S32.11 | — | 门禁 Linux 假 PASS 根治（`scripts/gate.ps1` 第 17 项硬编码 `powershell`） | Linux 实跑该项不再假 PASS；其余各项行为不变（项数随结构演进）；gate 全绿 |
 | S32.12 | S32.11 | 地图包 I7 资产哈希漂移修复（`assets/maps/m01~m03`） | `map_pack.py verify assets/maps/m01~m03` 全部 0 违规 + `map_pack.py check` 0 漂移；gate 全绿（含第 17 项可信，须 S32.11 根治后） |
+| S32.13 | S31.3 | wasm 主地图 v5 环形棋盘整体不渲染根治（`asset_present()` 按目标平台分流：wasm32 恒 true，缺资产语义交给 Bevy AssetServer） | `wasm_browser_e2e.py` L5 层（v6≥4/6 或 v5 9 类 + `island_home` + `card_panel`）+ `build_wasm.ps1` Linux 兼容；`evidence/S32.13.log` |
+| S32.14 | S32.12 | 地图包 I7 资产哈希漂移修复：S27.6/S26.2 岛卡美术刷新后 `assets/maps/m01~m03` manifest 的 `assets[].sha256` 重对齐 | `map_pack.py verify assets/maps/m01~m03` 全 0 违规（I1~I9 + schema/兼容 + I7 资产哈希）；`evidence/S32.14.log` |
+| S32.15 | S32.3 | 平台地图编辑器 + 免鉴权导入落盘（WebUI 制作地图：环形 SVG 画布编辑器 + I1~I9 前端实时校验 + `POST /api/map/import`） | 编辑器出描述符 + `repo/import.rs` 唯一写点（22 号 §10.1 例外）；`evidence/S32.15.log` |
 
 ## 每任务审计要求（强制）
 
@@ -84,7 +87,7 @@
 | `plan/ledger.yaml` + `ti-tools::ledger` | 台账数据源；解析实现上提 `ti-devmeta`，`ti-tools` 薄 re-export（单实现） |
 | `scripts/gate.ps1` | 门禁执行唯一入口（`-Fast` / `-Touch` / 全量）；注意其第 23 项会改写 `evidence/web_playtest.{log,png}`（22 号 §3.1 已列） |
 | `scripts/task_close.py` / `exp_log.py` | 收口 / EXP 登记唯一入口（平台默认只用 `--check` 只读面） |
-| `scripts/map_pack.py` | 地图包校验唯一入口（已装包集合 = `installed_packs()` 口径：平台自扫描，不解析人类可读输出；不重抄 I1~I8，标准见 21 号） |
+| `scripts/map_pack.py` | 地图包校验唯一入口（已装包集合 = `installed_packs()` 口径：平台自扫描，不解析人类可读输出；不重抄 I1~I9，标准见 21 号） |
 | `scripts/build_wasm.ps1` | 只用 `-Check` 只读体检；**平台不执行完整构建** |
 | `evidence/` | 证据浏览 + 平台写点 `evidence/console/`（运行期日志在 `logs/` 子目录，gitignored） |
 | `assets/ui_manifest.json` / `assets/registry.json` / `assets/maps/` / `dist/maps/` | 资产与包浏览 |

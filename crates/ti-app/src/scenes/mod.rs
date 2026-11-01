@@ -45,6 +45,7 @@ pub mod saveload;
 pub mod select_map;
 pub mod select_role;
 pub mod vs;
+pub mod vs_anim_proto;
 pub mod vs_proto;
 
 pub use index::IndexScene;
@@ -634,6 +635,9 @@ pub trait EconomyHost {
 
     /// 银行金。
     fn bank_gold(&self) -> u32;
+
+    /// 银行存款（卖出溢出累计，`host` `bank.deposit`；建造时并入 `Bank` 防丢账，EXP 第 6 轮 Q007）。
+    fn bank_deposit(&self) -> u32;
 
     /// 银行扣款。
     fn spend_bank_gold(&mut self, amount: u32);

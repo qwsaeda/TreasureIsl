@@ -78,9 +78,14 @@ ab_glyph = "0.2"
 # 且中文词级断行退化为整段不断。开了 = 完整 icu 字典（含 cjdict），报错消失 + 断行正确。
 # S29.1（B1）：+ "bevy_ui"（Node/Layout/Text/Button/IsDefaultUiCamera；UI 相机分层叠游戏世界之上，
 # UI 树走屏幕像素自动布局 + resize 重排；游戏世界仍 1080 正交 o.scale。定案 docs/process/17_layout_engine.md）。
+# S34（2026-11-01 用户拍板「音乐动效也没有」→ 补原版音频）：+ "bevy_audio" + "wav"。
+# 发货无声（S18.8 定案 registry.audio=[]）就此撤销：SFX = 原版 press/invalid/victory.wav（rodio WAV），
+# 音乐 = glmusic（Opus→WAV 转码，`assets/audio/`）；bevy_audio 默认只带 playback+tracing，无 codec，
+# 显式开 wav（bevy 顶层特性 → bevy_audio/wav = hound）才可播 WAV。macroquad 已不在依赖图
+# （Cargo.lock 无 quad-snd），无 links=alsa 冲突。
 # 版本 **精确钉 0.20.0**（`=0.20.0`）：bevy 子 crate 同版本族，混版（如 bevy_text 0.20.1 +
 # bevy_internal 0.20.0）会在解析期撞 `bevy_clipboard` 版本冲突（S27.7 合并后首次解析实测）。
-bevy = { version = "=0.20.0", default-features = false, features = ["2d", "bevy_ui", "bevy_ui_render", "bevy_text", "touch", "keyboard", "mouse", "complex_script_segmentation"] }
+bevy = { version = "=0.20.0", default-features = false, features = ["2d", "bevy_ui", "bevy_ui_render", "bevy_text", "touch", "keyboard", "mouse", "complex_script_segmentation", "bevy_audio", "wav"] }
 # S27.7：ti-engine（并回根 workspace 后）依赖的成员 crate 登记在此；
 # `ti-app` 用 `default-features = false`（ti-engine 侧显式开 hd-8bit/gpu-render/stats）。
 ti-app = { path = "crates/ti-app", default-features = false }

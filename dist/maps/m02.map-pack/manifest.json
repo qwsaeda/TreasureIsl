@@ -37,7 +37,9 @@
     "group": 1,
     "kind": "territory",
     "terrain": "R",
-    "isle": "harbour"
+    "isle": "harbour",
+    "resource": "fishing",
+    "building": 1
    },
    {
     "cell": [
@@ -47,7 +49,9 @@
     "group": 1,
     "kind": "territory",
     "terrain": "R",
-    "isle": "harbour"
+    "isle": "harbour",
+    "resource": "fishing",
+    "building": 1
    },
    {
     "cell": [
@@ -66,7 +70,9 @@
     "group": 2,
     "kind": "territory",
     "terrain": "R",
-    "isle": "lighthouse"
+    "isle": "lighthouse",
+    "resource": "reef",
+    "building": 1
    },
    {
     "cell": [
@@ -76,7 +82,9 @@
     "group": 2,
     "kind": "territory",
     "terrain": "R",
-    "isle": "lighthouse"
+    "isle": "lighthouse",
+    "resource": "reef",
+    "building": 1
    },
    {
     "cell": [
@@ -95,7 +103,9 @@
     "group": 3,
     "kind": "territory",
     "terrain": "R",
-    "isle": "wreck"
+    "isle": "wreck",
+    "resource": "gold",
+    "building": 1
    },
    {
     "cell": [
@@ -105,7 +115,9 @@
     "group": 3,
     "kind": "territory",
     "terrain": "R",
-    "isle": "wreck"
+    "isle": "wreck",
+    "resource": "gold",
+    "building": 1
    },
    {
     "cell": [
@@ -124,7 +136,9 @@
     "group": 4,
     "kind": "territory",
     "terrain": "R",
-    "isle": "pirate_lair"
+    "isle": "pirate_lair",
+    "resource": "loot",
+    "building": 1
    },
    {
     "cell": [
@@ -134,7 +148,9 @@
     "group": 4,
     "kind": "territory",
     "terrain": "R",
-    "isle": "pirate_lair"
+    "isle": "pirate_lair",
+    "resource": "loot",
+    "building": 1
    },
    {
     "cell": [
@@ -153,7 +169,9 @@
     "group": 5,
     "kind": "territory",
     "terrain": "R",
-    "isle": "shipyard"
+    "isle": "shipyard",
+    "resource": "ship",
+    "building": 1
    },
    {
     "cell": [
@@ -163,7 +181,9 @@
     "group": 5,
     "kind": "territory",
     "terrain": "R",
-    "isle": "shipyard"
+    "isle": "shipyard",
+    "resource": "ship",
+    "building": 1
    },
    {
     "cell": [
@@ -182,7 +202,9 @@
     "group": 6,
     "kind": "territory",
     "terrain": "R",
-    "isle": "trading_post"
+    "isle": "trading_post",
+    "resource": "trade",
+    "building": 1
    },
    {
     "cell": [
@@ -192,7 +214,9 @@
     "group": 6,
     "kind": "territory",
     "terrain": "R",
-    "isle": "trading_post"
+    "isle": "trading_post",
+    "resource": "trade",
+    "building": 1
    },
    {
     "cell": [
@@ -211,7 +235,9 @@
     "group": 7,
     "kind": "territory",
     "terrain": "R",
-    "isle": "skull_cliff"
+    "isle": "skull_cliff",
+    "resource": "loot",
+    "building": 1
    },
    {
     "cell": [
@@ -221,7 +247,9 @@
     "group": 7,
     "kind": "territory",
     "terrain": "R",
-    "isle": "skull_cliff"
+    "isle": "skull_cliff",
+    "resource": "loot",
+    "building": 1
    },
    {
     "cell": [
@@ -240,7 +268,9 @@
     "group": 8,
     "kind": "territory",
     "terrain": "R",
-    "isle": "volcano"
+    "isle": "volcano",
+    "resource": "gold",
+    "building": 1
    },
    {
     "cell": [
@@ -250,7 +280,9 @@
     "group": 8,
     "kind": "territory",
     "terrain": "R",
-    "isle": "volcano"
+    "isle": "volcano",
+    "resource": "gold",
+    "building": 1
    },
    {
     "cell": [
@@ -269,7 +301,9 @@
     "group": 9,
     "kind": "territory",
     "terrain": "R",
-    "isle": "lightship"
+    "isle": "lightship",
+    "resource": "dice",
+    "building": 1
    },
    {
     "cell": [
@@ -279,7 +313,9 @@
     "group": 9,
     "kind": "territory",
     "terrain": "R",
-    "isle": "lightship"
+    "isle": "lightship",
+    "resource": "dice",
+    "building": 1
    },
    {
     "cell": [
@@ -289,7 +325,9 @@
     "group": 10,
     "kind": "territory",
     "terrain": "R",
-    "isle": "boss_fort"
+    "isle": "boss_fort",
+    "resource": "boss",
+    "building": 1
    },
    {
     "cell": [
@@ -299,7 +337,9 @@
     "group": 10,
     "kind": "territory",
     "terrain": "R",
-    "isle": "boss_fort"
+    "isle": "boss_fort",
+    "resource": "boss",
+    "building": 1
    },
    {
     "cell": [
@@ -318,6 +358,35 @@
     "group": 4,
     "kind": "card",
     "terrain": "R"
+   }
+  ],
+  "events": [
+   {
+    "id": "m02_mirage",
+    "kind": "wind_god",
+    "jump_cells": 2
+   },
+   {
+    "id": "m02_red_tide",
+    "kind": "storm"
+   }
+  ],
+  "merchants": [
+   {
+    "id": "weapon",
+    "cell": [
+     15,
+     2
+    ],
+    "price_mult": 1.0
+   },
+   {
+    "id": "slave",
+    "cell": [
+     15,
+     16
+    ],
+    "price_mult": 1.0
    }
   ]
  },

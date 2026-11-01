@@ -31,10 +31,10 @@
 |---|---|---|
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
-  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 16 |
-  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 26 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 32 |
-  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 43 |
+  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 17 |
+  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 30 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 35 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 44 |
 
 ## 条目索引
 
@@ -180,6 +180,15 @@
 | EXP-138 | build | | v5 = v4 + 席位人手/武器 + 领地驻军；迁移补默认资源 + 空驻军；守恒=舰队+Σ驻军(按领地) 正文见 `build.md` |
 | EXP-139 | build | | 攻占非 HP 回合制（一次性确定性）+ 落他人格二选一（Confirm/Back）+ 守方兵力同源 + 驻军显示 + 席位资源初始化 正文见 `build.md` |
 | EXP-140 | build | | AI 攻占判定=兵力模型（force::resolve 预测）+ 攻占结算复用玩家同口径 assault + 驻军自定 1/3 + 胜负双 toast + 测试种子法 正文见 `build.md` |
+| EXP-141 | process | | AI 概念稿迭看 11 轮未收敛：逐元素修补低效（用户「总体去设计」）+ 图生图 ref 缩 100px 角色仍漂移 + 格子语义未先对齐（浮海石柱 vs 平面棋盘格）；解法=意图清单先行整体出图 + ref ≥150px/JPEG + 单帧锚 正文见 `process.md` |
+| EXP-142 | process | | 对抗子代理审计 12_main_map_v6_vs_v2_spec.md 抓出 8 类缺口（无方法论文/无尺寸/无资产/无格类分层/无判据/终稿自相矛盾）；解法=重写规范 + VS 按 R1~R10 重设计 + 引擎真实渲染为准 正文见 `process.md` |
+| EXP-143 | process | | 迭看图/渲染图必须落 evidence/ui_concept/ 顶层 + ui_thumb.py 侧车；禁止子目录/新目录乱放 正文见 `process.md` |
+| EXP-144 | build | | APK 重建踩坑：android-activity 不在根 workspace members ⇒ -p 找不到兜 registry 0.6.1；x86_64 CC 变量名连字符 export 非法；android_entry.rs 首行 //! 被 include! 非法（E0753）；单 crate >15min 正文见 `build.md` |
+| EXP-145 | tools | | wasm-browser-e2e L5 v6_*=0 误判：v6 资产实际文件名 assets/ui/v6/<name>.png，basename 不带 v6_ 前缀；判据 startswith("v6_") 恒 0 ⇒ 改 v6 专属 basename 集合 正文见 `tools.md` |
+| EXP-146 | build | | 真机/MuMu 装 arm64 APK 报「32 位系统」+ 闪退：APK 内 lib/aarch64 非 Android 标准 ABI（应 arm64-v8a）⇒ NO_MATCHING_ABIS；extractNativeLibs=false 要求 .so 16KB 对齐 + 转译需解压 ⇒ 改 true 正文见 `build.md` |
+| EXP-147 | build | | 真机可跑但没地图/图/资源：AndroidAssetReader 把 AssetServer.load("assets/ui/...") 原样给 AAssetManager.open，但 AAssetManager 根=APK assets 段（zip assets/ui/...）⇒ open("assets/ui/...") 找 assets/assets/ui/...=NotFound（wasm fetch 相对页面根含 assets/ 正常）；修复=自定义 reader 剥 assets/ 前缀 正文见 `build.md` |
+| EXP-148 | build | | 用户「安卓应用图标没有，应用名也没有」：manifest 无 android:icon + 无 res/mipmap ⇒ 系统默认图标；硬编码 label 经 aapt2 link 后 aapt dump badging 无 application-label（部分 launcher 读不到）；修复=helm 生成 5 密度 ic_launcher + @string/app_name + aapt2 compile --dir res → link res.zip + 组装复制 res/ 正文见 `build.md` |
+| EXP-149 | code | | Q014/Q019/Q056 三处重复审计发现固化：①doccheck2 collect_data_key_values 收 name_key/text_key/dungeon_name_key（白名单，排除 hud_key）②check_lcg_hex 扩扫 tools.md + 捕十进制 *214013 ③wasm_browser_e2e L5 改模式专属标记（v6 6 项 ≥4 / v5 9 类 + island_home + card_panel）防共用 basename 污染 正文见 `code.md` |
 
 ## 条目格式（写新条时照抄）
 

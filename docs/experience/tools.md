@@ -143,3 +143,9 @@
 3. 工具脚本内部 `print` 前可 `sys.stdout.reconfigure(encoding="utf-8")`（防御性）。
 
 **关联**：`docs/tutorial/06_input_system.md` 曾被 cmdlet 写入带 UTF-8 BOM（gate doccheck2 报「文本文件非 UTF-8 BOM（cmdlet 写入痕迹）」）——同一族「Windows 编码」坑，写盘用编辑工具/python 写 UTF-8（无 BOM），勿用 `Set-Content` 默认编码。见 EXP-051/091。
+
+### EXP-145 工具：wasm_browser_e2e L5 判据：v6 资产 basename 不带 v6_ 前缀（目录 v6/）⇒ startswith 恒 0 误判
+现象：wasm-browser-e2e L5 报 v6_*=0 isle_*=4（v6 资产未取到）⇒ gate FAIL（gate_final9）。
+根因：L5 判据 k.startswith("v6_")，但 v6 资产实际文件名 = assets/ui/v6/<name>.png，basename = ocean_bg.png/isle_land.png 等**不带 v6_ 前缀**（前缀是目录 v6/）⇒ 即使资产被 HTTP 取到（200），basename 也不匹配 v6_ ⇒ v6_*=0 恒成立误判。
+解法：L5 v6 判据改为 v6 专属 basename 集合 {ocean_bg.png, isle_land.png, isle_lighthouse.png, isle_treasure.png, isle_village.png, tile_owned.png, tile_deny.png}（避免与 v5 重名，如 parchment/island/compass/helm/ship）。
+验证：单独跑 wasm-browser-e2e L1-L5 全 PASS（L5 ok=true）+ gate_final10 0 failure。

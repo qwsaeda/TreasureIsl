@@ -40,13 +40,13 @@
 
 ---
 
-## 3. 架构分层（5 crate 单向依赖）
+## 3. 架构分层（核心 5 crate 单向依赖；S27.7 起交付壳 `ti-engine` 独立、S32.1 平台 `ti-devmeta`/`ti-console` 独立，当前 9 workspace member）
 
 | crate | 职责 | 约束 |
 |---|---|---|
 | `ti-formats` | 资源二进制格式解析/序列化 | 零依赖，纯字节 |
 | `ti-core` | 纯玩法逻辑（数值、规则、场景状态机） | **零 IO**，只依赖 `ti-formats`，可无窗口回归 |
-| `ti-platform` | 平台抽象（输入/存储/音频/定时 + macroquad 后端） | 不依赖 `ti-app` |
+| `ti-platform` | 平台抽象（输入/存储/音频/定时；macroquad 后端已退役 S18.8d，S27.7 起交付壳 = Bevy `ti-engine`） | 不依赖 `ti-app` |
 | `ti-app` | 组装层 + 场景状态机 + 三端 bin（native/wasm/android） | 依赖 core + platform + formats |
 | `ti-tools` | 离线工具（解包/校验/codegen） | 依赖 formats |
 
@@ -63,7 +63,7 @@
 
 **20 条合法转换**是唯一事实源（`docs/business/07_ui_flow.md` §1），代码侧 `scene_transition!` 宏逐条对应同一张表。
 **硬规则**：非法转换（如 `SelectRole → Vs`）在类型层面无实现、编译期报错；场景判别值 0..8 一场景一值；切场景后关闭态必须复位（选中项/页码/棋子位置），禁止残留。
-**UI 约束**：逻辑分辨率固定 176×220，缩放只改呈现不改逻辑；所有坐标经 `Viewport` 反变换到逻辑坐标再进业务层。
+**UI 约束**：逻辑分辨率固定 **1080×1920**（S18 起；旧 176×220 为 legacy，运行时禁现，doccheck2 门禁），缩放只改呈现不改逻辑；所有坐标经 `Viewport` 反变换到逻辑坐标再进业务层。
 
 ---
 
@@ -107,7 +107,7 @@
 | 你要 | 读 |
 |---|---|
 | 游戏怎么设计（玩法/规则/数值） | `docs/business/`（唯一事实源） |
-| 怎么架构（5 crate 分层） | `docs/impl/01_architecture.md` |
+| 怎么架构（核心 5 crate 分层；当前 9 member） | `docs/impl/01_architecture.md` |
 | 场景怎么连（9 场景 + 转换 + 输入） | `docs/business/07_ui_flow.md` |
 | 版面怎么摆（9 场景版面 + 配色） | `docs/business/08_layout_design.md` |
 | 模块怎么分（7 包 + 3 契约） | `docs/contracts/` + `plan/packages.yaml` |

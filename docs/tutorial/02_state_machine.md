@@ -88,11 +88,11 @@ if-else 地狱：所有场景的逻辑堆在一个函数里（1000+ 行）
 
 ```
 crates/ti-core/src/rules/main_loop.rs  — SceneStack 定义
-crates/ti-app/src/game_app.rs           — Scene 枚举
+crates/ti-app/src/game_app/mod.rs      — Scene 枚举（S20.0b 起为目录）
 crates/ti-app/src/scenes/mod.rs        — Scene trait + 路由
 ```
 
-### Scene 枚举（game_app/`（S20.0b 拆分后按模块定位））
+### Scene 枚举（`game_app/`，S20.0b 拆分后按模块定位）
 
 ```rust
 pub enum Scene {

@@ -8,7 +8,9 @@
 //!     S18.7 v3 场景落 Bevy 原生绘制后消除逐帧上传）；
 //! - **输入**：Bevy 0.20 输入 API（`ButtonInput<KeyCode>` / `ButtonInput<MouseButton>` /
 //!   `AccumulatedMouseMotion` / `Touches`）→ `KeyState` 沿 + `TouchPad::feed_screen`；
-//! - **音频**：双渲染期关（bevy audio 与 macroquad `links = "alsa"` 冲突，§6；S18.8 切 `bevy_audio`）；
+//! - **音频**：S18.8 发货无声（`bevy_audio` 未开，`registry.audio=[]`）→ **S34（2026-11-01 用户
+//!   拍板补原版音频）撤销**：`bevy_audio`+`wav` 特性 + 原版 `glmusic`（BGM 循环）+
+//!   press/invalid/victory.wav（SFX 一次），`registry.audio` 登记；无音频设备 = Bevy WARN 降级不 panic；
 //! - **stats**：`Time` fps（静止跳帧指标退役，S18.4 重锚 = `stats::FpsMeter::bevy_tick`）。
 //!
 //! 三端口径：
@@ -31,6 +33,125 @@ mod resizetest;
 #[cfg(target_os = "android")]
 pub(crate) mod android_entry {
     include!("android_entry.rs");
+}
+
+/// S18.8d / 2026-11-01 真机修复：Android 资产 reader 剥 `assets/` 前缀。
+///
+/// Bevy 0.20 的 `bevy::asset::io::android::AndroidAssetReader` 把 `AssetServer.load`
+/// 传入的完整相对路径**原样**交给 `AAssetManager::open`——但 AAssetManager 的根 =
+/// APK `assets/` 段（zip 内 `assets/ui/...`），而本项目 `load("assets/ui/...")`
+/// **带 `assets/` 前缀**（native 用 `file_path=仓库根` 对应，android 无仓库根概念）
+/// ⇒ `open("assets/ui/...")` 找 `assets/assets/ui/...` = NotFound ⇒ 真机资源全灭
+/// （wasm 的 `HttpWasmAssetReader` fetch 相对页面根含 `assets/`，正常）。
+/// 此 reader 剥掉开头 `assets/` 前缀再读（AAssetManager 根已含 assets 段）。
+#[cfg(target_os = "android")]
+pub(crate) mod asset_reader_android {
+    use std::ffi::CString;
+    use std::path::{Path, PathBuf};
+
+    use bevy::asset::io::{AssetReader, AssetReaderError, PathStream, Reader, VecReader};
+
+    /// `"assets/ui/icon.png"` → `"ui/icon.png"`（AAssetManager 根 = APK `assets/` 段）。
+    fn strip_assets(path: &Path) -> PathBuf {
+        path.strip_prefix("assets").map_or_else(|_| path.to_path_buf(), Path::to_path_buf)
+    }
+
+    /// `get_meta_path`（bevy_asset 内是 `pub(crate)`，此处按同逻辑自拼 `.meta` 后缀）。
+    fn meta_path(path: &Path) -> PathBuf {
+        let mut meta = path.to_path_buf();
+        let mut ext = path.extension().unwrap_or_default().to_os_string();
+        if !ext.is_empty() {
+            ext.push(".");
+        }
+        ext.push("meta");
+        meta.set_extension(ext);
+        meta
+    }
+
+    /// ANDROID_APP 未初始化时返回 `Io` 错误（不 panic——gate 硬规则 1：tests 外禁 unwrap/expect/panic!）。
+    fn android_app()
+    -> Result<&'static bevy::android::android_activity::AndroidApp, AssetReaderError> {
+        bevy::android::ANDROID_APP.get().ok_or_else(|| {
+            AssetReaderError::Io(std::sync::Arc::new(std::io::Error::other(
+                "ANDROID_APP 未初始化（android_entry 须先 set）",
+            )))
+        })
+    }
+
+    /// 路径 → `CString`（AAssetManager::open 需 C 字符串；非 UTF-8 / 含 NUL 返回 `Io` 错误，不 panic）。
+    fn to_cstring(path: &Path) -> Result<CString, AssetReaderError> {
+        let s = path.to_str().ok_or_else(|| {
+            AssetReaderError::Io(std::sync::Arc::new(std::io::Error::other("asset 路径非 UTF-8")))
+        })?;
+        CString::new(s).map_err(|_| {
+            AssetReaderError::Io(std::sync::Arc::new(std::io::Error::other("asset 路径含 NUL")))
+        })
+    }
+
+    pub struct StripAssetsReader;
+
+    impl AssetReader for StripAssetsReader {
+        async fn read<'a>(&'a self, path: &'a Path) -> Result<impl Reader + 'a, AssetReaderError> {
+            let stripped = strip_assets(path);
+            let app = android_app()?;
+            let mut asset = app
+                .asset_manager()
+                .open(&to_cstring(&stripped)?)
+                .ok_or_else(|| AssetReaderError::NotFound(path.to_path_buf()))?;
+            let bytes = asset.buffer()?;
+            Ok(VecReader::new(bytes.to_vec()))
+        }
+
+        async fn read_meta<'a>(
+            &'a self,
+            path: &'a Path,
+        ) -> Result<impl Reader + 'a, AssetReaderError> {
+            let meta = meta_path(&strip_assets(path));
+            let app = android_app()?;
+            let mut asset = app
+                .asset_manager()
+                .open(&to_cstring(&meta)?)
+                .ok_or_else(|| AssetReaderError::NotFound(meta))?;
+            let bytes = asset.buffer()?;
+            Ok(VecReader::new(bytes.to_vec()))
+        }
+
+        async fn read_directory<'a>(
+            &'a self,
+            path: &'a Path,
+        ) -> Result<Box<PathStream>, AssetReaderError> {
+            let stripped = strip_assets(path);
+            let app = android_app()?;
+            let dir = app
+                .asset_manager()
+                .open_dir(&to_cstring(&stripped)?)
+                .ok_or_else(|| AssetReaderError::NotFound(path.to_path_buf()))?;
+            let mapped = dir
+                .filter_map(move |f| {
+                    let name = f.to_str().ok()?;
+                    let file = path.join(Path::new(name));
+                    if let Some(ext) = file.extension().and_then(|e| e.to_str()) {
+                        if ext.eq_ignore_ascii_case("meta") {
+                            return None;
+                        }
+                    }
+                    Some(file.to_owned())
+                })
+                .collect::<Vec<_>>();
+            Ok(Box::new(futures_lite::stream::iter(mapped)))
+        }
+
+        async fn is_directory<'a>(&'a self, path: &'a Path) -> Result<bool, AssetReaderError> {
+            let stripped = strip_assets(path);
+            let app = android_app()?;
+            let cpath = to_cstring(&stripped)?;
+            let _ = app
+                .asset_manager()
+                .open_dir(&cpath)
+                .ok_or_else(|| AssetReaderError::NotFound(path.to_path_buf()))?;
+            Ok(app.asset_manager().open(&cpath).is_none())
+        }
+    }
 }
 
 use resizeprobe::attach_probe;
@@ -56,6 +177,9 @@ use bevy::sprite::Sprite;
 use bevy::text::Font;
 use bevy::window::{Window, WindowResolution};
 use ti_app::game_app::{GameApp, GameInput, HitData, KeyState, Scene};
+// S34（2026-11-01 用户拍板补原版音频）：bevy_audio 播放（SFX 一次 + BGM 循环）。
+use bevy::audio::{AudioPlayer, AudioSource, PlaybackSettings};
+use ti_core::domain::flow::Sfx;
 // S18.8a：`parse_font_bytes` 仅 native 分支用（wasm 分支无 std::fs 资源读）→ 按目标编译。
 #[cfg(not(target_arch = "wasm32"))]
 use ti_app::menu_shell::parse_font_bytes;
@@ -207,6 +331,51 @@ const LOGICAL_H: u32 = ti_render::framebuffer::LOGICAL_H_I32 as u32;
 #[derive(Resource)]
 struct GameStore(std::sync::Mutex<GameApp>);
 
+/// S34（2026-11-01 用户拍板补原版音频，撤销 S18.8 发货无声）：原版音频句柄。
+///
+/// 资源 = 启动时 `AssetServer` 预载的 `AudioSource` 句柄（SFX 一次 + BGM 循环）。
+/// 资产登记 = `assets/registry.json` `audio`（`check_asset_registry` 双向对账）。
+/// 发货无声撤销 = 用户「音乐动效也没有」；S18.8 定案只关 `bevy_audio` 特性，非禁止接。
+#[derive(Resource)]
+struct GameAudio {
+    /// 按钮音效（`Sfx::Press`）。
+    press: Handle<AudioSource>,
+    /// 无效操作音效（`Sfx::Invalid`）。
+    invalid: Handle<AudioSource>,
+    /// 胜利音效（`Sfx::Victory`）。
+    victory: Handle<AudioSource>,
+}
+
+/// S34：启动预载音频 + 起 BGM 循环（`--shot` 模式不 `app.run()`，本系统不执行 ⇒ 无音频）。
+#[allow(clippy::needless_pass_by_value)]
+fn spawn_audio(mut commands: Commands, server: Res<AssetServer>) {
+    let bgm = server.load::<AudioSource>("assets/audio/glmusic.wav");
+    let press = server.load::<AudioSource>("assets/audio/press.wav");
+    let invalid = server.load::<AudioSource>("assets/audio/invalid.wav");
+    let victory = server.load::<AudioSource>("assets/audio/victory.wav");
+    commands.insert_resource(GameAudio { press, invalid, victory });
+    // BGM 循环（原版 MOD 循环；缺音频设备 = Bevy 记 WARN 不 panic，静默降级）。
+    commands.spawn((AudioPlayer(bgm), PlaybackSettings::LOOP));
+}
+
+/// S34：读本帧 `last_sfx` → 播对应音效（一次性，播完 despawn）。须在 `render_system`
+/// （`clear_last_sfx`）**之前**执行，否则清空后读不到。
+#[allow(clippy::needless_pass_by_value)]
+fn audio_system(store: ResMut<GameStore>, audio: Res<GameAudio>, mut commands: Commands) {
+    let Ok(mut g) = store.0.lock() else {
+        return;
+    };
+    let Some(sfx) = *g.last_sfx() else {
+        return;
+    };
+    let handle = match sfx {
+        Sfx::Press => audio.press.clone(),
+        Sfx::Invalid => audio.invalid.clone(),
+        Sfx::Victory => audio.victory.clone(),
+    };
+    commands.spawn((AudioPlayer(handle), PlaybackSettings::DESPAWN));
+}
+
 /// 输入沿状态（`Local`：与 macroquad 壳 `poll_input` 同表，`docs/gamebook.md` §3）。
 ///
 /// S29.2（B1）：`touch`（`TouchPad` 手势 pad）退役 —— 命中/手势全走 Bevy 拾取层
@@ -347,10 +516,12 @@ fn finish_shot(
     frames: Res<bevy::diagnostic::FrameCount>,
     device: Option<Res<bevy::render::renderer::RenderDevice>>,
 ) {
-    // 兜底（S27.5）：600 帧（~10s）仍无内容帧 = 资产/渲染异常，强制退出并告警
+    // 兜底（S27.5）：3000 帧（~50s）仍无内容帧 = 资产/渲染异常，强制退出并告警
     // （证据可能失真——但死循环更不可接受；正常场景数帧内即就绪）。
-    if frames.0 > 600 {
-        eprintln!("[shot] WARN: 600 帧内未截到内容帧（贴图/管线未就绪？），强制退出");
+    // S34（vs 场景）：preload 需 ~1800 tick（98 资产 + v2 大图解码慢），600 帧兜底
+    // 提前杀（t500/result 帧 written=0 实测定因）；提高到 3000 给足窗口，仅 --shot 模式。
+    if frames.0 > 3000 {
+        eprintln!("[shot] WARN: 3000 帧内未截到内容帧（贴图/管线未就绪？），强制退出");
         exits.write(AppExit::Success);
         return;
     }
@@ -1816,6 +1987,66 @@ pub fn start() {
 /// 共用启动体（native `main` 调；wasm `start` 调；0 平台分叉主体）。
 /// 启动配置段（CLI 解析 + App 插件装配）拆入 `build_app`（本函数 = 游戏装配 + 系统注册 + 分派）。
 #[allow(clippy::too_many_lines)]
+/// S31.2：地图包注入（native = 仓库 `assets/maps/` 段；wasm = 部署根）。从 `run` 拆出，
+/// 守 `audit_code` 函数上限 140 行；缺包 = 内嵌默认，0 行为变化。
+fn inject_map_pack() {
+    #[cfg(not(target_arch = "wasm32"))]
+    apply_map_pack(&repo_root().join("assets").join("maps"));
+    #[cfg(target_arch = "wasm32")]
+    apply_map_pack();
+}
+
+/// 组 App + DefaultPlugins（窗口/资产根/渲染/日志）+ 基础资源（从 `run` 拆出，
+/// 守 clippy `too_many_lines` 100 行上限；Android 剥前缀 reader 在 `DefaultPlugins` 前注册）。
+fn build_app(window: Window, shot: bool, game: GameApp) -> App {
+    let mut app = App::new();
+    // S18.8d / 2026-11-01 真机修复：Android 上 `AssetServer.load("assets/ui/...")` 带
+    // `assets/` 前缀（native 用 `file_path=仓库根`），但 `AndroidAssetReader` 原样交给
+    // `AAssetManager.open`（根 = APK `assets/` 段）⇒ 找 `assets/assets/...` = NotFound。
+    // 注册剥前缀 reader 为默认 asset source（须在 `AssetPlugin`/`DefaultPlugins` 之前，
+    // `init_default_source` `get_or_insert` 不覆盖已设的 default）。
+    #[cfg(target_os = "android")]
+    {
+        use bevy::asset::AssetApp;
+        app.register_asset_source(
+            bevy::asset::io::AssetSourceId::Default,
+            bevy::asset::io::AssetSourceBuilder::new(|| {
+                Box::new(asset_reader_android::StripAssetsReader)
+            }),
+        );
+    }
+    app.add_plugins(
+        bevy::DefaultPlugins
+            .set(bevy::window::WindowPlugin {
+                primary_window: if shot { None } else { Some(window) },
+                ..Default::default()
+            })
+            // 资产根：native = 仓库根；android = 空（Bevy android 资产后端走 APK
+            // assets 段 `AAssetManager` 直读，`file_path` 须空）；wasm = 部署根。
+            .set(bevy::asset::AssetPlugin {
+                #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+                file_path: repo_root().to_string_lossy().to_string(),
+                #[cfg(any(target_arch = "wasm32", target_os = "android"))]
+                file_path: String::new(),
+                ..Default::default()
+            })
+            .set(bevy::render::RenderPlugin {
+                // Android 模拟器软渲染（gralloc_x86/Mesa）实测：downlevel limits 反而
+                // 触发 D3D compute shader / device lost（wgpu 软渲染路径无 D3D 支持，
+                // downlevel 档假设 WebGPU 基线不成立）⇒ 保持默认 limits（native 0 行为变化）。
+                render_creation: bevy::render::RenderPlugin::default().render_creation,
+                synchronous_pipeline_compilation: true,
+                ..Default::default()
+            })
+            .set(bevy::log::LogPlugin { level: bevy::log::Level::WARN, ..Default::default() }),
+    )
+    .init_resource::<ClearColor>()
+    .init_resource::<MousePos>()
+    .init_resource::<NativeIndex>()
+    .insert_resource(GameStore(std::sync::Mutex::new(game)));
+    app
+}
+
 fn run() {
     let args = Args::parse();
     let selftest = args.mode_flags.contains(&"--selftest".to_owned());
@@ -1835,10 +2066,7 @@ fn run() {
     let scene_id = args.scene_id;
     let viewport = args.viewport;
     // S31.2：地图包注入（须先于 `GameApp` 构造 / 任何表访问；缺包 = 内嵌默认，0 行为变化）。
-    #[cfg(not(target_arch = "wasm32"))]
-    apply_map_pack(&repo_root().join("assets").join("maps"));
-    #[cfg(target_arch = "wasm32")]
-    apply_map_pack();
+    inject_map_pack();
     let spin_n = args.spin_n;
     let mut game = GameApp::with_upload_mode(WIN_W as f32, WIN_H as f32, UploadMode::Partial);
     load_resources(&mut game);
@@ -1875,44 +2103,21 @@ fn run() {
     {
         window.canvas = Some("#game".to_owned());
     }
-    let mut app = App::new();
-    let _ = app
-        .add_plugins(
-            bevy::DefaultPlugins
-                .set(bevy::window::WindowPlugin {
-                    primary_window: if shot { None } else { Some(window) },
-                    ..Default::default()
-                })
-                // 资产根：native = 仓库根；android = 空（Bevy android 资产后端走 APK
-                // assets 段 `AAssetManager` 直读，`file_path` 须空）；wasm = 部署根。
-                .set(bevy::asset::AssetPlugin {
-                    #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
-                    file_path: repo_root().to_string_lossy().to_string(),
-                    #[cfg(any(target_arch = "wasm32", target_os = "android"))]
-                    file_path: String::new(),
-                    ..Default::default()
-                })
-                .set(bevy::render::RenderPlugin {
-                    // Android 模拟器软渲染（gralloc_x86/Mesa）实测：downlevel limits 反而
-                    // 触发 D3D compute shader / device lost（wgpu 软渲染路径无 D3D 支持，
-                    // downlevel 档假设 WebGPU 基线不成立）⇒ 保持默认 limits（native 0 行为变化）。
-                    render_creation: bevy::render::RenderPlugin::default().render_creation,
-                    synchronous_pipeline_compilation: true,
-                    ..Default::default()
-                })
-                .set(bevy::log::LogPlugin { level: bevy::log::Level::WARN, ..Default::default() }),
-        )
-        .init_resource::<ClearColor>()
-        .init_resource::<MousePos>()
-        .init_resource::<NativeIndex>()
-        .insert_resource(GameStore(std::sync::Mutex::new(game)));
+    let mut app = build_app(window, shot, game);
     if selftest {
         app.insert_resource(SelfTest { step: 0, repeat: 0, failures: 0, done: false })
             .add_systems(Update, (selftest_system, render_system, stats_system).chain());
     } else {
         app.add_systems(
             Update,
-            (window_resize_system, input_system, camera_system, render_system, stats_system)
+            (
+                window_resize_system,
+                input_system,
+                audio_system,
+                camera_system,
+                render_system,
+                stats_system,
+            )
                 .chain(),
         );
         app.add_systems(Update, native_index_system.after(render_system));
@@ -1921,23 +2126,29 @@ fn run() {
         app.add_systems(Update, pick_event_system.after(manual_1080_hit_system));
         app.init_resource::<ChromeUi>();
         app.add_systems(Update, chrome_ui_system.after(render_system));
-
-        if resizetest {
-            attach_resizetest(&mut app);
-        }
-        if resizeprobe {
-            attach_probe(&mut app);
-        }
+        attach_resize_extensions(&mut app, resizetest, resizeprobe);
     }
     app.add_systems(Startup, spawn_stage);
     if !selftest {
         app.add_systems(Startup, spawn_ui_chrome);
+        // S34：音频启动预载 + BGM 循环（仅 live 路径；selftest/shot 无窗口无声卡，跳过）。
+        app.add_systems(Startup, spawn_audio);
     }
     if shot {
         run_shot(&mut app, &scene_id, viewport);
         return;
     }
     app.run();
+}
+
+/// `--resizetest`/`--resizeprobe` 扩展挂载（从 `run` 拆出，守 `audit_code` 函数上限 140 行）。
+fn attach_resize_extensions(app: &mut App, resizetest: bool, resizeprobe: bool) {
+    if resizetest {
+        attach_resizetest(app);
+    }
+    if resizeprobe {
+        attach_probe(app);
+    }
 }
 
 /// 取命令行里 `--<prefix><value>` 形式的参数值（S29.5：参数解析收敛）。

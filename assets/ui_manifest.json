@@ -127,6 +127,24 @@
       ],
       "key": "magenta_clean",
       "prompt": "a single {what}, game inventory icon, chunky readable silhouette, painted old nautical chart illustration style, warm sand and dark basalt palette with brass accents, thick dark outline, the object is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no backdrop, no text, no letters, no numbers, centered, game asset icon"
+    },
+    "v6_alpha": {
+      "ratio": "1:1",
+      "target": [
+        512,
+        512
+      ],
+      "key": "alpha",
+      "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
+    },
+    "v2_alpha": {
+      "ratio": "1:1",
+      "target": [
+        512,
+        512
+      ],
+      "key": "alpha",
+      "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
     }
   },
   "assets": [
@@ -517,40 +535,32 @@
     {
       "name": "boat_1",
       "file": "assets/ui/boat_1.png",
-      "role": "boat",
-      "params": {
-        "what": "small open fishing skiff with one short mast and a single patched cream sail"
-      },
+      "role": "medallion",
+      "params": {},
       "generated_at": "2026-10-26",
       "prompt": "a single small open fishing skiff with one short mast and a plain brown sail, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
     {
       "name": "boat_2",
       "file": "assets/ui/boat_2.png",
-      "role": "boat",
-      "params": {
-        "what": "two-masted fast schooner with two cream sails and a small black pennant"
-      },
+      "role": "medallion",
+      "params": {},
       "generated_at": "2026-10-26",
       "prompt": "a single two-masted fast schooner with two white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
     {
       "name": "boat_3",
       "file": "assets/ui/boat_3.png",
-      "role": "boat",
-      "params": {
-        "what": "three-masted large galleon with three cream sails and a black pennant"
-      },
+      "role": "medallion",
+      "params": {},
       "generated_at": "2026-10-26",
       "prompt": "a single three-masted large galleon with three white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
     {
       "name": "boat_4",
       "file": "assets/ui/boat_4.png",
-      "role": "boat",
-      "params": {
-        "what": "armoured patrol warship with four gun ports, dark steel plated hull and a black pennant"
-      },
+      "role": "medallion",
+      "params": {},
       "generated_at": "2026-10-26",
       "prompt": "a single armoured patrol warship with four gun ports, steel plated hull and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
     },
@@ -808,6 +818,172 @@
         "what": "round wooden buckler shield with brass rim and iron boss"
       },
       "generated_at": "2026-10-29"
+    },
+    {
+      "name": "v6_ocean_bg",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/ocean_bg.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_tile_owned",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/tile_owned.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_tile_deny",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/tile_deny.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_island",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/island.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_creatures",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/creatures.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_helm",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/helm.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_compass",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/compass.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_ship",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/ship.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_parchment",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/parchment.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_hero",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/hero.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_enemy",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/enemy.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_crew",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/crew.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_banner_win",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/banner_win.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_banner_lose",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/banner_lose.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_vs_bg",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/vs_bg.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_bg_siege",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/bg_siege.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_bg_dungeon",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/bg_dungeon.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v2_bg_boss",
+      "role": "v2_alpha",
+      "file": "assets/ui/vs_v2/bg_boss.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_isle_land",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/isle_land.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_isle_lighthouse",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/isle_lighthouse.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_isle_treasure",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/isle_treasure.png",
+      "params": {},
+      "generated_at": "2026-10-31"
+    },
+    {
+      "name": "v6_isle_village",
+      "role": "v6_alpha",
+      "file": "assets/ui/v6/isle_village.png",
+      "params": {},
+      "generated_at": "2026-11-01"
     }
   ]
 }

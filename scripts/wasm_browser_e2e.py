@@ -11,8 +11,12 @@
   L4 场景切换 = 键盘走到 select_map 后鼠标点击 m01 卡片 ⇒ 切到 main_map
      （增量判据：点击前亮像素比 < 40%（select_map ≈ 17.7%）且点击后 > 40%
      （main_map ≈ 78%）；慢点 down/up 分帧，防同帧 press+release 丢 Click）；
-  L5 环资产实取 = main_map 的 v5 环形棋盘贴图**确实被 HTTP 取到**（`isle_*.png`
-     领地卡 + `island_home_*.png` 中央据点岛 + `card_panel.png` 卡板，各 ≥1 个 2xx）。
+  L5 主地图资产实取 = main_map 的**v6 默认路径贴图确实被 HTTP 取到**（v6 专属标记
+     `ocean_bg`/`isle_land`/`isle_treasure`/`isle_village`/`tile_owned`/`tile_deny`
+     ≥4 个 2xx；S34 起 v6 为默认）或 **v5 回退**（v5 专属岛型 ≥1 + `island_home_*.png`
+     ≥1 + `card_panel.png` ≥1 个 2xx；`TI_MAP_V5_RING`）。
+     v6/v5 共用 basename（`isle_lighthouse.png` 两目录同文件名）按 basename 无法区分
+     ⇒ 用**模式专属标记**判据（防污染，Q056）。
 
   **L5 为何必要**（S32.1 实证）：L4 的「亮像素比」判据**会被背景掩盖**——main_map 的
   `chart_full` 羊皮海图底本身就亮（≈78%），故「环/岛/骰全灭但背景照亮」时 L4 仍
@@ -222,15 +226,26 @@ def main() -> int:
             ok = True
             degraded = True
 
-        # ── L5 环资产实取：main_map v5 环形棋盘贴图确实被 HTTP 取到 ──
-        # L4 的亮像素比会被 `chart_full` 亮背景掩盖 ⇒ 环/岛/骰全灭时 L4 仍 PASS（S32.1
-        # 回归漏网根因）。L5 直接断言「环资产 2xx」，把该类回归变成门禁可拦。
-        l5 = {"isle": 0, "island_home": 0, "card_panel": 0, "ok": False, "skipped": True}
+        # ── L5 主地图资产实取：v6 默认路径（v6 专属标记）或 v5 环形棋盘（v5 专属岛型+island_home+card_panel）──
+        # L4 的亮像素比会被 `chart_full` 亮背景掩盖 ⇒ 主地图元素全灭时 L4 仍 PASS（S32.1
+        # 回归漏网根因）。L5 直接断言「主地图资产 2xx」，把该类回归变成门禁可拦。
+        # S34 起 v6 为默认路径；**v6/v5 共用 basename 防污染**：isle_lighthouse.png 在
+        # `assets/ui/`（v5）与 `assets/ui/v6/`（v6）同文件名 ⇒ 按 basename 无法区分模式 ⇒
+        # 用**仅该模式出现**的 basename 集合判据（Q056 修复；旧判据 isle_ 前缀被 v6 污染）。
+        V6_MARKERS = {"ocean_bg.png", "isle_land.png", "isle_treasure.png",
+                      "isle_village.png", "tile_owned.png", "tile_deny.png"}  # v6 专属（6 项）
+        V5_MARKERS = {"isle_boss_fort.png", "isle_harbour.png", "isle_lightship.png",
+                      "isle_pirate_lair.png", "isle_shipyard.png", "isle_skull_cliff.png",
+                      "isle_trading_post.png", "isle_volcano.png", "isle_wreck.png"}  # v5 专属（9 类，excl 共用 lighthouse）
+        V6_NEED = 4   # 多资产判据（6 中 ≥4，防单资产偶发 200 误 PASS；Q094）
+        l5 = {"v6": 0, "isle": 0, "island_home": 0, "card_panel": 0, "ok": False, "skipped": True}
         if not l4_crashed:
             def ring_counts() -> dict[str, int]:
                 return {
+                    "v6": sum(1 for k, v in asset_status.items()
+                              if k in V6_MARKERS and v == 200),
                     "isle": sum(1 for k, v in asset_status.items()
-                                if k.startswith("isle_") and v == 200),
+                                if k in V5_MARKERS and v == 200),
                     "island_home": sum(1 for k, v in asset_status.items()
                                        if k.startswith("island_home") and v == 200),
                     "card_panel": sum(1 for k, v in asset_status.items()
@@ -240,7 +255,9 @@ def main() -> int:
             # Bevy AssetServer 异步取 ⇒ 轮询等落地（上限 20s）。
             counts = ring_counts()
             for _ in range(20):
-                if counts["isle"] > 0 and counts["island_home"] > 0 and counts["card_panel"] > 0:
+                # v6 路径：v6 专属标记 ≥V6_NEED 即 PASS；v5 路径：v5 专属岛型 + island_home + card_panel 各 ≥1
+                v5_ok = (counts["isle"] > 0 and counts["island_home"] > 0 and counts["card_panel"] > 0)
+                if counts["v6"] >= V6_NEED or v5_ok:
                     break
                 try:
                     page.wait_for_timeout(1_000)
@@ -249,18 +266,21 @@ def main() -> int:
                     degraded = True
                     break
                 counts = ring_counts()
+            v5_ok = (counts["isle"] > 0 and counts["island_home"] > 0 and counts["card_panel"] > 0)
+            v6_ok = counts["v6"] >= V6_NEED
             l5 = {
+                "v6": counts["v6"],
                 "isle": counts["isle"],
                 "island_home": counts["island_home"],
                 "card_panel": counts["card_panel"],
-                "ok": counts["isle"] > 0 and counts["island_home"] > 0 and counts["card_panel"] > 0,
+                "ok": v6_ok or v5_ok,
                 "skipped": False,
             }
             if not l5["ok"]:
-                print("[wasm-browser-e2e] FAIL  L5 环资产未取到："
-                      f"isle_*={l5['isle']} island_home_*={l5['island_home']} "
-                      f"card_panel={l5['card_panel']}"
-                      "（v5 环形棋盘贴图未发请求 ⇒ 疑似 `asset_present()` 在 wasm 恒 false，"
+                print("[wasm-browser-e2e] FAIL  L5 主地图资产未取到："
+                      f"v6_markers={l5['v6']}/{len(V6_MARKERS)} v5_isle={l5['isle']} "
+                      f"island_home_*={l5['island_home']} card_panel={l5['card_panel']}"
+                      "（v6/v5 主地图贴图均未发请求 ⇒ 疑似 `asset_present()` 在 wasm 恒 false，"
                       "见 crates/ti-app/src/scenes/chrome.rs）")
         checks["L5_ring_assets"] = l5
 

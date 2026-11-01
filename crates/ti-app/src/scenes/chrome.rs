@@ -418,8 +418,68 @@ pub const VS_HERO_BACK: &str = "assets/ui/hero_back.png";
 pub const VS_DECK_BATTLE: &str = "assets/ui/deck_battle.png";
 /// 夜间海面背景（版式 B/E）。
 pub const VS_BG_NIGHT_SEA: &str = "assets/ui/bg_night_sea.png";
+
+// === S21.14/S26/S31 main_map v6「古典羊皮航海图」元素批次（main_map_v6 批次资产）===
+// 2026-10-31 用户方向确认 + 对抗审计：逻辑/地图包分开 ⇒ 元素 = 共享池 `source=pool`，
+// 路径单源登记（CS-1 资产单源），场景层禁字面量。
+
+/// v6 海洋全景底（AI 生成，画质来源；满屏背景）。
+pub const V6_OCEAN_BG: &str = "assets/ui/v6/ocean_bg.png";
+/// v6 可占领铜牌（亮铜骷髅）。
+pub const V6_TILE_OWNED: &str = "assets/ui/v6/tile_owned.png";
+/// v6 不可占领铜牌（灰暗锁链）。
+pub const V6_TILE_DENY: &str = "assets/ui/v6/tile_deny.png";
+/// v6 中央岛（山/棕榈/沙滩/灯塔/村落/宝箱金光/骷髅旗）。
+/// v6 中央岛（整图烘焙版，S34 前默认；黄铜圆边观感待 S34.2 拆小元素后退役）。
+pub const V6_ISLAND: &str = "assets/ui/v6/island.png";
+/// v6 岛体（小元素拆分：不规则岛 + 烘焙周围海水；与 `V6_OCEAN_BG` 拼合无圆盘感）。
+pub const V6_ISLE_LAND: &str = "assets/ui/v6/isle_land.png";
+/// v6 灯塔（小元素拆分：岛顶点缀，可独立摆放）。
+pub const V6_ISLE_LIGHTHOUSE: &str = "assets/ui/v6/isle_lighthouse.png";
+/// v6 宝箱金光（小元素拆分：岸边宝箱 + 金币堆发光）。
+pub const V6_ISLE_TREASURE: &str = "assets/ui/v6/isle_treasure.png";
+/// v6 村落（小元素拆分：岛岸木屋 + 码头 settlement）。
+pub const V6_ISLE_VILLAGE: &str = "assets/ui/v6/isle_village.png";
+/// v6 海洋生物群（鲨/鲸/触手/沉船/海藻）。
+pub const V6_CREATURES: &str = "assets/ui/v6/creatures.png";
+/// v6 舵轮 CTA。
+pub const V6_HELM: &str = "assets/ui/v6/helm.png";
+/// v6 罗盘装饰。
+pub const V6_COMPASS: &str = "assets/ui/v6/compass.png";
+/// v6 玩家帆船。
+pub const V6_SHIP: &str = "assets/ui/v6/ship.png";
+/// v6 羊皮做旧底（边框材质；S34 spec §1.1 定案 v6 外框 = 羊皮做旧。当前 v6 底用
+/// **代码绘制** `parchment_bg`（`ti_render::primitives`），PNG 资产待 S34 接线（暂未消费，
+/// 审计 Q085 已注记；**勿删**——资产已在 `ui_manifest.json` 登记，spec 定案元素）。
+pub const V6_PARCHMENT: &str = "assets/ui/v6/parchment.png";
+
+// === VS 战斗界面 v2 重设计元素批次（vs_v2 批次资产）===
+// 2026-10-31 用户否决旧稿 → 重设计：敌我分列 + 顶/底兵力条 + 中央战场 + 结果横幅。
+// 元素 = 共享池 `source=pool`（AI 生成 + `scripts/key_v6_elements.py` 去白键控），路径单源。
+
+/// v2 玩家英雄（三角帽/白衬衫/破披风/少年漫大眼）。
+pub const V2_HERO: &str = "assets/ui/vs_v2/hero.png";
+/// v2 敌船长（黑大衣/三角帽）。
+pub const V2_ENEMY: &str = "assets/ui/vs_v2/enemy.png";
+/// v2 水手方阵（clash 兵对兵）。
+pub const V2_CREW: &str = "assets/ui/vs_v2/crew.png";
+/// v2 胜利书法横幅（狂草「胜利」）。
+pub const V2_BANNER_WIN: &str = "assets/ui/vs_v2/banner_win.png";
+/// v2 败北书法横幅（狂草「败北」）。
+pub const V2_BANNER_LOSE: &str = "assets/ui/vs_v2/banner_lose.png";
+/// v2 甲板战斗背景（多人遭遇/duel 通用）。
+pub const V2_VS_BG: &str = "assets/ui/vs_v2/vs_bg.png";
+/// v2 攻占战背景（船队攻打建筑）。
+pub const V2_BG_SIEGE: &str = "assets/ui/vs_v2/bg_siege.png";
+/// v2 副本战背景（登岛打守军）。
+pub const V2_BG_DUNGEON: &str = "assets/ui/vs_v2/bg_dungeon.png";
+/// v2 BOSS 战背景（英雄 vs 要塞炮台）。
+pub const V2_BG_BOSS: &str = "assets/ui/vs_v2/bg_boss.png";
 /// 海战海面背景（版式 C）。
 pub const VS_BG_BATTLE_SEA: &str = "assets/ui/bg_battle_sea.png";
+/// 泛黄羊皮海图（1024×439；用户 2026-10-30 二轮「主背景不搭 → 总体设计」裁定 = 用已有
+/// 泛黄羊皮资源作 VS 主背景，取代写实照片背景）。
+pub const VS_CHART_WIDE: &str = "assets/ui/chart_wide.png";
 /// 玩家船（阵营标识，版式 C）。
 pub const VS_SHIP_PLAYER: &str = "assets/ui/ship_player.png";
 /// 黄铜指挥台底板（版式 E 底部）。
@@ -1134,6 +1194,16 @@ pub fn nautical_grid(host: &mut dyn SceneHost) {
 /// （同一 `scenes.json` 出同一画面）。**通用原语只有 6 种**（`rect`/`text`/`icon`/
 /// `grad`/`glow`/`disc`），渲染层**不认识**"菜单""木框"等场景语义 —— 场景语义 = 数据。
 pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64) {
+    render_primitives_filtered(host, scene_id, selected, i32::MIN);
+}
+
+/// S31+/v6：按 z 下限过滤原语（`min_z` 以下跳过）。v6 模式先画世界层再画 HUD 原语（z≥3）避免海图盖住 HUD。
+pub fn render_primitives_filtered(
+    host: &mut dyn SceneHost,
+    scene_id: &str,
+    selected: i64,
+    min_z: i32,
+) {
     let layout = scene_layout(scene_id);
     let theme = host.theme().clone();
     // 层序：z 升序 = 越大越靠上（调用序即层序，`08_render_arch.md` 契约 1）。
@@ -1144,6 +1214,9 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
     // CPU 路径（无 bevy_ui 的后端）照旧画。
     let skip_migrated = host.chrome_in_bevy_ui();
     for p in prims {
+        if p.z < min_z {
+            continue;
+        }
         if !primitive_visible(p, selected) {
             continue;
         }

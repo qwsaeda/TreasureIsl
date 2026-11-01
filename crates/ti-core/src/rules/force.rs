@@ -6,7 +6,7 @@
 //! 规则：
 //! - **一人一把武器**：`武装 = min(人手, 武器)`（武器 > 人手 = 多余武器无效，瓶颈 = 人手）；
 //!   人手可 > 或 < 武器（多余人手 = 徒手，战力折减）。
-//! - **战力 = 武装 × weapon_coef + 徒手 × barehand_coef**（weapon_coef > barehand_coef）。
+//! - **战力 = 武装 × `weapon_coef` + 徒手 × `barehand_coef`**（`weapon_coef` > `barehand_coef`）。
 //! - **胜负确定性**：比较战力，高者胜；同战力 = 守方胜（防守优势）。
 //! - **双方必损**：人手按 `loss_pct`、武器按 `weapon_loss_pct` 掉（胜者也损）。
 
@@ -30,26 +30,26 @@ impl Force {
 
     /// 武装人手 = min(人手, 武器)（一人一把；武器多余 = 没人用，无效）。
     #[must_use]
-    pub fn armed(&self) -> u32 {
+    pub fn armed(self) -> u32 {
         self.crew.min(self.arms)
     }
 
     /// 徒手人手 = 人手 − 武装（人手 > 武器时才有）。
     #[must_use]
-    pub fn unarmed(&self) -> u32 {
+    pub fn unarmed(self) -> u32 {
         self.crew.saturating_sub(self.armed())
     }
 
-    /// 战力 = 武装 × weapon_coef + 徒手 × barehand_coef。
+    /// 战力 = 武装 × `weapon_coef` + 徒手 × `barehand_coef`。
     #[must_use]
-    pub fn power(&self, cfg: &ManpowerCfg) -> u64 {
+    pub fn power(self, cfg: ManpowerCfg) -> u64 {
         u64::from(self.armed()) * u64::from(cfg.weapon_coef)
             + u64::from(self.unarmed()) * u64::from(cfg.barehand_coef)
     }
 
     /// 战后剩余（人手 / 武器都按 pct 损耗；胜者也损，`saturating_sub` 防下溢）。
     #[must_use]
-    pub fn attrition(&self, cfg: &ManpowerCfg) -> Force {
+    pub fn attrition(self, cfg: ManpowerCfg) -> Force {
         let crew_loss = apply_pct(self.crew, cfg.loss_pct);
         let arms_loss = apply_pct(self.arms, cfg.weapon_loss_pct);
         Force::new(self.crew.saturating_sub(crew_loss), self.arms.saturating_sub(arms_loss))
@@ -81,7 +81,7 @@ pub struct ForceResult {
 /// - 攻方战力 **>** 守方 ⇒ 攻方胜；否则守方胜（防守优势）。
 /// - 双方都按 `attrition` 损耗（人手 + 武器）。
 #[must_use]
-pub fn resolve(attack: &Force, defense: &Force, cfg: &ManpowerCfg) -> ForceResult {
+pub fn resolve(attack: Force, defense: Force, cfg: ManpowerCfg) -> ForceResult {
     let a_pow = attack.power(cfg);
     let d_pow = defense.power(cfg);
     let winner = if a_pow > d_pow { ForceSide::Attacker } else { ForceSide::Defender };
@@ -92,9 +92,14 @@ pub fn resolve(attack: &Force, defense: &Force, cfg: &ManpowerCfg) -> ForceResul
     }
 }
 
-/// `v × pct / 10000`（pct 已钳到 0..=10000）。
-fn apply_pct(v: u32, pct: u32) -> u32 {
-    (u64::from(v) * u64::from(pct.min(10000)) / 10000) as u32
+/// `value × pct / 10000`（pct 已钳到 0..=10000）。
+fn apply_pct(value: u32, pct: u32) -> u32 {
+    // pct ≤ 10000 ⇒ 结果 ≤ value，`u32` 不截断（`from` 失败 = 数据损坏，钳到 MAX 防 panic）。
+    #[allow(clippy::cast_possible_truncation)]
+    {
+        let n: u64 = u64::from(value) * u64::from(pct.min(10000)) / 10000;
+        u32::try_from(n).unwrap_or(u32::MAX)
+    }
 }
 
 #[cfg(test)]
@@ -129,10 +134,10 @@ mod tests {
         let c = cfg();
         // 武装 5 → 5×2=10；徒手 15 → 15×1=15；总 25。
         let g = Force::new(20, 5);
-        assert_eq!(g.power(&c), 25);
+        assert_eq!(g.power(c), 25);
         // 全武装 5 → 5×2=10。
         let h = Force::new(5, 5);
-        assert_eq!(h.power(&c), 10);
+        assert_eq!(h.power(c), 10);
     }
 
     #[test]
@@ -140,7 +145,7 @@ mod tests {
         let c = cfg();
         let a = Force::new(30, 30); // 30×2=60
         let d = Force::new(20, 20); // 20×2=40
-        assert_eq!(resolve(&a, &d, &c).winner, ForceSide::Attacker);
+        assert_eq!(resolve(a, d, c).winner, ForceSide::Attacker);
     }
 
     #[test]
@@ -149,10 +154,10 @@ mod tests {
         let a = Force::new(20, 20);
         let d = Force::new(20, 20);
         // 同战力 → 守方胜（防守优势）。
-        assert_eq!(resolve(&a, &d, &c).winner, ForceSide::Defender);
+        assert_eq!(resolve(a, d, c).winner, ForceSide::Defender);
         // 守方更强 → 守方胜。
         let d2 = Force::new(30, 30);
-        assert_eq!(resolve(&a, &d2, &c).winner, ForceSide::Defender);
+        assert_eq!(resolve(a, d2, c).winner, ForceSide::Defender);
     }
 
     #[test]
@@ -160,7 +165,7 @@ mod tests {
         let c = cfg();
         let a = Force::new(20, 10);
         let d = Force::new(15, 8);
-        let r = resolve(&a, &d, &c);
+        let r = resolve(a, d, c);
         // 攻方 20 人手损 10% = 2 → 18；10 武器损 20% = 2 → 8。
         assert_eq!(r.attacker_after, Force::new(18, 8));
         // 守方 15 人手损 10% = 1 → 14；8 武器损 20% = 1 → 7。
@@ -172,7 +177,7 @@ mod tests {
         // 损耗 100%：人手/武器清零，不 panic（saturating）。
         let full = ManpowerCfg { loss_pct: 10000, weapon_loss_pct: 10000, ..cfg() };
         let f = Force::new(5, 3);
-        assert_eq!(f.attrition(&full), Force::new(0, 0));
+        assert_eq!(f.attrition(full), Force::new(0, 0));
     }
 
     #[test]
@@ -180,6 +185,6 @@ mod tests {
         let c = cfg();
         let a = Force::new(25, 25);
         let d = Force::new(18, 18);
-        assert_eq!(resolve(&a, &d, &c), resolve(&a, &d, &c));
+        assert_eq!(resolve(a, d, c), resolve(a, d, c));
     }
 }

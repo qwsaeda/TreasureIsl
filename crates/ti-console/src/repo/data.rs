@@ -1,4 +1,5 @@
-//! 只读 API 的响应组装（`/api/overview` `/api/tasks` `/api/evidence` `/api/assets` `/api/session`）。
+//! 只读 API 的响应组装（`/api/overview` `/api/tasks` `/api/evidence` `/api/assets` `/api/tests`
+//! `/api/session`）。
 //!
 //! 数据源路径全部来自 [`super::config::RepoSources`]（`console_sources.json`，
 //! 22 号 §5 单一事实源）；路径访问全过 [`super::guard::resolve_guarded`]（canonicalize 防穿越）；
@@ -115,6 +116,11 @@ pub fn evidence_list(repo_root: &Path, sources: &RepoSources, sub: &str) -> Resu
     if let Ok(rd) = std::fs::read_dir(&root) {
         for entry in rd.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
+            // 缩略图侧车（`ui_thumb.py` 生成物，非设计稿本体）不进清单：前端卡/预览
+            // 单独按 `.thumb.png` 命名约定直读（22 号 §6.1 设计图页「压缩预览」面）。
+            if entry.path().is_file() && name.ends_with(".thumb.png") {
+                continue;
+            }
             let entry_name = if entry.path().is_dir() { format!("{name}/") } else { name };
             files.push(format!("{prefix}{entry_name}"));
         }
@@ -153,6 +159,231 @@ pub fn assets(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> 
         "map_packs": maps,
         "default_map_pack": default_pack,
         "dist": dist,
+    }))
+}
+
+/// `/api/tests`：游戏测试标杆机读清单（`23_game_testing.md` §7）+ evidence 存在性对账。
+///
+/// 返回 = `assets/data/test_manifest.json` 的 `tests[]`（白名单数据源，路径过
+/// `resolve_guarded`）逐条附 `evidence_exists`（`evidence/` 下路径存在与否，供前端标记
+/// 断链）；顶层 = 按 级(L1..L4)→类→型 的分组树（`by_level`），供「测试」页左树。
+///
+/// # Errors
+///
+/// 白名单路径缺失/不可读 = 带原因 `Err`（平台数据源面如实上报，不静默）。
+pub fn tests(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
+    let manifest_path = pick_source(sources, "test_manifest")?;
+    let manifest = read_json(repo_root, &sources.repo_sources, &manifest_path)?;
+    let list = manifest.get("tests").and_then(Value::as_array).cloned().unwrap_or_default();
+    let mut items: Vec<Value> = Vec::new();
+    for t in &list {
+        let ev = t.get("evidence").and_then(Value::as_str).unwrap_or("");
+        let exists = !ev.is_empty() && repo_root.join(ev).exists();
+        let mut item = t.clone();
+        if let Some(obj) = item.as_object_mut() {
+            obj.insert("evidence_exists".into(), json!(exists));
+        }
+        items.push(item);
+    }
+    // 按 级→类→型 分组（树序固定：L1..L4 / 6 类 / 5 型，缺省组不产出）。
+    let levels = ["L1", "L2", "L3", "L4"];
+    let cats = ["functional", "regression", "visual", "audio", "performance", "compatibility"];
+    let types = ["smoke", "ci", "playtest", "exploratory", "benchmark"];
+    let mut by_level: Vec<Value> = Vec::new();
+    for lv in levels {
+        let lv_items: Vec<&Value> = items.iter().filter(|i| i["level"] == lv).collect();
+        if lv_items.is_empty() {
+            continue;
+        }
+        let mut cats_out: Vec<Value> = Vec::new();
+        for cat in cats {
+            let cat_items: Vec<&Value> =
+                lv_items.iter().copied().filter(|i| i["category"] == cat).collect();
+            if cat_items.is_empty() {
+                continue;
+            }
+            let mut types_out: Vec<Value> = Vec::new();
+            for ty in types {
+                let ty_items: Vec<&Value> =
+                    cat_items.iter().copied().filter(|i| i["type"] == ty).collect();
+                if ty_items.is_empty() {
+                    continue;
+                }
+                types_out.push(json!({ "type": ty, "tests": ty_items }));
+            }
+            cats_out.push(json!({ "category": cat, "types": types_out }));
+        }
+        by_level.push(json!({ "level": lv, "categories": cats_out }));
+    }
+    Ok(json!({
+        "manifest": manifest_path,
+        "count": items.len(),
+        "tests": items,
+        "by_level": by_level,
+    }))
+}
+
+/// `/api/build`：构建产物清单 + 构建编排状态（S35.1，24 号 §4.1；只读）。
+///
+/// 口径：`scripts/build_artifacts.py list`（已构建产物 体积/mtime）+ 最近一次构建日志
+/// （`evidence/console/logs/build-*.log`，gitignored；平台不执行构建，构建触发走
+/// `console_commands.json` 白名单 id `build_apk`/`build_wasm`/`build_native` 后台执行）。
+///
+/// # Errors
+///
+/// `build_artifacts.py` 执行失败（`python3` 缺位）= `Err`（带原因，数据源面如实上报）。
+pub fn build_artifacts(
+    repo_root: &Path,
+    _sources: &RepoSources,
+    run_kind: Option<&str>,
+) -> Result<Value, String> {
+    // ?run=<kind> = 后台 spawn 构建编排器（S35.1；kind 白名单 apk|wasm|native，自由字符串 = 400）
+    if let Some(kind) = run_kind {
+        if !matches!(kind, "apk" | "wasm" | "native") {
+            return Err(format!(
+                "run 参数只接受 apk|wasm|native（22 号 §10.3 白名单；非自由字符串）：{kind}"
+            ));
+        }
+        let child = std::process::Command::new("python3")
+            .arg(repo_root.join("scripts/build_artifacts.py"))
+            .arg("run")
+            .arg(kind)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("后台构建 spawn 失败（python3 缺位？）：{e}"))?;
+        return Ok(json!({
+            "started": true,
+            "pid": child.id(),
+            "kind": kind,
+            "note": "后台构建已启动（日志落 evidence/console/logs/build-*.log；构建后自动复检）；轮询 /api/build 查产物",
+        }));
+    }
+    let out = std::process::Command::new("python3")
+        .arg(repo_root.join("scripts/build_artifacts.py"))
+        .arg("list")
+        .output();
+    let out = match out {
+        Ok(o) if o.status.success() => o,
+        Ok(o) => {
+            return Err(format!(
+                "build_artifacts.py list 非 0 退出：{}",
+                String::from_utf8_lossy(&o.stderr).trim()
+            ));
+        }
+        Err(e) => return Err(format!("build_artifacts.py 执行失败（python3 缺位？）：{e}")),
+    };
+    let list_body = String::from_utf8_lossy(&out.stdout).into_owned();
+    // 最近一次构建日志（按 mtime 降序取 1；gitignored 子目录，缺失 = 未跑过构建）
+    let logs_dir = repo_root.join("evidence/console/logs");
+    let mut last_log: Option<Value> = None;
+    if let Ok(rd) = std::fs::read_dir(&logs_dir) {
+        let mut cands: Vec<(std::path::PathBuf, u64)> = Vec::new();
+        for e in rd.flatten() {
+            let n = e.file_name();
+            let s = n.to_string_lossy().into_owned();
+            if s.starts_with("build-") && s.to_ascii_lowercase().ends_with(".log") {
+                let p = repo_root.join("evidence/console/logs").join(&n);
+                // mtime：`metadata→modified→elapsed` 链，`as_millis` 截断用 `try_from` 保底
+                // （u128→u64 无溢出风险——mtime 毫秒量级，clippy cast_possible_truncation）。
+                let mtime = p
+                    .metadata()
+                    .ok()
+                    .and_then(|m| m.modified().ok())
+                    .and_then(|t| t.elapsed().ok())
+                    .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+                cands.push((p, mtime));
+            }
+        }
+        cands.sort_by_key(|c| std::cmp::Reverse(c.1));
+        if let Some((p, _)) = cands.first() {
+            let t = std::fs::read_to_string(p).unwrap_or_default();
+            last_log = Some(json!({
+                "path": p.display().to_string(),
+                "tail": t.lines().take(8).collect::<Vec<_>>(),
+            }));
+        }
+    }
+    Ok(json!({
+        "list": list_body,
+        "last_build_log": last_log,
+        "tool": "scripts/build_artifacts.py（list 只读；触发构建 = console_commands build_{apk,wasm,native}）",
+    }))
+}
+
+/// `/api/apk-size`：APK 体积构成体检（S35.0，24 号标准；只读，平台不执行构建）。
+///
+/// 口径：`scripts/apk_audit.py --apk <最新 dist/TreasureIsl-arm64.apk>`（判据①② = .so 压缩率
+/// + 未引用 UI 漂移）+ `--refset`（引用集组成）。dist/ 无 APK = 「未构建」降级（不报错，24 号 §4）。
+///
+/// # Errors
+///
+/// `apk_audit.py` 执行失败（`python3` 缺位 / 输出解析失败）= `Err`（带原因，数据源面如实上报）。
+pub fn apk_size(repo_root: &Path, _sources: &RepoSources) -> Result<Value, String> {
+    let dist_dir = repo_root.join("dist");
+    let dist = dist_dir.join("TreasureIsl-arm64.apk");
+    if !dist.is_file() {
+        return Ok(json!({
+            "built": false,
+            "note": "dist/TreasureIsl-arm64.apk 不存在（未构建；先跑 scripts/build_apk.sh）",
+        }));
+    }
+    let out = std::process::Command::new("python3")
+        .arg(repo_root.join("scripts/apk_audit.py"))
+        .arg("--apk")
+        .arg(&dist)
+        .arg("--json")
+        .output();
+    let out = match out {
+        Ok(o) if o.status.success() => o,
+        Ok(o) => {
+            // 判据 FAIL（exit 3/4）= 体积口径违规，如实上报（平台显示 FAIL 灯，非 500）
+            let err = String::from_utf8_lossy(&o.stderr).trim().to_owned();
+            return Ok(json!({
+                "built": true,
+                "apk": dist.file_name().unwrap_or_default().to_str().unwrap_or_default(),
+                "verdict": "FAIL",
+                "fail_detail": if err.is_empty() { "apk_audit.py 非 0 退出".into() } else { err },
+                "note": "24 号判据 FAIL（.so 未压缩 或 未引用资产进包）；先修构建口径再发",
+            }));
+        }
+        Err(e) => return Err(format!("apk_audit.py 执行失败（python3 缺位？）：{e}")),
+    };
+    let body = String::from_utf8_lossy(&out.stdout);
+    let breakdown: Value =
+        serde_json::from_str(&body).map_err(|e| format!("apk_audit.py 输出解析失败：{e}"))?;
+    let refset_out = std::process::Command::new("python3")
+        .arg(repo_root.join("scripts/apk_audit.py"))
+        .arg("--refset")
+        .output();
+    let refset: Value = match refset_out {
+        Ok(o) if o.status.success() => {
+            serde_json::from_slice::<Value>(&o.stdout).unwrap_or(Value::Null)
+        }
+        _ => Value::Null,
+    };
+    let lib = breakdown.get("lib").cloned().unwrap_or(Value::Null);
+    let file_size = lib.get("file_size").and_then(Value::as_u64).unwrap_or(0);
+    let compress_size = lib.get("compress_size").and_then(Value::as_u64).unwrap_or(0);
+    // 判据①（24 号标准）：.so 必须 ZIP_DEFLATED。deflate-9 对 .so 实测 ratio≈0.38，
+    // Stored = 1.0；阈值 0.90 = 安全分界（压缩后必 <0.5，未压缩必 =1.0）。
+    // 整数比较避免 u64→f64 精度损失（clippy cast_precision_loss）：compress/file < 0.90
+    // ⇔ compress * 10 < file * 9（两侧为正整数，无溢出风险——.so 数 MB 量级）。
+    let so_compressed: bool =
+        file_size > 0 && compress_size.saturating_mul(10) < file_size.saturating_mul(9);
+    // 显示比率（仅 JSON 呈现，不参与判据①阈值比较——比较已在上面用整数完成；
+    // u64→f64 仅用于展示，codebase 既有模式 = ti-render allow cast_precision_loss）。
+    #[allow(clippy::cast_precision_loss)]
+    let ratio: f64 = if file_size > 0 { compress_size as f64 / file_size as f64 } else { 0.0 };
+    let verdict: &str = if so_compressed { "PASS" } else { "FAIL" };
+    Ok(json!({
+        "built": true,
+        "apk": "dist/TreasureIsl-arm64.apk",
+        "verdict": verdict,
+        "so_ratio": ratio,
+        "breakdown": breakdown,
+        "refset": refset,
+        "tool": "scripts/apk_audit.py（--apk 判据①② / --refset 引用集；24 号 §2）",
     }))
 }
 

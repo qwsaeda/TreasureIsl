@@ -74,6 +74,51 @@
       "args": [],
       "writes": ["evidence/console/"],
       "enabled_by_default": true
+    },
+    {
+      "id": "build_apk",
+      "runner": "python3",
+      "script": "scripts/build_artifacts.py",
+      "args": ["run", "apk"],
+      "writes": ["dist/TreasureIsl-arm64.apk", "evidence/console/logs/"],
+      "enabled_by_default": true,
+      "_note": "S35.1 构建编排（24 号 §4.1）：apk = build_apk.sh（复用 .so 秒级 / .so 比壳源新才重编 >15min）+ 构建后自动 apk_audit 复检（判据①②）。后台执行，日志落 evidence/console/logs/（gitignored）。"
+    },
+    {
+      "id": "build_wasm",
+      "runner": "python3",
+      "script": "scripts/build_artifacts.py",
+      "args": ["run", "wasm"],
+      "writes": ["web/", "evidence/console/logs/"],
+      "enabled_by_default": true,
+      "_note": "S35.1：wasm = build_wasm.ps1（含 cargo 编译 release wasm + 引用集裁剪部署）。后台执行。"
+    },
+    {
+      "id": "build_native",
+      "runner": "python3",
+      "script": "scripts/build_artifacts.py",
+      "args": ["run", "native"],
+      "writes": ["target/", "evidence/console/logs/"],
+      "enabled_by_default": true,
+      "_note": "S35.1：native = cargo build treasure-bevy-native（桌面冒烟）。后台执行。"
+    },
+    {
+      "id": "build_list",
+      "runner": "python3",
+      "script": "scripts/build_artifacts.py",
+      "args": ["list"],
+      "writes": [],
+      "enabled_by_default": true,
+      "_note": "S35.1 只读：已构建产物清单（体积 / mtime）。"
+    },
+    {
+      "id": "build_check",
+      "runner": "python3",
+      "script": "scripts/build_artifacts.py",
+      "args": ["check"],
+      "writes": [],
+      "enabled_by_default": true,
+      "_note": "S35.1 只读前置体检（runner 在位 + 产物目录）；非 0 退出 = 前置缺失。"
     }
   ]
 }

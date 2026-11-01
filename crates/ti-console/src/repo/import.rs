@@ -23,17 +23,13 @@ use crate::repo::config::RepoSources;
 fn is_legal_pack_id(id: &str) -> bool {
     let bytes = id.as_bytes();
     (1..=16).contains(&bytes.len())
-        && bytes
-            .iter()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == &b'_')
+        && bytes.iter().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == &b'_')
 }
 
 /// 4 文件键完整性校验（`manifest` 必须带 `schema`/`id`/`data_version`/`map`/`layout`/`strings`；
 /// `map` 必须带 `spaces` 数组；`layout` 必须带 `ring`）。缺 = 带原因 `Err`（不落盘）。
 fn check_payload_shape(payload: &Value) -> Result<&Value, String> {
-    let manifest = payload
-        .get("manifest")
-        .ok_or("请求体缺 `manifest`")?;
+    let manifest = payload.get("manifest").ok_or("请求体缺 `manifest`")?;
     for key in ["schema", "id", "data_version", "map", "layout", "strings"] {
         if manifest.get(key).is_none() {
             return Err(format!("manifest 缺必需键 `{key}`"));
@@ -65,11 +61,7 @@ pub fn import_map_pack(repo_root: &Path, _sources: &RepoSources, payload: &Value
     };
 
     // 2) id 白名单校验（防穿越）。
-    let pack_id = manifest
-        .get("id")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_owned();
+    let pack_id = manifest.get("id").and_then(Value::as_str).unwrap_or("").to_owned();
     if !is_legal_pack_id(&pack_id) {
         return json!({
             "ok": false,
@@ -130,7 +122,8 @@ fn write_four_files(
     manifest: &Value,
     payload: &Value,
 ) -> Result<Vec<String>, String> {
-    std::fs::create_dir_all(pack_dir).map_err(|e| format!("建包目录 {} 失败：{e}", pack_dir.display()))?;
+    std::fs::create_dir_all(pack_dir)
+        .map_err(|e| format!("建包目录 {} 失败：{e}", pack_dir.display()))?;
 
     let map_body = payload.get("map").unwrap_or(&manifest["map"]);
     let layout_body = payload.get("layout").unwrap_or(&manifest["layout"]);
@@ -145,8 +138,8 @@ fn write_four_files(
     let mut written = Vec::new();
     for (name, body) in &files {
         let target = pack_dir.join(name);
-        let text = serde_json::to_string_pretty(body)
-            .map_err(|e| format!("序列化 {name} 失败：{e}"))?;
+        let text =
+            serde_json::to_string_pretty(body).map_err(|e| format!("序列化 {name} 失败：{e}"))?;
         std::fs::write(&target, text + "\n")
             .map_err(|e| format!("写 {} 失败：{e}", target.display()))?;
         // 写点相对路径（assets/maps/<id>/<name>；供响应回报，strip 失败回退全路径）。
@@ -191,16 +184,14 @@ fn run_map_pack(repo_root: &Path, sub: &str, verify_pack_id: Option<&str>) -> (b
 ///
 /// 建目录 / canonicalize 失败 = 带原因 `Err`。
 fn assert_write_point(repo_root: &Path, pack_dir: &Path) -> Result<PathBuf, String> {
-    std::fs::create_dir_all(pack_dir).map_err(|e| format!("建包目录 {} 失败：{e}", pack_dir.display()))?;
+    std::fs::create_dir_all(pack_dir)
+        .map_err(|e| format!("建包目录 {} 失败：{e}", pack_dir.display()))?;
     let canon_root = std::fs::canonicalize(repo_root)
         .map_err(|e| format!("canonicalize repo_root 失败：{e}"))?;
-    let canon_dir = std::fs::canonicalize(pack_dir)
-        .map_err(|e| format!("canonicalize 包目录 失败：{e}"))?;
+    let canon_dir =
+        std::fs::canonicalize(pack_dir).map_err(|e| format!("canonicalize 包目录 失败：{e}"))?;
     if !canon_dir.starts_with(canon_root.join("assets").join("maps")) {
-        return Err(format!(
-            "写点越界（非 assets/maps/ 下）：{}",
-            canon_dir.display()
-        ));
+        return Err(format!("写点越界（非 assets/maps/ 下）：{}", canon_dir.display()));
     }
     Ok(canon_dir)
 }

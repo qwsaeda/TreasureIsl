@@ -264,7 +264,9 @@ def cmd_check(spec: dict, _args: argparse.Namespace) -> int:
             errors.append(f"{name}: 产物缺失 {dst.relative_to(ROOT)}（先 generate+install）")
             continue
         key = roles.get(asset["role"], {}).get("key", "none")
-        if key != "none":
+        if key != "none" and not (asset.get("params") or {}).get("full_bleed"):
+            # full_bleed 满屏背景（ocean_bg / parchment 类）：alpha 覆盖整幅 = 设计意图，
+            # 豁免「抠图疑似失败」键控内容检查（背景本就不该被透明化成内容图）。
             im = Image.open(dst).convert("RGBA")
             bbox = im.split()[3].getbbox()
             if bbox and bbox[0] == 0 and bbox[1] == 0 and bbox[2] == im.size[0] and bbox[3] == im.size[1]:

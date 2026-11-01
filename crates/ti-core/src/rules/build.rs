@@ -45,6 +45,17 @@ fn f64_to_u32(v: f64) -> Option<u32> {
     Some(v.round().min(f64::from(u32::MAX)) as u32)
 }
 
+/// 溢出金量 → 进银行金量（`excess * rate` 取整，钳 `u32::MAX`）。
+///
+/// 单点实现（去双轨，Q004）：[`BuildManager::settle_overflow`] 与
+/// `ti-app` `SceneHost::settle_overflow`（trade 卖出钳制溢出）共用同一换算，
+/// 避免两处 `(excess * rate).round()` 漂移。
+#[must_use]
+pub fn overflow_to_deposit(excess: u32, rate: f32) -> u32 {
+    let raw = f64::from(excess) * f64::from(rate);
+    f64_to_u32(raw).unwrap_or(0)
+}
+
 /// 建造错误。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BuildErr {
@@ -224,11 +235,7 @@ impl BuildManager {
             return 0;
         }
         let excess = self.bank.gold - cap;
-        let raw = f64::from(excess) * f64::from(rate);
-        let to_bank = f64_to_u32(raw);
-        let Some(to_bank) = to_bank else {
-            return 0;
-        };
+        let to_bank = overflow_to_deposit(excess, rate);
         if to_bank == 0 {
             return 0;
         }

@@ -22,11 +22,13 @@
 
 ```jsonc
 "trade": {
-  "markup": 1.0,          // 售价 = 成本 * markup
-  "goods": [              // 商品目录（示例节选）
-    { "id": "spice",  "name_key": "goods.spice",  "buy": 10,  "qty_max": 99 },
-    { "id": "silk",   "name_key": "goods.silk",   "buy": 25,  "qty_max": 50 },
-    { "id": "gem",    "name_key": "goods.gem",   "buy": 60,  "qty_max": 20 }
+  "markup": 1.5,          // 售价 = 成本 * markup（balance 实际）
+  "goods": [              // 商品目录（**真实值**，`assets/data/balance.json`；id 1..5、name_key=goods.N、qty_max=400）
+    { "id": 1, "name_key": "goods.1", "buy": 20,  "qty_max": 400 },
+    { "id": 2, "name_key": "goods.2", "buy": 76,  "qty_max": 400 },
+    { "id": 3, "name_key": "goods.3", "buy": 95,  "qty_max": 400 },
+    { "id": 4, "name_key": "goods.4", "buy": 114, "qty_max": 400 },
+    { "id": 5, "name_key": "goods.5", "buy": 133, "qty_max": 400 }
   ]
 }
 ```
@@ -134,7 +136,7 @@
 ## 资源（人手 / 武器，v2 新增，2026-10-30 用户定案）
 
 > 领地/攻占战斗从 HP 回合制改为**人手 + 武器**兵力模型（见 [`territory.md`](territory.md) §4 / [`combat.md`](combat.md) §兵力模型）。
-> 本节 = 资源来源/消耗/商人，数值单一事实源 = `balance.manpower` / `balance.weapons`。
+> 本节 = 资源来源/消耗/商人，数值单一事实源 = `balance.manpower`（战力/损耗）/ `balance.merchants`（商人价格）。
 
 | 资源 | 来源 | 消耗 | 说明 |
 |---|---|---|---|
@@ -145,8 +147,8 @@
 
 | 商人 | 卖 | 价格 | 规则 |
 |---|---|---|---|
-| **武器商人** | 武器 | `balance.weapons.price` | **每张地图必有**；花金币买武器；上限 = 人手（一人一把，多余无效） |
-| **奴隶商人** | 人手 | `balance.manpower.price` | 花金币买人手；上限 = 船容量 |
+| **武器商人** | 武器 | `balance.merchants.weapon_price` | 规则单一事实源 = [`territory.md`](territory.md) §7（每图必有 / 一人一把 / 上限 = 人手） |
+| **奴隶商人** | 人手 | `balance.merchants.slave_price` | 规则单一事实源 = [`territory.md`](territory.md) §7（每图必有 / 上限 = 船容量） |
 
 - **每图必有武器商人 + 奴隶商人**（`map.json`/`manifest` 商人格，`territory.md` §7）。
 - 不变量：`人手 ≤ 船容量`（船等级上限）；`武器 ≤ 人手`（一人一把，多余无意义）。

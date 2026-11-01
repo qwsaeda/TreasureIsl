@@ -1,7 +1,8 @@
 # S27.7：ti-engine **并回根 workspace**（用户 2026-10-29：crates 内项目统一由根 Cargo.toml 管理）。
 # 原独立 workspace 的唯一理由 = `links=alsa` 冲突（bevy 的 rodio→alsa-sys vs macroquad 的
 # quad-snd→quad-alsa-sys）：macroquad 音频自 S18.8d 起只挂 `android-shell` feature（可选），
-# bevy 侧未开 audio 特性 ⇒ 同一依赖图里不再同时出现两个 `links=alsa` 的包。
+# 且 macroquad 已不在依赖图（Cargo.lock 无 quad-snd）；**S34（2026-11-01）bevy_audio 已开**
+# （用户拍板补原版音频，发货无声撤销）⇒ 依赖图只余 bevy 侧 alsa 链，无冲突。
 # 依赖版本/特性统一在根 `Cargo.toml` 的 `[workspace.dependencies]` 登记（bevy 特性表在根注释）。
 [package]
 name = "ti-engine"
@@ -58,6 +59,9 @@ serde_json.workspace = true
 # wgpu-hal；bevy_render 的 wgpu 默认开 vulkan+dx12+metal（feature 合并不互斥，双后端共存）。
 bevy = { version = "=0.20.0", default-features = false, features = ["2d", "bevy_ui", "bevy_ui_render", "bevy_text", "touch", "keyboard", "mouse", "complex_script_segmentation", "android-native-activity"] }
 wgpu = { version = "30", default-features = false, features = ["std", "wgsl", "dx12", "metal", "vulkan", "gles", "fragile-send-sync-non-atomic-wasm"] }
+# S18.8d / 2026-11-01 真机修复：`asset_reader_android`（剥 assets/ 前缀）的
+# `read_directory` 用 `futures_lite::stream::iter`（bevy_asset 已传递依赖，lock 2.6.1）。
+futures-lite = "2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"

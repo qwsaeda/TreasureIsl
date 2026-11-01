@@ -29,7 +29,9 @@ pub enum MerchantError {
 /// 买武器：扣金 + 得武器；**上限 = 人手**（一人一把，多余武器无效）。
 ///
 /// `gold`/`arms`/`crew` 为当前值，`qty` 为请求数量，`price` 为单价。
-#[must_use]
+///
+/// # Errors
+/// 金币不足（`InsufficientGold`）或一人一把已满（`CapReached`）⇒ `Err`。
 pub fn buy_arms(
     gold: u32,
     arms: u32,
@@ -43,7 +45,7 @@ pub fn buy_arms(
         return Err(MerchantError::CapReached);
     }
     let want = qty.min(cap);
-    let total = want.checked_mul(price).unwrap_or(u32::MAX);
+    let total = want.saturating_mul(price);
     if total > gold {
         return Err(MerchantError::InsufficientGold);
     }
@@ -51,7 +53,9 @@ pub fn buy_arms(
 }
 
 /// 买人手：扣金 + 得人手；**上限 = 船容量**。
-#[must_use]
+///
+/// # Errors
+/// 金币不足（`InsufficientGold`）或船已满载（`CapReached`）⇒ `Err`。
 pub fn buy_crew(
     gold: u32,
     crew: u32,
@@ -65,7 +69,7 @@ pub fn buy_crew(
         return Err(MerchantError::CapReached);
     }
     let want = qty.min(cap);
-    let total = want.checked_mul(price).unwrap_or(u32::MAX);
+    let total = want.saturating_mul(price);
     if total > gold {
         return Err(MerchantError::InsufficientGold);
     }
@@ -79,7 +83,8 @@ mod tests {
     #[test]
     fn buy_arms_debits_and_adds_capped_at_crew() {
         // 人手 10、武器 5：还能买 5；请求 8 → 只买 5。
-        let r = buy_arms(1000, 5, 10, 8, 50).unwrap();
+        let r =
+            buy_arms(1000, 5, 10, 8, 50).unwrap_or_else(|_e| unreachable!("人手未饱和购买应成功"));
         assert_eq!(r.qty_bought, 5);
         assert_eq!(r.gold_left, 1000 - 5 * 50);
     }
@@ -99,7 +104,8 @@ mod tests {
     #[test]
     fn buy_crew_capped_at_boat_capacity() {
         // 船容量 20、现 15：还能买 5；请求 10 → 只买 5。
-        let r = buy_crew(1000, 15, 20, 10, 30).unwrap();
+        let r =
+            buy_crew(1000, 15, 20, 10, 30).unwrap_or_else(|_e| unreachable!("未满载购买应成功"));
         assert_eq!(r.qty_bought, 5);
         assert_eq!(r.gold_left, 1000 - 5 * 30);
     }
@@ -117,7 +123,8 @@ mod tests {
     #[test]
     fn zero_price_clamped() {
         // price=0 被钳到 1，避免除零/白嫖。
-        let r = buy_arms(1000, 0, 10, 1, 0).unwrap();
+        let r =
+            buy_arms(1000, 0, 10, 1, 0).unwrap_or_else(|_e| unreachable!("零价钳制后购买应成功"));
         assert_eq!(r.qty_bought, 1);
         assert_eq!(r.gold_left, 999);
     }

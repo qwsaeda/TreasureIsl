@@ -21,9 +21,16 @@
 | `scripts/ui_assets.py` | Python | UI 资产**单资产**入口（add/build/verify/rekey/normalize） | 是 |
 | `scripts/ui_asset_batch.py` | Python | UI 资产**批量**入口（register/generate/install/build/check/sheet，规格驱动 + 抠图可行性预检） | 是 |
 | `scripts/ui_layout_sheet.py` | Python | UI **版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图；设计稿评审 / 出图验收对照） | 是 |
+| `scripts/compose_main_map_v6.py` | Python | **main_map v6 概念稿组合合成**（AI 元素 + 凸包弧长布局 ⇒ 合成稿 + 布局 JSON 导出；`--check` 只读） | 是 |
+| `scripts/compose_vs_v2.py` | Python | **VS v2 战斗动画概念稿组合合成**（AI 元素按阶段构图；`--check` 只读） | 是 |
+| `scripts/key_v6_elements.py` | Python | **v6/vs_v2 元素去白键控**（抠白透明键写入批次 sidecar；`--check` 只读） | 是 |
+| `scripts/review_sheet.py` | Python | **迭看图 contact sheet 合成**（多张迭看图缩略拼一张压缩 PNG；`--check` 只读；13 号 §2.1a） | 是 |
  | `scripts/ui_icons.py` | Python | **UI 图标白蒙版生成器**（S21.14：读 `assets/ui_batches/icon_v1.json` 48 原生几何 → PIL 放大 512 白蒙版 `assets/ui/icon_*.png`；`--check` 字节幂等 + 注册表对账） | 是 |
  | `scripts/ui_islands.py` | Python | **岛屿剪影资产生成器**（S26.2：`terrain.json` 陆格掩码 → 3 枚暖沙岛屿剪影 PNG 994×826 抗锯齿+礁光晕+投影 → `assets/ui/island_m0*.png` + `ui_manifest.json` kind=island；运行时资产优先 blit 缺图回退；`--check` 只读幂等） | 否 |
+ | `scripts/ui_thumb.py` | Python | **设计稿压缩预览侧车**（`evidence/ui_concept/*.png` → 同名 `.thumb.png` 480px 长边 PNG-8 量化，~53KB/张 vs 原图 4-6MB；平台设计图页卡读侧车、lightbox 读原图；侧车 + `.thumb_meta/` = 生成物 gitignore 不归档；`--check` 只读对账缺侧车 + 非 0；13 号 §4.0） | 否 |
 | `scripts/map_pack.py` | Python | **地图包工具**（S31 / `21_map_package_spec.md`：一张图 = 一个自包含可分发包。`pack` 出一包 / `verify` 校验（sha256+31 格不变量，违规非 0）/ `install` 装上 / `uninstall` / `list` / `check` 漂移对账） | 否 |
+| `scripts/apk_audit.py` | Python | **APK 体积构成审计（S35.0，24 号 `24_apk_size_std.md`）**：`--refset` 出引擎引用集（代码字面量 + `format!` 动态前缀 + 地图岛 kind + registry audio；`build_apk.sh`/`build_wasm.ps1` 4f 打包只带引用件）/ `--apk <path>` 出体积构成表 + 判据①②（.so 压缩率 <90% / 未引用 UI 0 进包，FAIL 非 0）/ `--refset-unused` 列未引用图（构建裁剪核对） | 否 |
+| `scripts/build_artifacts.py` | Python | **构建产物编排器（S35.1，24 号 §4.1 执行面；平台「构建」页数据源 + 执行器）**：`pre`/`post <kind>` 构建前后 mtime 锚定（apk 回退 `treasure_bevy.rs` mtime 防误触发 15min 重编）/ `run <kind>` 执行构建本体（apk/wasm/native）+ 自动 `post` 复检 + 日志落 `evidence/console/logs/` / `list` 产物清单 / `check` 前置体检；构建本体仍走既有脚本（工具契约不变），本脚本只做编排 | 否 |
 | `scripts/task_close.py` | Python | **任务收口一条命令**（跑判据 → 写证据 → 台账行级置 verified → 同步 release 计数 → 三方对账复验；判据非 0 不改台账） | 是 |
 | `scripts/exp_log.py` | Python | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + 查重 + doccheck 复验） | 是 |
 | `scripts/doc_numbers.py` | Python | **门禁项数 / 台账计数实测回写**（8 处声称点一次改齐；`--fix` 回写） | 是 |
@@ -35,9 +42,6 @@
 新增工具**必须**：幂等 + 提供 `--check` 只读模式 + 非 0 退出码，并登记本表 +
 [`docs/README.md`](../README.md)；**详细用法与流水线组合见
 [`14_tooling_catalog.md`](14_tooling_catalog.md)（工具唯一事实源）**。
-
-新增工具**必须**：幂等 + 提供 `--check` 只读模式 + 非 0 退出码，并登记本表 +
-[`docs/README.md`](../README.md)。
 
 ## 2. 工具链（已建 + 待建）
 
@@ -59,7 +63,7 @@
 | `scripts/wasm_browser_e2e.py` | Bevy wasm 浏览器端 e2e（Playwright 无头 Chromium 3 层：L1 实例化 / L2 渲染 / L3 交互，与 native `e2e_playthrough` 互补） | `--check` 只读打印判据（0 新产物）；默认断言 3 层全绿，失败非 0；需 `serve` 静态服务在跑 |
 | `scripts/web_playtest.cjs` | 浏览器真运行时试玩（S16.1：Node + Playwright CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言） | `node scripts/web_playtest.cjs [--url ...]`；失败非 0；需 `serve` 在跑 + node playwright |
 | `scripts/playtest_loop.py` | 试玩闭环 4 报告聚合（S16.2：fuzz/full_run/render_invariants/web_playtest + 归因三分类清单；`08_playtest_loop.md` 执行面） | `--check` 只读打印判据（0 新产物）；全 0 失败 = 0 退出；任一失败非 0；web 缺 serve/node = SKIP |
-| `scripts/build_apk.sh` | Android APK 构建（S2.6/S18.8d：NDK 交叉编译 .so + APK 组装 + zipalign + SignV2 签名；装机 adb install + 资产 push） | 默认 x86_64；NDK 硬编码 /tmp/opencode/android-ndk-r25b |
+| `scripts/build_apk.sh` | Android APK 构建（S2.6/S18.8d：NDK 交叉编译 .so + APK 组装 + zipalign + SignV2 签名；装机 adb install + 资产 push） | `bash scripts/build_apk.sh`（**默认 aarch64/arm64**，2026-11-01 用户拍板「主要安卓玩、只交付 arm64」）；`x86_64` 传参；`--force` 强制重编 `.so`（默认 `.so` 已新则复用）；NDK 硬编码 /tmp/opencode/android-ndk-r25b；已知坑见 `14_tooling_catalog` build_apk 行（android-activity 不在根 members / x86_64 CC 连字符 / 单 crate >15min / E0753 / **lib 目录 ABI 映射 arm64-v8a** / **extractNativeLibs=true** / **res 两阶段 aapt2 + launcher 图标**，EXP-146/148） |
 | `scripts/publish_web.ps1` | 一键发布（S16.3：gate 全绿前置 + build_wasm + 本地静态断言 + release.md 发布历史 + gh-pages 线上复跑 web_playtest；线上不可达 = 降级登记不静默绕过） | `-Check` 只读前置体检；全链路失败非 0 |
 > **gate 项数**（2026-10 扩展，随对抗审计固化）：第 9 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
 > 第 10 项「数据表门禁」= `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（严格 0 命中）。

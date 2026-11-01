@@ -268,9 +268,8 @@ E0433（too many `super`）+ E0601（缺 main）。**bin 文件互引子模块�
   → 全文见 **[`19_bevy_ui.md`](19_bevy_ui.md)**。
 - **bevy_picking**（0.20 拾取结构 / 指针事件 / `Message` 取代 `Event` / 命中事件契约）
   → 全文见 **[`20_bevy_picking.md`](20_bevy_picking.md)**。
-- 通用仍适用：`Button`/`Interaction` 在 0.20 已废弃（交互一律走 `bevy_picking`）；无 `Entity::spawn`/`set_parent`
-  （层级用 `ChildOf(parent)`）；`Node` 字段全 inline（背景色是独立组件 `BackgroundColor`）；
-  `FontSize` 是枚举不是 `Option<f32>`；`GlobalTransform.translation` 是方法；离屏像素验证 UI 不可靠（证据 = `ComputedNode` 探针）。
+- 通用坑位（`Button`/`Interaction` 0.20 已废弃、`ChildOf` 层级、`Node` 字段 inline、`FontSize` 枚举、
+  `GlobalTransform.translation` 方法、离屏像素验证 UI 不可靠）逐一展开见 **[`19_bevy_ui.md`](19_bevy_ui.md) 9.8-3~9.8-8**。
 
 ---
 

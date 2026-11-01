@@ -45,6 +45,9 @@ wgpu = { version = "30", default-features = false, features = ["std", "wgsl", "d
 serde_json.workspace = true
 # 壳源 `treasure_bevy.rs` 引用 `ti_engine::{ui, scene_render, ...}`（lib 公共面）
 ti-engine.workspace = true
+# S18.8d / 2026-11-01 真机修复：`asset_reader_android`（剥 assets/ 前缀）的
+# `read_directory` 用 `futures_lite::stream::iter`（bevy_asset 已传递依赖，lock 2.6.1）。
+futures-lite = "2"
 
 [lints]
 workspace = true

@@ -18,6 +18,8 @@ v2 (`10_ui_redesign.md`) 是配色/字号/图标局部精修，**v3 是版面结
 | 9 | `09_index_compass_spec.md` | index 重设计「罗盘环标题页」版面规格 |
 | 10 | `10_main_map_v5_spec.md` | main_map 重设计 v5「中央据点岛 + 环形格子环」版面规格 |
 | 11 | `11_vs_spec.md` | **VS 对战场景重设计 v6「英雄 + 水手兵力模型」**（2026-10-30 起战斗从 HP 回合制改为人手+武器确定性 VS + 自动动效；§4 的 5 套候选版式仍为选型参考，动作/道具节已作废，见 `business/combat.md` §兵力模型） |
+| 12 | `12_main_map_v6_vs_v2_spec.md` | **main_map v6「古典羊皮航海图」+ VS v2 战斗动画版面/分层规格**（S34：不规则岛 + 格子紧围岛 + 海洋底 + VS v2 4 帧/兵力 HUD/格类分层/时间轴；见 [`../plan-s34-main-map-v6-vs-v2.md`](../plan-s34-main-map-v6-vs-v2.md)） |
+| 13 | `13_user_requirements_ledger.md` | 用户要求总账 U1~U17（改设计前必读，违反即返工） |
 | — | `../../assets/data/ui_schema/scene_manifest_v3.schema.json` | 场景清单 JSON Schema（DSL 的机读形态） |
 
 ## 与既有规范的关系

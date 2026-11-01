@@ -62,6 +62,12 @@ impl Scene for VsScene {
         }
         // S27.7 选型期：环境变量 `TI_VS_PROTO=a|b|c|d|e` ⇒ 走 5 套候选版式原型渲染
         // （`scenes::vs_proto`）；未设置 = 正式版式（旧布局不变）。
+        // 2026-10-30 用户拍板 VS v2（兵对兵→将对将→胜负+嘲讽）：5 套原型全作废，
+        // `TI_VS_ANIM_PROTO=clash|duel|result_win|result_lose` ⇒ 战斗动画概念帧（设计稿先行）。
+        if let Some(phase) = crate::scenes::vs_anim_proto::selected_phase() {
+            crate::scenes::vs_anim_proto::render(host, phase);
+            return;
+        }
         if let Some(variant) = crate::scenes::vs_proto::selected_variant() {
             crate::scenes::vs_proto::render(host, variant);
             return;
@@ -164,12 +170,12 @@ impl Scene for VsScene {
 /// 与 HP 回合制战斗分叉：`assault` 是**一次性确定性结算**（`territory.md` §4），
 /// 无回合推进，`Attack` 出结果、`Back` 回主地图。格类标题 = 攻占（船队攻打建筑）。
 #[allow(clippy::too_many_lines)]
-fn render_siege(host: &mut dyn SceneHost, s: &SiegeSnapshot) {
+fn render_siege(host: &mut dyn SceneHost, snap: &SiegeSnapshot) {
     let layout = chrome::scene_layout("vs");
     chrome::render_primitives(host, "vs", -1);
     let theme = host.theme().clone();
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
-    let isle_key = format!("isle.{}", s.isle);
+    let isle_key = format!("isle.{}", snap.isle);
     let isle_name = crate::i18n::sget(&isle_key);
     // 标题：攻占（船队攻打建筑）
     let title = crate::i18n::sgetf("scene.vs.siege_title", &[&isle_name]);
@@ -188,7 +194,8 @@ fn render_siege(host: &mut dyn SceneHost, s: &SiegeSnapshot) {
     host.fill_rect(ph_bar.x, ph_bar.y, 2, ph_bar.h, brass);
     host.fill_rect(ph_bar.x + ph_bar.w - 2, ph_bar.y, 2, ph_bar.h, brass);
     host.draw_hint_text(atk_label, ph_bar.x, ph_bar.y - 32, chrome::COLOR_TEXT_ON_PARCH);
-    let atk_num = i18n::sgetf("scene.vs.siege_force_fmt", &[&s.attacker_crew, &s.attacker_arms]);
+    let atk_num =
+        i18n::sgetf("scene.vs.siege_force_fmt", &[&snap.attacker_crew, &snap.attacker_arms]);
     host.draw_hint_text(
         &atk_num,
         ph_bar.x + ph_bar.w - 8 - host.shell().hint_text_width_px(&atk_num),
@@ -207,7 +214,8 @@ fn render_siege(host: &mut dyn SceneHost, s: &SiegeSnapshot) {
         bh_bar.y - 32,
         chrome::COLOR_TEXT_ON_PARCH,
     );
-    let def_num = i18n::sgetf("scene.vs.siege_force_fmt", &[&s.defender_crew, &s.defender_arms]);
+    let def_num =
+        i18n::sgetf("scene.vs.siege_force_fmt", &[&snap.defender_crew, &snap.defender_arms]);
     host.draw_hint_text(
         &def_num,
         bh_bar.x + bh_bar.w - 8 - host.shell().hint_text_width_px(&def_num),
@@ -218,7 +226,7 @@ fn render_siege(host: &mut dyn SceneHost, s: &SiegeSnapshot) {
     // 结果行（`outcome` 未结算 = 提示按 Attack；已结算 = 胜/败）
     let rd_pos = layout.extra.get("rounds").copied().unwrap_or_default();
     let oc_pos = layout.extra.get("outcome").copied().unwrap_or_default();
-    match s.won {
+    match snap.won {
         Some(true) => {
             let text = i18n::sget("scene.vs.siege_win");
             let text_x = chrome::centered_body_x(host, text);

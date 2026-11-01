@@ -3,7 +3,7 @@
 //! 纯开发管理平台（与游戏运行时解耦，定案见 `docs/process/22_dev_platform.md`）：
 //! - 静态壳（`web/`，原生 JS+CSS，无 npm 构建）+ `/api/health`；
 //! - S32.2：只读数据源 API（`/api/overview` `/api/tasks` `/api/evidence` `/api/assets`
-//!   `/api/session`，`repo/` 适配层 + 路径白名单 + canonicalize 防穿越 + 0 写盘）；
+//!   `/api/tests` `/api/session`，`repo/` 适配层 + 路径白名单 + canonicalize 防穿越 + 0 写盘）；
 //! - 默认监听 `127.0.0.1:8787`（非回环须显式 `--host` + token，22 号第 10.1 节）；
 //! - 单实例锁（`evidence/console/.lock`）；
 //! - 命令白名单 = `console_commands.json`（机器真源）；数据源 = `console_sources.json`。

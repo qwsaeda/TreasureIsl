@@ -46,7 +46,7 @@ pub struct BoardSpace {
 pub struct MapEvent {
     /// 事件 id（地图内唯一）。
     pub id: String,
-    /// 事件类型键（`rules::events::MaritimeEvent` kind：wind_god/shipwreck/…）。
+    /// 事件类型键（`rules::events::MaritimeEvent` 的 kind：`wind_god`/`shipwreck`/…）。
     pub kind: String,
     /// 风神保佑跳格参数（`kind=wind_god`；`0` = 多扔骰子一次；其他事件 = `0`）。
     pub jump_cells: i32,
@@ -201,11 +201,19 @@ pub fn board() -> Result<&'static BoardDb, LoadError> {
 mod tests {
     use super::*;
 
+    /// 测试用赛道表（`board()` 不可缺 = 编译期内嵌数据；失败 = 内嵌数据损坏，`unreachable!`）。
+    fn test_board_db() -> &'static BoardDb {
+        match board() {
+            Ok(db) => db,
+            Err(_e) => unreachable!("board.json 应可加载（编译期内嵌）"),
+        }
+    }
+
     /// S33.2：领地 v2 新字段解析（每图 events/merchants + 逐格 resource/building）。
     #[test]
     fn parses_v2_fields_per_map() {
-        let db = board().expect("board.json 应可加载");
-        let m01 = db.map("m01").expect("m01 应存在");
+        let db = test_board_db();
+        let m01 = db.map("m01").unwrap_or_else(|| unreachable!("m01 应存在（编译期内嵌）"));
         // 每图事件非空 + 商人含 weapon/slave
         assert!(!m01.events.is_empty(), "m01 events 非空");
         let ids: Vec<&str> = m01.merchants.iter().map(|m| m.id.as_str()).collect();
@@ -226,7 +234,7 @@ mod tests {
     /// S33.2：全图一致（每图都配 events + weapon/slave 商人）。
     #[test]
     fn all_maps_have_v2_events_and_merchants() {
-        let db = board().expect("board.json 应可加载");
+        let db = test_board_db();
         for (id, m) in &db.maps {
             assert!(!m.events.is_empty(), "{id} events 非空");
             let m_ids: Vec<&str> = m.merchants.iter().map(|x| x.id.as_str()).collect();

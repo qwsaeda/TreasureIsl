@@ -523,6 +523,8 @@
   "spaces": 31,
   "start": 1,
   "territory": 20,
-  "boss": 1
+  "feature": 9,
+  "boss": 1,
+  "isle_kinds": 10
  }
 }

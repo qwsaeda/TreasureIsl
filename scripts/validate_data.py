@@ -434,7 +434,6 @@ def _sync(registered: list[str], disk: set[str], label: str, problems: list[str]
 
 def check_asset_registry(root: Path, problems: list[str]) -> None:
     """①统一资产登记（gate 10a 扩展）：全类型资产 disk<->registry 双向同步。
-
     - UI 图像登记源 = `assets/ui_manifest.json`（`assets[].file`），与 `assets/ui/*.png` 双向同步；
     - 字体/音频登记源 = `assets/registry.json`（fonts/audio），与 `assets/fonts/*`、`assets/audio/*` 双向同步。
     新增资产 = 登记到对应 registry（gate 兜底：盘上有未登记 / 登记了盘上无 = FAIL）。
@@ -450,7 +449,7 @@ def check_asset_registry(root: Path, problems: list[str]) -> None:
         img_reg = [a.get("file") for a in m.get("assets", []) if a.get("file")]
         img_disk = {
             os.path.relpath(p, root).replace(os.sep, "/")
-            for p in glob.glob(str(root / "assets/ui/*.png"))
+            for p in glob.glob(str(root / "assets/ui/**/*.png"), recursive=True)
         }
         _sync(img_reg, img_disk, "ui_manifest(图像)", problems)
 
@@ -471,6 +470,91 @@ def check_asset_registry(root: Path, problems: list[str]) -> None:
             }
             _sync(registered, disk, f"registry({section})", problems)
 
+
+
+def check_test_manifest(root: Path, problems: list[str]) -> None:
+    """游戏测试标杆机读清单对账（23_game_testing.md §7）：id 唯一 + 级/类/型合法 + evidence/gate 至少一者。
+
+    - `assets/data/test_manifest.json` `tests[]`：`id` 唯一；`level` ∈ L1..L4；`category` ∈
+      功能/回归/视觉/音频/性能/兼容；`type` ∈ 冒烟/CI/试玩/探索/基准；`evidence` 与 `gate` 至少一者
+      （`evidence` = `evidence/` 下路径，或 `gate` = 门禁项号 1..=33）。
+    """
+    mf = root / "assets/data/test_manifest.json"
+    if not mf.is_file():
+        problems.append("test_manifest.json 缺失（23_game_testing.md §7 机读清单）")
+        return
+    try:
+        m = json.loads(mf.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        problems.append(f"test_manifest.json 读取失败：{e}")
+        return
+    levels = {"L1", "L2", "L3", "L4"}
+    cats = {"functional", "regression", "visual", "audio", "performance", "compatibility"}
+    types = {"smoke", "ci", "playtest", "exploratory", "benchmark"}
+    seen: set[str] = set()
+    for t in m.get("tests", []):
+        tid = t.get("id", "")
+        if not tid:
+            problems.append("test_manifest: 存在无 id 测试项")
+            continue
+        if tid in seen:
+            problems.append(f"test_manifest: id `{tid}` 重复")
+        seen.add(tid)
+        if t.get("level") not in levels:
+            problems.append(f"test_manifest: `{tid}` level={t.get('level')} 非法（须 L1..L4）")
+        if t.get("category") not in cats:
+            problems.append(f"test_manifest: `{tid}` category={t.get('category')} 非法")
+        if t.get("type") not in types:
+            problems.append(f"test_manifest: `{tid}` type={t.get('type')} 非法")
+        ev = t.get("evidence")
+        gate = t.get("gate")
+        if not ev and gate is None:
+            problems.append(f"test_manifest: `{tid}` 缺 evidence 与 gate（至少一者）")
+        if ev:
+            p = root / ev
+            if not p.is_file() and not p.is_dir():
+                problems.append(f"test_manifest: `{tid}` evidence `{ev}` 不存在")
+        if gate is not None and not (isinstance(gate, int) and 1 <= gate <= 33):
+            problems.append(f"test_manifest: `{tid}` gate={gate} 非法（须 1..=33）")
+        # 命令真实性：`cargo test -p <pkg> --test <name>` → `crates/<pkg>/tests/<name>.rs` 必须存在；
+        # `cargo run -p <pkg> --bin <bin>` → `crates/<pkg>/src/bin/<bin>.rs` 必须存在。
+        # 防「清单里命令指向已删/改名测试」（如 pcx_parity 退役路径、reference_diff_battle 不存在）。
+        cmd = t.get("command", "")
+        if " --test " in cmd and "cargo test" in cmd:
+            try:
+                pkg = cmd.split(" -p ")[1].split(" ")[0]
+                tname = cmd.split(" --test ")[1].split(" ")[0]
+            except IndexError:
+                pkg = tname = ""
+            if pkg and tname:
+                testf = root / f"crates/{pkg}/tests/{tname}.rs"
+                if not testf.is_file():
+                    problems.append(
+                        f"test_manifest: `{tid}` 命令 `{cmd}` 的测试文件 `crates/{pkg}/tests/{tname}.rs` 不存在（清单指向已删/改名测试）"
+                    )
+        elif " --bin " in cmd and "cargo run" in cmd:
+            try:
+                pkg = cmd.split(" -p ")[1].split(" ")[0]
+                bname = cmd.split(" --bin ")[1].split(" ")[0]
+            except IndexError:
+                pkg = bname = ""
+            if pkg and bname:
+                bin_dir = root / f"crates/{pkg}/src/bin"
+                # bin 名可含连字符且源文件名不同（Cargo.toml `[[bin]] name`+`path`，如
+                # treasure-headless → src/bin/treasure_headless.rs、treasure-bevy-native → treasure_bevy.rs）。
+                # 解析顺序：① src/bin/<name>.rs ② <连字符→下划线>.rs ③ Cargo.toml [[bin]] name+path 声明。
+                cands = [bin_dir / f"{bname}.rs", bin_dir / f"{bname.replace('-', '_')}.rs"]
+                if not any(c.is_file() for c in cands):
+                    declared = False
+                    toml = root / f"crates/{pkg}/Cargo.toml"
+                    if toml.is_file():
+                        text = toml.read_text(encoding="utf-8", errors="ignore")
+                        if f'name = "{bname}"' in text:
+                            declared = True
+                    if not declared:
+                        problems.append(
+                            f"test_manifest: `{tid}` 命令 `{cmd}` 的 bin `{bname}` 不存在（src/bin/ 无 {bname}.rs 且 Cargo.toml 未声明 [[bin]] name）"
+                        )
 
 
 def main() -> int:
@@ -509,6 +593,7 @@ def main() -> int:
     check_ui_icons(root, problems)
     check_scenes_canonical(root, problems)
     check_asset_registry(root, problems)
+    check_test_manifest(root, problems)
 
     for p in problems:
         print(f"ERROR {p}")
@@ -518,7 +603,7 @@ def main() -> int:
     n_str = len([k for k in loaded.get("strings.json", {}) if k != "schema_version"])
     print(
         f"validate_data: OK（{len(loaded)} 表，strings {n_str} 键；main_map.grid 三键 + 全场景 extra 标量正整数"
-        " + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步）"
+        " + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）"
     )
     return 0
 

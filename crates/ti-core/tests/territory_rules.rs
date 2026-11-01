@@ -315,7 +315,7 @@ fn save_roundtrip_restores_territories() {
     v4.territories.push(TerritorySave {
         map: "m01".to_owned(),
         cells: owned.clone(),
-        garrisons: Default::default(),
+        garrisons: std::collections::BTreeMap::default(),
     });
     v4.current_seat = 3;
     let json = v4.to_json();

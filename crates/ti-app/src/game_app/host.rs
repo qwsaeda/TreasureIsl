@@ -14,6 +14,7 @@ use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::{SaveSlot, SaveSlotV4Ext, SeatSave, TerritorySave};
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{BoardSession, TrackSpace, Turn};
+use ti_core::rules::build::overflow_to_deposit;
 use ti_core::rules::cards;
 use ti_core::rules::force::Force;
 use ti_core::rules::messages::total_pages;
@@ -642,6 +643,10 @@ impl EconomyHost for GameApp {
         self.bank.gold
     }
 
+    fn bank_deposit(&self) -> u32 {
+        self.bank.deposit
+    }
+
     fn spend_bank_gold(&mut self, amount: u32) {
         self.bank.gold -= amount;
     }
@@ -670,9 +675,7 @@ impl EconomyHost for GameApp {
             Ok(b) => b.economy.bank_rate,
             Err(_) => 1.0,
         };
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let to_bank =
-            ((f64::from(excess) * f64::from(rate)).round()).min(f64::from(u32::MAX)) as u32;
+        let to_bank = overflow_to_deposit(excess, rate);
         self.bank.deposit = self.bank.deposit.saturating_add(to_bank);
     }
 

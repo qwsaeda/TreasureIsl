@@ -28,6 +28,57 @@ S18.8a 之前，界面全是代码绘制的几何原语（`rect`/`icon`/`grad`�
   - CPU 侧：`ti_app::image_cache` → `<仓库根>/<路径>`。
   - 两侧同路径 → 双后端同画面（`09_render_framework.md` §5.1 `image` 原语行）。
 
+### 2.1 设计稿归档规范（`evidence/ui_concept/` 命名口径，平台设计图页默认面）
+
+`ui_concept/` 下混合了**正式设计稿**（人工参考/定案依据）与**中间产物**（未抠原图、
+临时试稿）。平台设计图页默认**只展示正式稿**，中间产物隐藏（可勾选展开）。命名口径：
+
+| 前缀 | 角色 | 设计图页默认面 |
+|---|---|---|
+| `raw_<name>.png` | 原始生成图（**未抠图**，`ui_assets.py rekey` 前） | 隐藏（中间产物） |
+| `tmp_<name>.png` | 临时试稿 / 调试产物（无归档价值） | 隐藏（中间产物） |
+| 其余 `<name>.png` | **正式设计稿**（概念图 / 变体 / 定案依据） | 展示 |
+
+- **写图纪律（所有会话 / AI 生图 / 工具链遵守）**：
+  - 未抠图原图**必须**落 `raw_<name>.png`（`ui_assets.py build` 自动生成，勿手改前缀）；
+  - 临时试稿 / 一次性调试图**必须**落 `tmp_<name>.png`，用完即删，**不得**混入无
+    `raw_`/`tmp_` 前缀的正式名（否则会被设计图页当正式稿展示）；
+  - 正式设计稿**不带** `raw_` / `tmp_` 前缀（`main_map_v5_b.png` / `index_compass_concept.png` /
+    `isle_v2_concept_a.png`…）；定案 / 对比 / 验收留痕用正式名。
+- **机器兜底**：平台 `GET /api/evidence?sub=ui_concept` 已**滤除** `.thumb.png` 侧车
+  （生成物非设计稿）；设计图页前端按 `raw_`/`tmp_` 前缀默认隐藏中间产物
+  （`web/index.html` 设计图页 `#design-mid` 开关，口径 = 本节表；改命名规则须同步本节
+  + 前端 `isMidProduct()`）。
+- **压缩预览面**（2026-10-30）：正式稿 + 中间产物都可用 `scripts/ui_thumb.py` 生成
+  `.thumb.png` 侧车（480px PNG-8，~53KB vs 原图 4-6MB），平台设计图卡读侧车、
+  lightbox 读原图；侧车 + `.thumb_meta/` 指纹目录均为**生成物，gitignore，不入清单/不归档**。
+
+### 2.1a 迭看图 / 引擎渲染图归档（2026-10-31 用户「图片乱放找不到」→ 定案）
+
+迭看 / 引擎渲染 / 设计稿**必须**统一落 `evidence/ui_concept/` **顶层**（不带 `raw_`/`tmp_` 前缀 =
+平台设计图页默认展示），**禁止**散落子目录（`ui_concept/<theme>/`）或新建顶层目录（如 `vs_v2_render/`）。
+命名口径（主题前缀 + 阶段/角色 + `_engine` 后缀区分渲染方式）：
+
+| 图类 | 命名 | 例 |
+|---|---|---|
+| 合成稿 / 概念稿 | `<theme>_<variant>.png` | `main_map_v6_composite.png` / `vs_v2_clash.png` |
+| 引擎渲染迭看图 | `<theme>_<variant>_engine.png` | `main_map_v6_engine.png` / `vs_v2_clash_engine.png` |
+| AI 元素源（中间产物） | `raw_<theme>_<elem>.png` | `raw_main_map_v6_island.png` |
+| 临时试稿 | `tmp_<name>.png` | `tmp_vs_v2_bg.png` |
+
+- **写图纪律**：任何迭看图/引擎渲染图**写前**先查本节命名表；写后**必须**跑
+  `python3 scripts/ui_thumb.py` 生成侧车（平台卡/lightbox 才可见）；gitignore 的 `ui_concept/`
+  子目录（`main_map_v6/elements/`、`vs_anim_v2/elements/`）只作 **AI 元素源**（`raw_`/中间产物），
+  **不得**放正式迭看图。
+- **呈现纪律（2026-10-31 用户「磁盘物理路径，每次按这个给出」）**：迭看图给用户看时，
+  **必须**给出**磁盘物理绝对路径**（`<repo>/evidence/ui_concept/<name>.png`），
+  且**在对话中直接显示图**（不只给路径）——用户可能从 git 视图找（`ui_concept/` gitignore
+  = git 看不到），物理路径 + 对话内显示双通道，防「找不到」。
+- **工具链一致性**：`ui_thumb.py` 只扫顶层 `*.png`，子目录元素源不生成侧车（不占清单）；
+  引擎渲染迭看图放子目录 = 平台看不到（2026-10-31 实测「生图在平台看不到」根因）。
+- **机器兜底**：平台 `GET /api/evidence?sub=ui_concept` 只枚举顶层 → 子目录稿天然不可见
+  （若把迭看图误放子目录，用户迭看必扑空）。
+
 ## 3. 角色预设（role）
 
 资产规格预设 = **生图比例 + 目标尺寸 + 抠图模式 + 提示词模板**。新增角色只加一条预设。
@@ -59,6 +110,30 @@ S18.8a 之前，界面全是代码绘制的几何原语（`rect`/`icon`/`grad`�
 > 由 `add --what` / 清单 `params` 填充。
 
 ## 4. 命令
+
+### 4.0 压缩预览侧车（设计图页大图传输优化，2026-10-30）
+
+`ui_concept/` 设计稿单张 4-6 MB（146 张共 353 MB），平台设计图页卡/lightbox 走白名单
+直读全量 PNG = 预览卡传输重。**侧车方案**：同名 `<name>.thumb.png`（480px 长边、
+PNG-8 量化，~53KB/张，总 7.6 MB = 原图 2%），卡网格只读侧车、lightbox 放大读原图；
+侧车 + `.thumb_meta/` 指纹目录 = **生成物，gitignore（`/evidence/ui_concept/` 已整体忽略），
+不入 `ui_manifest` 清单、不归档**。
+
+```bash
+python scripts/ui_thumb.py            # 全量生成/刷新侧车（幂等；源指纹未变则 SKIP）
+python scripts/ui_thumb.py --force    # 无视指纹强制重生成
+python scripts/ui_thumb.py --check    # 只读对账：缺侧车列表 + 非 0 退出（工具契约面）
+```
+
+- **平台前端契约**（`web/index.html` 设计图页）：卡 `<img src>` 默认读
+  `f.replace(/\.png$/, '.thumb.png')`，`onerror` 回退原图（侧车缺失不崩）；
+  lightbox 放大读原图（清晰面不降）。`/api/evidence?sub=ui_concept` 清单**已滤除**
+  `.thumb.png`（生成物非设计稿，不占设计图计数）。
+- **缓存协商**（`routes.rs` 白名单直读面）：响应带 `ETag`（FNV-1a 内容指纹 + 长度）
+  + `Cache-Control: max-age=604800`；浏览器二次请求带 `If-None-Match` 命中 = 304 空 body
+  （改文件 ⇒ 指纹变 ⇒ 自动失效）。网页静态壳（`index.html`）仍 `no-store`（改即生效）。
+
+### 4.1 补缺失资产
 
 ```sh
 # 补齐清单里缺失的资产（幂等；已存在则 SKIP）

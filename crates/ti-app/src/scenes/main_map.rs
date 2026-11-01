@@ -2,6 +2,10 @@
 //!
 //! 事件分派的跳转结果（`Vs` / `Message`）由路由层 [`crate::scenes::enter_target`]
 //! 处理——那是跨场景的公共跳转点，不属于本场景。
+//!
+//! 布局数据 `main_map_v6_layout.json`（S33/2026-10-31 不规则岛 v6）经
+//! `ti-core data 层常量`（`data::V6_LAYOUT_JSON`，CS-1 资产路径单源口径）
+//! 编译期读入；场景层 0 资产路径字面量。
 use ti_core::data;
 use ti_core::data::{SceneLayout, balance};
 use ti_core::domain::economy::Building;
@@ -162,7 +166,7 @@ fn handle_build(host: &mut dyn SceneHost, kind: Building) {
     };
     let mut mgr = build::BuildManager::new(
         b.build.clone(),
-        build::Bank { gold: host.bank_gold(), deposit: 0 },
+        build::Bank { gold: host.bank_gold(), deposit: host.bank_deposit() },
         &[],
     );
     let bank_before = mgr.bank().gold;
@@ -584,17 +588,30 @@ impl Scene for MainMapScene {
     }
 
     /// 等距地形瓦片（真资源）+ 玩家棋子 + 据点 + 金/持有量 HUD（v2 羊皮纸/木纹/金色系）。
+    #[allow(clippy::too_many_lines)]
     fn render(&mut self, host: &mut dyn SceneHost) {
         // P1-3：坐标/文案硬编码改读 `ti_core::data::scenes()`（scenes.json 字段已建）；
         // QA031：统一走 `chrome::scene_layout`（scenes.json 单一读点，契约 4）
         let layout = chrome::scene_layout("main_map");
         // S17.8 v3：v3 模式判定（world_canvas 键在位 = v3；缺席回退 v2 静态 grid.*）。
         let v3 = chrome::has_world_canvas(&layout);
+        // S34：v6 终码默认路径（无 `TI_MAP_V6_PROTO` / `TI_MAP_V5_RING` 环境变量）。
+        // S34 用户 2026-11-01 复验：v6 海图（`render_v6_elem`）满屏盖住早画的 HUD 数值
+        // （`render_hud_v3` 是运行时 text 非 z>=3 原语，`render_primitives_filtered` 只重画
+        // z>=3 原语 ⇒ 顶角铜牌无数值）。v6 默认路径把 HUD 数值**延迟到世界层之后**重画。
+        let v6_default = v3
+            && std::env::var("TI_MAP_V6_PROTO").is_err()
+            && std::env::var("TI_MAP_V5_RING").is_err();
         // S15.4：legacy 地形瓦片像素层移除。主地图 = 羊皮纸底 + 航海网格装饰 + 代码绘制等距棋盘（§4.3）
         // S18.7f：夜空底 + 画布框 + HUD/命令盘 chrome = JSON 原语（**必须先于瓦片**：
         // 夜空渐变是背景层，瓦片/实体叠其上）；v2 回退 = 羊皮纸底 + 航海网格。
+        // S31+/v6：v6 世界层（`render_v6_elem`）已画全屏海图，若先画 primitives(z>=2 背景) 会盖住 HUD（z>=3）
+        // ⇒ v6 默认路径先画世界层，后画 HUD 原语（min_z=3）。
         if v3 {
-            chrome::render_primitives(host, "main_map", -1);
+            if !v6_default {
+                chrome::render_primitives(host, "main_map", -1);
+            }
+            // v6_default：原语延迟到 render_v6_elem 后（下方分支），避免海图盖住 HUD 原语。
         } else {
             chrome::parchment_bg(host);
             chrome::nautical_grid(host);
@@ -626,7 +643,11 @@ impl Scene for MainMapScene {
 
         // S17.8：v3 边角化 HUD + 底部命令盘 / v2 羊皮纸 HUD 条 + 三按钮（双写，键缺席即 v2）。
         if v3 {
-            render_hud_v3(host, &layout);
+            // v6 默认路径：HUD 数值延迟到世界层之后（`render_v6_elem` 海图会盖住早画文本；
+            // 见 `v6_default` 注释 + 下方 v6 分支补画）。其余 v3 路径照旧先画。
+            if !v6_default {
+                render_hud_v3(host, &layout);
+            }
         } else {
             render_hud_v2(host, &layout);
         }
@@ -709,7 +730,29 @@ impl Scene for MainMapScene {
         }
         if v3 {
             // S27.4 v5 环形棋盘：中央据点岛 + 31 张卡环 + 玩家船 + 选中环 + 骰/落格签条。
-            render_v5_ring(host, &layout, &mut entity_texts);
+            // 2026-10-30 用户拍板 v6「羊皮石柱环岛」（设计稿先行）：`TI_MAP_V6_PROTO` 环境变量
+            // ⇒ 原型渲染（羊皮泛黄底 + 相连石柱格 + 弹出骰子），未确认终稿前不改 v5 主路径。
+            // 2026-10-31 用户拍板「不规则岛，格子紧围岛不规则排列」+ 迭看确认 + 引擎渲染确认
+            // ⇒ **v6 落终码**：默认走 `render_v6_elem`（不规则岛 + 格子紧围岛，布局 JSON 数据驱动）；
+            //    v5 环形棋盘退 `TI_MAP_V5_RING` 环境变量（原型保留）。
+            if std::env::var("TI_MAP_V6_PROTO").is_ok() {
+                chrome::render_primitives(host, "main_map", -1);
+                render_v6_proto(host, &layout, &mut entity_texts);
+            } else if std::env::var("TI_MAP_V5_RING").is_ok() {
+                chrome::render_primitives(host, "main_map", -1);
+                render_v5_ring(host, &layout, &mut entity_texts);
+            } else {
+                // v6 终码：不规则岛 + 格子紧围岛不规则排列（布局 JSON = compose 导出，数据驱动）
+                // 世界层先画，再画 HUD 原语（z>=3），避免海图满屏盖住 HUD
+                render_v6_elem(host, &layout, &mut entity_texts);
+                chrome::render_primitives_filtered(host, "main_map", -1, 3);
+                // v6 补层（最上层）：①HUD 数值（`render_hud_v3` 在 642 行被 `v6_default`
+                // 跳过，此处海图+原语之后重画，顶角铜牌不再空）②摇骰 CTA 骰点 + 骰数
+                // （舵轮 = z=7 原语，骰点须叠其轴心之上，`render_spin_die` 的 `deck_spin`
+                // 是 v5 残留位 ⇒ 用 v6 布局 helm 定位）。
+                render_hud_v3(host, &layout);
+                render_v6_spin_die(host);
+            }
         } else {
             // S19：等距环岛赛道（路径连线 + 空间标记 + 骰子数 + 落格提示条）+ S19.7 航程条（v2 dormant）
             render_track(host, &layout, gw, &mut entity_texts);
@@ -814,6 +857,675 @@ fn render_v5_ring(
     render_board_toast(host);
 }
 
+// —— v6 原型几何常量（`TI_MAP_V6_PROTO` 专用；不相叠平面拼凑格：格宽 < 每格弧长留海水缝）——
+const V6_CENTER: (i32, i32) = (540, 740);
+const V6_RADIUS: i32 = 460;
+// V6_CARD_W/V6_CARD_H 退役（S26.2 岛屿图片化后格子不再用卡片尺寸）。
+/// 动漫海蓝（用户 2026-10-31：海洋要蓝色非深绿黑；本地常量不动 theme）。
+const V6_SEA_BLUE: u16 = 0x29B5; // ≈(46,110,170)
+/// 动漫浅波（海面波纹高光）。
+const V6_SEA_FOAM: u16 = 0x7ADB; // ≈(120,180,220)
+
+// —— v6 不规则布局（`TI_MAP_V6_ELEM=1`，2026-10-31 用户「不规则岛，格子紧围岛不规则排列」）——
+// 单一事实源 = `scripts/compose_main_map_v6.py::tile_positions_around_island`（凸包弧长等分 +
+// 径向外推贴沿），导出 `assets/data/main_map_v6_layout.json`，本模块 `include_str!` 编译期读入，
+// 引擎只按数据 blit（数据驱动，不硬编码坐标；§3a「精确布局 = 脚本算」）。
+#[derive(serde::Deserialize)]
+struct V6Layout {
+    tile_r: f32,
+    #[serde(default)]
+    island: V6Rect,
+    #[serde(default)]
+    ship: V6Rect,
+    #[serde(default)]
+    helm: V6Rect,
+    #[serde(default)]
+    compass: V6Rect,
+    #[serde(default)]
+    tiles: Vec<V6Tile>,
+}
+
+#[derive(serde::Deserialize, Default)]
+struct V6Rect {
+    #[serde(default)]
+    cx: f32,
+    #[serde(default)]
+    cy: f32,
+    #[serde(default)]
+    w: f32,
+}
+
+#[derive(serde::Deserialize)]
+struct V6Tile {
+    #[serde(default)]
+    cx: f32,
+    #[serde(default)]
+    cy: f32,
+    #[serde(default)]
+    owned: bool,
+}
+
+/// 编译期读入 v6 布局（缺文件 = 空布局，回退环布局）。
+fn v6_layout() -> V6Layout {
+    serde_json::from_str(data::V6_LAYOUT_JSON).unwrap_or(V6Layout {
+        tile_r: 36.0,
+        island: V6Rect::default(),
+        ship: V6Rect::default(),
+        helm: V6Rect::default(),
+        compass: V6Rect::default(),
+        tiles: Vec::new(),
+    })
+}
+
+/// v6 第 `index` 个石柱格心（`θ = -90° + index·360°/count`，index=0 顶部起点顺时针）。
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+fn v6_pillar_center(index: usize, count: usize) -> (i32, i32) {
+    let count_f = f32::from(u16::try_from(count.max(1)).unwrap_or(1));
+    let index_f = f32::from(u16::try_from(index).unwrap_or(0));
+    let radius_f = V6_RADIUS as f32;
+    let rad = (-90.0 + index_f * 360.0 / count_f) * std::f32::consts::PI / 180.0;
+    let dx = (f64::from(radius_f) * f64::from(rad.cos())).round();
+    let dy = (f64::from(radius_f) * f64::from(rad.sin())).round();
+    (V6_CENTER.0 + dx as i32, V6_CENTER.1 + dy as i32)
+}
+
+/// S27.5 v6 原型（`TI_MAP_V6_PROTO` 环境变量 ⇒ 走本函数；未确认终稿前不改 v5 主路径）。
+///
+/// 用户 2026-10-30 拍板 `main_map` 4 条缺陷的可视化（A 纪律设计稿先行，未确认不落终码）：
+/// ①骰子到谁弹出（不常驻底部，带摇骰动作+语音）②建造三键占领格才弹出
+/// ③默认地图 = 羊皮泛黄岛屿风 ④格子相连不叠加、立体间隔海水、类浅水不规则石柱（人踩石柱）。
+///
+/// 本函数 = 原型渲染（羊皮泛黄底 + 石柱格 + 弹出骰子 + 海水间隔），
+/// 几何/色板数据驱动（`theme.by_name`），不改 `scenes.json` 版面坐标。
+#[allow(clippy::too_many_lines)]
+fn render_v6_proto(
+    host: &mut dyn SceneHost,
+    layout: &SceneLayout,
+    entity_texts: &mut Vec<(i32, i32, &str)>,
+) {
+    let spaces = host.board_spaces();
+    let count = spaces.len();
+    if count < 2 {
+        return;
+    }
+    let theme = host.theme().clone();
+    let gold_warm = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_BRASS);
+    let sand_light = theme.by_name("land_sand_light").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let sand_dark = theme.by_name("land_sand_dark").unwrap_or(chrome::COLOR_BRASS_DARK);
+    let sea = V6_SEA_BLUE; // 角切/凹槽透出海蓝（与海洋圆一致；theme sea_shallow 偏深绿黑非蓝色）
+    let ink = theme.by_name("parch_dark").unwrap_or(chrome::COLOR_TEXT_ON_PARCH);
+    let shadow = chrome::COLOR_BRASS_DARK;
+
+    // 0) 羊皮泛黄底：**满屏**（盖掉壳灰青 chart 底；用户 2026-10-31 背景不羊皮 → 泛黄羊皮全屏）
+    let (wx, wy, ww, wh) = (0, 0, 1080, 1920);
+    host.fill_rect(wx, wy, ww, wh, sand_light);
+    // 旧纸纤维噪点（确定性伪随机浅斑）
+    let mut seed: u32 = 0x9E37_79B9;
+    for _ in 0..180 {
+        seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        let px = wx + i32::try_from(seed % u32::try_from(ww.max(1)).unwrap_or(1)).unwrap_or(0);
+        let py =
+            wy + i32::try_from((seed >> 16) % u32::try_from(wh.max(1)).unwrap_or(1)).unwrap_or(0);
+        let dot = 2 + i32::try_from((seed >> 24) % 5).unwrap_or(0);
+        host.fill_rect(px, py, dot, dot, ink);
+    }
+    // 四边暗角做旧（**无网格**，用户 2026-10-30 二轮：泛黄羊皮不是网格；边缘深棕渐晕）
+    let stain = shadow;
+    for w in [48i32, 30, 14] {
+        let c = if w == 14 { ink } else { stain };
+        host.fill_rect(wx, wy, ww, w, c);
+        host.fill_rect(wx, wy + wh - w, ww, w, c);
+        host.fill_rect(wx, wy, w, wh, c);
+        host.fill_rect(wx + ww - w, wy, w, wh, c);
+    }
+    // 罗盘装饰（左上弱化圈）：外圈 + 8 方位短线
+    let (comp_x, comp_y, comp_r) = (180, 300, 110);
+    host.fill_rect(comp_x - comp_r, comp_y - 2, comp_r * 2, 4, brass);
+    host.fill_rect(comp_x - 2, comp_y - comp_r, 4, comp_r * 2, brass);
+    host.fill_rect(
+        comp_x - comp_r * 71 / 100,
+        comp_y - comp_r * 71 / 100,
+        comp_r * 142 / 100,
+        3,
+        brass,
+    );
+    host.fill_rect(
+        comp_x - comp_r * 71 / 100,
+        comp_y + comp_r * 71 / 100 - 3,
+        comp_r * 142 / 100,
+        3,
+        brass,
+    );
+
+    // 1) 海洋区（环 + 中央岛被**动漫蓝色海洋**包围；羊皮纸露四角/外缘）——fill_rect 逐行模拟圆
+    let sea_r = V6_RADIUS + 110;
+    let (scx, scy) = V6_CENTER;
+    let mut dy = -sea_r;
+    while dy <= sea_r {
+        // half ≤ sea_r（i32 有界）；截断安全（`sea_r` 远小于 `i32::MAX`，`as` 无精度损失）。
+        #[allow(clippy::cast_possible_truncation)]
+        let half = f64::from(sea_r * sea_r - dy * dy).max(0.0).sqrt() as i32;
+        host.fill_rect(scx - half, scy + dy, half * 2, 1, sea);
+        dy += 1;
+    }
+    // 海洋波纹（动漫海面：浅色弧纹，确定性伪随机）
+    let foam = V6_SEA_FOAM;
+    let mut seed2: u32 = 0x00C0_FFEE;
+    for _ in 0..30 {
+        seed2 = seed2.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        let rx =
+            scx + i32::try_from(seed2 % u32::try_from(sea_r * 2).unwrap_or(1)).unwrap_or(0) - sea_r;
+        let ry = scy
+            + i32::try_from((seed2 >> 16) % u32::try_from(sea_r * 2).unwrap_or(1)).unwrap_or(0)
+            - sea_r;
+        let rw = 34 + i32::try_from((seed2 >> 24) % 46).unwrap_or(0);
+        host.fill_rect(rx, ry, rw, 3, foam);
+    }
+
+    // 2) 中央据点岛（**紧贴环格**：放大到接近环内缘，海水窄缝；保留 island_home 资产）
+    if let Some(mid) = host.map_slot().map(crate::game_app::map_slot_id) {
+        let path = chrome::central_island_path(mid);
+        if chrome::asset_present(&path) {
+            let ir = V6_RADIUS - 66; // 岛半径 ≈ 环半径 - 格 - 海水缝 ⇒ 紧贴
+            let (ix, iy) = (V6_CENTER.0 - ir, V6_CENTER.1 - ir);
+            host.blit_image(&path, ix, iy, ir * 2, ir * 2);
+        }
+    }
+
+    // 3) 31 个平面棋盘格（随机拼凑形状，浮于海洋上；格间海水间隔不相叠）。
+    //    绘制序 = 按格心 y 升序（上方先画、下方后画）。
+    let mut order: Vec<usize> = (0..count).collect();
+    order.sort_by_key(|i| v6_pillar_center(*i, count).1);
+    for index in order {
+        draw_v6_tile(
+            host,
+            &spaces[index],
+            index,
+            count,
+            &theme,
+            brass,
+            gold_warm,
+            sand_light,
+            sand_dark,
+            sea,
+            shadow,
+        );
+    }
+
+    // 4) 弹出骰子（中央大区域掷骰动画，先画 → 玩家棋子顶层不被遮）
+    draw_v6_spin_popup(host, &theme, gold_warm, brass);
+
+    // 5) 玩家棋子「站格上」（顶层醒目；圆铜牌节点上，非浮柱）
+    let idx = host.board_index().min(count - 1);
+    let (cx, cy) = v6_pillar_center(idx, count);
+    let ship_edge = 44;
+    let ship_y = cy - 22;
+    let ship_asset = chrome::boat_asset(host.boat_level());
+    if chrome::asset_present(ship_asset) {
+        host.blit_image(ship_asset, cx - ship_edge / 2, ship_y, ship_edge, ship_edge);
+    } else {
+        chrome::entity_icon(host, "flag", cx - ship_edge / 2, ship_y, ship_edge, gold_warm);
+    }
+    let lbl = i18n::sget("scene.main_map.player_label");
+    entity_texts.push((cx + ship_edge / 2, ship_y - 4, lbl));
+    draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
+
+    // 5) 底部三键弹出式（v6 用户裁决）：不常驻——覆盖常驻三键区域为羊皮底，只留
+    //    「落占领格才弹出建造/贸易/出售」说明铜牌；`build_panel_open` 时弹出建造面板
+    //   （用毕确定退出副本 = 交互语义，原型静态画面板示意）。
+    let mut dbx = 0;
+    let mut dby = 0;
+    let mut dbw = 0;
+    let mut dbh = 0;
+    for key in [chrome::keys::DECK_TRADE, chrome::keys::DECK_SELL, chrome::keys::DECK_BUILD] {
+        if let Some(r) = layout.extra.get(key) {
+            if dbw == 0 {
+                dbx = r.x;
+                dby = r.y;
+            }
+            dbx = dbx.min(r.x);
+            dby = dby.min(r.y);
+            dbw = dbw.max(r.x + r.w - dbx);
+            dbh = dbh.max(r.y + r.h - dby);
+        }
+    }
+    if dbw > 0 {
+        host.fill_rect(dbx - 12, dby - 12, dbw + 24, dbh + 24, sand_light);
+        let note = i18n::sget("scene.main_map.v6_deck_popup_note");
+        let nw = host.shell().hint_text_width_px(note);
+        host.draw_hint_text(
+            note,
+            540 - nw / 2,
+            dby + (dbh - host.shell().hint_glyph_px()) / 2,
+            chrome::COLOR_TEXT_ON_PARCH,
+        );
+    }
+    if host.build_panel_open() {
+        render_build_panel(host);
+    }
+    render_board_toast(host);
+}
+
+/// 缆绳段：`fill_rect` 逐像素 Bresenham 近似（`blit_image` 无 line 原语；两格间连线）。
+/// `width` 奇偶 + 中心对齐；RGB565 色（compose 用 RGB(74,52,28)=深棕 / RGB(102,72,40)=高光）。
+#[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
+fn rope_segment(
+    host: &mut dyn SceneHost,
+    x0: i32,
+    y0: i32,
+    x1: i32,
+    y1: i32,
+    width: i32,
+    color: u16,
+) {
+    let mut x = x0;
+    let mut y = y0;
+    let dx = (x1 - x0).abs();
+    let dy = -(y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx + dy;
+    loop {
+        host.fill_rect(x - width / 2, y - width / 2, width, width, color);
+        if x == x1 && y == y1 {
+            break;
+        }
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y += sy;
+        }
+    }
+}
+
+/// v6 元素合成版（`TI_MAP_V6_ELEM=1`，2026-10-31 用户「方向对了」→ 引擎真实渲染）。
+///
+/// 2026-10-31 用户「不规则岛，格子紧围岛不规则排列」：直接 blit AI 元素到 1080×1920，
+/// 布局 = `assets/data/main_map_v6_layout.json`（`compose_main_map_v6.py` 导出，数据驱动）。
+/// 元素路径 = `chrome::V6_*` 单源常量。
+#[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
+fn render_v6_elem(
+    host: &mut dyn SceneHost,
+    _layout: &SceneLayout,
+    entity_texts: &mut Vec<(i32, i32, &str)>,
+) {
+    let spaces = host.board_spaces();
+    let count = spaces.len();
+    if count < 2 {
+        return;
+    }
+    let v6 = v6_layout();
+    // 1) 海洋全景底（羊皮框由 ocean_bg 自身带；直接满屏）
+    host.blit_image(chrome::V6_OCEAN_BG, 0, 0, 1080, 1920);
+    // 2) 羊皮做旧边框（56px 木框，四边）
+    let ink = 0x1E14; // 深木色 ≈(60,40,20)
+    for w in [8i32, 3] {
+        host.fill_rect(0, 0, 1080, w, ink);
+        host.fill_rect(0, 1920 - w, 1080, w, ink);
+        host.fill_rect(0, 0, w, 1920, ink);
+        host.fill_rect(1080 - w, 0, w, 1920, ink);
+    }
+
+    // 3) 中央岛（小元素拆分组合：不规则岛体 + 灯塔 + 岸边宝箱，替代整图 V6_ISLAND 圆盘观感）
+    let iw = v6.island.w.max(1.0) as i32;
+    let icx = v6.island.cx as i32;
+    let icy = v6.island.cy as i32;
+    // 岛体（不规则海岸线 + 烘焙周围海水，与 ocean_bg 自然拼合）
+    if chrome::asset_present(chrome::V6_ISLE_LAND) {
+        host.blit_image(chrome::V6_ISLE_LAND, icx - iw / 2, icy - iw / 2, iw, iw);
+    }
+    // 灯塔（岛顶偏右，约 45% 岛宽）
+    if chrome::asset_present(chrome::V6_ISLE_LIGHTHOUSE) {
+        let lw = iw * 45 / 100;
+        host.blit_image(chrome::V6_ISLE_LIGHTHOUSE, icx + iw / 6, icy - iw / 2 + iw / 12, lw, lw);
+    }
+    // 岸边宝箱金光（岛下缘，约 30% 岛宽）
+    if chrome::asset_present(chrome::V6_ISLE_TREASURE) {
+        let tw = iw * 30 / 100;
+        host.blit_image(chrome::V6_ISLE_TREASURE, icx - iw / 8, icy + iw / 3, tw, tw);
+    }
+    // 村落（岛岸 settlement：木屋 + 码头；补全岛内容 山/棕榈/沙滩/灯塔/村落/宝箱金光）
+    if chrome::asset_present(chrome::V6_ISLE_VILLAGE) {
+        let vw = iw * 34 / 100;
+        host.blit_image(
+            chrome::V6_ISLE_VILLAGE,
+            icx + iw * 30 / 100,
+            icy - iw / 2 + iw * 55 / 100,
+            vw,
+            vw,
+        );
+    }
+    // 整图版 V6_ISLAND 退役（小元素组合后不再使用；保留常量供回退）
+    let _ = chrome::V6_ISLAND;
+
+    // 4) 31 格紧围岛不规则排列（布局 JSON 数据驱动；不硬编码坐标）
+    let tile_r = v6.tile_r.max(1.0) as i32;
+    let size = tile_r * 2;
+    // 4a) 缆绳路径（沿格子顺序，先画压在格下；不规则连线 = 前进路线）
+    for i in 0..v6.tiles.len().max(1) {
+        let a = &v6.tiles[i];
+        let b = &v6.tiles[(i + 1) % v6.tiles.len().max(1)];
+        rope_segment(host, a.cx as i32, a.cy as i32, b.cx as i32, b.cy as i32, 13, 0x4A23); // 深棕 RGB(74,52,28)
+        rope_segment(host, a.cx as i32, a.cy as i32, b.cx as i32, b.cy as i32, 8, 0x6245); // 高光 RGB(102,72,40)
+    }
+    for t in &v6.tiles {
+        let path = if t.owned { chrome::V6_TILE_OWNED } else { chrome::V6_TILE_DENY };
+        host.blit_image(path, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
+    }
+
+    // 5) 玩家帆船（布局 ship 中心）
+    let sw = v6.ship.w.max(1.0) as i32;
+    host.blit_image(
+        chrome::V6_SHIP,
+        v6.ship.cx as i32 - sw / 2,
+        v6.ship.cy as i32 - sw / 2,
+        sw,
+        sw,
+    );
+
+    // 6) 舵轮 CTA + 罗盘（底部）
+    let hw = v6.helm.w.max(1.0) as i32;
+    host.blit_image(
+        chrome::V6_HELM,
+        v6.helm.cx as i32 - hw / 2,
+        v6.helm.cy as i32 - hw / 2,
+        hw,
+        hw,
+    );
+    let cw = v6.compass.w.max(1.0) as i32;
+    host.blit_image(
+        chrome::V6_COMPASS,
+        v6.compass.cx as i32 - cw / 2,
+        v6.compass.cy as i32 - cw / 2,
+        cw,
+        cw,
+    );
+
+    // 7) 海洋生物（4 处：沉船/鲸/鲨/触手；避开舵轮(291,1740)/罗盘(788,1742)区）
+    host.blit_image(chrome::V6_CREATURES, 150 - 115, 1240 - 90, 230, 180);
+    host.blit_image(chrome::V6_CREATURES, 935 - 100, 640 - 80, 200, 160);
+    host.blit_image(chrome::V6_CREATURES, 330 - 85, 1560 - 70, 170, 140);
+    host.blit_image(chrome::V6_CREATURES, 975 - 85, 1120 - 70, 170, 140);
+
+    // 8) 玩家位置名牌（当前格）
+    let idx = host.board_index().min(count - 1);
+    let (px, py) = v6.tiles.get(idx).map_or((540, 890), |t| (t.cx as i32, t.cy as i32));
+    let lbl = i18n::sget("scene.main_map.player_label");
+    entity_texts.push((px + 40, py - 6, lbl));
+}
+
+/// v6 名牌文字**真截断**（逐字测宽，超 `max_w` 截断 + "…"；`draw_hint_text` 画全宽无截断，
+/// clamp 只居中无效 ⇒ 用户 2026-10-31 自审：白字横跨两格是「屎」主因）。
+fn clip_text(host: &dyn SceneHost, text: &str, max_w: i32) -> String {
+    if host.shell().hint_text_width_px(text) <= max_w {
+        return text.to_owned();
+    }
+    let mut acc = String::new();
+    for ch in text.chars() {
+        let candidate = format!("{acc}{ch}");
+        if host.shell().hint_text_width_px(&candidate) > max_w {
+            let mut ell = format!("{acc}…");
+            while host.shell().hint_text_width_px(&ell) > max_w && !acc.is_empty() {
+                acc.pop();
+                ell = format!("{acc}…");
+            }
+            return ell;
+        }
+        acc.push(ch);
+    }
+    acc
+}
+
+/// v6 岛型 id → 扁平图标名（`ui_icons` 注册表；识别用，非照片）。
+fn v6_isle_icon(isle: &str) -> &'static str {
+    if isle.contains("light") {
+        "beacon"
+    } else if isle.contains("fort") || isle.contains("boss") {
+        "castle"
+    } else if isle.contains("harbour") || isle.contains("port") {
+        "anchor"
+    } else if isle.contains("lair") {
+        "flag"
+    } else if isle.contains("ship") || isle.contains("yard") {
+        "gear"
+    } else if isle.contains("skull") {
+        "monogram"
+    } else if isle.contains("trade") || isle.contains("post") {
+        "coin"
+    } else if isle.contains("volcano") {
+        "gear"
+    } else if isle.contains("wreck") {
+        "chest"
+    } else {
+        "map"
+    }
+}
+
+/// v6 功能格顶部色带（类型语义色；领地格用 `isle_token_color`）。
+fn v6_func_band_color(theme: &ti_render::theme::Theme, kind: SpaceKind, gold_warm: u16) -> u16 {
+    match kind {
+        SpaceKind::Start => theme.by_name("gold_warm").unwrap_or(gold_warm),
+        SpaceKind::Port => theme.by_name("sea_shallow").unwrap_or(gold_warm),
+        SpaceKind::City => theme.by_name("brass").unwrap_or(gold_warm),
+        SpaceKind::Event => theme.by_name("brass_dark").unwrap_or(gold_warm),
+        SpaceKind::Card => theme.by_name("isle_sand").unwrap_or(gold_warm),
+        SpaceKind::Battle => theme.by_name("isle_volcano").unwrap_or(gold_warm),
+        SpaceKind::Treasure => theme.by_name("isle_treasure").unwrap_or(gold_warm),
+        SpaceKind::Boss => theme.by_name("isle_boss").unwrap_or(gold_warm),
+        _ => theme.by_name("land_sand_dark").unwrap_or(gold_warm),
+    }
+}
+
+/// v6 实心圆（逐行填充模拟；无多边形 API 的代码圆牌）。
+fn fill_circle(host: &mut dyn SceneHost, cx: i32, cy: i32, radius: i32, color: u16) {
+    let mut dy = -radius;
+    while dy <= radius {
+        #[allow(clippy::cast_possible_truncation)]
+        let hw = (f64::from(radius * radius - dy * dy).max(0.0)).sqrt() as i32;
+        host.fill_rect(cx - hw, cy + dy, hw * 2, 1, color);
+        dy += 1;
+    }
+}
+
+/// v6 实心凸多边形（scanline 逐行填充；顶点有序）。
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn fill_polygon(host: &mut dyn SceneHost, pts: &[(i32, i32)], color: u16) {
+    if pts.len() < 3 {
+        return;
+    }
+    let ymin = pts.iter().map(|p| p.1).min().unwrap_or(0);
+    let ymax = pts.iter().map(|p| p.1).max().unwrap_or(0);
+    for y in ymin..=ymax {
+        let mut xs: Vec<i32> = Vec::new();
+        for i in 0..pts.len() {
+            let (x1, y1) = pts[i];
+            let (x2, y2) = pts[(i + 1) % pts.len()];
+            if (y1 <= y && y < y2) || (y2 <= y && y < y1) {
+                let denom = f64::from(y2 - y1);
+                if denom.abs() < 1.0 {
+                    continue;
+                }
+                let t = f64::from(y - y1) / denom;
+                let x = f64::from(x1) + t * f64::from(x2 - x1);
+                xs.push(x.round() as i32);
+            }
+        }
+        xs.sort_unstable();
+        if xs.len() % 2 != 0 {
+            xs.pop();
+        }
+        let mut j = 0;
+        while j + 1 < xs.len() {
+            let x0 = xs[j].max(0);
+            let x1 = xs[j + 1].min(1079);
+            if x1 > x0 {
+                host.fill_rect(x0, y, x1 - x0, 1, color);
+            }
+            j += 2;
+        }
+    }
+}
+
+/// v6 第 `index` 个格的不规则多边形（**真不规则**：6 顶点、每顶点半径 seed 随机 0.72~0.99 ⇒
+/// 每格形状差异大，非标准拼图块重复；用户 2026-10-31「你Tm知道什么叫不规则不」= 要真随机）。
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn v6_tile_polygon(index: usize, cx: i32, cy: i32, base_r: i32) -> Vec<(i32, i32)> {
+    let mut seed: u32 =
+        u32::try_from(index).unwrap_or(0).wrapping_mul(0x9E37_79B9).wrapping_add(0x1234_5678);
+    let n = 6usize;
+    let mut pts = Vec::with_capacity(n);
+    for k in 0..n {
+        seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        let ang = -90.0
+            + f64::from(u32::try_from(k).unwrap_or(0)) * 360.0
+                / f64::from(u32::try_from(n).unwrap_or(1));
+        let rr = f64::from(base_r) * (0.72 + f64::from(seed % 28) / 100.0);
+        let rad = ang * std::f64::consts::PI / 180.0;
+        pts.push((cx + (rr * rad.cos()).round() as i32, cy + (rr * rad.sin()).round() as i32));
+    }
+    pts
+}
+
+/// v6 平面棋盘格绘制（**大富翁式平面格 + 随机拼凑感**：平坦顶面 + 短侧壁矮立体 +
+/// 底部投影；每格形状随机差异——角切/凹槽/凸舌拼图块；格间海水间隔 = 海洋底透出；
+/// 下缘归属色带；功能格 = `node_` 铜牌）。
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::used_underscore_binding)]
+fn draw_v6_tile(
+    host: &mut dyn SceneHost,
+    space: &TrackSpace,
+    index: usize,
+    count: usize,
+    theme: &ti_render::theme::Theme,
+    brass: u16,
+    gold_warm: u16,
+    sand_light: u16,
+    _sand_dark: u16,
+    _sea: u16,
+    shadow: u16,
+) {
+    let (cx, cy) = v6_pillar_center(index, count);
+    let d = 68;
+    let r = d / 2;
+    let tile_face = theme.by_name("land_sand").unwrap_or(sand_light);
+
+    // 2) 语义色带环（领地 = 归属色 / 功能 = 类型色）——色彩是主要识别
+    let band = if space.kind == SpaceKind::Territory {
+        space
+            .isle
+            .as_deref()
+            .map_or(gold_warm, |i| theme.by_name(&isle_token_color(i)).unwrap_or(gold_warm))
+    } else {
+        v6_func_band_color(theme, space.kind, gold_warm)
+    };
+
+    // 1) **真不规则多边形格**（seed 随机 6 顶点，每格形状差异大；用户「不规则」= 真随机）
+    //    投影 + 主体（羊皮卡面）+ 色带圆环 + 中央扁平图标。
+    let poly = v6_tile_polygon(index, cx, cy + 3, r);
+    for p in &poly {
+        let _ = p;
+    }
+    // 投影（下移 3px 深色）
+    let shadow_poly: Vec<(i32, i32)> = poly.iter().map(|(px, py)| (*px, py + 3)).collect();
+    fill_polygon(host, &shadow_poly, shadow);
+    fill_polygon(host, &poly, tile_face);
+
+    // 色带圆环（语义色）
+    fill_circle(host, cx, cy, r * 66 / 100, band);
+    fill_circle(host, cx, cy, r * 50 / 100, tile_face);
+
+    // 3) 中央扁平图标（识别）：领地 = 岛型图标（tint 色带色）；功能 = node_* 铜牌
+    if space.kind == SpaceKind::Territory {
+        if let Some(isle) = &space.isle {
+            let ic = d * 40 / 100;
+            let icon = v6_isle_icon(isle);
+            chrome::entity_icon(host, icon, cx - ic / 2, cy - ic / 2, ic, band);
+        }
+    } else {
+        let def = chrome::node_asset(space.kind);
+        let medallion_edge = d * 46 / 100;
+        let (mx, my, mw, mh) = chrome::asset_dest_rect(cx, cy, medallion_edge, def.visible_px);
+        if chrome::asset_present(def.path) {
+            host.blit_image(def.path, mx, my, mw, mh);
+        } else {
+            chrome::entity_icon(
+                host,
+                "map",
+                cx - medallion_edge / 2,
+                cy - medallion_edge / 2,
+                medallion_edge,
+                gold_warm,
+            );
+        }
+    }
+
+    // 4) 名牌（节点下小字，真截断不溢出）
+    let name = if space.kind == SpaceKind::Territory {
+        space.isle.as_deref().map_or_else(Default::default, chrome::isle_name)
+    } else {
+        chrome::space_name(space.kind)
+    };
+    let name = clip_text(host, &name, 88);
+    let nw = host.shell().hint_text_width_px(&name);
+    host.draw_hint_text(&name, cx - nw / 2, cy + r + 8, chrome::COLOR_TEXT_ON_PARCH);
+
+    // 5) 驻军签（已占领领地格，节点下）
+    if space.kind == SpaceKind::Territory {
+        let idx_u = u32::try_from(index).unwrap_or(u32::MAX);
+        if let Some(own) = host.territory_ownership(idx_u) {
+            if own.owner.is_some() {
+                let g_txt = i18n::sgetf("scene.main_map.node.garrison_fmt", &[&own.garrison]);
+                let panel_w = (host.shell().hint_text_width_px(&g_txt) + 16).min(88);
+                host.fill_rect(cx - panel_w / 2, cy + r + 26, panel_w, 16, shadow);
+                host.draw_hint_text(
+                    &g_txt,
+                    cx - panel_w / 2 + 8,
+                    cy + r + 28,
+                    chrome::COLOR_TEXT_ON_PARCH,
+                );
+            }
+        }
+    }
+    let _ = (_sea, brass);
+}
+
+/// v6 弹出骰子（不常驻底部）：屏幕中上弹出大骰 + 金环 + 摇骰动作提示（原型静止帧）。
+fn draw_v6_spin_popup(
+    host: &mut dyn SceneHost,
+    theme: &ti_render::theme::Theme,
+    gold_warm: u16,
+    brass: u16,
+) {
+    // 大富翁式：骰子掷在棋盘**中央大区域**（环内偏上，岛上缘海面；用户 2026-10-31 点破
+    // 「骰子是在中心大区域」——非顶部小弹窗）。
+    let (px, py) = (540, 470);
+    let edge = 170;
+    // 3 帧滚动残影（向左上偏移的弱化骰影 = 摇骰动作）
+    let ghost = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_BRASS_DARK);
+    if chrome::asset_present(chrome::DICE_ASSET) {
+        host.blit_image(chrome::DICE_ASSET, px - edge / 2 - 26, py - edge / 2 - 14, edge, edge);
+        host.fill_rect(px - edge / 2 - 26, py - edge / 2 - 14, edge, edge, ghost);
+        host.blit_image(chrome::DICE_ASSET, px - edge / 2, py - edge / 2, edge, edge);
+    }
+    // 金环描边（主骰）
+    host.fill_rect(px - edge / 2 - 6, py - edge / 2 - 6, edge + 12, 4, brass);
+    host.fill_rect(px - edge / 2 - 6, py + edge / 2 + 2, edge + 12, 4, brass);
+    host.fill_rect(px - edge / 2 - 6, py - edge / 2 - 6, 4, edge + 12, brass);
+    host.fill_rect(px + edge / 2 + 2, py - edge / 2 - 6, 4, edge + 12, brass);
+    // 提示（轮到你 + 点击摇骰 + 语音图标）
+    let hint = i18n::sget("scene.main_map.hud.spin");
+    let hw = host.shell().hint_text_width_px(hint);
+    host.draw_hint_text(hint, px - hw / 2, py + edge / 2 + 14, gold_warm);
+    let hint2 = i18n::sget("scene.main_map.nav_hint");
+    let hw2 = host.shell().hint_text_width_px(hint2);
+    host.draw_hint_text(hint2, px - hw2 / 2, py + edge / 2 + 40, chrome::COLOR_TEXT_ON_PARCH);
+}
+
 /// S27.5 摇骰 CTA 轴心骰点（`dice.png`，1080 游戏世界层）。
 ///
 /// 摇骰按钮本体贴图 = `scenes.json` 原语（`deck_spin` 区域），这里只补轴心上的
@@ -834,7 +1546,36 @@ fn render_spin_die(host: &mut dyn SceneHost, layout: &SceneLayout) {
     host.blit_image(chrome::DICE_ASSET, dx, dy, edge, edge);
 }
 
-/// S27.4 v5 单卡绘制：领地格 = `isle_<id>.png` 整幅卡面（**径向旋转**）；功能格 = 旋转卡底板
+/// S34 用户 2026-11-01 复验「没有下一步（摇骰 CTA/骰点）」：v6 舵轮 CTA = `helm.png` 资产
+/// （`main_map_v6_layout.json` `helm`，非 scenes.json `deck_spin` 原语位——后者是 v5 残留，
+/// 位 (408,1336) 与 v6 舵轮 (291,1740) 不符，若复用 `render_spin_die` 骰点会漂到空海面）。
+///
+/// 本函数用 v6 布局 helm 定位：①骰点叠舵轮轴心（用户「看不见骰子，不知能否摇」）②最近骰数
+/// 在舵轮上方（`board_last_roll` = 0 不画）。缺骰图 = 只画骰数不画骰点（不抛异常）。
+#[allow(clippy::cast_possible_truncation)]
+fn render_v6_spin_die(host: &mut dyn SceneHost) {
+    let v6 = v6_layout();
+    let hw = v6.helm.w.max(1.0) as i32;
+    let hx = v6.helm.cx as i32;
+    let hy = v6.helm.cy as i32;
+    // 骰点（舵轮轴心；边长 = 舵轮边长的 DICE_EDGE_RATIO 百分比，与 v5 `render_spin_die` 同口径）
+    if chrome::asset_present(chrome::DICE_ASSET) {
+        let edge = hw * chrome::DICE_EDGE_RATIO / 100;
+        host.blit_image(chrome::DICE_ASSET, hx - edge / 2, hy - edge / 2, edge, edge);
+    }
+    // 最近骰数（舵轮上方；0 = 尚未摇，不画）
+    let roll = host.board_last_roll();
+    if roll > 0 {
+        let roll_str = chrome::roll_label(roll);
+        let rx = hx - host.shell().hint_text_width_px(&roll_str) / 2;
+        let ry = hy - hw / 2 - 30;
+        let theme = host.theme();
+        let gold_warm = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
+        host.draw_hint_text(&roll_str, rx, ry, gold_warm);
+    }
+}
+
+/// S27.5 v5 单卡绘制：领地格 = `isle_<id>.png` 整幅卡面（**径向旋转**）；功能格 = 旋转卡底板
 /// （`card_panel` 白蒙版 × `panel_wood`）+ 旋转 `node_` 铜牌。
 ///
 /// S27.5 二轮（概念稿变体 B 对齐）：卡面按方位角旋转（[`chrome::ring_card_rotation_mdeg`]），
@@ -882,7 +1623,7 @@ fn draw_ring_card(
                     if own.owner.is_some() {
                         let g_txt =
                             i18n::sgetf("scene.main_map.node.garrison_fmt", &[&own.garrison]);
-                        let panel_w = host.shell().hint_text_width_px(&g_txt) + 20;
+                        let panel_w = (host.shell().hint_text_width_px(&g_txt) + 20).min(bw);
                         let panel_h = 28;
                         // 挂色带下缘（卡心沿局部 +y 平移卡高×0.42）
                         let (gx, gy) = chrome::rotate_local_offset(

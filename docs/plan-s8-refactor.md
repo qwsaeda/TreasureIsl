@@ -111,7 +111,7 @@
 | E 控件层 | `crates/ti-app/src/widgets.rs`、`crates/ti-app/tests/widgets.rs`、`evidence/S8.5.log` | `widgets.rs`：`Framebuf` 无 `fill_rect` → 改 `MenuShell`；`color_of` 的 `rec.kind % palette.len()` u32/usize 转换；`hit()` 需 `.collect().rev()` |
 | G 渲染基线 | `crates/ti-app/tests/render_parity.rs`、`evidence/S8.6.log` | `E0596`（`a` 未 `mut`）；参考图需由 `ti-formats` 资源解码独立产出（去自指） |
 
-**收尾（主线程）：** 各子任务文件域全绿 → 按 `loop.md` §6.2 第 8 条复核（5 类产出物 + `cargo test` + ledger + gate）→ `S8.3` 父任务全子任务 verified → `gate.ps1` 10 项全绿（S8 时点，现 21 项）。
+**收尾（主线程）：** 各子任务文件域全绿 → 按 `loop.md` §6.2 第 8 条复核（5 类产出物 + `cargo test` + ledger + gate）→ `S8.3` 父任务全子任务 verified → `gate.ps1` 10 项全绿（S8 时点，现 33 项）。
 
 ### 7.3 各子任务 DoD 验收命令
 

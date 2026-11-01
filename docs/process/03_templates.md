@@ -366,7 +366,7 @@ if __name__ == "__main__":
 ## B. 数据 key 契约（挂 `c2`：数据面白名单 + key 命名）
 | 文件 | 新增 key / 段 | 值（设计值） | 校验锚点 |
 |---|---|---|---|
-| `assets/data/board.json`（或 `assets/maps/<id>/map.json`） | `spaces[].district` / `kind` | <例：isle=pirate_lair> | `validate_data` + `map_pack verify`（I1~I8 不变量） |
+| `assets/data/board.json`（或 `assets/maps/<id>/map.json`） | `spaces[].district` / `kind` | <例：isle=pirate_lair> | `validate_data` + `map_pack verify`（I1~I9 不变量） |
 | `assets/data/strings.json` | `isle.<kind>.name` / `district.<id>.name` | <例：海盗老巢> | `check_hardcode`（渲染层 0 中文字面量） |
 | `assets/data/balance.json` | `<段>.<field>` | <设计值> | `validate_data`（数值域 + 三面对账） |
 
@@ -379,7 +379,7 @@ if __name__ == "__main__":
 
 ## D. 验收锚点（三面对账 + 门禁）
 - [ ] `validate_data`（数据 schema + 数值域）
-- [ ] `python3 scripts/map_pack.py verify assets/maps/<id>`（入参 = 包目录或 zip，非 id）（I1~I8：31 格 / 10 类岛各 2 格 / BOSS@15 / 资产哈希）
+- [ ] `python3 scripts/map_pack.py verify assets/maps/<id>`（入参 = 包目录或 zip，非 id）（I1~I9：31 格 / 10 类岛各 2 格 / BOSS@15 / 资产哈希）
 - [ ] `doccheck2`（doc↔code/data 漂移 + 台账计数）
 - [ ] `render_invariants` / `bevy-cpu-parity`（渲染层结构 + 像素）
 - [ ] `tests/e2e_playthrough`（全流程 16 步 0 失败）

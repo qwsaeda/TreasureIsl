@@ -150,6 +150,9 @@
     <button data-page="assets">资产</button>
     <button data-page="design">设计图</button>
     <button data-page="map">地图</button>
+    <button data-page="tests">测试</button>
+    <button data-page="apksize">APK 体积</button>
+    <button data-page="build">构建</button>
   </nav>
   <div class="grp">平台</div>
   <nav>
@@ -307,6 +310,55 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
     </div>
   </section>
 
+  <!-- 测试（游戏测试标杆：分级/分类/类型 + 步骤/阶段 + 截图证据 + 门禁总览，23 号 §6） -->
+  <section id="page-tests" hidden>
+    <div class="card">
+      <h2>门禁 33 项总览（gate.ps1，23 号 §1 回归类）+ 测试清单对账</h2>
+      <div class="grid" id="ts-summary"></div>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+        <button id="ts-gate-refresh" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer">刷新门禁输出</button>
+        <span style="color:var(--muted);font-size:12px;align-self:center" id="ts-gate-info"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>测试分组树（级 L1–L4 → 类 → 型；点组看清单，点测试看步骤/证据）</h2>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div id="ts-tree" style="min-width:230px;flex:0 0 230px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px"></div>
+        <div style="flex:1;min-width:420px">
+          <div id="ts-detail"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- APK 体积（S35.0，24 号标准；/api/apk-size = apk_audit.py 只读体检） -->
+  <section id="page-apksize" hidden>
+    <div class="card">
+      <h2>APK 体积构成（24 号标准：.so 压缩 + 资产引用集）</h2>
+      <div class="grid" id="apk-summary"></div>
+      <div id="apk-breakdown" style="margin-top:12px"></div>
+      <div id="apk-drift" style="margin-top:12px"></div>
+      <div class="foot">
+        判据 = <code>scripts/apk_audit.py --apk</code>（① .so 压缩率 &lt; 90% / ② 未引用 UI 0 进包）；
+        单一事实源 = <code>docs/process/24_apk_size_std.md</code>。平台只读体检，不执行构建。
+      </div>
+    </div>
+  </section>
+  <!-- 构建（S35.1，24 号 §4.1；/api/build 只读 + console_commands build_* 后台触发） -->
+  <section id="page-build" hidden>
+    <div class="card">
+      <h2>构建产物（APK / WASM / Native；24 号 §4.1 构建编排）</h2>
+      <div id="build-trigger" style="margin-bottom:10px"></div>
+      <div id="build-list"></div>
+      <div id="build-log" style="margin-top:12px"></div>
+      <div class="foot">
+        触发 = <code>console_commands.json</code> 白名单 id（<code>build_apk</code> / <code>build_wasm</code> /
+        <code>build_native</code>，后台执行）；构建本体 = 既有脚本（<code>build_apk.sh</code> /
+        <code>build_wasm.ps1</code> / cargo），LLM 不再手拼命令；构建后自动复检（APK = 24 号判据①②）。
+        单一事实源 = <code>docs/process/24_apk_size_std.md</code> §4.1。
+      </div>
+    </div>
+  </section>
+
   <!-- 设置 -->
   <section id="page-settings" hidden>
     <div class="card">
@@ -322,7 +374,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
   </section>
 
   <div class="foot">
-    只读平台（写操作 = S32.4 起 POST + X-TI-Token）；数据源 = console_sources.json（10 条白名单，22 号 §5）；
+    只读平台（写操作 = S32.4 起 POST + X-TI-Token）；数据源 = console_sources.json（11 条白名单，22 号 §5）；
     「0 游戏产物变更」判定 = repo::snapshot 内容级指纹（22 号 §8，禁用 git status --porcelain）。
   </div>
 </main>
@@ -332,7 +384,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
-const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'settings'];
+const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'tests', 'settings'];
 
 /* 图片短 ID（大写下划线形，如 MM_3 / IDX_1；组代码 + 组内序号；同组递增，好记、可直接口述给 AI）。
  * 确定性派生：按组别分桶，桶内按文件名排序 ⇒ 刷新/重启 ID 稳定不变。 */
@@ -365,6 +417,9 @@ function showPage(name) {
   if (name === 'assets' && !loaded.assets) loadAssets();
   if (name === 'design' && !loaded.design) loadDesign();
   if (name === 'map' && !loaded.map) loadMap();
+  if (name === 'tests' && !loaded.tests) loadTests();
+  if (name === 'apksize' && !loaded.apksize) loadApkSize();
+  if (name === 'build' && !loaded.build) loadBuild();
   if (name === 'settings' && !loaded.settings) loadSettings();
 }
 const loaded = {};
@@ -926,6 +981,266 @@ $('ed-import-btn').addEventListener('click', edImport);
   $(id).addEventListener('change', () => { edReadInputs(); edRenderCanvas(); edValidateBar(); });
 });
 
+
+/* ==== 测试页（23 号 §6：分级/分类/类型 + 步骤/阶段 + 截图证据 + 门禁 33 项） ==== */
+const TS_LEVEL_LABEL = { L1: 'L1 单元', L2: 'L2 集成', L3: 'L3 系统', L4: 'L4 验收' };
+const TS_CAT_LABEL = {
+  functional: '功能', regression: '回归', visual: '视觉',
+  audio: '音频', performance: '性能', compatibility: '兼容',
+};
+const TS_TYPE_LABEL = { smoke: '冒烟', ci: 'CI 自动', playtest: '试玩', exploratory: '探索', benchmark: '基准' };
+let testsCache = null; // { tests[], by_level[] }
+
+async function loadTests() {
+  loaded.tests = true;
+  try {
+    const d = await api('/api/tests');
+    testsCache = d;
+    // 截图证据面：缓存 evidence/ 清单（同目录 .png 匹配，供点大）
+    const ev = await api('/api/evidence');
+    window.testsEvFiles = ev.files || [];
+    renderTestSummary();
+    renderTestTree();
+    loadGateProbe();
+  } catch (e) {
+    $('ts-tree').innerHTML = '<div class="empty">/api/tests 不可用：' + esc(String(e)) + '</div>';
+    $('ts-summary').innerHTML = '<div class="empty">测试清单不可用：' + esc(String(e)) + '</div>';
+  }
+}
+
+function renderTestSummary() {
+  const t = testsCache.tests || [];
+  const byLev = {}, byCat = {}, byType = {}, evOk = 0, evMiss = [];
+  t.forEach((x) => {
+    byLev[x.level] = (byLev[x.level] || 0) + 1;
+    byCat[x.category] = (byCat[x.category] || 0) + 1;
+    byType[x.type] = (byType[x.type] || 0) + 1;
+    if (x.evidence_exists) evOk++; else if (x.evidence) evMiss.push(x.id);
+  });
+  const stat = (n, l) => `<div class="stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`;
+  $('ts-summary').innerHTML =
+    stat(t.length, '测试总数') +
+    stat(evOk, '证据在位') +
+    stat(evMiss.length, '证据断链') +
+    stat(Object.keys(byLev).length, '级数') +
+    stat(Object.keys(byCat).length, '类数') +
+    stat(Object.keys(byType).length, '型数');
+}
+
+function renderTestTree() {
+  const byLevel = testsCache.by_level || [];
+  let h = '';
+  byLevel.forEach((lv) => {
+    const lvN = lv.tests ? lv.tests.length : lv.categories.reduce((a, c) => a + (c.types || []).reduce((b, ty) => b + (ty.tests || []).length, 0), 0);
+    h += `<div class="grp">${TS_LEVEL_LABEL[lv.level] || lv.level}（${lvN}）</div>`;
+    (lv.categories || []).forEach((cat) => {
+      h += `<div class="asset-tag" data-lv="${lv.level}" data-cat="${cat.category}" style="display:block;margin:4px 0">${TS_CAT_LABEL[cat.category] || cat.category}（${(cat.types || []).reduce((a, ty) => a + (ty.tests || []).length, 0)}）</div>`;
+    });
+  });
+  $('ts-tree').innerHTML = h || '<div class="empty">无测试分组</div>';
+  document.querySelectorAll('#ts-tree .asset-tag').forEach((tg) => {
+    tg.addEventListener('click', () => renderTestGroup(tg.dataset.lv, tg.dataset.cat));
+  });
+  // 默认显示第一组
+  const first = byLevel[0] && byLevel[0].categories[0];
+  if (first) renderTestGroup(byLevel[0].level, first.category);
+}
+
+function testRow(x) {
+  const miss = x.evidence && !x.evidence_exists;
+  return `<div class="row" style="cursor:pointer" data-id="${esc(x.id)}">
+    <span><span class="tag ${miss ? 'blocked' : 'verified'}">${miss ? '断链' : '在位'}</span>
+      <b>${esc(x.name || x.id)}</b> <code style="margin-left:6px">${esc(x.id)}</code></span>
+    <span style="color:var(--muted)">${TS_TYPE_LABEL[x.type] || x.type} · ${esc(x.level)}</span>
+  </div>`;
+}
+
+function renderTestGroup(lv, cat) {
+  const list = (testsCache.tests || []).filter((x) => x.level === lv && x.category === cat);
+  $('ts-detail').innerHTML =
+    `<div style="margin-bottom:8px;color:var(--muted)">${TS_LEVEL_LABEL[lv] || lv} · ${TS_CAT_LABEL[cat] || cat}（${list.length} 条；点条目看步骤/阶段/截图证据）</div>` +
+    (list.map(testRow).join('') || '<div class="empty">该组无测试</div>');
+  document.querySelectorAll('#ts-detail .row').forEach((r) => {
+    r.addEventListener('click', () => renderTestDetail(r.dataset.id));
+  });
+}
+
+function renderTestDetail(id) {
+  const x = (testsCache.tests || []).find((t) => t.id === id);
+  if (!x) return;
+  const miss = x.evidence && !x.evidence_exists;
+  const rows = [
+    ['id', x.id], ['级别', TS_LEVEL_LABEL[x.level] || x.level],
+    ['分类', TS_CAT_LABEL[x.category] || x.category], ['类型', TS_TYPE_LABEL[x.type] || x.type],
+    ['命令', x.command || '—'], ['证据', x.evidence || (x.gate ? '门禁第 ' + x.gate + ' 项' : '—')],
+    ['证据在位', miss ? '❌ 断链' : (x.evidence ? '✓' : '—')],
+    ['门禁项', x.gate ? '第 ' + x.gate + ' 项' : '—'],
+  ];
+  let h = `<div class="card" style="padding:12px">`;
+  h += `<div style="margin-bottom:8px"><b>${esc(x.name || x.id)}</b> <code>${esc(x.id)}</code></div>`;
+  h += rows.map(([k, v]) => `<div class="meta-row"><span class="k">${k}</span><span>${esc(v)}</span></div>`).join('');
+  h += `</div>`;
+  // 步骤/阶段（异步解析 evidence 日志：--shot 预载/就绪/写盘行 + gate Report 阶段）
+  loadTestSteps(x);
+  // 截图证据（evidence 指向 .png 则缩略图；否则用 evidence/ 清单匹配，供点大）
+  const shots = evidenceShots(x);
+  if (shots.length) {
+    h += `<div class="card" style="padding:12px"><div style="color:var(--muted);font-size:12px;margin-bottom:8px">截图证据（点图放大）</div>
+      <div class="asset-grid">` + shots.map((s) =>
+      `<div class="asset-cell" data-src="/${esc(s)}"><img src="/${esc(s)}" loading="lazy" onerror="this.style.opacity=0.25" alt="${esc(s)}">
+        <div class="nm">${esc(s.split('/').pop())}</div></div>`).join('') + `</div></div>`;
+    document.querySelectorAll('#ts-detail .asset-cell').forEach((c) => {
+      c.addEventListener('click', () => { $('lightbox-img').src = c.dataset.src; $('lightbox-cap').textContent = c.dataset.src; $('lightbox').classList.add('open'); });
+    });
+  }
+  $('ts-detail').insertAdjacentHTML('beforeend', h);
+}
+
+// 异步解析 evidence 日志关键阶段行（--shot 预载/就绪/写盘、gate Report、playtest 流转）
+async function loadTestSteps(x) {
+  if (!x.evidence) return;
+  const ev = x.evidence;
+  try {
+    const r = await fetch('/' + ev);
+    if (!r.ok) return;
+    const txt = await r.text();
+    const lines = txt.split(/\r?\n/);
+    const keys = ['预载', '就绪', '写盘', 'shot', 'Report', 'PASS', 'FAIL', 'playtest', '场景', 'L1', 'L2', 'L3', 'L4'];
+    const seen = new Set();
+    const pick = [];
+    keys.forEach((k) => {
+      const hit = lines.find((l) => l.toLowerCase().includes(k.toLowerCase()));
+      if (hit && !seen.has(hit.trim())) {
+        seen.add(hit.trim());
+        pick.push([k, hit.trim().slice(0, 90)]);
+      }
+    });
+    if (!pick.length) return;
+    // 追加到当前测试详情卡片（若用户已切走，querySelector 无该行则跳过）
+    const card = document.querySelector('#ts-detail .card');
+    if (!card) return;
+    card.insertAdjacentHTML('beforeend',
+      `<div style="margin-top:8px;color:var(--muted);font-size:12px">步骤 / 阶段（解析自 ${esc(ev)}）</div>` +
+      pick.map((s) => `<div class="meta-row"><span class="k">${esc(s[0])}</span><span>${esc(s[1])}</span></div>`).join(''));
+  } catch (e) { /* 解析失败 = 无步骤面，不崩 */ }
+}
+function evidenceShots(x) {
+  // evidence 指向 .png → 直接一张；指向 .log/目录 → 用 evidence/ 清单匹配（≤8 张）。
+  // 匹配序：① evidence stem 前缀 ② 测试 id（web_playtest/wasm_browser_e2e 等） ③ 场景 token
+  // （bevy_native_main_map 等 scene 名；scene_shot 类测试按场景命中）。
+  if (!x.evidence) return [];
+  const ev = x.evidence;
+  if (ev.endsWith('.png')) return [ev];
+  const stem = ev.split('/').pop().replace(/\.[a-z]+$/, '');
+  const files = window.testsEvFiles || [];
+  const pngs = files.filter((f) => f.endsWith('.png') && !f.endsWith('.thumb.png'));
+  // ① stem 前缀（S26.3 → S26.3*.png）
+  let match = pngs.filter((f) => f.includes(stem));
+  // ② 测试 id 子串（web_playtest / wasm_browser_e2e / scene_shot）
+  if (!match.length) {
+    match = pngs.filter((f) => x.id && f.includes(x.id));
+  }
+  // ③ 场景 token：test id 含场景名（main_map / select_map / index…）→ 匹配 bevy_native_<scene>
+  //    只认 id 且用词边界（id 是 snake_case；避免 name 里英文 "vs"（解码器 vs scripts）
+  //    误命中 `vs` 场景）。
+  if (!match.length) {
+    const scenes = ['main_map', 'select_map', 'select_role', 'saveload', 'message', 'index', 'vs'];
+    const id = x.id || '';
+    const sc = scenes.find((s) => new RegExp('(^|_|-)' + s + '(_|$)').test(id));
+    if (sc) match = pngs.filter((f) => f.includes('bevy_native_' + sc));
+  }
+  // ④ 兜底：全场景冒烟（scene_shot 测试）→ 全 bevy_native_*
+  if (!match.length && x.id === 'scene_shot') {
+    match = pngs.filter((f) => f.startsWith('bevy_native_'));
+  }
+  return match.slice(0, 8);
+}
+
+async function loadGateProbe() {
+  // 门禁输出面：读 evidence/gate*.log 末次，取 Report 行（pass/fail 计数）+ 阶段名
+  try {
+    const txt = await fetch('/evidence/gate.log').then((r) => (r.ok ? r.text() : ''));
+    const report = (txt.match(/Report\s+(\w+)\s+(.+)/g) || []).slice(-40);
+    const pass = (txt.match(/Report\s+PASS/g) || []).length;
+    const fail = (txt.match(/Report\s+FAIL/g) || []).length;
+    const skip = (txt.match(/Report\s+SKIP/g) || []).length;
+    $('ts-gate-info').textContent = `evidence/gate.log：PASS ${pass} / FAIL ${fail} / SKIP ${skip}（末次全量门禁输出，33 项口径）`;
+    if (report.length) {
+      $('ts-gate-info').insertAdjacentHTML('beforeend', ' <code style="font-size:11px">' + esc(report[report.length - 1].slice(0, 70)) + '</code>');
+    }
+  } catch (e) {
+    $('ts-gate-info').textContent = 'evidence/gate.log 未就绪（跑一次 gate.ps1 后有输出）';
+  }
+}
+
+// ── APK 体积页（S35.0，24 号标准；/api/apk-size 只读体检） ──
+async function loadApkSize() {
+  loaded.apksize = true;
+  try {
+    const d = await api('/api/apk-size');
+    if (!d.built) {
+      $('apk-summary').innerHTML = '<div class="empty">' + esc(d.note || '未构建') + '</div>';
+      return;
+    }
+    if (d.verdict === 'FAIL') {
+      $('apk-summary').innerHTML = '<div class="empty" style="color:#e06">判据 FAIL：'
+        + esc(d.fail_detail || d.note || '24 号标准未过') + '</div>';
+      return;
+    }
+    const bd = d.breakdown || {};
+    const mb = n => ((n || 0) / 1048576).toFixed(1);
+    $('apk-summary').innerHTML =
+      '<div class="row"><span class="k">APK（压缩后）</span><b>' + mb(bd.total_compressed) + ' MB</b></div>'
+      + '<div class="row"><span class="k">.so 压缩率</span><b>' + Math.round((d.so_ratio || 0) * 100) + '%</b></div>'
+      + '<div class="row"><span class="k">判据</span><b style="color:#3c9">PASS（'
+      + esc(d.apk || 'dist/TreasureIsl-arm64.apk') + '）</b></div>';
+    const rows = Object.entries(bd.by_dir || {}).sort((a, b) => b[1].compressed - a[1].compressed);
+    $('apk-breakdown').innerHTML = '<h3>目录构成（压缩后）</h3><table style="width:100%;font-size:12px;border-collapse:collapse">'
+      + rows.map(([k, v]) => '<tr><td>' + esc(k) + '</td><td>' + mb(v.compressed)
+        + ' MB（' + v.files + ' 项）</td><td>' + mb(v.uncompressed) + ' MB</td></tr>').join('')
+      + '</table>';
+    const refs = d.refset || {};
+    const counts = ['ui', 'fonts', 'audio'].map(g => g + ' ' + ((refs[g] || []).length)).join(' / ');
+    $('apk-drift').innerHTML = '<h3>引用集（构建只带这些）</h3><div class="row"><span class="k">ui / fonts / audio</span><b>'
+      + counts + '</b></div>';
+  } catch (e) {
+    $('apk-summary').innerHTML = '<div class="empty">/api/apk-size 不可用：' + esc(String(e)) + '</div>';
+  }
+}
+
+// ── 构建页（S35.1，24 号 §4.1；/api/build = build_artifacts.py list 只读；触发 = console_commands build_*） ──
+async function loadBuild() {
+  loaded.build = true;
+  try {
+    const d = await api('/api/build');
+    $('build-list').innerHTML = '<pre style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap">'
+      + esc(d.list || '（未构建）') + '</pre>';
+    const lg = d.last_build_log;
+    if (lg && lg.tail && lg.tail.length) {
+      $('build-log').innerHTML = '<h3>最近构建日志（' + esc(lg.path) + '）</h3><pre style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;max-height:200px;overflow:auto">'
+        + esc(lg.tail.join('\n')) + '</pre>';
+    } else {
+      $('build-log').innerHTML = '<div class="empty">尚无构建日志（触发构建后生成 evidence/console/logs/build-*.log）</div>';
+    }
+    ['build_apk', 'build_wasm', 'build_native'].forEach(id => {
+      const b = document.createElement('button');
+      b.textContent = id.replace('build_', '构建 ') + ' ▸';
+      b.style.cssText = 'background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer;margin:0 8px 8px 0';
+      b.onclick = async () => {
+        b.textContent = '构建中…';
+        try {
+          const r = await fetch('/api/build?run=' + id.replace('build_', ''));
+          const j = await r.json();
+          b.textContent = j.started ? '已启动(pid ' + (j.pid || '?') + ')' : '启动失败';
+        } catch (e) { b.textContent = '启动失败'; }
+        setTimeout(() => { loaded.build = false; loadBuild(); }, 3000);
+      };
+      $('build-trigger').appendChild(b);
+    });
+  } catch (e) {
+    $('build-list').innerHTML = '<div class="empty">/api/build 不可用：' + esc(String(e)) + '</div>';
+  }
+}
 
 async function loadSettings() {
   loaded.settings = true;

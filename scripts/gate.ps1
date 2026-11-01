@@ -16,7 +16,8 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
 # Linux 兼容（docs/migration_linux.md §3）：非 Windows 无 `python`（只有 python3）。
-# 33 项里所有脚本项经 `& $py` 调用；Windows 上 $py = python，行为不变。
+# 33 项里**脚本项经 `& $py`**；`.ps1` 脚本项（flywheel_readme.ps1）经 `$psExe`（pwsh）非 `$py`。
+# Windows 上 $py = python，行为不变。
 $py = 'python'
 if ($PSVersionTable.OS -notlike '*Windows*') { $py = 'python3' }
 # Linux 迁移口径：cargo 在 ~/.cargo/bin（不在默认 PATH）→ 绝对路径；Windows 走 PATH 的 cargo。

@@ -572,3 +572,10 @@ S24.0（约 6 个阶段）。连带影响：S21 用户评审「main_map 界面�
 解法：数据面补 pick_key 4/5/6/7（canonical indent=1 写回）；doccheck2 加 ①b 逐场景必需键集合（index↔1 / select_role·select_map↔2 / saveload↔3 / main_map↔4·5·6·7，缺键即 FAIL）；ti-app tests main_map_pick_e2e 锚数据面 4 键 + poll_hit(key=4) → roll>0 回归。
 验证：cargo test -p ti-app --test main_map_pick_e2e 0 failed；删掉任一必需键 → doccheck2 立即报「scenes.json 场景缺 pick_key=N」。
 教训：数据驱动命中链（数据面→拾取层→on_hit）三段任何一段缺失都是静默失效，门禁必须对账「消费面用到的键 ⊆ 数据面声明的键」，不能只查文件级子串存在。
+
+### EXP-149 代码：审计第6轮：i18n 数据驱动 key 假孤儿 + LCG 十进制 + wasm e2e v6/v5 basename 污染
+第 6 轮对抗审计（FIND→AUDIT→FIX）三处高价值重复发现已固化进机器检查：
+- Q014：doccheck2 check_i18n_orphans 只扫 sget/sgetf 字面量 + key: + scenes.json text_key ⇒ balance.json 数据驱动 name_key（boat.*/combat.item.*/isle.*）被误报假孤儿 WARN。修法 = collect_data_key_values 收 assets/data/*.json 的 i18n *_key 字段值（白名单 name_key/text_key/dungeon_name_key；排除 ui_icons.json hud_key 图标键非 i18n）。
+- Q019：legacy/docs/facts/tools.md F-320 写十进制 214013（项目约定 hex 0x343FD）。修法 = F-320 改 hex + check_lcg_hex 扩扫 tools.md + 捕 `*214013`（同行无 0x343FD）报错。
+- Q056/Q094：wasm_browser_e2e L5 判据 v6/v5 共用 basename（isle_lighthouse.png 双目录）按 basename 无法区分模式 ⇒ 旧 isle_ 前缀判据被 v6 污染。修法 = 模式专属标记（v6 6 项 ≥4 多资产 / v5 9 类专属岛型 + island_home + card_panel）。
+另 Q004 去双轨（overflow_to_deposit 单点，host 与 BuildManager 共用）+ Q007 补 bank_deposit 访问器（建造 deposit:0 丢账修复）。

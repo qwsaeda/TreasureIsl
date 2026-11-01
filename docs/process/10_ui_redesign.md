@@ -182,7 +182,7 @@ main_map HUD 按钮内文字符号、vs 血条端帽。
 
 ## 8. 验收锚点（S17.2/S17.4 固化，S17.5 收口）
 
-1. **doccheck2 第 24 项 `check_ui_redesign_tokens`**：
+1. **doccheck2 第 23 项 `check_ui_redesign_tokens`**：
    ① `scenes.json` 全部版面坐标 8pt 整除（`grid.*` 除外，白名单）；
    ② `theme.rs`/`menu_shell` 色板常量值 == §3 表（13 色）；
     ③ 动效参数 == §7 表（常量锚点；4 时长参 + 飞轮 R1 ①-04 翻页亮度 0.6/0.4 f32 参组，

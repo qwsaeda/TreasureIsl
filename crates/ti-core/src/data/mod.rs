@@ -51,6 +51,10 @@ pub(crate) const SCENES_JSON: &str = include_str!("../../../../assets/data/scene
 pub(crate) const TERRAIN_JSON: &str = include_str!("../../../../assets/data/terrain.json");
 /// 环岛赛道表（编译期内联；`scripts/extract_board.py` 生成）。
 pub(crate) const BOARD_JSON: &str = include_str!("../../../../assets/data/board.json");
+/// `V6_LAYOUT_JSON` 数据源（场景层经本常量读入 = 跨 crate 单源口径，CS-1 资产路径字面量单源）。
+///
+/// 坐标由 `scripts/compose_main_map_v6.py` 导出至 `main_map_v6_layout.json`（逐格 `cx/cy`）。
+pub const V6_LAYOUT_JSON: &str = include_str!("../../../../assets/data/main_map_v6_layout.json");
 /// 控件表（编译期内联；`scripts/gen_layout.py` 从 `ref/controls.json` 生成，
 /// S8.5 控件层数据源，`docs/impl/14_asset_enhancement.md`）。
 pub(crate) const CONTROLS_JSON: &str = include_str!("../../../../assets/data/controls.json");

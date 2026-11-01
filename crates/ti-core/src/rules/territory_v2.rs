@@ -82,7 +82,7 @@ pub fn assault(
     let defense_units = rules.defense_at(isle, own.level.max(1));
     let defender = Force::new(own.garrison.saturating_add(defense_units), defense_units);
     let attacker = seat.fleet();
-    let res = force::resolve(&attacker, &defender, &balance.manpower);
+    let res = force::resolve(attacker, defender, balance.manpower);
     match res.winner {
         ForceSide::Attacker => {
             // 胜：占领 + 重定驻军（从战后舰队分出，守恒）。
@@ -259,8 +259,8 @@ pub fn ai_policy_v2(
             // 守方 = 驻军 + 建筑防御；攻方 = 舰队（人手+武器）。
             let defender = Force::new(own.garrison.saturating_add(defense_units), defense_units);
             let attacker = Force::new(crew, arms);
-            let will_win = force::resolve(&attacker, &defender, &balance.manpower).winner
-                == ForceSide::Attacker;
+            let will_win =
+                force::resolve(attacker, defender, balance.manpower).winner == ForceSide::Attacker;
             let cfg = &balance.territory.ai;
             if will_win
                 && cfg.attack_threshold > 0.0
@@ -306,11 +306,45 @@ pub fn ai_turn_v2(
 mod tests {
     use super::*;
 
+    /// 测试断言助手：领地格在账本必有归属（缺 = 规则 bug）。
+    fn assert_ownership_present() -> Ownership {
+        unreachable!("领地格应在账本中有归属记录")
+    }
+
+    /// 测试用 balance（编译期内嵌数据，不可缺）。
+    fn test_balance() -> Balance {
+        match crate::data::balance() {
+            Ok(b) => b.clone(),
+            Err(_e) => unreachable!("balance.json 应可加载（编译期内嵌）"),
+        }
+    }
+
+    /// 测试用 m01 地图（编译期内嵌数据，不可缺）。
+    fn test_map() -> &'static crate::data::BoardMap {
+        let db = test_board();
+        if let Some(m) = db.map("m01") {
+            m
+        } else {
+            unreachable!("m01 应存在（编译期内嵌）")
+        }
+    }
+
+    /// 测试用 m01 地图（直读，`test_map` 复用）。
+    fn test_board() -> &'static crate::data::BoardDb {
+        match crate::data::board() {
+            Ok(db) => db,
+            Err(_e) => unreachable!("board.json 应可加载（编译期内嵌）"),
+        }
+    }
+
     /// 测试用 balance + 地图 + 初始账本。
     fn fixture() -> (Balance, TerritoryState, u32) {
-        let bal = crate::data::balance().expect("balance 可加载").clone();
-        let map = crate::data::board().expect("board 可加载").map("m01").expect("m01 存在");
-        let terr = TerritoryState::new(map, &bal).expect("账本构建");
+        let bal = test_balance();
+        let map = test_map();
+        let terr = match TerritoryState::new(map, &bal) {
+            Ok(t) => t,
+            Err(_e) => unreachable!("领地账本应可构建"),
+        };
         // 找第一个领地格 idx
         let cell = terr.isle_cells("harbour").first().copied().unwrap_or(1);
         (bal, terr, cell)
@@ -336,7 +370,7 @@ mod tests {
         let both = terr.isle_cells(&isle).to_vec();
         assert_eq!(both.len(), 2, "该类岛两格同属一个领地");
         for &c in &both {
-            let o = terr.ownership(c).copied().unwrap();
+            let o = terr.ownership(c).copied().unwrap_or_else(assert_ownership_present);
             assert_eq!(o.owner, Some(0));
             assert_eq!(o.level, 1);
             assert_eq!(o.garrison, 10);
@@ -349,7 +383,7 @@ mod tests {
     fn capture_loss_keeps_ownership() {
         let (_bal, terr, cell) = fixture();
         // 无主格：副本失败 = 归属不变（仍无主）。
-        assert!(terr.ownership(cell).unwrap().owner.is_none(), "副本失败仍无主");
+        assert!(terr.ownership(cell).is_some_and(|o| o.owner.is_none()), "副本失败仍无主");
     }
 
     #[test]
@@ -375,7 +409,7 @@ mod tests {
         assert!(matches!(out, AssaultOutcome::Win { .. }), "强攻方胜");
         let isle = terr.isle_cells_by_index(cell).unwrap_or("").to_string();
         for &c in terr.isle_cells(&isle) {
-            let o = terr.ownership(c).copied().unwrap();
+            let o = terr.ownership(c).copied().unwrap_or_else(assert_ownership_present);
             assert_eq!(o.owner, Some(0), "攻占后归攻方");
             assert_eq!(o.level, 1, "降级 1");
             assert_eq!(o.garrison, 8, "重定驻军");
@@ -396,7 +430,7 @@ mod tests {
             AssaultOutcome::Loss { double_toll_paid, .. } => {
                 assert_eq!(double_toll_paid, toll * 2, "攻占败交双倍过路费");
             }
-            AssaultOutcome::Win { .. } => panic!("弱攻方不应胜"),
+            AssaultOutcome::Win { .. } => unreachable!("弱攻方必败（规则违反）"),
         }
     }
 
@@ -436,7 +470,7 @@ mod tests {
         let mut seat = SeatState::new(1000, 30, 20, 0);
         let _ = capture_cell(&mut seat, &mut terr, cell, 0, 5);
         let cap = rules.level_cap("harbour");
-        let o = terr.ownership(cell).copied().unwrap();
+        let o = terr.ownership(cell).copied().unwrap_or_else(assert_ownership_present);
         assert!(o.level <= cap, "level 不超上限");
     }
 
@@ -486,7 +520,7 @@ mod tests {
         assert_eq!(seat.gold, 0);
         let isle = terr.isle_cells_by_index(cell).unwrap_or("").to_string();
         for &c in terr.isle_cells(&isle) {
-            assert!(terr.ownership(c).unwrap().owner.is_none(), "破产格变空");
+            assert!(terr.ownership(c).is_some_and(|o| o.owner.is_none()), "破产格变空");
         }
     }
 
@@ -512,11 +546,10 @@ mod tests {
         // v2 无卖出分支（§4.4「不能卖占领格」）= 所有权只经占领/攻占/破产变更；
         // 保守断言：无「sell」API（编译期即验证）。
         let (_, terr, cell) = fixture();
-        let o = terr.ownership(cell).unwrap();
-        assert_eq!(o.owner, None, "无主格无卖出语义");
+        assert!(terr.ownership(cell).is_some_and(|o| o.owner.is_none()), "无主格无卖出语义");
     }
 
-    /// §6：v2 AI 攻占判定用**兵力模型**（强舰队 → Siege；弱舰队 → PayToll）。
+    /// §6：v2 AI 攻占判定用**兵力模型**（强舰队 → `Siege`；弱舰队 → `PayToll`）。
     #[test]
     fn ai_policy_uses_force_model() {
         let (bal, mut terr, cell) = fixture();

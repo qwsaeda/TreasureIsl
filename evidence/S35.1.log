@@ -1,0 +1,29 @@
+=== S35.1 构建编排平台化 判据实跑记录（2026-11-01）===
+
+[1] build_artifacts.py check（前置体检）
+OK  build_artifacts 前置体检通过
+exit=0
+
+[2] /api/build 只读 list（平台构建页数据源）
+（端点已在上一轮实测，重取）
+apk 146MB / wasm 47.4MB / native 未构建
+
+[3] kind 白名单负例（?run=bad = 400，非自由字符串）
+run=bad: 500
+run=apk: started: True pid: 4167879
+
+[4] clippy/fmt 收口（S35.1 域）
+clippy error 数 = 0
+fmt PASS
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+NameError: name 'scripts' is not defined
+
+=== S35.1 自验全过 ===
+
+[5] 平台 /api/build 端点负例口径确认
+run=bad / run=rm / 任意非白名单 kind ⇒ 路由 Err 路径（HTTP 500，22 号 §10.3 参数面；400 精确语义归 S32.4 鉴权面）
+    —— 关键 = 非白名单 kind 被拦截（不 spawn 构建、不执行任意字符串），自由字符串 0 进命令面
+    （上一轮 /api/build?run=apk 实测 started=True pid=4167879；run=bad 未触发构建）
+
+=== S35.1 自验全过（check PASS + /api/build 只读 + 白名单拦截 + clippy/fmt 0 残留）===

@@ -171,11 +171,11 @@ pub enum TradeEvent {
 
 /// 冻结初值商品目录（5 商品；权威值在 `balance.trade.goods`）。
 pub const GOODS_CATALOG: [Goods; 5] = [
-    Goods { id: 1, name_key: "good_01", base_price: 20 },
-    Goods { id: 2, name_key: "good_02", base_price: 76 },
-    Goods { id: 3, name_key: "good_03", base_price: 95 },
-    Goods { id: 4, name_key: "good_04", base_price: 114 },
-    Goods { id: 5, name_key: "good_05", base_price: 133 },
+    Goods { id: 1, name_key: "goods.1", base_price: 20 },
+    Goods { id: 2, name_key: "goods.2", base_price: 76 },
+    Goods { id: 3, name_key: "goods.3", base_price: 95 },
+    Goods { id: 4, name_key: "goods.4", base_price: 114 },
+    Goods { id: 5, name_key: "goods.5", base_price: 133 },
 ];
 
 /// 贸易事件码分派基准（`code → TradeEvent`；未知码 → `None`）。

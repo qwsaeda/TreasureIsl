@@ -22,15 +22,15 @@ fn occupy_all_for_player(app: &mut GameApp) {
     let isles: Vec<String> = app
         .territory
         .as_ref()
-        .expect("账本")
-        .snapshot()
-        .keys()
-        .copied()
-        .map(|idx| {
-            app.territory.as_ref().unwrap().isle_cells_by_index(idx).unwrap_or("").to_string()
+        .map(|terr| {
+            terr.snapshot()
+                .keys()
+                .copied()
+                .map(|idx| terr.isle_cells_by_index(idx).unwrap_or("").to_string())
+                .filter(|s| !s.is_empty())
+                .collect()
         })
-        .filter(|s| !s.is_empty())
-        .collect();
+        .unwrap_or_default();
     let mut seat = SeatState::new(100_000, 500, 500, 0);
     if let Some(terr) = app.territory.as_mut() {
         for isle in isles {
