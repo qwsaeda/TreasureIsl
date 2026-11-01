@@ -71,8 +71,9 @@
 
 ## 6. 平台集成（TI Dev Console「测试」页，S32 扩展）
 
-> 用户 2026-11-01 拍板「加入平台」。设计（只读，符合 `22_dev_platform.md` §3 设计原则）：
-> 平台只读索引 `evidence/` + gate 输出，零写盘；不加载 wasm、不碰游戏运行时。
+> 用户 2026-11-01 拍板「加入平台」。设计（**只读索引 + 白名单动作触发**，符合 `22_dev_platform.md` §3 设计原则）：
+> 平台只读索引 `evidence/` + gate 输出；**测试实际运行** = `/api/tests?run=<id>` 白名单动作
+> （23 号 §6.1，后台 spawn + 日志落 `evidence/console/logs/`）；不加载 wasm、不碰游戏运行时。
 
 **页面**（第 7 页，左菜单「测试」，`/api/tests` 只读适配）：
 
@@ -82,9 +83,19 @@
 | 左侧树 | 按 级(L1–L4)→类→型 分组，点选看该组测试清单 | `23_game_testing.md` 分类表（机读 = `assets/data/test_manifest.json`，见 §7） |
 | 中部 | 某测试的**步骤/阶段**（从对应 `evidence/<id>.log` 解析：判据步骤、`--shot` 预载/就绪/写盘行、gate 各阶段 Report 行） | `evidence/*.log` |
 | 右侧 | **截图证据**（`evidence/bevy_native_*.png` / `wasm_browser_e2e.png` / 试玩截图，缩略图点大） | `evidence/*.png` |
+| 详情卡 | **▶ 运行测试**（点运行 → 后台 spawn test_manifest 命令 → 实时回显日志尾部 + PASS/FAIL 判定） | `/api/tests?run=<id>` |
 
-**不做什么**：不跑测试、不改 evidence、不重放断言（只读展示）；门禁/试玩仍由 `gate.ps1`/`playtest.ps1` 触发，
-平台只读其结果。
+### 6.1 测试实际运行（S32 用户拍板「能实际运行测试」）
+
+- **白名单 id**：`/api/tests?run=<id>`，`<id>` 必须 = `test_manifest.json` 登记的 `tests[].id`（枚举，非自由字符串，22 号 §10.3）。
+- **命令来源**：该 test 的 `command` 字段（禁前端/用户传命令，防任意执行）。
+- **程序白名单**：`cargo` / `python3` / `pwsh` / `powershell`（其余程序 = 400 拒绝；`sh -c`/`cmd /c` 字符串拼接禁用，22 号禁止 2）。
+- **执行形态**：逐参数 `Command::new(program).args([...])`，`current_dir = repo_root`，后台 spawn（`Stdio::null`），日志落 `evidence/console/logs/test-<id>-<ts>.log`（gitignored）。
+- **判定**：日志含 `test result: ok` = PASS、`FAILED`/`error[`/`panicked` = FAIL；前端每 2s 轮询尾部增量回显。
+- **不可自动运行**：人工验收（如 `visual_signoff`「用户视觉验收」无白名单程序）、无 `command` 字段 → 按钮禁用并注明。
+
+**不做什么**：不重放断言（运行测试走 test_manifest 命令本体）；门禁/试玩仍由 `gate.ps1`/`playtest.ps1` 触发，
+平台只读其结果 + 白名单动作触发运行。
 
 ## 7. 机读清单（`assets/data/test_manifest.json`）
 

@@ -31,9 +31,9 @@
 |---|---|---|
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
-  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 17 |
-  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 30 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 35 |
+  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 18 |
+  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 31 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 38 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 44 |
 
 ## 条目索引
@@ -189,6 +189,11 @@
 | EXP-147 | build | | 真机可跑但没地图/图/资源：AndroidAssetReader 把 AssetServer.load("assets/ui/...") 原样给 AAssetManager.open，但 AAssetManager 根=APK assets 段（zip assets/ui/...）⇒ open("assets/ui/...") 找 assets/assets/ui/...=NotFound（wasm fetch 相对页面根含 assets/ 正常）；修复=自定义 reader 剥 assets/ 前缀 正文见 `build.md` |
 | EXP-148 | build | | 用户「安卓应用图标没有，应用名也没有」：manifest 无 android:icon + 无 res/mipmap ⇒ 系统默认图标；硬编码 label 经 aapt2 link 后 aapt dump badging 无 application-label（部分 launcher 读不到）；修复=helm 生成 5 密度 ic_launcher + @string/app_name + aapt2 compile --dir res → link res.zip + 组装复制 res/ 正文见 `build.md` |
 | EXP-149 | code | | Q014/Q019/Q056 三处重复审计发现固化：①doccheck2 collect_data_key_values 收 name_key/text_key/dungeon_name_key（白名单，排除 hud_key）②check_lcg_hex 扩扫 tools.md + 捕十进制 *214013 ③wasm_browser_e2e L5 改模式专属标记（v6 6 项 ≥4 / v5 9 类 + island_home + card_panel）防共用 basename 污染 正文见 `code.md` |
+| EXP-150 | process | | UI 元素去掉 = 删 scenes.json primitives 原语（覆盖层会被 z 更高原语反盖）；同步删 on_hit 死分支/open_build_panel/孤儿字符串键/测试断言 正文见 `process.md` |
+| EXP-151 | process | | UI 元素去掉 = 删 scenes.json primitives 原语（覆盖层会被 z 更高原语反盖）；同步删 on_hit 死分支/open_build_panel/孤儿字符串键/测试断言 正文见 `process.md` |
+| EXP-152 | process | | wasm 音频不能在 Startup 直接播（AudioContext.resume 需用户手势）；bevy_audio 无内置处理，unlock_bgm_system 等首次交互后 spawn 正文见 `process.md` |
+| EXP-153 | build | | 版本单源 = Cargo.toml workspace.package；产物名带版本；wasm 版本化应拷 _bg.wasm（非 raw 副本）；check_version_consistency 三方对账 正文见 `build.md` |
+| EXP-154 | tools | | /api/tests?run=<id> 白名单枚举 id + 逐参数 Command::new（禁 shell 拼接）+ 后台 spawn + 日志落 evidence/console/logs；程序白名单 cargo/python3/pwsh/powershell 正文见 `tools.md` |
 
 ## 条目格式（写新条时照抄）
 

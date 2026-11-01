@@ -334,3 +334,21 @@ S33.6 AI 回合（兵力模型攻占判定 + 驻军自定）五个设计决策�
 
 ### EXP-148 构建：Android 应用图标/名缺失：manifest 无 android:icon + 硬编码 label 部分 launcher 读不到；res/ 两阶段 aapt2 compile+link
 现象：APK 装机 launcher 无应用图标（系统默认）+ 无应用名。\n根因：①android/AndroidManifest.xml 无 android:icon/roundIcon 且无 android/res/mipmap ⇒ 系统默认图标；②android:label 硬编码字符串（非 @string 资源）经 aapt2 link 后 aapt dump badging 读不到 application-label（PackageManager 部分实现读不到硬编码 label）。\n解法：①scripts/tmp/gen_icon.py（Pillow，已删）从 assets/ui/helm.png 生成 android/res/mipmap-{mdpi..xxxhdpi}/ic_launcher.png（48/72/96/144/192，羊皮暖背景 + 舵轮居中）；②res/values/strings.xml 加 app_name=金银岛 TreasureIsl + manifest label/@string/app_name + icon/roundIcon=@mipmap/ic_launcher；③build_apk.sh aapt2 link 改两阶段（aapt2 compile --dir android/res -o res.zip → link -o base.apk -I jar --manifest ... res.zip，aapt2 link 不接受 res 目录 positional）+ 组装复制 base.apk 的 res/ 条目（否则 mipmap 丢）。\n验证：本地 aapt2 compile+link 后 aapt dump badging 有 application-label:'金银岛 TreasureIsl' + application-icon-160~640；redroid 装新 APK Displayed NativeActivity +3s292ms + Path not found 0 + 画面非黑 98%（EXP-147 资源 + 本 EXP 图标/名双修）。\n遗留（Q050）：manifest `package="com.example.treasureisland"` 仍是占位——release 前须换自有反向域名包名（`android/AndroidManifest.xml` 头注释已标；换包名 = 改 package + 重编 .so 不需要，只需 aapt2 link 重跑）。
+
+### EXP-153 构建：版本 x.y.z 单源 + 产物命名带版本
+## 版本 x.y.z 单源 + 产物命名带版本 + 三方对账
+
+**用户要求**：游戏打包用 x.y.z 版本方式 + 更新规范 + 每次完成过清单 + 出版本规划。
+
+**定案**（`docs/process/25_versioning.md` 单一事实源）：版本单源 = `Cargo.toml` `[workspace.package] version`；
+产物名带版本（`TreasureIsl-<x.y.z>-<arch>.apk` / `treasure_bevy_wasm-<x.y.z>.wasm`）；
+AndroidManifest `versionName` 同步；release.md 版本规划行。
+
+**教训**：
+1. 产物名曾**散写**（`TreasureIsl-arm64.apk` / `treasure_bevy_wasm.wasm` 无版本）→ 打包漂移。
+2. wasm 实际加载 = wasm-bindgen 输出的 `treasure-bevy-wasm_bg.wasm`（main.js 引胶水 `treasure-bevy-wasm.js`），
+   `treasure_bevy_wasm.wasm` 是 cargo 裸产物重复拷贝（**未加载**）——版本化应拷 `_bg.wasm`，删 raw 副本。
+3. 构建脚本读版本：bash = `sed -n '/^\[workspace.package\]/,/^\[/p'`；pwsh = 逐行匹配 `[workspace.package]` 段。
+4. `validate_data.py check_version_consistency` 三方对账（Cargo↔manifest↔产物名↔release.md）防漂移。
+
+**验证**：validate_data OK（含新检查项）；build_apk.sh / build_wasm.ps1 产物名带版本。

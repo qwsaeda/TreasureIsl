@@ -149,3 +149,25 @@
 根因：L5 判据 k.startswith("v6_")，但 v6 资产实际文件名 = assets/ui/v6/<name>.png，basename = ocean_bg.png/isle_land.png 等**不带 v6_ 前缀**（前缀是目录 v6/）⇒ 即使资产被 HTTP 取到（200），basename 也不匹配 v6_ ⇒ v6_*=0 恒成立误判。
 解法：L5 v6 判据改为 v6 专属 basename 集合 {ocean_bg.png, isle_land.png, isle_lighthouse.png, isle_treasure.png, isle_village.png, tile_owned.png, tile_deny.png}（避免与 v5 重名，如 parchment/island/compass/helm/ship）。
 验证：单独跑 wasm-browser-e2e L1-L5 全 PASS（L5 ok=true）+ gate_final10 0 failure。
+
+### EXP-154 工具：平台测试页能实际运行测试 = 白名单动作后台 spawn
+## 平台测试页「能实际运行测试」= 白名单动作后台 spawn
+
+**用户要求**：平台测试相关「1-3 都没有」，澄清后 = **能实际运行测试**（平台测试页点测试真跑）。
+
+**现状**：平台测试页 `/api/tests` 原本**只读**（清单 + 分组树 + 证据解析），无运行能力。
+
+**定案**（23 号 §6.1）：`/api/tests?run=<id>` 白名单动作——`<id>` 必须 = test_manifest 登记 id（枚举）；
+命令从该 test `command` 字段取，**逐参数** `Command::new(program).args([...])`（禁 `sh -c`/`cmd /c` 拼接，
+22 号禁止 2）；程序白名单 cargo/python3/pwsh/powershell；后台 spawn（`Stdio::null`），日志落
+`evidence/console/logs/test-<id>-<ts>.log`（gitignored）；前端每 2s 轮询尾部 + `test result` 判定。
+
+**教训**：
+1. 平台「测试相关没有」可能是用户预期**能跑**而非只看清单——先问清「1-3 都没有」指什么。
+2. 复用既有后台执行机制（`/api/build?run=` 的 `build_artifacts`）模式，不另起炉灶。
+3. 命令解析：`split_whitespace` 拆 argv（test_manifest 命令无引号嵌套）；人工验收（`visual_signoff`
+   无白名单程序）→ 明确拒绝 + 前端按钮禁用。
+4. clippy：`run_test` 106 行超限（代码标准 100）→ 抽 `query_param` 辅助函数复用 `/api/tests`+`/api/build`。
+
+**验证**：`/api/tests?run=rules_battle` → 后台 spawn → 日志 `test result: ok. 20 passed`；非法 id/人工验收拒；
+ti-console 集成测试 4 组全过；前端页面 200 含 `ts-run-btn`。

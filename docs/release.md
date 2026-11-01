@@ -17,6 +17,16 @@
 
 原版 exe 无源码，所有逻辑通过 IDA 伪代码 + oracle 差分测试逆向验证。
 
+## 版本（25_versioning.md 单一事实源）
+
+> **当前版本 = `0.1.0`**（`Cargo.toml` `[workspace.package] version` 单源；`AndroidManifest versionName` 同步；
+> 产物命名带版本 = `TreasureIsl-<x.y.z>-<arch>.apk` / `treasure_bevy_wasm-<x.y.z>.wasm`）。
+> 版本规划 = 发布历史（§发布）每行带 x.y.z + 日期 + 变更摘要 + 产物 sha256；bump 规则见 `docs/process/25_versioning.md` §3。
+
+| 版本 | 日期 | 变更摘要 | 产物 | sha256 |
+|---|---|---|---|---|
+| `0.1.0` | 2026-11-01 | S0–S35 演进基线（逆向收口 + 现代化移植 + UI 重设计 v2→v6 + 领地系统 + 开发平台 + 测试标杆 + 版本规范定稿） | `TreasureIsl-0.1.0-arm64.apk` / `treasure_bevy_wasm-0.1.0.wasm` | wasm `8109F3C87EFEA644645F44A4B32972207FCFB1281B31FA3FC3CCFED3E340E74E`（45,582,959 B；APK 构建时回填） |
+
 ## 平台产物
 
 > **S18.8a：发货壳切 Bevy**。桌面/浏览器的**唯一发货入口** = `crates/ti-engine`（S27.7 起并入根 workspace）
@@ -27,7 +37,7 @@
 | 平台 | 产物 | 路径 | 体积 (S18.8a 后最新) |
 |---|---|---|---|
 | 桌面（当前收口） | `treasure-bevy-native.exe` | `target/release/`（S27.7 起并入根 workspace，产物落根 `target/`） | 见 `evidence/S18.8a-wasm-size.log` 同目录口径（Bevy 壳体积待 S18.8e 复验） |
-| 浏览器（Bevy 壳） | `treasure_bevy_wasm.wasm`（LTO+strip 后 **48,765,303 B ≈ 46.6 MB**，超 S18.8e 新预算 ≤8 MB 6 倍；缺口登记 = S18.8 收口「发货超预算」已知限制，wasm-opt -Oz 须 wasm32-unknown-unknown 目标 LTO 全开 + 分包才能收敛，本机实测未达标留痕）+ 真实资源 | `web/`（`evidence/S18.8e.log`） | 体积预算判定 = 11_bevy_migration §3；本机 NDK/LTO 实测值留痕，超预算不作静默发布口径 |
+| 浏览器（Bevy 壳） | `treasure_bevy_wasm-<x.y.z>.wasm`（S25 版本规范后带版本；当前 `0.1.0`，LTO+strip 后 **48,765,303 B ≈ 46.6 MB**，超 S18.8e 新预算 ≤8 MB 6 倍；缺口登记 = S18.8 收口「发货超预算」已知限制，wasm-opt -Oz 须 wasm32-unknown-unknown 目标 LTO 全开 + 分包才能收敛，本机实测未达标留痕）+ 真实资源 | `web/`（`evidence/S18.8e.log`） | 体积预算判定 = 11_bevy_migration §3；本机 NDK/LTO 实测值留痕，超预算不作静默发布口径 |
 | Android（S18.8d 切 Bevy 壳；Mac 编译） | `libandroid_activity.so`（`android/android-activity` cdylib，include! 复用 `treasure_bevy.rs`；JNI 入口 `android_main`，0 macroquad） | `target/aarch64-linux-android/release/`（Mac NDK r25b 交叉编译） （本机 NDK 缺失，`cargo build -p android-activity@0.1.0 --target aarch64-linux-android` 挂 S18.8d 收口实测定态） | APK 交付 = `cargo-apk` 标准布局；体积随 Bevy 壳（与浏览器侧同源，超 8 MB 预算同口径） |
 
 完整 sha256 见 `evidence/S4.4.log`（S4.3 时点 wasm 675,016 B）、`evidence/S5.4.log`；S5.6/S6.1~S6.4 完成后 macroquad wasm 增长至 745 KB（体积表见 `docs/modernization.md` §9，首屏 308,227 B / 非首屏 250,154 B）——**该组数字是 macroquad 壳的历史记述**。
@@ -232,9 +242,9 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 
 ## 发布（publish-web，S16.3）
 
-| 日期 | git short | wasm sha256 | 产物 | 线上（GitHub Pages） |
-|---|---|---|---|---|
-| 2026-10-30 01:17 | b2b68eb | 8D1C06BEEDCEF4B8FAE15C8440964346072E52453F5BAC0E7F2ACCBADB5CCB32 | web/（treasure-bevy-wasm_bg.wasm） | DEGRADED |
-| 2026-10-30 00:52 | 56d69ca | 8D1C06BEEDCEF4B8FAE15C8440964346072E52453F5BAC0E7F2ACCBADB5CCB32 | web/（treasure-bevy-wasm_bg.wasm） | DEGRADED |
+| 版本 | 日期 | git short | wasm sha256 | 产物 | 线上（GitHub Pages） |
+|---|---|---|---|---|---|
+| `0.1.0` | 2026-10-30 01:17 | b2b68eb | 8D1C06BEEDCEF4B8FAE15C8440964346072E52453F5BAC0E7F2ACCBADB5CCB32 | web/（treasure-bevy-wasm_bg.wasm） | DEGRADED |
+| `0.1.0` | 2026-10-30 00:52 | 56d69ca | 8D1C06BEEDCEF4B8FAE15C8440964346072E52453F5BAC0E7F2ACCBADB5CCB32 | web/（treasure-bevy-wasm_bg.wasm） | DEGRADED |
 
 - **Pages 线上段降级（S16.3 publish-web 实测定态 @ 56d69ca（2026-10-30 00:52）/ @ b2b68eb（01:17）两次尝试）**：DEGRADED — fatal: could not read Username for 'https://github.com': terminal prompts disabled。线上（GitHub Pages）发布需要 origin 写凭据（本机仅可读 `git ls-remote`）或 `gh` 登录态；降级下本地产物 + 静态断言（200/content-type 全绿）+ 发布历史仍有效，线上 URL 复跑留待有凭据环境补做。

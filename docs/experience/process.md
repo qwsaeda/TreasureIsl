@@ -442,3 +442,56 @@
 
 ### EXP-143 流程：迭看图/引擎渲染图归档规范（防平台看不到 + 防乱放）
 教训：用户迭看「生图在平台看不到」「图片乱放都找不到」。根因 = ①我把正式设计稿放 evidence/ui_concept/{vs_anim_v2,main_map_v6}/ 子目录（平台 GET /api/evidence?sub=ui_concept 只枚举顶层一层，子目录稿不可见）；②新开 evidence/vs_v2_render/ 目录放引擎渲染迭看图（无归档规范）。修复 = 13_ui_asset_pipeline.md §2.1a 定案：迭看图/引擎渲染图统一落 ui_concept/ 顶层，命名 <theme>_<variant>.png（合成稿）/ <theme>_<variant>_engine.png（引擎渲染），AI 元素源仅子目录（raw_/中间产物），写后必跑 ui_thumb.py 生成侧车；散落图已归位 + 侧车生成。规范：写迭看图前查 §2.1a 命名表；写后跑 ui_thumb.py；不新开顶层目录。
+
+### EXP-150 流程：三键取掉 = 删原语而非改覆盖逻辑
+## 三键取掉 = 删原语而非改覆盖逻辑
+
+**现象**：用户报「主地图底部三键（建造/贸易/出售）没有取掉」。
+
+**根因链**：`RawScene` 用 `#[serde(flatten)] extra` → `deck_trade/deck_sell/deck_build` 顶层键进 `extra`；
+main_map.rs 的「覆盖为羊皮底」逻辑读 `layout.extra.get(DECK_*)`，但**三键视觉 = scenes.json `primitives[]`
+的 deck_plaque 图片原语（z=8）**，渲染顺序 = 羊皮底（先画）→ `render_primitives_filtered(min_z=3)`
+后画盖住 ⇒ 三键可见。v6 裁决「不常驻」的实现失效（覆盖层被原语盖住）。
+
+**教训**：UI 元素「去掉」= 删**数据原语**（scenes.json `primitives[]`），不是加覆盖层盖住——覆盖层会被
+z 更高的原语反盖。删原语后同步：①`on_hit` 的 pick_key 5/6/7 死分支 ②`open_build_panel` 死函数
+③`v6_deck_popup_note` 孤儿字符串键 ④测试断言（`main_map_pick_e2e` 的 5/6/7 应 0 个）。
+
+**验证**：删 9 原语（3 plaque + 3 icon + 3 text）→ `--shot main_map` 出图底部只剩舵轮/罗盘；
+`main_map_pick_e2e` 断言 5/6/7=0 全过。
+
+### EXP-151 流程：三键取掉 = 删原语而非改覆盖逻辑
+## 三键取掉 = 删原语而非改覆盖逻辑
+
+**现象**：用户报「主地图底部三键（建造/贸易/出售）没有取掉」。
+
+**根因链**：`RawScene` 用 `#[serde(flatten)] extra` → `deck_trade/deck_sell/deck_build` 顶层键进 `extra`；
+main_map.rs 的「覆盖为羊皮底」逻辑读 `layout.extra.get(DECK_*)`，但**三键视觉 = scenes.json `primitives[]`
+的 deck_plaque 图片原语（z=8）**，渲染顺序 = 羊皮底（先画）→ `render_primitives_filtered(min_z=3)`
+后画盖住 ⇒ 三键可见。v6 裁决「不常驻」的实现失效（覆盖层被原语盖住）。
+
+**教训**：UI 元素「去掉」= 删**数据原语**（scenes.json `primitives[]`），不是加覆盖层盖住——覆盖层会被
+z 更高的原语反盖。删原语后同步：①`on_hit` 的 pick_key 5/6/7 死分支 ②`open_build_panel` 死函数
+③`v6_deck_popup_note` 孤儿字符串键 ④测试断言（`main_map_pick_e2e` 的 5/6/7 应 0 个）。
+
+**验证**：删 9 原语（3 plaque + 3 icon + 3 text）→ `--shot main_map` 出图底部只剩舵轮/罗盘；
+`main_map_pick_e2e` 断言 5/6/7=0 全过。
+
+### EXP-152 流程：wasm 背景音乐无声 = 浏览器 autoplay policy
+## wasm 背景音乐无声 = 浏览器 autoplay policy（需用户手势解锁）
+
+**现象**：用户报「背景音乐没有（多平台）」。
+
+**根因**：bevy_audio 0.20 `spawn_audio` 在 Startup spawn BGM → cpal 0.17 wasm `Stream::play()`
+调 `AudioContext.resume()`，但 Startup 无用户手势被浏览器拒（autoplay policy）⇒ wasm BGM 无声。
+native 逻辑正确（bevy_audio + ALSA，无声卡时静默降级）。
+
+**教训**：wasm 音频**不能**在 Startup 直接播——浏览器要求 `AudioContext.resume()` 在用户手势
+（sticky activation）之后。bevy_audio 0.20 无内置 wasm autoplay 处理（`AudioOutput.stream` 私有，
+无 resume API）；cpal 0.17 的 `Stream::play()` 会调 resume，但需手势。
+
+**修法**：`spawn_audio` 在 wasm 下不直接 spawn BGM（插 `BgmUnlock` 资源），`unlock_bgm_system`
+（Update）等首次 pointer/keyboard `get_just_pressed()` 后 spawn BGM（resume 成功）。native 照旧直播。
+
+**验证**：`unlock_bgm_system` wasm 编译通过（`cargo build --target wasm32-unknown-unknown`）；
+native clippy 全绿。注意 bevy 0.20 `ButtonInput::any_just_pressed()` 需参数，改 `get_just_pressed().next()`。
