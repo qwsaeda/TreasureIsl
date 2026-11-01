@@ -36,7 +36,12 @@ cargo build -q -p ti-tools --bin serve 2>$null
 $srv = Start-Process -FilePath "target\debug\serve.exe" -ArgumentList '--dir','web','--port','8092' -PassThru -WindowStyle Hidden -RedirectStandardOutput "$env:TEMP\opencode\smoke_srv.out" -RedirectStandardError "$env:TEMP\opencode\smoke_srv.err"
 Start-Sleep 3
 
-$endpoints = @('/treasure_bevy_wasm.wasm', '/assets/GoldLand.Fnt', '/assets/font.dat', '/assets/music.lpk', '/assets/settings.dat')
+# S25 版本规范（25_versioning.md §2）：wasm 产物名带版本（`treasure_bevy_wasm-<x.y.z>.wasm`）；
+# 冒烟端点 = 实际产物名（glob 最新带版本文件，缺失回退旧 raw 兼容）。
+$wasmName = Get-ChildItem 'web' -Filter 'treasure_bevy_wasm-*.wasm' -File -ErrorAction SilentlyContinue |
+    Sort-Object Name | Select-Object -Last 1
+$wasmEp = if ($wasmName) { "/$($wasmName.Name)" } else { '/treasure_bevy_wasm.wasm' }
+$endpoints = @($wasmEp, '/assets/GoldLand.Fnt', '/assets/font.dat', '/assets/music.lpk', '/assets/settings.dat')
 $allOk = $true
 foreach ($ep in $endpoints) {
     try {

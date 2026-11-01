@@ -3,7 +3,7 @@ S18.8a wasm 体积记录（2026-11-01）
 预算判定（wasm 主体 ≤8 MB，11_bevy_migration §3）属 S18.8e；本文件只记录实测值。
 
 == wasm 主体 ==
-treasure_bevy_wasm.wasm      49,704,399 B
+treasure_bevy_wasm.wasm               0 B
 
 == 首屏附属资源（不含 wasm 主体）==
 index.html                        1,257 B
@@ -45,9 +45,10 @@ msgl.Map                          2,532 B
 msgm.Map                          1,092 B
 music.lpk                        67,737 B
 option.Map                        3,732 B
+registry.json                     1,566 B
 selecttarget.Map                  2,676 B
 trade.Map                         3,828 B
-非首屏合计                           193,397 B
+非首屏合计                           194,963 B
 
 == HD 资产 ==
 hd/1x 合计                      1,565,411 B

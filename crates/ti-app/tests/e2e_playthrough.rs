@@ -307,7 +307,7 @@ fn e2e_touch_economy_loop() {
     };
     // pick_key 约定（`scenes.json` `pick_key`/`pick_index` 数据驱动，`ti_engine::pick`）：
     // 1 = index 罗盘环 medallion（index 0..5）；2 = select_role/select_map 列表行；
-    // 4/5/6/7 = 主地图 HUD（摇骰/买/卖/建造面板）。
+    // 4 = 主地图摇骰 CTA（S34 用户拍板「底部三键取掉」后 5/6/7 已删，贸易经 TradeBuy 直接 handle）。
     let _scenes = ti_core::data::scenes().expect("scenes.json 加载");
 
     // index S22 罗盘环 medallion 0（新游戏）→ 选角
@@ -324,27 +324,29 @@ fn e2e_touch_economy_loop() {
     let initial_gold = ti_core::data::balance().expect("balance.json 加载").economy.initial_gold;
     let price1 = app.price_table().lookup(1).unwrap_or(0);
 
-    // ① 贸易臂：买商品 1（键盘 T 同语义；HUD 臂不切场景，命中不切场景返回属正常，
-    // 命中判据 = 下方状态断言）
-    hit(&mut app, 5, 1);
-    assert_eq!(app.gold(), initial_gold.saturating_sub(price1), "触摸贸易后金 = 开局金 - 单价");
-    assert_eq!(app.owned().len(), 1, "触摸贸易后持有量 +1");
+    // ① 贸易臂：买商品 1（S34 用户拍板「底部三键取掉」：pick_key 5/6/7 已删，贸易经
+    // `GameInput::TradeBuy` 直接 handle——同 `e2e_playthrough` 的键盘/手柄路径；命中层只余
+    // pick_key=4 摇骰 CTA。下方断言 = 经济闭环判据（金 - 单价 / 持有量 +1），不依赖三键命中。）
+    app.handle(GameInput::TradeBuy(1));
+    assert_eq!(app.gold(), initial_gold.saturating_sub(price1), "贸易后金 = 开局金 - 单价");
+    assert_eq!(app.owned().len(), 1, "贸易后持有量 +1");
 
     // ② 卖出臂：全卖商品 1（键盘 Y 同语义）
     let gold_before_sell = app.gold();
-    hit(&mut app, 6, 1);
-    assert!(app.gold() > gold_before_sell, "触摸卖出后金应增加");
+    app.handle(GameInput::TradeSell(1));
+    assert!(app.gold() > gold_before_sell, "卖出后金应增加");
     assert_eq!(app.owned().len(), 0, "全卖后持有量清零");
 
-    // ③ 建造臂（S21.12）：建造按钮（key 7）= 开建造面板 → 条目 0（城堡，开面板即选中）确认。
-    // 面板条目级命中 = S29.3 拾取层落地；此处用键盘 `Confirm` 确认当前选中（开面板 sel=0）。
+    // ③ 建造臂（S21.12）：开建造面板 → 条目 0（城堡，开面板即选中）确认。
+    // S34 用户拍板「底部三键取掉」：key 7（建造按钮）已删，面板经 `set_build_panel_open(true)`
+    // 打开（等价原命中触发；面板条目级命中 = 键盘 `Confirm` 确认当前选中）。
     let castle_cost = ti_core::rules::build::cost_of(
         &ti_core::data::balance().expect("balance.json 加载").build,
         Building::Castle,
     );
     let bank_before = app.bank().gold;
-    hit(&mut app, 7, -1);
-    assert!(app.build_panel_open, "点建造按钮应开建造面板");
+    app.set_build_panel_open(true);
+    assert!(app.build_panel_open, "开建造面板");
     assert_eq!(app.buildings().len(), 0, "面板确认前不建造");
     app.handle(GameInput::Confirm);
     assert!(!app.build_panel_open, "确认城堡条目后面板应关闭");
@@ -365,7 +367,7 @@ fn e2e_touch_economy_loop() {
         .cost;
     app.bank.gold += 5000;
     let bank_before_boat = app.bank().gold;
-    hit(&mut app, 7, -1);
+    app.set_build_panel_open(true);
     for _ in 0..4 {
         app.handle(GameInput::MoveDown);
     }

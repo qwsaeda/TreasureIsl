@@ -95,7 +95,8 @@ $expect = @{
     '/'                         = 'text/html'
     '/main.js'                  = 'javascript'
     '/treasure-bevy-wasm.js'    = 'javascript'
-    '/treasure_bevy_wasm.wasm'  = 'application/wasm'
+    # S25 版本规范：静态断言用实际产物名（`_bg.wasm`，wasmFile glob；旧 /treasure_bevy_wasm.wasm 退役）
+    ("/" + $wasmFile.Name)      = 'application/wasm'
 }
 $localOk = $true
 try {

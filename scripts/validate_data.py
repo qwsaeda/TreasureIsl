@@ -36,6 +36,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -557,6 +558,78 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
                         )
 
 
+def check_version_consistency(root: Path, problems: list[str]) -> None:
+    """S25 版本规范（25_versioning.md §1/§2）：版本三方对账防漂移。
+
+    - 版本单源 = `Cargo.toml` `[workspace.package] version`（x.y.z）。
+    - `android/AndroidManifest.xml` `versionName` 必须 == 单源（§2 不变量）。
+    - `scripts/build_apk.sh` / `scripts/build_wasm.ps1` 必须读单源版本命名产物
+      （禁散写版本字面量；产物名与版本不符 = 打包漂移）。
+    - `docs/release.md` 必须含当前版本规划行（§3.3）。
+    """
+    cargo = root / "Cargo.toml"
+    if not cargo.is_file():
+        problems.append("version: Cargo.toml 缺失")
+        return
+    # 读 [workspace.package] version（单源）
+    version = None
+    in_wp = False
+    try:
+        for line in cargo.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if line.strip() == "[workspace.package]":
+                in_wp = True
+                continue
+            if in_wp and line.strip().startswith("["):
+                break
+            if in_wp and line.strip().startswith("version"):
+                m = re.match(r'version\s*=\s*"([^"]+)"', line.strip())
+                if m:
+                    version = m.group(1)
+                break
+    except OSError as e:
+        problems.append(f"version: Cargo.toml 读取失败 {e}")
+        return
+    if not version or not re.match(r"^\d+\.\d+\.\d+$", version):
+        problems.append(f"version: Cargo.toml [workspace.package] version 非法或缺失（当前 = {version!r}）")
+        return
+
+    # AndroidManifest versionName 同步
+    man = root / "android" / "AndroidManifest.xml"
+    if man.is_file():
+        text = man.read_text(encoding="utf-8", errors="ignore")
+        m = re.search(r'android:versionName="([^"]+)"', text)
+        if not m:
+            problems.append(f"version: AndroidManifest.xml 缺 android:versionName（单源 = {version}）")
+        elif m.group(1) != version:
+            problems.append(
+                f"version: AndroidManifest versionName={m.group(1)} ≠ Cargo.toml {version}（25_versioning.md §2 不变量）"
+            )
+
+    # 构建脚本产物名读单源版本（禁散写；产物名必须含 x.y.z）
+    for script, marker in (
+        ("scripts/build_apk.sh", "TreasureIsl-${VERSION}-${ARCH}.apk"),
+        ("scripts/build_wasm.ps1", 'treasure_bevy_wasm-$version.wasm'),
+    ):
+        sp = root / script
+        if not sp.is_file():
+            problems.append(f"version: {script} 缺失")
+            continue
+        txt = sp.read_text(encoding="utf-8", errors="ignore")
+        # 必须含读版本逻辑（非硬编码字面量）+ 产物名含版本变量
+        has_read = ("version" in txt and ("[workspace.package]" in txt or "Cargo.toml" in txt))
+        if not has_read:
+            problems.append(f"version: {script} 未读 Cargo.toml 单源版本（25_versioning.md §2）")
+        if marker not in txt and version not in txt:
+            problems.append(f"version: {script} 产物名未含版本（期望含 x.y.z，25_versioning.md §2）")
+
+    # release.md 版本规划行
+    rel = root / "docs" / "release.md"
+    if rel.is_file():
+        text = rel.read_text(encoding="utf-8", errors="ignore")
+        if f"`{version}`" not in text:
+            problems.append(f"version: release.md 缺当前版本 {version} 版本规划行（25_versioning.md §3.3）")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="数据表兜底校验（gate 第 10a 项统一入口）")
     ap.add_argument("--root", type=Path, default=Path("."))
@@ -594,6 +667,7 @@ def main() -> int:
     check_scenes_canonical(root, problems)
     check_asset_registry(root, problems)
     check_test_manifest(root, problems)
+    check_version_consistency(root, problems)
 
     for p in problems:
         print(f"ERROR {p}")

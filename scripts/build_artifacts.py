@@ -48,9 +48,11 @@ KINDS: dict[str, dict] = {
     "wasm": {
         "runner": "pwsh",
         "cmd": ["pwsh", "-NoProfile", "-File", str(REPO / "scripts/build_wasm.ps1")],
-        "artifact": "web/treasure_bevy_wasm.wasm",
+        # S25 版本规范（25_versioning.md §2）：wasm 产物名带版本 `treasure_bevy_wasm-<x.y.z>.wasm`；
+        # artifact_present 复检 = 按 glob 找最新带版本文件（旧 raw 副本已退役）。
+        "artifact": "web/treasure_bevy_wasm-*.wasm",
         "post": "artifact_present",
-        "note": "含 cargo 编译（release wasm 目标）；按引用集裁剪部署",
+        "note": "含 cargo 编译（release wasm 目标）；按引用集裁剪部署；产物名带版本（S25）",
     },
     "native": {
         "runner": "cargo",
@@ -142,6 +144,14 @@ def cmd_post(kind: str) -> int:
         return 0
     if post == "artifact_present":
         art = REPO / KINDS[kind]["artifact"]
+        # S25 版本规范：wasm/apk 产物名带版本（`*.<x.y.z>.*` glob 模式）——用 glob 找最新文件；
+        # 旧版精确名（无 `*`）走 is_file 直判（兼容）。
+        if "*" in str(art):
+            matches = sorted(art.parent.glob(art.name))
+            if not matches:
+                print(f"post: 产物缺失（glob 无匹配）{art}", file=sys.stderr)
+                return 2
+            art = matches[-1]
         if not art.is_file():
             print(f"post: 产物缺失 {art}", file=sys.stderr)
             return 2

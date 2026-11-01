@@ -223,6 +223,73 @@ pub fn tests(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
     }))
 }
 
+/// `/api/tests?run=<id>`：后台运行 `test_manifest` 登记的一个测试命令（23 号 §6 平台集成「能实际运行」）。
+///
+/// 安全口径（22 号 §10.3 白名单）：`<id>` 必须是 `test_manifest.json` 登记的 `tests[].id`（枚举，
+/// 非自由字符串）；命令从该 test 的 `command` 字段取，**逐参数** `Command::new` 执行（禁 `sh -c`/
+/// `cmd /c` 字符串拼接，22 号禁止 2）；`cargo`/`python3`/`pwsh`/`powershell` 之外的程序 = 拒绝。
+/// 后台 spawn（`Stdio::null`），日志落 `evidence/console/logs/test-<id>-<ts>.log`（gitignored）。
+/// 轮询 `/api/tests` 或 `/api/build`（logs 面）查结果。
+///
+/// # Errors
+///
+/// id 未登记 / 命令程序不在白名单 / spawn 失败 = 带原因 `Err`。
+pub fn run_test(repo_root: &Path, sources: &RepoSources, test_id: &str) -> Result<Value, String> {
+    let manifest_path = pick_source(sources, "test_manifest")?;
+    let manifest = read_json(repo_root, &sources.repo_sources, &manifest_path)?;
+    let list = manifest.get("tests").and_then(Value::as_array).cloned().unwrap_or_default();
+    let test = list
+        .iter()
+        .find(|t| t.get("id").and_then(Value::as_str) == Some(test_id))
+        .ok_or_else(|| {
+            format!("run_test: id `{test_id}` 未在 test_manifest.json 登记（23 号 §7；枚举 id）")
+        })?;
+    let command = test.get("command").and_then(Value::as_str).unwrap_or("");
+    if command.is_empty() {
+        return Err(format!(
+            "run_test: `{test_id}` 无 command 字段（不可自动运行，如人工视觉验收）"
+        ));
+    }
+    // 逐参数拆分（空格；非 shell——命令串来自 test_manifest 登记，无引号嵌套）
+    let args: Vec<&str> = command.split_whitespace().collect();
+    if args.is_empty() {
+        return Err(format!("run_test: `{test_id}` command 为空"));
+    }
+    let program = args[0];
+    // 程序白名单（22 号 §10.3）：cargo / python3 / pwsh / powershell；其余（含 gate.ps1 直跑）= 拒。
+    if !matches!(program, "cargo" | "python3" | "pwsh" | "powershell") {
+        return Err(format!(
+            "run_test: `{test_id}` 程序 `{program}` 不在白名单（cargo/python3/pwsh/powershell；22 号 §10.3）"
+        ));
+    }
+    // 日志落 evidence/console/logs/（gitignored；与 build 同目录面）
+    let logs_dir = repo_root.join("evidence/console/logs");
+    std::fs::create_dir_all(&logs_dir).map_err(|e| format!("run_test: logs 目录创建失败 {e}"))?;
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    let log_name = format!("test-{test_id}-{ts}.log");
+    let log_path = logs_dir.join(&log_name);
+    let log_file =
+        std::fs::File::create(&log_path).map_err(|e| format!("run_test: 日志文件创建失败 {e}"))?;
+    let err_file = log_file.try_clone().map_err(|e| format!("run_test: 日志克隆失败 {e}"))?;
+    let child = std::process::Command::new(program)
+        .args(&args[1..])
+        .current_dir(repo_root)
+        .stdout(std::process::Stdio::from(log_file))
+        .stderr(std::process::Stdio::from(err_file))
+        .spawn()
+        .map_err(|e| format!("run_test: 后台 spawn 失败（{program} 缺位？）：{e}"))?;
+    Ok(json!({
+        "started": true,
+        "pid": child.id(),
+        "id": test_id,
+        "command": command,
+        "log": format!("evidence/console/logs/{log_name}"),
+        "note": "后台测试已启动（日志落 evidence/console/logs/test-<id>-<ts>.log）；轮询 /api/build 的 logs 面查结果",
+    }))
+}
+
 /// `/api/build`：构建产物清单 + 构建编排状态（S35.1，24 号 §4.1；只读）。
 ///
 /// 口径：`scripts/build_artifacts.py list`（已构建产物 体积/mtime）+ 最近一次构建日志

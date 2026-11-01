@@ -54,7 +54,17 @@ async function main() {
   const fs = require('node:fs');
   log(`[web-playtest] url=${URL_BASE}`);
   const webIndex = path.join(REPO, 'web', 'index.html');
-  const wasmMain = path.join(REPO, 'web', 'treasure_bevy_wasm.wasm');
+  // S25 版本规范（25_versioning.md §2）：wasm 产物名带版本（`treasure_bevy_wasm-<x.y.z>.wasm`，
+  // build_wasm.ps1 输出）；旧 raw 副本 `treasure_bevy_wasm.wasm` 已退役。读 glob 最新带版本文件，
+  // 缺失回退旧名（兼容未重建产物）。
+  const fsx = require('node:fs');
+  const wasmGlob = fsx.readdirSync(path.join(REPO, 'web'))
+    .filter((f) => /^treasure_bevy_wasm-\d+\.\d+\.\d+\.wasm$/.test(f))
+    .sort()
+    .pop();
+  const wasmMain = wasmGlob
+    ? path.join(REPO, 'web', wasmGlob)
+    : path.join(REPO, 'web', 'treasure_bevy_wasm.wasm');
   if (!fs.existsSync(webIndex)) {
     log('FAIL  web/index.html 缺失（先跑 build_wasm.ps1）');
     return 1;

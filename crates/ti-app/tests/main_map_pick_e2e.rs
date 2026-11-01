@@ -4,8 +4,11 @@
 //! 出售 / 建造 四键全不可点（B1 拾取层 `spawn_pick_layer` 只认 `pick_key>0` 原语）。
 //! 修复 = 数据面补 `pick_key`（4/5/6/7）+ 轴心补骰点贴图。
 //!
+//! S34 用户 2026-11-01「底部三键取掉」：5/6/7（贸易/出售/建造）随三键原语删除，
+//! 命中层只余 4（摇骰 CTA）；判据 ①/② 相应收窄。
+//!
 //! 判据：
-//! ① `main_map` 场景数据面必须同时存在 `pick_key` = 4（摇骰）/ 5（买）/ 6（卖）/ 7（建造）；
+//! ① `main_map` 场景数据面必须存在 `pick_key` = 4（摇骰），且 5/6/7 恰 0 个（三键已取掉）；
 //! ② 每个 `pick_key` 原语须有非零矩形（命中几何非空）；
 //! ③ `on_hit` 消费面（键 4 → Spin）可达（headless 走 `poll_hit` → `GameInput::Spin`）。
 
@@ -45,12 +48,17 @@ fn enter_main_map(app: &mut GameApp) {
 #[test]
 fn main_map_hud_pick_keys_present() {
     let prims = main_map_pick_keys();
-    for key in [4u32, 5, 6, 7] {
+    // S34 用户 2026-11-01「底部三键取掉」：pick_key 5/6/7（TradeBuy/TradeSell/建造）随三键
+    // 原语删除，main_map 命中层只余 4（摇骰 CTA）。此断言 = 版面规格守门：4 恰 1 个、
+    // 5/6/7 恰 0 个（三键不常驻，用户拍板）。
+    let hits4: Vec<_> = prims.iter().filter(|(k, ..)| *k == 4).collect();
+    assert_eq!(hits4.len(), 1, "main_map 应恰有 1 个 pick_key=4 原语");
+    let (_, x, y, w, h) = *hits4[0];
+    assert!(w > 0 && h > 0, "pick_key=4 矩形须非空（命中几何）");
+    assert!(x >= 0 && y >= 0, "pick_key=4 矩形须在屏内");
+    for key in [5u32, 6, 7] {
         let hits: Vec<_> = prims.iter().filter(|(k, ..)| *k == key).collect();
-        assert_eq!(hits.len(), 1, "main_map 应恰有 1 个 pick_key={key} 原语");
-        let (_, x, y, w, h) = *hits[0];
-        assert!(w > 0 && h > 0, "pick_key={key} 矩形须非空（命中几何）");
-        assert!(x >= 0 && y >= 0, "pick_key={key} 矩形须在屏内");
+        assert_eq!(hits.len(), 0, "pick_key={key} 三键已取掉（S34 用户拍板），应 0 个");
     }
 }
 

@@ -16,8 +16,8 @@
 #   ⑥launcher 图标/应用名 + res/ 两阶段（`aapt2 compile --dir android/res -o res.zip` → link；
 #     = catalog ⑦，EXP-148）：`android:icon="@mipmap/ic_launcher"` + `label="@string/app_name"`。
 #   ⑦默认 arm64（2026-11-01 用户拍板「主要安卓玩」；x86_64 传参）+ 产物按架构命名
-#     （arm64→TreasureIsl-arm64.apk，x86_64→TreasureIsl.apk，不再 mv 覆盖 hack）+ `.so` 已存在且
-#     比壳源新 ⇒ 复用（固定产物复用；`--force` 强制重编）。
+#     （S25 版本规范后 = `TreasureIsl-<x.y.z>-<arch>.apk`，arch = arm64/x86_64；版本单源 = Cargo.toml）
+#     + `.so` 已存在且比壳源新 ⇒ 复用（固定产物复用；`--force` 强制重编）。
 # S35.0（24 号 APK 体积标准，2026-11-01）：⑧`.so` 改 ZIP_DEFLATED（原 Stored 原样 53MB ⇒ 压缩 20MB）
 #     + assets 只带「引擎引用集」（`scripts/apk_audit.py --refset`，未引用 UI 图 0 进包）
 #     + [4/5] 体积审计判据（.so 压缩率 + 引用集漂移，FAIL 阻断发布）。
@@ -37,7 +37,14 @@ TARGET="${ARCH}-linux-android"
 SRC_SO="/disk/target/${TARGET}/release/libandroid_activity.so"
 WORK=/tmp/opencode/apk_build
 OUT=$REPO/dist
-APK_OUT=$([ "$ARCH" = "aarch64" ] && echo "$OUT/TreasureIsl-arm64.apk" || echo "$OUT/TreasureIsl.apk")
+# S25 版本规范（25_versioning.md §2）：产物名带 x.y.z，版本单源 = `Cargo.toml` `[workspace.package] version`
+# （禁散写版本字面量；产物名与版本不一致 = 打包漂移，validate_data check_version_consistency 兜底）。
+VERSION=$(sed -n '/^\[workspace.package\]/,/^\[/p' "$REPO/Cargo.toml" | grep -m1 '^version' | cut -d'"' -f2)
+if [ -z "$VERSION" ]; then
+    echo "  FAIL  读不到 Cargo.toml [workspace.package] version（25_versioning.md §1 单源）" >&2
+    exit 1
+fi
+APK_OUT="$OUT/TreasureIsl-${VERSION}-${ARCH}.apk"
 
 cd "$REPO"
 echo "=== S2.6 Android APK 构建（${TARGET} / ABI ${ABI}）==="

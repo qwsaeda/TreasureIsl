@@ -37,7 +37,8 @@
             android:exported="true"
             android:extractNativeLibs="true"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:hardwareAccelerated="true">
+            android:hardwareAccelerated="true"
+            android:screenOrientation="landscape">
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="android_activity" />

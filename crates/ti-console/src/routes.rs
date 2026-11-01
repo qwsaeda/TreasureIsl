@@ -31,6 +31,11 @@ fn load_sources_opt(repo_root: &Path) -> Option<crate::repo::config::RepoSources
     load_sources_file(repo_root).ok()
 }
 
+/// 取查询串里某个键的值（`?run=<id>` 形态；无该键 = `None`；`url` 含 `?` 才拆）。
+fn query_param<'a>(url: &'a str, key: &str) -> Option<&'a str> {
+    url.split('?').nth(1)?.split('&').find_map(|kv| kv.strip_prefix(&format!("{key}=")))
+}
+
 /// 处理一个连接（每连接一线程；`web_root` = 静态壳，`repo_root` = 仓库根只读数据源面）。
 pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
     let mut reader = BufReader::new(match stream.try_clone() {
@@ -118,14 +123,18 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
             api_500_or_json(load_json(repo_root, |s| data::evidence_list(repo_root, s, &sub)), gz)
         }
         "/api/assets" => api_500_or_json(load_json(repo_root, |s| data::assets(repo_root, s)), gz),
-        "/api/tests" => api_500_or_json(load_json(repo_root, |s| data::tests(repo_root, s)), gz),
+        "/api/tests" => {
+            let run = query_param(url, "run");
+            api_500_or_json(
+                load_json(repo_root, |s| match run {
+                    Some(id) => data::run_test(repo_root, s, id),
+                    None => data::tests(repo_root, s),
+                }),
+                gz,
+            )
+        }
         "/api/build" => {
-            let mut run: Option<&str> = None;
-            if let Some(q) = url.split('?').nth(1) {
-                if let Some(v) = q.split('&').find_map(|kv| kv.strip_prefix("run=")) {
-                    run = Some(v);
-                }
-            }
+            let run = query_param(url, "run");
             api_500_or_json(load_json(repo_root, |s| data::build_artifacts(repo_root, s, run)), gz)
         }
         "/api/apk-size" => {

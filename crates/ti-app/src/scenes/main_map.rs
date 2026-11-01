@@ -241,13 +241,8 @@ fn build_entry_icon(host: &dyn SceneHost, entry: usize) -> &'static str {
         .unwrap_or_else(|| chrome::boat_asset(host.boat_level()))
 }
 
-/// S21.12 打开建造面板（选中复位第 0 项；面板渲染/交互由后续帧与点按接管）。
-fn open_build_panel(host: &mut dyn SceneHost) {
-    host.set_build_panel_sel(0);
-    host.set_build_panel_open(true);
-    host.play_sfx(Sfx::Press);
-}
-
+// S34 用户 2026-11-01「底部三键取掉」：`open_build_panel`（原 pick_key=7 触发）随三键原语删除；
+// 建造面板交互 = 键盘 ↑↓/Enter/Back（`on_input`，`build_panel_open` 状态机保留）。
 /// S21.12 面板当前选中项（越界 = 末条目；选中域 0..=`BUILD_LAST_ENTRY`）。
 fn panel_sel_clamped(host: &dyn SceneHost) -> usize {
     usize::from(host.build_panel_sel().min(chrome::BUILD_LAST_ENTRY))
@@ -575,14 +570,11 @@ impl Scene for MainMapScene {
         if hit.swipe != 0 {
             return false;
         }
+        // S34 用户 2026-11-01「底部三键取掉」：原 5/6/7（TradeBuy/TradeSell/建造）随三键原语
+        // 一并删除（scenes.json main_map primitives 只余 pick_key=4 摇骰 CTA）；建造面板
+        // 交互 = 键盘 ↑↓/Enter/Back（`on_input`），命中层不再有 5/6/7。
         match hit.key {
             4 => host.advance(GameInput::Spin),
-            5 => host.advance(GameInput::TradeBuy(1)),
-            6 => host.advance(GameInput::TradeSell(1)),
-            7 => {
-                open_build_panel(host);
-                true
-            }
             _ => false,
         }
     }
@@ -1074,33 +1066,10 @@ fn render_v6_proto(
     // 5) 底部三键弹出式（v6 用户裁决）：不常驻——覆盖常驻三键区域为羊皮底，只留
     //    「落占领格才弹出建造/贸易/出售」说明铜牌；`build_panel_open` 时弹出建造面板
     //   （用毕确定退出副本 = 交互语义，原型静态画面板示意）。
-    let mut dbx = 0;
-    let mut dby = 0;
-    let mut dbw = 0;
-    let mut dbh = 0;
-    for key in [chrome::keys::DECK_TRADE, chrome::keys::DECK_SELL, chrome::keys::DECK_BUILD] {
-        if let Some(r) = layout.extra.get(key) {
-            if dbw == 0 {
-                dbx = r.x;
-                dby = r.y;
-            }
-            dbx = dbx.min(r.x);
-            dby = dby.min(r.y);
-            dbw = dbw.max(r.x + r.w - dbx);
-            dbh = dbh.max(r.y + r.h - dby);
-        }
-    }
-    if dbw > 0 {
-        host.fill_rect(dbx - 12, dby - 12, dbw + 24, dbh + 24, sand_light);
-        let note = i18n::sget("scene.main_map.v6_deck_popup_note");
-        let nw = host.shell().hint_text_width_px(note);
-        host.draw_hint_text(
-            note,
-            540 - nw / 2,
-            dby + (dbh - host.shell().hint_glyph_px()) / 2,
-            chrome::COLOR_TEXT_ON_PARCH,
-        );
-    }
+    // S34 用户 2026-11-01「底部三键取掉」：deck_trade/deck_sell/deck_build 三键原语已从
+    // scenes.json 删除（本函数不再有羊皮底覆盖对象）；`layout.extra` 无 deck_* 键（顶层键），
+    // 旧覆盖逻辑是死代码，一并删除。建造面板（`build_panel_open`）交互 = 键盘（on_input），
+    // 面板 + 提示签条照旧。
     if host.build_panel_open() {
         render_build_panel(host);
     }

@@ -827,14 +827,16 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
 
 /// ①b 逐场景必需命中键（S27.5 教训固化）：场景消费面（`on_hit`）用到的键在数据面
 /// 必须存在，缺 = 该键不可点。键语义 = `20_bevy_picking.md` §6 约定
-/// （1=index 罗盘环徽章 / 2=列表行 / 3=存档槽 / 4..=7=主地图摇骰·买·卖·建造）。
+/// （1=index 罗盘环徽章 / 2=列表行 / 3=存档槽 / 4=主地图摇骰 / 5..7=贸易·出售·建造）。
+/// S34 用户 2026-11-01「底部三键取掉」：main_map 5/6/7 已删（命中面只余 4），
+/// 必需键收窄为 [4]，且 5/6/7 恰 0 个（防回潮）。
 fn check_scene_required_pick_keys(scenes: &str, errors: &mut Vec<String>) {
     const SCENE_REQUIRED_PICK_KEYS: &[(&str, &[u64])] = &[
         ("index", &[1]),
         ("select_role", &[2]),
         ("select_map", &[2]),
         ("saveload", &[3]),
-        ("main_map", &[4, 5, 6, 7]),
+        ("main_map", &[4]),
     ];
     let Ok(json) = serde_json::from_str::<serde_json::Value>(scenes) else {
         return;
@@ -861,6 +863,16 @@ fn check_scene_required_pick_keys(scenes: &str, errors: &mut Vec<String>) {
                 errors.push(format!(
                     "scenes.json `{scene_name}` 缺 `pick_key={key}`（命中数据面缺失 = 该键不可点；S27.5 教训）"
                 ));
+            }
+        }
+        // S34：main_map 三键已取掉（用户拍板）——5/6/7 命中面恰 0 个，防回潮。
+        if *scene_name == "main_map" {
+            for key in [5u64, 6, 7] {
+                if present.contains(&key) {
+                    errors.push(format!(
+                        "scenes.json `main_map` 残留 `pick_key={key}`（S34 底部三键已取掉，应 0 个）"
+                    ));
+                }
             }
         }
     }
@@ -985,11 +997,6 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
             "\"main_map\"",
             "btn_spin",
             "main_map S21.6 v4 舵轮 CTA 原语 = btn_spin 贴图（§4.3 S21.6，大号黄铜舵轮）",
-        ),
-        (
-            "\"main_map\"",
-            "deck_plaque",
-            "main_map S21.6 v4 底部三键铜牌 = deck_plaque 贴图（§4.3 S21.6）",
         ),
         (
             "\"main_map\"",

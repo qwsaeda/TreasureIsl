@@ -82,11 +82,32 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) { Write-Host "  FAIL  wasm-bindgen" -ForegroundColor Red; exit 1 }
 
 # 3) 拷贝 wasm 到 web/
-$wasmIn = $wasmOut
-if (-not (Test-Path $wasmIn)) { Write-Host "  FAIL  未找到 $wasmIn" -ForegroundColor Red; exit 1 }
+# S25 版本规范（25_versioning.md §2）：产物名带 x.y.z，版本单源 = `Cargo.toml` `[workspace.package] version`
+# （禁散写版本字面量；产物名与版本不一致 = 打包漂移，validate_data check_version_consistency 兜底）。
+$version = $null
+$inWpPkg = $false
+foreach ($line in Get-Content (Join-Path $PSScriptRoot '..\Cargo.toml')) {
+    if ($line -match '^\[workspace\.package\]') { $inWpPkg = $true; continue }
+    if ($inWpPkg -and $line -match '^\[') { break }
+    if ($inWpPkg -and $line -match '^version\s*=\s*"([^"]+)"') { $version = $Matches[1]; break }
+}
+if (-not $version) {
+    Write-Host "  FAIL  读不到 Cargo.toml [workspace.package] version（25_versioning.md §1 单源）" -ForegroundColor Red
+    exit 1
+}
+# 实际加载的 wasm = wasm-bindgen 产出的 `treasure-bevy-wasm_bg.wasm`（main.js 引 `treasure-bevy-wasm.js` 胶水，
+# 胶水内部引用 `_bg.wasm`）；版本化交付名 = `treasure_bevy_wasm-<x.y.z>.wasm`（页面不直接引用，作发布记录）。
+$bgWasm = Join-Path $outDir 'treasure-bevy-wasm_bg.wasm'
+if (-not (Test-Path $bgWasm)) { Write-Host "  FAIL  未找到 $bgWasm" -ForegroundColor Red; exit 1 }
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-Say "拷贝 wasm 到 $outDir\ ..."
-Copy-Item $wasmIn (Join-Path $outDir 'treasure_bevy_wasm.wasm') -Force
+Say "拷贝 wasm（带版本）到 $outDir\ ..."
+Copy-Item $bgWasm (Join-Path $outDir "treasure_bevy_wasm-$version.wasm") -Force
+# 清理旧的无版本 raw 副本（`treasure_bevy_wasm.wasm` = cargo 裸产物重复拷贝，未加载，S25 起退役）
+$legacyRaw = Join-Path $outDir 'treasure_bevy_wasm.wasm'
+if (Test-Path $legacyRaw) {
+    Remove-Item $legacyRaw -Force
+    Say "移除遗留无版本 raw 副本 $legacyRaw（S25 版本规范后以 $version 命名）"
+}
 
 # 3b) 清掉 macroquad 时代的遗留壳文件（gl.js / audio.js / treasure_wasm.wasm / index.html）：
 #     它们属于已退役的 macroquad wasm 壳，留着会让人误以为 web/ 仍可玩。

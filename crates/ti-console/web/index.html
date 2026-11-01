@@ -1079,6 +1079,16 @@ function renderTestDetail(id) {
   let h = `<div class="card" style="padding:12px">`;
   h += `<div style="margin-bottom:8px"><b>${esc(x.name || x.id)}</b> <code>${esc(x.id)}</code></div>`;
   h += rows.map(([k, v]) => `<div class="meta-row"><span class="k">${k}</span><span>${esc(v)}</span></div>`).join('');
+  // S32 用户拍板「测试能实际运行」（23 号 §6 平台集成）：点运行 → POST /api/tests?run=<id> 后台 spawn
+  //（白名单枚举 id；日志落 evidence/console/logs/test-<id>-<ts>.log，轮询读尾部）。人工/无命令 = 禁用。
+  const runnable = x.command && /^(cargo|python3|pwsh|powershell)\b/.test(x.command);
+  h += `<div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button id="ts-run-btn" ${runnable ? '' : 'disabled'} style="background:${runnable ? 'var(--accent)' : 'var(--panel2)'};border:1px solid ${runnable ? 'var(--accent)' : 'var(--border)'};color:${runnable ? '#0d0f17' : 'var(--muted)'};border-radius:6px;padding:8px 16px;cursor:${runnable ? 'pointer' : 'not-allowed'};font-weight:600">
+      ${runnable ? '▶ 运行测试' : '（不可自动运行：人工验收/非白名单程序）'}
+    </button>
+    <span id="ts-run-msg" style="color:var(--muted);font-size:12px"></span>
+  </div>
+  <div id="ts-run-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:220px;overflow:auto;display:none"></div>`;
   h += `</div>`;
   // 步骤/阶段（异步解析 evidence 日志：--shot 预载/就绪/写盘行 + gate Report 阶段）
   loadTestSteps(x);
@@ -1094,6 +1104,61 @@ function renderTestDetail(id) {
     });
   }
   $('ts-detail').insertAdjacentHTML('beforeend', h);
+  // 运行按钮（若禁用则跳过）；点运行 → GET /api/tests?run=<id>（后台 spawn），轮询读日志尾部
+  const runBtn = document.getElementById('ts-run-btn');
+  const runMsg = document.getElementById('ts-run-msg');
+  const runOut = document.getElementById('ts-run-out');
+  if (runBtn && runnable) {
+    runBtn.addEventListener('click', () => {
+      runBtn.disabled = true;
+      runBtn.textContent = '运行中…';
+      runMsg.textContent = '';
+      runOut.style.display = 'block';
+      runOut.textContent = '启动中…';
+      api('/api/tests?run=' + encodeURIComponent(x.id)).then((r) => {
+        runMsg.textContent = '已启动（pid ' + r.pid + '）：' + (r.log || '');
+        pollTestLog(r.log, runOut, () => {
+          runBtn.disabled = false;
+          runBtn.textContent = '▶ 运行测试';
+        });
+      }).catch((e) => {
+        runMsg.textContent = '启动失败：' + String(e);
+        runBtn.disabled = false;
+        runBtn.textContent = '▶ 运行测试';
+      });
+    });
+  }
+}
+
+// 轮询测试日志尾部（每 2s）：读 /<log> 增量行 + 终端标记（test result/FAILED/panic）+ 停止增长探测
+async function pollTestLog(logPath, out, done) {
+  const seen = {};
+  let lastLen = -1;
+  let noGrow = 0;
+  let finished = false;
+  const timer = setInterval(async () => {
+    try {
+      const r = await fetch('/' + logPath + '?t=' + Date.now());
+      if (!r.ok) return;
+      const txt = await r.text();
+      const lines = txt.split(/\r?\n/);
+      const fresh = lines.filter((l) => l && !seen[l]);
+      lines.forEach((l) => { seen[l] = true; });
+      if (fresh.length) {
+        out.textContent = (out.textContent ? out.textContent + '\n' : '') + fresh.join('\n');
+        out.scrollTop = out.scrollHeight;
+      }
+      if (/\b(test result:|FAILED|error\[|panicked)\b/.test(txt)) finished = true;
+      // 停止增长 3 次（~6s）且已见过内容 = 进程结束（cargo test 写完 terminal marker 后不再增长）
+      if (txt.length === lastLen) noGrow++; else noGrow = 0;
+      lastLen = txt.length;
+      if ((finished || noGrow >= 3) && txt.length > 0) {
+        clearInterval(timer);
+        out.textContent += '\n[运行结束]';
+        done && done();
+      }
+    } catch (e) { /* 轮询容错 */ }
+  }, 2000);
 }
 
 // 异步解析 evidence 日志关键阶段行（--shot 预载/就绪/写盘、gate Report、playtest 流转）

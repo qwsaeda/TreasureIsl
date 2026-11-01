@@ -354,8 +354,49 @@ fn spawn_audio(mut commands: Commands, server: Res<AssetServer>) {
     let invalid = server.load::<AudioSource>("assets/audio/invalid.wav");
     let victory = server.load::<AudioSource>("assets/audio/victory.wav");
     commands.insert_resource(GameAudio { press, invalid, victory });
-    // BGM 循环（原版 MOD 循环；缺音频设备 = Bevy 记 WARN 不 panic，静默降级）。
-    commands.spawn((AudioPlayer(bgm), PlaybackSettings::LOOP));
+    // BGM：native 直接播（有声卡、无浏览器 autoplay 限制）；wasm 等首次用户交互
+    // （浏览器 autoplay policy：`AudioContext.resume()` 需用户手势，Startup 无手势被拒）。
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // BGM 循环（原版 MOD 循环；缺音频设备 = Bevy 记 WARN 不 panic，静默降级）。
+        commands.spawn((AudioPlayer(bgm), PlaybackSettings::LOOP));
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        commands.insert_resource(BgmUnlock { bgm, started: false });
+    }
+}
+
+/// wasm autoplay 解锁状态（`unlock_bgm_system` 用）：首次用户交互后 spawn BGM。
+#[cfg(target_arch = "wasm32")]
+#[derive(Resource)]
+struct BgmUnlock {
+    /// BGM `AudioSource` 句柄（`spawn_audio` 预载）。
+    bgm: Handle<AudioSource>,
+    /// 已 spawn BGM（只 spawn 一次，防重复）。
+    started: bool,
+}
+
+/// wasm 首次用户交互（pointer/keyboard）后起 BGM：浏览器 autoplay policy 要求
+/// `AudioContext.resume()` 在用户手势之后（页面 sticky activation）——cpal 0.17 wasm 的
+/// `Stream::play` 会调 `ctx.resume()`，但 Startup spawn 时无手势被拒；首次交互后
+/// Update 里 spawn（resume 成功）⇒ BGM 响。native 无此限制（`cfg(not(wasm32))` 直播）。
+#[cfg(target_arch = "wasm32")]
+#[allow(clippy::needless_pass_by_value)]
+fn unlock_bgm_system(
+    mouse: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut unlock: ResMut<BgmUnlock>,
+    mut commands: Commands,
+) {
+    if unlock.started {
+        return;
+    }
+    // bevy 0.20 `ButtonInput::get_just_pressed()` = 本帧刚按下的迭代器（任意键/鼠标键）。
+    if mouse.get_just_pressed().next().is_some() || keys.get_just_pressed().next().is_some() {
+        commands.spawn((AudioPlayer(unlock.bgm.clone()), PlaybackSettings::LOOP));
+        unlock.started = true;
+    }
 }
 
 /// S34：读本帧 `last_sfx` → 播对应音效（一次性，播完 despawn）。须在 `render_system`
@@ -2133,6 +2174,9 @@ fn run() {
         app.add_systems(Startup, spawn_ui_chrome);
         // S34：音频启动预载 + BGM 循环（仅 live 路径；selftest/shot 无窗口无声卡，跳过）。
         app.add_systems(Startup, spawn_audio);
+        // wasm autoplay 解锁：BGM 等首次用户交互（浏览器策略；native 在 spawn_audio 直播）。
+        #[cfg(target_arch = "wasm32")]
+        app.add_systems(Update, unlock_bgm_system);
     }
     if shot {
         run_shot(&mut app, &scene_id, viewport);
