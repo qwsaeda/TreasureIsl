@@ -1,5 +1,7 @@
 # 经济系统
 
+> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+
 > **已弃用**：本文件旧数值体系（spice/silk/gem 业务名 + oracle 推测值）已被 `docs/business/economy.md` + `assets/data/balance.json` 取代（S8.0 决策），仅留作逆向历史参照。业务规则以 business/ 为准。
 
 本文档定义完整的经济系统：贸易（价格表/买卖公式/利润计算）、建造（建筑类型/成本公式/银行系统/金上限）。

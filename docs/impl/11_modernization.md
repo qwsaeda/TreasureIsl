@@ -1,5 +1,7 @@
 # 11 — 现代化改造实现规格
 
+> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+
 > 单一事实源：本文件是 `ti-app` 表现层 + `ti-platform` 渲染后端的现代化实现规格。
 > 关联文档：`docs/modernization.md`（方案总纲）、`legacy/docs/design/constants.md`（常量表）。
 

@@ -1,5 +1,7 @@
 # 10 — RNG 系统实现规格
 
+> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+
 > 单一事实源：本文件是 `ti-core::rules::rng::GameRng` 的实现规格。
 > 数值溯源（历史实测参照，归档 `legacy/`）：RNG 播种点与 LCG 算法为 S3.12 实测，完整证据见 `legacy/evidence/`；LCG 为 oracle 历史参照，S8.7 起 rules 侧改 `rand_pcg` PCG。
 

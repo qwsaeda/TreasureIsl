@@ -1,5 +1,7 @@
 # 13 — 参考附录
 
+> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+
 > 单一事实源：本文件汇总所有全局常量、事件码、场景码、错误类型、文件格式和资源清单。
 > 关联文档：`legacy/docs/design/constants.md`（常量表）、`docs/formats/lucencypackage.md`（容器格式）。
 

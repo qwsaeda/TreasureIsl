@@ -1,5 +1,7 @@
 # 14 — HD 资产增强管线（S7）
 
+> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+
 > 单一事实源：本文件是「分类 → 批量超分/矢量化 → 关键图 AI 重绘 → 动画时序稳定 → 多分辨率打包」
 > 的完整实现规格。关联：`docs/plan-s7.md`（任务表）、`docs/modernization.md`（总纲）、
 > `docs/impl/07_ui_controls.md`（渲染管线）、`docs/impl/13_appendix.md`（资源清单）。

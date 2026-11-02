@@ -31,14 +31,20 @@
 | **S9 骨架** | 场景真拆分 → 窄接口 8 模块 → 字段私有化 → Builder+Type-State → Command 模式 | 前言见 [`plan-s10-refactor.md`](plan-s10-refactor.md) |
 | **S10 现代化收口** | P0 错乱修复 + 占位清零 + GPU 化渲染 + 对抗流水线 loop 至停机 | [`plan-s10-refactor.md`](plan-s10-refactor.md) |
 | **S11 正向开发收口** | 逆向产物物理归档 `legacy/` + oracle 桥接层独立 crate + 业务闭环 + 模块并行 loop 固化 | [`plan-s11-forward.md`](plan-s11-forward.md) |
+| **S12 模块化并行** | 契约→并行→集成 loop 固化（D+P1–P6 七包，机读源 `plan/packages.yaml`） | [`plan-s12-parallel.md`](plan-s12-parallel.md) |
+| **S13 质量基建** | 种子化 playtest / 台账回退防护 / 飞轮流水线 / 视觉回归门禁（任务见台账，原计划已并入 S12 文档） | [`plan-s12-parallel.md`](plan-s12-parallel.md) |
+| **S14 业务对齐收口** | 业务规则/数值/版面单一事实源落地（S14.0 已验证，任务见台账） | 见台账 |
+| **S15 业务场景穷举** | 9 场景业务闭环穷举 + 跨图推进规则定稿（S15.1~S15.2 已验证，任务见台账） | 见台账 |
+| **S16 试玩闭环+发布** | 浏览器真运行时试玩 + 试玩 agent 闭环 + 一键发布 + 内容设计 sheet（S16.1~S16.4 已验证） | [`plan-s16-loop.md`](plan-s16-loop.md) |
+| **S17~S31 UI 重设计/迁移** | v2 设计令牌→v3 场景叙事→v3.5 数据化→v4 羊皮海图→v5 环形棋盘→布局引擎 B1→资产/内容管线→地图包标准；计划 = 各设计/流程 spec（`docs/ui-redesign-v3/` + `docs/process/`），**非 plan-\* 文档** | 见 `docs/README.md` + 26 号 overview 阶段表 |
+| **S33 领地/大富翁 v2** | 兵力模型/海事事件/商人/驻军/攻占/破产/AI（S33.1~S33.6 已验证） | [`plan-s33-territory-v2.md`](plan-s33-territory-v2.md) |
 
 ## 仍在使用的计划（非归档，勿当历史）
 
 | 文件 | 状态 |
 |---|---|
-| [`plan-s12-parallel.md`](plan-s12-parallel.md) | S12 模块化并行 WBS（D+P1–P6 七包，机读源 `plan/packages.yaml`） |
-| [`plan-s13-*`](plan-s12-parallel.md) | 质量基建（种子化 playtest / 台账回退防护 / 飞轮 / 视觉回归）任务见台账，原计划已并入 S12 文档 |
-| `docs/plan-s16-loop.md` | **未登记台账的 WIP 草稿**（S16 可玩性+渲染+运营 WBS），尚未 verified，勿当依据 |
+| [`plan-s32-platform.md`](plan-s32-platform.md) | S32 开发管理平台（S32.1~S32.6 已验证，S32.7~S32.9 待做；单一事实源 = 22 号 `docs/process/22_dev_platform.md`） |
+| [`plan-s34-main-map-v6-vs-v2.md`](plan-s34-main-map-v6-vs-v2.md) | S34 main_map v6「古典羊皮航海图」+ VS v2 战斗动画（进行中） |
 
 ## 归档纪律
 

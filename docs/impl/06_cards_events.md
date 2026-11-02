@@ -1,5 +1,7 @@
 # 卡牌与事件系统实现规格
 
+> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+
 本文档是卡牌/事件系统的完整实现规格，实现者无需阅读其他文档即可写出正确的卡牌逻辑代码。
 
 > 事实来源：`legacy/docs/design/combat.md` §2 + `legacy/docs/design/constants.md` §5 + `legacy/docs/facts/map.md`。

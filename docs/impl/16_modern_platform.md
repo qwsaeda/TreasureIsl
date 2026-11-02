@@ -1,5 +1,7 @@
 # 16 — 现代多端实现指南（Mobile / Desktop / Web）
 
+> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+
 > 本文档定义把《金银岛》从原版 Windows Mobile ARM 176×220 升级为**现代多端可玩游戏**
 > 的完整实现规格：架构选型、渲染管线、输入系统、音频、持久化、PWA、Android、性能预算、
 > 资源分包策略。读者仅凭本文档 + 00_index.md 架构总览即可搭建三端运行框架。

@@ -1,5 +1,7 @@
 # 09 — 持久化系统实现规格
 
+> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+
 > 单一事实源：本文件是 `ti-platform::fs` + `ti-formats::save` + `ti-core::rules::saveload` 的实现规格。
 > 数值溯源（历史实测参照，归档 `legacy/`）：存档布局（前缀 `5D 4A` / magic 字节序列）与 RNG 播种点均来自 S1.9 实测，完整证据见 `legacy/evidence/`。LCG 为 oracle 历史参照，S8.7 起 rules 侧改 `rand_pcg` PCG。
 
