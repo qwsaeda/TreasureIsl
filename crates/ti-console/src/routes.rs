@@ -6,6 +6,9 @@
 //!   设计图页 `sub=ui_concept`）`/api/assets` `/api/tests` `/api/session` `/api/audit`
 //!   `/api/map` = 只读数据源适配（`repo::data`，22 号 §5/§10.2；路径全过 `resolve_guarded`
 //!   白名单 + canonicalize 防穿越；0 写盘）；
+//! - S32.4 门禁执行面：`GET /api/gate` = 运行状态 + 历史（只读，免 token）；
+//!   `POST /api/gate` = 写操作（X-TI-Token 鉴权 403 + 非法 tier 400 + 锁占用 409 + 后台 spawn，
+//!   22 号 §4.2 白名单 id `gate`；`runner::gate`）；
 //! - S32.3 静态面（`web/`）= 看板 UI v1（左菜单分组 8 页 = 概览/任务/证据/资产/设计图/地图/测试/设置；
 //!   原生 JS + CSS 全内联无 npm；视觉令牌 = 游戏「航海夜·精修」，内联于 `index.html` `<style>`
 //!   （对齐 `docs/process/10_ui_redesign.md` §3 设计令牌 v2；单文件交付，0 外部静态资源依赖）；
@@ -24,6 +27,7 @@ use crate::repo::config::{RepoSources, load as load_sources_file};
 use crate::repo::data;
 use crate::repo::guard::{PathGuardError, resolve_guarded};
 use crate::repo::import;
+use crate::runner;
 use ti_devmeta::http::{mime_for, resolve_or_404};
 
 /// 每连接一次的数据源清单加载（缺文件/非法 JSON = 该请求 500，不阻断静态面）。
@@ -34,6 +38,56 @@ fn load_sources_opt(repo_root: &Path) -> Option<crate::repo::config::RepoSources
 /// 取查询串里某个键的值（`?run=<id>` 形态；无该键 = `None`；`url` 含 `?` 才拆）。
 fn query_param<'a>(url: &'a str, key: &str) -> Option<&'a str> {
     url.split('?').nth(1)?.split('&').find_map(|kv| kv.strip_prefix(&format!("{key}=")))
+}
+
+/// 请求头解析结果（S32.4：缓存/压缩协商 + POST body 长度 + 写操作 token + content-type）。
+struct ReqHeaders {
+    if_none_match: Vec<String>,
+    accept_gzip: bool,
+    content_length: u64,
+    x_ti_token: Option<String>,
+    content_type: Option<String>,
+}
+
+/// 逐行读请求头（首行已在 serve 读过；空行结束）。
+fn read_headers(reader: &mut BufReader<TcpStream>) -> ReqHeaders {
+    let mut hdrs = ReqHeaders {
+        if_none_match: Vec::new(),
+        accept_gzip: false,
+        content_length: 0,
+        x_ti_token: None,
+        content_type: None,
+    };
+    let mut hline = String::new();
+    while let Ok(n) = reader.read_line(&mut hline) {
+        if n == 0 {
+            break;
+        }
+        let tl = hline.trim();
+        if tl.is_empty() {
+            break;
+        }
+        if let Some(v) = tl.strip_prefix("If-None-Match:") {
+            hdrs.if_none_match.push(v.trim().to_owned());
+        }
+        // 压缩协商：`Accept-Encoding: gzip`（大小写不敏感，含 `gzip` 即认）。
+        if let Some(v) = tl.to_lowercase().strip_prefix("accept-encoding:") {
+            hdrs.accept_gzip = v.trim().contains("gzip");
+        }
+        // POST body 长度（`Content-Length`；上限 256KB 防内存暴涨）。
+        if let Some(v) = tl.to_lowercase().strip_prefix("content-length:") {
+            hdrs.content_length = v.trim().parse().unwrap_or(0);
+        }
+        // 写操作 token（S32.4）：X-TI-Token（值原样，不 trim 空串为 None 语义在 auth_ok 判）。
+        if let Some(v) = tl.strip_prefix("X-TI-Token:") {
+            hdrs.x_ti_token = Some(v.trim().to_owned());
+        }
+        if let Some(v) = tl.strip_prefix("Content-Type:") {
+            hdrs.content_type = Some(v.trim().to_owned());
+        }
+        hline.clear();
+    }
+    hdrs
 }
 
 /// 处理一个连接（每连接一线程；`web_root` = 静态壳，`repo_root` = 仓库根只读数据源面）。
@@ -50,32 +104,13 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
     let method = parts.next().unwrap_or("").to_uppercase();
     let url = parts.next().unwrap_or("/");
     let clean = url.split(['?', '#']).next().unwrap_or("/");
-    // 请求头面（缓存协商读 `If-None-Match` + 压缩协商读 `Accept-Encoding` + POST body 长度读 `Content-Length`）。
-    let mut if_none_match: Vec<String> = Vec::new();
-    let mut accept_gzip = false;
-    let mut content_length: u64 = 0;
-    let mut hline = String::new();
-    while let Ok(n) = reader.read_line(&mut hline) {
-        if n == 0 {
-            break;
-        }
-        let tl = hline.trim();
-        if tl.is_empty() {
-            break;
-        }
-        if let Some(v) = tl.strip_prefix("If-None-Match:") {
-            if_none_match.push(v.trim().to_owned());
-        }
-        // 压缩协商：`Accept-Encoding: gzip`（大小写不敏感，含 `gzip` 即认）。
-        if let Some(v) = tl.to_lowercase().strip_prefix("accept-encoding:") {
-            accept_gzip = v.trim().contains("gzip");
-        }
-        // POST body 长度（`Content-Length`；上限 256KB 防内存暴涨）。
-        if let Some(v) = tl.to_lowercase().strip_prefix("content-length:") {
-            content_length = v.trim().parse().unwrap_or(0);
-        }
-        hline.clear();
-    }
+    // 请求头面（S32.4：缓存/压缩协商 + POST body 长度 + 写操作 token + content-type）。
+    let hdrs = read_headers(&mut reader);
+    let if_none_match = hdrs.if_none_match;
+    let accept_gzip = hdrs.accept_gzip;
+    let content_length = hdrs.content_length;
+    let x_ti_token = hdrs.x_ti_token;
+    let content_type = hdrs.content_type;
 
     // POST /api/map/import：读 body（编辑器出描述符 → 落盘 + 回注，S32.14 ② 唯一写点）。
     let request_body: Vec<u8> =
@@ -88,6 +123,19 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
         };
 
     let gz = accept_gzip;
+    // POST /api/gate = S32.4 门禁执行面（写操作：X-TI-Token 鉴权 + tier 分档 + 单实例锁 + spawn）。
+    if method == "POST" && clean == "/api/gate" {
+        let response = handle_gate(
+            repo_root,
+            &request_body,
+            x_ti_token.as_deref(),
+            content_type.as_deref(),
+            gz,
+        );
+        let _ = stream.write_all(&response);
+        let _ = stream.flush();
+        return;
+    }
     // POST /api/map/import = S32.14 ② 唯一写点（编辑器描述符 → 落 assets/maps/<id>/ + 回注）。
     if method == "POST" && clean == "/api/map/import" {
         let response = handle_map_import(repo_root, &request_body, gz);
@@ -132,6 +180,10 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
                 }),
                 gz,
             )
+        }
+        "/api/gate" => {
+            let log = query_param(url, "log");
+            json200(&runner::gate::gate_status(repo_root, log), gz)
         }
         "/api/build" => {
             let run = query_param(url, "run");
@@ -187,6 +239,94 @@ fn handle_map_import(repo_root: &Path, body: &[u8], want_gzip: bool) -> Vec<u8> 
         None,
         want_gzip,
     )
+}
+
+/// `POST /api/gate`（S32.4 门禁执行面）：X-TI-Token 鉴权（403）→ tier 校验（400）
+/// → 单实例锁（409）→ `runner::gate::run_gate` 后台 spawn（200）。
+/// body = `{"tier": "fast"|"touch"|"full"}`；Content-Type 只接受 application/json（22 号 §10.3）。
+fn handle_gate(
+    repo_root: &Path,
+    body: &[u8],
+    token: Option<&str>,
+    content_type: Option<&str>,
+    want_gzip: bool,
+) -> Vec<u8> {
+    // 写操作鉴权（22 号 §10.1）：X-TI-Token 缺失或（env 设了但）不匹配 = 403。
+    if !auth_ok(token) {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1；设置页粘贴 TI_CONSOLE_TOKEN）"}"#.as_bytes(),
+            "403 Forbidden",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    // 只接受 application/json（22 号 §10.3；精确匹配 + 可带 charset 参数）。
+    let ct_ok = content_type.is_some_and(|c| {
+        let base = c.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
+        base == "application/json"
+    });
+    if !ct_ok {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"400: Content-Type 必须为 application/json（22 号 §10.3）"}"#
+                .as_bytes(),
+            "400 Bad Request",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    // 请求体上限 64 KiB（22 号 §10.1；gate body 极小，超限 = 413）。
+    if body.len() > 65_536 {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"413: 请求体超 64 KiB 上限（22 号 §10.1）"}"#.as_bytes(),
+            "413 Payload Too Large",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    let payload = match serde_json::from_slice::<Value>(body) {
+        Ok(v) => v,
+        Err(e) => {
+            let text = format!(r#"{{"ok":false,"error":"400: body 非合法 JSON：{e}"}}"#);
+            return header_body(
+                "application/json",
+                text.as_bytes(),
+                "400 Bad Request",
+                "no-store",
+                None,
+                want_gzip,
+            );
+        }
+    };
+    let tier = payload.get("tier").and_then(Value::as_str).unwrap_or("");
+    match runner::gate::run_gate(repo_root, tier) {
+        Ok(value) => json200(&value, want_gzip),
+        Err((code, msg)) => {
+            let status = match code {
+                400 => "400 Bad Request",
+                409 => "409 Conflict",
+                _ => "500 Internal Server Error",
+            };
+            let body = format!(r#"{{"ok":false,"error":"{}"}}"#, msg.replace('"', "\\\""));
+            header_body("application/json", body.as_bytes(), status, "no-store", None, want_gzip)
+        }
+    }
+}
+
+/// 写操作鉴权（22 号 §10.1）：
+/// - `TI_CONSOLE_TOKEN` env 设了 → 头必须存在且精确匹配；
+/// - env 未设（本地内网自用）→ 头存在且非空即可（S32.14 ② 免鉴权例外之外，写面一律要求头在场）。
+fn auth_ok(token: Option<&str>) -> bool {
+    match (std::env::var("TI_CONSOLE_TOKEN").ok(), token) {
+        (Some(env), Some(hdr)) => !hdr.is_empty() && env == hdr,
+        (_, None) => false,
+        (None, Some(hdr)) => !hdr.is_empty(),
+    }
 }
 
 fn api_500_or_json(result: Result<Value, String>, want_gzip: bool) -> Vec<u8> {

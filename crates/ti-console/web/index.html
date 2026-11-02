@@ -320,6 +320,22 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
         <span style="color:var(--muted);font-size:12px;align-self:center" id="ts-gate-info"></span>
       </div>
     </div>
+    <!-- S32.4 门禁执行：POST /api/gate 后台跑 gate.ps1（tier 分档 + 单实例锁 + 轮询日志 + 历史） -->
+    <div class="card">
+      <h2>门禁执行（S32.4：POST /api/gate 后台跑 gate.ps1，tier 分档 + 单实例锁 + 轮询）</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="gate-tier" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:7px 12px">
+          <option value="fast">fast（-Fast，开发档）</option>
+          <option value="touch">touch（-Touch，开发档）</option>
+          <option value="full">full（全量）</option>
+        </select>
+        <button id="gate-run" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">▶ 运行门禁</button>
+        <span style="color:var(--muted);font-size:12px" id="gate-msg"></span>
+      </div>
+      <div style="margin-top:6px;color:var(--muted);font-size:12px">⚠ fast/touch 为开发档，<b>不构成 gate 全绿证据</b>；全量 full 才可置 verified（S32.4 dod）。写操作需设置页粘贴 token（X-TI-Token，22 号 §10.1）。</div>
+      <div id="gate-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:240px;overflow:auto;display:none"></div>
+      <div id="gate-history" style="margin-top:8px"></div>
+    </div>
     <div class="card">
       <h2>测试分组树（级 L1–L4 → 类 → 型；点组看清单，点测试看步骤/证据）</h2>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
@@ -1002,6 +1018,8 @@ async function loadTests() {
     renderTestSummary();
     renderTestTree();
     loadGateProbe();
+    loadGate();
+    wireGateRun();
   } catch (e) {
     $('ts-tree').innerHTML = '<div class="empty">/api/tests 不可用：' + esc(String(e)) + '</div>';
     $('ts-summary').innerHTML = '<div class="empty">测试清单不可用：' + esc(String(e)) + '</div>';
@@ -1236,6 +1254,86 @@ async function loadGateProbe() {
   } catch (e) {
     $('ts-gate-info').textContent = 'evidence/gate.log 未就绪（跑一次 gate.ps1 后有输出）';
   }
+}
+
+// ── S32.4 门禁执行面（POST /api/gate + 轮询 + 历史） ──
+async function loadGate() {
+  loaded.gate = true;
+  try {
+    const d = await api('/api/gate');
+    renderGateStatus(d);
+    renderGateHistory(d.history || []);
+  } catch (e) {
+    $('gate-msg').textContent = '/api/gate 不可用：' + String(e);
+  }
+}
+function renderGateStatus(d) {
+  const m = d.last || {};
+  let s = d.running
+    ? '运行中（pid ' + (m.pid || '') + '，tier ' + (m.tier || '') + '）'
+    : '空闲';
+  if (!d.running && m && m.exit_code !== undefined) {
+    s += '（上次退出码 ' + (m.exit_code == null ? '?' : m.exit_code) + '，tier ' + (m.tier || '') + '）';
+  }
+  $('gate-msg').textContent = s;
+}
+function renderGateHistory(hist) {
+  const h = (hist.length ? hist.map((x) =>
+    `<div style="display:flex;gap:10px;align-items:center;padding:3px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <span style="color:var(--muted)">${esc(x.name)}</span>
+      <span style="color:var(--muted)">${x.size} B · ${new Date((x.mtime || 0) * 1000).toLocaleTimeString()}</span>
+      <a href="#" data-log="${esc(x.name)}" style="color:var(--accent);cursor:pointer">查看尾部</a>
+    </div>`).join('') : '<div style="color:var(--muted);font-size:12px">无历史（尚未跑过 gate）</div>');
+  $('gate-history').innerHTML = '<div style="color:var(--muted);font-size:12px;margin-bottom:4px">历史（gate-*.log）</div>' + h;
+  document.querySelectorAll('#gate-history a[data-log]').forEach((a) => {
+    a.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      api('/api/gate?log=' + encodeURIComponent(a.dataset.log)).then((d) => {
+        const out = $('gate-out');
+        out.style.display = 'block';
+        out.textContent = d.tail || '（日志空）';
+        out.scrollTop = out.scrollHeight;
+      }).catch(() => { $('gate-out').textContent = '读取日志失败'; });
+    });
+  });
+}
+function wireGateRun() {
+  const btn = document.getElementById('gate-run');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const tier = $('gate-tier').value;
+    const msg = $('gate-msg');
+    const out = $('gate-out');
+    const token = sessionStorage.getItem('ti_console_token') || '';
+    btn.disabled = true;
+    btn.textContent = '运行中…';
+    msg.textContent = '启动中…';
+    out.style.display = 'block';
+    out.textContent = '';
+    const hdrs = { 'Content-Type': 'application/json' };
+    if (token) hdrs['X-TI-Token'] = token;
+    fetch('/api/gate', { method: 'POST', headers: hdrs, body: JSON.stringify({ tier }) })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          msg.textContent = '启动失败：' + (body.error || ('HTTP ' + r.status));
+          btn.disabled = false;
+          btn.textContent = '▶ 运行门禁';
+          return;
+        }
+        msg.textContent = '已启动（pid ' + body.pid + '，tier ' + body.tier + '）：' + (body.log || '');
+        pollTestLog(body.log, out, () => {
+          btn.disabled = false;
+          btn.textContent = '▶ 运行门禁';
+          loadGate();
+        });
+      })
+      .catch((e) => {
+        msg.textContent = '启动失败：' + String(e);
+        btn.disabled = false;
+        btn.textContent = '▶ 运行门禁';
+      });
+  });
 }
 
 // ── APK 体积页（S35.0，24 号标准；/api/apk-size 只读体检） ──

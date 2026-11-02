@@ -63,6 +63,7 @@ __pycache__/
 # S32 开发管理平台（TI Dev Console）运行时敏感/临时文件（证据与报告仍入库）
 /evidence/console/token
 /evidence/console/.lock
+/evidence/console/gate.lock
 /evidence/console/logs/
 
 # 第三方 node 依赖（playwright 等；不入库）

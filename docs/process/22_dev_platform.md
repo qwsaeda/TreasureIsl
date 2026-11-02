@@ -102,7 +102,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | `build_wasm` | `python3` + `scripts/build_artifacts.py run wasm`（= `build_wasm.ps1`） | 无（后台执行） | `web/` + `evidence/console/logs/`（gitignored） | 是 |
 | `build_native` | `python3` + `scripts/build_artifacts.py run native`（= `cargo build treasure-bevy-native`） | 无（后台执行） | `target/` + `evidence/console/logs/`（gitignored） | 是 |
 | `build_list` | `python3` + `scripts/build_artifacts.py list` | 无（只读） | 无 | 是 |
-| `build_check` | `python3` + `scripts/build_artifacts.py check` | 无（只读前置体检；非 0 = 前置缺失） | 无 | 是 |
+| `build_artifacts_check` | `python3` + `scripts/build_artifacts.py check` | 无（只读前置体检；非 0 = 前置缺失） | 无 | 是 |
 
 - **默认启用列的机器真源** = `console_commands.json` 的 `enabled_by_default` 字段；
   **会改仓库跟踪文件（台账 / `docs/` / `assets/` / `evidence/` 根）的写动作默认关闭**（当前仅 `close_run` 一条，
@@ -175,7 +175,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | 概览 | 当前阶段 / 进度条 / 下一任务 / 阻塞清单 / 最近门禁 / 最近审计 | P0（S32.3） |
 | 任务 | 台账全表（按 status / 阶段 / rounds 筛选），任务详情含 dod + evidence 链接 | P0 |
 | 证据 | `evidence/` 浏览 + 缺失告警 + 双审计报告清单（`audit-*.md` 文件 + §7.3 四行机器字段：task/round/侧/新发现/误报/残留，`GET /api/audit`） | P0 |
-| 门禁 | 分档执行 + 轮询日志 + 历史 | P1（S32.4） |
+| 门禁 | 分档执行 + 轮询日志 + 历史（`GET /api/gate` = 状态 + 历史 + `?log=` 尾部，只读免 token；`POST /api/gate` = 写操作：`X-TI-Token` 鉴权 403 + `tier∈{fast,touch,full}` 校验 400 + 单实例锁 409 + 后台 spawn；日志落 `evidence/console/logs/gate-<ts>.log` gitignored；门禁既有副作用 `evidence/web_playtest.{log,png}`/`font_render.txt` 只记录不判定） | P1（S32.4） |
 | 资产 | UI 图片预览（`ui_manifest` 全量登记图（登记数随资产批次增长，S32.3 快照 = 75 张） + **标签分组 = role + 时间倒序** `generated_at` 降序 + **lightbox 点击放大** + 元数据含 AI prompt 原文；图片直读 = `assets/ui/` 白名单前缀，`GET /api/assets`）/ 校验状态 | P0（S32.3 看板 v1）+ P2（S32.7 校验状态） |
 | 设计图 | AI 生成设计稿浏览（`evidence/ui_concept/`，**非运行截图**；`GET /api/evidence?sub=ui_concept` 子目录枚举〔**滤除 `.thumb.png` 侧车**〕+ 白名单直读 + 组别标签〔主地图/首页/岛型·地图/对战/界面/资产表/其他〕+ lightbox 放大。**默认只展示正式稿**：`raw_`（未抠原图）/`tmp_`（临时试稿）前缀 = 中间产物隐藏（`#design-mid` 勾选展开），命名口径 = 13 号 §2.1。**压缩预览**：卡读 `.thumb.png` 侧车（480px PNG-8，~53KB vs 原图 4-6MB）、lightbox 读原图，口径 = 13 号 §4.0） | P0（S32.3） |
  | 地图 | 地图包管理面（`assets/maps/<id>/` 已装包清单 + 描述符摘要〔schema/id/version/data_version/中央岛/岛型数/31 格不变量/环几何/资产数〕+ `.default` 指针 + 制作指引 `scripts/map_pack.py` 命令面 + 21 号标准链接；`GET /api/map` 只读浏览） + **地图编辑器**（环形 SVG 画布 31 节点 + 点节点改 kind/isle + 环几何输入 + I1~I9 前端实时校验条〔镜像 `map_pack.py verify_pack`，权威实现 = `map_pack.py`〕+ 生成 4 文件 JSON） + **`POST /api/map/import`**（S32.14 ② 免鉴权导入落盘面：写 `assets/maps/<id>/` 四文件 + 同进程 `map_pack.py sync` 回注 + `verify` 终判 I1~I9〔含 I7 资产哈希〕，违规 = `errors` 如实上报不静默绕过；写点纪律 = 21 号 §8 平台编辑器口径 + 本号 §10.1 唯一写点例外） | P0（S32.3 只读）+ S32.14（编辑器 + import） |
@@ -367,6 +367,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 - **单实例锁**：`evidence/console/.lock`（gitignored；含 pid + 起始时间 + 动作 id）。S32.1 骨架期 = **pid 最小面**（仅写 pid 互斥；起始时间 + 动作 id + 30 分钟陈旧接管判定 = S32.4 并发面补全，`main.rs` 锁段注释已标注「S32.4 补全」）。
   互斥范围 = **平台自己发起的执行**（不互斥人工/会话直跑 `scripts/gate.ps1`，也不跨 worktree）；
   陈旧锁判定 = pid 不存在 **且** 起始时间超 30 分钟 ⇒ 接管并记 `stale-lock`（完整规格 = S32.4 并发面：起始时间 + 动作 id 字段 + 30 分钟接管判定；S32.1 骨架期锁文件仅 pid，接管判定暂不实现）。
+  **门禁执行锁（S32.4 起，两锁分立）**：`evidence/console/gate.lock`（JSON：pid/tier/started_ts/log/running/reserving/side_effects + 收割线程置 exit_code/ended_ts）——门禁并发面专用，`is_busy` = 锁存在且非陈旧（`running=false` 或 pid 死且起始超 30 分钟 = 陈旧可复用）；`create_new` 原子占锁防双启动竞态（A r1 P2-1）；`side_effects` 字段 = §3.1 门禁既有副作用只记录不判定。**损坏锁接管（r3-b P2）**：锁文件存在但非合法 JSON（进程崩溃于 `create_new`→`writeln` 微秒窗口）= 损坏；仅当文件已存在超 `CORRUPT_LOCK_MIN_AGE_SECS=5` 秒才视为「崩溃遗留」接管（`remove_file` 后重新占锁），< 5 秒（可能正写入）= 活锁 409 不接管——防误删「正持锁写入中」的活锁致双启动。
 - **不做自动回滚**：受控执行可能改台账，回滚 = 人工 `git checkout` / 重跑脚本；
   平台只保证「执行前记录 `git rev-parse HEAD` + 执行后 `git status --short` 快照」进日志，供人工判断
   （同 §10.3：该快照**仅记录**，与 §8 的内容级指纹判定口径分离）。

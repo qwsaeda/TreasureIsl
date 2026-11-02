@@ -12,6 +12,7 @@
 
 mod repo;
 mod routes;
+mod runner;
 
 use std::io::Write;
 use std::net::TcpListener;
@@ -20,31 +21,77 @@ use std::path::Path;
 /// 默认监听地址（非回环须显式 `--host`，鉴权负例见 22 号第 10.1 节）。
 const DEFAULT_BIND: &str = "127.0.0.1:8787";
 
-/// 单实例锁文件路径（`evidence/console/.lock`；存在即拒启动，避免多实例端口冲突）。
+/// 平台进程锁陈旧接管阈值（22 号 §10.4：起始超 30 分钟 + pid 不存在 ⇒ 接管）。
+const LOCK_STALE_SECS: u64 = 1800;
+
+/// 单实例锁文件路径（`evidence/console/.lock`；存在且非陈旧 = 拒启动，避免多实例端口冲突）。
 fn lock_path() -> std::path::PathBuf {
     Path::new("evidence/console/.lock").to_path_buf()
 }
 
-/// 写单实例锁（锁文件 = 当前 pid；已存在且 pid 不同 = 拒启动）。
+/// 进程存活（Linux `/proc/<pid>` 存在；非 Linux 退化为「锁存在即活」由 `LockGuard` `Drop` 清锁）。
+fn process_alive(pid: u32) -> bool {
+    if cfg!(target_os = "linux") {
+        return Path::new(&format!("/proc/{pid}")).exists();
+    }
+    true
+}
+
+/// 写单实例锁（JSON：`pid` + `started_ts` + `action`）。
+/// 陈旧接管（22 号 §10.4 S32.4 并发面补全）：锁内 pid 不存在 **且** 起始超 30 分钟 ⇒
+/// 接管并记 `stale-lock`（进程被 kill -9/崩溃后不残留阻启）；否则拒启动。
 fn write_lock(pid: u32) -> Result<std::path::PathBuf, String> {
-    let binding = lock_path();
-    let dir = binding.parent().ok_or_else(|| "锁路径缺父目录".to_owned())?;
-    std::fs::create_dir_all(dir).map_err(|e| format!("无法建 {}：{e}", dir.display()))?;
     let path = lock_path();
+    let dir = path.parent().ok_or_else(|| "锁路径缺父目录".to_owned())?;
+    std::fs::create_dir_all(dir).map_err(|e| format!("无法建 {}：{e}", dir.display()))?;
     if path.is_file() {
         let content = std::fs::read_to_string(&path).unwrap_or_default();
-        let Ok(old) = content.trim().parse::<u32>() else {
-            return Err(format!("锁文件 {} 内容非法（期望 pid）；先删再启动", path.display()));
-        };
-        if old != pid {
+        // 兼容旧纯 pid 锁（S32.1 骨架期）与 JSON 锁（S32.4 起：pid + started_ts + action）。
+        let parsed = serde_json::from_str::<serde_json::Value>(&content).ok();
+        let old_pid = parsed
+            .as_ref()
+            .and_then(|v| v.get("pid").and_then(serde_json::Value::as_u64))
+            .and_then(|p| u32::try_from(p).ok())
+            .or_else(|| content.trim().parse::<u32>().ok());
+        let started = parsed
+            .as_ref()
+            .and_then(|v| v.get("started_ts").and_then(serde_json::Value::as_u64))
+            .unwrap_or(0);
+        if let Some(old) = old_pid {
+            if old != pid {
+                let alive = process_alive(old);
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_secs());
+                if !alive && now.saturating_sub(started) > LOCK_STALE_SECS {
+                    eprintln!(
+                        "ti-console: 陈旧锁接管（pid {old} 不存在 + 起始超 30 分钟；stale-lock）"
+                    );
+                    let _ = std::fs::remove_file(&path);
+                } else {
+                    return Err(format!(
+                        "单实例锁被占用（pid {old}，当前 {pid}）；先删 {} 再启动",
+                        path.display()
+                    ));
+                }
+            }
+        } else {
             return Err(format!(
-                "单实例锁被占用（pid {old}，当前 {pid}）；先删 {} 再启动",
+                "锁文件 {} 内容非法（期望 pid 或 JSON）；先删再启动",
                 path.display()
             ));
         }
     }
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    let lock = serde_json::json!({
+        "pid": pid,
+        "started_ts": ts,
+        "action": "platform-serve",
+    });
     let mut f = std::fs::File::create(&path).map_err(|e| format!("无法写锁文件：{e}"))?;
-    writeln!(f, "{pid}").map_err(|e| format!("写锁文件失败：{e}"))?;
+    writeln!(f, "{lock}").map_err(|e| format!("写锁文件失败：{e}"))?;
     Ok(path)
 }
 
@@ -89,7 +136,7 @@ fn main() {
     if !matches!(host_part, "127.0.0.1" | "localhost") && std::env::var("TI_CONSOLE_TOKEN").is_err()
     {
         eprintln!(
-            "ti-console: 非回环监听（{host_part}）未设 TI_CONSOLE_TOKEN —— 只读面可用，写操作面（S32.4 起）将 403；生产部署须设 token"
+            "ti-console: 非回环监听（{host_part}）未设 TI_CONSOLE_TOKEN —— 写操作面（POST）要求 X-TI-Token 在场（env 未设 = 非空即可；env 设了 = 精确匹配；生产部署须设 token 作强校验，22 号 §10.1）"
         );
     }
 

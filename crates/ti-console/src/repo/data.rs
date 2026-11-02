@@ -273,9 +273,11 @@ pub fn run_test(repo_root: &Path, sources: &RepoSources, test_id: &str) -> Resul
     let log_file =
         std::fs::File::create(&log_path).map_err(|e| format!("run_test: 日志文件创建失败 {e}"))?;
     let err_file = log_file.try_clone().map_err(|e| format!("run_test: 日志克隆失败 {e}"))?;
-    let child = std::process::Command::new(program)
-        .args(&args[1..])
-        .current_dir(repo_root)
+    let mut cmd = std::process::Command::new(program);
+    cmd.args(&args[1..]).current_dir(repo_root);
+    // 22 号 §10.3 最小环境集（env_clear + 白名单）；r4-b P2 修复。
+    crate::runner::apply_minimal_env(&mut cmd);
+    let child = cmd
         .stdout(std::process::Stdio::from(log_file))
         .stderr(std::process::Stdio::from(err_file))
         .spawn()
@@ -311,10 +313,11 @@ pub fn build_artifacts(
                 "run 参数只接受 apk|wasm|native（22 号 §10.3 白名单；非自由字符串）：{kind}"
             ));
         }
-        let child = std::process::Command::new("python3")
-            .arg(repo_root.join("scripts/build_artifacts.py"))
-            .arg("run")
-            .arg(kind)
+        let mut cmd = std::process::Command::new("python3");
+        cmd.arg(repo_root.join("scripts/build_artifacts.py")).arg("run").arg(kind);
+        // 22 号 §10.3 最小环境集（env_clear + 白名单）；r4-b P2 修复。
+        crate::runner::apply_minimal_env(&mut cmd);
+        let child = cmd
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
@@ -326,10 +329,11 @@ pub fn build_artifacts(
             "note": "后台构建已启动（日志落 evidence/console/logs/build-*.log；构建后自动复检）；轮询 /api/build 查产物",
         }));
     }
-    let out = std::process::Command::new("python3")
-        .arg(repo_root.join("scripts/build_artifacts.py"))
-        .arg("list")
-        .output();
+    let mut list_cmd = std::process::Command::new("python3");
+    list_cmd.arg(repo_root.join("scripts/build_artifacts.py")).arg("list");
+    // 22 号 §10.3 最小环境集（env_clear + 白名单）；r4-b P2 修复。
+    crate::runner::apply_minimal_env(&mut list_cmd);
+    let out = list_cmd.output();
     let out = match out {
         Ok(o) if o.status.success() => o,
         Ok(o) => {
@@ -395,12 +399,11 @@ pub fn apk_size(repo_root: &Path, _sources: &RepoSources) -> Result<Value, Strin
             "note": "dist/TreasureIsl-arm64.apk 不存在（未构建；先跑 scripts/build_apk.sh）",
         }));
     }
-    let out = std::process::Command::new("python3")
-        .arg(repo_root.join("scripts/apk_audit.py"))
-        .arg("--apk")
-        .arg(&dist)
-        .arg("--json")
-        .output();
+    let mut apk_cmd = std::process::Command::new("python3");
+    apk_cmd.arg(repo_root.join("scripts/apk_audit.py")).arg("--apk").arg(&dist).arg("--json");
+    // 22 号 §10.3 最小环境集（env_clear + 白名单）；r6-b P2 修复。
+    crate::runner::apply_minimal_env(&mut apk_cmd);
+    let out = apk_cmd.output();
     let out = match out {
         Ok(o) if o.status.success() => o,
         Ok(o) => {
@@ -419,10 +422,11 @@ pub fn apk_size(repo_root: &Path, _sources: &RepoSources) -> Result<Value, Strin
     let body = String::from_utf8_lossy(&out.stdout);
     let breakdown: Value =
         serde_json::from_str(&body).map_err(|e| format!("apk_audit.py 输出解析失败：{e}"))?;
-    let refset_out = std::process::Command::new("python3")
-        .arg(repo_root.join("scripts/apk_audit.py"))
-        .arg("--refset")
-        .output();
+    let mut refset_cmd = std::process::Command::new("python3");
+    refset_cmd.arg(repo_root.join("scripts/apk_audit.py")).arg("--refset");
+    // 22 号 §10.3 最小环境集（env_clear + 白名单）；r6-b P2 修复。
+    crate::runner::apply_minimal_env(&mut refset_cmd);
+    let refset_out = refset_cmd.output();
     let refset: Value = match refset_out {
         Ok(o) if o.status.success() => {
             serde_json::from_slice::<Value>(&o.stdout).unwrap_or(Value::Null)

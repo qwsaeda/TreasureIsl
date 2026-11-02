@@ -1,0 +1,69 @@
+# S32.4 门禁执行 — 验收证据
+
+> 任务：`POST /api/gate`（tier=fast|touch|full → -Fast/-Touch/全量）+ 单实例锁 + 轮询日志 + 历史 + 门禁既有副作用路径只记录不判定。
+> 代码：`crates/ti-console/src/runner/gate.rs`（新建）+ `routes.rs`（GET/POST /api/gate）+ `web/index.html`（门禁执行卡）+ `tests/gate_tests.rs`（6 条单测）。
+> 判据来源：`plan/ledger.yaml` S32.4 dod + `docs/plan-s32-platform.md` L31 + `docs/process/22_dev_platform.md` §4.2/§7。
+
+## 一、判据逐条实跑
+
+| 判据 | 结论 | 证据 |
+|---|---|---|
+| 实跑 `fast` 档 PASS（日志含每项 PASS/SKIP） | ✅ | `evidence/console/logs/gate-1793577400.log`：**17 PASS / 0 FAIL / 16 SKIP**，末行 `=== gate: 0 failure(s) ===`；含 `[wasm-browser-e2e] PASS（L1~L5 全 True）` + `PASS playtest-loop` 等每项 PASS/SKIP 行。经 `POST /api/gate {"tier":"fast"}`（响应 `started=true pid=59884 tier=fast`）后台 spawn |
+| 失败负例退出码非 0 且页面可见 | ✅ | `gate-1793577717.log`（fmt/clippy 回归未净）→ 锁 `exit_code=1`，`GET /api/gate` `last.exit_code=1`；前端 `renderGateStatus` 显示「上次退出码 1」。另 `gate-1793577119.log` wasm-browser-e2e 环境 flake（SwiftShader WebGL shader 编译，与本次改动无关——只动 ti-console）同样 exit_code=1 可见 |
+| 非法 tier 400 | ✅ | `curl -X POST -H "Content-Type: application/json" -H "X-TI-Token: testtoken" -d '{"tier":"slow"}' /api/gate` → **400** `{"ok":false,"error":"非法 tier \`slow\`（可选 fast/touch/full"}` |
+| 锁占用 409 | ✅ | fast 运行中 `curl POST fast` → **409** `{"ok":false,"error":"门禁正在运行（{...pid 57195...}）..."}`；锁文件 `evidence/console/gate.lock`（JSON pid/tier/started_ts/log/running） |
+| 无 token 写操作 403 | ✅ | `curl -X POST -H "Content-Type: application/json" -d '{"tier":"fast"}' /api/gate`（无 X-TI-Token）→ **403** |
+| 历史可查 | ✅ | `GET /api/gate` `history` = 5 条 `gate-*.log`（mtime 倒序）；`GET /api/gate?log=gate-1793576816.log` `tail` = 日志尾部（≤400 行） |
+| 页面明示「fast/touch 为开发档，不构成 gate 全绿证据」 | ✅ | `crates/ti-console/web/index.html` 门禁执行卡：`⚠ fast/touch 为开发档，不构成 gate 全绿证据；全量 full 才可置 verified`；`GET /api/gate` `note` 同口径 |
+| 门禁副作用路径写进执行日志 | ✅ | `POST /api/gate` 响应含 `side_effects: ["evidence/web_playtest.log","evidence/web_playtest.png","evidence/font_render.txt"]`（`console_commands.json` `gate.writes` 镜像，22 号 §3.1 只记录不判定）；`note` 明示 |
+| gate 全绿（full） | ✅ | `evidence/console/logs/gate-1793578297.log`：**30 PASS / 0 FAIL / 2 SKIP**，末行 `=== gate: 0 failure(s) ===`（经 `POST /api/gate {"tier":"full"}` 后台 spawn，响应 `command=pwsh -File scripts/gate.ps1`） |
+| 单实例锁（gate.lock） | ✅ | `evidence/console/gate.lock` 与 main.rs 平台进程锁 `evidence/console/.lock` 分离；`running=true` + pid 活 = 409；`running=false`（收割线程置）或 pid 死 = 可复用 |
+| Content-Type 只接受 application/json | ✅ | `curl POST` 无 Content-Type → **400** `{"ok":false,"error":"400: Content-Type 必须为 application/json（22 号 §10.3）"}` |
+
+## 二、代码面
+
+- `crates/ti-console/src/runner/gate.rs`：`TIERS`（fast/touch/full）、`SIDE_EFFECTS`（3 路径）、`run_gate`（tier 校验 400 → 单实例锁 409 → 后台 spawn pwsh + 收割线程置 running=false/exit_code）、`gate_status`（状态 + 历史 + 尾部，白名单形状校验 + 防穿越）。
+- `crates/ti-console/src/routes.rs`：`ReqHeaders`（读 X-TI-Token/Content-Type/If-None-Match/Accept-Encoding/Content-Length）+ `handle_gate`（鉴权 403 → content-type 400 → tier 400 → run_gate）+ `auth_ok` + `GET /api/gate`。
+- `crates/ti-console/tests/gate_tests.rs`：6 条单测（tiers 枚举 / 非法 tier 400 / 空锁状态 / 活锁 409 / 死锁可复用 / 历史+尾部+穿越拒）。
+- `crates/ti-console/web/index.html`：门禁执行卡（tier 下拉 + 运行按钮 + 轮询 pollTestLog 复用 + 历史点看尾部）。
+
+## 三、验证命令
+
+```sh
+# 单测
+cargo test -p ti-console --test gate_tests   # 6 passed
+# clippy（gate 第 3 项口径）
+cargo clippy --workspace --all-targets -- -D warnings   # 0 error
+# fmt
+cargo fmt --all -- --check   # OK
+# e2e 经平台（ti-console 起在 127.0.0.1:8787，TI_CONSOLE_TOKEN=testtoken）
+curl -s -X POST -H "Content-Type: application/json" -H "X-TI-Token: testtoken" -d '{"tier":"fast"}' http://127.0.0.1:8787/api/gate
+curl -s http://127.0.0.1:8787/api/gate   # 轮询状态/历史/尾部
+```
+
+## 四、判据外附注
+
+- `wasm-browser-e2e` 为**环境敏感**项（SwiftShader WebGL shader 编译 / GPU 子进程退出，见 `scripts/wasm_browser_e2e.py` L132-142/202-224/265 SKIP 口径）：本机 headless 下**非必现**（首次 fast 运行 PASS，第二次 FAIL 后重跑 PASS）。平台只透传 gate.ps1 判定，不归因、不静默绕过（22 号 §3.1 只记录不判定）。
+- 平台 `GET /api/gate` 为只读（免 token）；写操作 `POST /api/gate` 一律要求 X-TI-Token 在场（本地 env 未设 = 非空即可，S32.14 ② 免鉴权例外之外；env 设了 = 精确匹配）。
+- 双审计 = 独立子代理 A/B（22 号 §7），报告见 `evidence/console/audit-S32.4-r<N>-{a,b}.md`。
+
+## 五、双审计收敛（r1~r8）
+
+> 双审计口径（22 号 §7.4）：0 新发现 + 0 误报 + 0 残留，**连续 2 轮**全部满足 = 通过；P2 建议同样计入新发现。
+> 报告 16 份：`evidence/console/audit-S32.4-r{1..8}-{a,b}.md`（每份首个 ``` 代码块含四行机器字段：总判定/新发现/误报/残留）。
+
+| 轮 | A 侧 | B 侧 | 本轮新发现 | 修复动作 |
+|---|---|---|---|---|
+| r1 | PASS / 4 | FAIL / 7（2 P1 + 5 P2） | 11 | create_new 原子占锁+占位锁 / side_effects 持久化 / `?log=` 拒 `/` `\` / 台账 title gate.lock；pwsh→powershell 回退 / main.rs 锁 JSON+30min 接管 / body 64KiB 413 / Content-Type 精确 / §10.4 文档 / API 登记 / auth_ok 文案 |
+| r2 | PASS / 1 | PASS / 2 | 3 | 日志建到锁后+409 不删 / spawn_gate 返回实际 interp / r1 报告落盘 |
+| r3 | PASS / 0 | FAIL / 2（1 P1 + 1 P2） | 2 | gate.lock 入 .gitignore / 损坏锁接管（>5s 接管 / <5s 409，`CORRUPT_LOCK_MIN_AGE_SECS=5`）+ `check_lock_available` 抽出 |
+| r4 | PASS / 0 | PASS / 4 | 4 | r3-b 报告落盘 / 损坏锁分支单测 ×2（`corrupt_lock_old_is_takeover`/`corrupt_lock_recent_is_409`）/ §10.4 损坏锁语义登记 / §10.3 最小环境集 `apply_minimal_env`（`MINIMAL_ENV_KEYS` 13 键）+ spawn_gate/run_test/build_artifacts 套用 |
+| r5 | PASS / 0 | PASS / 2 | 2 | r4 报告落盘 / console_commands.json 重复 id `build_check`→`build_artifacts_check`（+22 号 §4.2 表同步） |
+| r6 | PASS / 0 | PASS / 2 | 2 | r5 报告落盘 / apk_size 两处 `apk_audit.py --apk`/`--refset` 套 `apply_minimal_env` |
+| **r7** | **PASS / 0** | **PASS / 0** | **0** | —（首次全 0 轮） |
+| **r8** | **PASS / 0** | **PASS / 0** | **0** | —（连续第 2 轮全 0，收敛达成） |
+
+**累计 findings：r1~r6 共 24 项全部修复闭环**（11+3+2+4+2+2 = 24；其中 2 P1 = r1-b pwsh 硬编码回退 + main.rs 锁陈旧接管，22 P2 建议）。**r7/r8 连续 2 轮全 0（0 新发现 / 0 误报 / 0 残留）⇒ 双审计通过**。
+
+> 旁注（不计 S32.4 findings，分属各自任务）：`repo/import.rs:158`（map_pack.py）+ `repo/snapshot.rs:186`（git status）同模式未套最小环境集 = S32.14 / S32.2 面，待各自任务复核。
+
