@@ -1,0 +1,152 @@
+# S32.5 双审计编排 验收证据
+
+> 改动面 = 工具（编排）+ 文档（审计模板）+ 证据；代码 = `crates/ti-console/src/audit/*.rs` + `routes.rs` + `repo/data.rs` + `tests/audit_tests.rs` + `web/index.html`。
+> 判据 = 对 S32.0b 实跑生成任务书并与 evidence/console 现有报告对账 + 收敛规则单测（三条判据 + 连续 2 轮 + 3 轮升级）+ 载体口径与 22 号 §7.3 一致（八要素逐条覆盖 + 四行机器字段）+ 主线程独立复核记录 + gate 全绿 + 双审计通过。
+
+## 一、实现（S32.5 双审计编排）
+
+新增 `crates/ti-console/src/audit/` 四模块：
+
+| 模块 | 职责 |
+|---|---|
+| `template.rs` | 八要素任务书模板（`TASKBOOK_ELEMENTS` 8 要素 + `render_taskbook` + `cover_elements` 机器断言） |
+| `judge.rs` | 机械判定（`parse_head_status` 四行解析 + 值域 + `aggregate` a/b 配对 + `round_complete` 轮次完整性 + `convergence` 收敛 + `unclosed_findings` + `parse_report_filename`） |
+| `taskbook.rs` | 从台账生成任务书 `.prompt.md`（dod/evidence 注入 + 上一轮 findings） |
+| `archive.rs` | 粘贴归档报告（命名规则 + 防穿越 + 非空正文） |
+
+接入：
+- `lib.rs` `pub mod audit` + `main.rs` `mod audit`（bin/lib 双编译）。
+- `routes.rs`：`POST /api/audit/taskbook` + `POST /api/audit/archive`（X-TI-Token 鉴权 403 + CT 400 + body 413）+ `handle_post` 统一 POST 分派。
+- `repo/data.rs`：`audit_list` 重构用 judge（排除 `.prompt.md` + `parseable` 区分 parsed/legacy/unparseable + 收敛表）+ `convergence_rows` helper。
+- `web/index.html`：证据页加任务书生成控件 + 粘贴归档 + 收敛判定表（含未闭环清单）。
+
+## 二、收敛规则单测（`tests/audit_tests.rs`，27 条）
+
+判据逐条覆盖：
+- **三条判据**（0 新发现 + 0 误报 + 0 残留）：`is_converged` 单测（`aggregate_pairs_a_b` + `converge_two_rounds_pass`）。
+- **连续 2 轮 = 通过**：`converge_two_rounds_pass`（r7/r8 全 0 → `Pass{2}`）；`converge_one_round_in_progress`（仅 1 轮 → `InProgress{1}`）。
+- **3 轮未收敛 → 升级拆子任务**：`converge_three_unclosed_escalate`（r4/r5/r6 连续 3 轮未收敛 → `Escalate{3}`）。
+- **占位轮值域异常不计轮**：`parse_placeholder_round_unparseable`（「中断（无报告）」→ 不可解析）+ `converge_placeholder_round_not_counted`（r5 占位轮不打断 r6/r7 收敛计数）。
+- **legacy 豁免**：`parse_legacy_exempt`（r1~r3 缺四行 → Legacy 不计收敛不计违规）。
+- **轮次完整性**：`round_complete_missing_round_reported`（r3 缺口检出）+ `round_complete_split_task_no_false_missing`（拆分任务 min>1 不误报）。
+- **聚合 a/b 配对**：`aggregate_pairs_a_b` + `unclosed_findings_latest_only`。
+- **八要素覆盖**：`taskbook_covers_all_eight_elements`（8/8 全覆盖）+ `cover_elements_detects_missing`（缺「证据要求」检出）。
+- **文件名解析**（task 含 `-`/`.` 如 `S32.0a`）：`parse_filename_task_with_dash_dot` + `parse_filename_plain_task` + `parse_filename_invalid_side_none` + `parse_filename_prompt_none`。
+- **归档防穿越负例**：`archive_rejects_non_console_prefix` / `archive_rejects_subdir` / `archive_rejects_empty_content` / `archive_rejects_unknown_filename`。
+
+实跑：
+
+```
+cargo test -p ti-console --test audit_tests
+test result: ok. 27 passed; 0 failed
+```
+
+## 三、实跑生成任务书 + 对账（判据 1）
+
+对台账 S32.5 实跑生成任务书（`POST /api/audit/taskbook`，X-TI-Token 鉴权通过）：
+
+```
+{"file":"evidence/console/audit-S32.5-r1-a.prompt.md","ok":true,"uncovered_elements":[]}
+```
+
+- `uncovered_elements: []` = 模板八要素**全覆盖**（22 号 §7.3 八要素清单机器断言，闭合「22 号八要素无机器断言」兜底缺口）。
+- 生成任务书正文含八要素逐节（角色声明/只读约束/被审任务/本轮定位/审计面/证据要求/报告格式契约/输出要求）+ 台账 dod + 上一轮 findings（首轮 = 「本轮为首次审计轮」）。
+
+对账 `evidence/console/` 现有 92 份报告（`GET /api/audit`）：
+
+```
+reports: 92
+task=S32.0a  state=pass detail=2 complete=True missing=[]  unclosed=[]
+task=S32.4   state=pass detail=2 complete=True missing=[]  unclosed=[]
+task=S32.11  state=pass detail=2 complete=True missing=[]  unclosed=[]
+task=S32.12  state=pass detail=2 complete=True missing=[]  unclosed=[]
+```
+
+- S32.4 收敛表 = pass（r7/r8 连续 2 轮全 0，与 `evidence/S32.4.log` §五 审计轮次表一致）。
+- S32.0a/S32.11/S32.12 均 pass（连续 2 轮 0/0/0）。
+- 拆分任务 S32.0a 轮次完整性 correct（min=4 起检查，不误报拆分前 r1~r3 缺口；修复前误报 `missing=[1,2,3]`）。
+
+### 补充演示（A 侧 r1 P2 闭合）：上一轮 findings 非空注入分支
+
+- 生成 `evidence/console/audit-S32.0a-r18-a.prompt.md`（S32.0a 有存量报告；八要素全覆盖 `uncovered_elements:[]`）。
+- 归档 A 侧 r1 报告（`audit-S32.5-r1-a.md`，新发现 1）后，生成 r2 任务书，**「上一轮 findings」段非空注入**：
+  `- r1 a 侧：新发现 1，残留 0（evidence/console/audit-S32.5-r1-a.md）`——`latest_findings` 非空分支（taskbook.rs）实跑验证。
+- 闭合 A 侧 r1 P2-1（DoD 字面「对 S32.0b 实跑」未按字面执行 + 非空注入分支未演示）。
+
+## 四、归档 + 防穿越 + 鉴权（判据 2）
+
+```
+# 归档合法报告（四行齐全 PASS/0/0/0）
+{"file":"evidence/console/audit-S32.5-r1-a.md","ok":true}
+# 归档未收敛报告（FAIL/2/0/1）
+{"file":"evidence/console/audit-S32.5-r1-b.md","ok":true}
+# 防穿越负例（sub/ 子目录）
+{"ok":false,"error":"file 含子目录分隔符（防穿越，只允许 evidence/console/ 平铺）"}
+# 鉴权负例（无 token）
+{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1）"}
+```
+
+验收后删除人造报告（避免污染 S32.5 真实审计 r1），保留任务书生成样本。
+
+## 五、门禁（判据 3）
+
+```
+cargo build -p ti-console            # 0 error
+cargo clippy -p ti-console --all-targets -- -D warnings   # 0 error
+cargo test  -p ti-console            # 全过（含 27 条 audit 单测）
+cargo fmt --all -- --check           # 0 diff
+cargo run -q -p ti-tools --bin doccheck   # 156 docs, 0 error(s)
+pwsh -File scripts/gate.ps1          # === gate: 0 failure(s) ===
+```
+
+gate 全绿（wasm-browser-e2e + browser-playtest + playtest-loop 全 PASS）。
+
+## 六、主线程独立复核（判据 4）
+
+- 台账 `rounds` 未动（审计轮不进台账，22 号 §7.4「禁止把审计轮数写回台账 `rounds`」）。
+- 平台只做「任务书生成 + 归档 + 判定」，不自己起 LLM 子代理（§7.3）；双审计 r1 由主线程用 harness 按任务书起 A/B 子代理，报告由主线程写回/平台粘贴归档，见下轮记录。
+
+## 六之二、双审计 r1 复核 + 修复（B 侧发现闭合）
+
+双审计 r1：A 侧（完成度）PASS + 1 条 P2；B 侧（一致性）FAIL + 4 条发现（F1 P1 + F2~F4 P2）。主线程独立复核每条：
+
+| # | 严重度 | B 侧发现 | 独立复核 | 修复 |
+|---|---|---|---|---|
+| F1 | P1 | 非回环 + 无 token 未按 22 号 §10.1 拒绝启动（回归 + 三方漂移） | **确认文档漂移**：代码 `main.rs:134-142` 仅 `eprintln!` 告警不拒绝（注释明示「默认不启用强鉴权，便于内网开发机直接访问」= 跟随 S32.14 ② 用户拍板「内网自用不要鉴权」）；22 号 §10.1:325-326 旧口径「拒绝启动」未同步 | 改 22 号 §10.1 主规则为告警口径（对齐代码 + S32.14 例外 :336-341）+ 同步 `evidence/S32.1.log` 判据 6 注（三方已对齐） |
+| F2 | P2 | `--token` CLI 参数与 `token` 子命令未实现（静默忽略） | **确认挂账**：`parse_args` 仅处理 `--host`/`--port`；实际生效 = env `TI_CONSOLE_TOKEN`；22 号 §10.1:336 明示「S32.4 鉴权/POST token 面维持挂账不阻塞本线」 | 22 号 §10.1 取得途径标注挂账（不实现，避免承诺未兑现） |
+| F3 | P2 | 归档写路径未防符号链接 | **确认真实缺口**：`archive.rs` `std::fs::write` 跟随已有 symlink（纵深防御缺口） | `archive.rs` 加 `symlink_metadata` 拒绝既有 symlink（+ 单测 `archive_rejects_symlink`，28 条全绿） |
+| F4 | P2 | >256KB POST body 返回 400 而非 413 | **确认真实缺口**：`serve` 读取段上限 256KB，超限 body 未读入 → handler 见空 body → 400；与 22 号 §10.1「64 KiB 上限 413」不符 | `routes.rs` 读取前对 `content_length > 65536` 早判 413（`post_too_large` helper）；实跑 HTTP 413 确认 |
+
+修复后重跑：`cargo clippy -p ti-console --all-targets -- -D warnings` 0 error / `cargo build -p ti-console` 0 error / `cargo test -p ti-console --test audit_tests` 28 全绿 / `doccheck` 0 error。
+
+## 七、双审计收敛（判据 5：双审计通过）
+
+S32.5 双审计 r1~r3 收敛闭环：
+
+| 轮 | A 侧（完成度） | B 侧（一致性） | 收敛 |
+|---|---|---|---|
+| r1 | PASS / 新发现 1（P2-1 DoD 字面「对 S32.0b 实跑」未按字面执行 + 非空注入分支未演示） | FAIL / 新发现 4（F1 P1 非回环+无 token 未拒绝启动三方漂移 / F2 P2 --token 缺位 / F3 P2 归档 symlink / F4 P2 >256KB body 400 非 413） | ✗ |
+| r2 | PASS / 0/0/0（P2-1 闭环：补 S32.0a 实跑 + 归档 r1 后生成 r2 任务书非空注入验证） | PASS / 0/0/0（F1~F4 全闭环：F1 告警口径三方对齐 / F2 挂账标注 / F3 symlink_metadata 拒绝 + 单测 / F4 早判 413） | ✓ |
+| r3 | PASS / 0/0/0（稳定终核） | PASS / 0/0/0（七审计面全无回归） | ✓ |
+
+**收敛达成**：r2/r3 连续 2 轮 0/0/0 → `judge::convergence Pass{2}`（22 号 §7.4）；`/api/audit` 收敛表 S32.5 = `state=pass detail=2 complete=True missing=[] unclosed=[]`。
+
+**r1 修复清单（主线程独立复核判定）**：
+- A 侧 P2-1：补对 S32.0a（有存量报告）实跑生成任务书（八要素全覆盖）+ 归档 r1 后生成 r2 任务书演示 `latest_findings` 非空注入分支。
+- B 侧 F1：22 号 §10.1 主规则改告警口径（对齐 main.rs + S32.14 ② 例外）+ 同步 evidence/S32.1.log 判据 6 注（三方对齐）。
+- B 侧 F2：22 号 §10.1 取得途径标注挂账（S32.4 token 面维持挂账，避免承诺未兑现）。
+- B 侧 F3：archive.rs 加 symlink_metadata 拒绝既有 symlink（+ 单测 archive_rejects_symlink）。
+- B 侧 F4：routes.rs 读取前对 content_length > 65536 早判 413（post_too_large helper；实跑 HTTP 413 确认）。
+
+**收尾精确性修正**：taskbook.rs `latest_findings` 空分支回退文案「本轮为首次审计轮」→「无待复核 findings：上一轮已收敛 0/0/0 或本轮为首轮」（非首轮但无 findings 时措辞欠准，r3 观察 P3；28 单测 + clippy 无回归）。
+
+## 八、最终门禁（判据 4 复核）
+
+```
+cargo build -p ti-console            # 0 error
+cargo clippy -p ti-console --all-targets -- -D warnings   # 0 error
+cargo test  -p ti-console            # 全过（含 28 条 audit 单测）
+cargo fmt --all -- --check           # 0 diff
+cargo run -q -p ti-tools --bin doccheck   # 0 error(s)
+pwsh -File scripts/gate.ps1          # === gate: 0 failure(s) ===
+```

@@ -215,8 +215,38 @@
       <h2>双审计报告（evidence/console/audit-*.md，§7.3 四行机器字段）</h2>
       <p style="color:var(--muted);margin-top:0">收敛口径 = 0 新发现 + 0 误报 + 0 残留 连续 2 轮（22 号 §7.4）。</p>
       <table>
-        <thead><tr><th>报告</th><th style="width:110px">task</th><th style="width:55px">round</th><th style="width:45px">侧</th><th style="width:70px">总判定</th><th style="width:55px">新发现</th><th style="width:45px">误报</th><th style="width:45px">残留</th></tr></thead>
+        <thead><tr><th>报告</th><th style="width:110px">task</th><th style="width:55px">round</th><th style="width:45px">侧</th><th style="width:70px">总判定</th><th style="width:55px">新发现</th><th style="width:45px">误报</th><th style="width:45px">残留</th><th style="width:90px">解析</th></tr></thead>
         <tbody id="audit-rows"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>双审计任务书生成（S32.5；.prompt.md 供 harness 起 A/B 子代理）</h2>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="tb-task" placeholder="task（如 S32.5）" style="min-width:110px">
+        <input type="number" id="tb-round" placeholder="round" value="1" min="1" style="width:80px">
+        <select id="tb-role" style="width:110px">
+          <option value="a">a（完成度）</option>
+          <option value="b">b（一致性）</option>
+        </select>
+        <input type="text" id="tb-surface" placeholder="审计面（可选）" style="flex:1;min-width:260px">
+        <button onclick="genTaskbook()">生成任务书</button>
+      </div>
+      <div id="tb-out" style="color:var(--muted);font-size:13px"></div>
+    </div>
+    <div class="card">
+      <h2>报告粘贴归档（S32.5；主线程把子代理报告正文粘给平台落盘）</h2>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="ar-file" placeholder="evidence/console/audit-<task>-r<N>-<ab>.md" style="flex:1;min-width:320px">
+        <button onclick="archiveReport()">粘贴归档</button>
+      </div>
+      <textarea id="ar-content" rows="8" style="width:100%;box-sizing:border-box" placeholder="报告正文（含四行代码块：总判定/新发现/误报/残留）…"></textarea>
+      <div id="ar-out" style="color:var(--muted);font-size:13px"></div>
+    </div>
+    <div class="card">
+      <h2>收敛判定（22 号 §7.4 机械判定）</h2>
+      <table>
+        <thead><tr><th>task</th><th style="width:110px">状态</th><th style="width:80px">轮次</th><th style="width:70px">完整性</th><th style="width:170px">缺失轮</th><th>未闭环清单</th></tr></thead>
+        <tbody id="audit-conv-rows"></tbody>
       </table>
     </div>
   </section>
@@ -440,10 +470,20 @@ function showPage(name) {
 }
 const loaded = {};
 
-async function api(path) {
-  const r = await fetch(path);
-  if (!r.ok) throw new Error(path + ' → ' + r.status);
-  return r.json();
+async function api(path, body, write) {
+  if (!body) {
+    const r = await fetch(path);
+    if (!r.ok) throw new Error(path + ' → ' + r.status);
+    return r.json();
+  }
+  // POST 写操作（S32.4/S32.5）：X-TI-Token 鉴权 + Content-Type application/json。
+  const hdrs = { 'Content-Type': 'application/json' };
+  const token = sessionStorage.getItem('ti_console_token') || '';
+  if (token) hdrs['X-TI-Token'] = token;
+  const r = await fetch(path, { method: 'POST', headers: hdrs, body: JSON.stringify(body) });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok || !out.ok) throw new Error(out.error || (path + ' → ' + r.status));
+  return out;
 }
 
 async function loadOverview() {
@@ -516,8 +556,51 @@ function renderAudit(au) {
   const rows = (au.reports || []).slice().reverse(); // 最新 round 在前
   $('audit-rows').innerHTML = rows.map((r) =>
     `<tr><td class="file">${r.file}</td><td>${esc(r.task)}</td><td>${esc(r.round)}</td><td>${esc(r.side)}</td>
-     <td>${esc(r.verdict || '—')}</td><td>${r.new ?? '—'}</td><td>${r.false_pos ?? '—'}</td><td>${r.residual ?? '—'}</td></tr>`
-  ).join('') || '<tr><td colspan="8" class="empty">evidence/console/ 下无 audit-*.md 报告</td></tr>';
+     <td>${esc(r.verdict || '—')}</td><td>${r.new ?? '—'}</td><td>${r.false_pos ?? '—'}</td><td>${r.residual ?? '—'}</td>
+     <td>${esc(r.status || '—')}</td></tr>`
+  ).join('') || '<tr><td colspan="9" class="empty">evidence/console/ 下无 audit-*.md 报告</td></tr>';
+  const conv = au.convergence || [];
+  $('audit-conv-rows').innerHTML = conv.map((c) => {
+    const stateLabel = { pass: '✅ pass', in_progress: '⏳ in_progress', escalate: '⚠️ escalate' }[c.state] || esc(c.state);
+    const rounds = (c.rounds || []).map((r) => `r${r.round}${r.complete ? '' : '?（缺侧）'}${r.converged ? '✓' : r.legacy ? '·' : '✗'}`).join(' ');
+    const unclosed = (c.unclosed || []).map((u) => `${u.side} 侧：新 ${u.new} / 残 ${u.residual}`).join('<br>') || '<span style="color:var(--muted)">无</span>';
+    const missing = (c.missing_rounds || []).map((m) => `r${m}`).join(', ') || '—';
+    return `<tr><td>${esc(c.task)}</td><td>${stateLabel}</td><td>${esc(c.detail ?? '')}</td>
+      <td>${c.complete ? '完整' : '缺'}</td><td>${esc(missing)}</td><td>${unclosed}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty">无审计轮次</td></tr>';
+}
+
+async function genTaskbook() {
+  const task = $('tb-task').value.trim();
+  const round = parseInt($('tb-round').value, 10) || 0;
+  const role = $('tb-role').value;
+  const surface = $('tb-surface').value.trim();
+  if (!task || !round) { $('tb-out').textContent = 'task 与 round 必填'; return; }
+  const body = { task, round, role };
+  if (surface) body.surface = surface;
+  try {
+    const r = await api('/api/audit/taskbook', body, true);
+    const warn = (r.uncovered_elements && r.uncovered_elements.length)
+      ? `　⚠️ 未覆盖要素：${r.uncovered_elements.join(', ')}` : '';
+    $('tb-out').innerHTML = `<span style="color:var(--ok)">已生成：</span>${esc(r.file)}${warn}`;
+    loadEvidence();
+  } catch (e) {
+    $('tb-out').textContent = '失败：' + e;
+  }
+}
+
+async function archiveReport() {
+  const file = $('ar-file').value.trim();
+  const content = $('ar-content').value;
+  if (!file || !content) { $('ar-out').textContent = 'file 与正文必填'; return; }
+  try {
+    const r = await api('/api/audit/archive', { file, content }, true);
+    $('ar-out').innerHTML = `<span style="color:var(--ok)">已归档：</span>${esc(r.file)}`;
+    $('ar-content').value = '';
+    loadEvidence();
+  } catch (e) {
+    $('ar-out').textContent = '失败：' + e;
+  }
 }
 
 async function loadAssets() {

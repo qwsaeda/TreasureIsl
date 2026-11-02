@@ -497,10 +497,20 @@ fn snapshot_sample(snap: &super::snapshot::FrozenSnapshot) -> Vec<Value> {
 /// # Errors
 ///
 /// 目录读取失败 = 带原因 `Err`（0 报告时返回空清单不 Err）。
+/// `/api/audit`：双审计报告清单 + 收敛判定（22 号 §7.3/§7.4；S32.5 起机械判定）。
+///
+/// - 报告清单：`evidence/console/audit-*.md`（**排除** `.prompt.md` 任务书）；
+///   每份含 §7.3 四行机器字段（`parseable` 区分 parsed/legacy/unparseable）；
+/// - 收敛表（按 task 分组）：轮次完整性（1..=max 连续 + 每轮 a/b 在盘）+ 收敛状态
+///   （`pass` = 连续 2 轮全 0 / `in_progress` / `escalate` = 连续 3 轮未收敛）+ 未闭环清单。
+///
+/// 目录读取失败 = 带原因 `Err`（0 报告时返回空清单不 Err）。
 pub fn audit_list(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
+    use crate::audit::judge::{HeadStatus, ReportMeta, parse_head_status, parse_report_filename};
     let base = resolve_guarded(repo_root, &sources.repo_sources, "evidence/console/")
         .map_err(|e| e.to_string())?;
     let mut reports: Vec<Value> = Vec::new();
+    let mut metas: Vec<ReportMeta> = Vec::new();
     let Ok(rd) = std::fs::read_dir(&base) else {
         return Ok(json!({ "reports": reports, "count": 0, "base": "evidence/console/" }));
     };
@@ -509,57 +519,111 @@ pub fn audit_list(repo_root: &Path, sources: &RepoSources) -> Result<Value, Stri
         if !name.starts_with("audit-") || !name.to_lowercase().ends_with(".md") {
             continue;
         }
-        // 命名规则 = `audit-<task>-r<N>-<ab>.md`（`<task>` 本身可含 `-`/`.`，如 `S32.0a`）：
-        // 末段 = side（a/b），倒数第 2 段以 `r` 开头 = round，其余 = task。
-        let stem = name.trim_start_matches("audit-").trim_end_matches(".md");
-        let segs: Vec<&str> = stem.split('-').collect();
-        let ab = segs.last().copied().unwrap_or("");
-        let round = if segs.len() >= 2 { segs[segs.len() - 2] } else { "" };
-        let task = if segs.len() >= 3 { segs[..segs.len() - 2].join("-") } else { String::new() };
+        // 任务书（.prompt.md）非报告，排除（防「不可解析」误入报告清单）。
+        if name.ends_with(".prompt.md") {
+            continue;
+        }
+        let Some((task, round, side)) = parse_report_filename(&name) else {
+            continue;
+        };
         let text = std::fs::read_to_string(entry.path()).unwrap_or_default();
-        let fields = parse_audit_head(&text);
+        // 祖父条款：r1~r3（契约引入前）人工口径读，不因缺四行判「不可解析」误报。
+        let legacy = round <= 3;
+        let status = parse_head_status(&text, legacy);
+        let (verdict, new, false_pos, residual, st) = match &status {
+            HeadStatus::Parsed(f) => {
+                (f.verdict.clone(), f.found, f.false_pos, f.residual, "parsed")
+            }
+            HeadStatus::Legacy => (None, None, None, None, "legacy"),
+            HeadStatus::Unparseable => (None, None, None, None, "unparseable"),
+        };
         reports.push(json!({
             "file": format!("evidence/console/{name}"),
-            "task": task,
+            "task": task.clone(),
             "round": round,
-            "side": ab,
-            "verdict": fields.verdict,
-            "new": fields.found,
-            "false_pos": fields.false_pos,
-            "residual": fields.residual,
+            "side": side.to_string(),
+            "verdict": verdict,
+            "new": new,
+            "false_pos": false_pos,
+            "residual": residual,
+            "parseable": matches!(status, HeadStatus::Parsed(_)),
+            "status": st,
         }));
+        metas.push(ReportMeta {
+            task,
+            round,
+            side,
+            file: format!("evidence/console/{name}"),
+            status,
+        });
     }
     reports.sort_by(|a, b| {
         let ak = a.get("file").and_then(Value::as_str).unwrap_or("");
         let bk = b.get("file").and_then(Value::as_str).unwrap_or("");
         ak.cmp(bk)
     });
-    Ok(json!({ "reports": reports, "count": reports.len(), "base": "evidence/console/" }))
+    // 按 task 分组 → 收敛表 + 未闭环清单（22 号 §7.4 机械判定）。
+    let conv = convergence_rows(metas);
+    Ok(json!({
+        "reports": reports,
+        "count": reports.len(),
+        "convergence": conv,
+        "base": "evidence/console/",
+    }))
 }
 
-/// 解析审计报告抬头的 §7.3 四行机器可解析字段（代码块内 总判定/新发现/误报/残留 行）。
-struct AuditHead {
-    verdict: Option<String>,
-    found: Option<u64>,
-    false_pos: Option<u64>,
-    residual: Option<u64>,
-}
-
-fn parse_audit_head(text: &str) -> AuditHead {
-    let mut out = AuditHead { verdict: None, found: None, false_pos: None, residual: None };
-    for line in text.lines().take(80) {
-        let s = line.trim();
-        if let Some(v) = s.strip_prefix("总判定:") {
-            out.verdict = Some(v.trim().to_owned());
-        } else if let Some(v) = s.strip_prefix("新发现:") {
-            out.found = v.trim().parse().ok();
-        } else if let Some(v) = s.strip_prefix("误报:") {
-            out.false_pos = v.trim().parse().ok();
-        } else if let Some(v) = s.strip_prefix("残留:") {
-            out.residual = v.trim().parse().ok();
-        }
+/// 收敛表 + 未闭环清单（22 号 §7.4 机械判定；按 task 分组）。
+/// `metas` = 该仓库全部审计报告元数据（S32.5 起）。
+fn convergence_rows(metas: Vec<crate::audit::judge::ReportMeta>) -> Vec<Value> {
+    use crate::audit::judge::{
+        ReportMeta, aggregate, convergence, round_complete, unclosed_findings,
+    };
+    let mut by_task: std::collections::BTreeMap<String, Vec<ReportMeta>> =
+        std::collections::BTreeMap::new();
+    for m in metas {
+        by_task.entry(m.task.clone()).or_default().push(m);
     }
-    out
+    let mut conv: Vec<Value> = Vec::new();
+    for (task, mut ms) in by_task {
+        ms.sort_by_key(|m| (m.round, m.side));
+        let rounds = aggregate(&ms);
+        let (complete, missing) = round_complete(&rounds);
+        let (state, detail) = match convergence(&rounds) {
+            crate::audit::judge::ConvergeResult::Pass { consecutive } => {
+                ("pass", json!(consecutive))
+            }
+            crate::audit::judge::ConvergeResult::InProgress { consecutive } => {
+                ("in_progress", json!(consecutive))
+            }
+            crate::audit::judge::ConvergeResult::Escalate { unclosed } => {
+                ("escalate", json!(unclosed))
+            }
+        };
+        let unclosed: Vec<Value> = unclosed_findings(&rounds)
+            .into_iter()
+            .map(|(side, new, res, file)| {
+                json!({ "side": side.to_string(), "new": new, "residual": res, "file": file })
+            })
+            .collect();
+        conv.push(json!({
+            "task": task,
+            "rounds": rounds.iter().map(|r| json!({
+                "round": r.round,
+                "a_file": r.a_file,
+                "b_file": r.b_file,
+                "complete": r.complete(),
+                "converged": r.converged(),
+                "legacy": r.legacy(),
+                "unparseable": r.unparseable(),
+            })).collect::<Vec<_>>(),
+            "complete": complete,
+            "missing_rounds": missing,
+            "state": state,
+            "detail": detail,
+            "unclosed": unclosed,
+        }));
+    }
+    conv
 }
 
 /// `/api/map`：地图包清单 + 描述符浏览（21 号地图包标准；只读，0 写盘）。

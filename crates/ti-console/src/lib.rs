@@ -6,5 +6,6 @@
 //! 允许 unwrap/expect；src 库代码 0 豁免）。
 #![allow(dead_code)]
 
+pub mod audit;
 pub mod repo;
 pub mod runner;

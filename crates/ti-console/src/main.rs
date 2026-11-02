@@ -10,6 +10,7 @@
 //!
 //! 用法：`cargo run -p ti-console`（S32.1 起）。
 
+mod audit;
 mod repo;
 mod routes;
 mod runner;

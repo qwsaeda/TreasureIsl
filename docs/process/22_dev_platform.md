@@ -174,7 +174,8 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 |---|---|---|
 | 概览 | 当前阶段 / 进度条 / 下一任务 / 阻塞清单 / 最近门禁 / 最近审计 | P0（S32.3） |
 | 任务 | 台账全表（按 status / 阶段 / rounds 筛选），任务详情含 dod + evidence 链接 | P0 |
-| 证据 | `evidence/` 浏览 + 缺失告警 + 双审计报告清单（`audit-*.md` 文件 + §7.3 四行机器字段：task/round/侧/新发现/误报/残留，`GET /api/audit`） | P0 |
+| 证据 | `evidence/` 浏览 + 缺失告警 + 双审计报告清单（`audit-*.md` 文件 + §7.3 四行机器字段：task/round/侧/新发现/误报/残留，`GET /api/audit` = 报告清单 + **收敛表**（按 task 分组：轮次完整性 + 收敛状态 pass/in_progress/escalate + 未闭环清单，S32.5 机械判定）） | P0 |
+| 双审计编排 | 任务书生成（`POST /api/audit/taskbook`：写操作 `X-TI-Token` 鉴权 403 + body `{"task","round","role","surface?"}` → 落 `evidence/console/audit-<task>-r<N>-<role>.prompt.md` + 返回 `uncovered_elements`〔八要素模板机器断言，空 = 全覆盖〕）+ 报告归档（`POST /api/audit/archive`：body `{"file","content"}` → 落 `evidence/console/audit-<task>-r<N>-<role>.md`，命名规则 + 防穿越 + 非空正文校验）+ 机械判定（`GET /api/audit` 收敛表，§7.3/§7.4） | P1（S32.5） |
 | 门禁 | 分档执行 + 轮询日志 + 历史（`GET /api/gate` = 状态 + 历史 + `?log=` 尾部，只读免 token；`POST /api/gate` = 写操作：`X-TI-Token` 鉴权 403 + `tier∈{fast,touch,full}` 校验 400 + 单实例锁 409 + 后台 spawn；日志落 `evidence/console/logs/gate-<ts>.log` gitignored；门禁既有副作用 `evidence/web_playtest.{log,png}`/`font_render.txt` 只记录不判定） | P1（S32.4） |
 | 资产 | UI 图片预览（`ui_manifest` 全量登记图（登记数随资产批次增长，S32.3 快照 = 75 张） + **标签分组 = role + 时间倒序** `generated_at` 降序 + **lightbox 点击放大** + 元数据含 AI prompt 原文；图片直读 = `assets/ui/` 白名单前缀，`GET /api/assets`）/ 校验状态 | P0（S32.3 看板 v1）+ P2（S32.7 校验状态） |
 | 设计图 | AI 生成设计稿浏览（`evidence/ui_concept/`，**非运行截图**；`GET /api/evidence?sub=ui_concept` 子目录枚举〔**滤除 `.thumb.png` 侧车**〕+ 白名单直读 + 组别标签〔主地图/首页/岛型·地图/对战/界面/资产表/其他〕+ lightbox 放大。**默认只展示正式稿**：`raw_`（未抠原图）/`tmp_`（临时试稿）前缀 = 中间产物隐藏（`#design-mid` 勾选展开），命名口径 = 13 号 §2.1。**压缩预览**：卡读 `.thumb.png` 侧车（480px PNG-8，~53KB vs 原图 4-6MB）、lightbox 读原图，口径 = 13 号 §4.0） | P0（S32.3） |
@@ -223,6 +224,19 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 3. 子代理报告**由主线程写回** `evidence/console/audit-<task>-r<N>-<role>.md`
    （平台也提供「粘贴归档」入口：主线程把报告正文粘给平台，平台落盘同一文件名）；
 4. 平台做**机械判定**：解析报告抬头里的**机器可解析字段** → 收敛轮次表 + 未闭环清单。
+
+   **审计任务书八要素清单（S32.5 内联定义，模板逐条覆盖；`cover_elements` 机器断言）**：
+
+   | # | 要素 | 内容 |
+   |---|---|---|
+   | 1 | 角色声明 | 子代理是 A（完成度审计）或 B（一致性/风险审计），视角与输出边界（§7.2） |
+   | 2 | 只读约束 | 不得改文件 / 改台账 / 跑构建；只允许只读命令 |
+   | 3 | 被审任务 | 台账 id + dod（DoD 逐条）+ 证据路径 |
+   | 4 | 本轮定位 | 轮次 r\<N\>（收敛验证轮，复核上一轮 findings 是否闭环） |
+   | 5 | 审计面 | A = DoD 逐条；B = 架构 / 规范 / 文档 / 门禁 / 回归 / 安全 / 依赖 |
+   | 6 | 证据要求 | 必须引用文件路径 + 行号 或 命令实跑输出；禁止「看起来没问题」 |
+   | 7 | 报告格式契约 | 报告正文第一个代码块内四行（总判定/新发现/误报/残留） |
+   | 8 | 输出要求 | 把完整报告正文（含四行代码块 + findings 表）作为最终回复输出 |
 
    **报告格式契约（机器可解析）** —— 报告抬头必须含以下**四行**，平台按此解析（缺行 ⇒ 判「不可解析」而非 PASS）：
 
@@ -308,13 +322,16 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 
 ### 10.1 网络面与 token
 
-- 默认 `127.0.0.1:8787`；`--host` 非回环地址时**必须**同时给 `--token`（或环境变量 `TI_CONSOLE_TOKEN`），否则**拒绝启动**
-  （S32.1 DoD 判据：实测非回环 + 无 token ⇒ 进程拒绝启动）；
+- 默认 `127.0.0.1:8787`；`--host` 非回环地址时若未设 `TI_CONSOLE_TOKEN` → 启动**告警**（默认不启用强鉴权，
+  便于内网开发机直接访问；**S32.14 ② 例外见下**，用户 2026-10-30 拍板「内网自用不要鉴权」）。
+  **注（S32.5 同步口径）**：旧文「非回环 + 无 token ⇒ 拒绝启动」为 S32.1 期行为，已被 S32.14 ② 例外取代
+  （代码 `main.rs` 仅 `eprintln!` 告警不拒绝，与 :336-341 例外一致）；三方（文档/代码/`S32.1.log`）已对齐。
 - **token 存放**：默认落**仓库外**平台目录 —— Linux `$XDG_CONFIG_HOME/ti-console/token`（回退 `~/.config/ti-console/token`），
-  Windows `%APPDATA%\ti-console\token`；权限 `0600`（Windows 尽力）；`--token` 传入时不落盘；
+  Windows `%APPDATA%\ti-console\token`；权限 `0600`（Windows 尽力）；
   **禁止**写进 `evidence/console/`（git 跟踪目录）⇒ `.gitignore` 已加 `/evidence/console/token` 兜底；
-- **取得途径**：`cargo run -p ti-console -- token` 把 token 打印到 stdout（用户自行复制）；
-  启动日志打印 **token 文件路径**（不含内容）；
+- **取得途径**：**挂账（S32.4 token 面维持挂账不阻塞本线）** —— 文档化的 `--token` CLI 参数与 `cargo run -p ti-console -- token` 子命令
+  **当前未实现**（`parse_args` 仅处理 `--host`/`--port`，其余静默忽略）；实际生效途径 = 环境变量 `TI_CONSOLE_TOKEN`
+  （`auth_ok` 读 env；env 未设 = 写面鉴权退化「非空头即可」，env 设了 = 精确匹配）。S32.4 鉴权/POST token 面维持挂账（见下 S32.14 ②）。
 - **token 分发**：平台**不回传 token**；`GET /api/session` 只返回 `{write_enabled: bool}`。
   浏览器侧：用户在「设置」里粘贴 token → 存 `sessionStorage`（关闭即失）→ 写操作带 `X-TI-Token` 头；
 - 请求方法白名单：只读 `GET`；写操作 `POST` + `X-TI-Token`（缺 token ⇒ 403）；请求体上限 64 KiB；
@@ -403,6 +420,9 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 - **已知兜底缺口（如实标注）**：「22 号八要素齐全」+「5 处登记」两条判据**目前无机器断言**
   （`doccheck` / `doccheck2` 无相关检查项）⇒ 后续迭代删段/漏登不会被门禁发现；
   兜底落在 **S32.5**（审计任务书模板必须逐条覆盖 22 号八要素清单 ⇒ 漏段在生成任务书时暴露）。
+  **S32.5 已落地**：八要素清单在 §7.3 内联定义（表格）+ `crates/ti-console/src/audit/template.rs`
+  `TASKBOOK_ELEMENTS` + `cover_elements` 机器断言（生成任务书返回 `uncovered_elements`，空 = 全覆盖；
+  单测 `taskbook_covers_all_eight_elements` 断言 8/8）⇒ 该缺口已闭合。
 - **机器面盲区（如实标注，不扩面）**：S32 文档面（本节 / WBS）对门禁项数的声称点（§4.2「当前 = 33 项」等）**不在** `doccheck2::check_gate_item_count` 声称面（gate.ps1 头注释/横幅 + parity/git/README）也不在 `doc_numbers.py` 声称点内⇒ 门禁结构再漂移时机器不报，当前由**双审计人工 grep** 兜住（复发记录 = 15 号第 21 行）；扩面归属 = 后续门禁结构演进时随 `check_gate_item_count` 声称面扩容，**非 S32 任务**。
 - **信任项备注（S32.2 起 repo 适配层「0 写盘」已断言；`build_wasm.ps1 -Check`「不构建/不拷贝/不写 evidence」与 map_pack `install/uninstall` 条件写行为仍挂账 = S32.4/S32.9 执行面落地后改全断言）**：S32.2 落地 = `repo/` 适配层 24 条单测含 0 写盘面（repo/ 全模块 0 处写盘 API，唯一写点 = `evidence/console/.lock`，gitignored）⇒ 本节 repo 面改「已断言」；`-Check` 实跑 0 写盘断言 = S32.9 载体（执行面）。
 - 补充断言：S32 各任务的 DoD 各自要求 `cargo test -p ti-console`（或 `-p ti-devmeta`）实跑 +

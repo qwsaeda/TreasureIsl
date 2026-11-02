@@ -20,7 +20,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 use std::path::Path;
 
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::repo::config::{RepoSources, load as load_sources_file};
 
@@ -121,27 +121,30 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
         } else {
             Vec::new()
         };
-
+    // 统一 22 号 §10.1「请求体上限 64 KiB」口径：超限（含 >256KB 未读入者）一律 413，
+    // 而非落入空 body → 400（S32.5 B 侧 F4 修复）。
     let gz = accept_gzip;
-    // POST /api/gate = S32.4 门禁执行面（写操作：X-TI-Token 鉴权 + tier 分档 + 单实例锁 + spawn）。
-    if method == "POST" && clean == "/api/gate" {
-        let response = handle_gate(
+    if method == "POST" && content_length > 65_536 {
+        let response = post_too_large(gz);
+        let _ = stream.write_all(&response);
+        let _ = stream.flush();
+        return;
+    }
+
+    // POST /api/gate|/api/map/import|/api/audit/* = 写操作面（鉴权在各 handler；返回 None 即不匹配）。
+    if method == "POST" {
+        if let Some(response) = handle_post(
+            clean,
             repo_root,
             &request_body,
             x_ti_token.as_deref(),
             content_type.as_deref(),
             gz,
-        );
-        let _ = stream.write_all(&response);
-        let _ = stream.flush();
-        return;
-    }
-    // POST /api/map/import = S32.14 ② 唯一写点（编辑器描述符 → 落 assets/maps/<id>/ + 回注）。
-    if method == "POST" && clean == "/api/map/import" {
-        let response = handle_map_import(repo_root, &request_body, gz);
-        let _ = stream.write_all(&response);
-        let _ = stream.flush();
-        return;
+        ) {
+            let _ = stream.write_all(&response);
+            let _ = stream.flush();
+            return;
+        }
     }
     let response = match clean {
         "/api/health" => text200("ti-console ok", gz),
@@ -239,6 +242,217 @@ fn handle_map_import(repo_root: &Path, body: &[u8], want_gzip: bool) -> Vec<u8> 
         None,
         want_gzip,
     )
+}
+
+/// 请求体超 64 KiB 上限的 413 响应（22 号 §10.1；`serve` 读取前早判，统一口径）。
+fn post_too_large(want_gzip: bool) -> Vec<u8> {
+    header_body(
+        "application/json",
+        r#"{"ok":false,"error":"413: 请求体超 64 KiB 上限（22 号 §10.1）"}"#.as_bytes(),
+        "413 Payload Too Large",
+        "no-store",
+        None,
+        want_gzip,
+    )
+}
+
+/// `POST /api/*` 写操作分派（S32.4/S32.5）：gate / map/import / audit 匹配返回响应，否则 `None`。
+fn handle_post(
+    clean: &str,
+    repo_root: &Path,
+    body: &[u8],
+    token: Option<&str>,
+    content_type: Option<&str>,
+    gz: bool,
+) -> Option<Vec<u8>> {
+    match clean {
+        // S32.4 门禁执行面（写操作：X-TI-Token 鉴权 + tier 分档 + 单实例锁 + spawn）。
+        "/api/gate" => Some(handle_gate(repo_root, body, token, content_type, gz)),
+        // S32.14 ② 唯一写点（编辑器描述符 → 落 assets/maps/<id>/ + 回注）。
+        "/api/map/import" => Some(handle_map_import(repo_root, body, gz)),
+        // S32.5 双审计编排（任务书生成 + 粘贴归档）。
+        "/api/audit/taskbook" => {
+            Some(handle_audit_taskbook(repo_root, body, token, content_type, gz))
+        }
+        "/api/audit/archive" => {
+            Some(handle_audit_archive(repo_root, body, token, content_type, gz))
+        }
+        _ => None,
+    }
+}
+
+/// `POST /api/audit/taskbook`（S32.5 双审计编排）：生成审计任务书 `.prompt.md`。
+/// 写操作鉴权（403）→ Content-Type application/json（400）→ body ≤ 64KiB（413）→
+/// body `{"task","round","role","surface?"}` → `audit::taskbook::generate`。
+fn handle_audit_taskbook(
+    repo_root: &Path,
+    body: &[u8],
+    token: Option<&str>,
+    content_type: Option<&str>,
+    want_gzip: bool,
+) -> Vec<u8> {
+    if !auth_ok(token) {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1）"}"#.as_bytes(),
+            "403 Forbidden",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    let ct_ok = content_type.is_some_and(|c| {
+        let base = c.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
+        base == "application/json"
+    });
+    if !ct_ok {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"400: Content-Type 必须为 application/json（22 号 §10.3）"}"#
+                .as_bytes(),
+            "400 Bad Request",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    if body.len() > 65_536 {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"413: 请求体超 64 KiB 上限（22 号 §10.1）"}"#.as_bytes(),
+            "413 Payload Too Large",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    let payload = match serde_json::from_slice::<Value>(body) {
+        Ok(v) => v,
+        Err(e) => {
+            let text = format!(r#"{{"ok":false,"error":"400: body 非合法 JSON：{e}"}}"#);
+            return header_body(
+                "application/json",
+                text.as_bytes(),
+                "400 Bad Request",
+                "no-store",
+                None,
+                want_gzip,
+            );
+        }
+    };
+    let task = payload.get("task").and_then(Value::as_str).unwrap_or("");
+    let Some(round) =
+        payload.get("round").and_then(Value::as_u64).and_then(|v| u32::try_from(v).ok())
+    else {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"400: round 必须为 ≤ u32::MAX 的非负整数"}"#.as_bytes(),
+            "400 Bad Request",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    };
+    let role =
+        payload.get("role").and_then(Value::as_str).and_then(|s| s.chars().next()).unwrap_or(' ');
+    let surface = payload
+        .get("surface")
+        .and_then(Value::as_str)
+        .unwrap_or("A：DoD 逐条；B：架构/规范/文档/门禁/回归/安全/依赖");
+    match crate::audit::taskbook::generate(repo_root, task, round, role, surface) {
+        Ok((file, uncovered)) => json200(
+            &json!({ "ok": true, "file": file, "uncovered_elements": uncovered }),
+            want_gzip,
+        ),
+        Err(e) => {
+            let body = format!(r#"{{"ok":false,"error":"{}"}}"#, e.replace('"', "\\\""));
+            header_body(
+                "application/json",
+                body.as_bytes(),
+                "400 Bad Request",
+                "no-store",
+                None,
+                want_gzip,
+            )
+        }
+    }
+}
+
+/// `POST /api/audit/archive`（S32.5 双审计编排）：粘贴归档报告 `.md`。
+/// 写操作鉴权（403）→ Content-Type application/json（400）→ body ≤ 64KiB（413）→
+/// body `{"file":"evidence/console/audit-...-a.md","content":"..."}` → `audit::archive::archive`。
+fn handle_audit_archive(
+    repo_root: &Path,
+    body: &[u8],
+    token: Option<&str>,
+    content_type: Option<&str>,
+    want_gzip: bool,
+) -> Vec<u8> {
+    if !auth_ok(token) {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1）"}"#.as_bytes(),
+            "403 Forbidden",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    let ct_ok = content_type.is_some_and(|c| {
+        let base = c.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
+        base == "application/json"
+    });
+    if !ct_ok {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"400: Content-Type 必须为 application/json（22 号 §10.3）"}"#
+                .as_bytes(),
+            "400 Bad Request",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    if body.len() > 65_536 {
+        return header_body(
+            "application/json",
+            r#"{"ok":false,"error":"413: 请求体超 64 KiB 上限（22 号 §10.1）"}"#.as_bytes(),
+            "413 Payload Too Large",
+            "no-store",
+            None,
+            want_gzip,
+        );
+    }
+    let payload = match serde_json::from_slice::<Value>(body) {
+        Ok(v) => v,
+        Err(e) => {
+            let text = format!(r#"{{"ok":false,"error":"400: body 非合法 JSON：{e}"}}"#);
+            return header_body(
+                "application/json",
+                text.as_bytes(),
+                "400 Bad Request",
+                "no-store",
+                None,
+                want_gzip,
+            );
+        }
+    };
+    let file = payload.get("file").and_then(Value::as_str).unwrap_or("");
+    let content = payload.get("content").and_then(Value::as_str).unwrap_or("");
+    match crate::audit::archive::archive(repo_root, file, content) {
+        Ok(path) => json200(&json!({ "ok": true, "file": path }), want_gzip),
+        Err(e) => {
+            let body = format!(r#"{{"ok":false,"error":"{}"}}"#, e.replace('"', "\\\""));
+            header_body(
+                "application/json",
+                body.as_bytes(),
+                "400 Bad Request",
+                "no-store",
+                None,
+                want_gzip,
+            )
+        }
+    }
 }
 
 /// `POST /api/gate`（S32.4 门禁执行面）：X-TI-Token 鉴权（403）→ tier 校验（400）
