@@ -1,0 +1,36 @@
+# S34.3 VS v2 元素批次 — 验收证据
+
+## 验收判据（spec §2 资产接线 + dod）
+
+### ① ui_asset_batch check 0 违规
+- `python3 scripts/ui_asset_batch.py check --spec assets/ui_batches/vs_v2.json` → **0 error(s), 0 warn(s)**（批次 vs_v2，9 资产全合格）。
+
+### ② 9 元素在位（assets/ui/vs_v2/）
+| 元素 | 文件 | 用途 |
+|---|---|---|
+| hero | hero.png | 玩家首领（键控透明） |
+| enemy | enemy.png | 敌方首领（键控透明） |
+| crew | crew.png | 敌方船员（键控透明） |
+| banner_win | banner_win.png | 胜利横幅 |
+| banner_lose | banner_lose.png | 败北横幅 |
+| vs_bg | vs_bg.png | VS 通用战斗背景（满屏） |
+| bg_siege | bg_siege.png | 攻占战背景 |
+| bg_dungeon | bg_dungeon.png | 副本战背景 |
+| bg_boss | bg_boss.png | BOSS 战背景 |
+
+### ③ key_v6_elements.py --check 0 缺陷
+- `python3 scripts/key_v6_elements.py --check` → **ok**（0 缺陷）。
+- **S34.3 修复**：原 `BG_ITEMS` 单一列表混合两目录背景（VS 专用背景 vs_bg/bg_siege/bg_dungeon/bg_boss 被期望在 v6/、main_map 背景 ocean_bg/parchment 被期望在 vs_v2/ = 交叉污染）→ 拆 `MAP_BG`/`VS_BG` 按目录分属，--check 0 缺陷。
+
+### ④ validate_data 全绿
+- `python3 scripts/validate_data.py` → **OK**（全类型资产 disk↔registry 双向同步 + scenes.json indent=1 规范形）。
+
+### ⑤ 工具契约登记
+- `14_tooling_catalog.md`:215 key_v6_elements.py（幂等 + --check 只读 + 非 0 退出）✓
+- `14_tooling_catalog.md`:209 ui_asset_batch.py ✓
+
+### ⑥ gate 全绿
+- `scripts/gate.ps1` → **33 项 0 failure**（见 gate 输出）。
+
+## 结论
+**S34.3 verified**：9 元素批次在仓 + ui_asset_batch 0 违规 + key_v6_elements 0 缺陷（交叉污染修复）+ validate_data 全绿 + gate 全绿。

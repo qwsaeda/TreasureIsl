@@ -111,8 +111,11 @@ VS_DST = os.path.join(ROOT, "assets", "ui", "vs_v2")
 MAP_ITEMS = ["tile_owned", "tile_deny", "island", "isle_land", "isle_lighthouse",
              "isle_treasure", "isle_village", "creatures", "helm", "compass", "ship"]
 VS_ITEMS = ["hero", "enemy", "crew", "banner_win", "banner_lose"]
-# 满屏背景不做键控
-BG_ITEMS = ["ocean_bg", "parchment", "vs_bg", "bg_siege", "bg_dungeon", "bg_boss"]
+# 满屏背景不做键控；按目录分属（S34.3 修复：原单一 BG_ITEMS 混合两目录背景，
+# 导致 VS 专用背景（vs_bg/bg_siege/bg_dungeon/bg_boss）被期望在 v6/、
+# main_map 背景（ocean_bg/parchment）被期望在 vs_v2/ = 交叉污染 → key_v6_elements --check FAIL）。
+MAP_BG = ["ocean_bg", "parchment"]
+VS_BG = ["vs_bg", "bg_siege", "bg_dungeon", "bg_boss"]
 
 
 def key(src_dir: str, dst_dir: str, items: list[str], copy_bg: list[str],
@@ -146,16 +149,16 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
     args = ap.parse_args()
-    map_dst_files = [os.path.join(MAP_DST, f"{f}.png") for f in MAP_ITEMS + BG_ITEMS]
-    vs_dst_files = [os.path.join(VS_DST, f"{f}.png") for f in VS_ITEMS + BG_ITEMS]
+    map_dst_files = [os.path.join(MAP_DST, f"{f}.png") for f in MAP_ITEMS + MAP_BG]
+    vs_dst_files = [os.path.join(VS_DST, f"{f}.png") for f in VS_ITEMS + VS_BG]
     all_files = map_dst_files + vs_dst_files
     missing = [p for p in all_files if not os.path.exists(p)]
     if args.check:
         print(f"[key] check: {'ok' if not missing else 'missing ' + str(missing)}")
         return 0 if not missing else 1
-    a = key(MAP_SRC, MAP_DST, MAP_ITEMS, BG_ITEMS,
+    a = key(MAP_SRC, MAP_DST, MAP_ITEMS, MAP_BG,
             enclosed_items=["island"])
-    b = key(VS_SRC, VS_DST, VS_ITEMS, BG_ITEMS, enclosed_items=["hero", "enemy", "crew"])
+    b = key(VS_SRC, VS_DST, VS_ITEMS, VS_BG, enclosed_items=["hero", "enemy", "crew"])
     print(f"[key] wrote {len(a)} main_map + {len(b)} vs assets")
     return 0
 
