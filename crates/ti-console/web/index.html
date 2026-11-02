@@ -153,6 +153,7 @@
     <button data-page="tests">测试</button>
     <button data-page="apksize">APK 体积</button>
     <button data-page="build">构建</button>
+    <button data-page="close">收口</button>
   </nav>
   <div class="grp">平台</div>
   <nav>
@@ -405,6 +406,52 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
     </div>
   </section>
 
+  <!-- 收口（S32.6：POST /api/close；close_check 只读 / close_run 写需 enable_write / exp_check / 白名单对账断言） -->
+  <section id="page-close" hidden>
+    <div class="card">
+      <h2>白名单对账断言（S32.6 DoD：22 号 §4.2 人读视图 id 集合 == console_commands.json）</h2>
+      <div id="wl-audit" style="color:var(--muted);font-size:13px;margin-bottom:6px">…</div>
+      <div id="wl-ids" style="font:11px/1.5 monospace;color:var(--muted);max-height:120px;overflow:auto"></div>
+    </div>
+    <div class="card">
+      <h2>只读收口体检（close_check：task_close.py --check，不改台账）</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="cl-task" placeholder="task（如 S32.6）" style="min-width:120px">
+        <button onclick="closeCheck()">体检</button>
+        <span style="color:var(--muted);font-size:12px" id="cl-msg"></span>
+      </div>
+      <div id="cl-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:240px;overflow:auto;display:none"></div>
+    </div>
+    <div class="card">
+      <h2>EXP 查重（exp_check：exp_log.py --volume &lt;枚举&gt; --id &lt;EXP-id&gt; --check，只读）</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="cl-exp-vol" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:7px 12px">
+          <option value="code">code</option><option value="process">process</option>
+          <option value="build">build</option><option value="tools">tools</option>
+          <option value="formats">formats</option><option value="reverse">reverse</option>
+        </select>
+        <input type="text" id="cl-exp-id" placeholder="EXP-编号（如 EXP-116）" style="min-width:120px">
+        <button onclick="expCheck()">查重</button>
+        <span style="color:var(--muted);font-size:12px" id="cl-exp-msg"></span>
+      </div>
+      <div id="cl-exp-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:200px;overflow:auto;display:none"></div>
+    </div>
+    <div class="card">
+      <h2>收口执行（close_run：task_close.py --cmd 白名单 id 精确映射；写，需 enable_write）</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="cr-task" placeholder="task（如 S32.6）" style="min-width:120px">
+        <input type="text" id="cr-cmds" placeholder="判据 id（逗号分隔，如 close_check,exp_check）" style="flex:1;min-width:240px">
+        <label style="display:flex;gap:4px;align-items:center;color:var(--muted);font-size:13px">
+          <input type="checkbox" id="cr-enable"> enable_write
+        </label>
+        <button onclick="closeRun()">收口</button>
+        <span style="color:var(--muted);font-size:12px" id="cl-run-msg"></span>
+      </div>
+      <div style="margin-top:6px;color:var(--muted);font-size:12px">⚠ 未登记 id → 400（22 号 §4.2 禁止 1，禁透传自由字符串）；写操作需设置页粘贴 token。</div>
+      <div id="cl-run-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:240px;overflow:auto;display:none"></div>
+    </div>
+  </section>
+
   <!-- 设置 -->
   <section id="page-settings" hidden>
     <div class="card">
@@ -430,7 +477,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
-const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'tests', 'settings'];
+const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'tests', 'apksize', 'build', 'close', 'settings'];
 
 /* 图片短 ID（大写下划线形，如 MM_3 / IDX_1；组代码 + 组内序号；同组递增，好记、可直接口述给 AI）。
  * 确定性派生：按组别分桶，桶内按文件名排序 ⇒ 刷新/重启 ID 稳定不变。 */
@@ -466,6 +513,7 @@ function showPage(name) {
   if (name === 'tests' && !loaded.tests) loadTests();
   if (name === 'apksize' && !loaded.apksize) loadApkSize();
   if (name === 'build' && !loaded.build) loadBuild();
+  if (name === 'close' && !loaded.close) loadClose();
   if (name === 'settings' && !loaded.settings) loadSettings();
 }
 const loaded = {};
@@ -600,6 +648,66 @@ async function archiveReport() {
     loadEvidence();
   } catch (e) {
     $('ar-out').textContent = '失败：' + e;
+  }
+}
+
+/* ---- S32.6 收口：POST /api/close（close_check / close_run / exp_check + 白名单对账断言） ---- */
+async function loadClose() {
+  loaded.close = true;
+  // 白名单对账断言（S32.6 DoD）：只读 GET 面（经 /api/close?audit=1 无 body；此处直接 fetch）。
+  try {
+    const r = await fetch('/api/close?audit=1');
+    const d = await r.json();
+    if (d.ok) {
+      $('wl-audit').innerHTML = `<span style="color:var(--ok)">对账通过：</span>${d.count} 个 id；write_required = [${(d.write_required || []).join(', ')}]`;
+      $('wl-ids').textContent = (d.ids || []).join('\n');
+    } else {
+      $('wl-audit').textContent = '对账失败：' + (d.error || '');
+    }
+  } catch (e) {
+    $('wl-audit').textContent = '白名单对账不可用：' + e;
+  }
+}
+async function closeCheck() {
+  const task = $('cl-task').value.trim();
+  if (!task) { $('cl-msg').textContent = 'task 必填'; return; }
+  $('cl-msg').textContent = '…';
+  try {
+    const r = await api('/api/close', { mode: 'check', task }, true);
+    $('cl-msg').textContent = `exit=${r.exit_code} log=${r.log}`;
+    const o = $('cl-out'); o.style.display = 'block';
+    o.textContent = r.output_excerpt || '(空输出)';
+  } catch (e) {
+    $('cl-msg').textContent = '失败：' + e;
+  }
+}
+async function expCheck() {
+  const volume = $('cl-exp-vol').value;
+  const expId = $('cl-exp-id').value.trim();
+  if (!expId) { $('cl-exp-msg').textContent = 'EXP 编号必填'; return; }
+  $('cl-exp-msg').textContent = '…';
+  try {
+    const r = await api('/api/close', { mode: 'exp', volume, id: expId }, true);
+    $('cl-exp-msg').textContent = `exit=${r.exit_code} log=${r.log}`;
+    const o = $('cl-exp-out'); o.style.display = 'block';
+    o.textContent = r.output_excerpt || '(空输出)';
+  } catch (e) {
+    $('cl-exp-msg').textContent = '失败：' + e;
+  }
+}
+async function closeRun() {
+  const task = $('cr-task').value.trim();
+  const cmds = $('cr-cmds').value.split(',').map((s) => s.trim()).filter(Boolean);
+  const enable = $('cr-enable').checked;
+  if (!task) { $('cl-run-msg').textContent = 'task 必填'; return; }
+  $('cl-run-msg').textContent = '…';
+  try {
+    const r = await api('/api/close', { mode: 'run', task, cmd_ids: cmds, enable_write: enable }, true);
+    $('cl-run-msg').textContent = `exit=${r.exit_code} log=${r.log}`;
+    const o = $('cl-run-out'); o.style.display = 'block';
+    o.textContent = r.output_excerpt || '(空输出)';
+  } catch (e) {
+    $('cl-run-msg').textContent = '失败：' + e;
   }
 }
 

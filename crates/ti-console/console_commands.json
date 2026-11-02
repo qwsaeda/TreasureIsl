@@ -67,8 +67,46 @@
    "args": [
     "--check"
    ],
+   "enum_param": {
+    "name": "volume",
+    "values": [
+     "code",
+     "process",
+     "build",
+     "tools",
+     "formats",
+     "reverse"
+    ],
+    "arg_map": {
+     "code": [
+      "--volume",
+      "code"
+     ],
+     "process": [
+      "--volume",
+      "process"
+     ],
+     "build": [
+      "--volume",
+      "build"
+     ],
+     "tools": [
+      "--volume",
+      "tools"
+     ],
+     "formats": [
+      "--volume",
+      "formats"
+     ],
+     "reverse": [
+      "--volume",
+      "reverse"
+     ]
+    }
+   },
    "writes": [],
-   "enabled_by_default": true
+   "enabled_by_default": true,
+   "_id_note": "id（EXP-\\d+）由平台校验后追加 `--id <id>`；22 号 §4.2 exp_check 契约 = `--volume <枚举> --id <EXP-id> --check`（查重 = 单 EXP 是否重复，非全局）"
   },
   {
    "id": "build_check",

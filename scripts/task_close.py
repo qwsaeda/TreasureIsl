@@ -29,6 +29,7 @@ import datetime as _dt
 import json
 import pathlib
 import re
+import shlex
 import subprocess
 import sys
 
@@ -73,11 +74,16 @@ def write_text(path: pathlib.Path, text: str) -> None:
 
 
 def run_command(cmd: str) -> tuple[int, str]:
-    """跑一条判据命令，捕获合并输出（UTF-8，容错解码）。"""
+    """跑一条判据命令，捕获合并输出（UTF-8，容错解码）。
+
+    S32.6 硬化（22 号 §4.2 禁止 2）：`shell=True` 是自由 shell 面 ⇒ 改为 `shlex.split` +
+    `shell=False`（逐参数透传，禁 shell 拼接）。判据命令不含 shell 元字符（白名单固定串 /
+    手敲判据均为单命令）；若未来需管道/重定向，须显式走平台 runner（非 `--cmd`）。
+    """
     proc = subprocess.run(
-        cmd,
+        shlex.split(cmd),
         cwd=ROOT,
-        shell=True,
+        shell=False,
         capture_output=True,
         encoding="utf-8",
         errors="replace",

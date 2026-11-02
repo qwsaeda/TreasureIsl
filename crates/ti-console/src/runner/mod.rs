@@ -7,6 +7,7 @@
 //! 与 `repo/` 不同：`repo/` 是只读数据源适配；`runner/` 是**写面**（受控执行），
 //! 程序只来自 `console_commands.json` 白名单（禁自由字符串透传，22 号 §4.2）。
 
+pub mod close;
 pub mod gate;
 
 /// 子进程环境变量**最小集**白名单（22 号 §10.3 执行面：`PATH`/`HOME`/`USERPROFILE`/

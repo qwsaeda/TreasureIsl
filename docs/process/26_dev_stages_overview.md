@@ -114,7 +114,7 @@
 |---|---|---|
 | **S32.4** | 门禁执行 `POST /api/gate`（tier=fast/touch/full → -Fast/-Touch/全量）+ 单实例锁（evidence/console/.lock）+ 轮询日志 + 门禁既有副作用路径只记录不判定 | fast 档 PASS + 失败负例非 0 + 非法 tier 400 + 锁占用 409 + 无 token 写操作 403 |
 | **S32.5** | 双审计编排（任务书模板 + 归档报告 + 机械判定：0 新发现 + 0 误报 + 0 残留 / 连续 2 轮 / 3 轮升级拆子任务） | 实跑生成任务书对账 + 收敛规则单测 + 载体口径逐条覆盖 22 号八要素。**✅ verified（2026-11-02）**：audit 四模块 + POST taskbook/archive + GET 收敛表 + 28 单测 + 双审计 r1~r3 收敛（r2/r3 连续 2 轮 0/0/0 pass）；evidence/S32.5.log |
-| **S32.6** | 任务收口 `POST /api/close`（默认 `task_close.py --check` 只读体检）+ EXP 查重（`exp_log.py --check`） | 实跑 + 未登记 id 400 + 失败不改台账（执行前后 sha256 一致）+ 白名单对账 |
+| **S32.6** | 任务收口 `POST /api/close`（默认 `task_close.py --check` 只读体检）+ EXP 查重（`exp_log.py --check`） | 实跑 + 未登记 id 400 + 失败不改台账（执行前后 sha256 一致）+ 白名单对账。**✅ verified（2026-11-02）**：close.rs + `POST/GET /api/close` + `routes/close_api.rs` + 白名单对账断言（22 号 §4.2 机器化）+ 12 单测 + 双审计 r1~r4 收敛（r3+r4 连续 2 轮 0/0/0 = `state=pass`）；evidence/S32.6.log |
 | **S32.7** | 资产浏览（ui_manifest 缩略图 + registry.json + maps 包信息，只读；校验状态只调 `map_pack.py verify`） | 可浏览 + 缺图不崩 + 校验状态与 verify 退出码一致 + 区分平台 bug 与仓库既有漂移 |
 | **S32.8** | 文档检索（全文搜索 + EXP/F-ID/任务 ID 反查，只读，索引上限防阻塞） | 关键词命中实测 + 反查引用列表（文件:行）+ 大文件/总索引上限不阻塞 |
 | **S32.9** | 构建只读体检与预览（`build_wasm.ps1 -Check` 不构建/不拷贝/不写 evidence + web/ 产物清单 + 0 游戏产物变更断言） | 只读体检实跑 0 写盘 + 非法参数 400 + 冻结路径内容级 sha256 指纹差为空 |
@@ -162,7 +162,7 @@
 5. ✅ 每次完成过清单 + 版本规划（`docs/process/25_versioning.md` 单一事实源 + `release.md` §版本表）。
 6. ✅ x.y.z 版本打包（`TreasureIsl-<x.y.z>-<arch>.apk` / `treasure_bevy_wasm-<x.y.z>.wasm`；`validate_data.py check_version_consistency` 三方对账）。
 
-**下一节点** = 从台账取第一个 deps 全 verified 且未 verified 的任务 = **S32.6 收口**（S32.5 双审计编排已 verified）。之后按依赖链：S32.7/S32.8/S32.9 并行 → S34.0 → S34.3~S34.6 → S35.1，穿插用户视觉签收 S17.5/S21.9/S27.5/S34.6。
+**下一节点** = 从台账取第一个 deps 全 verified 且未 verified 的任务 = **S32.7/S32.8/S32.9 并行**（S32.6 收口已 verified）。之后按依赖链：S34.0 → S34.3~S34.6 → S35.1，穿插用户视觉签收 S17.5/S21.9/S27.5/S34.6。
 
 **项目总进度**：逆向+玩法+架构全完成，当前处于 **UI 重设计收尾（v6/VS v2）+ 开发平台扩展 + 产物体积标准化** 的并行收官期，距终止条件（台账全 verified + P0~P4 全 pass + 三端产物 + gate 全绿）剩约 6% 任务量。
 

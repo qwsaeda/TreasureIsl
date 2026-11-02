@@ -30,6 +30,9 @@ use crate::repo::import;
 use crate::runner;
 use ti_devmeta::http::{mime_for, resolve_or_404};
 
+/// S32.6 任务收口路由（`POST /api/close` + `GET /api/close?audit=1`）；从本文件抽出减行。
+mod close_api;
+
 /// 每连接一次的数据源清单加载（缺文件/非法 JSON = 该请求 500，不阻断静态面）。
 fn load_sources_opt(repo_root: &Path) -> Option<crate::repo::config::RepoSources> {
     load_sources_file(repo_root).ok()
@@ -90,6 +93,18 @@ fn read_headers(reader: &mut BufReader<TcpStream>) -> ReqHeaders {
     hdrs
 }
 
+/// 读 POST 请求体（≤ 256KiB；超限部分由调用方 `content_length > 65_536` 早判 413）。
+/// 完整读到 = 返回 body，否则空（非 `POST` / `content_length` 0 亦空）。
+fn read_post_body<R: std::io::Read>(reader: &mut R, method: &str, content_length: u64) -> Vec<u8> {
+    if method == "POST" && content_length > 0 && content_length <= 262_144 {
+        let mut buf = vec![0u8; content_length.min(262_144) as usize];
+        let complete = std::io::Read::read_exact(reader, &mut buf).is_ok();
+        if complete { buf } else { Vec::new() }
+    } else {
+        Vec::new()
+    }
+}
+
 /// 处理一个连接（每连接一线程；`web_root` = 静态壳，`repo_root` = 仓库根只读数据源面）。
 pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
     let mut reader = BufReader::new(match stream.try_clone() {
@@ -113,14 +128,7 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
     let content_type = hdrs.content_type;
 
     // POST /api/map/import：读 body（编辑器出描述符 → 落盘 + 回注，S32.14 ② 唯一写点）。
-    let request_body: Vec<u8> =
-        if method == "POST" && content_length > 0 && content_length <= 262_144 {
-            let mut buf = vec![0u8; content_length.min(262_144) as usize];
-            let complete = std::io::Read::read_exact(&mut reader, &mut buf).is_ok();
-            if complete { buf } else { Vec::new() }
-        } else {
-            Vec::new()
-        };
+    let request_body = read_post_body(&mut reader, &method, content_length);
     // 统一 22 号 §10.1「请求体上限 64 KiB」口径：超限（含 >256KB 未读入者）一律 413，
     // 而非落入空 body → 400（S32.5 B 侧 F4 修复）。
     let gz = accept_gzip;
@@ -188,6 +196,7 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
             let log = query_param(url, "log");
             json200(&runner::gate::gate_status(repo_root, log), gz)
         }
+        "/api/close" => close_api::handle_close_get(repo_root, url, gz),
         "/api/build" => {
             let run = query_param(url, "run");
             api_500_or_json(load_json(repo_root, |s| data::build_artifacts(repo_root, s, run)), gz)
@@ -277,6 +286,8 @@ fn handle_post(
         "/api/audit/archive" => {
             Some(handle_audit_archive(repo_root, body, token, content_type, gz))
         }
+        // S32.6 任务收口（close_check 只读体检 / close_run 写 + EXP 查重）。
+        "/api/close" => Some(close_api::handle_close(repo_root, body, token, content_type, gz)),
         _ => None,
     }
 }

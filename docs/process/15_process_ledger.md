@@ -31,7 +31,7 @@
 
 | # | 流程 | 现状（人工做法） | 复发证据 | 自动化形态 | 载体 | 状态 |
 |---|---|---|---|---|---|---|
-| 1 | **任务收口**（跑判据 → 写证据 → 置 verified → 同步台账计数） | 手工三步：手敲命令 + `Tee-Object` 写 log + 手改台账行 + 手改 release.md 计数 | 硬规则 2；EXP-058/065（回退/虚报）；本轮「S21.2 先 verified 后 evidence」被 `check_ledger_reality` 当场抓住 | 脚本一条命令 | `scripts/task_close.py` + `scripts/check_ledger_reality.py` | 已自动化 |
+| 1 | **任务收口**（跑判据 → 写证据 → 置 verified → 同步台账计数） | 手工三步：手敲命令 + `Tee-Object` 写 log + 手改台账行 + 手改 release.md 计数 | 硬规则 2；EXP-058/065（回退/虚报）；本轮「S21.2 先 verified 后 evidence」被 `check_ledger_reality` 当场抓住 | 脚本一条命令 | `scripts/task_close.py` + `scripts/check_ledger_reality.py` | 已自动化（S32.6 平台开放收口面：`POST /api/close`〔`close_check` 只读体检 / `close_run` 写需 `--enable-write` / `exp_check` EXP 查重；`--cmd` 只接受 `console_commands.json` 白名单 id，未登记 = 400〕+ 白名单对账断言 `GET /api/close?audit=1`） |
 | 2 | **EXP 登记**（分卷正文 + 索引行 + 分卷条数列） | 手改 3 处 | EXP-108（索引长期缺行、条数漂移） | 脚本一条命令 | `scripts/exp_log.py` + `check_experience_volume_counts` | 已自动化 |
 | 3 | **仓库文本完整性**（BOM / UTF-8 合法 / 无乱码字符） | 靠"用编辑工具写"的自觉 | EXP-051/091/111；本轮 R1 实证（4 文件被塞 BOM）+ 存量 1 处 U+FFFD | 门禁断言 | `doccheck2::check_repo_text_integrity` | 已自动化 |
 | 4 | **改动面声明**（每任务声明改哪一块 + 跨模块原因） | 手打进 dod，无任何判定 | `00_index.md` §纪律；台账 200 任务仅 22 处含声明 | 门禁断言 | `doccheck2::check_task_change_scope` | 已自动化 |

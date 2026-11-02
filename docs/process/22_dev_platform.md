@@ -86,6 +86,13 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 
 > **两份必须一致**：本节是**人读视图**，`console_commands.json` 是**机器真源**；
 > 两者动作 id 集合必须相等 ⇒ S32.6 DoD 加**对账断言**（集合一致；不一致即 FAIL）。
+> **S32.6 已机器化**：`runner::close::whitelist_audit` 断言 22 号 §4.2 人读视图 id 集合（
+> `HUMAN_VIEW_IDS` 常量镜像）== `console_commands.json` `commands[].id` 集合；不一致 → `Err` →
+> `POST /api/close` 回 500 不静默。只读对账面 = `GET /api/close?audit=1`（免 token）。
+> **桥接说明（r1-B P3-5）**：`HUMAN_VIEW_IDS` 是本表（人读视图）的 **Rust 镜像常量**；机器断言
+> 覆盖 `console_commands.json`（机器真源）↔镜像。**本表 ↔ 镜像按约定双改**（改 §4.2 表须同步
+> `close.rs::HUMAN_VIEW_IDS`，反之亦然；改错时对账断言只抓 json↔镜像漂移，本表↔镜像靠人工同步
+> —— 表与镜像逐字一致为设计不变量，`whitelist_audit` 以镜像为基准校验 json）。
 
 | id | 入口 | 参数（只接受枚举/id，不接受自由字符串） | 写面 | 默认启用 |
 |---|---|---|---|---|

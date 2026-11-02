@@ -1,0 +1,182 @@
+# S32.6 任务收口（POST /api/close）· 验收证据
+
+任务：`crates/ti-console/src/runner/close.rs` + `routes.rs` `POST /api/close` / `GET /api/close?audit=1`
++ `console_commands.json`（exp_check 加 volume 枚举 + id 契约）+ web 收口页 + 文档登记（22 号 §4.2 / 15 号第 1 行 / 14 号 ti-console 行）。
+
+## 一、实现要点
+
+- `runner::close::whitelist_audit`：22 号 §4.2 人读视图 id 集合（`HUMAN_VIEW_IDS` 14 id 镜像）==
+  `console_commands.json` `commands[].id` 集合；不一致 → `Err` → `POST /api/close` 回 500 不静默。
+  同时校验默认启用列（`enabled_by_default == false` ⇒ `write_required`，当前 = `["close_run"]`）。
+- `runner::close::map_cmd_id`：白名单 id → `{runner} {script} {args...}` 固定命令串（禁自由字符串，
+  22 号 §4.2 禁止 1）；`runner == "self"`（serve_web/audit_book）= 平台自身动作，不作为判据（None）。
+- `runner::close::{close_check, close_run, exp_check}`：同步执行（task_close.py / exp_log.py，快、只读），
+  输出落 `evidence/console/logs/close-<kind>-<ts>.log`；close_run 需 `--enable-write`（否则 400）。
+- `exp_check(volume, id)`：`volume` ∈ 6 分卷枚举 + `id` 匹配 `EXP-\d+`（禁注入）；跑
+  `exp_log.py --volume <v> --id <id> --check`（单 EXP 查重，22 号 §4.2 契约）。
+- 路由：`POST /api/close`（鉴权 403 / CT 400 / body 413 / mode 分派 / 对账断言 500）；
+  `GET /api/close?audit=1` = 只读白名单对账（免 token）。
+- 白名单对账断言 + 收口面 web UI（导航「收口」页：对账显示 + close_check + exp_check + close_run）。
+
+## 二、验收判据实跑
+
+### 判据 1：实跑一条 --check 只读体检（close_check，不改台账）
+
+```
+$ curl -X POST -H "Content-Type: application/json" -H "X-TI-Token: testtoken" \
+    -d '{"mode":"check","task":"S32.6"}' http://127.0.0.1:8787/api/close
+{"exit_code":0,"log":"evidence/console/logs/close-check-1793599180.log","mode":"check","ok":true,
+ "output_excerpt":"  任务 S32.6：status=pending 证据=evidence/S32.6.log 缺失\n  台账计数：280 任务 / 265 verified\n","task":"S32.6"}
+```
+
+输出落 `evidence/console/logs/close-check-1793599180.log`（只读体检，不改任何文件）。PASS。
+
+### 判据 2：未登记 id → 400（22 号 §4.2 禁止 1 禁透传自由字符串）
+
+```
+$ curl -X POST ... -d '{"mode":"run","task":"S32.6","cmd_ids":["sh","-c"],"enable_write":true}' /api/close
+HTTP=400
+{"ok":false,"error":"400: 未登记判据 id `sh`（console_commands.json 白名单；22 号 §4.2 禁止 1）"}
+```
+
+`sh`/`-c` 未登记 → 400（不 spawn、不 shell 拼接）。PASS。
+
+### 判据 3：失败不改台账（执行前后台账 sha256 一致）
+
+- close_run 用非法判据（close_check 非自包含，需 `--task`）→ `task_close.py` 判据失败
+  ⇒ 不写证据、不改台账；日志尾行：`判据失败（[...]）⇒ 不写证据、不改台账`。
+- 台账 sha256 前后：
+
+```
+before: 2869ba1cfc766f1049b34fcd5dddcce492a5d8acccb199a92286400a3d927771
+after:  2869ba1cfc766f1049b34fcd5dddcce492a5d8acccb199a92286400a3d927771   # 一致
+```
+
+- S32.6 状态保持 `pending`。PASS。
+
+### 判据 4：三处同步/对账结果可见 + 白名单对账断言（22 号 §4.2 动作 id 集合 == console_commands.json）
+
+```
+$ curl http://127.0.0.1:8787/api/close?audit=1
+{"count":14,"ids":["audit_book","build_apk","build_artifacts_check","build_check","build_list",
+ "build_native","build_wasm","close_check","close_run","exp_check","gate","mappack_check",
+ "mappack_verify","serve_web"],"ok":true,"write_required":["close_run"]}
+```
+
+`count=14`，`write_required=["close_run"]`（仅 close_run 需 `--enable-write`，与 22 号 §4.2 默认启用列一致）。
+人读视图（22 号 §4.2 表 14 行）== `console_commands.json` 14 id 集合。PASS。
+
+### 判据 5：close_run 合法白名单 id 精确映射（HTTP 200 路径）
+
+```
+$ curl -X POST ... -d '{"mode":"run","task":"S32.6","cmd_ids":["close_check"],"enable_write":true}' /api/close
+HTTP=200 {"ok":false,"exit_code":1,"log":"evidence/console/logs/close-run-1793599666.log",...}
+```
+
+映射 `close_check` → `python3 scripts/task_close.py --check`（白名单固定串，非用户串）；判据失败 exit=1
+→ 不改台账（判据 3）。平台正确透传，不归因。PASS。
+
+### 判据 6：exp_check（EXP 查重，单 EXP）
+
+```
+$ curl -X POST ... -d '{"mode":"exp","volume":"code","id":"EXP-116"}' /api/close
+{"exit_code":1,"id":"EXP-116","mode":"exp","ok":false,"volume":"code",
+ "output_excerpt":"  EXP-116 出现 4 处: ['code.md:485','code.md:535','index.md:158','index.md:159']\n..."}
+```
+
+`EXP-116` 查重 = 出现 4 处 → exit 1（重复，查重信号正确）。volume 非法（`codex`）→ 400；
+id 注入面（`sh; rm -rf /`）→ 400（22 号 §4.2 禁自由字符串）。PASS。
+
+### 判据 7：mode 非法 → 400
+
+```
+$ curl -X POST ... -d '{"mode":"bogus"}' /api/close
+HTTP=400 {"ok":false,"error":"400: mode 必须为 check|run|exp（收到 `bogus`）"}
+```
+
+PASS。
+
+## 三、代码质量
+
+- `cargo clippy -p ti-console --all-targets -- -D warnings`：0 error（含路由重构
+  `parse_write_json`/`read_post_body`/`handle_close_get` helper 减 serve/handle_close 到 100 行内）。
+- `cargo test -p ti-console`：全绿（**close_tests.rs 12 条**：exp_volumes_six / whitelist_audit_ok /
+  close_check_unknown_task_ok_but_reports / close_run_requires_enable_write /
+  close_run_unknown_cmd_id_400 / exp_check_readonly / exp_check_invalid_volume_400 /
+  exp_check_invalid_id_400 / map_cmd_id_gate_no_dup_script / map_cmd_id_close_check_prepends_script /
+  map_cmd_id_unknown_none / map_cmd_id_self_runner_none；测试在 `tests/close_tests.rs`（tests/ 目录惯例，
+  非 src 内联——硬规则 1 gate 扫描只豁免 tests/））。
+- `cargo fmt --all -- --check`：0 diff。
+- `python3 scripts/audit_code.py --check`：`[audit_code] PASS：0 项结构违规`（routes.rs 763 行 < 900 上限；
+  抽 `routes/close_api.rs` 子模块）。
+
+## 四、文档登记
+
+- `docs/process/22_dev_platform.md` §4.2：对账断言已机器化（`whitelist_audit` + `GET /api/close?audit=1`）。
+- `docs/process/15_process_ledger.md` 第 1 行（任务收口）：已自动化（S32.6 平台开放收口面）。
+- `docs/process/14_tooling_catalog.md` ti-console 行：`/api/close` 登记。
+
+## 五、最终门禁
+
+```
+cargo clippy -p ti-console --all-targets -- -D warnings   # 0 error
+cargo test  -p ti-console                                  # 全绿（含 close_tests 12 条）
+cargo fmt --all -- --check                                 # 0 diff
+python3 scripts/audit_code.py --check                      # [audit_code] PASS：0 项结构违规（routes.rs 907→763 行 < 900 上限）
+cargo run -q -p ti-tools --bin doccheck                    # 0 error(s)
+cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml  # 0 error(s)
+python3 scripts/check_ledger_reality.py                    # 全绿
+pwsh -File scripts/gate.ps1                                # === gate: 0 failure(s) ===（33 项）
+```
+
+### wasm-browser-e2e 瞬时 flake 说明（非归因）
+
+- 首次 gate 跑：`wasm-browser-e2e` L5 环资产 `v6_markers=0/6`（SwiftShader 软渲染首轮未加载
+  主地图 v6 标记贴图）→ FAIL。
+- 直接重跑 `scripts/wasm_browser_e2e.py --check`：**PASS**（L1~L5 全 True，`v6=6`）——确认
+  瞬时环境 flake（22 号 §3.1 已载明该门禁环境敏感，平台只透传不归因）。
+- 我的改动全在 `crates/ti-console/`（独立 crate，0 游戏代码变更），不影响 wasm 游戏构建。
+- 重跑全量 gate：`=== gate: 0 failure(s) ===`（33 项全绿）。
+
+## 六、结构违规修复记录（S32.6 收口期）
+
+- `audit_code` 曾 FAIL（routes.rs 907 行 > 900 上限）→ 抽 close HTTP handlers 到
+  `crates/ti-console/src/routes/close_api.rs`（子模块，`super::` 访问私有 helper）→ routes.rs 减到
+  763 行，audit_code PASS。
+- 硬规则 1 曾 FAIL（close.rs 内联 `#[cfg(test)] mod tests` 的 unwrap/expect 被 gate 扫描）→
+  迁测试到 `crates/ti-console/tests/close_tests.rs`（tests/ 目录惯例，同 audit_tests/gate_tests）
+  → src unwrap 0 命中。
+
+## 七、遗留观察（双审计待复核）
+
+- `close_run` 的 `--cmd` 判据若选 `close_check`（非自包含，需 `--task`）→ 判据失败不改台账
+  （正确行为）；平台把白名单 id 精确映射为固定命令串，选判据的责任在调用方（开发）。
+
+## 八、双审计 r1 发现与修复（r1-A 0 / r1-B 5 条 P3，全闭环）
+
+| # | 严重度 | 发现 | 修复 |
+|---|---|---|---|
+| F1 | P3 | `task_close.py` `run_command` 用 `shell=True`（自由 shell 面；平台层 `Command::new` 已禁，但下游实际 shell 执行） | **已修**：`run_command` 改 `shlex.split` + `shell=False`（逐参数透传，22 号 §4.2 禁止 2；判据不含 shell 元字符，白名单固定串/手敲判据均单命令）。task_close.py `--check` 实跑 exit 0 无回归 |
+| F2 | P3 | `map_cmd_id` 扁平拼接 `{runner} {script} {args}`：gate → `pwsh scripts/gate.ps1 -File scripts/gate.ps1`（`-File` 在脚本后，序错）；exp_check → `exp_log.py --check`（缺必填 `--volume`） | **已修**：`args` 已含 `script` 时不重复前置（gate → `pwsh -File scripts/gate.ps1`）；+ 4 条 map_cmd_id 单测（gate 无重复脚本 / close_check 前置脚本 / 未登记 None / self runner None） |
+| F3 | P3 | evidence/S32.6.log §三 写「5→9 条单测 + 7 测试名」；实测 `close_tests.rs` `#[test]` = 12 条（含 map_cmd_id 新增 4） | **已修**：§三 改「close_tests.rs 12 条」+ 完整测试名 + 注明 tests/ 目录惯例（硬规则 1 豁免） |
+| F4 | P3 | `close_tests.rs` 用真实仓库根调用，`write_log` 写真实 `evidence/console/logs/`（gitignored 无害但非 hermetic）；`tmp_root` 死代码 | **已修**：删 `tmp_root` 死代码 + 模块 doc 注明日志副作用（`.gitignore` L67 已忽略，无仓库污染，同 `gate_tests` 口径——脚本须读真实台账） |
+| F5 | P3 | 对账断言比较 `HUMAN_VIEW_IDS`（Rust 镜像）vs `console_commands.json`，不直接读 §4.2 文档文本（文档↔机器靠常量按约定桥接） | **已注明（设计不变量）**：22 号 §4.2 补「桥接说明」——机器断言覆盖 json↔镜像，本表↔镜像按约定双改（改 §4.2 表须同步 `HUMAN_VIEW_IDS`）；以镜像为基准校验 json |
+
+**修复后验证**：`cargo clippy -p ti-console --all-targets -- -D warnings` 0 error / `cargo test -p ti-console`
+全绿（close_tests **12** 条 + audit_tests 28 条）/ `cargo fmt --check` 0 diff / `audit_code --check` PASS
+（0 结构违规）/ task_close.py 语法 + `--check` exit 0 / close_run 失败不改台账（sha256 2869ba1c... 不变）。
+
+## 九、双审计收敛（r1~r4，state=pass）
+
+| 轮次 | A 侧 | B 侧 | 收敛 | 关键事件 |
+|---|---|---|---|---|
+| r1 | 0 新发现 | 5 条 P3（F1~F5） | ❌ | F1~F5 全修复（§八）；A 侧 1 条 P3 观察 O1（不计） |
+| r2 | 1 新发现（N1） | 0（F1~F5 全闭环） | ❌ | N1 = evidence §五 陈旧计数「close_tests 8 条」→ 已修 12 条 |
+| r3 | 0/0/0 | 0/0/0 | ✅（第 1 轮） | N1 闭环确认；7 审计面无回归 |
+| r4 | 0/0/0 | 0/0/0 | ✅（第 2 轮） | 收敛稳定复现 → `state=pass` |
+
+- **收敛口径**（22 号 §7.4）：0 新发现 + 0 误报 + 0 残留，连续 2 轮 = 通过。r3+r4 连续 2 轮 0/0/0。
+- **收敛表**（`GET /api/audit`）：`state=pass detail=2 complete=True unclosed=[]`；
+  轮次：r1 ❌ / r2 ❌ / r3 ✅ / r4 ✅。
+- 归档：`evidence/console/audit-S32.6-r{1..4}-{a,b}.md` + `.prompt.md` 任务书（8 要素，22 号 §7.3）。
+- **审计轮不进台账** `rounds`（22 号 §7.4 禁止写回；台账 `rounds` 只计验收失败轮数）。
