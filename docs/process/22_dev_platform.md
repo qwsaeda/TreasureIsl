@@ -16,7 +16,7 @@
 - 不是游戏运行时：不加载 wasm、不碰渲染/玩法/数值；
 - 不是 SaaS 多租户（P3 才评估）；
 - 不自建数据库（v1 文件系统即数据库，见 §3.1 边界）；
-- 不做「重新构建游戏产物」的前端（见 §9：只提供只读体检与预览）。
+- 不做「重新构建游戏产物」的**任意前端**（见 §9：只提供只读体检与预览；**构建执行 = 24 号 §4.1 编排**，经 `build_artifacts.py` 白名单 kind，不经手拼命令）。
 
 ## 2. 用户与场景
 
@@ -41,7 +41,7 @@
      | 只读收口体检 `scripts/task_close.py --check` | 无 | 只读 |
      | 收口 `scripts/task_close.py` | `evidence/<task>.log`、`plan/ledger.yaml`（任务行）、`docs/release.md`（计数） | 平台**默认只开放 `--check`**；写入口受 §4.2 白名单 id 约束 |
      | EXP 查重 `scripts/exp_log.py --check` | 无 | **当前不开放写入入口**（将来开放须同步本表 + §4.2） |
-     | 构建体检 `scripts/build_wasm.ps1 -Check` | 无 | 只读（不构建/不拷贝/不写 evidence）；**平台不执行完整构建** ⇒ 不会改写 `web/` 与 `evidence/S18.8a-wasm-size.log` |
+     | 构建体检 `scripts/build_wasm.ps1 -Check` | 无 | 只读（不构建/不拷贝/不写 evidence）；**此 `-Check` 行本身只读** ⇒ 单次体检不改写 `web/` 与 `evidence/S18.8a-wasm-size.log`（构建执行 = 24 号 §4.1 编排器，S35.1） |
      | 地图包校验 `scripts/map_pack.py verify/check` | 无（只读） | 同脚本的写子命令**平台一律不开放**：`install/uninstall` 写 `assets/maps/<id>/` + `assets/maps/.default`（**条件写**：install 缺时 / uninstall 仅卸默认包时）+ `assets/maps/index.json` + `assets/data/board.json`；`add` 写 `assets/maps/<id>/`；`sync` 写 `assets/data/{board,scenes,strings}.json` + `assets/data/ui_schema/scene_manifest_v3.json`（写点清单以 21 号 §8 为准） |
 
 2. **只读默认**：写操作（跑门禁 / 收口体检 / EXP 查重 / 审计归档）必须显式触发，走 §4.2 命令白名单。
@@ -173,7 +173,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 > **web/ 指代澄清（防混淆，S32.3 双审计 r1 B 侧 4-F2）**：平台壳静态面 =
 > `crates/ti-console/web/`（`index.html` 单文件交付，JS/CSS 全内联，0 外部静态资源依赖）；
 > 根 `web/` = S18.8a 游戏构建产物（`treasure-bevy-wasm` + HTML 胶水，`.gitignore` `/web/`），
-> 是另一物——平台「不执行完整构建 ⇒ 不重写根 `web/`」（§3 禁止 3）≠ 平台壳 `crates/ti-console/web/`。
+> 是另一物——平台「不手拼任意 shell ⇒ 根 `web/` 仅经 24 号 §4.1 编排器改写（S35.1；不经手拼命令）」（§3 禁止 3）≠ 平台壳 `crates/ti-console/web/`。
 
 ### 6.1 页面
 
@@ -188,8 +188,8 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | 设计图 | AI 生成设计稿浏览（`evidence/ui_concept/`，**非运行截图**；`GET /api/evidence?sub=ui_concept` 子目录枚举〔**滤除 `.thumb.png` 侧车**〕+ 白名单直读 + 组别标签〔主地图/首页/岛型·地图/对战/界面/资产表/其他〕+ lightbox 放大。**默认只展示正式稿**：`raw_`（未抠原图）/`tmp_`（临时试稿）前缀 = 中间产物隐藏（`#design-mid` 勾选展开），命名口径 = 13 号 §2.1。**压缩预览**：卡读 `.thumb.png` 侧车（480px PNG-8，~53KB vs 原图 4-6MB）、lightbox 读原图，口径 = 13 号 §4.0） | P0（S32.3） |
  | 地图 | 地图包管理面（`assets/maps/<id>/` 已装包清单 + 描述符摘要〔schema/id/version/data_version/中央岛/岛型数/31 格不变量/环几何/资产数〕+ `.default` 指针 + 制作指引 `scripts/map_pack.py` 命令面 + 21 号标准链接；`GET /api/map` 只读浏览） + **地图编辑器**（环形 SVG 画布 31 节点 + 点节点改 kind/isle + 环几何输入 + I1~I9 前端实时校验条〔镜像 `map_pack.py verify_pack`，权威实现 = `map_pack.py`〕+ 生成 4 文件 JSON） + **`POST /api/map/import`**（S32.14 ② 免鉴权导入落盘面：写 `assets/maps/<id>/` 四文件 + 同进程 `map_pack.py sync` 回注 + `verify` 终判 I1~I9〔含 I7 资产哈希〕，违规 = `errors` 如实上报不静默绕过；写点纪律 = 21 号 §8 平台编辑器口径 + 本号 §10.1 唯一写点例外） | P0（S32.3 只读）+ S32.14（编辑器 + import） |
 | 测试 | 游戏测试标杆（`GET /api/tests`：`assets/data/test_manifest.json` 机读清单 + evidence 存在性对账）——门禁 33 项总览（读 `evidence/gate.log` Report 行）+ **分组树 级(L1–L4)→类→型** + 点测试看**步骤/阶段**（解析 evidence 日志关键行）+ **截图证据**（evidence/ 清单匹配 `.png`，lightbox 放大）+ **▶ 运行测试**（`GET /api/tests?run=<id>` 白名单动作：test_manifest 登记 id 枚举 → command 逐参数 `Command::new` 后台 spawn → 日志落 `evidence/console/logs/test-<id>-<ts>.log` gitignored；程序白名单 cargo/python3/pwsh/powershell，禁 shell 拼接；人工验收/无命令 = 按钮禁用） | P0（S32.3 看板 v1 增量，23 号 §6） |
-| APK 体积 | APK/产物体积构成体检（`GET /api/apk-size`：`scripts/apk_audit.py --apk` 只读 = 判据① .so 压缩率 <90% + ② 未引用 UI 0 进包 + 目录构成表 + 引用集计数；`GET /api/build` = `build_artifacts.py list` 产物清单 + 最近构建日志尾行）。**平台不执行构建**（只读体检，22 号 §1 边界）；构建触发走 §4.2 白名单 id `build_apk`/`build_wasm`/`build_native`（后台执行，日志落 `evidence/console/logs/` gitignored）。判据单一事实源 = 24 号 `docs/process/24_apk_size_std.md`（S35.0）；构建编排 = 24 号 §4.1（S35.1） | P0（S35.0 只读页 + S35.1 构建编排面） |
-| 文档 | 全文检索 + ID 反查 | P2（S32.8） |
+| APK 体积 | APK/产物体积构成体检（`GET /api/apk-size`：`scripts/apk_audit.py --apk` 只读 = 判据① .so 压缩率 <90% + ② 未引用 UI 0 进包 + 目录构成表 + 引用集计数；`GET /api/build` = `build_artifacts.py list` 产物清单 + 最近构建日志尾行）。**此端点只读，不触发构建**（22 号 §1 边界：不做任意 shell）；**构建执行 = 24 号 §4.1 编排**（平台经 `build_artifacts.py` 白名单 kind `apk|wasm|native` 后台触发，不经手拼命令；日志落 `evidence/console/logs/` gitignored）。判据单一事实源 = 24 号 `docs/process/24_apk_size_std.md`（S35.0）；构建编排 = 24 号 §4.1（S35.1） | P0（S35.0 只读页 + S35.1 构建编排面） |
+| 文档 | 全文检索 + ID 反查（S32.8 已落地：`GET /api/search?q=`，白名单根 `docs/ crates/ scripts/ plan/`，文本扩展名白名单，`EXP-`/`F-`/任务 ID 精确引用反查，上限 3000 文件 / 512KB / 500 命中超限截断不阻塞，只读 0 写盘；**`q` 服务端先 `percent_decode`**〔前端 `encodeURIComponent`，中文/空格/保留字符才命中；非法 `%XX` 原样保留〕） | P2（S32.8） |
 | 构建 | `build_wasm -Check` 体检结果 + 产物清单 + `web/` 预览 | P2（S32.9） |
 | 设置 | token 粘贴（存 `sessionStorage`）+ 写操作开关 + 平台信息 | P0（S32.3，与 `GET /api/session` 配套） |
 
@@ -308,7 +308,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | 每任务双审计可追溯 | — | 每轮 A/B 报告落盘 + 收敛轮次表 + 未闭环 findings 计数（§7.4 三条判据） |
 | 平台自身质量 | 0 违规 | 既有门禁自动覆盖（见 §11.2）+ `cargo test -p ti-console` / `-p ti-devmeta` 实跑 |
 | 快照纪律有载体 | 0 空判 | 「0 游戏产物变更」的内容级指纹快照由 **`crates/ti-console` 的快照模块实现**（S32.2 落地；登记见 `docs/process/15_process_ledger.md` 第 23 行，状态 = **待固化（挂 S32.2，S32.2 完成前不得当载体断言）**）⇒ 纪律不悬空 |
-| **0 游戏产物变更** | 0 差异 | **增量口径 + 内容级快照（会话相对）**：动作前后各取一次冻结路径的**内容指纹**并逐文件比对，差集为空。指纹 = 每个文件 `sha256`（忽略 `.gitignore` 命中的文件）+ 未跟踪文件清单；**不能用 `git status --porcelain`**（它只给路径 + 状态码，不含内容 ⇒ 已脏文件再改内容时快照不变 = 口径失效，见第 4 轮 P1）。冻结路径 = `crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets/ android/ tests/`（游戏产物面；**S32.15 例外**：`assets/maps/` 目录 + `assets/data/board.json` 的 `maps` 段 = 平台地图导入唯一写点（§10.1），import 动作前后快照用 `snapshot::import_probe` 判定（豁免这两处差异，其余冻结路径差异仍算漂移）；工具面 `crates/ti-tools crates/ti-devmeta crates/ti-console` **不在冻结范围**，S32.1 改 `ti-tools` 由 `cargo run -p ti-tools --bin ledger` 0 error 断言行为不变）。**根 `Cargo.toml` / `Cargo.lock` 不在冻结路径**（S32.1 必须新增 workspace member ⇒ 会改二者；口径 = 「`Cargo.toml` 的 `members` 段仅允许新增 `crates/ti-devmeta` / `crates/ti-console` 两行，其余逐字节一致；`Cargo.lock` 仅允许新增对应 package 条目」）。**门禁既有副作用路径** `evidence/web_playtest.{log,png}`、`evidence/font_render.txt` 只记录不判定（§3.1），但必须写进执行日志并提示。`web/` 产物清单（文件名 + 体积）前后一致（平台不执行完整构建 ⇒ 天然不变） |
+| **0 游戏产物变更** | 0 差异 | **增量口径 + 内容级快照（会话相对）**：动作前后各取一次冻结路径的**内容指纹**并逐文件比对，差集为空。指纹 = 每个文件 `sha256`（忽略 `.gitignore` 命中的文件）+ 未跟踪文件清单；**不能用 `git status --porcelain`**（它只给路径 + 状态码，不含内容 ⇒ 已脏文件再改内容时快照不变 = 口径失效，见第 4 轮 P1）。冻结路径 = `crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets/ android/ tests/`（游戏产物面；**S32.15 例外**：`assets/maps/` 目录 + `assets/data/board.json` 的 `maps` 段 = 平台地图导入唯一写点（§10.1），import 动作前后快照用 `snapshot::import_probe` 判定（豁免这两处差异，其余冻结路径差异仍算漂移）；工具面 `crates/ti-tools crates/ti-devmeta crates/ti-console` **不在冻结范围**，S32.1 改 `ti-tools` 由 `cargo run -p ti-tools --bin ledger` 0 error 断言行为不变）。**根 `Cargo.toml` / `Cargo.lock` 不在冻结路径**（S32.1 必须新增 workspace member ⇒ 会改二者；口径 = 「`Cargo.toml` 的 `members` 段仅允许新增 `crates/ti-devmeta` / `crates/ti-console` 两行，其余逐字节一致；`Cargo.lock` 仅允许新增对应 package 条目」）。**门禁既有副作用路径** `evidence/web_playtest.{log,png}`、`evidence/font_render.txt` 只记录不判定（§3.1），但必须写进执行日志并提示。`web/` 产物清单（文件名 + 体积）前后一致（平台经 24 号 §4.1 编排器执行构建时会改写 `web/`〔S35.1 例外，镜像 22 号 §9〕；冻结路径不含 `web/`，故不违 0 游戏产物变更判据） |
 
 > `web/` 与 `dist/` 被 `.gitignore` 忽略 ⇒ **`git status` 不能作为「0 游戏产物变更」的证据**（EXP-058 反虚报口径）。
 
@@ -320,7 +320,9 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 - 不引入数据库：v1 用仓库文件（§3.1 写面边界）。
 - 不在平台里复述业务结论：只链接单一事实源。
 - 不内嵌 LLM SDK / 模型调用（§7.3）。
-- **不做完整构建 / 不重写游戏产物**（只提供 `-Check` 体检 + `web/` 预览）。
+- **不做完整构建 / 不重写游戏产物**（只提供 `-Check` 体检 + `web/` 预览；**S35.1 例外**：经 24 号 §4.1 编排器 `build_artifacts.py` 执行白名单 kind 构建——平台不手拼任意 shell，程序只来自 `console_commands.json` 白名单 id，镜像 §4.2 禁止 3 例外）。
+  - 体检面已落地 = `GET /api/build?check=1`（S32.9）：`build_wasm.ps1 -Check`（只读，不构建/不拷贝/不写 evidence）
+    + 22 号 §8 冻结路径内容级 sha256 指纹差断言（`ok = 体检通过 && 差为空`）；0 写盘实测 = `frozen_diff_empty=true`。
 - 不重述地图包标准与资产管线标准：涉及地图包/资产的事实一律引用 [`21_map_package_spec.md`](21_map_package_spec.md)
   与 [`18_asset_content_pipeline.md`](18_asset_content_pipeline.md)，本文只写「平台怎么调它」。
 - 不结构化解析 `plan/packages.yaml`（嵌套 YAML 需新依赖，收益低）⇒ 平台只给链接，真源仍是该文件。

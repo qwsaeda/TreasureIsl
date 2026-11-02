@@ -1,0 +1,17 @@
+# S32.9 构建只读体检（/api/build?check=1）验收 — 2026-11-02T09:35:41Z
+
+## 判据（22 号 §9 只读体检 + S32.9 dod）
+1. GET /api/build?check=1 → ok=true
+2. check_exit=0（build_wasm.ps1 -Check 只读体检通过）
+3. frozen_diff_empty=true（冻结路径 8 项内容级 sha256 指纹差为空 = 0 游戏产物变更）
+4. 只读：不构建/不拷贝/不写 evidence
+
+## 实跑输出
+ok=True check_exit=0 frozen_diff_empty=True frozen_diff=0
+note= 只读体检：build_wasm.ps1 -Check（不构建/不拷贝/不写 evidence）+ 冻结路径内容级 sha256 指纹差为空（22 号 §8 增量口径）
+--- check_output（前 400 字符）---
+  OK  -Check 前置体检通过（wasm32-unknown-unknown 已装 + 交付壳 manifest + 首屏资源在位；只读未构建）
+
+--- 判据判定 ---
+PASS= True
+EXIT=0

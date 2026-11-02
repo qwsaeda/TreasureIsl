@@ -292,11 +292,11 @@ pub fn run_test(repo_root: &Path, sources: &RepoSources, test_id: &str) -> Resul
     }))
 }
 
-/// `/api/build`：构建产物清单 + 构建编排状态（S35.1，24 号 §4.1；只读）。
+/// `/api/build`：构建产物清单 + 构建编排状态（S35.1，24 号 §4.1；只读面）。
 ///
 /// 口径：`scripts/build_artifacts.py list`（已构建产物 体积/mtime）+ 最近一次构建日志
-/// （`evidence/console/logs/build-*.log`，gitignored；平台不执行构建，构建触发走
-/// `console_commands.json` 白名单 id `build_apk`/`build_wasm`/`build_native` 后台执行）。
+/// （`evidence/console/logs/build-*.log`，gitignored）；`?run=<kind>` 后台 spawn 构建编排器
+/// （kind 白名单 `apk|wasm|native`，24 号 §4.1；自由字符串 = 400），平台不经手拼任意 shell。
 ///
 /// # Errors
 ///
@@ -382,7 +382,7 @@ pub fn build_artifacts(
     }))
 }
 
-/// `/api/apk-size`：APK 体积构成体检（S35.0，24 号标准；只读，平台不执行构建）。
+/// `/api/apk-size`：APK 体积构成体检（S35.0，24 号标准；**此端点只读，不触发构建**）。
 ///
 /// 口径：`scripts/apk_audit.py --apk <最新 dist/TreasureIsl-arm64.apk>`（判据①② = .so 压缩率
 /// + 未引用 UI 漂移）+ `--refset`（引用集组成）。dist/ 无 APK = 「未构建」降级（不报错，24 号 §4）。
@@ -779,12 +779,44 @@ fn map_pack_info(repo_root: &Path) -> Vec<Value> {
     if let Ok(rd) = std::fs::read_dir(&maps_dir) {
         for entry in rd.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            if entry.path().is_dir() && name != "_template" {
-                let manifest = entry.path().join("manifest.json");
+            let manifest = entry.path().join("manifest.json");
+            // installed_packs() 口径（map_pack.py）：manifest.json 存在 + 目录名 ≠ _template；
+            // 无 manifest 的非模板目录不列入（latent 分叉，A 审计 F4）。
+            if entry.path().is_dir() && name != "_template" && manifest.is_file() {
+                // S32.7：校验状态只调 map_pack.py verify（只读，裸 id）；区分「平台 bug」
+                // （spawn 失败 = platform_error）vs「仓库既有漂移」（verify 非 0 = drift）。
+                // 22 号 §10.3 最小环境集（verify 只读，PATH/HOME 透传仍可跑）。
+                let mut verify_cmd = std::process::Command::new("python3");
+                verify_cmd.arg(repo_root.join("scripts/map_pack.py")).arg("verify").arg(&name);
+                crate::runner::apply_minimal_env(&mut verify_cmd);
+                let verify = verify_cmd.output();
+                let (verify_status, verify_problems) = match verify {
+                    Ok(o) => {
+                        let text = format!(
+                            "{}{}",
+                            String::from_utf8_lossy(&o.stdout),
+                            String::from_utf8_lossy(&o.stderr)
+                        );
+                        let problems: Vec<String> = text
+                            .lines()
+                            // 违规项 = `[FAIL] <item>` 行（map_pack.py cmd_verify 输出契约）；
+                            // 「0 违规（全过）」行仅含「违规」二字，不作为问题项。
+                            .filter(|l| l.trim_start().starts_with("[FAIL]"))
+                            .map(|l| l.trim().to_owned())
+                            .collect();
+                        (if o.status.success() { "ok" } else { "drift" }.to_owned(), problems)
+                    }
+                    Err(_) => (
+                        "platform_error".to_owned(),
+                        vec!["map_pack.py verify 执行失败（python3 缺位？）".to_owned()],
+                    ),
+                };
                 out.push(json!({
                     "id": name,
                     "manifest_present": manifest.is_file(),
                     "pack_dir": format!("assets/maps/{name}"),
+                    "verify_status": verify_status,
+                    "verify_problems": verify_problems,
                 }));
             }
         }

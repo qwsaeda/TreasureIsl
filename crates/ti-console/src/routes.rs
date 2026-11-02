@@ -43,6 +43,12 @@ fn query_param<'a>(url: &'a str, key: &str) -> Option<&'a str> {
     url.split('?').nth(1)?.split('&').find_map(|kv| kv.strip_prefix(&format!("{key}=")))
 }
 
+/// 百分号解码（query 参数；前端 `encodeURIComponent` 输出 `%XX`，服务端须解码后再匹配，
+/// 否则含空格/中文/保留字符的查询按字面 `%XX` 匹配 = 0 命中）。实现 = `repo::percent_decode`。
+fn percent_decode(input: &str) -> String {
+    crate::repo::percent_decode(input)
+}
+
 /// 请求头解析结果（S32.4：缓存/压缩协商 + POST body 长度 + 写操作 token + content-type）。
 struct ReqHeaders {
     if_none_match: Vec<String>,
@@ -154,13 +160,33 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
             return;
         }
     }
-    let response = match clean {
+    let response = dispatch_get(clean, url, web_root, repo_root, &if_none_match, gz);
+    let _ = stream.write_all(&response);
+    let _ = stream.flush();
+}
+
+/// GET 路由分发（只读面；POST 写操作面在 `handle_post`）。
+fn dispatch_get(
+    clean: &str,
+    url: &str,
+    web_root: &Path,
+    repo_root: &Path,
+    if_none_match: &[String],
+    gz: bool,
+) -> Vec<u8> {
+    match clean {
         "/api/health" => text200("ti-console ok", gz),
         "/api/session" => json200(&data::session(), gz),
         "/api/whitelist" => {
-            let query = url.split('?').nth(1).unwrap_or("");
-            let path_param = query.strip_prefix("path=").unwrap_or("").to_owned();
+            let path_param = percent_decode(query_param(url, "path").unwrap_or(""));
             json200(&data::whitelist_probe(repo_root, &path_param), gz)
+        }
+        "/api/search" => {
+            // S32.8 文档检索（只读全文搜索 + EXP/F-ID/任务 ID 反查；q 必填，空 = 空结果）。
+            // 前端 encodeURIComponent → 服务端百分号解码（中文/空格查询才命中；上限 256 字符防长串扫盘）。
+            let q: String =
+                percent_decode(query_param(url, "q").unwrap_or("")).chars().take(256).collect();
+            json200(&crate::repo::search::search(repo_root, &q), gz)
         }
         "/api/audit" => {
             api_500_or_json(load_json(repo_root, |s| data::audit_list(repo_root, s)), gz)
@@ -177,8 +203,7 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
         }
         "/api/tasks" => api_500_or_json(load_json(repo_root, |s| data::tasks(repo_root, s)), gz),
         "/api/evidence" => {
-            let query = url.split('?').nth(1).unwrap_or("");
-            let sub = query.strip_prefix("sub=").unwrap_or("").to_owned();
+            let sub = percent_decode(query_param(url, "sub").unwrap_or(""));
             api_500_or_json(load_json(repo_root, |s| data::evidence_list(repo_root, s, &sub)), gz)
         }
         "/api/assets" => api_500_or_json(load_json(repo_root, |s| data::assets(repo_root, s)), gz),
@@ -198,17 +223,42 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
         }
         "/api/close" => close_api::handle_close_get(repo_root, url, gz),
         "/api/build" => {
-            let run = query_param(url, "run");
-            api_500_or_json(load_json(repo_root, |s| data::build_artifacts(repo_root, s, run)), gz)
+            // S32.9：?check=1 = 只读体检（build_wasm.ps1 -Check + 冻结路径 0 游戏产物变更断言）。
+            // S35.1：?run 白名单 apk|wasm|native（后台 spawn）；非法 = 400（22 号 §10.3 禁自由字符串）。
+            if query_param(url, "check") == Some("1") {
+                api_500_or_json(
+                    load_json(repo_root, |s| crate::runner::build::build_check(repo_root, s)),
+                    gz,
+                )
+            } else if let Some(kind) = query_param(url, "run") {
+                if matches!(kind, "apk" | "wasm" | "native") {
+                    api_500_or_json(
+                        load_json(repo_root, |s| data::build_artifacts(repo_root, s, Some(kind))),
+                        gz,
+                    )
+                } else {
+                    header_body(
+                        "application/json",
+                        r#"{"ok":false,"error":"400: run 只接受 apk|wasm|native（22 号 §10.3 白名单；非自由字符串）"}"#
+                            .as_bytes(),
+                        "400 Bad Request",
+                        "no-store",
+                        None,
+                        gz,
+                    )
+                }
+            } else {
+                api_500_or_json(
+                    load_json(repo_root, |s| data::build_artifacts(repo_root, s, None)),
+                    gz,
+                )
+            }
         }
         "/api/apk-size" => {
             api_500_or_json(load_json(repo_root, |s| data::apk_size(repo_root, s)), gz)
         }
-        _ => static_or_repo_file(web_root, clean, repo_root, &if_none_match, gz),
-    };
-
-    let _ = stream.write_all(&response);
-    let _ = stream.flush();
+        _ => static_or_repo_file(web_root, clean, repo_root, if_none_match, gz),
+    }
 }
 
 /// 有数据源清单 = 跑端点；无清单 = 500（数据源面不可用，如实上报）。

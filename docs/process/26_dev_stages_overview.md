@@ -11,7 +11,7 @@
 
 - **产品**：《金银岛 TreasureIsl》Windows Mobile 游戏（ARM 原生，176×220 逻辑分辨率）的**逆向 + Rust 现代化移植**，目标 **WASM（浏览器）+ Android** 双端。
 - **技术底座**：Rust edition 2024 + **Bevy 0.20**（S18.0 定案唯一渲染引擎，推翻旧 macroquad 定案）+ cargo workspace **9 个成员 crate**。
-- **进度**（`plan/ledger.yaml` 实测）：**280 任务 / 263 verified / 16 pending / 1 blocked**（完成率 ≈ 94%）。
+- **进度**（`plan/ledger.yaml` 实测）：**280 任务 / 270 verified / 9 pending / 1 blocked**（完成率 ≈ 96%）。
 - **9 场景**：`Intro → Index → SelectRole → SelectMap → MainMap → Vs → Message → Saveload → Exit`（20 条合法转换，非法转换编译期拒，Type-State 保证）。
 - **核心循环**：探索→贸易→建造→卡牌→战斗；主地图主玩法 = **大富翁式摇骰前进**（S19 定案：摇骰定步数 → 沿环岛赛道前进 N 格 → 落格结算；方向键自由移动已删）。
 - **主线玩法**（S27/S28/S33 领地系统）：31 格赛道（每格 = 领地/功能点）+ 中央可点击据点岛 + 10 类海盗岛专属副本 + 5 席位（≥1 玩家 + 4 AI）+ 落格三支分叉（无主→副本占领 / 他人→交钱或攻占 / 自己→升级加固）。
@@ -54,10 +54,10 @@
 | **布局/资产管线** | S29 | **布局引擎定案 B1 全 bevy_ui 响应式**（UI + 命中 + 重排全进 Bevy；游戏世界保持 1080 正交 + 数据驱动） | ✅ |
 | | S30 | 资产/内容数据管线（不手写像素：声明意图/数据，引擎算坐标） | ✅ |
 | | S31 | **地图包标准 v1**（一张图 = 一个自包含可分发包 + 运行期换图全链路 + 失败回退） | ✅ |
-| **开发平台** | S32 | **TI Dev Console 开发管理平台**（纯管理/辅助开发，与游戏运行时解耦；看板 v1 + 双审计协议 + 北极星判据） | **进行中**（S32.0a/S32.0b + S32.1~S32.3 + S32.11~S32.15 ✅，**S32.4~S32.9 待办**） |
+| **开发平台** | S32 | **TI Dev Console 开发管理平台**（纯管理/辅助开发，与游戏运行时解耦；看板 v1 + 双审计协议 + 北极星判据） | **✅ 全部**（S32.0a/S32.0b + S32.1~S32.9 + S32.11~S32.15，2026-11-02 收口） |
 | **领地 v2 业务** | S33 | 领地/大富翁 v2 业务逻辑（兵力模型/海事事件/商人/驻军/攻占/破产/AI） | ✅ 全 verified |
 | **v6+VS v2** | S34 | **main_map v6「古典羊皮航海图」+ VS 战斗动画 v2**（不规则岛 + 格子紧围岛 + 4 帧/兵力 HUD/格类分层/时间轴） | **进行中**（S34.1/S34.2 ✅，**S34.0/S34.3~S34.6 待办**） |
-| **产物体积** | S35 | **APK/产物体积标准**（.so 压缩 + 未引用 UI 0 进包 + 引用集打包 + 审计工具） | **进行中**（S35.0 ✅，**S35.1 待办**） |
+| **产物体积** | S35 | **APK/产物体积标准**（.so 压缩 + 未引用 UI 0 进包 + 引用集打包 + 审计工具） | **✅ 全部**（S35.0 + S35.1，2026-11-02 收口） |
 
 ---
 
@@ -115,15 +115,15 @@
 | **S32.4** | 门禁执行 `POST /api/gate`（tier=fast/touch/full → -Fast/-Touch/全量）+ 单实例锁（evidence/console/.lock）+ 轮询日志 + 门禁既有副作用路径只记录不判定 | fast 档 PASS + 失败负例非 0 + 非法 tier 400 + 锁占用 409 + 无 token 写操作 403 |
 | **S32.5** | 双审计编排（任务书模板 + 归档报告 + 机械判定：0 新发现 + 0 误报 + 0 残留 / 连续 2 轮 / 3 轮升级拆子任务） | 实跑生成任务书对账 + 收敛规则单测 + 载体口径逐条覆盖 22 号八要素。**✅ verified（2026-11-02）**：audit 四模块 + POST taskbook/archive + GET 收敛表 + 28 单测 + 双审计 r1~r3 收敛（r2/r3 连续 2 轮 0/0/0 pass）；evidence/S32.5.log |
 | **S32.6** | 任务收口 `POST /api/close`（默认 `task_close.py --check` 只读体检）+ EXP 查重（`exp_log.py --check`） | 实跑 + 未登记 id 400 + 失败不改台账（执行前后 sha256 一致）+ 白名单对账。**✅ verified（2026-11-02）**：close.rs + `POST/GET /api/close` + `routes/close_api.rs` + 白名单对账断言（22 号 §4.2 机器化）+ 12 单测 + 双审计 r1~r4 收敛（r3+r4 连续 2 轮 0/0/0 = `state=pass`）；evidence/S32.6.log |
-| **S32.7** | 资产浏览（ui_manifest 缩略图 + registry.json + maps 包信息，只读；校验状态只调 `map_pack.py verify`） | 可浏览 + 缺图不崩 + 校验状态与 verify 退出码一致 + 区分平台 bug 与仓库既有漂移 |
-| **S32.8** | 文档检索（全文搜索 + EXP/F-ID/任务 ID 反查，只读，索引上限防阻塞） | 关键词命中实测 + 反查引用列表（文件:行）+ 大文件/总索引上限不阻塞 |
-| **S32.9** | 构建只读体检与预览（`build_wasm.ps1 -Check` 不构建/不拷贝/不写 evidence + web/ 产物清单 + 0 游戏产物变更断言） | 只读体检实跑 0 写盘 + 非法参数 400 + 冻结路径内容级 sha256 指纹差为空 |
+| **S32.7** | 资产浏览（ui_manifest 缩略图 + registry.json + maps 包信息，只读；校验状态只调 `map_pack.py verify`） | 可浏览 + 缺图不崩 + 校验状态与 verify 退出码一致 + 区分平台 bug 与仓库既有漂移。**✅ verified（2026-11-02）**：`map_pack_info` verify_status/problems + web 资产页校验卡 + 实测 4 包 verify=ok；evidence/S32.7.log |
+| **S32.8** | 文档检索（全文搜索 + EXP/F-ID/任务 ID 反查，只读，索引上限防阻塞） | 关键词命中实测 + 反查引用列表（文件:行）+ 大文件/总索引上限不阻塞。**✅ verified（2026-11-02）**：`repo/search.rs` + `GET /api/search` + web 检索页 + 实测 EXP-116/F-319/S32.6 命中 + 空 q 空 + 上限截断标志 + **`q` 服务端 `percent_decode`**（前端 `encodeURIComponent`，中文/空格命中，非法 `%XX` 原样保留）+ token 边界反查（EXP-116 不误配 EXP-1160）；evidence/S32.8.log |
+| **S32.9** | 构建只读体检与预览（`build_wasm.ps1 -Check` 不构建/不拷贝/不写 evidence + web/ 产物清单 + 0 游戏产物变更断言） | 只读体检实跑 0 写盘 + 非法参数 400 + 冻结路径内容级 sha256 指纹差为空。**✅ verified（2026-11-02）**：`runner::build::build_check` + `GET /api/build?check=1` + web 体检卡 + 实测 check_exit=0 / frozen_diff_empty=true；evidence/S32.9.log |
 | **S34.0** | v6/VS v2 设计稿定案 + 引擎出图（用户视觉签收 A 纪律） | spec 用户确认留痕 + main_map v6 / VS v2 4 阶段出图 0 硬错误 + 用户视觉验收通过（不可代签） |
 | **S34.3** | VS v2 元素批次（9 PNG + `ui_batches/vs_v2.json` + ui_manifest 登记） | ui_asset_batch check 0 违规 + 9 元素在位 + validate_data 全绿 |
 | **S34.4** | VS v2 动画原型落码（4 阶段 clash/duel/result_win/result_lose + 兵力 HUD + theme 色值） | 4 阶段各 `--shot vs` 出图 0 硬错误 + check_hardcode 0 命中 |
 | **S34.5** | VS v2 按格类×地图主题分层（5 类各一张出图 + 格类分派逻辑 + TI_MAP=m02 换图主题 ≠ m01） | 5 类出图可区分 + m02 背景/BOSS ≠ m01 |
 | **S34.6** | 视觉签收 + 出图验收（main_map v6 + VS v2 全场景出图 + 逐屏核对 + 用户视觉验收） | 出图非黑 ≥90% + 缺陷清单全清 + 用户视觉验收通过 + gate 全绿 |
-| **S35.1** | 构建编排平台化（`build_artifacts.py` 编排器 + 平台「构建」页 + 白名单 5 条） | check PASS + /api/build 只读 list + ?run 后台 spawn + apk_audit 复检 PASS + 白名单负例 400 |
+| **S35.1** | 构建编排平台化（`build_artifacts.py` 编排器 + 平台「构建」页 + 白名单 5 条） | check PASS + /api/build 只读 list + ?run 后台 spawn + apk_audit 复检 PASS + 白名单负例 400。**✅ verified（2026-11-02）**：`build_artifacts.py` 编排器 + `GET /api/build?run` 白名单 400 修 + list/check 只读；evidence/S35.1.log |
 
 **阻塞 1**：S7.7（P4-1 基准切换可选任务，等待 S7.5 稳定运行 ≥2 周——非阻塞主线）。
 
@@ -150,21 +150,19 @@
 
 ---
 
-## 六、当前所处节点（2026-11-01 时点）
+## 六、当前所处节点（2026-11-02 时点）
 
-**进度**：280 任务 / **263 verified（≈94%）** / 16 pending / 1 blocked；gate **30 PASS / 0 FAIL / 2 SKIP** 全绿。
+**进度**：280 任务 / **270 verified（≈96%）** / 9 pending / 1 blocked；gate 全绿（上轮 plan-archive + impl 标注版 0 failure）。
 
-**刚完成一轮**（用户 6 项要求，gate 全绿）：
-1. ✅ 自动横屏（`android/AndroidManifest.xml` `screenOrientation="landscape"`）。
-2. ✅ 背景音乐 wasm（根因 = 浏览器 autoplay policy；`BgmUnlock` + `unlock_bgm_system` 首次交互后 spawn BGM）。
-3. ✅ 主地图底部三键取掉（根因 = 覆盖层被 z=8 deck_plaque 原语反盖；删 9 原语 + `on_hit` 5/6/7 死分支 + `open_build_panel` 死函数 + 孤儿字符串键 + 断言收窄）。
-4. ✅ 平台测试能实际运行（`/api/tests?run=<id>` 白名单动作：test_manifest 枚举 id + 逐参数 `Command::new` + 后台 spawn + 日志落 `evidence/console/logs/`；实测 `rules_battle` → 20 passed）。
-5. ✅ 每次完成过清单 + 版本规划（`docs/process/25_versioning.md` 单一事实源 + `release.md` §版本表）。
-6. ✅ x.y.z 版本打包（`TreasureIsl-<x.y.z>-<arch>.apk` / `treasure_bevy_wasm-<x.y.z>.wasm`；`validate_data.py check_version_consistency` 三方对账）。
+**刚完成一轮**（「先把能做的全做了」= ① 类 4 项并行收口）：
+1. ✅ S32.7 资产浏览：`map_pack_info` 每包 `verify_status=ok|drift|platform_error` + `verify_problems`（`[FAIL]` 行），web 资产页校验卡；实测 4 包 verify=ok problems=0。
+2. ✅ S32.8 文档检索：`repo/search.rs` 全文搜索 + EXP/F-ID/任务 ID 精确反查 + 上限 3000/512KB/500 超限截断；`GET /api/search` + web 检索页；实测 EXP-116→15/F-319→11/S32.6→35 命中，空 q→0，耗时 197~284ms。
+3. ✅ S32.9 构建只读体检：`runner::build::build_check`（`pwsh -Check` + `snapshot::FrozenSnapshot` 前后 diff）+ `GET /api/build?check=1`；实测 check_exit=0 / frozen_diff_empty=true / frozen_diff=0。
+4. ✅ S35.1 构建编排平台化：`build_artifacts.py` 编排器 + `GET /api/build?run` 白名单负例 **400**（改前 500）+ list/check 只读；evidence 四份 + 台账 4 任务 verified + WBS/26 号/14 号/22 号同步。
 
-**下一节点** = 从台账取第一个 deps 全 verified 且未 verified 的任务 = **S32.7/S32.8/S32.9 并行**（S32.6 收口已 verified）。之后按依赖链：S34.0 → S34.3~S34.6 → S35.1，穿插用户视觉签收 S17.5/S21.9/S27.5/S34.6。
+**下一节点** = 从台账取第一个 deps 全 verified 且未 verified 的任务 = **S34.0**（v6/VS v2 设计稿定案，A 纪律：spec 用户确认留痕 + 引擎出图 + 用户视觉验收通过，不可代签）。之后按依赖链：S34.3→S34.4→S34.5→S34.6，穿插用户视觉签收 S17.5/S21.9/S27.5/S27.7。
 
-**项目总进度**：逆向+玩法+架构全完成，当前处于 **UI 重设计收尾（v6/VS v2）+ 开发平台扩展 + 产物体积标准化** 的并行收官期，距终止条件（台账全 verified + P0~P4 全 pass + 三端产物 + gate 全绿）剩约 6% 任务量。
+**项目总进度**：逆向+玩法+架构全完成，当前处于 **UI 重设计收尾（v6/VS v2）+ 开发平台扩展（S32 全收口）+ 产物体积标准化（S35 全收口）** 的并行收官期，距终止条件（台账全 verified + P0~P4 全 pass + 三端产物 + gate 全绿）剩约 4% 任务量。
 
 ---
 

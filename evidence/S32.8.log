@@ -1,0 +1,36 @@
+# S32.8 文档检索（/api/search 全文搜索 + EXP/F-ID/任务 ID 反查）验收 — 2026-11-02T10:50:43Z
+
+## 判据（S32.8 dod）
+1. GET /api/search?q=<关键词> 返回 hits[]（file:line + snippet）
+2. EXP-116 / F-319 / S32.6 三类反查均命中（精确引用）
+3. 空 q 返回 0 hits（不扫盘）
+4. URL 解码：前端 encodeURIComponent 编码的中文/空格查询命中（视觉签收 %E8... = 39 命中）
+5. token 边界：EXP-116 不误配 EXP-1160（反查精确 token）
+6. 大文件/总索引上限不阻塞（MAX_FILES=3000 / 512KB / 500；实测耗时）+ 扩展名白名单含 html/js/sh/txt（平台自身端点/工具可检索）
+7. 只读：0 写盘（S32.9 同轮冻结路径验证）
+
+## 实跑输出
+--- q=EXP-116 ---
+query=EXP-116 hits=22 scanned=521 truncated=False
+  docs/release.md:184 | # 2026-10-26 修（S24.0 / EXP-116）：相机正交 `o.scale` 语义 = 世界单
+  docs/plan-s32-platform.md:35 | | S32.8 | S32.3 | 文档检索（全文 + `EXP-xxx` / `F-xxx` / 任务 ID
+  耗时=365ms
+--- q=F-319 ---
+query=F-319 hits=16 scanned=521 truncated=False
+  docs/style.md:284 | ## §5.11 REA MCP 使用规约 + thunk/导入识别 + RNG oracle 规约（S3.1
+  docs/style.md:293 | 4. **冒烟结果回写 `legacy/docs/facts/tools.md`**：F-313/F-319 
+  耗时=342ms
+--- q=S32.6 ---
+query=S32.6 hits=52 scanned=521 truncated=False
+  docs/plan-s32-platform.md:13 | | P1 执行与审计 | 一键门禁 / 双审计任务书 + 收敛判定 / 一键收口 | S32.4~S32.6 
+  docs/plan-s32-platform.md:33 | | S32.6 | S32.5 | 收口（`task_close.py --check` 只读 + 白名单 i
+  耗时=302ms
+--- q=(空) ---
+hits=0 note=空关键词（query 必填）
+--- 判据 4：URL 解码（encodeURIComponent('视觉签收') = %E8%A7%86%E8%A7%89%E7%AD%BE%E6%94%B6）---
+query=视觉签收 hits=39（中文编码命中）
+query=main_map v4 hits=7（空格编码命中）
+--- 判据 5：token 边界（EXP-116 命中不含 EXP-1160；EXP-1160 单独查询应命中其专属行）---
+EXP-1160 hits=2
+--- 判据 6：扩展名覆盖（html/js 检索 = 平台自身 web/index.html + 工具脚本）---
+build_apk hits=49（含 html/js/sh = 7）

@@ -157,6 +157,7 @@
   </nav>
   <div class="grp">平台</div>
   <nav>
+    <button data-page="search">检索</button>
     <button data-page="settings">设置</button>
   </nav>
 </aside>
@@ -269,6 +270,10 @@
         <img id="asset-preview" alt="" style="max-width:520px;max-height:420px;object-fit:contain;background:#0d0f17;border:1px solid var(--border);border-radius:8px;display:none">
         <div id="asset-meta" style="min-width:260px;flex:1"></div>
       </div>
+    </div>
+    <div class="card">
+      <h2>地图包校验状态（S32.7：`/api/assets` map_packs verify_status）</h2>
+      <div id="map-verify" style="font:11px/1.5 monospace;white-space:pre-wrap"></div>
     </div>
   </section>
 
@@ -386,7 +391,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       <div id="apk-drift" style="margin-top:12px"></div>
       <div class="foot">
         判据 = <code>scripts/apk_audit.py --apk</code>（① .so 压缩率 &lt; 90% / ② 未引用 UI 0 进包）；
-        单一事实源 = <code>docs/process/24_apk_size_std.md</code>。平台只读体检，不执行构建。
+        单一事实源 = <code>docs/process/24_apk_size_std.md</code>。此页只读体检；构建执行 = 24 号 §4.1 编排器（<code>/api/build?run=</code> 白名单 kind，不经手拼 shell）。
       </div>
     </div>
   </section>
@@ -397,6 +402,12 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       <div id="build-trigger" style="margin-bottom:10px"></div>
       <div id="build-list"></div>
       <div id="build-log" style="margin-top:12px"></div>
+      <div class="card" style="margin-top:12px">
+        <h2>只读体检（S32.9：/api/build?check=1）</h2>
+        <button onclick="buildCheck()">体检（build_wasm.ps1 -Check + 0 游戏产物变更断言）</button>
+        <span style="color:var(--muted);font-size:12px;margin-left:8px" id="bc-msg"></span>
+        <div id="bc-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:200px;overflow:auto;display:none"></div>
+      </div>
       <div class="foot">
         触发 = <code>console_commands.json</code> 白名单 id（<code>build_apk</code> / <code>build_wasm</code> /
         <code>build_native</code>，后台执行）；构建本体 = 既有脚本（<code>build_apk.sh</code> /
@@ -452,6 +463,20 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
     </div>
   </section>
 
+  <!-- 检索（S32.8：/api/search 只读全文搜索 + EXP/F-ID/任务 ID 反查） -->
+  <section id="page-search" hidden>
+    <div class="card">
+      <h2>文档检索（S32.8：全文搜索 + EXP/F-ID/任务 ID 反查，只读）</h2>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="search" id="sr-q" placeholder="关键词 / EXP-116 / F-319 / S32.6…" style="flex:1;min-width:240px">
+        <button onclick="doSearch()">检索</button>
+        <span style="color:var(--muted);align-self:center" id="sr-count"></span>
+      </div>
+      <div id="sr-hits" style="max-height:480px;overflow:auto;font:11px/1.5 monospace;white-space:pre-wrap"></div>
+      <div class="foot">只读全文检索（docs/ crates/ scripts/ plan/）；上限 3000 文件 / 512KB / 500 命中，超限截断不阻塞（S32.8 判据）。</div>
+    </div>
+  </section>
+
   <!-- 设置 -->
   <section id="page-settings" hidden>
     <div class="card">
@@ -477,7 +502,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
-const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'tests', 'apksize', 'build', 'close', 'settings'];
+const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'tests', 'apksize', 'build', 'close', 'search', 'settings'];
 
 /* 图片短 ID（大写下划线形，如 MM_3 / IDX_1；组代码 + 组内序号；同组递增，好记、可直接口述给 AI）。
  * 确定性派生：按组别分桶，桶内按文件名排序 ⇒ 刷新/重启 ID 稳定不变。 */
@@ -514,6 +539,7 @@ function showPage(name) {
   if (name === 'apksize' && !loaded.apksize) loadApkSize();
   if (name === 'build' && !loaded.build) loadBuild();
   if (name === 'close' && !loaded.close) loadClose();
+  if (name === 'search' && !loaded.search) loadSearch();
   if (name === 'settings' && !loaded.settings) loadSettings();
 }
 const loaded = {};
@@ -711,6 +737,25 @@ async function closeRun() {
   }
 }
 
+/* ---- S32.8 文档检索：GET /api/search（只读全文搜索 + EXP/F-ID/任务 ID 反查） ---- */
+async function loadSearch() {
+  loaded.search = true;
+  $('sr-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+}
+async function doSearch() {
+  const q = $('sr-q').value.trim();
+  if (!q) { $('sr-count').textContent = '关键词必填'; return; }
+  $('sr-count').textContent = '…';
+  try {
+    const r = await api('/api/search?q=' + encodeURIComponent(q));
+    $('sr-count').textContent = `${r.hits.length} 命中（扫 ${r.scanned_files} 文件${r.truncated ? '，超限截断' : ''}）`;
+    $('sr-hits').textContent =
+      r.hits.map((h) => `${h.file}:${h.line}\n  ${h.snippet}`).join('\n') || '(无命中)';
+  } catch (e) {
+    $('sr-count').textContent = '失败：' + e;
+  }
+}
+
 async function loadAssets() {
   loaded.assets = true;
   try {
@@ -731,6 +776,12 @@ async function loadAssets() {
       });
     });
     renderAssets();
+    // S32.7：地图包校验状态（map_pack.py verify 裸 id 只读；platform_error = 工具缺位 / drift = 仓库既有漂移）。
+    const mp = (d.map_packs || []).map((m) => {
+      const c = m.verify_status === 'ok' ? '#3c9' : (m.verify_status === 'drift' ? '#e06' : '#e90');
+      return `${m.id}  <span style="color:${c}">${m.verify_status}</span>${(m.verify_problems || []).length ? '  ' + esc(m.verify_problems.join('; ')) : ''}`;
+    }).join('\n') || '（无已装地图包）';
+    $('map-verify').innerHTML = mp;
   } catch (e) {
     $('asset-grid').innerHTML = `<div class="empty" style="grid-column:1/-1">/api/assets 不可用：${e}</div>`;
   }
@@ -1593,6 +1644,21 @@ async function loadBuild() {
     });
   } catch (e) {
     $('build-list').innerHTML = '<div class="empty">/api/build 不可用：' + esc(String(e)) + '</div>';
+  }
+}
+
+/* ---- S32.9 构建只读体检：GET /api/build?check=1（-Check + 0 游戏产物变更断言） ---- */
+async function buildCheck() {
+  $('bc-msg').textContent = '…';
+  try {
+    const r = await api('/api/build?check=1');
+    $('bc-msg').textContent =
+      `ok=${r.ok} check_exit=${r.check_exit} frozen_diff_empty=${r.frozen_diff_empty}（${(r.frozen_diff || []).length} 差异）`;
+    const o = $('bc-out');
+    o.style.display = 'block';
+    o.textContent = r.check_output || '(空输出)';
+  } catch (e) {
+    $('bc-msg').textContent = '失败：' + e;
   }
 }
 

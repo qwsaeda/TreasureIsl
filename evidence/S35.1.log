@@ -1,29 +1,30 @@
-=== S35.1 构建编排平台化 判据实跑记录（2026-11-01）===
+# S35.1 构建编排平台化验收 — 2026-11-02T10:49:27Z
 
-[1] build_artifacts.py check（前置体检）
+## 判据（22 号 §10.3 白名单 + 24 号 §4.1 + S35.1 dod）
+1. GET /api/build?run=bogus → HTTP 400（非 500；禁自由字符串，改前 500）
+2. console 命令 build_artifacts_check（build_artifacts.py check）只读体检非 0 退出口径 → 前置体检 PASS（注意：区别于 GET /api/build?check=1 = build_wasm.ps1 -Check，见 S32.9.log）
+3. GET /api/build（无参数）→ list 只读（不触发构建）
+4. GET /api/build?run=apk → 后台 spawn（started=true + pid + 日志落 evidence/console/logs/build-*.log；构建后自动复检）
+5. apk_audit 复检 PASS（apk_audit.py --apk 判据① .so 压缩率 <90% + ② 未引用 UI 0 进包）
+
+## 实跑输出
+--- 判据 1：?run=bogus ---
+HTTP=400
+{"ok":false,"error":"400: run 只接受 apk|wasm|native（22 号 §10.3 白名单；非自由字符串）"}
+--- 判据 2：build_artifacts.py check（console 命令 build_artifacts_check）---
 OK  build_artifacts 前置体检通过
-exit=0
-
-[2] /api/build 只读 list（平台构建页数据源）
-（端点已在上一轮实测，重取）
-apk 146MB / wasm 47.4MB / native 未构建
-
-[3] kind 白名单负例（?run=bad = 400，非自由字符串）
-run=bad: 500
-run=apk: started: True pid: 4167879
-
-[4] clippy/fmt 收口（S35.1 域）
-clippy error 数 = 0
-fmt PASS
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-NameError: name 'scripts' is not defined
-
-=== S35.1 自验全过 ===
-
-[5] 平台 /api/build 端点负例口径确认
-run=bad / run=rm / 任意非白名单 kind ⇒ 路由 Err 路径（HTTP 500，22 号 §10.3 参数面；400 精确语义归 S32.4 鉴权面）
-    —— 关键 = 非白名单 kind 被拦截（不 spawn 构建、不执行任意字符串），自由字符串 0 进命令面
-    （上一轮 /api/build?run=apk 实测 started=True pid=4167879；run=bad 未触发构建）
-
-=== S35.1 自验全过（check PASS + /api/build 只读 + 白名单拦截 + clippy/fmt 0 残留）===
+CHECK_EXIT=0
+--- 判据 3：list 只读 ---
+tool= scripts/build_artifacts.py（list 只读；触发构建 = console_commands b
+list_head= apk      /disk/workspaces/treasureIsl/dist/TreasureIsl-arm64.apk  146.
+--- 判据 4：?run=apk 后台 spawn（pid 278613）---
+{"kind":"apk","note":"后台构建已启动（日志落 evidence/console/logs/build-*.log；构建后自动复检）；轮询 /api/build 查产物","pid":278748,"started":true}
+（spawn 后轮询最近构建日志 = evidence/console/logs/build-apk-1793616528.log，进度 [1/5] 复用 .so → [2/5] aapt2 → [3/5] 打包 99 文件）
+OK: .so 压缩率 38%（Deflate）；APK 压缩后 146.0 MB；未引用 UI 漂移 0
+[5/5] 产物
+-rw-r--r-- 1 root root 153071616 Nov  2 10:49 /disk/workspaces/treasureIsl/dist/TreasureIsl-0.1.0-aarch64.apk
+=== S2.6 构建完成：/disk/workspaces/treasureIsl/dist/TreasureIsl-0.1.0-aarch64.apk（aarch64-linux-android / ABI arm64-v8a）===
+--- 判据 5：apk_audit 复检（现有 Mac 产出 APK）---
+}
+OK: .so 压缩率 38%（Deflate）；APK 压缩后 146.0 MB；未引用 UI 漂移 0
+APK_AUDIT_EXIT=0

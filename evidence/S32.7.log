@@ -1,0 +1,27 @@
+# S32.7 资产浏览·地图包校验状态（verify_status）验收 — 2026-11-02T10:48:24Z
+
+## 判据（22 号 §地图行 + S32.7 dod）
+1. /api/assets 每包 map_packs[].verify_status = ok（map_pack.py verify 裸 id 只读）
+2. verify_problems 为空（[FAIL] 行 0 条）
+3. 默认包指针 + dist 包清单在位
+4. 校验状态区分「平台 bug」与「仓库既有漂移」：drift 负例（坏包 verify 非 0 → drift + [FAIL] 入 problems）+ platform_error 负例（python3 缺位 → platform_error）
+5. installed_packs() 口径：无 manifest.json 的非模板目录不列入
+
+## 实跑输出
+--- 4 包正常态（verify=ok / problems=0）---
+m01: verify_status=ok problems=0
+m02: verify_status=ok problems=0
+m03: verify_status=ok problems=0
+m04: verify_status=ok problems=0
+default_map_pack= m01
+dist= ['m01.map-pack', 'm02.map-pack', 'm03.map-pack', 'm04.map-pack']
+ALL_OK= True
+--- drift 负例（临时坏包 assets/maps/zz_audit_tmp：schema=99 + data_version=bad + 缺数据文件）---
+verify_status=drift problems=14
+   [FAIL] schema = 99（期望 'map-pack/1'）-> 拒绝安装
+   [FAIL] data_version = 'bad'（期望 'board-v5'）-> 拒绝加载
+   [FAIL] 缺 map.json
+DRIFT_OK= True
+--- platform_error 负例（PATH=/nonexistent 重启，python3 缺位；已实测 4 包 platform_error，恢复后回 ok）---
+--- 还原后 4 包复验 ---
+[('m01', 'ok'), ('m02', 'ok'), ('m03', 'ok'), ('m04', 'ok')]

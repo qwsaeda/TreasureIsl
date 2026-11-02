@@ -61,13 +61,30 @@
 
 ## 4. 平台功能（ti-console）
 
-`/api/apk-size` = 调 `apk_audit.py --apk <最新 dist/TreasureIsl-arm64.apk>` 只读适配（**平台不执行构建**，
-22 号 §1 边界：只做只读体检与预览）：
+`/api/apk-size` = 调 `apk_audit.py --apk <最新 dist/TreasureIsl-arm64.apk>` 只读适配（**平台不手拼构建命令**，
+22 号 §1 边界：只做只读体检与预览；构建执行 = §4.1 构建编排，经 `build_artifacts.py` 白名单 kind，不经手拼 shell）：
 
 - 返回 JSON：`total_compressed` / `by_dir`（目录聚合 压缩后/原始/文件数）/ `lib`（压缩率 + method）
   + `verdict`（PASS/FAIL + 判据号）；
 - 平台「APK 体积」页（左菜单第 8 页）= 构成表 + 未引用漂移清单 + 判据状态灯；
 - 数据源缺失（dist/ 无 APK）= 页面显示「未构建」，不报错（只读降级口径，同 22 号 §8 快照缺省）。
+
+### 4.1 构建编排（S35.1 执行面，单一事实源）
+
+**平台经 `scripts/build_artifacts.py` 编排器执行既定构建**（`GET /api/build?run=<kind>`，kind 白名单
+`apk|wasm|native`；自由字符串 = 400，22 号 §10.3），**不经手拼任意 shell 命令**（22 号 §1「不做任意 shell」
+仍成立：程序只来自 `console_commands.json` 白名单 id `build_apk`/`build_wasm`/`build_native`）。
+
+- `pre <kind>`：构建前 mtime 锚定（apk 回退 `treasure_bevy.rs` mtime 到 `.so` 前 10s，防手动改 `.rs`
+  误触发 15min 重编；口径 = §1「.so 复用判据」）；
+- `run <kind>`：执行构建本体（apk=`build_apk.sh` / wasm=`build_wasm.ps1` / native=`cargo build
+  treasure-bevy-native`）+ 构建后自动 `post` 复检 + 日志落 `evidence/console/logs/build-*.log`（gitignored）；
+- `post <kind>`：复检（apk=`apk_audit.py --apk` 判据①② / wasm=产物在位 / native=退出码）+ 复原 `.rs` mtime；
+- `list`：已构建产物清单（体积/mtime）；`check`：前置体检（runner 在位 + 产物目录，非 0 退出口径）。
+
+复检判据 = §2 判据①②（`.so` 压缩率 <90% + 未引用 UI 0 进包）。**平台「构建」页** = `/api/build`
+（只读 `list` + `?run` 后台 spawn + 最近构建日志尾行）+ `?check=1` 只读体检（`build_wasm.ps1 -Check`
++ 22 号 §8 冻结路径指纹差断言，S32.9）。构建本体仍走既有脚本（工具契约不变，14 号 `build_artifacts.py` 行）。
 
 ## 5. 已知限制（不静默绕过）
 

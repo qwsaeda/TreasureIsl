@@ -20,4 +20,39 @@ pub mod config;
 pub mod data;
 pub mod guard;
 pub mod import;
+pub mod search;
 pub mod snapshot;
+
+/// 百分号解码（query 参数；前端 `encodeURIComponent` 输出 `%XX`，服务端须解码后再匹配，
+/// 否则含空格/中文/保留字符的查询按字面 `%XX` 匹配 = 0 命中；S32.8 检索 + whitelist/evidence 路由）。
+///
+/// 仅解 `%XX`（`+` 保持原样，与 JS `encodeURIComponent` 语义一致：空格→`%20`、`+`→`%2B`）；
+/// 非法 `%XX` 序列（如 `%GG`/末尾孤立 `%`）原样保留（不崩）；UTF-8 多字节序列正确还原。
+#[must_use]
+pub fn percent_decode(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0usize;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(high), Some(low)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2])) {
+                out.push((high << 4) | low);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// 十六进制字节值（`0-9a-fA-F`）；非十六进制 = `None`。
+fn hex_val(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}

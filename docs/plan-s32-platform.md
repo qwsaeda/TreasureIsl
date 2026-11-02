@@ -31,9 +31,9 @@
 | S32.4 | S32.3 | 门禁执行（`fast/touch/full` + 单实例锁 + 轮询日志 + 历史） | 实跑 `fast` PASS；失败负例非 0；非法 tier 400；锁占用 409；**无 token 写操作 403** |
 | S32.5 | S32.4 | 双审计任务书生成 + 报告归档 + 收敛判定（A/B 报告 `-a`/`-b`） | 对 S32.0b 实跑生成任务书（模板须逐条覆盖 22 号八要素清单）；报告落盘且抬头含四行机器可解析字段（总判定/新发现/误报/残留）；收敛规则单测（三条判据 + 连续 2 轮 + 3 轮升级）。**✅ verified（2026-11-02）**：`crates/ti-console/src/audit/*` + `POST /api/audit/taskbook|archive` + `GET /api/audit` 收敛表；28 条单测（含占位轮不计/连续 2 轮/3 轮升级/symlink 防穿越）；双审计 r1~r3 收敛（r1 A 1 + B 4 → r2/r3 双侧 0/0/0 连续 2 轮 pass）；evidence/S32.5.log |
 | S32.6 | S32.5 | 收口（`task_close.py --check` 只读 + 白名单 id → `--cmd` 精确映射）+ EXP 查重 | 实跑一条只读体检；未登记 id 400；失败不改台账；**白名单对账断言**（§4.2 动作 id 集合 == `console_commands.json`）。**✅ verified（2026-11-02）**：`crates/ti-console/src/runner/close.rs` + `POST /api/close`（close_check/close_run/exp_check + whitelist_audit 对账断言）+ `GET /api/close?audit=1` + `routes/close_api.rs`；12 条 close_tests（含 map_cmd_id 4 条）；双审计 r1~r4 收敛（r1 A 0 + B 5 P3 → r2 A N1 + B F1~F5 全闭环 → r3+r4 连续 2 轮 0/0/0 = `state=pass`）；evidence/S32.6.log |
-| S32.7 | S32.3 | 资产浏览（`ui_manifest` 缩略图 + `registry.json` + `assets/maps/` 包信息） | 只调 `map_pack.py verify`（已装包集合 = 平台自扫描，排除骨架 `_template`）；缺图占位不崩；**校验状态须区分「平台 bug」与「仓库既有漂移」**（HEAD 基线对比，见 §已知问题） |
-| S32.8 | S32.3 | 文档检索（全文 + `EXP-xxx` / `F-xxx` / 任务 ID 反查） | 关键词命中；反查处引用列表；索引上限不阻塞 |
-| S32.9 | S32.3 | 构建**只读体检**（`build_wasm.ps1 -Check`）+ `web/` 产物清单 + 平台自身静态服务预览 | 只跑 `-Check`（不构建/不拷贝/不写 evidence）；非法参数 400；0 游戏产物变更（22 号 §8 内容级指纹口径） |
+| S32.7 | S32.3 | 资产浏览（`ui_manifest` 缩略图 + `registry.json` + `assets/maps/` 包信息） | 只调 `map_pack.py verify`（已装包集合 = 平台自扫描，排除骨架 `_template`）；缺图占位不崩；**校验状态须区分「平台 bug」与「仓库既有漂移」**（HEAD 基线对比，见 §已知问题）。**✅ verified（2026-11-02）**：`map_pack_info`（`data.rs`）每包 `verify_status=ok|drift|platform_error` + `verify_problems`（`[FAIL]` 行，`0 违规` 行不算）+ `data::assets` 返回 `map_packs[]`；web 资产页「地图包校验状态」卡；实测 4 包（m01~m04）verify=ok problems=0；evidence/S32.7.log |
+| S32.8 | S32.3 | 文档检索（全文 + `EXP-xxx` / `F-xxx` / 任务 ID 反查） | 关键词命中；反查处引用列表；索引上限不阻塞。**✅ verified（2026-11-02）**：`repo/search.rs`（白名单根 `docs/ crates/ scripts/ plan/` + 文本扩展名 + 上限 3000/512KB/500 超限 `truncated` 不阻塞）+ `GET /api/search?q=`（`q` 空 = 空结果；**`q` 服务端先 `percent_decode`**〔前端 `encodeURIComponent`，中文/空格才命中〕）+ web 检索页；实测 EXP-116→22 / F-319→16 / S32.6→52 命中，空 q→0，中文编码→39 / 空格→7，token 边界（EXP-116≠EXP-1160），耗时 302~365ms；evidence/S32.8.log |
+| S32.9 | S32.3 | 构建**只读体检**（`build_wasm.ps1 -Check`）+ `web/` 产物清单 + 平台自身静态服务预览 | 只跑 `-Check`（不构建/不拷贝/不写 evidence）；非法参数 400；0 游戏产物变更（22 号 §8 内容级指纹口径）。**✅ verified（2026-11-02）**：`runner::build::build_check`（`pwsh -Check` + `snapshot::FrozenSnapshot` 前后 diff）+ `GET /api/build?check=1`（`ok=体检通过&&差为空`）+ web 构建页「只读体检」卡；实测 check_exit=0 / frozen_diff_empty=true / frozen_diff=0；evidence/S32.9.log |
 | S32.11 | — | 门禁 Linux 假 PASS 根治（`scripts/gate.ps1` 第 17 项硬编码 `powershell`） | Linux 实跑该项不再假 PASS；其余各项行为不变（项数随结构演进）；gate 全绿 |
 | S32.12 | S32.11 | 地图包 I7 资产哈希漂移修复（`assets/maps/m01~m03`） | `map_pack.py verify assets/maps/m01~m03` 全部 0 违规 + `map_pack.py check` 0 漂移；gate 全绿（含第 17 项可信，须 S32.11 根治后） |
 | S32.13 | S31.3 | wasm 主地图 v5 环形棋盘整体不渲染根治（`asset_present()` 按目标平台分流：wasm32 恒 true，缺资产语义交给 Bevy AssetServer） | `wasm_browser_e2e.py` L5 层（v6≥4/6 或 v5 9 类 + `island_home` + `card_panel`）+ `build_wasm.ps1` Linux 兼容；`evidence/S32.13.log` |
@@ -58,7 +58,7 @@
 | 问题 | 实测 | 任务 |
 |---|---|---|
 | `scripts/gate.ps1` 第 17 项硬编码 `powershell` | Linux 无该命令，但 `$LASTEXITCODE` 仍 0 ⇒ 该项**假 PASS**（第 4 轮双审计实测） | S32.11 |
-| 地图包 I7 资产哈希漂移 | `map_pack.py verify assets/maps/m01~m03` **各报 22 项不合规**（I7 字节数 + 哈希），**HEAD 即存在**；门禁（项数随结构演进，当前 33 项）不覆盖 verify ⇒ 漂移不可见。（`m04` 为 S16.4 在途空骨架，未入库，另 11 项「骨架未填」，**不纳入** S32.12） | S32.12 |
+| 地图包 I7 资产哈希漂移 | `map_pack.py verify assets/maps/m01~m03` **各报 22 项不合规**（I7 字节数 + 哈希），**HEAD 即存在**；门禁（项数随结构演进，当前 33 项）不覆盖 verify ⇒ 漂移不可见。（`m04` 为 S16.4 在途空骨架，未入库，另 11 项「骨架未填」，**不纳入** S32.12）。**已由 S32.12/S32.14 修复（2026-10-30）**：S32.7 实测 verify m01~m04 全 0 违规、`check` 0 漂移（不再作为 S32.7 前置前提） | S32.12 |
 | 22 号八要素 / 5 处登记无机器断言 | `doccheck`/`doccheck2` 无相关检查项 ⇒ 后续迭代删段/漏登不会被门禁发现 | 兜底落 S32.5（任务书模板逐条覆盖八要素清单） |
 | 平台 UI 视觉签收无机器兜底 | `check_visual_design_signoff` 只覆盖 `scenes.json`/`theme.json` ⇒ 平台 UI 走人工留痕 | `15_process_ledger.md` 第 22 行（半自动，挂 S32.3） |
 
@@ -88,7 +88,7 @@
 | `scripts/gate.ps1` | 门禁执行唯一入口（`-Fast` / `-Touch` / 全量）；注意其第 23 项会改写 `evidence/web_playtest.{log,png}`（22 号 §3.1 已列） |
 | `scripts/task_close.py` / `exp_log.py` | 收口 / EXP 登记唯一入口（平台默认只用 `--check` 只读面） |
 | `scripts/map_pack.py` | 地图包校验唯一入口（已装包集合 = `installed_packs()` 口径：平台自扫描，不解析人类可读输出；不重抄 I1~I9，标准见 21 号） |
-| `scripts/build_wasm.ps1` | 只用 `-Check` 只读体检；**平台不执行完整构建** |
+| `scripts/build_wasm.ps1` | 只用 `-Check` 只读体检；**构建执行 = 24 号 §4.1 编排器**（`build_artifacts.py` 白名单 kind，不经手拼 shell；平台不手拼任意命令） |
 | `evidence/` | 证据浏览 + 平台写点 `evidence/console/`（运行期日志在 `logs/` 子目录，gitignored） |
 | `assets/ui_manifest.json` / `assets/registry.json` / `assets/maps/` / `dist/maps/` | 资产与包浏览 |
 | `docs/` | 索引与全文检索（只读） |
@@ -98,4 +98,4 @@
 
 - 不做游戏编辑器 / 运行时 / 关卡工具（另立项）。
 - 不做账号、多租户、计费（P3 再评估）。
-- 不做任意 shell；不引入数据库（v1）；不内嵌 LLM SDK；不做完整构建。
+- 不做任意 shell；不引入数据库（v1）；不内嵌 LLM SDK；不做完整构建（**S35.1 例外**：经 24 号 §4.1 编排器 `build_artifacts.py` 执行白名单 kind 构建——平台不手拼任意 shell，程序只来自 `console_commands.json` 白名单 id；镜像 22 号 §9 例外注）。
