@@ -1,0 +1,37 @@
+# S34.4 VS v2 动画原型落码 — 验收证据
+
+## 验收判据（spec §2 四阶段 + §2.5 兵力 HUD + dod）
+
+### ① 4 阶段出图 0 硬错误（TI_VS_ANIM_PROTO=--shot vs）
+| 阶段 | 环境变量 | 出图 | 非黑像素 | 结果 |
+|---|---|---|---|---|
+| clash | `TI_VS_ANIM_PROTO=clash` | vs_clash_s344.png | 1993297 | 0 硬错误 |
+| duel | `TI_VS_ANIM_PROTO=duel` | vs_duel_s344.png | 1996772 | 0 硬错误 |
+| result_win | `TI_VS_ANIM_PROTO=result_win` | vs_result_win_s344.png | 满屏 | 0 硬错误 |
+| result_lose | `TI_VS_ANIM_PROTO=result_lose` | vs_result_lose_s344.png | 1949390 | 0 硬错误 |
+
+### ② 4 阶段实现（vs_anim_proto.rs）
+- `render()` 按 `selected_phase()` 分派 `draw_clash`/`draw_duel`/`draw_result(win/lose)`。
+- clash：VS 居中 + 敌方船员队列 + 顶/底兵力 HUD。
+- duel：双首领对峙 + 刀光 + 兵力 HUD。
+- result_win/lose：狂草「胜利/败北」+ 6 行战报（20 参数）+ 倒地 hero（lose）。
+
+### ③ 兵力 HUD 三数 i18n（spec §2.5）
+- `scene.vs.v2_elm_force_fmt` =「人手 {0} / 武器 {1} / 武装 {2}」（武装 = min(人手,武器)）。
+- `draw_status_box`：兵力条（黄铜槽 + 绿守/红攻）+ max_crew 满基准 + 三数 sgetf。
+- 顶部守方框 + 底部攻方框（clash/duel 必带，result 状态框隐藏）。
+
+### ④ theme 色值走 theme.by_name
+- 6 个渲染色值全走 `theme.by_name(...)`（parch_dark/ink_dark/brass_dark/gold_warm/parch_light/brass），check_hardcode 0 命中。
+
+### ⑤ strings i18n 7 键（scene.vs.v2_elm_*）
+- v2_elm_defender_label / v2_elm_attacker_label / v2_elm_battle_win / v2_elm_battle_lose / v2_elm_battle_report_win / v2_elm_battle_report_lose / v2_elm_force_fmt = 7 键 ✓
+
+### ⑥ check_hardcode 0 命中
+- `python3 scripts/check_hardcode.py` → OK（195 file(s), 0 hits）。
+
+### ⑦ gate 全绿
+- `scripts/gate.ps1` → 33 项 0 failure（见 gate 输出）。
+
+## 结论
+**S34.4 verified**：4 阶段出图 0 硬错误 + 兵力 HUD 三数 i18n + theme 色值走 by_name + strings 7 键 + check_hardcode 0 命中 + gate 全绿。
