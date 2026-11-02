@@ -1215,11 +1215,12 @@ fn render_v6_elem(
         cw,
     );
 
-    // 7) 海洋生物（4 处：沉船/鲸/鲨/触手；避开舵轮(291,1740)/罗盘(788,1742)区）
-    host.blit_image(chrome::V6_CREATURES, 150 - 115, 1240 - 90, 230, 180);
-    host.blit_image(chrome::V6_CREATURES, 935 - 100, 640 - 80, 200, 160);
-    host.blit_image(chrome::V6_CREATURES, 330 - 85, 1560 - 70, 170, 140);
-    host.blit_image(chrome::V6_CREATURES, 975 - 85, 1120 - 70, 170, 140);
+    // 7) 海洋生物（creatures.png = 单张合成海洋生态场景：沉船+鲸喷水+鲨鳍+触手+海藻。
+    // A4 修复（飞轮 R1/R2）：原 4 处全图 blit = 四角重复整张缩略（重复×4）+ 叠格；
+    // 改单处放中央岛下方海域（x 340-720 / y 1350-1600）。R2 复核：格环实底 = tile23
+    // cy 1313.2 + 半径 36 = 1349.2，生物顶 y1350 > 实底 ⇒ 不叠格；舵轮 y≥1625 / 罗盘 y≥1627
+    // 均 > 生物底 1600 ⇒ 不叠 CTA。U21「生物不叠格」。
+    host.blit_image(chrome::V6_CREATURES, 340, 1350, 380, 250);
 
     // 8) 玩家位置名牌（当前格）
     let idx = host.board_index().min(count - 1);

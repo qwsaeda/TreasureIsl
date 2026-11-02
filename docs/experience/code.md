@@ -579,3 +579,13 @@ S24.0（约 6 个阶段）。连带影响：S21 用户评审「main_map 界面�
 - Q019：legacy/docs/facts/tools.md F-320 写十进制 214013（项目约定 hex 0x343FD）。修法 = F-320 改 hex + check_lcg_hex 扩扫 tools.md + 捕 `*214013`（同行无 0x343FD）报错。
 - Q056/Q094：wasm_browser_e2e L5 判据 v6/v5 共用 basename（isle_lighthouse.png 双目录）按 basename 无法区分模式 ⇒ 旧 isle_ 前缀判据被 v6 污染。修法 = 模式专属标记（v6 6 项 ≥4 多资产 / v5 9 类专属岛型 + island_home + card_panel）。
 另 Q004 去双轨（overflow_to_deposit 单点，host 与 BuildManager 共用）+ Q007 补 bank_deposit 访问器（建造 deposit:0 丢账修复）。
+
+### EXP-155 代码：S34.0 飞轮 R1：拆分函数/改布局「四查」漏（CS-3 参数名 + 布局重叠 + 资产 blit 方式 + 文案参数）
+S34.0 违反项修复（U20 战报拆分 `draw_result_scene` + U21 生物移格环）后，飞轮 R1 抓出 4 条新漂移：
+- A1：拆出 `draw_result_scene(.., t, ..)` 参数 `t` 单字符 → `check_code_standards` CS-3 新违例（gate FAIL）。
+- A2：lose 帧倒地 hero `(60,1360,340,220)` 与加高战报框 `(240,1420,600,420)` 重叠 160×160（框加高上移加剧 80→160）。
+- A4：`creatures.png` 是**单张合成海洋生态场景**（沉船+鲸+鲨+触手+海藻一张），`blit_image` 无子矩形 ⇒ 4 次全图 blit = 四角各显整张缩略（内容重复×4）。
+- A7：战报第 5 行「各损 15% 人手 + 20% 武器」与实际演示损失（攻 5/30=16.7% 4/18=22.2%、守 4/20=20% 3/12=25%）不符。
+- **根因**：改布局/拆函数只盯目标（战报排版），未「四查」：①CS-3 参数命名（新函数参数禁单字母，仅 x/y 豁免）②布局求交（新元素与既有元素矩形重叠）③资产 blit 方式（合成图禁 4 次全图）④文案参数一致性（文案 % vs 实际数值）。
+- **解法**：拆函数/改布局前四查清单；合成资产图单处 blit 或子矩形（禁全图重复）；战报文案参数化显示实际损失（`{16}-{19}`）。
+- **验证**：`check_code_standards --check` PASS（CS-3 0 超基线）+ `cargo clippy -- -D warnings` PASS + `cargo test -p ti-app` PASS + 出图确认（lose 帧 hero 不重叠 / 生物单处不叠格）。

@@ -123,29 +123,45 @@ fn render_v2_elem(host: &mut dyn SceneHost, phase: &str) {
     host.fill_rect(0, 0, 9, 1920, c1);
     host.fill_rect(1071, 0, 9, 1920, c1);
 
-    // 顶部守方状态框（右）+ 底部攻方状态框（左）——黄铜羊皮面板
-    draw_status_box(
-        host,
-        1080 - 470,
-        60,
-        440,
-        130,
-        i18n::sget("scene.vs.v2_elm_defender_label"),
-        20,
-        12,
-        true,
-    );
-    draw_status_box(
-        host,
-        30,
-        1920 - 190,
-        440,
-        130,
-        i18n::sget("scene.vs.v2_elm_attacker_label"),
-        30,
-        18,
-        false,
-    );
+    // U20：兵力值 phase 相关（clash/duel 战前，result 战后）+ 满兵力基准 max_crew 对齐兵力条。
+    let (atk_crew, atk_arms, def_crew, def_arms) = match phase {
+        "result_win" | "result_lose" => (
+            DEMO_ATK_CREW - DEMO_ATK_LOSS,
+            DEMO_ATK_ARMS * 8 / 10,
+            DEMO_DEF_CREW - DEMO_DEF_LOSS,
+            DEMO_DEF_ARMS * 8 / 10,
+        ),
+        _ => (DEMO_ATK_CREW, DEMO_ATK_ARMS, DEMO_DEF_CREW, DEMO_DEF_ARMS),
+    };
+    // U20：clash/duel 必带 HUD（spec §2.5 顶守/底攻）；result 战报框已含双侧兵力数据 ⇒
+    // 隐藏状态框避免与战报框重叠（U20「战报重叠」修复）。
+    if !matches!(phase, "result_win" | "result_lose") {
+        // 顶部守方状态框（右）+ 底部攻方状态框（左）——黄铜羊皮面板
+        draw_status_box(
+            host,
+            1080 - 470,
+            60,
+            440,
+            130,
+            i18n::sget("scene.vs.v2_elm_defender_label"),
+            def_crew,
+            def_arms,
+            DEMO_DEF_CREW,
+            true,
+        );
+        draw_status_box(
+            host,
+            30,
+            1920 - 190,
+            440,
+            130,
+            i18n::sget("scene.vs.v2_elm_attacker_label"),
+            atk_crew,
+            atk_arms,
+            DEMO_ATK_CREW,
+            false,
+        );
+    }
 
     // 中央 VS 徽标
     host.fill_rect(540 - 70, 890 - 70, 140, 140, c2);
@@ -194,49 +210,94 @@ fn render_v2_elem(host: &mut dyn SceneHost, phase: &str) {
             host.fill_rect(440, 880, 200, 5, c3);
         }
         "result_win" | "result_lose" => {
-            let won = phase == "result_win";
-            // 胜方 hero（win）居中偏下；败方（lose）enemy 居中 + hero 倒下左下。
-            // 横幅上移顶部（不遮角色头），角色中下，战报框底部（三段不重叠）。
-            // #3 逐帧：win hero 轻微 bob / lose enemy 受创晃动。
-            if won {
-                let dy = tri(t, 1000, 8);
-                host.blit_image(chrome::V2_HERO, 540 - 200, 600 + dy, 400, 560);
-            } else {
-                let sx = tri(t, 300, 6);
-                host.blit_image(chrome::V2_HERO, 230 - 170, 1470 - 110, 340, 220);
-                host.blit_image(chrome::V2_ENEMY, 540 - 200 + sx, 580, 400, 560);
-            }
-            // 书法横幅（上中偏上，不遮顶部框与角色头）
-            let banner = if won { chrome::V2_BANNER_WIN } else { chrome::V2_BANNER_LOSE };
-            host.blit_image(banner, 540 - 250, 250, 500, 300);
-            // 战报框（底部中）
-            host.fill_rect(240, 1920 - 420, 1080 - 480, 300, c4);
-            frame_v2(host, 240, 1920 - 420, 1080 - 480, 300, c5);
-            let title = if won {
-                &i18n::sget("scene.vs.v2_elm_battle_win")
-            } else {
-                &i18n::sget("scene.vs.v2_elm_battle_lose")
-            };
-            host.draw_hint_text(title, 270, 1920 - 390, c2);
-            let body = if won {
-                i18n::sgetf("scene.vs.v2_elm_battle_report_win", &[&DEMO_ATK_CREW, &DEMO_ATK_ARMS])
-            } else {
-                i18n::sgetf("scene.vs.v2_elm_battle_report_lose", &[&DEMO_ATK_CREW, &DEMO_ATK_ARMS])
-            };
-            // 简化：draw_hint_text 单行，分三行画
-            for (i, line) in body.lines().enumerate() {
-                let lw = host.shell().hint_text_width_px(line);
-                let iy = i32::try_from(i).unwrap_or(0);
-                host.draw_hint_text(line, 540 - lw / 2, 1920 - 370 + iy * 60, c2);
-            }
+            // U20 拆分（render_v2_elem 超函数基线 140 行）：result 帧独立子函数。
+            draw_result_scene(host, phase, t, c4, c5, c2);
         }
         _ => {}
     }
     let _ = ink;
 }
 
+/// result 帧（胜/败）：角色 + 书法横幅 + 战报框（6 行双侧 16 参数，U20 拆分）。
+/// 三段不重叠：横幅顶部（250）+ 角色中下（600 起）+ 战报框底部（1920-500）。
+fn draw_result_scene(host: &mut dyn SceneHost, phase: &str, ms: u32, c4: u16, c5: u16, c2: u16) {
+    let won = phase == "result_win";
+    // 胜方 hero（win）居中偏下；败方（lose）enemy 居中 + hero 倒下左下。
+    if won {
+        let dy = tri(ms, 1000, 8);
+        host.blit_image(chrome::V2_HERO, 540 - 200, 600 + dy, 400, 560);
+    } else {
+        let sx = tri(ms, 300, 6);
+        // A2 修复（飞轮审计）：lose 倒地 hero 原 (60,1360,340,220) 与战报框 (240,1420,600,420)
+        // 重叠 160×160；移至左下角框外 (20,1330,200,130)，x 右缘 220 < 框左 240，不重叠。
+        host.blit_image(chrome::V2_HERO, 20, 1330, 200, 130);
+        host.blit_image(chrome::V2_ENEMY, 540 - 200 + sx, 580, 400, 560);
+    }
+    // 书法横幅（上中偏上，不遮顶部框与角色头）
+    let banner = if won { chrome::V2_BANNER_WIN } else { chrome::V2_BANNER_LOSE };
+    host.blit_image(banner, 540 - 250, 250, 500, 300);
+    // 战报框（底部中，加高容纳 6 行双侧战报）
+    host.fill_rect(240, 1920 - 500, 1080 - 480, 420, c4);
+    frame_v2(host, 240, 1920 - 500, 1080 - 480, 420, c5);
+    let title = if won {
+        &i18n::sget("scene.vs.v2_elm_battle_win")
+    } else {
+        &i18n::sget("scene.vs.v2_elm_battle_lose")
+    };
+    host.draw_hint_text(title, 270, 1920 - 470, c2);
+    // U20：战报双侧 16 参数（攻守战前→战后 人手/武器/武装/徒手），拆武装/徒手。
+    let atk_after_crew = DEMO_ATK_CREW - DEMO_ATK_LOSS;
+    let atk_after_arms = DEMO_ATK_ARMS * 8 / 10;
+    let atk_before_armed = DEMO_ATK_CREW.min(DEMO_ATK_ARMS);
+    let atk_before_unarmed = DEMO_ATK_CREW - atk_before_armed;
+    let atk_after_armed = atk_after_crew.min(atk_after_arms);
+    let atk_after_unarmed = atk_after_crew - atk_after_armed;
+    let def_after_crew = DEMO_DEF_CREW - DEMO_DEF_LOSS;
+    let def_after_arms = DEMO_DEF_ARMS * 8 / 10;
+    let def_before_armed = DEMO_DEF_CREW.min(DEMO_DEF_ARMS);
+    let def_before_unarmed = DEMO_DEF_CREW - def_before_armed;
+    let def_after_armed = def_after_crew.min(def_after_arms);
+    let def_after_unarmed = def_after_crew - def_after_armed;
+    // A7 修复（飞轮审计）：战报第 5 行显示实际损失（我方/敌方 人/器），与数值一致。
+    let atk_arm_loss = DEMO_ATK_ARMS - atk_after_arms;
+    let def_arm_loss = DEMO_DEF_ARMS - def_after_arms;
+    let args: [&dyn std::fmt::Display; 20] = [
+        &DEMO_ATK_CREW,
+        &DEMO_ATK_ARMS,
+        &atk_before_armed,
+        &atk_before_unarmed,
+        &atk_after_crew,
+        &atk_after_arms,
+        &atk_after_armed,
+        &atk_after_unarmed,
+        &DEMO_DEF_CREW,
+        &DEMO_DEF_ARMS,
+        &def_before_armed,
+        &def_before_unarmed,
+        &def_after_crew,
+        &def_after_arms,
+        &def_after_armed,
+        &def_after_unarmed,
+        &DEMO_ATK_LOSS,
+        &atk_arm_loss,
+        &DEMO_DEF_LOSS,
+        &def_arm_loss,
+    ];
+    let body = if won {
+        i18n::sgetf("scene.vs.v2_elm_battle_report_win", &args)
+    } else {
+        i18n::sgetf("scene.vs.v2_elm_battle_report_lose", &args)
+    };
+    // draw_hint_text 单行，分六行画（每侧战前/战后 + 必损 + 嘲讽）
+    for (i, line) in body.lines().enumerate() {
+        let lw = host.shell().hint_text_width_px(line);
+        let iy = i32::try_from(i).unwrap_or(0);
+        host.draw_hint_text(line, 540 - lw / 2, 1920 - 440 + iy * 50, c2);
+    }
+}
+
 /// v2 元素版状态框（顶守/底攻）：名牌 + 人手/武器/武装 + 兵力条。
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::many_single_char_names)]
 fn draw_status_box(
     host: &mut dyn SceneHost,
     x: i32,
@@ -246,6 +307,7 @@ fn draw_status_box(
     name: &str,
     crew: u32,
     arms: u32,
+    max_crew: u32,
     def: bool,
 ) {
     let theme = host.theme().clone();
@@ -260,10 +322,17 @@ fn draw_status_box(
     let armed = crew.min(arms);
     let info = i18n::sgetf("scene.vs.v2_elm_force_fmt", &[&crew, &arms, &armed]);
     host.draw_hint_text(&info, x + 18, y + 38, c7);
-    // 兵力条（黄铜槽 + 绿守/红攻填充）
+    // 兵力条（黄铜槽 + 绿守/红攻填充；U20 = 满兵力基准 max_crew，替代硬编码 40）
     let (bx, by, bw, bh) = (x + 18, y + h - 40, w - 36, 22);
     host.fill_rect(bx, by, bw, bh, c8);
-    let frac = f32::from(u16::try_from(crew.min(40)).unwrap_or(40)) / 40.0;
+    let frac = if max_crew == 0 {
+        0.0
+    } else {
+        // u32→f32 直接 `as` 触发 clippy cast_precision_loss；经 u16 无损转换（兵力 ≤ u16::MAX 常态）。
+        let c = u16::try_from(crew).unwrap_or(u16::MAX);
+        let m = u16::try_from(max_crew).unwrap_or(1);
+        f32::from(c) / f32::from(m)
+    };
     // bw ≤ 1080 像素有界，`as` 截断安全（`i32`→`u16` 去符号安全，`f32`→`i32` 截断安全）
     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::useless_conversion)]
     let fw = f32::from(u16::try_from((bw - 8).max(0) as u16).unwrap_or(0)) * frac;
