@@ -1,0 +1,33 @@
+# S34.0 main_map v6 + VS v2 设计稿定案 — 验收证据
+
+## 验收判据（spec §4.2 + A 纪律）
+
+### ① spec §4.1 用户确认留痕（A 纪律，不可代签）
+- [x] 本规范用户确认（2026-11-02 确认，转定稿）
+- [x] main_map v6 概念稿用户迭看确认（2026-11-02）
+- [x] VS v2 重设计概念稿 R1~R10 用户迭看确认（2026-11-02）
+- [x] 视觉签收（用户过目，不可代签；2026-11-02 用户确认通过）
+- 留痕：spec §4.1 4 项全部勾选 + 状态转定稿；用户迭看确认（question 工具消息留痕）。
+
+### ② 引擎出图 0 硬错误（5 张，evidence/ui_concept/）
+| 图 | 判据 | 结果 |
+|---|---|---|
+| `main_map_v6_engine.png` | 主地图 v6 环形格环 + 中央岛拆分 + 生物单处不叠格 | 0 硬错误，非黑 2057481 |
+| `vs_v2_clash_engine.png` | VS 居中 + 敌方队列 + 兵力 HUD | 0 硬错误 |
+| `vs_v2_duel_engine.png` | duel 双首领 + 刀光 | 0 硬错误 |
+| `vs_v2_result_win_engine.png` | 胜利 + 6 行战报 | 0 硬错误，非黑 1961287 |
+| `vs_v2_result_lose_engine.png` | 败北 + hero 左下 + 6 行战报 | 0 硬错误，非黑 1949399 |
+
+### ③ 用户视觉验收（A 纪律不可代签）
+- 2026-11-02 用户过目 5 张迭看图后确认「视觉验收通过」（question 工具响应）。
+
+### ④ gate 全绿
+- 2026-11-02 `scripts/gate.ps1`：**33 项 0 failure**（GATE_EXIT=0；含 check_code_standards / doccheck2 / wasm-browser-e2e / browser-playtest / playtest-loop / bevy-cpu-parity / render-invariants）。
+- wasm-browser-e2e L1~L5 全 PASS；playtest-loop 4 报告 0 失败。
+
+## 违反项闭环（飞轮对抗审计）
+- U18（中央岛拆分不规则岛）✅ / U19（duel 双首领）✅ / U20（战报 6 行双侧 20 参数 + result 状态框隐藏 + 兵力条满基准 max_crew）✅ / U21（生物单处不叠格 (340,1350,380,250)，格环实底 1349.2 < 1350）✅ / U22（单 V2_HERO 复用）✅。
+- 飞轮 R1→R2→R3 收敛到 0 新发现（A1/A2/A4/A7 修复 + EXP-155 回写；A5 动画 / A6 Q051 留 S34.2），停机结论 `evidence/flywheel.log`。
+
+## 结论
+**S34.0 verified**：spec §4.1 用户确认留痕 + 5 张引擎出图 0 硬错误 + 用户视觉验收通过 + gate 全绿。
