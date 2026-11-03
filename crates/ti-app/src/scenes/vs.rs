@@ -89,6 +89,9 @@ impl Scene for VsScene {
             // 替换演示常量（用户 2026-11-03「SB设计，阅读设计规范」= 构图对但兵力假）。
             // S34.6 D5（兵力模型迁移）：`resolved` = 已结算 → result 帧用 `after_crew/arms`
             // （真实战后，不再按 loss_pct 推）；未结算 → clash 战前兵力。
+            // S34.6 D6（格类分层 spec §2.4）：格类 = 副本战（dungeon）→ raid / BOSS → boss；
+            // 背景按格类（`bg_dungeon`/`bg_boss`），修复「BOSS 战显示甲板非炮台」（用户屎根因）。
+            let grid_class = if b.is_dungeon { "raid" } else { "boss" };
             crate::scenes::vs_anim_proto::render_v2_elem(
                 host,
                 phase,
@@ -97,6 +100,7 @@ impl Scene for VsScene {
                 b.defender_crew,
                 b.defender_arms,
                 b.resolved,
+                grid_class,
             );
             return;
         }

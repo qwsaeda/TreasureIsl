@@ -757,13 +757,13 @@ impl EconomyHost for GameApp {
 ///
 /// 副本战 = 该岛该级建筑防御；BOSS 战 = `boss_fort` 防御（`boss_tier+1` 当等级）。
 /// 供 `battle_step` 结算与 `battle_snapshot` 渲染共用，避免两处口径漂移。
-fn defender_force(b: &BattleView, bal: &data::Balance) -> (u32, u32) {
+fn defender_force(view: &BattleView, bal: &data::Balance) -> (u32, u32) {
     let rules = TerritoryRules::new(bal);
-    let defense = match &b.dungeon {
+    let defense = match &view.dungeon {
         Some((_cell, isle, level)) => rules.defense_at(isle, *level),
         None => rules.defense_at(
             "boss_fort",
-            u8::try_from(b.boss_tier.saturating_add(1)).unwrap_or(u8::MAX),
+            u8::try_from(view.boss_tier.saturating_add(1)).unwrap_or(u8::MAX),
         ),
     };
     (defense, defense)
@@ -859,6 +859,8 @@ impl SessionHost for GameApp {
                 resolved: b.outcome.is_some(),
                 after_crew: atk_crew,
                 after_arms: atk_arms,
+                // S34.6 D6（格类分层 spec §2.4）：副本战（dungeon 在位）= raid，否则 BOSS。
+                is_dungeon: b.dungeon.is_some(),
             }
         })
     }

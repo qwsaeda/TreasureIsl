@@ -119,6 +119,9 @@ pub struct BattleSnapshot {
     pub after_crew: u32,
     /// 攻方战后剩余武器（`resolve.attacker_after.arms`）。
     pub after_arms: u32,
+    /// S34.6 D6（格类分层，spec §2.4）：`true` = 副本战（`battle.dungeon` 在位，格类 raid）；
+    /// `false` = BOSS 战（格类 boss）。vs 渲染按此选格类背景（`bg_dungeon`/`bg_boss`）。
+    pub is_dungeon: bool,
 }
 
 /// S33.5 攻占战报（`Vs` 场景时有效；`assault` 一次性确定性结算，非 HP 回合制）。

@@ -143,6 +143,7 @@ pub fn render(host: &mut dyn SceneHost, phase: &str) {
             DEMO_DEF_CREW,
             DEMO_DEF_ARMS,
             false,
+            selected_grid_class(),
         );
         return;
     }
@@ -164,6 +165,7 @@ pub fn render(host: &mut dyn SceneHost, phase: &str) {
 /// 用户认可的是「这张好设计」，非 vs.rs 原海域图 + 叠小人的「屎」。导出 `pub(crate)`
 /// 供 vs.rs 正式战斗分支直接调用（phase 由 battle 结果推导）。
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn render_v2_elem(
     host: &mut dyn SceneHost,
     phase: &str,
@@ -172,6 +174,7 @@ pub(crate) fn render_v2_elem(
     def_crew: u32,
     def_arms: u32,
     resolved: bool,
+    grid_class: &str,
 ) {
     let theme = host.theme().clone();
     let ink = theme.by_name("parch_dark").unwrap_or(chrome::COLOR_TEXT_ON_PARCH);
@@ -180,7 +183,9 @@ pub(crate) fn render_v2_elem(
     let c2 = theme.by_name("brass_dark").unwrap_or(0x3942);
     let c3 = theme.by_name("gold_warm").unwrap_or(0xF692);
     // 背景（S34.5 按格类×地图主题：格类 → vs_theme 背景资产 + 主题 tint；收进 44px 羊皮框）
-    let class = selected_grid_class();
+    // S34.6 D6（格类分层 spec §2.4）：格类由调用方传（`grid_class`，vs.rs 从 battle 推导：
+    // 副本=raid / BOSS=boss），非环境变量默认 encounter —— 修复「BOSS 战显示甲板非炮台」。
+    let class = grid_class;
     let th = vs_theme();
     let bg = vs_bg_asset(class, th.as_ref());
     host.blit_image_tint(&bg, 44, 44, 1080 - 88, 1920 - 88, vs_tint(th.as_ref()));
