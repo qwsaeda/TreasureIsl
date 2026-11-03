@@ -626,9 +626,14 @@ fn scene_layer_contributes_text_region_pixels() {
         }
         // S18.20：其余 5 屏 = **贴图背景版式**（AI 夜空 / 俯视夜海全屏铺底，
         // 旧木框与占位横线已退役）→ 判据 = 非黑覆盖率 ≥ 990‰（贴图铺满画面）。
-        // main_map S33/v6（2026-10-31）：v6 不规则岛渲染默认路径，海蓝底 + 岛/格/
-        // 绳索等有黑色像素的 AI 元素 ⇒ 阈值降到 980‰（仍须「不黑屏」，容忍有黑元素）。
-        let threshold: u64 = if scene == "main_map" { 980 } else { 990 };
+        // S34.6 D2（2026-11-03）：vs vs_theme 满屏背景（格类×地图主题）替换夜空底——
+        // AI 主题贴图（羊皮海图/攻城/副本/BOSS）自然含暗色元素（黑边/暗角/海图墨线），
+        // 非黑覆盖率上限 ≈ 955‰；门槛 950‰（容忍暗色元素，仍须「不黑屏」）。
+        let threshold: u64 = match scene {
+            "main_map" => 980,
+            "vs" => 950,
+            _ => 990,
+        };
         let covered = non_black_permille(&px);
         assert!(
             covered >= threshold,

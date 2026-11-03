@@ -1,7 +1,8 @@
 //! 战斗场景（S9 骨架）：回合推进 / 战斗面板绘制。
+use ti_core::data::SceneLayout;
 use ti_core::domain::combat::{Side, hp_fill_pct};
 
-use crate::game_app::{GameInput, HitData, SiegeSnapshot};
+use crate::game_app::{BattleSnapshot, GameInput, HitData, SiegeSnapshot};
 use crate::i18n;
 use crate::scenes::chrome;
 use crate::scenes::chrome::{COLOR_DANGER, COLOR_PLAYER};
@@ -92,89 +93,103 @@ impl Scene for VsScene {
         );
         chrome::render_primitives_filtered(host, "vs", -1, 4);
         if let Some(b) = host.battle_snapshot() {
-            let ph_bar = layout.extra.get("player_hp").copied().unwrap_or_default();
-            let bh_bar = layout.extra.get("boss_hp").copied().unwrap_or_default();
-            let rd_pos = layout.extra.get("rounds").copied().unwrap_or_default();
-            let oc_pos = layout.extra.get("outcome").copied().unwrap_or_default();
-            // EXP-085：用显示 HP（平滑插值）渲染血条，而非实际 HP（跳变）。
-            // S15.6 QA141：填充宽走 `ti_core::domain::combat::hp_fill_pct`（显示值钳制 + 百分比折算），
-            // 血条宽度永不超过槽宽（旧直接乘除在插值过冲时越槽，QA140 判据域）。
-            let ph_w = ph_bar.w
-                * i32::try_from(hp_fill_pct(host.displayed_player_hp(), b.player_hp_max))
-                    .unwrap_or(0)
-                / 100;
-            let bh_w = bh_bar.w
-                * i32::try_from(hp_fill_pct(host.displayed_boss_hp(), b.boss_hp_max)).unwrap_or(0)
-                / 100;
-            // 血条语义 = 08_layout_design §2 L52-53（S15.6 B1 裁决②）：玩家青绿 COLOR_PLAYER /
-            // BOSS 血红 COLOR_DANGER（旧实现按 §4.4 表互置 + S14 色板，QA003/QA038）。
-            // 槽底 = JSON 原语（`vs.primitives`），此处只画运行时 HP 填充。
-            // S26.3：填充 + 黄铜描边 + 名字标签 + 数值（消除「裸色块」观感；
-            // 文案键 `scene.vs.hp_*`，`{0}/{1}` 占位 = 当前/上限）。
-            let theme = host.theme().clone();
-            let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
-            let pl_label = i18n::sget("scene.vs.hp_player");
-            let bo_label = i18n::sget("scene.vs.hp_boss");
-            let pl_num = i18n::sgetf("scene.vs.hp_fmt", &[&b.player_hp, &b.player_hp_max]);
-            let bo_num = i18n::sgetf("scene.vs.hp_fmt", &[&b.boss_hp, &b.boss_hp_max]);
-            for (bar, label, num, right_align) in
-                [(&ph_bar, pl_label, pl_num, false), (&bh_bar, bo_label, bo_num, true)]
-            {
-                let fill_w = if bar == &ph_bar { ph_w } else { bh_w };
-                let fill_color = if bar == &ph_bar { COLOR_PLAYER } else { COLOR_DANGER };
-                host.fill_rect(bar.x, bar.y, fill_w, bar.h, fill_color);
-                // 黄铜描边（4 边 2px，内嵌槽沿）
-                host.fill_rect(bar.x, bar.y, bar.w, 2, brass);
-                host.fill_rect(bar.x, bar.y + bar.h - 2, bar.w, 2, brass);
-                host.fill_rect(bar.x, bar.y, 2, bar.h, brass);
-                host.fill_rect(bar.x + bar.w - 2, bar.y, 2, bar.h, brass);
-                // 标签（槽上沿；右对齐 = BOSS 侧贴槽右缘）
-                let ly = bar.y - 32;
-                if right_align {
-                    host.draw_hint_text(
-                        label,
-                        bar.x + bar.w - host.shell().hint_text_width_px(label),
-                        ly,
-                        chrome::COLOR_TEXT_ON_PARCH,
-                    );
-                } else {
-                    host.draw_hint_text(label, bar.x, ly, chrome::COLOR_TEXT_ON_PARCH);
-                }
-                // 数值（槽内右缘，留 8px 内缩）
-                host.draw_hint_text(
-                    &num,
-                    bar.x + bar.w - 8 - host.shell().hint_text_width_px(&num),
-                    bar.y + (bar.h - host.shell().hint_glyph_px()) / 2,
-                    chrome::COLOR_TEXT_ON_PARCH,
-                );
+            // S34.6 D2（用户 2026-11-03「之前设计的很好」）：vs.rs 正式战斗区复用 vs_anim §2
+            // 好设计（hero 左下 + enemy 右上对峙，clash 站位，`vs_anim_proto` 同资产）——
+            // 修复「正式渲染无角色」（战斗区只有海域插画，用户「屎中屡」）。
+            // 静态对峙（HP 回合制，非动画帧）；缺资产 = 回退不画（战斗区海域仍在）。
+            if chrome::asset_present(chrome::V2_HERO) {
+                host.blit_image(chrome::V2_HERO, 120, 740, 260, 380);
             }
-            let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
-            // QA141：回合/结果/空态文本 44px 屏心居中（scenes.json rounds/outcome/empty x=540 = 居中语义）
-            let rd_x = chrome::centered_body_x(host, &rd);
-            chrome::draw_body_text(host, &rd, rd_x, rd_pos.y);
-            match b.outcome {
-                Some(Side::Player) => {
-                    let text = i18n::sget("scene.vs.victory");
-                    let text_x = chrome::centered_body_x(host, text);
-                    chrome::draw_body_text(host, text, text_x, oc_pos.y);
-                }
-                Some(Side::Enemy) => {
-                    let text = i18n::sget("scene.vs.defeat");
-                    let text_x = chrome::centered_body_x(host, text);
-                    chrome::draw_body_text(host, text, text_x, oc_pos.y);
-                }
-                None => {
-                    let aw = layout.extra.get("empty").copied().unwrap_or_default();
-                    let text = i18n::sget("scene.vs.awaiting");
-                    let text_x = chrome::centered_body_x(host, text);
-                    chrome::draw_body_text(host, text, text_x, aw.y);
-                }
+            if chrome::asset_present(chrome::V2_ENEMY) {
+                host.blit_image(chrome::V2_ENEMY, 640, 300, 260, 380);
             }
+            render_battle_bars(host, &layout, &b);
         } else {
             let em = layout.extra.get("empty").copied().unwrap_or_default();
             let text = i18n::sget("scene.vs.empty");
             let text_x = chrome::centered_body_x(host, text);
             chrome::draw_body_text(host, text, text_x, em.y);
+        }
+    }
+}
+
+/// S34.6 D2 拆出：战斗区 HP 双槽 + 回合/结果文本（`render` 保持窄接缝，超 100 行拆出）。
+fn render_battle_bars(host: &mut dyn SceneHost, layout: &SceneLayout, b: &BattleSnapshot) {
+    let ph_bar = layout.extra.get("player_hp").copied().unwrap_or_default();
+    let bh_bar = layout.extra.get("boss_hp").copied().unwrap_or_default();
+    let rd_pos = layout.extra.get("rounds").copied().unwrap_or_default();
+    let oc_pos = layout.extra.get("outcome").copied().unwrap_or_default();
+    // EXP-085：用显示 HP（平滑插值）渲染血条，而非实际 HP（跳变）。
+    // S15.6 QA141：填充宽走 `ti_core::domain::combat::hp_fill_pct`（显示值钳制 + 百分比折算），
+    // 血条宽度永不超过槽宽（旧直接乘除在插值过冲时越槽，QA140 判据域）。
+    let ph_w = ph_bar.w
+        * i32::try_from(hp_fill_pct(host.displayed_player_hp(), b.player_hp_max)).unwrap_or(0)
+        / 100;
+    let bh_w = bh_bar.w
+        * i32::try_from(hp_fill_pct(host.displayed_boss_hp(), b.boss_hp_max)).unwrap_or(0)
+        / 100;
+    // 血条语义 = 08_layout_design §2 L52-53（S15.6 B1 裁决②）：玩家青绿 COLOR_PLAYER /
+    // BOSS 血红 COLOR_DANGER（旧实现按 §4.4 表互置 + S14 色板，QA003/QA038）。
+    // 槽底 = JSON 原语（`vs.primitives`），此处只画运行时 HP 填充。
+    // S26.3：填充 + 黄铜描边 + 名字标签 + 数值（消除「裸色块」观感；
+    // 文案键 `scene.vs.hp_*`，`{0}/{1}` 占位 = 当前/上限）。
+    let theme = host.theme().clone();
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let pl_label = i18n::sget("scene.vs.hp_player");
+    let bo_label = i18n::sget("scene.vs.hp_boss");
+    let pl_num = i18n::sgetf("scene.vs.hp_fmt", &[&b.player_hp, &b.player_hp_max]);
+    let bo_num = i18n::sgetf("scene.vs.hp_fmt", &[&b.boss_hp, &b.boss_hp_max]);
+    for (bar, label, num, right_align) in
+        [(&ph_bar, pl_label, pl_num, false), (&bh_bar, bo_label, bo_num, true)]
+    {
+        let fill_w = if bar == &ph_bar { ph_w } else { bh_w };
+        let fill_color = if bar == &ph_bar { COLOR_PLAYER } else { COLOR_DANGER };
+        host.fill_rect(bar.x, bar.y, fill_w, bar.h, fill_color);
+        // 黄铜描边（4 边 2px，内嵌槽沿）
+        host.fill_rect(bar.x, bar.y, bar.w, 2, brass);
+        host.fill_rect(bar.x, bar.y + bar.h - 2, bar.w, 2, brass);
+        host.fill_rect(bar.x, bar.y, 2, bar.h, brass);
+        host.fill_rect(bar.x + bar.w - 2, bar.y, 2, bar.h, brass);
+        // 标签（槽上沿；右对齐 = BOSS 侧贴槽右缘）
+        let ly = bar.y - 32;
+        if right_align {
+            host.draw_hint_text(
+                label,
+                bar.x + bar.w - host.shell().hint_text_width_px(label),
+                ly,
+                chrome::COLOR_TEXT_ON_PARCH,
+            );
+        } else {
+            host.draw_hint_text(label, bar.x, ly, chrome::COLOR_TEXT_ON_PARCH);
+        }
+        // 数值（槽内右缘，留 8px 内缩）
+        host.draw_hint_text(
+            &num,
+            bar.x + bar.w - 8 - host.shell().hint_text_width_px(&num),
+            bar.y + (bar.h - host.shell().hint_glyph_px()) / 2,
+            chrome::COLOR_TEXT_ON_PARCH,
+        );
+    }
+    let rd = i18n::sgetf("scene.vs.rounds_fmt", &[&b.rounds]);
+    // QA141：回合/结果/空态文本 44px 屏心居中（scenes.json rounds/outcome/empty x=540 = 居中语义）
+    let rd_x = chrome::centered_body_x(host, &rd);
+    chrome::draw_body_text(host, &rd, rd_x, rd_pos.y);
+    match b.outcome {
+        Some(Side::Player) => {
+            let text = i18n::sget("scene.vs.victory");
+            let text_x = chrome::centered_body_x(host, text);
+            chrome::draw_body_text(host, text, text_x, oc_pos.y);
+        }
+        Some(Side::Enemy) => {
+            let text = i18n::sget("scene.vs.defeat");
+            let text_x = chrome::centered_body_x(host, text);
+            chrome::draw_body_text(host, text, text_x, oc_pos.y);
+        }
+        None => {
+            let aw = layout.extra.get("empty").copied().unwrap_or_default();
+            let text = i18n::sget("scene.vs.awaiting");
+            let text_x = chrome::centered_body_x(host, text);
+            chrome::draw_body_text(host, text, text_x, aw.y);
         }
     }
 }
