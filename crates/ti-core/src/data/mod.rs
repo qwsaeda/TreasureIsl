@@ -403,6 +403,8 @@ pub struct SelectionCfg {
     pub characters: Vec<CharacterDef>,
     /// 地图目录（`selection.maps`，含 `boss_tier`/`player_start`/`landmarks`/`grid_w`/`grid_h`）。
     pub maps: Vec<MapDef>,
+    /// 人类席下限（`selection.min_players`，缺省 2；领地 v3 `players ≥ 2` 不变量）。
+    pub min_players: u32,
 }
 
 /// 角色目录条目（`balance.selection.characters[]`）。
@@ -911,6 +913,7 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
         selection: SelectionCfg {
             character_count: raw.selection.character_count,
             map_count: raw.selection.map_count,
+            min_players: raw.selection.min_players,
             characters: raw
                 .selection
                 .characters

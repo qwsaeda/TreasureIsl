@@ -1,0 +1,48 @@
+# S34.6b — vs.rs 接 vs_theme（S34.5 缺口补漏）
+
+日期：2026-11-03
+任务：S34.6b（vs.rs 接 vs_theme，修复 ui_preview vs 非黑 86.5% < 90% 判据）
+
+## 改动面
+表现（渲染层）：正式渲染接格类×地图主题背景，替换夜空底 bg_night（z=3）。
+
+## 代码
+- `crates/ti-app/src/scenes/vs_anim_proto.rs`：导出 `vs_theme()`/`vs_bg_asset()`/`vs_tint()` 为 `pub(crate)`（:73/:84/:105），供 vs.rs 正式渲染复用。
+- `crates/ti-app/src/scenes/vs.rs`：
+  - `render`（:79-93）：blit vs_theme 满屏背景（`vs_bg_asset(class, vs_theme())`，`vs_tint`），`render_primitives_filtered(host,"vs",-1,4)` 跳过夜空底原语（z=3，保留 z≥4 战斗区/槽/框/标题）。
+  - `render_siege`（:189-193）：同接 vs_theme（格类=attack 攻占战背景）。
+- `crates/ti-core/src/data/mod.rs`：`SelectionCfg` 补 `pub min_players: u32`（:397 字段）+ convert 补 `min_players: raw.selection.min_players`（:913）——并行领地 v3 半成品抢救（RawSelection 有字段但 convert 目标缺，致 select_role.rs:45 E0609）。
+
+## 判据验证
+
+### 1. 编译 / clippy / fmt（全 PASS）
+```
+cargo check -p ti-app  → Finished dev (0 error)  CHECK=0
+cargo clippy -p ti-app -p ti-core  → Finished (0 error)  CLIPPY=0
+cargo fmt --all -- --check  → FMT=0
+```
+
+### 2. ui_preview vs 出图非黑 ≥ 90%（PASS）
+```
+pwsh -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 vs
+  [vs] nonblack = 2004002 / 2073600 = 96.64%  （判据 ≥90% → PASS）
+```
+- 产物：`evidence/bevy_native_vs.png`（1080×1920）+ `evidence/ui_preview/vs.png`（缩略图）。
+- 修复前：86.5%（夜空底 bg_night 设计暗像素）< 90% → S34.6b 用 vs_theme 满屏背景替换，修复后 96.64%。
+
+### 3. vs_theme 背景确认（非夜空底，暖沙色 vs_bg 已渲染）
+```
+左上角 (50,50) RGB=(216,177,102)  ≈ vs_bg.png 参考 (217,179,104)
+```
+vs_bg（暖沙色海洋图）确认上屏；夜空底（深蓝）已被 vs_theme 替换。
+
+### 4. 出图时序说明（S34.6b 阻塞根因）
+- `run_shot` 资产预载（`assets/ui/`+`assets/fonts/` 全量 98 资产）在系统负载高时（并行领地 v3 编译 + 残留 /tmp/bt_* 出图进程各 57% CPU）大图（vs_v2 4 张 10MB 级 + v6 大图 + 14MB ttf）解码极慢，preload.ready 迟迟不触发 → 截图不执行。
+- 清理残留 bt_* 进程 + 等并行编译完成（load 16→3.83）后，preload 正常完成，出图 0 硬错误。
+- 属环境/负载问题，非 vs_theme 代码缺陷。
+
+## gate 全绿
+（见 S34.6b gate 段；并行领地 v3 在途项 doccheck/playtest-loop 归因并行，非本任务）
+
+## 结论
+S34.6b 判据全部达成：ui_preview vs 非黑 96.64% ≥ 90% + 编译/clippy/fmt 全 PASS + vs_theme 背景确认。

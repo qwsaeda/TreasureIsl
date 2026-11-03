@@ -70,7 +70,7 @@ pub fn selected_grid_class() -> &'static str {
 
 /// 当前图 `vs_theme`（S34.5 按地图换主题；`TI_MAP` → 对应 manifest；无 = `None` 回退默认池）。
 #[must_use]
-fn vs_theme() -> Option<VsTheme> {
+pub(crate) fn vs_theme() -> Option<VsTheme> {
     let map_id = std::env::var("TI_MAP")
         .ok()
         .filter(|s| !s.trim().is_empty())
@@ -81,7 +81,7 @@ fn vs_theme() -> Option<VsTheme> {
 }
 
 /// 格类 → 背景资产路径（`vs_theme` 优先，缺 = 默认池资产；`CS-1` 资产路径单一读点 = chrome 常量）。
-fn vs_bg_asset(class: &str, th: Option<&VsTheme>) -> String {
+pub(crate) fn vs_bg_asset(class: &str, th: Option<&VsTheme>) -> String {
     let default = match class {
         "attack" => chrome::V2_BG_SIEGE,
         "raid" => chrome::V2_BG_DUNGEON,
@@ -102,7 +102,7 @@ fn vs_bg_asset(class: &str, th: Option<&VsTheme>) -> String {
 }
 
 /// 格类 → 主题色调（`vs_theme.tint`；无 = `0xFFFF` 白恒等）。
-fn vs_tint(th: Option<&VsTheme>) -> u16 {
+pub(crate) fn vs_tint(th: Option<&VsTheme>) -> u16 {
     th.map_or(0xFFFF, VsTheme::tint_u16)
 }
 

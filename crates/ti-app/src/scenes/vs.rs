@@ -76,7 +76,21 @@ impl Scene for VsScene {
         // S18.7f：vs 版面 100% 数据驱动 = `scenes.json` `vs.primitives`（夜空底 + 星点 +
         // 血条槽底 + 竞技区 + 标题 + 提示 + 木框；`chrome::scene_shell`/`bar_slot`/
         // `scene_hint` 的代码外壳已全部退役）。运行时内容 = HP 填充 + 回合/结果文本。
-        chrome::render_primitives(host, "vs", -1);
+        // S34.5 延伸：vs_theme 满屏背景（格类×地图主题）替换夜空底（bg_night z=3）——
+        // vs.rs 正式渲染接 vs_theme（S34.5 时只接 vs_anim_proto，此处补正式渲染）。
+        // min_z=4 跳过夜空底原语（z=3），保留战斗区/槽/框/标题（z≥4）。
+        let class = crate::scenes::vs_anim_proto::selected_grid_class();
+        let th = crate::scenes::vs_anim_proto::vs_theme();
+        let bg = crate::scenes::vs_anim_proto::vs_bg_asset(class, th.as_ref());
+        host.blit_image_tint(
+            &bg,
+            0,
+            0,
+            1080,
+            1920,
+            crate::scenes::vs_anim_proto::vs_tint(th.as_ref()),
+        );
+        chrome::render_primitives_filtered(host, "vs", -1, 4);
         if let Some(b) = host.battle_snapshot() {
             let ph_bar = layout.extra.get("player_hp").copied().unwrap_or_default();
             let bh_bar = layout.extra.get("boss_hp").copied().unwrap_or_default();
@@ -172,7 +186,12 @@ impl Scene for VsScene {
 #[allow(clippy::too_many_lines)]
 fn render_siege(host: &mut dyn SceneHost, snap: &SiegeSnapshot) {
     let layout = chrome::scene_layout("vs");
-    chrome::render_primitives(host, "vs", -1);
+    // S34.5 延伸：vs_theme 攻占战背景（格类=attack）替换夜空底（bg_night z=3）。
+    let class = "attack";
+    let th = crate::scenes::vs_anim_proto::vs_theme();
+    let bg = crate::scenes::vs_anim_proto::vs_bg_asset(class, th.as_ref());
+    host.blit_image_tint(&bg, 0, 0, 1080, 1920, crate::scenes::vs_anim_proto::vs_tint(th.as_ref()));
+    chrome::render_primitives_filtered(host, "vs", -1, 4);
     let theme = host.theme().clone();
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
     let isle_key = format!("isle.{}", snap.isle);
