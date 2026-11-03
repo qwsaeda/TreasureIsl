@@ -150,8 +150,13 @@ pub fn render(host: &mut dyn SceneHost, phase: &str) {
 ///
 /// 直接 blit `assets/ui/vs_v2` AI 元素（敌我分列 + 顶/底兵力条 + 结果横幅），
 /// 与 `scripts/compose_vs_v2.py` 同构图。阶段：`clash`/`duel`/`result_win`/`result_lose`。
+///
+/// S34.6 D3（用户 2026-11-03「之前设计的很好，你又瞎JB的乱设计」）：vs.rs 正式战斗
+/// 完整复用本构图（甲板插画 + crew/hero/enemy 分列 + 顶/底状态框 + VS 徽标）——
+/// 用户认可的是「这张好设计」，非 vs.rs 原海域图 + 叠小人的「屎」。导出 `pub(crate)`
+/// 供 vs.rs 正式战斗分支直接调用（phase 由 battle 结果推导）。
 #[allow(clippy::too_many_lines)]
-fn render_v2_elem(host: &mut dyn SceneHost, phase: &str) {
+pub(crate) fn render_v2_elem(host: &mut dyn SceneHost, phase: &str) {
     let theme = host.theme().clone();
     let ink = theme.by_name("parch_dark").unwrap_or(chrome::COLOR_TEXT_ON_PARCH);
     // 本地渲染色常量（v2 原型专用，不入 theme；走 chrome COLOR_* 有对应令牌时优先令牌）
