@@ -562,6 +562,19 @@ pub trait MapHost {
         false
     }
 
+    /// v3 终局面板（`territory.md` §4.4 / S36.3）：`match_outcome` 只读视图
+    /// （`None` = 未结束；`Some` = 已分出胜负，主地图渲染终局面板）。
+    fn match_outcome(&self) -> Option<crate::game_app::MatchOutcome> {
+        None
+    }
+
+    /// v3 终局面板确认（S36.3）：清 `match_outcome`（对局结束 → 回主菜单，终局状态清除）。
+    ///
+    /// 缺省 `false`（非主地图 fake 宿主无终局状态）。
+    fn clear_match_outcome(&mut self) -> bool {
+        false
+    }
+
     /// S33.5 放弃攻占交过路费（`pending_siege` 在位：`Back` 清待决 + 交钱，返回 `true` = 已消费；缺省 `false`）。
     fn pay_siege_toll(&mut self) -> bool {
         false

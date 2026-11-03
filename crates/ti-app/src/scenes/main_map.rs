@@ -463,6 +463,12 @@ fn render_track(
         render_build_panel(host);
     }
     render_board_toast(host);
+    // S36.3 终局面板（`territory.md` §4.4）：`match_outcome` 在位 = 对局结束，
+    // 主地图中心画胜利/失败/平局面板 + 「按 Confirm 返回主菜单」提示。
+    render_match_outcome(host);
+    // S36.3 热座交接提示条（§1 + §1.2）：`handoff_pending` 在位 = 轮到下一人类席，
+    // 画底部提示条（「热座交接：按 Confirm 确认」），确认前隐藏信息（§1.2）。
+    render_handoff(host);
 }
 
 /// S21.12 造船（`GameInput::BoatUpgrade` 事件处理）：走 `rules::boat` 单向升级链
@@ -621,10 +627,17 @@ impl Scene for MainMapScene {
             // （`pending_siege` 在位时 Confirm = 进攻占战报）——优先级 = 攻占 > 副本（不同格）。
             // v3：**热座交接确认优先**（§1 + §1.2）：轮到新人类席后须显式确认才能操作，
             // 否则下一位玩家会看到上一位的操作残留（隐藏信息）。
+            // S36.3 终局面板（§4.4）：`match_outcome` 在位 = 对局结束，Confirm = 清终局 + 回主菜单。
             GameInput::Confirm => {
                 // v3：热座交接确认优先（§1 + §1.2）：轮到新人类席后须显式确认才能操作。
                 if host.confirm_handoff() {
                     return false;
+                }
+                // S36.3 终局面板：对局已结束 ⇒ 清 `match_outcome` + 回主菜单（零回归：旧档无终局）。
+                if host.match_outcome().is_some() {
+                    host.clear_match_outcome();
+                    host.enter(SceneKind::Index);
+                    return true;
                 }
                 if host.confirm_siege() {
                     true
@@ -1873,4 +1886,80 @@ fn render_board_toast(host: &mut dyn SceneHost) {
     host.fill_rect(px + panel_w - 2, py, 2, panel_h, brass);
     let tx = 540 - tw / 2;
     host.draw_hint_text(&toast, tx, ty, chrome::COLOR_TEXT_ON_PARCH);
+}
+
+/// S36.3 终局面板（`territory.md` §4.4 / `territory_v2::victory_seat_active`）：
+/// `match_outcome` 在位 = 对局结束，主地图中央画羊皮面板 + 胜负文案 + 「按 Confirm 返回」。
+///
+/// - `Victory { seat }`：`"{0} 获胜！"`（`scene.main_map.match.victory_fmt`，i18n 槽位 0 = 席位名）；
+/// - `Defeat`：`"全部人类席破产出局——失败"`（`scene.main_map.match.defeat`）；
+/// - `Draw`：`"多人同时破产——平局"`（`scene.main_map.match.draw`）。
+fn render_match_outcome(host: &mut dyn SceneHost) {
+    use crate::game_app::MatchOutcome;
+
+    let Some(outcome) = host.match_outcome() else {
+        return;
+    };
+    let theme = host.theme().clone();
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let gold = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let ink = chrome::COLOR_TEXT_ON_PARCH;
+    let pw = 880i32;
+    let ph = 320i32;
+    let px = 540 - pw / 2;
+    let py = 780;
+    host.fill_rect(px, py, pw, ph, panel);
+    host.fill_rect(px, py, pw, 3, brass);
+    host.fill_rect(px, py + ph - 3, pw, 3, brass);
+    host.fill_rect(px, py, 3, ph, brass);
+    host.fill_rect(px + pw - 3, py, 3, ph, brass);
+    let (title, sub) = match outcome {
+        MatchOutcome::Victory { seat } => {
+            // 席位名：`P{n}`（1-based 序号）；缺 `balance` 时回退 `P{n}`（不 panic）。
+            let name = format!("P{seat}");
+            let s = i18n::sgetf("scene.main_map.match.victory_fmt", &[&name]);
+            (s, i18n::sget("scene.main_map.match.continue").to_string())
+        }
+        MatchOutcome::Defeat => {
+            let s = i18n::sget("scene.main_map.match.defeat").to_string();
+            (s, i18n::sget("scene.main_map.match.continue").to_string())
+        }
+        MatchOutcome::Draw => {
+            let s = i18n::sget("scene.main_map.match.draw").to_string();
+            (s, i18n::sget("scene.main_map.match.continue").to_string())
+        }
+    };
+    let tw = host.shell().hint_text_width_px(&title);
+    host.draw_hint_text(&title, 540 - tw / 2, py + 80, gold);
+    let sw = host.shell().hint_text_width_px(&sub);
+    host.draw_hint_text(&sub, 540 - sw / 2, py + ph - 60, ink);
+}
+
+/// S36.3 热座交接提示条（§1 + §1.2 隐藏信息）：`handoff_pending` 在位 =
+/// 底部画「热座交接：按 Confirm 确认开始回合」提示条（确认前不画其它玩家信息）。
+fn render_handoff(host: &mut dyn SceneHost) {
+    let Some(seat) = host.handoff_pending() else {
+        return;
+    };
+    let theme = host.theme().clone();
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let ink = chrome::COLOR_TEXT_ON_PARCH;
+    let msg = i18n::sget("scene.main_map.toast.handoff");
+    let tw = host.shell().hint_text_width_px(msg);
+    let pad = 24;
+    let pw = (tw + pad * 2).max(392);
+    let ph = 56i32;
+    let px = 540 - pw / 2;
+    let py = 1860;
+    host.fill_rect(px, py, pw, ph, panel);
+    host.fill_rect(px, py, pw, 2, brass);
+    host.fill_rect(px, py + ph - 2, pw, 2, brass);
+    host.fill_rect(px, py, 2, ph, brass);
+    host.fill_rect(px + pw - 2, py, 2, ph, brass);
+    let seat_label = format!("P{seat}");
+    let full = format!("{msg}（{seat_label}）");
+    let ftw = host.shell().hint_text_width_px(&full);
+    host.draw_hint_text(&full, 540 - ftw / 2, py + ph / 2 + 4, ink);
 }

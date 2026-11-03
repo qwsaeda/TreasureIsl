@@ -366,7 +366,8 @@ impl GameApp {
         let pool = if self.seat_marks.is_empty() {
             SeatPool::build_with_ai(&[player_idx.min(4)], self.seat_ai_count.unwrap_or(4))
         } else {
-            selection::seat_pool_with_ai(&self.seat_marks, self.seat_ai_count.unwrap_or(0))
+            let max_ai = bal.selection.max_ai_seats;
+            selection::seat_pool_with_ai(&self.seat_marks, self.seat_ai_count.unwrap_or(0), max_ai)
         };
         let mut cycle = TurnCycle::new(&pool);
         // 当前席 = 最低序号**人类席**（确定性开局，§1 顺序 = index 升序）

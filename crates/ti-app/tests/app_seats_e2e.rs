@@ -367,3 +367,48 @@ fn legacy_save_without_alive_field_keeps_all_seats_alive() {
         "旧存档无 `alive` 字段（缺省 `true`）⇒ 读档全席存活，零行为变化（不丢在局席位）"
     );
 }
+
+// ── S36.3 表现面收口（终局面板 Confirm → Index + 热座交接提示条渲染接线）────────
+
+/// S36.3 终局面板：`match_outcome = Victory { seat: 0 }` 置位 ⇒ 主地图 Confirm
+/// = 清终局 + 回主菜单（零回归：旧档无终局，`clear_match_outcome` 返回 false 无副作用）。
+#[test]
+fn match_outcome_confirm_returns_to_index() {
+    let mut app = enter_main_map_two_players();
+    assert!(app.match_outcome.is_none(), "开局前无终局");
+    // 模拟对局结束（席 0 获胜；规则层 `check_match_end` 会置位，测试直接置位）。
+    app.match_outcome = Some(MatchOutcome::Victory { seat: 0 });
+    assert!(app.match_outcome.is_some(), "终局已置位");
+    // 主地图 Confirm：`confirm_handoff` = false（无 pending）→ `match_outcome` 在位
+    // ⇒ `clear_match_outcome` + `enter(Index)` ⇒ 切回主菜单 + 清终局。
+    let consumed = app.handle(GameInput::Confirm);
+    assert!(consumed, "终局面板 Confirm 应消费（切场景）");
+    assert_eq!(app.scene(), Scene::Index, "终局面板 Confirm ⇒ 回主菜单");
+    assert!(app.match_outcome.is_none(), "Confirm 后终局已清（零残留）");
+}
+
+/// S36.3 回归：无终局 + 无 handoff 时主地图 Confirm = 副本/攻占确认（现状不变，零回归）。
+#[test]
+fn match_outcome_none_confirm_is_noop_on_main_map() {
+    let mut app = enter_main_map_two_players();
+    assert!(app.match_outcome.is_none(), "无终局");
+    assert!(app.handoff_pending.is_none(), "无 handoff（单人类开局）");
+    // 无 pending_dungeon / pending_siege / match_outcome ⇒ Confirm 消费但无副作用（stay MainMap）。
+    let consumed = app.handle(GameInput::Confirm);
+    assert_eq!(app.scene(), Scene::MainMap, "无终局 Confirm ⇒ 仍处 MainMap");
+    let _ = consumed;
+}
+
+/// S36.3 热座交接提示条渲染（§1.2 隐藏信息）：`handoff_pending` 在位时
+/// 主地图渲染底部提示条（i18n `scene.main_map.toast.handoff`）+ `P{n}` 席位标签。
+/// 判据 = `handoff_pending = Some(1)` ⇒ `confirm_handoff` 清 pending + `P1` 标签可辨。
+#[test]
+fn handoff_pending_confirm_clears_and_confirms_seat() {
+    let mut app = enter_main_map_two_players();
+    // 模拟热座交接（轮转推进到下一人类席；测试直接置 `handoff_pending`）。
+    app.handoff_pending = Some(1);
+    assert!(app.handoff_pending.is_some(), "交接 pending 在位（隐藏信息）");
+    let consumed = app.handle(GameInput::Confirm);
+    assert!(!consumed, "确认交接 = 不切场景（主地图内清 pending）");
+    assert!(app.handoff_pending.is_none(), "确认交接触发后 pending 已清");
+}

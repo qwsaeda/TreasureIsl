@@ -216,13 +216,21 @@ pub fn seat_selection_ready(seats: &[Character], min_players: u32) -> bool {
     seats.len() >= usize::try_from(min_players).unwrap_or(2)
 }
 
-/// v3：勾选角色 + AI 席数 → 席位池（§1：AI 席数可配）。
+/// v3：勾选角色 + AI 席数 → 席位池（§1：AI 席数可配，上限 `max_ai_seats`）。
 ///
-/// `ai_count` 超过剩余角色数时由 [`SeatPool::build_with_ai`] 钳到上限。
+/// `ai_count` 超过剩余角色数或 `max_ai_seats` 时由 [`SeatPool::build_with_ai_max`] 钳到上限。
 #[must_use]
-pub fn seat_pool_with_ai(seats: &[Character], ai_count: u32) -> SeatPool {
+pub fn seat_pool_with_ai(seats: &[Character], ai_count: u32, max_ai_seats: u32) -> SeatPool {
     let indexes: Vec<u32> = seats.iter().map(|c| c.index()).collect();
-    SeatPool::build_with_ai(&indexes, ai_count)
+    let cap = u32::try_from(indexes.len()).unwrap_or(0).saturating_add(max_ai_seats).min(5);
+    SeatPool::build_with_ai_max(&indexes, ai_count, cap)
+}
+
+/// v3（兼容旧调用）：勾选角色 + AI 席数 → 席位池（AI 上限 = 5，不额外约束）。
+#[must_use]
+pub fn seat_pool_with_ai_default(seats: &[Character], ai_count: u32) -> SeatPool {
+    let max_ai = u32::try_from(5usize.saturating_sub(seats.len().min(5))).unwrap_or(4);
+    seat_pool_with_ai(seats, ai_count, max_ai)
 }
 
 /// 玩家选中的席位角色 → 席位池（§1：`players + ai = 5`；未选中角色自动 AI）。

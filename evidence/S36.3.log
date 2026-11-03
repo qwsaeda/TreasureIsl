@@ -1,0 +1,40 @@
+=== S36.3 多人热座 v3 表现面收口 evidence ===
+日期: 2026-11-03
+
+--- 1. 改动面声明（territory.md §12.1 表现块）---
+场景 = main_map（终局面板 + 热座交接提示条）
+i18n = strings.json 新增 4 键（match.victory_fmt / match.defeat / match.draw / match.continue）
+MapHost trait = match_outcome() + clear_match_outcome() 两接口（缺省 None/false）
+GameApp 实现 = 直接读/写 `match_outcome` 字段（零新增状态）
+
+--- 2. 代码改动 ---
+crates/ti-app/src/scenes/main_map.rs：
+  - render_match_outcome()：match_outcome 在位 = 中央羊皮面板 + 金标题 + 白副标题
+  - render_handoff()：handoff_pending 在位 = 底部提示条（i18n toast.handoff + P{n} 标签）
+  - 两函数 wired 进 render_track 尾部（render_board_toast 之后，终局面板盖 toast）
+  - on_input Confirm：match_outcome.is_some() ⇒ clear_match_outcome + enter(Index)
+crates/ti-app/src/scenes/mod.rs：MapHost 加 match_outcome/clear_match_outcome 接口
+crates/ti-app/src/game_app/host.rs：GameApp 实现两接口
+assets/data/strings.json：新增 4 条 i18n 键
+
+--- 3. e2e 测试（cargo test -p ti-app --test app_seats_e2e）---
+17/17 PASS（S36.2 14 条 + S36.3 新增 3 条）：
+  match_outcome_confirm_returns_to_index
+    （Victory { seat:0 } 置位 ⇒ Confirm = clear + enter(Index) ⇒ 清终局 + 回主菜单）
+  match_outcome_none_confirm_is_noop_on_main_map
+    （无终局 + 无 handoff ⇒ Confirm 不切场景，仍处 MainMap，零回归）
+  handoff_pending_confirm_clears_and_confirms_seat
+    （handoff_pending=Some(1) ⇒ Confirm = confirm_handoff 清 pending + 不切场景）
+
+--- 4. territory_rules 回归 ---
+cargo test -p ti-core --test territory_rules：20/20 PASS
+
+--- 5. fmt + clippy ---
+cargo fmt --all --check：PASS
+cargo clippy --workspace --all-targets -D warnings：PASS
+
+--- S36.3 结论 ---
+v3 表现块（§12.1）全落地：
+  终局面板 = match_outcome 在位时主地图中央画羊皮面板 + 胜负文案 + Confirm 回主菜单
+  热座交接提示 = handoff_pending 在位时底部画提示条（P{n} 席位可辨，隐藏信息§1.2）
+  零回归 = 无终局/handoff 时 Confirm 行为不变（app_seats_e2e 17/17 含旧 14 条全绿）

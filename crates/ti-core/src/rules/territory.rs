@@ -80,11 +80,24 @@ impl SeatPool {
     /// 玩家列表为空 / 角色 index 越界 / 重复时 panic（同 [`Self::build`]）。
     #[must_use]
     pub fn build_with_ai(player_indexes: &[u32], ai_count: u32) -> Self {
+        Self::build_with_ai_max(player_indexes, ai_count, 5)
+    }
+
+    /// v3：`build_with_ai` + 不变量「人类席 + AI 席 ≤ `max_seats`」（§1：AI 席上限可配，
+    /// `max_ai_seats` = `balance.selection.max_ai_seats` 缺省 4；`≤ 5 − min_players`）。
+    ///
+    /// `ai_count` 超出 `max_seats − 人类席数` 时**钳到上限**（不变量，非 panic）。
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn build_with_ai_max(player_indexes: &[u32], ai_count: u32, max_seats: u32) -> Self {
         let mut pool = Self::build(player_indexes);
+        let human_n = player_indexes.len().min(5);
+        let cap = max_seats.saturating_sub(u32::try_from(human_n).unwrap_or(0));
+        let ai_budget = ai_count.min(cap);
         let remaining: Vec<u32> = (0..5u32)
             .filter(|i| !pool.seats.get(*i as usize).is_some_and(|s| s.is_player))
             .collect();
-        let ai_take = usize::try_from(ai_count).unwrap_or(0).min(remaining.len());
+        let ai_take = usize::try_from(ai_budget).unwrap_or(0).min(remaining.len());
         // 在局席位 = 人类席 ∪ 前 `ai_take` 个 AI 席；其余角色本局不出场。
         for (pos, &idx) in remaining.iter().enumerate() {
             pool.seats[idx as usize].is_active = pos < ai_take;

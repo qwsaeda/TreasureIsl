@@ -410,6 +410,16 @@ impl MapHost for GameApp {
         self.handoff_pending.take().is_some()
     }
 
+    /// v3 终局面板（`territory.md` §4.4 / S36.3）：`match_outcome` 只读视图。
+    fn match_outcome(&self) -> Option<super::MatchOutcome> {
+        self.match_outcome
+    }
+
+    /// v3 终局面板确认（S36.3）：清 `match_outcome`（对局结束 → 回主菜单，零回归）。
+    fn clear_match_outcome(&mut self) -> bool {
+        self.match_outcome.take().is_some()
+    }
+
     /// S33.5 放弃攻占（`pending_siege` 在位时主地图 `Back`）：交过路费（§4.2），清待决。
     /// 返回 `true` = 已消费（交钱提示已出）。
     fn pay_siege_toll(&mut self) -> bool {
