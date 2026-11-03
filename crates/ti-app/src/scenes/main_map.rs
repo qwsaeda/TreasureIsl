@@ -1194,15 +1194,14 @@ fn render_v6_elem(
         host.blit_image(path, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
     }
 
-    // 5) 玩家帆船（布局 ship 中心）
-    let sw = v6.ship.w.max(1.0) as i32;
-    host.blit_image(
-        chrome::V6_SHIP,
-        v6.ship.cx as i32 - sw / 2,
-        v6.ship.cy as i32 - sw / 2,
-        sw,
-        sw,
-    );
+    // 5) 玩家帆船（站落格格 board_index；随摇骰移动，与玩家名牌同位，非固定装饰）
+    // S34.6 用户视觉验收（2026-11-03）：玩家船未随落格格移动（固定灯塔旁像装饰，用户
+    // 「玩家没有渲染出来」）→ 改站落格格（tiles[board_index]），大小适配格径（不盖相邻格），
+    // 位置与名牌一致。缺 tiles 回退 v6.ship 布局点。
+    let idx = host.board_index().min(count - 1);
+    let (ship_cx, ship_cy) = v6.tiles.get(idx).map_or((v6.ship.cx, v6.ship.cy), |t| (t.cx, t.cy));
+    let sw = (v6.tile_r * 2.0).max(1.0) as i32;
+    host.blit_image(chrome::V6_SHIP, ship_cx as i32 - sw / 2, ship_cy as i32 - sw / 2, sw, sw);
 
     // 6) 舵轮 CTA + 罗盘（底部）
     let hw = v6.helm.w.max(1.0) as i32;
@@ -1238,8 +1237,7 @@ fn render_v6_elem(
     let bob_y = ((t * 0.7).sin() * 3.0) as i32;
     host.blit_image(chrome::V6_CREATURES, 340 + bob_x, 1350 + bob_y, 380, 250);
 
-    // 8) 玩家位置名牌（当前格）
-    let idx = host.board_index().min(count - 1);
+    // 8) 玩家位置名牌（当前格；idx 已在上方玩家船段取得）
     let (px, py) = v6.tiles.get(idx).map_or((540, 890), |t| (t.cx as i32, t.cy as i32));
     let lbl = i18n::sget("scene.main_map.player_label");
     entity_texts.push((px + 40, py - 6, lbl));
