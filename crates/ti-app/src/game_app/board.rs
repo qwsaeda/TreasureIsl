@@ -151,12 +151,15 @@ impl GameApp {
         let human_seats: Vec<u8> = (0..5u8)
             .filter(|s| self.turn_cycle.is_player_seat(*s) && self.turn_cycle.is_active_seat(*s))
             .collect();
-        if let Some(winner) = territory_v2::victory_seat_active(&states, &active) {
-            self.match_outcome = Some(MatchOutcome::Victory { seat: winner });
-            return true;
-        }
+        // S36.3 飞轮 F-3.1/F-9.2：胜负判定顺序对齐 `territory.md` §4.4 规格——
+        // **先判 Defeat（全部人类席破产 ⇒ 玩家失败）**，再判 Victory（存活席 = 1 且为在局席）。
+        // 原实现先判 Victory 导致「全人类破产 + 1 存活 AI 席」被误判为 AI 胜（对玩家 = 败）。
         if territory_v2::players_defeated(&states, &human_seats) {
             self.match_outcome = Some(MatchOutcome::Defeat);
+            return true;
+        }
+        if let Some(winner) = territory_v2::victory_seat_active(&states, &active) {
+            self.match_outcome = Some(MatchOutcome::Victory { seat: winner });
             return true;
         }
         // 全部在局席位都破产 ⇒ 平局（无胜者）。
@@ -297,6 +300,10 @@ impl GameApp {
         self.pending_siege = None; // S33.5：新摇骰 = 旧攻占选择失效（同上）
         // v3：热座交接未确认 ⇒ 不允许摇骰（§1 热座 + §1.2 隐藏信息）。
         if self.handoff_pending.is_some() {
+            return None;
+        }
+        // 对局已结束（`match_outcome` 在位）⇒ 摇骰 no-op（§4.4 终局后不再行动，飞轮 F-6.3）。
+        if self.match_outcome.is_some() {
             return None;
         }
         let b = match balance() {
@@ -441,8 +448,12 @@ impl GameApp {
         // **必须显式确认**才允许该席操作（防误操作 + 遮蔽他人情报）。
         // 单人类席（v2 兼容流）不置 handoff_pending，保持 0 行为变化。
         let seat = self.turn_cycle.current;
-        if self.turn_cycle.is_player_seat(seat) {
-            let active_players = (0..5u8).filter(|s| self.turn_cycle.is_player_seat(*s)).count();
+        if self.turn_cycle.is_playing(seat) && self.turn_cycle.is_player_seat(seat) {
+            // S36.3 飞轮 F-6.1/F-10.1：交接判定用 `is_playing`（在局 ∧ 存活）而非
+            // `is_player_seat`（只判席位类型）——已破产玩家席不再触发交接（防死锁）。
+            let active_players = (0..5u8)
+                .filter(|s| self.turn_cycle.is_player_seat(*s) && self.turn_cycle.is_alive(*s))
+                .count();
             self.switch_to_seat(seat);
             if active_players >= 2 {
                 self.handoff_pending = Some(seat);

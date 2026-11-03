@@ -575,12 +575,22 @@ impl MapHost for GameApp {
             self.turn_cycle.current = ext.current_seat;
         }
         // v3：逐席回填存活态（破产出局席 `alive=false`；旧存档缺省 `true` 全活）。
+        // S36.3 飞轮 F-5.1：回填在 `current_seat` 写入**之后**，故 `mark_bankrupt` 作用于
+        // 已构建的 `TurnCycle`（`restore_save` 先 `enter_main_map_at` → `init_territory` 建池，
+        // 再调本函数；`active` 已是本局池而非 `Default` 全活）。
         for (i, seat) in ext.seats.iter().enumerate().take(5) {
             let seat_idx = u8::try_from(i).unwrap_or(0);
             if self.turn_cycle.is_active_seat(seat_idx) && !seat.alive {
                 // 已出局席若存档标活（旧存档无字段）保持原态（只降不升）。
                 self.turn_cycle.mark_bankrupt(seat_idx);
             }
+        }
+        // S36.3 飞轮 F-5.3：`current_seat` 指向已出局席（存档时破产）⇒ 自动 advance 到
+        // 下一存活在局席（防 `spin_board` 拿到 `board=None` 的已出局会话卡死）。
+        if self.turn_cycle.is_active_seat(self.turn_cycle.current)
+            && !self.turn_cycle.is_alive(self.turn_cycle.current)
+        {
+            self.turn_cycle.advance();
         }
         let map_id = self.map_slot.map_or(String::new(), |ms| ms.id().to_string());
         for terr in &ext.territories {

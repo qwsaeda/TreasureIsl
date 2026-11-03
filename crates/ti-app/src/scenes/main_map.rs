@@ -951,6 +951,9 @@ fn render_v5_ring(
     // 舵轮本体 = `scenes.json` 原语（更早画），此处补轴心骰点，与卡环区无重叠）。
     render_spin_die(host, layout);
     render_board_toast(host);
+    // S36.3 飞轮 F-7.3：v5 环路径补终局面板 + 热座交接提示（render_track 已有，v5 此前缺失）。
+    render_match_outcome(host);
+    render_handoff(host);
 }
 
 // —— v6 原型几何常量（`TI_MAP_V6_PROTO` 专用；不相叠平面拼凑格：格宽 < 每格弧长留海水缝）——
@@ -1191,6 +1194,9 @@ fn render_v6_proto(
         render_build_panel(host);
     }
     render_board_toast(host);
+    // S36.3 飞轮 F-7.3：v6 原型路径补终局面板 + 热座交接提示。
+    render_match_outcome(host);
+    render_handoff(host);
 }
 
 /// 缆绳段：`fill_rect` 逐像素 Bresenham 近似（`blit_image` 无 line 原语；两格间连线）。

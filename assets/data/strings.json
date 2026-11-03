@@ -187,6 +187,7 @@
   "scene.main_map.toast.siege_choice_fmt": "{0} 的 {1}：确认 = 攻占，返回 = 交过路费",
   "scene.main_map.toast.dungeon_fail": "副本失败，現状維持",
   "scene.main_map.toast.handoff": "热座交接：轮到玩家席（按确认摇骰开始回合）",
+  "scene.main_map.toast.bankrupt_fmt": "{0} 破产出局（占领格全部无主，不再参与回合轮转）",
   "scene.main_map.match.victory_fmt": "{0} 获胜！最后存活的席位（其余席位全部破产出局）",
   "scene.main_map.match.defeat": "全部人类席破产出局——失败",
   "scene.main_map.match.draw": "多人同时破产——平局（无胜者）",

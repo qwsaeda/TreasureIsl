@@ -752,15 +752,15 @@ impl TurnCycle {
         }
     }
 
-    /// 下一个**玩家**席位（热座交接：从当前席后找首个玩家席，循环不越 5 次）。
-    ///
-    /// v3：跳过不在局 / 已出局席位；无存活玩家席时返回当前席（对局已结束）。
+    /// S36.3 飞轮 F-4.2：无存活玩家席时**不再原地返回已出局席**（热座交接到死席 = 死锁）；
+    /// 改返回 `current`（调用方 = `run_ai_turns`/摇骰路径，`is_playing(current)=false` ⇒ 被上层
+    /// `spin_board`/`check_match_end` 拦截，不会误操作死席）。
     #[must_use]
     pub fn next_player_seat(self) -> SeatIdx {
         let mut seat = self.current;
         for _ in 0..5 {
             seat = (seat + 1) % 5;
-            if self.players[seat as usize] && self.is_playing(seat) {
+            if self.is_playing(seat) && self.players[seat as usize] {
                 return seat;
             }
         }
