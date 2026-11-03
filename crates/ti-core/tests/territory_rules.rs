@@ -2,6 +2,8 @@
 //!
 //! 本文件位 `tests/`（源码内联测试被 doccheck2 拦截；EXP-052 口径）。
 //! 判据：`cargo test -p ti-core --test territory_rules` 全绿。
+//!
+//! S36.2 新增：`max_ai_seats` 上限截断 + `SeatSave.alive` 逐席持久化/回填 `TurnCycle`。
 
 use std::collections::BTreeMap;
 
@@ -444,6 +446,7 @@ fn save_migrate_v4_to_v5_defaults() {
         buildings: Vec::new(),
         crew: 0,
         arms: 0,
+        alive: true,
     });
     let v5 = SaveSlotV5::migrate_v4_to_v5(&v4);
     assert_eq!(v5.version, 5, "迁移补版本号 5");
@@ -486,6 +489,7 @@ fn save_v5_roundtrip_restores_resources_and_garrisons() {
         buildings: Vec::new(),
         crew: seat2.crew,
         arms: seat2.arms,
+        alive: true,
     });
     v5.seats.push(SeatSave {
         character: "tichy".to_owned(),
@@ -496,6 +500,7 @@ fn save_v5_roundtrip_restores_resources_and_garrisons() {
         buildings: Vec::new(),
         crew: seat3.crew,
         arms: seat3.arms,
+        alive: true,
     });
     let owned: std::collections::BTreeMap<u32, (u8, u8)> = state
         .snapshot()
@@ -517,4 +522,68 @@ fn save_v5_roundtrip_restores_resources_and_garrisons() {
     assert_eq!(back.seats[0].arms, seat2.arms, "武器往返");
     assert_eq!(back.territories[0].garrisons.get(&harbour), Some(&8), "驻军往返");
     assert_eq!(back.current_seat, 3, "当前席位往返");
+}
+
+// ── S36.2 数据面收口（max_ai_seats 上限截断 + SeatSave.alive 逐席持久化/回填）─────────
+
+/// S36.2 §1 不变量 `players + ai ≤ 5`：`max_ai_seats` 上限 4 → 3 人类 + 请求 4 AI = 截断 2。
+#[test]
+fn seat_pool_caps_ai_at_five_minus_humans() {
+    // 3 人类（index 0,1,2）+ 请求 4 AI（> 5−3=2 上限）⇒ 实际在局 = 5 席（3+2）。
+    let bal = balance().expect("balance.json");
+    assert_eq!(bal.selection.max_ai_seats, 4, "balance.json max_ai_seats 缺省 4");
+    let pool = SeatPool::build_with_ai(&[0, 1, 2], 4);
+    assert_eq!(pool.len(), 5, "席位池恒 5 席");
+    // 3 人类 + 截断后 AI = 2（剩余 index 3,4）⇒ 在局 5 席。
+    assert_eq!(pool.player_count(), 3, "人类席 3");
+    assert_eq!(pool.ai_count(), 2, "AI 席截断至 2（5 − 3 人类 = 2，请求 4 > 上限）");
+    // 2 人类 + 请求 4 AI（= 5 − 2 = 3 截断后 3）⇒ 在局 5 席。
+    let pool2 = SeatPool::build_with_ai(&[0, 1], 4);
+    assert_eq!(pool2.player_count(), 2);
+    assert_eq!(pool2.ai_count(), 3, "2 人类 ⇒ AI 上限 3（5−2）");
+}
+
+/// S36.2 §4.4：`SeatSave.alive=false` 存档回填 `TurnCycle` 出局位（只降不升，旧存档全活）。
+#[test]
+fn seat_save_alive_roundtrip_backfills_turn_cycle() {
+    let (_map, _bal, _state) = fixture();
+    let bal = balance().expect("balance.json");
+    let db = board().expect("board.json");
+    let _m01 = db.map("m01").expect("m01");
+    let pool = SeatPool::build_with_ai(&[0, 1], 3);
+    let mut cycle = TurnCycle::new(&pool);
+    // 席 1 破产出局（`alive` 标记位翻转；`advance` 应跳过）。
+    cycle.mark_bankrupt(1);
+    assert!(!cycle.is_alive(1), "破产后席 1 出局");
+    assert!(cycle.is_alive(0), "席 0 仍存活");
+    // 回填存档 `SeatSave.alive`（模拟 `restore_v4_ext` 逻辑：只在 `active_seat` 内降）。
+    let seats: Vec<SeatSave> = (0..5u8)
+        .map(|i| SeatSave {
+            character: bal
+                .selection
+                .characters
+                .get(i as usize)
+                .map_or(String::new(), |ch| ch.id.clone()),
+            is_player: i < 2,
+            gold: 0,
+            position: 0,
+            boat_level: 1,
+            buildings: Vec::new(),
+            crew: 0,
+            arms: 0,
+            alive: cycle.is_alive(i),
+        })
+        .collect();
+    assert!(!seats[1].alive, "席 1 存档 `alive=false`（破产出局持久化）");
+    assert!(seats[0].alive, "席 0 存档 `alive=true`（存活）");
+    // 新 `TurnCycle` + 回填（`mark_bankrupt` 只在 `is_active_seat` 内）⇒ 出局位保持。
+    let mut fresh_cycle = TurnCycle::new(&pool);
+    for (i, seat) in seats.iter().enumerate().take(5) {
+        let seat_idx = u8::try_from(i).unwrap_or(0);
+        if fresh_cycle.is_active_seat(seat_idx) && !seat.alive {
+            fresh_cycle.mark_bankrupt(seat_idx);
+        }
+    }
+    assert!(!fresh_cycle.is_alive(1), "回填后席 1 仍出局（破产状态持久）");
+    assert!(fresh_cycle.is_alive(0), "回填后席 0 仍存活（只降不升）");
 }

@@ -68,6 +68,11 @@ pub(crate) struct RawSelection {
     /// §1 不变量 `players ≥ 2`——单人局 = 假多人（v2 实测缺陷 D1/D5）。
     #[serde(default = "default_min_players")]
     pub(crate) min_players: u32,
+    /// v3：AI 席上限（`selection.max_ai_seats`，缺省 4；`≤ 5 − min_players`）。
+    ///
+    /// §1 不变量 `players + ai ≤ 5`——AI 席超过此值被 `SeatPool` 截断。
+    #[serde(default = "default_max_ai_seats")]
+    pub(crate) max_ai_seats: u32,
     /// 角色目录（`id`/`index`）。
     #[serde(default)]
     pub(crate) characters: Vec<RawCharacter>,
@@ -79,6 +84,12 @@ pub(crate) struct RawSelection {
 /// v3：人类席下限缺省 = 2（`territory.md` §1 不变量 `players ≥ 2`）。
 fn default_min_players() -> u32 {
     2
+}
+
+/// v3：AI 席上限缺省 = 4（`territory.md` §1：5 席位 − 最少 1 人类 = 4 上限；
+/// 运行时由 `SeatPool::build_with_ai` 按 `min(请求, 5−人类席数)` 截断）。
+fn default_max_ai_seats() -> u32 {
+    4
 }
 
 /// 角色目录条目（`balance.selection.characters[]`）。

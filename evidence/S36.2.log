@@ -1,0 +1,45 @@
+=== S36.2 多人热座 v3 数据面收口 evidence ===
+日期: 2026-11-03
+
+--- 1. balance.json 新增字段 ---
+"selection" 段新增：
+  "min_players": 2   （v3 人类席下限，§1 不变量 players ≥ 2；缺省 2）
+  "max_ai_seats": 4  （v3 AI 席上限，§1 不变量 players + ai ≤ 5；缺省 4）
+cargo test -p ti-core --test data_tables PASS（SelectionCfg { min_players, max_ai_seats } 字段编译）
+
+--- 2. Rust schema 接线 ---
+crates/ti-core/src/data/balance.rs：RawSelection 新增 min_players + max_ai_seats 字段
+  （#[serde(default = "default_min_players")] / #[serde(default = "default_max_ai_seats")]）
+crates/ti-core/src/data/mod.rs：SelectionCfg 新增 max_ai_seats: u32
+  + convert() 中 `max_ai_seats: raw.selection.max_ai_seats`
+crates/ti-core/tests/data_tables.rs：SelectionCfg 字面量补 `max_ai_seats: 4`
+
+--- 3. 存档 SeatSave.alive 逐席持久化 ---
+crates/ti-core/src/domain/persistence.rs：SeatSave 新增 `alive: bool` 字段
+  （#[serde(default = "default_v3_alives")]，缺省 true = 旧存档全席存活，零行为变化）
+crates/ti-app/src/game_app/host.rs：
+  save_v4_ext() 写入 `alive: self.turn_cycle.is_alive(i)`（逐席破产态持久化）
+  restore_v4_ext() 回填 `turn_cycle.mark_bankrupt(seat_idx)`（只在 `is_active_seat` 内，只降不升）
+crates/ti-core/tests/territory_rules.rs：3 个 `SeatSave { ... alive: true }` 字面量补齐
+crates/ti-app/tests/app_seats_e2e.rs：2 个新 e2e 测试
+  seat_alive_save_restore_roundtrip（真实 UI 进 2 玩家 → mark_bankrupt(1) → save_v4_ext →
+    新 GameApp restore_save ⇒ 席 1 出局保持 + 席 0 存活）
+  legacy_save_without_alive_field_keeps_all_seats_alive（旧存档 `alive=true` 缺省 ⇒ 全活，零回归）
+
+--- 4. ti-core 单测全绿 ---
+cargo test -p ti-core --test territory_rules：20/20 PASS
+  新增 2 条：seat_pool_caps_ai_at_five_minus_humans（max_ai_seats 上限截断）
+             seat_save_alive_roundtrip_backfills_turn_cycle（TurnCycle 出局位回填）
+
+--- 5. ti-app e2e 全绿 ---
+cargo test -p ti-app --test app_seats_e2e：14/14 PASS（含 S36.2 新增 2 条）
+
+--- 6. ledger + doccheck ---
+cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml：286 tasks, 278 verified, 0 error
+cargo run -q -p ti-tools --bin doccheck：0 error
+
+--- S36.2 结论 ---
+v3 数据块（§12.1）全落地：
+  balance.json selection.min_players / max_ai_seats 可配 AI 席（上限 4，SeatPool 截断）
+  存档 SeatSave.alive 逐席持久化（缺省 true，旧存档零行为变化；restore 只降不升）
+S36.0 席位语义 12/12 回归绿，territory_rules 20/20 全绿。

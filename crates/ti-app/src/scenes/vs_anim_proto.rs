@@ -177,31 +177,42 @@ pub(crate) fn render_v2_elem(
     grid_class: &str,
 ) {
     let theme = host.theme().clone();
+    let ink = theme.by_name("parch_dark").unwrap_or(chrome::COLOR_TEXT_ON_PARCH);
     // 本地渲染色常量（v2 原型专用，不入 theme；走 chrome COLOR_* 有对应令牌时优先令牌）
+    let c1 = theme.by_name("ink_dark").unwrap_or(0x28C1);
     let c2 = theme.by_name("brass_dark").unwrap_or(0x3942);
     let c3 = theme.by_name("gold_warm").unwrap_or(0xF692);
-    // S34.6 分离（用户 2026-11-03「地图和游戏逻辑分离」）：静态场景（背景+人物+落地阴影+
-    // VS徽标+标题牌+状态框底）由 `compose_vs_v2.py` 固化成 `assets/ui/vs_v2/scene_<class>.png`，
-    // 引擎只 blit 场景帧 + 动态叠 HUD 数据（兵力数字/条/战报 = 运行态），不手绘构图。
-    // 格类由调用方传（`grid_class`：副本=raid / BOSS=boss / 攻占=attack / 默认=encounter）。
-    // S34.6 result 帧：blit `scene_result_<class>.png`（无人物/无 HUD/无标题，防双影 + 状态框底
-    // 透出），引擎 draw_result_scene 叠站地 hero/enemy + 书法横幅 + 战报框。
+    // 背景（S34.5 按格类×地图主题：格类 → vs_theme 背景资产 + 主题 tint；收进 44px 羊皮框）
+    // S34.6 D6（格类分层 spec §2.4）：格类由调用方传（`grid_class`，vs.rs 从 battle 推导：
+    // 副本=raid / BOSS=boss），非环境变量默认 encounter —— 修复「BOSS 战显示甲板非炮台」。
     let class = grid_class;
-    let scene = if matches!(phase, "result_win" | "result_lose") {
-        chrome::v2_scene_result_asset(class)
-    } else {
-        chrome::v2_scene_asset(class)
-    };
-    host.blit_image(scene, 0, 0, 1080, 1920);
+    let th = vs_theme();
+    let bg = vs_bg_asset(class, th.as_ref());
+    host.blit_image_tint(&bg, 44, 44, 1080 - 88, 1920 - 88, vs_tint(th.as_ref()));
+    // 羊皮做旧边框
+    let c4 = theme.by_name("parch_dark").unwrap_or(0xDDD1);
+    let c5 = theme.by_name("brass").unwrap_or(0x7AC6);
+    let c6 = theme.by_name("parch_light").unwrap_or(0xDE32);
+    for (inset, col) in [(44i32, c6), (30, c5), (18, c5), (8, c4)] {
+        let w = 44 - inset + 8;
+        host.fill_rect(inset / 2, inset / 2, 1080 - inset, w, col);
+        host.fill_rect(inset / 2, 1920 - inset / 2 - w, 1080 - inset, w, col);
+        host.fill_rect(inset / 2, inset / 2, w, 1920 - inset, col);
+        host.fill_rect(1080 - inset / 2 - w, inset / 2, w, 1920 - inset, col);
+    }
+    host.fill_rect(0, 0, 1080, 9, c1);
+    host.fill_rect(0, 1911, 1080, 9, c1);
+    host.fill_rect(0, 0, 9, 1920, c1);
+    host.fill_rect(1071, 0, 9, 1920, c1);
 
     // U20：兵力值 phase 相关（clash/duel 战前，result 战后）+ 满兵力基准 max_crew 对齐兵力条。
     // S34.6 D4（spec §2.5 数据绑定）：`atk_crew/atk_arms/def_crew/def_arms` = **运行态兵力**
     // 由调用方传入（vs.rs 从 `BattleSnapshot` 读席位舰队/守方），非演示常量。result 帧的
     // 战后兵力 = 调用方已按 `balance.combat.manpower.loss_pct` 推算（同 `draw_result_scene` 战报）。
-    // S34.6 分离：场景帧已含状态框**静态底**（名牌+羊皮面板+黄铜槽），本函数只**动态叠**
-    // 数字/兵力条填充（坐标 = compose draw_status_box 同值：顶框 (610,60,440,130) / 底框 (30,1730,440,130)）。
+    // U20：clash/duel 必带 HUD（spec §2.5 顶守/底攻）；result 战报框已含双侧兵力数据 ⇒
+    // 隐藏状态框避免与战报框重叠（U20「战报重叠」修复）。
     if !matches!(phase, "result_win" | "result_lose") {
-        // 顶部守方状态框（右）+ 底部攻方状态框（左）——数字 + 兵力条填充（运行态）
+        // 顶部守方状态框（右）+ 底部攻方状态框（左）——黄铜羊皮面板
         draw_status_box(
             host,
             1080 - 470,
@@ -228,12 +239,26 @@ pub(crate) fn render_v2_elem(
         );
     }
 
+    // 中央 VS 徽标
+    host.fill_rect(540 - 70, 890 - 70, 140, 140, c2);
+    frame_v2(host, 540 - 70, 890 - 70, 140, 140, chrome::COLOR_GOLD_WARM);
+    let tw = host.shell().hint_text_width_px("VS");
+    host.draw_hint_text("VS", 540 - tw / 2, 875, c3);
+
     // #3 逐帧时间轴（proto 路径）：英雄/敌军 bob、冲锋脉动、逼近/晃动（帧率无关）。
     let t = anim_ms(host);
 
     match phase {
         "clash" => {
-            // S34.6 分离：人物已烘焙进场景帧（静态构图），此处只叠**动态刀光**（时间轴动效）。
+            // 兵对兵：左下攻方 crew 冲锋 + hero 领军，右上守方 enemy 督战
+            // 2026-10-31 用户「整体重做背景/角色」→ 角色放大（hero/enemy 突出）
+            // #3 逐帧：hero/enemy bob + crew 冲锋脉动 + 刀光闪烁。
+            let hb = tri(t, 900, 10);
+            let eb = -tri(t, 1100, 8);
+            let cx = tri(t, 700, 14);
+            host.blit_image(chrome::V2_CREW, 430 - 190 + cx, 1130 - 160, 380, 320);
+            host.blit_image(chrome::V2_HERO, 215 - 130, 1500 - 190 + hb, 260, 380);
+            host.blit_image(chrome::V2_ENEMY, 845 - 130, 400 - 190 + eb, 260, 380);
             // 冲锋刀光（中央，随 t 整体闪烁）
             for i in 0..6 {
                 let sx = 300 + i * 80;
@@ -243,7 +268,12 @@ pub(crate) fn render_v2_elem(
             }
         }
         "duel" => {
-            // S34.6 分离：人物已烘焙进场景帧（静态构图），此处只叠**动态刀光火花**。
+            // 将对将：左下 hero vs 右上 enemy 刀光冲突（放大 + 突出上半身）
+            // #3 逐帧：双方逼近中央 + 火花脉动。
+            let hx = tri(t, 800, 16);
+            let ex = -tri(t, 800, 16);
+            host.blit_image(chrome::V2_HERO, 240 - 130 + hx, 1360 - 200, 260, 400);
+            host.blit_image(chrome::V2_ENEMY, 855 - 130 + ex, 460 - 200, 260, 400);
             // 刀光火花（中央，脉动）
             let burst = (t / 150) % 3 == 0;
             for i in 0..9 {
@@ -259,59 +289,20 @@ pub(crate) fn render_v2_elem(
             // U20 拆分（render_v2_elem 超函数基线 140 行）：result 帧独立子函数。
             // S34.6 D4：战报兵力 = 运行态（调用方传入），draw_result_scene 内按 loss_pct 推战后。
             // S34.6 D5：`resolved` = 已结算 → 传入兵力即战后（`after_crew/arms` 真实值），不再推。
-            // S34.6 分离：场景帧 = clash 构图（兵对兵），result 需横幅/角色/战报 —— 仍走
-            // draw_result_scene（结果层 = 动态数据 + 书法横幅资产，非手绘构图）。
-            // 战报框底 = 羊皮米色 0xDE32 / 框线 = 黄铜 brass / 文字 = 深棕 brass_dark。
-            let parch = theme.by_name("brass").unwrap_or(0x9365);
-            let panel = 0xDE32;
             draw_result_scene(
-                host, phase, t, panel, parch, c2, atk_crew, atk_arms, def_crew, def_arms, resolved,
-                class,
+                host, phase, t, c4, c5, c2, atk_crew, atk_arms, def_crew, def_arms, resolved,
             );
         }
         _ => {}
     }
+    let _ = ink;
 }
 
-/// result 帧站地 y（compose 地面线同值；人物脚底贴地非飞天）。
-fn result_ground_y(class: &str, hero: bool) -> i32 {
-    match class {
-        "raid" => {
-            if hero {
-                1600
-            } else {
-                1400
-            }
-        }
-        "boss" => {
-            if hero {
-                1550
-            } else {
-                900
-            }
-        }
-        "attack" => {
-            if hero {
-                1600
-            } else {
-                1450
-            }
-        }
-        _ => {
-            if hero {
-                1680
-            } else {
-                1500
-            }
-        }
-    }
-}
-
-/// result 帧（胜/败）：站地 hero/enemy + 书法横幅 + 战报框（6 行双侧 16 参数，U20 拆分）。
-/// S34.6 修复双影：blit `scene_result_<class>.png`（无人物）+ 此处画站地 hero/enemy（`result_ground_y` 贴地）。
+/// result 帧（胜/败）：角色 + 书法横幅 + 战报框（6 行双侧 16 参数，U20 拆分）。
+/// 三段不重叠：横幅顶部（250）+ 角色中下（600 起）+ 战报框底部（1920-500）。
 ///
-/// 参数 = 渲染上下文（host/phase/t/3 色）+ 运行态兵力 4 值 + 已结算旗 + 格类；拆参数包反而
-/// 遮蔽「谁是攻方/守方」，故整体豁免 clippy 7 参上限（S34.6 D4 数据绑定 + 格类站地）。
+/// 参数 = 渲染上下文（host/phase/t/3 色）+ 运行态兵力 4 值 + 已结算旗；拆参数包反而
+/// 遮蔽「谁是攻方/守方」，故整体豁免 clippy 7 参上限（S34.6 D4 数据绑定）。
 #[allow(clippy::too_many_arguments)]
 fn draw_result_scene(
     host: &mut dyn SceneHost,
@@ -325,21 +316,18 @@ fn draw_result_scene(
     def_crew: u32,
     def_arms: u32,
     resolved: bool,
-    class: &str,
 ) {
     let won = phase == "result_win";
-    // S34.6 修复 result 双影：hero/enemy 站各场景**地面线**（result_ground_y，非飞天）。
-    // win = hero 站地 + enemy 倒地左下；lose = enemy 站地 + hero 倒地左下。
-    let hero_gy = result_ground_y(class, true);
-    let enemy_gy = result_ground_y(class, false);
+    // 胜方 hero（win）居中偏下；败方（lose）enemy 居中 + hero 倒下左下。
     if won {
         let dy = tri(ms, 1000, 8);
-        host.blit_image(chrome::V2_HERO, 540 - 150, hero_gy - 380 + dy, 300, 380);
-        host.blit_image(chrome::V2_ENEMY, 20, 1330, 200, 130);
+        host.blit_image(chrome::V2_HERO, 540 - 200, 600 + dy, 400, 560);
     } else {
         let sx = tri(ms, 300, 6);
+        // A2 修复（飞轮审计）：lose 倒地 hero 原 (60,1360,340,220) 与战报框 (240,1420,600,420)
+        // 重叠 160×160；移至左下角框外 (20,1330,200,130)，x 右缘 220 < 框左 240，不重叠。
         host.blit_image(chrome::V2_HERO, 20, 1330, 200, 130);
-        host.blit_image(chrome::V2_ENEMY, 540 - 150 + sx, enemy_gy - 380, 300, 380);
+        host.blit_image(chrome::V2_ENEMY, 540 - 200 + sx, 580, 400, 560);
     }
     // 书法横幅（上中偏上，不遮顶部框与角色头）
     let banner = if won { chrome::V2_BANNER_WIN } else { chrome::V2_BANNER_LOSE };
@@ -366,18 +354,17 @@ fn draw_result_scene(
     let atk_before_armed = atk_crew.min(atk_arms);
     let atk_before_unarmed = atk_crew - atk_before_armed;
     let atk_after_armed = atk_after_crew.min(atk_after_arms);
-    let atk_after_unarmed = atk_after_crew.saturating_sub(atk_after_armed);
+    let atk_after_unarmed = atk_after_crew - atk_after_armed;
     let def_before_armed = def_crew.min(def_arms);
-    let def_before_unarmed = def_crew.saturating_sub(def_before_armed);
+    let def_before_unarmed = def_crew - def_before_armed;
     let def_after_armed = def_after_crew.min(def_after_arms);
-    let def_after_unarmed = def_after_crew.saturating_sub(def_after_armed);
+    let def_after_unarmed = def_after_crew - def_after_armed;
     // A7 修复（飞轮审计）：战报第 5 行显示实际损失（我方/敌方 人/器），与数值一致。
-    let atk_arm_loss = atk_arms.saturating_sub(atk_after_arms);
-    let def_arm_loss = def_arms.saturating_sub(def_after_arms);
+    let atk_arm_loss = atk_arms - atk_after_arms;
+    let def_arm_loss = def_arms - def_after_arms;
     // S34.6 D4：损失人手（u32 运算需绑定再引用，E0308）。
-    // 修复（S34.6 result 帧下溢）：损耗 = 战前 - 战后（非负），saturating_sub 防 after>before 下溢。
-    let atk_crew_loss = atk_crew.saturating_sub(atk_after_crew);
-    let def_crew_loss = def_crew.saturating_sub(def_after_crew);
+    let atk_crew_loss = atk_after_crew - atk_crew;
+    let def_crew_loss = def_after_crew - def_crew;
     let args: [&dyn std::fmt::Display; 20] = [
         &atk_crew,
         &atk_arms,
@@ -421,23 +408,27 @@ fn draw_status_box(
     y: i32,
     w: i32,
     h: i32,
-    _name: &str,
+    name: &str,
     crew: u32,
     arms: u32,
     max_crew: u32,
     def: bool,
 ) {
     let theme = host.theme().clone();
-    // S34.6 分离：场景帧已含状态框**静态底**（名牌 + 黄铜槽 + 羊皮面板，compose 烘焙）。
-    // 本函数只**动态叠**运行态数据：兵力数字（人手/武器/武装）+ 兵力条填充。
-    // 坐标 = compose draw_status_box 同值（底框 (x,y,w,h)，名牌 (x+18,y+12)，
-    // 槽 (x+18, y+h-40, w-36, 22)）。`_name` 已烘焙进场景帧（静态），此处不再画。
+    let c6 = theme.by_name("parch_light").unwrap_or(0xDE32);
+    let c5 = theme.by_name("brass").unwrap_or(0x7AC6);
+    let c2 = theme.by_name("brass_dark").unwrap_or(0x3942);
     let c7 = theme.by_name("ink").unwrap_or(0x4183);
+    let c8 = theme.by_name("sea_deep").unwrap_or(0x28E2);
+    host.fill_rect(x, y, w, h, c6);
+    frame_v2(host, x, y, w, h, c5);
+    host.draw_hint_text(name, x + 18, y + 12, c2);
     let armed = crew.min(arms);
     let info = i18n::sgetf("scene.vs.v2_elm_force_fmt", &[&crew, &arms, &armed]);
     host.draw_hint_text(&info, x + 18, y + 38, c7);
-    // 兵力条填充（黄铜槽已烘焙在场景帧；此处只叠填充条）
+    // 兵力条（黄铜槽 + 绿守/红攻填充；U20 = 满兵力基准 max_crew，替代硬编码 40）
     let (bx, by, bw, bh) = (x + 18, y + h - 40, w - 36, 22);
+    host.fill_rect(bx, by, bw, bh, c8);
     let frac = if max_crew == 0 {
         0.0
     } else {
@@ -455,6 +446,7 @@ fn draw_status_box(
     if fw > 0 {
         host.fill_rect(bx + 4, by + 4, fw, bh - 8, col);
     }
+    frame_v2(host, bx, by, bw, bh, chrome::COLOR_BRASS_DARK);
 }
 
 /// v2 元素版黄铜框（描边）。

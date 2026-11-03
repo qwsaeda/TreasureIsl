@@ -531,6 +531,8 @@ impl MapHost for GameApp {
                     buildings: Vec::new(),
                     crew: self.seat_crew[i as usize],
                     arms: self.seat_arms[i as usize],
+                    // v3：逐席持久化存活态（破产出局席 `false`，`restore_v4_ext` 回填 `TurnCycle`）。
+                    alive: self.turn_cycle.is_alive(i),
                 }
             })
             .collect();
@@ -561,6 +563,14 @@ impl MapHost for GameApp {
         }
         if ext.current_seat < 5 {
             self.turn_cycle.current = ext.current_seat;
+        }
+        // v3：逐席回填存活态（破产出局席 `alive=false`；旧存档缺省 `true` 全活）。
+        for (i, seat) in ext.seats.iter().enumerate().take(5) {
+            let seat_idx = u8::try_from(i).unwrap_or(0);
+            if self.turn_cycle.is_active_seat(seat_idx) && !seat.alive {
+                // 已出局席若存档标活（旧存档无字段）保持原态（只降不升）。
+                self.turn_cycle.mark_bankrupt(seat_idx);
+            }
         }
         let map_id = self.map_slot.map_or(String::new(), |ms| ms.id().to_string());
         for terr in &ext.territories {

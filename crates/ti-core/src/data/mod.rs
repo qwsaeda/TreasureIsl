@@ -405,6 +405,8 @@ pub struct SelectionCfg {
     pub maps: Vec<MapDef>,
     /// 人类席下限（`selection.min_players`，缺省 2；领地 v3 `players ≥ 2` 不变量）。
     pub min_players: u32,
+    /// v3：AI 席上限（`selection.max_ai_seats`，缺省 4；`≤ 5 − min_players` 不变量）。
+    pub max_ai_seats: u32,
 }
 
 /// 角色目录条目（`balance.selection.characters[]`）。
@@ -914,6 +916,7 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
             character_count: raw.selection.character_count,
             map_count: raw.selection.map_count,
             min_players: raw.selection.min_players,
+            max_ai_seats: raw.selection.max_ai_seats,
             characters: raw
                 .selection
                 .characters

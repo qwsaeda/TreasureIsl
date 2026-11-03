@@ -560,7 +560,9 @@
           4
         ]
       }
-    ]
+    ],
+    "min_players": 2,
+    "max_ai_seats": 4
   },
   "ui": {
     "logical_width": 1080,

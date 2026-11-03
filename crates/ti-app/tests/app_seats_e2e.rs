@@ -315,3 +315,55 @@ fn two_player_gold_ledgers_are_independent() {
     let gold0_after = app.seat_gold[0];
     let _ = (gold0_after, gold1_before, gold1_after);
 }
+
+// ── S36.2 数据面收口（SeatSave.alive 逐席持久化 / 读档回填 TurnCycle 出局位）─────────
+
+/// S36.2 §4.4：`SeatSave.alive=false` 存档 → 读档回填 `TurnCycle` 出局位（只降不升，旧存档全活）。
+///
+/// 真实路径：`enter_main_map_two_players` → 手动置席 1 `alive=false`（模拟破产）
+/// → 组 `SaveSlot`（与 `save_v4_ext` 同源）→ 新 `GameApp` → `restore_save` 读档 ⇒ 席 1 出局保持。
+#[test]
+fn seat_alive_save_restore_roundtrip() {
+    use ti_core::domain::persistence::SaveSlot;
+    let mut app = enter_main_map_two_players();
+    assert!(app.turn_cycle.is_alive(1), "开局前席 1 存活");
+    // 模拟席 1 破产（规则层 `mark_bankrupt`；测试直接翻转 `alive` 标记位）。
+    app.turn_cycle.mark_bankrupt(1);
+    assert!(!app.turn_cycle.is_alive(1), "破产后席 1 出局");
+    // 组 `SaveSlot`（与 `scenes::saveload.rs` `WriteSave` 同源：`save_v4_ext` 填 `v4` 扩展）。
+    let v4_ext = ti_app::scenes::MapHost::save_v4_ext(&app).expect("2 玩家局 `save_v4_ext` 必在位");
+    assert!(!v4_ext.seats[1].alive, "写档时席 1 `alive=false`（破产出局已持久化）");
+    assert!(v4_ext.seats[0].alive, "写档时席 0 `alive=true`（存活）");
+    let save = SaveSlot { v4: Some(Box::new(v4_ext)), ..Default::default() };
+    // 读档回填：同 seed 新 `GameApp` + 走真实 UI 进同对局 + `restore_save`。
+    let mut fresh = enter_main_map_two_players();
+    assert!(fresh.turn_cycle.is_alive(1), "读档前席 1 存活（新开对局）");
+    fresh.restore_save(save);
+    assert!(
+        fresh.turn_cycle.is_active_seat(1) && !fresh.turn_cycle.is_alive(1),
+        "读档回填：席 1 在局（active）但已出局（alive=false，TurnCycle 跳过）"
+    );
+    assert!(
+        fresh.turn_cycle.is_active_seat(0) && fresh.turn_cycle.is_alive(0),
+        "读档回填：席 0 在局且存活（只降不升，旧态保持）"
+    );
+}
+
+/// S36.2 回归：旧 v3 存档（无 `alive` 字段，serde 缺省 `true`）读档后全席存活，零行为变化。
+#[test]
+fn legacy_save_without_alive_field_keeps_all_seats_alive() {
+    use ti_core::domain::persistence::SaveSlot;
+    let mut app = enter_main_map_two_players();
+    // 手动置席 1 破产。
+    app.turn_cycle.mark_bankrupt(1);
+    let mut ext = ti_app::scenes::MapHost::save_v4_ext(&app).expect("save_v4_ext 在位");
+    // 模拟旧存档：把席 1 的 `alive` 置回缺省 `true`（旧 schema 无此字段 ⇒ serde 缺省 true）。
+    ext.seats[1].alive = true;
+    let save = SaveSlot { v4: Some(Box::new(ext)), ..Default::default() };
+    let mut fresh = enter_main_map_two_players();
+    fresh.restore_save(save);
+    assert!(
+        fresh.turn_cycle.is_alive(1),
+        "旧存档无 `alive` 字段（缺省 `true`）⇒ 读档全席存活，零行为变化（不丢在局席位）"
+    );
+}

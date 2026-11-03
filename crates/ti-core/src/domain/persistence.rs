@@ -74,6 +74,9 @@ pub struct SeatSave {
     /// v5 舰队武器。
     #[serde(default = "default_v5_arms")]
     pub arms: u32,
+    /// v3：该席位是否存活（`false` = 已破产出局，`TurnCycle` 跳过；缺省 `true`）。
+    #[serde(default = "default_v3_alives")]
+    pub alive: bool,
 }
 
 /// 领地存档条目（`map → [格索引 → {owner_seat, level}]`，§8；无主格 = 缺省不写）。
@@ -101,6 +104,11 @@ fn default_v5_crew() -> u32 {
 /// v5 缺省舰队武器（v4 存档迁移默认值）。
 fn default_v5_arms() -> u32 {
     5
+}
+
+/// v3 缺省席位存活态（`true` = 存活；旧存档无此字段时缺省存活，不丢在局席位）。
+fn default_v3_alives() -> bool {
+    true
 }
 
 /// 存档 v4 扩展位（territory.md §8：多席位 + 领地图 + 当前席位；`None` = v3 及更早）。
