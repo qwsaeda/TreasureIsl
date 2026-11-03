@@ -86,7 +86,10 @@ impl GameApp {
         // 通关位还原（S15.2 通关门禁）：掩码 CLEARED 位（bit 3）= m03 BOSS 已击败。
         // 旧档无该字段 → mask 全 0 → cleared 保持开档 false，行为不回归。
         self.cleared = data.unlocked_mask & CLEARED_BIT != 0;
-        self.gold = data.gold;
+        // v3：v4 扩展含每席金币 ⇒ 旧档（无 v4）时把 `data.gold` 铺给当前行动席，
+        // 之后 `restore_v4_ext` 覆盖各席（唯一账本 `seat_gold[]`）。
+        self.seat_gold[self.turn_cycle.current as usize] = data.gold;
+        self.sync_gold_mirror();
         self.bank = Bank::new(data.gold);
         // P1-8（S1）：RNG 精确续流——读档后 `restore_state(rng_seed, rng_steps)` O(log n) 跳转，
         // 后续卡牌/地图随机流与"未存档"一致（`persistence.md` §RNG 可复现性）。
@@ -118,7 +121,8 @@ impl GameApp {
             }
             // Q007：`enter_main_map_at` 按初始值重铺了经济/位置，成功后再覆写存档值
             //（`owned`/`buildings` 不在 `SaveSlot` schema 内，保持初始空——schema 限制，`persistence.md`）。
-            self.gold = data.gold;
+            self.seat_gold[self.turn_cycle.current as usize] = data.gold;
+            self.sync_gold_mirror();
             self.bank = Bank::new(data.gold);
             self.selection.completed = true;
         } else {

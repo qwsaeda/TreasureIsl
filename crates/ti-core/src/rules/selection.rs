@@ -186,6 +186,45 @@ pub fn seat_toggle(seats: &mut Vec<Character>, ch: Character, count: u32) -> Sfx
     Sfx::Press
 }
 
+/// v3：席位勾选（`docs/business/territory.md` §1）——**可取消到 0 席**。
+///
+/// 与 [`seat_toggle`] 的差别：v3 勾选与「开始对局」分离（§1.1 D5），勾选阶段允许
+/// 清空到 0（**下限 2 席在「开始对局」时才校验**，见 [`seat_selection_ready`]），
+/// 因此取消勾选**没有「最后一席不可取消」限制**。
+///
+/// `seats` = 已勾选角色列表（0..=4 唯一；顺序 = 角色 index 升序）；
+/// `count` = 可选角色数（`balance.selection.character_count`，缺省 5）。
+#[must_use]
+pub fn seat_mark_toggle(seats: &mut Vec<Character>, ch: Character, count: u32) -> Sfx {
+    if ch.index() >= count {
+        return Sfx::Invalid;
+    }
+    if seats.contains(&ch) {
+        seats.retain(|c| *c != ch);
+        return Sfx::Press;
+    }
+    seats.push(ch);
+    seats.sort_by_key(|c| c.index());
+    Sfx::Press
+}
+
+/// v3：勾选是否**满足开局条件**（§1：人类席 `≥ min_players`）。
+///
+/// `min_players` = `balance.selection.min_players`（缺省 2；v2 的 1 席 = 假多人）。
+#[must_use]
+pub fn seat_selection_ready(seats: &[Character], min_players: u32) -> bool {
+    seats.len() >= usize::try_from(min_players).unwrap_or(2)
+}
+
+/// v3：勾选角色 + AI 席数 → 席位池（§1：AI 席数可配）。
+///
+/// `ai_count` 超过剩余角色数时由 [`SeatPool::build_with_ai`] 钳到上限。
+#[must_use]
+pub fn seat_pool_with_ai(seats: &[Character], ai_count: u32) -> SeatPool {
+    let indexes: Vec<u32> = seats.iter().map(|c| c.index()).collect();
+    SeatPool::build_with_ai(&indexes, ai_count)
+}
+
 /// 玩家选中的席位角色 → 席位池（§1：`players + ai = 5`；未选中角色自动 AI）。
 #[must_use]
 pub fn seat_pool(seats: &[Character]) -> SeatPool {

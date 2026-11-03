@@ -29,9 +29,14 @@ pub struct Seat {
     pub index: u32,
     /// 玩家席位（`false` = AI 席，自动行动）。
     pub is_player: bool,
+    /// v3：本席是否**在局**（参与回合轮转与胜负判定）。
+    ///
+    /// `false` = 该角色本局不出场（既非人类席也未补 AI 席）——席位槽位仍在
+    /// （存档 `owner_seat` = 槽位下标），但不参与任何对局判定。
+    pub is_active: bool,
 }
 
-/// 席位池（`players + ai = 5`，`players ≥ 1`）。
+/// 席位池（v3：`players ≥ 2`，`players + ai ≤ 5`；AI 席数可配）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SeatPool {
     seats: [Seat; 5],
@@ -58,8 +63,48 @@ impl SeatPool {
             character,
             index,
             is_player: chosen[index as usize],
+            is_active: true,
         });
         Self { seats }
+    }
+
+    /// v3：由「人类席角色 index 列表 + AI 席数」构建席位池（§1：AI 席数可配）。
+    ///
+    /// - 人类席 = `player_indexes`（保持 index 升序语义，`build` 同款）；
+    /// - AI 席 = **未被选为人类席**的角色按 index 升序取前 `ai_count` 个；
+    /// - `ai_count` 超过剩余角色数时**钳到上限**（不 panic：调用方给的是用户输入）；
+    /// - **不在本局**的角色（既非人类也未补 AI 席）`is_active = false`，
+    ///   **不参与回合轮转**（见 [`SeatPool::is_active`]）。
+    ///
+    /// # Panics
+    /// 玩家列表为空 / 角色 index 越界 / 重复时 panic（同 [`Self::build`]）。
+    #[must_use]
+    pub fn build_with_ai(player_indexes: &[u32], ai_count: u32) -> Self {
+        let mut pool = Self::build(player_indexes);
+        let remaining: Vec<u32> = (0..5u32)
+            .filter(|i| !pool.seats.get(*i as usize).is_some_and(|s| s.is_player))
+            .collect();
+        let ai_take = usize::try_from(ai_count).unwrap_or(0).min(remaining.len());
+        // 在局席位 = 人类席 ∪ 前 `ai_take` 个 AI 席；其余角色本局不出场。
+        for (pos, &idx) in remaining.iter().enumerate() {
+            pool.seats[idx as usize].is_active = pos < ai_take;
+        }
+        pool
+    }
+
+    /// 本席是否在局（人类席或 AI 席 = 在席；其余 = 该角色本局不出场）。
+    ///
+    /// v3：席位池仍占 5 个槽位（存档 `owner_seat` = 槽位下标），但**只有在席席位参与
+    /// 回合轮转与胜负判定**。
+    #[must_use]
+    pub fn is_active(&self, idx: SeatIdx) -> bool {
+        self.seats.get(idx as usize).is_some_and(|s| s.is_active)
+    }
+
+    /// 在席席位下标（升序）。
+    #[must_use]
+    pub fn active_seats(&self) -> Vec<SeatIdx> {
+        (0..5).filter(|i| self.is_active(*i)).collect()
     }
 
     /// 全部席位（index 升序 = 回合顺序）。
@@ -619,25 +664,33 @@ impl TerritoryApply for TerritoryState {
 // ------------------------------------------------------- S28.7 AI 回合（§6：AI 与玩家同规则）
 
 /// 席位轮转（§1 回合顺序 = 角色 index 升序；5 席循环）。
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TurnCycle {
     /// 当前轮到的席位。
     pub current: SeatIdx,
     /// 玩家席位（热座交接：轮到玩家席 = 需要「开始回合」确认；AI 席 = 自动行动）。
     players: [bool; 5],
+    /// v3：在局席位（参与轮转）+ 存活席位（未破产出局）。
+    ///
+    /// 轮转只经过「在局 ∧ 存活」的席位——破产出局（§4.4）与本局不出场（§1）的席位
+    /// 都被跳过。
+    active: [bool; 5],
+    alive: [bool; 5],
 }
 
 impl TurnCycle {
     /// 由席位池构建（`players[i]` = 席 i 是否玩家席；池顺序 = index 升序）。
+    ///
+    /// v3：在局席位 = `pool.is_active(i)`；全部初始存活。
     #[must_use]
     pub fn new(pool: &SeatPool) -> Self {
         let mut players = [false; 5];
+        let mut active = [false; 5];
         for (idx, seat) in pool.iter().enumerate() {
-            if seat.is_player {
-                players[idx] = true;
-            }
+            players[idx] = seat.is_player;
+            active[idx] = seat.is_active;
         }
-        Self { current: 0, players }
+        Self { current: 0, players, active, alive: [true; 5] }
     }
 
     /// 本席是否玩家席（`false` = AI 自动回合）。
@@ -646,22 +699,69 @@ impl TurnCycle {
         self.players[seat as usize]
     }
 
+    /// v3：本席是否**在局且存活**（参与轮转）。
+    #[must_use]
+    pub fn is_playing(self, seat: SeatIdx) -> bool {
+        self.active[seat as usize] && self.alive[seat as usize]
+    }
+
+    /// v3：本席是否**在局**（参与本局对局；出局后仍算在局，只是不再轮转）。
+    #[must_use]
+    pub fn is_active_seat(self, seat: SeatIdx) -> bool {
+        self.active[seat as usize]
+    }
+
+    /// v3：标记某席**破产出局**（§4.4）：该席不再参与轮转。
+    pub fn mark_bankrupt(&mut self, seat: SeatIdx) {
+        if let Some(a) = self.alive.get_mut(seat as usize) {
+            *a = false;
+        }
+    }
+
+    /// v3：本席存活态（只读）。
+    #[must_use]
+    pub fn is_alive(self, seat: SeatIdx) -> bool {
+        self.alive[seat as usize]
+    }
+
     /// 推进到下一席位（§1：5 席循环，`players + ai = 5`）。
+    ///
+    /// v3：跳过**不在局**与**已出局**席位；若全部席位都不可用则原地不动
+    /// （对局已结束，由上层判终局）。
     pub fn advance(&mut self) {
-        self.current = (self.current + 1) % 5;
+        let mut seat = self.current;
+        for _ in 0..5 {
+            seat = (seat + 1) % 5;
+            if self.is_playing(seat) {
+                self.current = seat;
+                return;
+            }
+        }
     }
 
     /// 下一个**玩家**席位（热座交接：从当前席后找首个玩家席，循环不越 5 次）。
+    ///
+    /// v3：跳过不在局 / 已出局席位；无存活玩家席时返回当前席（对局已结束）。
     #[must_use]
     pub fn next_player_seat(self) -> SeatIdx {
         let mut seat = self.current;
         for _ in 0..5 {
             seat = (seat + 1) % 5;
-            if self.players[seat as usize] {
+            if self.players[seat as usize] && self.is_playing(seat) {
                 return seat;
             }
         }
-        0
+        self.current
+    }
+}
+
+/// `TurnCycle` 默认值（`GameApp::new` 用）：**全部 5 席在局且存活**。
+///
+/// 不能用派生 `Default`：`alive`/`active` 数组零值 = 全 `false` ⇒ `is_playing` 恒假
+/// ⇒ `advance` 永不推进（回合卡死）。故手写实现。
+impl Default for TurnCycle {
+    fn default() -> Self {
+        Self { current: 0, players: [false; 5], active: [true; 5], alive: [true; 5] }
     }
 }
 

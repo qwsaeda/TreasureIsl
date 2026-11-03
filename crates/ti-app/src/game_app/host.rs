@@ -248,6 +248,13 @@ impl MapHost for GameApp {
         self.board.as_ref().map_or(0, BoardSession::index)
     }
 
+    fn seat_positions(&self) -> Vec<(u8, usize)> {
+        (0..5u8)
+            .filter(|s| self.turn_cycle.is_playing(*s))
+            .filter_map(|s| self.seat_session(s).map(|sess| (s, sess.index())))
+            .collect()
+    }
+
     fn territory_ownership(&self, idx: u32) -> Option<Ownership> {
         self.territory.as_ref().and_then(|t| t.ownership(idx)).copied()
     }
@@ -379,6 +386,18 @@ impl MapHost for GameApp {
         true
     }
 
+    /// v3：热座交接待确认席（`None` = 无待确认）。
+    fn handoff_pending(&self) -> Option<u8> {
+        self.handoff_pending
+    }
+
+    /// v3：确认热座交接（清 `handoff_pending`）⇒ 该席可操作。
+    ///
+    /// 返回 `true` = 本次消费了「确认交接」动作。
+    fn confirm_handoff(&mut self) -> bool {
+        self.handoff_pending.take().is_some()
+    }
+
     /// S33.5 放弃攻占（`pending_siege` 在位时主地图 `Back`）：交过路费（§4.2），清待决。
     /// 返回 `true` = 已消费（交钱提示已出）。
     fn pay_siege_toll(&mut self) -> bool {
@@ -485,11 +504,8 @@ impl MapHost for GameApp {
             u8::try_from(self.selection.character.map_or(0, Character::index).min(4)).unwrap_or(0);
         let seats = (0u8..5)
             .map(|i| {
-                let position = if i == player_idx {
-                    self.board.as_ref().map_or(0, BoardSession::position_index)
-                } else {
-                    self.ai_sessions[i as usize].as_ref().map_or(0, BoardSession::position_index)
-                };
+                // v3：每席独立会话 ⇒ 位置按席取（人类席也不再与他人共用）。
+                let position = self.seat_session(i).map_or(0, BoardSession::position_index);
                 SeatSave {
                     character: b
                         .selection
@@ -600,11 +616,17 @@ impl EconomyHost for GameApp {
     }
 
     fn gold(&self) -> u32 {
-        self.gold
+        // v3：唯一金币账本 = `seat_gold[]`；当前行动席的值（D3 修复：v2 双账本漂移）。
+        self.current_seat_gold()
     }
 
     fn set_gold(&mut self, value: u32) {
-        self.gold = value;
+        // v3：写唯一账本 `seat_gold[current]` + 同步镜像。
+        let seat = self.turn_cycle.current as usize;
+        if let Some(g) = self.seat_gold.get_mut(seat) {
+            *g = value;
+        }
+        self.sync_gold_mirror();
     }
 
     fn owned_index_of(&self, gid: u32) -> Option<usize> {
@@ -700,14 +722,19 @@ impl EconomyHost for GameApp {
             Err(_) => (u32::MAX, u32::MAX),
         };
         // 卡牌状态从宿主现状出发（Damage/Heal 改当前 hp，Gold 改当前 gold）
-        let mut state = cards::CardState { hp: 0, gold: self.gold, hp_max, gold_max };
+        let mut state =
+            cards::CardState { hp: 0, gold: self.current_seat_gold(), hp_max, gold_max };
         let result = cards::apply_card(card, &mut state);
         match result {
             cards::CardResult::Applied(eff) => {
                 match eff {
                     cards::CardEffect::Gold(n) => {
-                        // 卡牌加金走宿主 gold（saturating_add + 钳 economy.gold_max）
-                        self.gold = self.gold.saturating_add(n).min(gold_max);
+                        // v3：卡牌加金走唯一账本 `seat_gold[]`（saturating_add + 钳 gold_max）。
+                        let seat = self.turn_cycle.current as usize;
+                        if let Some(g) = self.seat_gold.get_mut(seat) {
+                            *g = g.saturating_add(n).min(gold_max);
+                        }
+                        self.sync_gold_mirror();
                     }
                     cards::CardEffect::Damage(n) => {
                         // 扣 HP：暂存到 `card_state.hp`（本次掉了 n），

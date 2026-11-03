@@ -474,6 +474,12 @@ pub trait MapHost {
         0
     }
 
+    /// v3：所有在局席位的赛道位置（`Vec<(seat, index)>`，只含 `is_active` 且未破产席；
+    /// 渲染侧据此画多棋子。无赛道 / 非主地图 = 空。
+    fn seat_positions(&self) -> Vec<(u8, usize)> {
+        Vec::new()
+    }
+
     /// 上一次摇出的步数（0 = 未摇过）。
     fn board_last_roll(&self) -> u32 {
         0
@@ -539,6 +545,20 @@ pub trait MapHost {
 
     /// S33.5 确认攻占（`pending_siege` 在位：切 `Vs` 攻占战报，返回 `true` = 已消费；缺省 `false`）。
     fn confirm_siege(&mut self) -> bool {
+        false
+    }
+
+    /// v3：热座交接待确认（§1 + §1.2）——`Some(seat)` = 轮到该人类席，须显式确认才能操作。
+    ///
+    /// 默认 `None` = 无待确认交接（非主地图 fake 宿主无需实现）。
+    fn handoff_pending(&self) -> Option<u8> {
+        None
+    }
+
+    /// v3：确认热座交接（清 `handoff_pending`）⇒ 该席可操作。
+    ///
+    /// 返回 `true` = 本次调用消费了「确认交接」这一动作；缺省 `false`。
+    fn confirm_handoff(&mut self) -> bool {
         false
     }
 

@@ -74,9 +74,11 @@ impl GameApp {
         self.map_session.boss_tile()
     }
     /// 当前金币数（只读）。
+    ///
+    /// v3：唯一金币账本 = `seat_gold[]`；此处返回**当前行动席**的值（D3）。
     #[must_use]
     pub fn gold(&self) -> u32 {
-        self.gold
+        self.current_seat_gold()
     }
     /// 已拥有物品列表（只读）。
     #[must_use]

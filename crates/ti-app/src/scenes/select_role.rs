@@ -20,6 +20,31 @@ fn selection_done(host: &dyn SceneHost) -> bool {
     s.has_character() && s.has_map()
 }
 
+/// v3：勾选/取消勾选某角色为**人类席**（`territory.md` §1）。
+///
+/// - 用 `selection::seat_mark_toggle`（可取消到 0 席——**下限 2 席在「开始对局」时校验**，
+///   勾选阶段允许清空，D5 修复）；
+/// - 人类席数 = `balance.selection.min_players`（缺省 2）——`players ≥ 2` 才有"多人"意义。
+fn toggle_seat_mark(host: &mut dyn SceneHost, picked: Character) {
+    let mut marks = host.player_seats();
+    let count = Character::count();
+    let sfx = selection::seat_mark_toggle(&mut marks, picked, count);
+    if sfx == Sfx::Press {
+        host.set_player_seats(marks);
+    }
+    host.play_sfx(sfx);
+}
+
+/// v3：当前勾选是否满足开局条件（人类席 `≥ min_players`）。
+fn seat_selection_ready(host: &dyn SceneHost) -> bool {
+    selection::seat_selection_ready(&host.player_seats(), min_players())
+}
+
+/// v3：人类席下限（`balance.selection.min_players`，缺省 2）。
+fn min_players() -> u32 {
+    ti_core::data::balance().map_or(2, |b| b.selection.min_players)
+}
+
 impl Scene for SelectRoleScene {
     fn kind(&self) -> SceneKind {
         SceneKind::SelectRole
@@ -45,7 +70,20 @@ impl Scene for SelectRoleScene {
                 host.play_sfx(Sfx::Press);
                 false
             }
-            GameInput::Confirm => {
+            // v3：勾选/取消勾选该角色为**人类席**（§1：人类席 2..5）。
+            // 键盘路径与触屏行点击**等价**（D1 修复：v2 键盘流根本选不出多人）。
+            GameInput::MarkSeat => {
+                let Some(picked) = host.character() else {
+                    host.play_sfx(Sfx::Invalid);
+                    return false;
+                };
+                toggle_seat_mark(host, picked);
+                false
+            }
+            // v3：**开始对局** = 确认当前勾选 ⇒ 进选图（与勾选动作分离，D5 修复）。
+            // 开局下限校验（`seat_selection_ready`）：人类席 < `min_players` 时拒绝开局，
+            // 留在选角界面让用户补选。
+            GameInput::StartMatch | GameInput::Confirm => {
                 // 首次进 SelectRole 时 `character`=None（Index 只 `reset_selection` 不设角色），
                 // Confirm 兜底选第 0 个角色（对齐 select_map Confirm 的 map_slot 兜底语义）
                 if host.character().is_none() {
@@ -60,6 +98,13 @@ impl Scene for SelectRoleScene {
                     return false;
                 };
                 host.selection_mut().character = Some(picked);
+                // v3：人类席 < min_players ⇒ 拒绝开局（留选角界面补选；Sfx::Invalid 提示）。
+                // `seat_marks` 空 = 旧单选流（1 人类 + 4 AI），豁免下限（v2 兼容路径）。
+                let marks = host.player_seats();
+                if !marks.is_empty() && !seat_selection_ready(host) {
+                    host.play_sfx(Sfx::Invalid);
+                    return false;
+                }
                 let done = selection_done(host);
                 host.selection_mut().completed = done;
                 if done {
@@ -84,7 +129,10 @@ impl Scene for SelectRoleScene {
         }
     }
 
-    /// S29.2：点某行（`pick_key=2` 角色行，`hit.index` = 行下标）= 选中该角色并确认；下滑 = 返回。
+    /// S29.2：点某行（`pick_key=2` 角色行，`hit.index` = 行下标）= **勾选/取消勾选**该角色
+    /// 为人类席（v3：勾选与「开始对局」分离，D5 修复）；下滑 = 返回。
+    ///
+    /// v2 行为 = 点行即选中并确认进选图 ⇒ 只能选 1 席 ⇒ 多人局不可达。
     fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
         if hit.swipe == 2 {
             return host.advance(GameInput::Back);
@@ -99,17 +147,8 @@ impl Scene for SelectRoleScene {
         host.set_character(Some(picked));
         host.selection_mut().character = Some(picked);
         chrome::flash_press();
-        // S28.4 多选玩家席（territory.md §1）：行点击 = 切换玩家席标记
-        // （`rules::selection::seat_toggle` 不变量：≥1 玩家席；0 选被拒），
-        // 完成确认仍走 `Confirm` 键（既有选角流程 0 回归：单点 Confirm 直进）。
-        let mut marks = host.player_seats();
-        let count = Character::count();
-        let sfx = selection::seat_toggle(&mut marks, picked, count);
-        if sfx == Sfx::Press {
-            host.set_player_seats(marks);
-        }
-        host.play_sfx(sfx);
-        host.advance(GameInput::Confirm)
+        toggle_seat_mark(host, picked);
+        false
     }
 
     /// S18.7d 声明式原语化：版面（夜空 / 左角色立绘锚 / 右 5 行选项 / 提示行）=

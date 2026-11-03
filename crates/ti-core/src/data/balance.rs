@@ -63,12 +63,22 @@ pub(crate) struct RawSelection {
     pub(crate) character_count: u32,
     #[serde(default = "default_map_count")]
     pub(crate) map_count: u32,
+    /// v3：人类席下限（`selection.min_players`，缺省 2）。
+    ///
+    /// §1 不变量 `players ≥ 2`——单人局 = 假多人（v2 实测缺陷 D1/D5）。
+    #[serde(default = "default_min_players")]
+    pub(crate) min_players: u32,
     /// 角色目录（`id`/`index`）。
     #[serde(default)]
     pub(crate) characters: Vec<RawCharacter>,
     /// 地图目录（`id`/`index`/`grid_w`/`grid_h`/`boss_tier`/`player_start`/`landmarks`）。
     #[serde(default)]
     pub(crate) maps: Vec<RawMapEntry>,
+}
+
+/// v3：人类席下限缺省 = 2（`territory.md` §1 不变量 `players ≥ 2`）。
+fn default_min_players() -> u32 {
+    2
 }
 
 /// 角色目录条目（`balance.selection.characters[]`）。

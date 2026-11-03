@@ -40,13 +40,13 @@ fn ai_turns_run_after_player_spin() {
     // 玩家回合结束后 = 回到玩家席（AI 连动已走完 4 席）
     assert_eq!(app.turn_cycle.current, initial_player_seat, "轮转回玩家席");
 
-    // 4 个 AI 席会话已推进（位置 ≠ 起点，除非骰点回绕；确定性 seed 下可复现）
+    // 非当前席会话已推进（位置 ≠ 起点，除非骰点回绕；确定性 seed 下可复现）
     let ai_moved: usize = app
-        .ai_sessions
+        .seat_sessions
         .iter()
         .filter_map(|s| s.as_ref().map(ti_core::rules::board::BoardSession::index))
         .sum();
-    assert!(ai_moved > 0, "AI 席已摇骰前进");
+    assert!(ai_moved > 0, "非当前席已摇骰前进");
 
     // 领地账本仍健全（格数不变；部分格可能已易主）
     let terr = app.territory.as_ref().expect("领地账本在位");

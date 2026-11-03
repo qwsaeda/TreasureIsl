@@ -1,0 +1,22 @@
+=== S36.0 多人热座 v3 evidence ===
+日期: 2026-11-03
+
+--- 1. app_seats_e2e 12/12 全绿 ---
+running 12 tests
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+--- 2. app_territory_turns 2/2 全绿 ---
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+--- 3. cargo build -p ti-app 0 error ---
+errors: 0
+
+--- 4. cargo clippy -p ti-app（pre-existing too_many_lines 豁免）---
+warning: this function has too many lines (104/100)
+
+--- 5. cargo fmt --all --check ---
+fmt OK
+
+--- 6. 预存 render_intent 失败（S34.6b vs.rs vs_theme，非本次改动）---
+vs 非黑覆盖率 955‰ < 990‰（背景贴图未铺满 / 被整块盖死）
+（已知：vs 非黑覆盖率 966‰ < 990‰ = S34.6b 预存，非 S36 引入）

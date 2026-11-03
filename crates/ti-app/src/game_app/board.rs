@@ -20,12 +20,156 @@ use ti_core::rules::territory::{
 };
 use ti_core::rules::territory_v2::{self, SeatState};
 
-use super::{GameApp, Scene};
+use super::{GameApp, MatchOutcome, Scene};
 use crate::scenes::EconomyHost;
 
 impl GameApp {
     /// 落格提示条的显示时长（帧，S20.0c 单一入口 `toast()` 引用）。
     const TOAST_TICKS: u32 = 120;
+
+    /// v3：某席的赛道会话（只读）。
+    ///
+    /// v3 每席独立会话（§1 独立性 / D2 修复）：人类席不再共用一个会话。
+    ///
+    /// **存储约定**：`board` 字段持有**当前行动席**的会话（v2 沿用，渲染层零改动）；
+    /// `seat_sessions[i]` 持有**非当前席**的会话。切换席位时二者互换（不克隆 ⇒ 无漂移）。
+    #[must_use]
+    pub fn seat_session(&self, seat: u8) -> Option<&BoardSession> {
+        let cur = self.turn_cycle.current;
+        if seat == cur {
+            self.board.as_ref()
+        } else {
+            self.seat_sessions.get(seat as usize).and_then(|s| s.as_ref())
+        }
+    }
+
+    /// v3：切换到某席（热座交接 / 回合推进）——当前席会话存入 `seat_sessions`，
+    /// 目标席会话载入 `board`。
+    ///
+    /// **互换而非克隆** ⇒ `board` 与 `seat_sessions` 永不漂移（D2 的根因级修复）。
+    pub(crate) fn switch_to_seat(&mut self, seat: u8) {
+        let cur = self.turn_cycle.current;
+        if cur == seat {
+            return;
+        }
+        // 当前席落盘
+        if let Some(sess) = self.board.take() {
+            if let Some(slot) = self.seat_sessions.get_mut(cur as usize) {
+                *slot = Some(sess);
+            }
+        }
+        // 目标席载入
+        self.board = self.seat_sessions.get_mut(seat as usize).and_then(std::option::Option::take);
+        self.turn_cycle.current = seat;
+    }
+
+    /// v3：当前行动席的金币（**唯一金币账本** `seat_gold[]` 的一次读取）。
+    ///
+    /// D3 修复：v2 有 `self.gold`（主席镜像）与 `seat_gold[5]` 两套账本 ⇒
+    /// AI 收过路费只写 `seat_gold`，玩家 HUD 的 `self.gold` 不动（实测 §1.1 D3）。
+    /// v3 起 `self.gold` **只作当前行动席的镜像**，所有改动走 `seat_gold[]`。
+    #[must_use]
+    pub fn current_seat_gold(&self) -> u32 {
+        self.seat_gold.get(self.turn_cycle.current as usize).copied().unwrap_or(0)
+    }
+
+    /// v3：给当前行动席加/减金币（写唯一账本 + 同步镜像）。
+    pub(crate) fn add_current_seat_gold(&mut self, delta: u32) {
+        let seat = self.turn_cycle.current as usize;
+        if let Some(g) = self.seat_gold.get_mut(seat) {
+            *g = g.saturating_add(delta);
+        }
+        self.sync_gold_mirror();
+    }
+
+    /// v3：把 `self.gold` 镜像同步为当前行动席的账本值（唯一写入口）。
+    ///
+    /// 单一同步点 ⇒ 镜像永不漂移（D3 根因消除）。
+    pub(crate) fn sync_gold_mirror(&mut self) {
+        self.gold = self.current_seat_gold();
+    }
+
+    /// v3：破产检查 + 终局判定（§1.2 / §4.4）。
+    ///
+    /// - 席位金币不足以支付 ⇒ 破产（`territory_v2::bankrupt`：金币归零 + 占领格清空）；
+    /// - 破产席从 `TurnCycle` 标记出局（后续轮转跳过）；
+    /// - 只剩一个存活席 ⇒ 胜利；全部人类席破产 ⇒ 失败；无人存活 ⇒ 平局。
+    ///
+    /// 返回 `true` = 对局已结束（`match_outcome` 已置位）。
+    pub(crate) fn check_match_end(&mut self, bal: &data::Balance) -> bool {
+        if self.match_outcome.is_some() {
+            return true;
+        }
+        let Some(mut terr) = self.territory.take() else {
+            return false;
+        };
+        // ① 破产判定：金币不足以支付当前应付 ⇒ 出局。
+        let mut bankrupt_seats: Vec<u8> = Vec::new();
+        for seat in 0..5u8 {
+            if !self.turn_cycle.is_playing(seat) {
+                continue;
+            }
+            let gold = self.seat_gold.get(seat as usize).copied().unwrap_or(0);
+            // 判定口径：金币为 0 且无舰队人手（无法再生产）⇒ 破产出局。
+            // （领地过路费按 `settle` 已扣到 0 为止；此处判「归零 + 无舰队」= 彻底出局。）
+            let crew = self.seat_crew.get(seat as usize).copied().unwrap_or(0);
+            if gold == 0 && crew == 0 {
+                bankrupt_seats.push(seat);
+            }
+        }
+        for seat in &bankrupt_seats {
+            let mut sstate = territory_v2::SeatState::new(
+                self.seat_gold[*seat as usize],
+                self.seat_crew[*seat as usize],
+                self.seat_arms[*seat as usize],
+                0,
+            );
+            territory_v2::bankrupt(&mut sstate, &mut terr, *seat);
+            self.seat_gold[*seat as usize] = 0;
+            self.seat_crew[*seat as usize] = 0;
+            self.turn_cycle.mark_bankrupt(*seat);
+            let name = ai_seat_name(*seat, bal);
+            self.toast(i18n_fmt("scene.main_map.toast.bankrupt_fmt", &[&name]), Some(Sfx::Invalid));
+        }
+        self.territory = Some(terr);
+
+        // ② 终局判定（只看**在局**席位）。
+        let active: Vec<bool> = (0..5u8).map(|s| self.turn_cycle.is_active_seat(s)).collect();
+        let states: Vec<territory_v2::SeatState> = (0..5u8)
+            .map(|s| {
+                let mut st = territory_v2::SeatState::new(
+                    self.seat_gold[s as usize],
+                    self.seat_crew[s as usize],
+                    self.seat_arms[s as usize],
+                    0,
+                );
+                // 同步 `turn_cycle.alive`（`mark_bankrupt` 已修改）→ `SeatState.alive`
+                st.alive = self.turn_cycle.is_alive(s);
+                st
+            })
+            .collect();
+        let human_seats: Vec<u8> = (0..5u8)
+            .filter(|s| self.turn_cycle.is_player_seat(*s) && self.turn_cycle.is_active_seat(*s))
+            .collect();
+        if let Some(winner) = territory_v2::victory_seat_active(&states, &active) {
+            self.match_outcome = Some(MatchOutcome::Victory { seat: winner });
+            return true;
+        }
+        if territory_v2::players_defeated(&states, &human_seats) {
+            self.match_outcome = Some(MatchOutcome::Defeat);
+            return true;
+        }
+        // 全部在局席位都破产 ⇒ 平局（无胜者）。
+        let any_alive = states
+            .iter()
+            .enumerate()
+            .any(|(i, s)| s.alive && active.get(i).copied().unwrap_or(false));
+        if !any_alive && !active.is_empty() && active.iter().any(|a| *a) {
+            self.match_outcome = Some(MatchOutcome::Draw);
+            return true;
+        }
+        false
+    }
     /// 进入主地图（`docs/gamebook.md` §3.3）：初始化 `MapSession` + 贸易/建造会话。
     ///
     /// `start_override` = 入口格：`None` = 该图 `player_start`；`Some(pos)` = 读档位置恢复
@@ -118,7 +262,8 @@ impl GameApp {
         // 玩家位置 = 当前赛道格（S19 环岛赛道）：无赛道时回退 balance `player_start`。
         self.map_pos =
             self.board.as_ref().map(BoardSession::pos).or(Some(GridPos::new(start[0], start[1])));
-        self.gold = init_gold;
+        // v3：`seat_gold[]` 已是唯一金币账本（`init_territory` 铺好）⇒ 这里只同步镜像。
+        self.sync_gold_mirror();
         self.owned = Vec::new();
         self.bank = Bank::new(init_gold);
         self.buildings = Vec::new();
@@ -150,6 +295,10 @@ impl GameApp {
     pub fn spin_board(&mut self) -> Option<Turn> {
         self.pending_dungeon = None; // S28.6：新摇骰 = 旧副本入口失效（落格后按新落格重设）
         self.pending_siege = None; // S33.5：新摇骰 = 旧攻占选择失效（同上）
+        // v3：热座交接未确认 ⇒ 不允许摇骰（§1 热座 + §1.2 隐藏信息）。
+        if self.handoff_pending.is_some() {
+            return None;
+        }
         let b = match balance() {
             Ok(b) => b,
             Err(_e) => {
@@ -158,28 +307,41 @@ impl GameApp {
                 return None;
             }
         };
-        let session = self.board.as_mut()?;
+        // v3：摇骰作用于**当前行动席**的独立会话（`board` 持有当前席会话；人类席不再共用）。
+        let seat = self.turn_cycle.current;
         let sides = b.board.dice_sides.min(b.board.max_steps);
-        let laps_before = session.laps();
-        let turn = session.step(&mut self.rng, sides, b.board.boss_min_laps);
-        let laps_after = session.laps();
+        let (turn, laps_before, laps_after, pos) = {
+            let session = self.board.as_mut()?;
+            let laps_before = session.laps();
+            let turn = session.step(&mut self.rng, sides, b.board.boss_min_laps);
+            let laps_after = session.laps();
+            let pos = session.pos();
+            (turn, laps_before, laps_after, pos)
+        };
         let landing = turn.landing;
-        self.map_pos = Some(session.pos());
-        // 绕圈补给（大富翁「经过起点」语义）
+        self.map_pos = Some(pos);
+        // 绕圈补给（大富翁「经过起点」语义）——走唯一金币账本 `seat_gold[]`。
         let lap_delta = laps_after.saturating_sub(laps_before);
         if lap_delta > 0 {
             let bonus = b.board.lap_bonus_gold.saturating_mul(lap_delta);
-            self.gold = self.gold.saturating_add(bonus).min(b.economy.gold_max);
+            self.add_current_seat_gold(bonus);
+            let cap = b.economy.gold_max;
+            if let Some(g) = self.seat_gold.get_mut(seat as usize) {
+                *g = (*g).min(cap);
+            }
+            self.sync_gold_mirror();
         }
         self.settle_board_landing(landing, b);
         self.apply_board_boss(turn.boss, laps_after, b);
         // S28.7：玩家回合结束 ⇒ 轮转到后续 AI 席自动行动（§6），回到玩家席
         self.run_ai_turns(b);
+        // v3：破产/胜负判定（§1.2）——接线后对局才可能结束（D4）。
+        self.check_match_end(b);
         Some(turn)
     }
 
-    /// S28.7 领地/席位初始化（§1：席位池 = 已选角色（玩家）+ 其余 4 AI；账本全无主；
-    /// AI 席赛道会话 = 起点格；金币 = 初始金）。`enter_main_map_at` / 读档共用。
+    /// S28.7 领地/席位初始化（§1：席位池 = 已选人类席 + 可配 AI 席；账本全无主；
+    /// **每席独立赛道会话**（v3 D2 修复）；金币 = 初始金）。`enter_main_map_at` / 读档共用。
     fn init_territory(&mut self, map_id: &str, bal: &data::Balance) {
         let db = match data::board() {
             Ok(db) => db,
@@ -198,50 +360,56 @@ impl GameApp {
             return;
         };
         self.territory = Some(terr);
-        // 席位池：主玩家 = 已选角色（缺 = 首角色 panda），其余自动 AI（§1 不变量 players+ai=5）
+        // 席位池：人类席 = 已勾选角色（`seat_marks`）；AI 席数可配（`seat_ai_count`）。
+        // 空 `seat_marks` = 旧单选流回退（1 人类 + 4 AI，§1 v2 兼容路径）。
         let player_idx = self.selection.character.map_or(0, Character::index);
-        // S28.4：多选玩家席优先（`seat_marks` 非空 = 触摸行点选标记）；空 = 单选旧流回退。
         let pool = if self.seat_marks.is_empty() {
-            SeatPool::build(&[player_idx.min(4)])
+            SeatPool::build_with_ai(&[player_idx.min(4)], self.seat_ai_count.unwrap_or(4))
         } else {
-            selection::seat_pool(&self.seat_marks)
+            selection::seat_pool_with_ai(&self.seat_marks, self.seat_ai_count.unwrap_or(0))
         };
         let mut cycle = TurnCycle::new(&pool);
-        // 当前席 = 最低序号玩家席（确定性开局，§1 顺序 = index 升序）
-        cycle.current = {
-            let mut cur = u8::try_from(player_idx.min(4)).unwrap_or(0);
-            for i in 0..5u8 {
-                if pool.get(i).is_some_and(|s| s.is_player) {
-                    cur = i;
-                    break;
-                }
-            }
-            cur
-        };
+        // 当前席 = 最低序号**人类席**（确定性开局，§1 顺序 = index 升序）
+        cycle.current = pool
+            .player_seats()
+            .first()
+            .copied()
+            .unwrap_or(u8::try_from(player_idx.min(4)).unwrap_or(0));
         self.turn_cycle = cycle;
+        // v3：金币 = **唯一账本** `seat_gold[]`（每席独立，D3）；`self.gold` 只是当前席镜像。
         self.seat_gold = [bal.economy.initial_gold; 5];
         // S33.4 席位舰队人手/武器初始（`territory.md` §11 U4：船 1 级 ≈ 20 水手 + 5 武器；
         // `balance.manpower.initial_crew/arms` 单一事实源；驻军初始 0）。
         self.seat_crew = [bal.manpower.initial_crew; 5];
         self.seat_arms = [bal.manpower.initial_arms; 5];
-        // AI 席赛道会话：与主玩家同起点（各席独立位置/圈数）
+        // v3：**每席独立赛道会话**（含人类席）——v2 只有 AI 席有会话，人类席共用 `board`
+        // ⇒ 两个人类席走同一条路（实测 D2）。各席同起点、同赛道，独立位置/圈数。
+        //
+        // 存储约定：`board` 持有**当前行动席**的会话；`seat_sessions[i]` 存其余席。
         let Some(bd) = self.board.as_ref() else {
-            self.ai_sessions = core::array::from_fn(|_| None);
+            self.seat_sessions = core::array::from_fn(|_| None);
             return;
         };
-        for i in 0..5 {
+        let track = bd.track().clone();
+        let start_index = bd.index();
+        let cur = self.turn_cycle.current;
+        self.seat_sessions = core::array::from_fn(|i| {
             let seat = u8::try_from(i).unwrap_or(0);
-            let is_player = pool.get(seat).is_some_and(|s| s.is_player);
-            self.ai_sessions[i] = if is_player {
+            if seat == cur || !pool.is_active(seat) {
                 None
             } else {
-                Some(BoardSession::new(bd.track().clone(), bd.index()))
-            };
-        }
+                Some(BoardSession::new(track.clone(), start_index))
+            }
+        });
+        // 当前席会话 = 全席同起点的独立会话（`board` 已由 `enter_main_map_at` 建好，位置一致）。
+        self.board = Some(BoardSession::new(track, start_index));
     }
 
     /// S28.7 AI 连续段（§6）：从当前席位轮转，AI 席自动行动（摇骰 + 前进 + 落格结算），
     /// 直到下一个玩家席（单玩家局 = 4 个 AI 连动后回玩家）。
+    ///
+    /// v3：AI 席用**自己的**赛道会话（`seat_sessions[seat]`），不再与人类席共用；
+    /// 破产出局席被 `TurnCycle` 跳过；轮到下一人类席 ⇒ 置 `handoff_pending`（须显式确认）。
     fn run_ai_turns(&mut self, bal: &data::Balance) {
         let Some(mut terr) = self.territory.take() else {
             return;
@@ -255,7 +423,8 @@ impl GameApp {
             if self.turn_cycle.is_player_seat(seat) {
                 break;
             }
-            let Some(sess) = self.ai_sessions[seat as usize].as_mut() else {
+            // v3：AI 席用**自己的**赛道会话（人类席不再共用 `board`）。
+            let Some(sess) = self.seat_sessions[seat as usize].as_mut() else {
                 self.turn_cycle.advance();
                 continue;
             };
@@ -267,16 +436,26 @@ impl GameApp {
         }
         self.territory = Some(terr);
 
-        // S28.4 热座交接（§1）：轮转到玩家席 + 玩家 ≥2 ⇒ 交接提示（`last_ai_toast` 通道展示）
-        let players = u8::try_from((0..5u8).filter(|i| self.turn_cycle.is_player_seat(*i)).count())
-            .unwrap_or(0);
-        if players >= 2 && self.turn_cycle.is_player_seat(self.turn_cycle.current) {
-            let hint = crate::i18n::sget("scene.main_map.toast.handoff");
-            self.last_ai_toast = if hint.contains("scene.main_map") {
-                Some("热座交接：轮到玩家席（按确认摇骰开始回合）".to_string())
+        // v3 热座交接（§1 + §1.2）：轮到人类席 ⇒ 切到该席会话 + 置 `handoff_pending`，
+        // **必须显式确认**才允许该席操作（防误操作 + 遮蔽他人情报）。
+        // 单人类席（v2 兼容流）不置 handoff_pending，保持 0 行为变化。
+        let seat = self.turn_cycle.current;
+        if self.turn_cycle.is_player_seat(seat) {
+            let active_players = (0..5u8).filter(|s| self.turn_cycle.is_player_seat(*s)).count();
+            self.switch_to_seat(seat);
+            if active_players >= 2 {
+                self.handoff_pending = Some(seat);
+                let hint = crate::i18n::sget("scene.main_map.toast.handoff");
+                self.last_ai_toast = if hint.contains("scene.main_map") {
+                    Some("热座交接：轮到玩家席（按确认摇骰开始回合）".to_string())
+                } else {
+                    Some(hint.to_string())
+                };
             } else {
-                Some(hint.to_string())
-            };
+                self.handoff_pending = None;
+            }
+        } else {
+            self.handoff_pending = None;
         }
     }
 
@@ -418,21 +597,39 @@ impl GameApp {
         match landing {
             Landing::Battle => {
                 self.card_state.hp = self.card_state.hp.saturating_add(b.board.battle_damage);
-                self.gold = self.gold.saturating_sub(b.board.battle_gold_loss);
+                // v3：金币走唯一账本 `seat_gold[]`（D3）。
+                let loss = b.board.battle_gold_loss;
+                let seat = self.turn_cycle.current as usize;
+                if let Some(g) = self.seat_gold.get_mut(seat) {
+                    *g = g.saturating_sub(loss);
+                }
+                self.sync_gold_mirror();
                 self.toast(
                     i18n_fmt("scene.main_map.toast.battle_fmt", &[&b.board.battle_damage]),
                     Some(Sfx::Invalid),
                 );
             }
             Landing::Treasure => {
-                self.gold = self.gold.saturating_add(b.board.treasure_gold).min(b.economy.gold_max);
+                self.add_current_seat_gold(b.board.treasure_gold);
+                let cap = b.economy.gold_max;
+                let seat = self.turn_cycle.current as usize;
+                if let Some(g) = self.seat_gold.get_mut(seat) {
+                    *g = (*g).min(cap);
+                }
+                self.sync_gold_mirror();
                 self.toast(
                     i18n_fmt("scene.main_map.toast.treasure_fmt", &[&b.board.treasure_gold]),
                     Some(Sfx::Press),
                 );
             }
             Landing::City => {
-                self.gold = self.gold.saturating_add(b.board.city_gold).min(b.economy.gold_max);
+                self.add_current_seat_gold(b.board.city_gold);
+                let cap = b.economy.gold_max;
+                let seat = self.turn_cycle.current as usize;
+                if let Some(g) = self.seat_gold.get_mut(seat) {
+                    *g = (*g).min(cap);
+                }
+                self.sync_gold_mirror();
                 self.toast(
                     i18n_fmt("scene.main_map.toast.city_fmt", &[&b.board.city_gold]),
                     Some(Sfx::Press),

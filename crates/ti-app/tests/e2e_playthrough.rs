@@ -313,9 +313,10 @@ fn e2e_touch_economy_loop() {
     // index S22 罗盘环 medallion 0（新游戏）→ 选角
     assert!(hit(&mut app, 1, 0), "index medallion 0 命中应返回 true");
     assert_eq!(app.scene(), Scene::SelectRole, "index medallion 0（新游戏）应进选角");
-    // select_role 卡 0 = Panda → 选图
-    assert!(hit(&mut app, 2, 0), "select_role 卡 0 命中应返回 true");
-    assert_eq!(app.scene(), Scene::SelectMap, "选角卡 0 应进选图");
+    // v3 单选流（seat_marks 空 = 旧单选流回退，min_players 门禁豁免）：
+    // Confirm = 选角色 + 进选图（同 v2 键盘路径；勾选流 = 触屏 hit 走 on_hit → toggle_seat_mark）
+    assert!(app.handle(GameInput::Confirm), "选角 Confirm 应消费（切场景）");
+    assert_eq!(app.scene(), Scene::SelectMap, "选角 Confirm 应进选图");
     // select_map 卡 0 = M01 → 主地图
     assert!(hit(&mut app, 2, 0), "select_map 卡 0 命中应返回 true");
     assert_eq!(app.scene(), Scene::MainMap, "选图卡 0 应进主地图");
@@ -553,12 +554,15 @@ fn e2e_track_node_preview() {
     let mut app = GameApp::new(1080.0, 1920.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
-    // index S22 罗盘环 medallion 0 → 选角卡 0 → 选图卡 0 → 主地图（S29.2 归一命中，同 e2e_touch_economy_loop）
+    // index S22 罗盘环 medallion 0 → 选角（v3 两阶段流：勾选 + 开始对局分离）
     let hit = |app: &mut GameApp, key: u32, index: i32| {
         app.poll_hit(Some(HitData { key, index, swipe: 0 }))
     };
     assert!(hit(&mut app, 1, 0), "index medallion 0 命中应返回 true");
-    assert!(hit(&mut app, 2, 0), "选角卡 0 命中应返回 true");
+    // v3 单选流（seat_marks 空 = 旧单选流回退，min_players 门禁豁免）：
+    // Confirm = 选角色 + 进选图（键盘路径；勾选流 = 触屏 hit 走 on_hit → toggle_seat_mark）
+    assert!(app.handle(GameInput::Confirm), "选角 Confirm 应消费（切场景）");
+    assert_eq!(app.scene(), Scene::SelectMap, "选角 Confirm 应进选图");
     assert!(hit(&mut app, 2, 0), "选图卡 0 命中应返回 true");
     assert_eq!(app.scene(), Scene::MainMap, "应进主地图");
 

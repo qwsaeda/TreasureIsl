@@ -277,6 +277,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             map_count: 3,
             characters: Vec::new(),
             maps: Vec::new(),
+            min_players: 2,
         },
         save: ti_core::data::SaveCfg { slot_count: 1, magic: 1, v2_size: 1 },
         ui: ti_core::data::UiCfg {

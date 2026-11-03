@@ -158,6 +158,15 @@ pub enum GameInput {
     MoveDown,
     /// 确认（事件码 13，真实确定键 `spec/menu.md §a`）。
     Confirm,
+    /// v3：勾选/取消勾选席位（选角界面；`territory.md` §1 人类席 2..5）。
+    ///
+    /// 与 [`Self::Confirm`] 分开：勾选是**多选**动作，Confirm 是「开始对局」（单次）。
+    /// 触屏 = 点角色行；键盘 = `M` 键（桌面/浏览器等价路径）。
+    MarkSeat,
+    /// v3：开始对局（选角界面「开始对局」按钮；键盘 = `Confirm`）。
+    ///
+    /// v2 的 Confirm = 选中角色即进选图；v3 改为「Confirm = 确认当前勾选 ⇒ 进选图」。
+    StartMatch,
     /// 返回（事件码 27，回上级场景）。
     Back,
     /// 上一页/上一个（事件码 38）。
@@ -288,6 +297,10 @@ pub struct GameApp {
     /// S28.4 玩家席位标记（`territory.md` §1：触摸行点选 toggle；空 = 单选旧流回退
     /// 主角色单席；非空 = 多选玩家席 + 其余自动 AI，`rules::selection::seat_pool`）。
     pub seat_marks: Vec<Character>,
+    /// v3：AI 席数配置（`territory.md` §1：AI 席数可配 `0..=(5 - 人类席数)`）。
+    ///
+    /// `None` = 未显式配置（按人类席数补满到 5 席 = v2 旧流口径）。
+    pub seat_ai_count: Option<u32>,
     /// S28.6 待确认的副本入口（`Some(格序号)` = 落格提示在位，主地图 `Confirm` 进副本战；
     /// 再次摇骰 / 其他行动 = 自动清除（新落格覆盖，territory.md §4 玩家选择权））。
     pub pending_dungeon: Option<u32>,
@@ -370,7 +383,8 @@ pub struct GameApp {
     pub fx: crate::particles::ParticleFx,
     /// S28.7 领地账本（`rules::territory::TerritoryState`，`MainMap` 场景时有效；开档/切图时构建）。
     pub territory: Option<TerritoryState>,
-    /// S28.7 各席位金币（`[u32; 5]`，§1 席位独立经济；主玩家金 = 本席位值，`gold` 字段保留主席镜像）。
+    /// S28.7 各席位金币（`[u32; 5]`，§1 席位独立经济；**v3 = 唯一金币账本**，
+    /// `gold` 字段只作「当前行动席」的镜像，由 `sync_gold_mirror` 保持同步）。
     pub seat_gold: [u32; 5],
     /// S33.4 v5 各席位舰队人手（`[u32; 5]`，§4.1 守恒；驻军在 `territory.garrison_map`）。
     pub seat_crew: [u32; 5],
@@ -378,8 +392,32 @@ pub struct GameApp {
     pub seat_arms: [u32; 5],
     /// S28.7 席位轮转（§1：5 席顺序 = 角色 index 升序；`current` = 当前轮到谁）。
     pub turn_cycle: TurnCycle,
-    /// S28.7 AI 席赛道会话（`[5]`；主玩家席走 `board` 字段，AI 席各持独立位置/圈数）。
-    pub ai_sessions: [Option<BoardSession>; 5],
+    /// v3：各席位赛道会话（`[5]`，**每席独立位置/圈数/上次骰点**）。
+    ///
+    /// v2 只有 AI 席有独立会话，人类席共用 `board` 一个 ⇒ 两个人类席走同一条路
+    /// （实测 D2）。v3 起 `board` 字段只保留「当前行动席」的视图，
+    /// 真实状态一律在 `seat_sessions[seat]`。
+    pub seat_sessions: [Option<BoardSession>; 5],
+    /// v3：热座交接待确认（`Some(seat)` = 轮到该人类席，须显式「开始回合」确认后才可操作）。
+    ///
+    /// §1 热座交接 + §1.2 隐藏信息：交接确认前不得泄露他人情报。
+    pub handoff_pending: Option<u8>,
+    /// v3：对局终局状态（`None` = 未结束；`Some` = 已分出胜负，见 `MatchOutcome`）。
+    pub match_outcome: Option<MatchOutcome>,
+}
+
+/// v3：对局终局（§1.2 / §4.4 破产与胜负判定）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MatchOutcome {
+    /// 某席位获胜（最后一个存活席）。
+    Victory {
+        /// 胜者席下标。
+        seat: u8,
+    },
+    /// 玩家失败（全部人类席破产出局）。
+    Defeat,
+    /// 平局（多人同回合破产，无存活席）。
+    Draw,
 }
 /// S18.5：FX 粒子 LCG 固定 seed（确定性视觉验收；不进业务 RNG `rules::rng::GameRng`）。
 pub const FX_SEED: u64 = 0xC0_FF_EE;
@@ -538,12 +576,15 @@ impl GameApp {
             seat_crew: [0; 5],
             seat_arms: [0; 5],
             turn_cycle: TurnCycle::default(),
-            ai_sessions: core::array::from_fn(|_| None),
+            seat_sessions: core::array::from_fn(|_| None),
+            handoff_pending: None,
+            match_outcome: None,
             last_ai_toast: None,
             pending_dungeon: None,
             pending_siege: None,
             siege_view: None,
             seat_marks: Vec::new(),
+            seat_ai_count: None,
             #[cfg(feature = "gpu-render")]
             gpu_renderer: {
                 // S18.8a：macroquad 发货壳退役后，仅 android 壳仍需真实 GPU API

@@ -189,10 +189,40 @@ pub fn victory_seat(seats: &[SeatState]) -> Option<SeatIdx> {
     }
 }
 
+/// v3：胜利判定（§1.2 / §4.4）——**只在「在局席位」范围内**判最后一个存活者。
+///
+/// v2 的 [`victory_seat`] 扫全部 5 席；v3 席位池可只放 2..5 席，其余槽位**不在局**
+/// （`alive = true` 但从未参与）⇒ 必须按在局掩码过滤，否则「不在局的席位」会
+/// 永远存活 ⇒ 永远判不出胜者（对局打不完，v2 缺陷 D4 的另一半）。
+///
+/// `active` = 在局席位掩码（长度 = `seats` 长度；越界视为不在局）。
+#[must_use]
+pub fn victory_seat_active(seats: &[SeatState], active: &[bool]) -> Option<SeatIdx> {
+    let alive: Vec<SeatIdx> = seats
+        .iter()
+        .enumerate()
+        .filter(|(i, s)| s.alive && active.get(*i).copied().unwrap_or(false))
+        .map(|(i, _)| u8::try_from(i).unwrap_or(u8::MAX))
+        .collect();
+    match alive.as_slice() {
+        [single] => Some(*single),
+        _ => None,
+    }
+}
+
 /// 失败判定（§4.4）：玩家席破产 ⇒ 直接结束（败）。
 #[must_use]
 pub fn player_defeated(seats: &[SeatState], player_idx: SeatIdx) -> bool {
     seats.get(player_idx as usize).is_some_and(|s| !s.alive)
+}
+
+/// v3：失败判定（§1.2）——**全部人类席**都破产 ⇒ 玩家失败。
+///
+/// `player_seats` = 人类席下标（热座可能有多个人类席）；空列表 = 无人类席 ⇒ 不判失败。
+#[must_use]
+pub fn players_defeated(seats: &[SeatState], player_seats: &[SeatIdx]) -> bool {
+    !player_seats.is_empty()
+        && player_seats.iter().all(|&s| seats.get(s as usize).is_some_and(|seat| !seat.alive))
 }
 
 /// 驻军守恒检验（§4.1：`舰队人手 + 该席位 Σ驻军（按领地计） = 该席位初始总人手`）。

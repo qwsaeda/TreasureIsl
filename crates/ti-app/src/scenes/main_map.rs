@@ -343,23 +343,32 @@ fn render_track(
         }
     }
 
-    // 4) 玩家船（当前格；缺资产 = 代码 `flag` 图标回退）
-    //    S21.12：船贴图按 `boat_level` 切 4 张（1 级 = 通用船顶替）。
-    let idx = host.board_index().min(spaces.len() - 1);
-    let (cx, cy) = centers[idx];
+    // 4) 多席棋子（v3：遍历 `seat_positions()`；当前席 = 金色船 + 名牌，
+    // 其余席 = 暗灰小旗；缺资产 = 代码 `flag` 图标回退）。
+    let turn_seat = host.turn_seat();
+    let cur_idx = host.board_index().min(spaces.len() - 1);
+    let cur_asset = chrome::boat_asset(host.boat_level());
     let ship_edge = chrome::ship_edge_px(layout, gw);
-    let (dx, dy, dw, dh) =
-        chrome::asset_dest_rect(cx, cy, ship_edge, chrome::SHIP_PLAYER_VISIBLE_PX);
-    let ship_asset = chrome::boat_asset(host.boat_level());
-    if chrome::asset_present(ship_asset) {
-        host.blit_image(ship_asset, dx, dy, dw, dh);
-    } else if chrome::asset_present(chrome::SHIP_PLAYER_ASSET) {
-        host.blit_image(chrome::SHIP_PLAYER_ASSET, dx, dy, dw, dh);
-    } else {
-        chrome::entity_icon(host, "flag", dx, dy, dw, chrome::COLOR_GOLD_WARM);
+    for (seat, idx) in host.seat_positions() {
+        let idx = idx.min(spaces.len() - 1);
+        let (cx, cy) = centers[idx];
+        let (dx, dy, dw, dh) =
+            chrome::asset_dest_rect(cx, cy, ship_edge, chrome::SHIP_PLAYER_VISIBLE_PX);
+        if seat == turn_seat {
+            if chrome::asset_present(cur_asset) {
+                host.blit_image(cur_asset, dx, dy, dw, dh);
+            } else if chrome::asset_present(chrome::SHIP_PLAYER_ASSET) {
+                host.blit_image(chrome::SHIP_PLAYER_ASSET, dx, dy, dw, dh);
+            } else {
+                chrome::entity_icon(host, "flag", dx, dy, dw, chrome::COLOR_GOLD_WARM);
+            }
+            let lbl = i18n::sget("scene.main_map.player_label");
+            entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
+        } else {
+            let small = dw.min(dh) * 35 / 100;
+            chrome::entity_icon(host, "flag", cx - small / 2, cy - small / 2, small, 0x7BEF);
+        }
     }
-    let lbl = i18n::sget("scene.main_map.player_label");
-    entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
 
     // 4.5) S21.7：节点预览选中（`gold_warm` 高亮环 + 信息签）+ 落点脉冲（toast 窗口内
     // 当前格画环，「1 拍」= `board_toast` 120 帧寿命）。
@@ -379,9 +388,9 @@ fn render_track(
             );
         }
     }
-    if host.board_toast().is_some() && idx < spaces.len() {
-        let (nx, ny) = centers[idx];
-        let def = chrome::node_asset(spaces[idx].kind);
+    if host.board_toast().is_some() && cur_idx < spaces.len() {
+        let (nx, ny) = centers[cur_idx];
+        let def = chrome::node_asset(spaces[cur_idx].kind);
         chrome::draw_node_ring(host, nx, ny, edge, def.visible_px, gold_warm);
     }
 
@@ -555,7 +564,13 @@ impl Scene for MainMapScene {
             // S28.6：落无主领地格后的待决副本入口（`pending_dungeon` 在位时 Confirm = 进守军战；
             // 缺位 no-op，主地图 Confirm 无其它语义）。S33.5：落他人领地格后的待决攻占
             // （`pending_siege` 在位时 Confirm = 进攻占战报）——优先级 = 攻占 > 副本（不同格）。
+            // v3：**热座交接确认优先**（§1 + §1.2）：轮到新人类席后须显式确认才能操作，
+            // 否则下一位玩家会看到上一位的操作残留（隐藏信息）。
             GameInput::Confirm => {
+                // v3：热座交接确认优先（§1 + §1.2）：轮到新人类席后须显式确认才能操作。
+                if host.confirm_handoff() {
+                    return false;
+                }
                 if host.confirm_siege() {
                     true
                 } else {
@@ -803,29 +818,50 @@ fn render_v5_ring(
         draw_ring_card(host, &spaces[index], index, count, layout, &theme, brass);
     }
 
-    // 3) 玩家船（落在 board_index 卡；缺资产 = 代码 flag 回退；船边长随卡宽缩放，非硬编码）
-    // S27.5 整改：83% → 55% 卡宽（原 79px 盖住 96px 整卡 ⇒ 玩家渲染「盖卡」问题；改作船标不遮岛面）。
-    // S27.5 二轮：船**不随卡旋转**（船是「谁在这格」的标记，正立更易认）+ 卡内侧挂**岛名牌**
-    // （未旋转水平文字；卡本身径向旋转 90/180° 时文字仍可读）。
-    let idx = host.board_index().min(count - 1);
-    let (cx, cy) = chrome::ring_card_center(idx, count, layout);
+    // 3) 多席棋子（v3：遍历 `seat_positions()` 画所有在局席；当前席 = 金色船，
+    // 其余席 = 暗灰旗；缺资产 = 代码 flag 回退；船边长随卡宽缩放，非硬编码）。
     let ship_edge: i32 = chrome::ring_geom(layout).w * 55 / 100;
-    let ship_asset = chrome::boat_asset(host.boat_level());
-    if chrome::asset_present(ship_asset) {
-        host.blit_image(ship_asset, cx - ship_edge / 2, cy - ship_edge / 2, ship_edge, ship_edge);
-    } else {
-        chrome::entity_icon(
-            host,
-            "flag",
-            cx - ship_edge / 2,
-            cy - ship_edge / 2,
-            ship_edge,
-            gold_warm,
-        );
+    let turn_seat = host.turn_seat();
+    let cur_asset = chrome::boat_asset(host.boat_level());
+    for (seat, idx) in host.seat_positions() {
+        let idx = idx.min(count - 1);
+        let (cx, cy) = chrome::ring_card_center(idx, count, layout);
+        if seat == turn_seat {
+            // 当前行动席：金色船（同旧路径）
+            if chrome::asset_present(cur_asset) {
+                host.blit_image(
+                    cur_asset,
+                    cx - ship_edge / 2,
+                    cy - ship_edge / 2,
+                    ship_edge,
+                    ship_edge,
+                );
+            } else {
+                chrome::entity_icon(
+                    host,
+                    "flag",
+                    cx - ship_edge / 2,
+                    cy - ship_edge / 2,
+                    ship_edge,
+                    gold_warm,
+                );
+            }
+            let lbl = i18n::sget("scene.main_map.player_label");
+            entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
+            draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
+        } else {
+            // 非当前席：暗灰小旗（区分，不遮岛面）
+            let small_edge = ship_edge * 35 / 100;
+            chrome::entity_icon(
+                host,
+                "flag",
+                cx - small_edge / 2,
+                cy - small_edge / 2,
+                small_edge,
+                0x7BEF, // 暗灰 RGB565
+            );
+        }
     }
-    let lbl = i18n::sget("scene.main_map.player_label");
-    entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
-    draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
 
     // 4) 选中高亮（track_node_sel = 预览选中卡；金环 3px 外扩）
     if let Some(sel) = host.track_node_sel() {
@@ -1055,20 +1091,29 @@ fn render_v6_proto(
     // 4) 弹出骰子（中央大区域掷骰动画，先画 → 玩家棋子顶层不被遮）
     draw_v6_spin_popup(host, &theme, gold_warm, brass);
 
-    // 5) 玩家棋子「站格上」（顶层醒目；圆铜牌节点上，非浮柱）
-    let idx = host.board_index().min(count - 1);
-    let (cx, cy) = v6_pillar_center(idx, count);
-    let ship_edge = 44;
-    let ship_y = cy - 22;
-    let ship_asset = chrome::boat_asset(host.boat_level());
-    if chrome::asset_present(ship_asset) {
-        host.blit_image(ship_asset, cx - ship_edge / 2, ship_y, ship_edge, ship_edge);
-    } else {
-        chrome::entity_icon(host, "flag", cx - ship_edge / 2, ship_y, ship_edge, gold_warm);
+    // 5) 多席棋子（v3：遍历 `seat_positions()` 画所有在局席；当前席 = 金色船 + 岛名牌，
+    // 其余席 = 暗灰小旗；圆铜牌节点上，非浮柱）。
+    let turn_seat = host.turn_seat();
+    let cur_asset = chrome::boat_asset(host.boat_level());
+    for (seat, idx) in host.seat_positions() {
+        let idx = idx.min(count - 1);
+        let (cx, cy) = v6_pillar_center(idx, count);
+        let ship_y = cy - 22;
+        if seat == turn_seat {
+            let ship_edge = 44i32;
+            if chrome::asset_present(cur_asset) {
+                host.blit_image(cur_asset, cx - ship_edge / 2, ship_y, ship_edge, ship_edge);
+            } else {
+                chrome::entity_icon(host, "flag", cx - ship_edge / 2, ship_y, ship_edge, gold_warm);
+            }
+            let lbl = i18n::sget("scene.main_map.player_label");
+            entity_texts.push((cx + ship_edge / 2, ship_y - 4, lbl));
+            draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
+        } else {
+            let small_edge = 44i32 * 35 / 100;
+            chrome::entity_icon(host, "flag", cx - small_edge / 2, ship_y, small_edge, 0x7BEF);
+        }
     }
-    let lbl = i18n::sget("scene.main_map.player_label");
-    entity_texts.push((cx + ship_edge / 2, ship_y - 4, lbl));
-    draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
 
     // 5) 底部三键弹出式（v6 用户裁决）：不常驻——覆盖常驻三键区域为羊皮底，只留
     //    「落占领格才弹出建造/贸易/出售」说明铜牌；`build_panel_open` 时弹出建造面板
@@ -1194,14 +1239,35 @@ fn render_v6_elem(
         host.blit_image(path, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
     }
 
-    // 5) 玩家帆船（站落格格 board_index；随摇骰移动，与玩家名牌同位，非固定装饰）
-    // S34.6 用户视觉验收（2026-11-03）：玩家船未随落格格移动（固定灯塔旁像装饰，用户
-    // 「玩家没有渲染出来」）→ 改站落格格（tiles[board_index]），大小适配格径（不盖相邻格），
-    // 位置与名牌一致。缺 tiles 回退 v6.ship 布局点。
-    let idx = host.board_index().min(count - 1);
-    let (ship_cx, ship_cy) = v6.tiles.get(idx).map_or((v6.ship.cx, v6.ship.cy), |t| (t.cx, t.cy));
-    let sw = (v6.tile_r * 2.0).max(1.0) as i32;
-    host.blit_image(chrome::V6_SHIP, ship_cx as i32 - sw / 2, ship_cy as i32 - sw / 2, sw, sw);
+    // 5) 多席棋子（v3：遍历 `seat_positions()`；当前席 = `V6_SHIP` 贴格，
+    // 其余席 = 暗灰小旗；S34.6 玩家船站落格格 = 格径适配，不盖相邻格）。
+    let turn_seat = host.turn_seat();
+    let cur_idx = host.board_index().min(count - 1);
+    let sw_full = (v6.tile_r * 2.0).max(1.0) as i32;
+    for (seat, idx) in host.seat_positions() {
+        let idx = idx.min(count - 1);
+        let (pcx, pcy) = v6.tiles.get(idx).map_or((v6.ship.cx, v6.ship.cy), |t| (t.cx, t.cy));
+        let (ix, iy) = (pcx as i32, pcy as i32);
+        if seat == turn_seat {
+            host.blit_image(chrome::V6_SHIP, ix - sw_full / 2, iy - sw_full / 2, sw_full, sw_full);
+        } else {
+            let sw_small = sw_full * 35 / 100;
+            chrome::entity_icon(
+                host,
+                "flag",
+                ix - sw_small / 2,
+                iy - sw_small / 2,
+                sw_small,
+                0x7BEF,
+            );
+        }
+    }
+    // 当前席名牌（与 S34.6 一致，画在落格格旁）
+    {
+        let (pcx, pcy) = v6.tiles.get(cur_idx).map_or((v6.ship.cx, v6.ship.cy), |t| (t.cx, t.cy));
+        let lbl = i18n::sget("scene.main_map.player_label");
+        entity_texts.push((pcx as i32 + sw_full / 2, pcy as i32 - 8, lbl));
+    }
 
     // 6) 舵轮 CTA + 罗盘（底部）
     let hw = v6.helm.w.max(1.0) as i32;
@@ -1237,8 +1303,8 @@ fn render_v6_elem(
     let bob_y = ((t * 0.7).sin() * 3.0) as i32;
     host.blit_image(chrome::V6_CREATURES, 340 + bob_x, 1350 + bob_y, 380, 250);
 
-    // 8) 玩家位置名牌（当前格；idx 已在上方玩家船段取得）
-    let (px, py) = v6.tiles.get(idx).map_or((540, 890), |t| (t.cx as i32, t.cy as i32));
+    // 8) 玩家位置名牌（当前格；`cur_idx` = 当前席 index）
+    let (px, py) = v6.tiles.get(cur_idx).map_or((540, 890), |t| (t.cx as i32, t.cy as i32));
     let lbl = i18n::sget("scene.main_map.player_label");
     entity_texts.push((px + 40, py - 6, lbl));
 }
