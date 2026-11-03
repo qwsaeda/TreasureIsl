@@ -646,7 +646,39 @@ crates/ti-render/src/canvas.rs        — Canvas trait（后端无关原语）
 
 ---
 
-## 八、项目对照
+## 八、主题风格 / 图集换皮（书 §12）
+
+**核心思想：同一套 UI 代码，换一张贴图 = 换主题风格，零代码改动。**
+
+书 §12 讲"把地下城风格变成森林风格" = 只换 tileset 贴图，不动渲染代码。
+本项目的等价物是 **`assets/ui_manifest.json` 图集单源**：
+
+```
+  场景代码（main_map / vs / index）
+    ↓ 只引用 asset name（如 "isle_territory"）
+  图集 manifest（ui_manifest.json）
+    ↓ 查 name → 文件路径 → PNG
+  GPU 采样
+```
+
+**换主题 = 换 manifest 里的文件**，不改任何 `blit_image` 调用。
+
+```
+  本项目的主题令牌（docs/process/10_ui_redesign.md §设计令牌 v2）：
+    · 色板：暖棕 panel_warm / 黄铜 trim_gold / 深蓝海 bg_navy
+    · 岛屿剪影：terrain → 3 枚暖沙岛屿 PNG（S26.2 图片化）
+    · 图标：14 枚白蒙版 + gold tint（S21.14 落地）
+
+  换"海盗风" → "森林风"：
+    只改 terrain 3 枚 PNG + 色板 hex 值
+    零渲染代码改动
+```
+
+**本项目图集单源事实**：`ui_manifest.json`（gate 第 9 项 `doccheck` 校验 disk↔registry 双向同步，见 `docs/process/18_asset_content_pipeline.md`）。
+
+---
+
+## 九、项目对照
 
 | 概念 | 文件 | 行号 |
 |---|---|---|
@@ -660,7 +692,7 @@ crates/ti-render/src/canvas.rs        — Canvas trait（后端无关原语）
 
 ---
 
-## 九、实践练习
+## 十、实践练习
 
 **练习 1：帧缓冲大小**
 
@@ -684,6 +716,11 @@ crates/ti-render/src/canvas.rs        — Canvas trait（后端无关原语）
 画布坐标 (100, 200) → Bevy 世界坐标是多少？
 （提示：world_x = 100 − 540 = −440，world_y = 960 − 200 = 760）
 
+**练习 5：主题换皮**
+
+打开 `assets/ui_manifest.json`，找 3 个岛屿剪影条目。
+说明：如果要把 3 枚 PNG 换成森林风格，需要改哪 3 处？（提示：只改 PNG，不改 manifest 结构、不改渲染代码。）
+
 ## 常见坑
 
 | 坑 | 原因 | 避免 |
@@ -694,9 +731,10 @@ crates/ti-render/src/canvas.rs        — Canvas trait（后端无关原语）
 | Bevy 坐标 y 轴方向反 | Bevy y 向上，1080 y 向下 | `world_y = 960 − canvas_y`（减不是加） |
 | 每帧全量重绘 | 没有脏行带 | 只上传 dirty 行（CPU 后端）/ wgpu 自动优化（GPU 路径） |
 | 文字模糊 | 没用预光栅化字形 | TTF 三档 96/44/28px，回退位图 advance |
+| 直接改 PNG 文件不改 manifest | 哈希漂移，gate 校验失败 | 换图走 `scripts/ui_assets.py`，自动更新 manifest + 哈希 |
 
 ## 学习记录
 
-- 状态：未开始
-- 完成日期：
-- 心得/疑问：
+- 状态：已完成
+- 完成日期：2026-11-03
+- 心得/疑问：图集单源 = 换皮零代码；Z-order 无枚举靠调用序

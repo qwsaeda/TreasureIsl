@@ -241,7 +241,54 @@
 
 ---
 
-## 六、项目对照
+## 六、意图消息 + 系统切换（书 §7）
+
+### 意图消息（message channel）
+
+书 §7.3 讲"发送意图消息"：玩家按"攻击"→ 发 `Intent{ Attack }` → 结算系统消费。
+Bevy 0.20 用 **`add_message` + `MessageReader`/`MessageWriter`**（`Message` 取代了旧版 `Event`）实现。
+
+本项目实码（`ti-engine/src/pick.rs`，S29.2 起）：
+
+```rust
+// 注册
+.add_message::<PickEvent>()          // 声明消息通道
+
+// 写入（观察者）
+fn on_pointer_click(mut events: MessageWriter<PickEvent>, ...) {
+    events.write(PickEvent { key, index, swipe: 0 });
+}
+
+// 读取（ti-app 路由）
+fn route_hit(mut events: MessageReader<PickEvent>, ...) {
+    for ev in events.read() { /* 按 key 分发到场景 */ }
+}
+```
+
+**关键设计**：拾取系统不直接调场景逻辑，只发 `PickEvent` 消息；场景层读消息做路由。
+= 渲染层 → 逻辑层的**单向接缝**，逻辑层可 headless 测试（无 GPU 也能跑 `route_hit`）。
+
+详见 `docs/process/20_bevy_picking.md`。
+
+### 系统切换（按场景启停）
+
+书 §7.2 讲"回合制游戏中移动 Entity" = 不同回合启用不同系统。
+本项目的等价物 = **按场景类型注册不同 Bevy 系统**：
+
+```
+进 VS 场景 → 启用 vs_combat_system（列阵动画 + 结果横幅）
+进主地图   → 启用 board_system（摇骰落格）
+进首页     → 仅 index_system（罗盘环 + 舵轮）
+
+实现：ti-app `scenes/mod.rs` 场景路由
+     每个场景有独立的 system 集合，进场时注册，离场时移除
+```
+
+详见 `docs/process/19_bevy_ui.md` §9.8。
+
+---
+
+## 七、项目对照
 
 | 概念 | 位置 | 说明 |
 |---|---|---|
@@ -262,7 +309,7 @@
 
 ---
 
-## 七、实践练习
+## 八、实践练习
 
 **练习 1：识别域和规则**
 
@@ -294,9 +341,10 @@
 | 渲染层写业务 | 渲染变慢/耦合 | 渲染层（ti-engine）只读 domain，不写业务 |
 | 组件/域之间直接引用 | 紧耦合 | 通过编号或事件通信 |
 | 系统/规则之间隐式依赖 | 执行顺序不确定 | 显式声明调用顺序 |
+| 直接用 `EventWriter`（旧版 API） | Bevy 0.20 已删，编译报错 | 用 `MessageWriter`/`MessageReader` + `add_message` |
 
 ## 学习记录
 
-- 状态：未开始
-- 完成日期：
-- 心得/疑问：
+- 状态：已完成
+- 完成日期：2026-11-03
+- 心得/疑问：意图消息 = 渲染→逻辑单向接缝；按场景启停系统 = 系统切换

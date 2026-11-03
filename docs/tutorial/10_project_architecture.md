@@ -158,7 +158,7 @@ EconomyHost    — 收银员：金/价格/持有/银行/建筑
 SessionHost    — 服务员领班：会话/战斗/消息/存读档
 ```
 
-### 四端入口
+### 四端入口 + 打包发布（书 §16.1）
 
 > **S18.8a：发货入口 = Bevy 壳**（`crates/ti-engine`，独立 workspace）。
 > ti-app 的 macroquad native/wasm 壳已删除；下表同步为现行形态。
@@ -169,6 +169,23 @@ ti-engine/src/bin/treasure_bevy.rs — 实体店（桌面 treasure-bevy-native�
 bin/treasure_android.rs            — 移动车（Android，S18.8d 切 Bevy）
 bin/treasure_headless.rs           — 中央厨房（测试/回归）
 ```
+
+**打包发布 3 个脚本（书 §16.1 的等价物）**：
+
+| 脚本 | 平台 | 产物 | 关键步骤 |
+|---|---|---|---|
+| `scripts/build_wasm.ps1` | 浏览器 | `web/*.wasm` | cargo build --target wasm32 + wasm-bindgen + 静态断言 200 |
+| `scripts/build_apk.sh` | Android | `TreasureIsl-<ver>-aarch64.apk` | cargo-apk + [4/5] 体积审计 `apk_audit.py --refset` |
+| `scripts/publish_web.ps1` | 线上 | gh-pages | gate 全绿前置 → build_wasm → 发布历史 sha256 → worktree 推 gh-pages → 线上复跑 |
+
+**版本规范**（`docs/process/25_versioning.md`）：
+- `Cargo.toml` `version` 字段 = 单一事实源（x.y.z 语义化）
+- 产物命名带版本：`TreasureIsl-<x.y.z>-<arch>.apk` / `treasure_bevy_wasm-<x.y.z>.wasm`
+- 完成清单 5 项：功能 / 回归 / 测试 / 视觉签收 / 版本 bump
+
+> **Pages 不可写 = 实测定态降级**：`publish_web.ps1` 失败时登记 `docs/release.md` 已知限制，不静默绕过。
+
+---
 
 ## 实践练习
 
@@ -201,9 +218,10 @@ bin/treasure_headless.rs           — 中央厨房（测试/回归）
 | 以为跨层是禁令 | `ti-app` 确实直接依赖 `ti-formats` | 分层是设计意图，不是 Cargo 硬约束 |
 | 组合根膨胀 | 业务逻辑写在 GameApp | 业务逻辑放场景/rules |
 | 场景持有 GameApp | 违反依赖方向 | 只持有 `&mut dyn SceneHost` |
+| `publish_web.ps1` 成功后不 bump 版本 | 产物版本与源码脱节 | 完成清单 5 项含版本 bump（`docs/process/25_versioning.md`） |
 
 ## 学习记录
 
-- 状态：未开始
-- 完成日期：
-- 心得/疑问：
+- 状态：已完成
+- 完成日期：2026-11-03
+- 心得/疑问：打包 3 脚本 = wasm/android/线上；版本单源在 Cargo.toml

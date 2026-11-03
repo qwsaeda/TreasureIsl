@@ -104,6 +104,32 @@
 渲染层：读取新状态 → 绘制
 ```
 
+### 数据驱动表（书 §15.1）
+
+书 §15.1 讲"数据驱动的地下城"：战斗数值 / 怪物表 / 掉落表全放数据文件，代码只读表。
+本项目的等价物 = **`assets/data/*.json` 表驱动**：
+
+```
+战斗数值：  docs/business/combat.md（兵力公式定案）
+            → assets/data/balance.json §combat（数值落地）
+            → crates/ti-core/src/rules/battle.rs（公式实现，只读表）
+
+怪物/岛：   docs/business/territory.md（10 类岛 + 副本规则）
+            → assets/data/board.json（赛道 31 格 + 岛类分布）
+            → crates/ti-core/src/rules/board.rs（落格结算，只读表）
+
+道具：      docs/ui-redesign-v3/11_vs_spec.md（4 道具规格）
+            → assets/ui_batches/vs_v1.json（item_keg/medkit/rum/smoke）
+            → 渲染层按表驱动演出
+```
+
+**规则：数值定案在 `docs/business/` → 落 JSON 表 → 代码只读表。**
+改数值 = 改 `balance.json`（先改文档），不改 `rules/battle.rs` 公式。
+
+详见 `docs/process/18_asset_content_pipeline.md` §数据分离原则。
+
+---
+
 ## 项目对照
 
 ### 分层架构
@@ -196,9 +222,10 @@ crates/ti-app/src/scenes/mod.rs — route_input
 | 渲染层修改业务状态 | 违反只读原则 | 渲染层只读 |
 | 输入处理在渲染层 | 业务逻辑在渲染层 | 输入事件注入业务层 |
 | 无法单元测试 | 业务依赖渲染 | 分离后可测试 |
+| 直接改 `balance.json` 不改文档 | 文档↔数据漂移 | 先改 `docs/business/`，再改 JSON，gate 第 9 项拦截 |
 
 ## 学习记录
 
-- 状态：未开始
-- 完成日期：
-- 心得/疑问：
+- 状态：已完成
+- 完成日期：2026-11-03
+- 心得/疑问：数据驱动表 = 改数值不改代码；先文档再 JSON
