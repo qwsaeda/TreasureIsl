@@ -24,6 +24,10 @@ use crate::i18n;
 use crate::scenes::SceneHost;
 use crate::scenes::chrome;
 use crate::scenes::chrome::{COLOR_BRASS, COLOR_DANGER, COLOR_PLAYER, COLOR_TEXT_ON_PARCH};
+use ti_core::data::map_pack::{FsPackReader, PackReader, VsTheme, check_pack_manifest};
+
+/// 格类战斗类型环境变量（S34.5：`TI_VS_GRID_CLASS=attack|raid|boss|encounter`）。
+pub const GRID_CLASS_ENV: &str = "TI_VS_GRID_CLASS";
 
 /// 环境变量名（阶段帧开关：`clash`/`duel`/`result_win`/`result_lose`）。
 pub const ANIM_ENV: &str = "TI_VS_ANIM_PROTO";
@@ -51,6 +55,55 @@ pub fn selected_phase() -> Option<&'static str> {
         "result_lose" => Some("result_lose"),
         _ => None,
     }
+}
+
+/// 当前格类战斗类型（S34.5 按格类分层；`TI_VS_GRID_CLASS` 环境变量，默认 `encounter`）。
+#[must_use]
+pub fn selected_grid_class() -> &'static str {
+    match std::env::var(GRID_CLASS_ENV).unwrap_or_default().trim().to_lowercase().as_str() {
+        "attack" => "attack",
+        "raid" => "raid",
+        "boss" => "boss",
+        _ => "encounter",
+    }
+}
+
+/// 当前图 `vs_theme`（S34.5 按地图换主题；`TI_MAP` → 对应 manifest；无 = `None` 回退默认池）。
+#[must_use]
+fn vs_theme() -> Option<VsTheme> {
+    let map_id = std::env::var("TI_MAP")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "m01".to_owned());
+    let reader = FsPackReader::new("assets/maps");
+    let raw = reader.read_file(&map_id, "manifest.json")?;
+    check_pack_manifest(&raw, &map_id).ok()?.vs_theme().cloned()
+}
+
+/// 格类 → 背景资产路径（`vs_theme` 优先，缺 = 默认池资产；`CS-1` 资产路径单一读点 = chrome 常量）。
+fn vs_bg_asset(class: &str, th: Option<&VsTheme>) -> String {
+    let default = match class {
+        "attack" => chrome::V2_BG_SIEGE,
+        "raid" => chrome::V2_BG_DUNGEON,
+        "boss" => chrome::V2_BG_BOSS,
+        _ => chrome::V2_VS_BG,
+    };
+    let Some(th) = th else {
+        return default.to_owned();
+    };
+    let id = match class {
+        "attack" => &th.siege,
+        "raid" => &th.dungeon,
+        "boss" => &th.boss,
+        _ => &th.encounter,
+    };
+    // vs_theme 资产 id（数据面）→ 池路径（前缀 = chrome 目录常量，单一读点）
+    format!("{}{id}.png", chrome::V2_VS_BG_DIR)
+}
+
+/// 格类 → 主题色调（`vs_theme.tint`；无 = `0xFFFF` 白恒等）。
+fn vs_tint(th: Option<&VsTheme>) -> u16 {
+    th.map_or(0xFFFF, VsTheme::tint_u16)
 }
 
 /// 逐帧时间轴时钟（proto 路径专用）：累计 `frame_delta_ms`（帧率无关，S17.4 唯一时间源）。
@@ -105,8 +158,11 @@ fn render_v2_elem(host: &mut dyn SceneHost, phase: &str) {
     let c1 = theme.by_name("ink_dark").unwrap_or(0x28C1);
     let c2 = theme.by_name("brass_dark").unwrap_or(0x3942);
     let c3 = theme.by_name("gold_warm").unwrap_or(0xF692);
-    // 背景（甲板全景，收进 44px 羊皮框）
-    host.blit_image(chrome::V2_VS_BG, 44, 44, 1080 - 88, 1920 - 88);
+    // 背景（S34.5 按格类×地图主题：格类 → vs_theme 背景资产 + 主题 tint；收进 44px 羊皮框）
+    let class = selected_grid_class();
+    let th = vs_theme();
+    let bg = vs_bg_asset(class, th.as_ref());
+    host.blit_image_tint(&bg, 44, 44, 1080 - 88, 1920 - 88, vs_tint(th.as_ref()));
     // 羊皮做旧边框
     let c4 = theme.by_name("parch_dark").unwrap_or(0xDDD1);
     let c5 = theme.by_name("brass").unwrap_or(0x7AC6);

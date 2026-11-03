@@ -108,6 +108,43 @@ pub struct RawPackManifest {
     id: String,
     /// 数据版本（须 = [`MAP_PACK_DATA_VERSION`]）。
     data_version: String,
+    /// VS 战斗主题（S34.5 按地图换主题；旧包无 = `None`，消费方回退默认池资产 + 无色调）。
+    #[serde(default)]
+    vs_theme: Option<VsTheme>,
+}
+
+/// VS 战斗主题（manifest.json `vs_theme`；S34.5 每图背景/氛围）。
+#[derive(Debug, Clone, Deserialize)]
+pub struct VsTheme {
+    /// 通用 VS 战斗背景池资产 id（如 `vs_bg`）。
+    pub bg: String,
+    /// 攻占战背景池资产 id（如 `bg_siege`）。
+    pub siege: String,
+    /// 副本战背景池资产 id（如 `bg_dungeon`）。
+    pub dungeon: String,
+    /// BOSS 战背景池资产 id（如 `bg_boss`）。
+    pub boss: String,
+    /// 遭遇战背景池资产 id（如 `vs_bg`）。
+    pub encounter: String,
+    /// 主题色调（RGB565 hex 字符串，如 `"0xFFFF"` = 无色调；每图不同 ⇒ 按地图换主题）。
+    pub tint: String,
+}
+
+impl RawPackManifest {
+    /// VS 战斗主题（旧包无 = `None`，消费方回退默认池资产 + 无色调）。
+    #[must_use]
+    pub fn vs_theme(&self) -> Option<&VsTheme> {
+        self.vs_theme.as_ref()
+    }
+}
+
+impl VsTheme {
+    /// 主题色调解析为 RGB565 `u16`（`"0xFFFF"` → `0xFFFF`；非法 = `0xFFFF` 无色调）。
+    #[must_use]
+    pub fn tint_u16(&self) -> u16 {
+        let t = self.tint.trim();
+        t.strip_prefix("0x").and_then(|h| u16::from_str_radix(h, 16).ok()).unwrap_or(0xFFFF)
+    }
 }
 
 /// 校验 `manifest.json` 文本（spec §6 版本兼容 + I1~I8 的 schema 面）。

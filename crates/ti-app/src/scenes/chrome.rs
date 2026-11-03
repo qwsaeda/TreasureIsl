@@ -469,6 +469,8 @@ pub const V2_BANNER_WIN: &str = "assets/ui/vs_v2/banner_win.png";
 pub const V2_BANNER_LOSE: &str = "assets/ui/vs_v2/banner_lose.png";
 /// v2 甲板战斗背景（多人遭遇/duel 通用）。
 pub const V2_VS_BG: &str = "assets/ui/vs_v2/vs_bg.png";
+/// v2 资产目录前缀（S34.5 `vs_theme` 资产 id → 路径拼接单一读点；`CS-1` 资产表）。
+pub const V2_VS_BG_DIR: &str = "assets/ui/vs_v2/";
 /// v2 攻占战背景（船队攻打建筑）。
 pub const V2_BG_SIEGE: &str = "assets/ui/vs_v2/bg_siege.png";
 /// v2 副本战背景（登岛打守军）。

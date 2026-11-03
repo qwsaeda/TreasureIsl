@@ -526,5 +526,13 @@
   "feature": 9,
   "boss": 1,
   "isle_kinds": 10
+ },
+ "vs_theme": {
+  "bg": "vs_bg",
+  "siege": "bg_siege",
+  "dungeon": "bg_dungeon",
+  "boss": "bg_boss",
+  "encounter": "vs_bg",
+  "tint": "0xEF5D"
  }
 }

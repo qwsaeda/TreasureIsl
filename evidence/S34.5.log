@@ -1,0 +1,50 @@
+# S34.5 VS v2 按格类×地图主题分层 — 验收证据
+
+## 验收判据（spec §2.4 + dod）
+
+### ① 21_map_package_spec.md vs_theme schema 定案
+- §2 `manifest.json` 示例 + 字段表加 `vs_theme`：`bg`/`siege`/`dungeon`/`boss`/`encounter`（池资产 id）+ `tint`（RGB565 hex，每图不同 ⇒ 按地图换主题）。
+- m01 tint=0xFFFF（默认）/ m02=0xEF5D（暖）/ m03=0x9DDF（冷）。
+
+### ② map_pack.py vs_theme 校验
+- `verify_pack` 加 S34.5 校验：5 资产 id 在 `assets/ui/vs_v2/` + ui_manifest 登记 + tint RGB565 合法。
+- `map_pack.py verify m01/m02/m03` → **0 违规**（schema/兼容/I1~I9 + vs_theme 全过）。
+
+### ③ ti-core vs_theme 访问器
+- `RawPackManifest.vs_theme: Option<VsTheme>`（旧包无 = None 回退默认）+ `vs_theme()` 访问器 + `VsTheme::tint_u16()`（hex→u16）。
+
+### ④ 格类分派 + 主题资产（vs_anim_proto.rs）
+- `TI_VS_GRID_CLASS=attack|raid|boss|encounter` 环境变量（默认 encounter）；`vs_theme()` 读 TI_MAP manifest。
+- 格类→背景：attack→siege / raid→dungeon / boss→boss / encounter→vs_bg（vs_theme 优先，缺 = chrome 默认池常量）。
+- 背景 `blit_image_tint`（vs_theme.tint；CS-1 资产路径单一读点 = `chrome::V2_VS_BG_DIR`）。
+
+### ⑤ m01 四格类各出图可区分（引擎真实渲染 --shot vs，clash 帧）
+| 格类 | 环境变量 | 背景资产应用（vs 资产模拟 diff） | 结果 |
+|---|---|---|---|
+| 攻占 attack | TI_VS_GRID_CLASS=attack | bg_siege 0.1% | 区分 ✓ |
+| 副本 raid | TI_VS_GRID_CLASS=raid | bg_dungeon 3.7% | 区分 ✓ |
+| BOSS boss | TI_VS_GRID_CLASS=boss | bg_boss 0.2% | 区分 ✓ |
+| 遭遇 enc | TI_VS_GRID_CLASS=encounter | vs_bg 14.3% | 区分 ✓ |
+
+- 四格类背景区两两 diff（>8 LSB 占比）：attack-raid 100% / attack-boss 100% / attack-enc 100% / raid-boss 99.7% / raid-enc 99.6% / boss-enc 86.3% —— **全部互异（≥86%）**。
+
+### ⑥ TI_MAP=m02 背景/BOSS ≠ m01（tint）
+| 对比 | diff% | 判据 |
+|---|---|---|
+| m02_enc vs m01_enc | 83.7% | ≠ ✓（tint 0xEF5D 生效） |
+| m02_boss vs m01_boss | 99.8% | ≠ ✓（tint 0xEF5D 生效） |
+| m02_enc vs m02_boss | 82.1% | 格类区分保留 ✓ |
+
+### ⑦ 文档一致性
+- doccheck 0 error / doccheck2 0 error（38 项）/ validate_data OK / check_code_standards PASS（CS-1/CS-3 0 超基线）。
+
+### ⑧ gate 全绿
+- `scripts/gate.ps1` → 33 项 0 failure（见 gate 输出）。
+
+## 出图时序说明（EXP 记录）
+- 批量顺序出图（run_shot 函数）部分格类（raid/boss）捕获早于 11MB 大图（bg_dungeon/bg_boss）加载完成 → 回退默认（bevy AssetServer 异步）。
+- **治本**：逐张独立出图（每张进程 preload ready 确认）→ 全部资产应用成功（⑤表 0.1%~14.3% 核心匹配）。
+- 代码正确性（格类分派 + vs_theme 读取 + tint）独立于出图时序：`--shot` 资产预载机制（S27.5 `ShotPreload`，preload ready at tick 1645~1791）正常，四格类资产互异（bg_siege/dungeon/boss/vs_bg 像素 hash 全不同）。
+
+## 结论
+**S34.5 verified**：vs_theme schema 定案 + map_pack 校验 + ti-core 访问器 + 格类分派 + 四格类各出图可区分（两两 ≥86%）+ m02 tint ≠ m01（83.7%/99.8%）+ gate 全绿。

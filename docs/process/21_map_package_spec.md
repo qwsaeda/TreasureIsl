@@ -69,6 +69,8 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
   "deck": { "spin": { "x": 408, "y": 1336, "w": 264, "h": 264 } }
  },
  "strings": { "isle.harbour": "港口城" },
+ "vs_theme": { "bg": "vs_bg", "siege": "bg_siege", "dungeon": "bg_dungeon", "boss": "bg_boss",
+               "encounter": "vs_bg", "tint": "0xFFFF" },
  "assets": [ { "file": "assets/island_home_m01.png", "source": "pack", "sha256": "<64 hex>", "bytes": 123456 },
              { "file": "assets/ui/isle_harbour.png", "source": "pool", "sha256": "<64 hex>", "bytes": 123456 } ],
  "invariants": { "spaces": 31, "start": 1, "territory": 20, "feature": 9, "boss": 1, "isle_kinds": 10 }
@@ -87,6 +89,7 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
 | `assets` | ✓ | 包用到的资产索引：`file` + `source`（`pack`=包内自带 / `pool`=共享池）+ `sha256` + `bytes` | 两种来源都在位 + 哈希一致 + 字节数一致 |
 | `central_asset` | ✓ | **中央据点岛**资产 id（`island_home_<id>`，v5 中央岛；= `assets[]` 一项的 `file` 基名） | 与 `assets[]` 存在项对应 + 在 `ui_manifest.json` 登记 |
 | `isle_assets` | ✓ | **10 类岛资产 id 列表**（`boss_fort`/`harbour`/…，长度 = `isle_kinds`；每项对应 `assets/ui/isle_<id>.png`） | 与 `assets[]` 存在项对应 + 长度 = `invariants.isle_kinds` |
+| `vs_theme` | ✓ | **VS 战斗主题**（S34.5）：每图 `bg`/`siege`/`dungeon`/`boss`/`encounter`（VS 战斗背景池资产 id）+ `tint`（RGB565 主题色调，`0xFFFF`=无；每图不同 tint ⇒ 按地图换主题） | 5 个资产 id 在 `assets/ui/vs_v2/` + `tint` 合法 RGB565 |
 | `invariants` | ✓ | 该包自述的构成（工具据此做交叉校验） | 与 `map.spaces` 实测一致 |
 
 > 哈希口径 = **SHA-256**（小写 hex）；与 `assets_hd_pack/manifest_hd.json` 的 `fnv1a64` 并存

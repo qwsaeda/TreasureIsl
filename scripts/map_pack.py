@@ -23,6 +23,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import zipfile
@@ -232,6 +233,25 @@ def verify_pack(pack_dir: Path) -> list[str]:
             problems.append(f"I7 哈希不符 {rel}（sha256 不一致）")
         if source == "pool" and rel.replace(os.sep, "/") not in ui_registered:
             problems.append(f"I7 池资产 {rel} 未在 ui_manifest.json 登记")
+
+    # S34.5：vs_theme（VS 战斗主题）校验——5 资产 id 在 vs_v2 池 + 登记 + tint 合法
+    vs_theme = manifest.get("vs_theme") or {}
+    if not vs_theme:
+        problems.append("S34.5 缺 vs_theme（VS 战斗主题）")
+    else:
+        for key in ("bg", "siege", "dungeon", "boss", "encounter"):
+            aid = vs_theme.get(key)
+            if not aid:
+                problems.append(f"S34.5 vs_theme.{key} 缺失")
+                continue
+            apath = f"assets/ui/vs_v2/{aid}.png"
+            if not (ROOT / apath).is_file():
+                problems.append(f"S34.5 vs_theme.{key} 资产缺失 {apath}")
+            elif apath not in ui_registered:
+                problems.append(f"S34.5 vs_theme.{key} 资产 {apath} 未在 ui_manifest 登记")
+        tint = str(vs_theme.get("tint", ""))
+        if not re.fullmatch(r"0x[0-9A-Fa-f]{4}", tint):
+            problems.append(f"S34.5 vs_theme.tint = {tint!r}（期望 RGB565 hex 0xXXXX）")
 
     # invariants 自述 vs 实测
     inv = manifest.get("invariants") or {}
