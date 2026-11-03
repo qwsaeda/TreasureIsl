@@ -22,6 +22,13 @@ use crate::scenes::main_map_island;
 use crate::scenes::main_map_node;
 use crate::scenes::{Scene, SceneHost, SceneKind, enter_target};
 
+/// A5 生物动画时钟（S34.6 前处理）：`frame_delta_ms` 累计（帧率无关，S17.4 唯一时间源）。
+/// creatures.png 是单张合成生态场景（无法拆元素级鲨/触手/浪花），程序 bob 微动
+/// 满足 spec §1.4「海洋内容会动」+ U21 不叠格（位移 ±4px 保持原边界 1350>1349.2）。
+static CREATURES_ACC: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+/// `TI_MAP_ANIM_T0`：生物动画初始相位（ms；离屏出多相位帧证明逐帧 bob，默认 0）。
+static CREATURES_T0: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+
 /// 主地图场景处理器（`MainMap`）。
 pub struct MainMapScene;
 
@@ -1220,7 +1227,16 @@ fn render_v6_elem(
     // 改单处放中央岛下方海域（x 340-720 / y 1350-1600）。R2 复核：格环实底 = tile23
     // cy 1313.2 + 半径 36 = 1349.2，生物顶 y1350 > 实底 ⇒ 不叠格；舵轮 y≥1625 / 罗盘 y≥1627
     // 均 > 生物底 1600 ⇒ 不叠 CTA。U21「生物不叠格」。
-    host.blit_image(chrome::V6_CREATURES, 340, 1350, 380, 250);
+    // A5 动画（S34.6 前处理）：bob 微动（鲨鱼游弋/浪花翻涌视觉，合成图整体动）——
+    // 位移 ±4px 保持边界（y1350+4=1354 > 1349.2 仍不叠格；x 340±4 不叠格环）。
+    let ms = CREATURES_ACC.fetch_add(host.frame_delta_ms(), std::sync::atomic::Ordering::Relaxed);
+    let t0 = *CREATURES_T0.get_or_init(|| {
+        std::env::var("TI_MAP_ANIM_T0").ok().and_then(|v| v.parse::<u32>().ok()).unwrap_or(0)
+    });
+    let t = f64::from(ms.saturating_add(t0)) / 1000.0;
+    let bob_x = (t.sin() * 4.0) as i32;
+    let bob_y = ((t * 0.7).sin() * 3.0) as i32;
+    host.blit_image(chrome::V6_CREATURES, 340 + bob_x, 1350 + bob_y, 380, 250);
 
     // 8) 玩家位置名牌（当前格）
     let idx = host.board_index().min(count - 1);

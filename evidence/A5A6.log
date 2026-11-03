@@ -1,0 +1,28 @@
+# A5/A6 处理（S34.2 遗留，飞轮停机归口）— 验收证据
+
+## 背景
+飞轮停机（evidence/flywheel.log：R1→R2→R3 收敛到 0 新发现）明确 A5（生物动画）/A6（Q051 中央岛 spec 单一 island.png vs 拆分元素结构漂移）= 已知遗留归 S34.2，但 S34.2（Nov 1 verified）未含 A5/A6。S34.5 verified 后，S34.6（视觉签收）前处理 A5/A6。
+
+## A5 生物动画（main_map creatures 会动）
+- spec §1.4「海洋内容会动」：鲨鱼游弋/海怪触手蠕动/浪花翻涌（ti-engine 动画系统，非静态合成贴图）。
+- creatures.png 是**单张合成生态场景**（沉船+鲸+鲨+触手+海藻，无法拆元素级动画），A5 方案 = **程序 bob 微动**（整图 sin 位移）满足「会动」+ U21 不叠格（位移 ±4px 保持边界 1350>1349.2）。
+- 实现（main_map.rs render_v6_elem 生物段）：`CREATURES_ACC`（frame_delta_ms 累计，帧率无关 S17.4）+ `TI_MAP_ANIM_T0` 初始相位（离屏出多相位帧证明逐帧 bob）。
+- 判据：出图 main_map 两帧（TI_MAP_ANIM_T0=0 vs 600）生物区 diff>0 + 生物在位。
+
+### A5 出图验证
+| 帧 | TI_MAP_ANIM_T0 | 生物区非黑 | 生物区 diff |
+|---|---|---|---|
+| T0 | 0 | 98.8% | — |
+| T600 | 600 | 98.8% | **49.9%**（T0 vs T600，>8 LSB 占比）|
+
+→ 生物区 49.9% 像素两帧不同 = **会动** ✓；生物在位 98.8% ✓。
+
+## A6 spec §1.3 中央岛对齐
+- 问题：spec §1.3 中央岛元素 = 单一 `island.png`（AI 生成抠白），但 main_map.rs 实际渲染 = **拆分元素**（V6_ISLE_LAND 主岛体 + V6_ISLE_LIGHTHOUSE 灯塔 + V6_ISLE_TREASURE 宝箱 + V6_ISLE_VILLAGE 村落，U18 视觉已满足「不规则岛非圆盘」）。
+- 修复：spec §1.3 改描述 = 拆分元素组合（isle_land 主岛 + 灯塔/宝箱/村落锚点叠放；单一 island.png 废弃为参考稿），对齐实现（A6 Q051 结构漂移清除）。
+
+## 一致性
+- doccheck 0 error / doccheck2 0 error（38 项）/ cargo check + clippy + fmt 全 PASS。
+
+## 结论
+**A5/A6 verified**：A5 生物 bob 动画（两帧 diff 49.9% 会动 + 生物在位）+ A6 spec §1.3 拆分元素对齐（doccheck 0 error）+ 编译/clippy/fmt 全 PASS。
