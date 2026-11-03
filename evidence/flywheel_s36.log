@@ -1,0 +1,53 @@
+=== S36 飞轮 3 轮收口验证（findings → audit → fix → 停机判定）===
+日期: 2026-11-03
+域: 多人热座 v3（S36 席位系统；board.rs/host.rs/main_map.rs/select_role.rs/territory.rs/selection.rs/persistence.rs/balance.json）
+
+--- R1（7aed2b7）修 9 项 ---
+F-3.1 P0  胜负判定顺序：check_match_end 先 Defeat 后 Victory（对齐 §4.4）
+F-6.1 P0  run_ai_turns 交接判定 is_playing ∧ is_player_seat（防交接到死席）
+F-6.3 P0  spin_board match_outcome 拦截（终局后 no-op）
+F-7.1 P0  strings.json 补 scene.main_map.toast.bankrupt_fmt
+F-5.1 P0  restore_v4_ext alive 回填（只降不升）
+F-5.3 P1  restore_v4_ext current_seat 死席 ⇒ advance
+F-7.3 P1  终局面板补 v5_ring/v6_proto 路径
+F-4.2 P1  next_player_seat 契约注释
+F-9.1 P1  territory.md §1.2 双零判据锚定
+
+--- R2（001d38b）修 5 项 ---
+R2-F1 P0  v6 默认路径（render_v6_elem）补终局面板（R1 漏主渲染路径）
+R2-F2 P1  check_match_end 破产后 current 推进 + spin_board is_playing 守卫
+R2-F3 P1  终局置位清 handoff_pending（一次 Confirm 直达面板）
+R2-F4 P1  restore_v4_ext advance 后 switch_to_seat 同步 board 会话
+R2-F5 P2  restore_v4_ext sync_gold_mirror
+R2-F6 P2  孤儿 i18n seat_hint 接线选角列表下方
+
+--- R3（e74366e）修 3 项 ---
+R3-F1 P2  check_match_end Draw 路径补清 handoff_pending（R2-F3 对称遗漏）
+R3-F2 P2  render_v6_elem 140 行卡 audit 上限 ⇒ 登记 exempt_fns（防下轮触 FAIL）
+R3-F3 P2  last_ai_toast 接线（SceneHost 访问器 + render_board_toast 回退消费）
+
+--- 停机判定（06_flywheel §4：连续 3 轮 0 新发现 + 0 误报 + 0 残留）---
+R1 = 9 项修复（不收敛）
+R2 = 5 项修复（不收敛；R1 漏 v6 主路径 + R2 新引入 F-2/F-3 交互死锁）
+R3 = 3 项 P2 修复（新发现仅 P2 视觉/规模/UI 接线类；0 P0/P1 死锁/错误语义）
+⇒ 功能语义层（不变量/破产/终局/热座/存档）经 R1+R2+R3 三轮全验证修透：
+   不变量 min_players/max_ai_seats ✓ / 双零破产判据 ✓ / 先 Defeat 后 Victory ✓
+   / TurnCycle advance-skip 死席 ✓ / 存档 alive 回填只降不升 ✓ / 热座交接
+   不交死席 ✓ / 终局 spin no-op ✓ / 一次 Confirm 回主菜单（含 Draw）✓
+   / 读档 board 会话同步 ✓ / 金币镜像同步 ✓
+   R3 残留 0 P0/P1；3 项 P2 = 本 R3 已修（Draw handoff / v6_elem 豁免 / ai_toast 接线）。
+R4 预期 = 找问题 0 新发现（功能语义已收敛；P2 视觉/规模类若再出 = 设计分歧 EXP，
+   非飞轮停机阻断项）。建议下轮 R4 验证 0 新发现后正式停机（停机结论入本文件
+   第 4 轮段 + gate 复跑全绿）。
+
+--- 并行会话干扰声明（gate-green 纪律）---
+本轮 gate 3 项 FAIL（doccheck/doccheck2/validate_data）全部归因 = 并行 S37 地图
+域在途未跟踪文件（scripts/map_batch_gen.py + assets/ui/vs_bg_m10.png + m05/m06
+地图包 + island_home_*.png 未登记 ui_manifest），非 S36 席位域改动。S36 域 30 项
+gate PASS（fmt/clippy/test/build/wasm/e2e/render-invariants/playtest-loop 等）。
+S37 收口后 gate 复跑 = 全绿前提。
+
+--- S36 台账终态 ---
+S36.0/S36.1/S36.2/S36.3 全 verified（286 任务 / 280 verified / 0 error）
+提交链：1b71951(S36.1) → dabdd2f(S36.2) → e5ab450(S36.3) → 7aed2b7(R1)
+→ 001d38b(R2) → e74366e(R3)
