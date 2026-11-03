@@ -451,7 +451,7 @@ impl ti_app::scenes::SceneHost for VsHost {}
 /// vs.rs 若把宽度置 0 / 坐标改错，`render` 产出的血条 fill 调用会偏离 §4.4 表值。
 #[test]
 fn key_rects_have_pixels() {
-    use ti_app::menu_shell::{COLOR_DANGER, COLOR_PARCH_DARK, COLOR_TITLE_BAR, MenuShell};
+    use ti_app::menu_shell::{COLOR_PARCH_DARK, COLOR_TITLE_BAR, MenuShell};
 
     let scs = scenes();
     let mut shell =
@@ -493,36 +493,44 @@ fn key_rects_have_pixels() {
         outcome: None,
         player_hp_max: 10,
         boss_hp_max: 20,
+        attacker_crew: 0,
+        attacker_arms: 0,
+        defender_crew: 0,
+        defender_arms: 0,
+        resolved: false,
+        after_crew: 0,
+        after_arms: 0,
     }));
     let mut vs_scene = ti_app::scenes::VsScene;
     ti_app::scenes::Scene::render(&mut vs_scene, &mut vs_host);
-    // 玩家血条**槽底**（`chrome::bar_slot` 铺 `COLOR_HILITE` 1080 槽位，§4.4 表值）——
-    // vs.rs 把槽底宽度置 0 / 坐标偏离 §4.4 时，这条 fill 调用偏离表值，当场抓住。
-    // S18.10：槽底色随色板演进（S18.7f 起槽底 = `vs.primitives` 原语，色 = brass_dark），
-    // 故按**几何**判定（意图 = 槽底矩形符合 §4.4 表值，不锁死具体色值）。
-    let backing = vs_host.fills.iter().find(|f| f.0 == ph.x && f.1 == ph.y && f.2 == ph.w).copied();
+    // S34.6 D3（用户 2026-11-03 拍板复用 `vs_anim_proto` 好设计）：正式战斗不再画旧 HP 双槽
+    // （`render_battle_bars` 已退役），改为 spec §2.5「顶守 / 底攻」兵力状态框 + 中央 VS 徽标。
+    // 判据 = 两侧状态框 fill_rect 必须在，且旧 HP 槽底（§4.4 `ph` 矩形）**不得再画**
+    // （防两套 HUD 并存重叠）。
+    let def_box =
+        vs_host.fills.iter().find(|f| f.0 == 1080 - 470 && f.1 == 60 && f.2 == 440).copied();
+    assert!(def_box.is_some(), "vs 顶守方兵力状态框缺失（spec §2.5 顶守/底攻）");
+    let atk_box =
+        vs_host.fills.iter().find(|f| f.0 == 30 && f.1 == 1920 - 190 && f.2 == 440).copied();
+    assert!(atk_box.is_some(), "vs 底攻方兵力状态框缺失（spec §2.5 顶守/底攻）");
     assert!(
-        backing.is_some(),
-        "vs 玩家血条槽底 fill_rect 未按 §4.4 画 ({},{},{},{})（COLOR_HILITE）—— 宽度 0 / 整段不画 静默偏离",
+        !vs_host.fills.iter().any(|f| f.0 == ph.x && f.1 == ph.y && f.2 == ph.w),
+        "旧 HP 血条槽底仍在画 ({} ,{}) —— `render_battle_bars` 应已退役，避免与兵力 HUD 重叠",
         ph.x,
-        ph.y,
-        ph.w,
-        ph.h
+        ph.y
     );
 
-    // 像素级复验：血条区（scenes.json 矩形）必有非背景像素
+    // 像素级复验：顶守方状态框区域必有非底色像素（面板真落帧，非仅记录调用）。
     let bg_vs = COLOR_PARCH_DARK; // QA029：底色基准 = 运行时画布底色（非 scenes.json bg 键）
-    shell.fb.clear(bg_vs);
-    shell.fill_rect(ph.x, ph.y, ph.w, ph.h, COLOR_DANGER); // QA046：§2 单一源（S14 内联 0xFDAF 已废）
-    let px = shell.fb.as_slice().to_vec();
-    let hp_px = (ph.y..(ph.y + ph.h))
-        .flat_map(|y| (ph.x..(ph.x + ph.w)).map(move |x| y * FB_W_I32 + x))
-        .filter(|&i| {
-            let ui = usize::try_from(i).unwrap_or(0);
+    let px = vs_host.fb.as_slice();
+    let painted = (60..60 + 130)
+        .flat_map(|y| (1080 - 470..1080 - 470 + 440).map(move |x| (x, y)))
+        .filter(|&(x, y)| {
+            let ui = usize::try_from(y * FB_W_I32 + x).unwrap_or(0);
             px.get(ui) != Some(&bg_vs)
         })
         .count();
-    assert!(hp_px > 0, "vs 玩家血条 fill_rect 后无像素 —— 坐标全 0 静默不画");
+    assert!(painted > 0, "vs 守方状态框区域无像素 —— 面板未真落帧");
 }
 
 // S15.5 重锚（`08_render_arch.md` §6 契约 5）：legacy 逐像素写帧层移除后，门禁判据从

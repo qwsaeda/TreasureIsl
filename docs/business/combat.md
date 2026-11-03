@@ -55,6 +55,14 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 - 副本 / BOSS 战：同用兵力模型（`territory.md` §11 U3），进 VS 界面自动结算。
 - 原「攻击 / 道具 / 防御」三动作回合制**作废**（`combat.md` v1 §战斗动作删除）。
 
+> **S34.6 D5（2026-11-03 用户拍板「迁移兵力模型」）**：VS 战斗（副本/BOSS/遭遇）结算
+> **已从 HP 回合制（`rules::battle::BattleSession`，作废）迁移到兵力模型**
+> （`rules::force::resolve`：人手+武器确定性 VS + 双方必损）。vs 场景 `Attack` 触发
+> 一次性 `force::resolve(seat.fleet(), defender)`（副本/BOSS 敌手 = `defense_at(isle, level)`），
+> 写回 `seat_crew/seat_arms`（attrition），结果钩同攻占（副本胜 = 占领 / BOSS 胜 = 通关）。
+> 实现：`BattleSnapshot` 带兵力（`attacker_crew/arms` + `defender_crew/arms`）+ 战后
+> （`after_crew/arms`）+ `resolved` 标记；vs.rs 渲染 clash 战前 / result 战后。
+
 ## VS 界面（按地图 / 格类变化，好好设计）
 
 > 用户 2026-10-30：「VS 界面是按地图、按不同类格有变化的」。VS 场景不是单一模板，

@@ -112,6 +112,13 @@ pub struct BattleSnapshot {
     pub defender_crew: u32,
     /// 守方兵力武器（= 建筑防御数）。
     pub defender_arms: u32,
+    /// S34.6 D5（兵力模型迁移，用户 2026-11-03）：已结算标记（`force::resolve` 一次性，
+    /// `battle_step` 后置 true；渲染 result 战后帧）。
+    pub resolved: bool,
+    /// 攻方战后剩余人手（`resolve.attacker_after.crew`）。
+    pub after_crew: u32,
+    /// 攻方战后剩余武器（`resolve.attacker_after.arms`）。
+    pub after_arms: u32,
 }
 
 /// S33.5 攻占战报（`Vs` 场景时有效；`assault` 一次性确定性结算，非 HP 回合制）。

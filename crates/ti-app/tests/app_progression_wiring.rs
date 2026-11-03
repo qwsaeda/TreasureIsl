@@ -8,10 +8,9 @@
 //! 4. 通关门禁（`is_cleared` 逐图）：新档 false；m03 胜（`battle_step`）置 true；
 //!    读档按 CLEARED 位还原。
 //!
-//! 确定性约定（EXP-040）：战斗模型 `atk_plus_flat`（伤害 = `atk` + 0..=3）+ `balance.combat`
-//! （player hp 2000/atk 60；`boss_tiers` 依次为 2400/10、4800/12、7200/14）
-//! ⇒ **档 0/1 固定胜**（最坏承伤：档 0 = 39×13=507、档 1 = 79×15=1185，均 < 2000；
-//! 本测试仅打这两档）；档 2 最坏 119×17=2023 > 2000 非固定胜且 seed 敏感，不在本测试断言。
+//! 确定性约定（EXP-040）：BOSS 战走兵力模型（S34.6 D5，`force::resolve` 一次性结算）——
+//! 攻方 = 席位舰队，守方 = `defense_at("boss_fort", boss_tier+1)`；本测试显式给够舰队，
+//! 与 HP 回合制时代的「档 0/1 固定胜」断言无关（那套数值已随迁移作废）。
 
 use ti_app::game_app::{BattleView, GameApp, GameInput, Scene};
 use ti_core::domain::combat::Side;
@@ -28,8 +27,19 @@ fn enter_m01(app: &mut GameApp) {
     assert_eq!(app.scene(), Scene::MainMap, "M01 应可进入主地图");
 }
 
-/// 据点事件 6 = 进 BOSS 战斗，打到结果落定（≤1000 回合）。
+/// 据点事件 6 = 进 BOSS 战斗，打到结果落定。
+///
+/// S34.6 D5（兵力模型迁移，`combat.md` §兵力模型）后 BOSS 不再走 HP 回合制，而是一次性
+/// `force::resolve`：攻方 = 席位舰队（`seat_crew/seat_arms`），守方 = `defense_at("boss_fort",
+/// boss_tier+1)`（`defense_base × (1 + 0.4·level)`，m01≈48 / m02≈75）。初始舰队 20/5 打不过
+/// ⇒ 本接线测试按当前图守军防御反推「武装 > 守军」的舰队（战力必胜），只验证「胜 → 解锁」链条。
 fn run_boss_battle_to_end(app: &mut GameApp) {
+    let bal = ti_core::data::balance().expect("balance.json 加载失败");
+    let level = u8::try_from(app.current_boss_tier.saturating_add(1)).unwrap_or(u8::MAX);
+    let need =
+        ti_core::rules::territory::TerritoryRules::new(bal).defense_at("boss_fort", level) + 1;
+    app.seat_crew = [need; 5];
+    app.seat_arms = [need; 5];
     app.handle(GameInput::Landmark(6));
     assert_eq!(app.scene(), Scene::Vs, "事件 6 应进战斗");
     for _ in 0..1000 {
@@ -41,7 +51,7 @@ fn run_boss_battle_to_end(app: &mut GameApp) {
     assert!(app.battle().is_some_and(BattleView::finished), "战斗应在 1000 回合内结束");
     assert!(
         app.battle().is_some_and(|b| b.outcome() == Some(Side::Player)),
-        "无建筑加成时 BOSS 档 0/1 固定胜（承伤 < 2000 hp）"
+        "反推舰队（武装 = 守军+1）应胜 boss_fort 守卫"
     );
 }
 

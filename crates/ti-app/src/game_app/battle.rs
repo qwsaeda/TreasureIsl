@@ -39,6 +39,11 @@ pub struct BattleView {
     pub player_hp_max: u32,
     /// BOSS 初始 HP（血条分母，`BattleSession::boss_hp()` 构造时快照）。
     pub boss_hp_max: u32,
+    /// S34.6 D5（兵力模型迁移）：攻方战后剩余人手（`force::resolve.attacker_after.crew`；
+    /// HP 回合制作废，本字段 = 兵力模型结算结果，`None` = 未结算）。
+    pub after_crew: Option<u32>,
+    /// 攻方战后剩余武器（`force::resolve.attacker_after.arms`）。
+    pub after_arms: Option<u32>,
 }
 impl BattleView {
     /// 新建战斗视图（`BattleSession::from_balance`，数值走 `balance().combat`）。
@@ -61,6 +66,8 @@ impl BattleView {
             outcome,
             dungeon: None,
             dungeon_battle: false,
+            after_crew: None,
+            after_arms: None,
         })
     }
 
@@ -83,6 +90,8 @@ impl BattleView {
             outcome,
             dungeon: None,
             dungeon_battle: true,
+            after_crew: None,
+            after_arms: None,
         }
     }
 

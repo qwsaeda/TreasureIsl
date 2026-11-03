@@ -87,13 +87,16 @@ impl Scene for VsScene {
             };
             // S34.6 D4（spec §2.5 数据绑定）：兵力 = 运行态（`BattleSnapshot` 席位舰队/守方），
             // 替换演示常量（用户 2026-11-03「SB设计，阅读设计规范」= 构图对但兵力假）。
+            // S34.6 D5（兵力模型迁移）：`resolved` = 已结算 → result 帧用 `after_crew/arms`
+            // （真实战后，不再按 loss_pct 推）；未结算 → clash 战前兵力。
             crate::scenes::vs_anim_proto::render_v2_elem(
                 host,
                 phase,
-                b.attacker_crew,
-                b.attacker_arms,
+                if b.resolved { b.after_crew } else { b.attacker_crew },
+                if b.resolved { b.after_arms } else { b.attacker_arms },
                 b.defender_crew,
                 b.defender_arms,
+                b.resolved,
             );
             return;
         }
@@ -122,7 +125,6 @@ impl Scene for VsScene {
 /// S34.6 D3（用户 2026-11-03）：正式战斗复用 `vs_anim_proto::render_v2_elem` 好设计构图，
 /// 原 `render_battle_bars`（HP 双槽 + 回合/结果文本）已退役——好设计自带顶/底兵力状态框 +
 /// VS 徽标 + 甲板插画 + crew/hero/enemy 分列，无需另画 HP 槽（海域图 + 叠小人的「屎」版废除）。
-
 /// S33.5 攻占战报渲染：双方兵力条（攻方舰队 vs 守方驻军+建筑防御）+ 结果行。
 ///
 /// 与 HP 回合制战斗分叉：`assault` 是**一次性确定性结算**（`territory.md` §4），

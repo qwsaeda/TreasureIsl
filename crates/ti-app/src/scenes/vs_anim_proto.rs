@@ -135,7 +135,15 @@ pub fn render(host: &mut dyn SceneHost, phase: &str) {
     // 2026-10-31 用户否决旧稿 → 元素合成重设计版：`TI_VS_V2_ELEM=1` ⇒ AI 元素 blit
     // （敌我分列 + 顶/底兵力条 + 结果横幅，与 `scripts/compose_vs_v2.py` 同构图）。
     if std::env::var(V2_ELEM_ENV).is_ok() {
-        render_v2_elem(host, phase, DEMO_ATK_CREW, DEMO_ATK_ARMS, DEMO_DEF_CREW, DEMO_DEF_ARMS);
+        render_v2_elem(
+            host,
+            phase,
+            DEMO_ATK_CREW,
+            DEMO_ATK_ARMS,
+            DEMO_DEF_CREW,
+            DEMO_DEF_ARMS,
+            false,
+        );
         return;
     }
     match phase {
@@ -163,6 +171,7 @@ pub(crate) fn render_v2_elem(
     atk_arms: u32,
     def_crew: u32,
     def_arms: u32,
+    resolved: bool,
 ) {
     let theme = host.theme().clone();
     let ink = theme.by_name("parch_dark").unwrap_or(chrome::COLOR_TEXT_ON_PARCH);
@@ -274,7 +283,10 @@ pub(crate) fn render_v2_elem(
         "result_win" | "result_lose" => {
             // U20 拆分（render_v2_elem 超函数基线 140 行）：result 帧独立子函数。
             // S34.6 D4：战报兵力 = 运行态（调用方传入），draw_result_scene 内按 loss_pct 推战后。
-            draw_result_scene(host, phase, t, c4, c5, c2, atk_crew, atk_arms, def_crew, def_arms);
+            // S34.6 D5：`resolved` = 已结算 → 传入兵力即战后（`after_crew/arms` 真实值），不再推。
+            draw_result_scene(
+                host, phase, t, c4, c5, c2, atk_crew, atk_arms, def_crew, def_arms, resolved,
+            );
         }
         _ => {}
     }
@@ -283,6 +295,10 @@ pub(crate) fn render_v2_elem(
 
 /// result 帧（胜/败）：角色 + 书法横幅 + 战报框（6 行双侧 16 参数，U20 拆分）。
 /// 三段不重叠：横幅顶部（250）+ 角色中下（600 起）+ 战报框底部（1920-500）。
+///
+/// 参数 = 渲染上下文（host/phase/t/3 色）+ 运行态兵力 4 值 + 已结算旗；拆参数包反而
+/// 遮蔽「谁是攻方/守方」，故整体豁免 clippy 7 参上限（S34.6 D4 数据绑定）。
+#[allow(clippy::too_many_arguments)]
 fn draw_result_scene(
     host: &mut dyn SceneHost,
     phase: &str,
@@ -294,6 +310,7 @@ fn draw_result_scene(
     atk_arms: u32,
     def_crew: u32,
     def_arms: u32,
+    resolved: bool,
 ) {
     let won = phase == "result_win";
     // 胜方 hero（win）居中偏下；败方（lose）enemy 居中 + hero 倒下左下。
@@ -322,14 +339,17 @@ fn draw_result_scene(
     // U20：战报双侧 16 参数（攻守战前→战后 人手/武器/武装/徒手），拆武装/徒手。
     // S34.6 D4（spec §2.5）：兵力 = 运行态（`atk_crew/...`），非 DEMO 常量。战后按
     // `balance.combat.manpower.loss_pct`（人手 15% + 武器 20%，同 `combat.md` §兵力模型）推算。
-    let atk_after_crew = atk_crew * 85 / 100;
-    let atk_after_arms = atk_arms * 80 / 100;
+    // S34.6 D5：`resolved` = 已结算 → 传入兵力即战后（`force::resolve.attacker_after` 真实值），
+    // 不再推 loss（`after_crew/arms` 已含双方必损）。
+    let (atk_after_crew, atk_after_arms, def_after_crew, def_after_arms) = if resolved {
+        (atk_crew, atk_arms, def_crew, def_arms)
+    } else {
+        (atk_crew * 85 / 100, atk_arms * 80 / 100, def_crew * 85 / 100, def_arms * 80 / 100)
+    };
     let atk_before_armed = atk_crew.min(atk_arms);
     let atk_before_unarmed = atk_crew - atk_before_armed;
     let atk_after_armed = atk_after_crew.min(atk_after_arms);
     let atk_after_unarmed = atk_after_crew - atk_after_armed;
-    let def_after_crew = def_crew * 85 / 100;
-    let def_after_arms = def_arms * 80 / 100;
     let def_before_armed = def_crew.min(def_arms);
     let def_before_unarmed = def_crew - def_before_armed;
     let def_after_armed = def_after_crew.min(def_after_arms);

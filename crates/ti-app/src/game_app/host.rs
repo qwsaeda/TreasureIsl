@@ -753,44 +753,76 @@ impl EconomyHost for GameApp {
         }
     }
 }
+/// S34.6 D4/D5：战斗守方兵力（`defense_at` 口径，守军全武装假设 ⇒ 人手 = 武器 = defense）。
+///
+/// 副本战 = 该岛该级建筑防御；BOSS 战 = `boss_fort` 防御（`boss_tier+1` 当等级）。
+/// 供 `battle_step` 结算与 `battle_snapshot` 渲染共用，避免两处口径漂移。
+fn defender_force(b: &BattleView, bal: &data::Balance) -> (u32, u32) {
+    let rules = TerritoryRules::new(bal);
+    let defense = match &b.dungeon {
+        Some((_cell, isle, level)) => rules.defense_at(isle, *level),
+        None => rules.defense_at(
+            "boss_fort",
+            u8::try_from(b.boss_tier.saturating_add(1)).unwrap_or(u8::MAX),
+        ),
+    };
+    (defense, defense)
+}
+
 impl SessionHost for GameApp {
     fn play_sfx(&mut self, sfx: Sfx) {
         self.last_sfx = Some(sfx);
     }
 
     fn battle_step(&mut self) {
+        // S34.6 D5（兵力模型迁移，用户 2026-11-03「迁移兵力模型」）：副本/BOSS 战从
+        // HP 回合制（`BattleSession::step`，作废）改为 `force::resolve` 一次性确定性结算
+        // （人手+武器 VS + 双方必损，`combat.md` §兵力模型）。首次 Attack 结算 + 写回
+        // `seat_crew/arms`（attrition）+ 结果钩；已结算再 Attack = no-op。
         if let Some(b) = self.battle.as_mut() {
-            b.step();
-            if b.outcome.is_some() {
-                self.battle_won = matches!(b.outcome, Some(Side::Player));
-                let dungeon = b.dungeon.clone();
-                b.dungeon = None;
-                if dungeon.is_some() {
-                    b.dungeon_battle = true;
-                }
-                if let Some((cell, isle, _level)) = dungeon {
-                    // S28.6 副本战（territory.md §4/§9）：胜利 = 占领（两格 + 首占奖励）；
-                    // 失败 = 现状不变。BOSS 推进钩与副本结算互斥（`b.dungeon` 在位 = 副本战）。
-                    if self.battle_won {
-                        self.last_sfx = Some(Sfx::Victory);
-                        self.settle_dungeon_win(cell, &isle);
-                    } else {
-                        self.toast_dungeon_fail(&isle);
-                    }
-                } else if self.battle_won {
+            if b.after_crew.is_some() {
+                return; // 已结算（兵力模型），no-op。
+            }
+            let Ok(bal) = data::balance() else {
+                return;
+            };
+            let seat = self.turn_cycle.current as usize;
+            let attacker = Force::new(
+                self.seat_crew.get(seat).copied().unwrap_or(0),
+                self.seat_arms.get(seat).copied().unwrap_or(0),
+            );
+            let (def_crew, def_arms) = defender_force(b, bal);
+            let defender = Force::new(def_crew, def_arms);
+            let res = ti_core::rules::force::resolve(attacker, defender, bal.manpower);
+            // 写回席位（双方必损：人手/武器都掉，胜者也损）。
+            self.seat_crew[seat] = res.attacker_after.crew;
+            self.seat_arms[seat] = res.attacker_after.arms;
+            b.after_crew = Some(res.attacker_after.crew);
+            b.after_arms = Some(res.attacker_after.arms);
+            let won = matches!(res.winner, ti_core::rules::force::ForceSide::Attacker);
+            b.outcome = Some(if won { Side::Player } else { Side::Enemy });
+            self.battle_won = won;
+            // 结果钩（同攻占口径）：副本胜 = 占领；BOSS 胜 = 跨图推进。
+            let dungeon = b.dungeon.clone();
+            b.dungeon = None;
+            if dungeon.is_some() {
+                b.dungeon_battle = true;
+            }
+            if let Some((cell, isle, _level)) = dungeon {
+                if won {
                     self.last_sfx = Some(Sfx::Victory);
-                    // 跨图推进（`business/progression.md`）：击败当前图 BOSS → 解锁下一图。
-                    // 结算走规则层（`from_unlocked` 重建 + `on_boss_defeated`，幂等）：
-                    // 重复攻击已结束时集合不变；失败（`battle_won=false`）不解锁（可重试当前图）。
-                    if let Some(ms) = self.map_slot {
-                        self.unlocked_maps = ProgressionState::from_unlocked(&self.unlocked_maps)
-                            .on_boss_defeated(ms)
-                            .unlocked();
-                        // 通关门禁（`business/progression.md` §通关）：击败 m03 BOSS = 全图通杀，
-                        // 置通关位（`is_cleared`）；解锁集不变（m03 无下一图）。
-                        if ms == MapSlot::M03 {
-                            self.cleared = true;
-                        }
+                    self.settle_dungeon_win(cell, &isle);
+                } else {
+                    self.toast_dungeon_fail(&isle);
+                }
+            } else if won {
+                self.last_sfx = Some(Sfx::Victory);
+                if let Some(ms) = self.map_slot {
+                    self.unlocked_maps = ProgressionState::from_unlocked(&self.unlocked_maps)
+                        .on_boss_defeated(ms)
+                        .unlocked();
+                    if ms == MapSlot::M03 {
+                        self.cleared = true;
                     }
                 }
             }
@@ -808,27 +840,10 @@ impl SessionHost for GameApp {
                 self.seat_crew.get(seat).copied().unwrap_or(0),
                 self.seat_arms.get(seat).copied().unwrap_or(0),
             );
-            let (def_crew, def_arms) = match &b.dungeon {
-                Some((_cell, isle, level)) => {
-                    let Ok(bal) = data::balance() else {
-                        return BattleSnapshot {
-                            player_hp: b.player_hp,
-                            boss_hp: b.boss_hp,
-                            rounds: b.rounds,
-                            outcome: b.outcome,
-                            player_hp_max: b.player_hp_max,
-                            boss_hp_max: b.boss_hp_max,
-                            attacker_crew: atk_crew,
-                            attacker_arms: atk_arms,
-                            defender_crew: 0,
-                            defender_arms: 0,
-                        };
-                    };
-                    let rules = TerritoryRules::new(bal);
-                    let u = rules.defender_unit(isle, *level);
-                    (u.hp, u.atk)
-                }
-                None => (b.boss_hp_max, 0),
+            let (def_crew, def_arms) = match data::balance() {
+                Ok(bal) => defender_force(b, bal),
+                // 硬错误不 fallback（`02_conventions.md` §4.4）：无 balance ⇒ 守方兵力 0。
+                Err(_e) => (0, 0),
             };
             BattleSnapshot {
                 player_hp: b.player_hp,
@@ -841,6 +856,9 @@ impl SessionHost for GameApp {
                 attacker_arms: atk_arms,
                 defender_crew: def_crew,
                 defender_arms: def_arms,
+                resolved: b.outcome.is_some(),
+                after_crew: atk_crew,
+                after_arms: atk_arms,
             }
         })
     }
