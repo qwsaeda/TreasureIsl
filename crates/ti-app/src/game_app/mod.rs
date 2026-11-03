@@ -104,6 +104,14 @@ pub struct BattleSnapshot {
     pub player_hp_max: u32,
     /// BOSS 初始 HP（血条分母，`balance.combat.boss_tiers[tier].hp`）。
     pub boss_hp_max: u32,
+    /// 攻方舰队人手（运行态兵力，`seat_crew[current]`；S34.6 D4 数据绑定，spec §2.5）。
+    pub attacker_crew: u32,
+    /// 攻方舰队武器（`seat_arms[current]`）。
+    pub attacker_arms: u32,
+    /// 守方兵力人手（驻军 + 建筑防御，`defender_unit`/siege 口径）。
+    pub defender_crew: u32,
+    /// 守方兵力武器（= 建筑防御数）。
+    pub defender_arms: u32,
 }
 
 /// S33.5 攻占战报（`Vs` 场景时有效；`assault` 一次性确定性结算，非 HP 回合制）。

@@ -85,7 +85,16 @@ impl Scene for VsScene {
                 Some(Side::Enemy) => "result_lose",
                 None => "clash",
             };
-            crate::scenes::vs_anim_proto::render_v2_elem(host, phase);
+            // S34.6 D4（spec §2.5 数据绑定）：兵力 = 运行态（`BattleSnapshot` 席位舰队/守方），
+            // 替换演示常量（用户 2026-11-03「SB设计，阅读设计规范」= 构图对但兵力假）。
+            crate::scenes::vs_anim_proto::render_v2_elem(
+                host,
+                phase,
+                b.attacker_crew,
+                b.attacker_arms,
+                b.defender_crew,
+                b.defender_arms,
+            );
             return;
         }
         // 非战斗（空态）：vs_theme 背景 + 原语 + 空文案。

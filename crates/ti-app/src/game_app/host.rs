@@ -798,13 +798,50 @@ impl SessionHost for GameApp {
     }
 
     fn battle_snapshot(&self) -> Option<BattleSnapshot> {
-        self.battle.as_ref().map(|b| BattleSnapshot {
-            player_hp: b.player_hp,
-            boss_hp: b.boss_hp,
-            rounds: b.rounds,
-            outcome: b.outcome,
-            player_hp_max: b.player_hp_max,
-            boss_hp_max: b.boss_hp_max,
+        self.battle.as_ref().map(|b| {
+            // S34.6 D4（spec §2.5 数据绑定，用户 2026-11-03「阅读设计规范」）：兵力 HUD 用
+            // **运行态**而非演示常量。攻方 = 席位舰队（`seat_crew/seat_arms[current]`）；
+            // 守方 = 战斗敌手（副本战 `defender_unit(isle, level)`，hp = defense 兵力口径；
+            // BOSS 战无兵力模型，回退 `boss_hp_max` 当兵力参考）。
+            let seat = self.turn_cycle.current as usize;
+            let (atk_crew, atk_arms) = (
+                self.seat_crew.get(seat).copied().unwrap_or(0),
+                self.seat_arms.get(seat).copied().unwrap_or(0),
+            );
+            let (def_crew, def_arms) = match &b.dungeon {
+                Some((_cell, isle, level)) => {
+                    let Ok(bal) = data::balance() else {
+                        return BattleSnapshot {
+                            player_hp: b.player_hp,
+                            boss_hp: b.boss_hp,
+                            rounds: b.rounds,
+                            outcome: b.outcome,
+                            player_hp_max: b.player_hp_max,
+                            boss_hp_max: b.boss_hp_max,
+                            attacker_crew: atk_crew,
+                            attacker_arms: atk_arms,
+                            defender_crew: 0,
+                            defender_arms: 0,
+                        };
+                    };
+                    let rules = TerritoryRules::new(bal);
+                    let u = rules.defender_unit(isle, *level);
+                    (u.hp, u.atk)
+                }
+                None => (b.boss_hp_max, 0),
+            };
+            BattleSnapshot {
+                player_hp: b.player_hp,
+                boss_hp: b.boss_hp,
+                rounds: b.rounds,
+                outcome: b.outcome,
+                player_hp_max: b.player_hp_max,
+                boss_hp_max: b.boss_hp_max,
+                attacker_crew: atk_crew,
+                attacker_arms: atk_arms,
+                defender_crew: def_crew,
+                defender_arms: def_arms,
+            }
         })
     }
 
