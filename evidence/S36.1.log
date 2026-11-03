@@ -1,0 +1,47 @@
+=== S36.1 多席棋子散开 + P{n} 席位徽标 evidence ===
+日期: 2026-11-03
+
+--- 1. app_seats_e2e 12/12 全绿（S36.0 席位语义回归，本任务无席位语义改动）---
+running 12 tests
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+--- 2. app_territory_turns 2/2 全绿 ---
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+--- 3. cargo build -p ti-app 0 error ---
+errors: 0
+
+--- 4. cargo clippy -p ti-app --all-targets -- -D warnings 全绿 ---
+warning: `ti-engine` (manifest) generated 1 warning   <- pre-existing cargo bin-target 提醒（ti-engine/src/bin 两 target 同名），非 clippy lint，不计
+（ti-app lib / lib test / all integration target：0 warning，S34.6 D3/D5 的 too_many_lines/too_many_arguments 豁免随修收口）
+
+--- 5. cargo fmt --all --check ---
+fmt OK
+
+--- 6. main_map --shot 出图 + 多席散开像素探针（S36.1 本任务核心判据）---
+cmd: xvfb-run -a -s "-screen 0 1280x800x24" cargo run -q -p ti-engine --bin treasure-bevy-native -- \
+      --shot --scene=main_map --viewport=1080x1920
+[shot] 预载 OK
+[shot] 非黑像素 = 2058521 / alpha>8 = 2073600 / 2073600
+[shot] 已写 /disk/workspaces/treasureIsl/crates/ti-engine/../../evidence/bevy_native_main_map_1080x1920.png
+PIL 读回 size = (1080, 1920)；暗灰旗 0x7BEF（≈RGB 123/125/125）探针：
+  旗组件数（start 格附近 bbox x∈[20,220] y∈[660,840]，8-邻域连通，尺寸 ≥15px）：4 个
+  组件 center/尺寸：(67,733) n=141 bbox=(62,727)-(76,745) / (121,733) n=109 bbox=(116,727)-(130,745)
+                 (78,765) n=138 bbox=(73,759)-(87,777) / (112,763) n=89  bbox=(105,759)-(119,769)
+  金色船（当前席 ordinal-0，start 格 (96,746)）与灰旗分居不同位置 ⇒ 同格多席已**扇出**，
+  叠成一枚 = 看不出谁在哪 缺陷关闭。
+
+--- 7. WASM 重建（用户报「wasm 没变」根因：S36 代码落后于 web/ 产物 mtime）---
+cmd: pwsh -ExecutionPolicy Bypass -File scripts/build_wasm.ps1
+  web/treasure_bevy_wasm-0.1.0.wasm   45,608,800 B  SHA256=32413A3B32B07088e5849e27f5897b96b5a6049a50212f698f4673f025053932
+  web/treasure-bevy-wasm_bg.wasm   45,608,800 B  SHA256=32413A3B32B07088e5849e27f5897b96b5a6049a50212f698f4673f025053932
+  （S18.8a 台账修复：旧体积口径写死 web/treasure_bevy_wasm.wasm（S18.8a 时代名，S31.2c 后不存在）⇒
+   实测恒 0 B；本轮脚本改「取 $outDir 内最大 *.wasm」后复跑，实得 45,608,800 B / 32413A3B32B07088。）
+
+--- 8. gate ---
+（见 scripts/gate.ps1 33 项实跑输出，本文件不贴总输出——任务判据 = 关键项实跑）
+
+=== S36.1 结论 ===
+- 同格多席（开局全员同起点）fan-out：沿小圆周散开 + 船缩小 70% + 余席暗灰旗 + 当前席金船 + P1..P5 徽标。
+- 四条渲染路径（render_track / render_v5_ring / render_v6_proto / render_v6_elem）统一接 seat_slots。
+- 旧「5 席棋子全叠一枚」缺陷（S36.0 表现层）closed；S36.0 席位语义全部回归绿。

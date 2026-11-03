@@ -16,7 +16,7 @@ use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{BoardSession, TrackSpace, Turn};
 use ti_core::rules::build::overflow_to_deposit;
 use ti_core::rules::cards;
-use ti_core::rules::force::Force;
+use ti_core::rules::force::{Force, ForceSide, resolve};
 use ti_core::rules::messages::total_pages;
 use ti_core::rules::progression::{CLEARED_BIT, ProgressionState};
 use ti_core::rules::territory::{
@@ -248,10 +248,22 @@ impl MapHost for GameApp {
         self.board.as_ref().map_or(0, BoardSession::index)
     }
 
+    /// v3：所有在局席位的赛道位置（`Vec<(seat, index)>`，当前席会话 = `board` 字段）。
     fn seat_positions(&self) -> Vec<(u8, usize)> {
+        let cur = self.turn_cycle.current;
         (0..5u8)
             .filter(|s| self.turn_cycle.is_playing(*s))
-            .filter_map(|s| self.seat_session(s).map(|sess| (s, sess.index())))
+            .map(|s| {
+                let idx = if s == cur {
+                    self.board.as_ref().map_or(0, BoardSession::index)
+                } else {
+                    self.seat_sessions
+                        .get(s as usize)
+                        .and_then(Option::as_ref)
+                        .map_or(0, BoardSession::index)
+                };
+                (s, idx)
+            })
             .collect()
     }
 
@@ -793,13 +805,13 @@ impl SessionHost for GameApp {
             );
             let (def_crew, def_arms) = defender_force(b, bal);
             let defender = Force::new(def_crew, def_arms);
-            let res = ti_core::rules::force::resolve(attacker, defender, bal.manpower);
+            let res = resolve(attacker, defender, bal.manpower);
             // 写回席位（双方必损：人手/武器都掉，胜者也损）。
             self.seat_crew[seat] = res.attacker_after.crew;
             self.seat_arms[seat] = res.attacker_after.arms;
             b.after_crew = Some(res.attacker_after.crew);
             b.after_arms = Some(res.attacker_after.arms);
-            let won = matches!(res.winner, ti_core::rules::force::ForceSide::Attacker);
+            let won = matches!(res.winner, ForceSide::Attacker);
             b.outcome = Some(if won { Side::Player } else { Side::Enemy });
             self.battle_won = won;
             // 结果钩（同攻占口径）：副本胜 = 占领；BOSS 胜 = 跨图推进。

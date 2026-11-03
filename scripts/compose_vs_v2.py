@@ -68,6 +68,17 @@ def flood_white_bg(img: Image.Image, thresh: int = 232) -> Image.Image:
 
 
 def load_elem(name: str, remove_bg: bool = True) -> Image.Image:
+    """加载元素。
+
+    S34.6 固化：优先用引擎透明资产（assets/ui/vs_v2/，RGBA 抠净）
+    ——设计稿与引擎渲染同源，避免 evidence 元素 RGB 未抠净
+    （hero 脚部白带 83.2% 亮像素，flood 未连通人物轮廓包围区）。
+    回退 evidence 元素 + flood_white_bg（背景/横幅仍用）。
+    """
+    ap = os.path.join(ROOT, "assets", "ui", "vs_v2", f"{name}.png")
+    if os.path.exists(ap):
+        im = Image.open(ap)
+        return im.convert("RGBA") if im.mode != "RGBA" else im
     p = os.path.join(ELEM, f"{name}.png")
     if not os.path.exists(p):
         raise FileNotFoundError(f"缺元素: {p}")
@@ -101,6 +112,19 @@ def paste_center(base: Image.Image, im: Image.Image, cx: int, cy: int) -> None:
     base.paste(im, (int(cx - im.width / 2), int(cy - im.height / 2)), im)
 
 
+def ground_shadow(d: ImageDraw.ImageDraw, cx: int, foot_y: int, w: int, a: int = 96) -> None:
+    """人物脚下椭圆落地阴影（贴地感，S34.6 固化；`foot_y` = 人物脚底 y）。
+
+    用户 2026-11-03「还TM飞天，你咋不入地呢」：人物通用资产叠加格类插画背景 =
+    贴纸感（无落地阴影/无空间融合）。本函数在人物脚底画椭圆阴影（贴地），
+    clash/duel/格类帧人物贴前调用（人物脚压阴影上沿 = 落地）。幂等（无随机）。
+    """
+    d.ellipse(
+        (cx - w // 2, foot_y - 8, cx + w // 2, foot_y + 22),
+        fill=(0, 0, 0, a),
+    )
+
+
 def calc_power(crew: int, arms: int) -> tuple[int, int, int, int]:
     """武装/徒手/战力/武装数。"""
     armed = min(crew, arms)
@@ -124,24 +148,23 @@ def draw_power_bar(base: Image.Image, x: int, y: int, w: int, h: int,
 
 def draw_status_box(base: Image.Image, x: int, y: int, w: int, h: int,
                     name: str, crew: int, arms: int, side: str) -> None:
-    """顶/底状态框：名牌 + 人手/武器/武装 + 兵力条。side='def'顶部绿 / 'atk'底部红。"""
+    """顶/底状态框：名牌 + 底框（黄铜羊皮面板）。
+
+    S34.6 分离（用户「地图和游戏逻辑分离」）：本函数只画**静态框**（名牌/底/黄铜框）——
+    兵力条填充/数字由**引擎动态画**（运行态兵力，非烘焙演示值）。引擎按同坐标叠画。
+    """
     d = ImageDraw.Draw(base)
     # 底框（黄铜羊皮面板）
     d.rounded_rectangle((x, y, x + w, y + h), radius=16, fill=(222, 198, 148, 235),
                         outline=(120, 90, 50, 255), width=3)
     d.rounded_rectangle((x + 6, y + 6, x + w - 6, y + h - 6), radius=12,
                         outline=(90, 66, 36, 120), width=2)
-    armed, unarmed, power, _ = calc_power(crew, arms)
-    # 名牌
+    # 名牌（静态标签）
     d.text((x + 18, y + 12), name, fill=(60, 40, 20))
-    # 兵力条
+    # 兵力条槽（黄铜空槽；填充由引擎动态画）
     bar_x, bar_y = x + 18, y + h - 40
     bar_w = w - 36
-    color = (60, 170, 90) if side == "def" else (200, 70, 50)
-    frac = crew / 40.0
-    draw_power_bar(base, bar_x, bar_y, bar_w, 22, frac, color)
-    # 数值
-    d.text((x + 18, y + 38), f"人手 {crew} / 武器 {arms} / 武装 {armed}", fill=(70, 50, 26))
+    draw_power_bar(base, bar_x, bar_y, bar_w, 22, 0.0, (60, 170, 90))
 
 
 def draw_hud(base: Image.Image, atk_crew: int, atk_arms: int,
@@ -152,16 +175,19 @@ def draw_hud(base: Image.Image, atk_crew: int, atk_arms: int,
     draw_status_box(base, W - 470, 60, 440, 130, def_name, def_crew, def_arms, "def")
     # 底部攻方框（左对齐）
     draw_status_box(base, 30, H - 190, 440, 130, atk_name, atk_crew, atk_arms, "atk")
-    # 中央 VS 徽标
+    # 中央 VS 徽标（S34.6 固化：加下方投影融合，非悬浮纯色块——用户「飞天/不入地」）
     d = ImageDraw.Draw(base)
+    d.ellipse((W // 2 - 70, H // 2 - 48, W // 2 + 70, H // 2 + 92),
+              fill=(0, 0, 0, 70))
     d.ellipse((W // 2 - 70, H // 2 - 70, W // 2 + 70, H // 2 + 70), fill=(60, 40, 20, 220),
               outline=(200, 160, 90, 255), width=5)
     d.text((W // 2 - 34, H // 2 - 26), "VS", fill=(240, 210, 150))
 
 
 def draw_battle_frame(base: Image.Image, atk_crew: int, atk_arms: int,
-                      def_crew: int, def_arms: int, bg_elem: str = "vs_bg") -> None:
-    """通用战斗层：羊皮底框 + 背景（可换战斗类型）+ HUD + 敌我分列站位。"""
+                      def_crew: int, def_arms: int, bg_elem: str = "vs_bg",
+                      with_hud: bool = True) -> None:
+    """通用战斗层：羊皮底框 + 背景（可换战斗类型）+ 可选 HUD（状态框底 + VS 徽标）。"""
     # 羊皮做旧边框
     d = ImageDraw.Draw(base)
     for i, col in enumerate([(158, 122, 66), (182, 146, 88), (200, 168, 110),
@@ -181,7 +207,8 @@ def draw_battle_frame(base: Image.Image, atk_crew: int, atk_arms: int,
     oy = (bg.height - ih) // 2
     bg = bg.crop((ox, oy, ox + iw, oy + ih))
     base.paste(bg, (44, 44))
-    draw_hud(base, atk_crew, atk_arms, def_crew, def_arms)
+    if with_hud:
+        draw_hud(base, atk_crew, atk_arms, def_crew, def_arms)
 
 
 def draw_fight_type_frame(base: Image.Image, bg_elem: str, title: str,
@@ -198,9 +225,104 @@ def draw_fight_type_frame(base: Image.Image, bg_elem: str, title: str,
     d.rounded_rectangle((W // 2 - 260, 190, W // 2 + 260, 275), radius=16,
                         fill=(222, 198, 148, 235), outline=(120, 90, 50, 255), width=4)
     d.text((W // 2 - 110, 220), title, fill=(60, 40, 20))
+    # S34.6 固化：人物落地阴影（hero/enemy focus，背景已烘焙部队不再贴 crew）
+    ground_shadow(d, 200, 1700, 190)   # hero 脚下
+    ground_shadow(d, 850, 530, 210)    # enemy 脚下
     # 敌我双船长（左下攻方 hero / 右上守方 enemy）
     paste_center(base, hero, 200, 1600)
     paste_center(base, enemy, 850, 430)
+
+
+def draw_gameui_design(base: Image.Image, bg_elem: str, title: str,
+                       atk_crew: int, atk_arms: int, def_crew: int, def_arms: int,
+                       hero: Image.Image, enemy: Image.Image) -> None:
+    """游戏化战斗界面设计稿（S34.6，参照宝可梦/FGO/FF 回合制战斗 HUD）。
+
+    用户 2026-11-03「这是游戏，不是动画片」：全屏场景插画当背景 = 动画片海报，非游戏。
+    成熟游戏（宝可梦/FGO/FF）战斗界面共同规律：
+      ① 背景 = 简洁战斗场地（色块地面 + 弱化远景剪影），**不抢戏**，非全屏插画；
+      ② 信息优先：顶部敌方面板 + 底部我方面板（名字/兵力条/兵力数字）；
+      ③ 底部指令区（攻击/防御/道具/技能）——战斗交互核心；
+      ④ 人物敌上我下，站场地地面线（落地阴影），是战斗角色非插画人物。
+    本函数出**设计稿**（1 张，encounter 代表），用户看效果再拍板参照哪类。
+    """
+    d = ImageDraw.Draw(base)
+    # ---- ① 简洁战斗场地（非全屏插画）----
+    # 天空/远景（上 55%）：深色渐变夜空，弱化场景图当剪影远景（低透明度，不抢戏）
+    sky_top, sky_bot = (26, 22, 18), (58, 46, 32)
+    for i in range(0, 960):
+        t = i / 960
+        r = int(sky_top[0] * (1 - t) + sky_bot[0] * t)
+        g = int(sky_top[1] * (1 - t) + sky_bot[1] * t)
+        b = int(sky_top[2] * (1 - t) + sky_bot[2] * t)
+        d.line((0, i, W, i), fill=(r, g, b))
+    # 弱化场景图当远景剪影（上 55%，低透明度，去色）
+    try:
+        bg = load_elem(bg_elem, remove_bg=False).convert("RGB")
+        bg = bg.resize((W, 1056), Image.LANCZOS)
+        # 去色 + 压暗
+        g = ImageOps.grayscale(bg)
+        g = ImageOps.autocontrast(g)
+        g = g.point(lambda p: int(p * 0.28))
+        tinted = Image.new("RGB", (W, 1056), (52, 40, 28))
+        silhou = Image.composite(g, tinted, ImageOps.invert(g).point(lambda p: int(p * 0.5)))
+        base.paste(silhou, (0, 0))
+    except Exception:
+        pass
+    # 地面（下 45%，色块，分近/中/远三带，简洁）
+    ground_bot = [(120, 88, 48), (98, 70, 40), (76, 54, 32)]
+    for i, (col, y0, y1) in enumerate([
+            (ground_bot[0], 1056, 1440),
+            (ground_bot[1], 1440, 1720),
+            (ground_bot[2], 1720, 1920)]):
+        d.rectangle((0, y0, W, y1), fill=col)
+    # 地面线（人物站地基准 + 高光）
+    d.line((0, 1440, W, 1440), fill=(160, 120, 70), width=4)
+    d.line((0, 1720, W, 1720), fill=(60, 44, 26), width=6)
+    # 远处战场剪影（敌营火把/旗帜点，点缀不抢戏）
+    for fx in (140, 340, 620, 900):
+        d.rectangle((fx, 1000, fx + 4, 1056), fill=(200, 150, 80))
+        d.ellipse((fx - 6, 992, fx + 10, 1008), fill=(240, 180, 90))
+    # ---- ④ 人物敌上我下，站场地地面线 ----
+    ground_shadow(d, 270, 1560, 230)   # hero 脚下（近处地面）
+    ground_shadow(d, 810, 1180, 240)   # enemy 脚下（远处地面）
+    paste_center(base, hero, 270, 1470)
+    paste_center(base, enemy, 810, 1090)
+    # 中央 VS 徽标（黄铜圆 + 投影）
+    d.ellipse((W // 2 - 70, 900 - 48, W // 2 + 70, 900 + 92), fill=(0, 0, 0, 80))
+    d.ellipse((W // 2 - 70, 900 - 70, W // 2 + 70, 900 + 70), fill=(60, 40, 20, 225),
+              outline=(200, 160, 90, 255), width=5)
+    d.text((W // 2 - 34, 900 - 26), "VS", fill=(240, 210, 150))
+    # ---- ② 顶部敌方面板（右上，名字 + 兵力条 + 兵力数字）----
+    d.rounded_rectangle((W - 470, 60, W - 30, 250), radius=16,
+                        fill=(40, 32, 24, 235), outline=(200, 160, 90, 255), width=3)
+    d.text((W - 450, 78), "敌方驻军", fill=(240, 210, 150))
+    d.text((W - 450, 108), f"人手 {def_crew}  武器 {def_arms}  武装 {min(def_crew, def_arms)}",
+           fill=(230, 200, 150))
+    draw_power_bar(base, W - 450, 160, 390, 26, 0.6, (200, 80, 60))
+    d.text((W - 450, 196), "兵力", fill=(180, 150, 110))
+    # ---- ③ 底部指令区（攻击/防御/道具/技能 4 按钮）----
+    cmd_names = ["攻击", "防御", "道具", "技能"]
+    cmd_cols = [(180, 60, 50), (70, 120, 170), (90, 140, 80), (140, 90, 160)]
+    bx0, by0 = 44, 1760
+    btn_w, btn_h, gap = 230, 120, 16
+    for i, (cn, cc) in enumerate(zip(cmd_names, cmd_cols)):
+        bx = bx0 + i * (btn_w + gap)
+        d.rounded_rectangle((bx, by0, bx + btn_w, by0 + btn_h), radius=12,
+                            fill=cc, outline=(240, 210, 150), width=3)
+        d.text((bx + btn_w // 2 - 28, by0 + btn_h // 2 - 14), cn, fill=(255, 245, 220))
+    # 底部我方面板（左下，名字 + 兵力条 + 兵力数字）——指令区上方
+    d.rounded_rectangle((44, 1560, 44 + 440, 1560 + 150), radius=16,
+                        fill=(40, 32, 24, 235), outline=(200, 160, 90, 255), width=3)
+    d.text((62, 1578), "我方舰队", fill=(240, 210, 150))
+    d.text((62, 1608), f"人手 {atk_crew}  武器 {atk_arms}  武装 {min(atk_crew, atk_arms)}",
+           fill=(230, 200, 150))
+    draw_power_bar(base, 62, 1660, 390, 26, 0.8, (90, 160, 80))
+    # 标题牌（上中）
+    if title:
+        d.rounded_rectangle((W // 2 - 260, 300, W // 2 + 260, 385), radius=16,
+                            fill=(222, 198, 148, 235), outline=(120, 90, 50, 255), width=4)
+        d.text((W // 2 - 110, 330), title, fill=(60, 40, 20))
 
 
 def main() -> int:
@@ -214,17 +336,30 @@ def main() -> int:
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--fight-type", choices=["all", "siege", "dungeon", "boss"],
                     default="all", help="战斗类型分层帧（默认 all=也出基础 4 帧）")
+    ap.add_argument("--gameui", action="store_true",
+                    help="游戏化战斗界面设计稿（参照宝可梦/FGO/FF：简洁场地 + 敌我面板 + 指令区）")
     args = ap.parse_args()
 
     need = ["hero", "enemy", "crew", "vs_bg", "banner_win", "banner_lose",
             "bg_siege", "bg_dungeon", "bg_boss"]
-    missing = [n for n in need if not os.path.exists(os.path.join(ELEM, f"{n}.png"))]
+    # S34.6 固化：主源 = 引擎透明资产（assets/ui/vs_v2/），缺则回退 evidence 元素
+    src_dir = os.path.join(ROOT, "assets", "ui", "vs_v2")
+    missing = [n for n in need
+               if not os.path.exists(os.path.join(src_dir, f"{n}.png"))
+               and not os.path.exists(os.path.join(ELEM, f"{n}.png"))]
     if missing:
         print(f"[vs] MISSING elements: {missing}", file=sys.stderr)
         return 2
     if args.check:
         ok = all(os.path.exists(os.path.join(args.outdir, f"vs_v2_{f}.png"))
                  for f in ["clash", "duel", "result_win", "result_lose"])
+        # S34.6 分离：场景层资产（引擎 blit 读）在 assets/ui/vs_v2/
+        sa = os.path.join(ROOT, "assets", "ui", "vs_v2")
+        ok = ok and all(os.path.exists(os.path.join(sa, f"scene_{c}.png"))
+                        for c in ["encounter", "raid", "boss", "attack"])
+        # S34.6 result 帧（无人物/无 HUD/无标题，引擎叠站地 hero + 横幅 + 战报）
+        ok = ok and all(os.path.exists(os.path.join(sa, f"scene_result_{c}.png"))
+                        for c in ["encounter", "raid", "boss", "attack"])
         print(f"[vs] check: out={'ok' if ok else 'missing'} seed={args.seed}")
         return 0 if ok else 1
 
@@ -240,6 +375,11 @@ def main() -> int:
     # ---- clash 兵对兵：左下攻方 crew 冲锋，右上守方 enemy 督战 ----
     base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw_battle_frame(base, ac, aa, dc, da)
+    d = ImageDraw.Draw(base)
+    # S34.6 固化：人物落地阴影（贴地，非飞天；人物脚压阴影上沿）
+    ground_shadow(d, 360, 1310, 270)   # crew 方阵脚下
+    ground_shadow(d, 200, 1660, 190)   # hero 领军脚下
+    ground_shadow(d, 830, 520, 210)    # enemy 督战脚下（高处）
     paste_center(base, crew, 360, 1200)          # 左下攻方水手方阵
     paste_center(base, hero_small, 200, 1560)    # 攻方英雄领军
     paste_center(base, enemy, 830, 420)          # 右上守方船长
@@ -258,6 +398,10 @@ def main() -> int:
     # ---- duel 将对将：左下 hero vs 右上 enemy 刀光冲突 ----
     base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw_battle_frame(base, ac, aa, dc, da)
+    d = ImageDraw.Draw(base)
+    # S34.6 固化：人物落地阴影（贴地）
+    ground_shadow(d, 230, 1370, 200)   # hero 脚下
+    ground_shadow(d, 860, 570, 200)    # enemy 脚下
     paste_center(base, hero, 230, 1290)
     paste_center(base, enemy, 860, 490)
     # 刀光火花（中央冲突点）
@@ -343,6 +487,70 @@ def main() -> int:
             draw_fight_type_frame(base, bg_elem, title, ac, aa, dc, da,
                                   hero, enemy, crew)
             base.convert("RGB").save(os.path.join(args.outdir, outname))
+
+    # ---- 场景层资产（S34.6 分离：compose 生成资产，引擎 blit + 动态叠 HUD 数据）----
+    # 用户 2026-11-03「地图和游戏逻辑分离」：VS 场景静态视觉（背景+人物+落地阴影+
+    # VS徽标+标题牌+状态框底）由本脚本固化成资产（assets/ui/vs_v2/scene_<class>.png），
+    # 引擎只 blit 资产 + 动态画兵力数字/条/战报（运行态数据，非烘焙演示值）。
+    scene_assets = os.path.join(ROOT, "assets", "ui", "vs_v2")
+    scenes = {
+        # class: (bg_elem, 标题牌 or None, 输出文件名, 贴crew, enemy_foot_y, hero_foot_y, crew_foot_y)
+        # S34.6 修复（用户「一个人飞到天上」）：enemy/hero 站各场景**地面线**。
+        # 坐标系：compose W,H = 1080,1920（1920 高）；地面线 = 场景图亮面（python 1080 高
+        # 分析 ×1.78 转 compose 坐标）——vs_bg 甲板面 1460-1690 / bg_dungeon 洞窟 1345-1690 /
+        # bg_siege 城墙 1400 / bg_boss 塔门平台 900 + 石阶下 1400-1700。
+        "encounter": ("vs_bg", None, "scene_encounter.png", True, 1500, 1680, 1560),
+        "raid": ("bg_dungeon", "副本战 · 登岛夺宝", "scene_raid.png", False, 1400, 1600, 0),
+        "boss": ("bg_boss", "BOSS 战 · 强攻要塞", "scene_boss.png", False, 900, 1550, 0),
+        "attack": ("bg_siege", "攻占战 · 船队攻城", "scene_attack.png", False, 1450, 1600, 0),
+    }
+    os.makedirs(scene_assets, exist_ok=True)
+    for cls, (bg_elem, title, outname, with_crew, enemy_foot, hero_foot, crew_foot) in scenes.items():
+        base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        draw_battle_frame(base, ac, aa, dc, da, bg_elem)
+        d = ImageDraw.Draw(base)
+        if title:
+            # 格类标题牌（上中，羊皮底；对齐 draw_fight_type_frame）
+            d.rounded_rectangle((W // 2 - 260, 190, W // 2 + 260, 275), radius=16,
+                                fill=(222, 198, 148, 235), outline=(120, 90, 50, 255), width=4)
+            d.text((W // 2 - 110, 220), title, fill=(60, 40, 20))
+        if with_crew:
+            # 遭遇战甲板列阵：crew+hero+enemy + 落地阴影（站各场景地面线）
+            ground_shadow(d, 360, crew_foot, 270)    # crew 方阵脚下
+            ground_shadow(d, 200, hero_foot, 190)    # hero 领军脚下
+            ground_shadow(d, 830, enemy_foot, 210)   # enemy 督战脚下
+            paste_center(base, crew, 360, crew_foot - 90)
+            paste_center(base, hero_small, 200, hero_foot - 80)
+            paste_center(base, enemy, 830, enemy_foot - 90)
+        else:
+            # 格类帧：背景已烘焙部队，只贴 hero/enemy focus（不贴 crew 防重复）+ 落地阴影
+            # （enemy 站偏上地面 / hero 站近处地面，一上一下都贴地）
+            ground_shadow(d, 200, hero_foot, 190)    # hero 脚下
+            ground_shadow(d, 850, enemy_foot, 210)   # enemy 脚下
+            paste_center(base, hero, 200, hero_foot - 90)
+            paste_center(base, enemy, 850, enemy_foot - 90)
+        base.convert("RGB").save(os.path.join(scene_assets, outname))
+        print(f"[vs] scene asset: assets/ui/vs_v2/{outname}")
+
+    # ---- result 帧（S34.6 修复 result 双影/状态框底重叠）----
+    # result 帧 = 仅边框+背景（无人物/无 HUD/无标题牌），引擎 draw_result_scene 叠
+    # 站地 hero/enemy + 书法横幅 + 战报框。分离 = 场景帧人物与 result 人物不再双影，
+    # 状态框底（clash 专属）不再透出 result 帧。
+    for cls, (bg_elem, _title, _outname, _crew, _ef, _hf, _cf) in scenes.items():
+        result_out = f"scene_result_{cls}.png"
+        base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        draw_battle_frame(base, ac, aa, dc, da, bg_elem, with_hud=False)
+        base.convert("RGB").save(os.path.join(scene_assets, result_out))
+        print(f"[vs] result asset: assets/ui/vs_v2/{result_out}")
+
+    # ---- gameui 设计稿（S34.6，参照宝可梦/FGO/FF）----
+    if args.gameui:
+        base = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        draw_gameui_design(base, "vs_bg", "遭遇战 · 甲板对峙",
+                           ac, aa, dc, da, hero, enemy)
+        out = os.path.join(args.outdir, "game_ui_design.png")
+        base.convert("RGB").save(out)
+        print(f"[vs] gameui design: {out}")
 
     print(f"[vs] saved 4 基础帧 + 战斗类型帧（{args.fight_type}）to {args.outdir} "
           f"(atk {ac}/{aa} def {dc}/{da})")

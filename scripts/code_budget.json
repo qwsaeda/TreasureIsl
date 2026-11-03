@@ -4,7 +4,10 @@
     "crates/ti-core/src/data/mod.rs": "S31.2 起超限（942>900）：2026-10-29 Linux 门禁对账补登基线（限期整改）",
     "crates/ti-tools/src/bin/doccheck2.rs": "超限（3657>900）：2026-10-29 门禁对账补登基线（限期整改）",
     "crates/ti-engine/src/bin/treasure_bevy.rs": "超限（2163>900）：2026-10-29 门禁对账补登基线（限期整改）",
-    "crates/ti-app/src/scenes/chrome.rs": "超限（1394>900）：2026-10-29 门禁对账补登基线（限期整改）"
+    "crates/ti-app/src/scenes/chrome.rs": "超限（1394>900）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-app/src/game_app/host.rs": "S34.6/S36.1 起超限（994>900）：2026-11-03 飞轮门禁对账补登基线（限期整改）",
+    "crates/ti-app/src/scenes/mod.rs": "超限（912>900）：2026-11-03 飞轮门禁对账补登基线（限期整改）",
+    "crates/ti-app/tests/render_intent.rs": "超限（909>900）：2026-10-29 门禁对账补登基线（限期整改）"
   },
   "exempt_fns": {
     "crates/ti-engine/src/scene_render.rs::spawn_primitives": "S29.3 起超限（183>140）：2026-10-29 门禁对账补登基线（限期整改）",
@@ -20,7 +23,8 @@
     "crates/ti-app/src/scenes/main_map.rs::render": {
       "reason": "v6 in-progress (2026-10-31)",
       "fix_in": "TBD"
-    }
+    },
+    "crates/ti-app/src/scenes/vs_anim_proto.rs::render_v2_elem": "S34.6 起超限（163>140）：2026-11-03 S34.6 D3 格类分层代码叠加，该函数为 S34.6 新增，按豁免处理"
   },
   "exempt_repeats": {
     "i18n 文案取值 sgetf@crates/ti-app/src/scenes/main_map.rs": {

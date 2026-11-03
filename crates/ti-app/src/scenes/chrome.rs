@@ -477,6 +477,44 @@ pub const V2_BG_SIEGE: &str = "assets/ui/vs_v2/bg_siege.png";
 pub const V2_BG_DUNGEON: &str = "assets/ui/vs_v2/bg_dungeon.png";
 /// v2 BOSS 战背景（英雄 vs 要塞炮台）。
 pub const V2_BG_BOSS: &str = "assets/ui/vs_v2/bg_boss.png";
+/// v2 场景层资产（S34.6 分离：compose 生成静态场景帧，引擎 blit + 动态叠 HUD 数据）。
+pub const V2_SCENE_ENCOUNTER: &str = "assets/ui/vs_v2/scene_encounter.png";
+/// v2 场景层资产：副本战（登岛打守军）。
+pub const V2_SCENE_RAID: &str = "assets/ui/vs_v2/scene_raid.png";
+/// v2 场景层资产：BOSS 战（强攻要塞）。
+pub const V2_SCENE_BOSS: &str = "assets/ui/vs_v2/scene_boss.png";
+/// v2 场景层资产：攻占战（船队攻城）。
+pub const V2_SCENE_ATTACK: &str = "assets/ui/vs_v2/scene_attack.png";
+/// 格类 → v2 场景层资产路径（S34.6 分离；CS-1 资产路径单一读点 = 本函数 + chrome 常量）。
+#[allow(clippy::must_use_candidate)]
+pub fn v2_scene_asset(class: &str) -> &'static str {
+    match class {
+        "raid" => V2_SCENE_RAID,
+        "boss" => V2_SCENE_BOSS,
+        "attack" => V2_SCENE_ATTACK,
+        _ => V2_SCENE_ENCOUNTER,
+    }
+}
+/// v2 result 帧资产（S34.6 修复 result 双影/状态框底重叠）：仅边框+背景，无人物/无 HUD/
+/// v2 result 帧资产：BOSS 战（`scene_result_boss.png`，仅背景/框，无人物HUD）。
+/// 无标题牌——引擎 `draw_result_scene` 叠站地 hero/enemy + 书法横幅 + 战报框。
+pub const V2_SCENE_RESULT_ENCOUNTER: &str = "assets/ui/vs_v2/scene_result_encounter.png";
+/// v2 result 帧资产：副本战。
+pub const V2_SCENE_RESULT_RAID: &str = "assets/ui/vs_v2/scene_result_raid.png";
+/// v2 result 帧资产：BOSS 战。
+pub const V2_SCENE_RESULT_BOSS: &str = "assets/ui/vs_v2/scene_result_boss.png";
+/// v2 result 帧资产：攻占战。
+pub const V2_SCENE_RESULT_ATTACK: &str = "assets/ui/vs_v2/scene_result_attack.png";
+/// 格类 → v2 result 帧资产路径（S34.6 分离；CS-1 资产路径单一读点）。
+#[allow(clippy::must_use_candidate)]
+pub fn v2_scene_result_asset(class: &str) -> &'static str {
+    match class {
+        "raid" => V2_SCENE_RESULT_RAID,
+        "boss" => V2_SCENE_RESULT_BOSS,
+        "attack" => V2_SCENE_RESULT_ATTACK,
+        _ => V2_SCENE_RESULT_ENCOUNTER,
+    }
+}
 /// 海战海面背景（版式 C）。
 pub const VS_BG_BATTLE_SEA: &str = "assets/ui/bg_battle_sea.png";
 /// 泛黄羊皮海图（1024×439；用户 2026-10-30 二轮「主背景不搭 → 总体设计」裁定 = 用已有

@@ -984,6 +984,74 @@
       "file": "assets/ui/v6/isle_village.png",
       "params": {},
       "generated_at": "2026-11-01"
+    },
+    {
+      "name": "v2_scene_encounter",
+      "role": "v2_scene",
+      "file": "assets/ui/vs_v2/scene_encounter.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-11-03"
+    },
+    {
+      "name": "v2_scene_raid",
+      "role": "v2_scene",
+      "file": "assets/ui/vs_v2/scene_raid.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-11-03"
+    },
+    {
+      "name": "v2_scene_boss",
+      "role": "v2_scene",
+      "file": "assets/ui/vs_v2/scene_boss.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-11-03"
+    },
+    {
+      "name": "v2_scene_attack",
+      "role": "v2_scene",
+      "file": "assets/ui/vs_v2/scene_attack.png",
+      "params": {
+        "full_bleed": true
+      },
+      "generated_at": "2026-11-03"
+    },
+    {
+      "name": "v2_scene_result_attack",
+      "role": "v2_scene",
+      "file": "assets/ui/vs_v2/scene_result_attack.png",
+      "params": {
+        "full_bleed": true
+      }
+    },
+    {
+      "name": "v2_scene_result_boss",
+      "role": "v2_scene",
+      "file": "assets/ui/vs_v2/scene_result_boss.png",
+      "params": {
+        "full_bleed": true
+      }
+    },
+    {
+      "name": "v2_scene_result_encounter",
+      "role": "v2_scene",
+      "file": "assets/ui/vs_v2/scene_result_encounter.png",
+      "params": {
+        "full_bleed": true
+      }
+    },
+    {
+      "name": "v2_scene_result_raid",
+      "role": "v2_scene",
+      "file": "assets/ui/vs_v2/scene_result_raid.png",
+      "params": {
+        "full_bleed": true
+      }
     }
   ]
 }

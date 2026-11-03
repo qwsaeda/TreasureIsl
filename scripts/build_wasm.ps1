@@ -301,7 +301,14 @@ $nonFirstScreen += (Get-ChildItem $assetsDir -ErrorAction SilentlyContinue |
 
 $fsBytes = ($firstScreen | Measure-Object -Property Length -Sum).Sum
 $nfsBytes = ($nonFirstScreen | Measure-Object -Property Length -Sum).Sum
-$wasmBytes = (Get-Item (Join-Path $outDir 'treasure_bevy_wasm.wasm') -ErrorAction SilentlyContinue).Length
+# S36.1：wasm 主体 = **本段实际产出的最大 `*.wasm`**（wasm-bindgen 输出
+# `treasure-bevy-wasm_bg.wasm` + 版本化副本 `treasure_bevy_wasm-<ver>.wasm`）。
+# 旧口径写死 `treasure_bevy_wasm.wasm`（S18.8a 时代名，S31.2c 后已不存在）⇒ 实测恒 0 B，
+# 台账把 45 MB wasm 记成 0 = 体积口径失真。取最大者 = 与 web/ 产物列表同源。
+$wasmFiles = Get-ChildItem $outDir -Filter '*.wasm' -File -ErrorAction SilentlyContinue
+$wasmItem = $wasmFiles | Sort-Object Length -Descending | Select-Object -First 1
+$wasmBytes = if ($wasmItem) { $wasmItem.Length } else { 0 }
+$wasmName = if ($wasmItem) { $wasmItem.Name } else { '(无)' }
 
 # S7.6：HD 体积（web/hd/1x 首屏 + web/hd/webp 非首屏）
 $hd1xDir = Join-Path $outDir 'hd/1x'
@@ -321,7 +328,7 @@ $lines += "口径：Bevy 交付壳 `treasure-bevy-wasm`（release，strip=symbol
 $lines += "预算判定（wasm 主体 ≤8 MB，11_bevy_migration §3）属 S18.8e；本文件只记录实测值。"
 $lines += ""
 $lines += "== wasm 主体 =="
-$lines += ("{0,-28} {1,10:N0} B" -f "treasure_bevy_wasm.wasm", $wasmBytes)
+$lines += ("{0,-28} {1,10:N0} B" -f $wasmName, $wasmBytes)
 $lines += ""
 $lines += "== 首屏附属资源（不含 wasm 主体）=="
 foreach ($a in $firstScreen) {

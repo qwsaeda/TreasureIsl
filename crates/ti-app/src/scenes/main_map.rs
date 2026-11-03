@@ -291,6 +291,55 @@ fn draw_route_line(host: &mut dyn SceneHost, centers: &[(i32, i32)], width: i32,
     }
 }
 
+/// v3 席位徽标（`entity_texts` 只收 `&'static str` ⇒ 编译期常量表，不 format）。
+///
+/// 热座（2~5 人类 + 可配 AI）必须能一眼分辨「哪枚棋子是哪一席」，否则同格散开后
+/// 仍是四枚无标识灰旗。`P1` 起编号 = 席位序号 + 1。
+const SEAT_BADGES: [&str; 5] = ["P1", "P2", "P3", "P4", "P5"];
+
+/// v3 同格多席棋子散开（大富翁惯例：开局全员同起点出发，叠成一枚 = 看不出谁在哪）。
+///
+/// 输入 `ordinal` = 同格组内序位、`total` = 同格席数、`radius` = 散开半径（px）。
+/// 输出相对格心的 `(dx, dy)`：单席 = `(0, 0)` 居中不偏移；n 席 = 沿小圆周均分
+/// （起始角 -90° 顶部、顺时针），相邻中心距 = `2·radius·sin(π/n)`。
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+fn seat_piece_offset(ordinal: usize, total: usize, radius: i32) -> (i32, i32) {
+    if total <= 1 || radius <= 0 {
+        return (0, 0);
+    }
+    let step = std::f64::consts::TAU / total as f64;
+    let ang = -std::f64::consts::FRAC_PI_2 + ordinal.min(total - 1) as f64 * step;
+    let (sin, cos) = ang.sin_cos();
+    let dx = (f64::from(radius) * cos).round() as i32;
+    let dy = (f64::from(radius) * sin).round() as i32;
+    (dx, dy)
+}
+
+/// v3：把 `seat_positions()` 归到「同格分组」，返回逐席 `(seat, idx, ordinal, total)`。
+///
+/// `ordinal`/`total` 交 [`seat_piece_offset`] 扇出；`idx` 已按 `count` 夹紧。
+fn seat_slots(positions: &[(u8, usize)], count: usize) -> Vec<(u8, usize, usize, usize)> {
+    let n = count.max(1);
+    let mut totals = vec![0usize; n];
+    for (_, idx) in positions {
+        if let Some(t) = totals.get_mut((*idx).min(n - 1)) {
+            *t += 1;
+        }
+    }
+    let mut seen = vec![0usize; n];
+    positions
+        .iter()
+        .map(|(seat, idx)| {
+            let idx = (*idx).min(n - 1);
+            let ord = seen.get(idx).copied().unwrap_or(0);
+            if let Some(s) = seen.get_mut(idx) {
+                *s += 1;
+            }
+            (*seat, idx, ord, totals.get(idx).copied().unwrap_or(1))
+        })
+        .collect()
+}
+
 /// S21.5 v4 环岛赛道绘制：**黄铜航线实线 + 45 枚多形状节点牌 + 玩家船**。
 ///
 /// - 航线：相邻赛道格中心连线（theme 令牌 `brass`），先画线后压牌 ⇒ 线在牌下、牌间露出；
@@ -349,11 +398,15 @@ fn render_track(
     let cur_idx = host.board_index().min(spaces.len() - 1);
     let cur_asset = chrome::boat_asset(host.boat_level());
     let ship_edge = chrome::ship_edge_px(layout, gw);
-    for (seat, idx) in host.seat_positions() {
-        let idx = idx.min(spaces.len() - 1);
+    // v3：同格多席（开局全员同起点）沿小圆周扇出 + 缩到 70%，叠成一枚 = 看不出谁在哪。
+    for (seat, idx, ord, total) in seat_slots(&host.seat_positions(), spaces.len()) {
         let (cx, cy) = centers[idx];
+        let (ox, oy) = seat_piece_offset(ord, total, ship_edge * 2 / 5);
+        let (cx, cy) = (cx + ox, cy + oy);
+        let edge = if total > 1 { ship_edge * 7 / 10 } else { ship_edge };
         let (dx, dy, dw, dh) =
-            chrome::asset_dest_rect(cx, cy, ship_edge, chrome::SHIP_PLAYER_VISIBLE_PX);
+            chrome::asset_dest_rect(cx, cy, edge, chrome::SHIP_PLAYER_VISIBLE_PX);
+        let badge = SEAT_BADGES[usize::from(seat).min(SEAT_BADGES.len() - 1)];
         if seat == turn_seat {
             if chrome::asset_present(cur_asset) {
                 host.blit_image(cur_asset, dx, dy, dw, dh);
@@ -363,10 +416,12 @@ fn render_track(
                 chrome::entity_icon(host, "flag", dx, dy, dw, chrome::COLOR_GOLD_WARM);
             }
             let lbl = i18n::sget("scene.main_map.player_label");
-            entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
+            entity_texts.push((cx + edge / 2, cy - 8, lbl));
+            entity_texts.push((cx - edge / 2, cy + edge / 2, badge));
         } else {
             let small = dw.min(dh) * 35 / 100;
             chrome::entity_icon(host, "flag", cx - small / 2, cy - small / 2, small, 0x7BEF);
+            entity_texts.push((cx - small / 2, cy + small / 2, badge));
         }
     }
 
@@ -823,35 +878,27 @@ fn render_v5_ring(
     let ship_edge: i32 = chrome::ring_geom(layout).w * 55 / 100;
     let turn_seat = host.turn_seat();
     let cur_asset = chrome::boat_asset(host.boat_level());
-    for (seat, idx) in host.seat_positions() {
-        let idx = idx.min(count - 1);
+    // v3：同格多席扇出（开局全员同起点）；单席保持卡面中心原尺寸。
+    for (seat, idx, ord, total) in seat_slots(&host.seat_positions(), count) {
         let (cx, cy) = chrome::ring_card_center(idx, count, layout);
+        let (ox, oy) = seat_piece_offset(ord, total, ship_edge * 2 / 5);
+        let (cx, cy) = (cx + ox, cy + oy);
+        let edge = if total > 1 { ship_edge * 7 / 10 } else { ship_edge };
+        let badge = SEAT_BADGES[usize::from(seat).min(SEAT_BADGES.len() - 1)];
         if seat == turn_seat {
             // 当前行动席：金色船（同旧路径）
             if chrome::asset_present(cur_asset) {
-                host.blit_image(
-                    cur_asset,
-                    cx - ship_edge / 2,
-                    cy - ship_edge / 2,
-                    ship_edge,
-                    ship_edge,
-                );
+                host.blit_image(cur_asset, cx - edge / 2, cy - edge / 2, edge, edge);
             } else {
-                chrome::entity_icon(
-                    host,
-                    "flag",
-                    cx - ship_edge / 2,
-                    cy - ship_edge / 2,
-                    ship_edge,
-                    gold_warm,
-                );
+                chrome::entity_icon(host, "flag", cx - edge / 2, cy - edge / 2, edge, gold_warm);
             }
             let lbl = i18n::sget("scene.main_map.player_label");
-            entity_texts.push((cx + ship_edge / 2, cy - 8, lbl));
+            entity_texts.push((cx + edge / 2, cy - 8, lbl));
+            entity_texts.push((cx - edge / 2, cy + edge / 2, badge));
             draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
         } else {
             // 非当前席：暗灰小旗（区分，不遮岛面）
-            let small_edge = ship_edge * 35 / 100;
+            let small_edge = edge * 35 / 100;
             chrome::entity_icon(
                 host,
                 "flag",
@@ -860,6 +907,7 @@ fn render_v5_ring(
                 small_edge,
                 0x7BEF, // 暗灰 RGB565
             );
+            entity_texts.push((cx - small_edge / 2, cy + small_edge / 2, badge));
         }
     }
 
@@ -1095,23 +1143,27 @@ fn render_v6_proto(
     // 其余席 = 暗灰小旗；圆铜牌节点上，非浮柱）。
     let turn_seat = host.turn_seat();
     let cur_asset = chrome::boat_asset(host.boat_level());
-    for (seat, idx) in host.seat_positions() {
-        let idx = idx.min(count - 1);
+    // v3：同格多席扇出（开局全员同起点）；单席保持柱顶原尺寸。
+    for (seat, idx, ord, total) in seat_slots(&host.seat_positions(), count) {
         let (cx, cy) = v6_pillar_center(idx, count);
-        let ship_y = cy - 22;
+        let (ox, oy) = seat_piece_offset(ord, total, 20);
+        let (cx, ship_y) = (cx + ox, cy - 22 + oy);
+        let edge = if total > 1 { 44 * 7 / 10 } else { 44 };
+        let badge = SEAT_BADGES[usize::from(seat).min(SEAT_BADGES.len() - 1)];
         if seat == turn_seat {
-            let ship_edge = 44i32;
             if chrome::asset_present(cur_asset) {
-                host.blit_image(cur_asset, cx - ship_edge / 2, ship_y, ship_edge, ship_edge);
+                host.blit_image(cur_asset, cx - edge / 2, ship_y, edge, edge);
             } else {
-                chrome::entity_icon(host, "flag", cx - ship_edge / 2, ship_y, ship_edge, gold_warm);
+                chrome::entity_icon(host, "flag", cx - edge / 2, ship_y, edge, gold_warm);
             }
             let lbl = i18n::sget("scene.main_map.player_label");
-            entity_texts.push((cx + ship_edge / 2, ship_y - 4, lbl));
+            entity_texts.push((cx + edge / 2, ship_y - 4, lbl));
+            entity_texts.push((cx - edge / 2, ship_y + edge, badge));
             draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
         } else {
-            let small_edge = 44i32 * 35 / 100;
+            let small_edge = edge * 35 / 100;
             chrome::entity_icon(host, "flag", cx - small_edge / 2, ship_y, small_edge, 0x7BEF);
+            entity_texts.push((cx - small_edge / 2, ship_y + small_edge, badge));
         }
     }
 
@@ -1244,14 +1296,17 @@ fn render_v6_elem(
     let turn_seat = host.turn_seat();
     let cur_idx = host.board_index().min(count - 1);
     let sw_full = (v6.tile_r * 2.0).max(1.0) as i32;
-    for (seat, idx) in host.seat_positions() {
-        let idx = idx.min(count - 1);
+    // v3：同格多席扇出（开局全员同起点出发 ⇒ 不扇出 = 5 枚棋子叠成一枚看不见）。
+    for (seat, idx, ord, total) in seat_slots(&host.seat_positions(), count) {
         let (pcx, pcy) = v6.tiles.get(idx).map_or((v6.ship.cx, v6.ship.cy), |t| (t.cx, t.cy));
-        let (ix, iy) = (pcx as i32, pcy as i32);
+        let (ox, oy) = seat_piece_offset(ord, total, sw_full * 2 / 5);
+        let (ix, iy) = (pcx as i32 + ox, pcy as i32 + oy);
+        let sw = if total > 1 { sw_full * 7 / 10 } else { sw_full };
+        let badge = SEAT_BADGES[usize::from(seat).min(SEAT_BADGES.len() - 1)];
         if seat == turn_seat {
-            host.blit_image(chrome::V6_SHIP, ix - sw_full / 2, iy - sw_full / 2, sw_full, sw_full);
+            host.blit_image(chrome::V6_SHIP, ix - sw / 2, iy - sw / 2, sw, sw);
         } else {
-            let sw_small = sw_full * 35 / 100;
+            let sw_small = sw * 5 / 10;
             chrome::entity_icon(
                 host,
                 "flag",
@@ -1261,6 +1316,7 @@ fn render_v6_elem(
                 0x7BEF,
             );
         }
+        entity_texts.push((ix - sw / 2, iy + sw / 2, badge));
     }
     // 当前席名牌（与 S34.6 一致，画在落格格旁）
     {
@@ -1287,13 +1343,8 @@ fn render_v6_elem(
         cw,
     );
 
-    // 7) 海洋生物（creatures.png = 单张合成海洋生态场景：沉船+鲸喷水+鲨鳍+触手+海藻。
-    // A4 修复（飞轮 R1/R2）：原 4 处全图 blit = 四角重复整张缩略（重复×4）+ 叠格；
-    // 改单处放中央岛下方海域（x 340-720 / y 1350-1600）。R2 复核：格环实底 = tile23
-    // cy 1313.2 + 半径 36 = 1349.2，生物顶 y1350 > 实底 ⇒ 不叠格；舵轮 y≥1625 / 罗盘 y≥1627
-    // 均 > 生物底 1600 ⇒ 不叠 CTA。U21「生物不叠格」。
-    // A5 动画（S34.6 前处理）：bob 微动（鲨鱼游弋/浪花翻涌视觉，合成图整体动）——
-    // 位移 ±4px 保持边界（y1350+4=1354 > 1349.2 仍不叠格；x 340±4 不叠格环）。
+    // 7) 海洋生物（creatures.png = 单张合成海洋生态场景；A4 单处放中央岛下方海域
+    // （x340-720/y1350-1600，不叠格环/CTA）+ A5 bob 微动（鲨鱼游弋/浪花翻涌，位移±4px）。
     let ms = CREATURES_ACC.fetch_add(host.frame_delta_ms(), std::sync::atomic::Ordering::Relaxed);
     let t0 = *CREATURES_T0.get_or_init(|| {
         std::env::var("TI_MAP_ANIM_T0").ok().and_then(|v| v.parse::<u32>().ok()).unwrap_or(0)

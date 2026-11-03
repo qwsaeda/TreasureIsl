@@ -1,4 +1,5 @@
 //! 角色选择场景（S9 骨架）：输入判定 / 拾取命中 / 绘制三面全部落在本文件。
+use ti_core::data;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::selection::Character;
 use ti_core::rules::selection;
@@ -42,7 +43,7 @@ fn seat_selection_ready(host: &dyn SceneHost) -> bool {
 
 /// v3：人类席下限（`balance.selection.min_players`，缺省 2）。
 fn min_players() -> u32 {
-    ti_core::data::balance().map_or(2, |b| b.selection.min_players)
+    data::balance().map_or(2, |b| b.selection.min_players)
 }
 
 impl Scene for SelectRoleScene {
