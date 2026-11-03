@@ -287,6 +287,11 @@ impl MapHost for GameApp {
         if self.board_toast_ticks > 0 { self.board_toast.clone() } else { None }
     }
 
+    /// S36.3 飞轮 R3：AI 回合提示签条（`territory.md` §6；`run_ai_turns` 写、主地图渲染读）。
+    fn last_ai_toast(&self) -> Option<String> {
+        self.last_ai_toast.clone()
+    }
+
     fn track_node_sel(&self) -> Option<usize> {
         self.track_node_sel
     }

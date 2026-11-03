@@ -496,6 +496,15 @@ pub trait MapHost {
         None
     }
 
+    /// S36.3 飞轮 R3：AI 回合提示签条（`territory.md` §6 主地图可见反馈 = AI toast 签条）。
+    ///
+    /// `run_ai_turns`/`settle_ai_landing` 写 `last_ai_toast`（攻占/交钱/产出/升级 6 处），
+    /// 本访问器供主地图渲染读（`render_board_toast` 画棋盘下方签条；`board_toast` 过期后回退）。
+    /// 缺省 `None`（非主地图 fake 宿主无 AI 回合）。
+    fn last_ai_toast(&self) -> Option<String> {
+        None
+    }
+
     /// S21.7 赛道节点预览选中（`Some(index)` = 该节点高亮 + 信息签；只读预览不移动，
     /// 摇骰时清空）。默认无（非主地图的 fake 宿主无需实现）。
     fn track_node_sel(&self) -> Option<usize> {

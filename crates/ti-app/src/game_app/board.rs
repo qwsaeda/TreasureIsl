@@ -179,6 +179,9 @@ impl GameApp {
             .any(|(i, s)| s.alive && active.get(i).copied().unwrap_or(false));
         if !any_alive && !active.is_empty() && active.iter().any(|a| *a) {
             self.match_outcome = Some(MatchOutcome::Draw);
+            // S36.3 飞轮 R3：Draw 路径对称清 handoff_pending（R2-F3 只清了 Defeat/Victory，
+            // 全死局 + handoff 残留 ⇒ 需两次 Confirm；对齐「终局 = 一次 Confirm 回主菜单」语义）。
+            self.handoff_pending = None;
             return true;
         }
         false

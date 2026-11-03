@@ -1873,7 +1873,10 @@ fn isle_token_color(isle: &str) -> String {
 /// 落格提示签条（`brass_dark` 底板 + 黄铜边框，S27.4 v5 位置）：宽按字自适应（最小 392）；
 /// 中心 = `hint` 键（v5 = (540,1760)，三键之下；`layout.hint.y ≤ 0` = 回退 1760）。
 fn render_board_toast(host: &mut dyn SceneHost) {
-    let Some(toast) = host.board_toast() else {
+    // S36.3 飞轮 R3：落格签条优先；缺位时回退 AI 回合提示签条（`territory.md` §6 主地图
+    // 可见反馈 = AI toast 签条——AI 攻占/交钱/产出/升级后玩家能看到发生了啥）。
+    let toast = host.board_toast().or_else(|| host.last_ai_toast());
+    let Some(toast) = toast else {
         return;
     };
     let layout = chrome::scene_layout("main_map");

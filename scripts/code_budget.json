@@ -24,7 +24,8 @@
       "reason": "v6 in-progress (2026-10-31)",
       "fix_in": "TBD"
     },
-    "crates/ti-app/src/scenes/vs_anim_proto.rs::render_v2_elem": "S34.6 起超限（163>140）：2026-11-03 S34.6 D3 格类分层代码叠加，该函数为 S34.6 新增，按豁免处理"
+    "crates/ti-app/src/scenes/vs_anim_proto.rs::render_v2_elem": "S34.6 起超限（163>140）：2026-11-03 S34.6 D3 格类分层代码叠加，该函数为 S34.6 新增，按豁免处理",
+    "crates/ti-app/src/scenes/main_map.rs::render_v6_elem": "S36.3 飞轮 R2-F1 起（140=上限，R3 登记防下轮视觉改动触审计 FAIL；限期整改）"
   },
   "exempt_repeats": {
     "i18n 文案取值 sgetf@crates/ti-app/src/scenes/main_map.rs": {
