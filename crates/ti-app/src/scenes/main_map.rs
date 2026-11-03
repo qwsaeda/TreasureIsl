@@ -1377,6 +1377,9 @@ fn render_v6_elem(
     let (px, py) = v6.tiles.get(cur_idx).map_or((540, 890), |t| (t.cx as i32, t.cy as i32));
     let lbl = i18n::sget("scene.main_map.player_label");
     entity_texts.push((px + 40, py - 6, lbl));
+    // S36.3 R2-F2：v6 默认路径补终局面板 + 交接提示（R1 漏 v6_elem 主渲染路径）。
+    render_match_outcome(host);
+    render_handoff(host);
 }
 
 /// v6 名牌文字**真截断**（逐字测宽，超 `max_w` 截断 + "…"；`draw_hint_text` 画全宽无截断，

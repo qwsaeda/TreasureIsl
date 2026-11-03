@@ -135,6 +135,12 @@ impl GameApp {
 
         // ② 终局判定（只看**在局**席位）。
         let active: Vec<bool> = (0..5u8).map(|s| self.turn_cycle.is_active_seat(s)).collect();
+
+        // S36.3 飞轮 R2-F1：标记破产后若当前行动席已出局，推进 `current` 到下一存活在局席
+        // （防下一轮 `spin_board` 用死席会话操作——`mark_bankrupt` 不清会话，`board` 仍指向死席）。
+        if !self.turn_cycle.is_alive(self.turn_cycle.current) {
+            self.turn_cycle.advance();
+        }
         let states: Vec<territory_v2::SeatState> = (0..5u8)
             .map(|s| {
                 let mut st = territory_v2::SeatState::new(
@@ -156,10 +162,14 @@ impl GameApp {
         // 原实现先判 Victory 导致「全人类破产 + 1 存活 AI 席」被误判为 AI 胜（对玩家 = 败）。
         if territory_v2::players_defeated(&states, &human_seats) {
             self.match_outcome = Some(MatchOutcome::Defeat);
+            // S36.3 飞轮 R2-F3：终局置位 ⇒ 清热座交接待确认（对局已结束，交接无意义；
+            // 不清则 Confirm 需按两次——第一次清 handoff 第二次才触发终局面板回主菜单）。
+            self.handoff_pending = None;
             return true;
         }
         if let Some(winner) = territory_v2::victory_seat_active(&states, &active) {
             self.match_outcome = Some(MatchOutcome::Victory { seat: winner });
+            self.handoff_pending = None;
             return true;
         }
         // 全部在局席位都破产 ⇒ 平局（无胜者）。
@@ -316,6 +326,11 @@ impl GameApp {
         };
         // v3：摇骰作用于**当前行动席**的独立会话（`board` 持有当前席会话；人类席不再共用）。
         let seat = self.turn_cycle.current;
+        // S36.3 飞轮 R2-F1：当前席已出局（破产）且 `advance` 后仍无存活在局席 ⇒ 无会话可摇，
+        // 返回 `None`（对局实际已终局，`match_outcome` 由 `check_match_end` 在下一结算点置位）。
+        if !self.turn_cycle.is_playing(seat) {
+            return None;
+        }
         let sides = b.board.dice_sides.min(b.board.max_steps);
         let (turn, laps_before, laps_after, pos) = {
             let session = self.board.as_mut()?;

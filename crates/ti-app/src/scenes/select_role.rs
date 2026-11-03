@@ -184,5 +184,14 @@ impl Scene for SelectRoleScene {
         }
         let sel = layout.list.item_rect(current);
         chrome::selected_border(host, sel.x, sel.y, sel.w, sel.h, chrome::PANEL_SELECTED_BORDER_PX);
+        // S36.3 飞轮 R2-F6：选角界面「热座勾选提示」——已勾选 ≥1 席时，列表下方画
+        // 1 行 i18n 提示（`scene.select_role.seat_hint`），告知玩家「点行标记玩家席；
+        // 未标记 = AI 对手」。旧版 = 孤儿 key 未接线（doccheck2 WARN）；本处接线后消除。
+        if !host.player_seats().is_empty() {
+            let hint_text = crate::i18n::sget("scene.select_role.seat_hint");
+            let hy = sel.y + sel.h + 40;
+            let hw = host.shell().hint_text_width_px(hint_text);
+            host.draw_hint_text(hint_text, 540 - hw / 2, hy, chrome::COLOR_TEXT_ON_PARCH);
+        }
     }
 }

@@ -585,13 +585,21 @@ impl MapHost for GameApp {
                 self.turn_cycle.mark_bankrupt(seat_idx);
             }
         }
-        // S36.3 飞轮 F-5.3：`current_seat` 指向已出局席（存档时破产）⇒ 自动 advance 到
+        // S36.3 飞轮 F-5.3/R2-F4：`current_seat` 指向已出局席（存档时破产）⇒ 自动 advance 到
         // 下一存活在局席（防 `spin_board` 拿到 `board=None` 的已出局会话卡死）。
+        // R2-F4：advance 后同步 `board` 会话（`switch_to_seat` 互换 `board`↔`seat_sessions`，
+        // 否则 `board` 仍持死席会话，下一轮 `spin_board` 用错席位的赛道）。
         if self.turn_cycle.is_active_seat(self.turn_cycle.current)
             && !self.turn_cycle.is_alive(self.turn_cycle.current)
         {
             self.turn_cycle.advance();
         }
+        // R2-F4：无论是否 advance，读档后 `board` 会话须与 `current` 一致（`switch_to_seat`
+        // 幂等：`cur == seat` 直接返回；不一致则互换 `board`/`seat_sessions`）。
+        self.switch_to_seat(self.turn_cycle.current);
+        // R2-F5：`current` 写入后同步金币镜像（`sync_gold_mirror` = `gold = seat_gold[current]`），
+        // 防 `EconomyHost::gold()` 读到旧 current 的金币（读档路径 `board` 已覆盖各席 `seat_gold`）。
+        self.sync_gold_mirror();
         let map_id = self.map_slot.map_or(String::new(), |ms| ms.id().to_string());
         for terr in &ext.territories {
             if terr.map != map_id {
