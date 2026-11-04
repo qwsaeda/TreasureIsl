@@ -23,3 +23,9 @@
 ## 结论
 **S34.6 机器判据达标**：vs/main_map 出图非空帧在位 + VS v4 设计稿用户确认 + main_map v6 概念稿用户确认 + gate 全绿。
 用户视觉验收（A 纪律不可代签）：VS v4 4 帧已确认；main_map v6 引擎渲染图 = `evidence/bevy_native_main_map.png` 待用户最终过目。
+
+## ⑤ 用户视觉验收（A 纪律，消息留痕，2026-11-04）
+- VS v4 4 帧设计稿：用户「这四个设计都可以」（2026-11-03 消息留痕）
+- main_map v6 引擎渲染图（`evidence/ui_concept/main_map_v6_engine_now.png`）：
+  用户过目后回复「继续」（2026-11-04 消息留痕，无异议）
+- 综合：main_map v6 + VS v2/v4 全场景用户已过目确认 → S34.6 verified
