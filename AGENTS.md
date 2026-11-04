@@ -5,7 +5,7 @@
 
 ## 当前状态
 
-> ⚠️ **进度以 `plan/ledger.yaml` 为准**（当前 280 任务 / 270 verified / 9 pending + 1 blocked）；以下各阶段行 = 进度记录，行内「待开工」为该阶段时点的待办，实时待办见台账（当前主待办 = S34.0/S34.3~S34.6 + 视觉签收类 S17.5/S21.9/S27.5/S27.7；S32 全收口 = S32.0a~S32.9 + S32.11~S32.15，S35 全收口 = S35.0 + S35.1）。
+> ⚠️ **进度以 `plan/ledger.yaml` 为准**（当前 295 任务 / 295 verified，全部收口）；以下各阶段行 = 进度记录，行内「待开工」为该阶段时点的待办，实时待办见台账。**2026-11-04 里程碑：台账全部任务 verified**（S0–S38 全阶段收口 + 视觉签收类 S17.5/S21.9/S27.5/S27.7 被 S34.6/S34.7 取代收口 + 可选 S7.7 路径 2 执行；当前无 pending/blocked，下一阶段待用户立项）。
 
 - 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA Professional 9.4，已自动分析、**无自定义命名**）、`legacy/`（逆向产物归档：`exe`/`i64`/`data`/`ref`/`docs`）、`Cargo.toml`（9 workspace member = 9 开发 crate，含 S32.1 新增 `ti-devmeta`/`ti-console`）、`scripts/`、`docs/`、`android/`、`plan/ledger.yaml`、`evidence/`、`ref/`。
 - 工程已 bootstrap：`crates/{ti-formats,ti-core,ti-platform,ti-render,ti-app,ti-engine,ti-tools,ti-devmeta,ti-console}`；进度只由 `plan/ledger.yaml` 驱动。
