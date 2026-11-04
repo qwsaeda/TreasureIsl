@@ -85,6 +85,12 @@ impl Orientation {
             Self::Landscape => (1920.0, 1080.0),
         }
     }
+
+    /// 从窗口尺寸判定方向（宽 ≥ 高 = 横屏；S38 方案 A 方向感知）。
+    #[must_use]
+    pub fn from_size(win_w: f32, win_h: f32) -> Self {
+        if win_w >= win_h { Self::Landscape } else { Self::Portrait }
+    }
 }
 
 /// 手势类型（由 [`GestureTracker`] 产出）。

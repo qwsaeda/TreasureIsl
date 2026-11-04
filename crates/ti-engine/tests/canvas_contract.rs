@@ -11,10 +11,13 @@
 use bevy::ecs::component::Component;
 use bevy::prelude::*;
 use ti_engine::canvas::{
-    BevyCanvas, CanvasEntity, color_to_rgb565, rgb565_to_color, viewport_scale,
+    BevyCanvas, CanvasEntity, color_to_rgb565, is_landscape, logical_h_for, logical_w_for,
+    rgb565_to_color, viewport_scale,
 };
 use ti_render::canvas::Canvas;
-use ti_render::framebuffer::{Framebuf, LOGICAL_H_I32, LOGICAL_W_I32};
+use ti_render::framebuffer::{
+    Framebuf, LANDSCAPE_H_I32, LANDSCAPE_W_I32, LOGICAL_H_I32, LOGICAL_W_I32,
+};
 use ti_render::theme::Theme;
 
 fn canvas() -> BevyCanvas {
@@ -33,13 +36,16 @@ fn rgb565_roundtrip_within_one_lsb() {
 
 #[test]
 fn viewport_scale_letterbox() {
-    // 1080×1920 同比例 → scale 1.0。
+    // 1080×1920 同比例竖屏 → scale 1.0。
     assert!((viewport_scale(1080.0, 1920.0) - 1.0).abs() < 1e-6);
-    // 半采样窗口 → 0.5。
+    // 半采样竖屏窗口 → 0.5。
     assert!((viewport_scale(540.0, 960.0) - 0.5).abs() < 1e-6);
-    // 宽窗口（1080×1000，比例更宽）→ 高度受限，取 1000/1920。
+    // 宽窗口（1080×1000，宽>高 = 横屏 S38 方向感知）→ 按 1920×1080 逻辑画布 contain：
+    // min(1080/1920, 1000/1080) = 0.5625（宽受限）。
     let s = viewport_scale(1080.0, 1000.0);
-    assert!((s - (1000.0 / 1920.0)).abs() < 1e-6, "scale={s}");
+    assert!((s - (1080.0 / 1920.0)).abs() < 1e-6, "scale={s}");
+    // 横屏 1920×1080 同比例 → scale 1.0（S38）。
+    assert!((viewport_scale(1920.0, 1080.0) - 1.0).abs() < 1e-6);
 }
 
 #[test]
@@ -179,4 +185,23 @@ fn canvas_entity_is_component() {
 fn world_extent_constants_unchanged() {
     assert_eq!(LOGICAL_W_I32, 1080);
     assert_eq!(LOGICAL_H_I32, 1920);
+}
+
+/// S38 方案 A：方向判定（宽 ≥ 高 = 横屏）。
+#[test]
+fn is_landscape_detects_orientation() {
+    assert!(!is_landscape(1080.0, 1920.0), "竖屏 1080×1920");
+    assert!(!is_landscape(540.0, 960.0), "小竖屏 540×960");
+    assert!(is_landscape(1920.0, 1080.0), "横屏 1920×1080");
+    assert!(is_landscape(1280.0, 720.0), "小横屏 1280×720");
+    assert!(is_landscape(100.0, 100.0), "正方形 = 横屏（宽≥高）");
+}
+
+/// S38 方案 A：逻辑画布尺寸随方向切换。
+#[test]
+fn logical_dims_follow_orientation() {
+    assert_eq!(logical_w_for(false), LOGICAL_W_I32);
+    assert_eq!(logical_h_for(false), LOGICAL_H_I32);
+    assert_eq!(logical_w_for(true), LANDSCAPE_W_I32);
+    assert_eq!(logical_h_for(true), LANDSCAPE_H_I32);
 }

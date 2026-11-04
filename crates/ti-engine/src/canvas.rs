@@ -5,7 +5,7 @@
 //! - **op 记录制**：Canvas 方法只记录绘制 op（纯、可测）；`flush` 把 op 落 ECS
 //!   （`fill_rect` → 定尺寸色块 Sprite；三档文本 → `Text2d`；`clear_frame` → `ClearColor`）。
 //! - **1080 坐标契约**（见 `docs/process/08_render_arch.md` 单一坐标系）：逻辑坐标
-//!   `(0,0)` = 左上、`y` 向下；Bevy 2D 世界 `y` 向上 → `世界 = (cx - 540, 960 - cy)`，
+//!   `(0,0)` = 左上、`y` 向下；Bevy 2D 世界 `y` 向上 → `世界 = (cx - LOGICAL_W_I32/2, LOGICAL_H_I32/2 - cy)`，
 //!   `Camera2d` 原点 + `viewport_scale` letterbox 缩放（`min(win_w/1080, win_h/1920)`，
 //!   富余边距 = 清屏色条）。
 //! - **层序**：Bevy 0.20 的 2D 精灵排序键 = `Transform.translation.z`
@@ -24,7 +24,7 @@ use bevy::text::{Font, FontSize, TextColor};
 
 use ti_render::canvas::Canvas;
 use ti_render::font::TtfFont;
-use ti_render::framebuffer::{LOGICAL_H_I32, LOGICAL_W_I32};
+use ti_render::framebuffer::{LANDSCAPE_H_I32, LANDSCAPE_W_I32, LOGICAL_H_I32, LOGICAL_W_I32};
 use ti_render::theme::Theme;
 
 /// 画布实体标记（下一帧 `flush` 时整体 despawn，帧间无残留实体）。
@@ -67,15 +67,39 @@ pub fn rgb565_to_color(value: u16) -> Color {
     )
 }
 
-/// 视窗逻辑尺寸 → 相机 scale（letterbox：内容恒 1080×1920 完整可见，
-/// 富余边距 = 清屏色条）。
+/// 视窗逻辑尺寸 → 相机 scale（letterbox：内容完整可见，富余边距 = 清屏色条）。
+///
+/// S38 方案 A 方向自适应：横屏窗口（`win_w >= win_h`）按 1920×1080 逻辑画布适配，
+/// 竖屏按 1080×1920（现状）。`is_landscape` 为方向判定（0 行为变化：竖屏路径 = 原式）。
 ///
 /// ⚠️ 口径 = **像素/逻辑单位**（shell 视口比）；Bevy 正交 `scale` 取其**倒数**
 /// （`12_bevy_usage.md` §3 口径卡）。
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn viewport_scale(window_w: f32, window_h: f32) -> f32 {
-    f32::min(window_w / LOGICAL_W_I32 as f32, window_h / LOGICAL_H_I32 as f32)
+    if is_landscape(window_w, window_h) {
+        f32::min(window_w / LANDSCAPE_W_I32 as f32, window_h / LANDSCAPE_H_I32 as f32)
+    } else {
+        f32::min(window_w / LOGICAL_W_I32 as f32, window_h / LOGICAL_H_I32 as f32)
+    }
+}
+
+/// 方向判定：窗口宽 ≥ 高 = 横屏（S38 方案 A）。
+#[must_use]
+pub fn is_landscape(window_w: f32, window_h: f32) -> bool {
+    window_w >= window_h
+}
+
+/// 当前方向的逻辑画布宽（横屏 = 1920，竖屏 = 1080）。
+#[must_use]
+pub const fn logical_w_for(landscape: bool) -> i32 {
+    if landscape { LANDSCAPE_W_I32 } else { LOGICAL_W_I32 }
+}
+
+/// 当前方向的逻辑画布高（横屏 = 1080，竖屏 = 1920）。
+#[must_use]
+pub const fn logical_h_for(landscape: bool) -> i32 {
+    if landscape { LANDSCAPE_H_I32 } else { LOGICAL_H_I32 }
 }
 
 /// 三档文本（与 `MenuShell::tier_*` 同源）。

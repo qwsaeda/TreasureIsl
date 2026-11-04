@@ -8,6 +8,11 @@ pub const CANVAS_W: u32 = 1080;
 /// UI 呈现画布高。
 pub const CANVAS_H: u32 = 1920;
 
+/// 横屏呈现画布宽（S38 方案 A 坐标双套：1920×1080 横屏）。
+pub const LANDSCAPE_W: u32 = 1920;
+/// 横屏呈现画布高。
+pub const LANDSCAPE_H: u32 = 1080;
+
 /// 帧缓冲像素数 = `CANVAS_W × CANVAS_H`。
 pub const FB_PIXELS: usize = (CANVAS_W as usize) * (CANVAS_H as usize);
 
@@ -17,6 +22,11 @@ pub const LOGICAL_W_I32: i32 = 1080;
 pub const LOGICAL_W_USIZE: usize = 1080;
 /// 逻辑高（i32，供坐标运算）。
 pub const LOGICAL_H_I32: i32 = 1920;
+
+/// 横屏逻辑宽（i32，S38 方向自适应）。
+pub const LANDSCAPE_W_I32: i32 = 1920;
+/// 横屏逻辑高（i32，S38 方向自适应）。
+pub const LANDSCAPE_H_I32: i32 = 1080;
 
 /// RGB565 呈现层帧缓冲。
 ///

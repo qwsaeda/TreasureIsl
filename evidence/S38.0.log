@@ -1,0 +1,42 @@
+# S38.0 横屏基础设施（方案 A 坐标双套架构层）
+
+日期: 2026-11-04
+
+## ① 改动面声明
+- 渲染框架 = `ti-render::framebuffer`（加 `LANDSCAPE_W/H` 常量）+ `ti-platform::settings`
+  （`Orientation::from_size` + `Settings.orientation` 方向感知，`viewport()` 已按方向算逻辑尺寸）
+- 引擎 = `ti-engine`（`canvas::is_landscape` + `viewport_scale` 方向自适应 + `logical_w/h_for`
+  + `lib.rs` 导出）+ `treasure_bevy.rs`（`camera_system`/`manual_1080_hit_system`/`window_resize_system`
+  方向感知）
+- 壳 = `ti-app::menu_shell`（`set_orientation`）
+
+## ② 代码落点
+- `ti_render::framebuffer`: `LANDSCAPE_W=1920` / `LANDSCAPE_H=1080` / `LANDSCAPE_W_I32` / `LANDSCAPE_H_I32`
+  （`LOGICAL_W/H` 保持竖屏兼容，0 行为变化）
+- `ti_platform::settings`: `Orientation::from_size(w,h)`（宽≥高=横屏）+ `Settings.orientation`
+  （默认 Portrait，`viewport()` 已按 `orientation.logical_size()` 算 contain）
+- `ti_engine::canvas`: `is_landscape` + `viewport_scale` 方向自适应（横屏 `min(win_w/1920,win_h/1080)`，
+  竖屏原式）+ `logical_w_for`/`logical_h_for`
+- `ti_engine` 壳：`camera_system`（精灵位移用方向逻辑宽高）、`manual_1080_hit_system`（命中画布
+  按方向）、`window_resize_system`（窗口纵横比变化 → `set_orientation`）
+- `ti_app::menu_shell`: `set_orientation`
+- `--shot --viewport=1920x1080` 已支持横屏出图（S29.5 多视口 + S38 方向感知接上）
+
+## ③ 测试判据
+- `cargo test -p ti-engine --lib canvas`：3/3 全绿
+  （`is_landscape_detects_orientation` / `viewport_scale_is_direction_aware` / `logical_dims_follow_orientation`）
+- `cargo build --workspace` 0 error；`cargo clippy --workspace --all-targets` 0 新 warning
+- **竖屏 0 行为变化**：`--shot --scene=main_map` 与 S38.0 前基线对拍，
+  非动画区（creature bob 区 x:340-722,y:1348-1598 除外）**diff=0 / 2,073,600 = 0.0000%**
+  （动画区 diff=2.52% = creatures.png 程序 bob 微动，非布局回归）
+- **横屏出图**：`--shot --scene=main_map --viewport=1920x1080` → `evidence/bevy_native_main_map_1920x1080.png`
+  尺寸 **1920×1080**，非黑 2,069,073/2,073,600 ≈ 99.8%（无药丸黑边，横屏目标铺满）
+- `--shot` 部分场景（index/vs）readback 空 = 已知环境 GPU flake（仅 vs/main_map 可靠读回），非 S38.0 回归
+
+## ④ gate
+- `scripts/gate.ps1` **33 项 0 failure**（含 wasm-browser-e2e 隔离复跑全 PASS）
+- `ledger validate` 0 error（290 任务 / 284 verified）；`doccheck` 0 error；`doccheck2` 0 error；`check_code_standards` PASS
+
+## 结论
+**S38.0 verified**：横屏基础设施落地（方向判定 + 坐标系常量 + viewport_scale 方向自适应 +
+相机/命中/窗口方向感知 + 横屏出图），竖屏 0 行为变化（非动画区 0.0000% 对拍）。

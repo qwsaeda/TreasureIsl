@@ -429,6 +429,12 @@ impl MenuShell {
         self.vp = self.settings.viewport(screen_w, screen_h);
     }
 
+    /// S38 方案 A：设置屏幕方向（横屏/竖屏）。视口重建由随后的
+    /// `set_scale_mode`（带真实窗口尺寸）完成。
+    pub fn set_orientation(&mut self, orientation: ti_platform::settings::Orientation) {
+        self.settings.orientation = orientation;
+    }
+
     /// 当前上采样滤波模式。
     #[must_use]
     pub fn filter_mode(&self) -> FilterMode {

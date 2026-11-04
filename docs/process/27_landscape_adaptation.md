@@ -92,8 +92,32 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
 - **视觉重心重排**：横屏不是旋转，是重设计（主地图横屏宽 > 高，格子环/舵轮布局要重排；VS 横屏对角双面板）。
 - **A 纪律**：必须先出**横屏渲染效果图**（`ui_preview`/`--shot --viewport=1920x1080` 或 AI 概念稿）+ 用户确认，才动码。
 
-## 7. 用户确认点
+## 7. 用户确认点（2026-11-04 留痕）
 
-- [ ] 方案 A / B / C 选型
-- [ ] 横屏效果图（7 场景 `--shot --viewport=1920x1080` 或 AI 概念稿）用户过目
-- [ ] 确认后动码（WBS 单独立项）
+- [x] **方案 A / B / C 选型 = 方案 A（坐标双套）**：用户 2026-11-04 过目横屏概念图
+  （`evidence/ui_concept/main_map_v6_landscape.png` + `vs_landscape.png`，`agnes_gen.py` 16:9）
+  后回复「继续」无异议（A 纪律消息留痕）。
+- [x] **横屏效果图（2 张代表图）用户过目**：main_map 横屏（岛+宝箱+灯塔居中+格环+罗盘右下+顶部 HUD）
+  + VS 横屏（拳皇对角线+VS 徽标+双面板+指令区）。**其余 5 场景（index/select_role/select_map/
+  message/saveload）横屏布局 = 基础设施跑通后出 `--shot --viewport=1920x1080` 效果图再请过目**。
+- [ ] 基础设施动码 → 出 7 场景横屏效果图 → 用户最终过目 → 各场景横屏布局动码（WBS S38.1 起，每场景独立任务）。
+
+---
+
+## 8. 立项（方案 A 动码起点，S38.0 基础设施）
+
+> 方案 A 已定案。WBS 从基础设施开始（不破坏竖屏 0 行为变化），再逐场景横屏布局。
+> 各场景横屏布局动码前，仍须过目该场景横屏效果图（A 纪律）。
+
+### S38.0 横屏基础设施（架构层，无场景视觉重排）
+1. `is_landscape(win_w, win_h) -> bool`（`win_w >= win_h`）方向判定。
+2. 坐标系常量：`ti_render::framebuffer` 加 `LANDSCAPE_W_I32 = 1920` / `LANDSCAPE_H_I32 = 1080`；
+   `LOGICAL_W/H_I32` 保持竖屏（兼容，0 行为变化）。
+3. `canvas.rs::viewport_scale` 方向自适应：`is_landscape` 时 `min(win_w/1920, win_h/1080)`，
+   竖屏保持 `min(win_w/1080, win_h/1920)`。
+4. `scene_render.rs` / 相机系统按 `is_landscape` 选逻辑画布尺寸（竖屏路径完全不变）。
+5. 命中 `pick.rs::hit_1080_pick`：当前方向换算（横屏 1920×1080，竖屏 1080×1920）。
+6. `--shot --viewport=1920x1080` 支持横屏出图（S29.5 多视口已具备，方向感知接上）。
+
+### S38.1 起场景横屏布局（每场景独立任务，动码前过目效果图）
+- index / select_role / select_map / main_map / vs / message / saveload（7 场景横屏重排）。

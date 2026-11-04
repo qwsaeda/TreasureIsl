@@ -1523,8 +1523,10 @@ fn manual_1080_hit_system(
             }
         }
     }
-    let canvas_w = ti_render::framebuffer::LOGICAL_W_I32 as f32;
-    let canvas_h = ti_render::framebuffer::LOGICAL_H_I32 as f32;
+    let landscape =
+        window.iter().next().is_some_and(|w| ti_engine::is_landscape(w.width(), w.height()));
+    let canvas_w = ti_engine::logical_w_for(landscape) as f32;
+    let canvas_h = ti_engine::logical_h_for(landscape) as f32;
     let hit = ti_engine::pick::hit_1080_pick(
         win.width(),
         win.height(),
@@ -1571,6 +1573,10 @@ fn window_resize_system(
         return;
     };
     let mode = g.shell().scale_mode();
+    // S38 方案 A：方向感知（横屏 1920×1080 / 竖屏 1080×1920）。窗口纵横比变化
+    // 时更新 `Settings.orientation` ⇒ `viewport()` 按当前方向重算逻辑尺寸。
+    let orientation = ti_platform::settings::Orientation::from_size(wh.0, wh.1);
+    g.shell_mut().set_orientation(orientation);
     g.shell_mut().set_scale_mode(mode, wh.0, wh.1);
 }
 
@@ -1590,11 +1596,17 @@ fn camera_system(
     // 多实体 ⇒ `single_mut()` 失败 ⇒ **静默不更新**正交 scale ⇒ 窗口缩放跟随失效。
     mut cameras: Query<&mut Projection, With<WorldCam>>,
     mut sprite: Query<&mut Transform, (With<FrameSprite>, Without<Camera2d>)>,
+    // S38 方案 A：方向感知（横屏 1920×1080 / 竖屏 1080×1920）。
+    windows: Query<&Window>,
 ) {
     let Ok(g) = store.0.lock() else {
         return;
     };
     let cam = *g.world_cam();
+    let landscape =
+        windows.iter().next().is_some_and(|w| ti_engine::is_landscape(w.width(), w.height()));
+    let logical_w = ti_engine::logical_w_for(landscape) as f32;
+    let logical_h = ti_engine::logical_h_for(landscape) as f32;
     let scale = bevy_ortho_scale(g.shell().vp.scale(), cam.zoom);
     if let Ok(mut proj) = cameras.single_mut() {
         if let Projection::Orthographic(o) = &mut *proj {
@@ -1602,8 +1614,8 @@ fn camera_system(
         }
     }
     if let Ok(mut st) = sprite.single_mut() {
-        st.translation.x = cam.cam[0] - LOGICAL_W as f32 / 2.0;
-        st.translation.y = LOGICAL_H as f32 / 2.0 - cam.cam[1];
+        st.translation.x = cam.cam[0] - logical_w / 2.0;
+        st.translation.y = logical_h / 2.0 - cam.cam[1];
     }
 }
 
