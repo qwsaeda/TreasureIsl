@@ -16,7 +16,12 @@ cargo clippy -p ti-core -p ti-app --all-targets -D warnings: 0 新 warning
 cargo fmt --all --check: 0
 
 --- 3. gate 实测 ---
-gate.ps1: 33 项 0 failure（含 wasm-browser-e2e / bevy-cpu-parity / browser-playtest / playtest-loop）
+gate.ps1（full）: 30 PASS + 2 SKIP（android 无 NDK / zero-unknown dev tier），0 FAIL
+  wasm-browser-e2e PASS（L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map / L5 环资产）
+  browser-playtest PASS（CDP 按键驱动 菜单→选人→选图→主地图 + 墨点/场景流转断言）
+  playtest-loop PASS（fuzz/full_run/render_invariants/web_playtest 4 报告聚合 0 失败）
+  重启后复跑（2026-11-04 /tmp/gate_s37_final2.log GATE_EXIT=0）= 起 serve 后全项复绿
+  （首跑 3 项 browser FAIL = serve 未起环境态 ERR_CONNECTION_REFUSED，非代码缺陷）
 
 --- 4. 地图包实测 ---
 map_pack.py list: m01~m20 全 20 包 OK
