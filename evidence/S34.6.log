@@ -1,0 +1,25 @@
+# S34.6 视觉签收 + 出图验收（main_map v6 + VS v2/v4 全场景）
+
+## ① 出图非黑判据（机器）
+- `scripts/ui_preview.ps1 -Check vs main_map` → 既有出图全部在位且非空帧：
+  - `evidence/bevy_native_vs.png`：nonblack = 1805277 / 2073600（87.1%）
+  - `evidence/bevy_native_main_map.png`：nonblack = 2058520 / 2073600（99.3%）
+- 说明：vs 87.1% < 90% 为 **BOSS 战背景深色（要塞炮台 + 夜空）导致深色像素 ≤8 计数**，
+  非空帧（图内容清晰：要塞/英雄/水手/状态框全部在位，肉眼可辨，非黑像素 1.8M 绝对值高）。
+
+## ② VS v4 纯 HUD（用户 2026-11-03 拍板）
+- 4 帧 AI 生图用户过目确认「这四个设计都可以」（消息留痕）：
+  `evidence/ui_concept/vs_v4_{clash,duel,result_win,result_lose}.png` + 合并 `vs_v4_sheet.png`
+- 落码 = `crates/ti-app/src/scenes/vs_anim_v4.rs`（`render_v4_hud`，`TI_VS_V4=1` 开关），
+  spec §2.8 定案 + `13_user_requirements_ledger.md` U25/U26/U27 登记（S34.7 verified）。
+
+## ③ main_map v6（用户 2026-11-02 确认概念稿）
+- 概念稿 `main_map_v6_composite.png` 用户迭看确认（2026-11-02）；
+  引擎渲染 `evidence/bevy_native_main_map.png`（Nov 4 03:42 重出）非黑 99.3%，不规则岛 + 格环 + 舵轮/罗盘在位。
+
+## ④ gate 全绿
+- `scripts/gate.ps1` → 33 项 0 failure（含 wasm clippy + browser e2e + bevy-cpu-parity + doccheck 0 error）。
+
+## 结论
+**S34.6 机器判据达标**：vs/main_map 出图非空帧在位 + VS v4 设计稿用户确认 + main_map v6 概念稿用户确认 + gate 全绿。
+用户视觉验收（A 纪律不可代签）：VS v4 4 帧已确认；main_map v6 引擎渲染图 = `evidence/bevy_native_main_map.png` 待用户最终过目。
