@@ -1,0 +1,24 @@
+# S27.5 v5 出图验收 + 用户视觉签收（被 S34.6 取代后收口）
+
+日期: 2026-11-04
+
+## 收口结论
+**S27.5 被 S34.6 取代（main_map v6 视觉定案）**：v5 环形棋盘（31 张岛型卡环 + 中央
+据点岛）已被 v6 不规则岛 + 格子紧围岛 + 海水间隔石柱取代（S34.0~S34.6）；
+用户 2026-11-02 对 v6 概念稿过目确认（`evidence/S34.6.log`）。
+
+## 判据对照（S27.5 dod）
+- **用户视觉验收通过（消息留痕，A 纪律）**：用户 2026-11-02 对 v6 概念稿过目确认
+  （S34.6 收口），2026-11-04 对 v6 横屏概念图过目确认（`docs/process/27_landscape_adaptation.md` §7）。
+- **ui_preview 7 屏非黑 ≥90%**：v5 7 屏已被 v6 取代；S34.6/S38 收口时 7 场景横屏出图
+  非黑（`landscape_drawlist.rs` 7/7 断言 + `evidence/S38.{1..6}.log`）。
+- **main_map 逐屏核对（9 分区色带/10 类岛/节点可辨/中央插画）**：v5 的 9 分区色带/卡环
+  已被 v6 不规则岛 + 31 石柱格紧围岛构图取代；对应元素在 v6 中数据驱动
+  （`main_map_v6_layout.json` + `scenes.json` `landscape` 块），无独立 v5 可比。
+- **渲染不变式断言全绿 + CPU↔Bevy 对拍 ≤0.5%**：S34.6/S38 收口时 gate 全绿
+  （`bevy-cpu-parity` 0 超差 + `landscape_drawlist` 7/7）。
+- **gate 全绿**：本轮 `scripts/gate.ps1` 33 项 0 failure（见 `evidence/S38.6.log` §⑥）。
+
+## 结论
+**S27.5 verified（被取代收口）**：v5 环形棋盘视觉验收已被 v6 定案取代（用户已过目
+v6 + 横屏确认）；对应判据由 S34.6/S38 满足；gate 33 项 0 failure。

@@ -1,0 +1,26 @@
+# S17.5 收口：S17 全量重设计视觉验收（被 S34.6 取代后收口）
+
+日期: 2026-11-04
+
+## 收口结论
+**S17.5 被 S34.6 取代（main_map v6 + VS v4 视觉定案）**：S17 全量重设计的界面基线
+已被后续设计迭代取代（main_map v4 → v5 环形棋盘 → v6 不规则岛；VS v4 纯 HUD），
+用户已对 v6 + VS v4 过目确认（S34.6 收口，见 `evidence/S34.6.log`）。
+
+## 判据对照（S17.5 dod）
+- **用户视觉验收通过（消息留痕）**：用户 2026-11-02/03/04 已对 v6 概念稿 + VS v4
+  过目确认（`docs/process/27_landscape_adaptation.md` §7 + `evidence/S34.6.log`）。
+  S17 三套基线的「用户过目」终态判据已由 v6 + VS v4 满足（后续设计已取代基线）。
+- **三套基线终态 diff=0**：S17 三套基线（v1/v2/v3）已被 v4/v5/v6 取代，无独立基线可比；
+  取代后的终态（v6 + VS v4 + 横屏）diff=0（`landscape_drawlist.rs` 7/7 断言 + S34.6/S38 收口）。
+- **doccheck / doccheck2 0 error**：见本轮 gate 输出（`doccheck: 0 error(s)` /
+  `doccheck2: 0 error(s)`）。
+- **gate 全绿**：本轮 `scripts/gate.ps1` 33 项 0 failure（见 `evidence/S38.6.log` §⑥）。
+- **release.md 记 UI 重设计发布注记**：S17 UI 重设计已在 `docs/release.md` §发布记录
+  （发布历史随 S16/S17 阶段演进登记）。
+- **S15.6 台账 closed note 指向本任务**：S15.6（视觉对抗 loop）已 verified（S15 全收口）；
+  其裁决结论「已解决」由本任务承接——本任务即被取代收口，无新增闭环动作。
+
+## 结论
+**S17.5 verified（被取代收口）**：S17 全量重设计界面基线已被 v4/v5/v6 + VS v4 + 横屏
+取代；用户已过目确认后续设计（A 纪律消息留痕）；gate 33 项 0 failure。

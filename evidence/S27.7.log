@@ -1,0 +1,28 @@
+# S27.7 VS 对战界面改版（被 S34.7 取代后收口）
+
+日期: 2026-11-04
+
+## 收口结论
+**S27.7 被 S34.7 取代（VS v4 纯 HUD 定案）**：`docs/ui-redesign-v3/12_main_map_v6_vs_v2_spec.md`
+§2 注记——①三动作/4 道具被 v2 兵力模型（确定性 VS）取代 ②5 套版式 A/B/C/D/E 被
+v4 纯 HUD 取代 ③ti-engine 并回 workspace 已在 S18.8c 完成。
+
+## 判据对照（S27.7 dod）
+- **战斗动作升级 + 4 道具（①）**：`docs/business/combat.md` v2 已定案——战斗改为
+  **兵力模型（人手 + 武器，确定性 VS + 双方必损 + 自动动效）**，原「攻击/道具/防御」
+  三动作回合制作废（combat.md §战斗动作删除）。4 道具资产
+  `assets/ui/item_{keg,medkit,rum,smoke}.png` 在（vs_v1 批次）；道具效果枚举
+  `ti-core::domain::combat::ItemEffect` 在。v2 兵力模型已由 S34.6 VS v2 定案落地。
+- **5 套 VS 版式原型渲染器（②）**：`crates/ti-app/src/scenes/vs_proto.rs`
+  `TI_VS_PROTO=a|b|c|d|e` 5 版式渲染器在；选型后被 v4 纯 HUD 取代（S34.6 定案 + S38.5 横屏）。
+- **ti-engine 并回根 workspace（③）**：S18.8c 完成（`evidence/S18.8c.log`）；根
+  `Cargo.toml` 统一管理 bevy 版本/特性 + `ti-engine` 成员。
+- **用户视觉验收通过（选型签收）**：用户 2026-11-01/02/03/04 对 VS v4 + 横屏过目确认
+  （S34.6 + `docs/process/27_landscape_adaptation.md` §7 + `evidence/S34.6.log`/`S38.5.log`）。
+- **cargo metadata 通过 + 双后端渲染仍绿 + gate 全绿**：S18.8c（workspace 并回）收口时
+  cargo metadata 通过 + 双后端（Bevy CPU/GPU）仍绿；本轮 `scripts/gate.ps1` 33 项 0 failure。
+
+## 结论
+**S27.7 verified（被取代收口）**：三动作/4 道具/5 版式均被 v2 兵力模型 + v4 纯 HUD
+取代（combat.md v2 定案）；ti-engine 并回已由 S18.8c 完成；用户已过目 VS v4 + 横屏
+确认（A 纪律消息留痕）；gate 33 项 0 failure。
