@@ -46,6 +46,7 @@ pub mod select_map;
 pub mod select_role;
 pub mod vs;
 pub mod vs_anim_proto;
+pub mod vs_anim_v4;
 pub mod vs_proto;
 
 pub use index::IndexScene;

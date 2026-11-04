@@ -1,0 +1,33 @@
+# S34.7 VS v4 纯 HUD 拳皇对角线（用户 2026-11-03 方案 A 拍板）
+
+## ① 用户拍板（A 纪律留痕）
+- 用户「都是屎。这是游戏，不是动画片」→ 参考宝可梦/FGO/FF 成熟回合制（敌我面板+指令区+简洁场地）。
+- 方案 A 纯 HUD 定案 + 保留羊皮纹理 + 拳皇 VS 对角线（用户「B 右上但人物没拳皇对角线感觉」）。
+- 4 帧 AI 生图（`scripts/agnes_gen.py`，`source .env` 加载 key）用户过目确认：
+  `evidence/ui_concept/vs_v4_{clash,duel,result_win,result_lose}.png` + 合并 `vs_v4_sheet.png`。
+- spec §2.8 定案 + `13_user_requirements_ledger.md` U25/U26/U27 登记。
+
+## ② 代码落点
+- `crates/ti-app/src/scenes/vs_anim_v4.rs`（新，268 行）：`render_v4_hud` 动态构图 =
+  羊皮底（chart_wide+暗角）+ 敌方面板右上/我方面板左上（名字+兵力双条+人手/武器/武装三数）
+  + 中央 VS 徽标 + 底部指令区（跳过/确认/重打）+ 角色对角线（我方左下 1.15× 近大/敌方右上
+  1.0× 远小 + 斜地线 + 斜冲虚线交叉于 VS）+ 脚下椭圆投影；result 帧败方倒地。
+- `vs_anim_proto.rs`（745 行，<900 基线）：`TI_VS_V4=1` 开关 → `vs_anim_v4::render_v4_hud`；
+  `anim_ms`/`tri`/`draw_result_scene`/`frame` 改 pub(crate) 供子模块；未设开关 = v2 烘焙帧现状（0 行为变化）。
+- i18n 3 键（`scene.vs.v4_cmd_skip/confirm/retry`）入 `assets/data/strings.json`。
+
+## ③ 拆分理由（硬规则 8：文件规模基线）
+- `vs_anim_proto.rs` 1002 行（v4 并入后）超 audit_code 900 行基线 → 拆 `vs_anim_v4.rs`（268 行）
+  独立职责，`vs_anim_proto.rs` 回 745 行。audit_code 0 违规（文件规模 0 项）。
+
+## ④ 验证
+- `cargo build -p ti-app` PASS（0 error）
+- `cargo clippy --workspace --all-targets -- -D warnings` PASS
+- `cargo test --workspace` PASS（402.8s）
+- `scripts/check_hardcode.py` OK（196 file(s), 0 hits）
+- `scripts/check_code_standards.py --check` PASS（0 项超基线）
+- `scripts/audit_code.py` PASS（0 项结构违规）
+- `scripts/gate.ps1` **33 项 0 failure**（含 wasm clippy + browser e2e + bevy-cpu-parity）
+
+## 结论
+**S34.7 verified**：VS v4 纯 HUD 拳皇对角线定案落码（设计稿 4 帧用户确认 + 开关式渲染 + 文件拆分在基线内）+ gate 33 项全绿。
