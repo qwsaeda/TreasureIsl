@@ -206,6 +206,16 @@ pub(crate) fn render_v2_elem(
         );
         return;
     }
+    // S38 方案 A：横屏 = 走横屏构图（`vs_anim_proto_landscape`，1920×1080，双 HP 条顶 +
+    // 角色对角 + 指令区）；竖屏 = 原式（0 行为变化）。用户 2026-11-04 已过目 vs_landscape 概念图。
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    if landscape {
+        crate::scenes::vs_anim_proto_landscape::render_v2_elem_landscape(
+            host, phase, atk_crew, atk_arms, def_crew, def_arms, resolved, class,
+        );
+        return;
+    }
     let th = vs_theme();
     let bg = vs_bg_asset(class, th.as_ref());
     host.blit_image_tint(&bg, 44, 44, 1080 - 88, 1920 - 88, vs_tint(th.as_ref()));
@@ -422,7 +432,7 @@ pub(crate) fn draw_result_scene(
 
 /// v2 元素版状态框（顶守/底攻）：名牌 + 人手/武器/武装 + 兵力条。
 #[allow(clippy::too_many_arguments, clippy::many_single_char_names)]
-fn draw_status_box(
+pub(crate) fn draw_status_box(
     host: &mut dyn SceneHost,
     x: i32,
     y: i32,
@@ -470,7 +480,14 @@ fn draw_status_box(
 }
 
 /// v2 元素版黄铜框（描边）。
-fn frame_v2(host: &mut dyn SceneHost, x: i32, y: i32, width: i32, height: i32, color: u16) {
+pub(crate) fn frame_v2(
+    host: &mut dyn SceneHost,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    color: u16,
+) {
     host.fill_rect(x, y, width, 3, color);
     host.fill_rect(x, y + height - 3, width, 3, color);
     host.fill_rect(x, y, 3, height, color);

@@ -736,6 +736,9 @@ pub struct SceneLayout {
     /// S38 方案 A：横屏原语表（`scenes.json` 的 `landscape.primitives`；非空 = 横屏
     /// 覆盖 `primitives`，空 = 无横屏覆盖 → 回退竖屏）。坐标 1920×1080。
     pub landscape_prims: Vec<Primitive>,
+    /// S38 方案 A：横屏专属额外矩形（`scenes.json` 的 `landscape.extra`；非空 = 横屏
+    /// 覆盖 `extra`，空 = 回退竖屏）。坐标 1920×1080。
+    pub landscape_extra: BTreeMap<String, Rect>,
 }
 
 impl SceneLayout {
@@ -746,6 +749,16 @@ impl SceneLayout {
             &self.landscape_prims
         } else {
             &self.primitives
+        }
+    }
+
+    /// 当前方向的额外矩形表（S38：横屏且声明了 `landscape_extra` 时用横屏，否则竖屏）。
+    #[must_use]
+    pub fn extra_for(&self, landscape: bool) -> &BTreeMap<String, Rect> {
+        if landscape && !self.landscape_extra.is_empty() {
+            &self.landscape_extra
+        } else {
+            &self.extra
         }
     }
 }

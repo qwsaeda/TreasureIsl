@@ -115,7 +115,12 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
 - [x] **S38.4 用户过目确认 + 动码完成**：saveload 横屏概念图（5 槽左列 + 右侧按钮）过目确认
   「动码」→ S38.4 动码（scenes.json saveload `landscape.primitives` 8 个：bg 满屏 + 5 按钮右侧竖排）
   → **verified**（`evidence/S38.4.log`；无头断言 + 竖屏 0 行为变化 + gate 33 项 0 failure）。
-- [ ] 其余场景横屏概念图（vs）出稿 → 用户过目 → 动码（S38.5）。
+- [x] **S38.5 用户过目确认 + 动码完成**：vs 横屏概念图（`vs_landscape.png`，双 HP 条顶 + VS 徽标
+  屏心 + 角色对角）§7 过目确认 → S38.5 动码（`render_v2_elem_landscape` + `draw_result_scene_landscape`
+  新文件 `vs_anim_proto_landscape.rs` + vs.rs 方向感知 + vs `landscape.primitives` 16 +
+  `landscape.extra` 6 键）→ **verified**（`evidence/S38.5.log`；landscape_drawlist 6/6 +
+  竖屏 0 行为变化 + gate 33 项 0 failure）。
+- [ ] 其余场景横屏概念图（main_map v6）出稿 → 用户过目 → 动码（S38.6 候选）。
 
 ---
 

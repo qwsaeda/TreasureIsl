@@ -108,17 +108,15 @@ impl Scene for VsScene {
         let class = crate::scenes::vs_anim_proto::selected_grid_class();
         let th = crate::scenes::vs_anim_proto::vs_theme();
         let bg = crate::scenes::vs_anim_proto::vs_bg_asset(class, th.as_ref());
-        host.blit_image_tint(
-            &bg,
-            0,
-            0,
-            1080,
-            1920,
-            crate::scenes::vs_anim_proto::vs_tint(th.as_ref()),
-        );
+        // S38 方案 A：横屏 = 画布 1920×1080（空态背景铺满横屏）；竖屏 = 原 1080×1920。
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let (bw, bh) = if landscape { (1920, 1080) } else { (1080, 1920) };
+        host.blit_image_tint(&bg, 0, 0, bw, bh, crate::scenes::vs_anim_proto::vs_tint(th.as_ref()));
         chrome::render_primitives_filtered(host, "vs", -1, 4);
         {
-            let em = layout.extra.get("empty").copied().unwrap_or_default();
+            // S38：横屏 empty 文案锚点走 `landscape.extra.empty`（回退竖屏 `extra.empty`）。
+            let em = layout.extra_for(landscape).get("empty").copied().unwrap_or_default();
             let text = i18n::sget("scene.vs.empty");
             let text_x = chrome::centered_body_x(host, text);
             chrome::draw_body_text(host, text, text_x, em.y);
@@ -140,7 +138,11 @@ fn render_siege(host: &mut dyn SceneHost, snap: &SiegeSnapshot) {
     let class = "attack";
     let th = crate::scenes::vs_anim_proto::vs_theme();
     let bg = crate::scenes::vs_anim_proto::vs_bg_asset(class, th.as_ref());
-    host.blit_image_tint(&bg, 0, 0, 1080, 1920, crate::scenes::vs_anim_proto::vs_tint(th.as_ref()));
+    // S38 方案 A：横屏 = 画布 1920×1080（攻占战报背景铺满横屏）；竖屏 = 原 1080×1920。
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let (bw, bh) = if landscape { (1920, 1080) } else { (1080, 1920) };
+    host.blit_image_tint(&bg, 0, 0, bw, bh, crate::scenes::vs_anim_proto::vs_tint(th.as_ref()));
     chrome::render_primitives_filtered(host, "vs", -1, 4);
     let theme = host.theme().clone();
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -151,9 +153,9 @@ fn render_siege(host: &mut dyn SceneHost, snap: &SiegeSnapshot) {
     let title_x = chrome::centered_body_x(host, &title);
     chrome::draw_body_text(host, &title, title_x, 64);
 
-    // 攻方/守方兵力条（攻方舰队 / 守方驻军+防御）
-    let ph_bar = layout.extra.get("player_hp").copied().unwrap_or_default();
-    let bh_bar = layout.extra.get("boss_hp").copied().unwrap_or_default();
+    // 攻方/守方兵力条（攻方舰队 / 守方驻军+防御）—— S38：横屏走 `landscape.extra`。
+    let ph_bar = layout.extra_for(landscape).get("player_hp").copied().unwrap_or_default();
+    let bh_bar = layout.extra_for(landscape).get("boss_hp").copied().unwrap_or_default();
     let atk_label = i18n::sget("scene.vs.siege_attacker");
     let def_label = i18n::sget("scene.vs.siege_defender");
     // 攻方条（青绿）
@@ -192,9 +194,9 @@ fn render_siege(host: &mut dyn SceneHost, snap: &SiegeSnapshot) {
         chrome::COLOR_TEXT_ON_PARCH,
     );
 
-    // 结果行（`outcome` 未结算 = 提示按 Attack；已结算 = 胜/败）
-    let rd_pos = layout.extra.get("rounds").copied().unwrap_or_default();
-    let oc_pos = layout.extra.get("outcome").copied().unwrap_or_default();
+    // 结果行（`outcome` 未结算 = 提示按 Attack；已结算 = 胜/败）—— S38：横屏走 `landscape.extra`。
+    let rd_pos = layout.extra_for(landscape).get("rounds").copied().unwrap_or_default();
+    let oc_pos = layout.extra_for(landscape).get("outcome").copied().unwrap_or_default();
     match snap.won {
         Some(true) => {
             let text = i18n::sget("scene.vs.siege_win");

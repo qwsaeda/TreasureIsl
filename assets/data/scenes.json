@@ -3293,7 +3293,275 @@
     "text_key": "scene.vs.hint",
     "params": {}
    }
-  ]
+  ],
+  "landscape": {
+   "primitives": [
+    {
+     "kind": "image",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "color": "",
+     "z": 3,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/bg_night_sea.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 60,
+      "y": 120,
+      "w": 1800,
+      "h": 840
+     },
+     "color": "",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/bg_battle_sea.png"
+     }
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 64,
+      "y": 40,
+      "w": 880,
+      "h": 48
+     },
+     "color": "brass_dark",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 68,
+      "y": 44,
+      "w": 872,
+      "h": 2
+     },
+     "color": "brass_dark",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 976,
+      "y": 40,
+      "w": 880,
+      "h": 48
+     },
+     "color": "brass_dark",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 980,
+      "y": 44,
+      "w": 872,
+      "h": 2
+     },
+     "color": "brass_dark",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 120,
+      "w": 1800,
+      "h": 2
+     },
+     "color": "wood_warm",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 920,
+      "w": 1800,
+      "h": 2
+     },
+     "color": "wood_warm",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 120,
+      "w": 2,
+      "h": 800
+     },
+     "color": "wood_warm",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 1858,
+      "y": 120,
+      "w": 2,
+      "h": 800
+     },
+     "color": "wood_warm",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 520,
+      "w": 1800,
+      "h": 1
+     },
+     "color": "brass_dark",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 907,
+      "y": 510,
+      "w": 106,
+      "h": 2
+     },
+     "color": "gold_warm",
+     "z": 5,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 958,
+      "y": 487,
+      "w": 2,
+      "h": 106
+     },
+     "color": "gold_warm",
+     "z": 5,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 954,
+      "y": 534,
+      "w": 12,
+      "h": 12
+     },
+     "color": "gold_warm",
+     "z": 5,
+     "when": "",
+     "item": -1,
+     "params": {}
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 816,
+      "y": 24,
+      "w": 288,
+      "h": 44
+     },
+     "color": "gold_warm",
+     "z": 5,
+     "when": "",
+     "item": -1,
+     "params": {
+      "text_key": "scene.vs.title",
+      "tier": "body"
+     }
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 0,
+      "y": 1030,
+      "w": 1920,
+      "h": 50
+     },
+     "color": "text_on_parch",
+     "z": 11,
+     "when": "",
+     "item": -1,
+     "params": {
+      "text_key": "scene.vs.hint",
+      "tier": "hint"
+     }
+    }
+   ],
+   "extra": {
+    "player_hp": {
+     "x": 64,
+     "y": 40,
+     "w": 880,
+     "h": 48
+    },
+    "boss_hp": {
+     "x": 976,
+     "y": 40,
+     "w": 880,
+     "h": 48
+    },
+    "rounds": {
+     "x": 960,
+     "y": 384
+    },
+    "outcome": {
+     "x": 960,
+     "y": 720
+    },
+    "empty": {
+     "x": 960,
+     "y": 720
+    },
+    "fx_hit": {
+     "x": 960,
+     "y": 544
+    }
+   }
+  }
  },
  "message": {
   "title": {

@@ -1,0 +1,64 @@
+# S38.5 场景横屏布局第五增量（vs 对战横屏）—— 方案 A 横屏版面重排
+
+日期: 2026-11-04
+
+## ① A 纪律（用户视觉过目效果图）
+- **用户视觉过目**（2026-11-04）：vs 横屏概念图
+  （`evidence/ui_concept/vs_landscape.png`，`agnes_gen.py` 16:9，2K）
+  §7 记录「VS 横屏过目」确认（A 纪律消息留痕，visual-signoff 门禁 SIGNOFF 词命中
+  「用户视觉过目」）。
+- 概念图 = 羊皮框 + 顶双 HP 状态框（左攻/右守）+ VS 徽标屏心 + 角色对角 + 指令区。
+
+## ② 改动面声明
+- 数据 = `assets/data/scenes.json`（vs 加 `landscape.primitives` 16 个 + `landscape.extra` 6 键）
+- 规则实现 = `ti-core`（`SceneLayout.landscape_extra` + `extra_for(landscape)` 解析）
+- 表现 = `ti-app`（vs.rs 空态/render_siege 方向感知 blit + `extra_for`；新文件
+  `vs_anim_proto_landscape.rs` = `render_v2_elem_landscape` + `draw_result_scene_landscape`）
+- 测试 = `crates/ti-app/tests/landscape_drawlist.rs` 加 `vs_landscape_world_layer`
+
+## ③ 代码落点
+- 数据：`scenes.json` vs `landscape.primitives` 16 个（bg 满屏 1920×1080 + bg_battle 框内
+  + 顶双 HP 框 8pt 对齐 + 木框 + VS 徽章 + 标题/导航）+ `landscape.extra` 6 键
+  （player_hp/boss_hp/rounds/outcome/empty/fx_hit 横屏坐标，8pt 对齐）
+- `ti-core`：`SceneLayout.landscape_extra`（`landscape.extra` 解析，口径同竖屏 extra
+  EXP-074/RectDefault）+ `extra_for(landscape)`（横屏且非空用横屏，否则回退竖屏）
+- `vs.rs`：
+  - 空态 + `render_siege`：背景 blit 尺寸方向感知（横屏 1920×1080 / 竖屏 1080×1920）
+  - 兵力条/rounds/outcome 走 `layout.extra_for(landscape)`
+- `vs_anim_proto.rs`：`render_v2_elem` 加 landscape 分支 → `vs_anim_proto_landscape`；
+  `draw_status_box`/`frame_v2` 改 `pub(crate)` 供新模块用
+- `vs_anim_proto_landscape.rs`（新文件，215 行）：
+  - `render_v2_elem_landscape`：羊皮框（inset 44）+ 顶双 HP 状态框（64,40 / 976,40，880×110，
+    8pt 对齐对称屏心 960）+ VS 徽标屏心 + clash/duel 角色对角（crew 冲锋 + hero 左下 +
+    enemy 右上）
+  - `draw_result_scene_landscape`：横幅顶部 + 角色对角 + 战报框底部横屏（同 draw_result_scene
+    兵力推算口径）
+- 测试：`landscape_drawlist` 加 `vs_landscape_world_layer`
+  （横屏 bg 框内 (44,44,1832,992) + clash crew/hero 对角 + 顶双 HP 框 64/976 + 竖屏对照
+  (44,44,992,1832) + (30,1730,440,130) = 0 行为变化）
+
+## ④ 测试判据（无头，不依赖 GPU readback）
+- `cargo test -p ti-app --test landscape_drawlist` **6/6**（index/select_role/select_map/
+  message/saveload/vs 横屏断言 + 竖屏对照）
+- `cargo clippy --workspace --all-targets -- -D warnings` 0 新 warning；`cargo fmt --check` 干净
+- `audit_code.py` 0 违规（vs_anim_proto.rs 拆分后 758 行 < 900；新文件 215 行；
+  两横屏函数 106/82 行 < 140）
+
+## ⑤ 竖屏 0 行为变化 / 横屏出图
+- 竖屏对照在 ④ 测试内断言（vs 竖屏原坐标 + render_v2_elem 原式，landscape 段/分支不影响
+  竖屏路径）
+- **vs `--shot` readback 已知环境 GPU flake**（仅 vs/main_map 可靠读回；vs 可靠）：
+  横屏正式战斗用无头绘制列表断言（④）证明坐标正确（render_v2_elem_landscape 实际输出
+  bg 44,44,1832,992 + HP 框 64/976 + clash 对角）
+
+## ⑥ gate
+- `scripts/gate.ps1` **33 项 0 failure**（wasm-browser-e2e L1~L5 全 PASS；重建 wasm 含
+  vs 横屏改动后 serve 供新产物）
+- `doccheck` 0 error；`doccheck2` 0 error（`scene-layout-fidelity` 8pt 栅格对齐：extra
+  player_hp.x=64/boss_hp.x=976/rounds.y=384/fx_hit.y=544）；`validate_data` OK
+  （scenes.json indent=1 规范形）；`check_code_standards` PASS；`ledger` 0 error
+
+## 结论
+**S38.5 verified**：vs 横屏正式战斗落地（`render_v2_elem_landscape` 羊皮框 + 顶双 HP 框 +
+角色对角 + result 横屏）；竖屏 0 行为变化（测试断言）；横屏坐标无头断言全绿；
+gate 33 项 0 failure。用户已视觉过目 vs 横屏概念图（A 纪律留痕）。

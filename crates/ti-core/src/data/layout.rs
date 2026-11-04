@@ -91,8 +91,26 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
         // 单项解析失败（形状不对）= 跳过该项（不 panic、不整场景失败）：数据先行、渲染后补。
         let primitives: Vec<Primitive> = parse_prim_values(r.primitives);
         // S38 方案 A：横屏原语表（`landscape.primitives`；缺 = 空 = 回退竖屏 `primitives`）。
-        let landscape_prims: Vec<Primitive> =
-            r.landscape.map(|l| parse_prim_values(l.primitives)).unwrap_or_default();
+        let landscape_prims: Vec<Primitive> = r
+            .landscape
+            .as_ref()
+            .map(|l| parse_prim_values(l.primitives.clone()))
+            .unwrap_or_default();
+        // S38 方案 A：横屏专属额外矩形（`landscape.extra`；缺 = 空 = 回退竖屏 `extra`）。
+        // 解析口径与竖屏 extra 一致（EXP-074/RectDefault：缺 w/h 填 0）。
+        let landscape_extra: BTreeMap<String, Rect> = r
+            .landscape
+            .as_ref()
+            .map(|l| {
+                l.extra
+                    .iter()
+                    .map(|(k, v)| {
+                        let rj: RectJson = serde_json::from_value(v.clone()).unwrap_or_default();
+                        (k.clone(), Rect::from(rj))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         // 飞轮 R1 ④-05：v3 氛围星空星位表（`ambient_art.stars` 数组；单项解析失败 = 跳过该项，
         // 与 `primitives` 同容错口径；缺键 = 空 Vec = 不画星点）。
         let ambient_stars: Vec<AmbientStar> = r
@@ -131,6 +149,7 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 portrait_zones,
                 primitives,
                 landscape_prims,
+                landscape_extra,
                 ambient_stars,
             },
         );
@@ -174,6 +193,10 @@ struct RawLandscape {
     /// 横屏原语表（有序 = 绘制顺序；缺 = 空 = 回退竖屏 `primitives`）。
     #[serde(default)]
     primitives: Vec<serde_json::Value>,
+    /// S38 方案 A：横屏专属额外矩形（`landscape.player_hp`/`boss_hp`/`rounds`/`outcome`/`empty`
+    /// 等；缺 = 空 = 回退竖屏 `extra`）。坐标 1920×1080。
+    #[serde(default)]
+    extra: BTreeMap<String, serde_json::Value>,
 }
 
 /// 原语 JSON 值数组 → [`Primitive`]（单项解析失败 = 跳过该项；S38 抽出供竖屏/横屏共用）。

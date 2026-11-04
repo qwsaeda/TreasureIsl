@@ -233,3 +233,56 @@ fn saveload_landscape_world_layer() {
         "saveload 竖屏 slot1 按钮应在 (760,240,160,224)，got {rects:?}"
     );
 }
+
+/// S38：`vs` 横屏正式战斗（`render_v2_elem_landscape`：bg 框内 + 顶双 HP 框 + 角色对角），
+/// 竖屏对照（`render_v2_elem` 原式 0 行为变化）。
+#[test]
+fn vs_landscape_world_layer() {
+    // 横屏：navigate("vs") 有 battle_snapshot → render_v2_elem_landscape（phase=clash）
+    let mut app = game(true);
+    ti_app::forward_nav::navigate(&mut app, "vs");
+    app.render();
+    let imgs = image_rects(&app);
+    assert!(
+        imgs.iter().any(|(a, x, y, w, h)| {
+            a.contains("vs_v2/bg_") && *x == 44 && *y == 44 && *w == 1832 && *h == 992
+        }),
+        "vs 横屏 bg 应在羊皮框内 (44,44,1832,992)，got {imgs:?}"
+    );
+    // clash 帧：crew 冲锋 + hero 左下 + enemy 右上（对角）
+    assert!(
+        imgs.iter().any(|(a, x, y, ..)| a.ends_with("crew.png") && *x == 120 && *y == 420),
+        "vs 横屏 clash crew 应在 (120,420)，got {imgs:?}"
+    );
+    assert!(
+        imgs.iter().any(|(a, x, y, ..)| a.ends_with("hero.png") && *x == 60 && *y == 600),
+        "vs 横屏 clash hero 应在 (60,600)，got {imgs:?}"
+    );
+    let rects = rect_rects(&app);
+    // 顶双 HP 状态框（左攻 64,40 / 右守 976,40，880×110）
+    assert!(
+        rects.iter().any(|(x, y, w, h)| *x == 64 && *y == 40 && *w == 880 && *h == 110),
+        "vs 横屏 attacker HP 框应在 (64,40,880,110)，got {rects:?}"
+    );
+    assert!(
+        rects.iter().any(|(x, y, w, h)| *x == 976 && *y == 40 && *w == 880 && *h == 110),
+        "vs 横屏 defender HP 框应在 (976,40,880,110)，got {rects:?}"
+    );
+
+    // 竖屏对照（0 行为变化）：bg (44,44,992,1832) + 攻方底左 (30,1730,440,130)
+    let mut app = game(false);
+    ti_app::forward_nav::navigate(&mut app, "vs");
+    app.render();
+    let imgs = image_rects(&app);
+    assert!(
+        imgs.iter().any(|(a, x, y, w, h)| {
+            a.contains("vs_v2/bg_") && *x == 44 && *y == 44 && *w == 992 && *h == 1832
+        }),
+        "vs 竖屏 bg 应在羊皮框内 (44,44,992,1832)（0 行为变化），got {imgs:?}"
+    );
+    let rects = rect_rects(&app);
+    assert!(
+        rects.iter().any(|(x, y, w, h)| *x == 30 && *y == 1730 && *w == 440 && *h == 130),
+        "vs 竖屏 attacker HP 框应在 (30,1730,440,130)，got {rects:?}"
+    );
+}
