@@ -352,3 +352,33 @@ AndroidManifest `versionName` 同步；release.md 版本规划行。
 4. `validate_data.py check_version_consistency` 三方对账（Cargo↔manifest↔产物名↔release.md）防漂移。
 
 **验证**：validate_data OK（含新检查项）；build_apk.sh / build_wasm.ps1 产物名带版本。
+
+### EXP-158 构建：wasm-browser-e2e transient flake：先单独重跑归因，别当回归改代码
+**现象**：gate `wasm-browser-e2e` FAIL L5 主地图资产未取到（v6_markers=0/6 v5_isle=0 island_home_*=0 card_panel=0，日志提示「疑似 `asset_present()` 在 wasm 恒 false」）。
+
+**根因**：transient（serve/资产加载时序 + 浏览器实例化竞态），非代码回归——单独重跑
+`python3 scripts/wasm_browser_e2e.py` 即 L1~L5 全 PASS。S38.6 时同项全 PASS，改一行
+sprite_atlas 死代码后同一 FAIL 又复现，排除改动相关。
+
+**解法**：wasm-browser-e2e FAIL 时**先单独重跑确认**（不直接当回归改代码/改判据）；
+确认 serve 提供最新 wasm（`build_wasm.ps1` 重建 `web/` 后 `fuser -k 8080/tcp` 杀旧 serve
+重启，或直接 `python3 scripts/wasm_browser_e2e.py` 重新起 serve）。单独重跑 PASS = 环境
+flake，继续 gate 其余项；连续多次 FAIL 才归因代码。
+
+**验证**：单独重跑 L1~L5 全 PASS + 完整 gate 33 项 0 failure。
+
+**预判**：gate 里 e2e 项报错先看是否 transient（重跑），不先动代码；改动 Rust 后重建
+wasm + 重启 serve 再跑 e2e。
+
+### EXP-159 构建：github push 网络 transient：失败先 sleep 重试 2-3 次，不改 remote
+**现象**：`git push origin master` 报 `Failed to connect to github.com port 443 after 135000 ms: Couldn't connect to server`（偶发 `Internal Server Error`），首次推送失败。
+
+**根因**：github 网络 transient（连接超时/5xx），非本地/remote 配置问题。
+
+**解法**：push 失败先 `sleep` 重试（间隔 15→25s 递增，最多 2-3 次）；连接超时后立即重试
+通常仍失败（TCP 建连被拒有冷却），**先 sleep 再重试**。连续 3 次失败才查 `git remote -v`/
+网络（不要中途改 remote/URL）。
+
+**验证**：sleep 25s 后重试成功（`To https://github.com/... 1e8953b..9defb77`）。
+
+**预判**：push 超时先睡 15-25s 重试，别慌着改配置；commit 已本地落盘，重试幂等。

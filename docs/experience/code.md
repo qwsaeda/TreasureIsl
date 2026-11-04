@@ -589,3 +589,43 @@ S34.0 违反项修复（U20 战报拆分 `draw_result_scene` + U21 生物移格�
 - **根因**：改布局/拆函数只盯目标（战报排版），未「四查」：①CS-3 参数命名（新函数参数禁单字母，仅 x/y 豁免）②布局求交（新元素与既有元素矩形重叠）③资产 blit 方式（合成图禁 4 次全图）④文案参数一致性（文案 % vs 实际数值）。
 - **解法**：拆函数/改布局前四查清单；合成资产图单处 blit 或子矩形（禁全图重复）；战报文案参数化显示实际损失（`{16}-{19}`）。
 - **验证**：`check_code_standards --check` PASS（CS-3 0 超基线）+ `cargo clippy -- -D warnings` PASS + `cargo test -p ti-app` PASS + 出图确认（lose 帧 hero 不重叠 / 生物单处不叠格）。
+
+### EXP-156 代码：audit_code 文件规模零豁免：超限函数须拆新文件而非补棘轮
+
+**现象**：S38.5 把横屏函数（`render_v2_elem_landscape` + `draw_result_scene_landscape`）加进
+`vs_anim_proto.rs` 后，`python3 scripts/audit_code.py` 报
+`FILE crates/ti-app/src/scenes/vs_anim_proto.rs = 953 行（上限 900）`（文件规模 1 项）。
+
+**根因**：目标文件已在 900 行上限附近，新增 197 行横屏函数即超限；`16_code_standards.md`
+「新代码零豁免」——不能补 `process_ratchet.json` 棘轮豁免（棘轮是历史基线，不覆盖新代码）。
+
+**解法**：拆到新文件 `crates/ti-app/src/scenes/vs_anim_proto_landscape.rs`（215 行）——
+把两个横屏函数整体搬出 + 需要跨文件用的 helper（`draw_status_box`/`frame_v2`）改
+`pub(crate)` + `render_v2_elem` 内 landscape 分支改调新模块
+（`crate::scenes::vs_anim_proto_landscape::render_v2_elem_landscape`）+ `scenes/mod.rs` 登记
+`pub mod vs_anim_proto_landscape`。
+
+**验证**：`audit_code.py` 0 违规（vs_anim_proto.rs 953→758，新文件 215，两横屏函数 106/82 < 140）；
+`cargo clippy --workspace --all-targets -- -D warnings` 0 新 warning；gate 33 项 0 failure。
+
+**预判**：新增函数前先 `wc -l <目标文件>` 预判是否超限；文件 >900 行时优先拆新文件
+（一个文件一个职责，`02_conventions` §9），不把函数塞进已超限文件。
+
+### EXP-157 代码：横屏 landscape 数据契约：extra/prims 坐标 8pt 栅格（doccheck2 scene-layout-fidelity 扫）
+
+**现象**：S38.5 横屏 `scenes.json` vs `landscape.extra` 写 `player_hp.x=60` / `boss_hp.x=980` /
+`rounds.y=380`，doccheck2 报
+`scenes.json vs: x = 980 非 8pt 栅格`（`10_ui_redesign` §4：版面坐标 8 整除）3 处 ERROR。
+
+**根因**：横屏布局按视觉顺手坐标写，未对齐 8pt 栅格；doccheck2 `scene-layout-fidelity`
+扫描 `landscape.extra` 键（竖屏 extra 与业务几何/叙事键已有豁免名单，横屏新键无豁免）。
+
+**解法**：横屏 `landscape.extra`（及 `landscape.primitives` 矩形）x/y/w/h 一律 8 整除，
+对称屏心 = 960（竖屏 540）；S38.5 对齐 `player_hp.x=64` / `boss_hp.x=976`（对称
+64+880=944、976 距 960 16）/ `rounds.y=384` / `fx_hit.y=544`。`render_v2_elem_landscape`
+的 `draw_status_box` 坐标同步（64/976）+ 测试断言同步。
+
+**验证**：doccheck2 0 error（`scene-layout-fidelity` 8pt 栅格全过）；gate 33 项 0 failure。
+
+**预判**：写横屏 `landscape` 块时坐标直接按 8 的倍数取（x/y/w/h % 8 == 0），不写视觉
+顺手值再等门禁抓；对称元素以 960 为轴心对称（960 ± 8n）。

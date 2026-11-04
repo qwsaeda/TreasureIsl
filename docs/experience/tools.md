@@ -171,3 +171,21 @@
 
 **验证**：`/api/tests?run=rules_battle` → 后台 spawn → 日志 `test result: ok. 20 passed`；非法 id/人工验收拒；
 ti-console 集成测试 4 组全过；前端页面 200 含 `ts-run-btn`。
+
+### EXP-160 工具：clippy --all-targets 含测试文档注释：missing backticks（build 阶段漏跑）
+**现象**：`cargo clippy --workspace --all-targets -- -D warnings` 报 `item in documentation is missing backticks`
+（S38.5 `vs_landscape`/`bevy_ui`、S38.6 `V6_OCEAN_BG`/`image`/`chart_full`），且命中
+`crates/ti-app/tests/landscape_drawlist.rs` **测试文件**的 `///` 文档注释。
+
+**根因**：`///`/`//!` 文档注释里标识符缺反引号（clippy `doc_markdown`，formats.md EXP 已有
+通用教训但聚焦 lib 注释）；`cargo build` 不跑 clippy，漏到 clippy 阶段末才被抓（S38.5/S38.6
+各修一次）。
+
+**解法**：①文档注释里标识符一律加反引号（`vs_landscape`→`` `vs_landscape` ``、`V6_OCEAN_BG`
+→`` `V6_OCEAN_BG` ``）②`tests/` 测试文件文档注释同样触发（`--all-targets`）③**提交前跑
+`cargo clippy --workspace --all-targets -- -D warnings`**（不只 `cargo build`），先拦后提交。
+
+**验证**：修反引号后 clippy 0 新 warning；gate 33 项 0 failure。
+
+**预判**：新增 `///`/`//!` 注释时标识符直接带反引号；改代码后先 clippy（含测试）再提交，
+不在 build 后直接 commit。
