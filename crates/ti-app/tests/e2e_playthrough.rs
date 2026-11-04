@@ -57,7 +57,7 @@ fn e2e_full_game_session() {
     assert_eq!(app.scene(), Scene::SelectMap, "角色确认后应进入选图");
 
     // ── 阶段 3：地图选择 ──────────────────────────────────────────────
-    // 遍历所有地图
+    // 遍历前 3 张地图
     for i in 0..3 {
         app.handle(GameInput::Next);
         let expected = match i {
@@ -68,9 +68,11 @@ fn e2e_full_game_session() {
         };
         assert_eq!(app.map_slot(), Some(expected), "Next 应切换到地图 {i}");
     }
-    // 循环回 M01
-    app.handle(GameInput::Next);
-    assert_eq!(app.map_slot(), Some(MapSlot::M01), "地图选择应循环");
+    // 从 M03（zero_index=2）循环 18 次回 M01：(2+18)%20=0（S37 20 槽位环形）
+    for _ in 0..18 {
+        app.handle(GameInput::Next);
+    }
+    assert_eq!(app.map_slot(), Some(MapSlot::M01), "20 槽位环形：M03 后 18 次 Next 回 M01（S37）");
 
     // 选择 M01 并确认
     app.handle(GameInput::Confirm);

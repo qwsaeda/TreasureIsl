@@ -16,6 +16,7 @@ use ti_app::game_app::{BattleView, GameApp, GameInput, Scene};
 use ti_core::domain::combat::Side;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::MapSlot;
+use ti_core::rules::progression::CLEARED_BIT;
 
 /// 新游戏 → 选角（Panda）→ 选图 M01 → 主地图。
 fn enter_m01(app: &mut GameApp) {
@@ -67,18 +68,26 @@ fn app_new_game_starts_with_only_m01_unlocked() {
 
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Next);
-    app.handle(GameInput::Confirm); // → SelectMap
-    // 锁定 m02 / m03：Confirm 应被拒（Sfx::Invalid，场景停留、选择态不变）
-    app.handle(GameInput::Next); // M01
-    app.handle(GameInput::Next); // M02
+    app.handle(GameInput::Confirm); // → SelectMap（map_slot=None）
+    // 锁定 m02 / m03 / m20：Confirm 应被拒（Sfx::Invalid，场景停留、选择态不变）
+    app.handle(GameInput::Next); // 首次 Next → M01（已解锁，暂存 map_slot）
+    app.handle(GameInput::Next); // M02（未解锁）
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::SelectMap, "未解锁 m02 的 Confirm 应被拒（停留选图）");
     assert_eq!(app.selection.map_slot, None, "被拒后选择态不应提交 m02");
-    app.handle(GameInput::Next); // M03
+    app.handle(GameInput::Next); // M03（未解锁）
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::SelectMap, "未解锁 m03 的 Confirm 应被拒（停留选图）");
-    // 解锁 m01：正常进主地图
-    app.handle(GameInput::Next); // 循环回 M01
+    // S37：m20（最后一张图）也锁定
+    for _ in 0..17 {
+        app.handle(GameInput::Next); // M04 → M20
+    }
+    assert_eq!(app.map_slot(), Some(MapSlot::M20), "Next×17 后应到 m20");
+    app.handle(GameInput::Confirm);
+    assert_eq!(app.scene(), Scene::SelectMap, "未解锁 m20 的 Confirm 应被拒（停留选图）");
+    // 解锁 m01：从 m20（zero_index=19）Next×1 = (19+1)%20=0 = M01（20 图环形）
+    app.handle(GameInput::Next);
+    assert_eq!(app.map_slot(), Some(MapSlot::M01), "m20 后 Next×1 即回 m01（S37 环形）");
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::MainMap, "m01 已解锁应可进主地图");
 }
@@ -238,35 +247,30 @@ fn app_save_load_restores_mask_faithfully() {
     assert!(!app.is_cleared(), "非通关掩码读档后 cleared 应为 false");
 }
 
-/// S15.2 逐图通关门禁：通关位（掩码 bit 3）读档还原 + 新档未通关。
+/// S15.2 / S37 逐图通关门禁：通关位（掩码 bit 19）读档还原 + 新档未通关。
 #[test]
 fn app_save_load_restores_cleared_gate() {
     let mut app = GameApp::new(1080.0, 1920.0);
     assert!(!app.is_cleared(), "新档未通关");
     assert!(!app.is_map_cleared(MapSlot::M01));
-    assert!(!app.is_map_cleared(MapSlot::M03));
+    assert!(!app.is_map_cleared(MapSlot::M20));
 
-    // 通关档：全解锁（0b0111）+ CLEARED 位（0b1000）= 0b1111
+    // 通关档：全解锁（bit 0..=18）+ CLEARED 位（bit 19）
     let save = SaveSlot {
         version: 2,
         character: 1,
         gold: 100,
-        map_slot: 2, // M03
+        map_slot: 19, // M20（zero_index = 19）
         position: 0,
         rng_steps: 0,
-        unlocked_mask: 0b1111,
+        unlocked_mask: ((1u32 << 19) - 1) | CLEARED_BIT,
         boat_level: 1,
-
         v4: None,
     };
     app.write_save_slot(0, save);
     app.restore_save(app.save_slots()[0].clone());
-    assert_eq!(
-        app.unlocked_maps,
-        vec![MapSlot::M01, MapSlot::M02, MapSlot::M03],
-        "通关档读档后全图解锁"
-    );
+    assert_eq!(app.unlocked_maps.len(), 20, "通关档读档后全图 20 解锁");
     assert!(app.is_cleared(), "CLEARED 位读档后应还原通关位");
-    assert!(app.is_map_cleared(MapSlot::M03), "m03 击败位 = 通关位");
-    assert!(app.is_map_cleared(MapSlot::M01), "通关档 m01/m02 击败位应为 true");
+    assert!(app.is_map_cleared(MapSlot::M20), "m20 击败位 = 通关位");
+    assert!(app.is_map_cleared(MapSlot::M01), "通关档 m01 击败位应为 true");
 }

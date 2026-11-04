@@ -171,7 +171,8 @@ fn scene_switch_resets_state() {
     assert!(!flow.state().has_character(), "reset 清角色（无残留）");
     assert!(!flow.state().has_map(), "reset 清地图（无残留）");
     assert!(!flow.is_completed(), "清空后 completed 复位");
-    assert_eq!(flow.unlocked().len(), 3, "reset 不清已解锁地图清单（探测事实保留）");
+    // S37：MapSlot 扩到 20 ⇒ 已解锁清单 20 图。
+    assert_eq!(flow.unlocked().len(), 20, "reset 不清已解锁地图清单（探测事实保留；S37 20 图）");
 }
 
 // ── 菜单光标 + 项目标（规则 1 / 2）─────────────────────────────────────
@@ -309,7 +310,9 @@ fn selection_reset_after_scene_switch() {
 fn selection_all_flows_full() {
     let flow = SelectionFlow::default();
     let flows = flow.all_flows();
-    assert_eq!(flows.len(), 15, "5 角色 × 3 地图 = 15 组合");
+    // S37：5 角色 × 20 地图 = 100 组合。
+    let expected = Character::all().len() * MapSlot::all().len();
+    assert_eq!(flows.len(), expected, "组合数 = 角色数 × 地图数（S37 = 5×20=100）");
 }
 
 #[test]

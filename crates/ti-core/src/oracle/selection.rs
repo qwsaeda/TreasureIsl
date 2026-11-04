@@ -138,9 +138,11 @@ mod tests {
     }
 
     #[test]
-    fn selection_flow_15_combinations() {
+    fn selection_flow_combinations() {
         let flows = oracle_selection_flow();
-        assert_eq!(flows.len(), 15, "5 角色 × 3 地图 = 15 组合");
+        // S37：MapSlot 扩到 20 ⇒ 5 角色 × 20 地图 = 100 组合。
+        let expected = Character::all().len() * MapSlot::all().len();
+        assert_eq!(flows.len(), expected, "5 角色 × 20 地图 = 100 组合");
         for (ch, m) in &flows {
             let s0 = SelectionState::new();
             let (s1, _) = oracle_select_role(s0, *ch);

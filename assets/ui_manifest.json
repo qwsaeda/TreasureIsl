@@ -1,1057 +1,1482 @@
 {
-  "version": 1,
-  "_comment": "UI 资产清单（单一事实源）：角色规格预设 + 资产登记。生成/抠图/规范化走 scripts/ui_assets.py；界面数据（assets/data/scenes.json）只引用 file 路径（相对仓库根）。新增资产 = 本文件加一条 + `python scripts/ui_assets.py build`。",
-  "roles": {
-    "background": {
-      "ratio": "9:16",
-      "target": [
-        1080,
-        1920
-      ],
-      "key": "none",
-      "prompt": "A vertical 9:16 game background, night sky over a calm sea horizon, deep navy blue gradient sky with scattered small warm stars, soft moonlight glow behind thin drifting clouds on the upper right, a subtle dark sea with faint wave highlights at the bottom, warm gold accent glints near the horizon, painterly nautical adventure style, EMPTY center area, absolutely no text, no letters, no logo, no icons, no characters, no UI frames"
-    },
-    "medallion": {
-      "ratio": "1:1",
-      "target": [
-        512,
-        512
-      ],
-      "key": "luma",
-      "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon"
-    },
-    "board": {
-      "ratio": "21:9",
-      "target": [
-        1024,
-        439
-      ],
-      "key": "magenta",
-      "prompt": "an ornate carved wooden signboard plaque, dark warm walnut wood with gold filigree carved border and curled corners, a completely EMPTY smooth wooden center panel with no carving inside, horizontal banner shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no shadow, no backdrop, no text, no letters"
-    },
-    "mapcard": {
-      "ratio": "4:3",
-      "target": [
-        640,
-        480
-      ],
-      "key": "none",
-      "prompt": "an antique parchment sea chart map card, {what}, hand-drawn coastline, compass rose, depth soundings and rhumb lines, weathered edges, warm candlelight, top-down view filling the whole frame, no text, no letters, no labels, no watermark"
-    },
-    "portrait": {
-      "ratio": "2:3",
-      "target": [
-        384,
-        576
-      ],
-      "key": "none",
-      "prompt": "a character portrait of {what}, heroic fantasy adventure game character art, warm gold rim light, painterly nautical treasure-hunting style, three-quarter view, upper body, dramatic painted scene background, no text, no letters, no watermark, high detail"
-    },
-    "plaque": {
-      "ratio": "21:9",
-      "target": [
-        1024,
-        439
-      ],
-      "key": "magenta",
-      "prompt": "an antique polished brass plaque, {what}, thin gold filigree rim, a completely EMPTY smooth brushed brass center panel, wide horizontal rectangle shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters"
-    },
-    "isle": {
-      "ratio": "3:4",
-      "target": [
-        512,
-        640
-      ],
-      "key": "none",
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: {what} seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
-    },
-    "island_home": {
-      "ratio": "1:1",
-      "target": [
-        1024,
-        1024
-      ],
-      "key": "magenta_clean",
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, {theme}, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
-    },
-    "cardmask": {
-      "ratio": "3:4",
-      "target": [
-        384,
-        512
-      ],
-      "key": "luma",
-      "prompt": "a single plain solid pure WHITE rounded rectangle panel with soft slightly rounded corners, flat even white fill, crisp clean edges, the panel fills most of the frame and is perfectly centered, the panel is the ONLY object in the image, isolated on a PURE SOLID BLACK background, no shadow, no glow, no highlight, no gradient, no text, no letters, no numbers, no decoration, no border ornament"
-    },
-    "boat": {
-      "ratio": "1:1",
-      "target": [
-        512,
-        512
-      ],
-      "key": "magenta",
-      "prompt": "a single {what}, side view facing right, painted wooden hull in warm brown and deep red, plain cream canvas sails, bold thick OPAQUE flat colors, crisp clean solid silhouette with hard edges, no transparency anywhere inside the boat, the boat is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no wave, no backdrop, no text, no letters, no numbers, centered, game asset sprite"
-    },
-    "boss": {
-      "ratio": "2:3",
-      "target": [
-        600,
-        900
-      ],
-      "key": "magenta_clean",
-      "prompt": "a single {what}, full body standing front view, dramatic rim light from the left, 18th century pirate captain, torn dark navy coat with tarnished brass buttons, blood red sash, tricorn hat, weathered angry face, painted old nautical chart illustration style, warm sand and dark basalt palette, crisp hard edges, the figure is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no backdrop, no text, no letters, no numbers, centered, game character sprite"
-    },
-    "hero_back": {
-      "ratio": "2:3",
-      "target": [
-        600,
-        900
-      ],
-      "key": "magenta_clean",
-      "prompt": "a single {what}, seen from behind, three quarter view, 18th century pirate captain, worn brown leather coat, scarf blowing in the wind, painted old nautical chart illustration style, warm sand and dark basalt palette, crisp hard edges, the figure is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no backdrop, no text, no letters, no numbers, centered, game character sprite"
-    },
-    "deck": {
-      "ratio": "9:16",
-      "target": [
-        1080,
-        1920
-      ],
-      "key": "none",
-      "prompt": "{what}, three quarter overhead perspective, wet plank deck, cannons and coiled ropes, brass fittings, lanterns glowing warm orange, stormy night sea beyond the railings, painted old nautical chart illustration style, dark basalt and warm sand palette, cinematic rim lighting, no characters, no people, no text, no letters, no numbers, full bleed game background"
-    },
-    "item": {
-      "ratio": "1:1",
-      "target": [
-        256,
-        256
-      ],
-      "key": "magenta_clean",
-      "prompt": "a single {what}, game inventory icon, chunky readable silhouette, painted old nautical chart illustration style, warm sand and dark basalt palette with brass accents, thick dark outline, the object is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no backdrop, no text, no letters, no numbers, centered, game asset icon"
-    },
-    "v6_alpha": {
-      "ratio": "1:1",
-      "target": [
-        512,
-        512
-      ],
-      "key": "alpha",
-      "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
-    },
-    "v2_alpha": {
-      "ratio": "1:1",
-      "target": [
-        512,
-        512
-      ],
-      "key": "alpha",
-      "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
-    }
+ "version": 1,
+ "_comment": "UI 资产清单（单一事实源）：角色规格预设 + 资产登记。生成/抠图/规范化走 scripts/ui_assets.py；界面数据（assets/data/scenes.json）只引用 file 路径（相对仓库根）。新增资产 = 本文件加一条 + `python scripts/ui_assets.py build`。",
+ "roles": {
+  "background": {
+   "ratio": "9:16",
+   "target": [
+    1080,
+    1920
+   ],
+   "key": "none",
+   "prompt": "A vertical 9:16 game background, night sky over a calm sea horizon, deep navy blue gradient sky with scattered small warm stars, soft moonlight glow behind thin drifting clouds on the upper right, a subtle dark sea with faint wave highlights at the bottom, warm gold accent glints near the horizon, painterly nautical adventure style, EMPTY center area, absolutely no text, no letters, no logo, no icons, no characters, no UI frames"
   },
-  "assets": [
-    {
-      "name": "bg_night_sea",
-      "role": "background",
-      "file": "assets/ui/bg_night_sea.png",
-      "params": {},
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "board",
-      "role": "board",
-      "file": "assets/ui/board.png",
-      "params": {},
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "icon_compass",
-      "role": "medallion",
-      "file": "assets/ui/icon_compass.png",
-      "params": {
-        "what": "a compass rose"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "icon_anchor",
-      "role": "medallion",
-      "file": "assets/ui/icon_anchor.png",
-      "params": {
-        "what": "a ship anchor"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "icon_map",
-      "role": "medallion",
-      "file": "assets/ui/icon_map.png",
-      "params": {
-        "what": "a rolled parchment sea chart map"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "icon_gear",
-      "role": "medallion",
-      "file": "assets/ui/icon_gear.png",
-      "params": {
-        "what": "a ship's helm wheel"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "icon_book",
-      "role": "medallion",
-      "file": "assets/ui/icon_book.png",
-      "params": {
-        "what": "an open scroll with curled ends"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "icon_door",
-      "role": "medallion",
-      "file": "assets/ui/icon_door.png",
-      "params": {
-        "what": "an ornate ship cabin door"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "icon_chest",
-      "role": "medallion",
-      "file": "assets/ui/icon_chest.png",
-      "params": {
-        "what": "treasure chest (white mask, ui_icons.py)"
-      },
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "icon_coin",
-      "role": "medallion",
-      "file": "assets/ui/icon_coin.png",
-      "params": {
-        "what": "double-ring coin (white mask, ui_icons.py)"
-      },
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "icon_sword",
-      "role": "medallion",
-      "file": "assets/ui/icon_sword.png",
-      "params": {
-        "what": "crossed swords (white mask, ui_icons.py)"
-      },
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "icon_castle",
-      "role": "medallion",
-      "file": "assets/ui/icon_castle.png",
-      "params": {
-        "what": "castle with three merlons (white mask, ui_icons.py)"
-      },
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "icon_beacon",
-      "role": "medallion",
-      "file": "assets/ui/icon_beacon.png",
-      "params": {
-        "what": "lighthouse beacon (white mask, ui_icons.py)"
-      },
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "icon_heart",
-      "role": "medallion",
-      "file": "assets/ui/icon_heart.png",
-      "params": {
-        "what": "heart / HP (white mask, ui_icons.py)"
-      },
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "icon_flag",
-      "role": "medallion",
-      "file": "assets/ui/icon_flag.png",
-      "params": {
-        "what": "turn-flag (white mask, ui_icons.py)"
-      },
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "icon_monogram",
-      "role": "medallion",
-      "file": "assets/ui/icon_monogram.png",
-      "params": {
-        "what": "role monogram ring (white mask, ui_icons.py)"
-      },
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "role_panda",
-      "role": "portrait",
-      "file": "assets/ui/role_panda.png",
-      "params": {
-        "what": "a stout middle-aged merchant captain in a fur-trimmed coat, calculating eyes, gold jewelry"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "role_tichy",
-      "role": "portrait",
-      "file": "assets/ui/role_tichy.png",
-      "params": {
-        "what": "a weathered old naval captain with a white beard, epaulettes and a peaked captain hat, calm commanding gaze"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "role_kidd",
-      "role": "portrait",
-      "file": "assets/ui/role_kidd.png",
-      "params": {
-        "what": "a young lean bounty hunter with a hooded cloak, a crossbow strap and a sharp watchful stare"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "role_drake",
-      "role": "portrait",
-      "file": "assets/ui/role_drake.png",
-      "params": {
-        "what": "a fearsome Caribbean pirate captain with a tricorn hat, jagged beard, red sash and a menacing grin"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "role_katharina",
-      "role": "portrait",
-      "file": "assets/ui/role_katharina.png",
-      "params": {
-        "what": "an aristocratic young noblewoman with dark curly hair, a deep crimson gown and a proud vengeful expression"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "map_harbour",
-      "role": "mapcard",
-      "file": "assets/ui/map_harbour.png",
-      "params": {
-        "what": "a busy tropical harbour with ships and docks"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "map_open_sea",
-      "role": "mapcard",
-      "file": "assets/ui/map_open_sea.png",
-      "params": {
-        "what": "an open ocean with a lone island and a compass rose"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "map_reef",
-      "role": "mapcard",
-      "file": "assets/ui/map_reef.png",
-      "params": {
-        "what": "a narrow reef strait between two cliffs with sea monsters"
-      },
-      "generated_at": "2026-10-21"
-    },
-    {
-      "name": "bg_night_sea_top",
-      "role": "background",
-      "file": "assets/ui/bg_night_sea_top.png",
-      "params": {},
-      "generated_at": "2026-10-21",
-      "prompt": "A vertical 9:16 top-down view of a calm dark ocean at night, deep navy blue water with subtle silver moonlight ripples and faint wave crests, no islands, no boats, no horizon line, no text, no letters, no watermark, painterly"
-    },
-    {
-      "name": "bg_battle_sea",
-      "role": "background",
-      "file": "assets/ui/bg_battle_sea.png",
-      "params": {},
-      "generated_at": "2026-10-21",
-      "prompt": "A vertical 9:16 dramatic naval battle scene at night, two sailing ships exchanging cannon fire on a moonlit sea, warm muzzle flashes and smoke, distant thunder clouds, painterly nautical adventure art, empty center space, no text, no letters, no watermark"
-    },
-    {
-      "name": "chart_wide",
-      "role": "board",
-      "file": "assets/ui/chart_wide.png",
-      "params": {},
-      "generated_at": "2026-10-21",
-      "prompt": "a wide antique parchment sea chart filling the whole frame, hand-drawn islands, rhumb lines, compass roses, weathered edges, warm candlelight, top-down view, no text, no letters, no labels, no watermark"
-    },
-    {
-      "name": "dice",
-      "role": "board",
-      "file": "assets/ui/dice.png",
-      "params": {
-        "what": "a nautical six-sided die with anchor engraving"
-      },
-      "prompt": "A single classic six-sided gaming die in a nautical pirate style: warm gold/brass die with dark carved pips, small anchor engraving, slight isometric 3D view, flat clean vector game-icon look, centered, on a PURE SOLID MAGENTA background, no text, no letters, no scenery, high contrast",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "helm",
-      "role": "board",
-      "file": "assets/ui/helm.png",
-      "params": {
-        "what": "a wooden ship's steering wheel (helm)"
-      },
-      "prompt": "A classic wooden ship's steering wheel (helm) with 8 spokes and a gold/brass central hub, front view, clean flat vector game-icon look, warm brown wood and gold metal, centered, on a PURE SOLID MAGENTA background, no text, no letters, no scenery, high contrast",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "chart_full",
-      "role": "background",
-      "file": "assets/ui/chart_full.png",
-      "params": {},
-      "prompt": "Full-bleed antique nautical sea chart, vertical 9:16, hand-drawn aged parchment sea in muted turquoise and teal with fine engraved wave hatching, faint latitude and longitude grid lines, delicate rhumb lines radiating outward, an ornate compass rose in the lower left, a small silhouetted sailing ship in the upper right sea, faint sea monster silhouette, tea stains and foxing spots, torn deckled edges, the outermost frame border is dark walnut wood, the central area is calm empty open water with absolutely no island and no landmass, painterly antique cartography, warm candlelight, no text, no letters, no numbers, no labels",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_start",
-      "role": "medallion",
-      "file": "assets/ui/node_start.png",
-      "params": {},
-      "prompt": "a single round antique brass compass medallion plate with a tiny sailing ship engraved in its center, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_city",
-      "role": "medallion",
-      "file": "assets/ui/node_city.png",
-      "params": {},
-      "prompt": "a single hexagonal antique brass badge engraved with a small walled harbour town with two towers, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_port",
-      "role": "medallion",
-      "file": "assets/ui/node_port.png",
-      "params": {},
-      "prompt": "a single rounded-square antique brass badge engraved with a lighthouse on a rock, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_event",
-      "role": "medallion",
-      "file": "assets/ui/node_event.png",
-      "params": {},
-      "prompt": "a single shield-shaped antique brass badge engraved with a rolled parchment scroll tied with cord, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_card",
-      "role": "medallion",
-      "file": "assets/ui/node_card.png",
-      "params": {},
-      "prompt": "a single diamond-shaped antique brass badge engraved with a folded treasure map, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_battle",
-      "role": "medallion",
-      "file": "assets/ui/node_battle.png",
-      "params": {},
-      "prompt": "a single spiky eight-pointed antique brass badge engraved with two crossed cutlasses, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_treasure",
-      "role": "medallion",
-      "file": "assets/ui/node_treasure.png",
-      "params": {},
-      "prompt": "a single antique brass treasure chest with a domed lid and heavy lock, ornate gold trim, three-quarter view, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_boss",
-      "role": "medallion",
-      "file": "assets/ui/node_boss.png",
-      "params": {},
-      "prompt": "a single antique brass human skull badge with crossed bones behind it, menacing, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "node_plain",
-      "role": "medallion",
-      "file": "assets/ui/node_plain.png",
-      "params": {},
-      "prompt": "a single small plain polished brass domed stud rivet, simple domed nail head, no symbol, no engraving, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "ship_player",
-      "role": "medallion",
-      "file": "assets/ui/ship_player.png",
-      "params": {},
-      "prompt": "a single small three-masted pirate galleon with white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "btn_spin",
-      "role": "medallion",
-      "file": "assets/ui/btn_spin.png",
-      "params": {},
-      "prompt": "a single large ornate antique brass ship helm wheel button with eight spokes and a carved bone die fixed in the hub, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "compass_rose",
-      "role": "medallion",
-      "file": "assets/ui/compass_rose.png",
-      "params": {},
-      "prompt": "a single ornate antique brass compass rose medallion with eight points and a fleur-de-lis north tip, engraved with fine radial lines, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "hud_plaque",
-      "role": "plaque",
-      "file": "assets/ui/hud_plaque.png",
-      "params": {},
-      "prompt": "a wide horizontal antique polished brass panel with beveled edges, gold filigree corners and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "deck_plaque",
-      "role": "plaque",
-      "file": "assets/ui/deck_plaque.png",
-      "params": {},
-      "prompt": "a LONG HORIZONTAL RECTANGULAR antique polished brass button plate, very wide and short, 4 to 1 width to height ratio, straight rectangular edges with slightly rounded corners, gold filigree rim and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
-      "generated_at": "2026-10-22"
-    },
-    {
-      "name": "medallion_ring",
-      "role": "medallion",
-      "file": "assets/ui/medallion_ring.png",
-      "params": {},
-      "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon",
-      "generated_at": "2026-10-23"
-    },
-    {
-      "name": "boat_1",
-      "file": "assets/ui/boat_1.png",
-      "role": "medallion",
-      "params": {},
-      "generated_at": "2026-10-26",
-      "prompt": "a single small open fishing skiff with one short mast and a plain brown sail, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-    },
-    {
-      "name": "boat_2",
-      "file": "assets/ui/boat_2.png",
-      "role": "medallion",
-      "params": {},
-      "generated_at": "2026-10-26",
-      "prompt": "a single two-masted fast schooner with two white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-    },
-    {
-      "name": "boat_3",
-      "file": "assets/ui/boat_3.png",
-      "role": "medallion",
-      "params": {},
-      "generated_at": "2026-10-26",
-      "prompt": "a single three-masted large galleon with three white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-    },
-    {
-      "name": "boat_4",
-      "file": "assets/ui/boat_4.png",
-      "role": "medallion",
-      "params": {},
-      "generated_at": "2026-10-26",
-      "prompt": "a single armoured patrol warship with four gun ports, steel plated hull and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-    },
-    {
-      "name": "island_m01",
-      "role": "island",
-      "file": "assets/ui/island_m01.png",
-      "params": {
-        "map": "m01",
-        "grid": 20,
-        "canvas": "994x826"
-      },
-      "generated_at": "2026-10-26",
-      "generator": "scripts/ui_islands.py"
-    },
-    {
-      "name": "island_m02",
-      "role": "island",
-      "file": "assets/ui/island_m02.png",
-      "params": {
-        "map": "m02",
-        "grid": 20,
-        "canvas": "994x826"
-      },
-      "generated_at": "2026-10-26",
-      "generator": "scripts/ui_islands.py"
-    },
-    {
-      "name": "island_m03",
-      "role": "island",
-      "file": "assets/ui/island_m03.png",
-      "params": {
-        "map": "m03",
-        "grid": 15,
-        "canvas": "994x826"
-      },
-      "generated_at": "2026-10-26",
-      "generator": "scripts/ui_islands.py"
-    },
-    {
-      "name": "isle_harbour",
-      "role": "isle",
-      "file": "assets/ui/isle_harbour.png",
-      "params": {
-        "what": "a walled harbour town with two stone towers, a stone gate, wooden docks and several fishing boats plus one galleon moored at the dock"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a walled harbour town with two stone towers, a stone gate, wooden docks and several fishing boats plus one galleon moored at the dock seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_lighthouse",
-      "role": "isle",
-      "file": "assets/ui/isle_lighthouse.png",
-      "params": {
-        "what": "a white lighthouse standing on a jagged rocky reef with a broken ship mast nearby"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a white lighthouse standing on a jagged rocky reef with a broken ship mast nearby seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_wreck",
-      "role": "isle",
-      "file": "assets/ui/isle_wreck.png",
-      "params": {
-        "what": "a half-sunken galleon wreck lying on its side on a sandy sandbar reef, tilted broken masts, spilled wooden treasure chests and scattered gold coins on the sand (no volcano, no lava, no fire)"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a half-sunken galleon wreck lying on its side on a sandy sandbar reef, tilted broken masts, spilled wooden treasure chests and scattered gold coins on the sand (no volcano, no lava, no fire) seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_pirate_lair",
-      "role": "isle",
-      "file": "assets/ui/isle_pirate_lair.png",
-      "params": {
-        "what": "a dark rocky pirate lair with a cave mouth, a skull totem and a tattered black flag on the cliff"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a dark rocky pirate lair with a cave mouth, a skull totem and a tattered black flag on the cliff seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_shipyard",
-      "role": "isle",
-      "file": "assets/ui/isle_shipyard.png",
-      "params": {
-        "what": "a shipyard with a wooden slipway and two half-built galleons on the beach"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a shipyard with a wooden slipway and two half-built galleons on the beach seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_trading_post",
-      "role": "isle",
-      "file": "assets/ui/isle_trading_post.png",
-      "params": {
-        "what": "a trading outpost with cargo crates, barrels and a striped market awning on a sandy beach"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a trading outpost with cargo crates, barrels and a striped market awning on a sandy beach seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_skull_cliff",
-      "role": "isle",
-      "file": "assets/ui/isle_skull_cliff.png",
-      "params": {
-        "what": "a bleached skull cliff with a wrecked longboat and bone stakes on pale rock"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a bleached skull cliff with a wrecked longboat and bone stakes on pale rock seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_volcano",
-      "role": "isle",
-      "file": "assets/ui/isle_volcano.png",
-      "params": {
-        "what": "a smoking volcano with a glowing orange-red lava crater and lava channels running down, obsidian rocks on the sand"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a smoking volcano with a glowing orange-red lava crater and lava channels running down, obsidian rocks on the sand seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_lightship",
-      "role": "isle",
-      "file": "assets/ui/isle_lightship.png",
-      "params": {
-        "what": "an old lantern lightship - a wooden ship with a tall mast carrying a glowing lantern light - moored beside a small jagged rocky sandbar"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: an old lantern lightship - a wooden ship with a tall mast carrying a glowing lantern light - moored beside a small jagged rocky sandbar seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "isle_boss_fort",
-      "role": "isle",
-      "file": "assets/ui/isle_boss_fort.png",
-      "params": {
-        "what": "a black stone fortress with heavy cannons, a spiked iron gate and tattered skull banners, built on a jagged irregular rocky islet (no circular wall ring around the island)"
-      },
-      "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a black stone fortress with heavy cannons, a spiked iron gate and tattered skull banners, built on a jagged irregular rocky islet (no circular wall ring around the island) seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
-      "generated_at": "2026-10-27"
-    },
-    {
-      "name": "island_home_m01",
-      "role": "island_home",
-      "file": "assets/ui/island_home_m01.png",
-      "params": {
-        "theme": "coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, dense palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the lagoon), muted desaturated antique-map colours"
-      },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, dense palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the lagoon, muted desaturated antique-map colours, antique cartography ink and watercolor, high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "island_home_m02",
-      "role": "island_home",
-      "file": "assets/ui/island_home_m02.png",
-      "params": {
-        "theme": "volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, dense dark palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the dark lagoon)"
-      },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, dense dark palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the dark lagoon, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "island_home_m03",
-      "role": "island_home",
-      "file": "assets/ui/island_home_m03.png",
-      "params": {
-        "theme": "bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, pale palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the pale lagoon)"
-      },
-      "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, pale palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the pale lagoon, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "card_panel",
-      "role": "cardmask",
-      "file": "assets/ui/card_panel.png",
-      "params": {},
-      "prompt": "a single plain solid pure WHITE rounded rectangle panel with soft slightly rounded corners, flat even white fill, crisp clean edges, the panel fills most of the frame and is perfectly centered, the panel is the ONLY object in the image, isolated on a PURE SOLID BLACK background, no shadow, no glow, no highlight, no gradient, no text, no letters, no numbers, no decoration, no border ornament",
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "boss_captain",
-      "role": "boss",
-      "file": "assets/ui/boss_captain.png",
-      "params": {
-        "what": "towering pirate captain boss holding a huge curved cutlass, skull emblem belt buckle"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "hero_back",
-      "role": "hero_back",
-      "file": "assets/ui/hero_back.png",
-      "params": {
-        "what": "pirate captain hero holding a cutlass ready to strike"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "deck_battle",
-      "role": "deck",
-      "file": "assets/ui/deck_battle.png",
-      "params": {
-        "what": "empty pirate ship main deck at night"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "item_keg",
-      "role": "item",
-      "file": "assets/ui/item_keg.png",
-      "params": {
-        "what": "wooden powder keg with brass bands and a short lit fuse"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "item_medkit",
-      "role": "item",
-      "file": "assets/ui/item_medkit.png",
-      "params": {
-        "what": "rolled canvas medical kit with a red cross bandage and a small glass bottle"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "item_rum",
-      "role": "item",
-      "file": "assets/ui/item_rum.png",
-      "params": {
-        "what": "dark glass rum bottle with a wax sealed cork and a parchment label"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "item_smoke",
-      "role": "item",
-      "file": "assets/ui/item_smoke.png",
-      "params": {
-        "what": "round iron smoke bomb with a lit fuse and a small smoke puff"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "icon_cutlass",
-      "role": "item",
-      "file": "assets/ui/icon_cutlass.png",
-      "params": {
-        "what": "curved pirate cutlass blade with a brass guard and worn leather grip"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "icon_shield",
-      "role": "item",
-      "file": "assets/ui/icon_shield.png",
-      "params": {
-        "what": "round wooden buckler shield with brass rim and iron boss"
-      },
-      "generated_at": "2026-10-29"
-    },
-    {
-      "name": "v6_ocean_bg",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/ocean_bg.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_tile_owned",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/tile_owned.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_tile_deny",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/tile_deny.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_island",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/island.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_creatures",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/creatures.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_helm",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/helm.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_compass",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/compass.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_ship",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/ship.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_parchment",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/parchment.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_hero",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/hero.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_enemy",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/enemy.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_crew",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/crew.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_banner_win",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/banner_win.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_banner_lose",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/banner_lose.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_vs_bg",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/vs_bg.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_bg_siege",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/bg_siege.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_bg_dungeon",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/bg_dungeon.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v2_bg_boss",
-      "role": "v2_alpha",
-      "file": "assets/ui/vs_v2/bg_boss.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_isle_land",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/isle_land.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_isle_lighthouse",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/isle_lighthouse.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_isle_treasure",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/isle_treasure.png",
-      "params": {},
-      "generated_at": "2026-10-31"
-    },
-    {
-      "name": "v6_isle_village",
-      "role": "v6_alpha",
-      "file": "assets/ui/v6/isle_village.png",
-      "params": {},
-      "generated_at": "2026-11-01"
-    },
-    {
-      "name": "v2_scene_encounter",
-      "role": "v2_scene",
-      "file": "assets/ui/vs_v2/scene_encounter.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-11-03"
-    },
-    {
-      "name": "v2_scene_raid",
-      "role": "v2_scene",
-      "file": "assets/ui/vs_v2/scene_raid.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-11-03"
-    },
-    {
-      "name": "v2_scene_boss",
-      "role": "v2_scene",
-      "file": "assets/ui/vs_v2/scene_boss.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-11-03"
-    },
-    {
-      "name": "v2_scene_attack",
-      "role": "v2_scene",
-      "file": "assets/ui/vs_v2/scene_attack.png",
-      "params": {
-        "full_bleed": true
-      },
-      "generated_at": "2026-11-03"
-    },
-    {
-      "name": "v2_scene_result_attack",
-      "role": "v2_scene",
-      "file": "assets/ui/vs_v2/scene_result_attack.png",
-      "params": {
-        "full_bleed": true
-      }
-    },
-    {
-      "name": "v2_scene_result_boss",
-      "role": "v2_scene",
-      "file": "assets/ui/vs_v2/scene_result_boss.png",
-      "params": {
-        "full_bleed": true
-      }
-    },
-    {
-      "name": "v2_scene_result_encounter",
-      "role": "v2_scene",
-      "file": "assets/ui/vs_v2/scene_result_encounter.png",
-      "params": {
-        "full_bleed": true
-      }
-    },
-    {
-      "name": "v2_scene_result_raid",
-      "role": "v2_scene",
-      "file": "assets/ui/vs_v2/scene_result_raid.png",
-      "params": {
-        "full_bleed": true
-      }
-    }
-  ]
+  "medallion": {
+   "ratio": "1:1",
+   "target": [
+    512,
+    512
+   ],
+   "key": "luma",
+   "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon"
+  },
+  "board": {
+   "ratio": "21:9",
+   "target": [
+    1024,
+    439
+   ],
+   "key": "magenta",
+   "prompt": "an ornate carved wooden signboard plaque, dark warm walnut wood with gold filigree carved border and curled corners, a completely EMPTY smooth wooden center panel with no carving inside, horizontal banner shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no shadow, no backdrop, no text, no letters"
+  },
+  "mapcard": {
+   "ratio": "4:3",
+   "target": [
+    640,
+    480
+   ],
+   "key": "none",
+   "prompt": "an antique parchment sea chart map card, {what}, hand-drawn coastline, compass rose, depth soundings and rhumb lines, weathered edges, warm candlelight, top-down view filling the whole frame, no text, no letters, no labels, no watermark"
+  },
+  "portrait": {
+   "ratio": "2:3",
+   "target": [
+    384,
+    576
+   ],
+   "key": "none",
+   "prompt": "a character portrait of {what}, heroic fantasy adventure game character art, warm gold rim light, painterly nautical treasure-hunting style, three-quarter view, upper body, dramatic painted scene background, no text, no letters, no watermark, high detail"
+  },
+  "plaque": {
+   "ratio": "21:9",
+   "target": [
+    1024,
+    439
+   ],
+   "key": "magenta",
+   "prompt": "an antique polished brass plaque, {what}, thin gold filigree rim, a completely EMPTY smooth brushed brass center panel, wide horizontal rectangle shape, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters"
+  },
+  "isle": {
+   "ratio": "3:4",
+   "target": [
+    512,
+    640
+   ],
+   "key": "none",
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: {what} seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art"
+  },
+  "island_home": {
+   "ratio": "1:1",
+   "target": [
+    1024,
+    1024
+   ],
+   "key": "magenta_clean",
+   "prompt": "a large pirate island seen from a high three-quarter aerial view, {theme}, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. Isolated on a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF background, no gradient, no vignette, no shadow cast onto the background, no glow, no halo, no soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration"
+  },
+  "cardmask": {
+   "ratio": "3:4",
+   "target": [
+    384,
+    512
+   ],
+   "key": "luma",
+   "prompt": "a single plain solid pure WHITE rounded rectangle panel with soft slightly rounded corners, flat even white fill, crisp clean edges, the panel fills most of the frame and is perfectly centered, the panel is the ONLY object in the image, isolated on a PURE SOLID BLACK background, no shadow, no glow, no highlight, no gradient, no text, no letters, no numbers, no decoration, no border ornament"
+  },
+  "boat": {
+   "ratio": "1:1",
+   "target": [
+    512,
+    512
+   ],
+   "key": "magenta",
+   "prompt": "a single {what}, side view facing right, painted wooden hull in warm brown and deep red, plain cream canvas sails, bold thick OPAQUE flat colors, crisp clean solid silhouette with hard edges, no transparency anywhere inside the boat, the boat is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no wave, no backdrop, no text, no letters, no numbers, centered, game asset sprite"
+  },
+  "boss": {
+   "ratio": "2:3",
+   "target": [
+    600,
+    900
+   ],
+   "key": "magenta_clean",
+   "prompt": "a single {what}, full body standing front view, dramatic rim light from the left, 18th century pirate captain, torn dark navy coat with tarnished brass buttons, blood red sash, tricorn hat, weathered angry face, painted old nautical chart illustration style, warm sand and dark basalt palette, crisp hard edges, the figure is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no backdrop, no text, no letters, no numbers, centered, game character sprite"
+  },
+  "hero_back": {
+   "ratio": "2:3",
+   "target": [
+    600,
+    900
+   ],
+   "key": "magenta_clean",
+   "prompt": "a single {what}, seen from behind, three quarter view, 18th century pirate captain, worn brown leather coat, scarf blowing in the wind, painted old nautical chart illustration style, warm sand and dark basalt palette, crisp hard edges, the figure is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no water, no backdrop, no text, no letters, no numbers, centered, game character sprite"
+  },
+  "deck": {
+   "ratio": "9:16",
+   "target": [
+    1080,
+    1920
+   ],
+   "key": "none",
+   "prompt": "{what}, three quarter overhead perspective, wet plank deck, cannons and coiled ropes, brass fittings, lanterns glowing warm orange, stormy night sea beyond the railings, painted old nautical chart illustration style, dark basalt and warm sand palette, cinematic rim lighting, no characters, no people, no text, no letters, no numbers, full bleed game background"
+  },
+  "item": {
+   "ratio": "1:1",
+   "target": [
+    256,
+    256
+   ],
+   "key": "magenta_clean",
+   "prompt": "a single {what}, game inventory icon, chunky readable silhouette, painted old nautical chart illustration style, warm sand and dark basalt palette with brass accents, thick dark outline, the object is the ONLY subject in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no reflection, no glow, no shadow, no floor, no backdrop, no text, no letters, no numbers, centered, game asset icon"
+  },
+  "v6_alpha": {
+   "ratio": "1:1",
+   "target": [
+    512,
+    512
+   ],
+   "key": "alpha",
+   "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
+  },
+  "v2_alpha": {
+   "ratio": "1:1",
+   "target": [
+    512,
+    512
+   ],
+   "key": "alpha",
+   "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
+  }
+ },
+ "assets": [
+  {
+   "name": "bg_night_sea",
+   "role": "background",
+   "file": "assets/ui/bg_night_sea.png",
+   "params": {},
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "board",
+   "role": "board",
+   "file": "assets/ui/board.png",
+   "params": {},
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "icon_compass",
+   "role": "medallion",
+   "file": "assets/ui/icon_compass.png",
+   "params": {
+    "what": "a compass rose"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "icon_anchor",
+   "role": "medallion",
+   "file": "assets/ui/icon_anchor.png",
+   "params": {
+    "what": "a ship anchor"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "icon_map",
+   "role": "medallion",
+   "file": "assets/ui/icon_map.png",
+   "params": {
+    "what": "a rolled parchment sea chart map"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "icon_gear",
+   "role": "medallion",
+   "file": "assets/ui/icon_gear.png",
+   "params": {
+    "what": "a ship's helm wheel"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "icon_book",
+   "role": "medallion",
+   "file": "assets/ui/icon_book.png",
+   "params": {
+    "what": "an open scroll with curled ends"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "icon_door",
+   "role": "medallion",
+   "file": "assets/ui/icon_door.png",
+   "params": {
+    "what": "an ornate ship cabin door"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "icon_chest",
+   "role": "medallion",
+   "file": "assets/ui/icon_chest.png",
+   "params": {
+    "what": "treasure chest (white mask, ui_icons.py)"
+   },
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "icon_coin",
+   "role": "medallion",
+   "file": "assets/ui/icon_coin.png",
+   "params": {
+    "what": "double-ring coin (white mask, ui_icons.py)"
+   },
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "icon_sword",
+   "role": "medallion",
+   "file": "assets/ui/icon_sword.png",
+   "params": {
+    "what": "crossed swords (white mask, ui_icons.py)"
+   },
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "icon_castle",
+   "role": "medallion",
+   "file": "assets/ui/icon_castle.png",
+   "params": {
+    "what": "castle with three merlons (white mask, ui_icons.py)"
+   },
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "icon_beacon",
+   "role": "medallion",
+   "file": "assets/ui/icon_beacon.png",
+   "params": {
+    "what": "lighthouse beacon (white mask, ui_icons.py)"
+   },
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "icon_heart",
+   "role": "medallion",
+   "file": "assets/ui/icon_heart.png",
+   "params": {
+    "what": "heart / HP (white mask, ui_icons.py)"
+   },
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "icon_flag",
+   "role": "medallion",
+   "file": "assets/ui/icon_flag.png",
+   "params": {
+    "what": "turn-flag (white mask, ui_icons.py)"
+   },
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "icon_monogram",
+   "role": "medallion",
+   "file": "assets/ui/icon_monogram.png",
+   "params": {
+    "what": "role monogram ring (white mask, ui_icons.py)"
+   },
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "role_panda",
+   "role": "portrait",
+   "file": "assets/ui/role_panda.png",
+   "params": {
+    "what": "a stout middle-aged merchant captain in a fur-trimmed coat, calculating eyes, gold jewelry"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "role_tichy",
+   "role": "portrait",
+   "file": "assets/ui/role_tichy.png",
+   "params": {
+    "what": "a weathered old naval captain with a white beard, epaulettes and a peaked captain hat, calm commanding gaze"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "role_kidd",
+   "role": "portrait",
+   "file": "assets/ui/role_kidd.png",
+   "params": {
+    "what": "a young lean bounty hunter with a hooded cloak, a crossbow strap and a sharp watchful stare"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "role_drake",
+   "role": "portrait",
+   "file": "assets/ui/role_drake.png",
+   "params": {
+    "what": "a fearsome Caribbean pirate captain with a tricorn hat, jagged beard, red sash and a menacing grin"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "role_katharina",
+   "role": "portrait",
+   "file": "assets/ui/role_katharina.png",
+   "params": {
+    "what": "an aristocratic young noblewoman with dark curly hair, a deep crimson gown and a proud vengeful expression"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "map_harbour",
+   "role": "mapcard",
+   "file": "assets/ui/map_harbour.png",
+   "params": {
+    "what": "a busy tropical harbour with ships and docks"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "map_open_sea",
+   "role": "mapcard",
+   "file": "assets/ui/map_open_sea.png",
+   "params": {
+    "what": "an open ocean with a lone island and a compass rose"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "map_reef",
+   "role": "mapcard",
+   "file": "assets/ui/map_reef.png",
+   "params": {
+    "what": "a narrow reef strait between two cliffs with sea monsters"
+   },
+   "generated_at": "2026-10-21"
+  },
+  {
+   "name": "bg_night_sea_top",
+   "role": "background",
+   "file": "assets/ui/bg_night_sea_top.png",
+   "params": {},
+   "generated_at": "2026-10-21",
+   "prompt": "A vertical 9:16 top-down view of a calm dark ocean at night, deep navy blue water with subtle silver moonlight ripples and faint wave crests, no islands, no boats, no horizon line, no text, no letters, no watermark, painterly"
+  },
+  {
+   "name": "bg_battle_sea",
+   "role": "background",
+   "file": "assets/ui/bg_battle_sea.png",
+   "params": {},
+   "generated_at": "2026-10-21",
+   "prompt": "A vertical 9:16 dramatic naval battle scene at night, two sailing ships exchanging cannon fire on a moonlit sea, warm muzzle flashes and smoke, distant thunder clouds, painterly nautical adventure art, empty center space, no text, no letters, no watermark"
+  },
+  {
+   "name": "chart_wide",
+   "role": "board",
+   "file": "assets/ui/chart_wide.png",
+   "params": {},
+   "generated_at": "2026-10-21",
+   "prompt": "a wide antique parchment sea chart filling the whole frame, hand-drawn islands, rhumb lines, compass roses, weathered edges, warm candlelight, top-down view, no text, no letters, no labels, no watermark"
+  },
+  {
+   "name": "dice",
+   "role": "board",
+   "file": "assets/ui/dice.png",
+   "params": {
+    "what": "a nautical six-sided die with anchor engraving"
+   },
+   "prompt": "A single classic six-sided gaming die in a nautical pirate style: warm gold/brass die with dark carved pips, small anchor engraving, slight isometric 3D view, flat clean vector game-icon look, centered, on a PURE SOLID MAGENTA background, no text, no letters, no scenery, high contrast",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "helm",
+   "role": "board",
+   "file": "assets/ui/helm.png",
+   "params": {
+    "what": "a wooden ship's steering wheel (helm)"
+   },
+   "prompt": "A classic wooden ship's steering wheel (helm) with 8 spokes and a gold/brass central hub, front view, clean flat vector game-icon look, warm brown wood and gold metal, centered, on a PURE SOLID MAGENTA background, no text, no letters, no scenery, high contrast",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "chart_full",
+   "role": "background",
+   "file": "assets/ui/chart_full.png",
+   "params": {},
+   "prompt": "Full-bleed antique nautical sea chart, vertical 9:16, hand-drawn aged parchment sea in muted turquoise and teal with fine engraved wave hatching, faint latitude and longitude grid lines, delicate rhumb lines radiating outward, an ornate compass rose in the lower left, a small silhouetted sailing ship in the upper right sea, faint sea monster silhouette, tea stains and foxing spots, torn deckled edges, the outermost frame border is dark walnut wood, the central area is calm empty open water with absolutely no island and no landmass, painterly antique cartography, warm candlelight, no text, no letters, no numbers, no labels",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_start",
+   "role": "medallion",
+   "file": "assets/ui/node_start.png",
+   "params": {},
+   "prompt": "a single round antique brass compass medallion plate with a tiny sailing ship engraved in its center, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_city",
+   "role": "medallion",
+   "file": "assets/ui/node_city.png",
+   "params": {},
+   "prompt": "a single hexagonal antique brass badge engraved with a small walled harbour town with two towers, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_port",
+   "role": "medallion",
+   "file": "assets/ui/node_port.png",
+   "params": {},
+   "prompt": "a single rounded-square antique brass badge engraved with a lighthouse on a rock, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_event",
+   "role": "medallion",
+   "file": "assets/ui/node_event.png",
+   "params": {},
+   "prompt": "a single shield-shaped antique brass badge engraved with a rolled parchment scroll tied with cord, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_card",
+   "role": "medallion",
+   "file": "assets/ui/node_card.png",
+   "params": {},
+   "prompt": "a single diamond-shaped antique brass badge engraved with a folded treasure map, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_battle",
+   "role": "medallion",
+   "file": "assets/ui/node_battle.png",
+   "params": {},
+   "prompt": "a single spiky eight-pointed antique brass badge engraved with two crossed cutlasses, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_treasure",
+   "role": "medallion",
+   "file": "assets/ui/node_treasure.png",
+   "params": {},
+   "prompt": "a single antique brass treasure chest with a domed lid and heavy lock, ornate gold trim, three-quarter view, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_boss",
+   "role": "medallion",
+   "file": "assets/ui/node_boss.png",
+   "params": {},
+   "prompt": "a single antique brass human skull badge with crossed bones behind it, menacing, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "node_plain",
+   "role": "medallion",
+   "file": "assets/ui/node_plain.png",
+   "params": {},
+   "prompt": "a single small plain polished brass domed stud rivet, simple domed nail head, no symbol, no engraving, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "ship_player",
+   "role": "medallion",
+   "file": "assets/ui/ship_player.png",
+   "params": {},
+   "prompt": "a single small three-masted pirate galleon with white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "btn_spin",
+   "role": "medallion",
+   "file": "assets/ui/btn_spin.png",
+   "params": {},
+   "prompt": "a single large ornate antique brass ship helm wheel button with eight spokes and a carved bone die fixed in the hub, polished brass with gold rim, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "compass_rose",
+   "role": "medallion",
+   "file": "assets/ui/compass_rose.png",
+   "params": {},
+   "prompt": "a single ornate antique brass compass rose medallion with eight points and a fleur-de-lis north tip, engraved with fine radial lines, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "hud_plaque",
+   "role": "plaque",
+   "file": "assets/ui/hud_plaque.png",
+   "params": {},
+   "prompt": "a wide horizontal antique polished brass panel with beveled edges, gold filigree corners and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "deck_plaque",
+   "role": "plaque",
+   "file": "assets/ui/deck_plaque.png",
+   "params": {},
+   "prompt": "a LONG HORIZONTAL RECTANGULAR antique polished brass button plate, very wide and short, 4 to 1 width to height ratio, straight rectangular edges with slightly rounded corners, gold filigree rim and a dark recessed empty center, flat front view, the plaque is the ONLY object in the frame, isolated on a flat solid chroma-key MAGENTA #FF00FF background, no floor, no table, no shadow, no backdrop, no text, no letters",
+   "generated_at": "2026-10-22"
+  },
+  {
+   "name": "medallion_ring",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring.png",
+   "params": {},
+   "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon",
+   "generated_at": "2026-10-23"
+  },
+  {
+   "name": "boat_1",
+   "file": "assets/ui/boat_1.png",
+   "role": "medallion",
+   "params": {},
+   "generated_at": "2026-10-26",
+   "prompt": "a single small open fishing skiff with one short mast and a plain brown sail, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+  },
+  {
+   "name": "boat_2",
+   "file": "assets/ui/boat_2.png",
+   "role": "medallion",
+   "params": {},
+   "generated_at": "2026-10-26",
+   "prompt": "a single two-masted fast schooner with two white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+  },
+  {
+   "name": "boat_3",
+   "file": "assets/ui/boat_3.png",
+   "role": "medallion",
+   "params": {},
+   "generated_at": "2026-10-26",
+   "prompt": "a single three-masted large galleon with three white sails and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+  },
+  {
+   "name": "boat_4",
+   "file": "assets/ui/boat_4.png",
+   "role": "medallion",
+   "params": {},
+   "generated_at": "2026-10-26",
+   "prompt": "a single armoured patrol warship with four gun ports, steel plated hull and a black flag, side view, polished brass and gold relief, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
+  },
+  {
+   "name": "island_m01",
+   "role": "island",
+   "file": "assets/ui/island_m01.png",
+   "params": {
+    "map": "m01",
+    "grid": 20,
+    "canvas": "994x826"
+   },
+   "generated_at": "2026-10-26",
+   "generator": "scripts/ui_islands.py"
+  },
+  {
+   "name": "island_m02",
+   "role": "island",
+   "file": "assets/ui/island_m02.png",
+   "params": {
+    "map": "m02",
+    "grid": 20,
+    "canvas": "994x826"
+   },
+   "generated_at": "2026-10-26",
+   "generator": "scripts/ui_islands.py"
+  },
+  {
+   "name": "island_m03",
+   "role": "island",
+   "file": "assets/ui/island_m03.png",
+   "params": {
+    "map": "m03",
+    "grid": 15,
+    "canvas": "994x826"
+   },
+   "generated_at": "2026-10-26",
+   "generator": "scripts/ui_islands.py"
+  },
+  {
+   "name": "isle_harbour",
+   "role": "isle",
+   "file": "assets/ui/isle_harbour.png",
+   "params": {
+    "what": "a walled harbour town with two stone towers, a stone gate, wooden docks and several fishing boats plus one galleon moored at the dock"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a walled harbour town with two stone towers, a stone gate, wooden docks and several fishing boats plus one galleon moored at the dock seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_lighthouse",
+   "role": "isle",
+   "file": "assets/ui/isle_lighthouse.png",
+   "params": {
+    "what": "a white lighthouse standing on a jagged rocky reef with a broken ship mast nearby"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a white lighthouse standing on a jagged rocky reef with a broken ship mast nearby seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_wreck",
+   "role": "isle",
+   "file": "assets/ui/isle_wreck.png",
+   "params": {
+    "what": "a half-sunken galleon wreck lying on its side on a sandy sandbar reef, tilted broken masts, spilled wooden treasure chests and scattered gold coins on the sand (no volcano, no lava, no fire)"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a half-sunken galleon wreck lying on its side on a sandy sandbar reef, tilted broken masts, spilled wooden treasure chests and scattered gold coins on the sand (no volcano, no lava, no fire) seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_pirate_lair",
+   "role": "isle",
+   "file": "assets/ui/isle_pirate_lair.png",
+   "params": {
+    "what": "a dark rocky pirate lair with a cave mouth, a skull totem and a tattered black flag on the cliff"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a dark rocky pirate lair with a cave mouth, a skull totem and a tattered black flag on the cliff seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_shipyard",
+   "role": "isle",
+   "file": "assets/ui/isle_shipyard.png",
+   "params": {
+    "what": "a shipyard with a wooden slipway and two half-built galleons on the beach"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a shipyard with a wooden slipway and two half-built galleons on the beach seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_trading_post",
+   "role": "isle",
+   "file": "assets/ui/isle_trading_post.png",
+   "params": {
+    "what": "a trading outpost with cargo crates, barrels and a striped market awning on a sandy beach"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a trading outpost with cargo crates, barrels and a striped market awning on a sandy beach seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_skull_cliff",
+   "role": "isle",
+   "file": "assets/ui/isle_skull_cliff.png",
+   "params": {
+    "what": "a bleached skull cliff with a wrecked longboat and bone stakes on pale rock"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a bleached skull cliff with a wrecked longboat and bone stakes on pale rock seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_volcano",
+   "role": "isle",
+   "file": "assets/ui/isle_volcano.png",
+   "params": {
+    "what": "a smoking volcano with a glowing orange-red lava crater and lava channels running down, obsidian rocks on the sand"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a smoking volcano with a glowing orange-red lava crater and lava channels running down, obsidian rocks on the sand seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_lightship",
+   "role": "isle",
+   "file": "assets/ui/isle_lightship.png",
+   "params": {
+    "what": "an old lantern lightship - a wooden ship with a tall mast carrying a glowing lantern light - moored beside a small jagged rocky sandbar"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: an old lantern lightship - a wooden ship with a tall mast carrying a glowing lantern light - moored beside a small jagged rocky sandbar seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "isle_boss_fort",
+   "role": "isle",
+   "file": "assets/ui/isle_boss_fort.png",
+   "params": {
+    "what": "a black stone fortress with heavy cannons, a spiked iron gate and tattered skull banners, built on a jagged irregular rocky islet (no circular wall ring around the island)"
+   },
+   "prompt": "a vertical 3:4 portrait game board card illustration in antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water, aged parchment texture background), thin dark brass border frame around the card edges, high three-quarter aerial view: a black stone fortress with heavy cannons, a spiked iron gate and tattered skull banners, built on a jagged irregular rocky islet (no circular wall ring around the island) seated on a small RANDOM-IRREGULAR island landmass with a jagged natural random shoreline like scattered stepping-stones across a river (strictly NOT a perfect circle, NOT an oval, NOT a concentric ring, NOT any regular polygon), the shoreline tight and snug hugging the land with only minimal open water around it, a small wooden dock with a boat moored right at the shoreline edge as a landing point. The drawing fills the upper three quarters of the card; the lower quarter is empty plain parchment with no drawing. No text, no letters, no numbers, no labels, no watermark, no signature, high detail, painted game board tile art",
+   "generated_at": "2026-10-27"
+  },
+  {
+   "name": "island_home_m01",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m01.png",
+   "params": {
+    "theme": "coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, dense palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the lagoon), muted desaturated antique-map colours"
+   },
+   "prompt": "a large pirate island seen from a high three-quarter aerial view, coral reef archipelago theme, turquoise lagoon in the middle, muted blue-grey coral shelves, white sand spits, dense palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the lagoon, muted desaturated antique-map colours, antique cartography ink and watercolor, high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "island_home_m02",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m02.png",
+   "params": {
+    "theme": "volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, dense dark palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the dark lagoon)"
+   },
+   "prompt": "a large pirate island seen from a high three-quarter aerial view, volcanic black island theme, dark basalt cliffs, a glowing lava crater on the ridge, black sand and ash dunes, no smoke, dense dark palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the dark lagoon, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "island_home_m03",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m03.png",
+   "params": {
+    "theme": "bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, pale palm trees and a small pirate settlement (wooden pier dock, thatched-roof tavern and warehouse, stone watchtower, black pirate flag, treasure chests and barrels, fishing boats and a galleon moored in the pale lagoon)"
+   },
+   "prompt": "a large pirate island seen from a high three-quarter aerial view, bone reef theme, pale bleached cliffs and white coral rock, wrecked hulls on the shore and a giant skull carved into the rock, absolutely no lava and no fire, pale palm trees and a small pirate settlement: a wooden pier dock at the shoreline, a thatched-roof tavern and a warehouse building, a stone watchtower, a tall flag mast flying a black pirate flag, stacked treasure chests and wooden barrels on the shore, several small fishing boats and a galleon moored in the pale lagoon, antique cartography ink and watercolor, palette keyed to a volcanic pirate chart reference (dark basalt rock, warm sand beach, teal shallow water), high three-quarter aerial camera angle. The island must have a RANDOM-IRREGULAR natural coastline (jagged, NOT a perfect circle, NOT a regular polygon), a small wooden dock with a black-sailed galleon moored right at the shoreline, tight sandy beaches and teal shallows around the land. CRITICAL: the ONLY water in the image is the thin teal shallows immediately hugging the island shoreline; the ENTIRE surrounding background (everything outside the island silhouette) must be a perfectly flat, completely uniform solid chroma-key MAGENTA #FF00FF, with NO rendered sea, NO ocean, NO waves, NO gradient, NO vignette, NO shadow cast onto the background, NO glow, NO halo, NO soft blur; crisp hard island silhouette edge with NO color bleeding into the background; the artwork contains NO purple, NO magenta, NO translucent or semi-transparent parts, NO smoke plume, NO fog. No floor, no backdrop, no frame, no text, no letters, no numbers, centered, high detail, game asset illustration",
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "card_panel",
+   "role": "cardmask",
+   "file": "assets/ui/card_panel.png",
+   "params": {},
+   "prompt": "a single plain solid pure WHITE rounded rectangle panel with soft slightly rounded corners, flat even white fill, crisp clean edges, the panel fills most of the frame and is perfectly centered, the panel is the ONLY object in the image, isolated on a PURE SOLID BLACK background, no shadow, no glow, no highlight, no gradient, no text, no letters, no numbers, no decoration, no border ornament",
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "boss_captain",
+   "role": "boss",
+   "file": "assets/ui/boss_captain.png",
+   "params": {
+    "what": "towering pirate captain boss holding a huge curved cutlass, skull emblem belt buckle"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "hero_back",
+   "role": "hero_back",
+   "file": "assets/ui/hero_back.png",
+   "params": {
+    "what": "pirate captain hero holding a cutlass ready to strike"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "deck_battle",
+   "role": "deck",
+   "file": "assets/ui/deck_battle.png",
+   "params": {
+    "what": "empty pirate ship main deck at night"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "item_keg",
+   "role": "item",
+   "file": "assets/ui/item_keg.png",
+   "params": {
+    "what": "wooden powder keg with brass bands and a short lit fuse"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "item_medkit",
+   "role": "item",
+   "file": "assets/ui/item_medkit.png",
+   "params": {
+    "what": "rolled canvas medical kit with a red cross bandage and a small glass bottle"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "item_rum",
+   "role": "item",
+   "file": "assets/ui/item_rum.png",
+   "params": {
+    "what": "dark glass rum bottle with a wax sealed cork and a parchment label"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "item_smoke",
+   "role": "item",
+   "file": "assets/ui/item_smoke.png",
+   "params": {
+    "what": "round iron smoke bomb with a lit fuse and a small smoke puff"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "icon_cutlass",
+   "role": "item",
+   "file": "assets/ui/icon_cutlass.png",
+   "params": {
+    "what": "curved pirate cutlass blade with a brass guard and worn leather grip"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "icon_shield",
+   "role": "item",
+   "file": "assets/ui/icon_shield.png",
+   "params": {
+    "what": "round wooden buckler shield with brass rim and iron boss"
+   },
+   "generated_at": "2026-10-29"
+  },
+  {
+   "name": "v6_ocean_bg",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/ocean_bg.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_tile_owned",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/tile_owned.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_tile_deny",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/tile_deny.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_island",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/island.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_creatures",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/creatures.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_helm",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/helm.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_compass",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/compass.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_ship",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/ship.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_parchment",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/parchment.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_hero",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/hero.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_enemy",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/enemy.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_crew",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/crew.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_banner_win",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/banner_win.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_banner_lose",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/banner_lose.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_vs_bg",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/vs_bg.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_bg_siege",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/bg_siege.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_bg_dungeon",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/bg_dungeon.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v2_bg_boss",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/bg_boss.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_isle_land",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/isle_land.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_isle_lighthouse",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/isle_lighthouse.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_isle_treasure",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/isle_treasure.png",
+   "params": {},
+   "generated_at": "2026-10-31"
+  },
+  {
+   "name": "v6_isle_village",
+   "role": "v6_alpha",
+   "file": "assets/ui/v6/isle_village.png",
+   "params": {},
+   "generated_at": "2026-11-01"
+  },
+  {
+   "name": "v2_scene_encounter",
+   "role": "v2_scene",
+   "file": "assets/ui/vs_v2/scene_encounter.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "v2_scene_raid",
+   "role": "v2_scene",
+   "file": "assets/ui/vs_v2/scene_raid.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "v2_scene_boss",
+   "role": "v2_scene",
+   "file": "assets/ui/vs_v2/scene_boss.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "v2_scene_attack",
+   "role": "v2_scene",
+   "file": "assets/ui/vs_v2/scene_attack.png",
+   "params": {
+    "full_bleed": true
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "v2_scene_result_attack",
+   "role": "v2_scene",
+   "file": "assets/ui/vs_v2/scene_result_attack.png",
+   "params": {
+    "full_bleed": true
+   }
+  },
+  {
+   "name": "v2_scene_result_boss",
+   "role": "v2_scene",
+   "file": "assets/ui/vs_v2/scene_result_boss.png",
+   "params": {
+    "full_bleed": true
+   }
+  },
+  {
+   "name": "v2_scene_result_encounter",
+   "role": "v2_scene",
+   "file": "assets/ui/vs_v2/scene_result_encounter.png",
+   "params": {
+    "full_bleed": true
+   }
+  },
+  {
+   "name": "v2_scene_result_raid",
+   "role": "v2_scene",
+   "file": "assets/ui/vs_v2/scene_result_raid.png",
+   "params": {
+    "full_bleed": true
+   }
+  },
+  {
+   "name": "island_home_m04",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m04.png",
+   "params": {
+    "what": "frozen north sea theme, ice floes and a glacier-floe pirate base with a wooden ice-breaker galleon moored at a snow-dusted jetty, white ice cliffs with veins of blue, pale blue shallow water, grey snow and a small cluster of dark pine trees at the base, the black pirate flag on a tall mast, treasure chests wrapped in straw in the snow, a few barrels and fishing boats lashed to the ice (no fire, no warm colours), antique map muted palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m05",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m05.png",
+   "params": {
+    "what": "tropical paradise theme, lush dense emerald jungle canopy with a waterfall running down emerald cliffs into a turquoise lagoon, white sand beaches, dense banana plants and palm trees, a small pirate camp with a red-roofed watchtower, thatched-hut tavern and wooden jetty with a two-masted galleon moored, the black pirate flag on a tall mast, barrels of spices and golden fruit piled on the beach, several small outrigger canoes and fishing boats lashed to the trees (no fire), muted antique watercolour map palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m06",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m06.png",
+   "params": {
+    "what": "arid desert archipelago theme, ochre sand dunes and cracked red earth islands with salt-white flats, scattered dead thorn trees and a single green oasis pool at one island, a sun-bleached wooden merchant bazaar with striped awnings and stacked amphora jars, a sand-skiff moored on a rope, the black pirate flag on a crooked pole, a few skeletons of ships half-buried in the dunes and barrels of water, desert haze in the shallows (no fire, no people), muted burnt sienna and sand watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m07",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m07.png",
+   "params": {
+    "what": "fog-shrouded kelp forest theme, dark green kelp fronds swaying in brackish water, grey-mist rocky islands with jagged basalt columns, seaweed-covered wooden rafts and a rusted iron shipwreck tilted on a rocky shelf, mossy watchtowers wrapped in vines, barnacled barrels and crab shells, the black pirate flag hanging limp in the fog, a small kelp-frond raft with a lantern, grey-green water, (no fire, no warm colours), muted teal and moss watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m08",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m08.png",
+   "params": {
+    "what": "storm-struck jagged cliff theme, towering dark grey basalt cliffs with a large natural arch pierced by white breaking waves, a small wooden harbour carved into a sea-cave with a galleon lashed to the cave mouth, lightning-bolt-shaped white spray and mist, scattered ship debris and floating cargo on the surf, the black pirate flag straining on the clifftop mast, barnacled rocks and dark churning water, (no fire), muted indigo and storm-grey watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m09",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m09.png",
+   "params": {
+    "what": "golden sunset shallows theme, a wide flat atoll of pale golden sandbars with a ring of broken coral reef, deep amber and honey-coloured shallow water around a calm blue lagoon centre, a sunlit wooden trading pier with a striped awning and stacked gold ingots and spice barrels, a galleon with golden sails in the lagoon, the black pirate flag catching the low light, coral rubble and starfish on the sand, warm honey and gold watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m10",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m10.png",
+   "params": {
+    "what": "deep-ocean abyssal trench theme, inky black-blue water with a single pale bioluminescent jellyfish drifting above a trench, dark obsidian rock formations with white bone spires of a shipwreck sticking up, a small wooden observatory perched on a black rock pillar with a brass telescope, a few ghostly blue-green ghostly lights, barnacled anchors and sunken treasure chests visible in the dark water, the black pirate flag tattered, deep indigo and black-blue watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m11",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m11.png",
+   "params": {
+    "what": "cannibal rock theme, twin symmetrical dark coral rock islands with a deep narrow pass between them, the pass mouth is a jagged red-coral barrier with a large skull carved into the rock face, a broken stone gate and rusted chains across the channel, sunken ship masts sticking out of the water, red-coral rubble and bone-white anchor stones scattered on the reef, a small wooden spy-boat in the pass, the black pirate flag on a crooked mast, muted crimson and charcoal watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m12",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m12.png",
+   "params": {
+    "what": "treasure isle theme, a large green hill island overflowing with buried gold: stacks of golden coins, gemstone stumps and jewelled statues jutting from a hillside, a wooden treasure-hauling cart and a galleon moored at a golden-sand pier, the black pirate flag on a tall pennant mast, jewelled treasure chests overflowing with rubies and emeralds, a few skeletal pirate remains on the beach, (no fire, no lava), muted golden and moss-green watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m13",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m13.png",
+   "params": {
+    "what": "mangrove estuary theme, a wide grey-green mangrove forest of stilted trees with tangled root networks over a calm brown-grey estuary, a wooden piling dock and a flat-bottomed smuggler barge moored among the mangrove props, a small thatched watchtower with a rope net, stacked amphora and spice barrels on the roots, the black pirate flag on a crooked pole in the mangroves, murky brown-green water, (no fire, no people), muted olive and grey watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m14",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m14.png",
+   "params": {
+    "what": "phantom reef theme, a ghostly pale sandbar reef with a spectral translucent white sail of a sunken ship ghost visible just beneath the water surface, a small wooden signal station with a white signal-flag mast and a lantern, ghostly white sand and bleached coral, a few sunken anchors and moored ghostly fishing skiffs, the black pirate flag on the signal mast, faint mist over the water, pale ghost-white and pale blue watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m15",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m15.png",
+   "params": {
+    "what": "lava shore theme, a black volcanic sand beach with active lava flow channels running down to the sea, glowing orange lava rocks and steam plumes, a dark basalt fortress with an open furnace door, a galleon with heat-warped black sails moored at a lava-protected rocky jetty, the black pirate flag scorched and tattered, molten orange glow on the black sand, (fire allowed here only), muted black and ember-orange watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m16",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m16.png",
+   "params": {
+    "what": "moon-lit cove theme, a calm crescent-shaped cove with white moonlight on the water, a small wooden moon-pier with a single lantern, a crescent-moon-shaped sail of a small boat in the cove, the black pirate flag on a low mast, white moonlight reflecting on the water, a small crescent-sail watchtower, a few moonlit palm trees and moonstone-white sand, no fire, muted silver-blue and night-indigo watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m17",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m17.png",
+   "params": {
+    "what": "crystal harbour theme, a harbour with large translucent crystal formations jutting from the water and rocks, pale blue crystal spires with faceted faces reflecting the light, a wooden crystal-cutting workshop with glass jars and polished gems, a galleon with crystal-rimmed masts moored at a crystal-jetted pier, the black pirate flag on a crystal-pole mast, faceted crystal chunks and glass barrels on the shore, pale ice-blue and pearl watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m18",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m18.png",
+   "params": {
+    "what": "storm-wreck shore theme, a sandy beach strewn with broken ship masts, snapped rigging and sunken hulls, a large broken galleon beached in the shallows with its masts down, splintered cargo crates and spilled gold on the sand, a small wooden salvage-boat and rope, the black pirate flag torn and limp on the broken mast, barnacled wreckage and storm-mist, muted brown and grey watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m19",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m19.png",
+   "params": {
+    "what": "coral atoll theme, a wide horseshoe-shaped coral atoll with a lagoon in the middle, a ring of white and orange coral formations with a small sandy spit running through the lagoon, a wooden coral-fishing station with a striped awning, a small outrigger canoe and a galleon moored in the lagoon, the black pirate flag on a palm-mast, coral rubble and shell heaps on the sand, muted coral-pink and turquoise watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "island_home_m20",
+   "role": "island_home",
+   "file": "assets/ui/island_home_m20.png",
+   "params": {
+    "what": "volcanic eye theme, a large volcanic island with a glowing eye-shaped lava crater at its centre with a single bright white eye of molten lava at the centre, dark basalt cliffs with obsidian glass, a small volcanic-fortress with a cannon battery on a ridge, a galleon with heat-warped dark sails at a lava-protected jetty, the black pirate flag scorched, glowing lava rivers running down to the black-sand beach, (fire allowed), muted black and ember-orange and white watercolour palette"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m04",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m04.png",
+   "params": {
+    "what": "a dark frozen north sea storm scene, icebergs and snow, a wooden ice-breaker ship fighting through white ice in dark blue water, pale moonlight on the ice, the black pirate flag on the ship, no fire, no warm colours, antique map muted palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m05",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m05.png",
+   "params": {
+    "what": "a tropical paradise island scene, a dense emerald jungle on a lush island, a turquoise lagoon with a two-masted galleon and outrigger canoes in the water, a waterfall running down the cliffs, bright sunlight, white sand beaches, antique map watercolour palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m06",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m06.png",
+   "params": {
+    "what": "an arid desert archipelago scene, ochre sand dunes and cracked red earth islands with salt flats, a single green oasis pool, sun-bleached merchant bazaar with striped awnings, scattered ship skeletons half-buried in sand, hazy light, antique map watercolour palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m07",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m07.png",
+   "params": {
+    "what": "a fog-shrouded kelp forest scene, dark green kelp fronds in murky green water, grey-mist rocky islands with jagged basalt columns, a rusted iron shipwreck tilted on a rocky shelf, dense fog, muted teal and moss palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m08",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m08.png",
+   "params": {
+    "what": "a storm-struck jagged cliff scene, towering dark grey basalt cliffs with a large natural arch, white breaking waves and spray, a small wooden harbour in a sea-cave, a galleon lashed to the cave mouth, lightning and mist, muted indigo and storm-grey palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m09",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m09.png",
+   "params": {
+    "what": "a golden sunset shallows scene, a wide flat atoll of pale golden sandbars with a ring of broken coral reef, deep amber and honey-coloured shallow water around a calm lagoon, a galleon with golden sails, warm honey and gold light, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m10",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m10.png",
+   "params": {
+    "what": "a deep-ocean abyssal trench scene, inky black-blue water, a large pale bioluminescent jellyfish drifting above the trench, dark obsidian rock formations, white bone spires of a shipwreck, a small wooden observatory on a rock pillar with a brass telescope, ghostly blue-green lights, deep indigo and black-blue palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m11",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m11.png",
+   "params": {
+    "what": "a twin red-coral rock scene, two symmetrical dark coral rock islands with a deep narrow pass between them, a large skull carved into the rock face at the pass mouth, red-coral rubble and bone-white anchor stones, a small wooden spy-boat in the pass, muted crimson and charcoal palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m12",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m12.png",
+   "params": {
+    "what": "a treasure isle scene, a large green hill island overflowing with buried gold, stacks of golden coins and gemstone stumps, a wooden treasure-hauling cart, a galleon with a black flag at a golden-sand pier, glowing gold light on the hillside, muted golden and moss-green palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m13",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m13.png",
+   "params": {
+    "what": "a mangrove estuary scene, a wide grey-green mangrove forest of stilted trees with tangled root networks over a calm brown-grey estuary, a flat-bottomed smuggler barge moored among the mangrove props, a small thatched watchtower, stacked amphora and spice barrels, muted olive and grey palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m14",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m14.png",
+   "params": {
+    "what": "a phantom reef scene, a ghostly pale sandbar reef with a spectral translucent white sail of a sunken ship ghost visible just beneath the water surface, a small wooden signal station with a white signal-flag mast, ghostly white sand and bleached coral, faint mist, pale ghost-white and pale blue palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m15",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m15.png",
+   "params": {
+    "what": "a lava shore scene, a black volcanic sand beach with active lava flow channels, glowing orange lava rocks and steam plumes, a dark basalt fortress with an open furnace door, a galleon with heat-warped black sails at a lava-protected jetty, molten orange glow, muted black and ember-orange palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m16",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m16.png",
+   "params": {
+    "what": "a moon-lit cove scene, a calm crescent-shaped cove with white moonlight on the water, a small wooden moon-pier with a single lantern, a crescent-moon-shaped sail of a small boat, a crescent-moon watchtower, white moonlight reflecting on the water, muted silver-blue and night-indigo palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m17",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m17.png",
+   "params": {
+    "what": "a crystal harbour scene, large translucent crystal formations jutting from the water and rocks, pale blue crystal spires with faceted faces, a wooden crystal-cutting workshop with glass jars and polished gems, a galleon with crystal-rimmed masts at a crystal-jetted pier, faceted crystal chunks and glass barrels, pale ice-blue and pearl palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m18",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m18.png",
+   "params": {
+    "what": "a storm-wreck shore scene, a sandy beach strewn with broken ship masts and sunken hulls, a large broken galleon beached in the shallows with its masts down, splintered cargo crates and spilled gold on the sand, barnacled wreckage and storm-mist, muted brown and grey palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m19",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m19.png",
+   "params": {
+    "what": "a coral atoll scene, a wide horseshoe-shaped coral atoll with a lagoon in the middle, a ring of white and orange coral formations, a small sandy spit, a wooden coral-fishing station, a small outrigger canoe and a galleon in the lagoon, coral rubble and shell heaps, muted coral-pink and turquoise palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m20",
+   "role": "background",
+   "file": "assets/ui/vs_bg_m20.png",
+   "params": {
+    "what": "a volcanic eye scene, a large volcanic island with a glowing eye-shaped lava crater at its centre, dark basalt cliffs with obsidian glass, a small volcanic-fortress with a cannon battery, a galleon with heat-warped dark sails at a lava-protected jetty, glowing lava rivers, muted black and ember-orange palette, a vertical 9:16 portrait game background with the horizon in the middle two thirds and a flat dark solid MAGENTA #FF00FF band across the bottom quarter"
+   },
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m04_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m04.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m05_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m05.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m06_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m06.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m07_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m07.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m08_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m08.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m09_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m09.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m10_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m10.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m11_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m11.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m12_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m12.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m13_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m13.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m14_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m14.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m15_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m15.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m16_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m16.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m17_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m17.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m18_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m18.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m19_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m19.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  },
+  {
+   "name": "vs_bg_m20_v2",
+   "role": "background",
+   "file": "assets/ui/vs_v2/vs_bg_m20.png",
+   "params": {},
+   "generated_at": "2026-11-03"
+  }
+ ]
 }

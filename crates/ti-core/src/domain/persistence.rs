@@ -31,7 +31,7 @@ pub struct SaveSlot {
     /// 为什么落进 schema（S15.2）：「在 m01 击败 BOSS 解锁 m02、尚未切图时存档」若只存
     /// `map_slot`，读档会退回仅 m01，跨图进度丢失；位掩码 1 字节即可保住整条解锁链。
     #[serde(default)]
-    pub unlocked_mask: u8,
+    pub unlocked_mask: u32,
     /// S21.11 船等级（1..=4；`rules::boat::BoatSession` 等级链；`balance.boat` 数值单一事实源）。
     /// v2 旧档缺此字段 ⇒ 缺省 **1（小舢板）**，读档零报错（迁移口径 = `docs/business/persistence.md`
     /// §迁移 v3）；全局账号级（不随跨图重置）。

@@ -135,7 +135,7 @@
 | `scripts/ui_asset_batch.py` | **UI 资产批量工具**（规格驱动：register/generate/install/build/check/sheet）—— 一组资产一次做完，含抠图可行性预检；规格 = `assets/ui_batches/*.json` |
 | `scripts/apk_audit.py` | **APK 体积构成审计（S35.0，24 号 `24_apk_size_std.md`）**：`--refset` 引擎引用集 / `--apk` 构成表 + 判据①②（.so 压缩率 <90% / 未引用 UI 0 进包，FAIL 非 0）/ `--refset-unused` 未引用清单 |
 | `scripts/build_artifacts.py` | **构建产物编排器（S35.1，24 号 §4.1 执行面）**：`pre`/`post` mtime 锚定 / `run` 执行 apk/wasm/native 构建 + 自动复检 + 日志 / `list` / `check`；构建本体仍走既有脚本，本脚本只做编排（平台「构建」页消费） |
-| `scripts/ui_thumb.py` | **设计稿压缩预览侧车**（`evidence/ui_concept/*.png` → `.thumb.png` 480px PNG-8 量化；平台设计图页卡读侧车、lightbox 读原图；`--check` 只读对账；13 号 §4.0） |
+| `scripts/ui_thumb.py` | **设计稿压缩预览侧车**（`evidence/ui_concept/*.png` → `.thumb.png` 480px PNG-8 量化；平台设计图页卡读侧车、lightbox 读原图；`--check` 只读对账；13 号 §4.0） || `scripts/map_batch_gen.py` | **S37 批量地图包生成器**（20 张不同场景地图包 m04~m20：`--check` 只读校验 / `--only <id>` 单包生成 / 幂等） |
 | `scripts/ui_layout_sheet.py` | **UI 版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图，版面评审 / S21.9 出图验收对照；`--check` 只读校验） |
  | `scripts/ui_icons.py` | **UI 图标白蒙版生成器**（S21.14 图标图片化 ④-04：读 `assets/ui_batches/icon_v1.json` 48 原生几何 → PIL 最近邻放大 512 白蒙版 `assets/ui/icon_*.png`；`--check` 字节幂等 + 注册表 `image→文件` 对账） |
  | `scripts/ui_islands.py` | **岛屿剪影资产生成器**（S26.2 主地图岛屿图片化：`terrain.json` 陆格掩码 → 3 枚暖沙岛屿剪影 PNG 994×826（4× 超采抗锯齿 + 礁光晕 + 投影）→ `assets/ui/island_m0*.png` + `ui_manifest.json` kind=island；运行时 `chrome::island_asset` 资产优先 blit、缺图代码矢量回退；`--check` 只读幂等） |

@@ -121,7 +121,7 @@ fn legacy_slot_out_of_range_clamps_conservative() {
         version: 1,
         character: 9,
         gold: 0,
-        map_slot: 9,
+        map_slot: 99, // S37：map 扩到 20 ⇒ 99 越界（旧 3 图时 9 越界→m03，S37 后 9=m09 合法）
         position: 0,
         rng_steps: 0,
         unlocked_mask: 0,
@@ -131,7 +131,7 @@ fn legacy_slot_out_of_range_clamps_conservative() {
     };
     let v2 = SaveSlotV2::from_legacy_slot(&legacy);
     assert_eq!(v2.character, "panda", "character 越界保守落首角色（不 panic）");
-    assert_eq!(v2.map, "m03", "map_slot 越界钳位 m03");
+    assert_eq!(v2.map, "m20", "map_slot 越界钳位 m20（S37：1..=20 上限）");
 }
 
 // ── S12.5 新增：RNG 精确续流 + 跨包状态桥 ─────────────────────────────

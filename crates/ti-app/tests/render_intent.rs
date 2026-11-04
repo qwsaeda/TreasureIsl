@@ -425,7 +425,7 @@ impl ti_app::scenes::SessionHost for VsHost {
         0
     }
     fn set_saveload_cursor(&mut self, _slot: usize) {}
-    fn unlocked_mask(&self) -> u8 {
+    fn unlocked_mask(&self) -> u32 {
         0
     }
     fn displayed_player_hp(&self) -> u32 {

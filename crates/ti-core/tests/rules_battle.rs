@@ -217,6 +217,7 @@ fn combat_max_rounds_tiebreak_same_hp() {
 #[test]
 fn combat_boss_tiers_from_balance() {
     let player = Unit { hp: 1, atk: 0 };
+    // S37：boss_tiers 扩到 20 档（0..=19），断言前 5 档（与原有表一致）+ 档 20 越界。
     let expect_boss_hp: &[u32] = &[2_400, 4_800, 7_200, 9_600, 12_000];
     for (tier, &init) in expect_boss_hp.iter().enumerate() {
         let tier_u32 = u32::try_from(tier).unwrap_or(u32::MAX);
@@ -224,8 +225,8 @@ fn combat_boss_tiers_from_balance() {
         assert_eq!(s.boss_hp(), init, "档 {tier} 初 HP 走 balance.combat.boss_tiers[{tier}]");
         assert_eq!(s.outcome(), None, "合法档 → 正常开打");
     }
-    let invalid = BattleSession::from_balance(0, player, 5).expect("balance.json 有效");
-    assert_eq!(invalid.boss_hp(), 0, "档 5 越界 → 无效战斗");
+    let invalid = BattleSession::from_balance(0, player, 20).expect("balance.json 有效");
+    assert_eq!(invalid.boss_hp(), 0, "档 20 越界 → 无效战斗（S37：20 档 = 0..=19）");
     assert_eq!(invalid.outcome(), Some(Side::Player), "越界档判玩家胜（无 BOSS 可打）");
 }
 

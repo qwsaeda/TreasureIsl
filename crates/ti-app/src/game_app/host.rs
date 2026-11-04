@@ -876,7 +876,7 @@ impl SessionHost for GameApp {
                     self.unlocked_maps = ProgressionState::from_unlocked(&self.unlocked_maps)
                         .on_boss_defeated(ms)
                         .unlocked();
-                    if ms == MapSlot::M03 {
+                    if ms == MapSlot::M20 {
                         self.cleared = true;
                     }
                 }
@@ -991,7 +991,7 @@ impl SessionHost for GameApp {
     }
 
     /// S15.2（F23）：写档捕获当前跨图推进解锁位掩码（口径 = 规则层 `unlocked_mask()`）。
-    fn unlocked_mask(&self) -> u8 {
+    fn unlocked_mask(&self) -> u32 {
         let base = ProgressionState::from_unlocked(&self.unlocked_maps).unlocked_mask();
         if self.cleared { base | CLEARED_BIT } else { base }
     }

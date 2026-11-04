@@ -64,7 +64,8 @@ fn exhaust_all_tier_seed_combo_invariants() {
     let es = exhaust().expect("exhaust_scenarios.json 有效");
     let b = balance().expect("balance.json 有效");
     let tiers: Vec<u32> = b.combat.boss_tiers.iter().map(|t| t.tier).collect();
-    assert_eq!(tiers.len(), 5, "balance.combat 5 档 BOSS");
+    // S37：balance.combat.boss_tiers 扩到 20 档（boss_tier 0..=19 对应 m01..m20）。
+    assert_eq!(tiers.len(), 20, "balance.combat 20 档 BOSS（S37）");
 
     let mut combos_checked: u32 = 0;
     for tier in &tiers {

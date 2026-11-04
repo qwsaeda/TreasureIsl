@@ -218,5 +218,22 @@
  "scene.vs.v2_elm_force_fmt": "人手 {0} / 武器 {1} / 武装 {2}",
  "scene.vs.v4_cmd_skip": "跳过",
  "scene.vs.v4_cmd_confirm": "确认",
- "scene.vs.v4_cmd_retry": "重打"
+ "scene.vs.v4_cmd_retry": "重打",
+ "glmapm04.Map": "冰霜极地",
+ "glmapm05.Map": "热带乐园",
+ "glmapm06.Map": "沙漠绿洲",
+ "glmapm07.Map": "迷雾海藻",
+ "glmapm08.Map": "怒海断崖",
+ "glmapm09.Map": "落日浅滩",
+ "glmapm10.Map": "深渊海沟",
+ "glmapm11.Map": "双岩骷髅",
+ "glmapm12.Map": "宝藏之岛",
+ "glmapm13.Map": "红树林湾",
+ "glmapm14.Map": "幽灵浅礁",
+ "glmapm15.Map": "熔岩海岸",
+ "glmapm16.Map": "月夜海湾",
+ "glmapm17.Map": "水晶港湾",
+ "glmapm18.Map": "风暴残骸",
+ "glmapm19.Map": "珊瑚环礁",
+ "glmapm20.Map": "火山之眼"
 }

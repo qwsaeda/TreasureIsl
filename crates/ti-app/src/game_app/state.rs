@@ -52,20 +52,23 @@ impl GameApp {
         self.terrain_grid_w()
     }
     /// 是否已通关（`is_cleared` 逐图门禁，`business/progression.md` §通关）：
-    /// m03 的 BOSS 已击败 = 全图通杀（`battle_step` 在 m03 胜时置位，
-    /// `restore_save` 按存档掩码 CLEARED 位（bit 3）还原）。
+    /// m20 的 BOSS 已击败 = 全图通杀（S37：`battle_step` 在 m20 胜时置位，
+    /// `restore_save` 按存档掩码 CLEARED 位（bit 19）还原）。
     #[must_use]
     pub fn is_cleared(&self) -> bool {
         self.cleared
     }
     /// 某图 BOSS 是否已击败（逐图门禁判据，`rules::progression`）：
-    /// m01/m02 的击败位 = 下一图已解锁（`can_select` 口径），m03 的击败位 = 通关位。
+    /// m(i) 的击败位 = 下一图已解锁（`can_select` 口径），m20 的击败位 = 通关位。
     #[must_use]
     pub fn is_map_cleared(&self, m: MapSlot) -> bool {
-        match m {
-            MapSlot::M01 => self.unlocked_maps.contains(&MapSlot::M02),
-            MapSlot::M02 => self.unlocked_maps.contains(&MapSlot::M03),
-            MapSlot::M03 => self.cleared,
+        let next = m.zero_index().saturating_add(1);
+        if next < 19 {
+            let next_slot = MapSlot::from_index(next).unwrap_or(MapSlot::M01);
+            self.unlocked_maps.contains(&next_slot)
+        } else {
+            // m20 = 最后一张图，击败位 = 通关位
+            self.cleared
         }
     }
     /// BOSS 格坐标（`MapSession::boss_tile`，主地图渲染橙红标记 + 战斗触发用，只读）。

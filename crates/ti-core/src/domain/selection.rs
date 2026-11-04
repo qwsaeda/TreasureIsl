@@ -73,7 +73,7 @@ impl Character {
     }
 }
 
-/// 可选地图槽位。
+/// 可选地图槽位（S37：20 图 = m01~m20；推进链 20 图，m20 = 通关图）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MapSlot {
     /// 地图 1。
@@ -82,6 +82,40 @@ pub enum MapSlot {
     M02,
     /// 地图 3。
     M03,
+    /// 地图 4（冰霜极地）。
+    M04,
+    /// 地图 5（热带乐园）。
+    M05,
+    /// 地图 6（沙漠绿洲）。
+    M06,
+    /// 地图 7（迷雾海藻）。
+    M07,
+    /// 地图 8（怒海断崖）。
+    M08,
+    /// 地图 9（落日浅滩）。
+    M09,
+    /// 地图 10（深渊海沟）。
+    M10,
+    /// 地图 11（双岩骷髅）。
+    M11,
+    /// 地图 12（宝藏之岛）。
+    M12,
+    /// 地图 13（红树林湾）。
+    M13,
+    /// 地图 14（幽灵浅礁）。
+    M14,
+    /// 地图 15（熔岩海岸）。
+    M15,
+    /// 地图 16（月夜海湾）。
+    M16,
+    /// 地图 17（水晶港湾）。
+    M17,
+    /// 地图 18（风暴残骸）。
+    M18,
+    /// 地图 19（珊瑚环礁）。
+    M19,
+    /// 地图 20（火山之眼；通关图）。
+    M20,
 }
 
 impl MapSlot {
@@ -93,13 +127,51 @@ impl MapSlot {
             Self::M01 => "m01",
             Self::M02 => "m02",
             Self::M03 => "m03",
+            Self::M04 => "m04",
+            Self::M05 => "m05",
+            Self::M06 => "m06",
+            Self::M07 => "m07",
+            Self::M08 => "m08",
+            Self::M09 => "m09",
+            Self::M10 => "m10",
+            Self::M11 => "m11",
+            Self::M12 => "m12",
+            Self::M13 => "m13",
+            Self::M14 => "m14",
+            Self::M15 => "m15",
+            Self::M16 => "m16",
+            Self::M17 => "m17",
+            Self::M18 => "m18",
+            Self::M19 => "m19",
+            Self::M20 => "m20",
         }
     }
 
     /// 全部地图槽位（按枚举声明顺序，遍历用）。
     #[must_use]
-    pub const fn all() -> [MapSlot; 3] {
-        [Self::M01, Self::M02, Self::M03]
+    pub const fn all() -> [MapSlot; 20] {
+        [
+            Self::M01,
+            Self::M02,
+            Self::M03,
+            Self::M04,
+            Self::M05,
+            Self::M06,
+            Self::M07,
+            Self::M08,
+            Self::M09,
+            Self::M10,
+            Self::M11,
+            Self::M12,
+            Self::M13,
+            Self::M14,
+            Self::M15,
+            Self::M16,
+            Self::M17,
+            Self::M18,
+            Self::M19,
+            Self::M20,
+        ]
     }
 
     /// 地图槽总数（= `all()` 长度；表现层循环/导航计数的单一事实源，B11：
@@ -110,14 +182,10 @@ impl MapSlot {
         Self::all().len() as u32
     }
 
-    /// 地图编号（`1..=3`，存档字段 `map_slot` = 本值）。
+    /// 地图编号（`1..=20`，存档字段 `map_slot` = 本值）。
     #[must_use]
     pub const fn index(self) -> u32 {
-        match self {
-            Self::M01 => 1,
-            Self::M02 => 2,
-            Self::M03 => 3,
-        }
+        self.zero_index() + 1
     }
 
     /// 0 起索引（遍历用）。
@@ -127,6 +195,23 @@ impl MapSlot {
             Self::M01 => 0,
             Self::M02 => 1,
             Self::M03 => 2,
+            Self::M04 => 3,
+            Self::M05 => 4,
+            Self::M06 => 5,
+            Self::M07 => 6,
+            Self::M08 => 7,
+            Self::M09 => 8,
+            Self::M10 => 9,
+            Self::M11 => 10,
+            Self::M12 => 11,
+            Self::M13 => 12,
+            Self::M14 => 13,
+            Self::M15 => 14,
+            Self::M16 => 15,
+            Self::M17 => 16,
+            Self::M18 => 17,
+            Self::M19 => 18,
+            Self::M20 => 19,
         }
     }
 
@@ -137,6 +222,23 @@ impl MapSlot {
             0 => Some(Self::M01),
             1 => Some(Self::M02),
             2 => Some(Self::M03),
+            3 => Some(Self::M04),
+            4 => Some(Self::M05),
+            5 => Some(Self::M06),
+            6 => Some(Self::M07),
+            7 => Some(Self::M08),
+            8 => Some(Self::M09),
+            9 => Some(Self::M10),
+            10 => Some(Self::M11),
+            11 => Some(Self::M12),
+            12 => Some(Self::M13),
+            13 => Some(Self::M14),
+            14 => Some(Self::M15),
+            15 => Some(Self::M16),
+            16 => Some(Self::M17),
+            17 => Some(Self::M18),
+            18 => Some(Self::M19),
+            19 => Some(Self::M20),
             _ => None,
         }
     }
@@ -148,6 +250,23 @@ impl MapSlot {
             Self::M01 => "glmapm01.Map",
             Self::M02 => "glmapm02.Map",
             Self::M03 => "glmapm03.Map",
+            Self::M04 => "glmapm04.Map",
+            Self::M05 => "glmapm05.Map",
+            Self::M06 => "glmapm06.Map",
+            Self::M07 => "glmapm07.Map",
+            Self::M08 => "glmapm08.Map",
+            Self::M09 => "glmapm09.Map",
+            Self::M10 => "glmapm10.Map",
+            Self::M11 => "glmapm11.Map",
+            Self::M12 => "glmapm12.Map",
+            Self::M13 => "glmapm13.Map",
+            Self::M14 => "glmapm14.Map",
+            Self::M15 => "glmapm15.Map",
+            Self::M16 => "glmapm16.Map",
+            Self::M17 => "glmapm17.Map",
+            Self::M18 => "glmapm18.Map",
+            Self::M19 => "glmapm19.Map",
+            Self::M20 => "glmapm20.Map",
         }
     }
 }

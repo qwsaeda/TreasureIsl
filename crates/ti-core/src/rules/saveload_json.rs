@@ -133,13 +133,30 @@ pub fn character_from_label(label: &str) -> Option<Character> {
     })
 }
 
-/// 存档 `map` 字符串（`"m01"`/`"m02"`/`"m03"`）→ 地图槽（未知 → `None`，门禁红线不 panic）。
+/// 存档 `map` 字符串（`"m01"`~`"m20"`）→ 地图槽（未知 → `None`，门禁红线不 panic）。
 #[must_use]
 pub fn map_slot_from_label(label: &str) -> Option<MapSlot> {
     Some(match label {
         "m01" => MapSlot::M01,
         "m02" => MapSlot::M02,
         "m03" => MapSlot::M03,
+        "m04" => MapSlot::M04,
+        "m05" => MapSlot::M05,
+        "m06" => MapSlot::M06,
+        "m07" => MapSlot::M07,
+        "m08" => MapSlot::M08,
+        "m09" => MapSlot::M09,
+        "m10" => MapSlot::M10,
+        "m11" => MapSlot::M11,
+        "m12" => MapSlot::M12,
+        "m13" => MapSlot::M13,
+        "m14" => MapSlot::M14,
+        "m15" => MapSlot::M15,
+        "m16" => MapSlot::M16,
+        "m17" => MapSlot::M17,
+        "m18" => MapSlot::M18,
+        "m19" => MapSlot::M19,
+        "m20" => MapSlot::M20,
         _ => return None,
     })
 }
@@ -150,10 +167,10 @@ pub fn legacy_character_label(n: u32) -> String {
     Character::from_index(n.saturating_sub(1)).map_or("panda".to_owned(), |c| c.label().to_owned())
 }
 
-/// legacy 数字地图（1 起，`1..=3`）→ `m0N`（`0`/越界钳到 `m01..m03`，可回读）。
+/// legacy 数字地图（1 起，`1..=20`）→ `mNN`（`0`/越界钳到 `m01..m20`，可回读）。
 #[must_use]
 pub fn legacy_map_label(n: u32) -> String {
-    format!("m{:02}", n.clamp(1, 3))
+    format!("m{:02}", n.clamp(1, 20))
 }
 
 /// `SceneId` → 存档 `scene` 字段（稳定字符串，与 `SceneId` 变体名一致）。

@@ -83,8 +83,8 @@ impl GameApp {
                     ProgressionState::for_save_restore(data.unlocked_mask, ms).unlocked();
             }
         }
-        // 通关位还原（S15.2 通关门禁）：掩码 CLEARED 位（bit 3）= m03 BOSS 已击败。
-        // 旧档无该字段 → mask 全 0 → cleared 保持开档 false，行为不回归。
+        // 通关位还原（S15.2 / S37 通关门禁）：掩码 CLEARED 位（bit 19）= m20 BOSS 已击败。
+        // 旧档（u8 掩码）无该字段 → mask 全 0 → cleared 保持开档 false，行为不回归。
         self.cleared = data.unlocked_mask & CLEARED_BIT != 0;
         // v3：v4 扩展含每席金币 ⇒ 旧档（无 v4）时把 `data.gold` 铺给当前行动席，
         // 之后 `restore_v4_ext` 覆盖各席（唯一账本 `seat_gold[]`）。

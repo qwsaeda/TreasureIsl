@@ -1,0 +1,31 @@
+=== S37.0 二十场景地图基础设施 evidence ===
+日期: 2026-11-04
+
+--- 1. 改动面声明 ---
+规则 = ti-core domain/selection（MapSlot M01~M20）+ rules/progression（MAP_SEQUENCE 20 图 + ProgressionState defeated[20] + CLEARED_BIT=bit19 + u32 掩码）+ rules/saveload_json（map_slot_from_label m01~m20 + legacy_map_label 钳位 1..=20）+ domain/persistence（unlocked_mask u8→u32）
+表现 = ti-app game_app/host.rs（unlocked_mask→u32 + cleared=击败M20）+ game_app/saveload.rs（掩码 CLEARED_BIT=bit19）+ game_app/state.rs（is_map_cleared 20 图）+ scenes/mod.rs（MapHost unlocked_mask u32）+ scenes/select_map.rs（自动扩，MAP_COUNT=MapSlot::count()=20）
+数据 = assets/data/balance.json（selection.maps 20 条 + boss_tiers 20 档）
+资产 = assets/ui/island_home_m04~m20.png（17 张 AI 生图，ui_assets.py add）+ assets/ui/vs_v2/vs_bg_m04~m20.png（17 张 VS 战斗背景）
+工具 = scripts/map_batch_gen.py（S37 批量地图包生成器，14_tooling_catalog 已登记）
+地图包 = assets/maps/m04~m20/（17 个新包，map_pack.py verify 全 0 违规）+ board.json 20 段 + index.json 20 ids
+
+--- 2. 测试判据 ---
+cargo test -p ti-core: 159 + 18 + 6 + 4 + 4 + 2 + 5 + 4 + 2 + 4 + 2 = 全绿
+cargo test -p ti-app: 34+2+2+6+17+5+2+5+9+8+1+2 = 全绿
+cargo clippy -p ti-core -p ti-app --all-targets -D warnings: 0 新 warning
+cargo fmt --all --check: 0
+
+--- 3. gate 实测 ---
+gate.ps1: 33 项 0 failure（含 wasm-browser-e2e / bevy-cpu-parity / browser-playtest / playtest-loop）
+
+--- 4. 地图包实测 ---
+map_pack.py list: m01~m20 全 20 包 OK
+map_pack.py check: 0 漂移
+board.json: 20 段
+index.json: 20 ids
+dist/maps: m04~m20 17 个 .map-pack + .zip 分发件
+
+--- S37.0 结论 ---
+MapSlot 3→20 扩展全链落地（域/规则/存档/选图/推进/资产/地图包/VS 背景）；
+20 张不同场景地图包 m01~m20 已装可玩；
+gate 全绿；cargo test/clippy/fmt 全 PASS。

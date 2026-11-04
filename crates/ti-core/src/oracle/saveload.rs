@@ -46,7 +46,7 @@ pub fn oracle_migrate_v1_to_v2(s: &SaveSlot) -> SaveSlot {
         map_slot: s.map_slot,
         position: s.position,
         rng_steps: s.rng_steps,
-        unlocked_mask: 0,
+        unlocked_mask: 0u32,
         boat_level: 1,
 
         v4: None,
@@ -88,7 +88,7 @@ pub fn oracle_read_slot(bytes: &[u8]) -> Result<SaveSlot, SaveErr> {
         map_slot,
         position,
         rng_steps: 0,
-        unlocked_mask: 0,
+        unlocked_mask: 0u32,
         boat_level: 1,
 
         v4: None,
@@ -144,7 +144,7 @@ pub fn oracle_read_slot_v1(bytes: &[u8]) -> Result<SaveSlot, SaveErr> {
         map_slot,
         position,
         rng_steps: 0,
-        unlocked_mask: 0,
+        unlocked_mask: 0u32,
         boat_level: 1,
 
         v4: None,
@@ -170,7 +170,7 @@ mod tests {
             map_slot: 0,
             position: 50,
             rng_steps: 0,
-            unlocked_mask: 0,
+            unlocked_mask: 0u32,
             boat_level: 1,
 
             v4: None,
@@ -205,7 +205,7 @@ mod tests {
                             map_slot: ms,
                             position: pos,
                             rng_steps: 0,
-                            unlocked_mask: 0,
+                            unlocked_mask: 0u32,
                             boat_level: 1,
 
                             v4: None,
@@ -231,7 +231,7 @@ mod tests {
             map_slot: 2,
             position: 100,
             rng_steps: 0,
-            unlocked_mask: 0,
+            unlocked_mask: 0u32,
             boat_level: 1,
 
             v4: None,
