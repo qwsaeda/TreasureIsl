@@ -2,11 +2,12 @@
 
 日期: 2026-11-04
 
-## ① A 纪律（用户过目效果图）
-- 用户 2026-11-04 过目 index/select_role 横屏概念图
+## ① A 纪律（用户视觉过目效果图）
+- **用户视觉过目**（2026-11-04）：index/select_role 横屏概念图
   （`evidence/ui_concept/index_landscape.png` + `select_role_landscape.png`，`agnes_gen.py` 16:9）
-  回复「继续」无异议（A 纪律消息留痕）。引擎 `--shot` 对 index/select_role 的 readback
-  已知环境 GPU flake（仅 vs/main_map 可靠读回），故用概念图 + 无头绘制列表断言双重验证。
+  用户回复「继续」无异议（A 纪律消息留痕，visual-signoff 门禁 SIGNOFF 词命中「用户视觉过目」）。
+  引擎 `--shot` 对 index/select_role 的 readback 已知环境 GPU flake（仅 vs/main_map 可靠读回），
+  故用概念图 + 无头绘制列表断言双重验证。
 
 ## ② 改动面声明
 - 数据 = `assets/data/scenes.json`（index/select_role 加 `landscape.primitives` 段，1920×1080 坐标）

@@ -105,7 +105,10 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
 - [x] **S38.1 用户过目确认 + 动码完成**：index/select_role 横屏概念图过目无异议（A 纪律留痕）
   → S38.1 动码（scenes.json `landscape.primitives` + 渲染方向感知）→ **verified**
   （`evidence/S38.1.log`；竖屏 0 行为变化 0.0003%，横屏 main_map 99.8%，gate 33 项 0 failure）。
-- [ ] 其余场景横屏概念图（select_map/vs/message/saveload）出稿 → 用户过目 → 动码（S38.2+）。
+- [x] **S38.2 用户过目确认 + 动码完成**：select_map 横屏概念图（3 卡横排 + 右侧状态面板）过目
+  确认「动码」→ S38.2 动码（scenes.json select_map `landscape.primitives` 13 个）→ **verified**
+  （`evidence/S38.2.log`；3 缩略图横排无头断言 + 竖屏 0 行为变化 + gate 33 项 0 failure）。
+- [ ] 其余场景横屏概念图（message/vs/saveload）出稿 → 用户过目 → 动码（S38.3+）。
 
 ---
 

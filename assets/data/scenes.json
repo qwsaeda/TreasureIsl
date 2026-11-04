@@ -2526,6 +2526,199 @@
     "w": 562,
     "h": 1190
    }
+  },
+  "landscape": {
+   "primitives": [
+    {
+     "kind": "image",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "color": "",
+     "z": 3,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/bg_night_sea.png"
+     }
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 20,
+      "y": 140,
+      "w": 1160,
+      "h": 760
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 40,
+      "y": 200,
+      "w": 360,
+      "h": 280
+     },
+     "color": "",
+     "z": 5,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/map_harbour.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 420,
+      "y": 200,
+      "w": 360,
+      "h": 280
+     },
+     "color": "",
+     "z": 5,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/map_open_sea.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 800,
+      "y": 200,
+      "w": 360,
+      "h": 280
+     },
+     "color": "",
+     "z": 5,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/map_reef.png"
+     }
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 40,
+      "y": 200,
+      "w": 360,
+      "h": 280
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 40,
+      "y": 200,
+      "w": 360,
+      "h": 2
+     },
+     "color": "panel_wood",
+     "z": 5,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 420,
+      "y": 200,
+      "w": 360,
+      "h": 280
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 420,
+      "y": 200,
+      "w": 360,
+      "h": 2
+     },
+     "color": "panel_wood",
+     "z": 5,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 800,
+      "y": 200,
+      "w": 360,
+      "h": 280
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 800,
+      "y": 200,
+      "w": 360,
+      "h": 2
+     },
+     "color": "panel_wood",
+     "z": 5,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 760,
+      "y": 24,
+      "w": 400,
+      "h": 96
+     },
+     "color": "gold_warm",
+     "z": 8,
+     "when": "",
+     "item": -1,
+     "params": {
+      "text_key": "scene.select_map.title",
+      "tier": "body"
+     }
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 0,
+      "y": 1030,
+      "w": 1920,
+      "h": 50
+     },
+     "color": "text_on_parch",
+     "z": 11,
+     "when": "",
+     "item": -1,
+     "params": {
+      "text_key": "scene.select_map.nav_hint",
+      "tier": "hint"
+     }
+    }
+   ]
   }
  },
  "main_map": {

@@ -109,3 +109,47 @@ fn select_role_landscape_world_layer() {
         "select_role 竖屏 bg 应 1080×1920（0 行为变化），got {rects:?}"
     );
 }
+
+/// S38：`select_map` 横屏世界层（bg 满屏 + 3 张地图缩略图**横排**），竖屏对照（竖排原坐标）。
+#[test]
+fn select_map_landscape_world_layer() {
+    // 横屏：3 张缩略图横排（left panel 20,140,1160,760 内 x=40/420/800，y=200）
+    let mut app = game(true);
+    ti_app::forward_nav::navigate(&mut app, "select_map");
+    app.render();
+    let rects = image_rects(&app);
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
+        }),
+        "select_map 横屏 bg 应满屏 1920×1080，got {rects:?}"
+    );
+    let expect: &[(&str, i32, i32)] =
+        &[("map_harbour.png", 40, 200), ("map_open_sea.png", 420, 200), ("map_reef.png", 800, 200)];
+    for (asset, ex, ey) in expect {
+        assert!(
+            rects.iter().any(|(a, x, y, w, h)| {
+                a.ends_with(asset) && *x == *ex && *y == *ey && *w == 360 && *h == 280
+            }),
+            "select_map 横屏 {asset} 应在 ({ex},{ey},360,280)，got {rects:?}"
+        );
+    }
+
+    // 竖屏对照（0 行为变化 = 竖排原坐标）
+    let mut app = game(false);
+    ti_app::forward_nav::navigate(&mut app, "select_map");
+    app.render();
+    let rects = image_rects(&app);
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1080 && *h == 1920
+        }),
+        "select_map 竖屏 bg 应 1080×1920（0 行为变化），got {rects:?}"
+    );
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("map_harbour.png") && *x == 96 && *y == 240 && *w == 400 && *h == 280
+        }),
+        "select_map 竖屏 map_harbour 应在 (96,240,400,280)，got {rects:?}"
+    );
+}

@@ -1,0 +1,56 @@
+# S38.2 场景横屏布局第二增量（select_map 选图 3 卡横屏）—— 方案 A 横屏版面重排
+
+日期: 2026-11-04
+
+## ① A 纪律（用户视觉过目效果图）
+- **用户视觉过目**（2026-11-04）：select_map 横屏概念图
+  （`evidence/ui_concept/select_map_landscape.png`，`agnes_gen.py` 16:9，2K）
+  用户确认「动码」（A 纪律消息留痕，visual-signoff 门禁 SIGNOFF 词命中「用户视觉过目」）。
+- 概念图 = 3 张地图卡横排居中（港湾/公海/礁石群岛）+ 右侧 3 状态面板（星级/锁态）
+  + 标题顶中 + 底部导航。**首次生成 9 卡（3×3 重复）已重生成修正为仅 3 卡横排**。
+
+## ② 改动面声明
+- 数据 = `assets/data/scenes.json`（select_map 加 `landscape.primitives` 段，1920×1080 坐标）
+- 表现 = `ti-app`（`render_primitives_filtered` 横屏选 `prims_for(landscape)`，S38.1 已通用；
+  select_map 世界层横屏路径复用，本任务零渲染代码改动）
+- 表现 = `ti-engine`（bevy_ui 面板 `build_select_map_chrome` 横屏自动重排 = % 定位引擎自带，
+  0 代码改动）
+
+## ③ 代码落点
+- 数据：`scenes.json` select_map `landscape.primitives` 13 个（省略 `ui_layer=bevy_ui` 原语 11-28，
+  右侧选项面板由 bevy_ui 画）：
+  - bg_night_sea 满屏 (0,0,1920,1080) z=3
+  - 左侧面板 (20,140,1160,760) z=4
+  - 3 张地图缩略图**横排** (40/420/800, 200, 360, 280) z=5（竖屏是竖排 x=96/156/216, y=240/560/880）
+  - 缩略图底/顶边 6 个 rect z=4/z=5
+  - 标题顶中 (760,24,400,96) z=8 + 底导航 (0,1030,1920,50) z=11
+- 测试：`crates/ti-app/tests/landscape_drawlist.rs` 加 `select_map_landscape_world_layer`
+  （横屏 3 缩略图横排断言 + 竖屏 0 行为变化对照）
+- bevy_ui 右侧面板（`build_select_map_chrome` PanelSide::Right）：% 定位（right 3% + width 34%），
+  resize 横屏自动重排 = 引擎自带（S29.5 已证明 bevy_ui 真重排），0 代码改动
+
+## ④ 测试判据（无头，不依赖 GPU readback）
+- `cargo test -p ti-app --test landscape_drawlist` **3/3**：
+  - select_map 横屏：bg (0,0,1920,1080) + map_harbour (40,200,360,280) + map_open_sea (420,200,360,280)
+    + map_reef (800,200,360,280)（3 缩略图横排）；
+  - 竖屏对照：bg (0,0,1080,1920) + map_harbour (96,240,400,280) = 0 行为变化
+  - index/select_role 既有断言仍过（S38.1 回归）
+- `cargo clippy --workspace --all-targets -- -D warnings` 0 新 warning；`cargo fmt --check` 干净
+- `audit_code.py` 0 违规
+
+## ⑤ 竖屏 0 行为变化 / 横屏出图
+- 竖屏对照在 ④ 测试内断言（select_map 竖屏原坐标，landscape 段不影响竖屏路径）
+- **select_map `--shot` readback 已知环境 GPU flake**（仅 vs/main_map 可靠读回）：
+  横屏版面用上述无头绘制列表断言（④）证明坐标正确，非 --shot 回归
+- 横屏 main_map `--shot --viewport=1920x1080` 基础设施出图已由 S38.0/S38.1 证明
+
+## ⑥ gate
+- `scripts/gate.ps1` **33 项 0 failure**（wasm-browser-e2e L1~L5 全 PASS；serve 已修复供最新 wasm）
+- `doccheck` 0 error；`doccheck2` 0 error（`layout-doc-table-cross-check` 剥除 `landscape` 段 + 
+  `visual-signoff` 修正 S38.1 evidence 措辞命中 SIGNOFF）；`validate_data` OK（scenes.json indent=1 规范形）；
+  `check_code_standards` PASS；`ledger` 0 error
+
+## 结论
+**S38.2 verified**：select_map 横屏版面重排落地（scenes.json `landscape.primitives` 13 个，
+3 缩略图横排 + 右侧 bevy_ui 面板自动重排）；竖屏 0 行为变化（测试断言）；
+横屏世界层坐标无头断言全绿；gate 33 项 0 failure。用户已视觉过目 select_map 横屏概念图（A 纪律留痕）。
