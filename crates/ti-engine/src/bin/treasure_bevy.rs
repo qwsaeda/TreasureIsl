@@ -626,15 +626,27 @@ fn letterbox() -> f32 {
     letterbox_size(WIN_W as f32, WIN_H as f32)
 }
 
-/// 任意窗口物理尺寸的 letterbox 视口比（`min(w/1080, h/1920)` = 像素/逻辑单位；
+/// 任意窗口物理尺寸的 letterbox 视口比（`min(w/LW, h/LH)` = 像素/逻辑单位；
 /// 2026-10-26 窗口缩放跟随）。
+///
+/// S38 方案 A：**方向感知**——横屏窗口用 `LANDSCAPE_W/H`（1920×1080）逻辑尺寸，
+/// 竖屏用 `LOGICAL_W/H`（1080×1920）。与 `canvas.rs::viewport_scale` 同口径
+/// （S38.0 曾遗漏本函数 ⇒ `--shot --viewport=1920x1080` 仍走竖屏 contain，横屏黑边 + 内容偏右）。
 ///
 /// ⚠️ 口径：这是 **shell 视口比**（`Viewport::fit` 同值），**不是** Bevy 正交 `scale`；
 /// Bevy 侧取其倒数（见 [`bevy_ortho_scale`]）。
 #[allow(clippy::cast_precision_loss)]
 fn letterbox_size(window_w: f32, window_h: f32) -> f32 {
-    let w = window_w / LOGICAL_W as f32;
-    let h = window_h / LOGICAL_H as f32;
+    let (lw, lh) = if window_w >= window_h {
+        (
+            ti_render::framebuffer::LANDSCAPE_W_I32 as f32,
+            ti_render::framebuffer::LANDSCAPE_H_I32 as f32,
+        )
+    } else {
+        (LOGICAL_W as f32, LOGICAL_H as f32)
+    };
+    let w = window_w / lw;
+    let h = window_h / lh;
     if w < h { w } else { h }
 }
 

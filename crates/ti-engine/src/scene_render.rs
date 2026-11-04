@@ -626,8 +626,11 @@ pub fn spawn_draw_list(
                 // （`to_world` 翻转）⇒ 世界角 = **取反**（`-θ`），同角度下屏幕/世界视觉一致。
                 let handle: Handle<Image> = world.resource::<AssetServer>().load(asset.clone());
                 let color = if *tint == 0xFFFF { Color::WHITE } else { rgb565_to_color(*tint) };
+                // S38 方案 A：方向感知（与 Rect/Text 同口径；曾遗漏用竖屏 `to_world`
+                // ⇒ 横屏下所有图片原语错位，`--shot --viewport=1920x1080` 黑边 + 内容偏右上）。
                 let mut transform = Transform::from_translation(
-                    to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0).extend(z),
+                    to_world_dims(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0, lw, lh)
+                        .extend(z),
                 );
                 if *rot_mdeg != 0 {
                     #[allow(clippy::cast_precision_loss)]
