@@ -629,3 +629,6 @@ S34.0 违反项修复（U20 战报拆分 `draw_result_scene` + U21 生物移格�
 
 **预判**：写横屏 `landscape` 块时坐标直接按 8 的倍数取（x/y/w/h % 8 == 0），不写视觉
 顺手值再等门禁抓；对称元素以 960 为轴心对称（960 ± 8n）。
+
+### EXP-161 代码：横屏 --shot 图片原语错位：DrawOp::Image 用竖屏 to_world 漏方向感知（只改了 Rect/Text）
+**现象**：S38 横屏 `--shot --viewport=1920x1080 --scene=main_map` 出图黑边 + 内容偏右上（岛在竖屏换算位而非 960,520 居中），竖屏 `--shot` 正常。\n\n**根因**：`crates/ti-engine/src/scene_render.rs::spawn_draw_list` 的 S38 方向感知**只改了 `Rect` 和 `Text`**（改用 `to_world_dims(…,lw,lh)`），`DrawOp::Image` 分支仍用竖屏硬编码 `to_world`（`x-540, 960-y`）。横屏下所有图片原语（ocean_bg/岛/舵轮/罗盘/骷髅格）被放到竖屏坐标 → 错位偏右上；Rect/Text 正常 → 画面半对半错。\n\n**解法**：`Image` op 改 `to_world_dims(cx, cy, lw, lh)`（与 Rect/Text 同口径）；竖屏 `to_world_dims(landscape=false)` ≡ `to_world`，0 行为变化。`landscape_spawn` 测试只覆盖 `spawn_draw_list` 的 Rect op（无 Image 断言）→ 未拦住。\n\n**验证**：横屏 `--shot` main_map 出图正确满屏（岛 960,520 居中 + 舵轮 350,880 + 罗盘 1560,880，无黑边）；竖屏无回归；landscape_spawn 3/3 + clippy 0 warning + gate 33 项 0 failure。\n\n**预判**：S38 方向感知改动要**逐分支核对**（Rect/Text/Image/Clear/其它）；给 `landscape_spawn` 补 Image op 断言（不只 Rect）。

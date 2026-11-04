@@ -34,7 +34,7 @@
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 19 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 33 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 38 |
-  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 47 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 48 |
 
 ## 条目索引
 
@@ -200,6 +200,7 @@
 | EXP-158 | build | | gate wasm-browser-e2e L5 主地图资产未取到（疑似 asset_present wasm 恒 false）；单独重跑 python3 scripts/wasm_browser_e2e.py L1~L5 全 PASS = transient（serve/资产加载时序）；e2e FAIL 先重跑再归因 + serve 供最新 wasm 正文见 `build.md` |
 | EXP-159 | build | | git push 连接超时（Failed to connect github.com port 443 after 135s/Internal Server Error）transient；sleep 15-25s 重试成功；push 失败先重试（间隔递增），不要改 remote/不要慌 正文见 `build.md` |
 | EXP-160 | tools | | 文档注释标识符缺反引号触发 clippy doc_markdown（含 tests/*.rs 测试文件）；cargo build 不跑 clippy 漏到阶段末才抓；提交前跑 clippy --all-targets（含测试）+ 注释标识符加反引号 正文见 `tools.md` |
+| EXP-161 | code | | S38 横屏适配只把 spawn_draw_list 的 Rect/Text 改用 to_world_dims，Image op 仍用竖屏 to_world → 横屏 --shot 所有图片原语（岛/舵轮/罗盘/格）错位竖屏坐标（黑边+内容偏右上）；改 Image op 同口径 to_world_dims 即修 正文见 `code.md` |
 
 ## 条目格式（写新条时照抄）
 
