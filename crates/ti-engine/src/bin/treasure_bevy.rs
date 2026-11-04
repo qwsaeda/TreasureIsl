@@ -1114,6 +1114,19 @@ fn build_index_chrome(
 
 /// 消息/帮助场景：面板 + 动态标题（`msg.<kind>`）+ 正文（`bevy_ui` 自动折行）+ 页点 + 页码。
 /// 翻页/换页类型时经 `chrome_ui_system` 重建。
+/// S38 方案 A 辅助：面板定位（`%`，意图化）。横屏居中（宽/高 55%，left/top = (100-55)/2）；
+/// 竖屏 = 1080 rect 400,704,608,336 → `%`（0 行为变化）。返回 `(pw, ph, pl, pt)`。
+#[allow(clippy::cast_precision_loss)]
+fn message_panel_params(landscape: bool) -> (f32, f32, f32, f32) {
+    if landscape {
+        (55.0, 55.0, 22.5, 22.5)
+    } else {
+        let cw = ti_render::framebuffer::LOGICAL_W_I32 as f32;
+        let ch = ti_render::framebuffer::LOGICAL_H_I32 as f32;
+        (608.0 / cw * 100.0, 336.0 / ch * 100.0, 400.0 / cw * 100.0, 704.0 / ch * 100.0)
+    }
+}
+
 fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &GameApp) -> Entity {
     let root = commands
         .spawn((
@@ -1135,17 +1148,20 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
     let body_key = page_text(kind, page);
     let body = ti_app::i18n::sget(&body_key);
     let page_str = ti_app::i18n::sgetf("scene.message.page", &[&(page + 1), &total]);
-    let cw = ti_render::framebuffer::LOGICAL_W_I32 as f32;
-    let ch = ti_render::framebuffer::LOGICAL_H_I32 as f32;
-    // 面板（1080 rect 400,704,608,336 → `%`；暖棕底 + flex column）
+    // S38 方案 A：横屏面板居中（宽/高 55%，意图化 = 概念图 message_landscape 居中羊皮纸）；
+    // 竖屏 = 1080 rect 400,704,608,336 → `%`（0 行为变化）。
+    let landscape =
+        app.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let (pw, ph, pl, pt) = message_panel_params(landscape);
+    // 面板（暖棕底 + flex column）
     let panel = commands
         .spawn((
             bevy::ui::Node {
-                width: bevy::ui::Val::Percent(608.0 / cw * 100.0),
-                height: bevy::ui::Val::Percent(336.0 / ch * 100.0),
+                width: bevy::ui::Val::Percent(pw),
+                height: bevy::ui::Val::Percent(ph),
                 position_type: bevy::ui::PositionType::Absolute,
-                left: bevy::ui::Val::Percent(400.0 / cw * 100.0),
-                top: bevy::ui::Val::Percent(704.0 / ch * 100.0),
+                left: bevy::ui::Val::Percent(pl),
+                top: bevy::ui::Val::Percent(pt),
                 display: bevy::ui::Display::Flex,
                 flex_direction: bevy::ui::FlexDirection::Column,
                 align_items: bevy::ui::AlignItems::Center,

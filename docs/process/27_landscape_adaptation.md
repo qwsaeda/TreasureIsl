@@ -108,7 +108,11 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
 - [x] **S38.2 用户过目确认 + 动码完成**：select_map 横屏概念图（3 卡横排 + 右侧状态面板）过目
   确认「动码」→ S38.2 动码（scenes.json select_map `landscape.primitives` 13 个）→ **verified**
   （`evidence/S38.2.log`；3 缩略图横排无头断言 + 竖屏 0 行为变化 + gate 33 项 0 failure）。
-- [ ] 其余场景横屏概念图（message/vs/saveload）出稿 → 用户过目 → 动码（S38.3+）。
+- [x] **S38.3 用户过目确认 + 动码完成**：message 横屏概念图（居中帮助面板）过目确认「动码」
+  → S38.3 动码（scenes.json message `landscape.primitives` bg 满屏 + `build_message_chrome`
+  面板横屏居中 55%）→ **verified**（`evidence/S38.3.log`；无头断言 + 竖屏 0 行为变化 +
+  gate 33 项 0 failure）。
+- [ ] 其余场景横屏概念图（vs/saveload）出稿 → 用户过目 → 动码（S38.4+）。
 
 ---
 

@@ -153,3 +153,32 @@ fn select_map_landscape_world_layer() {
         "select_map 竖屏 map_harbour 应在 (96,240,400,280)，got {rects:?}"
     );
 }
+
+/// S38：`message` 横屏世界层（bg 满屏），竖屏对照（0 行为变化）。
+/// 面板/导航 = `bevy_ui`（`build_message_chrome`），横屏面板居中由 `bevy_ui` 适配。
+#[test]
+fn message_landscape_world_layer() {
+    // 横屏：bg 满屏 1920×1080
+    let mut app = game(true);
+    ti_app::forward_nav::navigate(&mut app, "message");
+    app.render();
+    let rects = image_rects(&app);
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
+        }),
+        "message 横屏 bg 应满屏 1920×1080，got {rects:?}"
+    );
+
+    // 竖屏对照
+    let mut app = game(false);
+    ti_app::forward_nav::navigate(&mut app, "message");
+    app.render();
+    let rects = image_rects(&app);
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1080 && *h == 1920
+        }),
+        "message 竖屏 bg 应 1080×1920（0 行为变化），got {rects:?}"
+    );
+}

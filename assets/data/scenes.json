@@ -3431,6 +3431,26 @@
    "y": 704,
    "w": 608,
    "h": 336
+  },
+  "landscape": {
+   "primitives": [
+    {
+     "kind": "image",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "color": "",
+     "z": 3,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/bg_night_sea.png"
+     }
+    }
+   ]
   }
  },
  "saveload": {

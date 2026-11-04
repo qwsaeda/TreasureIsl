@@ -1,0 +1,47 @@
+# S38.3 场景横屏布局第三增量（message 帮助面板横屏）—— 方案 A 横屏版面重排
+
+日期: 2026-11-04
+
+## ① A 纪律（用户视觉过目效果图）
+- **用户视觉过目**（2026-11-04）：message 横屏概念图
+  （`evidence/ui_concept/message_landscape.png`，`agnes_gen.py` 16:9，2K）
+  用户确认「动码」（A 纪律消息留痕，visual-signoff 门禁 SIGNOFF 词命中「用户视觉过目」）。
+- 概念图 = 居中羊皮纸帮助面板（标题「游戏帮助」+ 正文 + 页码点）+ 深蓝夜空航海背景。
+
+## ② 改动面声明
+- 数据 = `assets/data/scenes.json`（message 加 `landscape.primitives` 段 = bg 满屏 1920×1080）
+- 表现 = `ti-engine`（`build_message_chrome` 横屏面板居中适配 + `message_panel_params` 辅助）
+- 测试 = `crates/ti-app/tests/landscape_drawlist.rs` 加 `message_landscape_world_layer`
+
+## ③ 代码落点
+- 数据：`scenes.json` message `landscape.primitives` 1 个（bg_night_sea 满屏 (0,0,1920,1080) z=3；
+  面板/导航 bevy_ui 原语 1-4 省略）
+- bevy_ui：`build_message_chrome` 面板 % 定位竖屏基于 LOGICAL_W/H（400,704,608,336 → %），
+  横屏抽 `message_panel_params` 居中（宽/高 55%，left/top 22.5%）—— 概念图居中羊皮纸。
+  竖屏路径 0 行为变化（返回原 % 值）。
+- 测试：`landscape_drawlist` 加 `message_landscape_world_layer`
+  （横屏 bg (0,0,1920,1080) + 竖屏对照 (0,0,1080,1920) = 0 行为变化）
+
+## ④ 测试判据（无头，不依赖 GPU readback）
+- `cargo test -p ti-app --test landscape_drawlist` **4/4**（index/select_role/select_map/message
+  横屏断言 + 竖屏对照）
+- `cargo clippy --workspace --all-targets -- -D warnings` 0 新 warning（`message_panel_params`
+  抽走后 build_message_chrome ≤100 行）；`cargo fmt --check` 干净
+- `audit_code.py` 0 违规
+
+## ⑤ 竖屏 0 行为变化 / 横屏出图
+- 竖屏对照在 ④ 测试内断言（message 竖屏原坐标，landscape 段不影响竖屏路径）
+- **message `--shot` readback 已知环境 GPU flake**（仅 vs/main_map 可靠读回）：
+  横屏版面用无头绘制列表断言（④）证明坐标正确，非 --shot 回归
+- bevy_ui 面板横屏居中 = `%` 定位（引擎自带，S29.5 已证明 bevy_ui 真重排）
+
+## ⑥ gate
+- `scripts/gate.ps1` **33 项 0 failure**（wasm-browser-e2e L1~L5 全 PASS；重建 wasm 含
+  build_message_chrome 改动后 serve 供新产物）
+- `doccheck` 0 error；`doccheck2` 0 error；`validate_data` OK（scenes.json indent=1 规范形）；
+  `check_code_standards` PASS；`ledger` 0 error
+
+## 结论
+**S38.3 verified**：message 横屏版面重排落地（scenes.json `landscape.primitives` bg 满屏 +
+bevy_ui 面板横屏居中 55%）；竖屏 0 行为变化（测试断言）；横屏世界层坐标无头断言全绿；
+gate 33 项 0 failure。用户已视觉过目 message 横屏概念图（A 纪律留痕）。
