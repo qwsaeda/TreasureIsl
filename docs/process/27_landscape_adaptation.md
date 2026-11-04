@@ -30,10 +30,14 @@
 - 引入**方向感知**：运行时按窗口纵横比选 `PORTRAIT(1080×1920)` 或 `LANDSCAPE(1920×1080)`。
 - **两套逻辑坐标系并存**：`LOGICAL_W/H_I32` 保持竖屏，新增 `LANDSCAPE_W/H = 1920/1080` 常量；
   `viewport_scale` 改按当前方向取 `min(win_w/CANVAS_W, win_h/CANVAS_H)`（方向自适应）。
-- 世界层数据：`scenes.json` 每场景加 `layout: {portrait: {...}, landscape: {...}}`（现有竖屏值 = portrait，
-  **横屏值 = 竖屏坐标顺时针旋转 90° + 手工重排**——不是简单镜像，需按横屏视觉重心重排）。
-- UI chrome 层：bevy_ui 已有 taffy 自动布局，横屏时**重排方向**（flex 方向/百分比随方向）。
-- 游戏世界 `portrait_zones`/`focus_anchor`/`bbox` 每场景**横竖双份**（`scene_manifest_v3.json` 加 landscape 段）。
+- 世界层数据：`scenes.json` 每场景加 `landscape: {primitives, extra}` 块（**竖屏现有值不动 =
+  portrait 默认，0 行为变化**；横屏值 = **每场景独立重排的 1920×1080 坐标**——不是旋转/镜像，
+  按横屏视觉重心重排定稿）。`landscape.primitives` = 横屏原语表（`prims_for(landscape)` 选中），
+  `landscape.extra` = 横屏专属额外矩形（`extra_for(landscape)` 选中，回退竖屏 `extra`）。
+- UI chrome 层：bevy_ui 已有 taffy 自动布局，横屏时**重排方向**（flex 方向/百分比随方向，
+  % 定位 = 引擎自带 resize 重排，如 message 面板横屏居中 55%）。
+- 游戏世界场景（vs/main_map，S29.3e 留 1080）：**数据驱动横屏布局**（vs = 羊皮框 + 顶双 HP 框 +
+  角色对角；main_map v6 = 椭圆格环 31 格，`main_map_v6_layout_landscape.json`）。
 - **工作量**：大（~7 场景 × 坐标重排 + 双份数据 + 方向切换逻辑），但**一次到位**、横竖屏都完整。
 
 ### 方案 B：横屏 = 竖屏内容旋转 90°（廉价，不推荐）
@@ -62,21 +66,27 @@ pub const LANDSCAPE_W_I32: i32 = 1920; // 横屏
 pub const LANDSCAPE_H_I32: i32 = 1080;
 ```
 
-### 4.3 数据层双份
-- `scenes.json` 每场景 primitives 加 `orientation: "portrait"|"landscape"` 或按方向切换整组；
-  现有值默认 portrait（0 行为变化）。
-- `scene_manifest_v3.json` 每场景 `focus.bbox_pct`/`portrait_zones` 加 landscape 值。
-- `ui_schema` 校验（`validate_data`）加「方向字段合法性」断言。
+### 4.3 数据层双份（落地 = `landscape` 块）
+- `scenes.json` 每场景 `landscape: {primitives, extra}`（1920×1080 坐标）；现有 `primitives`/`extra`
+  保持竖屏默认（0 行为变化）。`SceneLayout::prims_for(landscape)` / `extra_for(landscape)` 按方向选中，
+  `landscape` 块缺席 = 空 = 回退竖屏。
+- `ti-core` `SceneLayout` 加 `landscape_prims` / `landscape_extra`（解析口径同竖屏，EXP-074/RectDefault）。
+- `validate_data` 校验 `scenes.json` indent=1 规范形 + `landscape` 段 8pt 栅格（doccheck2
+  `scene-layout-fidelity` 扫描 `landscape.extra` 键）。
 
-### 4.4 世界层渲染
-- `scene_render.rs` 按 `is_landscape` 选逻辑画布（1080×1920 或 1920×1080），`viewport_scale` 方向自适应。
-- 每场景横屏绘制 = 竖屏坐标**旋转 90° 基准 + 手工重排**（各场景按横屏视觉重心定稿）。
+### 4.4 世界层渲染（落地）
+- `chrome::render_primitives_filtered`：横屏且场景声明 `landscape.primitives` 时用横屏原语
+  （`prims_for(landscape)`），`ui_layer=bevy_ui` 原语跳过（同竖屏口径）。
+- 游戏世界场景（vs/main_map）：方向感知 blit（横屏 1920×1080 / 竖屏 1080×1920）+ 屏心 960
+  （竖屏 540）；数据驱动横屏布局（`vs_anim_proto_landscape` / `main_map_v6_layout_landscape.json`）。
 
-### 4.5 UI chrome 层
-- bevy_ui 节点已 `%` 定位 + flex；横屏时按 `orientation` 切换布局参数（如列表 flex 方向、面板位置）。
+### 4.5 UI chrome 层（落地）
+- bevy_ui 节点 `%` 定位 + flex；横屏时按方向切换布局参数（message 面板横屏居中 55%；
+  select_map 右侧列表 / saveload 左侧列表 % 定位 = 引擎自带 resize 重排，0 代码改动）。
 
-### 4.6 命中
-- `pick.rs::hit_1080_pick` 窗口逻辑 px → **当前方向**逻辑坐标换算（letterbox 按方向 scale + 偏移）。
+### 4.6 命中（落地）
+- `pick.rs::hit_1080_pick` 窗口逻辑 px → **当前方向**逻辑坐标换算（letterbox 按方向 scale + 偏移，
+  S38.0 已接方向感知）。
 
 ## 5. 验收判据（草案）
 
@@ -144,3 +154,61 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
 
 ### S38.1 起场景横屏布局（每场景独立任务，动码前过目效果图）
 - index / select_role / select_map / main_map / vs / message / saveload（7 场景横屏重排）。
+- **S38 全部 7 场景已收口 verified**（S38.1~S38.6，见 §7 确认点逐行 + `evidence/S38.{1..6}.log`；
+  `landscape_drawlist.rs` 7/7 无头断言 + 竖屏 0 行为变化 + gate 33 项 0 failure）。
+
+---
+
+## 9. 横屏设计规范（S38 落地固化）
+
+> S38.0~S38.6 已全部 verified（7 场景横屏收口）。本段 = **落地后的设计规范单一事实源**，
+> 改横屏布局/加横屏场景/换坐标系前必读（与 §4 轮廓一致，此处为定稿口径）。
+
+### 9.1 方向感知基础（S38.0）
+- `is_landscape(win_w, win_h) = win_w >= win_h`；`LANDSCAPE_W/H = 1920/1080`（`LOGICAL_W/H` 保持竖屏）。
+- `viewport_scale` 方向自适应：横屏 `min(win_w/1920, win_h/1080)`，竖屏 `min(win_w/1080, win_h/1920)`。
+- 命中/相机/`--shot --viewport=1920x1080` 全部方向感知；**竖屏路径 0 行为变化**（横屏分支隔离）。
+
+### 9.2 横屏数据契约（scenes.json `landscape` 块）
+- **结构**：每场景 `landscape: {primitives: [...], extra: {...}}`。
+  - `primitives` = 1920×1080 原语表（缺 = 空 = 回退竖屏 `primitives`；`prims_for(landscape)` 选中）。
+  - `extra` = 横屏专属额外矩形（player_hp/boss_hp/hud_gold/…；缺 = 空 = 回退竖屏 `extra`；
+    `extra_for(landscape)` 选中）。
+- **坐标系**：横屏原语/extra 一律 1920×1080（**8pt 栅格**：x/y/w/h 须 8 整除，doccheck2
+  `scene-layout-fidelity` 扫描 `landscape.extra` 键；对称屏心 = 960，竖屏屏心 = 540）。
+- **ui_layer 口径**：已迁 bevy_ui 的 chrome 原语标 `params.ui_layer: "bevy_ui"`（横屏块同口径），
+  `render_primitives_filtered` 跳过（由 bevy_ui 层画）。
+- **资产路径**：沿用 `assets/ui/` 已登记资产（`ui_manifest.json` 单一事实源），横屏不新增资产路径。
+
+### 9.3 渲染方向感知契约
+- `chrome::render_primitives_filtered`：横屏且 `landscape.primitives` 非空 → `prims_for(landscape)`；
+  否则竖屏（0 行为变化）。
+- **游戏世界场景（vs/main_map，S29.3e 留 1080）**：方向感知 blit 尺寸（横屏 1920×1080 / 竖屏
+  1080×1920）+ 数据驱动横屏布局；屏心横屏 960 / 竖屏 540。
+- **bevy_ui 场景**（5 纯 UI）：`%` 定位 + flex = 引擎自带 resize 重排；横屏特殊面板（message
+  居中 55%）经 `*_panel_params(landscape)` 辅助函数抽参（竖屏返回原 % 值）。
+
+### 9.4 7 场景横屏构图定稿
+| 场景 | 横屏构图 | 数据源 |
+|---|---|---|
+| index | 罗盘环 + 6 徽章径向 + 中心舵轮（横屏居中） | `landscape.primitives` |
+| select_role | 5 角色卡横排 + 右侧属性面板 | `landscape.primitives` |
+| select_map | 3 地图卡横排 + 右侧状态面板 | `landscape.primitives`（13） |
+| message | bg 满屏 + 帮助面板居中 55% | `landscape.primitives` + `message_panel_params` |
+| saveload | 5 按钮右侧竖排 + bevy_ui 5 槽左列 | `landscape.primitives`（8） |
+| vs | 羊皮框（inset 44）+ 顶双 HP 框（64/976,880×110 8pt）+ VS 徽标屏心 + 角色对角 | `landscape.primitives`（16）+ `landscape.extra`（6）+ `vs_anim_proto_landscape` |
+| main_map v6 | 中央岛（960,520）+ 椭圆格环 31 格（rx=760/ry=330 均匀弧距）+ 船左下 + 罗盘右下 + 顶 HUD | `main_map_v6_layout_landscape.json` + `landscape.primitives`（6）+ `landscape.extra`（4） |
+
+### 9.5 验收判据（S38 实测标准）
+- **主判据 = 无头绘制列表断言**（`crates/ti-app/tests/landscape_drawlist.rs` 7/7）：横屏坐标
+  （1920×1080 原语/布局）+ 竖屏 0 行为变化对照。因多数场景 `--shot` readback 已知环境 GPU flake
+  （仅 vs/main_map 可靠读回），**横屏版面用 draw list 级断言证明**（非 --shot 回归）。
+- 每场景：gate 33 项 0 failure + doccheck/doccheck2 0 error + audit_code 0 违规（拆分超限文件）。
+- **改横屏布局**：改 `scenes.json` `landscape` 块 → 更新 `landscape_drawlist.rs` 对应断言 → gate 全绿。
+
+### 9.6 固化纪律
+- 横屏坐标/构图 = 本文件单一事实源；`08_layout_design.md` 表值仍竖屏（横屏不并入竖屏表，
+  避免双份漂移——横屏值在 `scenes.json` `landscape` 块 + 本文件 §9.4）。
+- 新增横屏场景 = 登记 `landscape_drawlist` 测试 + 过目该场景横屏效果图（A 纪律）+ 本节补行。
+- `validate_data` / doccheck2 `scene-layout-fidelity`（8pt 栅格）/ `layout-doc-table-cross-check`
+  （已剥除 `landscape` 段）守住数据面。
