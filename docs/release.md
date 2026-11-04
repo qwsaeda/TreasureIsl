@@ -19,12 +19,13 @@
 
 ## 版本（25_versioning.md 单一事实源）
 
-> **当前版本 = `0.1.0`**（`Cargo.toml` `[workspace.package] version` 单源；`AndroidManifest versionName` 同步；
+> **当前版本 = `0.2.0`**（`Cargo.toml` `[workspace.package] version` 单源；`AndroidManifest versionName` 同步；
 > 产物命名带版本 = `TreasureIsl-<x.y.z>-<arch>.apk` / `treasure_bevy_wasm-<x.y.z>.wasm`）。
 > 版本规划 = 发布历史（§发布）每行带 x.y.z + 日期 + 变更摘要 + 产物 sha256；bump 规则见 `docs/process/25_versioning.md` §3。
 
 | 版本 | 日期 | 变更摘要 | 产物 | sha256 |
 |---|---|---|---|---|
+| `0.2.0` | 2026-11-04 | S36/S37 新内容系统：5 席多人热座 v3（S36）+ 20 图推进链与地图包（S37）+ main_map v6/VS v4 重设计（S34）+ APK 体积标准（S35） | `TreasureIsl-0.2.0-arm64.apk` / `treasure_bevy_wasm-0.2.0.wasm` | wasm `5AA839C8502B6EA97193C540FA7B69579F705072BFFF7595159EE731EE60D442`（45,712,494 B；APK 构建时回填） |
 | `0.1.0` | 2026-11-01 | S0–S35 演进基线（逆向收口 + 现代化移植 + UI 重设计 v2→v6 + 领地系统 + 开发平台 + 测试标杆 + 版本规范定稿） | `TreasureIsl-0.1.0-arm64.apk` / `treasure_bevy_wasm-0.1.0.wasm` | wasm `8109F3C87EFEA644645F44A4B32972207FCFB1281B31FA3FC3CCFED3E340E74E`（45,582,959 B；APK 构建时回填） |
 
 ## 平台产物

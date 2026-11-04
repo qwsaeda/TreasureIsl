@@ -5058,7 +5058,7 @@ dependencies = [
 
 [[package]]
 name = "ti-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ab_glyph",
  "png 0.17.16",
@@ -5073,7 +5073,7 @@ dependencies = [
 
 [[package]]
 name = "ti-console"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "flate2",
  "serde_json",
@@ -5082,7 +5082,7 @@ dependencies = [
 
 [[package]]
 name = "ti-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rand_core 0.9.5",
  "rand_pcg",
@@ -5093,11 +5093,11 @@ dependencies = [
 
 [[package]]
 name = "ti-devmeta"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "ti-engine"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ab_glyph",
  "bevy",
@@ -5116,7 +5116,7 @@ dependencies = [
 
 [[package]]
 name = "ti-formats"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "flate2",
  "thiserror 2.0.21",
@@ -5124,7 +5124,7 @@ dependencies = [
 
 [[package]]
 name = "ti-platform"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bevy",
  "opus-pure",
@@ -5137,7 +5137,7 @@ dependencies = [
 
 [[package]]
 name = "ti-render"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ab_glyph",
  "serde",
@@ -5146,7 +5146,7 @@ dependencies = [
 
 [[package]]
 name = "ti-tools"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "fnv",
  "serde",
