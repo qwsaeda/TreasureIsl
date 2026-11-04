@@ -40,6 +40,18 @@ fn image_rects(app: &GameApp) -> Vec<(String, i32, i32, i32, i32)> {
         .collect()
 }
 
+/// 收集 draw list 中的 `Rect` op（x, y, w, h）。
+fn rect_rects(app: &GameApp) -> Vec<(i32, i32, i32, i32)> {
+    app.draw_list()
+        .ops
+        .iter()
+        .filter_map(|op| match op {
+            DrawOp::Rect { x, y, w, h, .. } => Some((*x, *y, *w, *h)),
+            _ => None,
+        })
+        .collect()
+}
+
 /// S38：`index` 横屏世界层（`chart_full` 满屏 + `helm` 屏心），竖屏对照（原坐标）。
 #[test]
 fn index_landscape_world_layer() {
@@ -180,5 +192,44 @@ fn message_landscape_world_layer() {
             a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1080 && *h == 1920
         }),
         "message 竖屏 bg 应 1080×1920（0 行为变化），got {rects:?}"
+    );
+}
+
+/// S38：`saveload` 横屏世界层（bg 满屏 + 5 按钮右侧竖排），竖屏对照（右侧按钮原坐标）。
+/// 5 槽列表 = `bevy_ui`（`build_list_chrome_pos` `PanelSide::Left`），横屏左侧自动重排。
+#[test]
+fn saveload_landscape_world_layer() {
+    // 横屏：bg 满屏 + slot1 按钮 (1680,125,180,150)
+    let mut app = game(true);
+    ti_app::forward_nav::navigate(&mut app, "saveload");
+    app.render();
+    let imgs = image_rects(&app);
+    assert!(
+        imgs.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
+        }),
+        "saveload 横屏 bg 应满屏 1920×1080，got {imgs:?}"
+    );
+    let rects = rect_rects(&app);
+    assert!(
+        rects.iter().any(|(x, y, w, h)| *x == 1680 && *y == 125 && *w == 180 && *h == 150),
+        "saveload 横屏 slot1 按钮应在 (1680,125,180,150)，got {rects:?}"
+    );
+
+    // 竖屏对照（0 行为变化）
+    let mut app = game(false);
+    ti_app::forward_nav::navigate(&mut app, "saveload");
+    app.render();
+    let imgs = image_rects(&app);
+    assert!(
+        imgs.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1080 && *h == 1920
+        }),
+        "saveload 竖屏 bg 应 1080×1920（0 行为变化），got {imgs:?}"
+    );
+    let rects = rect_rects(&app);
+    assert!(
+        rects.iter().any(|(x, y, w, h)| *x == 760 && *y == 240 && *w == 160 && *h == 224),
+        "saveload 竖屏 slot1 按钮应在 (760,240,160,224)，got {rects:?}"
     );
 }

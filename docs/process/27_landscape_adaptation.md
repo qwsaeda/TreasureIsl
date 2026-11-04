@@ -112,7 +112,10 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
   → S38.3 动码（scenes.json message `landscape.primitives` bg 满屏 + `build_message_chrome`
   面板横屏居中 55%）→ **verified**（`evidence/S38.3.log`；无头断言 + 竖屏 0 行为变化 +
   gate 33 项 0 failure）。
-- [ ] 其余场景横屏概念图（vs/saveload）出稿 → 用户过目 → 动码（S38.4+）。
+- [x] **S38.4 用户过目确认 + 动码完成**：saveload 横屏概念图（5 槽左列 + 右侧按钮）过目确认
+  「动码」→ S38.4 动码（scenes.json saveload `landscape.primitives` 8 个：bg 满屏 + 5 按钮右侧竖排）
+  → **verified**（`evidence/S38.4.log`；无头断言 + 竖屏 0 行为变化 + gate 33 项 0 failure）。
+- [ ] 其余场景横屏概念图（vs）出稿 → 用户过目 → 动码（S38.5）。
 
 ---
 

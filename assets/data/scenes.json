@@ -3676,6 +3676,125 @@
     "w": 637,
     "h": 1210
    }
+  },
+  "landscape": {
+   "primitives": [
+    {
+     "kind": "image",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "color": "",
+     "z": 3,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/bg_night_sea.png"
+     }
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 1680,
+      "y": 125,
+      "w": 180,
+      "h": 150
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 1680,
+      "y": 295,
+      "w": 180,
+      "h": 150
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 1680,
+      "y": 465,
+      "w": 180,
+      "h": 150
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 1680,
+      "y": 635,
+      "w": 180,
+      "h": 150
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 1680,
+      "y": 805,
+      "w": 180,
+      "h": 150
+     },
+     "color": "panel_wood",
+     "z": 4,
+     "when": "",
+     "item": -1
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 760,
+      "y": 24,
+      "w": 400,
+      "h": 96
+     },
+     "color": "gold_warm",
+     "z": 8,
+     "when": "",
+     "item": -1,
+     "params": {
+      "text_key": "scene.saveload.title",
+      "tier": "body"
+     }
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 0,
+      "y": 1030,
+      "w": 1920,
+      "h": 50
+     },
+     "color": "text_on_parch",
+     "z": 11,
+     "when": "",
+     "item": -1,
+     "params": {
+      "text_key": "scene.saveload.nav_hint",
+      "tier": "hint"
+     }
+    }
+   ]
   }
  }
 }

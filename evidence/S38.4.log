@@ -1,0 +1,46 @@
+# S38.4 场景横屏布局第四增量（saveload 存读档 5 槽横屏）—— 方案 A 横屏版面重排
+
+日期: 2026-11-04
+
+## ① A 纪律（用户视觉过目效果图）
+- **用户视觉过目**（2026-11-04）：saveload 横屏概念图
+  （`evidence/ui_concept/saveload_landscape.png`，`agnes_gen.py` 16:9，2K）
+  用户确认「动码」（A 纪律消息留痕，visual-signoff 门禁 SIGNOFF 词命中「用户视觉过目」）。
+- 概念图 = 5 存档槽左列 + 右侧操作按钮列 + 标题顶中 + 底导航。*注：AI 画 6 按钮，实际 5 个，
+  方向一致，动码按 5 个。*
+
+## ② 改动面声明
+- 数据 = `assets/data/scenes.json`（saveload 加 `landscape.primitives` 段，1920×1080 坐标）
+- 测试 = `crates/ti-app/tests/landscape_drawlist.rs` 加 `saveload_landscape_world_layer` + `rect_rects`
+- bevy_ui 5 槽列表横屏左侧自动重排（`build_list_chrome_pos` PanelSide::Left，% 定位引擎自带，
+  0 代码改动）
+
+## ③ 代码落点
+- 数据：`scenes.json` saveload `landscape.primitives` 8 个（省略 ui_layer=bevy_ui 槽列表原语 1/4/5/8/9）：
+  - bg_night_sea 满屏 (0,0,1920,1080) z=3
+  - 5 按钮右侧竖排 (1680,125/295/465/635/805,180,150) z=4（竖屏 x=760, y=240/496/752/1008/1264, 160,224）
+  - 标题顶中 (760,24,400,96) z=8 + 底导航 (0,1030,1920,50) z=11
+- 测试：`landscape_drawlist` 加 `saveload_landscape_world_layer`
+  （横屏 bg (0,0,1920,1080) + slot1 按钮 (1680,125,180,150) + 竖屏对照 (760,240,160,224) = 0 行为变化）
+
+## ④ 测试判据（无头，不依赖 GPU readback）
+- `cargo test -p ti-app --test landscape_drawlist` **5/5**（index/select_role/select_map/message/saveload
+  横屏断言 + 竖屏对照）
+- `cargo clippy --workspace --all-targets -- -D warnings` 0 新 warning；`cargo fmt --check` 干净
+- `audit_code.py` 0 违规
+
+## ⑤ 竖屏 0 行为变化 / 横屏出图
+- 竖屏对照在 ④ 测试内断言（saveload 竖屏原坐标，landscape 段不影响竖屏路径）
+- **saveload `--shot` readback 已知环境 GPU flake**（仅 vs/main_map 可靠读回）：
+  横屏版面用无头绘制列表断言（④）证明坐标正确，非 --shot 回归
+- bevy_ui 5 槽列表横屏左侧 = `%` 定位（引擎自带，S29.5 已证明 bevy_ui 真重排）
+
+## ⑥ gate
+- `scripts/gate.ps1` **33 项 0 failure**（wasm-browser-e2e L1~L5 全 PASS）
+- `doccheck` 0 error；`doccheck2` 0 error；`validate_data` OK（scenes.json indent=1 规范形）；
+  `check_code_standards` PASS；`ledger` 0 error
+
+## 结论
+**S38.4 verified**：saveload 横屏版面重排落地（scenes.json `landscape.primitives` 8 个，
+5 按钮右侧竖排 + bevy_ui 5 槽列表左侧自动重排）；竖屏 0 行为变化（测试断言）；
+横屏世界层坐标无头断言全绿；gate 33 项 0 failure。用户已视觉过目 saveload 横屏概念图（A 纪律留痕）。
