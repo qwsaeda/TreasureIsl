@@ -44,6 +44,7 @@ fmt: 全库规范 CRLF→LF 行尾（rustfmt newline_style=Unix）+ modernizatio
 - **每完成一个任务合入 `master` 后自动推送**（无需用户逐次指令）：`git push -u origin master`（首次带 `-u`，后续 `git push` 即可）。
 - 开发节奏：完成一个任务并 gate 全绿、台账 verified → commit → **自动推远端**，作为进度备份；不要攒多个任务才推一次。
 - 网络不通时：本地照常 commit，记录「待推送」，网络恢复后补推（不阻塞本地开发，但不得长期积压不推）。
+- **push 重试纪律（EXP-159）**：连接超时/5xx（`Failed to connect ... port 443` / `Internal Server Error`）多为 transient——**先 `sleep` 15-25s 递增重试 2-3 次**（TCP 建连被拒有冷却，立即重试通常仍失败），**不要中途改 remote/URL**；连续 3 次失败才记「待推送」并检查网络。
 
 ## 推送检查清单（每次推送前）
 
