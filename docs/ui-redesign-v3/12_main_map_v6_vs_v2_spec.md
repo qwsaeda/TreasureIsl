@@ -191,6 +191,12 @@
   - `evidence/ui_concept/vs_v4_result_lose.png`（败北横幅 + 战报兵力条 + 嘲讽）
   - 合并预览：`evidence/ui_concept/vs_v4_sheet.png`
 - **引擎渲染原型**：`crates/ti-app/src/scenes/vs_anim_proto.rs` `render_v4_hud`（开关 `TI_VS_V4=1`，已编译通过，待用户确认后转默认路径）。
+- **落码接线（转默认路径 = 删除开关守卫）**：
+  - `render_v2_elem` 内 `if v4_layout() { render_v4_hud(...) }` → 直接调 `render_v4_hud`（v4 取代烘焙帧）；
+  - 指令区（跳过/确认/重打）接 `bevy_picking` `pick_key`（`route_hit` 映射：skip=Advance 跳过 / confirm=settle 确认 / retry=重打）；
+  - 兵力数据 = `BattleSnapshot` 运行态（同 §2.5，非演示常量）；
+  - 格类分层（attack/raid/boss/encounter）沿用 `render_v4_hud` `class` 参数（背景/主题资产随格类）；
+  - 4 帧时间轴（clash→duel→result）沿用 `anim_ms` 时钟。
 - **旧 `11_vs_spec.md` §4 五套版式 A/B/C/D/E 作废**（被 v4 纯 HUD 取代，详见该文件作废注记）。
 
 ---
@@ -239,5 +245,7 @@
 | VS 时间轴 | 列阵→冲锋→结算→横幅顺序可复现 + `--shot` 定格 |
 | VS 格类分层 | 5 类各出一张可区分画面 |
 | VS v4 对角线构图（§2.8） | 我方左下 1.15× / 敌方右上 1.0× + 斜地线 + 斜冲虚线交叉 VS 徽标 + 脚下椭圆投影（`vs_v4_*` 4 帧出图肉眼判定） |
+| VS v4 HUD 三件套在位 | clash/duel 帧含 敌方面板右上 + 我方面板左上（名字+兵力双条+人手/武器/武装三数）+ 底部指令区（跳过/确认/重打）三键，非插画海报 |
+| VS v4 指令区命中 | 跳过/确认/重打 三键 `pick_key` 命中各自动作（非「点哪都结算」） |
 | VS 地图换主题 | `TI_MAP=m02 --shot vs` 背景/BOSS ≠ m01 |
 | 战报数值 | = crew/arms 数据，与 `balance.combat.manpower` 对得上 |
