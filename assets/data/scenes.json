@@ -660,7 +660,104 @@
     "text": "金银岛 v1 · 桌面版",
     "tier": "hint"
    }
-  ]
+  ],
+  "landscape": {
+   "primitives": [
+    {
+     "kind": "image",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "z": -13,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/chart_full.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 600,
+      "y": 16,
+      "w": 720,
+      "h": 140
+     },
+     "z": -12,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/hud_plaque.png"
+     }
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 600,
+      "y": 32,
+      "w": 720,
+      "h": 72
+     },
+     "z": -11,
+     "item": -1,
+     "when": "",
+     "color": "text_on_wood",
+     "tier": "title",
+     "text": "金银岛"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 600,
+      "y": 100,
+      "w": 720,
+      "h": 40
+     },
+     "z": -11,
+     "item": -1,
+     "when": "",
+     "color": "text_on_wood",
+     "tier": "hint",
+     "text": "Treasure Isl · 航海贸易"
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 828,
+      "y": 408,
+      "w": 264,
+      "h": 264
+     },
+     "z": -9,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/helm.png"
+     }
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 560,
+      "y": 1015,
+      "w": 800,
+      "h": 40
+     },
+     "z": -4,
+     "item": -1,
+     "when": "",
+     "color": "text_on_wood",
+     "tier": "hint",
+     "text": "金银岛 v1 · 桌面版"
+    }
+   ]
+  }
  },
  "select_role": {
   "title": {
@@ -1431,6 +1528,455 @@
    "y": 184,
    "w": 440,
    "h": 664
+  },
+  "landscape": {
+   "primitives": [
+    {
+     "kind": "image",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "z": -13,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/bg_night_sea.png"
+     }
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 700
+     },
+     "z": -12,
+     "item": -1,
+     "when": "",
+     "color": "panel_wood"
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 700
+     },
+     "z": -11,
+     "item": 0,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/role_panda.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 700
+     },
+     "z": -11,
+     "item": 1,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/role_tichy.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 700
+     },
+     "z": -11,
+     "item": 2,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/role_kidd.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 700
+     },
+     "z": -11,
+     "item": 3,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/role_drake.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 700
+     },
+     "z": -11,
+     "item": 4,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/role_katharina.png"
+     }
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 6
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 6
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 6
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 6
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 6
+     },
+     "z": -12,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 6
+     },
+     "z": -11,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 614,
+      "y": 110,
+      "w": 6,
+      "h": 700
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 614,
+      "y": 110,
+      "w": 6,
+      "h": 700
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 614,
+      "y": 110,
+      "w": 6,
+      "h": 700
+     },
+     "z": -12,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 614,
+      "y": 110,
+      "w": 6,
+      "h": 700
+     },
+     "z": -11,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 6,
+      "h": 700
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "rect",
+     "rect": {
+      "x": 60,
+      "y": 110,
+      "w": 560,
+      "h": 6
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "brass"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 820,
+      "w": 520,
+      "h": 90
+     },
+     "z": -10,
+     "item": 0,
+     "when": "selected",
+     "color": "gold_warm",
+     "tier": "title",
+     "text_key": "role.name.panda"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 915,
+      "w": 520,
+      "h": 50
+     },
+     "z": -10,
+     "item": 0,
+     "when": "selected",
+     "color": "brass_light",
+     "tier": "hint",
+     "text_key": "role.desc.panda"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 820,
+      "w": 520,
+      "h": 90
+     },
+     "z": -10,
+     "item": 1,
+     "when": "selected",
+     "color": "gold_warm",
+     "tier": "title",
+     "text_key": "role.name.tichy"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 915,
+      "w": 520,
+      "h": 50
+     },
+     "z": -10,
+     "item": 1,
+     "when": "selected",
+     "color": "brass_light",
+     "tier": "hint",
+     "text_key": "role.desc.tichy"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 820,
+      "w": 520,
+      "h": 90
+     },
+     "z": -10,
+     "item": 2,
+     "when": "selected",
+     "color": "gold_warm",
+     "tier": "title",
+     "text_key": "role.name.kidd"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 915,
+      "w": 520,
+      "h": 50
+     },
+     "z": -10,
+     "item": 2,
+     "when": "selected",
+     "color": "brass_light",
+     "tier": "hint",
+     "text_key": "role.desc.kidd"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 820,
+      "w": 520,
+      "h": 90
+     },
+     "z": -10,
+     "item": 3,
+     "when": "selected",
+     "color": "gold_warm",
+     "tier": "title",
+     "text_key": "role.name.drake"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 915,
+      "w": 520,
+      "h": 50
+     },
+     "z": -10,
+     "item": 3,
+     "when": "selected",
+     "color": "brass_light",
+     "tier": "hint",
+     "text_key": "role.desc.drake"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 820,
+      "w": 520,
+      "h": 90
+     },
+     "z": -10,
+     "item": 4,
+     "when": "selected",
+     "color": "gold_warm",
+     "tier": "title",
+     "text_key": "role.name.katharina"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 80,
+      "y": 915,
+      "w": 520,
+      "h": 50
+     },
+     "z": -10,
+     "item": 4,
+     "when": "selected",
+     "color": "brass_light",
+     "tier": "hint",
+     "text_key": "role.desc.katharina"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 60,
+      "y": 24,
+      "w": 560,
+      "h": 64
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "gold_warm",
+     "tier": "title",
+     "text_key": "scene.select_role.title"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 0,
+      "y": 1010,
+      "w": 1920,
+      "h": 50
+     },
+     "z": -10,
+     "item": -1,
+     "when": "",
+     "color": "text_on_parch",
+     "tier": "body",
+     "text_key": "scene.select_role.nav_hint"
+    }
+   ]
   }
  },
  "select_map": {

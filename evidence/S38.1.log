@@ -1,0 +1,60 @@
+# S38.1 场景横屏布局第一增量（index 罗盘环 + select_role 列表）—— 方案 A 横屏版面重排
+
+日期: 2026-11-04
+
+## ① A 纪律（用户过目效果图）
+- 用户 2026-11-04 过目 index/select_role 横屏概念图
+  （`evidence/ui_concept/index_landscape.png` + `select_role_landscape.png`，`agnes_gen.py` 16:9）
+  回复「继续」无异议（A 纪律消息留痕）。引擎 `--shot` 对 index/select_role 的 readback
+  已知环境 GPU flake（仅 vs/main_map 可靠读回），故用概念图 + 无头绘制列表断言双重验证。
+
+## ② 改动面声明
+- 数据 = `assets/data/scenes.json`（index/select_role 加 `landscape.primitives` 段，1920×1080 坐标）
+- 规则实现 = `ti-core`（`SceneLayout.landscape_prims` + `RawScene.landscape` 解析 + `prims_for`）
+- 表现 = `ti-engine`（`to_world_dims`/`logical_dims` + `spawn_draw_list`/`spawn_pick_layer` 方向感知
+  + `build_index_chrome` 罗盘环横屏等半径 + `--shot` 方向按目标宽高比）
+- 表现 = `ti-app`（`render_primitives` 横屏选 `landscape.primitives`）
+
+## ③ 代码落点
+- `ti-core`：`SceneLayout.landscape_prims`（`prims_for(landscape)`）+ `RawScene.landscape`
+  （`RawLandscape.primitives`）+ `parse_prim_values`（竖屏/横屏共用）
+- `ti-engine`：`to_world_dims(x,y,lw,lh)`（横屏 1920×1080 中心对折）+ `logical_dims` +
+  `spawn_draw_list`/`spawn_pick_layer` 加 `landscape: bool` + `index_ring_params`（横屏等半径圆环）
+  + `run_shot` `contain_scale` 按方向适配 + `--shot` 方向按 target 宽高比 + `native_index_system` 方向感知
+- `ti-app`：`render_primitives_filtered` 横屏用 `layout.prims_for(landscape)`
+- 数据：`scenes.json` index 横屏 6 prims（chart_full 满屏 1920×1080 + 舵轮屏心 828,408 + 标题顶中）
+  + select_role 横屏 31 prims（bg 满屏 + 立绘面板左 60,110,560,700 + 名称/简介 + 顶标题 + 底导航）
+
+## ④ 测试判据（无头，不依赖 GPU readback）
+- `cargo test -p ti-app --test landscape_drawlist` **2/2**：
+  - index 横屏 `chart_full` (0,0,1920,1080) + `helm` (828,408,264,264)（屏心）；
+    竖屏对照 `chart_full` (0,0,1080,1920) + `helm` (408,838) = 0 行为变化
+  - select_role 横屏 `bg_night_sea` (0,0,1920,1080) + 立绘面板 (60,110,560,700)；
+    竖屏对照 `bg_night_sea` (0,0,1080,1920) = 0 行为变化
+- `cargo test -p ti-engine --test landscape_spawn` **3/3**：
+  - `spawn_draw_list` 横屏矩形 (100,50,200,100) → 世界 (-760,440)（以 960,540 中心对折）；
+  - 竖屏 → (-340,860)（0 行为变化）；
+  - 横屏文本方向感知（x=1000 屏心右侧）
+- `cargo test -p ti-engine --test canvas_contract` **13/13**（含 S38 `is_landscape`/`logical_dims`/`viewport_scale`）
+- `cargo build --workspace` 0 error；`cargo clippy --workspace --all-targets -- -D warnings` 0 新 warning
+- `audit_code.py` 0 违规（`build_index_chrome` 抽 `index_ring_params` 后 151→<140 行）
+
+## ⑤ 竖屏 0 行为变化 / 横屏出图
+- 竖屏 `--shot --scene=main_map` 与 S38.1 前基线对拍：非动画区 diff=6/2,073,600 = **0.0003%**
+  （creature bob 动画区 x:340-722,y:1348-1598 除外；6px = 动画边缘亚像素噪声，非布局回归）
+- 横屏 `--shot --scene=main_map --viewport=1920x1080`：1920×1080 非黑 **99.8%**
+  （基础设施 + 世界层横屏出图证明）
+- **index/select_role `--shot` readback 已知环境 GPU flake**（仅 vs/main_map 可靠读回）：
+  横屏版面用上述无头绘制列表断言（④）证明坐标正确，非 --shot 回归
+
+## ⑥ gate
+- `scripts/gate.ps1` **33 项 0 failure**（含 wasm-browser-e2e L1~L5 全 PASS；
+  先前 FAIL 系旧 serve 进程供错内容，重启 serve 后自愈，非代码回归）
+- `doccheck` 0 error；`doccheck2` 0 error（`layout-doc-table-cross-check` 剥除 `landscape` 段，
+  §4 表镜像竖屏版面，横屏归 `27_landscape_adaptation.md`）；`validate_data` OK；
+  `check_code_standards` PASS；`ledger` 0 error
+
+## 结论
+**S38.1 verified**：index/select_role 横屏版面重排落地（方案 A：scenes.json `landscape.primitives`
+1920×1080 + 渲染层方向感知 + bevy_ui 罗盘环横屏等半径）；竖屏 0 行为变化（0.0003%）；
+横屏世界层坐标无头断言全绿；gate 33 项 0 failure。用户已过目横屏概念图（A 纪律留痕）。

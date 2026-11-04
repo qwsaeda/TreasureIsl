@@ -89,26 +89,10 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
             .collect();
         // S18.6 声明式原语表（`primitives` 数组；有序 = 绘制顺序；缺 = 空 Vec）。
         // 单项解析失败（形状不对）= 跳过该项（不 panic、不整场景失败）：数据先行、渲染后补。
-        let primitives: Vec<Primitive> = r
-            .primitives
-            .into_iter()
-            .filter_map(|v| {
-                let pj: PrimitiveJson = serde_json::from_value(v).ok()?;
-                Some(Primitive {
-                    kind: pj.kind,
-                    rect: Rect::from(pj.rect),
-                    param: pj.param,
-                    color: pj.color,
-                    text: pj.text,
-                    text_key: pj.text_key,
-                    params: pj.params,
-                    when: pj.when,
-                    item: pj.item,
-                    z: pj.z,
-                    tier: pj.tier,
-                })
-            })
-            .collect();
+        let primitives: Vec<Primitive> = parse_prim_values(r.primitives);
+        // S38 方案 A：横屏原语表（`landscape.primitives`；缺 = 空 = 回退竖屏 `primitives`）。
+        let landscape_prims: Vec<Primitive> =
+            r.landscape.map(|l| parse_prim_values(l.primitives)).unwrap_or_default();
         // 飞轮 R1 ④-05：v3 氛围星空星位表（`ambient_art.stars` 数组；单项解析失败 = 跳过该项，
         // 与 `primitives` 同容错口径；缺键 = 空 Vec = 不画星点）。
         let ambient_stars: Vec<AmbientStar> = r
@@ -146,6 +130,7 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
                 extra_scalar,
                 portrait_zones,
                 primitives,
+                landscape_prims,
                 ambient_stars,
             },
         );
@@ -178,6 +163,40 @@ struct RawScene {
     /// S18.6 声明式原语表（有序 = 绘制顺序；缺 = 空）。
     #[serde(default)]
     primitives: Vec<serde_json::Value>,
+    /// S38 方案 A：横屏覆盖段（`landscape.primitives` = 横屏 1920×1080 原语表；缺 = 无横屏覆盖）。
+    #[serde(default)]
+    landscape: Option<RawLandscape>,
+}
+
+/// 横屏覆盖段（S38 方案 A：每场景可声明 `landscape` 块，提供横屏 1920×1080 原语表）。
+#[derive(Deserialize)]
+struct RawLandscape {
+    /// 横屏原语表（有序 = 绘制顺序；缺 = 空 = 回退竖屏 `primitives`）。
+    #[serde(default)]
+    primitives: Vec<serde_json::Value>,
+}
+
+/// 原语 JSON 值数组 → [`Primitive`]（单项解析失败 = 跳过该项；S38 抽出供竖屏/横屏共用）。
+fn parse_prim_values(values: Vec<serde_json::Value>) -> Vec<Primitive> {
+    values
+        .into_iter()
+        .filter_map(|v| {
+            let pj: PrimitiveJson = serde_json::from_value(v).ok()?;
+            Some(Primitive {
+                kind: pj.kind,
+                rect: Rect::from(pj.rect),
+                param: pj.param,
+                color: pj.color,
+                text: pj.text,
+                text_key: pj.text_key,
+                params: pj.params,
+                when: pj.when,
+                item: pj.item,
+                z: pj.z,
+                tier: pj.tier,
+            })
+        })
+        .collect()
 }
 
 /// 单个原语的数据形状（`scenes.json` `primitives[]` 一项）。

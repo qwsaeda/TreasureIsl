@@ -102,8 +102,10 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
 - [x] **S38.1 场景横屏概念图出稿**：index（罗盘环+6 徽章+中心舵轮，横屏居中）+ select_role
   （5 角色卡横排+右侧属性面板）——`evidence/ui_concept/index_landscape.png` +
   `select_role_landscape.png`（`agnes_gen.py` 16:9）。
-- [ ] **S38.1 用户过目确认**：index/select_role 横屏概念图过目后动码。
-- [ ] 其余场景横屏概念图（select_map/vs/message/saveload）出稿 → 用户过目 → 动码。
+- [x] **S38.1 用户过目确认 + 动码完成**：index/select_role 横屏概念图过目无异议（A 纪律留痕）
+  → S38.1 动码（scenes.json `landscape.primitives` + 渲染方向感知）→ **verified**
+  （`evidence/S38.1.log`；竖屏 0 行为变化 0.0003%，横屏 main_map 99.8%，gate 33 项 0 failure）。
+- [ ] 其余场景横屏概念图（select_map/vs/message/saveload）出稿 → 用户过目 → 动码（S38.2+）。
 
 ---
 

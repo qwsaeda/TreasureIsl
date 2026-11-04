@@ -733,6 +733,21 @@ pub struct SceneLayout {
     pub portrait_zones: Vec<Rect>,
     /// 声明式原语表（`scenes.json` 的 `primitives`，有序 = 绘制顺序；缺 = 空 Vec）。
     pub primitives: Vec<Primitive>,
+    /// S38 方案 A：横屏原语表（`scenes.json` 的 `landscape.primitives`；非空 = 横屏
+    /// 覆盖 `primitives`，空 = 无横屏覆盖 → 回退竖屏）。坐标 1920×1080。
+    pub landscape_prims: Vec<Primitive>,
+}
+
+impl SceneLayout {
+    /// 当前方向的原语表（S38：横屏且声明了 `landscape_prims` 时用横屏，否则竖屏）。
+    #[must_use]
+    pub fn prims_for(&self, landscape: bool) -> &[Primitive] {
+        if landscape && !self.landscape_prims.is_empty() {
+            &self.landscape_prims
+        } else {
+            &self.primitives
+        }
+    }
 }
 
 // ------------------------------------------------------------------- 缓存入口

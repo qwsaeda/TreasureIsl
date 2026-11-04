@@ -1246,8 +1246,12 @@ pub fn render_primitives_filtered(
 ) {
     let layout = scene_layout(scene_id);
     let theme = host.theme().clone();
+    // S38 方案 A：横屏且场景声明了 `landscape.primitives` 时用横屏原语（1920×1080 坐标）。
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let prims_src = layout.prims_for(landscape);
     // 层序：z 升序 = 越大越靠上（调用序即层序，`08_render_arch.md` 契约 1）。
-    let mut prims: Vec<&Primitive> = layout.primitives.iter().collect();
+    let mut prims: Vec<&Primitive> = prims_src.iter().collect();
     prims.sort_by_key(|p| p.z);
     // S29.3（B1）：已迁 bevy_ui 的 chrome 原语跳过（`params["ui_layer"] == "bevy_ui"`）——
     // Bevy 壳由 `ti-engine` 的 bevy_ui 层画这些 chrome（避免 1080 + bevy_ui 双画）；

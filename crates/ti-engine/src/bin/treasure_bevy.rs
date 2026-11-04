@@ -950,6 +950,35 @@ fn build_scene_chrome(
 /// 首页 6 徽章径向环（**参数化**：环心 + 半径 + 60° 步进算 6 格中心 `%`，不逐格手写像素）。
 /// 每格 = `medallion_ring.png` 底 + 白蒙版图标（`gold`/选中 `text_on_wood` 跨层 tint）+ 文案，
 /// 挂 `PickTarget` key=1 index=0..5（**UI 相机层**命中；1080 层该场景徽章原语已标 `ui_layer` 跳过）。
+/// S38 方案 A 辅助：环参数（`%` 定位，resize 自动重排）。
+/// 竖屏 = 环心 (50%, 970/1920)、半径 400；横屏 = 环心 (50%, 50%)、等半径 300px
+/// （rx/ry 各自 % ⇒ 像素半径相等 = 真圆环）。返回 `(cw, ch, cx, cy, rx, ry, cell_w, cell_h)`。
+#[allow(clippy::cast_precision_loss)]
+fn index_ring_params(landscape: bool) -> (f32, f32, f32, f32, f32, f32, f32, f32) {
+    let (cw, ch, cy_px, radius_px) = if landscape {
+        (
+            ti_render::framebuffer::LANDSCAPE_W_I32 as f32,
+            ti_render::framebuffer::LANDSCAPE_H_I32 as f32,
+            ti_render::framebuffer::LANDSCAPE_H_I32 as f32 / 2.0, // 环心 y = 屏心（横屏居中）
+            300.0,                                                // 等半径（横屏）
+        )
+    } else {
+        (
+            ti_render::framebuffer::LOGICAL_W_I32 as f32,
+            ti_render::framebuffer::LOGICAL_H_I32 as f32,
+            970.0, // 环心 y（竖屏原式）
+            400.0, // 半径（竖屏原式）
+        )
+    };
+    let cx = cw / 2.0 / cw * 100.0; // 环心 x = 屏心（50%）
+    let cy = cy_px / ch * 100.0; // 环心 y
+    let rx = radius_px / cw * 100.0; // 环半径 x（`%` 宽）
+    let ry = radius_px / ch * 100.0; // 环半径 y（`%` 高）
+    let cell_w = 144.0 / cw * 100.0;
+    let cell_h = 144.0 / ch * 100.0;
+    (cw, ch, cx, cy, rx, ry, cell_w, cell_h)
+}
+
 #[allow(clippy::too_many_lines)]
 fn build_index_chrome(
     commands: &mut Commands,
@@ -987,14 +1016,10 @@ fn build_index_chrome(
     let on_wood = ti_engine::canvas::rgb565_to_color(theme.text_on_wood);
     // 环参数（1080 单源：画布尺寸走 `LOGICAL_*` 常量，不裸写 1080/1920/540）：
     // 环心 (画布半宽, 970)、半径 400、6 格 60° 步进（0 = 顶）。
-    let cw = ti_render::framebuffer::LOGICAL_W_I32 as f32;
-    let ch = ti_render::framebuffer::LOGICAL_H_I32 as f32;
-    let cx = cw / 2.0 / cw * 100.0; // 环心 x = 屏心（50%）
-    let cy = 970.0 / ch * 100.0; // 环心 y
-    let rx = 400.0 / cw * 100.0; // 环半径 x（`%` 宽）
-    let ry = 400.0 / ch * 100.0; // 环半径 y（`%` 高）
-    let cell_w = 144.0 / cw * 100.0;
-    let cell_h = 144.0 / ch * 100.0;
+    // S38 方案 A：横屏 = 环心 (50%, 50%)、等半径 300px（rx/ry 各自 % ⇒ 像素半径相等 = 真圆环）；
+    // 竖屏 = 原式（环心 970、半径 400）。0 行为变化：竖屏路径逐字节 = 原值。
+    let landscape = g.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let (_, _, cx, cy, rx, ry, cell_w, cell_h) = index_ring_params(landscape);
     let mut cell_entities = Vec::with_capacity(6);
     for (i, icon_name) in (0..6usize).zip(ICONS.iter()) {
         let deg = -90.0f32 + i as f32 * 60.0;
@@ -1616,6 +1641,10 @@ fn camera_system(
     if let Ok(mut st) = sprite.single_mut() {
         st.translation.x = cam.cam[0] - logical_w / 2.0;
         st.translation.y = logical_h / 2.0 - cam.cam[1];
+        // S38 方案 A：底色精灵随方向缩放（基准 1080×1920；横屏 ×(1920/1080, 1080/1920)），
+        // 方向切换（窗口 resize）时底色铺满新方向画布（0 行为变化：竖屏 scale=1.0）。
+        st.scale.x = logical_w / LOGICAL_W as f32;
+        st.scale.y = logical_h / LOGICAL_H as f32;
     }
 }
 
@@ -1654,6 +1683,8 @@ fn native_index_system(world: &mut World) {
     };
     let list = g.draw_list().clone();
     let scene_key = scene_json_key(g.scene());
+    // S38 方案 A：方向感知（横屏 = draw list/pick 层用 1920×1080 逻辑坐标）。
+    let landscape = g.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
     drop(g);
 
     // S18.7a: 画制列表 -> Bevy 实体（**覆盖全 7 场景**：
@@ -1682,14 +1713,15 @@ fn native_index_system(world: &mut World) {
     let font = world
         .get_resource::<AssetServer>()
         .map(|server| server.load::<Font>("assets/fonts/lxgw-wenkai-reg.ttf"));
-    ti_engine::scene_render::spawn_draw_list(world, font, &list);
+    ti_engine::scene_render::spawn_draw_list(world, font, &list, landscape);
     // S29.2：拾取层（该场景 `primitives` 带 `pick_key` 者挂透明可拾取标记 + `PickTarget`）。
+    // S38：横屏且场景声明了 `landscape.primitives` 时用横屏原语（`prims_for`）。
     let pick_prims: Vec<ti_core::data::Primitive> = ti_core::data::scenes()
         .ok()
         .and_then(|m| m.get(scene_key))
-        .map(|s| s.primitives.clone())
+        .map(|s| s.prims_for(landscape).to_vec())
         .unwrap_or_default();
-    let _n_pick = ti_engine::scene_render::spawn_pick_layer(world, &pick_prims);
+    let _n_pick = ti_engine::scene_render::spawn_pick_layer(world, &pick_prims, landscape);
     native.content_hash = Some(content_hash);
     world.insert_resource(native);
 }
@@ -2139,6 +2171,16 @@ fn run() {
         game.set_chrome_in_bevy_ui(true);
     }
     game.shell_mut().set_audio(0, 0);
+    // S38 方案 A：--shot 多视口按目标宽高比定方向（横屏 target → 场景横屏 1920×1080 坐标渲染；
+    // 无窗（primary_window=None）故 window_resize_system 不跑，此处显式设方向）。
+    if let Some((vw, vh)) = viewport {
+        let orientation = if vw >= vh {
+            ti_platform::settings::Orientation::Landscape
+        } else {
+            ti_platform::settings::Orientation::Portrait
+        };
+        game.shell_mut().set_orientation(orientation);
+    }
     if selftest {
         game.set_rng_seed(SELFTEST_SEED);
     }
@@ -2249,8 +2291,18 @@ fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
     target_image.asset_usage = RenderAssetUsages::RENDER_WORLD;
     let target_handle = app.world_mut().resource_mut::<Assets<Image>>().add(target_image);
     app.insert_resource(ShotTarget(target_handle.clone()));
-    let contain_scale =
-        (LOGICAL_W as f32 / target_w as f32).max(LOGICAL_H as f32 / target_h as f32);
+    // S38 方案 A：contain_scale 按**当前方向**的逻辑画布适配（横屏 target → 1920×1080 世界
+    // 恒完整可见；竖屏 → 1080×1920）。0 行为变化：竖屏 target = 原式 max(1080/W, 1920/H)。
+    let landscape_target = target_w >= target_h;
+    let (lw, lh) = if landscape_target {
+        (
+            ti_render::framebuffer::LANDSCAPE_W_I32 as f32,
+            ti_render::framebuffer::LANDSCAPE_H_I32 as f32,
+        )
+    } else {
+        (LOGICAL_W as f32, LOGICAL_H as f32)
+    };
+    let contain_scale = (lw / target_w as f32).max(lh / target_h as f32);
     app.world_mut().spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {

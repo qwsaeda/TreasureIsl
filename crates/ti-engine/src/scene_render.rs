@@ -28,7 +28,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::text::{Font, FontSize, TextColor};
 
 use crate::canvas::rgb565_to_color;
-use ti_render::framebuffer::{LOGICAL_H_I32, LOGICAL_W_I32};
+use ti_render::framebuffer::{LANDSCAPE_H_I32, LANDSCAPE_W_I32, LOGICAL_H_I32, LOGICAL_W_I32};
 use ti_render::theme::Theme;
 
 /// 逻辑画布宽（1080×1920 单一坐标系，`08_render_arch.md` 契约；
@@ -40,7 +40,23 @@ const LOGICAL_H: f32 = LOGICAL_H_I32 as f32;
 /// 逻辑 → Bevy 世界换算：`world = (cx - 540, 960 - cy)`（y 翻转，S18.2 契约）。
 #[inline]
 fn to_world(x: f32, y: f32) -> Vec2 {
-    Vec2::new(x - LOGICAL_W / 2.0, LOGICAL_H / 2.0 - y)
+    to_world_dims(x, y, LOGICAL_W, LOGICAL_H)
+}
+
+/// S38 方案 A：逻辑 → Bevy 世界换算（方向感知——横屏传 1920×1080，竖屏 1080×1920）。
+#[inline]
+fn to_world_dims(x: f32, y: f32, lw: f32, lh: f32) -> Vec2 {
+    Vec2::new(x - lw / 2.0, lh / 2.0 - y)
+}
+
+/// S38：方向 → 逻辑画布尺寸（横屏 1920×1080，竖屏 1080×1920）。
+#[inline]
+fn logical_dims(landscape: bool) -> (f32, f32) {
+    if landscape {
+        (LANDSCAPE_W_I32 as f32, LANDSCAPE_H_I32 as f32)
+    } else {
+        (LOGICAL_W, LOGICAL_H)
+    }
 }
 
 /// 烘焙位图（RGBA8）—— 供 `Sprite` 采样（图标 / 光晕等像素级形状）。
@@ -444,9 +460,14 @@ fn lerp_rgb565(from: u16, to: u16, t: f32) -> u16 {
 ///
 /// 返回挂出的标记数（`--shot` / 探针日志用）。
 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-pub fn spawn_pick_layer(world: &mut World, prims: &[ti_core::data::Primitive]) -> usize {
+pub fn spawn_pick_layer(
+    world: &mut World,
+    prims: &[ti_core::data::Primitive],
+    landscape: bool,
+) -> usize {
     use crate::pick::{PickLayerEntity, PickTarget};
 
+    let (lw, lh) = logical_dims(landscape);
     let mut count = 0usize;
     for p in prims {
         let key = p
@@ -479,7 +500,7 @@ pub fn spawn_pick_layer(world: &mut World, prims: &[ti_core::data::Primitive]) -
                 bevy::color::Color::srgba(0.0, 0.0, 0.0, 0.0),
                 Vec2::new(p.rect.w as f32, p.rect.h as f32),
             ),
-            Transform::from_translation(to_world(cx, cy).extend(0.0)),
+            Transform::from_translation(to_world_dims(cx, cy, lw, lh).extend(0.0)),
         ));
         count += 1;
     }
@@ -509,13 +530,15 @@ pub struct DrawListEntity;
 /// 返回生成的实体数。
 // S18.8a：门禁新增 wasm 交付壳 clippy 覆盖（`cargo clippy -D warnings` 覆盖到本 crate），
 // `Handle<Font>` 按值传入但函数体只读（`Text2d` 构造需要 owned clone）→ 显式豁免该 lint。
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, clippy::too_many_lines)]
 pub fn spawn_draw_list(
     world: &mut World,
     font: Option<Handle<Font>>,
     list: &ti_render::drawlist::DrawList,
+    landscape: bool,
 ) -> usize {
     let total = list.ops.len();
+    let (lw, lh) = logical_dims(landscape);
     let mut count = 0usize;
     for (idx, op) in list.ops.iter().enumerate() {
         // 层序 = 绘制顺序（z 越大越靠上 = EXP-103）；
@@ -532,8 +555,13 @@ pub fn spawn_draw_list(
                     DrawListEntity,
                     Sprite::from_color(rgb565_to_color(*color), Vec2::new(*w as f32, *h as f32)),
                     Transform::from_translation(
-                        to_world(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0)
-                            .extend(z),
+                        to_world_dims(
+                            *x as f32 + *w as f32 / 2.0,
+                            *y as f32 + *h as f32 / 2.0,
+                            lw,
+                            lh,
+                        )
+                        .extend(z),
                     ),
                 ));
                 count += 1;
@@ -579,8 +607,13 @@ pub fn spawn_draw_list(
                     TextColor(rgb565_to_color(*color)),
                     text_font,
                     Transform::from_translation(
-                        to_world(*x as f32 + width as f32 / 2.0, *y as f32 + height as f32 / 2.0)
-                            .extend(z),
+                        to_world_dims(
+                            *x as f32 + width as f32 / 2.0,
+                            *y as f32 + height as f32 / 2.0,
+                            lw,
+                            lh,
+                        )
+                        .extend(z),
                     ),
                 ));
                 count += 1;

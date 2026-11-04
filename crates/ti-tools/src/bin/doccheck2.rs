@@ -1171,10 +1171,13 @@ fn check_layout_doc_table_cross_check(root: &Path) -> Vec<String> {
         let mut pairs: Vec<(String, i64)> = Vec::new();
         // S18.7：`primitives` 子树 = 通用原语表（数百个坐标逐值镜像不现实；
         // §4 表镜像其**语义**（kind 集 + 来源），坐标由 `scenes.json` 单一事实源）。
+        // S38：`landscape` 段 = 横屏原语（1920×1080），§4 表镜像竖屏版面 ⇒ 一并剥除
+        // （横屏版面归 `27_landscape_adaptation.md` / 各场景横屏设计，不入竖屏 §4 表）。
         let stripped = {
             let mut v = val.clone();
             if let Some(o) = v.as_object_mut() {
                 o.remove("primitives");
+                o.remove("landscape");
             }
             v
         };
