@@ -13,14 +13,16 @@
 //!
 //! **S15.4（架构重构）**：legacy 逐像素 CPU 写帧（`blit_scene` / `blit_scene_frame` /
 //! `blit_sprite` / RGB565 + hd-8bit RGBA 逐像素 blit）已整体移除，运行时像素仅由代码
-//! 绘制（`fill_rect`/`draw_text`）+ GPU 纹理路（feature `gpu-render` 的 `gpu_blit_scene`）
-//! 产生。本模块保留 PCX 解码（`sprite`/`frame`/`advance_animation`）+ GPU blit + HD PNG
-//! 注入（`load_hd_pngs`），供诊断与 GPU 路径使用。
+//! 绘制（`fill_rect`/`draw_text`）。本模块保留 PCX 解码（`sprite`/`frame`/`advance_animation`）
+//! + HD PNG 注入（`load_hd_pngs`），供诊断 bin（`element_dump`/`sprite_step`）与无头测试使用。
+//!
+//! **S7.7（P4-1 路径 2 收口）**：`gpu_blit_scene`（feature `gpu-render` GPU 场景 blit，
+//! 全 workspace 无调用方）已删除——PCX GPU 渲染路径随 S7.5 PNG 切换 + S18 Bevy 迁移
+//! 自然退役，`ti-render` 渲染层 0 PCX 引用；PCX 解码源（`sprite`）保留供诊断。
 
 use std::collections::HashMap;
 
 use ti_formats::lucency::Package;
-use ti_formats::mapfile::{MapControl, MapHeader, MapScene};
 use ti_formats::pcx::Image;
 #[cfg(feature = "hd-8bit")]
 use ti_platform::hd_png::HdPng;
@@ -258,52 +260,7 @@ impl SpriteAtlas {
     pub fn animated_count(&self) -> usize {
         self.f1_to_name.values().filter(|(_, n)| *n > 1).count()
     }
-
-    /// S10.4（feature `gpu-render`）：GPU 场景 blit（逐精灵走 `GpuRenderer::blit_sprite`）。
-    ///
-    /// 不修改帧缓冲（GPU 路径直接上屏），返回成功提交的 draw call 数。
-    #[cfg(feature = "gpu-render")]
-    pub fn gpu_blit_scene(
-        &mut self,
-        scene: &MapScene,
-        renderer: &mut ti_platform::gpu_renderer::GpuRenderer,
-        atlas_texture_id: u32,
-        atlas_base_x: i32,
-        atlas_base_y: i32,
-    ) -> u32 {
-        let Ok(controls) = MapControl::parse_words("scene.Map", &scene.words) else {
-            return 0;
-        };
-        let _frame = self.frame();
-        let mut blitted = 0u32;
-        // z-order 契约 §2：与 `blit_scene_frame` 同为文件倒序（首条顶层）。
-        for ctrl in controls.iter().rev() {
-            if ctrl.f1 == 0 {
-                continue;
-            }
-            let Some(sprite) = self.sprite(ctrl.f1) else {
-                continue;
-            };
-            // 取当前帧的像素区域，转成 GPU SpriteRef（atlas 内坐标）
-            let fw = i32::try_from(sprite.width).unwrap_or(0);
-            let fh = i32::try_from(sprite.height).unwrap_or(0);
-            let ref_ = ti_platform::gpu_renderer::SpriteRef {
-                texture: atlas_texture_id,
-                rect: (atlas_base_x, atlas_base_y, fw, fh),
-            };
-            renderer.blit_sprite(
-                (i32::try_from(ctrl.f2).unwrap_or(0), i32::try_from(ctrl.f3).unwrap_or(0)),
-                &ref_,
-            );
-            blitted += 1;
-        }
-        blitted
-    }
 }
-
-/// 把 `MapHeader` 的字段直接暴露（避免构造 `MapScene` 时的字段访问器依赖）。
-#[allow(dead_code)]
-fn _map_header(_h: &MapHeader) {}
 
 #[cfg(test)]
 mod tests {

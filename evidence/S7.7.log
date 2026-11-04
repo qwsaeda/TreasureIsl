@@ -1,0 +1,40 @@
+# S7.7 P4-1 基准切换（可选路径 2：render_parity 基准 + 删 PCX 渲染路径）
+
+日期: 2026-11-04
+
+## 收口结论
+**S7.7 verified（可选路径 2 执行）**：删 PCX GPU 渲染路径（`SpriteAtlas::gpu_blit_scene`，
+全 workspace 无调用方 dead code）+ 确认 render_parity 断言式基准有效（6/6 绿）。
+S7.5 稳定 ≥2 周条件早已满足（S7.5 于早期阶段 verified，现 S38 阶段）。
+
+## 判据对照（S7.7 dod）
+- **cargo test -p ti-app --test render_parity 新基准全绿**：render_parity 已从「基准图
+  diff」演进为**程序化断言式基准**（S8.6 渲染基线去自指，无基准图文件需重生成）；
+  本轮 **6/6 全绿**（render_is_deterministic_per_scene / each_scene_renders_real_content /
+  distinct_scenes_produce_distinct_frames / index_scene_renders_real_glyphs_for_title /
+  framebuf_matches_logical_resolution / tiformats_baseline_is_non_empty）。
+- **gate 全绿**：`scripts/gate.ps1` **33 项 0 failure**（wasm-browser-e2e L1~L5 全 PASS；
+  重建 wasm 后 serve 供新产物）。
+- **删 PCX 渲染路径**：`crates/ti-app/src/sprite_atlas.rs` 删除
+  `SpriteAtlas::gpu_blit_scene`（feature `gpu-render` GPU 场景 blit，全 workspace
+  grep 0 调用方）+ `_map_header` 死辅助 + 对应 `MapControl/MapScene/MapHeader` import
+  （三者删除后全部 unused）。
+
+## PCX 渲染路径退役评估（路径 2 核心）
+- **ti-render 渲染层 0 PCX 引用**（`grep -rn "pcx" crates/ti-render/src` = 0）：PCX
+  渲染路径已随 S7.5 PNG 切换 + S18 Bevy 迁移自然退役于主渲染。
+- **PCX 解码源保留**（`SpriteAtlas::sprite` + `ti_formats::pcx::Image`）：供诊断 bin
+  （`element_dump`/`sprite_step`，decode-only）+ android 壳精灵回退使用，功能依赖非死代码。
+- **可删项 = `gpu_blit_scene`**（GPU 消费 PCX 的渲染路径，无调用方 dead code）——已删。
+- 删除后 `cargo build -p ti-app` 0 error/warning；`cargo clippy --workspace --all-targets
+  -- -D warnings` 0 新 warning；`audit_code.py` 0 违规。
+
+## 改动面
+- 表现 = `crates/ti-app/src/sprite_atlas.rs`（删 gpu_blit_scene + _map_header + import；
+  模块文档更新「GPU 纹理路退役」）
+- 测试 = `render_parity` 6/6（断言式基准有效，无需重生成基准图）
+
+## 结论
+**S7.7 verified**：PCX GPU 渲染路径（`gpu_blit_scene` dead code）已删；ti-render 渲染层
+0 PCX（主渲染已退役 PCX）；render_parity 断言式基准 6/6 绿；gate 33 项 0 failure。
+PCX 解码源保留（诊断 bin + android 壳功能依赖）。
