@@ -88,6 +88,7 @@
 | 文件 | 内容 |
 |---|---|
 | [`business/00_index.md`](business/00_index.md) | **业务总入口**：与逆向产物的边界 + 设计意图/数值分层 + 编写约定 |
+| [`business/01_game_logic_overview.md`](business/01_game_logic_overview.md) | **游戏逻辑总览（S37）**：全局业务逻辑按章节 + 流程图（Mermaid）；只做总览+索引，规则细节引用各系统单一事实源 |
 | [`business/loop_core.md`](business/loop_core.md) | 核心循环（探索→贸易→建造→卡牌→战斗）、目标/失败、回合节奏 |
 | [`business/economy.md`](business/economy.md) | 贸易（买卖结算/无动态行情）/ 建造（单调升级链）/ 银行（溢出） |
 | [`business/combat.md`](business/combat.md) | 战斗：伤害模型（自主设计非逆向）、回合流程、胜负判定 |

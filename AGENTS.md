@@ -48,6 +48,7 @@
 | **资产登记 / 资源加载标准 / 版面坐标写在哪 / 加资产·加地图（不手写像素 + 统一资产管理）** | `docs/process/18_asset_content_pipeline.md`（行业三档 ①绝对坐标/②意图+自动布局/③参数化 + 总纲「不手写像素」；本项目终态 UI=bevy_ui 自动布局 S29.3 / 地图=参数化 S27.4 / scenes.json 退成元素清单；**资产登记标准** = UI 图 `ui_manifest.json` + 字体/音频 `assets/registry.json`，gate `validate_data` `check_asset_registry` 全类型 disk↔registry 双向同步 + `check_scenes_canonical` 守 scenes.json indent=1 规范形；音频口径 = 发货无声 S18.8；**加地图/换图 = `scripts/map_pack.py`（`assets/maps/<id>/` 描述符 + 模板，`sync` 一条命令，不改 Rust）**；改资产/资源加载/版面坐标/加地图前必读） |
 | 用脚本/codegen 批量处理 | `docs/process/04_tooling.md` |
 | **查业务规则（战斗/经济/地图/存档/UI 流）** | `docs/business/` 各系统文档（不依赖逆向产物） |
+| **理解游戏逻辑全貌（按章节 + 流程图）** | `docs/business/01_game_logic_overview.md`（S37 总览：核心循环/场景态图/多席热座/20 图推进/落格分叉/领土战争/战斗/经济/对局生命周期/存档/失败边界/数值锚点；规则细节引用各系统单一事实源） |
 | **界面版面 / 配色 / 控件坐标（1080 单一事实源）** | `docs/business/08_layout_design.md`（改 scenes.json 坐标/配色前必读；表值 = scenes.json 同值） |
 | **模块并行开发（契约→并行→集成）** | `docs/process/05_module_parallel.md`（一轮 4 步 + 纪律 5 条）+ `docs/contracts/00_index.md` + `plan/packages.yaml`（**包划分的机读唯一源**） |
 | **对抗流水线飞轮（找问题→审计→修复→回写；开轮编排 = `flywheel-kickoff` skill）** | `docs/process/06_flywheel.md`（3 角色 + 开轮必读 6 条 + 停机条件）+ `scripts/flywheel_readme.ps1 -Check` |
