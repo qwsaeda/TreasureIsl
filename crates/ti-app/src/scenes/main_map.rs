@@ -123,23 +123,23 @@ fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, 
 /// 运行时只画数值文本（金币数 / 持有量），面板 = `main_map.primitives` 原语。
 fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
     let (gold_str, own_str) = hud_labels(host);
+    // S38 方案 A：横屏读 `landscape.extra`（HUD 铜牌横屏位）；竖屏 = `extra`（0 行为变化）。
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let extra = layout.extra_for(landscape);
     let mut plaque_text = |rc: &data::Rect, s: &str| {
         // 文本落铜牌右半（左侧 = 96/64px 图标区）：x = 牌左 + 176，基线 = 牌心 - 22
         chrome::draw_body_text(host, s, rc.x + 176, rc.y + rc.h / 2 - 22);
     };
-    if let Some(rc) = layout
-        .extra
-        .get(chrome::keys::HUD_PLAQUE_L)
-        .or_else(|| layout.extra.get(chrome::keys::HUD_GOLD))
+    if let Some(rc) =
+        extra.get(chrome::keys::HUD_PLAQUE_L).or_else(|| extra.get(chrome::keys::HUD_GOLD))
     {
         if rc.w > 0 && rc.h > 0 {
             plaque_text(rc, &gold_str);
         }
     }
-    if let Some(rc) = layout
-        .extra
-        .get(chrome::keys::HUD_PLAQUE_R)
-        .or_else(|| layout.extra.get(chrome::keys::HUD_PLAYER))
+    if let Some(rc) =
+        extra.get(chrome::keys::HUD_PLAQUE_R).or_else(|| extra.get(chrome::keys::HUD_PLAYER))
     {
         if rc.w > 0 && rc.h > 0 {
             plaque_text(rc, &own_str);
@@ -825,15 +825,18 @@ impl Scene for MainMapScene {
                 render_v5_ring(host, &layout, &mut entity_texts);
             } else {
                 // v6 终码：不规则岛 + 格子紧围岛不规则排列（布局 JSON = compose 导出，数据驱动）
-                // 世界层先画，再画 HUD 原语（z>=3），避免海图满屏盖住 HUD
-                render_v6_elem(host, &layout, &mut entity_texts);
+                // 世界层先画，再画 HUD 原语（z>=3），避免海图满屏盖住 HUD。
+                // S38 方案 A：横屏读 `main_map_v6_layout_landscape.json`（椭圆格环 1920×1080）。
+                let landscape = host.shell().settings.orientation
+                    == ti_platform::settings::Orientation::Landscape;
+                render_v6_elem(host, &layout, &mut entity_texts, landscape);
                 chrome::render_primitives_filtered(host, "main_map", -1, 3);
                 // v6 补层（最上层）：①HUD 数值（`render_hud_v3` 在 642 行被 `v6_default`
                 // 跳过，此处海图+原语之后重画，顶角铜牌不再空）②摇骰 CTA 骰点 + 骰数
                 // （舵轮 = z=7 原语，骰点须叠其轴心之上，`render_spin_die` 的 `deck_spin`
                 // 是 v5 残留位 ⇒ 用 v6 布局 helm 定位）。
                 render_hud_v3(host, &layout);
-                render_v6_spin_die(host);
+                render_v6_spin_die(host, landscape);
             }
         } else {
             // S19：等距环岛赛道（路径连线 + 空间标记 + 骰子数 + 落格提示条）+ S19.7 航程条（v2 dormant）
@@ -1005,8 +1008,10 @@ struct V6Tile {
 }
 
 /// 编译期读入 v6 布局（缺文件 = 空布局，回退环布局）。
-fn v6_layout() -> V6Layout {
-    serde_json::from_str(data::V6_LAYOUT_JSON).unwrap_or(V6Layout {
+fn v6_layout(landscape: bool) -> V6Layout {
+    // S38 方案 A：横屏 = 读横屏 v6 布局（1920×1080 椭圆格环）；竖屏 = 原布局（0 行为变化）。
+    let src = if landscape { data::V6_LAYOUT_JSON_LANDSCAPE } else { data::V6_LAYOUT_JSON };
+    serde_json::from_str(src).unwrap_or(V6Layout {
         tile_r: 36.0,
         island: V6Rect::default(),
         ship: V6Rect::default(),
@@ -1245,22 +1250,26 @@ fn render_v6_elem(
     host: &mut dyn SceneHost,
     _layout: &SceneLayout,
     entity_texts: &mut Vec<(i32, i32, &str)>,
+    landscape: bool,
 ) {
     let spaces = host.board_spaces();
     let count = spaces.len();
     if count < 2 {
         return;
     }
-    let v6 = v6_layout();
+    let v6 = v6_layout(landscape);
+    // S38 方案 A：横屏画布 1920×1080（读 `main_map_v6_layout_landscape.json`）；
+    // 竖屏 = 原 1080×1920（0 行为变化）。
+    let (w, h) = if landscape { (1920i32, 1080i32) } else { (1080, 1920) };
     // 1) 海洋全景底（羊皮框由 ocean_bg 自身带；直接满屏）
-    host.blit_image(chrome::V6_OCEAN_BG, 0, 0, 1080, 1920);
+    host.blit_image(chrome::V6_OCEAN_BG, 0, 0, w, h);
     // 2) 羊皮做旧边框（56px 木框，四边）
     let ink = 0x1E14; // 深木色 ≈(60,40,20)
-    for w in [8i32, 3] {
-        host.fill_rect(0, 0, 1080, w, ink);
-        host.fill_rect(0, 1920 - w, 1080, w, ink);
-        host.fill_rect(0, 0, w, 1920, ink);
-        host.fill_rect(1080 - w, 0, w, 1920, ink);
+    for bw in [8i32, 3] {
+        host.fill_rect(0, 0, w, bw, ink);
+        host.fill_rect(0, h - bw, w, bw, ink);
+        host.fill_rect(0, 0, bw, h, ink);
+        host.fill_rect(w - bw, 0, bw, h, ink);
     }
 
     // 3) 中央岛（小元素拆分组合：不规则岛体 + 灯塔 + 岸边宝箱，替代整图 V6_ISLAND 圆盘观感）
@@ -1362,19 +1371,23 @@ fn render_v6_elem(
         cw,
     );
 
-    // 7) 海洋生物（creatures.png = 单张合成海洋生态场景；A4 单处放中央岛下方海域
+    // 7) 海洋生物（creatures.png = 单张合成海洋生态场景；竖屏 A4 单处放中央岛下方海域
     // （x340-720/y1350-1600，不叠格环/CTA）+ A5 bob 微动（鲨鱼游弋/浪花翻涌，位移±4px）。
+    // S38 横屏：省略（概念图 `main_map_v6_landscape` 无海洋生物；格环椭圆占满横向，无空位）。
     let ms = CREATURES_ACC.fetch_add(host.frame_delta_ms(), std::sync::atomic::Ordering::Relaxed);
     let t0 = *CREATURES_T0.get_or_init(|| {
         std::env::var("TI_MAP_ANIM_T0").ok().and_then(|v| v.parse::<u32>().ok()).unwrap_or(0)
     });
     let t = f64::from(ms.saturating_add(t0)) / 1000.0;
-    let bob_x = (t.sin() * 4.0) as i32;
-    let bob_y = ((t * 0.7).sin() * 3.0) as i32;
-    host.blit_image(chrome::V6_CREATURES, 340 + bob_x, 1350 + bob_y, 380, 250);
+    if !landscape {
+        let bob_x = (t.sin() * 4.0) as i32;
+        let bob_y = ((t * 0.7).sin() * 3.0) as i32;
+        host.blit_image(chrome::V6_CREATURES, 340 + bob_x, 1350 + bob_y, 380, 250);
+    }
 
     // 8) 玩家位置名牌（当前格；`cur_idx` = 当前席 index）
-    let (px, py) = v6.tiles.get(cur_idx).map_or((540, 890), |t| (t.cx as i32, t.cy as i32));
+    let def_pos = if landscape { (960, 520) } else { (540, 890) };
+    let (px, py) = v6.tiles.get(cur_idx).map_or(def_pos, |t| (t.cx as i32, t.cy as i32));
     let lbl = i18n::sget("scene.main_map.player_label");
     entity_texts.push((px + 40, py - 6, lbl));
     // S36.3 R2-F2：v6 默认路径补终局面板 + 交接提示（R1 漏 v6_elem 主渲染路径）。
@@ -1676,8 +1689,8 @@ fn render_spin_die(host: &mut dyn SceneHost, layout: &SceneLayout) {
 /// 本函数用 v6 布局 helm 定位：①骰点叠舵轮轴心（用户「看不见骰子，不知能否摇」）②最近骰数
 /// 在舵轮上方（`board_last_roll` = 0 不画）。缺骰图 = 只画骰数不画骰点（不抛异常）。
 #[allow(clippy::cast_possible_truncation)]
-fn render_v6_spin_die(host: &mut dyn SceneHost) {
-    let v6 = v6_layout();
+fn render_v6_spin_die(host: &mut dyn SceneHost, landscape: bool) {
+    let v6 = v6_layout(landscape);
     let hw = v6.helm.w.max(1.0) as i32;
     let hx = v6.helm.cx as i32;
     let hy = v6.helm.cy as i32;
@@ -1880,12 +1893,22 @@ fn render_board_toast(host: &mut dyn SceneHost) {
         return;
     };
     let layout = chrome::scene_layout("main_map");
-    let ty = if layout.hint.y > 0 { layout.hint.y } else { 1760 };
+    // S38 方案 A：横屏落格签条屏心 960、hint 走 `landscape.hint`（回退 960）；竖屏 = 原。
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let cx = if landscape { 960i32 } else { 540 };
+    let ty = if landscape {
+        1004
+    } else if layout.hint.y > 0 {
+        layout.hint.y
+    } else {
+        1760
+    };
     let tw = host.shell().hint_text_width_px(&toast);
     let pad = 24;
     let panel_w = (tw + pad * 2).max(392);
     let panel_h = 64;
-    let px = 540 - panel_w / 2;
+    let px = cx - panel_w / 2;
     let py = ty - panel_h / 2;
     let theme = host.theme().clone();
     // 底板用 `brass_dark`（`panel_warm` 在深海底上≈隐形 —— RGB565 (24,24,16) 与底图同色）
@@ -1896,7 +1919,7 @@ fn render_board_toast(host: &mut dyn SceneHost) {
     host.fill_rect(px, py + panel_h - 2, panel_w, 2, brass);
     host.fill_rect(px, py, 2, panel_h, brass);
     host.fill_rect(px + panel_w - 2, py, 2, panel_h, brass);
-    let tx = 540 - tw / 2;
+    let tx = cx - tw / 2;
     host.draw_hint_text(&toast, tx, ty, chrome::COLOR_TEXT_ON_PARCH);
 }
 
@@ -1919,8 +1942,11 @@ fn render_match_outcome(host: &mut dyn SceneHost) {
     let ink = chrome::COLOR_TEXT_ON_PARCH;
     let pw = 880i32;
     let ph = 320i32;
-    let px = 540 - pw / 2;
-    let py = 780;
+    // S38 方案 A：横屏终局面板屏心 960、垂直居中（py=(1080-320)/2=380）；竖屏 = 原 (540,780)。
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let (cx, py) = if landscape { (960i32, 380i32) } else { (540, 780) };
+    let px = cx - pw / 2;
     host.fill_rect(px, py, pw, ph, panel);
     host.fill_rect(px, py, pw, 3, brass);
     host.fill_rect(px, py + ph - 3, pw, 3, brass);
@@ -1943,9 +1969,9 @@ fn render_match_outcome(host: &mut dyn SceneHost) {
         }
     };
     let tw = host.shell().hint_text_width_px(&title);
-    host.draw_hint_text(&title, 540 - tw / 2, py + 80, gold);
+    host.draw_hint_text(&title, cx - tw / 2, py + 80, gold);
     let sw = host.shell().hint_text_width_px(&sub);
-    host.draw_hint_text(&sub, 540 - sw / 2, py + ph - 60, ink);
+    host.draw_hint_text(&sub, cx - sw / 2, py + ph - 60, ink);
 }
 
 /// S36.3 热座交接提示条（§1 + §1.2 隐藏信息）：`handoff_pending` 在位 =
@@ -1963,8 +1989,12 @@ fn render_handoff(host: &mut dyn SceneHost) {
     let pad = 24;
     let pw = (tw + pad * 2).max(392);
     let ph = 56i32;
-    let px = 540 - pw / 2;
-    let py = 1860;
+    // S38 方案 A：横屏提示条屏心 960、底部 py=1004；竖屏 = 原 (540,1860)。
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let cx = if landscape { 960i32 } else { 540 };
+    let px = cx - pw / 2;
+    let py = if landscape { 1004 } else { 1860 };
     host.fill_rect(px, py, pw, ph, panel);
     host.fill_rect(px, py, pw, 2, brass);
     host.fill_rect(px, py + ph - 2, pw, 2, brass);
@@ -1973,5 +2003,5 @@ fn render_handoff(host: &mut dyn SceneHost) {
     let seat_label = format!("P{seat}");
     let full = format!("{msg}（{seat_label}）");
     let ftw = host.shell().hint_text_width_px(&full);
-    host.draw_hint_text(&full, 540 - ftw / 2, py + ph / 2 + 4, ink);
+    host.draw_hint_text(&full, cx - ftw / 2, py + ph / 2 + 4, ink);
 }

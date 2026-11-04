@@ -2998,6 +2998,135 @@
    "radius": 480,
    "card_w": 96,
    "card_h": 120
+  },
+  "landscape": {
+   "primitives": [
+    {
+     "kind": "image",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "color": "",
+     "z": 2,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/chart_full.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 48,
+      "y": 32,
+      "w": 448,
+      "h": 160
+     },
+     "color": "",
+     "z": 3,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/hud_plaque.png"
+     }
+    },
+    {
+     "kind": "icon",
+     "rect": {
+      "x": 104,
+      "y": 80,
+      "w": 80,
+      "h": 80
+     },
+     "color": "gold_warm",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {
+      "icon": "coin",
+      "size": 80
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1424,
+      "y": 32,
+      "w": 448,
+      "h": 160
+     },
+     "color": "",
+     "z": 3,
+     "when": "",
+     "item": -1,
+     "params": {
+      "asset": "assets/ui/hud_plaque.png"
+     }
+    },
+    {
+     "kind": "icon",
+     "rect": {
+      "x": 1480,
+      "y": 80,
+      "w": 80,
+      "h": 80
+     },
+     "color": "gold_warm",
+     "z": 4,
+     "when": "",
+     "item": -1,
+     "params": {
+      "icon": "chest",
+      "size": 80
+     }
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "x": 860,
+      "y": 24,
+      "w": 200,
+      "h": 44
+     },
+     "color": "gold_warm",
+     "z": 6,
+     "when": "",
+     "item": -1,
+     "params": {
+      "text_key": "scene.main_map.title",
+      "tier": "body"
+     }
+    }
+   ],
+   "extra": {
+    "hud_gold": {
+     "x": 48,
+     "y": 32,
+     "w": 448,
+     "h": 160
+    },
+    "hud_player": {
+     "x": 1424,
+     "y": 32,
+     "w": 448,
+     "h": 160
+    },
+    "hud_plaque_l": {
+     "x": 48,
+     "y": 32,
+     "w": 448,
+     "h": 160
+    },
+    "hud_plaque_r": {
+     "x": 1424,
+     "y": 32,
+     "w": 448,
+     "h": 160
+    }
+   }
   }
  },
  "vs": {

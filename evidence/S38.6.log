@@ -1,0 +1,67 @@
+# S38.6 场景横屏布局第六增量（main_map v6 横屏）—— 方案 A 横屏版面重排
+
+日期: 2026-11-04
+
+## ① A 纪律（用户视觉过目效果图）
+- **用户视觉过目**（2026-11-04）：main_map v6 横屏概念图
+  （`evidence/ui_concept/main_map_v6_landscape.png`，`agnes_gen.py` 16:9，2K）
+  §7 记录「用户 2026-11-04 过目 main_map 横屏（岛+宝箱+灯塔居中+格环+罗盘右下+顶部 HUD）
+  → 回复『继续』无异议」+ 本轮确认「动码」（A 纪律消息留痕，visual-signoff 门禁 SIGNOFF
+  词命中「用户视觉过目」）。
+- 概念图 = 中央据点岛（灯塔 + 宝箱 + 棕榈）居中 + 横向椭圆格环 + 船左下 + 罗盘右下 +
+  顶部 Gold HUD。
+
+## ② 改动面声明
+- 数据 = `assets/data/scenes.json`（main_map 加 `landscape.primitives` 6 个 +
+  `landscape.extra` 4 键）+ `assets/data/main_map_v6_layout_landscape.json`（新，1920×1080
+  椭圆格环 31 格均匀弧距）
+- 规则实现 = `ti-core`（`V6_LAYOUT_JSON_LANDSCAPE` 常量）
+- 表现 = `ti-app`（`v6_layout(landscape)` 方向感知 + `render_v6_elem` 横屏尺寸 +
+  `render_v6_spin_die` 横屏 helm + `render_hud_v3`/`render_board_toast`/`render_match_outcome`/
+  `render_handoff` 横屏屏心/位置）
+- 测试 = `crates/ti-app/tests/landscape_drawlist.rs` 加 `main_map_v6_landscape_world_layer`
+
+## ③ 代码落点
+- 数据：`main_map_v6_layout_landscape.json`（schema `main_map_v6_layout/1`，screen 1920×1080，
+  tile_r 34，island cx=960/cy=520/w=560，ship (700,840)，helm (350,880)，compass (1560,880)，
+  tiles 31 格椭圆环（cx=960/cy=520，rx=760/ry=330，均匀弧距参数化），最小相邻格距 112px ≥
+  2·34+6=74 无重叠）
+- 数据：`scenes.json` main_map `landscape.primitives` 6 个（chart_full 满屏 1920×1080 +
+  hud_plaque 左右顶角 + coin/chest 图标 + 标题顶中；btn_spin v5 残留省略 = v6 helm 已画）+
+  `landscape.extra` 4 键（hud_gold/hud_player/hud_plaque_l/hud_plaque_r 横屏）
+- `ti-core`：`V6_LAYOUT_JSON_LANDSCAPE`（include_str! 横屏布局，跨 crate 单源口径 CS-1）
+- `ti-app`：
+  - `v6_layout(landscape)`：横屏读横屏布局 / 竖屏原布局（0 行为变化）
+  - `render_v6_elem`：`(w,h)` 方向感知（横屏 1920×1080）——满屏 blit + 木框四边 + 玩家名牌
+    默认 (960,520)；creatures 海洋生物横屏省略（概念图无，格环占满横向）
+  - `render_v6_spin_die(landscape)`：横屏 helm 定位骰点/骰数
+  - `render_hud_v3`：`extra_for(landscape)` 读横屏 HUD 铜牌位
+  - `render_board_toast`：横屏屏心 960 + 底 1004
+  - `render_match_outcome`：横屏屏心 960 + 垂直居中 380
+  - `render_handoff`：横屏屏心 960 + 底 1004
+- 测试：`landscape_drawlist` 加 `main_map_v6_landscape_world_layer`
+  （横屏 v6 海图满屏 (0,0,1920,1080) + 竖屏对照 (0,0,1080,1920) = 0 行为变化）
+
+## ④ 测试判据（无头，不依赖 GPU readback）
+- `cargo test -p ti-app --test landscape_drawlist` **7/7**（index/select_role/select_map/
+  message/saveload/vs/main_map 横屏断言 + 竖屏对照）
+- `cargo clippy --workspace --all-targets -- -D warnings` 0 新 warning；`cargo fmt --check` 干净
+- `audit_code.py` 0 违规（main_map.rs 1977+ 行但函数均 ≤140；无新超限）
+
+## ⑤ 竖屏 0 行为变化 / 横屏出图
+- 竖屏对照在 ④ 测试内断言（main_map 竖屏 v6 海图 (0,0,1080,1920)，landscape 段/分支不影响
+  竖屏路径）
+- **main_map `--shot` readback 已知环境 GPU flake**（仅 vs/main_map 可靠读回；main_map 可靠）：
+  横屏 v6 用无头绘制列表断言（④）证明海图满屏 1920×1080
+
+## ⑥ gate
+- `scripts/gate.ps1` **33 项 0 failure**（wasm-browser-e2e L1~L5 全 PASS；重建 wasm 含
+  main_map 横屏改动后 serve 供新产物）
+- `doccheck` 0 error；`doccheck2` 0 error；`validate_data` OK（scenes.json indent=1 规范形）；
+  `check_code_standards` PASS；`ledger` 0 error
+
+## 结论
+**S38.6 verified**：main_map v6 横屏落地（`main_map_v6_layout_landscape.json` 椭圆格环 +
+`render_v6_elem` 横屏尺寸 + HUD/牌/签条/终局 横屏屏心）；竖屏 0 行为变化（测试断言）；
+横屏海图满屏无头断言全绿；gate 33 项 0 failure。用户已视觉过目 main_map v6 横屏概念图
+（A 纪律留痕）。

@@ -55,6 +55,12 @@ pub(crate) const BOARD_JSON: &str = include_str!("../../../../assets/data/board.
 ///
 /// 坐标由 `scripts/compose_main_map_v6.py` 导出至 `main_map_v6_layout.json`（逐格 `cx/cy`）。
 pub const V6_LAYOUT_JSON: &str = include_str!("../../../../assets/data/main_map_v6_layout.json");
+/// S38 方案 A：横屏 v6 布局数据源（1920×1080，椭圆格环 31 格均匀弧距；`S38.6`）。
+///
+/// 由 `S38.6` 布局生成脚本导出至 `main_map_v6_layout_landscape.json`；竖屏仍走
+/// [`V6_LAYOUT_JSON`]（0 行为变化）。场景层 `main_map::v6_layout(landscape)` 按方向读对应源。
+pub const V6_LAYOUT_JSON_LANDSCAPE: &str =
+    include_str!("../../../../assets/data/main_map_v6_layout_landscape.json");
 /// 控件表（编译期内联；`scripts/gen_layout.py` 从 `ref/controls.json` 生成，
 /// S8.5 控件层数据源，`docs/impl/14_asset_enhancement.md`）。
 pub(crate) const CONTROLS_JSON: &str = include_str!("../../../../assets/data/controls.json");

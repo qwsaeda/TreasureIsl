@@ -120,7 +120,10 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
   新文件 `vs_anim_proto_landscape.rs` + vs.rs 方向感知 + vs `landscape.primitives` 16 +
   `landscape.extra` 6 键）→ **verified**（`evidence/S38.5.log`；landscape_drawlist 6/6 +
   竖屏 0 行为变化 + gate 33 项 0 failure）。
-- [ ] 其余场景横屏概念图（main_map v6）出稿 → 用户过目 → 动码（S38.6 候选）。
+- [x] **S38.6 用户过目确认 + 动码完成**：main_map v6 横屏概念图（中央岛 + 椭圆格环 + 船 + 罗盘 +
+  顶 HUD）过目确认「动码」→ S38.6 动码（`main_map_v6_layout_landscape.json` 椭圆格环 +
+  `render_v6_elem` 横屏 + HUD/牌/终局 横屏屏心）→ **verified**（`evidence/S38.6.log`；
+  landscape_drawlist 7/7 + 竖屏 0 行为变化 + gate 33 项 0 failure）。**S38 全部 7 场景横屏收口**。
 
 ---
 

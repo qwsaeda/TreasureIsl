@@ -286,3 +286,28 @@ fn vs_landscape_world_layer() {
         "vs 竖屏 attacker HP 框应在 (30,1730,440,130)，got {rects:?}"
     );
 }
+
+/// S38：`main_map` v6 横屏（`render_v6_elem` 海图满屏 1920×1080，椭圆格环），竖屏对照（0 行为变化）。
+/// 注：v6 默认路径先画世界层（`V6_OCEAN_BG` 满屏），故断言满屏 `image` 而非 `chart_full` 原语（z=2 <3）。
+#[test]
+fn main_map_v6_landscape_world_layer() {
+    // 横屏：v6 海图满屏 1920×1080（render_v6_elem V6_OCEAN_BG）
+    let mut app = game(true);
+    ti_app::forward_nav::navigate(&mut app, "main_map");
+    app.render();
+    let imgs = image_rects(&app);
+    assert!(
+        imgs.iter().any(|(_, x, y, w, h)| *x == 0 && *y == 0 && *w == 1920 && *h == 1080),
+        "main_map 横屏 v6 海图应满屏 1920×1080，got {imgs:?}"
+    );
+
+    // 竖屏对照（0 行为变化）
+    let mut app = game(false);
+    ti_app::forward_nav::navigate(&mut app, "main_map");
+    app.render();
+    let imgs = image_rects(&app);
+    assert!(
+        imgs.iter().any(|(_, x, y, w, h)| *x == 0 && *y == 0 && *w == 1080 && *h == 1920),
+        "main_map 竖屏 v6 海图应满屏 1080×1920（0 行为变化），got {imgs:?}"
+    );
+}
