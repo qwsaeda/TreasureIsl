@@ -98,9 +98,12 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
   （`evidence/ui_concept/main_map_v6_landscape.png` + `vs_landscape.png`，`agnes_gen.py` 16:9）
   后回复「继续」无异议（A 纪律消息留痕）。
 - [x] **横屏效果图（2 张代表图）用户过目**：main_map 横屏（岛+宝箱+灯塔居中+格环+罗盘右下+顶部 HUD）
-  + VS 横屏（拳皇对角线+VS 徽标+双面板+指令区）。**其余 5 场景（index/select_role/select_map/
-  message/saveload）横屏布局 = 基础设施跑通后出 `--shot --viewport=1920x1080` 效果图再请过目**。
-- [ ] 基础设施动码 → 出 7 场景横屏效果图 → 用户最终过目 → 各场景横屏布局动码（WBS S38.1 起，每场景独立任务）。
+  + VS 横屏（拳皇对角线+VS 徽标+双面板+指令区）。
+- [x] **S38.1 场景横屏概念图出稿**：index（罗盘环+6 徽章+中心舵轮，横屏居中）+ select_role
+  （5 角色卡横排+右侧属性面板）——`evidence/ui_concept/index_landscape.png` +
+  `select_role_landscape.png`（`agnes_gen.py` 16:9）。
+- [ ] **S38.1 用户过目确认**：index/select_role 横屏概念图过目后动码。
+- [ ] 其余场景横屏概念图（select_map/vs/message/saveload）出稿 → 用户过目 → 动码。
 
 ---
 
