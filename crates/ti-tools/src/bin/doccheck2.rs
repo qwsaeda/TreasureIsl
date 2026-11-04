@@ -3482,6 +3482,7 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("touch-render-pair", check_touch_render_pair),
     ("hd-sprite-transparency", check_hd_sprite_transparency),
     ("scene-layout-fidelity", check_scene_layout_fidelity),
+    ("landscape-no-portrait-hardcode", check_landscape_no_portrait_hardcode),
     ("scene-band-count", check_scene_band_count),
     ("save-slot-map-slot-basis", check_save_slot_map_slot_basis),
     ("exhaust-balance-dual-write", check_exhaust_balance_dual_write),
@@ -3691,6 +3692,76 @@ fn check_no_inline_test_mod(root: &Path) -> Vec<String> {
     }
     errors
 }
+/// 提取指定 Rust 函数体（`fn NAME(` 起始 → 下一个顶层 `fn ` / 文件尾），返回函数体文本。
+///
+/// 用于函数级扫描（全文件 grep 会误报 test-only/其它函数的同名调用，EXP-161）。
+fn fn_body(text: &str, name: &str) -> Option<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let start = lines.iter().position(|l| l.contains(&format!("fn {name}(")))?;
+    let end = lines
+        .iter()
+        .enumerate()
+        .skip(start + 1)
+        .find(|(_, l)| l.trim_start().starts_with("fn ") || l.trim_start().starts_with("pub fn "))
+        .map_or(lines.len(), |(i, _)| i);
+    Some(lines[start..end].join("\n"))
+}
+
+/// S38 横屏方向感知遗漏（EXP-161）：横屏 live 路径的函数体禁止竖屏硬编码换算。
+///
+/// 已知模式（人工逐点改易漏，固化守门）：
+/// - `scene_render.rs::spawn_draw_list` / `spawn_pick_layer`：禁 `to_world(`（竖屏 `x-540,960-y`），
+///   必须 `to_world_dims(…,lw,lh)`（EXP-161：Image op 曾漏改 ⇒ 横屏 `--shot` 图片原语错位）；
+/// - `bin/treasure_bevy.rs::letterbox_size`：禁 `LOGICAL_W`/`LOGICAL_H`（竖屏 1080×1920 硬编码
+///   `min(w/1080,h/1920)`，S38.0 遗漏 ⇒ 横屏窗口 letterbox 错位，本次修复防回归）。
+fn check_landscape_no_portrait_hardcode(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    // `require`：true = 函数体必须含 needle（缺 = 仍纯竖屏硬编码）；false = 函数体禁 needle。
+    let mut scan_fn = |rel: &str, fn_name: &str, needles: &[&str], require: bool, what: &str| {
+        let Some(text) = read_file(root, rel) else {
+            errors.push(format!("{rel}: 文件缺失，无法扫横屏硬编码"));
+            return;
+        };
+        let Some(body) = fn_body(&text, fn_name) else {
+            errors.push(format!("{rel}: 找不到函数 {fn_name}（横屏硬编码检查锚点漂移？）"));
+            return;
+        };
+        for needle in needles {
+            let hit = body.contains(needle);
+            if (require && !hit) || (!require && hit) {
+                let kind = if require { "缺方向感知标志" } else { "命中竖屏硬编码" };
+                errors.push(format!("{rel}::{fn_name}: {kind} `{needle}`（{what}，EXP-161）"));
+            }
+        }
+    };
+    // scene_render.rs：live 横屏换算函数禁竖屏 `to_world(`。
+    // `to_world(` 精确匹配不含 `to_world_dims(`（后者是 `to_world_dims(`，`to_world` 后是 `_` 非 `(`）。
+    scan_fn(
+        "crates/ti-engine/src/scene_render.rs",
+        "spawn_draw_list",
+        &["to_world("],
+        false,
+        "横屏图片/矩形/文本原语须用 to_world_dims",
+    );
+    scan_fn(
+        "crates/ti-engine/src/scene_render.rs",
+        "spawn_pick_layer",
+        &["to_world("],
+        false,
+        "横屏拾取层须用 to_world_dims",
+    );
+    // bin：letterbox_size 必须方向感知（含 LANDSCAPE_W_I32/H_I32 = 横屏逻辑尺寸分支；
+    // 竖屏分支用 LOGICAL_W/H 合法，故用 require 而非 forbid）。
+    scan_fn(
+        "crates/ti-engine/src/bin/treasure_bevy.rs",
+        "letterbox_size",
+        &["LANDSCAPE_W_I32", "LANDSCAPE_H_I32"],
+        true,
+        "letterbox_size 须方向感知（横屏 1920×1080 / 竖屏 1080×1920）",
+    );
+    errors
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let root = args.first().map_or_else(|| std::path::PathBuf::from("."), std::path::PathBuf::from);

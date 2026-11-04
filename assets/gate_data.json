@@ -93,6 +93,7 @@
    {"id": "touch-render-pair", "impl": "rust"},
    {"id": "hd-sprite-transparency", "impl": "rust"},
    {"id": "scene-layout-fidelity", "impl": "rust"},
+   {"id": "landscape-no-portrait-hardcode", "impl": "rust"},
    {"id": "scene-band-count", "impl": "rust"},
    {"id": "save-slot-map-slot-basis", "impl": "rust"},
    {"id": "exhaust-balance-dual-write", "impl": "rust"},

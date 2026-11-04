@@ -826,20 +826,17 @@ fn input_system(
     // S18.5 相机（world_canvas 镜头）：主地图场景才允许 zoom/pan（其它场景相机冻结）。
     let camera_live = g.scene() == Scene::MainMap;
     if camera_live {
+        // S38 方案 A：zoom 锚点/画布尺寸**方向感知**（横屏 1920×1080 / 竖屏 1080×1920；
+        // 曾硬编码 `LOGICAL_W/H` 竖屏 ⇒ 横屏主地图 zoom 中心错位）。
+        let landscape = window_size.x >= window_size.y;
+        let lw = ti_engine::logical_w_for(landscape) as f32;
+        let lh = ti_engine::logical_h_for(landscape) as f32;
         // 滚轮 0.20 event 接线挂 S18.8（winit MotionEvent 面）；键盘 `=`/`-` 同构 zoom（view 中心锚点）。
         if kb.just_pressed(KeyCode::Equal) {
-            g.camera_zoom_at(
-                [LOGICAL_W as f32 / 2.0, LOGICAL_H as f32 / 2.0],
-                1.25,
-                [LOGICAL_W as f32, LOGICAL_H as f32],
-            );
+            g.camera_zoom_at([lw / 2.0, lh / 2.0], 1.25, [lw, lh]);
         }
         if kb.just_pressed(KeyCode::Minus) {
-            g.camera_zoom_at(
-                [LOGICAL_W as f32 / 2.0, LOGICAL_H as f32 / 2.0],
-                0.8,
-                [LOGICAL_W as f32, LOGICAL_H as f32],
-            );
+            g.camera_zoom_at([lw / 2.0, lh / 2.0], 0.8, [lw, lh]);
         }
         if drag.0 {
             // 窗口缩放跟随：物理 px → 逻辑 px 除**当前** `vp.scale()`（窗口尺寸变化时

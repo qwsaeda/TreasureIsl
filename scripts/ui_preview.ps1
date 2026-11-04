@@ -16,16 +16,35 @@ Set-Location $repoRoot
 $py = if ($env:OS -eq 'Windows_NT') { 'python' } else { 'python3' }
 
 $scenes = @('index', 'select_role', 'select_map', 'main_map', 'vs', 'message', 'saveload')
-if ($args.Count -gt 0) { $scenes = $args }
+# S38 横屏批量出图：`--viewport=WxH`（如 `--viewport=1920x1080`）→ 产物名带尺寸后缀
+# `bevy_native_<scene>_<WxH>.png`；缺省 = 竖屏 1080×1920（保持原行为，产物名不带后缀）。
+$viewport = $null
+$check = $false
+if ($args.Count -gt 0) {
+    $sceneArgs = @()
+    foreach ($a in $args) {
+        if ($a -like '--viewport=*') {
+            $viewport = $a.Substring('--viewport='.Length)
+        } elseif ($a -eq '-Check') {
+            $check = $true
+        } else {
+            $sceneArgs += $a
+        }
+    }
+    if ($sceneArgs.Count -gt 0) { $scenes = $sceneArgs }
+}
+# 产物名（带 viewport 后缀；竖屏缺省不带，保持历史产物名）
+function Out-ShotName([string]$scene) {
+    if ($viewport) { "bevy_native_${scene}_${viewport}.png" } else { "bevy_native_${scene}.png" }
+}
 
 # S21.8 工具契约只读模式：-Check = 既有出图验收（不重渲染 / 不写缩略图；缺图 / 空帧 ⇒ 非 0 退出）
-# 用法：powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 -Check [scene...]
-if ($args -contains '-Check') {
-    $checkScenes = @($args | Where-Object { $_ -ne '-Check' })
-    if ($checkScenes.Count -eq 0) { $checkScenes = @('index', 'select_role', 'select_map', 'main_map', 'vs', 'message', 'saveload') }
+# 用法：powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 -Check [--viewport=WxH] [scene...]
+if ($check) {
+    $checkScenes = $scenes
     $fail = 0
     foreach ($s in $checkScenes) {
-        $png = Join-Path 'evidence' "bevy_native_$s.png"
+        $png = Join-Path 'evidence' (Out-ShotName $s)
         if (-not (Test-Path $png)) {
             Write-Host "  FAIL  缺出图 $png（先跑默认模式出图）" -ForegroundColor Red
             $fail++
@@ -70,6 +89,8 @@ foreach ($s in $scenes) {
     # （Windows / 有 DISPLAY 时直连，行为不变）。
     $cargoArgs = @('run', '-q', '-p', 'ti-engine', '--bin', 'treasure-bevy-native',
                    '--', "--scene=$s", '--shot')
+    # S38 横屏：--viewport 传给离屏目标（缺省不带 = 竖屏 1080×1920 保持原行为）
+    if ($viewport) { $cargoArgs += "--viewport=$viewport" }
     if ($extra) { $cargoArgs += $extra }
     $useXvfb = ($env:OS -ne 'Windows_NT') -and (-not $env:DISPLAY) -and (Get-Command xvfb-run -ErrorAction SilentlyContinue)
     if ($useXvfb) {
@@ -80,14 +101,15 @@ foreach ($s in $scenes) {
     & $cmd[0] $cmd[1..($cmd.Length - 1)] 2>&1 |
         Select-String -Pattern '\[shot\]' | ForEach-Object { Write-Host "  $_" }
 
-    $png = Join-Path 'evidence' "bevy_native_$s.png"
+    $png = Join-Path 'evidence' (Out-ShotName $s)
     if (-not (Test-Path $png)) {
         Write-Host "  FAIL  未产出 $png" -ForegroundColor Red
         $fail++
         continue
     }
     # 统计 + 缩略图（用 PIL；无 PIL 则只报尺寸）
-    $thumbPath = (Join-Path $thumbDir "$s.png")
+    $thumbBase = if ($viewport) { "${s}_${viewport}" } else { $s }
+    $thumbPath = (Join-Path $thumbDir "$thumbBase.png")
     # 单引号 here-string（不插值）；路径经 argv 传入（免 PS 变量展开问题）
     $pyCode = @'
 from PIL import Image
