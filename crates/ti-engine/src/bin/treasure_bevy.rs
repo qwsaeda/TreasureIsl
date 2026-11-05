@@ -1097,7 +1097,10 @@ fn build_index_chrome(
                 position_type: bevy::ui::PositionType::Absolute,
                 left: bevy::ui::Val::Percent(x_pct - cell_w / 2.0),
                 top: bevy::ui::Val::Percent(y_pct + cell_h / 2.0 + 0.4),
-                padding: bevy::ui::UiRect::axes(bevy::ui::Val::Px(10.0), bevy::ui::Val::Px(4.0)),
+                padding: bevy::ui::UiRect::axes(
+                    bevy::ui::Val::Px(ti_engine::ui::palette::RING_LABEL_PAD_X),
+                    bevy::ui::Val::Px(ti_engine::ui::palette::RING_LABEL_PAD_Y),
+                ),
                 justify_content: bevy::ui::JustifyContent::Center,
                 ..Default::default()
             },
@@ -1105,7 +1108,7 @@ fn build_index_chrome(
             bevy::prelude::Text(label.to_string()),
             bevy::text::TextFont {
                 font: bevy::text::FontSource::Handle(font.clone()),
-                font_size: bevy::text::FontSize::Px(24.0),
+                font_size: bevy::text::FontSize::Px(ti_engine::ui::palette::RING_LABEL_FONT),
                 ..Default::default()
             },
             bevy::prelude::TextColor(if is_sel { on_wood } else { gold }),
@@ -1175,9 +1178,19 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
                 flex_direction: bevy::ui::FlexDirection::Column,
                 align_items: bevy::ui::AlignItems::Center,
                 justify_content: bevy::ui::JustifyContent::Center,
-                padding: bevy::ui::UiRect::px(24.0, 24.0, 24.0, 24.0),
-                row_gap: bevy::ui::Val::Px(14.0),
-                border_radius: bevy::ui::BorderRadius::px(12.0, 12.0, 12.0, 12.0),
+                padding: bevy::ui::UiRect::px(
+                    ti_engine::ui::palette::MSG_PANEL_PAD,
+                    ti_engine::ui::palette::MSG_PANEL_PAD,
+                    ti_engine::ui::palette::MSG_PANEL_PAD,
+                    ti_engine::ui::palette::MSG_PANEL_PAD,
+                ),
+                row_gap: bevy::ui::Val::Px(ti_engine::ui::palette::MSG_PANEL_GAP),
+                border_radius: bevy::ui::BorderRadius::px(
+                    ti_engine::ui::palette::MSG_PANEL_RADIUS,
+                    ti_engine::ui::palette::MSG_PANEL_RADIUS,
+                    ti_engine::ui::palette::MSG_PANEL_RADIUS,
+                    ti_engine::ui::palette::MSG_PANEL_RADIUS,
+                ),
                 ..Default::default()
             },
             bevy::ui::BackgroundColor(ti_engine::ui::palette::PANEL_WOOD_BG),
@@ -1192,7 +1205,7 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
         font,
         title.to_string(),
         None,
-        30.0,
+        ti_engine::ui::palette::MSG_TITLE_FONT,
         ti_engine::ui::palette::PARCH_BRIGHT,
     );
     msg_text_child(
@@ -1200,10 +1213,25 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
         panel,
         font,
         body.to_string(),
-        Some(92.0),
-        20.0,
+        Some(ti_engine::ui::palette::MSG_BODY_WIDTH_PCT),
+        ti_engine::ui::palette::MSG_BODY_FONT,
         ti_engine::ui::palette::PARCH_CREAM,
     );
+    // 页点 + 页码 + 底部提示（提取为 helper，守 clippy `too_many_lines`）。
+    message_chrome_footer(commands, panel, root, font, total, page, page_str);
+    root
+}
+
+/// 消息面板底部：页点（`total` 个方点；`i < page` 实心）+ 页码文本 + 底部提示行（全宽绝对定位）。
+fn message_chrome_footer(
+    commands: &mut Commands,
+    panel: Entity,
+    root: Entity,
+    font: &Handle<Font>,
+    total: u32,
+    page: u32,
+    page_str: String,
+) {
     // 页点（`total` 个方点；`i < page` 实心，否则暗底）
     let dots_row = commands
         .spawn((
@@ -1211,7 +1239,7 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
                 display: bevy::ui::Display::Flex,
                 flex_direction: bevy::ui::FlexDirection::Row,
                 justify_content: bevy::ui::JustifyContent::Center,
-                column_gap: bevy::ui::Val::Px(8.0),
+                column_gap: bevy::ui::Val::Px(ti_engine::ui::palette::MSG_DOTS_GAP),
                 ..Default::default()
             },
             bevy::picking::Pickable::IGNORE,
@@ -1221,7 +1249,15 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
     for i in 0..total {
         msg_page_dot(commands, dots_row, i < page);
     }
-    msg_text_child(commands, panel, font, page_str, None, 18.0, ti_engine::ui::palette::MUTED_GOLD);
+    msg_text_child(
+        commands,
+        panel,
+        font,
+        page_str,
+        None,
+        ti_engine::ui::palette::MSG_PAGE_FONT,
+        ti_engine::ui::palette::MUTED_GOLD,
+    );
     // 底部提示行（全宽绝对定位）
     let hint = ti_app::i18n::sget("scene.message.nav_hint");
     msg_text_child_abs(
@@ -1229,11 +1265,10 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
         root,
         font,
         hint.to_string(),
-        86.0,
-        18.0,
+        ti_engine::ui::palette::MSG_HINT_TOP_PCT,
+        ti_engine::ui::palette::MSG_HINT_FONT,
         ti_engine::ui::palette::MUTED_GOLD,
     );
-    root
 }
 
 /// 面板内 flex 子：居中文本（`width_pct` = 占父宽百分比，`None` = auto）。
@@ -1280,9 +1315,14 @@ fn msg_page_dot(commands: &mut Commands, parent: Entity, filled: bool) {
     };
     commands.spawn((
         bevy::ui::Node {
-            width: bevy::ui::Val::Px(10.0),
-            height: bevy::ui::Val::Px(10.0),
-            border_radius: bevy::ui::BorderRadius::px(2.0, 2.0, 2.0, 2.0),
+            width: bevy::ui::Val::Px(ti_engine::ui::palette::MSG_DOT_SIZE),
+            height: bevy::ui::Val::Px(ti_engine::ui::palette::MSG_DOT_SIZE),
+            border_radius: bevy::ui::BorderRadius::px(
+                ti_engine::ui::palette::MSG_DOT_RADIUS,
+                ti_engine::ui::palette::MSG_DOT_RADIUS,
+                ti_engine::ui::palette::MSG_DOT_RADIUS,
+                ti_engine::ui::palette::MSG_DOT_RADIUS,
+            ),
             ..Default::default()
         },
         bevy::ui::BackgroundColor(color),

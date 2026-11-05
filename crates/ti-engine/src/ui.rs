@@ -109,6 +109,43 @@ pub mod palette {
     pub const BUTTON_H: f32 = 56.0;
     /// 按钮圆角。
     pub const BUTTON_RADIUS: f32 = 10.0;
+    // ── F-02b 延伸（treasure_bevy.rs 消息面板/索引环标签 + vs_duel.rs 精灵，值 = 原字面量）──
+    /// 索引环标签内边（横/纵）。
+    pub const RING_LABEL_PAD_X: f32 = 10.0;
+    /// 索引环标签内边纵。
+    pub const RING_LABEL_PAD_Y: f32 = 4.0;
+    /// 索引环标签字号。
+    pub const RING_LABEL_FONT: f32 = 24.0;
+    /// 消息面板内边。
+    pub const MSG_PANEL_PAD: f32 = 24.0;
+    /// 消息面板行距。
+    pub const MSG_PANEL_GAP: f32 = 14.0;
+    /// 消息面板圆角。
+    pub const MSG_PANEL_RADIUS: f32 = 12.0;
+    /// 消息标题字号。
+    pub const MSG_TITLE_FONT: f32 = 30.0;
+    /// 消息正文字号。
+    pub const MSG_BODY_FONT: f32 = 20.0;
+    /// 消息页码字号。
+    pub const MSG_PAGE_FONT: f32 = 18.0;
+    /// 消息提示字号。
+    pub const MSG_HINT_FONT: f32 = 18.0;
+    /// 消息正文宽（%）。
+    pub const MSG_BODY_WIDTH_PCT: f32 = 92.0;
+    /// 消息提示顶边（%）。
+    pub const MSG_HINT_TOP_PCT: f32 = 86.0;
+    /// 消息页点列距。
+    pub const MSG_DOTS_GAP: f32 = 8.0;
+    /// 消息页点边长。
+    pub const MSG_DOT_SIZE: f32 = 10.0;
+    /// 消息页点圆角。
+    pub const MSG_DOT_RADIUS: f32 = 2.0;
+    /// VS 回合徽章边长。
+    pub const DUEL_BADGE_SIZE: f32 = 64.0;
+    /// VS 卡牌精灵宽。
+    pub const DUEL_CARD_W: f32 = 120.0;
+    /// VS 卡牌精灵高。
+    pub const DUEL_CARD_H: f32 = 60.0;
 }
 
 /// 生成 UI 相机（叠在游戏正交相机之上；`order=1` + `clear_color=None` 不清屏，游戏世界透出）。

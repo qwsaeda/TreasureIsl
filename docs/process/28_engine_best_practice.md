@@ -38,7 +38,9 @@ CS-1 资产单源 · CS-2 文件职责 · CS-3 参数禁单字母 · CS-4 场景
 |---|---|---|---|---|
 | **F-01** | 🔴 高 | 颜色未走令牌单源（CS-1）——`Color::srgb()/srgba()` 字面量 ~24 处 | `ti-engine/src/ui.rs`(10) · `bin/treasure_bevy.rs`(7) · `vs_duel.rs`(5) · `scene_render.rs`(1) · `bevy_app.rs`(1) | ✅ 集中 `ui.rs::palette`（值不变零视觉变化） |
 | **F-02** | 🟠 中 | 布局尺寸未走令牌/意图化——字体/圆角/内边/gap/宽高 px 字面量 18 处 | `ti-engine/src/ui.rs` | ✅ 集中 `ui.rs::palette` |
+| **F-02b** | 🟠 中 | 尺寸字面量延伸——消息面板/索引环标签/页点/VS 精灵尺寸 16 处 | `bin/treasure_bevy.rs`(13) · `vs_duel.rs`(3) | ✅ 集中 `ui.rs::palette`（F-02 续） |
 | **F-03** | 🟡 低 | 资产路径字符串 91 处——`chrome.rs VS_*` 已单源（OK）；`hd_manifest.rs` 生成路径（OK）；其余为数据路径（OK） | `ti-app/src/**` + `ti-engine/src/**` | 无违背（核对） |
+| **F-03b** | 🟡 低 | chrome.rs 内联资产路径 27 处（boat_1-4/icon_*/node_*） | `ti-app/src/scenes/chrome.rs` | 无违背——集中注册表 + `check_asset_registry` disk↔ui_manifest 双向同步兜底（全部登记在案） |
 
 **已验证符合规范（非硬编码）**：场景/地图/平衡/文本数据驱动（px 坐标字面量 0）；`DefaultPlugins`；`bevy_picking`；方向感知（S38 wasm 修复）；`include_str!` 内嵌 = S31 定案（内嵌默认 + 注入解耦，合理）。
 
@@ -60,7 +62,7 @@ CS-1 资产单源 · CS-2 文件职责 · CS-3 参数禁单字母 · CS-4 场景
 
 | 检查 | 守什么 |
 |---|---|
-| **`engine-no-color-literal`**（第 41 项） | ① 引擎层 `Color::srgb/srgba` 字面量只允许出现在 `ui.rs::palette` 常量定义（单源）与 `canvas.rs::rgb565_to_color`（合法 RGB565 转换）；其余出现 = 违背（F-01 防再犯）。② `ui.rs` 尺寸裸数字（`FontSize::Px`/`BorderRadius::px`/`UiRect::px`/`Val::Px` + 紧跟数字）= 0（F-02 防再犯）。 |
+| **`engine-no-color-literal`**（第 41 项） | ① 引擎层 `Color::srgb/srgba` 字面量只允许出现在 `ui.rs::palette` 常量定义（单源）与 `canvas.rs::rgb565_to_color`（合法 RGB565 转换）；其余出现 = 违背（F-01 防再犯）。② 尺寸裸数字 `Px(<数字>`（`FontSize::Px`/`BorderRadius::px`/`UiRect::px`/`Val::Px`）在 `ui.rs` + `bin/treasure_bevy.rs` = 0，`vs_duel.rs` 精灵尺寸（`Vec2::new`/`custom_size`）裸数字 = 0（F-02/F-02b 防再犯）。 |
 
 ## 5. 审计方法（复跑）
 

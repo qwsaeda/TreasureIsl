@@ -277,7 +277,10 @@ pub fn spawn_stage(world: &mut World, layout: &DuelLayout) {
     // 回合徽章（舵轮位 = 黄铜圆盘）。
     world.spawn((
         DuelEntity,
-        Sprite::from_color(crate::ui::palette::DUEL_ROUND_BADGE, Vec2::new(64.0, 64.0)),
+        Sprite::from_color(
+            crate::ui::palette::DUEL_ROUND_BADGE,
+            Vec2::new(crate::ui::palette::DUEL_BADGE_SIZE, crate::ui::palette::DUEL_BADGE_SIZE),
+        ),
         Transform::from_translation(
             to_world(layout.round_badge.0, layout.round_badge.1).extend(-40.0),
         ),
@@ -309,7 +312,14 @@ pub fn trigger_strike(world: &mut World, damage: u32, toward_boss: bool) {
     world.spawn((
         DuelEntity,
         DamagePopup { born_ms: 0, y0: to_world(anchor_x, anchor_y).y },
-        Sprite { image: handle, custom_size: Some(Vec2::new(120.0, 60.0)), ..Default::default() },
+        Sprite {
+            image: handle,
+            custom_size: Some(Vec2::new(
+                crate::ui::palette::DUEL_CARD_W,
+                crate::ui::palette::DUEL_CARD_H,
+            )),
+            ..Default::default()
+        },
         Transform::from_translation(to_world(anchor_x, anchor_y).extend(10.0)),
     ));
 

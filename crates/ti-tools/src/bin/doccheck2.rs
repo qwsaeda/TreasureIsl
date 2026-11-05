@@ -3761,19 +3761,42 @@ fn check_engine_no_color_literal(root: &Path) -> Vec<String> {
         }
     }
 
-    // ② ui.rs 尺寸魔法数字：裸数字 Px = 0（palette 常量引用）。
-    if let Some(text) = read_file(root, "crates/ti-engine/src/ui.rs") {
+    // ② 尺寸魔法数字：裸数字 Px = 0（palette 常量引用）。统一扫 `Px(<数字>`（覆盖
+    //   `Val::Px(10.0)` / `bevy::ui::UiRect::px(24.0,…)` / `bevy::text::FontSize::Px(24.0)` 等全前缀）。
+    //   ui.rs / treasure_bevy.rs（bevy_ui chrome）禁裸数字；vs_duel.rs 精灵尺寸（Vec2/custom_size）另查。
+    for rel in ["crates/ti-engine/src/ui.rs", "crates/ti-engine/src/bin/treasure_bevy.rs"] {
+        let Some(text) = read_file(root, rel) else { continue };
         for (i, line) in text.lines().enumerate() {
-            for pat in ["FontSize::Px(", "BorderRadius::px(", "UiRect::px(", "Val::Px("] {
-                if line.contains(pat) {
-                    // 取 pat 后紧跟的第一个字符，是数字 = 裸字面量（违背）。
-                    if let Some(rest) = line.split(pat).nth(1) {
-                        if rest.chars().next().is_some_and(|c| c.is_ascii_digit()) {
-                            errors.push(format!(
-                                "crates/ti-engine/src/ui.rs:{} `{pat}...` 尺寸魔法数字未走 `palette::*`（F-02）",
-                                i + 1
-                            ));
-                        }
+            if line.trim_start().starts_with("//") {
+                continue;
+            }
+            if let Some(pos) = line.find("Px(") {
+                let after = &line[pos + 3..];
+                if after.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+                    errors.push(format!(
+                        "{rel}:{} `Px(<数字>` 尺寸魔法数字未走 `palette::*`（F-02）",
+                        i + 1
+                    ));
+                }
+            }
+        }
+    }
+    if let Some(text) = read_file(root, "crates/ti-engine/src/vs_duel.rs") {
+        for (i, line) in text.lines().enumerate() {
+            if line.trim_start().starts_with("//") {
+                continue;
+            }
+            // `Vec2::new(64.0, 64.0)` / `custom_size: Some(Vec2::new(120.0, 60.0))` 裸尺寸。
+            if (line.contains("Vec2::new(") || line.contains("custom_size"))
+                && line.contains("Vec2::new(")
+            {
+                if let Some(pos) = line.find("Vec2::new(") {
+                    let after = &line[pos + "Vec2::new(".len()..];
+                    if after.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+                        errors.push(format!(
+                            "crates/ti-engine/src/vs_duel.rs:{} 精灵尺寸字面量未走 `palette::*`（F-02）",
+                            i + 1
+                        ));
                     }
                 }
             }
