@@ -1,0 +1,67 @@
+# S40.0 内容运营验证：新增地图 m21（全程零 Rust 改动）
+
+> 2026-11-05。用户「是不是不改业务，我们只用换 UI 和改地图了？」→「开这个验证任务」：
+> 机器证明「只换 UI/改地图 = 零 Rust 改动」的内容运营路径真实可用。
+
+## 改动面（声明）
+
+- **地图包数据**：`assets/maps/m21/{manifest,map,layout,strings}.json`（从 `_template` 引导 +
+  复制 m01 骨架保证 31 格不变量 + 定制：ring center_x 540→564 / radius 480→456（换版面）+
+  `glmapm21.Map` = 海图二十一（换文案）+ events id `m21_*`（防撞名））。
+- **资产**：复用共享池 pool（`isle_*` 10 类 + `island_home_m01`），无新资产文件（content 运营
+  换图不强制加资产；S39 已验证加资产路径）。
+- **UI/默认数据**：`map_pack.py install` 接线（board.json 段 + index.json 包清单）+ `sync`
+  回注（board/scenes/strings）。
+- **业务逻辑 / Rust 零改动**：`ti-core` 规则 + `ti-engine` 呈现层 + `crates/` 全目录 **0 diff**。
+
+## 判据
+
+### J1 map_pack add m21 + 定制 + verify（I1~I9 不变量）
+
+```
+map_pack add: m21 骨架已建（填 map.json 31 格 + 出专属资产后 verify / install / pack）
+map_pack verify: assets/maps/m21 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack pack: m21 → dist/maps/m21.map-pack + dist/maps/m21.map-pack.zip
+map_pack install: m21 → assets/maps/m21（board.json 已接线 + index.json 更新）
+map_pack check: 0 漂移（21 个已装包 vs board.json；默认包 m01 vs 布局数据）
+map_pack sync: 21 个已装包 map.json → board.json；默认包 m01 layout → scenes.json / manifest / strings
+```
+✅ I1~I9 全过 + pack/install/check/sync 全通。
+
+### J2 TI_MAP=m21 --shot --scene=main_map 换图生效
+
+```
+[map-pack] 已注入 m21（显式；board/scenes/strings 段注入 + 缺段内嵌回退；已装包清单 22 项）
+[shot] preload ready at tick=117
+[shot] 非黑像素 = 2058514 / alpha>8 = 2073600 / 2073600
+[shot] 已写 evidence/bevy_native_main_map.png
+```
+出图 = `evidence/bevy_native_main_map.png`：羊皮海图底 + 31 格环形赛道（骷髅旗/罗盘玫瑰格）+
+中央岛屿（火山/灯塔/村庄/金宝箱）+ 顶角 HUD（金 1000 / 持有 0 种）+ 舵轮 + 罗盘；
+**版面定制生效**（ring center_x 564 / radius 456 由 m21 包驱动）。✅ 换图生效。
+
+### J3 零 Rust 改动（核心判据）
+
+```
+git diff --stat crates/   → 空（crates/ 全目录 0 diff）
+```
+m21 全程只改 `assets/maps/m21/` + `assets/data/{board,scenes,strings}.json` + `assets/maps/index.json`
+（map_pack 接线回注）。**crates/ 0 diff = 换地图零 Rust 改动机器证明**。✅
+
+### J4 gate 全绿
+
+见 `evidence/S40.0_gate.log`（gate 全项 0 failure）。
+
+## 结论
+
+「只换 UI/改地图 = 零 Rust 改动」内容运营路径**机器证明**：
+- **改地图**：`map_pack.py add/pack/install/sync` 全程数据，`crates/` 0 diff（S40.0）。
+- **换 UI**：`scenes.json` + 换资产，`crates/` 0 diff（S39.0 已验证）。
+- **业务冻结**：`ti-core` 规则零改动（不改业务的前提 = 业务已定案稳定）。
+
+## 关联
+
+- 地图包标准：`docs/process/21_map_package_spec.md`（S31 单一事实源）
+- 内容运营路径：`docs/process/18_asset_content_pipeline.md`（③参数化）
+- 工具：`scripts/map_pack.py`（9 子命令；add/pack/verify/install/uninstall/list/check/sync/index）
+- 台账：S40.0（in_progress → verified）
