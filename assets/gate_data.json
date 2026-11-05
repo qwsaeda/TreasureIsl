@@ -77,6 +77,15 @@
     "gold_glow",
     "gold_bright",
     "selected"
+   ],
+   [
+    "ui_dark_brown_06",
+    "ui_dark_brown_text"
+   ],
+   [
+    "panel_wood",
+    "ui_duel_btn_bg",
+    "ui_panel_wood_bg"
    ]
   ],
   "doccheck2_checks": [

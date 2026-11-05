@@ -36,43 +36,57 @@ use bevy::ui::prelude::{ImageNode, NodeImageMode};
 /// 尺寸用 `f32` 常量（引用处 `UiRect::px(PANEL_PAD, …)`），避免 const-fn 限制。
 pub mod palette {
     use bevy::color::Color;
+    use ti_render::theme::Theme;
 
-    // ── 颜色（F-01，值 = 原字面量）──
+    // ── 颜色（S38 Theme 迁移：常量 = theme_color(Theme::DEFAULT.<token>, alpha)，编译期派生）──
+    /// `RGB565` → `Color`（含 alpha），const。S38 Theme 迁移：palette 颜色常量编译期从
+    /// `Theme::DEFAULT` 派生（theme.json/`Theme::DEFAULT` = 单源；alpha 因 `RGB565` 无 alpha 通道单独存）。
+    /// 数学与 [`crate::canvas::rgb565_to_color`] 一致（r/g/b = 5/6/5 bit → 0..1）。
+    #[allow(clippy::cast_precision_loss)]
+    const fn theme_color(token: u16, alpha: f32) -> Color {
+        const MAX5: u32 = 31;
+        const MAX6: u32 = 63;
+        let v = token as u32;
+        let r = (((v >> 11) & MAX5) * 255 / MAX5) as f32 / 255.0;
+        let g = (((v >> 5) & MAX6) * 255 / MAX6) as f32 / 255.0;
+        let b = ((v & MAX5) * 255 / MAX5) as f32 / 255.0;
+        Color::srgba(r, g, b, alpha)
+    }
     /// 面板底（棕黑半透明，ui.rs 列表/面板）。
-    pub const PANEL_BG: Color = Color::srgba(0.10, 0.07, 0.03, 0.82);
+    pub const PANEL_BG: Color = theme_color(Theme::DEFAULT.ui_panel_bg, 0.82);
     /// 金文本（标题/选中行，ui.rs）。
-    pub const GOLD_TEXT: Color = Color::srgb(0.95, 0.85, 0.60);
+    pub const GOLD_TEXT: Color = theme_color(Theme::DEFAULT.ui_gold_text, 1.0);
     /// 黄铜高亮（选中行/按钮，ui.rs）。
-    pub const BRASS_SELECT: Color = Color::srgb(0.72, 0.45, 0.16);
+    pub const BRASS_SELECT: Color = theme_color(Theme::DEFAULT.ui_brass_select, 1.0);
     /// 透明。
     pub const TRANSPARENT: Color = Color::srgba(0.0, 0.0, 0.0, 0.0);
     /// 米白文本（副标题，ui.rs）。
-    pub const CREAM_TEXT: Color = Color::srgb(0.95, 0.90, 0.78);
+    pub const CREAM_TEXT: Color = theme_color(Theme::DEFAULT.ui_cream_text, 1.0);
     /// 灰金副文本（ui.rs + `treasure_bevy`）。
-    pub const MUTED_GOLD: Color = Color::srgb(0.70, 0.62, 0.48);
+    pub const MUTED_GOLD: Color = theme_color(Theme::DEFAULT.ui_muted_gold, 1.0);
     /// 深棕文本（ui.rs）。
-    pub const DARK_BROWN_TEXT: Color = Color::srgb(0.15, 0.10, 0.05);
+    pub const DARK_BROWN_TEXT: Color = theme_color(Theme::DEFAULT.ui_dark_brown_text, 1.0);
     /// 面板深棕半透明（`treasure_bevy` message/其它面板）。
-    pub const PANEL_WOOD_BG: Color = Color::srgba(0.24, 0.16, 0.09, 0.92);
+    pub const PANEL_WOOD_BG: Color = theme_color(Theme::DEFAULT.ui_panel_wood_bg, 0.92);
     /// 羊皮亮文本（`treasure_bevy`）。
-    pub const PARCH_BRIGHT: Color = Color::srgb(0.97, 0.88, 0.70);
+    pub const PARCH_BRIGHT: Color = theme_color(Theme::DEFAULT.ui_parch_bright, 1.0);
     /// 羊皮米（`treasure_bevy`）。
-    pub const PARCH_CREAM: Color = Color::srgb(0.92, 0.86, 0.72);
+    pub const PARCH_CREAM: Color = theme_color(Theme::DEFAULT.ui_parch_cream, 1.0);
     /// 深棕文本（蓝分量 0.06，`treasure_bevy`）。
-    pub const DARK_BROWN_06: Color = Color::srgb(0.15, 0.10, 0.06);
+    pub const DARK_BROWN_06: Color = theme_color(Theme::DEFAULT.ui_dark_brown_06, 1.0);
     // VS 原型（vs_duel.rs）
     /// VS HP 槽底（黑半透明）。
-    pub const DUEL_SLOT_BG: Color = Color::srgba(0.05, 0.04, 0.03, 0.9);
+    pub const DUEL_SLOT_BG: Color = theme_color(Theme::DEFAULT.ui_duel_slot_bg, 0.9);
     /// VS 按钮底（棕半透明）。
-    pub const DUEL_BTN_BG: Color = Color::srgba(0.22, 0.16, 0.09, 0.95);
+    pub const DUEL_BTN_BG: Color = theme_color(Theme::DEFAULT.ui_duel_btn_bg, 0.95);
     /// VS 道具行底。
-    pub const DUEL_ROW_BG: Color = Color::srgba(0.18, 0.13, 0.08, 0.9);
+    pub const DUEL_ROW_BG: Color = theme_color(Theme::DEFAULT.ui_duel_row_bg, 0.9);
     /// VS 回合徽章（黄铜圆盘）。
-    pub const DUEL_ROUND_BADGE: Color = Color::srgba(0.78, 0.55, 0.20, 1.0);
+    pub const DUEL_ROUND_BADGE: Color = theme_color(Theme::DEFAULT.ui_duel_round_badge, 1.0);
     /// VS 弹窗白闪（alpha 由调用方乘 k）。
-    pub const DUEL_POPUP_FLASH: Color = Color::srgba(1.0, 0.91, 0.75, 1.0);
+    pub const DUEL_POPUP_FLASH: Color = theme_color(Theme::DEFAULT.ui_duel_popup_flash, 1.0);
     /// 调试红棕背景（`bevy_app` 占位）。
-    pub const DEBUG_RED_BROWN: Color = Color::srgb(0.23, 0.10, 0.09);
+    pub const DEBUG_RED_BROWN: Color = theme_color(Theme::DEFAULT.ui_debug_red_brown, 1.0);
 
     // ── 尺寸（F-02，值 = 原字面量，f32 常量）──
     /// 面板内边距。
@@ -146,6 +160,33 @@ pub mod palette {
     pub const DUEL_CARD_W: f32 = 120.0;
     /// VS 卡牌精灵高。
     pub const DUEL_CARD_H: f32 = 60.0;
+    // VS 动效（F-04：集中 vs_duel 时序/偏移/位图烘焙色，值 = 原字面量零视觉变化）。
+    /// VS 冲刺距离（px）。
+    pub const DUEL_STRIKE_REACH: f32 = 260.0;
+    /// VS 冲刺时长（ms）。
+    pub const DUEL_STRIKE_MS: u32 = 260;
+    /// VS 命中定格时长（ms）。
+    pub const DUEL_HIT_STOP_MS: u32 = 90;
+    /// VS 伤害数字上飘时长（ms）。
+    pub const DUEL_POPUP_MS: u32 = 700;
+    /// VS 伤害数字上飘距离（px）。
+    pub const DUEL_POPUP_RISE_PX: f32 = 120.0;
+    /// VS 伤害数字锚点横向偏移（px，向命中方偏移）。
+    pub const DUEL_HIT_ANCHOR_DX: f32 = 60.0;
+    /// VS 伤害数字锚点纵向比例（`fighter_h` 的百分比）。
+    pub const DUEL_HIT_ANCHOR_Y_PCT: f32 = 0.55;
+    /// VS 屏幕震动幅度（px）。
+    pub const DUEL_SHAKE_AMPLITUDE: f32 = 14.0;
+    /// VS 屏幕震动时长（ms）。
+    pub const DUEL_SHAKE_REMAIN_MS: u32 = 160;
+    /// 帧 delta 回退（`Time::delta()` 读失败/极小帧，ms；`vs_duel` 动画 + 游戏帧共用）。
+    pub const FRAME_DELTA_FALLBACK_MS: u32 = 16;
+    /// VS 动画帧 delta 上限（ms，防动画跳帧；游戏帧上限在 `render_system` 另定 250）。
+    pub const DUEL_ANIM_DELTA_CLAMP_MS: u32 = 60;
+    /// 伤害数字位图描边 RGB（RGBA8 字节域，`bake_damage_texture`）。
+    pub const DUEL_DMG_OUTLINE_RGB: (u8, u8, u8) = (0x20, 0x12, 0x08);
+    /// 伤害数字位图芯 RGB（RGBA8 字节域，`bake_damage_texture`）。
+    pub const DUEL_DMG_CORE_RGB: (u8, u8, u8) = (0xFF, 0xE8, 0xC0);
 }
 
 /// 生成 UI 相机（叠在游戏正交相机之上；`order=1` + `clear_color=None` 不清屏，游戏世界透出）。

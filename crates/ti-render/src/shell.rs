@@ -621,6 +621,23 @@ mod tests {
         isle_ember: 37,
         isle_mist: 38,
         isle_black: 39,
+        // S38 bevy_ui palette 迁移（测试用不同值 → 像素可区分）。
+        ui_panel_bg: 60,
+        ui_gold_text: 61,
+        ui_brass_select: 62,
+        ui_cream_text: 63,
+        ui_muted_gold: 64,
+        ui_dark_brown_text: 65,
+        ui_panel_wood_bg: 66,
+        ui_parch_bright: 67,
+        ui_parch_cream: 68,
+        ui_dark_brown_06: 69,
+        ui_duel_slot_bg: 70,
+        ui_duel_btn_bg: 71,
+        ui_duel_row_bg: 72,
+        ui_duel_round_badge: 73,
+        ui_duel_popup_flash: 74,
+        ui_debug_red_brown: 75,
     };
 
     /// 记录型 Canvas：统计 `fill_rect` 次数与面积和（`draw_text` 不记账）。

@@ -120,15 +120,6 @@ pub struct ShakeOffset {
     pub remain_ms: u32,
 }
 
-/// 我方出手冲刺距离（像素）。
-const STRIKE_REACH: f32 = 260.0;
-/// 冲刺时长（毫秒）。
-const STRIKE_MS: u32 = 260;
-/// 命中定格时长（毫秒）。
-const HIT_STOP_MS: u32 = 90;
-/// 伤害数字存活时长（毫秒）。
-const POPUP_MS: u32 = 700;
-
 /// 缓动（ease-out cubic）；`progress` = 归一化进度 0..=1。
 fn ease_out(progress: f32) -> f32 {
     let inv = 1.0 - progress.clamp(0.0, 1.0);
@@ -307,8 +298,12 @@ pub fn trigger_strike(world: &mut World, damage: u32, toward_boss: bool) {
     // 伤害数字：烘焙 RGBA8 位图（白字 + 描边），由 `bake_damage_texture` 生成。
     let image = bake_damage_texture(&text);
     let handle = world.resource_mut::<AssetServer>().add(image);
-    let anchor_x = if toward_boss { layout.boss_x - 60.0 } else { layout.player_x + 60.0 };
-    let anchor_y = layout.ground_y - layout.fighter_h * 0.55;
+    let anchor_x = if toward_boss {
+        layout.boss_x - crate::ui::palette::DUEL_HIT_ANCHOR_DX
+    } else {
+        layout.player_x + crate::ui::palette::DUEL_HIT_ANCHOR_DX
+    };
+    let anchor_y = layout.ground_y - layout.fighter_h * crate::ui::palette::DUEL_HIT_ANCHOR_Y_PCT;
     world.spawn((
         DuelEntity,
         DamagePopup { born_ms: 0, y0: to_world(anchor_x, anchor_y).y },
@@ -327,7 +322,10 @@ pub fn trigger_strike(world: &mut World, damage: u32, toward_boss: bool) {
     if toward_boss {
         world.spawn((
             DuelEntity,
-            ShakeOffset { amplitude: 14.0, remain_ms: 160 },
+            ShakeOffset {
+                amplitude: crate::ui::palette::DUEL_SHAKE_AMPLITUDE,
+                remain_ms: crate::ui::palette::DUEL_SHAKE_REMAIN_MS,
+            },
             Transform::from_translation(Vec3::ZERO),
         ));
     }
@@ -381,15 +379,15 @@ fn bake_damage_texture(text: &str) -> Image {
                             )]
                             let nidx = ((ny as usize) * w + nx as usize) * 4;
                             if px[nidx + 3] == 0 {
-                                px[nidx] = 0x20;
-                                px[nidx + 1] = 0x12;
-                                px[nidx + 2] = 0x08;
+                                px[nidx] = crate::ui::palette::DUEL_DMG_OUTLINE_RGB.0;
+                                px[nidx + 1] = crate::ui::palette::DUEL_DMG_OUTLINE_RGB.1;
+                                px[nidx + 2] = crate::ui::palette::DUEL_DMG_OUTLINE_RGB.2;
                                 px[nidx + 3] = 0xFF;
                             }
                         }
-                        px[idx] = 0xFF;
-                        px[idx + 1] = 0xE8;
-                        px[idx + 2] = 0xC0;
+                        px[idx] = crate::ui::palette::DUEL_DMG_CORE_RGB.0;
+                        px[idx + 1] = crate::ui::palette::DUEL_DMG_CORE_RGB.1;
+                        px[idx + 2] = crate::ui::palette::DUEL_DMG_CORE_RGB.2;
                         px[idx + 3] = 0xFF;
                     }
                 }
@@ -433,19 +431,22 @@ pub fn animate_stage(
     mut popups: Query<(&mut Transform, &mut Sprite, &DamagePopup)>,
     time: Res<Time>,
 ) {
-    let delta = u32::try_from(time.delta().as_millis()).unwrap_or(16).clamp(1, 60);
+    let delta = u32::try_from(time.delta().as_millis())
+        .unwrap_or(crate::ui::palette::FRAME_DELTA_FALLBACK_MS)
+        .clamp(1, crate::ui::palette::DUEL_ANIM_DELTA_CLAMP_MS);
     stage.phase_ms = stage.phase_ms.saturating_add(delta);
     let layout = DuelLayout::default();
 
     // 冲刺位移：t 进度 → 缓动位移（出击方前冲，命中后回位）。
-    let progress = (stage.phase_ms as f32 / STRIKE_MS as f32).clamp(0.0, 1.0);
+    let progress =
+        (stage.phase_ms as f32 / crate::ui::palette::DUEL_STRIKE_MS as f32).clamp(0.0, 1.0);
     let eased = ease_out(progress);
     match stage.phase {
         DuelPhase::PlayerStrike | DuelPhase::BossStrike => {
             let (from_x, to_x) = if stage.phase == DuelPhase::PlayerStrike {
-                (layout.player_x, layout.player_x + STRIKE_REACH)
+                (layout.player_x, layout.player_x + crate::ui::palette::DUEL_STRIKE_REACH)
             } else {
-                (layout.boss_x, layout.boss_x - STRIKE_REACH)
+                (layout.boss_x, layout.boss_x - crate::ui::palette::DUEL_STRIKE_REACH)
             };
             let x = from_x + (to_x - from_x) * eased;
             for mut t in &mut fighters {
@@ -453,12 +454,12 @@ pub fn animate_stage(
                 let want = if is_player { x } else { layout.boss_x };
                 t.translation.x = to_world(want, layout.ground_y - layout.fighter_h / 2.0).x;
             }
-            if stage.phase_ms >= STRIKE_MS {
+            if stage.phase_ms >= crate::ui::palette::DUEL_STRIKE_MS {
                 stage.phase = DuelPhase::HitStop;
                 stage.phase_ms = 0;
             }
         }
-        DuelPhase::HitStop if stage.phase_ms >= HIT_STOP_MS => {
+        DuelPhase::HitStop if stage.phase_ms >= crate::ui::palette::DUEL_HIT_STOP_MS => {
             // 命中定格结束：双方短暂僵持（位置不回弹，保持压迫感）后回 Idle。
             {
                 stage.phase = DuelPhase::Idle;
@@ -478,8 +479,8 @@ pub fn animate_stage(
     // 伤害数字：上飘 + 渐隐。
     for (mut t, mut s, popup) in &mut popups {
         let age = stage.phase_ms.saturating_sub(popup.born_ms);
-        let k = (age as f32 / POPUP_MS as f32).clamp(0.0, 1.0);
-        t.translation.y = popup.y0 + k * 120.0;
+        let k = (age as f32 / crate::ui::palette::DUEL_POPUP_MS as f32).clamp(0.0, 1.0);
+        t.translation.y = popup.y0 + k * crate::ui::palette::DUEL_POPUP_RISE_PX;
         s.color = crate::ui::palette::DUEL_POPUP_FLASH.with_alpha((1.0 - k).max(0.0));
         if k >= 1.0 {
             // 生命周期结束由清理系统处理（本原型不自动 despawn，避免借用冲突）。

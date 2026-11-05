@@ -2201,14 +2201,18 @@ fn ui_palette_triple_check(root: &Path) -> Vec<String> {
     // theme.rs DEFAULT 块：`field: 0xNNNN,`
     let mut code_map: Vec<(String, u16)> = Vec::new();
     if let Some(start) = theme_rs.find("pub const DEFAULT") {
+        // 截止 = 字号段起点（`font_size: 44`）；DEFAULT 色板段含 S38 `ui_*` 新令牌
+        // （原截止 `black: 0x0000` 会漏掉 black 之后新增的色板字段）。
         let end =
-            theme_rs[start..].find("black: 0x0000").map_or(theme_rs.len(), |o| start + o + 16);
+            theme_rs[start..].find("font_size: 44").map_or(theme_rs.len(), |o| start + o + 16);
         for line in theme_rs[start..end].lines() {
             let Some((name, val)) = line.trim().trim_end_matches(',').split_once("0x") else {
                 continue;
             };
             let field = name.trim().trim_end_matches(':').to_string();
-            if val.len() == 4 && field.chars().all(|c| c.is_ascii_lowercase() || c == '_') {
+            if val.len() == 4
+                && field.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+            {
                 if let Ok(v) = u16::from_str_radix(val, 16) {
                     code_map.push((field, v));
                 }
@@ -3749,8 +3753,13 @@ fn check_engine_no_color_literal(root: &Path) -> Vec<String> {
             if !line.contains("Color::srgb(") && !line.contains("Color::srgba(") {
                 continue;
             }
-            // 允许：ui.rs palette 单源常量定义；canvas.rs rgb565_to_color 合法转换。
-            let is_palette_const = rel.ends_with("ui.rs") && line.contains("pub const");
+            // 允许：ui.rs palette 单源常量定义（S38 起 = `theme_color(Theme::DEFAULT.<token>, alpha)`
+            //   编译期派生；`theme_color` helper 函数体含 `Color::srgba(r,g,b,alpha)` 属合法转换）；
+            //   canvas.rs rgb565_to_color 合法转换。
+            let is_palette_const = rel.ends_with("ui.rs")
+                && (line.contains("pub const")
+                    || line.contains("theme_color(")
+                    || line.contains("Color::srgba(r, g, b, alpha)"));
             let is_rgb565 = rel.ends_with("canvas.rs");
             if !is_palette_const && !is_rgb565 {
                 errors.push(format!(
@@ -3795,6 +3804,55 @@ fn check_engine_no_color_literal(root: &Path) -> Vec<String> {
                     if after.chars().next().is_some_and(|c| c.is_ascii_digit()) {
                         errors.push(format!(
                             "crates/ti-engine/src/vs_duel.rs:{} 精灵尺寸字面量未走 `palette::*`（F-02）",
+                            i + 1
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    // ③ 动画/时序裸数字（F-04）：独立 helper（守 `too_many_lines`）。
+    errors.extend(check_anim_timing_literals(root));
+    errors
+}
+
+/// ③ 动画/时序裸数字（F-04）：`vs_duel.rs` 动效参数禁止裸字面量（delta 回退/震动幅度/上飘/
+/// 锚点偏移）——走 `palette::DUEL_*` / `FRAME_DELTA_FALLBACK_MS`。扫 `unwrap_or(16)`、
+/// `ShakeOffset { amplitude: <数字>`、`k * <数字>`（上飘距离）。`treasure_bevy.rs` `unwrap_or(16)`
+/// 同样禁（游戏帧回退共用 `FRAME_DELTA_FALLBACK_MS`）。
+fn check_anim_timing_literals(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    for rel in ["crates/ti-engine/src/vs_duel.rs", "crates/ti-engine/src/bin/treasure_bevy.rs"] {
+        let Some(text) = read_file(root, rel) else { continue };
+        for (i, line) in text.lines().enumerate() {
+            if line.trim_start().starts_with("//") {
+                continue;
+            }
+            let stripped = line.trim();
+            if stripped.contains("unwrap_or(16)") {
+                errors.push(format!(
+                    "{rel}:{} `unwrap_or(16)` 帧回退字面量未走 `palette::FRAME_DELTA_FALLBACK_MS`（F-04）",
+                    i + 1
+                ));
+            }
+            if rel.ends_with("vs_duel.rs") {
+                if let Some(pos) = stripped.find("amplitude: ") {
+                    if stripped[pos + "amplitude: ".len()..]
+                        .chars()
+                        .next()
+                        .is_some_and(|c| c.is_ascii_digit())
+                    {
+                        errors.push(format!(
+                            "{rel}:{} `ShakeOffset amplitude` 裸数字未走 `palette::DUEL_SHAKE_AMPLITUDE`（F-04）",
+                            i + 1
+                        ));
+                    }
+                }
+                if let Some(pos) = stripped.find("k * ") {
+                    let after = &stripped[pos + "k * ".len()..];
+                    if after.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+                        errors.push(format!(
+                            "{rel}:{} 伤害数字上飘 `k * <数字>` 未走 `palette::DUEL_POPUP_RISE_PX`（F-04）",
                             i + 1
                         ));
                     }

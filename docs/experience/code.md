@@ -644,3 +644,29 @@ S34.0 违反项修复（U20 战报拆分 `draw_result_scene` + U21 生物移格�
 
 ### EXP-165 代码：硬编码审计：引擎层 Color::srgb/srgba 字面量 ~24 处 + ui.rs 尺寸魔法数字 18 处未走令牌单源，集中 ui.rs::palette 具名常量
 **背景**：用户 2026-11-04「发现你用了游戏引擎，但很多还是硬编码，不是遵守游戏开发/引擎使用的最佳规范实践，首先总结这样的规范，然后审计我们的项目」。\n\n**审计方法**（对照 `12_bevy_usage.md`/`16_code_standards.md`/`18_asset_content_pipeline.md`/`17_layout_engine.md` 提炼规范清单 A 数据驱动 / B 视觉令牌 / C 引擎机制 / D 代码标准）：\n- 扫 `Color::srgb()/srgba()` 字面量（应走 Theme 令牌 / CS-1 单源）→ **F-01 ~24 处**（ui.rs 10 / treasure_bevy.rs 7 / vs_duel.rs 5 / scene_render.rs 1 / bevy_app.rs 1）。\n- 扫 `FontSize::Px()`/`BorderRadius::px()`/`UiRect::px()`/`Val::Px()` 裸数字 → **F-02 18 处**（ui.rs bevy_ui chrome：字体 26/20/15/28/24、圆角 12/8/10、内边 16/8、gap 12/10、缩略图 72×96、按钮 240×56）。\n- 已达标面：场景/地图/平衡/文本数据驱动（px 坐标字面量 0）；DefaultPlugins；bevy_picking；方向感知（S38 wasm 修复）；include_str! 内嵌 = S31 定案（合理）。\n\n**关键决策**：不直接走 `ti_render::Theme`（RGB565）——Theme 值与现值有偏差（如 `0.72,0.45,0.16` 黄铜高亮 vs gold `0.581,0.429,0.161`），严格走 Theme 会改变视觉 → 触发 A 纪律设计稿（硬规则 9）。故先做**具名常量单源**（`ui.rs::palette`，值不变零视觉变化），Theme 完整迁移列为后续（需用户确认设计稿）。\n\n**落码**：`ui.rs` 顶部 `pub mod palette`（17 色 `Color` const + 17 尺寸 `f32` const）；引用约定：ui.rs 用 `palette::X`，lib 子模块（vs_duel/bevy_app/scene_render）用 `crate::ui::palette::X`，bin（treasure_bevy）用 `ti_engine::ui::palette::X`。\n\n**固化**：doccheck2 第 41 项 `engine-no-color-literal`（① 引擎层 `Color::srgb/srgba` 字面量只允许在 `ui.rs::palette` 常量定义 + `canvas.rs::rgb565_to_color` 合法转换；② `ui.rs` 尺寸裸数字 = 0），41 项 0 error；文档 `docs/process/28_engine_best_practice.md`（审计基准单一事实源）。\n\n**预判**：① 加新颜色/尺寸 → 先进 `ui.rs::palette` 加 const，再引用（禁止散落字面量）；② 走 Theme 迁移 → 先出设计稿用户确认（A 纪律），`palette::X` → `rgb565_to_color(theme.xxx)`；③ doccheck2 第 41 项注释行已豁免（doc 示例不算硬编码）。
+
+### EXP-166 代码：palette 颜色 → ti_render::Theme 令牌：语义不匹配须加新令牌保视觉；const 派生用自写 theme_color 而非 with_alpha
+
+用户「继续」延伸要求完整迁移 `palette::*` → `ti_render::Theme`。踩坑：
+
+1. **语义不匹配（A 纪律关键）**：现有 Theme 令牌与 palette 色**不是同一语义**——`menu_bg`=藏蓝、`text_on_wood`=粉、`secondary`=绿、`brass_light`=黄绿，而 palette 色是棕/金/奶油（当前设计真实色）。naive 值交换把棕面板变蓝、金文本变粉 = **劣化视觉**。处置 = 加 **16 个 `ui_*` 新令牌**（值 = palette 现值 RGB565 量化，最大误差 0.0155 < 1.6% 零视觉变化近似），用户确认「加新令牌保视觉」后落码。
+2. **`with_alpha` 非 const**：`Color::with_alpha` 是 trait 方法非 const fn，palette 颜色常量无法 `theme_color(...).with_alpha(a)`。处置 = 自写 `const fn theme_color(token, alpha)`（RGB565→srgb 数学 + alpha 一并算，`Color::srgba` 是 const fn），编译期真派生。
+3. **`u32::from(u16)` 非 const**：const fn 内用 `u32::from(value)` 报 `From is not yet stable as a const trait`；改 `value as u32`。
+4. **doccheck2 S17.2 三方对账定界**：解析 `pub const DEFAULT` 块截止于 `black: 0x0000`——S38 在 black 之后加的新字段被漏解析报「无对应」。改截止 = 字号段起点 `font_size: 44`。
+5. **`is_ascii_lowercase` 过滤数字字段**：`ui_dark_brown_06` 含数字被三方对账字段名校验过滤（`is_ascii_lowercase()` 对 `'0'` 为 false）。放宽允许 `is_ascii_digit()`。
+6. **撞色须登记**：`ui_dark_brown_06`==`ui_dark_brown_text`（0x28C2）、`panel_wood`==`ui_duel_btn_bg`==`ui_panel_wood_bg`（0x3943）触发「撞色未登记 palette_aliases」，加入 `gate_data.json::palette_aliases`（飞轮 R1 ①-12）。
+7. **doc_markdown**：新字段 doc 注释里 `bevy_ui`/`RGB565`/`bevy_app` 需反引号（clippy `-D warnings`），否则 `missing backticks`。
+8. **尺寸不迁 Theme**：Theme 字号是 `i32` 逻辑像素、非 bevy_ui 布局 px 语义，迁移会引入单位混淆 → 尺寸保持 `palette` 常量。
+
+判据：workspace + wasm32 clippy 0、fmt 干净、doccheck2 41 项 0 error、重建 wasm + Playwright 渲染与改前一致（<1.6%）。
+
+### EXP-167 代码：动画/时序 + VS 原型数据审计：烘焙位图颜色字面量 + 动效时序魔法数字未走 palette 单源
+
+用户「继续深扫」延伸审计动画/时序数值 + VS 原型数据。踩坑：
+
+1. **烘焙位图颜色字面量（F-04a）**：`bake_damage_texture`（vs_duel.rs）用 RGBA8 字节直写像素——描边 `0x20/0x12/0x08` + 芯 `0xFF/0xE8/0xC0` 是**颜色硬编码**，绕过 `palette`/Theme（F-01 同类）。处置 = `palette::DUEL_DMG_OUTLINE_RGB`/`DUEL_DMG_CORE_RGB`（`(u8,u8,u8)` 元组，值不变零视觉变化）。注意：位图烘焙色是字节域（0-255）非 `Color`（0-1），palette 用 `(u8,u8,u8)` 而非 Color。
+2. **动画/时序魔法数字（F-04b）**：伤害数字上飘 `k*120.0`、锚点 `boss_x-60.0`/`fighter_h*0.55`、`ShakeOffset{amplitude:14.0, remain_ms:160}`、delta `unwrap_or(16).clamp(1,60)`——裸时序字面量。且 `unwrap_or(16)` 在 vs_duel（动画帧）+ treasure_bevy（游戏帧）**重复**。处置 = `palette::DUEL_POPUP_RISE_PX`/`DUEL_HIT_ANCHOR_DX`/`DUEL_HIT_ANCHOR_Y_PCT`/`DUEL_SHAKE_AMPLITUDE`/`DUEL_SHAKE_REMAIN_MS`/`FRAME_DELTA_FALLBACK_MS`/`DUEL_ANIM_DELTA_CLAMP_MS`。
+3. **时序常量分散（F-04c）**：`STRIKE_REACH`/`STRIKE_MS`/`HIT_STOP_MS`/`POPUP_MS` 在 vs_duel 模块顶部，未集中 palette。处置 = 集中 `palette::DUEL_STRIKE_*` 等。
+4. **作废 HP 原型残留（F-05）**：vs_duel.rs 的 `player_hp=2000`/三动作（Attack/Item/Defend）/4 道具/HP 条 = **HP 回合制原型**，而业务已迁兵力模型（combat.md v2 作废 HP 回合制；S34.6 D5 `rules::force::resolve`）；vs_duel 仅 `pub mod` 导出**无 live 调用点** = 未接线原型。记录判定：作废业务残留，保留作动效骨架参考，不贸然删（用户决策后处置）。
+
+判据：workspace + wasm32 clippy 0、fmt 干净、doccheck2 41 项 0 error（第 41 项 ③ 新增时序扫描防再犯）、零视觉变化（值不变等价替换）。

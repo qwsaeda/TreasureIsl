@@ -1708,7 +1708,9 @@ fn camera_system(
 #[allow(clippy::needless_pass_by_value)]
 /// 渲染系统：GameApp 帧推进 + 静止跳渲染 + Framebuf → RGBA8 纹理。
 fn render_system(store: ResMut<GameStore>, time: Res<Time>, mut exits: MessageWriter<AppExit>) {
-    let delta_ms = u32::try_from(time.delta().as_millis()).unwrap_or(16).clamp(1, 250);
+    let delta_ms = u32::try_from(time.delta().as_millis())
+        .unwrap_or(ti_engine::ui::palette::FRAME_DELTA_FALLBACK_MS)
+        .clamp(1, 250);
     let Ok(mut g) = store.0.lock() else {
         return;
     };

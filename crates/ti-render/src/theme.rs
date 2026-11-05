@@ -107,6 +107,40 @@ pub struct Theme {
     /// 领地岛色带·BOSS 据点（`isle_black`）。
     pub isle_black: u16,
 
+    // === S38 `bevy_ui` palette 迁移（值 = palette 现值 RGB565 量化；alpha 单独存 ui.rs::palette）===
+    /// `bevy_ui` 面板底（棕黑半透明）。
+    pub ui_panel_bg: u16,
+    /// `bevy_ui` 金文本。
+    pub ui_gold_text: u16,
+    /// `bevy_ui` 黄铜高亮（选中行/按钮）。
+    pub ui_brass_select: u16,
+    /// `bevy_ui` 米白文本（副标题）。
+    pub ui_cream_text: u16,
+    /// `bevy_ui` 灰金副文本。
+    pub ui_muted_gold: u16,
+    /// `bevy_ui` 深棕文本。
+    pub ui_dark_brown_text: u16,
+    /// `bevy_ui` 面板深棕半透明。
+    pub ui_panel_wood_bg: u16,
+    /// `bevy_ui` 羊皮亮文本。
+    pub ui_parch_bright: u16,
+    /// `bevy_ui` 羊皮米。
+    pub ui_parch_cream: u16,
+    /// `bevy_ui` 深棕文本（蓝分量 0.06）。
+    pub ui_dark_brown_06: u16,
+    /// VS 槽底（黑半透明）。
+    pub ui_duel_slot_bg: u16,
+    /// VS 按钮底（棕半透明）。
+    pub ui_duel_btn_bg: u16,
+    /// VS 道具行底。
+    pub ui_duel_row_bg: u16,
+    /// VS 回合徽章（黄铜圆盘）。
+    pub ui_duel_round_badge: u16,
+    /// VS 弹窗白闪。
+    pub ui_duel_popup_flash: u16,
+    /// 调试红棕背景（`bevy_app` 占位）。
+    pub ui_debug_red_brown: u16,
+
     // === 字号 ===
     /// 正文 TTF 字号（px）。
     pub font_size: i32,
@@ -141,6 +175,23 @@ impl Theme {
             "isle_ember" => return Some(self.isle_ember),
             "isle_mist" => return Some(self.isle_mist),
             "isle_black" => return Some(self.isle_black),
+            // S38 bevy_ui palette 迁移。
+            "ui_panel_bg" => return Some(self.ui_panel_bg),
+            "ui_gold_text" => return Some(self.ui_gold_text),
+            "ui_brass_select" => return Some(self.ui_brass_select),
+            "ui_cream_text" => return Some(self.ui_cream_text),
+            "ui_muted_gold" => return Some(self.ui_muted_gold),
+            "ui_dark_brown_text" => return Some(self.ui_dark_brown_text),
+            "ui_panel_wood_bg" => return Some(self.ui_panel_wood_bg),
+            "ui_parch_bright" => return Some(self.ui_parch_bright),
+            "ui_parch_cream" => return Some(self.ui_parch_cream),
+            "ui_dark_brown_06" => return Some(self.ui_dark_brown_06),
+            "ui_duel_slot_bg" => return Some(self.ui_duel_slot_bg),
+            "ui_duel_btn_bg" => return Some(self.ui_duel_btn_bg),
+            "ui_duel_row_bg" => return Some(self.ui_duel_row_bg),
+            "ui_duel_round_badge" => return Some(self.ui_duel_round_badge),
+            "ui_duel_popup_flash" => return Some(self.ui_duel_popup_flash),
+            "ui_debug_red_brown" => return Some(self.ui_debug_red_brown),
             _ => {}
         }
         Some(match name {
@@ -241,6 +292,23 @@ impl Theme {
         isle_mist: 0xA5B7,
         isle_black: 0x20E3,
         black: 0x0000,
+        // S38 bevy_ui palette 迁移（值 = palette 现值 RGB565 量化）。
+        ui_panel_bg: 0x1881,
+        ui_gold_text: 0xEED3,
+        ui_brass_select: 0xB385,
+        ui_cream_text: 0xEF38,
+        ui_muted_gold: 0xB4EF,
+        ui_dark_brown_text: 0x28C2,
+        ui_panel_wood_bg: 0x3943,
+        ui_parch_bright: 0xF6F6,
+        ui_parch_cream: 0xEED6,
+        ui_dark_brown_06: 0x28C2,
+        ui_duel_slot_bg: 0x1061,
+        ui_duel_btn_bg: 0x3943,
+        ui_duel_row_bg: 0x3102,
+        ui_duel_round_badge: 0xC466,
+        ui_duel_popup_flash: 0xFF37,
+        ui_debug_red_brown: 0x38C3,
         // 字号
         font_size: 44,
         title_font_size: 96,
@@ -335,6 +403,23 @@ impl Theme {
             isle_ember: p.isle_ember.hex().unwrap_or(d.isle_ember),
             isle_mist: p.isle_mist.hex().unwrap_or(d.isle_mist),
             isle_black: p.isle_black.hex().unwrap_or(d.isle_black),
+            // S38 bevy_ui palette 迁移。
+            ui_panel_bg: p.ui_panel_bg.hex().unwrap_or(d.ui_panel_bg),
+            ui_gold_text: p.ui_gold_text.hex().unwrap_or(d.ui_gold_text),
+            ui_brass_select: p.ui_brass_select.hex().unwrap_or(d.ui_brass_select),
+            ui_cream_text: p.ui_cream_text.hex().unwrap_or(d.ui_cream_text),
+            ui_muted_gold: p.ui_muted_gold.hex().unwrap_or(d.ui_muted_gold),
+            ui_dark_brown_text: p.ui_dark_brown_text.hex().unwrap_or(d.ui_dark_brown_text),
+            ui_panel_wood_bg: p.ui_panel_wood_bg.hex().unwrap_or(d.ui_panel_wood_bg),
+            ui_parch_bright: p.ui_parch_bright.hex().unwrap_or(d.ui_parch_bright),
+            ui_parch_cream: p.ui_parch_cream.hex().unwrap_or(d.ui_parch_cream),
+            ui_dark_brown_06: p.ui_dark_brown_06.hex().unwrap_or(d.ui_dark_brown_06),
+            ui_duel_slot_bg: p.ui_duel_slot_bg.hex().unwrap_or(d.ui_duel_slot_bg),
+            ui_duel_btn_bg: p.ui_duel_btn_bg.hex().unwrap_or(d.ui_duel_btn_bg),
+            ui_duel_row_bg: p.ui_duel_row_bg.hex().unwrap_or(d.ui_duel_row_bg),
+            ui_duel_round_badge: p.ui_duel_round_badge.hex().unwrap_or(d.ui_duel_round_badge),
+            ui_duel_popup_flash: p.ui_duel_popup_flash.hex().unwrap_or(d.ui_duel_popup_flash),
+            ui_debug_red_brown: p.ui_debug_red_brown.hex().unwrap_or(d.ui_debug_red_brown),
             font_size: f.font_size.unwrap_or(d.font_size),
             title_font_size: f.title_font_size.unwrap_or(d.title_font_size),
             hint_font_size: f.hint_font_size.unwrap_or(d.hint_font_size),
@@ -453,6 +538,39 @@ pub struct PaletteJson {
     pub isle_mist: Option<Hex16>,
     /// 领地岛色带·BOSS 据点（`isle_tokens[9]` = `isle_black`）。
     pub isle_black: Option<Hex16>,
+    // S38 bevy_ui palette 迁移。
+    /// 面板底（棕黑半透明）。
+    pub ui_panel_bg: Option<Hex16>,
+    /// 金文本。
+    pub ui_gold_text: Option<Hex16>,
+    /// 黄铜高亮（选中行/按钮）。
+    pub ui_brass_select: Option<Hex16>,
+    /// 米白文本（副标题）。
+    pub ui_cream_text: Option<Hex16>,
+    /// 灰金副文本。
+    pub ui_muted_gold: Option<Hex16>,
+    /// 深棕文本。
+    pub ui_dark_brown_text: Option<Hex16>,
+    /// 面板深棕半透明。
+    pub ui_panel_wood_bg: Option<Hex16>,
+    /// 羊皮亮文本。
+    pub ui_parch_bright: Option<Hex16>,
+    /// 羊皮米。
+    pub ui_parch_cream: Option<Hex16>,
+    /// 深棕文本（蓝分量 0.06）。
+    pub ui_dark_brown_06: Option<Hex16>,
+    /// VS 槽底（黑半透明）。
+    pub ui_duel_slot_bg: Option<Hex16>,
+    /// VS 按钮底（棕半透明）。
+    pub ui_duel_btn_bg: Option<Hex16>,
+    /// VS 道具行底。
+    pub ui_duel_row_bg: Option<Hex16>,
+    /// VS 回合徽章（黄铜圆盘）。
+    pub ui_duel_round_badge: Option<Hex16>,
+    /// VS 弹窗白闪。
+    pub ui_duel_popup_flash: Option<Hex16>,
+    /// 调试红棕背景。
+    pub ui_debug_red_brown: Option<Hex16>,
 }
 
 /// 字号组：全部可选（缺失回落 `default`）。

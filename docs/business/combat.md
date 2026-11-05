@@ -62,6 +62,14 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 > 写回 `seat_crew/seat_arms`（attrition），结果钩同攻占（副本胜 = 占领 / BOSS 胜 = 通关）。
 > 实现：`BattleSnapshot` 带兵力（`attacker_crew/arms` + `defender_crew/arms`）+ 战后
 > （`after_crew/arms`）+ `resolved` 标记；vs.rs 渲染 clash 战前 / result 战后。
+>
+> **S38 审计 F-05（2026-11-05）——`vs_duel.rs` 模块状态判定**：`crates/ti-engine/src/vs_duel.rs`
+> （S27.7 横版对峙动效骨架）实现的是**作废的 HP 回合制原型**（`DuelStage.player_hp=2000` /
+> 三动作 `Attack/Item/Defend` / 4 道具 / HP 条 + 冲刺/定格/震动动效），与兵力模型业务
+> **不冲突**（仅 `pub mod` 导出，**无 live 调用点**，不参与 VS 场景结算）。处置：**保留作动效
+> 骨架参考**（冲刺/hit-stop/伤害上飘/屏幕震动可复用到兵力模型的自动动效），**不贸然删除**；
+> 其硬编码（位图烘焙色/时序参数）已集中 `ui.rs::palette`（F-04）。**活动 VS 业务 =**
+> `rules::force::resolve` 兵力模型 + vs.rs 渲染（本文件 §兵力模型）。
 
 ## VS 界面（按地图 / 格类变化，好好设计）
 
