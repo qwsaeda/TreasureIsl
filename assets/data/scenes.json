@@ -150,6 +150,24 @@
     }
    },
    {
+    "kind": "rect",
+    "rect": {
+     "x": 468,
+     "y": 654,
+     "w": 144,
+     "h": 40
+    },
+    "z": -7,
+    "item": 0,
+    "when": "",
+    "color": "brass_dark",
+    "text": "",
+    "tier": "",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
+   },
+   {
     "kind": "text",
     "rect": {
      "x": 468,
@@ -238,6 +256,24 @@
     "params": {
      "icon": "chest",
      "size": 96,
+     "ui_layer": "bevy_ui"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 814,
+     "y": 854,
+     "w": 144,
+     "h": 40
+    },
+    "z": -7,
+    "item": 1,
+    "when": "",
+    "color": "brass_dark",
+    "text": "",
+    "tier": "",
+    "params": {
      "ui_layer": "bevy_ui"
     }
    },
@@ -334,6 +370,24 @@
     }
    },
    {
+    "kind": "rect",
+    "rect": {
+     "x": 814,
+     "y": 1254,
+     "w": 144,
+     "h": 40
+    },
+    "z": -7,
+    "item": 2,
+    "when": "",
+    "color": "brass_dark",
+    "text": "",
+    "tier": "",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
+   },
+   {
     "kind": "text",
     "rect": {
      "x": 814,
@@ -422,6 +476,24 @@
     "params": {
      "icon": "gear",
      "size": 96,
+     "ui_layer": "bevy_ui"
+    }
+   },
+   {
+    "kind": "rect",
+    "rect": {
+     "x": 468,
+     "y": 1454,
+     "w": 144,
+     "h": 40
+    },
+    "z": -7,
+    "item": 3,
+    "when": "",
+    "color": "brass_dark",
+    "text": "",
+    "tier": "",
+    "params": {
      "ui_layer": "bevy_ui"
     }
    },
@@ -518,6 +590,24 @@
     }
    },
    {
+    "kind": "rect",
+    "rect": {
+     "x": 122,
+     "y": 1254,
+     "w": 144,
+     "h": 40
+    },
+    "z": -7,
+    "item": 4,
+    "when": "",
+    "color": "brass_dark",
+    "text": "",
+    "tier": "",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
+   },
+   {
     "kind": "text",
     "rect": {
      "x": 122,
@@ -610,6 +700,24 @@
     }
    },
    {
+    "kind": "rect",
+    "rect": {
+     "x": 122,
+     "y": 854,
+     "w": 144,
+     "h": 40
+    },
+    "z": -7,
+    "item": 5,
+    "when": "",
+    "color": "brass_dark",
+    "text": "",
+    "tier": "",
+    "params": {
+     "ui_layer": "bevy_ui"
+    }
+   },
+   {
     "kind": "text",
     "rect": {
      "x": 122,
@@ -676,78 +784,366 @@
      "when": "",
      "color": "",
      "params": {
-      "asset": "assets/ui/chart_full.png"
+      "asset": "assets/ui/index_bg_map_h.png"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 600,
-      "y": 16,
-      "w": 720,
-      "h": 140
+      "x": 511,
+      "y": 324,
+      "w": 679,
+      "h": 660
      },
      "z": -12,
      "item": -1,
      "when": "",
      "color": "",
      "params": {
-      "asset": "assets/ui/hud_plaque.png"
+      "asset": "assets/ui/index_hero_duo.png"
      }
-    },
-    {
-     "kind": "text",
-     "rect": {
-      "x": 600,
-      "y": 32,
-      "w": 720,
-      "h": 72
-     },
-     "z": -11,
-     "item": -1,
-     "when": "",
-     "color": "text_on_wood",
-     "tier": "title",
-     "text": "金银岛"
-    },
-    {
-     "kind": "text",
-     "rect": {
-      "x": 600,
-      "y": 100,
-      "w": 720,
-      "h": 40
-     },
-     "z": -11,
-     "item": -1,
-     "when": "",
-     "color": "text_on_wood",
-     "tier": "hint",
-     "text": "Treasure Isl · 航海贸易"
     },
     {
      "kind": "image",
      "rect": {
-      "x": 828,
-      "y": 408,
-      "w": 264,
-      "h": 264
+      "x": 1446,
+      "y": 138,
+      "w": 434,
+      "h": 28
+     },
+     "z": -11,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_rope.png"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1446,
+      "y": 176,
+      "w": 434,
+      "h": 92
+     },
+     "z": -10,
+     "item": 0,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_0.png",
+      "pick_key": 1,
+      "pick_index": 0,
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1483,
+      "y": 191,
+      "w": 51,
+      "h": 63
      },
      "z": -9,
      "item": -1,
      "when": "",
      "color": "",
      "params": {
-      "asset": "assets/ui/helm.png"
+      "asset": "assets/ui/index_icon_compass.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1446,
+      "y": 176,
+      "w": 434,
+      "h": 92
+     },
+     "z": -8,
+     "item": 0,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_sel.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1444,
+      "y": 274,
+      "w": 438,
+      "h": 108
+     },
+     "z": -10,
+     "item": 1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_1.png",
+      "pick_key": 1,
+      "pick_index": 1,
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1476,
+      "y": 302,
+      "w": 64,
+      "h": 53
+     },
+     "z": -9,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_icon_chest.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1446,
+      "y": 282,
+      "w": 434,
+      "h": 92
+     },
+     "z": -8,
+     "item": 1,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_sel.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1444,
+      "y": 380,
+      "w": 438,
+      "h": 108
+     },
+     "z": -10,
+     "item": 2,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_2.png",
+      "pick_key": 1,
+      "pick_index": 2,
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1476,
+      "y": 405,
+      "w": 64,
+      "h": 58
+     },
+     "z": -9,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_icon_book.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1446,
+      "y": 388,
+      "w": 434,
+      "h": 92
+     },
+     "z": -8,
+     "item": 2,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_sel.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1444,
+      "y": 486,
+      "w": 438,
+      "h": 108
+     },
+     "z": -10,
+     "item": 3,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_3.png",
+      "pick_key": 1,
+      "pick_index": 3,
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1476,
+      "y": 512,
+      "w": 64,
+      "h": 56
+     },
+     "z": -9,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_icon_gear.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1446,
+      "y": 494,
+      "w": 434,
+      "h": 92
+     },
+     "z": -8,
+     "item": 3,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_sel.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1444,
+      "y": 592,
+      "w": 438,
+      "h": 108
+     },
+     "z": -10,
+     "item": 4,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_4.png",
+      "pick_key": 1,
+      "pick_index": 4,
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1481,
+      "y": 614,
+      "w": 54,
+      "h": 64
+     },
+     "z": -9,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_icon_flag.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1446,
+      "y": 600,
+      "w": 434,
+      "h": 92
+     },
+     "z": -8,
+     "item": 4,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_sel.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1444,
+      "y": 698,
+      "w": 438,
+      "h": 108
+     },
+     "z": -10,
+     "item": 5,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_5.png",
+      "pick_key": 1,
+      "pick_index": 5,
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1487,
+      "y": 720,
+      "w": 42,
+      "h": 64
+     },
+     "z": -9,
+     "item": -1,
+     "when": "",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_icon_door.png",
+      "ui_layer": "bevy_ui"
+     }
+    },
+    {
+     "kind": "image",
+     "rect": {
+      "x": 1446,
+      "y": 706,
+      "w": 434,
+      "h": 92
+     },
+     "z": -8,
+     "item": 5,
+     "when": "selected",
+     "color": "",
+     "params": {
+      "asset": "assets/ui/index_plank_sel.png",
+      "ui_layer": "bevy_ui"
      }
     },
     {
      "kind": "text",
      "rect": {
-      "x": 560,
-      "y": 1015,
-      "w": 800,
-      "h": 40
+      "x": 820,
+      "y": 1008,
+      "w": 280,
+      "h": 32
      },
      "z": -4,
      "item": -1,

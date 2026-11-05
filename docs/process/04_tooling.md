@@ -18,7 +18,7 @@
 | `crates/ti-tools` 各 bin | Rust | unpack / map2json / build_assets / controls / classify / specskel / doccheck | 是 |
 | `crates/ti-devmeta` | Rust | 平台共享层（台账解析 + 静态 HTTP，纯 std；`ledger.rs` 上提自 ti-tools 的单实现） | 库（无 bin） |
 | `crates/ti-console` | Rust | **TI Dev Console 平台本体**（S32 开发管理平台；静态壳 + `/api/health` + 单实例锁 + 命令白名单；S32.1 骨架） | 是（`cargo run -p ti-console`） |
-| `scripts/ui_assets.py` | Python | UI 资产**单资产**入口（add/build/verify/rekey/normalize） | 是 |
+| `scripts/ui_assets.py` | Python | UI 资产**单资产**入口（add/build/verify/rekey/normalize；原图落 `evidence/gen_tmp/`，13 号 §2.2） | 是 |
 | `scripts/ui_asset_batch.py` | Python | UI 资产**批量**入口（register/generate/install/build/check/sheet，规格驱动 + 抠图可行性预检） | 是 |
 | `scripts/ui_layout_sheet.py` | Python | UI **版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图；设计稿评审 / 出图验收对照） | 是 |
 | `scripts/compose_main_map_v6.py` | Python | **main_map v6 概念稿组合合成**（AI 元素 + 凸包弧长布局 ⇒ 合成稿 + 布局 JSON 导出；`--check` 只读） | 是 |
@@ -119,6 +119,10 @@
 **用途**：UI 效果图/概念图生成（S18.7 HD 贴图管线前置；不入库密钥）。
 
 **环境变量**：`AGNES_API_KEY`（必填；不写入脚本/不入库）。
+
+**落点纪律（13 号 §2.2）**：正式设计稿 → `evidence/ui_concept/<name>.png`；
+**生图原图 / 临时试稿 → `evidence/gen_tmp/`**（gitignore 整目录，`rm -rf evidence/gen_tmp/`
+一条命令清理）。
 
 **用法**：
 

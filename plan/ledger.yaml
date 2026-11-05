@@ -356,3 +356,8 @@ tasks:
   - { id: S38.4, title: "场景横屏布局第四增量（saveload 存读档 5 槽横屏，动码前过目该场景横屏效果图）", status: verified, deps: [S38.3], dod: "改动面=表现+数据（scenes.json saveload landscape 段 + 渲染横屏路径）| 判据=用户过目 saveload 横屏效果图（A 纪律）+ 横屏 --shot 出图非黑 ≥90% + 竖屏 0 行为变化 + gate 全绿 + evidence/S38.4.log", evidence: "evidence/S38.4.log", blocked_by: null, rounds: 1 }
   - { id: S38.5, title: "场景横屏布局第五增量（vs 对战横屏，动码前过目该场景横屏效果图）", status: verified, deps: [S38.4], dod: "改动面=表现+数据（scenes.json vs landscape 段 + 渲染横屏路径）| 判据=用户过目 vs 横屏效果图（A 纪律）+ 横屏 --shot 出图非黑 ≥90% + 竖屏 0 行为变化 + gate 全绿 + evidence/S38.5.log", evidence: "evidence/S38.5.log", blocked_by: null, rounds: 1 }
   - { id: S38.6, title: "场景横屏布局第六增量（main_map v6 横屏，动码前过目该场景横屏效果图）", status: verified, deps: [S38.5], dod: "改动面=表现+数据（scenes.json main_map landscape 段 + 渲染横屏路径）| 判据=用户过目 main_map v6 横屏效果图（A 纪律）+ 横屏 --shot 出图非黑 ≥90% + 竖屏 0 行为变化 + gate 全绿 + evidence/S38.6.log", evidence: "evidence/S38.6.log", blocked_by: null, rounds: 1 }
+
+  # S39 index 首页现代化重设计 + 数据化（用户 2026-11-05「index 现代化重设计：原版骨架 + 美术现代化」+
+  # 「游戏主流是横版」→「横版为主」+「可以多贴图分层渲染」+「元素拆分组件加载渲染」+
+  # 「标题融合到背景里」+「换 UI/换地图应零改动 Rust 代码」）
+  - { id: S39.0, title: "index 横版 v2「羊皮藏宝图 + 绳挂木牌」重设计 + index 数据化重构（换 UI 零 Rust 改动）", status: in_progress, deps: [S38.6], dod: "改动面=UI 资产（16 件拆件：底图含标题烘焙/人物层/绳/6 木牌/选中金边/6 AI 图标）+ UI 数据（scenes.json index.landscape 原语 + index 竖屏铭牌底）+ 呈现框架（ti-engine ui::build_data_chrome 通用数据 UI 通道 + 壳 index 接线 + 删 Rust 罗盘环）| 业务逻辑零改动（ti-core 规则/存档/战斗/经济 + 菜单行为 + i18n + 命中契约 pick_key=1/pick_index 零改）| 判据=横屏 --shot index --viewport=1920x1080 出图非黑 ≥90% + 用户视觉签收 + 竖屏 --shot index 0 行为变化（罗盘环由数据还原）+ 木牌命中可用 + gate 全绿 + evidence/S39.0.log", evidence: "evidence/S39.0.log", blocked_by: null, rounds: 1 }

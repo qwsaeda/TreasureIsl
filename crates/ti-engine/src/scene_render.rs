@@ -247,6 +247,13 @@ pub fn spawn_primitives(
 ) -> SceneEntities {
     let mut out = SceneEntities::default();
     for (idx, p) in prims.iter().enumerate() {
+        // S29.3（B1）：已迁 bevy_ui 的 chrome 原语**不在 1080 层 spawn**——
+        // 它在 UI 相机层由 bevy_ui 节点绘制；1080 再 spawn = 双画 + 重复计数
+        // （bevy_native_render 断言 18 vs 12，S39 竖屏罗盘环迁 bevy_ui 后暴露）。
+        // 与 `render_primitives` 的 `skip_migrated`（ti-app/src/scenes/chrome.rs）同口径。
+        if p.params.get("ui_layer").and_then(serde_json::Value::as_str) == Some("bevy_ui") {
+            continue;
+        }
         // `when` 过滤：仅"选中"或仅"常态"的元素按当前选择显隐。
         let visible = match p.when.as_str() {
             "selected" => p.item == selected,

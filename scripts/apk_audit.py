@@ -68,6 +68,12 @@ def collect_refset() -> dict[str, list[str]]:
             p = "assets/ui/" + m.group(1) + ".png"
             if os.path.isfile(os.path.join(REPO, p)):
                 refs.add(p)
+        # S39 数据化：`scenes.json`（数据）引用的 UI 资产是 `"assets/ui/<name>.png"` 全路径
+        # 字面量（如 `index_plank_0.png`）——不在代码字面量、非动态前缀、非岛 kind，
+        # 引用集若不扫数据 JSON ⇒ 数据驱动资产被引用集裁剪掉（wasm/APK 部署 404）。
+        # 同 LIT_RE 口径扫数据 JSON 全路径字面量（24 号标准③：引用集变更先改工具）。
+        for m in LIT_RE.finditer(fi.read_text(errors="ignore")):
+            refs.add(m.group(1))
     # registry audio（`path` 字段；缺登记 = 漏音频）
     audio: list[str] = []
     registry = os.path.join(REPO, "assets/registry.json")

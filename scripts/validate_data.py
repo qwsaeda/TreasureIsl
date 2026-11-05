@@ -378,6 +378,39 @@ def check_v2(scenes: dict, problems: list[str]) -> None:
                             problems.append(f"V2: {sid}.{key}.{fk} = {fv!r} 非正整数字面量")
 
 
+def check_scenes_item_contract(scenes: dict, problems: list[str]) -> None:
+    """S39.0：`ui_layer="bevy_ui"` 且带 `when="selected"|"normal"` 的原语 `item` 须 ≥ 0。
+
+    回归教训（EXP-169）：`when="selected"` 过滤读的是 `item`（不是 `params.pick_index`）；
+    `item=-1` ⇒ 选中态判定恒 false ⇒ 所有 `when="selected"` 原语被滤掉（金边高亮不渲染）。
+    无 `when` 的原语（`item` 缺省/任意）不要求（无选中态过滤；saveload 列表等场景 `item` 缺省）。
+    """
+    for sid, scene in scenes.items():
+        if sid == "schema_version" or not isinstance(scene, dict):
+            continue
+        sections = [("primitives", scene.get("primitives"))]
+        land = scene.get("landscape")
+        if isinstance(land, dict):
+            sections.append(("landscape.primitives", land.get("primitives")))
+        for sname, prims in sections:
+            if not isinstance(prims, list):
+                continue
+            for p in prims:
+                if not isinstance(p, dict):
+                    continue
+                params = p.get("params", {})
+                if params.get("ui_layer") != "bevy_ui":
+                    continue
+                when = p.get("when", "")
+                if when not in ("selected", "normal"):
+                    continue  # 无选中态过滤 ⇒ 不要求 item
+                if p.get("item", -1) < 0:
+                    problems.append(
+                        f"S39 item contract: {sid}.{sname} 原语 when={when!r} item="
+                        f"{p.get('item')!r} < 0（ui_layer=bevy_ui；item 须 = 所属菜单项序号 0..5）"
+                    )
+
+
 def check_ui_icons(root: Path, problems: list[str]) -> None:
     """S21.14：`ui_icons.json icons[].image`（如 `assets/ui/icon_compass.png`）指向的白蒙版须在位。
 
@@ -662,6 +695,7 @@ def main() -> int:
         else:
             check_v1(main_map, problems)
         check_v2(scenes, problems)
+        check_scenes_item_contract(scenes, problems)
     check_controls(root, problems)
     check_ui_icons(root, problems)
     check_scenes_canonical(root, problems)

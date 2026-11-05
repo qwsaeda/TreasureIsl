@@ -52,7 +52,14 @@ fn rect_rects(app: &GameApp) -> Vec<(i32, i32, i32, i32)> {
         .collect()
 }
 
-/// S38：`index` 横屏世界层（`chart_full` 满屏 + `helm` 屏心），竖屏对照（原坐标）。
+/// S39：`index` 横屏新版世界层 + UI 层组件（羊皮藏宝图底 + 人物互动层 + 绳挂木牌菜单 6 块），
+/// 竖屏对照（S38.1 罗盘环，0 行为变化）。
+///
+/// 横屏判据（`scenes.json` `index.landscape` 原语）：
+/// - `index_bg_map_h.png` 满屏 (0,0,1920,1080)（标题已烘焙进底图）；
+/// - `index_hero_duo.png` 人物层 (511,324,679,660)（居中偏左）；
+/// - `index_rope.png` 菜单主绳 (1446,138,434,28)；
+/// - 6 块木牌（第 0 块未旋转 (1446,176,434,92)；第 1 块旋转 expand (1444,274,438,108)）。
 #[test]
 fn index_landscape_world_layer() {
     // 横屏
@@ -61,18 +68,36 @@ fn index_landscape_world_layer() {
     let rects = image_rects(&app);
     assert!(
         rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("chart_full.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
+            a.ends_with("index_bg_map_h.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
         }),
-        "index 横屏 chart_full 应满屏 1920×1080，got {rects:?}"
+        "index 横屏 羊皮底图应满屏 1920×1080，got {rects:?}"
     );
     assert!(
         rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("helm.png") && *x == 828 && *y == 408 && *w == 264 && *h == 264
+            a.ends_with("index_hero_duo.png") && *x == 511 && *y == 324 && *w == 679 && *h == 660
         }),
-        "index 横屏 helm 应在屏心 (828,408)，got {rects:?}"
+        "index 横屏 人物互动层应在 (511,324,679,660)，got {rects:?}"
+    );
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("index_rope.png") && *x == 1446 && *y == 138 && *w == 434 && *h == 28
+        }),
+        "index 横屏 菜单主绳应在 (1446,138,434,28)，got {rects:?}"
+    );
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("index_plank_0.png") && *x == 1446 && *y == 176 && *w == 434 && *h == 92
+        }),
+        "index 横屏 木牌 0 应在 (1446,176,434,92)，got {rects:?}"
+    );
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("index_plank_1.png") && *x == 1444 && *y == 274 && *w == 438 && *h == 108
+        }),
+        "index 横屏 木牌 1 应在 (1444,274,438,108)（旋转 expand），got {rects:?}"
     );
 
-    // 竖屏对照（0 行为变化）
+    // 竖屏对照（0 行为变化 = S38.1 罗盘环仍由数据还原）
     let mut app = game(false);
     app.render();
     let rects = image_rects(&app);
@@ -85,6 +110,12 @@ fn index_landscape_world_layer() {
     assert!(
         rects.iter().any(|(a, x, y, _w, _h)| { a.ends_with("helm.png") && *x == 408 && *y == 838 }),
         "index 竖屏 helm 应在 (408,838)，got {rects:?}"
+    );
+    assert!(
+        rects.iter().any(|(a, x, y, w, h)| {
+            a.ends_with("medallion_ring.png") && *x == 468 && *y == 498 && *w == 144 && *h == 144
+        }),
+        "index 竖屏 罗盘环徽章 0 应在 (468,498,144,144)（Rust 环退役后由数据还原），got {rects:?}"
     );
 }
 

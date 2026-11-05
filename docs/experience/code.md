@@ -670,3 +670,24 @@ S34.0 违反项修复（U20 战报拆分 `draw_result_scene` + U21 生物移格�
 4. **作废 HP 原型残留（F-05）**：vs_duel.rs 的 `player_hp=2000`/三动作（Attack/Item/Defend）/4 道具/HP 条 = **HP 回合制原型**，而业务已迁兵力模型（combat.md v2 作废 HP 回合制；S34.6 D5 `rules::force::resolve`）；vs_duel 仅 `pub mod` 导出**无 live 调用点** = 未接线原型。记录判定：作废业务残留，保留作动效骨架参考，不贸然删（用户决策后处置）。
 
 判据：workspace + wasm32 clippy 0、fmt 干净、doccheck2 41 项 0 error（第 41 项 ③ 新增时序扫描防再犯）、零视觉变化（值不变等价替换）。
+
+### EXP-168 代码：bevy_ui 内容组件必须与 Node 同实体（否则静默不渲染）
+S39.0 抓出：bevy_ui 只渲染带 `Node` 组件的实体（`extract_uinodes` 按 `Node` 提取）。
+`build_data_chrome` 把 `ImageNode`/`Text`/`BackgroundColor` 放在**无 `Node` 的子实体**上
+（`commands.spawn((ImageNode, Pickable::IGNORE, ChildOf(node)))`）⇒ taffy 布局不提取、
+UI pass 不绘制 ⇒ 内容**静默不渲染**（截图非黑达标但内容缺失 = 假达标）。
+旧 `build_index_chrome`（S29.3d）是 `Node + ImageNode` **同实体**，新代码拆开 = 回归。
+修复 = 内容组件合并回定位 Node 实体（`commands.entity(node).insert(...)`）。
+教训：bevy_ui 内容组件（ImageNode/Text/BackgroundColor）必须与 `Node` 同实体；
+另 `chrome_ui_system` 重建键须含方向（`--shot --viewport=1920x1080` 下 orientation 由
+main() 显式设，重建键不含方向 ⇒ 首跑竖屏数据建树后永不重建）。详见 `code.md`。
+
+### EXP-169 代码：ui_layer=bevy_ui 原语 item 字段须 = 菜单项序号（非 -1）
+S39.0 抓出：`ui_layer=bevy_ui` 且带 `when="selected"|"normal"` 的原语 `item` 字段须 = 所属菜单项
+序号（`pick_index` 对齐 0..5，**非 -1**）；`when="selected"` 过滤读 `item`（不是 `params.pick_index`）
+⇒ `item=-1` 时选中态判定恒 false，所有 `when="selected"` 原语被滤掉（金边高亮不渲染）。
+修复 = `scenes.json` 横屏 6 木牌原语 `item = pick_index` + `validate_data.py`
+`check_scenes_item_contract`（`ui_layer=bevy_ui` 且 `when∈{selected,normal}` 的原语 `item ≥ 0`；
+无 `when` 的原语不要求——saveload 等列表场景 `item` 缺省）兜底防回归。
+教训：数据契约（`item`/`pick_index`/`when` 三字段一致性）须机器校验，勿只靠视觉抽查。
+详见 `code.md`。

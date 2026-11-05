@@ -34,7 +34,7 @@
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 19 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 33 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 38 |
-  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 54 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 56 |
 
 ## 条目索引
 
@@ -207,6 +207,8 @@
 | EXP-165 | code | | 用户「发现你用了游戏引擎，但很多还是硬编码，不是遵守游戏开发/引擎使用的最佳实践」→ 审计：数据驱动/引擎机制已达标（px 坐标字面量 0、DefaultPlugins、bevy_picking、方向感知），主要硬编码违背 = F-01 颜色字面量 ~24 处（ui.rs/treasure_bevy/vs_duel/scene_render/bevy_app）+ F-02 ui.rs 尺寸魔法数字 18 处（字体/圆角/内边/gap/宽高）。处置：集中 ui.rs::palette 具名常量（值不变零视觉变化，CS-1 单源），固化 doccheck2 第 41 项 engine-no-color-literal 正文见 `code.md` |
 | EXP-166 | code | | 用户延伸要求完整迁移 palette→Theme。关键：现有 Theme 令牌（menu_bg=蓝/text_on_wood=粉/secondary=绿/brass_light=黄）与 palette 色（棕/金/奶油）语义不匹配，naive 值交换劣化视觉 → 加 16 个 ui_* 新令牌保视觉（RGB565 量化 <1.6%）；const 派生用自写 theme_color（with_alpha/u32::from 非 const）；doccheck2 S17.2 三方对账定界 black→font_size 起点 + 字段名允许数字；撞色登记 palette_aliases；尺寸保持 palette（Theme 字号 i32 非 bevy_ui px 语义） 正文见 `code.md` |
 | EXP-167 | code | | 用户延伸审计动画/时序 + VS 原型数据。发现：烘焙位图颜色字面量（0x20/0x12/0x08/0xFF/0xE8/0xC0 绕过 palette）+ 动效时序魔法数字（上飘 120/锚点 60/0.55/ShakeOffset 14/160/delta unwrap_or(16) 重复）+ 时序常量分散（STRIKE_*/HIT_STOP/POPUP_MS 模块顶）+ 作废 HP 回合制原型残留（player_hp=2000/三动作/4 道具，业务已迁兵力模型 S34.6，无 live 调用）。处置：集中 palette::DUEL_* 常量（值不变零视觉变化），doccheck2 第 41 项 ③ 时序扫描防再犯；F-05 记录判定保留作骨架 正文见 `code.md` |
+| EXP-168 | code | | S39 build_data_chrome 把 ImageNode/Text/BackgroundColor 放无 Node 子实体 ⇒ bevy_ui 按 Node 提取不绘制；修复=内容合并回 Node 实体 正文见 `code.md` |
+| EXP-169 | code | | S39 when=selected 过滤读 item 而非 pick_index ⇒ item=-1 全滤掉；修复=item=pick_index + validate_data 机器兜底 正文见 `code.md` |
 
 ## 条目格式（写新条时照抄）
 

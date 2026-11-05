@@ -123,13 +123,9 @@ pub mod palette {
     pub const BUTTON_H: f32 = 56.0;
     /// 按钮圆角。
     pub const BUTTON_RADIUS: f32 = 10.0;
-    // ── F-02b 延伸（treasure_bevy.rs 消息面板/索引环标签 + vs_duel.rs 精灵，值 = 原字面量）──
-    /// 索引环标签内边（横/纵）。
-    pub const RING_LABEL_PAD_X: f32 = 10.0;
-    /// 索引环标签内边纵。
-    pub const RING_LABEL_PAD_Y: f32 = 4.0;
-    /// 索引环标签字号。
-    pub const RING_LABEL_FONT: f32 = 24.0;
+    // ── F-02b 延伸（treasure_bevy.rs 消息面板 + vs_duel.rs 精灵，值 = 原字面量）──
+    // 注：S39 数据化后 index 环标签的 pad/字号归数据层（`tier` → 字号），
+    // 原 `RING_LABEL_*` 常量随 Rust 罗盘环一并退役。
     /// 消息面板内边。
     pub const MSG_PANEL_PAD: f32 = 24.0;
     /// 消息面板行距。
@@ -187,6 +183,13 @@ pub mod palette {
     pub const DUEL_DMG_OUTLINE_RGB: (u8, u8, u8) = (0x20, 0x12, 0x08);
     /// 伤害数字位图芯 RGB（RGBA8 字节域，`bake_damage_texture`）。
     pub const DUEL_DMG_CORE_RGB: (u8, u8, u8) = (0xFF, 0xE8, 0xC0);
+    // ── S39 数据化 UI 层文本字号（tier → px；与 CPU 位图字三档同族）──
+    /// 数据化 UI 层标题字号（px）。
+    pub const DATA_TEXT_FONT_TITLE: f32 = 48.0;
+    /// 数据化 UI 层正文字号（px）。
+    pub const DATA_TEXT_FONT_BODY: f32 = 24.0;
+    /// 数据化 UI 层提示字号（px）。
+    pub const DATA_TEXT_FONT_HINT: f32 = 20.0;
 }
 
 /// 生成 UI 相机（叠在游戏正交相机之上；`order=1` + `clear_color=None` 不清屏，游戏世界透出）。
@@ -576,4 +579,186 @@ pub fn build_proof_panel(
     ));
 
     root
+}
+
+/// **S39 数据化 UI 层 chrome**：一条与场景无关的「原语 → `bevy_ui` 节点」渲染通道。
+///
+/// 动机（用户 2026-11-05「换 UI/换地图应该零改动 Rust 代码」）：此前 index 菜单的**版面**
+/// （环形布局 + 硬编码图标数组）写在 Rust 里 ⇒ 换一次首页视觉就要改 Rust。
+/// 本通道把**版面 = 数据**（`scenes.json` 原语），Rust 只保留「怎么把原语画成节点」的通用机制；
+/// 之后任何 UI 换肤/换布局 = 改数据 + 换资产，**Rust 零改动**。
+///
+/// 项（[`DataChromeItem`]）由调用方从场景原语转换而来（壳侧做 i18n 解析）——
+/// 本模块零游戏语义：不出现场景名/文案/角色，只认原语字段。
+///
+/// 机制要点：
+/// - **位置**：原语 `rect`（设计空间坐标：竖屏 1080×1920 / 横屏 1920×1080）换算成视口 `%`
+///   ⇒ 随窗口 resize 真重排（S29.5 第 3 不变量：布局根 = 视口尺寸 + 节点数不变）。
+/// - **层序**：按 `z` 升序生成（同层后建者在上；与 `08_render_arch.md` 契约 1 同构）。
+/// - **命中**：带 `pick` 的项挂 [`crate::pick::PickTarget`]（`bevy_picking` 直接拾取 `Node`）。
+#[derive(Debug, Clone)]
+pub struct DataChromeItem {
+    /// 原语种类：`image` / `icon` / `text` / `rect`（其余忽略）。
+    pub kind: String,
+    /// 位置尺寸（设计空间坐标；x, y, w, h）。
+    pub rect: (f32, f32, f32, f32),
+    /// 层序（越大越靠上）。
+    pub z: i32,
+    /// 显示条件：`""` = 总是 / `"selected"` = 仅选中项 / `"normal"` = 仅未选中项。
+    pub when: String,
+    /// 所属菜单项序号（`when` 判定用）。
+    pub item: i64,
+    /// 配色令牌名（`text`/`icon`/`rect` 用；空 = 缺省）。
+    pub color: String,
+    /// 文本内容（`text` 用；调用方已解析 i18n）。
+    pub text: String,
+    /// 文本档位（`text` 用：`title` / `hint` / 空=body ⇒ 字号档）。
+    pub tier: String,
+    /// 资产路径（`image` 用，`assets/ui/...`）。
+    pub asset: String,
+    /// 图标名（`icon` 用 ⇒ `assets/ui/icon_<name>.png` 白蒙版 + 令牌 tint）。
+    pub icon: String,
+    /// 命中契约（`Some((key, index))` ⇒ 挂 `PickTarget`）。
+    pub pick: Option<(u32, i32)>,
+}
+
+/// 按 tier 决定文本字号（数据化 UI 层用；`title`/`hint`/其余=body）。
+///
+/// 口径与 CPU 后端 `ti_render::generic::text` 的三档字高同族（位图字 48/28/16 → UI 层近似 48/24/20）。
+#[must_use]
+pub fn tier_font_px(tier: &str) -> f32 {
+    match tier {
+        "title" => palette::DATA_TEXT_FONT_TITLE,
+        "hint" => palette::DATA_TEXT_FONT_HINT,
+        _ => palette::DATA_TEXT_FONT_BODY,
+    }
+}
+
+/// 建**数据驱动 UI 层 chrome**：把 [`DataChromeItem`] 列表落成 `bevy_ui` 节点树。
+///
+/// 返回根实体（调用方 despawn 即整棵子树消失）。零游戏语义。
+#[must_use]
+#[allow(clippy::too_many_lines)]
+pub fn build_data_chrome(
+    commands: &mut Commands,
+    server: &AssetServer,
+    font: &Handle<Font>,
+    items: &[DataChromeItem],
+    selected: i64,
+    design_w: f32,
+    design_h: f32,
+) -> Option<Entity> {
+    if items.is_empty() {
+        return None;
+    }
+    // 全屏根（bevy_ui 树须有铺满屏幕的根；`%` 布局据此相对屏幕）
+    let root = commands
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                display: Display::Flex,
+                position_type: PositionType::Relative,
+                ..Node::default()
+            },
+            // 根节点铺满屏幕 ⇒ 默认可拾取会吃掉所有指针事件（S29.3b）⇒ 明确 IGNORE。
+            Pickable::IGNORE,
+        ))
+        .id();
+    let theme = ti_render::theme::Theme::DEFAULT;
+    let mut sorted: Vec<&DataChromeItem> = items.iter().collect();
+    sorted.sort_by_key(|i| i.z);
+    for item in sorted {
+        // 选中态过滤：`selected` = 仅选中项 / `normal` = 仅未选中项 / 空 = 总是
+        let visible = match item.when.as_str() {
+            "selected" => item.item == selected,
+            "normal" => item.item != selected,
+            _ => true,
+        };
+        if !visible {
+            continue;
+        }
+        let (x, y, w, h) = item.rect;
+        let node = commands
+            .spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Percent(x / design_w * 100.0),
+                    top: Val::Percent(y / design_h * 100.0),
+                    width: Val::Percent(w / design_w * 100.0),
+                    height: Val::Percent(h / design_h * 100.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..Node::default()
+                },
+                ChildOf(root),
+            ))
+            .id();
+        match item.kind.as_str() {
+            "image" => {
+                if item.asset.is_empty() {
+                    continue;
+                }
+                // bevy_ui 只渲染**带 `Node` 的实体**（`extract_uinodes` 按 `Node` 提取）⇒
+                // 内容组件必须挂**同一实体**（旧 build_index_chrome S29.3d 口径：
+                // `Node + ImageNode` 同实体；拆成无 Node 子实体 = taffy 布局不提取 = 不渲染）。
+                commands.entity(node).insert((
+                    ImageNode {
+                        image: server.load(item.asset.clone()),
+                        color: Color::WHITE,
+                        image_mode: NodeImageMode::Stretch,
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                ));
+            }
+            "icon" => {
+                if item.icon.is_empty() {
+                    continue;
+                }
+                let tint = theme
+                    .by_name(&item.color)
+                    .map_or(palette::GOLD_TEXT, crate::canvas::rgb565_to_color);
+                commands.entity(node).insert((
+                    ImageNode {
+                        image: server.load(format!("assets/ui/icon_{}.png", item.icon)),
+                        color: tint,
+                        image_mode: NodeImageMode::Stretch,
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                ));
+            }
+            "text" => {
+                if item.text.is_empty() {
+                    continue;
+                }
+                let color = theme
+                    .by_name(&item.color)
+                    .map_or(palette::CREAM_TEXT, crate::canvas::rgb565_to_color);
+                commands.entity(node).insert((
+                    Text(item.text.clone()),
+                    TextFont {
+                        font: FontSource::Handle(font.clone()),
+                        font_size: FontSize::Px(tier_font_px(&item.tier)),
+                        ..default()
+                    },
+                    TextColor(color),
+                    Pickable::IGNORE,
+                ));
+            }
+            "rect" => {
+                let color = theme
+                    .by_name(&item.color)
+                    .map_or(palette::PANEL_BG, crate::canvas::rgb565_to_color);
+                commands.entity(node).insert((BackgroundColor(color), Pickable::IGNORE));
+            }
+            _ => {}
+        }
+        // 命中：带 pick 契约的项挂 PickTarget（bevy_picking 直接拾取 Node 实体）
+        if let Some((key, index)) = item.pick {
+            commands.entity(node).insert(crate::pick::PickTarget { key, index });
+        }
+    }
+    Some(root)
 }

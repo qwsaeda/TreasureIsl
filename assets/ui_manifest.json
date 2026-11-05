@@ -1477,6 +1477,150 @@
    "file": "assets/ui/vs_v2/vs_bg_m20.png",
    "params": {},
    "generated_at": "2026-11-03"
+  },
+  {
+   "name": "index_plank_0",
+   "role": "item",
+   "file": "assets/ui/index_plank_0.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_plank_1",
+   "role": "item",
+   "file": "assets/ui/index_plank_1.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_plank_2",
+   "role": "item",
+   "file": "assets/ui/index_plank_2.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_plank_3",
+   "role": "item",
+   "file": "assets/ui/index_plank_3.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_plank_4",
+   "role": "item",
+   "file": "assets/ui/index_plank_4.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_plank_5",
+   "role": "item",
+   "file": "assets/ui/index_plank_5.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_icon_compass",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_icon_chest",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_icon_book",
+   "role": "item",
+   "file": "assets/ui/index_icon_book.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_icon_gear",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_icon_flag",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_icon_door",
+   "role": "item",
+   "file": "assets/ui/index_icon_door.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_bg_map_h",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_hero_duo",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_rope",
+   "role": "item",
+   "file": "assets/ui/index_rope.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_plank_sel",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel.png",
+   "params": {
+    "source": "agnes_ai_2026-11-05"
+   },
+   "generated_at": "2026-11-05"
   }
  ]
 }

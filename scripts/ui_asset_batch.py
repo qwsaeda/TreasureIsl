@@ -12,7 +12,10 @@
   可评审、可 diff、可复现；`assets/ui_manifest.json` 仍是**资产唯一事实源**（本工具只做
   upsert，不另立门户）；
 - **抠图可行性预检**（`check`）：`luma` 角色要求纯黑底、`magenta` 角色要求品红底，
-  底色不对时 keyer 会把整张图留成不透明 —— 预检在 install 之前就报出来。
+  底色不对时 keyer 会把整张图留成不透明 —— 预检在 install 之前就报出来；
+- **原图落点** = `evidence/gen_tmp/raw_<name>.png`（13 号 §2.2 临时图统一目录，
+  gitignore 整目录 = 手动删 `gen_tmp/` 即全部清理；旧路径 `ui_concept/raw_*.png`
+  只读兼容，install/check 读不到新目录时回退读旧路径）。
 
 用法：
     python scripts/ui_asset_batch.py register  --spec assets/ui_batches/main_map_v4.json
@@ -43,6 +46,9 @@ import ui_assets  # noqa: E402  (复用单资产管线的 keyer / generate，不
 
 MANIFEST = ROOT / "assets" / "ui_manifest.json"
 CONCEPT_DIR = ROOT / "evidence" / "ui_concept"
+# 生图原图统一落点（13 号 §2.2：evidence/gen_tmp/，gitignore，手动删整个目录即清理）；
+# 旧路径 ui_concept/raw_*.png 只读兼容。
+GEN_TMP_DIR = ui_assets.GEN_TMP_DIR
 
 # 抠图可行性阈值（与 ui_assets.key_luma / key_magenta 的判定点同源）。
 LUMA_CUTOFF = 58
@@ -72,6 +78,12 @@ def resolve_prompt(spec: dict, asset: dict, roles: dict) -> str:
 
 
 def raw_path(name: str) -> pathlib.Path:
+    """生图原图统一落点（13 号 §2.2：evidence/gen_tmp/raw_<name>.png）。"""
+    return GEN_TMP_DIR / f"raw_{name}.png"
+
+
+def legacy_raw_path(name: str) -> pathlib.Path:
+    """旧原图路径（存量兼容；install 读不到新目录时回退读）。"""
     return CONCEPT_DIR / f"raw_{name}.png"
 
 
@@ -178,6 +190,8 @@ def cmd_install(spec: dict, args: argparse.Namespace) -> int:
             continue
         raw = raw_path(name)
         if not raw.exists():
+            raw = legacy_raw_path(name)  # 存量旧路径回退（13 号 §2.2 迁移期）
+        if not raw.exists():
             print(f"  FAIL  {name}: 原图不存在（先 generate）: {raw}")
             rc = 1
             continue
@@ -272,6 +286,8 @@ def cmd_check(spec: dict, _args: argparse.Namespace) -> int:
             if bbox and bbox[0] == 0 and bbox[1] == 0 and bbox[2] == im.size[0] and bbox[3] == im.size[1]:
                 errors.append(f"{name}: 抠图疑似失败（alpha 覆盖整幅 = 底色没被抠掉）")
         raw = raw_path(name)
+        if not raw.exists():
+            raw = legacy_raw_path(name)  # 存量旧路径回退（13 号 §2.2 迁移期）
         if raw.is_file():
             if key == "luma":
                 corner, dark = _luma_stats(raw)

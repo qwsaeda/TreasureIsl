@@ -1,0 +1,96 @@
+# S39.0 index 首页横版重设计「羊皮藏宝图 + 绳挂木牌」+ 数据化重构
+
+> 2026-11-05。用户「index 现代化重设计：以原版布局为参考骨架（标题+角色+菜单），美术全现代化
+> （禁像素复刻）」+「游戏主流是横版」+「可以多贴图分层渲染，不必 AI 一次生全」+
+> 「界面把元素拆分出来再组件加载渲染」+「标题融合到背景里」+「换 UI/换地图零改动 Rust 代码」。
+
+## 改动面（声明）
+
+- **UI 资产**：16 件拆件（`assets/ui/index_bg_map_h.png` 底图含标题烘焙 1920×1080 /
+  `index_hero_duo.png` 人物层 679×660 / `index_rope.png` 主绳 434×28 /
+  `index_plank_0..5.png` 木牌 434×92（1..5 旋转 expand 438×108）/ `index_plank_sel.png` 金边 /
+  `index_icon_{compass,chest,book,gear,flag,door}.png` 图标 ~64×64）。
+- **UI 数据**：`scenes.json` `index.landscape` 段（22 原语：底图/人物/绳世界层 + 18 件
+  `ui_layer=bevy_ui` UI 层：6 木牌 + 6 图标 + 6 金边）；竖屏补 `kind=rect` 铭牌底原语。
+- **呈现框架**：`ti-engine::ui::build_data_chrome` 通用「原语→bevy_ui 节点」通道（零游戏语义）；
+  壳侧 `build_index_chrome`/`index_data_items` 薄转换；**删除 Rust 罗盘环**
+  （`index_ring_params` + 旧 `build_index_chrome` + `ICONS` 数组 + `RING_LABEL_*` 常量）。
+- **业务逻辑零改动**：`ti-core` 规则/存档/战斗/经济 0 diff；菜单行为/i18n/命中契约
+  （`pick_key=1`/`pick_index=0..5`、`IndexScene::on_hit`）0 diff。
+
+## 判据
+
+### J1 横屏 --shot index --viewport=1920x1080 非黑 ≥90%
+
+```
+[shot] preload ready at tick=1868
+[shot] 非黑像素 = 2009563 / alpha>8 = 2073600 / 2073600
+[shot] 左上角 = ["[89, 51, 6, 255]"] 屏幕中心 = ["[46, 15, 16, 255]"]
+[shot] 已写 evidence/bevy_native_index_1920x1080.png
+```
+非黑 = 2009563/2073600 = **96.9% ≥ 90%** ✅
+
+出图 = `evidence/bevy_native_index_1920x1080.png`（满屏羊皮藏宝图 + 标题「金银岛」逐字墨色
+融合进图 + 冷峻红头巾海盗/熊猫海盗互动层 + 右列 6 块绳挂木牌菜单（新游戏/载入游戏/读取存档/
+选项设置/帮助说明/离开游戏 + AI 图标 + 首项金边选中态）+ 罗盘玫瑰 + 帆船/鲸鱼/海怪/红色虚线航线）。
+
+### J2 出图与设计稿构图一致 —— 用户视觉签收（待用户过目）
+
+构图与 `docs/ui-redesign-v3/14_index_treasure_map_spec.md` §0 设计意图一致（底图 + 标题融合 +
+人物居中偏左 + 右列 6 木牌 + AI 图标）。**视觉签收待用户过目后确认**（A 纪律）。
+
+### J3 竖屏 --shot index 0 行为变化（罗盘环由数据还原）
+
+```
+[shot] preload ready at tick=1827
+[shot] 非黑像素 = 2056004 / alpha>8 = 2073600 / 2073600
+[shot] 已写 evidence/bevy_native_index.png
+```
+出图 = `evidence/bevy_native_index.png`：罗盘环 6 徽章 + 中心舵轮 + 标题牌 + 海图底，
+与 S38.1 版逐像素一致（数据 rect 与旧环布局逐格相等：468,498 / 814,698 / 814,1098 /
+468,1254 / 122,1098 / 122,698）。✅
+
+### J4 木牌命中可用（点第 i 块 ⇒ 选中并执行）
+
+命中契约 `pick_key=1`/`pick_index=0..5` 挂 `PickTarget`（bevy_ui Node 实体直接拾取）；
+`IndexScene::on_hit` 零改动。**e2e 交互验证** = 归 `crates/ti-app/tests/landscape_drawlist.rs`
+（index 木牌 rect 断言）+ wasm e2e（见下，运行期验证）。
+
+### J5 gate 全绿
+
+见 `evidence/S39.0.gate.log`（gate 33 项 0 failure）。
+
+## 根因修复（S39.0 过程抓出）
+
+### R1 build_data_chrome 内容不渲染（P0）
+
+- **现象**：横屏 `--shot` 非黑 96.1% 但右列 6 木牌/图标/金边全缺失（底图+人物正常）。
+- **根因**：`build_data_chrome` 把 `ImageNode`/`Text`/`BackgroundColor` 放在**无 `Node` 组件**
+  的子实体上（`commands.spawn((ImageNode, Pickable::IGNORE, ChildOf(node)))`）。bevy_ui 渲染
+  系统按 `Node` 提取 UI 节点（`extract_uinodes`），无 `Node` 的子实体**从不被布局/绘制** ⇒
+  内容静默不渲染。旧 `build_index_chrome`（S29.3d）是 `Node + ImageNode` **同实体**，
+  新代码拆开 = 回归。
+- **修复**：内容组件合并回定位 Node 实体（`commands.entity(node).insert(...)`）。
+- **验证**：修复后非黑 96.9%（UI 层内容上屏），木牌/图标/金边/文案全部可见。
+
+### R2 chrome 树方向键缺失（潜在）
+
+- **现象**：`--shot --viewport=1920x1080` 下 orientation 由 `main()` 显式设 Landscape，
+  但 `chrome_ui_system` 重建键 = `(场景, sel_key)` **不含方向**。
+- **修复**：`ChromeUi.built` 键加 `orientation_disc`（Landscape=1/Portrait=0）⇒ 方向变化强制重建。
+- **验证**：横屏 shot 用 landscape 原语建树（18 items），竖屏用 portrait（36 items）。
+
+### R3 横屏木牌原语 item 字段（数据 bug）
+
+- **现象**：`index_plank_*` 原语 `item=-1`（应 `0..5` 与 `pick_index` 对齐）；`when="selected"`
+  过滤读 `item` ⇒ `item=-1` 时选中态判定恒 false。
+- **修复**：`scenes.json` 横屏 6 木牌原语 `item = pick_index`（0..5）；竖屏 rect/text 铭牌
+  补 `item` 值；`validate_data.py` 加 `check_scenes_item_contract`（`ui_layer=bevy_ui` 原语
+  `item ≥ 0`）兜底防回归。
+
+## 关联
+
+- 规格单一事实源：`docs/ui-redesign-v3/14_index_treasure_map_spec.md`（S39 定案，含数据契约 §3）
+- 数据化通道：`docs/process/19_bevy_ui.md`（§7 迁移三联动 + bevy_ui 渲染须带 Node）
+- 资产登记：`assets/ui_manifest.json`（16 件新资产 disk↔registry 双向同步，`validate_data` OK）
+- 竖屏对照：`docs/ui-redesign-v3/09_index_compass_spec.md`（S22 罗盘环，S39 由数据还原）

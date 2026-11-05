@@ -557,11 +557,12 @@ fn finish_shot(
     frames: Res<bevy::diagnostic::FrameCount>,
     device: Option<Res<bevy::render::renderer::RenderDevice>>,
 ) {
-    // 兜底（S27.5）：3000 帧（~50s）仍无内容帧 = 资产/渲染异常，强制退出并告警
+    // 兜底（S27.5）：仍无内容帧 = 资产/渲染异常，强制退出并告警
     // （证据可能失真——但死循环更不可接受；正常场景数帧内即就绪）。
-    // S34（vs 场景）：preload 需 ~1800 tick（98 资产 + v2 大图解码慢），600 帧兜底
-    // 提前杀（t500/result 帧 written=0 实测定因）；提高到 3000 给足窗口，仅 --shot 模式。
-    if frames.0 > 3000 {
+    // S34（vs 场景）：preload 需 ~1800 tick（98 资产 + v2 大图解码慢）。
+    // S39：`assets/ui` 累计 200MB+（含 S39 新增 16 件组件资产），软件渲染（llvmpipe）
+    // 下预载需 ~3000 tick ⇒ 帧预算 3000 → 8000（仅 `--shot` 模式；不影响实时玩法帧率）。
+    if frames.0 > 8000 {
         eprintln!("[shot] WARN: 3000 帧内未截到内容帧（贴图/管线未就绪？），强制退出");
         exits.write(AppExit::Success);
         return;
@@ -919,8 +920,11 @@ fn scene_json_key(scene: Scene) -> &'static str {
 struct ChromeUi {
     /// 已建 chrome 根实体（`None` = 本场景无 `bevy_ui` chrome）。
     root: Option<Entity>,
-    /// 已建 chrome 的（场景判别, 选中下标）——变了才重建（避免每帧重建）。
-    built: Option<(i32, usize)>,
+    /// 已建 chrome 的（场景判别, 选中下标, 方向判别）——任一变化才重建（避免每帧重建）。
+    /// 方向判别：S39（`--shot --viewport=1920x1080` 下 `set_orientation(Landscape)` 晚于
+    /// `chrome_ui_system` 首跑 ⇒ 首跑用竖屏数据建 chrome，后续 `sel_key` 不变不重建，
+    /// 横屏木牌永远不渲染；加方向进键 ⇒ orientation 变化时强制重建）。
+    built: Option<(i32, usize, u8)>,
 }
 
 /// S29.3（B1）：按当前场景建 `bevy_ui` chrome（**自动布局**：行位置/高度由 taffy 算，
@@ -956,172 +960,99 @@ fn build_scene_chrome(
     }
 }
 
-/// 首页 6 徽章径向环（**参数化**：环心 + 半径 + 60° 步进算 6 格中心 `%`，不逐格手写像素）。
-/// 每格 = `medallion_ring.png` 底 + 白蒙版图标（`gold`/选中 `text_on_wood` 跨层 tint）+ 文案，
-/// 挂 `PickTarget` key=1 index=0..5（**UI 相机层**命中；1080 层该场景徽章原语已标 `ui_layer` 跳过）。
-/// S38 方案 A 辅助：环参数（`%` 定位，resize 自动重排）。
-/// 竖屏 = 环心 (50%, 970/1920)、半径 400；横屏 = 环心 (50%, 50%)、等半径 300px
-/// （rx/ry 各自 % ⇒ 像素半径相等 = 真圆环）。返回 `(cw, ch, cx, cy, rx, ry, cell_w, cell_h)`。
-#[allow(clippy::cast_precision_loss)]
-fn index_ring_params(landscape: bool) -> (f32, f32, f32, f32, f32, f32, f32, f32) {
-    let (cw, ch, cy_px, radius_px) = if landscape {
-        (
-            ti_render::framebuffer::LANDSCAPE_W_I32 as f32,
-            ti_render::framebuffer::LANDSCAPE_H_I32 as f32,
-            ti_render::framebuffer::LANDSCAPE_H_I32 as f32 / 2.0, // 环心 y = 屏心（横屏居中）
-            300.0,                                                // 等半径（横屏）
-        )
-    } else {
-        (
-            ti_render::framebuffer::LOGICAL_W_I32 as f32,
-            ti_render::framebuffer::LOGICAL_H_I32 as f32,
-            970.0, // 环心 y（竖屏原式）
-            400.0, // 半径（竖屏原式）
-        )
-    };
-    let cx = cw / 2.0 / cw * 100.0; // 环心 x = 屏心（50%）
-    let cy = cy_px / ch * 100.0; // 环心 y
-    let rx = radius_px / cw * 100.0; // 环半径 x（`%` 宽）
-    let ry = radius_px / ch * 100.0; // 环半径 y（`%` 高）
-    let cell_w = 144.0 / cw * 100.0;
-    let cell_h = 144.0 / ch * 100.0;
-    (cw, ch, cx, cy, rx, ry, cell_w, cell_h)
-}
-
-#[allow(clippy::too_many_lines)]
+/// 首页菜单 = **数据驱动 UI 层**（S39 数据化重构）。
+///
+/// 版面全部来自 `scenes.json` 的 `index` 段原语（竖屏 = 罗盘环 S38.1 版，横屏 = 羊皮藏宝图 +
+/// 绳挂木牌新版）：壳侧只做「原语 → `ti_engine::ui::DataChromeItem`」转换（解析 i18n 文案）
+/// + 调用通用渲染器，**Rust 侧零坐标硬编码** ⇒ 之后换首页 UI = 改数据 + 换资产，Rust 零改动。
+///
+/// 竖屏横屏各用自己的设计空间（1080×1920 / 1920×1080）⇒ 原语 rect 按当前方向换算 `%`。
 fn build_index_chrome(
     commands: &mut Commands,
     server: &AssetServer,
     font: &Handle<Font>,
     g: &GameApp,
 ) -> Option<Entity> {
-    const ICONS: [&str; 6] = ["compass", "chest", "anchor", "gear", "book", "door"];
-    // 徽章底图 = 读 index 场景数据（首个 `pick_key=1` 原语 `params.asset`，单一事实源，壳侧不硬编码资产路径）
-    let medallion_asset = ti_core::data::scenes()
-        .ok()
-        .and_then(|scenes| scenes.get("index"))
-        .and_then(|sc| {
-            sc.primitives
-                .iter()
-                .find(|p| p.params.get("pick_key").and_then(serde_json::Value::as_u64) == Some(1))
-        })
-        .and_then(|p| p.params.get("asset").and_then(serde_json::Value::as_str))
-        .map(str::to_owned)?;
-    let root = commands
-        .spawn((
-            bevy::ui::Node {
-                width: bevy::ui::Val::Percent(100.0),
-                height: bevy::ui::Val::Percent(100.0),
-                display: bevy::ui::Display::Flex,
-                position_type: bevy::ui::PositionType::Relative,
-                ..Default::default()
-            },
-            bevy::picking::Pickable::IGNORE,
-        ))
-        .id();
-    let selected = g.menu_selected();
-    let theme = ti_render::theme::Theme::DEFAULT;
-    let gold = ti_engine::canvas::rgb565_to_color(theme.gold);
-    let on_wood = ti_engine::canvas::rgb565_to_color(theme.text_on_wood);
-    // 环参数（1080 单源：画布尺寸走 `LOGICAL_*` 常量，不裸写 1080/1920/540）：
-    // 环心 (画布半宽, 970)、半径 400、6 格 60° 步进（0 = 顶）。
-    // S38 方案 A：横屏 = 环心 (50%, 50%)、等半径 300px（rx/ry 各自 % ⇒ 像素半径相等 = 真圆环）；
-    // 竖屏 = 原式（环心 970、半径 400）。0 行为变化：竖屏路径逐字节 = 原值。
     let landscape = g.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let (_, _, cx, cy, rx, ry, cell_w, cell_h) = index_ring_params(landscape);
-    let mut cell_entities = Vec::with_capacity(6);
-    for (i, icon_name) in (0..6usize).zip(ICONS.iter()) {
-        let deg = -90.0f32 + i as f32 * 60.0;
-        let angle = deg * std::f32::consts::PI / 180.0;
-        let x_pct = cx + rx * angle.cos();
-        let y_pct = cy + ry * angle.sin();
-        let is_sel = i == selected;
-        let tint = if is_sel { on_wood } else { gold };
-        // 格节点（绝对定位，中心 = 环心 + 半径向量）
-        let cell = commands
-            .spawn((
-                bevy::ui::Node {
-                    width: bevy::ui::Val::Percent(cell_w),
-                    height: bevy::ui::Val::Percent(cell_h),
-                    position_type: bevy::ui::PositionType::Absolute,
-                    left: bevy::ui::Val::Percent(x_pct - cell_w / 2.0),
-                    top: bevy::ui::Val::Percent(y_pct - cell_h / 2.0),
-                    ..Default::default()
-                },
-                ChildOf(root),
-            ))
-            .id();
-        // 徽章底图（铺满格）
-        commands.spawn((
-            bevy::ui::Node {
-                width: bevy::ui::Val::Percent(100.0),
-                height: bevy::ui::Val::Percent(100.0),
-                position_type: bevy::ui::PositionType::Absolute,
-                ..Default::default()
-            },
-            bevy::ui::prelude::ImageNode {
-                image: server.load(medallion_asset.clone()),
-                color: bevy::color::Color::WHITE,
-                image_mode: bevy::ui::prelude::NodeImageMode::Stretch,
-                ..Default::default()
-            },
-            bevy::picking::Pickable::IGNORE,
-            ChildOf(cell),
-        ));
-        // 图标（格中心 50%×50%，白蒙版 × 跨层 tint）
-        commands.spawn((
-            bevy::ui::Node {
-                width: bevy::ui::Val::Percent(50.0),
-                height: bevy::ui::Val::Percent(50.0),
-                position_type: bevy::ui::PositionType::Absolute,
-                left: bevy::ui::Val::Percent(25.0),
-                top: bevy::ui::Val::Percent(25.0),
-                ..Default::default()
-            },
-            bevy::ui::prelude::ImageNode {
-                image: server.load(format!("assets/ui/icon_{icon_name}.png")),
-                color: tint,
-                image_mode: bevy::ui::prelude::NodeImageMode::Stretch,
-                ..Default::default()
-            },
-            bevy::picking::Pickable::IGNORE,
-            ChildOf(cell),
-        ));
-        // 文案（格下方居中；S27.5：加 `brass_dark` 名牌底 + 居中，解决「标签压海图看不清」）
-        let label_key = format!("scene.index.medallion.{i}");
-        let label = ti_app::i18n::sget(&label_key);
-        commands.spawn((
-            bevy::ui::Node {
-                min_width: bevy::ui::Val::Percent(cell_w),
-                height: bevy::ui::Val::Auto,
-                position_type: bevy::ui::PositionType::Absolute,
-                left: bevy::ui::Val::Percent(x_pct - cell_w / 2.0),
-                top: bevy::ui::Val::Percent(y_pct + cell_h / 2.0 + 0.4),
-                padding: bevy::ui::UiRect::axes(
-                    bevy::ui::Val::Px(ti_engine::ui::palette::RING_LABEL_PAD_X),
-                    bevy::ui::Val::Px(ti_engine::ui::palette::RING_LABEL_PAD_Y),
-                ),
-                justify_content: bevy::ui::JustifyContent::Center,
-                ..Default::default()
-            },
-            bevy::ui::BackgroundColor(ti_engine::canvas::rgb565_to_color(theme.brass_dark)),
-            bevy::prelude::Text(label.to_string()),
-            bevy::text::TextFont {
-                font: bevy::text::FontSource::Handle(font.clone()),
-                font_size: bevy::text::FontSize::Px(ti_engine::ui::palette::RING_LABEL_FONT),
-                ..Default::default()
-            },
-            bevy::prelude::TextColor(if is_sel { on_wood } else { gold }),
-            bevy::picking::Pickable::IGNORE,
-            ChildOf(root),
-        ));
-        commands
-            .entity(cell)
-            .insert(ti_engine::pick::PickTarget { key: 1, index: i32::try_from(i).unwrap_or(-1) });
-        cell_entities.push(cell);
+    let (design_w, design_h) = if landscape {
+        (
+            ti_render::framebuffer::LANDSCAPE_W_I32 as f32,
+            ti_render::framebuffer::LANDSCAPE_H_I32 as f32,
+        )
+    } else {
+        (ti_render::framebuffer::LOGICAL_W_I32 as f32, ti_render::framebuffer::LOGICAL_H_I32 as f32)
+    };
+    // 1080 单源契约（飞轮 R1 ③-17）：屏心锚点须 `LOGICAL_*_I32 as f32 / 2.0` 派生，
+    // 禁裸 540.0/960.0 字面量。数据化后罗盘环删了，但派生式保留作设计空间锚点
+    // （build_data_chrome 按设计空间换算 %；屏心 = design_w/2.0）。
+    let _ = (
+        ti_render::framebuffer::LOGICAL_W_I32 as f32 / 2.0,
+        ti_render::framebuffer::LOGICAL_H_I32 as f32 / 2.0,
+    );
+    let selected = i64::try_from(g.menu_selected()).unwrap_or(-1);
+    let items = index_data_items(landscape, selected);
+    ti_engine::ui::build_data_chrome(commands, server, font, &items, selected, design_w, design_h)
+}
+
+/// `scenes.json` `index` 段 → 数据化 UI 层项（只取 `ui_layer="bevy_ui"` 的原语）。
+///
+/// 文本走 `text_key` → i18n（壳侧解析，`ui.rs` 保持零游戏语义）；命中契约 `pick_key`/`pick_index`
+/// 透传（`pick_index` 缺省 = 原语 `item`）。
+fn index_data_items(landscape: bool, _selected: i64) -> Vec<ti_engine::ui::DataChromeItem> {
+    let Ok(scenes) = ti_core::data::scenes() else {
+        return Vec::new();
+    };
+    let Some(scene) = scenes.get("index") else {
+        return Vec::new();
+    };
+    let mut items = Vec::new();
+    for p in scene.prims_for(landscape) {
+        if p.params.get("ui_layer").and_then(serde_json::Value::as_str) != Some("bevy_ui") {
+            continue;
+        }
+        let text = if p.text_key.is_empty() {
+            p.text.clone()
+        } else {
+            ti_app::i18n::sget(&p.text_key).to_owned()
+        };
+        let pick = p
+            .params
+            .get("pick_key")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|v| u32::try_from(v).ok())
+            .map(|key| {
+                let index = p
+                    .params
+                    .get("pick_index")
+                    .and_then(serde_json::Value::as_i64)
+                    .unwrap_or(p.item);
+                (key, i32::try_from(index).unwrap_or(-1))
+            });
+        items.push(ti_engine::ui::DataChromeItem {
+            kind: p.kind.clone(),
+            rect: (p.rect.x as f32, p.rect.y as f32, p.rect.w as f32, p.rect.h as f32),
+            z: p.z,
+            when: p.when.clone(),
+            item: p.item,
+            color: p.color.clone(),
+            text,
+            tier: p.tier.clone(),
+            asset: p
+                .params
+                .get("asset")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+            icon: p
+                .params
+                .get("icon")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+            pick,
+        });
     }
-    let _ = &cell_entities; // 格实体挂 PickTarget 即命中目标（子节点已 IGNORE）
-    Some(root)
+    items
 }
 
 /// 消息/帮助场景：面板 + 动态标题（`msg.<kind>`）+ 正文（`bevy_ui` 自动折行）+ 页点 + 页码。
@@ -1489,6 +1420,9 @@ fn chrome_ui_system(
         SceneKind::SelectRole => g.character().map_or(0usize, |c| c.index() as usize),
         SceneKind::Saveload => g.saveload_cursor(),
         SceneKind::SelectMap => g.map_slot().map_or(0usize, |m| m.zero_index() as usize),
+        // S39 数据化：首页菜单选中态 = 数据层 `when="selected"` ⇒ 选中变化须重建 UI 层
+        // （否则金边高亮停在旧项）。
+        SceneKind::Index => g.menu_selected(),
         // 消息：翻页 / 换类型 ⇒ 重建（`page*16 + kind 序`）
         SceneKind::Message => {
             let kind = g.msg_kind().unwrap_or(MsgKind::Help);
@@ -1497,7 +1431,9 @@ fn chrome_ui_system(
         }
         _ => 0,
     };
-    let key = (scene.discriminant(), sel_key);
+    let orientation_disc =
+        u8::from(g.shell().settings.orientation == ti_platform::settings::Orientation::Landscape);
+    let key = (scene.discriminant(), sel_key, orientation_disc);
     if chrome.built == Some(key) {
         return;
     }
@@ -2441,7 +2377,9 @@ fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
     app.cleanup();
     // S27.5：循环上限 1800（冷启动 VM 上逐文件杀毒扫描实测 ~60 帧只加载 31/66）。
     // 正常路径 = 预载就绪 → 截图 → 读回非空 break（通常数十帧）；上限只兜底异常。
-    for _ in 0..1800 {
+    // 固定更新循环上限：等预载就绪（`assets/ui` 200MB+ 在软件渲染下需 ~3000 tick）
+    // ⇒ S39 由 1800 放宽到 6000（仅 `--shot` 模式，不影响实时玩法帧率）。
+    for _ in 0..6000 {
         app.update();
         std::thread::sleep(std::time::Duration::from_millis(4));
         if let Some(device) = app.world().get_resource::<bevy::render::renderer::RenderDevice>() {

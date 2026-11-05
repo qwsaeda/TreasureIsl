@@ -36,7 +36,9 @@
 
 环境变量：`AGNES_API_KEY`（Agnes API 密钥；仅 `build/add` 需要）。
 
-原图（未抠图）落在 `evidence/ui_concept/raw_<name>.png`（不入库）。
+原图（未抠图）+ 临时试稿统一落 `evidence/gen_tmp/`（gitignore；清理面 = 删整个目录，
+13 号 §2.2）。`evidence/ui_concept/raw_<name>.png` 为旧路径，`rekey` 读不到新目录时
+回退读旧路径（兼容存量原图）。
 """
 from __future__ import annotations
 
@@ -52,6 +54,9 @@ from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 UI_DIR = ROOT / "assets" / "ui"
+# 生图原图 + 临时试稿统一落点（2026-11-05 用户拍板：临时图固定一个目录，方便手动删除；
+# 13 号 §2.2 单一事实源）。旧原图路径 ui_concept/raw_*.png 只读兼容（rekey 回退）。
+GEN_TMP_DIR = ROOT / "evidence" / "gen_tmp"
 CONCEPT_DIR = ROOT / "evidence" / "ui_concept"
 MANIFEST = ROOT / "assets" / "ui_manifest.json"
 SCENES = ROOT / "assets" / "data" / "scenes.json"
@@ -287,6 +292,11 @@ KEYERS = {
 
 
 # ────────────────────────────── 命令 ──────────────────────────────
+def raw_path(name: str) -> pathlib.Path:
+    """生图原图 / 临时图统一落点（13 号 §2.2）。"""
+    return GEN_TMP_DIR / f"raw_{name}.png"
+
+
 def build_asset(data: dict, asset: dict, force: bool) -> bool:
     name = asset["name"]
     role_name = asset.get("role", "")
@@ -295,7 +305,7 @@ def build_asset(data: dict, asset: dict, force: bool) -> bool:
         print(f"  FAIL  资产 {name}: 未知角色 {role_name!r}", file=sys.stderr)
         return False
     dst = ROOT / asset["file"]
-    raw = CONCEPT_DIR / f"raw_{name}.png"
+    raw = raw_path(name)
     if dst.exists() and not force:
         print(f"  SKIP  {name}（已存在；--force 可重生成）")
         return True
@@ -350,6 +360,11 @@ def cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
+def legacy_raw_path(name: str) -> pathlib.Path:
+    """旧原图路径（存量兼容；rekey 读不到新目录时回退读）。"""
+    return CONCEPT_DIR / f"raw_{name}.png"
+
+
 def cmd_rekey(args: argparse.Namespace) -> int:
     data = load_manifest()
     asset = find_asset(data, args.name)
@@ -357,7 +372,9 @@ def cmd_rekey(args: argparse.Namespace) -> int:
         print(f"清单里没有资产: {args.name}", file=sys.stderr)
         return 1
     role = data["roles"][asset["role"]]
-    raw = CONCEPT_DIR / f"raw_{args.name}.png"
+    raw = raw_path(args.name)
+    if not raw.exists():
+        raw = legacy_raw_path(args.name)  # 存量旧路径回退（13 号 §2.2 迁移期）
     if not raw.exists():
         print(f"原图不存在（先生成）: {raw}", file=sys.stderr)
         return 1
@@ -461,7 +478,7 @@ def main() -> int:
         return 1
     if not args.check:
         UI_DIR.mkdir(parents=True, exist_ok=True)
-        CONCEPT_DIR.mkdir(parents=True, exist_ok=True)
+        GEN_TMP_DIR.mkdir(parents=True, exist_ok=True)
     return args.func(args)
 
 

@@ -159,6 +159,8 @@ y% = cy + ry·sin(angle_i)      // cy/ry = 环心/半径 y（`%` 高，屏幕 y 
 | 9.8-12 | **`ComputedNode` 计数 > 0 不等于「画出来了」** | 证据须加**布局尺寸**（`ComputedNode.size`）+ 像素采样（截图取样点）；S29.3 探针已扩：`[ui] bevy_ui layout size: max_node=WxH px` |
 | 9.8-13 | **bevy_ui UI 相机叠在 1080 世界相机之上（`order=1` 不清屏）⇒ 同屏位的 bevy_ui 节点会**遮住** 1080 动态内容** | 游戏世界场景（vs HP 条 / main_map 棋盘+实体+HUD 数值）的 chrome 与 world **层叠** ⇒ 不能把 chrome 迁 bevy_ui 而 1080 动态内容留在 world（会被遮）。B1「游戏世界保持 1080」⇒ vs/main_map 整体留 1080；只有 chrome 与 world 不重叠的纯 UI 场景（index/role/map/saveload/message）可迁 bevy_ui（S29.3 实测判定） |
 | 9.8-14 | **`TextFont.font` 是 `FontSource` 枚举；不给字体 = 中文豆腐块 □□** | `FontSource::Handle(font.clone())` + `load_project_font` |
+| 9.8-15 | **bevy_ui 只渲染带 `Node` 组件的实体**（`extract_uinodes` 按 `Node` 提取）⇒ `ImageNode`/`Text`/`BackgroundColor` 必须与 `Node` **同实体** | 内容组件放**无 `Node` 的子实体**（`spawn((ImageNode, ChildOf(node)))`）= taffy 布局不提取、UI pass 不绘制 ⇒ **静默不渲染**（截图非黑达标但内容缺失 = 假达标）。S39.0 实测（EXP-168）：旧 `build_index_chrome`（S29.3d）`Node + ImageNode` 同实体正确，新 `build_data_chrome` 拆开 = 回归。修法 = `commands.entity(node).insert((ImageNode, ...))` |
+| 9.8-16 | **per-scene bevy_ui chrome 重建键须含方向判别**（`chrome_ui_system` 的 `built` 键） | 重建键 = `(场景, 选中)` 不含方向 ⇒ `--shot --viewport=1920x1080` 下 orientation 由 main() 显式设 Landscape，但首跑（可能竖屏数据）建树后 `sel_key` 不变即**永不重建** ⇒ 横屏原语永不生效。修法 = 键加 `orientation_disc`（Landscape=1/Portrait=0），EXP-168 |
 
 ## 10. 相关文档
 

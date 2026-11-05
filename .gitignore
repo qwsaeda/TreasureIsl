@@ -57,6 +57,8 @@ __pycache__/
 # S15.6 视觉审计草稿（一次性渲染 dump，非正式 evidence；正式 evidence = evidence/S15.x.log）
 /evidence/render_png/
 /evidence/ui_concept/
+# 生图原图 + 临时试稿统一落点（13 号 §2.2；清理面 = 删整个目录）
+/evidence/gen_tmp/
 # publish_web.ps1 的 gh-pages 隔离工作树（每次发布后清理）
 .git-worktrees/
 

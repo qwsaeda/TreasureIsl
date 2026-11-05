@@ -19,8 +19,9 @@ S18.8a 之前，界面全是代码绘制的几何原语（`rect`/`icon`/`grad`�
 |---|---|---|
 | `assets/ui_manifest.json` | **资产清单**（单一事实源）：角色预设 + 资产登记 | ✅ |
 | `assets/ui/<name>.png` | 运行时资产（RGBA8，已抠透明/规范化） | ✅ |
-| `evidence/ui_concept/raw_<name>.png` | 原始生成图（未抠图） | ❌（gitignore） |
+| `evidence/ui_concept/raw_<name>.png` | 原始生成图（未抠图；**旧路径**，新原图落 `evidence/gen_tmp/`） | ❌（gitignore） |
 | `evidence/ui_concept/<name>.png` | 设计概念图（人工参考） | ❌（gitignore） |
+| `evidence/gen_tmp/raw_<name>.png` | **生图原图（未抠图）+ 临时试稿统一落点**（§2.2） | ❌（gitignore） |
 | `evidence/bevy_native_<scene>.png` | 界面实拍（离屏出图，验收用） | ✅ |
 
 - **资产路径口径 = 相对仓库根**（`assets/ui/board.png`）：
@@ -35,16 +36,33 @@ S18.8a 之前，界面全是代码绘制的几何原语（`rect`/`icon`/`grad`�
 
 | 前缀 | 角色 | 设计图页默认面 |
 |---|---|---|
-| `raw_<name>.png` | 原始生成图（**未抠图**，`ui_assets.py rekey` 前） | 隐藏（中间产物） |
+| `raw_<name>.png` | 原始生成图（**未抠图**；§2.2 起新原图落 `evidence/gen_tmp/`，旧路径存量兼容） | 隐藏（中间产物） |
 | `tmp_<name>.png` | 临时试稿 / 调试产物（无归档价值） | 隐藏（中间产物） |
 | 其余 `<name>.png` | **正式设计稿**（概念图 / 变体 / 定案依据） | 展示 |
 
 - **写图纪律（所有会话 / AI 生图 / 工具链遵守）**：
-  - 未抠图原图**必须**落 `raw_<name>.png`（`ui_assets.py build` 自动生成，勿手改前缀）；
-  - 临时试稿 / 一次性调试图**必须**落 `tmp_<name>.png`，用完即删，**不得**混入无
-    `raw_`/`tmp_` 前缀的正式名（否则会被设计图页当正式稿展示）；
-  - 正式设计稿**不带** `raw_` / `tmp_` 前缀（`main_map_v5_b.png` / `index_compass_concept.png` /
-    `isle_v2_concept_a.png`…）；定案 / 对比 / 验收留痕用正式名。
+  - 未抠图原图**必须**落 `evidence/gen_tmp/raw_<name>.png`（`ui_assets.py build` 自动生成，勿手改前缀）；
+  - 临时试稿 / 一次性调试图**必须**落 `evidence/gen_tmp/tmp_<name>.png`（**不带** `raw_`/`tmp_` 前缀
+    的正式名混不进 `ui_concept/` 顶层 = 不会被设计图页当正式稿展示）；
+  - 正式设计稿（**不带** `raw_` / `tmp_` 前缀：`main_map_v5_b.png` / `index_compass_concept.png` /
+    `isle_v2_concept_a.png`…）落 `evidence/ui_concept/` 顶层；定案 / 对比 / 验收留痕用正式名。
+
+### 2.2 生图临时图统一落点（`evidence/gen_tmp/`，2026-11-05 用户拍板）
+
+**生图原图（未抠图）+ 临时试稿全部固定落 `evidence/gen_tmp/`**（gitignore 整目录），
+不再散进 `evidence/ui_concept/`。理由与口径：
+
+- **清理面 = 删整个目录**：`rm -rf evidence/gen_tmp/` 一条命令清空全部临时图，
+  目录里**只允许**临时图（`raw_*` 原图 + `tmp_*` 试稿），**禁止**放正式设计稿 /
+  合成稿 / 引擎渲染图（那些仍落 `ui_concept/` 顶层，§2.1/§2.1a 口径不变）；
+- 工具链落点已改：`ui_assets.py`（build/add 写 `gen_tmp/raw_<name>.png`）+
+  `ui_asset_batch.py`（generate/install 写/读同一路径）；`rekey`/`install` 读不到
+  新目录时**回退读旧路径** `ui_concept/raw_<name>.png`（存量兼容，旧目录可整段删除，
+  旧原图不再回写）；
+- `ui_thumb.py` **不扫** `gen_tmp/`（临时图不出缩略侧车，不进平台设计图页）；
+  平台 `GET /api/evidence?sub=ui_concept` 同样只枚举 `ui_concept/`，临时图天然不可见；
+- 文档/evidence 里引用的旧路径（`ui_concept/raw_*.png`）= 存量留痕，不再新增引用；
+  新建临时图一律 `gen_tmp/`。
 - **机器兜底**：平台 `GET /api/evidence?sub=ui_concept` 已**滤除** `.thumb.png` 侧车
   （生成物非设计稿）；设计图页前端按 `raw_`/`tmp_` 前缀默认隐藏中间产物
   （`web/index.html` 设计图页 `#design-mid` 开关，口径 = 本节表；改命名规则须同步本节
@@ -69,7 +87,7 @@ S18.8a 之前，界面全是代码绘制的几何原语（`rect`/`icon`/`grad`�
 - **写图纪律**：任何迭看图/引擎渲染图**写前**先查本节命名表；写后**必须**跑
   `python3 scripts/ui_thumb.py` 生成侧车（平台卡/lightbox 才可见）；gitignore 的 `ui_concept/`
   子目录（`main_map_v6/elements/`、`vs_anim_v2/elements/`）只作 **AI 元素源**（`raw_`/中间产物），
-  **不得**放正式迭看图。
+  **不得**放正式迭看图；临时试稿 / 未抠原图落 `evidence/gen_tmp/`（§2.2，不进平台面）。
 - **呈现纪律（2026-10-31 用户「磁盘物理路径，每次按这个给出」）**：迭看图给用户看时，
   **必须**给出**磁盘物理绝对路径**（`<repo>/evidence/ui_concept/<name>.png`），
   且**在对话中直接显示图**（不只给路径）——用户可能从 git 视图找（`ui_concept/` gitignore
@@ -172,7 +190,7 @@ powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1        # 全部 
 ## 6. 迭代闭环（一个界面怎么做完）
 
 ```
-① 出设计图/概念图（Agnes 生图 → evidence/ui_concept/ 参考）
+① 出设计图/概念图（Agnes 生图 → evidence/ui_concept/ 参考；原图/临时图 → evidence/gen_tmp/ §2.2）
 ② 定资产清单（背景/木牌/纹章/立绘…）→ python scripts/ui_assets.py add ...
 ③ 改界面数据（assets/data/scenes.json 的 primitives：image 原语 + 文本/矩形）
 ④ 出图看效果 → python scripts/ui_preview.ps1 <scene>   （evidence/ui_preview/ 缩略图 + 非黑像素统计）
