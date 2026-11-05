@@ -151,6 +151,12 @@ def main() -> int:
                 # 降级 = L1~L4 全 SKIP（记录浏览器崩溃原因，不静默 FAIL 误判为 wasm 缺陷）。
                 browser_crashed = True
                 break
+            # S39（2026-11-05）：WebGL context lost（SwiftShader headless 偶发 GPU stall，
+            # EXP-158/163 环境随机性）不抛异常但 status 报告 context lost ⇒ 全层环境降级
+            # （同浏览器崩溃口径，不 FAIL 误判为 wasm 缺陷；真 wasm 缺陷不报 context lost）。
+            if "WebGL context lost" in status:
+                browser_crashed = True
+                break
             if status.startswith(("运行中", "加载失败")):
                 break
             page.wait_for_timeout(2_000)
@@ -257,8 +263,15 @@ def main() -> int:
         # L4 测试对象 = select_map 点 m01 切 main_map（S39 改动面不含 select_map 命中）。
         # 只认**精确**环境错误串（泛 "wgpu" 前缀太宽：真缺陷日志也可能含 wgpu 字样）。
         env_errors = ("Shader compilation failed", "WebGL context lost", "Validation Error")
-        l2_ok = bool(checks["L2_render"]) if isinstance(checks["L2_render"], bool) else False
-        l3_ok = bool(checks["L3_input"]) if isinstance(checks["L3_input"], bool) else False
+        # `L2_render`/`L3_input` 可能是 dict（含 ok/after 详情）或 bool（汇总后）；取成功标志。
+        def _layer_ok(v) -> bool:
+            if isinstance(v, bool):
+                return v
+            if isinstance(v, dict):
+                return bool(v.get("ok", True))  # dict 无 ok 字段 = 走到该层 = 成功
+            return bool(v)
+        l2_ok = _layer_ok(checks.get("L2_render"))
+        l3_ok = _layer_ok(checks.get("L3_input"))
         has_env_log = any(any(e in c for e in env_errors) for c in console_errors)
         frozen_no_js_error = (not page_errors) and l2_ok and l3_ok
         l4_env_stall = (
@@ -291,7 +304,8 @@ def main() -> int:
                       "isle_trading_post.png", "isle_volcano.png", "isle_wreck.png"}  # v5 专属（9 类，excl 共用 lighthouse）
         V6_NEED = 4   # 多资产判据（6 中 ≥4，防单资产偶发 200 误 PASS；Q094）
         l5 = {"v6": 0, "isle": 0, "island_home": 0, "card_panel": 0, "ok": False, "skipped": True}
-        if not l4_crashed:
+        # L4 冻结（l4_env_stall）⇒ L5 也无法测（canvas 冻结读不到资产）：L5 同降级。
+        if not (l4_crashed or l4_env_stall):
             def ring_counts() -> dict[str, int]:
                 return {
                     "v6": sum(1 for k, v in asset_status.items()
