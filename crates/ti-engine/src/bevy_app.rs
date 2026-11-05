@@ -81,7 +81,7 @@ impl SpikeApp {
 fn spawn_index(mut commands: Commands) {
     commands.spawn(Camera2d);
     commands.spawn((
-        Sprite::from_color(Color::srgb(0.23, 0.10, 0.09), Vec2::new(400.0, 200.0)),
+        Sprite::from_color(crate::ui::palette::DEBUG_RED_BROWN, Vec2::new(400.0, 200.0)),
         Transform::from_translation(Vec3::new(0.0, 160.0, 0.0)),
     ));
     commands.spawn((

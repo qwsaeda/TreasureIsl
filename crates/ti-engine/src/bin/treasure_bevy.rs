@@ -1180,7 +1180,7 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
                 border_radius: bevy::ui::BorderRadius::px(12.0, 12.0, 12.0, 12.0),
                 ..Default::default()
             },
-            bevy::ui::BackgroundColor(bevy::color::Color::srgba(0.24, 0.16, 0.09, 0.92)),
+            bevy::ui::BackgroundColor(ti_engine::ui::palette::PANEL_WOOD_BG),
             bevy::picking::Pickable::IGNORE,
             ChildOf(root),
         ))
@@ -1193,7 +1193,7 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
         title.to_string(),
         None,
         30.0,
-        bevy::color::Color::srgb(0.97, 0.88, 0.70),
+        ti_engine::ui::palette::PARCH_BRIGHT,
     );
     msg_text_child(
         commands,
@@ -1202,7 +1202,7 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
         body.to_string(),
         Some(92.0),
         20.0,
-        bevy::color::Color::srgb(0.92, 0.86, 0.72),
+        ti_engine::ui::palette::PARCH_CREAM,
     );
     // 页点（`total` 个方点；`i < page` 实心，否则暗底）
     let dots_row = commands
@@ -1221,15 +1221,7 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
     for i in 0..total {
         msg_page_dot(commands, dots_row, i < page);
     }
-    msg_text_child(
-        commands,
-        panel,
-        font,
-        page_str,
-        None,
-        18.0,
-        bevy::color::Color::srgb(0.70, 0.62, 0.48),
-    );
+    msg_text_child(commands, panel, font, page_str, None, 18.0, ti_engine::ui::palette::MUTED_GOLD);
     // 底部提示行（全宽绝对定位）
     let hint = ti_app::i18n::sget("scene.message.nav_hint");
     msg_text_child_abs(
@@ -1239,7 +1231,7 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
         hint.to_string(),
         86.0,
         18.0,
-        bevy::color::Color::srgb(0.70, 0.62, 0.48),
+        ti_engine::ui::palette::MUTED_GOLD,
     );
     root
 }
@@ -1282,9 +1274,9 @@ fn msg_text_child(
 /// 消息面板页点（10×10 圆角方点；`filled` = 实心金，否则暗棕底）。
 fn msg_page_dot(commands: &mut Commands, parent: Entity, filled: bool) {
     let color = if filled {
-        bevy::color::Color::srgb(0.97, 0.88, 0.70)
+        ti_engine::ui::palette::PARCH_BRIGHT
     } else {
-        bevy::color::Color::srgb(0.15, 0.10, 0.06)
+        ti_engine::ui::palette::DARK_BROWN_06
     };
     commands.spawn((
         bevy::ui::Node {

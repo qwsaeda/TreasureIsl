@@ -3483,6 +3483,7 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("hd-sprite-transparency", check_hd_sprite_transparency),
     ("scene-layout-fidelity", check_scene_layout_fidelity),
     ("wasm-viewport-init", check_wasm_viewport_init),
+    ("engine-no-color-literal", check_engine_no_color_literal),
     ("landscape-no-portrait-hardcode", check_landscape_no_portrait_hardcode),
     ("scene-band-count", check_scene_band_count),
     ("save-slot-map-slot-basis", check_save_slot_map_slot_basis),
@@ -3716,6 +3717,71 @@ fn fn_body(text: &str, name: &str) -> Option<String> {
 /// - `bin/treasure_bevy.rs::letterbox_size`：禁 `LOGICAL_W`/`LOGICAL_H`（竖屏 1080×1920 硬编码
 ///   `min(w/1080,h/1920)`，S38.0 遗漏 ⇒ 横屏窗口 letterbox 错位，本次修复防回归）。
 ///
+/// S38 审计 F-01/F-02（用户「引擎用了但很多硬编码」）：消除引擎层 `Color::srgb()/srgba()`
+/// 字面量 + `ui.rs` 尺寸魔法数字（`FontSize::Px`/`BorderRadius::px`/`UiRect::px`/`Val::Px`
+/// 裸数字）。处置 = 集中为 `ui.rs::palette` 具名常量（值不变零视觉变化，CS-1 单源）。
+///
+/// 固化守门：
+/// - `Color::srgb/srgba` 字面量只允许出现在 `ui.rs::palette` 常量定义（单源）与
+///   `canvas.rs::rgb565_to_color`（合法 RGB565 转换）；其余引擎层出现 = 违背。
+/// - `ui.rs` 尺寸裸数字 = 0（`palette::*` 引用，禁止散落魔法数字）。
+fn check_engine_no_color_literal(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    // ① 颜色字面量：扫 ti-engine/src 全部 .rs（palette 常量 + rgb565_to_color 除外）。
+    for rel in [
+        "crates/ti-engine/src/ui.rs",
+        "crates/ti-engine/src/vs_duel.rs",
+        "crates/ti-engine/src/bevy_app.rs",
+        "crates/ti-engine/src/scene_render.rs",
+        "crates/ti-engine/src/bin/treasure_bevy.rs",
+        "crates/ti-engine/src/canvas.rs",
+    ] {
+        let Some(text) = read_file(root, rel) else {
+            errors.push(format!("{rel} 缺失，无法扫颜色字面量"));
+            continue;
+        };
+        for (i, line) in text.lines().enumerate() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("//") {
+                continue; // 注释/doc 示例不算硬编码。
+            }
+            if !line.contains("Color::srgb(") && !line.contains("Color::srgba(") {
+                continue;
+            }
+            // 允许：ui.rs palette 单源常量定义；canvas.rs rgb565_to_color 合法转换。
+            let is_palette_const = rel.ends_with("ui.rs") && line.contains("pub const");
+            let is_rgb565 = rel.ends_with("canvas.rs");
+            if !is_palette_const && !is_rgb565 {
+                errors.push(format!(
+                    "{rel}:{} 颜色字面量未走 `ui.rs::palette` 单源（F-01：`Color::srgb/srgba` 禁止硬编码）",
+                    i + 1
+                ));
+            }
+        }
+    }
+
+    // ② ui.rs 尺寸魔法数字：裸数字 Px = 0（palette 常量引用）。
+    if let Some(text) = read_file(root, "crates/ti-engine/src/ui.rs") {
+        for (i, line) in text.lines().enumerate() {
+            for pat in ["FontSize::Px(", "BorderRadius::px(", "UiRect::px(", "Val::Px("] {
+                if line.contains(pat) {
+                    // 取 pat 后紧跟的第一个字符，是数字 = 裸字面量（违背）。
+                    if let Some(rest) = line.split(pat).nth(1) {
+                        if rest.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+                            errors.push(format!(
+                                "crates/ti-engine/src/ui.rs:{} `{pat}...` 尺寸魔法数字未走 `palette::*`（F-02）",
+                                i + 1
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    errors
+}
+
 /// S38 wasm 横屏根因（EXP-164）：bevy 0.20 wasm 把 canvas 尺寸设为 `WindowResolution`
 /// （初始 `WIN_W`×`WIN_H` = 540×960 竖屏硬编码），**覆盖**页面 CSS `100vw×100vh` ⇒ 浏览器视口
 /// 无论横竖，`canvas` 恒 540×960 ⇒ 恒竖屏 `letterbox`（wasm 横屏从未生效；native 不受影响）。

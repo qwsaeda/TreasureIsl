@@ -497,7 +497,7 @@ pub fn spawn_pick_layer(
             PickLayerEntity,
             PickTarget { key, index },
             Sprite::from_color(
-                bevy::color::Color::srgba(0.0, 0.0, 0.0, 0.0),
+                crate::ui::palette::TRANSPARENT,
                 Vec2::new(p.rect.w as f32, p.rect.h as f32),
             ),
             Transform::from_translation(to_world_dims(cx, cy, lw, lh).extend(0.0)),

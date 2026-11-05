@@ -20,12 +20,96 @@
 
 use bevy::camera::ClearColorConfig;
 use bevy::camera::visibility::RenderLayers;
-use bevy::color::Color;
 use bevy::picking::Pickable;
 use bevy::prelude::*;
 use bevy::text::{FontSize, FontSource, TextColor, TextFont};
 use bevy::ui::IsDefaultUiCamera;
 use bevy::ui::prelude::{ImageNode, NodeImageMode};
+
+/// S38 审计 F-01/F-02（用户「引擎用了但很多硬编码」）：bevy_ui chrome + VS 原型的**视觉量
+/// 集中为具名常量**——消除 `Color::srgb()/srgba()` + 尺寸魔法数字字面量，CS-1 单源。
+///
+/// **值不变 = 零视觉变化**（等价替换）。若需走 `ti_render::Theme`（RGB565）映射
+/// `rgb565_to_color(theme.xxx)`——注意 Theme 值与现值有偏差，会改变视觉（A 纪律设计稿），
+/// 故本审计先做**常量单源**（消除硬编码），Theme 完整迁移列为后续（需用户确认设计稿）。
+///
+/// 尺寸用 `f32` 常量（引用处 `UiRect::px(PANEL_PAD, …)`），避免 const-fn 限制。
+pub mod palette {
+    use bevy::color::Color;
+
+    // ── 颜色（F-01，值 = 原字面量）──
+    /// 面板底（棕黑半透明，ui.rs 列表/面板）。
+    pub const PANEL_BG: Color = Color::srgba(0.10, 0.07, 0.03, 0.82);
+    /// 金文本（标题/选中行，ui.rs）。
+    pub const GOLD_TEXT: Color = Color::srgb(0.95, 0.85, 0.60);
+    /// 黄铜高亮（选中行/按钮，ui.rs）。
+    pub const BRASS_SELECT: Color = Color::srgb(0.72, 0.45, 0.16);
+    /// 透明。
+    pub const TRANSPARENT: Color = Color::srgba(0.0, 0.0, 0.0, 0.0);
+    /// 米白文本（副标题，ui.rs）。
+    pub const CREAM_TEXT: Color = Color::srgb(0.95, 0.90, 0.78);
+    /// 灰金副文本（ui.rs + `treasure_bevy`）。
+    pub const MUTED_GOLD: Color = Color::srgb(0.70, 0.62, 0.48);
+    /// 深棕文本（ui.rs）。
+    pub const DARK_BROWN_TEXT: Color = Color::srgb(0.15, 0.10, 0.05);
+    /// 面板深棕半透明（`treasure_bevy` message/其它面板）。
+    pub const PANEL_WOOD_BG: Color = Color::srgba(0.24, 0.16, 0.09, 0.92);
+    /// 羊皮亮文本（`treasure_bevy`）。
+    pub const PARCH_BRIGHT: Color = Color::srgb(0.97, 0.88, 0.70);
+    /// 羊皮米（`treasure_bevy`）。
+    pub const PARCH_CREAM: Color = Color::srgb(0.92, 0.86, 0.72);
+    /// 深棕文本（蓝分量 0.06，`treasure_bevy`）。
+    pub const DARK_BROWN_06: Color = Color::srgb(0.15, 0.10, 0.06);
+    // VS 原型（vs_duel.rs）
+    /// VS HP 槽底（黑半透明）。
+    pub const DUEL_SLOT_BG: Color = Color::srgba(0.05, 0.04, 0.03, 0.9);
+    /// VS 按钮底（棕半透明）。
+    pub const DUEL_BTN_BG: Color = Color::srgba(0.22, 0.16, 0.09, 0.95);
+    /// VS 道具行底。
+    pub const DUEL_ROW_BG: Color = Color::srgba(0.18, 0.13, 0.08, 0.9);
+    /// VS 回合徽章（黄铜圆盘）。
+    pub const DUEL_ROUND_BADGE: Color = Color::srgba(0.78, 0.55, 0.20, 1.0);
+    /// VS 弹窗白闪（alpha 由调用方乘 k）。
+    pub const DUEL_POPUP_FLASH: Color = Color::srgba(1.0, 0.91, 0.75, 1.0);
+    /// 调试红棕背景（`bevy_app` 占位）。
+    pub const DEBUG_RED_BROWN: Color = Color::srgb(0.23, 0.10, 0.09);
+
+    // ── 尺寸（F-02，值 = 原字面量，f32 常量）──
+    /// 面板内边距。
+    pub const PANEL_PAD: f32 = 16.0;
+    /// 面板圆角。
+    pub const PANEL_RADIUS: f32 = 12.0;
+    /// 面板行距。
+    pub const PANEL_ROW_GAP: f32 = 12.0;
+    /// 面板行距（小）。
+    pub const PANEL_ROW_GAP_SMALL: f32 = 10.0;
+    /// 标题字号。
+    pub const TITLE_FONT: f32 = 26.0;
+    /// 正文字号。
+    pub const BODY_FONT: f32 = 20.0;
+    /// 提示字号。
+    pub const HINT_FONT: f32 = 15.0;
+    /// 列表标题字号。
+    pub const LIST_TITLE_FONT: f32 = 28.0;
+    /// 按钮字号。
+    pub const BUTTON_FONT: f32 = 24.0;
+    /// 行内列距。
+    pub const ROW_COLUMN_GAP: f32 = 12.0;
+    /// 行内边距。
+    pub const ROW_PAD: f32 = 8.0;
+    /// 行圆角。
+    pub const ROW_RADIUS: f32 = 8.0;
+    /// 缩略图宽。
+    pub const THUMB_W: f32 = 72.0;
+    /// 缩略图高。
+    pub const THUMB_H: f32 = 96.0;
+    /// 按钮宽。
+    pub const BUTTON_W: f32 = 240.0;
+    /// 按钮高。
+    pub const BUTTON_H: f32 = 56.0;
+    /// 按钮圆角。
+    pub const BUTTON_RADIUS: f32 = 10.0;
+}
 
 /// 生成 UI 相机（叠在游戏正交相机之上；`order=1` + `clear_color=None` 不清屏，游戏世界透出）。
 ///
@@ -139,9 +223,19 @@ pub fn build_list_chrome_pos(
         height: Val::Auto,
         flex_direction: FlexDirection::Column,
         align_items: AlignItems::Stretch,
-        padding: UiRect::px(16.0, 16.0, 16.0, 16.0),
-        border_radius: BorderRadius::px(12.0, 12.0, 12.0, 12.0),
-        row_gap: Val::Px(12.0),
+        padding: UiRect::px(
+            palette::PANEL_PAD,
+            palette::PANEL_PAD,
+            palette::PANEL_PAD,
+            palette::PANEL_PAD,
+        ),
+        border_radius: BorderRadius::px(
+            palette::PANEL_RADIUS,
+            palette::PANEL_RADIUS,
+            palette::PANEL_RADIUS,
+            palette::PANEL_RADIUS,
+        ),
+        row_gap: Val::Px(palette::PANEL_ROW_GAP),
         ..Node::default()
     };
     match side {
@@ -155,7 +249,7 @@ pub fn build_list_chrome_pos(
     let panel = commands
         .spawn((
             node,
-            BackgroundColor(Color::srgba(0.10, 0.07, 0.03, 0.82)),
+            BackgroundColor(palette::PANEL_BG),
             // 面板容器本身不拾取（行节点才是命中目标）；否则面板区域会挡住下层 1080 拾取标记。
             Pickable::IGNORE,
             ChildOf(root),
@@ -169,10 +263,10 @@ pub fn build_list_chrome_pos(
             Text(title.to_string()),
             TextFont {
                 font: FontSource::Handle(font.clone()),
-                font_size: FontSize::Px(26.0),
+                font_size: FontSize::Px(palette::TITLE_FONT),
                 ..default()
             },
-            TextColor(Color::srgb(0.95, 0.85, 0.60)),
+            TextColor(palette::GOLD_TEXT),
             Pickable::IGNORE,
             ChildOf(panel),
         ));
@@ -196,18 +290,28 @@ fn build_chrome_row(
     panel: Entity,
 ) -> Entity {
     let row_bg = if row.selected {
-        Color::srgb(0.72, 0.45, 0.16) // 选中 = 黄铜高亮
+        palette::BRASS_SELECT // 选中 = 黄铜高亮
     } else {
-        Color::srgba(0.0, 0.0, 0.0, 0.0) // 非选中 = 透明
+        palette::TRANSPARENT // 非选中 = 透明
     };
     let row_node = commands
         .spawn((
             Node {
                 display: Display::Flex,
                 align_items: AlignItems::Center,
-                column_gap: Val::Px(12.0),
-                padding: UiRect::px(8.0, 8.0, 8.0, 8.0),
-                border_radius: BorderRadius::px(8.0, 8.0, 8.0, 8.0),
+                column_gap: Val::Px(palette::ROW_COLUMN_GAP),
+                padding: UiRect::px(
+                    palette::ROW_PAD,
+                    palette::ROW_PAD,
+                    palette::ROW_PAD,
+                    palette::ROW_PAD,
+                ),
+                border_radius: BorderRadius::px(
+                    palette::ROW_RADIUS,
+                    palette::ROW_RADIUS,
+                    palette::ROW_RADIUS,
+                    palette::ROW_RADIUS,
+                ),
                 ..Node::default()
             },
             BackgroundColor(row_bg),
@@ -222,7 +326,11 @@ fn build_chrome_row(
     // 可拾取实体，事件正确落到挂 `PickTarget` 的行上。
     if let Some(img) = &row.image {
         commands.spawn((
-            Node { width: Val::Px(72.0), height: Val::Px(96.0), ..Node::default() },
+            Node {
+                width: Val::Px(palette::THUMB_W),
+                height: Val::Px(palette::THUMB_H),
+                ..Node::default()
+            },
             ImageNode {
                 image: img.clone(),
                 image_mode: NodeImageMode::Stretch,
@@ -250,10 +358,10 @@ fn build_chrome_row(
         Text(row.line1.clone()),
         TextFont {
             font: FontSource::Handle(font.clone()),
-            font_size: FontSize::Px(20.0),
+            font_size: FontSize::Px(palette::BODY_FONT),
             ..default()
         },
-        TextColor(Color::srgb(0.95, 0.90, 0.78)),
+        TextColor(palette::CREAM_TEXT),
         Pickable::IGNORE,
         ChildOf(text_col),
     ));
@@ -261,10 +369,10 @@ fn build_chrome_row(
         Text(row.line2.clone()),
         TextFont {
             font: FontSource::Handle(font.clone()),
-            font_size: FontSize::Px(15.0),
+            font_size: FontSize::Px(palette::HINT_FONT),
             ..default()
         },
-        TextColor(Color::srgb(0.70, 0.62, 0.48)),
+        TextColor(palette::MUTED_GOLD),
         Pickable::IGNORE,
         ChildOf(text_col),
     ));
@@ -315,12 +423,22 @@ pub fn build_proof_panel(
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
-                padding: UiRect::px(16.0, 16.0, 16.0, 16.0),
-                border_radius: BorderRadius::px(12.0, 12.0, 12.0, 12.0),
-                row_gap: Val::Px(10.0),
+                padding: UiRect::px(
+                    palette::PANEL_PAD,
+                    palette::PANEL_PAD,
+                    palette::PANEL_PAD,
+                    palette::PANEL_PAD,
+                ),
+                border_radius: BorderRadius::px(
+                    palette::PANEL_RADIUS,
+                    palette::PANEL_RADIUS,
+                    palette::PANEL_RADIUS,
+                    palette::PANEL_RADIUS,
+                ),
+                row_gap: Val::Px(palette::PANEL_ROW_GAP_SMALL),
                 ..Node::default()
             },
-            BackgroundColor(Color::srgba(0.10, 0.07, 0.03, 0.82)),
+            BackgroundColor(palette::PANEL_BG),
             Pickable::IGNORE,
             ChildOf(root),
         ))
@@ -337,10 +455,10 @@ pub fn build_proof_panel(
         Text(title.to_string()),
         TextFont {
             font: FontSource::Handle(font.clone()),
-            font_size: FontSize::Px(28.0),
+            font_size: FontSize::Px(palette::LIST_TITLE_FONT),
             ..default()
         },
-        TextColor(Color::srgb(0.95, 0.85, 0.60)),
+        TextColor(palette::GOLD_TEXT),
         Pickable::IGNORE,
         ChildOf(panel),
     ));
@@ -349,15 +467,20 @@ pub fn build_proof_panel(
     let button = commands
         .spawn((
             Node {
-                width: Val::Px(240.0),
-                height: Val::Px(56.0),
+                width: Val::Px(palette::BUTTON_W),
+                height: Val::Px(palette::BUTTON_H),
                 display: Display::Flex,
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
-                border_radius: BorderRadius::px(10.0, 10.0, 10.0, 10.0),
+                border_radius: BorderRadius::px(
+                    palette::BUTTON_RADIUS,
+                    palette::BUTTON_RADIUS,
+                    palette::BUTTON_RADIUS,
+                    palette::BUTTON_RADIUS,
+                ),
                 ..Node::default()
             },
-            BackgroundColor(Color::srgb(0.72, 0.45, 0.16)),
+            BackgroundColor(palette::BRASS_SELECT),
             Pickable::IGNORE,
             ChildOf(panel),
         ))
@@ -366,10 +489,10 @@ pub fn build_proof_panel(
         Text(button_label.to_string()),
         TextFont {
             font: FontSource::Handle(font.clone()),
-            font_size: FontSize::Px(24.0),
+            font_size: FontSize::Px(palette::BUTTON_FONT),
             ..default()
         },
-        TextColor(Color::srgb(0.15, 0.10, 0.05)),
+        TextColor(palette::DARK_BROWN_TEXT),
         Pickable::IGNORE,
         ChildOf(button),
     ));

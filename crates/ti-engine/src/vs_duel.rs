@@ -242,7 +242,7 @@ pub fn spawn_stage(world: &mut World, layout: &DuelLayout) {
     for bar in [layout.player_hp_bar, layout.boss_hp_bar] {
         world.spawn((
             DuelEntity,
-            Sprite::from_color(Color::srgba(0.05, 0.04, 0.03, 0.9), Vec2::new(bar.2, bar.3)),
+            Sprite::from_color(crate::ui::palette::DUEL_SLOT_BG, Vec2::new(bar.2, bar.3)),
             Transform::from_translation(
                 to_world(bar.0 + bar.2 / 2.0, bar.1 + bar.3 / 2.0).extend(-40.0),
             ),
@@ -253,7 +253,7 @@ pub fn spawn_stage(world: &mut World, layout: &DuelLayout) {
     for btn in layout.action_buttons {
         world.spawn((
             DuelEntity,
-            Sprite::from_color(Color::srgba(0.22, 0.16, 0.09, 0.95), Vec2::new(btn.2, btn.3)),
+            Sprite::from_color(crate::ui::palette::DUEL_BTN_BG, Vec2::new(btn.2, btn.3)),
             Transform::from_translation(
                 to_world(btn.0 + btn.2 / 2.0, btn.1 + btn.3 / 2.0).extend(-40.0),
             ),
@@ -262,7 +262,7 @@ pub fn spawn_stage(world: &mut World, layout: &DuelLayout) {
     world.spawn((
         DuelEntity,
         Sprite::from_color(
-            Color::srgba(0.18, 0.13, 0.08, 0.9),
+            crate::ui::palette::DUEL_ROW_BG,
             Vec2::new(layout.item_row.2, layout.item_row.3),
         ),
         Transform::from_translation(
@@ -277,7 +277,7 @@ pub fn spawn_stage(world: &mut World, layout: &DuelLayout) {
     // 回合徽章（舵轮位 = 黄铜圆盘）。
     world.spawn((
         DuelEntity,
-        Sprite::from_color(Color::srgba(0.78, 0.55, 0.20, 1.0), Vec2::new(64.0, 64.0)),
+        Sprite::from_color(crate::ui::palette::DUEL_ROUND_BADGE, Vec2::new(64.0, 64.0)),
         Transform::from_translation(
             to_world(layout.round_badge.0, layout.round_badge.1).extend(-40.0),
         ),
@@ -470,7 +470,7 @@ pub fn animate_stage(
         let age = stage.phase_ms.saturating_sub(popup.born_ms);
         let k = (age as f32 / POPUP_MS as f32).clamp(0.0, 1.0);
         t.translation.y = popup.y0 + k * 120.0;
-        s.color = Color::srgba(1.0, 0.91, 0.75, (1.0 - k).max(0.0));
+        s.color = crate::ui::palette::DUEL_POPUP_FLASH.with_alpha((1.0 - k).max(0.0));
         if k >= 1.0 {
             // 生命周期结束由清理系统处理（本原型不自动 despawn，避免借用冲突）。
         }
