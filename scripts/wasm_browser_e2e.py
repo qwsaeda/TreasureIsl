@@ -53,7 +53,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--url", default="http://127.0.0.1:8080/", help="已部署 web/ 的静态服务地址")
     p.add_argument("--check", action="store_true", help="只读模式：打印判据，不写截图")
     p.add_argument("--timeout", type=int, default=90, help="等待 start/渲染的秒数上限")
-    p.add_argument("--out", default=str(SHOT_OUT), help="渲染截图输出路径")
+    p.add_argument("--out", default=None, help="渲染截图输出路径（缺省 = evidence/wasm_browser_e2e[_<WxH>].png）")
+    # S38：wasm 横屏视口测试。缺省 = 竖屏 540×960（历史行为）；`--viewport=1920x1080` = 横屏。
+    # 影响：①浏览器页面视口 ②L4 点击坐标按视口比例映射 ③截图默认名带尺寸后缀。
+    p.add_argument("--viewport", default=None, help="浏览器视口 WxH（如 1920x1080；缺省竖屏 540×960）")
     return p.parse_args()
 
 
@@ -68,6 +71,20 @@ def main() -> int:
     checks: dict[str, object] = {}
     degraded = False  # 浏览器 GPU 子进程崩溃 ⇒ 记名降级（SKIP）而非 FAIL
     console_errors: list[str] = []
+
+    # S38：视口解析（缺省竖屏 540×960，保持历史行为；`--viewport=WxH` 覆盖）。
+    # L4 的 m01 卡片点击坐标按视口比例映射（竖屏基准 540×960 → (430,100)；bevy_ui
+    # 自动重排后的横屏位置近似比例，若 L4 横屏因坐标偏而 FAIL，见 EXP-163 归因）。
+    vw, vh = 540, 960
+    if args.viewport:
+        try:
+            vw, vh = (int(x) for x in args.viewport.lower().split("x", 1))
+        except ValueError:
+            print(f"[wasm-browser-e2e] FAIL  --viewport 应为 WxH（如 1920x1080），got {args.viewport!r}")
+            return 1
+    # 截图默认名带尺寸后缀（0 行为变化：缺省无后缀，保持历史产物名）。
+    if args.out is None:
+        args.out = str(SHOT_OUT.with_name(f"{SHOT_OUT.stem}_{args.viewport}.png")) if args.viewport else str(SHOT_OUT)
     asset_status: dict[str, int] = {}
     page_errors: list[str] = []
 
@@ -95,7 +112,7 @@ def main() -> int:
             if cands:
                 launch_kwargs["executable_path"] = cands[-1]
         browser = pw.chromium.launch(**launch_kwargs)
-        page = browser.new_page(viewport={"width": 540, "height": 960})
+        page = browser.new_page(viewport={"width": vw, "height": vh})
 
         def on_console(msg) -> None:
             text = msg.text
@@ -177,21 +194,33 @@ def main() -> int:
         # 从任意场景走 Enter 链直达 select_map（menu_selected 持久化；select_role/select_map
         # 的 Confirm 都是幂等推进/确认 ⇒ 无 Back 死锁、无状态歧义；Back 在 main_map = 回
         # select_map 后若再按 Back = 回 select_role，且 Back 在 select_role 无效 ⇒ 死锁风险）。
+        # S38 横屏：亮度阈值导航是**竖屏口径**——横屏各场景亮度相近（index≈select_role≈19%），
+        # `bright<40` 在横屏首轮就命中 ⇒ 未导航到 select_map（EXP-163）。横屏 L4 是已知边界：
+        # 需场景身份识别（非亮度）导航，见 `docs/process/27_landscape_adaptation.md` §S38 wasm 边界。
         for _ in range(4):
             if bright_ratio() < 40.0:  # 已在 select_map（≈17.7%）
                 break
             page.keyboard.press("Enter")
             page.wait_for_timeout(3_000)
         before_bright = bright_ratio()
-        # m01 卡片 = select_map 右侧面板顶行（540×960 视口：x≈430, y≈100）
+        # m01 卡片 = select_map 右侧面板顶行（540×960 视口：x≈430, y≈100）。
+        # S38 横屏：bevy_ui 面板是 `%` 定位（top:4%/width:34%/right:3%，flex 竖排），卡片行位置
+        # **布局派生**（非线性映射）⇒ 横屏用 (0.80×vw, 0.125×vh)（面板 x 中心 + 首行 y，含标题/
+        # 行距）；竖屏保持 (430,100) 0 行为变化。EXP-163 归因。
         # 慢点（down/up 分帧）：bevy_picking 的 PointerClick = press 帧 + release 帧同实体，
         # 快速 click 两动作可能落同一帧 ⇒ 无 Click。首次不命中重试一次（选图卡点击偶发
         # 丢 Click 的兜底；两次都不中 = 判据 FAIL，不静默放行）。
         clicked = False
         l4_crashed = False
+        if vw > vh:
+            # select_map 横屏 m01 卡片 = 1080 landscape 原语（scenes.json `select_map.landscape.primitives`
+            # 首个 image rect (40,200,360,280)，中心 ≈ (220,340)）——非 bevy_ui 右面板（EXP-163 归因）。
+            m01_x, m01_y = 220, 340
+        else:
+            m01_x, m01_y = 430, 100
         for attempt in range(2):
             try:
-                page.mouse.move(430, 100)
+                page.mouse.move(m01_x, m01_y)
                 page.wait_for_timeout(1_000)
                 page.mouse.down()
                 page.wait_for_timeout(500)

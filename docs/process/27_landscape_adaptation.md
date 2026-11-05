@@ -203,6 +203,12 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
 - **主判据 = 无头绘制列表断言**（`crates/ti-app/tests/landscape_drawlist.rs` 7/7）：横屏坐标
   （1920×1080 原语/布局）+ 竖屏 0 行为变化对照。因多数场景 `--shot` readback 已知环境 GPU flake
   （仅 vs/main_map 可靠读回），**横屏版面用 draw list 级断言证明**（非 --shot 回归）。
+- **wasm 横屏实测**（EXP-163）：`scripts/wasm_browser_e2e.py --viewport=1920x1080` 已补（视口 +
+  截图名带尺寸后缀），实测 **L1 实例化 / L2 渲染（非黑 + 资产 2xx）/ L3 交互 / L5 环资产实取
+  = PASS**（wasm 横屏实际渲染已验证）。**L4 场景切换点击 = 已知边界**：亮度阈值导航
+  （`bright<40` 判已在 select_map）是竖屏口径，横屏各场景亮度相近（≈19%）首轮即命中、
+  未导航到 select_map——需场景身份识别导航（非亮度）后方可覆盖，非渲染 bug。
+  竖屏默认跑 5/5 PASS（0 回归）。
 - 每场景：gate 33 项 0 failure + doccheck/doccheck2 0 error + audit_code 0 违规（拆分超限文件）。
 - **改横屏布局**：改 `scenes.json` `landscape` 块 → 更新 `landscape_drawlist.rs` 对应断言 → gate 全绿。
 

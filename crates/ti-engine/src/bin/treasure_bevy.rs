@@ -2157,6 +2157,21 @@ fn build_app(window: Window, shot: bool, game: GameApp) -> App {
     app
 }
 
+/// S38 wasm 横屏根因（EXP-164）：bevy 0.20 wasm 把 `#game` canvas 尺寸设为 `WindowResolution`
+/// （初始 `WIN_W`×`WIN_H` = 540×960 竖屏硬编码），覆盖页面 CSS `100vw×100vh` ⇒ 浏览器视口
+/// 无论横竖，canvas 恒 540×960 ⇒ 恒竖屏 letterbox。修复：wasm 初始窗口用**实际视口**——
+/// `window.innerWidth/Height`（CSS 逻辑 px）× `devicePixelRatio` = 物理 px。native 不编译
+/// （`#[cfg(target_arch = "wasm32")]`），行为 0 变化。
+#[cfg(target_arch = "wasm32")]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 视口尺寸恒正、上限合理（u32）
+fn wasm_viewport_resolution() -> Option<(u32, u32)> {
+    let win = web_sys::window()?;
+    let dpr = win.device_pixel_ratio();
+    let iw = win.inner_width().ok()?.as_f64()?;
+    let ih = win.inner_height().ok()?.as_f64()?;
+    if iw > 0.0 && ih > 0.0 { Some(((iw * dpr) as u32, (ih * dpr) as u32)) } else { None }
+}
+
 fn run() {
     let args = Args::parse();
     let selftest = args.mode_flags.contains(&"--selftest".to_owned());
@@ -2222,6 +2237,15 @@ fn run() {
     #[cfg(target_arch = "wasm32")]
     {
         window.canvas = Some("#game".to_owned());
+        // S38 wasm 横屏根因（EXP-164）：bevy 0.20 wasm 把 canvas 尺寸设为 `WindowResolution`
+        // （初始 = WIN_W×WIN_H = 540×960 竖屏），**覆盖**页面 CSS `100vw×100vh` ⇒ 无论浏览器
+        // 视口横竖，canvas 恒 540×960 ⇒ `is_landscape(540,960)=false` ⇒ 恒竖屏 letterbox
+        // （native `--viewport=1920x1080` 横屏满屏正确，但 wasm 端横屏从未生效）。
+        // 修复：wasm 初始窗口用**实际视口**（见 `wasm_viewport_resolution`），横屏显示器/宽
+        // 窗口 ⇒ 游戏横屏（方向感知随窗口尺寸）。
+        if let Some((iw, ih)) = wasm_viewport_resolution() {
+            window.resolution = WindowResolution::new(iw, ih);
+        }
     }
     let mut app = build_app(window, shot, game);
     if selftest {

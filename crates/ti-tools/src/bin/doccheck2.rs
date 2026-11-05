@@ -3482,6 +3482,7 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("touch-render-pair", check_touch_render_pair),
     ("hd-sprite-transparency", check_hd_sprite_transparency),
     ("scene-layout-fidelity", check_scene_layout_fidelity),
+    ("wasm-viewport-init", check_wasm_viewport_init),
     ("landscape-no-portrait-hardcode", check_landscape_no_portrait_hardcode),
     ("scene-band-count", check_scene_band_count),
     ("save-slot-map-slot-basis", check_save_slot_map_slot_basis),
@@ -3714,6 +3715,48 @@ fn fn_body(text: &str, name: &str) -> Option<String> {
 ///   必须 `to_world_dims(…,lw,lh)`（EXP-161：Image op 曾漏改 ⇒ 横屏 `--shot` 图片原语错位）；
 /// - `bin/treasure_bevy.rs::letterbox_size`：禁 `LOGICAL_W`/`LOGICAL_H`（竖屏 1080×1920 硬编码
 ///   `min(w/1080,h/1920)`，S38.0 遗漏 ⇒ 横屏窗口 letterbox 错位，本次修复防回归）。
+///
+/// S38 wasm 横屏根因（EXP-164）：bevy 0.20 wasm 把 canvas 尺寸设为 `WindowResolution`
+/// （初始 `WIN_W`×`WIN_H` = 540×960 竖屏硬编码），**覆盖**页面 CSS `100vw×100vh` ⇒ 浏览器视口
+/// 无论横竖，`canvas` 恒 540×960 ⇒ 恒竖屏 `letterbox`（wasm 横屏从未生效；native 不受影响）。
+/// 修复 = `run` wasm 分支调 `wasm_viewport_resolution()` 读**实际视口**（`inner_width`/`inner_height`）。
+/// 固化守门：`run` 须含 `canvas = Some` + `wasm_viewport_resolution`（接线）；helper 须含
+/// `inner_width`/`inner_height`/`device_pixel_ratio`（视口读取，防回退 `WIN_W`/`WIN_H` 硬编码）。
+fn check_wasm_viewport_init(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(text) = read_file(root, "crates/ti-engine/src/bin/treasure_bevy.rs") else {
+        return vec![
+            "crates/ti-engine/src/bin/treasure_bevy.rs 缺失，无法扫 wasm 视口初始化".to_string(),
+        ];
+    };
+    let Some(run_body) = fn_body(&text, "run") else {
+        return vec!["treasure_bevy.rs::run 找不到（wasm 视口初始化锚点漂移？）".to_string()];
+    };
+    let Some(helper_body) = fn_body(&text, "wasm_viewport_resolution") else {
+        return vec![
+            "treasure_bevy.rs::wasm_viewport_resolution 找不到（wasm 视口初始化锚点漂移？）"
+                .to_string(),
+        ];
+    };
+    // run() 须接线（canvas 选择器 + 调 helper）。
+    for needle in ["canvas = Some", "wasm_viewport_resolution"] {
+        if !run_body.contains(needle) {
+            errors.push(format!(
+                "treasure_bevy.rs::run 缺 `{needle}`（wasm 视口初始化接线，EXP-164）"
+            ));
+        }
+    }
+    // helper 须读实际视口（防回退 WIN_W/H 硬编码）。
+    for needle in ["inner_width", "inner_height", "device_pixel_ratio"] {
+        if !helper_body.contains(needle) {
+            errors.push(format!(
+                "treasure_bevy.rs::wasm_viewport_resolution 缺 `{needle}`（读实际视口，EXP-164）"
+            ));
+        }
+    }
+    errors
+}
+
 fn check_landscape_no_portrait_hardcode(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     // `require`：true = 函数体必须含 needle（缺 = 仍纯竖屏硬编码）；false = 函数体禁 needle。
