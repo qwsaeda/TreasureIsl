@@ -16,7 +16,7 @@
 - `crates/ti-console/src/content/map_wizard.rs`：委托共享 `resolve_action` + 修复 `--scene=main_map` 潜伏 bug（分离参数 → 静默回退 index）
 - `crates/ti-console/src/routes.rs`：`GET /api/content/ui` + `POST /api/content/ui/step`（X-TI-Token 鉴权）
 - `crates/ti-console/web/index.html`：UI 工作台卡片（纵向 stepper，`uw*` JS，`X-TI-Token`）
-- `crates/ti-console/tests/content_ui_wizard_tests.rs`：9 单测（判据/400/409/state 坏 id）
+- `crates/ti-console/tests/content_ui_wizard_tests.rs`：16 单测（判据/400/409/state 坏 id + r1 F3 参数校验×5 + r1 F2 签收×2；r3 修订后）
 
 ## 2. 端到端 e2e（平台 API 跑 index 变体，横屏 S39 当前设计）
 
@@ -63,7 +63,7 @@ before / after 截图（圆环/木牌暖棕 → 冷灰蓝，可见变化）：
 
 ## 6. 单测 + 静态检查
 
-- `cargo test -p ti-console`：全部套件通过（含 content_ui_wizard_tests 9 个：criterion 判据 / 400 未知 step / 400 坏 id / 409 不可跳步 / 400 写动作无 enable_write / 400 state 坏 id）。
+- `cargo test -p ti-console`：全部套件通过（含 content_ui_wizard_tests 16 个：criterion 判据 / 400 未知 step / 400 坏 id / 409 不可跳步 / 400 写动作无 enable_write / 400 state 坏 id + r1 F3 参数校验×5 + r1 F2 签收×2）。
 - `cargo clippy -p ti-console --all-targets`：0 warning。
 - `cargo fmt --all -- --check`：干净。
 
