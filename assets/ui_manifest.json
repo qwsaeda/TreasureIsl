@@ -1483,7 +1483,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_0.png",
    "params": {
-    "source": "agnes_ai_2026-11-05"
+    "source": "s42_cool_weathered",
+    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1492,7 +1493,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_1.png",
    "params": {
-    "source": "agnes_ai_2026-11-05"
+    "source": "s42_cool_weathered",
+    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1501,7 +1503,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_2.png",
    "params": {
-    "source": "agnes_ai_2026-11-05"
+    "source": "s42_cool_weathered",
+    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1510,7 +1513,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_3.png",
    "params": {
-    "source": "agnes_ai_2026-11-05"
+    "source": "s42_cool_weathered",
+    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1519,7 +1523,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_4.png",
    "params": {
-    "source": "agnes_ai_2026-11-05"
+    "source": "s42_cool_weathered",
+    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1528,7 +1533,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_5.png",
    "params": {
-    "source": "agnes_ai_2026-11-05"
+    "source": "s42_cool_weathered",
+    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1591,7 +1597,8 @@
    "role": "background",
    "file": "assets/ui/index_bg_map_h.png",
    "params": {
-    "source": "agnes_ai_2026-11-05"
+    "source": "s42_cool_weathered",
+    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1609,7 +1616,8 @@
    "role": "item",
    "file": "assets/ui/index_rope.png",
    "params": {
-    "source": "agnes_ai_2026-11-05"
+    "source": "s42_cool_weathered",
+    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
    },
    "generated_at": "2026-11-05"
   },

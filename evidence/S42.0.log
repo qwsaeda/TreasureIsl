@@ -1,0 +1,35 @@
+S42.0 — index 新视觉变体（内容运营：换 UI 零 Rust 改动）
+========================================================
+任务：index 横屏首页「羊皮藏宝图 + 绳挂木牌」冷调风化变体（内容运营路径验证）。
+改动面声明：UI 数据（视觉变体 = 木牌配色/背景色调/标题烘焙同图；同路径替换资产，零 Rust、零 scenes.json diff）。
+前置：S41.0（m22 新地图）/ S43.0（内容运营流程规范）已 verified。
+
+用户视觉签收（A 纪律：设计稿先行）
+----------------------------------
+2026-11-06 用户确认「确认 v2b」——选定 v2b 冷调风化变体：
+  - 背景 暖金羊皮 (153,116,49) → 灰橄榄褪色 (114,110,93)（实测渲染采样）；
+  - 木牌 暖橡木 (123,83,41) → 青灰风化木 (96,96,97)；
+  - 标题「金银岛」与底图烘焙同图（正片叠底），换色即换标题色，零坐标改动。
+用户视觉验收留痕：用户 2026-11-06 在会话中确认 v2b 变体（消息留痕），证据 = 本行 + 设计稿
+`evidence/ui_concept/`（v2b 变体）+ 出图 `evidence/bevy_native_index_1920x1080.png`。
+
+判据结果
+--------
+[1] 零 Rust 改动（核心判据）：`git diff --stat crates/` = 空 ✓（产品源码 + 测试 0 diff）。
+[2] 零 scenes.json 版面改动：`git diff --stat assets/data/scenes.json` = 空 ✓
+    （同路径替换：资产引用名/坐标全不动，仅像素内容变）。
+[3] 视觉变体 --shot index --viewport=1920x1080 出图：bg 区采样 RGB (114,110,93) = 灰橄榄
+    （原暖金 153,116,49），出图 `evidence/bevy_native_index_1920x1080.png` ✓。
+[4] 竖屏 0 行为变化：landscape_drawlist 竖屏对照（chart_full 1080×1920 / helm 408,838 /
+    medallion_ring 468,498）全过 ✓（crates/ti-app/tests/landscape_drawlist.rs 7/7 pass）。
+[5] 资产同路径替换 + 登记一致：v1 路径覆盖 v2b 像素，ui_manifest.json 同名条目 params
+    注 `source=s42_cool_weathered`（未新增路径，disk↔registry 双向同步 validate_data 0 违规）✓。
+[6] gate 全绿：`scripts/gate.ps1` 33 项 0 failure（30 PASS + 2 SKIP android/zero-unknown）；
+    明细见 `evidence/S42.0_gate.log` ✓。
+
+内容运营路径验证结论（S40.0/S41.0/S42.0 三连）
+---------------------------------------------
+- S40.0（m21 换图）/ S41.0（m22 新图）：改地图 = 只动 `assets/maps/` + 打包工具，零 Rust。
+- S42.0（换 UI 视觉）：改视觉 = 只动 `assets/ui/*.png` 像素 + ui_manifest params，零 Rust、
+  零 scenes.json、零测试改动（同路径替换）。
+- 共同判据：`git diff crates/` = 空。内容运营（只换 UI / 改地图）确证零 Rust 改动。
