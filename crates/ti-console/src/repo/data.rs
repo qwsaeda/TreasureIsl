@@ -150,7 +150,7 @@ pub fn assets(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> 
         .ok()
         .map(|s| s.trim().to_owned())
         .filter(|s| !s.is_empty());
-    let dist = dist_pack_names(repo_root);
+    let dist = crate::repo::dist::dist_pack_names(repo_root);
     let _ = sources;
     Ok(json!({
         "ui_manifest": ui,
@@ -711,6 +711,8 @@ pub fn map_packs_detail(repo_root: &Path, sources: &RepoSources) -> Result<Value
         "packs": packs,
         "count": packs.len(),
         "default": default_map_pack(repo_root, sources),
+        // S44.4 打包/分发面（30 号 §2.3）：dist/maps/ 可分发件清单（地图页扩展；name/size/mtime 对象）。
+        "dist": crate::repo::dist::dist_pack_names(repo_root),
         "tool": "scripts/map_pack.py（add 新建 / pack 打包 / install 装上 / verify 校验 / check 漂移对账，21 号 §8；平台本端点只读）",
         "spec": "docs/process/21_map_package_spec.md（地图包标准 v1 单一事实源）",
     }))
@@ -837,22 +839,6 @@ fn map_pack_info(repo_root: &Path) -> Vec<Value> {
         ak.cmp(bk)
     });
     out
-}
-
-/// `dist/maps/*.map-pack` 目录名清单（gitignored；缺失 = 空清单，不报错）。
-fn dist_pack_names(repo_root: &Path) -> Vec<String> {
-    let dist = repo_root.join("dist/maps");
-    let mut names: Vec<String> = Vec::new();
-    if let Ok(rd) = std::fs::read_dir(&dist) {
-        for entry in rd.flatten() {
-            let n = entry.file_name().to_string_lossy().to_string();
-            if n.ends_with(".map-pack") {
-                names.push(n.clone());
-            }
-        }
-    }
-    names.sort();
-    names
 }
 
 fn status_str(task: &ti_devmeta::ledger::Task) -> &'static str {

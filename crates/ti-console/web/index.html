@@ -301,6 +301,16 @@
       <div id="map-list"></div>
       <button id="map-edit-btn" style="margin-top:12px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">＋ 新建 / 编辑地图（环形画布）</button>
     </div>
+    <div class="card">
+      <h2>打包/分发（S44.4，30 号 §2.3：dist/maps/ 清单 + publish 编排默认关）</h2>
+      <div id="dist-list" style="font:11px/1.5 monospace;white-space:pre-wrap;color:var(--muted)"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+        <button id="pub-check-btn" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">发布体检（publish_web.ps1 -Check 只读）</button>
+        <button id="pub-run-btn" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">发布（写 web/ + release.md + gh-pages；需 enable_write）</button>
+        <span id="pub-msg" style="color:var(--muted);font-size:12px"></span>
+      </div>
+      <div style="margin-top:8px;color:var(--muted);font-size:12px">发布 = <code>scripts/publish_web.ps1</code>（gate 前置 + 重建 web + 静态断言 + release.md 发布历史 + gh-pages 推流）；单动作默认关（30 号 §2.3），须每次显式开启。</div>
+    </div>
     <div class="card" id="map-editor" hidden>
       <h2>地图编辑器（环形画布 · I1~I8 实时校验 · 导入落盘）</h2>
       <div style="display:flex;gap:14px;flex-wrap:wrap">
@@ -1056,9 +1066,54 @@ async function loadMap() {
         + '<div class="rl">' + ring + (p.schema ? ' · ' + esc(String(p.schema)) : '') + '</div>'
         + '</div>';
     }).join('');
+    // S44.4：dist/maps/ 可分发件清单（30 号 §2.3；mtime = epoch 秒，size = 目录字节和）。
+    $('dist-list').innerHTML = (d.dist || []).map((x) => {
+      const mb = ((x.size || 0) / 1048576).toFixed(1) + ' MB';
+      const ts = x.mtime ? new Date(x.mtime * 1000).toLocaleString() : '（无时间戳）';
+      return esc(x.name || '') + '  ' + mb + '  ' + ts;
+    }).join('\n') || '（无 dist/maps/ 可分发件；地图向导第 5 步 mappack_pack 生成）';
   } catch (e) {
     $('map-list').innerHTML = '<div class="empty">地图包不可用：' + esc(String(e)) + '</div>';
   }
+}
+
+// ── S44.4 打包/分发面：publish 编排（30 号 §2.3；check 只读 / run 默认关需 enable_write） ──
+function runPublish(mode) {
+  const body = { mode };
+  if (mode === 'run') body.enable_write = true;
+  $('pub-msg').textContent = mode === 'run' ? '发布启动中…' : '体检中…';
+  const hdrs = { 'Content-Type': 'application/json' };
+  const tok = sessionStorage.getItem('ti_console_token') || '';
+  if (tok) hdrs['X-TI-Token'] = tok;
+  fetch('/api/publish', {
+    method: 'POST',
+    headers: hdrs,
+    body: JSON.stringify(body),
+  }).then((r) => r.json()).then((d) => {
+    if (mode === 'check') {
+      $('pub-msg').textContent = (d.ok ? '体检 PASS' : '体检 FAIL') + '（exit=' + (d.exit_code ?? '?') + '）';
+      $('dist-list').textContent = (d.output || '').slice(-1200) || $('dist-list').textContent;
+    } else {
+      $('pub-msg').textContent = d.started ? '发布已启动（pid=' + d.pid + '；日志 ' + (d.log || '') + '）' : ('发布失败：' + (d.error || ''));
+      if (!d.started) alert('发布失败：' + (d.error || '未知'));
+      pollPublish();
+    }
+  }).catch((e) => {
+    $('pub-msg').textContent = '/api/publish 错误：' + e;
+  });
+}
+
+// S44.4：轮询 GET /api/publish（只读）读后台发布退出码（非 0 = 硬失败上报）。
+function pollPublish() {
+  api('/api/publish').then((d) => {
+    const last = d.last || {};
+    if (d.running) {
+      $('pub-msg').textContent = '发布进行中（pid=' + (last.pid ?? '?') + '；日志 ' + (last.log || '') + '）';
+      setTimeout(pollPublish, 5000);
+    } else if (last.exit_code !== null && last.exit_code !== undefined) {
+      $('pub-msg').textContent = '发布结束（exit=' + last.exit_code + (last.exit_code === 0 ? ' = 成功' : ' = 硬失败；查日志 ' + (last.log || '')) + '）';
+    }
+  }).catch(() => {});
 }
 
 /* ==== 地图编辑器（环形画布 + I1~I8 前端判定 + 导入落盘，S32.14） ==== */
@@ -1286,6 +1341,9 @@ function openMapEditor() {
   $('map-editor').scrollIntoView({ behavior: 'smooth' });
 }
 $('map-edit-btn').addEventListener('click', openMapEditor);
+// S44.4 打包/分发面：publish 体检（只读）+ 发布（默认关需 enable_write）。
+$('pub-check-btn').addEventListener('click', () => runPublish('check'));
+$('pub-run-btn').addEventListener('click', () => runPublish('run'));
 $('ed-validate-btn').addEventListener('click', () => { edReadInputs(); edRenderCanvas(); edValidateBar(); });
 $('ed-import-btn').addEventListener('click', edImport);
 ['ed-cx','ed-cy','ed-r','ed-cw','ed-ch'].forEach((id) => {

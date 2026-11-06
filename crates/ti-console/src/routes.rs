@@ -194,6 +194,8 @@ fn dispatch_get(
         "/api/map" => {
             api_500_or_json(load_json(repo_root, |s| data::map_packs_detail(repo_root, s)), gz)
         }
+        // S44.4 发布面只读状态（运行中标志 + 末次 exit_code + 日志历史 + ?log= 尾部；免 token，镜像 GET /api/gate）。
+        "/api/publish" => publish_get(repo_root, url, gz),
         "/api/snapshot" => json200(
             &data::snapshot(repo_root, &load_sources_opt(repo_root).unwrap_or_default()),
             gz,
@@ -275,6 +277,13 @@ fn dispatch_get(
         }
         _ => static_or_repo_file(web_root, clean, repo_root, if_none_match, gz),
     }
+}
+
+/// `GET /api/publish`（S44.4 发布面只读状态）：运行中标志 + 末次状态（含 `exit_code`）+ 日志历史
+/// + `?log=<name>` 尾部（白名单形状校验 + 防穿越由 `publish_status` 内部负责）。
+fn publish_get(repo_root: &Path, url: &str, gz: bool) -> Vec<u8> {
+    let log = query_param(url, "log").map(crate::repo::percent_decode);
+    json200(&crate::content::publish::publish_status(repo_root, log), gz)
 }
 
 /// 有数据源清单 = 跑端点；无清单 = 500（数据源面不可用，如实上报）。
@@ -366,6 +375,11 @@ fn handle_post(
         )),
         "/api/content/ui/step" => {
             Some(crate::content::handle_wizard_step(repo_root, body, token, content_type, gz, true))
+        }
+        // S44.4 发布面（30 号 §2.3）：写操作鉴权（403）+ Content-Type（400）+ mode 白名单（400）
+        // + run 无 enable_write（400）；check = 只读体检，run = 后台 spawn。
+        "/api/publish" => {
+            Some(crate::content::publish::handle_publish(repo_root, body, token, content_type, gz))
         }
         _ => None,
     }

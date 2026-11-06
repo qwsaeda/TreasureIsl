@@ -76,6 +76,19 @@
 
 - **发布 `publish` 单独默认关**（写 `docs/release.md` + 推远端，写面最大，须用户每次显式开启，镜像 22 号 §4.2 默认启用列口径）。
 
+### 2.4 打包/分发面的平台落地（S44.4）
+
+| 端点 | 形态 | 口径 |
+|---|---|---|
+| `GET /api/map` 的 `dist` 段 | 只读 | `dist/maps/*.map-pack` 清单，每项 `{name, size, mtime}`（`size` = 目录递归字节和；`mtime` = epoch 秒；缺失 = `null`）；缺失目录 = 空清单，不报错。web 地图页「打包/分发」卡片渲染 |
+| `POST /api/publish`（`mode=check`） | 写操作（鉴权） | **只读**前置体检 = 同步跑 `publish_web.ps1 -Check`（不构建 / 不推送 / 不写 `release.md`），响应回显 `exit_code` + 输出尾段；免 `enable_write` |
+| `POST /api/publish`（`mode=run`） | 写操作（鉴权 + `enable_write`） | 后台 spawn `publish_web.ps1`（含 **gate 全绿前置**，gate 非全绿 = 脚本 exit 1 拒绝发布）；写 `web/` + `docs/release.md` + gh-pages。**须 `enable_write=true`**，缺 flag = 400（默认关） |
+| `GET /api/publish` | 只读（免 token） | 运行中标志 + 末次状态（含 `exit_code`，非 0 = 硬失败）+ 日志历史 + `?log=<name>` 尾部（形状校验 + 防穿越）；日志落 `evidence/console/logs/publish-<ts>.log`（gitignored） |
+
+- **鉴权与白名单次序**：`X-TI-Token` 鉴权 403 → Content-Type `application/json` 400 → `mode∈{check,run}` 400 → `run` 无 `enable_write` 400（镜像 22 号 §10.1/§10.3）。
+- **退出码上报**：`run` 为后台进程，退出码经收割线程写入 `publish-<ts>.status.json`，由 `GET /api/publish` 读回（非 0 = 硬失败，如实上报不静默绕过；信号终止记 `-1`）。
+- **产物构建复用 S35.1**：`build_wasm` / `build_apk` / `build_native` 走既有 `/api/build` + `build_artifacts.py`，本面不重做。
+
 ## 3. 白名单扩展与写面纪律修订（S44.1）
 
 ### 3.1 §4.2 新增动作（`console_commands.json` 机器真源 + 22 号 §4.2 人读视图同步）

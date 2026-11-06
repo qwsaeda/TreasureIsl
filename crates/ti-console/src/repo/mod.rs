@@ -18,6 +18,7 @@
 
 pub mod config;
 pub mod data;
+pub mod dist;
 pub mod guard;
 pub mod import;
 pub mod search;

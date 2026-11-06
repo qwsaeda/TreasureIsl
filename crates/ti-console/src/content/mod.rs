@@ -5,6 +5,7 @@ use std::path::Path;
 use serde_json::Value;
 
 pub mod map_wizard;
+pub mod publish;
 pub mod ui_wizard;
 
 /// `POST /api/content/{map,ui}/step`（S44.2/S44.3 向导）HTTP handler：执行一步（调白名单动作 + 机器判据 + 写点探针）。
