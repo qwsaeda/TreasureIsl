@@ -109,3 +109,16 @@ r1 归档：`evidence/console/audit-S44.3-r1-{a,b}.md`（A PASS/1 finding；B FA
 单测补：`content_ui_wizard_tests.rs` 9 → 16（F3 非法 scene/viewport/assets/suffix/color 400×5 + F2 zero_rust 无签收判败/有签收过×2）。
 
 复跑：`cargo clippy -p ti-console --all-targets` 0 warning；`cargo test -p ti-console` 全过（16 项向导单测 + 既有套件）。
+
+## 11. 双审计收敛（r1→r8，22 号 §7 双 agent 对抗审计）
+
+- **r1**：A PASS/1 + B FAIL/7（B-F1~F7 + A-F1）→ 8/8 修复（commit 3734a4d）。
+- **r2**：A PASS/1（P3 dup comment）+ B FAIL/1（B-N1 P2 e2e 状态早于 F2 修复）→ 修复（含 F2 SIGNOFF_KW 5→6 词「视觉验收」真实 bug；e2e 用最终代码重跑）（commit da08a25）。
+- **r3**：A PASS/1（P3 evidence 计数）+ B PASS/1（P3 F2 6 词未传播 doccheck2/30 号/测试注释）→ 修复（doccheck2 SIGNOFF 6 词对齐 + 30 号 step6 6 词 + 测试注释）（commit 9a22268）。
+- **r4**：A PASS/**0/0/0**（首轮收敛）+ B PASS/1（P3 evidence §1/§6 旧计数）→ 修复（commit a340dc8 + 1264f50）。
+- **r5**：A PASS/**0/0/0** + B PASS/**0/0/0**（收敛首轮，仅 cosmetic 反引号注记，后修）（commit 4f3e106）。
+- **r6**：A PASS/**0/0/0** + B PASS/0/1（B-C1 cosmetic 反引号 5 处未全落地）→ 修复（commit 99e9532）。
+- **r7**：A PASS/**0/0/0** + B PASS/0/2（B-C2 陈旧模块注释 + B-C3 反引号跨度，均 P3 cosmetic）→ 修复（commit c4a71e4）。
+- **r8**：A PASS/**0/0/0** + B PASS/**0/0/0** —— **严格 0/0/0 收敛确认**（r7 残留清零 + 7 面全过 + 无 P1/P2 + 反引号奇偶 0 失衡 + 游戏 6 crate 0 diff）。
+
+**收敛判据**：r5 + r8 均为严格 0/0/0；r6/r7 仅 cosmetic（P3 注释级）残留且全部修复清零；**全程 0 个 P1/P2 未闭环残留** —— 双审计协议（22 号 §7）收敛达成，S44.3 可收口。r1~r8 报告归档 `evidence/console/audit-S44.3-r{1..8}-{a,b}.md`（台账 `rounds` 为开发重做计数，保持 1 —— 审计轮次独立记录于本节）。
