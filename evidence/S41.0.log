@@ -1,0 +1,84 @@
+# S41.0 新地图 m22（内容运营：全程零 Rust 改动）
+
+> 2026-11-05。用户「新地图 m22」→ 同 S40.0 已验证路径：`map_pack.py` 全程数据 + 零 Rust 改动。
+> 关键发现：**v5 环形棋盘视觉来自 `index + layout ring 几何 + spaces[].isle 卡面`**（
+> `chrome::ring_card_center(index, count, layout)` + `draw_ring_card` 的 `isle_card_path(isle)`），
+> **`spaces[].cell` 坐标不驱动 v5 视觉**（只用于 v3 iso 回退路径 `render_track`）。故 m22 真差异
+> = 换 **isle 内容排布**（卡面移动）+ **ring 几何**（卡尺寸/岛尺寸）+ **events/merchants**（玩法）。
+
+## 改动面（声明）
+
+- **地图包数据**：`assets/maps/m22/{manifest,map,layout,strings}.json`
+  - `map.json`：isle 内容换位（`harbour↔lightship` / `volcano↔boss_fort` / `lighthouse↔skull_cliff`
+    3 对「简单区」互换，**仅换 isle/resource/building/group 内容字段，cell/kind/terrain 原位不动**）
+    → 6 卡面在环上移动，视觉/玩法与 m01 不同；I3（每 isle 两格同组）保持。
+  - events：`shipwreck`→`treasure_wreck`、`wind_god{jump:3}`→`storm`（不同玩法，id 仍 `m22_*`）。
+  - merchants：`weapon [15,2]×1.0→[17,2]×1.2`、`slave [15,16]×1.0→[13,16]×0.85`（不同驻点/倍率）。
+  - `layout.json`：ring `radius 480→448`（8 整除）、`card 96×120→88×112`（8 整除）、
+    `center (540,784)`；`island_home 760×760→720×720`（中心对齐，留 32px 卡环间隙）。
+  - `strings.json`：`glmapm22.Map` = 海图二十二。
+- **数据一致性修复**：`assets/maps/m21/manifest.json` `map` 字段同步 m21/map.json（S40.0 潜在
+  缺陷：m21 events id 原为 `m01_*`，应为 `m21_*`；现 board.json m21 正确 `m21_*`）。
+  **根因教训**：`map_pack` 的 verify/sync/install 读 `manifest["map"]`（内嵌权威字段），而
+  `check` 对账 board.json vs `manifest["map"]`；`map.json` 是冗余副本（无自动同步）。初版 m22
+  只改 `map.json` 未同步 `manifest["map"]` → 出图仍 m01 视觉（`sync` 读旧 `manifest["map"]`）。
+  修复 = `manifest["map"]` ← `map.json` 同步后重跑 pack/install/check/sync。此坑已在本任务
+  记录（后续加图须先同步 `manifest["map"]` ← `map.json`，或由工具自动内嵌）。
+- **资产**：复用共享池 pool（`isle_*` 10 类 + `island_home_m01`），无新资产文件。
+- **UI/默认数据**：`map_pack.py install` 接线（board.json 段 + index.json 包清单）+ `sync` 回注。
+- **业务逻辑 / Rust 零改动**：`ti-core` 规则 + `ti-engine` 呈现层 + `crates/` 全目录 **0 diff**。
+
+## 判据
+
+### J1 map_pack add m22 + 定制 + verify（I1~I9 不变量）
+
+```
+map_pack add: m22 骨架已建（填 map.json 31 格 + 出专属资产后 verify / install / pack）
+map_pack verify: assets/maps/m22 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack pack: m22 → dist/maps/m22.map-pack + dist/maps/m22.map-pack.zip
+map_pack install: m22 → assets/maps/m22（board.json 已接线 + index.json 更新）
+map_pack check: 0 漂移（22 个已装包 vs board.json；默认包 m01 vs 布局数据）
+map_pack sync: 22 个已装包 map.json → board.json；默认包 m01 layout → scenes.json / manifest / strings
+```
+✅ I1~I9 全过（含 I3 每 isle 两格同组、I6 ring 8pt、I9 events/merchants 齐备）+ pack/install/check/sync 全通。
+
+### J2 TI_MAP=m22 --shot --scene=main_map 换图生效 + 视觉/玩法与 m01 不同
+
+```
+[map-pack] 已注入 m22（显式；board/scenes/strings 段注入 + 缺段内嵌回退；已装包清单 23 项）
+[shot] preload ready at tick=125
+[shot] 非黑像素 = 2058520 / alpha>8 = 2073600 / 2073600
+[shot] 已写 evidence/bevy_native_main_map.png
+```
+出图 = `evidence/bevy_native_main_map.png`：羊皮海图 + 31 格环形赛道 + 中央据点岛 + HUD。
+**与 m01 同条件渲染像素 diff**：差异像素 **2.20%**（>20，45584/2073600），差异区
+x 337-720 / y 1349-1598（下环卡 + 岛底，ring 448 vs 480 + 卡 88×112 vs 96×120 + 岛 720 vs 760）。
+**数据级差异**（board.json）：isle 顺序 `[1,2] harbour→lightship`、`[25,26] lightship→harbour` 等
+6 卡面换位；events `treasure_wreck+storm`；merchants `weapon[17,2]×1.2/slave[13,16]×0.85`。
+✅ 换图生效 + 视觉/玩法真不同（非 m01 复制）。
+
+### J3 零 Rust 改动（核心判据）
+
+```
+git diff --stat crates/   → 空（crates/ 全目录 0 diff）
+```
+m22 全程只改 `assets/maps/m22/` + `assets/maps/m21/manifest.json`（一致性修复）+
+`assets/data/board.json` + `assets/maps/index.json`（map_pack 接线回注）。**crates/ 0 diff**。✅
+
+### J4 gate 全绿
+
+见 `evidence/S41.0_gate.log`（gate 全项 0 failure）。
+
+## 结论
+
+m22 = 真正新地图（非 m01 复制）：
+- **视觉**：ring 448/88×112 + 岛 720×720 + 6 卡面换位（2.2% 像素 diff，客观可测）。
+- **玩法**：events `treasure_wreck+storm` + merchants 换位/倍率（不同随机会/贸易面）。
+- **零 Rust**：`crates/` 0 diff（内容运营路径再证）。
+
+## 关联
+
+- 地图包标准：`docs/process/21_map_package_spec.md`（I1~I9 不变量单一事实源）
+- 内容运营路径：`docs/process/18_asset_content_pipeline.md`（③参数化）+ S40.0（改地图零 Rust 首证）
+- v5 环视觉来源：`crates/ti-app/src/scenes/main_map.rs` `render_v5_ring` / `chrome::ring_card_center`
+- 台账：S41.0（in_progress → verified）

@@ -362,11 +362,11 @@
   ],
   "events": [
    {
-    "id": "m01_reef_current",
+    "id": "m21_reef_current",
     "kind": "shipwreck"
    },
    {
-    "id": "m01_trade_wind",
+    "id": "m21_trade_wind",
     "kind": "wind_god",
     "jump_cells": 3
    }
