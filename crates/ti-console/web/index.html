@@ -366,6 +366,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
   <section id="page-tests" hidden>
     <div class="card">
       <h2>门禁 33 项总览（gate.ps1，23 号 §1 回归类）+ 测试清单对账</h2>
+      <div id="ts-contract" style="font:11px/1.6 monospace;color:var(--muted);margin-bottom:10px;white-space:pre-wrap"></div>
       <div class="grid" id="ts-summary"></div>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
         <button id="ts-gate-refresh" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer">刷新门禁输出</button>
@@ -1359,6 +1360,7 @@ async function loadTests() {
     const ev = await api('/api/evidence');
     window.testsEvFiles = ev.files || [];
     renderTestSummary();
+    renderTestContract();
     renderTestTree();
     loadGateProbe();
     loadGate();
@@ -1386,6 +1388,23 @@ function renderTestSummary() {
     stat(Object.keys(byLev).length, '级数') +
     stat(Object.keys(byCat).length, '类数') +
     stat(Object.keys(byType).length, '型数');
+}
+
+function renderTestContract() {
+  // S45.1 平台测试页展示 schema 契约摘要（31 号 §2/§3，机读回显）。
+  const sc = testsCache.schema_contract;
+  if (!sc) { $('ts-contract').innerHTML = ''; return; }
+  const lines = [
+    'schema 契约（31 号 §2/§3，登记测试即平台自动接入，零平台代码）',
+    '  id      ' + sc.id,
+    '  level   ' + sc.level,
+    '  category' + sc.category,
+    '  type    ' + sc.type,
+    '  name    ' + sc.name,
+    '  command ' + sc.command,
+    '  evidence' + sc.evidence_xor_gate,
+  ];
+  $('ts-contract').innerHTML = lines.join('\n');
 }
 
 function renderTestTree() {

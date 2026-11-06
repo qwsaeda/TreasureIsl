@@ -220,6 +220,16 @@ pub fn tests(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
         "count": items.len(),
         "tests": items,
         "by_level": by_level,
+        // S45.1 平台测试页展示标准（31 号 §2/§3 schema+command 契约摘要，机读回显）。
+        "schema_contract": {
+            "id": "^[a-z0-9_]+$（唯一，?run 枚举面）",
+            "level": "L1..L4",
+            "category": "functional|regression|visual|audio|performance|compatibility",
+            "type": "smoke|ci|playtest|exploratory|benchmark",
+            "name": "人类可读名（平台展示）",
+            "command": "首词∈cargo|python3|pwsh|powershell + 逐参数非 shell（null/缺=人工验收禁 run）",
+            "evidence_xor_gate": "evidence XOR gate 至少一者",
+        },
     }))
 }
 

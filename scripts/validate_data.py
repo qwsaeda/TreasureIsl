@@ -534,12 +534,18 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
         if tid in seen:
             problems.append(f"test_manifest: id `{tid}` 重复")
         seen.add(tid)
+        # S45.1 强化：id 格式（平台 `?run=<id>` 枚举面，31 号 §2）。
+        if not re.fullmatch(r"[a-z0-9_]+", tid):
+            problems.append(f"test_manifest: `{tid}` id 格式非法（^[a-z0-9_]+$，平台 ?run 枚举面）")
         if t.get("level") not in levels:
             problems.append(f"test_manifest: `{tid}` level={t.get('level')} 非法（须 L1..L4）")
         if t.get("category") not in cats:
             problems.append(f"test_manifest: `{tid}` category={t.get('category')} 非法")
         if t.get("type") not in types:
             problems.append(f"test_manifest: `{tid}` type={t.get('type')} 非法")
+        # S45.1 强化：name 必填（人类可读名，平台测试页展示面，31 号 §2）。
+        if not t.get("name"):
+            problems.append(f"test_manifest: `{tid}` 缺 name（人类可读名，平台测试页展示面）")
         ev = t.get("evidence")
         gate = t.get("gate")
         if not ev and gate is None:
@@ -553,7 +559,26 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
         # 命令真实性：`cargo test -p <pkg> --test <name>` → `crates/<pkg>/tests/<name>.rs` 必须存在；
         # `cargo run -p <pkg> --bin <bin>` → `crates/<pkg>/src/bin/<bin>.rs` 必须存在。
         # 防「清单里命令指向已删/改名测试」（如 pcx_parity 退役路径、reference_diff_battle 不存在）。
-        cmd = t.get("command", "")
+        # `command:null`（31 号 §2 人工验收 / gate 覆盖）= 平台禁 run，跳过命令契约。
+        cmd = t.get("command") or ""
+        if cmd:
+            # S45.1 强化：command 程序白名单（31 号 §3）——首词 ∈ cargo/python3/pwsh/powershell
+            # （镜像平台 run_test 白名单，22 号 §10.3；gate/smoke_ps1 用 powershell，Linux 映射 pwsh）。
+            prog = cmd.split(" ", 1)[0]
+            if prog not in {"cargo", "python3", "pwsh", "powershell"}:
+                problems.append(
+                    f"test_manifest: `{tid}` 命令首词 `{prog}` 不在白名单（cargo/python3/pwsh/powershell，平台 run_test 跑不了）"
+                )
+            # S45.1 强化：command 无 shell 拼接面（31 号 §3 禁止 2，22 号 §10.3）——
+            # `;`/`&&`/`|`/`>`/反引号/`$(` = 违规（平台 Command::new(程序).args([...]) 逐参数，禁 sh -c/cmd /c）。
+            # 注：不含 `<`（scene_shot 等模板用 `<id>` 占位符，非重定向；31 号 §3 列 `;`/`&&`/`|`/`>`/反引号/`$(`）。
+            shell_marks = [";", "&&", "|", ">", "`", "$("]
+            for sc in shell_marks:
+                if sc in cmd:
+                    problems.append(
+                        f"test_manifest: `{tid}` 命令含 shell 拼接面 `{sc}`（禁 22 号 §10.3；须逐参数非 shell）"
+                    )
+                    break
         if " --test " in cmd and "cargo test" in cmd:
             try:
                 pkg = cmd.split(" -p ")[1].split(" ")[0]

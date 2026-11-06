@@ -1,0 +1,71 @@
+S45.1 — 测试接入标准落地（schema/command 契约 + 平台展示 + 零平台代码端到端）
+=================================================================================
+任务：把 S45.0 定案的《测试接入标准》落地——validate_data 强化门禁断言 + 平台测试页展示契约摘要
++ 按标准登记一条新测试端到端接入（零平台代码）。
+改动面声明：平台（crates/ti-console/src/repo/data.rs /api/tests 加 schema_contract 摘要 +
+web/index.html 测试页 ts-contract 展示）+ 门禁脚本（scripts/validate_data.py check_test_manifest 强化）
++ 数据（assets/data/test_manifest.json 登记新测试 + 既有非合规 command 修正）。
+业务逻辑/游戏产品 Rust 零改动（crates/{ti-core,ti-app,ti-engine,ti-render,ti-platform,ti-formats} 全目录 0 diff）。
+
+## 实现
+
+### 1. validate_data.py `check_test_manifest` 强化（31 号 §6 门禁断言）
+- **command 程序白名单**：首词 ∈ cargo/python3/pwsh/powershell（镜像平台 run_test 白名单，22 号 §10.3）；
+  登记 sh/bash/cmd/裸脚本 = 违规（平台 run_test 跑不了）。
+- **command 无 shell 拼接面**：含 `;`/`&&`/`|`/`>`/反引号/`$(` = 违规（禁 22 号 §10.3）。
+  注：**不含 `<`**（scene_shot 等模板用 `<id>` 占位符，非重定向；31 号 §3 列 `;`/`&&`/`|`/`>`/反引号/`$(`）。
+- **id 格式**：`^[a-z0-9_]+$`（平台 `?run=<id>` 枚举面）。
+- **name 必填**：缺 name = 违规（平台测试页展示面）。
+- **command:null / 缺 command 字段** = 人工验收/gate 覆盖/证据基（31 号 §2）→ 平台禁 run，跳过命令契约。
+
+### 2. test_manifest.json 既有非合规修正（31 号 §3「人工验收」语义）
+- 5 条 command 为非可运行命令串（gate 覆盖/证据基/人工验收）→ `command: null`（平台禁 run）：
+  `web_playtest`（gate=23）/ `bevy_cpu_parity`（gate=21）/ `wasm_browser_e2e`（gate=22）/
+  `wasm_size`（evidence=S18.8a）/ `visual_signoff`（人工视觉验收，硬规则 9）。
+- `scene_shot` command 具体化：`--scene=<id>` 占位符（非可运行）→ `--scene=main_map`（可运行，cargo 白名单）。
+
+### 3. 新测试端到端登记（S45.1 DoD：按标准登记 → 平台自动出现 + ?run 执行）
+- 新测试 `map_pack_check`（L1 regression ci「地图包漂移对账」）`python3 scripts/map_pack.py check`，
+  evidence=S31.1.log。清单 28 → **29 条**。
+
+### 4. 平台测试页展示契约摘要（data-driven，零平台 Rust 逻辑）
+- `data.rs tests()` 加 `schema_contract` 字段（31 号 §2/§3 摘要机读回显：id/level/category/type/name/command/evidence_xor_gate）。
+- `web/index.html` 测试页 `ts-contract` 块 + `renderTestContract()`（schema 契约摘要展示）。
+
+## 判据结果
+
+[1] validate_data 基线 0 违规：`python3 scripts/validate_data.py` → `OK（4 表，strings 236 键；… + test_manifest 分级/类/型对账）` rc=0 ✓。
+
+[2] 负例 7 组全部抓出（临时 test_manifest.json 注入 + check_test_manifest 直调）：
+    - 负例 1 程序 sh（非白名单）→「命令首词 `sh` 不在白名单」✓
+    - 负例 2 程序 bash →「命令首词 `bash` 不在白名单」✓
+    - 负例 3 拼接 `;` →「命令含 shell 拼接面 `;`」✓
+    - 负例 4 缺 name →「缺 name（人类可读名，平台测试页展示面）」✓
+    - 负例 5 id `BAD-ID!` →「id 格式非法（^[a-z0-9_]+$，平台 ?run 枚举面）」✓
+    - 负例 6 重定向 `>` →「命令含 shell 拼接面 `>`」✓
+    - 负例 7 拼接 `&&` →「命令含 shell 拼接面 `&&`」✓
+    - 基线（gate=1）0 违规 ✓；command:null / 缺 command 字段（人工验收）0 违规 + 跳过命令契约 ✓。
+
+[3] 平台 `/api/tests` 含 schema_contract + 新测试：`count=29`、`schema_contract` 7 键
+    （id/level/category/type/name/command/evidence_xor_gate）、`map_pack_check` 在列
+    （level=L1 regression ci + command=python3 scripts/map_pack.py check + evidence_exists=True）✓。
+
+[4] 新测试 `?run` 白名单执行：`GET /api/tests?run=map_pack_check` → `{"started":true,"command":"python3 scripts/map_pack.py check",…}`，
+    日志 `evidence/console/logs/test-map_pack_check-*.log` 记「map_pack check: 0 漂移（22 个已装包 vs board.json；默认包 m01 vs 布局数据）」✓。
+
+[5] 零平台代码（接入路径）：登记新测试 = 改 `test_manifest.json` 数据行 + validate_data 门禁断言；
+    **ti-console Rust 逻辑零改动**（`/api/tests`/`?run` 为既有 data-driven 面，新测试自动出现 + 可执行）。
+    本任务改 ti-console 仅为「平台展示契约摘要」面（schema_contract 回显 + ts-contract 展示），非接入逻辑 ✓。
+
+[6] 游戏产品 6 crate 零 Rust：`git diff crates/{ti-core,ti-app,ti-engine,ti-render,ti-platform,ti-formats}` = 空 ✓。
+
+[7] gate 全绿：scripts/gate.ps1 33 项 0 failure（首跑 playtest-loop 因 web_playtest SwiftShader 偶发 GPU stall
+    L1=false/L4=false；单独重跑 3 次全 PASS 确认环境抖动非回归 → 复跑 gate 0 failure）；
+    明细 evidence/S45.1_gate.log ✓。
+
+[8] 平台自检：cargo build -p ti-console 0 错；/api/tests 实际返回 schema_contract + 29 条（服务器重启后实测）；
+    validate_data rc=0 ✓。
+
+## 遗留
+- S44.2 B 审计 F-1~F-5（鉴权/校验/文档漂移）待修复后复审计；A 审计 PASS（2 低观测）。
+- S44.3 UI 工作台 / S44.4 打包分发 / S44.5 固化收口 / 架构灵活化（场景自注册 + 规则策略接口）后续。
