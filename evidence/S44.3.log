@@ -86,7 +86,7 @@ r3 修复后复跑（2026-11-06，F2 关键词 6 词对齐 doccheck2/30 号/测�
 ## 9. gate 修复（S44.3 首轮 gate 2 项失败 → 修复）
 
 - `CS-3 fn_param_naming`：`ui_wizard.rs::fmt_num` 参数 `v` → `value`（单字母违例，已改）。
-- `audit_code`（routes.rs 918 > 900 上限）：`handle_content_map_step`/`handle_content_ui_step` 两个同构 handler 合并为 `handle_content_wizard_step`（is_ui 分支，DRY）；routes.rs → 887 行（<900）。
+- `audit_code`（routes.rs 918 > 900 上限）：`handle_content_map_step`/`handle_content_ui_step` 两个同构 handler 合并为 `handle_content_wizard_step`（is_ui 分支，DRY）；routes.rs → 887 行（<900；**§10 r1 重构后最终 846 行**，handler 抽至 `content/mod.rs`）。
 - 复跑：`check_code_standards.py --check` rc=0（无超基线）；`audit_code.py` rc=0（文件规模 0 / 函数长度 0 / 重复 0）。
 
 ## 10. 双审计 r1 修复（B 审计 7 findings + A 审计 1 finding）
