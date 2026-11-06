@@ -3,7 +3,7 @@
 //!
 //! 状态机持久化到 `evidence/console/content-ui-<id>.json`（gitignored；22 号 §3.1 平台自身写点）。
 //! 写面纪律：写动作（第 1/2/3/5 步 = design/variant/layout/shot）须 `enable_write`（30 号 §3.1 默认关）；
-//! 第 4/6 `步（build/zero_rust）为只读面（build` 写 `target/` gitignored `不计；zero_rust` 只读断言）。
+//! 第 4/6 步（`build`/`zero_rust`）为只读面（`build` 写 `target/` gitignored 不计；`zero_rust` 只读断言）。
 //! 北极星写点探针（`write_probe`）按动作登记写点集判定（30 号 §3.2）。
 //! 变体器同路径替换（29 号 §3）：`ui_variant tint` 默认覆盖原资产（资产名/坐标/scenes.json 不动 ⇒ 零 Rust + 零 scenes.json diff）；
 //! `--suffix` 选项出变体路径（设计稿迭看，不落定）。
@@ -508,7 +508,7 @@ fn is_viewport(value: &str) -> bool {
     })
 }
 
-/// `解析执行面：白名单动作（子进程）或平台自身动作（design/layout/build/shot/zero_rust`）。
+/// 解析执行面：白名单动作（子进程）或平台自身动作（`design`/`layout`/`build`/`shot`/`zero_rust`）。
 /// 返回 (runner, args, `env_vars)；参数注入步骤位置参数（30` 号 §3.1 param）。
 fn resolve_execution(
     repo_root: &Path,

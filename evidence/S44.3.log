@@ -75,6 +75,7 @@ before / after 截图（圆环/木牌暖棕 → 冷灰蓝，可见变化）：
 r1 修复后复跑（2026-11-06，双审计 r1 findings 修复 + 新增 7 单测）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443c.log`；cargo test --workspace 含 16 项 UI 向导单测）。
 r2 修复后复跑（2026-11-06，F2 签收关键词修正 + P3 清理 + e2e 重跑）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443d.log`）。
 r3 修复后复跑（2026-11-06，F2 关键词 6 词对齐 doccheck2/30 号/测试注释 + evidence §10 措辞修正）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443e.log`；doccheck2 仍 41 checks 0 error）。
+r5 后复跑（2026-11-06，r5 审计 0/0/0 + cosmetic 反引号修正）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443f.log`）。
 
 ## 8. 局域网可访问（2026-11-06 用户要求「必须局域可以访问」）
 
