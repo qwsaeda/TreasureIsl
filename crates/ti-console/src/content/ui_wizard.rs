@@ -343,9 +343,11 @@ fn evaluate_criterion(
     // F2 修复（B 审计 r1 P1）：zero_rust 步判据须含视觉签收留痕（A 纪律硬规则 9）。
     // 规格 = `git diff crates/` 空 + `state.signoff` 非空含签收关键词（用户视觉验收/过目/确认/签收/拍板）。
     // 无 signoff = 判败（不推进向导；须重跑该步补签收）。
+    // B-N1 修正（r2）：signoff 实为「用户 <日期> <任务> 视觉验收通过（…）」格式，日期/语境隔断「用户视觉验收」
+    // 连续子串 ⇒ 追加核心动词短语「视觉验收」（覆盖「…视觉验收通过」）；与 doccheck2 第 35 项同口径。
     if step == "zero_rust" {
-        const SIGNOFF_KW: [&str; 5] =
-            ["用户视觉验收", "用户视觉过目", "用户视觉确认", "视觉签收", "用户拍板"];
+        const SIGNOFF_KW: [&str; 6] =
+            ["用户视觉验收", "用户视觉过目", "用户视觉确认", "视觉签收", "用户拍板", "视觉验收"];
         let has_signoff = SIGNOFF_KW.iter().any(|k| state.signoff.contains(k));
         if has_signoff {
             criterion = format!(
@@ -417,7 +419,6 @@ fn validate_request(
     Ok((step_idx, state))
 }
 
-/// 从 `params` 合并场景/视口/资产/着色参数/签收到 state（幂等；缺省不覆盖）。
 /// 从 `params` 合并场景/视口/资产/着色参数/签收到 state（幂等；缺省不覆盖）。
 /// F3 修复（B 审计 r1 P1）：`scene`/`viewport`/`assets`/`suffix` 用户可控字符串**校验**，
 /// 防路径穿越/命令参数注入（id 已有 `^[a-z0-9_]{1,16}$`；这些字段直达出图文件名与子进程参数）。

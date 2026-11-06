@@ -52,7 +52,7 @@
 
 | # | 步骤 | 平台动作 | 机器判据 |
 |---|---|---|---|
-| 1 | 设计稿先行 | `--shot --scene=<id> --viewport=<方向>`（当前状态出图） | 出图非黑；**用户视觉确认留痕**（平台记录：时间戳 + 用户消息，A 纪律硬规则 9） |
+| 1 | 设计稿先行 | `--shot --scene=<id> --viewport=<方向>`（当前状态出图） | 出图非黑；**用户视觉确认留痕**（平台记录：时间戳 + 用户消息，A 纪律硬规则 9；step1=留痕**记录**，step6=强制判据） |
 | 2 | 视觉变体器 | `ui_variant`（`scripts/ui_variant.py`，**新正式工具**，固化 S42.0 临时脚本：选资产组 + 着色参数 → 同路径替换/新路径 + 可选 ui_manifest 注册） | 资产生成 + `ui_manifest.json` 登记一致（disk↔registry 双向同步 validate_data 0 违规） |
 | 3 | 版面（可选） | 平台表单改 `scenes.json` 原语（asset/坐标/配色）→ 写 scenes.json | **本向导版面步 = 只读断言**（0 `scenes.json` diff；版面编辑不在本向导，写端点为后续平台表单，B 审计 r1-F1 已降格对齐） |
 | 4 | 重建 | `cargo build`（嵌 scenes.json，29 号 §5 坑位：include_str! 编译期内嵌） | build 成功（scenes.json 生效） |

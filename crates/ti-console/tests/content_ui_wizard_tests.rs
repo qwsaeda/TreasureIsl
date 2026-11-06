@@ -231,7 +231,11 @@ fn run_step_zero_rust_requires_signoff() {
 fn run_step_zero_rust_passes_with_signoff() {
     // F2 正例：signoff 含「用户视觉验收」→ 判过（git diff crates/ 为 0 空工作树）。
     let id = "ui_f2_signoff";
-    seed_state_at_step6(&repo_root(), id, "用户视觉验收通过（2026-11-06 过目）");
+    seed_state_at_step6(
+        &repo_root(),
+        id,
+        "用户 2026-11-06 S44.3 UI 工作台 e2e 视觉验收通过（S39 横版 index_plank 绳挂木牌冷调变体，1920x1080）",
+    );
     let r = run_step(&repo_root(), id, "zero_rust", false, &serde_json::json!({}));
     let v = r.unwrap_or_else(|e| panic!("zero_rust 应可执行：{e:?}"));
     // 若 git diff crates/ 有未提交改动（当前 r1 修复中），判据 = diff 非空 → 判败；但**签收判据**本身应过。

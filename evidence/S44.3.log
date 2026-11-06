@@ -34,6 +34,10 @@
 
 状态文件：`evidence/console/content-ui-u01.json`（current_step=6/6，halted=false，6 步全 done+passed）。
 
+> **r2 重跑（B-N1 闭环）**：2026-11-06 用最终代码（含 F1 版面只读 + F2 签收强制 + F3 参数校验 + F5 validate_data）重跑 6 步，
+> 状态文件重新生成（step3 判据含「版面跳过：0 scenes.json diff」；step6 判据含「签收留痕判据：state.signoff 含…」），
+> 证明签收强制路径**端到端**演示（此前状态文件为 F1 后/F2 前中间版本）。测试产物（assets/ui 3 资产 + ui_manifest + 出图）已回退。
+
 ## 3. 视觉签收（A 纪律硬规则 9 / DoD「用户视觉验收」）
 
 用户 2026-11-06 视觉验收通过（S39 横版 index_plank 绳挂木牌冷调变体，1920x1080）。
@@ -69,6 +73,7 @@ before / after 截图（圆环/木牌暖棕 → 冷灰蓝，可见变化）：
 
 复跑（2026-11-06，S44.3 全量）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP = android NDK / zero-unknown；wasm-browser-e2e + browser-playtest + playtest-loop 全过；bevy-cpu-parity 0 LSB 超差）。
 r1 修复后复跑（2026-11-06，双审计 r1 findings 修复 + 新增 7 单测）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443c.log`；cargo test --workspace 含 16 项 UI 向导单测）。
+r2 修复后复跑（2026-11-06，F2 签收关键词修正 + P3 清理 + e2e 重跑）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443d.log`）。
 
 ## 8. 局域网可访问（2026-11-06 用户要求「必须局域可以访问」）
 
@@ -99,6 +104,6 @@ r1 归档：`evidence/console/audit-S44.3-r1-{a,b}.md`（A PASS/1 finding；B FA
 | A-F1 证据 rmul 参数漂移 | P2 | 本证据 §2 改 `rmult=1.00` 如实（e2e 走平台表单 rmul 默认 1.00）；bmult=1.20 蓝移为主效果 + before/after DIFFERENT |
 
 重构（为控 routes.rs <900）：wizard HTTP handler 抽至 `crates/ti-console/src/content/mod.rs::handle_wizard_step`（`auth_ok`/`status_json`/`header_body` 改 `pub(crate)`；`lib.rs` 加 `pub mod routes`）；routes.rs → 846 行（<900）。
-单测补：`content_ui_wizard_tests.rs` 9 → 15（F3 非法 scene/viewport/assets/color 400×4 + F2 zero_rust 无签收判败/有签收过×2）。
+单测补：`content_ui_wizard_tests.rs` 9 → 16（F3 非法 scene/viewport/assets/suffix/color 400×5 + F2 zero_rust 无签收判败/有签收过×2）。
 
 复跑：`cargo clippy -p ti-console --all-targets` 0 warning；`cargo test -p ti-console` 全过（15 项向导单测 + 既有套件）。
