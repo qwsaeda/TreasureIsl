@@ -44,8 +44,9 @@
 | 10 | 零 Rust | 平台跑 `git diff crates/` | **空**（29 号 §1 核心不变量） |
 
 - **不可跳步**：向导状态机按 1→10 串行，第 N 步判据未过不开放第 N+1 步（见 §4）。
-- **写面纪律**：第 1/2/3/5/6/8 步写 `assets/maps/`+`dist/`+`board.json`+`ui_manifest.json`，须 `--enable-write`（§3 放开）。
-- **第 9 步出图**：平台后台调 `TI_MAP=<id> treasure-bevy-native --shot --scene=main_map`（白名单 `map_shot`，只读出 `evidence/`，gitignored 预览）。
+- **写面纪律**：第 1/3/5/6/8/9 步写 `assets/maps/`+`dist/`+`board.json`+`ui_manifest.json`+`evidence/`（出图），须 `--enable-write`（§3 放开）；
+  第 2/4/7/10 步只读（import/verify/check/zero_rust，无门无探针）。
+- **第 9 步出图**：平台后台调 `TI_MAP=<id> treasure-bevy-native --shot --scene=main_map`（白名单 `map_shot`，写 `evidence/` 出图，gitignored 预览；写点 `evidence/` ⇒ 属写步须 `enable_write`）。
 
 ### 2.2 UI 工作台（固定 6 步，映射 29 号 §3 1:1）
 
@@ -84,7 +85,7 @@
 | `mappack_add` | `python3 map_pack.py add <id>` | `assets/maps/<id>/` | **否**（--enable-write） |
 | `mappack_syncmap` | `python3 map_pack.py syncmap <id>` | `assets/maps/<id>/manifest.json` | **否** |
 | `mappack_pack` | `python3 map_pack.py pack <id>` | `dist/maps/<id>.map-pack/` | **否** |
-| `mappack_install` | `python3 map_pack.py install <path>` | `assets/maps/<id>/` + `board.json` + `index.json` + `ui_manifest.json` | **否** |
+| `mappack_install` | `python3 map_pack.py install <path>` | `assets/maps/`（父目录，前缀豁免同包写）+ `assets/data/board.json` + `assets/maps/index.json` + `assets/ui_manifest.json`（机器真源全路径） | **否** |
 | `mappack_sync` | `python3 map_pack.py sync` | `assets/data/{board,scenes,strings}.json` + `scene_manifest_v3.json` | **否** |
 | `mappack_uninstall` | `python3 map_pack.py uninstall <id>` | `assets/maps/` + `.default` + `index.json` + `board.json` | **否** |
 | `ui_variant` | `python3 ui_variant.py <asset-group> <params>` | `assets/ui/<name>.png` + 可选 `ui_manifest.json` | **否** |

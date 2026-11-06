@@ -1318,8 +1318,12 @@ async function cwAdvance() {
   $('cw-msg').innerHTML = '执行第 ' + (cwState ? cwState.current_step + 1 : 1) + ' 步（' + step + '）…';
   try {
     // 用裸 fetch（非 api()）：步失败 = HTTP 200 + ok:false，须读 r.passed 回显，不抛。
+    // F-1 修复（B 审计 HIGH）：写路由须 X-TI-Token（22 号 §10.1），带 sessionStorage token。
+    const hdrs = { 'Content-Type': 'application/json' };
+    const tok = sessionStorage.getItem('ti_console_token') || '';
+    if (tok) hdrs['X-TI-Token'] = tok;
     const r = await fetch('/api/content/map/step', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: hdrs,
       body: JSON.stringify({ id: id, step: step, enable_write: enableWrite })
     });
     const data = await r.json().catch(() => ({}));

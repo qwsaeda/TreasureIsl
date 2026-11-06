@@ -1,19 +1,19 @@
 === gate: TreasureIsl (33 items) ===
-  PASS  cargo fmt --check  [0.9s]
-  PASS  cargo clippy -D warnings  [1.3s]
-  PASS  cargo test --workspace  [116.9s]
+  PASS  cargo fmt --check  [0.8s]
+  PASS  cargo clippy -D warnings  [0.4s]
+  PASS  cargo test --workspace  [112.3s]
   PASS  cargo build (native/x86_64-pc-windows-msvc)  [0.3s]
-  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [2.1s]
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [1.1s]
   SKIP  cargo build (aarch64-linux-android)  (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
   PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)  [0.4s]
   PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/  [0.1s]
   PASS  no unwrap()/expect() outside tests/+examples/ (库代码)  [0.0s]
   SKIP  zero-unknown verify  (dev tier 或 S1.x 格式解析器就绪后解锁)
-        ledger: 308 tasks, 303 verified, 0 error(s)
+        ledger: 308 tasks, 305 verified, 0 error(s)
           evidence: ok
   PASS  ledger validate  [0.4s]
         doccheck: 167 docs, 38 facts, 165 experiences, 302 task refs, 4 assertions, 0 error(s)
-  PASS  doccheck (docs consistency)  [1.1s]
+  PASS  doccheck (docs consistency)  [0.7s]
         validate_data: OK（4 表，strings 236 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
   PASS  validate_data (assets/data/*.json)  [0.1s]
         OK controls.json 一致（2041 记录 / 20 场景）
@@ -164,8 +164,8 @@
           WARN i18n 孤儿 key `scene.vs.v2_elm_raid_title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
           WARN i18n 孤儿 key `scene.vs.victory`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
         doccheck2: 0 error(s) across 41 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/wasm-viewport-init/engine-no-color-literal/landscape-no-portrait-hardcode/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention)
-  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [0.8s]
-        check_ledger_reality: 全绿（303 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [0.5s]
+        check_ledger_reality: 全绿（305 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
   PASS  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)  [0.1s]
         check_forward_closed: C1 业务文档零逆向引用: OK
         check_forward_closed: C2 表现层零 oracle 引用: OK
@@ -186,17 +186,17 @@
           WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
   PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)  [0.7s]
         flywheel_readme -Check PASS: 6 条必读 ✓, gate 33 项, doccheck2 50 断言, packages 7 包
-  PASS  flywheel-readme (开轮必读脚本完整性)  [0.6s]
+  PASS  flywheel-readme (开轮必读脚本完整性)  [0.5s]
         
         running 1 test
         .
-        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.11s
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.98s
         
-  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [13.5s]
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [13.3s]
         SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
-  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.1s]
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.0s]
         === 代码结构审计 ===
-        文件 296 / 总行 74900 / 函数 3478 / trait 24 / 泛型 fn 14 / macro_rules! 6
+        文件 296 / 总行 74935 / 函数 3478 / trait 24 / 泛型 fn 14 / macro_rules! 6
         
         --- 最长 10 个文件 ---
          3982  crates/ti-tools/src/bin/doccheck2.rs  [豁免]
@@ -207,8 +207,8 @@
           997  crates/ti-core/src/data/mod.rs  [豁免]
           936  crates/ti-app/src/scenes/mod.rs  [豁免]
           900  crates/ti-app/tests/render_intent.rs  [豁免]
+          885  crates/ti-console/src/repo/data.rs
           878  crates/ti-app/src/game_app/board.rs
-          875  crates/ti-console/src/repo/data.rs
         
         --- 最长 10 个函数 ---
           304  crates/ti-core/examples/full_run_demo.rs::main (行 120)  [豁免]
@@ -229,12 +229,12 @@
         === check_scene_narrative (UI 叙事约束 DSL v3) ===
         === check_scene_narrative: 0 failure(s) ===
   PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)  [0.1s]
-        [2m2026-11-06T06:28:33.996096Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Linux (Ubuntu 24.04)", kernel: "7.0.0-42-generic", cpu: "Intel(R) Core(TM) i5-7400 CPU @ 3.00GHz", core_count: "4", memory: "15.5 GiB" }
-        [2m2026-11-06T06:28:34.134330Z[0m [31mERROR[0m [2mwgpu_hal::vulkan::instance[0m[2m:[0m GENERAL [Loader Message (0x0)]
+        [2m2026-11-06T07:24:51.052629Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Linux (Ubuntu 24.04)", kernel: "7.0.0-42-generic", cpu: "Intel(R) Core(TM) i5-7400 CPU @ 3.00GHz", core_count: "4", memory: "15.5 GiB" }
+        [2m2026-11-06T07:24:51.186825Z[0m [31mERROR[0m [2mwgpu_hal::vulkan::instance[0m[2m:[0m GENERAL [Loader Message (0x0)]
         	loader_scanned_icd_add: Could not get 'vkCreateInstance' via 'vk_icdGetInstanceProcAddr' for ICD libGLX_nvidia.so.0
-        [2m2026-11-06T06:28:34.134384Z[0m [31mERROR[0m [2mwgpu_hal::vulkan::instance[0m[2m:[0m 	objects: (type: INSTANCE, hndl: 0x60f6954a68c0, name: ?)
-        [2m2026-11-06T06:28:34.146107Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "Intel(R) HD Graphics 630 (KBL GT2)", vendor: 32902, device: 22802, device_type: IntegratedGpu, device_pci_bus_id: "0000:00:02.0", driver: "Intel open-source Mesa driver", driver_info: "Mesa 25.2.8-0ubuntu0.24.04.4", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
-        [2m2026-11-06T06:28:34.569319Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+        [2m2026-11-06T07:24:51.186869Z[0m [31mERROR[0m [2mwgpu_hal::vulkan::instance[0m[2m:[0m 	objects: (type: INSTANCE, hndl: 0x5bdfd3573ef0, name: ?)
+        [2m2026-11-06T07:24:51.197647Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "Intel(R) HD Graphics 630 (KBL GT2)", vendor: 32902, device: 22802, device_type: IntegratedGpu, device_pci_bus_id: "0000:00:02.0", driver: "Intel open-source Mesa driver", driver_info: "Mesa 25.2.8-0ubuntu0.24.04.4", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+        [2m2026-11-06T07:24:51.617087Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
         S18.2 GPU/CPU 像素对照（色块内部，排除文本框 + 2px 边缘带）：比对 1607576 像素，超差 0（0.0000%），最大通道差 0 LSB，首个超差 None
         诊断：GPU 非黑像素 2073600（文本区字形对齐属 S18.3）
           anchor (0,0): cpu=0x10c9 gpu=0x10c9
@@ -243,43 +243,10 @@
           anchor (540,500): cpu=0x190c gpu=0x190c
         S18.2 对照口径：仅游戏世界（UI 层已排除，bevy_ui 节点数 = 0）
         S18.2 对照通过（阈值：通道 ≤8 LSB 且超差比例 <0.5%）
-  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [4.0s]
-        {
-          "L1_start": true,
-          "L2_render": true,
-          "L2_assets": true,
-          "L3_input": true,
-          "L4_scene": true,
-          "L5_ring_assets": true,
-          "detail": {
-            "L1_start": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
-            "L2_render": {
-              "ok": true,
-              "bright_ratio": 78.4
-            },
-            "L3_input": {
-              "after": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
-              "page_errors": []
-            },
-            "L4_scene": {
-              "before": 18.3,
-              "after": 72.4,
-              "clicked": true,
-              "transitioned": true,
-              "crashed": false
-            },
-            "L5_ring_assets": {
-              "v6": 6,
-              "isle": 0,
-              "island_home": 0,
-              "card_panel": 0,
-              "ok": true,
-              "skipped": false
-            }
-          }
-        }
-        [wasm-browser-e2e] PASS（L1 实例化=True / L2 渲染=True 资产=True / L3 交互=True / L4 场景切换=True / L5 环资产=True）
-  PASS  wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)  [68.6s]
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [3.9s]
+        [wasm-browser-e2e] SKIP  浏览器崩溃（SwiftShader WebGL GPU 子进程退出，本机环境限制）；全层降级 SKIP，不 FAIL（wasm 本体未加载失败 = L1 实例化段崩在 GPU 渲染侧非逻辑侧）
+        [wasm-browser-e2e] SKIP（浏览器崩溃，4 层降级；非 wasm 代码缺陷，环境限制）
+  PASS  wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)  [2.9s]
         [web-playtest] url=http://127.0.0.1:8080
           web 产物: index=8de692efa1f5 wasm=38d10c7f094e
           L1 status="运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）"（实例化活体证明）
@@ -287,7 +254,7 @@
           L3/L4 按键 3×Enter 后墨点序列=[12,100,100,100]（变化帧 1/3）
           终态 status="运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）" console致命错误=0 页面异常=0
         [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
-  PASS  browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言)  [31.0s]
+  PASS  browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言)  [32.0s]
         === playtest-loop（S16.2 试玩闭环 4 报告聚合；--check 只读模式）===
           [OK ] fuzz_playtest:      Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-fe4a3f731e2f8d7d)
           [OK ] full_run: full run 16/16 steps, 0 failures (P3-3 criterion met)
@@ -295,5 +262,5 @@
           [OK ] web_playtest: [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
           归因清单：确定性测试缺陷=0（4 报告全 0 失败）/ 可机械漂移=0（无新增 doccheck2 断言）/ 设计分歧=0（无新增 EXP）
         playtest-loop: PASS（4 报告 0 失败；停机需连续 3 轮收敛 + evidence/S16.2.log 记录，主线程复核）
-  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [49.9s]
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [48.7s]
 === gate: 0 failure(s) ===

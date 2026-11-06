@@ -50,6 +50,21 @@ S44.2 — 地图工作台（固定 10 步向导 + 状态机 + 判据回显）
     cargo clippy -D warnings 0 错；audit_code PASS（0 结构违规，run_step 已拆 validate_request/resolve_execution/shot_command 控长）；
     doccheck 0 errors / doccheck2 0 errors（41 audit-codified checks）；ledger 308 tasks / 303 verified / 0 error ✓。
 
+## 双审计收敛（S44.2 复审计）
+- **A 完成度审计 PASS**（8 条 DoD 判据全部真实达成；2 低 severity 观测：①DoD 措辞引 `routes/content_api.rs` 但实际落 `routes.rs`（本修复回填）②既有 gate.ps1 头「33 items」硬编码 vs 打印 32 条顶层行，非本任务缺陷）。
+- **B 一致性审计 FAIL → 5 条新发现已全部修复**（本修复 commit）：
+  - **F-1 HIGH 写路由无鉴权**：`POST /api/content/map/step` 加 `token: Option<&str>` + `auth_ok()` 403（镜像 /api/audit/taskbook）；
+    前端 `cwAdvance` 带 `X-TI-Token`（sessionStorage）；实测无 token → 403、带 token → 400 写门（鉴权过）。22 号 §10.1 合规，
+    且不再是「免 token 唯一写端点」不变量（22 号 L359 仅 /api/map/import）之外的第 2 个免 token 写端点。
+  - **F-2 MEDIUM id 校验比文档宽**：`validate_request` 改 `^[a-z0-9_]{1,16}$`（小写 + ≤16）；实测大写/超长 id → 400。
+  - **F-3 LOW enable_write 门与文档写步清单不一致**：实际写步 = 1/3/5/6/8/9（shot 写 `evidence/`），文档/docstring 对齐
+    （30 号 §2.1 写面纪律 + 第 9 步注 + map_wizard.rs 模块 docstring；import 为 verify-only 只读面）。
+  - **F-4 LOW WBS 文件/页面布局未照做**：`docs/plan-s44` S44.2 行回填实际布局（`src/routes.rs` + `web/index.html` 地图页卡片，
+    无独立 `/content` 页）。
+  - **F-5 LOW 22 号 §4.2 未同步新端点 + install 写点粒度表述漂移**：§4.2 加「内容运营向导」行
+    （`GET /api/content/map` + `POST /api/content/map/step`，X-TI-Token 鉴权）；install 写点统一机器真源全路径
+    （`assets/maps/` 父目录 + `assets/data/board.json` + `assets/maps/index.json` + `assets/ui_manifest.json`）。
+
 ## 遗留（S44.3 起）
 - UI 工作台（6 步向导）S44.3；打包/分发面 S44.4；固化收口 S44.5。
 - 向导「填内容」步（import）当前 = 编辑器导入（POST /api/map/import）后 verify 终判；编辑器内嵌在

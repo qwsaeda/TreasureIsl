@@ -2,7 +2,8 @@
 //! 不可跳步（未过 N 步判据 → N+1 步 409），失败即停。
 //!
 //! 状态机持久化到 `evidence/console/content-map-<id>.json`（gitignored；22 号 §3.1 平台自身写点）。
-//! 写面纪律：写动作（第 1/2/3/5/6/8 步）须 `--enable-write`（30 号 §3.1 默认关）；
+//! 写面纪律：写动作（第 1/3/5/6/8/9 步 = add/syncmap/pack/install/sync/shot）须 `enable_write`（30 号 §3.1 默认关）；
+//! 第 2/4/7/10 步（import/verify/check/zero_rust）为只读面（verify-only，无门无探针）。
 //! 北极星写点探针（`write_probe`）按动作登记写点集判定（30 号 §3.2）。
 
 use std::path::{Path, PathBuf};
@@ -231,7 +232,7 @@ pub fn parse_criterion(step: &str, exit_code: i32, output: &str) -> (bool, Strin
 /// 不可跳步：当前步骤 != 请求步骤 ⇒ 409（前置未过）。
 ///
 /// # Errors
-/// id/step 非法（400）/ 不可跳步（409）/ 动作未登记（400）/ 写动作无 --enable-write（400）/
+/// id/step 非法（400）/ 不可跳步（409）/ 动作未登记（400）/ 写动作无 `enable_write`（400）/
 /// spawn/解析失败（500）。
 pub fn run_step(
     repo_root: &Path,
@@ -349,8 +350,13 @@ fn validate_request(
     id: &str,
     step: &str,
 ) -> Result<(usize, WizardState), (u16, String)> {
-    if !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') || id.is_empty() {
-        return Err((400u16, format!("map_id `{id}` 非法（^[a-z0-9_]+$）")));
+    // F-2 修复（B 审计 MEDIUM）：id 校验与规格 `^[a-z0-9_]{1,16}$` 一致（22 号 §4.2 / 30 号 §3.1）——
+    // 仅小写字母/数字/下划线且 ≤16；原实现允许大写 A-Z 与任意长度（契约违背，非安全问题）。
+    if id.is_empty()
+        || id.len() > 16
+        || !id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+    {
+        return Err((400u16, format!("map_id `{id}` 非法（^[a-z0-9_]{{1,16}}$）")));
     }
     let step_idx = MAP_STEPS
         .iter()
