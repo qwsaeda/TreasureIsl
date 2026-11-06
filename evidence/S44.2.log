@@ -51,6 +51,12 @@ S44.2 — 地图工作台（固定 10 步向导 + 状态机 + 判据回显）
     doccheck 0 errors / doccheck2 0 errors（41 audit-codified checks）；ledger 308 tasks / 303 verified / 0 error ✓。
 
 ## 双审计收敛（S44.2 复审计）
+
+- **N-1 修复（A 复审计 LOW 证据时效）**：F-1 鉴权后重跑全 10 步 e2e（wz2，m22 编辑器导入内容），
+  每步带 `X-TI-Token` 实跑：add→import→syncmap→verify→pack→install→check→sync→shot→zero_rust
+  全 10 步 `passed=true`（exit=0 + 0 违规/0 漂移/0 差 + 出图非黑 + git diff crates/ 空），终态
+  current_step=10 halted=false。证明 F-1 鉴权门不破坏向导全流程（wz2 残留已清理：assets/maps/wz2/ +
+  dist/maps/wz2.map-pack/ + board.json/index.json git checkout 恢复 + 状态文件删除）。
 - **A 完成度审计 PASS**（8 条 DoD 判据全部真实达成；2 低 severity 观测：①DoD 措辞引 `routes/content_api.rs` 但实际落 `routes.rs`（本修复回填）②既有 gate.ps1 头「33 items」硬编码 vs 打印 32 条顶层行，非本任务缺陷）。
 - **B 一致性审计 FAIL → 5 条新发现已全部修复**（本修复 commit）：
   - **F-1 HIGH 写路由无鉴权**：`POST /api/content/map/step` 加 `token: Option<&str>` + `auth_ok()` 403（镜像 /api/audit/taskbook）；

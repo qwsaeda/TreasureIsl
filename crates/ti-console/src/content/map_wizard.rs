@@ -49,7 +49,7 @@ const STEP_ACTION: [Option<&str>; 10] = [
 /// 向导状态（持久化 JSON）。
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct WizardState {
-    /// 地图包 id（`^[a-z0-9_]+$`）。
+    /// 地图包 id（`^[a-z0-9_]{1,16}$`）。
     pub id: String,
     /// 当前待执行步骤索引（0 基；完成 N 步后 = N）。
     pub current_step: usize,
@@ -483,10 +483,15 @@ fn shot_command(repo_root: &Path, id: &str) -> ExecSpec {
 /// `GET /api/content/map?id=<id>`：读向导状态（含每步 done/passed/criterion + 当前步骤）。
 ///
 /// # Errors
-/// `id` 为空 = 400（读状态前校验）。
+/// `id` 为空或格式非法（`^[a-z0-9_]{1,16}$`，与 F-2 校验对齐）= 400（读状态前校验）。
 pub fn state(repo_root: &Path, id: &str) -> Result<Value, (u16, String)> {
-    if id.is_empty() {
-        return Err((400u16, "id 不能为空".to_owned()));
+    // N3 修复（B 复审计 LOW）：读状态 id 也套 `^[a-z0-9_]{1,16}$`（与 validate_request 对齐；
+    // 防只读路径穿越面 `evidence/console/content-map-<id>.json`，join 防 `..`/`/`）。
+    if id.is_empty()
+        || id.len() > 16
+        || !id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+    {
+        return Err((400u16, format!("map_id `{id}` 非法（^[a-z0-9_]{{1,16}}$）")));
     }
     let st = read_state(repo_root, id)?;
     Ok(json!({
