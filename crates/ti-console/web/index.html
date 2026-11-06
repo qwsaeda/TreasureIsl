@@ -360,6 +360,42 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       <div id="cw-steps" style="border:1px solid var(--border);border-radius:6px;overflow:hidden"></div>
       <div id="cw-msg" style="margin-top:8px;font:11px/1.5 monospace;white-space:pre-wrap;color:var(--muted);max-height:200px;overflow:auto"></div>
     </div>
+    <div class="card">
+      <h2>UI 工作台（S44.3 固定 6 步向导，30 号 §2.2；不可跳步，每步机器判据 + 视觉签收留痕）</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <label style="font-size:12px;color:var(--muted)">变体 id</label>
+        <input id="uw-id" value="u01" style="width:110px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted)">场景</label>
+        <input id="uw-scene" value="index" placeholder="index" style="width:100px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted)">视口</label>
+        <input id="uw-viewport" value="" placeholder="1920x1080" style="width:110px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted)">资产(逗号)</label>
+        <input id="uw-assets" value="" placeholder="index_plank_0,index_plank_1" style="width:220px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted)">签收留痕</label>
+        <input id="uw-signoff" value="" placeholder="用户 2026-11-06 视觉验收" style="width:200px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <label style="font-size:12px;color:var(--muted)">color</label>
+        <input id="uw-color" type="number" step="0.01" value="1.00" style="width:80px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted)">brightness</label>
+        <input id="uw-brightness" type="number" step="0.01" value="1.00" style="width:80px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted)">rmul</label>
+        <input id="uw-rmul" type="number" step="0.01" value="1.00" style="width:80px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted)">gmult</label>
+        <input id="uw-gmult" type="number" step="0.01" value="1.00" style="width:80px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted)">bmult</label>
+        <input id="uw-bmult" type="number" step="0.01" value="1.00" style="width:80px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px">
+          <input type="checkbox" id="uw-write"> 允许写面（30 号 §3.1 默认关）
+        </label>
+        <button id="uw-load" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">载入状态</button>
+        <button id="uw-advance" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">执行下一步</button>
+      </div>
+      <div id="uw-progress" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+      <!-- 纵向 stepper（成熟模式：✓ 完成 / ● 当前 / ○ 待办 / ✗ 失败；当前步高亮 + 判据内联回显） -->
+      <div id="uw-steps" style="border:1px solid var(--border);border-radius:6px;overflow:hidden"></div>
+      <div id="uw-msg" style="margin-top:8px;font:11px/1.5 monospace;white-space:pre-wrap;color:var(--muted);max-height:200px;overflow:auto"></div>
+    </div>
   </section>
 
   <!-- 测试（游戏测试标杆：分级/分类/类型 + 步骤/阶段 + 截图证据 + 门禁总览，23 号 §6） -->
@@ -1344,6 +1380,114 @@ async function cwAdvance() {
 }
 $('cw-load').addEventListener('click', cwLoad);
 $('cw-advance').addEventListener('click', cwAdvance);
+
+/* ==== UI 工作台（S44.3 固定 6 步向导：状态机 + 判据回显 + 不可跳步 409 + 签收留痕） ==== */
+const UW_STEPS = ['design','variant','layout','build','shot','zero_rust'];
+const UW_LABEL = {
+  design:'1 设计稿先行(当前状态出图)', variant:'2 视觉变体器(tint 同路径替换)',
+  layout:'3 版面(纯视觉变体跳过)', build:'4 重建(cargo build 嵌 scenes.json)',
+  shot:'5 出图验收(多视口)', zero_rust:'6 零 Rust + 签收'
+};
+let uwState = null;
+function uwParams() {
+  // 从输入框收集 step 2 变体参数（幂等：每次执行下一步收集当前表单值）。
+  const p = {
+    scene: $('uw-scene').value.trim() || 'index',
+    viewport: $('uw-viewport').value.trim(),
+    assets: $('uw-assets').value.trim(),
+    color: parseFloat($('uw-color').value) || 1.0,
+    brightness: parseFloat($('uw-brightness').value) || 1.0,
+    rmult: parseFloat($('uw-rmul').value) || 1.0,
+    gmult: parseFloat($('uw-gmult').value) || 1.0,
+    bmult: parseFloat($('uw-bmult').value) || 1.0,
+    signoff: $('uw-signoff').value.trim()
+  };
+  return p;
+}
+function uwRefresh() {
+  const id = $('uw-id').value.trim() || 'u01';
+  const steps = uwState && uwState.steps ? uwState.steps : [];
+  const cur = uwState ? uwState.current_step : 0;
+  const halted = uwState ? uwState.halted : false;
+  const curName = (UW_STEPS[cur] && UW_LABEL[UW_STEPS[cur]]) || '（已完成）';
+  $('uw-progress').innerHTML = '向导 <b style="color:var(--ink)">' + esc(id) + '</b> · 第 <b style="color:var(--accent)">'
+    + (cur + 1) + '</b> / 共 6 步 · 当前：' + esc(curName)
+    + (halted ? ' · <span style="color:#ff7a7a">⛔ 已停止（失败即停，须重跑当前步）</span>' : '');
+  $('uw-steps').innerHTML = UW_STEPS.map((s, i) => {
+    const rec = steps[i];
+    let badge, badgeColor, rowColor, labelWeight;
+    if (rec && rec.done) {
+      if (rec.passed) { badge = '✓'; badgeColor = '#3fae6a'; }
+      else { badge = '✗'; badgeColor = '#ff7a7a'; }
+      rowColor = 'rgba(255,255,255,0.02)';
+      labelWeight = '400';
+    } else if (i === cur && !halted) {
+      badge = '●'; badgeColor = 'var(--accent)';
+      rowColor = 'rgba(126,200,227,0.08)';
+      labelWeight = '700';
+    } else {
+      badge = '○'; badgeColor = 'var(--muted)';
+      rowColor = 'transparent';
+      labelWeight = '400';
+    }
+    const crit = rec && rec.criterion ? '<span style="color:var(--muted);font-weight:400;margin-left:8px">' + esc(rec.criterion) + '</span>' : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:' + rowColor + ';border-bottom:1px solid var(--border)">'
+      + '<span style="color:' + badgeColor + ';font-weight:700;width:16px;text-align:center">' + badge + '</span>'
+      + '<span style="color:var(--ink);font-weight:' + labelWeight + ';font-size:12px">' + esc(UW_LABEL[s] || s) + '</span>'
+      + crit
+      + '</div>';
+  }).join('');
+}
+async function uwLoad() {
+  const id = $('uw-id').value.trim() || 'u01';
+  try {
+    const d = await api('/api/content/ui?id=' + encodeURIComponent(id));
+    uwState = d;
+    // 回填表单（state 持久化场景/视口/资产/签收）。
+    if (d.scene) $('uw-scene').value = d.scene;
+    if (d.viewport) $('uw-viewport').value = d.viewport;
+    if (d.assets) $('uw-assets').value = d.assets;
+    if (d.signoff) $('uw-signoff').value = d.signoff;
+    uwRefresh();
+    $('uw-msg').innerHTML = '载入状态：第 ' + (d.current_step + 1) + ' 步待执行' + (d.halted ? '（已停止）' : '');
+  } catch (e) {
+    $('uw-msg').innerHTML = '载入失败：' + esc(String(e));
+  }
+}
+async function uwAdvance() {
+  const id = $('uw-id').value.trim() || 'u01';
+  const step = uwState ? (UW_STEPS[uwState.current_step] || UW_STEPS[0]) : UW_STEPS[0];
+  const enableWrite = $('uw-write').checked;
+  const params = uwParams();
+  $('uw-msg').innerHTML = '执行第 ' + (uwState ? uwState.current_step + 1 : 1) + ' 步（' + step + '）…';
+  try {
+    // 裸 fetch（非 api()）：步失败 = HTTP 200 + ok:false，读 r.passed 回显，不抛。
+    // 写路由须 X-TI-Token（22 号 §10.1），带 sessionStorage token。
+    const hdrs = { 'Content-Type': 'application/json' };
+    const tok = sessionStorage.getItem('ti_console_token') || '';
+    if (tok) hdrs['X-TI-Token'] = tok;
+    const r = await fetch('/api/content/ui/step', {
+      method: 'POST', headers: hdrs,
+      body: JSON.stringify({ id: id, step: step, enable_write: enableWrite, params: params })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      $('uw-msg').innerHTML = '⛔ ' + esc(String(data.error || ('HTTP ' + r.status)));
+      uwLoad();
+      return;
+    }
+    uwState = await (await fetch('/api/content/ui?id=' + encodeURIComponent(id))).json();
+    uwRefresh();
+    const ok = data.passed ? '✅' : '❌';
+    $('uw-msg').innerHTML = ok + ' 第' + (data.step_index || '?') + ' 步 ' + (data.step || '') + ' exit=' + data.exit_code
+      + ' · ' + (data.criterion || '') + (data.probe ? ' · ' + data.probe : '')
+      + '\n' + (data.output_excerpt || '').slice(-800);
+  } catch (e) {
+    $('uw-msg').innerHTML = '⛔ ' + esc(String(e));
+  }
+}
+$('uw-load').addEventListener('click', uwLoad);
+$('uw-advance').addEventListener('click', uwAdvance);
 
 
 /* ==== 测试页（23 号 §6：分级/分类/类型 + 步骤/阶段 + 截图证据 + 门禁 33 项） ==== */

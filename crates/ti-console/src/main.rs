@@ -4,7 +4,8 @@
 //! - 静态壳（`web/`，原生 JS+CSS，无 npm 构建）+ `/api/health`；
 //! - S32.2：只读数据源 API（`/api/overview` `/api/tasks` `/api/evidence` `/api/assets`
 //!   `/api/tests` `/api/session`，`repo/` 适配层 + 路径白名单 + canonicalize 防穿越 + 0 写盘）；
-//! - 默认监听 `127.0.0.1:8787`（非回环须显式 `--host` + token，22 号第 10.1 节）；
+//! - 默认监听 `0.0.0.0:8787`（局域网可访问；非回环须显式 `--host` + token 强鉴权可选，22 号第 10.1 节）；
+//!   用户 2026-11-06 拍板「必须局域可以访问」⇒ 默认绑定全接口，`--host 127.0.0.1` 可收窄回环。
 //! - 单实例锁（`evidence/console/.lock`）；
 //! - 命令白名单 = `console_commands.json`（机器真源）；数据源 = `console_sources.json`。
 //!
@@ -21,7 +22,7 @@ use std::net::TcpListener;
 use std::path::Path;
 
 /// 默认监听地址（非回环须显式 `--host`，鉴权负例见 22 号第 10.1 节）。
-const DEFAULT_BIND: &str = "127.0.0.1:8787";
+const DEFAULT_BIND: &str = "0.0.0.0:8787";
 
 /// 平台进程锁陈旧接管阈值（22 号 §10.4：起始超 30 分钟 + pid 不存在 ⇒ 接管）。
 const LOCK_STALE_SECS: u64 = 1800;
@@ -122,7 +123,7 @@ fn parse_args() -> String {
         }
     }
     let bind = DEFAULT_BIND.to_owned();
-    let host = host_opt.unwrap_or_else(|| bind.split(':').next().unwrap_or("127.0.0.1").to_owned());
+    let host = host_opt.unwrap_or_else(|| bind.split(':').next().unwrap_or("0.0.0.0").to_owned());
     let p = port
         .unwrap_or_else(|| bind.rsplit(':').next().and_then(|s| s.parse().ok()).unwrap_or(8787));
     format!("{host}:{p}")
@@ -132,13 +133,13 @@ fn main() {
     let pid = std::process::id();
     let bind = parse_args();
 
-    // 非回环鉴权（22 号第 10.1 节）：--host 非 127.0.0.1 时**警告**（默认不启用强鉴权，
-    // 便于内网开发机直接访问）；设了 TI_CONSOLE_TOKEN 时 = 写操作面（S32.4 起）的 token 校验。
+    // 非回环鉴权（22 号第 10.1 节）：默认 `0.0.0.0`（2026-11-06 用户拍板「必须局域可以访问」），
+    // 非回环未设 TI_CONSOLE_TOKEN 时**告警**（内网自用不启用强鉴权；设了 = 写操作面 S32.4 token 校验）。
     let host_part = bind.split(':').next().unwrap_or("");
     if !matches!(host_part, "127.0.0.1" | "localhost") && std::env::var("TI_CONSOLE_TOKEN").is_err()
     {
         eprintln!(
-            "ti-console: 非回环监听（{host_part}）未设 TI_CONSOLE_TOKEN —— 写操作面（POST）要求 X-TI-Token 在场（env 未设 = 非空即可；env 设了 = 精确匹配；生产部署须设 token 作强校验，22 号 §10.1）"
+            "ti-console: 局域网监听（{host_part}，默认 0.0.0.0 局域可访问）未设 TI_CONSOLE_TOKEN —— 写操作面（POST）要求 X-TI-Token 在场（env 未设 = 非空即可；env 设了 = 精确匹配；外网/生产部署须设 token 作强校验，22 号 §10.1；内网自用默认不启用强鉴权）"
         );
     }
 

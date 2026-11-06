@@ -1,0 +1,83 @@
+# S44.3 UI 工作台（固定 6 步向导 + 视觉变体器 + 签收留痕）— 验收证据
+
+日期：2026-11-06
+改动面：平台（crates/ti-console/src/content/ui_wizard.rs + web/index.html UI 向导卡片）+ 数据（evidence/console/content-ui-<id>.json，gitignored）
+判据：向导 6 步每步判据 + 端到端用平台跑 index 变体（设计稿出图→变体器→rebuild→出图→签收→零 Rust）每步判据过 + git diff crates/{ti-core,ti-app,ti-engine,ti-render,ti-platform,ti-formats} = 空 + evidence 含「用户视觉验收」+ 变体器同路径替换（资产名/坐标/scenes.json 不动）+ UI 原型截图用户确认留痕 + gate 全绿
+
+## 1. 实现清单
+
+- `crates/ti-console/src/content/ui_wizard.rs`：UI 向导 6 步状态机（design/variant/layout/build/shot/zero_rust）
+  - 每步 `parse_criterion` 机器判据回显；`step_write_paths` 写点集；`run_step` 执行 + 写点探针（北极星）
+  - `resolve_execution`：白名单动作（ui_variant tint）+ 平台自身面（scene shot / scenes.json 断言 / cargo build / git diff）
+  - `scene_shot_command`：`--scene=<id>` 单参数（`arg_value("--scene=")` 只匹配 `=` 形式，避免静默回退 index）
+  - `resolve_cargo`：显式解析 cargo 绝对路径（`apply_minimal_env` 清 PATH 后无 cargo）
+  - layout 纯视觉变体跳过 = 只读（0 scenes.json diff），不强制 enable_write
+- `crates/ti-console/src/content/mod.rs`：共享 `resolve_action`（白名单解析，map/ui 同口径）
+- `crates/ti-console/src/content/map_wizard.rs`：委托共享 `resolve_action` + 修复 `--scene=main_map` 潜伏 bug（分离参数 → 静默回退 index）
+- `crates/ti-console/src/routes.rs`：`GET /api/content/ui` + `POST /api/content/ui/step`（X-TI-Token 鉴权）
+- `crates/ti-console/web/index.html`：UI 工作台卡片（纵向 stepper，`uw*` JS，`X-TI-Token`）
+- `crates/ti-console/tests/content_ui_wizard_tests.rs`：9 单测（判据/400/409/state 坏 id）
+
+## 2. 端到端 e2e（平台 API 跑 index 变体，横屏 S39 当前设计）
+
+变体 id = `u01`；scene = `index`；viewport = `1920x1080`（横屏 S39 羊皮藏宝图 + 绳挂木牌，`index_plank_*` 木牌可见渲染）；
+变体参数 = color=0.32 / brightness=1.10 / rmul=0.88 / gmult=1.00 / bmult=1.20（S42.0 v2b 冷调风化；同路径替换）。
+
+| 步 | 名称 | 判据 | 结果 |
+|---|---|---|---|
+| 1 | design | exit=0 + 图像非黑（字节多样性 9）+ write_probe 0 差 | ✅ passed |
+| 2 | variant | exit=0 + ui_manifest 登记一致（3 条 source=ui_variant）| ✅ passed |
+| 3 | layout | exit=0 + 0 scenes.json diff（纯视觉变体跳过版面）| ✅ passed |
+| 4 | build | exit=0（cargo build ti-engine，scenes.json 生效）| ✅ passed |
+| 5 | shot | exit=0 + 图像非黑 + write_probe 0 差 | ✅ passed |
+| 6 | zero_rust | exit=0 + git diff crates/ 空（游戏产品 6 crate）| ✅ passed |
+
+状态文件：`evidence/console/content-ui-u01.json`（current_step=6/6，halted=false，6 步全 done+passed）。
+
+## 3. 视觉签收（A 纪律硬规则 9 / DoD「用户视觉验收」）
+
+用户 2026-11-06 视觉验收通过（S39 横版 index_plank 绳挂木牌冷调变体，1920x1080）。
+
+before / after 截图（圆环/木牌暖棕 → 冷灰蓝，可见变化）：
+- `evidence/bevy_native_index_s39_orig.png`（变体前，S39 横版原样）
+- `evidence/bevy_native_index_s39_tinted.png`（变体后，index_plank_0/1/2 冷调风化）
+
+像素证据：`cmp` before/after DIFFERENT（可见变化）；出图 8296178 B / 字节多样性 9（非黑帧判据过）。
+
+## 4. 变体器同路径替换 + 测试产物回退
+
+- 变体器 `ui_variant tint` 默认同路径替换（覆盖 `assets/ui/index_plank_0/1/2.png` + `--register` 更新 `assets/ui_manifest.json`）；
+  资产名/坐标/scenes.json 不动 ⇒ 零 Rust + 零 scenes.json diff（layout 步 0 diff 判据过）。
+- 测试产物（S44.3 是平台功能开发，非内容运营）已回退：`git checkout -- assets/ui/index_plank_0/1/2.png assets/ui_manifest.json`；
+  回退后 `git diff --quiet -- assets/ui/` = 空（游戏资产回原样）；e2e 证据留 `evidence/` + `evidence/console/content-ui-u01.json`（gitignored）。
+- `.gitignore` 新增 `/evidence/console/content-*.json`（S44 地图/UI 向导状态，平台自身写点 gitignored）。
+
+## 5. 游戏产品 6 crate 零 diff
+
+`git diff --quiet -- crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats` = 0（空）。
+平台本体仅 ti-console/ti-devmeta 允许改（S44 是平台功能开发）。
+
+## 6. 单测 + 静态检查
+
+- `cargo test -p ti-console`：全部套件通过（含 content_ui_wizard_tests 9 个：criterion 判据 / 400 未知 step / 400 坏 id / 409 不可跳步 / 400 写动作无 enable_write / 400 state 坏 id）。
+- `cargo clippy -p ti-console --all-targets`：0 warning。
+- `cargo fmt --all -- --check`：干净。
+
+## 7. gate 全绿
+
+（gate.ps1 输出见下；0 failure 才置 verified）
+
+复跑（2026-11-06，S44.3 全量）：`=== gate: 0 failure(s) ===`（37 项 PASS；wasm-browser-e2e + browser-playtest + playtest-loop 全过；bevy-cpu-parity 0 LSB 超差）。
+
+## 8. 局域网可访问（2026-11-06 用户要求「必须局域可以访问」）
+
+- `crates/ti-console/src/main.rs`：`DEFAULT_BIND` `127.0.0.1:8787` → `0.0.0.0:8787`（全接口，局域网可访问；`--host 127.0.0.1` 可收窄回环）；非回环未设 token 启动告警文案更新。
+- 规范单一事实源：`docs/process/22_dev_platform.md` §10.1 + §5「局域网可访问（S44.3 补规范）」（默认 `0.0.0.0:8787`；`--host 127.0.0.1` 收窄；非回环未设 token 告警不拒绝 = 内网自用）。
+- 实测：`http://127.0.0.1:8787/` → 200；`http://10.0.182.131:8787/` → 200（本机局域网 IP）；`/api/content/ui?id=u01` → 200（API 正常）。
+- 平台本体 ti-console 允许改（S44 平台功能开发）；游戏产品 6 crate 仍 0 diff。
+
+## 9. gate 修复（S44.3 首轮 gate 2 项失败 → 修复）
+
+- `CS-3 fn_param_naming`：`ui_wizard.rs::fmt_num` 参数 `v` → `value`（单字母违例，已改）。
+- `audit_code`（routes.rs 918 > 900 上限）：`handle_content_map_step`/`handle_content_ui_step` 两个同构 handler 合并为 `handle_content_wizard_step`（is_ui 分支，DRY）；routes.rs → 887 行（<900）。
+- 复跑：`check_code_standards.py --check` rc=0（无超基线）；`audit_code.py` rc=0（文件规模 0 / 函数长度 0 / 重复 0）。

@@ -125,29 +125,9 @@ fn write_state(repo_root: &Path, state: &WizardState) -> Result<(), (u16, String
 
 /// 从白名单解析动作 → (runner, 完整参数)（逐参数；禁 shell 拼接）。
 /// 返回 `None` 表示动作是平台自身面（self runner），由调用方自行处理。
+/// 共享实现见 `content/mod.rs::resolve_action`（map/ui 向导同口径）。
 fn resolve_action(repo_root: &Path, action_id: &str) -> Result<Option<CmdSpec>, (u16, String)> {
-    let cmds = crate::runner::close::read_commands(repo_root)
-        .map_err(|e| (500u16, format!("读白名单失败：{e}")))?;
-    let c = cmds
-        .iter()
-        .find(|c| c.get("id").and_then(Value::as_str) == Some(action_id))
-        .ok_or_else(|| (400u16, format!("白名单动作 `{action_id}` 未登记（30 号 §3.1）")))?;
-    let runner = c.get("runner").and_then(Value::as_str).unwrap_or("").to_owned();
-    if runner == "self" {
-        return Ok(None);
-    }
-    let script = c.get("script").and_then(Value::as_str).unwrap_or("").to_owned();
-    let mut args: Vec<String> = c
-        .get("args")
-        .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect())
-        .unwrap_or_default();
-    // args 已含 script 时不前置（同 map_cmd_id 口径）。
-    let script_in_args = args.iter().any(|a| a == &script);
-    if !script.is_empty() && !script_in_args {
-        args.insert(0, script);
-    }
-    Ok(Some((runner, args)))
+    crate::content::resolve_action(repo_root, action_id)
 }
 
 /// 把白名单动作的 `writes`（可含 `<id>` 占位符）解析为实际写点集（30 号 §3.2 约定）。
@@ -457,6 +437,8 @@ fn resolve_execution(
 
 /// `map_shot` 步命令：运行 ti-engine 发货 bin（--shot `离屏），TI_MAP`=<id> 经 env 传。
 /// 无头环境需虚拟显示（xvfb-run -a，Linux 迁移口径）；bin 路径 = 构建期 target-dir。
+/// 注：`--scene=<id>` 单参数（`arg_value("--scene=")` 只匹配 `=` 形式；旧分离 `--scene main_map`
+/// 会静默回退 index，属 S44.2 潜伏 bug 修复）。
 fn shot_command(repo_root: &Path, id: &str) -> ExecSpec {
     let bin = resolve_bin_path(repo_root);
     let xvfb = Path::new("/usr/bin/xvfb-run");
@@ -467,14 +449,13 @@ fn shot_command(repo_root: &Path, id: &str) -> ExecSpec {
                 "-a".to_owned(),
                 bin.to_string_lossy().to_string(),
                 "--shot".to_owned(),
-                "--scene".to_owned(),
-                "main_map".to_owned(),
+                "--scene=main_map".to_owned(),
             ],
         )
     } else {
         (
             bin.to_string_lossy().to_string(),
-            vec!["--shot".to_owned(), "--scene".to_owned(), "main_map".to_owned()],
+            vec!["--shot".to_owned(), "--scene=main_map".to_owned()],
         )
     };
     (r, a, vec![("TI_MAP", id.to_owned())])

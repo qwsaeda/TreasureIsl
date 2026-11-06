@@ -67,6 +67,8 @@ __pycache__/
 /evidence/console/.lock
 /evidence/console/gate.lock
 /evidence/console/logs/
+# S44 地图/UI 工作台向导状态（平台自身写点；22 号 §3.1，gitignored）
+/evidence/console/content-*.json
 
 # 第三方 node 依赖（playwright 等；不入库）
 /node_modules/

@@ -230,6 +230,14 @@ fn dispatch_get(
                 Err((code, msg)) => status_json(code, &json!({"ok": false, "error": msg}), gz),
             }
         }
+        "/api/content/ui" => {
+            // S44.3 UI 向导状态（只读）。
+            let id = query_param(url, "id").unwrap_or("");
+            match crate::content::ui_wizard::state(repo_root, id) {
+                Ok(v) => json200(&v, gz),
+                Err((code, msg)) => status_json(code, &json!({"ok": false, "error": msg}), gz),
+            }
+        }
         "/api/build" => {
             // S32.9：?check=1 = 只读体检（build_wasm.ps1 -Check + 冻结路径 0 游戏产物变更断言）。
             // S35.1：?run 白名单 apk|wasm|native（后台 spawn）；非法 = 400（22 号 §10.3 禁自由字符串）。
@@ -325,15 +333,18 @@ fn post_too_large(want_gzip: bool) -> Vec<u8> {
 
 /// `POST /api/content/map/step`（S44.2 地图向导）：执行一步（调白名单动作 + 机器判据 + 写点探针）。
 /// body：`{"id","step","enable_write"?,"params"?}`。写操作鉴权（`403`）→ 不可跳步（`409`）/ 写动作无 `enable_write`（`400`）。
-fn handle_content_map_step(
+/// `POST /api/content/{map,ui}/step`（S44.2/S44.3 向导）：执行一步（调白名单动作 + 机器判据 + 写点探针）。
+/// body：`{"id","step","enable_write"?,"params"?}`。写操作鉴权（`403`）→ 不可跳步（`409`）/ 写动作无 `enable_write`（`400`）。
+/// `is_ui` 选择地图/UI 向导（两 handler 同构，合并 DRY；`routes.rs` 行数守 `audit_code` 900 上限）。
+fn handle_content_wizard_step(
     repo_root: &Path,
     body: &[u8],
     token: Option<&str>,
     want_gzip: bool,
+    is_ui: bool,
 ) -> Vec<u8> {
-    // F-1 修复（B 审计 HIGH）：写路由须 X-TI-Token（22 号 §10.1）；缺 token ⇒ 403。
-    // 镜像 /api/audit/taskbook 鉴权面；该路由为写点（assets/ + dist/ + evidence/ + 向导状态），
-    // 非「免 token 唯一写端点」（22 号 L359 仅 /api/map/import 豁免）。
+    // 写路由须 X-TI-Token（22 号 §10.1）；缺 token ⇒ 403。镜像 /api/audit/taskbook 鉴权面；
+    // 该路由为写点（assets/ + dist/ + evidence/ + 向导状态），非「免 token 唯一写端点」（22 号 L359 仅 /api/map/import 豁免）。
     if !auth_ok(token) {
         return header_body(
             "application/json",
@@ -358,7 +369,12 @@ fn handle_content_map_step(
     let step = payload.get("step").and_then(Value::as_str).unwrap_or("").to_owned();
     let enable_write = payload.get("enable_write").and_then(Value::as_bool).unwrap_or(false);
     let params = payload.get("params").cloned().unwrap_or(json!({}));
-    match crate::content::map_wizard::run_step(repo_root, &id, &step, enable_write, &params) {
+    let result = if is_ui {
+        crate::content::ui_wizard::run_step(repo_root, &id, &step, enable_write, &params)
+    } else {
+        crate::content::map_wizard::run_step(repo_root, &id, &step, enable_write, &params)
+    };
+    match result {
         Ok(v) => status_json(200, &v, want_gzip),
         Err((code, msg)) => status_json(code, &json!({"ok": false, "error": msg}), want_gzip),
     }
@@ -389,7 +405,13 @@ fn handle_post(
         "/api/close" => Some(close_api::handle_close(repo_root, body, token, content_type, gz)),
         // S44.2 地图向导执行一步（写动作需 enable_write；不可跳步 409；失败即停）。
         // F-1 修复：写路由须 X-TI-Token（22 号 §10.1），传 token 供 403 鉴权。
-        "/api/content/map/step" => Some(handle_content_map_step(repo_root, body, token, gz)),
+        "/api/content/map/step" => {
+            Some(handle_content_wizard_step(repo_root, body, token, gz, false))
+        }
+        // S44.3 UI 向导执行一步（写动作需 enable_write；不可跳步 409；失败即停）。
+        "/api/content/ui/step" => {
+            Some(handle_content_wizard_step(repo_root, body, token, gz, true))
+        }
         _ => None,
     }
 }
