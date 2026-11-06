@@ -98,11 +98,18 @@
 
 ### 3.2 写面纪律修订（22 号 §3.1 已知写点表 + §8 北极星）
 
-- **§3.1 已知写点表**：新增上表 7 个写动作行（写点列见 §3.1）；表外写点发现 ⇒ 补表后再上线（原纪律保留）。
+- **§3.1 已知写点表**：新增上表 8 个写动作行（mappack_add/syncmap/pack/install/sync/uninstall/ui_variant/publish；map_shot 只读出图默认开不计；写点列见 §3.1）；表外写点发现 ⇒ 补表后再上线（原纪律保留）。
 - **§8 北极星「0 游戏产物变更」口径**：从「唯一写点 = 地图导入口子（S32.15 import_probe）」**泛化为「白名单动作写点探针」**
   ——每个写动作登记其写点集（`console_commands.json` 加 `write_paths` 字段），动作前后取 `snapshot::FrozenSnapshot`，
   **豁免该动作登记写点 + gitignored 路径**，其余冻结路径（`crates/ crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets/ android/ tests/`）差异为空 ⇒ 0 游戏产物变更。
   `import_probe` 收敛为 `write_probe(动作写点集)`（S32.15 专用探针并入，行为不变）。
+  > **gitignored 豁免为口径注记（当前未实现）**：`write_probe` 目前只豁免 `write_paths` 参数，未做 `git check-ignore` 遍历
+  >（`snapshot.rs` 收集面已忽略 `.gitignore` 命中文件，故 gitignored 路径本就不入 `files` 快照，差异面自然豁免）——
+  > 口径注记防误导 S44.2，实现无需改动。
+  - **写点占位符解析约定（S44.2 向导接线必守）**：`console_commands.json` 写点可含 `<id>` 占位符（如 `assets/maps/<id>/manifest.json`），
+    属**模板形态**（22 号 §4.2 前缀形态口径）。S44.2 向导以实际 id 执行动作时，**必须先解析占位符**（`<id>` → 实际包 id）再喂 `write_probe`，
+    否则 diff 路径（`assets/maps/m01/...`）与模板（`assets/maps/<id>/...`）前缀不匹配 ⇒ 误判漂移（B 审计 F2 潜伏，S44.2 必触发）。
+    解析规则 = 取实际 id 替换 `<id>`；`<id>.map-pack` → `<id>.map-pack`（pack 动作 dist 写点同规则）。
 - **零 Rust 判据独立于快照**：`git diff crates/` = 空（动作写点探针只管「产物面」，零 Rust 是独立 `git diff crates/` 断言，两者都要）。
 
 ## 4. 模式化/固化机制（向导状态机 + 每步机器判据）
