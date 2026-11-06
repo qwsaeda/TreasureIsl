@@ -375,8 +375,8 @@ fn validate_request(
     Ok((step_idx, state))
 }
 
-/// `解析执行面：白名单动作（子进程）或平台自身动作（import/zero_rust/shot`）。
-/// 返回 (runner, args, `env_vars)；参数注入步骤位置参数（30` 号 §3.1 param）。
+/// 解析执行面：白名单动作（子进程）或平台自身动作（`import`/`zero_rust`/`shot`）。
+/// 返回 `(runner, args, env_vars)`；参数注入步骤位置参数（30 号 §3.1 param）。
 fn resolve_execution(
     repo_root: &Path,
     id: &str,

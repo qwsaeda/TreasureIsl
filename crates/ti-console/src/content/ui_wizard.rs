@@ -58,13 +58,13 @@ fn step_write_paths(step: &str) -> &'static [&'static str] {
 pub struct UiWizardState {
     /// 变体 id（`^[a-z0-9_]{1,16}$`）。
     pub id: String,
-    /// `目标场景（index/main_map/...，30` 号 §2.2 `--scene=<id>`）。
+    /// 目标场景（`index`/`main_map`/...，30 号 §2.2 `--scene=<id>`）。
     pub scene: String,
     /// 视口（"" = 壳默认；`WxH` 如 1920x1080，S29.5 多视口出图）。
     pub viewport: String,
     /// 变体资产（逗号分隔资产名，step 2 用）。
     pub assets: String,
-    /// `变体着色参数（tint_cool，30` 号 §2.2 step 2）。
+    /// 变体着色参数（`tint_cool`，30 号 §2.2 step 2）。
     pub color: f64,
     /// Brightness 增强（v2b=1.10/0.94）。
     pub brightness: f64,
@@ -509,7 +509,7 @@ fn is_viewport(value: &str) -> bool {
 }
 
 /// 解析执行面：白名单动作（子进程）或平台自身动作（`design`/`layout`/`build`/`shot`/`zero_rust`）。
-/// 返回 (runner, args, `env_vars)；参数注入步骤位置参数（30` 号 §3.1 param）。
+/// 返回 `(runner, args, env_vars)`；参数注入步骤位置参数（30 号 §3.1 param）。
 fn resolve_execution(
     repo_root: &Path,
     state: &UiWizardState,
