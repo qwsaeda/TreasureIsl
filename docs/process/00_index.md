@@ -93,6 +93,7 @@
 | [`22_dev_platform.md`](22_dev_platform.md) | **开发管理平台（TI Dev Console）定案**（与游戏运行时解耦，纯管理 + 辅助开发：定位/不做清单 / 文件系统即数据库的写面边界 / 零游戏依赖的依赖图断言 / HTTP 选型 / 命令白名单 / 数据源 / 页面与能力矩阵 / **双审计协议与载体** / 安全 / 北极星判据的测量口径）；WBS = [`plan-s32-platform.md`](../plan-s32-platform.md) |
 | [`23_game_testing.md`](23_game_testing.md) | **游戏测试标杆**（分级 L1–L4 / 分类 功能·回归·视觉·音频·性能·兼容 / 类型 冒烟·CI·试玩·探索·基准 / 行业常用 测试金字塔·ISTQB·游戏 QA / Bevy 官方 `how_to_test_apps` 范式 / 平台「测试」页集成（步骤/阶段/截图证据，只读）/ 机读清单 `assets/data/test_manifest.json`）；定测试标杆·验收前必读 |
 | [`30_content_ops_platform.md`](30_content_ops_platform.md) | **内容运营平台化定案（S44）**（地图工作台 10 步 + UI 工作台 6 步 + 打包/分发面 + §4.2 白名单扩展 + 写点纪律修订 + 北极星写点探针 + 向导状态机；把内容运营流程固化到平台固定流程向导）；WBS = [`plan-s44-content-ops-platform.md`](../plan-s44-content-ops-platform.md) |
+| [`31_test_ingress_standard.md`](31_test_ingress_standard.md) | **测试接入标准（S45）**（schema 契约 + command 契约 + 登记流程 + 平台接入口径（data-driven，零平台 Rust）+ 门禁断言；把新测试按标准写 + 登记进平台即可跑）；WBS = [`plan-s45-test-ingress.md`](../plan-s45-test-ingress.md) |
 
 ## 变更面声明（每次开发必填）
 

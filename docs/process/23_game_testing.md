@@ -107,6 +107,19 @@
 已删/改名测试——实测抓出 `pcx_parity` 退役路径、`reference_diff_battle` 不存在、`treasure-headless`
 bin 名与源文件名不一致 3 类陈旧项）。
 
+### 7.1 测试接入标准（S45，单一事实源 = [`31_test_ingress_standard.md`](31_test_ingress_standard.md)）
+
+**新增测试接入平台的固化标准**（用户 2026-11-06「固化一个标准，新脚本按标准写测试代码接入平台」）：
+
+| 面 | 契约 |
+|---|---|
+| schema | `tests[]` 字段：`id`（唯一，`^[a-z0-9_]+$`）/ `level`∈L1~L4 / `category`∈6 类 / `type`∈5 型 / `name`（必填）/ `command`（§3）/ `evidence` XOR `gate`（至少一者） |
+| command | 首词 ∈ `cargo`/`python3`/`pwsh`/`powershell`（平台 `run_test` 白名单）；逐参数非 shell（禁 `;`/`&&`/`\|`/`>`/反引号/`$(`）；命令真实性（--test/--bin 路径存在） |
+| 登记流程 | 写测试 → 登记 `test_manifest.json` 一行 → `validate_data` 全过 → 平台 `/api/tests` 自动出现（**零平台 Rust 改动**）→ `?run=<id>` 白名单执行 |
+| 门禁断言 | `check_test_manifest`（schema + 程序白名单 + 无 shell 拼接面 + id 格式 + name 必填 + evidence↔gate） |
+
+> 详情（含登记流程逐步 + 平台接入口径 + 零平台代码断言）= 31 号 §2~§6，本段只引不复述。
+
 ## 8. 执行入口
 
 | 入口 | 命令 |

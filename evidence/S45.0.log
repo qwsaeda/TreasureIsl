@@ -1,0 +1,39 @@
+S45.0 — 测试接入标准定案（31 号 + WBS + 登记）
+=================================================
+任务：把「新增测试按标准写 + 登记 test_manifest.json → 平台自动接入可跑」固化成标准（定案）。
+改动面声明：文档（新增 docs/process/31_test_ingress_standard.md + docs/plan-s45-test-ingress.md
++ 23 号 §7.1 补测试接入标准段 + 登记 4 处）。
+
+用户拍板（2026-11-06，三问全选推荐，消息留痕）
+------------------------------------------------
+① 范围 = 定案 + 落地；② 标准深度 = **完整标准**（schema 契约 + 登记流程 + 平台接入口径 + 门禁断言）；
+③ 与 S44 关系 = **S44 后独立**。
+用户诉求原文：游戏测试也应该平台管理起来，固化一个标准——新增加脚本只能按标准写测试代码接入到平台中就行了。
+
+定案要素（31 号 §1~§7）
+-----------------------
+- §1 定位：平台测试页已 data-driven（读机读清单），登记即接入、零平台 Rust 改动；本文件 = 接入口径的
+  schema 契约 + 登记流程 + 门禁断言。
+- §2 schema 契约（test_manifest.json tests[]）：id 唯一 ^[a-z0-9_]+$ / level∈L1~L4 / category 6 类 /
+  type 5 型 / name 必填 / command（§3）/ evidence XOR gate（至少一者）。
+- §3 command 契约：首词 ∈ cargo/python3/pwsh/powershell（平台 run_test 白名单）+ 逐参数非 shell
+  （禁 ;/&&/|/>/反引号/$( ）+ 命令真实性（--test/--bin 路径存在）+ 人工验收禁 run。
+- §4 登记流程：写测试 → 登记 test_manifest 一行 → validate_data 全过 → 平台 /api/tests 自动出现
+  （零平台 Rust 改动）→ ?run=<id> 白名单执行 → 证据落 evidence/。
+- §5 平台接入口径：data-driven（读清单登记即接入）+ 白名单 id 枚举 + 程序白名单 + 零平台代码断言。
+- §6 门禁断言（check_test_manifest 强化）：command 程序白名单 / 无 shell 拼接面 / id 格式 / name 必填。
+- §7 关联与登记。
+
+WBS（plan-s45-test-ingress.md）：S45.0 定案 → S45.1 落地（validate_data 强化 + 平台测试页展示标准
++ 新增测试端到端 + 零平台代码断言）。
+
+判据结果
+--------
+[1] 定案要素齐全（31 号 §1~§7 + WBS 任务表 S45.0~S45.1）✓。
+[2] 登记 4 处：docs/README.md（31 号 + plan-s45 两行）/ AGENTS.md 路由表（测试接入标准行）/
+    docs/process/00_index.md 目录清单 / 23 号 §7.1 补测试接入标准段 ✓。
+[3] doccheck 0 errors（167 docs / 302 task refs / 4 assertions）/ doccheck2 0 errors（41 audit-codified checks）✓。
+[4] 零 Rust 改动：git diff crates/ = 空 ✓（定案纯文档 + 台账）。
+[5] gate 全绿：scripts/gate.ps1 33 项 0 failure（wasm-browser-e2e 环境降级 SKIP 记名 PASS）；
+    明细 evidence/S45.0_gate.log ✓。
+[6] 台账 308 任务 / 302 verified + S45.0 in_progress + S44.2~S44.5/S45.1 pending；ledger 0 error ✓。
