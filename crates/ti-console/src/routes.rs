@@ -222,6 +222,14 @@ fn dispatch_get(
             json200(&runner::gate::gate_status(repo_root, log), gz)
         }
         "/api/close" => close_api::handle_close_get(repo_root, url, gz),
+        "/api/content/map" => {
+            // S44.2 地图向导状态（只读）。
+            let id = query_param(url, "id").unwrap_or("");
+            match crate::content::map_wizard::state(repo_root, id) {
+                Ok(v) => json200(&v, gz),
+                Err((code, msg)) => status_json(code, &json!({"ok": false, "error": msg}), gz),
+            }
+        }
         "/api/build" => {
             // S32.9：?check=1 = 只读体检（build_wasm.ps1 -Check + 冻结路径 0 游戏产物变更断言）。
             // S35.1：?run 白名单 apk|wasm|native（后台 spawn）；非法 = 400（22 号 §10.3 禁自由字符串）。
@@ -315,6 +323,29 @@ fn post_too_large(want_gzip: bool) -> Vec<u8> {
     )
 }
 
+/// `POST /api/content/map/step`（S44.2 地图向导）：执行一步（调白名单动作 + 机器判据 + 写点探针）。
+/// body：`{"id","step","enable_write"?,"params"?}`。不可跳步（`409`）/ 写动作无 `enable_write`（`400`）。
+fn handle_content_map_step(repo_root: &Path, body: &[u8], want_gzip: bool) -> Vec<u8> {
+    let payload = match serde_json::from_slice::<Value>(body) {
+        Ok(v) => v,
+        Err(e) => {
+            return status_json(
+                400,
+                &json!({"ok": false, "error": format!("body 非合法 JSON：{e}")}),
+                want_gzip,
+            );
+        }
+    };
+    let id = payload.get("id").and_then(Value::as_str).unwrap_or("").to_owned();
+    let step = payload.get("step").and_then(Value::as_str).unwrap_or("").to_owned();
+    let enable_write = payload.get("enable_write").and_then(Value::as_bool).unwrap_or(false);
+    let params = payload.get("params").cloned().unwrap_or(json!({}));
+    match crate::content::map_wizard::run_step(repo_root, &id, &step, enable_write, &params) {
+        Ok(v) => status_json(200, &v, want_gzip),
+        Err((code, msg)) => status_json(code, &json!({"ok": false, "error": msg}), want_gzip),
+    }
+}
+
 /// `POST /api/*` 写操作分派（S32.4/S32.5）：gate / map/import / audit 匹配返回响应，否则 `None`。
 fn handle_post(
     clean: &str,
@@ -338,6 +369,8 @@ fn handle_post(
         }
         // S32.6 任务收口（close_check 只读体检 / close_run 写 + EXP 查重）。
         "/api/close" => Some(close_api::handle_close(repo_root, body, token, content_type, gz)),
+        // S44.2 地图向导执行一步（写动作需 enable_write；不可跳步 409；失败即停）。
+        "/api/content/map/step" => Some(handle_content_map_step(repo_root, body, gz)),
         _ => None,
     }
 }
@@ -629,6 +662,20 @@ fn text200(body: &str, want_gzip: bool) -> Vec<u8> {
 fn json200(value: &Value, want_gzip: bool) -> Vec<u8> {
     let bytes = value.to_string().into_bytes();
     header_body("application/json", &bytes, "200 OK", "no-store", None, want_gzip)
+}
+
+/// 带状态码的 JSON 响应（S44.2 向导 400/409 判据回显）。
+fn status_json(code: u16, value: &Value, want_gzip: bool) -> Vec<u8> {
+    let status = match code {
+        400 => "400 Bad Request",
+        403 => "403 Forbidden",
+        409 => "409 Conflict",
+        413 => "413 Payload Too Large",
+        500 => "500 Internal Server Error",
+        _ => "200 OK",
+    };
+    let bytes = value.to_string().into_bytes();
+    header_body("application/json", &bytes, status, "no-store", None, want_gzip)
 }
 
 /// 静态映射；静态缺失时回退数据源白名单内的仓库文件直读（`/plan/ledger.yaml` 等）。

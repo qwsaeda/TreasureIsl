@@ -15,6 +15,7 @@ ti-devmeta = { path = "../ti-devmeta" }
 # 纯管理面：只引共享层 + JSON + gzip（文本响应压缩，S32.13；flate2 已在 workspace 依赖，
 # 0 新增外部 crate）；依赖图断言（DoD）：不含 ti-core/ti-platform/ti-app/ti-engine/ti-render/bevy/macroquad。
 serde_json.workspace = true
+serde.workspace = true
 flate2.workspace = true
 
 [lints]

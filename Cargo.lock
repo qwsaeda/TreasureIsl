@@ -5076,6 +5076,7 @@ name = "ti-console"
 version = "0.2.0"
 dependencies = [
  "flate2",
+ "serde",
  "serde_json",
  "ti-devmeta",
 ]

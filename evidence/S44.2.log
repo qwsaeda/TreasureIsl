@@ -1,0 +1,56 @@
+S44.2 — 地图工作台（固定 10 步向导 + 状态机 + 判据回显）
+=====================================================
+任务：把「加一张图」做成平台固定流程向导（30 号 §2.1 十步；不可跳步；每步机器判据；失败即停）。
+改动面声明：平台（crates/ti-console/src/content/map_wizard.rs + routes.rs /api/content/map(+step)
++ web/index.html 地图工作台卡片）+ 数据（evidence/console/content-map-<id>.json gitignored，平台自身写点）。
+业务逻辑/游戏产品 Rust 零改动（crates/{ti-core,ti-app,ti-engine,ti-render,ti-platform,ti-formats} 全目录 0 diff）。
+
+## 实现
+- `content/map_wizard.rs`：10 步状态机（MAP_STEPS 常量）+ 判据解析（parse_criterion）+ 写点占位符解析
+  （resolve_write_paths，30 号 §3.2 约定 <id>→实际 id）+ 白名单动作解析（resolve_action）+ 执行面解析
+  （resolve_execution / shot_command）+ 北极星写点探针（write_probe）+ 失败即停 + 重跑当前步复位。
+- `routes.rs`：GET /api/content/map（状态）+ POST /api/content/map/step（执行一步）+ status_json 助手。
+- `web/index.html`：地图工作台卡片（纵向 stepper：✓ 完成 / ● 当前高亮 / ○ 待办 / ✗ 失败；进度头；判据内联回显）。
+- `content_map_wizard_tests.rs`：8 单测（判据解析 / 写点占位符 / 400 非法 id·step / 409 不可跳步 / 400 写无 flag）。
+- `console_commands.json` 9 白名单动作复用（mappack_* + map_shot runner=self）；serde 依赖加入 Cargo.toml。
+
+## 判据结果
+
+[1] 向导状态机·不可跳步 409 负例：POST step import（第 2 步）未过第 1 步（add）判据 → `{"error":"不可跳步：当前待执行第 1 步（add），请求第 2 步（import）","ok":false}` HTTP 409 ✓。
+
+[2] 10 步每步调白名单动作 + 判据回显：端到端用平台跑 wz1（m22 复制改图，31 格）全 10 步，
+    每步判据过（exit=0 + 0 违规/0 漂移/0 差 + 出图非黑 + git diff crates/ 空）：
+    - add：exit=0「骨架已建」+ write_probe 0 差（写点 assets/maps/ 豁免）
+    - import（填内容 = POST /api/map/import 模拟编辑器，ok=true verified=true）+ 向导 verify 0 违规
+    - syncmap：exit=0 manifest[map]←map.json
+    - verify：exit=0 + 0 违规（I1~I9）
+    - pack：exit=0 出 dist/maps/wz1.map-pack
+    - install：exit=0 接线（board.json 回注 + 池资产登记）+ write_probe 0 差
+    - check：exit=0 + 0 漂移
+    - sync：exit=0 回注
+    - shot：exit=0（xvfb-run -a 无头出图 evidence/bevy_native_main_map.png，8297018 B，字节多样性 9 = 非黑判据）
+    - zero_rust：exit=0 + git diff crates/ 空
+    （每步 passed=true，final current_step=10 halted=false；wz1 残留已清理：assets/maps/wz1/ + dist/maps/wz1.map-pack/ + board.json/index.json git checkout 恢复 + 状态文件删除。）
+
+[3] 写动作默认关负例：add 无 enable_write → `{"error":"第 1 步（add）为写动作，需 enable_write=true（30 号 §3.1 默认关）","ok":false}` HTTP 400 ✓。
+
+[4] 失败即停 + 重跑：shot 首次 exit=101（无头缺显示）→ halted=true；改 xvfb-run 包装后重跑同一步（step_idx==current_step 复位 halted）→ exit=0 过 ✓。
+
+[5] 游戏产品 6 crate 零 Rust：`git diff crates/{ti-core,ti-app,ti-engine,ti-render,ti-platform,ti-formats}` = 空（全流程写面仅在 assets/ + dist/ + evidence/，平台本体 ti-console 允许改）✓。
+
+[6] UI 原型截图用户确认留痕（22 号 §11.1 + 硬规则 9 A 纪律）：evidence/console/ui-map-wizard.png。
+    用户 2026-11-06 反馈「没有参考业务竞品的成熟设计呢？」→ 调研行业 stepper/wizard 成熟模式
+    （Eleken 32 例：Process Place 垂直清单 / Habstash 面包屑向导 / Involi 内联验证 / Vestiaire checklist）
+    → 重设计 v2（纵向 stepper：进度头 + ✓完成/●当前高亮/○待办/✗失败 + 判据内联回显）→ 用户确认通过（消息留痕）✓。
+
+[7] gate 全绿：scripts/gate.ps1 33 项 0 failure（wasm-browser-e2e/browser-playtest/playtest-loop 需 web serve :8080，
+    起 serve 后全过）；明细 evidence/S44.2_gate.log ✓。
+
+[8] 平台自检：cargo test -p ti-console 全过（含 8 向导单测 + 既有 close/snapshot/audit 套件）；
+    cargo clippy -D warnings 0 错；audit_code PASS（0 结构违规，run_step 已拆 validate_request/resolve_execution/shot_command 控长）；
+    doccheck 0 errors / doccheck2 0 errors（41 audit-codified checks）；ledger 308 tasks / 303 verified / 0 error ✓。
+
+## 遗留（S44.3 起）
+- UI 工作台（6 步向导）S44.3；打包/分发面 S44.4；固化收口 S44.5。
+- 向导「填内容」步（import）当前 = 编辑器导入（POST /api/map/import）后 verify 终判；编辑器内嵌在
+  「＋新建/编辑地图」环形画布（既有 S32.14），向导卡片提示用户先填再验证。

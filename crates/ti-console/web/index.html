@@ -344,6 +344,22 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
         切包 = 选图界面 <code>TI_MAP=&lt;id&gt;</code> / <code>.default</code> 指针（S31.2b）。
       </div>
     </div>
+    <div class="card">
+      <h2>地图工作台（S44.2 固定 10 步向导，30 号 §2.1；不可跳步，每步机器判据）</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <label style="font-size:12px;color:var(--muted)">目标包 id</label>
+        <input id="cw-id" value="m22" style="width:110px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
+        <button id="cw-load" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">载入状态</button>
+        <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px">
+          <input type="checkbox" id="cw-write"> 允许写面（--enable-write，30 号 §3.1 默认关）
+        </label>
+        <button id="cw-advance" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">执行下一步</button>
+      </div>
+      <div id="cw-progress" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+      <!-- 纵向 stepper（成熟模式：✓ 完成 / ● 当前 / ○ 待办 / ✗ 失败；当前步高亮 + 判据内联回显） -->
+      <div id="cw-steps" style="border:1px solid var(--border);border-radius:6px;overflow:hidden"></div>
+      <div id="cw-msg" style="margin-top:8px;font:11px/1.5 monospace;white-space:pre-wrap;color:var(--muted);max-height:200px;overflow:auto"></div>
+    </div>
   </section>
 
   <!-- 测试（游戏测试标杆：分级/分类/类型 + 步骤/阶段 + 截图证据 + 门禁总览，23 号 §6） -->
@@ -1238,6 +1254,91 @@ $('ed-import-btn').addEventListener('click', edImport);
 ['ed-cx','ed-cy','ed-r','ed-cw','ed-ch'].forEach((id) => {
   $(id).addEventListener('change', () => { edReadInputs(); edRenderCanvas(); edValidateBar(); });
 });
+
+/* ==== 地图工作台（S44.2 固定 10 步向导：状态机 + 判据回显 + 不可跳步 409） ==== */
+const CW_STEPS = ['add','import','syncmap','verify','pack','install','check','sync','shot','zero_rust'];
+const CW_LABEL = {
+  add:'1 新建包', import:'2 填内容(编辑器导入)', syncmap:'3 manifest[map]←map.json',
+  verify:'4 校验', pack:'5 打包', install:'6 安装', check:'7 漂移对账',
+  sync:'8 回注', shot:'9 出图验收', zero_rust:'10 零 Rust'
+};
+let cwState = null;
+function cwRefresh() {
+  const id = $('cw-id').value.trim() || 'm22';
+  const steps = cwState && cwState.steps ? cwState.steps : [];
+  const cur = cwState ? cwState.current_step : 0;
+  const halted = cwState ? cwState.halted : false;
+  // 进度头：第 N 步 / 共 10 步 + 当前步名 + 停止态。
+  const curName = (CW_STEPS[cur] && CW_LABEL[CW_STEPS[cur]]) || '（已完成）';
+  $('cw-progress').innerHTML = '向导 <b style="color:var(--ink)">' + esc(id) + '</b> · 第 <b style="color:var(--accent)">'
+    + (cur + 1) + '</b> / 共 10 步 · 当前：' + esc(curName)
+    + (halted ? ' · <span style="color:#ff7a7a">⛔ 已停止（失败即停，须重跑当前步）</span>' : '');
+  // 纵向 stepper：✓ 完成(绿) / ● 当前(accent,加粗) / ○ 待办(灰) / ✗ 失败(红)。
+  $('cw-steps').innerHTML = CW_STEPS.map((s, i) => {
+    const rec = steps[i];
+    let badge, badgeColor, rowColor, labelWeight;
+    if (rec && rec.done) {
+      if (rec.passed) { badge = '✓'; badgeColor = '#3fae6a'; }
+      else { badge = '✗'; badgeColor = '#ff7a7a'; }
+      rowColor = 'rgba(255,255,255,0.02)';
+      labelWeight = '400';
+    } else if (i === cur && !halted) {
+      badge = '●'; badgeColor = 'var(--accent)';
+      rowColor = 'rgba(126,200,227,0.08)';
+      labelWeight = '700';
+    } else {
+      badge = '○'; badgeColor = 'var(--muted)';
+      rowColor = 'transparent';
+      labelWeight = '400';
+    }
+    const crit = rec && rec.criterion ? '<span style="color:var(--muted);font-weight:400;margin-left:8px">' + esc(rec.criterion) + '</span>' : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:' + rowColor + ';border-bottom:1px solid var(--border)">'
+      + '<span style="color:' + badgeColor + ';font-weight:700;width:16px;text-align:center">' + badge + '</span>'
+      + '<span style="color:var(--ink);font-weight:' + labelWeight + ';font-size:12px">' + esc(CW_LABEL[s] || s) + '</span>'
+      + crit
+      + '</div>';
+  }).join('');
+}
+async function cwLoad() {
+  const id = $('cw-id').value.trim() || 'm22';
+  try {
+    const d = await api('/api/content/map?id=' + encodeURIComponent(id));
+    cwState = d;
+    cwRefresh();
+    $('cw-msg').innerHTML = '载入状态：第 ' + (d.current_step + 1) + ' 步待执行' + (d.halted ? '（已停止）' : '');
+  } catch (e) {
+    $('cw-msg').innerHTML = '载入失败：' + esc(String(e));
+  }
+}
+async function cwAdvance() {
+  const id = $('cw-id').value.trim() || 'm22';
+  const step = cwState ? (CW_STEPS[cwState.current_step] || CW_STEPS[0]) : CW_STEPS[0];
+  const enableWrite = $('cw-write').checked;
+  $('cw-msg').innerHTML = '执行第 ' + (cwState ? cwState.current_step + 1 : 1) + ' 步（' + step + '）…';
+  try {
+    // 用裸 fetch（非 api()）：步失败 = HTTP 200 + ok:false，须读 r.passed 回显，不抛。
+    const r = await fetch('/api/content/map/step', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, step: step, enable_write: enableWrite })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      $('cw-msg').innerHTML = '⛔ ' + esc(String(data.error || ('HTTP ' + r.status)));
+      cwLoad();
+      return;
+    }
+    cwState = await (await fetch('/api/content/map?id=' + encodeURIComponent(id))).json();
+    cwRefresh();
+    const ok = data.passed ? '✅' : '❌';
+    $('cw-msg').innerHTML = ok + ' 第' + (data.step_index || '?') + ' 步 ' + (data.step || '') + ' exit=' + data.exit_code
+      + ' · ' + (data.criterion || '') + (data.probe ? ' · ' + data.probe : '')
+      + '\n' + (data.output_excerpt || '').slice(-800);
+  } catch (e) {
+    $('cw-msg').innerHTML = '⛔ ' + esc(String(e));
+  }
+}
+$('cw-load').addEventListener('click', cwLoad);
+$('cw-advance').addEventListener('click', cwAdvance);
 
 
 /* ==== 测试页（23 号 §6：分级/分类/类型 + 步骤/阶段 + 截图证据 + 门禁 33 项） ==== */

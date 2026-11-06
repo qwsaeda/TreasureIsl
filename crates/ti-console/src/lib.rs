@@ -7,5 +7,6 @@
 #![allow(dead_code)]
 
 pub mod audit;
+pub mod content;
 pub mod repo;
 pub mod runner;

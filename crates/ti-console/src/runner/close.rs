@@ -60,7 +60,7 @@ fn logs_dir(repo_root: &Path) -> PathBuf {
 }
 
 /// 读 `console_commands.json` 命令清单（`commands` 数组）。
-fn read_commands(repo_root: &Path) -> Result<Vec<Value>, String> {
+pub(crate) fn read_commands(repo_root: &Path) -> Result<Vec<Value>, String> {
     let path = whitelist_path(repo_root);
     let text =
         std::fs::read_to_string(&path).map_err(|e| format!("读 {} 失败：{e}", path.display()))?;
@@ -139,7 +139,7 @@ pub fn map_cmd_id(cmds: &[Value], id: &str) -> Option<String> {
 
 /// 同步跑一个子进程（`task_close.py` / `exp_log.py`），捕获合并输出。
 /// 程序来自白名单（固定路径），参数逐段传（禁 shell 拼接；22 号 §4.2 禁止 2）。
-fn run_sync(prog: &str, args: &[String]) -> Result<(i32, String), String> {
+pub(crate) fn run_sync(prog: &str, args: &[String]) -> Result<(i32, String), String> {
     let mut cmd = std::process::Command::new(prog);
     cmd.args(args);
     apply_minimal_env(&mut cmd);
