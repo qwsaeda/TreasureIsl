@@ -1,0 +1,244 @@
+# S44.5 固化收口（29 号 ↔ 平台向导 1:1 映射断言 + S40~S42 三连验证复盘）— 验收证据
+
+日期：2026-11-06
+改动面：文档（`docs/process/29_content_ops.md` §2/§3 补「平台向导步骤 / 判据 / 写面」三列 + `docs/process/15_process_ledger.md` S40~S42 三连验证复盘入固化工单 + `docs/process/30_content_ops_platform.md` 新增 §2.5 + `docs/process/22_dev_platform.md` 功能表补行）+ 平台（`crates/ti-console` 步骤映射断言：新增 `content/docmap.rs` + `GET /api/content/mapping` + 单测 + web 卡片）
+判据：29 号 §2 十步 ↔ 地图向导 10 步 1:1 映射断言（每步 id/判据/写面登记一致）+ 29 号 §3 六步 ↔ UI 向导 6 步 1:1 映射断言 + S40~S42 三连验证复盘入 15 号固化工单 + 29 号 §2/§3 补「平台向导」列（流程 ↔ 平台 1:1）+ doccheck 0 errors + gate 全绿 + `evidence/S44.5.log`
+
+## 1. 实现清单
+
+- `crates/ti-console/src/content/docmap.rs`（**新增**，约 490 行）：29 号 ↔ 平台向导 **1:1 映射断言**（机器事实源 + 断言 + 报告）
+  - `assert_mapping(doc, repo_root) -> Vec<String>`：**空 = 全过**；三件断言
+    1. **id**：文档「平台向导步骤」列 ↔ 平台步骤 id 集合逐一相等，且每个平台步 id 在文档中恰好出现一次（§2 严格序号 1:1）
+    2. **判据**：文档「判据」列须含该步判据关键词；**且关键词须出现在平台 `parse_criterion` 的判据描述中**（关键词 ↔ 判据不漂移，代码侧自检）
+    3. **写面**：文档「写面」列须列出该步**有效写点**（白名单动作步取 `console_commands.json` 的 `writes`，且须与平台写点模板逐项一致；平台自身步取向导登记写点）；有效写点为空 ⇒ 文档列须标「只读」
+  - `parse_section_table`：按章节定位（`## 2. 改地图流程` / `## 3. 换 UI 流程`）→ 取连续 `|` 表格 → 定位
+    「平台向导步骤 / 判据 / 写面」三列 → 逐行解析（列数不齐即报错，不静默通过）
+  - `extract_step_ids`：步骤 id **恒以反引号包裹** ⇒ 只取反引号跨度（散文说明不误判为步骤 id）；无反引号时退化为整格切分
+    （使畸形文档报「未知平台步」而非静默通过）
+  - `effective_write_paths`：白名单动作步 ⇒ `console_commands.json` 的 `writes` **且校验与平台 `write_templates` 逐项一致**
+    （不一致直接报「写面登记不一致」）；平台自身步 ⇒ 向导登记写点
+  - `mapping_report(repo_root) -> Value`：映射报告（两侧对照 + `problems`）
+  - `UI_DOC_ANCHORS`：§3 六步 ↔ UI 向导 6 步的**锚点映射**（§3.2 拆 `variant`+`layout`；§3.5+§3.6 合 `zero_rust`）
+- `crates/ti-console/src/content/map_wizard.rs`：暴露 `MAP_STEPS` / `STEP_ACTION`（`pub(crate)`，单一事实源，不复制步骤表）；
+  拆出 `write_templates(action_id)`（写点模板，白名单 `writes` 的一致性基准）；新增 `platform_write_paths(step)`（平台自身步写点）
+- `crates/ti-console/src/content/ui_wizard.rs`：暴露 `UI_STEPS` / `STEP_ACTION` / `step_write_paths`
+- `crates/ti-console/src/routes.rs`：新增 `GET /api/content/mapping`（只读免 token，镜像 `GET /api/gate` 口径）
+- `crates/ti-console/tests/content_docmap_tests.rs`（**新增**）：8 单测 = 3 正例 + **5 反例**
+- `crates/ti-console/web/index.html`：地图页新增「流程 ↔ 平台 1:1 映射断言」卡片（`mp-*` 5 个 id + `mpLoad` JS）
+
+## 2. 1:1 映射断言实测
+
+### 2.1 端点（`GET /api/content/mapping`，只读免 token）
+
+```
+$ curl -s http://127.0.0.1:8787/api/content/mapping
+[200]
+ok: True | problems: []
+map: 10 步 | ui: 6 步
+```
+
+映射报告（10 + 6 步全量对照）：
+
+```
+=== 地图十步映射 ===
+  [1] add        action=mappack_add          key=0=成功         write=['assets/maps/']
+  [2] import     action=None                 key=0 违规         write=['assets/maps/']
+  [3] syncmap    action=mappack_syncmap      key=0=成功         write=['assets/maps/<id>/manifest.json']
+  [4] verify     action=mappack_verify       key=0 违规         write=[]
+  [5] pack       action=mappack_pack         key=pack 成功      write=['dist/maps/<id>.map-pack/']
+  [6] install    action=mappack_install      key=install 接线成功 write=['assets/maps/', 'assets/data/board.json', 'assets/maps/index.json', 'assets/ui_manifest.json']
+  [7] check      action=mappack_check        key=0 漂移         write=[]
+  [8] sync       action=mappack_sync         key=0=成功         write=['assets/data/board.json', 'assets/data/scenes.json', 'assets/data/strings.json', 'assets/data/ui_schema/scene_manifest_v3.json']
+  [9] shot       action=map_shot             key=出图成功         write=['evidence/']
+  [10] zero_rust  action=None                 key=git diff crates/ write=[]
+=== UI 六步映射 ===
+  [1] design     action=None                 key=出图成功                         write=['evidence/']
+  [2] variant    action=ui_variant           key=ui_manifest 登记一致             write=['assets/ui/', 'assets/ui_manifest.json']
+  [2] layout     action=None                 key=scenes.json indent=1 规范形     write=[]
+  [3] build      action=None                 key=build 成功                     write=[]
+  [4] shot       action=None                 key=出图成功                         write=['evidence/']
+  [5, 6] zero_rust  action=None                 key=git diff crates/             write=[]
+```
+
+### 2.2 断言**会咬**（活体篡改文档 ⇒ 端点即时报错 ⇒ 恢复即净）
+
+```
+$ python3 - <<'PY'   # 篡改 §2 第 3 行步骤 id：syncmap → syncmapX
+$ curl -s http://127.0.0.1:8787/api/content/mapping
+ok: False
+problems: ["§2 第 3 行：文档步骤 [\"syncmapX\"] ≠ 平台步 `syncmap`",
+           "§2 第 3 行：未知平台步 `syncmapX`",
+           "§2：平台步 `syncmap` 在文档中出现 0 次（应恰好 1 次）"]
+$ cp /tmp/opencode/29_backup.md docs/process/29_content_ops.md   # 恢复
+$ curl -s http://127.0.0.1:8787/api/content/mapping
+恢复后 ok: True | problems: []
+```
+
+### 2.3 单测（8 条 = 3 正例 + 5 反例）
+
+```
+running 8 tests
+test negative_dropped_row_is_reported ... ok
+test mapping_report_ok_and_counts ... ok
+test negative_missing_criterion_key_is_reported ... ok
+test negative_missing_write_path_is_reported ... ok
+test negative_wrong_step_id_is_reported ... ok
+test negative_readonly_step_without_label_is_reported ... ok
+test ui_anchor_mapping_merges_and_splits ... ok
+test real_doc_mapping_is_clean ... ok
+test result: ok. 8 passed; 0 failed
+```
+
+- 正例：`real_doc_mapping_is_clean`（真实仓库文档 0 问题）/ `mapping_report_ok_and_counts`（ok + 10 + 6）/ `ui_anchor_mapping_merges_and_splits`（§3 锚点：variant→[2]、layout→[2]、zero_rust→[5,6]）。
+- 反例（**每条都证明断言会咬**，非空跑）：错步骤 id / 删判据关键词 / 删写点 / 只读步未标「只读」/ 删整行。
+
+### 2.4 前端卡片
+
+`mp-load` / `mp-status` / `mp-map` / `mp-ui` / `mp-problems` 5 个 id 全部落地（served 页实测命中 9 处引用）；内联 JS `node --check` 语法 OK。
+
+## 3. S40~S42 三连验证复盘入 15 号固化工单
+
+**三连验证 = 三次独立内容运营任务，同一痛点连续 3 次复发**：
+
+| 任务 | 内容 | 复现的痛点 |
+|---|---|---|
+| S40.0 | 新增地图 m21（全程零 Rust 改动） | 改地图 10 步靠人对照 29 号 §2 逐步跑 |
+| S41.0 | 新地图 m22（内容运营：全程零 Rust 改动） | 同上（第二次） |
+| S42.0 | index 新视觉变体（内容运营：换 UI 零 Rust 改动） | 换 UI 6 步靠人对照 29 号 §3 逐步跑 |
+
+**回写 15 号**（`docs/process/15_process_ledger.md`）：
+
+- **§1 复发证据表**：该家族行由「待固化（S44 随向导状态机落地…）」改为 **「已自动化（S44.2 地图向导 + S44.3 UI 向导 + S44.5 1:1 映射断言）」**，
+  并把复发证据从「S44.2/S44.3 端到端」升级为 **「S40~S42 三连验证复盘（三次独立任务，每次都靠人对照文档逐步跑 ⇒ 连续 3 次复发）」**。
+- **§2 台账新增第 25 项**「内容运营流程机器化（固定流程向导 + 29 号 ↔ 平台步骤 1:1 映射断言）」：
+  现状（人对照文档逐步跑）/ 复发证据（S40~S42 三连验证复盘）/ 自动化形态（向导 + 1:1 断言）/ 载体 / 状态 = **已自动化**。
+  （7 单元格 + 状态枚举合法 ⇒ `doccheck2::check_process_ledger` 口径一致。）
+
+## 4. 29 号 §2/§3 补「平台向导」列（流程 ↔ 平台 1:1）
+
+- **§2 改地图流程**：编号列表 → **6 列表格**（`# | 流程（29 号） | 平台向导步骤 | 白名单动作 | 判据 | 写面`），
+  10 行 ↔ 地图向导 10 步**严格序号 1:1**；原「⚠ 视觉来源提示」注记原样保留。
+- **§3 换 UI 流程**：编号列表 → **6 列表格**，6 行 ↔ UI 向导 6 步**锚点映射**：
+  §3.2「改数据」→ `variant` + `layout`；§3.5「零 Rust」+ §3.6「视觉签收留痕」→ `zero_rust`（判据后半段）。
+  表前注记写明锚点语义（文档与平台同记，避免"哪行对应哪步"歧义）。
+- 两节均加注：机器断言载体 = `GET /api/content/mapping` + `crates/ti-console/tests/content_docmap_tests.rs`。
+
+**同步登记**：`30 号` 新增 §2.5「29 号 ↔ 平台向导 1:1 映射断言（S44.5 固化收口）」（端点表 + 断言三件 + §3 锚点语义 + 载体）；
+`22 号` 功能表「内容运营向导」行补 `GET /api/content/mapping` 端点口径。
+
+## 5. 游戏产品 6 crate 零 diff
+
+```
+$ git diff --stat -- crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets
+（空 = 0 diff）
+```
+
+平台本体仅 `ti-console` 允许改（S44 是平台功能开发）：`content/{mod,map_wizard,ui_wizard}.rs` + `content/docmap.rs`(新) +
+`routes.rs` + `web/index.html` + `tests/content_docmap_tests.rs`(新)。
+
+## 6. 单测 + 静态检查
+
+- `cargo test -p ti-console`：全部套件通过（0 failed；含新增 8 条 docmap 单测）。
+- `cargo clippy -p ti-console --all-targets`：**0 warning**（本轮修 1 项：测试内 `u64 → usize` 截断告警）。
+- `cargo fmt --all -- --check`：干净。
+- 文件/函数规模（`audit_code` 棘轮基线，上限 900 行/文件、140 行/函数）：
+  `content/docmap.rs` ≈490 / `content/map_wizard.rs` 577 / `content/ui_wizard.rs` 763 / `routes.rs` 864 —— 均在限内。
+- `cargo run -q -p ti-tools --bin doccheck`：`167 docs, 38 facts, 165 experiences, 302 task refs, 4 assertions, 0 error(s)`。
+- `cargo run -q -p ti-tools --bin doccheck2`：`0 error(s) across 41 audit-codified checks`（含 `check_process_ledger`）。
+
+## 7. gate 全绿
+
+（gate.ps1 输出见下；`=== gate: 0 failure(s) ===` 才置 verified）
+
+### 7.1 r1（实现完成，台账仍 pending）
+
+```
+$ pwsh -ExecutionPolicy Bypass -File scripts/gate.ps1
+=== gate: 0 failure(s) ===
+PASS=30 SKIP=2 FAIL=0
+```
+
+2 项 SKIP = android NDK 缺位 + zero-unknown（dev tier 未解锁）——环境口径，非本任务引入。
+
+### 7.2 r2（收口后 = 待提交状态，权威轮）
+
+（gate.ps1 输出见下；台账已置 verified + release.md 计数同步后的状态复跑）
+
+## 8. 收口（台账 + 计数同步 + 三方对账）
+
+- **台账**：`plan/ledger.yaml` S44.5 `status: pending → verified` + `evidence: "evidence/S44.5.log"` + `rounds: 0 → 1`。
+- **计数同步**：`docs/release.md` 台账计数行随台账演进同步（`doccheck` Q021 断言锁定防漂移）：
+  `308 任务（307 verified + S44.5 pending）` → **`308 任务（308 verified）`**。
+
+收口后实测（四项全过）：
+
+```
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml
+ledger: 308 tasks, 308 verified, 0 error(s)
+  evidence: ok
+$ python3 scripts/check_ledger_reality.py
+check_ledger_reality: 全绿（308 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+$ cargo run -q -p ti-tools --bin doccheck
+doccheck: 167 docs, 38 facts, 165 experiences, 302 task refs, 4 assertions, 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck2
+doccheck2: 0 error(s) across 41 audit-codified checks (...)
+```
+
+## 9. 判据逐条核对
+
+| DoD 判据 | 证据 | 结论 |
+|---|---|---|
+| 29 号 §2 十步 ↔ 地图向导 10 步 1:1 映射断言（每步 id/判据/写面登记一致） | §2.1 报告（10 步全量对照）+ §2.2 活体篡改即报错 + §2.3 正例/反例单测；§2 严格序号 1:1（`syncmap` 改 `syncmapX` ⇒ 报 3 条问题） | ✅ |
+| 29 号 §3 六步 ↔ UI 向导 6 步 1:1 映射断言 | §2.1 报告（6 步）+ §2.3 `ui_anchor_mapping_merges_and_splits`（§3.2→variant+layout；§3.5+§3.6→zero_rust）+ 逐行集合相等断言 | ✅ |
+| S40~S42 三连验证复盘入 15 号固化工单 | §3：15 号 §1 复发证据行升级为「已自动化」+ 复发证据改写为三连验证复盘；§2 新增第 25 项（7 单元格 + 状态枚举合法） | ✅ |
+| 29 号 §2/§3 补「平台向导」列（流程 ↔ 平台 1:1） | §4：两节均转 6 列表格（`# | 流程 | 平台向导步骤 | 白名单动作 | 判据 | 写面`），§2 = 10 行、§3 = 6 行；原注记保留 | ✅ |
+| doccheck 0 errors | §6：`doccheck: … 0 error(s)`（收口后复跑仍 0） | ✅ |
+| gate 全绿 | §7：r1 = 0 failure；r2（待提交态）= 0 failure | ✅ |
+| `evidence/S44.5.log` | 本文件 | ✅ |
+
+## 10. 残留与后续
+
+- **无残留 FAIL**：最终轮 0 failure。
+- **S44 全线收口**：S44.0 定案 / S44.1 工具与写面 / S44.2 地图向导 / S44.3 UI 向导 / S44.4 打包分发面 / S44.5 固化收口 —— 台账 **308 任务全部 verified**。
+- **后续待办（台账驱动）**：S45.1 已 verified；下一非 verified 任务 = `plan/ledger.yaml` 中首个非 verified 条目（由台账给出，非本文档）。
+- **可机器化的后续**：29 号 §4 打包/分发链（`publish` 编排）已由 S44.4 落地平台面；若再增流程纪律，按 15 号 §4「新增流程怎么进本页」登记。
+
+
+```
+=== gate: TreasureIsl (33 items) ===
+ PASS cargo fmt --check [0.9s]
+ PASS cargo clippy -D warnings [0.5s]
+ PASS cargo test --workspace [124.1s]
+ PASS cargo build (native/x86_64-pc-windows-msvc) [0.3s]
+ PASS cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳) [1.2s]
+ SKIP cargo build (aarch64-linux-android) (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
+ PASS clippy feature-gated bins (native-shell/headless; required-features 盲区) [0.5s]
+ PASS no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/ [0.1s]
+ PASS no unwrap()/expect() outside tests/+examples/ (库代码) [0.1s]
+ SKIP zero-unknown verify (dev tier 或 S1.x 格式解析器就绪后解锁)
+ PASS ledger validate [0.5s]
+ PASS doccheck (docs consistency) [0.8s]
+ PASS validate_data (assets/data/*.json) [0.1s]
+ PASS gen_layout --check (idempotent) [0.1s]
+ PASS check_hardcode (strict; 0 hits required) [1.6s]
+ PASS check_data_driven (generic primitives; renderer has no scene semantics) [0.1s]
+ PASS check_code_standards (CS-1~6 代码标准 + 棘轮基线) [0.2s]
+ PASS check_oracle_boundary (shell 层禁 oracle_* 函数调用) [0.1s]
+ PASS no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描) [0.3s]
+ PASS doccheck2 (audit-codified doc↔code/data consistency) [0.6s]
+ PASS check_ledger_reality (台账三方对账：verified↔evidence↔代码符号) [0.1s]
+ PASS check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位) [0.1s]
+ PASS check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面) [0.7s]
+ PASS flywheel-readme (开轮必读脚本完整性) [0.7s]
+ PASS render-invariants (7 场景结构不变式断言，无像素基线) [13.6s]
+ PASS check_data_source (数据源改动 → 渲染不变式门禁) [0.1s]
+ PASS audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线) [0.6s]
+ PASS check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限) [0.1s]
+ PASS bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP) [4.4s]
+ PASS wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map) [74.8s]
+ PASS browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言) [32.5s]
+ PASS playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log) [50.7s]
+=== gate: 0 failure(s) ===
+```
+
+**结论 = `=== gate: 0 failure(s) ===`**（30 PASS + 2 SKIP + 0 FAIL；日志 `/tmp/opencode/gate_s445b.log`）。

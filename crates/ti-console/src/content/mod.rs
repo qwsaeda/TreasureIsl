@@ -4,6 +4,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
+pub mod docmap;
 pub mod map_wizard;
 pub mod publish;
 pub mod ui_wizard;

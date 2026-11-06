@@ -240,6 +240,10 @@ fn dispatch_get(
                 Err((code, msg)) => status_json(code, &json!({"ok": false, "error": msg}), gz),
             }
         }
+        "/api/content/mapping" => {
+            // S44.5 固化收口：29 号 §2/§3 流程 ↔ 平台向导 1:1 映射断言（只读免 token）。
+            json200(&crate::content::docmap::mapping_report(repo_root), gz)
+        }
         "/api/build" => {
             // S32.9：?check=1 = 只读体检（build_wasm.ps1 -Check + 冻结路径 0 游戏产物变更断言）。
             // S35.1：?run 白名单 apk|wasm|native（后台 spawn）；非法 = 400（22 号 §10.3 禁自由字符串）。

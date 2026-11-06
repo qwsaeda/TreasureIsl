@@ -34,23 +34,23 @@
 
 ## 2. 改地图流程（S40.0/S41.0 验证；固定顺序不可跳）
 
-1. **`map_pack.py add <id>`**：从 `_template` 引导骨架（manifest/layout/strings）。
-2. **填内容**：
-   - `map.json`：复制现有图保证 31 格不变量（I1/I2/I3/I5/I9）+ 定制 isle 排布（简单区互换，
-     仅换 isle/resource/building/group，cell/kind/terrain 原位不动）/ events（换种类）/
-     merchants（换驻点倍率）。
-   - `layout.json`：ring 几何（`center_y`/`radius`/`card_w`/`card_h` 8 整除）+ `island_home`。
-   - `strings.json`：`glmap<id>.Map` = 图名。
-   - `manifest.json`：`id` = 目录名 + 资产（`source=pool` 共享池复用 / `source=pack` 专属入包）。
-3. **`manifest["map"]` ← `map.json` 同步**（⚠ 坑位，见 §5）。
-4. **`verify <id>`**：schema/兼容/资产齐+哈希/I1~I9 **0 违规**。
-5. **`pack <id>`**：出 `dist/maps/<id>.map-pack/`（+ `.zip`，含池资产副本 `pool/` + `POOL_INDEX.json`）。
-6. **`install <dist 路径>`**：装回 `assets/maps/<id>/` + 接线（board.json 段 + index.json 包清单）。
-7. **`check`**：已装态 ↔ 内嵌默认数据漂移 **0**。
-8. **`sync`**：全部包 map → board.json + 默认包 layout → scenes/manifest/strings。
-9. **出图**：`TI_MAP=<id> --shot --scene=main_map`（换图生效；与现有图渲染 diff 或数据级差异
-   证明「真新图」）。
-10. **零 Rust 判据**：`git diff crates/` = 空。
+> **平台向导列 = 机器断言的文档侧**（S44.5）：下表「平台向导步骤 / 判据 / 写面」三列由
+> `GET /api/content/mapping`（只读）与 `crates/ti-console/tests/content_docmap_tests.rs` 对账
+> 平台向导（`content::map_wizard`）——**步骤 id 恰好一次 + 判据关键词 + 写面登记**三者一致，
+> 任一侧漂移即 FAIL。§2 ↔ 地图向导 10 步为**严格序号 1:1**。
+
+| # | 流程（29 号） | 平台向导步骤 | 白名单动作 | 判据 | 写面 |
+|---|---|---|---|---|---|
+| 1 | **`map_pack.py add <id>`**：从 `_template` 引导骨架（manifest/layout/strings） | `add` | `mappack_add` | exit=0（0=成功） | `assets/maps/` |
+| 2 | **填内容**：`map.json` 复制现有图保证 31 格不变量（I1/I2/I3/I5/I9）+ 定制 isle 排布（简单区互换，仅换 isle/resource/building/group，cell/kind/terrain 原位不动）/ events（换种类）/ merchants（换驻点倍率）；`layout.json` ring 几何（`center_y`/`radius`/`card_w`/`card_h` 8 整除）+ `island_home`；`strings.json` `glmap<id>.Map` = 图名；`manifest.json` `id` = 目录名 + 资产（`source=pool` 共享池复用 / `source=pack` 专属入包） | `import` | 平台自身面（`POST /api/map/import`） | exit=0 + verify 0 违规（I1~I9 终判，内容已填充） | `assets/maps/` |
+| 3 | **`manifest["map"]` ← `map.json` 同步**（⚠ 坑位，见 §5） | `syncmap` | `mappack_syncmap` | exit=0（0=成功） | `assets/maps/<id>/manifest.json` |
+| 4 | **`verify <id>`**：schema/兼容/资产齐+哈希/I1~I9 **0 违规** | `verify` | `mappack_verify` | exit=0 + 输出含 0 违规/0 漂移/0 差 | 只读 |
+| 5 | **`pack <id>`**：出 `dist/maps/<id>.map-pack/`（+ `.zip`，含池资产副本 `pool/` + `POOL_INDEX.json`） | `pack` | `mappack_pack` | exit=0（pack 成功 + dist 产物存在） | `dist/maps/<id>.map-pack/` |
+| 6 | **`install <dist 路径>`**：装回 `assets/maps/<id>/` + 接线（board.json 段 + index.json 包清单） | `install` | `mappack_install` | exit=0（install 接线成功） | `assets/maps/` + `assets/data/board.json` + `assets/maps/index.json` + `assets/ui_manifest.json` |
+| 7 | **`check`**：已装态 ↔ 内嵌默认数据漂移 **0** | `check` | `mappack_check` | exit=0 + 输出含 0 违规/0 漂移/0 差 | 只读 |
+| 8 | **`sync`**：全部包 map → board.json + 默认包 layout → scenes/manifest/strings | `sync` | `mappack_sync` | exit=0（0=成功） | `assets/data/board.json` + `assets/data/scenes.json` + `assets/data/strings.json` + `assets/data/ui_schema/scene_manifest_v3.json` |
+| 9 | **出图**：`TI_MAP=<id> --shot --scene=main_map`（换图生效；与现有图渲染 diff 或数据级差异证明「真新图」） | `shot` | `map_shot` | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
+| 10 | **零 Rust 判据**：`git diff crates/` = 空 | `zero_rust` | 平台自身面（`git diff --quiet -- crates/…`） | exit=0 + git diff crates/ 空（游戏产品 6 crate） | 只读 |
 
 > ⚠ 视觉来源提示：v5 环形棋盘视觉 = `index + layout ring 几何 + spaces[].isle 卡面`
 > （`chrome::ring_card_center` + `draw_ring_card` 的 `isle_card_path`），**`spaces[].cell` 坐标
@@ -59,15 +59,21 @@
 
 ## 3. 换 UI 流程（S39.0/S42.0）
 
-1. **设计稿先行**（A 纪律，硬规则 9）：改 `scenes.json` 或换 `assets/ui/` → `--shot --viewport`
-   出图 → **用户视觉确认留痕** → 才固化。
-2. **改数据**：`scenes.json`（版面/配色原语）+ 或换资产（着色/新图 `assets/ui/`）。
-3. **重建二进制**（⚠ 坑位，见 §5）：`scenes.json` 是 `include_str!` **编译期内嵌**——改它必须
-   `cargo build` 才生效；`assets/ui/*.png` 运行时读盘，无需 rebuild。
-4. **出图**：`--shot --scene=<id> --viewport=<方向>`（多视口）。
-5. **零 Rust 判据**：`git diff crates/` = 空（重建不改 Rust 源码，仅内嵌数据 blob）。
-6. **视觉签收留痕**：`evidence/<id>.log` 含「用户视觉验收/过目/确认/签收」之一
-   （doccheck2 第 35 项 visual-signoff 检查）。
+> **平台向导列 = 机器断言的文档侧**（S44.5）：下表三列由 `GET /api/content/mapping` 与
+> `crates/ti-console/tests/content_docmap_tests.rs` 对账 UI 向导（`content::ui_wizard`）。
+> §3 ↔ UI 向导 6 步为**锚点映射**（非严格序号）：§3.2「改数据」在平台拆为 `variant`（换资产）
+> + `layout`（改版面原语）；§3.5「零 Rust」+ §3.6「视觉签收留痕」在平台合为 `zero_rust` 一步
+> （判据含签收关键词）。断言口径 = 每步 id 至少出现一次 + 每行步骤集合与平台锚点**逐行相等**
+> + 判据关键词 + 写面登记三者一致。
+
+| # | 流程（29 号） | 平台向导步骤 | 白名单动作 | 判据 | 写面 |
+|---|---|---|---|---|---|
+| 1 | **设计稿先行**（A 纪律，硬规则 9）：改 `scenes.json` 或换 `assets/ui/` → `--shot --viewport` 出图 → **用户视觉确认留痕** → 才固化 | `design` | 平台自身面（scene shot 当前状态出图） | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
+| 2 | **改数据**：`scenes.json`（版面/配色原语）+ 或换资产（着色/新图 `assets/ui/`） | `variant` + `layout` | `ui_variant`（换资产）+ 平台自身面（版面原语只读断言） | `variant`：exit=0 + ui_manifest 登记一致（disk↔registry，validate_data 0 违规）；`layout`：exit=0（scenes.json indent=1 规范形 + check_scenes_canonical 0 差） | `variant`：`assets/ui/` + `assets/ui_manifest.json`；`layout`：只读（可选跳过断言） |
+| 3 | **重建二进制**（⚠ 坑位，见 §5）：`scenes.json` 是 `include_str!` **编译期内嵌**——改它必须 `cargo build` 才生效；`assets/ui/*.png` 运行时读盘，无需 rebuild | `build` | 平台自身面（`cargo build`） | exit=0（build 成功，scenes.json 生效） | 只读（产物落 `target/`，非冻结路径） |
+| 4 | **出图**：`--shot --scene=<id> --viewport=<方向>`（多视口） | `shot` | 平台自身面（scene shot 多视口） | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
+| 5 | **零 Rust 判据**：`git diff crates/` = 空（重建不改 Rust 源码，仅内嵌数据 blob） | `zero_rust` | 平台自身面（`git diff --quiet -- crates/…`） | exit=0 + git diff crates/ 空（游戏产品 6 crate） | 只读 |
+| 6 | **视觉签收留痕**：`evidence/<id>.log` 含「用户视觉验收/过目/确认/签收」之一（doccheck2 第 35 项 visual-signoff 检查）——与第 5 步**同一步**，是 `zero_rust` 判据的后半段 | `zero_rust` | 平台自身面（同第 5 步） | exit=0 + git diff crates/ 空 + `state.signoff` 含签收关键词（A 纪律 EXP-114） | 只读 |
 
 ## 4. 打包/分发链（内容运营产物）
 

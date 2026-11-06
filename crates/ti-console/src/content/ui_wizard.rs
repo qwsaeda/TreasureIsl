@@ -21,7 +21,7 @@ use crate::repo::snapshot::FrozenSnapshot;
 type ExecSpec = (String, Vec<String>, Vec<(&'static str, String)>);
 
 /// UI 向导固定步骤（30 号 §2.2 六步；顺序即执行序，不可跳步）。
-const UI_STEPS: [&str; 6] = [
+pub(crate) const UI_STEPS: [&str; 6] = [
     "design",    // 1 设计稿先行（当前状态出图）
     "variant",   // 2 视觉变体器（ui_variant tint 同路径替换）
     "layout",    // 3 版面（可选：改 scenes.json 原语；纯视觉变体跳过）
@@ -32,7 +32,7 @@ const UI_STEPS: [&str; 6] = [
 
 /// 每步对应的白名单动作 id（`console_commands.json`）；其余为平台自身面。
 /// `设计/layout/build/shot/zero_rust` 为平台自身动作（scene shot / scenes.json 写 / cargo build / git diff）。
-const STEP_ACTION: [Option<&str>; 6] = [
+pub(crate) const STEP_ACTION: [Option<&str>; 6] = [
     None,               // design：平台自身 scene shot（当前状态）
     Some("ui_variant"), // variant：ui_variant tint（同路径替换）
     None,               // layout：平台自身 scenes.json 写（可选，跳过=只读）
@@ -43,7 +43,7 @@ const STEP_ACTION: [Option<&str>; 6] = [
 
 /// 每步写点集（`params` 无关的平台自身写点）；`[]` = 只读步。
 /// design/shot 写 `evidence/`（出图，非冻结路径 ⇒ 探针天然 0 差，仍记写点语义）。
-fn step_write_paths(step: &str) -> &'static [&'static str] {
+pub(crate) fn step_write_paths(step: &str) -> &'static [&'static str] {
     match step {
         "design" | "shot" => &["evidence/"],
         "variant" => &["assets/ui/", "assets/ui_manifest.json"],

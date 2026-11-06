@@ -19,7 +19,8 @@ type CmdSpec = (String, Vec<String>);
 type ExecSpec = (String, Vec<String>, Vec<(&'static str, String)>);
 
 /// 地图向导固定步骤（30 号 §2.1 十步；顺序即执行序，不可跳步）。
-const MAP_STEPS: [&str; 10] = [
+/// S44.5：29 号 §2 十步 ↔ 本数组的 1:1 映射断言读取此表（`content::docmap`），故为 `pub(crate)`。
+pub(crate) const MAP_STEPS: [&str; 10] = [
     "add",       // 1 新建包
     "import",    // 2 填内容（复用 S32.15 编辑器 import）
     "syncmap",   // 3 manifest["map"]←map.json
@@ -33,7 +34,8 @@ const MAP_STEPS: [&str; 10] = [
 ];
 
 /// 每步对应的白名单动作 id（`console_commands.json`）；`import`/`zero_rust` 为平台自身面。
-const STEP_ACTION: [Option<&str>; 10] = [
+/// S44.5：写面登记一致性断言读取此表（`content::docmap`）。
+pub(crate) const STEP_ACTION: [Option<&str>; 10] = [
     Some("mappack_add"),
     None, // import：POST /api/map/import（S32.15）
     Some("mappack_syncmap"),
@@ -130,10 +132,11 @@ fn resolve_action(repo_root: &Path, action_id: &str) -> Result<Option<CmdSpec>, 
     crate::content::resolve_action(repo_root, action_id)
 }
 
-/// 把白名单动作的 `writes`（可含 `<id>` 占位符）解析为实际写点集（30 号 §3.2 约定）。
+/// 白名单动作的**写点模板集**（可含 `<id>` 占位符，30 号 §3.2 约定）。
+/// S44.5：`console_commands.json` 的 `writes` 登记必须与本表逐项一致（写面登记一致性断言）。
 #[must_use]
-pub fn resolve_write_paths(action_id: &str, id: &str) -> Vec<String> {
-    let template: &[&str] = match action_id {
+pub(crate) fn write_templates(action_id: &str) -> &'static [&'static str] {
+    match action_id {
         "mappack_add" => &["assets/maps/"],
         "mappack_syncmap" => &["assets/maps/<id>/manifest.json"],
         "mappack_pack" => &["dist/maps/<id>.map-pack/"],
@@ -158,8 +161,24 @@ pub fn resolve_write_paths(action_id: &str, id: &str) -> Vec<String> {
         "ui_variant" => &["assets/ui/", "assets/ui_manifest.json"],
         "map_shot" => &["evidence/"],
         _ => &[],
-    };
-    template.iter().map(|p| p.replace("<id>", id)).collect()
+    }
+}
+
+/// 平台自身步（非白名单动作）的写点集（白名单动作步见 `write_templates`）。
+/// `import` = S32.15 编辑器导入（落 `assets/maps/<id>/` 四文件）；`zero_rust` = 只读断言。
+/// S44.5：29 号 ↔ 平台写面登记一致性断言读取本表。
+#[must_use]
+pub(crate) fn platform_write_paths(step: &str) -> &'static [&'static str] {
+    match step {
+        "import" => &["assets/maps/"],
+        _ => &[],
+    }
+}
+
+/// 把白名单动作的 `writes`（可含 `<id>` 占位符）解析为实际写点集（30 号 §3.2 约定）。
+#[must_use]
+pub fn resolve_write_paths(action_id: &str, id: &str) -> Vec<String> {
+    write_templates(action_id).iter().map(|p| p.replace("<id>", id)).collect()
 }
 
 /// 步骤机器判据解析（30 号 §4「每步机器判据」）：读工具输出，判定该步是否通过。

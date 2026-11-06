@@ -406,6 +406,16 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       <div id="uw-steps" style="border:1px solid var(--border);border-radius:6px;overflow:hidden"></div>
       <div id="uw-msg" style="margin-top:8px;font:11px/1.5 monospace;white-space:pre-wrap;color:var(--muted);max-height:200px;overflow:auto"></div>
     </div>
+    <div class="card">
+      <h2>流程 ↔ 平台 1:1 映射断言（S44.5，30 号 §2.5：29 号 §2/§3 ↔ 向导步骤 id/判据/写面）</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <button id="mp-load" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">校验映射（GET /api/content/mapping）</button>
+        <span id="mp-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div id="mp-map" style="font:11px/1.5 monospace;white-space:pre-wrap;color:var(--muted);margin-bottom:8px"></div>
+      <div id="mp-ui" style="font:11px/1.5 monospace;white-space:pre-wrap;color:var(--muted)"></div>
+      <div id="mp-problems" style="margin-top:8px;font:11px/1.5 monospace;white-space:pre-wrap;color:#e06"></div>
+    </div>
   </section>
 
   <!-- 测试（游戏测试标杆：分级/分类/类型 + 步骤/阶段 + 截图证据 + 门禁总览，23 号 §6） -->
@@ -1547,6 +1557,29 @@ async function uwAdvance() {
 $('uw-load').addEventListener('click', uwLoad);
 $('uw-advance').addEventListener('click', uwAdvance);
 
+/* ==== S44.5 流程 ↔ 平台 1:1 映射断言（29 号 §2/§3 ↔ 向导步骤；只读） ==== */
+function mpLoad() {
+  $('mp-status').textContent = '校验中…';
+  api('/api/content/mapping').then((d) => {
+    const rows = (arr) => (arr || []).map((m) =>
+      '  §' + (m.doc_rows || []).join('+') + '  ' + m.step.padEnd(10) +
+      ' action=' + String(m.action || '（平台自身面）').padEnd(18) +
+      ' 判据[' + m.criterion_key + '] 写面[' + (m.write_paths || []).join(', ') + ']'
+    ).join('\n');
+    $('mp-map').textContent = '地图十步（§2 严格序号 1:1）：\n' + rows(d.map);
+    $('mp-ui').textContent = 'UI 六步（§3 锚点映射）：\n' + rows(d.ui);
+    const ps = d.problems || [];
+    $('mp-problems').textContent = ps.length ? ('断言问题 ' + ps.length + ' 条：\n' + ps.map((p) => '  ✗ ' + p).join('\n')) : '';
+    $('mp-status').textContent = d.ok
+      ? '映射一致（0 问题）· 文档 ' + (d.doc || '')
+      : '映射不一致（' + ps.length + ' 问题）';
+    $('mp-status').style.color = d.ok ? '#3c9' : '#e06';
+  }).catch((e) => {
+    $('mp-status').textContent = '/api/content/mapping 错误：' + e;
+    $('mp-status').style.color = '#e06';
+  });
+}
+$('mp-load').addEventListener('click', mpLoad);
 
 /* ==== 测试页（23 号 §6：分级/分类/类型 + 步骤/阶段 + 截图证据 + 门禁 33 项） ==== */
 const TS_LEVEL_LABEL = { L1: 'L1 单元', L2: 'L2 集成', L3: 'L3 系统', L4: 'L4 验收' };
