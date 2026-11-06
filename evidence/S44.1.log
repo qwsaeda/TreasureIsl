@@ -1,0 +1,39 @@
+S44.1 — 工具与写面落地（map_pack syncmap + ui_variant.py + §4.2 白名单 + §3.1/§8 写面纪律）
+=========================================================================================
+任务：内容运营平台化的工具与写面准备——固化两个工具 + 白名单扩展 + 写点纪律修订（北极星 write_probe 泛化）。
+改动面声明：工具（scripts/map_pack.py syncmap + scripts/ui_variant.py）+ 平台（console_commands.json + ti-console
+snapshot.rs/close.rs + 22 号 §4.2/§3.1/§8）+ 文档（14 号/04 号/README/30 号）| 游戏产品 Rust 零改动
+（crates/{ti-core,ti-app,ti-engine,ti-render,ti-platform,ti-formats} 全目录 0 diff；ti-console 平台本体允许改）。
+
+[1] map_pack.py `syncmap <id>`（29 号 §5 坑位固化：manifest["map"]←map.json）
+    - 幂等：一致态跑 syncmap 跳过写（实测 m22 一致态 = 0 diff，真幂等）；
+    - `--check` 只读：0 一致 / 1 漂移（实测 m01/m02/m03/m22 全 0 差；临时加 `_test_marker` → rc=1 漂移）；
+    - 非 0 退出：缺 manifest.json/map.json（未 add）→ 1。
+
+[2] scripts/ui_variant.py（固化 S42.0 临时脚本 → 正式工具，30 号 §5）
+    - PIL `tint_cool`（Color/Brightness 增强 + R×/G×/B× 冷移）参数化；
+    - 同路径替换（默认，资产名/坐标/scenes.json 全不动 ⇒ 零 Rust + 零 scenes.json diff）；
+    - `--suffix` 变体路径（设计稿迭看）/ `--register` 更新 ui_manifest（**深拷贝修复**：浅拷贝共享 params dict
+      会污染原条目——实测原条目 s42_cool_weathered 不被污染）；
+    - `--check` 只读（0 合法 / 1 非法：参数超 [0,3] / 资产缺失 / 空资产——实测 3 负例 rc=1）；
+    - 登记：14 号 §3.2 + 04_tooling + README（3 处，doccheck2 tooling-registration 0 违规）；
+    - 工具契约：幂等（PIL 确定性）+ 只读 --check + 非 0 退出（gate 内 check_tooling_contract PASS）。
+
+[3] console_commands.json 9 动作（30 号 §3.1）+ close.rs HUMAN_VIEW_IDS 14→23
+    - mappack_add/syncmap/pack/install/sync/uninstall + ui_variant + map_shot + publish；
+    - 写面登记（`writes` 列）+ 写动作 `enabled_by_default=false`（map_shot 只读出图默认开）；
+    - whitelist_audit 对账断言：id 集合 23 一致 + write_required = 9（close_run + 8 内容运营写动作）。
+
+[4] 22 号 §4.2 人读视图同步（+9 行）+ §3.1 已知写点表（+内容运营写动作行）+ §8 北极星 write_probe。
+
+[5] 北极星写点探针（snapshot.rs）：`write_probe(写点集)` 泛化，`import_probe` 收敛为 wrapper
+    - **修复潜伏缺陷**：原 import_probe 逻辑反了（`all(路径不在豁免集)` = 只判「无写点变更」，语义应 =
+      `all(路径在写点集)` = 写点内变更全豁免、写点外 = 漂移）；原面是预置从未被消费，故未测出；
+    - 2 新测试：`write_probe_exempts_registered_write_paths`（写点内豁免 / 写点外 crates/ 判漂移）
+      + `import_probe_wrapper_matches_write_probe`（收敛口径一致）。
+
+[6] 判据实测
+    - ti-console 测试 6/6（close_tests 更新 whitelist_audit_ok 23 id + write_required 9；snapshot_tests +2）；
+    - doccheck 0 errors / doccheck2 0 errors（41 audit-codified checks）/ validate_data 0 违规；
+    - 游戏产品 Rust 零改动：git diff crates/{ti-core,ti-app,ti-engine,ti-render,ti-platform,ti-formats} = 空；
+    - gate 全绿：scripts/gate.ps1 33 项 0 failure；明细 evidence/S44.1_gate.log。

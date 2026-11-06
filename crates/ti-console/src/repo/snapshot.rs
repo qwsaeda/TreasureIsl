@@ -116,10 +116,20 @@ impl FrozenSnapshot {
 
     /// import 动作 0 变更判定（`assets/maps/` + `assets/data/board.json` 前缀差异豁免；
     /// 其余冻结路径差异仍算漂移）。S32.15 ② 唯一写点例外面（22 号 §8/§10.1）；
-    /// S32.4 执行面消费前接入（当前 = 数据面预置，`no_change_probe` 为现行判定）。
+    /// **S44.1 收敛为 `write_probe`**（30 号 §3.2：动作写点集参数化，行为不变）。
     #[must_use]
     #[allow(dead_code)]
     pub fn import_probe(&self, other: &FrozenSnapshot) -> bool {
+        self.write_probe(other, &["assets/maps/", "assets/data/board.json"])
+    }
+
+    /// 白名单动作写点探针（30 号 §3.2）：`write_paths` = 动作登记写点集（前缀/精确匹配）。
+    /// 语义 = **所有差异都在写点集内**（写点内变更全豁免 ⇒ 0 游戏产物变更）；
+    /// 任一差异在写点集外（如 `crates/` 产品源码）⇒ 漂移（返回 false）。
+    #[must_use]
+    pub fn write_probe(&self, other: &FrozenSnapshot, write_paths: &[&str]) -> bool {
+        let exempt: Vec<String> =
+            write_paths.iter().map(|p| p.trim_end_matches('/').to_owned()).collect();
         self.diff(other).iter().all(|line| {
             let path = line
                 .trim_start_matches(['+', '-', '~'])
@@ -128,7 +138,7 @@ impl FrozenSnapshot {
                 .next()
                 .unwrap_or("")
                 .to_owned();
-            !path.starts_with("assets/maps/") && path != "assets/data/board.json"
+            exempt.iter().any(|p| path == *p || path.starts_with(&format!("{p}/")))
         })
     }
 

@@ -20,7 +20,7 @@ use crate::runner::apply_minimal_env;
 
 /// 22 号 §4.2 人读视图动作 id 集合（机器断言镜像；S32.6 白名单对账断言）。
 /// 必须与 `console_commands.json` `commands[].id` 集合逐字一致（`whitelist_audit` 断言）。
-pub const HUMAN_VIEW_IDS: [&str; 14] = [
+pub const HUMAN_VIEW_IDS: [&str; 23] = [
     "gate",
     "close_check",
     "close_run",
@@ -29,6 +29,15 @@ pub const HUMAN_VIEW_IDS: [&str; 14] = [
     "serve_web",
     "mappack_verify",
     "mappack_check",
+    "mappack_add",
+    "mappack_syncmap",
+    "mappack_pack",
+    "mappack_install",
+    "mappack_sync",
+    "mappack_uninstall",
+    "ui_variant",
+    "map_shot",
+    "publish",
     "audit_book",
     "build_apk",
     "build_wasm",

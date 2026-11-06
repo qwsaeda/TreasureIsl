@@ -61,7 +61,7 @@
 - **第 2 步变体器**：固化 S42.0 的 PIL `tint_cool`（Color/Brightness 增强 + R×/G×/B× 冷移）为 `scripts/ui_variant.py`
   （登记 14 号 §3.2 + 工具契约：幂等 + `--check` 只读 + 非 0 退出 + 3 处登记）。
 - **同路径替换**（29 号 §3 换 UI 核心判据）：变体器默认**覆盖原路径**（资产名/坐标/scenes.json/测试全不动 ⇒ 零 Rust + 零 scenes.json diff，S42.0 实证）；
-  `--new-name` 选项出变体路径（供设计稿迭看，不落定）。
+  `--suffix` 选项出变体路径（供设计稿迭看，不落定）。
 - **第 3 步版面可选**：纯视觉变体（着色）时跳过（0 scenes.json diff）；改版面/新元素才用。
 
 ### 2.3 打包/分发面
@@ -119,7 +119,7 @@
 | 工具 | 改动 | 登记 |
 |---|---|---|
 | `scripts/map_pack.py` | 新增 `syncmap <id>`（manifest["map"]←map.json，幂等 + `--check` 只读 + 非 0 退出） | 14 号 §3.2 + 工具契约（幂等/只读/非 0/3 处登记） |
-| `scripts/ui_variant.py` | **新**（固化 S42.0 临时脚本：tint_cool 着色 + 同路径替换/`--new-name` + `--check` 只读 + 非 0 退出） | 14 号 §3.2 + 工具契约 |
+| `scripts/ui_variant.py` | **新**（固化 S42.0 临时脚本：tint_cool 着色 + 同路径替换/`--suffix` + `--register` + `--check` 只读 + 非 0 退出） | 14 号 §3.2 + 工具契约 |
 | `console_commands.json` | 新增 9 动作 id（§3.1） | 22 号 §4.2 人读视图同步（id 集合对账断言 S32.6 自动覆盖） |
 
 ## 6. 关联与登记

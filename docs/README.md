@@ -151,6 +151,7 @@
  | `scripts/key_v6_elements.py` | **v6/vs_v2 元素去白键控**（AI 白底元素抠白透明键写入批次 sidecar；`--check` 只读） |
  | `scripts/review_sheet.py` | **迭看图 contact sheet 合成**（多张迭看图缩略拼一张压缩 PNG；`--check` 只读；13 号 §2.1a） |
 | `scripts/map_pack.py` | **地图包工具**（S31 / `21_map_package_spec.md`：一张图 = 一个自包含可分发包 —— `pack` 出一包（`dist/maps/<id>.map-pack/` + sha256 清单）/ `verify` 校验（schema·兼容·资产齐+哈希·31 格不变量，违规非 0）/ `install` 装上 + 接线 / `uninstall` / `list` / `check` 漂移对账；运行期可切包） |
+| `scripts/ui_variant.py` | **UI 资产视觉变体器（S44）**：固化 S42.0 的 `tint_cool` 为正式工具（选资产 + 着色参数 → 同路径替换 / `--suffix` 变体路径；`--register` 更新 `ui_manifest.json`；`--check` 只读）——换 UI 视觉变体零 Rust |
 | `scripts/task_close.py` | **任务收口一条命令**（跑判据 → 写 `evidence/<id>.log` → 台账行级置 verified → 同步 release 台账计数 → 三方对账复验；判据非 0 则不写证据不改台账） |
 | `scripts/exp_log.py` | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + ID 查重 + doccheck 复验） |
 | `scripts/doc_numbers.py` | **门禁项数 / 台账计数实测回写**（8 处声称点一次改齐；`--fix` 回写，消灭手抄漂移） |

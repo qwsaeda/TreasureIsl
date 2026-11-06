@@ -506,6 +506,39 @@ def _layout_drift_problems(map_id: str, manifest: dict, problems: list[str]) -> 
             problems.append(f"manifest main_map.focus.bbox_pct 与默认包 {map_id} 漂移")
 
 
+def cmd_syncmap(map_id: str, check_only: bool) -> int:
+    """`manifest["map"]` ← `map.json`（29 号 §5 坑位固化：`map.json` 是冗余副本，无自动同步；
+    填内容后必 syncmap 再 verify/pack/install/check/sync）。幂等（同输入同产物）。
+    `--check` 只读：manifest["map"] 与 map.json 一致 → 0；漂移 → 1（平台向导第 3 步判据）。"""
+    pack_dir = MAPS_DIR / map_id
+    manifest_path = pack_dir / "manifest.json"
+    map_path = pack_dir / "map.json"
+    if not manifest_path.is_file() or not map_path.is_file():
+        print(f"map_pack syncmap: 包 {map_id} 缺 manifest.json/map.json（未 add？）", file=sys.stderr)
+        return 1
+    manifest = load_json(manifest_path)
+    map_data = load_json(map_path)
+    cur = manifest.get("map") or {}
+    if check_only:
+        if cur == map_data:
+            print(f"map_pack syncmap: {map_id} manifest[map] 与 map.json 一致（0 差）")
+            return 0
+        print(
+            f"map_pack syncmap: {map_id} manifest[map] 与 map.json 漂移 "
+            f"（{len(cur)} vs {len(map_data)} 键；需 syncmap 同步）",
+            file=sys.stderr,
+        )
+        return 1
+    # 语义一致 = 不写（真幂等：一致态跑 syncmap 不改盘，避免仅格式化差异（尾换行）触发 diff）
+    if cur == map_data:
+        print(f"map_pack syncmap: {map_id} manifest[map] 已与 map.json 一致（0 差，跳过写）")
+        return 0
+    manifest["map"] = json.loads(json.dumps(map_data))
+    dump_canonical(manifest_path, manifest)
+    print(f"map_pack syncmap: {map_id} manifest[map] ← map.json（{len(map_data)} 键）")
+    return 0
+
+
 def cmd_sync() -> int:
     """回注构建期默认数据：全部已装包 `map.json` → `board.json maps.<id>`；
     默认包（`.default`）`layout.json` → `scenes.json main_map` / `scene_manifest_v3 focus` / `strings.json`。幂等。"""
@@ -634,6 +667,9 @@ def main(argv: list[str]) -> int:
     p_add = sub.add_parser("add", help="从 _template 包引导新包骨架")
     p_add.add_argument("id")
     sub.add_parser("check", help="已装态 vs 默认数据漂移对账（只读）")
+    p_syncmap = sub.add_parser("syncmap", help="manifest[map] ← map.json（29 号 §5 坑位固化；幂等）")
+    p_syncmap.add_argument("id")
+    p_syncmap.add_argument("--check", action="store_true", help="只读：0 一致 / 1 漂移")
     sub.add_parser("sync", help="从已装包回注构建期默认数据")
     sub.add_parser("index", help="生成 assets/maps/index.json（浏览器侧包清单，幂等）")
     args = parser.parse_args(argv[1:])
@@ -652,6 +688,8 @@ def main(argv: list[str]) -> int:
         return cmd_add(args.id)
     if args.cmd == "check":
         return cmd_check()
+    if args.cmd == "syncmap":
+        return cmd_syncmap(args.id, args.check)
     if args.cmd == "sync":
         return cmd_sync()
     if args.cmd == "index":

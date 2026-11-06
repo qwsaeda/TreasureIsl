@@ -9,7 +9,6 @@
 //!   （`.gitignore` L67 已忽略，无仓库污染；非 hermetic 但同 `gate_tests` 口径——脚本须读真实台账）。
 //! - `map_cmd_id` 测试读真实 `console_commands.json`（纯函数，无副作用）。
 
-use serde_json::json;
 use ti_console::runner::close::{
     EXP_VOLUMES, close_check, close_run, exp_check, map_cmd_id, whitelist_audit,
 };
@@ -35,10 +34,33 @@ fn exp_volumes_six() {
 #[test]
 fn whitelist_audit_ok() {
     // 白名单对账断言：22 号 §4.2 人读视图 id 集合 == console_commands.json（真实仓库）。
+    // S44.1 新增 9 动作（mappack_add/syncmap/pack/install/sync/uninstall + ui_variant + map_shot + publish）。
     let v = whitelist_audit(&repo_root()).expect("白名单对账应通过");
     assert_eq!(v["ok"], true);
-    assert_eq!(v["count"], 14);
-    assert_eq!(v["write_required"], json!(["close_run"]));
+    assert_eq!(v["count"], 23);
+    // 写面动作默认关（enabled_by_default=false）：close_run + 8 个内容运营写动作（30 号 §3.1）；
+    // map_shot 只读出图默认开。
+    let wr: Vec<&str> = v["write_required"]
+        .as_array()
+        .expect("write_required 数组")
+        .iter()
+        .filter_map(|x| x.as_str())
+        .collect();
+    assert_eq!(wr.len(), 9);
+    for id in [
+        "close_run",
+        "mappack_add",
+        "mappack_syncmap",
+        "mappack_pack",
+        "mappack_install",
+        "mappack_sync",
+        "mappack_uninstall",
+        "ui_variant",
+        "publish",
+    ] {
+        assert!(wr.contains(&id), "write_required 缺 {id}");
+    }
+    assert!(!wr.contains(&"map_shot"), "map_shot 只读出图不应默认关");
 }
 
 #[test]

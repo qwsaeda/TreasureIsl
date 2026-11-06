@@ -225,6 +225,161 @@
    "writes": [],
    "enabled_by_default": true,
    "_note": "S35.1 只读前置体检（runner 在位 + 产物目录）；非 0 退出 = 前置缺失。"
+  },
+  {
+   "id": "mappack_add",
+   "runner": "python3",
+   "script": "scripts/map_pack.py",
+   "args": [
+    "add"
+   ],
+   "param": {
+    "name": "id",
+    "kind": "map_id",
+    "desc": "新建包 id（^[a-z0-9_]{1,16}$，平台自扫描校验）"
+   },
+   "writes": [
+    "assets/maps/"
+   ],
+   "enabled_by_default": false
+  },
+  {
+   "id": "mappack_syncmap",
+   "runner": "python3",
+   "script": "scripts/map_pack.py",
+   "args": [
+    "syncmap"
+   ],
+   "param": {
+    "name": "id",
+    "kind": "map_id",
+    "desc": "manifest[map]←map.json 的包 id"
+   },
+   "writes": [
+    "assets/maps/<id>/manifest.json"
+   ],
+   "enabled_by_default": false
+  },
+  {
+   "id": "mappack_pack",
+   "runner": "python3",
+   "script": "scripts/map_pack.py",
+   "args": [
+    "pack"
+   ],
+   "param": {
+    "name": "id",
+    "kind": "map_id",
+    "desc": "出可分发件的包 id"
+   },
+   "writes": [
+    "dist/maps/<id>.map-pack/"
+   ],
+   "enabled_by_default": false
+  },
+  {
+   "id": "mappack_install",
+   "runner": "python3",
+   "script": "scripts/map_pack.py",
+   "args": [
+    "install"
+   ],
+   "param": {
+    "name": "path",
+    "kind": "pack_path",
+    "desc": "已装包路径（平台按自扫描拼出，不接受自由字符串）"
+   },
+   "writes": [
+    "assets/maps/",
+    "assets/data/board.json",
+    "assets/maps/index.json",
+    "assets/ui_manifest.json"
+   ],
+   "enabled_by_default": false
+  },
+  {
+   "id": "mappack_sync",
+   "runner": "python3",
+   "script": "scripts/map_pack.py",
+   "args": [
+    "sync"
+   ],
+   "writes": [
+    "assets/data/board.json",
+    "assets/data/scenes.json",
+    "assets/data/strings.json",
+    "assets/data/ui_schema/scene_manifest_v3.json"
+   ],
+   "enabled_by_default": false
+  },
+  {
+   "id": "mappack_uninstall",
+   "runner": "python3",
+   "script": "scripts/map_pack.py",
+   "args": [
+    "uninstall"
+   ],
+   "param": {
+    "name": "id",
+    "kind": "map_id",
+    "desc": "卸包 id"
+   },
+   "writes": [
+    "assets/maps/",
+    "assets/maps/.default",
+    "assets/maps/index.json",
+    "assets/data/board.json"
+   ],
+   "enabled_by_default": false
+  },
+  {
+   "id": "ui_variant",
+   "runner": "python3",
+   "script": "scripts/ui_variant.py",
+   "args": [
+    "tint"
+   ],
+   "param": {
+    "name": "assets",
+    "kind": "ui_assets",
+    "desc": "逗号分隔资产名 + 着色参数（UI 向导传，不接受自由字符串）"
+   },
+   "writes": [
+    "assets/ui/",
+    "assets/ui_manifest.json"
+   ],
+   "enabled_by_default": false
+  },
+  {
+   "id": "map_shot",
+   "runner": "self",
+   "script": "treasure-bevy-native --shot",
+   "args": [
+    "--shot"
+   ],
+   "param": {
+    "name": "id",
+    "kind": "map_id",
+    "desc": "TI_MAP=<id> 出图预览（平台设 env + viewport）"
+   },
+   "writes": [
+    "evidence/"
+   ],
+   "enabled_by_default": true
+  },
+  {
+   "id": "publish",
+   "runner": "pwsh",
+   "script": "scripts/publish_web.ps1",
+   "args": [
+    "-File",
+    "scripts/publish_web.ps1"
+   ],
+   "writes": [
+    "web/",
+    "docs/release.md"
+   ],
+   "enabled_by_default": false
   }
  ]
 }

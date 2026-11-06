@@ -43,6 +43,7 @@
      | EXP 查重 `scripts/exp_log.py --check` | 无 | **当前不开放写入入口**（将来开放须同步本表 + §4.2） |
      | 构建体检 `scripts/build_wasm.ps1 -Check` | 无 | 只读（不构建/不拷贝/不写 evidence）；**此 `-Check` 行本身只读** ⇒ 单次体检不改写 `web/` 与 `evidence/S18.8a-wasm-size.log`（构建执行 = 24 号 §4.1 编排器，S35.1） |
      | 地图包校验 `scripts/map_pack.py verify/check` | 无（只读） | 同脚本的写子命令**平台一律不开放**：`install/uninstall` 写 `assets/maps/<id>/` + `assets/maps/.default`（**条件写**：install 缺时 / uninstall 仅卸默认包时）+ `assets/maps/index.json` + `assets/data/board.json`；`add` 写 `assets/maps/<id>/`；`sync` 写 `assets/data/{board,scenes,strings}.json` + `assets/data/ui_schema/scene_manifest_v3.json`（写点清单以 21 号 §8 为准） |
+| 内容运营写动作（**S44.1 起开放，默认关**，30 号 §3.1） | `scripts/map_pack.py`（`add`/`syncmap`/`pack`/`install`/`sync`/`uninstall`）+ `scripts/ui_variant.py`（`tint`）+ `scripts/publish_web.ps1` | `mappack_add`→`assets/maps/`；`mappack_syncmap`→`assets/maps/<id>/manifest.json`；`mappack_pack`→`dist/maps/<id>.map-pack/`；`mappack_install`→`assets/maps/`+`board.json`+`index.json`+`ui_manifest.json`；`mappack_sync`→`assets/data/{board,scenes,strings}.json`+`scene_manifest_v3.json`；`mappack_uninstall`→`assets/maps/`+`.default`+`index.json`+`board.json`；`ui_variant`→`assets/ui/`+`ui_manifest.json`；`publish`→`web/`+`docs/release.md`。写点清单以 21 号 §8 / 30 号 §3.1 为准（S32.15 起「平台一律不开放地图写子命令」改为「开放但默认关 + 写点探针」） |
 
 2. **只读默认**：写操作（跑门禁 / 收口体检 / EXP 查重 / 审计归档）必须显式触发，走 §4.2 命令白名单。
 3. **单一事实源**：业务结论只链接（`EXP-xxx` / `F-xxx` / 业务文档），平台不二次表述、不缓存结论。
@@ -104,6 +105,15 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | `serve_web` | 平台自身静态服务（`ti-devmeta::http`） | `--dir web`（目录枚举固定） | 无 | 是 |
 | `mappack_verify` | `python3` + `scripts/map_pack.py verify <path>` | `path` = 平台按**自己的已装包扫描**（`assets/maps/*/manifest.json` 存在且目录名 ≠ `_template`）内部拼出的 `assets/maps/<id>` | 无 | 是 |
 | `mappack_check` | `python3` + `scripts/map_pack.py check` | 无 | 无 | 是 |
+| `mappack_add` | `python3` + `scripts/map_pack.py add <id>` | `<id>` = 平台自扫描校验 `^[a-z0-9_]{1,16}$`（新建包 id） | `assets/maps/<id>/` | **否**（需 `--enable-write`） |
+| `mappack_syncmap` | `python3` + `scripts/map_pack.py syncmap <id>` | `<id>` = 已装包 id（平台自扫描） | `assets/maps/<id>/manifest.json`（29 号 §5 坑位固化：manifest["map"]←map.json） | **否** |
+| `mappack_pack` | `python3` + `scripts/map_pack.py pack <id>` | `<id>` = 已装包 id | `dist/maps/<id>.map-pack/` | **否** |
+| `mappack_install` | `python3` + `scripts/map_pack.py install <path>` | `path` = 平台按自扫描拼出的 `assets/maps/<id>` | `assets/maps/<id>/` + `board.json` + `index.json` + `ui_manifest.json` | **否** |
+| `mappack_sync` | `python3` + `scripts/map_pack.py sync` | 无 | `assets/data/{board,scenes,strings}.json` + `scene_manifest_v3.json` | **否** |
+| `mappack_uninstall` | `python3` + `scripts/map_pack.py uninstall <id>` | `<id>` = 已装包 id | `assets/maps/` + `.default` + `index.json` + `board.json` | **否** |
+| `ui_variant` | `python3` + `scripts/ui_variant.py tint` | `assets` + 着色参数（UI 向导传，不接受自由字符串） | `assets/ui/<name>.png` + `ui_manifest.json`（同路径替换/`--suffix`） | **否** |
+| `map_shot` | 平台自身（`treasure-bevy-native --shot --scene=main_map`，env `TI_MAP=<id>`） | `<id>` = 已装包 id | `evidence/` 预览（gitignored 侧车） | 是 |
+| `publish` | `pwsh`/`powershell` + `-File scripts/publish_web.ps1` | 无 | `web/` + `docs/release.md` + gh-pages 远端 | **否** |
 | `audit_book` | 平台自身 | `--task <台账 id> --round <n> --role <a\|b>` | 只写 `evidence/console/` | 是 |
 | `build_apk` | `python3` + `scripts/build_artifacts.py run apk`（= `build_apk.sh` + 构建后 `apk_audit.py --apk` 复检，S35.1 24 号 §4.1） | 无（kind 固定 `apk`；后台执行，日志落 `evidence/console/logs/` gitignored） | `dist/TreasureIsl-arm64.apk` + `evidence/console/logs/`（gitignored） | 是 |
 | `build_wasm` | `python3` + `scripts/build_artifacts.py run wasm`（= `build_wasm.ps1`） | 无（后台执行） | `web/` + `evidence/console/logs/`（gitignored） | 是 |
@@ -308,7 +318,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | 每任务双审计可追溯 | — | 每轮 A/B 报告落盘 + 收敛轮次表 + 未闭环 findings 计数（§7.4 三条判据） |
 | 平台自身质量 | 0 违规 | 既有门禁自动覆盖（见 §11.2）+ `cargo test -p ti-console` / `-p ti-devmeta` 实跑 |
 | 快照纪律有载体 | 0 空判 | 「0 游戏产物变更」的内容级指纹快照由 **`crates/ti-console` 的快照模块实现**（S32.2 落地；登记见 `docs/process/15_process_ledger.md` 第 23 行，状态 = **待固化（挂 S32.2，S32.2 完成前不得当载体断言）**）⇒ 纪律不悬空 |
-| **0 游戏产物变更** | 0 差异 | **增量口径 + 内容级快照（会话相对）**：动作前后各取一次冻结路径的**内容指纹**并逐文件比对，差集为空。指纹 = 每个文件 `sha256`（忽略 `.gitignore` 命中的文件）+ 未跟踪文件清单；**不能用 `git status --porcelain`**（它只给路径 + 状态码，不含内容 ⇒ 已脏文件再改内容时快照不变 = 口径失效，见第 4 轮 P1）。冻结路径 = `crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets/ android/ tests/`（游戏产物面；**S32.15 例外**：`assets/maps/` 目录 + `assets/data/board.json` 的 `maps` 段 = 平台地图导入唯一写点（§10.1），import 动作前后快照用 `snapshot::import_probe` 判定（豁免这两处差异，其余冻结路径差异仍算漂移）；工具面 `crates/ti-tools crates/ti-devmeta crates/ti-console` **不在冻结范围**，S32.1 改 `ti-tools` 由 `cargo run -p ti-tools --bin ledger` 0 error 断言行为不变）。**根 `Cargo.toml` / `Cargo.lock` 不在冻结路径**（S32.1 必须新增 workspace member ⇒ 会改二者；口径 = 「`Cargo.toml` 的 `members` 段仅允许新增 `crates/ti-devmeta` / `crates/ti-console` 两行，其余逐字节一致；`Cargo.lock` 仅允许新增对应 package 条目」）。**门禁既有副作用路径** `evidence/web_playtest.{log,png}`、`evidence/font_render.txt` 只记录不判定（§3.1），但必须写进执行日志并提示。`web/` 产物清单（文件名 + 体积）前后一致（平台经 24 号 §4.1 编排器执行构建时会改写 `web/`〔S35.1 例外，镜像 22 号 §9〕；冻结路径不含 `web/`，故不违 0 游戏产物变更判据） |
+| **0 游戏产物变更** | 0 差异 | **增量口径 + 内容级快照（会话相对）**：动作前后各取一次冻结路径的**内容指纹**并逐文件比对，差集为空。指纹 = 每个文件 `sha256`（忽略 `.gitignore` 命中的文件）+ 未跟踪文件清单；**不能用 `git status --porcelain`**（它只给路径 + 状态码，不含内容 ⇒ 已脏文件再改内容时快照不变 = 口径失效，见第 4 轮 P1）。冻结路径 = `crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets/ android/ tests/`（游戏产物面；**S44.1 写点探针**：每个白名单写动作登记写点集（`console_commands.json` `writes`），动作前后 `write_probe(写点集)` 豁免该动作登记写点 + gitignored 路径，其余冻结路径差异 = 漂移；`import_probe` 收敛为 `write_probe(&["assets/maps/","assets/data/board.json"])`，S32.15 行为不变）；工具面 `crates/ti-tools crates/ti-devmeta crates/ti-console` **不在冻结范围**（S32.1 改 `ti-tools` 由 `cargo run -p ti-tools --bin ledger` 0 error 断言行为不变）。**根 `Cargo.toml` / `Cargo.lock` 不在冻结路径**（S32.1 必须新增 workspace member ⇒ 会改二者；口径 = 「`Cargo.toml` 的 `members` 段仅允许新增 `crates/ti-devmeta` / `crates/ti-console` 两行，其余逐字节一致；`Cargo.lock` 仅允许新增对应 package 条目」）。**门禁既有副作用路径** `evidence/web_playtest.{log,png}`、`evidence/font_render.txt` 只记录不判定（§3.1），但必须写进执行日志并提示。`web/` 产物清单（文件名 + 体积）前后一致（平台经 24 号 §4.1 编排器执行构建时会改写 `web/`〔S35.1 例外，镜像 22 号 §9〕；冻结路径不含 `web/`，故不违 0 游戏产物变更判据） |
 
 > `web/` 与 `dist/` 被 `.gitignore` 忽略 ⇒ **`git status` 不能作为「0 游戏产物变更」的证据**（EXP-058 反虚报口径）。
 
