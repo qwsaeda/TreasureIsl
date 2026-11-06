@@ -62,7 +62,7 @@ pub struct WizardState {
 /// 单步记录。
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct StepRecord {
-    /// `步骤名（MAP_STEPS` 枚举）。
+    /// 步骤名（`MAP_STEPS` 枚举）。
     pub name: String,
     /// 已执行。
     pub done: bool,

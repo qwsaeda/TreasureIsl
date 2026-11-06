@@ -2,7 +2,8 @@
 //! 不可跳步（未过 N 步判据 → N+1 步 409），失败即停。
 //!
 //! 状态机持久化到 `evidence/console/content-ui-<id>.json`（gitignored；22 号 §3.1 平台自身写点）。
-//! 写面纪律：写动作（第 1/2/3/5 步 = design/variant/layout/shot）须 `enable_write`（30 号 §3.1 默认关）；
+//! 写面纪律：写动作（第 1/2/5 步 = design/variant/shot）须 `enable_write`（30 号 §3.1 默认关）；
+//! 第 3 步（`layout`）为只读面（F1：纯视觉变体跳过，0 `scenes.json` diff 断言）；
 //! 第 4/6 步（`build`/`zero_rust`）为只读面（`build` 写 `target/` gitignored 不计；`zero_rust` 只读断言）。
 //! 北极星写点探针（`write_probe`）按动作登记写点集判定（30 号 §3.2）。
 //! 变体器同路径替换（29 号 §3）：`ui_variant tint` 默认覆盖原资产（资产名/坐标/scenes.json 不动 ⇒ 零 Rust + 零 scenes.json diff）；
@@ -204,7 +205,7 @@ pub fn parse_criterion(step: &str, exit_code: i32, output: &str) -> (bool, Strin
 /// 执行一步（`POST /api/content/ui/step`）。
 ///
 /// body：`{"id","step","enable_write"?,"params"?}`。`step` = 步骤名（枚举 `UI_STEPS`）。
-/// `params`：`{"scene","viewport","assets","color","brightness","rmult","gmult","bmult","signoff","layout"}`。
+/// `params`：`{"scene","viewport","assets","color","brightness","rmult","gmult","bmult","signoff"}`（F1：layout 步为只读断言，无 `params.layout` 消费）。
 /// 不可跳步：当前步骤 != 请求步骤 ⇒ 409（前置未过）。
 ///
 /// # Errors
