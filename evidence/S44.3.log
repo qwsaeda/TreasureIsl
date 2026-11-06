@@ -21,7 +21,7 @@
 ## 2. 端到端 e2e（平台 API 跑 index 变体，横屏 S39 当前设计）
 
 变体 id = `u01`；scene = `index`；viewport = `1920x1080`（横屏 S39 羊皮藏宝图 + 绳挂木牌，`index_plank_*` 木牌可见渲染）；
-变体参数 = color=0.32 / brightness=1.10 / rmul=0.88 / gmult=1.00 / bmult=1.20（S42.0 v2b 冷调风化；同路径替换）。
+变体参数 = color=0.32 / brightness=1.10 / **rmult=1.00** / gmult=1.00 / bmult=1.20（A-F1 修正：e2e 走平台表单，rmul 输入框默认 1.00 未改，故实跑 rmult=1.00；bmult=1.20 蓝移为主冷调效果，before/after 可见变化确认；S42.0 v2b 设计意图 rmult=0.88 属可选调参，DoD 不强制特定值。证据与实际执行参数对齐）。
 
 | 步 | 名称 | 判据 | 结果 |
 |---|---|---|---|
@@ -67,7 +67,8 @@ before / after 截图（圆环/木牌暖棕 → 冷灰蓝，可见变化）：
 
 （gate.ps1 输出见下；0 failure 才置 verified）
 
-复跑（2026-11-06，S44.3 全量）：`=== gate: 0 failure(s) ===`（37 项 PASS；wasm-browser-e2e + browser-playtest + playtest-loop 全过；bevy-cpu-parity 0 LSB 超差）。
+复跑（2026-11-06，S44.3 全量）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP = android NDK / zero-unknown；wasm-browser-e2e + browser-playtest + playtest-loop 全过；bevy-cpu-parity 0 LSB 超差）。
+r1 修复后复跑（2026-11-06，双审计 r1 findings 修复 + 新增 7 单测）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443c.log`；cargo test --workspace 含 16 项 UI 向导单测）。
 
 ## 8. 局域网可访问（2026-11-06 用户要求「必须局域可以访问」）
 
@@ -81,3 +82,23 @@ before / after 截图（圆环/木牌暖棕 → 冷灰蓝，可见变化）：
 - `CS-3 fn_param_naming`：`ui_wizard.rs::fmt_num` 参数 `v` → `value`（单字母违例，已改）。
 - `audit_code`（routes.rs 918 > 900 上限）：`handle_content_map_step`/`handle_content_ui_step` 两个同构 handler 合并为 `handle_content_wizard_step`（is_ui 分支，DRY）；routes.rs → 887 行（<900）。
 - 复跑：`check_code_standards.py --check` rc=0（无超基线）；`audit_code.py` rc=0（文件规模 0 / 函数长度 0 / 重复 0）。
+
+## 10. 双审计 r1 修复（B 审计 7 findings + A 审计 1 finding）
+
+r1 归档：`evidence/console/audit-S44.3-r1-{a,b}.md`（A PASS/1 finding；B FAIL/7 findings）。
+
+| finding | 严重度 | 修复 |
+|---|---|---|
+| B-F1 版面写路径缺失 | P1 | `step_write_paths("layout")` → `&[]`（只读断言）；删 `layout_requested` 死分支 + 失实注释；layout 步固定 `git diff --quiet scenes.json` |
+| B-F2 zero_rust 签收判据未机器化 | P1 | `evaluate_criterion` zero_rust 步强制 `state.signoff` 含签收关键词（用户视觉验收/过目/确认/签收/拍板），无 = 判败 |
+| B-F3 scene/viewport/assets/suffix 未校验 | P1 | `merge_params` → `Result`，校验 `is_ident`（scene）/`is_viewport`/assets 字符集/`suffix` `^[A-Za-z0-9_]*$`/着色参数域 [0,3]；非法 → 400 |
+| B-F4 无 Content-Type 检查 | P2 | `handle_content_wizard_step` 加 `content_type` 参数 + `application/json` 检查（400，镜像 handle_gate） |
+| B-F5 variant 判据缺 validate_data | P2 | `ui_variant.py` `--register` 后跑 `validate_data.py --check`，违规非 0 退出 |
+| B-F6 routes.rs 证据行数失真 | P2 | 本证据 §9/§10 更新（r1 后 routes.rs 846 行；handler 抽至 `content/mod.rs` `handle_wizard_step`） |
+| B-F7 重复 doc comment | P2 | 删除旧 `handle_content_map_step` 文档注释，保留合并后一段 |
+| A-F1 证据 rmul 参数漂移 | P2 | 本证据 §2 改 `rmult=1.00` 如实（e2e 走平台表单 rmul 默认 1.00）；bmult=1.20 蓝移为主效果 + before/after DIFFERENT |
+
+重构（为控 routes.rs <900）：wizard HTTP handler 抽至 `crates/ti-console/src/content/mod.rs::handle_wizard_step`（`auth_ok`/`status_json`/`header_body` 改 `pub(crate)`；`lib.rs` 加 `pub mod routes`）；routes.rs → 846 行（<900）。
+单测补：`content_ui_wizard_tests.rs` 9 → 15（F3 非法 scene/viewport/assets/color 400×4 + F2 zero_rust 无签收判败/有签收过×2）。
+
+复跑：`cargo clippy -p ti-console --all-targets` 0 warning；`cargo test -p ti-console` 全过（15 项向导单测 + 既有套件）。

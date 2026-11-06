@@ -46,7 +46,9 @@ fn step_write_paths(step: &str) -> &'static [&'static str] {
     match step {
         "design" | "shot" => &["evidence/"],
         "variant" => &["assets/ui/", "assets/ui_manifest.json"],
-        "layout" => &["assets/data/scenes.json"],
+        // F1 修复（B 审计 r1 P1）：layout 步为「可选跳过断言」（纯视觉变体，0 scenes.json diff），
+        // 只读不写盘；版面编辑（scenes.json 写）不在本向导内（30 号 §2.2 step 3 已对齐）。
+        // 其余步骤（build/zero_rust）无写点（build 产物在 target/，zero_rust 只读断言）。
         _ => &[],
     }
 }
@@ -218,14 +220,11 @@ pub fn run_step(
     // 校验 + 状态读 + 不可跳步/失败重跑门（抽离，控 run_step 长度）。
     let (step_idx, mut state) = validate_request(repo_root, id, step)?;
     // 从 params 合并场景/视口/资产/着色参数/签收（step 1 首次设定，后续步骤沿用）。
-    merge_params(&mut state, params);
+    // F3：merge_params 校验 scene/viewport/assets/suffix（路径穿越/注入防），非法 → 400。
+    merge_params(&mut state, params)?;
     let action = STEP_ACTION[step_idx];
-    // 写点集：layout 纯视觉变体跳过时只读（0 scenes.json diff，30 号 §2.2 step 3 可选）。
-    let write_paths: Vec<String> = if step == "layout" && !layout_requested(params) {
-        Vec::new()
-    } else {
-        step_write_paths(step).iter().map(|s| (*s).to_owned()).collect()
-    };
+    // 写点集：layout 步只读（0 scenes.json diff，30 号 §2.2 step 3 可选跳过；版面编辑不在本向导）。
+    let write_paths: Vec<String> = step_write_paths(step).iter().map(|s| (*s).to_owned()).collect();
     let is_write_step = !write_paths.is_empty();
     if is_write_step && !enable_write {
         return Err((
@@ -264,22 +263,7 @@ pub fn run_step(
     let stderr = String::from_utf8_lossy(&output.stderr);
     let combined = format!("{stdout}{stderr}");
 
-    let (mut passed, mut criterion) = parse_criterion(step, exit_code, &combined);
-
-    // 出图步图像非黑判据（S27.5 口径；纯色判据拦不住 blank frame，须像素多样性判据）。
-    if step == "design" || step == "shot" {
-        let shot_path = shot_output_path(repo_root, &state);
-        let (img_ok, note) = shot_image_ok(&shot_path);
-        passed = passed && img_ok;
-        criterion = format!("{criterion}；图像判据：{note}");
-    }
-
-    // 版面步：纯视觉变体跳过（layout 未提供）时，判据 = 0 scenes.json diff（只读）。
-    if step == "layout" && !layout_requested(params) {
-        let (no_diff, note) = scenes_json_no_diff(repo_root);
-        passed = passed && no_diff;
-        criterion = format!("{criterion}；版面跳过：{note}");
-    }
+    let (passed, criterion) = evaluate_criterion(step, repo_root, &state, exit_code, &combined);
 
     // 北极星写点探针判定（写步骤）。
     let (probe_ok, probe_note) = if is_write_step {
@@ -329,6 +313,54 @@ pub fn run_step(
         "halted": halted,
         "output_excerpt": combined.chars().take(1500).collect::<String>(),
     }))
+}
+
+/// 步骤判据求值（抽离 `run_step`，控其长度）：解析判据 + 出图图像非黑 + 版面跳过断言 + 签收留痕。
+fn evaluate_criterion(
+    step: &str,
+    repo_root: &Path,
+    state: &UiWizardState,
+    exit_code: i32,
+    combined: &str,
+) -> (bool, String) {
+    let (mut passed, mut criterion) = parse_criterion(step, exit_code, combined);
+
+    // 出图步图像非黑判据（S27.5 口径；纯色判据拦不住 blank frame，须像素多样性判据）。
+    if step == "design" || step == "shot" {
+        let shot_path = shot_output_path(repo_root, state);
+        let (img_ok, note) = shot_image_ok(&shot_path);
+        passed = passed && img_ok;
+        criterion = format!("{criterion}；图像判据：{note}");
+    }
+
+    // 版面步（F1：只读断言）：纯视觉变体跳过（0 scenes.json diff），版面编辑不在本向导。
+    if step == "layout" {
+        let (no_diff, note) = scenes_json_no_diff(repo_root);
+        passed = passed && no_diff;
+        criterion = format!("{criterion}；版面跳过：{note}");
+    }
+
+    // F2 修复（B 审计 r1 P1）：zero_rust 步判据须含视觉签收留痕（A 纪律硬规则 9）。
+    // 规格 = `git diff crates/` 空 + `state.signoff` 非空含签收关键词（用户视觉验收/过目/确认/签收/拍板）。
+    // 无 signoff = 判败（不推进向导；须重跑该步补签收）。
+    if step == "zero_rust" {
+        const SIGNOFF_KW: [&str; 5] =
+            ["用户视觉验收", "用户视觉过目", "用户视觉确认", "视觉签收", "用户拍板"];
+        let has_signoff = SIGNOFF_KW.iter().any(|k| state.signoff.contains(k));
+        if has_signoff {
+            criterion = format!(
+                "{criterion}；签收留痕判据：state.signoff 含「{}」",
+                state.signoff.chars().take(24).collect::<String>()
+            );
+        } else {
+            passed = false;
+            criterion = format!(
+                "{criterion}；签收留痕判据：state.signoff 空或不含签收关键词（须「用户视觉验收通过」等，A 纪律 EXP-114）"
+            );
+        }
+    }
+
+    (passed, criterion)
 }
 
 /// 请求校验：id 合法性 + step 在 6 步内 + 读状态 + 不可跳步/失败重跑门。
@@ -386,23 +418,51 @@ fn validate_request(
 }
 
 /// 从 `params` 合并场景/视口/资产/着色参数/签收到 state（幂等；缺省不覆盖）。
-fn merge_params(state: &mut UiWizardState, params: &Value) {
+/// 从 `params` 合并场景/视口/资产/着色参数/签收到 state（幂等；缺省不覆盖）。
+/// F3 修复（B 审计 r1 P1）：`scene`/`viewport`/`assets`/`suffix` 用户可控字符串**校验**，
+/// 防路径穿越/命令参数注入（id 已有 `^[a-z0-9_]{1,16}$`；这些字段直达出图文件名与子进程参数）。
+fn merge_params(state: &mut UiWizardState, params: &Value) -> Result<(), (u16, String)> {
     if let Some(v) = params.get("scene").and_then(Value::as_str) {
         if !v.is_empty() {
+            if !is_ident(v) {
+                return Err((
+                    400u16,
+                    format!("`scene` `{v}` 非法（^[a-z0-9_]{{1,16}}$，场景 id）"),
+                ));
+            }
             state.scene = String::from(v);
         }
     }
     if let Some(v) = params.get("viewport").and_then(Value::as_str) {
+        // 空 = 壳默认视口；否则 `WxH`（S29.5 多视口出图）。
+        if !v.is_empty() && !is_viewport(v) {
+            return Err((
+                400u16,
+                format!("`viewport` `{v}` 非法（空 或 ^[0-9]{{2,4}}x[0-9]{{2,4}}$，如 1920x1080）"),
+            ));
+        }
         state.viewport = String::from(v);
     }
     if let Some(v) = params.get("assets").and_then(Value::as_str) {
         if !v.is_empty() {
+            if !v
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == ',')
+            {
+                return Err((
+                    400u16,
+                    format!("`assets` `{v}` 非法（^[a-z0-9_,]+$，逗号分隔资产名）"),
+                ));
+            }
             state.assets = String::from(v);
         }
     }
     for (key, field) in [("color", 0), ("brightness", 1), ("rmult", 2), ("gmult", 3), ("bmult", 4)]
     {
         if let Some(v) = params.get(key).and_then(Value::as_f64) {
+            if !(0.0..=3.0).contains(&v) {
+                return Err((400u16, format!("`{key}` {v} 越界（[0,3]，ui_variant 参数域）")));
+            }
             match field {
                 0 => state.color = v,
                 1 => state.brightness = v,
@@ -413,18 +473,38 @@ fn merge_params(state: &mut UiWizardState, params: &Value) {
             }
         }
     }
+    // F3：`suffix`（变体路径后缀，resolve_execution 直读 params）校验：`^[A-Za-z0-9_]*$`（可空）。
+    // 非空时防 `..` 逃逸 assets/ui/（ui_variant.py `f"{name}{suffix}.png"`）。
+    if let Some(v) = params.get("suffix").and_then(Value::as_str) {
+        if !v.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            return Err((400u16, format!("`suffix` `{v}` 非法（^[A-Za-z0-9_]*$，变体路径后缀）")));
+        }
+    }
     if let Some(v) = params.get("signoff").and_then(Value::as_str) {
         if !v.is_empty() {
             state.signoff = String::from(v);
         }
     }
+    Ok(())
 }
 
-/// 版面步是否请求了实际 scenes.json 编辑（`params.layout` 非空对象）。
-fn layout_requested(params: &Value) -> bool {
-    params
-        .get("layout")
-        .is_some_and(|l| !l.is_null() && !l.as_object().is_none_or(serde_json::Map::is_empty))
+/// F3：`scene`/`suffix` 类短标识（`^[a-z0-9_]{1,16}$`，与 id 同口径）。
+fn is_ident(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 16
+        && value.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+}
+
+/// F3：视口格式（`WxH`，W/H 2~4 位数字）。
+fn is_viewport(value: &str) -> bool {
+    value.split_once('x').is_some_and(|(w, h)| {
+        !w.is_empty()
+            && !h.is_empty()
+            && w.len() <= 4
+            && h.len() <= 4
+            && w.chars().all(|c| c.is_ascii_digit())
+            && h.chars().all(|c| c.is_ascii_digit())
+    })
 }
 
 /// `解析执行面：白名单动作（子进程）或平台自身动作（design/layout/build/shot/zero_rust`）。
@@ -473,33 +553,18 @@ fn resolve_execution(
         },
         None => match step {
             "design" | "shot" => Ok(scene_shot_command(repo_root, state)),
-            "layout" => {
-                if layout_requested(params) {
-                    // 版面编辑：平台表单已改 scenes.json（前端提交）；此处只做规范形断言（git diff 校验）。
-                    // 实际写 scenes.json 由前端表单完成，向导步仅校验 + 记录（写点探针捕获差异）。
-                    Ok((
-                        "python3".to_owned(),
-                        vec![
-                            "scripts/validate_data.py".to_owned(),
-                            "--check".to_owned(),
-                            "scenes".to_owned(),
-                        ],
-                        Vec::new(),
-                    ))
-                } else {
-                    // 纯视觉变体跳过：只读断言（不写盘，0 scenes.json diff）。
-                    Ok((
-                        "git".to_owned(),
-                        vec![
-                            "diff".to_owned(),
-                            "--quiet".to_owned(),
-                            "--".to_owned(),
-                            "assets/data/scenes.json".to_owned(),
-                        ],
-                        Vec::new(),
-                    ))
-                }
-            }
+            // F1 修复（B 审计 r1 P1）：layout 步 = 纯视觉变体跳过（只读断言，0 scenes.json diff）；
+            // 版面编辑（scenes.json 写）不在本向导（30 号 §2.2 step 3 已对齐，平台表单写端点为后续）。
+            "layout" => Ok((
+                "git".to_owned(),
+                vec![
+                    "diff".to_owned(),
+                    "--quiet".to_owned(),
+                    "--".to_owned(),
+                    "assets/data/scenes.json".to_owned(),
+                ],
+                Vec::new(),
+            )),
             "build" => Ok((
                 resolve_cargo().to_string_lossy().to_string(),
                 vec!["build".to_owned(), "-p".to_owned(), "ti-engine".to_owned()],

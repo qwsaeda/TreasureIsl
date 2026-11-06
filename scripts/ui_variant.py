@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -136,6 +137,18 @@ def main(argv: list[str]) -> int:
             changed += 1
         save_manifest(manifest)
         print(f"ui_variant: ui_manifest 已更新 {changed} 条（source=ui_variant）")
+        # F5 修复（S44.3 双审计 r1 B-P2）：register 后跑 validate_data --check（disk↔registry 一致性），
+        # 违规非 0 退出（gate 第 10a 项统一入口口径；向导 variant 步「0 违规」判据由退出码传达）。
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "validate_data.py"), "--check"],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        if proc.returncode != 0:
+            print(f"ui_variant: validate_data --check 失败（{proc.returncode}）—— ui_manifest 与磁盘不一致，"
+                  f"变体登记回滚不成立", file=sys.stderr)
+            sys.stderr.write(proc.stdout[-2000:] + proc.stderr[-2000:])
+            return 1
+        print("ui_variant: validate_data --check OK（ui_manifest ↔ disk 一致，0 违规）")
 
     return 0
 

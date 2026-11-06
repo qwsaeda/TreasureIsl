@@ -331,55 +331,6 @@ fn post_too_large(want_gzip: bool) -> Vec<u8> {
     )
 }
 
-/// `POST /api/content/map/step`（S44.2 地图向导）：执行一步（调白名单动作 + 机器判据 + 写点探针）。
-/// body：`{"id","step","enable_write"?,"params"?}`。写操作鉴权（`403`）→ 不可跳步（`409`）/ 写动作无 `enable_write`（`400`）。
-/// `POST /api/content/{map,ui}/step`（S44.2/S44.3 向导）：执行一步（调白名单动作 + 机器判据 + 写点探针）。
-/// body：`{"id","step","enable_write"?,"params"?}`。写操作鉴权（`403`）→ 不可跳步（`409`）/ 写动作无 `enable_write`（`400`）。
-/// `is_ui` 选择地图/UI 向导（两 handler 同构，合并 DRY；`routes.rs` 行数守 `audit_code` 900 上限）。
-fn handle_content_wizard_step(
-    repo_root: &Path,
-    body: &[u8],
-    token: Option<&str>,
-    want_gzip: bool,
-    is_ui: bool,
-) -> Vec<u8> {
-    // 写路由须 X-TI-Token（22 号 §10.1）；缺 token ⇒ 403。镜像 /api/audit/taskbook 鉴权面；
-    // 该路由为写点（assets/ + dist/ + evidence/ + 向导状态），非「免 token 唯一写端点」（22 号 L359 仅 /api/map/import 豁免）。
-    if !auth_ok(token) {
-        return header_body(
-            "application/json",
-            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1）"}"#.as_bytes(),
-            "403 Forbidden",
-            "no-store",
-            None,
-            want_gzip,
-        );
-    }
-    let payload = match serde_json::from_slice::<Value>(body) {
-        Ok(v) => v,
-        Err(e) => {
-            return status_json(
-                400,
-                &json!({"ok": false, "error": format!("body 非合法 JSON：{e}")}),
-                want_gzip,
-            );
-        }
-    };
-    let id = payload.get("id").and_then(Value::as_str).unwrap_or("").to_owned();
-    let step = payload.get("step").and_then(Value::as_str).unwrap_or("").to_owned();
-    let enable_write = payload.get("enable_write").and_then(Value::as_bool).unwrap_or(false);
-    let params = payload.get("params").cloned().unwrap_or(json!({}));
-    let result = if is_ui {
-        crate::content::ui_wizard::run_step(repo_root, &id, &step, enable_write, &params)
-    } else {
-        crate::content::map_wizard::run_step(repo_root, &id, &step, enable_write, &params)
-    };
-    match result {
-        Ok(v) => status_json(200, &v, want_gzip),
-        Err((code, msg)) => status_json(code, &json!({"ok": false, "error": msg}), want_gzip),
-    }
-}
-
 /// `POST /api/*` 写操作分派（S32.4/S32.5）：gate / map/import / audit 匹配返回响应，否则 `None`。
 fn handle_post(
     clean: &str,
@@ -403,14 +354,18 @@ fn handle_post(
         }
         // S32.6 任务收口（close_check 只读体检 / close_run 写 + EXP 查重）。
         "/api/close" => Some(close_api::handle_close(repo_root, body, token, content_type, gz)),
-        // S44.2 地图向导执行一步（写动作需 enable_write；不可跳步 409；失败即停）。
-        // F-1 修复：写路由须 X-TI-Token（22 号 §10.1），传 token 供 403 鉴权。
-        "/api/content/map/step" => {
-            Some(handle_content_wizard_step(repo_root, body, token, gz, false))
-        }
-        // S44.3 UI 向导执行一步（写动作需 enable_write；不可跳步 409；失败即停）。
+        // S44.2/S44.3 地图/UI 向导执行一步（写动作需 enable_write；不可跳步 409；失败即停）。
+        // F-1 修复：写路由须 X-TI-Token（22 号 §10.1）；F4：Content-Type application/json。
+        "/api/content/map/step" => Some(crate::content::handle_wizard_step(
+            repo_root,
+            body,
+            token,
+            content_type,
+            gz,
+            false,
+        )),
         "/api/content/ui/step" => {
-            Some(handle_content_wizard_step(repo_root, body, token, gz, true))
+            Some(crate::content::handle_wizard_step(repo_root, body, token, content_type, gz, true))
         }
         _ => None,
     }
@@ -670,7 +625,7 @@ fn handle_gate(
 /// 写操作鉴权（22 号 §10.1）：
 /// - `TI_CONSOLE_TOKEN` env 设了 → 头必须存在且精确匹配；
 /// - env 未设（本地内网自用）→ 头存在且非空即可（S32.14 ② 免鉴权例外之外，写面一律要求头在场）。
-fn auth_ok(token: Option<&str>) -> bool {
+pub(crate) fn auth_ok(token: Option<&str>) -> bool {
     match (std::env::var("TI_CONSOLE_TOKEN").ok(), token) {
         (Some(env), Some(hdr)) => !hdr.is_empty() && env == hdr,
         (_, None) => false,
@@ -706,7 +661,7 @@ fn json200(value: &Value, want_gzip: bool) -> Vec<u8> {
 }
 
 /// 带状态码的 JSON 响应（S44.2 向导 400/409 判据回显）。
-fn status_json(code: u16, value: &Value, want_gzip: bool) -> Vec<u8> {
+pub(crate) fn status_json(code: u16, value: &Value, want_gzip: bool) -> Vec<u8> {
     let status = match code {
         400 => "400 Bad Request",
         403 => "403 Forbidden",
@@ -795,7 +750,7 @@ fn guarded_file(
 /// gzip 面（S32.13）：仅**文本类 MIME**（`text/*` / `application/json` / yaml 等）在客户端
 /// `Accept-Encoding: gzip` 时压；**已压缩二进制（`image/*` / wasm）不压**（PNG 内部已 zlib，
 /// 再 gzip ≈ 0 收益还费 CPU，实测省 -0.0%）。`Content-Encoding: gzip` + `Vary: Accept-Encoding`。
-fn header_body(
+pub(crate) fn header_body(
     mime: &str,
     body: &[u8],
     status: &str,

@@ -9,4 +9,5 @@
 pub mod audit;
 pub mod content;
 pub mod repo;
+pub mod routes;
 pub mod runner;

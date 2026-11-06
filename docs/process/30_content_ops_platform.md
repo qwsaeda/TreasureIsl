@@ -54,16 +54,16 @@
 |---|---|---|---|
 | 1 | 设计稿先行 | `--shot --scene=<id> --viewport=<方向>`（当前状态出图） | 出图非黑；**用户视觉确认留痕**（平台记录：时间戳 + 用户消息，A 纪律硬规则 9） |
 | 2 | 视觉变体器 | `ui_variant`（`scripts/ui_variant.py`，**新正式工具**，固化 S42.0 临时脚本：选资产组 + 着色参数 → 同路径替换/新路径 + 可选 ui_manifest 注册） | 资产生成 + `ui_manifest.json` 登记一致（disk↔registry 双向同步 validate_data 0 违规） |
-| 3 | 版面（可选） | 平台表单改 `scenes.json` 原语（asset/坐标/配色）→ 写 scenes.json | `scenes.json` indent=1 规范形 + `check_scenes_canonical` 0 差 |
+| 3 | 版面（可选） | 平台表单改 `scenes.json` 原语（asset/坐标/配色）→ 写 scenes.json | **本向导版面步 = 只读断言**（0 `scenes.json` diff；版面编辑不在本向导，写端点为后续平台表单，B 审计 r1-F1 已降格对齐） |
 | 4 | 重建 | `cargo build`（嵌 scenes.json，29 号 §5 坑位：include_str! 编译期内嵌） | build 成功（scenes.json 生效） |
 | 5 | 出图验收 | `--shot --scene=<id> --viewport=<方向>`（多视口） | 出图非黑 + bg 采样期望（变体色调验证） |
-| 6 | 零 Rust + 签收 | 平台跑 `git diff crates/` + 视觉签收留痕 | **空** + `evidence/<id>.log` 含「用户视觉验收/过目/确认/签收」（doccheck2 第 35 项） |
+| 6 | 零 Rust + 签收 | 平台跑 `git diff crates/` + 视觉签收留痕 | **空** + 向导 `state.signoff` 含「用户视觉验收/过目/确认/签收/拍板」（B 审计 r1-F2 已机器化：无 signoff = 判败） |
 
 - **第 2 步变体器**：固化 S42.0 的 PIL `tint_cool`（Color/Brightness 增强 + R×/G×/B× 冷移）为 `scripts/ui_variant.py`
   （登记 14 号 §3.2 + 工具契约：幂等 + `--check` 只读 + 非 0 退出 + 3 处登记）。
 - **同路径替换**（29 号 §3 换 UI 核心判据）：变体器默认**覆盖原路径**（资产名/坐标/scenes.json/测试全不动 ⇒ 零 Rust + 零 scenes.json diff，S42.0 实证）；
   `--suffix` 选项出变体路径（供设计稿迭看，不落定）。
-- **第 3 步版面可选**：纯视觉变体（着色）时跳过（0 scenes.json diff）；改版面/新元素才用。
+- **第 3 步版面可选**：纯视觉变体（着色）时跳过（0 `scenes.json` diff，本向导版面步 = 只读断言）；改版面/新元素需平台表单写端点为后续能力（B 审计 r1-F1 已降格，非本向导范围）。
 
 ### 2.3 打包/分发面
 
