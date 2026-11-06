@@ -1,0 +1,76 @@
+# S43.0 内容运营流程规范 + 程序构成模型（文档定案）
+
+> 2026-11-06。用户「把内容运营流程制定规范出来」+「代码 + UI数据 + 地图数据 构成模型也写进
+> 规范文档」→ 新增 `docs/process/29_content_ops.md`（内容运营规范单一事实源）。
+> 背景：S40.0/S41.0 改地图零 Rust 验证 + S39.0/S42.0 换 UI 零 Rust 验证 → 用户拍板「不改业务，
+> 只用换 UI 和改地图」→ 把流程固化成规范。
+
+## 改动面（声明）
+
+- **文档（新增）**：`docs/process/29_content_ops.md`（内容运营规范单一事实源）：
+  - §0 **程序构成模型**：程序 = **代码 + UI数据 + 地图数据**（UI/地图是数据非代码，
+    换它们零 Rust；业务规则在代码里，改业务才碰 Rust）。
+  - §1 **内容运营核心判据**：`git diff crates/` = 空 / 不改业务 / 只动数据 / 验收含证据。
+  - §2 **改地图流程**（S40.0/S41.0）：add→填内容（isle 排布/events/merchants/layout/strings/
+    manifest）→`manifest["map"]`←map.json 同步→verify（I1~I9 0 违规）→pack→install→check 0 漂移
+    →sync→TI_MAP 出图→零 Rust 判据。
+  - §3 **换 UI 流程**（S39.0/S42.0）：设计稿先行（A 纪律）→改 scenes.json/换资产→rebuild→出图
+    →视觉签收留痕。
+  - §4 **打包/分发链**：pack→dist/ + install + build_wasm 4e 部署 + 运行期换图。
+  - §5 **坑位教训**：manifest["map"] 同步 / scenes.json include_str 内嵌须 rebuild /
+    dod 措辞触发 visual-signoff 误报。
+  - §6 内容运营 vs 从零设计分界；§7 关联。
+- **登记**：`docs/README.md`（process 表 + 29 行）+ `AGENTS.md`（路由表「内容运营」入口）。
+- **计数**：`docs/release.md` 台账任务总数 299→300（S43.0 入账，doccheck 断言锁定）。
+- **业务逻辑 / Rust 零改动**：`crates/` 全目录 **0 diff**（纯文档任务）。
+
+## 判据
+
+### J1 规范含构成模型 + 内容运营流程 + 坑位固化
+
+`docs/process/29_content_ops.md` 含：
+- §0 程序构成模型（代码 + UI数据 + 地图数据）——用户「构成模型也写进规范文档」✅
+- §1~§4 内容运营流程（改地图 / 换 UI / 打包分发 + 零 Rust 判据）——用户「流程制定规范出来」✅
+- §5 坑位教训（manifest["map"] 同步 / scenes.json 内嵌须 rebuild / dod 误报）——S41.0/S42.0 踩坑固化 ✅
+
+### J2 doccheck 0 errors（新文档登记 + cross-doc 引用）
+
+```
+doccheck: 163 docs, 38 facts, 165 experiences, 294 task refs, 4 assertions, 0 error(s)
+```
+✅ 29 文档登记 + README/路由表 + release 计数断言全过。
+
+### J3 doccheck2 0 errors（audit-codified 41 项）
+
+```
+doccheck2: 0 error(s) across 41 audit-codified checks
+```
+✅（含 task-change-scope / process-ledger / visual-signoff / tooling-registration 全过）。
+
+### J4 零 Rust 改动（核心判据）
+
+```
+git diff --stat crates/   → 空（crates/ 全目录 0 diff）
+```
+S43.0 全程只改 `docs/` + `AGENTS.md` + `plan/ledger.yaml`。✅
+
+### J5 gate 全绿
+
+```
+=== gate: 0 failure(s) ===（30 PASS + SKIP；wasm-browser-e2e L4 环境降级 SKIP 计数 PASS）
+```
+见 `evidence/S43.0_gate.log`。✅
+
+## 结论
+
+内容运营流程已规范化（`29_content_ops.md` 单一事实源）：
+- **程序构成模型**：代码 + UI数据 + 地图数据（换 UI/改地图 = 动数据层 = 零 Rust）。
+- **内容运营流程**：改地图（S40.0/S41.0 步骤）+ 换 UI（S39.0/S42.0 步骤）+ 打包分发。
+- **坑位固化**：manifest["map"] 同步 / scenes.json 内嵌须 rebuild / dod 误报——下次不再踩。
+
+## 关联
+
+- 地图包格式/I1~I9：`21_map_package_spec.md`（S31）。
+- 工具：`scripts/map_pack.py`（台账 `14_tooling_catalog.md` §3.2）。
+- 验证记录：S40.0（m21）/S41.0（m22）/S42.0（index 变体，in_progress）。
+- 台账：S43.0（in_progress → verified）。
