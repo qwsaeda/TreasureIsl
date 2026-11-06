@@ -84,6 +84,7 @@
 | [process/27_landscape_adaptation.md](process/27_landscape_adaptation.md) | **横屏适配设计草案（U23，设计稿先行）**：现状（1080×1920 竖屏 + letterbox 药丸，横屏浪费 61%）+ 目标（横屏铺满 + 双方向自适应）+ 三方案选型（A 坐标双套推荐 / B 旋转不推荐 / C letterbox 最小）+ 方案 A 落地轮廓（方向判定 / 坐标系常量 / 数据双份 / 两层渲染 / 命中）+ 验收判据 + 风险。**A 纪律：用户确认选型 + 横屏效果图过目后才动码**。改横屏适配·加方向感知前必读 |
 | [process/28_engine_best_practice.md](process/28_engine_best_practice.md) | **游戏开发 + Bevy 最佳实践（规范/审计基准，S38）**：规范清单 A 数据驱动 / B 视觉令牌 / C 引擎机制 / D 代码标准 + 审计 findings（F-01 颜色字面量 ~24 处 / F-02 尺寸魔法数字 18 处 → `ui.rs::palette` 单源）+ 固化守门 doccheck2 `engine-no-color-literal`（第 41 项）。审计项目找硬编码·改视觉量·加颜色/尺寸常量前必读 |
 | [process/29_content_ops.md](process/29_content_ops.md) | **内容运营规范（零 Rust 内容运营，S43）**：程序构成模型（**代码 + UI数据 + 地图数据**，UI/地图是数据非代码）+ 内容运营核心判据（`git diff crates/`=空 / 不改业务 / 只动数据）+ 改地图流程（S40.0/S41.0：add→填内容→`manifest["map"]`←map.json 同步→verify→pack→install→check→sync→出图）+ 换 UI 流程（S39.0/S42.0：设计稿先行 A 纪律→改 scenes.json/换资产→rebuild→出图→视觉签收）+ 打包/分发链 + 坑位教训（manifest["map"] 同步 / scenes.json include_str 内嵌须 rebuild）。**内容运营（换 UI/改地图）前必读** |
+| [process/30_content_ops_platform.md](process/30_content_ops_platform.md) | **内容运营平台化定案（S44，单一事实源）**：把内容运营流程做成平台的**固定流程向导**——地图工作台（10 步：add→填→syncmap→verify→pack→install→check→sync→出图→零 Rust）+ UI 工作台（6 步：设计稿→变体器→版面→rebuild→出图→签收→零 Rust）+ 打包/分发面（pack→dist / build wasm·apk / publish）+ §4.2 白名单扩展（9 动作，写面默认关）+ §3.1 写点表修订 + §8 北极星写点探针 + 向导状态机（每步机器判据，不可跳步，失败即停）。**内容运营平台化前必读** |
 | [process/19_bevy_ui.md](process/19_bevy_ui.md) | **bevy_ui 专题（单一事实源）**：UI 相机分层（`IsDefaultUiCamera` order=1/clear None）/ `Node` 字段全 inline / `Text`+`TextFont` / **UI 图片 = `ImageNode`**（0.20 新 API，非旧 `Image`/`Sprite`）/ **taffy 自动布局 = 意图化（flex column+gap+% 定位，resize 真重排，不手写像素）** / `ComputedNode` 探针证据口径 / 0.20 坑位清单。改 UI chrome·加控件·改版面坐标前必读 |
 | [process/20_bevy_picking.md](process/20_bevy_picking.md) | **bevy_picking 专题（单一事实源）**：0.20 拾取结构（无 `PickingSection`/`PickingHandler`；`Pickable`+`MeshPickingSettings`）/ 指针事件（`PointerClick`=tap、`PointerDragEnd.distance`=swipe）/ **0.20 `Message` 取代 `Event`**（`add_message`+`MessageWriter::write`+`MessageReader::read`）/ 本项目命中契约（`PickTarget`/`PickEvent`/`HitData`/`register_pick`/`swipe_dir_from`）/ 数据化命中（`scenes.json` `pick_key`/`pick_index`）/ 观察者参数最小化 / 坑位清单。改命中·加可点元素前必读 |
 
@@ -123,6 +124,7 @@
 | [`pipeline.md`](pipeline.md) | TEST-AUDIT-FIX 多代理协作循环（**已被 [`process/06_flywheel.md`](process/06_flywheel.md) 取代**，仅存历史） |
 | [`plan-s16-loop.md`](plan-s16-loop.md) | **S16 试玩闭环 + 发布 + 设计 sheet**（WIP 草稿，S16 尚未登记台账，勿当依据） |
 | [`plan-s32-platform.md`](plan-s32-platform.md) | **S32 开发管理平台 WBS**（TI Dev Console：P0 只读骨架 → P1 执行与审计 → P2 辅助开发 → P3 部署可选；每任务 = 实现 → 自验 → 双审计 → 台账 verified；定案 = `process/22_dev_platform.md`） |
+| [`plan-s44-content-ops-platform.md`](plan-s44-content-ops-platform.md) | **S44 内容运营平台化 WBS**（TI Dev Console 固定流程向导：S44.0 定案 → S44.1 工具与写面 → S44.2 地图工作台 → S44.3 UI 工作台 → S44.4 打包/分发 → S44.5 固化收口；定案 = `process/30_content_ops_platform.md`） |
 
 ### 工具与产出物索引
 

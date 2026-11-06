@@ -1,0 +1,35 @@
+S44.0 — 内容运营平台化定案（文档 + WBS + 登记）
+================================================
+任务：把内容运营流程（29 号 §2 改地图 10 步 / §3 换 UI 6 步）做成平台固定流程向导的**定案**。
+改动面声明：文档（新增 docs/process/30_content_ops_platform.md + docs/plan-s44-content-ops-platform.md）+ 登记 4 处。
+
+用户拍板（2026-11-06，四问全选推荐，消息留痕）
+----------------------------------------------
+① 范围 = 地图 + UI + 打包**全流程**；② 执行模式 = **半自动向导**（每步确认 + 机器判据，不可跳步）；
+③ 写面放开 = **加白名单默认关 + 内容级快照判定**；④ UI 形态 = **视觉变体器**（着色/替换 + 出图 + 签收留痕）。
+用户诉求原文：既然 UI 和地图已经与程序分离，那么制定它们就应该是平台的功能——能固化的东西应可固定化、模式化去制定，包括最终打包。
+
+定案要素（30 号 §1~§7）
+-----------------------
+- §1 目标与边界（平台 = 编排者，不重写制作逻辑；不做从零设计/编辑器/任意 shell）。
+- §2 页面与流程：地图工作台**固定 10 步**（add→填→syncmap→verify→pack→install→check→sync→出图→零 Rust，
+  29 号 §2 1:1 映射）+ UI 工作台**固定 6 步**（设计稿→变体器→版面→rebuild→出图→签收→零 Rust，29 号 §3 1:1）
+  + 打包/分发面（pack→dist / build wasm·apk / publish 默认关）。
+- §3 白名单扩展与写面纪律修订：§4.2 新增 9 动作（mappack_add/syncmap/pack/install/sync/uninstall + ui_variant + map_shot + publish，
+  写面默认关，禁止 1/2/3 保留）；§3.1 已知写点表 + §8 北极星**写点探针**（write_probe 泛化，import_probe 并入）。
+- §4 模式化机制：向导状态机（evidence/console/content-*.json gitignored）+ 不可跳步（409）+ 失败即停 + 每步机器判据。
+- §5 工具扩展：map_pack.py `syncmap`（manifest["map"]←map.json，幂等 + --check）+ ui_variant.py 固化（S42.0 tint_cool）。
+- §7 验收判据：端到端两向导零 Rust + 不可跳步 409 + 写面受控 + 判据不虚报 + gate 全绿。
+
+WBS（plan-s44-content-ops-platform.md）：S44.0 定案 → S44.1 工具与写面 → S44.2 地图工作台 →
+S44.3 UI 工作台 → S44.4 打包/分发 → S44.5 固化收口。
+
+判据结果
+--------
+[1] 定案要素齐全（30 号 §1~§7 + WBS 任务表 S44.0~S44.5）✓。
+[2] 登记 4 处：docs/README.md（30 号 + plan-s44 两行）/ AGENTS.md 路由表（内容运营平台化行）/
+    docs/process/00_index.md 目录清单 / docs/process/15_process_ledger.md 待固化（向导状态机挂 S44）✓。
+[3] doccheck 0 errors（165 docs / 300 task refs / 4 assertions）/ doccheck2 0 errors（41 audit-codified checks）✓。
+[4] 零 Rust 改动：git diff crates/ = 空 ✓（定案纯文档 + 台账）。
+[5] gate 全绿：scripts/gate.ps1 33 项 0 failure；明细 evidence/S44.0_gate.log ✓。
+[6] 台账 306 任务 / 300 verified + S44.0 in_progress + S44.1~S44.5 pending；ledger 0 error ✓。
