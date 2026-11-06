@@ -74,6 +74,7 @@ before / after 截图（圆环/木牌暖棕 → 冷灰蓝，可见变化）：
 复跑（2026-11-06，S44.3 全量）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP = android NDK / zero-unknown；wasm-browser-e2e + browser-playtest + playtest-loop 全过；bevy-cpu-parity 0 LSB 超差）。
 r1 修复后复跑（2026-11-06，双审计 r1 findings 修复 + 新增 7 单测）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443c.log`；cargo test --workspace 含 16 项 UI 向导单测）。
 r2 修复后复跑（2026-11-06，F2 签收关键词修正 + P3 清理 + e2e 重跑）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443d.log`）。
+r3 修复后复跑（2026-11-06，F2 关键词 6 词对齐 doccheck2/30 号/测试注释 + evidence §10 措辞修正）：`=== gate: 0 failure(s) ===`（30 PASS + 2 SKIP，`/tmp/opencode/gate_s443e.log`；doccheck2 仍 41 checks 0 error）。
 
 ## 8. 局域网可访问（2026-11-06 用户要求「必须局域可以访问」）
 
@@ -106,4 +107,4 @@ r1 归档：`evidence/console/audit-S44.3-r1-{a,b}.md`（A PASS/1 finding；B FA
 重构（为控 routes.rs <900）：wizard HTTP handler 抽至 `crates/ti-console/src/content/mod.rs::handle_wizard_step`（`auth_ok`/`status_json`/`header_body` 改 `pub(crate)`；`lib.rs` 加 `pub mod routes`）；routes.rs → 846 行（<900）。
 单测补：`content_ui_wizard_tests.rs` 9 → 16（F3 非法 scene/viewport/assets/suffix/color 400×5 + F2 zero_rust 无签收判败/有签收过×2）。
 
-复跑：`cargo clippy -p ti-console --all-targets` 0 warning；`cargo test -p ti-console` 全过（15 项向导单测 + 既有套件）。
+复跑：`cargo clippy -p ti-console --all-targets` 0 warning；`cargo test -p ti-console` 全过（16 项向导单测 + 既有套件）。

@@ -3358,8 +3358,10 @@ fn check_visual_design_signoff(root: &Path) -> Vec<String> {
     // 只看**版面/配色数据面**（scenes/theme）：单纯产资产（assets/ui）不改画面 ⇒ 不要求签收
     const TOUCH: [&str; 2] = ["scenes.json", "theme.json"];
     // 签收标记写在**证据**里（留痕的载体是证据，不是 dod 的措辞）
-    const SIGNOFF: [&str; 5] =
-        ["用户视觉验收", "用户视觉过目", "用户视觉确认", "视觉签收", "用户拍板"];
+    // r3 对齐（S44.3 双审计）：真实留痕格式「用户 <日期> <任务> 视觉验收通过」经日期隔断「用户视觉验收」
+    // 连续子串 ⇒ 追加核心动词短语「视觉验收」（与 ui_wizard SIGNOFF_KW 6 词同口径，防未来证据假阳性）。
+    const SIGNOFF: [&str; 6] =
+        ["用户视觉验收", "用户视觉过目", "用户视觉确认", "视觉签收", "用户拍板", "视觉验收"];
     let mut errors: Vec<String> = Vec::new();
     let Some(ledger) = read_file(root, "plan/ledger.yaml") else {
         return vec!["plan/ledger.yaml 不存在，无法校验视觉签收留痕".to_string()];

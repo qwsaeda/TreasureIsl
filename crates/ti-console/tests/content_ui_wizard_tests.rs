@@ -229,7 +229,7 @@ fn run_step_zero_rust_requires_signoff() {
 
 #[test]
 fn run_step_zero_rust_passes_with_signoff() {
-    // F2 正例：signoff 含「用户视觉验收」→ 判过（git diff crates/ 为 0 空工作树）。
+    // F2 正例：signoff 含「视觉验收」（真实格式「用户 <日期> <任务> 视觉验收通过」，r3 对齐 6 词）→ 过签收判据。
     let id = "ui_f2_signoff";
     seed_state_at_step6(
         &repo_root(),

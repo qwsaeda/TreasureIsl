@@ -57,7 +57,7 @@
 | 3 | 版面（可选） | 平台表单改 `scenes.json` 原语（asset/坐标/配色）→ 写 scenes.json | **本向导版面步 = 只读断言**（0 `scenes.json` diff；版面编辑不在本向导，写端点为后续平台表单，B 审计 r1-F1 已降格对齐） |
 | 4 | 重建 | `cargo build`（嵌 scenes.json，29 号 §5 坑位：include_str! 编译期内嵌） | build 成功（scenes.json 生效） |
 | 5 | 出图验收 | `--shot --scene=<id> --viewport=<方向>`（多视口） | 出图非黑 + bg 采样期望（变体色调验证） |
-| 6 | 零 Rust + 签收 | 平台跑 `git diff crates/` + 视觉签收留痕 | **空** + 向导 `state.signoff` 含「用户视觉验收/过目/确认/签收/拍板」（B 审计 r1-F2 已机器化：无 signoff = 判败） |
+| 6 | 零 Rust + 签收 | 平台跑 `git diff crates/` + 视觉签收留痕 | **空** + 向导 `state.signoff` 含「用户视觉验收/过目/确认/签收/拍板/视觉验收」（B 审计 r1-F2 已机器化：无 signoff = 判败；r3 对齐 doccheck2 第 35 项 6 词） |
 
 - **第 2 步变体器**：固化 S42.0 的 PIL `tint_cool`（Color/Brightness 增强 + R×/G×/B× 冷移）为 `scripts/ui_variant.py`
   （登记 14 号 §3.2 + 工具契约：幂等 + `--check` 只读 + 非 0 退出 + 3 处登记）。
