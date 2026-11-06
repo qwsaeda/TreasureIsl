@@ -167,9 +167,10 @@ $uw = @($srcDirs | Select-String -Pattern '\.unwrap\(\)|\.expect\(')
 $uwList = ($uw | ForEach-Object { "$($_.Path):$($_.LineNumber)" }) -join ', '
 Report ($uw.Count -eq 0) 'no unwrap()/expect() outside tests/+examples/ (库代码)' $uwList
 
-# 7) 全格式 0 未知字节（S1 起有实现）
+# 7) 全格式 0 未知字节（S46.0 起 `verify` bin 落地；`--bin verify` 显式指定——
+#    ti-tools 多 bin 且无 default-run，`-- verify` 形式会被 cargo 拒绝（歧义）。
 if ((Test-Path 'crates/ti-tools/src/bin/verify.rs') -and (Tier 'late')) {
-    & $cargoCmd run -q -p ti-tools -- verify --zero-unknown 2>&1 | ForEach-Object { Write-Host "        $_" }
+    & $cargoCmd run -q -p ti-tools --bin verify -- --zero-unknown 2>&1 | ForEach-Object { Write-Host "        $_" }
     Report ($LASTEXITCODE -eq 0) 'zero-unknown verify'
 } else {
     Skip 'zero-unknown verify' 'dev tier 或 S1.x 格式解析器就绪后解锁'

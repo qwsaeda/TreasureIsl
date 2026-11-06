@@ -1,0 +1,313 @@
+# S46.0 P0-2 零未知字节 verify 落地（ti-tools verify bin + 门禁激活 + 实测基线）— 验收证据
+
+日期：2026-11-06
+改动面：工具（`crates/ti-tools/src/bin/verify.rs` 新增 = `verify --zero-unknown` 判据载体）+ 门禁（`scripts/gate.ps1` 第 7 项调用修正 `--bin verify --` + 载体在位 ⇒ 由永久 SKIP 转默认 full 档实跑）+ 文档（`docs/parity.md` P0-2 实测回填 + `docs/process/14_tooling_catalog.md` 工具登记（§3.5 表行 + §4 门禁项↔工具对照）+ `docs/plan-s0-s2.md` 判据命令修正 + 经验 EXP-170 回写 `docs/experience/`）+ 数据（`docs/release.md` 台账计数行同步）
+判据=verify bin 存在且 `cargo run -p ti-tools --bin verify -- --zero-unknown` 实跑输出落 `evidence/S46.0.log`（含逐文件逐族结果 + 汇总）+ legacy/data 全部可解析格式文件 0 未知字节（无解析器者如实标注跳过，不静默通过）+ gate 第 7 项 zero-unknown verify 由 SKIP 转 PASS（默认 full 档实跑 0 failure）+ 14 号工具台账登记（用途/用法/幂等/只读模式/非 0 退出）+ doccheck 0 errors + doccheck2 0 errors + gate 全绿 + `evidence/S46.0.log`
+
+## 0. 缘起（发现 → 立项）
+
+**台账 308/308 全部 verified 后复核项目 DoD（`docs/parity.md` §完成定义 = 「P0~P4 全 pass + gate 33 项全绿 + 三端产物齐全 + ledger 全 verified」）时发现 DoD 不可达**：
+
+| 项 | 声称 | 实测 | 结论 |
+|---|---|---|---|
+| ledger 全 verified | 308/308 | 308/308 | ✅ |
+| gate 33 项全绿 | 全绿 | 全绿（2 SKIP = android NDK + zero-unknown） | ⚠️ 其中 zero-unknown 是**永久 SKIP** |
+| **P0~P4 全 pass** | P0-2 判据 `cargo run -p ti-tools -- verify --zero-unknown` | **`crates/ti-tools/src/bin/verify.rs` 在 git 全历史中从未存在**（`git log --all -- crates/ti-tools/src/bin/verify.rs` 为空）；`cargo run -p ti-tools -- verify --zero-unknown` 报 `could not determine which binary to run` | ❌ **P0-2 判据从未执行过 ⇒ DoD 长期不可达** |
+
+**根因（3 条，已回写 EXP-170）**：① 门禁第 7 项用「载体存在性守卫」（`Test-Path crates/ti-tools/src/bin/verify.rs`）
+⇒ 载体缺失时**静默降级 SKIP**（而非 FAIL）⇒ 缺失被伪装成「未解锁」；② 判据命令**从未实跑过** ⇒ 载体落地后首次实跑即暴露
+`-- verify` 裸形式在「多 bin 且无 `default-run`」的 crate 上被 cargo 拒绝；③ S0~S2 计划把 `verify --zero-unknown`
+写进阶段 DoD，但**未创建对应台账任务** ⇒ 无任务承载 ⇒ 载体永不落地（验收集合 ≠ 判据集合）。
+
+**立项**：`plan/ledger.yaml` 新增 **S46.0**（deps=[]，P0-2 判据载体落地 + 门禁激活 + 实测基线），
+按硬规则 3「进度只由台账驱动」推进。
+
+## 1. 实现清单
+
+- `crates/ti-tools/src/bin/verify.rs`（**新增**，约 420 行）：`verify --zero-unknown` 判据载体
+  - **口径**：单个文件的「0 未知字节」= **该格式解析器消费了文件全部字节**（结构后无残留字节）。
+    `ti_formats` 的 `define_format!` 生成的 `read` 对残留字节报 `ParseKind::TrailingBytes`
+    ⇒ **解析成功即达标**（不需额外统计逻辑；这是 `define_format!` 自 S0.5 起就有的性质，缺的只是**驱动**）。
+  - **遍历面** = `legacy/data/` 真实文件逐族 + 容器**逐条目**：
+
+    | 族 | 文件 | 解析器 |
+    |---|---|---|
+    | `map-scene` | UI 场景 `.Map`（20 个） | `MapScene::parse` + `MapControl::parse_words`（`5 + 6*count`，F-306） |
+    | `terrain` | `glmapm*.Map`（3 个） | `TerrainMap::parse`（stride=9 三段流，F-307） |
+    | `font-fnt` | `GoldLand.Fnt` | `Font::parse`（字形 1016 个） |
+    | `font-charset` | `font.dat` | `Charset::parse`（UTF-16LE，字符 1016 个） |
+    | `settings` | `settings.dat` | `Settings::parse`（8 字节定长 + 魔数） |
+    | `package` | `.pak`/`.lpk`（7 个） | `Package::parse`（头 + 索引）+ **逐条目** `read_entry`（解压）+ PCX 图像条目 `Image::decode` |
+
+  - **只读**（仅读 `legacy/data/`，0 写盘）；**幂等**（重复跑同输出）；**非 0 退出**（任一文件/条目未达标 ⇒ exit 1；
+    缺 `--zero-unknown` ⇒ exit 2 并打印用法 ⇒ 防「以为跑了其实没跑」）；`--json` 机器可读（`ok`/`failed`/`files`/`entries`/`skipped` + 逐项明细）。
+  - **无解析器者如实标注「跳过」**（不静默通过）；实测 33 个真实文件**全部有解析器**（0 跳过）。
+- `crates/ti-tools/tests/verify_zero_unknown.rs`（**新增**）：4 单测
+  （实跑 exit 0 + `PASS：全部可解析格式文件 0 未知字节` / `--json` ok=true failed=0 skipped=0 files≥30 entries≥300 /
+  无参 exit 2 / 数据面在位前置断言）。
+- `scripts/gate.ps1` 第 7 项：调用修正 `--bin verify --`（ti-tools 多 bin 且无 `default-run`，`-- verify` 裸形式会被 cargo 拒绝）；
+  载体在位 ⇒ 该项**由永久 SKIP 转为默认 full 档实跑**。
+- `docs/process/14_tooling_catalog.md`：§3.5 新增 `verify` 表行（用途/用法/幂等/只读/非 0 退出全要素）；
+  §4 门禁项↔工具对照新增「格式 0 未知字节 | 7 | `cargo run -q -p ti-tools --bin verify -- --zero-unknown`」。
+- `docs/parity.md` P0-2：判据命令修正 + **实测基线回填**（33 文件 / 305 条目 / 0 跳过 / 0 失败）。
+- `docs/plan-s0-s2.md`：S0~S2 阶段 DoD 的判据命令补载体指向（S46.0）+ 注明该判据长期挂空。
+- `docs/experience/`：**EXP-170**「判据载体缺失 ⇒ 门禁项永久 SKIP ⇒ 判据从未执行」（process 卷 + 索引行 + 条数列 39）。
+
+## 2. 实测
+
+### 2.1 人读报告（节选：非容器条目全量 + 汇总）
+
+```
+=== verify --zero-unknown（口径：P0-2 每格式 0 未知字节）===
+[ OK ] Bigcard.Map            map-scene           5124 B  0 未知字节（控件 212 条）
+[ OK ] GoldLand.Fnt           font-fnt           24384 B  0 未知字节（字形 1016 个）
+[ OK ] background.Map         map-scene            276 B  0 未知字节（控件 10 条）
+[ OK ] build.Map              map-scene           1836 B  0 未知字节（控件 75 条）
+[ OK ] card.Map               map-scene           1500 B  0 未知字节（控件 61 条）
+[ OK ] cards.lpk              package            34000 B  0 未知字节（容器头 + 索引，条目 4 个）
+[ OK ] castle.Map             map-scene           4116 B  0 未知字节（控件 170 条）
+[ OK ] font.dat               font-charset        2034 B  0 未知字节（字符 1016 个）
+[ OK ] glmap_m01.pak          package            39609 B  0 未知字节（容器头 + 索引，条目 47 个）
+[ OK ] glmap_m02.pak          package            30315 B  0 未知字节（容器头 + 索引，条目 37 个）
+[ OK ] glmapm01.Map           terrain            17148 B  0 未知字节（地形 20×20）
+[ OK ] glmapm02.Map           terrain            18948 B  0 未知字节（地形 20×20）
+[ OK ] glmapm03.Map           terrain             8976 B  0 未知字节（地形 15×15）
+[ OK ] glpics.pak             package            87027 B  0 未知字节（容器头 + 索引，条目 88 个）
+[ OK ] goods.lpk              package              469 B  0 未知字节（容器头 + 索引，条目 1 个）
+[ OK ] help.Map               map-scene           2460 B  0 未知字节（控件 101 条）
+[ OK ] index.Map              map-scene            780 B  0 未知字节（控件 31 条）
+...
+[ OK ] vs.Map                 map-scene           2388 B  0 未知字节（控件 98 条）
+--- 文件 33 个 / 容器条目 305 个 / 跳过 0 个 / 失败 0 个
+PASS：全部可解析格式文件 0 未知字节
+```
+
+> 容器条目 305 行（`ui.pak#0..121` / `glpics.pak#0..87` / `glmap_m0*.pak#0..46|36` / `cards.lpk` / `music.lpk` / `goods.lpk`）
+> 亦全部 `0 未知字节（条目内容）` 或 `0 未知字节（条目内容 + PCX 解码）`。
+
+### 2.2 退出码 + JSON
+
+```
+$ cargo run -q -p ti-tools --bin verify -- --zero-unknown > /dev/null; echo exit=$?
+exit=0
+$ cargo run -q -p ti-tools --bin verify -- --zero-unknown --json
+{ "criterion": "P0-2 每个格式解析器 0 未知字节",
+  "data_dir": ".../legacy/data", "entries": 305, "failed": 0, "files": 33, "ok": true, "items": [...] }
+```
+
+### 2.3 单测
+
+```
+$ cargo test -p ti-tools --test verify_zero_unknown
+running 4 tests
+test legacy_data_dir_exists_with_formats ... ok
+test zero_unknown_requires_flag ... ok
+test zero_unknown_verify_passes_on_real_data ... ok
+test zero_unknown_verify_json_reports_zero_failed ... ok
+test result: ok. 4 passed; 0 failed
+```
+
+### 2.4 门禁第 7 项：由永久 SKIP → 实跑 PASS
+
+```
+        === verify --zero-unknown（口径：P0-2 每格式 0 未知字节）===
+        ...
+        --- 文件 33 个 / 容器条目 305 个 / 跳过 0 个 / 失败 0 个
+        PASS：全部可解析格式文件 0 未知字节
+  PASS  zero-unknown verify  [0.6s]
+```
+
+> 对比：改造前该项恒为 `SKIP zero-unknown verify (dev tier 或 S1.x 格式解析器就绪后解锁)`。
+
+## 3. 游戏产品 6 crate 零 diff
+
+```
+$ git diff --stat -- crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets
+（空 = 0 diff）
+```
+
+改动面仅限 `ti-tools`（工具 crate）+ `scripts/` + `docs/`（游戏产品 6 crate 与 `assets/` 零改动）。
+
+## 4. 单测 + 静态检查
+
+- `cargo test -p ti-tools`：全部套件通过（0 failed；含新增 4 条 verify 单测）。
+- `cargo clippy -p ti-tools --all-targets`：**0 warning**（本轮修 5 项：扩展名大小写比较 ×3 → `Path::extension` +
+  `eq_ignore_ascii_case`；函数过长 ×2 → 拆 `verify_map_scene`/`verify_terrain`/`verify_font_fnt`/`verify_charset`/
+  `verify_settings`/`verify_package` + `print_report`/`print_json`；多余布尔取反 ×1）。
+- `cargo fmt --all -- --check`：干净。
+- `cargo run -q -p ti-tools --bin doccheck`：`167 docs, 38 facts, 166 experiences, 303 task refs, 4 assertions, 0 error(s)`。
+- `cargo run -q -p ti-tools --bin doccheck2`：`0 error(s) across 41 audit-codified checks`。
+
+## 4.1 15 号流程固化台账回写（复发纪律）
+
+本发现属「纪律无载体 / 载体缺失被静默跳过」类 ⇒ 按 15 号 §1 复发证据表 + §2 台账登记：
+
+- **§1 新增行**「判据载体缺失被门禁静默跳过」：表现 = P0-2 判据从未执行、DoD 不可达且被台账全 verified 掩盖；
+  根因 = 存在性守卫把「缺失」伪装成「未解锁」+ 判据命令未实跑 + 判据未落台账任务；
+  对策 = 已自动化（S46.0 载体落地 + 门禁实跑 PASS + EXP-170 + 三条复发防护）。
+- **§2 新增第 26 项**「判据载体存在性门禁」：现状（人工做法）= 判据只写在文档里、载体未实现；
+  复发证据 = EXP-170；自动化形态 = 门禁断言（载体在位即实跑 + 显式 `--bin`）+ 载体落地后判据实测 PASS + 单测固化；
+  载体 = `crates/ti-tools/src/bin/verify.rs` + `scripts/gate.ps1` + `crates/ti-tools/tests/verify_zero_unknown.rs`；
+  状态 = **已自动化（S46.0）**。
+
+## 5. gate 全绿
+
+=== gate: TreasureIsl (33 items) ===
+ PASS cargo fmt --check [0.9s]
+ PASS cargo clippy -D warnings [12.9s]
+ PASS cargo test --workspace [128.5s]
+ PASS cargo build (native/x86_64-pc-windows-msvc) [0.3s]
+ PASS cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳) [1.1s]
+ SKIP cargo build (aarch64-linux-android) (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
+ PASS clippy feature-gated bins (native-shell/headless; required-features 盲区) [4.7s]
+ PASS no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/ [0.1s]
+ PASS no unwrap()/expect() outside tests/+examples/ (库代码) [0.0s]
+ PASS zero-unknown verify [0.6s]
+ PASS ledger validate [0.4s]
+ PASS doccheck (docs consistency) [0.7s]
+ PASS validate_data (assets/data/*.json) [0.1s]
+ PASS gen_layout --check (idempotent) [0.1s]
+ PASS check_hardcode (strict; 0 hits required) [1.6s]
+ PASS check_data_driven (generic primitives; renderer has no scene semantics) [0.1s]
+ PASS check_code_standards (CS-1~6 代码标准 + 棘轮基线) [0.2s]
+ PASS check_oracle_boundary (shell 层禁 oracle_* 函数调用) [0.1s]
+ PASS no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描) [0.3s]
+ PASS doccheck2 (audit-codified doc↔code/data consistency) [0.6s]
+ PASS check_ledger_reality (台账三方对账：verified↔evidence↔代码符号) [0.1s]
+ PASS check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位) [0.1s]
+ PASS check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面) [0.8s]
+ PASS flywheel-readme (开轮必读脚本完整性) [0.7s]
+ PASS render-invariants (7 场景结构不变式断言，无像素基线) [13.7s]
+ PASS check_data_source (数据源改动 → 渲染不变式门禁) [0.1s]
+ PASS audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线) [0.6s]
+ PASS check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限) [0.1s]
+ PASS bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP) [4.2s]
+ PASS wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map) [76.5s]
+ PASS browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言) [33.2s]
+ PASS playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log) [50.1s]
+=== gate: 0 failure(s) ===
+
+**结论 = `=== gate: 0 failure(s) ===`**（31 PASS + 1 SKIP〔android NDK〕+ 0 FAIL；SKIP 由 2 降为 1 = zero-unknown 项转 PASS）。
+
+### 5.1 r1（实现完成，台账仍 pending）
+
+```
+=== gate: TreasureIsl (33 items) ===
+ PASS cargo fmt --check [0.9s]
+ PASS cargo clippy -D warnings [12.9s]
+ PASS cargo test --workspace [128.5s]
+ PASS cargo build (native/x86_64-pc-windows-msvc) [0.3s]
+ PASS cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳) [1.1s]
+ SKIP cargo build (aarch64-linux-android) (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
+ PASS clippy feature-gated bins (native-shell/headless; required-features 盲区) [4.7s]
+ PASS no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/ [0.1s]
+ PASS no unwrap()/expect() outside tests/+examples/ (库代码) [0.0s]
+ PASS zero-unknown verify [0.6s]
+ PASS ledger validate [0.4s]
+ PASS doccheck (docs consistency) [0.7s]
+ PASS validate_data (assets/data/*.json) [0.1s]
+ PASS gen_layout --check (idempotent) [0.1s]
+ PASS check_hardcode (strict; 0 hits required) [1.6s]
+ PASS check_data_driven (generic primitives; renderer has no scene semantics) [0.1s]
+ PASS check_code_standards (CS-1~6 代码标准 + 棘轮基线) [0.2s]
+ PASS check_oracle_boundary (shell 层禁 oracle_* 函数调用) [0.1s]
+ PASS no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描) [0.3s]
+ PASS doccheck2 (audit-codified doc↔code/data consistency) [0.6s]
+ PASS check_ledger_reality (台账三方对账：verified↔evidence↔代码符号) [0.1s]
+ PASS check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位) [0.1s]
+ PASS check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面) [0.8s]
+ PASS flywheel-readme (开轮必读脚本完整性) [0.7s]
+ PASS render-invariants (7 场景结构不变式断言，无像素基线) [13.7s]
+ PASS check_data_source (数据源改动 → 渲染不变式门禁) [0.1s]
+ PASS audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线) [0.6s]
+ PASS check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限) [0.1s]
+ PASS bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP) [4.2s]
+ PASS wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map) [76.5s]
+ PASS browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言) [33.2s]
+ PASS playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log) [50.1s]
+=== gate: 0 failure(s) ===
+```
+
+### 5.2 r2（收口后 = 待提交状态，权威轮）
+
+```
+=== gate: TreasureIsl (33 items) ===
+ PASS cargo fmt --check [0.9s]
+ PASS cargo clippy -D warnings [0.5s]
+ PASS cargo test --workspace [125.5s]
+ PASS cargo build (native/x86_64-pc-windows-msvc) [0.4s]
+ PASS cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳) [1.1s]
+ SKIP cargo build (aarch64-linux-android) (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
+ PASS clippy feature-gated bins (native-shell/headless; required-features 盲区) [0.4s]
+ PASS no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/ [0.1s]
+ PASS no unwrap()/expect() outside tests/+examples/ (库代码) [0.0s]
+ PASS zero-unknown verify [0.6s]
+ PASS ledger validate [0.4s]
+ PASS doccheck (docs consistency) [0.8s]
+ PASS validate_data (assets/data/*.json) [0.1s]
+ PASS gen_layout --check (idempotent) [0.1s]
+ PASS check_hardcode (strict; 0 hits required) [1.6s]
+ PASS check_data_driven (generic primitives; renderer has no scene semantics) [0.1s]
+ PASS check_code_standards (CS-1~6 代码标准 + 棘轮基线) [0.2s]
+ PASS check_oracle_boundary (shell 层禁 oracle_* 函数调用) [0.1s]
+ PASS no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描) [0.3s]
+ PASS doccheck2 (audit-codified doc↔code/data consistency) [0.7s]
+ PASS check_ledger_reality (台账三方对账：verified↔evidence↔代码符号) [0.1s]
+ PASS check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位) [0.1s]
+ PASS check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面) [0.7s]
+ PASS flywheel-readme (开轮必读脚本完整性) [0.7s]
+ PASS render-invariants (7 场景结构不变式断言，无像素基线) [13.8s]
+ PASS check_data_source (数据源改动 → 渲染不变式门禁) [0.1s]
+ PASS audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线) [0.6s]
+ PASS check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限) [0.1s]
+ PASS bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP) [4.3s]
+ PASS wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map) [87.9s]
+ PASS browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言) [31.0s]
+ PASS playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log) [55.8s]
+=== gate: 0 failure(s) ===
+```
+
+**结论 = `=== gate: 0 failure(s) ===`**（31 PASS + 1 SKIP〔android NDK〕+ 0 FAIL；日志 `/tmp/opencode/gate_s460b.log`）。
+
+> **SKIP 由 2 降为 1** = zero-unknown verify 项从「永久 SKIP（判据从未执行）」转为「实跑 PASS」⇒ 门禁 33 项中
+> **实际执行的门禁项 +1**。
+
+## 6. 收口（台账 + 计数同步 + 三方对账）
+
+- **台账**：`plan/ledger.yaml` S46.0 `status: pending → verified` + `evidence: "evidence/S46.0.log"` + `rounds: 0 → 1`。
+- **计数同步**：`docs/release.md` 台账计数行：`309 任务（308 verified + S46.0 pending）` → **`309 任务（309 verified）`**。
+
+```
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml
+ledger: 309 tasks, 309 verified, 0 error(s)
+  evidence: ok
+$ python3 scripts/check_ledger_reality.py
+check_ledger_reality: 全绿（309 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+$ cargo run -q -p ti-tools --bin doccheck
+doccheck: 167 docs, 38 facts, 166 experiences, 303 task refs, 4 assertions, 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck2
+doccheck2: 0 error(s) across 41 audit-codified checks (...)
+```
+
+## 7. 判据逐条核对
+
+| DoD 判据 | 证据 | 结论 |
+|---|---|---|
+| verify bin 存在且实跑输出落 evidence/S46.0.log（逐文件逐族 + 汇总） | §1（`crates/ti-tools/src/bin/verify.rs`）+ §2.1（33 文件逐行）+ §2.2（exit 0 + JSON） | ✅ |
+| legacy/data 全部可解析格式文件 0 未知字节（无解析者如实标注跳过） | §2.1「文件 33 个 / 容器条目 305 个 / 跳过 0 个 / 失败 0 个」+ PASS 结论；6 个格式族全覆盖 | ✅ |
+| gate 第 7 项 zero-unknown verify 由 SKIP 转 PASS（默认 full 档实跑 0 failure） | §2.4（`PASS zero-unknown verify [0.6s]`）+ §5（SKIP 2→1） | ✅ |
+| 14 号工具台账登记（用途/用法/幂等/只读模式/非 0 退出） | §1（§3.5 表行含全要素 + §4 门禁项↔工具对照新增行） | ✅ |
+| doccheck 0 errors + doccheck2 0 errors | §4 + §6（四项实测全 0 error） | ✅ |
+| gate 全绿 | §5.2：`=== gate: 0 failure(s) ===`（r2 待提交态） | ✅ |
+| `evidence/S46.0.log` | 本文件 | ✅ |
+
+## 8. 项目 DoD 复核（本次立项的根因面）
+
+| DoD 条件（`docs/parity.md` §完成定义 / `docs/loop.md` §3） | 本任务前 | 本任务后 |
+|---|---|---|
+| ledger 全 verified | 308/308 ✅ | **309/309 ✅**（S46.0 补登并实现） |
+| gate 33 项全绿 | ✅（但 2 项 SKIP，其中 zero-unknown 永久 SKIP = 判据从未执行） | ✅（**1 项 SKIP**：android NDK 环境限制；zero-unknown 实跑 PASS） |
+| **P0~P4 全 pass** | ❌ P0-2 判据载体不存在 ⇒ **不可达** | ✅ **P0-2 首次真实通过**（33 文件 / 305 条目 / 0 失败） |
+| 三端产物（桌面 exe / wasm 站点 / APK） | 桌面 ✅（`target/release/treasure-bevy-native` 62MB）/ wasm ✅（`web/treasure-bevy-wasm_bg.wasm` 45MB）/ APK ❌（本机无 NDK，在 Mac 产出） | 同左（APK 属环境限制，已登记 `android/README.md`） |
+
+> **结论**：项目 DoD 中唯一「因实现缺失而不可达」的判据（P0-2）已闭合；余下 APK 一项为**环境限制**（无 NDK），非实现缺口。

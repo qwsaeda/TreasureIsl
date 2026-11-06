@@ -18,7 +18,7 @@
 
 ## S1 — 资源逆向（1~2 周）
 
-**本阶段所有任务统一 DoD**：格式文档（`docs/formats/<x>.md`，含完整字段与偏移）+ `ti-formats` 解析器接入 `define_format!` + `roundtrip_all!` 通过 + `verify --zero-unknown` pass。
+**本阶段所有任务统一 DoD**：格式文档（`docs/formats/<x>.md`，含完整字段与偏移）+ `ti-formats` 解析器接入 `define_format!` + `roundtrip_all!` 通过 + `verify --zero-unknown` pass（S46.0 补：判据载体 = `crates/ti-tools/src/bin/verify.rs`，命令 `cargo run -q -p ti-tools --bin verify -- --zero-unknown`；S0~S2 阶段该判据因载体未实现而长期挂空）。
 
 | ID | 产出物 | 验收 |
 |---|---|---|

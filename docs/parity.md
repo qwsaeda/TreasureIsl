@@ -15,7 +15,7 @@
 | # | 判据 | 验收命令（S0.1 后落地为真实命令） |
 |---|---|---|
 | P0-1 | 每个容器（`ui.pak`/`glpics.pak`/`glmap_m0*.pak`/`*.lpk`）条目提取率 100% | `cargo run -p ti-tools -- unpack --check-all` → extracted == total |
-| P0-2 | 每个格式解析器 **0 未知字节**（文件 100% 字段被定义，否则报错） | `cargo run -p ti-tools -- verify --zero-unknown` → 全格式 pass |
+| P0-2 | 每个格式解析器 **0 未知字节**（文件 100% 字段被定义，否则报错） | `cargo run -p ti-tools --bin verify -- --zero-unknown` → 全格式 pass（**S46.0 实测基线**：33 个真实文件 / 305 个容器条目 / 0 跳过 / 0 失败；口径 = 结构后无残留字节，`define_format!` 的 `read` 对残留报 `TrailingBytes` ⇒ 解析成功即达标；门禁第 7 项同步由永久 SKIP 转为默认 full 档实跑） |
 | P0-3 | 解包后**重打包逐字节一致** | `--repack` 输出 sha256 == 原文件 sha256 |
 | P0-4 | PCX 解码像素与**独立参考实现**逐像素一致 | `cargo test -p ti-tools --test pcx_ref`（Rust 解码器 vs `scripts/pcx_ref.py` 独立参考，`pcx_ref.rs` 3 用例） |
 | P0-5（S10.1 新增）| 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | 已并入 doccheck2 `check_touch_render_pair`（门禁 doccheck2 项；原 `touch_render_same_coords` 集成测试已退役） |

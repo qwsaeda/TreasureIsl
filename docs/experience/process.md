@@ -495,3 +495,28 @@ native 逻辑正确（bevy_audio + ALSA，无声卡时静默降级）。
 
 **验证**：`unlock_bgm_system` wasm 编译通过（`cargo build --target wasm32-unknown-unknown`）；
 native clippy 全绿。注意 bevy 0.20 `ButtonInput::any_just_pressed()` 需参数，改 `get_just_pressed().next()`。
+
+### EXP-170 流程：判据载体缺失 ⇒ 门禁项永久 SKIP ⇒ 判据从未执行
+**现象**：parity.md P0-2「每个格式解析器 0 未知字节」的判据命令 `cargo run -p ti-tools -- verify --zero-unknown`
+**从未存在**——`crates/ti-tools/src/bin/verify.rs` 在 git 全历史中从未出现（`git log --all -- crates/ti-tools/src/bin/verify.rs` 为空），
+而门禁第 7 项写成 `if ((Test-Path 'crates/ti-tools/src/bin/verify.rs') -and (Tier 'late'))` 的**载体存在性守卫**
+⇒ 载体缺失 = 永久 SKIP ⇒ 判据**从未执行过**。S0~S2 计划（`docs/plan-s0-s2.md` §DoD）把 `verify --zero-unknown` 写进
+阶段 DoD，但**未创建对应台账任务** ⇒ 无任务承载 ⇒ 载体永不落地 ⇒ 项目 DoD「P0~P4 全 pass」中 P0-2 长期不可达，
+而台账 308/308 `verified` 掩盖了该缺口（验收集合 ≠ 判据集合）。
+
+**根因（3 条）**：① 门禁项用「载体存在性」当条件，载体缺失时**静默降级 SKIP**（而非 FAIL）⇒ 缺失被伪装成「未解锁」；
+② 判据命令**从未实跑过**——载体落地后首次实跑即暴露：`cargo run -p ti-tools -- verify --zero-unknown` 在
+「多 bin 且无 `default-run`」的 crate 上被 cargo 直接拒绝（`could not determine which binary to run`），须写
+`--bin verify --`；③ 计划里的判据命令**未落台账任务** ⇒ 无归属、无排期、永不实现。
+
+**对策（S46.0 落地）**：① 载体 = `crates/ti-tools/src/bin/verify.rs`：遍历 `legacy/data/` 真实文件逐族解析
+（UI 场景 `.Map` / 地形图 `glmapm*.Map` / `GoldLand.Fnt` / `font.dat` / `settings.dat` / 容器 `.pak`+`.lpk` 逐条目 + PCX 条目解码）；
+口径 = **结构后无残留字节**（`define_format!` 生成的 `read` 对残留报 `TrailingBytes` ⇒ **解析成功即达标**，不需额外统计逻辑）；
+实测 **33 文件 / 305 容器条目 / 0 跳过 / 0 失败** ⇒ P0-2 判据**首次真实通过**（此前是「不可达」而非「通过」）。
+② 门禁第 7 项调用改 `--bin verify --`（显式 bin）；载体在位 ⇒ 该项由**永久 SKIP 转为默认 full 档实跑 PASS**。
+③ 反例已固化进单测：`crates/ti-tools/tests/verify_zero_unknown.rs`（4 条：实跑 exit 0 / `--json` ok=true failed=0 /
+无参退出码 2 / 数据面在位前置）。
+
+**复发防护**：① 新增判据时，**判据命令必须可实跑**（多 bin crate 一律 `--bin <name> --` 形式，禁止 `-- <name>` 裸形式）；
+② 门禁项若判据依赖某个载体文件，载体缺失应 **FAIL 而非 SKIP**（分档锁定除外，如 tier 条件）；
+③ 文档（parity.md / 阶段计划）里出现的判据命令，必须能对应到**一个台账任务号**——否则它只是愿望，不是判据。
