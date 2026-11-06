@@ -30,7 +30,7 @@
 | `category` | ✓ | `functional` `regression` `visual` `audio` `performance` `compatibility`——23 号 §3 分类 |
 | `type` | ✓ | `smoke` `ci` `playtest` `exploratory` `benchmark`——23 号 §4 类型 |
 | `name` | ✓ | 人类可读名（平台测试页展示） |
-| `command` | ✓ | 可运行命令串（§3 command 契约）；`null`/缺 = 人工验收（不可自动运行，平台禁 run） |
+| `command` | ✓ | 可运行命令串（§3 command 契约）；`null`/缺 = 不可自动运行（人工验收 / gate 覆盖 / 证据基，平台禁 run） |
 | `evidence` | 与 `gate` 至少一者 | `evidence/` 下日志/截图路径（须存在，`validate_data` 对账） |
 | `gate` | 与 `evidence` 至少一者 | 门禁项号 `1..=33`（证据 = 对应 gate 运行日志） |
 
@@ -44,7 +44,7 @@
 | 程序白名单 | 首词 ∈ `cargo` `python3` `pwsh` `powershell`（镜像平台 `run_test` 白名单，22 号 §10.3；`gate`/`smoke_ps1` 用 `powershell`，Linux 映射 `pwsh`） |
 | 非 shell 拼接 | command 串**逐参数拆分**（空格，无引号嵌套——平台 `Command::new(程序).args([...])`，禁 `sh -c`/`cmd /c`） |
 | 命令真实性 | `cargo test -p <pkg> --test <name>` → `crates/<pkg>/tests/<name>.rs` 存在；`cargo run -p <pkg> --bin <bin>` → `crates/<pkg>/src/bin/<bin>.rs` 存在（防清单指向已删/改名测试，`validate_data` 已有） |
-| 人工验收 | `command` = 非命令描述（如「用户视觉验收（设计稿先行，硬规则 9）」）→ 平台禁 run（无 command 字段面；`visual_signoff` 例） |
+| 不可自动运行 | `command` = `null`/缺/非命令描述（如「用户视觉验收（设计稿先行，硬规则 9）」；`visual_signoff` 例；`web_playtest`/`bevy_cpu_parity`/`wasm_browser_e2e` = gate 覆盖）→ 平台禁 run（无 command 字段面；23 号 §6.1「门禁仍由 gate.ps1 触发，平台只读其结果」） |
 
 ## 4. 登记流程（新增测试接入平台）
 
