@@ -41,7 +41,10 @@ KINDS: dict[str, dict] = {
     "apk": {
         "runner": "bash",
         "cmd": ["bash", str(REPO / "scripts/build_apk.sh"), "aarch64"],
-        "artifact": "dist/TreasureIsl-arm64.apk",
+        # S46.3：build_apk.sh 产物名 = `TreasureIsl-<x.y.z>-<arch>.apk`（S25 版本规范，arch=aarch64；
+        # 注释/文档曾写 arm64，脚本实际用 aarch64 CLI 参）⇒ glob 匹配（旧 `TreasureIsl-arm64.apk`
+        # 与新版 `TreasureIsl-0.2.0-aarch64.apk` 均命中），不再硬编码精确名导致「已构建仍报未构建」。
+        "artifact": "dist/TreasureIsl-*.apk",
         "post": "apk_audit",
         "note": "复用 .so 时秒级；.so 比壳源新才重编（>15min）",
     },
@@ -57,7 +60,7 @@ KINDS: dict[str, dict] = {
     "native": {
         "runner": "cargo",
         "cmd": ["cargo", "build", "--release", "-p", "ti-engine", "--bin", "treasure-bevy-native"],
-        "artifact": "",  # native 产物在 target/release/，不部署；复检 = 构建 0 退出码
+        "artifact": "",  # native 产物在 config target-dir（/disk/target）/release/，不部署；复检 = 构建 0 退出码
         "post": "exit_code",
         "note": "桌面冒烟构建；F4 切画质",
     },
@@ -123,14 +126,26 @@ def _restore_mtime() -> None:
         print(f"post: 复原 {shell_src.name} mtime → {orig}")
 
 
+def _resolve_artifact(kind: str) -> Path | None:
+    """解析 kind 的产物路径（S46.3：artifact 可为 glob 模式，取最新匹配；字面路径 is_file 直判）。"""
+    art = KINDS.get(kind, {}).get("artifact", "")
+    if not art:
+        return None
+    p = REPO / art
+    if "*" in art:
+        matches = sorted(p.parent.glob(p.name))
+        return matches[-1] if matches else None
+    return p if p.is_file() else None
+
+
 def cmd_post(kind: str) -> int:
     if kind not in KINDS:
         print(f"未知 kind: {kind}", file=sys.stderr)
         return 1
     post = KINDS[kind]["post"]
     if post == "apk_audit":
-        apk = REPO / KINDS["apk"]["artifact"]
-        if not apk.is_file():
+        apk = _resolve_artifact(kind)
+        if apk is None:
             print("post: APK 未生成", file=sys.stderr)
             return 2
         r = subprocess.run([sys.executable, str(REPO / "scripts/apk_audit.py"), "--apk", str(apk)],
@@ -189,7 +204,7 @@ def cmd_run(kind: str, log_name: str | None = None) -> int:
 def cmd_list() -> int:
     for kind in ("apk", "wasm", "native"):
         cfg = KINDS[kind]
-        art = REPO / cfg["artifact"] if cfg["artifact"] else None
+        art = _resolve_artifact(kind)
         if art and art.is_file():
             st = art.stat()
             print(f"{kind:8} {art}  {st.st_size/1048576:.1f}MB  mtime={time.strftime('%m-%d %H:%M', time.localtime(st.st_mtime))}")

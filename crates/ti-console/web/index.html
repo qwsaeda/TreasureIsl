@@ -1986,21 +1986,37 @@ async function loadBuild() {
     } else {
       $('build-log').innerHTML = '<div class="empty">尚无构建日志（触发构建后生成 evidence/console/logs/build-*.log）</div>';
     }
+    // S46.3：清空旧按钮（此前每次 loadBuild 追加 3 个 ⇒ 无限累积）；用 d.running 禁用 + 显示末次态。
+    $('build-trigger').innerHTML = '';
+    const runningNow = d.running === true;
+    const runningKind = runningNow ? (d.last_kind || '?') : '';
     ['build_apk', 'build_wasm', 'build_native'].forEach(id => {
       const b = document.createElement('button');
-      b.textContent = id.replace('build_', '构建 ') + ' ▸';
-      b.style.cssText = 'background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer;margin:0 8px 8px 0';
+      const kind = id.replace('build_', '');
+      const busy = runningNow && runningKind === kind;
+      b.textContent = (runningNow ? (runningKind === kind ? '构建中…(' + (d.running_pid || '?') + ')' : '（另一构建在跑）') : '') + id.replace('build_', '构建 ') + ' ▸';
+      b.style.cssText = 'background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer;margin:0 8px 8px 0' + (runningNow ? ';opacity:0.55' : '');
+      b.disabled = runningNow;
       b.onclick = async () => {
         b.textContent = '构建中…';
         try {
-          const r = await fetch('/api/build?run=' + id.replace('build_', ''));
+          const r = await fetch('/api/build?run=' + kind);
           const j = await r.json();
-          b.textContent = j.started ? '已启动(pid ' + (j.pid || '?') + ')' : '启动失败';
+          if (j.busy) { b.textContent = '已在跑(pid ' + (j.pid || '?') + ')'; }
+          else { b.textContent = j.started ? '已启动(pid ' + (j.pid || '?') + ')' : '启动失败'; }
         } catch (e) { b.textContent = '启动失败'; }
         setTimeout(() => { loaded.build = false; loadBuild(); }, 3000);
       };
       $('build-trigger').appendChild(b);
     });
+    // 末次构建完成态（exit_code 0=成功 / 非 0=硬失败 / null=未跑过）
+    const lx = d.last_exit;
+    if (lx !== null && lx !== undefined) {
+      const done = document.createElement('div');
+      done.style.cssText = 'margin-top:6px;font-size:12px;color:' + (Number(lx) === 0 ? 'var(--ok,#4caf50)' : 'var(--err,#e57373)');
+      done.textContent = '末次构建（' + (d.last_kind || '?') + '）：exit=' + lx + (Number(lx) === 0 ? ' = 成功' : ' = 硬失败（查 evidence/console/logs/build-*.log）');
+      $('build-trigger').appendChild(done);
+    }
   } catch (e) {
     $('build-list').innerHTML = '<div class="empty">/api/build 不可用：' + esc(String(e)) + '</div>';
   }

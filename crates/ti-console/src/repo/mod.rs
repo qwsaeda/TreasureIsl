@@ -16,6 +16,7 @@
 //! （`POST /api/map/import` 落 `assets/maps/<id>/` 四文件 + 同进程 `map_pack.py verify/sync`〔先判后回注〕，
 //! 平台其余 0 写盘，北极星「0 游戏产物变更」的受控例外，22 号 §10.1 + `snapshot::import_probe` 豁免面）。
 
+pub mod build_ops;
 pub mod config;
 pub mod data;
 pub mod dist;

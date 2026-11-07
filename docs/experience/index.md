@@ -32,7 +32,7 @@
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 19 |
-  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 33 |
+  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 34 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 41 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 56 |
 
@@ -212,6 +212,7 @@
 | EXP-170 | process | | P0-2「每格式 0 未知字节」的判据命令 `verify --zero-unknown` 从未存在（verify.rs 在 git 全历史中从未出现），门禁第 7 项用载体存在性守卫 ⇒ 永久 SKIP ⇒ 判据从未执行（项目 DoD 的 P0~P4 全 pass 中 P0-2 长期不可达，且计划里的判据未落台账任务）；S46.0 落地载体 = crates/ti-tools/src/bin/verify.rs（真实数据 33 文件 / 305 条目 / 0 失败 ⇒ 首次真实通过）+ 门禁改 `--bin verify --` + 4 条单测；复发防护 = 判据命令须可实跑（多 bin 必显式 `--bin`）+ 载体缺失应 FAIL 而非 SKIP + 判据须对应台账任务号 | 正文见 `process.md` |
 | EXP-171 | process | | 判据命令写在文档里但形式不可实跑（多 bin crate 裸 -- 形式 / bin 拼错 / crate 张冠李戴 / 引用退役载体）⇒ 判据从未执行；check_dod_commands.py 门禁第 25 项逐条解析载体 + 首跑抓 9 处 + 4 真伤修复 正文见 `process.md` |
 | EXP-172 | process | | doc_numbers --fix 自称回写 8 处门禁项数声称，实际漏 gate.ps1 英文横幅 (N items) + doccheck2.rs expected 硬编码（权威基准）⇒ 门禁仍红、人肉补刀；S46.2 补两声称点 + 负例护栏（改 33 ⇒ 回写 34） 正文见 `process.md` |
+| EXP-173 | build | | 用户「构建有问题，也没有构建成功」5 根因：① 签名助手 `/tmp/opencode/apksigner/{apksig.jar,SignV2.class}` 仓库外临时资产，/tmp 清理后 `ClassNotFoundException: SignV2` ⇒ 构建死在签名步；② S34 开 bevy_audio→cpal→ndk-sys `#[link(name="aaudio")]` 链接 `-laudio`，但 build_apk.sh 用 `android21-clang`（NDK libaaudio 仅 API≥26）⇒ `unable to find library -laudio`；③ `/api/build?run=` 无并发守卫（build_apk.sh 临时改根 Cargo.toml，多击 spawn 互踩）；④ 前端 build-trigger 每次 loadBuild 追加 3 按钮无限累积；⑤ build_artifacts.py apk artifact 硬编码 `dist/TreasureIsl-arm64.apk`，实际产物 `TreasureIsl-<ver>-aarch64.apk` ⇒ 已构建仍报未构建。S46.3 修复：官方 apksigner CLI + keystore 缺失自举 + [0/5] 依赖前置 + API 21→26 + minSdk 26 + build.lock 单构建互斥 + 按钮清空/禁用 + glob 判定 正文见 `build.md` |
 
 ## 条目格式（写新条时照抄）
 

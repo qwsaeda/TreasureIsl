@@ -25,18 +25,49 @@
 #   bash scripts/build_apk.sh                    # aarch64（真机 ARM64，默认）
 #   bash scripts/build_apk.sh x86_64             # x86_64（MuMu/redroid x86 模拟器）
 #   bash scripts/build_apk.sh aarch64 --force    # 强制重编 .so（默认复用）
-# 依赖：NDK r25b（/tmp/opencode/android-ndk-r25b）+ aapt2 + zipalign + apksig.jar（本地全备）。
+# 依赖：NDK r25b（/tmp/opencode/android-ndk-r25b）+ aapt2 + zipalign + apksigner（系统 build-tools）
+#       + java/keytool（签名）。**S46.3 自举修复**：原 `[3/5]` 签名用一次性助手
+#       `/tmp/opencode/apksigner/{apksig.jar,SignV2.class,keystore/ti.keystore}`（仓库外临时资产，
+#       /tmp 被清后即 ClassNotFoundException: SignV2 ⇒ 构建死在签名步，EXP-173）⇒ 改官方
+#       `apksigner` CLI + keystore 缺失自动生成 + `[0/5]` 依赖前置（缺一即 FAIL 早退，不再半路死）。
 set -euo pipefail
 REPO=/disk/workspaces/treasureIsl
 NDK=/tmp/opencode/android-ndk-r25b
 BIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
 ARCH=${1:-aarch64}
 FORCE=${2:-}
+# S46.3：AAudio（bevy_audio→cpal→ndk-sys `-laaudio`）需 API≥26；21 的 sysroot 无 libaaudio ⇒ 链接失败（EXP-173）
+API=${3:-26}
 ABI=$([ "$ARCH" = "aarch64" ] && echo arm64-v8a || echo x86_64)
 TARGET="${ARCH}-linux-android"
 SRC_SO="/disk/target/${TARGET}/release/libandroid_activity.so"
 WORK=/tmp/opencode/apk_build
 OUT=$REPO/dist
+AAPT2=/usr/lib/android-sdk/build-tools/debian/aapt2
+APKSIGNER=/usr/lib/android-sdk/build-tools/debian/apksigner
+
+# [0/5] 依赖前置（S46.3：缺一即 FAIL 早退 + 行动信息；不再靠「本地全备」假设，/tmp 清理即死）
+echo "[0/5] 依赖前置…"
+MISSING=""
+for d in "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/${ARCH}-linux-android${API}-clang"; do
+    [ -x "$d" ] || MISSING="$MISSING $d"
+done
+[ -x "$AAPT2" ] || MISSING="$MISSING $AAPT2"
+ZALIGN=$(find /disk/containerd -name "zipalign" 2>/dev/null | head -1)
+[ -n "$ZALIGN" ] && [ -x "$ZALIGN" ] || MISSING="$MISSING zipalign(containerd 内)"
+[ -x "$APKSIGNER" ] || MISSING="$MISSING $APKSIGNER"
+command -v java >/dev/null || MISSING="$MISSING java"
+command -v keytool >/dev/null || MISSING="$MISSING keytool"
+JAR=$(find /disk/containerd -name "android.jar" 2>/dev/null | head -1)
+[ -n "$JAR" ] || MISSING="$MISSING android.jar(containerd 内)"
+if [ -n "$MISSING" ]; then
+    echo "  FAIL  依赖缺失：$MISSING" >&2
+    echo "  安装指引：NDK=/tmp/opencode/android-ndk-r25b；aapt2/zipalign/apksigner = android build-tools（debian 包 android-sdk-build-tools）；java/keytool = openjdk-17" >&2
+    exit 1
+fi
+echo "  OK  NDK/aapt2/zipalign/apksigner/java/keytool 在位（签名走官方 apksigner CLI）"
+
+mkdir -p "$WORK" "$OUT"
 # S25 版本规范（25_versioning.md §2）：产物名带 x.y.z，版本单源 = `Cargo.toml` `[workspace.package] version`
 # （禁散写版本字面量；产物名与版本不一致 = 打包漂移，validate_data check_version_consistency 兜底）。
 VERSION=$(sed -n '/^\[workspace.package\]/,/^\[/p' "$REPO/Cargo.toml" | grep -m1 '^version' | cut -d'"' -f2)
@@ -74,17 +105,15 @@ open(p, "w").write(s.replace('    # "android/android-activity",', '    "android/
 PYEOF
     export PATH="$HOME/.cargo/bin:$PATH"
     # ④ CC/AR 连字符变量名（x86_64→x86-64）bash export 非法 ⇒ env 命令（可设含 `-` 变量名）
-    env "CC_${TARGET}=$BIN/${ARCH}-linux-android21-clang" \
+    env "CC_${TARGET}=$BIN/${ARCH}-linux-android${API}-clang" \
         "AR_${TARGET}=$BIN/llvm-ar" \
-        RUSTFLAGS="-C linker=$BIN/${ARCH}-linux-android21-clang" \
+        RUSTFLAGS="-C linker=$BIN/${ARCH}-linux-android${API}-clang" \
         cargo build -p android-activity@0.1.0 --release --target "$TARGET"
 fi
 
 # [2/5] aapt2 link（每次重跑：manifest 变更生效，如 extractNativeLibs）
 echo "[2/5] aapt2 link（manifest 每次重跑）…"
 mkdir -p "$WORK" "$OUT"
-JAR=$(find /disk/containerd -name "android.jar" 2>/dev/null | head -1)
-AAPT2=/usr/lib/android-sdk/build-tools/debian/aapt2
 rm -f "$WORK/base.apk" "$WORK/res.zip"
 # ⑥ launcher 图标 + @string/app_name：res/ 目录两阶段编译（aapt2 compile --dir → link 引用）
 if [ -d "$REPO/android/res" ]; then
@@ -145,12 +174,26 @@ with zipfile.ZipFile(f"{WORK}/unsigned.apk", 'w') as z:
             z.writestr(zi, open(full, 'rb').read())
 print("APK 组装完成")
 PYEOF
-ZALIGN=$(find /disk/containerd -name "zipalign" 2>/dev/null | head -1)
 # S35.0（24 号标准①）：.so 已压缩（ZIP_DEFLATED）⇒ zipalign 用常规 4 字节对齐（非 -p 16KB unaligned 模式）。
 # 历史坑 ②：`-p`（unaligned + extractNativeLibs）曾为转译加载服务；现 .so 压缩后安装器统一解压，
 # 对齐口径回到标准 4 字节（aapt2 已对齐 res/ 资源；.so 压缩块无需 16KB 页对齐）。
 $ZALIGN -f 4 "$WORK/unsigned.apk" "$WORK/aligned.apk"
-(cd /tmp/opencode/apksigner && java -cp apksig.jar:. SignV2 "$WORK/aligned.apk" "$WORK/keystore/ti.keystore" treasure ti treasure)
+# S46.3 签名（原自造 SignV2 助手依赖 /tmp/opencode/apksigner 已随 /tmp 清理丢失，EXP-173）：
+# 改官方 `apksigner` CLI（v2+v3 自动，minSdk 26 无需 v1；原 SignV2 助手为 v1+v2）；keystore 缺失自动生成（原私钥已丢失，
+# 新 key 为新签名——装机需卸载旧包；如可恢复旧 ti.keystore 请放回 $WORK/keystore/ 以保持签名一致）。
+mkdir -p "$WORK/keystore"
+KS="$WORK/keystore/ti.keystore"
+if [ ! -f "$KS" ]; then
+    echo "  (签名自举) 生成新 keystore $KS（原私钥已随 /tmp 清理丢失；新 key = 新签名）"
+    rm -f "$KS"   # 清残留半成品（此前 keytool 失败可能留空文件）
+    keytool -genkeypair -v -keystore "$KS" -storetype JKS -alias treasure \
+        -keyalg RSA -keysize 2048 -validity 10000 -storepass treasure -keypass treasure \
+        -dname "CN=TreasureIsl, OU=Dev, O=TreasureIsl, L=CN, C=CN"
+fi
+$APKSIGNER sign --ks "$KS" --ks-key-alias treasure --ks-pass pass:treasure --key-pass pass:treasure \
+    --v1-signing-enabled true --v2-signing-enabled true \
+    --out "$WORK/aligned.apk.signed" "$WORK/aligned.apk"
+echo "  v2+v3 signed → $WORK/aligned.apk.signed"
 cp "$WORK/aligned.apk.signed" "$APK_OUT"
 
 # [4/5] 体积审计（S35.0 判据①：.so 压缩率 + 引用集漂移；FAIL = 非 0 退出阻断发布）

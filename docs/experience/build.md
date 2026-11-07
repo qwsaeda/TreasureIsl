@@ -382,3 +382,49 @@ wasm + 重启 serve 再跑 e2e。
 **验证**：sleep 25s 后重试成功（`To https://github.com/... 1e8953b..9defb77`）。
 
 **预判**：push 超时先睡 15-25s 重试，别慌着改配置；commit 已本地落盘，重试幂等。
+
+### EXP-173 构建：APK 构建「有问题也没成功」5 根因——签名助手 /tmp 丢失 + AAudio API26 + 并发互踩 + 按钮累积 + glob 不匹配
+**现象**（用户 2026-11-07「你这构建有问题，也没有构建成功」）：平台「构建」页三个产物全标
+「未构建」，但 apk 日志却显示「构建完成 + 已签名」；多个「已启动(pid...)」药丸累积；
+`dist/TreasureIsl-arm64.apk` 已丢失。
+
+**根因（5 条，全实测）**：
+① **签名助手是仓库外临时资产**：`build_apk.sh [3/5]` 用 `(cd /tmp/opencode/apksigner && java -cp
+apksig.jar:. SignV2 ...)` 签名，`SignV2.class`/`apksig.jar`/`ti.keystore` 都在 `/tmp/opencode/apksigner/`
+（仓库外）；`/tmp` 被清后目录空 ⇒ `Error: Could not find or load main class SignV2` ⇒ 构建**死在签名步**
+（日志停在 [3/5]，无 [4/5]/[5/5]）。**教训：签名/工具依赖不得放仓库外临时目录**（/tmp 无持久性）；
+要么系统包（`apksigner`/`apksig.jar` 在 build-tools），要么仓内登记。
+② **AAudio 链接失败（API 不匹配）**：S34 开 `bevy_audio` → cpal → ndk-sys
+`#[link(name="aaudio")]` 链接 `-laudio`；但 `build_apk.sh` 用 `aarch64-linux-android21-clang`，
+NDK 的 `libaaudio.so` **只在 API≥26 的 sysroot** ⇒ `unable to find library -laudio`（旧 .so 无此依赖
+= bevy_audio 未启用时构建的）。**教训：交叉编译 clang API 必须 ≥ 依赖链最低要求**；AAudio=26 ⇒
+`build_apk.sh` clang 21→26（变量 `API=${3:-26}`）+ manifest `minSdkVersion` 21→26（同步，装不上低版本）。
+③ **并发构建互踩**：`/api/build?run=` 无并发守卫，多次点击每次 spawn；`build_apk.sh` 会**临时改根
+`Cargo.toml`**（members 加 android-activity）⇒ 并发构建互踩 Cargo.toml。**教训：平台后台 spawn 必须
+单构建锁**（`evidence/console/logs/build.lock`：`create_new` 原子占位 + `/proc/<pid>` 存活预检 +
+收割线程记 `exit_code`/`ended_ts`；忙时返回 `busy:true` HTTP 200）。
+④ **前端按钮无限累积**：`build-trigger` 每次 `loadBuild` 追加 3 个按钮，从不清空 ⇒ 无限累积 +
+无 in-flight 禁用。**教训：触发按钮每轮渲染须清空容器 + 用后端 running 态禁用**。
+⑤ **产物判定 glob 不匹配**：`build_artifacts.py` KINDS apk artifact 硬编码
+`dist/TreasureIsl-arm64.apk`，但 `build_apk.sh` 产物名 = `TreasureIsl-<x.y.z>-<arch>.apk`
+（arch = CLI 参 `aarch64`；注释/文档写 arm64 与脚本实际不符）⇒ 字面 `is_file()` 永远不命中 ⇒
+「已构建仍报未构建」。**教训：产物判定用 glob 且与实际命名一致**（版本/arch 勿硬编码精确名），
+加 `_resolve_artifact` glob 解析（取最新匹配）。
+
+**对策（S46.3 落地）**：① 官方 `apksigner` CLI（`--v1/v2-signing-enabled`，v0.9 系统包）替换自造
+SignV2 + keystore 缺失自动 `keytool` 生成（原私钥不可恢复，新 key = 新签名，装机需卸载旧包）+
+`[0/5]` 依赖前置（NDK/aapt2/zipalign/apksigner/java/keytool 缺一即 FAIL 早退，不再半路死）；
+② API 21→26 + minSdk 26；③ `repo/build_ops.rs` 单构建锁 + `/api/build` 上报 running/last_exit +
+前端清空/禁用/完成态；④ apk artifact 改 glob `dist/TreasureIsl-*.apk` + `_resolve_artifact`。
+**锁文件永存坑（同轮实证）**：锁完成后文件留 `running=false` 状态记录供 `/api/build` 上报，但
+`create_new` 下次必失败 ⇒ 第二次起所有构建误报 `busy:true`（「构建锁被占用」）；修 = `lock_is_stale`
+（`running=false` 或 pid 死 = 非真占用）⇒ 移除后重试一次。**教训：create_new 锁若完成后文件永存，
+获取侧须区分「真占用」与「陈旧状态记录」**。
+
+**复发防护**：① 仓库外临时资产不可作构建/签名依赖；② 交叉编译 API 与 manifest minSdk 同步对齐
+依赖链最低要求；③ 平台后台 spawn 必须单构建锁；④ 前端触发容器每次清空 + running 禁用；
+⑤ 产物判定 glob 对齐实际产物命名。
+
+**验证**：`bash scripts/build_apk.sh aarch64`（API26 clang 重编 .so）[0/5]~[5/5] 全过 +
+`dist/TreasureIsl-0.2.0-aarch64.apk` 产出 + `apksigner verify` v1+v2 有效 + `apk_audit --apk` 判据①② PASS
++ `/api/build` running/last_exit 如实 + `?run` 忙时 `busy:true` + 非法 run 400 + list apk 已构建。

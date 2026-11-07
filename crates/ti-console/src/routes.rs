@@ -22,6 +22,7 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 
+use crate::repo::build_ops::build_artifacts;
 use crate::repo::config::{RepoSources, load as load_sources_file};
 
 use crate::repo::data;
@@ -255,7 +256,7 @@ fn dispatch_get(
             } else if let Some(kind) = query_param(url, "run") {
                 if matches!(kind, "apk" | "wasm" | "native") {
                     api_500_or_json(
-                        load_json(repo_root, |s| data::build_artifacts(repo_root, s, Some(kind))),
+                        load_json(repo_root, |s| build_artifacts(repo_root, s, Some(kind))),
                         gz,
                     )
                 } else {
@@ -270,10 +271,7 @@ fn dispatch_get(
                     )
                 }
             } else {
-                api_500_or_json(
-                    load_json(repo_root, |s| data::build_artifacts(repo_root, s, None)),
-                    gz,
-                )
+                api_500_or_json(load_json(repo_root, |s| build_artifacts(repo_root, s, None)), gz)
             }
         }
         "/api/apk-size" => {

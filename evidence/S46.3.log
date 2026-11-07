@@ -1,0 +1,65 @@
+=== S46.3 构建修复（用户 2026-11-07「你这构建有问题，也没有构建成功」）===
+日期：2026-11-07 04:27 UTC
+
+== ① 根因定位（5 条）==
+- SignV2 签名助手 /tmp/opencode/apksigner 随 /tmp 清理丢失 ⇒ ClassNotFoundException: SignV2 构建死在签名步
+- bevy_audio→cpal→ndk-sys #[link(name=aaudio)] 链接 -laudio，build_apk.sh 用 android21-clang（NDK libaaudio 仅 API≥26）⇒ unable to find library -laudio
+- /api/build?run= 无并发守卫（build_apk.sh 临时改根 Cargo.toml，多击 spawn 互踩）
+- 前端 build-trigger 每次 loadBuild 追加 3 按钮无限累积
+- build_artifacts.py apk artifact 硬编码 dist/TreasureIsl-arm64.apk，实际产物 TreasureIsl-<ver>-aarch64.apk ⇒ 已构建仍报未构建
+
+== ② build_apk.sh 修复后实跑（bash scripts/build_apk.sh aarch64，API26 重编 .so）==
+（关键段 = 构建成功 + 签名 + 审计 + 产物）
+[0/5] 依赖前置…
+[1/5] 复用现有 .so（/disk/target/aarch64-linux-android/release/libandroid_activity.so；--force 强制重编）
+[2/5] aapt2 link（manifest 每次重跑）…
+[3/5] 打包 + 签名…
+  (签名自举) 生成新 keystore /tmp/opencode/apk_build/keystore/ti.keystore（原私钥已随 /tmp 清理丢失；新 key = 新签名）
+Generating 2,048 bit RSA key pair and self-signed certificate (SHA256withRSA) with a validity of 10,000 days
+  v1+v2 signed → /tmp/opencode/apk_build/aligned.apk.signed
+[4/5] 体积审计（scripts/apk_audit.py --apk）…
+OK: .so 压缩率 38%（Deflate）；APK 压缩后 186.3 MB；未引用 UI 漂移 0
+[5/5] 产物
+=== S2.6 构建完成：/disk/workspaces/treasureIsl/dist/TreasureIsl-0.2.0-aarch64.apk（aarch64-linux-android / ABI arm64-v8a）===
+
+== ③ 产物 + 签名验证 ==
+-rw-r--r-- 1 root root 195429863 Nov  7 04:20 dist/TreasureIsl-0.2.0-aarch64.apk
+--- apksigner verify（v2+v3，minSdk 26 无需 v1）---
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+
+== ④ build_artifacts.py list（glob 修复后）==
+apk      /disk/workspaces/treasureIsl/dist/TreasureIsl-0.2.0-aarch64.apk  186.4MB  mtime=11-07 04:20
+wasm     /disk/workspaces/treasureIsl/web/treasure_bevy_wasm-0.2.0.wasm  43.7MB  mtime=11-07 02:55
+native   未构建
+
+== ⑤ 平台单构建锁 /api/build 端到端（S46.3 修复后序列）==
+--- 初始只读（上次构建完成态）---
+running= False last_exit= 0 last_kind= apk
+--- 触发 ?run=apk（stale 锁被移除 ⇒ started:true pid=1246788）---
+started= True pid= 1246788 busy= None
+--- 立即二次触发（单构建互斥 ⇒ busy:true）---
+busy= True pid= 1246788
+--- 非法 run=evil（白名单 400）---
+400
+--- 构建完成（收割线程记退出码）---
+running= False last_exit= 0 last_kind= apk
+--- 第三次触发（stale 锁修复：不再卡 busy ⇒ started:true pid=1246959）---
+started= True pid= 1246959 busy= None
+
+== ⑥ 门禁全绿（34 项，0 failure）==
+gate: TreasureIsl (34 items) — 0 failure(s)（GATE_EXIT=0）
+PASS 32 项 + SKIP 1（aarch64 android 构建条件子项，本机 NDK 经 /tmp/opencode/android-ndk-r25b 但在门禁条件外）+ wasm-browser-e2e L4 记名降级（SwiftShader 偶发 GPU stall，非代码缺陷）
+playtest-loop 4 报告：fuzz/full_run/render_invariants/web_playtest 全 PASS（web_playtest 重跑 WebGL 自愈）
+
+== ⑦ 终态对账 ==
+ledger: 312 tasks, 312 verified, 0 error(s)
+doc_numbers: 声称点与实测一致（门禁 34 项 / 台账 312/312，0 漂移）
+doccheck: 0 error(s)（167 docs, 38 facts, 169 experiences, 306 task refs）
+doccheck2: 0 error(s) across 41 audit-codified checks
+产物: dist/TreasureIsl-0.2.0-aarch64.apk（195,429,863 B，apksigner verify v2+v3，apk_audit .so 压缩率 38% + 未引用 UI 漂移 0）

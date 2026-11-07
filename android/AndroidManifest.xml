@@ -5,7 +5,8 @@
      入口 Activity = `android.app.NativeActivity`（Android 内建，0 自定义 Java/Kotlin 类，
      `libname=android_activity` = cdylib `libandroid_activity.so` 去前缀/后缀）。
      包名 com.example.treasureisland 占位（release 可换自有包名；keystore 用 debug 签名）。
-     minSdk 21（Android 5.0），targetSdk 34。不锁方向（P4-2 letterbox 自适应）。 -->
+     minSdk 26（Android 8.0；S46.3 bevy_audio→cpal→ndk-sys 链接 -laaudio（AAudio）最低 API 26，
+     API 21 的 NDK sysroot 无 libaaudio ⇒ 交叉链接失败，EXP-173），targetSdk 34。不锁方向（P4-2 letterbox 自适应）。 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.treasureisland"
     android:versionCode="2"
@@ -14,7 +15,7 @@
     <!-- 无网络权限（游戏全离线可玩；bevy 资产管线本地 APK assets 直读） -->
 
     <uses-sdk
-        android:minSdkVersion="21"
+        android:minSdkVersion="26"
         android:targetSdkVersion="34" />
 
     <!-- 全屏 + 保持唤醒（游戏场景，防锁屏） -->
