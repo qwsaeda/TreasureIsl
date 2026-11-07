@@ -528,7 +528,10 @@
    "name": "medallion_ring",
    "role": "medallion",
    "file": "assets/ui/medallion_ring.png",
-   "params": {},
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
+   },
    "prompt": "a single round antique brass medallion badge with a completely EMPTY smooth brushed-brass recessed center panel (no symbol, no engraving, no icon), an ornate beveled gold rim with small rivets, polished brass with warm gold tones, the medallion is the ONLY object in the frame, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no text, no letters, no numbers, centered, high contrast, game asset icon",
    "generated_at": "2026-10-23"
   },
@@ -1483,8 +1486,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_0.png",
    "params": {
-    "source": "s42_cool_weathered",
-    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1493,8 +1496,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_1.png",
    "params": {
-    "source": "s42_cool_weathered",
-    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1503,8 +1506,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_2.png",
    "params": {
-    "source": "s42_cool_weathered",
-    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1513,8 +1516,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_3.png",
    "params": {
-    "source": "s42_cool_weathered",
-    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1523,8 +1526,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_4.png",
    "params": {
-    "source": "s42_cool_weathered",
-    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1533,8 +1536,8 @@
    "role": "item",
    "file": "assets/ui/index_plank_5.png",
    "params": {
-    "source": "s42_cool_weathered",
-    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1597,8 +1600,8 @@
    "role": "background",
    "file": "assets/ui/index_bg_map_h.png",
    "params": {
-    "source": "s42_cool_weathered",
-    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1616,8 +1619,8 @@
    "role": "item",
    "file": "assets/ui/index_rope.png",
    "params": {
-    "source": "s42_cool_weathered",
-    "note": "S42.0 冷调风化变体（同路径替换 v2b）"
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=1.1 R=1.35 G=1.05 B=0.62）"
    },
    "generated_at": "2026-11-05"
   },
@@ -1629,6 +1632,1706 @@
     "source": "agnes_ai_2026-11-05"
    },
    "generated_at": "2026-11-05"
+  },
+  {
+   "name": "index_bg_map_h_u23",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_bg_map_h 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u24",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u25",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u26",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u27",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u28",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u29",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u30",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u31",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_bg_map_h_u32",
+   "role": "background",
+   "file": "assets/ui/index_bg_map_h_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u23",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_hero_duo 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u24",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u25",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u26",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u27",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u28",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u29",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u30",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u31",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_hero_duo_u32",
+   "role": "portrait",
+   "file": "assets/ui/index_hero_duo_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u23",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_icon_book 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u24",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u25",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u26",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u27",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u28",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u29",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u30",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u31",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_book_u32",
+   "role": "item",
+   "file": "assets/ui/index_icon_book_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u23",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_icon_chest 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u24",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u25",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u26",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u27",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u28",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u29",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u30",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u31",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_chest_u32",
+   "role": "item",
+   "file": "assets/ui/index_icon_chest_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u23",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_icon_compass 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u24",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u25",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u26",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u27",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u28",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u29",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u30",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u31",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_compass_u32",
+   "role": "item",
+   "file": "assets/ui/index_icon_compass_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u23",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_icon_door 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u24",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u25",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u26",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u27",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u28",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u29",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u30",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u31",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_door_u32",
+   "role": "item",
+   "file": "assets/ui/index_icon_door_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u23",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_icon_flag 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u24",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u25",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u26",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u27",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u28",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u29",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u30",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u31",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_flag_u32",
+   "role": "item",
+   "file": "assets/ui/index_icon_flag_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u23",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_icon_gear 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u24",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u25",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u26",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u27",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u28",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u29",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u30",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u31",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_icon_gear_u32",
+   "role": "item",
+   "file": "assets/ui/index_icon_gear_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u23",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_plank_0 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u24",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u25",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u26",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u27",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u28",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u29",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u30",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u31",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_0_u32",
+   "role": "item",
+   "file": "assets/ui/index_plank_0_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u23",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_plank_1 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u24",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u25",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u26",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u27",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u28",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u29",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u30",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u31",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_1_u32",
+   "role": "item",
+   "file": "assets/ui/index_plank_1_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u23",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_plank_2 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u24",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u25",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u26",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u27",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u28",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u29",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u30",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u31",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_2_u32",
+   "role": "item",
+   "file": "assets/ui/index_plank_2_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u23",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_plank_3 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u24",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u25",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u26",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u27",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u28",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u29",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u30",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u31",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_3_u32",
+   "role": "item",
+   "file": "assets/ui/index_plank_3_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u23",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_plank_4 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u24",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u25",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u26",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u27",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u28",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u29",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u30",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u31",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_4_u32",
+   "role": "item",
+   "file": "assets/ui/index_plank_4_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u23",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_plank_5 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u24",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u25",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u26",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u27",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u28",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u29",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u30",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u31",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_5_u32",
+   "role": "item",
+   "file": "assets/ui/index_plank_5_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u23",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_plank_sel 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u24",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u25",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u26",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u27",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u28",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u29",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u30",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u31",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_plank_sel_u32",
+   "role": "item",
+   "file": "assets/ui/index_plank_sel_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u23",
+   "role": "item",
+   "file": "assets/ui/index_rope_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（index_rope 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u24",
+   "role": "item",
+   "file": "assets/ui/index_rope_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u25",
+   "role": "item",
+   "file": "assets/ui/index_rope_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u26",
+   "role": "item",
+   "file": "assets/ui/index_rope_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u27",
+   "role": "item",
+   "file": "assets/ui/index_rope_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u28",
+   "role": "item",
+   "file": "assets/ui/index_rope_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u29",
+   "role": "item",
+   "file": "assets/ui/index_rope_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u30",
+   "role": "item",
+   "file": "assets/ui/index_rope_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u31",
+   "role": "item",
+   "file": "assets/ui/index_rope_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "index_rope_u32",
+   "role": "item",
+   "file": "assets/ui/index_rope_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u23",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u23.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S47.0 视觉变体皮肤库（medallion_ring 变体 23）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u24",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u24.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.85 b=0.8 R=1.15 G=0.7 B=1.25）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u25",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u25.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.5 b=1.0 R=0.7 G=1.15 B=1.05）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u26",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u26.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.25 b=1.25 R=0.95 G=0.93 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u27",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u27.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.8 b=0.75 R=0.55 G=0.7 B=1.35）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u28",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u28.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.1 b=1.05 R=1.45 G=0.9 B=0.5）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u29",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u29.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.2 b=1.0 R=1.25 G=0.65 B=1.15）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u30",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u30.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=1.0 b=0.95 R=0.95 G=1.25 B=0.65）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u31",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u31.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.2 b=0.85 R=0.82 G=0.85 B=0.88）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "medallion_ring_u32",
+   "role": "medallion",
+   "file": "assets/ui/medallion_ring_u32.png",
+   "params": {
+    "source": "ui_variant",
+    "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
+   },
+   "generated_at": "2026-11-07"
   }
  ]
 }

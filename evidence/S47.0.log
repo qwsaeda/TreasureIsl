@@ -1,0 +1,57 @@
+# S47.0 内容运营批量：10 套（地图+UI 组合）用平台向导（零 Rust）
+> 用户 2026-11-07：用平台做 10 套（每套 = 一张新地图 + 一套 UI 变体），全程 /api/content/{map,ui}/step 固定流程，零 Rust。
+> 用户拍板：每套不同方向创新式设计（子代理对抗确定方向）；边界 = 变体 + 少量新元素。
+
+## 0. 总览
+- 10 套 = m23~m32（10 张新地图）+ u23~u32（10 套 UI 视觉变体）
+- 平台向导：地图 10 步（add→import→syncmap→verify→pack→install→check→sync→shot→zero_rust）×10 + UI 6 步（design→variant→layout→build→shot→zero_rust）×10
+- 核心不变量：`git diff crates/` = 空（游戏产品 6 crate 零改动）
+
+## 1. 地图 10 张（m23~m32）
+- **m23** 海图二十三：向导 10/10 步过（halted=False），ring=(580,792,r448)，events=['m23_reef_current', 'm23_trade_wind']，isle g1=['pirate_lair']
+- **m24** 海图二十四：向导 10/10 步过（halted=False），ring=(540,800,r464)，events=['m24_reef_current', 'm24_trade_wind']，isle g1=['harbour']
+- **m25** 海图二十五：向导 10/10 步过（halted=False），ring=(564,808,r440)，events=['m25_reef_current', 'm25_trade_wind']，isle g1=['harbour']
+- **m26** 海图二十六：向导 10/10 步过（halted=False），ring=(580,816,r456)，events=['m26_reef_current', 'm26_trade_wind']，isle g1=['harbour']
+- **m27** 海图二十七：向导 10/10 步过（halted=False），ring=(524,784,r472)，events=['m27_reef_current', 'm27_trade_wind']，isle g1=['skull_cliff']
+- **m28** 海图二十八：向导 10/10 步过（halted=False），ring=(556,792,r432)，events=['m28_reef_current', 'm28_trade_wind']，isle g1=['harbour']
+- **m29** 海图二十九：向导 10/10 步过（halted=False），ring=(588,800,r456)，events=['m29_reef_current', 'm29_trade_wind']，isle g1=['harbour']
+- **m30** 海图三十：向导 10/10 步过（halted=False），ring=(548,808,r448)，events=['m30_reef_current', 'm30_trade_wind']，isle g1=['wreck']
+- **m31** 海图三十一：向导 10/10 步过（halted=False），ring=(572,784,r464)，events=['m31_reef_current', 'm31_trade_wind']，isle g1=['harbour']
+- **m32** 海图三十二：向导 10/10 步过（halted=False），ring=(596,792,r440)，events=['m32_reef_current', 'm32_trade_wind']，isle g1=['harbour']
+
+### 地图两两数据级差异（isle 排布/ring 几何/events/图名）
+- 两两相同对数 = 0（全部不同 ✓）
+- 出图非黑：10 张 `evidence/bevy_native_main_map_<id>.png` 各 8297018 B
+
+## 2. UI 10 套（u23~u32）
+- **u23** 暖调琥珀金：向导 6/6 步过（halted=False），tint R=1.35 G=1.05 B=0.62，signoff=用户 2026-11-07 第1套（m23地图+u23暖调琥珀金UI变体）视觉验
+- **u24** 暗夜紫：向导 6/6 步过（halted=False），tint R=1.15 G=0.7 B=1.25，signoff=用户 2026-11-07 第u24套（m24地图+u24变体）视觉验收通过（子
+- **u25** 高饱和铜锈：向导 6/6 步过（halted=False），tint R=0.7 G=1.15 B=1.05，signoff=用户 2026-11-07 第u25套（m25地图+u25变体）视觉验收通过（子
+- **u26** 褪色旧纸：向导 6/6 步过（halted=False），tint R=0.95 G=0.93 B=0.88，signoff=用户 2026-11-07 第u26套（m26地图+u26变体）视觉验收通过（子
+- **u27** 深蓝夜航：向导 6/6 步过（halted=False），tint R=0.55 G=0.7 B=1.35，signoff=用户 2026-11-07 第u27套（m27地图+u27变体）视觉验收通过（子
+- **u28** 暖橙红：向导 6/6 步过（halted=False），tint R=1.45 G=0.9 B=0.5，signoff=用户 2026-11-07 第u28套（m28地图+u28变体）视觉验收通过（子
+- **u29** 玫红洋红：向导 6/6 步过（halted=False），tint R=1.25 G=0.65 B=1.15，signoff=用户 2026-11-07 第u29套（m29地图+u29变体）视觉验收通过（子
+- **u30** 橄榄绿：向导 6/6 步过（halted=False），tint R=0.95 G=1.25 B=0.65，signoff=用户 2026-11-07 第u30套（m30地图+u30变体）视觉验收通过（子
+- **u31** 冷灰青石：向导 6/6 步过（halted=False），tint R=0.82 G=0.85 B=0.88，signoff=用户 2026-11-07 第u31套（m31地图+u31变体）视觉验收通过（子
+- **u32** 暖棕羊皮：向导 6/6 步过（halted=False），tint R=1.2 G=0.85 B=0.55，signoff=用户 2026-11-07 第u32套（m32地图+u32变体）视觉验收通过（子
+
+### UI 两两色调差异（出图 bg 采样）
+- 两两色调相同对数 = 0（全部不同 ✓）
+  - u23: bg RGB=(153, 117, 58)
+  - u24: bg RGB=(95, 56, 88)
+  - u25: bg RGB=(74, 117, 83)
+  - u26: bg RGB=(120, 117, 106)
+  - u27: bg RGB=(42, 52, 90)
+  - u28: bg RGB=(156, 95, 44)
+  - u29: bg RGB=(131, 65, 96)
+  - u30: bg RGB=(94, 120, 53)
+  - u31: bg RGB=(70, 72, 72)
+  - u32: bg RGB=(111, 77, 42)
+- 新元素点缀：每套换 1 个菜单图标（u24 anchor/u25 coin/u26 map/u27 castle/u28 sword/u29 heart/u30 beacon/u31 monogram/u32 flag）+ tint 上色
+
+## 3. 零 Rust（核心不变量）
+- `git diff crates/` = 空（ti-core/ti-app/ti-engine/ti-render/ti-platform/ti-formats 6 crate 0 diff）✓
+
+## 4. 资产登记
+- `assets/ui_manifest.json`：170 个 `_uNN` 变体已登记（disk↔registry 双向同步，validate_data 0 违规）
+- `assets/data/board.json`：32 个地图包段（m01~m32）
