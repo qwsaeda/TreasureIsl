@@ -554,3 +554,31 @@ ti-app→ti-core / treasure-native→treasure-bevy-native。
 ② doc_numbers `--fix` 类回写工具改动须带**负例（故意改错看报红）**——正例全绿不能证明正则会伤人（EXP-108 同类）；
 ③ 「门禁 N 项」语境词启发式对**工具自身项数**有歧义：写「doccheck2 41 项」这类声明时**别在句首加「门禁」语境词**，
 或改用「doccheck2 自身检查 41」表述。
+
+### EXP-172 工具：回写工具自身覆盖盲区——doc_numbers `--fix` 漏英文横幅 + doccheck2.rs 期望值
+**现象**：S46.1 门禁项数 33→34 时，`scripts/doc_numbers.py --fix` 自称「回写 8 处」并打印
+「已回写 23 处声称点」，但**门禁仍红**（doccheck2 `gate.ps1 实测固定项 34，期望 33`）；
+人工排查发现 `--fix` 漏了 2 处：① `scripts/gate.ps1` **英文横幅** `=== gate: TreasureIsl (N items) ===`
+（`claim_sites` 只认中文「N 项」正则 `(\d+)\s*项`，英文 `items` 盲区）；② `crates/ti-tools/src/bin/doccheck2.rs`
+**期望值硬编码** `let expected = 34usize;`（`gate_item_actual_count` 断言 gate.ps1 实测 == expected，
+此值不在 8 个声称文件内）。两处均为 S46.1 手工补刀才转绿。
+
+**根因（2 条）**：① `doc_numbers.py` 的声称点清单是**固定文件列表 + 单一中文正则**，未随门禁结构
+演化同步（英文横幅与 Rust 硬编码是后加的声称形态，工具没跟上）；② 门禁项数变更的**真权威**
+是 doccheck2.rs 的 `expected`（gate-item 检查的对照基准），但工具把「8 个文档声称」当全部，
+把真正的基准值留给人肉 ⇒ 权威源与声称点脱节。
+
+**对策（S46.2 落地）**：① 给 `doc_numbers.py` 加两个声称点——`GATE_BANNER_RE`（`(N items)`，仅 gate.ps1）
+与 `DOCCHECK2_EXPECTED_RE`（`let expected = Nusize;`，仅 doccheck2.rs），纳入 `--fix` 同口径回写；
+② header 注释「8 处」改「10 处」+ 覆盖面清单明示；③ 负例护栏：临时把横幅与期望改 33 ⇒
+`--fix` 回写 34（实测 3 处含 release 计数）⇒ 再体检 0 漂移；④ 15 号第 12 项 + 14 号 doc_numbers 行同步。
+
+**同轮相关发现（S46.1 实证，一并记住）**：`doccheck2::check_process_ledger` 对 15 号载体格的解析按空白分割，
+载体写 `scripts/x.py（gate 第 N 项）`（反引号后**紧贴全角括号**）会被当成路径 `scripts/x.py`（gate` →
+误报「载体不存在」；写法 = 反引号后加**空格**再写括号注释（`scripts/x.py` gate 第 N 项）。
+这是「载体格注释粘括号」小坑，与 EXP-171 ③ 同类（工具对书写形式敏感）。
+
+**复发防护**：① 回写/生成类工具（`--fix` 形态）改动后，必须做**负例**（故意把声称点改错看是否
+报红/回写），正例全绿不能证明覆盖面（EXP-171 ③ 同类）；② 工具的「声称点清单」应与其**权威基准
+来源**（doccheck2.rs expected / gate.ps1 实测）一起维护，别把基准值当外部常量人肉同步；
+③ 门禁项数变更后的自检 = 跑 `python3 scripts/doc_numbers.py`（应 0 漂移）+ `cargo run -q -p ti-tools --bin doccheck2`（应 0 error，gate-items 项兜底）。

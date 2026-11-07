@@ -4,7 +4,9 @@
 
 **为什么有这个工具**（`docs/process/15_process_ledger.md` 第 12 条流程）：
 门禁项数一改，`parity.md` / `git.md` / `docs/README.md` / `loop.md` / `AGENTS.md` / `style.md` /
-`playbook.ps1` / `gate.ps1` 横幅共 8 处要手改（S20.0c dod 自认牵动 7 处）⇒ 漏一处 = 文档说谎
+`playbook.ps1` / `gate.ps1` 中文横幅 + **`gate.ps1` 英文横幅 `(N items)`** + **`doccheck2.rs` 门禁项数
+期望值**（`let expected = Nusize;`）共 **10 处**要手改（S20.0c dod 自认牵动 7 处；S46.2 补上
+英文横幅与 doccheck2.rs 期望值两个盲区——此前每改门禁项数仍须人肉补刀 2 处，EXP-172）⇒ 漏一处 = 文档说谎
 （假安全感）。本工具**从权威源实测**后统一回写：
 
 - 门禁项数口径 = `scripts/gate.ps1` 顶层（不缩进）`Report ` 调用数（与
@@ -47,6 +49,10 @@ LEDGER_CLAIM = re.compile(r"(`plan/ledger\.yaml`\s*)(\d+)\s*任务\s*（(\d+)\s*
 
 # gate-total 语境标记（本行在谈门禁总数）
 _GATE_CTX = re.compile(r"门禁|全绿|全门禁|gate|Report|当前")
+# gate.ps1 英文横幅 `=== gate: TreasureIsl (N items) ===`（claim_sites 只认中文「N 项」，此为其盲区）
+GATE_BANNER_RE = re.compile(r"\((\d+)\s*items\)")
+# doccheck2.rs 门禁项数期望值（`gate_item_actual_count` 断言 gate.ps1 实测 == expected；与横幅同盲区）
+DOCCHECK2_EXPECTED_RE = re.compile(r"let expected = (\d+)usize;")
 # 「N 项」后的其它总数（命令数 / 图标数 …）——非门禁项数，须排除
 _OTHER_AFTER = re.compile(r"(命令|图标)")
 # 其它总数的前缀（残留 / 图标 计数）
@@ -157,6 +163,33 @@ def main() -> int:
                 print(f"    将改 {rel}:{i + 1}: {m.group(1)} → {g} :: {out_lines[i].strip()[:90]}")
         if args.fix and not args.dry_run:
             p.write_text("\n".join(out_lines) + ("\n" if text.endswith("\n") else ""), encoding="utf-8", newline="")
+
+    # gate.ps1 英文横幅 `(N items)`（S46.2 盲区补齐：claim_sites 只认中文「N 项」，英文横幅曾漏网，
+    # 上轮 S46.1 手改；现纳入回写）。
+    if GATE.is_file():
+        text = GATE.read_text(encoding="utf-8")
+        m = GATE_BANNER_RE.search(text)
+        if m and m.group(1) != str(g):
+            drift += 1
+            new_text = GATE_BANNER_RE.sub(lambda mm: f"({g} items)", text, count=1)
+            if args.fix and not args.dry_run:
+                GATE.write_text(new_text, encoding="utf-8", newline="")
+            else:
+                print(f"    将改 scripts/gate.ps1 英文横幅: {m.group(1)} → {g}")
+
+    # doccheck2.rs 门禁项数期望值（S46.2 盲区补齐：gate_item_actual_count 断言 gate.ps1 实测 ==
+    # expected；此前每改门禁项数须人肉同步 doccheck2.rs，现纳入回写同口径）。
+    dc2 = ROOT / "crates" / "ti-tools" / "src" / "bin" / "doccheck2.rs"
+    if dc2.is_file():
+        text = dc2.read_text(encoding="utf-8")
+        m = DOCCHECK2_EXPECTED_RE.search(text)
+        if m and m.group(1) != str(g):
+            drift += 1
+            new_text = DOCCHECK2_EXPECTED_RE.sub(lambda mm: f"let expected = {g}usize;", text, count=1)
+            if args.fix and not args.dry_run:
+                dc2.write_text(new_text, encoding="utf-8", newline="")
+            else:
+                print(f"    将改 crates/ti-tools/src/bin/doccheck2.rs 期望值: {m.group(1)} → {g}")
 
     # 台账计数（release.md）
     rel_path = ROOT / "docs" / "release.md"

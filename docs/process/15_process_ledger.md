@@ -44,7 +44,7 @@
 | 9 | **UI 资产批次生产**（登记 → 并行生图 → 抠图 → 预检 → 拼版） | 写临时脚本（仓库外） | EXP-115 | 脚本 | `scripts/ui_asset_batch.py` | 已自动化 |
 | 10 | **版面线图 / 出图验收**（坐标表线图 + 真实渲染 + 像素取证） | 内联 `python -c` 手搓 | 本轮 S21.3 实证 | 脚本 | `scripts/ui_layout_sheet.py` + `scripts/ui_preview.ps1` + `scripts/ui_shot_probe.py` | 已自动化 |
 | 11 | **读不出的文件静默跳过**（`doccheck` 读文件失败就 continue，坏字节文件整份失声） | 靠「计数漂移」倒查 | EXP-091（release.md 292 处坏字节） | 扩展 `doccheck`（读失败即 ERROR + 列文件名/字节偏移） | `doccheck::read_docs` 读失败即 ERROR（EXP-091 兜住） | 已自动化 |
-| 12 | **门禁项数声称同步**（一改要手抄 8 处：parity/git/README/loop/AGENTS/style/playbook/横幅） | 手改 8 处 | S20.0c dod 自认牵动 7 处 | 脚本 `--fix`（从权威源实测回写） | `scripts/doc_numbers.py` — `--fix` 回写 8 处，默认只读体检 | 已自动化 |
+| 12 | **门禁项数声称同步**（一改要手抄 10 处：parity/git/README/loop/AGENTS/style/playbook/gate 中英横幅 + doccheck2.rs 期望值；S46.2 补英文横幅 + doccheck2.rs 期望值盲区） | 手改 10 处 | S20.0c dod 自认牵动 7 处；S46.1 门禁 33→34 时英文横幅与 doccheck2.rs 期望值漏网（EXP-172） | 脚本 `--fix`（从权威源实测回写） | `scripts/doc_numbers.py` — `--fix` 回写 10 处（含 gate.ps1 英文横幅 `(N items)` + doccheck2.rs `let expected = Nusize;`），默认只读体检 | 已自动化（S46.2） |
 | 13 | **视觉改动「设计稿确认」留痕**（A 纪律） | 留痕只在聊天，dod 手写 | EXP-114；S20.3 dod 自认「暂无机械门禁断言」 | 门禁断言（证据须含确认标记） | `doccheck2::check_visual_design_signoff` | 已自动化 |
 | 14 | **布局规格坐标机器校验**（8pt / N8 往返 / N3-N6 / 与 scenes.json 一致） | 人手算并写进 evidence | S21.3 dod「坐标一致性自证」 | 脚本（解析规格表 → 比对 scenes.json + manifest） | `scripts/layout_spec_check.py` | 已自动化 |
 | 15 | **节点 kind ↔ 资产映射唯一事实源** | 规格文档 → 手工抄进 chrome.rs + manifest | S21.1 批次 15 资产；S21.5 dod | 门禁断言（映射 key 集合 == manifest 资产集合 == 规格表） | `doccheck2::check_node_kind_asset_map` | 已自动化 |
