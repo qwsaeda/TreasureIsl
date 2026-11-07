@@ -10,6 +10,7 @@
 pub mod build;
 pub mod close;
 pub mod gate;
+pub mod spawn;
 
 /// 子进程环境变量**最小集**白名单（22 号 §10.3 执行面：`PATH`/`HOME`/`USERPROFILE`/
 /// `CARGO_HOME`/`RUSTUP_HOME`/`SYSTEMROOT`/`TEMP`/`TMP`/`APPDATA`/`LOCALAPPDATA`/

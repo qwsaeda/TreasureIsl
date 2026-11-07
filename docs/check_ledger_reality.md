@@ -92,7 +92,7 @@ dod 须含可 grep 的关键产物。若 dod 只写中文描述无标识符，(b
 
 ## 维护
 
-- 新增 S<阶段>.<子号> 任务，dod 写清 grep 标识符（如 `cargo test -p ti-app --test rules_trade`
+- 新增 S<阶段>.<子号> 任务，dod 写清 grep 标识符（如 `cargo test -p ti-core --test rules_trade`
   里的 `rules_trade`），本脚本自动校验
 - dod 只写中文描述时 (b) 自动 PASS，由 doccheck 兜底
 - 发现某任务 dod 太模糊（grep 不到标识符但 evidence 又纯日志）→ 补全 dod 标识符，

@@ -1,4 +1,4 @@
-﻿# gate.ps1 — 统一门禁（33 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop）
+# gate.ps1 — 统一门禁（34 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop；S46.1 起第 25 项 = dod-commands）
 # 用法：
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1            # 全量（收口用；语义不变）
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 -Touch     # 开发期：跳过纯构建/grep 项
@@ -16,7 +16,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
 # Linux 兼容（docs/migration_linux.md §3）：非 Windows 无 `python`（只有 python3）。
-# 33 项里**脚本项经 `& $py`**；`.ps1` 脚本项（flywheel_readme.ps1）经 `$psExe`（pwsh）非 `$py`。
+# 34 项里**脚本项经 `& $py`**；`.ps1` 脚本项（flywheel_readme.ps1）经 `$psExe`（pwsh）非 `$py`。
 # Windows 上 $py = python，行为不变。
 $py = 'python'
 if ($PSVersionTable.OS -notlike '*Windows*') { $py = 'python3' }
@@ -72,7 +72,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (33 items) ==="
+Write-Host "=== gate: TreasureIsl (34 items) ==="
 
 # 1) format
 & $cargoCmd fmt --all -- --check 2>&1 | Out-Null
@@ -352,7 +352,7 @@ $e2eOut = & $py scripts/wasm_browser_e2e.py --check 2>&1
 $e2eOut | ForEach-Object { Write-Host "        $_" }
 $e2eExit = $LASTEXITCODE
 # 无 serve / 无 Playwright / 无 Pillow ⇒ 记名 SKIP（硬件/环境不可验，同 GPU bevy-cpu-parity 口径）；
-# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，33 项）。
+# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，34 项）。
 $e2eEnvMissing = $e2eOut -match "FAIL  本机无 playwright|ModuleNotFoundError"
 if (-not $e2eEnvMissing) {
     Report ($e2eExit -eq 0) 'wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)'
@@ -383,6 +383,14 @@ $plOut = & $py scripts/playtest_loop.py --check 2>&1
 $plOut | ForEach-Object { Write-Host "        $_" }
 $plExit = $LASTEXITCODE
 Report ($plExit -eq 0) 'playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)'
+
+# 25) DoD 判据命令载体可达性自检（S46.1；EXP-170/EXP-171 复发防护）：
+#     文档里的判据命令（cargo run/test --bin/--test、scripts/*.py|ps1）逐一解析，
+#     载体缺失 / 多 bin crate 歧义形式 ⇒ 非 0 退出 = FAIL（「判据从未执行」类缺陷的门禁兜底）。
+$dcOut = & $py scripts/check_dod_commands.py --check 2>&1
+$dcOut | ForEach-Object { Write-Host "        $_" }
+$dcExit = $LASTEXITCODE
+Report ($dcExit -eq 0) 'dod-commands (DoD 判据命令载体可达性：cargo --bin/--test 与 scripts 载体全存在 + 多 bin 歧义形式 0 处；EXP-170 复发防护)'
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

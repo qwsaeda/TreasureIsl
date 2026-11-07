@@ -39,12 +39,19 @@ fn criterion_syncmap_zero() {
 #[test]
 fn write_paths_resolves_id_placeholder() {
     // 30 号 §3.2 占位符解析约定：<id> → 实际包 id。
-    let p = resolve_write_paths("mappack_syncmap", "m01");
+    // 写点数据单一事实源 = `console_commands.json` 的 `writes`（S46.1 整理：平台侧不再另存一份）。
+    let p = resolve_write_paths(&repo_root(), "mappack_syncmap", "m01");
     assert_eq!(p, vec!["assets/maps/m01/manifest.json"]);
-    let p2 = resolve_write_paths("mappack_pack", "m22");
+    let p2 = resolve_write_paths(&repo_root(), "mappack_pack", "m22");
     assert_eq!(p2, vec!["dist/maps/m22.map-pack/"]);
-    let p3 = resolve_write_paths("mappack_add", "m99");
+    let p3 = resolve_write_paths(&repo_root(), "mappack_add", "m99");
     assert_eq!(p3, vec!["assets/maps/"]);
+    // 只读动作 = 空写点集（`mappack_verify` / `mappack_check` 的 writes 为 []）。
+    let p4 = resolve_write_paths(&repo_root(), "mappack_verify", "m01");
+    assert!(p4.is_empty(), "只读动作应无写点：{p4:?}");
+    // 未登记动作 = 空写点集（不 panic、不静默当成有写点）。
+    let p5 = resolve_write_paths(&repo_root(), "no_such_action", "m01");
+    assert!(p5.is_empty(), "未登记动作应无写点：{p5:?}");
 }
 
 #[test]

@@ -96,7 +96,6 @@ pub fn tasks(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
             })
         })
         .collect();
-    let _ = sources;
     Ok(json!({ "tasks": rows, "count": rows.len() }))
 }
 
@@ -151,7 +150,6 @@ pub fn assets(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> 
         .map(|s| s.trim().to_owned())
         .filter(|s| !s.is_empty());
     let dist = crate::repo::dist::dist_pack_names(repo_root);
-    let _ = sources;
     Ok(json!({
         "ui_manifest": ui,
         "registry": registry,
@@ -471,7 +469,7 @@ pub fn apk_size(repo_root: &Path, _sources: &RepoSources) -> Result<Value, Strin
 /// `/api/snapshot`：22 号 §8「0 游戏产物变更」内容级指纹快照（S32.2 载体消费点；
 /// 只读计算：冻结路径逐文件内容指纹 + 未跟踪清单；差值报告落盘 = 调用方写 `evidence/console/`）。
 #[must_use]
-pub fn snapshot(repo_root: &Path, sources: &RepoSources) -> Value {
+pub fn snapshot(repo_root: &Path, _sources: &RepoSources) -> Value {
     let snap = super::snapshot::FrozenSnapshot::take(repo_root);
     let kind = super::snapshot::fingerprint_kind();
     // 差值面：与快照报告落盘面（evidence/console/）配套 = 动作前后各取一次，
@@ -480,7 +478,6 @@ pub fn snapshot(repo_root: &Path, sources: &RepoSources) -> Value {
     let diff_entries = baseline.diff(&snap).len();
     let _ = super::snapshot::diff_report(&baseline, &snap);
     let _ = super::snapshot::no_change_probe(&baseline, &snap);
-    let _ = sources;
     json!({
         "kind": format!("{kind}（22 号 §8；禁用 git status --porcelain）"),
         "frozen_paths": super::snapshot::FROZEN_PATHS,

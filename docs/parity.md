@@ -14,11 +14,11 @@
 
 | # | 判据 | 验收命令（S0.1 后落地为真实命令） |
 |---|---|---|
-| P0-1 | 每个容器（`ui.pak`/`glpics.pak`/`glmap_m0*.pak`/`*.lpk`）条目提取率 100% | `cargo run -p ti-tools -- unpack --check-all` → extracted == total |
+| P0-1 | 每个容器（`ui.pak`/`glpics.pak`/`glmap_m0*.pak`/`*.lpk`）条目提取率 100% | `cargo run -p ti-tools --bin unpak -- --check-all` → extracted == total |
 | P0-2 | 每个格式解析器 **0 未知字节**（文件 100% 字段被定义，否则报错） | `cargo run -p ti-tools --bin verify -- --zero-unknown` → 全格式 pass（**S46.0 实测基线**：33 个真实文件 / 305 个容器条目 / 0 跳过 / 0 失败；口径 = 结构后无残留字节，`define_format!` 的 `read` 对残留报 `TrailingBytes` ⇒ 解析成功即达标；门禁第 7 项同步由永久 SKIP 转为默认 full 档实跑） |
 | P0-3 | 解包后**重打包逐字节一致** | `--repack` 输出 sha256 == 原文件 sha256 |
 | P0-4 | PCX 解码像素与**独立参考实现**逐像素一致 | `cargo test -p ti-tools --test pcx_ref`（Rust 解码器 vs `scripts/pcx_ref.py` 独立参考，`pcx_ref.rs` 3 用例） |
-| P0-5（S10.1 新增）| 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | 已并入 doccheck2 `check_touch_render_pair`（门禁 doccheck2 项；原 `touch_render_same_coords` 集成测试已退役） |
+| P0-5（S10.1 新增）| 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | 已并入 doccheck2 `check_touch_render_pair`（doccheck2 项；原 `touch_render_same_coords` 集成测试已退役） |
 | P0-6（S10.2 新增）| HD 递归加载 100% 注入（`load_hd_pack_from_dir` 递归子目录） | `cargo test -p ti-app --test render_parity_hd`（HD RGBA8 渲染路径逐像素对齐，`hd-8bit` feature）；原 `hd_inject_full` 集成测试已退役 |
 
 ## P1 数据对齐
@@ -61,7 +61,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 |  | P0-5（S10.1 新增） | 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test render_invariants` |  |
 
-## 代码质量门禁 `scripts/gate.ps1`（33 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
+## 代码质量门禁 `scripts/gate.ps1`（34 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
 
 > **计数约定（本节是门禁项数的唯一事实源，其他文档只引用、不各自重数）**
 >
@@ -69,7 +69,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > 1. 只数顶格 `Report`；**缩进在 `if`/`else` 块内的条件 `Report`/`Skip` 不计入**——
 >    即 wasm 构建、android 构建、`zero-unknown verify`（`if (Test-Path ...)` 守卫）三项；
 > 2. `Skip` 不单独计项；
-> 3. 当前顶格 `Report` = **33 项**（S31.3 起 = 28 + 第 22 项 wasm 浏览器端 e2e；数字对不上时以机器输出为准）。
+> 3. 当前顶格 `Report` = **34 项**（S31.3 起 = 28 + 第 22 项 wasm 浏览器端 e2e；数字对不上时以机器输出为准）。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
 > 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
@@ -84,6 +84,12 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > - **`required-features` 的 bin 不被第 1~3 项编译/lint 覆盖**——第 4b 项专门补这个盲区（EXP-099）。
 >
 > 增删门禁项时**只改本节**，并在同一次改动里同步更新编号与计数。
+
+> **DoD 判据命令可达性自检（S46.1，门禁第 25 项 `dod-commands`）**：P0~P4 表里的
+> 判据命令由 `scripts/check_dod_commands.py --check` 机器校验——`cargo run -p <crate> --bin <bin>`
+> 的 bin 须存在；多 bin crate 上的 `cargo run -p <crate> -- <arg>` **裸形式 = 歧义 FAIL**
+> （EXP-170/171 实测：P0-1 判据 `-- unpack --check-all` 曾五年不可实跑）；`cargo test --test <name>`
+> 与 `scripts/*.py|ps1` 载体须在位。防「验收集合 ≠ 判据集合」复发。
 
 ```
 1  cargo fmt --all -- --check
@@ -168,7 +174,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 33 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 34 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
 
 **S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
-审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 33 项全绿。
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 34 项全绿。

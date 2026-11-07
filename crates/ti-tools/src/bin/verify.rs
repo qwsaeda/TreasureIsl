@@ -270,7 +270,7 @@ fn collect_files(data_dir: &Path) -> Result<Vec<String>, String> {
 }
 
 /// 人读报告（逐行 + 汇总）。
-fn print_report(rows: &[Row], counters: &Counters, data_dir: &Path) {
+fn print_report(rows: &[Row], counters: &Counters) {
     println!("=== verify --zero-unknown（口径：P0-2 每格式 0 未知字节）===");
     for r in rows {
         let mark = if r.skipped {
@@ -301,7 +301,6 @@ fn print_report(rows: &[Row], counters: &Counters, data_dir: &Path) {
     } else {
         println!("FAIL：存在未达 0 未知字节的文件/条目（详见上方 FAIL 行）");
     }
-    let _ = data_dir;
 }
 
 /// JSON 报告（机器可读）。
@@ -366,7 +365,7 @@ fn main() -> ExitCode {
     if json {
         print_json(&rows, &counters, &data_dir);
     } else {
-        print_report(&rows, &counters, &data_dir);
+        print_report(&rows, &counters);
     }
     if rows.iter().all(|r| r.ok) { ExitCode::SUCCESS } else { ExitCode::from(1) }
 }

@@ -132,40 +132,13 @@ fn resolve_action(repo_root: &Path, action_id: &str) -> Result<Option<CmdSpec>, 
     crate::content::resolve_action(repo_root, action_id)
 }
 
-/// 白名单动作的**写点模板集**（可含 `<id>` 占位符，30 号 §3.2 约定）。
-/// S44.5：`console_commands.json` 的 `writes` 登记必须与本表逐项一致（写面登记一致性断言）。
-#[must_use]
-pub(crate) fn write_templates(action_id: &str) -> &'static [&'static str] {
-    match action_id {
-        "mappack_add" => &["assets/maps/"],
-        "mappack_syncmap" => &["assets/maps/<id>/manifest.json"],
-        "mappack_pack" => &["dist/maps/<id>.map-pack/"],
-        "mappack_install" => &[
-            "assets/maps/",
-            "assets/data/board.json",
-            "assets/maps/index.json",
-            "assets/ui_manifest.json",
-        ],
-        "mappack_sync" => &[
-            "assets/data/board.json",
-            "assets/data/scenes.json",
-            "assets/data/strings.json",
-            "assets/data/ui_schema/scene_manifest_v3.json",
-        ],
-        "mappack_uninstall" => &[
-            "assets/maps/",
-            "assets/maps/.default",
-            "assets/maps/index.json",
-            "assets/data/board.json",
-        ],
-        "ui_variant" => &["assets/ui/", "assets/ui_manifest.json"],
-        "map_shot" => &["evidence/"],
-        _ => &[],
-    }
-}
-
-/// 平台自身步（非白名单动作）的写点集（白名单动作步见 `write_templates`）。
+/// 平台自身步（非白名单动作）的**实际写点集**（白名单动作步见 `resolve_write_paths`：
+/// 数据源 = `console_commands.json` 的 `writes`，单一事实源）。
 /// `import` = S32.15 编辑器导入（落 `assets/maps/<id>/` 四文件）；`zero_rust` = 只读断言。
+///
+/// **口径注记**：本表 = 「该步实际写入什么」，**≠** 「该步是否须 `enable_write`」
+/// （后者 = 30 号 §2.1 的写动作步集合 1/3/5/6/8/9；第 2 步 `import` 走 S32.15 免鉴权导入面，
+/// 故向导门禁不额外要求 `enable_write`，但其写点仍登记在此供探针与文档断言使用）。
 /// S44.5：29 号 ↔ 平台写面登记一致性断言读取本表。
 #[must_use]
 pub(crate) fn platform_write_paths(step: &str) -> &'static [&'static str] {
@@ -175,10 +148,24 @@ pub(crate) fn platform_write_paths(step: &str) -> &'static [&'static str] {
     }
 }
 
-/// 把白名单动作的 `writes`（可含 `<id>` 占位符）解析为实际写点集（30 号 §3.2 约定）。
+/// 把白名单动作的**写点集**（`console_commands.json` 的 `writes`，可含 `<id>` 占位符）
+/// 解析为实际写点集（30 号 §3.2 约定）。
+///
+/// **写点数据单一事实源 = `console_commands.json`**（22 号 §4.2 机器真源）——
+/// 平台侧不再另存一份写点表（消除双源漂移）；S46.1 整理项。
 #[must_use]
-pub fn resolve_write_paths(action_id: &str, id: &str) -> Vec<String> {
-    write_templates(action_id).iter().map(|p| p.replace("<id>", id)).collect()
+pub fn resolve_write_paths(repo_root: &Path, action_id: &str, id: &str) -> Vec<String> {
+    if action_id.is_empty() {
+        return Vec::new();
+    }
+    let Ok(cmds) = crate::runner::close::read_commands(repo_root) else {
+        return Vec::new();
+    };
+    cmds.iter()
+        .find(|c| c.get("id").and_then(Value::as_str) == Some(action_id))
+        .and_then(|c| c.get("writes").and_then(Value::as_array))
+        .map(|arr| arr.iter().filter_map(Value::as_str).map(|p| p.replace("<id>", id)).collect())
+        .unwrap_or_default()
 }
 
 /// 步骤机器判据解析（30 号 §4「每步机器判据」）：读工具输出，判定该步是否通过。
@@ -243,7 +230,7 @@ pub fn run_step(
     // 校验 + 状态读 + 不可跳步/失败重跑门（抽离，控 run_step 长度）。
     let (step_idx, mut state) = validate_request(repo_root, id, step)?;
     let action = STEP_ACTION[step_idx];
-    let write_paths = resolve_write_paths(action.unwrap_or(""), id);
+    let write_paths = resolve_write_paths(repo_root, action.unwrap_or(""), id);
     let is_write_step = !write_paths.is_empty();
     if is_write_step && !enable_write {
         return Err((

@@ -96,38 +96,6 @@ fn lock_is_stale(meta: &Value) -> bool {
     now.saturating_sub(started) > STALE_TAKEOVER_SECS
 }
 
-/// spawn gate.ps1：候选解释器 pwsh → powershell（22 号 §4.3 回退；Windows 仅 PowerShell 5.1 时回退）。
-/// 返回 `(Child, 实际解释器名)` 供 `command` 元数据如实反映（r2-b P2-1 修复）。
-fn spawn_gate(
-    repo_root: &Path,
-    tier_args: &[&str],
-    log_file: &std::fs::File,
-    err_file: &std::fs::File,
-) -> Result<(std::process::Child, &'static str), String> {
-    let mut last_err = String::new();
-    for interp in ["pwsh", "powershell"] {
-        let mut cmd = std::process::Command::new(interp);
-        cmd.arg("-File").arg("scripts/gate.ps1");
-        for a in tier_args {
-            cmd.arg(a);
-        }
-        // 22 号 §10.3 最小环境集（env_clear + 白名单）；r4-b P2 修复。
-        crate::runner::apply_minimal_env(&mut cmd);
-        let stdout = log_file.try_clone().map_err(|e| format!("日志克隆失败 {e}"))?;
-        let stderr = err_file.try_clone().map_err(|e| format!("日志克隆失败 {e}"))?;
-        let res = cmd
-            .current_dir(repo_root)
-            .stdout(std::process::Stdio::from(stdout))
-            .stderr(std::process::Stdio::from(stderr))
-            .spawn();
-        match res {
-            Ok(child) => return Ok((child, interp)),
-            Err(e) => last_err = format!("{interp}: {e}"),
-        }
-    }
-    Err(format!("后台 spawn 失败（pwsh/powershell 均缺位？）：{last_err}"))
-}
-
 /// 锁预检（22 号 §10.4 + r3-b P2 修复）：锁存在且非陈旧 → 409；陈旧/损坏（超 5 秒）→ 清除（接管）；
 /// 损坏 < 5 秒（可能正写入）→ 409。返回 `Err((code, msg))` = 拒绝启动；`Ok(())` = 可继续 `create_new`。
 /// `pub` 供 `gate_tests.rs` 单测直接验证损坏锁接管分支（r4-b P2 修复）。
@@ -220,19 +188,18 @@ pub fn run_gate(repo_root: &Path, tier: &str) -> Result<Value, (u16, String)> {
         let _ = std::fs::remove_file(&lock_p);
         return Err((500u16, "写锁内容失败".to_owned()));
     }
-    // 持锁后建日志（失败释放锁；不再触碰持锁者之外的任何日志）。
-    let log_file = std::fs::File::create(&log_path).map_err(|e| {
-        let _ = std::fs::remove_file(&lock_p);
-        (500u16, format!("日志文件创建失败 {e}"))
-    })?;
-    let err_file = log_file.try_clone().map_err(|e| {
-        let _ = std::fs::remove_file(&lock_p);
-        let _ = std::fs::remove_file(&log_path);
-        (500u16, format!("日志克隆失败 {e}"))
-    })?;
-
-    // spawn（pwsh → powershell 回退；失败释放锁）。
-    let (mut child, interp) = match spawn_gate(repo_root, &args, &log_file, &err_file) {
+    // 后台 spawn（共用实现 `runner::spawn`：解释器回退 + 日志落盘 + 收割线程记退出码；
+    // 失败释放锁 + 删日志）。状态文件 = 锁文件本身（收割线程更新 running/exit_code/ended_ts）。
+    let lock_meta = json!({
+        "tier": tier,
+        "started_ts": ts,
+        "log": format!("evidence/console/logs/{log_name}"),
+        "reserving": false,
+        "side_effects": SIDE_EFFECTS,
+    });
+    let outcome = match crate::runner::spawn::spawn_script_logged(
+        &args, repo_root, &log_path, &lock_p, lock_meta,
+    ) {
         Ok(v) => v,
         Err(e) => {
             let _ = std::fs::remove_file(&lock_p);
@@ -240,36 +207,8 @@ pub fn run_gate(repo_root: &Path, tier: &str) -> Result<Value, (u16, String)> {
             return Err((500u16, e));
         }
     };
-    let pid = child.id();
-
-    // 更新锁为真实 pid（reserving=false）。
-    let lock = json!({
-        "pid": pid,
-        "tier": tier,
-        "started_ts": ts,
-        "log": format!("evidence/console/logs/{log_name}"),
-        "running": true,
-        "reserving": false,
-        "side_effects": SIDE_EFFECTS,
-    });
-    if let Ok(mut f) = std::fs::File::create(&lock_p) {
-        let _ = writeln!(f, "{lock}");
-    }
-
-    // 收割线程：等 gate 退出 → 锁置 running=false + exit_code + ended_ts（保留末次状态；
-    // 下次启动见 running=false 即视为陈旧可复用）。子进程被 wait 后无僵尸残留。
-    let lock_meta = lock.clone();
-    let _ = std::thread::spawn(move || {
-        let code = child.wait().ok().and_then(|s| s.code());
-        let ended_ts = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
-        let mut meta = lock_meta.clone();
-        meta["running"] = json!(false);
-        meta["exit_code"] = code.map_or(Value::Null, |c| json!(c));
-        meta["ended_ts"] = json!(ended_ts);
-        let _ = std::fs::write(&lock_p, meta.to_string());
-    });
+    let pid = outcome.pid;
+    let interp = outcome.interp;
 
     Ok(json!({
         "started": true,

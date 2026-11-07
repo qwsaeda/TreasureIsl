@@ -248,14 +248,8 @@ fn effective_write_paths(
                     arr.iter().filter_map(Value::as_str).map(str::to_owned).collect::<Vec<String>>()
                 })
                 .unwrap_or_default();
-            // 白名单登记必须与平台写点模板逐项一致（写面登记一致性）。
-            let template: Vec<String> =
-                map_wizard::write_templates(a).iter().map(|s| (*s).to_owned()).collect();
-            if template != writes {
-                return Err(format!(
-                    "动作 `{a}` 写面登记不一致：console_commands.json writes={writes:?} ≠ 平台模板={template:?}"
-                ));
-            }
+            // 写点数据单一事实源 = `console_commands.json` 的 `writes`（S46.1 整理：消除平台侧双源表）；
+            // 平台向导的写点解析（`map_wizard::resolve_write_paths`）读同一来源 ⇒ 天然一致。
             Ok(writes)
         }
         None => Ok(platform_paths.iter().map(|s| (*s).to_owned()).collect()),

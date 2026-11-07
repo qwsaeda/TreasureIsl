@@ -33,7 +33,7 @@
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 19 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 33 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 39 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 40 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 56 |
 
 ## 条目索引
@@ -210,6 +210,7 @@
 | EXP-168 | code | | S39 build_data_chrome 把 ImageNode/Text/BackgroundColor 放无 Node 子实体 ⇒ bevy_ui 按 Node 提取不绘制；修复=内容合并回 Node 实体 正文见 `code.md` |
 | EXP-169 | code | | S39 when=selected 过滤读 item 而非 pick_index ⇒ item=-1 全滤掉；修复=item=pick_index + validate_data 机器兜底 正文见 `code.md` |
 | EXP-170 | process | | P0-2「每格式 0 未知字节」的判据命令 `verify --zero-unknown` 从未存在（verify.rs 在 git 全历史中从未出现），门禁第 7 项用载体存在性守卫 ⇒ 永久 SKIP ⇒ 判据从未执行（项目 DoD 的 P0~P4 全 pass 中 P0-2 长期不可达，且计划里的判据未落台账任务）；S46.0 落地载体 = crates/ti-tools/src/bin/verify.rs（真实数据 33 文件 / 305 条目 / 0 失败 ⇒ 首次真实通过）+ 门禁改 `--bin verify --` + 4 条单测；复发防护 = 判据命令须可实跑（多 bin 必显式 `--bin`）+ 载体缺失应 FAIL 而非 SKIP + 判据须对应台账任务号 | 正文见 `process.md` |
+| EXP-171 | process | | 判据命令写在文档里但形式不可实跑（多 bin crate 裸 -- 形式 / bin 拼错 / crate 张冠李戴 / 引用退役载体）⇒ 判据从未执行；check_dod_commands.py 门禁第 25 项逐条解析载体 + 首跑抓 9 处 + 4 真伤修复 正文见 `process.md` |
 
 ## 条目格式（写新条时照抄）
 

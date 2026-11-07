@@ -186,6 +186,7 @@ python scripts/map_pack.py check
 | `validate_data.py` | 数据表校验（balance/strings/scenes/controls/theme 必填字段、值域、孤儿 key、grid 三键）+ **`check_scenes_canonical`**（scenes.json 须 indent=1 逐字节规范形，防整文件 churn，S29.2 §18）+ **`check_asset_registry`**（全类型资产 disk↔registry 双向同步：UI 图=`ui_manifest.json`、字体/音频=`assets/registry.json`，S29.2 §18）+ **`check_version_consistency`**（S25 版本三方对账：`Cargo.toml` `[workspace.package] version` 单源 ↔ `AndroidManifest versionName` ↔ 构建脚本产物名带 x.y.z ↔ `release.md` 版本规划行） | `python scripts/validate_data.py` | 幂等只读；违规非 0（gate 第 10a 项） |
 | `check_hardcode.py` | 硬编码扫描（数值/中文面量；`EXEMPT` 带理由豁免：oracle 冻结层 / CLI 输出 / 诊断 eprintln，含 S31.2 `data/map_pack.rs`+`data/table_source.rs` 注入诊断） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` / `--selftest`（STR_LIT 全捕获回归自检，飞轮 R1 ⑤-05 起 CJK 通道对全字面量生效） | 幂等；严格模式命中即非 0；`--selftest` 断言失败即非 0 |
 | `check_ledger_reality.py` | 台账三方对账（verified ↔ evidence 文件 ↔ 代码符号） | `python scripts/check_ledger_reality.py` | 幂等只读；虚报即非 0 |
+| `check_dod_commands.py` | **DoD 判据命令载体可达性自检**（S46.1 / EXP-170+171 复发防护：扫描 AGENTS.md + docs/**/*.md〔排除 experience/impl/plan-*：叙事卷引反例、历史规格 superseded〕里的判据命令，逐一解析载体——`cargo run -p <crate> --bin <bin>` 查 bin 存在 / `cargo run -p <crate> -- <arg>` 无 `--bin` 且多 bin = 歧义 FAIL / `cargo test -p <crate> --test <name>` 查 test 存在 / `python scripts/x.py`·`pwsh scripts/x.ps1` 查文件存在；`<module>`/单字母泛指 = 占位符跳过；数据源 = `cargo metadata` 权威 bin/test 清单） | `python scripts/check_dod_commands.py`（`--check` 只读别名 / `--json` 机读） | 幂等只读；不可达判据非 0（exit 1）+ 前置缺失（cargo metadata 不可用）exit 2；gate 第 25 项 |
 | `check_oracle_boundary.py` | oracle 边界（shell 层禁 `oracle_*` 调用） | `python scripts/check_oracle_boundary.py --check` / `--report` | 幂等只读；违规非 0 |
 | `check_forward_closed.py` | 业务闭环 C1~C4（零逆向引用 / 单一 oracle 源 / 根目录清空 / 无重复 crate） | `python scripts/check_forward_closed.py --check` | 幂等只读；违规非 0 |
 | `check_module_contracts.py` | 模块并行契约（包白名单互斥 / 契约锚点 / 跨 crate 可见面） | `python scripts/check_module_contracts.py --check` | 幂等只读；违规非 0（WARN 级除外） |
@@ -279,6 +280,7 @@ python scripts/map_pack.py check
 | 占位 / unwrap | 5~6 | `Select-String` 扫 `TODO|unwrap(`（`check_hardcode.py` 辅助） |
 | 格式 0 未知字节 | 7 | `cargo run -q -p ti-tools --bin verify -- --zero-unknown`（S46.0 起默认 full 档实跑；`--json` 机器可读） |
 | 台账 / 文档 | 8~9、13~14 | `cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` / `doccheck` / `doccheck2` / `check_ledger_reality.py` |
+| 判据载体 | 25 | `python scripts/check_dod_commands.py --check`（DoD 判据命令可达性；EXP-170/171） |
 | 数据 | 10a~10c、20 | `python scripts/validate_data.py` / `gen_layout.py --check` / `check_hardcode.py` / `check_data_source.py` |
 | 资产 | 19.5 | `python scripts/ui_assets.py verify` + `ui_preview.ps1` + `ui_shot_probe.py` |
 | 结构 | 23（audit_code） | `python scripts/audit_code.py --report` + `code_outline.py --crate <c>` |

@@ -520,3 +520,37 @@ native clippy 全绿。注意 bevy 0.20 `ButtonInput::any_just_pressed()` 需参
 **复发防护**：① 新增判据时，**判据命令必须可实跑**（多 bin crate 一律 `--bin <name> --` 形式，禁止 `-- <name>` 裸形式）；
 ② 门禁项若判据依赖某个载体文件，载体缺失应 **FAIL 而非 SKIP**（分档锁定除外，如 tier 条件）；
 ③ 文档（parity.md / 阶段计划）里出现的判据命令，必须能对应到**一个台账任务号**——否则它只是愿望，不是判据。
+
+### EXP-171 流程：判据命令「形式不可跑」——载体在位也白搭（check_dod_commands 首跑抓出 9 处）
+**现象**：S46.1 复盘 EXP-170 时写扫描器 `scripts/check_dod_commands.py`（判据命令载体可达性自检），**首跑即抓出 9 处**
+不可实跑判据（修复后 0）：① `docs/parity.md` P0-1 判据 **`cargo run -p ti-tools -- unpack --check-all`**
+——ti-tools 是多 bin crate 且无 `default-run`，cargo 直接拒绝（`could not determine which binary to run`），
+与 EXP-170 同根因，但**载体 unpak 在位**（是命令**形式**错，非载体缺失）⇒ 该判据长期不可实跑；
+② `docs/process/04_tooling.md` 表 `--bin datacheck`（**拼错**，实为 `doccheck`）；③ `docs/check_ledger_reality.md`
+示例 `cargo test -p ti-app --test rules_trade`（crate **张冠李戴**，rules_trade 在 ti-core）；④ `docs/process/11_bevy_migration.md`
+任务表引用 `--bin treasure-native`（ti-app 旧壳已退役）；⑤~⑨ AGENTS/loop/parity/00_index 里的台账校验命令
+（同义重复但均为正确形式，①②③④ 属真伤）。另抓出 doc_numbers `--fix` 的**误伤 1 处**：
+parity.md 行 21「doccheck2 `check_touch_render_pair`（门禁 doccheck2 项）」的「doccheck2 项」是
+**doccheck2 自身检查项数**（非门禁项数），因行含「门禁」语境词被 gate-total 正则误改写为「doccheck34 项」。
+
+**根因（3 条）**：① EXP-170 对策只钉死了**载体存在性**与**显式 `--bin`** 两类，但文档里的判据命令
+**没有机器逐条自检**——「人记得、不复查」⇒ 拼错 bin 名 / 张冠李戴 crate / 引用退役载体这类**形式错**漏网；
+② 判据命令散落在 parity.md 表格 / 工具目录 / 任务表多处，**一无唯一清单、二无实跑兜底**；
+③ doc_numbers 的 gate-total 语境匹配（`门禁|全绿|gate|Report` 启发式）对「门禁 xxx 项」的**归属有歧义**
+——同段落谈「doccheck2 项」也被当 gate 总数改写 ⇒ `--fix` 回写本身需要反例护栏。
+
+**对策（S46.1 落地）**：① `scripts/check_dod_commands.py`：扫描 AGENTS.md + docs/**/*.md
+（排除 experience/**（叙事卷引反例）/ impl/**（历史规格）/ plan-*.md（阶段 WBS，命令多被 superseded）），
+判据命令逐条解析——`cargo run -p <crate> --bin <bin>` 对 **`cargo metadata` 权威 bin 清单**、
+`cargo test -p <crate> --test <name>` 对权威 test 清单、`python scripts/*.py`/`pwsh scripts/*.ps1` 对文件存在性；
+多 bin crate 上 `cargo run -p <crate> -- <arg>`（无 `--bin`）= **歧义 FAIL**（EXP-170 同类）；
+`<module>`/单字母泛指 = 占位符跳过（误报防护，实测 `<module>`/`z.py` 两类）。不可达判据非 0 退出。
+② 固化为**门禁第 25 项**（off门禁 34 项）；门禁项数牵动 8 处声称由 `doc_numbers --fix` 同步 + doccheck2 期望值 33→34。
+③ 4 处真伤当场修复：P0-1 判据改 `--bin unpak -- --check-all`（parity.md）/ datacheck→doccheck /
+ti-app→ti-core / treasure-native→treasure-bevy-native。
+④ 负例护栏：临时注入 `cargo run -p ti-tools -- fakebin` ⇒ 检出 FAIL；恢复 ⇒ PASS。
+
+**复发防护**：① 文档新增判据命令时，跑 `python3 scripts/check_dod_commands.py` 自检（gate 每轮全量兜底）；
+② doc_numbers `--fix` 类回写工具改动须带**负例（故意改错看报红）**——正例全绿不能证明正则会伤人（EXP-108 同类）；
+③ 「门禁 N 项」语境词启发式对**工具自身项数**有歧义：写「doccheck2 41 项」这类声明时**别在句首加「门禁」语境词**，
+或改用「doccheck2 自身检查 41」表述。

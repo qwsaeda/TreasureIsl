@@ -92,110 +92,88 @@ pub(crate) fn handle_publish(
 }
 
 /// 执行发布（`check` 同步 / `run` 后台 spawn）。解释器回退 pwsh → powershell（22 号 §4.3；Windows 仅 PS 5.1）。
+/// 执行发布（`check` 同步只读体检 / `run` 后台 spawn）。
+/// 解释器回退 pwsh → powershell（22 号 §4.3；Windows 仅 PS 5.1）——`check` 走同步路径自行回退，
+/// `run` 走共用实现 `runner::spawn`（回退在其内部）。
 fn publish(repo_root: &Path, mode: &str) -> Result<Value, (u16, String)> {
+    if mode == "check" {
+        return publish_check(repo_root);
+    }
+    publish_run(repo_root)
+}
+
+/// `check` 模式：同步跑 `publish_web.ps1 -Check`（只读：不构建/不推/不写 release.md），
+/// 回显退出码 + 输出尾段（非 0 如实上报）。
+fn publish_check(repo_root: &Path) -> Result<Value, (u16, String)> {
     let mut last_err = String::new();
     for interp in ["pwsh", "powershell"] {
         let mut cmd = std::process::Command::new(interp);
-        cmd.arg("-File").arg("scripts/publish_web.ps1");
-        if mode == "check" {
-            cmd.arg("-Check");
-        }
+        cmd.arg("-File").arg("scripts/publish_web.ps1").arg("-Check");
         // 22 号 §10.3 最小环境集（env_clear + 白名单；pwsh 依赖 PATH/HOME）。
         crate::runner::apply_minimal_env(&mut cmd);
         cmd.current_dir(repo_root);
-        if mode == "check" {
-            // 只读体检：同步捕获输出，report exit + 尾部输出（非 0 退出如实上报）。
-            let out = match cmd
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .output()
-            {
-                Ok(o) => o,
-                Err(e) => {
-                    last_err = format!("{interp}: {e}");
-                    continue;
-                }
-            };
-            let exit = out.status.code().unwrap_or(-1);
-            let mut output = String::from_utf8_lossy(&out.stdout).into_owned();
-            output.push_str(&String::from_utf8_lossy(&out.stderr));
-            return Ok(serde_json::json!({
-                "ok": exit == 0,
-                "mode": "check",
-                "exit_code": exit,
-                "output": output.chars().take(2000).collect::<String>(),
-                "note": "publish_web.ps1 -Check 只读前置体检（未构建/未推送/未写 release.md）",
-            }));
-        }
-        // run：后台 spawn，日志落 evidence/console/logs/publish-<ts>.log（gitignored；GET /api/publish 轮询状态）。
-        let logs = repo_root.join("evidence/console/logs");
-        if let Err(e) = std::fs::create_dir_all(&logs) {
-            return Err((500u16, format!("建 publish 日志目录失败：{e}")));
-        }
-        let ts = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_millis());
-        let log_name = format!("publish-{ts}.log");
-        let log_path = logs.join(&log_name);
-        let log_file = match std::fs::File::create(&log_path) {
-            Ok(f) => f,
-            Err(e) => return Err((500u16, format!("建 publish 日志文件失败：{e}"))),
-        };
-        let stdout = match log_file.try_clone() {
-            Ok(f) => f,
-            Err(e) => return Err((500u16, format!("publish 日志克隆失败：{e}"))),
-        };
-        let stderr = match log_file.try_clone() {
-            Ok(f) => f,
-            Err(e) => return Err((500u16, format!("publish 日志克隆失败：{e}"))),
-        };
-        let mut child = match cmd
-            .stdout(std::process::Stdio::from(stdout))
-            .stderr(std::process::Stdio::from(stderr))
-            .spawn()
+        // 只读体检：同步捕获输出，report exit + 尾部输出（非 0 退出如实上报）。
+        let out = match cmd
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .output()
         {
-            Ok(c) => c,
+            Ok(o) => o,
             Err(e) => {
                 last_err = format!("{interp}: {e}");
                 continue;
             }
         };
-        let pid = child.id();
-        // 状态文件（收割线程写 exit_code；镜像 runner::gate 的锁文件口径）。
-        let status_path = logs.join(format!("publish-{ts}.status.json"));
-        let status = serde_json::json!({
-            "pid": pid,
-            "running": true,
-            "exit_code": Value::Null,
-            "started_ts": ts,
-            "ended_ts": Value::Null,
-            "log": format!("evidence/console/logs/{log_name}"),
-        });
-        let _ = std::fs::write(&status_path, status.to_string());
-        // 收割线程：等 publish 退出 → 状态文件置 running=false + exit_code（非 0 退出上报）。
-        // 信号终止（SIGTERM 等）无退出码 = -1（非 0，如实表示硬失败；口径同 check 模式）。
-        let status_path_thread = status_path.clone();
-        std::thread::spawn(move || {
-            let code = child.wait().ok().and_then(|s| s.code()).unwrap_or(-1);
-            let ended_ts = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_or(0, |d| d.as_secs());
-            let mut meta = status;
-            meta["running"] = serde_json::json!(false);
-            meta["exit_code"] = serde_json::json!(code);
-            meta["ended_ts"] = serde_json::json!(ended_ts);
-            let _ = std::fs::write(&status_path_thread, meta.to_string());
-        });
+        let exit = out.status.code().unwrap_or(-1);
+        let mut output = String::from_utf8_lossy(&out.stdout).into_owned();
+        output.push_str(&String::from_utf8_lossy(&out.stderr));
         return Ok(serde_json::json!({
-            "started": true,
-            "pid": pid,
-            "mode": "run",
-            "log": format!("evidence/console/logs/{log_name}"),
-            "status": format!("evidence/console/logs/publish-{ts}.status.json"),
-            "note": "后台发布已启动（publish_web.ps1：gate 前置 + 重建 web + 静态断言 + release.md 发布历史 + gh-pages 推流）；退出码经 GET /api/publish 上报（非 0 = 硬失败）",
+            "ok": exit == 0,
+            "mode": "check",
+            "exit_code": exit,
+            "output": output.chars().take(2000).collect::<String>(),
+            "note": "publish_web.ps1 -Check 只读前置体检（未构建/未推送/未写 release.md）",
         }));
     }
-    Err((500u16, format!("发布 spawn 失败（pwsh/powershell 均缺位？）：{last_err}")))
+    Err((500u16, format!("发布体检 spawn 失败（pwsh/powershell 均缺位？）：{last_err}")))
+}
+
+/// `run` 模式：后台 spawn（共用实现 `runner::spawn`：解释器回退 + 日志落盘 + 收割线程记退出码），
+/// 日志落 `evidence/console/logs/publish-<ts>.log`（gitignored；`GET /api/publish` 轮询状态）。
+fn publish_run(repo_root: &Path) -> Result<Value, (u16, String)> {
+    let logs = repo_root.join("evidence/console/logs");
+    if let Err(e) = std::fs::create_dir_all(&logs) {
+        return Err((500u16, format!("建 publish 日志目录失败：{e}")));
+    }
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis());
+    let log_name = format!("publish-{ts}.log");
+    let log_path = logs.join(&log_name);
+    let status_path = logs.join(format!("publish-{ts}.status.json"));
+    let status_meta = serde_json::json!({
+        "started_ts": ts,
+        "log": format!("evidence/console/logs/{log_name}"),
+    });
+    let outcome = match crate::runner::spawn::spawn_script_logged(
+        &["-File", "scripts/publish_web.ps1"],
+        repo_root,
+        &log_path,
+        &status_path,
+        status_meta,
+    ) {
+        Ok(v) => v,
+        Err(e) => return Err((500u16, e)),
+    };
+    Ok(serde_json::json!({
+        "started": true,
+        "pid": outcome.pid,
+        "mode": "run",
+        "interp": outcome.interp,
+        "log": format!("evidence/console/logs/{log_name}"),
+        "status": format!("evidence/console/logs/publish-{ts}.status.json"),
+        "note": "后台发布已启动（publish_web.ps1：gate 前置 + 重建 web + 静态断言 + release.md 发布历史 + gh-pages 推流）；退出码经 GET /api/publish 上报（非 0 = 硬失败）",
+    }))
 }
 
 /// `GET /api/publish`（S44.4 发布面只读状态）：运行中标志 + 末次状态（含 `exit_code`）+ 日志历史 + 指定日志尾部。

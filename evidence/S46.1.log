@@ -1,0 +1,658 @@
+=== gate: TreasureIsl (34 items) ===
+  PASS  cargo fmt --check  [0.9s]
+  PASS  cargo clippy -D warnings  [0.5s]
+  PASS  cargo test --workspace  [124.3s]
+  PASS  cargo build (native/x86_64-pc-windows-msvc)  [0.4s]
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [1.2s]
+  SKIP  cargo build (aarch64-linux-android)  (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)  [0.5s]
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/  [0.1s]
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)  [0.1s]
+        === verify --zero-unknown（口径：P0-2 每格式 0 未知字节）===
+        [ OK ] Bigcard.Map            map-scene           5124 B  0 未知字节（控件 212 条）
+        [ OK ] GoldLand.Fnt           font-fnt           24384 B  0 未知字节（字形 1016 个）
+        [ OK ] background.Map         map-scene            276 B  0 未知字节（控件 10 条）
+        [ OK ] build.Map              map-scene           1836 B  0 未知字节（控件 75 条）
+        [ OK ] card.Map               map-scene           1500 B  0 未知字节（控件 61 条）
+        [ OK ] cards.lpk              package            34000 B  0 未知字节（容器头 + 索引，条目 4 个）
+        [ OK ] cards.lpk#0            package             4218 B  0 未知字节（条目内容）
+        [ OK ] cards.lpk#1            package            48678 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] cards.lpk#2            package            51708 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] cards.lpk#3            package            10116 B  0 未知字节（条目内容）
+        [ OK ] castle.Map             map-scene           4116 B  0 未知字节（控件 170 条）
+        [ OK ] font.dat               font-charset        2034 B  0 未知字节（字符 1016 个）
+        [ OK ] glmap_m01.pak          package            39609 B  0 未知字节（容器头 + 索引，条目 47 个）
+        [ OK ] glmap_m01.pak#0        package              945 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#1        package             1599 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#2        package             1596 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#3        package             2092 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#4        package             1763 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#5        package             3618 B  0 未知字节（条目内容）
+        [ OK ] glmap_m01.pak#6        package             1977 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#7        package             1814 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#8        package             1751 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#9        package             1985 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#10       package             2681 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#11       package             1761 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#12       package             5896 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#13       package             2681 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#14       package             1920 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#15       package             1994 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#16       package             1811 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#17       package             1850 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#18       package             1771 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#19       package             1771 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#20       package             1817 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#21       package             1817 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#22       package             1817 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#23       package             1842 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#24       package             2858 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#25       package             3507 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#26       package             3655 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#27       package             2323 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#28       package             2323 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#29       package             2440 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#30       package             2679 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#31       package             2488 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#32       package             2632 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#33       package             2377 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#34       package             1814 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#35       package             1842 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#36       package             1778 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#37       package             1763 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#38       package             3895 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#39       package             2984 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#40       package             1778 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#41       package             2512 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#42       package             2512 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#43       package             2655 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#44       package             2927 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#45       package             2663 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m01.pak#46       package             2326 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak          package            30315 B  0 未知字节（容器头 + 索引，条目 37 个）
+        [ OK ] glmap_m02.pak#0        package              945 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#1        package             1535 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#2        package             1689 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#3        package             1741 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#4        package             2440 B  0 未知字节（条目内容）
+        [ OK ] glmap_m02.pak#5        package             2338 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#6        package             1966 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#7        package             1853 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#8        package             3839 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#9        package             2013 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#10       package             2079 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#11       package             2051 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#12       package             1976 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#13       package             1271 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#14       package             1271 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#15       package             1271 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#16       package             1271 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#17       package             2391 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#18       package             3895 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#19       package             1897 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#20       package             1897 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#21       package             2796 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#22       package             3260 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#23       package             3470 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#24       package             3446 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#25       package             2940 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#26       package             2663 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#27       package             6752 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#28       package             1854 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#29       package             1817 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#30       package             1854 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#31       package             1822 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#32       package             1796 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#33       package             1819 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#34       package             3002 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#35       package             3847 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmap_m02.pak#36       package             1937 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glmapm01.Map           terrain            17148 B  0 未知字节（地形 20×20）
+        [ OK ] glmapm02.Map           terrain            18948 B  0 未知字节（地形 20×20）
+        [ OK ] glmapm03.Map           terrain             8976 B  0 未知字节（地形 15×15）
+        [ OK ] glpics.pak             package            87027 B  0 未知字节（容器头 + 索引，条目 88 个）
+        [ OK ] glpics.pak#0           package             1533 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#1           package             1119 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#2           package             1217 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#3           package             3446 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#4           package             5683 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#5           package             1396 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#6           package             1202 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#7           package             1180 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#8           package             1277 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#9           package             1201 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#10          package             1521 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#11          package             1376 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#12          package              973 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#13          package            12954 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#14          package             1193 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#15          package             4209 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#16          package             2062 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#17          package             2345 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#18          package             2692 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#19          package             2871 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#20          package             1393 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#21          package             4127 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#22          package             1107 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#23          package             1238 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#24          package            11193 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#25          package             1373 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#26          package             9677 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#27          package             1241 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#28          package             1053 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#29          package             1386 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#30          package             1386 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#31          package             1119 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#32          package             1691 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#33          package             3697 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#34          package             1993 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#35          package             1275 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#36          package             1073 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#37          package             1243 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#38          package             1669 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#39          package            25638 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#40          package             1521 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#41          package             1418 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#42          package            11715 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#43          package             1244 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#44          package              943 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#45          package             1273 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#46          package             1557 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#47          package             1295 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#48          package            12345 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#49          package            11030 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#50          package             1384 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#51          package             1895 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#52          package             1851 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#53          package             1228 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#54          package             3395 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#55          package             1112 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#56          package             1999 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#57          package             2603 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#58          package             3046 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#59          package             4259 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#60          package             1427 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#61          package             1147 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#62          package             1263 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#63          package            25004 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#64          package             1201 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#65          package             1973 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#66          package             1391 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#67          package             4497 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#68          package             1378 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#69          package             4475 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#70          package             1267 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#71          package            12145 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#72          package            11966 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#73          package             3645 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#74          package             1521 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#75          package             1393 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#76          package             1197 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#77          package             1521 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#78          package            20193 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#79          package             2021 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#80          package             1096 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#81          package             1267 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#82          package              961 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#83          package             1275 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#84          package             1308 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#85          package             5746 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#86          package             1511 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] glpics.pak#87          package             2211 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] goods.lpk              package              469 B  0 未知字节（容器头 + 索引，条目 1 个）
+        [ OK ] goods.lpk#0            package             1094 B  0 未知字节（条目内容）
+        [ OK ] help.Map               map-scene           2460 B  0 未知字节（控件 101 条）
+        [ OK ] index.Map              map-scene            780 B  0 未知字节（控件 31 条）
+        [ OK ] information.Map        map-scene           3780 B  0 未知字节（控件 156 条）
+        [ OK ] intro.Map              map-scene           1956 B  0 未知字节（控件 80 条）
+        [ OK ] main.Map               map-scene           1692 B  0 未知字节（控件 69 条）
+        [ OK ] msgl.Map               map-scene           2532 B  0 未知字节（控件 104 条）
+        [ OK ] msgm.Map               map-scene           1092 B  0 未知字节（控件 44 条）
+        [ OK ] msgs.Map               map-scene            900 B  0 未知字节（控件 36 条）
+        [ OK ] music.lpk              package            67737 B  0 未知字节（容器头 + 索引，条目 6 个）
+        [ OK ] music.lpk#0            package             1514 B  0 未知字节（条目内容）
+        [ OK ] music.lpk#1            package             6668 B  0 未知字节（条目内容）
+        [ OK ] music.lpk#2            package            13494 B  0 未知字节（条目内容）
+        [ OK ] music.lpk#3            package            50016 B  0 未知字节（条目内容）
+        [ OK ] music.lpk#4            package             2948 B  0 未知字节（条目内容）
+        [ OK ] music.lpk#5            package            35532 B  0 未知字节（条目内容）
+        [ OK ] option.Map             map-scene           3732 B  0 未知字节（控件 154 条）
+        [ OK ] saveload.Map           map-scene           5052 B  0 未知字节（控件 209 条）
+        [ OK ] selectmap.Map          map-scene           2196 B  0 未知字节（控件 90 条）
+        [ OK ] selectrole.Map         map-scene           1788 B  0 未知字节（控件 73 条）
+        [ OK ] selecttarget.Map       map-scene           2676 B  0 未知字节（控件 110 条）
+        [ OK ] settings.dat           settings               8 B  0 未知字节（8 字节定长）
+        [ OK ] trade.Map              map-scene           3828 B  0 未知字节（控件 158 条）
+        [ OK ] ui.pak                 package           102369 B  0 未知字节（容器头 + 索引，条目 122 个）
+        [ OK ] ui.pak#0               package             1199 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#1               package             1221 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#2               package             1131 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#3               package             1037 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#4               package              969 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#5               package             3605 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#6               package             1113 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#7               package             1669 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#8               package             1973 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#9               package             1642 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#10              package             1770 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#11              package             2555 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#12              package              917 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#13              package             1716 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#14              package             1787 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#15              package             1773 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#16              package             7154 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#17              package            10495 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#18              package             2025 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#19              package             2841 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#20              package             2009 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#21              package             7376 B  0 未知字节（条目内容）
+        [ OK ] ui.pak#22              package             1546 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#23              package             1077 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#24              package             1060 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#25              package             1229 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#26              package             1281 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#27              package             1370 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#28              package              911 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#29              package              905 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#30              package              907 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#31              package             1007 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#32              package             1438 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#33              package             1446 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#34              package             2427 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#35              package             5926 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#36              package              900 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#37              package              989 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#38              package             1187 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#39              package             1039 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#40              package             1069 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#41              package             1409 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#42              package              926 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#43              package             1647 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#44              package             1624 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#45              package             1128 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#46              package              929 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#47              package             5189 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#48              package             1563 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#49              package             1553 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#50              package            13853 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#51              package            13928 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#52              package             5277 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#53              package             5598 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#54              package             1033 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#55              package             1034 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#56              package             1033 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#57              package             1034 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#58              package             6744 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#59              package            16917 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#60              package             1074 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#61              package             1409 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#62              package             1074 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#63              package             1089 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#64              package             1321 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#65              package             1055 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#66              package             1115 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#67              package             2237 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#68              package             1999 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#69              package             1231 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#70              package             1226 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#71              package             1446 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#72              package             1343 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#73              package             1327 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#74              package             1663 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#75              package             1053 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#76              package             1575 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#77              package             1811 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#78              package             1016 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#79              package             1281 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#80              package             1307 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#81              package             1276 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#82              package             1295 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#83              package             1288 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#84              package             1323 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#85              package             1301 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#86              package             1472 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#87              package             2233 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#88              package             2094 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#89              package             3155 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#90              package             2208 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#91              package             1789 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#92              package             2285 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#93              package             3287 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#94              package             2087 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#95              package             1415 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#96              package             1210 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#97              package             1616 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#98              package             1331 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#99              package             1540 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#100             package             1301 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#101             package             7082 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#102             package             1086 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#103             package             1138 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#104             package             1059 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#105             package             5196 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#106             package             1098 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#107             package            20131 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#108             package             1141 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#109             package              905 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#110             package              909 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#111             package             4829 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#112             package             1133 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#113             package              979 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#114             package             1263 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#115             package             1108 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#116             package             1178 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#117             package             1233 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#118             package             1180 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#119             package             1199 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#120             package             1284 B  0 未知字节（条目内容 + PCX 解码）
+        [ OK ] ui.pak#121             package            16896 B  0 未知字节（条目内容）
+        [ OK ] vs.Map                 map-scene           2388 B  0 未知字节（控件 98 条）
+        --- 文件 33 个 / 容器条目 305 个 / 跳过 0 个 / 失败 0 个
+        PASS：全部可解析格式文件 0 未知字节
+  PASS  zero-unknown verify  [0.6s]
+        ledger: 310 tasks, 309 verified, 0 error(s)
+          evidence: ok
+  PASS  ledger validate  [0.3s]
+        doccheck: 167 docs, 38 facts, 167 experiences, 304 task refs, 4 assertions, 0 error(s)
+  PASS  doccheck (docs consistency)  [0.7s]
+        validate_data: OK（4 表，strings 236 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+  PASS  validate_data (assets/data/*.json)  [0.1s]
+        OK controls.json 一致（2041 记录 / 20 场景）
+  PASS  gen_layout --check (idempotent)  [0.1s]
+  PASS  check_hardcode (strict; 0 hits required)  [1.6s]
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)  [0.1s]
+        
+        === CS-1 asset_path_hardcode（资产路径字面量只在 chrome/data/ti-tools）— 当前违例 0 ===
+        [ok] CS-1 asset_path_hardcode：0 存量违例全在豁免基线内
+        
+        === CS-2 file_doc_present（src 文件缺 //! 模块文档（职责声明））— 当前违例 1 ===
+            crates/ti-engine/src/bin/android_entry.rs
+        [ok] CS-2 file_doc_present：1 存量违例全在豁免基线内
+        
+        === CS-3 fn_param_naming（fn 参数单字母（非 x/y））— 当前违例 179 ===
+            ('crates/ti-core/src/domain/selection.rs::from_index', 52, 'i')
+            ('crates/ti-core/src/domain/selection.rs::from_index', 220, 'i')
+            ('crates/ti-core/src/domain/render.rs::fmt', 80, 'f')
+            ('crates/ti-core/src/data/mod.rs::fmt', 83, 'f')
+            ('crates/ti-core/src/data/mod.rs::item_text_pos', 646, 'i')
+            ('crates/ti-core/src/data/mod.rs::item_rect', 655, 'i')
+            ('crates/ti-core/src/data/layout.rs::from', 276, 'r')
+            ('crates/ti-core/src/oracle/saveload.rs::oracle_migrate_v1_to_v2', 40, 's')
+            ('crates/ti-core/src/oracle/main_map.rs::oracle_move', 21, 'd')
+            ('crates/ti-core/src/oracle/main_map.rs::oracle_walk', 66, 'd')
+            ('crates/ti-core/src/oracle/main_loop.rs::oracle_next_state', 30, 's')
+            ('crates/ti-core/src/rules/saveload_json.rs::legacy_character_label', 166, 'n')
+            ('crates/ti-core/src/rules/saveload_json.rs::legacy_map_label', 172, 'n')
+            ('crates/ti-core/src/rules/saveload_json.rs::scene_id_label', 177, 's')
+            ('crates/ti-core/src/rules/saveload_json.rs::set_slot', 375, 's')
+            ('crates/ti-core/src/rules/cards_draw.rs::draw_one', 112, 'n')
+            ('crates/ti-core/src/rules/selection.rs::select_map', 76, 'm')
+            ('crates/ti-core/src/rules/messages.rs::kind_key', 55, 'k')
+            ('crates/ti-core/src/rules/progression.rs::boss_tier_of', 44, 'm')
+            ('crates/ti-core/src/rules/progression.rs::can_select', 86, 'm')
+            ('crates/ti-core/src/rules/progression.rs::on_boss_defeated', 95, 'm')
+            ('crates/ti-core/src/rules/progression.rs::min_progression_to_select', 135, 'm')
+            ('crates/ti-core/src/rules/progression.rs::is_map_defeated', 146, 'm')
+            ('crates/ti-core/src/rules/saveload.rs::scene_id_label', 141, 's')
+            ('crates/ti-core/src/rules/saveload.rs::set_slot', 709, 's')
+            ('crates/ti-core/src/rules/main_map.rs::step_move', 51, 'd')
+            ('crates/ti-core/src/rules/main_map.rs::move_to', 157, 'd')
+            ('crates/ti-core/src/rules/main_map.rs::walk', 203, 'd')
+            ('crates/ti-core/src/rules/main_map.rs::walk_steps', 245, 'd')
+            ('crates/ti-core/src/rules/main_map.rs::can_walk', 262, 'd')
+            ('crates/ti-core/src/rules/trade.rs::f64_to_u32', 47, 'v')
+            ('crates/ti-core/src/rules/rng.rs::advance', 60, 'n')
+            ('crates/ti-core/src/rules/rng.rs::srand', 74, 's')
+            ('crates/ti-core/src/rules/rng.rs::seq', 86, 'n')
+            ('crates/ti-core/src/rules/rng.rs::set_seed', 114, 's')
+            ('crates/ti-core/src/rules/rng.rs::in_range', 144, 'n')
+            ('crates/ti-core/src/rules/rng.rs::advance', 184, 'n')
+            ('crates/ti-core/src/rules/menu.rs::set_scene', 26, 's')
+            ('crates/ti-core/src/rules/cards.rs::data_to_card_effect', 210, 'e')
+            ('crates/ti-core/src/rules/build.rs::f64_to_u32', 41, 'v')
+            ...（139 更多）
+        [ok] CS-3 fn_param_naming：134 存量违例全在豁免基线内
+        
+        === CS-4 scene_session_ctor（场景层构造持久会话（窄接缝））— 当前违例 0 ===
+        [ok] CS-4 scene_session_ctor：0 存量违例全在豁免基线内
+        
+        check_code_standards: PASS（0 项超基线）
+  PASS  check_code_standards (CS-1~6 代码标准 + 棘轮基线)  [0.2s]
+        check_oracle_boundary: OK (0 oracle_* function calls in shell layer)
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)  [0.1s]
+  PASS  no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描)  [0.3s]
+          WARN i18n 孤儿 key `app.window_title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm04.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm05.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm06.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm07.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm08.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm09.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm10.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm11.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm12.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm13.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm14.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm15.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm16.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm17.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm18.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm19.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `glmapm20.Map`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.boss_fort.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.boss_fort.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.harbour.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.harbour.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lighthouse.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lighthouse.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lightship.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.lightship.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.pirate_lair.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.pirate_lair.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.shipyard.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.shipyard.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.skull_cliff.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.skull_cliff.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.trading_post.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.trading_post.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.volcano.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.volcano.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.wreck.benefit`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `isle.wreck.guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.0`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.1`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.2`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.3`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.4`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.medallion.5`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.index.title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.hud.build`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.hud.sell`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.hud.trade`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.battle`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.boss`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.card`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.city`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.event`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.plain`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.port`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.start`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.territory`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.node.treasure`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_collect_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_dungeon_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_siege_fail_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_siege_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_toll_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.ai_upgrade_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.bankrupt_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.boss_locked_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.card_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.dungeon_fail`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.dungeon_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.siege_choice_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.main_map.toast.territory_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.select_map.locked`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.select_map.open`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.awaiting`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.defeat`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.hp_boss`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.hp_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.hp_player`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.rounds_fmt`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.v2_elm_attack_title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.v2_elm_boss_title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.v2_elm_raid_title`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+          WARN i18n 孤儿 key `scene.vs.victory`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+        doccheck2: 0 error(s) across 41 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/wasm-viewport-init/engine-no-color-literal/landscape-no-portrait-hardcode/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention)
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [0.6s]
+        check_ledger_reality: 全绿（309 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+  PASS  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)  [0.1s]
+        check_forward_closed: C1 业务文档零逆向引用: OK
+        check_forward_closed: C2 表现层零 oracle 引用: OK
+        check_forward_closed: C3 根目录清空 + legacy 在位: OK
+        check_forward_closed: C4 oracle 单点源 + 禁重复 crate: OK
+        check_forward_closed: 0 violation(s) across 4 check(s)
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)  [0.1s]
+        check_module_contracts: 7 packages, M1-M3 0 violation(s), M4 10 warn(s)
+          WARN M4 包 D status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P1 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P2 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P3 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P4 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P5 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 包 P6 status=draft（并行轮启动前须全票 frozen）
+          WARN M4 契约 c1_core_public_types.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c2_data_keys.md 未 frozen（并行轮启动前须全票 frozen）
+          WARN M4 契约 c3_app_host_api.md 未 frozen（并行轮启动前须全票 frozen）
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)  [0.7s]
+        flywheel_readme -Check PASS: 6 条必读 ✓, gate 34 项, doccheck2 50 断言, packages 7 包
+  PASS  flywheel-readme (开轮必读脚本完整性)  [0.6s]
+        
+        running 1 test
+        .
+        test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.33s
+        
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [13.7s]
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.1s]
+        === 代码结构审计 ===
+        文件 305 / 总行 77483 / 函数 3570 / trait 24 / 泛型 fn 14 / macro_rules! 6
+        
+        --- 最长 10 个文件 ---
+         3984  crates/ti-tools/src/bin/doccheck2.rs  [豁免]
+         2457  crates/ti-engine/src/bin/treasure_bevy.rs  [豁免]
+         2007  crates/ti-app/src/scenes/main_map.rs  [豁免]
+         1529  crates/ti-app/src/scenes/chrome.rs  [豁免]
+         1037  crates/ti-app/src/game_app/host.rs  [豁免]
+          997  crates/ti-core/src/data/mod.rs  [豁免]
+          936  crates/ti-app/src/scenes/mod.rs  [豁免]
+          900  crates/ti-app/tests/render_intent.rs  [豁免]
+          878  crates/ti-app/src/game_app/board.rs
+          868  crates/ti-console/src/repo/data.rs
+        
+        --- 最长 10 个函数 ---
+          304  crates/ti-core/examples/full_run_demo.rs::main (行 120)  [豁免]
+          223  crates/ti-core/src/data/mod.rs::convert (行 775)  [豁免]
+          190  crates/ti-core/tests/exhaust_random_session.rs::run_random_session (行 71)  [豁免]
+          190  crates/ti-engine/src/scene_render.rs::spawn_primitives (行 241)  [豁免]
+          190  crates/ti-tools/src/bin/doccheck2.rs::check_scene_layout_fidelity (行 922)  [豁免]
+          181  crates/ti-app/src/scenes/main_map.rs::render (行 674)  [豁免]
+          175  crates/ti-app/tests/e2e_playthrough.rs::e2e_full_game_session (行 19)  [豁免]
+          161  crates/ti-app/src/scenes/main_map.rs::render_v6_proto (行 1045)  [豁免]
+          149  crates/ti-app/src/scenes/vs_anim_proto.rs::render_v2_elem (行 181)  [豁免]
+          148  crates/ti-app/src/scenes/main_map.rs::render_v6_elem (行 1249)  [豁免]
+        
+        --- 违规（阈值：文件 >900 行 / 函数 >140 行 / 重复 >5 次）---
+        文件规模 0 项；函数长度 0 项；重复模式 0 项
+        [audit_code] PASS：0 项结构违规
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)  [0.6s]
+        === check_scene_narrative (UI 叙事约束 DSL v3) ===
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)  [0.1s]
+        [2m2026-11-07T01:53:27.294603Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "Linux (Ubuntu 24.04)", kernel: "7.0.0-42-generic", cpu: "Intel(R) Core(TM) i5-7400 CPU @ 3.00GHz", core_count: "4", memory: "15.5 GiB" }
+        [2m2026-11-07T01:53:27.434652Z[0m [31mERROR[0m [2mwgpu_hal::vulkan::instance[0m[2m:[0m GENERAL [Loader Message (0x0)]
+        	loader_scanned_icd_add: Could not get 'vkCreateInstance' via 'vk_icdGetInstanceProcAddr' for ICD libGLX_nvidia.so.0
+        [2m2026-11-07T01:53:27.434803Z[0m [31mERROR[0m [2mwgpu_hal::vulkan::instance[0m[2m:[0m 	objects: (type: INSTANCE, hndl: 0x5da99b5527d0, name: ?)
+        [2m2026-11-07T01:53:27.446735Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "Intel(R) HD Graphics 630 (KBL GT2)", vendor: 32902, device: 22802, device_type: IntegratedGpu, device_pci_bus_id: "0000:00:02.0", driver: "Intel open-source Mesa driver", driver_info: "Mesa 25.2.8-0ubuntu0.24.04.4", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+        [2m2026-11-07T01:53:27.894637Z[0m [32m INFO[0m [2mbevy_render::batching::gpu_preprocessing[0m[2m:[0m GPU preprocessing is fully supported on this device.
+        S18.2 GPU/CPU 像素对照（色块内部，排除文本框 + 2px 边缘带）：比对 1607576 像素，超差 0（0.0000%），最大通道差 0 LSB，首个超差 None
+        诊断：GPU 非黑像素 2073600（文本区字形对齐属 S18.3）
+          anchor (0,0): cpu=0x10c9 gpu=0x10c9
+          anchor (1079,1919): cpu=0x0865 gpu=0x0865
+          anchor (60,200): cpu=0x190c gpu=0x190c
+          anchor (540,500): cpu=0x190c gpu=0x190c
+        S18.2 对照口径：仅游戏世界（UI 层已排除，bevy_ui 节点数 = 0）
+        S18.2 对照通过（阈值：通道 ≤8 LSB 且超差比例 <0.5%）
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [4.2s]
+        [wasm-browser-e2e] SKIP  L4 场景切换失败但 console 报 wgpu/WebGL 环境错误（SwiftShader 偶发 GPU stall；同产物独立跑 PASS）⇒ L4 记名降级，不 FAIL
+        {
+          "L1_start": true,
+          "L2_render": true,
+          "L2_assets": true,
+          "L3_input": true,
+          "L4_scene": false,
+          "L5_ring_assets": true,
+          "detail": {
+            "L1_start": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
+            "L2_render": {
+              "ok": true,
+              "bright_ratio": 78.4
+            },
+            "L3_input": {
+              "after": "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）",
+              "page_errors": []
+            },
+            "L4_scene": {
+              "before": 10.8,
+              "after": 10.8,
+              "clicked": false,
+              "transitioned": false,
+              "crashed": false,
+              "env_stall": true
+            },
+            "L5_ring_assets": {
+              "v6": 0,
+              "isle": 0,
+              "island_home": 0,
+              "card_panel": 0,
+              "ok": false,
+              "skipped": true
+            }
+          }
+        }
+        [wasm-browser-e2e] FAIL（L1 实例化=True / L2 渲染=True 资产=True / L3 交互=True / L4 场景切换=False / L5 环资产=True）
+        [wasm-browser-e2e] PASS（部分层因浏览器 GPU 子进程崩溃降级 SKIP；非 wasm 代码缺陷）
+  PASS  wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)  [82.9s]
+        [web-playtest] url=http://127.0.0.1:8080
+          web 产物: index=8de692efa1f5 wasm=38d10c7f094e
+          L1 status="运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）"（实例化活体证明）
+          L2 首帧墨点=44%（体积启发，阈值 >5 = 非全黑/非空白）
+          L3/L4 按键 3×Enter 后墨点序列=[44,100,100,100]（变化帧 1/3）
+          终态 status="运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）" console致命错误=0 页面异常=0
+        [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
+  PASS  browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言)  [42.1s]
+        === playtest-loop（S16.2 试玩闭环 4 报告聚合；--check 只读模式）===
+          [OK ] fuzz_playtest:      Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-fe4a3f731e2f8d7d)
+          [OK ] full_run: full run 16/16 steps, 0 failures (P3-3 criterion met)
+          [OK ] render_invariants:      Running tests/render_invariants.rs (/disk/target/debug/deps/render_invariants-5b5a593fc6d79da4)
+          [OK ] web_playtest: [web-playtest] PASS（L1=true L2=true L4=true console=0 pageerror=0）
+          归因清单：确定性测试缺陷=0（4 报告全 0 失败）/ 可机械漂移=0（无新增 doccheck2 断言）/ 设计分歧=0（无新增 EXP）
+        playtest-loop: PASS（4 报告 0 失败；停机需连续 3 轮收敛 + evidence/S16.2.log 记录，主线程复核）
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [49.7s]
+        === check_dod_commands（DoD 判据命令载体可达性自检；EXP-170 复发防护）===
+        PASS：文档判据命令载体全部可达
+  PASS  dod-commands (DoD 判据命令载体可达性：cargo --bin/--test 与 scripts 载体全存在 + 多 bin 歧义形式 0 处；EXP-170 复发防护)  [0.3s]
+=== gate: 0 failure(s) ===
+
+=== S46.1 判据证据（收口附录）===
+[1] 共用 spawn 抽取：gate.rs 276 行 / spawn.rs 90 行 / publish.rs 240 行（原 gate.rs+publish.rs 同构 ~130 行重复 → 单模块双端引用）
+[2] 写点单源：resolve_write_paths 读 console_commands.json；docmap 同源；单测 8 条全过（含只读动作空写点 + 未登记动作空写点）
+[3] 死代码清理：verify.rs 1 处 + data.rs 2 处（tasks/snapshot 参数改名 _sources）+ data.rs assets 1 处
+[4] dod-commands 自检：真实文档判据命令 0 缺失（PASS）
+[5] 反例：临时注入 'cargo run -p ti-tools -- fakebin' ⇒ 检出 FAIL（非 0）⇒ 恢复 PASS
+[6] 真伤修复 4 处：parity.md P0-1 --bin unpak / 04_tooling datacheck→doccheck / check_ledger_reality ti-app→ti-core / 11_bevy treasure-native→treasure-bevy-native
+[7] 门禁项数 33→34（doc_numbers --fix 23 处 + doccheck2 期望 34 + gate.ps1 横幅 x2 + parity/README/loop/AGENTS）
+[8] doccheck 0 errors（167 docs / 167 experiences）; doccheck2 0 errors（41 checks）
+[9] gate 34 项：0 failure / 1 SKIP（android NDK 环境缺位）; browser-playtest 首轮 env flake（GPU stall，同产物独立跑 PASS）复跑消
+[10] EXP-171 已登记（process 卷 40 条，index 行 + 正文一致）

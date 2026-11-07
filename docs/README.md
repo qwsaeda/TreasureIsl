@@ -10,10 +10,10 @@
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md) + `plan/ledger.yaml` + 本文件 |
 | **迁移 Linux / 换机器续工（会话总结 + 迁移操作 + 续工序列）** | [`migration_linux.md`](migration_linux.md)（迁移前二选一：整目录拷贝 or add -A 提交；在途 tracked-M + untracked-? 文件清单；Linux 环境准备 + `pwsh` 命令差异 + CRLF/无头 GPU 风险点 + 迁移后第一条命令序列；S27.7 进度快照） |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 33 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 34 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
-| [process/03_templates.md §8 + docs/design-sheets/](process/03_templates.md) | **内容设计 sheet 模版（Canvas 概念落地，S16.4）**：加新地图/新岛类/新剧情 = 一张设计 sheet （四段式 A 业务定案 / B 数据 key 契约 / C 场景资源接线 / D 验收锚点 33 项门禁）；空样例 `assets/maps/m04/`（`map_pack add m04` 骨架，真内容落地后 verify 合规）+ `docs/design-sheets/m04.sheet.md`（模版填法示例，dod = 本任务只落模版不实现真内容） |
+| [process/03_templates.md §8 + docs/design-sheets/](process/03_templates.md) | **内容设计 sheet 模版（Canvas 概念落地，S16.4）**：加新地图/新岛类/新剧情 = 一张设计 sheet （四段式 A 业务定案 / B 数据 key 契约 / C 场景资源接线 / D 验收锚点 34 项门禁）；空样例 `assets/maps/m04/`（`map_pack add m04` 骨架，真内容落地后 verify 合规）+ `docs/design-sheets/m04.sheet.md`（模版填法示例，dod = 本任务只落模版不实现真内容） |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
 | **模块并行开发（契约→并行→集成）** | [`process/05_module_parallel.md`](process/05_module_parallel.md)（一轮 4 步 + 包划分 + 纪律 + §4.5 开轮必读）+ [`contracts/`](contracts/00_index.md) + `plan/packages.yaml` |
 | **对抗流水线飞轮（找问题→审计→修复→回写）** | [`process/06_flywheel.md`](process/06_flywheel.md)（3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件，EXP-068） |
@@ -80,7 +80,7 @@
 | [process/23_game_testing.md](process/23_game_testing.md) | **游戏测试标杆（单一事实源）**：分级 L1 单元→L4 验收 / 分类（功能·回归·视觉·音频·性能·兼容）/ 类型（冒烟·CI·试玩·探索·基准）/ 行业常用（测试金字塔·ISTQB·游戏 QA 流水线）/ Bevy 官方推荐（`how_to_test_apps.rs` App 模式·unit/integration/doctest/compile-fail/example-smoke/benchmark）/ 平台集成（Dev Console「测试」页：步骤/阶段/截图证据，只读）/ 机读清单 `assets/data/test_manifest.json`。定测试标杆/验收前必读 |
 | [process/24_apk_size_std.md](process/24_apk_size_std.md) | **APK/产物体积标准（S35.0，单一事实源）**：判据①②③④（`.so` 必须 ZIP_DEFLATED 压缩率<90% / 未引用 UI 0 进包 / 构建侧引用集打包 / 引用集变更先改工具）+ 引用集组成（代码字面量 + `format!` 动态前缀 + 地图岛 kind + registry audio）+ 已知缺口 + 平台「APK 体积」页口径（`/api/apk-size` 只读）。构建 APK / 改资产打包 / 压体积前必读；工具 = `scripts/apk_audit.py` |
 | [process/25_versioning.md](process/25_versioning.md) | **版本与打包规范（单一事实源）**：x.y.z 语义化版本（`Cargo.toml` 单源，major/minor/patch 何时 bump）+ 打包产物带版本（`TreasureIsl-<x.y.z>-<arch>.apk` / `treasure_bevy_wasm-<x.y.z>.wasm` / AndroidManifest `versionName`）+ 更新规范（每任务完成清单 → bump → release.md 版本规划）+ 完成清单 5 项（功能/回归/测试/视觉签收/版本）。打包·发布·bump 版本前必读 |
-| [process/26_dev_stages_overview.md](process/26_dev_stages_overview.md) | **开发阶段总览（横向索引）**：项目阶段演进 S0→S35（表）+ 开发流程三层协议（循环 loop / 标准工作流 / 并行+飞轮）+ 节点清单（台账粒度，当前主待办 S32.4~S32.9 + S34.0/S34.3~S34.6 + S35.1）+ 工具矩阵（`scripts/` 全量按用途分组）+ 当前所处节点（2026-11-01 时点：263/280 verified ≈94% + 本轮用户要求已闭环 + gate 30 PASS 0 FAIL）+ 验收判据（P0~P4 + 门禁 33 项）。看全局·新人入场·阶段导航前必读 |
+| [process/26_dev_stages_overview.md](process/26_dev_stages_overview.md) | **开发阶段总览（横向索引）**：项目阶段演进 S0→S35（表）+ 开发流程三层协议（循环 loop / 标准工作流 / 并行+飞轮）+ 节点清单（台账粒度，当前主待办 S32.4~S32.9 + S34.0/S34.3~S34.6 + S35.1）+ 工具矩阵（`scripts/` 全量按用途分组）+ 当前所处节点（2026-11-01 时点：263/280 verified ≈94% + 本轮用户要求已闭环 + gate 30 PASS 0 FAIL）+ 验收判据（P0~P4 + 门禁 34 项）。看全局·新人入场·阶段导航前必读 |
 | [process/27_landscape_adaptation.md](process/27_landscape_adaptation.md) | **横屏适配设计草案（U23，设计稿先行）**：现状（1080×1920 竖屏 + letterbox 药丸，横屏浪费 61%）+ 目标（横屏铺满 + 双方向自适应）+ 三方案选型（A 坐标双套推荐 / B 旋转不推荐 / C letterbox 最小）+ 方案 A 落地轮廓（方向判定 / 坐标系常量 / 数据双份 / 两层渲染 / 命中）+ 验收判据 + 风险。**A 纪律：用户确认选型 + 横屏效果图过目后才动码**。改横屏适配·加方向感知前必读 |
 | [process/28_engine_best_practice.md](process/28_engine_best_practice.md) | **游戏开发 + Bevy 最佳实践（规范/审计基准，S38）**：规范清单 A 数据驱动 / B 视觉令牌 / C 引擎机制 / D 代码标准 + 审计 findings（F-01 颜色字面量 ~24 处 / F-02 尺寸魔法数字 18 处 → `ui.rs::palette` 单源）+ 固化守门 doccheck2 `engine-no-color-literal`（第 41 项）。审计项目找硬编码·改视觉量·加颜色/尺寸常量前必读 |
 | [process/29_content_ops.md](process/29_content_ops.md) | **内容运营规范（零 Rust 内容运营，S43）**：程序构成模型（**代码 + UI数据 + 地图数据**，UI/地图是数据非代码）+ 内容运营核心判据（`git diff crates/`=空 / 不改业务 / 只动数据）+ 改地图流程（S40.0/S41.0：add→填内容→`manifest["map"]`←map.json 同步→verify→pack→install→check→sync→出图）+ 换 UI 流程（S39.0/S42.0：设计稿先行 A 纪律→改 scenes.json/换资产→rebuild→出图→视觉签收）+ 打包/分发链 + 坑位教训（manifest["map"] 同步 / scenes.json include_str 内嵌须 rebuild）。**内容运营（换 UI/改地图）前必读** |
@@ -143,6 +143,7 @@
 | `scripts/ui_shot_probe.py` | **出图取样**（区域主色 / 最亮像素 / 裁剪放大）—— UI 出图验收的像素证据 |
 | `scripts/ui_asset_batch.py` | **UI 资产批量工具**（规格驱动：register/generate/install/build/check/sheet）—— 一组资产一次做完，含抠图可行性预检；规格 = `assets/ui_batches/*.json` |
 | `scripts/apk_audit.py` | **APK 体积构成审计（S35.0，24 号 `24_apk_size_std.md`）**：`--refset` 引擎引用集 / `--apk` 构成表 + 判据①②（.so 压缩率 <90% / 未引用 UI 0 进包，FAIL 非 0）/ `--refset-unused` 未引用清单 |
+| `scripts/check_dod_commands.py` | **DoD 判据命令载体可达性自检（S46.1，EXP-170/171）**：文档判据命令（`cargo run --bin / --test`、`scripts/*.py|ps1`）逐一解析，载体缺失 / 多 bin crate 歧义形式 ⇒ 非 0（gate 第 25 项） |
 | `scripts/build_artifacts.py` | **构建产物编排器（S35.1，24 号 §4.1 执行面）**：`pre`/`post` mtime 锚定 / `run` 执行 apk/wasm/native 构建 + 自动复检 + 日志 / `list` / `check`；构建本体仍走既有脚本，本脚本只做编排（平台「构建」页消费） |
 | `scripts/ui_thumb.py` | **设计稿压缩预览侧车**（`evidence/ui_concept/*.png` → `.thumb.png` 480px PNG-8 量化；平台设计图页卡读侧车、lightbox 读原图；`--check` 只读对账；13 号 §4.0） || `scripts/map_batch_gen.py` | **S37 批量地图包生成器**（20 张不同场景地图包 m04~m20：`--check` 只读校验 / `--only <id>` 单包生成 / 幂等） |
 | `scripts/ui_layout_sheet.py` | **UI 版面线图**（规格驱动：底图 + 逐元素矩形 + 环岛示意 ⇒ 坐标表线图，版面评审 / S21.9 出图验收对照；`--check` 只读校验） |
