@@ -156,6 +156,7 @@
     <button data-page="tests">测试</button>
     <button data-page="apksize">APK 体积</button>
     <button data-page="build">构建</button>
+    <button data-page="themes">主题</button>
     <button data-page="close">收口</button>
   </nav>
   <div class="grp">平台</div>
@@ -493,6 +494,24 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
     </div>
   </section>
 
+  <!-- 主题管理（S49.3，S48.0 全主题创新；/api/themes = ui_theme.py list/verify/apply 消费） -->
+  <section id="page-themes" hidden>
+    <div class="card">
+      <h2>主题管理（S48.0 全主题创新；/api/themes = ui_theme.py 工具面）</h2>
+      <div style="margin-bottom:10px">
+        <button onclick="loadThemes()">刷新（list）</button>
+        <span style="color:var(--muted);font-size:12px;margin-left:8px" id="th-msg"></span>
+      </div>
+      <div class="grid" id="themes-list" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))"></div>
+      <div id="themes-out" style="margin-top:12px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:220px;overflow:auto;display:none"></div>
+      <div class="foot">
+        `apply` 写 <code>scenes.json index.landscape.primitives</code> + 部署资产（<code>ui_theme.py apply</code>），
+        写面 = X-TI-Token + <code>enable_write=true</code>（30 号 §3.1 默认关）；`verify` = 只读校验（compose/资产源/ui_manifest 登记）。
+        单一事实源 = <code>docs/process/30_content_ops_platform.md</code> §2.2.1 + 工具 = <code>scripts/ui_theme.py</code>。
+      </div>
+    </div>
+  </section>
+
   <!-- 收口（S32.6：POST /api/close；close_check 只读 / close_run 写需 enable_write / exp_check / 白名单对账断言） -->
   <section id="page-close" hidden>
     <div class="card">
@@ -578,7 +597,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
-const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'tests', 'apksize', 'build', 'close', 'search', 'settings'];
+const pages = ['overview', 'tasks', 'evidence', 'assets', 'design', 'map', 'tests', 'apksize', 'build', 'themes', 'close', 'search', 'settings'];
 
 /* 图片短 ID（大写下划线形，如 MM_3 / IDX_1；组代码 + 组内序号；同组递增，好记、可直接口述给 AI）。
  * 确定性派生：按组别分桶，桶内按文件名排序 ⇒ 刷新/重启 ID 稳定不变。 */
@@ -614,6 +633,7 @@ function showPage(name) {
   if (name === 'tests' && !loaded.tests) loadTests();
   if (name === 'apksize' && !loaded.apksize) loadApkSize();
   if (name === 'build' && !loaded.build) loadBuild();
+  if (name === 'themes' && !loaded.themes) loadThemes();
   if (name === 'close' && !loaded.close) loadClose();
   if (name === 'search' && !loaded.search) loadSearch();
   if (name === 'settings' && !loaded.settings) loadSettings();
@@ -2068,6 +2088,77 @@ async function buildCheck() {
     $('bc-chips').innerHTML = '<span style="color:var(--err);font-size:12px">失败：' + esc(String(e)) + '</span>';
     $('bc-out').style.display = 'none';
   }
+}
+
+// ── 主题管理（S49.3，S48.0 全主题创新；/api/themes = ui_theme.py list/verify/apply 消费） ──
+async function loadThemes() {
+  loaded.themes = true;
+  try {
+    const d = await api('/api/themes');
+    const list = (d.themes || []);
+    $('th-msg').textContent = `共 ${d.count || list.length} 个主题包`;
+    const meta = { apply: '应用', verify: '校验' };
+    $('themes-list').innerHTML = list.map(t => {
+      const ok = t.valid === true;
+      const applied = t.applied === true;
+      const st = applied
+        ? '<span style="padding:2px 10px;border-radius:12px;background:rgba(88,196,122,.14);color:var(--ok);border:1px solid var(--ok);font-size:11px;font-weight:600">● 已应用</span>'
+        : (ok
+          ? '<span style="padding:2px 10px;border-radius:12px;background:var(--panel2);color:var(--muted);border:1px solid var(--border);font-size:11px">○ 未应用</span>'
+          : '<span style="padding:2px 10px;border-radius:12px;background:rgba(224,96,96,.14);color:var(--err);border:1px solid var(--err);font-size:11px;font-weight:600">✗ 不合法</span>');
+      const assets = (t.assets || []).length;
+      return '<div class="stat" style="padding:14px;display:flex;flex-direction:column;gap:8px">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center">'
+        +   '<span style="font-weight:700;font-size:14px">' + esc(t.name || t.id) + '</span>' + st + '</div>'
+        + '<div style="font-size:12px;color:var(--muted)">id=<code>' + esc(t.id) + '</code> · scene=' + esc(t.scene || '—')
+        + ' · 原语 <b style="color:var(--ink)">' + t.primitives + '</b> · 资产 <b style="color:var(--ink)">' + assets + '</b></div>'
+        + (t.error ? '<div style="font-size:11px;color:var(--err)">' + esc(t.error) + '</div>' : '')
+        + '<div style="display:flex;gap:8px;margin-top:2px">'
+        +   '<button data-theme-id="' + esc(t.id) + '" data-th-op="verify" ' + (!ok ? 'disabled' : '') + ' style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:5px 12px;cursor:' + (ok ? 'pointer' : 'not-allowed') + '">校验</button>'
+        +   '<button data-theme-id="' + esc(t.id) + '" data-th-op="apply" ' + (applied ? 'disabled' : '') + ' style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:5px 12px;cursor:' + (applied ? 'not-allowed' : 'pointer') + ';font-weight:600">应用</button>'
+        + '</div></div>';
+    }).join('') || '<div class="empty">无主题包（assets/themes/ 空）</div>';
+    document.querySelectorAll('#themes-list button[data-th-op]').forEach(b => {
+      b.addEventListener('click', async () => {
+        const tid = b.dataset.themeId;
+        const op = b.dataset.thOp;
+        if (op === 'verify') {
+          try {
+            const r = await api('/api/themes?verify=' + encodeURIComponent(tid));
+            const v = (r.violations || []);
+            $('th-msg').textContent = `verify ${tid}: ${r.ok ? '0 违规 ✓' : v.length + ' 违规'}`;
+            showThemesOut(JSON.stringify(r, null, 1));
+          } catch (e) { $('th-msg').textContent = 'verify 失败：' + e; }
+        } else if (op === 'apply') {
+          const ew = window.prompt('写面需 enable_write=true（30 号 §3.1 默认关）；输入 1 确认，空取消');
+          if (ew !== '1') return;
+          b.textContent = '应用中…'; b.disabled = true;
+          try {
+            const r = await fetch('/api/themes/apply', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ theme: tid, register: true, enable_write: true }),
+            });
+            const j = await r.json();
+            if (j.ok) {
+              $('th-msg').textContent = `apply ${tid}: ✓ exit=0（scenes.json 构图 + 资产部署 + validate_data 0 违规）`;
+            } else {
+              $('th-msg').textContent = `apply ${tid}: ✗ exit=${j.exit_code}（${j.error || ''}）`;
+            }
+            showThemesOut(j.output || JSON.stringify(j, null, 1));
+          } catch (e) { $('th-msg').textContent = 'apply 失败：' + e; }
+          setTimeout(() => { loaded.themes = false; loadThemes(); }, 1500);
+        }
+      });
+    });
+  } catch (e) {
+    $('themes-list').innerHTML = '<div class="empty">/api/themes 不可用：' + esc(String(e)) + '</div>';
+  }
+}
+
+function showThemesOut(text) {
+  const o = $('themes-out');
+  o.style.display = 'block';
+  o.textContent = text || '(空输出)';
 }
 
 async function loadSettings() {

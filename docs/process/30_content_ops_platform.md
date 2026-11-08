@@ -85,6 +85,19 @@
 - **A 纪律**：每套先出概念稿（`evidence/ui_concept/theme_concepts/`）+ 用户逐套确认留痕后才落码；概念稿**不做角色**（角色用真实资产）。
 - **构图判据**：出图两两不同（md5 唯一）+ 10 套全部平台向导 7 步过 + `git diff crates/`（6 游戏 crate）= 空 + validate_data 0 违规 + **scenes.json index.landscape 默认恢复 S39**（羊皮藏宝图，保 landscape_drawlist 测试；10 套主题构图在主题包 compose.json，运行时默认不变，换主题 = apply 主题包）。
 
+#### 2.2.2 主题管理页的平台落地（S49.3）
+
+| 端点 | 形态 | 口径 |
+|---|---|---|
+| `GET /api/themes` | 只读（免 token） | `assets/themes/` 全部主题包清单，每项 `{id, name, scene, primitives, assets[], valid, applied, error}`（`valid` = compose 合法 + 资产源在位；`applied` = 当前 `scenes.json index.landscape.primitives` == 该主题 `landscape_primitives`）；缺失目录 = 空清单不报错 |
+| `GET /api/themes?verify=<tid>` | 只读（免 token） | 主题包校验（`id` 白名单 `^[a-z0-9_]{1,16}$`，非法 = 400）：compose 合法（id/name/scene/landscape_primitives/assets）+ `landscape_primitives` 非空 + 每个 `compose.assets` 源文件在位 + 每个部署资产 `assets/ui/<name>.png` 在位 + `ui_manifest` 登记；违规清单非空 = `ok:false` |
+| `POST /api/themes/apply` | 写操作（鉴权 + `enable_write`） | body `{theme, register?, enable_write}`；走 `ui_theme.py apply` 子进程（工具契约，同 wizard 第 3 步）；写 `scenes.json index.landscape.primitives` + 部署资产 + `ui_manifest` 登记 + validate_data；**须 `enable_write=true`**，缺 = 400（默认关） |
+
+- **鉴权与白名单次序**：`X-TI-Token` 鉴权 403 → Content-Type `application/json` 400 → body ≤ 64KiB 413 → `enable_write=true` 400 → `theme` id 白名单 400（镜像 22 号 §10.1/§10.3）。
+- **数据源登记**：`console_sources.json` `repo_sources` 加 `assets/data/scenes.json` + `assets/themes/`（平台读面「assets/ 只返回登记过的文件」纪律）。
+- **白名单对账**：`ui_theme` 已在 `HUMAN_VIEW_IDS` + `console_commands.json`（S48.0 登记），S49.3 无需新增。
+- **web 主题页**：看板「主题」页 = 卡片渲染（状态胶囊 已应用/未应用/不合法 + 原语/资产数 + 校验/应用按钮），`apply` 前端确认 `enable_write`（prompt 1 确认）。
+
 ### 2.3 打包/分发面
 
 | 面 | 平台动作 | 写面 |

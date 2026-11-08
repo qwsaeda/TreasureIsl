@@ -24,6 +24,7 @@ pub mod guard;
 pub mod import;
 pub mod search;
 pub mod snapshot;
+pub mod themes;
 
 /// 百分号解码（query 参数；前端 `encodeURIComponent` 输出 `%XX`，服务端须解码后再匹配，
 /// 否则含空格/中文/保留字符的查询按字面 `%XX` 匹配 = 0 命中；S32.8 检索 + whitelist/evidence 路由）。

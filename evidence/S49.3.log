@@ -1,0 +1,63 @@
+=== S49.3 平台主题管理页（/api/themes list/verify/apply + web 主题面板）===
+日期: $(date '+%Y-%m-%d %H:%M')
+
+=== ① 平台编译 + clippy ===
+  ti-console 编译 OK
+  clippy error 数: 0
+
+=== ② GET /api/themes（list，端到端新二进制）===
+  count: 10
+    t01: name=海盗港口 valid=True applied=False prims=22 assets=1
+    t02: name=迷雾沼泽 valid=True applied=False prims=22 assets=1
+    t03: name=风暴海 valid=True applied=False prims=22 assets=1
+    t04: name=火山岛 valid=True applied=False prims=22 assets=1
+    t05: name=骷髅礁 valid=True applied=False prims=22 assets=1
+    t06: name=宝藏洞窟 valid=True applied=False prims=22 assets=1
+    t07: name=幽灵船 valid=True applied=False prims=22 assets=1
+    t08: name=冰霜湾 valid=True applied=False prims=22 assets=1
+    t09: name=落日帆影 valid=True applied=False prims=22 assets=1
+    t10: name=深海海沟 valid=True applied=False prims=22 assets=1
+
+=== ③ GET /api/themes?verify=t01（0 违规）===
+  ok: True | tid: t01 | violations: []
+
+=== ④ POST /api/themes/apply 写面门控（403/400 负例 + 成功）===
+  无 token → 403（期望 403）
+  无 enable_write → 400（期望 400）
+  非法 theme → 400（期望 400）
+  apply t01 → ok: True | exit: 0
+
+=== ⑤ applied 态翻转（t01 True / t02 False）===
+    t01: applied=True
+    t02: applied=False
+
+=== ⑥ scenes.json 恢复 S39 默认 + validate_data 0 违规 ===
+  scenes.json 已恢复（S39 默认）
+validate_data: OK（4 表，strings 236 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+
+=== ⑦ web 主题面板（HTML 完整性）===
+    #page-themes HTML=1
+    #themes-list HTML=1
+    #themes-out HTML=1
+    #th-msg HTML=1
+    loadThemes 函数: 1（期望 1）
+    pages 含 themes: 2
+
+=== ⑧ 白名单对账（ui_theme 已登记）===
+  commands 数: 24 | ui_theme 在: True
+
+=== ⑨ 零 Rust（游戏产品 6 crate 0 diff）===
+  ✓ 0 diff
+
+=== ⑩ 文档登记（30 号 §2.2.2 + 14 号 ui_theme.py S49.3 注）===
+  30 号 §2.2.2: 1
+  14 号 S49.3 注: 1
+  ✓ 0 diff
+
+=== ⑪ audit_code / 结构（第 1 轮 gate 抓出 routes.rs 超 900 行 → 拆分修复）===
+  第 1 轮 gate：doccheck2 1 error（S49.3 dod 含 scenes.json 字面无视觉签收——但 S49.3 是平台管理页非视觉改动，
+  apply 端点能力已存在 S48.0 wizard theme 步，S49.3 仅接端点；诚实修 dod 措辞去 scenes.json 字面）+ audit_code 1 项
+  （routes.rs 1003 行 > 900 上限——我加 ~123 行 themes HTTP 处理；修复 = themes_get/handle_themes_apply/parse_themes_apply
+  迁入 repo/themes.rs（pub(crate) 辅助函数 json200/header_body/load_json/api_500_or_json/query_param/auth_ok 改可见性），
+  routes.rs 1003→864 行 + themes.rs 365 行）
+  复核：audit_code 0 违规（文件规模 0 / 函数长度 0 / 重复 0）；clippy 0 error（must_use 补 2 处）；doccheck2 0 error

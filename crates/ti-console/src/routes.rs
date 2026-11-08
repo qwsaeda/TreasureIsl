@@ -40,7 +40,7 @@ fn load_sources_opt(repo_root: &Path) -> Option<crate::repo::config::RepoSources
 }
 
 /// 取查询串里某个键的值（`?run=<id>` 形态；无该键 = `None`；`url` 含 `?` 才拆）。
-fn query_param<'a>(url: &'a str, key: &str) -> Option<&'a str> {
+pub(crate) fn query_param<'a>(url: &'a str, key: &str) -> Option<&'a str> {
     url.split('?').nth(1)?.split('&').find_map(|kv| kv.strip_prefix(&format!("{key}=")))
 }
 
@@ -274,6 +274,7 @@ fn dispatch_get(
                 api_500_or_json(load_json(repo_root, |s| build_artifacts(repo_root, s, None)), gz)
             }
         }
+        "/api/themes" => crate::repo::themes::themes_get(repo_root, url, gz),
         "/api/apk-size" => {
             api_500_or_json(load_json(repo_root, |s| data::apk_size(repo_root, s)), gz)
         }
@@ -281,6 +282,7 @@ fn dispatch_get(
     }
 }
 
+/// `GET /api/themes`（S49.3 主题管理）：`?verify=<tid>` 只读校验；无参数 = list（全部主题包 + applied 态）。
 /// `GET /api/publish`（S44.4 发布面只读状态）：运行中标志 + 末次状态（含 `exit_code`）+ 日志历史
 /// + `?log=<name>` 尾部（白名单形状校验 + 防穿越由 `publish_status` 内部负责）。
 fn publish_get(repo_root: &Path, url: &str, gz: bool) -> Vec<u8> {
@@ -289,7 +291,7 @@ fn publish_get(repo_root: &Path, url: &str, gz: bool) -> Vec<u8> {
 }
 
 /// 有数据源清单 = 跑端点；无清单 = 500（数据源面不可用，如实上报）。
-fn load_json(
+pub(crate) fn load_json(
     repo_root: &Path,
     f: impl FnOnce(&RepoSources) -> Result<Value, String>,
 ) -> Result<Value, String> {
@@ -362,6 +364,10 @@ fn handle_post(
         }
         "/api/audit/archive" => {
             Some(handle_audit_archive(repo_root, body, token, content_type, gz))
+        }
+        // S49.3 主题管理：apply（写 scenes.json + 部署资产，X-TI-Token + enable_write 门控）。
+        "/api/themes/apply" => {
+            Some(crate::repo::themes::handle_themes_apply(repo_root, body, token, content_type, gz))
         }
         // S32.6 任务收口（close_check 只读体检 / close_run 写 + EXP 查重）。
         "/api/close" => Some(close_api::handle_close(repo_root, body, token, content_type, gz)),
@@ -484,9 +490,6 @@ fn handle_audit_taskbook(
     }
 }
 
-/// `POST /api/audit/archive`（S32.5 双审计编排）：粘贴归档报告 `.md`。
-/// 写操作鉴权（403）→ Content-Type application/json（400）→ body ≤ 64KiB（413）→
-/// body `{"file":"evidence/console/audit-...-a.md","content":"..."}` → `audit::archive::archive`。
 fn handle_audit_archive(
     repo_root: &Path,
     body: &[u8],
@@ -649,7 +652,7 @@ pub(crate) fn auth_ok(token: Option<&str>) -> bool {
     }
 }
 
-fn api_500_or_json(result: Result<Value, String>, want_gzip: bool) -> Vec<u8> {
+pub(crate) fn api_500_or_json(result: Result<Value, String>, want_gzip: bool) -> Vec<u8> {
     match result {
         Ok(value) => json200(&value, want_gzip),
         Err(err) => {
@@ -671,7 +674,7 @@ fn text200(body: &str, want_gzip: bool) -> Vec<u8> {
     header_body("text/plain", bytes, "200 OK", "no-store", None, want_gzip)
 }
 
-fn json200(value: &Value, want_gzip: bool) -> Vec<u8> {
+pub(crate) fn json200(value: &Value, want_gzip: bool) -> Vec<u8> {
     let bytes = value.to_string().into_bytes();
     header_body("application/json", &bytes, "200 OK", "no-store", None, want_gzip)
 }
