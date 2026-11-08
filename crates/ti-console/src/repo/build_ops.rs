@@ -10,6 +10,7 @@
 //!
 //! 本模块 **0 游戏依赖**；写点仅 `evidence/console/logs/`（平台归档目录）。
 
+use std::fmt::Write as _;
 use std::io::Write;
 use std::path::Path;
 
@@ -165,10 +166,10 @@ fn run_build(repo_root: &Path, kind: &str, lock_path: &Path) -> Result<Value, St
     }))
 }
 
-/// 只读面：`build_artifacts.py list`（产物体积/mtime）+ 最近一次构建日志 + 构建锁状态。
+/// 只读面：`build_artifacts.py list --json`（结构化产物体积/mtime）+ 最近一次构建日志 + 构建锁状态。
 fn list_build(repo_root: &Path, lock_path: &Path) -> Result<Value, String> {
     let mut list_cmd = std::process::Command::new("python3");
-    list_cmd.arg(repo_root.join("scripts/build_artifacts.py")).arg("list");
+    list_cmd.arg(repo_root.join("scripts/build_artifacts.py")).arg("list").arg("--json");
     // 22 号 §10.3 最小环境集（env_clear + 白名单）；r4-b P2 修复。
     crate::runner::apply_minimal_env(&mut list_cmd);
     let out = list_cmd.output();
@@ -182,7 +183,29 @@ fn list_build(repo_root: &Path, lock_path: &Path) -> Result<Value, String> {
         }
         Err(e) => return Err(format!("build_artifacts.py 执行失败（python3 缺位？）：{e}")),
     };
-    let list_body = String::from_utf8_lossy(&out.stdout).into_owned();
+    // S49.5：`list --json` 结构化产物（artifacts[]，kind/artifact/size_mb/mtime/present/note）
+    // 供前端渲染卡片；`list` 纯文本面派生（与 `build_artifacts.py list` 同格式）保持兼容。
+    let artifacts: Vec<Value> = String::from_utf8_lossy(&out.stdout)
+        .parse::<Value>()
+        .ok()
+        .and_then(|v| v.get("artifacts").cloned())
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default();
+    let mut list_body = String::new();
+    for a in &artifacts {
+        let kind = a.get("kind").and_then(Value::as_str).unwrap_or("?");
+        if a.get("present").and_then(Value::as_bool).unwrap_or(false) {
+            let art = a.get("artifact").and_then(Value::as_str).unwrap_or("");
+            let mb = a.get("size_mb").and_then(Value::as_f64).unwrap_or(0.0);
+            let mtime = a.get("mtime").and_then(Value::as_str).unwrap_or("").to_string();
+            // 派生纯文本 mtime = "%m-%d %H:%M"（从 "%Y-%m-%d %H:%M" 去年份段）
+            let short = if mtime.len() >= 11 { &mtime[5..] } else { mtime.as_str() };
+            // clippy format_push_string：push_str(&format!(..)) → writeln!（写 String 免临时）
+            let _ = writeln!(list_body, "{kind:8} {art}  {mb:.1}MB  mtime={short}");
+        } else {
+            let _ = writeln!(list_body, "{kind:8} 未构建");
+        }
+    }
     // 最近一次构建日志（按 mtime 降序取 1；gitignored 子目录，缺失 = 未跑过构建）
     let logs_dir = repo_root.join("evidence/console/logs");
     let mut last_log: Option<Value> = None;
@@ -237,11 +260,12 @@ fn list_build(repo_root: &Path, lock_path: &Path) -> Result<Value, String> {
     }
     Ok(json!({
         "list": list_body,
+        "artifacts": artifacts,
         "last_build_log": last_log,
         "running": running,
         "running_pid": running_pid,
         "last_exit": lock_state.get("exit_code").cloned().unwrap_or(Value::Null),
         "last_kind": lock_state.get("kind").cloned().unwrap_or(Value::Null),
-        "tool": "scripts/build_artifacts.py（list 只读；触发构建 = console_commands build_{apk,wasm,native}）",
+        "tool": "scripts/build_artifacts.py（list --json 结构化 + list 纯文本派生；触发构建 = console_commands build_{apk,wasm,native}）",
     }))
 }

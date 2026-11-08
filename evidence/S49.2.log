@@ -1,0 +1,91 @@
+=== S49.2 新地图 m33~m40（8 张，map 向导 10 步，零 Rust）===
+日期: 2026-11-08 09:25
+
+=== 0. 生成（基 m32：isle 旋转 1~8 + ring 几何各异 + events mNN_* + 图名 海图三十三~四十）===
+  m33: ring=(600,792,r448) g1=shipyard events=['m33_reef_current', 'm33_trade_wind'] name=海图三十三
+  m34: ring=(568,784,r456) g1=wreck events=['m34_reef_current', 'm34_trade_wind'] name=海图三十四
+  m35: ring=(584,800,r440) g1=pirate_lair events=['m35_reef_current', 'm35_trade_wind'] name=海图三十五
+  m36: ring=(552,792,r464) g1=lighthouse events=['m36_reef_current', 'm36_trade_wind'] name=海图三十六
+  m37: ring=(608,776,r448) g1=trading_post events=['m37_reef_current', 'm37_trade_wind'] name=海图三十七
+  m38: ring=(576,808,r456) g1=skull_cliff events=['m38_reef_current', 'm38_trade_wind'] name=海图三十八
+  m39: ring=(592,784,r432) g1=volcano events=['m39_reef_current', 'm39_trade_wind'] name=海图三十九
+  m40: ring=(560,800,r464) g1=lightship events=['m40_reef_current', 'm40_trade_wind'] name=海图四十
+
+=== 1. add（骨架）===
+  m33 add（此前）；m34~m40 由生成器建骨架+内容（等价 add+import）
+
+=== 2. import（填内容）===
+  生成器写 map.json（31 格 isle 旋转）/layout.json（ring）/strings.json（图名）/manifest.json（复制 m32 全资产）
+
+=== 3. syncmap（manifest[map]←map.json）===
+map_pack syncmap: m33 manifest[map] 已与 map.json 一致（0 差，跳过写）
+map_pack syncmap: m34 manifest[map] 已与 map.json 一致（0 差，跳过写）
+map_pack syncmap: m35 manifest[map] 已与 map.json 一致（0 差，跳过写）
+map_pack syncmap: m36 manifest[map] 已与 map.json 一致（0 差，跳过写）
+map_pack syncmap: m37 manifest[map] 已与 map.json 一致（0 差，跳过写）
+map_pack syncmap: m38 manifest[map] 已与 map.json 一致（0 差，跳过写）
+map_pack syncmap: m39 manifest[map] 已与 map.json 一致（0 差，跳过写）
+map_pack syncmap: m40 manifest[map] 已与 map.json 一致（0 差，跳过写）
+
+=== 4. verify（I1~I9 0 违规）===
+map_pack verify: assets/maps/m33 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack verify: assets/maps/m34 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack verify: assets/maps/m35 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack verify: assets/maps/m36 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack verify: assets/maps/m37 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack verify: assets/maps/m38 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack verify: assets/maps/m39 -> 0 违规（schema/兼容/I1~I9 全过）
+map_pack verify: assets/maps/m40 -> 0 违规（schema/兼容/I1~I9 全过）
+
+=== 5. pack（dist 可分发件）===
+map_pack pack: m33 → dist/maps/m33.map-pack + dist/maps/m33.map-pack.zip
+map_pack pack: m34 → dist/maps/m34.map-pack + dist/maps/m34.map-pack.zip
+map_pack pack: m35 → dist/maps/m35.map-pack + dist/maps/m35.map-pack.zip
+map_pack pack: m36 → dist/maps/m36.map-pack + dist/maps/m36.map-pack.zip
+map_pack pack: m37 → dist/maps/m37.map-pack + dist/maps/m37.map-pack.zip
+map_pack pack: m38 → dist/maps/m38.map-pack + dist/maps/m38.map-pack.zip
+map_pack pack: m39 → dist/maps/m39.map-pack + dist/maps/m39.map-pack.zip
+map_pack pack: m40 → dist/maps/m40.map-pack + dist/maps/m40.map-pack.zip
+
+=== 6. install（board.json 接线）===
+map_pack install: m33 → assets/maps/m33（board.json 已接线 + index.json 更新）
+map_pack install: m34 → assets/maps/m34（board.json 已接线 + index.json 更新）
+map_pack install: m35 → assets/maps/m35（board.json 已接线 + index.json 更新）
+map_pack install: m36 → assets/maps/m36（board.json 已接线 + index.json 更新）
+map_pack install: m37 → assets/maps/m37（board.json 已接线 + index.json 更新）
+map_pack install: m38 → assets/maps/m38（board.json 已接线 + index.json 更新）
+map_pack install: m39 → assets/maps/m39（board.json 已接线 + index.json 更新）
+map_pack install: m40 → assets/maps/m40（board.json 已接线 + index.json 更新）
+
+=== 7. check（0 漂移）===
+map_pack check: 0 漂移（40 个已装包 vs board.json；默认包 m01 vs 布局数据）
+
+=== 8. sync（回注 board.json 40 包）===
+map_pack sync: 40 个已装包 map.json → board.json；默认包 m01 layout → scenes.json / manifest / strings
+map_pack check: 0 漂移（40 个已装包 vs board.json；默认包 m01 vs 布局数据）
+
+=== 9. shot（TI_MAP=<id> --shot --scene=main_map，出图非黑）===
+  m33: 8297018B 多样字节=256 非黑✓
+  m34: 8297018B 多样字节=256 非黑✓
+  m35: 8297018B 多样字节=256 非黑✓
+  m36: 8297018B 多样字节=256 非黑✓
+  m37: 8297018B 多样字节=256 非黑✓
+  m38: 8297018B 多样字节=256 非黑✓
+  m39: 8297018B 多样字节=256 非黑✓
+  m40: 8297018B 多样字节=256 非黑✓
+
+=== 10. zero_rust（游戏产品 6 crate 0 diff）===
+  ✓ 0 diff（零 Rust）
+
+=== 数据级差异（两两唯一，数据面）===
+  8 张指纹唯一: True（8/8）
+   m33:c9a7591bf3 m34:6bc73113c4 m35:5d0f4a798c m36:127190c26d m37:75bc5104cd m38:bf0cc9c2a4 m39:af05407545 m40:94f7d12c65
+
+=== validate_data / index.json / 台账 ===
+validate_data: OK（4 表，strings 236 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+  index 包数: 40 m33~m40 在: True
+
+=== shot 帧非确定性归因（诚实记录）===
+  m34 首拍=341907a5 / 重拍=68e359ef；m36 首拍=68e359ef / 重拍=341907a5 —— 同图重拍互换 md5
+  ⇒ main_map --shot 帧级非确定（动画相位）；md5 聚类非地图驱动（S47.0 同款 6 组/10 图）
+  ⇒ S49.2 shot 判据 = 非黑（8/8 达标）+ 数据级差异（数据面 8/8 唯一）；md5 唯一非地图 shot 判据（UI 变体判据）

@@ -1,0 +1,37 @@
+=== S49.5 平台「构建」页 UI/UX 重设计（产物卡片化 + 状态条 + 日志尾 + 体检 chips）===
+日期: 2026-11-08 09:28
+
+=== ① 工具：build_artifacts.py list --json（结构化产物）===
+  artifacts 数: 3
+    apk: present=True size=186.3MB mtime=2026-11-08 05:13
+    wasm: present=True size=43.7MB mtime=2026-11-07 02:55
+    native: present=False size=NoneMB mtime=None
+
+=== ② 平台：/api/build 回 artifacts[]（端到端，新二进制）===
+  artifacts 数: 3
+    apk: present=True size=186.3MB mtime=2026-11-08 05:13
+    wasm: present=True size=43.7MB mtime=2026-11-07 02:55
+    native: present=False size=NoneMB mtime=None
+  running: False | last_exit: 0 | last_kind: apk
+  list 面派生（兼容）: 'apk      /disk/workspaces/treasureIsl/dist/TreasureIsl-0.2.0-aarch64.apk  186.3
+
+=== ③ 前端：新 ID 在位 + 旧 ID 残留清零 ===
+    #build-status HTML=1
+    #build-cards HTML=1
+    #build-log HTML=1
+    #bc-chips HTML=1
+    #bc-out HTML=1
+    旧 ID 残留（build-trigger/build-list/bc-msg）: 0（期望 0）
+    loadBuild/buildCheck 函数: 2（期望 2）
+
+=== ④ 平台编译 ===
+  ti-console 编译 OK
+
+=== ⑤ 零 Rust（游戏产品 6 crate）===
+  ✓ 0 diff
+
+=== ⑥ validate_data ===
+validate_data: OK（4 表，strings 236 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+
+=== ⑦ 工具台账登记（14 号 build_artifacts.py 行补 --json）===
+  14 号 --json 提及: 1（结构化输出 kind/artifact/size_mb/mtime/present/note 已补）

@@ -63,6 +63,9 @@
   .stat { background: var(--panel2); border-radius: 8px; padding: 12px; }
   .stat .num { font-size: 22px; font-weight: 700; }
   .stat .lbl { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  /* 构建页：构建中 spinner（状态条/胶囊） */
+  .bld-spin { display:inline-block; width:12px; height:12px; border:2px solid var(--warn); border-top-color:transparent; border-radius:50%; animation:bld-rot .8s linear infinite; vertical-align:middle; }
+  @keyframes bld-rot { to { transform: rotate(360deg); } }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
   th { color: var(--muted); font-weight: 600; font-size: 12px; }
@@ -471,19 +474,19 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
   <!-- 构建（S35.1，24 号 §4.1；/api/build 只读 + console_commands build_* 后台触发） -->
   <section id="page-build" hidden>
     <div class="card">
-      <h2>构建产物（APK / WASM / Native；24 号 §4.1 构建编排）</h2>
-      <div id="build-trigger" style="margin-bottom:10px"></div>
-      <div id="build-list"></div>
-      <div id="build-log" style="margin-top:12px"></div>
-      <div class="card" style="margin-top:12px">
+      <h2>构建编排（APK / WASM / Native；24 号 §4.1）</h2>
+      <div id="build-status" style="margin-bottom:14px"></div>
+      <div class="grid" id="build-cards" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))"></div>
+      <div id="build-log" style="margin-top:14px"></div>
+      <div class="card" style="margin-top:14px">
         <h2>只读体检（S32.9：/api/build?check=1）</h2>
         <button onclick="buildCheck()">体检（build_wasm.ps1 -Check + 0 游戏产物变更断言）</button>
-        <span style="color:var(--muted);font-size:12px;margin-left:8px" id="bc-msg"></span>
+        <div id="bc-chips" style="display:inline-flex;gap:8px;flex-wrap:wrap;margin-left:10px;vertical-align:middle"></div>
         <div id="bc-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:200px;overflow:auto;display:none"></div>
       </div>
       <div class="foot">
         触发 = <code>console_commands.json</code> 白名单 id（<code>build_apk</code> / <code>build_wasm</code> /
-        <code>build_native</code>，后台执行）；构建本体 = 既有脚本（<code>build_apk.sh</code> /
+        <code>build_native</code>，后台执行，单构建互斥 build.lock）；构建本体 = 既有脚本（<code>build_apk.sh</code> /
         <code>build_wasm.ps1</code> / cargo），LLM 不再手拼命令；构建后自动复检（APK = 24 号判据①②）。
         单一事实源 = <code>docs/process/24_apk_size_std.md</code> §4.1。
       </div>
@@ -1977,63 +1980,93 @@ async function loadBuild() {
   loaded.build = true;
   try {
     const d = await api('/api/build');
-    $('build-list').innerHTML = '<pre style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap">'
-      + esc(d.list || '（未构建）') + '</pre>';
+    const runningNow = d.running === true;
+    const runningKind = runningNow ? String(d.last_kind || '') : '';
+    // ── 状态条：空闲 / 构建中（kind+pid）/ 末次 exit 结果 ──
+    const st = $('build-status');
+    let stHtml = '';
+    if (runningNow) {
+      stHtml = '<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel2);border:1px solid var(--warn);border-radius:20px;color:var(--warn);font-size:13px;font-weight:600">'
+        + '<span class="bld-spin"></span> 构建中 ' + esc(runningKind) + '（pid ' + esc(d.running_pid || '?') + '）— 单构建互斥，其余按钮已禁</div>';
+    } else if (d.last_exit !== null && d.last_exit !== undefined) {
+      const ok = Number(d.last_exit) === 0;
+      stHtml = '<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel2);border:1px solid ' + (ok ? 'var(--ok)' : 'var(--err)') + ';border-radius:20px;color:' + (ok ? 'var(--ok)' : 'var(--err)') + ';font-size:13px;font-weight:600">'
+        + (ok ? '✓' : '✗') + ' 末次 ' + esc(d.last_kind || '?') + ' exit=' + esc(d.last_exit) + (ok ? ' = 成功' : ' = 硬失败（查 evidence/console/logs/build-*.log）') + '</div>';
+    } else {
+      stHtml = '<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel2);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:13px">● 空闲（未跑过构建）</div>';
+    }
+    st.innerHTML = stHtml;
+    // ── 产物卡片：3 张（APK/WASM/Native），状态胶囊 + 体积 + mtime + 触发 + 说明 ──
+    const cards = d.artifacts && d.artifacts.length ? d.artifacts
+      : [{kind:'apk',present:false,note:''},{kind:'wasm',present:false,note:''},{kind:'native',present:false,note:''}];
+    const meta = {
+      apk:  {icon:'📱', label:'构建 APK'},
+      wasm: {icon:'🌐', label:'构建 WASM'},
+      native:{icon:'🖥', label:'构建 Native'},
+    };
+    $('build-cards').innerHTML = cards.map(a => {
+      const kind = a.kind;
+      const m = meta[kind] || {icon:'▫', label:kind};
+      const isRunning = runningNow && runningKind === kind;
+      const pill = a.present
+        ? '<span style="padding:2px 10px;border-radius:12px;background:rgba(88,196,122,.14);color:var(--ok);border:1px solid var(--ok);font-size:11px;font-weight:600">● 已构建</span>'
+        : '<span style="padding:2px 10px;border-radius:12px;background:var(--panel2);color:var(--muted);border:1px solid var(--border);font-size:11px">○ 未构建</span>';
+      if (isRunning) pill = '<span style="padding:2px 10px;border-radius:12px;background:rgba(224,179,69,.14);color:var(--warn);border:1px solid var(--warn);font-size:11px;font-weight:600"><span class="bld-spin" style="margin-right:6px"></span>构建中</span>';
+      const size = a.present ? (a.size_mb != null ? a.size_mb + 'MB' : '—') : '—';
+      const mt = a.present ? (a.mtime || '—') : '—';
+      const btnLabel = isRunning ? '构建中…' : (runningNow ? '（另一构建在跑）' : '▶ 构建');
+      return '<div class="stat" style="padding:14px;display:flex;flex-direction:column;gap:8px">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center">'
+        +   '<span style="font-weight:700;font-size:14px">' + m.icon + ' ' + esc(m.label) + '</span>' + pill + '</div>'
+        + '<div style="display:flex;gap:14px;font-size:12px;color:var(--muted)">'
+        +   '<span>体积 <b style="color:var(--ink)">' + esc(size) + '</b></span>'
+        +   '<span>mtime <b style="color:var(--ink)">' + esc(mt) + '</b></span></div>'
+        + '<button data-bkind="' + esc(kind) + '" ' + (runningNow ? 'disabled' : '') + ' style="background:' + (runningNow ? 'var(--panel2)' : 'var(--accent)') + ';border:1px solid ' + (runningNow ? 'var(--border)' : 'var(--accent)') + ';color:' + (runningNow ? 'var(--muted)' : '#0d0f17') + ';border-radius:6px;padding:7px 14px;cursor:' + (runningNow ? 'not-allowed' : 'pointer') + ';font-weight:600;align-self:flex-start">' + esc(btnLabel) + '</button>'
+        + (a.note ? '<div style="font-size:11px;color:var(--muted)">' + esc(a.note) + '</div>' : '')
+        + '</div>';
+    }).join('');
+    // 卡片触发按钮
+    document.querySelectorAll('#build-cards button[data-bkind]').forEach(b => {
+      b.addEventListener('click', async () => {
+        const kind = b.dataset.bkind;
+        b.textContent = '构建中…';
+        try {
+          const r = await fetch('/api/build?run=' + encodeURIComponent(kind));
+          const j = await r.json();
+          b.textContent = j.busy ? '已在跑(pid ' + (j.pid || '?') + ')' : (j.started ? '已启动(pid ' + (j.pid || '?') + ')' : '启动失败');
+        } catch (e) { b.textContent = '启动失败'; }
+        setTimeout(() => { loaded.build = false; loadBuild(); }, 3000);
+      });
+    });
+    // ── 最近构建日志（尾部）──
     const lg = d.last_build_log;
     if (lg && lg.tail && lg.tail.length) {
-      $('build-log').innerHTML = '<h3>最近构建日志（' + esc(lg.path) + '）</h3><pre style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;max-height:200px;overflow:auto">'
+      $('build-log').innerHTML = '<h3 style="margin:0 0 8px;font-size:13px;color:var(--muted)">最近构建日志（' + esc(lg.path) + '）</h3><pre style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;max-height:220px;overflow:auto;margin:0">'
         + esc(lg.tail.join('\n')) + '</pre>';
     } else {
       $('build-log').innerHTML = '<div class="empty">尚无构建日志（触发构建后生成 evidence/console/logs/build-*.log）</div>';
     }
-    // S46.3：清空旧按钮（此前每次 loadBuild 追加 3 个 ⇒ 无限累积）；用 d.running 禁用 + 显示末次态。
-    $('build-trigger').innerHTML = '';
-    const runningNow = d.running === true;
-    const runningKind = runningNow ? (d.last_kind || '?') : '';
-    ['build_apk', 'build_wasm', 'build_native'].forEach(id => {
-      const b = document.createElement('button');
-      const kind = id.replace('build_', '');
-      const busy = runningNow && runningKind === kind;
-      b.textContent = (runningNow ? (runningKind === kind ? '构建中…(' + (d.running_pid || '?') + ')' : '（另一构建在跑）') : '') + id.replace('build_', '构建 ') + ' ▸';
-      b.style.cssText = 'background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer;margin:0 8px 8px 0' + (runningNow ? ';opacity:0.55' : '');
-      b.disabled = runningNow;
-      b.onclick = async () => {
-        b.textContent = '构建中…';
-        try {
-          const r = await fetch('/api/build?run=' + kind);
-          const j = await r.json();
-          if (j.busy) { b.textContent = '已在跑(pid ' + (j.pid || '?') + ')'; }
-          else { b.textContent = j.started ? '已启动(pid ' + (j.pid || '?') + ')' : '启动失败'; }
-        } catch (e) { b.textContent = '启动失败'; }
-        setTimeout(() => { loaded.build = false; loadBuild(); }, 3000);
-      };
-      $('build-trigger').appendChild(b);
-    });
-    // 末次构建完成态（exit_code 0=成功 / 非 0=硬失败 / null=未跑过）
-    const lx = d.last_exit;
-    if (lx !== null && lx !== undefined) {
-      const done = document.createElement('div');
-      done.style.cssText = 'margin-top:6px;font-size:12px;color:' + (Number(lx) === 0 ? 'var(--ok,#4caf50)' : 'var(--err,#e57373)');
-      done.textContent = '末次构建（' + (d.last_kind || '?') + '）：exit=' + lx + (Number(lx) === 0 ? ' = 成功' : ' = 硬失败（查 evidence/console/logs/build-*.log）');
-      $('build-trigger').appendChild(done);
-    }
   } catch (e) {
-    $('build-list').innerHTML = '<div class="empty">/api/build 不可用：' + esc(String(e)) + '</div>';
+    $('build-cards').innerHTML = '<div class="empty">/api/build 不可用：' + esc(String(e)) + '</div>';
   }
 }
 
 /* ---- S32.9 构建只读体检：GET /api/build?check=1（-Check + 0 游戏产物变更断言） ---- */
 async function buildCheck() {
-  $('bc-msg').textContent = '…';
   try {
     const r = await api('/api/build?check=1');
-    $('bc-msg').textContent =
-      `ok=${r.ok} check_exit=${r.check_exit} frozen_diff_empty=${r.frozen_diff_empty}（${(r.frozen_diff || []).length} 差异）`;
+    const chips = [];
+    const chip = (ok, label) => '<span style="padding:3px 12px;border-radius:12px;background:' + (ok ? 'rgba(88,196,122,.14)' : 'rgba(224,96,96,.14)') + ';color:' + (ok ? 'var(--ok)' : 'var(--err)') + ';border:1px solid ' + (ok ? 'var(--ok)' : 'var(--err)') + ';font-size:12px;font-weight:600">' + (ok ? '✓ ' : '✗ ') + esc(label) + '</span>';
+    chips.push(chip(r.ok === true, 'ok=' + r.ok));
+    chips.push(chip(r.check_exit === 0, 'check_exit=' + r.check_exit));
+    chips.push(chip(r.frozen_diff_empty === true, '冻结路径 0 差异（' + ((r.frozen_diff || []).length) + '）'));
+    $('bc-chips').innerHTML = chips.join('');
     const o = $('bc-out');
     o.style.display = 'block';
     o.textContent = r.check_output || '(空输出)';
   } catch (e) {
-    $('bc-msg').textContent = '失败：' + e;
+    $('bc-chips').innerHTML = '<span style="color:var(--err);font-size:12px">失败：' + esc(String(e)) + '</span>';
+    $('bc-out').style.display = 'none';
   }
 }
 

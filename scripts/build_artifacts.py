@@ -201,15 +201,39 @@ def cmd_run(kind: str, log_name: str | None = None) -> int:
     return cmd_post(kind)
 
 
-def cmd_list() -> int:
+def cmd_list(json_out: bool = False) -> int:
+    """列出已构建产物（体积/mtime/判据状态）。
+
+    - `--json`：结构化输出（`kind`/`artifact`/`size_mb`/`mtime`/`present`/`note`），供平台
+      `/api/build` 消费渲染卡片（24 号 §4.1；纯文本面保留供工具面）。
+    """
+    items = []
     for kind in ("apk", "wasm", "native"):
         cfg = KINDS[kind]
         art = _resolve_artifact(kind)
-        if art and art.is_file():
+        present = bool(art and art.is_file())
+        size_mb = None
+        mtime = None
+        if present:
             st = art.stat()
-            print(f"{kind:8} {art}  {st.st_size/1048576:.1f}MB  mtime={time.strftime('%m-%d %H:%M', time.localtime(st.st_mtime))}")
+            size_mb = round(st.st_size / 1048576, 1)
+            mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime))
+        if json_out:
+            items.append({
+                "kind": kind,
+                "artifact": str(art) if present else "",
+                "present": present,
+                "size_mb": size_mb,
+                "mtime": mtime,
+                "note": cfg["note"],
+            })
         else:
-            print(f"{kind:8} 未构建")
+            if present:
+                print(f"{kind:8} {art}  {st.st_size/1048576:.1f}MB  mtime={time.strftime('%m-%d %H:%M', time.localtime(st.st_mtime))}")
+            else:
+                print(f"{kind:8} 未构建")
+    if json_out:
+        print(json.dumps({"artifacts": items}, ensure_ascii=False, indent=1))
     return 0
 
 
@@ -237,6 +261,7 @@ def cmd_check() -> int:
 
 
 def main() -> int:
+    want_json = "--json" in sys.argv[1:]
     args = [a for a in sys.argv[1:] if a != "--json"]
     if not args:
         print(__doc__.splitlines()[0])
@@ -249,7 +274,7 @@ def main() -> int:
     if op == "run":
         return cmd_run(kind or "")
     if op == "list":
-        return cmd_list()
+        return cmd_list(want_json)
     if op == "check":
         return cmd_check()
     print(f"未知操作: {op}", file=sys.stderr)
