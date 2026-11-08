@@ -691,3 +691,6 @@ S39.0 抓出：`ui_layer=bevy_ui` 且带 `when="selected"|"normal"` 的原语 `i
 无 `when` 的原语不要求——saveload 等列表场景 `item` 缺省）兜底防回归。
 教训：数据契约（`item`/`pick_index`/`when` 三字段一致性）须机器校验，勿只靠视觉抽查。
 详见 `code.md`。
+
+### EXP-179 代码：async 回调重置顶层 const loaded 触发 Assignment to constant ⇒ 构建页整块 catch 成「/api/build 不可用」
+S49.2/S49.5 构建页 loadBuild 触发按钮的 async click handler 在 setTimeout(() => { loaded.build = false; loadBuild(); }, 3000) 里重置顶层 const loaded（const 声明只能声明时赋值）⇒ 浏览器抛 TypeError: Assignment to constant variable。该异常发生在 loadBuild 的 try 块内的 setTimeout 注册之后（回调 3 秒后跑在 try 外），但用户看到的「/api/build 不可用：TypeError」来自点击触发按钮后的 3 秒刷新：回调里 loaded.build=false + loadBuild() 重入时，若 API 正常应重建，但实测用户报告整块 catch ⇒ 直接修 = 删除回调对 const 的赋值，改 setTimeout(loadBuild, 3000)（loadBuild 自身在 showPage 的 !loaded.build 门禁下已幂等；触发成功路径不再需要重置标志）。教训：web/index.html 顶层状态用 const 对象 + 只读引用；要重置字段用 let 或整体换引用，绝不在异步回调里给顶层 const 变量本身重新赋值（const loaded = {} 后 loaded.build = ... 合法，但 loaded = ... 非法——检查点 = 写目标是不是对象字段而非变量本身）。

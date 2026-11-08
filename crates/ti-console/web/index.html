@@ -2055,7 +2055,10 @@ async function loadBuild() {
           const j = await r.json();
           b.textContent = j.busy ? '已在跑(pid ' + (j.pid || '?') + ')' : (j.started ? '已启动(pid ' + (j.pid || '?') + ')' : '启动失败');
         } catch (e) { b.textContent = '启动失败'; }
-        setTimeout(() => { loaded.build = false; loadBuild(); }, 3000);
+        // 3 秒后回到空闲态重建卡片（触发 = click handler 同步段；loadBuild 的 catch 兜底 API 故障，
+        // 不再在 async 回调里重置顶层 `const loaded`（浏览器报 `Assignment to constant variable` ⇒
+        // 整块 loadBuild catch 掉 = 页面显示「/api/build 不可用」，EXP 固化）
+        setTimeout(loadBuild, 3000);
       });
     });
     // ── 最近构建日志（尾部）──

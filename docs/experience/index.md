@@ -34,7 +34,7 @@
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 20 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 35 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 44 |
-  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 56 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093） | 57 |
 
 ## 条目索引
 
@@ -218,6 +218,7 @@
 | EXP-177 | build | | 主题背景大图（2K PNG）出图 preload 慢，--shot timeout 60 不够、115 才够；全量 gate 900s 超时（wasm build 523s+test 346s） 正文见 `build.md` |
 | EXP-178 | process | | 内容运营换 UI 改 scenes.json index.landscape 默认（主题构图）→ landscape_drawlist 测试断言旧 S39 构图 FAIL；改测试=破零 Rust ⇒ 主题包保留 + scenes.json 默认恢复 S39 正文见 `process.md` |
 | EXP-176 | process | | 平台 UI 向导加 theme 步（写 scenes.json 构图）后，layout 步仍断言 0 scenes.json diff → 冲突；修复 theme 非空 layout 改规范形验证 正文见 `process.md` |
+| EXP-179 | code | | web/index.html loadBuild 触发按钮 setTimeout 回调写顶层 const loaded.build=false ⇒ 浏览器报 Assignment to constant，整块被 catch 掉显 /api/build 不可用；改 setTimeout(loadBuild,3000)（showPage 判 loaded 门） 正文见 `code.md` |
 
 ## 条目格式（写新条时照抄）
 
