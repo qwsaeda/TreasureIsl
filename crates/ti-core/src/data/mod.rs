@@ -211,6 +211,8 @@ pub struct CombatCfg {
     pub defend_reduction_pct: u32,
     /// 战斗道具表（S27.7，`docs/business/combat.md` §道具表）。
     pub items: Vec<CombatItemDef>,
+    /// 战斗动效参数（S49.4 `balance.combat.anim`，CS-1 参数单源；缺省 = 代码回退）。
+    pub anim: CombatAnimCfg,
 }
 
 impl CombatCfg {
@@ -224,6 +226,75 @@ impl CombatCfg {
     #[must_use]
     pub fn item(&self, id: &str) -> Option<&CombatItemDef> {
         self.items.iter().find(|i| i.id == id)
+    }
+
+    /// 按 id 查道具动效（未命中 → `None`；S49.4 `balance.combat.anim.items[]`）。
+    #[must_use]
+    pub fn item_anim(&self, id: &str) -> Option<&CombatItemAnimCfg> {
+        self.anim.items.iter().find(|i| i.id == id)
+    }
+}
+
+/// 战斗动效参数（`balance.combat.anim`，S49.4）。
+///
+/// 渲染层读本段（CS-1 参数单源），0 硬编码魔法数字；JSON 缺段 = 本缺省回退。
+#[derive(Debug, Clone, PartialEq)]
+pub struct CombatAnimCfg {
+    /// 4 阶段时长 ms：列阵 / 冲锋 / 必损 / 横幅。
+    pub stage_ms: [u32; 4],
+    /// 角色呼吸 bob。
+    pub bob: BobCfg,
+    /// hero 前冲。
+    pub dash: BobCfg,
+    /// 受击红闪。
+    pub hit: HitCfg,
+    /// 道具动效表（`id` → 参数）。
+    pub items: Vec<CombatItemAnimCfg>,
+}
+
+/// 正弦式位移参数（`period_ms` 周期 + `amp_px` 振幅）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BobCfg {
+    /// 周期 ms。
+    pub period_ms: u32,
+    /// 振幅 px。
+    pub amp_px: i32,
+}
+
+/// 受击红闪参数（`period_ms` 周期 + `flash_ms` 红闪时长）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HitCfg {
+    /// 红闪周期 ms。
+    pub period_ms: u32,
+    /// 红闪持续 ms（每周期内前 `flash_ms` 为红闪）。
+    pub flash_ms: u32,
+}
+
+/// 道具动效参数（`id` + `dur_ms` + `color` 主色）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CombatItemAnimCfg {
+    /// 道具 id（`keg` / `medkit` / `rum` / `smoke`）。
+    pub id: String,
+    /// 动效时长 ms。
+    pub dur_ms: u32,
+    /// 动效主色（RGB565 字面量字符串，如 `"0xF020"`）。
+    pub color: String,
+}
+
+impl Default for CombatAnimCfg {
+    fn default() -> Self {
+        Self {
+            stage_ms: [1200, 1800, 1200, 600],
+            bob: BobCfg { period_ms: 900, amp_px: 10 },
+            dash: BobCfg { period_ms: 700, amp_px: 8 },
+            hit: HitCfg { period_ms: 240, flash_ms: 60 },
+            items: vec![
+                CombatItemAnimCfg { id: "keg".into(), dur_ms: 900, color: "0xF020".into() },
+                CombatItemAnimCfg { id: "medkit".into(), dur_ms: 800, color: "0x0F80".into() },
+                CombatItemAnimCfg { id: "rum".into(), dur_ms: 1000, color: "0xF692".into() },
+                CombatItemAnimCfg { id: "smoke".into(), dur_ms: 400, color: "0x0842".into() },
+            ],
+        }
     }
 }
 
@@ -930,6 +1001,31 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
                     Ok(CombatItemDef { id: i.id, name_key: i.name_key, carry: i.carry, effect })
                 })
                 .collect::<Result<Vec<_>, LoadError>>()?,
+            anim: {
+                // S49.4：`balance.combat.anim` → `CombatAnimCfg`（缺省 = default 回退）。
+                let a = &raw.combat.anim;
+                let stage = [
+                    a.stage_ms.first().copied().unwrap_or(1200),
+                    a.stage_ms.get(1).copied().unwrap_or(1800),
+                    a.stage_ms.get(2).copied().unwrap_or(1200),
+                    a.stage_ms.get(3).copied().unwrap_or(600),
+                ];
+                CombatAnimCfg {
+                    stage_ms: stage,
+                    bob: BobCfg { period_ms: a.bob.period.max(1), amp_px: a.bob.amp },
+                    dash: BobCfg { period_ms: a.dash.period.max(1), amp_px: a.dash.amp },
+                    hit: HitCfg { period_ms: a.hit.period.max(1), flash_ms: a.hit.flash_ms },
+                    items: a
+                        .items
+                        .iter()
+                        .map(|i| CombatItemAnimCfg {
+                            id: i.id.clone(),
+                            dur_ms: i.dur_ms.max(1),
+                            color: i.color.clone(),
+                        })
+                        .collect(),
+                }
+            },
         },
         trade,
         build,

@@ -38,6 +38,7 @@ fn test_cfg() -> CombatCfg {
         boss_tiers: vec![BossTier { tier: 0, hp: 50_000, atk: 10 }],
         defend_reduction_pct: 50,
         items: Vec::new(),
+        anim: ti_core::data::CombatAnimCfg::default(),
     }
 }
 

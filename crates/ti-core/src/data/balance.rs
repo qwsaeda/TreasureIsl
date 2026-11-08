@@ -143,6 +143,99 @@ pub(crate) struct RawCombat {
     /// 战斗道具表（S27.7；缺省空表 = 无道具可用）。
     #[serde(default)]
     pub(crate) items: Vec<RawCombatItem>,
+    /// 战斗动效参数（S49.4 `balance.combat.anim`；缺省 = 代码回退，见 `CombatAnimCfg::default`）。
+    #[serde(default)]
+    pub(crate) anim: RawCombatAnim,
+}
+
+/// 战斗动效参数 serde 形状（`balance.combat.anim`，S49.4）。
+///
+/// 渲染层读本段（CS-1 参数单源），0 硬编码魔法数字；缺省 = `CombatAnimCfg::default`。
+#[derive(Deserialize)]
+pub(crate) struct RawCombatAnim {
+    /// 4 阶段时长 ms：列阵 / 冲锋 / 必损 / 横幅。
+    #[serde(default = "default_anim_stage_ms")]
+    pub(crate) stage_ms: Vec<u32>,
+    /// 角色呼吸 bob（`{period, amp}`）。
+    #[serde(default)]
+    pub(crate) bob: RawBobCfg,
+    /// hero 前冲（`{period, amp}`）。
+    #[serde(default)]
+    pub(crate) dash: RawBobCfg,
+    /// 受击红闪（`{period, flash_ms}`）。
+    #[serde(default)]
+    pub(crate) hit: RawHitCfg,
+    /// 道具动效表（`{id, dur_ms, color}`）。
+    #[serde(default)]
+    pub(crate) items: Vec<RawItemAnimCfg>,
+}
+
+impl Default for RawCombatAnim {
+    fn default() -> Self {
+        Self {
+            stage_ms: default_anim_stage_ms(),
+            bob: RawBobCfg::default(),
+            dash: RawBobCfg::default(),
+            hit: RawHitCfg::default(),
+            items: Vec::new(),
+        }
+    }
+}
+
+/// 正弦式位移参数（`{period_ms, amp_px}`）。
+#[derive(Deserialize)]
+pub(crate) struct RawBobCfg {
+    #[serde(default = "default_anim_period")]
+    pub(crate) period: u32,
+    #[serde(default = "default_anim_amp")]
+    pub(crate) amp: i32,
+}
+
+impl Default for RawBobCfg {
+    fn default() -> Self {
+        Self { period: default_anim_period(), amp: default_anim_amp() }
+    }
+}
+
+/// 受击红闪参数（`{period_ms, flash_ms}`）。
+#[derive(Deserialize)]
+pub(crate) struct RawHitCfg {
+    #[serde(default = "default_anim_period")]
+    pub(crate) period: u32,
+    #[serde(default = "default_anim_flash")]
+    pub(crate) flash_ms: u32,
+}
+
+impl Default for RawHitCfg {
+    fn default() -> Self {
+        Self { period: default_anim_period(), flash_ms: default_anim_flash() }
+    }
+}
+
+/// 道具动效参数（`{id, dur_ms, color}`）。
+#[derive(Deserialize)]
+pub(crate) struct RawItemAnimCfg {
+    pub(crate) id: String,
+    #[serde(default = "default_anim_period")]
+    pub(crate) dur_ms: u32,
+    #[serde(default = "default_anim_color")]
+    pub(crate) color: String,
+}
+
+fn default_anim_stage_ms() -> Vec<u32> {
+    vec![1200, 1800, 1200, 600]
+}
+fn default_anim_period() -> u32 {
+    900
+}
+fn default_anim_amp() -> i32 {
+    10
+}
+fn default_anim_flash() -> u32 {
+    60
+}
+fn default_anim_color() -> String {
+    "0xF692".to_owned()
 }
 
 /// `defend_reduction_pct` 缺省值（与 `docs/business/combat.md` §战斗动作一致）。

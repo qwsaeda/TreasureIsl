@@ -1,0 +1,95 @@
+# S49.4 玩法补强 · vs 战斗动效 — 验收证据
+
+任务：攻击/受击/道具 4 帧动画 + 演出时间轴（对齐 12 号 VS v2 规格 §2）
+状态：**verified**（2026-11-08）
+改动面：表现层 + 业务数据（`balance.combat.anim`）
+
+---
+
+## 1. A 纪律：设计稿先行 + 用户确认留痕
+
+- 用户 2026-11-08 三轮反馈：①「设计是垃圾是屎，参考设计规范和竞品出图」②「血条设计不行，
+  对战不要对角，同一水平，前景应该按格子场景，不是单一的」。
+- v6 设计稿（格子场景 `bg_siege` 按格类分层 + 水平对位 foot_y=1000 + 血条重做单条百分比绿黄红）
+  出 4 帧效果图 → 用户过目 → **确认落码（推荐）**（消息留痕，本会话 question 记录）。
+- 落码后才实现：格子场景底 + 水平对位 + 血条重做 + 完整时间轴 + 道具/受击动效。
+
+## 2. 动效资产 + 数据化（CS-1 单源）
+
+- `balance.combat.anim`（`assets/data/balance.json`）新增段：
+  - `stage_ms: [1200, 1800, 1200, 600]`（列阵 / 冲锋 / 必损 / 横幅）
+  - `bob: {period: 900, amp: 10}`、`dash: {period: 700, amp: 8}`、`hit: {period: 240, flash_ms: 60}`
+  - `items[]`: keg `0xF020` / medkit `0x0F80` / rum `0xF692` / smoke `0x3186`（`dur_ms` + `color`）
+- `ti-core` 数据层：`RawCombatAnim`/`RawBobCfg`/`RawHitCfg`/`RawItemAnimCfg` + 公开
+  `CombatAnimCfg`/`BobCfg`/`HitCfg`/`CombatItemAnimCfg` + `CombatCfg::item_anim()` 查询
+  + `CombatAnimCfg::default` 缺省回退 + `balance()` 转换。
+- 渲染层读本段（0 硬编码魔法数字）：道具主色从 `anim.items[].color` 经 `hex16()` 解析（CS-1）。
+
+## 3. 时间轴接线（4 阶段）
+
+- `render_v2_elem` 竖屏**正式默认**走 `render_v4_hud`（v6 风格）；横屏保持 S38 独立路径。
+- `anim_ms`：`TI_VS_ANIM_T0` = 绝对定格（`--shot` 不累计，修预载 tick 致 t 巨大）；
+  live 无 T0 = 帧率无关累计。
+- `v4_timeline()`：阶段分派（`stage_ms` 和）+ 战后兵力推算（`balance.manpower.loss_pct`）
+  + 血条插值（阶段 2 线性，整数千分比防 f32 精度红线）。
+- 阶段 0 列阵（血条战前满值）→ 1 冲锋（敌受击红闪 + 道具窗口）→ 2 必损（双方受击 + 血条插值）
+  → 3 横幅（结果帧：胜/败 + 战报框 + 倒地角色）。
+
+## 4. 道具 4 帧 + 受击红闪
+
+- `v6_item_effects`：`keg` 中央爆裂（放射火花 + 白热核心）/ `medkit` 头顶绿脉冲 /
+  `rum` 琥珀刀光沿冲锋线 / `smoke` 灰雾细横条纹；`TI_VS_ITEM` 定格演示某道具。
+- 受击红闪：`v4_char` hit 参数（`t % hit.period < flash_ms` → RGB565 红 tint + 后仰 4px）；
+  阶段 1 敌受击、阶段 2 双方受击。
+
+## 5. 出图证明（全部唯一非黑）
+
+```
+stage0  (T0=500,  clash)      md5=9a7561c423  列阵：格子场景 + 水平对位 + 血条 100%
+stage1  (T0=2000, clash)      md5=1d137ba0a6  冲锋：敌受击窗口 + 道具
+stage2  (T0=3500, clash)      md5=34a9f89081  必损：血条插值 93% + keg 爆裂
+stage3  (T0=4500, result_win) md5=6a77b70fc2  横幅：胜利 + 战报 + 敌倒地
+item_keg    md5=360cce2157  keg 爆裂（中央红火花 + 白热）
+item_medkit md5=524c5d9494  medkit 头顶绿光
+item_rum    md5=2121b1f2a3  rum 琥珀刀光
+item_smoke  md5=7a6b5e4b82  smoke 灰雾条纹
+hit         (T0=2400) md5=cc7debca91  受击红闪（enemy 红 tint，对比 nohit md5=021f4afa4a）
+```
+
+效果图：`evidence/bevy_native_vs_v6_stage{0,1,2,3}.png`、`evidence/bevy_native_vs_v6_item_{keg,medkit,rum,smoke}.png`、
+`evidence/bevy_native_vs_v6_hit.png`、汇总 `evidence/ui_concept/vs_v6_engine_sheet.png`。
+
+## 6. 交互契约
+
+- `vs.rs on_hit`：`pick_key` 2=跳过（`skip_anim_to_banner` 快进横幅）/ 3=确认（`GameInput::Back`
+  回主地图）/ 4=重打（`reset_anim` 归 0 重播）；无命中 = 原 swipe/点按语义。
+- `scenes.json` vs 场景加 3 个 pick 原语（z=0 < min_z=4 空态不渲染只命中）。
+
+## 7. 测试 + 门禁
+
+```
+cargo fmt --check                      PASS
+cargo clippy -D warnings               PASS（ti-app/ti-core 0 新警告）
+cargo test --workspace                 PASS（含 landscape_drawlist 7 项，竖屏断言更新 v6）
+cargo build (native)                   PASS
+cargo build+clippy (wasm)              PASS
+check_hardcode                         PASS（0 hits）
+check_code_standards (CS-1~6)          PASS（0 超基线）
+doccheck                               PASS（168 docs, 0 error）
+doccheck2                              PASS（41 audit-codified checks, 0 error）
+validate_data                          PASS（scenes.json indent=1 + asset registry + balance）
+audit_code                             PASS（render_v4_hud 46 行 < 140 上限）
+bevy-cpu-parity                        PASS（GPU/CPU 像素对照，仅游戏世界）
+wasm-browser-e2e                       PASS
+browser-playtest                       PASS
+playtest-loop                          PASS（16/16 steps）
+gate                                   PASS（34 items, **0 failure**）
+```
+
+回归确认：`landscape_drawlist` 竖屏断言更新（v6 默认：bg 满屏 0,0,1080,1920 + 顶面板 40,50,400,200）；
+横屏 S38 路径保持独立。ti-core 测试构造 `CombatCfg` 补 `anim: CombatAnimCfg::default()`。
+
+## 8. 用户视觉确认
+
+- 用户已确认 v6 4 帧（格子场景 + 水平对位 + 血条重做）方向后落码；落码后 4 帧 + 4 道具 + 受击
+  全出图（§5），gate 全绿。

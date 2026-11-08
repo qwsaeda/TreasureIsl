@@ -3817,6 +3817,60 @@
     "item": -1,
     "text_key": "scene.vs.hint",
     "params": {}
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 80,
+     "y": 1740,
+     "w": 280,
+     "h": 110
+    },
+    "color": "",
+    "z": 0,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/chart_wide.png",
+     "pick_key": 2,
+     "pick_index": 0
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 400,
+     "y": 1740,
+     "w": 280,
+     "h": 110
+    },
+    "color": "",
+    "z": 0,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/chart_wide.png",
+     "pick_key": 3,
+     "pick_index": 1
+    }
+   },
+   {
+    "kind": "image",
+    "rect": {
+     "x": 720,
+     "y": 1740,
+     "w": 280,
+     "h": 110
+    },
+    "color": "",
+    "z": 0,
+    "when": "",
+    "item": -1,
+    "params": {
+     "asset": "assets/ui/chart_wide.png",
+     "pick_key": 4,
+     "pick_index": 2
+    }
    }
   ],
   "landscape": {

@@ -215,6 +215,7 @@ fn exhaust_fixture_cfg_cross_validation() {
                             .collect(),
                         defend_reduction_pct: 50,
                         items: Vec::new(),
+                        anim: ti_core::data::CombatAnimCfg::default(),
                     };
                     let player = Unit { hp: fx.player_hp, atk: fx.player_atk };
                     let mut a = BattleSession::new_with_cfg(cfg.clone(), seed, player, tier);

@@ -237,6 +237,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             boss_tiers: vec![BossTier { tier: 0, hp: 10, atk: 1 }],
             defend_reduction_pct: 50,
             items: Vec::new(),
+            anim: ti_core::data::CombatAnimCfg::default(),
         },
         trade: ti_core::data::TradeCfg {
             markup: 1.0,

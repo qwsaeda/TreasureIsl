@@ -300,21 +300,25 @@ fn vs_landscape_world_layer() {
         "vs 横屏 defender HP 框应在 (976,40,880,110)，got {rects:?}"
     );
 
-    // 竖屏对照（0 行为变化）：bg (44,44,992,1832) + 攻方底左 (30,1730,440,130)
+    // 竖屏对照（S49.4 v6 转默认：格子场景满屏 + 顶面板，非 v2 羊皮框 44,44）
     let mut app = game(false);
     ti_app::forward_nav::navigate(&mut app, "vs");
     app.render();
     let imgs = image_rects(&app);
     assert!(
         imgs.iter().any(|(a, x, y, w, h)| {
-            a.contains("vs_v2/bg_") && *x == 44 && *y == 44 && *w == 992 && *h == 1832
+            (a.contains("vs_v2/bg_") || a.contains("vs_v2/scene_"))
+                && *x == 0
+                && *y == 0
+                && *w == 1080
+                && *h == 1920
         }),
-        "vs 竖屏 bg 应在羊皮框内 (44,44,992,1832)（0 行为变化），got {imgs:?}"
+        "vs 竖屏 v6 格子场景 bg 应满屏 (0,0,1080,1920)，got {imgs:?}"
     );
     let rects = rect_rects(&app);
     assert!(
-        rects.iter().any(|(x, y, w, h)| *x == 30 && *y == 1730 && *w == 440 && *h == 130),
-        "vs 竖屏 attacker HP 框应在 (30,1730,440,130)，got {rects:?}"
+        rects.iter().any(|(x, y, w, h)| *x == 40 && *y == 50 && *w == 400 && *h == 200),
+        "vs 竖屏 v6 顶面板应在 (40,50,400,200)，got {rects:?}"
     );
 }
 

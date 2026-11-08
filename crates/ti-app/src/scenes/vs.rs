@@ -45,10 +45,23 @@ impl Scene for VsScene {
     }
 
     /// S29.2：点任意处（`key=0`）/ 上·左·右滑 = 攻击一回合；下滑 = 退出战斗。
+    /// S49.4 交互契约（§2.6.1）：`pick_key` 2=跳过（快进横幅）/ 3=确认（结束回主地图）/
+    /// 4=重打（重置演出）；无命中 = 现有 swipe/点按语义。
     fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
-        match hit.swipe {
-            2 => host.advance(GameInput::Back),
-            _ => host.advance(GameInput::Attack),
+        match hit.key {
+            2 => {
+                crate::scenes::vs_anim_proto::skip_anim_to_banner();
+                false
+            }
+            3 => host.advance(GameInput::Back),
+            4 => {
+                crate::scenes::vs_anim_proto::reset_anim();
+                false
+            }
+            _ => match hit.swipe {
+                2 => host.advance(GameInput::Back),
+                _ => host.advance(GameInput::Attack),
+            },
         }
     }
 

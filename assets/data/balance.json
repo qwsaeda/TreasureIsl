@@ -158,7 +158,49 @@
      "kind": "stagger"
     }
    }
-  ]
+  ],
+  "anim": {
+   "stage_ms": [
+    1200,
+    1800,
+    1200,
+    600
+   ],
+   "bob": {
+    "period": 900,
+    "amp": 10
+   },
+   "dash": {
+    "period": 700,
+    "amp": 8
+   },
+   "hit": {
+    "period": 240,
+    "flash_ms": 60
+   },
+   "items": [
+    {
+     "id": "keg",
+     "dur_ms": 900,
+     "color": "0xF020"
+    },
+    {
+     "id": "medkit",
+     "dur_ms": 800,
+     "color": "0x0F80"
+    },
+    {
+     "id": "rum",
+     "dur_ms": 1000,
+     "color": "0xF692"
+    },
+    {
+     "id": "smoke",
+     "dur_ms": 400,
+     "color": "0x3186"
+    }
+   ]
+  }
  },
  "manpower": {
   "weapon_coef": 2,

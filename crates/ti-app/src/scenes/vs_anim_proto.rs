@@ -24,6 +24,7 @@ use crate::i18n;
 use crate::scenes::SceneHost;
 use crate::scenes::chrome;
 use crate::scenes::chrome::{COLOR_BRASS, COLOR_DANGER, COLOR_PLAYER, COLOR_TEXT_ON_PARCH};
+use ti_core::data::balance;
 use ti_core::data::map_pack::{FsPackReader, PackReader, VsTheme, check_pack_manifest};
 
 /// 格类战斗类型环境变量（S34.5：`TI_VS_GRID_CLASS=attack|raid|boss|encounter`）。
@@ -128,8 +129,28 @@ pub(crate) fn anim_ms(host: &dyn SceneHost) -> u32 {
     let t0 = *ANIM_T0.get_or_init(|| {
         std::env::var("TI_VS_ANIM_T0").ok().and_then(|v| v.parse::<u32>().ok()).unwrap_or(0)
     });
+    // S49.4：`TI_VS_ANIM_T0` 为**绝对定格**（`--shot` 定格任一帧判据；不累计，避免预载
+    // 3000+ tick 使累计主导致 t 巨大 → 血条误显战后）。live 无 T0 = 帧率无关累计。
+    if t0 > 0 {
+        return t0;
+    }
     let _ = ANIM_ACC.fetch_add(host.frame_delta_ms(), Ordering::Relaxed);
-    ANIM_ACC.load(Ordering::Relaxed).saturating_add(t0)
+    ANIM_ACC.load(Ordering::Relaxed)
+}
+
+/// S49.4 交互契约：重打（`pick_key` = 4）= 重置演出时钟（`anim_ms` 归 0，列阵重播）。
+pub(crate) fn reset_anim() {
+    use std::sync::atomic::Ordering;
+    ANIM_ACC.store(0, Ordering::Relaxed);
+}
+
+/// S49.4 交互契约：跳过（`pick_key` = 2）= 快进演出时钟到横幅（`stage_ms` 和，直接结果帧）。
+pub(crate) fn skip_anim_to_banner() {
+    use std::sync::atomic::Ordering;
+    if let Ok(b) = balance() {
+        let sum: u32 = b.combat.anim.stage_ms.iter().sum();
+        ANIM_ACC.store(sum, Ordering::Relaxed);
+    }
 }
 
 /// 三角波（`0..amp`，`period_ms` 周期）：proto 逐帧 `bob` / 冲锋脉动。
@@ -144,6 +165,21 @@ pub(crate) fn tri(ms: u32, period_ms: u32, amp: i32) -> i32 {
 
 /// 渲染入口（`vs.rs` 在 `selected_phase()` = `Some` 时调用）。
 pub fn render(host: &mut dyn SceneHost, phase: &str) {
+    // S34.7 VS v4 纯 HUD（`TI_VS_V4=1`）：概念帧路径也走 v4（`render_v2_elem` 内 v4 分支），
+    // 否则 `TI_VS_ANIM_PROTO=<phase>` 概念帧绕过 v4（用户 2026-11-08 反馈：v4 效果图出不来）。
+    if v4_layout() {
+        render_v2_elem(
+            host,
+            phase,
+            DEMO_ATK_CREW,
+            DEMO_ATK_ARMS,
+            DEMO_DEF_CREW,
+            DEMO_DEF_ARMS,
+            false,
+            selected_grid_class(),
+        );
+        return;
+    }
     // 2026-10-31 用户否决旧稿 → 元素合成重设计版：`TI_VS_V2_ELEM=1` ⇒ AI 元素 blit
     // （敌我分列 + 顶/底兵力条 + 结果横幅，与 `scripts/compose_vs_v2.py` 同构图）。
     if std::env::var(V2_ELEM_ENV).is_ok() {
@@ -198,18 +234,19 @@ pub(crate) fn render_v2_elem(
     // S34.6 D6（格类分层 spec §2.4）：格类由调用方传（`grid_class`，vs.rs 从 battle 推导：
     // 副本=raid / BOSS=boss），非环境变量默认 encounter —— 修复「BOSS 战显示甲板非炮台」。
     let class = grid_class;
-    // S34.7 VS v4 纯 HUD 拳皇对角线（用户 2026-11-03 拍板方案 A + 保留羊皮）：
-    // 弃烘焙场景帧（插画海报根因），动态构图 = 羊皮底 + 对角双面板 + 指令区 + 角色对角。
-    if v4_layout() {
+    // S38 方案 A：横屏 = 走横屏构图（`vs_anim_proto_landscape`，1920×1080，双 HP 条顶 +
+    // 角色对角 + 指令区）；竖屏 = 原式（0 行为变化）。用户 2026-11-04 已过目 vs_landscape 概念图。
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    // S49.4：v6 格子场景·水平对位·血条重做（用户 2026-11-08 三修正确认）→ **竖屏正式默认**
+    // 走 `render_v4_hud`（v6 风格，格子场景底 + 同一水平线 + 单条百分比绿黄红血条 + 时间轴）。
+    // 横屏保持 S38 独立路径（`vs_anim_proto_landscape`）；`TI_VS_V4=1` 强制走 v4（调试）。
+    if !landscape || v4_layout() {
         crate::scenes::vs_anim_v4::render_v4_hud(
             host, phase, atk_crew, atk_arms, def_crew, def_arms, resolved, class,
         );
         return;
     }
-    // S38 方案 A：横屏 = 走横屏构图（`vs_anim_proto_landscape`，1920×1080，双 HP 条顶 +
-    // 角色对角 + 指令区）；竖屏 = 原式（0 行为变化）。用户 2026-11-04 已过目 vs_landscape 概念图。
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
     if landscape {
         crate::scenes::vs_anim_proto_landscape::render_v2_elem_landscape(
             host, phase, atk_crew, atk_arms, def_crew, def_arms, resolved, class,
@@ -320,7 +357,7 @@ pub(crate) fn render_v2_elem(
             // S34.6 D4：战报兵力 = 运行态（调用方传入），draw_result_scene 内按 loss_pct 推战后。
             // S34.6 D5：`resolved` = 已结算 → 传入兵力即战后（`after_crew/arms` 真实值），不再推。
             draw_result_scene(
-                host, phase, t, c4, c5, c2, atk_crew, atk_arms, def_crew, def_arms, resolved,
+                host, phase, t, c4, c5, c2, atk_crew, atk_arms, def_crew, def_arms, resolved, true,
             );
         }
         _ => {}
@@ -331,7 +368,10 @@ pub(crate) fn render_v2_elem(
 /// result 帧（胜/败）：角色 + 书法横幅 + 战报框（6 行双侧 16 参数，U20 拆分）。
 /// 三段不重叠：横幅顶部（250）+ 角色中下（600 起）+ 战报框底部（1920-500）。
 ///
-/// 参数 = 渲染上下文（host/phase/t/3 色）+ 运行态兵力 4 值 + 已结算旗；拆参数包反而
+/// `with_chars=false`（v4 纯 HUD 用）：**不画角色**（v4 已自绘对角 hero/enemy，
+/// S49.4 修复 v4 result 角色重复——原 v4 调本函数又画 v2 角色 ⇒ 双角色）。
+///
+/// 参数 = 渲染上下文（host/phase/t/3 色）+ 运行态兵力 4 值 + 已结算旗 + 角色开关；拆参数包反而
 /// 遮蔽「谁是攻方/守方」，故整体豁免 clippy 7 参上限（S34.6 D4 数据绑定）。
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn draw_result_scene(
@@ -346,22 +386,28 @@ pub(crate) fn draw_result_scene(
     def_crew: u32,
     def_arms: u32,
     resolved: bool,
+    with_chars: bool,
 ) {
     let won = phase == "result_win";
     // 胜方 hero（win）居中偏下；败方（lose）enemy 居中 + hero 倒下左下。
-    if won {
-        let dy = tri(ms, 1000, 8);
-        host.blit_image(chrome::V2_HERO, 540 - 200, 600 + dy, 400, 560);
-    } else {
-        let sx = tri(ms, 300, 6);
-        // A2 修复（飞轮审计）：lose 倒地 hero 原 (60,1360,340,220) 与战报框 (240,1420,600,420)
-        // 重叠 160×160；移至左下角框外 (20,1330,200,130)，x 右缘 220 < 框左 240，不重叠。
-        host.blit_image(chrome::V2_HERO, 20, 1330, 200, 130);
-        host.blit_image(chrome::V2_ENEMY, 540 - 200 + sx, 580, 400, 560);
+    if with_chars {
+        if won {
+            let dy = tri(ms, 1000, 8);
+            host.blit_image(chrome::V2_HERO, 540 - 200, 600 + dy, 400, 560);
+        } else {
+            let sx = tri(ms, 300, 6);
+            // A2 修复（飞轮审计）：lose 倒地 hero 原 (60,1360,340,220) 与战报框 (240,1420,600,420)
+            // 重叠 160×160；移至左下角框外 (20,1330,200,130)，x 右缘 220 < 框左 240，不重叠。
+            host.blit_image(chrome::V2_HERO, 20, 1330, 200, 130);
+            host.blit_image(chrome::V2_ENEMY, 540 - 200 + sx, 580, 400, 560);
+        }
     }
     // 书法横幅（上中偏上，不遮顶部框与角色头）
-    let banner = if won { chrome::V2_BANNER_WIN } else { chrome::V2_BANNER_LOSE };
-    host.blit_image(banner, 540 - 250, 250, 500, 300);
+    // S49.4：`with_chars=false`（v4）时 v4 已自绘横幅（v4 位 760），此处跳横幅段防双横幅。
+    if with_chars {
+        let banner = if won { chrome::V2_BANNER_WIN } else { chrome::V2_BANNER_LOSE };
+        host.blit_image(banner, 540 - 250, 250, 500, 300);
+    }
     // 战报框（底部中，加高容纳 6 行双侧战报）
     host.fill_rect(240, 1920 - 500, 1080 - 480, 420, c4);
     frame_v2(host, 240, 1920 - 500, 1080 - 480, 420, c5);
@@ -390,11 +436,12 @@ pub(crate) fn draw_result_scene(
     let def_after_armed = def_after_crew.min(def_after_arms);
     let def_after_unarmed = def_after_crew - def_after_armed;
     // A7 修复（飞轮审计）：战报第 5 行显示实际损失（我方/敌方 人/器），与数值一致。
-    let atk_arm_loss = atk_arms - atk_after_arms;
-    let def_arm_loss = def_arms - def_after_arms;
-    // S34.6 D4：损失人手（u32 运算需绑定再引用，E0308）。
-    let atk_crew_loss = atk_after_crew - atk_crew;
-    let def_crew_loss = def_after_crew - def_crew;
+    // S49.4 修复下溢（原 `after - before` 为负向 → panic）：损失 = before - after（after<before）。
+    let atk_arm_loss = atk_arms.saturating_sub(atk_after_arms);
+    let def_arm_loss = def_arms.saturating_sub(def_after_arms);
+    // S34.6 D4：损失人手（u32 运算需绑定再引用，E0308）。S49.4：before - after（saturating 防负）。
+    let atk_crew_loss = atk_crew.saturating_sub(atk_after_crew);
+    let def_crew_loss = def_crew.saturating_sub(def_after_crew);
     let args: [&dyn std::fmt::Display; 20] = [
         &atk_crew,
         &atk_arms,
