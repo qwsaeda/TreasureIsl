@@ -127,6 +127,7 @@
 | [`plan-s32-platform.md`](plan-s32-platform.md) | **S32 开发管理平台 WBS**（TI Dev Console：P0 只读骨架 → P1 执行与审计 → P2 辅助开发 → P3 部署可选；每任务 = 实现 → 自验 → 双审计 → 台账 verified；定案 = `process/22_dev_platform.md`） |
 | [`plan-s44-content-ops-platform.md`](plan-s44-content-ops-platform.md) | **S44 内容运营平台化 WBS**（TI Dev Console 固定流程向导：S44.0 定案 → S44.1 工具与写面 → S44.2 地图工作台 → S44.3 UI 工作台 → S44.4 打包/分发 → S44.5 固化收口；定案 = `process/30_content_ops_platform.md`） |
 | [`plan-s45-test-ingress.md`](plan-s45-test-ingress.md) | **S45 测试接入标准固化 WBS**（S45.0 定案 → S45.1 落地：validate_data 强化 + 平台测试页展示标准 + 新增测试端到端 + 零平台代码断言；定案 = `process/31_test_ingress_standard.md`；S44.5 后独立） |
+| [`plan-s49.md`](plan-s49.md) | **S49 内容运营续集 + 平台主题管理 + 玩法补强 WBS**（四方向 = 主题续集竖屏主题化 / 新地图 m33~m40 / 平台主题管理页 / 战斗动效，都做；用户 2026-11-08 拍板；子任务见 WBS 表） |
 
 ### 工具与产出物索引
 

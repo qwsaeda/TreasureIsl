@@ -1,0 +1,32 @@
+=== S49.0 立项定案（四方向 WBS，用户 2026-11-08 拍板「都做」）===
+日期: 2026-11-08 05:22
+
+=== ① docs/plan-s49.md 要素 ===
+  文档存在: 1
+  章节数: 4
+  WBS 子任务行: 5
+  执行顺序段: 1
+  关键约束段: 1
+
+=== ② 登记 2 处 ===
+  docs/README.md: 1 处
+  AGENTS.md 路由表: 1 处
+
+=== ③ 台账 S49 条目 ===
+id: S49.0, title: "S49 立项定案（WBS 四方向：主题续集竖屏 + 新地图 m33~m40 + 
+id: S49.1, title: "主题续集·竖屏主题化（compose 加 portrait_primitives
+id: S49.2, title: "新地图 m33~m40（8 张，map 向导 add→import→syncma
+id: S49.3, title: "平台主题管理页（/api/themes list/apply/verify + 
+id: S49.4, title: "玩法补强·vs 战斗动效（攻击/受击/道具 4 帧动画 + 演出时间轴，对齐 1
+  状态: status: in_progress
+
+=== ④ 台账校验 ===
+  evidence: ok
+
+=== ⑤ doccheck / doccheck2 / validate_data ===
+doccheck: 168 docs, 38 facts, 174 experiences, 313 task refs, 4 assertions, 0 error(s)
+doccheck2: 0 error(s) across 41 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/wasm-viewport-init/engine-no-color-literal/landscape-no-portrait-hardcode/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention)
+validate_data: OK（4 表，strings 236 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+
+=== ⑥ 零 Rust（纯文档立项）===
+  crates/ 0 diff ✓
