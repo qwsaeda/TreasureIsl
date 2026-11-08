@@ -428,3 +428,6 @@ SignV2 + keystore 缺失自动 `keytool` 生成（原私钥不可恢复，新 ke
 **验证**：`bash scripts/build_apk.sh aarch64`（API26 clang 重编 .so）[0/5]~[5/5] 全过 +
 `dist/TreasureIsl-0.2.0-aarch64.apk` 产出 + `apksigner verify` v1+v2 有效 + `apk_audit --apk` 判据①② PASS
 + `/api/build` running/last_exit 如实 + `?run` 忙时 `busy:true` + 非法 run 400 + list apk 已构建。
+
+### EXP-177 构建：出图 preload 慢 + 全量 gate 超时
+S48.0 逐套出图（--shot --scene=index --viewport=1920x1080）：主题背景 2K PNG（3-5MB）+ 标题 + 双主角，preload 资源加载慢，timeout 60（refix.sh 首版）出图 preload 未完成（hist Loading 51）即退；改 timeout 115 出图成功。全量 gate（34 项 full）超 900s（cargo test 346s + wasm build 523s）→ gate exit=124 超时杀。教训：大图资产出图须长 timeout（≥115s）；gate full 用 ≥1500s timeout（含 wasm build 慢项）。

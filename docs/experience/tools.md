@@ -189,3 +189,6 @@ ti-console 集成测试 4 组全过；前端页面 200 含 `ts-run-btn`。
 
 **预判**：新增 `///`/`//!` 注释时标识符直接带反引号；改代码后先 clippy（含测试）再提交，
 不在 build 后直接 commit。
+
+### EXP-174 工具：ui_manifest.json 被 json.dump(encoding=) 截断损坏
+S48.0 登记 index_title_gold 时误用 json.dump(m, open(p,'w',encoding='utf-8'), encoding='utf-8')（Python2 风格）：open('w') 先截断文件，json.dump 报 unexpected keyword 'encoding' TypeError，文件留空。validate_data 报 353 条 disk→registry 漏登记（因 manifest 空）。修复：git checkout 恢复 ui_manifest.json（S47.0 342 资产）+ 重新登记 S48.0 资产。教训：Python3 json.dump 无 encoding 参数，须 with open(p,'w',encoding='utf-8') as f: json.dump(obj, f, ensure_ascii=False, indent=1)；凡写 JSON 一律此式（防截断损坏）。

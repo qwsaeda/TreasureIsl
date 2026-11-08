@@ -351,6 +351,25 @@
    "enabled_by_default": false
   },
   {
+   "id": "ui_theme",
+   "runner": "python3",
+   "script": "scripts/ui_theme.py",
+   "args": [
+    "apply"
+   ],
+   "param": {
+    "name": "theme",
+    "kind": "theme_id",
+    "desc": "主题包 id（assets/themes/<id>/，S48.0 全主题创新）"
+   },
+   "writes": [
+    "assets/data/scenes.json",
+    "assets/ui/",
+    "assets/ui_manifest.json"
+   ],
+   "enabled_by_default": false
+  },
+  {
    "id": "map_shot",
    "runner": "self",
    "script": "treasure-bevy-native --shot",

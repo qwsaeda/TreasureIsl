@@ -164,11 +164,12 @@ fn run_step_rejects_bad_suffix_param() {
 
 // ---- F2（B 审计 r1 P1）：zero_rust 步判据须含视觉签收留痕 ----
 
-/// 构造一个 `current_step=5`（前 5 步已过）的 state JSON，写入 `state_path`。
+/// 构造一个 `current_step=6`（前 6 步已过）的 state JSON，写入 `state_path`。
 fn seed_state_at_step6(repo: &std::path::Path, id: &str, signoff: &str) {
     let steps: Vec<serde_json::Value> = [
         "design",
         "variant",
+        "theme",
         "layout",
         "build",
         "shot",
@@ -179,10 +180,10 @@ fn seed_state_at_step6(repo: &std::path::Path, id: &str, signoff: &str) {
     .map(|(i, name)| {
         serde_json::json!({
             "name": name,
-            "done": i < 5,
-            "passed": i < 5,
+            "done": i < 6,
+            "passed": i < 6,
             "cmd": "",
-            "exit_code": if i < 5 { serde_json::Value::from(0) } else { serde_json::Value::Null },
+            "exit_code": if i < 6 { serde_json::Value::from(0) } else { serde_json::Value::Null },
             "criterion": "",
             "ts": serde_json::Value::Null,
         })
@@ -198,8 +199,9 @@ fn seed_state_at_step6(repo: &std::path::Path, id: &str, signoff: &str) {
         "rmult": 0.88,
         "gmult": 1.00,
         "bmult": 1.20,
+        "theme": "",
         "signoff": signoff,
-        "current_step": 5,
+        "current_step": 6,
         "halted": false,
         "steps": steps,
     });

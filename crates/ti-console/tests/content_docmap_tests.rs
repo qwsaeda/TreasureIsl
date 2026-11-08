@@ -34,7 +34,7 @@ fn mapping_report_ok_and_counts() {
     let report = mapping_report(&repo_root());
     assert_eq!(report["ok"], serde_json::json!(true), "报告应 ok");
     assert_eq!(report["map"].as_array().unwrap().len(), 10, "地图向导 10 步");
-    assert_eq!(report["ui"].as_array().unwrap().len(), 6, "UI 向导 6 步");
+    assert_eq!(report["ui"].as_array().unwrap().len(), 7, "UI 向导 7 步（S48.0 插 theme）");
     assert_eq!(report["problems"].as_array().unwrap().len(), 0, "报告 0 问题");
 }
 
@@ -57,6 +57,7 @@ fn ui_anchor_mapping_merges_and_splits() {
             .unwrap()
     };
     assert_eq!(rows_of("variant"), vec![2], "§3.2 → variant");
+    assert_eq!(rows_of("theme"), vec![2], "§3.2 → theme（S48.0 全主题创新）");
     assert_eq!(rows_of("layout"), vec![2], "§3.2 → layout");
     assert_eq!(rows_of("zero_rust"), vec![5, 6], "§3.5+§3.6 → zero_rust");
     assert_eq!(rows_of("design"), vec![1]);

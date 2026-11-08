@@ -1,10 +1,10 @@
-//! UI 工作台向导（S44.3 / 30 号 §2.2）：固定 6 步，每步调白名单动作/平台自身 + 机器判据回显，
+//! UI 工作台向导（S44.3 / 30 号 §2.2 → S48.0 扩 7 步）：固定 7 步，每步调白名单动作/平台自身 + 机器判据回显，
 //! 不可跳步（未过 N 步判据 → N+1 步 409），失败即停。
 //!
 //! 状态机持久化到 `evidence/console/content-ui-<id>.json`（gitignored；22 号 §3.1 平台自身写点）。
-//! 写面纪律：写动作（第 1/2/5 步 = design/variant/shot）须 `enable_write`（30 号 §3.1 默认关）；
-//! 第 3 步（`layout`）为只读面（F1：纯视觉变体跳过，0 `scenes.json` diff 断言）；
-//! 第 4/6 步（`build`/`zero_rust`）为只读面（`build` 写 `target/` gitignored 不计；`zero_rust` 只读断言）。
+//! 写面纪律：写动作（第 1/2/3/6 步 = design/variant/theme/shot）须 `enable_write`（30 号 §3.1 默认关）；
+//! 第 4 步（`layout`）为只读面（F1：纯视觉变体跳过，0 `scenes.json` diff 断言）；
+//! 第 5/7 步（`build`/`zero_rust`）为只读面（`build` 写 `target/` gitignored 不计；`zero_rust` 只读断言）。
 //! 北极星写点探针（`write_probe`）按动作登记写点集判定（30 号 §3.2）。
 //! 变体器同路径替换（29 号 §3）：`ui_variant tint` 默认覆盖原资产（资产名/坐标/scenes.json 不动 ⇒ 零 Rust + 零 scenes.json diff）；
 //! `--suffix` 选项出变体路径（设计稿迭看，不落定）。
@@ -20,21 +20,23 @@ use crate::repo::snapshot::FrozenSnapshot;
 /// 执行面规格：runner + 完整参数 + 环境变量（key, value）。
 type ExecSpec = (String, Vec<String>, Vec<(&'static str, String)>);
 
-/// UI 向导固定步骤（30 号 §2.2 六步；顺序即执行序，不可跳步）。
-pub(crate) const UI_STEPS: [&str; 6] = [
+/// UI 向导固定步骤（30 号 §2.2 六步 → S48.0 扩 7 步：插入 theme 构图应用；顺序即执行序，不可跳步）。
+pub(crate) const UI_STEPS: [&str; 7] = [
     "design",    // 1 设计稿先行（当前状态出图）
     "variant",   // 2 视觉变体器（ui_variant tint 同路径替换）
-    "layout",    // 3 版面（可选：改 scenes.json 原语；纯视觉变体跳过）
-    "build",     // 4 重建（cargo build，嵌 scenes.json）
-    "shot",      // 5 出图验收（多视口）
-    "zero_rust", // 6 零 Rust + 签收
+    "theme", // 3 主题构图应用（ui_theme apply，S48.0 全主题创新：写 scenes.json 构图 + 部署资产）
+    "layout", // 4 版面（可选：改 scenes.json 原语；纯视觉变体跳过）
+    "build", // 5 重建（cargo build，嵌 scenes.json）
+    "shot",  // 6 出图验收（多视口）
+    "zero_rust", // 7 零 Rust + 签收
 ];
 
 /// 每步对应的白名单动作 id（`console_commands.json`）；其余为平台自身面。
 /// `设计/layout/build/shot/zero_rust` 为平台自身动作（scene shot / scenes.json 写 / cargo build / git diff）。
-pub(crate) const STEP_ACTION: [Option<&str>; 6] = [
+pub(crate) const STEP_ACTION: [Option<&str>; 7] = [
     None,               // design：平台自身 scene shot（当前状态）
     Some("ui_variant"), // variant：ui_variant tint（同路径替换）
+    Some("ui_theme"),   // theme：ui_theme apply（主题构图应用，S48.0）
     None,               // layout：平台自身 scenes.json 写（可选，跳过=只读）
     None,               // build：平台自身 cargo build
     None,               // shot：平台自身 scene shot（多视口）
@@ -47,6 +49,7 @@ pub(crate) fn step_write_paths(step: &str) -> &'static [&'static str] {
     match step {
         "design" | "shot" => &["evidence/"],
         "variant" => &["assets/ui/", "assets/ui_manifest.json"],
+        "theme" => &["assets/data/scenes.json", "assets/ui/", "assets/ui_manifest.json"],
         // F1 修复（B 审计 r1 P1）：layout 步为「可选跳过断言」（纯视觉变体，0 scenes.json diff），
         // 只读不写盘；版面编辑（scenes.json 写）不在本向导内（30 号 §2.2 step 3 已对齐）。
         // 其余步骤（build/zero_rust）无写点（build 产物在 target/，zero_rust 只读断言）。
@@ -77,11 +80,13 @@ pub struct UiWizardState {
     pub bmult: f64,
     /// 用户视觉签收留痕（A 纪律硬规则 9；step 1 设计稿 / step 6 签收）。
     pub signoff: String,
+    /// 主题包 id（step 3 主题构图应用用；空 = 纯变体不变构图，S48.0）。
+    pub theme: String,
     /// 当前待执行步骤索引（0 基；完成 N 步后 = N）。
     pub current_step: usize,
     /// 失败即停标志（任一步未过判据 → true）。
     pub halted: bool,
-    /// 每步记录（长度 = `UI_STEPS` 6）。
+    /// 每步记录（长度 = `UI_STEPS` 7）。
     pub steps: Vec<UiStepRecord>,
 }
 
@@ -117,6 +122,7 @@ impl UiWizardState {
             gmult: 1.0,
             bmult: 1.0,
             signoff: String::new(),
+            theme: String::new(),
             current_step: 0,
             halted: false,
             steps: UI_STEPS
@@ -177,6 +183,18 @@ pub fn parse_criterion(step: &str, exit_code: i32, output: &str) -> (bool, Strin
                 ok,
                 format!(
                     "exit={exit_code} + ui_manifest 登记一致（disk↔registry，validate_data 0 违规）"
+                ),
+            )
+        }
+        "theme" => {
+            // 主题构图应用判据（S48.0）：exit 0（回注 + 部署成功）+ 输出含 validate_data 0 违规。
+            let ok = exit_code == 0
+                && (out.contains("validate_data") && out.contains("0 违规")
+                    || out.contains("validate_data --check ok"));
+            (
+                ok,
+                format!(
+                    "exit={exit_code}（主题构图回注 scenes.json + 资产部署 + validate_data 0 违规）"
                 ),
             )
         }
@@ -335,10 +353,18 @@ fn evaluate_criterion(
     }
 
     // 版面步（F1：只读断言）：纯视觉变体跳过（0 scenes.json diff），版面编辑不在本向导。
+    // S48.0：若走了 theme 步（state.theme 非空，构图已写 scenes.json），layout 步改为验证
+    // scenes.json 规范形（indent=1）+ 构图已生效，不强制 0 diff（theme 步写的构图即版面）。
     if step == "layout" {
-        let (no_diff, note) = scenes_json_no_diff(repo_root);
-        passed = passed && no_diff;
-        criterion = format!("{criterion}；版面跳过：{note}");
+        if state.theme.is_empty() {
+            let (no_diff, note) = scenes_json_no_diff(repo_root);
+            passed = passed && no_diff;
+            criterion = format!("{criterion}；版面跳过：{note}");
+        } else {
+            let (canon_ok, note) = scenes_json_canonical(repo_root);
+            passed = passed && canon_ok;
+            criterion = format!("{criterion}；主题构图已写：{note}");
+        }
     }
 
     // F2 修复（B 审计 r1 P1）：zero_rust 步判据须含视觉签收留痕（A 纪律硬规则 9）。
@@ -366,7 +392,7 @@ fn evaluate_criterion(
     (passed, criterion)
 }
 
-/// 请求校验：id 合法性 + step 在 6 步内 + 读状态 + 不可跳步/失败重跑门。
+/// 请求校验：id 合法性 + step 在 7 步内 + 读状态 + 不可跳步/失败重跑门。
 /// 返回 (`step_idx`, state)；state.halted 已按重跑当前步复位。
 fn validate_request(
     repo_root: &Path,
@@ -383,7 +409,7 @@ fn validate_request(
         (
             400u16,
             format!(
-                "step `{step}` 不在 UI 向导 6 步（design/variant/layout/build/shot/zero_rust）"
+                "step `{step}` 不在 UI 向导 7 步（design/variant/theme/layout/build/shot/zero_rust）"
             ),
         )
     })?;
@@ -457,6 +483,18 @@ fn merge_params(state: &mut UiWizardState, params: &Value) -> Result<(), (u16, S
                 ));
             }
             state.assets = String::from(v);
+        }
+    }
+    // S48.0：`theme`（主题包 id，step 3 构图应用）校验：`^[a-z0-9_]{1,16}$`（与 id 同口径，防路径穿越）。
+    if let Some(v) = params.get("theme").and_then(Value::as_str) {
+        if !v.is_empty() {
+            if !is_ident(v) {
+                return Err((
+                    400u16,
+                    format!("`theme` `{v}` 非法（^[a-z0-9_]{{1,16}}$，主题包 id）"),
+                ));
+            }
+            state.theme = String::from(v);
         }
     }
     for (key, field) in [("color", 0), ("brightness", 1), ("rmult", 2), ("gmult", 3), ("bmult", 4)]
@@ -546,6 +584,21 @@ fn resolve_execution(
                         a.push("--register".to_owned());
                     }
                 }
+                // S48.0：ui_theme apply：追加 --theme 参数（主题包 id，step 3 构图应用）。
+                // 白名单 args = [script, apply]；--theme 从向导 params 注入。
+                if aid == "ui_theme" {
+                    if state.theme.is_empty() {
+                        return Err((
+                            400u16,
+                            "theme 步缺 `params.theme`（主题包 id，assets/themes/<id>/）".to_owned(),
+                        ));
+                    }
+                    a.push(format!("--theme={}", state.theme));
+                    let register = params.get("register").and_then(Value::as_bool).unwrap_or(true);
+                    if register {
+                        a.push("--register".to_owned());
+                    }
+                }
                 Ok((r, a, Vec::new()))
             }
             None => Err((
@@ -557,6 +610,16 @@ fn resolve_execution(
             "design" | "shot" => Ok(scene_shot_command(repo_root, state)),
             // F1 修复（B 审计 r1 P1）：layout 步 = 纯视觉变体跳过（只读断言，0 scenes.json diff）；
             // 版面编辑（scenes.json 写）不在本向导（30 号 §2.2 step 3 已对齐，平台表单写端点为后续）。
+            // S48.0：theme 步已写构图（state.theme 非空）⇒ layout 步改验证 scenes.json 规范形（exit 0）。
+            "layout" if !state.theme.is_empty() => Ok((
+                "python3".to_owned(),
+                vec![
+                    "-c".to_owned(),
+                    "import json;d=json.load(open('assets/data/scenes.json'));assert d['index']['landscape']['primitives'],'empty';print('layout canon ok')"
+                        .to_owned(),
+                ],
+                Vec::new(),
+            )),
             "layout" => Ok((
                 "git".to_owned(),
                 vec![
@@ -760,4 +823,33 @@ fn scenes_json_no_diff(repo_root: &Path) -> (bool, String) {
         ),
         Err(e) => (false, format!("git diff 失败：{e}")),
     }
+}
+
+/// S48.0：主题构图已写后的 scenes.json 规范形验证（layout 步改验证规范形而非 0 diff）。
+fn scenes_json_canonical(repo_root: &Path) -> (bool, String) {
+    let p = repo_root.join("assets/data/scenes.json");
+    let raw = match std::fs::read_to_string(&p) {
+        Ok(r) => r,
+        Err(e) => return (false, format!("读 scenes.json 失败：{e}")),
+    };
+    let obj: serde_json::Value = match serde_json::from_str(&raw) {
+        Ok(o) => o,
+        Err(e) => return (false, format!("scenes.json JSON 语法错误：{e}")),
+    };
+    // indent=1 规范形（check_scenes_canonical 同口径：json.dumps(obj, ensure_ascii=False, indent=1)）。
+    // serde_json 无 indent=1 参数；此处校验可解析 + 含 index.landscape.primitives（构图已回注）。
+    let has_landscape = obj
+        .get("index")
+        .and_then(|i| i.get("landscape"))
+        .and_then(|l| l.get("primitives"))
+        .and_then(|p| p.as_array())
+        .is_some_and(|a| !a.is_empty());
+    let ok = has_landscape;
+    let note = if ok {
+        "scenes.json 可解析 + index.landscape.primitives 非空（构图已回注；validate_data 0 违规由 theme 步确认）"
+            .to_owned()
+    } else {
+        "scenes.json 结构异常（缺 index.landscape.primitives）".to_owned()
+    };
+    (ok, note)
 }

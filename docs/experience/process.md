@@ -582,3 +582,12 @@ ti-app→ti-core / treasure-native→treasure-bevy-native。
 报红/回写），正例全绿不能证明覆盖面（EXP-171 ③ 同类）；② 工具的「声称点清单」应与其**权威基准
 来源**（doccheck2.rs expected / gate.ps1 实测）一起维护，别把基准值当外部常量人肉同步；
 ③ 门禁项数变更后的自检 = 跑 `python3 scripts/doc_numbers.py`（应 0 漂移）+ `cargo run -q -p ti-tools --bin doccheck2`（应 0 error，gate-items 项兜底）。
+
+### EXP-175 流程：换 UI 构图丢菜单命中（pick_key）
+S48.0 主题构图（compose.json landscape_primitives）菜单牌只写 kind/rect/z/params.asset，未带 params.pick_key/pick_index；S39 默认横屏菜单牌有 params.pick_key=1+pick_index=0..5（on_hit key=1 命中已接线）。主题构图丢命中 → 换 UI 后横屏菜单不可点击。修复：10 套 compose.json 菜单牌补 params.pick_key=1+pick_index=0..5 + 命中几何验证（6 菜单中心命中 (1,0)~(1,5)）。教训：换 UI 构图必须保留命中数据（pick_key/pick_index），compose 菜单牌须与 S39 同结构带 params.pick_key。
+
+### EXP-176 流程：向导 layout 步与 theme 步 diff 断言冲突
+S48.0 平台 UI 向导插 theme 步（ui_theme 写 scenes.json 构图）后，layout 步原判据=0 scenes.json diff（纯变体跳过）与 theme 步写构图冲突（theme 已写 → diff 非 0 → layout FAIL）。修复：resolve_execution/evaluate_criterion 区分 state.theme 非空（theme 已写构图）⇒ layout 改 python 校验 scenes.json 规范形（exit 0），theme 空保持 git diff 0。教训：向导加「写构图」的步时，后续断言 0 diff 的步须区分语义（theme 非空用规范形验证，非强制 0 diff）。
+
+### EXP-178 流程：零 Rust vs 测试断言冲突（换 UI 改 scenes.json 默认）
+S48.0 主题构图落 scenes.json index.landscape.primitives（最后 t10）→ 既有 landscape_drawlist 测试（断言 S39 羊皮藏宝图 index_bg_map_h 满屏 + 木牌 @1446）FAIL；改测试（ti-app 测试文件）= 破零 Rust（crates/ 全目录 0 diff）。修复：scenes.json index.landscape 恢复 S39 默认（landscape_drawlist 7 passed + 零 Rust 保持），10 套主题构图保留在 assets/themes/<tid>/compose.json（可 apply 切换，运行时默认 S39 不变）。教训：内容运营换 UI 若改 scenes.json 默认，须评估既有测试断言（版面/命中测试锁定默认构图）；正确 = 主题包保留 + scenes.json 默认不变（测试过 + 零 Rust），换主题=apply 主题包。

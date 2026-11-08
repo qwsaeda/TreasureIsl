@@ -48,22 +48,42 @@
   第 2/4/7/10 步只读（import/verify/check/zero_rust，无门无探针）。
 - **第 9 步出图**：平台后台调 `TI_MAP=<id> treasure-bevy-native --shot --scene=main_map`（白名单 `map_shot`，写 `evidence/` 出图，gitignored 预览；写点 `evidence/` ⇒ 属写步须 `enable_write`）。
 
-### 2.2 UI 工作台（固定 6 步，映射 29 号 §3 1:1）
+### 2.2 UI 工作台（固定 7 步，映射 29 号 §3 1:1；S48.0 插 `theme` 步扩 6→7）
 
 | # | 步骤 | 平台动作 | 机器判据 |
 |---|---|---|---|
-| 1 | 设计稿先行 | `--shot --scene=<id> --viewport=<方向>`（当前状态出图） | 出图非黑；**用户视觉确认留痕**（平台记录：时间戳 + 用户消息，A 纪律硬规则 9；step1=留痕**记录**，step6=强制判据） |
+| 1 | 设计稿先行 | `--shot --scene=<id> --viewport=<方向>`（当前状态出图） | 出图非黑；**用户视觉确认留痕**（平台记录：时间戳 + 用户消息，A 纪律硬规则 9；step1=留痕**记录**，step7=强制判据） |
 | 2 | 视觉变体器 | `ui_variant`（`scripts/ui_variant.py`，**新正式工具**，固化 S42.0 临时脚本：选资产组 + 着色参数 → 同路径替换/新路径 + 可选 ui_manifest 注册） | 资产生成 + `ui_manifest.json` 登记一致（disk↔registry 双向同步 validate_data 0 违规） |
-| 3 | 版面（可选） | 平台表单改 `scenes.json` 原语（asset/坐标/配色）→ 写 scenes.json | **本向导版面步 = 只读断言**（0 `scenes.json` diff；版面编辑不在本向导，写端点为后续平台表单，B 审计 r1-F1 已降格对齐） |
-| 4 | 重建 | `cargo build`（嵌 scenes.json，29 号 §5 坑位：include_str! 编译期内嵌） | build 成功（scenes.json 生效） |
-| 5 | 出图验收 | `--shot --scene=<id> --viewport=<方向>`（多视口） | 出图非黑 + bg 采样期望（变体色调验证） |
-| 6 | 零 Rust + 签收 | 平台跑 `git diff crates/` + 视觉签收留痕 | **空** + 向导 `state.signoff` 含「用户视觉验收/过目/确认/签收/拍板/视觉验收」（B 审计 r1-F2 已机器化：无 signoff = 判败；r3 对齐 doccheck2 第 35 项 6 词） |
+| 3 | 主题构图应用 | `ui_theme`（`scripts/ui_theme.py`，**S48.0 新正式工具**：主题包 `assets/themes/<tid>/compose.json` 的 `landscape_primitives` + `assets` → 回注 scenes.json `index.landscape.primitives` + 部署资产 + register） | exit 0 + 输出含「validate_data」+「0 违规」（构图回注 + 资产部署 + 双向同步） |
+| 4 | 版面（可选） | 平台表单改 `scenes.json` 原语（asset/坐标/配色）→ 写 scenes.json | **本向导版面步 = 只读断言**：`state.theme` 空 = 0 `scenes.json` diff（纯变体跳过）；`state.theme` 非空 = scenes.json 规范形验证（theme 步已写构图，S48.0） |
+| 5 | 重建 | `cargo build`（嵌 scenes.json，29 号 §5 坑位：include_str! 编译期内嵌） | build 成功（scenes.json 生效） |
+| 6 | 出图验收 | `--shot --scene=<id> --viewport=<方向>`（多视口） | 出图非黑 + bg 采样期望（变体色调验证） |
+| 7 | 零 Rust + 签收 | 平台跑 `git diff crates/` + 视觉签收留痕 | **空** + 向导 `state.signoff` 含「用户视觉验收/过目/确认/签收/拍板/视觉验收」（B 审计 r1-F2 已机器化：无 signoff = 判败；r3 对齐 doccheck2 第 35 项 6 词） |
 
 - **第 2 步变体器**：固化 S42.0 的 PIL `tint_cool`（Color/Brightness 增强 + R×/G×/B× 冷移）为 `scripts/ui_variant.py`
   （登记 14 号 §3.2 + 工具契约：幂等 + `--check` 只读 + 非 0 退出 + 3 处登记）。
 - **同路径替换**（29 号 §3 换 UI 核心判据）：变体器默认**覆盖原路径**（资产名/坐标/scenes.json/测试全不动 ⇒ 零 Rust + 零 scenes.json diff，S42.0 实证）；
   `--suffix` 选项出变体路径（供设计稿迭看，不落定）。
-- **第 3 步版面可选**：纯视觉变体（着色）时跳过（0 `scenes.json` diff，本向导版面步 = 只读断言）；改版面/新元素需平台表单写端点为后续能力（B 审计 r1-F1 已降格，非本向导范围）。
+- **第 3 步主题构图应用（S48.0 全主题创新）**：`ui_theme` 主题包 `assets/themes/<tid>/compose.json` = `{id, name, scene, landscape_primitives, assets}`；
+  `landscape_primitives` = **完整** `index.landscape.primitives` 数组（构图数据重排，引用资产）；`assets` = `{<name>: <source_path>}`（背景/标题素材来源）。
+  apply = 读原对象→定点回注 `index.landscape.primitives`→`json.dumps(indent=1)` 规范形（0 churn 其余键）+ 部署资产到 `assets/ui/` + register + validate_data。
+- **第 4 步版面只读断言**：`state.theme` 非空（已走 theme 步）⇒ 版面步改验证 scenes.json 规范形（python 校验 exit 0），不再强制 0 diff（theme 步写的构图即版面）。
+
+#### 2.2.1 S48.0 全主题创新规范（10 套首页主题包）
+
+用户拍板「全主题创新」（非色调变体）：**每套 = 一个完全不同主题场景 + 构图数据重排 + 菜单排布不同 + 标题主题化**，零 Rust（游戏产品 6 crate 0 diff）。落地规范：
+
+| 元素 | 来源 | 约束 |
+|---|---|---|
+| 双主角 | **真实资产** `assets/ui/index_hero_duo.png`（叠加层，可 tint 主题化着装） | ❌ 固定，只用真实资产；AI 概念稿不做角色 |
+| 背景 | AI 生图横版全景（`assets/themes/<tid>/bg_*.png`，**不含角色**，透明叠加） | ✅ 每套主题不同（港口/沼泽/风暴/火山/骷髅礁/洞窟/幽灵船/冰霜/落日/海沟） |
+| 标题 | AI 生图书法字「金银岛」（`assets/themes/<tid>/title_raw.png` → PIL 抠黑底透明 → `assets/ui/<tid>_title.png`） | ✅ 每套主题色（鎏金书法体融入背景）；字形须正确（AI 生图后读图验字） |
+| 构图/菜单排布 | scenes.json `index.landscape.primitives` 数据重排（菜单位置/标题位置/双主角位置每套不同） | ✅ 10 套两两不同（md5 对拍）；元素不重叠（标题/提示避菜单区） |
+| 菜单文字 | scenes.json 数据（真中文，非 AI 生成） | ✅ 数据 |
+
+- **主题包结构**：`assets/themes/<tid>/{compose.json, bg_*.png, title_raw.png}`（`title_raw.png` = AI 生图黑底原稿，gitignored 可选；`bg_*.png` 部署到 `assets/ui/<tid>_bg_*.png`，标题抠图到 `assets/ui/<tid>_title.png`）。
+- **A 纪律**：每套先出概念稿（`evidence/ui_concept/theme_concepts/`）+ 用户逐套确认留痕后才落码；概念稿**不做角色**（角色用真实资产）。
+- **构图判据**：出图两两不同（md5 唯一）+ 10 套全部平台向导 7 步过 + `git diff crates/`（6 游戏 crate）= 空 + validate_data 0 违规 + **scenes.json index.landscape 默认恢复 S39**（羊皮藏宝图，保 landscape_drawlist 测试；10 套主题构图在主题包 compose.json，运行时默认不变，换主题 = apply 主题包）。
 
 ### 2.3 打包/分发面
 

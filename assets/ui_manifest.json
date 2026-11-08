@@ -3332,6 +3332,313 @@
     "note": "S44 视觉变体（tint_cool color=0.95 b=0.9 R=1.2 G=0.85 B=0.55）"
    },
    "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t01_bg_harbor",
+   "role": "asset",
+   "file": "assets/ui/t01_bg_harbor.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t01（assets/themes/t01/bg_harbor.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t02_bg_swamp",
+   "role": "asset",
+   "file": "assets/ui/t02_bg_swamp.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t02（assets/themes/t02/bg_swamp.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t03_bg_storm",
+   "role": "asset",
+   "file": "assets/ui/t03_bg_storm.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t03（assets/themes/t03/bg_storm.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t04_bg_volcano",
+   "role": "asset",
+   "file": "assets/ui/t04_bg_volcano.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t04（assets/themes/t04/bg_volcano.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t05_bg_skull",
+   "role": "asset",
+   "file": "assets/ui/t05_bg_skull.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t05（assets/themes/t05/bg_skull.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t06_bg_cave",
+   "role": "asset",
+   "file": "assets/ui/t06_bg_cave.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t06（assets/themes/t06/bg_cave.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t07_bg_ghost",
+   "role": "asset",
+   "file": "assets/ui/t07_bg_ghost.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t07（assets/themes/t07/bg_ghost.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t08_bg_frost",
+   "role": "asset",
+   "file": "assets/ui/t08_bg_frost.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t08（assets/themes/t08/bg_frost.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t09_bg_sunset",
+   "role": "asset",
+   "file": "assets/ui/t09_bg_sunset.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t09（assets/themes/t09/bg_sunset.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t10_bg_trench",
+   "role": "asset",
+   "file": "assets/ui/t10_bg_trench.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题 t10（assets/themes/t10/bg_trench.png）"
+   },
+   "generated_at": "2026-11-07"
+  },
+  {
+   "name": "t01_title",
+   "role": "asset",
+   "file": "assets/ui/t01_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t01 主题化）"
+   }
+  },
+  {
+   "name": "t02_title",
+   "role": "asset",
+   "file": "assets/ui/t02_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t02 主题化）"
+   }
+  },
+  {
+   "name": "t03_title",
+   "role": "asset",
+   "file": "assets/ui/t03_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t03 主题化）"
+   }
+  },
+  {
+   "name": "t04_title",
+   "role": "asset",
+   "file": "assets/ui/t04_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t04 主题化）"
+   }
+  },
+  {
+   "name": "t05_title",
+   "role": "asset",
+   "file": "assets/ui/t05_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t05 主题化）"
+   }
+  },
+  {
+   "name": "t06_title",
+   "role": "asset",
+   "file": "assets/ui/t06_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t06 主题化）"
+   }
+  },
+  {
+   "name": "t07_title",
+   "role": "asset",
+   "file": "assets/ui/t07_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t07 主题化）"
+   }
+  },
+  {
+   "name": "t08_title",
+   "role": "asset",
+   "file": "assets/ui/t08_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t08 主题化）"
+   }
+  },
+  {
+   "name": "t09_title",
+   "role": "asset",
+   "file": "assets/ui/t09_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t09 主题化）"
+   }
+  },
+  {
+   "name": "t10_title",
+   "role": "asset",
+   "file": "assets/ui/t10_title.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 首页标题美术字（t10 主题化）"
+   }
+  },
+  {
+   "name": "theme_plank_0",
+   "role": "asset",
+   "file": "assets/ui/theme_plank_0.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_plank_1",
+   "role": "asset",
+   "file": "assets/ui/theme_plank_1.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_plank_2",
+   "role": "asset",
+   "file": "assets/ui/theme_plank_2.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_plank_3",
+   "role": "asset",
+   "file": "assets/ui/theme_plank_3.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_plank_4",
+   "role": "asset",
+   "file": "assets/ui/theme_plank_4.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_plank_5",
+   "role": "asset",
+   "file": "assets/ui/theme_plank_5.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_plank_sel",
+   "role": "asset",
+   "file": "assets/ui/theme_plank_sel.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_icon_book",
+   "role": "asset",
+   "file": "assets/ui/theme_icon_book.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_icon_chest",
+   "role": "asset",
+   "file": "assets/ui/theme_icon_chest.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_icon_compass",
+   "role": "asset",
+   "file": "assets/ui/theme_icon_compass.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_icon_door",
+   "role": "asset",
+   "file": "assets/ui/theme_icon_door.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_icon_flag",
+   "role": "asset",
+   "file": "assets/ui/theme_icon_flag.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
+  },
+  {
+   "name": "theme_icon_gear",
+   "role": "asset",
+   "file": "assets/ui/theme_icon_gear.png",
+   "params": {
+    "source": "ui_theme",
+    "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
+   }
   }
  ]
 }

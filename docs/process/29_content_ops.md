@@ -61,15 +61,15 @@
 
 > **平台向导列 = 机器断言的文档侧**（S44.5）：下表三列由 `GET /api/content/mapping` 与
 > `crates/ti-console/tests/content_docmap_tests.rs` 对账 UI 向导（`content::ui_wizard`）。
-> §3 ↔ UI 向导 6 步为**锚点映射**（非严格序号）：§3.2「改数据」在平台拆为 `variant`（换资产）
-> + `layout`（改版面原语）；§3.5「零 Rust」+ §3.6「视觉签收留痕」在平台合为 `zero_rust` 一步
+> §3 ↔ UI 向导 7 步为**锚点映射**（非严格序号）：§3.2「改数据」在平台拆为 `variant`（换资产）
+> + `theme`（主题构图应用，S48.0 全主题创新）+ `layout`（改版面原语）；§3.5「零 Rust」+ §3.6「视觉签收留痕」在平台合为 `zero_rust` 一步
 > （判据含签收关键词）。断言口径 = 每步 id 至少出现一次 + 每行步骤集合与平台锚点**逐行相等**
 > + 判据关键词 + 写面登记三者一致。
 
 | # | 流程（29 号） | 平台向导步骤 | 白名单动作 | 判据 | 写面 |
 |---|---|---|---|---|---|
 | 1 | **设计稿先行**（A 纪律，硬规则 9）：改 `scenes.json` 或换 `assets/ui/` → `--shot --viewport` 出图 → **用户视觉确认留痕** → 才固化 | `design` | 平台自身面（scene shot 当前状态出图） | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
-| 2 | **改数据**：`scenes.json`（版面/配色原语）+ 或换资产（着色/新图 `assets/ui/`） | `variant` + `layout` | `ui_variant`（换资产）+ 平台自身面（版面原语只读断言） | `variant`：exit=0 + ui_manifest 登记一致（disk↔registry，validate_data 0 违规）；`layout`：exit=0（scenes.json indent=1 规范形 + check_scenes_canonical 0 差） | `variant`：`assets/ui/` + `assets/ui_manifest.json`；`layout`：只读（可选跳过断言） |
+| 2 | **改数据**：`scenes.json`（版面/配色原语）+ 或换资产（着色/新图 `assets/ui/`） | `variant` + `theme` + `layout` | `ui_variant`（换资产）+ `ui_theme`（主题构图应用，S48.0 全主题创新）+ 平台自身面（版面原语只读断言） | `variant`：exit=0 + ui_manifest 登记一致（disk↔registry，validate_data 0 违规）；`theme`：exit=0 + 输出含 validate_data 0 违规（主题构图回注 + 资产部署）；`layout`：exit=0（scenes.json indent=1 规范形 + check_scenes_canonical 0 差） | `variant`：`assets/ui/` + `assets/ui_manifest.json`；`theme`：`assets/data/scenes.json` + `assets/ui/` + `assets/ui_manifest.json`；`layout`：只读（可选跳过断言） |
 | 3 | **重建二进制**（⚠ 坑位，见 §5）：`scenes.json` 是 `include_str!` **编译期内嵌**——改它必须 `cargo build` 才生效；`assets/ui/*.png` 运行时读盘，无需 rebuild | `build` | 平台自身面（`cargo build`） | exit=0（build 成功，scenes.json 生效） | 只读（产物落 `target/`，非冻结路径） |
 | 4 | **出图**：`--shot --scene=<id> --viewport=<方向>`（多视口） | `shot` | 平台自身面（scene shot 多视口） | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
 | 5 | **零 Rust 判据**：`git diff crates/` = 空（重建不改 Rust 源码，仅内嵌数据 blob） | `zero_rust` | 平台自身面（`git diff --quiet -- crates/…`） | exit=0 + git diff crates/ 空（游戏产品 6 crate） | 只读 |

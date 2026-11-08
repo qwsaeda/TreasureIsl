@@ -1,0 +1,65 @@
+=== S48.0 内容运营全主题创新：10 套全主题首页（平台 UI 向导 7 步 + 零 Rust）===
+日期: 2026-11-07 23:59
+
+=== ① 平台 UI 向导扩展（6→7 步，插 theme）===
+文件: crates/ti-console/src/content/ui_wizard.rs + console_commands.json
+  白名单动作含 ui_theme: True
+  ui_theme writes: ['assets/data/scenes.json', 'assets/ui/', 'assets/ui_manifest.json']
+
+=== ② 10 套平台 UI 向导状态（7 步全过）===
+  t01: step=7 halted=False all_7_passed=True
+  t02: step=7 halted=False all_7_passed=True
+  t03: step=7 halted=False all_7_passed=True
+  t04: step=7 halted=False all_7_passed=True
+  t05: step=7 halted=False all_7_passed=True
+  t06: step=7 halted=False all_7_passed=True
+  t07: step=7 halted=False all_7_passed=True
+  t08: step=7 halted=False all_7_passed=True
+  t09: step=7 halted=False all_7_passed=True
+  t10: step=7 halted=False all_7_passed=True
+
+=== ③ 10 套出图两两不同（md5 唯一）===
+  27b2a481 evidence/bevy_native_index_t01.png
+  973bab7d evidence/bevy_native_index_t02.png
+  cb3e6540 evidence/bevy_native_index_t03.png
+  a2d2f58f evidence/bevy_native_index_t04.png
+  49b29cdd evidence/bevy_native_index_t05.png
+  5335fe9c evidence/bevy_native_index_t06.png
+  7f4fd9e9 evidence/bevy_native_index_t07.png
+  060410c9 evidence/bevy_native_index_t08.png
+  f34c3cdc evidence/bevy_native_index_t09.png
+  7e262fad evidence/bevy_native_index_t10.png
+  唯一 md5 数: 10 / 10
+
+=== ④ 零 Rust（游戏产品 6 crate）===
+  crates/ 6 游戏 crate 0 diff ✓
+
+=== ⑤ validate_data 0 违规 ===
+validate_data: OK（4 表，strings 236 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+
+=== ⑥ scenes.json 默认 S39（landscape_drawlist 测试过）===
+  index.landscape.primitives=22 首=assets/ui/index_bg_map_h.png 双主角={'x': 511, 'y': 324, 'w': 679, 'h': 660}
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.78s
+
+=== ⑦ 菜单命中（pick_key 补全 + 几何验证）===
+  10 套 compose 菜单牌补 params.pick_key=1 + pick_index=0..5
+  pick_key=1 矩形数=6 6 菜单中心命中正确=True 空白点=None
+
+=== ⑧ EXP 回写（EXP-174~178）===
+  EXP-174: 1 索引行
+  EXP-175: 1 索引行
+  EXP-176: 1 索引行
+  EXP-177: 1 索引行
+  EXP-178: 1 索引行
+
+=== ⑨ 文档同步 ===
+  30 号 §2.2（7 步）+ §2.2.1（全主题规范）+ 29 号 §3（theme 锚点）+ 15 号（流程固化 7 步）+ 14/04/README（ui_theme 登记 3 处）
+
+=== [gate 段占位] ===
+
+=== ⑩ gate 全绿 ===
+gate: 0 failure(s) / 34 PASS（2026-11-08 00:07）
+
+=== 用户视觉签收留痕（A 纪律 EXP-114，doccheck2 第 35 项）===
+用户确认：10 套 AI 书法标题主题化（拼图 v4 index_10themes_montage_v4.png）全部确认通过（答复「AI 标题确认（推荐）」），2026-11-07
+用户确认：10 套全主题首页（t01 海盗港口 ~ t10 深海海沟）逐套过目 + 确认（概念稿 theme_concepts/ + 出图 montage v3/v4），2026-11-07

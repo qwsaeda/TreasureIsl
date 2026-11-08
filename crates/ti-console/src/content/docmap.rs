@@ -40,9 +40,10 @@ const SEC_UI: &str = "换 UI 流程";
 /// 29 号 §3 六步 ↔ UI 向导 6 步的**锚点映射**（文档行号 1 基）。
 /// - §3.2「改数据」在平台拆为 `variant`（换资产）+ `layout`（改版面原语）；
 /// - §3.5「零 Rust」+ §3.6「视觉签收留痕」在平台合为 `zero_rust` 一步（判据含签收关键词）。
-const UI_DOC_ANCHORS: [(&str, &[usize]); 6] = [
+const UI_DOC_ANCHORS: [(&str, &[usize]); 7] = [
     ("design", &[1]),
     ("variant", &[2]),
+    ("theme", &[2]),
     ("layout", &[2]),
     ("build", &[3]),
     ("shot", &[4]),
@@ -64,9 +65,10 @@ const MAP_CRITERION_KEYS: [(&str, &str); 10] = [
 ];
 
 /// UI 向导每步的判据关键词（须出现在平台 `parse_criterion` 描述 + 文档「判据」列）。
-const UI_CRITERION_KEYS: [(&str, &str); 6] = [
+const UI_CRITERION_KEYS: [(&str, &str); 7] = [
     ("design", "出图成功"),
     ("variant", "ui_manifest 登记一致"),
+    ("theme", "0 违规"),
     ("layout", "scenes.json indent=1 规范形"),
     ("build", "build 成功"),
     ("shot", "出图成功"),

@@ -37,16 +37,16 @@ fn whitelist_audit_ok() {
     // S44.1 新增 9 动作（mappack_add/syncmap/pack/install/sync/uninstall + ui_variant + map_shot + publish）。
     let v = whitelist_audit(&repo_root()).expect("白名单对账应通过");
     assert_eq!(v["ok"], true);
-    assert_eq!(v["count"], 23);
-    // 写面动作默认关（enabled_by_default=false）：close_run + 8 个内容运营写动作（30 号 §3.1）；
-    // map_shot 只读出图默认开。
+    assert_eq!(v["count"], 24);
+    // 写面动作默认关（enabled_by_default=false）：close_run + 9 个内容运营写动作（30 号 §3.1）；
+    // map_shot 只读出图默认开。S48.0 加 ui_theme（主题构图应用，写 scenes.json + assets/ui + ui_manifest）。
     let wr: Vec<&str> = v["write_required"]
         .as_array()
         .expect("write_required 数组")
         .iter()
         .filter_map(|x| x.as_str())
         .collect();
-    assert_eq!(wr.len(), 9);
+    assert_eq!(wr.len(), 10);
     for id in [
         "close_run",
         "mappack_add",
@@ -56,6 +56,7 @@ fn whitelist_audit_ok() {
         "mappack_sync",
         "mappack_uninstall",
         "ui_variant",
+        "ui_theme",
         "publish",
     ] {
         assert!(wr.contains(&id), "write_required 缺 {id}");
