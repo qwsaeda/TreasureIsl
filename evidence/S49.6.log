@@ -1,0 +1,40 @@
+# S49.6 地图编辑器：编辑已有包（载入 + 覆盖合并语义）— 判据实跑
+日期: 2026-11-09 | 平台: http://127.0.0.1:8787 (ti-console, 0.0.0.0:8787) | 提交: 00e4459
+
+=== [1] cargo test -p ti-console --test map_pack_edit_tests（覆盖合并纯函数语义）===
+     Running tests/map_pack_edit_tests.rs (/disk/target/debug/deps/map_pack_edit_tests-917c6f80f68e9b7b)
+
+running 5 tests
+test 新建包无原manifest按原样采用 ... ok
+test 覆盖导入保留包级_layout附加键 ... ok
+test 覆盖导入保留_strings附加条目 ... ok
+test 覆盖导入保留原包资产登记 ... ok
+test 覆盖导入写入编辑器改动格与岛表 ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+=== [2] GET /api/map/pack?id=m01（单包只读详情）===
+ok= True id= m01 spaces= 31
+manifest keys= ['assets', 'central_asset', 'data_version', 'id', 'invariants', 'isle_assets', 'layout', 'map', 'schema', 'strings', 'version', 'vs_theme']
+layout keys= ['deck_build', 'deck_sell', 'deck_trade', 'focus_anchor', 'focus_bbox_pct', 'hint', 'island_home', 'ring', 'world_canvas']
+events= 2 merchants= 2 vs_theme.bg= vs_bg
+spaces[1]= {"building": 1, "cell": [11, 1], "group": 1, "isle": "harbour", "kind": "territory", "resource": "fishing", "terrain": "L"}
+
+=== [3] playwright 无头实测（编辑已有包链路）===
+[2] 包列表「编辑（载入画布）」按钮数=40 | 前几个包 id=['m01', 'm02', 'm03', 'm04', 'm05']
+[3] #map-editor 可见=True | .ed-node 数=31 | edState={'id': 'm01', 'n': 31, 'isle1': 'harbour', 'radius': 480, 'events': 2, 'merchants': 2, 'vs_bg': 'vs_bg'}
+    ed-import-msg='已载入 m01（编辑模式：导入 = 覆盖该包 → verify → sync 回注 board.json；改包 id = 另存新包）'
+[4] 拖动后 spaces[2].pos=[855, 458]（自由摆放生效）
+[5] 校验栏='✓ 全过（I1~I9 + S34.5 前端判定；导入后 map_pack.py verify 终判含 I7 资产哈希）'
+[1] console/page 错误数 = 0
+RESULT: PASS
+
+=== [4] 未跑项（如实记录）===
+- gate 全绿未跑：工作区存在**并行在途改动**（地图编辑器 v3 仪表盘重设计 + 4 个地图包数据 +
+  board/scenes/strings + map_wizard.rs + 5 个新脚本 + docs/map_editor_guide.md，均未提交未收口）；
+  且 gate 含 doc_numbers --fix 等自动写文档动作，跑在在途工作上会污染对方改动 ⇒ 本任务不跑全量
+  gate，台账 S49.6 状态置 in_progress，待并行改动收口后统一跑（硬规则 2：未验收不置 verified）。
+- 导入闭环（POST /api/map/import 真写盘）未实测：导入会触发 `map_pack.py sync` 全量重算
+  board.json → 覆盖并行在途对 board.json 的改动 ⇒ 本轮不跑；覆盖合并语义由 [1] 纯函数单测覆盖
+  （5 条：资产登记保留 / 包级 layout 保留 / strings 附加条目保留 / 编辑器改动生效 / 新建包不受影响）。

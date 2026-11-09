@@ -47,6 +47,13 @@
 - **写面纪律**：第 1/3/5/6/8/9 步写 `assets/maps/`+`dist/`+`board.json`+`ui_manifest.json`+`evidence/`（出图），须 `--enable-write`（§3 放开）；
   第 2/4/7/10 步只读（import/verify/check/zero_rust，无门无探针）。
 - **第 9 步出图**：平台后台调 `TI_MAP=<id> treasure-bevy-native --shot --scene=main_map`（白名单 `map_shot`，写 `evidence/` 出图，gitignored 预览；写点 `evidence/` ⇒ 属写步须 `enable_write`）。
+- **编辑已有包（S49.6）**：地图页包列表每行有「编辑（载入画布）」按钮 → `GET /api/map/pack?id=<id>`（只读，manifest 全文）载入编辑器
+  （31 格序/岛型/group/terrain/cell/building/resource + 环几何 + 画布 + `events`/`merchants`/`vs_theme` + 已拖好的 `pos`）；
+  导入 = **覆盖该包**（`POST /api/map/import`），后端按「**编辑器管辖键**」合并（`repo::import::merge_map_manifest`）：
+  manifest 顶层以原包为基底；`layout` 仅 `ring`/`world_canvas`/`focus_anchor`/`focus_bbox_pct` 用编辑器值
+  （`island_home`/`deck_*`/`hint` 等**包级配置保留原值**）；`map`/`strings` 逐键合并；
+  `assets` 空数组 = 编辑器未提供 ⇒ **保留原登记**（否则 I7 资产引用消失 = 包内容降级）；`vs_theme`/`invariants` incoming 非空才覆盖。
+  改包 id = 另存新包（`central_asset` 随 id 改名）。
 
 ### 2.2 UI 工作台（固定 7 步，映射 29 号 §3 1:1；S48.0 插 `theme` 步扩 6→7）
 
