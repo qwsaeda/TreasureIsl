@@ -281,9 +281,8 @@ pub fn run_step(
             .all(|f| pack_dir.join(f).is_file());
         if four_files_in_place {
             passed = true;
-            criterion = format!(
-                "exit={exit_code}；{id} 已安装且 4 文件在位（add 幂等跳过，视为内容就绪）"
-            );
+            criterion =
+                format!("exit={exit_code}；{id} 已安装且 4 文件在位（add 幂等跳过，视为内容就绪）");
         } else {
             (passed, criterion) = parse_criterion(step, exit_code, &combined);
         }

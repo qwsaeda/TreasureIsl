@@ -1,11 +1,11 @@
 //! 统一作业模型（23 号 §6.2；S49.7）——平台任何「跑一条命令」的动作共用此实现。
 //!
 //! 动机（用户 2026-11-09 拍板「从架构上要统一设计，复用」）：平台原有四类作业各写一套
-//! spawn/状态/日志（测试自写且**不记 exit_code**、构建自写 + 自写锁、发布/门禁各拼状态路径）
+//! spawn/状态/日志（测试自写且**不记 `exit_code`**、构建自写 + 自写锁、发布/门禁各拼状态路径）
 //! ⇒ 「跑完了吗 / 成没成 / 证明在哪」三个问题没有统一答案，平台测试页交互无法闭环。
 //!
 //! 统一口径（23 号 §6.2）：
-//! - **作业种类** `kind` = `test` / `build` / `publish` / `gate`；
+//! - **作业种类** = `test` / `build` / `publish` / `gate`（四类，见 `JOB_KINDS`）；
 //! - **状态文件** `evidence/console/jobs/<kind>-<id>.json`：
 //!   `{kind,id,running,pid,exit_code,started_ts,ended_ts,log,evidence[],note,timeout_s}`；
 //! - **日志** `evidence/console/logs/<kind>-<id>-<ts>.log`（流式写 ⇒ 输出实时可见）；
@@ -68,9 +68,7 @@ impl JobSpec {
             return Err(format!("作业 id `{id}` 非法（须 ^[a-z0-9_-]{{1,64}}$）"));
         }
         if !JOB_PROGRAMS.contains(&program) {
-            return Err(format!(
-                "程序 `{program}` 不在白名单 {JOB_PROGRAMS:?}（22 号 §10.3）"
-            ));
+            return Err(format!("程序 `{program}` 不在白名单 {JOB_PROGRAMS:?}（22 号 §10.3）"));
         }
         Ok(Self {
             kind: kind.to_owned(),
@@ -94,9 +92,7 @@ fn is_legal_job_id(id: &str) -> bool {
 
 /// Unix 秒（系统时钟异常 = 0）。
 fn now_unix_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs())
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
 }
 
 /// 作业状态目录（`evidence/console/jobs/`；gitignored）。
@@ -110,11 +106,13 @@ fn logs_dir(repo_root: &Path) -> PathBuf {
 }
 
 /// 作业状态文件路径。
+#[must_use]
 pub fn job_state_path(repo_root: &Path, kind: &str, id: &str) -> PathBuf {
     jobs_dir(repo_root).join(format!("{kind}-{id}.json"))
 }
 
 /// 作业日志路径（含时间戳 ⇒ 每次运行独立留档）。
+#[must_use]
 pub fn job_log_path(repo_root: &Path, kind: &str, id: &str, ts: u64) -> PathBuf {
     logs_dir(repo_root).join(format!("{kind}-{id}-{ts}.log"))
 }
@@ -132,10 +130,10 @@ pub fn spawn_job(repo_root: &Path, spec: &JobSpec) -> Result<Value, String> {
     let ts = now_unix_secs();
     let log_path = job_log_path(repo_root, &spec.kind, &spec.id, ts);
     let state_path = job_state_path(repo_root, &spec.kind, &spec.id);
-    let log_rel = log_path
-        .strip_prefix(repo_root)
-        .map(|p| p.to_string_lossy().replace('\\', "/"))
-        .unwrap_or_else(|_| log_path.to_string_lossy().to_string());
+    let log_rel = log_path.strip_prefix(repo_root).map_or_else(
+        |_| log_path.to_string_lossy().to_string(),
+        |p| p.to_string_lossy().replace('\\', "/"),
+    );
     let mut meta = spec.meta.clone();
     if let Some(obj) = meta.as_object_mut() {
         obj.insert("kind".into(), json!(spec.kind));
@@ -152,21 +150,21 @@ pub fn spawn_job(repo_root: &Path, spec: &JobSpec) -> Result<Value, String> {
         }
     }
     // 脚本类走解释器回退（pwsh → powershell）；cargo/python3 单候选。
-    let candidates: Vec<&str> = if SCRIPT_INTERPS.contains(&spec.program.as_str()) {
-        SCRIPT_INTERPS.to_vec()
+    let candidates: Vec<String> = if SCRIPT_INTERPS.contains(&spec.program.as_str()) {
+        SCRIPT_INTERPS.iter().map(|s| (*s).to_owned()).collect()
     } else {
-        vec![spec.program.as_str()]
+        vec![spec.program.clone()]
     };
-    let outcome = spawn_program_logged(
-        &candidates,
-        &spec.args,
-        repo_root,
-        Some(&log_path),
-        &state_path,
-        meta,
-        spec.timeout_s,
-        None,
-    )?;
+    let outcome = spawn_program_logged(&SpawnOpts {
+        candidates: candidates.clone(),
+        args: spec.args.clone(),
+        cwd: repo_root.to_path_buf(),
+        log_path: Some(log_path.clone()),
+        state_path: state_path.clone(),
+        status_meta: meta.clone(),
+        timeout_s: spec.timeout_s,
+        mirror_path: None,
+    })?;
     // 回填真实 pid + 命令（状态文件初值已写 pid=0 占位）。
     if let Ok(text) = std::fs::read_to_string(&state_path) {
         if let Ok(mut v) = serde_json::from_str::<Value>(&text) {
@@ -188,10 +186,33 @@ pub fn spawn_job(repo_root: &Path, spec: &JobSpec) -> Result<Value, String> {
         "log": log_rel,
         "status": state_path
             .strip_prefix(repo_root)
-            .map(|p| p.to_string_lossy().replace('\\', "/"))
-            .unwrap_or_else(|_| state_path.to_string_lossy().to_string()),
+            .map_or_else(
+                |_| state_path.to_string_lossy().to_string(),
+                |p| p.to_string_lossy().replace('\\', "/"),
+            ),
         "note": "作业已后台启动（统一作业模型 23 号 §6.2）；轮询 GET /api/jobs?kind=<kind>&id=<id> 查状态/退出码/证明",
     }))
+}
+
+/// 后台 spawn 参数包（参数过多 ⇒ 收敛为 struct；23 号 §6.2 作业模型）。
+#[derive(Debug, Clone)]
+pub struct SpawnOpts {
+    /// 候选程序（回退序；`pwsh` → `powershell`；拥有型，避免 `'static` 借用约束）。
+    pub candidates: Vec<String>,
+    /// 参数（逐参数；禁 shell 拼接面）。
+    pub args: Vec<String>,
+    /// 工作目录（仓库根）。
+    pub cwd: PathBuf,
+    /// 日志落盘目标（`None` = stdout/stderr 丢弃；脚本自写日志时用）。
+    pub log_path: Option<PathBuf>,
+    /// 状态文件（JSON）路径。
+    pub state_path: PathBuf,
+    /// 状态文件初始内容（helper 追加 `pid` / `running`）。
+    pub status_meta: Value,
+    /// 超时秒数（`None` = 不限）。
+    pub timeout_s: Option<u64>,
+    /// 统一作业状态镜像路径（`None` = 不镜像）。
+    pub mirror_path: Option<PathBuf>,
 }
 
 /// 后台 spawn（候选程序回退 + 日志落盘 + 收割线程记终态 + 可选超时 + 可选统一状态镜像）。
@@ -204,55 +225,46 @@ pub fn spawn_job(repo_root: &Path, spec: &JobSpec) -> Result<Value, String> {
 /// # Errors
 ///
 /// 日志文件创建/克隆失败、全部候选程序 spawn 失败 ⇒ 报错（附最后一次失败原因）。
-pub fn spawn_program_logged(
-    candidates: &[&str],
-    args: &[String],
-    cwd: &Path,
-    log_path: Option<&Path>,
-    state_path: &Path,
-    status_meta: Value,
-    timeout_s: Option<u64>,
-    mirror_path: Option<&Path>,
-) -> Result<SpawnOutcome, String> {
-    let log_file = match log_path {
-        Some(path) => Some(std::fs::File::create(path).map_err(|e| format!("日志文件创建失败 {e}"))?),
+pub fn spawn_program_logged(opts: &SpawnOpts) -> Result<SpawnOutcome, String> {
+    let log_file = match &opts.log_path {
+        Some(path) => {
+            Some(std::fs::File::create(path).map_err(|e| format!("日志文件创建失败 {e}"))?)
+        }
         None => None,
     };
     let mut last_err = String::new();
-    for program in candidates {
+    for program in &opts.candidates {
         let mut cmd = std::process::Command::new(program);
-        cmd.args(args);
-        cmd.current_dir(cwd);
+        cmd.args(&opts.args);
+        cmd.current_dir(&opts.cwd);
         // 22 号 §10.3 最小环境集（env_clear + 白名单）。
         crate::runner::apply_minimal_env(&mut cmd);
-        match &log_file {
-            Some(file) => {
-                let stdout = file.try_clone().map_err(|e| format!("日志克隆失败 {e}"))?;
-                let stderr = file.try_clone().map_err(|e| format!("日志克隆失败 {e}"))?;
-                cmd.stdout(std::process::Stdio::from(stdout));
-                cmd.stderr(std::process::Stdio::from(stderr));
-            }
-            None => {
-                cmd.stdout(std::process::Stdio::null());
-                cmd.stderr(std::process::Stdio::null());
-            }
+        if let Some(file) = &log_file {
+            let stdout = file.try_clone().map_err(|e| format!("日志克隆失败 {e}"))?;
+            let stderr = file.try_clone().map_err(|e| format!("日志克隆失败 {e}"))?;
+            cmd.stdout(std::process::Stdio::from(stdout));
+            cmd.stderr(std::process::Stdio::from(stderr));
+        } else {
+            cmd.stdout(std::process::Stdio::null());
+            cmd.stderr(std::process::Stdio::null());
         }
         match cmd.spawn() {
             Ok(mut child) => {
                 let pid = child.id();
-                let mut meta = status_meta.clone();
+                let mut meta = opts.status_meta.clone();
                 if let Some(obj) = meta.as_object_mut() {
                     obj.insert("pid".into(), json!(pid));
                     obj.insert("running".into(), json!(true));
                 }
-                let _ = std::fs::write(state_path, meta.to_string());
+                let _ = std::fs::write(&opts.state_path, meta.to_string());
                 // 统一作业镜像：spawn 后**立即**写初值（running 期间 `/api/jobs` 可查）
-                let mirror = mirror_path.map(|p| p.to_path_buf());
-                if let Some(mirror_path) = &mirror {
+                if let Some(mirror_path) = &opts.mirror_path {
                     let _ = std::fs::write(mirror_path, meta.to_string());
                 }
                 // 收割线程：等退出（可超时）⇒ 写 running=false + exit_code + ended_ts。
-                let meta_path = state_path.to_path_buf();
+                let meta_path = opts.state_path.clone();
+                let mirror_path = opts.mirror_path.clone();
+                let timeout_s = opts.timeout_s;
                 std::thread::spawn(move || {
                     let mut code: Option<i32> = None;
                     let mut timed_out = false;
@@ -292,16 +304,16 @@ pub fn spawn_program_logged(
                     }
                     let _ = std::fs::write(&meta_path, done.to_string());
                     // 统一作业状态镜像（jobs 目录）⇒ /api/jobs 可查（23 号 §6.2 查询行）。
-                    if let Some(mirror_path) = mirror {
+                    if let Some(mirror_path) = mirror_path {
                         let _ = std::fs::write(&mirror_path, done.to_string());
                     }
                 });
-                return Ok(SpawnOutcome { pid, program: program.to_string() });
+                return Ok(SpawnOutcome { pid, program: program.clone() });
             }
             Err(e) => last_err = format!("{program}: {e}"),
         }
     }
-    Err(format!("后台 spawn 失败（{candidates:?} 均缺位？）：{last_err}"))
+    Err(format!("后台 spawn 失败（{:?} 均缺位？）：{last_err}", opts.candidates))
 }
 
 /// 后台 spawn 结果。
@@ -314,13 +326,15 @@ pub struct SpawnOutcome {
 }
 
 /// 读作业状态（状态文件不存在 = `None`）。
+#[must_use]
 pub fn job_status(repo_root: &Path, kind: &str, id: &str) -> Option<Value> {
     let path = job_state_path(repo_root, kind, id);
     let text = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(&text).ok()
 }
 
-/// 列作业状态（`kind` = `None` ⇒ 全部种类；按 started_ts 降序）。
+/// 列作业状态（`kind` = `None` ⇒ 全部种类；按 `started_ts` 降序）。
+#[must_use]
 pub fn job_list(repo_root: &Path, kind: Option<&str>) -> Vec<Value> {
     let mut out: Vec<Value> = Vec::new();
     let Ok(rd) = std::fs::read_dir(jobs_dir(repo_root)) else {
@@ -328,7 +342,7 @@ pub fn job_list(repo_root: &Path, kind: Option<&str>) -> Vec<Value> {
     };
     for entry in rd.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
-        if !name.ends_with(".json") {
+        if !name.to_ascii_lowercase().ends_with(".json") {
             continue;
         }
         let Some(kind_of) = name.split_once('-').map(|(k, _)| k.to_owned()) else {
@@ -393,8 +407,9 @@ pub fn register_evidence(repo_root: &Path, kind: &str, id: &str, paths: &[String
 
 /// 作业查询面（23 号 §6.2 查询行）：列表 / 详情（含日志尾 + 证明）。
 ///
-/// - `id` 缺省 = 列表（`kind` 缺省 = 全部种类；按 started_ts 降序）；
+/// - `id` 缺省 = 列表（`kind` 缺省 = 全部种类；按 `started_ts` 降序）；
 /// - `id` 给出 = 详情（`state` + `log_tail` 末 200 行 + `evidence[]`）。
+#[must_use]
 pub fn jobs_view(repo_root: &Path, kind: Option<&str>, id: Option<&str>) -> Value {
     if let Some(test_id) = id.filter(|s| !s.is_empty()) {
         let kind = kind.filter(|k| JOB_KINDS.contains(k)).unwrap_or("test");

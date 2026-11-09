@@ -171,6 +171,27 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
 }
 
 /// GET 路由分发（只读面；POST 写操作面在 `handle_post`）。
+/// `GET /api/jobs`（统一作业模型查询面：列表 / 详情 + 日志尾 + 证明；23 号 §6.2）。
+fn jobs_get(repo_root: &Path, url: &str, gz: bool) -> Vec<u8> {
+    let kind = percent_decode(query_param(url, "kind").unwrap_or(""));
+    let id = percent_decode(query_param(url, "id").unwrap_or(""));
+    json200(&crate::runner::jobs::jobs_view(repo_root, Some(kind.as_str()), Some(id.as_str())), gz)
+}
+
+/// `GET /api/tests`（测试清单 + `?run=<id>` 白名单执行）。
+///
+/// 拆出独立函数：`dispatch_get` 行数超限（CS-3 局部函数规模门禁）。
+fn tests_get(repo_root: &Path, url: &str, gz: bool) -> Vec<u8> {
+    let run = query_param(url, "run");
+    api_500_or_json(
+        load_json(repo_root, |s| match run {
+            Some(id) => data::run_test(repo_root, s, id),
+            None => data::tests(repo_root, s),
+        }),
+        gz,
+    )
+}
+
 fn dispatch_get(
     clean: &str,
     url: &str,
@@ -219,30 +240,10 @@ fn dispatch_get(
             api_500_or_json(load_json(repo_root, |s| data::evidence_list(repo_root, s, &sub)), gz)
         }
         "/api/assets" => api_500_or_json(load_json(repo_root, |s| data::assets(repo_root, s)), gz),
-        "/api/tests" => {
-            let run = query_param(url, "run");
-            api_500_or_json(
-                load_json(repo_root, |s| match run {
-                    Some(id) => data::run_test(repo_root, s, id),
-                    None => data::tests(repo_root, s),
-                }),
-                gz,
-            )
-        }
+        "/api/tests" => tests_get(repo_root, url, gz),
         // 统一作业模型查询面（23 号 §6.2；S49.7）：?kind=<kind>[&id=<id>]
         // 列表 = 各作业状态；详情 = 状态 + 日志尾 + 证明（evidence[]）。只读，免 token。
-        "/api/jobs" => {
-            let kind = percent_decode(query_param(url, "kind").unwrap_or(""));
-            let id = percent_decode(query_param(url, "id").unwrap_or(""));
-            json200(
-                &crate::runner::jobs::jobs_view(
-                    repo_root,
-                    Some(kind.as_str()),
-                    Some(id.as_str()),
-                ),
-                gz,
-            )
-        }
+        "/api/jobs" => jobs_get(repo_root, url, gz),
         "/api/gate" => {
             let log = query_param(url, "log");
             json200(&runner::gate::gate_status(repo_root, log), gz)

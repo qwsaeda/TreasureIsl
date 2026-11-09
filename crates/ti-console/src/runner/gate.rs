@@ -204,16 +204,16 @@ pub fn run_gate(repo_root: &Path, tier: &str) -> Result<Value, (u16, String)> {
     // （`evidence/console/jobs/gate-<tier>.json`）⇒ `/api/jobs` 统一查询面可查门禁结果。
     let owned_args: Vec<String> = args.iter().map(|s| (*s).to_owned()).collect();
     let mirror = crate::runner::jobs::job_state_path(repo_root, "gate", tier);
-    let outcome = match crate::runner::jobs::spawn_program_logged(
-        &crate::runner::spawn::SCRIPT_INTERPS,
-        &owned_args,
-        repo_root,
-        Some(&log_path),
-        &lock_p,
-        lock_meta,
-        None,
-        Some(&mirror),
-    ) {
+    let outcome = match crate::runner::jobs::spawn_program_logged(&crate::runner::jobs::SpawnOpts {
+        candidates: crate::runner::spawn::SCRIPT_INTERPS.iter().map(|s| (*s).to_owned()).collect(),
+        args: owned_args,
+        cwd: repo_root.to_path_buf(),
+        log_path: Some(log_path.clone()),
+        state_path: lock_p.clone(),
+        status_meta: lock_meta,
+        timeout_s: None,
+        mirror_path: Some(mirror.clone()),
+    }) {
         Ok(v) => v,
         Err(e) => {
             let _ = std::fs::remove_file(&lock_p);

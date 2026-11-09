@@ -324,7 +324,6 @@ pub fn run_test(repo_root: &Path, sources: &RepoSources, test_id: &str) -> Resul
     Ok(out)
 }
 
-
 /// `/api/apk-size`：APK 体积构成体检（S35.0，24 号标准；**此端点只读，不触发构建**）。
 ///
 /// 口径：`scripts/apk_audit.py --apk <最新 dist/TreasureIsl-arm64.apk>`（判据①② = .so 压缩率
@@ -679,7 +678,9 @@ pub fn map_pack_detail(repo_root: &Path, sources: &RepoSources, id: &str) -> Res
         .map_err(|e| e.to_string())?;
     let manifest_path = maps_dir.join(id).join("manifest.json");
     let Some(manifest) = read_map_json(&manifest_path) else {
-        return Err(format!("包 `{id}` 不存在或 manifest 不可读（assets/maps/{id}/manifest.json）"));
+        return Err(format!(
+            "包 `{id}` 不存在或 manifest 不可读（assets/maps/{id}/manifest.json）"
+        ));
     };
     Ok(json!({
         "ok": true,

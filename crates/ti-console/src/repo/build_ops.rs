@@ -144,16 +144,17 @@ fn run_build(repo_root: &Path, kind: &str, lock_path: &Path) -> Result<Value, St
         kind.to_owned(),
     ];
     let mirror = crate::runner::jobs::job_state_path(repo_root, "build", kind);
-    let outcome = match crate::runner::jobs::spawn_program_logged(
-        &["python3"],
-        &args,
-        repo_root,
-        None, // 构建脚本自写日志（evidence/console/logs/build-*.log）⇒ stdout/stderr 丢弃
-        lock_path,
-        meta,
-        None,
-        Some(&mirror),
-    ) {
+    let outcome = match crate::runner::jobs::spawn_program_logged(&crate::runner::jobs::SpawnOpts {
+        candidates: vec!["python3".to_owned()],
+        args,
+        cwd: repo_root.to_path_buf(),
+        // 构建脚本自写日志（evidence/console/logs/build-*.log）⇒ stdout/stderr 丢弃
+        log_path: None,
+        state_path: lock_path.to_path_buf(),
+        status_meta: meta,
+        timeout_s: None,
+        mirror_path: Some(mirror.clone()),
+    }) {
         Ok(v) => v,
         Err(e) => {
             let _ = std::fs::remove_file(lock_path);

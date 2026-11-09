@@ -74,7 +74,8 @@ pub fn merge_map_manifest(base: &Value, incoming: &Value) -> Value {
     for (key, val) in incoming_obj {
         match key.as_str() {
             "layout" => {
-                let mut lay = base_obj.get("layout").and_then(Value::as_object).cloned().unwrap_or_default();
+                let mut lay =
+                    base_obj.get("layout").and_then(Value::as_object).cloned().unwrap_or_default();
                 if let Some(in_lay) = val.as_object() {
                     for (lk, lv) in in_lay {
                         if EDITOR_MANAGED_LAYOUT_KEYS.contains(&lk.as_str()) {
@@ -85,7 +86,8 @@ pub fn merge_map_manifest(base: &Value, incoming: &Value) -> Value {
                 out_obj.insert("layout".to_owned(), Value::Object(lay));
             }
             "map" | "strings" => {
-                let mut seg = base_obj.get(key).and_then(Value::as_object).cloned().unwrap_or_default();
+                let mut seg =
+                    base_obj.get(key).and_then(Value::as_object).cloned().unwrap_or_default();
                 if let Some(in_seg) = val.as_object() {
                     for (sk, sv) in in_seg {
                         seg.insert(sk.clone(), sv.clone());
@@ -99,7 +101,7 @@ pub fn merge_map_manifest(base: &Value, incoming: &Value) -> Value {
             _ => {
                 // 编辑器未提供的包级字段（`assets` 空数组 / `vs_theme` / `invariants`…）：
                 // incoming 带非空值才覆盖，否则保留原值（不丢资产登记与包级配置）。
-                let meaningful = !val.as_array().is_some_and(|a| a.is_empty());
+                let meaningful = !val.as_array().is_some_and(Vec::is_empty);
                 if meaningful {
                     out_obj.insert(key.clone(), val.clone());
                 }

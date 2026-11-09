@@ -162,16 +162,16 @@ fn publish_run(repo_root: &Path) -> Result<Value, (u16, String)> {
     // + 写统一作业镜像（`evidence/console/jobs/publish-publish.json`）⇒ `/api/jobs` 可查。
     let owned_args: Vec<String> = vec!["-File".to_owned(), "scripts/publish_web.ps1".to_owned()];
     let mirror = crate::runner::jobs::job_state_path(repo_root, "publish", "publish");
-    let outcome = match crate::runner::jobs::spawn_program_logged(
-        &crate::runner::spawn::SCRIPT_INTERPS,
-        &owned_args,
-        repo_root,
-        Some(&log_path),
-        &status_path,
+    let outcome = match crate::runner::jobs::spawn_program_logged(&crate::runner::jobs::SpawnOpts {
+        candidates: crate::runner::spawn::SCRIPT_INTERPS.iter().map(|s| (*s).to_owned()).collect(),
+        args: owned_args,
+        cwd: repo_root.to_path_buf(),
+        log_path: Some(log_path.clone()),
+        state_path: status_path.clone(),
         status_meta,
-        None,
-        Some(&mirror),
-    ) {
+        timeout_s: None,
+        mirror_path: Some(mirror.clone()),
+    }) {
         Ok(v) => v,
         Err(e) => return Err((500u16, e)),
     };
