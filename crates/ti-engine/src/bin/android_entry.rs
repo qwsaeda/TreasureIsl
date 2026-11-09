@@ -11,6 +11,22 @@
 #[allow(unsafe_code, reason = "android-activity JNI 入口须 no_mangle（winit 壳约定，bevy_main 同形态）")]
 #[allow(unsafe_cast, reason = "AndroidApp 经 FFI 边界 = android-activity 约定入口签名")]
 pub unsafe extern "C" fn android_main(app: bevy::android::android_activity::AndroidApp) {
+    // S49.4d 真机「没有全屏 / 左侧黑条」根因：系统栏未隐藏 → surface 被系统栏压缩 →
+    // 游戏 letterbox 有效区 → 黑条（landscape 状态栏在长边侧）。
+    // 用 android-activity 原生 `set_window_flags`（0 新依赖、0 JNI，本壳可编译）：
+    // - `LAYOUT_NO_LIMITS`：窗口布局延伸屏幕边缘（系统栏下仍铺满）；
+    // - `FULLSCREEN`：隐藏状态栏（API 16+，NativeActivity 窗口 attribute）；
+    // - `KEEP_SCREEN_ON`：游戏场景防锁屏（manifest 注释「保持唤醒」落地）。
+    // 注：导航栏完全隐藏（immersive `SYSTEM_UI_FLAG_HIDE_NAVIGATION|IMMERSIVE_STICKY`）需
+    // JNI `setSystemUiVisibility`（android-activity 未暴露），本机无 NDK 无法编译验证 ⇒
+    // 先落 window flags（状态栏 + 布局），导航栏若仍悬浮后续补 JNI（需真机验证）。
+    use bevy::android::android_activity::WindowManagerFlags;
+    app.set_window_flags(
+        WindowManagerFlags::LAYOUT_NO_LIMITS
+            | WindowManagerFlags::FULLSCREEN
+            | WindowManagerFlags::KEEP_SCREEN_ON,
+        WindowManagerFlags::empty(),
+    );
     let _ = bevy::android::ANDROID_APP.set(app);
     super::run();
 }

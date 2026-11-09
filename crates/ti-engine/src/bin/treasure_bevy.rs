@@ -178,7 +178,7 @@ use bevy::text::Font;
 use bevy::window::{Window, WindowResolution};
 use ti_app::game_app::{GameApp, GameInput, HitData, KeyState, Scene};
 // S34（2026-11-01 用户拍板补原版音频）：bevy_audio 播放（SFX 一次 + BGM 循环）。
-use bevy::audio::{AudioPlayer, AudioSource, PlaybackSettings};
+use bevy::audio::{AudioPlayer, AudioSink, AudioSource, PlaybackSettings};
 use ti_core::domain::flow::Sfx;
 // S18.8a：`parse_font_bytes` 仅 native 分支用（wasm 分支无 std::fs 资源读）→ 按目标编译。
 #[cfg(not(target_arch = "wasm32"))]
@@ -346,6 +346,47 @@ struct GameAudio {
     victory: Handle<AudioSource>,
 }
 
+/// BGM 实体标记（`lifecycle_audio_system` 定位 BGM sink 暂停/恢复；`--shot`/selftest 无实体）。
+#[derive(Component)]
+struct BgmTrack;
+
+/// S49.4d：App 生命周期 → BGM 暂停/恢复（Android 切后台音频不停根因）。
+///
+/// 用户真机实测：切后台 BGM 仍播放（`spawn_audio` 直播 BGM 循环，无 onPause/onResume 处理）。
+/// Bevy 0.20 生命周期事件 = `bevy::window::WindowEvent::AppLifecycle`（winit 投递）；
+/// `Suspended`/`WillSuspend` → 暂停 BGM，`WillResume`/`Running` → 恢复（native/Android；
+/// wasm 浏览器 tab 后台由浏览器策略管，本系统对 wasm 也生效无妨——无 `BgmTrack` 则 no-op）。
+#[allow(clippy::needless_pass_by_value)]
+fn lifecycle_audio_system(
+    mut events: MessageReader<bevy::window::WindowEvent>,
+    bgm: Query<&AudioSink, With<BgmTrack>>,
+) {
+    let mut paused = false;
+    for ev in events.read() {
+        if let bevy::window::WindowEvent::AppLifecycle(state) = ev {
+            match state {
+                bevy::window::AppLifecycle::Suspended | bevy::window::AppLifecycle::WillSuspend => {
+                    paused = true;
+                }
+                bevy::window::AppLifecycle::WillResume | bevy::window::AppLifecycle::Running => {
+                    paused = false;
+                }
+                // Idle（未启动）= 保持暂停（无 BGM 实体时 no-op）。
+                bevy::window::AppLifecycle::Idle => {}
+            }
+        }
+    }
+    if let Ok(sink) = bgm.single() {
+        if paused && !sink.is_paused() {
+            sink.pause();
+            eprintln!("[audio] BGM 暂停（app 挂起）");
+        } else if !paused && sink.is_paused() {
+            sink.play();
+            eprintln!("[audio] BGM 恢复（app 回前台）");
+        }
+    }
+}
+
 /// S34：启动预载音频 + 起 BGM 循环（`--shot` 模式不 `app.run()`，本系统不执行 ⇒ 无音频）。
 #[allow(clippy::needless_pass_by_value)]
 fn spawn_audio(mut commands: Commands, server: Res<AssetServer>) {
@@ -359,7 +400,8 @@ fn spawn_audio(mut commands: Commands, server: Res<AssetServer>) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         // BGM 循环（原版 MOD 循环；缺音频设备 = Bevy 记 WARN 不 panic，静默降级）。
-        commands.spawn((AudioPlayer(bgm), PlaybackSettings::LOOP));
+        // `BgmTrack` 标记 = `lifecycle_audio_system` 暂停/恢复定位（Android 切后台）。
+        commands.spawn((AudioPlayer(bgm), PlaybackSettings::LOOP, BgmTrack));
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -394,7 +436,7 @@ fn unlock_bgm_system(
     }
     // bevy 0.20 `ButtonInput::get_just_pressed()` = 本帧刚按下的迭代器（任意键/鼠标键）。
     if mouse.get_just_pressed().next().is_some() || keys.get_just_pressed().next().is_some() {
-        commands.spawn((AudioPlayer(unlock.bgm.clone()), PlaybackSettings::LOOP));
+        commands.spawn((AudioPlayer(unlock.bgm.clone()), PlaybackSettings::LOOP, BgmTrack));
         unlock.started = true;
     }
 }
@@ -795,6 +837,10 @@ fn input_system(
     mut acc: ResMut<AccumulatedMouseMotion>,
     kb: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
+    // S49.4d：Android 触摸（无鼠标 → `cursor_position()`=None、`MouseButton`=空）。
+    // 触摸 tap 位置更新 `MousePos`（逻辑 px，bevy 0.20 `TouchInput.position` = 逻辑），
+    // 供 `manual_1080_hit_system` 命中 + 滚轮/拖拽（Android 触摸拖拽 = pan）。
+    touches: Res<bevy::input::touch::Touches>,
     mut state: Local<InputState>,
     window: Query<&Window>,
 ) {
@@ -809,6 +855,10 @@ fn input_system(
     if let Some(c) = window.single().ok().and_then(bevy::window::Window::cursor_position) {
         mouse_pos.x = c.x;
         mouse_pos.y = c.y;
+    } else if let Some(t) = touches.iter().next() {
+        // Android 触摸（无鼠标）：当前按下的首个触摸位置（逻辑 px）覆盖鼠标位置。
+        mouse_pos.x = t.position().x;
+        mouse_pos.y = t.position().y;
     }
     let drag = (mouse.pressed(MouseButton::Left), acc.delta);
     acc.delta = bevy::prelude::Vec2::ZERO;
@@ -1486,11 +1536,15 @@ fn pick_event_system(
 fn manual_1080_hit_system(
     store: Res<GameStore>,
     mouse: Res<ButtonInput<MouseButton>>,
+    // S49.4d：Android 触摸 tap（无鼠标 → `MouseButton` 恒空，1080 层命中靠触摸）。
+    touches: Res<bevy::input::touch::Touches>,
     mouse_pos: Res<MousePos>,
     window: Query<&Window>,
     mut picker: MessageWriter<ti_engine::pick::PickEvent>,
 ) {
-    if !mouse.just_pressed(MouseButton::Left) {
+    // 鼠标左键 tap 或任意触摸刚按下（Android 无鼠标；bevy_picking 的触摸 → PointerInput
+    // 已覆盖 bevy_ui 层，本系统只补 **1080 层**（未迁 bevy_ui 的原语矩形））。
+    if !mouse.just_pressed(MouseButton::Left) && !touches.any_just_pressed() {
         return;
     }
     let Ok(g) = store.0.lock() else {
@@ -2364,6 +2418,8 @@ fn run() {
                 window_resize_system,
                 input_system,
                 audio_system,
+                // S49.4d：App 生命周期 → BGM 暂停/恢复（Android 切后台音频不停根因）。
+                lifecycle_audio_system,
                 camera_system,
                 render_system,
                 stats_system,
