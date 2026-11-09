@@ -1102,8 +1102,13 @@ async function loadMap() {
         + '<div class="nm"><b>' + esc(p.id) + '</b> ' + esc(String(p.version || '')) + ' · ' + esc(String(p.data_version || '')) + '</div>'
         + '<div class="rl">中央岛 = ' + esc(String(p.central_asset || '-')) + ' · 岛型 ' + p.isle_assets + ' 类 · 31 格 ' + p.spaces + ' · 资产 ' + p.assets_count + '</div>'
         + '<div class="rl">' + ring + (p.schema ? ' · ' + esc(String(p.schema)) : '') + '</div>'
+        + '<div style="margin-top:6px"><button data-pack-edit="' + esc(p.id) + '" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px">编辑（载入画布）</button></div>'
         + '</div>';
     }).join('');
+    // 「编辑已有包」入口：载入该包 manifest 进编辑器（格序/岛型/事件/商人/VS 主题 + 已拖好的 pos）。
+    document.querySelectorAll('#map-list button[data-pack-edit]').forEach((b) => {
+      b.addEventListener('click', () => edLoadPack(b.dataset.packEdit));
+    });
     // S44.4：dist/maps/ 可分发件清单（30 号 §2.3；mtime = epoch 秒，size = 目录字节和）。
     $('dist-list').innerHTML = (d.dist || []).map((x) => {
       const mb = ((x.size || 0) / 1048576).toFixed(1) + ' MB';
@@ -1112,6 +1117,61 @@ async function loadMap() {
     }).join('\n') || '（无 dist/maps/ 可分发件；地图向导第 5 步 mappack_pack 生成）';
   } catch (e) {
     $('map-list').innerHTML = '<div class="empty">地图包不可用：' + esc(String(e)) + '</div>';
+  }
+}
+
+// 编辑已有包：载入该包 manifest → 编辑器画布（31 格序/岛型/group/事件/商人/VS 主题 + 已拖好的 pos）。
+// 导入语义 = **覆盖该包**（后端 merge_map_manifest：编辑器管辖键 ring/world_canvas/focus_*/spaces
+// 用新值；原包 assets 资产登记 / 包级 layout 附加键 / strings 附加条目保留 ⇒ 覆盖导入不丢包内容）。
+async function edLoadPack(id) {
+  $('ed-import-msg').textContent = '载入包 ' + id + '…';
+  try {
+    const d = await api('/api/map/pack?id=' + encodeURIComponent(id));
+    const mf = d.manifest || {};
+    const ring = (mf.layout && mf.layout.ring) || {};
+    const canvas = (mf.layout && mf.layout.world_canvas) || { x: 11, y: 250, w: 1048, h: 1056 };
+    const raw = (mf.map && mf.map.spaces) || [];
+    const base = edDefaultState();
+    edState = Object.assign(base, {
+      id: id,
+      manifest: mf,
+      spaces: raw.map((s, i) => ({
+        idx: i,
+        kind: s.kind || 'territory',
+        isle: s.isle || null,
+        group: s.group != null ? s.group : 1,
+        terrain: s.terrain || 'L',
+        cell: s.cell || [10, 0],
+        resource: s.resource || (s.isle ? ED_ISLE_RESOURCE[s.isle] : null),
+        building: s.building != null ? s.building : (s.isle ? 1 : 0),
+        pos: Array.isArray(s.pos) ? s.pos.slice() : null,
+      })),
+      ring: {
+        center_x: ring.center_x != null ? ring.center_x : base.ring.center_x,
+        center_y: ring.center_y != null ? ring.center_y : base.ring.center_y,
+        radius: ring.radius != null ? ring.radius : base.ring.radius,
+        card_w: ring.card_w != null ? ring.card_w : base.ring.card_w,
+        card_h: ring.card_h != null ? ring.card_h : base.ring.card_h,
+      },
+      canvas: canvas,
+      events: (mf.map && mf.map.events) || base.events,
+      merchants: (mf.map && mf.map.merchants) || base.merchants,
+      vs_theme: mf.vs_theme || base.vs_theme,
+    });
+    edUndoStack.length = 0; edRedoStack.length = 0; // 撤销栈 = 上一个包的快照，须清零
+    edSel = 0; // 选中首格（Inspector 有内容）
+    edSyncInputs();
+    edRenderCanvas();
+    edRenderLeft();
+    edRenderInspector();
+    edRenderTable();
+    edStatusBar();
+    edValidateBar();
+    $('map-editor').hidden = false;
+    $('map-editor').scrollIntoView({ behavior: 'smooth' });
+    $('ed-import-msg').textContent = '已载入 ' + id + '（编辑模式：导入 = 覆盖该包 → verify → sync 回注 board.json；改包 id = 另存新包）';
+  } catch (e) {
+    $('ed-import-msg').textContent = '载入失败：' + e;
   }
 }
 

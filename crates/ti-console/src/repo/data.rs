@@ -637,6 +637,33 @@ fn default_map_pack(repo_root: &Path, sources: &RepoSources) -> Option<String> {
     std::fs::read_to_string(&path).ok().map(|s| s.trim().to_owned()).filter(|s| !s.is_empty())
 }
 
+/// `/api/map/pack?id=<id>`：单包只读详情（地图编辑器「编辑已有包」载入面；0 写盘）。
+///
+/// 返回 = 该包 `manifest.json` **全文**（含 `map`/`layout`/`strings`/`assets`/`vs_theme` 等）
+/// —— 前端以原 manifest 为基底做**增量编辑**（不丢 `vs_theme` / `assets` / 每格
+/// `building`/`resource`；否则覆盖导入必 FAIL I7/I9 且包已被写坏）。
+///
+/// # Errors
+///
+/// id 非法（`^[a-z0-9_]{1,16}$`）/ 包不存在或 manifest 不可读 = 带原因 `Err`。
+pub fn map_pack_detail(repo_root: &Path, sources: &RepoSources, id: &str) -> Result<Value, String> {
+    if !super::import::is_legal_pack_id(id) {
+        return Err(format!("非法包 id `{id}`（须 ^[a-z0-9_]{{1,16}}$）"));
+    }
+    let maps_dir = resolve_guarded(repo_root, &sources.repo_sources, "assets/maps/")
+        .map_err(|e| e.to_string())?;
+    let manifest_path = maps_dir.join(id).join("manifest.json");
+    let Some(manifest) = read_map_json(&manifest_path) else {
+        return Err(format!("包 `{id}` 不存在或 manifest 不可读（assets/maps/{id}/manifest.json）"));
+    };
+    Ok(json!({
+        "ok": true,
+        "id": id,
+        "manifest": manifest,
+        "note": "只读载入面（编辑器「编辑已有包」）；导入 = POST /api/map/import（覆盖该包 → verify → sync 回注 board.json）",
+    }))
+}
+
 /// `/api/whitelist?path=<relative>`：白名单判定 API（22 号 §10.2 混合白名单的机器面；
 /// 只读：`in_sources` 纯计算 + 参数白名单校验，0 写盘）。
 #[must_use]

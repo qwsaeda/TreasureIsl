@@ -20,10 +20,115 @@ use serde_json::{Value, json};
 use crate::repo::config::RepoSources;
 
 /// 地图包 `id` 合法字符集（`^[a-z0-9_]{1,16}$`；小写 + 数字 + 下划线，长度 1~16）。
-fn is_legal_pack_id(id: &str) -> bool {
+/// 地图包 id 合法性（`^[a-z0-9_]{1,16}$`；防路径穿越 + 命名约定）。
+/// 公开给 [`super::data::map_pack_detail`] 复用（同一口径，避免两处漂移）。
+pub(crate) fn is_legal_pack_id(id: &str) -> bool {
     let bytes = id.as_bytes();
     (1..=16).contains(&bytes.len())
         && bytes.iter().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == &b'_')
+}
+
+/// 编辑器管辖键（manifest 顶层）：平台地图编辑器 UI 暴露的就是这些 ⇒ 覆盖导入以编辑器值为准。
+const EDITOR_MANAGED_MANIFEST_KEYS: &[&str] = &[
+    "schema",
+    "id",
+    "version",
+    "data_version",
+    "map",
+    "layout",
+    "strings",
+    "central_asset",
+    "isle_assets",
+];
+
+/// 编辑器管辖键（layout 段）：编辑器只暴露环几何 + 画布 + 焦点锚；
+/// 其余（`island_home` / `deck_*` / `hint` …）= 包级配置，编辑器不提供 ⇒ 覆盖导入保留原值。
+const EDITOR_MANAGED_LAYOUT_KEYS: &[&str] =
+    &["ring", "world_canvas", "focus_anchor", "focus_bbox_pct"];
+
+/// 合并「原 manifest」与「编辑器 incoming manifest」= **覆盖语义**（纯函数，0 IO；集成测试面）。
+///
+/// 平台地图编辑器的导入 payload 只带它能表达的内容（31 格属性 + 环几何 + 画布 + 焦点 +
+/// `events`/`merchants`/`vs_theme`），**不带**原包的资产登记（`assets`）、包级 `layout` 附加键、
+/// `strings` 附加条目等 ⇒ 若直接覆盖写入 = 包内容降级（`assets` 丢 ⇒ I7 资产引用消失；
+/// `layout.island_home`/`deck_*` 丢 ⇒ 布局回默认）。
+///
+/// 合并规则：
+/// - manifest 顶层 = 原 manifest 为基底；**编辑器管辖键**用 incoming 覆盖；
+///   其余（`assets`/`vs_theme`/`invariants`…）incoming 带非空值才覆盖，否则保留原值；
+/// - `layout` 段 = 仅**编辑器管辖键**用 incoming 覆盖，其余保留原值；
+/// - `map` / `strings` 段 = 逐键合并（incoming 覆盖同名键，原包附加键保留）。
+///
+/// `base` 非对象（包不存在 = 新建）⇒ 返回 incoming 原样（新建语义不受影响）。
+pub fn merge_map_manifest(base: &Value, incoming: &Value) -> Value {
+    let Some(base_obj) = base.as_object() else {
+        return incoming.clone();
+    };
+    let Some(incoming_obj) = incoming.as_object() else {
+        return incoming.clone();
+    };
+    let mut out = base.clone();
+    let Some(out_obj) = out.as_object_mut() else {
+        return incoming.clone();
+    };
+    for (key, val) in incoming_obj {
+        match key.as_str() {
+            "layout" => {
+                let mut lay = base_obj.get("layout").and_then(Value::as_object).cloned().unwrap_or_default();
+                if let Some(in_lay) = val.as_object() {
+                    for (lk, lv) in in_lay {
+                        if EDITOR_MANAGED_LAYOUT_KEYS.contains(&lk.as_str()) {
+                            lay.insert(lk.clone(), lv.clone());
+                        }
+                    }
+                }
+                out_obj.insert("layout".to_owned(), Value::Object(lay));
+            }
+            "map" | "strings" => {
+                let mut seg = base_obj.get(key).and_then(Value::as_object).cloned().unwrap_or_default();
+                if let Some(in_seg) = val.as_object() {
+                    for (sk, sv) in in_seg {
+                        seg.insert(sk.clone(), sv.clone());
+                    }
+                }
+                out_obj.insert(key.clone(), Value::Object(seg));
+            }
+            _ if EDITOR_MANAGED_MANIFEST_KEYS.contains(&key.as_str()) => {
+                out_obj.insert(key.clone(), val.clone());
+            }
+            _ => {
+                // 编辑器未提供的包级字段（`assets` 空数组 / `vs_theme` / `invariants`…）：
+                // incoming 带非空值才覆盖，否则保留原值（不丢资产登记与包级配置）。
+                let meaningful = !val.as_array().is_some_and(|a| a.is_empty());
+                if meaningful {
+                    out_obj.insert(key.clone(), val.clone());
+                }
+            }
+        }
+    }
+    out
+}
+
+/// 读既有包 manifest（不存在 / 不可解析 = `Value::Null` ⇒ 合并时按新建处理）。
+fn read_existing_manifest(pack_dir: &std::path::Path) -> Value {
+    std::fs::read_to_string(pack_dir.join("manifest.json"))
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or(Value::Null)
+}
+
+/// payload 的 `map`/`layout`/`strings` 顶层段 = 合并后 manifest 的对应段
+/// （否则写出的独立 `map.json`/`layout.json`/`strings.json` 仍是未合并版 ⇒ 4 文件不一致）。
+fn merge_payload_segments(payload: &Value, manifest: &Value) -> Value {
+    let mut out = payload.clone();
+    if let Some(obj) = out.as_object_mut() {
+        for key in ["map", "layout", "strings"] {
+            if let Some(v) = manifest.get(key) {
+                obj.insert(key.to_owned(), v.clone());
+            }
+        }
+    }
+    out
 }
 
 /// 4 文件键完整性校验（`manifest` 必须带 `schema`/`id`/`data_version`/`map`/`layout`/`strings`；
@@ -77,7 +182,11 @@ pub fn import_map_pack(repo_root: &Path, _sources: &RepoSources, payload: &Value
             return json!({ "ok": false, "error": reason });
         }
     };
-    let written = match write_four_files(repo_root, &pack_dir, manifest, payload) {
+    // 3b) 覆盖既有包 = 合并原 manifest（编辑器只改「编辑器管辖键」；`assets`/包级 `layout`
+    //     附加键/`strings` 附加条目等编辑器不提供的字段保留原值 ⇒ 覆盖导入不丢包内容）。
+    let merged_manifest = merge_map_manifest(&read_existing_manifest(&pack_dir), manifest);
+    let merged_payload = merge_payload_segments(payload, &merged_manifest);
+    let written = match write_four_files(repo_root, &pack_dir, &merged_manifest, &merged_payload) {
         Ok(files) => files,
         Err(reason) => {
             return json!({ "ok": false, "error": reason });

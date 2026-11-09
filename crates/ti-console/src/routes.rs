@@ -199,6 +199,11 @@ fn dispatch_get(
         "/api/map" => {
             api_500_or_json(load_json(repo_root, |s| data::map_packs_detail(repo_root, s)), gz)
         }
+        // 单包只读详情（编辑器「编辑已有包」载入面；0 写盘，免 token）。
+        "/api/map/pack" => {
+            let id = percent_decode(query_param(url, "id").unwrap_or(""));
+            api_500_or_json(load_json(repo_root, |s| data::map_pack_detail(repo_root, s, &id)), gz)
+        }
         // S44.4 发布面只读状态（运行中标志 + 末次 exit_code + 日志历史 + ?log= 尾部；免 token，镜像 GET /api/gate）。
         "/api/publish" => publish_get(repo_root, url, gz),
         "/api/snapshot" => json200(
