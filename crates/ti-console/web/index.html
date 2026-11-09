@@ -301,9 +301,14 @@
   <section id="page-map" hidden>
     <div class="card">
       <h2>地图包（21 号标准 <code>assets/maps/&lt;id&gt;/</code>）</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:12px;border:1px solid var(--accent);border-radius:8px;background:rgba(126,200,227,.06)">
+        <div style="flex:1;min-width:240px"><b style="font-size:13px">地图制作</b>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">新建 / 编辑地图：31 格可拖拽自由摆放，校验通过后一键导入 <code>assets/maps/</code>（零 Rust）。</div>
+        </div>
+        <button id="map-edit-btn" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:9px 18px;cursor:pointer;font-weight:600">＋ 新建 / 编辑地图（可拖拽自由摆放）</button>
+      </div>
       <div id="map-default" style="margin-bottom:10px;color:var(--muted)"></div>
       <div id="map-list"></div>
-      <button id="map-edit-btn" style="margin-top:12px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">＋ 新建 / 编辑地图（环形画布）</button>
     </div>
     <div class="card">
       <h2>打包/分发（S44.4，30 号 §2.3：dist/maps/ 清单 + publish 编排默认关）</h2>
@@ -316,7 +321,7 @@
       <div style="margin-top:8px;color:var(--muted);font-size:12px">发布 = <code>scripts/publish_web.ps1</code>（gate 前置 + 重建 web + 静态断言 + release.md 发布历史 + gh-pages 推流）；单动作默认关（30 号 §2.3），须每次显式开启。</div>
     </div>
     <div class="card" id="map-editor" hidden>
-      <h2>地图编辑器（环形画布 · I1~I8 实时校验 · 导入落盘）</h2>
+      <h2>地图编辑器（可拖拽自由摆放 · I1~I8 实时校验 · 导入落盘）</h2>
       <div style="display:flex;gap:14px;flex-wrap:wrap">
         <div>
           <label style="font-size:12px;color:var(--muted)">包 id</label>
@@ -334,7 +339,7 @@
         </div>
         <div style="flex:1;min-width:360px">
           <svg id="ed-canvas" viewBox="0 0 1080 1920" style="width:100%;height:520px;background:#0d0f17;border:1px solid var(--border);border-radius:8px"></svg>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px">点环上节点改 kind/isle（弹窗选）；首格 = start，第 15 格 = boss（I5）；岛型每类 2 格同 group（I3）</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">拖动节点 = 自由摆放（位置存 <code>spaces[].pos</code>，缺省按环排布）；点击节点（不拖）改 kind/isle（弹窗选）；首格 = start，第 15 格 = boss（I5）；岛型每类 2 格同 group（I3）</div>
         </div>
       </div>
       <div id="ed-spaces" style="margin-top:14px;max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:6px"></div>
