@@ -114,6 +114,10 @@ fn read_post_body<R: std::io::Read>(reader: &mut R, method: &str, content_length
 
 /// 处理一个连接（每连接一线程；`web_root` = 静态壳，`repo_root` = 仓库根只读数据源面）。
 pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
+    // 读超时（2026-11-09 修复）：客户端连接后不发数据 / keep-alive 空闲连接会阻塞 `read_line`
+    // 长占线程。10s：正常浏览器请求远快于此；超时 = 连接被服务端关闭（客户端重连即可），
+    // 防慢客户端线程泄漏（与 main.rs 并发化配套：单线程长占不再冻全局，但线程数仍受控）。
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(10)));
     let mut reader = BufReader::new(match stream.try_clone() {
         Ok(s) => s,
         Err(_) => return,

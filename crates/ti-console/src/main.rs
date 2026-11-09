@@ -180,13 +180,18 @@ fn main() {
         );
         std::process::exit(1);
     }
-    for stream in listener.incoming().flatten() {
-        let web_root = web_root.clone();
-        let repo_root = repo_root.clone();
-        std::thread::scope(|s| {
-            s.spawn(|| routes::serve(stream, &web_root, &repo_root));
-        });
-    }
+    // 每连接一线程 + 并发处理（2026-11-09 修复）：原实现 `std::thread::scope` 放在 for 循环**内**，
+    // 每 accept 一个连接就 scope 阻塞等该连接处理完才 accept 下一个 ⇒ 任一客户端连接
+    // （浏览器 keep-alive 空闲连接 / 慢客户端不发数据）在 `read_line` 长占即冻结整个 accept 循环，
+    // 用户报「/api/build 构建日志不实时更新」真根因（慢连接复现实测：curl 5s 超时 0 字节）。
+    // 修复 = 单 scope 包住 accept 循环：连接并行（互不阻塞），scope 语义不变（线程不逃逸 main）。
+    std::thread::scope(|s| {
+        for stream in listener.incoming().flatten() {
+            let web_root = web_root.clone();
+            let repo_root = repo_root.clone();
+            s.spawn(move || routes::serve(stream, &web_root, &repo_root));
+        }
+    });
 }
 
 /// 锁文件守卫：进程正常退出时删锁（Ctrl+C 终止场景由下次启动时的 pid 存活检测兜底，S32.4 补全）。
