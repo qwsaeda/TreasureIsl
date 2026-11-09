@@ -32,7 +32,7 @@
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 20 |
-  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 36 |
+  | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 37 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 44 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 58 |
 
@@ -221,6 +221,7 @@
 | EXP-179 | code | | web/index.html loadBuild 触发按钮 setTimeout 回调写顶层 const loaded.build=false ⇒ 浏览器报 Assignment to constant，整块被 catch 掉显 /api/build 不可用；改 setTimeout(loadBuild,3000)（showPage 判 loaded 门） 正文见 `code.md` |
 | EXP-180 | code | | S49.7 平台测试页重做后「功能不见了」根因 = `renderTestSummary` 的 `const evOk = 0` 却 `evOk++` ⇒ TypeError: Assignment to constant variable ⇒ 整块渲染落 catch（分组/清单全空）；且 catch 块引用已删 DOM id （`ts-tree`）二次抛错掩盖真因。处置：计数器改 `let` + catch 只引用现存元素 + 判据改**全站冒烟**（13 页逐页渲染 + 测试页 30 条逐条展开收集 pageerror）。教训：「元素在但内容空」第一嫌疑 = 渲染函数抛错，非「UI 被删」；与 EXP-179 同类根因（const 绑定重赋值）。正文见 `code.md` |
 | EXP-181 | build | | 用户报安卓横屏不是全屏：项目坐标系写死 1080×1920 竖屏（S38 方案 A 已解：LANDSCAPE+is_landscape+prims_for+7场景landscape段）+ MuMu 驱动缺 VK_KHR_swapchain_mutable_format（wgpu 30 硬检查 SURFACE_VIEW_FORMATS → Surface::configure 失败黑屏，GLES 也挂，模拟器限制非项目）；winit 0.30 Android Resized 链路完整（无需 wasm_viewport_resolution 等价物）；真机当前 APK（含 S49.4d+S38）应已铺满 正文见 `build.md` |
+| EXP-182 | build | | MuMu GPU 栈结构性不兼容 sRGB surface（EXP-181）⇒ 起 redroid 容器当 Android 测试设备：f2fs 走不通（宿主内核 7.0 无 f2fs）改 ext4 loop；binder 必须挂 ext4 镜像进容器（bind-mount 宿主 binderfs 会 SIGABRT）；P5 脚本加横竖屏兼容 + dumpsys 30 行扫描 + 渲染链路健康前置（0fps 时 P5-2/P5-3 如实 SKIP）+ am start -W 死等坑 + logcat 刷爆 timeout 防护；平台 MINIMAL_ENV_KEYS 加 ANDROID_SERIAL 透传；gate P5 0 failure 正文见 `build.md` |
 
 ## 条目格式（写新条时照抄）
 

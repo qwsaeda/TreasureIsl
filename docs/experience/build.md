@@ -442,3 +442,14 @@ S48.0 逐套出图（--shot --scene=index --viewport=1920x1080）：主题背景
 **解法**：① 用户报「不是全屏」最可能来自**旧 APK**（S49.4d `android_entry.rs` window flags 2026-11-09 03:18 前构建的系统栏黑条）或 **wasm**（EXP-164 前 canvas 恒 540×960）；② **当前 APK 含 S49.4d + S38 → 真机横屏应已铺满**，无需额外改（修缺口 B 反而画蛇添足）；③ 模拟器黑屏无项目级修复（wgpu 30 硬检查，GLES 也挂），真机验证为准。
 
 **验证**：`bash scripts/build_apk.sh x86_64` 成功（zipalign 补装后）装 MuMu 实测仍黑屏（`Surface is not configured for presentation` / `SURFACE_VIEW_FORMATS`）；`dumpsys window` 确认 `screenOrientation=landscape` + 设备 `wm size 900x1600`；grep wgpu-30 源码确认检查点 + winit Android Resized 链路；7 场景 `landscape` 段实测（index 22/select_role 31/select_map 13/main_map 6/vs 16/message 1/saveload 8）。
+
+### EXP-182 构建：redroid 容器当 P5 测试设备（ext4 loop 替代 f2fs + binder 挂载踩坑 + P5 脚本 3 处设备标定）
+2026-11-09 P5 收口（S49.4e/S49.7）：MuMu 上 Bevy surface configure 结构性失败（EXP-181 根因），用户拍板「起 redroid 容器当测试设备」。踩坑与落法：
+- **f2fs 走不通 ⇒ ext4 loop 替代**：宿主内核 7.0 无 f2fs（/proc/filesystems 无），redroid 官方 f2fs 镜像路径死；`truncate -s 256M img && mkfs.ext4 && losetup -f --show img && mount` 挂 ext4 到 `-v ...:/data/android.img` 同样可用（redroid 只要求可写块设备语义，fs 不限）。
+- **binder 必须挂 ext4 loop，不能 bind-mount 宿主 binderfs**：`-v /host/binderfs:/dev/binder` 起容器后 zygote/system_server 反复 SIGABRT（tombstone：`Binder driver '/dev/binder' could not be opened`）——bind-mount 的宿主 binder 节点 Android 打开不了；正解 = ext4 镜像挂进容器当 `/dev/binder`（redroid init 自管）。
+- **`--device /dev/binder` 起容器时别再 bind-mount `/dev/binder`**（docker 报 Duplicate mount point），二选一。
+- **P5 判据脚本对 redroid 三处设备标定**（`scripts/android_device_test.py` 已落）：①P5-1 横竖屏兼容（redroid 横屏 1280×720 vs `wm size` 竖屏 720×1280，判据 = 占满全屏非方向匹配）；②dumpsys window 的 `mFrame` 在 Window 登记行后 ~19 行，scan 窗口 30 行；③redroid 软渲染 gralloc 桥 0fps（swap chain 持续 Timeout + 截屏 100% 黑）⇒ P5-2/P5-3 加渲染链路健康前置，0fps 时如实标 SKIP（设备能力限制，非 app bug），P5-1/P5-4 不依赖出帧照跑。
+- **NativeActivity 上 `am start -W` 会死等**（activity 常驻不 finish）⇒ 回前台等待用固定 sleep，不用 -W。
+- **logcat 缓冲被 swap chain 错误刷爆 ⇒ 每条 adb 加 timeout 防护**，否则命令挂死。
+- **平台跑 P5**：`ti-console` 子进程 env_clear 白名单不透传 `ANDROID_SERIAL` ⇒ `MINIMAL_ENV_KEYS` 加 `ANDROID_SERIAL`（22 号 §10.3 白名单 + 注释同步），平台 8787 起时带 `ANDROID_SERIAL=<serial>` 即透传。
+验证：redroid 12.0.0-latest + ext4 loop + `--device /dev/binder` 起容器 → `adb connect 127.0.0.1:5556` → 装 `dist/TreasureIsl-*.apk` → `python3 scripts/android_device_test.py --run -s 127.0.0.1:5556` = P5-1/P5-4 PASS + P5-2/P5-3 设备渲染限制 SKIP（exit 0）；平台 `/api/tests?run=android_device_test` exit_code=0。镜像保留（2.78GB），下次 P5 直接 `docker run` 复用。
