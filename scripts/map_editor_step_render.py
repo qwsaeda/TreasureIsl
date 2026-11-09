@@ -83,6 +83,20 @@ def font(size, bold=False):
     return ImageFont.load_default()
 
 
+def v6_polygon(index, cx, cy, base_r):
+    """seed 随机 6 顶点不规则多边形（真渲染 main_map.rs::v6_tile_polygon 同算法）。"""
+    seed = (index * 0x9E3779B9 + 0x12345678) & 0xFFFFFFFF
+    n = 6
+    pts = []
+    for k in range(n):
+        seed = (seed * 1664525 + 1013904223) & 0xFFFFFFFF
+        ang = -90 + k * 360 / n
+        rr = base_r * (0.72 + (seed % 28) / 100.0)
+        rad = math.radians(ang)
+        pts.append((cx + rr * math.cos(rad), cy + rr * math.sin(rad)))
+    return pts
+
+
 # ---------------------------------------------------------------- 步骤定义
 STEPS = [
     # slug, 标签, 结果面板, 画布演示
@@ -190,26 +204,33 @@ def draw_editor_screen(step_no, highlight_idx, status=""):
             d.text((x + 34, y + 6), isle[:8], font=font(9, True), fill=INK)
             d.text((x + 34, y + 22), ISLE_ZH[isle], font=font(8), fill=MUTED)
             d.text((x + 8, y + 34), "→" + ISLE_RES[isle], font=font(8), fill=MUTED)
-        # 中画布（环 + 中央岛 + 选中格）
+        # 中画布（真渲染 v6 对齐：环心 540,740 / 半径 460 / 格 d=68 / 中央岛 394）
         d.rounded_rectangle([mx, my, mx + mw, my + mh], radius=8, fill=(16, 20, 28), outline=BORDER)
-        d.text((mx + 14, my + 10), "环形赛道 · 点格铺岛", font=font(12, True), fill=INK)
-        cx, cy = mx + mw / 2, my + mh / 2 + 8
-        R = min(mw, mh) * 0.34
+        d.text((mx + 14, my + 10), "环形赛道 · 点格铺岛（真渲染 v6 所见即所得）", font=font(12, True), fill=INK)
+        cx, cy = mx + mw / 2, my + mh / 2 + 20
+        R = 300  # 画布内缩小比例（真渲染 460 等比缩进容器）
+        # 海面 + 环轨
+        d.ellipse([cx - R - 80, cy - R - 80, cx + R + 80, cy + R + 80], outline=(40, 70, 88), width=2)
         d.ellipse([cx - R, cy - R, cx + R, cy + R], outline=(54, 64, 82), width=2)
-        d.ellipse([cx - 78, cy - 78, cx + 78, cy + 78], fill=PARCH, outline=GOLD, width=2)
-        d.text((cx - 24, cy - 10), "中央岛", font=font(12, True), fill=GOLD)
+        # 中央据点岛（紧贴环格：R-43）
+        ir = R - 43
+        d.ellipse([cx - ir, cy - ir, cx + ir, cy + ir], fill=(42, 58, 48), outline=GOLD, width=2)
+        d.text((cx - 40, cy - 6), "中央据点岛", font=font(14, True), fill=GOLD)
         for i in range(31):
             a = math.radians(-90 + i * 360 / 31)
             nx, ny = cx + R * math.cos(a), cy + R * math.sin(a)
             kind, isle = KIND_SEQ[i], ISLE_SEQ[i]
-            w2, h2 = 34, 42
-            x0, y0 = nx - w2 / 2, ny - h2 / 2
+            base_r = 22  # 真渲染 d=68 等比缩进
             col = KCOL.get(kind, GRAY) if kind != "territory" else (ISLE_COLORS.get(isle, GRAY) if isle else (110, 130, 160))
             sel = (i == highlight_idx)
-            d.rounded_rectangle([x0, y0, x0 + w2, y0 + h2], radius=4,
-                                fill=col, outline=(ACCENT if sel else (24, 28, 38)),
-                                width=3 if sel else 1)
-            d.text((x0 + 3, y0 + 2), str(i), font=font(9, True), fill=(255, 255, 255))
+            # 真渲染对齐：seed 随机 6 顶点不规则多边形 + 色带圆环 + 中央图标
+            poly = v6_polygon(i, nx, ny, base_r)
+            sh = [(px, py + 2) for px, py in poly]
+            d.polygon(sh, fill=(12, 20, 26))
+            d.polygon(poly, fill=(222, 210, 176), outline=(ACCENT if sel else (30, 36, 46)), width=2 if sel else 1)
+            d.ellipse([nx - base_r * 0.62, ny - base_r * 0.62, nx + base_r * 0.62, ny + base_r * 0.62], fill=col)
+            d.ellipse([nx - base_r * 0.45, ny - base_r * 0.45, nx + base_r * 0.45, ny + base_r * 0.45], fill=(222, 210, 176))
+            d.text((nx - 4, ny - 4), str(i), font=font(8, True), fill=(30, 36, 46))
         # 右属性/内容
         rx = mx + mw + 10
         d.rounded_rectangle([rx, my, rx + rw, my + mh], radius=8, fill=PANEL, outline=BORDER)

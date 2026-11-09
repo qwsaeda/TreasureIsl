@@ -357,7 +357,7 @@
    "name": "Android 真机交互 P5（全屏/触摸命中/音频生命周期/切后台不崩）",
    "command": "python3 scripts/android_device_test.py --run",
    "gate": "4c",
-   "note": "S49.4e（docs/parity.md §P5）：gate 第 4c 项同源判据，需 adb + 已授权设备 + app 已装（adb install dist/TreasureIsl-*.apk）。无设备 = 工具 --run 环境检查 FAIL 非 0（如实报告未测，非静默）；判据证据 = evidence/android_device_test.log（--run 落盘，首次设备接入生成）",
+   "note": "S49.4e（docs/parity.md §P5）：gate 第 4c 项同源判据，需 adb + 已授权设备 + app 已装（adb install dist/TreasureIsl-*.apk）。多设备在线（红米/MuMu 与 redroid 可同时在线）用 --serial/-s 或 ANDROID_SERIAL 指定目标（脚本内 resolve_serial：--serial > ANDROID_SERIAL > 唯一设备，多设备未指定 = 歧义报错）。无设备 = 工具 --run 环境检查 FAIL 非 0（如实报告未测，非静默）；设备渲染 0fps（swap chain 持续 Timeout + 截屏全黑，如 redroid 软渲染 gralloc 桥）时 P5-2/P5-3 如实标 SKIP（设备渲染限制，非 app bug；真机/GPU 正常设备渲染出帧后重跑），P5-1/P5-4（窗口几何 + 进程生命周期）不依赖渲染出帧照跑。判据证据 = evidence/android_device_test.log（--run 落盘，首次设备接入生成；含设备 serial + 屏幕尺寸）",
    "group": "device",
    "timeout_s": 1800,
    "prove": "evidence/tests/android_device_test/"

@@ -342,13 +342,15 @@
          <div id="ed-func-list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
          <div id="ed-cur-isle" style="margin-top:10px;padding:8px;border:2px solid var(--accent);border-radius:8px;background:var(--panel2)"></div>
        </div>
-       <div id="ed-canvasbox" style="border:1px solid var(--border);border-radius:8px;background:#0d0f17;padding:10px;position:relative">
-         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px">
+       <div id="ed-canvasbox" style="border:1px solid var(--border);border-radius:8px;background:#0d0f17;padding:10px;position:relative;height:min(78vh,900px);display:flex;flex-direction:column">
+         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px;flex:none">
            <span style="font-size:12px;font-weight:600;color:var(--ink)">环形赛道 · 31 格</span>
-           <span style="font-size:11px;color:var(--muted)">点格铺岛 · 拖格摆位 · 滚轮缩放</span>
+           <span style="font-size:11px;color:var(--muted)">点格铺岛 · 拖格摆位 · 滚轮缩放 · 自适应全屏</span>
          </div>
-         <svg id="ed-canvas" viewBox="0 0 1080 960" style="width:100%;height:430px;background:transparent"></svg>
-         <div id="ed-float-sel" style="position:absolute;left:14px;bottom:14px;max-width:300px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);font-size:11px;color:var(--ink)" hidden></div>
+         <div style="flex:1;min-height:0;position:relative">
+           <svg id="ed-canvas" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;background:transparent;display:block"></svg>
+           <div id="ed-float-sel" style="position:absolute;left:14px;bottom:14px;max-width:300px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);font-size:11px;color:var(--ink)" hidden></div>
+         </div>
        </div>
        <div id="ed-right" style="border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:12px;overflow:auto;max-height:480px">
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">属性 · 格 <span id="ed-sel-idx">—</span></div>
@@ -1240,6 +1242,18 @@ const ED_ISLES = ['boss_fort','harbour','lighthouse','lightship','pirate_lair','
 const ED_KINDS = ['start','territory','event','card','treasure','boss'];
 // 岛型 → 归属色带（theme.json isle_* 实测 RGB565 → 前端 888 近似；渲染层 main_map.rs::isle_token_color 同映射）。
 // 节点两态：无主 = 灰底（tile_deny 语义）；已占 = 岛色带（tile_owned 语义，逐局动态，编辑器画「已占」态示范）。
+// ── 真渲染 v6 常量（main_map.rs V6_CENTER/V6_RADIUS/d；所见即所得 = 编辑器画布直接用）──
+const V6_CENTER = { x: 540, y: 740 };
+const V6_RADIUS = 460;
+const V6_TILE_D = 68;              // 格子直径（d=68 → 半径 34）
+const V6_TILE_R = V6_TILE_D / 2;
+// theme.json isle_* 令牌（RGB565 → hex；真渲染 by_name(isle_token_color) 源）
+const ED_ISLE_THEME = {
+  harbour: '#dac8', lighthouse: '#e652', wreck: '#fe47', pirate_lair: '#4163',
+  shipyard: '#3d54', trading_post: '#8c07', skull_cliff: '#eef7', volcano: '#e365',
+  lightship: '#a5b7', boss_fort: '#20e3',
+};
+
 const ED_ISLE_COLOR = {harbour:'#C87A6E',lighthouse:'#E0B070',wreck:'#E8C040',pirate_lair:'#3A3A5C',shipyard:'#3E8A78',trading_post:'#8C7A3C',skull_cliff:'#E8E4D0',volcano:'#D85C30',lightship:'#7A8CA0',boss_fort:'#38284A'};
 // 岛型 → 产出 resource（m01 实测绑定：harbour→fishing … boss_fort→boss；编辑器选岛自动配）。
 const ED_ISLE_RESOURCE = {harbour:'fishing',lighthouse:'reef',wreck:'gold',pirate_lair:'loot',shipyard:'ship',trading_post:'trade',skull_cliff:'loot',volcano:'gold',lightship:'dice',boss_fort:'boss'};
@@ -1382,15 +1396,29 @@ function edValidate() {
   return issues;
 }
 
-// 格 i 画布位置：优先 `spaces[i].pos`（拖过 = 自由摆放，存 map.json），缺省 = 按环几何算（向后兼容）。
-
+// 格 i 不规则多边形（真渲染对齐 main_map.rs::v6_tile_polygon：seed 随机 6 顶点，每格形状唯一）。
+function edTilePolygon(i, cx, cy, baseR) {
+  let seed = ((i * 0x9E3779B9) + 0x12345678) >>> 0;
+  const n = 6;
+  const pts = [];
+  for (let k = 0; k < n; k++) {
+    seed = ((seed * 1664525) + 1013904223) >>> 0;
+    const ang = -90 + k * 360 / n;
+    const rr = baseR * (0.72 + (seed % 28) / 100.0);
+    const rad = ang * Math.PI / 180;
+    pts.push([cx + rr * Math.cos(rad), cy + rr * Math.sin(rad)]);
+  }
+  return pts;
+}
+// 多边形点串（SVG polygon points）
+function edTilePoints(pts) { return pts.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '); }
 
 // 格 i 画布位置：优先 `spaces[i].pos`（拖过 = 自由摆放，存 map.json），缺省 = 按环几何算（向后兼容）。
 function edNodeXY(s, i) {
-  const ring = edState.ring;
+  // 真渲染 v6 对齐：缺省位置按 V6_CENTER + V6_RADIUS（v6_pillar_center 同式）
   if (Array.isArray(s.pos) && s.pos.length === 2 && isFinite(s.pos[0]) && isFinite(s.pos[1])) return [s.pos[0], s.pos[1]];
   const theta = (i / edState.spaces.length) * Math.PI * 2 - Math.PI / 2;
-  return [ring.center_x + ring.radius * Math.cos(theta), ring.center_y + ring.radius * Math.sin(theta)];
+  return [V6_CENTER.x + V6_RADIUS * Math.cos(theta), V6_CENTER.y + V6_RADIUS * Math.sin(theta)];
 }
 
 // 画布 viewBox 缩放（滚轮；1.0 = 适配，0.6 = 放大看细节；平移 = 空白拖）。
@@ -1399,7 +1427,7 @@ let edPan = { x: 0, y: 0 };
 function edApplyView() {
   const svg = $('ed-canvas');
   if (!svg) return;
-  svg.setAttribute('viewBox', '0 0 1080 960');
+  svg.setAttribute('viewBox', '0 0 1080 1920');
 }
 
 function edRenderCanvas() {
@@ -1408,20 +1436,26 @@ function edRenderCanvas() {
   const ring = st.ring;
   const N = st.spaces.length;
   let g = '';
-  // 环（1080×960 视口内：环心 = 540,480，半径按 ring.radius 等比缩进视口）
-  g += '<circle cx="' + ring.center_x + '" cy="' + ring.center_y + '" r="' + ring.radius + '" fill="none" stroke="#3a4155" stroke-width="2"/>';
-  // 中央据点岛
-  g += '<circle cx="' + ring.center_x + '" cy="' + ring.center_y + '" r="120" fill="#1a2233" stroke="#c9a15a" stroke-width="2"/>';
-  g += '<text x="' + ring.center_x + '" y="' + ring.center_y + '" text-anchor="middle" fill="#c9a15a" font-size="20">中央岛</text>';
+  // 真渲染 v6 对齐：环心 = V6_CENTER(540,740)，环半径 = V6_RADIUS(460)（所见即所得）
+  const cx0 = V6_CENTER.x, cy0 = V6_CENTER.y, R0 = V6_RADIUS;
+  // 海面
+  g += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + (R0 + 110) + '" fill="#1a3444" stroke="#2a4a5a" stroke-width="2"/>';
+  // 环轨
+  g += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + R0 + '" fill="none" stroke="#3a4155" stroke-width="2" stroke-dasharray="6 6"/>';
+  // 中央据点岛（真渲染：V6_RADIUS-66 = 紧贴环格，海水窄缝）
+  const ir = R0 - 66;
+  g += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + ir + '" fill="#2a3a30" stroke="#c9a15a" stroke-width="3"/>';
+  g += '<text x="' + cx0 + '" y="' + (cy0 - 6) + '" text-anchor="middle" fill="#c9a15a" font-size="26" font-weight="700">中央据点岛</text>';
+  g += '<text x="' + cx0 + '" y="' + (cy0 + 22) + '" text-anchor="middle" fill="#9aa5b5" font-size="13">island_home_' + st.id + '</text>';
   // 31 节点（序 = 前进方向；格 0 = 顶，顺时针；有 pos = 自由摆放）
   for (let i = 0; i < N; i++) {
     const [x, y] = edNodeXY(st.spaces[i], i);
     const s = st.spaces[i];
     // 节点两态（真实渲染口径 main_map.rs::render_v6_elem）：
-    // 领地格 = 已占 → 岛归属色带（ED_ISLE_COLOR，逐局动态）；无主 = 灰（tile_deny）。
+    // 领地格 = 已占 → 岛归属色带（theme.json isle_* 令牌）；无主 = 灰（tile_deny）。
     let color, letter = null, opacity = 0.92;
     if (s.kind === 'territory') {
-      color = s.isle ? ED_ISLE_COLOR[s.isle] || '#c9a15a' : '#5a5f6b';
+      color = s.isle ? (ED_ISLE_THEME[s.isle] || '#c9a15a') : '#5a5f6b';
       letter = s.isle ? (s.isle || '').slice(0, 2).toUpperCase() : '·';
       opacity = s.isle ? 0.92 : 0.6;
     } else if (s.kind === 'start') { color = '#3fb950'; letter = 'S'; }
@@ -1430,12 +1464,23 @@ function edRenderCanvas() {
     else if (s.kind === 'event') { color = '#4a6a9a'; letter = 'E'; }
     else { color = '#4a6a9a'; letter = 'C'; }
     const sel = (edSel != null && edSel === i);
+    // 真渲染对齐：seed 随机 6 顶点不规则多边形 + 色带圆环 + 中央图标 + 名牌
+    const baseR = V6_TILE_R;  // 真渲染 d=68 → r=34（所见即所得）
+    const poly = edTilePolygon(i, x, y, baseR);
+    const pts = edTilePoints(poly);
+    const shadowPts = edTilePoints(poly.map((p) => [p[0], p[1] + 3]));
+    const face = '#ded2b0';  // land_sand（羊皮卡面）
+    const band = s.kind === 'territory' ? (s.isle ? (ED_ISLE_COLOR[s.isle] || '#c9a15a') : '#5a5f6b') : color;
+    const ringR = baseR * 0.66;
+    const ringIn = baseR * 0.50;
     g += '<g class="ed-node" data-idx="' + i + '" style="cursor:grab">'
-      + '<rect x="' + (x - ring.card_w/2) + '" y="' + (y - ring.card_h/2) + '" width="' + ring.card_w + '" height="' + ring.card_h
-      + '" rx="8" fill="' + color + '" opacity="' + opacity + '" stroke="' + (sel ? '#7ec8e3' : (s.kind==='territory' && !s.isle ? '#8a8f9a' : '#0d0f17')) + '" stroke-width="' + (sel ? 4 : 2) + '"/>'
-      + '<text x="' + x + '" y="' + (y - 10) + '" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">' + i + '</text>'
-      + '<text x="' + x + '" y="' + (y + 6) + '" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">' + letter + '</text>'
-      + '<text x="' + x + '" y="' + (y + 24) + '" text-anchor="middle" fill="#cfd3dc" font-size="10">' + (s.kind === 'territory' ? (s.isle ? ED_ISLE_LABEL[s.isle] || s.isle : '无主') : s.kind) + '</text>'
+      + '<polygon points="' + shadowPts + '" fill="#0c141a"/>'
+      + '<polygon points="' + pts + '" fill="' + face + '" stroke="' + (sel ? '#7ec8e3' : (s.kind==='territory' && !s.isle ? '#8a8f9a' : '#1e242e')) + '" stroke-width="' + (sel ? 3 : 2) + '"/>'
+      + '<circle cx="' + x + '" cy="' + y + '" r="' + ringR + '" fill="' + band + '" opacity="' + opacity + '"/>'
+      + '<circle cx="' + x + '" cy="' + y + '" r="' + ringIn + '" fill="' + face + '" opacity="0.94"/>'
+      + '<text x="' + x + '" y="' + (y - 8) + '" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">' + i + '</text>'
+      + '<text x="' + x + '" y="' + (y + 7) + '" text-anchor="middle" fill="' + (s.kind === 'territory' && s.isle ? '#1e242e' : color) + '" font-size="12" font-weight="700">' + letter + '</text>'
+      + '<text x="' + x + '" y="' + (y + baseR + 14) + '" text-anchor="middle" fill="#cfd3dc" font-size="10">' + (s.kind === 'territory' ? (s.isle ? ED_ISLE_LABEL[s.isle] || s.isle : '无主') : s.kind) + '</text>'
       + '</g>';
   }
   svg.innerHTML = g;

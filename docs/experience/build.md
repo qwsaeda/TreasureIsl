@@ -431,3 +431,14 @@ SignV2 + keystore 缺失自动 `keytool` 生成（原私钥不可恢复，新 ke
 
 ### EXP-177 构建：出图 preload 慢 + 全量 gate 超时
 S48.0 逐套出图（--shot --scene=index --viewport=1920x1080）：主题背景 2K PNG（3-5MB）+ 标题 + 双主角，preload 资源加载慢，timeout 60（refix.sh 首版）出图 preload 未完成（hist Loading 51）即退；改 timeout 115 出图成功。全量 gate（34 项 full）超 900s（cargo test 346s + wasm build 523s）→ gate exit=124 超时杀。教训：大图资产出图须长 timeout（≥115s）；gate full 用 ≥1500s timeout（含 wasm build 慢项）。
+
+### EXP-181 构建：安卓横屏「不是全屏」排查 = 项目坐标系写死 + MuMu 驱动缺 VK_KHR_swapchain_mutable_format（wgpu 30 硬检查）
+用户 2026-11-09 报「安卓横屏画面不是全屏？写死的？游戏引擎这么 low？」。排查链：
+- **不是引擎 low**：native `--shot --viewport=1920x1080` 横屏铺满正确（S38.0 验收非黑 99.8%）。
+- **「写死」= 项目坐标系写死 1080×1920 竖屏**（`ti_render::framebuffer::LOGICAL_W/H_I32`）+ `viewport_scale=min(win_w/1080,win_h/1920)` 恒竖屏 → 横屏 letterbox 浪费 61%；**S38 方案 A 已解**（`LANDSCAPE_W/H=1920/1080` + `is_landscape` + `prims_for(landscape)` + 7 场景全有 `landscape` 段）。
+- **Android 横屏链路代码完整**：winit 0.30 Android `MainEvent::WindowResized`（`mod.rs:220`）→ `WindowEvent::Resized(size)`（`mod.rs:343`）→ bevy_winit `react_to_resize` 更新 Window（`state.rs:255`）→ `window_resize_system` `Orientation::from_size` 设 `Landscape`（`treasure_bevy.rs:1650`）→ `prims_for(landscape)`（`chrome.rs:1256`）。**缺口「Android 未接实际窗口尺寸」不存在**——winit 正确发 Resized，无需 wasm `wasm_viewport_resolution` 等价物。
+- **MuMu 模拟器黑屏（实测）**：wgpu 30 硬性 `require_downlevel_flags(SURFACE_VIEW_FORMATS)`（`wgpu-core/device/resource.rs:5299`）：Vulkan 需 `VK_KHR_swapchain_mutable_format` 扩展（`vulkan/adapter.rs:702-704` 条件设置），**MuMu 缺该扩展**（arm64 转译 + x86_64 原生都黑屏，`bash scripts/build_apk.sh x86_64` 实测同错）→ `Surface::configure` 失败 → panic → 黑屏 + 失焦；GLES 后端也挂（`gles/adapter.rs:387-402` downlevel 不含该 flag）。**模拟器限制非项目问题**，真机 arm64 通常支持该扩展。
+
+**解法**：① 用户报「不是全屏」最可能来自**旧 APK**（S49.4d `android_entry.rs` window flags 2026-11-09 03:18 前构建的系统栏黑条）或 **wasm**（EXP-164 前 canvas 恒 540×960）；② **当前 APK 含 S49.4d + S38 → 真机横屏应已铺满**，无需额外改（修缺口 B 反而画蛇添足）；③ 模拟器黑屏无项目级修复（wgpu 30 硬检查，GLES 也挂），真机验证为准。
+
+**验证**：`bash scripts/build_apk.sh x86_64` 成功（zipalign 补装后）装 MuMu 实测仍黑屏（`Surface is not configured for presentation` / `SURFACE_VIEW_FORMATS`）；`dumpsys window` 确认 `screenOrientation=landscape` + 设备 `wm size 900x1600`；grep wgpu-30 源码确认检查点 + winit Android Resized 链路；7 场景 `landscape` 段实测（index 22/select_role 31/select_map 13/main_map 6/vs 16/message 1/saveload 8）。

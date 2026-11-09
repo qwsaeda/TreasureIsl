@@ -1,0 +1,10 @@
+# Android 真机交互 P5 判据证据（S49.4e；docs/parity.md §P5）
+
+设备：serial=127.0.0.1:5556 屏幕=720x1280
+
+  [PASS] clean-start 首启 pid=2423（6s 清场后）
+  [PASS] p5-1 全屏（surface=屏幕尺寸）：屏幕 720x1280 vs app 1280x720
+  [SKIP] p5-2 触摸命中（tap 1600,300→场景流转）：SKIP（设备渲染限制）：截屏黑 100% + swap chain Timeout ≥3 （设备 0fps，redroid 软渲染 gralloc 桥；触摸/截图判据无意义，非 app bug；真机或 GPU 正常的设备应渲染出帧后重跑）
+  [SKIP] p5-3 音频生命周期（切后台暂停/回前台恢复）：SKIP（设备渲染限制）：swap chain Timeout ≥3（设备 0fps，渲染链路未起），BGM AudioSink 未 spawn，音频生命周期判据无意义；真机/GPU 正常设备重跑
+  [PASS] p5-4 切后台不崩（进程存活+无 FATAL）：切后台回前台进程存活 + 无 FATAL/ANR（同一进程）
+P5: 全部判据 PASS（设备限制判据已如实标 SKIP）

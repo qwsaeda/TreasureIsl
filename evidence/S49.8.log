@@ -25,3 +25,7 @@ overview/tasks/evidence/assets/design/map/tests/apksize/build/themes/close/searc
 === 未跑项（如实记录）===
 - 用户视觉签收待过目（v3 地图编辑器交互面 = 表现层改动，A 纪律：设计稿先行 → 用户过目后才算收口）
 - gate 全量待跑（与 S49.7 同批）
+
+=== gate 全量（S49.8 收口补记，2026-11-09 15:50）===
+gate 35 项 = 0 failure（与 S49.7 同批；P5 真机交互 = redroid 127.0.0.1:5556 实测）
+地图编辑器 v3 在平台 /map 页 13 页冒烟 0 JS 错误；视觉签收 = 用户浏览器硬刷新过目（A 纪律）

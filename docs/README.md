@@ -161,6 +161,7 @@
 | `scripts/map_editor_redesign_concepts.py` | **地图编辑器 3 方向概念稿生成器**（A 纪律：3 方向横版概念稿 → `evidence/ui_concept/map_editor_redesign_{A,B,C}.png`；`--check` 只读） |
 | `scripts/map_editor_redesign_v3_minimal.py` | **地图编辑器「极简分步」3 变体概念图**（一次只亮当前步 → `evidence/ui_concept/map_editor_v3_minimal_{a,b,c}.png`；`--check` 只读） |
 | `scripts/map_editor_step_render.py` | **地图编辑器 10 步逐步设计渲染图生成器**（10 步各 1 张 + 总览拼图 → `evidence/ui_concept/map_editor_step_*.png`；`--check` 只读） |
+| `scripts/map_editor_tile_concepts.py` | **地图格子「创意形状」概念图**（真渲染 v6 不规则多边形对齐 → `evidence/ui_concept/map_editor_tile_concept_{a,b,c,d}.png`；`--check` 只读） |
 | `scripts/ui_variant.py` | **UI 资产视觉变体器（S44）**：固化 S42.0 的 `tint_cool` 为正式工具（选资产 + 着色参数 → 同路径替换 / `--suffix` 变体路径；`--register` 更新 `ui_manifest.json`；`--check` 只读）——换 UI 视觉变体零 Rust |
 | `scripts/ui_theme.py` | **内容运营全主题创新·主题应用工具（S48.0）**：主题包 `assets/themes/<tid>/compose.json` 的 `landscape_primitives` + `assets` → 定点回注 scenes.json 构图（indent=1 规范形）+ 部署资产 + register + validate_data——全主题创新（AI 背景/标题 + 真实双主角 + 构图重排）零 Rust |
 | `scripts/task_close.py` | **任务收口一条命令**（跑判据 → 写 `evidence/<id>.log` → 台账行级置 verified → 同步 release 台账计数 → 三方对账复验；判据非 0 则不写证据不改台账） |

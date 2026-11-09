@@ -134,13 +134,51 @@
 | B 上下分屏 | ![B](../evidence/ui_concept/map_editor_v3_minimal_b.png) | 备选：画布常驻 + 下步骤卡，边看边调但下半屏稍重 |
 | C 纯步骤卡 | ![C](../evidence/ui_concept/map_editor_v3_minimal_c.png) | 备选：10 卡竖排无常驻画布，最轻但失去所见即所得 |
 
-## 五、节点颜色语义（与真渲染 main_map.rs 对齐）
+## 五、格子创意形状（用户 2026-11-09「格子为什么用卡片？去创意生成不同格子」）
+
+**根因**：真渲染 v6（`main_map.rs::v6_tile_polygon`）**已是 seed 随机 6 顶点不规则多边形**（每格形状唯一），但编辑器画布 + 设计渲染图用了过时矩形卡片（S27.1 旧定案 96×120 卡），与真渲染脱节。
+
+**选型 = 变体 A 真渲染对齐**（编辑器/概念图从矩形卡 → seed 随机不规则多边形，所见即所得，0 游戏 Rust 改动）。4 变体概念图：
+
+| 变体 | 设计稿 | 特点 | 与真渲染 |
+|------|--------|------|----------|
+| **A 真渲染对齐** | ![A](../evidence/ui_concept/map_editor_tile_concept_a.png) | seed 随机 6 顶点，每格形状唯一（尖角/圆润/偏斜），色带圆环 + 中央图标 + 名牌 | ✅ 完全一致（同 `v6_tile_polygon` 算法） |
+| B 拼图块 | ![B](../evidence/ui_concept/map_editor_tile_concept_b.png) | 四边随机凸舌/凹槽咬合，拼图感 | 需新算法 |
+| C 圆形徽章 | ![C](../evidence/ui_concept/map_editor_tile_concept_c.png) | 纯圆 + 8 刻度齿外环 + 色带，简洁 | 需新算法 |
+| D 六边形蜂窝 | ![D](../evidence/ui_concept/map_editor_tile_concept_d.png) | 六边形平铺 + 色带描边，规整 | 需新算法 |
+
+**落码**：编辑器画布（`edRenderCanvas` 格子 `rect`→`polygon` + `edTilePolygon` 函数，同真渲染 seed 算法）+ 设计渲染图（`map_editor_step_render.py` 格子同算法）。**0 游戏 crate 改动**（`v6_tile_polygon` 已在位，内容运营判据保持）。
+
+**所见即所得对齐（用户 2026-11-09「可见即可得的可视化做的怎么样了」）**——编辑器画布现在直接用真渲染 v6 常量（`main_map.rs`）：
+
+| 维度 | 真渲染 v6 | 编辑器画布（已对齐） |
+|------|----------|---------------------|
+| 格子形状 | `v6_tile_polygon` seed 随机 6 顶点 | `edTilePolygon` 同算法 ✅ |
+| 环心 | `V6_CENTER = (540, 740)` | `V6_CENTER = {x:540, y:740}` ✅ |
+| 环半径 | `V6_RADIUS = 460` | `V6_RADIUS = 460` ✅ |
+| 格子直径 | `d = 68`（半径 34） | `V6_TILE_D = 68` → `V6_TILE_R = 34` ✅ |
+| 中央岛 | `V6_RADIUS - 66 = 394`（紧贴环格） | `ir = R0 - 66 = 394` ✅ |
+| 岛颜色 | `theme.by_name(isle_token_color)` 读 `theme.json isle_*` 令牌 | `ED_ISLE_THEME` = theme.json 令牌值（harbour `#dac8`…boss_fort `#20e3`）✅ |
+| 视口 | 1080×1920 竖屏世界 | `viewBox 0 0 1080 1920` ✅ |
+
+⇒ **编辑器画布 = 真渲染 v6 的等比视图**（编辑器看到的 = 游戏 main_map 布局），所见即所得达成。
+
+**自适应全屏（用户 2026-11-09「1080×1920？固定死的，横屏居然不是全屏？」）**——编辑器画布**不固定 1080×1920 死框**，改 `preserveAspectRatio="xMidYMid meet"` + 容器弹性高 `height:min(78vh,900px)` + SVG 100%×100%，地图在容器内**等比缩放填满可用区域**：
+
+| 窗口 | 画布实测 | 效果 |
+|------|---------|------|
+| 横屏 1600×900 | SVG 784×657，容器高 702 | 地图横向铺满，无两侧黑边 ✅ |
+| 竖屏 900×1600 | SVG 398×855 | 地图纵向铺满，完整显示 ✅ |
+
+（注：**游戏运行时**的横屏适配 = 27 号 `docs/process/27_landscape_adaptation.md` U23 设计草案，**待用户确认后动码**，与编辑器平台工具的解耦。）
+
+## 六、节点颜色语义（与真渲染 main_map.rs 对齐）
 
 - **节点 tile 底色 = 两态**：`tile_owned`（无主/有主，中性）/ `tile_deny`（锁定，暗红）；**不随事件/商人内容变色**（随机/每局事件无专属底色）。
 - **岛色带（顶部）= 动态**：颜色来自 `theme.json` 的 `isle_*` 令牌（10 类，运行期随主题切换），非编辑器画死。
 - **岛类型 = 固定 10 类闭集**（boss_fort/harbour/lighthouse/lightship/pirate_lair/shipyard/skull_cliff/trading_post/volcano/wreck），不可加新类，只能重分配 20 个领地格（I3 每类必须 2 格同 group，须成对改）。
 
-## 六、踩坑（已固化进编辑器）
+## 七、踩坑（已固化进编辑器）
 
 1. **I3 成对**：铺/清任一岛型格，该类格数偏离 2 立即红字标出，必须成对改。
 2. **pos 越界**：拖动自由摆放 pos 超出 `world_canvas`（底 1310 / 左右 7~1059）立即红字。
@@ -148,7 +186,7 @@
 4. **events/merchants/vs_theme = I9+S34.5 硬门禁**：前端逐条 ✓/✗，不过 0 违规不能导入。
 5. **只动数据不碰代码**：第 ⑩ 步 `git diff crates/` 空 = 内容运营判据（0 游戏 crate 改动）。
 
-## 七、设计渲染图怎么再生成（可复用 / 多次后合成）
+## 八、设计渲染图怎么再生成（可复用 / 多次后合成）
 
 - **脚本**：`python3 scripts/map_editor_step_render.py`（11 张 = 10 步 + 总览，幂等覆盖）。
   - 无参 = 全出；`--only 04_verify` = 只重出指定步；`--check` = 只读校验产物在位。
@@ -157,7 +195,7 @@
 - **出图后可**：多次生成不同包/不同步的渲染图，PIL 拼图合成对比效果（参考 `map_editor_design_gen.py` 的拼图范式）。
 - 图落 `evidence/ui_concept/map_editor_step_*.png` + 总览。
 
-## 八、视觉签收（用户过目）
+## 九、视觉签收（用户过目）
 
 | 签收图 | 内容 |
 |--------|------|
@@ -167,7 +205,7 @@
 
 **判据 = 用户视觉确认（本图 + 上述签收图过目，视觉签收类任务收口口径见 `docs/process/26_dev_stages_overview.md` 视觉签收清单）。**
 
-## 九、文件/命令速查
+## 十、文件/命令速查
 
 | 物 | 位置 |
 |----|------|

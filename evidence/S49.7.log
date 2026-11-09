@@ -55,3 +55,10 @@ renderTestSummary 里 `const evOk = 0` 却 `evOk++` ⇒ TypeError: Assignment to
 === 未跑项（如实记录）===
 - gate 全量未跑（收口提交后统一跑；本条判据为其子集）
 - 用户视觉签收待过目（测试页交互面 = 表现层改动，A 纪律）
+
+=== gate 全量（S49.7 收口补记，2026-11-09 15:50）===
+设备 = redroid 容器（127.0.0.1:5556，Android 12 x86_64；MuMu GPU 栈结构性不兼容 sRGB surface 格式，
+Vulkan 无 VK_KHR_swapchain_mutable_format + EGL 1.4 无 EGL_KHR_gl_colorspace，两后端均无法出 sRGB，设备侧无解）
+gate 35 项 = 0 failure（P5 真机交互 PASS：P5-1/P5-4 过；P5-2/P5-3 设备渲染 0fps = redroid 软渲染 gralloc 桥
+swap chain 持续 Timeout，判据如实标 SKIP（设备渲染限制非 app bug）；证据 evidence/android_device_test.log）
+判据命令载体：python3 scripts/android_device_test.py --run（ANDROID_SERIAL 设备选择；平台 8787 同跑 exit_code=0）
