@@ -2180,6 +2180,17 @@ async function loadThemes() {
         }
       });
     });
+    // S49.4f：默认展示预览图 —— 进入主题页自动为默认主题出图一次（默认 = 当前应用主题
+    // `applied`，无则第一个合法主题 `valid`；复用「预览」按钮 handler，避免重复逻辑）。
+    // apply 后重载（loaded.themes 置 false → loadThemes 重跑）会再次自动出图新应用主题。
+    const defT = (list.find(t => t.applied === true) || list.find(t => t.valid === true) || {});
+    if (defT.id) {
+      let autoBtn = null;
+      document.querySelectorAll('#themes-list button[data-th-op="preview"]').forEach(btn => {
+        if (!autoBtn && btn.dataset.themeId === defT.id && !btn.disabled) autoBtn = btn;
+      });
+      if (autoBtn) autoBtn.click();
+    }
   } catch (e) {
     $('themes-list').innerHTML = '<div class="empty">/api/themes 不可用：' + esc(String(e)) + '</div>';
   }
