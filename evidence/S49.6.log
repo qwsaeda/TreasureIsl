@@ -38,3 +38,11 @@ RESULT: PASS
 - 导入闭环（POST /api/map/import 真写盘）未实测：导入会触发 `map_pack.py sync` 全量重算
   board.json → 覆盖并行在途对 board.json 的改动 ⇒ 本轮不跑；覆盖合并语义由 [1] 纯函数单测覆盖
   （5 条：资产登记保留 / 包级 layout 保留 / strings 附加条目保留 / 编辑器改动生效 / 新建包不受影响）。
+
+=== gate 全量（S49.6 收口补记，2026-11-09 15:55）===
+并行在途改动（地图编辑器 v3 仪表盘 + 4 地图包 + 5 脚本 + 指南）已随 925e27b 收口提交，
+工作区已干净 ⇒ 收口前置解除。gate 35 项 0 failure（S49.7/S49.8 同批全量实跑，evidence/S49.7.log）；
+本机无 NDK = aarch64 构建条件项 SKIP（文档化，非判据失败）。
+map_pack_edit_tests 5/5 复跑绿（上条证据判据载体在位）。
+导入闭环（POST /api/map/import 真写盘）仍待用户视觉签收后统一实测（导入会触发 map_pack.py sync
+重算 board.json，属写面动作，A 纪律：签收后跑）。
