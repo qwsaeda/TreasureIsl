@@ -1200,6 +1200,15 @@ function edValidate() {
   // I6：ring 8pt（center_x 屏心 540 豁免）
   const r = st.ring;
   ['center_y','radius','card_w','card_h'].forEach((k) => { if (typeof r[k] === 'number' && r[k] % 8 !== 0) issues.push('I6 ring.' + k + '=' + r[k] + ' 非 8 整除'); });
+  // I6 扩展：spaces[].pos 自由摆放（可选；缺省 = 按环）。在则须 [x,y] 且在 world_canvas 内。
+  st.spaces.forEach((s, i) => {
+    if (Array.isArray(s.pos) && s.pos.length === 2 && isFinite(s.pos[0]) && isFinite(s.pos[1])) {
+      const c = st.canvas;
+      if (s.pos[0] < c.x - 4 || s.pos[0] > c.x + c.w + 4 || s.pos[1] < c.y - 4 || s.pos[1] > c.y + c.h + 4) {
+        issues.push('格' + i + ' pos=' + s.pos[0] + ',' + s.pos[1] + ' 超出 world_canvas');
+      }
+    }
+  });
   // I8：world_canvas ≡ focus_bbox_pct × (1080,1920) ±1px（导入时 canvas 由 pct 正算往返恒等；
   // 前端同口径做 ±1px 逐维校验 = 与 verify_pack 一致，防前端全过但导入被 I8 拒（审计 r1 修））
   const LAYOUT = { x: 11, y: 250, w: 1048, h: 1056 };
@@ -1209,6 +1218,14 @@ function edValidate() {
     if (Math.abs(want - LAYOUT[k]) > 1) issues.push('I8 world_canvas.' + k + ' = ' + LAYOUT[k] + '（bbox 往返超差 >1px）');
   }
   return issues;
+}
+
+// 格 i 画布位置：优先 `spaces[i].pos`（拖过 = 自由摆放，存 map.json），缺省 = 按环几何算（向后兼容）。
+function edNodeXY(s, i) {
+  const ring = edState.ring;
+  if (Array.isArray(s.pos) && s.pos.length === 2 && isFinite(s.pos[0]) && isFinite(s.pos[1])) return [s.pos[0], s.pos[1]];
+  const theta = (i / edState.spaces.length) * Math.PI * 2 - Math.PI / 2;
+  return [ring.center_x + ring.radius * Math.cos(theta), ring.center_y + ring.radius * Math.sin(theta)];
 }
 
 function edRenderCanvas() {
@@ -1222,18 +1239,18 @@ function edRenderCanvas() {
   // 中央据点岛
   g += '<circle cx="' + ring.center_x + '" cy="' + ring.center_y + '" r="120" fill="#1a2233" stroke="#c9a15a" stroke-width="2"/>';
   g += '<text x="' + ring.center_x + '" y="' + ring.center_y + '" text-anchor="middle" fill="#c9a15a" font-size="20">中央岛</text>';
-  // 31 节点（序 = 前进方向；格 0 = 顶，顺时针）
+  // 拖动提示
+  g += '<text x="' + ring.center_x + '" y="' + (ring.center_y + 150) + '" text-anchor="middle" fill="#5a6272" font-size="12">格子可拖拽自由摆放（位置存 map.json spaces[].pos；未拖 = 按环排布）</text>';
+  // 31 节点（序 = 前进方向；格 0 = 顶，顺时针；有 pos = 自由摆放）
   for (let i = 0; i < N; i++) {
-    const theta = (i / N) * Math.PI * 2 - Math.PI / 2;
-    const x = ring.center_x + ring.radius * Math.cos(theta);
-    const y = ring.center_y + ring.radius * Math.sin(theta);
+    const [x, y] = edNodeXY(st.spaces[i], i);
     const s = st.spaces[i];
     let color = '#3a4155';
     if (s.kind === 'start') color = '#3fb950';
     else if (s.kind === 'boss') color = '#d05454';
     else if (s.kind === 'territory') color = s.isle ? '#c9a15a' : '#8a6d3b';
     else color = '#4a90d9';
-    g += '<g class="ed-node" data-idx="' + i + '" style="cursor:pointer">'
+    g += '<g class="ed-node" data-idx="' + i + '" style="cursor:grab">'
       + '<rect x="' + (x - ring.card_w/2) + '" y="' + (y - ring.card_h/2) + '" width="' + ring.card_w + '" height="' + ring.card_h
       + '" rx="8" fill="' + color + '" opacity="' + (s.kind==='territory' && !s.isle ? 0.5 : 0.9) + '" stroke="#0d0f17" stroke-width="2"/>'
       + '<text x="' + x + '" y="' + (y - 4) + '" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">' + i + '</text>'
@@ -1241,9 +1258,38 @@ function edRenderCanvas() {
       + '</g>';
   }
   svg.innerHTML = g;
-  // 节点交互
+  // 节点交互：拖拽自由摆放（pointerdown/move/up）；未拖动 = 点击编辑（kind/isle/group）。
   svg.querySelectorAll('.ed-node').forEach((n) => {
-    n.addEventListener('click', () => edEditNode(parseInt(n.dataset.idx, 10)));
+    n.addEventListener('pointerdown', (ev) => {
+      const idx = parseInt(n.dataset.idx, 10);
+      const s = st.spaces[idx];
+      const [ox, oy] = edNodeXY(s, idx);
+      const rect = svg.getBoundingClientRect();
+      const kx = 1080 / rect.width, ky = 1920 / rect.height;
+      const sx = ev.clientX, sy = ev.clientY;
+      let dragged = false, ldx = 0, ldy = 0;
+      const move = (ev2) => {
+        ldx = (ev2.clientX - sx) * kx; ldy = (ev2.clientY - sy) * ky;
+        if (!dragged && Math.hypot(ldx, ldy) < 8) return; // 阈值内 = 未拖（点击）
+        dragged = true;
+        n.setAttribute('transform', 'translate(' + ldx + ',' + ldy + ')');
+        n.style.cursor = 'grabbing';
+      };
+      const up = () => {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        if (dragged) {
+          s.pos = [Math.round(ox + ldx), Math.round(oy + ldy)]; // 提交自由位置
+          edRenderCanvas(); // 整体重绘（label/位置刷新）
+          edValidateBar();
+        } else {
+          edEditNode(idx); // 未拖 = 点击编辑
+        }
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      ev.preventDefault();
+    });
   });
 }
 
@@ -1273,9 +1319,9 @@ function edEditNode(idx) {
 
 function edRenderTable() {
   const st = edState;
-  let h = '<table style="width:100%;font-size:12px;border-collapse:collapse"><tr><th style="text-align:left;padding:4px">#</th><th>kind</th><th>isle</th><th>group</th><th>terrain</th></tr>';
+  let h = '<table style="width:100%;font-size:12px;border-collapse:collapse"><tr><th style="text-align:left;padding:4px">#</th><th>kind</th><th>isle</th><th>group</th><th>terrain</th><th>pos</th></tr>';
   st.spaces.forEach((s, i) => {
-    h += '<tr style="border-top:1px solid var(--border)"><td style="padding:4px">' + i + '</td><td>' + s.kind + '</td><td>' + (s.isle || '-') + '</td><td>' + s.group + '</td><td>' + s.terrain + '</td></tr>';
+    h += '<tr style="border-top:1px solid var(--border)"><td style="padding:4px">' + i + '</td><td>' + s.kind + '</td><td>' + (s.isle || '-') + '</td><td>' + s.group + '</td><td>' + s.terrain + '</td><td>' + (Array.isArray(s.pos) ? s.pos.join(',') : '（环）') + '</td></tr>';
   });
   h += '</table>';
   $('ed-spaces').innerHTML = h;
@@ -1325,7 +1371,7 @@ async function edImport() {
     schema: 'map-pack/1', id: st.id, version: '1.0.0', data_version: 'board-v5',
     central_asset: 'island_home_' + st.id,
     isle_assets: ED_ISLES.slice(),
-    map: { grid_w: 20, grid_h: 20, spaces: st.spaces.map((s) => ({ cell: s.cell, group: s.group, kind: s.kind, terrain: s.terrain, ...(s.isle ? { isle: s.isle } : {}) })) },
+    map: { grid_w: 20, grid_h: 20, spaces: st.spaces.map((s) => ({ cell: s.cell, group: s.group, kind: s.kind, terrain: s.terrain, ...(s.isle ? { isle: s.isle } : {}), ...(Array.isArray(s.pos) && s.pos.length === 2 ? { pos: s.pos } : {}) })) },
     layout: {
       ring: st.ring,
       world_canvas: st.canvas,

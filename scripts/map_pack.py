@@ -210,6 +210,19 @@ def verify_pack(pack_dir: Path) -> list[str]:
     elif canvas and not pct:
         problems.append("I8 缺 focus_bbox_pct（无法做 N8 往返）")
 
+    # I6 扩展：spaces[].pos 自由摆放（编辑器拖拽；可选，缺省 = 按环排布，现有包 0 影响）。
+    # 在则须 [x,y] 数对且在 world_canvas 内（±4 卡片半宽容差）。
+    for i, s in enumerate(spaces):
+        pos = s.get("pos")
+        if pos is None:
+            continue
+        if not (isinstance(pos, list) and len(pos) == 2 and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in pos)):
+            problems.append(f"I6 spaces[{i}].pos = {pos!r}（须 [x,y] 数对）")
+        elif canvas:
+            cx, cy, cw, ch = canvas.get("x", 0), canvas.get("y", 0), canvas.get("w", 0), canvas.get("h", 0)
+            if pos[0] < cx - 4 or pos[0] > cx + cw + 4 or pos[1] < cy - 4 or pos[1] > cy + ch + 4:
+                problems.append(f"I6 spaces[{i}].pos = {pos}（超出 world_canvas {cx},{cy},{cw},{ch}）")
+
     # I7：资产齐全 + 哈希一致（pack 与 pool 两种来源都算；pool 资产还须在全局池登记）
     ui_registered = _ui_registered_files()
     for entry in manifest.get("assets") or []:
