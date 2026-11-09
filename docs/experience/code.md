@@ -694,3 +694,23 @@ S39.0 抓出：`ui_layer=bevy_ui` 且带 `when="selected"|"normal"` 的原语 `i
 
 ### EXP-179 代码：async 回调重置顶层 const loaded 触发 Assignment to constant ⇒ 构建页整块 catch 成「/api/build 不可用」
 S49.2/S49.5 构建页 loadBuild 触发按钮的 async click handler 在 setTimeout(() => { loaded.build = false; loadBuild(); }, 3000) 里重置顶层 const loaded（const 声明只能声明时赋值）⇒ 浏览器抛 TypeError: Assignment to constant variable。该异常发生在 loadBuild 的 try 块内的 setTimeout 注册之后（回调 3 秒后跑在 try 外），但用户看到的「/api/build 不可用：TypeError」来自点击触发按钮后的 3 秒刷新：回调里 loaded.build=false + loadBuild() 重入时，若 API 正常应重建，但实测用户报告整块 catch ⇒ 直接修 = 删除回调对 const 的赋值，改 setTimeout(loadBuild, 3000)（loadBuild 自身在 showPage 的 !loaded.build 门禁下已幂等；触发成功路径不再需要重置标志）。教训：web/index.html 顶层状态用 const 对象 + 只读引用；要重置字段用 let 或整体换引用，绝不在异步回调里给顶层 const 变量本身重新赋值（const loaded = {} 后 loaded.build = ... 合法，但 loaded = ... 非法——检查点 = 写目标是不是对象字段而非变量本身）。
+
+### EXP-180 代码：const 计数器自增触发 Assignment to constant variable ⇒ 整块渲染抛错 ⇒ UI「像是被删了」
+S49.7 平台测试页重做后，用户报「平台里没有地图制作入口 / UI 被删除了」一类观感；实测根因**不是**
+元素缺失，而是**整块渲染函数抛错**：`renderTestSummary` 里 `const byLev = {}, …, evOk = 0, evMiss = []`
+却对 `evOk` 做 `evOk++` ⇒ `TypeError: Assignment to constant variable`（const **绑定**不可重新赋值；
+属性赋值 `byLev[x.level] = …` 合法，自增不合法）⇒ `loadTests` 的 try 整块落 catch ⇒
+分组侧栏 / 清单 / 统计全空 ⇒ 用户看到「功能不见了」。
+**双重掩盖**：catch 块里还引用了**已被替换掉的 DOM id**（`$('ts-tree')`）⇒ catch 自身再抛
+`Cannot set properties of null` ⇒ 浏览器控制台两条 pageerror 指向「渲染」而非「计数器」，
+真因被埋。
+解法：① 计数器改 `let`（const 计数器自增是 TS/JS 常见写法，勿用 const）；
+② catch 块只引用**现存**元素并显式回显错误文本（不二次抛错）；
+③ 判据不只看目标页 —— 跑**全站冒烟**（13 个导航页逐页渲染 + 测试页 30 条逐条展开）收集
+`pageerror`，本轮即由全站冒烟抓出该缺陷（目标页手测只看到「空的」）。
+与 EXP-179 同类根因（const 绑定被重新赋值）：**浏览器报 `Assignment to constant variable` 时，
+先查该作用域内所有 `const` 变量的自增/整体赋值**，再查 catch 块是否引用了已删元素。
+验证：修前 2 个 pageerror + 分组 0 条；修后全站 13 页 0 JS 错误 + 测试页 30 条逐条展开 0 错误
+（S49.7 实测，见 `evidence/S49.7.log`）。
+教训：平台前端每个渲染函数都应是**独立可失败**的单元（单点抛错不得连带整页空）；
+「元素在但内容空」的第一嫌疑 = 渲染函数抛错，而不是「UI 被删」。

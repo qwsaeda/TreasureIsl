@@ -450,22 +450,6 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
     </div>
     <!-- S32.4 门禁执行：POST /api/gate 后台跑 gate.ps1（tier 分档 + 单实例锁 + 轮询日志 + 历史） -->
     <div class="card">
-      <h2>门禁执行（S32.4：POST /api/gate 后台跑 gate.ps1，tier 分档 + 单实例锁 + 轮询）</h2>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <select id="gate-tier" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:7px 12px">
-          <option value="fast">fast（-Fast，开发档）</option>
-          <option value="touch">touch（-Touch，开发档）</option>
-          <option value="full">full（全量）</option>
-        </select>
-        <button id="gate-run" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">▶ 运行门禁</button>
-        <span style="color:var(--muted);font-size:12px" id="gate-msg"></span>
-      </div>
-      <div style="margin-top:6px;color:var(--muted);font-size:12px">⚠ fast/touch 为开发档，<b>不构成 gate 全绿证据</b>；全量 full 才可置 verified（S32.4 dod）。写操作需设置页粘贴 token（X-TI-Token，22 号 §10.1）。</div>
-      <div id="gate-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:240px;overflow:auto;display:none"></div>
-      <div id="gate-history" style="margin-top:8px"></div>
-    </div>
-    <!-- S49.7 测试交互重做（23 号 §6.3）：业务域分组 → 分类 → 逐个运行出结果出证明 -->
-    <div class="card">
       <h2>测试清单（业务域分组 → 分类 → 逐个运行出结果出证明；23 号 §6.3）</h2>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0">
         <input id="ts-search" placeholder="搜索名称 / id / 命令…" style="flex:1;min-width:220px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink);padding:6px 10px">
@@ -481,7 +465,23 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       </div>
       <div style="margin-top:8px;color:var(--muted);font-size:12px">结果判据 = 作业 <code>exit_code</code>（统一作业模型 23 号 §6.2：状态 <code>evidence/console/jobs/test-&lt;id&gt;.json</code> + 日志 <code>evidence/console/logs/test-&lt;id&gt;-&lt;ts&gt;.log</code>）；证明 = 本次运行产物登记进作业状态 <code>evidence[]</code>（与清单里的静态基线证据并存）。</div>
     </div>
-  </section>
+  <div class="card">
+      <h2>门禁执行（S32.4：POST /api/gate 后台跑 gate.ps1，tier 分档 + 单实例锁 + 轮询）</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="gate-tier" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:7px 12px">
+          <option value="fast">fast（-Fast，开发档）</option>
+          <option value="touch">touch（-Touch，开发档）</option>
+          <option value="full">full（全量）</option>
+        </select>
+        <button id="gate-run" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">▶ 运行门禁</button>
+        <span style="color:var(--muted);font-size:12px" id="gate-msg"></span>
+      </div>
+      <div style="margin-top:6px;color:var(--muted);font-size:12px">⚠ fast/touch 为开发档，<b>不构成 gate 全绿证据</b>；全量 full 才可置 verified（S32.4 dod）。写操作需设置页粘贴 token（X-TI-Token，22 号 §10.1）。</div>
+      <div id="gate-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:240px;overflow:auto;display:none"></div>
+      <div id="gate-history" style="margin-top:8px"></div>
+    </div>
+    <!-- S49.7 测试交互重做（23 号 §6.3）：业务域分组 → 分类 → 逐个运行出结果出证明 -->
+    </section>
   <!-- APK 体积（S35.0，24 号标准；/api/apk-size = apk_audit.py 只读体检） -->
   <section id="page-apksize" hidden>
     <div class="card">

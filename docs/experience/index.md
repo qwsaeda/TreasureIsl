@@ -219,6 +219,7 @@
 | EXP-178 | process | | 内容运营换 UI 改 scenes.json index.landscape 默认（主题构图）→ landscape_drawlist 测试断言旧 S39 构图 FAIL；改测试=破零 Rust ⇒ 主题包保留 + scenes.json 默认恢复 S39 正文见 `process.md` |
 | EXP-176 | process | | 平台 UI 向导加 theme 步（写 scenes.json 构图）后，layout 步仍断言 0 scenes.json diff → 冲突；修复 theme 非空 layout 改规范形验证 正文见 `process.md` |
 | EXP-179 | code | | web/index.html loadBuild 触发按钮 setTimeout 回调写顶层 const loaded.build=false ⇒ 浏览器报 Assignment to constant，整块被 catch 掉显 /api/build 不可用；改 setTimeout(loadBuild,3000)（showPage 判 loaded 门） 正文见 `code.md` |
+| EXP-180 | code | | S49.7 平台测试页重做后「功能不见了」根因 = `renderTestSummary` 的 `const evOk = 0` 却 `evOk++` ⇒ TypeError: Assignment to constant variable ⇒ 整块渲染落 catch（分组/清单全空）；且 catch 块引用已删 DOM id （`ts-tree`）二次抛错掩盖真因。处置：计数器改 `let` + catch 只引用现存元素 + 判据改**全站冒烟**（13 页逐页渲染 + 测试页 30 条逐条展开收集 pageerror）。教训：「元素在但内容空」第一嫌疑 = 渲染函数抛错，非「UI 被删」；与 EXP-179 同类根因（const 绑定重赋值）。正文见 `code.md` |
 
 ## 条目格式（写新条时照抄）
 

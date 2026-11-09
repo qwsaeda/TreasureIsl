@@ -127,7 +127,7 @@ STEPS = [
      "  判据：内容运营 = 只动数据不碰游戏代码",
      lambda i: None),
 ]
-WIZARD_ORDER = ["add", "fill", "syncmap", "verify", "pack", "install", "check", "sync", "shot", "zero_rust"]
+WIZARD_ORDER = ["add", "import", "syncmap", "verify", "pack", "install", "check", "sync", "shot", "zero_rust"]
 
 
 # ---------------------------------------------------------------- 编辑器整屏（每步共用底）
