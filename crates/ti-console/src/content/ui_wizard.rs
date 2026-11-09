@@ -741,8 +741,9 @@ fn resolve_cargo() -> PathBuf {
     PathBuf::from("cargo")
 }
 
-/// 解析 ti-engine 发货 bin 路径（scene shot 用）：`CARGO_TARGET_DIR` > `.cargo/config.toml` `target-dir` > `repo/target`。
-fn resolve_bin_path(repo_root: &Path) -> PathBuf {
+/// 解析 ti-engine 发货 bin 路径（scene shot / theme preview 用）：
+/// `CARGO_TARGET_DIR` > `.cargo/config.toml` `target-dir` > `repo/target`。
+pub fn resolve_bin_path(repo_root: &Path) -> PathBuf {
     let mut target: Option<PathBuf> = std::env::var("CARGO_TARGET_DIR").ok().map(PathBuf::from);
     if target.is_none() {
         let cfg = repo_root.join(".cargo").join("config.toml");

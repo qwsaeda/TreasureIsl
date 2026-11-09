@@ -2069,11 +2069,147 @@ pub fn start() {
 #[allow(clippy::too_many_lines)]
 /// S31.2：地图包注入（native = 仓库 `assets/maps/` 段；wasm = 部署根）。从 `run` 拆出，
 /// 守 `audit_code` 函数上限 140 行；缺包 = 内嵌默认，0 行为变化。
+/// S49.4c：主题预览注入（`TI_THEME=<tid>`）**优先**于地图包注入——主题注入先 set
+/// `table_source`（首访前），地图包注入随后 set 失败无害（主题保持；0 写面预览）。
 fn inject_map_pack() {
+    // S49.4c 主题预览（`TI_THEME=<tid>`）：先注入（native 专属；平台后台预览）。
+    #[cfg(not(target_arch = "wasm32"))]
+    apply_theme_preview(&repo_root().join("assets").join("themes"));
     #[cfg(not(target_arch = "wasm32"))]
     apply_map_pack(&repo_root().join("assets").join("maps"));
     #[cfg(target_arch = "wasm32")]
     apply_map_pack();
+}
+
+/// S49.4c 主题预览注入（`TI_THEME=<tid>` → `assets/themes/<tid>/compose.json`）：
+/// 把 `landscape_primitives` 内存 upsert 进 `scenes.json` 的 `index.landscape.primitives`，
+/// 经 [`ti_core::data::table_source::install`] 注入（首访前；0 写面 = 不改仓库文件）。
+/// 资产回退：主题原语引用的 `assets/ui/<name>.png` 若磁盘缺失，从主题包 `assets/` 内
+/// 同名文件或默认 `assets/ui/` 同名资产解析（预览缺图兜底）；找不到 = 原路径（引擎
+/// 加载失败仅该元素缺图，不 panic）。
+#[cfg(not(target_arch = "wasm32"))]
+fn apply_theme_preview(themes_dir: &std::path::Path) {
+    use ti_core::data::table_source;
+
+    let Some(tid) = std::env::var("TI_THEME").ok().filter(|s| !s.trim().is_empty()) else {
+        return;
+    };
+    let compose_path = themes_dir.join(&tid).join("compose.json");
+    let Ok(raw) = std::fs::read_to_string(&compose_path) else {
+        eprintln!("[theme-preview] {tid} compose.json 缺失 ⇒ 跳过预览注入");
+        return;
+    };
+    let Ok(compose) = serde_json::from_str::<serde_json::Value>(&raw) else {
+        eprintln!("[theme-preview] {tid} compose.json 非法 JSON ⇒ 跳过预览注入");
+        return;
+    };
+    let Some(prims) = compose.get("landscape_primitives").and_then(serde_json::Value::as_array)
+    else {
+        eprintln!("[theme-preview] {tid} 缺 landscape_primitives ⇒ 跳过预览注入");
+        return;
+    };
+    if prims.is_empty() {
+        eprintln!("[theme-preview] {tid} landscape_primitives 空 ⇒ 跳过预览注入");
+        return;
+    }
+    // 内存 upsert：内嵌 scenes.json 的 index.landscape.primitives ← 主题原语（0 写面）。
+    let mut scenes: serde_json::Value = serde_json::from_str(
+        &ti_core::data::map_pack::merge_theme_scenes(prims).unwrap_or_else(|| "{}".to_owned()),
+    )
+    .unwrap_or(serde_json::Value::Object(serde_json::Map::default()));
+    if !scenes.is_object() || scenes.get("index").is_none() {
+        eprintln!("[theme-preview] {tid} scenes.json 无 index.landscape ⇒ 跳过预览注入");
+        return;
+    }
+    // 资产回退：原语 asset 路径缺失 → 主题包 assets/ 同名 → 默认 assets/ui/ 同名。
+    patch_theme_assets(&mut scenes, &themes_dir.join(&tid));
+    let Ok(scenes_json) = serde_json::to_string(&scenes) else {
+        eprintln!("[theme-preview] {tid} 序列化失败 ⇒ 跳过预览注入");
+        return;
+    };
+    let tables = table_source::PackTables {
+        source_id: Some(format!("theme:{tid}")),
+        board: None,
+        scenes: Some(scenes_json),
+        strings: None,
+        available_ids: None,
+    };
+    if table_source::install(tables) {
+        eprintln!(
+            "[theme-preview] 已注入主题 {tid}（index.landscape.primitives {} 原语；零写面）",
+            prims.len()
+        );
+    }
+}
+
+/// 主题预览资产回退（只读补路径，不改文件）：遍历 `index.landscape.primitives` 的
+/// `params.asset`，若 `assets/ui/<name>.png` 磁盘缺失，改指主题包 `assets/` 同名或
+/// 默认 `assets/ui/` 同名；仍缺 = 保留原路径（引擎加载失败仅缺图，不 panic）。
+#[cfg(not(target_arch = "wasm32"))]
+fn patch_theme_assets(scenes: &mut serde_json::Value, theme_dir: &std::path::Path) {
+    let ui_root = std::path::Path::new("assets/ui");
+    let mut patched = 0usize;
+    if let Some(prims) = scenes
+        .get_mut("index")
+        .and_then(|i| i.get_mut("landscape"))
+        .and_then(|l| l.get_mut("primitives"))
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for p in prims.iter_mut() {
+            let Some(params) = p.get_mut("params").and_then(serde_json::Value::as_object_mut)
+            else {
+                continue;
+            };
+            for key in ["asset", "image", "src", "file"] {
+                let Some(asset) = params.get(key).and_then(serde_json::Value::as_str) else {
+                    continue;
+                };
+                if !asset.starts_with("assets/") {
+                    continue;
+                }
+                if std::path::Path::new(asset).is_file() {
+                    continue;
+                }
+                let fname =
+                    std::path::Path::new(asset).file_name().and_then(|s| s.to_str()).unwrap_or("");
+                if fname.is_empty() {
+                    continue;
+                }
+                // 主题包 assets/ 同名 → 默认 assets/ui/ 同名（去主题前缀，如 t01_icon_gear.png
+                // → icon_gear.png；S39 默认池同名资产）。两档：先原文件名，再去 `<tid>_` 前缀。
+                let theme_alt = theme_dir.join("assets").join(fname);
+                let ui_alt = ui_root.join(fname);
+                let ui_stem = fname.strip_prefix(&format!(
+                    "{}_",
+                    theme_dir.file_name().and_then(|s| s.to_str()).unwrap_or("")
+                ));
+                let ui_default = ui_stem.map_or_else(|| ui_root.join(fname), |s| ui_root.join(s));
+                // plank 映射：t01_plank_N → index_plank_N（S39 默认绳挂木牌池，无裸 plank_*）。
+                let plank_default = ui_stem
+                    .and_then(|s| s.strip_prefix("plank_"))
+                    .map(|s| ui_root.join(format!("index_plank_{s}")));
+                let new_path = if theme_alt.is_file() {
+                    theme_alt.to_string_lossy().to_string()
+                } else if ui_alt.is_file() {
+                    ui_alt.to_string_lossy().to_string()
+                } else if ui_default.is_file() {
+                    ui_default.to_string_lossy().to_string()
+                } else if let Some(p) = plank_default.filter(|p| p.is_file()) {
+                    p.to_string_lossy().to_string()
+                } else {
+                    continue;
+                };
+                // get_mut 再取一次（上面只读借用已结束）。
+                if let Some(pv) = params.get_mut(key) {
+                    *pv = serde_json::Value::String(new_path);
+                }
+                patched += 1;
+            }
+        }
+    }
+    if patched > 0 {
+        eprintln!("[theme-preview] 资产回退 {patched} 处（主题包 assets/ 或默认 assets/ui/）");
+    }
 }
 
 /// 组 App + DefaultPlugins（窗口/资产根/渲染/日志）+ 基础资源（从 `run` 拆出，

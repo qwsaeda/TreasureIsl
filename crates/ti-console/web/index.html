@@ -2116,10 +2116,16 @@ async function loadThemes() {
         + '<div style="font-size:12px;color:var(--muted)">id=<code>' + esc(t.id) + '</code> · scene=' + esc(t.scene || '—')
         + ' · 原语 <b style="color:var(--ink)">' + t.primitives + '</b> · 资产 <b style="color:var(--ink)">' + assets + '</b></div>'
         + (t.error ? '<div style="font-size:11px;color:var(--err)">' + esc(t.error) + '</div>' : '')
-        + '<div style="display:flex;gap:8px;margin-top:2px">'
+        + '<div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap">'
+        +   '<button data-theme-id="' + esc(t.id) + '" data-th-op="preview" ' + (!ok ? 'disabled' : '') + ' style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:5px 12px;cursor:' + (ok ? 'pointer' : 'not-allowed') + '">预览</button>'
         +   '<button data-theme-id="' + esc(t.id) + '" data-th-op="verify" ' + (!ok ? 'disabled' : '') + ' style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:5px 12px;cursor:' + (ok ? 'pointer' : 'not-allowed') + '">校验</button>'
         +   '<button data-theme-id="' + esc(t.id) + '" data-th-op="apply" ' + (applied ? 'disabled' : '') + ' style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:5px 12px;cursor:' + (applied ? 'not-allowed' : 'pointer') + ';font-weight:600">应用</button>'
-        + '</div></div>';
+        + '</div>'
+        + '<div data-theme-prev="' + esc(t.id) + '" style="display:none;margin-top:6px;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:#000">'
+        +   '<div style="font-size:11px;color:var(--muted);padding:4px 8px" data-th-prev-status="' + esc(t.id) + '">点「预览」出图（TI_THEME 运行时注入，零写面）</div>'
+        +   '<img data-th-prev-img="' + esc(t.id) + '" style="width:100%;display:none" alt="主题预览"/>'
+        + '</div>'
+        + '</div>';
     }).join('') || '<div class="empty">无主题包（assets/themes/ 空）</div>';
     document.querySelectorAll('#themes-list button[data-th-op]').forEach(b => {
       b.addEventListener('click', async () => {
@@ -2132,6 +2138,27 @@ async function loadThemes() {
             $('th-msg').textContent = `verify ${tid}: ${r.ok ? '0 违规 ✓' : v.length + ' 违规'}`;
             showThemesOut(JSON.stringify(r, null, 1));
           } catch (e) { $('th-msg').textContent = 'verify 失败：' + e; }
+        } else if (op === 'preview') {
+          const box = document.querySelector('[data-theme-prev="' + tid + '"]');
+          const img = document.querySelector('[data-th-prev-img="' + tid + '"]');
+          const st = document.querySelector('[data-th-prev-status="' + tid + '"]');
+          if (box) box.style.display = 'block';
+          if (st) st.textContent = '出图中（--shot 全场景渲染，约 30~90s）…';
+          if (img) img.style.display = 'none';
+          b.textContent = '出图中…'; b.disabled = true;
+          try {
+            const r = await api('/api/themes?preview=' + encodeURIComponent(tid));
+            if (r.ok && r.image) {
+              if (st) st.textContent = `✓ 出图成功（exit=${r.exit_code}，${r.shot_ok ? 'shot ok' : 'shot fail'}）`;
+              if (img) { img.src = '/' + r.image + '?t=' + Date.now(); img.style.display = 'block'; }
+              showThemesOut((r.output || '').slice(-800));
+            } else {
+              if (st) st.textContent = '✗ 出图失败：' + (r.error || (r.output || '').slice(-200));
+            }
+          } catch (e) {
+            if (st) st.textContent = '✗ preview 失败：' + e;
+          }
+          b.textContent = '预览'; b.disabled = false;
         } else if (op === 'apply') {
           const ew = window.prompt('写面需 enable_write=true（30 号 §3.1 默认关）；输入 1 确认，空取消');
           if (ew !== '1') return;

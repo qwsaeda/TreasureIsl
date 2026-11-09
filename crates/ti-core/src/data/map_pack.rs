@@ -343,6 +343,35 @@ fn merge_strings_upsert(strings_raw: Option<&str>) -> Option<String> {
     serde_json::to_string(&strings).ok()
 }
 
+/// S49.4c 主题预览构图合并（运行时注入，零写面）：
+/// 主题包 `landscape_primitives` 数组 upsert 进内嵌 `scenes.json` 的
+/// `index.landscape.primitives`（只改该键，其余原样 ⇒ 0 churn），返回整段 scenes.json
+/// 文本供 [`super::table_source::install`] 注入。缺 `index.landscape` 或 prims 空 = `None`。
+///
+/// 0 游戏语义：本函数只做「主题构图 → scenes.json index.landscape 段」的文本合并，
+/// 不含规则判定（与 `merge_scenes_upsert` 同层）。
+#[must_use]
+pub fn merge_theme_scenes(prims: &[serde_json::Value]) -> Option<String> {
+    if prims.is_empty() {
+        return None;
+    }
+    let mut scenes: serde_json::Value = serde_json::from_str(super::SCENES_JSON)
+        .unwrap_or(serde_json::Value::Object(serde_json::Map::default()));
+    let patched = scenes
+        .get_mut("index")
+        .and_then(serde_json::Value::as_object_mut)
+        .and_then(|idx| idx.get_mut("landscape"))
+        .and_then(serde_json::Value::as_object_mut)
+        .map(|land| {
+            land.insert("primitives".to_string(), serde_json::Value::Array(prims.to_vec()));
+        })
+        .is_some();
+    if !patched {
+        return None;
+    }
+    serde_json::to_string(&scenes).ok()
+}
+
 /// 包根目录（`TI_MAP_ROOT` 环境变量 > `assets/maps`，壳层相对 CWD 跑；0 硬编码绝对路径）。
 ///
 /// 返回**候选目录**供壳层判定在位（`available_pack_ids` 空 = 走内嵌，§6 回退）。

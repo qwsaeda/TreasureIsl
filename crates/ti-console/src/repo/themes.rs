@@ -190,6 +190,64 @@ pub fn theme_verify(repo_root: &Path, tid: &str) -> Result<Value, String> {
     }))
 }
 
+/// `/api/themes/preview`（只读出图，零写面）：运行时注入主题构图 + 资产回退出图。
+///
+/// 命令 = `treasure-bevy-native --shot --scene=index --viewport=1920x1080`（bin 路径 =
+/// [`crate::content::ui_wizard::resolve_bin_path`]），env `TI_THEME=<tid>`（引擎侧
+/// [`apply_theme_preview`] 注入 `index.landscape.primitives`，**不 apply 不改仓库**）。
+/// 无头环境走 `xvfb-run -a`（Linux 迁移口径，同 [`scene_shot_command`]）。
+/// 出图 = `evidence/bevy_native_theme_<tid>_1920x1080.png`（gitignored 侧车，平台面板内嵌展示）。
+///
+/// # Errors
+/// theme id 非法 = `Err`；bin 缺位 / spawn 失败 = `Err`（如实上报）。
+pub fn theme_preview(repo_root: &Path, tid: &str) -> Result<Value, String> {
+    if !is_valid_theme_id(tid) {
+        return Err(format!("theme id 非法（^[a-z0-9_]{{1,16}}$）：{tid}"));
+    }
+    let bin = crate::content::ui_wizard::resolve_bin_path(repo_root);
+    if !bin.is_file() {
+        return Err(format!(
+            "treasure-bevy-native 未构建：{}（先 cargo build -p ti-engine --bin treasure-bevy-native）",
+            bin.display()
+        ));
+    }
+    // 无头环境需虚拟显示（xvfb-run -a，Linux 迁移口径；同 scene_shot_command）。
+    let xvfb = std::path::Path::new("/usr/bin/xvfb-run");
+    let mut cmd = if xvfb.is_file() {
+        let mut c = std::process::Command::new(xvfb);
+        c.arg("-a").arg(&bin);
+        c
+    } else {
+        std::process::Command::new(&bin)
+    };
+    cmd.env("TI_THEME", tid).arg("--shot").arg("--scene=index").arg("--viewport=1920x1080");
+    cmd.current_dir(repo_root);
+    crate::runner::apply_minimal_env(&mut cmd);
+    // apply_minimal_env 会 env_clear + 白名单，清掉 TI_THEME —— 需在清后重设。
+    // TI_SHOT_NAME 固定出图名（bin 默认 scene+viewport 后缀会互相覆盖；S27.7 口径）。
+    cmd.env("TI_THEME", tid);
+    cmd.env("TI_SHOT_NAME", format!("bevy_native_theme_{tid}"));
+    let out = cmd
+        .output()
+        .map_err(|e| format!("theme preview spawn 失败（{e}）：{:?}", bin.display()))?;
+    let output =
+        format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    let exit_code = out.status.code().unwrap_or(-1);
+    let shot_ok = output.contains("已写");
+    // bin 命名口径：TI_SHOT_NAME 只覆盖基名，`_<WxH>` 后缀仍追加（viewport 固定 1920×1080）。
+    let out_name = format!("bevy_native_theme_{tid}_1920x1080.png");
+    let out_path = repo_root.join("evidence").join(&out_name);
+    Ok(json!({
+        "ok": exit_code == 0 && shot_ok && out_path.is_file(),
+        "tid": tid,
+        "exit_code": exit_code,
+        "shot_ok": shot_ok,
+        "image": format!("evidence/{out_name}"),
+        "output": output.chars().take(2000).collect::<String>(),
+        "note": "theme preview：TI_THEME 运行时注入 index.landscape.primitives + 资产回退，--shot 出图（零写面，不 apply 不改仓库）",
+    }))
+}
+
 /// `/api/themes/apply`（写，调用方门控）：`ui_theme.py apply --theme <tid> [--register]`。
 ///
 /// 子进程走最小环境集（22 号 §10.3）；判据 = exit 0 + 输出含 `validate_data` 成功
@@ -231,6 +289,19 @@ pub fn theme_apply(repo_root: &Path, tid: &str, register: bool) -> Result<Value,
 pub fn themes_get(repo_root: &Path, url: &str, gz: bool) -> Vec<u8> {
     if let Some(tid) = crate::routes::query_param(url, "verify") {
         match theme_verify(repo_root, tid) {
+            Ok(v) => crate::routes::json200(&v, gz),
+            Err(e) => crate::routes::header_body(
+                "application/json",
+                format!(r#"{{"ok":false,"error":"{e}"}}"#).as_bytes(),
+                "400 Bad Request",
+                "no-store",
+                None,
+                gz,
+            ),
+        }
+    } else if let Some(tid) = crate::routes::query_param(url, "preview") {
+        // S49.4c 主题预览（只读出图，零写面）：TI_THEME 运行时注入 + --shot 出图。
+        match theme_preview(repo_root, tid) {
             Ok(v) => crate::routes::json200(&v, gz),
             Err(e) => crate::routes::header_body(
                 "application/json",
