@@ -1,0 +1,25 @@
+# S49.4d 真机修复：Android 全屏 + 触摸命中 + BGM 生命周期（2026-11-09）
+
+用户真机实测三大问题：
+1. 没有全屏（左侧黑条）：系统栏未隐藏 → surface 压缩 → letterbox 黑条
+2. 菜单按键全没反应：Android 触摸不产生 MouseButton → 1080 层命中全 miss
+3. 背景音乐切后台仍播放：BGM 直播无 onPause/onResume 处理
+
+## [1] 修复
+- `android_entry.rs`：`set_window_flags(LAYOUT_NO_LIMITS | FULLSCREEN | KEEP_SCREEN_ON)` 隐藏状态栏 + 布局延伸屏幕边缘 + 防锁屏（android-activity 原生 API，0 JNI/0 新依赖）
+- `treasure_bevy.rs` `input_system`：`Touches` 触摸位置更新 `MousePos`（Android 无鼠标 → cursor_position()=None）
+- `treasure_bevy.rs` `manual_1080_hit_system`：`touches.any_just_pressed()` 触发 1080 层命中（tap）
+- `treasure_bevy.rs` `lifecycle_audio_system`：`WindowEvent::AppLifecycle` Suspended/WillSuspend → BGM pause，WillResume/Running → play（`BgmTrack` 标记 + `AudioSink`）
+
+## [2] 判据实跑
+```
+  cargo build -p ti-engine --bin treasure-bevy-native    → Finished（0 error）
+  cargo clippy -p ti-engine --bin treasure-bevy-native   → 0 warning（-D warnings 通过）
+  cargo test -p ti-engine                                 → 全 test result: ok（0 failed）
+  gate 34 项 0 failure（native 通用改动回归；含 doccheck/doccheck2 0 error）
+```
+
+## [3] 验证限制（如实）
+- 本机无 NDK/cargo-apk（APK 在 Mac 产出，`docs/migration_linux.md` 明说 Linux 可不装）→ 无法交叉编译验证 Android；native 通用改动已验证（编译 + clippy + ti-engine 测试 + gate 34 项 0 failure）。
+- Android 真机验证 = 用户重编 APK 实测（P5 判据见 `docs/parity.md` §P5，载体 `scripts/android_device_test.py`）。
+- 导航栏完全隐藏（JNI immersive `setSystemUiVisibility`）未做（无法本机编译验证）；若真机仍悬浮需补 JNI。

@@ -266,6 +266,16 @@
    "name": "地图包漂移对账（check 只读 0 漂移）",
    "command": "python3 scripts/map_pack.py check",
    "evidence": "evidence/S31.1.log"
+  },
+  {
+   "id": "android_device_test",
+   "level": "L4",
+   "category": "compatibility",
+   "type": "smoke",
+   "name": "Android 真机交互 P5（全屏/触摸命中/音频生命周期/切后台不崩）",
+   "command": "python3 scripts/android_device_test.py --run",
+   "gate": "4c",
+   "note": "S49.4e（docs/parity.md §P5）：gate 第 4c 项同源判据，需 adb + 已授权设备 + app 已装（adb install dist/TreasureIsl-*.apk）。无设备 = 工具 --run 环境检查 FAIL 非 0（如实报告未测，非静默）；判据证据 = evidence/android_device_test.log（--run 落盘，首次设备接入生成）"
   }
  ]
 }

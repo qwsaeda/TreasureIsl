@@ -128,7 +128,7 @@ powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 gate         # 全
 powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 test         # 全 workspace 测试
 powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 element-dump index 3  # 元素级验证（场景 + 记录号）
 
-# 每轮循环的门禁：gate.ps1 34 项固定 Report（分档 -Fast/-Touch/full）（fmt/clippy/test/build/占位/unwrap/zero-unknown/台账/doccheck/validate_data/gen_layout/check_hardcode/check_data_driven/check_code_standards/oracle边界/no-macroquad/doccheck2/台账对账/业务闭环/模块契约/飞轮/渲染不变式/数据源/audit_code/场景叙事/bevy-cpu-parity/wasm-browser-e2e/browser-playtest/playtest-loop；wasm/android 构建为条件子项不计顶层；zero-unknown 亦条件项（verify.rs 在位才计，QA145））
+# 每轮循环的门禁：gate.ps1 35 项固定 Report（分档 -Fast/-Touch/full）（fmt/clippy/test/build/占位/unwrap/zero-unknown/台账/doccheck/validate_data/gen_layout/check_hardcode/check_data_driven/check_code_standards/oracle边界/no-macroquad/doccheck2/台账对账/业务闭环/模块契约/飞轮/渲染不变式/数据源/audit_code/场景叙事/bevy-cpu-parity/wasm-browser-e2e/browser-playtest/playtest-loop/Android 真机；wasm/android 构建为条件子项；zero-unknown 亦条件项（verify.rs 在位才计，QA145））
 # 全绿才可把任务置 verified，输出 tee 到 evidence/<id>.log
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 

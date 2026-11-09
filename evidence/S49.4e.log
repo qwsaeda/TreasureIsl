@@ -1,0 +1,30 @@
+# S49.4e 规范补强：Android 真机判据 P5（2026-11-09）
+
+## 背景
+2026-11-09 真机反馈「无全屏/菜单无响应/后台音乐不停」根因审计：测试体系从设计起无
+「Android 真机交互」判据（P0-P4 全桌面/解析器，Android 仅「构建」条件项 SKIP），真机专属
+行为结构性测不到。本任务把 Android 真机立为 P5 判据 + gate 条件项 + adb 驱动机器判据工具。
+
+## [1] 改动
+- `docs/parity.md` §P5：Android 真机交互判据表（P5-1 全屏 / P5-2 触摸 / P5-3 音频生命周期 / P5-4 切后台不崩，载体 `android_device_test.py --run`）
+- `docs/process/23_game_testing.md`：兼容类改口径（「三端一致」→ 明确 Android 真机执行/判据 + 无设备不静默文档化）+ L4 加 Android 真机验收
+- `scripts/gate.ps1` 第 4c 项：有 adb 设备 + 包已装 → 跑 P5 全判据；环境缺 → 记名 SKIP（非 FAIL，不静默）
+- `scripts/android_device_test.py`：P5 判据执行器（adb 驱动，`--check` 只读环境检查 / `--run` 执行判据写 `evidence/android_device_test.log`，非 0 退出如实上报）
+- `assets/data/test_manifest.json`：登记 `android_device_test`（L4/兼容/smoke，平台测试页按钮）
+- 工具契约 3 处登记：`docs/process/14_tooling_catalog.md` + `docs/process/04_tooling.md` + `docs/README.md`
+- `scripts/validate_data.py`：test_manifest `gate` 字段放宽接受条件项号（如 "4c"）
+
+## [2] 判据实跑
+```
+  python3 scripts/android_device_test.py --check   → 非 0（本机包未装；adb+设备在位，包未装=环境缺，如实上报非静默）
+  validate_data --check                            → OK（test_manifest 分级/类/型对账 0 违规）
+  doccheck                                          → 0 error（task refs + release 台账计数 324/323）
+  doccheck2                                         → 0 error（41 项 audit-codified checks；tooling-registration/contract 过）
+  flywheel-readme -Check                            → PASS（gate 35 项）
+  gate.ps1（35 项 full）                            → 0 failure（第 4c 项记名 SKIP：环境缺包未装，非 FAIL）
+```
+
+## [3] 验证限制（如实）
+本机无 NDK/cargo-apk 编 APK（APK 在 Mac 产出），且包未安装到设备 → 第 4c 项记名 SKIP
+（Android 真机未测，文档化不静默）。设备接入 + `adb install dist/TreasureIsl-*.apk` 后
+`python3 scripts/android_device_test.py --run` 即执行 P5 全判据（gate 第 4c 项同源）。

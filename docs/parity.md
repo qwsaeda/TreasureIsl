@@ -61,25 +61,43 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
 |  | P0-5（S10.1 新增） | 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test render_invariants` |  |
 
-## 代码质量门禁 `scripts/gate.ps1`（34 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
+## P5 Android 真机交互（S49.4e 新增；2026-11-09 真机反馈「全屏/菜单无响应/后台音乐不停」根因审计补强）
+
+> **背景**：P0-P4 全是桌面/解析器/格式判据，Android 仅「构建」条件项（本机 SKIP），真机专属
+> 行为（全屏/触摸/音频生命周期）结构性测不到——「三端一致」是口号，Android 从未成为「能验收」
+> 的一等公民（根因审计见 `docs/process/23_game_testing.md` §2 兼容类 + `docs/process/00_index.md` 变更面声明）。
+> 本表把 Android 真机交互立为 P5 判据，载体 = `scripts/android_device_test.py`（adb 驱动，
+> 设备接入即能跑；本机无设备 = gate 条件项记名 SKIP，不阻塞但文档化，不静默）。
+
+| # | 判据 | 验收（`python3 scripts/android_device_test.py --run`，设备 + 包已装） |
+|---|---|---|
+| P5-1 | **全屏**：app surface 尺寸 ≈ 屏幕全尺寸（无系统栏压缩 → 游戏 letterbox 无黑条） | `--run --only p5-1`：`adb wm size` vs `dumpsys window` app bounds 差 ≤4px |
+| P5-2 | **触摸命中**：菜单/场景 tap 触发流转（S49.4d 前 Android 触摸不产生 `MouseButton` → 1080 层命中全 miss） | `--run --only p5-2`：`input tap <tap-x> <tap-y>` → logcat `[hit]` 或截屏 md5 变化 |
+| P5-3 | **音频生命周期**：切后台 BGM 暂停 / 回前台恢复（S49.4d `lifecycle_audio_system`） | `--run --only p5-3`：`KEYCODE_HOME` → logcat `BGM 暂停`；`am start` → `BGM 恢复` |
+| P5-4 | **切后台不崩**：进程存活 + 无 FATAL/ANR | `--run --only p5-4`：`pidof` 在 + logcat 无 `FATAL`/`ANR in` |
+
+> **环境检查**：`--check` 只读（adb 在位 + 设备已授权 + 包已装）；缺 = 非 0 退出（gate 条件项据此记名 SKIP）。
+> **坐标标定**：首次设备接入 `--tap-x/--tap-y`（P5-2 菜单 tap 屏幕坐标；不同设备分辨率不同）。
+> **门禁**：gate 第 4c 项（Android 真机）——有 adb 设备跑 P5 全判据，无设备记名 SKIP + 文档化（不静默）。
+
+## 代码质量门禁 `scripts/gate.ps1`（35 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
 
 > **计数约定（本节是门禁项数的唯一事实源，其他文档只引用、不各自重数）**
 >
-> 「项」= `gate.ps1` 中**顶格（第 0 列）**的 `Report` 调用数。三条口径：
-> 1. 只数顶格 `Report`；**缩进在 `if`/`else` 块内的条件 `Report`/`Skip` 不计入**——
->    即 wasm 构建、android 构建、`zero-unknown verify`（`if (Test-Path ...)` 守卫）三项；
-> 2. `Skip` 不单独计项；
-> 3. 当前顶格 `Report` = **34 项**（S31.3 起 = 28 + 第 22 项 wasm 浏览器端 e2e；数字对不上时以机器输出为准）。
+> 「项」= `gate.ps1` 中**全部 `Report` 调用（含 `if`/`else` 条件块内缩进的 Report），按行内首个引号串 = 项名去重**（S26.3 修正口径；`Read-GateItems` 同实现）。三条口径：
+> 1. **数全部 `Report`**（不只看顶格）——wasm 构建、android 构建、`zero-unknown verify`、
+>    **Android 真机（第 4c 项）** 等条件块内 Report 也计项（它们都是真实门禁检查，只是环境依赖 SKIP）；
+> 2. `Skip` 不单独计项（环境缺 = SKIP，判据 FAIL = Report FAIL）；
+> 3. 当前全部 `Report` 去重 = **35 项**（S46.1 起 = 34 + 第 25 项 dod-commands；S49.4e 起 = 35 + 第 4c 项 Android 真机；数字对不上时以机器输出为准）。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
 > 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
 > `flywheel-readme -Check` 亦打印同一数字）。**数字对不上时以机器输出为准**，不要手工重数。
 >
 > **易错点（勿再踩）**：
-> - `gate.ps1` 的**注释编号**（1..20 + 19.5 + 4b，含第 7 项 zero-unknown）与**机器计数**
->   不一定相等：zero-unknown 是条件项不计；`10a`/`10b`/`10c` 各算 1 项。引用「项数」
->   一律用机器口径 33。
-> - `10a`/`10b`/`10c` 是 **3 个独立顶格 `Report`，各算 1 项**，不是「三合一算 1 项」。
+> - `gate.ps1` 的**注释编号**（1..20 + 19.5 + 4b/4c，含第 7 项 zero-unknown）与**机器计数**
+>   不一定相等：`10a`/`10b`/`10c` 各算 1 项。引用「项数」一律用机器口径 35。
+> - `10a`/`10b`/`10c` 是 **3 个独立 `Report`，各算 1 项**，不是「三合一算 1 项」。
 > - 历史计划文档里的 8/10/14/16/18/20 项均为**该阶段时点快照**，不代表当前；引用时须带时点标注。
 > - **`required-features` 的 bin 不被第 1~3 项编译/lint 覆盖**——第 4b 项专门补这个盲区（EXP-099）。
 >
@@ -174,7 +192,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 34 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 35 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
 
 **S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
-审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 34 项全绿。
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 35 项全绿。

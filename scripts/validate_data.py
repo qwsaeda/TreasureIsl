@@ -554,8 +554,13 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
             p = root / ev
             if not p.is_file() and not p.is_dir():
                 problems.append(f"test_manifest: `{tid}` evidence `{ev}` 不存在")
-        if gate is not None and not (isinstance(gate, int) and 1 <= gate <= 33):
-            problems.append(f"test_manifest: `{tid}` gate={gate} 非法（须 1..=33）")
+        if gate is not None and not (
+            (isinstance(gate, int) and 1 <= gate <= 33)
+            or (isinstance(gate, str) and re.fullmatch(r"[0-9]+[a-z]?", gate))
+        ):
+            problems.append(
+                f"test_manifest: `{tid}` gate={gate} 非法（须 1..=33 或条件项号如 \"4c\"，如 gate 第 4c 项 Android 真机）"
+            )
         # 命令真实性：`cargo test -p <pkg> --test <name>` → `crates/<pkg>/tests/<name>.rs` 必须存在；
         # `cargo run -p <pkg> --bin <bin>` → `crates/<pkg>/src/bin/<bin>.rs` 必须存在。
         # 防「清单里命令指向已删/改名测试」（如 pcx_parity 退役路径、reference_diff_battle 不存在）。

@@ -19,7 +19,7 @@
 | **L1** | 单元（Unit） | 单规则/单函数最小逻辑（纯函数、不碰表现层/IO） | `ti-core/tests/rules_{battle,trade,build,boat,saveload,territory}.rs`、`reference_diff_*`（oracle 差分，`ti-core/src/oracle` 同种子同输入→同输出）、`ti-tools/tests/pcx_ref.rs`（PCX 解码 vs `scripts/pcx_ref.py` 独立参考，P0-4） |
 | **L2** | 集成（Integration） | 跨模块/子系统交互（规则↔数据↔存档/地图包） | `ti-core/tests/exhaust_{combat,economy,progression,menu}.rs`、`map_pack.rs`、`territory_rules.rs`、`ti-app/tests/main_map_pick_e2e.rs`、`render_invariants.rs` |
 | **L3** | 系统（System） | 完整场景/全流程（一局可玩链路） | `tests/scripts/full_run.json`（seed=42，16 步）、`ti-app/tests/e2e_playthrough.rs`、`app_{ai_turn,dungeon,siege,territory}_e2e.rs`、`game_app_flow.rs`、`save_migration.rs` |
-| **L4** | 验收（Acceptance） | 用户可玩/视觉/性能/兼容终验 | `web_playtest`（CDP 按键驱动 菜单→选人→选图→主地图）、`fuzz_playtest.rs`、`bevy-cpu-parity`（GPU 离屏读回 vs CPU 逐像素，通道 ≤8 LSB 超差 <0.5%）、`render_parity_{gpu,hd}.rs`、视觉签收 S17.5/S21.9/S27.5 |
+| **L4** | 验收（Acceptance） | 用户可玩/视觉/性能/兼容终验 | `web_playtest`（CDP 按键驱动 菜单→选人→选图→主地图）、`fuzz_playtest.rs`、`bevy-cpu-parity`（GPU 离屏读回 vs CPU 逐像素，通道 ≤8 LSB 超差 <0.5%）、`render_parity_{gpu,hd}.rs`、视觉签收 S17.5/S21.9/S27.5、**Android 真机验收 P5**（`scripts/android_device_test.py --run`，见 §2 兼容类） |
 
 ## 2. 测试分类（Categories，横向维度）
 
@@ -30,7 +30,22 @@
 | **视觉**（Visual） | 渲染/版面/资产/像素 | `render_parity_*`、`render_invariants`、`bevy-cpu-parity`、`--scene=X --shot` 出图 `evidence/bevy_native_*.png` |
 | **音频**（Audio） | 音乐/音效播放（S34 原版音频接入后） | S34 新增：BGM `glmusic.wav` 循环 + SFX `press/invalid/victory.wav` 一次，`registry.audio` 对账 + 无音频设备降级断言 |
 | **性能**（Performance） | fps/加载/体积基准 | `stats`（fps）、wasm 体积 `evidence/S18.8a-wasm-size.log`（44.8MB，`11_bevy_migration.md` §3 预算口径） |
-| **兼容**（Compatibility） | native/wasm/android 三端一致 | `smoke.ps1`（两端冒烟）、gate 条件项（wasm/android SKIP 判定）、`bevy_native_*.png` ↔ wasm 同缺陷排查 |
+| **兼容**（Compatibility） | native/wasm/android 三端一致 | `smoke.ps1`（两端冒烟）、gate 条件项（wasm/android SKIP 判定）、`bevy_native_*.png` ↔ wasm 同缺陷排查、**Android 真机 P5**（`android_device_test.py --run`，见下补强注） |
+
+> **S49.4e 补强（2026-11-09 真机反馈「全屏/菜单无响应/后台音乐不停」根因审计）**：本类原写
+> 「三端一致」但**从未定义 Android 真机怎么测、测什么**——执行只 `smoke.ps1`（两端）+ gate
+> （android **SKIP 判定**），全屏/触摸/音频生命周期在规范里零判据、零执行、零任务，真机缺陷
+> 结构性测不到（只能靠用户实测）。**本类口径修订**：
+>
+> 1. **三端一致须含 Android 真机执行**，不只是「构建 SKIP」。Android 真机交互判据 = `docs/parity.md` §P5
+>    （P5-1 全屏 / P5-2 触摸 / P5-3 音频生命周期 / P5-4 切后台不崩），载体 = `scripts/android_device_test.py`
+>    （adb 驱动，设备接入即能跑）。
+> 2. **执行方式**：`python3 scripts/android_device_test.py --check`（环境检查：adb + 设备授权 + 包已装）
+>    → `--run`（P5 全判据）。设备接入 + app 安装（`adb install dist/TreasureIsl-*.apk`）后执行。
+> 3. **判据证据**：`--run` 输出写入 `evidence/android_device_test.log`（gate 第 4c 项 + 验收判据），
+>    全 PASS = P5 达标；任一 FAIL = 非 0 退出（如实上报，不静默）。
+> 4. **无设备不静默**：gate 第 4c 项有 adb 设备才跑 P5，无设备记名 SKIP + 文档化（本注），
+>    不阻塞桌面但**明确记录 Android 真机未测**（防「SKIP 判定」被误读为「已测」）。
 
 ## 3. 测试类型（Types，执行方式）
 

@@ -1,4 +1,4 @@
-# gate.ps1 — 统一门禁（34 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop；S46.1 起第 25 项 = dod-commands）
+# gate.ps1 — 统一门禁（35 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop；S46.1 起第 25 项 = dod-commands；S49.4e 起第 4c 项 = Android 真机）
 # 用法：
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1            # 全量（收口用；语义不变）
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 -Touch     # 开发期：跳过纯构建/grep 项
@@ -16,7 +16,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
 # Linux 兼容（docs/migration_linux.md §3）：非 Windows 无 `python`（只有 python3）。
-# 34 项里**脚本项经 `& $py`**；`.ps1` 脚本项（flywheel_readme.ps1）经 `$psExe`（pwsh）非 `$py`。
+# 35 项里**脚本项经 `& $py`**；`.ps1` 脚本项（flywheel_readme.ps1）经 `$psExe`（pwsh）非 `$py`。
 # Windows 上 $py = python，行为不变。
 $py = 'python'
 if ($PSVersionTable.OS -notlike '*Windows*') { $py = 'python3' }
@@ -72,7 +72,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (34 items) ==="
+Write-Host "=== gate: TreasureIsl (35 items) ==="
 
 # 1) format
 & $cargoCmd fmt --all -- --check 2>&1 | Out-Null
@@ -135,6 +135,22 @@ if (($installed -match 'aarch64-linux-android') -and (Tier 'skip')) {
     # 桌面/浏览器可玩（S5.1-S5.4）为当前收口目标；Android 为后续移动端交付，故 SKIP 不阻塞。
     Skip 'cargo build (aarch64-linux-android)' 'S2.6：APK 在 Mac 编译，本机无 NDK/SDK（用户既定，桌面优先）'
 }
+
+# 4c) Android 真机交互判据（P5，S49.4e；2026-11-09 真机反馈「全屏/菜单无响应/后台音乐不停」根因审计）
+#     环境在位（adb + 已授权设备 + 包已装）→ 跑 docs/parity.md §P5 全判据（android_device_test.py --run）；
+#     环境缺（无 adb/设备/包未装）→ 记名 SKIP + 文档化（23_game_testing.md §2 兼容类补强注），
+#     不静默（明确记录 Android 未测），也**不因环境缺 FAIL**（包未装 = 待安装，非判据失败）。
+if (Tier 'skip') {
+    & $py scripts/android_device_test.py --check 2>&1 | Out-Null
+    $p5EnvOk = ($LASTEXITCODE -eq 0)
+    if ($p5EnvOk) {
+        # P5 全判据（--run 先做环境检查：adb + 设备 + 包已装，缺任一 = 非 0 退出）
+        $p5Out = (& $py scripts/android_device_test.py --run 2>&1 | Out-String)
+        Report ($LASTEXITCODE -eq 0) 'Android 真机交互 (P5 全屏/触摸/音频/切后台)' $p5Out
+    } else {
+        Skip 'Android 真机交互 (P5)' '环境缺（adb 未装 / 无已授权设备 / 包未装；android_device_test.py --check 非 0；设备接入 + adb install dist/TreasureIsl-*.apk 后即跑，23_game_testing.md §2 补强注）'
+    }
+} else { Skip 'Android 真机交互 (P5)' 'dev tier（-Touch/--fast）' }
 
 # 4b) feature 门控 bin 编译 + lint（EXP-099）
 #     第 1~3 项不带 feature，`required-features = ["native-shell"/"headless"]` 的 bin
@@ -352,7 +368,7 @@ $e2eOut = & $py scripts/wasm_browser_e2e.py --check 2>&1
 $e2eOut | ForEach-Object { Write-Host "        $_" }
 $e2eExit = $LASTEXITCODE
 # 无 serve / 无 Playwright / 无 Pillow ⇒ 记名 SKIP（硬件/环境不可验，同 GPU bevy-cpu-parity 口径）；
-# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，34 项）。
+# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，35 项）。
 $e2eEnvMissing = $e2eOut -match "FAIL  本机无 playwright|ModuleNotFoundError"
 if (-not $e2eEnvMissing) {
     Report ($e2eExit -eq 0) 'wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)'

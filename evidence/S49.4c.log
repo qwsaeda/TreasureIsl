@@ -1,0 +1,15 @@
+# S49.4c 主题管理预览（/api/themes?preview=<tid> 运行时注入主题构图出图 + web 面板预览按钮）（2026-11-09）
+
+## [1] 改动
+- 引擎 TI_THEME 注入：`apply_theme_preview`（index.landscape.primitives 内存 upsert，0 写面）+ `patch_theme_assets` 资产回退（t01_ 前缀去 → 默认 icon_*/index_plank_* 同名，18 处）+ `merge_theme_scenes`（ti-core data/map_pack 公开合并函数）
+- 平台 `theme_preview` 端点（/api/themes?preview=）：resolve_bin_path + TI_SHOT_NAME + TI_THEME + --shot --scene=index --viewport=1920x1080，出图 evidence/bevy_native_theme_<tid>_1920x1080.png
+- web 主题面板每卡「预览」按钮 + 内嵌 img 展示（出图中态 + 成功/失败反馈）
+
+## [2] 判据实跑
+```
+  /api/themes?preview=t01  →  ok=True
+  gate 34 项 0 failure（含 doccheck/doccheck2 0 error）
+```
+
+## [3] 出图
+- evidence/bevy_native_theme_t01_1920x1080.png（t01 海盗港口横屏：金黄海港 + 6 绳挂木牌菜单完整）
