@@ -1281,6 +1281,7 @@ function edRenderCanvas() {
         if (dragged) {
           s.pos = [Math.round(ox + ldx), Math.round(oy + ldy)]; // 提交自由位置
           edRenderCanvas(); // 整体重绘（label/位置刷新）
+          edRenderTable(); // 表格 pos 列同步
           edValidateBar();
         } else {
           edEditNode(idx); // 未拖 = 点击编辑
