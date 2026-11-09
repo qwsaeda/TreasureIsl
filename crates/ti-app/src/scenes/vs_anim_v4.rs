@@ -99,7 +99,8 @@ pub(crate) fn render_v4_hud(
     v4_command_zone(host);
 }
 
-/// S49.4 背景层：v6 格子场景满屏（`vs_bg_asset` 按 class 分层 + tint）/ v5 甲板 / v4 羊皮 + 四周暗角。
+/// S49.4 背景层：v7 分元素（统一 `vs_bg` 底板全格类共用 + 格类透明底元素叠加）/
+/// v6 格子场景整张（按 class 分层 + tint）/ v5 甲板 / v4 羊皮 + 四周暗角。
 fn v4_bg(
     host: &mut dyn SceneHost,
     theme: &ti_render::Theme,
@@ -109,8 +110,23 @@ fn v4_bg(
 ) {
     if v6_grid {
         let class = if class_arg.is_empty() { "encounter" } else { class_arg };
-        let bg = crate::scenes::vs_anim_proto::vs_bg_asset(class, None);
-        host.blit_image_tint(&bg, 0, 0, 1080, 1920, crate::scenes::vs_anim_proto::vs_tint(None));
+        // S49.4 v7 分元素（用户 2026-11-08「背景风格不统一」）：风格统一由底板保证。
+        // 底板 = 全格类共用 `vs_bg`（金黄甲板），不再按 class 整张换（G1 风格割裂修复）。
+        host.blit_image_tint(
+            chrome::V2_VS_BG,
+            0,
+            0,
+            1080,
+            1920,
+            crate::scenes::vs_anim_proto::vs_tint(None),
+        );
+        // 格类元素 = 透明底单元素叠加（仅格类差异；无元素 = 纯底板）。独立可换
+        // （换 AI 生图元素 = 换资产，零引擎改动；G2 元素烘焙死修复）。
+        let elem = crate::scenes::vs_anim_proto::vs_class_elem(class);
+        if !elem.is_empty() && chrome::asset_present(&elem) {
+            // 元素位：中上视觉区（面板下方、角色后方，foot_y=1000 对位不变）。
+            host.blit_image(&elem, 190, 200, 700, 656);
+        }
     } else if v5_simple && chrome::asset_present(chrome::VS_DECK_BATTLE) {
         host.blit_image(chrome::VS_DECK_BATTLE, 0, 0, 1080, 1920);
     } else if chrome::asset_present(chrome::VS_CHART_WIDE) {

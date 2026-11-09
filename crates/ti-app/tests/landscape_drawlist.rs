@@ -300,20 +300,24 @@ fn vs_landscape_world_layer() {
         "vs 横屏 defender HP 框应在 (976,40,880,110)，got {rects:?}"
     );
 
-    // 竖屏对照（S49.4 v6 转默认：格子场景满屏 + 顶面板，非 v2 羊皮框 44,44）
+    // 竖屏对照（S49.4 v7 转默认：统一 vs_bg 底板满屏 + 格类元素叠加，非 v2 羊皮框 44,44）
     let mut app = game(false);
     ti_app::forward_nav::navigate(&mut app, "vs");
     app.render();
     let imgs = image_rects(&app);
+    // S49.4b v7 分元素：底板 = 统一 vs_bg（全格类共用）满屏 + 格类透明底元素叠加
+    // （boss 格类 → elem_boss (190,200,700,656)）；不再整张 bg_<class>。
     assert!(
         imgs.iter().any(|(a, x, y, w, h)| {
-            (a.contains("vs_v2/bg_") || a.contains("vs_v2/scene_"))
-                && *x == 0
-                && *y == 0
-                && *w == 1080
-                && *h == 1920
+            a.contains("vs_v2/vs_bg.png") && *x == 0 && *y == 0 && *w == 1080 && *h == 1920
         }),
-        "vs 竖屏 v6 格子场景 bg 应满屏 (0,0,1080,1920)，got {imgs:?}"
+        "vs 竖屏 v7 统一 vs_bg 底板应满屏 (0,0,1080,1920)，got {imgs:?}"
+    );
+    assert!(
+        imgs.iter().any(|(a, x, y, w, h)| {
+            a.contains("vs_v2/elem_boss.png") && *x == 190 && *y == 200 && *w == 700 && *h == 656
+        }),
+        "vs 竖屏 v7 格类元素（boss）应叠于 (190,200,700,656)，got {imgs:?}"
     );
     let rects = rect_rects(&app);
     assert!(

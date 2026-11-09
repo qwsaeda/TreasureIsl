@@ -19,6 +19,9 @@
   {"name": "v2_vs_bg", "role": "v2_alpha", "file": "assets/ui/vs_v2/vs_bg.png", "params": {"full_bleed": true}},
   {"name": "v2_bg_siege", "role": "v2_alpha", "file": "assets/ui/vs_v2/bg_siege.png", "params": {"full_bleed": true}},
   {"name": "v2_bg_dungeon", "role": "v2_alpha", "file": "assets/ui/vs_v2/bg_dungeon.png", "params": {"full_bleed": true}},
-  {"name": "v2_bg_boss", "role": "v2_alpha", "file": "assets/ui/vs_v2/bg_boss.png", "params": {"full_bleed": true}}
+  {"name": "v2_bg_boss", "role": "v2_alpha", "file": "assets/ui/vs_v2/bg_boss.png", "params": {"full_bleed": true}},
+  {"name": "v2_elem_attack", "role": "v2_alpha", "file": "assets/ui/vs_v2/elem_attack.png", "params": {"note": "S49.4 v7 分元素：统一底板 + 格类透明底元素（程序化线稿，可独立替换为 AI 生图元素）"}},
+  {"name": "v2_elem_raid", "role": "v2_alpha", "file": "assets/ui/vs_v2/elem_raid.png", "params": {"note": "S49.4 v7 分元素：统一底板 + 格类透明底元素（程序化线稿，可独立替换为 AI 生图元素）"}},
+  {"name": "v2_elem_boss", "role": "v2_alpha", "file": "assets/ui/vs_v2/elem_boss.png", "params": {"note": "S49.4 v7 分元素：统一底板 + 格类透明底元素（程序化线稿，可独立替换为 AI 生图元素）"}}
  ]
 }

@@ -961,6 +961,27 @@
    "generated_at": "2026-10-31"
   },
   {
+   "name": "v2_elem_attack",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/elem_attack.png",
+   "params": {},
+   "generated_at": "2026-11-08"
+  },
+  {
+   "name": "v2_elem_raid",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/elem_raid.png",
+   "params": {},
+   "generated_at": "2026-11-08"
+  },
+  {
+   "name": "v2_elem_boss",
+   "role": "v2_alpha",
+   "file": "assets/ui/vs_v2/elem_boss.png",
+   "params": {},
+   "generated_at": "2026-11-08"
+  },
+  {
    "name": "v6_isle_land",
    "role": "v6_alpha",
    "file": "assets/ui/v6/isle_land.png",

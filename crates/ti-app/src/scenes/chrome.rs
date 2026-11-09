@@ -477,6 +477,12 @@ pub const V2_BG_SIEGE: &str = "assets/ui/vs_v2/bg_siege.png";
 pub const V2_BG_DUNGEON: &str = "assets/ui/vs_v2/bg_dungeon.png";
 /// v2 BOSS 战背景（英雄 vs 要塞炮台）。
 pub const V2_BG_BOSS: &str = "assets/ui/vs_v2/bg_boss.png";
+/// S49.4 v7 分元素：攻占格类透明底叠加元素（统一 `vs_bg` 底板之上，独立可换）。
+pub const V2_ELEM_SIEGE: &str = "assets/ui/vs_v2/elem_attack.png";
+/// S49.4 v7 分元素：副本格类透明底叠加元素。
+pub const V2_ELEM_DUNGEON: &str = "assets/ui/vs_v2/elem_raid.png";
+/// S49.4 v7 分元素：BOSS 格类透明底叠加元素。
+pub const V2_ELEM_BOSS: &str = "assets/ui/vs_v2/elem_boss.png";
 /// v2 场景层资产（S34.6 分离：compose 生成静态场景帧，引擎 blit + 动态叠 HUD 数据）。
 pub const V2_SCENE_ENCOUNTER: &str = "assets/ui/vs_v2/scene_encounter.png";
 /// v2 场景层资产：副本战（登岛打守军）。

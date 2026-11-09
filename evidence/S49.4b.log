@@ -1,0 +1,72 @@
+# S49.4b 玩法补强·vs 战斗动效 v7「统一底板 + 分元素」验收证据
+
+> 2026-11-08。触发：用户「背景风格不统一，原则 = 不需要一次生图成功，可以分元素组合，
+> 写到设计文档中；LLM 一次生图坑太多了，总结经验重新设计」。
+> 方向确认：用户「确认方向，v7 落码」。
+> 元素方案：AI 生图（`agnes_gen.py` + `key_v6_elements.py` 抠白透明；`AGNES_API_KEY`
+> 存项目 `.env`（gitignored），工具规范 `04_tooling.md` §6）。
+
+## 判据与实测
+
+| 判据 | 实测 | 结果 |
+|---|---|---|
+| ① 4 格类同一底板 | 4 张出图 `evidence/bevy_native_vs_v7_{encounter,attack,raid,boss}.png` 共用 `vs_bg.png` 金黄甲板底板（`render_v4_hud::v4_bg` 不再按 class 整张换） | PASS |
+| ② 元素差异仅在叠加区 | attack=城堡 / raid=洞窟 / boss=炮塔 AI 透明底元素叠于底板 `(190,200,700,656)`；encounter=无（纯底板）；元素金黄 sepia 线稿与底板同族 | PASS |
+| ③ 角色 foot_y 对位不变 | 4 张出图 hero 左下 / enemy 右上 同一水平线（foot_y≈1000，v6 对位未动） | PASS |
+| ④ 面板/血条不被遮挡 | 顶/底敌我状态框 + 单条百分比绿/黄/红血条 + 底指令区均完整可见（元素位于面板下方、角色后方） | PASS |
+| ⑤ 用户视觉确认 | 用户确认方向（「确认方向，v7 落码」）；4 张出图 `evidence/bevy_native_vs_v7_*.png` | PASS |
+| ⑥ gate 全绿 | `scripts/gate.ps1` 34 项（见下） | PASS |
+| ⑦ doccheck/doccheck2 0 error | `cargo run -p ti-tools --bin doccheck` + `doccheck2` | PASS |
+
+## 资产登记
+
+- `assets/ui/vs_v2/elem_{attack,raid,boss}.png`：3 张 AI 生图透明底元素（金黄 sepia 线稿，
+  与 vs_bg 底板同族）。生成 = `agnes_gen.py` 白底单元素（2K 1:1）→ `key_v6_elements.py`
+  flood 抠白透明 → `assets/ui/vs_v2/`。源原图 = `evidence/ui_concept/vs_anim_v2/elements/elem_*.png`。
+- `assets/ui_batches/vs_v2.json`：批次 +3（`v2_elem_{attack,raid,boss}`，role=`v2_alpha`，
+  params.note =「S49.4 v7 分元素：统一底板 + 格类透明底元素（AI 生图，独立可换）」）。
+- `assets/ui_manifest.json`：资产 +3（`v2_elem_{attack,raid,boss}`，generated_at=2026-11-08）；
+  `python3 scripts/validate_data.py` 全类型资产 disk↔registry 双向同步 OK（378 项）。
+- `scripts/key_v6_elements.py`：`VS_ITEMS` 加 `elem_{attack,raid,boss}` 3 项（键控唯一入口）。
+- `crates/ti-app/src/scenes/chrome.rs`：`V2_ELEM_SIEGE/DUNGEON/BOSS` 单源常量（CS-1）。
+
+## 引擎改动
+
+- `crates/ti-app/src/scenes/vs_anim_proto.rs`：`vs_class_elem(class)`（格类→元素路径，encounter/未知=空串）。
+- `crates/ti-app/src/scenes/vs_anim_v4.rs`：`v4_bg` v6_grid 分支改「统一 `vs_bg` 底板 +
+  `vs_class_elem(class)` 叠加（asset_present 守卫，无元素 = 纯底板）」；v7 为正式默认（`TI_VS_V6=0` 关回调试）。
+- `crates/ti-app/tests/landscape_drawlist.rs`：`vs_landscape_world_layer` 竖屏对照断言更新
+  （v6 整张 bg_<class> → v7 统一 vs_bg 底板 + elem_boss 叠加 (190,200,700,656)）。
+
+## 出图（4 格类，同一底板 + AI 分元素）
+
+- `evidence/bevy_native_vs_v7_encounter.png`：纯底板（金黄甲板，无元素）。
+- `evidence/bevy_native_vs_v7_attack.png`：AI 城堡（城墙 + 雉堞 + 拱门 + 塔楼）。
+- `evidence/bevy_native_vs_v7_raid.png`：AI 洞窟（岩壁 + 黑拱洞 + 火炬 + 钟乳石）。
+- `evidence/bevy_native_vs_v7_boss.png`：AI 炮塔（巨炮 + 石堡 + 炮窗）。
+
+## 命令（复现）
+
+```sh
+export PATH="$HOME/.cargo/bin:$PATH"
+# 生图（key 从 .env 加载；唯一入口 = agnes_gen.py）
+set -a; source .env; set +a
+python3 scripts/agnes_gen.py --prompt "..." --out evidence/gen_tmp/v7/raw_v7_attack.png --size 2K --ratio 1:1
+python3 scripts/agnes_gen.py --prompt "..." --out evidence/gen_tmp/v7/raw_v7_raid.png --size 2K --ratio 1:1
+python3 scripts/agnes_gen.py --prompt "..." --out evidence/gen_tmp/v7/raw_v7_boss.png --size 2K --ratio 1:1
+# 抠白透明（唯一入口 = key_v6_elements.py）
+python3 scripts/key_v6_elements.py
+# 出图
+cargo build -p ti-engine --bin treasure-bevy-native
+for cls in encounter attack raid boss; do
+  TI_SHOT_NAME="bevy_native_vs_v7_$cls" TI_VS_GRID_CLASS=$cls TI_VS_V4=1 \
+    TI_VS_ANIM_PROTO=clash TI_VS_ANIM_T0=500 \
+    xvfb-run -a /disk/target/debug/treasure-bevy-native --shot --scene=vs
+done
+```
+
+## 文档
+
+- `docs/ui-redesign-v3/12_main_map_v6_vs_v2_spec.md` §2.8.3：LLM 一次生图坑 G1–G5（风格割裂 /
+  元素烘焙死 / 角色冲突 / 返工成本 / 构图不可控）+ 分元素组合原则 + 落地路径 + 已落码记录
+  （AI 生图元素 + 独立可换）。

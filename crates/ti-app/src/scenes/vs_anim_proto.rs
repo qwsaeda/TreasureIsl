@@ -114,6 +114,18 @@ pub(crate) fn vs_bg_asset(class: &str, th: Option<&VsTheme>) -> String {
     format!("{}{id}.png", chrome::V2_VS_BG_DIR)
 }
 
+/// S49.4 v7 分元素：格类 → 透明底叠加元素（统一 `vs_bg` 底板上方，仅格类差异）。
+/// 元素 = 透明底单元素（城堡/洞窟/炮塔），独立可换（AI 生图元素替换 = 换资产零引擎改动）；
+/// 无元素（encounter/未知）= 空串（纯底板，不叠加）。
+pub(crate) fn vs_class_elem(class: &str) -> String {
+    match class {
+        "attack" => chrome::V2_ELEM_SIEGE.to_owned(),
+        "raid" => chrome::V2_ELEM_DUNGEON.to_owned(),
+        "boss" => chrome::V2_ELEM_BOSS.to_owned(),
+        _ => String::new(),
+    }
+}
+
 /// 格类 → 主题色调（`vs_theme.tint`；无 = `0xFFFF` 白恒等）。
 pub(crate) fn vs_tint(th: Option<&VsTheme>) -> u16 {
     th.map_or(0xFFFF, VsTheme::tint_u16)

@@ -110,7 +110,9 @@ VS_DST = os.path.join(ROOT, "assets", "ui", "vs_v2")
 
 MAP_ITEMS = ["tile_owned", "tile_deny", "island", "isle_land", "isle_lighthouse",
              "isle_treasure", "isle_village", "creatures", "helm", "compass", "ship"]
-VS_ITEMS = ["hero", "enemy", "crew", "banner_win", "banner_lose"]
+VS_ITEMS = ["hero", "enemy", "crew", "banner_win", "banner_lose",
+            # S49.4b v7 分元素：格类透明底叠加元素（白底 AI 单元素 → 抠白透明）。
+            "elem_attack", "elem_raid", "elem_boss"]
 # 满屏背景不做键控；按目录分属（S34.3 修复：原单一 BG_ITEMS 混合两目录背景，
 # 导致 VS 专用背景（vs_bg/bg_siege/bg_dungeon/bg_boss）被期望在 v6/、
 # main_map 背景（ocean_bg/parchment）被期望在 vs_v2/ = 交叉污染 → key_v6_elements --check FAIL）。
