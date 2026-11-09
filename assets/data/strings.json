@@ -107,7 +107,6 @@
  "scene.vs.hint": "攻击  返回",
  "scene.vs.rounds_fmt": "回合 {0}",
  "scene.vs.title": "战斗",
- "scene.vs.victory": "胜利!",
  "scene.vs.siege_title": "攻占 {0}（船队攻打建筑）",
  "scene.vs.siege_attacker": "舰队",
  "scene.vs.siege_defender": "守军",

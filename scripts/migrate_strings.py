@@ -63,7 +63,6 @@ KEY_HINTS: dict[str, str] = {
     "帮助说明": "menu.help",
     "离开游戏": "menu.quit",
     # 战斗
-    "胜利!": "scene.vs.victory",
     "失败": "scene.vs.defeat",
     "无战斗": "scene.vs.empty",
     "按攻击键": "scene.vs.awaiting",
