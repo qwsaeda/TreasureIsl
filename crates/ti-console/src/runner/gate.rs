@@ -191,14 +191,28 @@ pub fn run_gate(repo_root: &Path, tier: &str) -> Result<Value, (u16, String)> {
     // 后台 spawn（共用实现 `runner::spawn`：解释器回退 + 日志落盘 + 收割线程记退出码；
     // 失败释放锁 + 删日志）。状态文件 = 锁文件本身（收割线程更新 running/exit_code/ended_ts）。
     let lock_meta = json!({
+        "kind": "gate",
+        "id": tier,
         "tier": tier,
         "started_ts": ts,
         "log": format!("evidence/console/logs/{log_name}"),
         "reserving": false,
         "side_effects": SIDE_EFFECTS,
     });
-    let outcome = match crate::runner::spawn::spawn_script_logged(
-        &args, repo_root, &log_path, &lock_p, lock_meta,
+    // S49.7 统一作业模型（23 号 §6.2）：spawn + 收割（exit_code/ended_ts）走 `runner::jobs` 单一实现；
+    // 门禁保留自身单实例锁文件（= 状态载体，`GET /api/gate` 读回不变）+ 写统一作业镜像
+    // （`evidence/console/jobs/gate-<tier>.json`）⇒ `/api/jobs` 统一查询面可查门禁结果。
+    let owned_args: Vec<String> = args.iter().map(|s| (*s).to_owned()).collect();
+    let mirror = crate::runner::jobs::job_state_path(repo_root, "gate", tier);
+    let outcome = match crate::runner::jobs::spawn_program_logged(
+        &crate::runner::spawn::SCRIPT_INTERPS,
+        &owned_args,
+        repo_root,
+        Some(&log_path),
+        &lock_p,
+        lock_meta,
+        None,
+        Some(&mirror),
     ) {
         Ok(v) => v,
         Err(e) => {
@@ -208,7 +222,7 @@ pub fn run_gate(repo_root: &Path, tier: &str) -> Result<Value, (u16, String)> {
         }
     };
     let pid = outcome.pid;
-    let interp = outcome.interp;
+    let interp: &str = &outcome.program;
 
     Ok(json!({
         "started": true,

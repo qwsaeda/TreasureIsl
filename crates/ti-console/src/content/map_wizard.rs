@@ -269,7 +269,27 @@ pub fn run_step(
     let stderr = String::from_utf8_lossy(&output.stderr);
     let combined = format!("{stdout}{stderr}");
 
-    let (mut passed, mut criterion) = parse_criterion(step, exit_code, &combined);
+    // add 步幂等跳过：已安装包时 `map_pack.py add <id>` 输出「已安装（先 uninstall 再 add）」
+    // 但包目录 + 4 文件本就在位（编辑已存在包 = 正常场景，非「新建」），按 21 号 §8.1
+    // 「verify 通过才 sync」语义 = add 步内容就绪即可，不因「已安装」误 halted。
+    let mut passed: bool;
+    let mut criterion: String;
+    if step == "add" && exit_code != 0 && combined.contains("已安装") {
+        let pack_dir = repo_root.join("assets").join("maps").join(id);
+        let four_files_in_place = ["manifest.json", "map.json", "layout.json", "strings.json"]
+            .iter()
+            .all(|f| pack_dir.join(f).is_file());
+        if four_files_in_place {
+            passed = true;
+            criterion = format!(
+                "exit={exit_code}；{id} 已安装且 4 文件在位（add 幂等跳过，视为内容就绪）"
+            );
+        } else {
+            (passed, criterion) = parse_criterion(step, exit_code, &combined);
+        }
+    } else {
+        (passed, criterion) = parse_criterion(step, exit_code, &combined);
+    }
 
     // shot 步图像非黑判据（S27.5 口径；纯色判据拦不住 blank frame，须像素多样性判据）。
     if step == "shot" {

@@ -12,9 +12,8 @@
 //! - **收割线程**保证子进程被 `wait` ⇒ 无僵尸残留（平台进程存活期间状态文件始终最新）。
 
 use std::path::Path;
-use std::process::{Command, Stdio};
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 /// 脚本解释器候选（22 号 §4.3 回退序）。
 pub const SCRIPT_INTERPS: [&str; 2] = ["pwsh", "powershell"];
@@ -48,42 +47,23 @@ pub fn spawn_script_logged(
     status_path: &Path,
     status_meta: Value,
 ) -> Result<SpawnOutcome, String> {
-    let log_file = std::fs::File::create(log_path).map_err(|e| format!("日志文件创建失败 {e}"))?;
-    let mut last_err = String::new();
-    for interp in SCRIPT_INTERPS {
-        let mut cmd = Command::new(interp);
-        cmd.args(args);
-        cmd.current_dir(cwd);
-        // 22 号 §10.3 最小环境集（env_clear + 白名单）。
-        crate::runner::apply_minimal_env(&mut cmd);
-        let stdout = log_file.try_clone().map_err(|e| format!("日志克隆失败 {e}"))?;
-        let stderr = log_file.try_clone().map_err(|e| format!("日志克隆失败 {e}"))?;
-        cmd.stdout(Stdio::from(stdout)).stderr(Stdio::from(stderr));
-        match cmd.spawn() {
-            Ok(mut child) => {
-                let pid = child.id();
-                // 状态文件：pid + running=true（收割线程随后写 running=false + exit_code）。
-                let mut meta = status_meta;
-                meta["pid"] = json!(pid);
-                meta["running"] = json!(true);
-                let _ = std::fs::write(status_path, meta.to_string());
-                // 收割线程：等退出 → 记退出码（子进程被 wait ⇒ 无僵尸残留）。
-                let meta_path = status_path.to_path_buf();
-                std::thread::spawn(move || {
-                    let code = child.wait().ok().and_then(|s| s.code()).unwrap_or(-1);
-                    let ended_ts = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map_or(0, |d| d.as_secs());
-                    let mut done = meta;
-                    done["running"] = json!(false);
-                    done["exit_code"] = json!(code);
-                    done["ended_ts"] = json!(ended_ts);
-                    let _ = std::fs::write(&meta_path, done.to_string());
-                });
-                return Ok(SpawnOutcome { pid, interp });
-            }
-            Err(e) => last_err = format!("{interp}: {e}"),
-        }
-    }
-    Err(format!("后台 spawn 失败（pwsh/powershell 均缺位？）：{last_err}"))
+    // S49.7：收割/状态/超时实现**单一来源** = `runner::jobs::spawn_program_logged`
+    // （23 号 §6.2 统一作业模型）；本函数保留薄封装语义（解释器回退 + 日志 + 收割）。
+    let owned: Vec<String> = args.iter().map(|s| (*s).to_owned()).collect();
+    let outcome = crate::runner::jobs::spawn_program_logged(
+        &SCRIPT_INTERPS,
+        &owned,
+        cwd,
+        Some(log_path),
+        status_path,
+        status_meta,
+        None,
+        None,
+    )?;
+    let interp: &'static str = if outcome.program == "powershell" {
+        "powershell"
+    } else {
+        "pwsh"
+    };
+    Ok(SpawnOutcome { pid: outcome.pid, interp })
 }

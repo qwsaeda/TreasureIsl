@@ -33,6 +33,9 @@
 | `command` | ✓ | 可运行命令串（§3 command 契约）；`null`/缺 = 不可自动运行（人工验收 / gate 覆盖 / 证据基，平台禁 run） |
 | `evidence` | 与 `gate` 至少一者 | `evidence/` 下日志/截图路径（须存在，`validate_data` 对账） |
 | `gate` | 与 `evidence` 至少一者 | 门禁项号 `1..=33`（证据 = 对应 gate 运行日志） |
+| `group` | ✓（S49.7 起） | **业务域**：`core`（核心规则/玩法）`asset`（资产与内容管线）`platform`（平台与工具）`device`（端侧与兼容）`perf`（性能与体积）——平台测试页主分组维度（23 号 §6.3 侧栏 + §7.2） |
+| `timeout_s` | ○ | 作业超时秒数（缺省不限；超时 ⇒ 作业 `exit_code=-1` + note `timeout`，23 号 §6.2 收割） |
+| `prove` | ✓（可自动运行者） | 本次运行**证明落点**（`evidence/tests/<id>/` 前缀）；与静态基线 `evidence` 并存不冲突（23 号 §6.3「证明」行） |
 
 - **`evidence` XOR `gate` 语义**：`evidence` 指向独立证据日志（如 `evidence/S13.3.log`）；
   `gate` = 该测试由门禁项覆盖（如 `web_playtest` gate=23）；两者至少一者（都设 = 双证据，允许）。
@@ -76,6 +79,12 @@ evidence 路径存在 / `gate`∈1..=33 / command 真实性（--test/--bin 路�
 - **command 无 shell 拼接面**：command 含 `;`/`&&`/`|`/`>`/反引号/`$(` = 违规（shell 拼接面，禁 22 号 §10.3）；
 - **id 格式**：`^[a-z0-9_]+$`（`?run` 枚举面）；
 - **name 必填**：缺 `name` = 违规（平台测试页展示面）。
+
+**S49.7 强化**（平台测试页分组分类 + 逐个运行 + 出证明）：
+- **group 必填 + 值域**：`group` ∈ `core|asset|platform|device|perf`（缺 = 违规；平台测试页主分组维度，23 号 §6.3/§7.2）；
+- **prove 路径形状**：可自动运行者 `prove` 须以 `evidence/tests/` 开头（本次运行证明落点约定，23 号 §6.2 证明行）；
+- **timeout_s 合理性**：`timeout_s` 若给出须为正整数（≤ 7200）；
+- **零平台代码断言续**：新增测试登记后 `git diff crates/ti-console/` = 空（平台未改；仅 `test_manifest.json` + 测试文件变化）。
 
 ## 7. 关联与登记
 

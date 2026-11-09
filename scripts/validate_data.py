@@ -506,6 +506,11 @@ def check_asset_registry(root: Path, problems: list[str]) -> None:
 
 
 
+def cmd_of(test: dict) -> str:
+    """可自动运行命令（`command` 非空；`null`/缺 = 人工验收 / gate 覆盖 ⇒ 平台禁 run）。"""
+    return str(test.get("command") or "")
+
+
 def check_test_manifest(root: Path, problems: list[str]) -> None:
     """游戏测试标杆机读清单对账（23_game_testing.md §7）：id 唯一 + 级/类/型合法 + evidence/gate 至少一者。
 
@@ -525,6 +530,8 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
     levels = {"L1", "L2", "L3", "L4"}
     cats = {"functional", "regression", "visual", "audio", "performance", "compatibility"}
     types = {"smoke", "ci", "playtest", "exploratory", "benchmark"}
+    # S49.7：业务域分组（平台测试页主分组维度，23 号 §6.3/§7.2）。
+    groups = {"core", "asset", "platform", "device", "perf"}
     seen: set[str] = set()
     for t in m.get("tests", []):
         tid = t.get("id", "")
@@ -543,6 +550,35 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
             problems.append(f"test_manifest: `{tid}` category={t.get('category')} 非法")
         if t.get("type") not in types:
             problems.append(f"test_manifest: `{tid}` type={t.get('type')} 非法")
+        # S49.7 强化：group 必填 + 值域（业务域主分组维度，23 号 §6.3 侧栏 + §7.2）。
+        grp = t.get("group")
+        if not grp:
+            problems.append(
+                f"test_manifest: `{tid}` 缺 group（业务域主分组；须 core|asset|platform|device|perf，23 号 §7.2）"
+            )
+        elif grp not in groups:
+            problems.append(
+                f"test_manifest: `{tid}` group={grp} 非法（须 core|asset|platform|device|perf，23 号 §7.2）"
+            )
+        # S49.7 强化：timeout_s = 1..=7200 的整数（缺省 = 不限；23 号 §6.2 收割）。
+        tmo = t.get("timeout_s")
+        if tmo is not None and not (isinstance(tmo, int) and not isinstance(tmo, bool) and 1 <= tmo <= 7200):
+            problems.append(f"test_manifest: `{tid}` timeout_s={tmo} 非法（须 1..=7200 的整数）")
+        # S49.7 强化：prove = 本次运行证明落点（可自动运行者必填；前缀 evidence/tests/；23 号 §6.2 证明行）。
+        prove = t.get("prove")
+        if cmd_of(t):
+            if not prove:
+                problems.append(
+                    f"test_manifest: `{tid}` 缺 prove（可自动运行者必填；本次运行证明落点，23 号 §7.2）"
+                )
+            elif not str(prove).startswith("evidence/tests/"):
+                problems.append(
+                    f"test_manifest: `{tid}` prove={prove} 非法（须以 evidence/tests/ 开头）"
+                )
+        elif prove and not str(prove).startswith("evidence/tests/"):
+            problems.append(
+                f"test_manifest: `{tid}` prove={prove} 非法（须以 evidence/tests/ 开头）"
+            )
         # S45.1 强化：name 必填（人类可读名，平台测试页展示面，31 号 §2）。
         if not t.get("name"):
             problems.append(f"test_manifest: `{tid}` 缺 name（人类可读名，平台测试页展示面）")

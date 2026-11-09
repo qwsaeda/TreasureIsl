@@ -1,6 +1,6 @@
 {
  "version": 1,
- "_note": "游戏测试标杆机读清单（23_game_testing.md §7）。级=level(L1..L4)/类=category(功能·回归·视觉·音频·性能·兼容)/型=type(冒烟·CI·试玩·探索·基准)。evidence 与 gate 至少一者：evidence 指向 evidence/ 下日志（或 gate=门禁项号 1..=33，证据=对应 gate 运行日志）。validate_data::check_test_manifest 对账。",
+ "_note": "游戏测试标杆机读清单（23_game_testing.md §7）。级=level(L1..L4)/类=category(功能·回归·视觉·音频·性能·兼容)/型=type(冒烟·CI·试玩·探索·基准)。evidence 与 gate 至少一者：evidence 指向 evidence/ 下日志（或 gate=门禁项号 1..=33，证据=对应 gate 运行日志）。validate_data::check_test_manifest 对账。S49.7 扩展：group=业务域主分组（core 核心规则/asset 资产管线/platform 平台工具/device 端侧兼容/perf 性能体积）、timeout_s=作业超时（23 号 §6.2 收割）、prove=本次运行证明落点（23 号 §6.2 证明行）。",
  "tests": [
   {
    "id": "rules_battle",
@@ -9,7 +9,10 @@
    "type": "ci",
    "name": "战斗规则差分",
    "command": "cargo test -p ti-core --test rules_battle",
-   "evidence": "evidence/S13.3.log"
+   "evidence": "evidence/S13.3.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/rules_battle/"
   },
   {
    "id": "rules_trade",
@@ -18,7 +21,10 @@
    "type": "ci",
    "name": "贸易规则差分",
    "command": "cargo test -p ti-core --test rules_trade",
-   "evidence": "evidence/S15.1.log"
+   "evidence": "evidence/S15.1.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/rules_trade/"
   },
   {
    "id": "rules_build",
@@ -27,7 +33,10 @@
    "type": "ci",
    "name": "建造规则差分",
    "command": "cargo test -p ti-core --test rules_build",
-   "evidence": "evidence/S12.6.log"
+   "evidence": "evidence/S12.6.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/rules_build/"
   },
   {
    "id": "rules_boat",
@@ -36,7 +45,10 @@
    "type": "ci",
    "name": "船系统规则",
    "command": "cargo test -p ti-core --test rules_boat",
-   "evidence": "evidence/S21.2.log"
+   "evidence": "evidence/S21.2.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/rules_boat/"
   },
   {
    "id": "rules_saveload",
@@ -45,7 +57,10 @@
    "type": "ci",
    "name": "存档规则往返",
    "command": "cargo test -p ti-core --test rules_saveload",
-   "evidence": "evidence/S14.0.log"
+   "evidence": "evidence/S14.0.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/rules_saveload/"
   },
   {
    "id": "territory_rules",
@@ -54,7 +69,10 @@
    "type": "ci",
    "name": "领地/大富翁规则",
    "command": "cargo test -p ti-core --test territory_rules",
-   "evidence": "evidence/S33.6.log"
+   "evidence": "evidence/S33.6.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/territory_rules/"
   },
   {
    "id": "oracle_diff",
@@ -63,7 +81,10 @@
    "type": "ci",
    "name": "oracle 差分（伪代码直译对照：main_loop 全组合逐位一致）",
    "command": "cargo test -p ti-core --test reference_diff_main_loop",
-   "evidence": "evidence/S11.2.log"
+   "evidence": "evidence/S11.2.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/oracle_diff/"
   },
   {
    "id": "pcx_parity",
@@ -72,7 +93,10 @@
    "type": "ci",
    "name": "PCX 解码像素对照（Rust 解码器 vs pcx_ref.py 独立参考）",
    "command": "cargo test -p ti-tools --test pcx_ref",
-   "evidence": "evidence/S0.4.log"
+   "evidence": "evidence/S0.4.log",
+   "group": "asset",
+   "timeout_s": 900,
+   "prove": "evidence/tests/pcx_parity/"
   },
   {
    "id": "font_parity",
@@ -81,7 +105,10 @@
    "type": "ci",
    "name": "中文字形点阵逐位对照",
    "command": "cargo test -p ti-formats --test font_parity",
-   "evidence": "evidence/font_render.txt"
+   "evidence": "evidence/font_render.txt",
+   "group": "asset",
+   "timeout_s": 900,
+   "prove": "evidence/tests/font_parity/"
   },
   {
    "id": "exhaust_combat",
@@ -90,7 +117,10 @@
    "type": "ci",
    "name": "战斗穷举",
    "command": "cargo test -p ti-core --test exhaust_combat",
-   "evidence": "evidence/S15.3.log"
+   "evidence": "evidence/S15.3.log",
+   "group": "core",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/exhaust_combat/"
   },
   {
    "id": "exhaust_economy",
@@ -99,7 +129,10 @@
    "type": "ci",
    "name": "经济穷举",
    "command": "cargo test -p ti-core --test exhaust_economy",
-   "evidence": "evidence/S15.4.log"
+   "evidence": "evidence/S15.4.log",
+   "group": "core",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/exhaust_economy/"
   },
   {
    "id": "exhaust_progression",
@@ -108,7 +141,10 @@
    "type": "ci",
    "name": "推进/跨图穷举",
    "command": "cargo test -p ti-core --test exhaust_progression",
-   "evidence": "evidence/S15.2.log"
+   "evidence": "evidence/S15.2.log",
+   "group": "core",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/exhaust_progression/"
   },
   {
    "id": "map_pack",
@@ -117,7 +153,10 @@
    "type": "ci",
    "name": "地图包加载/注入",
    "command": "cargo test -p ti-core --test map_pack",
-   "evidence": "evidence/S31.2.log"
+   "evidence": "evidence/S31.2.log",
+   "group": "asset",
+   "timeout_s": 900,
+   "prove": "evidence/tests/map_pack/"
   },
   {
    "id": "main_map_pick_e2e",
@@ -126,7 +165,10 @@
    "type": "ci",
    "name": "主地图命中 e2e",
    "command": "cargo test -p ti-app --test main_map_pick_e2e",
-   "evidence": "evidence/S29.2.log"
+   "evidence": "evidence/S29.2.log",
+   "group": "core",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/main_map_pick_e2e/"
   },
   {
    "id": "render_invariants",
@@ -135,7 +177,10 @@
    "type": "ci",
    "name": "渲染不变式（7 场景非黑/签名/暖色板/TTF）",
    "command": "cargo test -p ti-app --test render_invariants",
-   "evidence": "evidence/S18.9.log"
+   "evidence": "evidence/S18.9.log",
+   "group": "asset",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/render_invariants/"
   },
   {
    "id": "full_run",
@@ -144,7 +189,10 @@
    "type": "playtest",
    "name": "固定种子全流程（开局→选人→选图→移动→贸易→建造→战斗→存读档）",
    "command": "cargo run -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json",
-   "evidence": "evidence/S16.1.log"
+   "evidence": "evidence/S16.1.log",
+   "group": "core",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/full_run/"
   },
   {
    "id": "e2e_playthrough",
@@ -153,7 +201,10 @@
    "type": "playtest",
    "name": "端到端通关链路",
    "command": "cargo test -p ti-app --test e2e_playthrough",
-   "evidence": "evidence/S16.2.log"
+   "evidence": "evidence/S16.2.log",
+   "group": "core",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/e2e_playthrough/"
   },
   {
    "id": "game_app_flow",
@@ -162,7 +213,10 @@
    "type": "playtest",
    "name": "GameApp 场景流",
    "command": "cargo test -p ti-app --test game_app_flow",
-   "evidence": "evidence/S16.2.log"
+   "evidence": "evidence/S16.2.log",
+   "group": "core",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/game_app_flow/"
   },
   {
    "id": "web_playtest",
@@ -172,7 +226,9 @@
    "name": "浏览器真运行时试玩（CDP 按键驱动）",
    "command": null,
    "evidence": "evidence/web_playtest.log",
-   "gate": 23
+   "gate": 23,
+   "group": "device",
+   "timeout_s": 1800
   },
   {
    "id": "fuzz_playtest",
@@ -181,7 +237,10 @@
    "type": "exploratory",
    "name": "模糊试玩（随机输入找崩）",
    "command": "cargo test -p ti-app --test fuzz_playtest",
-   "evidence": "evidence/S16.2.log"
+   "evidence": "evidence/S16.2.log",
+   "group": "device",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/fuzz_playtest/"
   },
   {
    "id": "bevy_cpu_parity",
@@ -191,7 +250,9 @@
    "name": "GPU↔CPU 像素对照（仅游戏世界，UI 层排除）",
    "command": null,
    "evidence": "evidence/linux_gate_green.log",
-   "gate": 21
+   "gate": 21,
+   "group": "device",
+   "timeout_s": 900
   },
   {
    "id": "wasm_browser_e2e",
@@ -201,7 +262,9 @@
    "name": "wasm 浏览器端 4 层 e2e（实例化/渲染/交互/场景切换）",
    "command": null,
    "evidence": "evidence/wasm_browser_e2e.png",
-   "gate": 22
+   "gate": 22,
+   "group": "device",
+   "timeout_s": 1800
   },
   {
    "id": "scene_shot",
@@ -210,7 +273,10 @@
    "type": "smoke",
    "name": "7 场景冒烟出图（--scene=X --shot）",
    "command": "cargo run -p ti-engine --bin treasure-bevy-native -- --scene=main_map --shot",
-   "evidence": "evidence/bevy_native_main_map.png"
+   "evidence": "evidence/bevy_native_main_map.png",
+   "group": "asset",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/scene_shot/"
   },
   {
    "id": "audio_sfx",
@@ -219,7 +285,10 @@
    "type": "ci",
    "name": "音频资产契约（registry.audio 4 项 + WAV 魔数 + 双向同步）",
    "command": "cargo test -p ti-engine --test audio",
-   "evidence": "evidence/S34.2_audio.log"
+   "evidence": "evidence/S34.2_audio.log",
+   "group": "asset",
+   "timeout_s": 900,
+   "prove": "evidence/tests/audio_sfx/"
   },
   {
    "id": "wasm_size",
@@ -228,7 +297,9 @@
    "type": "benchmark",
    "name": "wasm 体积基准（预算 ≤8MB，11 号 §3）",
    "command": null,
-   "evidence": "evidence/S18.8a-wasm-size.log"
+   "evidence": "evidence/S18.8a-wasm-size.log",
+   "group": "perf",
+   "timeout_s": 900
   },
   {
    "id": "smoke_ps1",
@@ -237,7 +308,10 @@
    "type": "smoke",
    "name": "native+wasm 两端冒烟",
    "command": "powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1",
-   "evidence": "evidence/S5.1.log"
+   "evidence": "evidence/S5.1.log",
+   "group": "device",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/smoke_ps1/"
   },
   {
    "id": "gate_full",
@@ -246,7 +320,10 @@
    "type": "ci",
    "name": "全量门禁 33 项",
    "command": "powershell -ExecutionPolicy Bypass -File scripts/gate.ps1",
-   "evidence": "evidence/gate.log"
+   "evidence": "evidence/gate.log",
+   "group": "platform",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/gate_full/"
   },
   {
    "id": "visual_signoff",
@@ -256,7 +333,9 @@
    "name": "视觉签收（S17.5/S21.9/S27.5 用户过目）",
    "command": null,
    "evidence": "evidence/S17.4.log",
-   "gate": null
+   "gate": null,
+   "group": "platform",
+   "timeout_s": 900
   },
   {
    "id": "map_pack_check",
@@ -265,7 +344,10 @@
    "type": "ci",
    "name": "地图包漂移对账（check 只读 0 漂移）",
    "command": "python3 scripts/map_pack.py check",
-   "evidence": "evidence/S31.1.log"
+   "evidence": "evidence/S31.1.log",
+   "group": "asset",
+   "timeout_s": 900,
+   "prove": "evidence/tests/map_pack_check/"
   },
   {
    "id": "android_device_test",
@@ -275,7 +357,10 @@
    "name": "Android 真机交互 P5（全屏/触摸命中/音频生命周期/切后台不崩）",
    "command": "python3 scripts/android_device_test.py --run",
    "gate": "4c",
-   "note": "S49.4e（docs/parity.md §P5）：gate 第 4c 项同源判据，需 adb + 已授权设备 + app 已装（adb install dist/TreasureIsl-*.apk）。无设备 = 工具 --run 环境检查 FAIL 非 0（如实报告未测，非静默）；判据证据 = evidence/android_device_test.log（--run 落盘，首次设备接入生成）"
+   "note": "S49.4e（docs/parity.md §P5）：gate 第 4c 项同源判据，需 adb + 已授权设备 + app 已装（adb install dist/TreasureIsl-*.apk）。无设备 = 工具 --run 环境检查 FAIL 非 0（如实报告未测，非静默）；判据证据 = evidence/android_device_test.log（--run 落盘，首次设备接入生成）",
+   "group": "device",
+   "timeout_s": 1800,
+   "prove": "evidence/tests/android_device_test/"
   }
  ]
 }

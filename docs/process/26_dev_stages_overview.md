@@ -138,7 +138,7 @@
 | **门禁** | `gate.ps1`（33 项固定 Report：fmt/clippy/test/build/占位/unwrap/台账/doccheck/validate_data/gen_layout/check_hardcode/check_data_driven/check_code_standards/oracle边界/no-macroquad/doccheck2/台账对账/业务闭环/模块契约/飞轮/渲染不变式/数据源/audit_code/场景叙事/bevy-cpu-parity/wasm-browser-e2e/browser-playtest/playtest-loop） |
 | **数据校验** | `validate_data.py`（B 基础 + V1 grid 三键 + V2 标量 + V3 图标 + scenes_canonical + asset_registry + test_manifest + **version_consistency** 三方对账） |
 | **代码校验** | `check_hardcode.py` / `check_data_driven.py` / `check_code_standards.py`（CS-1 资产单源/CS-2 文件职责/CS-3 参数命名/CS-4 场景窄接缝）/ `audit_code.py`（规模棘轮）/ `check_ledger_reality.py`（台账三方对账）/ `check_oracle_boundary.py` / `check_forward_closed.py` / `check_module_contracts.py` / `check_scene_narrative.py` / `check_data_source.py` |
-| **文档一致性** | `doccheck`（155 docs/38 facts/274 task refs 交叉引用）/ `doccheck2`（41 项 audit-codified 断言）/ `doc_numbers.py` / `layout_spec_check.py` / `check_ps_scripts.ps1` |
+| **文档一致性** | `doccheck`（155 docs/38 facts/274 task refs 交叉引用）/ `doccheck2`（42 项 audit-codified 断言；S49.7 起 = 41 + 第 42 项 `job-model-unified` 统一作业模型守卫）/ `doc_numbers.py` / `layout_spec_check.py` / `check_ps_scripts.ps1` |
 | **台账/经验** | `task_close.py`（收口一条命令：跑判据→写证据→置 verified→同步计数→三方对账）/ `exp_log.py`（EXP 3 处改齐）/ `ledger`（`ti-tools --bin ledger` 台账校验） |
 | **UI 资产** | `ui_assets.py`（add/build/verify）/ `ui_asset_batch.py`（规格驱动批量 + 抠图预检）/ `ui_layout_sheet.py` / `ui_thumb.py` / `ui_preview.ps1`（出图验收）/ `ui_shot_probe.py` |
 | **AI 生图/视频** | `agnes_gen.py`（Agnes Image 2.5 Flash）/ `agnes_video.py`（Agnes Video 2.5 Flash）/ `agnes_vision.py` |

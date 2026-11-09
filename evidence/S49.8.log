@@ -1,0 +1,27 @@
+# S49.8 收口在途改动：地图编辑器 v3 仪表盘重设计 — 判据实跑
+日期: 2026-11-09 | 范围：crates/ti-console/web/index.html（+826 行）+ content/map_wizard.rs +
+5 个设计稿/签收脚本 + docs/map_editor_guide.md + 4 个地图包数据 + 工具登记 3 处
+
+=== [1] doccheck2（工具登记补齐 ⇒ 15 error 清零；42 项 0 error）===
+收口前：15 error(s)（map_editor_redesign_concepts / map_editor_redesign_v3_minimal /
+  map_editor_step_render 三个脚本未登记 14 号台账 + 未登记 04 速查 + 未登记 README）
+收口后：doccheck2: 0 error(s) across 42 audit-codified checks
+登记补齐（3 处 × 3 脚本）：
+- docs/process/14_tooling_catalog.md §3.2 台账表行（用途/用法/幂等与退出码）
+- docs/process/04_tooling.md 速查表行
+- docs/README.md 脚本索引行
+
+=== [2] 全站 13 页冒烟（v3 仪表盘页含地图编辑器交互）===
+overview/tasks/evidence/assets/design/map/tests/apksize/build/themes/close/search/settings ⇒ 0 JS 错误
+
+=== [3] 地图编辑器实测（playwright 无头；与 S49.6 编辑已有包同一探针）===
+[2] 包列表「编辑（载入画布）」按钮数=40
+[3] #map-editor 可见=True | .ed-node 数=31
+    edState={'id': 'm01', 'n': 31, 'isle1': 'harbour', 'radius': 480, 'events': 2, 'merchants': 2}
+[4] 拖动后 spaces[2].pos=[855, 458]
+[5] 校验栏='✓ 全过（I1~I9 + S34.5 前端判定）'
+[1] console/page 错误数 = 0
+
+=== 未跑项（如实记录）===
+- 用户视觉签收待过目（v3 地图编辑器交互面 = 表现层改动，A 纪律：设计稿先行 → 用户过目后才算收口）
+- gate 全量待跑（与 S49.7 同批）

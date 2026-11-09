@@ -18,6 +18,11 @@ use serde_json::{Value, json};
 
 use super::config::RepoSources;
 
+/// Unix 秒（`SystemTime` → `UNIX_EPOCH` 秒数；溢出 / 系统时钟异常 = 0，不 panic）。
+fn now_unix_secs() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
+}
+
 /// `/api/build`：构建产物清单 + 构建编排状态（S35.1，24 号 §4.1）。
 ///
 /// - `run_kind == None`：只读面。`scripts/build_artifacts.py list`（已构建产物 体积/mtime）+
@@ -113,9 +118,7 @@ fn run_build(repo_root: &Path, kind: &str, lock_path: &Path) -> Result<Value, St
                 }));
             }
         };
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
+    let ts = now_unix_secs();
     let placeholder = json!({
         "pid": 0,
         "kind": kind,
@@ -126,44 +129,94 @@ fn run_build(repo_root: &Path, kind: &str, lock_path: &Path) -> Result<Value, St
         "note": "构建占位（pid=0 = reserving，spawn 后更新真实 pid）",
     });
     let _ = writeln!(lock_file, "{placeholder}");
-    let mut cmd = std::process::Command::new("python3");
-    cmd.arg(repo_root.join("scripts/build_artifacts.py")).arg("run").arg(kind);
-    // 22 号 §10.3 最小环境集（env_clear + 白名单）；r4-b P2 修复。
-    crate::runner::apply_minimal_env(&mut cmd);
-    let mut child =
-        match cmd.stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn() {
-            Ok(c) => c,
-            Err(e) => {
-                let _ = std::fs::remove_file(lock_path);
-                return Err(format!("后台构建 spawn 失败（python3 缺位？）：{e}"));
-            }
-        };
-    let pid = child.id();
-    // 更新锁为真实 pid + 建日志路径字段。
+    // 统一作业模型（23 号 §6.2；S49.7）：spawn + 收割（exit_code/ended_ts）+ 状态写入**单一实现**
+    // `runner::jobs::spawn_program_logged`；构建保留自身互斥锁文件（`build.lock` = 状态载体，
+    // `/api/build` 读回不变）+ 额外写统一作业镜像（`evidence/console/jobs/build-<kind>.json`）
+    // ⇒ `/api/jobs` 统一查询面可查构建结果（零行为变化：日志仍由 build_artifacts.py 自写）。
     let mut meta = placeholder;
-    meta["pid"] = json!(pid);
+    // 注：**不写** `kind`/`id` 字段 —— `build.lock` 的 `kind` 语义 = 构建种类（native/apk/wasm，
+    // `list_build` 读它上报）；作业种类用 `job_kind` 表达（避免语义污染 ⇒ 前端 last_kind 回归）。
+    meta["job_kind"] = json!("build");
     meta["log"] = json!(format!("evidence/console/logs/build-{kind}-{ts}.log"));
-    let _ = std::fs::write(lock_path, meta.to_string());
-    // 收割线程：等构建进程退出 → 锁置 running=false + exit_code + ended_ts（保留末次态供 /api/build 上报）。
-    let lock_meta = meta.clone();
-    let lock_p = lock_path.to_path_buf();
-    std::thread::spawn(move || {
-        let code = child.wait().ok().and_then(|s| s.code()).unwrap_or(-1);
-        let ended = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
-        let mut done = lock_meta;
-        done["running"] = json!(false);
-        done["exit_code"] = json!(code);
-        done["ended_ts"] = json!(ended);
-        let _ = std::fs::write(&lock_p, done.to_string());
-    });
+    let args = vec![
+        repo_root.join("scripts/build_artifacts.py").to_string_lossy().to_string(),
+        "run".to_owned(),
+        kind.to_owned(),
+    ];
+    let mirror = crate::runner::jobs::job_state_path(repo_root, "build", kind);
+    let outcome = match crate::runner::jobs::spawn_program_logged(
+        &["python3"],
+        &args,
+        repo_root,
+        None, // 构建脚本自写日志（evidence/console/logs/build-*.log）⇒ stdout/stderr 丢弃
+        lock_path,
+        meta,
+        None,
+        Some(&mirror),
+    ) {
+        Ok(v) => v,
+        Err(e) => {
+            let _ = std::fs::remove_file(lock_path);
+            return Err(format!("后台构建 spawn 失败（python3 缺位？）：{e}"));
+        }
+    };
     Ok(json!({
         "started": true,
-        "pid": pid,
+        "pid": outcome.pid,
         "kind": kind,
-        "note": "后台构建已启动（日志落 evidence/console/logs/build-*.log；构建后自动复检）；轮询 /api/build 查产物",
+        "note": "后台构建已启动（统一作业模型 23 号 §6.2；日志落 evidence/console/logs/build-*.log；构建后自动复检）；轮询 /api/build 查产物 / /api/jobs?kind=build 查作业状态",
     }))
+}
+
+/// 最近一次构建日志解析（S46.5 抽出，降 `list_build` 行数）：优先取 `build.lock` 记录的
+/// `log` 字段（收割线程落盘的真实末次路径）；锁缺失 / 无 log 字段 / 路径不存在时回退全目录
+/// 扫 `build-*.log` 按 mtime 降序取 1（gitignored 子目录，全缺 = 未跑过构建）。原实现纯靠
+/// mtime 扫描：写日志的文件句柄在构建过程中持续刷新 mtime ⇒ 排序可能取到**旧日志**
+///（S46.5 用户报「日志不更新」根因）。
+fn resolve_last_build_log(repo_root: &Path, lock_path: &Path) -> Option<Value> {
+    let tail_of = |p: &Path| {
+        let t = std::fs::read_to_string(p).unwrap_or_default();
+        json!({
+            "path": p.display().to_string(),
+            "tail": t.lines().take(8).collect::<Vec<_>>(),
+            "head": t.lines().take(2).collect::<Vec<_>>(),
+        })
+    };
+    let lock_v0: Value = std::fs::read_to_string(lock_path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or(Value::Null);
+    if let Some(rel) = lock_v0.get("log").and_then(Value::as_str) {
+        let p = repo_root.join(rel);
+        if p.is_file() {
+            return Some(tail_of(&p));
+        }
+    }
+    let logs_dir = repo_root.join("evidence/console/logs");
+    if let Ok(rd) = std::fs::read_dir(&logs_dir) {
+        let mut cands: Vec<(std::path::PathBuf, u64)> = Vec::new();
+        for e in rd.flatten() {
+            let n = e.file_name();
+            let s = n.to_string_lossy().into_owned();
+            if s.starts_with("build-") && s.to_ascii_lowercase().ends_with(".log") {
+                let p = logs_dir.join(&n);
+                // mtime：`metadata→modified→elapsed` 链，`as_millis` 截断用 `try_from` 保底
+                // （u128→u64 无溢出风险——mtime 毫秒量级，clippy cast_possible_truncation）。
+                let mtime = p
+                    .metadata()
+                    .ok()
+                    .and_then(|m| m.modified().ok())
+                    .and_then(|t| t.elapsed().ok())
+                    .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+                cands.push((p, mtime));
+            }
+        }
+        cands.sort_by_key(|c| std::cmp::Reverse(c.1));
+        if let Some((p, _)) = cands.first() {
+            return Some(tail_of(p));
+        }
+    }
+    None
 }
 
 /// 只读面：`build_artifacts.py list --json`（结构化产物体积/mtime）+ 最近一次构建日志 + 构建锁状态。
@@ -206,36 +259,11 @@ fn list_build(repo_root: &Path, lock_path: &Path) -> Result<Value, String> {
             let _ = writeln!(list_body, "{kind:8} 未构建");
         }
     }
-    // 最近一次构建日志（按 mtime 降序取 1；gitignored 子目录，缺失 = 未跑过构建）
-    let logs_dir = repo_root.join("evidence/console/logs");
-    let mut last_log: Option<Value> = None;
-    if let Ok(rd) = std::fs::read_dir(&logs_dir) {
-        let mut cands: Vec<(std::path::PathBuf, u64)> = Vec::new();
-        for e in rd.flatten() {
-            let n = e.file_name();
-            let s = n.to_string_lossy().into_owned();
-            if s.starts_with("build-") && s.to_ascii_lowercase().ends_with(".log") {
-                let p = repo_root.join("evidence/console/logs").join(&n);
-                // mtime：`metadata→modified→elapsed` 链，`as_millis` 截断用 `try_from` 保底
-                // （u128→u64 无溢出风险——mtime 毫秒量级，clippy cast_possible_truncation）。
-                let mtime = p
-                    .metadata()
-                    .ok()
-                    .and_then(|m| m.modified().ok())
-                    .and_then(|t| t.elapsed().ok())
-                    .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
-                cands.push((p, mtime));
-            }
-        }
-        cands.sort_by_key(|c| std::cmp::Reverse(c.1));
-        if let Some((p, _)) = cands.first() {
-            let t = std::fs::read_to_string(p).unwrap_or_default();
-            last_log = Some(json!({
-                "path": p.display().to_string(),
-                "tail": t.lines().take(8).collect::<Vec<_>>(),
-            }));
-        }
-    }
+    // 最近一次构建日志：优先取 `build.lock` 记录的 `log` 字段（收割线程落盘的真实末次路径）；
+    // 锁缺失 / 无 log 字段 / 路径不存在时回退全目录扫 `build-*.log` 按 mtime 降序取 1
+    // （gitignored 子目录，全缺 = 未跑过构建）。原实现纯靠 mtime 扫描：写日志的文件句柄在
+    // 构建过程中持续刷新 mtime ⇒ 排序可能取到**旧日志**（S46.5 用户报「日志不更新」根因）。
+    let last_log = resolve_last_build_log(repo_root, lock_path);
     // S46.3：构建锁状态上报（running / exit_code / 末次 kind），前端据此禁用按钮 + 显示完成态。
     let lock_state: Value = std::fs::read_to_string(lock_path)
         .ok()
@@ -266,6 +294,8 @@ fn list_build(repo_root: &Path, lock_path: &Path) -> Result<Value, String> {
         "running_pid": running_pid,
         "last_exit": lock_state.get("exit_code").cloned().unwrap_or(Value::Null),
         "last_kind": lock_state.get("kind").cloned().unwrap_or(Value::Null),
+        "started_ts": lock_state.get("started_ts").cloned().unwrap_or(Value::Null),
+        "ended_ts": lock_state.get("ended_ts").cloned().unwrap_or(Value::Null),
         "tool": "scripts/build_artifacts.py（list --json 结构化 + list 纯文本派生；触发构建 = console_commands build_{apk,wasm,native}）",
     }))
 }

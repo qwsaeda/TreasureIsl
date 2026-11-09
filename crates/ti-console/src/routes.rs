@@ -229,6 +229,20 @@ fn dispatch_get(
                 gz,
             )
         }
+        // 统一作业模型查询面（23 号 §6.2；S49.7）：?kind=<kind>[&id=<id>]
+        // 列表 = 各作业状态；详情 = 状态 + 日志尾 + 证明（evidence[]）。只读，免 token。
+        "/api/jobs" => {
+            let kind = percent_decode(query_param(url, "kind").unwrap_or(""));
+            let id = percent_decode(query_param(url, "id").unwrap_or(""));
+            json200(
+                &crate::runner::jobs::jobs_view(
+                    repo_root,
+                    Some(kind.as_str()),
+                    Some(id.as_str()),
+                ),
+                gz,
+            )
+        }
         "/api/gate" => {
             let log = query_param(url, "log");
             json200(&runner::gate::gate_status(repo_root, log), gz)

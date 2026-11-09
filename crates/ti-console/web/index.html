@@ -320,37 +320,47 @@
       </div>
       <div style="margin-top:8px;color:var(--muted);font-size:12px">发布 = <code>scripts/publish_web.ps1</code>（gate 前置 + 重建 web + 静态断言 + release.md 发布历史 + gh-pages 推流）；单动作默认关（30 号 §2.3），须每次显式开启。</div>
     </div>
+    <!-- 地图编辑器（v3 仪表盘：Unity/Godot 编辑器范式 = 顶工具条 + 左 Tile Palette + 中 Scene 画布 + 右 Inspector + 底状态条；
+         设计稿 evidence/ui_concept/map_editor_redesign_v2_scene_view.png）-->
     <div class="card" id="map-editor" hidden>
-      <h2>地图编辑器（可拖拽自由摆放 · I1~I8 实时校验 · 导入落盘）</h2>
-      <div style="display:flex;gap:14px;flex-wrap:wrap">
-        <div>
-          <label style="font-size:12px;color:var(--muted)">包 id</label>
-          <input id="ed-id" value="m04" style="width:100%;box-sizing:border-box;margin-top:4px;padding:6px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
-          <label style="font-size:12px;color:var(--muted);display:block;margin-top:8px">环心 x</label>
-          <input id="ed-cx" type="number" value="540" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
-          <label style="font-size:12px;color:var(--muted);display:block;margin-top:6px">环心 y</label>
-          <input id="ed-cy" type="number" value="784" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
-          <label style="font-size:12px;color:var(--muted);display:block;margin-top:6px">半径 R</label>
-          <input id="ed-r" type="number" value="480" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
-          <label style="font-size:12px;color:var(--muted);display:block;margin-top:6px">卡宽</label>
-          <input id="ed-cw" type="number" value="96" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
-          <label style="font-size:12px;color:var(--muted);display:block;margin-top:6px">卡高</label>
-          <input id="ed-ch" type="number" value="120" style="width:80px;padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink)">
-        </div>
-        <div style="flex:1;min-width:360px">
-          <svg id="ed-canvas" viewBox="0 0 1080 1920" style="width:100%;height:520px;background:#0d0f17;border:1px solid var(--border);border-radius:8px"></svg>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px">拖动节点 = 自由摆放（位置存 <code>spaces[].pos</code>，缺省按环排布）；点击节点（不拖）改 kind/isle（弹窗选）；首格 = start，第 15 格 = boss（I5）；岛型每类 2 格同 group（I3）</div>
-        </div>
-      </div>
-      <div id="ed-spaces" style="margin-top:14px;max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:6px"></div>
-      <div id="ed-validate" style="margin-top:12px;font-size:12px"></div>
-      <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
-        <button id="ed-validate-btn" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px 16px;cursor:pointer">校验 I1~I8</button>
-        <button id="ed-import-btn" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">导入到 assets/maps/（POST /api/map/import）</button>
-        <span id="ed-import-msg" style="color:var(--muted);font-size:12px"></span>
-      </div>
-    </div>
-    <div class="card">
+       <h2>地图编辑器（极简分步 · 向导聚焦：一次只亮当前步工作区 · I1~I9 + S34.5 实时）</h2>
+       <!-- ① 顶部：细步进条（10 圆点，仅当前高亮）+ 当前步标题 + 包 id -->
+       <div id="ed-stepbar" style="padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);margin-bottom:14px"></div>
+       <!-- ② 当前步工作区（按步显隐：add/import 亮编辑区，verify 亮校验区，pack~sync 亮出包区，shot 亮出图区）-->
+       <div id="ed-workzone"></div>
+       <!-- ③ 当前步操作条（主操作按钮 + 结果回显 + 下一步）-->
+       <div id="ed-step-body" style="margin-top:12px;padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--panel);min-height:96px"></div>
+       <!-- ④ 底状态条（极简单行）-->
+       <div id="ed-statusbar" style="margin-top:12px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);font-size:11px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap"></div>
+     </div>
+     <!-- 编辑区（add/import 步用）：左岛色板 + 中环画布 + 右属性/内容，按步显隐 -->
+     <div id="ed-zone-edit" hidden style="display:grid;grid-template-columns:230px minmax(420px,1fr) 290px;gap:12px">
+       <div id="ed-left" style="border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:12px;overflow:auto;max-height:480px">
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">🗺 岛型（10 类 · 点选铺格）</div>
+         <div id="ed-isle-palette" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+         <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">功能格（固定 9 格 · 不可占）</div>
+         <div id="ed-func-list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+         <div id="ed-cur-isle" style="margin-top:10px;padding:8px;border:2px solid var(--accent);border-radius:8px;background:var(--panel2)"></div>
+       </div>
+       <div id="ed-canvasbox" style="border:1px solid var(--border);border-radius:8px;background:#0d0f17;padding:10px;position:relative">
+         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px">
+           <span style="font-size:12px;font-weight:600;color:var(--ink)">环形赛道 · 31 格</span>
+           <span style="font-size:11px;color:var(--muted)">点格铺岛 · 拖格摆位 · 滚轮缩放</span>
+         </div>
+         <svg id="ed-canvas" viewBox="0 0 1080 960" style="width:100%;height:430px;background:transparent"></svg>
+         <div id="ed-float-sel" style="position:absolute;left:14px;bottom:14px;max-width:300px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);font-size:11px;color:var(--ink)" hidden></div>
+       </div>
+       <div id="ed-right" style="border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:12px;overflow:auto;max-height:480px">
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">属性 · 格 <span id="ed-sel-idx">—</span></div>
+         <div id="ed-inspector" style="font-size:12px;color:var(--ink)"></div>
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">内容配置（I9 + S34.5）</div>
+         <div id="ed-content-panels" style="font-size:11px;color:var(--ink)"></div>
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">校验（逐条 ✓/✗）</div>
+         <div id="ed-validate" style="font-size:11px"></div>
+         <span id="ed-import-msg" style="color:var(--muted);font-size:12px;display:block;margin-top:8px"></span>
+       </div>
+     </div>
+     <div class="card">
       <h2>制作指引（<code>scripts/map_pack.py</code> 工具链，21 号 §8）</h2>
       <pre style="overflow-x:auto">python3 scripts/map_pack.py add mXX    # 从 _template 骨架新建
 python3 scripts/map_pack.py sync        # 全量重算 board.json maps 段（幂等；无 map 键的草稿包跳过）
@@ -454,14 +464,22 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       <div id="gate-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:240px;overflow:auto;display:none"></div>
       <div id="gate-history" style="margin-top:8px"></div>
     </div>
+    <!-- S49.7 测试交互重做（23 号 §6.3）：业务域分组 → 分类 → 逐个运行出结果出证明 -->
     <div class="card">
-      <h2>测试分组树（级 L1–L4 → 类 → 型；点组看清单，点测试看步骤/证据）</h2>
+      <h2>测试清单（业务域分组 → 分类 → 逐个运行出结果出证明；23 号 §6.3）</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0">
+        <input id="ts-search" placeholder="搜索名称 / id / 命令…" style="flex:1;min-width:220px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink);padding:6px 10px">
+        <button id="ts-run-group" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer">▶ 运行本组（串行）</button>
+        <span id="ts-list-msg" style="color:var(--muted);font-size:12px"></span>
+      </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <div id="ts-tree" style="min-width:230px;flex:0 0 230px;max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px"></div>
-        <div style="flex:1;min-width:420px">
-          <div id="ts-detail"></div>
+        <div id="ts-groups" style="min-width:210px;flex:0 0 210px;max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px"></div>
+        <div style="flex:1;min-width:460px">
+          <div id="ts-list"></div>
+          <div id="ts-detail" style="margin-top:12px"></div>
         </div>
       </div>
+      <div style="margin-top:8px;color:var(--muted);font-size:12px">结果判据 = 作业 <code>exit_code</code>（统一作业模型 23 号 §6.2：状态 <code>evidence/console/jobs/test-&lt;id&gt;.json</code> + 日志 <code>evidence/console/logs/test-&lt;id&gt;-&lt;ts&gt;.log</code>）；证明 = 本次运行产物登记进作业状态 <code>evidence[]</code>（与清单里的静态基线证据并存）。</div>
     </div>
   </section>
   <!-- APK 体积（S35.0，24 号标准；/api/apk-size = apk_audit.py 只读体检） -->
@@ -1220,6 +1238,19 @@ function pollPublish() {
    / I5 首格 start + 第 15 格 boss / I6 ring 8pt / I7 资产齐（导入后端算） / I8 world_canvas≡bbox_pct×(1080,1920)±1px */
 const ED_ISLES = ['boss_fort','harbour','lighthouse','lightship','pirate_lair','shipyard','skull_cliff','trading_post','volcano','wreck'];
 const ED_KINDS = ['start','territory','event','card','treasure','boss'];
+// 岛型 → 归属色带（theme.json isle_* 实测 RGB565 → 前端 888 近似；渲染层 main_map.rs::isle_token_color 同映射）。
+// 节点两态：无主 = 灰底（tile_deny 语义）；已占 = 岛色带（tile_owned 语义，逐局动态，编辑器画「已占」态示范）。
+const ED_ISLE_COLOR = {harbour:'#C87A6E',lighthouse:'#E0B070',wreck:'#E8C040',pirate_lair:'#3A3A5C',shipyard:'#3E8A78',trading_post:'#8C7A3C',skull_cliff:'#E8E4D0',volcano:'#D85C30',lightship:'#7A8CA0',boss_fort:'#38284A'};
+// 岛型 → 产出 resource（m01 实测绑定：harbour→fishing … boss_fort→boss；编辑器选岛自动配）。
+const ED_ISLE_RESOURCE = {harbour:'fishing',lighthouse:'reef',wreck:'gold',pirate_lair:'loot',shipyard:'ship',trading_post:'trade',skull_cliff:'loot',volcano:'gold',lightship:'dice',boss_fort:'boss'};
+// 岛型说明（10 类闭集：只能在这 10 类间分配 20 个领地格，不可新增；balance.territory.prototypes）。
+const ED_ISLE_LABEL = {harbour:'港口城',lighthouse:'灯塔礁',wreck:'沉船滩',pirate_lair:'海盗老巢',shipyard:'帆船坞',trading_post:'军需商岛',skull_cliff:'骷髅崖',volcano:'火山岛',lightship:'灯船站',boss_fort:'无畏号要塞'};
+// 海事事件 kind 值域（rules::events；常用集：territory.md §6）。
+const ED_EVENT_KINDS = ['shipwreck','storm','treasure_wreck','wind_god','island_rescue','blacksmith'];
+// VS 战斗背景池（assets/ui/vs_v2/ 实测在位；vs_theme 5 槽 + tint RGB565 0xXXXX）。
+// vs_v2 池实测在位且已登记 ui_manifest（verify S34.5 双判：文件在 + 登记）。m04 默认 bg=vs_bg_m04（S37 专属）。
+const ED_VS_BG = ['vs_bg','vs_bg_m04','vs_bg_m05','vs_bg_m06','vs_bg_m07','vs_bg_m08','vs_bg_m09','vs_bg_m10'];
+const ED_VS_SLOTS = ['bg','siege','dungeon','boss','encounter'];
 let edState = null; // { id, spaces[31], ring, canvas }
 
 function edDefaultState() {
@@ -1229,9 +1260,52 @@ function edDefaultState() {
   const kindSeq = ['start','territory','territory','event','territory','territory','card','territory','territory','treasure','territory','territory','event','territory','territory','boss','territory','territory','event','territory','territory','treasure','territory','territory','card','territory','territory','territory','territory','event','card'];
   const isleSeq = [null,'harbour','harbour',null,'lighthouse','lighthouse',null,'wreck','wreck',null,'pirate_lair','pirate_lair',null,'shipyard','shipyard',null,'trading_post','trading_post',null,'skull_cliff','skull_cliff',null,'volcano','volcano',null,'lightship','lightship','boss_fort','boss_fort',null,null];
   const grpSeq   = [1,1,1,3,2,2,4,3,3,5,4,4,3,5,5,6,6,6,3,7,7,5,8,8,4,9,9,10,10,3,4];
-  const spaces = kindSeq.map((kind, i) => ({ idx: i, kind, isle: isleSeq[i] || null, group: grpSeq[i], cell: [10,0], terrain: 'L' }));
-  return { id: 'm04', spaces, ring: { center_x: 540, center_y: 784, radius: 480, card_w: 96, card_h: 120 },
-           canvas: { x: 11, y: 250, w: 1048, h: 1056 } };
+  const spaces = kindSeq.map((kind, i) => {
+    const s = { idx: i, kind, isle: isleSeq[i] || null, group: grpSeq[i], cell: [10,0], terrain: 'L' };
+    if (s.isle) { s.resource = ED_ISLE_RESOURCE[s.isle]; s.building = 1; }  // I9：领地格自动配产出地形 + 初始建筑等级
+    return s;
+  });
+  return {
+    id: 'm04', spaces,
+    ring: { center_x: 540, center_y: 784, radius: 480, card_w: 96, card_h: 120 },
+    canvas: { x: 11, y: 250, w: 1048, h: 1056 },
+    // I9：每图特有随机事件 + 每图必有 weapon/slave 商人（territory.md §6/§7）
+    events: [
+      { id: 'm04_cur_event_a', kind: 'storm' },
+      { id: 'm04_cur_event_b', kind: 'wind_god', jump_cells: 2 },
+    ],
+    merchants: [
+      { id: 'weapon', cell: [15, 2], price_mult: 1.0 },
+      { id: 'slave', cell: [15, 16], price_mult: 1.0 },
+    ],
+    // S34.5：VS 战斗主题（5 资产 id + RGB565 tint；每图不同 tint = 按图换主题）
+    vs_theme: { bg: 'vs_bg_m04', siege: 'bg_siege', dungeon: 'bg_dungeon', boss: 'bg_boss', encounter: 'vs_bg_m04', tint: '0x78FF' },
+    // 编辑器工具态（Unity paint/eraser 同款）：tool = paint 铺岛 / eraser 清岛；cur_isle = 当前选岛
+    tool: 'paint',
+    cur_isle: 'wreck',
+  };
+}
+
+// 撤销/重做（Unity/Godot 工具条同款；快照 = spaces 深拷贝，上限 50）。
+// 语义 = 修改前存档：edPushHistory 在**变更发生前**调用；edUndo = 弹栈还原（回退到最后一次变更前的状态）。
+let edUndoStack = [];
+let edRedoStack = [];
+function edPushHistory() {
+  edUndoStack.push(JSON.stringify(edState.spaces));
+  if (edUndoStack.length > 50) edUndoStack.shift();
+  edRedoStack = [];
+}
+function edUndo() {
+  if (edUndoStack.length === 0) return;
+  edRedoStack.push(JSON.stringify(edState.spaces));
+  edState.spaces = JSON.parse(edUndoStack.pop());
+  edRenderCanvas(); edRenderLeft(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar();
+}
+function edRedo() {
+  if (edRedoStack.length === 0) return;
+  edUndoStack.push(JSON.stringify(edState.spaces));
+  edState.spaces = JSON.parse(edRedoStack.pop());
+  edRenderCanvas(); edRenderLeft(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar();
 }
 
 function edValidate() {
@@ -1282,8 +1356,34 @@ function edValidate() {
     const want = Math.round(pctOf(LAYOUT[k], dim) / 100 * dim);
     if (Math.abs(want - LAYOUT[k]) > 1) issues.push('I8 world_canvas.' + k + ' = ' + LAYOUT[k] + '（bbox 往返超差 >1px）');
   }
+  // I9：内容齐备（每图 events[] 非空 + merchants 含 weapon/slave + 每个领地格有 building≥1 + resource）
+  const evs = st.events || [];
+  if (evs.length === 0) issues.push('I9 events[] 为空（每图必配特有随机事件）');
+  const mids = (st.merchants || []).map((m) => m.id);
+  if (mids.indexOf('weapon') < 0) issues.push('I9 merchants 缺武器商人（id=weapon）');
+  if (mids.indexOf('slave') < 0) issues.push('I9 merchants 缺奴隶商人（id=slave）');
+  st.spaces.forEach((s, i) => {
+    if (s.isle) {
+      if (typeof s.building !== 'number' || s.building < 1) issues.push('I9 格' + i + '（' + s.isle + '）缺 building（初始等级 ≥1）');
+      if (!s.resource) issues.push('I9 格' + i + '（' + s.isle + '）缺 resource（产出地形）');
+    }
+  });
+  // S34.5：vs_theme（VS 战斗主题）——5 槽 id 非空 + tint = 0xXXXX（RGB565）
+  const vt = st.vs_theme || {};
+  if (!vt.tint && Object.keys(vt).length === 0) {
+    issues.push('S34.5 缺 vs_theme（VS 战斗主题）');
+  } else {
+    for (const slot of ED_VS_SLOTS) {
+      if (!vt[slot]) issues.push('S34.5 vs_theme.' + slot + ' 缺失');
+    }
+    const tint = String(vt.tint || '');
+    if (!/^0x[0-9A-Fa-f]{4}$/.test(tint)) issues.push('S34.5 vs_theme.tint = ' + tint + '（期望 RGB565 hex 0xXXXX）');
+  }
   return issues;
 }
+
+// 格 i 画布位置：优先 `spaces[i].pos`（拖过 = 自由摆放，存 map.json），缺省 = 按环几何算（向后兼容）。
+
 
 // 格 i 画布位置：优先 `spaces[i].pos`（拖过 = 自由摆放，存 map.json），缺省 = 按环几何算（向后兼容）。
 function edNodeXY(s, i) {
@@ -1293,49 +1393,65 @@ function edNodeXY(s, i) {
   return [ring.center_x + ring.radius * Math.cos(theta), ring.center_y + ring.radius * Math.sin(theta)];
 }
 
+// 画布 viewBox 缩放（滚轮；1.0 = 适配，0.6 = 放大看细节；平移 = 空白拖）。
+let edZoom = 1.0;
+let edPan = { x: 0, y: 0 };
+function edApplyView() {
+  const svg = $('ed-canvas');
+  if (!svg) return;
+  svg.setAttribute('viewBox', '0 0 1080 960');
+}
+
 function edRenderCanvas() {
   const st = edState;
   const svg = $('ed-canvas');
   const ring = st.ring;
   const N = st.spaces.length;
   let g = '';
-  // 环
+  // 环（1080×960 视口内：环心 = 540,480，半径按 ring.radius 等比缩进视口）
   g += '<circle cx="' + ring.center_x + '" cy="' + ring.center_y + '" r="' + ring.radius + '" fill="none" stroke="#3a4155" stroke-width="2"/>';
   // 中央据点岛
   g += '<circle cx="' + ring.center_x + '" cy="' + ring.center_y + '" r="120" fill="#1a2233" stroke="#c9a15a" stroke-width="2"/>';
   g += '<text x="' + ring.center_x + '" y="' + ring.center_y + '" text-anchor="middle" fill="#c9a15a" font-size="20">中央岛</text>';
-  // 拖动提示
-  g += '<text x="' + ring.center_x + '" y="' + (ring.center_y + 150) + '" text-anchor="middle" fill="#5a6272" font-size="12">格子可拖拽自由摆放（位置存 map.json spaces[].pos；未拖 = 按环排布）</text>';
   // 31 节点（序 = 前进方向；格 0 = 顶，顺时针；有 pos = 自由摆放）
   for (let i = 0; i < N; i++) {
     const [x, y] = edNodeXY(st.spaces[i], i);
     const s = st.spaces[i];
-    let color = '#3a4155';
-    if (s.kind === 'start') color = '#3fb950';
-    else if (s.kind === 'boss') color = '#d05454';
-    else if (s.kind === 'territory') color = s.isle ? '#c9a15a' : '#8a6d3b';
-    else color = '#4a90d9';
+    // 节点两态（真实渲染口径 main_map.rs::render_v6_elem）：
+    // 领地格 = 已占 → 岛归属色带（ED_ISLE_COLOR，逐局动态）；无主 = 灰（tile_deny）。
+    let color, letter = null, opacity = 0.92;
+    if (s.kind === 'territory') {
+      color = s.isle ? ED_ISLE_COLOR[s.isle] || '#c9a15a' : '#5a5f6b';
+      letter = s.isle ? (s.isle || '').slice(0, 2).toUpperCase() : '·';
+      opacity = s.isle ? 0.92 : 0.6;
+    } else if (s.kind === 'start') { color = '#3fb950'; letter = 'S'; }
+    else if (s.kind === 'boss') { color = '#d05454'; letter = 'B'; }
+    else if (s.kind === 'treasure') { color = '#4a6a9a'; letter = 'T'; }
+    else if (s.kind === 'event') { color = '#4a6a9a'; letter = 'E'; }
+    else { color = '#4a6a9a'; letter = 'C'; }
+    const sel = (edSel != null && edSel === i);
     g += '<g class="ed-node" data-idx="' + i + '" style="cursor:grab">'
       + '<rect x="' + (x - ring.card_w/2) + '" y="' + (y - ring.card_h/2) + '" width="' + ring.card_w + '" height="' + ring.card_h
-      + '" rx="8" fill="' + color + '" opacity="' + (s.kind==='territory' && !s.isle ? 0.5 : 0.9) + '" stroke="#0d0f17" stroke-width="2"/>'
-      + '<text x="' + x + '" y="' + (y - 4) + '" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">' + i + '</text>'
-      + '<text x="' + x + '" y="' + (y + 14) + '" text-anchor="middle" fill="#fff" font-size="11">' + s.kind + '</text>'
+      + '" rx="8" fill="' + color + '" opacity="' + opacity + '" stroke="' + (sel ? '#7ec8e3' : (s.kind==='territory' && !s.isle ? '#8a8f9a' : '#0d0f17')) + '" stroke-width="' + (sel ? 4 : 2) + '"/>'
+      + '<text x="' + x + '" y="' + (y - 10) + '" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">' + i + '</text>'
+      + '<text x="' + x + '" y="' + (y + 6) + '" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">' + letter + '</text>'
+      + '<text x="' + x + '" y="' + (y + 24) + '" text-anchor="middle" fill="#cfd3dc" font-size="10">' + (s.kind === 'territory' ? (s.isle ? ED_ISLE_LABEL[s.isle] || s.isle : '无主') : s.kind) + '</text>'
       + '</g>';
   }
   svg.innerHTML = g;
-  // 节点交互：拖拽自由摆放（pointerdown/move/up）；未拖动 = 点击编辑（kind/isle/group）。
+  // 节点交互：拖拽自由摆放；未拖动 = 点击选中（当前工具 paint/eraser 决定行为）
   svg.querySelectorAll('.ed-node').forEach((n) => {
     n.addEventListener('pointerdown', (ev) => {
       const idx = parseInt(n.dataset.idx, 10);
       const s = st.spaces[idx];
       const [ox, oy] = edNodeXY(s, idx);
       const rect = svg.getBoundingClientRect();
-      const kx = 1080 / rect.width, ky = 1920 / rect.height;
+      const kx = 1080 / rect.width, ky = 960 / rect.height;
       const sx = ev.clientX, sy = ev.clientY;
       let dragged = false, ldx = 0, ldy = 0;
       const move = (ev2) => {
         ldx = (ev2.clientX - sx) * kx; ldy = (ev2.clientY - sy) * ky;
-        if (!dragged && Math.hypot(ldx, ldy) < 8) return; // 阈值内 = 未拖（点击）
+        if (!dragged && Math.hypot(ldx, ldy) < 8) return;
         dragged = true;
         n.setAttribute('transform', 'translate(' + ldx + ',' + ldy + ')');
         n.style.cursor = 'grabbing';
@@ -1344,12 +1460,14 @@ function edRenderCanvas() {
         document.removeEventListener('pointermove', move);
         document.removeEventListener('pointerup', up);
         if (dragged) {
-          s.pos = [Math.round(ox + ldx), Math.round(oy + ldy)]; // 提交自由位置
-          edRenderCanvas(); // 整体重绘（label/位置刷新）
-          edRenderTable(); // 表格 pos 列同步
+          s.pos = [Math.round(ox + ldx), Math.round(oy + ldy)];
+          edPushHistory();
+          edRenderCanvas();
+          edRenderFloats();
           edValidateBar();
+          edStatusBar();
         } else {
-          edEditNode(idx); // 未拖 = 点击编辑
+          edSelectNode(idx); // 点选 = 选中 + 当前工具动作（paint=铺岛 / eraser=清岛）
         }
       };
       document.addEventListener('pointermove', move);
@@ -1357,70 +1475,486 @@ function edRenderCanvas() {
       ev.preventDefault();
     });
   });
+  // 滚轮缩放（Godot viewport 同款）
+  svg.onwheel = (ev) => {
+    ev.preventDefault();
+    edZoom = Math.max(0.5, Math.min(3.0, edZoom * (ev.deltaY < 0 ? 1.1 : 0.9)));
+    edApplyView();
+  };
 }
 
-function edEditNode(idx) {
+// 当前选中格（Inspector 跟随 + 浮层同步；Unity/Godot 核心交互）
+let edSel = null;
+function edSelectNode(idx) {
   const st = edState;
   const s = st.spaces[idx];
-  let kind = prompt('格 ' + idx + ' kind（start/territory/event/card/treasure/boss）：', s.kind || '');
-  if (kind == null) return;
-  kind = kind.trim();
-  if (!ED_KINDS.includes(kind) && kind !== 'port' && kind !== 'city') { alert('非法 kind（值域：' + ED_KINDS.join('/') + '/port/city）'); return; }
-  s.kind = kind;
-  if (kind === 'territory') {
-    let isle = prompt('格 ' + idx + ' isle（10 类岛之一）：', s.isle || '');
-    if (isle == null) return;
-    isle = isle.trim();
-    if (isle && ED_ISLES.indexOf(isle) < 0) { alert('isle 不在 10 类值域：' + ED_ISLES.join(', ')); return; }
-    s.isle = isle || null;
-    let grp = prompt('格 ' + idx + ' group（同岛须同 group）：', String(s.group || 1));
-    if (grp != null) s.group = parseInt(grp, 10) || 1;
-  } else {
-    s.isle = null;
+  edSel = idx;
+  // paint 工具 + 领地格 = 铺当前选岛（Tile Palette 核心交互）
+  if (st.tool === 'paint' && s.kind === 'territory' && st.cur_isle) {
+    applyIslePick(st, idx, st.cur_isle);
+  } else if (st.tool === 'eraser' && s.kind === 'territory') {
+    edPushHistory(); // 改前存档
+    delete s.isle; delete s.resource; delete s.building;
+    edRenderCanvas(); edRenderLeft(); edRenderInspector(); edValidateBar(); edStatusBar();
   }
-  edRenderCanvas();
-  edRenderTable();
-  edValidateBar();
+  edRenderCanvas(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar();
 }
 
-function edRenderTable() {
+// 中栏浮层（选中格标签；极简版只保留 ed-float-sel，环几何/岛抽屉已并入左栏）
+function edRenderFloats() {
   const st = edState;
-  let h = '<table style="width:100%;font-size:12px;border-collapse:collapse"><tr><th style="text-align:left;padding:4px">#</th><th>kind</th><th>isle</th><th>group</th><th>terrain</th><th>pos</th></tr>';
-  st.spaces.forEach((s, i) => {
-    h += '<tr style="border-top:1px solid var(--border)"><td style="padding:4px">' + i + '</td><td>' + s.kind + '</td><td>' + (s.isle || '-') + '</td><td>' + s.group + '</td><td>' + s.terrain + '</td><td>' + (Array.isArray(s.pos) ? s.pos.join(',') : '（环）') + '</td></tr>';
+  const fs = $('ed-float-sel');
+  if (fs) {
+    if (edSel == null) { fs.hidden = true; }
+    else {
+      const s = st.spaces[edSel];
+      fs.hidden = false;
+      fs.innerHTML = '<div style="font-weight:600;color:var(--accent)">格 ' + edSel + ' · ' + (s.isle ? ED_ISLE_LABEL[s.isle] || s.isle : s.kind) + '</div>'
+        + '<div style="color:var(--muted);margin-top:2px">resource=' + (s.resource||'—') + ' · building=' + (s.building!=null?s.building:'—') + ' · group=' + s.group + '</div>'
+        + '<div style="color:var(--muted);font-size:10px;margin-top:2px">' + (Array.isArray(s.pos) ? 'pos 自由摆放 ' + s.pos.join(',') : 'pos 未设（按环排布）') + '</div>';
+    }
+  }
+}
+
+// 左栏 Tile Palette（10 类岛 + 功能格清单 + 当前选岛大高亮；Unity Tile Palette 同款）
+function edRenderLeft() {
+  const st = edState;
+  const pal = $('ed-isle-palette');
+  if (!pal) return;
+  // 统计每岛占用格数（I3 实时）
+  const cnt = {};
+  st.spaces.forEach((s) => { if (s.isle) cnt[s.isle] = (cnt[s.isle]||0)+1; });
+  pal.innerHTML = ED_ISLES.map((isle) =>
+    '<div data-pi="' + isle + '" style="padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid '
+    + (st.cur_isle === isle ? 'var(--accent)' : 'var(--border)') + ';background:' + (st.cur_isle === isle ? 'var(--panel2)' : 'var(--panel)') + '">'
+    + '<div style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:16px;background:' + (ED_ISLE_COLOR[isle]||'#888') + ';border-radius:3px;flex:none"></span>'
+    + '<b style="font-size:11px">' + (ED_ISLE_LABEL[isle]||isle) + '</b></div>'
+    + '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + isle + ' → ' + ED_ISLE_RESOURCE[isle] + '</div>'
+    + '<div style="font-size:10px;color:' + ((cnt[isle]||0)===2 ? 'var(--muted)' : '#d05454') + ';margin-top:2px">占用 ' + (cnt[isle]||0) + '/2 格</div>'
+    + '</div>'
+  ).join('');
+  pal.querySelectorAll('[data-pi]').forEach((el) => el.addEventListener('click', () => {
+    st.cur_isle = el.dataset.pi; st.tool = 'paint';
+    edRenderLeft(); edRenderFloats(); edRenderCanvas(); edStatusBar();
+  }));
+  // 功能格（不可占；只读展示）
+  const func = $('ed-func-list');
+  if (func) {
+    const fc = {};
+    st.spaces.forEach((s) => { if (s.kind!=='territory' && s.kind!=='start' && s.kind!=='boss') fc[s.kind]=(fc[s.kind]||0)+1; });
+    func.innerHTML = ['event','card','treasure','start','boss'].map((k) =>
+      '<div style="padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:var(--panel);font-size:10px;color:var(--ink)">'
+      + {event:'事件',card:'卡牌',treasure:'宝藏',start:'起点',boss:'BOSS'}[k]
+      + ' <span style="color:var(--muted)">×' + (fc[k]||0) + '</span></div>'
+    ).join('');
+  }
+  // 当前选岛大高亮（点画布格 = 铺这个岛）
+  const cur = $('ed-cur-isle');
+  if (cur) {
+    cur.innerHTML = '<div style="font-size:10px;color:var(--muted)">当前选岛（点画布领地格 = 铺）</div>'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'
+      + '<span style="width:26px;height:30px;background:' + (ED_ISLE_COLOR[st.cur_isle]||'#888') + ';border-radius:4px;flex:none"></span>'
+      + '<div><b style="font-size:13px">' + (st.cur_isle ? ED_ISLE_LABEL[st.cur_isle]||st.cur_isle : '未选') + '</b>'
+      + '<div style="font-size:10px;color:var(--muted)">' + (st.cur_isle ? 'resource=' + ED_ISLE_RESOURCE[st.cur_isle] + ' · building=1' : '先在上方选一个岛') + '</div></div></div>';
+  }
+}
+// 领地格铺岛：当前选岛铺到 idx 格（自动配 resource/building；group 归一到该岛现 group）。
+// 岛型 = 10 类闭集（不可新增）；重分配时 I3 保证每类仍 2 格同 group（校验条实时拦）。
+function applyIslePick(st, idx, isle) {
+  const s = st.spaces[idx];
+  const peers = st.spaces.filter((x, j) => j !== idx && x.isle === isle);
+  edPushHistory(); // 改前存档（撤销 = 回到铺岛前）
+  if (peers.length > 0) s.group = peers[0].group;
+  s.kind = 'territory';
+  s.isle = isle;
+  s.resource = ED_ISLE_RESOURCE[isle];
+  s.building = 1;
+  edRenderCanvas(); edRenderLeft(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar();
+}
+
+// 功能格改 kind（Inspector 下拉；territory = 转领地格可铺岛；start/boss 由 I5 锁定，禁止改）。
+function edSetKind(idx, kind) {
+  const st = edState;
+  const s = st.spaces[idx];
+  if (!ED_KINDS.includes(kind)) return;
+  if ((idx === 0 && kind !== 'start') || (idx === 15 && kind !== 'boss')) {
+    alert('I5：首格须 = start、第 15 格须 = boss（环半周），不能改');
+    return;
+  }
+  edPushHistory(); // 改前存档
+  s.kind = kind;
+  if (kind !== 'territory') { delete s.isle; delete s.resource; delete s.building; }
+  edRenderCanvas(); edRenderLeft(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar();
+}
+
+// 右栏 Inspector（Unity/Godot 同款：跟随选中格的全部属性 + 可改 kind 下拉）。
+function edRenderInspector() {
+  const box = $('ed-inspector');
+  if (!box) return;
+  const st = edState;
+  $('ed-sel-idx').textContent = edSel != null ? edSel : '—';
+  if (edSel == null) { box.innerHTML = '<div style="color:var(--muted);font-size:11px">点画布节点选中（属性在此显示）</div>'; return; }
+  const s = st.spaces[edSel];
+  let h = '';
+  if (s.kind === 'territory') {
+    // 岛型下拉（10 类闭集；改岛 = applyIslePick）
+    h += '<div style="margin-bottom:6px">isle '
+      + '<select id="ed-inp-isle" style="margin-left:6px;padding:2px 6px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+      + '<option value="">（无主）</option>'
+      + ED_ISLES.map((isle) => '<option value="' + isle + '"' + (s.isle === isle ? ' selected' : '') + '>' + (ED_ISLE_LABEL[isle]||isle) + '</option>').join('')
+      + '</select></div>';
+    if (s.isle) {
+      h += '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">resource <b style="color:var(--ink)">' + (s.resource||'') + '</b>（随岛型自动） · building <b style="color:var(--ink)">' + (s.building!=null?s.building:'1') + '</b> · group <b style="color:var(--ink)">' + s.group + '</b></div>';
+    }
+  }
+  // kind 下拉（首格/15格锁定，I5）
+  const locked = (edSel === 0 || edSel === 15);
+  h += '<div style="margin:8px 0;font-size:11px">kind '
+    + '<select id="ed-inp-kind" ' + (locked ? 'disabled' : '') + ' style="margin-left:6px;padding:2px 6px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+    + ED_KINDS.map((k) => '<option value="' + k + '"' + (s.kind === k ? ' selected' : '') + '>' + k + '</option>').join('')
+    + '</select>' + (locked ? ' <span style="color:var(--muted);font-size:10px">（I5 锁定）</span>' : '') + '</div>';
+  h += '<div style="font-size:11px;color:var(--muted)">terrain <b style="color:var(--ink)">' + s.terrain + '</b> · cell [' + (s.cell||[]).join(',') + ']'
+    + ' · pos ' + (Array.isArray(s.pos) ? '<b style="color:var(--accent)">' + s.pos.join(',') + '</b>' : '（按环排布）') + '</div>';
+  box.innerHTML = h;
+  const isleSel = $('ed-inp-isle');
+  if (isleSel) isleSel.addEventListener('change', () => {
+    if (isleSel.value) applyIslePick(st, edSel, isleSel.value);
+    else { delete s.isle; delete s.resource; delete s.building; edPushHistory(); edRenderCanvas(); edRenderLeft(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar(); }
   });
-  h += '</table>';
-  $('ed-spaces').innerHTML = h;
+  const kindSel = $('ed-inp-kind');
+  if (kindSel) kindSel.addEventListener('change', () => edSetKind(edSel, kindSel.value));
+}
+
+// 内容配置面板：I9 events/merchants + S34.5 vs_theme（m04 事故根因 = 这三块原无界面，现补齐）。
+// 事件 = 每图特有海事随机事件（rules::events kind 值域）；商人 = 每图必有 weapon/slave（cell 在 20×20 内）；
+// vs_theme = 5 资产 id + RGB565 tint（每图不同 tint = 按图换战斗主题）。
+function edRenderContentPanels() {
+  const st = edState;
+  const box = $('ed-content-panels');
+  if (!box) return;
+  let h = '';
+  // ── events ──
+  h += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">I9 随机事件 events[]（每图 ≥1 条特有海事事件）</div>';
+  (st.events || []).forEach((ev, i) => {
+    h += '<div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">'
+      + '<input data-ev="id" data-i="' + i + '" value="' + esc(ev.id || '') + '" style="flex:1;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+      + '<select data-ev="kind" data-i="' + i + '" style="padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+      + ED_EVENT_KINDS.map((k) => '<option value="' + k + '"' + (ev.kind === k ? ' selected' : '') + '>' + k + '</option>').join('')
+      + '</select>'
+      + '<button data-ev="del" data-i="' + i + '" style="padding:3px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:11px">删</button>'
+      + '</div>';
+  });
+  h += '<button id="ev-add-btn" style="font-size:11px;padding:3px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--ink);cursor:pointer">＋ 加事件</button></div>';
+  // ── merchants ──
+  h += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">I9 商人 merchants[]（每图必有 weapon + slave，cell = 20×20 网格坐标）</div>';
+  (st.merchants || []).forEach((m, i) => {
+    h += '<div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">'
+      + '<span style="width:52px;font-size:11px;color:var(--ink)">' + esc(m.id) + '</span>'
+      + '<input data-mc="row" data-i="' + i + '" type="number" min="0" max="19" value="' + ((m.cell||[])[0]!=null?(m.cell||[])[0]:0) + '" style="width:44px;padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">, '
+      + '<input data-mc="col" data-i="' + i + '" type="number" min="0" max="19" value="' + ((m.cell||[])[1]!=null?(m.cell||[])[1]:0) + '" style="width:44px;padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+      + ' <span style="font-size:11px;color:var(--muted)">price_mult=' + (m.price_mult != null ? m.price_mult : 1.0) + '</span>'
+      + '</div>';
+  });
+  const haveW = (st.merchants||[]).some((m)=>m.id==='weapon');
+  const haveS = (st.merchants||[]).some((m)=>m.id==='slave');
+  const missing = (!haveW ? 'weapon ' : '') + (!haveS ? 'slave' : '');
+  if (missing) h += '<div style="font-size:11px;color:#d05454">缺 ' + missing + ' 商人（I9 须两者皆有）</div>';
+  h += '</div>';
+  // ── vs_theme ──
+  const vt = st.vs_theme || {};
+  h += '<div><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">S34.5 VS 战斗主题 vs_theme（5 资产 + RGB565 tint）</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+  ED_VS_SLOTS.forEach((slot) => {
+    h += '<label style="font-size:11px;color:var(--muted)">' + slot + ' <select data-vs="' + slot + '" style="padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+      + ED_VS_BG.map((bg) => '<option value="' + bg + '"' + (String(vt[slot]||'') === bg ? ' selected' : '') + '>' + bg + '</option>').join('')
+      + '</select></label>';
+  });
+  h += '<label style="font-size:11px;color:var(--muted)">tint <input data-vs="tint" value="' + esc(String(vt.tint||'0xFFFF')) + '" style="width:70px;padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px"></label></div></div>';
+  box.innerHTML = h;
+  // 事件增删改
+  const addEv = $('ev-add-btn');
+  if (addEv) addEv.addEventListener('click', () => {
+    st.events = st.events || [];
+    st.events.push({ id: st.id + '_ev_' + st.events.length, kind: 'storm' });
+    edRenderContentPanels();
+    edValidateBar();
+  });
+  box.querySelectorAll('[data-ev="id"]').forEach((el) => el.addEventListener('change', () => { st.events[parseInt(el.dataset.i,10)].id = el.value.trim() || st.id + '_ev'; edValidateBar(); }));
+  box.querySelectorAll('[data-ev="kind"]').forEach((el) => el.addEventListener('change', () => { st.events[parseInt(el.dataset.i,10)].kind = el.value; edValidateBar(); }));
+  box.querySelectorAll('[data-ev="del"]').forEach((el) => el.addEventListener('click', () => { st.events.splice(parseInt(el.dataset.i,10), 1); edRenderContentPanels(); edValidateBar(); }));
+  box.querySelectorAll('[data-mc="row"]').forEach((el) => el.addEventListener('change', () => { const m = st.merchants[parseInt(el.dataset.i,10)]; m.cell = [parseInt(el.value,10)||0, ((m.cell||[])[1]!=null?(m.cell||[])[1]:0)]; edValidateBar(); }));
+  box.querySelectorAll('[data-mc="col"]').forEach((el) => el.addEventListener('change', () => { const m = st.merchants[parseInt(el.dataset.i,10)]; m.cell = [((m.cell||[])[0]!=null?(m.cell||[])[0]:0), parseInt(el.value,10)||0]; edValidateBar(); }));
+  box.querySelectorAll('[data-vs]').forEach((el) => el.addEventListener('change', () => {
+    st.vs_theme = st.vs_theme || {};
+    st.vs_theme[el.dataset.vs] = el.value;
+    edValidateBar();
+  }));
+}
+
+// 10 步向导面板（S44.2 固定 10 步，30 号 §2.1；不可跳步，失败即停。设计稿 map_wizard_step_*）。
+// ================================================================== 步进方案
+// 10 步 = 制作流程主轴（add/import/syncmap/verify/pack/install/check/sync/shot/zero_rust，
+// 与 map_wizard.rs 机器判据 1:1）；每步有 说明 + 验收清单 + 操作按钮 + 结果回显。
+// 步进状态 edStep（0 基）驱动：① 顶部步进条高亮 ② 步骤感知三区显隐 ③ 当前步操作区。
+const WZ_STEPS = [
+  {name:'add', label:'① 新建包', desc:'从 _template 建 4 文件骨架（已安装包幂等跳过 = 内容就绪即过）',
+   accept:'assets/maps/<id>/ 出现 manifest/map/layout/strings 四文件（已存在 = 跳过 add 直接过）',
+   do:'点「执行」= 本地校验 I1~I9+S34.5 全绿 + 包已存在则幂等过；全新包才跑 map_pack.py add', need:'包 id 合法（^[a-z0-9_]{1,16}$）'},
+  {name:'import', label:'② 填内容 + 导入落盘', desc:'在编辑器把 31 格 + events + merchants + vs_theme 填完，导入落 4 文件',
+   accept:'I1~I9 + S34.5 全绿（0 违规）+ POST /api/map/import 返回 ok',
+   do:'编辑区左选岛→中铺格→右填内容配置 → 点「导入落盘」', need:'校验条必须 0 违规才能导入'},
+  {name:'syncmap', label:'③ 同步 manifest[map] ← map.json', desc:'两文件是冗余副本，导入后须显式同步',
+   accept:'map_pack.py syncmap 输出「0 差」（幂等）', do:'点「执行同步」', need:'第 2 步已导入'},
+  {name:'verify', label:'④ 权威校验', desc:'map_pack.py verify 终判（含 I7 资产哈希，前端镜像不含）',
+   accept:'verify 输出「0 违规」', do:'点「执行校验」', need:'第 2 步已导入'},
+  {name:'pack', label:'⑤ 出可分发件', desc:'已装包 → dist/maps/<id>.map-pack/ + .zip（含 sha256 清单 + 池资产副本）',
+   accept:'pack 成功 + dist 产物存在', do:'点「执行打包」', need:'第 4 步 0 违规'},
+  {name:'install', label:'⑥ 安装 + 回注', desc:'装到 assets/maps/<id>/ + 接线 board.json maps.<id> + 更新 index.json',
+   accept:'install 成功', do:'点「执行安装」', need:'第 5 步已出包'},
+  {name:'check', label:'⑦ 漂移对账', desc:'已装态 vs board.json 全量对账（只读）',
+   accept:'check 输出「0 漂移」', do:'点「执行对账」', need:'第 6 步已安装'},
+  {name:'sync', label:'⑧ 回注构建期默认数据', desc:'全量重算 board/scenes/manifest/strings（幂等）',
+   accept:'sync 成功', do:'点「执行回注」', need:'第 6 步已安装'},
+  {name:'shot', label:'⑨ 出图验收', desc:'引擎真渲染 main_map（TI_MAP=<id>）截图 + 非黑判据 = 视觉签收',
+   accept:'exit 0 + 出图非黑', do:'点「执行出图」（xvfb 无头真渲染）', need:'第 8 步已回注'},
+  {name:'zero_rust', label:'⑩ 零 Rust 判据', desc:'游戏 6 crate git diff 空 = 内容运营核心判据（只动数据不碰代码）',
+   accept:'git diff crates/ 空', do:'点「执行断言」', need:'全程未改游戏 crate'},
+];
+let edStep = 0;          // 当前步（0 基）
+let edStepDone = [false,false,false,false,false,false,false,false,false,false]; // 每步是否已 PASS
+let edStepResults = [];  // 每步结果回显（{ok, text}）
+
+// 顶部细步进条（10 圆点：已完成=绿✓ / 当前=金 / 失败=红 / 待办=灰；极简，仅当前高亮）
+function edRenderStepbar() {
+  const bar = $('ed-stepbar');
+  if (!bar) return;
+  const s = WZ_STEPS[edStep];
+  let h = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+  h += '<div style="display:flex;gap:8px;align-items:center;flex:1">';
+  WZ_STEPS.forEach((st, i) => {
+    const done = edStepDone[i];
+    const fail = edStepResults[i] && edStepResults[i].ok === false && !done;
+    const cur = (i === edStep);
+    const bg = done ? '#3fae6a' : (fail ? '#d05454' : (cur ? '#c9a15a' : '#3a4155'));
+    const mark = done ? '✓' : (fail ? '✗' : String(i+1));
+    const fg = done || fail ? '#fff' : (cur ? '#0d0f17' : 'var(--muted)');
+    h += '<div data-sb="' + i + '" title="' + st.name + '" style="width:26px;height:26px;border-radius:50%;background:' + bg
+      + ';display:flex;align-items:center;justify-content:center;cursor:' + (done ? 'pointer' : 'default')
+      + ';border:2px solid ' + (cur ? 'var(--accent)' : 'transparent') + ';font-size:12px;font-weight:700;color:' + fg + '">' + mark + '</div>';
+  });
+  h += '</div>';
+  h += '<div style="font-size:13px;font-weight:700;color:var(--accent)">第 ' + (edStep+1) + '/10 步 · ' + s.label.slice(2).trim() + '</div>';
+  h += '<label style="font-size:11px;color:var(--muted);margin-left:8px">包</label>';
+  h += '<input id="ed-id" value="' + esc(edState.id) + '" style="width:56px;padding:4px 8px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:11px">';
+  h += '</div>';
+  // 当前步说明 + 验收 + 操作 + 前置（紧凑单卡）
+  h += '<div style="border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:10px;font-size:12px;color:var(--ink)">'
+    + s.desc
+    + '<div style="font-size:11px;color:var(--muted);margin-top:4px"><b style="color:var(--ink)">验收：</b>' + s.accept
+    + '　<b style="color:var(--ink)">前置：</b>' + s.need + '</div>'
+    + '</div>';
+  bar.innerHTML = h;
+  bar.querySelectorAll('[data-sb]').forEach((el) => el.addEventListener('click', () => {
+    const i = parseInt(el.dataset.sb, 10);
+    if (edStepDone[i] || i === edStep) { edStep = i; edRenderStepbar(); edRenderWorkzone(); edRenderStepBody(); edStatusBar(); }
+  }));
+  const idIn = bar.querySelector('#ed-id');
+  if (idIn) idIn.addEventListener('change', () => { edState.id = idIn.value.trim() || edState.id; edStatusBar(); });
+}
+
+// 当前步工作区（#ed-workzone：按步显隐 —— add/import = 编辑区 #ed-zone-edit；其余 = 结果卡）
+function edRenderWorkzone() {
+  const s = WZ_STEPS[edStep];
+  const editZone = $('ed-zone-edit');
+  if (editZone) editZone.hidden = !('add' === s.name || 'import' === s.name);
+  const wz = $('ed-workzone');
+  if (!wz) return;
+  // 编辑区显隐时，动态区清空（编辑区在 #map-editor 外独立 #ed-zone-edit）
+  if (s.name === 'add' || s.name === 'import') {
+    wz.innerHTML = '';
+    return;
+  }
+  // 其余步 = 结果卡（本步命令 + 结果回显 + 产出路径）
+  const res = edStepResults[edStep];
+  const cmd = {syncmap:'map_pack.py syncmap <id>', verify:'map_pack.py verify <id>',
+    pack:'map_pack.py pack <id>', install:'map_pack.py install <id>',
+    check:'map_pack.py check', sync:'map_pack.py sync',
+    shot:'treasure-bevy-native --shot --scene=main_map（TI_MAP=<id>）',
+    zero_rust:'git diff --quiet -- crates/ti-core…ti-formats'}[s.name] || '';
+  wz.innerHTML =
+    '<div style="border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:14px">'
+    + '<div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">' + s.label + ' · 执行区</div>'
+    + '<div style="font-size:12px;color:var(--ink)">本步命令：<code style="background:var(--panel2);padding:2px 6px;border-radius:4px">' + cmd + '</code></div>'
+    + (res ? '<div style="margin-top:10px;padding:8px;border-radius:6px;background:' + (res.ok ? 'rgba(63,174,106,.12)' : 'rgba(208,84,84,.12)')
+      + ';border:1px solid ' + (res.ok ? '#3fae6a' : '#d05454') + ';font-size:12px;white-space:pre-wrap;color:' + (res.ok ? '#3fae6a' : '#d05454') + '">'
+      + (res.ok ? '✓ ' : '✗ ') + esc(res.text || '') + '</div>'
+      : '<div style="margin-top:10px;font-size:11px;color:var(--muted)">尚未执行（点下方「执行」）</div>')
+    + (s.name === 'shot' ? '<div style="margin-top:8px"><button id="ed-step-open-shot" style="font-size:11px;padding:5px 10px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:5px;cursor:pointer">看出图 evidence/bevy_native_main_map.png</button></div>' : '')
+    + '</div>';
+  const ob = wz.querySelector('#ed-step-open-shot');
+  if (ob) ob.addEventListener('click', () => window.open('/evidence/bevy_native_main_map.png', '_blank'));
+}
+
+// 当前步操作条（#ed-step-body：执行 + 下一步 + 刷新，极简）
+function edRenderStepBody() {
+  const body = $('ed-step-body');
+  if (!body) return;
+  const s = WZ_STEPS[edStep];
+  let h = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    + '<button id="ed-step-run" style="padding:8px 18px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;cursor:pointer;font-weight:700;font-size:12px">▶ 执行' + s.label.slice(2).trim() + '</button>';
+  if (s.name === 'import') h += '<button id="ed-step-import-local" style="padding:8px 14px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;cursor:pointer;font-size:12px">仅本地校验（不写盘）</button>';
+  h += '<button id="ed-step-next" style="padding:8px 14px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;cursor:pointer;font-size:12px">下一步 →</button>'
+    + '<button id="ed-step-refresh" style="padding:8px 14px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:12px">刷新（读向导态）</button>';
+  h += '</div>';
+  h += '<div id="ed-step-msg" style="margin-top:8px;font-size:11px;color:var(--muted);white-space:pre-wrap"></div>';
+  body.innerHTML = h;
+  $('ed-step-run').addEventListener('click', () => edRunStepAction(edStep));
+  const ib = $('ed-step-import-local');
+  if (ib) ib.addEventListener('click', () => { const iss = edValidate(); const m = $('ed-step-msg'); m.textContent = iss.length === 0 ? '✓ 本地校验全过' : '✗ 本地校验未过 ' + iss.length + ' 项：\n' + iss.join('\n'); m.style.color = iss.length ? '#d05454' : '#3fb950'; });
+  $('ed-step-refresh').addEventListener('click', edWizardLoad);
+  const nb = $('ed-step-next');
+  nb.addEventListener('click', () => {
+    if (edStepDone[edStep]) {
+      if (edStep < 9) { edStep++; edRenderStepbar(); edRenderWorkzone(); edRenderStepBody(); edStatusBar(); }
+      else { const m = $('ed-step-msg'); if (m) { m.style.color = '#3fb950'; m.textContent = '10 步全完成 ✓（内容运营收口）'; } }
+    } else {
+      const m = $('ed-step-msg');
+      if (m) { m.style.color = '#d05454'; m.textContent = '第 ' + (edStep+1) + ' 步未 PASS（' + WZ_STEPS[edStep].accept + '），先点「执行' + WZ_STEPS[edStep].label.slice(2).trim() + '」再下一步'; }
+    }
+  });
+}
+
+// 当前步主操作（add/import/syncmap/verify/pack/install/check/sync/shot/zero_rust → 调向导 API 或本地）
+async function edRunStepAction(i) {
+  const s = WZ_STEPS[i];
+  const st = edState;
+  const msg = $('ed-step-msg');
+  if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = '执行第 ' + (i+1) + ' 步 ' + s.name + ' …'; }
+  try {
+    // 第 1 步 add：本地校验内容就绪 + 调后端向导 step API 推进状态机（后端 add 步已幂等跳过：已安装且 4 文件在位 = PASS）
+    if (s.name === 'add') {
+      const iss = edValidate();
+      if (iss.length !== 0) {
+        edStepResults[i] = { ok: false, text: '未就绪，' + iss.length + ' 项未过：' + iss.join('；') };
+      } else {
+        const tok = sessionStorage.getItem('ti_console_token') || '';
+        const hdrs = { 'Content-Type': 'application/json' };
+        if (tok) hdrs['X-TI-Token'] = tok;
+        const resp = await fetch('/api/content/map/step', { method: 'POST', headers: hdrs,
+          body: JSON.stringify({ id: st.id, step: 'add', enable_write: true, params: {} }) });
+        const out = await resp.json();
+        edStepResults[i] = { ok: !!out.ok, text: out.ok
+          ? ('包 ' + st.id + ' 内容就绪（' + st.spaces.length + ' 格 + ' + st.events.length + ' 事件 + ' + st.merchants.length + ' 商人 + vs_theme）；向导 add 步 PASS')
+          : ('add 步未过：' + (out.criterion || out.error || '')) };
+        if (out.ok) { edStepDone[i] = true; if (i < 9) edStep = i + 1; }
+      }
+    } else if (s.name === 'import') {
+      // 本地落盘（edImport = POST /api/map/import，先 verify 后 sync）+ 调后端向导 step API 推进状态机
+      const ok = await edImport();
+      if (ok) {
+        // 后端 import 步 = map_pack.py verify（import 已 sync+verify，此处推进向导 cur）
+        const tok = sessionStorage.getItem('ti_console_token') || '';
+        const hdrs = { 'Content-Type': 'application/json' };
+        if (tok) hdrs['X-TI-Token'] = tok;
+        const resp = await fetch('/api/content/map/step', { method: 'POST', headers: hdrs,
+          body: JSON.stringify({ id: st.id, step: 'import', enable_write: true, params: {} }) });
+        const out = await resp.json();
+        edStepResults[i] = { ok: !!out.ok, text: out.ok
+          ? ('已落盘 assets/maps/' + st.id + '/ 四文件 + sync/verify + 向导推进')
+          : ('导入落盘成功但向导 import 步未过：' + (out.criterion || out.error || '')) };
+        if (out.ok) { edStepDone[i] = true; if (i < 9) edStep = i + 1; }
+      } else {
+        edStepResults[i] = { ok: false, text: '导入失败（校验未过或被拒）' };
+      }
+    } else {
+      // 第 3~10 步 = 调向导 API（POST /api/content/map/step，写步带 enable_write + token）
+      const tok = sessionStorage.getItem('ti_console_token') || '';
+      const hdrs = { 'Content-Type': 'application/json' };
+      if (tok) hdrs['X-TI-Token'] = tok;
+      const body = { id: st.id, step: s.name, enable_write: true, params: {} };
+      const resp = await fetch('/api/content/map/step', { method: 'POST', headers: hdrs, body: JSON.stringify(body) });
+      const out = await resp.json();
+      const passed = !!out.ok;
+      let note = (passed ? 'PASS：' : 'FAIL：') + (out.criterion || out.error || ('HTTP ' + resp.status));
+      if (out.output_excerpt) note += '\n' + String(out.output_excerpt).slice(-400);
+      if (!passed) note += '\n（失败即停：须修复后重跑本步；不可跳步）';
+      edStepResults[i] = { ok: passed, text: note };
+      if (passed) { edStepDone[i] = true; if (i < 9) edStep = i + 1; }
+    }
+  } catch (e) {
+    edStepResults[i] = { ok: false, text: '执行异常：' + e };
+  }
+  edRenderStepbar();
+  edRenderWorkzone();
+  edRenderStepBody();
+  edStatusBar();
+}
+
+// 读向导状态机（GET /api/content/map）→ 同步 edStepDone（后端已 PASS 的步标绿）
+async function edWizardLoad() {
+  const st = edState;
+  const msg = $('ed-step-msg');
+  if (!msg) return;
+  try {
+    const d = await api('/api/content/map?id=' + encodeURIComponent(st.id));
+    const cur = d.current_step || 0;
+    const steps = d.steps || [];
+    steps.forEach((s, i) => { if (s && s.done && s.passed) edStepDone[i] = true; });
+    // 当前步 = 后端 current_step（若 > 本地 edStep 则对齐）
+    if (cur > edStep) edStep = cur;
+    edRenderStepbar();
+    edRenderWorkzone();
+    edRenderStepBody();
+    edStatusBar();
+    msg.style.color = 'var(--muted)';
+    msg.textContent = '已读向导状态机：当前第 ' + (cur+1) + ' 步（' + ((d.steps_def||[])[cur]||'?') + '）· halted=' + d.halted + '\n'
+      + steps.map((s, i) => (s && s.done ? (s.passed ? '✅' : '⛔') : (i === cur ? '●' : '○')) + ' ' + s.name + (s.criterion ? '（' + s.criterion + '）' : '')).join('\n');
+  } catch (e) { msg.style.color = '#d05454'; msg.textContent = '读向导状态失败：' + e; }
+}
+// 表格已并入 Inspector（v3 仪表盘）；保留空实现防旧引用。
+function edRenderTable() {
+  edRenderInspector();
+}
+
+// 底状态条（Unity/Godot 状态条同款：选中项 + 操作提示 + 校验摘要）
+function edStatusBar() {
+  const bar = $('ed-statusbar');
+  if (!bar) return;
+  const s = WZ_STEPS[edStep];
+  const failed = edStepResults[edStep] && !edStepResults[edStep].ok;
+  const stepTxt = s ? ('当前第 ' + (edStep+1) + ' 步 ' + s.label.slice(2).trim() + (edStepDone[edStep] ? ' ✓' : (failed ? ' ✗ 失败即停' : ''))) : '';
+  const st = edState;
+  const selTxt = edSel != null ? ('格 ' + edSel + ' · ' + (st.spaces[edSel].isle ? (ED_ISLE_LABEL[st.spaces[edSel].isle]||st.spaces[edSel].isle) : st.spaces[edSel].kind)) : '未选中';
+  const issues = edValidate();
+  const total = 8;  // I1,I2,I3,I5,I6,I8,I9,S34.5（与 edValidate 输出条目同口径）
+  bar.innerHTML =
+    '<span>选中 = <b style="color:var(--accent)">' + selTxt + '</b></span>'
+    + '<span style="margin-left:auto;color:var(--ink)">' + stepTxt + '</span>'
+    + '<span style="color:' + (issues.length ? '#d05454' : '#3fb950') + '">校验 ' + (total - issues.length) + '/' + total + (issues.length ? '（✗' + issues.length + '）' : '') + '</span>';
 }
 
 function edValidateBar() {
   const issues = edValidate();
+  const n = issues.length;
   const bar = $('ed-validate');
-  if (issues.length === 0) {
-    bar.innerHTML = '<span style="color:#3fb950;font-weight:600">I1~I8 全过（前端判定；导入后 map_pack.py verify 终判含 I7 资产哈希）</span>';
+  if (!bar) return;
+  if (n === 0) {
+    bar.innerHTML = '<div style="color:#3fb950;font-weight:600">✓ 全过（' +
+      'I1~I9 + S34.5 前端判定；导入后 map_pack.py verify 终判含 I7 资产哈希）</div>';
   } else {
-    bar.innerHTML = '<span style="color:#d05454">未过 ' + issues.length + ' 项：</span><ul style="margin:6px 0 0 18px;color:#d05454">' + issues.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+    // 逐条 ✓/✗（每条 = 一个不变量违规；与 map_pack.py verify_pack 同口径）
+    bar.innerHTML = '<div style="color:#d05454;font-weight:600;margin-bottom:4px">✗ 未过 ' + n + ' 项（修红字才能导入）</div>'
+      + '<ul style="margin:0 0 0 16px;color:#d05454">' + issues.map((x) => '<li style="margin:2px 0">' + esc(x) + '</li>').join('') + '</ul>';
   }
 }
 
 function edReadInputs() {
-  const st = edState;
-  st.id = $('ed-id').value.trim() || st.id;
-  st.ring.center_x = parseInt($('ed-cx').value, 10) || st.ring.center_x;
-  st.ring.center_y = parseInt($('ed-cy').value, 10) || st.ring.center_y;
-  st.ring.radius = parseInt($('ed-r').value, 10) || st.ring.radius;
-  st.ring.card_w = parseInt($('ed-cw').value, 10) || st.ring.card_w;
-  st.ring.card_h = parseInt($('ed-ch').value, 10) || st.ring.card_h;
+  // ed-id 已随步进条动态渲染（edRenderStepbar 内），此处仅读 sessionStorage 持久值
+  const v = sessionStorage.getItem('ti_map_editor_id');
+  if (v) edState.id = v;
 }
 
 function edSyncInputs() {
-  const st = edState;
-  $('ed-id').value = st.id;
-  $('ed-cx').value = st.ring.center_x;
-  $('ed-cy').value = st.ring.center_y;
-  $('ed-r').value = st.ring.radius;
-  $('ed-cw').value = st.ring.card_w;
-  $('ed-ch').value = st.ring.card_h;
+  sessionStorage.setItem('ti_map_editor_id', edState.id);
 }
 
 async function edImport() {
@@ -1428,7 +1962,7 @@ async function edImport() {
   const issues = edValidate();
   if (issues.length > 0) {
     edValidateBar();
-    alert('I1~I8 未过（' + issues.length + ' 项），拒绝导入：\n' + issues.join('\n') + '\n（修好再导入；或终端 map_pack.py verify 详查）');
+    alert('I1~I9 + S34.5 未过（' + issues.length + ' 项），拒绝导入：\n' + issues.join('\n') + '\n（修好再导入；或终端 map_pack.py verify 详查）');
     return;
   }
   // 生成 4 文件 JSON（manifest/map/layout/strings）
@@ -1437,7 +1971,16 @@ async function edImport() {
     schema: 'map-pack/1', id: st.id, version: '1.0.0', data_version: 'board-v5',
     central_asset: 'island_home_' + st.id,
     isle_assets: ED_ISLES.slice(),
-    map: { grid_w: 20, grid_h: 20, spaces: st.spaces.map((s) => ({ cell: s.cell, group: s.group, kind: s.kind, terrain: s.terrain, ...(s.isle ? { isle: s.isle } : {}), ...(Array.isArray(s.pos) && s.pos.length === 2 ? { pos: s.pos } : {}) })) },
+    map: {
+      grid_w: 20, grid_h: 20,
+      spaces: st.spaces.map((s) => ({
+        cell: s.cell, group: s.group, kind: s.kind, terrain: s.terrain,
+        ...(s.isle ? { isle: s.isle, resource: s.resource || ED_ISLE_RESOURCE[s.isle], building: s.building != null ? s.building : 1 } : {}),
+        ...(Array.isArray(s.pos) && s.pos.length === 2 ? { pos: s.pos } : {})
+      })),
+      events: st.events || [],
+      merchants: st.merchants || [],
+    },
     layout: {
       ring: st.ring,
       world_canvas: st.canvas,
@@ -1451,7 +1994,8 @@ async function edImport() {
     },
     strings: { ['glmap' + st.id + '.Map']: st.id },
     assets: [],
-    invariants: { spaces: 31, start: 1, territory: 20, feature: 9, boss: 1, isle_kinds: 10 }
+    invariants: { spaces: 31, start: 1, territory: 20, feature: 9, boss: 1, isle_kinds: 10 },
+    vs_theme: st.vs_theme || { bg: 'vs_bg_m04', siege: 'bg_siege', dungeon: 'bg_dungeon', boss: 'bg_boss', encounter: 'vs_bg_m04', tint: '0x78FF' },
   };
   const payload = { manifest, map: manifest.map, layout: manifest.layout, strings: manifest.strings };
   $('ed-import-msg').textContent = '导入中…';
@@ -1470,30 +2014,51 @@ async function edImport() {
     $('ed-import-msg').textContent = '导入成功：' + JSON.stringify(out.written || out.synced || out) + '（已跑 map_pack.py sync + verify）';
     $('ed-import-msg').style.color = '#3fb950';
     loadMap();
+    edStepDone[1] = true; // 导入步完成
+    edStep = Math.max(edStep, 1 + 1); // 自动推进到第 3 步
+    return true;
   } catch (e) {
     $('ed-import-msg').textContent = '导入异常：' + e;
     $('ed-import-msg').style.color = '#d05454';
   }
+  return false;
 }
 
 function openMapEditor() {
   edState = edDefaultState();
-  edSyncInputs();
+  edUndoStack = []; edRedoStack = [];
+  edSel = null;
+  edZoom = 1.0; edPan = { x: 0, y: 0 };
+  edRenderLeft();
   edRenderCanvas();
-  edRenderTable();
+  edRenderFloats();
+  edRenderInspector();
+  edRenderContentPanels();
   edValidateBar();
-  $('map-editor').hidden = false;
-  $('map-editor').scrollIntoView({ behavior: 'smooth' });
+  edRenderStepbar();
+  edRenderWorkzone();
+  edRenderStepBody();
+  edStatusBar();
+  edSetTool('paint');
+
+  const edCard = $('map-editor');
+  if (edCard) {
+    edCard.hidden = false;
+    edCard.scrollIntoView({ behavior: 'smooth' });
+  }
 }
+// 工具条：工具切换（paint 选岛 / eraser 清岛）
+function edSetTool(tool) {
+  edState.tool = tool;
+  edStatusBar();
+}
+
 $('map-edit-btn').addEventListener('click', openMapEditor);
 // S44.4 打包/分发面：publish 体检（只读）+ 发布（默认关需 enable_write）。
 $('pub-check-btn').addEventListener('click', () => runPublish('check'));
 $('pub-run-btn').addEventListener('click', () => runPublish('run'));
-$('ed-validate-btn').addEventListener('click', () => { edReadInputs(); edRenderCanvas(); edValidateBar(); });
-$('ed-import-btn').addEventListener('click', edImport);
-['ed-cx','ed-cy','ed-r','ed-cw','ed-ch'].forEach((id) => {
-  $(id).addEventListener('change', () => { edReadInputs(); edRenderCanvas(); edValidateBar(); });
-});
+// 极简版：工具条已并入步进方案（add/import 步 = 编辑区 #ed-zone-edit），顶层事件绑定移除。
+// edSetTool 由编辑区（isle palette 点选 / 画布点格）内部调用，见 edRenderLeft。
 
 /* ==== 地图工作台（S44.2 固定 10 步向导：状态机 + 判据回显 + 不可跳步 409） ==== */
 const CW_STEPS = ['add','import','syncmap','verify','pack','install','check','sync','shot','zero_rust'];
@@ -1735,19 +2300,25 @@ async function loadTests() {
     window.testsEvFiles = ev.files || [];
     renderTestSummary();
     renderTestContract();
-    renderTestTree();
+    renderTestGroups();
+    renderTestList();
     loadGateProbe();
     loadGate();
     wireGateRun();
   } catch (e) {
-    $('ts-tree').innerHTML = '<div class="empty">/api/tests 不可用：' + esc(String(e)) + '</div>';
+    $('ts-groups').innerHTML = '<div class="empty">/api/tests 不可用：' + esc(String(e)) + '</div>';
+    $('ts-list').innerHTML = '';
     $('ts-summary').innerHTML = '<div class="empty">测试清单不可用：' + esc(String(e)) + '</div>';
   }
 }
 
 function renderTestSummary() {
   const t = testsCache.tests || [];
-  const byLev = {}, byCat = {}, byType = {}, evOk = 0, evMiss = [];
+  // S49.7 修：const 计数器被 `evOk++` 重新赋值 ⇒ TypeError: Assignment to constant variable
+  //（EXP-179 同类根因；整块 renderTestSummary 抛错 ⇒ 分组/清单不渲染）。计数器须 `let`。
+  const byLev = {}, byCat = {}, byType = {};
+  let evOk = 0;
+  const evMiss = [];
   t.forEach((x) => {
     byLev[x.level] = (byLev[x.level] || 0) + 1;
     byCat[x.category] = (byCat[x.category] || 0) + 1;
@@ -1781,42 +2352,163 @@ function renderTestContract() {
   $('ts-contract').innerHTML = lines.join('\n');
 }
 
-function renderTestTree() {
-  const byLevel = testsCache.by_level || [];
-  let h = '';
-  byLevel.forEach((lv) => {
-    const lvN = lv.tests ? lv.tests.length : lv.categories.reduce((a, c) => a + (c.types || []).reduce((b, ty) => b + (ty.tests || []).length, 0), 0);
-    h += `<div class="grp">${TS_LEVEL_LABEL[lv.level] || lv.level}（${lvN}）</div>`;
-    (lv.categories || []).forEach((cat) => {
-      h += `<div class="asset-tag" data-lv="${lv.level}" data-cat="${cat.category}" style="display:block;margin:4px 0">${TS_CAT_LABEL[cat.category] || cat.category}（${(cat.types || []).reduce((a, ty) => a + (ty.tests || []).length, 0)}）</div>`;
+// S49.7（23 号 §6.3）：侧栏 = 业务域主分组（group）→ 分类计数；主区 = 分组折叠列表。
+const TS_GROUP_LABEL = { core:'核心规则/玩法', asset:'资产与内容管线', platform:'平台与工具', device:'端侧与兼容', perf:'性能与体积' };
+let tsFilter = { group: '', cat: '' };
+
+function tsFiltered() {
+  const box = $('ts-search');
+  const q = (box && box.value || '').trim().toLowerCase();
+  return (testsCache.tests || []).filter((x) => {
+    if (tsFilter.group && x.group !== tsFilter.group) return false;
+    if (tsFilter.cat && x.category !== tsFilter.cat) return false;
+    if (q) {
+      const hay = ((x.name || '') + ' ' + (x.id || '') + ' ' + (x.command || '')).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+}
+
+// 状态徽章（统一作业模型 23 号 §6.2：exit_code = 机器判据，不靠日志字符串猜）。
+function tsJobBadge(x) {
+  const job = x.job;
+  if (!job) return '<span class="tag" style="opacity:.6">未跑</span>';
+  if (job.running === true) return '<span class="tag" style="border-color:var(--warn);color:var(--warn)">跑中</span>';
+  const code = job.exit_code;
+  if (code === 0 || code === '0') {
+    const dur = (job.started_ts && job.ended_ts) ? (' ' + (job.ended_ts - job.started_ts) + 's') : '';
+    return '<span class="tag verified">✓ 通过' + dur + '</span>';
+  }
+  return '<span class="tag blocked">✗ 失败 exit=' + (code == null ? '?' : code) + '</span>';
+}
+
+function renderTestGroups() {
+  const groups = testsCache.groups || ['core', 'asset', 'platform', 'device', 'perf'];
+  const all = testsCache.tests || [];
+  let h = '<div class="grp">业务域（主分组）</div>';
+  h += '<div class="asset-tag" data-g="" data-c="" style="display:block;margin:4px 0">全部（' + all.length + '）</div>';
+  groups.forEach((g) => {
+    const gi = all.filter((x) => x.group === g);
+    if (!gi.length) return;
+    h += '<div class="grp" style="margin-top:8px">' + esc(TS_GROUP_LABEL[g] || g) + '（' + gi.length + '）</div>';
+    const cats = {};
+    gi.forEach((x) => { cats[x.category] = (cats[x.category] || 0) + 1; });
+    Object.keys(cats).forEach((c) => {
+      h += '<div class="asset-tag" data-g="' + esc(g) + '" data-c="' + esc(c) + '" style="display:block;margin:4px 0">'
+        + esc(TS_CAT_LABEL[c] || c) + '（' + cats[c] + '）</div>';
     });
   });
-  $('ts-tree').innerHTML = h || '<div class="empty">无测试分组</div>';
-  document.querySelectorAll('#ts-tree .asset-tag').forEach((tg) => {
-    tg.addEventListener('click', () => renderTestGroup(tg.dataset.lv, tg.dataset.cat));
+  $('ts-groups').innerHTML = h;
+  document.querySelectorAll('#ts-groups .asset-tag').forEach((tg) => {
+    tg.addEventListener('click', () => {
+      tsFilter.group = tg.dataset.g || '';
+      tsFilter.cat = tg.dataset.c || '';
+      renderTestGroups();
+      renderTestList();
+    });
   });
-  // 默认显示第一组
-  const first = byLevel[0] && byLevel[0].categories[0];
-  if (first) renderTestGroup(byLevel[0].level, first.category);
 }
 
-function testRow(x) {
+// 主区：业务域 → 分类 → 条目（分组折叠）；每条带「▶ 运行」+ 状态徽章。
+function renderTestList() {
+  const list = tsFiltered();
+  const byGroup = {};
+  list.forEach((x) => { const g = x.group || 'core'; (byGroup[g] = byGroup[g] || []).push(x); });
+  let h = '';
+  Object.keys(byGroup).forEach((g) => {
+    const items = byGroup[g];
+    const passed = items.filter((x) => x.job && x.job.running === false && (x.job.exit_code === 0 || x.job.exit_code === '0')).length;
+    h += '<details open style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;padding:8px 10px">'
+      + '<summary style="cursor:pointer;font-weight:700">' + esc(TS_GROUP_LABEL[g] || g) + ' · ' + items.length + ' 条 · 已通过 ' + passed + '</summary>';
+    const cats = {};
+    items.forEach((x) => { (cats[x.category] = cats[x.category] || []).push(x); });
+    Object.keys(cats).forEach((c) => {
+      h += '<div style="margin:8px 0 4px;color:var(--muted);font-size:12px">' + esc(TS_CAT_LABEL[c] || c) + '（' + cats[c].length + '）</div>';
+      cats[c].forEach((x) => { h += tsRow(x); });
+    });
+    h += '</details>';
+  });
+  $('ts-list').innerHTML = h || '<div class="empty">无匹配测试</div>';
+  document.querySelectorAll('#ts-list button[data-ts-run]').forEach((b) => {
+    b.addEventListener('click', (ev) => { ev.stopPropagation(); tsRunTest(b.dataset.tsRun, b); });
+  });
+  document.querySelectorAll('#ts-list .ts-row').forEach((r) => {
+    r.addEventListener('click', () => renderTestDetail(r.dataset.tsId));
+  });
+}
+
+function tsRow(x) {
   const miss = x.evidence && !x.evidence_exists;
-  return `<div class="row" style="cursor:pointer" data-id="${esc(x.id)}">
-    <span><span class="tag ${miss ? 'blocked' : 'verified'}">${miss ? '断链' : '在位'}</span>
-      <b>${esc(x.name || x.id)}</b> <code style="margin-left:6px">${esc(x.id)}</code></span>
-    <span style="color:var(--muted)">${TS_TYPE_LABEL[x.type] || x.type} · ${esc(x.level)}</span>
-  </div>`;
+  const runnable = !!(x.command && /^(cargo|python3|pwsh|powershell)\b/.test(x.command));
+  const reason = !x.command ? '人工验收/无命令（不可自动运行）' : '程序不在白名单';
+  return '<div class="row ts-row" data-ts-id="' + esc(x.id) + '" style="cursor:pointer;align-items:center;gap:8px">'
+    + '<span style="flex:1;min-width:0">'
+    + '<b>' + esc(x.name || x.id) + '</b> <code style="margin-left:6px">' + esc(x.id) + '</code>'
+    + '<span style="margin-left:8px">' + tsJobBadge(x) + '</span>'
+    + '<span class="tag ' + (miss ? 'blocked' : 'verified') + '" style="margin-left:6px">' + (miss ? '断链' : '在位') + '</span>'
+    + '<span style="color:var(--muted);margin-left:6px">' + esc(x.level) + ' · ' + esc(x.type) + '</span>'
+    + '</span>'
+    + '<button data-ts-run="' + esc(x.id) + '" ' + (runnable ? '' : 'disabled') + ' title="' + (runnable ? '运行该测试' : reason) + '"'
+    + ' style="background:' + (runnable ? 'var(--accent)' : 'var(--panel2)') + ';border:1px solid ' + (runnable ? 'var(--accent)' : 'var(--border)')
+    + ';color:' + (runnable ? '#0d0f17' : 'var(--muted)') + ';border-radius:6px;padding:4px 10px;cursor:' + (runnable ? 'pointer' : 'not-allowed') + ';font-size:12px">▶ 运行</button>'
+    + '</div>';
 }
 
-function renderTestGroup(lv, cat) {
-  const list = (testsCache.tests || []).filter((x) => x.level === lv && x.category === cat);
-  $('ts-detail').innerHTML =
-    `<div style="margin-bottom:8px;color:var(--muted)">${TS_LEVEL_LABEL[lv] || lv} · ${TS_CAT_LABEL[cat] || cat}（${list.length} 条；点条目看步骤/阶段/截图证据）</div>` +
-    (list.map(testRow).join('') || '<div class="empty">该组无测试</div>');
-  document.querySelectorAll('#ts-detail .row').forEach((r) => {
-    r.addEventListener('click', () => renderTestDetail(r.dataset.id));
+// 运行单个测试：/api/tests?run=<id>（白名单枚举 id）→ 后台作业（统一作业模型 23 号 §6.2）。
+function tsRunTest(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '运行中…'; }
+  const msg = $('ts-list-msg');
+  if (msg) msg.textContent = '启动 ' + id + '…';
+  api('/api/tests?run=' + encodeURIComponent(id)).then((r) => {
+    if (msg) msg.textContent = id + ' 已启动（pid ' + (r.pid || '?') + '）';
+    tsPollJob(id, btn);
+  }).catch((e) => {
+    if (msg) msg.textContent = id + ' 启动失败：' + String(e);
+    if (btn) { btn.disabled = false; btn.textContent = '▶ 运行'; }
   });
+}
+
+// 轮询作业状态（2s）：exit_code = 机器判据；日志尾实时回显；跑完刷新清单（徽章 + 证明）。
+function tsPollJob(id, btn) {
+  const timer = setInterval(() => {
+    api('/api/jobs?kind=test&id=' + encodeURIComponent(id)).then((j) => {
+      const st = j.state || {};
+      const tail = j.log_tail || '';
+      const out = $('ts-run-out');
+      if (tail && out) { out.style.display = 'block'; out.textContent = tail; out.scrollTop = out.scrollHeight; }
+      if (st.running !== true) {
+        clearInterval(timer);
+        if (btn) { btn.disabled = false; btn.textContent = '▶ 运行'; }
+        const msg = $('ts-list-msg');
+        const code = st.exit_code == null ? '?' : st.exit_code;
+        if (msg) msg.textContent = id + ' 结束：exit=' + code + (code === 0 ? '（通过）' : '（失败）');
+        loadTests();
+      }
+    }).catch(() => {});
+  }, 2000);
+}
+
+// 「运行本组」= 当前筛选下的可运行条目**串行**执行（同目标目录会互踩 cargo 锁，23 号 §6.3）。
+function tsRunGroup() {
+  const list = tsFiltered().filter((x) => x.command && /^(cargo|python3|pwsh|powershell)\b/.test(x.command));
+  if (!list.length) { const msg = $('ts-list-msg'); if (msg) msg.textContent = '当前分组无可自动运行条目'; return; }
+  const msg = $('ts-list-msg');
+  let idx = 0;
+  const next = () => {
+    if (idx >= list.length) { if (msg) msg.textContent = '本组运行完毕（' + list.length + ' 条）'; loadTests(); return; }
+    const item = list[idx++];
+    if (msg) msg.textContent = '运行中 ' + item.id + '（' + idx + '/' + list.length + '）';
+    api('/api/tests?run=' + encodeURIComponent(item.id)).then(() => {
+      tsPollJob(item.id, null);
+      const t2 = setInterval(() => {
+        api('/api/jobs?kind=test&id=' + encodeURIComponent(item.id)).then((j) => {
+          if ((j.state || {}).running !== true) { clearInterval(t2); next(); }
+        }).catch(() => {});
+      }, 2000);
+    }).catch(() => { next(); });
+  };
+  next();
 }
 
 function renderTestDetail(id) {
@@ -1863,26 +2555,23 @@ function renderTestDetail(id) {
   const runMsg = document.getElementById('ts-run-msg');
   const runOut = document.getElementById('ts-run-out');
   if (runBtn && runnable) {
+    // 统一作业模型（23 号 §6.2）：run → 轮询作业状态（exit_code 判据 + 日志尾 + 证明）。
     runBtn.addEventListener('click', () => {
-      runBtn.disabled = true;
-      runBtn.textContent = '运行中…';
-      runMsg.textContent = '';
+      runMsg.textContent = '启动中…';
       runOut.style.display = 'block';
       runOut.textContent = '启动中…';
-      api('/api/tests?run=' + encodeURIComponent(x.id)).then((r) => {
-        runMsg.textContent = '已启动（pid ' + r.pid + '）：' + (r.log || '');
-        pollTestLog(r.log, runOut, () => {
-          runBtn.disabled = false;
-          runBtn.textContent = '▶ 运行测试';
-        });
-      }).catch((e) => {
-        runMsg.textContent = '启动失败：' + String(e);
-        runBtn.disabled = false;
-        runBtn.textContent = '▶ 运行测试';
-      });
+      tsRunTest(x.id, runBtn);
     });
   }
 }
+
+// 搜索框（名称/id/命令过滤）+ 「运行本组」串行运行（23 号 §6.3）。
+document.addEventListener('DOMContentLoaded', () => {
+  const search = $('ts-search');
+  if (search) search.addEventListener('input', () => { renderTestList(); });
+  const groupBtn = $('ts-run-group');
+  if (groupBtn) groupBtn.addEventListener('click', tsRunGroup);
+});
 
 // 轮询测试日志尾部（每 2s）：读 /<log> 增量行 + 终端标记（test result/FAILED/panic）+ 停止增长探测
 async function pollTestLog(logPath, out, done) {
@@ -2117,13 +2806,30 @@ async function loadBuild() {
     // ── 状态条：空闲 / 构建中（kind+pid）/ 末次 exit 结果 ──
     const st = $('build-status');
     let stHtml = '';
+    // S46.5 时间本地化（Unix 秒 → 本机 `MM-dd HH:mm:ss`；0/缺失 = '—'）
+    const fmtLocal = (sec) => {
+      if (!sec) return '';
+      const dt = new Date(sec * 1000);
+      const p2 = (n) => String(n).padStart(2, '0');
+      return p2(dt.getMonth() + 1) + '-' + p2(dt.getDate()) + ' ' + p2(dt.getHours()) + ':' + p2(dt.getMinutes()) + ':' + p2(dt.getSeconds());
+    };
     if (runningNow) {
+      const startedSec = d.started_ts || 0;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const elapsed = startedSec ? Math.max(0, nowSec - startedSec) : null;
+      const elapsedTxt = elapsed != null ? (elapsed < 60 ? elapsed + 's' : Math.floor(elapsed / 60) + 'm' + (elapsed % 60) + 's') : '';
       stHtml = '<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel2);border:1px solid var(--warn);border-radius:20px;color:var(--warn);font-size:13px;font-weight:600">'
-        + '<span class="bld-spin"></span> 构建中 ' + esc(runningKind) + '（pid ' + esc(d.running_pid || '?') + '）— 单构建互斥，其余按钮已禁</div>';
+        + '<span class="bld-spin"></span> 构建中 ' + esc(runningKind) + '（pid ' + esc(d.running_pid || '?')
+        + (elapsedTxt ? '，已运行 ' + elapsedTxt : '')
+        + (fmtLocal(startedSec) ? '，' + fmtLocal(startedSec) : '') + '）— 单构建互斥，5s 自动刷新</div>';
     } else if (d.last_exit !== null && d.last_exit !== undefined) {
       const ok = Number(d.last_exit) === 0;
+      const durSec = (d.started_ts && d.ended_ts && d.ended_ts >= d.started_ts) ? (d.ended_ts - d.started_ts) : 0;
+      const durTxt = durSec ? (durSec < 60 ? durSec + 's' : Math.floor(durSec / 60) + 'm' + (durSec % 60) + 's') : '';
       stHtml = '<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel2);border:1px solid ' + (ok ? 'var(--ok)' : 'var(--err)') + ';border-radius:20px;color:' + (ok ? 'var(--ok)' : 'var(--err)') + ';font-size:13px;font-weight:600">'
-        + (ok ? '✓' : '✗') + ' 末次 ' + esc(d.last_kind || '?') + ' exit=' + esc(d.last_exit) + (ok ? ' = 成功' : ' = 硬失败（查 evidence/console/logs/build-*.log）') + '</div>';
+        + (ok ? '✓' : '✗') + ' 末次 ' + esc(d.last_kind || '?') + ' exit=' + esc(d.last_exit) + (ok ? ' = 成功' : ' = 硬失败（查 evidence/console/logs/build-*.log）')
+        + (durTxt ? '，耗时 ' + durTxt : '')
+        + (fmtLocal(d.ended_ts) ? '，' + fmtLocal(d.ended_ts) : '') + '</div>';
     } else {
       stHtml = '<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--panel2);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:13px">● 空闲（未跑过构建）</div>';
     }
@@ -2167,19 +2873,38 @@ async function loadBuild() {
           const j = await r.json();
           b.textContent = j.busy ? '已在跑(pid ' + (j.pid || '?') + ')' : (j.started ? '已启动(pid ' + (j.pid || '?') + ')' : '启动失败');
         } catch (e) { b.textContent = '启动失败'; }
-        // 3 秒后回到空闲态重建卡片（触发 = click handler 同步段；loadBuild 的 catch 兜底 API 故障，
-        // 不再在 async 回调里重置顶层 `const loaded`（浏览器报 `Assignment to constant variable` ⇒
-        // 整块 loadBuild catch 掉 = 页面显示「/api/build 不可用」，EXP 固化）
-        setTimeout(loadBuild, 3000);
+        // S46.5 立即刷新一次（500ms）+ 进入 5s 自动轮询（下方 runningNow 分支调度；
+        // 绝不给顶层 `const loaded` 整体重赋 = `Assignment to constant variable`，EXP-179）
+        setTimeout(loadBuild, 500);
       });
     });
-    // ── 最近构建日志（尾部）──
+    // ── 最近构建日志（尾 8 行 + 构建窗口时间上下文）──
     const lg = d.last_build_log;
     if (lg && lg.tail && lg.tail.length) {
-      $('build-log').innerHTML = '<h3 style="margin:0 0 8px;font-size:13px;color:var(--muted)">最近构建日志（' + esc(lg.path) + '）</h3><pre style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;max-height:220px;overflow:auto;margin:0">'
+      // S46.5：日志头锚（# build X 开始：…）+ 尾锚（# build X 结束：…）双显，
+      // 头尾本地时间戳配成构建窗口（fmtLocal），根治「日志内容没有时间」；中间 8 行 = 最近步骤输出。
+      const winTxt = (d.started_ts || d.ended_ts)
+        ? '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">构建窗口 '
+          + fmtLocal(d.started_ts) + ' → ' + (d.ended_ts ? fmtLocal(d.ended_ts) : '进行中')
+          + ' · 头 ' + ((lg.head || []).length) + ' 行 / 末 ' + lg.tail.length + ' 行</div>' : '';
+      const headBlock = (lg.head && lg.head.length)
+        ? '<pre style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;margin:0">'
+          + esc(lg.head.join('\n')) + '</pre>' : '';
+      $('build-log').innerHTML = '<h3 style="margin:0 0 8px;font-size:13px;color:var(--muted)">最近构建日志（' + esc(lg.path) + '）</h3>'
+        + winTxt
+        + headBlock
+        + '<pre style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;max-height:240px;overflow:auto;margin:8px 0 0">'
         + esc(lg.tail.join('\n')) + '</pre>';
     } else {
       $('build-log').innerHTML = '<div class="empty">尚无构建日志（触发构建后生成 evidence/console/logs/build-*.log）</div>';
+    }
+    // ── S46.5 自动轮询：构建中每 5s 刷新（「构建中」态自动跳「完成」态；空闲/末次态停轮询）──
+    if (runningNow) {
+      clearTimeout(window.__buildPollTid);
+      window.__buildPollTid = setTimeout(loadBuild, 5000);
+    } else {
+      clearTimeout(window.__buildPollTid);
+      window.__buildPollTid = 0;
     }
   } catch (e) {
     $('build-cards').innerHTML = '<div class="empty">/api/build 不可用：' + esc(String(e)) + '</div>';

@@ -187,12 +187,21 @@ def cmd_run(kind: str, log_name: str | None = None) -> int:
     pre_r = cmd_pre(kind)
     if pre_r != 0:
         return pre_r
-    with log.open("w", encoding="utf-8") as lf:
-        lf.write(f"$ {cfg['cmd'][0]}\n")
-        # 子进程补 ~/.cargo/bin 到 PATH（cargo/rustup 常在此；构建走 cargo 子命令时 shell profile 不一定生效）
-        env = os.environ.copy()
-        env["PATH"] = str(Path.home() / ".cargo/bin") + os.pathsep + env.get("PATH", "")
+    local_start = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+    # S46.5：日志头时间戳锚独立成文件（`lf` 在 subprocess 前关闭），**不**经 stdout/stderr 合并流
+    # 落盘（shell 脚本的 `set -u` 等中途异常可能让合并流被重定向吞掉头锚行，用户实测首行 = 步骤输出）。
+    # 步骤行仍由 build_apk.sh / build_wasm.ps1 原样输出（工具契约不变，不重写它们）。
+    with log.open("w", encoding="utf-8") as head_f:
+        head_f.write(f"# build {kind} 开始：{local_start}（user={os.environ.get('USER', '?')}）\n")
+        head_f.write(f"$ {cfg['cmd'][0]}\n")
+    # 子进程补 ~/.cargo/bin 到 PATH（cargo/rustup 常在此；构建走 cargo 子命令时 shell profile 不一定生效）
+    env = os.environ.copy()
+    env["PATH"] = str(Path.home() / ".cargo/bin") + os.pathsep + env.get("PATH", "")
+    with log.open("a", encoding="utf-8") as lf:
         r = subprocess.run(cfg["cmd"], cwd=str(REPO), stdout=lf, stderr=subprocess.STDOUT, text=True, env=env)
+        # S46.5 日志尾锚：构建结束时间 + 退出码（与头锚配成构建窗口，人类可读；追加在同一流内，紧邻步骤输出）。
+        local_end = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+        lf.write(f"# build {kind} 结束：{local_end}（exit={r.returncode}）\n")
     print(f"构建日志: {log}")
     _restore_mtime()  # 无论成败都复原 .rs mtime（build_apk.sh 构建后 .so 若重编已更新，复原无副作用）
     if r.returncode != 0:

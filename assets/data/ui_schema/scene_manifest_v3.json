@@ -169,10 +169,10 @@
     "focus": {
      "anchor": "world_canvas",
      "bbox_pct": {
-      "x": 1,
-      "y": 13,
+      "h": 55,
       "w": 97,
-      "h": 55
+      "x": 1,
+      "y": 13
      }
     },
     "rhythm": {

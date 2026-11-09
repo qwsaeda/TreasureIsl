@@ -152,15 +152,25 @@ fn publish_run(repo_root: &Path) -> Result<Value, (u16, String)> {
     let log_path = logs.join(&log_name);
     let status_path = logs.join(format!("publish-{ts}.status.json"));
     let status_meta = serde_json::json!({
+        "kind": "publish",
+        "id": "publish",
         "started_ts": ts,
         "log": format!("evidence/console/logs/{log_name}"),
     });
-    let outcome = match crate::runner::spawn::spawn_script_logged(
-        &["-File", "scripts/publish_web.ps1"],
+    // S49.7 统一作业模型（23 号 §6.2）：spawn + 收割走 `runner::jobs` 单一实现；
+    // 发布保留自身状态文件（`publish-<ts>.status.json`，`GET /api/publish` 读回不变）
+    // + 写统一作业镜像（`evidence/console/jobs/publish-publish.json`）⇒ `/api/jobs` 可查。
+    let owned_args: Vec<String> = vec!["-File".to_owned(), "scripts/publish_web.ps1".to_owned()];
+    let mirror = crate::runner::jobs::job_state_path(repo_root, "publish", "publish");
+    let outcome = match crate::runner::jobs::spawn_program_logged(
+        &crate::runner::spawn::SCRIPT_INTERPS,
+        &owned_args,
         repo_root,
-        &log_path,
+        Some(&log_path),
         &status_path,
         status_meta,
+        None,
+        Some(&mirror),
     ) {
         Ok(v) => v,
         Err(e) => return Err((500u16, e)),
@@ -169,7 +179,7 @@ fn publish_run(repo_root: &Path) -> Result<Value, (u16, String)> {
         "started": true,
         "pid": outcome.pid,
         "mode": "run",
-        "interp": outcome.interp,
+        "interp": outcome.program,
         "log": format!("evidence/console/logs/{log_name}"),
         "status": format!("evidence/console/logs/publish-{ts}.status.json"),
         "note": "后台发布已启动（publish_web.ps1：gate 前置 + 重建 web + 静态断言 + release.md 发布历史 + gh-pages 推流）；退出码经 GET /api/publish 上报（非 0 = 硬失败）",

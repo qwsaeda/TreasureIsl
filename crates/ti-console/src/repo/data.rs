@@ -180,6 +180,12 @@ pub fn tests(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
         let mut item = t.clone();
         if let Some(obj) = item.as_object_mut() {
             obj.insert("evidence_exists".into(), json!(exists));
+            // 最近一次作业状态（统一作业模型 23 号 §6.2）⇒ 前端状态徽章（未跑/跑中/通过/失败）。
+            if let Some(id) = t.get("id").and_then(Value::as_str) {
+                if let Some(state) = crate::runner::jobs::job_status(repo_root, "test", id) {
+                    obj.insert("job".into(), state);
+                }
+            }
         }
         items.push(item);
     }
@@ -213,11 +219,32 @@ pub fn tests(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
         }
         by_level.push(json!({ "level": lv, "categories": cats_out }));
     }
+    // 业务域分组（主分组维度，23 号 §6.3 侧栏 + §7.2）：group → category → 条目。
+    let groups = ["core", "asset", "platform", "device", "perf"];
+    let mut by_group: Vec<Value> = Vec::new();
+    for group in groups {
+        let g_items: Vec<&Value> = items.iter().filter(|i| i["group"] == group).collect();
+        if g_items.is_empty() {
+            continue;
+        }
+        let mut g_cats: Vec<Value> = Vec::new();
+        for cat in cats {
+            let c_items: Vec<&Value> =
+                g_items.iter().copied().filter(|i| i["category"] == cat).collect();
+            if c_items.is_empty() {
+                continue;
+            }
+            g_cats.push(json!({ "category": cat, "tests": c_items }));
+        }
+        by_group.push(json!({ "group": group, "categories": g_cats }));
+    }
     Ok(json!({
         "manifest": manifest_path,
         "count": items.len(),
         "tests": items,
         "by_level": by_level,
+        "by_group": by_group,
+        "groups": groups,
         // S45.1 平台测试页展示标准（31 号 §2/§3 schema+command 契约摘要，机读回显）。
         "schema_contract": {
             "id": "^[a-z0-9_]+$（唯一，?run 枚举面）",
@@ -227,6 +254,9 @@ pub fn tests(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
             "name": "人类可读名（平台展示）",
             "command": "首词∈cargo|python3|pwsh|powershell + 逐参数非 shell（null/缺=人工验收禁 run）",
             "evidence_xor_gate": "evidence XOR gate 至少一者",
+            "group": "core|asset|platform|device|perf（业务域主分组；23 号 §7.2）",
+            "timeout_s": "作业超时秒数（缺省不限；23 号 §6.2 收割）",
+            "prove": "本次运行证明落点 evidence/tests/<id>/（23 号 §6.2 证明行）",
         },
     }))
 }
@@ -258,47 +288,42 @@ pub fn run_test(repo_root: &Path, sources: &RepoSources, test_id: &str) -> Resul
             "run_test: `{test_id}` 无 command 字段（不可自动运行，如人工视觉验收）"
         ));
     }
-    // 逐参数拆分（空格；非 shell——命令串来自 test_manifest 登记，无引号嵌套）
-    let args: Vec<&str> = command.split_whitespace().collect();
-    if args.is_empty() {
+    // 逐参数拆分（空格；非 shell——命令串来自 test_manifest 登记，无引号嵌套）。
+    let parts: Vec<&str> = command.split_whitespace().collect();
+    if parts.is_empty() {
         return Err(format!("run_test: `{test_id}` command 为空"));
     }
-    let program = args[0];
-    // 程序白名单（22 号 §10.3）：cargo / python3 / pwsh / powershell；其余（含 gate.ps1 直跑）= 拒。
-    if !matches!(program, "cargo" | "python3" | "pwsh" | "powershell") {
+    let program = parts[0].to_owned();
+    let args: Vec<String> = parts[1..].iter().map(|s| (*s).to_owned()).collect();
+    // 程序白名单（22 号 §10.3）——与 `runner::jobs` 同一口径（jobs 层再校验一次，防绕过）。
+    if !crate::runner::jobs::JOB_PROGRAMS.contains(&program.as_str()) {
         return Err(format!(
             "run_test: `{test_id}` 程序 `{program}` 不在白名单（cargo/python3/pwsh/powershell；22 号 §10.3）"
         ));
     }
-    // 日志落 evidence/console/logs/（gitignored；与 build 同目录面）
-    let logs_dir = repo_root.join("evidence/console/logs");
-    std::fs::create_dir_all(&logs_dir).map_err(|e| format!("run_test: logs 目录创建失败 {e}"))?;
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
-    let log_name = format!("test-{test_id}-{ts}.log");
-    let log_path = logs_dir.join(&log_name);
-    let log_file =
-        std::fs::File::create(&log_path).map_err(|e| format!("run_test: 日志文件创建失败 {e}"))?;
-    let err_file = log_file.try_clone().map_err(|e| format!("run_test: 日志克隆失败 {e}"))?;
-    let mut cmd = std::process::Command::new(program);
-    cmd.args(&args[1..]).current_dir(repo_root);
-    // 22 号 §10.3 最小环境集（env_clear + 白名单）；r4-b P2 修复。
-    crate::runner::apply_minimal_env(&mut cmd);
-    let child = cmd
-        .stdout(std::process::Stdio::from(log_file))
-        .stderr(std::process::Stdio::from(err_file))
-        .spawn()
-        .map_err(|e| format!("run_test: 后台 spawn 失败（{program} 缺位？）：{e}"))?;
-    Ok(json!({
-        "started": true,
-        "pid": child.id(),
-        "id": test_id,
-        "command": command,
-        "log": format!("evidence/console/logs/{log_name}"),
-        "note": "后台测试已启动（日志落 evidence/console/logs/test-<id>-<ts>.log）；轮询 /api/build 的 logs 面查结果",
-    }))
+    // 统一作业模型（23 号 §6.2；S49.7）：状态文件 `evidence/console/jobs/test-<id>.json`
+    // + 流式日志 `evidence/console/logs/test-<id>-<ts>.log` + 收割线程记 `exit_code`
+    // ⇒ 「跑完了吗 / 成没成」有机器答案（不靠日志字符串猜）。
+    let mut spec = crate::runner::jobs::JobSpec::new(
+        "test",
+        test_id,
+        &program,
+        args,
+        json!({
+            "command": command,
+            "name": test.get("name").cloned().unwrap_or(Value::Null),
+            "prove": test.get("prove").cloned().unwrap_or(Value::Null),
+        }),
+    )?;
+    spec.timeout_s = test.get("timeout_s").and_then(Value::as_u64);
+    let out = crate::runner::jobs::spawn_job(repo_root, &spec)?;
+    // 证明 = 本次运行日志（登记进作业状态 `evidence[]`；23 号 §6.2 证明行 ⇒ 与本次运行绑定）。
+    if let Some(log) = out.get("log").and_then(Value::as_str) {
+        crate::runner::jobs::register_evidence(repo_root, "test", test_id, &[log.to_owned()]);
+    }
+    Ok(out)
 }
+
 
 /// `/api/apk-size`：APK 体积构成体检（S35.0，24 号标准；**此端点只读，不触发构建**）。
 ///

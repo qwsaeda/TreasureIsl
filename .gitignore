@@ -67,6 +67,8 @@ __pycache__/
 /evidence/console/.lock
 /evidence/console/gate.lock
 /evidence/console/logs/
+# S49.7 统一作业模型：作业状态文件（evidence/console/jobs/<kind>-<id>.json；运行时产物，gitignored）
+/evidence/console/jobs/
 # S44 地图/UI 工作台向导状态（平台自身写点；22 号 §3.1，gitignored）
 /evidence/console/content-*.json
 

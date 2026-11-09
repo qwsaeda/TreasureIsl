@@ -1,0 +1,57 @@
+# S49.7 测试规范补强 + 统一作业模型 + 平台测试页交互重做 — 判据实跑
+日期: 2026-11-09 | 平台: http://127.0.0.1:8787 (ti-console, 0.0.0.0:8787)
+
+=== [1] doccheck2（42 项；含新增第 42 项 job-model-unified 统一作业模型守卫）===
+doccheck2: 0 error(s) across 42 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/
+headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/
+hd-sprite-transparency/scene-layout-fidelity/wasm-viewport-init/engine-no-color-literal/
+landscape-no-portrait-hardcode/scene-band-count/save-slot-map-slot-basis/exhaust-balance-dual-write/
+experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/
+std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/
+tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/
+repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/
+no-inline-test-mod/bevy-camera-scale-convention/job-model-unified)
+
+=== [2] doccheck（跨文档数值/任务引用断言）===
+doccheck: 169 docs, 38 facts, 175 experiences, 321 task refs, 4 assertions, 0 error(s)
+
+=== [3] validate_data（test_manifest group/prove/timeout_s 新断言）===
+validate_data: OK（4 表，strings 236 键；main_map.grid 三键 + 全场景 extra 标量正整数 +
+scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+
+=== [4] /api/tests（业务域分组）===
+count= 30 groups= ['core', 'asset', 'platform', 'device', 'perf']
+by_group= [('core', 14), ('asset', 7), ('platform', 2), ('device', 6), ('perf', 1)]
+
+=== [5] /api/jobs（统一作业查询面；4 kind 同一模型）===
+jobs kinds= ['test', 'build', 'publish', 'gate']
+  native None running= True exit= None      # build 作业：running 期间镜像可查
+
+=== [6] 4 处作业迁移后行为未回归 ===
+- 测试：/api/tests?run=rules_battle → exit=0（通过），日志落 evidence/console/logs/test-<id>-<ts>.log
+- 构建：/api/build?run=native → started=True pid=2731176；/api/build 读回 running=True last_kind=native
+  （`kind` 语义 = 构建种类 native/apk/wasm，未被作业字段污染 ⇒ last_kind 未回归）
+- 发布/门禁：调用点换 jobs::spawn_program_logged（保留各自状态文件 + 互斥锁），另写 jobs 镜像
+
+=== [7] playwright 无头实测（平台测试页新交互；探针一次性脚本用完即删）===
+[2] 侧栏业务域组=['业务域（主分组）', '核心规则/玩法（14）', '资产与内容管线（7）', '平台与工具（2）',
+     '端侧与兼容（6）', '性能与体积（1）']
+[3] 主区条目数=30 | 运行按钮数=30
+[4] 搜索 'rules' 后条目数=6（过滤生效=True）
+[5] 运行前徽章='✓ 通过 5s'
+[8] 列表消息='rules_battle 已启动（pid 2726415）'
+[1] console/page 错误数 = 0
+RESULT: PASS
+
+=== [8] 全站 13 页冒烟（每页渲染 + 测试页 30 条逐条展开）===
+overview/tasks/evidence/assets/design/map/tests/apksize/build/themes/close/search/settings
+  ⇒ 0 JS 错误（仅设计图缩略图 *.thumb.png 404 = ui_thumb.py 侧车未生成，原图在 + onerror 降级，不影响功能）
+
+=== [9] 修掉的运行期缺陷（EXP-179 同类根因）===
+renderTestSummary 里 `const evOk = 0` 却 `evOk++` ⇒ TypeError: Assignment to constant variable
+  ⇒ 整块 renderTestSummary 抛错 ⇒ 分组/清单不渲染（用户看到「功能不存在」而元素其实在）。
+  修：计数器改 `let`（const 对象属性赋值合法，自增不合法）。
+
+=== 未跑项（如实记录）===
+- gate 全量未跑（收口提交后统一跑；本条判据为其子集）
+- 用户视觉签收待过目（测试页交互面 = 表现层改动，A 纪律）

@@ -112,6 +112,49 @@
 **不做什么**：不重放断言（运行测试走 test_manifest 命令本体）；门禁/试玩仍由 `gate.ps1`/`playtest.ps1` 触发，
 平台只读其结果 + 白名单动作触发运行。
 
+### 6.2 统一作业模型（`runner/jobs.rs`；S49.7）
+
+> 用户 2026-11-09 拍板：「平台测试交互问题很大……**从架构上要统一设计，复用**」。
+> 根因 = 平台四类「跑一条命令」动作各写一套 spawn/状态/日志（测试自写且**不记 exit_code**、
+> 构建自写 + 自写锁、发布/门禁各拼状态路径）⇒ 「跑完了吗 / 成没成 / 证明在哪」三个问题没有统一答案。
+
+**一个动作 = 一个作业**（同一实现，不各自 spawn）：
+
+| 面 | 契约 |
+|---|---|
+| 作业种类 `kind` | `test` / `build` / `publish` / `gate`（`runner::jobs::JobKind`） |
+| 作业条目 `JobSpec` | `{ kind, id, program, args, meta }`；`program` ∈ 白名单 `cargo`/`python3`/`pwsh`/`powershell`（22 号 §10.3）；**逐参数非 shell**（禁 `sh -c`/`cmd /c`） |
+| 状态文件 | `evidence/console/jobs/<kind>-<id>.json`（统一目录，gitignored）：`{kind,id,running,pid,exit_code,started_ts,ended_ts,log,evidence[],note}` |
+| 日志 | `evidence/console/logs/<kind>-<id>-<ts>.log`（**流式**写 ⇒ 构建/测试输出实时可见） |
+| 收割 | spawn 后**收割线程**等子进程退出 → 写 `running=false` + `exit_code` + `ended_ts` ⇒ 「跑完了吗 / 成没成」有机器判据（不靠日志字符串猜） |
+| 证明 | 作业产物（日志 + 报告 + 截图）登记进状态文件 `evidence[]`，落 `evidence/tests/<id>/<ts>/` ⇒ **证明与本次运行绑定** |
+| 查询 | `GET /api/jobs?kind=<kind>`（列表 + 状态）/ `?kind=<kind>&id=<id>`（详情 + 日志尾 + 证明） |
+
+**迁移对照**（S49.7 全迁）：
+
+| 作业 | 迁移前 | 迁移后 |
+|---|---|---|
+| 测试 | `repo::data::run_test` 自写 spawn（**无 exit_code、无状态文件** ⇒ 前端无从显示通过/失败） | `jobs::spawn_job(kind=test)` |
+| 构建 | `repo::build_ops::run_build` 自写 spawn + 自写 `build.lock` | `jobs::spawn_job(kind=build)` + 作业模型内互斥检查（互斥语义保留） |
+| 发布 | `content::publish` → `spawn::spawn_script_logged`（各自拼状态路径） | `jobs::spawn_job(kind=publish)` |
+| 门禁 | `runner::gate` → `spawn::spawn_script_logged`（各自拼状态路径） | `jobs::spawn_job(kind=gate)` |
+
+### 6.3 平台测试页交互规范（分组分类 → 逐个运行 → 出结果出证明）
+
+> 用户 2026-11-09 拍板：「应该**分组分类**，然后**一个一个测试运行出结果**，**出证明**」。
+> 旧交互三处不合规：分组是「级→类」静态两点树（无业务域视角 / 无折叠 / 无筛选）；条目无「运行」入口；
+> `evidence` 是清单里**静态声明**的基线路径（与本次运行无绑定）。
+
+| 区 | 内容 | 机器判据 |
+|---|---|---|
+| 侧栏 | **业务域分组**（`group`，§7.2）→ 域内**分类**（`category`）计数；搜索框按 name/id/command 过滤 | 分组计数 = manifest 实际条目数（机器对账） |
+| 主区 | 折叠分组列表（业务域 → 分类 → 条目）；每条 = 名称 + id + `level`/`type` 徽章 + 证据在位/断链 + **状态徽章**（未跑 / 跑中 / 通过 / 失败+`exit_code`+耗时） | 条目数 = manifest 条目数（无遗漏无重复） |
+| 运行 | 每条「▶ 运行」+ 分组「运行本组」（**串行**：同目标目录会互踩 cargo 锁，同 S46.3「单构建互斥」纪律） | 点击后 ≤2s 内出现「跑中」徽章（**不刷新页面**） |
+| 结果 | 轮询 `GET /api/jobs?kind=test&id=<id>` → `exit_code` + 耗时 + **日志尾实时回显** | `exit_code` 落盘（跑完即有） |
+| 证明 | 每条列**本次运行**的证明（作业状态 `evidence[]`：日志 + 报告 + 截图）+ 清单里静态基线证据 | 证明路径存在且与本次作业 id/时间戳对应 |
+| 禁跑 | `command` 缺/`null`（人工视觉验收 / gate 覆盖）→ 按钮禁用**并注明原因** | 禁用原因可见（不静默） |
+
+
 ## 7. 机读清单（`assets/data/test_manifest.json`）
 
 测试分组表（级/类/型 ↔ 测试 id ↔ 证据路径 ↔ 门禁项号）落 `assets/data/test_manifest.json`，
@@ -135,6 +178,14 @@ bin 名与源文件名不一致 3 类陈旧项）。
 
 > 详情（含登记流程逐步 + 平台接入口径 + 零平台代码断言）= 31 号 §2~§6，本段只引不复述。
 
+### 7.2 manifest 扩展（`group` / `timeout_s` / `prove`；S49.7）
+
+| 字段 | 必填 | 契约 |
+|---|---|---|
+| `group` | ✓（S49.7 起） | **业务域**：`core`（核心规则/玩法）/ `asset`（资产与内容管线）/ `platform`（平台与工具）/ `device`（端侧与兼容）/ `perf`（性能与体积）—— 主分组维度（§6.3 侧栏） |
+| `timeout_s` | ○ | 作业超时（秒；缺省 = 不限；超时 ⇒ 作业记 `exit_code=-1` + note `timeout`） |
+| `prove` | ✓（可自动运行者） | 本次运行**证明落点**（`evidence/tests/<id>/`）；与 `evidence`（静态基线证据）并存不冲突（§6.3「证明」行） |
+
 ## 8. 执行入口
 
 | 入口 | 命令 |
@@ -144,3 +195,15 @@ bin 名与源文件名不一致 3 类陈旧项）。
 | 单场景冒烟出图 | `cargo run -p ti-engine --bin treasure-bevy-native -- --scene=<id> --shot`（`xvfb-run -a` headless） |
 | 试玩闭环 | `powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 run-native` + `web_playtest`（`08_playtest_loop.md` §6） |
 | 收口（证据→台账） | `python scripts/task_close.py <task>` |
+
+## 9. 架构统一与复用原则（S49.7）
+
+1. **一个动作 = 一个作业**：平台任何「跑一条命令」的动作（测试/构建/发布/门禁）**必须**走
+   `runner/jobs.rs` 统一作业模型；新增动作**不得**自写 spawn / 状态文件 / 日志路径（doccheck2 机器化）。
+2. **声明优先**：可枚举的测试/动作 = manifest 声明（登记即接入，**零平台代码**）；不可枚举 = 白名单 id 枚举。
+3. **命令契约**：程序白名单 + 逐参数非 shell + 逐项真实性校验（31 号 §3）。
+4. **结果即判据**：退出码落盘（`exit_code`）+ 收割线程记终态；**不靠日志字符串猜**通过/失败。
+5. **证明与运行绑定**：本次运行产物登记进作业状态 `evidence[]`；清单里的静态 `evidence` 只是**基线**，二者不混。
+6. **互斥显式**：会互相踩目标目录/锁文件的动作（构建/门禁）= 作业模型 + 显式互斥检查（busy 回显），不做隐式串行。
+7. **0 游戏依赖**：平台本体（`ti-console`/`ti-devmeta`）不引游戏 crate；作业模型只管进程与文件。
+8. **规范优先于实现**：测试相关改动先改本规范（分级/分类/类型/schema/交互/作业模型），再落码；判据以本规范为准。

@@ -3178,10 +3178,10 @@
    }
   ],
   "world_canvas": {
-   "x": 11,
-   "y": 250,
+   "h": 1056,
    "w": 1048,
-   "h": 1056
+   "x": 11,
+   "y": 250
   },
   "hud_gold": {
    "x": 80,
@@ -3239,10 +3239,10 @@
   "focus_anchor": {
    "type": "world_canvas",
    "bbox": {
-    "x": 11,
-    "y": 250,
+    "h": 1056,
     "w": 1048,
-    "h": 1056
+    "x": 11,
+    "y": 250
    }
   },
   "primitives": [
@@ -3383,17 +3383,17 @@
    "ring.home_size": 760
   },
   "island_home": {
-   "x": 160,
-   "y": 400,
+   "h": 760,
    "w": 760,
-   "h": 760
+   "x": 160,
+   "y": 400
   },
   "ring": {
+   "card_h": 120,
+   "card_w": 96,
    "center_x": 540,
    "center_y": 784,
-   "radius": 480,
-   "card_w": 96,
-   "card_h": 120
+   "radius": 480
   },
   "landscape": {
    "primitives": [
