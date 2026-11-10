@@ -50,6 +50,12 @@ fn deterministic_cfg() -> CombatCfg {
     cfg
 }
 
+/// 测试 1：`from_balance` 开局（真实 `balance.json` 档 0 BOSS HP=2400）+ 首回合 step。
+/// 场景：玩家 hp=100 atk=10，走真实 balance 配置开打。
+/// 断言：开局 BOSS HP=2400（读 balance.combat，非夹具）/ round=0 / 无胜负；
+/// step 后 round=1，玩家 HP 只减不增，BOSS 被扣血。
+/// 效果：验证「读 balance 开打 + step 状态机推进」最基础链路，balance 改档表这里能发现。
+
 #[test]
 fn session_from_balance_new_and_step() {
     let player = Unit { hp: 100, atk: 10 };
@@ -63,6 +69,11 @@ fn session_from_balance_new_and_step() {
     assert!(eh < 2_400, "BOSS 被扣血（档 0 hp=2400）");
 }
 
+/// 测试 2：越界 tier（档 99 不存在）⇒ 无效战斗。
+/// 场景：`new_with_cfg(test_cfg(), 0, player, 99)`，test_cfg 只有档 0，档 99 越界。
+/// 断言：BOSS HP=0（无 BOSS）/ outcome=Player（无效战斗判玩家胜）/ finish 轨迹空、0 回合。
+/// 效果：越界档防御（数据脏/参数错时不崩，直接判无效）。
+
 #[test]
 fn session_invalid_tier() {
     let player = Unit { hp: 100, atk: 10 };
@@ -75,6 +86,11 @@ fn session_invalid_tier() {
     assert_eq!(r, 0);
 }
 
+/// 测试 3：同 seed 同参数 ⇒ 同战斗结果（确定性回归）。
+/// 场景：两个 `new_with_cfg(test_cfg(), 42, ...)` 完全同参数各跑一遍 finish()。
+/// 断言：两次 finish() 返回的 (轨迹, 胜方, 回合数) 逐元素相等。
+/// 效果：锁 RNG 可复现——任何改动若破坏「同 seed 同结果」立即失败（防随机泄漏进战斗）。
+
 #[test]
 fn session_deterministic() {
     let player = Unit { hp: 1000, atk: 50 };
@@ -82,6 +98,11 @@ fn session_deterministic() {
     let mut s2 = BattleSession::new_with_cfg(test_cfg(), 42, player, 0);
     assert_eq!(s1.finish(), s2.finish(), "同 seed + 同参数 → 同结果（可复现战斗）");
 }
+
+/// 测试 4：玩家一击秒 BOSS ⇒ 立即玩家胜，BOSS 不反击。
+/// 场景：玩家 atk = BOSS 满血（一击打空），hp=1（经不起反击）。
+/// 断言：step 后 BOSS HP=0、outcome=Player、玩家 HP 仍=1（BOSS 没机会反击）。
+/// 效果：验证「归零即结束、不结算对方反击」——若先结算反击玩家会死，胜负翻转。
 
 #[test]
 fn combat_victory_no_counterattack() {
@@ -96,6 +117,11 @@ fn combat_victory_no_counterattack() {
     assert_eq!(ph, 1, "BOSS 未反击，玩家 HP 不变");
 }
 
+/// 测试 5：玩家 HP 归零 ⇒ 判 Defeat。
+/// 场景：玩家 hp=1 atk=1，BOSS 档 0（atk=10 一击 >1）。
+/// 断言：step 后 BOSS 仍存活（hp>0），outcome=Enemy（玩家被秒）。
+/// 效果：胜负判定对称面（玩家败方路径），战斗不止测赢。
+
 #[test]
 fn combat_defeat_when_player_hp_zero() {
     let cfg = test_cfg();
@@ -105,6 +131,11 @@ fn combat_defeat_when_player_hp_zero() {
     assert!(eh > 0, "BOSS 仍存活");
     assert_eq!(s.outcome().unwrap_or(Side::Player), Side::Enemy, "玩家 HP 归零判 Defeat");
 }
+
+/// 测试 6：伤害下限 flat（atk=0 也每回合至少掉 flat 血）。
+/// 场景：玩家 atk=0（普攻算 0 伤害），flat=5、无随机浮动。
+/// 断言：step 后 BOSS 掉血 ≥ flat=5（test_cfg 档 0 夹具 50k HP）。
+/// 效果：锁「每回合至少掉 flat 血」下限规则（防 atk=0 变无伤挂机）。
 
 #[test]
 fn combat_min_damage_floor() {
@@ -118,6 +149,11 @@ fn combat_min_damage_floor() {
     assert!(eh <= 50_000 - 5, "BOSS 每回合至少掉 flat=5 血（test_cfg 档 0 夹具 50k，非 balance）");
 }
 
+/// 测试 7：跑满 max_rounds 未分胜负 ⇒ 兜底判 Defeat（小上限快路径）。
+/// 场景：玩家 atk=1（每回合 1 血蹭 50k HP BOSS），max_rounds=3。
+/// 断言：finish 后 rounds=3 跑满、胜方=Enemy（兜底 Defeat）。
+/// 效果：锁「超过回合上限未分胜负 → Defeat」兜底规则（防无限拉锯）。
+
 #[test]
 fn combat_max_rounds_tiebreak() {
     // 双方 atk 极低 + max_rounds 小 → 兜底判胜负（`docs/business/combat.md` 胜负判定表）
@@ -129,6 +165,11 @@ fn combat_max_rounds_tiebreak() {
     assert_eq!(r, 3, "跑满 max_rounds");
     assert!(matches!(w, Side::Enemy), "超回合上限未分胜负 → 兜底 Enemy");
 }
+
+/// 测试 8：`from_balance` 路径同 seed 同结果（走真实 balance 档 1）。
+/// 场景：两个 `from_balance(7, player, 1)` 同 seed 7 各 finish()。
+/// 断言：两次结果逐元素相等。
+/// 效果：确定性在「读 balance」路径也成立（不只夹具路径），balance 改数值可复现。
 
 #[test]
 fn combat_same_seed_same_result_from_balance() {
@@ -215,6 +256,11 @@ fn combat_max_rounds_tiebreak_same_hp() {
 
 /// BOSS 档表逐档走 `balance.json`（`docs/business/combat.md` 可测试规则表 + `combat.md` §参数）：
 /// 档 0..=4 的 HP 与 BOSS 档表一致，越界档 5 ⇒ 无效战斗。
+/// 测试 9：BOSS 档表逐档走 balance.json（S37：0..=19 共 20 档）。
+/// 场景：档 0..=4 初 HP 断言（2400/4800/7200/9600/12000）+ 档 20 越界。
+/// 断言：前 5 档 HP 与 balance.combat.boss_tiers 一致；档 20 越界 ⇒ 无效战斗判玩家胜。
+/// 效果：档表数据↔代码对账（balance 改档这里发现），越界档 20 防御。
+
 #[test]
 fn combat_boss_tiers_from_balance() {
     let player = Unit { hp: 1, atk: 0 };
@@ -304,6 +350,11 @@ fn combat_item_stagger_once() {
 }
 
 /// S27.7：防御动作当回合反击减半（`defend_reduction_pct = 50`）。
+/// 测试 10：防御回合敌方反击伤害减半。
+/// 场景：BOSS atk=100（无随机），玩家 Defend 动作。
+/// 断言：反击 100 → 减半 50，玩家 HP 掉 50 非 100。
+/// 效果：锁「防御当回合反击 ×50%」规则（combat.md 可测规则表）。
+
 #[test]
 fn combat_defend_halves_counter() {
     let cfg = deterministic_cfg();
@@ -314,6 +365,11 @@ fn combat_defend_halves_counter() {
 }
 
 /// S27.7：道具不消耗随机数 ⇒ 同 seed + 同动作序列 ⇒ 同轨迹。
+/// 测试 11：道具回合不消耗随机数（RNG 轨迹守恒）。
+/// 场景：同一战斗，A 全程普攻 vs B 某回合改用道具，其余回合同 seed。
+/// 断言：两次轨迹除道具回合外逐回合 RNG 结果一致（道具不偷随机数）。
+/// 效果：锁「道具不消耗 RNG」——道具逻辑若误调 rng.next()，后续回合漂移会暴露。
+
 #[test]
 fn combat_item_keeps_rng_state() {
     let player = Unit { hp: 1_000, atk: 20 };

@@ -13,7 +13,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/rules_battle/",
-   "desc": "做什么：跑 ti-core 战斗规则单测，把战斗逻辑（伤害/暴击/闪避/胜负判定）的输出与 oracle 参照实现逐条比对。测什么：battle.rs 规则函数的纯逻辑正确性（不碰渲染/IO）。达到效果：战斗数值改动后，若与原版行为漂移，本条立即失败 = 保证战斗可玩性与逆向基准一致。"
+   "desc": "做什么：跑 ti-core 战斗规则单测，把战斗逻辑（伤害/暴击/闪避/胜负判定）的输出与 oracle 参照实现逐条比对。测什么：battle.rs 规则函数的纯逻辑正确性（不碰渲染/IO）。达到效果：战斗数值改动后，若与原版行为漂移，本条立即失败 = 保证战斗可玩性与逆向基准一致。 逐测说明（20 条）：①from_balance 开局+step 基础链路（BOSS HP 走 balance 2400）②越界档 99 无效战斗判玩家胜③同 seed 同结果（夹具路径确定性）④玩家一击秒 BOSS 不反击⑤玩家归零判 Defeat⑥atk=0 每回合至少掉 flat 血（伤害下限）⑦跑满 max_rounds=3 兜底 Defeat⑧from_balance 路径同 seed 同结果（档 1 真实 balance）⑨同 seed 同轨迹/胜方/回合数（1234 显式播种）⑩player_first 先手顺序固定（一击秒 BOSS 玩家 HP 不变）⑪player_first=false 顺序翻转（BOSS 先手可观测）⑫from_balance 越界档 99 无效（真实 balance 路径）⑬max_rounds=1000 拉锯兜底 Enemy（防无限拉锯）⑭BOSS 档表逐档走 balance（S37 0..=19，前 5 档+档 20 越界）⑮火药桶固定 300 伤害（不吃 atk/随机）⑯医疗包按上限 % 回复且封顶不超上限⑰朗姆酒 3 回合 atk×1.5 到期失效⑱烟雾弹只挡 1 次反击（下回合恢复掉血）⑲防御当回合反击减半（100→50）⑳道具不消耗 RNG（同 seed 轨迹守恒）。"
   },
   {
    "id": "rules_trade",
@@ -26,7 +26,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/rules_trade/",
-   "desc": "做什么：跑贸易规则单测（货物价格/买卖结算/利润计算），与 oracle 差分。测什么：trade.rs 纯逻辑。达到效果：经济系统数值改动不漂移。"
+   "desc": "做什么：跑贸易规则单测（货物价格/买卖结算/利润计算），与 oracle 差分。测什么：trade.rs 纯逻辑。达到效果：经济系统数值改动不漂移。 逐测：货价结算（买/卖/利润）+ 船货舱容量上限 + 贸易路径最短价。断言全部对照 oracle 逐位。"
   },
   {
    "id": "rules_build",
@@ -39,7 +39,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/rules_build/",
-   "desc": "做什么：跑建造规则单测（建筑造价/产出/升级链），与 oracle 差分。测什么：build.rs 纯逻辑。达到效果：建造玩法数值改动不漂移。"
+   "desc": "做什么：跑建造规则单测（建筑造价/产出/升级链），与 oracle 差分。测什么：build.rs 纯逻辑。达到效果：建造玩法数值改动不漂移。 逐测：建筑造价/产出/升级链（bank/castle/fort 等）+ 建造顺序门禁。断言对照 oracle。"
   },
   {
    "id": "rules_boat",
@@ -52,7 +52,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/rules_boat/",
-   "desc": "做什么：跑船系统规则单测（船级/货舱容量/造价），与 oracle 差分。测什么：boat.rs 纯逻辑。达到效果：S21.2 船系统 4 级规格改动不漂移。"
+   "desc": "做什么：跑船系统规则单测（船级/货舱容量/造价），与 oracle 差分。测什么：boat.rs 纯逻辑。达到效果：S21.2 船系统 4 级规格改动不漂移。 逐测：4 级船（小舢板→双桅→三桅→巡防）造价 0/800/2500/6000 + 货舱 99/150/240/400 单次贸易上限 + atk/hp 累计叠加。断言对照 S21.2 规格。"
   },
   {
    "id": "rules_saveload",
@@ -65,7 +65,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/rules_saveload/",
-   "desc": "做什么：跑存档往返单测（存盘→读盘→逐字段还原），含旧档兼容迁移。测什么：saveload.rs 序列化/反序列化对称性。达到效果：存档改 schema 时旧档仍能读、数据不丢。"
+   "desc": "做什么：跑存档往返单测（存盘→读盘→逐字段还原），含旧档兼容迁移。测什么：saveload.rs 序列化/反序列化对称性。达到效果：存档改 schema 时旧档仍能读、数据不丢。 逐测：存盘→读盘逐字段还原 + 旧档 mask=0 退链不迁移 + gold/位置恢复。断言 roundtrip 无损。"
   },
   {
    "id": "territory_rules",
@@ -78,7 +78,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/territory_rules/",
-   "desc": "做什么：跑领地/大富翁规则单测（领地格 vs 功能格/落格分叉/攻占/升级加固），与 territory.md 规则表 13 条比对。测什么：territory.rs 规则。达到效果：S28/S33 领地系统业务逻辑正确。"
+   "desc": "做什么：跑领地/大富翁规则单测（领地格 vs 功能格/落格分叉/攻占/升级加固），与 territory.md 规则表 13 条比对。测什么：territory.rs 规则。达到效果：S28/S33 领地系统业务逻辑正确。 逐测：领地格 vs 功能格 + 落格三支分叉（无主→副本占领/他人→交钱或攻占/自己→升级加固）+ 10 类岛专属副本 + 4 AI 席位。断言对照 territory.md 可测规则表 13 条。"
   },
   {
    "id": "oracle_diff",
@@ -91,7 +91,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/oracle_diff/",
-   "desc": "做什么：跑 oracle 差分测试，把 main_loop 全组合输入喂给「逆向伪代码直译的参照实现」与本仓 rules，逐位比对输出。测什么：整个规则层 vs 原 exe 行为的逐位一致性。达到效果：P0 资源/数据对齐的机器判据——任何规则改动导致行为偏离原版即失败。"
+   "desc": "做什么：跑 oracle 差分测试，把 main_loop 全组合输入喂给「逆向伪代码直译的参照实现」与本仓 rules，逐位比对输出。测什么：整个规则层 vs 原 exe 行为的逐位一致性。达到效果：P0 资源/数据对齐的机器判据——任何规则改动导致行为偏离原版即失败。 逐测：main_loop 全组合输入喂「逆向伪代码直译参照实现」vs 本仓 rules，逐位比对输出。断言 0 漂移 = P0 数据对齐。"
   },
   {
    "id": "pcx_parity",
@@ -104,7 +104,7 @@
    "group": "asset",
    "timeout_s": 900,
    "prove": "evidence/tests/pcx_parity/",
-   "desc": "做什么：跑 PCX 解码像素对照，Rust 解码器输出 vs scripts/pcx_ref.py 独立参考实现逐像素比对。测什么：ti-formats PCX 解析正确性（P0-4）。达到效果：PCX 格式解析无 1 像素漂移。"
+   "desc": "做什么：跑 PCX 解码像素对照，Rust 解码器输出 vs scripts/pcx_ref.py 独立参考实现逐像素比对。测什么：ti-formats PCX 解析正确性（P0-4）。达到效果：PCX 格式解析无 1 像素漂移。 逐测：PCX 文件 Rust 解码 vs scripts/pcx_ref.py 独立参考逐像素比对。断言 0 像素差（P0-4）。"
   },
   {
    "id": "font_parity",
@@ -117,7 +117,7 @@
    "group": "asset",
    "timeout_s": 900,
    "prove": "evidence/tests/font_parity/",
-   "desc": "做什么：跑中文字形点阵逐位对照，TTF 渲染输出 vs 基准。测什么：中文字形渲染一致性。达到效果：字体改动/换字库时字形不漂移。"
+   "desc": "做什么：跑中文字形点阵逐位对照，TTF 渲染输出 vs 基准。测什么：中文字形渲染一致性。达到效果：字体改动/换字库时字形不漂移。 逐测：中文字形 TTF 渲染点阵 vs 基准逐位比对。断言字形 0 漂移。"
   },
   {
    "id": "exhaust_combat",
@@ -130,7 +130,7 @@
    "group": "core",
    "timeout_s": 1800,
    "prove": "evidence/tests/exhaust_combat/",
-   "desc": "做什么：跑战斗穷举测试，遍历战斗状态空间全组合，断言每格规则结果。测什么：combat 规则的全输入覆盖（非抽样）。达到效果：战斗边界 case（满血/0 兵/全暴击）无未定义行为。"
+   "desc": "做什么：跑战斗穷举测试，遍历战斗状态空间全组合，断言每格规则结果。测什么：combat 规则的全输入覆盖（非抽样）。达到效果：战斗边界 case（满血/0 兵/全暴击）无未定义行为。 逐测：遍历战斗状态空间全组合（HP/atk/暴击/闪避边界），断言每格规则结果。覆盖满血/0 兵/全暴击边界。"
   },
   {
    "id": "exhaust_economy",
@@ -143,7 +143,7 @@
    "group": "core",
    "timeout_s": 1800,
    "prove": "evidence/tests/exhaust_economy/",
-   "desc": "做什么：跑经济穷举测试，遍历贸易/建造状态组合，断言结算不变式。测什么：economy 规则全输入覆盖。达到效果：经济数值无溢出/无负数/无超预算。"
+   "desc": "做什么：跑经济穷举测试，遍历贸易/建造状态组合，断言结算不变式。测什么：economy 规则全输入覆盖。达到效果：经济数值无溢出/无负数/无超预算。 逐测：遍历贸易/建造状态组合，断言结算不变式。覆盖溢出/负数/超预算边界。"
   },
   {
    "id": "exhaust_progression",
@@ -156,7 +156,7 @@
    "group": "core",
    "timeout_s": 1800,
    "prove": "evidence/tests/exhaust_progression/",
-   "desc": "做什么：跑推进/跨图穷举测试，遍历地图解锁/通关组合，断言推进规则。测什么：progression 规则全输入。达到效果：跨图推进（S15.2 逐图门禁）无死锁/无跳图。"
+   "desc": "做什么：跑推进/跨图穷举测试，遍历地图解锁/通关组合，断言推进规则。测什么：progression 规则全输入。达到效果：跨图推进（S15.2 逐图门禁）无死锁/无跳图。 逐测：遍历地图解锁/通关组合，断言推进规则。覆盖死锁/跳图边界（S15.2 逐图门禁）。"
   },
   {
    "id": "map_pack",
@@ -169,7 +169,7 @@
    "group": "asset",
    "timeout_s": 900,
    "prove": "evidence/tests/map_pack/",
-   "desc": "做什么：跑地图包加载/注入测试（S31.2 三段表 upsert 合并），验证注入 m02 不丢 m01/m03 内嵌图。测什么：data::map_pack 注入接缝 + manifest schema/版本三拒。达到效果：运行期换图全链路（选 B）数据正确。"
+   "desc": "做什么：跑地图包加载/注入测试（S31.2 三段表 upsert 合并），验证注入 m02 不丢 m01/m03 内嵌图。测什么：data::map_pack 注入接缝 + manifest schema/版本三拒。达到效果：运行期换图全链路（选 B）数据正确。 逐测：注入 m02 不丢 m01/m03 内嵌图（三段表 upsert 合并）+ manifest schema/版本/id 三拒 + 缺段回退。"
   },
   {
    "id": "main_map_pick_e2e",
@@ -182,7 +182,7 @@
    "group": "core",
    "timeout_s": 1800,
    "prove": "evidence/tests/main_map_pick_e2e/",
-   "desc": "做什么：跑主地图命中 e2e，模拟赛道/环格点击，断言 1080 层命中派发正确。测什么：pick_key/pick_index 数据化命中（S29.2 bevy_picking）。达到效果：点格交互（进副本/交钱/攻占）命中不偏。"
+   "desc": "做什么：跑主地图命中 e2e，模拟赛道/环格点击，断言 1080 层命中派发正确。测什么：pick_key/pick_index 数据化命中（S29.2 bevy_picking）。达到效果：点格交互（进副本/交钱/攻占）命中不偏。 逐测：模拟赛道/环格点击，断言 1080 层命中派发（pick_key/pick_index 数据化命中，S29.2 bevy_picking）。"
   },
   {
    "id": "render_invariants",
@@ -195,7 +195,7 @@
    "group": "asset",
    "timeout_s": 1800,
    "prove": "evidence/tests/render_invariants/",
-   "desc": "做什么：跑 7 场景渲染结构不变式断言（非黑覆盖率/内容签名互异/暖色板在位/TTF 在位），无像素基线。测什么：Bevy 渲染链路出帧 + 场景视觉完整性。达到效果：渲染改动后 7 场景结构不退化（S18.7b 取代三套 golden PNG）。"
+   "desc": "做什么：跑 7 场景渲染结构不变式断言（非黑覆盖率/内容签名互异/暖色板在位/TTF 在位），无像素基线。测什么：Bevy 渲染链路出帧 + 场景视觉完整性。达到效果：渲染改动后 7 场景结构不退化（S18.7b 取代三套 golden PNG）。 逐测：7 场景 × 非黑覆盖率 ≥90% + 内容签名互异 + 暖色板在位 + TTF 在位（无像素基线，S18.7b）。"
   },
   {
    "id": "full_run",
@@ -208,7 +208,7 @@
    "group": "core",
    "timeout_s": 1800,
    "prove": "evidence/tests/full_run/",
-   "desc": "做什么：跑固定种子（seed=42）全流程 headless 脚本（开局→选人→选图→移动→贸易→建造→战斗→存读档，16 步）。测什么：P3-3 全流程可玩性。达到效果：一局完整闭环无卡死（docs/parity.md P3-3 判据）。"
+   "desc": "做什么：跑固定种子（seed=42）全流程 headless 脚本（开局→选人→选图→移动→贸易→建造→战斗→存读档，16 步）。测什么：P3-3 全流程可玩性。达到效果：一局完整闭环无卡死（docs/parity.md P3-3 判据）。 逐测：固定种子 seed=42 全流程 16 步（开局→选人→选图→移动→贸易→建造→战斗→存读档），断言 0 失败（P3-3）。"
   },
   {
    "id": "e2e_playthrough",
@@ -221,7 +221,7 @@
    "group": "core",
    "timeout_s": 1800,
    "prove": "evidence/tests/e2e_playthrough/",
-   "desc": "做什么：跑端到端通关链路测试，从首页到通关全场景流转。测什么：场景状态机完整链路。达到效果：P3 全流程 7 项断言（tests/game_app_flow.rs）。"
+   "desc": "做什么：跑端到端通关链路测试，从首页到通关全场景流转。测什么：场景状态机完整链路。达到效果：P3 全流程 7 项断言（tests/game_app_flow.rs）。 逐测：端到端通关链路，从首页到通关全场景流转，断言场景状态机 7 项（P3 全流程）。"
   },
   {
    "id": "game_app_flow",
@@ -234,7 +234,7 @@
    "group": "core",
    "timeout_s": 1800,
    "prove": "evidence/tests/game_app_flow/",
-   "desc": "做什么：跑 GameApp 场景流测试，断言场景切换/热座/胜负流转。测什么：GameApp 状态机。达到效果：多席热座（S36.0）+ 场景流转无残留。"
+   "desc": "做什么：跑 GameApp 场景流测试，断言场景切换/热座/胜负流转。测什么：GameApp 状态机。达到效果：多席热座（S36.0）+ 场景流转无残留。 逐测：场景切换/多席热座（S36.0 5 席独立会话）/胜负流转，断言 GameApp 状态机无残留。"
   },
   {
    "id": "web_playtest",
@@ -247,7 +247,7 @@
    "gate": 23,
    "group": "device",
    "timeout_s": 1800,
-   "desc": "做什么：跑浏览器真运行时试玩，CDP 按键驱动 菜单→选人→选图→主地图，断言 console 致命错误=0 + 截图墨点>阈值 + 场景切换帧有变化。测什么：wasm 浏览器端 L1~L4 全链路（S16.1）。达到效果：浏览器版可玩（P3/P4 判据载体）。"
+   "desc": "做什么：跑浏览器真运行时试玩，CDP 按键驱动 菜单→选人→选图→主地图，断言 console 致命错误=0 + 截图墨点>阈值 + 场景切换帧有变化。测什么：wasm 浏览器端 L1~L4 全链路（S16.1）。达到效果：浏览器版可玩（P3/P4 判据载体）。 逐测：CDP 按键驱动 菜单→选人→选图→主地图，断言 console 致命错误=0 + 截图墨点>5% + 场景切换帧有变化（L1~L4）。"
   },
   {
    "id": "fuzz_playtest",
@@ -260,7 +260,7 @@
    "group": "device",
    "timeout_s": 1800,
    "prove": "evidence/tests/fuzz_playtest/",
-   "desc": "做什么：跑模糊试玩，随机输入序列找崩溃/未定义行为。测什么：鲁棒性（任意输入不崩）。达到效果：无随机种子触发的 panic（P4 鲁棒判据）。"
+   "desc": "做什么：跑模糊试玩，随机输入序列找崩溃/未定义行为。测什么：鲁棒性（任意输入不崩）。达到效果：无随机种子触发的 panic（P4 鲁棒判据）。 逐测：随机输入序列（fuzz）跑完整流程，断言 0 panic/0 未定义行为。"
   },
   {
    "id": "bevy_cpu_parity",
@@ -273,7 +273,7 @@
    "gate": 21,
    "group": "device",
    "timeout_s": 900,
-   "desc": "做什么：跑 GPU↔CPU 像素对照（ti-engine bevy_vs_cpu_pixel example），Bevy 真实 GPU 离屏渲染 vs CPU 期望逐像素比对（通道 ≤8 LSB 且超差 <0.5%）。测什么：双渲染期 CPU 逻辑层与 GPU 呈现层一致性（S18.16）。达到效果：删 macroquad 后 Bevy 渲染无 1 像素漂移（P4 渲染对齐判据）。"
+   "desc": "做什么：跑 GPU↔CPU 像素对照（ti-engine bevy_vs_cpu_pixel example），Bevy 真实 GPU 离屏渲染 vs CPU 期望逐像素比对（通道 ≤8 LSB 且超差 <0.5%）。测什么：双渲染期 CPU 逻辑层与 GPU 呈现层一致性（S18.16）。达到效果：删 macroquad 后 Bevy 渲染无 1 像素漂移（P4 渲染对齐判据）。 逐测：Bevy GPU 真实离屏渲染 vs CPU 期望逐像素对照（通道 ≤8 LSB 且超差 <0.5%，仅游戏世界 UI 层已排除，S18.16）。"
   },
   {
    "id": "wasm_browser_e2e",
@@ -286,7 +286,7 @@
    "gate": 22,
    "group": "device",
    "timeout_s": 1800,
-   "desc": "做什么：跑 wasm 浏览器端 4 层 e2e（L1 实例化/L2 渲染/L3 交互/L4 select_map 点 m01 切 main_map）。测什么：wasm 交付产物在浏览器真运行时的 4 层行为（S31.3）。达到效果：浏览器版 4 层全过 = 可发货（P0-P4 浏览器端判据）。"
+   "desc": "做什么：跑 wasm 浏览器端 4 层 e2e（L1 实例化/L2 渲染/L3 交互/L4 select_map 点 m01 切 main_map）。测什么：wasm 交付产物在浏览器真运行时的 4 层行为（S31.3）。达到效果：浏览器版 4 层全过 = 可发货（P0-P4 浏览器端判据）。 逐测：wasm 浏览器 4 层（L1 实例化/L2 渲染资产/L3 交互无 pageerror/L4 select_map 点 m01 切 main_map），断言 4 层全过。"
   },
   {
    "id": "scene_shot",
@@ -299,7 +299,7 @@
    "group": "asset",
    "timeout_s": 1800,
    "prove": "evidence/tests/scene_shot/",
-   "desc": "做什么：跑 7 场景冒烟出图（cargo run --bin treasure-bevy-native --shot --scene=X），每场景出 1 张 PNG。测什么：渲染冒烟（出图非黑 + 资产在位）。达到效果：7 场景视觉冒烟 0 黑屏（L4 视觉判据）。"
+   "desc": "做什么：跑 7 场景冒烟出图（cargo run --bin treasure-bevy-native --shot --scene=X），每场景出 1 张 PNG。测什么：渲染冒烟（出图非黑 + 资产在位）。达到效果：7 场景视觉冒烟 0 黑屏（L4 视觉判据）。 逐测：7 场景各出 1 张 PNG（--shot），断言非黑 + 资产在位（视觉冒烟）。"
   },
   {
    "id": "audio_sfx",
@@ -312,7 +312,7 @@
    "group": "asset",
    "timeout_s": 900,
    "prove": "evidence/tests/audio_sfx/",
-   "desc": "做什么：跑音频资产契约校验（registry.audio 4 项登记 + WAV 魔数 + 双向同步 + 体积预算），S34 补原版音频。测什么：音频资产数据契约（非播放）。达到效果：音频资产缺失/格式错/未登记即失败（S18.8 发货无声撤销后的资产判据）。"
+   "desc": "做什么：跑音频资产契约校验（registry.audio 4 项登记 + WAV 魔数 + 双向同步 + 体积预算），S34 补原版音频。测什么：音频资产数据契约（非播放）。达到效果：音频资产缺失/格式错/未登记即失败（S18.8 发货无声撤销后的资产判据）。 逐测：registry.audio 4 项登记 + WAV 魔数校验 + 双向同步 + 体积预算（S34 补原版音频资产契约）。"
   },
   {
    "id": "wasm_size",
@@ -324,7 +324,7 @@
    "evidence": "evidence/S18.8a-wasm-size.log",
    "group": "perf",
    "timeout_s": 900,
-   "desc": "做什么：跑 wasm 体积基准（构建 release wasm 后断言 ≤8MB 预算，11 号 §3）。测什么：浏览器产物体积。达到效果：体积超预算即失败 = 防 wasm 膨胀（P0 体积判据）。"
+   "desc": "做什么：跑 wasm 体积基准（构建 release wasm 后断言 ≤8MB 预算，11 号 §3）。测什么：浏览器产物体积。达到效果：体积超预算即失败 = 防 wasm 膨胀（P0 体积判据）。 逐测：构建 release wasm 后断言体积 ≤8MB（11 号 §3 预算）。"
   },
   {
    "id": "smoke_ps1",
@@ -337,7 +337,7 @@
    "group": "device",
    "timeout_s": 1800,
    "prove": "evidence/tests/smoke_ps1/",
-   "desc": "做什么：跑 native+wasm 两端冒烟（scripts/smoke.ps1，两端各起 + 断言可玩）。测什么：多端交付产物可用性。达到效果：native/浏览器两端冒烟 0 崩（P3 多端判据）。"
+   "desc": "做什么：跑 native+wasm 两端冒烟（scripts/smoke.ps1，两端各起 + 断言可玩）。测什么：多端交付产物可用性。达到效果：native/浏览器两端冒烟 0 崩（P3 多端判据）。 逐测：native + wasm 两端各起 + 断言可玩（多端冒烟）。"
   },
   {
    "id": "gate_full",
@@ -350,7 +350,7 @@
    "group": "platform",
    "timeout_s": 1800,
    "prove": "evidence/tests/gate_full/",
-   "desc": "做什么：跑全量门禁 35 项（scripts/gate.ps1，fmt/clippy/test/build/占位/unwrap/zero-unknown/台账/doccheck/doccheck2/三方对账/业务闭环/渲染不变式/wasm e2e/浏览器试玩 等）。测什么：全仓质量底线。达到效果：全绿才可置 verified（硬规则 2 验收载体）。"
+   "desc": "做什么：跑全量门禁 35 项（scripts/gate.ps1，fmt/clippy/test/build/占位/unwrap/zero-unknown/台账/doccheck/doccheck2/三方对账/业务闭环/渲染不变式/wasm e2e/浏览器试玩 等）。测什么：全仓质量底线。达到效果：全绿才可置 verified（硬规则 2 验收载体）。 逐测：全量 35 项门禁（fmt/clippy/test/build/占位/unwrap/台账/doccheck/doccheck2/三方对账/渲染不变式/wasm e2e/浏览器试玩），断言 0 failure。"
   },
   {
    "id": "visual_signoff",
@@ -363,7 +363,7 @@
    "gate": null,
    "group": "platform",
    "timeout_s": 900,
-   "desc": "做什么：视觉签收（S17.5/S21.9/S27.5 设计渲染图用户过目），出图后等用户视觉验收。测什么：视觉主观验收（A 纪律：设计稿先行）。达到效果：表现层视觉改动经用户确认后才算收口（硬规则 9）。"
+   "desc": "做什么：视觉签收（S17.5/S21.9/S27.5 设计渲染图用户过目），出图后等用户视觉验收。测什么：视觉主观验收（A 纪律：设计稿先行）。达到效果：表现层视觉改动经用户确认后才算收口（硬规则 9）。 逐测：设计渲染图用户过目（A 纪律：设计稿先行，人工验收，非机器判据）。"
   },
   {
    "id": "map_pack_check",
@@ -376,7 +376,7 @@
    "group": "asset",
    "timeout_s": 900,
    "prove": "evidence/tests/map_pack_check/",
-   "desc": "做什么：跑地图包漂移对账（scripts/map_pack.py check 只读），断言已装包 0 漂移。测什么：S31.1 地图包产物一致性。达到效果：地图包改内容后未 sync = 漂移非 0 即失败（S30 内容运营判据）。"
+   "desc": "做什么：跑地图包漂移对账（scripts/map_pack.py check 只读），断言已装包 0 漂移。测什么：S31.1 地图包产物一致性。达到效果：地图包改内容后未 sync = 漂移非 0 即失败（S30 内容运营判据）。 逐测：scripts/map_pack.py check 只读对账，断言已装 4 包 0 漂移（I1~I9 不变量）。"
   },
   {
    "id": "android_device_test",
@@ -390,7 +390,7 @@
    "group": "device",
    "timeout_s": 1800,
    "prove": "evidence/tests/android_device_test/",
-   "desc": "做什么：跑 Android 真机交互 P5 判据（scripts/android_device_test.py --run，adb 驱动：全屏/触摸命中/音频生命周期/切后台不崩 4 判据 + 设备选择 + 渲染链路健康前置）。测什么：docs/parity.md §P5 真机专属行为。达到效果：Android 真机验收判据（S49.4e）；纯 CPU 设备 = 设备限制 SKIP 记名，arm64 真机 = 全 PASS。"
+   "desc": "做什么：跑 Android 真机交互 P5 判据（scripts/android_device_test.py --run，adb 驱动：全屏/触摸命中/音频生命周期/切后台不崩 4 判据 + 设备选择 + 渲染链路健康前置）。测什么：docs/parity.md §P5 真机专属行为。达到效果：Android 真机验收判据（S49.4e）；纯 CPU 设备 = 设备限制 SKIP 记名，arm64 真机 = 全 PASS。 逐测：P5-1 全屏（窗口几何）/ P5-2 触摸命中（截屏像素 diff ≥2%）/ P5-3 音频生命周期（BGM 暂停/恢复日志）/ P5-4 切后台不崩（pidof + 无 FATAL/ANR）。纯 CPU 设备 = 设备限制 SKIP 记名，arm64 真机 = 全 PASS。"
   }
  ]
 }
