@@ -2827,6 +2827,8 @@ function tsPollJob(id, btn) {
       const tail = j.log_tail || '';
       const out = $('ts-run-out');
       const wrap = $('ts-run-out-wrap');
+      // 只在当前打开的明细 = 此 id 时才更新日志框，防串（用户 2026-11-10）
+      if (id !== tsOpenTestId) return;
       if (tail && out) {
         // 只在用户已在（或接近）底部时才自动跟随滚动，避免往上读日志时被拽回
         const nearBottom = out.scrollHeight - out.scrollTop - out.clientHeight < 40;
@@ -2851,6 +2853,9 @@ function tsPollJob(id, btn) {
     }).catch(() => {});
   }, 2000);
 }
+
+// 当前打开明细的测试 id（ts-run-out 只显示对应测试的日志，防串）
+let tsOpenTestId = null;
 
 // 2026-11-10：自解释结论卡渲染（跑完 test job 时调用；若明细区已打开则追加，否则存进 cache 供下次打开）
 function tsRenderConclusion(id, conc) {
@@ -2905,6 +2910,7 @@ function tsRunGroup() {
 }
 
 function renderTestDetail(id) {
+  tsOpenTestId = id;
   const x = (testsCache.tests || []).find((t) => t.id === id);
   if (!x) return;
   const miss = x.evidence && !x.evidence_exists;
@@ -2921,6 +2927,12 @@ function renderTestDetail(id) {
   if (x.desc) {
     h += `<div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin:8px 0;font-size:13px;line-height:1.6;color:var(--ink)">${esc(x.desc)}</div>`;
   }
+  // 进入明细：重置日志框（只显示当前测试内容）
+  const runOutInit = document.getElementById('ts-run-out');
+  if (runOutInit) { runOutInit.textContent = ''; runOutInit._len = 0; runOutInit.scrollTop = 0; }
+  const wrapInit = document.getElementById('ts-run-out-wrap');
+  if (wrapInit) wrapInit.open = false;
+
   // 2026-11-10「自解释结论」层：最近一次运行结论卡（跑完自动显示；agent/人直接可读）
   const conc = x.run_conclusion;
   if (conc && conc.details && conc.details.length) {
