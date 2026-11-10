@@ -2810,7 +2810,8 @@ function tsPollJob(id, btn) {
       const st = j.state || {};
       const tail = j.log_tail || '';
       const out = $('ts-run-out');
-      if (tail && out) { out.style.display = 'block'; out.textContent = tail; out.scrollTop = out.scrollHeight; }
+      const wrap = $('ts-run-out-wrap');
+      if (tail && out) { out.textContent = tail; out.scrollTop = out.scrollHeight; if (wrap) wrap.open = true; }
       if (st.running !== true) {
         clearInterval(timer);
         if (btn) { btn.disabled = false; btn.textContent = '▶ 运行'; }
@@ -2872,7 +2873,8 @@ function renderTestDetail(id) {
     </button>
     <span id="ts-run-msg" style="color:var(--muted);font-size:12px"></span>
   </div>
-  <div id="ts-run-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:220px;overflow:auto;display:none"></div>`;
+  <details id="ts-run-out-wrap" style="margin-top:8px" open="false"><summary style="cursor:pointer;color:var(--muted);font-size:12px;padding:4px 0">▶ 运行输出（默认收起，点击展开看全量日志）</summary>
+  <div id="ts-run-out" style="margin-top:6px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:220px;overflow:auto"></div></details>`;
   h += `</div>`;
   // 步骤/阶段（异步解析 evidence 日志：--shot 预载/就绪/写盘行 + gate Report 阶段）
   loadTestSteps(x);
@@ -2896,8 +2898,9 @@ function renderTestDetail(id) {
     // 统一作业模型（23 号 §6.2）：run → 轮询作业状态（exit_code 判据 + 日志尾 + 证明）。
     runBtn.addEventListener('click', () => {
       runMsg.textContent = '启动中…';
-      runOut.style.display = 'block';
       runOut.textContent = '启动中…';
+      var wrapEl = document.getElementById('ts-run-out-wrap');
+      if (wrapEl) wrapEl.open = true;
       tsRunTest(x.id, runBtn);
     });
   }
