@@ -70,7 +70,7 @@ fn session_from_balance_new_and_step() {
 }
 
 /// 测试 2：越界 tier（档 99 不存在）⇒ 无效战斗。
-/// 场景：`new_with_cfg(test_cfg(), 0, player, 99)`，test_cfg 只有档 0，档 99 越界。
+/// 场景：`new_with_cfg(test_cfg(), 0, player, 99)`，`test_cfg` 只有档 0，档 99 越界。
 /// 断言：BOSS HP=0（无 BOSS）/ outcome=Player（无效战斗判玩家胜）/ finish 轨迹空、0 回合。
 /// 效果：越界档防御（数据脏/参数错时不崩，直接判无效）。
 
@@ -87,8 +87,8 @@ fn session_invalid_tier() {
 }
 
 /// 测试 3：同 seed 同参数 ⇒ 同战斗结果（确定性回归）。
-/// 场景：两个 `new_with_cfg(test_cfg(), 42, ...)` 完全同参数各跑一遍 finish()。
-/// 断言：两次 finish() 返回的 (轨迹, 胜方, 回合数) 逐元素相等。
+/// 场景：两个 `new_with_cfg(test_cfg(), 42, ...)` 完全同参数各跑一遍 `finish()`。
+/// 断言：两次 `finish()` 返回的（轨迹, 胜方, 回合数）逐元素相等。
 /// 效果：锁 RNG 可复现——任何改动若破坏「同 seed 同结果」立即失败（防随机泄漏进战斗）。
 
 #[test]
@@ -134,7 +134,7 @@ fn combat_defeat_when_player_hp_zero() {
 
 /// 测试 6：伤害下限 flat（atk=0 也每回合至少掉 flat 血）。
 /// 场景：玩家 atk=0（普攻算 0 伤害），flat=5、无随机浮动。
-/// 断言：step 后 BOSS 掉血 ≥ flat=5（test_cfg 档 0 夹具 50k HP）。
+/// 断言：`step` 后 BOSS 掉血 ≥ flat=5（`test_cfg` 档 0 夹具 50k HP）。
 /// 效果：锁「每回合至少掉 flat 血」下限规则（防 atk=0 变无伤挂机）。
 
 #[test]
@@ -149,8 +149,8 @@ fn combat_min_damage_floor() {
     assert!(eh <= 50_000 - 5, "BOSS 每回合至少掉 flat=5 血（test_cfg 档 0 夹具 50k，非 balance）");
 }
 
-/// 测试 7：跑满 max_rounds 未分胜负 ⇒ 兜底判 Defeat（小上限快路径）。
-/// 场景：玩家 atk=1（每回合 1 血蹭 50k HP BOSS），max_rounds=3。
+/// 测试 7：跑满 `max_rounds` 未分胜负 ⇒ 兜底判 Defeat（小上限快路径）。
+/// 场景：玩家 `atk=1`（每回合 1 血蹭 50k HP BOSS），`max_rounds=3`。
 /// 断言：finish 后 rounds=3 跑满、胜方=Enemy（兜底 Defeat）。
 /// 效果：锁「超过回合上限未分胜负 → Defeat」兜底规则（防无限拉锯）。
 
@@ -167,7 +167,7 @@ fn combat_max_rounds_tiebreak() {
 }
 
 /// 测试 8：`from_balance` 路径同 seed 同结果（走真实 balance 档 1）。
-/// 场景：两个 `from_balance(7, player, 1)` 同 seed 7 各 finish()。
+/// 场景：两个 `from_balance(7, player, 1)` 同 seed 7 各 `finish()`。
 /// 断言：两次结果逐元素相等。
 /// 效果：确定性在「读 balance」路径也成立（不只夹具路径），balance 改数值可复现。
 
@@ -258,7 +258,7 @@ fn combat_max_rounds_tiebreak_same_hp() {
 /// 档 0..=4 的 HP 与 BOSS 档表一致，越界档 5 ⇒ 无效战斗。
 /// 测试 9：BOSS 档表逐档走 balance.json（S37：0..=19 共 20 档）。
 /// 场景：档 0..=4 初 HP 断言（2400/4800/7200/9600/12000）+ 档 20 越界。
-/// 断言：前 5 档 HP 与 balance.combat.boss_tiers 一致；档 20 越界 ⇒ 无效战斗判玩家胜。
+/// 断言：前 5 档 HP 与 `balance.combat.boss_tiers` 一致；档 20 越界 ⇒ 无效战斗判玩家胜。
 /// 效果：档表数据↔代码对账（balance 改档这里发现），越界档 20 防御。
 
 #[test]

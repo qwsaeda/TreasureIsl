@@ -31,7 +31,7 @@
 |---|---|---|
 | [`formats.md`](formats.md) | 二进制/资源格式：容器、PCX、`.Map`、字体、音频、INI | 16 |
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
-  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 20 |
+  | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 21 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 37 |
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 44 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 59 |
@@ -223,6 +223,7 @@
 | EXP-181 | build | | 用户报安卓横屏不是全屏：项目坐标系写死 1080×1920 竖屏（S38 方案 A 已解：LANDSCAPE+is_landscape+prims_for+7场景landscape段）+ MuMu 驱动缺 VK_KHR_swapchain_mutable_format（wgpu 30 硬检查 SURFACE_VIEW_FORMATS → Surface::configure 失败黑屏，GLES 也挂，模拟器限制非项目）；winit 0.30 Android Resized 链路完整（无需 wasm_viewport_resolution 等价物）；真机当前 APK（含 S49.4d+S38）应已铺满 正文见 `build.md` |
 | EXP-182 | build | | MuMu GPU 栈结构性不兼容 sRGB surface（EXP-181）⇒ 起 redroid 容器当 Android 测试设备：f2fs 走不通（宿主内核 7.0 无 f2fs）改 ext4 loop；binder 必须挂 ext4 镜像进容器（bind-mount 宿主 binderfs 会 SIGABRT）；P5 脚本加横竖屏兼容 + dumpsys 30 行扫描 + 渲染链路健康前置（0fps 时 P5-2/P5-3 如实 SKIP）+ am start -W 死等坑 + logcat 刷爆 timeout 防护；平台 MINIMAL_ENV_KEYS 加 ANDROID_SERIAL 透传；gate P5 0 failure 正文见 `build.md` |
 | EXP-183 | code | | P5 判据飞轮 r1 对抗审计抓 12 洞修 7：P5-2 md5 判据太松（未用 SCREENSHOT_CHANGE_MIN 阈值）+ tap 坐标超界（MuMu 900 宽 tap 1600 误判 PASS）；P5-1 只查 mFrame 不查 surface（0fps 设备假 PASS）；P5-4 重启误判挂起（同 pid vs 异 pid 降级）；判据分级 = P5-1 窗口驻留 / P5-4 生命周期 / P5-2/P5-3 渲染出帧依赖；纯 CPU 设备三重限制无法全过，需 arm64 真机 正文见 `code.md` |
+| EXP-184 | tools | | 平台 Rust 侧用 serde_json::to_string_pretty 重写 assets/ui_manifest.json → indent 1→2 + BTreeMap 键序重排 = 每次格子生图 3681 行全文件 churn；解法=清单写入唯一路径 scripts/ui_assets.py register-tile（json.dumps(indent=2) 保序）→ 零 churn（已登记 0 diff / 新条目 +9 行）+ 契约测试（幂等 + 逐字节不变） 正文见 `tools.md` |
 
 ## 条目格式（写新条时照抄）
 
