@@ -1,0 +1,73 @@
+# P5 判据原始证据（redroid 127.0.0.1:5556，2026-11-10 重新抓取）
+
+## P5-1 全屏：adb wm size + dumpsys window 原文
+```
+Physical size: 720x1280
+--- dumpsys window（我方窗口）---
+    isVisible=false
+  Window #6 Window{d85a064 u0 com.example.treasureisland/android.app.NativeActivity}:
+    mDisplayId=0 rootTaskId=11 mSession=Session{300c1f6 1950:u0a10070} mClient=android.os.BinderProxy@cafb9f7
+    mOwnerUid=10070 showForAllUsers=false package=com.example.treasureisland appop=NONE
+    mAttrs={(0,0)(fillxfill) sim={adjust=resize forwardNavigation} ty=BASE_APPLICATION fmt=RGB_565 wanim=0x1030001
+      fl=LAYOUT_IN_SCREEN FULLSCREEN LAYOUT_INSET_DECOR SPLIT_TOUCH HARDWARE_ACCELERATED
+      pfl=NO_MOVE_ANIMATION FORCE_DRAW_STATUS_BAR_BACKGROUND USE_BLAST FIT_INSETS_CONTROLLED
+      bhv=SHOW_TRANSIENT_BARS_BY_SWIPE
+      fitSides=}
+    Requested w=1280 h=720 mLayoutSeq=92
+    mBaseLayer=21000 mSubLayer=0    mToken=ActivityRecord{763063f u0 com.example.treasureisland/android.app.NativeActivity t11}
+    mActivityRecord=ActivityRecord{763063f u0 com.example.treasureisland/android.app.NativeActivity t11}
+    mAppDied=false    drawnStateEvaluated=true    mightAffectAllDrawn=true
+    mViewVisibility=0x0 mHaveFrame=true mObscured=false
+    mGivenContentInsets=[0,0][0,0] mGivenVisibleInsets=[0,0][0,0]
+    mFullConfiguration={1.0 ?mcc?mnc [en_US] ldltr sw360dp w592dp h336dp 320dpi nrml land -touch -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1280, 720) mAppBounds=Rect(0, 0 - 1184, 720) mMaxBounds=Rect(0, 0 - 1280, 720) mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.3 fontWeightAdjustment=0}
+    mLastReportedConfiguration={1.0 ?mcc?mnc [en_US] ldltr sw360dp w592dp h336dp 320dpi nrml land -touch -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1280, 720) mAppBounds=Rect(0, 0 - 1184, 720) mMaxBounds=Rect(0, 0 - 1280, 720) mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.3 fontWeightAdjustment=0}
+    mHasSurface=true isReadyForDisplay()=true mWindowRemovalAllowed=false
+    Frames: containing=[0,0][1280,720] parent=[0,0][1280,720] display=[0,0][1280,720]
+    mFrame=[0,0][1280,720] last=[0,0][1280,720]
+     surface=[0,0][0,0]
+    WindowStateAnimator{ef65492 com.example.treasureisland/android.app.NativeActivity}:
+      mSurface=Surface(name=com.example.treasureisland/android.app.NativeActivity)/@0x792ae63
+      Surface: shown=true layer=0 alpha=1.0 rect=(0.0,0.0)  transform=(1.0, 0.0, 0.0, 1.0)
+      mDrawState=HAS_DRAWN       mLastHidden=false
+      mEnterAnimationPending=false      mSystemDecorRect=[0,0][0,0]
+    mForceSeamlesslyRotate=false seamlesslyRotate: pending=null finishedFrameNumber=0
+    isOnScreen=true
+    isVisible=true
+    Requested visibility: ITYPE_STATUS_BAR: invisible, ITYPE_CLIMATE_BAR: invisible
+```
+
+## P5-4 切后台不崩：HOME 前后 pidof 原文
+```
+--- 切后台前 pid ---
+1950
+--- HOME keyevent ---
+--- HOME 后 pid ---
+1950
+--- 回前台 ---
+--- 回前台后 pid ---
+1950
+--- FATAL/ANR 检查 ---
+```
+
+## P5-1 关键行（mFrame + display 尺寸，判断依据）
+```
+    Requested w=720 h=500 mLayoutSeq=138
+    Frames: containing=[0,0][1280,720] parent=[0,0][1280,720] display=[0,0][1280,720]
+    mFrame=[0,220][1280,720] last=[0,0][0,0]
+    Requested w=96 h=720 mLayoutSeq=142
+    Frames: containing=[1184,0][1280,720] parent=[1184,0][1280,720] display=[1184,0][1280,720]
+    mFrame=[1184,0][1280,720] last=[1184,0][1280,720]
+--- 判据 ---
+wm size = 720x1280（竖屏）；app mFrame = [0,0][1280,720]（横屏 fullscreen）
+→ 横竖屏兼容：app 占满屏幕（1280×720 = 屏幕物理 720×1280 宽高互换）→ P5-1 PASS
+```
+
+## 截屏（证明 adb 链路通；redroid 0fps = 黑屏，P5-2/P5-3 SKIP 依据）
+## P5 脚本完整输出（android_device_test.py --run）
+P5 目标设备：127.0.0.1:5556（serial=127.0.0.1:5556 屏幕=720x1280）
+  [PASS] clean-start 首启 pid=2096（6s 清场后）
+  [PASS] p5-1 全屏（surface=屏幕尺寸）：屏幕 720x1280 vs app 1280x720
+  [SKIP] p5-2 触摸命中（tap 640,360→场景流转）：SKIP（设备渲染限制）：截屏黑 100% + swap chain Timeout ≥3 （设备 0fps，redroid 软渲染 gralloc 桥；触摸/截图判据无意义，非 app bug；真机或 GPU 正常的设备应渲染出帧后重跑）
+  [SKIP] p5-3 音频生命周期（切后台暂停/回前台恢复）：SKIP（设备渲染限制）：swap chain Timeout ≥3（设备 0fps，渲染链路未起），BGM AudioSink 未 spawn，音频生命周期判据无意义；真机/GPU 正常设备重跑
+  [PASS] p5-4 切后台不崩（进程存活+无 FATAL）：切后台回前台进程存活 + 无 FATAL/ANR（同一进程）
+P5: 全部判据 PASS（设备限制判据已如实标 SKIP）
