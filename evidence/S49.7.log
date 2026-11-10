@@ -62,3 +62,18 @@ Vulkan 无 VK_KHR_swapchain_mutable_format + EGL 1.4 无 EGL_KHR_gl_colorspace�
 gate 35 项 = 0 failure（P5 真机交互 PASS：P5-1/P5-4 过；P5-2/P5-3 设备渲染 0fps = redroid 软渲染 gralloc 桥
 swap chain 持续 Timeout，判据如实标 SKIP（设备渲染限制非 app bug）；证据 evidence/android_device_test.log）
 判据命令载体：python3 scripts/android_device_test.py --run（ANDROID_SERIAL 设备选择；平台 8787 同跑 exit_code=0）
+
+=== P5-2/P5-3 真机缺口说明（2026-11-10 补记，硬件渲染三路径全排除）===
+目标：补 P5-2（触摸命中）/ P5-3（BGM 生命周期）真机实跑证据。
+环境：redroid + 宿主 Intel i915（renderD128）硬件渲染三路径实测全死：
+  ①宿主 i915 无 Vulkan 1.1 支持（vkCreateInstance 走 intel ICD rc=-9；i915 模块加载但驱动版本不报，
+    宿主仅 mesa llvmpipe SwiftShader = 软渲染 lvp，VK_KHR_swapchain=0 ⇒ wgpu 拿不到可呈现 surface）
+  ②gfxstream ICD 要 virtio-gpu 设备（本机宿主无 /dev/gfxdri*、无 virtio-gpu 内核驱动）⇒ rc=-9
+  ③redroid 容器自带 pastel（SwiftShader）Vulkan ICD ⇒ 软件渲染 gralloc 桥 0fps（swap chain 持续 Timeout，
+    截屏 100% 黑）⇒ P5-2 触摸判据无帧可比、P5-3 BGM 未 spawn 无 pause/resume 事件
+结论：P5-2/P5-3 在**纯 CPU 容器环境结构性测不到**（需 GPU 渲染出帧才有意义）；
+本机无 GPU 硬件可用（宿主 i915 Vulkan 1.1 不支持 + 无 virtio-gpu）⇒ 判据载体就绪（android_device_test.py
+--run + ANDROID_SERIAL 设备选择 + 渲染链路健康前置 SKIP），P5-2/P5-3 保持「设备渲染限制 SKIP」状态，
+待 arm64 真机（支持 VK_KHR_swapchain_mutable_format 或 EGL 1.5 sRGB）接入后重跑出 PASS。
+门禁口径不变：SKIP = 设备能力边界如实标注，非 app bug（MuMu 死点 = EXP-181）。
+P5-1/P5-4 在 redroid 上已 PASS（窗口几何 + 进程生命周期不依赖渲染出帧）。
