@@ -377,33 +377,25 @@ fn gen_island_err(want_gzip: bool, status: &str, msg: &str) -> Vec<u8> {
 /// 从项目 `.env`（gitignored，规范 = key 存这里）读环境变量；`std::env` 优先，`.env` 兜底。
 /// 解析：逐行 `KEY=VALUE`，跳过 `#` 注释/空行，去成对引号。key 缺失 = None（如实上报）。
 /// 登记 AI 生成格子卡图到 `assets/ui_manifest.json`（disk→registry 双向同步）。
-/// roles.tile 缺则补（1:1 透明徽章模板）；assets 缺 `tile_<isle>` 则追加（不覆盖已有 AI 图）。
-/// 幂等（已登记 = 0 改动）；读/写失败 = 静默（`validate_data` 门禁兜底报错，不静默绕过）。
+///
+/// **唯一清单写入路径 = `scripts/ui_assets.py register-tile`**（`04_tooling` §4）：该命令用
+/// `json.dumps(indent=2)` 保序写出 = 与仓库清单同格式 → **零 churn**（旧实现用
+/// `serde_json::to_string_pretty` 会 2 空格 + 键序重排，整文件 churn）。
+/// roles.tile 缺则补（1:1 透明徽章模板）；assets 缺 `tile_<isle>` 则追加（不覆盖已有 AI 图）；
+/// 幂等（已登记 = 0 改动）；**只登记不生图**（图片由 `scripts/agnes_gen.py` 唯一入口生成）；
+/// 读/写失败 = 静默（`validate_data` 门禁兜底报错，不静默绕过）。
 fn register_tile_in_manifest(repo_root: &Path, isle: &str, prompt: &str) {
-    let mpath = repo_root.join("assets").join("ui_manifest.json");
-    let Ok(text) = std::fs::read_to_string(&mpath) else { return };
-    let Ok(mut v) = serde_json::from_str::<Value>(&text) else { return };
-    if v["roles"]["tile"].is_null() {
-        v["roles"]["tile"] = json!({
-            "ratio": "1:1", "target": [1024, 1024], "key": "none",
-            "prompt": "a lone pirate island emblem badge, {what}, isolated on transparent background, centered, antique cartography ink and watercolor, palette keyed to a pirate chart reference (dark bark brown, aged parchment, brass gold)",
-        });
-    }
-    let name = format!("tile_{isle}");
-    let already =
-        v["assets"].as_array().is_some_and(|arr| arr.iter().any(|a| a["name"] == name.as_str()));
-    if !already {
-        if let Some(arr) = v["assets"].as_array_mut() {
-            arr.push(json!({
-                "name": name,
-                "role": "tile",
-                "file": format!("assets/ui/{name}.png"),
-                "params": {"what": prompt},
-                "generated_at": "2026-11-10",
-            }));
-        }
-    }
-    let _ = std::fs::write(&mpath, serde_json::to_string_pretty(&v).unwrap_or_default());
+    let script = repo_root.join("scripts").join("ui_assets.py");
+    let mut cmd = std::process::Command::new("python3");
+    cmd.arg(&script)
+        .arg("register-tile")
+        .arg("--isle")
+        .arg(isle)
+        .arg("--what")
+        .arg(prompt)
+        .current_dir(repo_root);
+    crate::runner::apply_minimal_env(&mut cmd);
+    let _ = cmd.output();
 }
 
 fn read_env_file(repo_root: &Path, key: &str) -> Option<String> {
