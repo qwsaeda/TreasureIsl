@@ -2827,7 +2827,15 @@ function tsPollJob(id, btn) {
       const tail = j.log_tail || '';
       const out = $('ts-run-out');
       const wrap = $('ts-run-out-wrap');
-      if (tail && out) { out.textContent = tail; out.scrollTop = out.scrollHeight; if (wrap) wrap.open = true; }
+      if (tail && out) {
+        // 只在用户已在（或接近）底部时才自动跟随滚动，避免往上读日志时被拽回
+        const nearBottom = out.scrollHeight - out.scrollTop - out.clientHeight < 40;
+        const prevLen = out._len || 0;
+        out.textContent = tail;
+        out._len = tail.length;
+        if (nearBottom || prevLen === 0) out.scrollTop = out.scrollHeight;
+        if (wrap) wrap.open = true;
+      }
       if (st.running !== true) {
         clearInterval(timer);
         if (btn) { btn.disabled = false; btn.textContent = '▶ 运行'; }
@@ -2974,6 +2982,8 @@ function renderTestDetail(id) {
     runBtn.addEventListener('click', () => {
       runMsg.textContent = '启动中…';
       runOut.textContent = '启动中…';
+      runOut._len = 0;
+      runOut.scrollTop = 0;
       var wrapEl = document.getElementById('ts-run-out-wrap');
       if (wrapEl) wrapEl.open = true;
       tsRunTest(x.id, runBtn);
