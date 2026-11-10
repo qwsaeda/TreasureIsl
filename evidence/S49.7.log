@@ -77,3 +77,35 @@ swap chain 持续 Timeout，判据如实标 SKIP（设备渲染限制非 app bug
 待 arm64 真机（支持 VK_KHR_swapchain_mutable_format 或 EGL 1.5 sRGB）接入后重跑出 PASS。
 门禁口径不变：SKIP = 设备能力边界如实标注，非 app bug（MuMu 死点 = EXP-181）。
 P5-1/P5-4 在 redroid 上已 PASS（窗口几何 + 进程生命周期不依赖渲染出帧）。
+
+=== MuMu 设备 P5 实测（2026-11-10 补记，10.0.182.146:5555）===
+设备 = MuMu（伪装 Xiaomi houji/Adreno 640，宿主 Intel HD 630 i915 无 Vulkan 驱动，wgpu 走软件渲染）。
+P5 判据结果（android_device_test.py --run -s 10.0.182.146:5555）：
+  P5-1 全屏：FAIL（窗口不驻留 dumpsys window —— MuMu launcher 抢前台 + NativeActivity 0fps 出不了首帧，
+    判据取不到 app bounds；红帽上窗口驻留可取到 → P5-1 PASS。设备能力差异，非 app bug）
+  P5-2 触摸：PASS（截屏 md5 变化 = 场景流转，画面在动）
+  P5-3 音频：SKIP（无 BGM 实体日志 —— 设备 0fps 渲染链路未起，BGM AudioSink 未 spawn）
+  P5-4 切后台不崩：PASS（HOME 后 launcher 杀 activity，am start 恢复存活 + 无 FATAL/ANR）
+结论：P5-2（触摸）在 MuMu 上已真跑 PASS。P5-1/P5-3 在 MuMu 上受设备渲染 0fps 限制
+（窗口不驻留 / BGM 未 spawn），需 GPU 正常设备（arm64 真机）重跑。
+P5 判据分级修正：P5-1（全屏）也属渲染出帧依赖判据（窗口不驻留 = 取不到 bounds），
+非纯几何判据（之前 parity.md/23 号误标 P5-1 = 几何判据，已修正）。
+
+=== P5 判据飞轮 r1 对抗审计修正（2026-11-10）===
+子代理挑 12 条洞，主线程复核后修 5 条高严重度 + 口径统一：
+① P5-4 拆分「挂起存活（同 pid）」vs「launcher 杀后重启（异 pid，降级标注）」；FATAL 检查改全量 logcat
+② P5-3 SKIP 先查 winit AppLifecycle 事件在投否（区分「app 没带音频」vs「容器生命周期断裂」）
+③ P5-1 追加 surface 行检查（0fps 设备 surface=[0,0][0,0] = 窗口 bounds 对但 surface 未分配 → 降级标注）
+④ P5-2 md5 判据太松 → 启用 SCREENSHOT_CHANGE_MIN 像素 diff 阈值（2% 才 PASS，排除系统 UI 干扰）
+⑤ P5-2 tap 坐标强检（超出屏幕 → 坐标未标定 FAIL，防 MuMu 900 宽屏 tap 1600 误判）
+⑥ P5-1 解析收紧（只取 mFrame 窗口实际帧，拒 task 块 mBounds 全局 config 误抓——红帽 359x592 脏数字根因）
+⑦ 口径统一（parity.md + 23 号）：P5-1 = 窗口驻留依赖（非渲染出帧）；P5-4 = 生命周期；P5-2/P5-3 = 渲染出帧依赖；
+   设备分级 = GPU 转译层（MuMu）/ 纯 CPU（redroid）；P5 达标 = 4 条在 GPU 正常 + 前台稳定设备全 PASS
+
+最终实测（两台设备，P5 脚本修复后）：
+  redroid 127.0.0.1:5556（720x1280）：P5-1 窗口不驻留（NativeActivity 0fps 未画首帧）/ P5-2 SKIP（0fps）/ P5-3 SKIP（winit 生命周期断裂）/ P5-4 PASS（挂起存活）
+  MuMu 10.0.182.146:5555（900x1600）：P5-1 窗口不驻留 / P5-2 坐标未标定（需 --tap-x/--tap-y 按 900 宽屏标定）/ P5-3 SKIP（winit 生命周期 0 条）/ P5-4 PASS（launcher 杀后重启，降级标注）
+结论：P5-4（生命周期）两台设备均 PASS；P5-1/P5-2/P5-3 在纯 CPU 设备（redroid）/ GPU 转译层（MuMu）上
+受窗口驻留 + 渲染 0fps + winit 生命周期断裂三重限制无法全过 = 设备能力边界，需 GPU 正常 + 前台稳定设备
+（arm64 真机）重跑。gate 4c 项在纯 CPU 设备跑 P5 = P5-1 设备标定 FAIL（窗口不驻留）→ gate 非 0，
+故 gate 全量应在 GPU 正常设备或「仅连 GPU 正常设备」时跑。

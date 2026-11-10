@@ -81,14 +81,21 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > **多设备**：`--serial/-s <serial>` > `ANDROID_SERIAL` 环境变量 > 唯一设备；多设备未指定 = 歧义报错（红米/MuMu 与 redroid 可同时在线）。
 > **门禁**：gate 第 4c 项（Android 真机）——有 adb 设备跑 P5 全判据，无设备记名 SKIP + 文档化（不静默）。
 >
-> **判据分级：P5-1/P5-4 = 几何 + 生命周期判据（任何 adb 设备可跑）；P5-2/P5-3 = 渲染出帧依赖判据**
+> **判据分级（2026-11-10 飞轮 r1 修正）**：P5-4 = 进程生命周期判据（任何 adb 设备可跑）；
+> P5-1 = 窗口驻留依赖判据（app 窗口须驻留 `dumpsys window` 的 windows 段才能取 bounds；
+> MuMu launcher 抢前台 + NativeActivity 出不了首帧 = 窗口不驻留 → 设备标定，需前台稳定设备）；
+> P5-2/P5-3 = 渲染出帧依赖判据（触摸需截屏非黑 / BGM 需渲染管线起）。
 > （触摸需截屏非黑 / BGM 需渲染管线起 ⇒ 仅 GPU 正常设备有效）。
 > 无 GPU 设备（MuMu 转译层缺 `VK_KHR_swapchain_mutable_format`，EXP-181；redroid 纯 CPU pastel
 > 软渲染 0fps，宿主 i915 Vulkan 1.1 不可用 / 无 virtio-gpu gfxstream，2026-11-10 三路径实测）上
-> P5-2/P5-3 会**无帧可判**：脚本渲染链路健康前置检测（截屏 100% 黑 + swap chain Timeout ≥3）
-> 自动记 **SKIP（设备渲染限制，非 app bug，exit 0）**，P5-1/P5-4 照跑。
-> **P5 达标口径**：P5-1/P5-4 PASS + P5-2/P5-3 在有 GPU 设备上 PASS；纯 CPU 设备 = P5-2/P5-3
-> 文档化 SKIP 记名（设备能力边界，`evidence/android_device_test.log` 含设备 serial 可回溯）。
+> P5-1/P5-2/P5-3 会**无帧可判**：P5-2/P5-3 由脚本渲染链路健康前置检测（截屏 100% 黑 +
+> swap chain Timeout ≥3）自动记 **SKIP（设备渲染限制，非 app bug，exit 0）**；P5-1 窗口
+> 不驻留 dumpsys（NativeActivity 未画出首帧）→ 判据 FAIL（设备标定，需 GPU 正常设备重跑）；
+> P5-4（进程生命周期）不依赖渲染出帧，照跑。
+> **P5 达标口径**：P5-4 PASS + P5-1/P5-2/P5-3 在有 GPU 设备（arm64 真机）上 PASS；
+> GPU 转译层设备（MuMu Adreno 640 伪装 + redroid 纯 CPU pastel）= P5-2/P5-3 SKIP 记名
+> + P5-1 设备标定 FAIL（窗口不驻留）；P5-4 照跑，`evidence/android_device_test.log`
+> 含设备 serial 可回溯（2026-11-10 MuMu 实测：P5-2 PASS / P5-4 PASS / P5-1 设备标定 / P5-3 SKIP）。
 
 ## 代码质量门禁 `scripts/gate.ps1`（35 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
 

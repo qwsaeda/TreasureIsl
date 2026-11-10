@@ -714,3 +714,10 @@ S49.7 平台测试页重做后，用户报「平台里没有地图制作入口 /
 （S49.7 实测，见 `evidence/S49.7.log`）。
 教训：平台前端每个渲染函数都应是**独立可失败**的单元（单点抛错不得连带整页空）；
 「元素在但内容空」的第一嫌疑 = 渲染函数抛错，而不是「UI 被删」。
+
+### EXP-183 代码：P5 判据「全 PASS」≠「判据逻辑对」（md5 判据太松/tap 坐标超界/surface 未查/重启误判挂起）+ 判据分级口径
+2026-11-10 P5 判据飞轮 r1 对抗审计（S49.4e 载体 android_device_test.py）子代理挑 12 条洞，主线程复核修 7 条 + 口径统一。核心教训：
+- **判据「全 PASS」不等于「判据逻辑对」**：前两轮 P5 在 MuMu/redroid 报「全 PASS（设备限制 SKIP）」，飞轮 r1 抓出 3 条误判 —— P5-2 截屏 md5 判据太松（未用已定义的 SCREENSHOT_CHANGE_MIN 阈值）+ tap 坐标 1600 超出 MuMu 900 宽屏幕（坐标未标定仍判 PASS）；P5-1 只查 mFrame 不查 surface（surface=[0,0][0,0] 仍判 PASS = 假 PASS）；P5-4 把「launcher 杀进程后 am start 重启」误判为「挂起存活」（同 pid 挂起 vs 异 pid 重启是两个行为）。
+- **判据分级口径**：P5-1 = 窗口驻留依赖（需 app 窗口驻留 dumpsys windows 段，MuMu launcher 抢前台 + NativeActivity 0fps = 不驻留 → 设备标定）；P5-4 = 进程生命周期（任何 adb 设备可跑）；P5-2/P5-3 = 渲染出帧依赖（触摸需截屏非黑 / BGM 需渲染管线起 + winit AppLifecycle 通道通）。纯 CPU 设备（redroid pastel）/ GPU 转译层（MuMu Adreno 640 伪装 + 宿主 i915 无 Vulkan 驱动）上 P5-1/P5-2/P5-3 三重限制（窗口不驻留 + 渲染 0fps + winit 生命周期断裂）无法全过 = 设备能力边界。
+- **P5 判据 4 条在 arm64 真机（GPU 正常 + 前台稳定）上才可全 PASS**；本机纯 CPU 设备只能验 P5-4（生命周期）。gate 4c 项在纯 CPU 设备跑 P5 = P5-1 设备标定 FAIL → gate 非 0，故 gate 全量应在 GPU 正常设备跑。
+验证：`python3 scripts/android_device_test.py --run -s <serial>` 修复后红帽 = P5-4 PASS / P5-2 SKIP / P5-3 SKIP / P5-1 窗口不驻留；MuMu = P5-4 PASS（重启降级）/ P5-2 坐标未标定 / P5-3 SKIP / P5-1 窗口不驻留。
