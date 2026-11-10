@@ -642,7 +642,11 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       <button id="ed-gen-modal-x" title="关闭" style="padding:2px 9px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:13px">✕</button>
     </div>
     <div id="ed-gen-modal-target" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
-    <textarea id="ed-gen-modal-prompt" rows="6" placeholder="提示词：描述你要的图（风格/元素/构图），生成后预览…" style="width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:12px;resize:vertical;line-height:1.5"></textarea>
+    <div id="ed-gen-modal-isle-row" style="display:none;margin-bottom:8px;align-items:center;gap:8px">
+      <label style="font-size:11px;color:var(--muted)">岛型（提示词随岛切换，可复用修改）</label>
+      <select id="ed-gen-modal-isle" style="flex:1;max-width:220px;padding:4px 6px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--ink);font-size:12px"></select>
+    </div>
+    <textarea id="ed-gen-modal-prompt" rows="6" placeholder="提示词：描述你要的图（风格/元素/构图），默认已填该岛模板，可直接改…" style="width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:12px;resize:vertical;line-height:1.5"></textarea>
     <div id="ed-gen-modal-previewbox" style="margin-top:10px;min-height:240px;max-height:420px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;background:#0d0f17;overflow:hidden">
       <span id="ed-gen-modal-ph" style="color:var(--muted);font-size:12px;padding:16px;text-align:center">输入提示词 → 「✨ 生成预览」；生成后在此<b style="color:var(--ink)">预览大图</b>，满意点「✓ 应用保存」</span>
       <img id="ed-gen-modal-img" alt="AI 生成预览" style="display:none;max-width:100%;max-height:400px;object-fit:contain" />
@@ -1531,31 +1535,38 @@ function edGenModalSet(prevDisabled, status) {
 function edGenOpen(kind, isle) {
   edGenKind = kind; edGenPath = null; edGenTileIsle = null;
   const modal = $('ed-gen-modal'), title = $('ed-gen-modal-title'), target = $('ed-gen-modal-target'),
-        promptEl = $('ed-gen-modal-prompt'), img = $('ed-gen-modal-img'), ph = $('ed-gen-modal-ph');
+        promptEl = $('ed-gen-modal-prompt'), img = $('ed-gen-modal-img'), ph = $('ed-gen-modal-ph'),
+        isleRow = $('ed-gen-modal-isle-row'), isleSel = $('ed-gen-modal-isle');
   if (kind === 'island') {
     title.textContent = '🤖 AI 生成 · 中央岛图';
     target.innerHTML = '生成 <code style="color:var(--accent)">assets/ui/island_home_' + edState.id + '.png</code>（真渲染自动用，0 游戏改动）';
     promptEl.value = ED_ISLAND_GEN_PROMPT;   // 预填默认提示词，可直接改（复用修改）
+    isleRow.style.display = 'none';
     edGenModalSet(false, '');
   } else {
-    // 显式 isle（左侧岛 ✎ 生图）优先；否则读选中格（右侧「格子卡图」按钮）。
-    const s = (isle && ED_ISLES.includes(isle)) ? { isle } : edGenSelTile();
+    // 岛型下拉（10 类）：默认 = 显式 isle（点岛✎）→ 选中格岛 → 当前选岛 → wreck；切换岛型 = 提示词随岛复用修改。
     title.textContent = '🤖 AI 生成 · 格子卡图';
-    if (s) {
-      edGenTileIsle = s.isle;
-      target.innerHTML = '生成 <code style="color:var(--accent)">assets/ui/tile_' + s.isle + '.png</code>'
-        + '（' + (ED_ISLE_LABEL[s.isle] || s.isle) + (isle ? ' · 点岛生图' : ' · 领地格 ' + edSel) + '，游戏 if-blit 回退程序绘制）';
-      promptEl.value = ED_ISLE_GEN_PROMPT[s.isle] || '';   // 预填该岛默认提示词（复用修改）
-    } else {
-      target.textContent = '✗ 先点选一个「领地 + 岛型」格再生成（右栏点格后重开）';
-      promptEl.value = '';
-    }
-    edGenModalSet(!s, s ? '' : '✗ 未选中领地格');
+    const selIsle = (isle && ED_ISLES.includes(isle)) ? isle
+      : ((edGenSelTile() && edGenSelTile().isle) || edState.cur_isle || 'wreck');
+    isleRow.style.display = 'flex';
+    isleSel.innerHTML = ED_ISLES.map((i) => '<option value="' + i + '">' + (ED_ISLE_LABEL[i] || i) + '</option>').join('');
+    isleSel.value = selIsle;
+    edGenSetTileIsle(selIsle);
+    isleSel.onchange = () => edGenSetTileIsle(isleSel.value);
   }
   promptEl.placeholder = '提示词：描述你要的图（风格/元素/构图），默认已填该岛模板，可直接改…';
   img.style.display = 'none'; ph.style.display = 'block';
   modal.style.display = 'flex';
   promptEl.focus();
+}
+// 格子卡图：设目标岛型 → 刷新 target + 预填该岛默认提示词 + 启用生成预览（提示词永远有）
+function edGenSetTileIsle(isle) {
+  if (!isle || !ED_ISLES.includes(isle)) return;
+  edGenTileIsle = isle;
+  $('ed-gen-modal-target').innerHTML = '生成 <code style="color:var(--accent)">assets/ui/tile_' + isle + '.png</code>'
+    + '（' + (ED_ISLE_LABEL[isle] || isle) + '，游戏 if-blit 回退程序绘制）';
+  $('ed-gen-modal-prompt').value = ED_ISLE_GEN_PROMPT[isle] || '';
+  edGenModalSet(false, '');
 }
 async function edGenPreview() {
   const promptEl = $('ed-gen-modal-prompt'), status = $('ed-gen-modal-status'),
