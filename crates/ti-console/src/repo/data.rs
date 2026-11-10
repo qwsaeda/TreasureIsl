@@ -181,9 +181,18 @@ pub fn tests(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
         if let Some(obj) = item.as_object_mut() {
             obj.insert("evidence_exists".into(), json!(exists));
             // 最近一次作业状态（统一作业模型 23 号 §6.2）⇒ 前端状态徽章（未跑/跑中/通过/失败）。
-            if let Some(id) = t.get("id").and_then(Value::as_str) {
-                if let Some(state) = crate::runner::jobs::job_status(repo_root, "test", id) {
-                    obj.insert("job".into(), state);
+            let id = t.get("id").and_then(Value::as_str).unwrap_or("").to_owned();
+            if let Some(state) = crate::runner::jobs::job_status(repo_root, "test", &id) {
+                let running = state.get("running").and_then(Value::as_bool).unwrap_or(true);
+                obj.insert("job".into(), state);
+                // 2026-11-10「自解释结论」层：作业已结束 ⇒ 解析日志生成结构化结论卡
+                //（哪些测试 binary/通过数/失败数/对应说明），替代裸 `test result: ok` 回显。
+                if !running {
+                    if let Some(conclusion) =
+                        crate::runner::jobs::test_run_conclusion(repo_root, "test", &id)
+                    {
+                        obj.insert("run_conclusion".into(), conclusion);
+                    }
                 }
             }
         }

@@ -419,6 +419,10 @@ pub fn jobs_view(repo_root: &Path, kind: Option<&str>, id: Option<&str>) -> Valu
             .as_ref()
             .and_then(|s| s.get("evidence").cloned())
             .unwrap_or_else(|| json!([] as [String; 0]));
+        // 2026-11-10「自解释结论」层：test 作业已结束 ⇒ 解析日志生成结构化结论
+        //（哪些测试 binary / 通过数 / 失败数 / 对应说明），替代裸 `test result: ok` 回显。
+        let conclusion =
+            if kind == "test" { test_run_conclusion(repo_root, "test", test_id) } else { None };
         return json!({
             "ok": state.is_some(),
             "kind": kind,
@@ -426,7 +430,8 @@ pub fn jobs_view(repo_root: &Path, kind: Option<&str>, id: Option<&str>) -> Valu
             "state": state.unwrap_or(Value::Null),
             "log_tail": tail.unwrap_or_default(),
             "evidence": evidence,
-            "note": "统一作业模型查询面（23 号 §6.2）；exit_code = 机器判据（0 通过），evidence[] = 本次运行证明",
+            "conclusion": conclusion,
+            "note": "统一作业模型查询面（23 号 §6.2）；exit_code = 机器判据（0 通过），evidence[] = 本次运行证明；conclusion = 自解释结论（test kind）",
         });
     }
     let list = job_list(repo_root, kind.filter(|k| !k.is_empty()));
@@ -438,4 +443,170 @@ pub fn jobs_view(repo_root: &Path, kind: Option<&str>, id: Option<&str>) -> Valu
         "kinds": JOB_KINDS,
         "note": "统一作业模型列表（23 号 §6.2）",
     })
+}
+
+/// 解析 cargo test 日志 → 自解释结构化结论（2026-11-10「单独 Agent 也能看懂」层）。
+///
+/// 支持两种日志格式：
+/// - 完整 cargo test（`Running tests/xxx.rs` 头 + 逐 test 行 + `test result:`）
+/// - smoke.ps1 简化（`Running tests/xxx.rs` + `test result:` 对）
+///
+/// binary 名关联 manifest `desc`（做什么/测什么/达到什么效果）。
+#[must_use]
+pub fn parse_test_log(log_text: &str, repo_root: &Path) -> Value {
+    let manifest_map = manifest_binary_desc_map(repo_root);
+    let blocks = parse_cargo_test_blocks(log_text);
+    let total_passed: u32 = blocks.iter().map(|b| b.passed).sum();
+    let total_failed: u32 = blocks.iter().map(|b| b.failed).sum();
+    let all_ok = total_failed == 0;
+
+    let details: Vec<Value> = blocks
+        .iter()
+        .map(|b| {
+            let desc = manifest_map.get(&b.name).cloned().unwrap_or_default();
+            let desc_chars: Vec<char> = desc.chars().collect();
+            let desc_short = if desc_chars.len() > 100 {
+                format!("{}…", desc_chars.iter().take(80).collect::<String>())
+            } else {
+                desc
+            };
+            json!({
+                "binary": b.name,
+                "passed": b.passed,
+                "failed": b.failed,
+                "failures": b.failures,
+                "desc": desc_short,
+            })
+        })
+        .collect();
+
+    let fail_count = blocks.iter().filter(|b| b.failed > 0).count();
+    json!({
+        "ok": all_ok,
+        "total_passed": total_passed,
+        "total_failed": total_failed,
+        "binary_count": blocks.len(),
+        "summary": if all_ok {
+            format!("全部通过：{} 个测试 binary，共 {total_passed} 条断言。", blocks.len())
+        } else {
+            format!("有失败：{fail_count} 个 binary 共 {total_failed} 条失败。")
+        },
+        "details": details,
+    })
+}
+
+/// manifest `id` → `desc` 映射（id = test binary 名，与 `Running tests/<id>.rs` 对齐）。
+fn manifest_binary_desc_map(repo_root: &Path) -> std::collections::HashMap<String, String> {
+    let mut m: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mf = repo_root.join("assets/data/test_manifest.json");
+    if let Ok(text) = std::fs::read_to_string(&mf) {
+        if let Ok(v) = serde_json::from_str::<Value>(&text) {
+            for t in v.get("tests").and_then(Value::as_array).into_iter().flatten() {
+                let tid = t.get("id").and_then(Value::as_str).unwrap_or("");
+                let desc = t.get("desc").and_then(Value::as_str).unwrap_or("");
+                if !tid.is_empty() {
+                    m.insert(tid.to_owned(), desc.to_owned());
+                }
+            }
+        }
+    }
+    m
+}
+
+struct TestBlock {
+    name: String,
+    passed: u32,
+    failed: u32,
+    failures: Vec<String>,
+}
+
+/// 分块状态 flush（`cur_name` 有值 ⇒ 推入 `blocks` 并清零计数）。
+fn flush_test_block(
+    blocks: &mut Vec<TestBlock>,
+    cur_name: &mut Option<String>,
+    cur_passed: &mut u32,
+    cur_failed: &mut u32,
+    cur_failures: &mut Vec<String>,
+) {
+    if let Some(n) = cur_name.take() {
+        blocks.push(TestBlock {
+            name: n,
+            passed: *cur_passed,
+            failed: *cur_failed,
+            failures: std::mem::take(cur_failures),
+        });
+        *cur_passed = 0;
+        *cur_failed = 0;
+    }
+}
+
+fn parse_cargo_test_blocks(log_text: &str) -> Vec<TestBlock> {
+    let mut blocks: Vec<TestBlock> = Vec::new();
+    let mut cur_name: Option<String> = None;
+    let mut cur_passed: u32 = 0;
+    let mut cur_failed: u32 = 0;
+    let mut cur_failures: Vec<String> = Vec::new();
+
+    for line in log_text.lines() {
+        let stripped = line.trim();
+        if let Some(rest) = stripped.strip_prefix("Running tests/") {
+            flush_test_block(
+                &mut blocks,
+                &mut cur_name,
+                &mut cur_passed,
+                &mut cur_failed,
+                &mut cur_failures,
+            );
+            let fname = rest.split_whitespace().next().unwrap_or("");
+            cur_name = Some(fname.strip_suffix(".rs").unwrap_or(fname).to_owned());
+        } else if let Some(res) = stripped.strip_prefix("test result:") {
+            if cur_name.is_some() {
+                // res = " ok. 20 passed; 0 failed; ..." — 找 " N passed" / " M failed"
+                let res_str = res.trim();
+                cur_passed = extract_count(res_str, " passed");
+                cur_failed = extract_count(res_str, " failed");
+            }
+        } else if stripped.starts_with("test ") && stripped.contains("FAILED") && cur_name.is_some()
+        {
+            let tname = stripped
+                .strip_prefix("test ")
+                .and_then(|s| s.split(" ...").next())
+                .unwrap_or("")
+                .trim()
+                .to_owned();
+            cur_failures.push(tname);
+        }
+    }
+    flush_test_block(
+        &mut blocks,
+        &mut cur_name,
+        &mut cur_passed,
+        &mut cur_failed,
+        &mut cur_failures,
+    );
+    blocks
+}
+
+/// 从 `test result: ok. N passed; M failed;` 提取关键词后的数字。
+/// 从 `test result` 行提取 `" N passed"` / `" M failed"` 中的数字。
+/// `needle` 带前导空格（`" passed"` / `" failed"`），避免匹配 `FAILED` 大写。
+fn extract_count(line: &str, needle: &str) -> u32 {
+    let Some(idx) = line.find(needle) else {
+        return 0;
+    };
+    let before = &line[..idx];
+    let digits: String = before.chars().rev().take_while(char::is_ascii_digit).collect();
+    digits.chars().rev().collect::<String>().parse::<u32>().unwrap_or(0)
+}
+
+/// 测试作业「自解释结论」：读日志尾 → `parse_test_log`。
+/// 仅对已结束（`running=false`）的 test 作业有效；缺失/未完成 = `None`。
+#[must_use]
+pub fn test_run_conclusion(repo_root: &Path, kind: &str, id: &str) -> Option<Value> {
+    let state = job_status(repo_root, kind, id)?;
+    if state.get("running").and_then(Value::as_bool).unwrap_or(true) {
+        return None;
+    }
+    let tail = job_log_tail(repo_root, kind, id, 400)?;
+    Some(parse_test_log(&tail, repo_root))
 }

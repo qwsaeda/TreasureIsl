@@ -2818,10 +2818,44 @@ function tsPollJob(id, btn) {
         const msg = $('ts-list-msg');
         const code = st.exit_code == null ? '?' : st.exit_code;
         if (msg) msg.textContent = id + ' 结束：exit=' + code + (code === 0 ? '（通过）' : '（失败）');
+        // 2026-11-10：跑完渲染自解释结论卡（不只看裸日志）
+        if (j.conclusion && j.conclusion.details && j.conclusion.details.length) {
+          tsRenderConclusion(id, j.conclusion);
+        }
         loadTests();
       }
     }).catch(() => {});
   }, 2000);
+}
+
+// 2026-11-10：自解释结论卡渲染（跑完 test job 时调用；若明细区已打开则追加，否则存进 cache 供下次打开）
+function tsRenderConclusion(id, conc) {
+  const detail = $('ts-detail');
+  if (!detail) return;
+  // 若该 id 的明细正在展示，直接追加结论卡
+  const existing = detail.querySelector('[data-conc="' + id + '"]');
+  if (existing) { existing.remove(); }
+  const badge = conc.ok
+    ? '<span style="background:#1a3a1a;color:#4f8f4f;border:1px solid #2a4a2a;border-radius:4px;padding:2px 8px;font-size:12px">✓ 全部通过</span>'
+    : '<span style="background:#3a1a1a;color:#f88;border:1px solid #4a2a2a;border-radius:4px;padding:2px 8px;font-size:12px">✗ ' + conc.total_failed + ' 条失败</span>';
+  let concH = `<div data-conc="${esc(id)}" style="background:#0d0f17;border:1px solid var(--border);border-radius:8px;padding:10px;margin:8px 0">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <b style="font-size:13px">运行结论（${esc(id)}）</b> ${badge}
+      <span style="color:var(--muted);font-size:11px">${esc(conc.summary || '')}</span>
+    </div>
+    <div style="font-size:12px;color:var(--ink);line-height:1.6">`;
+  conc.details.forEach((d) => {
+    const icon = d.failed ? '❌' : '✅';
+    concH += `<div style="margin:4px 0;padding:4px 8px;background:rgba(255,255,255,0.03);border-radius:4px">
+      <span style="margin-right:6px">${icon}</span>
+      <code style="color:#8fd38f;font-size:11px">${esc(d.binary)}</code>
+      <span style="color:var(--muted);font-size:11px;margin-left:6px">${d.passed} 通过${d.failed ? ' / ' + d.failed + ' 失败' : ''}</span>
+      ${d.desc ? '<div style="color:var(--muted);font-size:11px;margin-top:2px">' + esc(d.desc) + '</div>' : ''}
+      ${d.failures && d.failures.length ? '<div style="color:#f88;font-size:11px;margin-top:2px">失败用例：' + d.failures.map(esc).join(', ') + '</div>' : ''}
+    </div>`;
+  });
+  concH += `</div></div>`;
+  detail.insertAdjacentHTML('beforeend', concH);
 }
 
 // 「运行本组」= 当前筛选下的可运行条目**串行**执行（同目标目录会互踩 cargo 锁，23 号 §6.3）。
@@ -2862,6 +2896,31 @@ function renderTestDetail(id) {
   // S49.9：测试用例说明（做什么/测什么/达到什么效果）
   if (x.desc) {
     h += `<div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin:8px 0;font-size:13px;line-height:1.6;color:var(--ink)">${esc(x.desc)}</div>`;
+  }
+  // 2026-11-10「自解释结论」层：最近一次运行结论卡（跑完自动显示；agent/人直接可读）
+  const conc = x.run_conclusion;
+  if (conc && conc.details && conc.details.length) {
+    const badge = conc.ok
+      ? '<span style="background:#1a3a1a;color:#6f8;color:#4f8f4f;border:1px solid #2a4a2a;border-radius:4px;padding:2px 8px;font-size:12px">✓ 全部通过</span>'
+      : '<span style="background:#3a1a1a;color:#f88;border:1px solid #4a2a2a;border-radius:4px;padding:2px 8px;font-size:12px">✗ ' + conc.total_failed + ' 条失败</span>';
+    let concH = `<div style="background:#0d0f17;border:1px solid var(--border);border-radius:8px;padding:10px;margin:8px 0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <b style="font-size:13px">运行结论</b> ${badge}
+        <span style="color:var(--muted);font-size:11px">${esc(conc.summary || '')}</span>
+      </div>
+      <div style="font-size:12px;color:var(--ink);line-height:1.6">`;
+    conc.details.forEach((d) => {
+      const icon = d.failed ? '❌' : '✅';
+      concH += `<div style="margin:4px 0;padding:4px 8px;background:rgba(255,255,255,0.03);border-radius:4px">
+        <span style="margin-right:6px">${icon}</span>
+        <code style="color:#8fd38f;font-size:11px">${esc(d.binary)}</code>
+        <span style="color:var(--muted);font-size:11px;margin-left:6px">${d.passed} 通过${d.failed ? ' / ' + d.failed + ' 失败' : ''}</span>
+        ${d.desc ? '<div style="color:var(--muted);font-size:11px;margin-top:2px">' + esc(d.desc) + '</div>' : ''}
+        ${d.failures && d.failures.length ? '<div style="color:#f88;font-size:11px;margin-top:2px">失败用例：' + d.failures.map(esc).join(', ') + '</div>' : ''}
+      </div>`;
+    });
+    concH += `</div></div>`;
+    h += concH;
   }
   h += rows.map(([k, v]) => `<div class="meta-row"><span class="k">${k}</span><span>${esc(v)}</span></div>`).join('');
   // S32 用户拍板「测试能实际运行」（23 号 §6 平台集成）：点运行 → POST /api/tests?run=<id> 后台 spawn

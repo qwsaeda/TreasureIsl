@@ -21,8 +21,9 @@ cargo build -p ti-engine --bin treasure-bevy-native 2>&1 | Select-Object -Last 1
 # 2. 测试
 Write-Host ""
 Write-Host "[2/6] cargo test --workspace (+ ti-engine)"
-cargo test --workspace 2>&1 | Select-String "test result:" | ForEach-Object { "  $($_.Line)" }
-cargo test -p ti-engine 2>&1 | Select-String "test result:" | ForEach-Object { "  $($_.Line)" }
+# 保留 Running 头行（每个测试文件一行）+ test result 行 ⇒ 平台「自解释结论」层可逐 binary 对上号
+cargo test --workspace 2>&1 | Select-String "Running tests/|test result:" | ForEach-Object { "  $($_.Line)" }
+cargo test -p ti-engine 2>&1 | Select-String "Running tests/|test result:" | ForEach-Object { "  $($_.Line)" }
 
 # 3. wasm 构建
 Write-Host ""
