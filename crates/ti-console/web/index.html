@@ -363,22 +363,11 @@
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">属性 · 格 <span id="ed-sel-idx">—</span></div>
          <div id="ed-inspector" style="font-size:12px;color:var(--ink)"></div>
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">🤖 AI 生成（提示词 → 资产，0 游戏改动）</div>
-         <div style="margin-bottom:12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--panel2)">
-           <div style="font-size:11px;color:var(--muted);margin-bottom:4px">中央岛图 → <code style="color:var(--accent)">assets/ui/island_home_<id>.png</code>（真渲染自动用）</div>
-           <textarea id="ed-gen-prompt" rows="3" placeholder="提示词：海盗藏宝岛，绿色山脉金沙滩，海水环绕，帆船停靠，手绘航海风格…" style="width:100%;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px;resize:vertical"></textarea>
-           <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
-             <button id="ed-gen-run" style="padding:4px 12px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">生成中央岛</button>
-             <span style="font-size:10px;color:var(--muted)">需 AGNES_API_KEY</span>
-           </div>
-           <div id="ed-gen-status" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
-           <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;border-top:1px solid var(--border);padding-top:8px">格子整卡图 → <code style="color:var(--accent)">assets/ui/tile_<isle>.png</code>（选中领地格；AI 卡图含形状+岛艺术，游戏 if-blit 回退程序绘制）</div>
-           <textarea id="ed-gen-tile-prompt" rows="2" placeholder="提示词：海盗岛徽章，绿色山脉金沙滩棕榈树，孤立无背景，居中，航海线稿风格…" style="width:100%;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px;resize:vertical"></textarea>
-           <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
-             <button id="ed-gen-tile-run" style="padding:4px 12px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">生成格子卡图</button>
-             <span id="ed-gen-tile-sel" style="font-size:10px;color:var(--muted)">（先点选一个领地格）</span>
-           </div>
-           <div id="ed-gen-tile-status" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+         <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+           <button id="ed-gen-island-btn" style="padding:5px 12px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600">中央岛图</button>
+           <button id="ed-gen-tile-btn" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:5px;cursor:pointer;font-size:11px">格子卡图</button>
          </div>
+         <div style="font-size:10px;color:var(--muted);margin-bottom:12px">点按钮弹出<b style="color:var(--ink)">提示词编辑框 + 预览</b>；生成即保存 <code style="color:var(--accent)">assets/ui/</code>，预览后「应用保存」刷新画布（需 AGNES_API_KEY）</div>
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">内容配置（I9 + S34.5）</div>
          <div id="ed-content-panels" style="font-size:11px;color:var(--ink)"></div>
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">校验（逐条 ✓/✗）</div>
@@ -2649,6 +2638,7 @@ function tsRow(x) {
     + '<span style="margin-left:8px">' + tsJobBadge(x) + '</span>'
     + '<span class="tag ' + (miss ? 'blocked' : 'verified') + '" style="margin-left:6px">' + (miss ? '断链' : '在位') + '</span>'
     + '<span style="color:var(--muted);margin-left:6px">' + esc(x.level) + ' · ' + esc(x.type) + '</span>'
+    + (x.desc ? '<div style="color:var(--muted);font-size:11px;margin-top:3px;max-width:640px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(x.desc) + '">' + esc(x.desc.length > 60 ? x.desc.slice(0, 60) + '…' : x.desc) + '</div>' : '')
     + '</span>'
     + '<button data-ts-run="' + esc(x.id) + '" ' + (runnable ? '' : 'disabled') + ' title="' + (runnable ? '运行该测试' : reason) + '"'
     + ' style="background:' + (runnable ? 'var(--accent)' : 'var(--panel2)') + ';border:1px solid ' + (runnable ? 'var(--accent)' : 'var(--border)')
@@ -2725,6 +2715,10 @@ function renderTestDetail(id) {
   ];
   let h = `<div class="card" style="padding:12px">`;
   h += `<div style="margin-bottom:8px"><b>${esc(x.name || x.id)}</b> <code>${esc(x.id)}</code></div>`;
+  // S49.9：测试用例说明（做什么/测什么/达到什么效果）
+  if (x.desc) {
+    h += `<div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin:8px 0;font-size:13px;line-height:1.6;color:var(--ink)">${esc(x.desc)}</div>`;
+  }
   h += rows.map(([k, v]) => `<div class="meta-row"><span class="k">${k}</span><span>${esc(v)}</span></div>`).join('');
   // S32 用户拍板「测试能实际运行」（23 号 §6 平台集成）：点运行 → POST /api/tests?run=<id> 后台 spawn
   //（白名单枚举 id；日志落 evidence/console/logs/test-<id>-<ts>.log，轮询读尾部）。人工/无命令 = 禁用。
@@ -3265,5 +3259,28 @@ function esc(s) {
 
 showPage('overview');
 </script>
+
+<!-- AI 生图模态（用户 2026-11-10「右侧生图相关应优化：弹出提示词编辑框+预览界面+直接应用保存」） -->
+<div id="ed-gen-modal" style="display:none;position:fixed;inset:0;background:rgba(4,7,13,.74);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
+  <div style="width:min(680px,92vw);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 14px 48px rgba(0,0,0,.55)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span id="ed-gen-modal-title" style="font-size:14px;font-weight:700;color:var(--accent)">🤖 AI 生成</span>
+      <button id="ed-gen-modal-x" title="关闭" style="padding:2px 9px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:13px">✕</button>
+    </div>
+    <div id="ed-gen-modal-target" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+    <textarea id="ed-gen-modal-prompt" rows="6" placeholder="提示词：描述你要的图（风格/元素/构图），生成后预览…" style="width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:12px;resize:vertical;line-height:1.5"></textarea>
+    <div id="ed-gen-modal-preview" style="margin-top:10px;min-height:240px;max-height:420px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;background:#0d0f17;overflow:hidden">
+      <span id="ed-gen-modal-ph" style="color:var(--muted);font-size:12px;padding:16px;text-align:center">输入提示词 → 「✨ 生成预览」；生成后在此<b style="color:var(--ink)">预览大图</b>，满意点「✓ 应用保存」</span>
+      <img id="ed-gen-modal-img" alt="AI 生成预览" style="display:none;max-width:100%;max-height:400px;object-fit:contain" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+      <button id="ed-gen-modal-preview" style="padding:6px 16px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">✨ 生成预览</button>
+      <button id="ed-gen-modal-apply" disabled style="padding:6px 16px;background:#2a7d46;border:1px solid #2a7d46;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;opacity:.45">✓ 应用保存</button>
+      <button id="ed-gen-modal-cancel" style="padding:6px 14px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:12px">取消</button>
+      <span id="ed-gen-modal-status" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

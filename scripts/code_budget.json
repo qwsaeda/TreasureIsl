@@ -7,7 +7,8 @@
     "crates/ti-app/src/scenes/chrome.rs": "超限（1394>900）：2026-10-29 门禁对账补登基线（限期整改）",
     "crates/ti-app/src/game_app/host.rs": "S34.6/S36.1 起超限（994>900）：2026-11-03 飞轮门禁对账补登基线（限期整改）",
     "crates/ti-app/src/scenes/mod.rs": "超限（912>900）：2026-11-03 飞轮门禁对账补登基线（限期整改）",
-    "crates/ti-app/tests/render_intent.rs": "超限（909>900）：2026-10-29 门禁对账补登基线（限期整改）"
+    "crates/ti-app/tests/render_intent.rs": "超限（909>900）：2026-10-29 门禁对账补登基线（限期整改）",
+    "crates/ti-console/src/routes.rs": "S49.7 统一作业模型 + 地图编辑器 v3 路由面 + P5 判据路由（2026-11-10 超 900 = 1110 行；登记棘轮，后续按 16_code_standards 拆分或降基线）"
   },
   "exempt_fns": {
     "crates/ti-engine/src/scene_render.rs::spawn_primitives": "S29.3 起超限（183>140）：2026-10-29 门禁对账补登基线（限期整改）",

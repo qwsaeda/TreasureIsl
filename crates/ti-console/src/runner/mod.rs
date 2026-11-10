@@ -44,4 +44,21 @@ pub fn apply_minimal_env(cmd: &mut std::process::Command) {
             cmd.env(k, v);
         }
     }
+    // cargo 工具链定位兜底（2026-11-10 S49.7 统一作业模型遗留缺口修复）：
+    // 平台进程 spawn 时 PATH 不含 ~/.cargo/bin（nohup/systemd 起平台时 PATH 常缺），
+    // 白名单里 CARGO_HOME/RUSTUP_HOME 键若父进程未设 = 跳过 → 子进程 `cargo` 500。
+    // 修法：父进程未设 CARGO_HOME/RUSTUP_HOME 时，按 HOME 推断 ~/.cargo / ~/.rustup 补进 PATH，
+    // 保证 test/build job 的 `cargo` 命令在任意启动方式下都能定位（Linux；Windows 走 USERPROFILE 同构）。
+    if std::env::var("CARGO_HOME").is_err() {
+        if let Ok(home) = std::env::var("HOME") {
+            let cargo_bin = format!("{home}/.cargo/bin");
+            if std::path::Path::new(&cargo_bin).is_dir() {
+                // 追加到 PATH（不覆盖已有），子进程 `cargo` 可定位
+                let base = std::env::var("PATH").unwrap_or_default();
+                let merged =
+                    if base.is_empty() { cargo_bin.clone() } else { format!("{base}:{cargo_bin}") };
+                cmd.env("PATH", merged);
+            }
+        }
+    }
 }

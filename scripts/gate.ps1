@@ -154,7 +154,7 @@ if (Tier 'skip') {
         $p5Out = (& $py scripts/android_device_test.py --run 2>&1 | Out-String)
         $p5Exit = $LASTEXITCODE
         if ($p5Exit -eq 0) {
-            Report $true 'Android 真机交互 (P5 全屏/触摸/音频/切后台；设备限制判据已 SKIP)'
+            Report $true 'Android 真机交互 (P5 全屏/触摸/音频/切后台)'
         } elseif ($p5Out -match 'SKIP（设备渲染限制）' -or $p5Out -match 'SKIP（launcher 抢前台）' -or $p5Out -match 'SKIP（无 BGM 日志）') {
             # 全部 FAIL 均为设备限制 SKIP（设备能力边界）= 记名 SKIP 非真实 FAIL
             Skip 'Android 真机交互 (P5)' '设备限制（纯 CPU/GPU 转译层：P5-1 窗口不驻留 / P5-2 渲染 0fps / P5-3 winit 生命周期断裂；脚本已如实标 SKIP；arm64 真机重跑可全过，parity.md §P5 + 23_game_testing §2 补强注 5）'

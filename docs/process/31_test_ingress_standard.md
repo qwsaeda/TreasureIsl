@@ -30,6 +30,7 @@
 | `category` | ✓ | `functional` `regression` `visual` `audio` `performance` `compatibility`——23 号 §3 分类 |
 | `type` | ✓ | `smoke` `ci` `playtest` `exploratory` `benchmark`——23 号 §4 类型 |
 | `name` | ✓ | 人类可读名（平台测试页展示） |
+| `desc` | ✓ | 测试用例说明（做什么/测什么/达到什么效果，≥20 字符；平台测试页展开渲染，S49.7 补强（2026-11-10 用户「光有测试用例不行，要有说明」）——「光有测试用例不行，要有说明」） |
 | `command` | ✓ | 可运行命令串（§3 command 契约）；`null`/缺 = 不可自动运行（人工验收 / gate 覆盖 / 证据基，平台禁 run） |
 | `evidence` | 与 `gate` 至少一者 | `evidence/` 下日志/截图路径（须存在，`validate_data` 对账） |
 | `gate` | 与 `evidence` 至少一者 | 门禁项号 `1..=33`（证据 = 对应 gate 运行日志） |
@@ -79,6 +80,7 @@ evidence 路径存在 / `gate`∈1..=33 / command 真实性（--test/--bin 路�
 - **command 无 shell 拼接面**：command 含 `;`/`&&`/`|`/`>`/反引号/`$(` = 违规（shell 拼接面，禁 22 号 §10.3）；
 - **id 格式**：`^[a-z0-9_]+$`（`?run` 枚举面）；
 - **name 必填**：缺 `name` = 违规（平台测试页展示面）。
+- **desc 必填**：缺 `desc`（做什么/测什么/达到什么效果，≥20 字符）= 违规（S49.7 补强；`validate_data::check_test_manifest` 断言；平台测试页展开渲染说明）
 
 **S49.7 强化**（平台测试页分组分类 + 逐个运行 + 出证明）：
 - **group 必填 + 值域**：`group` ∈ `core|asset|platform|device|perf`（缺 = 违规；平台测试页主分组维度，23 号 §6.3/§7.2）；

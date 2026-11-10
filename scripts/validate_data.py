@@ -560,6 +560,13 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
             problems.append(
                 f"test_manifest: `{tid}` group={grp} 非法（须 core|asset|platform|device|perf，23 号 §7.2）"
             )
+        # S49.9 强化：desc 必填（平台测试页展示「干什么用/测什么/达到什么效果」，
+        # 23 号 §7.2 schema + 31 号 §2 字段表；无说明 = 测试用例不可读，违规）。
+        desc = t.get("desc")
+        if not desc or not isinstance(desc, str) or len(desc.strip()) < 20:
+            problems.append(
+                f"test_manifest: `{tid}` 缺 desc（必填；说明「做什么/测什么/达到什么效果」，≥20 字符，23 号 §7.2）"
+            )
         # S49.7 强化：timeout_s = 1..=7200 的整数（缺省 = 不限；23 号 §6.2 收割）。
         tmo = t.get("timeout_s")
         if tmo is not None and not (isinstance(tmo, int) and not isinstance(tmo, bool) and 1 <= tmo <= 7200):
