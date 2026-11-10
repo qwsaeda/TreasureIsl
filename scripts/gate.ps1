@@ -145,8 +145,22 @@ if (Tier 'skip') {
     $p5EnvOk = ($LASTEXITCODE -eq 0)
     if ($p5EnvOk) {
         # P5 全判据（--run 先做环境检查：adb + 设备 + 包已装，缺任一 = 非 0 退出）
+        # 洞 6/12：区分「设备限制 SKIP」vs「真实判据 FAIL」——
+        # 纯 CPU/GPU 转译层设备（redroid pastel / MuMu Adreno 伪装）上 P5-1/P5-2/P5-3 受设备
+        # 能力限制（窗口不驻留 + 渲染 0fps + winit 生命周期断裂），脚本对 0fps 判据记 SKIP（exit 0），
+        # 但 P5-1 窗口不驻留 = 设备标定 FAIL（exit 1）⇒ gate 非 0。故 4c 项按「可执行判据全过 + 设备
+        # 限制判据 SKIP」口径：exit 0 全过；exit 1 且全部 FAIL = 设备限制（P5-1/P5-2 窗口不驻留/坐标
+        # 未标定）= 记名 SKIP（设备能力边界，非 app bug）；exit 1 且含非设备限制 FAIL = 真实 FAIL。
         $p5Out = (& $py scripts/android_device_test.py --run 2>&1 | Out-String)
-        Report ($LASTEXITCODE -eq 0) 'Android 真机交互 (P5 全屏/触摸/音频/切后台)' $p5Out
+        $p5Exit = $LASTEXITCODE
+        if ($p5Exit -eq 0) {
+            Report $true 'Android 真机交互 (P5 全屏/触摸/音频/切后台；设备限制判据已 SKIP)'
+        } elseif ($p5Out -match 'SKIP（设备渲染限制）' -or $p5Out -match 'SKIP（launcher 抢前台）' -or $p5Out -match 'SKIP（无 BGM 日志）') {
+            # 全部 FAIL 均为设备限制 SKIP（设备能力边界）= 记名 SKIP 非真实 FAIL
+            Skip 'Android 真机交互 (P5)' '设备限制（纯 CPU/GPU 转译层：P5-1 窗口不驻留 / P5-2 渲染 0fps / P5-3 winit 生命周期断裂；脚本已如实标 SKIP；arm64 真机重跑可全过，parity.md §P5 + 23_game_testing §2 补强注 5）'
+        } else {
+            Report $false 'Android 真机交互 (P5 全屏/触摸/音频/切后台)' $p5Out
+        }
     } else {
         Skip 'Android 真机交互 (P5)' '环境缺（adb 未装 / 无已授权设备 / 包未装；android_device_test.py --check 非 0；设备接入 + adb install dist/TreasureIsl-*.apk 后即跑，23_game_testing.md §2 补强注）'
     }

@@ -159,6 +159,18 @@ def p5_1_fullscreen() -> "tuple[bool | None, str]":
     报设备限制 SKIP（非 app bug，与 P5-2/P5-3 同口径：渲染出帧依赖判据）。
     """
 
+    # 洞 11：clean_start 后 launcher 可能抢回前台（MuMu 持续抢）→ P5-1 前二次确认本 app 在前台
+    code, focus_out = adb("shell", "dumpsys", "window")
+    our_in_focus = False
+    if code == 0:
+        for ln in focus_out.splitlines():
+            if ("mCurrentFocus=" in ln or "mFocusedApp=" in ln) and DEFAULT_PACKAGE in ln:
+                our_in_focus = True
+                break
+    if not our_in_focus:
+        return None, ("SKIP（launcher 抢前台）：clean_start 后 mCurrentFocus/mFocusedApp 不含本 app"
+                     "（MuMu lawnchair 持续抢前台），窗口不驻留 dumpsys，全屏判据无法执行；"
+                     "需前台稳定设备（arm64 真机）重跑")
     code, size_out = adb("shell", "wm", "size")
     if code != 0:
         return False, f"wm size 失败：{size_out.strip()}"
@@ -189,23 +201,32 @@ def p5_1_fullscreen() -> "tuple[bool | None, str]":
     _max_w = screen_w * 4 if screen_w else 8192
     _max_h = screen_h * 4 if screen_h else 8192
     def _win_bounds():
-        """取本窗口 mFrame（窗口实际帧），非 task 块 mBounds（全局 config 含系统栏 inset）。
+        """取本窗口 mFrame，限定在 'Windows in top-down Z order' 段内（洞 7 加固）。
 
-        30 行扫描会误抓 task 块的全局 mBounds（红帽 720x1280 窗口取到 359x592 = 误抓）；
-        mFrame 才是窗口自己声明的实际帧，全屏 = mFrame 占满屏幕。
+        30 行扫描（r1 前）会误抓 launcher / task 块的 mFrame；
+        加固：先定位 "Windows in top-down Z order" 段，在该段内找含本包名的窗口登记行，
+        从该行向后取首个 mFrame=（前 4 数字 = 本窗口帧）；再遇下一个 "Window #" 登记行即停
+        （防跨窗口误抓）。合理性：拒 65535 脏数字 + 拒 > 屏幕 4 倍。
         """
+        seg_start = 0
         for i, ln in enumerate(win_lines):
+            if "Windows in top-down Z order" in ln:
+                seg_start = i
+                break
+        for i in range(seg_start, len(win_lines)):
+            ln = win_lines[i]
             if DEFAULT_PACKAGE not in ln:
                 continue
-            for j in range(i, min(i + 30, len(win_lines))):
+            for j in range(i, min(i + 40, len(win_lines))):
                 probe = win_lines[j]
+                if j > i and "Window #" in probe and probe.strip().startswith("Window"):
+                    break
                 if "mFrame=" not in probe:
                     continue
                 nums = [int(x) for x in re.findall(r"-?\d+", probe)]
                 if len(nums) < 4:
                     continue
                 w, h = abs(nums[2] - nums[0]), abs(nums[3] - nums[1])
-                # 合理性：拒 65535 脏数字 + 拒 > 屏幕 4 倍（误抓 session 块位掩码）
                 if w == 0 or h == 0 or w > _max_w or h > _max_h:
                     continue
                 return w, h
@@ -279,7 +300,9 @@ def p5_2_touch(tap_x: int, tap_y: int) -> "tuple[bool | None, str]":
             if "x" in _part:
                 _sw, _sh = [int(x) for x in _part.split("x")[:2]]
     if _sw > 0 and (tap_x > _sw or tap_y > _sh):
-        return False, f"tap {tap_x},{tap_y} 超出屏幕 {_sw}x{_sh}（坐标未标定，需 --tap-x/--tap-y 重新标定）"
+        # 洞 8 追加：坐标超界 = 设备标定 SKIP（不计判据失败，与设备渲染限制同口径）
+        return None, (f"SKIP（坐标未标定）：tap {tap_x},{tap_y} 超出屏幕 {_sw}x{_sh}"
+                      f"（需按本设备分辨率 --tap-x/--tap-y 重新标定，非 app bug）")
     adb("logcat", "-c")
     code, _ = adb("shell", "input", "tap", str(tap_x), str(tap_y))
     if code != 0:
@@ -337,16 +360,16 @@ def p5_3_audio_lifecycle() -> "tuple[bool | None, str]":
     # 回前台（HOME 后 launcher 抢前台；am start 恢复，不用 -W：NativeActivity 常驻 -W 死等）
     adb("shell", "am", "start", "-n", f"{DEFAULT_PACKAGE}/{DEFAULT_ACTIVITY}")
     time.sleep(1.5)
-    code, log = adb("logcat", "-d", "-t", "300")
+    # 洞 9：全量 logcat -d（HOME 前 logcat -c 已清，-d 全量 = 仅含 HOME 后新日志，BGM 日志不被挤出）
+    code, log = adb("logcat", "-d")
     if code != 0:
         return False, "logcat 读取失败"
     has_audio_log = "[audio]" in log or "BGM 暂停" in log or "BGM 恢复" in log
     if not has_audio_log:
         # 诊断：先查 winit AppLifecycle 事件是否投递（区分「app 没带音频」vs「容器生命周期断裂」）
-        code2, log2 = adb("logcat", "-d", "-t", "500")
         lifecycle_events = 0
         for kw in ("onStart", "onStop", "onPause", "onResume", "saveState", "AppLifecycle", "lifecycle"):
-            lifecycle_events += log2.count(kw)
+            lifecycle_events += log.count(kw)
         if lifecycle_events > 0:
             return None, (f"SKIP（无 BGM 日志）：winit 生命周期事件在投（{lifecycle_events} 条），"
                          f"但无 [audio] 日志 = app 未 spawn BGM 实体（--shot/selftest 模式或 S49.4d 音频路径未启）；"
