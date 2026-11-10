@@ -9,7 +9,9 @@
   python scripts/agnes_gen.py --prompt "..." --out mockup.png --size 2K --ratio 9:16
 
 环境变量:
-  AGNES_API_KEY  — Agnes API 密钥（必填；不写入脚本/不入库）
+  AGNES_API_KEY  — Agnes API 密钥（**必填**；**不入库**；密钥**存项目 `.env`**（gitignored，
+                    不入库）或 `export AGNES_API_KEY=...`，不写入脚本 / 不提交仓库；缺失时生图 /
+                    `--check` 均失败（非 0 退出），配置见 `docs/process/04_tooling.md` §6）。
 
 模型: agnes-image-2.5-flash（当前全部输出分辨率免费）
 API:  https://apihub.agnes-ai.com/v1/images/generations
@@ -163,7 +165,7 @@ def main() -> int:
     if args.check:
         ok = True
         if not api_key:
-            print("[agnes --check] FAIL 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
+            print("[agnes --check] FAIL 缺少环境变量 AGNES_API_KEY（规范 04_tooling.md §6：密钥存项目 .env（gitignored）或 export 后重试）", file=sys.stderr)
             ok = False
         if not out_path.parent.exists():
             print(f"[agnes --check] FAIL 输出目录不存在: {out_path.parent}", file=sys.stderr)
@@ -172,7 +174,7 @@ def main() -> int:
             print("[agnes --check] OK（AGNES_API_KEY 在位 + 输出目录在位；只读未生图 / 未写文件）")
         return 0 if ok else 1
     if not api_key:
-        print("[agnes] 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
+        print("[agnes] 缺少环境变量 AGNES_API_KEY（规范 04_tooling.md §6：密钥存项目 .env（gitignored）或 export 后重试）", file=sys.stderr)
         return 1
 
     generate(

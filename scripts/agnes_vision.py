@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 """Agnes 多模态看图脚本（Agnes 2.5 Flash，OpenAI 兼容 Chat Completions）。
 
-与 `scripts/agnes_gen.py`（生图）同一 KEY（环境变量 `AGNES_API_KEY`），
+**非生图**（多模态看图/分析，独立功能；生图唯一入口 = `scripts/agnes_gen.py` §6）。
+
+与 `scripts/agnes_gen.py`（生图）同一 KEY（环境变量 `AGNES_API_KEY`，**必填**；**不入库**；
+密钥**存项目 `.env`**（gitignored，不入库）或 `export AGNES_API_KEY=...`，不写入脚本 / 不提交仓库；
+缺失时分析 / `--check` 均失败（非 0 退出），配置见 `docs/process/04_tooling.md` §6），
 但走 `POST /v1/chat/completions` + `image_url`（本地图片转 Data URI）。
 
 用法:
@@ -99,7 +103,7 @@ def main() -> int:
     if args.check:
         ok = True
         if not api_key:
-            print("[agnes-vision --check] FAIL 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
+            print("[agnes-vision --check] FAIL 缺少环境变量 AGNES_API_KEY（规范 04_tooling.md §6：密钥存项目 .env（gitignored）或 export 后重试）", file=sys.stderr)
             ok = False
         if not images:
             print("[agnes-vision --check] FAIL 没有待分析图片（--image / --image-dir）", file=sys.stderr)
@@ -113,7 +117,7 @@ def main() -> int:
         return 0 if ok else 1
 
     if not api_key:
-        print("[agnes-vision] 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
+        print("[agnes-vision] 缺少环境变量 AGNES_API_KEY（规范 04_tooling.md §6：密钥存项目 .env（gitignored）或 export 后重试）", file=sys.stderr)
         return 1
 
     if not images:

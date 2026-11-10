@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """Agnes Video 2.5 Flash 视频脚本（docs/process/04_tooling.md §Agnes 视频）。
 
+**非生图**（视频生成，独立功能；生图唯一入口 = `scripts/agnes_gen.py` §6）。
+
 用法:
   python scripts/agnes_video.py --prompt "..." --out evidence/tutorial/05_aabb_demo.mp4
   python scripts/agnes_video.py --prompt "..." --out demo.mp4 --seconds 8 --ratio 16:9
@@ -9,7 +11,9 @@
   python scripts/agnes_video.py --check
 
 环境变量:
-  AGNES_API_KEY  — Agnes API 密钥（必填；不写脚本/文档中）
+  AGNES_API_KEY  — Agnes API 密钥（**必填**；**不入库**；密钥**存项目 `.env`**（gitignored，
+                    不入库）或 `export AGNES_API_KEY=...`，不写入脚本 / 不提交仓库；缺失时生成 /
+                    `--check` 均失败（非 0 退出），配置见 `docs/process/04_tooling.md` §6）。
 
 模型: agnes-video-2.5-flash（异步：创建任务 → 轮询 → 下载）
 API:  https://apihub.agnes-ai.com/v1/videos
@@ -154,7 +158,7 @@ def main() -> int:
     if args.check:
         ok = True
         if not api_key:
-            print("[agnes_video --check] FAIL 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
+            print("[agnes_video --check] FAIL 缺少环境变量 AGNES_API_KEY（规范 04_tooling.md §6：密钥存项目 .env（gitignored）或 export 后重试）", file=sys.stderr)
             ok = False
         if not out_path.parent.exists():
             print(f"[agnes_video --check] FAIL 输出目录不存在: {out_path.parent}", file=sys.stderr)
@@ -164,7 +168,7 @@ def main() -> int:
         return 0 if ok else 1
 
     if not api_key:
-        print("[agnes_video] 缺少环境变量 AGNES_API_KEY", file=sys.stderr)
+        print("[agnes_video] 缺少环境变量 AGNES_API_KEY（规范 04_tooling.md §6：密钥存项目 .env（gitignored）或 export 后重试）", file=sys.stderr)
         return 1
 
     if args.video_id:

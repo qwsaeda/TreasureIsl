@@ -128,6 +128,7 @@ def cmd_register(spec: dict, _args: argparse.Namespace) -> int:
 
 
 def _generate_one(name: str, prompt: str, ratio: str, size: str, force: bool) -> tuple[str, str]:
+    """批量生图单件（生图 = `ui_assets.generate` → `agnes_gen.py` CLI 唯一入口，04_tooling §6）。"""
     out = raw_path(name)
     if out.exists() and out.stat().st_size > 10_000 and not force:
         return name, "SKIP"

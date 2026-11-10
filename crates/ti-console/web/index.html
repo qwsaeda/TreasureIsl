@@ -632,6 +632,26 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
 <div id="lightbox" aria-label="图片放大预览"><img id="lightbox-img" alt=""><div class="lb-id" id="lightbox-id"></div><div class="lb-cap" id="lightbox-cap"></div><div class="lb-actions"><button id="lb-copy">复制 AI 引用</button><button id="lb-copy-prompt">复制修改提示词</button></div></div>
 </div>
 
+<!-- AI 生图模态（用户 2026-11-10「右侧生图相关应优化：弹出提示词编辑框+预览界面+直接应用保存」） -->
+<div id="ed-gen-modal" style="display:none;position:fixed;inset:0;background:rgba(4,7,13,.74);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
+  <div style="width:min(680px,92vw);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 14px 48px rgba(0,0,0,.55)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span id="ed-gen-modal-title" style="font-size:14px;font-weight:700;color:var(--accent)">🤖 AI 生成</span>
+      <button id="ed-gen-modal-x" title="关闭" style="padding:2px 9px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:13px">✕</button>
+    </div>
+    <div id="ed-gen-modal-target" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+    <textarea id="ed-gen-modal-prompt" rows="6" placeholder="提示词：描述你要的图（风格/元素/构图），生成后预览…" style="width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:12px;resize:vertical;line-height:1.5"></textarea>
+    <div id="ed-gen-modal-previewbox" style="margin-top:10px;min-height:240px;max-height:420px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;background:#0d0f17;overflow:hidden">
+      <span id="ed-gen-modal-ph" style="color:var(--muted);font-size:12px;padding:16px;text-align:center">输入提示词 → 「✨ 生成预览」；生成后在此<b style="color:var(--ink)">预览大图</b>，满意点「✓ 应用保存」</span>
+      <img id="ed-gen-modal-img" alt="AI 生成预览" style="display:none;max-width:100%;max-height:400px;object-fit:contain" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+      <button id="ed-gen-modal-preview" style="padding:6px 16px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">✨ 生成预览</button>
+      <button id="ed-gen-modal-apply" disabled style="padding:6px 16px;background:#2a7d46;border:1px solid #2a7d46;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;opacity:.45">✓ 应用保存</button>
+      <button id="ed-gen-modal-cancel" style="padding:6px 14px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:12px">取消</button>
+      <span id="ed-gen-modal-status" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+  </div>
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
@@ -1469,65 +1489,92 @@ function edBindZoomButtons() {
 
 // AI 生成中央岛（用户 2026-11-10「中央岛不能自己生成」）：提示词 → POST /api/gen-island →
 // assets/ui/island_home_<id>.png → 刷新画布（所见即所得显示新图；0 游戏 crate 改动）。
-async function edGenIsland() {
-  const promptEl = $('ed-gen-prompt'), statusEl = $('ed-gen-status'), btn = $('ed-gen-run');
+// ============ AI 生图模态（用户 2026-11-10「右侧生图应优化：弹提示词编辑框 + 预览界面 + 直接应用保存」） ============
+// 右侧面板只留入口按钮 → 弹大模态（提示词 textarea rows=6 + 大预览区 + 生成预览/应用保存/取消）。
+// 生成即落盘 assets/ui/（后端 /api/gen-island|gen-tile），预览加载大图，满意点「✓ 应用保存」
+// = 刷新画布（所见即所得）+ 关闭；「取消/✕」关闭不刷新。不挤小空间。
+let edGenKind = null;      // 'island' | 'tile'
+let edGenPath = null;      // 已生成路径（应用保存刷新用）
+let edGenTileIsle = null;  // tile 目标 isle（打开模态时捕获，防预览时选格漂移）
+function edGenSelTile() {
+  const s = (edSel != null) ? edState.spaces[edSel] : null;
+  return (s && s.kind === 'territory' && s.isle) ? s : null;
+}
+function edGenModalSet(prevDisabled, status) {
+  const applyBtn = $('ed-gen-modal-apply'), prevBtn = $('ed-gen-modal-preview');
+  applyBtn.disabled = !edGenPath;
+  applyBtn.style.opacity = edGenPath ? '1' : '.45';
+  prevBtn.disabled = prevDisabled;
+  prevBtn.style.opacity = prevDisabled ? '.45' : '1';
+  const st = $('ed-gen-modal-status');
+  if (st && status != null) st.textContent = status;
+}
+function edGenOpen(kind) {
+  edGenKind = kind; edGenPath = null; edGenTileIsle = null;
+  const modal = $('ed-gen-modal'), title = $('ed-gen-modal-title'), target = $('ed-gen-modal-target'),
+        promptEl = $('ed-gen-modal-prompt'), img = $('ed-gen-modal-img'), ph = $('ed-gen-modal-ph');
+  if (kind === 'island') {
+    title.textContent = '🤖 AI 生成 · 中央岛图';
+    target.innerHTML = '生成 <code style="color:var(--accent)">assets/ui/island_home_' + edState.id + '.png</code>（真渲染自动用，0 游戏改动）';
+    promptEl.value = '';
+    promptEl.placeholder = '提示词：海盗藏宝岛，绿色山脉金沙滩，海水环绕，帆船停靠，手绘航海风格…';
+    edGenModalSet(false, '');
+  } else {
+    const s = edGenSelTile();
+    title.textContent = '🤖 AI 生成 · 格子卡图';
+    if (s) {
+      edGenTileIsle = s.isle;
+      target.innerHTML = '生成 <code style="color:var(--accent)">assets/ui/tile_' + s.isle + '.png</code>（领地格 ' + edSel + '，游戏 if-blit 回退程序绘制）';
+    } else {
+      target.textContent = '✗ 先点选一个「领地 + 岛型」格再生成（右栏点格后重开）';
+    }
+    promptEl.value = '';
+    promptEl.placeholder = '提示词：海盗岛徽章，绿色山脉金沙滩棕榈树，孤立无背景，居中，航海线稿风格…';
+    edGenModalSet(!s, s ? '' : '✗ 未选中领地格');
+  }
+  img.style.display = 'none'; ph.style.display = 'block';
+  modal.style.display = 'flex';
+  promptEl.focus();
+}
+async function edGenPreview() {
+  const promptEl = $('ed-gen-modal-prompt'), status = $('ed-gen-modal-status'),
+        img = $('ed-gen-modal-img'), ph = $('ed-gen-modal-ph');
   const prompt = (promptEl.value || '').trim();
-  if (!prompt) { statusEl.textContent = '✗ 提示词为空'; return; }
-  btn.disabled = true;
-  statusEl.textContent = '⏳ 生成中（Agnes 2.5 Flash）…';
+  if (!prompt) { status.textContent = '✗ 提示词为空'; return; }
+  if (edGenKind === 'tile' && !edGenTileIsle) { status.textContent = '✗ 未选中领地格'; return; }
+  const body = (edGenKind === 'island')
+    ? { prompt, map_id: edState.id, size: '2K', ratio: '1:1' }
+    : { prompt, isle: edGenTileIsle, size: '1K', ratio: '1:1' };
+  edGenModalSet(true, '⏳ 生成中（Agnes 2.5 Flash）…');
   try {
-    const resp = await fetch('/api/gen-island', {
+    const resp = await fetch('/api/' + (edGenKind === 'island' ? 'gen-island' : 'gen-tile'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, map_id: edState.id, size: '2K', ratio: '1:1' }),
+      body: JSON.stringify(body),
     });
     const r = await resp.json();
     if (r.ok) {
-      statusEl.textContent = '✓ 已生成 ' + r.path + '（' + Math.round((r.bytes || 0) / 1024) + 'KB）';
-      edRenderCanvas(); edRenderLeft(); edStatusBar();
+      edGenPath = r.path;
+      img.src = '/' + r.path + '?t=' + Date.now();
+      img.style.display = 'block'; ph.style.display = 'none';
+      edGenModalSet(false, '✓ 已生成（' + Math.round((r.bytes || 0) / 1024) + 'KB）；预览满意后点「✓ 应用保存」');
     } else {
-      statusEl.textContent = '✗ ' + (r.error || '生成失败');
+      edGenPath = null;
+      edGenModalSet(false, '✗ ' + (r.error || '生成失败'));
     }
   } catch (e) {
-    statusEl.textContent = '✗ 请求失败：' + e;
-  } finally {
-    btn.disabled = false;
+    edGenPath = null;
+    edGenModalSet(false, '✗ 请求失败：' + e);
   }
 }
-
-// AI 生成格子整卡图（用户 2026-11-10「格子不能自己生成」）：选中领地格 → POST /api/gen-tile
-// → assets/ui/tile_<isle>.png → 刷新画布（所见即所得显示 AI 卡图；游戏 if-blit 回退程序绘制）。
-async function edGenTile() {
-  const promptEl = $('ed-gen-tile-prompt'), statusEl = $('ed-gen-tile-status'), btn = $('ed-gen-tile-run');
-  const selEl = $('ed-gen-tile-sel');
-  const s = (edSel != null) ? edState.spaces[edSel] : null;
-  if (!s || s.kind !== 'territory' || !s.isle) {
-    if (selEl) selEl.textContent = '✗ 先点选一个「领地 + 岛型」格';
-    return;
-  }
-  const prompt = (promptEl.value || '').trim();
-  if (!prompt) { statusEl.textContent = '✗ 提示词为空'; return; }
-  btn.disabled = true;
-  if (selEl) selEl.textContent = '目标格 ' + edSel + ' → ' + s.isle;
-  statusEl.textContent = '⏳ 生成中（Agnes 2.5 Flash）…';
-  try {
-    const resp = await fetch('/api/gen-tile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, isle: s.isle, size: '1K', ratio: '1:1' }),
-    });
-    const r = await resp.json();
-    if (r.ok) {
-      statusEl.textContent = '✓ 已生成 ' + r.path + '（' + Math.round((r.bytes || 0) / 1024) + 'KB）';
-      edRenderCanvas(); edRenderLeft(); edStatusBar();
-    } else {
-      statusEl.textContent = '✗ ' + (r.error || '生成失败');
-    }
-  } catch (e) {
-    statusEl.textContent = '✗ 请求失败：' + e;
-  } finally {
-    btn.disabled = false;
-  }
+function edGenApply() {
+  if (!edGenPath) return;
+  edRenderCanvas(); edRenderLeft(); edStatusBar();
+  edGenClose();
+}
+function edGenClose() {
+  $('ed-gen-modal').style.display = 'none';
+  edGenKind = null; edGenPath = null; edGenTileIsle = null;
 }
 
 function edRenderCanvas() {
@@ -1675,13 +1722,6 @@ function edSelectNode(idx) {
     edRenderCanvas(); edRenderLeft(); edRenderInspector(); edValidateBar(); edStatusBar();
   }
   edRenderCanvas(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar();
-  // 格子生成目标提示（选中格 → isle）
-  const selEl = $('ed-gen-tile-sel');
-  if (selEl) {
-    selEl.textContent = (s.kind === 'territory' && s.isle)
-      ? '目标格 ' + idx + ' → ' + s.isle
-      : '（先点选一个领地格）';
-  }
 }
 
 // 中栏浮层（选中格标签；极简版只保留 ed-float-sel，环几何/岛抽屉已并入左栏）
@@ -2215,10 +2255,11 @@ function openMapEditor() {
   edSel = null;
   edZoom = 1.0; edPan = { x: 0, y: 0 };
   edBindZoomButtons();
-  const gbtn = $('ed-gen-run');
-  if (gbtn) gbtn.addEventListener('click', edGenIsland);
-  const gbtn2 = $('ed-gen-tile-run');
-  if (gbtn2) gbtn2.addEventListener('click', edGenTile);
+  // AI 生图模态入口按钮（右侧面板；旧 ed-gen-run/ed-gen-tile-run 已退役）
+  const genIsland = $('ed-gen-island-btn');
+  if (genIsland) genIsland.addEventListener('click', () => edGenOpen('island'));
+  const genTile = $('ed-gen-tile-btn');
+  if (genTile) genTile.addEventListener('click', () => edGenOpen('tile'));
   edRenderLeft();
   edRenderCanvas();
   edRenderFloats();
@@ -2244,6 +2285,13 @@ function edSetTool(tool) {
 }
 
 $('map-edit-btn').addEventListener('click', openMapEditor);
+// AI 生图模态按钮（静态元素，顶层绑定一次）：生成预览 / 应用保存 / 取消 / ✕；Escape + 点遮罩关闭。
+$('ed-gen-modal-preview').addEventListener('click', edGenPreview);
+$('ed-gen-modal-apply').addEventListener('click', edGenApply);
+$('ed-gen-modal-cancel').addEventListener('click', edGenClose);
+$('ed-gen-modal-x').addEventListener('click', edGenClose);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') edGenClose(); });
+$('ed-gen-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) edGenClose(); });
 // S44.4 打包/分发面：publish 体检（只读）+ 发布（默认关需 enable_write）。
 $('pub-check-btn').addEventListener('click', () => runPublish('check'));
 $('pub-run-btn').addEventListener('click', () => runPublish('run'));
@@ -3260,26 +3308,7 @@ function esc(s) {
 showPage('overview');
 </script>
 
-<!-- AI 生图模态（用户 2026-11-10「右侧生图相关应优化：弹出提示词编辑框+预览界面+直接应用保存」） -->
-<div id="ed-gen-modal" style="display:none;position:fixed;inset:0;background:rgba(4,7,13,.74);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
-  <div style="width:min(680px,92vw);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 14px 48px rgba(0,0,0,.55)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span id="ed-gen-modal-title" style="font-size:14px;font-weight:700;color:var(--accent)">🤖 AI 生成</span>
-      <button id="ed-gen-modal-x" title="关闭" style="padding:2px 9px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:13px">✕</button>
-    </div>
-    <div id="ed-gen-modal-target" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
-    <textarea id="ed-gen-modal-prompt" rows="6" placeholder="提示词：描述你要的图（风格/元素/构图），生成后预览…" style="width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:12px;resize:vertical;line-height:1.5"></textarea>
-    <div id="ed-gen-modal-preview" style="margin-top:10px;min-height:240px;max-height:420px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;background:#0d0f17;overflow:hidden">
-      <span id="ed-gen-modal-ph" style="color:var(--muted);font-size:12px;padding:16px;text-align:center">输入提示词 → 「✨ 生成预览」；生成后在此<b style="color:var(--ink)">预览大图</b>，满意点「✓ 应用保存」</span>
-      <img id="ed-gen-modal-img" alt="AI 生成预览" style="display:none;max-width:100%;max-height:400px;object-fit:contain" />
-    </div>
-    <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
-      <button id="ed-gen-modal-preview" style="padding:6px 16px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">✨ 生成预览</button>
-      <button id="ed-gen-modal-apply" disabled style="padding:6px 16px;background:#2a7d46;border:1px solid #2a7d46;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;opacity:.45">✓ 应用保存</button>
-      <button id="ed-gen-modal-cancel" style="padding:6px 14px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:12px">取消</button>
-      <span id="ed-gen-modal-status" style="font-size:11px;color:var(--muted)"></span>
-    </div>
-  </div>
+
 </div>
 
 </body>

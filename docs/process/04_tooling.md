@@ -122,9 +122,22 @@
 
 ## 6. Agnes 生图（`scripts/agnes_gen.py`）
 
-**用途**：UI 效果图/概念图生成（S18.7 HD 贴图管线前置；不入库密钥）。
+> **生图唯一入口 = `scripts/agnes_gen.py`**（用户 2026-11-10「生图只能使用一个脚本」）。
+> 项目**生图 API 调用唯一**（`POST /v1/images/generations` 只在 `agnes_gen.py`）；其余调用方**不自行生图**，只调 `agnes_gen.py`：
+> - `scripts/ui_assets.py`（资产管线 `build`/`add`）→ `generate()` = `agnes_gen.py` CLI 子进程；
+> - `scripts/ui_asset_batch.py`（批量资产）→ `ui_assets.generate` → `agnes_gen.py` CLI；
+> - `crates/ti-console/src/routes.rs`（地图编辑器 `gen-island`/`gen-tile`）→ `agnes_gen.py` CLI；
+> - **非生图**（独立功能，不属生图入口）：`agnes_video.py`（视频生成，§7）/ `agnes_vision.py`（多模态看图）。
 
-**环境变量**：`AGNES_API_KEY`（必填；不写入脚本/不入库）。
+**用途**：UI 效果图/概念图/资产图生成（S18.7 HD 贴图管线前置；不入库密钥）。
+
+**环境变量**：`AGNES_API_KEY`（**必填**；**不入库**：不写入脚本/不提交仓库；规范 = 存项目
+`.env`（gitignored）或 `export AGNES_API_KEY=...`；缺失时生图/`--check` 均失败非 0 退出）。
+
+**统一使用规范（所有生图入口一致）**：
+- **`--check` 只读体检**：`AGNES_API_KEY` 在位 + 输出目录在位；不生图/不写文件，前置缺失 ⇒ 非 0 退出（工具契约 21.8）；
+- **幂等 + 非 0 退出**：失败如实上报不静默；只读模式缺 key 不误调 API；
+- **落点纪律（13 号 §2.2）**：正式设计稿 → `evidence/ui_concept/<name>.png`；生图原图/临时试稿 → `evidence/gen_tmp/`（gitignore，`rm -rf evidence/gen_tmp/` 清理）。
 
 **落点纪律（13 号 §2.2）**：正式设计稿 → `evidence/ui_concept/<name>.png`；
 **生图原图 / 临时试稿 → `evidence/gen_tmp/`**（gitignore 整目录，`rm -rf evidence/gen_tmp/`
@@ -162,7 +175,7 @@ python scripts/agnes_gen.py --prompt "..." --out mockup.png --size 2K --ratio 9:
 
 ## 7. Agnes 视频（`scripts/agnes_video.py`）
 
-**用途**：教程动效 / 概念演示视频生成（异步任务：创建 → 轮询 → 下载）。
+**用途**：教程动效 / 概念演示视频生成（异步任务：创建 → 轮询 → 下载）。**非生图**（视频生成，独立功能；生图唯一入口 = `agnes_gen.py` §6）。
 
 **环境变量**：`AGNES_API_KEY`（同生图）。
 

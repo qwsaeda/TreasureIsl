@@ -145,6 +145,9 @@ def api_key() -> str:
 
 
 def generate(prompt: str, out: pathlib.Path, ratio: str, size: str = "2K") -> pathlib.Path:
+    """生图原图（**唯一入口 = `scripts/agnes_gen.py`**，04_tooling.md §6；本函数只包装 CLI 子进程，
+    不自行调 Agnes API——生图实现/`AGNES_API_KEY` 规范/`--check` 体检全在 agnes_gen.py）。
+    失败 = 非 0 退出（如实上报不静默）；key 经 env 透传（不入库，规范 §6）。"""
     cmd = [
         sys.executable, str(ROOT / "scripts" / "agnes_gen.py"),
         "--prompt", prompt, "--out", str(out), "--size", size, "--ratio", ratio,
