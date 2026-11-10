@@ -46,6 +46,14 @@
 >    全 PASS = P5 达标；任一 FAIL = 非 0 退出（如实上报，不静默）。
 > 4. **无设备不静默**：gate 第 4c 项有 adb 设备才跑 P5，无设备记名 SKIP + 文档化（本注），
 >    不阻塞桌面但**明确记录 Android 真机未测**（防「SKIP 判定」被误读为「已测」）。
+> 5. **设备能力分级（2026-11-10 补，P5 判据分级）**：P5-1/P5-4 = 几何 + 进程生命周期判据，任何 adb 设备可跑；
+>    P5-2（触摸需截屏非黑）/ P5-3（BGM 需渲染管线起）= **渲染出帧依赖判据，仅 GPU 正常设备有效**。
+>    无 GPU 设备（MuMu 转译层缺 `VK_KHR_swapchain_mutable_format` = EXP-181；redroid 纯 CPU pastel 软渲染
+>    0fps = 宿主 i915 Vulkan 1.1 不可用 + 无 virtio-gpu gfxstream，2026-11-10 三路径实测）上 P5-2/P5-3
+>    无帧可判：`android_device_test.py` 渲染链路健康前置检测（截屏 100% 黑 + swap chain Timeout ≥3）
+>    自动记 **SKIP（设备渲染限制，非 app bug，exit 0）**，P5-1/P5-4 照跑。**P5 达标口径** =
+>    P5-1/P5-4 PASS + P5-2/P5-3 在 GPU 正常设备（arm64 真机）上 PASS；纯 CPU 设备 = P5-2/P5-3
+>    文档化 SKIP 记名（设备能力边界，`evidence/android_device_test.log` 含设备 serial 可回溯）。
 
 ## 3. 测试类型（Types，执行方式）
 

@@ -78,7 +78,17 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 
 > **环境检查**：`--check` 只读（adb 在位 + 设备已授权 + 包已装）；缺 = 非 0 退出（gate 条件项据此记名 SKIP）。
 > **坐标标定**：首次设备接入 `--tap-x/--tap-y`（P5-2 菜单 tap 屏幕坐标；不同设备分辨率不同）。
+> **多设备**：`--serial/-s <serial>` > `ANDROID_SERIAL` 环境变量 > 唯一设备；多设备未指定 = 歧义报错（红米/MuMu 与 redroid 可同时在线）。
 > **门禁**：gate 第 4c 项（Android 真机）——有 adb 设备跑 P5 全判据，无设备记名 SKIP + 文档化（不静默）。
+>
+> **判据分级：P5-1/P5-4 = 几何 + 生命周期判据（任何 adb 设备可跑）；P5-2/P5-3 = 渲染出帧依赖判据**
+> （触摸需截屏非黑 / BGM 需渲染管线起 ⇒ 仅 GPU 正常设备有效）。
+> 无 GPU 设备（MuMu 转译层缺 `VK_KHR_swapchain_mutable_format`，EXP-181；redroid 纯 CPU pastel
+> 软渲染 0fps，宿主 i915 Vulkan 1.1 不可用 / 无 virtio-gpu gfxstream，2026-11-10 三路径实测）上
+> P5-2/P5-3 会**无帧可判**：脚本渲染链路健康前置检测（截屏 100% 黑 + swap chain Timeout ≥3）
+> 自动记 **SKIP（设备渲染限制，非 app bug，exit 0）**，P5-1/P5-4 照跑。
+> **P5 达标口径**：P5-1/P5-4 PASS + P5-2/P5-3 在有 GPU 设备上 PASS；纯 CPU 设备 = P5-2/P5-3
+> 文档化 SKIP 记名（设备能力边界，`evidence/android_device_test.log` 含设备 serial 可回溯）。
 
 ## 代码质量门禁 `scripts/gate.ps1`（35 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
 
