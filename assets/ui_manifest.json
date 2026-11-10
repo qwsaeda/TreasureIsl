@@ -145,6 +145,15 @@
    ],
    "key": "alpha",
    "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
+  },
+  "tile": {
+   "ratio": "1:1",
+   "target": [
+    1024,
+    1024
+   ],
+   "key": "none",
+   "prompt": "a lone pirate island emblem badge, {what}, isolated on transparent background, centered, antique cartography ink and watercolor, palette keyed to a pirate chart reference (dark bark brown, aged parchment, brass gold)"
   }
  },
  "assets": [
@@ -3660,6 +3669,15 @@
     "source": "ui_theme",
     "note": "S48.0 主题共享菜单资产（暖 tint R1.1/B0.85，全部主题引用）"
    }
+  },
+  {
+   "name": "tile_wreck",
+   "role": "tile",
+   "file": "assets/ui/tile_wreck.png",
+   "params": {
+    "what": "black rock reef gold sand, a tilted sunken galleon half-buried, palm trees"
+   },
+   "generated_at": "2026-11-10"
   }
  ]
 }

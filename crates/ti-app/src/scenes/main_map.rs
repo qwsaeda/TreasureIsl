@@ -1314,9 +1314,23 @@ fn render_v6_elem(
         rope_segment(host, a.cx as i32, a.cy as i32, b.cx as i32, b.cy as i32, 13, 0x4A23); // 深棕 RGB(74,52,28)
         rope_segment(host, a.cx as i32, a.cy as i32, b.cx as i32, b.cy as i32, 8, 0x6245); // 高光 RGB(102,72,40)
     }
-    for t in &v6.tiles {
-        let path = if t.owned { chrome::V6_TILE_OWNED } else { chrome::V6_TILE_DENY };
-        host.blit_image(path, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
+    for (i, t) in v6.tiles.iter().enumerate() {
+        // AI 自生成格子卡图（用户 2026-11-10「格子不能自己生成」）：领地格若
+        // `assets/ui/tile_<isle>.png` 存在 → blit 该图（透明背景孤立岛 + 岛艺术烘焙，
+        // 格间海水缝保留）；缺图回退共享羊皮石柱 V6_TILE_OWNED/DENY（0 视觉变化）。
+        // tiles[i] ↔ spaces[i] 索引对应（环序 0=起点）；领地格 = kind Territory + isle。
+        let custom = spaces
+            .get(i)
+            .filter(|s| s.kind == SpaceKind::Territory)
+            .and_then(|s| s.isle.as_deref())
+            .map(|isle| format!("assets/ui/tile_{isle}.png"))
+            .filter(|p| chrome::asset_present(p));
+        if let Some(p) = &custom {
+            host.blit_image(p, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
+        } else {
+            let path = if t.owned { chrome::V6_TILE_OWNED } else { chrome::V6_TILE_DENY };
+            host.blit_image(path, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
+        }
     }
 
     // 5) 多席棋子（v3：遍历 `seat_positions()`；当前席 = `V6_SHIP` 贴格，
@@ -1560,46 +1574,59 @@ fn draw_v6_tile(
         v6_func_band_color(theme, space.kind, gold_warm)
     };
 
-    // 1) **真不规则多边形格**（seed 随机 6 顶点，每格形状差异大；用户「不规则」= 真随机）
-    //    投影 + 主体（羊皮卡面）+ 色带圆环 + 中央扁平图标。
-    let poly = v6_tile_polygon(index, cx, cy + 3, r);
-    for p in &poly {
-        let _ = p;
-    }
-    // 投影（下移 3px 深色）
-    let shadow_poly: Vec<(i32, i32)> = poly.iter().map(|(px, py)| (*px, py + 3)).collect();
-    fill_polygon(host, &shadow_poly, shadow);
-    fill_polygon(host, &poly, tile_face);
-
-    // 色带圆环（语义色）
-    fill_circle(host, cx, cy, r * 66 / 100, band);
-    fill_circle(host, cx, cy, r * 50 / 100, tile_face);
-
-    // 3) 中央扁平图标（识别）：领地 = 岛型图标（tint 色带色）；功能 = node_* 铜牌
-    if space.kind == SpaceKind::Territory {
-        if let Some(isle) = &space.isle {
-            let ic = d * 40 / 100;
-            let icon = v6_isle_icon(isle);
-            chrome::entity_icon(host, icon, cx - ic / 2, cy - ic / 2, ic, band);
-        }
+    // 1) **AI 自生成整格卡图**（用户 2026-11-10「格子不能自己生成」）：领地格若
+    //    `assets/ui/tile_<isle>.png` 存在 → blit 68×68 覆盖程序绘制（透明背景孤立岛 +
+    //    岛艺术烘焙；格间海水缝保留——相邻格心距≈93px > 68px；名牌/驻军仍在卡下）。
+    //    缺图回退程序绘制（多边形 + 色带 + 图标）= 0 视觉变化，编辑器可 AI 生成后即用。
+    let tile_card_used = if space.kind == SpaceKind::Territory {
+        space.isle.as_deref().map(|i| format!("assets/ui/tile_{i}.png"))
     } else {
-        let def = chrome::node_asset(space.kind);
-        let medallion_edge = d * 46 / 100;
-        let (mx, my, mw, mh) = chrome::asset_dest_rect(cx, cy, medallion_edge, def.visible_px);
-        if chrome::asset_present(def.path) {
-            host.blit_image(def.path, mx, my, mw, mh);
+        None
+    };
+    if let Some(tile_path) = tile_card_used.as_deref().filter(|p| chrome::asset_present(p)) {
+        host.blit_image(tile_path, cx - r, cy - r, d, d);
+    }
+    if tile_card_used.as_deref().is_none_or(|p| !chrome::asset_present(p)) {
+        // 1) **真不规则多边形格**（seed 随机 6 顶点，每格形状差异大；用户「不规则」= 真随机）
+        //    投影 + 主体（羊皮卡面）+ 色带圆环 + 中央扁平图标。
+        let poly = v6_tile_polygon(index, cx, cy + 3, r);
+        for p in &poly {
+            let _ = p;
+        }
+        // 投影（下移 3px 深色）
+        let shadow_poly: Vec<(i32, i32)> = poly.iter().map(|(px, py)| (*px, py + 3)).collect();
+        fill_polygon(host, &shadow_poly, shadow);
+        fill_polygon(host, &poly, tile_face);
+
+        // 色带圆环（语义色）
+        fill_circle(host, cx, cy, r * 66 / 100, band);
+        fill_circle(host, cx, cy, r * 50 / 100, tile_face);
+
+        // 3) 中央扁平图标（识别）：领地 = 岛型图标（tint 色带色）；功能 = node_* 铜牌
+        if space.kind == SpaceKind::Territory {
+            if let Some(isle) = &space.isle {
+                let ic = d * 40 / 100;
+                let icon = v6_isle_icon(isle);
+                chrome::entity_icon(host, icon, cx - ic / 2, cy - ic / 2, ic, band);
+            }
         } else {
-            chrome::entity_icon(
-                host,
-                "map",
-                cx - medallion_edge / 2,
-                cy - medallion_edge / 2,
-                medallion_edge,
-                gold_warm,
-            );
+            let def = chrome::node_asset(space.kind);
+            let medallion_edge = d * 46 / 100;
+            let (mx, my, mw, mh) = chrome::asset_dest_rect(cx, cy, medallion_edge, def.visible_px);
+            if chrome::asset_present(def.path) {
+                host.blit_image(def.path, mx, my, mw, mh);
+            } else {
+                chrome::entity_icon(
+                    host,
+                    "map",
+                    cx - medallion_edge / 2,
+                    cy - medallion_edge / 2,
+                    medallion_edge,
+                    gold_warm,
+                );
+            }
         }
     }
-
     // 4) 名牌（节点下小字，真截断不溢出）
     let name = if space.kind == SpaceKind::Territory {
         space.isle.as_deref().map_or_else(Default::default, chrome::isle_name)

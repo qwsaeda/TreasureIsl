@@ -157,11 +157,25 @@
 | 环心 | `V6_CENTER = (540, 740)` | `V6_CENTER = {x:540, y:740}` ✅ |
 | 环半径 | `V6_RADIUS = 460` | `V6_RADIUS = 460` ✅ |
 | 格子直径 | `d = 68`（半径 34） | `V6_TILE_D = 68` → `V6_TILE_R = 34` ✅ |
-| 中央岛 | `V6_RADIUS - 66 = 394`（紧贴环格） | `ir = R0 - 66 = 394` ✅ |
+| 中央岛 | `blit_image(island_home_<mid>.png, 146, 346, 788×788)`（缺图不画） | SVG `<image href="/assets/ui/island_home_<id>.png">` 同矩形 788×788（缺图回退绿圆）✅ |
 | 岛颜色 | `theme.by_name(isle_token_color)` 读 `theme.json isle_*` 令牌 | `ED_ISLE_THEME` = theme.json 令牌值（harbour `#dac8`…boss_fort `#20e3`）✅ |
 | 视口 | 1080×1920 竖屏世界 | `viewBox 0 0 1080 1920` ✅ |
 
 ⇒ **编辑器画布 = 真渲染 v6 的等比视图**（编辑器看到的 = 游戏 main_map 布局），所见即所得达成。
+
+**中央岛图 + 右侧参数接地气（用户 2026-11-10「中间岛图呢？…太不接地气？」）**：
+- **中央岛 = 真渲染岛资产图**：编辑器画布中央加载 `/assets/ui/island_home_<id>.png`（`island_home_m01~m10.png` 10 张岛插画），显示位置/尺寸 = 真渲染 `blit_image` 同矩形（`V6_CENTER-ir` 起 788×788），**所见即所得 = 编辑器看到的就是游戏 main_map 的中央岛插画**；缺图回退绿圆占位（`main_map.rs` 缺图不画，编辑器友好回退）。
+- **右侧参数接地气**：内部原始键 → 中文名/图标（`ED_EVENT_KIND_LABEL`/`ED_MERCHANT_LABEL`/`ED_VS_SLOT_LABEL`）——随机事件显示「事件1/事件2」+ 类型中文（沉船/风暴/风神…）、商人显示「⚔ 武器商/⛓ 奴隶贩」+ 价格倍率、VS 主题显示「背景/攻城/地牢/首领/遭遇」+ 色调（RGB565）；格属性「岛型/格类/产出/建筑等级/格位/自由位置」。数据键值不变（`m04_cur_event_a` 等仍存盘），仅展示层中文化。
+
+**画布缩放 + 平移（用户 2026-11-10「中央岛图不能放大」）**——修复 `edApplyView()` 忽略 `edZoom`/`edPan` 的根因（viewBox 硬编码 `0 0 1080 1920`，滚轮缩放无效）：
+- **滚轮缩放** 0.5×–3.0×（`edApplyView` 合成 viewBox = `edZoom` 缩放 + `edPan` 世界平移）；**空白拖平移**看细节（节点拖拽不触发）；右上角**缩放控制条**（−/百分比/＋/重置）。
+- 实测：滚轮 110%、按钮 132%、重置 100%；中央岛放大 220% 清晰可见（山脉+沙滩+帆船）。
+
+**AI 自生成（用户 2026-11-10「不能自己生成？只能内置使用已有的？」）**——中央岛图/格子卡图**提示词 AI 生图**（`POST /api/gen-island`/`POST /api/gen-tile` → `scripts/agnes_gen.py` Agnes 2.5 Flash → 落 `assets/ui/`，真渲染自动用）：
+- **中央岛图**：右侧「🤖 AI 生成」面板输入提示词 → `assets/ui/island_home_<id>.png`（真渲染命名约定 `chrome::central_island_path`；0 游戏 crate 改动——生成即被 `main_map.rs` blit 用）。实测 `island_home_m04.png`（2K 1:1，19s）AI 生成绿山+金沙滩+棕榈+三桅帆船，编辑器/游戏真渲染同显示。
+- **格子整卡图**：点选领地格 → `assets/ui/tile_<isle>.png`（透明背景孤立岛 + 岛艺术烘焙；游戏 `render_v6_elem` 领地格 `if asset_present(tile_<isle>.png)` blit 68×68 代替共享羊皮石柱 `V6_TILE_OWNED`，缺图回退 = 0 视觉变化；格间海水缝保留——格心距≈93px > 68px）。实测 `tile_wreck.png`（1K 1:1，17s）AI 生成黑岩礁+金沙滩+沉船+棕榈徽章，wreck 格 7/8 编辑器/游戏真渲染同显示（其余格仍共享石柱）。**动游戏层 = `render_v6_elem`/`draw_v6_tile` 各加 `tile_<isle>.png` if-blit 回退**（用户认可例外，破内容运营判据但 0 视觉变化）。
+- **`AGNES_API_KEY`**：规范 = 项目 `.env`（gitignored，不入库）；服务端 `read_env_file` 读 `.env` 兜底 + `std::env` 优先，缺失 = 400 如实上报。
+- **格子中央岛图标**（`isle_*.png` 专属）：共享 `icon_*.png` 白蒙版（S21.14，14 枚全局复用）**不宜单独替换**（改 HUD/VS/面板图标）——格子自生成走**整卡图**（含岛徽章艺术烘焙，图标方向自然涵盖）。
 
 **自适应全屏（用户 2026-11-09「1080×1920？固定死的，横屏居然不是全屏？」）**——编辑器画布**不固定 1080×1920 死框**，改 `preserveAspectRatio="xMidYMid meet"` + 容器弹性高 `height:min(78vh,900px)` + SVG 100%×100%，地图在容器内**等比缩放填满可用区域**：
 

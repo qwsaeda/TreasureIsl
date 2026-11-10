@@ -350,11 +350,35 @@
          <div style="flex:1;min-height:0;position:relative">
            <svg id="ed-canvas" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;background:transparent;display:block"></svg>
            <div id="ed-float-sel" style="position:absolute;left:14px;bottom:14px;max-width:300px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);font-size:11px;color:var(--ink)" hidden></div>
+           <!-- 画布缩放控制条（滚轮/空白拖也可；用户 2026-11-10「不能放大」修复） -->
+           <div style="position:absolute;right:14px;top:14px;display:flex;gap:4px;align-items:center;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel2);font-size:11px;color:var(--ink)">
+             <button id="ed-zoom-out" title="缩小" style="padding:2px 8px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);cursor:pointer;font-size:12px">−</button>
+             <span id="ed-zoom-label" style="min-width:38px;text-align:center;font-variant-numeric:tabular-nums">100%</span>
+             <button id="ed-zoom-in" title="放大" style="padding:2px 8px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);cursor:pointer;font-size:12px">＋</button>
+             <button id="ed-zoom-reset" title="重置视图" style="padding:2px 8px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:11px">重置</button>
+           </div>
          </div>
        </div>
        <div id="ed-right" style="border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:12px;overflow:auto;max-height:480px">
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">属性 · 格 <span id="ed-sel-idx">—</span></div>
          <div id="ed-inspector" style="font-size:12px;color:var(--ink)"></div>
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">🤖 AI 生成（提示词 → 资产，0 游戏改动）</div>
+         <div style="margin-bottom:12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--panel2)">
+           <div style="font-size:11px;color:var(--muted);margin-bottom:4px">中央岛图 → <code style="color:var(--accent)">assets/ui/island_home_<id>.png</code>（真渲染自动用）</div>
+           <textarea id="ed-gen-prompt" rows="3" placeholder="提示词：海盗藏宝岛，绿色山脉金沙滩，海水环绕，帆船停靠，手绘航海风格…" style="width:100%;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px;resize:vertical"></textarea>
+           <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+             <button id="ed-gen-run" style="padding:4px 12px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">生成中央岛</button>
+             <span style="font-size:10px;color:var(--muted)">需 AGNES_API_KEY</span>
+           </div>
+           <div id="ed-gen-status" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+           <div style="font-size:11px;color:var(--muted);margin:10px 0 4px;border-top:1px solid var(--border);padding-top:8px">格子整卡图 → <code style="color:var(--accent)">assets/ui/tile_<isle>.png</code>（选中领地格；AI 卡图含形状+岛艺术，游戏 if-blit 回退程序绘制）</div>
+           <textarea id="ed-gen-tile-prompt" rows="2" placeholder="提示词：海盗岛徽章，绿色山脉金沙滩棕榈树，孤立无背景，居中，航海线稿风格…" style="width:100%;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px;resize:vertical"></textarea>
+           <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+             <button id="ed-gen-tile-run" style="padding:4px 12px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">生成格子卡图</button>
+             <span id="ed-gen-tile-sel" style="font-size:10px;color:var(--muted)">（先点选一个领地格）</span>
+           </div>
+           <div id="ed-gen-tile-status" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+         </div>
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">内容配置（I9 + S34.5）</div>
          <div id="ed-content-panels" style="font-size:11px;color:var(--ink)"></div>
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">校验（逐条 ✓/✗）</div>
@@ -1259,6 +1283,11 @@ const ED_ISLE_COLOR = {harbour:'#C87A6E',lighthouse:'#E0B070',wreck:'#E8C040',pi
 const ED_ISLE_RESOURCE = {harbour:'fishing',lighthouse:'reef',wreck:'gold',pirate_lair:'loot',shipyard:'ship',trading_post:'trade',skull_cliff:'loot',volcano:'gold',lightship:'dice',boss_fort:'boss'};
 // 岛型说明（10 类闭集：只能在这 10 类间分配 20 个领地格，不可新增；balance.territory.prototypes）。
 const ED_ISLE_LABEL = {harbour:'港口城',lighthouse:'灯塔礁',wreck:'沉船滩',pirate_lair:'海盗老巢',shipyard:'帆船坞',trading_post:'军需商岛',skull_cliff:'骷髅崖',volcano:'火山岛',lightship:'灯船站',boss_fort:'无畏号要塞'};
+// 接地气中文映射（右侧参数面板：内部键 → 中文名/图标，用户 2026-11-10「太不接地气」）
+const ED_EVENT_KIND_LABEL = {shipwreck:'沉船',storm:'风暴',treasure_wreck:'宝船残骸',wind_god:'风神',island_rescue:'岛礁救援',blacksmith:'铁匠'};
+const ED_MERCHANT_LABEL = {weapon:'⚔ 武器商',slave:'⛓ 奴隶贩'};
+const ED_VS_SLOT_LABEL = {bg:'背景',siege:'攻城',dungeon:'地牢',boss:'首领',encounter:'遭遇'};
+const ED_KIND_LABEL = {start:'起点',territory:'领地',event:'事件',card:'卡牌',treasure:'宝藏',boss:'首领'};
 // 海事事件 kind 值域（rules::events；常用集：territory.md §6）。
 const ED_EVENT_KINDS = ['shipwreck','storm','treasure_wreck','wind_god','island_rescue','blacksmith'];
 // VS 战斗背景池（assets/ui/vs_v2/ 实测在位；vs_theme 5 槽 + tint RGB565 0xXXXX）。
@@ -1427,7 +1456,89 @@ let edPan = { x: 0, y: 0 };
 function edApplyView() {
   const svg = $('ed-canvas');
   if (!svg) return;
-  svg.setAttribute('viewBox', '0 0 1080 1920');
+  // 缩放 + 平移合成 viewBox（edZoom=1.0 适配全图；>1 放大看细节；<1 缩小看全局；edPan=世界坐标平移）
+  const vw = 1080 / edZoom, vh = 1920 / edZoom;
+  const x = (1080 - vw) / 2 + edPan.x;
+  const y = (1920 - vh) / 2 + edPan.y;
+  svg.setAttribute('viewBox', x + ' ' + y + ' ' + vw + ' ' + vh);
+  const lbl = $('ed-zoom-label');
+  if (lbl) lbl.textContent = Math.round(edZoom * 100) + '%';
+}
+
+// 缩放控制条按钮（放大/缩小/重置；滚轮/空白拖亦可）
+function edSetZoom(z, pan) {
+  edZoom = Math.max(0.5, Math.min(3.0, z));
+  if (pan) edPan = { x: 0, y: 0 };
+  edApplyView();
+}
+function edBindZoomButtons() {
+  const zi = $('ed-zoom-in'), zo = $('ed-zoom-out'), zr = $('ed-zoom-reset');
+  if (zi) zi.addEventListener('click', () => edSetZoom(edZoom * 1.2));
+  if (zo) zo.addEventListener('click', () => edSetZoom(edZoom / 1.2));
+  if (zr) zr.addEventListener('click', () => edSetZoom(1.0, true));
+}
+
+// AI 生成中央岛（用户 2026-11-10「中央岛不能自己生成」）：提示词 → POST /api/gen-island →
+// assets/ui/island_home_<id>.png → 刷新画布（所见即所得显示新图；0 游戏 crate 改动）。
+async function edGenIsland() {
+  const promptEl = $('ed-gen-prompt'), statusEl = $('ed-gen-status'), btn = $('ed-gen-run');
+  const prompt = (promptEl.value || '').trim();
+  if (!prompt) { statusEl.textContent = '✗ 提示词为空'; return; }
+  btn.disabled = true;
+  statusEl.textContent = '⏳ 生成中（Agnes 2.5 Flash）…';
+  try {
+    const resp = await fetch('/api/gen-island', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, map_id: edState.id, size: '2K', ratio: '1:1' }),
+    });
+    const r = await resp.json();
+    if (r.ok) {
+      statusEl.textContent = '✓ 已生成 ' + r.path + '（' + Math.round((r.bytes || 0) / 1024) + 'KB）';
+      edRenderCanvas(); edRenderLeft(); edStatusBar();
+    } else {
+      statusEl.textContent = '✗ ' + (r.error || '生成失败');
+    }
+  } catch (e) {
+    statusEl.textContent = '✗ 请求失败：' + e;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// AI 生成格子整卡图（用户 2026-11-10「格子不能自己生成」）：选中领地格 → POST /api/gen-tile
+// → assets/ui/tile_<isle>.png → 刷新画布（所见即所得显示 AI 卡图；游戏 if-blit 回退程序绘制）。
+async function edGenTile() {
+  const promptEl = $('ed-gen-tile-prompt'), statusEl = $('ed-gen-tile-status'), btn = $('ed-gen-tile-run');
+  const selEl = $('ed-gen-tile-sel');
+  const s = (edSel != null) ? edState.spaces[edSel] : null;
+  if (!s || s.kind !== 'territory' || !s.isle) {
+    if (selEl) selEl.textContent = '✗ 先点选一个「领地 + 岛型」格';
+    return;
+  }
+  const prompt = (promptEl.value || '').trim();
+  if (!prompt) { statusEl.textContent = '✗ 提示词为空'; return; }
+  btn.disabled = true;
+  if (selEl) selEl.textContent = '目标格 ' + edSel + ' → ' + s.isle;
+  statusEl.textContent = '⏳ 生成中（Agnes 2.5 Flash）…';
+  try {
+    const resp = await fetch('/api/gen-tile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, isle: s.isle, size: '1K', ratio: '1:1' }),
+    });
+    const r = await resp.json();
+    if (r.ok) {
+      statusEl.textContent = '✓ 已生成 ' + r.path + '（' + Math.round((r.bytes || 0) / 1024) + 'KB）';
+      edRenderCanvas(); edRenderLeft(); edStatusBar();
+    } else {
+      statusEl.textContent = '✗ ' + (r.error || '生成失败');
+    }
+  } catch (e) {
+    statusEl.textContent = '✗ 请求失败：' + e;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function edRenderCanvas() {
@@ -1442,11 +1553,16 @@ function edRenderCanvas() {
   g += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + (R0 + 110) + '" fill="#1a3444" stroke="#2a4a5a" stroke-width="2"/>';
   // 环轨
   g += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + R0 + '" fill="none" stroke="#3a4155" stroke-width="2" stroke-dasharray="6 6"/>';
-  // 中央据点岛（真渲染：V6_RADIUS-66 = 紧贴环格，海水窄缝）
+  // 中央据点岛（真渲染：blit island_home_<id>.png @ (V6_CENTER-ir, 788×788)，缺图不画；
+  // 所见即所得 = 编辑器显示真渲染岛资产图；缺图回退绿圆占位）
   const ir = R0 - 66;
+  const ix = cx0 - ir, iy = cy0 - ir;
+  // 回退层（图 404 时可见）：绿圆 + 文字
   g += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + ir + '" fill="#2a3a30" stroke="#c9a15a" stroke-width="3"/>';
   g += '<text x="' + cx0 + '" y="' + (cy0 - 6) + '" text-anchor="middle" fill="#c9a15a" font-size="26" font-weight="700">中央据点岛</text>';
-  g += '<text x="' + cx0 + '" y="' + (cy0 + 22) + '" text-anchor="middle" fill="#9aa5b5" font-size="13">island_home_' + st.id + '</text>';
+  g += '<text x="' + cx0 + '" y="' + (cy0 + 22) + '" text-anchor="middle" fill="#9aa5b5" font-size="13">island_home_' + st.id + '（缺图回退）</text>';
+  // 真渲染资产图覆盖（存在则显示 = 所见即所得；404 = image 空白，回退层可见）
+  g += '<image href="/assets/ui/island_home_' + st.id + '.png" x="' + ix + '" y="' + iy + '" width="' + (ir * 2) + '" height="' + (ir * 2) + '" preserveAspectRatio="none" style="pointer-events:none"/>';
   // 31 节点（序 = 前进方向；格 0 = 顶，顺时针；有 pos = 自由摆放）
   for (let i = 0; i < N; i++) {
     const [x, y] = edNodeXY(st.spaces[i], i);
@@ -1473,14 +1589,20 @@ function edRenderCanvas() {
     const band = s.kind === 'territory' ? (s.isle ? (ED_ISLE_COLOR[s.isle] || '#c9a15a') : '#5a5f6b') : color;
     const ringR = baseR * 0.66;
     const ringIn = baseR * 0.50;
+    // AI 自生成整格卡图（用户 2026-11-10「格子自己生成」）：领地格若 `tile_<isle>.png` 存在
+    // → blit 68×68 覆盖程序绘制（真渲染 main_map.rs::draw_v6_tile if-blit 同口径）；
+    // 404 = image 透明 → 程序绘制可见（回退，与真渲染 asset_present 缺图不画一致）。
+    // 序号 i 画在卡图上方（编辑器辅助层；真渲染无序号但属调试 UI，不遮岛艺术）。
+    const tileHref = (s.kind === 'territory' && s.isle) ? ('/assets/ui/tile_' + s.isle + '.png') : null;
     g += '<g class="ed-node" data-idx="' + i + '" style="cursor:grab">'
       + '<polygon points="' + shadowPts + '" fill="#0c141a"/>'
       + '<polygon points="' + pts + '" fill="' + face + '" stroke="' + (sel ? '#7ec8e3' : (s.kind==='territory' && !s.isle ? '#8a8f9a' : '#1e242e')) + '" stroke-width="' + (sel ? 3 : 2) + '"/>'
       + '<circle cx="' + x + '" cy="' + y + '" r="' + ringR + '" fill="' + band + '" opacity="' + opacity + '"/>'
       + '<circle cx="' + x + '" cy="' + y + '" r="' + ringIn + '" fill="' + face + '" opacity="0.94"/>'
-      + '<text x="' + x + '" y="' + (y - 8) + '" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">' + i + '</text>'
       + '<text x="' + x + '" y="' + (y + 7) + '" text-anchor="middle" fill="' + (s.kind === 'territory' && s.isle ? '#1e242e' : color) + '" font-size="12" font-weight="700">' + letter + '</text>'
+      + (tileHref ? ('<image href="' + tileHref + '" x="' + (x - baseR) + '" y="' + (y - baseR) + '" width="' + (baseR * 2) + '" height="' + (baseR * 2) + '" preserveAspectRatio="none" style="pointer-events:none"/>') : '')
       + '<text x="' + x + '" y="' + (y + baseR + 14) + '" text-anchor="middle" fill="#cfd3dc" font-size="10">' + (s.kind === 'territory' ? (s.isle ? ED_ISLE_LABEL[s.isle] || s.isle : '无主') : s.kind) + '</text>'
+      + '<text x="' + (x - baseR + 2) + '" y="' + (y - baseR + 10) + '" fill="#ffe9a0" font-size="9" font-weight="700" opacity="0.9">' + i + '</text>'
       + '</g>';
   }
   svg.innerHTML = g;
@@ -1526,6 +1648,27 @@ function edRenderCanvas() {
     edZoom = Math.max(0.5, Math.min(3.0, edZoom * (ev.deltaY < 0 ? 1.1 : 0.9)));
     edApplyView();
   };
+  // 空白拖平移（点背景拖动看细节；节点自身 pointerdown 不触发）
+  svg.addEventListener('pointerdown', (ev) => {
+    if (ev.target.closest('.ed-node')) return;
+    const rect = svg.getBoundingClientRect();
+    const kx = (1080 / edZoom) / rect.width, ky = (1920 / edZoom) / rect.height;
+    const sx = ev.clientX, sy = ev.clientY, ox = edPan.x, oy = edPan.y;
+    let dragging = false;
+    const move = (ev2) => {
+      const dx = (ev2.clientX - sx) * kx, dy = (ev2.clientY - sy) * ky;
+      if (!dragging && Math.hypot(ev2.clientX - sx, ev2.clientY - sy) < 5) return;
+      dragging = true;
+      edPan = { x: ox + dx, y: oy + dy };
+      edApplyView();
+    };
+    const up = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  });
 }
 
 // 当前选中格（Inspector 跟随 + 浮层同步；Unity/Godot 核心交互）
@@ -1543,6 +1686,13 @@ function edSelectNode(idx) {
     edRenderCanvas(); edRenderLeft(); edRenderInspector(); edValidateBar(); edStatusBar();
   }
   edRenderCanvas(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar();
+  // 格子生成目标提示（选中格 → isle）
+  const selEl = $('ed-gen-tile-sel');
+  if (selEl) {
+    selEl.textContent = (s.kind === 'territory' && s.isle)
+      ? '目标格 ' + idx + ' → ' + s.isle
+      : '（先点选一个领地格）';
+  }
 }
 
 // 中栏浮层（选中格标签；极简版只保留 ed-float-sel，环几何/岛抽屉已并入左栏）
@@ -1643,23 +1793,23 @@ function edRenderInspector() {
   let h = '';
   if (s.kind === 'territory') {
     // 岛型下拉（10 类闭集；改岛 = applyIslePick）
-    h += '<div style="margin-bottom:6px">isle '
+    h += '<div style="margin-bottom:6px">岛型 '
       + '<select id="ed-inp-isle" style="margin-left:6px;padding:2px 6px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
       + '<option value="">（无主）</option>'
       + ED_ISLES.map((isle) => '<option value="' + isle + '"' + (s.isle === isle ? ' selected' : '') + '>' + (ED_ISLE_LABEL[isle]||isle) + '</option>').join('')
       + '</select></div>';
     if (s.isle) {
-      h += '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">resource <b style="color:var(--ink)">' + (s.resource||'') + '</b>（随岛型自动） · building <b style="color:var(--ink)">' + (s.building!=null?s.building:'1') + '</b> · group <b style="color:var(--ink)">' + s.group + '</b></div>';
+      h += '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">产出 <b style="color:var(--ink)">' + (s.resource||'') + '</b>（随岛型自动） · 建筑等级 <b style="color:var(--ink)">' + (s.building!=null?s.building:'1') + '</b> · 组 <b style="color:var(--ink)">' + s.group + '</b></div>';
     }
   }
   // kind 下拉（首格/15格锁定，I5）
   const locked = (edSel === 0 || edSel === 15);
-  h += '<div style="margin:8px 0;font-size:11px">kind '
+  h += '<div style="margin:8px 0;font-size:11px">格类 '
     + '<select id="ed-inp-kind" ' + (locked ? 'disabled' : '') + ' style="margin-left:6px;padding:2px 6px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
     + ED_KINDS.map((k) => '<option value="' + k + '"' + (s.kind === k ? ' selected' : '') + '>' + k + '</option>').join('')
     + '</select>' + (locked ? ' <span style="color:var(--muted);font-size:10px">（I5 锁定）</span>' : '') + '</div>';
-  h += '<div style="font-size:11px;color:var(--muted)">terrain <b style="color:var(--ink)">' + s.terrain + '</b> · cell [' + (s.cell||[]).join(',') + ']'
-    + ' · pos ' + (Array.isArray(s.pos) ? '<b style="color:var(--accent)">' + s.pos.join(',') + '</b>' : '（按环排布）') + '</div>';
+  h += '<div style="font-size:11px;color:var(--muted)">地形 <b style="color:var(--ink)">' + s.terrain + '</b> · 格位 [' + (s.cell||[]).join(',') + ']'
+    + ' · 自由位置 ' + (Array.isArray(s.pos) ? '<b style="color:var(--accent)">' + s.pos.join(',') + '</b>' : '（按环排布）') + '</div>';
   box.innerHTML = h;
   const isleSel = $('ed-inp-isle');
   if (isleSel) isleSel.addEventListener('change', () => {
@@ -1679,25 +1829,26 @@ function edRenderContentPanels() {
   if (!box) return;
   let h = '';
   // ── events ──
-  h += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">I9 随机事件 events[]（每图 ≥1 条特有海事事件）</div>';
+  h += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">随机事件 events（每图 ≥1 条特有海事事件；id 自动 = <地图id>_event_<n>，可改）</div>';
   (st.events || []).forEach((ev, i) => {
     h += '<div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">'
-      + '<input data-ev="id" data-i="' + i + '" value="' + esc(ev.id || '') + '" style="flex:1;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
-      + '<select data-ev="kind" data-i="' + i + '" style="padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
-      + ED_EVENT_KINDS.map((k) => '<option value="' + k + '"' + (ev.kind === k ? ' selected' : '') + '>' + k + '</option>').join('')
+      + '<span style="width:46px;font-size:11px;color:var(--ink);flex:none">事件' + (i + 1) + '</span>'
+      + '<input data-ev="id" data-i="' + i + '" value="' + esc(ev.id || '') + '" title="事件 id（自动生成，可改）" style="flex:1;padding:4px 6px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+      + '<select data-ev="kind" data-i="' + i + '" title="事件类型" style="padding:4px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+      + ED_EVENT_KINDS.map((k) => '<option value="' + k + '"' + (ev.kind === k ? ' selected' : '') + '>' + (ED_EVENT_KIND_LABEL[k] || k) + '</option>').join('')
       + '</select>'
       + '<button data-ev="del" data-i="' + i + '" style="padding:3px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;font-size:11px">删</button>'
       + '</div>';
   });
   h += '<button id="ev-add-btn" style="font-size:11px;padding:3px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--ink);cursor:pointer">＋ 加事件</button></div>';
   // ── merchants ──
-  h += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">I9 商人 merchants[]（每图必有 weapon + slave，cell = 20×20 网格坐标）</div>';
+  h += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">商人 merchants（每图必有 ⚔武器商 + ⛓奴隶贩；格位 = 20×20 网格坐标）</div>';
   (st.merchants || []).forEach((m, i) => {
     h += '<div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">'
-      + '<span style="width:52px;font-size:11px;color:var(--ink)">' + esc(m.id) + '</span>'
+      + '<span style="width:76px;font-size:11px;color:var(--ink);flex:none">' + (ED_MERCHANT_LABEL[m.id] || esc(m.id)) + '</span>'
       + '<input data-mc="row" data-i="' + i + '" type="number" min="0" max="19" value="' + ((m.cell||[])[0]!=null?(m.cell||[])[0]:0) + '" style="width:44px;padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">, '
       + '<input data-mc="col" data-i="' + i + '" type="number" min="0" max="19" value="' + ((m.cell||[])[1]!=null?(m.cell||[])[1]:0) + '" style="width:44px;padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
-      + ' <span style="font-size:11px;color:var(--muted)">price_mult=' + (m.price_mult != null ? m.price_mult : 1.0) + '</span>'
+      + ' <span style="font-size:11px;color:var(--muted)">价格倍率=' + (m.price_mult != null ? m.price_mult : 1.0) + '</span>'
       + '</div>';
   });
   const haveW = (st.merchants||[]).some((m)=>m.id==='weapon');
@@ -1707,13 +1858,13 @@ function edRenderContentPanels() {
   h += '</div>';
   // ── vs_theme ──
   const vt = st.vs_theme || {};
-  h += '<div><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">S34.5 VS 战斗主题 vs_theme（5 资产 + RGB565 tint）</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+  h += '<div><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">VS 战斗主题 vs_theme（背景/攻城/地牢/首领/遭遇 5 资产 + 色调 RGB565）</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
   ED_VS_SLOTS.forEach((slot) => {
-    h += '<label style="font-size:11px;color:var(--muted)">' + slot + ' <select data-vs="' + slot + '" style="padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
+    h += '<label style="font-size:11px;color:var(--muted)">' + (ED_VS_SLOT_LABEL[slot] || slot) + ' <select data-vs="' + slot + '" title="' + (ED_VS_SLOT_LABEL[slot] || slot) + '资产" style="padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px">'
       + ED_VS_BG.map((bg) => '<option value="' + bg + '"' + (String(vt[slot]||'') === bg ? ' selected' : '') + '>' + bg + '</option>').join('')
       + '</select></label>';
   });
-  h += '<label style="font-size:11px;color:var(--muted)">tint <input data-vs="tint" value="' + esc(String(vt.tint||'0xFFFF')) + '" style="width:70px;padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px"></label></div></div>';
+  h += '<label style="font-size:11px;color:var(--muted)">色调 <input data-vs="tint" value="' + esc(String(vt.tint||'0xFFFF')) + '" title="RGB565 色调 0xXXXX" style="width:70px;padding:3px;background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:11px"></label></div></div>';
   box.innerHTML = h;
   // 事件增删改
   const addEv = $('ev-add-btn');
@@ -2074,6 +2225,11 @@ function openMapEditor() {
   edUndoStack = []; edRedoStack = [];
   edSel = null;
   edZoom = 1.0; edPan = { x: 0, y: 0 };
+  edBindZoomButtons();
+  const gbtn = $('ed-gen-run');
+  if (gbtn) gbtn.addEventListener('click', edGenIsland);
+  const gbtn2 = $('ed-gen-tile-run');
+  if (gbtn2) gbtn2.addEventListener('click', edGenTile);
   edRenderLeft();
   edRenderCanvas();
   edRenderFloats();
