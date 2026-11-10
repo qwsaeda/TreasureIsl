@@ -336,7 +336,9 @@
      <!-- 编辑区（add/import 步用）：左岛色板 + 中环画布 + 右属性/内容，按步显隐 -->
      <div id="ed-zone-edit" hidden style="display:grid;grid-template-columns:230px minmax(420px,1fr) 290px;gap:12px">
        <div id="ed-left" style="border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:12px;overflow:auto;max-height:480px">
-         <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">🗺 岛型（10 类 · 点选铺格）</div>
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">🏝 中央岛（生图即所见即所得）</div>
+         <div id="ed-island-card" style="margin-bottom:12px"></div>
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">🗺 岛型（10 类 · 点选铺格 · 点 ✎ 生图）</div>
          <div id="ed-isle-palette" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">功能格（固定 9 格 · 不可占）</div>
          <div id="ed-func-list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
@@ -1292,6 +1294,22 @@ const ED_ISLE_COLOR = {harbour:'#C87A6E',lighthouse:'#E0B070',wreck:'#E8C040',pi
 const ED_ISLE_RESOURCE = {harbour:'fishing',lighthouse:'reef',wreck:'gold',pirate_lair:'loot',shipyard:'ship',trading_post:'trade',skull_cliff:'loot',volcano:'gold',lightship:'dice',boss_fort:'boss'};
 // 岛型说明（10 类闭集：只能在这 10 类间分配 20 个领地格，不可新增；balance.territory.prototypes）。
 const ED_ISLE_LABEL = {harbour:'港口城',lighthouse:'灯塔礁',wreck:'沉船滩',pirate_lair:'海盗老巢',shipyard:'帆船坞',trading_post:'军需商岛',skull_cliff:'骷髅崖',volcano:'火山岛',lightship:'灯船站',boss_fort:'无畏号要塞'};
+// ── 生图默认提示词（用户 2026-11-10「点每个岛屿应有该岛生图提示词可复用修改」）──
+// 每岛一个默认提示词（tile_<isle>.png 整卡图：岛徽章 + 形状 + 岛艺术，孤立无背景居中）；
+// 点岛「✎ 生图」→ 模态预填可改；中央岛 = island_home_<id>.png（真渲染同矩形自动用）。
+const ED_ISLAND_GEN_PROMPT = '海盗藏宝岛，绿色山脉金沙滩，海水环绕，帆船停靠，宝箱小径，孤立居中，手绘航海风格';
+const ED_ISLE_GEN_PROMPT = {
+  harbour: '海盗港口城徽章，木质码头泊满帆船，货箱缆绳，灯塔剪影，孤立无背景，居中，手绘航海线稿水彩风格',
+  lighthouse: '海上灯塔礁徽章，高耸石塔亮暖光，礁石海浪拍打，孤立无背景，居中，手绘航海线稿水彩风格',
+  wreck: '海盗沉船滩徽章，破损木船半沉，绿色礁石，海草缠绕桅杆，孤立无背景，居中，手绘航海线稿水彩风格',
+  pirate_lair: '海盗老巢徽章，岩洞骷髅旗飘扬，藏宝箱，火把微光，孤立无背景，居中，手绘航海线稿水彩风格',
+  shipyard: '海盗帆船坞徽章，船台龙骨架，木槌缆绳，未完工船体，孤立无背景，居中，手绘航海线稿水彩风格',
+  trading_post: '军需商岛徽章，货栈木箱武器架，火药桶，商旗，孤立无背景，居中，手绘航海线稿水彩风格',
+  skull_cliff: '骷髅崖徽章，骷髅形白色礁崖，海浪洞穿，孤立无背景，居中，手绘航海线稿水彩风格',
+  volcano: '火山岛徽章，黑色火山喷发熔岩，红橙火光，孤立无背景，居中，手绘航海线稿水彩风格',
+  lightship: '灯船站徽章，锚泊灯船高塔亮信标，夜海微光，孤立无背景，居中，手绘航海线稿水彩风格',
+  boss_fort: '无畏号要塞徽章，海上堡垒巨炮城墙，黑色战旗，孤立无背景，居中，手绘航海线稿水彩风格',
+};
 // 接地气中文映射（右侧参数面板：内部键 → 中文名/图标，用户 2026-11-10「太不接地气」）
 const ED_EVENT_KIND_LABEL = {shipwreck:'沉船',storm:'风暴',treasure_wreck:'宝船残骸',wind_god:'风神',island_rescue:'岛礁救援',blacksmith:'铁匠'};
 const ED_MERCHANT_LABEL = {weapon:'⚔ 武器商',slave:'⛓ 奴隶贩'};
@@ -1496,6 +1514,7 @@ function edBindZoomButtons() {
 let edGenKind = null;      // 'island' | 'tile'
 let edGenPath = null;      // 已生成路径（应用保存刷新用）
 let edGenTileIsle = null;  // tile 目标 isle（打开模态时捕获，防预览时选格漂移）
+let edGenBust = 0;         // 生成后 ++ → 缩略图 URL 破缓存（左侧/画布立即显示新图）
 function edGenSelTile() {
   const s = (edSel != null) ? edState.spaces[edSel] : null;
   return (s && s.kind === 'territory' && s.isle) ? s : null;
@@ -1509,29 +1528,31 @@ function edGenModalSet(prevDisabled, status) {
   const st = $('ed-gen-modal-status');
   if (st && status != null) st.textContent = status;
 }
-function edGenOpen(kind) {
+function edGenOpen(kind, isle) {
   edGenKind = kind; edGenPath = null; edGenTileIsle = null;
   const modal = $('ed-gen-modal'), title = $('ed-gen-modal-title'), target = $('ed-gen-modal-target'),
         promptEl = $('ed-gen-modal-prompt'), img = $('ed-gen-modal-img'), ph = $('ed-gen-modal-ph');
   if (kind === 'island') {
     title.textContent = '🤖 AI 生成 · 中央岛图';
     target.innerHTML = '生成 <code style="color:var(--accent)">assets/ui/island_home_' + edState.id + '.png</code>（真渲染自动用，0 游戏改动）';
-    promptEl.value = '';
-    promptEl.placeholder = '提示词：海盗藏宝岛，绿色山脉金沙滩，海水环绕，帆船停靠，手绘航海风格…';
+    promptEl.value = ED_ISLAND_GEN_PROMPT;   // 预填默认提示词，可直接改（复用修改）
     edGenModalSet(false, '');
   } else {
-    const s = edGenSelTile();
+    // 显式 isle（左侧岛 ✎ 生图）优先；否则读选中格（右侧「格子卡图」按钮）。
+    const s = (isle && ED_ISLES.includes(isle)) ? { isle } : edGenSelTile();
     title.textContent = '🤖 AI 生成 · 格子卡图';
     if (s) {
       edGenTileIsle = s.isle;
-      target.innerHTML = '生成 <code style="color:var(--accent)">assets/ui/tile_' + s.isle + '.png</code>（领地格 ' + edSel + '，游戏 if-blit 回退程序绘制）';
+      target.innerHTML = '生成 <code style="color:var(--accent)">assets/ui/tile_' + s.isle + '.png</code>'
+        + '（' + (ED_ISLE_LABEL[s.isle] || s.isle) + (isle ? ' · 点岛生图' : ' · 领地格 ' + edSel) + '，游戏 if-blit 回退程序绘制）';
+      promptEl.value = ED_ISLE_GEN_PROMPT[s.isle] || '';   // 预填该岛默认提示词（复用修改）
     } else {
       target.textContent = '✗ 先点选一个「领地 + 岛型」格再生成（右栏点格后重开）';
+      promptEl.value = '';
     }
-    promptEl.value = '';
-    promptEl.placeholder = '提示词：海盗岛徽章，绿色山脉金沙滩棕榈树，孤立无背景，居中，航海线稿风格…';
     edGenModalSet(!s, s ? '' : '✗ 未选中领地格');
   }
+  promptEl.placeholder = '提示词：描述你要的图（风格/元素/构图），默认已填该岛模板，可直接改…';
   img.style.display = 'none'; ph.style.display = 'block';
   modal.style.display = 'flex';
   promptEl.focus();
@@ -1569,6 +1590,9 @@ async function edGenPreview() {
 }
 function edGenApply() {
   if (!edGenPath) return;
+  // 格子卡图应用保存 = 生成即选：当前选岛切到刚生成的岛（左侧大卡/palette 高亮跟随）
+  if (edGenKind === 'tile' && edGenTileIsle) edState.cur_isle = edGenTileIsle;
+  edGenBust++;   // 破缓存：左侧 palette / 中央岛卡 / 画布 blit 立即显示新图
   edRenderCanvas(); edRenderLeft(); edStatusBar();
   edGenClose();
 }
@@ -1641,6 +1665,13 @@ function edRenderCanvas() {
       + '<text x="' + (x - baseR + 2) + '" y="' + (y - baseR + 10) + '" fill="#ffe9a0" font-size="9" font-weight="700" opacity="0.9">' + i + '</text>'
       + '</g>';
   }
+  // 光标预览（用户 2026-11-10「点左侧换岛没可见可得」）：paint 工具鼠标在画布 → 当前选岛缩略图跟随
+  const ci = st.cur_isle;
+  g += '<g id="ed-cursor-pre" style="pointer-events:none;display:none">'
+    + '<circle id="ed-cursor-ring" cx="0" cy="0" r="34" fill="' + (ci ? (ED_ISLE_COLOR[ci]||'#888') : '#5a5f6b') + '" opacity="0.8"/>'
+    + '<image id="ed-cursor-img" x="-34" y="-34" width="68" height="68" preserveAspectRatio="none" style="pointer-events:none"/>'
+    + '<text id="ed-cursor-txt" x="0" y="52" text-anchor="middle" fill="#ffe9a0" font-size="11" font-weight="700"></text>'
+    + '</g>';
   svg.innerHTML = g;
   // 节点交互：拖拽自由摆放；未拖动 = 点击选中（当前工具 paint/eraser 决定行为）
   svg.querySelectorAll('.ed-node').forEach((n) => {
@@ -1705,6 +1736,23 @@ function edRenderCanvas() {
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
   });
+  // 光标预览跟随（paint 工具 + 当前选岛）：鼠标移动 → 换算 SVG 坐标 → 显示选岛缩略图 + 岛名
+  svg.onmousemove = (ev) => {
+    const pre = $('ed-cursor-pre');
+    if (!pre) return;
+    if (st.tool !== 'paint' || !st.cur_isle) { pre.style.display = 'none'; return; }
+    const pt = svg.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    const inv = svg.getScreenCTM().inverse();
+    const p = pt.matrixTransform(inv);
+    pre.setAttribute('transform', 'translate(' + p.x + ',' + p.y + ')');
+    const c = st.cur_isle, ring = $('ed-cursor-ring'), img = $('ed-cursor-img'), txt = $('ed-cursor-txt');
+    if (ring) ring.setAttribute('fill', ED_ISLE_COLOR[c] || '#888');
+    if (img) img.setAttribute('href', '/assets/ui/tile_' + c + '.png?t=' + edGenBust);
+    if (txt) txt.textContent = ED_ISLE_LABEL[c] || c;
+    pre.style.display = 'block';
+  };
+  svg.onmouseleave = () => { const pre = $('ed-cursor-pre'); if (pre) pre.style.display = 'none'; };
 }
 
 // 当前选中格（Inspector 跟随 + 浮层同步；Unity/Godot 核心交互）
@@ -1748,19 +1796,44 @@ function edRenderLeft() {
   // 统计每岛占用格数（I3 实时）
   const cnt = {};
   st.spaces.forEach((s) => { if (s.isle) cnt[s.isle] = (cnt[s.isle]||0)+1; });
-  pal.innerHTML = ED_ISLES.map((isle) =>
-    '<div data-pi="' + isle + '" style="padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid '
-    + (st.cur_isle === isle ? 'var(--accent)' : 'var(--border)') + ';background:' + (st.cur_isle === isle ? 'var(--panel2)' : 'var(--panel)') + '">'
-    + '<div style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:16px;background:' + (ED_ISLE_COLOR[isle]||'#888') + ';border-radius:3px;flex:none"></span>'
-    + '<b style="font-size:11px">' + (ED_ISLE_LABEL[isle]||isle) + '</b></div>'
-    + '<div style="font-size:10px;color:var(--muted);margin-top:3px">' + isle + ' → ' + ED_ISLE_RESOURCE[isle] + '</div>'
-    + '<div style="font-size:10px;color:' + ((cnt[isle]||0)===2 ? 'var(--muted)' : '#d05454') + ';margin-top:2px">占用 ' + (cnt[isle]||0) + '/2 格</div>'
-    + '</div>'
-  ).join('');
-  pal.querySelectorAll('[data-pi]').forEach((el) => el.addEventListener('click', () => {
+  // 缩略图（tile_<isle>.png 有图覆盖色块；404 onerror=remove → 色块回退；?t=edGenBust 破缓存）
+  const t = '?t=' + edGenBust;
+  pal.innerHTML = ED_ISLES.map((isle) => {
+    const sel = st.cur_isle === isle;
+    return '<div data-pi="' + isle + '" style="padding:5px;border-radius:6px;cursor:pointer;border:1px solid '
+      + (sel ? 'var(--accent)' : 'var(--border)') + ';background:' + (sel ? 'var(--panel2)' : 'var(--panel)') + '">'
+      + '<div style="display:flex;gap:6px;align-items:center">'
+      + '<div style="width:34px;height:38px;border-radius:5px;background:' + (ED_ISLE_COLOR[isle]||'#888') + ';flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid rgba(0,0,0,.25)">'
+      + '<span style="width:12px;height:14px;background:' + (ED_ISLE_COLOR[isle]||'#888') + ';border-radius:2px"></span>'
+      + '<img src="/assets/ui/tile_' + isle + '.png' + t + '" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="' + isle + '">'
+      + '</div>'
+      + '<div style="flex:1;min-width:0"><b style="font-size:11px;display:block">' + (ED_ISLE_LABEL[isle]||isle) + '</b>'
+      + '<div style="font-size:10px;color:' + ((cnt[isle]||0)===2 ? 'var(--muted)' : '#d05454') + '">占用 ' + (cnt[isle]||0) + '/2 格</div></div>'
+      + '<button data-gen="' + isle + '" title="' + (ED_ISLE_LABEL[isle]||isle) + ' 生图（AI 提示词可复用修改）" style="padding:2px 7px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--accent);cursor:pointer;font-size:11px;flex:none">✎</button>'
+      + '</div></div>';
+  }).join('');
+  pal.querySelectorAll('[data-pi]').forEach((el) => el.addEventListener('click', (ev) => {
+    // ✎ 生图按钮（stopPropagation，不选岛）
+    const g = ev.target.closest('[data-gen]');
+    if (g) { edGenOpen('tile', g.dataset.gen); return; }
     st.cur_isle = el.dataset.pi; st.tool = 'paint';
     edRenderLeft(); edRenderFloats(); edRenderCanvas(); edStatusBar();
   }));
+  // 中央岛卡（生图即所见即所得：island_home_<id>.png 缩略图 + 生图按钮）
+  const isl = $('ed-island-card');
+  if (isl) {
+    isl.innerHTML = '<div style="display:flex;align-items:center;gap:8px">'
+      + '<div style="width:56px;height:56px;border-radius:8px;background:#1a2a3a;flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid var(--border)">'
+      + '<span style="font-size:20px;opacity:.6">🏝</span>'
+      + '<img src="/assets/ui/island_home_' + st.id + '.png' + t + '" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="中央岛">'
+      + '</div>'
+      + '<div style="flex:1;min-width:0"><b style="font-size:12px;display:block">中央岛（' + st.id + '）</b>'
+      + '<div style="font-size:10px;color:var(--muted)">island_home_' + st.id + '.png · 真渲染同矩形自动用</div></div>'
+      + '</div>'
+      + '<button id="ed-gen-island-btn-left" style="margin-top:8px;width:100%;padding:5px 10px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600">🎨 中央岛生图 / 换图</button>';
+    const b = $('ed-gen-island-btn-left');
+    if (b) b.addEventListener('click', () => edGenOpen('island'));
+  }
   // 功能格（不可占；只读展示）
   const func = $('ed-func-list');
   if (func) {
@@ -1772,14 +1845,25 @@ function edRenderLeft() {
       + ' <span style="color:var(--muted)">×' + (fc[k]||0) + '</span></div>'
     ).join('');
   }
-  // 当前选岛大高亮（点画布格 = 铺这个岛）
+  // 当前选岛大高亮（点画布格 = 铺这个岛；含生图提示词预览 + ✎ 生图）
   const cur = $('ed-cur-isle');
   if (cur) {
+    const ci = st.cur_isle;
     cur.innerHTML = '<div style="font-size:10px;color:var(--muted)">当前选岛（点画布领地格 = 铺）</div>'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'
-      + '<span style="width:26px;height:30px;background:' + (ED_ISLE_COLOR[st.cur_isle]||'#888') + ';border-radius:4px;flex:none"></span>'
-      + '<div><b style="font-size:13px">' + (st.cur_isle ? ED_ISLE_LABEL[st.cur_isle]||st.cur_isle : '未选') + '</b>'
-      + '<div style="font-size:10px;color:var(--muted)">' + (st.cur_isle ? 'resource=' + ED_ISLE_RESOURCE[st.cur_isle] + ' · building=1' : '先在上方选一个岛') + '</div></div></div>';
+      + (ci
+        ? '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'
+          + '<div style="width:36px;height:40px;border-radius:5px;background:' + (ED_ISLE_COLOR[ci]||'#888') + ';flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid rgba(0,0,0,.25)">'
+          + '<span style="width:12px;height:14px;background:' + (ED_ISLE_COLOR[ci]||'#888') + ';border-radius:2px"></span>'
+          + '<img src="/assets/ui/tile_' + ci + '.png' + t + '" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="' + ci + '">'
+          + '</div>'
+          + '<div style="flex:1;min-width:0"><b style="font-size:13px;display:block">' + (ED_ISLE_LABEL[ci]||ci) + '</b>'
+          + '<div style="font-size:10px;color:var(--muted)">resource=' + ED_ISLE_RESOURCE[ci] + ' · building=1</div>'
+          + '<div style="font-size:9px;color:var(--muted);margin-top:2px;word-break:break-all">提示词：' + (ED_ISLE_GEN_PROMPT[ci]||'').slice(0, 26) + '…</div></div>'
+          + '<button id="ed-gen-tile-btn-left" title="' + (ED_ISLE_LABEL[ci]||ci) + ' 生图" style="padding:3px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--accent);cursor:pointer;font-size:11px;flex:none">✎ 生图</button>'
+          + '</div>'
+        : '<div style="font-size:11px;color:var(--muted);margin-top:4px">先在上方选一个岛</div>');
+    const b = $('ed-gen-tile-btn-left');
+    if (b) b.addEventListener('click', () => edGenOpen('tile', ci));
   }
 }
 // 领地格铺岛：当前选岛铺到 idx 格（自动配 resource/building；group 归一到该岛现 group）。
