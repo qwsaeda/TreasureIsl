@@ -379,10 +379,15 @@ def cmd_register_plot(args: argparse.Namespace) -> int:
             "ratio": "1:1",
             "target": [1024, 1024],
             "key": "none",
+            # 地块图 = 该格标志性物件（牌面风格）；负向禁船/旗帜/角色/动物/文字（
+            # 这些属运行时叠层，不属于地块）。用户 2026-11-10「格子里有船」= 旧模板
+            # 「a lone pirate island emblem badge」+ 每岛提示词带船元素诱导 AI 画船。
             "prompt": (
-                "a top-down pirate island plot tile, {what}, isolated on transparent background, "
-                "centered, antique cartography ink and watercolor, palette keyed to a pirate chart "
-                "reference (dark bark brown, aged parchment, brass gold)"
+                "a top-down pirate island landmark emblem tile, {what}, "
+                "NO ships, NO flags, NO pirate characters, NO animals, NO text, "
+                "isolated on transparent background, centered, plate-card style, "
+                "antique cartography ink and watercolor, palette keyed to a pirate "
+                "chart reference (dark bark brown, aged parchment, brass gold)"
             ),
         }
     name = f"tile_{args.map_id}_{args.idx}"

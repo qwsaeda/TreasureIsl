@@ -3678,6 +3678,87 @@
         "what": "black rock reef gold sand, a tilted sunken galleon half-buried, palm trees"
       },
       "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_1",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_1.png",
+      "params": {
+        "what": "harbour 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_4",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_4.png",
+      "params": {
+        "what": "lighthouse 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_10",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_10.png",
+      "params": {
+        "what": "pirate_lair 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_13",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_13.png",
+      "params": {
+        "what": "shipyard 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_16",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_16.png",
+      "params": {
+        "what": "trading_post 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_19",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_19.png",
+      "params": {
+        "what": "skull_cliff 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_22",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_22.png",
+      "params": {
+        "what": "volcano 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_25",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_25.png",
+      "params": {
+        "what": "lightship 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
+    },
+    {
+      "name": "tile_m04_27",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_27.png",
+      "params": {
+        "what": "boss_fort 标志物（无船）"
+      },
+      "generated_at": "2026-11-10"
     }
   ]
 }
