@@ -146,14 +146,14 @@
       "key": "alpha",
       "prompt": "transparent-keyed game element (pre-keyed by scripts/key_v6_elements.py)"
     },
-    "tile": {
+    "plot": {
       "ratio": "1:1",
       "target": [
         1024,
         1024
       ],
       "key": "none",
-      "prompt": "a lone pirate island emblem badge, {what}, isolated on transparent background, centered, antique cartography ink and watercolor, palette keyed to a pirate chart reference (dark bark brown, aged parchment, brass gold)"
+      "prompt": "a top-down pirate island plot tile, {what}, isolated on transparent background, centered, antique cartography ink and watercolor, palette keyed to a pirate chart reference (dark bark brown, aged parchment, brass gold)"
     }
   },
   "assets": [
@@ -3671,9 +3671,9 @@
       }
     },
     {
-      "name": "tile_wreck",
-      "role": "tile",
-      "file": "assets/ui/tile_wreck.png",
+      "name": "tile_m04_7",
+      "role": "plot",
+      "file": "assets/ui/tile_m04_7.png",
       "params": {
         "what": "black rock reef gold sand, a tilted sunken galleon half-buried, palm trees"
       },

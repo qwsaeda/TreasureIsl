@@ -363,10 +363,10 @@ def cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_register_tile(args: argparse.Namespace) -> int:
-    """登记 AI 生成的格子卡图（`tile_<isle>.png`）到清单：补 `roles.tile` + 追加 assets 条目。
+def cmd_register_plot(args: argparse.Namespace) -> int:
+    """登记 AI 生成的地块图（`tile_<map_id>_<格号>.png`）到清单：补 `roles.plot` + 追加 assets 条目。
 
-    **唯一清单写入路径**（地图编辑器 `POST /api/gen-tile` 的登记动作只调本命令，见 04_tooling §4）：
+    **唯一清单写入路径**（地图编辑器 `POST /api/gen-plot` 的登记动作只调本命令，见 04_tooling §4）：
     写入走 `save_manifest`（`json.dumps(indent=2)` 保序）= 与仓库清单同格式 → **零 churn**
     （不整文件重排缩进/键序；旧实现用 `serde_json::to_string_pretty` 会 2 空格+键序全文件 churn）。
     幂等：已登记同名 = 不追加、不覆盖既有条目（保留原 `params.what`）；**只登记不生图**
@@ -374,22 +374,22 @@ def cmd_register_tile(args: argparse.Namespace) -> int:
     """
     data = load_manifest()
     roles = data.setdefault("roles", {})
-    if "tile" not in roles:
-        roles["tile"] = {
+    if "plot" not in roles:
+        roles["plot"] = {
             "ratio": "1:1",
             "target": [1024, 1024],
             "key": "none",
             "prompt": (
-                "a lone pirate island emblem badge, {what}, isolated on transparent background, centered, "
-                "antique cartography ink and watercolor, palette keyed to a pirate chart reference "
-                "(dark bark brown, aged parchment, brass gold)"
+                "a top-down pirate island plot tile, {what}, isolated on transparent background, "
+                "centered, antique cartography ink and watercolor, palette keyed to a pirate chart "
+                "reference (dark bark brown, aged parchment, brass gold)"
             ),
         }
-    name = f"tile_{args.isle}"
+    name = f"tile_{args.map_id}_{args.idx}"
     if not find_asset(data, name):
         data.setdefault("assets", []).append({
             "name": name,
-            "role": "tile",
+            "role": "plot",
             "file": f"assets/ui/{name}.png",
             "params": {"what": args.what or ""},
             "generated_at": _dt.date.today().isoformat(),
@@ -504,11 +504,12 @@ def main() -> int:
     v = sub.add_parser("verify", help="校验（清单 ↔ 文件 ↔ scenes.json 引用）")
     v.set_defaults(func=cmd_verify)
 
-    t = sub.add_parser("register-tile",
-                       help="登记 AI 生成的格子卡图 tile_<isle>.png 到清单（幂等；只登记不生图）")
-    t.add_argument("--isle", required=True, help="岛型 key（如 wreck）")
+    t = sub.add_parser("register-plot",
+                       help="登记 AI 生成的地块图 tile_<map_id>_<格号>.png 到清单（幂等；只登记不生图）")
+    t.add_argument("--map-id", required=True, help="地图 id（如 m04）")
+    t.add_argument("--idx", required=True, type=int, help="地块格号（0..=30）")
     t.add_argument("--what", default="", help="生图提示词（记入 params.what，便于复用修改）")
-    t.set_defaults(func=cmd_register_tile)
+    t.set_defaults(func=cmd_register_plot)
 
     args = ap.parse_args()
     if getattr(args, "params", None):

@@ -338,10 +338,11 @@
        <div id="ed-left" style="border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:12px;overflow:auto;max-height:480px">
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">🏝 中央岛（生图即所见即所得）</div>
          <div id="ed-island-card" style="margin-bottom:12px"></div>
-         <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">🗺 岛型（10 类 · 点选铺格 · 点 ✎ 生图）</div>
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">🗺 岛型（10 类 · 点选铺格 · 点 ✎ 取该岛提示词）</div>
          <div id="ed-isle-palette" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
          <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">功能格（固定 9 格 · 不可占）</div>
          <div id="ed-func-list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+         <div id="ed-plot-card" style="margin-top:12px"></div>
          <div id="ed-cur-isle" style="margin-top:10px;padding:8px;border:2px solid var(--accent);border-radius:8px;background:var(--panel2)"></div>
        </div>
        <div id="ed-canvasbox" style="border:1px solid var(--border);border-radius:8px;background:#0d0f17;padding:10px;position:relative;height:min(78vh,900px);display:flex;flex-direction:column">
@@ -367,7 +368,7 @@
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">🤖 AI 生成（提示词 → 资产，0 游戏改动）</div>
          <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
            <button id="ed-gen-island-btn" style="padding:5px 12px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600">中央岛图</button>
-           <button id="ed-gen-tile-btn" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:5px;cursor:pointer;font-size:11px">格子卡图</button>
+           <button id="ed-gen-plot-btn" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:5px;cursor:pointer;font-size:11px">地块图</button>
          </div>
          <div style="font-size:10px;color:var(--muted);margin-bottom:12px">点按钮弹出<b style="color:var(--ink)">提示词编辑框 + 预览</b>；生成即保存 <code style="color:var(--accent)">assets/ui/</code>，预览后「应用保存」刷新画布（需 AGNES_API_KEY）</div>
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">内容配置（I9 + S34.5）</div>
@@ -642,11 +643,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       <button id="ed-gen-modal-x" title="关闭" style="padding:2px 9px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:13px">✕</button>
     </div>
     <div id="ed-gen-modal-target" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
-    <div id="ed-gen-modal-isle-row" style="display:none;margin-bottom:8px;align-items:center;gap:8px">
-      <label style="font-size:11px;color:var(--muted)">岛型（提示词随岛切换，可复用修改）</label>
-      <select id="ed-gen-modal-isle" style="flex:1;max-width:220px;padding:4px 6px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;color:var(--ink);font-size:12px"></select>
-    </div>
-    <textarea id="ed-gen-modal-prompt" rows="6" placeholder="提示词：描述你要的图（风格/元素/构图），默认已填该岛模板，可直接改…" style="width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:12px;resize:vertical;line-height:1.5"></textarea>
+    <textarea id="ed-gen-modal-prompt" rows="6" placeholder="提示词：描述你要的图（风格/元素/构图），默认已填该地块模板，可直接改…" style="width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-size:12px;resize:vertical;line-height:1.5"></textarea>
     <div id="ed-gen-modal-previewbox" style="margin-top:10px;min-height:240px;max-height:420px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;background:#0d0f17;overflow:hidden">
       <span id="ed-gen-modal-ph" style="color:var(--muted);font-size:12px;padding:16px;text-align:center">输入提示词 → 「✨ 生成预览」；生成后在此<b style="color:var(--ink)">预览大图</b>，满意点「✓ 应用保存」</span>
       <img id="ed-gen-modal-img" alt="AI 生成预览" style="display:none;max-width:100%;max-height:400px;object-fit:contain" />
@@ -1298,21 +1295,24 @@ const ED_ISLE_COLOR = {harbour:'#C87A6E',lighthouse:'#E0B070',wreck:'#E8C040',pi
 const ED_ISLE_RESOURCE = {harbour:'fishing',lighthouse:'reef',wreck:'gold',pirate_lair:'loot',shipyard:'ship',trading_post:'trade',skull_cliff:'loot',volcano:'gold',lightship:'dice',boss_fort:'boss'};
 // 岛型说明（10 类闭集：只能在这 10 类间分配 20 个领地格，不可新增；balance.territory.prototypes）。
 const ED_ISLE_LABEL = {harbour:'港口城',lighthouse:'灯塔礁',wreck:'沉船滩',pirate_lair:'海盗老巢',shipyard:'帆船坞',trading_post:'军需商岛',skull_cliff:'骷髅崖',volcano:'火山岛',lightship:'灯船站',boss_fort:'无畏号要塞'};
-// ── 生图默认提示词（用户 2026-11-10「点每个岛屿应有该岛生图提示词可复用修改」）──
-// 每岛一个默认提示词（tile_<isle>.png 整卡图：岛徽章 + 形状 + 岛艺术，孤立无背景居中）；
-// 点岛「✎ 生图」→ 模态预填可改；中央岛 = island_home_<id>.png（真渲染同矩形自动用）。
+// ── 生图默认提示词（用户 2026-11-10「点每个岛屿应有该岛生图提示词可复用修改」+
+//    「格子卡图是过渡设计」→ 改为**每地块专属**地块图 `tile_<map_id>_<格号>.png`）──
+// 每岛型一个默认提示词（地块插画：孤岛地表 + 岛特征，孤立无背景居中）；
+// 点岛「✎ 提示词」→ 把该岛提示词填入当前选中格的生图模态（可复用修改）；
+// 中央岛 = island_home_<map_id>.png（真渲染同矩形自动用）。
 const ED_ISLAND_GEN_PROMPT = '海盗藏宝岛，绿色山脉金沙滩，海水环绕，帆船停靠，宝箱小径，孤立居中，手绘航海风格';
+const ED_PLOT_GEN_PROMPT = '海盗岛屿地块插画，俯视孤立小岛地表，沙滩与礁岩环绕，孤立无背景，居中，手绘航海线稿水彩风格';
 const ED_ISLE_GEN_PROMPT = {
-  harbour: '海盗港口城徽章，木质码头泊满帆船，货箱缆绳，灯塔剪影，孤立无背景，居中，手绘航海线稿水彩风格',
-  lighthouse: '海上灯塔礁徽章，高耸石塔亮暖光，礁石海浪拍打，孤立无背景，居中，手绘航海线稿水彩风格',
-  wreck: '海盗沉船滩徽章，破损木船半沉，绿色礁石，海草缠绕桅杆，孤立无背景，居中，手绘航海线稿水彩风格',
-  pirate_lair: '海盗老巢徽章，岩洞骷髅旗飘扬，藏宝箱，火把微光，孤立无背景，居中，手绘航海线稿水彩风格',
-  shipyard: '海盗帆船坞徽章，船台龙骨架，木槌缆绳，未完工船体，孤立无背景，居中，手绘航海线稿水彩风格',
-  trading_post: '军需商岛徽章，货栈木箱武器架，火药桶，商旗，孤立无背景，居中，手绘航海线稿水彩风格',
-  skull_cliff: '骷髅崖徽章，骷髅形白色礁崖，海浪洞穿，孤立无背景，居中，手绘航海线稿水彩风格',
-  volcano: '火山岛徽章，黑色火山喷发熔岩，红橙火光，孤立无背景，居中，手绘航海线稿水彩风格',
-  lightship: '灯船站徽章，锚泊灯船高塔亮信标，夜海微光，孤立无背景，居中，手绘航海线稿水彩风格',
-  boss_fort: '无畏号要塞徽章，海上堡垒巨炮城墙，黑色战旗，孤立无背景，居中，手绘航海线稿水彩风格',
+  harbour: '海盗港口城地块，木质码头泊满帆船，货箱缆绳，灯塔剪影，孤立无背景，居中，手绘航海线稿水彩风格',
+  lighthouse: '灯塔礁地块，高耸石塔亮暖光，礁石海浪拍打，孤立无背景，居中，手绘航海线稿水彩风格',
+  wreck: '沉船滩地块，破损木船半沉，绿色礁石，海草缠绕桅杆，孤立无背景，居中，手绘航海线稿水彩风格',
+  pirate_lair: '海盗老巢地块，岩洞骷髅旗飘扬，藏宝箱，火把微光，孤立无背景，居中，手绘航海线稿水彩风格',
+  shipyard: '帆船坞地块，船台龙骨架，木槌缆绳，未完工船体，孤立无背景，居中，手绘航海线稿水彩风格',
+  trading_post: '军需商岛地块，货栈木箱武器架，火药桶，商旗，孤立无背景，居中，手绘航海线稿水彩风格',
+  skull_cliff: '骷髅崖地块，骷髅形白色礁崖，海浪洞穿，孤立无背景，居中，手绘航海线稿水彩风格',
+  volcano: '火山岛地块，黑色火山喷发熔岩，红橙火光，孤立无背景，居中，手绘航海线稿水彩风格',
+  lightship: '灯船站地块，锚泊灯船高塔亮信标，夜海微光，孤立无背景，居中，手绘航海线稿水彩风格',
+  boss_fort: '无畏号要塞地块，海上堡垒巨炮城墙，黑色战旗，孤立无背景，居中，手绘航海线稿水彩风格',
 };
 // 接地气中文映射（右侧参数面板：内部键 → 中文名/图标，用户 2026-11-10「太不接地气」）
 const ED_EVENT_KIND_LABEL = {shipwreck:'沉船',storm:'风暴',treasure_wreck:'宝船残骸',wind_god:'风神',island_rescue:'岛礁救援',blacksmith:'铁匠'};
@@ -1511,18 +1511,15 @@ function edBindZoomButtons() {
 
 // AI 生成中央岛（用户 2026-11-10「中央岛不能自己生成」）：提示词 → POST /api/gen-island →
 // assets/ui/island_home_<id>.png → 刷新画布（所见即所得显示新图；0 游戏 crate 改动）。
-// ============ AI 生图模态（用户 2026-11-10「右侧生图应优化：弹提示词编辑框 + 预览界面 + 直接应用保存」） ============
+// ============ AI 生图模态（用户 2026-11-10「右侧生图应优化：弹提示词编辑框 + 预览界面 + 直接应用保存」
+//    +「格子卡图是过渡设计」→ 改为**每地块专属**地块图） ============
 // 右侧面板只留入口按钮 → 弹大模态（提示词 textarea rows=6 + 大预览区 + 生成预览/应用保存/取消）。
-// 生成即落盘 assets/ui/（后端 /api/gen-island|gen-tile），预览加载大图，满意点「✓ 应用保存」
+// 生成即落盘 assets/ui/（后端 /api/gen-island|gen-plot），预览加载大图，满意点「✓ 应用保存」
 // = 刷新画布（所见即所得）+ 关闭；「取消/✕」关闭不刷新。不挤小空间。
-let edGenKind = null;      // 'island' | 'tile'
+let edGenKind = null;      // 'island' | 'plot'
 let edGenPath = null;      // 已生成路径（应用保存刷新用）
-let edGenTileIsle = null;  // tile 目标 isle（打开模态时捕获，防预览时选格漂移）
+let edGenPlotIdx = null;   // 地块目标格号（打开模态时捕获，防预览时选格漂移）
 let edGenBust = 0;         // 生成后 ++ → 缩略图 URL 破缓存（左侧/画布立即显示新图）
-function edGenSelTile() {
-  const s = (edSel != null) ? edState.spaces[edSel] : null;
-  return (s && s.kind === 'territory' && s.isle) ? s : null;
-}
 function edGenModalSet(prevDisabled, status) {
   const applyBtn = $('ed-gen-modal-apply'), prevBtn = $('ed-gen-modal-preview');
   applyBtn.disabled = !edGenPath;
@@ -1532,54 +1529,56 @@ function edGenModalSet(prevDisabled, status) {
   const st = $('ed-gen-modal-status');
   if (st && status != null) st.textContent = status;
 }
-function edGenOpen(kind, isle) {
-  edGenKind = kind; edGenPath = null; edGenTileIsle = null;
+// 地块图路径约定：`assets/ui/tile_<map_id>_<格号>.png`（真渲染同路径自动发现，0 描述符改动）
+function edPlotPath(idx) {
+  return 'assets/ui/tile_' + edState.id + '_' + idx + '.png';
+}
+function edGenOpen(kind, opts) {
+  edGenKind = kind; edGenPath = null; edGenPlotIdx = null;
   const modal = $('ed-gen-modal'), title = $('ed-gen-modal-title'), target = $('ed-gen-modal-target'),
-        promptEl = $('ed-gen-modal-prompt'), img = $('ed-gen-modal-img'), ph = $('ed-gen-modal-ph'),
-        isleRow = $('ed-gen-modal-isle-row'), isleSel = $('ed-gen-modal-isle');
+        promptEl = $('ed-gen-modal-prompt'), img = $('ed-gen-modal-img'), ph = $('ed-gen-modal-ph');
   if (kind === 'island') {
     title.textContent = '🤖 AI 生成 · 中央岛图';
     target.innerHTML = '生成 <code style="color:var(--accent)">assets/ui/island_home_' + edState.id + '.png</code>（真渲染自动用，0 游戏改动）';
     promptEl.value = ED_ISLAND_GEN_PROMPT;   // 预填默认提示词，可直接改（复用修改）
-    isleRow.style.display = 'none';
     edGenModalSet(false, '');
   } else {
-    // 岛型下拉（10 类）：默认 = 显式 isle（点岛✎）→ 选中格岛 → 当前选岛 → wreck；切换岛型 = 提示词随岛复用修改。
-    title.textContent = '🤖 AI 生成 · 格子卡图';
-    const selIsle = (isle && ED_ISLES.includes(isle)) ? isle
-      : ((edGenSelTile() && edGenSelTile().isle) || edState.cur_isle || 'wreck');
-    isleRow.style.display = 'flex';
-    isleSel.innerHTML = ED_ISLES.map((i) => '<option value="' + i + '">' + (ED_ISLE_LABEL[i] || i) + '</option>').join('');
-    isleSel.value = selIsle;
-    edGenSetTileIsle(selIsle);
-    isleSel.onchange = () => edGenSetTileIsle(isleSel.value);
+    // 地块图：目标 = 当前选中格（每格一张专属图）；提示词 = 该格岛型模板（可复用修改）。
+    title.textContent = '🤖 AI 生成 · 地块图';
+    const idx = (opts && opts.idx != null) ? opts.idx : edSel;
+    if (idx == null) {
+      target.textContent = '✗ 先在画布上点选一个地块格（要生哪一格的地块图）';
+      promptEl.value = ED_PLOT_GEN_PROMPT;
+      edGenModalSet(true, '✗ 未选中地块格');
+    } else {
+      edGenPlotIdx = idx;
+      const sp = edState.spaces[idx] || {};
+      const isle = sp.isle;
+      // 提示词来源：显式取某岛提示词（左侧岛 ✎）优先 → 该格岛型模板 → 通用地块模板。
+      const pIsle = (opts && opts.promptIsle) ? opts.promptIsle : isle;
+      target.innerHTML = '生成 <code style="color:var(--accent)">' + edPlotPath(idx) + '</code>'
+        + '（第 ' + idx + ' 格' + (isle ? ' · ' + (ED_ISLE_LABEL[isle] || isle) : '') + '，每地块专属，缺图回退程序绘制）';
+      promptEl.value = (pIsle && ED_ISLE_GEN_PROMPT[pIsle]) ? ED_ISLE_GEN_PROMPT[pIsle] : ED_PLOT_GEN_PROMPT;
+      edGenModalSet(false, '');
+    }
   }
-  promptEl.placeholder = '提示词：描述你要的图（风格/元素/构图），默认已填该岛模板，可直接改…';
+  promptEl.placeholder = '提示词：描述你要的图（风格/元素/构图），默认已填该地块模板，可直接改…';
   img.style.display = 'none'; ph.style.display = 'block';
   modal.style.display = 'flex';
   promptEl.focus();
-}
-// 格子卡图：设目标岛型 → 刷新 target + 预填该岛默认提示词 + 启用生成预览（提示词永远有）
-function edGenSetTileIsle(isle) {
-  if (!isle || !ED_ISLES.includes(isle)) return;
-  edGenTileIsle = isle;
-  $('ed-gen-modal-target').innerHTML = '生成 <code style="color:var(--accent)">assets/ui/tile_' + isle + '.png</code>'
-    + '（' + (ED_ISLE_LABEL[isle] || isle) + '，游戏 if-blit 回退程序绘制）';
-  $('ed-gen-modal-prompt').value = ED_ISLE_GEN_PROMPT[isle] || '';
-  edGenModalSet(false, '');
 }
 async function edGenPreview() {
   const promptEl = $('ed-gen-modal-prompt'), status = $('ed-gen-modal-status'),
         img = $('ed-gen-modal-img'), ph = $('ed-gen-modal-ph');
   const prompt = (promptEl.value || '').trim();
   if (!prompt) { status.textContent = '✗ 提示词为空'; return; }
-  if (edGenKind === 'tile' && !edGenTileIsle) { status.textContent = '✗ 未选中领地格'; return; }
+  if (edGenKind === 'plot' && edGenPlotIdx == null) { status.textContent = '✗ 未选中地块格'; return; }
   const body = (edGenKind === 'island')
     ? { prompt, map_id: edState.id, size: '2K', ratio: '1:1' }
-    : { prompt, isle: edGenTileIsle, size: '1K', ratio: '1:1' };
+    : { prompt, map_id: edState.id, idx: edGenPlotIdx, size: '1K', ratio: '1:1' };
   edGenModalSet(true, '⏳ 生成中（Agnes 2.5 Flash）…');
   try {
-    const resp = await fetch('/api/' + (edGenKind === 'island' ? 'gen-island' : 'gen-tile'), {
+    const resp = await fetch('/api/' + (edGenKind === 'island' ? 'gen-island' : 'gen-plot'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -1601,15 +1600,13 @@ async function edGenPreview() {
 }
 function edGenApply() {
   if (!edGenPath) return;
-  // 格子卡图应用保存 = 生成即选：当前选岛切到刚生成的岛（左侧大卡/palette 高亮跟随）
-  if (edGenKind === 'tile' && edGenTileIsle) edState.cur_isle = edGenTileIsle;
-  edGenBust++;   // 破缓存：左侧 palette / 中央岛卡 / 画布 blit 立即显示新图
+  edGenBust++;   // 破缓存：左侧地块卡 / 中央岛卡 / 画布 blit 立即显示新图
   edRenderCanvas(); edRenderLeft(); edStatusBar();
   edGenClose();
 }
 function edGenClose() {
   $('ed-gen-modal').style.display = 'none';
-  edGenKind = null; edGenPath = null; edGenTileIsle = null;
+  edGenKind = null; edGenPath = null; edGenPlotIdx = null;
 }
 
 function edRenderCanvas() {
@@ -1660,11 +1657,11 @@ function edRenderCanvas() {
     const band = s.kind === 'territory' ? (s.isle ? (ED_ISLE_COLOR[s.isle] || '#c9a15a') : '#5a5f6b') : color;
     const ringR = baseR * 0.66;
     const ringIn = baseR * 0.50;
-    // AI 自生成整格卡图（用户 2026-11-10「格子自己生成」）：领地格若 `tile_<isle>.png` 存在
-    // → blit 68×68 覆盖程序绘制（真渲染 main_map.rs::draw_v6_tile if-blit 同口径）；
+    // 地块图（**每地块专属**，AI 自生成）：该格若 `tile_<map_id>_<格号>.png` 存在
+    // → blit 68×68 覆盖程序绘制（真渲染 main_map.rs::render_v6_elem 同口径：按格路径自动发现）；
     // 404 = image 透明 → 程序绘制可见（回退，与真渲染 asset_present 缺图不画一致）。
-    // 序号 i 画在卡图上方（编辑器辅助层；真渲染无序号但属调试 UI，不遮岛艺术）。
-    const tileHref = (s.kind === 'territory' && s.isle) ? ('/assets/ui/tile_' + s.isle + '.png') : null;
+    // 序号 i 画在图上方（编辑器辅助层；真渲染无序号但属调试 UI，不遮岛艺术）。
+    const tileHref = '/' + edPlotPath(i) + '?t=' + edGenBust;
     g += '<g class="ed-node" data-idx="' + i + '" style="cursor:grab">'
       + '<polygon points="' + shadowPts + '" fill="#0c141a"/>'
       + '<polygon points="' + pts + '" fill="' + face + '" stroke="' + (sel ? '#7ec8e3' : (s.kind==='territory' && !s.isle ? '#8a8f9a' : '#1e242e')) + '" stroke-width="' + (sel ? 3 : 2) + '"/>'
@@ -1757,9 +1754,8 @@ function edRenderCanvas() {
     const inv = svg.getScreenCTM().inverse();
     const p = pt.matrixTransform(inv);
     pre.setAttribute('transform', 'translate(' + p.x + ',' + p.y + ')');
-    const c = st.cur_isle, ring = $('ed-cursor-ring'), img = $('ed-cursor-img'), txt = $('ed-cursor-txt');
+    const c = st.cur_isle, ring = $('ed-cursor-ring'), txt = $('ed-cursor-txt');
     if (ring) ring.setAttribute('fill', ED_ISLE_COLOR[c] || '#888');
-    if (img) img.setAttribute('href', '/assets/ui/tile_' + c + '.png?t=' + edGenBust);
     if (txt) txt.textContent = ED_ISLE_LABEL[c] || c;
     pre.style.display = 'block';
   };
@@ -1780,7 +1776,7 @@ function edSelectNode(idx) {
     delete s.isle; delete s.resource; delete s.building;
     edRenderCanvas(); edRenderLeft(); edRenderInspector(); edValidateBar(); edStatusBar();
   }
-  edRenderCanvas(); edRenderFloats(); edRenderInspector(); edValidateBar(); edStatusBar();
+  edRenderCanvas(); edRenderFloats(); edRenderInspector(); edRenderLeft(); edValidateBar(); edStatusBar();
 }
 
 // 中栏浮层（选中格标签；极简版只保留 ed-float-sel，环几何/岛抽屉已并入左栏）
@@ -1807,26 +1803,23 @@ function edRenderLeft() {
   // 统计每岛占用格数（I3 实时）
   const cnt = {};
   st.spaces.forEach((s) => { if (s.isle) cnt[s.isle] = (cnt[s.isle]||0)+1; });
-  // 缩略图（tile_<isle>.png 有图覆盖色块；404 onerror=remove → 色块回退；?t=edGenBust 破缓存）
+  // 缩略图破缓存（?t=edGenBust；404 onerror=remove → 回退底色/占位）
   const t = '?t=' + edGenBust;
   pal.innerHTML = ED_ISLES.map((isle) => {
     const sel = st.cur_isle === isle;
     return '<div data-pi="' + isle + '" style="padding:5px;border-radius:6px;cursor:pointer;border:1px solid '
       + (sel ? 'var(--accent)' : 'var(--border)') + ';background:' + (sel ? 'var(--panel2)' : 'var(--panel)') + '">'
       + '<div style="display:flex;gap:6px;align-items:center">'
-      + '<div style="width:34px;height:38px;border-radius:5px;background:' + (ED_ISLE_COLOR[isle]||'#888') + ';flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid rgba(0,0,0,.25)">'
-      + '<span style="width:12px;height:14px;background:' + (ED_ISLE_COLOR[isle]||'#888') + ';border-radius:2px"></span>'
-      + '<img src="/assets/ui/tile_' + isle + '.png' + t + '" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="' + isle + '">'
-      + '</div>'
+      + '<span style="width:14px;height:18px;background:' + (ED_ISLE_COLOR[isle]||'#888') + ';border-radius:3px;flex:none"></span>'
       + '<div style="flex:1;min-width:0"><b style="font-size:11px;display:block">' + (ED_ISLE_LABEL[isle]||isle) + '</b>'
       + '<div style="font-size:10px;color:' + ((cnt[isle]||0)===2 ? 'var(--muted)' : '#d05454') + '">占用 ' + (cnt[isle]||0) + '/2 格</div></div>'
-      + '<button data-gen="' + isle + '" title="' + (ED_ISLE_LABEL[isle]||isle) + ' 生图（AI 提示词可复用修改）" style="padding:2px 7px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--accent);cursor:pointer;font-size:11px;flex:none">✎</button>'
+      + '<button data-prompt="' + isle + '" title="' + (ED_ISLE_LABEL[isle]||isle) + ' 提示词（填入当前选中格的地块图，可复用修改）" style="padding:2px 7px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--accent);cursor:pointer;font-size:11px;flex:none">✎</button>'
       + '</div></div>';
   }).join('');
   pal.querySelectorAll('[data-pi]').forEach((el) => el.addEventListener('click', (ev) => {
-    // ✎ 生图按钮（stopPropagation，不选岛）
-    const g = ev.target.closest('[data-gen]');
-    if (g) { edGenOpen('tile', g.dataset.gen); return; }
+    // ✎ 取该岛提示词（不选岛；填入当前选中格的地块图生图框，可复用修改）
+    const g = ev.target.closest('[data-prompt]');
+    if (g) { edGenOpen('plot', { idx: edSel, promptIsle: g.dataset.prompt }); return; }
     st.cur_isle = el.dataset.pi; st.tool = 'paint';
     edRenderLeft(); edRenderFloats(); edRenderCanvas(); edStatusBar();
   }));
@@ -1856,25 +1849,48 @@ function edRenderLeft() {
       + ' <span style="color:var(--muted)">×' + (fc[k]||0) + '</span></div>'
     ).join('');
   }
-  // 当前选岛大高亮（点画布格 = 铺这个岛；含生图提示词预览 + ✎ 生图）
+  // 当前地块卡（**每地块专属**地块图：选中格 → 缩略图 + 生图入口；用户 2026-11-10
+  // 「格子卡图是过渡设计」→ 地块图按格唯一 `tile_<map_id>_<格号>.png`）
+  const pc = $('ed-plot-card');
+  if (pc) {
+    const idx = edSel;
+    if (idx == null) {
+      pc.innerHTML = '<div style="font-size:11px;color:var(--muted)">当前地块：点画布上任意一格 → 可看/生它的<b style="color:var(--ink)">地块图</b></div>';
+    } else {
+      const sp = st.spaces[idx] || {};
+      const isle = sp.isle;
+      const kindLabel = isle ? (ED_ISLE_LABEL[isle] || isle) : (ED_KIND_LABEL[sp.kind] || sp.kind || '—');
+      pc.innerHTML = '<div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:6px">当前地块（第 ' + idx + ' 格）</div>'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        + '<div style="width:52px;height:52px;border-radius:6px;background:' + (isle ? (ED_ISLE_COLOR[isle]||'#888') : '#5a5f6b') + ';flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid rgba(0,0,0,.25)">'
+        + '<span style="font-size:16px;opacity:.7">🧩</span>'
+        + '<img src="/' + edPlotPath(idx) + t + '" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="地块图">'
+        + '</div>'
+        + '<div style="flex:1;min-width:0"><b style="font-size:12px;display:block">' + kindLabel + '</b>'
+        + '<div style="font-size:10px;color:var(--muted)">' + edPlotPath(idx).replace('assets/ui/','') + '</div>'
+        + '<div style="font-size:9px;color:var(--muted)">每地块一张专属图；缺图 = 程序绘制</div></div>'
+        + '</div>'
+        + '<button id="ed-gen-plot-btn-left" style="margin-top:8px;width:100%;padding:5px 10px;background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600">🎨 生成本地块图</button>';
+      const b = $('ed-gen-plot-btn-left');
+      if (b) b.addEventListener('click', () => edGenOpen('plot', { idx }));
+    }
+  }
+  // 当前选岛大高亮（点画布格 = 铺这个岛；含该岛提示词预览 + ✎ 取提示词）
   const cur = $('ed-cur-isle');
   if (cur) {
     const ci = st.cur_isle;
     cur.innerHTML = '<div style="font-size:10px;color:var(--muted)">当前选岛（点画布领地格 = 铺）</div>'
       + (ci
         ? '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'
-          + '<div style="width:36px;height:40px;border-radius:5px;background:' + (ED_ISLE_COLOR[ci]||'#888') + ';flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid rgba(0,0,0,.25)">'
-          + '<span style="width:12px;height:14px;background:' + (ED_ISLE_COLOR[ci]||'#888') + ';border-radius:2px"></span>'
-          + '<img src="/assets/ui/tile_' + ci + '.png' + t + '" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="' + ci + '">'
-          + '</div>'
+          + '<span style="width:16px;height:20px;background:' + (ED_ISLE_COLOR[ci]||'#888') + ';border-radius:3px;flex:none"></span>'
           + '<div style="flex:1;min-width:0"><b style="font-size:13px;display:block">' + (ED_ISLE_LABEL[ci]||ci) + '</b>'
           + '<div style="font-size:10px;color:var(--muted)">resource=' + ED_ISLE_RESOURCE[ci] + ' · building=1</div>'
           + '<div style="font-size:9px;color:var(--muted);margin-top:2px;word-break:break-all">提示词：' + (ED_ISLE_GEN_PROMPT[ci]||'').slice(0, 26) + '…</div></div>'
-          + '<button id="ed-gen-tile-btn-left" title="' + (ED_ISLE_LABEL[ci]||ci) + ' 生图" style="padding:3px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--accent);cursor:pointer;font-size:11px;flex:none">✎ 生图</button>'
+          + '<button id="ed-gen-prompt-btn-left" title="取该岛提示词（填入当前选中格的地块图，可复用修改）" style="padding:3px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;color:var(--accent);cursor:pointer;font-size:11px;flex:none">✎ 提示词</button>'
           + '</div>'
         : '<div style="font-size:11px;color:var(--muted);margin-top:4px">先在上方选一个岛</div>');
-    const b = $('ed-gen-tile-btn-left');
-    if (b) b.addEventListener('click', () => edGenOpen('tile', ci));
+    const b = $('ed-gen-prompt-btn-left');
+    if (b) b.addEventListener('click', () => edGenOpen('plot', { idx: edSel, promptIsle: ci }));
   }
 }
 // 领地格铺岛：当前选岛铺到 idx 格（自动配 resource/building；group 归一到该岛现 group）。
@@ -2350,11 +2366,11 @@ function openMapEditor() {
   edSel = null;
   edZoom = 1.0; edPan = { x: 0, y: 0 };
   edBindZoomButtons();
-  // AI 生图模态入口按钮（右侧面板；旧 ed-gen-run/ed-gen-tile-run 已退役）
+  // AI 生图模态入口按钮（右侧面板；中央岛图 + 地块图=当前选中格）
   const genIsland = $('ed-gen-island-btn');
   if (genIsland) genIsland.addEventListener('click', () => edGenOpen('island'));
-  const genTile = $('ed-gen-tile-btn');
-  if (genTile) genTile.addEventListener('click', () => edGenOpen('tile'));
+  const genPlot = $('ed-gen-plot-btn');
+  if (genPlot) genPlot.addEventListener('click', () => edGenOpen('plot'));
   edRenderLeft();
   edRenderCanvas();
   edRenderFloats();

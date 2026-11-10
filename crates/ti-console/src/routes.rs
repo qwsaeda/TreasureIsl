@@ -376,21 +376,24 @@ fn gen_island_err(want_gzip: bool, status: &str, msg: &str) -> Vec<u8> {
 
 /// 从项目 `.env`（gitignored，规范 = key 存这里）读环境变量；`std::env` 优先，`.env` 兜底。
 /// 解析：逐行 `KEY=VALUE`，跳过 `#` 注释/空行，去成对引号。key 缺失 = None（如实上报）。
-/// 登记 AI 生成格子卡图到 `assets/ui_manifest.json`（disk→registry 双向同步）。
+/// 登记 AI 生成地块图到 `assets/ui_manifest.json`（disk→registry 双向同步）。
 ///
-/// **唯一清单写入路径 = `scripts/ui_assets.py register-tile`**（`04_tooling` §4）：该命令用
+/// **唯一清单写入路径 = `scripts/ui_assets.py register-plot`**（`04_tooling` §4）：该命令用
 /// `json.dumps(indent=2)` 保序写出 = 与仓库清单同格式 → **零 churn**（旧实现用
 /// `serde_json::to_string_pretty` 会 2 空格 + 键序重排，整文件 churn）。
-/// roles.tile 缺则补（1:1 透明徽章模板）；assets 缺 `tile_<isle>` 则追加（不覆盖已有 AI 图）；
-/// 幂等（已登记 = 0 改动）；**只登记不生图**（图片由 `scripts/agnes_gen.py` 唯一入口生成）；
-/// 读/写失败 = 静默（`validate_data` 门禁兜底报错，不静默绕过）。
-fn register_tile_in_manifest(repo_root: &Path, isle: &str, prompt: &str) {
+/// roles.plot 缺则补（1:1 透明地块插画模板）；assets 缺 `tile_<map_id>_<格号>` 则追加
+/// （不覆盖已有 AI 图）；幂等（已登记 = 0 改动）；**只登记不生图**
+/// （图片由 `scripts/agnes_gen.py` 唯一入口生成）；读/写失败 = 静默
+/// （`validate_data` 门禁兜底报错，不静默绕过）。
+fn register_plot_in_manifest(repo_root: &Path, map_id: &str, idx: usize, prompt: &str) {
     let script = repo_root.join("scripts").join("ui_assets.py");
     let mut cmd = std::process::Command::new("python3");
     cmd.arg(&script)
-        .arg("register-tile")
-        .arg("--isle")
-        .arg(isle)
+        .arg("register-plot")
+        .arg("--map-id")
+        .arg(map_id)
+        .arg("--idx")
+        .arg(idx.to_string())
         .arg("--what")
         .arg(prompt)
         .current_dir(repo_root);
@@ -422,27 +425,26 @@ fn read_env_file(repo_root: &Path, key: &str) -> Option<String> {
 
 /// AI 资产自生成目标（用户 2026-11-10「中央岛/格子不能自己生成」）：
 /// `Island` → `assets/ui/island_home_<map_id>.png`（真渲染命名约定，0 游戏改动）；
-/// `Tile` → `assets/ui/tile_<isle>.png`（领地格 AI 整卡图，游戏 if-blit 回退程序绘制）。
+/// `Plot` → `assets/ui/tile_<map_id>_<格号>.png`（每地块专属贴图，游戏 if-blit 回退程序绘制）。
 #[derive(Clone, Copy, PartialEq)]
 enum GenAssetKind {
     Island,
-    Tile,
+    Plot,
 }
 
 impl GenAssetKind {
-    /// 生成参数键名（body JSON 字段；`Island=map_id` / `Tile=isle`）。
+    /// 生成参数键名（body JSON 字段；`Island=map_id` / `Plot=map_id`+`idx`）。
     fn key_name(self) -> &'static str {
         match self {
-            GenAssetKind::Island => "map_id",
-            GenAssetKind::Tile => "isle",
+            GenAssetKind::Island | GenAssetKind::Plot => "map_id",
         }
     }
 
     /// 输出资产文件（相对 `assets/ui/`）。
-    fn file_name(self, key: &str) -> String {
+    fn file_name(self, map_id: &str, idx: usize) -> String {
         match self {
-            GenAssetKind::Island => format!("island_home_{key}.png"),
-            GenAssetKind::Tile => format!("tile_{key}.png"),
+            GenAssetKind::Island => format!("island_home_{map_id}.png"),
+            GenAssetKind::Plot => format!("tile_{map_id}_{idx}.png"),
         }
     }
 
@@ -450,30 +452,66 @@ impl GenAssetKind {
     fn label(self) -> &'static str {
         match self {
             GenAssetKind::Island => "中央岛图",
-            GenAssetKind::Tile => "格子整卡图",
+            GenAssetKind::Plot => "地块图",
         }
     }
 }
 
-/// 10 类岛型白名单（`assets/data/board.json`/`scenes.json` isle 值域；编辑器 `ED_ISLES` 同集）。
-const GEN_ISLES: &[&str] = &[
-    "boss_fort",
-    "harbour",
-    "lighthouse",
-    "lightship",
-    "pirate_lair",
-    "shipyard",
-    "skull_cliff",
-    "trading_post",
-    "volcano",
-    "wreck",
-];
+/// 地块图格号上限（31 格赛道；`spaces` 索引 0..=30）。
+const GEN_PLOT_MAX_IDX: u64 = 30;
 
-/// `POST /api/gen-island` / `POST /api/gen-tile`：AI 提示词 → Agnes 生图 →
-/// `assets/ui/<kind>_<key>.png`（真渲染命名约定；Island 0 游戏改动，Tile 游戏 if-blit 回退）。
-/// body `{prompt, map_id|isle, size?, ratio?}`；key 校验（Island 仅 `[a-z0-9_]` 防路径穿越 /
-/// Tile 仅 10 类岛型）、prompt 非空、size/ratio 白名单；`AGNES_API_KEY` 项目 `.env` 或环境
-/// 变量缺失 = 400（如实上报）；子进程非 0 / 输出未落盘 = 500。
+/// 生图请求（解析 + 校验后）。
+struct GenRequest {
+    map_id: String,
+    idx: usize,
+    prompt: String,
+    size: String,
+    ratio: String,
+}
+
+/// 解析 + 校验生图请求（`POST /api/gen-island` / `POST /api/gen-plot` 的 body）。
+///
+/// 校验：`map_id` 仅 `[a-z0-9_]`（防路径穿越）；`Plot` 另需格号 `0..=30`（31 格赛道）；
+/// `prompt` 非空；`size`/`ratio` 白名单。`Err` = 错误消息（调用方映射 400）。
+fn parse_gen_request(payload: &Value, kind: GenAssetKind) -> Result<GenRequest, String> {
+    let map_id =
+        payload.get(kind.key_name()).and_then(|v| v.as_str()).unwrap_or("").trim().to_owned();
+    if map_id.is_empty()
+        || !map_id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+    {
+        return Err("map_id 非法（仅 [a-z0-9_]）".to_owned());
+    }
+    let idx = match kind {
+        GenAssetKind::Plot => {
+            let raw = payload.get("idx").and_then(Value::as_u64);
+            match raw {
+                Some(i) if i <= GEN_PLOT_MAX_IDX => usize::try_from(i).unwrap_or(0),
+                _ => return Err(format!("idx 非法（地块格号 0..={GEN_PLOT_MAX_IDX}）")),
+            }
+        }
+        GenAssetKind::Island => 0,
+    };
+    let prompt = payload.get("prompt").and_then(|v| v.as_str()).unwrap_or("").trim().to_owned();
+    if prompt.is_empty() {
+        return Err("prompt 为空".to_owned());
+    }
+    let size = payload.get("size").and_then(|v| v.as_str()).unwrap_or("1K");
+    if !["1K", "2K", "3K", "4K"].contains(&size) {
+        return Err("size 非法（1K/2K/3K/4K）".to_owned());
+    }
+    let ratio = payload.get("ratio").and_then(|v| v.as_str()).unwrap_or("1:1");
+    if !["1:1", "3:4", "4:3", "16:9", "9:16", "2:3", "3:2", "21:9"].contains(&ratio) {
+        return Err("ratio 非法（1:1 等）".to_owned());
+    }
+    Ok(GenRequest { map_id, idx, prompt, size: size.to_owned(), ratio: ratio.to_owned() })
+}
+
+/// `POST /api/gen-island` / `POST /api/gen-plot`：AI 提示词 → Agnes 生图 →
+/// `assets/ui/<kind>_<key>.png`（真渲染命名约定；Island 0 游戏改动，Plot 游戏 if-blit 回退）。
+/// body `{prompt, map_id, size?, ratio?}`（Plot 另需 `idx` 格号）；
+/// 校验（`map_id` 仅 `[a-z0-9_]` 防路径穿越 / `Plot` 格号 `0..=30`、`prompt` 非空、`size`/`ratio`
+/// 白名单）见 `parse_gen_request`；`AGNES_API_KEY` 项目 `.env` 或环境变量缺失 = 400
+/// （如实上报）；子进程非 0 / 输出未落盘 = 500。
 fn handle_gen_asset(repo_root: &Path, body: &[u8], want_gzip: bool, kind: GenAssetKind) -> Vec<u8> {
     let payload = match serde_json::from_slice::<Value>(body) {
         Ok(v) => v,
@@ -481,34 +519,11 @@ fn handle_gen_asset(repo_root: &Path, body: &[u8], want_gzip: bool, kind: GenAss
             return gen_island_err(want_gzip, "400 Bad Request", &format!("body 非合法 JSON：{e}"));
         }
     };
-    let prompt = payload.get("prompt").and_then(|v| v.as_str()).unwrap_or("").trim();
-    let key = payload.get(kind.key_name()).and_then(|v| v.as_str()).unwrap_or("").trim();
-    let size = payload.get("size").and_then(|v| v.as_str()).unwrap_or("1K");
-    let ratio = payload.get("ratio").and_then(|v| v.as_str()).unwrap_or("1:1");
-    // key 校验：Island = [a-z0-9_]（防路径穿越）；Tile = 10 类岛型白名单。
-    let key_ok = match kind {
-        GenAssetKind::Island => {
-            !key.is_empty()
-                && key.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
-        }
-        GenAssetKind::Tile => GEN_ISLES.contains(&key),
+    let req = match parse_gen_request(&payload, kind) {
+        Ok(r) => r,
+        Err(msg) => return gen_island_err(want_gzip, "400 Bad Request", &msg),
     };
-    if !key_ok {
-        let hint = match kind {
-            GenAssetKind::Island => "map_id 非法（仅 [a-z0-9_]）".to_string(),
-            GenAssetKind::Tile => format!("isle 非法（10 类岛型：{}）", GEN_ISLES.join("/")),
-        };
-        return gen_island_err(want_gzip, "400 Bad Request", &hint);
-    }
-    if prompt.is_empty() {
-        return gen_island_err(want_gzip, "400 Bad Request", "prompt 为空");
-    }
-    if !["1K", "2K", "3K", "4K"].contains(&size) {
-        return gen_island_err(want_gzip, "400 Bad Request", "size 非法（1K/2K/3K/4K）");
-    }
-    if !["1:1", "3:4", "4:3", "16:9", "9:16", "2:3", "3:2", "21:9"].contains(&ratio) {
-        return gen_island_err(want_gzip, "400 Bad Request", "ratio 非法（1:1 等）");
-    }
+    let GenRequest { map_id, idx, prompt, size, ratio } = req;
     let api_key = std::env::var("AGNES_API_KEY")
         .ok()
         .filter(|k| !k.is_empty())
@@ -521,19 +536,19 @@ fn handle_gen_asset(repo_root: &Path, body: &[u8], want_gzip: bool, kind: GenAss
             "AGNES_API_KEY 未配置（项目 .env 或环境变量缺失，无法调用 Agnes 生图）",
         );
     }
-    let file_name = kind.file_name(key);
+    let file_name = kind.file_name(&map_id, idx);
     let out = repo_root.join("assets").join("ui").join(&file_name);
     let script = repo_root.join("scripts").join("agnes_gen.py");
     let mut cmd = std::process::Command::new("python3");
     cmd.arg(&script)
         .arg("--prompt")
-        .arg(prompt)
+        .arg(&prompt)
         .arg("--out")
         .arg(&out)
         .arg("--size")
-        .arg(size)
+        .arg(&size)
         .arg("--ratio")
-        .arg(ratio)
+        .arg(&ratio)
         .current_dir(repo_root);
     crate::runner::apply_minimal_env(&mut cmd);
     cmd.env("AGNES_API_KEY", &api_key);
@@ -560,10 +575,10 @@ fn handle_gen_asset(repo_root: &Path, body: &[u8], want_gzip: bool, kind: GenAss
             &format!("{} 生图失败 exit={exit}：{combined}", kind.label()),
         );
     }
-    // Tile：生成后自动登记 ui_manifest（AI 卡图落盘 → disk↔registry 双向同步；岛型卡图
-    // 独立可换 = 换 tile_<isle>.png 即零引擎改动；validate_data::check_asset_registry 守门）。
-    if kind == GenAssetKind::Tile {
-        register_tile_in_manifest(repo_root, key, prompt);
+    // Plot：生成后自动登记 ui_manifest（AI 地块图落盘 → disk↔registry 双向同步；每地块独立
+    // 可换 = 换 tile_<map_id>_<格号>.png 即零引擎改动；validate_data::check_asset_registry 守门）。
+    if kind == GenAssetKind::Plot {
+        register_plot_in_manifest(repo_root, &map_id, idx, &prompt);
     }
     let resp = json!({
         "ok": true,
@@ -590,11 +605,11 @@ fn handle_post(
         "/api/gate" => Some(handle_gate(repo_root, body, token, content_type, gz)),
         // S32.14 ② 唯一写点（编辑器描述符 → 落 assets/maps/<id>/ + 回注）。
         "/api/map/import" => Some(handle_map_import(repo_root, body, gz)),
-        // 用户 2026-11-10「中央岛图/格子自己生成」：AI 提示词 → Agnes 生图 →
-        // `assets/ui/island_home_<map_id>.png`（真渲染命名约定）/ `assets/ui/tile_<isle>.png`
-        //（领地格 AI 整卡图，游戏 if-blit 回退程序绘制）。
+        // 用户 2026-11-10「中央岛图/格子自己生成」+「格子卡图是过渡设计」：AI 提示词 →
+        // Agnes 生图 → `assets/ui/island_home_<map_id>.png`（中央岛图，真渲染命名约定）/
+        // `assets/ui/tile_<map_id>_<格号>.png`（**每地块专属**地块图，游戏 if-blit 回退程序绘制）。
         "/api/gen-island" => Some(handle_gen_asset(repo_root, body, gz, GenAssetKind::Island)),
-        "/api/gen-tile" => Some(handle_gen_asset(repo_root, body, gz, GenAssetKind::Tile)),
+        "/api/gen-plot" => Some(handle_gen_asset(repo_root, body, gz, GenAssetKind::Plot)),
         // S32.5 双审计编排（任务书生成 + 粘贴归档）。
         "/api/audit/taskbook" => {
             Some(handle_audit_taskbook(repo_root, body, token, content_type, gz))

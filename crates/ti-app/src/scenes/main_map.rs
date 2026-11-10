@@ -1315,18 +1315,12 @@ fn render_v6_elem(
         rope_segment(host, a.cx as i32, a.cy as i32, b.cx as i32, b.cy as i32, 8, 0x6245); // 高光 RGB(102,72,40)
     }
     for (i, t) in v6.tiles.iter().enumerate() {
-        // AI 自生成格子卡图（用户 2026-11-10「格子不能自己生成」）：领地格若
-        // `assets/ui/tile_<isle>.png` 存在 → blit 该图（透明背景孤立岛 + 岛艺术烘焙，
-        // 格间海水缝保留）；缺图回退共享羊皮石柱 V6_TILE_OWNED/DENY（0 视觉变化）。
-        // tiles[i] ↔ spaces[i] 索引对应（环序 0=起点）；领地格 = kind Territory + isle。
-        let custom = spaces
-            .get(i)
-            .filter(|s| s.kind == SpaceKind::Territory)
-            .and_then(|s| s.isle.as_deref())
-            .map(|isle| format!("assets/ui/tile_{isle}.png"))
-            .filter(|p| chrome::asset_present(p));
-        if let Some(p) = &custom {
-            host.blit_image(p, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
+        // 地块图（每格专属，AI 自生成；用户 2026-11-10「格子卡图是过渡设计」→ 改为按格独立贴图）：
+        // `assets/ui/tile_<map_id>_<格号>.png` 存在 → blit 该格专属地块图（命名约定自动发现，
+        // 0 描述符改动；同 `island_home_<map_id>.png` 口径）；缺图回退共享羊皮石柱
+        // V6_TILE_OWNED/DENY（0 视觉变化）。tiles[i] ↔ spaces[i] 索引对应（环序 0=起点）。
+        if let Some(p) = tile_plot_path(host, i) {
+            host.blit_image(&p, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
         } else {
             let path = if t.owned { chrome::V6_TILE_OWNED } else { chrome::V6_TILE_DENY };
             host.blit_image(path, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
@@ -1541,6 +1535,17 @@ fn v6_tile_polygon(index: usize, cx: i32, cy: i32, base_r: i32) -> Vec<(i32, i32
     pts
 }
 
+/// 地块图路径（**每格专属**）：`assets/ui/tile_<map_id>_<格号>.png`。
+///
+/// 命名约定自动发现（0 描述符改动；同 `island_home_<map_id>.png` 口径）：地图编辑器给某格
+/// AI 生图 → 落 `assets/ui/tile_<map_id>_<格号>.png` → 真渲染按同路径 blit。
+/// 缺图 = 该格回退程序绘制（共享羊皮石柱，0 视觉变化）。
+fn tile_plot_path(host: &dyn SceneHost, index: usize) -> Option<String> {
+    let mid = host.map_slot().map(crate::game_app::map_slot_id)?;
+    let path = format!("assets/ui/tile_{mid}_{index}.png");
+    if chrome::asset_present(&path) { Some(path) } else { None }
+}
+
 /// v6 平面棋盘格绘制（**大富翁式平面格 + 随机拼凑感**：平坦顶面 + 短侧壁矮立体 +
 /// 底部投影；每格形状随机差异——角切/凹槽/凸舌拼图块；格间海水间隔 = 海洋底透出；
 /// 下缘归属色带；功能格 = `node_` 铜牌）。
@@ -1574,19 +1579,14 @@ fn draw_v6_tile(
         v6_func_band_color(theme, space.kind, gold_warm)
     };
 
-    // 1) **AI 自生成整格卡图**（用户 2026-11-10「格子不能自己生成」）：领地格若
-    //    `assets/ui/tile_<isle>.png` 存在 → blit 68×68 覆盖程序绘制（透明背景孤立岛 +
-    //    岛艺术烘焙；格间海水缝保留——相邻格心距≈93px > 68px；名牌/驻军仍在卡下）。
-    //    缺图回退程序绘制（多边形 + 色带 + 图标）= 0 视觉变化，编辑器可 AI 生成后即用。
-    let tile_card_used = if space.kind == SpaceKind::Territory {
-        space.isle.as_deref().map(|i| format!("assets/ui/tile_{i}.png"))
-    } else {
-        None
-    };
-    if let Some(tile_path) = tile_card_used.as_deref().filter(|p| chrome::asset_present(p)) {
+    // 1) **地块图（每格专属，AI 自生成）**：该格若 `assets/ui/tile_<map_id>_<格号>.png` 存在
+    //    → blit 68×68 覆盖程序绘制（透明背景地块插画；格间海水缝保留——相邻格心距≈93px > 68px；
+    //    名牌/驻军仍在卡下）。缺图回退程序绘制（多边形 + 色带 + 图标）= 0 视觉变化。
+    let tile_plot_used = tile_plot_path(host, index);
+    if let Some(tile_path) = tile_plot_used.as_deref() {
         host.blit_image(tile_path, cx - r, cy - r, d, d);
     }
-    if tile_card_used.as_deref().is_none_or(|p| !chrome::asset_present(p)) {
+    if tile_plot_used.is_none() {
         // 1) **真不规则多边形格**（seed 随机 6 顶点，每格形状差异大；用户「不规则」= 真随机）
         //    投影 + 主体（羊皮卡面）+ 色带圆环 + 中央扁平图标。
         let poly = v6_tile_polygon(index, cx, cy + 3, r);
