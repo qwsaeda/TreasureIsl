@@ -1,0 +1,33 @@
+S49.9 地块格定案（2026-11-10 用户三轮定案）
+
+用户原话：
+- 「格子卡图」这是瞎JB的过渡设计吧
+- 不知道这个东西是什么
+- 格子里为什么有船这样的东西呢？什么叫格子设计规范？重新设计
+- （Q1）地块图里不该画船；（Q2）只重做格子/地块；（Q3）只画标志物（像牌）
+
+改动面（S49.9）：
+- 游戏层：main_map.rs 新增 tile_plot_path helper（tile_<map_id>_<格号>.png 命名约定自动发现）
+  + render_v6_elem/draw_v6_tile 按格 if-blit 回退共享石柱（缺图 0 视觉变化）
+- 平台：routes.rs /api/gen-tile → /api/gen-plot（body {prompt, map_id, idx}，idx 0..=30 白名单）
+  + parse_gen_request helper + web/index.html 新增「当前地块卡」+ 岛型面板 ✎ 改「取该岛提示词」
+  + 模态目标 = 当前选中格 + 预填该格岛型提示词（复用修改）
+- 工具：ui_assets.py register-tile → register-plot（--map-id --idx --what）+ roles.plot 标志物模板
+  + 契约测试 ui_manifest_register_tests 同步（幂等 + 零 churn）
+- 数据：10 类岛 10 张 m04 地块图入仓（tile_m04_{1,4,7,10,13,16,19,22,25,27}.png，品红抠透明）
+  + ui_manifest 登记 10 条 role=plot
+- 文档：新增 docs/ui-redesign-v3/14_plot_tile_spec.md 单一事实源（一格 = 底 + 地块图（标志物）
+  + 归属色带；负向清单禁船/旗/角色/动物/文字；收口 v5「岛型卡」/v6「插旗」旧措辞）
+  + AGENTS 路由表 + docs/README 登记 + map_editor_guide 正名「地块图」
+
+判据实跑（2026-11-10 收口）：
+- node --check（编辑器 JS）= 干净
+- cargo test -p ti-console --test ui_manifest_register_tests = 2 passed
+- cargo clippy --workspace --all-targets -- -D warnings = 干净
+- cargo fmt --all -- --check = 干净
+- doccheck = 0 error（170 docs）
+- validate_data = OK（4 表，disk↔registry 双向同步）
+- gate -Touch = 0 failure
+- TI_MAP=m04 xvfb-run --scene=main_map --shot = 出图 evidence/bevy_native_main_map.png
+  （有图格 vs 回退格像素分布不同 = 按格 blit 生效）
+- 用户视觉确认 = 2026-11-10 三轮问答（A 选「每地块独立贴图」+ Q3 选「只画标志物（像牌）」+ 最终「做」定案）

@@ -198,3 +198,9 @@ S48.0 登记 index_title_gold 时误用 json.dump(m, open(p,'w',encoding='utf-8'
 解法（工具纪律「单一写入路径」）：① 清单写入唯一路径 = `scripts/ui_assets.py register-plot`（新增子命令：补 `roles.plot` + 追加 `assets` 条目，写入走既有 `save_manifest` 的 `json.dumps(indent=2)` 保序 ⇒ 与仓库清单同格式 ⇒ 零 churn；幂等：已登记不追加不覆盖；只登记不生图，图片仍由 `scripts/agnes_gen.py` 唯一入口生成）；② 平台 Rust 侧只 spawn 该命令，不再自己重序列化；③ 仓库清单一次性规范化到工具标准格式（语义 + 键序不变，仅缩进）；④ 加契约测试 `crates/ti-console/tests/ui_manifest_register_tests.rs`（登记含 `roles.plot` + `assets[tile_<map_id>_<格号>]` 且不生图；**二次登记清单逐字节不变** = 幂等 + 零 churn 回归防护）；⑤ 工具台账 `04_tooling.md` §4 登记新子命令与唯一写入路径口径。
 验证：服务端端到端 `POST /api/gen-tile` → 已登记岛型 `ui_manifest.json` **0 diff**；新岛型仅 **+9 行**（该条目本身，旧实现为 3681 行全文件 churn）；`cargo test -p ti-console --test ui_manifest_register_tests` 2 passed；clippy/fmt 干净；validate_data OK；gate -Touch 0 failure。
 通用教训：**平台/服务端写仓库数据文件，要么走仓库既有工具（唯一写入路径），要么保 indent + 保键序**——`serde_json` 默认 BTreeMap 会重排键序（要保序需 `preserve_order` feature），而 Python `json` 天然保序；两者混用必出 churn。另：跨语言写同一 JSON 数据文件时，先定「事实格式 = 工具格式」，再统一所有写入路径，否则每次写都是全文件 diff。
+
+### EXP-185 工具：地块图 = 该格标志物（不是棋子/卡）：按格命名 + 提示词负向禁船/旗/角色/动物/文字 + 14 号单一事实源
+v5「岛型卡」→ v6「不规则多边形地块」的演进中，资产命名与文案（`tile_<isle>.png` 按岛型共用一张）已不成立：地图上没有「卡」这个实体，同一岛型 2 格共用一张 = 复制感。AI 提示词模板若不带负向清单（「no ship / no flag / no character / no animal / no text」）→ 地块图里画航行船 → 与玩家船棋子叠层撞车（用户「格子里有船」）。
+解法：① 资产命名从按岛型（`tile_<isle>.png`，10 张共用）改按格（`tile_<map_id>_<格号>.png`，31 格各自独立，命名约定自动发现 0 描述符改动，同 `island_home_<map_id>.png` 口径）；② 提示词模板统一加**负向清单**（地块图 = 该岛标志物 + 牌面风格；静态地标如沉船残骸/灯塔剪影可留，航行中的船/旗帜/角色/动物/文字一律不画）；③ 新增 `docs/ui-redesign-v3/14_plot_tile_spec.md` 单一事实源（一格 = 格子底 + 地块图 + 归属色带三层模型 + 运行时叠层区分；收口 v5「岛型卡」/v6「插旗」散落旧措辞）；④ 全 10 类岛 m04 首格全量重生成入仓（`ui_assets.py register-plot` 唯一清单写入路径，EXP-184 零 churn）。
+验证：按格 blit 真渲染出图（有图格 vs 回退格像素分布不同）+ 契约测试 2 passed + doccheck 0 error（170 docs）+ gate -Touch 0 failure + 用户三轮视觉确认（「只画标志物（像牌）」定案）。
+通用教训：**地图地块图是「该格地标」，不是「玩家棋子」，更不是「岛型卡」**——命名（按格 `tile_<map_id>_<idx>.png`）、生成（提示词负向清单禁船/旗/角色/动物/文字）、文档（14 号单一事实源）三者必须对齐；否则 AI 生成的图与运行时叠层撞车。
