@@ -145,7 +145,7 @@
   子代理回报无「规范回执」判据，主线程无法确认代理是否读过现行规范。
 - **解法**：
   1. 新建 `docs/process/06_flywheel.md`（飞轮单一事实源）：3 角色（找问题/审计/修复）
-     + 开轮必读 6 条 + 飞轮回写规则 + 停机条件；
+     + 开轮必读 7 条（S51.0 起；EXP-070 原 6 条 + 第 7 条开轮协作五步）+ 飞轮回写规则 + 停机条件；
   2. `05_module_parallel.md` 新增 §4.5「开轮必读清单 + 规范回执」，
      下发/回报双侧硬要求，缺项打回；
   3. `03_templates.md` §7 任务书模版加「开轮必读 + 回执」段（checkbox 清单 + 回执 4 项）；
@@ -167,7 +167,7 @@
   4. doccheck2 加第 10 项 `check_flywheel_script`（断言脚本存在 + gate/06_flywheel/index.md 含关键词）。
 - **飞轮**：脚本读的是各文件的**实时内容**，规范/EXP/门禁变了脚本自动反映；
   LLM 子代理只需跑 `powershell -File scripts/flywheel_readme.ps1 -Package <本包>` + 回执，不再逐个工具调用。
-- **验证**：`powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package P6` 输出含 6 条必读
+- **验证**：`powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package P6` 输出含 7 条必读（S51.0 起；EXP-070 原 6 条 + 开轮协作五步）
    + P6 白名单 + 本域 EXP + gate 17 项 + doccheck2 10 项；`-Check -Quiet` exit 0；
    `cargo run -q -p ti-tools --bin doccheck2 .` 10 项 0 error。
 

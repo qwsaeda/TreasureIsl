@@ -57,7 +57,7 @@
 | **理解游戏逻辑全貌（按章节 + 流程图）** | `docs/business/01_game_logic_overview.md`（S37 总览：核心循环/场景态图/多席热座/20 图推进/落格分叉/领土战争/战斗/经济/对局生命周期/存档/失败边界/数值锚点；规则细节引用各系统单一事实源） |
 | **界面版面 / 配色 / 控件坐标（1080 单一事实源）** | `docs/business/08_layout_design.md`（改 scenes.json 坐标/配色前必读；表值 = scenes.json 同值） |
 | **模块并行开发（契约→并行→集成）** | `docs/process/05_module_parallel.md`（一轮 4 步 + 纪律 5 条）+ `docs/contracts/00_index.md` + `plan/packages.yaml`（**包划分的机读唯一源**） |
-| **对抗流水线飞轮（找问题→审计→修复→回写；开轮编排 = `flywheel-kickoff` skill）** | `docs/process/06_flywheel.md`（3 角色 + 开轮必读 6 条 + 停机条件）+ `scripts/flywheel_readme.ps1 -Check` |
+| **对抗流水线飞轮（找问题→审计→修复→回写；开轮编排 = `flywheel-kickoff` skill）** | `docs/process/06_flywheel.md`（3 角色 + 开轮必读 7 条〔S51.0〕+ 停机条件）+ `scripts/flywheel_readme.ps1 -Check` |
 | **界面全量重设计 S17（设计令牌 v2 / 8pt 版面 / 图标 14 项 / 动效 4 参数，航海夜·精修）** | `docs/process/10_ui_redesign.md`（S17 规格单一事实源；改 UI 视觉量前必读，与 `08_layout_design.md` 场景坐标实例互锁） |
 | **UI 重设计 v3（真游戏化版面：场景叙事 DSL + 打破 7 场景同模板）** | `docs/ui-redesign-v3/README.md`（01 对标拆解 / 02 场景叙事 DSL 规格 / 03 七场景重设计提案 / 04 index 落地；gate 的 `check_scene_narrative` 项（gate.ps1 内注释编号 21）锚点 `assets/data/ui_schema/scene_manifest_v3.json`；v3 取代 v2 的「7 场景同模板」前提，色板/字体/动效令牌仍沿用 `10_ui_redesign.md`） |
 | **UI 重设计 v3.5（画面丑的根因=设计数据：地形/暖色板/画布/实体/HUD）** | `docs/ui-redesign-v3/07_v3_5_pass.md`（地形数据 → 棋盘成地图；暖色板；画布贴合；实体图标化；执行链 S18.9~S18.13） |

@@ -71,7 +71,7 @@
 
 ## 6. 开轮必读脚本化（EXP-070）
 
-EXP-068 规定开轮必读 6 条，但 LLM 每次需逐个 Read 工具调用 6 份文档 + 读 gate + doccheck2 + packages.yaml，
+EXP-068 规定开轮必读 6 条（S51.0 起扩为 7 条，加第 7 条「开轮协作五步」），但 LLM 每次需逐个 Read 工具调用 6 份文档 + 读 gate + doccheck2 + packages.yaml，
 N 个子代理各跑一遍，工具调用爆炸 + 容易漏读（本轮 P6 子代理没读 06_flywheel 的在途白名单）。
 
 **脚本化替代**：
@@ -84,18 +84,19 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package P6
 
 输出包含：
 1. 环境事实（工作目录 / shell / crate 前缀 / 逆向产物位置）
-2. 必读文档 6 条（逐条路径 + 一句话要点）
+2. 必读文档 7 条（逐条路径 + 一句话要点；第 7 条 = 开轮协作五步，S51.0）
 3. 在途并行包白名单（读 `plan/packages.yaml` 机器生成，含 P1–P6 + D 的 files/tests）
-4. 本域相关 EXP（按包域关键词过滤 `docs/experience/index.md`）
-5. gate 项清单（从 `scripts/gate.ps1` 正则提取）
-6. doccheck2 断言清单（从 `doccheck2.rs` 正则提取 `fn check_*` 函数名）
+4. 本域红线（`docs/rules/` 按包域 glob 过滤 1~3 个，CCGS paths frontmatter 模式，S51.0）
+5. 本域相关 EXP（按包域关键词过滤 `docs/experience/index.md`）
+6. gate 项清单（从 `scripts/gate.ps1` 正则提取）
+7. doccheck2 断言清单（从 `doccheck2.rs` 正则提取 `fn check_*` 函数名）
 
 脚本读的是各文件的**实时内容**，规范/EXP/门禁变更后下次跑自动反映，无需改 prompt。
 
 **LLM 子代理开轮流程（替代手动读文档）**：
 1. 跑 `powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package <本包>`；
-2. 确认输出完整（6 条必读 + 白名单 + 本域 EXP + gate 项 + doccheck2 断言均非空）；
-3. 回执「已读脚本输出，命中 N 条规范」，不再逐个 Read 工具调用；
+2. 确认输出完整（7 条必读 + 白名单 + 本域红线 + 本域 EXP + gate 项 + doccheck2 断言均非空）；
+3. 回执「已读脚本输出，命中 N 条规范」+「开轮协作五步」段（第 7 条：澄清问题 / 决策点+所选方案+拍板留痕 / 草稿批准状态；写码类全走，只读角色报「0 个决策点」），不再逐个 Read 工具调用；
 4. 若输出中某条 EXP 与本次改动强相关 → 再读该 EXP 正文（分卷文件）；
 5. gate 加 `flywheel-readme -Check` 项（第 17 项）验证脚本输出完整性，缺项 FAIL。
 
@@ -127,7 +128,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package P6
 
 **定向飞轮执行细则**：
 
-1. **开轮**：`scripts/flywheel_readme.ps1`（全域，不带 `-Package`）拿必读 6 条 + gate/doccheck2 清单；
+1. **开轮**：`scripts/flywheel_readme.ps1`（全域，不带 `-Package`）拿必读 7 条（含第 7 条开轮协作五步）+ 本域红线 + gate/doccheck2 清单；
    3 角色 prompt 共同上下文 = 必读输出 + **靶点主题定义（照抄本节登记的主题卡）** + 在途白名单；
 2. **找问题 agent（只读，目标 100/轮）**：按主题给定的**类别轴**（如 ①色值/数值字面量 ②画/不画决策
    ③尺寸坐标偏移 ④该用图片处用代码画 ⑤i18n 面量 ⑥跨文件重复常量 ⑦v2/v3 残留键）逐类扫，

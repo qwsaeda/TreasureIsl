@@ -56,8 +56,8 @@ function Read-PackagesYaml {
             if ($trimmed -match '^name:\s+"(.*)"') { $current['name'] = $Matches[1] }
             elseif ($trimmed -match '^files:\s*$') { $inFiles = $true; $inTests = $false }
             elseif ($trimmed -match '^tests:\s*$') { $inTests = $true; $inFiles = $false }
-            elseif ($inFiles -and $trimmed -match '^-\s+(.+?)\s*$') { $current['files'] += $Matches[1] }
-            elseif ($inTests -and $trimmed -match '^-\s+(.+?)\s*$') { $current['tests'] += $Matches[1] }
+            elseif ($inFiles -and $trimmed -match '^-\s+(.+)$') { $ff = $Matches[1].TrimEnd("`r").Trim(); if (-not ($ff.StartsWith('#'))) { $current['files'] += $ff } }
+            elseif ($inTests -and $trimmed -match '^-\s+(.+)$') { $tt = $Matches[1].TrimEnd("`r").Trim(); if (-not ($tt.StartsWith('#'))) { $current['tests'] += $tt } }
             elseif ($trimmed -match '^depends_on:') { $inFiles = $false; $inTests = $false }
             elseif ($trimmed -match '^status:') { $inFiles = $false; $inTests = $false }
         }
@@ -134,6 +134,32 @@ function Read-GateItems {
     return $items
 }
 
+# ── 读 docs/rules/ 红线文件，按包域过滤（S51.0 第 7 条「开轮协作五步」+ docs/rules 注入）────
+# 每个 docs/rules/<x>-rules.md frontmatter `paths:` glob 列表 → 按 -Package 过滤本域相关 1~3 个。
+# 过滤口径 = 该红线文件 paths glob 的目录前缀 与 选定 P 包 files 的 crate 前缀 匹配。
+function Read-RulesFiles {
+    param([string]$RulesDir)
+    $rules = @()
+    if (-not (Test-Path $RulesDir)) { return $rules }
+    # -Filter 对 *-rules.md 形态不可靠（实测只数到 3/5），改用 Where-Object 全量筛
+    foreach ($f in Get-ChildItem -Path $RulesDir -File | Where-Object { $_.Name -match '-rules\.md$' }) {
+        $content = Get-Content $f.FullName -Raw
+        $lines = $content -split "`n"
+        $inPaths = $false
+        $globs = @()
+        foreach ($ln in $lines) {
+            $t = $ln.Trim()
+            if ($t -eq 'paths:') { $inPaths = $true; continue }
+            if ($inPaths -and $t.StartsWith('- ')) {
+                $g = $t.Substring(2).Trim().Trim('"')
+                if ($g.Length -ge 3) { $globs += $g }
+            } elseif ($inPaths -and $t -eq '---') { $inPaths = $false }
+        }
+        $rules += @{ file = $f.Name; globs = $globs }
+    }
+    return $rules
+}
+
 # ── 读 doccheck2.rs，提取 fn check_* 函数名 ──────────────────────────────
 function Read-Doccheck2Checks {
     param([string]$path)
@@ -170,6 +196,48 @@ elseif ($Package) {
 
 $filteredExps = Filter-Exps $exps $Package $pkgExpKeywords
 
+$dc2Checks = Read-Doccheck2Checks $dc2Path
+
+# 红线文件（docs/rules/，S51.0 第 7 条「开轮协作五步」+ docs/rules 注入）
+# 末尾是目录（无扩展名分隔），Linux 下 Join-Path 反斜杠会被当字面文件名，须显式正斜杠
+$rulesDir = $root + '/docs/rules'
+$allRules = Read-RulesFiles $rulesDir
+# 按 -Package 过滤：P 包 files 的 **crate 前缀**（前 2 段 crates/<name>）匹配红线文件
+# globs 里任一 glob 的 crate 前缀。P1~P5 files 全在 crates/ti-core/… ⇒ 命中 ti-core-rules.md；
+# P6 files 在 crates/ti-app/… ⇒ 命中 ti-app-scenes-rules.md；ti-engine/scripts/assets 包域 = 0（
+# 引擎/工具/资产域无 P 包持有，红线速查给全域开轮读，不挂 P 包过滤）。
+# P 包 files 的 crate 前缀集合（避免 Where-Object 管道里 hashtable 按值传丢 files 键的坑；
+# .Trim() 双向防 CRLF 的 \r 污染：$p.id 可能 "P1\r"、files 项可能 "crates/...\r"）
+$pkgCratePrefixes = @()
+if ($Package) {
+    foreach ($p in $packages) {
+        if (($p.id | Out-String).Trim() -eq $Package) {
+            foreach ($ff in @($p.files)) {
+                $ff = ($ff | Out-String).Trim()
+                $ffParts = $ff -split '/'
+                if ($ffParts.Count -ge 2) { $pkgCratePrefixes += ($ffParts[0] + '/' + $ffParts[1]) }
+            }
+        }
+    }
+}
+$selectedRules = if ($Package) {
+    $sel = @()
+    foreach ($r in $allRules) {
+        $match = $false
+        foreach ($g in $r.globs) {
+            $gParts = $g -split '/'
+            if ($gParts.Count -ge 2) {
+                $gCrate = $gParts[0] + '/' + $gParts[1]
+                if ($pkgCratePrefixes -contains $gCrate) { $match = $true; break }
+            }
+        }
+        if ($match) { $sel += $r }
+    }
+    $sel
+} else {
+    @($allRules)
+}
+
 # ── 输出 ─────────────────────────────────────────────────────────────────
 $output = @()
 $output += "=== 飞轮开轮必读清单（EXP-068 → EXP-070 脚本化）==="
@@ -183,13 +251,14 @@ $output += "工作目录: $workDir"
     $output += "逆向产物: legacy/（rules/ 与 domain/ 层 0 oracle 引用）"
     $output += ""
 }
-$output += "--- 必读文档（6 条，逐条路径 + 一句话要点）---"
+$output += "--- 必读文档（7 条，逐条路径 + 一句话要点）---"
 $output += "[1] docs/process/00_index.md — 分工表 + 标准工作流"
 $output += "[2] docs/business/00_index.md — 业务唯一事实源"
 $output += "[3] docs/process/01_architecture.md + 02_conventions.md — 分层 + 数据驱动 + 命名 + 错误 + 测试"
 $output += "[4] docs/contracts/00_index.md + 涉及契约 c1/c2/c3 — 跨包公共面"
 $output += "[5] docs/experience/index.md — EXP 总表（重点读本包域相关 EXP）"
 $output += "[6] scripts/gate.ps1 + crates/ti-tools/src/bin/doccheck2.rs — 门禁项 + 断言清单"
+$output += "[7] 开轮协作五步（03_templates.md §7：提问→方案→拍板→草稿→批准；只读角色豁免草稿/批准两步）"
 $output += ""
 $output += "--- 在途并行包白名单（读 plan/packages.yaml 机器生成）---"
 if ($selectedPkgs.Count -eq 0) {
@@ -202,6 +271,14 @@ if ($selectedPkgs.Count -eq 0) {
         $output += "$($p.id) $($p.name) = " + ($p.files -join ' ')
         if ($p.tests.Count -gt 0) { $output += "  tests: " + ($p.tests -join ', ') }
     }
+}
+$output += ""
+$output += "--- 本域红线（docs/rules/，按包域 glob 过滤；CCGS paths frontmatter 模式，S51.0）---"
+if ($selectedRules.Count -eq 0) {
+    $output += "（无命中包域红线文件，改前查 docs/rules/ 5 个全）"
+}
+foreach ($r in $selectedRules) {
+    $output += "  $($r.file)：paths = " + ($r.globs -join ', ')
 }
 $output += ""
 $output += "--- 本域相关 EXP（按包域过滤，来自 docs/experience/index.md）---"
@@ -232,24 +309,26 @@ if ($Check) {
     if ($gateItems.Count -lt 21) { $ok = $false; $msg += "gate 项仅 $($gateItems.Count)（要求 ≥21，与 gate.ps1 顶层固定项 21 对齐，doccheck2 gate_item_actual_count 同口径）" }
     if ($dc2Checks.Count -lt 15) { $ok = $false; $msg += "doccheck2 断言仅 $($dc2Checks.Count)（要求 ≥15）" }
     if ($packages.Count -lt 7) { $ok = $false; $msg += "packages.yaml 仅 $($packages.Count) 包（要求 ≥7）" }
-    # 6 条必读关键词
-    $required6 = @(
+    # 7 条必读关键词（S51.0 起含 [7] 开轮协作五步）
+    $required7 = @(
         'docs/process/00_index.md',
         'docs/business/00_index.md',
         'docs/process/01_architecture.md',
         'docs/contracts/00_index.md',
         'docs/experience/index.md',
-        'scripts/gate.ps1'
+        'scripts/gate.ps1',
+        '开轮协作五步'
     )
-    foreach ($kw in $required6) {
+    foreach ($kw in $required7) {
         if ($text -notmatch [regex]::Escape($kw)) { $ok = $false; $msg += "缺关键词 $kw" }
     }
+    if ($allRules.Count -lt 5) { $ok = $false; $msg += "docs/rules 红线仅 $($allRules.Count)（要求 ≥5）" }
     if (-not $ok) {
         Write-Host "flywheel_readme -Check FAIL:"
         foreach ($m in $msg) { Write-Host "  - $m" }
         exit 1
     }
-    Write-Host "flywheel_readme -Check PASS: 6 条必读 ✓, gate $($gateItems.Count) 项, doccheck2 $($dc2Checks.Count) 断言, packages $($packages.Count) 包"
+    Write-Host "flywheel_readme -Check PASS: 7 条必读 ✓, gate $($gateItems.Count) 项, doccheck2 $($dc2Checks.Count) 断言, packages $($packages.Count) 包, rules $($allRules.Count) 红线"
     exit 0
 }
 

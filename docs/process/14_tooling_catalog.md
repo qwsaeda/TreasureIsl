@@ -197,7 +197,7 @@ python scripts/map_pack.py check
 | `check_data_driven.py` | 数据驱动（渲染层不得认业务语义） | `python scripts/check_data_driven.py` | 幂等只读；违规非 0 |
 | `check_hd_manifest.py` | HD manifest ↔ `assets_hd_pack/1x/ui` 目录一致（EXP-048/060） | `python scripts/check_hd_manifest.py --check` / `--report` | 幂等只读；漂移非 0 |
 | `audit_code.py` | **代码结构**（文件 >900 行 / 函数 >140 行 / 重复模式 ≥6 次；棘轮基线 `scripts/code_budget.json`） | `python scripts/audit_code.py --check` / `--report` / `--update-baseline` | 幂等只读；新增违规非 0 |
-| `flywheel_readme.ps1` | 开轮必读清单（6 条必读 + gate 项数 + doccheck2 断言数） | `powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check` | 幂等只读；不符非 0 |
+| `flywheel_readme.ps1` | 开轮必读清单（7 条必读〔S51.0 起含开轮协作五步〕 + 本域红线 docs/rules + gate 项数 + doccheck2 断言数） | `powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check` | 幂等只读；不符非 0 |
 
 ### 3.2 长期工具（反复执行 / 结论入文档）
 

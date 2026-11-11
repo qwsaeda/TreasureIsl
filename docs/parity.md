@@ -189,7 +189,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
          M3 ti-app 跨 crate 可见面只走契约模块（domain/rules/data）/ M4 draft 残留 WARN）
  17 飞轮开轮必读脚本（EXP-070）：
         powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check -Quiet
-        （脚本存在 + 输出含 6 条必读 + gate ≥16 项 + doccheck2 ≥8 项，exit 0 = PASS）
+        （脚本存在 + 输出含 7 条必读〔S51.0 起含开轮协作五步〕 + 本域红线 + gate ≥16 项 + doccheck2 ≥8 项，exit 0 = PASS）
  18 视觉回归基准图（EXP-072）：
 19.5 正向渲染快照门禁（S14，与 19 并列而非从属，docs/business/08_layout_design.md §4）：
  20 数据源门禁（S13.6 契约 §5）：
