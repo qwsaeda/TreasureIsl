@@ -1,0 +1,18 @@
+=== S52.2 i18n 假孤儿 WARN 清零 判据实跑（2026-11-11）===
+### ① 根因 = check_i18n_orphans 扫描面 2 盲区
+  盲区① collect_sget_keys 只认 sget/sgetf 标识符，漏 i18n_fmt("key",…) 第三类消费方（board.rs 单一入口收敛 i18n::sgetf，传变量 key 时 sgetf 扫描漏）
+  盲区② 扫描面只扫 crates/ti-app/src，漏 crates/ti-engine/src（treasure_bevy.rs 字面量 key：app.window_title / select_map.locked/open）
+### ② 修法 = 扩扫描面（非前缀豁免）
+  collect_sget_keys 增认 i18n_fmt 字面量调用 + 扫描面扩到 ti-engine
+### ③ 5 条白名单豁免（扫描器结构性读不出的消费形态，附代码引用证据）
+  scene.select_map.locked/open = sget(if c{..}else{..}) 条件表达式（treasure_bevy.rs:1422/1424）
+  scene.main_map.toast.ai_siege_fmt/ai_siege_fail_fmt = i18n_fmt(if won{..}else{..}) 条件表达式（board.rs:568/570）
+  app.window_title = pair.0 == "app.window_title" 比较符消费（treasure_bevy.rs:2647）
+### ④ 实跑结果
+  i18n 孤儿 WARN = 0（改前 16 条；13 条 i18n_fmt 漏扫扩面根治 + 5 条白名单豁免清零）
+  doccheck2 i18n WARN 数 = 0
+doccheck2: 0 error(s) across 44 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/wasm-viewport-init/engine-no-color-literal/landscape-no-portrait-hardcode/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention/job-model-unified/rules-files/theme-consumption/cross-doc-counts)
+### ⑤ 负例护栏（造 1 条代码 0 引用的真孤儿 key 须仍 WARN，防断言恒 PASS）
+  负例命中: WARN i18n 孤儿 key `scene.test.neg_guard`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）
+### ⑥ 游戏 6 crate 0 diff（纯 ti-tools doccheck2.rs 改动）
+  （上行为空 = 0 diff）

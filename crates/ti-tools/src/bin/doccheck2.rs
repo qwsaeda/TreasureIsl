@@ -290,6 +290,48 @@ fn check_landmark_threshold(root: &Path) -> Vec<String> {
 /// 支持多行书写：`(` 与字符串字面量之间允许任意空白/换行；标识符 `sget`/`sgetf` 边界
 /// 判定避免 `xsget` 类前缀误配；key 读到 `"` 或换行为止——Rust 普通字符串字面量不跨行）。
 fn collect_sget_keys(text: &str, out: &mut BTreeSet<String>) {
+    // 第三类 i18n key 消费方（S52.2）：`i18n_fmt("key", &[...])`（`board.rs` 单一入口
+    // 收敛 `i18n::sgetf`，传变量 key 时 `collect_sget_keys` 扫 `sgetf` 漏掉）。
+    // 字面量调用 `i18n_fmt("scene.main_map.toast.…", …)` 须并入 used_keys，否则
+    // `scene.main_map.toast.*` 13 条被误报孤儿（飞轮 R2 B-03 盲区）。
+    let mut i18n_fmt_hits: Vec<String> = Vec::new();
+    {
+        let bytes = text.as_bytes();
+        let mut i = 0usize;
+        while let Some(rel) = text[i..].find("i18n_fmt") {
+            let start = i + rel;
+            let after = start + 8;
+            let prev_ok = start == 0
+                || !matches!(
+                    bytes[start - 1],
+                    b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_'
+                );
+            if prev_ok {
+                let mut cursor = after;
+                while cursor < bytes.len() && matches!(bytes[cursor], b' ' | b'\t' | b'\n') {
+                    cursor += 1;
+                }
+                if cursor < bytes.len() && bytes[cursor] == b'(' {
+                    cursor += 1;
+                    while cursor < bytes.len() && matches!(bytes[cursor], b' ' | b'\t' | b'\n') {
+                        cursor += 1;
+                    }
+                    if cursor < bytes.len() && bytes[cursor] == b'"' {
+                        // 开引号在 `cursor`；key 内容 = `cursor+1..close`（`close` = 闭引号位置）。
+                        let open_quote = cursor;
+                        let mut close = open_quote + 1;
+                        while close < bytes.len() && bytes[close] != b'"' && bytes[close] != b'\n' {
+                            close += 1;
+                        }
+                        if close < bytes.len() && bytes[close] == b'"' && close > open_quote {
+                            i18n_fmt_hits.push(text[open_quote + 1..close].to_string());
+                        }
+                    }
+                }
+            }
+            i = after;
+        }
+    }
     let bytes = text.as_bytes();
     let mut i = 0usize;
     while let Some(rel) = text[i..].find("sget") {
@@ -331,6 +373,10 @@ fn collect_sget_keys(text: &str, out: &mut BTreeSet<String>) {
         }
         i = after;
     }
+    // 并入 i18n_fmt 字面量 key（第三类消费方）
+    for k in i18n_fmt_hits {
+        out.insert(k);
+    }
 }
 
 /// 5. i18n 一致性：代码里 `sget`/`sgetf`/`MenuItem.key` 用的 key 必须都存在于
@@ -351,22 +397,28 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
         })
         .collect();
 
-    // 收集代码里 `sget`/`sgetf` 的字面量 key。
+    // 收集代码里 `sget`/`sgetf`/`i18n_fmt` 的字面量 key。
     // 盲区修复（S26 审计 Q031/Q032）：旧实现按**行**找 `sget("`，多行书写
     //   i18n::sgetf(\n        "key",\n        &[...],\n    )
     // 会漏掉（`sgetf(` 行尾无 `"`）⇒ 假孤儿。改整文本扫描：定位 `sget`/`sgetf` 标识符，
     // 跳过 `(` 与引号间的任意空白/换行再读 key。
+    // 盲区修复（S52.2，飞轮 R2 B-03）：① 第三类消费方 `i18n_fmt("key", …)`（`board.rs`
+    //   单一入口收敛 `i18n::sgetf`，传变量 key 时 `sgetf` 扫描漏）② 扫描面扩到
+    //   `crates/ti-engine/src`（`treasure_bevy.rs` 字面量 key：`app.window_title` /
+    //   `scene.select_map.locked/open` 等 bevy 侧消费）。
     let mut used_keys: BTreeSet<String> = BTreeSet::new();
-    for text in read_rs_tree(&root.join("crates/ti-app/src")) {
-        collect_sget_keys(&text, &mut used_keys);
-        // `MenuItem { key: "…", … }` const 表里直接写死的 i18n key（单行）
-        for line in text.lines() {
-            if let Some(ki) = line.find("key:") {
-                let rest = &line[ki + 4..];
-                let Some(q) = rest.find('"') else { continue };
-                let inner = &rest[q + 1..];
-                let Some(end) = inner.find('"') else { continue };
-                used_keys.insert(inner[..end].to_string());
+    for crate_dir in ["crates/ti-app/src", "crates/ti-engine/src"] {
+        for text in read_rs_tree(&root.join(crate_dir)) {
+            collect_sget_keys(&text, &mut used_keys);
+            // `MenuItem { key: "…", … }` const 表里直接写死的 i18n key（单行）
+            for line in text.lines() {
+                if let Some(ki) = line.find("key:") {
+                    let rest = &line[ki + 4..];
+                    let Some(q) = rest.find('"') else { continue };
+                    let inner = &rest[q + 1..];
+                    let Some(end) = inner.find('"') else { continue };
+                    used_keys.insert(inner[..end].to_string());
+                }
             }
         }
     }
@@ -399,6 +451,23 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
     // JSON 里有但代码从未引用的 key → 孤儿（文案表漂移）。
     // 豁免：`schema_*` / 旧命名空间（battle/build/cards/goods/hint/hud/slot/msg）/
     // `scene.*` 下已知被 `*_fmt` 长 key 取代的短后缀变体（设计占位，S8.x 数据化迁移前清理）
+    // S52.2 白名单豁免（飞轮 R2 B-03）：5 个 key 已被代码**真实消费**，但消费形态是
+    // 扫描器结构性读不出的字面量调用（非 `sget("…")`/`i18n_fmt("…",…)` 直接字面量）：
+    //   ① `sget(if c { "scene.select_map.locked" } else { "scene.select_map.open" })`
+    //      —— `select_map.rs` 锁/开放态二选一，`sget(` 后跟 `if` 非引号 ⇒ 主扫描漏。
+    //   ② `i18n_fmt(if won { "…ai_siege_fmt" } else { "…ai_siege_fail_fmt" }, …)`
+    //      —— `board.rs` 攻占胜/败二选一 toast，`i18n_fmt(` 后跟 `if` ⇒ 漏。
+    //   ③ `pair.0 == "app.window_title"` —— `treasure_bevy.rs` 窗口标题，经 `==` 比较
+    //      消费（非调用），静态扫调用形态读不出。
+    // 这 5 条豁免须随消费点同步：若代码删掉对应消费（select_map 锁态 / 攻占 toast /
+    // 窗口标题），key 即转真孤儿 → 应删 strings.json 行 + 从本白名单摘除。
+    let exempt_known_consumed: [&str; 5] = [
+        "scene.select_map.locked",
+        "scene.select_map.open",
+        "scene.main_map.toast.ai_siege_fmt",
+        "scene.main_map.toast.ai_siege_fail_fmt",
+        "app.window_title",
+    ];
     let exempt_prefixes = [
         "schema_",
         "battle.",
@@ -436,7 +505,7 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
         }
         let is_suffixed_variant =
             k.starts_with("scene.") && exempt_suffixed.iter().any(|s| k.ends_with(s));
-        if !used_keys.contains(k) && !is_suffixed_variant {
+        if !used_keys.contains(k) && !is_suffixed_variant && !exempt_known_consumed.iter().any(|e| e == k) {
             eprintln!(
                 "  WARN i18n 孤儿 key `{k}`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）"
             );
@@ -2357,7 +2426,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     };
     // 现状声称点锚定短语（`doc_numbers.py --fix` 回写同一组短语 = 双保险）
     let claims: [(&str, &str); 2] = [
-        ("docs/release.md", &format!("{tasks} 任务（{verified} verified + 2 pending S52.2/3")),
+        ("docs/release.md", &format!("{tasks} 任务（{verified} verified + 1 pending S52.3")),
         ("AGENTS.md", &format!("{tasks} 任务 / {verified} verified")),
     ];
     for (rel, phrase) in claims {
