@@ -295,7 +295,6 @@
       "crates/ti-core/src/rules/force.rs",
       "crates/ti-core/src/data/board.rs",
       "crates/ti-core/src/rules/events.rs",
-      "crates/ti-core/src/rules/territory_v2.rs",
       "crates/ti-core/src/rules/merchant.rs"
     ]
   },

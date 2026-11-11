@@ -1,0 +1,24 @@
+=== S52.1 rules 层集成测试盲区补测专项 判据实跑（2026-11-11）===
+### ① 9 个新集成测试文件（territory_v2 42 内联迁移 + 8 新文件）
+crates/ti-core/tests/battle_rules.rs
+crates/ti-core/tests/board_rules.rs
+crates/ti-core/tests/build_rules.rs
+crates/ti-core/tests/messages_rules.rs
+crates/ti-core/tests/progression_rules.rs
+crates/ti-core/tests/saveload_json_rules.rs
+crates/ti-core/tests/territory_rules_v1.rs
+crates/ti-core/tests/territory_v2_rules.rs
+crates/ti-core/tests/trade_rules.rs
+### ② 补测 fn 命中验证（30 个目标 fn 名全在 tests/ 命中）
+补测 fn 命中: 30/30（assault/ai_policy_v2/victory_seat_active/players_defeated/manpower_conserved/is_capturable/previous_occupant/set_garrison/capture_cell/bankrupt + territory 4 + progression 7 + battle 2 + trade 2 + build 2 + saveload_json 2 + messages 1 + board 6 + 其余）
+### ③ 全测试 0 failed
+  ti-core 通过测试组 = 35
+  ti-core FAILED 组数 = 0
+### ④ territory_v2.rs 内联测试摘除（棘轮豁免 49 条，删 1）
+  inline_test_mod_grandfathered = 49
+  territory_v2.rs #[cfg(test)] 残留 = 0
+### ⑤ doccheck2 44 项 0 error + 三方对账
+doccheck2: 0 error(s) across 44 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/wasm-viewport-init/engine-no-color-literal/landscape-no-portrait-hardcode/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention/job-model-unified/rules-files/theme-consumption/cross-doc-counts)
+check_ledger_reality: 全绿（334 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+### ⑥ 6 游戏 crate 测试全绿（分 crate）
+  ti-core/ti-app/ti-engine/ti-render/ti-platform/ti-formats: 全 0 FAILED（实跑）
