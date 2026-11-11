@@ -1,0 +1,38 @@
+S50.0 立项定案（2026-11-11 用户拍板「两者都做」= 出设计稿 + 立台账 WBS）
+
+## 判据实跑输出
+
+### 1. 两文件齐全
+$ test -f docs/plan-s50-studio-interface.md && test -f docs/process/32_ccgs_borrow.md
+→ 2 文件齐全 OK
+
+### 2. 台账 S50 条目数（要求 ≥5）
+$ grep -c "id: S50\." plan/ledger.yaml
+→ 5（S50.0/S50.1/S50.2/S50.3/S50.4）
+
+### 3. 登记 2 处
+$ grep -n "32_ccgs_borrow" docs/README.md
+→ 91: | [process/32_ccgs_borrow.md] | **CCGS 工作室制度借鉴（决策依据，S50.0）**… WBS = plan-s50-studio-interface.md |
+$ grep -n "plan-s50-studio-interface" AGENTS.md
+→ 52: | **S50 借鉴 CCGS 工作室制度…** | docs/plan-s50-studio-interface.md（S50 WBS）…
+
+### 4. 纯文档立项，零 Rust 改动
+$ git diff --stat crates/
+→ 空（纯文档 + 台账 + 登记，crates/ 0 diff）
+
+### 5. WBS 要素齐全自检（docs/plan-s50-studio-interface.md）
+$ grep -n "^## " docs/plan-s50-studio-interface.md
+→ §1 任务表 / §2 S50.0 判据 / §3 S50.1 判据 / §4 S50.2 判据 / §5 S50.3 判据 / §6 S50.4 收口 / §7 与既有体系边界 / §8 执行顺序（8 节全在）
+
+### 6. 32 号设计稿要素齐全自检（docs/process/32_ccgs_borrow.md）
+$ grep -n "^## " docs/process/32_ccgs_borrow.md
+→ §1 CCGS 调研摘录 / §2 机制级对照表 / §3 3 个借鉴点 / §4 4 个不借鉴点 / §5 1 个隐藏风险点 / §6 登记与 WBS（6 节全在）
+
+## 备注
+- 4 项不借鉴（49 agent 层级 / 75 slash 命令 / commit hook / 逐 agent 内嵌 5 步协议）已在 32_ccgs_borrow.md §4 决策留痕，不立任务。
+- S50.1/S50.2/S50.3 待开工（deps = S50.0 verified），三路并行（互不依赖）。
+- 收口 = S50.4（gate 全绿含新增第 25b/44 项 + 双审计 2 轮收敛 + 台账三方对账）。
+- doccheck / doccheck2 / gate 全绿留待收口轮统一跑（本任务纯文档立项，doccheck/doccheck2 0 error 由收口轮 S50.4 统一断言；本条 evidence 记录判据实跑输出，非 gate 总输出，符合硬规则 2）。
+
+## 实跑时间
+2026-11-11（workspace /disk/workspaces/treasureIsl）

@@ -1,0 +1,51 @@
+S50.2 元测试面（CCGS studio-tests 模式借鉴；scripts/studio_tests.py 3 类断言 + gate 第 25b 项 + 工具契约 3 处登记）
+
+## 判据实跑输出
+
+### 1. studio_tests.py 实跑（3 类断言全 OK，exit 0）
+$ python3 scripts/studio_tests.py --check
+  1. doccheck2 触发面双向对账            : OK
+  2. test_manifest↔console_commands 映射 : OK
+  3. 工具台账三处登记核验                : OK
+  [studio_tests] 3 类断言全 OK（exit 0）
+
+### 2. gate 第 25b 项入位 + 工具契约 3 处登记命中
+- gate.ps1 第 25b 项（`scripts/studio_tests.py --check`，Tier skip 收口档实跑 + 开发档 SKIP + exit 2 前置缺失记名 SKIP 不静默）
+- 14 号 §3.1 表格行命中 = 1
+- 04 号速查表命中 = 1
+- README 索引命中 = 1
+（三处全登记，工具契约 3 处对账过）
+
+### 3. waiver 棘轮基线（只降不升）
+- unmapped_test_manifest = 26 条（存量 test_manifest 登记但 console_commands.json 未映射的测试 id；平台面历史未覆盖，新增测试必映射）
+- unregistered_scripts = 30 条（存量 scripts/ 缺 14 号/04/README 三处登记的工具名；新工具必三处全登记）
+
+### 4. 负例护栏（2 个）
+- 负例 A：临时改 test_manifest[rules_battle].command 首词为 `sh` ⇒ studio_tests 非 0 退出（FAIL: 首词 `sh` 不在程序白名单）；恢复后 0 退出
+- 负例 B：临时从 waiver 删 android_device_test ⇒ studio_tests 非 0 退出（FAIL: 未映射）；恢复 waiver 后 0 退出
+
+### 5. 零 Rust 改动（crates/ 仅 doccheck2.rs expected 35→36 单行，属门禁项数同步）
+$ git diff --stat crates/
+  crates/ti-tools/src/bin/doccheck2.rs | 2 +-
+  1 file changed, 1 insertion(+), 1 deletion(-)
+
+### 6. 门禁项数 35→36 全库回写
+- gate.ps1 头注释 + 横幅 + 第 19 行注释 = 36 项
+- docs/parity.md 第 100/108 行 = 36 项
+- doccheck2 check_gate_item_count expected = 36usize
+- doc_numbers --fix 回写 24 处声称点（全库 35→36 一致）
+- 误伤修复：AGENTS S50 行「3 项过程约束 + 1 项元测试面」被 doc_numbers 误改成「36 项...」⇒ 已修回（S50 行的「3/1」指 CCGS 借鉴项数，非 gate 项数，不受 35→36 影响）
+
+### 7. doccheck / doccheck2 0 error
+$ cargo run -q -p ti-tools --bin doccheck
+  doccheck: 172 docs, 38 facts, 181 experiences, 327 task refs, 4 assertions, 0 error(s)
+$ cargo run -q -p ti-tools --bin doccheck2 .
+  doccheck2: 0 error(s) across 42 audit-codified checks
+
+## 备注
+- 3 类断言语义：① 测「门禁断言本身被正确触发」（doccheck2 注册表 ↔ gate_data.json 双向对账，与既有 check_check_inventory_consistency 同口径但独立第三眼）② 测「测试登记是否经平台白名单可执行」（test_manifest↔console_commands 映射，缺映射 = 平台面未覆盖）③ 测「工具台账三处登记是否齐全」（scripts/ 每个文件 14 号+04+README 三处 grep 命中）
+- 存量豁免走 waiver 棘轮基线（只降不升，整改后逐条删除 waiver 条目）；新增测试/工具必走映射/三处登记。
+- gate 第 25b 项收口档实跑，开发档（-Fast/-Touch）SKIP，同 GPU/wasm 环境缺口径。
+
+## 实跑时间
+2026-11-11（workspace /disk/workspaces/treasureIsl）

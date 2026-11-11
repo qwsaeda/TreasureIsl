@@ -1,4 +1,4 @@
-# gate.ps1 — 统一门禁（35 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop；S46.1 起第 25 项 = dod-commands；S49.4e 起第 4c 项 = Android 真机）
+# gate.ps1 — 统一门禁（36 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop；S46.1 起第 25 项 = dod-commands；S49.4e 起第 4c 项 = Android 真机；S50.2 起第 25b 项 = studio-tests 元测试面）
 # 用法：
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1            # 全量（收口用；语义不变）
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 -Touch     # 开发期：跳过纯构建/grep 项
@@ -16,7 +16,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
 # Linux 兼容（docs/migration_linux.md §3）：非 Windows 无 `python`（只有 python3）。
-# 35 项里**脚本项经 `& $py`**；`.ps1` 脚本项（flywheel_readme.ps1）经 `$psExe`（pwsh）非 `$py`。
+# 36 项里**脚本项经 `& $py`**；`.ps1` 脚本项（flywheel_readme.ps1）经 `$psExe`（pwsh）非 `$py`。
 # Windows 上 $py = python，行为不变。
 $py = 'python'
 if ($PSVersionTable.OS -notlike '*Windows*') { $py = 'python3' }
@@ -72,7 +72,7 @@ function Scan([string]$pattern, [string[]]$paths) {
     , $hits
 }
 
-Write-Host "=== gate: TreasureIsl (35 items) ==="
+Write-Host "=== gate: TreasureIsl (36 items) ==="
 
 # 1) format
 & $cargoCmd fmt --all -- --check 2>&1 | Out-Null
@@ -382,7 +382,7 @@ $e2eOut = & $py scripts/wasm_browser_e2e.py --check 2>&1
 $e2eOut | ForEach-Object { Write-Host "        $_" }
 $e2eExit = $LASTEXITCODE
 # 无 serve / 无 Playwright / 无 Pillow ⇒ 记名 SKIP（硬件/环境不可验，同 GPU bevy-cpu-parity 口径）；
-# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，35 项）。
+# 有前置且断言失败 ⇒ FAIL。项数计量 = 机器口径（Read-GateItems 数全部 Report 去重项名，36 项）。
 $e2eEnvMissing = $e2eOut -match "FAIL  本机无 playwright|ModuleNotFoundError"
 if (-not $e2eEnvMissing) {
     Report ($e2eExit -eq 0) 'wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)'
@@ -421,6 +421,24 @@ $dcOut = & $py scripts/check_dod_commands.py --check 2>&1
 $dcOut | ForEach-Object { Write-Host "        $_" }
 $dcExit = $LASTEXITCODE
 Report ($dcExit -eq 0) 'dod-commands (DoD 判据命令载体可达性：cargo --bin/--test 与 scripts 载体全存在 + 多 bin 歧义形式 0 处；EXP-170 复发防护)'
+
+# 25b) 元测试面（S50.2；CCGS studio-tests 模式借鉴，docs/process/32_ccgs_borrow.md）：
+#     对「门禁断言 / 测试登记 / 工具台账」本身做 QA——① doccheck2 触发面双向对账
+#     ② test_manifest↔console_commands 映射 ③ 工具台账三处登记核验。
+#     收口档（Tier skip）实跑；开发档（-Fast/-Touch）SKIP。存量豁免走 scripts/studio_tests_waiver.json 棘轮基线。
+if (Tier 'skip') {
+    $stOut = & $py scripts/studio_tests.py --check 2>&1
+    $stOut | ForEach-Object { Write-Host "        $_" }
+    $stExit = $LASTEXITCODE
+    if ($stExit -eq 2) {
+        # 前置源文件缺失（doccheck2.rs / gate_data.json / test_manifest.json / console_commands.json 任一不在）
+        # = 记名 SKIP（同 GPU/wasm 环境缺口径，不静默）；有前置且断言失败 = FAIL。
+        Write-Host "        SKIP: studio_tests.py 前置源文件缺失（exit 2）"
+        Skip 'studio-tests' '前置源文件缺失（exit 2，studio_tests.py 只读体检）'
+    } else {
+        Report ($stExit -eq 0) 'studio-tests (元测试面：doccheck2 触发面 + test_manifest↔console_commands 映射 + 工具台账三处登记；S50.2 CCGS studio-tests 借鉴)'
+    }
+} else { Skip 'studio-tests' 'dev tier（-Touch/--fast）' }
 
 Write-Host "=== gate: $($script:fail) failure(s) ==="
 if ($script:fail -gt 0) { exit 1 } else { exit 0 }

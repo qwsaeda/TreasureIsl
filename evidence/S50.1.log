@@ -1,0 +1,27 @@
+S50.1 状态文件即记忆（CCGS active.md 模式借鉴；纯文档，docs/loop.md §9）
+
+## 判据实跑输出
+
+### 1. docs/loop.md 含新节 + 3 要素字段名固定 ①②③
+$ grep -n "state.md\|长会话压缩纪律\|## 9\." docs/loop.md
+→ 75: ## 9. 长会话压缩纪律（CCGS active.md 模式借鉴，S50.1）
+→ 80: 1. **触发条件**（满足任一项即写 state.md）：
+→ 85: 2. **压缩前 3 要素**（主线程自检，写进 `evidence/<task>.state.md` … 3 要素字段名固定 ①②③，不得增删改名）
+→ 91: 3. **压缩后续接**：主线程第一件事 = 读该 `evidence/<task>.state.md` 续接，**禁止**凭对话摘要 / 压缩前 memory 续接
+3 要素字段命中 = 3（① 已读清单 / ② 在途包白名单 / ③ 下一步动作，grep -c 全命中）
+
+### 2. docs/README.md loop.md 行更新
+$ grep -n "loop.md.*压缩纪律\|S50.1" docs/README.md
+→ 11: | 任何开工动作之前 | [`loop.md`](loop.md)（循环协议 + **§9 长会话压缩纪律（S50.1，CCGS active.md 模式）**：压缩前 3 要素写 `evidence/<task>.state.md`，压缩后读 state.md 续接）…
+
+### 3. 零 Rust 改动
+$ git diff --stat crates/
+→ 空（docs/ 改动，crates/ 0 diff）
+
+## 后续实测说明（不阻塞本任务收口）
+- 本任务 = 纪律文档落地（§9 触发条件 + 3 要素 + 续接判据全在）。
+- 真实长会话压缩时实测一次（下次开长会话触发压缩，主线程压缩前写 state.md + 压缩后读 state.md 续接），
+  证据入下次任务 evidence，不阻塞 S50.1 verified。
+
+## 实跑时间
+2026-11-11（workspace /disk/workspaces/treasureIsl）

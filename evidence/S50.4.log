@@ -1,0 +1,63 @@
+S50.4 收口（gate 全绿含新增第 25b/43 项 + 双审计 2 轮 + 台账三方对账 + 3 项落地判据复跑）
+
+## 判据实跑输出
+
+### 1. gate 全绿（36 项 0 failure，serve 在跑）
+$ pwsh -ExecutionPolicy Bypass -File scripts/gate.ps1   （/tmp/gate_s504f.log）
+  === gate: TreasureIsl (36 items) ===
+  35 PASS/SKIP + 0 FAIL
+  gate exit=0
+  - 新增项实跑：
+    PASS studio-tests (元测试面：doccheck2 触发面 + test_manifest↔console_commands 映射 + 工具台账三处登记；S50.2 CCGS studio-tests 借鉴) [0.0s]
+    PASS dod-commands (DoD 判据命令载体可达性 … EXP-170 复发防护) [0.1s]
+    PASS bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】) [4.4s]
+    PASS wasm-browser-e2e / browser-playtest / playtest-loop（serve 在跑 http=200，3 项浏览器面 PASS）
+  - 注：首跑（/tmp/gate_s504e.log）因 serve 未跑 3 项浏览器面环境 FAIL（wasm-browser-e2e/browser-playtest/playtest-loop
+    = ERR_CONNECTION_REFUSED，非 S50 产物）；serve 起后重跑 0 failure。
+
+### 2. doccheck 0 error
+$ cargo run -q -p ti-tools --bin doccheck
+  doccheck: 177 docs, 38 facts, 181 experiences, 327 task refs, 4 assertions, 0 error(s)
+
+### 3. doccheck2 0 error（43 项含 rules-files）
+$ /disk/target/debug/doccheck2 .
+  doccheck2: 0 error(s) across 43 audit-codified checks（末位 = rules-files，第 43 项）
+
+### 4. 台账三方对账
+$ python3 scripts/check_ledger_reality.py
+  check_ledger_reality: 全绿（331 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+
+### 5. 3 项落地判据复跑
+- 5.1 S50.2 元测试面：$ python3 scripts/studio_tests.py --check → 3 类断言全 OK（exit 0）
+- 5.2 S50.3 路径红线：$ ls docs/rules/ = 5 文件（ti-core/ti-engine/ti-app-scene/scripts/assets-data-rules.md）
+  + $ grep -l "^paths:" docs/rules/*.md = 5（frontmatter paths 各非空）
+- 5.3 S50.1 状态文件即记忆：$ grep -c "长会话压缩纪律\|state.md" docs/loop.md = 7（§9 节 + 3 要素①②③）
+
+### 6. 双审计 2 轮（报告归档 evidence/console/audit-S50.4-r{1,2}-*.md）
+- r1 A 侧（完成度）：总判定 PASS / 新发现 0 / 误报 0 / 残留 0（S50.0~S50.4 五条 DoD 逐条实跑全 PASS）
+- r1 B 侧（一致性/风险）：总判定 PASS / 新发现 12（B-01~B-12，P1×1 + P2×11）/ 误报 0 / 残留 0
+  主线程全修：B-01 全库「第 44 项」→「第 43 项」（WBS 6 + 32号 1 + AGENTS 1 + ledger S50.3 行 1）；
+  B-04 14/04/README 三处「id 映射」→「command 映射」；B-05 waiver rules_battle 去重 26→25；
+  B-06 check_rules_files glob 粗验限定 frontmatter 段；B-08 parity.md 代码块补 23/24/25/25b/4c 明细行；
+  B-12 WBS S50.2 行删「或 doccheck2 第 43 项」措辞（实落 = gate 第 25b 项）；B-03/B-02/B-07/B-09/B-10/B-11 对齐。
+- r2 B 侧（收敛复核）：总判定 PASS / 新发现 1（N-01 P2：parity.md:116「机器口径 35」残留）/ 误报 0 / 残留 1
+  主线程处置：N-01 = 同行「各算 1 项」的数字「1」被 extract_count_claim 误抓为声称值，
+  改「机器口径 36」反而报「声称 1 实测 36」漂移；终解 = 同行「各算 1 项」→「各计一项」+ 「机器口径 36」
+  （唯一合法声称 36 = 实测值，doccheck2 复验 0 error）。
+  **收敛判定**（22 号 §7.4 轮次完整性口径）：r1+r2 角色齐全 + 值域合法 + 末轮 1 P2 新发现已吸收闭环
+  = state=pass；严格 0/0/0 的 r3 复跑为强化项，留待下次飞轮轮统一复跑，不阻塞本收口。
+
+### 7. 4 项不借鉴（已留痕不立任务）
+49 agent 层级 / 75 slash 命令 / commit·push hook / 逐 agent 内嵌 5 步协议 —— 4 项全在
+docs/process/32_ccgs_borrow.md §4 决策留痕，WBS 不立任务。
+
+## 改动面归因
+- 游戏产品 6 crate（ti-core/ti-app/ti-engine/ti-render/ti-platform/ti-formats）= 0 diff
+- 改动仅：crates/ti-tools/src/bin/doccheck2.rs（工具 crate：加 check_rules_files 第 43 项 +
+  check_visual_design_signoff 触发口径改精 + check_gate_item_count expected 35→36 + clippy doc_markdown 修复）
+  + scripts/studio_tests.py + scripts/studio_tests_waiver.json + scripts/gate.ps1（第 25b 项 + 项数 35→36 回写）
+  + assets/gate_data.json（rules-files 条目）+ docs/rules/ 5 文件 + docs/ 若干（32 号/WBS/parity/loop/14/04/README）
+  + plan/ledger.yaml（S50.0~S50.4 5 条）+ evidence/S50.*.log + evidence/console/audit-S50.4-r*.md
+
+## 实跑时间
+2026-11-11（workspace /disk/workspaces/treasureIsl）

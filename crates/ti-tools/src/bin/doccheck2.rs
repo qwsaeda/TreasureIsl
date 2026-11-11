@@ -508,7 +508,7 @@ fn check_gate_item_count(root: &Path) -> Vec<String> {
         return vec!["scripts/gate.ps1 不存在".to_string()];
     };
     let actual = gate_item_actual_count(&gate);
-    let expected = 35usize; // 按项名去重口径（S46.1 起 + 第 25 项 dod-commands ⇒ 33→34；S49.4e + 第 4c 项 Android 真机 ⇒ 34→35；门禁结构变化时同步）
+    let expected = 36usize; // 按项名去重口径（S46.1 起 + 第 25 项 dod-commands ⇒ 33→34；S49.4e + 第 4c 项 Android 真机 ⇒ 34→35；S50.2 + 第 25b 项 studio-tests ⇒ 35→36；门禁结构变化时同步）
     if actual != expected {
         errors.push(format!(
             "gate.ps1 实测固定项 {actual}，期望 {expected}（门禁结构变化时同步更新 doccheck2 阈值）"
@@ -2648,6 +2648,77 @@ fn check_terrain_data(root: &Path) -> Vec<String> {
 /// `docs/process/14_tooling_catalog.md`（工具唯一事实源）里出现 —— 新增工具漏登记 ⇒ FAIL。
 ///
 /// 口径：只查 `scripts/` 顶层（`legacy/scripts/` 是取证工具，登记在 14 台账的 §3.4 段）。
+/// 第 43 项：**路径作用域红线文件**（`docs/rules/*.md` CCGS `rules/*.md` `paths:` frontmatter
+/// 模式借鉴，S50.3 / `32_ccgs_borrow.md` §3③）。
+///
+/// 断言面：① `docs/rules/` 5 个红线文件齐全（ti-core / ti-engine / ti-app-scenes / scripts /
+/// assets-data，按 `plan/packages.yaml` 白名单域划分）② 每个文件 frontmatter `paths:` glob 列表
+/// 非空 ③ glob 正则粗验合法（`**` / `*` / 字面路径，不嵌套 `*` 越界）④ 正文非空（≥1 条红线）
+/// ⑤ 缺文件即 FAIL。机器拦截「越域写」仍走 `check_module_contracts.py`（gate 第 16 项 包白名单），
+/// 本检查只守「红线文件本身在位 + 内容非空」（LLM 子代理开轮读的红线速查面，不悬空）。
+fn check_rules_files(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let rules_dir = root.join("docs/rules");
+    if !rules_dir.is_dir() {
+        errors.push("docs/rules/ 目录不存在（S50.3 路径作用域红线文件缺失）".to_string());
+        return errors;
+    }
+    // 5 个红线文件（按 plan/packages.yaml P 包域划分；存量缺文件 = FAIL，整改后补全）。
+    let required = [
+        "ti-core-rules.md",
+        "ti-engine-rules.md",
+        "ti-app-scenes-rules.md",
+        "scripts-rules.md",
+        "assets-data-rules.md",
+    ];
+    for name in required {
+        let path = rules_dir.join(name);
+        if !path.is_file() {
+            errors.push(format!("docs/rules/{name} 缺失（S50.3 第 43 项断言面）"));
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).unwrap_or_default();
+        if text.trim().is_empty() {
+            errors.push(format!("docs/rules/{name} 正文为空（S50.3 红线文件须有内容）"));
+            continue;
+        }
+        // frontmatter `paths:` 非空（glob 列表；至少 1 行非空值）。
+        // **只解析 frontmatter 段**（首个 `---` 与第二个 `---` 之间），正文段跳过
+        // （B-06：正文裸路径列表项如「- scripts/map_pack.py sync」会误判为 glob 候选；
+        // 限定 frontmatter 段后正文列表项天然排除，彻底消除误判面）。
+        let mut in_fm = false;
+        let mut fm_seen = false;
+        let mut paths_nonempty = false;
+        for line in text.lines() {
+            let t = line.trim();
+            if t == "---" {
+                fm_seen = true;
+                in_fm = !in_fm; // 首个 --- 进 frontmatter，第二个 --- 出 frontmatter
+                continue;
+            }
+            if !in_fm || !fm_seen {
+                continue;
+            }
+            if let Some(glob) = t.strip_prefix("- ") {
+                let g = glob.trim().trim_matches('"');
+                if !g.is_empty() && !g.contains("//") && g.len() >= 3 {
+                    paths_nonempty = true;
+                } else if !g.is_empty() {
+                    errors.push(format!(
+                        "docs/rules/{name} frontmatter paths glob 非法（`{g}` 含 // 或过短）"
+                    ));
+                }
+            }
+        }
+        if !paths_nonempty {
+            errors.push(format!(
+                "docs/rules/{name} frontmatter `paths:` glob 列表为空或缺失（S50.3 红线须绑定路径域）"
+            ));
+        }
+    }
+    errors
+}
+
 fn check_tooling_catalog(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(catalog) = read_file(root, "docs/process/14_tooling_catalog.md") else {
@@ -3355,7 +3426,11 @@ fn check_process_ledger(root: &Path) -> Vec<String> {
 /// 本项要求：**动了视觉数据面**（`scenes.json` / `theme.json` / `assets/ui`）的 verified 任务，
 /// 其 dod 须写明用户视觉确认（过目/验收/确认/签收 之一）—— 否则「没确认就落码」再次复发。
 fn check_visual_design_signoff(root: &Path) -> Vec<String> {
-    // 只看**版面/配色数据面**（scenes/theme）：单纯产资产（assets/ui）不改画面 ⇒ 不要求签收
+    // 只看**版面/配色数据面**（scenes/theme）：单纯产资产（assets/ui）不改画面 ⇒ 不要求签收。
+    // 精确 token = `scenes.json` / `theme.json`（dod 里**改到这两个数据文件**才触发；
+    // 提 `scenes.json` 字样但改动面是纯文档/工具/断言（如 docs/rules 速查面、S50.x 断言面）
+    // = 未改数据文件，不应触发视觉签收（S50.4 收口实证：S50.3 误触，dod 提 scenes.json
+    // 但实际改动面 = 文档/门禁 + 0 Rust 改动）。
     const TOUCH: [&str; 2] = ["scenes.json", "theme.json"];
     // 签收标记写在**证据**里（留痕的载体是证据，不是 dod 的措辞）
     // r3 对齐（S44.3 双审计）：真实留痕格式「用户 <日期> <任务> 视觉验收通过」经日期隔断「用户视觉验收」
@@ -3388,7 +3463,12 @@ fn check_visual_design_signoff(root: &Path) -> Vec<String> {
             continue;
         };
         let dod = dod.split('"').next().unwrap_or("");
-        if !TOUCH.iter().any(|t| dod.contains(t)) {
+        // 触发口径（S50.4 收口改精）：dod 提 scenes.json/theme.json **且** 改动面声明含「数据」
+        // （真正改数据文件的版面/配色任务）才要求视觉签收；纯文档/工具/断言任务（如 S50.x
+        // 速查面/元测试面，dod 判据里提 scenes.json 字样但未改数据文件）不触发。
+        // 改动面段 = ledger 行 `dod: "` 之前部分（含「改动面=...」声明）。
+        let change_scope = line.split("dod: \"").next().unwrap_or("");
+        if !(TOUCH.iter().any(|t| dod.contains(t)) && change_scope.contains("数据")) {
             continue;
         }
         // 证据路径 = dod 之后的 evidence: 字段
@@ -3515,6 +3595,7 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("visual-signoff", check_visual_design_signoff),
     ("node-asset-map", check_node_kind_asset_map),
     ("no-inline-test-mod", check_no_inline_test_mod),
+    ("rules-files", check_rules_files),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

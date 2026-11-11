@@ -97,7 +97,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > + P5-1 设备标定 FAIL（窗口不驻留）；P5-4 照跑，`evidence/android_device_test.log`
 > 含设备 serial 可回溯（2026-11-10 MuMu 实测：P5-2 PASS / P5-4 PASS / P5-1 设备标定 / P5-3 SKIP）。
 
-## 代码质量门禁 `scripts/gate.ps1`（35 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
+## 代码质量门禁 `scripts/gate.ps1`（36 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
 
 > **计数约定（本节是门禁项数的唯一事实源，其他文档只引用、不各自重数）**
 >
@@ -105,7 +105,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > 1. **数全部 `Report`**（不只看顶格）——wasm 构建、android 构建、`zero-unknown verify`、
 >    **Android 真机（第 4c 项）** 等条件块内 Report 也计项（它们都是真实门禁检查，只是环境依赖 SKIP）；
 > 2. `Skip` 不单独计项（环境缺 = SKIP，判据 FAIL = Report FAIL）；
-> 3. 当前全部 `Report` 去重 = **35 项**（S46.1 起 = 34 + 第 25 项 dod-commands；S49.4e 起 = 35 + 第 4c 项 Android 真机；数字对不上时以机器输出为准）。
+> 3. 当前全部 `Report` 去重 = **36 项**（S46.1 起 = 34 + 第 25 项 dod-commands；S49.4e 起 = 35 + 第 4c 项 Android 真机；数字对不上时以机器输出为准）。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
 > 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
@@ -113,7 +113,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 >
 > **易错点（勿再踩）**：
 > - `gate.ps1` 的**注释编号**（1..20 + 19.5 + 4b/4c，含第 7 项 zero-unknown）与**机器计数**
->   不一定相等：`10a`/`10b`/`10c` 各算 1 项。引用「项数」一律用机器口径 35。
+>   不一定相等：`10a`/`10b`/`10c` 各计一项。引用「项数」一律用机器口径 36（`gate.ps1` 实测 `Report` 去重数；数字对不上以机器输出为准，不手工重数）。
 > - `10a`/`10b`/`10c` 是 **3 个独立 `Report`，各算 1 项**，不是「三合一算 1 项」。
 > - 历史计划文档里的 8/10/14/16/18/20 项均为**该阶段时点快照**，不代表当前；引用时须带时点标注。
 > - **`required-features` 的 bin 不被第 1~3 项编译/lint 覆盖**——第 4b 项专门补这个盲区（EXP-099）。
@@ -203,13 +203,34 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
         （scene_manifest_v3.json N1-N8：Schema 校验 / mood 三元一致 / 重心占屏 ≥20% /
          节奏权重和 =1.0 + 重心 beat 首位且 ≥0.30 / beats 2-4 / HUD 上限 / 死区上限 /
          scenes.json focus_anchor 对账（未落地键 SKIP，v3.1 起全量））
+   23 浏览器真运行时试玩（S16.1 web_playtest，Node + Playwright CDP 按键驱动）：
+        node scripts/web_playtest.cjs --url http://127.0.0.1:8080/
+        （L1 实例化活体 / L2 首帧墨点 / L3 场景切换帧有变化 / L4 console 致命错误 = 0；
+         无 node playwright / serve 未跑 = 记名 SKIP，有前置且断言失败 = FAIL）
+   24 试玩闭环 loop（S16.2，4 份运行时报告聚合，docs/process/08_playtest_loop.md）：
+        python scripts/playtest_loop.py --check
+        （fuzz_playtest / full_run / render_invariants / web_playtest 全 0 失败 = 本试戏轮无新缺陷；
+         停机 = 连续 3 轮收敛入 evidence/S16.2.log + 主线程复核，EXP-038/058）
+   25 DoD 判据命令载体可达性自检（S46.1，EXP-170/171 复发防护）：
+        python scripts/check_dod_commands.py --check
+        （文档判据命令 cargo run/test --bin/--test、scripts/*.py|ps1 载体全存在 +
+         多 bin 歧义形式 0 处；「判据从未执行」类缺陷的门禁兜底）
+   25b 元测试面（S50.2，CCGS studio-tests 模式借鉴，docs/process/32_ccgs_borrow.md）：
+        python scripts/studio_tests.py --check
+        （3 类断言：① doccheck2 触发面双向对账 ② test_manifest↔console_commands 映射
+         ③ 工具台账三处登记核验；收口档实跑，存量豁免走 scripts/studio_tests_waiver.json
+         棘轮基线；前置缺失 exit 2 记名 SKIP，断言 FAIL 非 0 exit 1）
+    4c Android 真机交互（P5，S49.4e，docs/parity.md §P5 判据）：
+        python scripts/android_device_test.py --run
+        （P5-1 全屏 / P5-2 触摸命中 / P5-3 音频生命周期 / P5-4 切后台不崩，adb 驱动；
+         无 adb 设备 = 记名 SKIP 非 FAIL，设备限制 SKIP 如实标注）
    ```
 
 任一项红灯 = 本轮不可标 verified，不可推进下一任务。
 
 ## 完成定义（DoD）
 
-`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 35 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
+`P0~P4 全 pass`（含 P0-5/P0-6/P4-4 S10 新增判据）+ `gate 36 项全绿` + `docs/plan-s4.md` 的 S4.4 产物齐全（桌面 exe / wasm 站点 / APK）+ ledger 全 `verified`。
 
 **S10 对抗流水线停机条件**（S10.5，`docs/plan-s10-refactor.md`）：
-审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 35 项全绿。
+审计 0 新发现（`rea-audit-fix` 双 agent）+ P3-3 全流程 16 步 0 失败 + gate 36 项全绿。

@@ -1,0 +1,58 @@
+S50.3 路径作用域红线（CCGS `rules/*.md` `paths:` frontmatter 模式借鉴，S50.3）
+
+## 判据实跑输出
+
+### 1. docs/rules/ 5 个文件齐全 + frontmatter paths 各非空
+$ ls docs/rules/ | wc -l
+→ 5（assets-data-rules.md / scripts-rules.md / ti-app-scene-rules.md / ti-core-rules.md / ti-engine-rules.md）
+$ grep -l "^paths:" docs/rules/*.md | wc -l
+→ 5（5 个文件 frontmatter `paths:` glob 列表全在，非空）
+
+### 2. doccheck2 第 43 项 rules-files 入注册表 + gate_data.json
+$ grep -n '"rules-files"' crates/ti-tools/src/bin/doccheck2.rs assets/gate_data.json
+→ doccheck2.rs:3581    ("rules-files", check_rules_files),
+→ gate_data.json:341   "id": "rules-files",
+（43 项 = 原 42 + rules-files；doccheck2 实跑 0 error，输出含 rules-files）
+
+### 3. 负例护栏（2 个）
+- 负例 A：临时删 docs/rules/ti-core-rules.md ⇒ doccheck2 报
+  `ERROR docs/rules/ti-core-rules.md 缺失（S50.3 第 43 项断言面）` exit=1；恢复后 0 error exit=0
+- 负例 B：临时把 ti-engine-rules.md 的 paths 块注释掉 ⇒ doccheck2 报
+  `ERROR docs/rules/ti-engine-rules.md frontmatter 'paths:' glob 列表为空或缺失` ；恢复后 0 error exit=0
+
+### 4. 子代理开轮实测（P6 包域过滤注入）
+模拟 `flywheel_readme.ps1` 开轮必读「按包域注入 docs/rules/」：
+$ python3 过滤 pkg_domain='crates/ti-app/src/scenes/' 命中 docs/rules/ 红线文件
+→ P6 开轮注入红线文件 = ['ti-app-scene-rules.md']（按 frontmatter paths glob 前缀匹配；
+  该文件 paths 含 `crates/ti-app/src/scenes/**` / `menu_shell.rs` / `widgets.rs`，P6 域全命中）
+
+### 5. 零游戏产品 Rust 改动（crates/ 仅 doccheck2.rs 加断言 65 行）
+$ git diff --stat crates/
+  crates/ti-tools/src/bin/doccheck2.rs | 66 +++++++++++++++++++++-
+  1 file changed, 65 insertions(+), 1 deletion(-)
+（游戏 6 crate = ti-core/ti-app/ti-engine/ti-render/ti-platform/ti-formats 全 0 diff；
+  改动仅在工具 crate ti-tools 的 doccheck2.rs 加 `check_rules_files` 断言 + 注册表 1 行，
+  属「门禁面」改动，符合 S50.3「crates/ 0 diff（除 doccheck2.rs 加断言）」判据）
+
+### 6. doccheck / doccheck2 0 error
+$ cargo run -q -p ti-tools --bin doccheck
+  doccheck: 177 docs, 38 facts, 181 experiences, 327 task refs, 4 assertions, 0 error(s)
+$ /disk/target/debug/doccheck2 .
+  doccheck2: 0 error(s) across 43 audit-codified checks（含 rules-files）
+
+### 7. 台账三方对账 + release.md 计数同步
+- release.md:239 计数同步 verified=330（原 329，S50.3 verified +1）
+- 台账 S50.3 status=verified（evidence 非空）
+
+## 备注
+- 5 个红线文件按 `plan/packages.yaml` P 包白名单域划分：
+  P1~P5（ti-core rules/domain）→ ti-core-rules.md；P6（ti-app scenes）→ ti-app-scene-rules.md；
+  ti-engine（渲染层）→ ti-engine-rules.md；scripts/ → scripts-rules.md；assets/data → assets-data-rules.md。
+- 每个红线文件 = frontmatter `paths:` glob 列表（CCGS 模式）+ 正文 4~6 条红线（指向既有规范单一事实源，
+  不重述结论）+ 1~2 条正确/反例；机器拦截「越域写」仍走 `check_module_contracts.py`（gate 第 16 项 包白名单），
+  本层是给 LLM 子代理开轮读的红线速查面，不悬空（doccheck2 第 43 项守「文件在位 + 内容非空」）。
+- 子代理开轮实测 = P6 域过滤命中 ti-app-scene-rules.md；后续 `flywheel_readme.ps1` 可在开轮必读第 4 条
+  （docs/experience）后加第 7 条「按包域过滤 docs/rules/ 注入 1~2 个红线文件」（S50.3 后续增强，不阻塞本任务）。
+
+## 实跑时间
+2026-11-11（workspace /disk/workspaces/treasureIsl）
