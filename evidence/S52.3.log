@@ -1,0 +1,17 @@
+=== S52.3 死代码 3 函数处置（B 方案：留 #[deprecated]，用户 2026-11-11 拍板）===
+### ① 处置 = territory_v2.rs 3 函数挂 #[deprecated(since=0.2.0, note=...)]
+179:/// `#[deprecated]`（S52.3）：v2 全 5 席扫描，v3 席位池 2..5 席时有「不在局席永远存活」
+181:#[deprecated(
+222:/// `#[deprecated]`（S52.3）：单玩家 index 口径，v3 热座多玩家 = [`players_defeated`]
+224:#[deprecated(
+335:/// `#[deprecated]`（S52.3）：纯薄包装（本函数体 = 直调 [`ai_policy_v2`]，无独有逻辑）；
+337:#[deprecated(
+### ② 测试文件 territory_v2_rules.rs（v2 口径唯一引用点）文件级 #![allow(deprecated)]
+1:#![allow(deprecated)]
+### ③ check_hardcode 豁免表加 territory_v2.rs（deprecated note 中文 = 编译器诊断通道，非玩家 UI）
+71:    ("territory_v2.rs", "cjk", "S52.3 #[deprecated(note=...)] 编译器诊断文本（v2 死代码 3 函数留作语义参照；note 走 clippy/rustc 警告通道，非玩家可见 UI），not in-game UI"),
+### ④ 判据（S52.3 dod）：
+  - 生产调用方 grep = 0（飞轮 R2 P2-29/30/31 定位；ti-app/ti-engine 无调用）
+    生产调用命中 = 0
+  - deprecated 标记编译生效：测试唯一引用点须文件级 allow 才过 clippy -D warnings（已实跑 clippy_exit=0）
+  - check_hardcode 严格 0 命中（豁免表新增 territory_v2.rs 行 + 14 号台账登记）

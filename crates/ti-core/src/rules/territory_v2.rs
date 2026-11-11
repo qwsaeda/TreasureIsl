@@ -175,6 +175,13 @@ pub fn bankrupt(seat: &mut SeatState, terr: &mut TerritoryState, seat_idx: SeatI
 /// 胜利判定（§4.4）：**所有对手（其他席）全部破产** ⇒ 最后一个未破产席位胜。
 ///
 /// `seats` = 全部席位的存活态；返回胜者席位下标（无胜者 = `None`）。
+///
+/// `#[deprecated]`（S52.3）：v2 全 5 席扫描，v3 席位池 2..5 席时有「不在局席永远存活」
+/// 缺陷（D4）；0 生产调用方。现役 = [`victory_seat_active`]（按在局掩码判）。
+#[deprecated(
+    since = "0.2.0",
+    note = "v3 在局掩码口径 = `victory_seat_active`；v2 全席扫描仅留作语义参照"
+)]
 #[must_use]
 pub fn victory_seat(seats: &[SeatState]) -> Option<SeatIdx> {
     let alive: Vec<SeatIdx> = seats
@@ -211,6 +218,13 @@ pub fn victory_seat_active(seats: &[SeatState], active: &[bool]) -> Option<SeatI
 }
 
 /// 失败判定（§4.4）：玩家席破产 ⇒ 直接结束（败）。
+///
+/// `#[deprecated]`（S52.3）：单玩家 index 口径，v3 热座多玩家 = [`players_defeated`]
+/// （全部玩家席出局才判败）；0 生产调用方，仅留作语义参照。
+#[deprecated(
+    since = "0.2.0",
+    note = "v3 多玩家席口径 = `players_defeated`；单 index 口径仅留作语义参照"
+)]
 #[must_use]
 pub fn player_defeated(seats: &[SeatState], player_idx: SeatIdx) -> bool {
     seats.get(player_idx as usize).is_some_and(|s| !s.alive)
@@ -317,6 +331,13 @@ pub fn ai_policy_v2(
 }
 
 /// v2 AI 回合（§6）：决策（兵力模型）+ 驻军自定（战后留 1/3 守，守恒）。
+///
+/// `#[deprecated]`（S52.3）：纯薄包装（本函数体 = 直调 [`ai_policy_v2`]，无独有逻辑）；
+/// 0 生产调用方。现役 AI 决策入口 = `ai_policy_v2`。
+#[deprecated(
+    since = "0.2.0",
+    note = "薄包装无独有逻辑，现役入口 = `ai_policy_v2`；仅留作 v2 语义参照"
+)]
 #[must_use]
 pub fn ai_turn_v2(
     balance: &Balance,

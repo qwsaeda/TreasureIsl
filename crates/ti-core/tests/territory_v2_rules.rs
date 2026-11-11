@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 //! 领地 v2 兵力模型规则集成测试（S52.1；`docs/business/territory.md` §4–§7 可测规则）。
 //!
 //! 本文件位 `tests/`（源码内联测试被 doccheck2 `no-inline-test-mod` 拦截；EXP-052 口径）。
@@ -6,6 +8,11 @@
 //! oracle = `docs/business/territory.md` §4.4（驻军守恒 / 攻占败交双倍 / 多人同格只打前一个 /
 //! 破产出局 / 胜者 = 唯一存活者）+ `combat.md` §兵力模型（`rules::force`）。
 //! 判据：`cargo test -p ti-core --test territory_v2_rules` 全绿。
+//!
+//! `#[allow(deprecated)]`（S52.3 文件级）：本文件是 `victory_seat` / `player_defeated`
+//! （v2 口径，0 生产调用，挂 `#[deprecated]` 留作语义参照）的**唯一**引用点；
+//! 文件级 allow 盖住 use 块 + 2 个用例。现役 v3 口径 = `victory_seat_active` /
+//! `players_defeated`（本文件另有专测，不 deprecated）。
 
 use ti_core::data::{Balance, balance, board};
 use ti_core::rules::force::Force;
@@ -213,6 +220,9 @@ fn bankrupt_empties_all_territories() {
 }
 
 /// §4.4 胜利：所有对手破产 ⇒ 最后存活者胜。
+/// `#[allow(deprecated)]`（S52.3）：`victory_seat` = v2 全席扫描口径（0 生产调用，挂
+/// `#[deprecated]` 留作语义参照）；现役 = `victory_seat_active`（v3 在局掩码，另有专测）。
+#[allow(deprecated)]
 #[test]
 fn victory_when_all_opponents_bankrupt() {
     let mut seats = vec![SeatState::new(100, 10, 5, 0), SeatState::new(0, 0, 0, 0)];
@@ -223,6 +233,9 @@ fn victory_when_all_opponents_bankrupt() {
 }
 
 /// §4.4 玩家败：玩家席破产 = 玩家方败。
+/// `#[allow(deprecated)]`（S52.3）：`player_defeated` = 单玩家 index 口径（0 生产调用，
+/// 挂 `#[deprecated]` 留作语义参照）；现役 = `players_defeated`（v3 多玩家席，另有专测）。
+#[allow(deprecated)]
 #[test]
 fn defeat_when_player_bankrupt_ends_game() {
     let mut seats = vec![SeatState::new(100, 10, 5, 0), SeatState::new(100, 10, 5, 0)];

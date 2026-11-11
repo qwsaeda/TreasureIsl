@@ -505,7 +505,10 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
         }
         let is_suffixed_variant =
             k.starts_with("scene.") && exempt_suffixed.iter().any(|s| k.ends_with(s));
-        if !used_keys.contains(k) && !is_suffixed_variant && !exempt_known_consumed.iter().any(|e| e == k) {
+        if !used_keys.contains(k)
+            && !is_suffixed_variant
+            && !exempt_known_consumed.iter().any(|e| e == k)
+        {
             eprintln!(
                 "  WARN i18n 孤儿 key `{k}`（strings.json 有但代码未引用，S8.x 数据化迁移前清理）"
             );
@@ -2426,7 +2429,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     };
     // 现状声称点锚定短语（`doc_numbers.py --fix` 回写同一组短语 = 双保险）
     let claims: [(&str, &str); 2] = [
-        ("docs/release.md", &format!("{tasks} 任务（{verified} verified + 1 pending S52.3")),
+        ("docs/release.md", &format!("{tasks} 任务（{verified} verified + 0 pending（S52 全收口；余 1 blocked S7.7 可选）")),
         ("AGENTS.md", &format!("{tasks} 任务 / {verified} verified")),
     ];
     for (rel, phrase) in claims {

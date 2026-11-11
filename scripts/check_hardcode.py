@@ -68,6 +68,7 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("element_dump.rs", "cjk", "diagnostic bin: §4 layout zone / bleed terminal output, not in-game UI"),
     ("forward_nav.rs", "cjk", "S14 forward navigation diagnostic prints, not in-game UI text"),
     ("render_png.rs", "cjk", "S14 forward PNG export bin terminal output, not in-game UI text"),
+    ("territory_v2.rs", "cjk", "S52.3 #[deprecated(note=...)] 编译器诊断文本（v2 死代码 3 函数留作语义参照；note 走 clippy/rustc 警告通道，非玩家可见 UI），not in-game UI"),
 ]
 
 
