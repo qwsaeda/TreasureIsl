@@ -1,0 +1,42 @@
+S51.0 CCGS 五步协作协议形态借鉴（开轮协作五步：提问→方案→拍板→草稿→批准，固化进任务书模版段；纯文档零 Rust）
+
+## 背景
+S50.4 收口时把 CCGS「5 步协作协议逐 agent 内嵌」判进「4 不借鉴」（理由写「loop.md §4 + 硬规则 2 已替代」）。
+用户质疑「不能做？」后查全库实跑验证：loop.md §4 实际 =「卡死与回退」、硬规则 2 =「验收才算完成」（均事后约束），
+都不覆盖 CCGS 五步协议的**事前**面（提问→给 2-4 方案+利弊→你拍板→出草稿→你批准才落地）。
+全库 grep 0 命中「先问再写 / 给 2-4 方案 / 草稿先过目 / 批准才落地」= 事前协作协议面 = 真缺口。
+故 S51.0 = 把 CCGS 五步协议**思想**形态借鉴进来（我方无静态 agent 配置文件，故固化进任务书模版段，非逐 agent 内嵌）。
+
+## 判据实跑输出
+
+### 1. 03_templates.md §7 含「开轮协作五步」段（5 字段名固定 提问/方案/拍板/草稿/批准）
+$ grep -n "开轮协作五步\|提问（Ask）\|方案（Options）\|拍板（Decision）\|草稿（Draft）\|批准（Approve）" docs/process/03_templates.md
+→ 行 324 节标题 + 行 330/332/334/336/337 五步各 1 行（5 字段全在）
+→ 角色豁免条款（只读角色豁免「草稿/批准」两步保留「提问+方案+拍板」）+ 回报必填段
+
+### 2. 06_flywheel.md §2 开轮必读 6 条→7 条（加第 7 条 + 节标题改「7 条」）
+$ grep -n "开轮必读清单（飞轮增强核心\|开轮协作五步\|附以下 7 条" docs/process/06_flywheel.md
+→ 行 19 节标题「开轮必读清单（飞轮增强核心，EXP-068；S51.0 起 7 条）」
+→ 行 21「必须附以下 7 条」
+→ 行 32 第 7 条「开轮协作五步」（指向 03_templates §7 + CCGS Ask→Options→Decision→Draft→Approval）
+→ 行 38「第 7 条回执」判据（缺段 = 回报不合格打回；只读角色报「0 个决策点」即可）
+
+### 3. 32_ccgs_borrow.md §4 第 4 项「不借鉴」→「形态借鉴」
+$ grep -n "形态借鉴\|S51.0" docs/process/32_ccgs_borrow.md
+→ 行 93 第 4 项改为：「逐 agent 内嵌形态做不了也不需；但 CCGS 五步协议思想值得借鉴 —— S51.0 起**形态借鉴**：
+   固化进 03_templates.md §7 任务书模版「开轮协作五步」段 + 06_flywheel §2 开轮必读第 7 条
+   （非 49 个 agent 文件，而是子代理任务书模版段，和我方既有载体一致）」
+
+### 4. AGENTS.md 路由表 S51 行 + README 登记 2 处（06_flywheel 行「开轮必读 6 条」→「7 条」）
+$ grep -n "S51" AGENTS.md → 行 53 S51 路由行在位
+$ grep -n "开轮必读 7 条" docs/README.md → 行 19 + 行 54 两处 06_flywheel 行已改 7 条
+
+### 5. EXP-186 经验回写（process 卷 + index 登记）
+$ grep -c "EXP-186" docs/experience/index.md docs/experience/process.md → index 2（卷统计行 + 条目行）/ process 1（正文）
+（EXP-186 = 「CCGS 借鉴分析里『已替代』误判（事前协作协议真没有等价物）」，根因 + 教训 + S51.0 改形态借鉴）
+
+### 6. 纯文档零 Rust
+$ git diff --stat crates/ → 空（docs/ 改动，crates/ 0 diff）
+
+## 实跑时间
+2026-11-11（workspace /disk/workspaces/treasureIsl）

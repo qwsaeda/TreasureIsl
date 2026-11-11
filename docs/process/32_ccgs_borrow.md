@@ -90,7 +90,7 @@ CCGS 14 个 `rules/*.md` 的 `paths:` frontmatter + 该路径下编码红线正�
 | 49 agent 层级（总监/主管/专家 3 层 + 垂直委派/横向咨询） | 项目规模 = 2 主线程 + 2 审计 + 3 飞轮 + 临时 spawn 足够；49 角色 = 过度设计；台账本身已替代「制作人协调变更传播」 |
 | 75 个 slash 命令（/brainstorm /dev-story /code-review ...） | gate 35 项已等价覆盖质量阶段；75 命令是过程脚手架，我方是收口脚手架，多脚手架反而让 LLM 走流程忘了「必须实测」 |
 | 12 个 commit/push 前 hook（`validate-commit.sh` 48KB） | 我方 commit 全由人工/主线程做，无「LLM 子代理擅自 commit 绕过」风险面；收口时刻 = gate 全绿 + 三方对账，比 commit hook 更彻底 |
-| 5 步协作协议逐 agent 内嵌 | 我方无 agent 配置文件（只有临时 spawn 子代理 + prompt 附带开轮必读清单 6 条 + 规范回执）；`loop.md` §4 + 硬规则 2 已替代 |
+| 5 步协作协议逐 agent 内嵌 | 我方无静态 agent 配置文件（子代理临时 spawn + 开轮必读清单 + 规范回执），**逐 agent 内嵌形态做不了也不需**；但 CCGS 五步协议（Ask→Options→Decision→Draft→Approval）的**思想**值得借鉴 —— S51.0 起**形态借鉴**：固化进 `03_templates.md` §7 任务书模版「开轮协作五步」段 + `06_flywheel` §2 开轮必读第 7 条（非 49 个 agent 文件，而是子代理任务书模版段，和我方既有载体一致） |
 
 ## 5. 一个隐藏风险点（CCGS 没解决，我方 S50.2 部分解决）
 

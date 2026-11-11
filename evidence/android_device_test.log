@@ -2,9 +2,9 @@
 
 设备：serial=10.0.182.146:5555 屏幕=900x1600
 
-  [PASS] clean-start 首启 pid=5510（6s 清场后）
-  [SKIP] p5-1 全屏（surface=屏幕尺寸）：SKIP（launcher 抢前台）：clean_start 后 mCurrentFocus/mFocusedApp 不含本 app（MuMu lawnchair 持续抢前台），窗口不驻留 dumpsys，全屏判据无法执行；需前台稳定设备（arm64 真机）重跑
+  [PASS] clean-start 首启 pid=7351（6s 清场后）
+  [FAIL] p5-1 全屏（surface=屏幕尺寸）：dumpsys window 未提取到 app bounds（com.example.treasureisland；窗口不驻留 = 设备标定，GPU 正常设备重跑；已拒脏数字 65535/越界）
   [SKIP] p5-2 触摸命中（tap 1600,300→场景流转）：SKIP（坐标未标定）：tap 1600,300 超出屏幕 900x1600（需按本设备分辨率 --tap-x/--tap-y 重新标定，非 app bug）
   [SKIP] p5-3 音频生命周期（切后台暂停/回前台恢复）：SKIP（无 BGM 日志）：winit 生命周期事件 0 条 + 无 [audio] 日志 = 容器/设备 AppLifecycle 通道断裂（redroid/MuMu 上 winit 生命周期未投递），无法验证 BGM 暂停/恢复；需真机或正常 winit 生命周期设备重跑
-  [PASS] p5-4 切后台不崩（进程存活+无 FATAL）：HOME 切后台后进程挂起存活 + 无 FATAL/ANR（同一 pid=5510）
-P5: 全部判据 PASS（设备限制判据已如实标 SKIP）
+  [PASS] p5-4 切后台不崩（进程存活+无 FATAL）：HOME 切后台后进程挂起存活 + 无 FATAL/ANR（同一 pid=7351）
+P5: 1 判据 FAIL（docs/parity.md §P5；设备/坐标标定见脚本 docstring）

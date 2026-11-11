@@ -33,7 +33,7 @@
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 22 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 37 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114） | 44 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114）、CCGS 借鉴分析「已替代」误判（EXP-186） | 45 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 59 |
 
 ## 条目索引
@@ -225,6 +225,7 @@
 | EXP-183 | code | | P5 判据飞轮 r1 对抗审计抓 12 洞修 7：P5-2 md5 判据太松（未用 SCREENSHOT_CHANGE_MIN 阈值）+ tap 坐标超界（MuMu 900 宽 tap 1600 误判 PASS）；P5-1 只查 mFrame 不查 surface（0fps 设备假 PASS）；P5-4 重启误判挂起（同 pid vs 异 pid 降级）；判据分级 = P5-1 窗口驻留 / P5-4 生命周期 / P5-2/P5-3 渲染出帧依赖；纯 CPU 设备三重限制无法全过，需 arm64 真机 正文见 `code.md` |
 | EXP-184 | tools | | 平台 Rust 侧用 serde_json::to_string_pretty 重写 assets/ui_manifest.json → indent 1→2 + BTreeMap 键序重排 = 每次地块生图 3681 行全文件 churn；解法=清单写入唯一路径 scripts/ui_assets.py register-plot（json.dumps(indent=2) 保序）→ 零 churn（已登记 0 diff / 新条目 +9 行）+ 契约测试（幂等 + 逐字节不变） 正文见 `tools.md` |
 | EXP-185 | tools | | v5「岛型卡」→ v6 不规则地块演进中，tile_<isle>.png 按岛型共用一张 + 提示词无负向清单 → 地块图里画船（与玩家船棋子叠层撞车）；解法 = 资产按格（tile_<map_id>_<格号>.png）+ 提示词负向清单（no ship/flag/character/animal/text）+ 14_plot_tile_spec.md 单一事实源（收口 v5/v6 旧措辞）；全 10 类岛 m04 首格入仓 正文见 `tools.md` |
+| EXP-186 | process | | S50.4 收口把 CCGS「5 步协作协议逐 agent 内嵌」判进「4 不借鉴」（理由「loop.md §4 + 硬规则 2 已替代」）；用户质疑后查全库：loop.md §4 = 卡死与回退、硬规则 2 = 验收才算完成（均事后），不覆盖 CCGS 五步协议的**事前**面（提问→方案→拍板→草稿→批准）；现有事前约束仅角色禁区（一刀切只读）+ 开轮必读（只管读什么）+ A 纪律（仅 UI 视觉）= 全库 0 命中「先问再写/给 2-4 方案/草稿先过目/批准才落地」。教训：对照分析判「不借鉴」前必须 grep 验证我方是否真有等价载体，不能凭印象归「已替代」——事前协作协议面 = 真缺口（S51.0 改形态借鉴）。正文见 `process.md` |
 
 ## 条目格式（写新条时照抄）
 

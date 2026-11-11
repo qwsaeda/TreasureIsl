@@ -16,7 +16,7 @@
 | [process/03_templates.md §8 + docs/design-sheets/](process/03_templates.md) | **内容设计 sheet 模版（Canvas 概念落地，S16.4）**：加新地图/新岛类/新剧情 = 一张设计 sheet （四段式 A 业务定案 / B 数据 key 契约 / C 场景资源接线 / D 验收锚点 36 项门禁）；空样例 `assets/maps/m04/`（`map_pack add m04` 骨架，真内容落地后 verify 合规）+ `docs/design-sheets/m04.sheet.md`（模版填法示例，dod = 本任务只落模版不实现真内容） |
 | 用脚本/codegen 批量处理 | [`process/04_tooling.md`](process/04_tooling.md) |
 | **模块并行开发（契约→并行→集成）** | [`process/05_module_parallel.md`](process/05_module_parallel.md)（一轮 4 步 + 包划分 + 纪律 + §4.5 开轮必读）+ [`contracts/`](contracts/00_index.md) + `plan/packages.yaml` |
-| **对抗流水线飞轮（找问题→审计→修复→回写）** | [`process/06_flywheel.md`](process/06_flywheel.md)（3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件，EXP-068） |
+| **对抗流水线飞轮（找问题→审计→修复→回写）** | [`process/06_flywheel.md`](process/06_flywheel.md)（3 角色 + 开轮必读 7 条〔S51.0 起含第 7 条「开轮协作五步」〕+ 飞轮回写 + 停机条件，EXP-068） |
 | 查业务规则（战斗/经济/地图/存档） | [`business/`](business/00_index.md) 各系统文档（含 [`07_ui_flow.md`](business/07_ui_flow.md) 场景流/控件/输入/消息） |
 | S8 标准化改造 | [`plan-s8-refactor.md`](plan-s8-refactor.md) |
 | 逆向 exe 或 `data/` 格式（**仅参照物**） | [`facts/index.md`](facts/index.md) |
@@ -51,7 +51,7 @@
 | [`process/03_templates.md`](process/03_templates.md) | **模版库**：场景/控件/数据表/玩法模块/测试/脚本 六个可复制模版 |
 | [`process/04_tooling.md`](process/04_tooling.md) | 工具链现状 + 待建脚本（codegen/校验/硬编码扫描）+ 幂等要求 |
 | [process/05_module_parallel.md](process/05_module_parallel.md) | **模块并行开发 loop**（一轮 4 步 + 包划分 + 并行纪律 5 条 + §4.5 开轮必读/规范回执；机读白名单 plan/packages.yaml） |
-| [process/06_flywheel.md](process/06_flywheel.md) | **对抗流水线飞轮**（找问题/审计/修复 3 角色 + 开轮必读 6 条 + 飞轮回写 + 停机条件；EXP-068 单一事实源） |
+| [process/06_flywheel.md](process/06_flywheel.md) | **对抗流水线飞轮**（找问题/审计/修复 3 角色 + 开轮必读 7 条〔S51.0 起含第 7 条「开轮协作五步」CCGS 五步协议形态借鉴〕+ 飞轮回写 + 停机条件；EXP-068 单一事实源） |
 | [process/08_playtest_loop.md](process/08_playtest_loop.md) | **试玩闭环 loop**（S16.2：试戏/归因/修复/复测 4 角色 + 4 份运行时报告 fuzz_playtest/full_run/visual_regression/web_playtest + 归因三分类回写 + 3 轮收敛停机；开轮必读与回写口径复用 06_flywheel，不重造） |
 | [process/07_render_pipeline.md](process/07_render_pipeline.md) | **legacy 像素管线契约**（路径表/z-order 文件顺序/越界求交裁剪/PCX 透明位 index 0；S16 起降级为逆向参照，gate 第 19/20 项锚点） |
 | [process/08_render_arch.md](process/08_render_arch.md) | **运行时渲染架构**（分层/绘制原语/z-order=调用顺序/5 条坐标与像素来源契约/grep 门禁/测试重锚矩阵；改渲染代码必读） |

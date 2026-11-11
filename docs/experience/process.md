@@ -591,3 +591,6 @@ S48.0 平台 UI 向导插 theme 步（ui_theme 写 scenes.json 构图）后，la
 
 ### EXP-178 流程：零 Rust vs 测试断言冲突（换 UI 改 scenes.json 默认）
 S48.0 主题构图落 scenes.json index.landscape.primitives（最后 t10）→ 既有 landscape_drawlist 测试（断言 S39 羊皮藏宝图 index_bg_map_h 满屏 + 木牌 @1446）FAIL；改测试（ti-app 测试文件）= 破零 Rust（crates/ 全目录 0 diff）。修复：scenes.json index.landscape 恢复 S39 默认（landscape_drawlist 7 passed + 零 Rust 保持），10 套主题构图保留在 assets/themes/<tid>/compose.json（可 apply 切换，运行时默认 S39 不变）。教训：内容运营换 UI 若改 scenes.json 默认，须评估既有测试断言（版面/命中测试锁定默认构图）；正确 = 主题包保留 + scenes.json 默认不变（测试过 + 零 Rust），换主题=apply 主题包。
+
+### EXP-186 流程：CCGS 借鉴分析里「已替代」误判（事前协作协议真没有等价物）
+S50.4 收口时把 CCGS「5 步协作协议逐 agent 内嵌」判进「4 不借鉴」，理由写「loop.md §4 + 硬规则 2 已替代」。用户质疑后查全库：loop.md §4 实际是「卡死与回退」（验收失败拆子任务），硬规则 2 是「验收才算完成」（事后出示证据）——两者都不覆盖 CCGS 五步协议的**事前**面（提问→给 2-4 方案+利弊→你拍板→出草稿→你批准才落地）。现有事前约束只有 06_flywheel §1 角色禁区（角色级一刀切「不改任何文件」，不是「可以改但改前先问+给方案+拍板」）+ 03_templates §7 任务书的「开轮必读+规范回执」（只约束读什么，无方案选项/拍板/草稿批准面）+ A 纪律（只覆盖 UI 视觉类，非通用五步协议）= 全库 0 命中「先问再写/给 2-4 方案/草稿先过目/批准才落地」。教训：做对照分析判「不借鉴」前，必须查我方**是否真有等价载体**（grep 关键词验证），不能凭「我方已有协作机制」印象归进「已替代」——CCGS 的五步协议是事前约束，我方收口约束（台账/门禁/双审计）是事后约束，两者正交，**事前协作协议面 = 真缺口**。S51.0 起改形态借鉴（固化进任务书模版段，非逐 agent 内嵌，因我方无静态 agent 配置文件）。
