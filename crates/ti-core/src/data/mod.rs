@@ -250,6 +250,8 @@ pub struct CombatAnimCfg {
     pub hit: HitCfg,
     /// 道具动效表（`id` → 参数）。
     pub items: Vec<CombatItemAnimCfg>,
+    /// 血条中段健康色（<60% 黄，RGB565 字面量字符串；S49.4 飞轮 P1-26 数据驱动）。
+    pub hp_yellow: String,
 }
 
 /// 正弦式位移参数（`period_ms` 周期 + `amp_px` 振幅）。
@@ -294,6 +296,7 @@ impl Default for CombatAnimCfg {
                 CombatItemAnimCfg { id: "rum".into(), dur_ms: 1000, color: "0xF692".into() },
                 CombatItemAnimCfg { id: "smoke".into(), dur_ms: 400, color: "0x0842".into() },
             ],
+            hp_yellow: "0xE8C0".into(),
         }
     }
 }
@@ -1024,6 +1027,7 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
                             color: i.color.clone(),
                         })
                         .collect(),
+                    hp_yellow: a.hp_yellow.clone(),
                 }
             },
         },

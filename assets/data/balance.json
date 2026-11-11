@@ -160,6 +160,7 @@
    }
   ],
   "anim": {
+   "hp_yellow": "0xE8C0",
    "stage_ms": [
     1200,
     1800,

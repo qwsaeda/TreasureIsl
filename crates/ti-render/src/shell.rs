@@ -638,6 +638,12 @@ mod tests {
         ui_duel_round_badge: 73,
         ui_duel_popup_flash: 74,
         ui_debug_red_brown: 75,
+        isle_flag_dark: 76,
+        ink: 77,
+        ink_dark: 78,
+        vs_duel_edge_1: 79,
+        vs_duel_edge_2: 80,
+        vs_duel_edge_3: 81,
     };
 
     /// 记录型 Canvas：统计 `fill_rect` 次数与面积和（`draw_text` 不记账）。

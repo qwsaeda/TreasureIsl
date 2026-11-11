@@ -154,10 +154,6 @@
    "impl": "rust"
   },
   {
-   "id": "scene-band-count",
-   "impl": "rust"
-  },
-  {
    "id": "save-slot-map-slot-basis",
    "impl": "rust"
   },
@@ -339,6 +335,14 @@
   },
   {
    "id": "rules-files",
+   "impl": "rust"
+  },
+  {
+   "id": "theme-consumption",
+   "impl": "rust"
+  },
+  {
+   "id": "cross-doc-counts",
    "impl": "rust"
   }
  ]

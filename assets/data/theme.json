@@ -63,7 +63,13 @@
   "ui_duel_row_bg": "0x3102",
   "ui_duel_round_badge": "0xC466",
   "ui_duel_popup_flash": "0xFF37",
-  "ui_debug_red_brown": "0x38C3"
+  "ui_debug_red_brown": "0x38C3",
+  "isle_flag_dark": "0x7BEF",
+  "ink": "0x4183",
+  "ink_dark": "0x28C1",
+  "vs_duel_edge_1": "0x2A1A",
+  "vs_duel_edge_2": "0x1E12",
+  "vs_duel_edge_3": "0x140C"
  },
  "fonts": {
   "font_size": 44,

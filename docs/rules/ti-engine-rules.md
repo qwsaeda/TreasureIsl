@@ -36,4 +36,4 @@ paths:
 - 正确：`main_map.rs` 读 `scenes.json` `main_map.ring.*` 几何 + `board.json` 31 格数据 → 调
   `draw_poly` / `draw_image` 画环形棋盘，无 `if scene == "main_map"` 分支。
 - 反例：`chrome.rs` 硬编码 `let gold = [212, 175, 55];`（颜色字面量，应走 `theme.json` 色板令牌，
-  doccheck2 `engine-no-color-literal` 第 41 项守门）。
+  doccheck2 `engine-no-color-literal` 断言守门（现行第 15 项，`assets/gate_data.json` `doccheck2_checks` 为准）。

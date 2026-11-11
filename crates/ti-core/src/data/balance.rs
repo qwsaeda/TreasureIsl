@@ -168,6 +168,9 @@ pub(crate) struct RawCombatAnim {
     /// 道具动效表（`{id, dur_ms, color}`）。
     #[serde(default)]
     pub(crate) items: Vec<RawItemAnimCfg>,
+    /// 血条中段健康色（<60% 黄；飞轮 P1-26 数据驱动，缺省 = `CombatAnimCfg::default`）。
+    #[serde(default = "default_anim_hp_yellow")]
+    pub(crate) hp_yellow: String,
 }
 
 impl Default for RawCombatAnim {
@@ -178,6 +181,7 @@ impl Default for RawCombatAnim {
             dash: RawBobCfg::default(),
             hit: RawHitCfg::default(),
             items: Vec::new(),
+            hp_yellow: default_anim_hp_yellow(),
         }
     }
 }
@@ -236,6 +240,10 @@ fn default_anim_flash() -> u32 {
 }
 fn default_anim_color() -> String {
     "0xF692".to_owned()
+}
+
+fn default_anim_hp_yellow() -> String {
+    "0xE8C0".to_owned()
 }
 
 /// `defend_reduction_pct` 缺省值（与 `docs/business/combat.md` §战斗动作一致）。

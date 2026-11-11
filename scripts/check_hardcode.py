@@ -51,7 +51,7 @@ EXEMPT: list[tuple[str, str, str]] = [
     ("audio_prep.rs", "cjk", "audio asset diagnostics / test messages, not player-visible UI"),
     ("sprite_atlas.rs", "cjk", "atlas loading diagnostics / assertion messages, not player UI"),
     ("terrain_atlas.rs", "cjk", "terrain pak loading diagnostics / assertion messages, not player UI"),
-    ("game_app/", "cjk", "runtime eprintln diagnostics after S20.0b split (board/host/mod/assets), not player UI (flywheel R1 ⑤-06: old `game_app.rs` line no longer matches post-split paths)"),
+    ("game_app/", "cjk", "runtime eprintln diagnostics after S20.0b split (board/host/mod/assets), not player UI (flywheel R1 ⑤-06: old `game_app.rs` line no longer matches post-split paths; S28.6 玩家可见 toast 已走 i18n `i18n_fmt`，玩家可见 CJK = 0)"),
     ("scenes/main_map.rs", "cjk", "[stats]-gated TradeBuy/TradeSell/Build hard-error diagnostics, not player UI"),
     ("scenes/mod.rs", "cjk", "scene_transition! macro 3rd arg is doc-only ($doc -> #[doc] attribute), not player-visible text"),
     ("bevy_app.rs", "cjk", "Bevy spike shell window title, dev tool, not in-game UI (flywheel R1 ⑤-04 pending human ruling: may move to strings.json later)"),

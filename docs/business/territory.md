@@ -75,7 +75,7 @@
 | 同格起点 | 开局全席位同起点（`start_index`）出发；同格散开 = `seat_piece_offset(ordinal, total, radius)` |
 | 散开半径 | 开局全员同格 ⇒ 必须扇出到**不可重叠**：相邻中心距 ≥ `2·radius·sin(π/n)`；单席 = 居中 `(0,0)` |
 | 船缩小 | 同格 ≥2 席时棋子缩小到 `70%`（`7/10`）防重叠；单席 = 原尺寸 |
-| 席位徽标 | 当前席 = 金色船 + 名牌（`scene.main_map.player_label` = 当前席视角「你」）；余席 = 暗灰小旗（`0x7BEF`）+ `P1..P5` 席位徽标 |
+| 席位徽标 | 当前席 = 金色船 + 名牌（`scene.main_map.player_label` = 当前席视角「你」）；余席 = 暗灰小旗（`theme.isle_flag_dark` = `0x7BEF`）+ `P1..P5` 席位徽标 |
 | 渲染路径 | 等距环（`render_track`）/ 大富翁环（`render_v5_ring`）/ v6 圆柱（`render_v6_proto`）/ v6 元素（`render_v6_elem`）四条主地图渲染全接，同一套 `seat_slots` 分组 |
 
 ## 2. 赛道格两类（领地格 / 功能格并存）
@@ -111,10 +111,10 @@
 | 3 | `wreck` | 藏宝沉船 | 沉船夺宝 | 守宝骷髅 | 宝藏金 | 3 | `isle_gold` |
 | 4 | `pirate_lair` | 海盗老巢 | 攻陷老巢 | 头目亲卫 | 掠夺金 | 3 | `isle_dark` |
 | 5 | `shipyard` | 帆船坞 | 夺船坞 | 船坞工头 | 造船折扣 | 2 | `isle_teal` |
-| 6 | `trading_post` | 军需商岛 | 商岛护镖 | 私掠队 | 贸易利润 + | 3 | `isle_olive` |
+| 6 | `trading_post` | 军需商岛 | 商岛护镖 | 私掠队 | 贸易利润+ | 3 | `isle_olive` |
 | 7 | `skull_cliff` | 骷髅崖 | 崖上营寨 | 骷髅兵 | 战利品 | 2 | `isle_bone` |
 | 8 | `volcano` | 火山岛 | 熔岩洞府 | 熔岩守卫 | 熔金 | 3 | `isle_ember` |
-| 9 | `lightship` | 灯船站 | 登船夺旗 | 灯船船员 | 骰点 +1（下回合多走 1 格） | 2 | `isle_mist` |
+| 9 | `lightship` | 灯船站 | 登船夺旗 | 灯船船员 | 骰点+1（下回合多走 1 格） | 2 | `isle_mist` |
 | 10 | `boss_fort` | 无畏号要塞 | 无畏号炮台 | BOSS 舰队 | 通关关键（击败要塞 = 本图 BOSS） | 3 | `isle_black` |
 
 - 每类的**两格同属一个领地**：占领其中任一格 ⇒ 该类两格同归该席位（Monopoly 式「买下整区」）。

@@ -360,6 +360,8 @@ fn render_track(
     let (tw, th) = chrome::iso_tile_fit(layout, gw);
     let theme = host.theme().clone();
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    // 暗灰小旗（余席棋子旗图标；`territory.md` §1.3 行 78，色值单源 theme `isle_flag_dark`）
+    let isle_flag_dark = theme.by_name("isle_flag_dark").unwrap_or(0x7BEF);
     // 节点中心（等距菱形中心 = 格子绘制盒中心；与 `iso_cell_fit` 同源）
     let centers: Vec<(i32, i32)> = spaces
         .iter()
@@ -420,7 +422,14 @@ fn render_track(
             entity_texts.push((cx - edge / 2, cy + edge / 2, badge));
         } else {
             let small = dw.min(dh) * 35 / 100;
-            chrome::entity_icon(host, "flag", cx - small / 2, cy - small / 2, small, 0x7BEF);
+            chrome::entity_icon(
+                host,
+                "flag",
+                cx - small / 2,
+                cy - small / 2,
+                small,
+                isle_flag_dark,
+            );
             entity_texts.push((cx - small / 2, cy + small / 2, badge));
         }
     }
@@ -449,6 +458,12 @@ fn render_track(
         chrome::draw_node_ring(host, nx, ny, edge, def.visible_px, gold_warm);
     }
 
+    // 5) 骰子数（摇骰按钮上方居中）+ 6) 提示签条 / 建造面板 / toast / 终局 / 热座
+    render_track_tail(host, layout);
+}
+/// 赛道尾层（`render_track` 抽出 5)~6)：骰子数 / 提示签条 / 建造面板 / board toast /
+/// 终局面板 / 热座交接。纯表现层调用序不变（与 `render_track` 内原调用序一致）。
+fn render_track_tail(host: &mut dyn SceneHost, layout: &SceneLayout) {
     // 5) 骰子数（摇骰按钮上方居中，`board_last_roll` = 0 → 不画）
     let roll = host.board_last_roll();
     if roll > 0 {
@@ -867,6 +882,8 @@ fn render_v5_ring(
     let theme = host.theme().clone();
     let gold_warm = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_BRASS);
+    // 暗灰小旗（余席棋子旗图标；`territory.md` §1.3 行 78，色值单源 theme `isle_flag_dark`）
+    let isle_flag_dark = theme.by_name("isle_flag_dark").unwrap_or(0x7BEF);
 
     // 1) 中央据点岛（运行时 blit `island_home_<mid>.png` @ `island_home` 矩形；缺图 = 不画，不占位）
     if let Some(mid) = host.map_slot().map(crate::game_app::map_slot_id) {
@@ -921,7 +938,7 @@ fn render_v5_ring(
                 cx - small_edge / 2,
                 cy - small_edge / 2,
                 small_edge,
-                0x7BEF, // 暗灰 RGB565
+                isle_flag_dark,
             );
             entity_texts.push((cx - small_edge / 2, cy + small_edge / 2, badge));
         }
@@ -1056,6 +1073,8 @@ fn render_v6_proto(
     let gold_warm = theme.by_name("gold_warm").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_BRASS);
     let sand_light = theme.by_name("land_sand_light").unwrap_or(chrome::COLOR_GOLD_WARM);
+    // 暗灰小旗（余席棋子旗图标；`territory.md` §1.3 行 78，色值单源 theme `isle_flag_dark`）
+    let isle_flag_dark = theme.by_name("isle_flag_dark").unwrap_or(0x7BEF);
     let sand_dark = theme.by_name("land_sand_dark").unwrap_or(chrome::COLOR_BRASS_DARK);
     let sea = V6_SEA_BLUE; // 角切/凹槽透出海蓝（与海洋圆一致；theme sea_shallow 偏深绿黑非蓝色）
     let ink = theme.by_name("parch_dark").unwrap_or(chrome::COLOR_TEXT_ON_PARCH);
@@ -1183,7 +1202,14 @@ fn render_v6_proto(
             draw_card_name_plate(host, &spaces[idx], cx, cy, layout, &theme, brass, gold_warm);
         } else {
             let small_edge = edge * 35 / 100;
-            chrome::entity_icon(host, "flag", cx - small_edge / 2, ship_y, small_edge, 0x7BEF);
+            chrome::entity_icon(
+                host,
+                "flag",
+                cx - small_edge / 2,
+                ship_y,
+                small_edge,
+                isle_flag_dark,
+            );
             entity_texts.push((cx - small_edge / 2, ship_y + small_edge, badge));
         }
     }
@@ -1260,6 +1286,9 @@ fn render_v6_elem(
     let v6 = v6_layout(landscape);
     // S38 方案 A：横屏画布 1920×1080（读 `main_map_v6_layout_landscape.json`）；
     // 竖屏 = 原 1080×1920（0 行为变化）。
+    let theme = host.theme().clone();
+    // 暗灰小旗（余席棋子旗图标；`territory.md` §1.3 行 78，色值单源 theme `isle_flag_dark`）
+    let isle_flag_dark = theme.by_name("isle_flag_dark").unwrap_or(0x7BEF);
     let (w, h) = if landscape { (1920i32, 1080i32) } else { (1080, 1920) };
     // 1) 海洋全景底（羊皮框由 ocean_bg 自身带；直接满屏）
     host.blit_image(chrome::V6_OCEAN_BG, 0, 0, w, h);
@@ -1349,7 +1378,7 @@ fn render_v6_elem(
                 ix - sw_small / 2,
                 iy - sw_small / 2,
                 sw_small,
-                0x7BEF,
+                isle_flag_dark,
             );
         }
         entity_texts.push((ix - sw / 2, iy + sw / 2, badge));
@@ -1458,9 +1487,9 @@ fn v6_func_band_color(theme: &ti_render::theme::Theme, kind: SpaceKind, gold_war
         SpaceKind::City => theme.by_name("brass").unwrap_or(gold_warm),
         SpaceKind::Event => theme.by_name("brass_dark").unwrap_or(gold_warm),
         SpaceKind::Card => theme.by_name("isle_sand").unwrap_or(gold_warm),
-        SpaceKind::Battle => theme.by_name("isle_volcano").unwrap_or(gold_warm),
-        SpaceKind::Treasure => theme.by_name("isle_treasure").unwrap_or(gold_warm),
-        SpaceKind::Boss => theme.by_name("isle_boss").unwrap_or(gold_warm),
+        SpaceKind::Battle => theme.by_name("isle_ember").unwrap_or(gold_warm),
+        SpaceKind::Treasure => theme.by_name("isle_gold").unwrap_or(gold_warm),
+        SpaceKind::Boss => theme.by_name("isle_black").unwrap_or(gold_warm),
         _ => theme.by_name("land_sand_dark").unwrap_or(gold_warm),
     }
 }

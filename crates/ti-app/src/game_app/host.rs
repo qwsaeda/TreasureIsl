@@ -1024,14 +1024,14 @@ impl GameApp {
         }
         self.territory = Some(terr);
         let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
-        self.board_toast = Some(format!("占领 {isle_name}（首占 +{bonus}）"));
+        self.board_toast = Some(i18n_fmt("scene.main_map.toast.territory_fmt", &[&isle_name]));
         self.board_toast_ticks = 240;
     }
 
     /// S28.6 副本失败提示（§4：失败 = 现状不变，无账本变更）。
     fn toast_dungeon_fail(&mut self, isle: &str) {
         let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
-        self.board_toast = Some(format!("副本失败：{isle_name} 现状不变"));
+        self.board_toast = Some(i18n_fmt("scene.main_map.toast.dungeon_fail", &[&isle_name]));
         self.board_toast_ticks = 240;
     }
 }

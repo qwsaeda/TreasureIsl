@@ -59,7 +59,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 | P4-2 | 176×220 逻辑坐标命中判定在任意整数/非整数缩放下不偏移 | `cargo test -p ti-platform -- test coordinate_roundtrip` |
 | P4-3 | 中文点阵字形与 `GoldLand.Fnt`/`font.dat` 逐位图一致 | `cargo test -p ti-formats --test font_parity` |
 | P4-4（S10.4 新增）| GPU 渲染观感对齐（sprite batch + alpha 混合 + TTF 字形无豆腐块） | `cargo test -p ti-app --test render_parity_gpu`：关键场景截图对比 + TTF 14 缺口字渲染非空心方框 |
-|  | P0-5（S10.1 新增） | 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test render_invariants` |  |
+| P0-5（S10.1 新增） | 触摸命中与渲染坐标系一致（主地图等距投影逆变换） | `cargo test -p ti-app --test render_invariants` |
 
 ## P5 Android 真机交互（S49.4e 新增；2026-11-09 真机反馈「全屏/菜单无响应/后台音乐不停」根因审计补强）
 

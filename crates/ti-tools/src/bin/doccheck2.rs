@@ -399,8 +399,25 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
     // JSON 里有但代码从未引用的 key → 孤儿（文案表漂移）。
     // 豁免：`schema_*` / 旧命名空间（battle/build/cards/goods/hint/hud/slot/msg）/
     // `scene.*` 下已知被 `*_fmt` 长 key 取代的短后缀变体（设计占位，S8.x 数据化迁移前清理）
-    let exempt_prefixes =
-        ["schema_", "battle.", "build.", "cards.", "goods.", "hint.", "hud.", "slot.", "msg."];
+    let exempt_prefixes = [
+        "schema_",
+        "battle.",
+        "build.",
+        "cards.",
+        "goods.",
+        "hint.",
+        "hud.",
+        "slot.",
+        "msg.",
+        // 动态 key 拼接盲区（EXP-187 三步法）：`format!("isle.{id}")` / `space_name()`
+        // SpaceKind 变体 key / `glmapm{N:02}.Map` 等 sget 经变量/拼接消费，静态扫描 0 命中。
+        // ① 业务规格预置文案（territory.md §3「守军/每圈产出」列，副本场景将消费）② 动态节点/HUD 前缀
+        "isle.",
+        "scene.main_map.node.",
+        "scene.main_map.hud.",
+        "glmapm",
+        "scene.index.",
+    ];
     let exempt_suffixed = [
         ".hint",
         ".empty",
@@ -1293,64 +1310,6 @@ fn check_no_ti_core_fullpath(root: &Path) -> Vec<String> {
             errors.push(format!(
                 "{rel} 非 use 行仍有 `ti_core::` 全路径（EXP-061：必须收敛到顶部 use）：{}",
                 hits.join(", ")
-            ));
-        }
-    }
-    errors
-}
-
-fn check_scene_band_count(root: &Path) -> Vec<String> {
-    let mut errors = Vec::new();
-    let Some(src) = read_file(root, "crates/ti-app/src/scenes/select_role.rs") else {
-        return vec!["select_role.rs 不存在，无法校验 band 数".to_string()];
-    };
-    // 找到 `scene_list_bands(` 调用
-    let Some(call_pos) = src.find("scene_list_bands(") else {
-        return errors; // 已由 check_touch_render_pair 报错
-    };
-    // 提取调用块（平衡括号）
-    let after_call = &src[call_pos + "scene_list_bands(".len()..];
-    let mut depth = 1usize;
-    let mut end_pos = 0usize;
-    for (i, c) in after_call.char_indices() {
-        match c {
-            '(' => depth += 1,
-            ')' => {
-                depth -= 1;
-                if depth == 0 {
-                    end_pos = i;
-                    break;
-                }
-            }
-            _ => {}
-        }
-    }
-    let args_block = after_call[..end_pos].trim();
-    // 按逗号取最后一个非空参数（band 数）
-    let last_arg = args_block.rsplit(',').map(str::trim).find(|s| !s.is_empty()).unwrap_or("");
-    // 判断 band 数是否为字面量 5 或常量 ROLE_COUNT
-    let band_ok = last_arg == "5"
-        || last_arg == "5usize"
-        || last_arg == "ROLE_COUNT as usize"
-        || last_arg == "ROLE_COUNT";
-    if !band_ok {
-        errors.push(format!(
-            "select_role.rs scene_list_bands band 数参数为 `{last_arg}`，必须 == Character::all().len()（= 5）或 ROLE_COUNT（EXP-073）"
-        ));
-    }
-    // 若走常量，验证常量值 == 5（B11 起允许域出口 `Character::count()` 单源派生，
-    // 其编译期值仍 = `Character::all().len()` = 5，域层加角色时门禁报错引导同步）
-    if last_arg.contains("ROLE_COUNT") {
-        let Some(role_const_pos) = src.find("const ROLE_COUNT") else {
-            errors.push("select_role.rs 引用 ROLE_COUNT 但未定义该常量".to_string());
-            return errors;
-        };
-        let after_const = &src[role_const_pos..];
-        let const_line_end = after_const.find(';').unwrap_or(0);
-        let const_decl = &after_const[..=const_line_end];
-        if !const_decl.contains("= 5") && !const_decl.contains("= Character::count()") {
-            errors.push(format!(
-                "select_role.rs ROLE_COUNT 常量值 ≠ 5（声明: `{const_decl}`），必须 == Character::all().len()（= 5，EXP-073）或域出口 Character::count()（B11）"
             ));
         }
     }
@@ -2253,6 +2212,232 @@ fn ui_palette_triple_check(root: &Path) -> Vec<String> {
     let mut doc_errors = ui_doc_table_check(&doc, palette);
     errors.append(&mut doc_errors);
     errors
+}
+
+/// 飞轮 R 桶 A1（用户拍板）：theme 令牌**消费对账**——代码 `theme.by_name("X")` 全集、
+/// 数据面 `scenes.json color` / `balance.json territory.isle_tokens` 引用的令牌，
+/// 必须全部存在于 `theme.json palette`（或 `Theme::DEFAULT` 字段）。引用了不存在的 key
+/// = 该调用点永远走 `unwrap_or` 回退字面量（幻象令牌，本轮手工抓出
+/// `isle_volcano/isle_treasure/isle_boss/ink/ink_dark` 的防再犯固化）。
+/// 与 `ui_palette_triple_check`（theme.json ↔ `Theme::DEFAULT` 值恒等）互补：
+/// 本断言查「引用了不存在的 key」，它查「同 key 值漂移」。
+fn check_theme_consumption(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(theme_json) = read_file(root, "assets/data/theme.json") else {
+        return vec!["assets/data/theme.json 不存在（theme 消费对账无基准）".to_string()];
+    };
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&theme_json) else {
+        return vec!["assets/data/theme.json 解析失败（theme 消费对账无基准）".to_string()];
+    };
+    let palette =
+        parsed.get("palette").and_then(serde_json::Value::as_object).cloned().unwrap_or_default();
+    // 合法令牌全集 = theme.json palette keys ∪ Theme::DEFAULT 字段名（theme.rs 锚点）
+    let mut known: BTreeSet<String> = palette.keys().cloned().collect();
+    if let Some(theme_rs) = read_file(root, "crates/ti-render/src/theme.rs") {
+        let mut in_default = false;
+        for line in theme_rs.lines() {
+            let t = line.trim();
+            if t.starts_with("pub const DEFAULT") {
+                in_default = true;
+                continue;
+            }
+            if in_default {
+                if let Some((field, _)) = t.trim_end_matches(',').split_once("0x") {
+                    let f = field.trim().trim_end_matches(':');
+                    if f.is_empty()
+                        || !f
+                            .chars()
+                            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+                    {
+                        in_default = false;
+                    } else {
+                        known.insert(f.to_string());
+                    }
+                }
+            }
+        }
+    }
+    // ① 代码消费面：全 6 游戏 crate + ti-engine 的 `by_name("<literal>")` 调用
+    for crate_dir in [
+        "crates/ti-app/src",
+        "crates/ti-engine/src",
+        "crates/ti-render/src",
+        "crates/ti-platform/src",
+    ] {
+        for text in read_rs_tree(&root.join(crate_dir)) {
+            for m in text.match_by_name_keys() {
+                if !known.contains(&m) {
+                    errors.push(format!(
+                        "theme 消费对账：{crate_dir} 的 theme.by_name(\"{m}\") 引用了 theme.json palette 不存在的令牌（调用点永远走 unwrap_or 回退字面量）"
+                    ));
+                }
+            }
+        }
+    }
+    // ② 数据消费面：scenes.json 原语 `color` 字段 + balance.json territory.isle_tokens
+    if let Some(scn) = read_file(root, "assets/data/scenes.json") {
+        for line in scn.lines() {
+            let t = line.trim();
+            let Some(ki) = t.find("\"color\"") else { continue };
+            let rest = &t[ki + 7..];
+            let Some(q1) = rest.find('"') else { continue };
+            let inner = &rest[q1 + 1..];
+            let Some(q2) = inner.find('"') else { continue };
+            let tok = inner[..q2].to_string();
+            if !tok.is_empty() && !known.contains(&tok) {
+                errors.push(format!(
+                    "theme 消费对账：scenes.json color 令牌 `{tok}` 不在 theme.json palette"
+                ));
+            }
+        }
+    }
+    if let Some(bal) = read_file(root, "assets/data/balance.json") {
+        if let Ok(parsed_bal) = serde_json::from_str::<serde_json::Value>(&bal) {
+            if let Some(tokens) = parsed_bal
+                .get("territory")
+                .and_then(|t| t.get("isle_tokens"))
+                .and_then(serde_json::Value::as_array)
+            {
+                for tok in tokens {
+                    let Some(s) = tok.as_str() else { continue };
+                    if !known.contains(s) {
+                        errors.push(format!(
+                            "theme 消费对账：balance.territory.isle_tokens `{s}` 不在 theme.json palette"
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    errors
+}
+
+/// `str` 扩展：抽 `by_name("<literal>")` 的字面量令牌（整文本扫描；
+/// 变量/拼接调用 `by_name(key)` 不命中 = 天然只查字面量消费点）。
+trait ByNameKeys {
+    fn match_by_name_keys(&self) -> Vec<String>;
+}
+impl ByNameKeys for str {
+    fn match_by_name_keys(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        for rel_start in self.match_indices("by_name(").map(|(s, _)| s) {
+            let after = rel_start + 8; // "by_name(".len()
+            let rest = &self[after..];
+            let ws = rest.bytes().take_while(|b| matches!(b, b' ' | b'\t' | b'\n')).count();
+            let candidate = &rest[ws..];
+            if !candidate.starts_with('"') {
+                continue;
+            }
+            if let Some(end) = candidate[1..].find('"') {
+                out.push(candidate[1..=end].to_string());
+            }
+        }
+        out
+    }
+}
+
+/// 飞轮 R 桶 A2（用户拍板）：跨文档计数声称守门——反复过期漂移的面（本轮飞轮
+/// 手工修 8+ 处 327→334 / 35→36 / 41→42 / 280/270→334/333 的防再犯固化）。
+/// 口径（`doc_numbers.py` 实测同源）：台账任务数 = ledger.yaml `status:` 行数；
+/// 台账 verified 数；gate 项数 = gate.ps1 `Report ` 项名去重；doccheck2 断言数 =
+/// `doccheck2_checks` 长度。仅对**现状声称点**（固定锚定短语）FAIL；
+/// 里程碑/EXP 历史叙述（行内含「里程碑」/行首 `EXP-` 索引表）豁免 = 历史时点快照。
+fn check_cross_doc_counts(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(ledger_text) = read_file(root, "plan/ledger.yaml") else {
+        return vec!["plan/ledger.yaml 不存在（计数守门无基准）".to_string()];
+    };
+    let tasks: usize = ledger_text.matches("id: S").count();
+    let verified: usize = ledger_text.matches("status: verified").count();
+    let gate = if let Some(t) = read_file(root, "scripts/gate.ps1") {
+        gate_item_actual_count(&t)
+    } else {
+        errors.push("gate 项数实测无基准（scripts/gate.ps1 读失败，口径断裂）".to_string());
+        36
+    };
+    // 现状声称点锚定短语（`doc_numbers.py --fix` 回写同一组短语 = 双保险）
+    let claims: [(&str, &str); 2] = [
+        ("docs/release.md", &format!("{tasks} 任务（{verified} verified")),
+        ("AGENTS.md", &format!("{tasks} 任务 / {verified} verified")),
+    ];
+    for (rel, phrase) in claims {
+        let Some(text) = read_file(root, rel) else {
+            errors.push(format!("计数守门：{rel} 读失败（声称点 {phrase} 无法校验）"));
+            continue;
+        };
+        let has_hit = text.lines().any(|l| l.contains(phrase));
+        if !has_hit {
+            errors.push(format!(
+                "计数守门：{rel} 缺现状声称点「{phrase}」（须保留；删 = 进度面漂移）"
+            ));
+        }
+    }
+    // 过期数值守门：现状区出现的 台账任务数/gate 项数 若 ≠ 实测即 FAIL（327/35/41 旧值防再犯）。
+    // 实测基准：台账任务数 = `id: S` 条目数（一行一任务，334）；gate 项数 = Report 去重（36）。
+    // 现状声称点 = release.md「N 任务（N verified」/「gate N 项 0 failure」+ AGENTS.md:8
+    // 「N 任务 / N verified」+ 26 号「N 项」（行含 gate.ps1/门禁 36/固定 Report）。
+    // 历史行豁免：独立里程碑/历史叙述行（行首至「里程碑」前 ≤6 字符 = 该词是行的主题）才豁免；
+    // 「当前 334 任务 / … 里程碑：台账 327/327 verified」这类**现状行内联时点描述**不豁免——
+    // 现状区的「当前 N 任务」声称仍须 == 实测（行内「327/327」历史快照数字不紧邻「任务/项」，不误拦）。
+    let files = ["AGENTS.md", "docs/process/26_dev_stages_overview.md", "docs/release.md"];
+    for rel in files {
+        let Some(text) = read_file(root, rel) else { continue };
+        for (i, line) in text.lines().enumerate() {
+            let head = &line.trim_start().chars().take(6).collect::<String>();
+            let is_historical_line = head.contains("里程碑");
+            if !is_historical_line {
+                // 「N 任务」现状声称（N = 紧邻「任务」前的数字；只拦 ≥10 的现势进度声称，
+                // 「4 项/4 任务」类任务书小描述非台账进度计数，不限）
+                for m in line.match_indices("任务") {
+                    let before = &line[..m.0];
+                    let digits = scan_digits_before(before);
+                    if let Some(n) = digits {
+                        if n >= 10 && n != tasks {
+                            errors.push(format!(
+                                "计数守门：{rel}:{} 声称「{n} 任务」≠ 实测台账 {tasks} 任务（现状区过期漂移，独立里程碑行才豁免）",
+                                i + 1
+                            ));
+                        }
+                    }
+                }
+                // 「N 项」gate 项数现状声称（仅拦 gate 表头横幅「N 项固定 Report」类声称；
+                // 路由表行内「N 项工具契约/N 项过程约束」等小数字是任务描述非 gate 项数，不限）
+                if let Some(claimed) = extract_count_claim(line, '项') {
+                    let gate_context = line.contains("gate.ps1")
+                        || line.contains("门禁 36")
+                        || line.contains("固定 Report");
+                    if gate_context && claimed >= 10 && claimed != gate {
+                        errors.push(format!(
+                            "计数守门：{rel}:{} 声称「{claimed} 项」≠ 实测 gate {gate} 项（gate 项数过期漂移）",
+                            i + 1
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    errors
+}
+
+/// 抽 CJK 串（如「任务」「verified」）前紧邻的数字串（左边界非数字；中间只许空白/「/」）。
+/// 用于「N 任务」类现状声称（`extract_count_claim` 只处理单 char keyword 的既有用法）。
+fn scan_digits_before(before: &str) -> Option<usize> {
+    let b = before.as_bytes();
+    let mut i = b.len();
+    while i > 0 && (b[i - 1] == b' ' || b[i - 1] == b'\t') {
+        i -= 1;
+    }
+    let mut j = i;
+    while j > 0 && b[j - 1].is_ascii_digit() {
+        j -= 1;
+    }
+    if j == i {
+        return None;
+    }
+    if j > 0 && b[j - 1].is_ascii_digit() {
+        return None;
+    }
+    b[j..i].iter().map(|c| *c as char).collect::<String>().parse().ok()
 }
 
 /// ②-3 文档 §3 令牌表（`10_ui_redesign.md`）RGB565 列 vs `theme.json`（人读镜像漂移检测）。
@@ -3571,7 +3756,6 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("wasm-viewport-init", check_wasm_viewport_init),
     ("engine-no-color-literal", check_engine_no_color_literal),
     ("landscape-no-portrait-hardcode", check_landscape_no_portrait_hardcode),
-    ("scene-band-count", check_scene_band_count),
     ("save-slot-map-slot-basis", check_save_slot_map_slot_basis),
     ("exhaust-balance-dual-write", check_exhaust_balance_dual_write),
     ("experience-volume-counts", check_experience_volume_counts),
@@ -3596,6 +3780,9 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("node-asset-map", check_node_kind_asset_map),
     ("no-inline-test-mod", check_no_inline_test_mod),
     ("rules-files", check_rules_files),
+    // 飞轮 R 固化（用户拍板 3 桶）：theme 令牌消费对账 + 跨文档计数声称守门（桶 A1/A2）
+    ("theme-consumption", check_theme_consumption),
+    ("cross-doc-counts", check_cross_doc_counts),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

@@ -135,8 +135,12 @@ fn v4_bg(
         let sand = theme.by_name("land_sand_light").unwrap_or(chrome::COLOR_GOLD_WARM);
         host.fill_rect(0, 0, 1080, 1920, sand);
     }
-    // 四周暗角（三层实色描边近似渐变，越外越重）
-    for (edge, col) in [(80i32, 0x2A1A), (48, 0x1E12), (24, 0x140C)] {
+    // 四周暗角（三层实色描边近似渐变，越外越重；色值走 theme 令牌 `vs_duel_edge_*`，P1-27）
+    for (edge, col) in [
+        (80i32, theme.by_name("vs_duel_edge_1").unwrap_or(0x2A1A)),
+        (48, theme.by_name("vs_duel_edge_2").unwrap_or(0x1E12)),
+        (24, theme.by_name("vs_duel_edge_3").unwrap_or(0x140C)),
+    ] {
         host.fill_rect(0, 0, 1080, edge, col);
         host.fill_rect(0, 1920 - edge, 1080, edge, col);
         host.fill_rect(0, 0, edge, 1920, col);
@@ -387,11 +391,13 @@ fn v4_panel(
         let base = base_crew.max(1);
         let pct_mille = u64::from(crew) * 1000 / u64::from(base);
         let pct_mille = pct_mille.min(1000) as u32;
-        // 健康色分段：满→绿 0x0F80、<60% 黄 0xE8C0、<30% 红 0xF020（千分比 <300/<600）
+        // 健康色分段：满→绿 0x0F80、<60% 黄 `balance.combat.anim.hp_yellow`、<30% 红 0xF020
+        //（千分比 <300/<600；飞轮 P1-26：黄色段走 balance 数据，红/绿 = items 主色 keg/medkit）
+        let hp_yellow_hex = balance().map(|b| b.combat.anim.hp_yellow.clone()).unwrap_or_default();
         let hp_col = if pct_mille < 300 {
             0xF020u16
         } else if pct_mille < 600 {
-            0xE8C0u16
+            hex16(&hp_yellow_hex)
         } else {
             0x0F80u16
         };
