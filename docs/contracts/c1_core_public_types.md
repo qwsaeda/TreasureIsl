@@ -62,6 +62,19 @@ ti_core::rules::rng::GameRng
 ti_core::rules::battle::BattleSession
 ti_core::rules::main_map::MapSession
 ti_core::rules::main_loop::SceneStack
+ti_core::rules::board::{SpaceKind, TrackSpace}
+ti_core::rules::progression::boss_tier_of
+ti_core::rules::selection
+ti_core::rules::territory::Ownership
+ti_core::rules::build
+ti_core::rules::trade
+ti_core::rules::messages::page_text
+
+> **S52 飞轮 R2 补**（P1-15/B-2 越界 import 合法化）：`ti-app/scenes` 7 处直接
+> `use ti_core::rules::{board,progression,selection,territory,build,trade,messages}` 是
+> **表现层→规则层**（正确分层方向，红线 1 的「越界」指反向 rules→渲染），
+> 此 7 个模块列入 c1 公共面 = 跨包 import 合法。`rules` 是 `pub mod`，符号全 `pub`，
+> 非「内部函数」。
 ti_core::data::balance
 ti_core::data::strings
 ti_core::data::scenes

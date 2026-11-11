@@ -2357,7 +2357,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     };
     // 现状声称点锚定短语（`doc_numbers.py --fix` 回写同一组短语 = 双保险）
     let claims: [(&str, &str); 2] = [
-        ("docs/release.md", &format!("{tasks} 任务（{verified} verified")),
+        ("docs/release.md", &format!("{tasks} 任务（{verified} verified + 3 pending S52.1/2/3")),
         ("AGENTS.md", &format!("{tasks} 任务 / {verified} verified")),
     ];
     for (rel, phrase) in claims {

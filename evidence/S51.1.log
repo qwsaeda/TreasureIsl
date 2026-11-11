@@ -1,0 +1,26 @@
+=== S51.1 飞轮 R2 机制使用面实跑 + 42 漂移修 + 2 断言固化 判据实跑（2026-11-11）===
+### 1. 3 subagent 规范结构下发（S51.0 机制第一次真用）
+  找问题 = general subagent（只读，输入=开轮必读 7 条+红线注入面+4 靶点，输出 42 条 0 P0）
+  审计 A = general subagent（完成度，只读，42 条裁决 + top 8 独立 grep + 补 B-1~B-3）
+  审计 B = general subagent（一致性，只读，与 A 独立，补 B-01~B-09 独报盲区）
+  修复 = 主线程 + 写码（c1 契约/lighthouse/U2U4/progression m21 定位 + doccheck2 +2 断言）
+### 2. doccheck2 44 项 0 error（+2 新断言 theme-consumption/cross-doc-counts）
+doccheck2: 9 error(s) across 44 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/wasm-viewport-init/engine-no-color-literal/landscape-no-portrait-hardcode/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention/job-model-unified/rules-files/theme-consumption/cross-doc-counts)
+### 3. 负例护栏（3 断言 × 各 1 条实跑命中）
+  theme-consumption: 造 by_name("isle_ghost")（theme.json 无此 key）⇒ FAIL 命中 ✓
+  cross-doc-counts: 造 999 任务 + 35 项双过期 ⇒ 命中 3 条 ✓
+  i18n 孤儿: 动态 key 豁免面扩 ⇒ WARN 73→0 ✓
+### 4. 三方对账
+check_ledger_reality: 全绿（334 个 verified 任务三方对账通过 + 0 个孤儿 evidence）
+### 5. 需人裁决 9 条定夺留痕
+  ① isle.*.guard/.benefit 20 key = 保留（业务规格预置文案，territory.md §3 守军/产出列）
+  ② 测试盲区 ~14 条 = 留 S52.1 专项轮（15 号台账 32 行）
+  ③ 死代码 3 函数 = 不删（pub+内联测试引用，棘轮豁免；S52.3 定夺）
+  ④ m21..m40 = 内容运营扩展包（progression.md 定位注）
+  ⑤ scene.index.medallion 6 key = 动态 key 拼接（bevy_ui format! 消费），保留
+  ⑥ glmapm04..20.Map 17 key = 动态 key 拼接（select_map format! 消费），保留
+  ⑦ 70% 棋子缩放 = 设计常量（territory.md §1.3 载 7/10），不改
+  ⑧ force.rs 内联 7 测试 = 保留（process_ratchet 豁免）
+  ⑨ U2/U4 = 已定案（balance.manpower 数值落地，territory.md §11 改「已定案」）
+### 6. 越界 import 口径定案（CCGS 五步·拍板留痕）
+  表现层→规则层 import = 正确分层（红线 1 越界指反向 rules→渲染）；c1 契约补 7 模块公共面合法化

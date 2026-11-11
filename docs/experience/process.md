@@ -600,3 +600,10 @@ S50.4 收口时把 CCGS「5 步协作协议逐 agent 内嵌」判进「4 不借�
 ① 动态 key 拼接 = 静态扫描盲区：`chrome.rs space_name()` 对 9 个 SpaceKind 变体、`main_map.rs render_hud_button(label_key)` 经变量传 key、`select_map.rs format!("glmapm{N:02}.Map")` 拼接 —— collect_sget_keys 只扫字面量 sget("...")，这些 0 命中 = 误报孤儿，须加前缀豁免（scene.main_map.node./hud. + glmapm*.Map）。
 ② 业务规格预置文案 ≠ 孤儿：`isle.*.guard/.benefit` 20 key 代码当前 0 引用，但 territory.md §3 明确「守军/占领后每圈产出」列 = 副本场景（S33.6 后 10 专属场景）将消费的 i18n 文案。判孤儿前须查业务规格单一事实源是否记载该文案用途。
 教训：i18n 孤儿裁决三步 = grep 字面量消费 → grep 动态拼接点（format!/变量传 key）→ 查 docs/business/ 是否规格预置。三步全 0 才真孤儿可删。
+
+### EXP-188 流程：飞轮 R2 审计 A/B 双 agent 对抗 + 越界 import 合法化口径
+飞轮 R2 首轮真按 S51 规范结构跑（3 subagent 带红线注入 + 五步回执 + A/B 双审计对抗）。
+① A/B 双审计：A 侧 = 完成度审计（14 P1 功能缺口/测试盲区），B 侧 = 一致性审计（值漂移/口径过期/恒 PASS）。两路独立，B 抓到 A 看不到的 3 条（B-01/B-02 doccheck2 42→44 项数漂移 + B-04 lighthouse benefit 三方不一致 + B-08 world_canvas 锚点待验）。
+② 越界 import 口径定案： 7 处  = **表现层→规则层正确分层**，红线 1「越界」指反向（rules→渲染）。 补 7 模块公共面 + 合法化注。
+③ 测试盲区 ~14 条（rules 函数 0 集成测试）= 高成本留后续专项，15 号台账待固化登记。
+④ 死代码 3 函数（ai_turn_v2/victory_seat/player_defeated）= pub + 内联测试引用，删 0 收益不删（棘轮豁免）。
