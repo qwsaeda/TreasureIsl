@@ -33,7 +33,7 @@
 | `desc` | ✓ | 测试用例说明（做什么/测什么/达到什么效果，≥20 字符；平台测试页展开渲染，S49.7 补强（2026-11-10 用户「光有测试用例不行，要有说明」）——「光有测试用例不行，要有说明」） |
 | `command` | ✓ | 可运行命令串（§3 command 契约）；`null`/缺 = 不可自动运行（人工验收 / gate 覆盖 / 证据基，平台禁 run） |
 | `evidence` | 与 `gate` 至少一者 | `evidence/` 下日志/截图路径（须存在，`validate_data` 对账） |
-| `gate` | 与 `evidence` 至少一者 | 门禁项号 `1..=33`（证据 = 对应 gate 运行日志） |
+| `gate` | 与 `evidence` 至少一者 | 门禁项号 `1..=36`（飞轮 R10 勘误旧 33，S50.2 后 36 项）（证据 = 对应 gate 运行日志） |
 | `group` | ✓（S49.7 起） | **业务域**：`core`（核心规则/玩法）`asset`（资产与内容管线）`platform`（平台与工具）`device`（端侧与兼容）`perf`（性能与体积）——平台测试页主分组维度（23 号 §6.3 侧栏 + §7.2） |
 | `timeout_s` | ○ | 作业超时秒数（缺省不限；超时 ⇒ 作业 `exit_code=-1` + note `timeout`，23 号 §6.2 收割） |
 | `prove` | ✓（可自动运行者） | 本次运行**证明落点**（`evidence/tests/<id>/` 前缀）；与静态基线 `evidence` 并存不冲突（23 号 §6.3「证明」行） |
@@ -73,7 +73,7 @@
 ## 6. 门禁断言（`validate_data::check_test_manifest` 强化）
 
 现有（23 号 §7 已落地）：`id` 唯一 / `level`∈L1~L4 / `category` / `type` / `evidence` 与 `gate` 至少一者 /
-evidence 路径存在 / `gate`∈1..=33 / command 真实性（--test/--bin 路径存在）。
+evidence 路径存在 / `gate`∈1..=36 / command 真实性（--test/--bin 路径存在）。
 
 **S45.1 强化**：
 - **command 程序白名单**：`command` 首词 ∈ §3 白名单（登记 `sh`/`bash`/`cmd`/裸脚本 = 违规，平台跑不了）；

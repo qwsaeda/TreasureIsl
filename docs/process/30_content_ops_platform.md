@@ -65,7 +65,7 @@
 | 4 | 版面（可选） | 平台表单改 `scenes.json` 原语（asset/坐标/配色）→ 写 scenes.json | **本向导版面步 = 只读断言**：`state.theme` 空 = 0 `scenes.json` diff（纯变体跳过）；`state.theme` 非空 = scenes.json 规范形验证（theme 步已写构图，S48.0） |
 | 5 | 重建 | `cargo build`（嵌 scenes.json，29 号 §5 坑位：include_str! 编译期内嵌） | build 成功（scenes.json 生效） |
 | 6 | 出图验收 | `--shot --scene=<id> --viewport=<方向>`（多视口） | 出图非黑 + bg 采样期望（变体色调验证） |
-| 7 | 零 Rust + 签收 | 平台跑 `git diff crates/` + 视觉签收留痕 | **空** + 向导 `state.signoff` 含「用户视觉验收/过目/确认/签收/拍板/视觉验收」（B 审计 r1-F2 已机器化：无 signoff = 判败；r3 对齐 doccheck2 第 35 项 6 词） |
+| 7 | 零 Rust + 签收 | 平台跑 `git diff crates/` + 视觉签收留痕 | **空** + 向导 `state.signoff` 含「用户视觉验收/过目/确认/签收/拍板/视觉验收」（B 审计 r1-F2 已机器化：无 signoff = 判败；r3 对齐 doccheck2 第 37 项 `visual-signoff` 6 词（飞轮 R10 勘误旧「第 35 项」，S53/S54/S55 增 3 项后现 37 项）） |
 
 - **第 2 步变体器**：固化 S42.0 的 PIL `tint_cool`（Color/Brightness 增强 + R×/G×/B× 冷移）为 `scripts/ui_variant.py`
   （登记 14 号 §3.2 + 工具契约：幂等 + `--check` 只读 + 非 0 退出 + 3 处登记）。
@@ -166,6 +166,7 @@
 | `mappack_sync` | `python3 map_pack.py sync` | `assets/data/{board,scenes,strings}.json` + `scene_manifest_v3.json` | **否** |
 | `mappack_uninstall` | `python3 map_pack.py uninstall <id>` | `assets/maps/` + `.default` + `index.json` + `board.json` | **否** |
 | `ui_variant` | `python3 ui_variant.py <asset-group> <params>` | `assets/ui/<name>.png` + 可选 `ui_manifest.json` | **否** |
+| `ui_theme` | `python3 ui_theme.py apply <theme-id>`（`^[a-z0-9_]{1,16}$` 白名单） | `assets/data/scenes.json` + `assets/ui/` + `ui_manifest.json`（主题构图回注，S48.0） | **否** |
 | `map_shot` | `TI_MAP=<id> treasure-bevy-native --shot --scene=main_map` | `evidence/` 预览（gitignored 侧车） | 是 |
 | `publish` | `pwsh publish_web.ps1` | `web/` + `docs/release.md` + gh-pages | **否** |
 
@@ -179,7 +180,7 @@
 
 ### 3.2 写面纪律修订（22 号 §3.1 已知写点表 + §8 北极星）
 
-- **§3.1 已知写点表**：新增上表 8 个写动作行（mappack_add/syncmap/pack/install/sync/uninstall/ui_variant/publish；map_shot 只读出图默认开不计；写点列见 §3.1）；表外写点发现 ⇒ 补表后再上线（原纪律保留）。
+- **§3.1 已知写点表**：新增上表 9 个写动作行（mappack_add/syncmap/pack/install/sync/uninstall/ui_variant/ui_theme/publish；map_shot 只读出图默认开不计；写点列见 §3.1；飞轮 R10 F3-1 补 ui_theme 漏行 8→9）；表外写点发现 ⇒ 补表后再上线（原纪律保留）。
 - **§8 北极星「0 游戏产物变更」口径**：从「唯一写点 = 地图导入口子（S32.15 import_probe）」**泛化为「白名单动作写点探针」**
   ——每个写动作登记其写点集（`console_commands.json` 加 `write_paths` 字段），动作前后取 `snapshot::FrozenSnapshot`，
   **豁免该动作登记写点 + gitignored 路径**，其余冻结路径（`crates/ crates/ti-core crates/ti-app crates/ti-engine crates/ti-render crates/ti-platform crates/ti-formats assets/ android/ tests/`）差异为空 ⇒ 0 游戏产物变更。

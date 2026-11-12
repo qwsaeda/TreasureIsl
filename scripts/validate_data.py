@@ -516,7 +516,7 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
 
     - `assets/data/test_manifest.json` `tests[]`：`id` 唯一；`level` ∈ L1..L4；`category` ∈
       功能/回归/视觉/音频/性能/兼容；`type` ∈ 冒烟/CI/试玩/探索/基准；`evidence` 与 `gate` 至少一者
-      （`evidence` = `evidence/` 下路径，或 `gate` = 门禁项号 1..=33）。
+      （`evidence` = `evidence/` 下路径，或 `gate` = 门禁项号 1..=36（飞轮 R10 勘误旧 33））。
     """
     mf = root / "assets/data/test_manifest.json"
     if not mf.is_file():
@@ -598,11 +598,11 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
             if not p.is_file() and not p.is_dir():
                 problems.append(f"test_manifest: `{tid}` evidence `{ev}` 不存在")
         if gate is not None and not (
-            (isinstance(gate, int) and 1 <= gate <= 33)
+            (isinstance(gate, int) and 1 <= gate <= 36)
             or (isinstance(gate, str) and re.fullmatch(r"[0-9]+[a-z]?", gate))
         ):
             problems.append(
-                f"test_manifest: `{tid}` gate={gate} 非法（须 1..=33 或条件项号如 \"4c\"，如 gate 第 4c 项 Android 真机）"
+                f"test_manifest: `{tid}` gate={gate} 非法（须 1..=36 或条件项号如 \"4c\"，如 gate 第 4c 项 Android 真机）"
             )
         # 命令真实性：`cargo test -p <pkg> --test <name>` → `crates/<pkg>/tests/<name>.rs` 必须存在；
         # `cargo run -p <pkg> --bin <bin>` → `crates/<pkg>/src/bin/<bin>.rs` 必须存在。

@@ -113,6 +113,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | `mappack_sync` | `python3` + `scripts/map_pack.py sync` | 无 | `assets/data/{board,scenes,strings}.json` + `scene_manifest_v3.json` | **否** |
 | `mappack_uninstall` | `python3` + `scripts/map_pack.py uninstall <id>` | `<id>` = 已装包 id | `assets/maps/` + `.default` + `index.json` + `board.json` | **否** |
 | `ui_variant` | `python3` + `scripts/ui_variant.py tint` | `assets` + 着色参数（UI 向导传，不接受自由字符串） | `assets/ui/<name>.png` + `ui_manifest.json`（同路径替换/`--suffix`） | **否** |
+| `ui_theme` | `python3` + `scripts/ui_theme.py apply` | `<theme>` = 主题包 id（`assets/themes/<id>/`，`^[a-z0-9_]{1,16}$` 白名单，不接受自由字符串） | `assets/data/scenes.json` + `assets/ui/` + `ui_manifest.json`（主题构图回注，S48.0 全主题创新；飞轮 R10 F3-1 补漏行） | **否**（需 `--enable-write`） |
 | `map_shot` | 平台自身（`treasure-bevy-native --shot --scene=main_map`，env `TI_MAP=<id>`） | `<id>` = 已装包 id | `evidence/` 预览（gitignored 侧车） | 是 |
 | `publish` | `pwsh`/`powershell` + `-File scripts/publish_web.ps1` | 无 | `web/` + `docs/release.md` + gh-pages 远端 | **否** |
 | `audit_book` | 平台自身 | `--task <台账 id> --round <n> --role <a\|b>` | 只写 `evidence/console/` | 是 |
@@ -131,7 +132,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
   `map_pack.py verify` 退出码 + 输出行数逐条一致」，格式变了即 FAIL（不得静默显示 0 违规）。
 
 - **门禁档位口径**：`-Fast` / `-Touch` 是**开发档**（多项 SKIP），**不构成 gate 全绿证据**；
-  「gate 全绿」= 无参数全量跑完（项数以 `docs/parity.md` 为准，当前 = 33 项；门禁结构变化时本节不逐项跟进）。
+  「gate 全绿」= 无参数全量跑完（项数以 `docs/parity.md` 为准，当前 = 36 项（飞轮 R10 勘误旧「33 项」，S50.2 studio-tests 后 35→36）；门禁结构变化时本节不逐项跟进）。
 - **禁止 1**：把 HTTP 请求体里的任意字符串透传给 `--cmd`（`task_close.py --cmd` 是自由 shell 面 ⇒ RCE）；
   `--cmd` 取值只能是 `console_commands.json` 里登记的 **id**，未登记 id 直接 400。
 - **禁止 2**：`sh -c` / `cmd /c` 字符串拼接；一律 `Command::new(程序).args([...])` 逐参数传递。
@@ -200,7 +201,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
  | 地图 | 地图包管理面（`assets/maps/<id>/` 已装包清单 + 描述符摘要〔schema/id/version/data_version/中央岛/岛型数/31 格不变量/环几何/资产数〕+ `.default` 指针 + 制作指引 `scripts/map_pack.py` 命令面 + 21 号标准链接；`GET /api/map` 只读浏览） + **地图编辑器**（环形 SVG 画布 31 节点 + 点节点改 kind/isle + 环几何输入 + I1~I9 前端实时校验条〔镜像 `map_pack.py verify_pack`，权威实现 = `map_pack.py`〕+ 生成 4 文件 JSON） + **`POST /api/map/import`**（S32.14 ② 免鉴权导入落盘面：写 `assets/maps/<id>/` 四文件 + 同进程 `map_pack.py sync` 回注 + `verify` 终判 I1~I9〔含 I7 资产哈希〕，违规 = `errors` 如实上报不静默绕过；写点纪律 = 21 号 §8 平台编辑器口径 + 本号 §10.1 唯一写点例外） | P0（S32.3 只读）+ S32.14（编辑器 + import） |
 | 内容运营向导 | 内容运营平台化（30 号）：**地图工作台**（S44.2 `GET /api/content/map?id=` 读向导状态 + `POST /api/content/map/step` 执行一步〔固定 10 步状态机 + 不可跳步 409 + 每步机器判据回显 + 写点探针 + 失败即停；**写操作 `X-TI-Token` 鉴权 403**（F-1 修复，非免 token 唯一写端点例外）+ 写动作须 `enable_write` 400〕，web 地图页纵向 stepper 卡片）+ **UI 工作台**（S44.3 6 步 + 视觉变体器 + 签收留痕，后续）+ **1:1 映射断言**（S44.5 `GET /api/content/mapping` 只读免 token = 29 号 §2 十步 ↔ 地图向导 / §3 六步 ↔ UI 向导的步骤 id / 判据 / 写面三件对照 + 断言结果 `problems`（空 = 全过）；§2 严格序号 1:1，§3 锚点映射〔§3.2 拆 `variant`+`layout`，§3.5+§3.6 合 `zero_rust`〕） | S44.2（地图向导）+ S44.3（UI 向导）+ S44.5（映射断言） |
 | AI 资产生成 | 地图编辑器「自己生成」（用户 2026-11-10）：`POST /api/gen-island`（body `{prompt,map_id,size?,ratio?}` → `assets/ui/island_home_<map_id>.png`，真渲染命名约定 `chrome::central_island_path`，0 游戏 crate 改动）+ `POST /api/gen-plot`（body `{prompt,map_id,idx,size?,ratio?}`，idx = 地块格号 0..=30 → `assets/ui/tile_<map_id>_<格号>.png`，**每地块专属**地块图，游戏 `render_v6_elem`/`draw_v6_tile` 按格 if-blit 回退共享石柱）；均 = `scripts/agnes_gen.py` Agnes 2.5 Flash 子进程（`AGNES_API_KEY` 项目 `.env` 或环境变量，缺失 = 400 如实上报；map_id 仅 `[a-z0-9_]` 防穿越；size/ratio 白名单；输出未落盘 = 500）；web 地图编辑器右侧「🤖 AI 生成」面板（中央岛图 + 地块图两入口，弹模态：提示词编辑框 + 预览 + 应用保存） | 用户 2026-11-10 |
-| 测试 | 游戏测试标杆（`GET /api/tests`：`assets/data/test_manifest.json` 机读清单 + evidence 存在性对账）——门禁 33 项总览（读 `evidence/gate.log` Report 行）+ **分组树 级(L1–L4)→类→型** + 点测试看**步骤/阶段**（解析 evidence 日志关键行）+ **截图证据**（evidence/ 清单匹配 `.png`，lightbox 放大）+ **▶ 运行测试**（`GET /api/tests?run=<id>` 白名单动作：test_manifest 登记 id 枚举 → command 逐参数 `Command::new` 后台 spawn → 日志落 `evidence/console/logs/test-<id>-<ts>.log` gitignored；程序白名单 cargo/python3/pwsh/powershell，禁 shell 拼接；人工验收/无命令 = 按钮禁用） | P0（S32.3 看板 v1 增量，23 号 §6） |
+| 测试 | 游戏测试标杆（`GET /api/tests`：`assets/data/test_manifest.json` 机读清单 + evidence 存在性对账）——门禁 36 项总览（飞轮 R10 勘误旧「33 项」）（读 `evidence/gate.log` Report 行）+ **分组树 级(L1–L4)→类→型** + 点测试看**步骤/阶段**（解析 evidence 日志关键行）+ **截图证据**（evidence/ 清单匹配 `.png`，lightbox 放大）+ **▶ 运行测试**（`GET /api/tests?run=<id>` 白名单动作：test_manifest 登记 id 枚举 → command 逐参数 `Command::new` 后台 spawn → 日志落 `evidence/console/logs/test-<id>-<ts>.log` gitignored；程序白名单 cargo/python3/pwsh/powershell，禁 shell 拼接；人工验收/无命令 = 按钮禁用） | P0（S32.3 看板 v1 增量，23 号 §6） |
 | APK 体积 | APK/产物体积构成体检（`GET /api/apk-size`：`scripts/apk_audit.py --apk` 只读 = 判据① .so 压缩率 <90% + ② 未引用 UI 0 进包 + 目录构成表 + 引用集计数；`GET /api/build` = `build_artifacts.py list` 产物清单 + 最近构建日志尾行）。**此端点只读，不触发构建**（22 号 §1 边界：不做任意 shell）；**构建执行 = 24 号 §4.1 编排**（平台经 `build_artifacts.py` 白名单 kind `apk|wasm|native` 后台触发，不经手拼命令；日志落 `evidence/console/logs/` gitignored）。判据单一事实源 = 24 号 `docs/process/24_apk_size_std.md`（S35.0）；构建编排 = 24 号 §4.1（S35.1） | P0（S35.0 只读页 + S35.1 构建编排面） |
 | 文档 | 全文检索 + ID 反查（S32.8 已落地：`GET /api/search?q=`，白名单根 `docs/ crates/ scripts/ plan/`，文本扩展名白名单，`EXP-`/`F-`/任务 ID 精确引用反查，上限 3000 文件 / 512KB / 500 命中超限截断不阻塞，只读 0 写盘；**`q` 服务端先 `percent_decode`**〔前端 `encodeURIComponent`，中文/空格/保留字符才命中；非法 `%XX` 原样保留〕） | P2（S32.8） |
 | 构建 | `build_wasm -Check` 体检结果 + 产物清单 + `web/` 预览 | P2（S32.9） |
@@ -447,7 +448,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
   **S32.5 已落地**：八要素清单在 §7.3 内联定义（表格）+ `crates/ti-console/src/audit/template.rs`
   `TASKBOOK_ELEMENTS` + `cover_elements` 机器断言（生成任务书返回 `uncovered_elements`，空 = 全覆盖；
   单测 `taskbook_covers_all_eight_elements` 断言 8/8）⇒ 该缺口已闭合。
-- **机器面盲区（如实标注，不扩面）**：S32 文档面（本节 / WBS）对门禁项数的声称点（§4.2「当前 = 33 项」等）**不在** `doccheck2::check_gate_item_count` 声称面（gate.ps1 头注释/横幅 + parity/git/README）也不在 `doc_numbers.py` 声称点内⇒ 门禁结构再漂移时机器不报，当前由**双审计人工 grep** 兜住（复发记录 = 15 号第 21 行）；扩面归属 = 后续门禁结构演进时随 `check_gate_item_count` 声称面扩容，**非 S32 任务**。
+- **机器面盲区（如实标注，不扩面）**：S32 文档面（本节 / WBS）对门禁项数的声称点（§4.2「当前 = 36 项」等）**不在** `doccheck2::check_gate_item_count` 声称面（gate.ps1 头注释/横幅 + parity/git/README）也不在 `doc_numbers.py` 声称点内⇒ 门禁结构再漂移时机器不报，当前由**双审计人工 grep** 兜住（复发记录 = 15 号第 21 行）；扩面归属 = 后续门禁结构演进时随 `check_gate_item_count` 声称面扩容，**非 S32 任务**。
 - **信任项备注（S32.2 起 repo 适配层「0 写盘」已断言；`build_wasm.ps1 -Check`「不构建/不拷贝/不写 evidence」与 map_pack `install/uninstall` 条件写行为仍挂账 = S32.4/S32.9 执行面落地后改全断言）**：S32.2 落地 = `repo/` 适配层 24 条单测含 0 写盘面（repo/ 全模块 0 处写盘 API，唯一写点 = `evidence/console/.lock`，gitignored）⇒ 本节 repo 面改「已断言」；`-Check` 实跑 0 写盘断言 = S32.9 载体（执行面）。
 - 补充断言：S32 各任务的 DoD 各自要求 `cargo test -p ti-console`（或 `-p ti-devmeta`）实跑 +
   依赖图断言 + `0 游戏产物变更`（§8 测量方式）。

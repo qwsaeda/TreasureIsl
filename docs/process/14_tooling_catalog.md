@@ -123,7 +123,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 # 3) 结构审计（文件规模 / 函数长度 / 重复模式，棘轮基线）
 python scripts/audit_code.py --check
-# 4) 全门禁（33 项；含上面三件套 + 文档/数据/资产/结构/渲染）
+# 4) 全门禁（36 项；含上面三件套 + 文档/数据/资产/结构/渲染；飞轮 R10 勘误旧「33 项」）
 powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 # 5) 台账三方对账（verified ↔ evidence ↔ 代码符号）
 python scripts/check_ledger_reality.py
@@ -182,7 +182,7 @@ python scripts/map_pack.py check
 
 | 工具 | 用途 | 用法 | 幂等 / 退出码 |
 |---|---|---|---|
-| `gate.ps1` | 全门禁 33 项（编译/测试/文档/数据/结构/渲染/台账） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
+| `gate.ps1` | 全门禁 36 项（编译/测试/文档/数据/结构/渲染/台账；飞轮 R10 勘误旧「33 项」） | `powershell -ExecutionPolicy Bypass -File scripts/gate.ps1` | 幂等；失败项数 > 0 ⇒ 退出 1 |
 | `validate_data.py` | 数据表校验（balance/strings/scenes/controls/theme 必填字段、值域、孤儿 key、grid 三键）+ **`check_scenes_canonical`**（scenes.json 须 indent=1 逐字节规范形，防整文件 churn，S29.2 §18）+ **`check_asset_registry`**（全类型资产 disk↔registry 双向同步：UI 图=`ui_manifest.json`、字体/音频=`assets/registry.json`，S29.2 §18）+ **`check_version_consistency`**（S25 版本三方对账：`Cargo.toml` `[workspace.package] version` 单源 ↔ `AndroidManifest versionName` ↔ 构建脚本产物名带 x.y.z ↔ `release.md` 版本规划行） | `python scripts/validate_data.py` | 幂等只读；违规非 0（gate 第 10a 项） |
 | `check_hardcode.py` | 硬编码扫描（数值/中文面量；`EXEMPT` 带理由豁免：oracle 冻结层 / CLI 输出 / 诊断 eprintln，含 S31.2 `data/map_pack.rs`+`data/table_source.rs` 注入诊断 + S52.3 `territory_v2.rs` `#[deprecated]` note 诊断文本（文件级宽豁免；飞轮 R3 F-R3-02：实测当前 CJK 字符串字面量命中 0 行——3 条 note 走 clippy/rustc 诊断通道已被该豁免盖住，前瞻风险 = 若该文件未来加玩家可见 CJK 文案会被静默放行；行级收窄（仅 3 note 行）留 S53，当前维持文件级零风险）） | `python scripts/check_hardcode.py`（严格）/ `--warn` / `--list` / `--selftest`（STR_LIT 全捕获回归自检，飞轮 R1 ⑤-05 起 CJK 通道对全字面量生效） | 幂等；严格模式命中即非 0；`--selftest` 断言失败即非 0 |
 | `check_ledger_reality.py` | 台账三方对账（verified ↔ evidence 文件 ↔ 代码符号） | `python scripts/check_ledger_reality.py` | 幂等只读；虚报即非 0 |
@@ -281,7 +281,7 @@ python scripts/map_pack.py check
 
 ## 4. 门禁项 ↔ 工具对照（排障入口）
 
-`scripts/gate.ps1` 的 33 项按域分组，**每组对应的排障工具**如下（门禁清单本身见
+`scripts/gate.ps1` 的 36 项按域分组（飞轮 R10 勘误旧「33 项」），**每组对应的排障工具**如下（门禁清单本身见
 [`../parity.md`](../parity.md) §代码质量门禁）：
 
 | 域 | 门禁项 | 排障工具 |

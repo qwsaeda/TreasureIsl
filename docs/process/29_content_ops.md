@@ -73,7 +73,7 @@
 | 3 | **重建二进制**（⚠ 坑位，见 §5）：`scenes.json` 是 `include_str!` **编译期内嵌**——改它必须 `cargo build` 才生效；`assets/ui/*.png` 运行时读盘，无需 rebuild | `build` | 平台自身面（`cargo build`） | exit=0（build 成功，scenes.json 生效） | 只读（产物落 `target/`，非冻结路径） |
 | 4 | **出图**：`--shot --scene=<id> --viewport=<方向>`（多视口） | `shot` | 平台自身面（scene shot 多视口） | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
 | 5 | **零 Rust 判据**：`git diff crates/` = 空（重建不改 Rust 源码，仅内嵌数据 blob） | `zero_rust` | 平台自身面（`git diff --quiet -- crates/…`） | exit=0 + git diff crates/ 空（游戏产品 6 crate） | 只读 |
-| 6 | **视觉签收留痕**：`evidence/<id>.log` 含「用户视觉验收/过目/确认/签收」之一（doccheck2 第 35 项 visual-signoff 检查）——与第 5 步**同一步**，是 `zero_rust` 判据的后半段 | `zero_rust` | 平台自身面（同第 5 步） | exit=0 + git diff crates/ 空 + `state.signoff` 含签收关键词（A 纪律 EXP-114） | 只读 |
+| 6 | **视觉签收留痕**：`evidence/<id>.log` 含「用户视觉验收/过目/确认/签收」之一（doccheck2 第 37 项 `visual-signoff` 检查，飞轮 R10 勘误旧「第 35 项」序号）——与第 5 步**同一步**，是 `zero_rust` 判据的后半段 | `zero_rust` | 平台自身面（同第 5 步） | exit=0 + git diff crates/ 空 + `state.signoff` 含签收关键词（A 纪律 EXP-114） | 只读 |
 
 ## 4. 打包/分发链（内容运营产物）
 

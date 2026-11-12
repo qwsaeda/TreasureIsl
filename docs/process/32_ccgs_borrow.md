@@ -41,7 +41,7 @@
 | 角色分层 | 49 agent（总监 3 Opus / 主管 9 Sonnet / 专家 38 Sonnet/Haiku） | 22 号双审计 A/B + 飞轮 3 角色 + 临时 spawn 子代理，无 agent 配置文件 |
 | 协作规则 | `coordination-rules.md` 7 条 prose | `05_module_parallel.md` §4 并行纪律 6 条（文件域不相交/契约全票/集成轮门禁/打回不代劳/环境事实前置/必读清单） |
 | 路径作用域 | 14 个 `rules/*.md` `paths:` glob + `validate-write.sh` 机器拦截 | `plan/packages.yaml` 包白名单 + `check_module_contracts.py`（gate 第 16 项）；**无「路径下编码红线」文件层** |
-| 过程 Hook | 15 事件（commit 前 / 写前 / 压缩前后 / 子代理审计） | 无过程 hook；收口时刻 = `gate.ps1` 35 项 + `check_ledger_reality` 三方对账 |
+| 过程 Hook | 15 事件（commit 前 / 写前 / 压缩前后 / 子代理审计） | 无过程 hook；收口时刻 = `gate.ps1` 35 项（S50 立项时点；现行以 `assets/gate_data.json` 实测为准，飞轮 R10 勘误注明时点） + `check_ledger_reality` 三方对账 |
 | 停机判据 | 无显式（5 步协议 = 问→方案→拍板→草稿→批准） | 06_flywheel §4 三条（找问题 0 / 审计 0 误报 / 修复 0 残留）+ 主线程复核（EXP-038/058） |
 | 审计日志 | `agent-audit.log` 管道符格式 | `evidence/console/audit-<task>-r<N>-<role>.md` 四行机器可解析字段 |
 | 防虚报 | `code-review/SKILL.md`「NOT ASSESSED — NO DATA」+ `validate-commit.sh` | `check_ledger_reality`（gate 第 14 项）+ `evidence/<task>.log` 必须含任务自己判据 |
@@ -64,7 +64,7 @@ CCGS `active.md` CHECKPOINT 块 + SessionStart 重读 + PreCompact 追加日志�
 
 CCGS `studio-tests/` = 对 skills/agents 本身的 QA（49+75 对应测试 + catalog + rubric），行业少见。
 我方 `assets/data/test_manifest.json` + 平台 `/api/tests` 是 L1~L4 游戏测试（被测对象 = 游戏），
-**没有「对 doccheck2 41 项断言 / 对 35 项 gate 本身」的元测试面**——`dod-commands`（gate 第 25 项）
+**没有「对 doccheck2 41 项断言 / 对 35 项 gate 本身」（S50 立项时点快照；现行 = 47 项/36 项，以 gate_data.json 实测为准，飞轮 R10 注明时点）的元测试面**——`dod-commands`（gate 第 25 项）
 只覆盖「判据载体缺失」，不覆盖「门禁断言自身被正确触发」。
 **借鉴**：新增 `scripts/studio_tests.py`（工具契约 4 条全满足），3 类断言：
 1. doccheck2 每个 `fn check_*` 在注册表被引用 + 在 `gate_data.json` `doccheck2_checks` 有条目（双向对账）
@@ -88,13 +88,13 @@ CCGS 14 个 `rules/*.md` 的 `paths:` frontmatter + 该路径下编码红线正�
 | CCGS 特性 | 为什么不抄 |
 |---|---|
 | 49 agent 层级（总监/主管/专家 3 层 + 垂直委派/横向咨询） | 项目规模 = 2 主线程 + 2 审计 + 3 飞轮 + 临时 spawn 足够；49 角色 = 过度设计；台账本身已替代「制作人协调变更传播」 |
-| 75 个 slash 命令（/brainstorm /dev-story /code-review ...） | gate 35 项已等价覆盖质量阶段；75 命令是过程脚手架，我方是收口脚手架，多脚手架反而让 LLM 走流程忘了「必须实测」 |
+| 75 个 slash 命令（/brainstorm /dev-story /code-review ...） | gate 35 项（S50 立项时点；现行 36 项，飞轮 R10 注明）已等价覆盖质量阶段；75 命令是过程脚手架，我方是收口脚手架，多脚手架反而让 LLM 走流程忘了「必须实测」 |
 | 12 个 commit/push 前 hook（`validate-commit.sh` 48KB） | 我方 commit 全由人工/主线程做，无「LLM 子代理擅自 commit 绕过」风险面；收口时刻 = gate 全绿 + 三方对账，比 commit hook 更彻底 |
 | 5 步协作协议逐 agent 内嵌 | 我方无静态 agent 配置文件（子代理临时 spawn + 开轮必读清单 + 规范回执），**逐 agent 内嵌形态做不了也不需**；但 CCGS 五步协议（Ask→Options→Decision→Draft→Approval）的**思想**值得借鉴 —— S51.0 起**形态借鉴**：固化进 `03_templates.md` §7 任务书模版「开轮协作五步」段 + `06_flywheel` §2 开轮必读第 7 条（非 49 个 agent 文件，而是子代理任务书模版段，和我方既有载体一致） |
 
 ## 5. 一个隐藏风险点（CCGS 没解决，我方 S50.2 部分解决）
 
-CCGS `studio-tests/` 元测试思想 = 测「测代码的测试」本身。我方 `doccheck2` 41 项断言本身可能写错/漏写
+CCGS `studio-tests/` 元测试思想 = 测「测代码的测试」本身。我方 `doccheck2` 41 项断言（S50 立项时点；现行 47 项，飞轮 R10 注明）本身可能写错/漏写
 （EXP-170/171 复发防护 dod-commands 部分覆盖「判据从未执行」类缺陷），**缺「门禁断言自身被正确触发」的元层验证**。
 S50.2 的 3 类断言（§3②）即此面的机器化落地。
 
