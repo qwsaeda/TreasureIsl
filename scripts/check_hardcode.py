@@ -177,6 +177,8 @@ def main() -> int:
                     help="flywheel R1 regression: assert STR_LIT captures the full literal")
     ap.add_argument("--check", action="store_true",
                     help="门禁模式（S21.8 工具契约只读开关；默认严格行为即只读扫描，命中非 0 退出）")
+    ap.add_argument("--list", action="store_true",
+                    help="飞轮 R3 B-02：按文件分类汇总命中（只读，与 14 号/04 号台账声称对齐；命中即按文件分组打印，退出码同严格模式）")
     args = ap.parse_args()
 
     if args.selftest:
@@ -211,6 +213,14 @@ def main() -> int:
         print("check_hardcode: %d hit(s) in %d file(s) scanned" % (len(all_hits), files))
         return 0
 
+    if args.list:
+        # 飞轮 R3 B-02：按文件分类汇总（只读模式；命中按文件分组 + 逐条，退出码同严格模式）
+        for f in sorted(by_file):
+            hits = by_file[f]
+            k = sum(1 for h in hits if h[1] == "cjk")
+            print("  %3d hits (cjk=%d color=%d)  %s" % (len(hits), k, len(hits) - k, f))
+            for rel, cat, lineno, detail in hits:
+                print("    %s:%d [%s] %s" % (rel, lineno, cat, detail))
     for rel, cat, lineno, detail in all_hits:
         print("  %s:%d [%s] %s" % (rel, lineno, cat, detail))
 

@@ -2428,13 +2428,18 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         36
     };
     // 现状声称点锚定短语（`doc_numbers.py --fix` 回写同一组短语 = 双保险）
-    let claims: [(&str, &str); 2] = [
+    let claims: [(&str, &str); 3] = [
         (
             "docs/release.md",
             &format!(
                 "{tasks} 任务（{verified} verified + 0 pending（S52 全收口；余 1 blocked S7.7 可选）"
             ),
         ),
+        // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。
+        // 实测基准 = e1cf0f8^ 迁移前 `crates/ti-core/src/rules/territory_v2.rs` `#[test]` 数 = 18
+        // （非 S52.1 时点虚报的「42」——串了飞轮 R2 的 42 findings 计数）。15 号台账第 32 行
+        // 须含「18 内联迁移」（18 = 迁移前内联测试数），防虚报计数漂移复发（防虚报硬规则 2）。
+        ("docs/process/15_process_ledger.md", "territory_v2 18 内联迁移"),
         ("AGENTS.md", &format!("{tasks} 任务 / {verified} verified")),
     ];
     for (rel, phrase) in claims {

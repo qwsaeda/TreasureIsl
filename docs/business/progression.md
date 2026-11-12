@@ -64,7 +64,7 @@ Space（空格）/ 点按「摇骰前进」
 | 触发时机 | **经过或落在 BOSS 格即遇 BOSS**（不再要求「恰好停在 BOSS 格」） | 31 格赛道「恰好落格」≈ 1/31（v5 定构；旧 33~46 格 ≈ 1/40 量级运气已作废），节奏可预期（实测 E[摇骰] = 13.6，S28.8 复测） |
 | 现身门槛 | 绕岛满 `boss_min_laps` 圈（默认 1）才现身；未满圈 = 「BOSS 尚未现身（还需绕岛 N 圈）」提示，不进战斗 | 跨图节奏对齐 + 保证攒金建造时间（攒金→建造→打 BOSS 闭环） |
 | 拦停 | 现身时位置停到 BOSS 格（被 BOSS 拦停，视觉与位置一致） | 玩家一眼看出「在这打」 |
-| 跨图推进 | 击败 BOSS → 解锁下一图（`MapSlot` / `unlocked_maps`），m03 BOSS = 通关 | 已有实现（`battle_step` → `on_boss_defeated`） |
+| 跨图推进 | 击败 BOSS → 解锁下一图（`MapSlot` / `unlocked_maps`），m20 BOSS = 通关（20 图 m01~m20，飞轮 R3 N-A2 勘误旧 m03 口径） | 已有实现（`battle_step` → `on_boss_defeated`） |
 
 **跨图节奏实测**（蒙特卡洛 2 万次，`dice_sides=6`、`boss_min_laps=1`）：
 
@@ -261,54 +261,49 @@ Space（空格）/ 点按「摇骰前进」
 
 ## 跨图推进（地图解锁 `unlocked_maps`）
 
-游戏共 3 图 m01/m02/m03，难度按 `boss_tier` 升序（m01=0 → m02=1 → m03=2，BOSS 更强）。
-推进规则 = **击败当前图 BOSS 才解锁下一图**，非开局三图齐选。
+游戏共 **20 图 m01~m20**，难度按 `boss_tier` 升序（`balance.selection.maps` 20 条，m01→m20 BOSS 更强；飞轮 R3 N-A2 勘误：S15.2 时点 3 图 m01~m03 规格已被 S33/S37 20 图演进覆盖，本文档段追平现行代码 `rules/progression.rs`）。
+推进规则 = **击败当前图 BOSS 才解锁下一图**，非开局齐选。
 
 | 阶段 | 规则 |
 |---|---|
 | 初始解锁 | 仅 `m01`（`unlocked_maps = [m01]`） |
 | 推进 | 击败当前图 BOSS（`combat` 结果 = Player 胜）→ 解锁序列下一图，追加进 `unlocked_maps` |
-| 序列 | m01 →(击败)→ 解锁 m02 →(击败)→ 解锁 m03；m03 无下一图 |
-| 通关 | 击败 m03 的 BOSS = 全图通杀 = 游戏通关（本局结束） |
+| 序列 | m01 →(击败)→ 解锁 m02 → … → 解锁 m20；m20 无下一图 |
+| 通关 | 击败 m20 的 BOSS = 全 20 图通杀 = 游戏通关（本局结束；`CLEARED_BIT` = bit 19） |
 | 失败 | HP 归零 / 超 `combat.max_rounds` = 失败，**不解锁**；回主菜单后可**重试**当前图 |
-| 选择约束 | SelectMap 显示**全部 3 图**，锁定项置灰 + 深色「锁」块（`08_layout_design.md` §锁块）；Prev/Next 可自由导航（含锁定位），仅 **Confirm** 经 `map_unlocked` 校验拒绝（`Sfx::Invalid`，选择态不提交） |
+| 选择约束 | SelectMap 显示**全部 20 图**，锁定项置灰 + 深色「锁」块（`08_layout_design.md` §锁块）；Prev/Next 可自由导航（含锁定位），仅 **Confirm** 经 `map_unlocked` 校验拒绝（`Sfx::Invalid`，选择态不提交） |
 
 ### 与存档一致（`persistence.md`）
 
 - 规则层存档（`saveload`/`saveload_json` 的 `SaveData.unlocked_maps` 字段）**当前无生产写入端**：4 处构造恒 `Vec::new()`，仅测试 fixture 手工置值——解锁链的**唯一事实源 = app 侧 `GameApp.unlocked_maps` + `GameApp.cleared`**（`ProgressionState` 驱动）。该字段为预留扩展位（接规则层存档需 `capture_state` 增 `unlocked` 入参，c1 契约变更，见台账 S15.2 残留）。
-- **app 侧存档槽（`domain::persistence::SaveSlot`）持 `unlocked_mask: u8` 逐图推进字段**（S15.2/F23 定稿，v2 向后兼容：旧档无该字节 → `#[serde(default)]` = 0）：bit 0/1/2 = m01/m02/m03 已解锁（口径 = 规则层 `ProgressionState::unlocked_mask()`），**bit 3 = CLEARED 通关位**（m03 BOSS 已击败，`ProgressionState::CLEARED_BIT`）。写盘 = `scenes/saveload.rs` 经 `SessionHost::unlocked_mask()` 取 GameApp 当前推进位（解锁集 + 通关位）；读档 `restore_save` 经 `ProgressionState::for_save_restore(mask, map_slot)` 还原：`mask != 0` 逐位忠实还原（保住「击败 m01 解锁 m02、尚未切图」的进度 + 通关位），`mask == 0`（旧档）退「最小前置链」`min_progression_to_select`，档与选图矛盾（选图未解锁）也退链——旧档恒可回读，无需迁移。
-- **通关门禁（`is_cleared` 逐图）**：m03 BOSS 击败位 = 通关位，逐图判定 = `GameApp::is_map_cleared(m)`（m01/m02 = 下一图已解锁口径，m03 = `GameApp.cleared`）；总门禁 `GameApp::is_cleared()` = m03 击败位。置位时机 = `battle_step` 在 m03 胜时（解锁集此时已全开，通关另记位）。
+- **app 侧存档槽（`domain::persistence::SaveSlot`）持 `unlocked_mask: u32` 逐图推进字段**（S37 起 u32 20 图口径，旧 `u8` 档读时高 24 位 = 0 向后兼容）：bit j = m(j+1) 已解锁（口径 = 规则层 `ProgressionState::unlocked_mask()`），**bit 19 = CLEARED 通关位**（m20 BOSS 已击败，`ProgressionState::CLEARED_BIT` = `1u32 << 19`）。写盘 = `scenes/saveload.rs` 经 `SessionHost::unlocked_mask()` 取 GameApp 当前推进位（解锁集 + 通关位）；读档 `restore_save` 经 `ProgressionState::for_save_restore(mask, map_slot)` 还原：`mask != 0` 逐位忠实还原（保住「击败 m01 解锁 m02、尚未切图」的进度 + 通关位），`mask == 0`（旧档）退「最小前置链」`min_progression_to_select`，档与选图矛盾（选图未解锁）也退链——旧档恒可回读，无需迁移。
+- **通关门禁（`is_cleared` 逐图）**：m20 BOSS 击败位 = 通关位，逐图判定 = `GameApp::is_map_cleared(m)`（m01~m19 = 下一图已解锁口径，m20 = `GameApp.cleared`）；总门禁 `GameApp::is_cleared()` = m20 击败位。置位时机 = `battle_step` 在 m20 胜时（解锁集此时已全开，通关另记位）。
 
 ### 可测试规则
 
-| 规则 | 单测 |
+| 规则 | 单测（现行，`crates/ti-core/tests/progression_rules.rs`） |
 |---|---|
-| 初始仅 m01 解锁 | `progression_initial_unlocks_only_m01` |
-| 击败 m01 → 解锁 m02（m03 仍锁） | `progression_defeat_m01_unlocks_m02_only` |
-| 击败 m02 → 解锁 m03 | `progression_defeat_m02_unlocks_m03` |
-| 击败 m03 = 通关、无下一图 | `progression_defeat_m03_clears_game` |
-| 失败（未击败）不解锁 | `progression_loss_does_not_unlock` |
-| 解锁链单调（只增不降，m01 恒解锁） | `progression_unlocks_monotonic` |
-| 读档链恢复：选中 m(i) 的最小前置 = 击败 m(0)..m(i-1) | `min_progression_to_select_chain` |
-| 解锁集重建（战斗结算 / 旧档异常集忠实保留 / 全解锁幂等） | `from_unlocked_feeds_boss_defeat_step`、`from_unlocked_legacy_anomaly_is_faithful`、`from_unlocked_all_then_m03_clears` |
-| 掩码往返（`unlocked_mask()` ↔ `from_mask()`，含 CLEARED 位） | `unlocked_mask_round_trip` |
-| 读档掩码忠实还原 / 旧档 `mask=0` 退链 / 矛盾掩码修当前图 | `for_save_restore_legacy_mask_zero_falls_back_to_chain`、`for_save_restore_nonzero_mask_is_faithful`、`for_save_restore_contradictory_mask_repairs_current_map` |
-| 通关门禁（m03 击败位 = `is_cleared` 逐图门禁） | `is_map_defeated_is_per_map` + app 层 `app_save_load_restores_cleared_gate` |
+| 初始仅 m01 解锁 | `initial_unlocked_is_m01_only` |
+| 击败 m01 → 解锁 m02（m03+ 仍锁，单调链） | `on_boss_defeated_unlocks_next_map` |
+| 击败图数累计（defeated_count） | `defeated_count_tracks_maps_beaten` |
+| 击败 m20 = 通关、m03 击败 ≠ 通关（20 图需 m20） | `is_cleared_when_m20_boss_beaten` |
+| 选图 BOSS 档读 `balance.selection.maps`（m01..m20 有档） | `boss_tier_of_maps_selection_entries` |
+| 掩码往返（`unlocked_mask()` ↔ `from_mask()`，含 CLEARED 位 bit 19） | `unlocked_mask_roundtrip` |
+| 读档 `mask=0` 退最小前置链 / 矛盾掩码补最小前置 | `for_save_restore_fallback_for_legacy_and_broken_mask` |
+| 解锁集合 → 推进态重建（击败位 = 相邻两图差） | `from_unlocked_reconstructs_defeated_bits` |
 
 > 实现落点：`crates/ti-core/src/rules/progression.rs`（`ProgressionState`：`initial_unlocked` /
 > `unlocked` / `on_boss_defeated` / `is_cleared` / `can_select` / `from_unlocked` / `min_progression_to_select`
-> / `is_map_defeated` / `unlocked_mask` / `from_mask` / `for_save_restore` + `CLEARED_BIT`（bit 3 通关位））。
+> / `is_map_defeated` / `unlocked_mask` / `from_mask` / `for_save_restore` + `CLEARED_BIT`（bit 19 通关位，m20；S37 起 20 图 u32 口径，飞轮 R3 N-A2））。
 > **app 层已接线**（`crates/ti-app/src/game_app/`（S20.0b 拆分后的目录模块））：开档 `unlocked_maps = initial_unlocked()`（仅 m01，非全开）；
-> `battle_step` 胜利钩 = 击败当前图 BOSS → 规则层结算解锁下一图（幂等，失败不加），m03 胜另置 `GameApp.cleared` 通关位；
-> 逐图门禁只读接口 = `GameApp::is_cleared()`（m03 击败位）/ `GameApp::is_map_cleared(m)`；
+> `battle_step` 胜利钩 = 击败当前图 BOSS → 规则层结算解锁下一图（幂等，失败不加），m20 胜另置 `GameApp.cleared` 通关位；
+> 逐图门禁只读接口 = `GameApp::is_cleared()`（m20 击败位）/ `GameApp::is_map_cleared(m)`；
 > `restore_save` 经 `unlocked_mask` 忠实还原（`mask=0` 旧档退最小前置链，矛盾掩码退链修当前图）；
 > 写盘 = `scenes/saveload.rs` 经 `SessionHost::unlocked_mask()` 取推进位（解锁集 + CLEARED 位）。
-> 验收：`crates/ti-app/tests/app_progression_wiring.rs`（6 条：初始仅 m01 / 胜解锁+幂等 / m01→m02 全链路 / 读档链恢复+gold/位置恢复 /
-> **读档掩码忠实还原（非零掩码）** / **通关门禁 CLEARED 位读档还原**）。
-> 演示：`crates/ti-core/examples/cross_map_demo.rs`（打满 3 图）。
-> **残留（S15.2 登记）**：① 通关判定 `is_cleared` 在 app 游玩层暂无**画面表现**（击败 m03 后 Back 回主菜单，无通关画面/提示；门禁位与存档口径已闭环，画面属 S16 范围）；
+> 验收：`crates/ti-core/tests/progression_rules.rs`（8 条，S52.1 补测）+ `crates/ti-app/tests/app_progression_wiring.rs`（接线验收）。
+> 演示：`crates/ti-core/examples/cross_map_demo.rs`（打满 20 图 m01~m20）。
+> **残留（S15.2 登记）**：① 通关判定 `is_cleared` 在 app 游玩层暂无**画面表现**（击败 m20 后 Back 回主菜单，无通关画面/提示；门禁位与存档口径已闭环，画面属 S16 范围）；
 > ② 规则层存档 `SaveData.unlocked_maps` 无生产写入端（见上「与存档一致」）。
-
 ## 与实现的接口
 
 - 玩法：`rules::main_map`（`MapSession`）、`rules::cards`（`CardEngine`）（S8.3.c 重写中）；

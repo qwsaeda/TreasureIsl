@@ -562,7 +562,10 @@ impl GameApp {
                 self.seat_crew[seat as usize] = sstate.crew;
                 self.seat_arms[seat as usize] = sstate.arms;
                 let won = matches!(outcome, territory_v2::AssaultOutcome::Win { .. });
-                let owner_txt = prev.map_or_else(|| String::from("无主"), |o| ai_seat_name(o, b));
+                let owner_txt = prev.map_or_else(
+                    || crate::i18n::sget("role.name.none").to_string(),
+                    |o| ai_seat_name(o, b),
+                );
                 self.last_ai_toast = Some(i18n_fmt(
                     if won {
                         "scene.main_map.toast.ai_siege_fmt"

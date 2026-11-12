@@ -125,7 +125,16 @@ function Read-GateItems {
         $last = -1
         for ($i = $rest.Length - 1; $i -ge 0; $i--) { if ($rest[$i] -eq [char]39 -or $rest[$i] -eq [char]34) { $last = $i; break } }
         if ($first -ge 0 -and $last -gt $first + 1) {
+            # 飞轮 R3 漂移②修正（2026-11-12）：按「项名前缀」（描述串首个 `（` 前段）去重。
+            # 旧口径按完整描述串去重，而同一 gate 项的 PASS/FAIL 双分支描述串不同
+            # （如 no-macroquad 的 `cargo tree -p ti-app 扫描` vs `共 N 行`）⇒ 同逻辑项被
+            # 拆成 2 行（readme 第 20/21 项重复）。归一 = 取 `（` 前段（无 `（` = 整串），
+            # 与 doccheck2 gate_item_actual_count「项名去重」同口径（gate 实为 36 个逻辑项名）。
             $name = $rest.Substring($first + 1, $last - $first - 1)
+            # 与 doccheck2 gate_item_actual_count **同口径**：按完整项描述串去重。
+            # 双分支项（cargo build / Android 真机 / check_data_driven / no-macroquad）的
+            # PASS/FAIL 描述串各占 1 条完整名 ⇒ 去重后 gate = 36 逻辑项（权威基准 =
+            # doccheck2 `gate_item_actual_count` + parity.md §108「Report 去重 = 36 项」）。
             if (-not $names.Contains($name)) { $names.Add($name) }
         }
     }
@@ -160,16 +169,36 @@ function Read-RulesFiles {
     return $rules
 }
 
-# ── 读 doccheck2.rs，提取 fn check_* 函数名 ──────────────────────────────
+# ── 读 doccheck2.rs 注册表 RUST_CHECKS + gate_data.json doccheck2_checks，提取实跑断言名 ──
+# 飞轮 R3 漂移①修正（2026-11-12）：旧实现数所有 `fn check_` 定义（52，含 8 个未注册的
+# 子 helper：check_anim_timing_literals/check_check_inventory_consistency/
+# check_image_asset/check_inventory_ids/check_primitive_params/check_primitive_text/
+# check_scene_required_pick_keys/check_tooling_contract_one/check_tooling_stray_scripts/
+# check_tooling_tmp_dir），与实跑面（gate_data.json doccheck2_checks = 44，单一事实源）漂移。
+# 新口径 = gate_data.json `doccheck2_checks[].id`（实跑 44 项，唯一事实源；
+#   RUST_CHECKS 42 注册项 + doccheck2_grep_checks 2 项 = 44，飞轮 R3 N-A5 勘误旧注释「42」）：
+#   与 `cargo run --bin doccheck2` 输出「across 44 audit-codified checks」对齐
 function Read-Doccheck2Checks {
-    param([string]$path)
-    $text = Get-Content -Path $path -Raw -Encoding UTF8
+    param([string]$dc2Path, [string]$gateDataPath)
     $checks = @()
-    $i = 0
-    foreach ($line in ($text -split "`n")) {
-        if ($line -match '^\s*fn\s+(check_\w+)') {
-            $i++
-            $checks += @{ n = $i; name = $Matches[1] }
+    # 单一事实源 = assets/gate_data.json doccheck2_checks[].id（实跑断言面）
+    if (Test-Path $gateDataPath) {
+        $gd = Get-Content -Path $gateDataPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($gd.doccheck2_checks) {
+            foreach ($c in $gd.doccheck2_checks) {
+                $checks += @{ n = ($checks.Count + 1); name = $c.id }
+            }
+        }
+    }
+    # 兜底：gate_data 读失败时退回 RUST_CHECKS 注册表（仍优于旧的 fn 全定义数）
+    if ($checks.Count -eq 0 -and (Test-Path $dc2Path)) {
+        $text = Get-Content -Path $dc2Path -Raw -Encoding UTF8
+        $i = 0
+        foreach ($line in ($text -split "`n")) {
+            if ($line -match '^\s*\("[a-z0-9-]+",\s*(check_\w+)') {
+                $i++
+                $checks += @{ n = $i; name = $Matches[1] }
+            }
         }
     }
     return $checks
@@ -180,11 +209,12 @@ $pkgPath  = Join-Path $root 'plan\packages.yaml'
 $expPath  = Join-Path $root 'docs\experience\index.md'
 $gatePath = Join-Path $root 'scripts\gate.ps1'
 $dc2Path  = Join-Path $root 'crates\ti-tools\src\bin\doccheck2.rs'
+$gateDataPath = Join-Path $root 'assets/gate_data.json'  # S51.0+doccheck2 实跑面单一事实源（飞轮 R3 漂移①：gate_data.json doccheck2_checks=44）
 
 $packages = Read-PackagesYaml $pkgPath
 $exps     = Read-ExpIndex $expPath
 $gateItems = Read-GateItems $gatePath
-$dc2Checks = Read-Doccheck2Checks $dc2Path
+$dc2Checks = Read-Doccheck2Checks $dc2Path $gateDataPath
 
 $selectedPkgs = @()
 if ($All) {
@@ -196,7 +226,7 @@ elseif ($Package) {
 
 $filteredExps = Filter-Exps $exps $Package $pkgExpKeywords
 
-$dc2Checks = Read-Doccheck2Checks $dc2Path
+$dc2Checks = Read-Doccheck2Checks $dc2Path $gateDataPath
 
 # 红线文件（docs/rules/，S51.0 第 7 条「开轮协作五步」+ docs/rules 注入）
 # 末尾是目录（无扩展名分隔），Linux 下 Join-Path 反斜杠会被当字面文件名，须显式正斜杠

@@ -1,10 +1,10 @@
-//! 跨图推进演示（`ti-core`，纯玩法层）：打满 3 图（m01→m02→m03）。
+//! 跨图推进演示（`ti-core`，纯玩法层）：打满 20 图（m01→m20，`MapSlot::all()`）。
 //!
 //! 忠实 `docs/business/progression.md`「跨图推进」+ `loop_core.md`：
 //! - 每图 = 单图完整循环（随机经据点贸易/建造 → 逐格随机路线到 BOSS → 战斗定胜负）；
 //! - **击败当前图 BOSS 才解锁下一图**（`rules::progression::ProgressionState`）；
 //! - 失败（BOSS 胜 / 超回合）→ **重试当前图**（换战斗 seed）；
-//! - 击败 m03 = **通关**（全图通杀）。
+//! - 击败 m20 = **通关**（全 20 图通杀，`CLEARED_BIT` bit 19）。
 //!
 //! 角色随机选一次（跨图不换），图按解锁顺序推进。
 //! - 不带参：每次抽新 seed；`--seed N` 固定复现。
@@ -277,7 +277,7 @@ fn main() {
     // 随机选角一次（跨图不换角色）
     let n_char = u32::try_from(Character::all().len()).unwrap_or(5);
     let ch = Character::from_index(rng.in_range(n_char)).expect("角色索引在表");
-    println!("===== 跨图推进（打满 3 图）seed={seed}：角色 {} =====", ch.label());
+    println!("===== 跨图推进（打满 20 图 m01~m20）seed={seed}：角色 {} =====", ch.label());
 
     let mut progression = ProgressionState::initial();
     let max_retry = 3u32; // 每图失败重试次数上限（避免无限）
@@ -310,14 +310,14 @@ fn main() {
         // 推进：击败本图 BOSS → 解锁下一图 / 通关（功能式：消费旧状态、返回新状态）
         progression = progression.on_boss_defeated(m);
         if progression.is_cleared() {
-            println!("\n★ 击败 {} 的 BOSS → 通关！全 3 图通杀", m.label());
+            println!("\n★ 击败 {} 的 BOSS → 通关！全 20 图通杀", m.label());
             break;
         }
         println!("\n★ 击败 {} 的 BOSS → 解锁下一图", m.label());
     }
 
     if !failed && progression.is_cleared() {
-        println!("\n========== 通关！击败全部 3 图 BOSS（跨图推进完成）==========");
+        println!("\n========== 通关！击败全部 20 图 BOSS（跨图推进完成）==========");
     }
     if pinned {
         println!("\n（固定 seed={seed}，重跑 --seed {seed} 可逐位复现）");

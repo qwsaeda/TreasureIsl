@@ -3,7 +3,7 @@
 //! 领地 v2 兵力模型规则集成测试（S52.1；`docs/business/territory.md` §4–§7 可测规则）。
 //!
 //! 本文件位 `tests/`（源码内联测试被 doccheck2 `no-inline-test-mod` 拦截；EXP-052 口径）。
-//! S52.1 补测：`territory_v2.rs` 42 条内联单测迁移至此（飞轮 R2 找问题 P1-1），
+//! S52.1 补测：`territory_v2.rs` 18 条内联单测迁移至此 + 4 条新增 v3 口径专测（共 22，飞轮 R3 F-R3-01 勘误 42→18+4），
 //! `territory_v2.rs` 棘轮豁免摘除。
 //! oracle = `docs/business/territory.md` §4.4（驻军守恒 / 攻占败交双倍 / 多人同格只打前一个 /
 //! 破产出局 / 胜者 = 唯一存活者）+ `combat.md` §兵力模型（`rules::force`）。
@@ -11,8 +11,9 @@
 //!
 //! `#[allow(deprecated)]`（S52.3 文件级）：本文件是 `victory_seat` / `player_defeated`
 //! （v2 口径，0 生产调用，挂 `#[deprecated]` 留作语义参照）的**唯一**引用点；
-//! 文件级 allow 盖住 use 块 + 2 个用例。现役 v3 口径 = `victory_seat_active` /
-//! `players_defeated`（本文件另有专测，不 deprecated）。
+//! `ai_turn_v2`（S52.3 死代码 3 函数之一，飞轮 R3 F-R3-03 补披露）全库 0 引用（本文件
+//! 亦未 import），留纯语义参照。文件级 allow 盖住 use 块 + 2 个用例。现役 v3 口径 =
+//! `victory_seat_active` / `players_defeated`（本文件另有专测，不 deprecated）。
 
 use ti_core::data::{Balance, balance, board};
 use ti_core::rules::force::Force;

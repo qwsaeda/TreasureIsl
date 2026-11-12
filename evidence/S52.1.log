@@ -1,5 +1,5 @@
 === S52.1 rules 层集成测试盲区补测专项 判据实跑（2026-11-11）===
-### ① 9 个新集成测试文件（territory_v2 42 内联迁移 + 8 新文件）
+### ① 9 个新集成测试文件（territory_v2 18 内联迁移 + 4 新增 v3 专测共 22 + 8 新文件）
 crates/ti-core/tests/battle_rules.rs
 crates/ti-core/tests/board_rules.rs
 crates/ti-core/tests/build_rules.rs

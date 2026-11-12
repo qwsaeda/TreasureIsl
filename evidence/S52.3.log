@@ -15,3 +15,13 @@
     生产调用命中 = 0
   - deprecated 标记编译生效：测试唯一引用点须文件级 allow 才过 clippy -D warnings（已实跑 clippy_exit=0）
   - check_hardcode 严格 0 命中（豁免表新增 territory_v2.rs 行 + 14 号台账登记）
+
+### ⑥ gate 全量 36 项归因（2026-11-11 S52.3 收口轮）
+  代码面 0 failure：fmt/clippy/test/build/check_hardcode/doccheck2(44)/doccheck/
+  三方对账 337 全绿。
+  browser-playtest = 环境项偶发 WebGL context lost（gate 内撞 Chromium GPU context
+  丢失：status="WebGL context lost" L1/L4 false；同产物独立证据 = ① 同 gate 内
+  playtest-loop web_playtest 子项 PASS（L1/L2/L4 true）② wasm-browser-e2e PASS
+  （L1~L5 4 层全真）③ gate 外直接重跑 web_playtest.cjs PASS（墨点 44%→100% 场景
+  切换正常）。S52.2/3 改动面 = 纯门禁工具 + 文档 + ti-core 3 #[deprecated] 标记
+  + 1 行 rustfmt（0 行为变化），与 browser-playtest FAIL 零因果。
