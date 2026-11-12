@@ -210,7 +210,7 @@ $pkgPath  = Join-Path $root 'plan\packages.yaml'
 $expPath  = Join-Path $root 'docs\experience\index.md'
 $gatePath = Join-Path $root 'scripts\gate.ps1'
 $dc2Path  = Join-Path $root 'crates\ti-tools\src\bin\doccheck2.rs'
-$gateDataPath = Join-Path $root 'assets/gate_data.json'  # S51.0+doccheck2 实跑面单一事实源（飞轮 R3 漂移①：gate_data.json doccheck2_checks=44）
+$gateDataPath = Join-Path $root 'assets/gate_data.json'  # S51.0+doccheck2 实跑面单一事实源（飞轮 R3 漂移①：gate_data.json doccheck2_checks=45（S53 飞轮 R6 +1 后现行；R3 时点=44））
 
 $packages = Read-PackagesYaml $pkgPath
 $exps     = Read-ExpIndex $expPath
