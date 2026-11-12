@@ -2449,6 +2449,93 @@ impl ByNameKeys for str {
 /// 台账 verified 数；gate 项数 = gate.ps1 `Report ` 项名去重；doccheck2 断言数 =
 /// `doccheck2_checks` 长度。仅对**现状声称点**（固定锚定短语）FAIL；
 /// 里程碑/EXP 历史叙述（行内含「里程碑」/行首 `EXP-` 索引表）豁免 = 历史时点快照。
+/// 飞轮 R6/S53 固化：业务文档「可测试规则表」引用的测试名须全库实存（幻影测试名防护）。
+///
+/// 扫描 `docs/business/*.md` 里「可测试规则」表（表头含 `单测` 的表格）数据行的
+/// 反引号 `snake_case` 标识符（测试名引用），逐名在 `crates/**` 全库 grep，0 命中 =
+/// 幻影测试名（文档 §可测表引用了不存在的测试函数 = 张冠李戴/过期名，飞轮 R6 B 侧
+/// 独报 10 条 + F-1 11 条的同类根因）。
+///
+/// 口径 = 只守「可测表形态」（表头 `单测` + 表格行反引号 `snake_case`），非全库标识符
+/// （公式变量 / 函数名 / i18n key 前缀不在表形态内，天然不被误报）。
+/// WARN 级（幻影名不阻塞门禁，打印供人工回写），与 `check_i18n_orphans` 孤儿 WARN 同档。
+fn check_business_doc_test_refs(root: &Path) -> Vec<String> {
+    let mut warnings = Vec::new();
+    let bus_dir = root.join("docs").join("business");
+    let Ok(entries) = std::fs::read_dir(&bus_dir) else {
+        return warnings;
+    };
+    let mut refs: BTreeSet<String> = BTreeSet::new();
+    for e in entries {
+        let Ok(e) = e else {
+            continue;
+        };
+        let Ok(name) = e.file_name().into_string() else {
+            continue;
+        };
+        if !name.to_lowercase().ends_with(".md") {
+            continue;
+        }
+        let Some(text) = read_file(root, &format!("docs/business/{name}")) else {
+            continue;
+        };
+        let lines = text.lines().collect::<Vec<_>>();
+        let mut in_test_table = false;
+        for line in &lines {
+            let t = line.trim();
+            if t.starts_with('|') && t.contains("单测") && t.contains("规则") {
+                in_test_table = true;
+                continue;
+            }
+            if in_test_table {
+                if !t.starts_with('|') {
+                    in_test_table = false;
+                    continue;
+                }
+                // 表头分隔行 |---| 跳过
+                let inner = t.trim_start_matches('|').trim();
+                if inner.chars().all(|c| c == '-' || c == ':') && !inner.is_empty() {
+                    continue;
+                }
+                // 反引号 snake_case 标识符（≥1 下划线，字母数字开头）= 测试名引用
+                let mut rest = t;
+                while let Some(open) = rest.find('`') {
+                    let after = &rest[open + 1..];
+                    let Some(close) = after.find('`') else {
+                        break;
+                    };
+                    let cand = &after[..close];
+                    if cand.chars().next().is_some_and(|c| c.is_ascii_lowercase())
+                        && cand.contains('_')
+                        && cand
+                            .chars()
+                            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+                    {
+                        refs.insert(cand.to_string());
+                    }
+                    rest = &after[close + 1..];
+                }
+            }
+        }
+    }
+    // 逐名在 crates/** 全库 grep（grep -rl，命中 0 = 幻影测试名，WARN 不阻塞）
+    for ident in &refs {
+        let out = std::process::Command::new("grep")
+            .args(["-rl", ident, "crates/"])
+            .current_dir(root)
+            .output();
+        if let Ok(o) = out {
+            let hits = String::from_utf8_lossy(&o.stdout);
+            if hits.trim().is_empty() {
+                warnings.push(format!(
+                    "业务文档可测表引用测试名 `{ident}` 在 crates/ 全库 0 命中（幻影测试名，飞轮 R6 B 侧同类；须对齐实际测试函数名）"
+                ));
+            }
+        }
+    }
+    warnings
+}
+
 fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(ledger_text) = read_file(root, "plan/ledger.yaml") else {
@@ -2467,7 +2554,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口；余 1 blocked S7.7 可选）"
+                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口；余 1 blocked S49.1（S7.7 已 verified））"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。
@@ -3897,6 +3984,7 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("node-asset-map", check_node_kind_asset_map),
     ("no-inline-test-mod", check_no_inline_test_mod),
     ("rules-files", check_rules_files),
+    ("business-doc-test-refs", check_business_doc_test_refs),
     // 飞轮 R 固化（用户拍板 3 桶）：theme 令牌消费对账 + 跨文档计数声称守门（桶 A1/A2）
     ("theme-consumption", check_theme_consumption),
     ("cross-doc-counts", check_cross_doc_counts),

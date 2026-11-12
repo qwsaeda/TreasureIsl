@@ -50,7 +50,7 @@
   为 v2 字段，v3 起改为列表；字段口径与读档还原规则 = [`progression.md`](progression.md) §与存档一致（单一事实源）。
 - **v2 → v3（S21.2 船系统，实现 S21.11）**：新增 `boat_level: u8`（1..=4，船等级 1-based，
   `balance.boat.levels` 有效域）；v2 旧档缺字段 = 迁移补 **1（小船）**，不回退不报错；
-  迁移纯函数、幂等（再迁不变），单测锚点 `save_migrate_v2_to_v3_defaults`。
+  迁移纯函数、幂等（再迁不变），单测锚点 `save_migrate_v2_to_v3_defaults_boat_level`（`tests/save_migration.rs`，飞轮 R6 B-08 补全旧省略后缀）。
 - **v3 → v4（S28.2 存档 v4，领地系统）**：新增 `seats: Vec<SeatSave>`（席位全量 = 主玩家 + 4 AI）+
   `territories: Vec<TerritorySave>`（领地图）+ `current_seat: u8`；v3 旧档补单席位 + 空领地图。
 - **v4 → v5（S33.4 存档 v5，领地 v2 兵力模型）**：席位补默认人手/武器

@@ -152,8 +152,8 @@
 
 - **每图必有武器商人 + 奴隶商人**（`map.json`/`manifest` 商人格，`territory.md` §7）。
 - 不变量：`人手 ≤ 船容量`（船等级上限）；`武器 ≤ 人手`（一人一把，多余无意义）。
-- 可测试规则：`crew_bought_from_slave_merchant` / `arms_bought_from_weapon_merchant` /
-  `crew_capped_by_boat_capacity` / `arms_capped_at_crew`（`rules/merchant.rs`，落码时登记）。
+- 可测试规则（`rules/merchant.rs` 内联 `#[cfg(test)]`，飞轮 R6 B-07 勘误旧规格名）：`buy_crew_capped_at_boat_capacity` /
+  `buy_crew_at_capacity_rejected` / `buy_arms_debits_and_adds_capped_at_crew` / `buy_arms_one_per_person_cap`。
 
 ## 可测试规则
 

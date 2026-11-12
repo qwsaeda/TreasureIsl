@@ -11,7 +11,7 @@
 
 - **产品**：《金银岛 TreasureIsl》Windows Mobile 游戏（ARM 原生，176×220 逻辑分辨率）的**逆向 + Rust 现代化移植**，目标 **WASM（浏览器）+ Android** 双端。
 - **技术底座**：Rust edition 2024 + **Bevy 0.20**（S18.0 定案唯一渲染引擎，推翻旧 macroquad 定案）+ cargo workspace **9 个成员 crate**。
-- **进度**（`plan/ledger.yaml` 实测）：**338 任务 / 337 verified / 0 pending / 1 blocked（S7.7 可选）**。
+- **进度**（`plan/ledger.yaml` 实测）：**338 任务 / 337 verified / 0 pending / 1 blocked（S49.1 作废可选；S7.7 已 verified）**。
 - **9 场景**：`Intro → Index → SelectRole → SelectMap → MainMap → Vs → Message → Saveload → Exit`（20 条合法转换，非法转换编译期拒，Type-State 保证）。
 - **核心循环**：探索→贸易→建造→卡牌→战斗；主地图主玩法 = **大富翁式摇骰前进**（S19 定案：摇骰定步数 → 沿环岛赛道前进 N 格 → 落格结算；方向键自由移动已删）。
 - **主线玩法**（S27/S28/S33 领地系统）：31 格赛道（每格 = 领地/功能点）+ 中央可点击据点岛 + 10 类海盗岛专属副本 + 5 席位（≥1 玩家 + 4 AI）+ 落格三支分叉（无主→副本占领 / 他人→交钱或攻占 / 自己→升级加固）。
@@ -106,7 +106,7 @@
 
 ---
 
-## 四、节点清单（当前待办 0 + 阻塞 1，S7.7 可选）
+## 四、节点清单（当前待办 0 + 阻塞 1 = S49.1 竖屏主题化用户拍板作废；S7.7 已 verified）
 
 > 完整台账 = `plan/ledger.yaml`；下表 = **当前主待办**（AGENTS 路由表同步口径）。
 
@@ -138,7 +138,7 @@
 | **门禁** | `gate.ps1`（36 项固定 Report：fmt/clippy/test/build/占位/unwrap/台账/doccheck/validate_data/gen_layout/check_hardcode/check_data_driven/check_code_standards/oracle边界/no-macroquad/doccheck2/台账对账/业务闭环/模块契约/飞轮/渲染不变式/数据源/audit_code/场景叙事/bevy-cpu-parity/wasm-browser-e2e/browser-playtest/playtest-loop） |
 | **数据校验** | `validate_data.py`（B 基础 + V1 grid 三键 + V2 标量 + V3 图标 + scenes_canonical + asset_registry + test_manifest + **version_consistency** 三方对账） |
 | **代码校验** | `check_hardcode.py` / `check_data_driven.py` / `check_code_standards.py`（CS-1 资产单源/CS-2 文件职责/CS-3 参数命名/CS-4 场景窄接缝）/ `audit_code.py`（规模棘轮）/ `check_ledger_reality.py`（台账三方对账）/ `check_oracle_boundary.py` / `check_forward_closed.py` / `check_module_contracts.py` / `check_scene_narrative.py` / `check_data_source.py` |
-| **文档一致性** | `doccheck`（155 docs/38 facts/274 task refs 交叉引用）/ `doccheck2`（44 项 audit-codified 断言；gate_data.json `doccheck2_checks` 单一事实源，飞轮 R4 勘误旧「42 项」残留）/ `doc_numbers.py` / `layout_spec_check.py` / `check_ps_scripts.ps1` |
+| **文档一致性** | `doccheck`（155 docs/38 facts/274 task refs 交叉引用）/ `doccheck2`（45 项 audit-codified 断言；gate_data.json `doccheck2_checks` 单一事实源，S53 飞轮 R6 固化 `business-doc-test-refs` +1 项；飞轮 R4 勘误旧「42 项」残留）/ `doc_numbers.py` / `layout_spec_check.py` / `check_ps_scripts.ps1` |
 | **台账/经验** | `task_close.py`（收口一条命令：跑判据→写证据→置 verified→同步计数→三方对账）/ `exp_log.py`（EXP 3 处改齐）/ `ledger`（`ti-tools --bin ledger` 台账校验） |
 | **UI 资产** | `ui_assets.py`（add/build/verify）/ `ui_asset_batch.py`（规格驱动批量 + 抠图预检）/ `ui_layout_sheet.py` / `ui_thumb.py` / `ui_preview.ps1`（出图验收）/ `ui_shot_probe.py` |
 | **AI 生图/视频** | `agnes_gen.py`（Agnes Image 2.5 Flash）/ `agnes_video.py`（Agnes Video 2.5 Flash）/ `agnes_vision.py` |
@@ -152,7 +152,7 @@
 
 ## 六、当前所处节点（台账全收口 时点）
 
-**进度**：338 任务 / **337 verified / 0 pending / 1 blocked（S7.7 可选）**；gate 全绿（0 failure）。
+**进度**：338 任务 / **337 verified / 0 pending / 1 blocked（S49.1 作废；S7.7 已 verified）**；gate 全绿（0 failure）。
 
 **刚完成一轮**（「先把能做的全做了」= ① 类 4 项并行收口）：
 1. ✅ S32.7 资产浏览：`map_pack_info` 每包 `verify_status=ok|drift|platform_error` + `verify_problems`（`[FAIL]` 行），web 资产页校验卡；实测 4 包 verify=ok problems=0。
@@ -160,7 +160,7 @@
 3. ✅ S32.9 构建只读体检：`runner::build::build_check`（`pwsh -Check` + `snapshot::FrozenSnapshot` 前后 diff）+ `GET /api/build?check=1`；实测 check_exit=0 / frozen_diff_empty=true / frozen_diff=0。
 4. ✅ S35.1 构建编排平台化：`build_artifacts.py` 编排器 + `GET /api/build?run` 白名单负例 **400**（改前 500）+ list/check 只读；evidence 四份 + 台账 4 任务 verified + WBS/26 号/14 号/22 号同步。
 
-**下一节点** = 台账已全收口（337 verified / 0 pending / 1 blocked S7.7 可选），后续 = 飞轮找问题 / 用户拍板新方向（S50/S51 起）；S34.0~S34.6 全 verified（2026-11-09），视觉签收类 S17.5/S21.9/S27.5 由 S34.6/S34.7 取代收口。
+**下一节点** = 台账已全收口（337 verified / 0 pending / 1 blocked S49.1 作废），后续 = 飞轮找问题 / 用户拍板新方向（S50/S51 起）；S34.0~S34.6 全 verified（2026-11-09），视觉签收类 S17.5/S21.9/S27.5 由 S34.6/S34.7 取代收口。
 
 ---
 

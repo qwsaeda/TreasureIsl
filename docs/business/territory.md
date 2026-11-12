@@ -233,16 +233,16 @@
 
 | 规则 | 单测名（`crates/ti-core/tests/` 或模块内） |
 |---|---|
-| **v3**：选 2..5 人类席 + 可配 AI 席数（`players + ai ≤ 5`） | `seat_pool_configurable_ai_count` |
-| **v3**：人类席勾选（键盘 + 触屏等价）+ 勾选数 ≥2 才允许开局 | `multi_seat_selection_requires_two_humans` |
-| **v3**：每席独立赛道会话（人类席不再共用一个会话） | `each_seat_has_own_track_session` |
-| **v3**：单一金币账本（AI 收过路费 ⇒ 玩家席金币同步减少） | `single_gold_ledger_syncs_toll_to_owner` |
-| **v3**：破产出局 ⇒ 回合轮转跳过该席 | `bankrupt_seat_skipped_in_turn_cycle` |
-| **v3**：app 层终局接线（破产 ⇒ 对局结束 + 胜者判定） | `app_wires_bankruptcy_to_match_end` |
-| **v3**：热座交接（轮到下一人类席前必须显式确认） | `hot_seat_handoff_requires_confirm` |
+| **v3**：选 2..5 人类席 + 可配 AI 席数（`players + ai ≤ 5`） | `seat_pool_caps_ai_at_five_minus_humans`（`seat_pool_from_selection` AI 席数 3/4 断言） |
+| **v3**：人类席勾选（键盘 + 触屏等价）+ 勾选数 ≥2 才允许开局 | `seat_selection_keeps_at_least_one_player` + `seat_selection_toggle_and_order` |
+| **v3**：每席独立赛道会话（人类席不再共用一个会话） | `two_players_three_ai_independent_sessions`（ti-app e2e） |
+| **v3**：单一金币账本（AI 收过路费 ⇒ 玩家席金币同步减少） | `ai_landing_settlement_is_deterministic`（AI 收过路费 → 玩家席金币同步，ti-app） |
+| **v3**：破产出局 ⇒ 回合轮转跳过该席 | `turn_cycle_is_playing_requires_active_and_alive` + `seat_save_alive_roundtrip_backfills_turn_cycle` |
+| **v3**：app 层终局接线（破产 ⇒ 对局结束 + 胜者判定） | `two_players_bankruptcy_yields_victory`（ti-app e2e，`check_match_end` 接线） |
+| **v3**：热座交接（轮到下一人类席前必须显式确认） | `handoff_blocks_spin_until_confirmed` + `two_players_hot_seat_full_turn_cycle`（ti-app e2e） |
 | 选 ≥1 玩家，其余补 AI，合计 5 | `seats_split_players_and_ai_to_five` |
 | **功能格不能占领（领地格才可占领）** | `feature_tiles_not_capturable` |
-| **风神保佑 = 多扔骰子一次 / 随机前进或后退 N 格** | `wind_god_blessing_extra_roll_or_jump` |
+| **风神保佑 = 多扔骰子一次 / 随机前进或后退 N 格** | `wind_god_extra_roll_when_jump_zero` + `wind_god_jump_when_nonzero` |
 | 席位顺序 = 角色 index 升序 | `seat_order_follows_character_index` |
 | 无主格副本胜利 ⇒ 易主 + level 1 + 自定驻军，两格同易主 | `capture_wins_takes_both_cells_of_isle` |
 | 副本失败 ⇒ 归属不变 | `capture_loss_keeps_ownership` |
@@ -259,13 +259,13 @@
 | **胜利 = 所有对手破产** | `victory_when_all_opponents_bankrupt` |
 | **失败 = 玩家破产直接结束** | `defeat_when_player_bankrupt_ends_game` |
 | **不能卖占领格** | `territory_not_sellable` |
-| **每图必有武器商人 + 奴隶商人** | `map_has_both_merchants` |
-| **每图配特有事件（地图层 events[] 与常用集合并）** | `map_events_merge_common_set` |
+| **每图必有武器商人 + 奴隶商人** | `all_maps_have_v2_events_and_merchants`（S33.2，全 40 图 events + 双商人非空断言） |
+| **每图配特有事件（地图层 events[] 与常用集合并）** | `all_maps_have_v2_events_and_merchants`（地图层 events[] 非空 + 与常用集并） |
 | 每图赛道 = 31 格 = 起点 1 + 领地 20 + 功能 9 + BOSS 1 | `v5_track_has_31_cells_composition` |
 | 每类岛两格同属一个领地 | `isle_cells_share_one_territory` |
 | AI 走同一分支表（策略只选分支） | `ai_uses_same_settlement_table` |
 | AI 攻占判定 = 兵力模型（舰队战力 vs 守方战力，`force::resolve` 预测） | `ai_policy_uses_force_model` |
-| AI 攻占后驻军自定（战后舰队 1/3 留守，守恒） | `ai_siege_sets_garrison_conserved` |
+| AI 攻占后驻军自定（战后舰队 1/3 留守，守恒） | `manpower_conserved_after_transfer`（tests/territory_v2_rules.rs；AI 攻占反馈 `ai_sieges_player_cell_with_visible_feedback` ti-app e2e，飞轮 R6 B-09 澄清 `ai_siege` = i18n key 非测试名） |
 | 存档 v4 → v5 迁移 = 单席位 + 人手/武器默认 + 空领地 | `save_migrate_v4_to_v5_defaults` |
 | 存档往返还原归属/金币/人手/武器/驻军/当前席位 | `save_roundtrip_restores_territories` |
 

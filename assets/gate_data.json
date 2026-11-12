@@ -344,6 +344,12 @@
   {
    "id": "cross-doc-counts",
    "impl": "rust"
+  },
+  {
+   "id": "business-doc-test-refs",
+   "impl": "rust",
+   "rules": "业务文档可测表测试名须 crates/ 全库实存（幻影名 WARN）",
+   "note": "S53 飞轮 R6 B 侧固化"
   }
  ]
 }

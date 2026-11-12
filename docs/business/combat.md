@@ -110,17 +110,17 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 
 ## 可测试规则（每条 → 单测名）
 
-| 规则 | 单测（`crates/ti-core/tests/rules_battle.rs`） |
+| 规则 | 单测（`rules/force.rs` 内联 `#[cfg(test)]` + `tests/territory_v2_rules.rs`，飞轮 R6 B-01 勘误旧表头指向 rules_battle.rs） |
 |---|---|
-| 武装 = min(人手, 武器)；武器多余无效 | `armed_power_caps_at_manpower` |
-| 人手 > 武器 ⇒ 徒手战力折减 | `unarmed_crew_reduced_power` |
-| 战力确定性（同兵力同结果，不耗随机） | `battle_deterministic_no_rng` |
-| 攻方战力 > 守方 ⇒ 攻方胜 | `attacker_power_wins` |
-| 守方战力 ≥ 攻方 ⇒ 守方胜 | `defender_power_wins` |
-| 双方必损（人手 + 武器都掉） | `battle_both_sides_lose_crew_and_arms` |
+| 武装 = min(人手, 武器)；武器多余无效 | `armed_power_caps_at_manpower`（tests/territory_v2_rules.rs） |
+| 人手 > 武器 ⇒ 徒手战力折减 | `power_weights_armed_over_barehand`（force.rs 内联） |
+| 战力确定性（同兵力同结果，不耗随机） | `deterministic_same_input_same_result`（force.rs 内联） |
+| 攻方战力 > 守方 ⇒ 攻方胜 | `attacker_power_wins`（force.rs 内联） |
+| 守方战力 ≥ 攻方 ⇒ 守方胜 | `defender_wins_on_tie_or_higher`（force.rs 内联） |
+| 双方必损（人手 + 武器都掉） | `both_sides_attrition`（force.rs 内联） |
 | 败方交双倍过路费 | `siege_loss_pays_double_toll` |
 | 胜方占领重定驻军 | `siege_win_recaptures_with_level_one` |
-| 同 seed 同兵力 ⇒ 同结果（复现） | `battle_same_seed_same_result` |
+| 同 seed 同兵力 ⇒ 同结果（复现） | `combat_same_seed_same_result`（tests/rules_battle.rs） |
 
 ## 数值平衡指引（非规则，供调参参考）
 
