@@ -1,6 +1,6 @@
 {
  "version": 1,
- "_note": "游戏测试标杆机读清单（23_game_testing.md §7）。级=level(L1..L4)/类=category(功能·回归·视觉·音频·性能·兼容)/型=type(冒烟·CI·试玩·探索·基准)。evidence 与 gate 至少一者：evidence 指向 evidence/ 下日志（或 gate=门禁项号 1..=33，证据=对应 gate 运行日志）。validate_data::check_test_manifest 对账。S49.7 扩展：group=业务域主分组（core 核心规则/asset 资产管线/platform 平台工具/device 端侧兼容/perf 性能体积）、timeout_s=作业超时（23 号 §6.2 收割）、prove=本次运行证明落点（23 号 §6.2 证明行）。",
+ "_note": "游戏测试标杆机读清单（23_game_testing.md §7）。级=level(L1..L4)/类=category(功能·回归·视觉·音频·性能·兼容)/型=type(冒烟·CI·试玩·探索·基准)。evidence 与 gate 至少一者：evidence 指向 evidence/ 下日志（或 gate=门禁项号 1..=36（飞轮 R11 勘误旧 33），证据=对应 gate 运行日志）。validate_data::check_test_manifest 对账。S49.7 扩展：group=业务域主分组（core 核心规则/asset 资产管线/platform 平台工具/device 端侧兼容/perf 性能体积）、timeout_s=作业超时（23 号 §6.2 收割）、prove=本次运行证明落点（23 号 §6.2 证明行）。",
  "tests": [
   {
    "id": "rules_battle",
