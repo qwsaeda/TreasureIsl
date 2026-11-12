@@ -160,7 +160,7 @@
 3. ✅ S32.9 构建只读体检：`runner::build::build_check`（`pwsh -Check` + `snapshot::FrozenSnapshot` 前后 diff）+ `GET /api/build?check=1`；实测 check_exit=0 / frozen_diff_empty=true / frozen_diff=0。
 4. ✅ S35.1 构建编排平台化：`build_artifacts.py` 编排器 + `GET /api/build?run` 白名单负例 **400**（改前 500）+ list/check 只读；evidence 四份 + 台账 4 任务 verified + WBS/26 号/14 号/22 号同步。
 
-**下一节点** = 台账已全收口（337 verified / 0 pending / 1 blocked S49.1 作废），后续 = 飞轮找问题 / 用户拍板新方向（S50/S51 起）；S34.0~S34.6 全 verified（2026-11-09），视觉签收类 S17.5/S21.9/S27.5 由 S34.6/S34.7 取代收口。
+**下一节点** = 台账已全收口（339 verified / 0 pending / 1 blocked S49.1 作废；S54.1/S55.1 断言固化 2 条 verified），飞轮 R3~R11 全收口（业务面 R3~R9 + 平台面 R10~R11 双停机，CCGS 连续 2 轮 0/0/0；S53/S54/S55 三条断言固化 doccheck2 44→47 项 + 平台红线 `ti-console-rules.md` 第 6 个），后续 = 用户拍板新方向（S50/S51 起）/ 用户视觉签收（S17.5/S21.9/S26 出图）；S34.0~S34.6 全 verified（2026-11-09），视觉签收类 S17.5/S21.9/S27.5 由 S34.6/S34.7 取代收口。
 
 ---
 
