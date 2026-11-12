@@ -382,6 +382,39 @@ fn collect_sget_keys(text: &str, out: &mut BTreeSet<String>) {
 /// 5. i18n 一致性：代码里 `sget`/`sgetf`/`MenuItem.key` 用的 key 必须都存在于
 ///    `strings.json`（缺失 key 会让界面显示裸 key）；反向 `strings.json` 里未被引用
 ///    的 key 以 WARN 打印（不阻塞门禁，S8.x 数据化迁移前清理；`schema_*` 与旧命名空间豁免）。
+///
+/// 飞轮 R4 A-P2-2：动态 `isle.*` i18n key 正向存在性（`check_i18n_orphans` 子断言）。
+///
+/// `isle.` 前缀在 `exempt_prefixes`（动态拼接 key `board.rs sget(&format!("isle.{isle}"))`
+/// 静态扫不到消费点，整前缀豁免会遮蔽 strings.json 里 `isle.<x>` 死 key）。本断言 =
+/// `balance.territory.prototypes[].id`（10 类岛）每类 `isle.<id>` 须在 strings.json 实存
+/// （新增岛类漏配 i18n key = 玩家见空串，此断言兜底；机械可判定 = balance 岛类 ↔ strings 对账）。
+fn check_isle_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(bal_json) = read_file(root, "assets/data/balance.json") else {
+        return errors;
+    };
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&bal_json) else {
+        return errors;
+    };
+    let Some(proto) =
+        parsed.get("territory").and_then(|t| t.get("prototypes")).and_then(|p| p.as_array())
+    else {
+        return errors;
+    };
+    for p in proto {
+        if let Some(id) = p.get("id").and_then(|v| v.as_str()) {
+            let key = format!("isle.{id}");
+            if !json_keys.contains(&key) {
+                errors.push(format!(
+                    "i18n 动态 key `{key}` 缺失（balance.territory 岛原型 {id} 无对应 strings.json 文案；board.rs `isle.{{}}` 拼接消费将显示空串）"
+                ));
+            }
+        }
+    }
+    errors
+}
+
 fn check_i18n_orphans(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(strings_json) = read_file(root, "assets/data/strings.json") else {
@@ -499,6 +532,8 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
         ".player_hp",
         ".rounds",
     ];
+    // 飞轮 R4 A-P2-2：动态 isle.* key 正向存在性（balance 岛类 ↔ strings isle.<id> 对账）
+    errors.extend(check_isle_keys_present(root, &json_keys));
     for k in &json_keys {
         if exempt_prefixes.iter().any(|p| k.starts_with(p)) {
             continue;

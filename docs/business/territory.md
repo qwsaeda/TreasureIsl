@@ -212,7 +212,7 @@
 | `seats` | `Vec<SeatSave>` | 每席位：角色 / 类型（player/ai）/ 金币 / **人手 / 武器** / 位置格 / 船只 / 建筑 / **存活态** |
 | `territories` | `map → [格索引 → {owner_seat, level, garrison}]` | 领地图（`owner_seat` = 席位下标；`garrison` = 驻军人手；无主 = 缺省） |
 | `current_seat` | `u8` | 当前轮到哪个席位（热座交接用） |
-| `unlocked_mask` | `u8` | 沿用 v2/v3（逐图解锁 + 通关位） |
+| `unlocked_mask` | `u32` | S37 起 20 图口径（bit j = m(j+1) 解锁，bit 19 = CLEARED 通关位，飞轮 R4 勘误旧 u8；旧 u8 档读时高 24 位 = 0 向后兼容） |
 
 - 迁移：v4 → v5 缺省 = 单席位 + 人手/武器 默认值 + 空领地图；旧迁移链保持不变。
 - 存档必须能完整还原「谁占哪格 / 各席位金币/人手/武器/驻军 / 轮到谁 / 谁已出局」。
