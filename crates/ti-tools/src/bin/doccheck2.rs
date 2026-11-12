@@ -2536,6 +2536,168 @@ fn check_business_doc_test_refs(root: &Path) -> Vec<String> {
     warnings
 }
 
+/// S54 飞轮 R9 固化：台账 blocked 任务 ID ↔ 文档阻塞标签一致性对账。
+///
+/// 台账 `plan/ledger.yaml` 实测 `status: blocked` 任务 ID 集（当前 = S49.1）为唯一基准；
+/// 文档侧「阻塞 N」/「N blocked」/「blocked Sxx」标签须指向该基准（防 S7.7/S49.1
+/// 标签过期第 3 次复发，根因 = 飞轮 R6 B-10 + R7 F-1 两次同类漂移）。
+///
+/// 口径 = 扫 docs/ + AGENTS.md + release.md 的「阻塞/blocked」标签行，提取其指向的
+/// 任务 ID，凡 ∈ 台账 verified/pending 集（非 blocked）= 漂移（ERROR）。
+/// 负例护栏 = 造 1 个 verified 任务当阻塞标签须 FAIL。
+fn check_blocked_label_consistency(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(ledger_text) = read_file(root, "plan/ledger.yaml") else {
+        return vec!["plan/ledger.yaml 不存在（S54 blocked 标签对账无基准）".to_string()];
+    };
+    // 台账实测 blocked / 非 blocked 任务 ID 集
+    // 台账行形态 =「- { id: Sx.y, ... status: ..., }」（行首 "- {"，id 在行中）；
+    // 逐行找 "id: Sx.y" 子串（同 cross-doc-counts「id: S」计数口径），配合同行 status。
+    let mut blocked_ids: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for line in ledger_text.lines() {
+        let Some(pos) = line.find("id: ") else {
+            continue;
+        };
+        let rest = &line[pos + 4..];
+        let id =
+            rest.chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '.').collect::<String>();
+        if id.starts_with('S') && line.contains("status: blocked") {
+            blocked_ids.insert(id);
+        }
+    }
+    if blocked_ids.is_empty() {
+        return errors;
+    }
+    // 文档侧「阻塞 N：Sxx」/「N blocked（Sxx）」/「blocked Sxx」标签行
+    let doc_targets: [&str; 3] =
+        ["AGENTS.md", "docs/release.md", "docs/process/26_dev_stages_overview.md"];
+    for rel in &doc_targets {
+        let Some(text) = read_file(root, rel) else {
+            continue;
+        };
+        for line in text.lines() {
+            let t = line.trim();
+            // 只扫「明确阻塞标签声称」形态（S7.7/S49.1 当阻塞项标签 = 漂移面；
+            // 合规的「S49.1 作废」叙述 + 历史里程碑行不在此形态，天然不误报）
+            let is_blocked_claim = t.contains("阻塞 1：")
+                || t.contains("1 blocked（")
+                || t.contains("余 1 blocked")
+                || (t.contains("blocked") && t.contains("S7.7"));
+            if !is_blocked_claim {
+                continue;
+            }
+            // 提取「阻塞标签直接指向的任务 ID」（Sxx.x 形态）：只认「阻塞 N：Sxx」的冒号后
+            // 首个 ID + 「…blocked（Sxx）」括号内首个 ID 两处标签指向位。防 11KB 进度长行里
+            // S0/S39/S17.5 等正文叙述 ID 被逐字误抓（R6 B-10 / R7 F-1 漂移面 = 阻塞标签
+            // 直接指向了错误任务，而非叙述面）。
+            let mut id_refs: Vec<&str> = Vec::new();
+            // 「阻塞 N：Sxx」= 行内 "阻塞" 后首个任务 ID（含 S 前缀；冒号可全角/半角，直接找
+            // "阻塞" 关键字后第一个 'S' 开头的 ID，不依赖 split 全角 char 数组的类型坑）
+            if let Some(opos) = t.find("阻塞") {
+                let after = &t[opos..];
+                let sstart = after.find('S').unwrap_or(usize::MAX);
+                if sstart < after.len() {
+                    let id = &after[sstart..];
+                    let n_digits = id[1..].chars().take_while(char::is_ascii_digit).count();
+                    if n_digits > 0 {
+                        let mut end = 1 + n_digits;
+                        if let Some(sub) = id.get(1 + n_digits..).and_then(|r| r.strip_prefix('.'))
+                        {
+                            let s2 = sub.chars().take_while(char::is_ascii_digit).count();
+                            if s2 > 0 {
+                                end += 1 + s2;
+                            }
+                        }
+                        id_refs.push(&id[..end]);
+                    }
+                }
+            }
+            // 「…blocked（Sxx）」/「1 blocked（Sxx）」/「余 1 blocked Sxx」括号内首个 ID（含 S）
+            for bpat in ["1 blocked（", "余 1 blocked", "blocked（"] {
+                if let Some(bpos) = t.find(bpat) {
+                    let after = &t[bpos + bpat.len()..];
+                    let sstart = after.find('S').unwrap_or(usize::MAX);
+                    if sstart < after.len() {
+                        let id = &after[sstart..];
+                        let n_digits = id[1..].chars().take_while(char::is_ascii_digit).count();
+                        if n_digits > 0 {
+                            let mut end = 1 + n_digits;
+                            if let Some(sub) =
+                                id.get(1 + n_digits..).and_then(|r| r.strip_prefix('.'))
+                            {
+                                let s2 = sub.chars().take_while(char::is_ascii_digit).count();
+                                if s2 > 0 {
+                                    end += 1 + s2;
+                                }
+                            }
+                            id_refs.push(&id[..end]);
+                        }
+                    }
+                    break;
+                }
+            }
+            for id in id_refs {
+                // 行级守卫已确认是阻塞标签声称行；该 ID 台账 status 非 blocked = 漂移
+                let is_exempt = t.contains("已 verified") || t.contains("非阻塞");
+                if !blocked_ids.contains(id) && !is_exempt {
+                    errors.push(format!(
+                        "S54 blocked 标签漂移：`{rel}` 把 `{id}` 当阻塞项声称，但台账 {id} status 非 blocked（blocked 实测 = {blocked_ids:?}；飞轮 R6 B-10 / R7 F-1 同类）"
+                    ));
+                }
+            }
+        }
+    }
+    errors
+}
+
+/// S55 飞轮 R9 固化：doccheck 自身输出计数（docs/facts/experiences/task refs）↔ 文档声称点对账。
+///
+/// `doccheck` 实跑输出「N docs, M facts, K experiences, T task refs」为唯一基准；
+/// 26号 工具矩阵行的 doccheck 计数声称须与实测一致（防 155→177 类陈旧数第 2 次复发，
+/// 根因 = 飞轮 R8 P1「doccheck 计数声称面无人断言」）。
+///
+/// 口径 = 实跑 doccheck（子进程）解析 4 计数 ↔ 26号 声称面逐字符对账。
+/// 负例护栏 = 改 26号 声称值 1 位须 FAIL。
+fn check_doccheck_counts_match(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let out = std::process::Command::new("cargo")
+        .args(["run", "-q", "-p", "ti-tools", "--bin", "doccheck"])
+        .current_dir(root)
+        .output();
+    let Ok(o) = out else {
+        return vec![
+            "doccheck 实跑失败（S55 计数对账无基准；环境项 = cargo 缺，gate 其它项兜底）"
+                .to_string(),
+        ];
+    };
+    let txt = String::from_utf8_lossy(&o.stdout);
+    // 计数行 = 「N docs, M facts, K experiences, T task refs」（段首为数字）
+    let Some(line) = txt.lines().find(|l| l.contains(" docs, ") && l.contains(" task refs")) else {
+        return errors;
+    };
+    // 段首可能是「doccheck: 177」（命令名前缀），取每段内首个纯数字 token
+    let nums: Vec<u32> = line
+        .split(',')
+        .filter_map(|seg| seg.split_whitespace().find_map(|tok| tok.parse().ok()))
+        .take(4)
+        .collect();
+    if nums.len() != 4 {
+        return errors;
+    }
+    // 26号 工具矩阵行声称面：「N docs/M facts/K experiences/T task refs」
+    let Some(d26) = read_file(root, "docs/process/26_dev_stages_overview.md") else {
+        return errors;
+    };
+    let expected =
+        format!("{} docs/{} facts/{} experiences/{} task refs", nums[0], nums[1], nums[2], nums[3]);
+    if !d26.contains(&expected) {
+        errors.push(format!(
+            "S55 doccheck 计数漂移：doccheck 实跑 = {expected}，但 26号 工具矩阵行未声称此值（飞轮 R8 P1 同类，陈旧数须随文档增长实测回写）"
+        ));
+    }
+    errors
+}
+
 fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(ledger_text) = read_file(root, "plan/ledger.yaml") else {
@@ -2554,7 +2716,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口；余 1 blocked S49.1（S7.7 已 verified））"
+                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口 + S54/S55 断言固化；余 1 blocked S49.1（S7.7 已 verified））"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。
@@ -3988,6 +4150,8 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     // 飞轮 R 固化（用户拍板 3 桶）：theme 令牌消费对账 + 跨文档计数声称守门（桶 A1/A2）
     ("theme-consumption", check_theme_consumption),
     ("cross-doc-counts", check_cross_doc_counts),
+    ("blocked-label-consistency", check_blocked_label_consistency),
+    ("doccheck-counts-match", check_doccheck_counts_match),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

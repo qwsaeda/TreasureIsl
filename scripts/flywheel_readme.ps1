@@ -175,7 +175,7 @@ function Read-RulesFiles {
 # check_image_asset/check_inventory_ids/check_primitive_params/check_primitive_text/
 # check_scene_required_pick_keys/check_tooling_contract_one/check_tooling_stray_scripts/
 # check_tooling_tmp_dir），与实跑面（gate_data.json doccheck2_checks 实跑项数，单一事实源；R3 时点 = 44，S53 飞轮 R6 +1 后现行 45）漂移。
-# 新口径 = gate_data.json `doccheck2_checks[].id`（实跑 45 项，唯一事实源；
+# 新口径 = gate_data.json `doccheck2_checks[].id`（实跑 47 项，唯一事实源；
 #   RUST_CHECKS 42 注册项 + doccheck2_grep_checks 2 项 = 44（R3 时点），S53 飞轮 R6 固化
 #   business-doc-test-refs（+1）后现行 45，飞轮 R3 N-A5 勘误旧注释「42」）：
 #   与 `cargo run --bin doccheck2` 输出「across N audit-codified checks」对齐（N = gate_data.json 实测 45）

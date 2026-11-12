@@ -1,0 +1,24 @@
+# S54 blocked-label-consistency + S55 doccheck-counts-match 断言固化（飞轮 R9 后用户拍板立项）
+
+## 判据实跑
+- S54 check_blocked_label_consistency（doccheck2 第 46 项）：台账 ledger.yaml status: blocked 任务 ID
+  集（S49.1）为唯一基准，扫 AGENTS/release/26号 的「阻塞 N：Sxx」+「N blocked（Sxx）」标签行，
+  提取标签直接指向的任务 ID，凡 ∈ 台账非 blocked = ERROR（防 S7.7/S49.1 标签过期第 3 次复发）
+  负例护栏：造「阻塞 1：S7.7」⇒ doccheck2 报 ERROR「S7.7 当阻塞项声称但台账 verified」精准点名 ✓
+  现行态 0 误报（合规 S49.1 叙述 + S7.7 已 verified 豁免行 0 命中）
+- S55 check_doccheck_counts_match（doccheck2 第 47 项）：doccheck 实跑输出「N docs, M facts,
+  K experiences, T task refs」= 唯一基准，26号 工具矩阵行声称值须逐字符一致（防 155→177 类
+  陈旧数第 2 次复发，根因 = 飞轮 R8 P1「doccheck 计数声称面无人断言」）
+  负例护栏：改 26号 177→170 ⇒ doccheck2 报 ERROR「doccheck 实跑 = 177 docs/… 但 26号 未声称」 ✓
+  现行态 0 误报（26号:141 = 177/38/184/332 与实跑逐字一致）
+
+## 全库判据
+- gate 36 项 0 failure（R9 S54/S55 后 gate 实跑）
+- doccheck2 47 项 0 error（45 + S54/S55 +2）+ 负例护栏双 FAIL✓
+- doccheck 0 + 三方对账 337 + 全测试 0 FAILED + clippy 0 error
+- 计数声称点 45→47 同步 3 处（AGENTS S21.13 尾 / 26号:141 / flywheel_readme 注释）
+
+## 改动面
+- crates/ti-tools/src/bin/doccheck2.rs（2 新断言子函数 + RUST_CHECKS 注册 2 项）
+- assets/gate_data.json（doccheck2_checks 45→47）
+- 计数声称点 3 处（AGENTS/26号/flywheel_readme 注释，纯文档/注释 0 游戏 crate diff）

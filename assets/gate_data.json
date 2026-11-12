@@ -350,6 +350,18 @@
    "impl": "rust",
    "rules": "业务文档可测表测试名须 crates/ 全库实存（幻影名 WARN）",
    "note": "S53 飞轮 R6 B 侧固化"
+  },
+  {
+   "id": "blocked-label-consistency",
+   "impl": "rust",
+   "rules": "台账 blocked 任务 ID ↔ 文档阻塞标签语义对账（S7.7/S49.1 标签过期防复发）",
+   "note": "S54 飞轮 R9 固化"
+  },
+  {
+   "id": "doccheck-counts-match",
+   "impl": "rust",
+   "rules": "doccheck 输出计数（docs/facts/experiences/task refs）↔ 26号 声称点对账（陈旧数防复发）",
+   "note": "S55 飞轮 R9 固化"
   }
  ]
 }
