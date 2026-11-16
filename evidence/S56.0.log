@@ -1,0 +1,19 @@
+# S56.0 收口（doc_numbers.py 扩面：doccheck2 项号文字 + 数值声称点对账）
+
+## [1] 改动面：工具（scripts/doc_numbers.py +130 行扩面；0 游戏 crate diff；docs 面 = 14 号行注 + 15 号行 36 状态 + experience index 2 处项号回写 + parity 1 处注释编号注）
+
+## [2] 判据实跑
+$ python3 scripts/doc_numbers.py（只读体检）→ 声称点与实测一致（0 漂移）EXIT=0
+$ python3 scripts/doc_numbers.py --fix → 已回写 2 处（experience index 第 40→14 项 wasm-viewport-init / 第 39→16 项 landscape-no-portrait-hardcode，R12 前时点值 → 现行 47 位表）
+$ 幂等：--fix 后再测 → 0 漂移 EXIT=0
+$ 负例护栏：临时改 第 14 项→第 13 项 wasm-viewport-init ⇒ 漂移 1 处 EXIT=1 ✓；还原 ⇒ 0 漂移 EXIT=0
+$ gate_data.json 位表实测：47 项（wasm-viewport-init=14 / landscape-no-portrait-hardcode=16 / engine-no-color-literal=15 / runtime-no-legacy-coords=20 / tooling-catalog=28 / tooling-contract=29 等）
+
+## [3] 扩面设计（15 号行 36 双轨：现轮人工清零 + 载体守门）
+- 扫 18 文档（DOC2_CLAIM_FILES）声称点形态 =  第 N 项 / 第 N 项  /  第 N 项
+- 护栏：时点快照行（时点/历史/立项/修订前口径）排除；gate 项名（gate 语境词 + check_ 工具名）排除；裸项号（无短名且无 doccheck2_checks 字面）不回写不报告（低信息量面）
+- check_xxx 函数名 → 连字符化 id（check_runtime_no_legacy_coords → runtime-no-legacy-coords）
+- 台账行计数面（N 任务 / M verified）同步对账（cross-doc-counts 同源回写面）
+
+## [4] 台账 341 任务 = 340 verified + 0 pending + 1 blocked（S49.1）
+## [5] gate 全量：evidence/gate-r12-process-audit.log（36 项 0 failure，S56.0 改动后复跑全绿）

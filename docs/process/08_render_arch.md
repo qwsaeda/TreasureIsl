@@ -142,7 +142,7 @@
 - 所有绘制原语入参、帧缓冲索引、快照/基线尺寸，一律 1080 空间。
 - **legacy 坐标（176×220）不得出现在运行时**；如需 legacy 尺寸做业务判断，由逻辑层
   以数据形式提供，视图层不得感知。
-- **机器保证**：`doccheck2` grep 不变量（`runtime-no-legacy-coords`，gate_data.json `doccheck2_checks` 第 20 项 / gate 第 22 项 doccheck2 内子检查）—— `ti-platform/gfx.rs`、`ti-app/scenes/**`、
+- **机器保证**：`doccheck2` grep 不变量（`runtime-no-legacy-coords`〔第 20 项〕，gate_data.json `doccheck2_checks` 为准 / gate 第 22 项 doccheck2 内子检查）—— `ti-platform/gfx.rs`、`ti-app/scenes/**`、
   `ti-app/menu_shell.rs` 内出现字面量 `176` / `220` 即 FAIL（契约 4 解释，§5 门禁）。
 
 ### 契约 2 · 像素来源单一
@@ -201,7 +201,7 @@ SHA 基线，必须同时重生成基线并人裁决。
 
 | 契约 | 保证方式 | 门禁项 |
 |---|---|---|
-| 契约 1 坐标系唯一 | `doccheck2` grep：`ti-platform/gfx.rs` + `ti-app/scenes/**` + `menu_shell.rs` 禁字面 `176`/`220`；另断言 `ti_render::framebuffer::CANVAS_W/H` 与 `LOGICAL_*_I32` 同值 | gate 第 22 项 doccheck2（`runtime-no-legacy-coords` 子检查，gate_data.json `doccheck2_checks` 第 20 项） |
+| 契约 1 坐标系唯一 | `doccheck2` grep：`ti-platform/gfx.rs` + `ti-app/scenes/**` + `menu_shell.rs` 禁字面 `176`/`220`；另断言 `ti_render::framebuffer::CANVAS_W/H` 与 `LOGICAL_*_I32` 同值 | gate 第 22 项 doccheck2 `runtime-no-legacy-coords`（gate_data.json `doccheck2_checks` 第 20 项） |
 | 契约 2 像素来源单一 | `grep` 断言：`game_app::render`/`render_hd` 不调 `blit_scene*`；`sprite_atlas` 无写帧函数；`terrain_atlas` 无 blit 分支 | gate 第 22 项（doccheck2）+ 编译期（函数删除即失效） |
 | 契约 3 逻辑/渲染分离 | `render_parity.rs` 确定性/非空/场景区分；`render()` 签名不暴露可变状态 | gate 第 3 项（cargo test） |
 | 契约 4 版面数据驱动 | `render_intent.rs` 6 个 `*_layout_matches_doc` 断言 `scenes.json` **实值**；`doccheck2::check_layout_doc_table_cross_check` 锁 §4 表 == `scenes.json` | 测试（gate 第 3 项）+ gate 第 22 项（doccheck2） |

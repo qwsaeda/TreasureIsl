@@ -11,7 +11,7 @@
 
 - **产品**：《金银岛 TreasureIsl》Windows Mobile 游戏（ARM 原生，176×220 逻辑分辨率）的**逆向 + Rust 现代化移植**，目标 **WASM（浏览器）+ Android** 双端。
 - **技术底座**：Rust edition 2024 + **Bevy 0.20**（S18.0 定案唯一渲染引擎，推翻旧 macroquad 定案）+ cargo workspace **9 个成员 crate**。
-- **进度**（`plan/ledger.yaml` 实测）：**341 任务 / 339 verified / 1 pending（S56.0 流程强化载体待开工）/ 1 blocked（S49.1 作废可选；S7.7 已 verified；S54.1/S55.1 断言固化 2 条 verified）**。
+- **进度**（`plan/ledger.yaml` 实测）：**341 任务 / 340 verified / 0 pending / 1 blocked（S49.1 作废可选；S56.0 流程强化载体 verified）**（S49.1 作废可选；S7.7 已 verified；S54.1/S55.1 断言固化 2 条 verified）**。
 - **9 场景**：`Intro → Index → SelectRole → SelectMap → MainMap → Vs → Message → Saveload → Exit`（20 条合法转换，非法转换编译期拒，Type-State 保证）。
 - **核心循环**：探索→贸易→建造→卡牌→战斗；主地图主玩法 = **大富翁式摇骰前进**（S19 定案：摇骰定步数 → 沿环岛赛道前进 N 格 → 落格结算；方向键自由移动已删）。
 - **主线玩法**（S27/S28/S33 领地系统）：31 格赛道（每格 = 领地/功能点）+ 中央可点击据点岛 + 10 类海盗岛专属副本 + 5 席位（≥1 玩家 + 4 AI）+ 落格三支分叉（无主→副本占领 / 他人→交钱或攻占 / 自己→升级加固）。
@@ -160,7 +160,7 @@
 3. ✅ S32.9 构建只读体检：`runner::build::build_check`（`pwsh -Check` + `snapshot::FrozenSnapshot` 前后 diff）+ `GET /api/build?check=1`；实测 check_exit=0 / frozen_diff_empty=true / frozen_diff=0。
 4. ✅ S35.1 构建编排平台化：`build_artifacts.py` 编排器 + `GET /api/build?run` 白名单负例 **400**（改前 500）+ list/check 只读；evidence 四份 + 台账 4 任务 verified + WBS/26 号/14 号/22 号同步。
 
-**下一节点** = 341 任务（339 verified / 1 pending S56.0 / 1 blocked S49.1 作废；S54.1/S55.1 断言固化 2 条 verified），飞轮 R3~R11 全收口（业务面 R3~R9 + 平台面 R10~R11 双停机，CCGS 连续 2 轮 0/0/0；S53/S54/S55 三条断言固化 doccheck2 44→47 项 + 平台红线 `ti-console-rules.md` 第 6 个），后续 = 用户拍板新方向（S50/S51 起）/ 用户视觉签收（S17.5/S21.9/S26 出图）；S34.0~S34.6 全 verified（2026-11-09），视觉签收类 S17.5/S21.9/S27.5 由 S34.6/S34.7 取代收口。
+**下一节点** = 341 任务（340 verified / 0 pending / 1 blocked S49.1 作废；S54.1/S55.1/S56.0 共 3 条流程强化断言/载体 verified），飞轮 R3~R11 全收口（业务面 R3~R9 + 平台面 R10~R11 双停机，CCGS 连续 2 轮 0/0/0；S53/S54/S55 三条断言固化 doccheck2 44→47 项 + 平台红线 `ti-console-rules.md` 第 6 个），后续 = 用户拍板新方向（S50/S51 起）/ 用户视觉签收（S17.5/S21.9/S26 出图）；S34.0~S34.6 全 verified（2026-11-09），视觉签收类 S17.5/S21.9/S27.5 由 S34.6/S34.7 取代收口。
 
 ---
 
