@@ -33,7 +33,7 @@
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 22 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 37 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114）、CCGS 借鉴分析「已替代」误判（EXP-186） | 47 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114）、CCGS 借鉴分析「已替代」误判（EXP-186）、i18n 动态 key 拼接盲区（EXP-187）、双审计 A/B 协议（EXP-188）、doccheck2 项号文字漂移高频复现（EXP-189） | 49 |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 59 |
 
 ## 条目索引
@@ -229,6 +229,7 @@
 | EXP-187 | process | | 静态扫 sget 字面量判孤儿 i18n key 会误报：format!("glmapm{N}") 等动态拼接 + territory.md 预置的副本 guard/benefit 文案当前 0 引用但非孤儿，须 grep 动态拼接点 + 查业务规格再判删 正文见 `process.md` |
 | EXP-188 | process | | CCGS 双审计协议：A 完成度（功能缺口）/ B 一致性（值漂移/口径过期）独立并行不读对方结论；表现层→规则层 import = 正确分层（红线 1 越界指反向 rules→渲染），c1 契约补 7 模块公共面合法化 正文见 `process.md` |
 | EXP-189 | process | | doccheck2 项号/工具契约项号/gate 项名等「项号文字本身」漂移 = 高频复现模式（R12 一次 20+ 处）：gate_data.json 数组顺序是机读源，文档文字「第 N 项」是手工镜像，S53/S54/S55 加 3 项后未回写 ⇒ 现状区（28_engine/README/AGENTS/rules/tutorial）全过期；修毕靠 cross-doc-counts/gate-items 双断言 + 对抗审计人工复核兜底（本轮不新增断言：项号引用面 20+ 处且 gate_data.json 顺序本身机读可信，文字漂移面靠 R12 清零 + 后续 gate 项数变更走 doc_numbers --fix 扩「项号文字」回写面）。证据 = evidence/r12-audit.log + r12-audit-find/audit.md 正文见 `process.md` |
+| EXP-190 | process | | 轨道 3 机制审计 24 条（M-01~M-24）：① 分卷条数门禁 check_experience_volume_counts 判据 .md]( 永不成立 = 自落地起从未生效（M-09 修判据 + 负例护栏）② 五步回执历轮 0/10 落盘 = 机制两张皮（06 号 §4 补落盘判据 M-05）③ 停机口径「连续 2 轮 0/0/0」成本倒挂 = 第 1 个 0 轮即通过 + 第 2 轮降级可选（M-24 拍板，judge.rs 阈值 2→1 + 文档面全同步）④ re-audit skill 文本 Windows 路径冻结面 = C:\金银岛 + Temp（M-19 修 /tmp/opencode）⑤ blocked 行 evidence 假路径 = loop.md 补 schema 条款 + check_ledger_reality 加 blocked 校验（M-01/M-22）⑥ exp_log --check 正常态恒 FAIL = 改 2~3 处命中 PASS（M-08）⑦ 项号文字漂移 = 15 号行 36 + S56.0 台账立项（M-13/M-23） 正文见 `process.md` |
 
 ## 条目格式（写新条时照抄）
 

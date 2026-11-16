@@ -1,4 +1,7 @@
 # gate.ps1 — 统一门禁（36 项，见 docs/parity.md；S24.1 分档 -Fast/-Touch/full；S31.3 起第 22 项 = wasm 浏览器端 e2e；S16.1 起第 23 项 = browser-playtest；S16.2 起第 24 项 = playtest-loop；S46.1 起第 25 项 = dod-commands；S49.4e 起第 4c 项 = Android 真机；S50.2 起第 25b 项 = studio-tests 元测试面）
+# 计数口径（2026-11-16 轨道 3 M-14 注）：门禁项数 = 逻辑项名去重口径（同一项的 PASS/FAIL 双分支
+# 各算一行 Report，按项名去重后才是口径数，与 docs/parity.md §门禁 + doccheck2 gate-items 断言同口径）；
+# 本文件 Report 调用行数多于去重后的口径数（含双分支重复），勿按 Report 行数计门禁项数。
 # 用法：
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1            # 全量（收口用；语义不变）
 #   powershell -ExecutionPolicy Bypass -File scripts/gate.ps1 -Touch     # 开发期：跳过纯构建/grep 项

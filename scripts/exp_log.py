@@ -81,7 +81,12 @@ def main() -> int:
         print(f"  {args.id} 出现 {len(hits)} 处: {hits or '无'}")
         for v in VOLUMES:
             print(f"    {v}.md: {volume_count(v)} 条")
-        return 1 if len(hits) > 1 else 0
+        # 语义（2026-11-16 轨道 3 M-08 修）：正常登记 = index.md 行 + 分卷正文 = 2 处命中；
+        # 0 处（未登记）/ >2 处（重复登记或跨卷重号）= 违规非 0。原「len>1 即 FAIL」使正常态恒 FAIL，
+        # 该脚本不可挂 gate 例行体检（工具契约「只读 + 违规非 0」里正常态也非 0 = 假红）。
+        # 注：分卷表「条数」行同时含 EXP-id 字样时命中 +1（如 EXP-189 行 3 处 = 索引行 + 正文 + 条数行引用），
+        # 故正常登记 2~3 处 = PASS。
+        return 1 if len(hits) == 0 or len(hits) > 3 else 0
     if len(hits) > 1:
         print(f"EXP 编号重复（{len(hits)} 处）：{hits}", file=sys.stderr)
         return 1

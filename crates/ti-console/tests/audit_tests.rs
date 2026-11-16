@@ -113,15 +113,15 @@ fn converge_two_rounds_pass() {
 }
 
 #[test]
-fn converge_one_round_in_progress() {
-    // 仅 r8 收敛（r7 有 finding）→ InProgress。
+fn converge_one_round_pass() {
+    // M-24 拍板①（2026-11-16）：第 1 个 0 轮即通过（原「仅 r8 收敛 → InProgress」改判 Pass）。
     let rounds = aggregate(&[
         meta("S32.4", 7, 'a', "a7", HeadStatus::Parsed(parsed_fields("FAIL", 2, 0, 1))),
         meta("S32.4", 7, 'b', "b7", HeadStatus::Parsed(parsed_fields("PASS", 0, 0, 0))),
         meta("S32.4", 8, 'a', "a8", HeadStatus::Parsed(parsed_fields("PASS", 0, 0, 0))),
         meta("S32.4", 8, 'b', "b8", HeadStatus::Parsed(parsed_fields("PASS", 0, 0, 0))),
     ]);
-    assert_eq!(convergence(&rounds), ConvergeResult::InProgress { consecutive: 1 });
+    assert_eq!(convergence(&rounds), ConvergeResult::Pass { consecutive: 1 });
 }
 
 #[test]

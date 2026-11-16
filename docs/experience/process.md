@@ -617,3 +617,36 @@ R12（rea-audit-fix 双 agent：FIND 100 条 Q001~Q100 + AUDIT 逐条复核 46 C
 固化判定 = **不新增 doccheck2 断言**：项号引用面 20+ 处、gate_data.json 顺序机读可信，文字漂移靠 cross-doc-counts（第 44 项）+ gate-items（第 6 项）双断言 + 对抗审计人工复核兜底；后续 gate/doccheck2 项数变更 = doc_numbers --fix 扩「项号文字」回写面（15 号 §2 第 12 行已登记该工具，扩面待专项）。
 证据 = evidence/r12-audit.log + r12-audit-find.md + r12-audit-audit.md。
 教训：双 agent 审计价值面 = B 侧（一致性）独报的项号/计数类漂移 A 侧（完成度）结构性看不见——本轮 46 CONFIRMED 里 0 条是功能缺口，全 = 值/编号/路径漂移，与 S51.1 飞轮 R2「B 侧独报 3 条 A 看不到的值漂移」同构；主线程独立复核不可省（AUDIT 漏网 3 条 + 改判 2 条 = EXP-038 再次实证）。
+
+### EXP-190 流程：流程机制审计：停机口径/回执落盘/条数门禁恒失效/skill 路径冻结
+## 现象
+
+开发流程机制面 0 机器兜底清单（15 号 §2 半自动行逐条核实现状 + 历轮 evidence 取证）：
+1. 分卷条数门禁恒失效：`check_experience_volume_counts` 行识别判据 `cols[0].contains(".md](")` 对实际行首列 `` [`process.md`](process.md) ``（含反引号）永不成立 ⇒ 该断言自落地起从未生效，index.md:36 process 卷 47 vs 实 48 = 真漂移 0 拦截（EXP-108 当年修判据修错方向，代码注释自认「从未生效」）。
+2. 五步回执 0 落盘：`evidence/flywheel-R{2..11}.md` 10 轮 grep「规范回执/五步/决策点」= 0 命中（唯一命中 = 编排描述非回执本身）⇒ 06 §2「缺回执段 = 打回」判据无落盘证据，机制与执行两张皮。
+3. 停机口径成本倒挂：「连续 2 轮 0/0/0 才停机」使每域停机至少 2 个全成本 0 产出验证轮（R5/R8/R9 + R10/R11 实证；单日 R3~R11 = 9 轮），与 §8「100 条/轮」目标脱节。
+4. re-audit-fix skill 文本冻结面：`C:\金银岛` 根 + `C:\Users\Administrator\...\Temp\opencode\` 输出路径 = Windows 时代写死，Linux 迁移后 0 更新（R12 靠 skill 外的人约定兜 /tmp/opencode）。
+5. blocked 行 evidence 假路径：S49.1（唯一 blocked）写 `evidence: "evidence/S49.1.log"` 该文件不存在 = loop.md §1 schema 无 blocked⇒evidence 条款的必然产物。
+6. exp_log.py --check 语义缺陷：正常登记（index 行 + 分卷正文 = 2 处命中）跑 --check 必退出 1 ⇒ 工具契约「只读 + 违规非 0」正常态也非 0 = 假红，不可挂 gate 例行体检。
+
+## 根因
+
+机制落盘 ≠ 机制执行（15 号行 28 同族）：门禁断言的行识别判据无负例护栏（EXP-108 修判据时未实测跑一次破坏验证）；停机/回执等「人盯纪律」无落盘载体（evidence 固定段缺失 = 无人可复核）；skill 文本 = 开轮固定模板源，环境迁移（Windows→Linux）无同步机制；schema 空档（blocked 行 evidence 语义未定义）由台账行自由发挥填假路径。
+
+## 解法
+
+M-09：判据改 `](` + `.md)` 收口形态匹配 + 表头失锚报错 + 分卷表限定（防条目索引行首列 `[`xx](xx)` 3 列误命中，负例：EXP 行首列含 `](index.md)` 但第三列非整数 = 自然跳过）+ 负例护栏（临时改 47 vs 48 实跑必 FAIL 再还原）。
+M-05/M-12：06_flywheel §4 补「停机三条件勾选表 + 五步回执必须拷进 evidence/flywheel-R<n>.md 固定段，缺段 = 停机判定无效/回报打回」。
+M-24：judge.rs 收敛阈值 2→1（第 1 个 0 轮即 Pass，历史轮「连续 2 轮」= 修订前口径快照不回改）+ 单测改判 + 22 号 §7.4/plan-s32/s44/s45/README 文档面全同步（历史 verified 行保留时点措辞）。
+M-19：skill 文本 2 处路径改「仓库根（当前工作目录）+ /tmp/opencode/（Linux）」。
+M-01/M-22：S49.1 evidence 置 null + loop.md §1 补「blocked ⇒ evidence: null」条款 + check_ledger_reality 加 blocked 行 schema 校验 + 输出措辞改「三方/两方对账」防 M-04 误读。
+M-08：exp_log --check 改「0 或 >3 处命中 = FAIL；2~3 处 = PASS（分卷表条数行引用 +1）」。
+M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文字 + 数值声称点对账面，待开工）+ 现轮人工清零（R12 20+ 处 + 本轮 README 项号 31~34→33~36 等）。
+
+## 验证
+
+- `check_experience_volume_counts` 负例实跑（临时 47 vs 实 48 ⇒ 1 ERROR 精准点名 process.md；还原 ⇒ 0 error）。
+- doccheck2 47 项 0 error + doccheck 0 error + check_ledger_reality 全绿（339 verified 两方对账 + 3 符号 grep + 1 blocked schema + 0 孤儿）。
+- `cargo test -p ti-console --test audit_tests` 28 条全绿（converge_one_round_pass 改判 Pass{1}）。
+- exp_log --check EXP-189/EXP-001 均 EXIT=0（正常态），EXIT=1 = 违规面（0 处或 >3 处）。
+- gate.ps1 头注释补「36 = 去重口径 / Report 行 38」防 M-14 误计数。

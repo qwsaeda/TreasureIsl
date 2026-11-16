@@ -194,6 +194,18 @@ def main() -> int:
         if probs:
             failures.append(f"[{tid}] " + "; ".join(probs))
 
+    # blocked 行 schema 断言（loop.md §1：blocked ⇒ evidence 必须 null，防死数据假路径；
+    # 轨道 3 M-01/M-22 固化，S49.1 先例）
+    for t in tasks:
+        if t.get("status") != "blocked":
+            continue
+        ev = t.get("evidence")
+        if ev:
+            failures.append(
+                f"[{t.get('id', '?')}] blocked 行 evidence 非 null（schema 要求 null；"
+                f"指向 {ev} = 死数据假路径）"
+            )
+
     orphans = check_orphan_evidence(tasks)
     for o in orphans:
         failures.append(f"[orphan] {o}")
@@ -203,9 +215,12 @@ def main() -> int:
         for f in failures:
             print(f"  FAIL  {f}")
         return 0 if args.check else 1
+    blocked = [t for t in tasks if t.get("status") == "blocked"]
+    sym_covered = sum(1 for t in verified if t.get("id", "") in SYMBOL_EXPECTATIONS)
     print(
-        f"check_ledger_reality: 全绿（{len(verified)} 个 verified 任务三方对账通过"
-        f" + 0 个孤儿 evidence）"
+        f"check_ledger_reality: 全绿（{len(verified)} 个 verified 任务对账通过"
+        f"〔其中 {sym_covered} 个含代码符号 grep 第三方验，其余 = 台账行 + evidence 存在非空两方〕"
+        f" + {len(blocked)} 个 blocked schema 校验通过 + 0 个孤儿 evidence）"
     )
     return 0
 

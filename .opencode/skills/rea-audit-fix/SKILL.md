@@ -11,7 +11,7 @@ description: Use when the user asks to run the twin-agent adversarial audit (双
 
 派 `general` 子代理，prompt 固定要点：
 - 角色：FIND 子代理，第 N 轮对抗审计。
-- 目标：仓库根 C:\金银岛，找出 100 条一致性/漂移问题，编号 Q001..Q100。
+- 目标：仓库根（当前工作目录），找出 100 条一致性/漂移问题，编号 Q001..Q100。
 - 每条给：位置（文件:行号）、现象（实际值 vs 期望值，或代码 API vs 文档描述矛盾）、建议修复动作。
 - 必扫区域（每轮更新，但骨架不变）：
   1. `crates/ti-app/src/game_app.rs` + `scenes/*.rs`：oracle 调用残留、`Unit{hp,atk}` 硬编码、Build/Trade 内联结算 vs 委托 `TradeLedger`/`BuildManager`、boss tier 随机 vs `map.boss_tier`。
@@ -29,7 +29,7 @@ description: Use when the user asks to run the twin-agent adversarial audit (双
   13. `check_hardcode.py`/`validate_data.py`/`gen_layout.py` 内部断言数值（2041/20 场景/字符串 key 数）是否与 `strings.json`、`controls.json` 实时值一致。
 - 取证：用 Read/Grep/Glob/Bash（PowerShell 5.1）实际取证，**不许凭记忆编造行号**。
 - 输出：纯 markdown `## Q001` ~ `## Q100`，每条 3 行内。最后给统计（CONFIRMED-candidate 数量 + 最高价值 5 条 Qxxx 编号+一句话）。
-- **必须把完整清单 Write 到 `C:\Users\Administrator\AppData\Local\Temp\opencode\audit_roundN_find.md`**（子代理输出不自动持久化，AUDIT 读不到就无法工作）。最终回复只返回统计摘要，不要把 100 条全文贴回。
+- **必须把完整清单 Write 到 `/tmp/opencode/audit_roundN_find.md`（Linux 环境；旧 Windows 路径已冻结）**（子代理输出不自动持久化，AUDIT 读不到就无法工作）。最终回复只返回统计摘要，不要把 100 条全文贴回。
 
 ## 2. AUDIT（逐条 verify）
 
@@ -43,7 +43,7 @@ description: Use when the user asks to run the twin-agent adversarial audit (双
   - `impl/12_audio.md` vs `audio.rs` ChannelState（读真实 struct 字段）
 - 每条一行：`Qxxx [判定] 一句话证据（文件:行号 实际值）`。
 - 最后给统计：CONFIRMED/REJECTED/PARTIAL/NO-LINE 各多少 + CONFIRMED 里最高价值 8 条编号+一句话。
-- **必须 Write 到 `audit_roundN_audit.md`**。最终回复只返回统计 + 8 条最高价值 CONFIRMED。
+- **必须 Write 到 `/tmp/opencode/audit_roundN_audit.md`**。最终回复只返回统计 + 8 条最高价值 CONFIRMED。
 
 ## 3. 主线程独立复核（EXP-038）
 

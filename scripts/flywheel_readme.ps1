@@ -306,7 +306,7 @@ if ($selectedPkgs.Count -eq 0) {
 $output += ""
 $output += "--- 本域红线（docs/rules/，按包域 glob 过滤；CCGS paths frontmatter 模式，S51.0）---"
 if ($selectedRules.Count -eq 0) {
-    $output += "（无命中包域红线文件，改前查 docs/rules/ 5 个全）"
+    $output += "（无命中包域红线文件，改前查 docs/rules/ 全部 6 个：ti-core/ti-app-scenes/ti-engine/scripts/assets-data/ti-console）"
 }
 foreach ($r in $selectedRules) {
     $output += "  $($r.file)：paths = " + ($r.globs -join ', ')
@@ -353,7 +353,7 @@ if ($Check) {
     foreach ($kw in $required7) {
         if ($text -notmatch [regex]::Escape($kw)) { $ok = $false; $msg += "缺关键词 $kw" }
     }
-    if ($allRules.Count -lt 5) { $ok = $false; $msg += "docs/rules 红线仅 $($allRules.Count)（要求 ≥5）" }
+    if ($allRules.Count -lt 6) { $ok = $false; $msg += "docs/rules 红线仅 $($allRules.Count)（要求 ≥6：S50.3 五条 + S54/R10 新增 ti-console 第 6 个）" }
     if (-not $ok) {
         Write-Host "flywheel_readme -Check FAIL:"
         foreach ($m in $msg) { Write-Host "  - $m" }

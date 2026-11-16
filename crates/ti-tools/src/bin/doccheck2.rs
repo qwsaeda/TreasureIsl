@@ -1617,19 +1617,29 @@ fn contains_word(haystack: &str, needle: &str) -> bool {
 /// 17. 经验库分卷条数对账（第 12 轮对抗审计 Q016 类复发固化）：
 ///     `docs/experience/index.md` 分卷表「条数」列须 == 各卷文件实际 `### EXP-` heading 数
 ///     （历史 2 轮漂移：code/process 各差 5、tools/build 反向差 3/1，均靠人肉发现）。
+///     注：行首有 2 空格缩进的分卷表行同样在解析面内（EXP-189 轮实修：判据自落地起
+///     因 `.md](` 永不成立恒不生效，轨道 3 M-09 改判 `](...md)` 形态匹配）。
 fn check_experience_volume_counts(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(index) = read_file(root, "docs/experience/index.md") else { return errors };
+    let lines = index.lines();
+    let in_volume_table = lines.filter(|l| l.starts_with('|') && l.contains("条数")).count() >= 1;
+    if !in_volume_table {
+        errors.push(
+            "docs/experience/index.md 未找到分卷表（表头含「条数」列）——判据失锚".to_string(),
+        );
+        return errors;
+    }
     for line in index.lines() {
         let trimmed = line.trim();
-        // 仅解析分卷表行：`| [`file.md`](file.md) | 内容 | 条数 |`（3 列且首列含 `](…md)`）
+        // 仅解析分卷表行：`| [`file.md`](file.md) | 内容 | 条数 |`（3 列且首列含 `](`…`.md)`）；
+        // 表头行（| 卷 | 内容 | 条数 |）与分隔行（|---|）经首列判据自然跳过。
         if !trimmed.starts_with('|') || !trimmed.ends_with('|') {
             continue;
         }
         let body = &trimmed[1..trimmed.len() - 1];
         let cols: Vec<&str> = body.split('|').map(str::trim).collect();
-        // 首列形如 "[`code.md`](code.md)" —— 判据是 `](`（旧写法 `.md](` 永不成立，
-        // 该检查自落地起从未生效 → 条数漂移 code +5 / tools +1 长期无人发现，EXP-108）。
+        // 首列形如 "[`code.md`](code.md)"（可能带 2 空格缩进）——判据 = `](` 后段以 `.md)` 收口。
         if cols.len() != 3 || !cols[0].contains("](") {
             continue;
         }
@@ -1637,7 +1647,16 @@ fn check_experience_volume_counts(root: &Path) -> Vec<String> {
         let seg = &cols[0][p + 2..];
         let Some(close) = seg.find(')') else { continue };
         let fname = &seg[..close];
-        let Ok(declared) = cols[2].parse::<usize>() else { continue };
+        if !fname.to_lowercase().ends_with(".md") || fname.contains('/') {
+            continue;
+        }
+        let Some(declared) = cols[2].parse::<usize>().ok() else {
+            errors.push(format!(
+                "docs/experience/index.md 分卷表「{fname}」行条数列非整数：{}（须 = 该卷 `### EXP-` heading 数）",
+                cols[2]
+            ));
+            continue;
+        };
         let actual = read_file(root, &format!("docs/experience/{fname}"))
             .map_or(0, |t| t.lines().filter(|l| l.starts_with("### EXP-")).count());
         if actual != declared {
@@ -2716,7 +2735,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口 + S54/S55 断言固化；余 1 blocked S49.1（S7.7 已 verified））"
+                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口 + S54/S55 断言固化；余 1 blocked S49.1（S7.7 已 verified）；S56.0 流程强化载体已登记待开工）"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。

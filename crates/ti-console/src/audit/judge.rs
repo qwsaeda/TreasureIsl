@@ -6,7 +6,10 @@
 //!   ⇒ 该轮不计收敛轮次（占位轮不得被机械判定误读成 0/0/0 有效轮）；
 //! - **计数口径**：`0 新发现` = 新发现行 = 0（P2 建议同样计入）；
 //! - **轮次完整性**：N 轮 × A/B 角色齐全（序号连续、每轮 a/b 在盘；占位文件计完整性不计值域轮）；
-//! - **收敛**：0 新发现 + 0 误报 + 0 残留，连续 2 轮 = 通过；连续 3 轮未收敛 → 升级拆子任务；
+//! - **收敛**：0 新发现 + 0 误报 + 0 残留，**第 1 个 0 轮即通过**（2026-11-16 轨道 3 M-24 拍板①修订，
+//!   原「连续 2 轮」口径废止——每域停机吃 2 轮全成本 0 产出 = 成本/收益倒挂；第 2 个 0 轮降级为可选，
+//!   仅 P2 面未清零时主线程判断再扫；历史轮 R3~R11 的「连续 2 轮」判定 = 修订前口径快照，机器面
+//!   `convergence()` 阈值 1 = 新口径，旧报告归档不回改）；连续 3 轮未收敛 → 升级拆子任务；
 //! - **祖父条款**：r1~r3（契约引入前）人工口径读，不得因缺四行判「不可解析」误报。
 
 /// 四行机器可解析字段。
@@ -206,12 +209,13 @@ pub fn round_complete(rounds: &[RoundAgg]) -> (bool, Vec<u32>) {
 /// 收敛判定结果（22 号 §7.4）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConvergeResult {
-    /// 连续 ≥2 轮全收敛 = 通过。
+    /// 第 1 个 0 轮全收敛 = 通过（2026-11-16 M-24 拍板①修订：原「连续 ≥2 轮」阈值 2 → 1；
+    /// 历史归档报告的「连续 2 轮」判定 = 修订前口径快照，机器面不回改）。
     Pass {
-        /// 连续收敛轮数。
+        /// 连续收敛轮数（≥1 即 Pass）。
         consecutive: u32,
     },
-    /// 进行中（最近连续收敛轮 < 2，且未达升级阈值）。
+    /// 进行中（最近连续收敛轮 = 0，且未达升级阈值）。
     InProgress {
         /// 最近连续收敛轮数。
         consecutive: u32,
@@ -249,7 +253,7 @@ pub fn convergence(rounds: &[RoundAgg]) -> ConvergeResult {
         }
         unclosed_streak += 1;
     }
-    if consecutive >= 2 {
+    if consecutive >= 1 {
         ConvergeResult::Pass { consecutive }
     } else if unclosed_streak >= 3 {
         ConvergeResult::Escalate { unclosed: unclosed_streak }

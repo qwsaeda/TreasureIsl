@@ -19,6 +19,10 @@
 ## 规则
 
 1. **状态只允许 `draft` / `frozen`**；`draft` 时开并行轮会 FAIL（第 16 项断言无 draft 残留）；
+   **飞轮开轮口径（2026-11-16 轨道 3 M-06 拍板）**：飞轮轮（06_flywheel §7/§8 的 3 subagent 轮）**不查契约状态**——
+   开轮必读第 4 条下发的 c1/c2/c3 契约在 `draft` 期**仅作跨包可见面参照**（不阻塞开轮），第 16 项 `check_module_contracts`
+   只守并行轮（P 包 loop）；契约冻结时点由主线程按 05_module_parallel §契约冻结拍板（当前维持 draft = 飞轮轮继续参照口径，
+   不静默升级）。
 2. 契约只列**跨包可见面**（公共 struct 签名 / 枚举 / 函数 / JSON key），包内私有实现不进契约；
 3. 改契约 = 全票同步（主线程仲裁）；改动须重跑第 16 项校验 + 全 workspace test；
 4. 数值与文案**不写死在契约**，只写 `balance.json` / `strings.json` 的 **key**（值在数据表里改）；

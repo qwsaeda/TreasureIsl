@@ -69,8 +69,14 @@ def _is_gate_total(line: str, m: re.Match) -> bool:
     """护栏：m 是 数字+「项」匹配 且本行在谈**当前**门禁总数。
 
     排除：序数（第 N 项）/ 其它总数（N 项命令·图标·残留·各算）/ 阈值（≥·≤ N 项）/
-    历史快照（N 项均为时点快照）。仅「当前总数」的断言才允许被 --fix 回写。
+    历史快照（N 项均为时点快照）/ 跨文档名（doccheck2 第 N 项 类「项号文字」声称点，
+    归 15 号行 36 S56.0 扩面，doc_numbers 只管 gate 总数 + 台账计数）。
+    仅「当前总数」的断言才允许被 --fix 回写。
     """
+    # 跨文档名上下文（doccheck2/doccheck 等 + 「第 N 项」项号文字）= S56.0 扩面，勿混入 gate 总数回写
+    ctx = line[max(0, m.start() - 30): m.end() + 10]
+    if re.search(r"doccheck2?|check_?[a-z_]+\s*第\s*\d+\s*项|第\s*\d+\s*项\s*`?[a-z-]*`?\s*（?gate", ctx):
+        return False
     before = line[max(0, m.start() - 12): m.start()]
     after = line[m.end(): m.end() + 3]
     if "第" in before[-6:]:

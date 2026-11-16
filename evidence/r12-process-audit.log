@@ -1,0 +1,27 @@
+# 2026-11-16 开发流程审计收口（轨道 1 值漂移 + 轨道 3 机制面）
+
+## [1] 改动面：流程机制强化（Rust = ti-tools doccheck2.rs 3 处 + ti-console judge.rs 阈值 2→1；工具 = check_ledger_reality/exp_log/doc_numbers/flywheel_readme/gate.ps1 注释；文档 = 06/22/loop/contracts/15/26/release/README/AGENTS/plan-s56 + skill 路径）
+
+## [2] 轨道 3（机制审计 24 条 M-01~M-24，/tmp/opencode/audit_r12_track3_mechanism.md）拍板 + 修复：
+- M-01/M-22：S49.1 blocked 行 evidence 假路径 → null + loop.md 补「blocked ⇒ evidence: null」schema + check_ledger_reality 加 blocked 行校验（FAIL 面实测）
+- M-04：check_ledger_reality 输出措辞改「339 对账〔其中 3 含符号 grep 第三方验，其余两方〕」防误读
+- M-05/M-12：06_flywheel §4 补「五步回执必须落盘 evidence/flywheel-R<n>.md 固定段 + 停机三条件勾选表，缺段 = 停机判定无效/回报打回」
+- M-08：exp_log.py --check 语义修（正常登记 2~3 处命中 = PASS 退出 0；0/>3 = FAIL；EXP-189 实跑 EXIT=0 验证）
+- M-09：doccheck2 check_experience_volume_counts 判据修（].md) 形态 + 表头失锚报错 + 分卷表限定；负例护栏实跑（临时 47 vs 实 48 ⇒ 1 ERROR 点名 process.md，还原 ⇒ 0 error）
+- M-13/M-23（拍板折中面）：15 号 §2 行 36 + S56.0 台账立项（plan-s56-process-hardening.md WBS：doc_numbers.py 扩项号文字 + 数值声称点对账面）+ README/AGENTS 路由登记 + doc_numbers 护栏补跨文档项号文字排除面（防 --fix 误改 doccheck2 第 N 项 声称点）
+- M-14：gate.ps1 头注释补计数口径注（去重口径 vs Report 行数；无字面数字防 doccheck2 gate-items 误报）
+- M-16：README:75 doccheck2 项号 31~34→33~36（实测 gate_data.json 位 33=repo-text-integrity/34=task-change-scope/35=tooling-registration/36=process-ledger）
+- M-17/M-18：flywheel_readme.ps1 域 0 命中提示「5 个全」→「全部 6 个」+ -Check 下限 5→6
+- M-19：rea-audit-fix skill 文本 2 处 Windows 路径（C:\金银岛 + Temp）→ 仓库根 + /tmp/opencode/（Linux）
+- M-24（拍板①）：停机口径「连续 2 轮 0/0/0」→「第 1 个 0 轮即通过，第 2 个 0 轮 = 可选复扫」：judge.rs 收敛阈值 2→1 + 单测改判 Pass{1} + 22 号 §7.4 + plan-s32/s44/s45 + README 现状区全同步（历史 verified 行 = 修订前口径快照不回改）
+
+## [3] 连带同步面：index.md 分卷条数 47→48→49（EXP-189/190 登记）+ 26 号 doccheck 计数声称 179/38/186/335 + release.md/AGENTS/26 号「341 任务 / 339 verified + 1 pending S56.0 + 1 blocked S49.1」+ 15 号行 36 行标（35→36 物理追加位）
+
+## [4] 判据实跑
+$ cargo test -p ti-console --test audit_tests → 28 passed（converge_one_round_pass 改判 Pass{1}）
+$ python3 scripts/check_ledger_reality.py → 全绿（339 verified〔3 符号 grep + 两方〕+ 1 blocked schema + 0 孤儿）
+$ python3 scripts/exp_log.py --check --id EXP-189/190 --volume process → EXIT=0（正常态）
+$ python3 scripts/doc_numbers.py → 0 漂移
+$ cargo run -p ti-tools --bin doccheck → 179 docs/38 facts/186 exp/335 refs, 0 error
+$ cargo run -p ti-tools --bin doccheck2 → 47 项 0 error
+## [5] gate 全量：evidence/gate-r12-process-audit.log（36 项 0 failure；playtest-loop 首跑 1 次 web_playtest L1=false = SwiftShader 偶发 GPU stall（同产物 browser-playtest 独立 PASS + 重试 0 failure，判据文档口径 = 环境降级不 FAIL）+ 2 个环境 SKIP（无 NDK / 无 adb 设备））
