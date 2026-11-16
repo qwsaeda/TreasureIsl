@@ -25,3 +25,16 @@ $ python3 scripts/doc_numbers.py → 0 漂移
 $ cargo run -p ti-tools --bin doccheck → 179 docs/38 facts/186 exp/335 refs, 0 error
 $ cargo run -p ti-tools --bin doccheck2 → 47 项 0 error
 ## [5] gate 全量：evidence/gate-r12-process-audit.log（36 项 0 failure；playtest-loop 首跑 1 次 web_playtest L1=false = SwiftShader 偶发 GPU stall（同产物 browser-playtest 独立 PASS + 重试 0 failure，判据文档口径 = 环境降级不 FAIL）+ 2 个环境 SKIP（无 NDK / 无 adb 设备））
+
+## [6] 轨道 1 AUDIT 对抗复核（65 条 P001~P065 → CONFIRMED 29 / REJECTED 11 / PARTIAL 24 / NO-LINE 1）+ 修复：
+- 基准面勘误（AUDIT 独报）：FIND 头部机器位表漏 Android 真机 4c = 第 7 位 ⇒ 第 20 位起全 -1 错位；修复按 doccheck2 同口径 36 项实测位（render-invariants=27 / check_data_source=28 / flywheel=26 / scene=30 / browser-playtest=33 / playtest-loop=34 / dod-commands=35 / studio-tests=36）
+- P023 test_manifest gate_full name 33/desc 35 自相矛盾 → 统一 36（JSON 机读面）
+- P024/P025 23 号 evidence 535→543 + 集成测试 106→105（实跑翻案）
+- P001~P020 项号面批量修（04_tooling 第 13/14~16/19/23 项 + 07_render_pipeline 27/28 + 05_module 24/25 + 06_flywheel 26 + 08_playtest 33 + 12/11/08_layout 第 17 项 check_data_driven + 08_layout/README 第 30 项 scene + 09 第 24 项 + 10 第 25 项 + 32/plan-s50 rules-files 第 42 项 + 14 号 playbook 16→20/-List 口径 + loop 24/25 + 35/36 + rules/15 号同步 + AGENTS 命令节 12/13/23）
+- 历史/时点行（07 退役基线段 / 15 号 L52 / plan-s32 verified dod 行）保留时点快照
+
+## [7] 复验
+$ cargo run -p ti-tools --bin doccheck → 179/38/186/335, 0 error
+$ cargo run -p ti-tools --bin doccheck2 → 47 项 0 error
+$ python3 scripts/validate_data.py → OK（test_manifest 对账过）
+gate 全量 = evidence/gate-r12-process-audit.log（36 项 0 failure）

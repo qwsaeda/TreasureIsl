@@ -49,20 +49,20 @@
 
 ## 2. 工具链（已建 + 待建）
 
-### 已建（S8.2 落地，进 gate 第 10 项）
+### 已建（S8.2 落地，进 gate 第 14~16 项）
 
 | 工具 | 替代什么手工活 | 幂等 / --check |
 |---|---|---|
 | `scripts/gen_layout.py`（`legacy/scripts/` 逆向数据工具，gate 10b 项调用路径 `legacy/scripts/gen_layout.py --check`） | 把 `ref/controls.json` 2041 条控件记录转成 `assets/data/controls.json`（控件层数据源） | 连跑两次逐字节一致；`--check` 只读比对 |
 | `scripts/validate_data.py` | 手查 JSON 字段与数值域 | `--check` 校验（FIND-201 统一入口，并入原 legacy 脚本 + V1/V2 场景标量兜底）：必填字段、概率域、价格/权重>0、strings 覆盖每个 name_key（无孤儿）、scenes 覆盖 7 场景、controls record_total 与 legacy/ref 一致、main_map.grid 三键正整数、全场景 extra 标量键正整数 |
 | `scripts/check_hardcode.py` | 人眼找 `.rs` 里的硬编码数值/中文（`02_conventions.md` §1） | `--warn` 迁移期只报告（历史时点）；`--list` 按文件分类汇总；EXEMPT 豁免带理由（oracle/CLI/配置键）；当前严格模式 0 命中即绿 |
-| `crates/ti-tools --bin doccheck` | 跨文档 ID/数值漂移 + 数据文件一致性（对抗审计固化，gate 第 9 项） | 数值断言 4 条：UI 场景数=20、控件记录=2041、LCG hex=0x343FD（非 0x3443D）、save.magic=20011591（非 20125007）；扫描 docs + AGENTS.md + plan + assets/data/*.json |
+| `crates/ti-tools --bin doccheck` | 跨文档 ID/数值漂移 + 数据文件一致性（对抗审计固化，gate 第 13 项） | 数值断言 4 条：UI 场景数=20、控件记录=2041、LCG hex=0x343FD（非 0x3443D）、save.magic=20011591（非 20125007）；扫描 docs + AGENTS.md + plan + assets/data/*.json |
 
-| `scripts/check_oracle_boundary.py` | S8 定位边界：shell 层（game_app/bins/scenes/widgets/i18n）禁 `oracle_*` 函数调用（oracle 仅 rules 内部参照物，类型重导出允许） | `--check` 违规即非 0（gate 第 11 项）；`--report` 列命中明细恒 0；幂等只读（EXP-054/EXP-057） |
+| `scripts/check_oracle_boundary.py` | S8 定位边界：shell 层（game_app/bins/scenes/widgets/i18n）禁 `oracle_*` 函数调用（oracle 仅 rules 内部参照物，类型重导出允许） | `--check` 违规即非 0（gate 第 19 项）；`--report` 列命中明细恒 0；幂等只读（EXP-054/EXP-057） |
 | `scripts/migrate_strings.py` | 把 `.rs` 中命中 `KEY_HINTS` 的中文字面量批量迁到 `strings.json` + 改写调用点为 `sget(key)` | `--report` 只列不写；`--apply` 幂等（已迁过的再跑零改动）；新增文案只需在 KEY_HINTS 加一条再重跑 |
-| `scripts/check_ledger_reality.py` | 台账三方对账（防虚报，S10.0）：ledger `status: verified` 行 ↔ evidence 文件（存在+非空，支持 `+` 多文件）↔ 代码符号（`SYMBOL_EXPECTATIONS` 登记的 DoD 产物在 `crates/*/src` grep）三方一致 | 全绿 0 退出码；任一虚报 FAIL 列命中（gate 第 14 项）；只读幂等；新增任务若 DoD 声明代码产物，往 `SYMBOL_EXPECTATIONS` 登记（EXP-058） |
-| `scripts/check_dod_commands.py` | DoD 判据命令载体可达性自检（S46.1，EXP-170/171 复发防护）：文档判据命令（`cargo run --bin`/`--test`、`scripts/*.py|ps1`）逐一解析，载体缺失或多 bin crate 歧义形式 ⇒ FAIL；扫描面 = AGENTS.md + docs（排除 experience/impl/plan-*） | `--check` 只读别名 / `--json` 机读；不可达判据非 0（gate 第 25 项） |
-| `scripts/studio_tests.py` | **元测试面（S50.2，CCGS studio-tests 模式借鉴）**：对「门禁断言 / 测试登记 / 工具台账」本身做 QA（测「测代码的测试」）——3 类断言：① doccheck2 触发面双向对账（`fn check_*` ↔ `RUST_CHECKS` 注册表 ↔ `gate_data.json` 条目）② `test_manifest.json` 每条 command 首词 ∈ 程序白名单 + `console_commands.json` 有 command 映射（缺映射 = 平台面未覆盖；存量未映射进 `studio_tests_waiver.json` 棘轮基线）③ `scripts/*.py/.ps1` 每个文件在 14 号 + 04 速查 + README 三处均登记（缺任一 FAIL；存量豁免进棘轮基线 + `scripts/tmp/` 豁免） | `--check` 只读；3 类断言任一 FAIL ⇒ 非 0（exit 1），前置缺失 exit 2；gate 第 25b 项 |
+| `scripts/check_ledger_reality.py` | 台账三方对账（防虚报，S10.0）：ledger `status: verified` 行 ↔ evidence 文件（存在+非空，支持 `+` 多文件）↔ 代码符号（`SYMBOL_EXPECTATIONS` 登记的 DoD 产物在 `crates/*/src` grep）三方一致 | 全绿 0 退出码；任一虚报 FAIL 列命中（gate 第 23 项）；只读幂等；新增任务若 DoD 声明代码产物，往 `SYMBOL_EXPECTATIONS` 登记（EXP-058） |
+| `scripts/check_dod_commands.py` | DoD 判据命令载体可达性自检（S46.1，EXP-170/171 复发防护）：文档判据命令（`cargo run --bin`/`--test`、`scripts/*.py|ps1`）逐一解析，载体缺失或多 bin crate 歧义形式 ⇒ FAIL；扫描面 = AGENTS.md + docs（排除 experience/impl/plan-*） | `--check` 只读别名 / `--json` 机读；不可达判据非 0（gate 第 35 项） |
+| `scripts/studio_tests.py` | **元测试面（S50.2，CCGS studio-tests 模式借鉴）**：对「门禁断言 / 测试登记 / 工具台账」本身做 QA（测「测代码的测试」）——3 类断言：① doccheck2 触发面双向对账（`fn check_*` ↔ `RUST_CHECKS` 注册表 ↔ `gate_data.json` 条目）② `test_manifest.json` 每条 command 首词 ∈ 程序白名单 + `console_commands.json` 有 command 映射（缺映射 = 平台面未覆盖；存量未映射进 `studio_tests_waiver.json` 棘轮基线）③ `scripts/*.py/.ps1` 每个文件在 14 号 + 04 速查 + README 三处均登记（缺任一 FAIL；存量豁免进棘轮基线 + `scripts/tmp/` 豁免） | `--check` 只读；3 类断言任一 FAIL ⇒ 非 0（exit 1），前置缺失 exit 2；gate 第 36 项（studio-tests） |
 
 | `scripts/audit_code.py` | 代码结构审计（`docs/style.md` §5.12 的执行手段）：文件规模（>900 行）/ 函数长度（>140 行）/ 重复模式（同一骨架 ≥N 次） | `--check` 只读检查、违规 ⇒ 非 0 退出码；`--report` 人读报告（永远 0 退出）；`--update-baseline` 写棘轮基线；阈值与基线豁免 = `scripts/code_budget.json`（每条豁免带整改任务号） |
 | `scripts/check_code_standards.py` | 代码标准 4 项机器检查（`16_code_standards.md` 执行矩阵：CS-1 资产路径单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数禁单字母 / CS-4 场景层窄接缝禁构造会话；规模维度归 `audit_code.py`，不重复） | `--check` 门禁判定（违例超基线 ⇒ 非 0）；`--report` 明细（恒 0）；`--update-baseline` 写豁免（棘轮只收紧）；基线 = `scripts/process_ratchet.json::code_standards`（每条带 `reason`+`fix_in`） |
@@ -72,15 +72,15 @@
 | `scripts/android_device_test.py` | **Android 真机交互验收（S49.4e，parity.md §P5）**：P5-1 全屏 / P5-2 触摸命中 / P5-3 音频生命周期 / P5-4 切后台不崩（adb 驱动机器判据；2026-11-09 真机「全屏/菜单无响应/后台音乐不停」根因审计补强） | `--check` 只读环境检查（adb+设备+包）；`--run` 执行 P5 全判据写 `evidence/android_device_test.log`；环境缺/判据 FAIL = 非 0 退出（如实上报不静默） |
 | `scripts/build_apk.sh` | Android APK 构建（S2.6/S18.8d：NDK 交叉编译 .so + APK 组装 + zipalign + SignV2 签名；装机 adb install + 资产 push） | `bash scripts/build_apk.sh`（**默认 aarch64/arm64**，2026-11-01 用户拍板「主要安卓玩、只交付 arm64」）；`x86_64` 传参；`--force` 强制重编 `.so`（默认 `.so` 已新则复用）；NDK 硬编码 /tmp/opencode/android-ndk-r25b；已知坑见 `14_tooling_catalog` build_apk 行（android-activity 不在根 members / x86_64 CC 连字符 / 单 crate >15min / E0753 / **lib 目录 ABI 映射 arm64-v8a** / **extractNativeLibs=true** / **res 两阶段 aapt2 + launcher 图标**，EXP-146/148） |
 | `scripts/publish_web.ps1` | 一键发布（S16.3：gate 全绿前置 + build_wasm + 本地静态断言 + release.md 发布历史 + gh-pages 线上复跑 web_playtest；线上不可达 = 降级登记不静默绕过） | `-Check` 只读前置体检；全链路失败非 0 |
-> **gate 项数**（2026-10 扩展，随对抗审计固化）：第 9 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
-> 第 10 项「数据表门禁」= `validate_data`（须绿）+ `gen_layout --check`（幂等绿）+ `check_hardcode`（严格 0 命中）。
+> **gate 项数**（2026-10 扩展，随对抗审计固化）：第 13 项 `doccheck`（ID/数值漂移 + 数据文件一致性）→
+> 第 14~16 项「数据表门禁」= `validate_data`（第 14 项，须绿）+ `gen_layout --check`（第 15 项，幂等绿）+ `check_hardcode`（第 16 项，严格 0 命中）。
 > 历史时点 gate 为 8 项（plan-s0-s2/s3/s4 文档保留「当时 8 项」注，勿直接改写）。
 
 > **对抗审计→门禁固化流程**（第 1-5 轮经验，EXP-048）：凡审计中发现「重复、可机械判定」的
 > 数值/引用/一致性检查，**必须**固化成 `doccheck` 数值断言或 gate 脚本项，否则下一轮必然复发。
 > 例：2041/0x343FD/save.magic 三条断言即来自第 4-5 轮审计反复出现的跨文档漂移。
-> **gate 第 11 项** = `check_oracle_boundary.py --check`（S8.8：shell 层 0 个 `oracle_*` 函数调用；oracle 仅作 rules 内部类型/几何参照物，EXP-057）。
-> **gate 第 14 项** = `check_ledger_reality.py`（S10.0：台账 verified ↔ evidence ↔ 代码符号三方对账，防子代理虚报，EXP-058；S9.5 commands.rs 虚报教训）。
+> **gate 第 19 项** = `check_oracle_boundary.py --check`（S8.8：shell 层 0 个 `oracle_*` 函数调用；oracle 仅作 rules 内部类型/几何参照物，EXP-057）。
+> **gate 第 23 项** = `check_ledger_reality.py`（S10.0：台账 verified ↔ evidence ↔ 代码符号三方对账，防子代理虚报，EXP-058；S9.5 commands.rs 虚报教训）。
 
 ### 待建
 
@@ -89,7 +89,7 @@
 | `scripts/scaffold.py` | 手写新场景/控件/模块骨架（套 [`03_templates.md`](03_templates.md)） | `scaffold.py scene --name foo` 生成可编译骨架；`--check` 校验已有文件符合模板 |
 | `cargo run -p ti-tools --bin doccheck` | 校验 data 表能反序列化 + 数值合法域（Rust 侧，与 Python 互补） | 单测 + 可跑 |
 
-**新增门禁项（gate 第 10 项，S8.2 已落地）**：`validate_data.py` + `legacy/scripts/gen_layout.py --check`
+**新增门禁项（gate 第 14~16 项，S8.2 已落地）**：`validate_data.py` + `legacy/scripts/gen_layout.py --check`
 + `check_hardcode.py` 全绿才允许置 verified——这样「数值非法」「控件表与来源不一致」
 「硬编码残留」会被机器拦住，不靠自觉。
 

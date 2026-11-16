@@ -17,12 +17,12 @@
 
 > 单一事实源：《金银岛》legacy UI 渲染链路的**路径、z-order、越界裁剪、PCX 透明**四类行为契约。
 > 任何改 `sprite_atlas.rs` / `terrain_atlas.rs` / `game_app.rs::render` / `menu_shell.rs` 的代码，
-> 必须先读本文档；改完必须过 `tests/render_invariants.rs`（gate 第 19 项）+ `scripts/check_data_source.py`（gate 第 20 项）。
+> 必须先读本文档；改完必须过 `tests/render_invariants.rs`（gate 第 27 项）+ `scripts/check_data_source.py`（gate 第 28 项）。
 > 本文档是**正向设计契约**（"渲染应当如何"）；逆向实现细节（原版函数地址、伪代码）仅作历史参照，归档 `legacy/`，不作为验收基准。
 
 > **排查原则（EXP-077）**：原版 ARM WinCE 程序本机跑不起来，**禁止向用户索要原版截图**。
 > 替代证据链：(a) 用户指认偏移量（看我渲染的 PNG，指出哪个精灵朝哪个方向偏了多少像素）；
-> (b) 像素级对比工具（`scripts/compare_render.py`，**TODO 未实现**，当前用 `element-dump` + `render_invariants` 测试替代，见 gate 第 19 项）；
+> (b) 像素级对比工具（`scripts/compare_render.py`，**TODO 未实现**，当前用 `element-dump` + `render_invariants` 测试替代，见 gate 第 27 项）；
 > (c) QEMU 系统模式（需 WinCE 镜像，本机没有）。
 
 ---
@@ -117,12 +117,12 @@
 
 | 门禁项 | 命令 | 判定 |
 |---|---|---|
-| **第 19 项 渲染结构不变式** | `cargo test -p ti-app render_invariants` | 7 场景 × 结构不变式（非黑覆盖率/内容签名互异/暖色板在位/TTF 在位），**无像素基线** |
-| **第 20 项 数据源门禁** | `python scripts/check_data_source.py` | `legacy/data/*.Map` / `*.pak` git diff 非空 → 强制跑第 19 项快照，漂移即 FAIL。 |
+| **第 27 项 渲染结构不变式** | `cargo test -p ti-app render_invariants` | 7 场景 × 结构不变式（非黑覆盖率/内容签名互异/暖色板在位/TTF 在位），**无像素基线** |
+| **第 28 项 数据源门禁** | `python scripts/check_data_source.py` | `legacy/data/*.Map` / `*.pak` git diff 非空 → 强制跑第 27 项快照，漂移即 FAIL。 |
 | **第 7 项 no-unwrap** | `scripts/gate.ps1` 第 7 项 | 渲染代码（含新增 `render_pipeline.rs`）0 处 `.unwrap()`/`.expect()`（tests/ 除外）。 |
-| **元素级验证（诊断 bin）** | `cargo run -p ti-app --features native-shell --bin element-dump -- <scene>` | 逐精灵 blit dump：`记录号 | f1 | 原点 | 精灵w×h | clip_rect 结果 | OK/CLIP/SKIP | 贡献像素`。报「特定区域错位/覆盖菜单」时先跑它定位到具体记录号 + f1 精灵（§7），再对照修复前后清单确认只有越界条从「拉回」变「SKIP」。与第 19 项全帧 diff 互补：全帧锁「整体没漂」，element_dump 定位「漂的是哪个元素」。 |
+| **元素级验证（诊断 bin）** | `cargo run -p ti-app --features native-shell --bin element-dump -- <scene>` | 逐精灵 blit dump：`记录号 | f1 | 原点 | 精灵w×h | clip_rect 结果 | OK/CLIP/SKIP | 贡献像素`。报「特定区域错位/覆盖菜单」时先跑它定位到具体记录号 + f1 精灵（§7），再对照修复前后清单确认只有越界条从「拉回」变「SKIP」。与第 27 项全帧 diff 互补：全帧锁「整体没漂」，element_dump 定位「漂的是哪个元素」。 |
 
-**数据源变更纪律**：任何 `legacy/data/*.Map` / `*.pak` 改动 → 必须同步跑快照门禁 + 更新基准，否则第 20 项 FAIL。
+**数据源变更纪律**：任何 `legacy/data/*.Map` / `*.pak` 改动 → 必须同步跑快照门禁 + 更新基准，否则第 28 项 FAIL。
 
 ---
 
@@ -198,7 +198,7 @@
 
 ## 8. 元素级验证法（EXP-076：逐精灵定位「哪个元素错位」）
 
-全帧 diff（`render_invariants` 第 19 项）只能告诉你「有没有漂移」，不能告诉你「哪个元素漂移」。
+全帧 diff（`render_invariants` 第 27 项）只能告诉你「有没有漂移」，不能告诉你「哪个元素漂移」。
 定位到具体元素用**逐精灵 dump**：
 
 ### 方法
@@ -231,5 +231,5 @@
 ### 固化
 
 `element_dump` 作为 ti-app 长期诊断 bin（`crates/ti-app/src/bin/element_dump.rs`，Cargo.toml 声明），
-不再临时删。它是渲染契约 §7 的机器工具，与 `render_invariants`（第 19 项全帧 diff）互补：
+不再临时删。它是渲染契约 §7 的机器工具，与 `render_invariants`（第 27 项全帧 diff）互补：
 `render_invariants` 锁「整体没漂」，`element_dump` 定位「漂的是哪个元素」。

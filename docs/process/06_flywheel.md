@@ -109,7 +109,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package P6
 2. 确认输出完整（7 条必读 + 白名单 + 本域红线 + 本域 EXP + gate 项 + doccheck2 断言均非空）；
 3. 回执「已读脚本输出，命中 N 条规范」+「开轮协作五步」段（第 7 条：澄清问题 / 决策点+所选方案+拍板留痕 / 草稿批准状态；写码类全走，只读角色报「0 个决策点」），不再逐个 Read 工具调用；
 4. 若输出中某条 EXP 与本次改动强相关 → 再读该 EXP 正文（分卷文件）；
-5. gate 加 `flywheel-readme -Check` 项（第 17 项）验证脚本输出完整性，缺项 FAIL。
+5. gate 加 `flywheel-readme -Check` 项（第 26 项）验证脚本输出完整性，缺项 FAIL。
 
 ## 7. 单轮流程
 

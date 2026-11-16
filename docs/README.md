@@ -10,7 +10,7 @@
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md)（循环协议 + **§9 长会话压缩纪律（S50.1，CCGS active.md 模式）**：压缩前 3 要素写 `evidence/<task>.state.md`，压缩后读 state.md 续接）+ `plan/ledger.yaml` + 本文件 |
 | **迁移 Linux / 换机器续工（会话总结 + 迁移操作 + 续工序列）** | [`migration_linux.md`](migration_linux.md)（迁移前二选一：整目录拷贝 or add -A 提交；在途 tracked-M + untracked-? 文件清单；Linux 环境准备 + `pwsh` 命令差异 + CRLF/无头 GPU 风险点 + 迁移后第一条命令序列；S27.7 进度快照） |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 36 项 + doccheck 门禁第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 36 项 + doccheck 门禁第 13 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
 | [process/03_templates.md §8 + docs/design-sheets/](process/03_templates.md) | **内容设计 sheet 模版（Canvas 概念落地，S16.4）**：加新地图/新岛类/新剧情 = 一张设计 sheet （四段式 A 业务定案 / B 数据 key 契约 / C 场景资源接线 / D 验收锚点 36 项门禁）；空样例 `assets/maps/m04/`（`map_pack add m04` 骨架，真内容落地后 verify 合规）+ `docs/design-sheets/m04.sheet.md`（模版填法示例，dod = 本任务只落模版不实现真内容） |
@@ -33,12 +33,12 @@
 | 文件 | 作用 |
 |---|---|
 | [`00_design.md`](00_design.md) | **正向设计总入口**：核心循环 + 数据驱动分层 + crate 架构 + 9 场景流 + 模块包 + 场景宿主窄接口（不读 legacy/） |
-| [`parity.md`](parity.md) | P0~P4 对齐标准 + **门禁项数与计数约定的唯一事实源**（doccheck 门禁第 9 项含跨文档数值漂移 + release 台账计数同步） |
+| [`parity.md`](parity.md) | P0~P4 对齐标准 + **门禁项数与计数约定的唯一事实源**（doccheck 门禁第 13 项含跨文档数值漂移 + release 台账计数同步） |
 | [`gamebook.md`](gamebook.md) | **可玩实现手册**：把已验证 `rules` 接进交互壳的全流程接线规格（S5 起） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收）⚠️ **GBK 编码，勿用 `Set-Content` 编辑** |
 | [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP；**§5.6.6 标准库 trait 选用矩阵 + 重构操作规程**） |
 | [`git.md`](git.md) | 推送规范（远端 origin/分支模型/推送规则/commit 格式/推送检查清单） |
-| [`check_ledger_reality.md`](check_ledger_reality.md) | 防虚报：台账 `verified` ↔ `evidence` ↔ 代码符号三方对账（EXP-058；gate 第 14 项） |
+| [`check_ledger_reality.md`](check_ledger_reality.md) | 防虚报：台账 `verified` ↔ `evidence` ↔ 代码符号三方对账（EXP-058；gate 第 23 项） |
 | [`plan-archive.md`](plan-archive.md) | **历史阶段计划归档索引**（S0~S8 逐阶段摘要 + 原文件位置；查背景用，非开发依据） |
 
 ### 标准化流程（`docs/process/`，不依赖逆向产物）
@@ -53,11 +53,11 @@
 | [process/05_module_parallel.md](process/05_module_parallel.md) | **模块并行开发 loop**（一轮 4 步 + 包划分 + 并行纪律 5 条 + §4.5 开轮必读/规范回执；机读白名单 plan/packages.yaml） |
 | [process/06_flywheel.md](process/06_flywheel.md) | **对抗流水线飞轮**（找问题/审计/修复 3 角色 + 开轮必读 7 条〔S51.0 起含第 7 条「开轮协作五步」CCGS 五步协议形态借鉴〕+ 飞轮回写 + 停机条件；EXP-068 单一事实源） |
 | [process/08_playtest_loop.md](process/08_playtest_loop.md) | **试玩闭环 loop**（S16.2：试戏/归因/修复/复测 4 角色 + 4 份运行时报告 fuzz_playtest/full_run/visual_regression/web_playtest + 归因三分类回写 + 3 轮收敛停机；开轮必读与回写口径复用 06_flywheel，不重造） |
-| [process/07_render_pipeline.md](process/07_render_pipeline.md) | **legacy 像素管线契约**（路径表/z-order 文件顺序/越界求交裁剪/PCX 透明位 index 0；S16 起降级为逆向参照，gate 第 19/20 项锚点） |
+| [process/07_render_pipeline.md](process/07_render_pipeline.md) | **legacy 像素管线契约**（路径表/z-order 文件顺序/越界求交裁剪/PCX 透明位 index 0；S16 起降级为逆向参照，gate 第 27/28 项锚点） |
 | [process/08_render_arch.md](process/08_render_arch.md) | **运行时渲染架构**（分层/绘制原语/z-order=调用顺序/5 条坐标与像素来源契约/grep 门禁/测试重锚矩阵；改渲染代码必读） |
 | [process/09_render_framework.md](process/09_render_framework.md) | **`ti-render` crate 边界契约**（职责与禁止项/模块结构/Theme schema/迁移映射/数据分离原则；改 `crates/ti-render/` 代码前必读） |
 | [process/10_ui_redesign.md](process/10_ui_redesign.md) | **界面全量重设计·航海夜精修规格（S17 单一事实源）**：设计令牌 v2（色板 13 色/8pt 栅格/字号阶/动效 4 参数/图标 14 项）+ 7 场景版面增量 + 对比度 AA 表 + 验收锚点（改 UI 视觉量前必读） |
-| [ui-redesign-v3/README.md](ui-redesign-v3/README.md) | **UI 重设计 v3 · 真游戏化版面**（对标拆解 01 + 场景叙事 DSL 规格 02 + 7 场景重设计提案 03 + index 落地 04 + vs 落地 05 + main_map 全量落地 06；gate 第 28 项 `check_scene_narrative` 锚点；v2 的"7 场景同模板"前提由 v3 取代） |
+| [ui-redesign-v3/README.md](ui-redesign-v3/README.md) | **UI 重设计 v3 · 真游戏化版面**（对标拆解 01 + 场景叙事 DSL 规格 02 + 7 场景重设计提案 03 + index 落地 04 + vs 落地 05 + main_map 全量落地 06；gate 第 30 项 `check_scene_narrative` 锚点；v2 的"7 场景同模板"前提由 v3 取代） |
 | [ui-redesign-v3/07_v3_5_pass.md](ui-redesign-v3/07_v3_5_pass.md) | **v3.5 真游戏化重设计**（地形数据 + 暖色板 + 画布贴合 + 实体图标化 + HUD/命令盘黄铜化；S18.9~S18.13 执行链；画面丑的根因=设计数据而非渲染/分离） |
 | [ui-redesign-v3/08_main_map_v4_spec.md](ui-redesign-v3/08_main_map_v4_spec.md) | **main_map 重设计 v4「羊皮海图桌面」版面与交互规格**（S21.3 定案：满屏海图 `chart_full` + 顶角双铜牌 + 岛只画陆/礁/宝 + 黄铜航线多形状节点牌 + 船玩家 + 舵轮 CTA；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 交互契约；坐标单一事实源，镜像 `business/08_layout_design.md` §4.3；落码 = S21.4~S21.7/S21.12） |
 | [ui-redesign-v3/09_index_compass_spec.md](ui-redesign-v3/09_index_compass_spec.md) | **首页 index 重设计「罗盘环标题页」版面与交互规格**（S22.0：C 方向罗盘导航 + 羊皮海图底与 main_map v4 统一；满屏 `chart_full` + 中心舵轮 `helm` + 6 铜质 medallion 沿环（白蒙版图标 gold tint）+ 版本签；逐元素坐标表 + N8/8pt/原语闭集门禁耦合 + 资产接线 + 6 徽章命中契约；坐标单一事实源；落码 = S22.1 出 medallion_ring 资产 / S22.2 落码 / S22.3 出图验收） |
@@ -274,4 +274,4 @@
 1. **单一事实源**：同一结论只写在一处，其他文档**引用 ID**（`F-xxx` / `EXP-xxx` / `P0-x`）而不是复述。
 2. **反例**：曾出现 `parity.md` 的 P1-3 与 P3-1 复述同一判据、`style.md` 复述 REA 工具清单 —— 均已改为引用。
 3. **长行禁令**：表格单元格不得塞整段散文（>300 字符）；长结论拆成「短结论 + 指向 `legacy/docs/facts/<分卷>.md`」。
-4. **`doccheck` 门禁**：gate 第 9 项独立命令，自动校验 ID 唯一性、跨文档引用有效性、数字断言一致性、evidence 内容特征。见 [`parity.md`](parity.md)。
+4. **`doccheck` 门禁**：gate 第 13 项独立命令，自动校验 ID 唯一性、跨文档引用有效性、数字断言一致性、evidence 内容特征。见 [`parity.md`](parity.md)。

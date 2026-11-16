@@ -78,13 +78,13 @@
 | **首页 index 重设计「罗盘环标题页」（S22.0 定案坐标/交互/资产接线；改**竖屏**首页版面/罗盘环/徽章/舵轮前必读）** | `docs/ui-redesign-v3/09_index_compass_spec.md`（C 方向 + 羊皮海图底与 main_map v4 统一：满屏 `chart_full` + 中心舵轮 `helm` + 6 铜质 medallion 沿环（白蒙版图标 gold tint）+ 版本签；逐元素坐标表 + N8/8pt 径向键豁免 + 资产接线 + 6 徽章命中契约；单一事实源；落码 = S22.1 出 `medallion_ring` 资产 / S22.2 落码 / S22.3 出图验收） |
 | **首页 index **横屏**重设计「羊皮藏宝图 + 绳挂木牌」（S39 定案；改横屏首页版面/菜单/标题/资产前必读）** | `docs/ui-redesign-v3/14_index_treasure_map_spec.md`（满屏羊皮藏宝图 + 标题**融合进图**（正片叠底烘焙进底图 + 逐字鎏金/冷银/铜绿墨）+ 冷峻红头巾海盗 & 熊猫海盗互动层 + 右列绳挂木牌菜单（烙印文案 + AI 图例徽章图标）+ 16 件拆件资产 + 逐元素坐标表（横屏 1920×1080）+ 命中契约 `pick_key=1`；**§4 = S39 数据化重构**：index 版面归 `scenes.json`（`ti-engine::ui::build_data_chrome` 通用「原语→bevy_ui」通道；Rust 罗盘环已删，竖屏由数据还原）⇒ **此后换首页 UI = 改数据 + 换资产 = Rust 零改动**） |
 | **环岛赛道 / 摇骰前进（S19，主地图主玩法）** | `docs/business/progression.md` §环岛赛道（单一事实源）+ `assets/data/board.json`（赛道数据，`scripts/extract_board.py` 生成）+ `rules::board`（`ti-core`）；改主地图移动/落格结算/轨道数据前必读 |
-| **改渲染代码（sprite_atlas/terrain_atlas/game_app render/越界/透明/z-order）前必读** | `docs/process/08_render_arch.md`（**运行时架构契约**：分层 / 绘制原语 / z-order=调用顺序 / 单一 1080 坐标系 / grep 门禁；gate 第 9 项 doccheck2 `check_runtime_no_legacy_coords`（gate_data.json 第 13 项 doccheck2 内子检查））<br>`docs/process/07_render_pipeline.md`（legacy 像素管线契约，已降级为逆向参照） |
+| **改渲染代码（sprite_atlas/terrain_atlas/game_app render/越界/透明/z-order）前必读** | `docs/process/08_render_arch.md`（**运行时架构契约**：分层 / 绘制原语 / z-order=调用顺序 / 单一 1080 坐标系 / grep 门禁；gate 第 22 项 doccheck2（`runtime-no-legacy-coords` 子检查，gate_data.json `doccheck2_checks` 第 20 项））<br>`docs/process/07_render_pipeline.md`（legacy 像素管线契约，已降级为逆向参照） |
 | **改 `crates/ti-render/`（渲染框架 crate）代码前必读** | `docs/process/09_render_framework.md`（**ti-render crate 边界契约**：职责与禁止项 / 模块结构 / Theme schema / 迁移映射 / 数据分离原则；注意本 crate **无 z-order 枚举**，层序在 `chrome::scene_shell` 调用序） |
 | **S18 渲染引擎迁移（Bevy 0.20）· 改引擎层/加 bevy 依赖前必读** | `docs/process/11_bevy_migration.md`（**迁移裁决单一事实源**：差距定稿 / 定案推翻签核（macroquad 定案 + 旧 800KB wasm 预算作废，新预算 **≤8MB**）/ 架构形状（新 crate `ti-engine` + Canvas 后端替换 + 双渲染期）/ WBS S18.0–S18.8 / 风险） |
 | 可玩实现手册（已验证 rules 接进交互壳的接线规格） | `docs/gamebook.md` |
 | 当前可玩范围 / 平台产物 / 已知限制 / 如何运行 | `docs/release.md`（纯 UTF-8，编辑 CJK 内容时勿用 `Set-Content`，见 EXP-051/091；§发布 = publish-web 发布历史 + Pages 降级实测定态） |
 | **一键发布（浏览器版上线 / 出 gh-pages / 查发布历史）** | `scripts/publish_web.ps1`（S16.3：gate 全绿前置 → `build_wasm` → 本地 `serve` 静态断言 200/content-type → 发布历史 sha256+git short sha 入 `release.md` §发布 → `git worktree` 隔离推 `gh-pages` → 线上 URL 复跑 `web_playtest`；**Pages 不可写 = 实测定态降级登记 `release.md` 已知限制，不静默绕过**；`-Check` 只读体检） |
-| 防虚报：台账 verified ↔ evidence ↔ 代码符号三方对账 | `docs/check_ledger_reality.md`（EXP-058；gate 第 14 项） |
+| 防虚报：台账 verified ↔ evidence ↔ 代码符号三方对账 | `docs/check_ledger_reality.md`（EXP-058；gate 第 23 项） |
 | S10 现代化收口总计划（P0 修复/占位清零/GPU 渲染） | `docs/plan-s10-refactor.md`（历史阶段文档） |
 | S11 正向开发收口（逆向归档 legacy/ + 业务闭环） | `docs/plan-s11-forward.md`（历史阶段文档，§7 交接快照） |
 | S12 模块化并行 WBS | `docs/plan-s12-parallel.md` |
@@ -141,9 +141,9 @@ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test  --workspace
-cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（gate 第 8 项）
-cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 9 项，含跨文档数值断言 + release 台账计数漂移）
-python scripts/check_ledger_reality.py                         # 台账三方对账（gate 第 14 项，verified↔evidence↔代码符号，EXP-058）
+cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（gate 第 12 项 ledger validate）
+cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 13 项，含跨文档数值断言 + release 台账计数漂移）
+python scripts/check_ledger_reality.py                         # 台账三方对账（gate 第 23 项，verified↔evidence↔代码符号，EXP-058）
 
 # S2.5：构建浏览器产物到 web/（S18.8a 起 = Bevy 交付壳 `treasure-bevy-wasm` + 真实资源；
 # 浏览器页 wasm-bindgen 胶水 + HTML 属 S18.8e）

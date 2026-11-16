@@ -34,7 +34,7 @@ tasks:
 2. 实现（按 WBS 产出物落地，禁止留占位实现）
    - **判据命令须可实跑**（S46.1 / EXP-170+171）：写在 dod / parity.md 里的 `cargo run|test`
      命令，多 bin crate 必须显式 `--bin <name> --`；python/pwsh 脚本须文件在位。
-     机器守门 = `scripts/check_dod_commands.py`（gate 第 25 项，载体缺失 / 歧义形式 = FAIL）。
+     机器守门 = `scripts/check_dod_commands.py`（gate 第 35 项，载体缺失 / 歧义形式 = FAIL）。
 3. 跑该任务的验收命令 → 输出存 evidence/<id>.log
 4. 跑 scripts/gate.ps1（全局门禁，36 项）
 5. gate 全绿 → ledger 置 verified + evidence；否则 rounds+=1，按规则拆解/标记 blocked
@@ -63,7 +63,7 @@ tasks:
 任务 ≥ 2 个且**文件域不相交**时，不走 §2 串行取件，改走并行轮。
 唯一事实源 = [`process/05_module_parallel.md`](process/05_module_parallel.md)（一轮 4 步：
 契约冻结 → 多包并行 → 集成联调 → 记账；包白名单 = `plan/packages.yaml`；任务书模板 =
-`03_templates.md` §7；机器判定 = gate 第 15/16 项）。
+`03_templates.md` §7；机器判定 = gate 第 24/25 项）。
 
 与 §2 的分工：§2 管「单任务何时开工」，§7 管「多任务怎么同时开工」。
 §6 多会话并行规则（文件域 + 分支模型）在 §7 下仍全部适用。

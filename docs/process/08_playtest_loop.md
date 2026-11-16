@@ -57,10 +57,10 @@
 cargo test -p ti-app --test fuzz_playtest
 cargo run -q -p ti-app --features headless --bin treasure-headless -- --script tests/scripts/full_run.json
 cargo test -p ti-app --test render_invariants
-# web_playtest 需 serve 在跑（gate 第 23 项同款前置）：
+# web_playtest 需 serve 在跑（gate 第 33 项（browser-playtest）同款前置）：
 cargo run -q -p ti-tools --bin serve -- --dir web --port 8080 &
 node scripts/web_playtest.cjs
 ```
 
-gate 第 24 项 `playtest-loop` = 4 报告聚合断言（全 0 失败 + 收敛记录在 `evidence/S16.2.log`）；
+gate 第 34 项 `playtest-loop` = 4 报告聚合断言（全 0 失败 + 收敛记录在 `evidence/S16.2.log`）；
 playbook `playtest-loop` 命令 = 一条命令出 4 报告 + 三分类清单。

@@ -1,4 +1,4 @@
-# 台账三方对账（S10.0 增 gate 第 14 项，2026-10 起进 `scripts/gate.ps1`）
+# 台账三方对账（S10.0 增 gate 第 23 项——S10.0 时点第 14 项，2026-11 起按现行去重口径第 23 位，2026-10 起进 `scripts/gate.ps1`）
 
 > **目的**：验证台账 `plan/ledger.yaml` 里每条 `status: verified` 的任务，
 > 其 `evidence` 文件**真实存在且非空**，且 dod 声明的关键产物在代码里 grep 得到。

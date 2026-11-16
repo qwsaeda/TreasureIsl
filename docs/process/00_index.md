@@ -74,7 +74,7 @@
 | [`03_templates.md`](03_templates.md) | 可复制的模版：场景 / 控件 / 数据表 / 模块 / 测试 |
 | [`04_tooling.md`](04_tooling.md) | 脚本与 codegen 工具链、幂等要求、新增工具的登记方式 |
 | [`05_module_parallel.md`](05_module_parallel.md) | **模块并行开发 loop**（契约冻结 → 多包并行 → 集成联调 → 记账；包白名单互斥 + 任务书模板 + 纪律 5 条） |
-| [`06_flywheel.md`](06_flywheel.md) | **对抗流水线飞轮**（找问题 / 审计 / 修复 3 角色 + 开轮必读 7 条〔S51.0〕+ 飞轮回写 + 停机条件；gate 第 17 项） |
+| [`06_flywheel.md`](06_flywheel.md) | **对抗流水线飞轮**（找问题 / 审计 / 修复 3 角色 + 开轮必读 7 条〔S51.0〕+ 飞轮回写 + 停机条件；gate 第 26 项） |
 | [`07_render_pipeline.md`](07_render_pipeline.md) | **legacy 像素管线契约**（路径表 / z-order 文件顺序 / 越界求交裁剪 / PCX 透明位 index 0）；S16 起**降级为逆向参照**——运行时架构见 08 |
 | [`08_render_arch.md`](08_render_arch.md) | **运行时渲染架构**（分层 / 绘制原语 / z-order=调用顺序 / 5 条坐标与像素来源契约 / grep 门禁 / 测试重锚矩阵；改渲染代码前必读） |
 | [`09_render_framework.md`](09_render_framework.md) | **`ti-render` crate 边界契约**（职责/禁止项 / 模块结构 / Theme schema / 从 ti-app 的迁移映射 / 数据分离原则；改 `crates/ti-render/` 代码前必读） |
@@ -151,4 +151,4 @@
 1. **单一事实源**：一个结论只写一处，其他文档引用 ID；
 2. **长行禁令**：表格单元格不得塞整段散文（>300 字符）；
 3. **不复制粘贴**：`parity.md` / `README.md` 里的清单改为链接到本目录；
-4. 新增文档必须登记 [`docs/README.md`](../README.md)（门禁第 9 项自动校验）。
+4. 新增文档必须登记 [`docs/README.md`](../README.md)（门禁第 13 项自动校验）。

@@ -40,11 +40,11 @@
 |---|---|---|
 | 角色分层 | 49 agent（总监 3 Opus / 主管 9 Sonnet / 专家 38 Sonnet/Haiku） | 22 号双审计 A/B + 飞轮 3 角色 + 临时 spawn 子代理，无 agent 配置文件 |
 | 协作规则 | `coordination-rules.md` 7 条 prose | `05_module_parallel.md` §4 并行纪律 6 条（文件域不相交/契约全票/集成轮门禁/打回不代劳/环境事实前置/必读清单） |
-| 路径作用域 | 14 个 `rules/*.md` `paths:` glob + `validate-write.sh` 机器拦截 | `plan/packages.yaml` 包白名单 + `check_module_contracts.py`（gate 第 16 项）；**无「路径下编码红线」文件层** |
+| 路径作用域 | 14 个 `rules/*.md` `paths:` glob + `validate-write.sh` 机器拦截 | `plan/packages.yaml` 包白名单 + `check_module_contracts.py`（gate 第 25 项）；**无「路径下编码红线」文件层** |
 | 过程 Hook | 15 事件（commit 前 / 写前 / 压缩前后 / 子代理审计） | 无过程 hook；收口时刻 = `gate.ps1` 35 项（S50 立项时点；现行以 `assets/gate_data.json` 实测为准，飞轮 R10 勘误注明时点） + `check_ledger_reality` 三方对账 |
 | 停机判据 | 无显式（5 步协议 = 问→方案→拍板→草稿→批准） | 06_flywheel §4 三条（找问题 0 / 审计 0 误报 / 修复 0 残留）+ 主线程复核（EXP-038/058） |
 | 审计日志 | `agent-audit.log` 管道符格式 | `evidence/console/audit-<task>-r<N>-<role>.md` 四行机器可解析字段 |
-| 防虚报 | `code-review/SKILL.md`「NOT ASSESSED — NO DATA」+ `validate-commit.sh` | `check_ledger_reality`（gate 第 14 项）+ `evidence/<task>.log` 必须含任务自己判据 |
+| 防虚报 | `code-review/SKILL.md`「NOT ASSESSED — NO DATA」+ `validate-commit.sh` | `check_ledger_reality`（gate 第 23 项）+ `evidence/<task>.log` 必须含任务自己判据 |
 | 成本控制 | 模型 pin + 3 档 rigor | -Fast/-Touch/full 三档 gate（99% 时间在 8 个 cargo 项上），无模型 pin |
 
 **结论**：CCGS 强在**过程约束**（写码时有人/有 hook 盯着）；我方强在**收口约束**（做完必须出示证据 + 机器核验）。
@@ -81,7 +81,7 @@ CCGS 14 个 `rules/*.md` 的 `paths:` frontmatter + 该路径下编码红线正�
 `ti-core` / `ti-engine` / `ti-app scenes` / `scripts` / `assets-data`），frontmatter `paths:` glob + 正文 4~6 条红线；
 门禁面 = doccheck2 第 43 项断言「5 文件齐全 + `paths:` 非空 + glob 合法 + 正文非空」。
 **注意**：这层是「给 LLM 子代理开轮读的红线速查面」，机器拦截仍走既有 `check_module_contracts.py`
-（gate 第 16 项，白名单机制），不重复造 hook。
+（gate 第 25 项，白名单机制），不重复造 hook。
 
 ## 4. 4 个不借鉴点（决策留痕，不立任务）
 

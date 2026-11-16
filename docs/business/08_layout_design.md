@@ -112,7 +112,7 @@
 | 仪式标题面板（v3） | `title_art {x:112, y:192, w:856, h:672}` | S18.6 暖金版：`ornate_frame` 精致木框（木色外框 + 金色内线 + 四角卷角 + 置顶指南针玫瑰），与标题/副标题同处 192..864 仪式区 |
 | 星空氛围层（v3） | `ambient_art {x:0, y:0, w:1080, h:1920, center_x:50, center_y:52, exclude:12}` | v3.1 双写：`chrome::star_sky` 确定性 26 星（无 RNG，快照可复现），绘制夹 12px 外框内，z-order 在外壳之后/菜单之前（P-SoT-2）；飞轮 R1 ④-05/①-32：星位表 + 屏心净空参数（`center_x`/`center_y`/`exclude` 百分数）数据化 |
 | 星空氛围层 · 星位表（v3） | `ambient_art.stars [{x:8, y:9}, {x:22, y:5}, {x:36, y:14}, {x:52, y:7}, {x:71, y:11}, {x:88, y:6}, {x:15, y:21}, {x:64, y:19}, {x:90, y:23}, {x:6, y:33}, {x:30, y:29}, {x:79, y:31}, {x:94, y:40}, {x:10, y:47}, {x:86, y:51}, {x:18, y:60}, {x:92, y:63}, {x:7, y:72}, {x:38, y:68}, {x:84, y:75}, {x:14, y:84}, {x:62, y:81}, {x:91, y:88}, {x:25, y:91}, {x:48, y:94}, {x:74, y:92}]` | 26 星（百分数 x/y；亮星 = `size:2` + 四向光晕，暗星 = `size:1`；飞轮 R1 ④-05：星位表 = 数据，渲染层只遍历） |
-| 视觉重心锚（S22 罗盘环） | `focus_anchor {type:compass_ring, bbox:{x:65, y:500, w:950, h:941}}` | S22 罗盘环标题页重心区（`ui_schema/scene_manifest_v3.json` index `focus.bbox_pct {6,26,88,49}` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点（坐标单一事实源 = `09_index_compass_spec.md`） |
+| 视觉重心锚（S22 罗盘环） | `focus_anchor {type:compass_ring, bbox:{x:65, y:500, w:950, h:941}}` | S22 罗盘环标题页重心区（`ui_schema/scene_manifest_v3.json` index `focus.bbox_pct {6,26,88,49}` × (1080,1920)）；gate 第 30 项 `check_scene_narrative` N8 对账锚点（坐标单一事实源 = `09_index_compass_spec.md`） |
 
 不变式：`920 ≥ 108`（首块不压标题条）、`1432 ≤ 1840`（末块不撞提示行）。
 
@@ -121,7 +121,7 @@
 
 界面 = **通用原语**数组（`rect`/`text`/`icon`/`grad`/`glow`/`disc` 六种）；渲染层只认这六种，
 **不认识**"菜单""木框"等场景语义（场景语义全在数据里）。渲染层契约由
-`scripts/check_data_driven.py` 门禁守护（gate 第 24 项）。
+`scripts/check_data_driven.py` 门禁守护（gate 第 17 项）。
 
 | kind | 用途 | 关键参数 |
 |---|---|---|
@@ -156,7 +156,7 @@
 | 锁定标记列 | — | `locked {text_x:920, inset:6, max_w:40, min_w:4, h:12}`（QA033 钳制公式不变：卡片右缘 = 1000；飞轮 R1 ③-13：几何参数组入 JSON） |
 | BOSS 难度星（S19.5） | — | `stars {size:14, gap:6, inset:12, top:10, max:3, bevel_px:2}`（飞轮 R1 ③-14：星几何组入 JSON；`max` 仅几何上限，星数钳制规则在 `rules::progression`） |
 | 立绘锚（S18.7d） | `hero_art {x:76, y:184, w:440, h:664}`（S18.20：立绘**贴图** 2:3 区） | —（地图拼贴区 = 重心区，chrome 全在 `primitives`） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:130, w:356, h:534}}`（S18.20 = 立绘区） | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 22 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:130, w:356, h:534}}`（S18.20 = 立绘区） | `focus_anchor {bbox:{x:76, y:230, w:562, h:1190}}`（gate 第 30 项 `check_scene_narrative` N8 对账，manifest `focus.bbox_pct` × (1080,1920)） |
 | 提示行 | `hint {x:540, y:1840}` | 同左（JSON 原语 tier hint） |
 | 动态区 | `portrait_zones [{0,240,1080,1460}]` | `portrait_zones [{0,240,1080,960}]` |
 
@@ -209,7 +209,7 @@
 | 落格提示签条（v4） | 运行时绘制，中心 `(540, 1632)`（签条 {344,1600,392,64}） | S21.6：`brass_dark` 底板 + 黄铜边，宽按字自适应（最小 392）；落在三键下沿 1576 之下；骰点在 CTA 上沿 1136 |
 | 画布实体比例（v3） | `canvas_entities {player:100, landmark:80, boss:96}` | 实体边长 = `board_fit.tw` × 百分比（v4 tw=24 → 24/19/23）；缺席回退 v2 `player.size` 等（QA106） |
 | 金币光 FX 触发点（S18.5） | `fx_coin {x:272, y:144}` | S21.6：顶左铜牌中心（飞轮 R1 ③-02 数据化：FX 坐标 = 版面数值，代码读键不裸写） |
-| 视觉重心锚（v4） | `focus_anchor {bbox:{x:43, y:250, w:994, h:826}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` main_map `focus.bbox_pct{4,13,92,43}` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点 |
+| 视觉重心锚（v4） | `focus_anchor {bbox:{x:43, y:250, w:994, h:826}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` main_map `focus.bbox_pct{4,13,92,43}` × (1080,1920)）；gate 第 30 项 `check_scene_narrative` N8 对账锚点 |
 
 不变式（v4 版面叠放，自上而下不重叠）：铜牌底 `240` ≤ 画布顶 `250`（`hud_plaque_*` 底 48+192=240）；
 画布 `250..1076` < 进度尺 `1088..1136` < CTA `1160..1424` < 三键 `1440..1576` < 签条 `1600..1664`；
@@ -236,7 +236,7 @@
 | 提示行 | `hint {x:540, y:1840}` | 攻击/返回 |
 | 动态区 | `portrait_zones [{0,170,1080,1680}]` | 玩家/BOSS 代码方块允许落区 |
 | 战斗竞技区（v3） | `battle_arena {x:76, y:230, w:918, h:998}` | v3.1 双写：`chrome::battle_arena` 三层甲板阶梯 + 罗盘饰 + 饰线垫底（z-order 外壳之后、血条/回合文本之前）；血条带 `168..216` 在竞技区顶之上不重叠；8pt 豁免（v3 键，ui-redesign-v3/02 §10） |
-| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:918, h:998}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` vs `focus.bbox_pct` × (1080,1920)）；gate 第 22 项 `check_scene_narrative` N8 对账锚点 |
+| 视觉重心锚（v3） | `focus_anchor {bbox:{x:76, y:230, w:918, h:998}}` | 场景叙事 DSL 重心区（`ui_schema/scene_manifest_v3.json` vs `focus.bbox_pct` × (1080,1920)）；gate 第 30 项 `check_scene_narrative` N8 对账锚点 |
 
 不变式：`player_hp.x+w ≤ 1080`、`boss_hp.x+w ≤ 1080`；**双条互斥**：`boss_hp.x - (player_hp.x+w) ≥ 40`（64..512 / 576..1024，gap=64，QA140/QB120）；`rounds`/`empty`/`outcome` 均不在血条带 `y=168..216` 内。
 

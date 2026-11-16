@@ -346,7 +346,7 @@ crates/ti-render/       = 渲染**资源与度量**（theme 令牌 / TTF 度量 
 |---|---|
 | ① 改数据能改画面，渲染代码 0 改动 | 对照实验（改 `scenes.json` → 画面变 → `git diff` 渲染层 = 空） |
 | ② 加视觉元素 = 只加 JSON | 新增效果 = 追加 `primitives` 项 |
-| ③ 渲染层无场景语义 | **gate 第 24 项 `check_data_driven`**：grep 渲染层禁出现场景名/场景专属 kind；kind 分支 ⊆ 六原语 |
+| ③ 渲染层无场景语义 | **gate 第 17 项 `check_data_driven`**：grep 渲染层禁出现场景名/场景专属 kind；kind 分支 ⊆ 六原语 |
 | ④ 令牌拼错会静默失真 | 同门禁：数据侧引用的令牌必须存在于 theme（防"令牌不存在 → 渲染器回退"） |
 | ⑤ 两后端同源 | 同一份 `primitives` → CPU 执行器（`ti-render::generic`）与 Bevy 执行器（`ti_engine::scene_render`）出同一画面 |
 

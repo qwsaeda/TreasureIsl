@@ -344,13 +344,13 @@
    "level": "L4",
    "category": "regression",
    "type": "ci",
-   "name": "全量门禁 33 项",
+   "name": "全量门禁 36 项",
    "command": "powershell -ExecutionPolicy Bypass -File scripts/gate.ps1",
    "evidence": "evidence/gate.log",
    "group": "platform",
    "timeout_s": 1800,
    "prove": "evidence/tests/gate_full/",
-   "desc": "做什么：跑全量门禁 35 项（scripts/gate.ps1，fmt/clippy/test/build/占位/unwrap/zero-unknown/台账/doccheck/doccheck2/三方对账/业务闭环/渲染不变式/wasm e2e/浏览器试玩 等）。测什么：全仓质量底线。达到效果：全绿才可置 verified（硬规则 2 验收载体）。 逐测：全量 35 项门禁（fmt/clippy/test/build/占位/unwrap/台账/doccheck/doccheck2/三方对账/渲染不变式/wasm e2e/浏览器试玩），断言 0 failure。"
+   "desc": "做什么：跑全量门禁 36 项（scripts/gate.ps1，fmt/clippy/test/build/占位/unwrap/zero-unknown/台账/doccheck/doccheck2/三方对账/业务闭环/渲染不变式/wasm e2e/浏览器试玩 等）。测什么：全仓质量底线。达到效果：全绿才可置 verified（硬规则 2 验收载体）。 逐测：全量 36 项门禁（fmt/clippy/test/build/占位/unwrap/台账/doccheck/doccheck2/三方对账/渲染不变式/wasm e2e/浏览器试玩），断言 0 failure。"
   },
   {
    "id": "visual_signoff",
