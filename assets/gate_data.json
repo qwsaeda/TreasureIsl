@@ -362,6 +362,10 @@
    "impl": "rust",
    "rules": "doccheck 输出计数（docs/facts/experiences/task refs）↔ 26号 声称点对账（陈旧数防复发）",
    "note": "S55 飞轮 R9 固化"
+  },
+  {
+   "id": "state-md-discipline",
+   "impl": "rust"
   }
  ]
 }

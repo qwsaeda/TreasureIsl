@@ -63,6 +63,13 @@
 | **P4 流程菜单** | 主菜单/选角/选图/消息/渲染 | `crates/ti-core/src/rules/{menu,selection,messages,main_loop,render}.rs`、`domain/{flow,selection,messages,render}.rs` | D |
 | **P5 存档 + RNG** | 存档 v2 + 迁移 + 可复现随机 | `crates/ti-core/src/rules/{saveload,saveload_json,rng}.rs`、`domain/persistence.rs`、`tests/{rules_saveload,rules_saveload_json,save_migration}.rs` | **P1–P4 状态结构稳定后** |
 | **P6 表现层**（后续轮） | 场景/控件/渲染/输入 | `crates/ti-app/src/{scenes,widgets.rs,touch.rs,menu_shell.rs}`、`crates/ti-platform/src/**` | P1–P5 会话 API 冻结 |
+| **P7 引擎域**（S57.0） | Bevy 壳（UI chrome/渲染/命中/主循环） | `crates/ti-engine/src/**`、`crates/ti-engine/tests/**` | P6 |
+| **P8 平台域**（S57.0） | 开发管理平台 + 共享层 | `crates/ti-console/src/**`、`crates/ti-devmeta/src/**`、`crates/ti-console/tests/**` | 无（与游戏 6 crate 解耦） |
+
+> **S57.0 补包域（2026-11-16 轨道 3 M-17）**：原 7 包（D + P1~P6）只挂 `ti-core-rules` + `ti-app-scenes-rules`
+> 2/6 红线；`ti-engine-rules`/`scripts-rules`/`assets-data-rules`/`ti-console-rules` 4 域 0 包持有 ⇒ 包域开轮
+> （`flywheel_readme.ps1 -Package P1~P6`）红线注入 0 命中 4 域。补 P7/P8 后 6 红线全挂包域
+>（P7→ti-engine-rules、P8→ti-console-rules；scripts/assets-data = D 域开轮面，`-All` 全域开轮读全 6 个）。
 
 **包依赖铁律**
 

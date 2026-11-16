@@ -124,3 +124,29 @@ packages:
       - crates/ti-app/tests/e2e_playthrough.rs
       - crates/ti-app/tests/app_progression_wiring.rs  # 跨图推进接线验收（game_app.rs，EXP-088 闭环）
       - crates/ti-render/tests/  # 渲染框架单测（theme_json 等）
+
+  # S57.0（2026-11-16 轨道 3 M-17 拍板）：红线挂包域补全——原 P 包 7 个（D + P1~P6）只挂
+  # ti-core-rules + ti-app-scenes-rules 2/6 红线；ti-engine/scripts/assets-data/ti-console
+  # 4 个域 0 包持有 ⇒ 包域开轮（-Package P1~P6）红线注入面 0 命中 4 域。补 P7/P8 两包域
+  # 使 6 红线全挂（check_module_contracts 白名单互斥自动覆盖；D 包持有 assets 域 = assets-data-rules
+  # 由 D 域开轮注入，非 P 包，P 域 0 命中 = 数据/资产面开轮读 D 域或全域 -All）。
+  - id: P7
+    name: "引擎域（ti-engine Bevy 壳：UI chrome/渲染/命中/主循环；飞轮 R 起 ti-engine 红线注入面）"
+    status: draft
+    depends_on: [P6]
+    files:
+      - crates/ti-engine/src/
+      - crates/ti-engine/tests/
+    tests:
+      - crates/ti-engine/tests/
+
+  - id: P8
+    name: "平台域（ti-console 开发管理平台 + ti-devmeta 共享层；R10 平台面审计载体）"
+    status: draft
+    depends_on: []
+    files:
+      - crates/ti-console/src/
+      - crates/ti-devmeta/src/
+      - crates/ti-console/tests/
+    tests:
+      - crates/ti-console/tests/

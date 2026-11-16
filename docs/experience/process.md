@@ -650,3 +650,9 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - `cargo test -p ti-console --test audit_tests` 28 条全绿（converge_one_round_pass 改判 Pass{1}）。
 - exp_log --check EXP-189/EXP-001 均 EXIT=0（正常态），EXIT=1 = 违规面（0 处或 >3 处）。
 - gate.ps1 头注释补「36 = 去重口径 / Report 行 38」防 M-14 误计数。
+
+### EXP-191 流程：流程强化轮 3 面教训（git 还原丢改动 / 证据文件名前缀撞孤儿检测 / 覆盖率分母设计）
+- **现象**：S57 轮 ① `git checkout -- <file>` 把**本轮未提交的** S57.2a patch（check_ledger_reality.py）整文件还原 3 次 ② 多任务组共用证据 `evidence/S57.0.log` 前缀 `S57` 不在台账（台账行 = S57.0/S57.1/S57.2a/S57.2b）⇒ 孤儿 evidence 误报 ③ 符号覆盖率分子混入 3 个文档类手工登记任务 = 106% 假绿。
+- **根因**：① `git checkout --` 无差别还原整个文件到 HEAD，对本轮工作区跨任务累积改动 = 丢面；须**先 cp 备份再还原 + 幂等 patch 脚本重做**（`/tmp/opencode/s572a_patch.py` 含「已应用，跳过」守卫 + 好副本 `clr_s572a_good.py`）② 孤儿 evidence 检测口径 =「文件名任务 ID 前缀」，证据文件命名必须带**完整任务 ID 前缀**（S57.0.log 非 S57 前缀 .log）③ 覆盖率分子把「手工登记的文档类任务」（S9.5/S10.4/S21.0 符号非代码产物）混入「改动面含代码」分母面 ⇒ 分母口径 = 声明面 ∩ 可提取符号子集（110 = dod 含 crates 路径/pub 项的可提取面），分子 = 自动提取命中面。
+- **解法**：① 高风险 git 还原前先 `cp file /tmp/opencode/bak_file`；patch 脚本幂等可重放（重做 = 跑 patch 脚本，不重敲 edit）② 多任务共用证据文件命名 = 任务组首 ID 全前缀（S57.0.log）③ 覆盖率 = 自动提取面（分母 ∩ 可提取子集，防虚高/假绿）+ 手工面优先合并；28%（31/110）= S57.2a 收口时点基线棘轮（只收紧，S57.2b 阶梯 60%→100%）。
+- **验证**：`python3 scripts/check_ledger_reality.py` 全绿（31/110 = 28% 基线）+ 负例实跑（删 S21.0 手工符号 ⇒ FAIL 1，备份还原法）+ doccheck2 48 项 0 error。

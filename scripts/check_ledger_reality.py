@@ -50,6 +50,64 @@ SYMBOL_EXPECTATIONS = {
     ],
 }
 
+# S57.2a（轨道 3 M-04 第一批）：dod 自动提取面——「改动面含代码」声明（业务规则/表现/规则/代码 各面）
+# 的 verified 任务，自动提取期望符号（dod 声明的 crates 路径尾文件名 + pub 项名），
+# 与 SYMBOL_EXPECTATIONS 手工面合并判定（手工面优先；自动面 = 覆盖率棘轮基线，防「声明代码产物
+# 但三方对账 0 符号验证」假绿，M-04：3/339 = 0.9% 覆盖率面）。
+# 覆盖率下限 = S57.2a 收口时点 28%（31/110）为棘轮基线（只收紧不放宽；扩面 = S57.2b 阶梯 60%→100%）。
+# 「改动面含代码」判定：台账 dod 改动面词表中 代码/业务规则/表现/规则 各面 = 代码产物面
+# （业务规则/表现/规则 实现全在 crates/；工具/文档/数据/内容运营 = 非代码面）。
+_AUTO_EXTRACT = re.compile(r"改动面=[^|]*?(?:代码|业务规则|表现|规则实现|规则)")
+# S57.2a 符号自动面豁免（dod 声明的文件符号已被后续重构迁走/删除，三方对账面 = 历史 dod 快照）：
+# 登记须带迁往去向说明（防「声明即消失」假绿；2026-11-16 S57.2a 首跑实抓 2 真漂移后豁免）。
+SYMBOL_WAIVER: dict[str, str] = {
+    "game_app.rs": "S20.0b 拆分后 = crates/ti-app/src/game_app/ 目录 9 模块（mod/state/input/render/assets/board/battle/saveload/host），单文件 game_app.rs 已不存在（重构去向实存）",
+    "turn.rs": "S28.7 dod 时点文件；回合序逻辑后续重构吸收（rules/ 现无 turn.rs 单文件），去向 = 战斗/回合域现模块",
+}
+
+
+def auto_symbol_expectations(tasks: list[dict]) -> dict[str, list[str]]:
+    """dod 含「改动面含代码」的 verified 任务 → 自动提取符号期望（dod 自身声明的 .rs 文件名 + pub 项名）。
+
+    提取规则：
+    - `crates/<crate>/src/...<file>.rs` 路径且该 `<file>.rs` 在该任务 dod 内重复出现（= dod 声明的
+      产物本身，非引用其它任务文件）⇒ 文件名符号（glob 面）；
+    - `pub struct/fn/enum/trait X` ⇒ 正则 `pub (struct|fn|enum|trait) X`（代码 grep 面）。
+    未提取到任何符号的「改动面含代码」任务 = dod 声明不精确（无 crates 路径且无 pub 项）⇒ 跳过
+    （不虚报，留人工补 dod 精确面，S57.2b 阶梯扩面）。
+    """
+    out: dict[str, list[str]] = {}
+    for t in tasks:
+        if t.get("status") != "verified":
+            continue
+        dod = t.get("dod") or ""
+        if not _AUTO_EXTRACT.search(dod):
+            continue
+        tid = t.get("id", "")
+        if not tid or tid in SYMBOL_EXPECTATIONS:
+            continue  # 手工登记面优先
+        pats: list[str] = []
+        for m in re.finditer(r"crates/[a-z0-9-]+/src/(?:[a-z0-9_/]+/)*([A-Za-z0-9_\-]+\.rs)", dod):
+            fname = m.group(1)
+            if re.search(rf"crates/[a-z0-9-]+/src/(?:[a-z0-9_/]+/)*{re.escape(fname)}\b", dod):
+                pats.append(fname)  # 文件符号 = 该任务 dod 声明的产物本身
+        for m in re.finditer(r"pub\s+(struct|fn|enum|trait)\s+([A-Za-z0-9_]+)", dod):
+            pats.append(rf"pub\s+{m.group(1)}\s+{m.group(2)}")
+        if pats:
+            out[tid] = pats
+    return out
+
+
+def symbol_coverage(tasks: list[dict], auto: dict[str, list[str]]) -> tuple[int, int]:
+    """覆盖率 = 自动提取符号的任务数 / 「改动面含代码」声明且实际提取到符号的 verified 任务数。
+
+    分母 = 声明面 ∩ 可提取子集（dod 无 crates 路径且无 pub 项的「改动面含代码」任务不强制登记，
+    防分母虚高；S57.2a 时点 31/110 = 28% 基线）。
+    """
+    declared = [t for t in tasks if t.get("status") == "verified" and _AUTO_EXTRACT.search(t.get("dod") or "")]
+    covered = {t.get("id") for t in declared if t.get("id") in auto}
+    return len(covered), len(declared)
+
 # 孤儿 evidence 检测：只认「以任务 ID 开头」的证据文件，形如
 #   S10.4.log / S2.5_wasm_shell.log / S4.3-size.log / S8.3.e_gate.log
 # 不认 gate_run.log / font_render.txt / S1.11-*.json 之类非任务 ID 文件。
@@ -116,7 +174,7 @@ def check_evidence(evidence: str | None) -> list[str]:
     return problems
 
 
-def check_symbols(task_id: str) -> list[str]:
+def check_symbols(task_id: str, extra_patterns: list[str] | None = None) -> list[str]:
     """DoD 声明的代码符号必须在 crates/ 里 grep 到。
 
     符号匹配规则（EXP-058）：
@@ -124,9 +182,14 @@ def check_symbols(task_id: str) -> list[str]:
       必须存在对应文件（glob 检查）；
     - 其余符号（如 trait+Command 正则）= 代码正则，在 crates/*/src 里 grep。
     """
-    patterns = SYMBOL_EXPECTATIONS.get(task_id, [])
+    patterns = list(SYMBOL_EXPECTATIONS.get(task_id, []))
+    if extra_patterns:
+        seen = set(patterns)
+        patterns += [p for p in extra_patterns if p not in seen]
     if not patterns:
         return []  # 未登记符号期望的任务（如文档类）跳过
+    # S57.2a 豁免面（dod 时点符号已被重构迁走，去向已登记）
+    patterns = [p for p in patterns if p not in SYMBOL_WAIVER]
     problems: list[str] = []
     rs_files = list(REPO.glob("crates/*/src/**/*.rs")) + list(REPO.glob("crates/*/tests/**/*.rs"))
     for pat in patterns:
@@ -187,12 +250,23 @@ def main() -> int:
     tasks = parse_ledger_tasks()
     verified = [t for t in tasks if t.get("status") == "verified"]
     failures: list[str] = []
+    # S57.2a：dod 自动提取面（与手工 SYMBOL_EXPECTATIONS 合并；手工优先）
+    auto = auto_symbol_expectations(tasks)
     for t in verified:
         tid = t.get("id", "?")
         probs = check_evidence(t.get("evidence"))
-        probs += check_symbols(tid)
+        probs += check_symbols(tid, extra_patterns=auto.get(tid, []))
         if probs:
             failures.append(f"[{tid}] " + "; ".join(probs))
+    # S57.2a：符号覆盖率下限（28% 棘轮 = S57.2a 收口时点基线 31/110，只收紧）
+    covered, declared = symbol_coverage(tasks, auto)
+    if declared > 0:
+        cov = covered * 100 // declared
+        if cov < 28:
+            failures.append(
+                f"[coverage] 符号覆盖率 {cov}%（{covered}/{declared} 声明代码产物的 verified 任务有符号登记）"
+                f" < 28% 下限（S57.2a M-04 棘轮 = 收口时点基线 31/110，只收紧；S57.2b 阶梯 60%→100%）"
+            )
 
     # blocked 行 schema 断言（loop.md §1：blocked ⇒ evidence 必须 null，防死数据假路径；
     # 轨道 3 M-01/M-22 固化，S49.1 先例）
@@ -216,10 +290,12 @@ def main() -> int:
             print(f"  FAIL  {f}")
         return 0 if args.check else 1
     blocked = [t for t in tasks if t.get("status") == "blocked"]
-    sym_covered = sum(1 for t in verified if t.get("id", "") in SYMBOL_EXPECTATIONS)
+    sym_covered, declared = symbol_coverage(tasks, auto)
+    cov = (sym_covered * 100 // declared) if declared else 100
     print(
         f"check_ledger_reality: 全绿（{len(verified)} 个 verified 任务对账通过"
-        f"〔其中 {sym_covered} 个含代码符号 grep 第三方验，其余 = 台账行 + evidence 存在非空两方〕"
+        f"〔符号 grep 第三方验 {sym_covered}/{declared} 声明代码产物任务 = 覆盖率 {cov}%（S57.2a 基线 28%），"
+        f"其余 = 台账行 + evidence 存在非空两方〕"
         f" + {len(blocked)} 个 blocked schema 校验通过 + 0 个孤儿 evidence）"
     )
     return 0

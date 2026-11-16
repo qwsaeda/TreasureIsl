@@ -11,3 +11,10 @@
   - ③ `--fix` = 按实测位回写声称点（现状只读 `--check`）；`--check` 违规非 0；
   - 判据 = 现行全库 0 漂移（R12 已清零态）+ 负例护栏（临时改 1 处项号 ⇒ `--check` 必 FAIL）+ 工具契约 3 处登记（14 号 §3.1 + 04 速查 + README 索引，doccheck2 tooling-contract 第 29 项）。
   - evidence = `evidence/S56.0.log`。
+
+## S57 流程强化第二批（轨道 3 P2 可选面，2026-11-16 用户拍板「三个都做」）
+
+- [ ] **S57.0（M-17）**：`plan/packages.yaml` 加 P7=引擎域（ti-engine）+ P8=平台域（ti-console/ti-devmeta）⇒ 6 红线全挂包域（原 P1~P6 只挂 ti-core + ti-app 2/6）；05_module_parallel §3 包表同步 + `flywheel_readme.ps1 -Package P7/P8` 红线注入面实跑验证。
+- [ ] **S57.1（M-11）**：`doccheck2::check_state_md_discipline` 第 48 项（loop.md §9 state.md 载体面：① §9 段 + 3 要素字段名锚点存在性 ② in_progress 跨会话任务（rounds≥1 或 dod 含「跨会话」）须 `evidence/<id>.state.md` 或 dod「state 豁免」标记）+ 双负例护栏（删 §9 段 / 造 in_progress 跨会话行）。
+- [ ] **S57.2a（M-04 第一批）**：`check_ledger_reality.py` SYMBOL_EXPECTATIONS 扩面——从 3 任务（0.9%）扩到「dod 明确声明代码产物的任务」自动提取面（解析 dod 里 `crates/<x>/src/<file>.rs` / `fn <name>` / `pub struct <Name>` 字样自动登记期望符号，人工只审白名单豁免）+ doccheck 断言覆盖率下限（≥30% 声明代码产物的 verified 任务有符号登记，棘轮只收紧）。
+- [ ] **S57.2b（M-04 第二批，待开工）**：覆盖率下限 30%→60%→「100% 声明代码产物任务」阶梯 + `doc_numbers.py` 扩「符号覆盖率」回写面（与 15 号行 36 同专项）。

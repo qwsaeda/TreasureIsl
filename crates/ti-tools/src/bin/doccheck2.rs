@@ -2717,6 +2717,82 @@ fn check_doccheck_counts_match(root: &Path) -> Vec<String> {
     errors
 }
 
+/// S57.1（轨道 3 M-11 / 15 号行 28② 载体落地）：`docs/loop.md` §9 state.md 压缩纪律机器面。
+/// 判据（双轨）：
+/// ① **§9 段存在性**（载体不被删改）：loop.md 含「## 9. 长会话压缩纪律」段 + `evidence/<task>.state.md`
+///    载体字样 + 3 要素（已读清单/在途包白名单/下一步动作）字段名（改名 = 断言漂移即报）；
+/// ② **`in_progress` 任务 state.md 对账**：台账 `status: in_progress` 行，若该任务**跨会话**（rounds >= 1
+///    或 dod 含「跨会话/state.md」）⇒ 须 `evidence/<id>.state.md` 存在，或 dod 含「state 豁免」字样
+///    （显式豁免留痕）；`in_progress` 0 行 = 0 命中不报错（空台账面）。
+/// 负例护栏：删 §9 段锚点 / `in_progress` 跨会话任务无 state.md 且无豁免 = 必 FAIL。
+fn check_state_md_discipline(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(loop_doc) = read_file(root, "docs/loop.md") else {
+        return vec!["docs/loop.md 不存在（state.md 纪律无载体，§9 被删？）".to_string()];
+    };
+    // ① §9 段 + 3 要素字段名存在性（字段名固定 ①②③，loop.md §9 自认「不得增删改名」）；
+    // 段定位 = 锚点行起到下一「## 10.」/EOF 的区间（锚点改名/段被删 = 区间失锚即报）。
+    let section_start = loop_doc.find("## 9. 长会话压缩纪律");
+    if section_start.is_none() {
+        errors.push("docs/loop.md §9 state.md 纪律载体缺失锚点「## 9. 长会话压缩纪律」（§9 段被删/改名，触发面失效）".to_string());
+    }
+    if let Some(start) = section_start {
+        let section_end = loop_doc[start..].find("## 10.").map_or(loop_doc.len(), |p| start + p);
+        let section = &loop_doc[start..section_end];
+        for anchor in ["已读清单", "在途包白名单", "下一步动作", "evidence/<task>.state.md"]
+        {
+            if !section.contains(anchor) {
+                errors.push(format!(
+                    "docs/loop.md §9 state.md 纪律段缺 3 要素/载体字段「{anchor}」（字段改名/删除，触发面失效）"
+                ));
+            }
+        }
+    }
+    // ② in_progress 任务 state.md 对账
+    let Some(ledger) = read_file(root, "plan/ledger.yaml") else {
+        return errors;
+    };
+    for line in ledger.lines() {
+        let l = line.trim();
+        let Some(prefix) = l
+            .strip_prefix("- { id: ")
+            .or_else(|| l.strip_prefix("- {id: "))
+            .or_else(|| l.strip_prefix("-{ id: "))
+        else {
+            continue;
+        };
+        if !l.contains("status: in_progress") {
+            continue;
+        }
+        let tid = prefix.split(',').next().unwrap_or("").trim().to_string();
+        if tid.is_empty() {
+            continue;
+        }
+        // 跨会话判据：rounds >= 1（loop.md §1：rounds 从 0 起，>=1 = 曾验收失败/跨轮）或 dod 显式跨会话
+        let rounds: u32 = l
+            .split("rounds: ")
+            .nth(1)
+            .and_then(|rest| rest.split(',').next())
+            .and_then(|v| v.trim().parse().ok())
+            .unwrap_or(0);
+        let cross_session = rounds >= 1 || l.contains("跨会话") || l.contains("state.md");
+        if !cross_session {
+            continue; // 首轮 in_progress（rounds=0 无跨会话痕迹）= 触发条件未满足，不强制
+        }
+        let state_path = root.join("evidence").join(format!("{tid}.state.md"));
+        if state_path.is_file() {
+            continue;
+        }
+        if l.contains("state 豁免") {
+            continue; // 显式豁免留痕（dod 写明为何不写 state.md）
+        }
+        errors.push(format!(
+            "台账 {tid}（in_progress + rounds={rounds} 跨会话）缺 `evidence/{tid}.state.md` 且 dod 无「state 豁免」标记（loop.md §9 压缩前 3 要素载体，15 号行 28②）"
+        ));
+    }
+    errors
+}
+
 fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(ledger_text) = read_file(root, "plan/ledger.yaml") else {
@@ -4171,6 +4247,8 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("cross-doc-counts", check_cross_doc_counts),
     ("blocked-label-consistency", check_blocked_label_consistency),
     ("doccheck-counts-match", check_doccheck_counts_match),
+    // S57.1（轨道 3 M-11）：loop.md §9 state.md 压缩纪律载体面（in_progress 任务跨会话须 state.md 或豁免）
+    ("state-md-discipline", check_state_md_discipline),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

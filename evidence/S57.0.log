@@ -1,0 +1,28 @@
+# S57.0+S57.1+S57.2a 收口（轨道 3 P2 三面：M-17 红线挂包域 + M-11 state.md 载体 + M-04 符号覆盖率第一批）
+
+## S57.0（M-17）：packages.yaml 加 P7=引擎域（ti-engine）+ P8=平台域（ti-console/ti-devmeta）
+- 6 红线全挂包域：P7→ti-engine-rules（-Package P7 实跑命中 crates/ti-engine/src/**）、P8→ti-console-rules
+- scripts/assets-data = D 域开轮面（非 P 包，-All 全域开轮读全 6 个，05 号 §3 注）
+- check_module_contracts 0 违规（P7/P8 与 P1~P6 白名单互斥）+ 05_module_parallel §3 包表 9 包同步
+
+## S57.1（M-11）：doccheck2 第 48 项 check_state_md_discipline
+- ① loop.md §9 段 + 3 要素字段名（已读清单/在途包白名单/下一步动作/evidence/<task>.state.md）锚点存在性
+- ② in_progress 跨会话任务（rounds>=1 或 dod 含「跨会话/state.md」）须 evidence/<id>.state.md 或 dod「state 豁免」标记
+- 双负例实跑：删 §9 段 ⇒ 2 ERROR（锚点+载体字段精准点名）✓；造 S99.8 in_progress rounds=0 + dod「跨会话测试」无 state.md ⇒ ERROR 精准点名 ✓；还原 0 error
+- gate_data.json 47→48 项 + RUST_CHECKS 注册 + doccheck2 输出「48 audit-codified checks」
+
+## S57.2a（M-04 第一批）：check_ledger_reality 符号覆盖率 3/339(0.9%) → 31/110(28%) 基线
+- dod 自动提取面：「改动面含代码」（业务规则/表现/规则/代码 各面）verified 任务自动提取符号
+  （dod 自身声明的 crates 路径尾 .rs 文件名 + pub struct/fn/enum/trait 项；引用其它任务文件不误报）
+- 首跑实抓 2 真漂移（豁免面登记去向）：S20.0b game_app.rs ⇒ game_app/ 目录 9 模块（S20.0b 重构产物）
+  / S28.7 turn.rs ⇒ 回合域现模块（重构吸收）
+- 覆盖率 28%（31/110）= S57.2a 收口时点棘轮基线（只收紧；S57.2b 阶梯 60%→100% 待开工）
+- 负例实跑：删 S21.0 手工符号 S57NEG ⇒ 三方对账 FAIL 1 ✓（备份还原法）
+
+## 判据实跑
+$ python3 scripts/check_ledger_reality.py → 全绿（340 verified；符号 grep 31/110 = 28% 基线；1 blocked schema；0 孤儿）
+$ cargo run -p ti-tools --bin doccheck2 → 48 项 0 error（含 state-md-discipline）
+$ python3 scripts/check_module_contracts.py --check → EXIT=0（P7/P8 互斥）
+$ pwsh scripts/flywheel_readme.ps1 -Package P7 → ti-engine-rules.md 命中 ✓
+## gate 全量：36 项 0 failure（web 静态服务起 web/ 8080；2 环境 SKIP = Android NDK/真机；evidence/gate_s57.log）
+## 收口面（fmt/clippy 红线 + EXP-191 回写 + 26号/release/AGENTS 计数面 345/343 + 15号行 28② 已自动化）
