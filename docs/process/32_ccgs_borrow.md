@@ -75,7 +75,7 @@ CCGS `studio-tests/` = 对 skills/agents 本身的 QA（49+75 对应测试 + cat
 ### ③ 路径作用域红线文件（价值中低，S50.3）
 
 CCGS 14 个 `rules/*.md` 的 `paths:` frontmatter + 该路径下编码红线正文 + hook 写前拦截模式。
-我方最接近 = `16_code_standards.md` CS-1~6 全局标准 + `code_budget.json` 棘轮基线 + `process_ratchet.json` 豁免表，
+我方最接近 = `16_code_standards.md` CS-1~4 全局标准 + `code_budget.json` 棘轮基线 + `process_ratchet.json` 豁免表，
 **缺「按目录域的红线文件」层**。
 **借鉴**：新增 `docs/rules/` 目录 5 个红线文件（按 `plan/packages.yaml` 白名单域划分：
 `ti-core` / `ti-engine` / `ti-app scenes` / `scripts` / `assets-data`），frontmatter `paths:` glob + 正文 4~6 条红线；

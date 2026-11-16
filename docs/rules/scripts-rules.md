@@ -8,7 +8,7 @@ paths:
 # scripts/ 编码红线（工具脚本域，CCGS `rules/*.md` `paths:` 模式借鉴，S50.3）
 
 > 本文件 = `docs/rules/` 路径作用域红线速查面（给 LLM 子代理开轮读，**非机器拦截**；
-> 机器拦截仍走 `check_tooling_contract`（doccheck2 第 27 项）+ `check_tooling_stray_scripts` /
+> 机器拦截仍走 `check_tooling_contract`（doccheck2 第 29 项）+ `check_tooling_stray_scripts` /
 > `check_tooling_registration`（工具台账三处登记 + 仓库外散落脚本）+ `check_dod_commands`（gate 第 25 项）
 > + `studio_tests.py`（gate 第 25b 项，元测试面第 3 类断言 = 工具台账三处登记核验）。
 > 单一事实源 = `docs/process/14_tooling_catalog.md`（工具唯一事实源 + 工具契约 4 条）+
@@ -16,7 +16,7 @@ paths:
 
 ## 红线（4~6 条，违反 = 返工）
 
-1. **工具契约 4 条全满足（§14 第 27 项）**：① 落地 `scripts/`（正式工具）/ `scripts/tmp/`（一次性，
+1. **工具契约 4 条全满足（§14 第 29 项）**：① 落地 `scripts/`（正式工具）/ `scripts/tmp/`（一次性，
    用完即删）② 台账登记 = 14 号表格行（`| \`x.py\` |`）③ 登记要素（用途/用法/幂等/只读模式）
    ④ 只读模式 + 非 0 退出（新工具须含 `--check`/`--verify`/`--report` 之一，违规非 0 退出）。
    反例：写 `scripts/tmp/fix_once.py` 用完不删 / 写 `scripts/gen_ui.py` 无 `--check` 只读模式。

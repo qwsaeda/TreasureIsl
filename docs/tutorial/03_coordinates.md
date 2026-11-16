@@ -497,7 +497,7 @@ crates/ti-render/src/framebuffer.rs — CANVAS_W=1080 / CANVAS_H=1920（单一�
 crates/ti-engine/src/scene_render.rs — Bevy 世界坐标换算
 ```
 
-> ⚠️ **176×220 是 legacy 坐标**（旧 macroquad 时代），运行时禁止出现（doccheck2 第 9 项 grep 门禁）。
+> ⚠️ **176×220 是 legacy 坐标**（旧 macroquad 时代），运行时禁止出现（doccheck2 第 20 项 `runtime-no-legacy-coords` grep 门禁）。
 
 ---
 

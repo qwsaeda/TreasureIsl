@@ -15,7 +15,7 @@
 | **取证工具** | 只服务 `legacy/` 逆向取证 | 必须标注「不进产品代码」+ 用法 | `scripts/` 或 `legacy/scripts/` |
 | **cargo bin / crate 工具**（S32.1 起） | Rust workspace 成员 crate 的可执行入口（`cargo run -p <crate>`；与 `scripts/` 流水线的分工 = 台账解析/HTTP 服务等库化能力 + 平台本体） | 本页 §3.5 登记 + 依赖图断言（`cargo tree -p <crate>` 不含游戏 crate，22 号 §11.2 机器兜底面）+ 根 `Cargo.toml` members 在册 | `crates/<name>/`（`[[bin]]` 或 crate 本体） |
 
-> **落地位置是硬规则**（`doccheck2` 第 27 项机器判定）：
+> **落地位置是硬规则**（`doccheck2` 第 29 项机器判定）：
 > 正式工具落 `scripts/`；一次性改写脚本落 `scripts/tmp/`（**用完即删**）；
 > **禁止写到仓库外**（系统临时目录 / 桌面 / 任何仓库外路径）—— 仓库外的脚本
 > 绕开台账登记与门禁对账，等于没进项目。
@@ -28,8 +28,8 @@
    （`04_tooling.md` §1）；
 3. **本页登记**：用途 / 用法（可直接复制的命令）/ 幂等与退出码 / 所属流水线 / 是否门禁项；
 4. **速查表登记**：`04_tooling.md` §1 表 + `docs/README.md` scripts 表；
-5. **自动对账**：`doccheck2` 第 26 项 `check_tooling_catalog`（新增脚本必须在本页出现 ⇒ 漏登记即 FAIL）
-   + 第 27 项 `check_tooling_contract`（落地位置 / 表格行 / 登记要素 / 只读模式 + 非 0 退出）。
+5. **自动对账**：`doccheck2` 第 28 项 `check_tooling_catalog`（新增脚本必须在本页出现 ⇒ 漏登记即 FAIL）
+   + 第 29 项 `check_tooling_contract`（落地位置 / 表格行 / 登记要素 / 只读模式 + 非 0 退出）。
 
 ### 1.3 临时脚本纪律（EXP-113）
 
@@ -41,13 +41,13 @@
 
 ### 1.4 工具契约（4 条，机器可判定）
 
-> `doccheck2` 第 27 项 `check_tooling_contract` 逐条判定（存量豁免见棘轮基线
+> `doccheck2` 第 29 项 `check_tooling_contract` 逐条判定（存量豁免见棘轮基线
 > `scripts/tooling_contract_baseline.json`，每条豁免带理由 + 整改任务号）。
 
 | # | 契约 | 判定方式 | 违反后果 |
 |---|---|---|---|
 | 1 | **落地位置** | 正式工具在 `scripts/`；一次性脚本在 `scripts/tmp/` 且用完即删；cargo bin / crate 工具在 `crates/<name>/`（S32.1 起，§3.5）；仓库内无散落 `.py`/`.ps1` | doccheck2 FAIL |
-| 2 | **台账登记 = 表格行** | `scripts/x.py` 必须在 §3.1~§3.4 某张表里有 `\| \`x.py\` \|` 行（§3 第 26 项只查「出现过」）；cargo bin / crate 工具须在 §3.5 登记 | doccheck2 FAIL |
+| 2 | **台账登记 = 表格行** | `scripts/x.py` 必须在 §3.1~§3.4 某张表里有 `\| \`x.py\` \|` 行（§3 第 28 项只查「出现过」）；cargo bin / crate 工具须在 §3.5 登记 | doccheck2 FAIL |
 | 3 | **登记要素齐全** | 该行须声明「幂等/只读」与退出码语义（「非 0 退出」或等价表述） | doccheck2 FAIL |
 | 4 | **只读模式 + 非 0 退出** | 新增工具（不在棘轮基线内）源码须含 `--check`/`--verify`/`--report` 之一，且违规时非 0 退出；**豁免 = cargo bin / crate 工具类**（§3.5，服务形态 bin：只读/写面语义由 22 号 §4.2 白名单 + §10.3 执行面接管，`check_tooling_contract` 实扫面 = `scripts/` 的 `.py`/`.ps1`，不含 `crates/`） | doccheck2 FAIL |
 

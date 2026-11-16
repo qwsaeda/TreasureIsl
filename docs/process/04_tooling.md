@@ -53,7 +53,7 @@
 
 | 工具 | 替代什么手工活 | 幂等 / --check |
 |---|---|---|
-| `scripts/gen_layout.py` | 把 `ref/controls.json` 2041 条控件记录转成 `assets/data/controls.json`（控件层数据源） | 连跑两次逐字节一致；`--check` 只读比对 |
+| `scripts/gen_layout.py`（`legacy/scripts/` 逆向数据工具，gate 10b 项调用路径 `legacy/scripts/gen_layout.py --check`） | 把 `ref/controls.json` 2041 条控件记录转成 `assets/data/controls.json`（控件层数据源） | 连跑两次逐字节一致；`--check` 只读比对 |
 | `scripts/validate_data.py` | 手查 JSON 字段与数值域 | `--check` 校验（FIND-201 统一入口，并入原 legacy 脚本 + V1/V2 场景标量兜底）：必填字段、概率域、价格/权重>0、strings 覆盖每个 name_key（无孤儿）、scenes 覆盖 7 场景、controls record_total 与 legacy/ref 一致、main_map.grid 三键正整数、全场景 extra 标量键正整数 |
 | `scripts/check_hardcode.py` | 人眼找 `.rs` 里的硬编码数值/中文（`02_conventions.md` §1） | `--warn` 迁移期只报告（历史时点）；`--list` 按文件分类汇总；EXEMPT 豁免带理由（oracle/CLI/配置键）；当前严格模式 0 命中即绿 |
 | `crates/ti-tools --bin doccheck` | 跨文档 ID/数值漂移 + 数据文件一致性（对抗审计固化，gate 第 9 项） | 数值断言 4 条：UI 场景数=20、控件记录=2041、LCG hex=0x343FD（非 0x3443D）、save.magic=20011591（非 20125007）；扫描 docs + AGENTS.md + plan + assets/data/*.json |
@@ -89,7 +89,7 @@
 | `scripts/scaffold.py` | 手写新场景/控件/模块骨架（套 [`03_templates.md`](03_templates.md)） | `scaffold.py scene --name foo` 生成可编译骨架；`--check` 校验已有文件符合模板 |
 | `cargo run -p ti-tools --bin doccheck` | 校验 data 表能反序列化 + 数值合法域（Rust 侧，与 Python 互补） | 单测 + 可跑 |
 
-**新增门禁项（gate 第 10 项，S8.2 已落地）**：`validate_data.py` + `gen_layout.py --check`
+**新增门禁项（gate 第 10 项，S8.2 已落地）**：`validate_data.py` + `legacy/scripts/gen_layout.py --check`
 + `check_hardcode.py` 全绿才允许置 verified——这样「数值非法」「控件表与来源不一致」
 「硬编码残留」会被机器拦住，不靠自觉。
 

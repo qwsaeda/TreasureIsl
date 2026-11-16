@@ -10,7 +10,7 @@
 | **新开工 / 参与开发（先读这个）** | [`process/00_index.md`](process/00_index.md)（分工表/工作流）+ [`business/00_index.md`](business/00_index.md)（业务唯一事实源） |
 | 任何开工动作之前 | [`loop.md`](loop.md)（循环协议 + **§9 长会话压缩纪律（S50.1，CCGS active.md 模式）**：压缩前 3 要素写 `evidence/<task>.state.md`，压缩后读 state.md 续接）+ `plan/ledger.yaml` + 本文件 |
 | **迁移 Linux / 换机器续工（会话总结 + 迁移操作 + 续工序列）** | [`migration_linux.md`](migration_linux.md)（迁移前二选一：整目录拷贝 or add -A 提交；在途 tracked-M + untracked-? 文件清单；Linux 环境准备 + `pwsh` 命令差异 + CRLF/无头 GPU 风险点 + 迁移后第一条命令序列；S27.7 进度快照） |
-| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 36 项 + doccheck 独立第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
+| 判断「做完了没有」/ 验收 | [`parity.md`](parity.md)（P0~P4 五级判据 + gate 36 项 + doccheck 门禁第 9 项，数值断言与台账计数漂移检查已并入 doccheck） |
 | 写 Rust（布局/常量/错误/宏/trait/风格/测试位置） | [`process/01_architecture.md`](process/01_architecture.md) + [`process/02_conventions.md`](process/02_conventions.md)（新）或 [`style.md`](style.md)（语法层） |
 | 套用现成模版 / 写新场景·控件·模块 | [`process/03_templates.md`](process/03_templates.md)（含 §7 模块包任务书模版） |
 | [process/03_templates.md §8 + docs/design-sheets/](process/03_templates.md) | **内容设计 sheet 模版（Canvas 概念落地，S16.4）**：加新地图/新岛类/新剧情 = 一张设计 sheet （四段式 A 业务定案 / B 数据 key 契约 / C 场景资源接线 / D 验收锚点 36 项门禁）；空样例 `assets/maps/m04/`（`map_pack add m04` 骨架，真内容落地后 verify 合规）+ `docs/design-sheets/m04.sheet.md`（模版填法示例，dod = 本任务只落模版不实现真内容） |
@@ -33,7 +33,7 @@
 | 文件 | 作用 |
 |---|---|
 | [`00_design.md`](00_design.md) | **正向设计总入口**：核心循环 + 数据驱动分层 + crate 架构 + 9 场景流 + 模块包 + 场景宿主窄接口（不读 legacy/） |
-| [`parity.md`](parity.md) | P0~P4 对齐标准 + **门禁项数与计数约定的唯一事实源**（doccheck 独立第 9 项含跨文档数值漂移 + release 台账计数同步） |
+| [`parity.md`](parity.md) | P0~P4 对齐标准 + **门禁项数与计数约定的唯一事实源**（doccheck 门禁第 9 项含跨文档数值漂移 + release 台账计数同步） |
 | [`gamebook.md`](gamebook.md) | **可玩实现手册**：把已验证 `rules` 接进交互壳的全流程接线规格（S5 起） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收）⚠️ **GBK 编码，勿用 `Set-Content` 编辑** |
 | [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP；**§5.6.6 标准库 trait 选用矩阵 + 重构操作规程**） |
@@ -71,7 +71,7 @@
 | [process/11_bevy_migration.md](process/11_bevy_migration.md) | **渲染引擎迁移裁决（S18 · Bevy 0.20）**：差距定稿 + 定案推翻签核（macroquad 定案作废 / 旧 800KB 预算作废）+ 新 wasm 预算（≤8MB）+ 架构形状（ti-engine 新 crate + Canvas 后端替换 + 双渲染期）+ WBS S18.0–S18.8 + 风险（改引擎层代码前必读） |
 | [process/12_bevy_usage.md](process/12_bevy_usage.md) | **Bevy 0.20 用法规范 / 最佳实践 / 坑位清单**（官方 `DefaultPlugins` 强制 + 1080 坐标换算 + z 层负值升序绘制 + GPU Text2d + 离屏截图验收口径 + `links=alsa` 隔离 + 已知坑位；S18.7 起 Bevy = 唯一渲染引擎） |
 | [process/13_ui_asset_pipeline.md](process/13_ui_asset_pipeline.md) | **UI 资产管线**（清单驱动：AI 生图 → 抠透明 → 规范化 → 入库 `assets/ui/`；角色预设 background/medallion/board/portrait；`scripts/ui_assets.py` + `scripts/ui_preview.ps1`；资产清单 = 单一事实源，门禁校验登记与存在；**生图原图 + 临时试稿统一落 `evidence/gen_tmp/`（13 号 §2.2，gitignore，删目录即清理）**） |
-| [process/14_tooling_catalog.md](process/14_tooling_catalog.md) | **工具台账**（`scripts/` 全量登记：用途 / 用法 / 幂等与退出码 / 流水线组合 / 门禁归属）——工具的唯一事实源；新增工具须登记（doccheck2 第 26 项对账）+ 满足**工具契约**（第 27 项 `check_tooling_contract`：落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出） |
+| [process/14_tooling_catalog.md](process/14_tooling_catalog.md) | **工具台账**（`scripts/` 全量登记：用途 / 用法 / 幂等与退出码 / 流水线组合 / 门禁归属）——工具的唯一事实源；新增工具须登记（doccheck2 第 28 项对账）+ 满足**工具契约**（第 29 项 `check_tooling_contract`：落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出） |
 | [process/15_process_ledger.md](process/15_process_ledger.md) | **流程固化台账**（人反复要做的开发动作 = 纪律执行状态面：每条流程登记 人工做法 / 复发证据 / 自动化形态 / 载体 / 状态（已自动化·半自动·待固化·一次性）；**纪律不执行 = 纪律不存在** ⇒ 待固化必须带台账任务号；载体 = `scripts/task_close.py`（收口一条命令）/ `scripts/exp_log.py`（EXP 一条命令）/ doccheck2 第 31~34 项（文本完整性 / 改动面声明 / 工具 3 处登记 / 台账自洽）） |
 | [process/16_code_standards.md](process/16_code_standards.md) | **代码标准执行矩阵**（架构/耦合/内聚/命名/重构 各维度 → 机器检查映射：CS-1 资产单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数命名 / CS-4 场景窄接缝 = `scripts/check_code_standards.py`（四项 CS 检查）+ 规模归 `audit_code.py` + lint 红线归门禁；棘轮基线 `process_ratchet.json::code_standards`，新增代码零豁免——写码/提交前对照执行矩阵） |
 | [process/17_layout_engine.md](process/17_layout_engine.md) | **布局引擎定案（S29 · B1 全 bevy_ui 响应式 · 单一事实源）**：UI + 命中 + 重排全进 Bevy（`bevy_ui` 自动布局 + 窗口 resize + `bevy_picking` 2D 拾取）；3 条约定松绑签核（逻辑层仅 UI 交互层进 Bevy / `bevy-cpu-parity` 改口径只保游戏世界 / UI chrome 转 Bevy 代码而游戏内容仍数据驱动）；游戏世界保持 1080 正交 + 数据驱动（换引擎友好）；原「引擎无关求解器」方向已作废（WBS S29.0~S29.5，改布局/加场景/调视口/换引擎前必读） |
@@ -83,7 +83,7 @@
 | [process/25_versioning.md](process/25_versioning.md) | **版本与打包规范（单一事实源）**：x.y.z 语义化版本（`Cargo.toml` 单源，major/minor/patch 何时 bump）+ 打包产物带版本（`TreasureIsl-<x.y.z>-<arch>.apk` / `treasure_bevy_wasm-<x.y.z>.wasm` / AndroidManifest `versionName`）+ 更新规范（每任务完成清单 → bump → release.md 版本规划）+ 完成清单 5 项（功能/回归/测试/视觉签收/版本）。打包·发布·bump 版本前必读 |
 | [process/26_dev_stages_overview.md](process/26_dev_stages_overview.md) | **开发阶段总览（横向索引）**：项目阶段演进 S0→S35（表）+ 开发流程三层协议（循环 loop / 标准工作流 / 并行+飞轮）+ 节点清单（台账粒度，当前主待办 S32.4~S32.9 + S34.0/S34.3~S34.6 + S35.1）+ 工具矩阵（`scripts/` 全量按用途分组）+ 当前所处节点（进度 = 台账实测）+ 验收判据（P0~P4 + 门禁 36 项）。看全局·新人入场·阶段导航前必读 |
 | [process/27_landscape_adaptation.md](process/27_landscape_adaptation.md) | **横屏适配设计草案（U23，设计稿先行）**：现状（1080×1920 竖屏 + letterbox 药丸，横屏浪费 61%）+ 目标（横屏铺满 + 双方向自适应）+ 三方案选型（A 坐标双套推荐 / B 旋转不推荐 / C letterbox 最小）+ 方案 A 落地轮廓（方向判定 / 坐标系常量 / 数据双份 / 两层渲染 / 命中）+ 验收判据 + 风险。**A 纪律：用户确认选型 + 横屏效果图过目后才动码**。改横屏适配·加方向感知前必读 |
-| [process/28_engine_best_practice.md](process/28_engine_best_practice.md) | **游戏开发 + Bevy 最佳实践（规范/审计基准，S38）**：规范清单 A 数据驱动 / B 视觉令牌 / C 引擎机制 / D 代码标准 + 审计 findings（F-01 颜色字面量 ~24 处 / F-02 尺寸魔法数字 18 处 → `ui.rs::palette` 单源）+ 固化守门 doccheck2 `engine-no-color-literal`（第 41 项）。审计项目找硬编码·改视觉量·加颜色/尺寸常量前必读 |
+| [process/28_engine_best_practice.md](process/28_engine_best_practice.md) | **游戏开发 + Bevy 最佳实践（规范/审计基准，S38）**：规范清单 A 数据驱动 / B 视觉令牌 / C 引擎机制 / D 代码标准 + 审计 findings（F-01 颜色字面量 ~24 处 / F-02 尺寸魔法数字 18 处 → `ui.rs::palette` 单源）+ 固化守门 doccheck2 `engine-no-color-literal`（第 15 项）。审计项目找硬编码·改视觉量·加颜色/尺寸常量前必读 |
 | [map_editor_guide.md](map_editor_guide.md) | **地图编辑器使用指南（图文并茂）**：环形画布 + 属性面板 + 实时 I1~I9 校验条 + 10 步向导；设计概念稿（见文档内图）；常见踩坑（`pos` 越界 / `sync` 漏跑 / 手工改字段后必须 `syncmap→verify→sync` / git 恢复后必须 `install`）。**做地图前先看这个** |
 | [process/29_content_ops.md](process/29_content_ops.md) | **内容运营规范（零 Rust 内容运营，S43）**：程序构成模型（**代码 + UI数据 + 地图数据**，UI/地图是数据非代码）+ 内容运营核心判据（`git diff crates/`=空 / 不改业务 / 只动数据）+ 改地图流程（S40.0/S41.0：add→填内容→`manifest["map"]`←map.json 同步→verify→pack→install→check→sync→出图）+ 换 UI 流程（S39.0/S42.0：设计稿先行 A 纪律→改 scenes.json/换资产→rebuild→出图→视觉签收）+ 打包/分发链 + 坑位教训（manifest["map"] 同步 / scenes.json include_str 内嵌须 rebuild）。**内容运营（换 UI/改地图）前必读** |
 | [process/30_content_ops_platform.md](process/30_content_ops_platform.md) | **内容运营平台化定案（S44，单一事实源）**：把内容运营流程做成平台的**固定流程向导**——地图工作台（10 步：add→填→syncmap→verify→pack→install→check→sync→出图→零 Rust）+ UI 工作台（6 步：设计稿→变体器→版面→rebuild→出图→签收→零 Rust）+ 打包/分发面（pack→dist / build wasm·apk / publish）+ §4.2 白名单扩展（9 动作，写面默认关）+ §3.1 写点表修订 + §8 北极星写点探针 + 向导状态机（每步机器判据，不可跳步，失败即停）。**内容运营平台化前必读** |
@@ -274,4 +274,4 @@
 1. **单一事实源**：同一结论只写在一处，其他文档**引用 ID**（`F-xxx` / `EXP-xxx` / `P0-x`）而不是复述。
 2. **反例**：曾出现 `parity.md` 的 P1-3 与 P3-1 复述同一判据、`style.md` 复述 REA 工具清单 —— 均已改为引用。
 3. **长行禁令**：表格单元格不得塞整段散文（>300 字符）；长结论拆成「短结论 + 指向 `legacy/docs/facts/<分卷>.md`」。
-4. **`doccheck` 门禁**：第 9 项自动校验 ID 唯一性、跨文档引用有效性、数字断言一致性、evidence 内容特征。见 [`parity.md`](parity.md)。
+4. **`doccheck` 门禁**：gate 第 9 项独立命令，自动校验 ID 唯一性、跨文档引用有效性、数字断言一致性、evidence 内容特征。见 [`parity.md`](parity.md)。

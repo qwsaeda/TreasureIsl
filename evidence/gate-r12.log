@@ -1,0 +1,49 @@
+  PASS  cargo fmt --check  [1.0s]
+  PASS  cargo clippy -D warnings  [0.5s]
+  PASS  cargo test --workspace  [131.2s]
+  PASS  cargo build (native/x86_64-pc-windows-msvc)  [0.4s]
+  PASS  cargo build+clippy (wasm32-unknown-unknown; ti-engine Bevy wasm 壳)  [3.1s]
+  SKIP  cargo build (aarch64-linux-android)  (本机无 NDK（android target 已装但 NDK 缺；cargo check 亦需交叉工具链，挂 S18.8d Mac 编译）)
+  SKIP  Android 真机交互 (P5)  (环境缺（adb 未装 / 无已授权设备 / 包未装；android_device_test.py --check 非 0；设备接入 + adb install dist/TreasureIsl-*.apk 后即跑，23_game_testing.md §2 补强注）)
+  PASS  clippy feature-gated bins (native-shell/headless; required-features 盲区)  [0.4s]
+  PASS  no placeholders (TODO/FIXME/todo!/unimplemented!/panic!) outside tests/+examples/  [0.1s]
+  PASS  no unwrap()/expect() outside tests/+examples/ (库代码)  [0.1s]
+        PASS：全部可解析格式文件 0 未知字节
+  PASS  zero-unknown verify  [0.5s]
+  PASS  ledger validate  [0.3s]
+  PASS  doccheck (docs consistency)  [0.7s]
+  PASS  validate_data (assets/data/*.json)  [0.1s]
+  PASS  gen_layout --check (idempotent)  [0.1s]
+  PASS  check_hardcode (strict; 0 hits required)  [1.8s]
+  PASS  check_data_driven (generic primitives; renderer has no scene semantics)  [0.1s]
+        check_code_standards: PASS（0 项超基线）
+  PASS  check_code_standards (CS-1~4 代码标准 + 棘轮基线)  [0.2s]
+  PASS  check_oracle_boundary (shell 层禁 oracle_* 函数调用)  [0.1s]
+  PASS  no-macroquad (S18.8c：workspace 依赖树 0 macroquad/miniquad；cargo tree -p ti-app 扫描)  [0.3s]
+  PASS  doccheck2 (audit-codified doc↔code/data consistency)  [1.8s]
+  PASS  check_ledger_reality (台账三方对账：verified↔evidence↔代码符号)  [0.1s]
+  PASS  check_forward_closed (业务闭环：business 零逆向引用 + legacy 归档就位)  [0.1s]
+  PASS  check_module_contracts (包白名单互斥 + 契约锚点 + 跨包可见面)  [0.8s]
+        flywheel_readme -Check PASS: 7 条必读 ✓, gate 36 项, doccheck2 47 断言, packages 7 包, rules 6 红线
+  PASS  flywheel-readme (开轮必读脚本完整性)  [0.5s]
+  PASS  render-invariants (7 场景结构不变式断言，无像素基线)  [13.1s]
+        SKIP: legacy/data/ 无 .Map/.pak 改动，渲染快照门禁无需触发
+  PASS  check_data_source (数据源改动 → 渲染不变式门禁)  [0.0s]
+        [audit_code] PASS：0 项结构违规
+  PASS  audit_code (代码结构：文件规模/函数长度/重复模式，棘轮基线)  [0.6s]
+        === check_scene_narrative: 0 failure(s) ===
+  PASS  check_scene_narrative (UI 场景叙事约束 DSL v3：重心+节奏+密度+HUD 上限)  [0.1s]
+  PASS  bevy-cpu-parity (GPU/CPU 像素对照【仅游戏世界，UI 层已排除】：通道 ≤8 LSB 且超差 <0.5%；无 GPU → 记名 SKIP)  [4.3s]
+        [wasm-browser-e2e] PASS（L1 实例化=True / L2 渲染=True 资产=True / L3 交互=True / L4 场景切换=True / L5 环资产=True）
+  PASS  wasm-browser-e2e (wasm 浏览器端 4 层：L1 实例化 / L2 渲染 / L3 交互 / L4 select_map 鼠标点 m01 切 main_map)  [58.8s]
+        [web-playtest] SKIP  L4 场景流转失败但 pageerror=0 + L1/L2 成功（SwiftShader 偶发 GPU stall；同产物独立跑 PASS）⇒ 环境降级，不 FAIL
+        [web-playtest] PASS（L1=true L2=true L4=false console=0 pageerror=0；环境降级）
+  PASS  browser-playtest (浏览器真运行时试玩：CDP 按键驱动 菜单→选人→选图→主地图 + console/墨点/场景流转断言)  [31.6s]
+          [OK ] full_run: full run 16/16 steps, 0 failures (P3-3 criterion met)
+          [OK ] web_playtest: [web-playtest] PASS（L1=true L2=true L4=false console=0 pageerror=0；环境降级）
+        playtest-loop: PASS（4 报告 0 失败；停机需连续 3 轮收敛 + evidence/S16.2.log 记录，主线程复核）
+  PASS  playtest-loop (试玩闭环 4 报告聚合：fuzz/full_run/render_invariants/web_playtest 全 0 失败；停机 = 3 轮收敛入 evidence/S16.2.log)  [47.1s]
+        PASS：文档判据命令载体全部可达
+  PASS  dod-commands (DoD 判据命令载体可达性：cargo --bin/--test 与 scripts 载体全存在 + 多 bin 歧义形式 0 处；EXP-170 复发防护)  [0.1s]
+  PASS  studio-tests (元测试面：doccheck2 触发面 + test_manifest↔console_commands 映射 + 工具台账三处登记；S50.2 CCGS studio-tests 借鉴)  [0.0s]
+=== gate: 0 failure(s) ===

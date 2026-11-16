@@ -77,7 +77,7 @@
 | **首页 index 重设计「罗盘环标题页」（S22.0 定案坐标/交互/资产接线；改**竖屏**首页版面/罗盘环/徽章/舵轮前必读）** | `docs/ui-redesign-v3/09_index_compass_spec.md`（C 方向 + 羊皮海图底与 main_map v4 统一：满屏 `chart_full` + 中心舵轮 `helm` + 6 铜质 medallion 沿环（白蒙版图标 gold tint）+ 版本签；逐元素坐标表 + N8/8pt 径向键豁免 + 资产接线 + 6 徽章命中契约；单一事实源；落码 = S22.1 出 `medallion_ring` 资产 / S22.2 落码 / S22.3 出图验收） |
 | **首页 index **横屏**重设计「羊皮藏宝图 + 绳挂木牌」（S39 定案；改横屏首页版面/菜单/标题/资产前必读）** | `docs/ui-redesign-v3/14_index_treasure_map_spec.md`（满屏羊皮藏宝图 + 标题**融合进图**（正片叠底烘焙进底图 + 逐字鎏金/冷银/铜绿墨）+ 冷峻红头巾海盗 & 熊猫海盗互动层 + 右列绳挂木牌菜单（烙印文案 + AI 图例徽章图标）+ 16 件拆件资产 + 逐元素坐标表（横屏 1920×1080）+ 命中契约 `pick_key=1`；**§4 = S39 数据化重构**：index 版面归 `scenes.json`（`ti-engine::ui::build_data_chrome` 通用「原语→bevy_ui」通道；Rust 罗盘环已删，竖屏由数据还原）⇒ **此后换首页 UI = 改数据 + 换资产 = Rust 零改动**） |
 | **环岛赛道 / 摇骰前进（S19，主地图主玩法）** | `docs/business/progression.md` §环岛赛道（单一事实源）+ `assets/data/board.json`（赛道数据，`scripts/extract_board.py` 生成）+ `rules::board`（`ti-core`）；改主地图移动/落格结算/轨道数据前必读 |
-| **改渲染代码（sprite_atlas/terrain_atlas/game_app render/越界/透明/z-order）前必读** | `docs/process/08_render_arch.md`（**运行时架构契约**：分层 / 绘制原语 / z-order=调用顺序 / 单一 1080 坐标系 / grep 门禁；gate 第 9 项 doccheck2 `check_runtime_no_legacy_coords` 锚点）<br>`docs/process/07_render_pipeline.md`（legacy 像素管线契约，已降级为逆向参照） |
+| **改渲染代码（sprite_atlas/terrain_atlas/game_app render/越界/透明/z-order）前必读** | `docs/process/08_render_arch.md`（**运行时架构契约**：分层 / 绘制原语 / z-order=调用顺序 / 单一 1080 坐标系 / grep 门禁；gate 第 9 项 doccheck2 `check_runtime_no_legacy_coords`（gate_data.json 第 13 项 doccheck2 内子检查））<br>`docs/process/07_render_pipeline.md`（legacy 像素管线契约，已降级为逆向参照） |
 | **改 `crates/ti-render/`（渲染框架 crate）代码前必读** | `docs/process/09_render_framework.md`（**ti-render crate 边界契约**：职责与禁止项 / 模块结构 / Theme schema / 迁移映射 / 数据分离原则；注意本 crate **无 z-order 枚举**，层序在 `chrome::scene_shell` 调用序） |
 | **S18 渲染引擎迁移（Bevy 0.20）· 改引擎层/加 bevy 依赖前必读** | `docs/process/11_bevy_migration.md`（**迁移裁决单一事实源**：差距定稿 / 定案推翻签核（macroquad 定案 + 旧 800KB wasm 预算作废，新预算 **≤8MB**）/ 架构形状（新 crate `ti-engine` + Canvas 后端替换 + 双渲染期）/ WBS S18.0–S18.8 / 风险） |
 | 可玩实现手册（已验证 rules 接进交互壳的接线规格） | `docs/gamebook.md` |
@@ -99,8 +99,8 @@
 | **改 UI chrome / 加控件 / 改版面坐标 / bevy_ui 用法（自动布局·resize 重排·UI 图片）** | `docs/process/19_bevy_ui.md`（**bevy_ui 专题单一事实源**：UI 相机分层 `IsDefaultUiCamera` order=1/clear None + `Node` 字段全 inline + `Text`/`TextFont` + **UI 图片 = `ImageNode`**（0.20 新 API，非旧 `Image`/`Sprite`；`NodeImageMode::Stretch` 铺满节点）+ **taffy 自动布局 = 意图化**（flex column+gap+`%` 定位 ⇒ resize 真重排，不手写像素）+ `ComputedNode` 探针证据口径 + 0.20 坑位清单） |
 | **改命中 / 加可点元素 / bevy_picking 用法（指针事件·事件契约）** | `docs/process/20_bevy_picking.md`（**bevy_picking 专题单一事实源**：0.20 拾取结构（无 `PickingSection`/`PickingHandler`；`Pickable`+`MeshPickingSettings`+`MeshPickingCamera`）+ 指针事件（`PointerClick`=tap、`PointerDragEnd.distance`=swipe）+ **0.20 `Message` 取代 `Event`**（`add_message`+`MessageWriter::write`+`MessageReader::read`；`add_event`/`EventWriter` 已删）+ 本项目命中契约（`PickTarget`/`PickEvent`/`HitData`/`register_pick`/`swipe_dir_from`）+ 数据化命中（`scenes.json` `pick_key`/`pick_index`）+ 观察者参数最小化 + 坑位清单） |
 | **做界面（改 scenes.json 版面 / 加美术资产 / 出图验收）** | `docs/process/13_ui_asset_pipeline.md`（**UI 资产管线**：资产清单 `assets/ui_manifest.json` = 单一事实源；`python scripts/ui_assets.py add/build/verify` 生图+抠透明+入库；`powershell scripts/ui_preview.ps1 <scene>` 出图验收；界面数据只引用资产路径，`image` 原语见 `09_render_framework.md` §5.1；**生图原图 + 临时试稿统一落 `evidence/gen_tmp/`（§2.2，gitignore，`rm -rf evidence/gen_tmp/` 即清理）**） |
-| **工具台账 / 流水线组合（scripts/ 全量登记 + 用法）** | `docs/process/14_tooling_catalog.md`（工具唯一事实源：用途 / 用法 / 幂等与退出码 / UI 资产·赛道数据·门禁·逆向 4 条流水线 / 门禁项↔排障工具对照）；新增工具须登记（doccheck2 第 26 项对账）+ 满足工具契约（第 27 项 `check_tooling_contract`：落地位置 / 表格行 / 登记要素 / 只读模式 + 非 0 退出；一次性脚本落 `scripts/tmp/` 用完即删，**禁止写仓库外**） |
-| **流程固化台账（哪些纪律已被机器兜住；收口 / EXP 登记走一条命令）** | `docs/process/15_process_ledger.md`（人反复要做的动作 = 纪律执行状态面：已自动化 / 半自动 / 待固化（必带台账任务号）/ 一次性；载体 = `scripts/task_close.py`（收口一条命令：跑判据→写证据→置 verified→同步计数→三方对账）/ `scripts/exp_log.py`（EXP 3 处改齐）；doccheck2 第 31~34 项守住：BOM/UTF-8/乱码 / 改动面声明 / 工具 3 处登记 / 台账自洽） |
+| **工具台账 / 流水线组合（scripts/ 全量登记 + 用法）** | `docs/process/14_tooling_catalog.md`（工具唯一事实源：用途 / 用法 / 幂等与退出码 / UI 资产·赛道数据·门禁·逆向 4 条流水线 / 门禁项↔排障工具对照）；新增工具须登记（doccheck2 第 28 项对账）+ 满足工具契约（第 29 项 `check_tooling_contract`：落地位置 / 表格行 / 登记要素 / 只读模式 + 非 0 退出；一次性脚本落 `scripts/tmp/` 用完即删，**禁止写仓库外**） |
+| **流程固化台账（哪些纪律已被机器兜住；收口 / EXP 登记走一条命令）** | `docs/process/15_process_ledger.md`（人反复要做的动作 = 纪律执行状态面：已自动化 / 半自动 / 待固化（必带台账任务号）/ 一次性；载体 = `scripts/task_close.py`（收口一条命令：跑判据→写证据→置 verified→同步计数→三方对账）/ `scripts/exp_log.py`（EXP 3 处改齐）；doccheck2 第 33~36 项守住：BOM/UTF-8/乱码 / 改动面声明 / 工具 3 处登记 / 台账自洽） |
 | **批量做一组 UI 资产（多形状图标 / 一批背景）** | `scripts/ui_asset_batch.py`（register/generate/install/build/check/sheet，规格驱动 `assets/ui_batches/*.json`；含**抠图可行性预检**：luma 需纯黑底 / magenta 需品红底；**原图落 `evidence/gen_tmp/`**（13 号 §2.2 临时图统一目录，旧 `ui_concept/raw_*` 只读兼容））+ `docs/process/13_ui_asset_pipeline.md` |
 | **AI 生图（UI 效果图/概念图，S18.7 前置）** | `scripts/agnes_gen.py`（Agnes Image 2.5 Flash；`AGNES_API_KEY` 环境变量；正式稿 → `evidence/ui_concept/`，**原图/临时试稿 → `evidence/gen_tmp/`（13 号 §2.2）**；用法见 `docs/process/04_tooling.md` §6） |
 | **AI 视频（教程动效 / 概念演示）** | `scripts/agnes_video.py`（Agnes Video 2.5 Flash；`AGNES_API_KEY`；用法见 `docs/process/04_tooling.md` §6） |
@@ -112,15 +112,15 @@
 ## 硬规则（违反 = 返工）
 
 1. **不许留占位**：`TODO/FIXME/unimplemented!/todo!/panic!` 及库代码中的 `unwrap/expect` 一律为 0 命中（`tests/` 除外），门禁在 `scripts/gate.ps1`。
-2. **验收才算完成**：任务的验收命令**实跑输出**写入 `evidence/<task>.log` 后，才在 `plan/ledger.yaml` 置 `verified`。⛔ **只贴 gate 总输出不算验收证据** —— `doccheck` 会检查 evidence 是否包含任务自己的判据（第 9 项）。
+2. **验收才算完成**：任务的验收命令**实跑输出**写入 `evidence/<task>.log` 后，才在 `plan/ledger.yaml` 置 `verified`。⛔ **只贴 gate 总输出不算验收证据** —— `doccheck` 会检查 evidence 是否包含任务自己的判据（gate 第 9 项）。
 3. **进度只由台账驱动**：循环 = 取下一个非 `verified` 任务 → 实现 → 验收 → `scripts/gate.ps1` → 更新台账 → 终止条件见 `docs/loop.md`（推进至 S4.4）。
 4. **结论必须实测**：二进制/格式相关结论写进 `legacy/docs/facts/<分卷>.md` 前必须有脚本证据；推测一律标注 `推测`。
 5. **选型已定案**：Rust edition 2024 + **Bevy 0.20**（渲染引擎；S18.0 推翻旧「macroquad」定案，见 `docs/process/11_bevy_migration.md` §1 + `docs/style.md`）。macroquad 只剩 android 壳在用（S18.8d 退役）。不要重新讨论语言/框架。
-6. **文档拆分 + 单一事实源**：细节进 `docs/`，本文件只做路由与硬规则。**同一结论只写一处**，其他文档引用 ID（`F-xxx`/`EXP-xxx`/`P0-x`）而非复述。新增文档必须登记进 `docs/README.md` 与本路由表。ID 唯一性与跨文档引用有效性由 `doccheck` 门禁（第 9 项）自动校验。
+6. **文档拆分 + 单一事实源**：细节进 `docs/`，本文件只做路由与硬规则。**同一结论只写一处**，其他文档引用 ID（`F-xxx`/`EXP-xxx`/`P0-x`）而非复述。新增文档必须登记进 `docs/README.md` 与本路由表。ID 唯一性与跨文档引用有效性由 `doccheck` 门禁（gate 第 9 项）自动校验。
 7. **改动面必声明**：每次开发开工前声明「改哪一块」（业务规则 / 数据 / 规则实现 / 表现 / 资产，见 `docs/process/00_index.md` §变更面声明），**跨模块必须写原因**（为何必须同改、为何不能拆成可独立验收子任务）；改动面含「业务规则」时**先在 `docs/business/` 定案再动代码**。不声明 = 返工（同 §分工表「LLM 禁区」）。
 8. **按模块功能开发 + 批量编辑一次编译**：动手前先定**模块边界与函数清单**（一个文件 = 一个职责，见 `docs/process/02_conventions.md` §9）；同一任务的编辑**全部落完再编译一次**，编译报错**一次性收口**——禁「改一处编一次」的探针节奏（编译成本纪律）。
 9. **UI 视觉改动：设计稿先行（A 纪律）**：表现层视觉/版面/配色/控件改动，**先出设计稿/效果图**（`scripts/ui_preview.ps1` 离屏出图或临时原型），**用户确认（消息留痕）后才落码**；任务 dod 必含「用户视觉验收通过」，确认后再改视觉意图须重新过目（`docs/process/00_index.md` §UI 视觉改动：设计稿先行 + EXP-114）；未确认就开工 = 返工。
-10. **脚本纪律（工具缺位才是病）**：动手写脚本前**先查 `docs/process/14_tooling_catalog.md`**（工具唯一事实源）；① 现有工具能跑 → 用；② 现有工具能组合 → 组合；③ 缺能力 → **补 `scripts/` 正式工具** + 按台账 §1.2 登记（幂等 + 只读模式 + 非 0 退出 + 台账 + 速查表），**不许**写一次性脚本包一层；④ 真的一次性改写 → 落 `scripts/tmp/` 且**用完即删**。**禁止写到仓库外**（系统临时目录 / 桌面），仓库内不得散落 `.py`/`.ps1`。违反 = `doccheck2` 第 27 项 `check_tooling_contract` FAIL（落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出）。
+10. **脚本纪律（工具缺位才是病）**：动手写脚本前**先查 `docs/process/14_tooling_catalog.md`**（工具唯一事实源）；① 现有工具能跑 → 用；② 现有工具能组合 → 组合；③ 缺能力 → **补 `scripts/` 正式工具** + 按台账 §1.2 登记（幂等 + 只读模式 + 非 0 退出 + 台账 + 速查表），**不许**写一次性脚本包一层；④ 真的一次性改写 → 落 `scripts/tmp/` 且**用完即删**。**禁止写到仓库外**（系统临时目录 / 桌面），仓库内不得散落 `.py`/`.ps1`。违反 = `doccheck2` 第 29 项 `check_tooling_contract` FAIL（落地位置 / 台账表格行 / 登记要素 / 只读模式 + 非 0 退出）。
 
 ## 命令
 

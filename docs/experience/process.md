@@ -607,3 +607,13 @@ S50.4 收口时把 CCGS「5 步协作协议逐 agent 内嵌」判进「4 不借�
 ② 越界 import 口径定案： 7 处  = **表现层→规则层正确分层**，红线 1「越界」指反向（rules→渲染）。 补 7 模块公共面 + 合法化注。
 ③ 测试盲区 ~14 条（rules 函数 0 集成测试）= 高成本留后续专项，15 号台账待固化登记。
 ④ 死代码 3 函数（ai_turn_v2/victory_seat/player_defeated）= pub + 内联测试引用，删 0 收益不删（棘轮豁免）。
+
+### EXP-189 流程：R12 双 agent 对抗审计——「项号文字本身」漂移 = 高频复现模式
+R12（rea-audit-fix 双 agent：FIND 100 条 Q001~Q100 + AUDIT 逐条复核 46 CONFIRMED / 2 REJECTED / 20 PARTIAL / 32 NO-LINE + 主线程独立复核 8 条最高价值 + 自查 3 条漏网）修 20+ 处漂移。三类系统性模式：
+① **项号镜像漂移**：`gate_data.json` `doccheck2_checks` 数组顺序是机读唯一源，文档文字「doccheck2 第 N 项 X」是手工镜像；S53/S54/S55 加 3 项（44→47）后，tooling-catalog/tooling-contract 从 26/27 漂到 28/29（9 处现状区：14_tooling_catalog×4 / AGENTS×2 / scripts-rules×2 / README×1），engine-no-color-literal 被 5 处误写「第 41 项」实为 15（S38 时点该项本就 15 = 数组前段从未变动，纯系统性误写非时点漂移，且与 rules/ti-engine-rules.md「第 15 项」库内矛盾）。
+② **gate 侧文字与代码不符**：gate.ps1 注释 + Report 项名写「CS-1~6」，check_code_standards.py 实测仅 CS-1~4 四项；32_ccgs_borrow 同误写。
+③ **版本/路径/工具矩阵面**：release.md 浏览器行「当前 0.1.0 / 48,765,303 B」vs 磁盘 0.2.0 / 45,794,950 B（版本规划表第 28 行 0.2.0 行才是真值）；gen_layout.py 3 处写 scripts/ 实为 legacy/scripts/（gate 实调路径）；26_dev_stages 工具矩阵 36 项实列 33 项（漏 dod-commands/studio-tests/Android 真机）+ PASS/SKIP 合计错；11_bevy_migration S18.7g「第 24 项」实 26（AUDIT 漏网自查）；08_render_arch 契约 1 表项号改现行 gate 13 项 doccheck2 内子检查口径 + §5.1 已退役基线段加「历史记述」标注；AGENTS/README「doccheck 独立第 9 项」统一改「gate 第 9 项」（doccheck 就是 gate 第 9 项本身，「独立」措辞歧义）。
+处置面 = 现状区（AGENTS/README/14/28/26/04/rules/experience index 表）全部改现行值；**历史叙事卷（EXP-113/115 正文、release 版本规划表 0.2.0/0.1.0 行、15 号 §2 台账行）保留时点快照不改**（带时点标注 = 正确形态，飞轮 R 已固化口径「历史计划文档里 N 项 = 该阶段时点快照，引用须带时点标注」）。
+固化判定 = **不新增 doccheck2 断言**：项号引用面 20+ 处、gate_data.json 顺序机读可信，文字漂移靠 cross-doc-counts（第 44 项）+ gate-items（第 6 项）双断言 + 对抗审计人工复核兜底；后续 gate/doccheck2 项数变更 = doc_numbers --fix 扩「项号文字」回写面（15 号 §2 第 12 行已登记该工具，扩面待专项）。
+证据 = evidence/r12-audit.log + r12-audit-find.md + r12-audit-audit.md。
+教训：双 agent 审计价值面 = B 侧（一致性）独报的项号/计数类漂移 A 侧（完成度）结构性看不见——本轮 46 CONFIRMED 里 0 条是功能缺口，全 = 值/编号/路径漂移，与 S51.1 飞轮 R2「B 侧独报 3 条 A 看不到的值漂移」同构；主线程独立复核不可省（AUDIT 漏网 3 条 + 改判 2 条 = EXP-038 再次实证）。

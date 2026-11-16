@@ -135,7 +135,7 @@
 
 | 用途 | 工具 |
 |---|---|
-| **门禁** | `gate.ps1`（36 项固定 Report：fmt/clippy/test/build/占位/unwrap/台账/doccheck/validate_data/gen_layout/check_hardcode/check_data_driven/check_code_standards/oracle边界/no-macroquad/doccheck2/台账对账/业务闭环/模块契约/飞轮/渲染不变式/数据源/audit_code/场景叙事/bevy-cpu-parity/wasm-browser-e2e/browser-playtest/playtest-loop） |
+| **门禁** | `gate.ps1`（36 项固定 Report：fmt/clippy/test/build/占位/unwrap/台账/doccheck/validate_data/gen_layout/check_hardcode/check_data_driven/check_code_standards/oracle边界/no-macroquad/doccheck2/台账对账/业务闭环/模块契约/飞轮/渲染不变式/数据源/audit_code/场景叙事/bevy-cpu-parity/wasm-browser-e2e/browser-playtest/playtest-loop/**dod-commands**/**studio-tests**/**Android 真机**） |
 | **数据校验** | `validate_data.py`（B 基础 + V1 grid 三键 + V2 标量 + V3 图标 + scenes_canonical + asset_registry + test_manifest + **version_consistency** 三方对账） |
 | **代码校验** | `check_hardcode.py` / `check_data_driven.py` / `check_code_standards.py`（CS-1 资产单源/CS-2 文件职责/CS-3 参数命名/CS-4 场景窄接缝）/ `audit_code.py`（规模棘轮）/ `check_ledger_reality.py`（台账三方对账）/ `check_oracle_boundary.py` / `check_forward_closed.py` / `check_module_contracts.py` / `check_scene_narrative.py` / `check_data_source.py` |
 | **文档一致性** | `doccheck`（178 docs/38 facts/184 experiences/334 task refs 交叉引用；计数随文档增长实测回写，飞轮 R8 勘误旧 155/274 快照）/ `doccheck2`（47 项 audit-codified 断言；gate_data.json `doccheck2_checks` 单一事实源，S53 飞轮 R6 固化 `business-doc-test-refs` +1 / S54/S55 飞轮 R9 固化 `blocked-label-consistency`/`doccheck-counts-match` +2；飞轮 R4 勘误旧「42 项」残留）/ `doc_numbers.py` / `layout_spec_check.py` / `check_ps_scripts.ps1` |
@@ -176,7 +176,7 @@
 | **P3** | 业务闭环（P3-3 全流程 16 步 0 失败 + P3-2 穷举覆盖） |
 | **P4** | 渲染对齐（P4-1 CPU↔Bevy 像素对拍通道 ≤8 LSB 超差 <0.5%） |
 
-### 门禁 36 项（`gate.ps1`，当前 30 PASS / 0 FAIL / 2 SKIP）
+### 门禁 36 项（`gate.ps1`；分档 -Fast/-Touch/full，SKIP 数随环境浮动：android 无 NDK / zero-unknown 条件档 / bevy-cpu-parity 无 GPU 记名 SKIP）
 
 fmt / clippy / test / build(native) / wasm build+clippy / android(SKIP 无 NDK) / 占位 / unwrap / 台账 / doccheck / validate_data / gen_layout / check_hardcode / check_ledger_reality / check_forward_closed / check_oracle_boundary / no-macroquad / doccheck2 / 台账对账 / check_data_driven / check_data_source / 模块契约 / 飞轮 / 渲染不变式 / audit_code / 场景叙事 / bevy-cpu-parity / wasm-browser-e2e / browser-playtest / playtest-loop / check_code_standards / …（wasm/android 构建为条件子项）。
 

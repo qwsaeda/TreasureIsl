@@ -38,7 +38,7 @@
 | 平台 | 产物 | 路径 | 体积 (S18.8a 后最新) |
 |---|---|---|---|
 | 桌面（当前收口） | `treasure-bevy-native.exe` | `target/release/`（S27.7 起并入根 workspace，产物落根 `target/`） | 见 `evidence/S18.8a-wasm-size.log` 同目录口径（Bevy 壳体积待 S18.8e 复验） |
-| 浏览器（Bevy 壳） | `treasure_bevy_wasm-<x.y.z>.wasm`（S25 版本规范后带版本；当前 `0.1.0`，LTO+strip 后 **48,765,303 B ≈ 46.6 MB**，超 S18.8e 新预算 ≤8 MB 6 倍；缺口登记 = S18.8 收口「发货超预算」已知限制，wasm-opt -Oz 须 wasm32-unknown-unknown 目标 LTO 全开 + 分包才能收敛，本机实测未达标留痕）+ 真实资源 | `web/`（`evidence/S18.8e.log`） | 体积预算判定 = 11_bevy_migration §3；本机 NDK/LTO 实测值留痕，超预算不作静默发布口径 |
+| 浏览器（Bevy 壳） | `treasure_bevy_wasm-<x.y.z>.wasm`（S25 版本规范后带版本；当前 `0.2.0`，LTO+strip 后 **45,794,950 B ≈ 43.7 MB**，超 S18.8e 新预算 ≤8 MB 6 倍；缺口登记 = S18.8 收口「发货超预算」已知限制，wasm-opt -Oz 须 wasm32-unknown-unknown 目标 LTO 全开 + 分包才能收敛，本机实测未达标留痕）+ 真实资源 | `web/`（`evidence/S18.8e.log`） | 体积预算判定 = 11_bevy_migration §3；本机 NDK/LTO 实测值留痕，超预算不作静默发布口径 |
 | Android（S18.8d 切 Bevy 壳；Mac 编译） | `libandroid_activity.so`（`android/android-activity` cdylib，include! 复用 `treasure_bevy.rs`；JNI 入口 `android_main`，0 macroquad） | `target/aarch64-linux-android/release/`（Mac NDK r25b 交叉编译） （本机 NDK 缺失，`cargo build -p android-activity@0.1.0 --target aarch64-linux-android` 挂 S18.8d 收口实测定态） | APK 交付 = `cargo-apk` 标准布局；体积随 Bevy 壳（与浏览器侧同源，超 8 MB 预算同口径） |
 
 完整 sha256 见 `evidence/S4.4.log`（S4.3 时点 wasm 675,016 B）、`evidence/S5.4.log`；S5.6/S6.1~S6.4 完成后 macroquad wasm 增长至 745 KB（体积表见 `docs/modernization.md` §9，首屏 308,227 B / 非首屏 250,154 B）——**该组数字是 macroquad 壳的历史记述**。

@@ -73,7 +73,7 @@ CS-1 资产单源 · CS-2 文件职责 · CS-3 参数禁单字母 · CS-4 场景
 
 | 检查 | 守什么 |
 |---|---|
-| **`engine-no-color-literal`**（第 41 项） | ① 引擎层 `Color::srgb/srgba` 字面量只允许出现在 `ui.rs::palette` 常量定义（S38 起 = `theme_color(Theme::DEFAULT.<token>, alpha)` 编译期派生；`theme_color` helper 函数体 `Color::srgba(r,g,b,alpha)` 属合法转换）与 `canvas.rs::rgb565_to_color`（合法 RGB565 转换）；其余出现 = 违背（F-01 防再犯）。② 尺寸裸数字 `Px(<数字>`（`FontSize::Px`/`BorderRadius::px`/`UiRect::px`/`Val::Px`）在 `ui.rs` + `bin/treasure_bevy.rs` = 0，`vs_duel.rs` 精灵尺寸（`Vec2::new`/`custom_size`）裸数字 = 0（F-02/F-02b 防再犯）。③ 动画/时序裸数字：`unwrap_or(16)` 在 `vs_duel.rs` + `bin/treasure_bevy.rs` = 0（`FRAME_DELTA_FALLBACK_MS`）；`vs_duel.rs` `ShakeOffset amplitude: <数字>` 与 `k * <数字>`（上飘）裸数字 = 0（F-04 防再犯）。 |
+| **`engine-no-color-literal`**（第 15 项） | ① 引擎层 `Color::srgb/srgba` 字面量只允许出现在 `ui.rs::palette` 常量定义（S38 起 = `theme_color(Theme::DEFAULT.<token>, alpha)` 编译期派生；`theme_color` helper 函数体 `Color::srgba(r,g,b,alpha)` 属合法转换）与 `canvas.rs::rgb565_to_color`（合法 RGB565 转换）；其余出现 = 违背（F-01 防再犯）。② 尺寸裸数字 `Px(<数字>`（`FontSize::Px`/`BorderRadius::px`/`UiRect::px`/`Val::Px`）在 `ui.rs` + `bin/treasure_bevy.rs` = 0，`vs_duel.rs` 精灵尺寸（`Vec2::new`/`custom_size`）裸数字 = 0（F-02/F-02b 防再犯）。③ 动画/时序裸数字：`unwrap_or(16)` 在 `vs_duel.rs` + `bin/treasure_bevy.rs` = 0（`FRAME_DELTA_FALLBACK_MS`）；`vs_duel.rs` `ShakeOffset amplitude: <数字>` 与 `k * <数字>`（上飘）裸数字 = 0（F-04 防再犯）。 |
 
 ## 5. 审计方法（复跑）
 
@@ -82,7 +82,7 @@ CS-1 资产单源 · CS-2 文件职责 · CS-3 参数禁单字母 · CS-4 场景
 grep -rnE "Color::srgb\(|Color::srgba\(" crates/ti-engine/src | grep -v "pub const"
 grep -nE "FontSize::Px\([0-9]|BorderRadius::px\([0-9]|UiRect::px\([0-9]|Val::Px\([0-9]" crates/ti-engine/src/ui.rs
 
-# 机器守门（第 41 项）
+# 机器守门（第 15 项）
 cargo run -q -p ti-tools --bin doccheck2
 ```
 

@@ -58,7 +58,7 @@ S0 系列 6 条 + S1 系列 6 条 + S2 系列 6 条，共 18 条（早期任务�
 
 S1.7 起全部**走真校验**（S3/S4/S5/S7/S8/S9/S10 各阶段同），
 dod 须含可 grep 的关键产物。若 dod 只写中文描述无标识符，(b) 自动 PASS（vacuously true），
-由 doccheck 第 9 项（evidence 内容特征）兜底。
+`doccheck` 第 9 项（evidence 内容特征）兜底。
 
 ### 4. 孤儿 evidence 检测（S13.2 增）
 
@@ -85,7 +85,7 @@ dod 须含可 grep 的关键产物。若 dod 只写中文描述无标识符，(b
 ## 与 doccheck 的分工
 
 - **本脚本**：台账 verified ↔ evidence 实存 ↔ 代码产物 grep（三方对账，EXP-058）
-- **doccheck 第 9 项**：文档 ID 唯一性 + release 台账计数漂移（数值对账）
+- **doccheck 第 9 项门禁**：文档 ID 唯一性 + release 台账计数漂移（数值对账）
 - **gate.ps1 第 8 项**（`ledger` bin）：台账语法 + 依赖 + 状态机合法性
 
 三者互补，不重复。

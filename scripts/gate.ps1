@@ -250,12 +250,12 @@ if ($ddHits.Count -gt 0) {
     Report $true 'check_data_driven (generic primitives; renderer has no scene semantics)'
 }
 
-# 10e) 代码标准（docs/process/16_code_standards.md）：CS-1~CS-6 机器检查 + 棘轮基线
+# 10e) 代码标准（docs/process/16_code_standards.md）：CS-1~CS-4 机器检查 + 棘轮基线
 #      （存量豁免在 scripts/process_ratchet.json::code_standards；新增违例 = 非 0 退出）。
 #      快且全档执行（不加 Tier 门控）：-Fast/-Touch/full 都拦新增违例。
 $csOut = & $py scripts/check_code_standards.py --check 2>&1
 $csOut | ForEach-Object { Write-Host "        $_" }
-Report ($LASTEXITCODE -eq 0) 'check_code_standards (CS-1~6 代码标准 + 棘轮基线)'
+Report ($LASTEXITCODE -eq 0) 'check_code_standards (CS-1~4 代码标准 + 棘轮基线)'
 
 # 11) oracle 边界（S8.8）：shell 层 0 个 oracle_* 函数调用（oracle 仅 rules 内部参照物）
 #     check_oracle_boundary.py 区分「oracle_* 函数调用=违规」vs「oracle::xxx::Type 类型重导出=允许」。

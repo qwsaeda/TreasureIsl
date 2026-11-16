@@ -1,0 +1,35 @@
+# R12 双 agent 对抗审计收口（rea-audit-fix）2026-11-16
+
+## [1] 改动面：文档 doc↔code↔data 漂移修复（零 Rust；gate.ps1 注释 + Report 项名 + 32_ccgs_borrow + 14/AGENTS/README/rules/experience/04/26/release/tutorial/08_render_arch/11_bevy_migration/check_ledger_reality）
+
+## [2] FIND：100 条 Q001~Q100（72 候选漂移 + 28 正例）→ /tmp/opencode/audit_round12_find.md
+## AUDIT：100 条逐条复核 → /tmp/opencode/audit_round12_audit.md
+CONFIRMED 46 / REJECTED 2 / PARTIAL 20 / NO-LINE 32
+
+## [3] 主线程独立复核（最高价值 8 条 + 自查 3 条漏网）后 FIX：
+- gate.ps1 CS-1~6→CS-1~4（注释 + Report 项名）+ 32_ccgs_borrow CS-1~6→CS-1~4
+- 工具契约 doccheck2 项号 26/27→28/29 现状区 9 处（14_tooling_catalog×4 + AGENTS×2 + scripts-rules×2 + README×1；EXP-113/115 叙事卷保留时点快照）
+- engine-no-color-literal 项号 41→15 现状区 5 处（28_engine×2 + README×1 + experience/index×2）
+- release.md 浏览器行 0.1.0/48,765,303B→0.2.0/45,794,950B（Cargo.toml 0.2.0 + 磁盘 0.2.0 wasm 实测；第 53 行体积表行 = S18.8e 历史口径保留）
+- gen_layout.py 路径 3 处 scripts/→legacy/scripts/（gate.ps1 实际调用 legacy/scripts/gen_layout.py）
+- 26_dev_stages 工具矩阵补 3 项（dod-commands/studio-tests/Android 真机，实列 33→36）+ PASS/SKIP 合计改分档口径
+- tutorial/03_coordinates 项号 9→20（runtime-no-legacy-coords）
+- 08_render_arch 契约 1 表项号改现行 gate 13 项 doccheck2 内子检查口径 + §5.1 已退役基线段加历史记述标注
+- AGENTS 路由表「gate 第 9 项 doccheck2」改现行口径 + 硬规则 2/6「第 9 项」改「gate 第 9 项」
+- README L13/36/277「doccheck 独立第 9 项」改「gate 第 9 项」
+- 11_bevy_migration S18.7g「doccheck2 第 24 项」→第 26 项（AUDIT 漏网自查）
+- check_ledger_reality L61/69 doccheck 第 9 项补 gate 前缀
+- experience/index EXP-068/072 L26/108 措辞统一
+- AGENTS L103 doccheck2 第 31~34→33~36 项（repo-text-integrity/task-change-scope/tooling-registration/process-ledger 现行位）
+
+## [4] 判据实跑
+$ python3 scripts/doc_numbers.py
+  实测：门禁 36 项 / 台账 340 任务（339 verified）
+  声称点与实测一致（0 漂移）
+
+$ cargo run -q -p ti-tools --bin doccheck2
+doccheck2: 0 error(s) across 47 audit-codified checks (audio/oracle/lcg/landmark/i18n/gate-items/headless-battle-api/flywheel-readback/battle-player-data-driven/flywheel-script/touch-render-pair/hd-sprite-transparency/scene-layout-fidelity/wasm-viewport-init/engine-no-color-literal/landscape-no-portrait-hardcode/save-slot-map-slot-basis/exhaust-balance-dual-write/experience-volume-counts/runtime-no-legacy-coords/layout-doc-table-cross-check/no-ti-core-fullpath/std-traits-matrix/render-framework-boundary/ui-redesign-tokens/primitives-data/terrain-data/tooling-catalog/tooling-contract/engine-no-bare-half/select-role-render-loop/render-single-source/repo-text-integrity/task-change-scope/tooling-registration/process-ledger/visual-signoff/node-asset-map/no-inline-test-mod/bevy-camera-scale-convention/job-model-unified/rules-files/theme-consumption/cross-doc-counts/business-doc-test-refs/blocked-label-consistency/doccheck-counts-match)
+
+gate.ps1 全量：见 evidence/gate-r12.log（36 项 0 failure；wasm-browser-e2e/browser-playtest/playtest-loop 前次 3 failure = 环境无 web/ 静态服务，起 python3 http.server 8080（web/）后复跑全 PASS，L4 降级 SKIP 口径 = SwiftShader 偶发 GPU stall）
+
+## [5] 结论：R12 收口。同类高频复现模式（doccheck2 项号/工具契约项号/gate 项名 现状区漂移）= 飞轮 R4/R6/R9 已固化的 47 项断言未覆盖「项号文字本身」——本轮修毕，不新增 doccheck2 断言（项号引用面 20+ 处且 gate_data.json 顺序本身是机读源，文字漂移靠 cross-doc-counts/gate-items 双断言 + 本轮人工复核兜底）。

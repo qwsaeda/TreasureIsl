@@ -23,7 +23,7 @@
 | `resolved by EXP-NNN` | 坑已解决，保留作经验 | `### EXP-NNN 标题（**status: resolved by EXP-NNN**）` |
 | `superseded by EXP-NNN` | 条文已被作废，**不要照它行动** | `### EXP-NNN 标题（**status: superseded by EXP-NNN**）` |
 
-> 约定（当前门禁未自动校验提示块）：`doccheck`（gate 第 9 项，独立命令）校验 `EXP-NNN` 全库唯一 + 跨文档引用有效；status 标记格式与「被标记条目必须带提示块」为文档约定，当前门禁不自动校验。
+> 约定（当前门禁未自动校验提示块）：`doccheck`（gate 第 9 项独立命令）校验 `EXP-NNN` 全库唯一 + 跨文档引用有效；status 标记格式与「被标记条目必须带提示块」为文档约定，当前门禁不自动校验。
 
 ## 分卷
 
@@ -105,7 +105,7 @@
 | EXP-061 | process | | 行内全路径引用（`ti_core::data::balance()`）vs use 声明——子代理风格漂移，改动前读既有 use 块，行内全路径=0（S10.3 教训） |
 | EXP-063 | process | | doccheck 任务 ID 检查是散文全库扫描：新阶段任务先登记 `plan/ledger.yaml`（pending 即可）再写文档引用；散文范围写法「某阶段 x」会被当 token 抓，写「S10 系列」或逐个编号（S11 登记 S12 WBS 踩坑） |
 | EXP-064 | process | | 子代理只拿到任务书 = 跨会话上下文丢失：会话起点 prompt 必注入仓库绝对路径 + crate 前缀 `ti-`（非 `ty-`）+ 关键符号路径 + 契约锚点 + 当前任务与已 verified 清单，回执逐条对齐否则返工（模块并行 loop 纪律） |
-| EXP-065 | process | | 台账被文件级回退（`git checkout -- <file>`/restore 不进 reflog）会静默丢任务条目：23 条丢失 → doccheck 第 9 项 115 error；兜底 = gate 第 14 项「孤儿 evidence 检测」（`evidence/` 里任务 ID 命名的文件其 ID 必须在台账）+ 长阶段收尾即 commit |
+| EXP-065 | process | | 台账被文件级回退（`git checkout -- <file>`/restore 不进 reflog）会静默丢任务条目：23 条丢失 → gate 第 9 项 doccheck 115 error；兜底 = gate 第 14 项「孤儿 evidence 检测」（`evidence/` 里任务 ID 命名的文件其 ID 必须在台账）+ 长阶段收尾即 commit |
 | EXP-066 | code | | 表现层 `start_battle` 写死 `Unit{hp:1000,atk:150}` 与 `balance.combat.player{hp:2000,atk:60}` 漂移；属 P1-P5 白名单外，S10.5 审计留 unknown 不强制修，仅登记 + 写 evidence（check_hardcode/oracle_boundary 都抓不到，需双 agent 反向审计补洞） |
 | EXP-067 | code | | 跨层几何公式（rules 逻辑坐标 ↔ 渲染投影）须正逆成对测试：逆变换(正变换(p))==p，单层公式自洽不算数（S10.5 审计发现，主地图触摸命中教训 EXP-059 的泛化） |
 | EXP-068 | process | | 子代理开轮不读最新规范/EXP/契约 → 重复踩坑（ty-app 前缀、跨层几何不对齐、不知 gate 第 16 项查什么）：开轮必读清单 6 条 + 规范回执固化进 06_flywheel（飞轮单一事实源）+ 05 §4.5 + 03 §7 + doccheck2 第 8 项 `check_flywheel_readback` |
@@ -204,9 +204,9 @@
 | EXP-162 | code | | S38 横屏方向感知人工逐点改（to_world→to_world_dims、letterbox 方向感知），已漏 3 处（Image op/letterbox_size/zoom 锚点+resizetest 断言）；固化 doccheck2 第 39 项 landscape-no-portrait-hardcode（函数级扫 spawn_draw_list/pick_layer 禁 to_world + letterbox_size 须含 LANDSCAPE_W_I32）防复发 正文见 `code.md` |
 | EXP-163 | code | | wasm_browser_e2e.py 加 --viewport=WxH（横屏 1920×1080 视口 + 截图名带尺寸后缀 + L4 m01 点击坐标布局适配）实测：wasm 横屏 L1 实例化/L2 渲染（19% 非黑 + 资产 2xx）/L3 交互/L5 环资产 PASS；L4 场景切换点击横屏不达——亮度阈值导航（bright<40 判已在 select_map）是竖屏口径，横屏各场景亮度相近（≈19%）首轮即命中，未导航到 select_map 正文见 `code.md` |
 | EXP-164 | code | | 用户报 wasm 无横屏：bevy 0.20 wasm 把 #game canvas 尺寸设为 WindowResolution(540,960)（初始 WIN_W×WIN_H 竖屏硬编码），覆盖页面 CSS 100vw×100vh ⇒ 浏览器视口无论横竖，canvas 恒 540×960 ⇒ is_landscape=false ⇒ 恒竖屏 letterbox（native --viewport=1920x1080 横屏正确但 wasm 从未横屏）。修复：run() wasm 分支用 window.innerWidth/Height×dpr 初始化 WindowResolution（实际视口）。固化 doccheck2 第 40 项 wasm-viewport-init（run 须含 inner_width/inner_height） 正文见 `code.md` |
-| EXP-165 | code | | 用户「发现你用了游戏引擎，但很多还是硬编码，不是遵守游戏开发/引擎使用的最佳实践」→ 审计：数据驱动/引擎机制已达标（px 坐标字面量 0、DefaultPlugins、bevy_picking、方向感知），主要硬编码违背 = F-01 颜色字面量 ~24 处（ui.rs/treasure_bevy/vs_duel/scene_render/bevy_app）+ F-02 ui.rs 尺寸魔法数字 18 处（字体/圆角/内边/gap/宽高）。处置：集中 ui.rs::palette 具名常量（值不变零视觉变化，CS-1 单源），固化 doccheck2 第 41 项 engine-no-color-literal 正文见 `code.md` |
+| EXP-165 | code | | 用户「发现你用了游戏引擎，但很多还是硬编码，不是遵守游戏开发/引擎使用的最佳实践」→ 审计：数据驱动/引擎机制已达标（px 坐标字面量 0、DefaultPlugins、bevy_picking、方向感知），主要硬编码违背 = F-01 颜色字面量 ~24 处（ui.rs/treasure_bevy/vs_duel/scene_render/bevy_app）+ F-02 ui.rs 尺寸魔法数字 18 处（字体/圆角/内边/gap/宽高）。处置：集中 ui.rs::palette 具名常量（值不变零视觉变化，CS-1 单源），固化 doccheck2 第 15 项 engine-no-color-literal 正文见 `code.md` |
 | EXP-166 | code | | 用户延伸要求完整迁移 palette→Theme。关键：现有 Theme 令牌（menu_bg=蓝/text_on_wood=粉/secondary=绿/brass_light=黄）与 palette 色（棕/金/奶油）语义不匹配，naive 值交换劣化视觉 → 加 16 个 ui_* 新令牌保视觉（RGB565 量化 <1.6%）；const 派生用自写 theme_color（with_alpha/u32::from 非 const）；doccheck2 S17.2 三方对账定界 black→font_size 起点 + 字段名允许数字；撞色登记 palette_aliases；尺寸保持 palette（Theme 字号 i32 非 bevy_ui px 语义） 正文见 `code.md` |
-| EXP-167 | code | | 用户延伸审计动画/时序 + VS 原型数据。发现：烘焙位图颜色字面量（0x20/0x12/0x08/0xFF/0xE8/0xC0 绕过 palette）+ 动效时序魔法数字（上飘 120/锚点 60/0.55/ShakeOffset 14/160/delta unwrap_or(16) 重复）+ 时序常量分散（STRIKE_*/HIT_STOP/POPUP_MS 模块顶）+ 作废 HP 回合制原型残留（player_hp=2000/三动作/4 道具，业务已迁兵力模型 S34.6，无 live 调用）。处置：集中 palette::DUEL_* 常量（值不变零视觉变化），doccheck2 第 41 项 ③ 时序扫描防再犯；F-05 记录判定保留作骨架 正文见 `code.md` |
+| EXP-167 | code | | 用户延伸审计动画/时序 + VS 原型数据。发现：烘焙位图颜色字面量（0x20/0x12/0x08/0xFF/0xE8/0xC0 绕过 palette）+ 动效时序魔法数字（上飘 120/锚点 60/0.55/ShakeOffset 14/160/delta unwrap_or(16) 重复）+ 时序常量分散（STRIKE_*/HIT_STOP/POPUP_MS 模块顶）+ 作废 HP 回合制原型残留（player_hp=2000/三动作/4 道具，业务已迁兵力模型 S34.6，无 live 调用）。处置：集中 palette::DUEL_* 常量（值不变零视觉变化），doccheck2 第 15 项 ③ 时序扫描防再犯；F-05 记录判定保留作骨架 正文见 `code.md` |
 | EXP-168 | code | | S39 build_data_chrome 把 ImageNode/Text/BackgroundColor 放无 Node 子实体 ⇒ bevy_ui 按 Node 提取不绘制；修复=内容合并回 Node 实体 正文见 `code.md` |
 | EXP-169 | code | | S39 when=selected 过滤读 item 而非 pick_index ⇒ item=-1 全滤掉；修复=item=pick_index + validate_data 机器兜底 正文见 `code.md` |
 | EXP-170 | process | | P0-2「每格式 0 未知字节」的判据命令 `verify --zero-unknown` 从未存在（verify.rs 在 git 全历史中从未出现），门禁第 7 项用载体存在性守卫 ⇒ 永久 SKIP ⇒ 判据从未执行（项目 DoD 的 P0~P4 全 pass 中 P0-2 长期不可达，且计划里的判据未落台账任务）；S46.0 落地载体 = crates/ti-tools/src/bin/verify.rs（真实数据 33 文件 / 305 条目 / 0 失败 ⇒ 首次真实通过）+ 门禁改 `--bin verify --` + 4 条单测；复发防护 = 判据命令须可实跑（多 bin 必显式 `--bin`）+ 载体缺失应 FAIL 而非 SKIP + 判据须对应台账任务号 | 正文见 `process.md` |
@@ -228,6 +228,7 @@
 | EXP-186 | process | | S50.4 收口把 CCGS「5 步协作协议逐 agent 内嵌」判进「4 不借鉴」（理由「loop.md §4 + 硬规则 2 已替代」）；用户质疑后查全库：loop.md §4 = 卡死与回退、硬规则 2 = 验收才算完成（均事后），不覆盖 CCGS 五步协议的**事前**面（提问→方案→拍板→草稿→批准）；现有事前约束仅角色禁区（一刀切只读）+ 开轮必读（只管读什么）+ A 纪律（仅 UI 视觉）= 全库 0 命中「先问再写/给 2-4 方案/草稿先过目/批准才落地」。教训：对照分析判「不借鉴」前必须 grep 验证我方是否真有等价载体，不能凭印象归「已替代」——事前协作协议面 = 真缺口（S51.0 改形态借鉴）。正文见 `process.md` |
 | EXP-187 | process | | 静态扫 sget 字面量判孤儿 i18n key 会误报：format!("glmapm{N}") 等动态拼接 + territory.md 预置的副本 guard/benefit 文案当前 0 引用但非孤儿，须 grep 动态拼接点 + 查业务规格再判删 正文见 `process.md` |
 | EXP-188 | process | | CCGS 双审计协议：A 完成度（功能缺口）/ B 一致性（值漂移/口径过期）独立并行不读对方结论；表现层→规则层 import = 正确分层（红线 1 越界指反向 rules→渲染），c1 契约补 7 模块公共面合法化 正文见 `process.md` |
+| EXP-189 | process | | doccheck2 项号/工具契约项号/gate 项名等「项号文字本身」漂移 = 高频复现模式（R12 一次 20+ 处）：gate_data.json 数组顺序是机读源，文档文字「第 N 项」是手工镜像，S53/S54/S55 加 3 项后未回写 ⇒ 现状区（28_engine/README/AGENTS/rules/tutorial）全过期；修毕靠 cross-doc-counts/gate-items 双断言 + 对抗审计人工复核兜底（本轮不新增断言：项号引用面 20+ 处且 gate_data.json 顺序本身机读可信，文字漂移面靠 R12 清零 + 后续 gate 项数变更走 doc_numbers --fix 扩「项号文字」回写面）。证据 = evidence/r12-audit.log + r12-audit-find/audit.md 正文见 `process.md` |
 
 ## 条目格式（写新条时照抄）
 
