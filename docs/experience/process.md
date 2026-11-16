@@ -545,7 +545,7 @@ parity.md 行 21「doccheck2 `check_touch_render_pair`（门禁 doccheck2 项）
 `cargo test -p <crate> --test <name>` 对权威 test 清单、`python scripts/*.py`/`pwsh scripts/*.ps1` 对文件存在性；
 多 bin crate 上 `cargo run -p <crate> -- <arg>`（无 `--bin`）= **歧义 FAIL**（EXP-170 同类）；
 `<module>`/单字母泛指 = 占位符跳过（误报防护，实测 `<module>`/`z.py` 两类）。不可达判据非 0 退出。
-② 固化为**门禁第 25 项**（off门禁 34 项）；门禁项数牵动 8 处声称由 `doc_numbers --fix` 同步 + doccheck2 期望值 33→34。
+② 固化为**门禁第 25 项**（该 EXP 时点门禁 34 项；现行 36 项，`doc_numbers` 声称面口径）；门禁项数牵动 8 处声称由 `doc_numbers --fix` 同步 + doccheck2 期望值 33→34（时点值，现行 36）。
 ③ 4 处真伤当场修复：P0-1 判据改 `--bin unpak -- --check-all`（parity.md）/ datacheck→doccheck /
 ti-app→ti-core / treasure-native→treasure-bevy-native。
 ④ 负例护栏：临时注入 `cargo run -p ti-tools -- fakebin` ⇒ 检出 FAIL；恢复 ⇒ PASS。
@@ -656,3 +656,9 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **根因**：① `git checkout --` 无差别还原整个文件到 HEAD，对本轮工作区跨任务累积改动 = 丢面；须**先 cp 备份再还原 + 幂等 patch 脚本重做**（`/tmp/opencode/s572a_patch.py` 含「已应用，跳过」守卫 + 好副本 `clr_s572a_good.py`）② 孤儿 evidence 检测口径 =「文件名任务 ID 前缀」，证据文件命名必须带**完整任务 ID 前缀**（S57.0.log 非 S57 前缀 .log）③ 覆盖率分子把「手工登记的文档类任务」（S9.5/S10.4/S21.0 符号非代码产物）混入「改动面含代码」分母面 ⇒ 分母口径 = 声明面 ∩ 可提取符号子集（110 = dod 含 crates 路径/pub 项的可提取面），分子 = 自动提取命中面。
 - **解法**：① 高风险 git 还原前先 `cp file /tmp/opencode/bak_file`；patch 脚本幂等可重放（重做 = 跑 patch 脚本，不重敲 edit）② 多任务共用证据文件命名 = 任务组首 ID 全前缀（S57.0.log）③ 覆盖率 = 自动提取面（分母 ∩ 可提取子集，防虚高/假绿）+ 手工面优先合并；28%（31/110）= S57.2a 收口时点基线棘轮（只收紧，S57.2b 阶梯 60%→100%）。
 - **验证**：`python3 scripts/check_ledger_reality.py` 全绿（31/110 = 28% 基线）+ 负例实跑（删 S21.0 手工符号 ⇒ FAIL 1，备份还原法）+ doccheck2 48 项 0 error。
+
+### EXP-192 流程：数值声称点同组多文档口径漂移（R13 三组同模式 + 平台前端硬编码面 + WBS 复选框不回写）
+- **现象**：R13 双 agent 审计 8 组 CONFIRMED 缺陷里 3 组同模式 =「同一数值在 3+ 文档各自手写，改 1 处漏 2 处」：①「流程强化 8/7 条」26 号 vs AGENTS.md ②「doccheck2 47/48 项」26 号 L141 漏 S57.1 +1 ③「门禁 33/36 项」27 号 8 处 + ti-console web/index.html 3 处硬编码（R10 勘误只修 28 号/README/AGENTS 文档面，漏平台前端）。另 2 组新面：plan-s56 WBS 复选框 4 行 [ ] 未随台账 verified 回写 + process.md L548 乱码「（off门禁 34 项）」。
+- **根因**：① 数值声称点无「枚举型」载体——doccheck2 cross-doc-counts 只守「N 任务（M verified + 0 pending（…）」锚定短语 + 26 号工具矩阵行 doccheck 计数，**「N 条流程强化」枚举面 0 断言**（人工数枚举易 off-by-one，S53 属飞轮 R6 断言固化不属流程强化第二批 = 7 非 8）② 门禁项数声称面 doc_numbers 覆盖 8 文档 + S57.2b 扩 2 文件 = 10 载体，**ti-console 前端 index.html 硬编码 3 处 0 覆盖**（R10 修平台 doc↔code 漂移时前端面漏网）③ WBS 文档（plan-sNN）复选框 = 纯人工回写面，无机器断言（task_close.py 只回写台账不联动 WBS 文档）④ 乱码 = 早期手敲 CJK 混入（Set-Content 类事故残留，EXP-051 同类）。
+- **解法**：① 枚举型声称点（「N 条 X」）暂靠对抗审计人工面 + 文档写全枚举（「S54.1/S55.1/S56.0/S57.0~S57.2b 共 7 条」= 枚举随值，改任务自动暴露）；doccheck2 扩「枚举面」断言 = 后续轮 ② doc_numbers.py 扩 `crates/ti-console/web/index.html` 门禁项数声称面（3 处硬编码 ⇒ 1 个声称文件登记，--fix 可回写）= 后续轮 ③ WBS 复选框回写 = 收口轮人工面（plan-sNN 4 行 [ ]→[x]），后续 S58+ WBS 统一在台账 dod 写「WBS 复选框同步」判据 ④ 乱码行 = 修时点标注（现行值 + 时点值双注，防误读）。
+- **验证**：R13 8 条全修 + gate 36 项 0 failure + doccheck2 48 项 0 error + doc_numbers 0 漂移（evidence/r13-audit.md）。

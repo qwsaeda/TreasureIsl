@@ -114,26 +114,26 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
   `select_role_landscape.png`（`agnes_gen.py` 16:9）。
 - [x] **S38.1 用户过目确认 + 动码完成**：index/select_role 横屏概念图过目无异议（A 纪律留痕）
   → S38.1 动码（scenes.json `landscape.primitives` + 渲染方向感知）→ **verified**
-  （`evidence/S38.1.log`；竖屏 0 行为变化 0.0003%，横屏 main_map 99.8%，gate 33 项 0 failure）。
+  （`evidence/S38.1.log`；竖屏 0 行为变化 0.0003%，横屏 main_map 99.8%，gate 36 项 0 failure）。
 - [x] **S38.2 用户过目确认 + 动码完成**：select_map 横屏概念图（3 卡横排 + 右侧状态面板）过目
   确认「动码」→ S38.2 动码（scenes.json select_map `landscape.primitives` 13 个）→ **verified**
-  （`evidence/S38.2.log`；3 缩略图横排无头断言 + 竖屏 0 行为变化 + gate 33 项 0 failure）。
+  （`evidence/S38.2.log`；3 缩略图横排无头断言 + 竖屏 0 行为变化 + gate 36 项 0 failure）。
 - [x] **S38.3 用户过目确认 + 动码完成**：message 横屏概念图（居中帮助面板）过目确认「动码」
   → S38.3 动码（scenes.json message `landscape.primitives` bg 满屏 + `build_message_chrome`
   面板横屏居中 55%）→ **verified**（`evidence/S38.3.log`；无头断言 + 竖屏 0 行为变化 +
-  gate 33 项 0 failure）。
+  gate 36 项 0 failure）。
 - [x] **S38.4 用户过目确认 + 动码完成**：saveload 横屏概念图（5 槽左列 + 右侧按钮）过目确认
   「动码」→ S38.4 动码（scenes.json saveload `landscape.primitives` 8 个：bg 满屏 + 5 按钮右侧竖排）
-  → **verified**（`evidence/S38.4.log`；无头断言 + 竖屏 0 行为变化 + gate 33 项 0 failure）。
+  → **verified**（`evidence/S38.4.log`；无头断言 + 竖屏 0 行为变化 + gate 36 项 0 failure）。
 - [x] **S38.5 用户过目确认 + 动码完成**：vs 横屏概念图（`vs_landscape.png`，双 HP 条顶 + VS 徽标
   屏心 + 角色对角）§7 过目确认 → S38.5 动码（`render_v2_elem_landscape` + `draw_result_scene_landscape`
   新文件 `vs_anim_proto_landscape.rs` + vs.rs 方向感知 + vs `landscape.primitives` 16 +
   `landscape.extra` 6 键）→ **verified**（`evidence/S38.5.log`；landscape_drawlist 6/6 +
-  竖屏 0 行为变化 + gate 33 项 0 failure）。
+  竖屏 0 行为变化 + gate 36 项 0 failure）。
 - [x] **S38.6 用户过目确认 + 动码完成**：main_map v6 横屏概念图（中央岛 + 椭圆格环 + 船 + 罗盘 +
   顶 HUD）过目确认「动码」→ S38.6 动码（`main_map_v6_layout_landscape.json` 椭圆格环 +
   `render_v6_elem` 横屏 + HUD/牌/终局 横屏屏心）→ **verified**（`evidence/S38.6.log`；
-  landscape_drawlist 7/7 + 竖屏 0 行为变化 + gate 33 项 0 failure）。**S38 全部 7 场景横屏收口**。
+  landscape_drawlist 7/7 + 竖屏 0 行为变化 + gate 36 项 0 failure）。**S38 全部 7 场景横屏收口**。
 
 ---
 
@@ -155,7 +155,7 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
 ### S38.1 起场景横屏布局（每场景独立任务，动码前过目效果图）
 - index / select_role / select_map / main_map / vs / message / saveload（7 场景横屏重排）。
 - **S38 全部 7 场景已收口 verified**（S38.1~S38.6，见 §7 确认点逐行 + `evidence/S38.{1..6}.log`；
-  `landscape_drawlist.rs` 7/7 无头断言 + 竖屏 0 行为变化 + gate 33 项 0 failure）。
+  `landscape_drawlist.rs` 7/7 无头断言 + 竖屏 0 行为变化 + gate 36 项 0 failure）。
 
 ---
 
@@ -209,7 +209,7 @@ pub const LANDSCAPE_H_I32: i32 = 1080;
   （`bright<40` 判已在 select_map）是竖屏口径，横屏各场景亮度相近（≈19%）首轮即命中、
   未导航到 select_map——需场景身份识别导航（非亮度）后方可覆盖，非渲染 bug。
   竖屏默认跑 5/5 PASS（0 回归）。
-- 每场景：gate 33 项 0 failure + doccheck/doccheck2 0 error + audit_code 0 违规（拆分超限文件）。
+- 每场景：gate 36 项 0 failure + doccheck/doccheck2 0 error + audit_code 0 违规（拆分超限文件）。
 - **改横屏布局**：改 `scenes.json` `landscape` 块 → 更新 `landscape_drawlist.rs` 对应断言 → gate 全绿。
 
 ### 9.6 固化纪律

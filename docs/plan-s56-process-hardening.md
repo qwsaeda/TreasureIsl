@@ -5,7 +5,7 @@
 
 ## WBS
 
-- [ ] **S56.0**：`scripts/doc_numbers.py` 扩「声称点对账」面
+- [x] **S56.0（verified 2026-11-16）**：`scripts/doc_numbers.py` 扩「声称点对账」面
   - ① 扫全库（AGENTS.md + docs/**/*.md，排除 experience 叙事卷/plan-* 时点快照）`doccheck2 第 N 项` 声称点；
   - ② 对照 `assets/gate_data.json` `doccheck2_checks` 1-based 位实测，声称 (N, check_name) 不匹配 ⇒ 报告；
   - ③ `--fix` = 按实测位回写声称点（现状只读 `--check`）；`--check` 违规非 0；
@@ -14,7 +14,7 @@
 
 ## S57 流程强化第二批（轨道 3 P2 可选面，2026-11-16 用户拍板「三个都做」）
 
-- [ ] **S57.0（M-17）**：`plan/packages.yaml` 加 P7=引擎域（ti-engine）+ P8=平台域（ti-console/ti-devmeta）⇒ 6 红线全挂包域（原 P1~P6 只挂 ti-core + ti-app 2/6）；05_module_parallel §3 包表同步 + `flywheel_readme.ps1 -Package P7/P8` 红线注入面实跑验证。
-- [ ] **S57.1（M-11）**：`doccheck2::check_state_md_discipline` 第 48 项（loop.md §9 state.md 载体面：① §9 段 + 3 要素字段名锚点存在性 ② in_progress 跨会话任务（rounds≥1 或 dod 含「跨会话」）须 `evidence/<id>.state.md` 或 dod「state 豁免」标记）+ 双负例护栏（删 §9 段 / 造 in_progress 跨会话行）。
-- [ ] **S57.2a（M-04 第一批）**：`check_ledger_reality.py` SYMBOL_EXPECTATIONS 扩面——从 3 任务（0.9%）扩到「dod 明确声明代码产物的任务」自动提取面（解析 dod 里 `crates/<x>/src/<file>.rs` / `fn <name>` / `pub struct <Name>` 字样自动登记期望符号，人工只审白名单豁免）+ doccheck 断言覆盖率下限（≥30% 声明代码产物的 verified 任务有符号登记，棘轮只收紧）。
+- [x] **S57.0（M-17，verified 2026-11-16）**：`plan/packages.yaml` 加 P7=引擎域（ti-engine）+ P8=平台域（ti-console/ti-devmeta）⇒ 6 红线全挂包域（原 P1~P6 只挂 ti-core + ti-app 2/6）；05_module_parallel §3 包表同步 + `flywheel_readme.ps1 -Package P7/P8` 红线注入面实跑验证。
+- [x] **S57.1（M-11，verified 2026-11-16）**：`doccheck2::check_state_md_discipline` 第 48 项（loop.md §9 state.md 载体面：① §9 段 + 3 要素字段名锚点存在性 ② in_progress 跨会话任务（rounds≥1 或 dod 含「跨会话」）须 `evidence/<id>.state.md` 或 dod「state 豁免」标记）+ 双负例护栏（删 §9 段 / 造 in_progress 跨会话行）。
+- [x] **S57.2a（M-04 第一批，verified 2026-11-16）**：`check_ledger_reality.py` SYMBOL_EXPECTATIONS 扩面——从 3 任务（0.9%）扩到「dod 明确声明代码产物的任务」自动提取面（解析 dod 里 `crates/<x>/src/<file>.rs` / `fn <name>` / `pub struct <Name>` 字样自动登记期望符号，人工只审白名单豁免）+ doccheck 断言覆盖率下限（≥30% 声明代码产物的 verified 任务有符号登记，棘轮只收紧）。
 - [x] **S57.2b（M-04 第二批，verified 2026-11-16）**：`doc_numbers.py` 扩「符号覆盖率」回写面（实跑 check_ledger_reality 输出「覆盖率 P%（C/D）」↔ 14 号 + check_ledger_reality.md 声称点对账，`--fix` 回写 + 负例实跑必 FAIL）；**阶梯 60%→100% = 后续覆盖率提升轮**（提覆盖率 = 扩 SYMBOL_EXPECTATIONS 手工登记 / dod 精确面补全 → check 脚本 `if cov < N` 常量收紧；doc_numbers 回写面随阶梯值自动跟进，无需再改工具）。
