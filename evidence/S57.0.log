@@ -26,3 +26,10 @@ $ python3 scripts/check_module_contracts.py --check → EXIT=0（P7/P8 互斥）
 $ pwsh scripts/flywheel_readme.ps1 -Package P7 → ti-engine-rules.md 命中 ✓
 ## gate 全量：36 项 0 failure（web 静态服务起 web/ 8080；2 环境 SKIP = Android NDK/真机；evidence/gate_s57.log）
 ## 收口面（fmt/clippy 红线 + EXP-191 回写 + 26号/release/AGENTS 计数面 345/343 + 15号行 28② 已自动化）
+
+## S57.2b（M-04 第二批）：doc_numbers.py 扩「符号覆盖率」回写面
+- 权威源 = 实跑 check_ledger_reality.py 输出「符号 grep 第三方验 C/D 声明代码产物任务 = 覆盖率 P%（S57.2a 基线 28%）」；
+  声称点 = 14_tooling_catalog.md + check_ledger_reality.md「覆盖率 P%（C/D）」形态；漂移非 0，--fix 回写幂等。
+- 实跑：doc_numbers 0 漂移 ✓；负例（28%→27%）漂移 1 非 0 ✓ + --fix 回写后 0 漂移 ✓。
+- 阶梯 60%→100% = 后续覆盖率提升轮（扩 SYMBOL_EXPECTATIONS 手工登记 / dod 精确面 → check 脚本 `if cov < N` 常量收紧；
+  doc_numbers 回写面随阶梯值自动跟进，工具 0 改动 = 阶梯判据面已固化）。

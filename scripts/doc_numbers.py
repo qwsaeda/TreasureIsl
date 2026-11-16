@@ -21,6 +21,12 @@
 
 退出码：0 = 无漂移（或 `--fix` 后已一致）；1 = 有漂移且未 `--fix`。
 幂等：`--fix` 连跑两次 = 第二次 0 改动（实测值回填后再次测得一致）。
+
+S57.2b 扩面（2026-11-16）：**符号覆盖率回写面**——权威源 = `scripts/check_ledger_reality.py`
+实跑（`python3 scripts/check_ledger_reality.py` 输出「符号 grep 第三方验 C/D 声明代码产物任务 =
+覆盖率 P%」+ 覆盖率下限常量）；声称点 = docs/process/14_tooling_catalog.md +
+docs/check_ledger_reality.md 里「覆盖率 P%（C/D）」形态数值对账 + 覆盖率下限 N% 与 check 脚本常量
+同值断言（`SYMBOL_COVERAGE_FLOOR`，阶梯 28→60→100，棘轮只收紧）。
 """
 from __future__ import annotations
 
@@ -244,6 +250,42 @@ def ledger_counts() -> tuple[int, int]:
     return (tasks, verified)
 
 
+# S57.2b：符号覆盖率声称点所在文件（14 号工具台账行 + check_ledger_reality.md 判据段）
+SYMBOL_CLAIM_FILES: list[str] = [
+    "docs/process/14_tooling_catalog.md",
+    "docs/check_ledger_reality.md",
+]
+# 「覆盖率 P%（C/D 声明代码产物任务）」形态（P/C/D = 数值声称点）
+SYMBOL_COVERAGE_RE = re.compile(r"覆盖率\s*(\d+)%（(\d+)/(\d+)")
+# 「覆盖率下限 N%」/「< N% 下限」形态（N 须与 check 脚本 SYMBOL_COVERAGE_FLOOR 同值）
+SYMBOL_FLOOR_RE = re.compile(r"(?:覆盖率下限|< )\s*(\d+)\s*%（?S57\.2a")
+
+
+def symbol_claim_sites(rel: str, text: str, c: str, d: str, p: str, floor: str) -> list[dict[str, object]]:
+    """扫 SYMBOL_CLAIM_FILES 里的符号覆盖率声称点 ↔ check_ledger_reality 实测对账。
+
+    返回漂移声称点（claimed ≠ 实测）；--fix 时回写为实测值（数值面 = 覆盖率% + C/D 计数）。
+    覆盖率下限 N% 与 check 脚本常量不同值 = 漂移（报告不回写，须改 check 脚本常量走棘轮流程）。
+    """
+    sites: list[dict[str, object]] = []
+    for i, line in enumerate(text.splitlines(), 1):
+        m = SYMBOL_COVERAGE_RE.search(line)
+        if m and (m.group(1) != p or m.group(2) != c or m.group(3) != d):
+            sites.append({
+                "line": i,
+                "kind": "coverage-value",
+                "claimed": f"{m.group(1)}%（{m.group(2)}/{m.group(3)}）",
+            })
+        fm = re.search(r"(?:覆盖率下限|< )\s*(\d+)\s*%", line)
+        if fm and fm.group(1) != floor and "S57.2a" in line:
+            sites.append({
+                "line": i,
+                "kind": "floor-value",
+                "claimed": fm.group(1),
+            })
+    return sites
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="门禁项数 / 台账计数 实测回写（--fix 消灭手抄漂移）")
     ap.add_argument("--fix", action="store_true", help="实测回写全部声称点（默认只体检）")
@@ -366,6 +408,43 @@ def main() -> int:
                     print(f"    将改 {rel}:{s['line']}: {s['claimed']} → {s['actual']}（台账行计数）")
             if args.fix and not args.dry_run and (sites or ledger_sites):
                 p.write_text("\n".join(out_lines) + ("\n" if text.endswith("\n") else ""), encoding="utf-8", newline="")
+
+    # --- S57.2b 扩面（M-04 第二批）：符号覆盖率声称点对账 ------------------------------------
+    import subprocess
+    r = subprocess.run(
+        ["python3", str(ROOT / "scripts" / "check_ledger_reality.py")],
+        capture_output=True, text=True,
+    )
+    m = re.search(r"符号 grep 第三方验 (\d+)/(\d+) 声明代码产物任务 = 覆盖率 (\d+)%", r.stdout)
+    if m:
+        c, d, p = m.group(1), m.group(2), m.group(3)
+        floor_m = re.search(r"if cov < (\d+):", (ROOT / "scripts" / "check_ledger_reality.py").read_text(encoding="utf-8"))
+        floor = floor_m.group(1) if floor_m else "?"
+        print(f"  实测：符号覆盖率 {p}%（{c}/{d} 声明代码产物任务；覆盖率下限 {floor}% 棘轮）")
+        for rel in SYMBOL_CLAIM_FILES:
+            pp = ROOT / rel
+            if not pp.is_file():
+                continue
+            text = pp.read_text(encoding="utf-8")
+            sites = symbol_claim_sites(rel, text, c, d, p, floor)
+            if not sites:
+                continue
+            out_lines = text.splitlines()
+            for s2 in reversed(sites):
+                drift += 1
+                line = out_lines[s2["line"] - 1]
+                new_line = re.sub(
+                    rf"覆盖率\s*\d+%（\d+/\d+）",
+                    f"覆盖率 {p}%（{c}/{d}）",
+                    line, count=1,
+                )
+                out_lines[s2["line"] - 1] = new_line
+                if not args.fix:
+                    print(f"    将改 {rel}:{s2['line']}: 覆盖率声称 {s2['claimed']} → 实测 {p}%（{c}/{d}）")
+            if args.fix and not args.dry_run and sites:
+                pp.write_text("\n".join(out_lines) + ("\n" if text.endswith("\n") else ""), encoding="utf-8", newline="")
+    else:
+        print("  [报告] check_ledger_reality 实跑输出无符号覆盖率行（扩面未生效？负例护栏面）")
 
     if drift == 0:
         print("  声称点与实测一致（0 漂移）")

@@ -152,7 +152,7 @@
 
 ## 六、当前所处节点（台账全收口 时点）
 
-**进度**：345 任务 / **343 verified / 1 pending（S57.2b 符号覆盖率第二批）/ 1 blocked（S49.1 作废；S54.1/S55.1/S56.0/S57.0~S57.2a 流程强化 7 条 verified）**；gate 全绿（0 failure）。
+**进度**：345 任务 / **344 verified / 0 pending / 1 blocked（S49.1 作废；S54.1/S55.1/S56.0/S57.0~S57.2b 流程强化 8 条 verified）**；gate 全绿（0 failure）。
 
 **刚完成一轮**（「先把能做的全做了」= ① 类 4 项并行收口）：
 1. ✅ S32.7 资产浏览：`map_pack_info` 每包 `verify_status=ok|drift|platform_error` + `verify_problems`（`[FAIL]` 行），web 资产页校验卡；实测 4 包 verify=ok problems=0。
