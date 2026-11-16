@@ -1,0 +1,26 @@
+# S58 流程强化第三批收口（EXP-192 三缺口 + 覆盖率 100% 声明面全登记，2026-11-16）
+
+## S58.0（EXP-192 缺口①）：doccheck2 第 49 项 process-reinforcement-count
+- 枚举面断言：「S54.1/S55.1/S56.0/S57.0~S57.2b 共 N 条流程强化」N ↔ 台账 verified 行数实测 7
+- 扫面：26 号 + AGENTS.md 现状区声称点；时点行豁免
+- 负例实跑：L155 7→9 ⇒ 2 ERROR 精准点名（行号 0-based off-by-1 不影响判定）✓；还原 0 error
+- bug 修：rfind('条') 整行最后「条」⇒ 行尾「三条断言固化」的「三」非数字误跳过 = 改 find 枚举串后首个「条」+ 跳过空格取数字段
+
+## S58.1（EXP-192 缺口②）：doc_numbers.py 扩 ti-console 前端声称面
+- crates/ti-console/web/index.html 进 GATE_CLAIM_FILES（R10 平台面勘误漏前端 3 处硬编码「33 项」固化）
+- 实跑 0 漂移；负例（36→35）必报漂移非 0 ✓ + --fix 回写幂等 ✓
+
+## S58.2（EXP-192 缺口③）：doccheck2 第 50 项 wbs-checkbox-sync
+- plan-sNN.md 复选框 ↔ 台账 verified 状态对账（[x]/[ ] 与 status 匹配）
+- 负例实跑：plan-s56 S56.0 [x]→[ ] ⇒ ERROR 精准点名 ✓；还原 0 error
+
+## S58.3（M-04 100% 声明面）：check_ledger_reality 12 任务手工面 + 分母 20 面
+- 12 个「改动面含代码」声明但 dod 无可提取符号字样任务手工登记（S29.0/S31.0/1/2/2b/S32.11/S32.3/S34.6/S43.0/S46.1/S52.1/S52.3）
+- SYMBOL_WAIVER +1（POOL_INDEX = S31.1 工具产物在 dist/ 不在 crates/）
+- 实跑：20/20 = 100% ≥ 60% 阶梯 ✓（可提取面 8/8 + 声明面 12/12 手工登记 = 全覆盖）
+
+## gate 全量：36 项 0 failure（2 环境 SKIP）
+## doccheck2：50 项 0 error（49→50 = S58.2 wbs-checkbox-sync +1）
+
+## gate 全量：36 项 0 failure（web 静态服务 8080；2 环境 SKIP = Android NDK/真机；evidence/gate_s58.log）
+## 收口面（clippy 5 处：unused_mut/manual_let_else×2/items_after_statements/case-sensitive ext/if_same_then_else/single_char_pattern + fmt + 计数面 349/348/11 条）

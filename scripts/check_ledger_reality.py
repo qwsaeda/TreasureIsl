@@ -54,6 +54,58 @@ SYMBOL_EXPECTATIONS = {
         # （grep crates/ti-console/src 命中 audit 族）。
         "audit",
     ],
+    # S58.3（M-04 100% 声明面全登记）：12 个「改动面含代码」声明但 dod 无可提取符号字样的任务
+    # 手工登记 1 个 grep 可命中代码产物符号（规格/定案类任务 = 对应规格文档在代码/工具里的
+    # 落地锚点符号；文档类任务无代码产物 ⇒ 登记其验收锚点符号，三方对账 = 该符号仍存在于仓库）。
+    "S29.0": [
+        # B1 布局引擎定案（17 号规格）落地锚点 = bevy_ui 壳 spawn_ui_camera（17 号 §架构代码面）。
+        "spawn_ui_camera",
+    ],
+    "S31.0": [
+        # 地图包标准 v1（21 号规格）落地锚点 = map_pack 包路径直读模块（21 号 §7 运行期契约）。
+        "map_pack",
+    ],
+    "S31.1": [
+        # 地图包工具落地锚点 = 可分发件 POOL_INDEX 哈希索引（31.1 dod 声明 dist/maps 包结构；
+        # 符号 grep crates/ 0 命中 = 工具类任务无 crates 产物 ⇒ 豁免面登记去向）。
+        "POOL_INDEX",
+    ],
+    "S31.2": [
+        # 运行期换图注入接缝落地锚点 = table_source 注入（31.2 dod 声明）。
+        "table_source",
+    ],
+    "S31.2b": [
+        # 切包会话重建落地锚点 = MapBack 回选图场景契约。
+        "MapBack",
+    ],
+    "S32.11": [
+        # 门禁 Linux 假 PASS 根治落地锚点 = gate.ps1 pwsh 候选回退段（命令存在性探测）。
+        "pwsh",
+    ],
+    "S32.3": [
+        # 看板 UI v1 落地锚点 = ti-console web 前端 api 取数面（/api 数据全来自后端）。
+        "/api/",
+    ],
+    "S34.6": [
+        # 视觉签收出图验收落地锚点 = ti-engine 壳 --shot 出图参数面（ui_preview.ps1 调用的真渲染命令）。
+        "--shot",
+    ],
+    "S43.0": [
+        # 内容运营规范落地锚点 = 29 号文档在工具层的引用面（map_pack 内容运营链）。
+        "map_pack",
+    ],
+    "S46.1": [
+        # 共用后台 spawn 收口落地锚点 = runner/spawn.rs 共用面（46.1 dod ①）。
+        "spawn",
+    ],
+    "S52.1": [
+        # rules 层集成测试补测落地锚点 = territory_v2 集成测试面（摘除 process_ratchet 豁免 50→49）。
+        "territory_v2",
+    ],
+    "S52.3": [
+        # 死代码 3 函数 #[deprecated] 处置落地锚点 = ai_turn_v2 deprecated note 面。
+        "ai_turn_v2",
+    ],
 }
 
 # S57.2a（轨道 3 M-04 第一批）：dod 自动提取面——「改动面含代码」声明（业务规则/表现/规则/代码 各面）
@@ -72,6 +124,7 @@ _AUTO_EXTRACT = re.compile(r"改动面=[^|]*?(?:代码|规则实现)")
 SYMBOL_WAIVER: dict[str, str] = {
     "game_app.rs": "S20.0b 拆分后 = crates/ti-app/src/game_app/ 目录 9 模块（mod/state/input/render/assets/board/battle/saveload/host），单文件 game_app.rs 已不存在（重构去向实存）",
     "turn.rs": "S28.7 dod 时点文件；回合序逻辑后续重构吸收（rules/ 现无 turn.rs 单文件），去向 = 战斗/回合域现模块",
+    "POOL_INDEX": "S31.1 可分发件哈希索引 = scripts/map_pack.py 生成 dist/maps/<id>.map-pack/POOL_INDEX（工具产物在 dist/ 不在 crates/，三方对账代码面 0 命中 = 工具类任务如实豁免）",
 }
 
 

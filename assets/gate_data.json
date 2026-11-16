@@ -366,6 +366,14 @@
   {
    "id": "state-md-discipline",
    "impl": "rust"
+  },
+  {
+   "id": "process-reinforcement-count",
+   "impl": "rust"
+  },
+  {
+   "id": "wbs-checkbox-sync",
+   "impl": "rust"
   }
  ]
 }

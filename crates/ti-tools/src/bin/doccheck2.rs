@@ -2793,6 +2793,166 @@ fn check_state_md_discipline(root: &Path) -> Vec<String> {
     errors
 }
 
+/// S58.0（EXP-192 缺口① / R13 Q003 固化）：「N 条流程强化」枚举值 ↔ 台账实测对账。
+/// 判据：流程强化枚举 = S54.1/S55.1/S56.0/S57.0/S57.1/S57.2a/S57.2b（S53 = 飞轮 R6 断言固化，
+/// 不属流程强化第二批起计数）⇒ 台账 verified 的枚举行数 = 期望 7；
+/// 声称点 = 26 号 L14/L155/L163 + AGENTS.md L8 的「S54.1/S55.1/S56.0/S57.0~S57.2b 共 N 条」
+/// （N ≠ 实测 = 现状区漂移 FAIL；带「时点」标注的历史行豁免）。
+/// 负例护栏：改 26 号 7→8 必 FAIL；还原 0 error。
+fn check_process_reinforcement_count(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(ledger) = read_file(root, "plan/ledger.yaml") else {
+        return vec!["plan/ledger.yaml 不存在（枚举面无基准）".to_string()];
+    };
+    let ids = [
+        "id: S54.1",
+        "id: S55.1",
+        "id: S56.0",
+        "id: S57.0",
+        "id: S57.1",
+        "id: S57.2a",
+        "id: S57.2b",
+        "id: S58.0",
+        "id: S58.1",
+        "id: S58.2",
+        "id: S58.3",
+    ];
+    let mut actual = 0usize;
+    for id in ids {
+        for line in ledger.lines() {
+            let l = line.trim();
+            if l.contains(id) && l.contains("status: verified") {
+                actual += 1;
+                break;
+            }
+        }
+    }
+    // 声称点扫面（26 号 + AGENTS.md 的「共 N 条流程强化」/「流程强化 N 条」形态）
+    for rel in ["docs/process/26_dev_stages_overview.md", "AGENTS.md"] {
+        let Some(text) = read_file(root, rel) else { continue };
+        for (i, line) in text.lines().enumerate() {
+            if line.contains("时点") || line.contains("历史") {
+                continue; // 时点快照行豁免
+            }
+            // 枚举行 = 含「S54.1/S55.1/S56.0/S57.0~S57.2b」且其后含「N 条」数字；
+            // claimed = 枚举串后**首个**「条」前的数字段（不用 rfind 整行最后「条」⇒
+            // 行尾「S53/S54/S55 三条断言固化」的「三」非数字 ⇒ digits 空 ⇒ 误跳过 = BUG）。
+            // 枚举串双形态：S57 全收口态「S54.1/S55.1/S56.0/S57.0~S57.2b」/ S58 续收口态「.../S58.0~S58.3」
+            let enum_pos = line
+                .find("S54.1/S55.1/S56.0/S57.0~S57.2b/S58.0~S58.3")
+                .or_else(|| line.find("S54.1/S55.1/S56.0/S57.0~S57.2b"));
+            let Some(enum_pos) = enum_pos else { continue };
+            let after_enum = &line[enum_pos..];
+            let Some(tiao_off) = after_enum.find('条') else {
+                continue;
+            };
+            let before_tiao = &after_enum[..tiao_off];
+            // 「N 条」形态 = 数字 + 空格 + 「条」（可能多空格）⇒ 反向跳过空格后取连续数字段
+            let digits: String = {
+                let chars: Vec<char> = before_tiao.chars().rev().collect();
+                let mut i = 0;
+                while i < chars.len() && chars[i] == ' ' {
+                    i += 1;
+                }
+                let mut out: Vec<char> = Vec::new();
+                while i < chars.len() && chars[i].is_ascii_digit() {
+                    out.push(chars[i]);
+                    i += 1;
+                }
+                out.into_iter().rev().collect()
+            };
+            let Ok(claimed) = digits.parse::<usize>() else { continue };
+            if claimed != actual {
+                errors.push(format!(
+                    "{rel}:{i} 「流程强化 {claimed} 条」≠ 台账实测 {actual} 条（S54.1/S55.1/S56.0/S57.0/S57.1/S57.2a/S57.2b verified 行数，EXP-192 缺口①）"
+                ));
+            }
+        }
+    }
+    errors
+}
+
+/// S58.2（EXP-192 缺口③ / R13 Q002 固化）：plan-sNN WBS 文档复选框 ↔ 台账 verified 状态对账。
+/// 判据：plan-sNN.md 段「- [ ] **Sxx**」/「- [x] **Sxx**」（Sxx = 任务 id）⇒
+///   - 该 id 在台账 `status: verified` ⇒ 须 `[x]`；
+///   - 该 id 在台账且 `status ≠ verified` ⇒ 须 `[ ]`；
+///   - 不匹配 = FAIL（防「台账 verified 后 WBS 复选框忘回写」假绿，R13 Q002 = plan-s56 4 行漏改）。
+///
+/// 负例护栏：临时改 1 行 [x]→[ ]（verified 任务）必 FAIL；还原 0 error。
+#[allow(clippy::items_after_statements)]
+fn check_wbs_checkbox_sync(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(ledger) = read_file(root, "plan/ledger.yaml") else {
+        return vec!["plan/ledger.yaml 不存在（WBS 对账无基准）".to_string()];
+    };
+    // 台账 status 映射（id → verified?）
+    use std::collections::HashSet;
+    let mut verified_ids: HashSet<String> = HashSet::new();
+    let mut all_ids: HashSet<String> = HashSet::new();
+    for line in ledger.lines() {
+        let l = line.trim();
+        let Some(rest) = l.strip_prefix("- { id: ").or_else(|| l.strip_prefix("  - { id: ")) else {
+            continue;
+        };
+        let tid = rest.split(',').next().unwrap_or("").trim().to_string();
+        if tid.is_empty() || !tid.starts_with('S') {
+            continue;
+        }
+        all_ids.insert(tid.clone());
+        if l.contains("status: verified") {
+            verified_ids.insert(tid);
+        }
+    }
+    // 扫 plan-sNN.md 复选框段
+    for entry in std::fs::read_dir(root.join("docs")).into_iter().flatten() {
+        let Ok(entry) = entry else { continue };
+        let path = entry.path();
+        let Some(fname) = path.file_name().and_then(|n| n.to_str()) else { continue };
+        if !fname.starts_with("plan-s") {
+            continue;
+        }
+        let is_md = std::path::Path::new(fname)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
+        if !is_md {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(&path) else { continue };
+        for (i, line) in text.lines().enumerate() {
+            // 形态：`- [ ] **Sxx**` / `- [x] **Sxx**`（Sxx = 任务 id，含字母数字点）
+            let trimmed = line.trim_start();
+            let checked = trimmed.starts_with("- [x] ");
+            let unchecked = trimmed.starts_with("- [ ] ");
+            if !checked && !unchecked {
+                continue;
+            }
+            let after_box = &trimmed[6..]; // checked/unchecked 前缀均 6 字符 "- [x] "/"- [ ] "
+            let id_end = after_box.find("**").unwrap_or(after_box.len());
+            let id_start = after_box.find('S').unwrap_or(0);
+            if id_start >= id_end {
+                continue;
+            }
+            let tid = &after_box[id_start..id_end];
+            if !tid.starts_with('S') || !all_ids.contains(tid) {
+                continue; // 非台账任务 id（如 Sxx.y 注释）
+            }
+            let is_verified = verified_ids.contains(tid);
+            if checked && !is_verified {
+                errors.push(format!(
+                    "{}:{} WBS 复选框 `[x]` 但台账 {} 未 verified（复选框与台账状态不同步，EXP-192 缺口③）",
+                    fname, i + 1, tid
+                ));
+            } else if !checked && is_verified {
+                errors.push(format!(
+                    "{}:{} WBS 复选框 `[ ]` 但台账 {} 已 verified（复选框未随 verified 回写，R13 Q002 同类，EXP-192 缺口③）",
+                    fname, i + 1, tid
+                ));
+            }
+        }
+    }
+    errors
+}
+
 fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(ledger_text) = read_file(root, "plan/ledger.yaml") else {
@@ -2811,7 +2971,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b 流程强化 7 条 verified；余 1 blocked S49.1（S7.7 已 verified））"
+                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 verified；余 1 blocked S49.1（S7.7 已 verified））"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。
@@ -4249,6 +4409,10 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("doccheck-counts-match", check_doccheck_counts_match),
     // S57.1（轨道 3 M-11）：loop.md §9 state.md 压缩纪律载体面（in_progress 任务跨会话须 state.md 或豁免）
     ("state-md-discipline", check_state_md_discipline),
+    // S58.0（EXP-192 缺口①）：「N 条流程强化」枚举值 ↔ 台账实测（防 7/8 条 off-by-one）
+    ("process-reinforcement-count", check_process_reinforcement_count),
+    // S58.2（EXP-192 缺口③）：plan-sNN WBS 复选框 ↔ 台账 verified 状态对账
+    ("wbs-checkbox-sync", check_wbs_checkbox_sync),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

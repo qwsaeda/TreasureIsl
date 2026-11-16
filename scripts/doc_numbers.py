@@ -49,6 +49,9 @@ GATE_CLAIM_FILES: list[str] = [
     "docs/style.md",
     "scripts/playbook.ps1",
     "scripts/gate.ps1",
+    # S58.1（EXP-192 缺口② / R13 Q079）：ti-console 前端门禁项数声称面（R10 平台面勘误漏前端
+    # 3 处硬编码「门禁 33 项」；本文件「门禁 N 项总览/N 项口径」形态 = 与文档面同 regex 护栏）
+    "crates/ti-console/web/index.html",
 ]
 # 台账计数声称点：release.md 的「plan/ledger.yaml` N 任务（M verified」
 LEDGER_CLAIM = re.compile(r"(`plan/ledger\.yaml`\s*)(\d+)\s*任务\s*（(\d+)\s*verified")
@@ -433,9 +436,11 @@ def main() -> int:
             for s2 in reversed(sites):
                 drift += 1
                 line = out_lines[s2["line"] - 1]
+                # 回写 = 数值段改实测（「（C/D 可提取面全登记…）」尾巴保留：regex 只到「（C/D）」闭合
+                # 括号前；尾巴文字 = 声称点上下文，--fix 后人工核 1 次即可）
                 new_line = re.sub(
-                    r"覆盖率\s*\d+%（\d+/\d+）",
-                    f"覆盖率 {p}%（{c}/{d}）",
+                    r"覆盖率\s*\d+%（\d+/\d+",
+                    f"覆盖率 {p}%（{c}/{d}",
                     line, count=1,
                 )
                 out_lines[s2["line"] - 1] = new_line

@@ -154,7 +154,9 @@ fn check_ledger_counts(docs: &[Doc], tasks: &[Task]) -> Vec<String> {
     let verified = tasks.iter().filter(|t| t.status == Status::Verified).count();
     // 逐行提取「(\d+) 任务」与「(\d+) verified」的声明值，与实测比对
     for doc in docs {
-        if !doc.path.contains("release.md") && !doc.path.contains("ledger") {
+        // S58 修：ledger.yaml 自身的 dod 文本可能含「N 任务」字样（如「分母 19 面：11 个... 任务」）
+        // ⇒ 误判为总数声明。限定 release.md（唯一现状声称点载体），ledger.yaml 不扫。
+        if !doc.path.contains("release.md") {
             continue;
         }
         for (i, line) in doc.text.lines().enumerate() {
