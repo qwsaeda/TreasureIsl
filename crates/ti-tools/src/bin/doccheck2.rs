@@ -2926,13 +2926,22 @@ fn check_wbs_checkbox_sync(root: &Path) -> Vec<String> {
             if !checked && !unchecked {
                 continue;
             }
-            let after_box = &trimmed[6..]; // checked/unchecked 前缀均 6 字符 "- [x] "/"- [ ] "
-            let id_end = after_box.find("**").unwrap_or(after_box.len());
-            let id_start = after_box.find('S').unwrap_or(0);
-            if id_start >= id_end {
-                continue;
+            // Q005 根因修：加粗行 `- [ ] **S58.0（...）**` after_box = `**S58.0（...）**`
+            // 原 find('S')/find("**") 逻辑对加粗行 id_start(2)≥id_end(0) ⇒ 100% 跳过 = 断言恒 0 命中。
+            // 修 = 剥前导 `*` 后取「S 开头到下一 空格/（/`*`/行末」为任务 id。
+            // 剥前导 `*` 后，取首个 `S` 开头的任务 id 到「下一 非 alnum/`.`/`-` 字符」
+            let after_box = trimmed[6..].trim_start_matches('*');
+            let start = after_box.find('S').unwrap_or(0);
+            let rest = &after_box[start..];
+            let mut tid_end = 0;
+            for (i, c) in rest.char_indices() {
+                if c.is_ascii_alphanumeric() || c == '.' || c == '-' {
+                    tid_end = i + c.len_utf8();
+                } else {
+                    break;
+                }
             }
-            let tid = &after_box[id_start..id_end];
+            let tid = &rest[..tid_end];
             if !tid.starts_with('S') || !all_ids.contains(tid) {
                 continue; // 非台账任务 id（如 Sxx.y 注释）
             }

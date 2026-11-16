@@ -662,3 +662,9 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **根因**：① 数值声称点无「枚举型」载体——doccheck2 cross-doc-counts 只守「N 任务（M verified + 0 pending（…）」锚定短语 + 26 号工具矩阵行 doccheck 计数，**「N 条流程强化」枚举面 0 断言**（人工数枚举易 off-by-one，S53 属飞轮 R6 断言固化不属流程强化第二批 = 7 非 8）② 门禁项数声称面 doc_numbers 覆盖 8 文档 + S57.2b 扩 2 文件 = 10 载体，**ti-console 前端 index.html 硬编码 3 处 0 覆盖**（R10 修平台 doc↔code 漂移时前端面漏网）③ WBS 文档（plan-sNN）复选框 = 纯人工回写面，无机器断言（task_close.py 只回写台账不联动 WBS 文档）④ 乱码 = 早期手敲 CJK 混入（Set-Content 类事故残留，EXP-051 同类）。
 - **解法**：① 枚举型声称点（「N 条 X」）暂靠对抗审计人工面 + 文档写全枚举（「S54.1/S55.1/S56.0/S57.0~S57.2b 共 7 条」= 枚举随值，改任务自动暴露）；doccheck2 扩「枚举面」断言 = 后续轮 ② doc_numbers.py 扩 `crates/ti-console/web/index.html` 门禁项数声称面（3 处硬编码 ⇒ 1 个声称文件登记，--fix 可回写）= 后续轮 ③ WBS 复选框回写 = 收口轮人工面（plan-sNN 4 行 [ ]→[x]），后续 S58+ WBS 统一在台账 dod 写「WBS 复选框同步」判据 ④ 乱码行 = 修时点标注（现行值 + 时点值双注，防误读）。
 - **验证**：R13 8 条全修 + gate 36 项 0 failure + doccheck2 48 项 0 error + doc_numbers 0 漂移（evidence/r13-audit.md）。
+
+### EXP-193 流程：机器门禁自身结构失效盲区（wbs-checkbox-sync 加粗行 100% 跳过 = 断言恒 0 命中）
+- **现象**：R14 审计 Q005 = S58.2 新增 doccheck2 第 50 项 `wbs-checkbox-sync` 上线后 plan-s56 S58 段 4 行 `[ ]` 真漂移（台账全 verified）未被抓，doccheck2 实跑 0 error「通过」——机器门禁自身结构失效。
+- **根因**：解析器 `id_start=after_box.find('S')` / `id_end=after_box.find("**")` 对全库 plan-sNN 复选框**全是加粗格式** `- [ ] **Sxx（...）**` ⇒ after_box = `**S58.0（...）**`，`find('S')`=2 ≥ `find("**")`=0 ⇒ 每行 `id_start>=id_end` 跳过 = 断言恒 0 命中（与 S57.1 state-md-discipline 首版同类：新断言须双负例实跑验证触发面，「0 error」≠「断言生效」）。
+- **解法**：解析器修 = 剥前导 `*` 后取 S 开头任务 id 到「下一 非 alnum/`.`/`-` 字符」；新断言上线判据必含**双负例实跑**（临时造 1 条违规 ⇒ 必 FAIL 精准点名 + 还原 0 error），0 error 不能当生效证据。
+- **验证**：R14 修复后负例实跑（plan-s56 S58.0 `[x]`→`[ ]` ⇒ ERROR 精准点名 L24 S58.0 ✓ + 还原 0 error）+ 全库 plan-sNN 复选框 ↔ 台账 verified 全 0 漂移。
