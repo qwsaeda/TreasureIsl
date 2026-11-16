@@ -256,7 +256,7 @@ SYMBOL_CLAIM_FILES: list[str] = [
     "docs/check_ledger_reality.md",
 ]
 # 「覆盖率 P%（C/D 声明代码产物任务）」形态（P/C/D = 数值声称点）
-SYMBOL_COVERAGE_RE = re.compile(r"覆盖率\s*(\d+)%（(\d+)/(\d+)")
+SYMBOL_COVERAGE_RE = re.compile(r"覆盖率\s*(\d+)%（(\d+)/(\d+)")  # 前缀允许「（可提取面分母）」任意插入，回写只改数值段
 # 「覆盖率下限 N%」/「< N% 下限」形态（N 须与 check 脚本 SYMBOL_COVERAGE_FLOOR 同值）
 SYMBOL_FLOOR_RE = re.compile(r"(?:覆盖率下限|< )\s*(\d+)\s*%（?S57\.2a")
 
@@ -415,7 +415,7 @@ def main() -> int:
         ["python3", str(ROOT / "scripts" / "check_ledger_reality.py")],
         capture_output=True, text=True,
     )
-    m = re.search(r"符号 grep 第三方验 (\d+)/(\d+) 声明代码产物任务 = 覆盖率 (\d+)%", r.stdout)
+    m = re.search(r"符号 grep 第三方验 (\d+)/(\d+) 声明代码产物任务（[^）]*）?\s*= 覆盖率 (\d+)%", r.stdout)
     if m:
         c, d, p = m.group(1), m.group(2), m.group(3)
         floor_m = re.search(r"if cov < (\d+):", (ROOT / "scripts" / "check_ledger_reality.py").read_text(encoding="utf-8"))
@@ -434,7 +434,7 @@ def main() -> int:
                 drift += 1
                 line = out_lines[s2["line"] - 1]
                 new_line = re.sub(
-                    rf"覆盖率\s*\d+%（\d+/\d+）",
+                    r"覆盖率\s*\d+%（\d+/\d+）",
                     f"覆盖率 {p}%（{c}/{d}）",
                     line, count=1,
                 )

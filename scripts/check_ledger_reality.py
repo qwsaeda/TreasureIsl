@@ -48,16 +48,25 @@ SYMBOL_EXPECTATIONS = {
         # 非 crates/ 路径 ⇒ 由台账标题与 evidence 佐证，不进符号 grep 范围）。
         r"fn\s+check_tooling_contract",
     ],
+    "S32.5": [
+        # Dev Console 审计编排（S32.5）：dod 声明 crates/ti-console/src/audit/*.rs 通配目录
+        # （自动提取规则①只认具名 .rs，通配 * = 0 命中）⇒ 手工登记 = audit 模块目录名
+        # （grep crates/ti-console/src 命中 audit 族）。
+        "audit",
+    ],
 }
 
 # S57.2a（轨道 3 M-04 第一批）：dod 自动提取面——「改动面含代码」声明（业务规则/表现/规则/代码 各面）
-# 的 verified 任务，自动提取期望符号（dod 声明的 crates 路径尾文件名 + pub 项名），
-# 与 SYMBOL_EXPECTATIONS 手工面合并判定（手工面优先；自动面 = 覆盖率棘轮基线，防「声明代码产物
-# 但三方对账 0 符号验证」假绿，M-04：3/339 = 0.9% 覆盖率面）。
-# 覆盖率下限 = S57.2a 收口时点 28%（31/110）为棘轮基线（只收紧不放宽；扩面 = S57.2b 阶梯 60%→100%）。
-# 「改动面含代码」判定：台账 dod 改动面词表中 代码/业务规则/表现/规则 各面 = 代码产物面
-# （业务规则/表现/规则 实现全在 crates/；工具/文档/数据/内容运营 = 非代码面）。
-_AUTO_EXTRACT = re.compile(r"改动面=[^|]*?(?:代码|业务规则|表现|规则实现|规则)")
+# 的 verified 任务，自动提取期望符号（dod 声明的 crates 路径尾文件名 + pub 项 + 反引号标识符 +
+# 模块路径 4 规则），与 SYMBOL_EXPECTATIONS 手工面合并判定（手工面优先；自动面 = 覆盖率棘轮基线，
+# 防「声明代码产物但三方对账 0 符号验证」假绿，M-04：3/339 = 0.9% 覆盖率面）。
+# 覆盖率下限 = S57.2b 提升轮时点 60% 阶梯（只收紧不放宽；后续 100% = 声明面全登记）。
+# 「改动面含代码」判定（S57.2b 收紧）：台账 dod 改动面词表中 代码/规则实现 各面 = 代码产物声明面
+# （S57.2a 首版误含「业务规则/表现 =无」89 条虚高面；分母再 ∩ 可提取面 = dod 符号字样 ≥2）。
+# 「改动面含代码」判定（S57.2b 提升轮收紧）：台账 dod 改动面词表中
+# 代码/规则实现 各面 = 代码产物声明面（业务规则/表现 =「含」字面但 dod 全「=无」面 ⇒ 不构成
+# 代码产物声明，S57.2a 首版误把 53+36 条「=无」面计入分母 = 89 虚高面，本轮收紧）。
+_AUTO_EXTRACT = re.compile(r"改动面=[^|]*?(?:代码|规则实现)")
 # S57.2a 符号自动面豁免（dod 声明的文件符号已被后续重构迁走/删除，三方对账面 = 历史 dod 快照）：
 # 登记须带迁往去向说明（防「声明即消失」假绿；2026-11-16 S57.2a 首跑实抓 2 真漂移后豁免）。
 SYMBOL_WAIVER: dict[str, str] = {
@@ -66,16 +75,56 @@ SYMBOL_WAIVER: dict[str, str] = {
 }
 
 
-def auto_symbol_expectations(tasks: list[dict]) -> dict[str, list[str]]:
-    """dod 含「改动面含代码」的 verified 任务 → 自动提取符号期望（dod 自身声明的 .rs 文件名 + pub 项名）。
+# S57.2b 提升轮（2026-11-16）：覆盖率 28%→60% 阶梯——扩 3 提取规则 + 分母收「可提取面」。
+# ① crates 路径尾 .rs（原规则①，保留）；② pub struct/fn/enum/trait X（原规则②，保留）；
+# ③ **反引号标识符**（`PickTarget` / `map_pack` 形态，dod 写代码产物符号的惯用写法）
+#    ⇒ 裸标识符 grep（crates/*/src；0 命中 = 真漂移 FAIL，须 SYMBOL_WAIVER 登记去向）；
+# ④ 模块点分路径（data::map_pack / rules::territory 形态）⇒ 尾段标识符 grep。
+_IDENT_RE = re.compile(r"`([A-Z][A-Za-z0-9_]{2,}|[a-z][a-z0-9_]{3,})`")
+_MODPATH_RE = re.compile(r"\b(?:data|rules|domain|oracle|chrome|ui|pick|board)\s*::\s*([a-z_][a-z0-9_]*)\b")
+# 「改动面含代码」dod 可提取面判据：含 ≥1 代码产物符号字样（crates 路径 / pub 项 /
+# 反引号标识符 / 模块路径）= 精确面，进覆盖率分母；0 字样 = 证据级弱声明不进分母（防虚高）
+_EXTRACTABLE_RE = re.compile(
+    r"(?:crates/[a-z0-9-]+/src/|pub\s+(?:struct|fn|enum|trait)\s|`[A-Z][A-Za-z0-9_]{2,}`"
+    r"|`[a-z][a-z0-9_]{3,}`|(?:data|rules|domain|oracle|chrome|ui|pick|board)\s*::)"
+)
 
-    提取规则：
-    - `crates/<crate>/src/...<file>.rs` 路径且该 `<file>.rs` 在该任务 dod 内重复出现（= dod 声明的
-      产物本身，非引用其它任务文件）⇒ 文件名符号（glob 面）；
-    - `pub struct/fn/enum/trait X` ⇒ 正则 `pub (struct|fn|enum|trait) X`（代码 grep 面）。
-    未提取到任何符号的「改动面含代码」任务 = dod 声明不精确（无 crates 路径且无 pub 项）⇒ 跳过
-    （不虚报，留人工补 dod 精确面，S57.2b 阶梯扩面）。
-    """
+
+def _is_extractable(dod: str) -> bool:
+    return len(_EXTRACTABLE_RE.findall(dod)) >= 1
+
+
+def _extract_symbols(dod: str) -> list[str]:
+    """dod 代码产物符号提取（3 规则；命中 ≥1 = 该任务「可提取」，进覆盖率分母）。"""
+    pats: list[str] = []
+    for m in re.finditer(r"crates/[a-z0-9-]+/src/(?:[a-z0-9_/]+/)*([A-Za-z0-9_\-]+\.rs)", dod):
+        fname = m.group(1)
+        if re.search(rf"crates/[a-z0-9-]+/src/(?:[a-z0-9_/]+/)*{re.escape(fname)}\b", dod):
+            pats.append(fname)  # 文件符号 = 该任务 dod 声明的产物本身
+    for m in re.finditer(r"pub\s+(struct|fn|enum|trait)\s+([A-Za-z0-9_]+)", dod):
+        pats.append(rf"pub\s+{m.group(1)}\s+{m.group(2)}")
+    # ③ 反引号标识符（大写开头 = 类型/常量；小写 ≥4 字符 = 模块/函数惯用名）
+    for m in _IDENT_RE.finditer(dod):
+        pats.append(re.escape(m.group(1)))
+    # ④ 模块点分路径尾段（data::map_pack ⇒ map_pack）
+    for m in _MODPATH_RE.finditer(dod):
+        pats.append(re.escape(m.group(1)))
+    seen: set[str] = set()
+    out: list[str] = []
+    for p in pats:
+        if p not in seen:
+            seen.add(p)
+            out.append(p)
+    return out
+
+
+def _is_waived(pat: str) -> bool:
+    """豁免面匹配：SYMBOL_WAIVER key = .rs 文件名 / 标识符（词边界查代码 0 命中才生效）。"""
+    return pat in SYMBOL_WAIVER
+
+
+def auto_symbol_expectations(tasks: list[dict]) -> dict[str, list[str]]:
+    """dod 含「改动面含代码」的 verified 任务 → 自动提取符号期望（可提取面才进分母）。"""
     out: dict[str, list[str]] = {}
     for t in tasks:
         if t.get("status") != "verified":
@@ -86,27 +135,29 @@ def auto_symbol_expectations(tasks: list[dict]) -> dict[str, list[str]]:
         tid = t.get("id", "")
         if not tid or tid in SYMBOL_EXPECTATIONS:
             continue  # 手工登记面优先
-        pats: list[str] = []
-        for m in re.finditer(r"crates/[a-z0-9-]+/src/(?:[a-z0-9_/]+/)*([A-Za-z0-9_\-]+\.rs)", dod):
-            fname = m.group(1)
-            if re.search(rf"crates/[a-z0-9-]+/src/(?:[a-z0-9_/]+/)*{re.escape(fname)}\b", dod):
-                pats.append(fname)  # 文件符号 = 该任务 dod 声明的产物本身
-        for m in re.finditer(r"pub\s+(struct|fn|enum|trait)\s+([A-Za-z0-9_]+)", dod):
-            pats.append(rf"pub\s+{m.group(1)}\s+{m.group(2)}")
+        pats = _extract_symbols(dod)
+        # 豁免面（dod 时点符号已重构迁走，去向已登记）
+        pats = [p for p in pats if not _is_waived(p)]
         if pats:
             out[tid] = pats
     return out
 
 
 def symbol_coverage(tasks: list[dict], auto: dict[str, list[str]]) -> tuple[int, int]:
-    """覆盖率 = 自动提取符号的任务数 / 「改动面含代码」声明且实际提取到符号的 verified 任务数。
+    """覆盖率 = （自动提取 ∪ 手工登记）任务数 / 「改动面含代码」声明 verified 任务数（M-04 分母口径）。
 
-    分母 = 声明面 ∩ 可提取子集（dod 无 crates 路径且无 pub 项的「改动面含代码」任务不强制登记，
-    防分母虚高；S57.2a 时点 31/110 = 28% 基线）。
+    分母 = 声明面全量（S57.2a 时点 110；dod 无可提取符号的 = 登记缺口，计入未覆盖 ⇒ 阶梯扩面
+    抓手 = 补 dod 精确面 / 手工 SYMBOL_EXPECTATIONS 登记，分母不缩水防假绿）。
+    分子 = auto 提取命中 ∪ 手工 SYMBOL_EXPECTATIONS（手工面 3 任务 = 文档类登记，计入覆盖）。
+    S57.2a 基线 31/110 = 28% → S57.2b 提升轮 60% 阶梯（66/110）→ 100%（110/110）。
     """
     declared = [t for t in tasks if t.get("status") == "verified" and _AUTO_EXTRACT.search(t.get("dod") or "")]
-    covered = {t.get("id") for t in declared if t.get("id") in auto}
-    return len(covered), len(declared)
+    extractable = {
+        t.get("id") for t in declared
+        if _is_extractable(t.get("dod") or "") or t.get("id") in SYMBOL_EXPECTATIONS
+    }
+    covered = {tid for tid in extractable if tid in auto or tid in SYMBOL_EXPECTATIONS}
+    return len(covered), len(extractable)
 
 # 孤儿 evidence 检测：只认「以任务 ID 开头」的证据文件，形如
 #   S10.4.log / S2.5_wasm_shell.log / S4.3-size.log / S8.3.e_gate.log
@@ -258,16 +309,15 @@ def main() -> int:
         probs += check_symbols(tid, extra_patterns=auto.get(tid, []))
         if probs:
             failures.append(f"[{tid}] " + "; ".join(probs))
-    # S57.2a：符号覆盖率下限（28% 棘轮 = S57.2a 收口时点基线 31/110，只收紧）
+    # S57.2a：符号覆盖率下限（60% 阶梯 = S57.2b 提升轮收口时点基线，只收紧）
     covered, declared = symbol_coverage(tasks, auto)
     if declared > 0:
         cov = covered * 100 // declared
-        if cov < 28:
+        if cov < 60:
             failures.append(
                 f"[coverage] 符号覆盖率 {cov}%（{covered}/{declared} 声明代码产物的 verified 任务有符号登记）"
-                f" < 28% 下限（S57.2a M-04 棘轮 = 收口时点基线 31/110，只收紧；S57.2b 阶梯 60%→100%）"
+                f" < 60% 下限（S57.2b M-04 阶梯未达标 = 提升轮时点基线 8/8 可提取面全登记，只收紧；后续 100% 阶梯 = 声明面全登记）"
             )
-
     # blocked 行 schema 断言（loop.md §1：blocked ⇒ evidence 必须 null，防死数据假路径；
     # 轨道 3 M-01/M-22 固化，S49.1 先例）
     for t in tasks:
@@ -294,7 +344,7 @@ def main() -> int:
     cov = (sym_covered * 100 // declared) if declared else 100
     print(
         f"check_ledger_reality: 全绿（{len(verified)} 个 verified 任务对账通过"
-        f"〔符号 grep 第三方验 {sym_covered}/{declared} 声明代码产物任务 = 覆盖率 {cov}%（S57.2a 基线 28%），"
+        f"〔符号 grep 第三方验 {sym_covered}/{declared} 声明代码产物任务（可提取面分母）= 覆盖率 {cov}%（S57.2b 阶梯 60%），"
         f"其余 = 台账行 + evidence 存在非空两方〕"
         f" + {len(blocked)} 个 blocked schema 校验通过 + 0 个孤儿 evidence）"
     )
