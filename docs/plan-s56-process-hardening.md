@@ -25,3 +25,8 @@
 - [x] **S58.1（EXP-192 缺口②）**：`doc_numbers.py` 扩 `crates/ti-console/web/index.html` 门禁项数声称面（R13 Q079 = R10 平台面勘误漏前端 3 处硬编码「33 项」；扩面后 --fix 可回写，防再漏网）。
 - [x] **S58.2（EXP-192 缺口③）**：WBS 复选框回写判据面——plan-sNN.md 文档 `[x]` 勾选 ↔ 台账任务 verified 状态对账断言（R13 Q002 = plan-s56 4 行 [ ] 未随 verified 回写；载体 = doccheck2 第 50 项 `wbs-checkbox-sync` 或 check_ledger_reality 扩面，落地时定）。
 - [x] **S58.3（M-04 100% 声明面）**：符号覆盖率分母 20 面（代码/规则实现 声明，S57.2b 收紧口径后实测）全登记——12 个无代码产物符号字样 dod 手工 `SYMBOL_EXPECTATIONS` 登记 / dod 精确面补全 ⇒ 20/20 = 100%（可提取面 8/8 已 100%；声明面全登记 = M-04 终态）。
+
+## S59 流程强化第四批（2026-11-17 用户拍板「EXP-194 载体 + WBS 表格面 + R16 复扫」）
+
+- [x] **S59.0（EXP-194 载体）**：doccheck2 第 51 项 `gate-item-number-text`——扫全库「gate 第 N 项/位 <gate项名>」声称点 ↔ `scripts/gate.ps1` 完整描述串去重 1-based 位实测（与 S56.0 doccheck2 项号面同模式：gate 项名→1-based 位 posmap，「第 N 项 `name`」N ≠ posmap[name] = 漂移；时点快照行豁免）。EXP-194 教训 = gate 项号文字全库残留高频复现（EXP-189 同类第 3 次）。
+- [x] **S59.1（R15 Q072/Q076 盲区）**：`wbs-checkbox-sync` 函数扩表格形态扫描——plan-sNN.md 表格 WBS 行（`| Sxx | … | verified/pending |` 状态列）↔ 台账 status 对账（现行 wbs-checkbox-sync 只扫 `- [ ]`/`- [x]` 复选框形态，表格 WBS 0 覆盖 = R15 实抓盲区）。

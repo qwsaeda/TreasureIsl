@@ -37,6 +37,7 @@
 | `scripts/build_artifacts.py` | Python | **构建产物编排器（S35.1，24 号 §4.1 执行面；平台「构建」页数据源 + 执行器）**：`pre`/`post <kind>` 构建前后 mtime 锚定（apk 回退 `treasure_bevy.rs` mtime 防误触发 15min 重编）/ `run <kind>` 执行构建本体（apk/wasm/native）+ 自动 `post` 复检 + 日志落 `evidence/console/logs/` / `list` 产物清单 / `check` 前置体检；构建本体仍走既有脚本（工具契约不变），本脚本只做编排 | 否 |
 | `scripts/task_close.py` | Python | **任务收口一条命令**（跑判据 → 写证据 → 台账行级置 verified → 同步 release 计数 → 三方对账复验；判据非 0 不改台账） | 是 |
 | `scripts/exp_log.py` | Python | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + 查重 + doccheck 复验） | 是 |
+| `scripts/gate_item_posmap.py` | Python | **gate 项号位表回写**（gate.ps1 去重 1-based 位 ↔ `assets/gate_item_posmap.json`；EXP-194 载体，`--fix` 回写） | 是 |
 | `scripts/doc_numbers.py` | Python | **门禁项数 / 台账计数 / doccheck2 项号文字（S56.0）/ 符号覆盖率声称点（S57.2b）实测回写**（声称点一次改齐；`--fix` 回写） | 是 |
 | `scripts/layout_spec_check.py` | Python | **UI 版面规格三面对账**（规格表 ↔ scenes.json ↔ manifest：坐标 + 8pt + N8 往返） | 是 |
 | `scripts/check_ps_scripts.ps1` | PowerShell | **PS 入口体检**（BOM + ParseFile 语法自检，EXP-109） | 是 |

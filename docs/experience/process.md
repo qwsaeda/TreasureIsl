@@ -674,3 +674,23 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **根因**：gate.ps1 加减项后文档「第 N 项」文字是手工镜像（gate_data.json 去重序是机读源），R12 已修 20+ 处但 gate 项号面**无机器断言**（doccheck2 50 项守 doccheck2 项号文字 S56.0，不守 gate 项号文字；EXP-189 同类 = 第 N 次加减 gate 项后第 N+1 次复发）。
 - **解法**：① 本轮 9 处全修（去重序实值 + 旧值时点标注「旧第 N 项 = X 项体系时点值」）② 后续轮扩 doccheck2「gate 项号文字」断言面（扫全库「第 N 项」声称点 ↔ gate.ps1 完整描述串去重 1-based 位实测，与 S56.0 doccheck2 项号面同模式，载体待立项）。
 - **验证**：R15 9 处全修 + gate 36 项 0 failure + doccheck2 50 项 0 error（evidence/r15-audit.md）。
+### EXP-195 · gate 项号文字断言（S59.0 载体）+ WBS 表格形态对账（S59.1）三坑
+
+- **坑①（S59.0 断言恒 0 命中根因）**：posmap 单行 item `{"short":"X","pos":N}` 的 Rust 手工解析，`"short":` = **8 字符**（`"short"` 7 + 冒号 1），用 `s_idx + 7` 取到的是**冒号**而非值引号 ⇒ `strip_prefix('"')` 失败 ⇒ short 值全解析成 `":"`（垃圾）⇒ short_pos 36 项但全空值 ⇒ `line.contains(short)` 永不命中 ⇒ 断言恒 0 命中（负例改坏不 FAIL）。**教训 = 手工 JSON 解析的字符 offset 须逐字符核实**（`"short":` = `" s h o r t "` 7 字符 + `:` = 8 位；`"pos":` = 6 位），且首跑须用负例实跑验证解析值（而非只看 len），`[dbg] short_pos = 36 项` 不等于「解析正确」，须打 first3 看值。
+- **坑②（gate 项号声称点 claimed 提取过宽 = 63 误报）**：初版用「全行 contains(short)」匹配 gate 项名，把行末叙述里碰巧出现的 gate 短名（doccheck/doccheck2 等）与 claimed 数字误配 ⇒ 63 处误报。**修法 = 紧邻区 + 词边界**：short 名须出现在「项/位」后 ≤14 字符窗口内 **且** 命中后紧跟字符非 ASCII 字母数字（防 `doccheck` 短名误吃 `doccheck2`）。
+- **坑③（语义误报：doccheck2 检查项号 ≠ gate 项号）**：`第 N 项 doccheck`（N = doccheck2 内部检查序号）与 `gate 第 N 项 <gate项名>`（N = gate 去重位号）形态相同但语义不同；历史经验条目（EXP-065）的「gate 第 9 项 doccheck」= 旧 9 项体系时点值。**修法 = 时点/历史条目加「旧 9 项体系时点值」标注豁免；现状规范文档（style.md）修实位；exp 历史条目豁免。**
+- **坑④（S59.1 表格 WBS 状态标注过宽 = 3 误报）**：初版用「行内含 pending 字样」判 pending 状态，把描述列散字（"允许类目 pending"/"pending=0"）误判 ⇒ 3 处历史 WBS 表格误报。**修法 = 只认明确状态标注形态（`✅ verified`/`已 verified`/`状态 \`pending\``），散字不判 + 历史阶段文档（plan-s0-s2/plan-s3）整体豁免（状态列 = 当时快照）。**
+- **收口判据**：S59.0 = doccheck2 第 51 项 `gate-item-number-text`（机读源 `assets/gate_item_posmap.json` + `scripts/gate_item_posmap.py` 回写 + 3 处工具契约登记）；S59.1 = `wbs-checkbox-sync` 扩 `check_wbs_table_row`（plan-sNN 表格 WBS ↔ 台账 verified 对账）；双负例实跑 + clippy -D 0 warning + gate 全绿。
+#### S59.0 gate 项号断言 AUDIT R16 抓出 4 真逻辑漏洞（修毕）
+
+- **A-02 P0（整行豁免掩盖 2 真漂移）**：首版豁免取**行内首个「项/位」后全扫**「时点值/旧第」⇒ 同行「当前 gate 声称 + 历史时点标注」整行被误豁免，掩盖 AGENTS:145（doccheck 第11位≠实位13）+ loop:37（dod-commands 第32位≠实位35）两条真漂移。修 = 豁免只认**声称点数字后 8 字符内**带时点标注；另加「演进叙述行」（整行带「起」+ ≥2 个「第 N 项」）+ 子项分组（「第 N/M 项」斜杠）+ exp 历史条目整文件豁免。
+- **A-01 P1（窗口 14 字符过小）**：紧邻区窗口硬编码 14 字符，对 >14 字符 short 名（`no unwrap()/expect()...` = 45 字符）结构性不可匹配，64% gate 项号漂移漏检。修 = 窗口 = `max(short_len) + 4`（动态 49 字符）。负例 flywheel-readme（15 字符）改 26→25 精准命中 loop.md:127 验证。
+- **A-03 P2（多声称行只核首个）**：`iter_gate_claims` 初版 `line.find("第")` 只取首个「第」，多声称行（`gate 第 13 项 doccheck、第 99 项 bogus`）后续声称漏核。修 = while 全行迭代所有「第」。
+- **A-05 P2（重复短名假阳性）**：posmap 含重复短名（`cargo build` pos4/6、`no-macroquad` pos20/21），窗口匹配 break 取**首个**命中 ⇒ 声称后一个位置必报假阳性。修 = 窗口取**最靠后** occurrence（最近声称）。
+- **坑·CJK 字节边界 panic**：`iter_gate_claims` 的 `search_from = abs + 1`（abs = 「第」首字节）落「第」3 字节中间 ⇒ `line[search_from..]` char boundary panic（整个 doccheck2 进程崩，后续所有文档不扫）。修 = `abs + "第".len()`（跳整字 3 字节）。**教训 = CJK 字符串按字节推进必跳整字，`+1` 落多字节中间即 panic；且 panic 会静默吞掉整条门禁（doccheck2 exit 101 而非报「0 项」）。**
+- **坑·gate 前缀 take(14) 取错方向**：`line[..di].chars().take(14)` 取「第」**行首** 14 字符（`| \`check_dod_c`）而非「第」**前** 14 字符 ⇒ gate 前缀校验恒 false，断言恒 0 命中。修 = `line[..di].chars().rev().take(14).collect().rev()` 取「第」前 14 字符。**教训 = `chars().take(n)` 取迭代器**前 n**（行首方向），取「尾部 n」须 `.rev().take(n)` 再 rev。**
+#### R16 复扫 2 的 4 结构性漏网面处置
+- **F-04 P3 已修**：gate-item-number-text 扫描面 15→16 文件（加 `docs/process/06_flywheel.md`，gate 第 26 位 flywheel-readme 高频停机锚点）。
+- **F-02 P2 部分修**：`iter_gate_claims` 推进逻辑改 `search_from = min(第+len, item_pos)`（防 item_pos 越位跳第二声称）；**残留局限 = 跨行 gate 项号**（"第 N 项" 在行尾、short 名在下行，如 parity:111「gate 第 26 项」+ L112 flywheel-readme）窗口只取本行 ⇒ 跨行 short 名不核（值对故无真漂移，登记为已知局限，后续轮扩跨行窗口）。
+- **F-01 P1 已修**：子项后缀「第 4c/25b/10a 项」（数字后紧跟小写字母 = 条件子块编号）识别后跳过（gate.ps1 条件子项去重后归并 1 主项，文档子项号 vs posmap 主位号口径不同，不核；防 "4c" 被 digits 解析为 "4" + 窗口短路误命中 pos8 feature-gated）。
+- **F-03 P2 判定误报**：32_ccgs:67「gate 第 25 项 dod-commands（S50 立项时点快照；现行=36项）」= 时点快照行（带「S50 立项时点快照」标注）⇒ 整行「起」+多声称豁免**正确**（该行本就该豁免，不回改历史位号）。

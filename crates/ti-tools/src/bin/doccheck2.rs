@@ -2880,13 +2880,75 @@ fn check_process_reinforcement_count(root: &Path) -> Vec<String> {
 ///
 /// 负例护栏：临时改 1 行 [x]→[ ]（verified 任务）必 FAIL；还原 0 error。
 #[allow(clippy::items_after_statements)]
+/// 从表格首列 `Sxx.y` 提取任务 id（S 开头到首个非 alnum/`.`/`-` 字符；防 `S0.1 |` 误吃 `|`）。
+fn extract_table_tid(cell: &str) -> Option<String> {
+    let rest = cell.strip_prefix("S")?;
+    let mut tid = String::from("S");
+    for c in rest.chars() {
+        if c.is_ascii_alphanumeric() || c == '.' || c == '-' {
+            tid.push(c);
+        } else {
+            break;
+        }
+    }
+    if tid.len() > 1 { Some(tid) } else { None }
+}
+
+/// S59.1（R15 Q072/Q076 盲区）：表格 WBS 行 `| Sxx | … | <状态词> |` ↔ 台账 verified 对账。
+/// 仅当表格行含**显式状态标记**才核；历史阶段文档（plan-s0-s2/plan-s3）状态列 = 当时快照，豁免。
+fn check_wbs_table_row(
+    fname: &str,
+    i: usize,
+    line: &str,
+    all_ids: &std::collections::HashSet<String>,
+    verified_ids: &std::collections::HashSet<String>,
+    errors: &mut Vec<String>,
+) {
+    let tline = line.trim_start();
+    if !tline.starts_with("| ") || tline.len() <= 3 {
+        return;
+    }
+    let first_cell = tline[2..].split('|').next().unwrap_or("").trim();
+    let is_tid = first_cell
+        .strip_prefix("S")
+        .is_some_and(|rest| rest.chars().next().is_some_and(|c| c.is_ascii_digit()));
+    // 历史阶段文档（S0~S8 全 verified）表格 WBS 状态列 = 当时快照，豁免（EXP-192 缺口④）
+    if fname == "plan-s0-s2.md" || fname == "plan-s3.md" {
+        return;
+    }
+    if !is_tid {
+        return;
+    }
+    let Some(tid) = extract_table_tid(first_cell) else { return };
+    if !all_ids.contains(tid.as_str()) {
+        return;
+    }
+    let is_verified = verified_ids.contains(tid.as_str());
+    let claims_verified = line.contains("✅ verified")
+        || line.contains("已 verified")
+        || line.contains("**verified**")
+        || line.contains("状态 `verified`");
+    let claims_pending = line.contains("状态 `pending`") && !line.contains("✅");
+    if claims_verified && !is_verified {
+        errors.push(format!(
+            "{}:{} 表格 WBS `| {} |` 含 verified 标记但台账 {} 未 verified（表格↔台账状态漂移，S59.1，EXP-192 缺口④）",
+            fname, i + 1, tid, tid
+        ));
+    } else if claims_pending && is_verified {
+        errors.push(format!(
+            "{}:{} 表格 WBS `| {} |` 含 pending 标记但台账 {} 已 verified（表格↔台账状态漂移，S59.1，EXP-192 缺口④）",
+            fname, i + 1, tid, tid
+        ));
+    }
+}
+
 fn check_wbs_checkbox_sync(root: &Path) -> Vec<String> {
+    use std::collections::HashSet;
     let mut errors = Vec::new();
     let Some(ledger) = read_file(root, "plan/ledger.yaml") else {
         return vec!["plan/ledger.yaml 不存在（WBS 对账无基准）".to_string()];
     };
     // 台账 status 映射（id → verified?）
-    use std::collections::HashSet;
     let mut verified_ids: HashSet<String> = HashSet::new();
     let mut all_ids: HashSet<String> = HashSet::new();
     for line in ledger.lines() {
@@ -2919,6 +2981,10 @@ fn check_wbs_checkbox_sync(root: &Path) -> Vec<String> {
         }
         let Ok(text) = std::fs::read_to_string(&path) else { continue };
         for (i, line) in text.lines().enumerate() {
+            // S59.1（R15 Q072/Q076 盲区）：表格 WBS 行 `| Sxx | … | <状态词> |` ↔ 台账对账。
+            // 仅当表格行含**显式状态标记**（verified/pending/blocked）才核；无状态词的描述性
+            // 历史 WBS 表格不强对账（避免历史文档误报）。
+            check_wbs_table_row(fname, i, line, &all_ids, &verified_ids, &mut errors);
             // 形态：`- [ ] **Sxx**` / `- [x] **Sxx**`（Sxx = 任务 id，含字母数字点）
             let trimmed = line.trim_start();
             let checked = trimmed.starts_with("- [x] ");
@@ -2980,7 +3046,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 verified；余 1 blocked S49.1 竖屏主题化用户拍板作废可选（跳 S49.2））"
+                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 verified；余 1 blocked S49.1 竖屏主题化用户拍板作废可选（跳 S49.2））"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。
@@ -4422,6 +4488,8 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("process-reinforcement-count", check_process_reinforcement_count),
     // S58.2（EXP-192 缺口③）：plan-sNN WBS 复选框 ↔ 台账 verified 状态对账
     ("wbs-checkbox-sync", check_wbs_checkbox_sync),
+    // S59.0（EXP-194 载体）：gate 项号文字「第 N 项/位 <gate项名>」↔ gate.ps1 去重 1-based 位实测
+    ("gate-item-number-text", check_gate_item_number_text),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：
@@ -4859,6 +4927,205 @@ fn check_landscape_no_portrait_hardcode(root: &Path) -> Vec<String> {
         "letterbox_size 须方向感知（横屏 1920×1080 / 竖屏 1080×1920）",
     );
     errors
+}
+
+/// S59.0（EXP-194 载体 / R15 9 处 gate 项号旧时点值固化）：gate 项号文字「第 N 项/位」
+/// ↔ `assets/gate_item_posmap.json`（gate.ps1 完整描述串去重 1-based 位表，机读源）对账。
+/// 判据：扫 18 文档 + rules 里「gate 第 N 项/位 <gate项短名>」形态（如「gate 第 35 项 dod-commands」），
+/// N ≠ posmap[短名] = 现状区漂移 FAIL；带「时点/历史/旧第 N 项」标注行 = 豁免（时点值不回改）。
+/// 负例护栏：改 1 处 gate 项号（如「第 35 项 dod-commands」→「第 25 项」）必 FAIL 精准点名；还原 0 error。
+/// 载体 = `assets/gate_item_posmap.json`（`scripts/gate_item_posmap.py --fix` 回写，gate 加减项后重跑）。
+fn check_gate_item_number_text(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(posmap_text) = read_file(root, "assets/gate_item_posmap.json") else {
+        return vec!["assets/gate_item_posmap.json 不存在（gate 项号文字断言无机读源；跑 scripts/gate_item_posmap.py --fix 生成）".to_string()];
+    };
+    let short_pos = parse_posmap_shorts(&posmap_text);
+    if short_pos.is_empty() {
+        return vec!["assets/gate_item_posmap.json 解析出 0 项（格式漂移？跑 scripts/gate_item_posmap.py --fix 回写）".to_string()];
+    }
+    let claim_files = [
+        "AGENTS.md",
+        "docs/README.md",
+        "docs/loop.md",
+        "docs/style.md",
+        "docs/parity.md",
+        "docs/process/04_tooling.md",
+        "docs/process/05_module_parallel.md",
+        "docs/process/14_tooling_catalog.md",
+        "docs/process/15_process_ledger.md",
+        "docs/process/23_game_testing.md",
+        "docs/process/26_dev_stages_overview.md",
+        "docs/process/28_engine_best_practice.md",
+        "docs/process/32_ccgs_borrow.md",
+        "docs/rules/scripts-rules.md",
+        "docs/rules/ti-engine-rules.md",
+        "docs/process/06_flywheel.md",
+        "docs/experience/index.md",
+    ];
+    for rel in claim_files {
+        let Some(text) = read_file(root, rel) else { continue };
+        for (i, line) in text.lines().enumerate() {
+            // experience/index.md = 历史经验条目（gate 项号 = 当时快照，不回改），整文件豁免
+            if rel == "docs/experience/index.md" {
+                continue;
+            }
+            // A-03 修：扫行内**全部**「第 N 项/位」声称点（旧逻辑只核首个）
+            for claim in iter_gate_claims(line) {
+                // A-02 修：豁免只认该声称点紧邻区（数字后 8 字符）带时点标注，不整行扫
+                if claim_exempt_near(&claim, line) {
+                    continue;
+                }
+                let claimed = claim.n;
+                // A-01 修：窗口 = 最长 short + 4（旧 14 字符对 >14 short 名结构性不可匹配）
+                let window_len = short_pos.iter().map(|(sp, _)| sp.len()).max().unwrap_or(12) + 4;
+                let after_item = &line[claim.item_pos..];
+                let window: String = after_item.chars().take(window_len).collect();
+                // A-05 修：重复短名取窗口内**最靠后** occurrence（最近声称）
+                let mut hit: Option<(String, i64)> = None;
+                for (short, pos) in &short_pos {
+                    if short.len() < 3 {
+                        continue;
+                    }
+                    let mut last_hit: Option<usize> = None;
+                    let mut search_from = 0usize;
+                    while let Some(found) = window[search_from..].find(short.as_str()) {
+                        let abs = search_from + found;
+                        let after_end = abs + short.len();
+                        let boundary_ok = !window[after_end..]
+                            .chars()
+                            .next()
+                            .is_some_and(|c| c.is_ascii_alphanumeric());
+                        if boundary_ok {
+                            last_hit = Some(abs);
+                        }
+                        search_from = abs + 1;
+                    }
+                    if last_hit.is_some() {
+                        hit = Some((short.clone(), *pos));
+                        break;
+                    }
+                }
+                let Some((short, actual)) = hit else { continue };
+                if claimed != actual {
+                    errors.push(format!(
+                        "{rel}:{} 「gate 第 {claimed} 项/位 {short}」≠ gate.ps1 去重实测第 {actual} 位（gate 项号文字漂移，EXP-194；机读源 = assets/gate_item_posmap.json，回写跑 scripts/gate_item_posmap.py --fix）",
+                        i + 1
+                    ));
+                }
+            }
+        }
+    }
+    errors
+}
+
+/// 逐「第」扫行内**全部** gate 声称点（A-03）。
+fn iter_gate_claims(line: &str) -> Vec<GateClaim> {
+    let mut out = Vec::new();
+    let mut search_from = 0usize;
+    while let Some(rel) = line[search_from..].find("第") {
+        let abs = search_from + rel;
+        if let Some(claim) = parse_gate_claim_at(line, abs) {
+            let item_pos = claim.item_pos;
+            out.push(claim);
+            // F-02 修：推进须越过**本声称点自身**的「第」（abs+3），但不可越过紧随的下一「第」
+            // （旧 search_from = item_pos 会越过 item_pos 之前的下一「第」，多声称行漏核第二声称）。
+            // 取 abs + "第".len()（本「第」之后）与 item_pos 中较小者推进 = 只跳本「第」，下一「第」可被 find 到。
+            let skip_past_di = abs + "第".len();
+            search_from = skip_past_di.min(item_pos);
+        } else {
+            // 「第」= 3 字节；abs 指向「第」首字节，须跳整字（+1 落 CJK 中间 panic）
+            search_from = abs + "第".len();
+        }
+    }
+    out
+}
+
+/// 在已知「第」字节偏移 di 处解析声称点。
+/// 仅当「第 N 项/位」前 14 字节内出现 gate 字样（gate/门禁）才算 gate 项号声称点；
+/// 否则 = doccheck2 内部检查序号 / gate 子项分组号（非 gate 去重位号），跳过（EXP-194 语义歧义防护）。
+fn parse_gate_claim_at(line: &str, di: usize) -> Option<GateClaim> {
+    // gate 前缀校验：「第」前 14 字节（约 4-5 汉字）内须含 gate 字样
+    // 「第」前 14 字符（line[..di] 的**末尾** 14 字符，非行首）须含 gate 字样
+    let before: String =
+        line[..di].chars().rev().take(14).collect::<Vec<_>>().into_iter().rev().collect();
+    if !before.contains("gate") && !before.contains("门禁") {
+        return None;
+    }
+    let rest = &line[di + "第".len()..];
+    let mut digits = String::new();
+    let mut walked = 0usize;
+    for (i, c) in rest.char_indices() {
+        if c.is_ascii_digit() {
+            digits.push(c);
+            walked = i + c.len_utf8();
+        } else if c == ' ' || c == '　' {
+            walked = i + c.len_utf8();
+        } else {
+            break;
+        }
+    }
+    let Ok(n) = digits.parse::<i64>() else { return None };
+    if n == 0 {
+        return None;
+    }
+    // 子项分组「第 N/M 项」（斜杠多子项 = 门禁子项编号，非 36 项去重位号）跳过
+    let tail = &rest[walked..];
+    if tail.starts_with('/') || tail.starts_with("／") {
+        return None;
+    }
+    // 子项后缀「第 4c/25b/10a 项」（数字后紧跟小写字母 = 条件子块编号，非 36 项去重主位号）跳过
+    // （gate.ps1 条件子项 4c/25b/10a 在去重后归并为 1 主项，文档用子项号 vs posmap 主位号口径不同，不核）
+    let first_after_digits = tail.chars().next();
+    if first_after_digits.is_some_and(|c| c.is_ascii_lowercase()) {
+        return None;
+    }
+    let item_rel = tail.find('项').or_else(|| tail.find("位"))?;
+    Some(GateClaim { n, item_pos: di + "第".len() + walked + item_rel + "项".len() })
+}
+
+/// A-02：豁免只认声称点数字后 8 字符内带「时点值/旧第/修订前口径」（不整行扫）。
+fn claim_exempt_near(claim: &GateClaim, line: &str) -> bool {
+    let after = &line[claim.item_pos..];
+    // 声称点数字后 8 字符内带时点标注 = 历史快照。
+    let near: String = after.chars().take(8).collect();
+    if near.contains("时点值")
+        || near.contains("旧第")
+        || near.contains("修订前口径")
+        || near.contains("起含")
+    {
+        return true;
+    }
+    // 演进叙述行特征：整行带「起」（S16.1 起含/S31.3 起）且 ≥2 个「第 N 项」声称点
+    // = 历史位号演进快照（一行多声称 + 时点语境），整行豁免（EXP-194 语义歧义防护）。
+    let claim_count = line.matches("项").count() + line.matches("位").count();
+    line.contains("起") && claim_count >= 2
+}
+
+/// posmap 单行 item（每行 = {"short":"X","pos":N}）逐行解析 (short, pos)。
+fn parse_posmap_shorts(posmap: &str) -> Vec<(String, i64)> {
+    let mut out = Vec::new();
+    for line in posmap.lines() {
+        let l = line.trim();
+        let Some(s_idx) = l.find("\"short\":") else { continue };
+        let after = &l[s_idx + 8..];
+        let short_val: String =
+            after.strip_prefix('"').unwrap_or(after).chars().take_while(|c| *c != '"').collect();
+        let Some(p_idx) = l.find("\"pos\":") else { continue };
+        let digits: String =
+            l[p_idx + 6..].trim_start().chars().filter(char::is_ascii_digit).take(3).collect();
+        let Ok(pos) = digits.parse::<i64>() else { continue };
+        if !short_val.is_empty() && pos > 0 {
+            out.push((short_val, pos));
+        }
+    }
+    out
+}
+
+struct GateClaim {
+    n: i64,
+    /// 「项/位」字之后的下标（紧邻区窗口起点）。
+    item_pos: usize,
 }
 
 fn main() -> ExitCode {

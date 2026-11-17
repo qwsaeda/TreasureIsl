@@ -76,7 +76,7 @@ panic = "deny"                     # 禁 panic，错误走 Result 链
 | `define_id!` | 随对应 ID 域任务（**参考实现已在** `ti-formats/src/ids.rs` 手写 `ControlKind`：newtype + `From<u32>/From<ControlKind> for u32` + `Display` + `FromStr` + 关联常量，§5.6.6 选用矩阵） | newtype ID + `From<u32>/Display/FromStr` + 关联常量；消除重复 ID 定义；落地宏时把 `ControlKind` 迁进宏 |
 | `diff_test!` | 已由各模块手写 `tests/diff_*.rs` 取代 | oracle vs 正式实现同种子对拍；P2 双通道差分 |
 
-> 门禁第 9 项 `doccheck` 会校验本表「已落地」段的每个宏名都能在 `macros.rs` 里 grep 到；把未实现的宏写进「已落地」段即判失败。
+> 门禁第 13 项 `doccheck` 会校验本表「已落地」段的每个宏名都能在 `macros.rs` 里 grep 到；把未实现的宏写进「已落地」段即判失败。
 
 过程宏暂不引入；确需时先在 `docs/experience/index.md` 记录理由再改 §5.1。
 数据表 `include_str!` 进包约定（serde + `OnceLock`、失败即硬错误不 fallback）单一事实源 = `docs/process/01_architecture.md` §5，本文件不复述。

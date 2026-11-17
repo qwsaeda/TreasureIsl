@@ -169,6 +169,7 @@
 | `scripts/ui_theme.py` | **内容运营全主题创新·主题应用工具（S48.0）**：主题包 `assets/themes/<tid>/compose.json` 的 `landscape_primitives` + `assets` → 定点回注 scenes.json 构图（indent=1 规范形）+ 部署资产 + register + validate_data——全主题创新（AI 背景/标题 + 真实双主角 + 构图重排）零 Rust |
 | `scripts/task_close.py` | **任务收口一条命令**（跑判据 → 写 `evidence/<id>.log` → 台账行级置 verified → 同步 release 台账计数 → 三方对账复验；判据非 0 则不写证据不改台账） |
 | `scripts/exp_log.py` | **EXP 登记一条命令**（分卷正文 + 索引行 + 分卷条数列 3 处改齐 + ID 查重 + doccheck 复验） |
+| `scripts/gate_item_posmap.py` | **gate 项号位表回写**（gate.ps1 去重 1-based 位 ↔ `assets/gate_item_posmap.json`；EXP-194 载体） |
 | `scripts/doc_numbers.py` | **门禁项数 / 台账计数 / doccheck2 项号文字（S56.0）/ 符号覆盖率声称点（S57.2b）实测回写**（声称点一次改齐；`--fix` 回写，消灭手抄漂移） |
 | `scripts/layout_spec_check.py` | **UI 版面规格三面对账**（规格表 ↔ `scenes.json` ↔ `scene_manifest_v3.json`：坐标 + 8pt + N8 往返 ±1px） |
 | `scripts/check_ps_scripts.ps1` | **PowerShell 入口体检**（UTF-8 BOM + `ParseFile` 真语法自检 ⇒ 拦住「入口从未真跑起来」，EXP-109） |

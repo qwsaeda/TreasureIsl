@@ -34,7 +34,7 @@ tasks:
 2. 实现（按 WBS 产出物落地，禁止留占位实现）
    - **判据命令须可实跑**（S46.1 / EXP-170+171）：写在 dod / parity.md 里的 `cargo run|test`
      命令，多 bin crate 必须显式 `--bin <name> --`；python/pwsh 脚本须文件在位。
-     机器守门 = `scripts/check_dod_commands.py`（gate 第 32 位 dod-commands，去重序；旧「第 35 项」= 25 项体系时点值）。
+     机器守门 = `scripts/check_dod_commands.py`（gate 第 35 位 dod-commands，去重序；旧「第 35 项」= 25 项体系时点值）。
 3. 跑该任务的验收命令 → 输出存 evidence/<id>.log
 4. 跑 scripts/gate.ps1（全局门禁，36 项）
 5. gate 全绿 → ledger 置 verified + evidence；否则 rounds+=1，按规则拆解/标记 blocked

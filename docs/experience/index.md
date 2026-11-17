@@ -33,7 +33,8 @@
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 22 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 37 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114）、CCGS 借鉴分析「已替代」误判（EXP-186）、i18n 动态 key 拼接盲区（EXP-187）、双审计 A/B 协议（EXP-188）、doccheck2 项号文字漂移高频复现（EXP-189）、流程强化轮 3 面教训 git 还原/孤儿证据前缀/覆盖率分母（EXP-191）、数值声称点同组多文档口径漂移（EXP-192）、机器门禁自身结构失效盲区 wbs-checkbox-sync 加粗行解析（EXP-193）、gate 项号文字旧时点值全库残留（EXP-194） | 53 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114）、CCGS 借鉴分析「已替代」误判（EXP-186）、i18n 动态 key 拼接盲区（EXP-187）、双审计 A/B 协议（EXP-188）、doccheck2 项号文字漂移高频复现（EXP-189）、流程强化轮 3 面教训 git 还原/孤儿证据前缀/覆盖率分母（EXP-191）、数值声称点同组多文档口径漂移（EXP-192）、机器门禁自身结构失效盲区 wbs-checkbox-sync 加粗行解析（EXP-193）、gate 项号文字旧时点值全库残留（EXP-194）、gate 项号文字断言（S59.0 载体）+ WBS 表格形态对账（S59.1）三坑 + AUDIT R16 4 逻辑漏洞修复（EXP-195）（EXP-195） | 54 |
+| EXP-195 | process | gate 项号文字断言（S59.0 载体）+ WBS 表格形态对账（S59.1）三坑：posmap 手工 JSON offset（`"short":` = 8 字符）值全解析成 `:` 恒 0 命中 / claimed 全行 contains 过宽 63 误报（改紧邻区 + 词边界防 doccheck 误吃 doccheck2）/ doccheck2 检查项号 ≠ gate 项号（历史条目时点豁免）/ S59.1 表格 pending 散字 3 误报（只认明确状态标注 + 历史文档豁免） |
   | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 59 |
 
 ## 条目索引
@@ -105,7 +106,7 @@
 | EXP-061 | process | | 行内全路径引用（`ti_core::data::balance()`）vs use 声明——子代理风格漂移，改动前读既有 use 块，行内全路径=0（S10.3 教训） |
 | EXP-063 | process | | doccheck 任务 ID 检查是散文全库扫描：新阶段任务先登记 `plan/ledger.yaml`（pending 即可）再写文档引用；散文范围写法「某阶段 x」会被当 token 抓，写「S10 系列」或逐个编号（S11 登记 S12 WBS 踩坑） |
 | EXP-064 | process | | 子代理只拿到任务书 = 跨会话上下文丢失：会话起点 prompt 必注入仓库绝对路径 + crate 前缀 `ti-`（非 `ty-`）+ 关键符号路径 + 契约锚点 + 当前任务与已 verified 清单，回执逐条对齐否则返工（模块并行 loop 纪律） |
-| EXP-065 | process | | 台账被文件级回退（`git checkout -- <file>`/restore 不进 reflog）会静默丢任务条目：23 条丢失 → gate 第 9 项 doccheck 115 error；兜底 = gate 第 14 项「孤儿 evidence 检测」（`evidence/` 里任务 ID 命名的文件其 ID 必须在台账）+ 长阶段收尾即 commit |
+| EXP-065 | process | | 台账被文件级回退（`git checkout -- <file>`/restore 不进 reflog）会静默丢任务条目：23 条丢失 → gate 第 9 项 doccheck 115 error（旧 9 项体系时点值）；兜底 = gate 第 14 项「孤儿 evidence 检测」（旧时点值，现行 check_ledger_reality = 第 23 项）（`evidence/` 里任务 ID 命名的文件其 ID 必须在台账）+ 长阶段收尾即 commit |
 | EXP-066 | code | | 表现层 `start_battle` 写死 `Unit{hp:1000,atk:150}` 与 `balance.combat.player{hp:2000,atk:60}` 漂移；属 P1-P5 白名单外，S10.5 审计留 unknown 不强制修，仅登记 + 写 evidence（check_hardcode/oracle_boundary 都抓不到，需双 agent 反向审计补洞） |
 | EXP-067 | code | | 跨层几何公式（rules 逻辑坐标 ↔ 渲染投影）须正逆成对测试：逆变换(正变换(p))==p，单层公式自洽不算数（S10.5 审计发现，主地图触摸命中教训 EXP-059 的泛化） |
 | EXP-068 | process | | 子代理开轮不读最新规范/EXP/契约 → 重复踩坑（ty-app 前缀、跨层几何不对齐、不知 gate 第 16 项查什么）：开轮必读清单 6 条 + 规范回执固化进 06_flywheel（飞轮单一事实源）+ 05 §4.5 + 03 §7 + doccheck2 第 8 项 `check_flywheel_readback` |

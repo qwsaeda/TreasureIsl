@@ -108,7 +108,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 > 3. 当前全部 `Report` 去重 = **36 项**（S46.1 起 = 34 + 第 25 项 dod-commands；S49.4e 起 = 35 + 第 4c 项 Android 真机；数字对不上时以机器输出为准）。
 >
 > **机器校验**：该口径由 `scripts/flywheel_readme.ps1` 的 `Read-GateItems` 实现，
-> 并由 gate 第 13 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 17 项
+> 并由 gate 第 22 项 `doccheck2` 的 `check_gate_item_actual_count` 持续对账（gate 第 26 项
 > `flywheel-readme -Check` 亦打印同一数字）。**数字对不上时以机器输出为准**，不要手工重数。
 >
 > **易错点（勿再踩）**：
@@ -120,7 +120,7 @@ diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
 >
 > 增删门禁项时**只改本节**，并在同一次改动里同步更新编号与计数。
 
-> **DoD 判据命令可达性自检（S46.1，门禁第 25 项 `dod-commands`）**：P0~P4 表里的
+> **DoD 判据命令可达性自检（S46.1，门禁第 35 项 `dod-commands`）**：P0~P4 表里的
 > 判据命令由 `scripts/check_dod_commands.py --check` 机器校验——`cargo run -p <crate> --bin <bin>`
 > 的 bin 须存在；多 bin crate 上的 `cargo run -p <crate> -- <arg>` **裸形式 = 歧义 FAIL**
 > （EXP-170/171 实测：P0-1 判据 `-- unpack --check-all` 曾五年不可实跑）；`cargo test --test <name>`

@@ -1,0 +1,13 @@
+=== S59.0 gate-item-number-text（doccheck2 第 51 项）实跑证据（AUDIT R16 修毕版）===
+[0] R16 AUDIT 修复面：A-02 整行豁免→声称点紧邻区（修 2 真漂移 AGENTS:145/loop:37）+ A-01 窗口 14→动态 max+4 + A-03 全声称核 + A-05 最靠后命中 + CJK 字节边界 + gate 前缀取尾
+[1] 机读源 posmap 36 项 + 0 漂移：
+  实测：gate.ps1 去重 36 项；posmap 现行 36 项
+  posmap 与 gate.ps1 实测一致（0 漂移）
+
+[2] 双负例实跑（改坏必 FAIL 精准点名 + 还原 0 error）：
+  负例1: 14号L189 dod-commands 35→20
+  ERROR docs/process/14_tooling_catalog.md:189 「gate 第 20 项/位 dod-commands」≠ gate.ps1 去重实测第 35 位（gate 项号文字漂移，EXP-194；机读源 = assets/gate_item_posmap.json，回写跑 scripts/gate_item_posmap.py --fix）
+  负例2: flywheel-readme（A-01 长 short 名 15字符）loop.md 造 26→25
+  ERROR docs/loop.md:127 「gate 第 25 项/位 flywheel-readme」≠ gate.ps1 去重实测第 26 位（gate 项号文字漂移，EXP-194；机读源 = assets/gate_item_posmap.json，回写跑 scripts/gate_item_posmap.py --fix）
+  还原后 0 error：
+1 error(s)

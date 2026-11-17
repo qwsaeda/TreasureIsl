@@ -1,0 +1,12 @@
+=== S59.1 WBS 表格形态覆盖面（check_wbs_table_row）实跑证据 ===
+[1] 全库 plan-sNN 表格 WBS 行 ↔ 台账 verified 现行 0 漂移：
+  （0 命中 = 全一致）
+
+[2] 双负例实跑（EXP-193 判据）：
+  负例: plan-s32 S32.5 ✅ verified → 状态 pending（台账 S32.5 已 verified，必 FAIL）
+  ERROR plan-s32-platform.md:32 表格 WBS `| S32.5 |` 含 pending 标记但台账 S32.5 已 verified（表格↔台账状态漂移，S59.1，EXP-192 缺口④）
+  还原后 0 表格漂移：
+  （0 命中 = 还原成功）
+
+[3] 历史阶段文档豁免面（plan-s0-s2/plan-s3 状态列 = 当时快照）：
+  （plan-s0-s2/plan-s3 0 命中 = 豁免正确）

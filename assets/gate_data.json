@@ -374,6 +374,10 @@
   {
    "id": "wbs-checkbox-sync",
    "impl": "rust"
+  },
+  {
+   "id": "gate-item-number-text",
+   "impl": "rust"
   }
  ]
 }
