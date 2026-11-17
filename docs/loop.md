@@ -23,7 +23,7 @@ tasks:
 规则：
 - `status` 只能按 `pending → in_progress → verified` 单向流转；回退只能到 `in_progress`，并写 `blocked_by`。
 - `blocked_by` 约定：`blocked` 任务写**字符串原因**（如 `android-build-on-mac-not-this-machine`），非 `null`；`pending`/`verified` 任务为 `null`；`in_progress` 任务默认 `null`，但**被外部阻塞**（如渲染线未提交 WIP 致 gate 非全绿、视觉基线未重生成）时允许写非 `null` 原因（S15.2 先例；台账校验器 `ledger` 不禁此组合，`status` 保持 `in_progress` 而非 `blocked`——渲染线收敛 + 复测后转 verified，EXP-078 归因口径）。
-- **`blocked` 行 `evidence` 必须为 `null`**（无验收判据 = 无 evidence 文件；指不存在文件 = 死数据，`check_ledger_reality` 报 FAIL；S49.1 先例 2026-11-16 轨道 3 M-01/M-22 修：原写不存在的 `evidence/S49.1.log` 已置 null）。
+- **`blocked` 行 `evidence` 必须为 `null`**（无验收判据 = 无 evidence 文件；指不存在文件 = 死数据，`check_ledger_reality` 报 FAIL；原竖屏主题任务先例 2026-11-16 轨道 3 M-01/M-22 修：原写不存在的 evidence 路径已置 null（该任务已删除台账））。
 - `verified` 必须有 `evidence`，否则台账校验（gate 第 10 位，去重序；旧「第 8 项」= 早期 12 项体系时点值）失败。
 - `rounds >= 3` 的任务必须拆成子任务（新增 `Sx.y.a` 形式 ID）后才可继续。
 

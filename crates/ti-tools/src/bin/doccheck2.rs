@@ -2924,11 +2924,17 @@ fn check_wbs_table_row(
         return;
     }
     let is_verified = verified_ids.contains(tid.as_str());
+    // 状态标注收紧（EXP-192 缺口④ 误报防护）：只认明确状态标注形态（散字不判）。
+    // A-06 扩：verified 变体（`verified（` 半角括号 / `已 verified` / `**verified**`）+
+    // pending 变体（`状态 pending` / `未 verified`）。blocked 不在本面（blocked ↔ 台账由
+    // blocked-label-consistency 第 46 项核，表格 WBS 面只核 verified/pending 双态）。
     let claims_verified = line.contains("✅ verified")
         || line.contains("已 verified")
         || line.contains("**verified**")
-        || line.contains("状态 `verified`");
-    let claims_pending = line.contains("状态 `pending`") && !line.contains("✅");
+        || line.contains("状态 `verified`")
+        || line.contains("verified（");
+    let claims_pending =
+        (line.contains("状态 `pending`") && !line.contains("✅")) || line.contains("未 verified");
     if claims_verified && !is_verified {
         errors.push(format!(
             "{}:{} 表格 WBS `| {} |` 含 verified 标记但台账 {} 未 verified（表格↔台账状态漂移，S59.1，EXP-192 缺口④）",
@@ -3046,7 +3052,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 0 pending（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 verified；余 1 blocked S49.1 竖屏主题化用户拍板作废可选（跳 S49.2））"
+                "{tasks} 任务（{verified} verified + 0 pending + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 verified；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。

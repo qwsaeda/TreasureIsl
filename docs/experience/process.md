@@ -626,7 +626,7 @@ R12（rea-audit-fix 双 agent：FIND 100 条 Q001~Q100 + AUDIT 逐条复核 46 C
 2. 五步回执 0 落盘：`evidence/flywheel-R{2..11}.md` 10 轮 grep「规范回执/五步/决策点」= 0 命中（唯一命中 = 编排描述非回执本身）⇒ 06 §2「缺回执段 = 打回」判据无落盘证据，机制与执行两张皮。
 3. 停机口径成本倒挂：「连续 2 轮 0/0/0 才停机」使每域停机至少 2 个全成本 0 产出验证轮（R5/R8/R9 + R10/R11 实证；单日 R3~R11 = 9 轮），与 §8「100 条/轮」目标脱节。
 4. re-audit-fix skill 文本冻结面：`C:\金银岛` 根 + `C:\Users\Administrator\...\Temp\opencode\` 输出路径 = Windows 时代写死，Linux 迁移后 0 更新（R12 靠 skill 外的人约定兜 /tmp/opencode）。
-5. blocked 行 evidence 假路径：S49.1（唯一 blocked）写 `evidence: "evidence/S49.1.log"` 该文件不存在 = loop.md §1 schema 无 blocked⇒evidence 条款的必然产物。
+5. blocked 行 evidence 假路径：原竖屏主题任务（唯一 blocked，已删除）写 `evidence: "evidence/<已删任务>.log"` 该文件不存在 = loop.md §1 schema 无 blocked⇒evidence 条款的必然产物。
 6. exp_log.py --check 语义缺陷：正常登记（index 行 + 分卷正文 = 2 处命中）跑 --check 必退出 1 ⇒ 工具契约「只读 + 违规非 0」正常态也非 0 = 假红，不可挂 gate 例行体检。
 
 ## 根因
@@ -639,7 +639,7 @@ M-09：判据改 `](` + `.md)` 收口形态匹配 + 表头失锚报错 + 分卷�
 M-05/M-12：06_flywheel §4 补「停机三条件勾选表 + 五步回执必须拷进 evidence/flywheel-R<n>.md 固定段，缺段 = 停机判定无效/回报打回」。
 M-24：judge.rs 收敛阈值 2→1（第 1 个 0 轮即 Pass，历史轮「连续 2 轮」= 修订前口径快照不回改）+ 单测改判 + 22 号 §7.4/plan-s32/s44/s45/README 文档面全同步（历史 verified 行保留时点措辞）。
 M-19：skill 文本 2 处路径改「仓库根（当前工作目录）+ /tmp/opencode/（Linux）」。
-M-01/M-22：S49.1 evidence 置 null + loop.md §1 补「blocked ⇒ evidence: null」条款 + check_ledger_reality 加 blocked 行 schema 校验 + 输出措辞改「三方/两方对账」防 M-04 误读。
+M-01/M-22：原竖屏主题任务 evidence 置 null + loop.md §1 补「blocked ⇒ evidence: null」条款 + check_ledger_reality 加 blocked 行 schema 校验 + 输出措辞改「三方/两方对账」防 M-04 误读。
 M-08：exp_log --check 改「0 或 >3 处命中 = FAIL；2~3 处 = PASS（分卷表条数行引用 +1）」。
 M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文字 + 数值声称点对账面，待开工）+ 现轮人工清零（R12 20+ 处 + 本轮 README 项号 31~34→33~36 等）。
 
@@ -694,3 +694,7 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **F-02 P2 部分修**：`iter_gate_claims` 推进逻辑改 `search_from = min(第+len, item_pos)`（防 item_pos 越位跳第二声称）；**残留局限 = 跨行 gate 项号**（"第 N 项" 在行尾、short 名在下行，如 parity:111「gate 第 26 项」+ L112 flywheel-readme）窗口只取本行 ⇒ 跨行 short 名不核（值对故无真漂移，登记为已知局限，后续轮扩跨行窗口）。
 - **F-01 P1 已修**：子项后缀「第 4c/25b/10a 项」（数字后紧跟小写字母 = 条件子块编号）识别后跳过（gate.ps1 条件子项去重后归并 1 主项，文档子项号 vs posmap 主位号口径不同，不核；防 "4c" 被 digits 解析为 "4" + 窗口短路误命中 pos8 feature-gated）。
 - **F-03 P2 判定误报**：32_ccgs:67「gate 第 25 项 dod-commands（S50 立项时点快照；现行=36项）」= 时点快照行（带「S50 立项时点快照」标注）⇒ 整行「起」+多声称豁免**正确**（该行本就该豁免，不回改历史位号）。
+#### 已知局限清零（用户拍板 1-3 全做，竖屏禁做已删竖屏主题任务）
+- **跨行 gate 项号（P3 登记局限）**：`check_gate_item_number_text` 窗口只取本行（`line[claim.item_pos..]`），「第 N 项」在行尾 + short 名在下行（如 parity:111「gate 第 26 项」+ L112 flywheel-readme）不核。当前唯一 case 值对（26=26）无真漂移，跨行扩窗 ROI 低 + 易引入新 bug ⇒ 登记已知局限，后续轮再扩（需预读下行 + 偏移换算）。
+- **A-06 WBS 状态变体（已扩）**：`check_wbs_table_row` 状态词表加 `verified（`（半角括号）+ `未 verified`（pending 变体）⇒ 灵敏度提升；blocked 不在本面（由 blocked-label-consistency 第 46 项核）。台账 0 pending（全 350 verified）故无 pending↔verified 可负例，扩词表 = 形态覆盖（值对无真漂移）。
+- **原竖屏主题任务删除（用户「有则删除」）**：台账竖屏主题行删除（351→350 任务，1 blocked→0）+ S54.1 deps 改 [S49.0] + 全库 6 文件竖屏任务 token 清零（plan-s49/plan-archive/process/loop/release/AGENTS 改「原竖屏主题作废已删除」叙述）+ 计数面 351/350/1→350/350/0 全同步 + doccheck2 锚定短语同步。台账 350 任务 / 350 verified / 0 pending / 0 blocked = 全清零。

@@ -11,3 +11,10 @@
   ERROR docs/loop.md:127 「gate 第 25 项/位 flywheel-readme」≠ gate.ps1 去重实测第 26 位（gate 项号文字漂移，EXP-194；机读源 = assets/gate_item_posmap.json，回写跑 scripts/gate_item_posmap.py --fix）
   还原后 0 error：
 1 error(s)
+=== S59.0 补充：已知局限清零处置 ===
+[跨行 gate 项号 = 登记局限] parity:111「gate 第 26 项」行尾 + flywheel-readme 下行，窗口只取本行不核（唯一 case 值对，无真漂移；后续轮扩跨行窗口）
+[A-06 WBS 状态变体 = 已扩] check_wbs_table_row 加 verified（半角/未 verified 形态；blocked 归第46项
+[S49.1 竖屏删除 = 用户拍板] 台账 350 任务/350 verified/0/0；全库 S49.1 token 0 残留；计数面同步
+
+=== 现行 0 error ===
+0 error(s)
