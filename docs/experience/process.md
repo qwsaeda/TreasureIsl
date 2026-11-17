@@ -646,7 +646,7 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 ## 验证
 
 - `check_experience_volume_counts` 负例实跑（临时 47 vs 实 48 ⇒ 1 ERROR 精准点名 process.md；还原 ⇒ 0 error）。
-- doccheck2 47 项 0 error + doccheck 0 error + check_ledger_reality 全绿（339 verified 两方对账 + 3 符号 grep + 1 blocked schema + 0 孤儿）。
+- doccheck2 47 项 0 error〔R12 时点值；现行 51 项〕+ doccheck 0 error + check_ledger_reality 全绿（339 verified 两方对账 + 3 符号 grep + 1 blocked schema + 0 孤儿）。
 - `cargo test -p ti-console --test audit_tests` 28 条全绿（converge_one_round_pass 改判 Pass{1}）。
 - exp_log --check EXP-189/EXP-001 均 EXIT=0（正常态），EXIT=1 = 违规面（0 处或 >3 处）。
 - gate.ps1 头注释补「36 = 去重口径 / Report 行 38」防 M-14 误计数。
@@ -655,13 +655,13 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **现象**：S57 轮 ① `git checkout -- <file>` 把**本轮未提交的** S57.2a patch（check_ledger_reality.py）整文件还原 3 次 ② 多任务组共用证据 `evidence/S57.0.log` 前缀 `S57` 不在台账（台账行 = S57.0/S57.1/S57.2a/S57.2b）⇒ 孤儿 evidence 误报 ③ 符号覆盖率分子混入 3 个文档类手工登记任务 = 106% 假绿。
 - **根因**：① `git checkout --` 无差别还原整个文件到 HEAD，对本轮工作区跨任务累积改动 = 丢面；须**先 cp 备份再还原 + 幂等 patch 脚本重做**（`/tmp/opencode/s572a_patch.py` 含「已应用，跳过」守卫 + 好副本 `clr_s572a_good.py`）② 孤儿 evidence 检测口径 =「文件名任务 ID 前缀」，证据文件命名必须带**完整任务 ID 前缀**（S57.0.log 非 S57 前缀 .log）③ 覆盖率分子把「手工登记的文档类任务」（S9.5/S10.4/S21.0 符号非代码产物）混入「改动面含代码」分母面 ⇒ 分母口径 = 声明面 ∩ 可提取符号子集（110 = dod 含 crates 路径/pub 项的可提取面），分子 = 自动提取命中面。
 - **解法**：① 高风险 git 还原前先 `cp file /tmp/opencode/bak_file`；patch 脚本幂等可重放（重做 = 跑 patch 脚本，不重敲 edit）② 多任务共用证据文件命名 = 任务组首 ID 全前缀（S57.0.log）③ 覆盖率 = 自动提取面（分母 ∩ 可提取子集，防虚高/假绿）+ 手工面优先合并；28%（31/110）= S57.2a 收口时点基线棘轮（只收紧，S57.2b 阶梯 60%→100%）。
-- **验证**：`python3 scripts/check_ledger_reality.py` 全绿（31/110 = 28% 基线）+ 负例实跑（删 S21.0 手工符号 ⇒ FAIL 1，备份还原法）+ doccheck2 48 项 0 error。
+- **验证**：`python3 scripts/check_ledger_reality.py` 全绿（31/110 = 28% 基线）+ 负例实跑（删 S21.0 手工符号 ⇒ FAIL 1，备份还原法） + doccheck2 48 项 0 error〔R13 时点值；现行 51 项〕。
 
 ### EXP-192 流程：数值声称点同组多文档口径漂移（R13 三组同模式 + 平台前端硬编码面 + WBS 复选框不回写）
 - **现象**：R13 双 agent 审计 8 组 CONFIRMED 缺陷里 3 组同模式 =「同一数值在 3+ 文档各自手写，改 1 处漏 2 处」：①「流程强化 8/7 条」26 号 vs AGENTS.md ②「doccheck2 47/48 项」26 号 L141 漏 S57.1 +1 ③「门禁 33/36 项」27 号 8 处 + ti-console web/index.html 3 处硬编码（R10 勘误只修 28 号/README/AGENTS 文档面，漏平台前端）。另 2 组新面：plan-s56 WBS 复选框 4 行 [ ] 未随台账 verified 回写 + process.md L548 乱码「（off门禁 34 项）」。
 - **根因**：① 数值声称点无「枚举型」载体——doccheck2 cross-doc-counts 只守「N 任务（M verified + 0 pending（…）」锚定短语 + 26 号工具矩阵行 doccheck 计数，**「N 条流程强化」枚举面 0 断言**（人工数枚举易 off-by-one，S53 属飞轮 R6 断言固化不属流程强化第二批 = 7 非 8）② 门禁项数声称面 doc_numbers 覆盖 8 文档 + S57.2b 扩 2 文件 = 10 载体，**ti-console 前端 index.html 硬编码 3 处 0 覆盖**（R10 修平台 doc↔code 漂移时前端面漏网）③ WBS 文档（plan-sNN）复选框 = 纯人工回写面，无机器断言（task_close.py 只回写台账不联动 WBS 文档）④ 乱码 = 早期手敲 CJK 混入（Set-Content 类事故残留，EXP-051 同类）。
 - **解法**：① 枚举型声称点（「N 条 X」）暂靠对抗审计人工面 + 文档写全枚举（「S54.1/S55.1/S56.0/S57.0~S57.2b 共 7 条」= 枚举随值，改任务自动暴露）；doccheck2 扩「枚举面」断言 = 后续轮 ② doc_numbers.py 扩 `crates/ti-console/web/index.html` 门禁项数声称面（3 处硬编码 ⇒ 1 个声称文件登记，--fix 可回写）= 后续轮 ③ WBS 复选框回写 = 收口轮人工面（plan-sNN 4 行 [ ]→[x]），后续 S58+ WBS 统一在台账 dod 写「WBS 复选框同步」判据 ④ 乱码行 = 修时点标注（现行值 + 时点值双注，防误读）。
-- **验证**：R13 8 条全修 + gate 36 项 0 failure + doccheck2 48 项 0 error + doc_numbers 0 漂移（evidence/r13-audit.md）。
+- **验证**：R13 8 条全修 + gate 36 项 0 failure + doccheck2 48 项 0 error〔R13 时点值；现行 51 项〕+ doc_numbers 0 漂移（evidence/r13-audit.md）。
 
 ### EXP-193 流程：机器门禁自身结构失效盲区（wbs-checkbox-sync 加粗行 100% 跳过 = 断言恒 0 命中）
 - **现象**：R14 审计 Q005 = S58.2 新增 doccheck2 第 50 项 `wbs-checkbox-sync` 上线后 plan-s56 S58 段 4 行 `[ ]` 真漂移（台账全 verified）未被抓，doccheck2 实跑 0 error「通过」——机器门禁自身结构失效。
@@ -698,3 +698,10 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **跨行 gate 项号（P3 登记局限）**：`check_gate_item_number_text` 窗口只取本行（`line[claim.item_pos..]`），「第 N 项」在行尾 + short 名在下行（如 parity:111「gate 第 26 项」+ L112 flywheel-readme）不核。当前唯一 case 值对（26=26）无真漂移，跨行扩窗 ROI 低 + 易引入新 bug ⇒ 登记已知局限，后续轮再扩（需预读下行 + 偏移换算）。
 - **A-06 WBS 状态变体（已扩）**：`check_wbs_table_row` 状态词表加 `verified（`（半角括号）+ `未 verified`（pending 变体）⇒ 灵敏度提升；blocked 不在本面（由 blocked-label-consistency 第 46 项核）。台账 0 pending（全 350 verified）故无 pending↔verified 可负例，扩词表 = 形态覆盖（值对无真漂移）。
 - **原竖屏主题任务删除（用户「有则删除」）**：台账竖屏主题行删除（351→350 任务，1 blocked→0）+ S54.1 deps 改 [S49.0] + 全库 6 文件竖屏任务 token 清零（plan-s49/plan-archive/process/loop/release/AGENTS 改「原竖屏主题作废已删除」叙述）+ 计数面 351/350/1→350/350/0 全同步 + doccheck2 锚定短语同步。台账 350 任务 / 350 verified / 0 pending / 0 blocked = 全清零。
+#### R17 飞轮（S59 + 竖屏主题删除 + 全库值漂移复扫）处置
+- **AUDIT-B 7 真漂移全修**：gate 项号文字（AGENTS doccheck 9→13 / check_ledger_reality 20→23〔旧第20时点值〕/ ledger 10→12〔旧第10〕/ 26号 flywheel 17→26）+ doccheck2 项数（26号 47/48→51 / plan-archive 44→47 加时点标注 / AGENTS 里程碑 44→47 加「S55 时点值；现行 51 项」标注）。修后 doccheck2 0 error。
+- **AUDIT-B 2 断言盲区登记局限**：
+  - B-18 `gate-item-number-text` 「第 N 项」后**无 posmap short 名**时（如 "gate 第 9 项）。"语境型）`continue` 不核 = 盲区。根治需"语境判定 gate 项"（"第 N 项" 可能指 doccheck2 项/子项，歧义）⇒ 登记局限，靠 AUDIT 人工 + 修后不复发。
+  - B-19 `cross-doc-counts` 仅核「N 任务」+「gate N 项」，不核「doccheck2 N 项」声称 ⇒ B-01/B-06/B-07 doccheck2 项数漂移无断言覆盖。登记局限（后续轮 cross-doc-counts 扩 doccheck2 项数面）。
+- **AUDIT-A（主线程代做，subagent LLM 后端故障 2 次）**：断言面完整（16 文档覆盖高频 gate 项号文件；41 文件含 gate 项号但余 25 = 历史/时点/tutorial）+ 红线代码 0 违规（engine-no-color-literal/CS-1/CS-4 全基线内）+ doccheck2 51 项 0 恒 PASS（现行全过）= 0 新发现。
+- **FIND = 0 条（0/0）**：竖屏主题任务删干净（全库 0 token）+ 计数面 350/350/0/0 全同步 + 门禁全 0。

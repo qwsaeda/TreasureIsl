@@ -102,7 +102,7 @@
 ### 3. 并行与对抗（两种增强 loop）
 
 - **模块并行轮** `process/05_module_parallel.md`：任务 ≥2 且文件域不相交 → 契约冻结 → 多包并行 → 集成联调 → 记账（包白名单互斥 `plan/packages.yaml` + 任务书模板 + 纪律 5 条）。
-- **对抗流水线飞轮** `process/06_flywheel.md`：找问题→审计→修复→回写 3 角色；开轮必读 7 条〔S51.0〕+ 停机条件（gate 第 17 项锚点）。
+- **对抗流水线飞轮** `process/06_flywheel.md`：找问题→审计→修复→回写 3 角色；开轮必读 7 条〔S51.0〕+ 停机条件（gate 第 26 项锚点）。
 
 ---
 
@@ -160,7 +160,7 @@
 3. ✅ S32.9 构建只读体检：`runner::build::build_check`（`pwsh -Check` + `snapshot::FrozenSnapshot` 前后 diff）+ `GET /api/build?check=1`；实测 check_exit=0 / frozen_diff_empty=true / frozen_diff=0。
 4. ✅ S35.1 构建编排平台化：`build_artifacts.py` 编排器 + `GET /api/build?run` 白名单负例 **400**（改前 500）+ list/check 只读；evidence 四份 + 台账 4 任务 verified + WBS/26 号/14 号/22 号同步。
 
-**下一节点** = 350 任务（350 verified / 0 pending / 0 blocked〔竖屏已删除〕；S54.1/S55.1/S56.0/S57.0~S57.2b/S58.0~S58.3 共 11 条 + S59.0/S59.1 第四批 2 条流程强化断言/载体 verified；**S58 全收口，S59 全 verified（2026-11-17）**，doccheck2 51 项 0 error + 覆盖率 100%（20/20 声明面）+ ti-console 前端声称面 + WBS 复选框回写面全固化），飞轮 R3~R11 全收口（业务面 R3~R9 + 平台面 R10~R11 双停机，CCGS 连续 2 轮 0/0/0；S53/S54/S55 三条断言固化 doccheck2 44→47 项 + S57.1 载体 +1 = 48 项 + 平台红线 `ti-console-rules.md` 第 6 个），后续 = 用户拍板新方向（轨道 3 P2 三可选面 S57 全收口后）/ 覆盖率提升轮（S57.2b 阶梯 60%→100%）/ 用户视觉签收（S17.5/S21.9/S26 出图）；S34.0~S34.6 全 verified（2026-11-09），视觉签收类 S17.5/S21.9/S27.5 由 S34.6/S34.7 取代收口。
+**下一节点** = 350 任务（350 verified / 0 pending / 0 blocked〔竖屏已删除〕；S54.1/S55.1/S56.0/S57.0~S57.2b/S58.0~S58.3 共 11 条 + S59.0/S59.1 第四批 2 条流程强化断言/载体 verified；**S58 全收口，S59 全 verified（2026-11-17）**，doccheck2 51 项 0 error + 覆盖率 100%（20/20 声明面）+ ti-console 前端声称面 + WBS 复选框回写面全固化），飞轮 R3~R11 全收口（业务面 R3~R9 + 平台面 R10~R11 双停机，CCGS 连续 2 轮 0/0/0；S53/S54/S55 三条断言固化 doccheck2 44→47 项 + S57.1 载体 +1 = 48 项〔R11 时点值；现行 51 项〕+ 平台红线 `ti-console-rules.md` 第 6 个），后续 = 用户拍板新方向（轨道 3 P2 三可选面 S57 全收口后）/ 覆盖率提升轮（S57.2b 阶梯 60%→100%）/ 用户视觉签收（S17.5/S21.9/S26 出图）；S34.0~S34.6 全 verified（2026-11-09），视觉签收类 S17.5/S21.9/S27.5 由 S34.6/S34.7 取代收口。
 
 ---
 

@@ -5,7 +5,7 @@
 
 ## 当前状态
 
-> ⚠️ **进度以 `plan/ledger.yaml` 为准**（当前 350 任务 / 350 verified + 0 pending + 0 blocked（竖屏主题化已删除〔用户 2026-11-08 拍板作废〕；S54.1/S55.1/S56.0/S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 verified），2026-11-09 台账清零：S39 index 横版重设计等后续阶段全 verified；P5 真机判据走 redroid 设备链路收口，gate 36 项 0 failure）；以下各阶段行 = 进度记录，行内「待开工」为该阶段时点的待办，实时待办见台账。**2026-11-04 里程碑：台账全部任务 verified**（S0–S38 全阶段收口 + 视觉签收类 S17.5/S21.9/S27.5/S27.7 被 S34.6/S34.7 取代收口 + 可选 S7.7 路径 2 执行）。**2026-11-05 里程碑：S39 index 首页横版重设计「羊皮藏宝图 + 绳挂木牌」立项**（横屏为主 + 16 件拆件资产 + index 数据化重构 = 换 UI/换地图零 Rust 改动；WBS = S39.0，见台账）。**2026-11-09 里程碑：S39~S49 全收口，台账 327/327 verified**（S49 内容运营续集 + 平台主题 + 玩法补强 + S49.6 地图编辑器编辑已有包 + S49.7 测试规范/统一作业模型 + S49.8 地图编辑器 v3 仪表盘；P5 根因定位 MuMu GPU 栈结构性不兼容 ⇒ redroid 容器当测试设备真跑，P5-1/P5-4 PASS + P5-2/P5-3 设备渲染限制如实 SKIP；gate 35 项 0 failure 全推 origin/master）。 **2026-11-12 里程碑：飞轮 R3~R11 全收口，业务面 + 平台面双停机**（业务面 R3~R9 = CCGS 连续 2 轮 0/0/0 停机 + S53/S54/S55 三条断言固化〔doccheck2 44→47 项〕；平台面 R10+R11 = 新建 `docs/rules/ti-console-rules.md` 平台红线第 6 个 + 修 7 条平台 doc↔code↔data 值漂移〔ui_theme 写点漏行/门禁 33→36 项/gate 值域 1..=36/visual-signoff 第 37 项/evidence 计数/时点快照〕+ 0 轮复验停机；gate 36 项 0 failure 全推 origin/master）。
+> ⚠️ **进度以 `plan/ledger.yaml` 为准**（当前 350 任务 / 350 verified + 0 pending + 0 blocked（竖屏主题化已删除〔用户 2026-11-08 拍板作废〕；S54.1/S55.1/S56.0/S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 verified），2026-11-09 台账清零：S39 index 横版重设计等后续阶段全 verified；P5 真机判据走 redroid 设备链路收口，gate 36 项 0 failure）；以下各阶段行 = 进度记录，行内「待开工」为该阶段时点的待办，实时待办见台账。**2026-11-04 里程碑：台账全部任务 verified**（S0–S38 全阶段收口 + 视觉签收类 S17.5/S21.9/S27.5/S27.7 被 S34.6/S34.7 取代收口 + 可选 S7.7 路径 2 执行）。**2026-11-05 里程碑：S39 index 首页横版重设计「羊皮藏宝图 + 绳挂木牌」立项**（横屏为主 + 16 件拆件资产 + index 数据化重构 = 换 UI/换地图零 Rust 改动；WBS = S39.0，见台账）。**2026-11-09 里程碑：S39~S49 全收口，台账 327/327 verified**（S49 内容运营续集 + 平台主题 + 玩法补强 + S49.6 地图编辑器编辑已有包 + S49.7 测试规范/统一作业模型 + S49.8 地图编辑器 v3 仪表盘；P5 根因定位 MuMu GPU 栈结构性不兼容 ⇒ redroid 容器当测试设备真跑，P5-1/P5-4 PASS + P5-2/P5-3 设备渲染限制如实 SKIP；gate 35 项 0 failure 全推 origin/master）。 **2026-11-12 里程碑：飞轮 R3~R11 全收口，业务面 + 平台面双停机**（业务面 R3~R9 = CCGS 连续 2 轮 0/0/0 停机 + S53/S54/S55 三条断言固化〔doccheck2 44→47 项〔S55 时点值；现行 51 项〕〕；平台面 R10+R11 = 新建 `docs/rules/ti-console-rules.md` 平台红线第 6 个 + 修 7 条平台 doc↔code↔data 值漂移〔ui_theme 写点漏行/门禁 33→36 项/gate 值域 1..=36/visual-signoff 第 37 项/evidence 计数/时点快照〕+ 0 轮复验停机；gate 36 项 0 failure 全推 origin/master）。
 
 - 根目录：`TreasureIsl.exe`（ARM PE32）、`TreasureIsl.exe.i64`（IDA Professional 9.4，已自动分析、**无自定义命名**）、`legacy/`（逆向产物归档：`exe`/`i64`/`data`/`ref`/`docs`）、`Cargo.toml`（9 workspace member = 9 开发 crate，含 S32.1 新增 `ti-devmeta`/`ti-console`）、`scripts/`、`docs/`、`android/`、`plan/ledger.yaml`、`evidence/`、`ref/`。
 - 工程已 bootstrap：`crates/{ti-formats,ti-core,ti-platform,ti-render,ti-app,ti-engine,ti-tools,ti-devmeta,ti-console}`；进度只由 `plan/ledger.yaml` 驱动。
@@ -84,7 +84,7 @@
 | 可玩实现手册（已验证 rules 接进交互壳的接线规格） | `docs/gamebook.md` |
 | 当前可玩范围 / 平台产物 / 已知限制 / 如何运行 | `docs/release.md`（纯 UTF-8，编辑 CJK 内容时勿用 `Set-Content`，见 EXP-051/091；§发布 = publish-web 发布历史 + Pages 降级实测定态） |
 | **一键发布（浏览器版上线 / 出 gh-pages / 查发布历史）** | `scripts/publish_web.ps1`（S16.3：gate 全绿前置 → `build_wasm` → 本地 `serve` 静态断言 200/content-type → 发布历史 sha256+git short sha 入 `release.md` §发布 → `git worktree` 隔离推 `gh-pages` → 线上 URL 复跑 `web_playtest`；**Pages 不可写 = 实测定态降级登记 `release.md` 已知限制，不静默绕过**；`-Check` 只读体检） |
-| 防虚报：台账 verified ↔ evidence ↔ 代码符号三方对账 | `docs/check_ledger_reality.md`（EXP-058；gate 第 20 位 check_ledger_reality，去重序；旧「第 23 项」时点值） |
+| 防虚报：台账 verified ↔ evidence ↔ 代码符号三方对账 | `docs/check_ledger_reality.md`（EXP-058；gate 第 23 位 check_ledger_reality，去重序；旧「第 20 项」时点值） |
 | S10 现代化收口总计划（P0 修复/占位清零/GPU 渲染） | `docs/plan-s10-refactor.md`（历史阶段文档） |
 | S11 正向开发收口（逆向归档 legacy/ + 业务闭环） | `docs/plan-s11-forward.md`（历史阶段文档，§7 交接快照） |
 | S12 模块化并行 WBS | `docs/plan-s12-parallel.md` |
@@ -141,9 +141,9 @@ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test  --workspace
-cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（gate 第 10 位 ledger validate，去重序；旧「第 12 项」时点值）
+cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（gate 第 12 位 ledger validate，去重序；旧「第 10 项」时点值）
 cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 13 位 doccheck，去重序；旧「第 11 项」时点值，含跨文档数值断言 + release 台账计数漂移）
-python scripts/check_ledger_reality.py                         # 台账三方对账（gate 第 20 位 check_ledger_reality，去重序；旧「第 23 项」时点值，verified↔evidence↔代码符号，EXP-058）
+python scripts/check_ledger_reality.py                         # 台账三方对账（gate 第 23 位 check_ledger_reality，去重序；旧「第 20 项」时点值，verified↔evidence↔代码符号，EXP-058）
 
 # S2.5：构建浏览器产物到 web/（S18.8a 起 = Bevy 交付壳 `treasure-bevy-wasm` + 真实资源；
 # 浏览器页 wasm-bindgen 胶水 + HTML 属 S18.8e）
