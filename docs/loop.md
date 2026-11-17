@@ -24,7 +24,7 @@ tasks:
 - `status` 只能按 `pending → in_progress → verified` 单向流转；回退只能到 `in_progress`，并写 `blocked_by`。
 - `blocked_by` 约定：`blocked` 任务写**字符串原因**（如 `android-build-on-mac-not-this-machine`），非 `null`；`pending`/`verified` 任务为 `null`；`in_progress` 任务默认 `null`，但**被外部阻塞**（如渲染线未提交 WIP 致 gate 非全绿、视觉基线未重生成）时允许写非 `null` 原因（S15.2 先例；台账校验器 `ledger` 不禁此组合，`status` 保持 `in_progress` 而非 `blocked`——渲染线收敛 + 复测后转 verified，EXP-078 归因口径）。
 - **`blocked` 行 `evidence` 必须为 `null`**（无验收判据 = 无 evidence 文件；指不存在文件 = 死数据，`check_ledger_reality` 报 FAIL；S49.1 先例 2026-11-16 轨道 3 M-01/M-22 修：原写不存在的 `evidence/S49.1.log` 已置 null）。
-- `verified` 必须有 `evidence`，否则台账校验（gate 第 8 项）失败。
+- `verified` 必须有 `evidence`，否则台账校验（gate 第 10 位，去重序；旧「第 8 项」= 早期 12 项体系时点值）失败。
 - `rounds >= 3` 的任务必须拆成子任务（新增 `Sx.y.a` 形式 ID）后才可继续。
 
 ## 2. 循环体（每轮迭代）
@@ -34,7 +34,7 @@ tasks:
 2. 实现（按 WBS 产出物落地，禁止留占位实现）
    - **判据命令须可实跑**（S46.1 / EXP-170+171）：写在 dod / parity.md 里的 `cargo run|test`
      命令，多 bin crate 必须显式 `--bin <name> --`；python/pwsh 脚本须文件在位。
-     机器守门 = `scripts/check_dod_commands.py`（gate 第 35 项，载体缺失 / 歧义形式 = FAIL）。
+     机器守门 = `scripts/check_dod_commands.py`（gate 第 32 位 dod-commands，去重序；旧「第 35 项」= 25 项体系时点值）。
 3. 跑该任务的验收命令 → 输出存 evidence/<id>.log
 4. 跑 scripts/gate.ps1（全局门禁，36 项）
 5. gate 全绿 → ledger 置 verified + evidence；否则 rounds+=1，按规则拆解/标记 blocked

@@ -11,7 +11,7 @@
 - 工程已 bootstrap：`crates/{ti-formats,ti-core,ti-platform,ti-render,ti-app,ti-engine,ti-tools,ti-devmeta,ti-console}`；进度只由 `plan/ledger.yaml` 驱动。
 - **S15 业务场景穷举测试阶段**：S0–S14 全 verified（含 S9.1–S9.5 全 verified、S10.0–S10.5 全 verified、S11.1–S11.4 全 verified、S12.0–S12.8 全 verified、S13.1–S13.6 全 verified、S14.0 verified）；S15.1 verified，S15.1 verified、**S15.2 verified**（跨图推进规则定稿 + 落地，S15.2 残留 2 项已闭环 = 通关门禁 `is_cleared` 逐图 + 存档 `unlocked_mask` 逐图写入，见 `evidence/S15.2.log [8]`）。S16（试玩闭环 + 发布 + 设计 sheet）**已完成**（S16.1~S16.4 verified，`docs/plan-s16-loop.md`；发布历史见 `docs/release.md` §发布）。
   逆向产物已物理归档 `legacy/`（S11.1 verified）；oracle 参照实现唯一源 = `ti-core/src/oracle`（`pub mod oracle` 公开导出，测试直接 `use ti_core::oracle::`）；逐字节重复 crate `legacy/oracle-rust` 已于 S15.8 删除（C4 反向守卫防重引入）。
-  模块并行开发 loop 已固化（`docs/process/05_module_parallel.md`）；飞轮流水线已落地（`docs/process/06_flywheel.md` + gate 第 17 项）。
+  模块并行开发 loop 已固化（`docs/process/05_module_parallel.md`）；飞轮流水线已落地（`docs/process/06_flywheel.md` + gate 第 26 位 flywheel-readme，去重序；旧「第 17 项」时点值）。
 - **S19 环岛赛道（大富翁式摇骰前进）**：主地图主玩法 = 摇骰定步数 → 沿环岛赛道前进 N 格 → 落格结算（`rules::board` + `assets/data/board.json` + `balance.board`）；**S19.1 方向键自由移动已彻底删除，主地图移动只保留摇骰（`GameInput::Spin`）**。单一事实源 = `docs/business/progression.md` §环岛赛道 + 路由表 S19 条目。
 - **S21 main_map 重设计 v4「羊皮海图桌面」+ 船系统**（2026-10-22 用户：main_map 界面很烂 → 出新的设计渲染图）：**S21.0（脚本纪律强制化：doccheck2 第 27 项工具契约门禁 + `ui_asset_batch.py` 批量资产工具 + 硬规则 10）与 S21.1（概念稿 3 变体 + 15 资产多形状节点批次）已 verified**；**S21.2 船系统规格已定案 verified**（B 独立船轴：4 级 小舢板→双桅→三桅→巡防，造价 0/800/2500/6000，货舱 99/150/240/400 = 单次贸易上限，atk/hp 累计叠加建筑轴；单一事实源 = `docs/business/economy.md` §船系统 + `balance.boat`）；**S21.3 main_map v4 版面/交互规格已定案 verified**（满屏 `chart_full` + 顶角双铜牌 + 岛只画陆/礁/宝 + 黄铜航线多形状节点牌 + 船玩家 + 264×264 舵轮 CTA；`world_canvas {43,250,994,826}` ↔ `bbox_pct {4,13,92,43}`；坐标/交互/资产接线单一事实源 = `docs/ui-redesign-v3/08_main_map_v4_spec.md`，镜像 `business/08_layout_design.md` §4.3）；**S21.13 流程固化待固化项落地已 verified**（15_process_ledger §2 待固化 7 行全部转已自动化：①doccheck 读失败即 ERROR ②`scripts/doc_numbers.py` 门禁项数/台账计数实测回写 ③`doccheck2::check_visual_design_signoff` 视觉签收 ④`scripts/layout_spec_check.py` 版面规格三面对账 ⑤`doccheck2::check_node_kind_asset_map` 节点 kind↔资产唯一源 ⑥`scripts/check_ps_scripts.ps1` PS 入口 BOM+语法 + `doccheck2::check_no_inline_test_mod` src 内联单测拦截（47 存量 `process_ratchet.json` 棘轮豁免）；doccheck2 34→12 项（S21.13 时点；**后随 S26/S29/S34/S38 已增至 41 项**，S50.3 起 42 项，飞轮 R 删恒 PASS `scene-band-count`（-1）+ 飞轮 R 固化 `theme-consumption`/`cross-doc-counts`（+2）后现行 44，S53 飞轮 R6 固化 `business-doc-test-refs`（+1）后现行 45，S54/S55 飞轮 R9 固化 `blocked-label-consistency`/`doccheck-counts-match`（+2）后现行 47，`assets/gate_data.json` `doccheck2_checks` 长度为准，doccheck2 输出「47 audit-codified checks」））；**S21.12 verified**（建造面板 5 入口造船 + 船贴图×4 + `boat_level` 船标切换，`evidence/S21.12.log`）；**S24.0/S24.1 verified**（相机 `o.scale` 语义 + 点击绝对光标，EXP-116/117）；**代码标准三件套落地**（`docs/process/16_code_standards.md` + `check_code_standards.py` CS-1~4 + 棕轮基线，S25.1 免用清零已落地）；**用户 2026-10-23 拍板：4 条设计分歧全部→图片化**（④-04 = 14 枚代码图标改图片资产 + 跨层 tint 支持，见 `docs/process/06_flywheel.md` §8 飞轮 R1 findings ①-01/①-12/④-04/⑤-04；**④-04 已落地 = S21.14 verified**：14 白蒙版 `assets/ui/icon_*.png` + 几何规格 `assets/ui_batches/icon_v1.json`（抄自 `icons.rs`）+ `blit_image_tint` 跨层 tint（CPU×tint multiply ≡ Bevy `Sprite.color`，白 tint 恒等），生成/校验归 Python `scripts/ui_icons.py`（工具契约 3 处登记）+ `validate_data.py` V3，Rust 只留运行时 tint 契约，`icons.rs` 代码矢量降级为缺图回退）+ 飞轮 R2（渲染硬编码/数据图片分离，停机=0 新发现）。该阶段任务已 verified（剩 S21.9 出图验收 + 用户视觉签收 pending，见台账）。**S22 首页重设计「罗盘环标题页」已完成**（C 方向 + 羊皮海图底，用户 2026-10-23 拍板：6 菜单沿罗盘环 + 中心舵轮 logo + 羊皮海图与主地图 v4 统一；概念稿 `evidence/ui_concept/index_compass_{layout,concept}.png`；S22.0~S22.3 verified，规格 = `docs/ui-redesign-v3/09_index_compass_spec.md`）。批次规格 = `assets/ui_batches/main_map_v4.json`；概念稿 = `evidence/ui_concept/main_map_v4_{a,b,c}.png`（gitignored，仅参考）。
 
@@ -84,7 +84,7 @@
 | 可玩实现手册（已验证 rules 接进交互壳的接线规格） | `docs/gamebook.md` |
 | 当前可玩范围 / 平台产物 / 已知限制 / 如何运行 | `docs/release.md`（纯 UTF-8，编辑 CJK 内容时勿用 `Set-Content`，见 EXP-051/091；§发布 = publish-web 发布历史 + Pages 降级实测定态） |
 | **一键发布（浏览器版上线 / 出 gh-pages / 查发布历史）** | `scripts/publish_web.ps1`（S16.3：gate 全绿前置 → `build_wasm` → 本地 `serve` 静态断言 200/content-type → 发布历史 sha256+git short sha 入 `release.md` §发布 → `git worktree` 隔离推 `gh-pages` → 线上 URL 复跑 `web_playtest`；**Pages 不可写 = 实测定态降级登记 `release.md` 已知限制，不静默绕过**；`-Check` 只读体检） |
-| 防虚报：台账 verified ↔ evidence ↔ 代码符号三方对账 | `docs/check_ledger_reality.md`（EXP-058；gate 第 23 项） |
+| 防虚报：台账 verified ↔ evidence ↔ 代码符号三方对账 | `docs/check_ledger_reality.md`（EXP-058；gate 第 20 位 check_ledger_reality，去重序；旧「第 23 项」时点值） |
 | S10 现代化收口总计划（P0 修复/占位清零/GPU 渲染） | `docs/plan-s10-refactor.md`（历史阶段文档） |
 | S11 正向开发收口（逆向归档 legacy/ + 业务闭环） | `docs/plan-s11-forward.md`（历史阶段文档，§7 交接快照） |
 | S12 模块化并行 WBS | `docs/plan-s12-parallel.md` |
@@ -141,9 +141,9 @@ powershell -ExecutionPolicy Bypass -File scripts/gate.ps1
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test  --workspace
-cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（gate 第 12 项 ledger validate）
-cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 13 项，含跨文档数值断言 + release 台账计数漂移）
-python scripts/check_ledger_reality.py                         # 台账三方对账（gate 第 23 项，verified↔evidence↔代码符号，EXP-058）
+cargo run -q -p ti-tools --bin ledger  -- plan/ledger.yaml   # 台账校验（gate 第 10 位 ledger validate，去重序；旧「第 12 项」时点值）
+cargo run -q -p ti-tools --bin doccheck                       # 文档一致性（gate 第 11 位 doccheck，去重序；旧「第 13 项」时点值，含跨文档数值断言 + release 台账计数漂移）
+python scripts/check_ledger_reality.py                         # 台账三方对账（gate 第 20 位 check_ledger_reality，去重序；旧「第 23 项」时点值，verified↔evidence↔代码符号，EXP-058）
 
 # S2.5：构建浏览器产物到 web/（S18.8a 起 = Bevy 交付壳 `treasure-bevy-wasm` + 真实资源；
 # 浏览器页 wasm-bindgen 胶水 + HTML 属 S18.8e）

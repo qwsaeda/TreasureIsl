@@ -668,3 +668,9 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **根因**：解析器 `id_start=after_box.find('S')` / `id_end=after_box.find("**")` 对全库 plan-sNN 复选框**全是加粗格式** `- [ ] **Sxx（...）**` ⇒ after_box = `**S58.0（...）**`，`find('S')`=2 ≥ `find("**")`=0 ⇒ 每行 `id_start>=id_end` 跳过 = 断言恒 0 命中（与 S57.1 state-md-discipline 首版同类：新断言须双负例实跑验证触发面，「0 error」≠「断言生效」）。
 - **解法**：解析器修 = 剥前导 `*` 后取 S 开头任务 id 到「下一 非 alnum/`.`/`-` 字符」；新断言上线判据必含**双负例实跑**（临时造 1 条违规 ⇒ 必 FAIL 精准点名 + 还原 0 error），0 error 不能当生效证据。
 - **验证**：R14 修复后负例实跑（plan-s56 S58.0 `[x]`→`[ ]` ⇒ ERROR 精准点名 L24 S58.0 ✓ + 还原 0 error）+ 全库 plan-sNN 复选框 ↔ 台账 verified 全 0 漂移。
+
+### EXP-194 流程：gate 项号文字旧时点值全库残留（EXP-189 同类第 3 次，R15 实抓 9 处）
+- **现象**：R15 审计 gate 项号文字（「第 N 项」/「gate 第 N 位」）全库 9 处旧时点值无标注：AGENTS.md L14/L87/L144/L145/L146（第 17/23/12/13/23 项）+ loop.md L37（第 35 项）等；现行去重实序（36 项 BTreeSet 去重）dod-commands=32 / flywheel=26 / check_ledger_reality=20 / ledger=10 / doccheck=11，旧值 = 早期 12/25 项体系时点命名。
+- **根因**：gate.ps1 加减项后文档「第 N 项」文字是手工镜像（gate_data.json 去重序是机读源），R12 已修 20+ 处但 gate 项号面**无机器断言**（doccheck2 50 项守 doccheck2 项号文字 S56.0，不守 gate 项号文字；EXP-189 同类 = 第 N 次加减 gate 项后第 N+1 次复发）。
+- **解法**：① 本轮 9 处全修（去重序实值 + 旧值时点标注「旧第 N 项 = X 项体系时点值」）② 后续轮扩 doccheck2「gate 项号文字」断言面（扫全库「第 N 项」声称点 ↔ gate.ps1 完整描述串去重 1-based 位实测，与 S56.0 doccheck2 项号面同模式，载体待立项）。
+- **验证**：R15 9 处全修 + gate 36 项 0 failure + doccheck2 50 项 0 error（evidence/r15-audit.md）。

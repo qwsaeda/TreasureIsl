@@ -24,4 +24,4 @@
 - [x] **S58.0（EXP-192 缺口①）**：doccheck2 第 49 项 `process-reinforcement-count`——「N 条流程强化」枚举值 ↔ 台账 S54.1/S55.1/S56.0/S57.0~S57.2b 实测 7 条（26 号 L14/L155/L163 + AGENTS.md L8 声称点对账；EXP-192 教训 = 枚举面 0 断言致 7/8 条 off-by-one）。
 - [x] **S58.1（EXP-192 缺口②）**：`doc_numbers.py` 扩 `crates/ti-console/web/index.html` 门禁项数声称面（R13 Q079 = R10 平台面勘误漏前端 3 处硬编码「33 项」；扩面后 --fix 可回写，防再漏网）。
 - [x] **S58.2（EXP-192 缺口③）**：WBS 复选框回写判据面——plan-sNN.md 文档 `[x]` 勾选 ↔ 台账任务 verified 状态对账断言（R13 Q002 = plan-s56 4 行 [ ] 未随 verified 回写；载体 = doccheck2 第 50 项 `wbs-checkbox-sync` 或 check_ledger_reality 扩面，落地时定）。
-- [x] **S58.3（M-04 100% 声明面）**：符号覆盖率分母 19 面（代码/规则实现 声明）全登记——11 个无代码产物符号字样 dod 手工 `SYMBOL_EXPECTATIONS` 登记 / dod 精确面补全 ⇒ 19/19 = 100%（可提取面 8/8 已 100%；声明面全登记 = M-04 终态）。
+- [x] **S58.3（M-04 100% 声明面）**：符号覆盖率分母 20 面（代码/规则实现 声明，S57.2b 收紧口径后实测）全登记——12 个无代码产物符号字样 dod 手工 `SYMBOL_EXPECTATIONS` 登记 / dod 精确面补全 ⇒ 20/20 = 100%（可提取面 8/8 已 100%；声明面全登记 = M-04 终态）。

@@ -64,7 +64,7 @@ CCGS `active.md` CHECKPOINT 块 + SessionStart 重读 + PreCompact 追加日志�
 
 CCGS `studio-tests/` = 对 skills/agents 本身的 QA（49+75 对应测试 + catalog + rubric），行业少见。
 我方 `assets/data/test_manifest.json` + 平台 `/api/tests` 是 L1~L4 游戏测试（被测对象 = 游戏），
-**没有「对 doccheck2 41 项断言 / 对 35 项 gate 本身」（S50 立项时点快照；现行 = 47 项/36 项，以 gate_data.json 实测为准，飞轮 R10 注明时点）的元测试面**——`dod-commands`（gate 第 25 项）
+**没有「对 doccheck2 41 项断言 / 对 35 项 gate 本身」（S50 立项时点快照；现行 = 50 项（S57.1 +1 state-md-discipline + S58.0/S58.2 +2）/36 项，以 gate_data.json 实测为准，飞轮 R10 注明时点）的元测试面**——`dod-commands`（gate 第 25 项）
 只覆盖「判据载体缺失」，不覆盖「门禁断言自身被正确触发」。
 **借鉴**：新增 `scripts/studio_tests.py`（工具契约 4 条全满足），3 类断言：
 1. doccheck2 每个 `fn check_*` 在注册表被引用 + 在 `gate_data.json` `doccheck2_checks` 有条目（双向对账）
@@ -94,7 +94,7 @@ CCGS 14 个 `rules/*.md` 的 `paths:` frontmatter + 该路径下编码红线正�
 
 ## 5. 一个隐藏风险点（CCGS 没解决，我方 S50.2 部分解决）
 
-CCGS `studio-tests/` 元测试思想 = 测「测代码的测试」本身。我方 `doccheck2` 41 项断言（S50 立项时点；现行 47 项，飞轮 R10 注明）本身可能写错/漏写
+CCGS `studio-tests/` 元测试思想 = 测「测代码的测试」本身。我方 `doccheck2` 41 项断言（S50 立项时点；现行 50 项（S57.1/S58.0/S58.2 各 +1），飞轮 R10 注明）本身可能写错/漏写
 （EXP-170/171 复发防护 dod-commands 部分覆盖「判据从未执行」类缺陷），**缺「门禁断言自身被正确触发」的元层验证**。
 S50.2 的 3 类断言（§3②）即此面的机器化落地。
 
