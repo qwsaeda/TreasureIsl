@@ -537,16 +537,18 @@ impl GameApp {
                 if owner == seat {
                     return;
                 }
+                // 金币守恒：实付 = min(全额 toll, 席位金)；扣实付 + 入账守方实付（不足时不凭空产生，A-04）。
                 let toll = terr.apply_pay_toll(rules, idx, seat);
-                self.seat_gold[seat as usize] = self.seat_gold[seat as usize].saturating_sub(toll);
-                self.credit_seat_gold(owner, toll, b);
+                let paid = toll.min(self.seat_gold[seat as usize]);
+                self.seat_gold[seat as usize] -= paid;
+                self.credit_seat_gold(owner, paid, b);
                 let owner_name = ai_seat_name(owner, b);
                 self.last_ai_toast = Some(i18n_fmt(
                     "scene.main_map.toast.ai_toll_fmt",
                     &[
                         &name as &dyn std::fmt::Display,
                         &owner_name as &dyn std::fmt::Display,
-                        &toll as &dyn std::fmt::Display,
+                        &paid as &dyn std::fmt::Display,
                     ],
                 ));
             }

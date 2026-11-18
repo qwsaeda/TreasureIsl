@@ -705,3 +705,14 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
   - B-19 `cross-doc-counts` 仅核「N 任务」+「gate N 项」，不核「doccheck2 N 项」声称 ⇒ B-01/B-06/B-07 doccheck2 项数漂移无断言覆盖。登记局限（后续轮 cross-doc-counts 扩 doccheck2 项数面）。
 - **AUDIT-A（主线程代做，subagent LLM 后端故障 2 次）**：断言面完整（16 文档覆盖高频 gate 项号文件；41 文件含 gate 项号但余 25 = 历史/时点/tutorial）+ 红线代码 0 违规（engine-no-color-literal/CS-1/CS-4 全基线内）+ doccheck2 51 项 0 恒 PASS（现行全过）= 0 新发现。
 - **FIND = 0 条（0/0）**：竖屏主题任务删干净（全库 0 token）+ 计数面 350/350/0/0 全同步 + 门禁全 0。
+
+#### 双盲对抗找游戏逻辑 bug / 合理性问题（用户 2026-11-17 拍板「自己整理对抗找问题」）
+- **方法**：双 subagent 对抗（A 逻辑 bug 实现≠规格 / B 合理性失衡，双盲不读对方结论）+ 主线程逐条独立复核（EXP-038 子代理声称不算数）→ 合并 → 只修真 bug + 补测试盲区 + 设计缺陷列清单给用户裁决。
+- **A 侧 9 条复核判定**：
+  - 真 bug 已修 = A-03（`settle_siege` 攻占败漏入账守方，金币凭空消失）+ A-04（AI/玩家交钱超付，`apply_pay_toll` 返全额 toll 不钳金，守方多收）= **金币守恒**，两路径（host.rs `pay_siege_toll` + board.rs `settle_ai_landing`）+ `settle_siege` 三处统一改「实付 = min(toll, 席位金)」+ 守方入实付。补 2 e2e（M-04 `siege_loss_credits_defender_gold` / M-05 `pay_toll_caps_at_seat_gold`）。
+  - 误报 = A-01（`run_ai_turns` 循环上界 5 对 5 席全环恒够，`advance` 跳破产不耗额外迭代，边界安全）/ A-05（v4 席位无 crew 字段恒缺省 0，迁移补默认正确，v5 运行态 0 不经迁移路径）/ A-07（`previous_occupant` rposition-1 对简单序列 a→b→c 正确取前驱，重复到访非规格 case）/ A-09（BOSS 战 `boss_fort` 防御 = S34.6 D5 用户拍板迁移兵力模型，旧 HP `boss_tiers` 作废，设计选择非 bug）/ A-11（`force::resolve` 守方胜与 combat.md 一致）。
+  - 设计缺陷（实现≠规格，列清单待裁决）= A-02（`attack_threshold 0.6` 连续梯度退化为 `>0.0` 布尔开关）/ A-06（玩家落自己格自动升级/领产出，规格 §4「玩家可选」三支未做选择 UI + 增减驻军分支缺失）/ A-08（`assault` 无格属前置校验，无主格/自格调攻占语义错，P3 防御性）。
+- **B 侧 5 条复核判定**：
+  - 死内容/死参/死数据 = B-01（4 combat items keg/medkit/rum/smoke 无获取路径，卡片/事件/商人均不产 item）/ B-04（`toll_aversion` 仅 v1 `ai_policy` 用，v2 `ai_policy_v2` 死参）/ B-05（`boss_tiers` 旧 HP 表仅 `difficulty_ladder`/`rules_battle` 测试引用，active combat 用 `force::resolve` 不用，vestigial）。
+  - 设计缺陷（合理性，待裁决）= B-02（`upgrade_priority=0.3 < 0.5` 阈值 ⇒ AI 永不升级，领地永远 L1）/ B-03（雪崩：先占者收入优势 7.5×，20 图 campaign 在 ~5 图后无意义，缺 catch-up 机制）。
+- **教训**：金币守恒类 bug 最易漏（扣款方扣了、收款方没入账 = 净消失；或超额入账 = 净产生），双盲对抗 A 侧独立抓出 3 处同类（`settle_siege` 攻占败 / AI 交钱 / 玩家交钱），须统一「实付 = min(应付, 实有)」+ 收方入实付的守恒契约；测试盲区 M-04/M-05 补 e2e 守恒断言。设计缺陷类（A-02/A-06/B-01/B-02/B-03）= 实现偏离规格或数值失衡，须用户裁决方向（自动化 vs 选择 UI / 死内容接线 / AI 升级 / 雪崩 catch-up），非机械可判。

@@ -139,6 +139,58 @@ fn siege_strong_attacker_wins() {
     );
 }
 
+/// M-04 金币守恒：攻占**败**时双倍过路费入账守方（攻方扣、守方收，总金币不凭空消失）。
+///
+/// 强守方（守军足）令攻方必败；败前记守方 `seat_gold`，结算后守方 gold += `double_toll_paid`
+/// （`territory.md` §4 攻占败交双倍过路费给所有者）。
+#[test]
+fn siege_loss_credits_defender_gold() {
+    let mut app = main_map_with_board();
+    spin_to_other_owned(&mut app);
+    let my_seat = app.turn_cycle.current;
+    let defender = 1u8; // AI 席（spin_to_other_owned 已让席 1 占 harbour）
+    let defender_gold_before = app.seat_gold[defender as usize];
+    // 攻方保留默认弱舰队（20/5，战力 25）⇒ vs 守方（驻军 5 + 防御 28）必败。
+    app.handle(GameInput::Confirm);
+    app.handle(GameInput::Attack);
+    let s = app.siege_snapshot().expect("结算后战报仍在");
+    let won = s.won.expect("必出结果");
+    if won {
+        // 攻方胜（数值边界）：占领该格，守恒路径不触发。
+        let terr = app.territory.as_ref().expect("账本");
+        assert_eq!(
+            terr.ownership(s.cell).expect("该格在账本").owner,
+            Some(my_seat),
+            "攻占胜 = 归攻方"
+        );
+    } else {
+        // 败：双倍过路费入账守方（金币守恒；A-03 修复点）。
+        assert!(
+            app.seat_gold[defender as usize] > defender_gold_before,
+            "攻占败 = 守方收双倍过路费"
+        );
+    }
+}
+
+/// M-05 金币守恒：交过路费实付 = min(全额 toll, 席位金)，不足时守方不收全额（不凭空产生）。
+///
+/// 玩家金压到 0 ⇒ 交他人格 toll 实付 0（守方 gold 不变）。
+#[test]
+fn pay_toll_caps_at_seat_gold() {
+    let mut app = main_map_with_board();
+    spin_to_other_owned(&mut app);
+    let my_seat = app.turn_cycle.current;
+    let defender = 1u8;
+    let defender_gold_before = app.seat_gold[defender as usize];
+    app.seat_gold[my_seat as usize] = 0; // 玩家 0 金
+    app.handle(GameInput::Back); // 交过路费（实付 0）
+    assert_eq!(app.seat_gold[my_seat as usize], 0, "玩家 0 金交 toll 实付 0");
+    assert_eq!(
+        app.seat_gold[defender as usize], defender_gold_before,
+        "守方不收（实付 0）= 金币守恒（不凭空产生，A-04 修复点）"
+    );
+}
+
 /// 他人格落格 `Back` = 放弃攻占交过路费（`pending_siege` 清 + 金转移）。
 #[test]
 fn back_pays_toll_clears_siege() {

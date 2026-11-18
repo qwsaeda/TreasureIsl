@@ -440,9 +440,11 @@ impl MapHost for GameApp {
         };
         let rules = TerritoryRules::new(b);
         let seat = self.turn_cycle.current;
+        // 金币守恒：实付 = min(全额 toll, 席位金)；扣实付 + 入账守方实付（不足时不凭空产生）。
         let toll = terr.apply_pay_toll(&rules, cell, seat);
-        self.seat_gold[seat as usize] = self.seat_gold[seat as usize].saturating_sub(toll);
-        self.credit_seat_gold(owner, toll, b);
+        let paid = toll.min(self.seat_gold[seat as usize]);
+        self.seat_gold[seat as usize] -= paid;
+        self.credit_seat_gold(owner, paid, b);
         let isle_name = terr
             .isle_cells_by_index(cell)
             .map_or(String::new(), |isle| crate::i18n::sget(&format!("isle.{isle}")).to_string());
@@ -457,7 +459,7 @@ impl MapHost for GameApp {
                 &[
                     &my_name as &dyn std::fmt::Display,
                     &owner_name as &dyn std::fmt::Display,
-                    &toll as &dyn std::fmt::Display,
+                    &paid as &dyn std::fmt::Display,
                 ],
             ),
             Some(Sfx::Press),
@@ -497,6 +499,8 @@ impl MapHost for GameApp {
         let seat = self.turn_cycle.current;
         // 攻占后重定驻军 = 战后舰队的 1/3（`territory.md` §4：占领者自定；默认留 1/3 守）。
         let new_garrison = self.seat_crew[seat as usize] / 3;
+        // 守方 = 攻占前该格所有者（`territory.md` §4：攻占败交双倍过路费给守方，金币守恒须入账）。
+        let defender_owner = terr.ownership(view.cell).and_then(|o| o.owner);
         let mut sstate = SeatState::new(
             self.seat_gold[seat as usize],
             self.seat_crew[seat as usize],
@@ -510,6 +514,14 @@ impl MapHost for GameApp {
         self.seat_gold[seat as usize] = sstate.gold;
         self.seat_crew[seat as usize] = sstate.crew;
         self.seat_arms[seat as usize] = sstate.arms;
+        // 攻占败：双倍过路费入账守方（金币守恒；`territory.md` §4 交双倍过路费给所有者）。
+        if let (Some(owner), AssaultOutcome::Loss { double_toll_paid, .. }) =
+            (defender_owner, &outcome)
+        {
+            if *double_toll_paid > 0 && owner != seat {
+                self.credit_seat_gold(owner, *double_toll_paid, b);
+            }
+        }
         self.territory = Some(terr);
         // 战报保留结果供渲染（再 Attack = 已结算 no-op，Back = 回主地图）。
         self.siege_view = Some(SiegeView { outcome: Some(outcome), ..view });
