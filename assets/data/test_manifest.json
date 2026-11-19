@@ -365,6 +365,45 @@
    "timeout_s": 1800,
    "prove": "evidence/tests/android_device_test/",
    "desc": "做什么：跑 Android 真机交互 P5 判据（scripts/android_device_test.py --run，adb 驱动：全屏/触摸命中/音频生命周期/切后台不崩 4 判据 + 设备选择 + 渲染链路健康前置）。测什么：docs/parity.md §P5 真机专属行为。达到效果：Android 真机验收判据（S49.4e）；纯 CPU 设备 = 设备限制 SKIP 记名，arm64 真机 = 全 PASS。 逐测：P5-1 全屏（窗口几何）/ P5-2 触摸命中（截屏像素 diff ≥2%）/ P5-3 音频生命周期（BGM 暂停/恢复日志）/ P5-4 切后台不崩（pidof + 无 FATAL/ANR）。纯 CPU 设备 = 设备限制 SKIP 记名，arm64 真机 = 全 PASS。"
+  },
+  {
+   "id": "oracle_diff_cards",
+   "level": "L1",
+   "category": "functional",
+   "type": "ci",
+   "name": "卡牌 oracle 差分（reference_diff_cards：卡牌效果码/权重抽牌 vs 参照实现）",
+   "command": "cargo test -p ti-core --test reference_diff_cards",
+   "evidence": "evidence/S20.2.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/oracle_diff_cards/",
+   "desc": "做什么：跑卡牌 oracle 差分测试（reference_diff_cards，11 条），把卡池/事件 id/状态档位喂「逆向伪代码参照实现」vs 本仓 rules::cards，逐位比对。测什么：卡牌效果码解码（Damage/Heal/Gold/Move/Unknown）+ 权重抽牌可复现（2026-11-19 H1② 人手口径）。达到效果：卡牌规则改动不偏离参照实现（P0 数据对齐，dod 单测 cards_same_seed_same_sequence/cards_effects_clamped 载体）。逐测：卡池 5 张 × event_id 0..=25 × 状态档位，断言 apply 结果与参照逐位一致。"
+  },
+  {
+   "id": "oracle_diff_main_map",
+   "level": "L1",
+   "category": "functional",
+   "type": "ci",
+   "name": "主地图 oracle 差分（reference_diff_main_map：移动/落格 vs 参照实现）",
+   "command": "cargo test -p ti-core --test reference_diff_main_map",
+   "evidence": "evidence/S20.2.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/oracle_diff_main_map/",
+   "desc": "做什么：跑主地图 oracle 差分（reference_diff_main_map，8 条），断言越界不移动/落格结算一次/BOSS 进战斗与参照实现一致。测什么：rules::main_map 地图移动/落格规则（progression.md 可测规则表 6 条载体）。达到效果：地图规则改动不偏离参照（P0 数据对齐）。逐测：越界/不可通行/每步一次结算/BOSS 格进战斗/同 seed 同卡牌串/钳制在合法域。"
+  },
+  {
+   "id": "oracle_diff_rng",
+   "level": "L1",
+   "category": "functional",
+   "type": "ci",
+   "name": "RNG oracle 差分（reference_diff_rng：可播种流 vs 参照实现）",
+   "command": "cargo test -p ti-core --test reference_diff_rng",
+   "evidence": "evidence/S20.2.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/oracle_diff_rng/",
+   "desc": "做什么：跑 RNG oracle 差分（reference_diff_rng，7 条），断言同 seed 同序列逐位一致 + `GameRng` 可播种可复现。测什么：rules::rng PCG 实现 vs 参照（persistence.md RNG 设计）。达到效果：RNG 改动不破坏全流程可复现性（回归测试基础）。逐测：同 seed 同输出/不同 seed 不同输出/存档 rng_seed+rng_steps 精确续流。"
   }
  ]
 }

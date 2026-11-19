@@ -763,3 +763,9 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **根因**：H1② 拍板时只改了「表现层 host.rs」（app 侧），没同步「规则层 rules/cards.rs」（rules 侧）；EXP-199 六面清理只清了「实现/数据/i18n/资产/测试/文档」，漏了「rules 层口径」——迁移类重构（HP→人手）须同步清 app + rules 两侧，rules 层 = 效果结算唯一事实源，app 层 = 表现，两侧口径须一致。
 - **解法**：① rules/cards.rs CardState 加 crew 字段（删 hp/hp_max）+ apply_card Damage/Heal 写 state.crew（saturating_sub/add，无上限对齐 app）；② 测试 reference_diff_cards.rs（state_with/state_clamped 构造器 hp→crew + 断言）+ exhaust_progression.rs（v.hp 档位映射 crew + 不变式改 gold ≤ gold_max）；③ cards_draw.rs 陈旧注释「保留复用」改 H1② 人手口径；④ doccheck2 第 52 项 card-crew-alignment 守门（CardState 含 pub crew + apply_card Damage/Heal 写 state.crew + 全 crates 0 处 state.hp 卡牌暂存，防回归）。
 - **验证**：cargo test 990/0 + clippy 0 + doccheck2 52 项 0 error（card-crew-alignment 负例护栏：改回 state.hp 必 FAIL 精准点名 + 还原 0 error）。EXP-199 六面扩「七面」= +rules 层口径（app↔rules 双侧一致）。
+
+### EXP-201 流程：专项审计 FIND subagent harness 故障兜底 + 现状声称点回写纪律（集成测试数/evidence 数随删除漂移）
+- **现象**：测试体系专项审计 FIND subagent 两次 harness 故障（OpenAI delta missing id/name，与内容无关）；主线程手动 FIND 覆盖 12 必扫面，抓 23号 §0 两处现状漂移 + 1 覆盖粒度缺口。
+- **根因**：① subagent harness 故障为工具侧不稳（连续两轮专项审计 FIND 均失败），非 prompt 内容问题——飞轮 R18 + 本轮均靠主线程手动补跑且更可控；② 105→103 = HP 本体删除 commit 2170700 删 3 测试文件（battle_rules/exhaust_combat/rules_battle）后 23号未回写（其它文档如 combat.md 回写了）；③ 757→560 = R15 回写取「全量 763 左右」口径，但括注写「排除 console/」（现全量 763 - console 203 = 560），口径自相矛盾。
+- **解法**：① FIND subagent 故障 ⇒ 主线程手动 FIND（按必扫面逐条 grep，不依赖 subagent 落盘）；② 105→103 + 757→560 实测回写 23号 §0（含根因 + 历史快照链注释）；③ Q003 粒度：manifest 补 oracle_diff_cards/main_map/rng 3 条（28→31，L1 9→12，四个 reference_diff_* 独立实跑 11/8/7/4 passed），平台可逐项单独跑；④ 现状声称点回写纪律：文档里的「实测数字」（集成测试数/evidence 数/门禁项数）须随删文件/口径变更同步回写（同类 EXP-189 项号文字漂移 / EXP-192 数值声称点漂移）。
+- **验证**：validate_data OK（31 条 manifest 对账）+ doccheck 0 + doccheck2 52 项 0 + ledger 351/351/0 + 4 个 reference_diff_* 独立实跑全过。

@@ -1,0 +1,17 @@
+# 测试体系专项审计（2026-11-19）
+范围：docs/process/23_game_testing.md + assets/data/test_manifest.json + 平台作业模型 + 证据在位
+方法：FIND subagent 2 次 harness 故障（OpenAI delta missing id/name）⇒ 主线程手动 FIND 覆盖 12 必扫面 + 独立复核
+
+## CONFIRMED（2）
+- Q001: 23号 §0「105 个集成测试文件」实测 103（HP 删除 commit 2170700 删 battle_rules/exhaust_combat/rules_battle 3 文件后未回写）⇒ 实测回写 103 + 根因注
+- Q002: 23号 §0「evidence 757 文件〔排除 console/〕」实测 560（757≈当时全量口径 763，与括注「排除 console/」矛盾；全量 763 - console 203 = 560）⇒ 实测回写 560 + 口径勘误
+
+## 覆盖粒度补全（1，非 bug）
+- Q003: 4 个 reference_diff_* 文件原只登记 oracle_diff=main_loop 1 条 ⇒ 补 oracle_diff_cards/main_map/rng 3 条（manifest 28→31，L1 9→12）；4 个独立实跑 11/8/7/4 passed
+
+## 0 漂移面（9）
+命令真实性（2 个 bin 经 [[bin]] name+path 声明，validate_data 已认）/ 证据路径在位（0 缺失）/ gate 项号 4c 在 gate.ps1 在位 / 平台白名单 cargo/python3/pwsh/powershell 与 jobs.rs JOB_PROGRAMS 一致 / 收割线程 exit_code 落盘 / 音频 registry.audio 在位 / Android P5 gate 4c / S45 接入标准 / 本轮 test 改动（reference_diff_cards + exhaust_progression 人手口径）
+
+## 验证
+validate_data OK（31 条 manifest）+ doccheck 0 + doccheck2 52 项 0 + ledger 351/351/0 + board_measure --check PASS + 4 个 reference_diff_* 独立实跑全过。
+EXP-201 登记（process 卷 60）。
