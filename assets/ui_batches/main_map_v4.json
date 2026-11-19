@@ -57,13 +57,6 @@
    "prompt": "a single diamond-shaped antique brass badge engraved with a folded treasure map, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
   },
   {
-   "name": "node_battle",
-   "role": "medallion",
-   "file": "assets/ui/node_battle.png",
-   "params": {},
-   "prompt": "a single spiky eight-pointed antique brass badge engraved with two crossed cutlasses, polished brass with gold rim and rivets, isolated on a PURE SOLID BLACK background, no floor, no shadow, no backdrop, no scenery, no text, no letters, no numbers, centered, high contrast, game asset icon"
-  },
-  {
    "name": "node_treasure",
    "role": "medallion",
    "file": "assets/ui/node_treasure.png",

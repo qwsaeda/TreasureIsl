@@ -4468,13 +4468,16 @@ fn check_node_kind_asset_map(root: &Path) -> Vec<String> {
         return errors; // 尚未引入节点牌资产（v3 之前）⇒ 不判
     }
     // 规格文档声明的 kind→资产名（`node_<kind>.png`）
-    let kinds = ["start", "city", "port", "event", "card", "battle", "treasure", "boss", "plain"];
+    // **2026-11-19**：`battle`（遭遇格）从 8 类死资产面清理（v5 无遭遇格，`node_battle.png`
+    // 死资产删 + `chrome.rs` 节点牌/i18n 映射 `SpaceKind::Battle` arm 回退 plain；
+    // `SpaceKind::Battle` 枚举 + `from_key` 保留作 v4 地图包兼容面，不渲染节点牌）。
+    let kinds = ["start", "city", "port", "event", "card", "treasure", "boss", "plain"];
     for kind in kinds {
         let want = format!("node_{kind}");
         if !node_assets.iter().any(|n| n == &want) {
             errors.push(format!(
-                "ui_manifest.json: 缺节点牌资产 `{want}`（kind={kind}；9 类 kind 集合 = \
-                 规格 08_main_map_v4_spec.md §6 单一事实源）"
+                "ui_manifest.json: 缺节点牌资产 `{want}`（kind={kind}；8 类 kind 集合 = \
+                 规格 08_main_map_v4_spec.md §6 单一事实源〔battle 2026-11-19 清理〕）"
             ));
         }
     }
@@ -4482,7 +4485,7 @@ fn check_node_kind_asset_map(root: &Path) -> Vec<String> {
         let kind = name.trim_start_matches("node_");
         if !kinds.contains(&kind) {
             errors.push(format!(
-                "ui_manifest.json: 节点牌资产 `{name}` 的 kind 不在 9 类集合（{kinds:?}）"
+                "ui_manifest.json: 节点牌资产 `{name}` 的 kind 不在 8 类集合（{kinds:?}）"
             ));
         }
     }

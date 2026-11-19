@@ -102,8 +102,8 @@ def track_income(bal, spaces, spins=SPINS, seed=SEED):
             elif kind == 'city':
                 gold += int(cfg['city_gold'])
             elif kind == 'battle':
-                gold -= int(cfg.get('battle_gold_loss', 0))
-                dmg += int(cfg.get('battle_damage', 0))
+                # v4 休眠分支（v5 无遭遇格，balance.board 已删 battle_* 键 ⇒ 缺省 0，
+                # 此分支 v5 不可达；保留作 v4 地图包兼容面，2026-11-19 登记）。
                 battles += 1
             elif kind in ('card', 'event'):
                 gold += CARD_GOLD_EXP

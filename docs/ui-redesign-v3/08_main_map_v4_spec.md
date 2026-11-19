@@ -131,7 +131,9 @@
 
 **节点 kind → 资产映射（唯一事实源，S21.5 落 `chrome.rs` 映射表）**：
 `start→node_start / city→node_city / port→node_port / event→node_event / card→node_card /
-battle→node_battle / treasure→node_treasure / boss→node_boss / plain→node_plain`；
+treasure→node_treasure / boss→node_boss / plain→node_plain`（**8 类**；`battle→node_battle`
+遭遇格 2026-11-19 清理〔v5 无遭遇格，死资产删；`SpaceKind::Battle` 枚举保留作 v4 包兼容，
+v4 包加载遭遇格时节点牌/i18n 回退 `plain`〕）；
 玩家标记 = `boat_{boat_level}`（缺资产回退 `ship_player`，再回退代码 `flag` 图标）。
 
 ## 7. 改动面声明（硬规则 7）

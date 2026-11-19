@@ -629,11 +629,13 @@ pub fn node_asset(kind: SpaceKind) -> NodeAsset {
         SpaceKind::Port => NodeAsset { path: "assets/ui/node_port.png", visible_px: 324 },
         SpaceKind::Event => NodeAsset { path: "assets/ui/node_event.png", visible_px: 471 },
         SpaceKind::Card => NodeAsset { path: "assets/ui/node_card.png", visible_px: 314 },
-        SpaceKind::Battle => NodeAsset { path: "assets/ui/node_battle.png", visible_px: 468 },
         SpaceKind::Treasure => NodeAsset { path: "assets/ui/node_treasure.png", visible_px: 443 },
         SpaceKind::Boss => NodeAsset { path: "assets/ui/node_boss.png", visible_px: 334 },
         SpaceKind::Plain => NodeAsset { path: "assets/ui/node_plain.png", visible_px: 182 },
         SpaceKind::Territory => NodeAsset { path: "assets/ui/node_plain.png", visible_px: 314 },
+        // v5 无遭遇格（`node_battle` 死资产 2026-11-19 清）；v4 包加载遭遇格时回退 plain
+        // 节点牌（与 Territory 同族回退，crash-safe）。
+        SpaceKind::Battle => NodeAsset { path: "assets/ui/node_plain.png", visible_px: 182 },
     }
 }
 
@@ -773,11 +775,13 @@ pub fn space_name(kind: SpaceKind) -> String {
         SpaceKind::Port => "scene.main_map.node.port",
         SpaceKind::Event => "scene.main_map.node.event",
         SpaceKind::Card => "scene.main_map.node.card",
-        SpaceKind::Battle => "scene.main_map.node.battle",
         SpaceKind::Treasure => "scene.main_map.node.treasure",
         SpaceKind::Boss => "scene.main_map.node.boss",
         SpaceKind::Plain => "scene.main_map.node.plain",
         SpaceKind::Territory => "scene.main_map.node.territory",
+        // v5 无遭遇格（`scene.main_map.node.battle` i18n 键 2026-11-19 删）；v4 包加载
+        // 遭遇格回退 plain 文案（crash-safe，与节点牌回退同族）。
+        SpaceKind::Battle => "scene.main_map.node.plain",
     };
     crate::i18n::sget(key).to_owned()
 }

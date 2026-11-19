@@ -333,8 +333,9 @@ pub struct GameApp {
     pub build_panel_sel: u8,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
-    /// 战斗会话（`Vs` 场景时有效）。
-    /// 初始值来自 `BattleSession::from_balance`（`balance.combat.player` + `boss_tier`）。
+    /// 战斗会话（`Vs` 场景时有效，兵力模型 `force::resolve` 一次性结算）。
+    /// 守方兵力 = `defender_force`（守军/`boss_fort` 防御，`battle.rs` S34.6 D5；旧 HP
+    /// `BattleSession` 已删），攻方 = 席位 `seat_crew/seat_arms`。
     pub battle: Option<BattleView>,
     /// 全局 RNG（可播种 PCG，`rand_pcg`，`rules::rng` 行为，EXP-040 确定性；S8.7 前为 MSVC LCG 历史参照）。
     pub rng: GameRng,

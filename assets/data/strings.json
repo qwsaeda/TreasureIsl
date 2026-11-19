@@ -70,7 +70,6 @@
  "scene.main_map.hud.trade": "贸易",
  "scene.main_map.landmark_label": "据",
  "scene.main_map.nav_hint": "空格摇骰前进 · 港口/宝藏/事件格结算",
- "scene.main_map.node.battle": "遭遇",
  "scene.main_map.node.boss": "BOSS",
  "scene.main_map.node.card": "卡牌 · 抽一张",
  "scene.main_map.node.city": "城镇",
