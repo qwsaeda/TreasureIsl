@@ -4573,6 +4573,11 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("wbs-checkbox-sync", check_wbs_checkbox_sync),
     // S59.0（EXP-194 载体）：gate 项号文字「第 N 项/位 <gate项名>」↔ gate.ps1 去重 1-based 位实测
     ("gate-item-number-text", check_gate_item_number_text),
+    // 飞轮 R18（2026-11-19 业务规格审计收口）：rules 层卡牌 `Damage`/`Heal` 改作用人手 `crew`
+    // （H1② 拍板② 兵力模型对齐），与 app `host.rs::apply_card_effect` 改写 `seat_crew` 同口径；
+    // 守门 = `rules/cards.rs` `CardState` 含 `crew` 字段（非旧 `hp` HP 暂存死通道）+ `apply_card`
+    // 的 `Damage`/`Heal` 分支写 `state.crew`（防回归到 `state.hp`）。
+    ("card-crew-alignment", check_card_crew_alignment),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：
@@ -5018,6 +5023,70 @@ fn check_landscape_no_portrait_hardcode(root: &Path) -> Vec<String> {
 /// N ≠ posmap[短名] = 现状区漂移 FAIL；带「时点/历史/旧第 N 项」标注行 = 豁免（时点值不回改）。
 /// 负例护栏：改 1 处 gate 项号（如「第 35 项 dod-commands」→「第 25 项」）必 FAIL 精准点名；还原 0 error。
 /// 载体 = `assets/gate_item_posmap.json`（`scripts/gate_item_posmap.py --fix` 回写，gate 加减项后重跑）。
+/// 飞轮 R18（2026-11-19 业务规格审计收口）：rules 层卡牌 `Damage`/`Heal` 人手口径守门。
+///
+/// H1② 拍板②（兵力模型对齐）：`rules/cards.rs` `CardState` 的 `Damage`/`Heal` 目标字段
+/// 须 = 人手 `crew`（与 app `host.rs::apply_card_effect` 改写 `seat_crew` 同口径），
+/// **非**旧「HP 暂存 `hp`」死通道（`state.hp` 不进 `force::resolve`，作废）。守门 =
+/// ① `CardState` 结构体含 `pub crew: u32` 字段；② `apply_card` 的 `Damage` 分支写
+/// `state.crew`（`saturating_sub`）；③ `apply_card` 的 `Heal` 分支写 `state.crew`
+/// （`saturating_add`）；④ 全 `crates/` 0 处 `state.hp` 卡牌暂存（防回归）。
+fn check_card_crew_alignment(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(cards_text) = read_file(root, "crates/ti-core/src/rules/cards.rs") else {
+        return vec!["rules/cards.rs 不存在（卡牌人手口径无机读源）".to_string()];
+    };
+    // ① CardState 含 `pub crew` 字段（H1② 人手口径，非旧 `pub hp`）
+    if !cards_text.contains("pub crew: u32") {
+        errors.push(
+            "rules/cards.rs: `CardState` 缺 `pub crew: u32` 字段（H1② 人手口径；旧 `pub hp` 暂存死通道应已删）"
+                .to_string(),
+        );
+    }
+    // ② apply_card Damage 分支写 `state.crew`（saturating_sub）
+    if !cards_text.contains("state.crew = state.crew.saturating_sub(n)") {
+        errors.push(
+            "rules/cards.rs: `apply_card` `Damage` 分支未写 `state.crew.saturating_sub`（H1② 扣人手口径漂移，疑回归 `state.hp`）"
+                .to_string(),
+        );
+    }
+    // ③ apply_card Heal 分支写 `state.crew`（saturating_add，无上限）
+    if !cards_text.contains("state.crew = state.crew.saturating_add(n)") {
+        errors.push(
+            "rules/cards.rs: `apply_card` `Heal` 分支未写 `state.crew.saturating_add`（H1② 加人手口径漂移，疑回归 `state.hp`）"
+                .to_string(),
+        );
+    }
+    // ④ 全 crates 0 处卡牌 HP 暂存（`state.hp` 在 cards.rs / CardState 上下文）
+    for f in [
+        "crates/ti-core/src/rules/cards.rs",
+        "crates/ti-core/src/rules/cards_draw.rs",
+        "crates/ti-app/src/game_app/host.rs",
+    ] {
+        let Some(text) = read_file(root, f) else { continue };
+        for (i, line) in text.lines().enumerate() {
+            // 命中 `state.hp` / `CardState { hp` / `pub hp` 且行非历史注释（含「已删/v4 历史/勘误」字样豁免）
+            let is_code =
+                !line.trim_start().starts_with("//") && !line.trim_start().starts_with("///");
+            let historical = line.contains("已删")
+                || line.contains("v4 历史")
+                || line.contains("勘误")
+                || line.contains("死效果");
+            let hits = line.contains("state.hp")
+                || line.contains("CardState { hp")
+                || line.contains("pub hp: u32")
+                || line.contains("hp_max");
+            if is_code && hits && !historical {
+                errors.push(format!(
+                    "{f}:{} 疑似卡牌 HP 暂存死通道回归（`state.hp`/`CardState.hp`/`pub hp`/`hp_max`，H1② 应改 `crew` 人手口径）",
+                    i + 1
+                ));
+            }
+        }
+    }
+    errors
+}
+
 fn check_gate_item_number_text(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(posmap_text) = read_file(root, "assets/gate_item_posmap.json") else {

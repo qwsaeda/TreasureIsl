@@ -10,8 +10,8 @@
 //! 与旧 `rules/cards.rs` 的边界：
 //! - 旧模块的 `event_to_card`（事件 id → 卡映射）仍有效，但**卡池来源**改走本模块的
 //!   [`CardPool::from_balance`]；旧 `CARD_CATALOG` 的「5 张占位卡」不再作为运行时来源。
-//! - 旧 `apply_card` 的状态机（Damage/Heal/Gold/Move 对 `CardState` 的修改）保留复用，
-//!   本模块只提供「抽哪些卡」，不重复实现效果应用。
+//! - 旧 `apply_card` 的状态机（**2026-11-19 H1②**：Damage/Heal 改作用人手 `crew`、
+//!   Gold 改金，对齐兵力模型）保留复用；本模块只提供「抽哪些卡」，不重复实现效果应用。
 
 use crate::data::CardDef;
 

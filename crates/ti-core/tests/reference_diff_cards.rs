@@ -37,14 +37,15 @@ fn test_catalog() -> Vec<CardDef> {
     ]
 }
 
-/// 测试用 `CardState`（`hp_max`/`gold_max` = `u32::MAX`，无钳制上限）。
-fn state_with(hp: u32, gold: u32) -> CardState {
-    CardState { hp, gold, hp_max: u32::MAX, gold_max: u32::MAX }
+/// 测试用 `CardState`（`gold_max` = `u32::MAX`，无金钳制；**2026-11-19 H1②** 人手 `crew`
+/// 无上限，`hp_max` 字段已删）。
+fn state_with(crew: u32, gold: u32) -> CardState {
+    CardState { crew, gold, gold_max: u32::MAX }
 }
 
-/// 测试用 `CardState`（带 `hp_max`/`gold_max` 钳制上限，`progression.md` 效果结算）。
-fn state_clamped(hp: u32, gold: u32, hp_max: u32, gold_max: u32) -> CardState {
-    CardState { hp, gold, hp_max, gold_max }
+/// 测试用 `CardState`（带 `gold_max` 钳制上限；`crew` 无上限，`progression.md` 效果结算 H1②）。
+fn state_clamped(crew: u32, gold: u32, gold_max: u32) -> CardState {
+    CardState { crew, gold, gold_max }
 }
 
 /// 从 `balance.cards` 构建引擎（S10.3 数据化）。
@@ -72,23 +73,23 @@ fn assert_event_to_card_correct(catalog: &[CardDef], event_id: u32) {
 }
 
 /// 断言 `apply` 结果与手算的饱和运算 + 区间钳制一致（S12.3）。
-fn assert_apply_correct(catalog: &[CardDef], event_id: u32, initial_hp: u32, initial_gold: u32) {
+fn assert_apply_correct(catalog: &[CardDef], event_id: u32, initial_crew: u32, initial_gold: u32) {
     let card = event_to_card(event_id, catalog);
     let engine = CardEngine::new(catalog.to_vec());
-    let mut state = state_with(initial_hp, initial_gold);
+    let mut state = state_with(initial_crew, initial_gold);
     let result = engine.apply(event_id, &mut state);
 
     match card {
         Some(c) => {
-            let mut expected_state = state_with(initial_hp, initial_gold);
+            let mut expected_state = state_with(initial_crew, initial_gold);
             let expected_result = apply_card(c, &mut expected_state);
             assert_eq!(
                 result, expected_result,
                 "apply (event_id={event_id}) 结果不一致：{result:?} vs {expected_result:?}"
             );
             assert_eq!(
-                state.hp, expected_state.hp,
-                "HP 不一致 (event_id={event_id} hp={initial_hp})"
+                state.crew, expected_state.crew,
+                "人手不一致 (event_id={event_id} crew={initial_crew})"
             );
             assert_eq!(
                 state.gold, expected_state.gold,
@@ -118,12 +119,12 @@ fn diff_event_to_card_all_combos() {
 #[test]
 fn diff_apply_all_combos() {
     let catalog = test_catalog();
-    let hps = [0u32, 50, 100, 999_999];
+    let crews = [0u32, 50, 100, 999_999];
     let golds = [0u32, 100, 999_999];
     for event_id in 1..=25u32 {
-        for &hp in &hps {
+        for &crew in &crews {
             for &gold in &golds {
-                assert_apply_correct(&catalog, event_id, hp, gold);
+                assert_apply_correct(&catalog, event_id, crew, gold);
             }
         }
     }
@@ -172,7 +173,7 @@ fn semantic_damage_heal() {
     let mut state = state_with(100, 0);
     let r = apply_card(card_dmg, &mut state);
     assert_eq!(r, CardResult::Applied(CardEffect::Damage(10)));
-    assert_eq!(state.hp, 90, "HP 100 - 10 = 90");
+    assert_eq!(state.crew, 90, "人手 100 - 10 = 90");
 
     // Heal
     let card_heal = event_to_card(2, &catalog).expect("event_id=2 应映射到卡 2（Heal）");
@@ -180,7 +181,7 @@ fn semantic_damage_heal() {
     let mut state2 = state_with(80, 0);
     let r2 = apply_card(card_heal, &mut state2);
     assert_eq!(r2, CardResult::Applied(CardEffect::Heal(15)));
-    assert_eq!(state2.hp, 95, "HP 80 + 15 = 95");
+    assert_eq!(state2.crew, 95, "人手 80 + 15 = 95");
 
     // Gold
     let card_gold = event_to_card(3, &catalog).expect("event_id=3 应映射到卡 3（Gold）");
@@ -198,14 +199,14 @@ fn semantic_move_and_unknown_no_state_change() {
     let mut state = state_with(100, 50);
     let r = apply_card(card_move, &mut state);
     assert_eq!(r, CardResult::Applied(CardEffect::Move));
-    assert_eq!(state.hp, 100, "Move 不改 HP");
+    assert_eq!(state.crew, 100, "Move 不改变手");
     assert_eq!(state.gold, 50, "Move 不改金");
 
     let card_unknown = event_to_card(5, &catalog).expect("event_id=5 应映射到卡 5（Unknown）");
     let mut state2 = state_with(100, 50);
     let r2 = apply_card(card_unknown, &mut state2);
     assert_eq!(r2, CardResult::Applied(CardEffect::Unknown));
-    assert_eq!(state2.hp, 100, "Unknown 不改 HP");
+    assert_eq!(state2.crew, 100, "Unknown 不改变手");
     assert_eq!(state2.gold, 50, "Unknown 不改金");
 }
 
@@ -264,33 +265,33 @@ fn cards_same_seed_same_sequence() {
 /// `cards_effects_clamped`：效果后 HP/金钳制在合法域。
 ///
 /// 业务规则（`progression.md` 效果结算）：
-/// `gold`/`hp` 增减后立即做区间钳制（`0 ≤ gold ≤ gold_max`、`0 ≤ hp ≤ hp_max`）。
-/// 判据：`Heal` 后 `hp ≤ hp_max`；`Gold` 后 `gold ≤ gold_max`；`Damage` 后 `hp ≥ 0`。
+/// `gold`/`crew` 增减后立即做区间钳制（**H1② 兵力模型**：`0 ≤ gold ≤ gold_max`、
+/// 人手 `crew` 无上限）。
+/// 判据：`Heal` 加人手（无上限）；`Gold` 后 `gold ≤ gold_max`；`Damage` 后 `crew ≥ 0`。
 #[test]
 fn cards_effects_clamped() {
     let engine = CardEngine::new(test_catalog());
 
-    // Heal 钳制：hp=90, hp_max=100, Heal(15) → min(100, 90+15) = 100
-    let mut s1 = state_clamped(90, 0, 100, u32::MAX);
+    // Heal 加人手（无上限）：crew=90, Heal(15) → 90+15 = 105（saturating_add）
+    let mut s1 = state_clamped(90, 0, u32::MAX);
     let _ = engine.apply(2, &mut s1);
-    assert_eq!(s1.hp, 100, "Heal 后 hp 应钳制到 hp_max=100");
-    assert!(s1.hp <= 100, "hp 不得超 hp_max");
+    assert_eq!(s1.crew, 105, "Heal 加人手（无上限）");
 
     // Gold 钳制：gold=10, gold_max=25, Gold(20) → min(25, 10+20) = 25
-    let mut s2 = state_clamped(0, 10, u32::MAX, 25);
+    let mut s2 = state_clamped(0, 10, 25);
     let _ = engine.apply(3, &mut s2);
     assert_eq!(s2.gold, 25, "Gold 后 gold 应钳制到 gold_max=25");
     assert!(s2.gold <= 25, "gold 不得超 gold_max");
 
-    // Damage 下限：hp=5, Damage(10) → saturating_sub → 0（u32 天然 ≥ 0）
-    let mut s3 = state_clamped(5, 0, u32::MAX, u32::MAX);
+    // Damage 扣人手下限：crew=5, Damage(10) → saturating_sub → 0（u32 天然 ≥ 0）
+    let mut s3 = state_clamped(5, 0, u32::MAX);
     let _ = engine.apply(1, &mut s3);
-    assert_eq!(s3.hp, 0, "Damage 后 hp 应钳制到 0（saturating_sub 下界）");
+    assert_eq!(s3.crew, 0, "Damage 后人手应钳制到 0（saturating_sub 下界）");
 
-    // 无上限（hp_max=U32::MAX）：hp=100, Heal(15) → 115（不钳制）
+    // 人手无上限：crew=100, Heal(15) → 115（saturating_add，不钳制）
     let mut s4 = state_with(100, 0);
     let _ = engine.apply(2, &mut s4);
-    assert_eq!(s4.hp, 115, "无 hp_max 时 Heal 不加钳制");
+    assert_eq!(s4.crew, 115, "人手无上限时 Heal 直接加");
 }
 
 /// `cards_weighted_pick_reproducible`：权重抽卡可复现（单测只断言可复现，分布靠统计脚本）。

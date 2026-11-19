@@ -757,3 +757,9 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **根因**：迁移类重构（HP→兵力模型）只清了 rules 层主路径（BattleSession/combat.items），未同步清「表现层死分支 + 数据段死字段 + i18n 死文案 + 落格死 arm」——六面中清了一面（rules），其余五面挂编译面长期漂移。
 - **解法**：迁移类重构收口时，按六面清单系统摸排：① 实现（死分支/死字段/死函数）② 数据（balance 段死键）③ i18n（strings 死文案）④ 资产（ui 死图，查 vs 渲染活路径）⑤ 测试（断言死字段）⑥ 文档（规格旧口径）；逐层 grep 消费点 + 查 F-ID 保留判定（EXP-197）。本轮 = 删 battle_* 字段 + Battle 分支 + battle_fmt i18n + data_tables 断言 + 文档勘误。
 - **验证**：grep -rn battle_damage/battle_gold_loss/board.card_state 全库 0 活消费（仅历史注释）；cargo test 990/0 + gate 36 项 0 failure；doccheck2 i18n 孤儿面 = 已知保留（combat.item.* vs 渲染活路径，EXP-197）。
+
+### EXP-200 流程：迁移类口径对齐须同步清 rules 层（EXP-199 六面：app 改了 host.rs 但 rules/cards.rs apply_card 仍写 state.hp）
+- **现象**：H1② 拍板卡牌 Damage/Heal 改人手，只改了 app 层 host.rs::apply_card_effect（seat_crew），但 rules 层 rules/cards.rs apply_card 仍写 CardState.hp（HP 暂存）；rules 层 = 卡牌效果唯一事实源，app 层实际不消费 apply_card 的 HP 路径（只消费 CardEngine 卡池 + 自己改 seat_crew）⇒ 两条路径口径分裂，rules 层死代码长期挂编译面。
+- **根因**：H1② 拍板时只改了「表现层 host.rs」（app 侧），没同步「规则层 rules/cards.rs」（rules 侧）；EXP-199 六面清理只清了「实现/数据/i18n/资产/测试/文档」，漏了「rules 层口径」——迁移类重构（HP→人手）须同步清 app + rules 两侧，rules 层 = 效果结算唯一事实源，app 层 = 表现，两侧口径须一致。
+- **解法**：① rules/cards.rs CardState 加 crew 字段（删 hp/hp_max）+ apply_card Damage/Heal 写 state.crew（saturating_sub/add，无上限对齐 app）；② 测试 reference_diff_cards.rs（state_with/state_clamped 构造器 hp→crew + 断言）+ exhaust_progression.rs（v.hp 档位映射 crew + 不变式改 gold ≤ gold_max）；③ cards_draw.rs 陈旧注释「保留复用」改 H1② 人手口径；④ doccheck2 第 52 项 card-crew-alignment 守门（CardState 含 pub crew + apply_card Damage/Heal 写 state.crew + 全 crates 0 处 state.hp 卡牌暂存，防回归）。
+- **验证**：cargo test 990/0 + clippy 0 + doccheck2 52 项 0 error（card-crew-alignment 负例护栏：改回 state.hp 必 FAIL 精准点名 + 还原 0 error）。EXP-199 六面扩「七面」= +rules 层口径（app↔rules 双侧一致）。

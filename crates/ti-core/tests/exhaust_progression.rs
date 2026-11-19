@@ -155,8 +155,9 @@ fn exhaust_progression_map_move_to_invariants() {
 /// 卡牌侧穷举（1）：全事件 id × 状态档位，`apply` 确定性 + 钳制不变式。
 ///
 /// 两次独立跑同事件 ⇒ 终态逐字段一致（确定性，`apply` 不耗 RNG）；终态恒满足
-/// `hp` 不超过 `hp_max`、`gold` 不超过 `gold_max`（0 / 上限边界钳制，
-/// `progression.md` 效果结算）；`UnknownEvent` 不得改动状态。
+/// **2026-11-19 H1② 兵力模型对齐**：人手 `crew`（`Damage` 扣 / `Heal` 加，无上限——船容量
+/// 约束在商人面非卡牌面，`v.hp` 档位映射为 `crew` 初值）、`gold` 不超过 `gold_max`；
+/// `UnknownEvent` 不得改动状态。
 #[test]
 fn exhaust_progression_cards_apply_all_events_states() {
     let e = exhaust().expect("exhaust_scenarios.json should parse");
@@ -168,18 +169,18 @@ fn exhaust_progression_cards_apply_all_events_states() {
     let mut combos: u32 = 0;
     for event_id in 0..=event_max {
         for v in states {
-            let base = CardState { hp: v.hp, gold: v.gold, hp_max: v.hp_max, gold_max: v.gold_max };
+            // H1②：exhaust 夹具 `v.hp` 档位映射为 `CardState.crew`（人手初值）；`hp_max` 字段已删。
+            let base = CardState { crew: v.hp, gold: v.gold, gold_max: v.gold_max };
             let mut a = base;
             let ra = engine.apply(event_id, &mut a);
             let mut b = base;
             let rb = engine.apply(event_id, &mut b);
             assert_eq!(a, b, "apply 确定性违例（event={event_id} 状态={v:?}）");
             assert_eq!(ra, rb, "apply 结果码确定性违例");
-            // 钳制不变式：终态恒在合法区间（0 下界由 saturating_sub 保证，上限由 min 保证）
-            assert!(
-                a.hp <= v.hp_max && a.gold <= v.gold_max,
-                "apply 后 hp/gold 越上限（event={event_id} 状态={v:?}）"
-            );
+            // 钳制不变式（H1②）：人手 `crew` 无上限（船容量约束在商人面，非卡牌面），
+            // 下界 0 由 `saturating_sub` 保证（u32 天然 ≥0，无需断言）；`gold` 上限由
+            // `min(gold_max, ...)` 保证。
+            assert!(a.gold <= v.gold_max, "apply 后 gold 越上限（event={event_id} 状态={v:?}）");
             // 无处理路径事件：状态须原样不变
             if matches!(ra, CardResult::UnknownEvent) {
                 assert_eq!(a, base, "UnknownEvent 不得改动状态");

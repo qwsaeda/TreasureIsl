@@ -378,6 +378,10 @@
   {
    "id": "gate-item-number-text",
    "impl": "rust"
+  },
+  {
+   "id": "card-crew-alignment",
+   "impl": "rust"
   }
  ]
 }
