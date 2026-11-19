@@ -1,0 +1,72 @@
+# S60.0 业务规格审计 + 代码收口 证据（2026-11-19）
+
+## 改动面（跨模块：业务规则 + 数据 + 规则实现 + 表现 + 工具 + 文档）
+
+### H1② 卡牌 Damage/Heal 改人手（对齐兵力模型 force::resolve）
+- 拍板②（用户 2026-11-19）：卡牌 `Damage(n)` 改 `seat_crew.saturating_sub(n)`（扣当前席人手），
+  `Heal(n)` 改 `seat_crew.saturating_add(n)`（加当前席人手），与商人 `buy_crew` 同账本。
+- 旧口径 = 卡牌 HP 暂存 `card_state.hp`（钳 `combat.player.hp`），但兵力模型战斗结算不用 HP
+  ⇒ 死效果（暂存不进 `seat_crew`，不影响 `force::resolve`）。
+- 落码：`host.rs::apply_card_effect` 改写 `seat_crew`（删 `combat.player` 消费点 + `map_or` lint）；
+  `mod.rs` 删 `card_state` 字段 + `cards` import。
+- 文档：`combat.md` §卡牌效果口径（拍板②记录）+ `progression.md` §卡牌事件 + `01_game_logic_overview.md` §4.2。
+
+### X2 删 Landing::Battle 死分支（v5 无遭遇格）
+- `board.rs::settle_board_landing` `Landing::Battle` arm 并入 no-op（v5 赛道 `board_data_matches_extraction`
+  断言遭遇格 = 0，分支不可达）。
+- `BoardCfg.battle_damage/battle_gold_loss`（`data/mod.rs`）+ `RawBoard` serde 字段（`data/balance.rs`）
+  + `balance.json` board 段二键 全删。
+- `main_map_node.rs::track_node_effect` `SpaceKind::Battle` toast → `None`（v5 死格回退）。
+- `strings.json` 删 `scene.main_map.toast.battle_fmt`（i18n 孤儿，0 代码消费）。
+- `data_tables.rs` 删 `battle_*` 断言 + fixture 字段。
+
+### M6 扩 board_measure「见 BOSS 累计金」口径
+- `board_measure.py::track_income` 加 `cum_gold`（落格净金 + 领地通道〔首占 `first_capture_bonus` 150
+  + 每圈领地产出 1920 + 每圈过路费 2212，level 1 基准，`boss_fort` 占格不计产出〕）。
+- 实测（40000 次/图 seed=42，20 图 31 格定构一致）：E[摇骰]=13.6 / E[落格净金]=488 /
+  **E[见 BOSS 累计金]=4620**，含 `initial_gold` 1000 = **5620**。
+- 回填 `progression.md` §跨图节奏实测（1338 旧值勘误为 M6 口径）+ §落格节奏两表「待重估」列。
+
+### 15 条 docs/business 勘误（笔误/滞后）
+1. boss_tiers 20 档标注（progression 难度阶梯表 = v4 历史）
+2. 赛道格类 v4 残留标注（progression L52 遭遇格 / L173 battle_damage）
+3. U2 必损公式勘误（`armed=min(人手,武器)`，非 `crew×weapon_coef`）
+4. U6 产出时机定案（落格 Collect，非「二选一待定」）
+5. 存档字段口径（on-disk `unlocked_mask:u32`，`Vec<String>` 为规则层）
+6. territory §1.2 AI 参数去重（指针引用 §1 末段）
+7. territory §12 标题 v2→v3 口径
+8. 00_index territory 行 v2→v3（2..5 热座 + 可配 AI）
+9. combat 单测表死文件引用（rules_battle.rs 已删 S34.6 D5）
+10. persistence rng_seed 0→42（`DEFAULT_RNG_SEED`）
+11. progression 可测规则 6 条「待 S8.3.c 补单测」→ 已落地 `reference_diff_{main_map,cards}.rs`
+12. H1 卡牌 HP 空洞记录（combat.md + 01_overview §4.2）
+13. 14 号台账 board_measure 登记 M6 口径
+14. 26 号 doccheck 计数 192→195（EXP-197/198/199 登记）
+15. combat.item i18n 孤儿 4 条登记（vs 渲染活路径保留，EXP-197）
+
+### EXP 回写 3 条
+- EXP-197 i18n 孤儿 ≠ 死代码（渲染活路径 vs 死分支判定）
+- EXP-198 业务规格审计 4 分类处置 + 数值口径勘误
+- EXP-199 迁移类重构须同步清六面（实现+数据+i18n+资产+测试+example+文档）
+
+## 验收（判据实跑输出）
+
+- `cargo test --workspace`：990 passed / 0 failed（含 `e2e_board_spin_loop` / `cards_effects_clamped` / `board_landing_rhythm_is_consistent_across_maps`）。
+- `cargo clippy --workspace -D warnings`：0 error（`map_or` lint 修）。
+- `cargo run -p ti-tools --bin doccheck`：180 docs / 38 facts / 195 experiences / 344 task refs / 4 assertions / **0 error**。
+- `cargo run -p ti-tools --bin doccheck2`：**0 error across 51 audit-codified checks**（i18n 孤儿 4 条 `combat.item.*` = 已知保留面 vs 渲染活路径，非 FAIL）。
+- `python3 scripts/validate_data.py`：OK（4 表，strings 229 键；资产 disk↔registry 双向同步 + test_manifest 对账）。
+- `python3 scripts/board_measure.py --check`：**PASS**（业务规格难度档位与 balance 一致）。
+- `python3 scripts/doc_numbers.py`：声称点与实测一致（0 漂移）。
+- `cargo run -p ti-tools --bin ledger -- plan/ledger.yaml`：351 tasks / 351 verified / 0 error；evidence: ok。
+- 全量 gate 36 项 = **0 failure**（web e2e 需 `:8080` 静态服务，起服务后 PASS；3 环境项非改动引入）。
+
+## 提交（push origin/master）
+- `c75683d` 业务规格审计收口（H1② + X2 + M6 + 15 条勘误 + 14 号台账）
+- `9e57f6e` EXP-197/198/199 回写（process 卷 55→58）
+- `6023c54` 26 号 doccheck 计数 192→195（doccheck2 S55 漂移清零）
+
+## 残留（已登记文档，非本轮范围）
+- `combat.item.*` i18n 4 条孤儿（vs 渲染活路径 `vs_proto`/`vs_anim_v4` 消费，保留；doccheck2 WARN 4 条已知面）。
+- `combat.player` 字段（exhaust `BattleSession` 机制消费，后续轮评估整删）。
+- `exhaust_scenarios.json` `progression.card_state_variants`（exhaust 测试夹具，非 app `card_state`）。

@@ -3095,11 +3095,16 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
             if !is_historical_line {
                 // 「N 任务」现状声称（N = 紧邻「任务」前的数字；只拦 ≥10 的现势进度声称，
                 // 「4 项/4 任务」类任务书小描述非台账进度计数，不限）
+                // 里程碑段豁免（结构判定）：行内「里程碑：…**（…）**」段 = 独立时点快照
+                // （S59 时点的「350 全 verified」等），AGENTS.md 单行长段现状+历史里程碑
+                // 混排 ⇒ 行首判定不够，须按「命中位置在里程碑段内」结构判定（非关键词
+                // 豁免——防「历史时点值」字样被当豁免标记滥用）。
                 for m in line.match_indices("任务") {
                     let before = &line[..m.0];
                     let digits = scan_digits_before(before);
                     if let Some(n) = digits {
-                        if n >= 10 && n != tasks {
+                        let in_milestone = milestone_span_contains(before, m.0);
+                        if n >= 10 && n != tasks && !in_milestone {
                             errors.push(format!(
                                 "计数守门：{rel}:{} 声称「{n} 任务」≠ 实测台账 {tasks} 任务（现状区过期漂移，独立里程碑行才豁免）",
                                 i + 1
@@ -3124,6 +3129,57 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         }
     }
     errors
+}
+
+/// 命中位置是否落在「独立里程碑段」内（结构判定，非关键词豁免）：
+/// 「N 任务」的命中点 `pos` 在某个「里程碑：…**（…）**」块的**加粗正文**内 = 该块是该
+/// 里程碑时点的快照（如 S59「350 全 verified」），豁免。判定 = `pos` 前最近一个
+/// 「里程碑：」词之后的 `**` 段（即该里程碑块的加粗体）包含 `pos`。
+///
+/// 防滥用：不认「历史时点值」字样（防关键词豁免被绕）——纯结构：命中点须在该
+/// 里程碑块的 `**…` 加粗段内，块外的现状声称（如行首「当前 350 任务」）仍拦。
+/// 命中点是否落在「独立里程碑块」内（结构判定，非关键词豁免）：
+/// 「N 任务」命中点 `pos` 在「…里程碑：…**…（…）**…」的 `**` 加粗块内 = 该块是该
+/// 里程碑时点的快照（如 S59「350 全 verified」），豁免。判定 = `pos` 前最近一个
+/// 「里程碑：」词后的 `**…**` 加粗块包含 `pos`。块外的现状声称（行首「当前 350 任务」）仍拦。
+///
+/// 防滥用：不认「历史时点值」字样（防关键词豁免被绕）——纯结构：命中点须在该
+/// 里程碑 `**…**` 加粗块内。
+fn milestone_span_contains(before: &str, pos: usize) -> bool {
+    let b = before.as_bytes();
+    // 1) 命中点前最近一个「里程碑：」（UTF-8 逐字节匹配，避免 non-ASCII byte literal）
+    let milestone_bytes = "里程碑：".as_bytes();
+    let mut last_milestone = None;
+    let mut i = 0;
+    while i + milestone_bytes.len() <= b.len() {
+        if &b[i..i + milestone_bytes.len()] == milestone_bytes {
+            last_milestone = Some(i + milestone_bytes.len());
+        }
+        i += 1;
+    }
+    let Some(mstart) = last_milestone else {
+        return false;
+    };
+    // 2) `mstart` 后第一个 `**`（加粗块起点）
+    let after = &b[mstart..];
+    let mut k = 0;
+    let mut bold_open = None;
+    while k + 1 < after.len() {
+        if after[k] == b'*' && after[k + 1] == b'*' {
+            bold_open = Some(k);
+            break;
+        }
+        k += 1;
+    }
+    let Some(bold_open) = bold_open else {
+        return false;
+    };
+    // 3) 加粗块内字符段 = `**` 后到行尾（before 只到命中点；命中点本身在「任务」前）
+    //    命中点相对 `mstart` 的偏移 = pos - mstart；须 ≥ bold_open + 2（块开 `**` 之后）
+    //    且 ≤ before 长度（命中点在 before 内，天然成立）。
+    //    块内判定 = 命中点在「`**` 开」之后 = pos - mstart > bold_open。
+    let rel = pos - mstart;
+    rel > bold_open
 }
 
 /// 抽 CJK 串（如「任务」「verified」）前紧邻的数字串（左边界非数字；中间只许空白/「/」）。
