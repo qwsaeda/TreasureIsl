@@ -3,19 +3,6 @@
  "_note": "游戏测试标杆机读清单（23_game_testing.md §7）。级=level(L1..L4)/类=category(功能·回归·视觉·音频·性能·兼容)/型=type(冒烟·CI·试玩·探索·基准)。evidence 与 gate 至少一者：evidence 指向 evidence/ 下日志（或 gate=门禁项号 1..=36（飞轮 R11 勘误旧 33），证据=对应 gate 运行日志）。validate_data::check_test_manifest 对账。S49.7 扩展：group=业务域主分组（core 核心规则/asset 资产管线/platform 平台工具/device 端侧兼容/perf 性能体积）、timeout_s=作业超时（23 号 §6.2 收割）、prove=本次运行证明落点（23 号 §6.2 证明行）。",
  "tests": [
   {
-   "id": "rules_battle",
-   "level": "L1",
-   "category": "functional",
-   "type": "ci",
-   "name": "战斗规则差分",
-   "command": "cargo test -p ti-core --test rules_battle",
-   "evidence": "evidence/S13.3.log",
-   "group": "core",
-   "timeout_s": 900,
-   "prove": "evidence/tests/rules_battle/",
-   "desc": "做什么：跑 ti-core 战斗规则单测，把战斗逻辑（伤害/暴击/闪避/胜负判定）的输出与 oracle 参照实现逐条比对。测什么：battle.rs 规则函数的纯逻辑正确性（不碰渲染/IO）。达到效果：战斗数值改动后，若与原版行为漂移，本条立即失败 = 保证战斗可玩性与逆向基准一致。 逐测说明（20 条）：①from_balance 开局+step 基础链路（BOSS HP 走 balance 2400）②越界档 99 无效战斗判玩家胜③同 seed 同结果（夹具路径确定性）④玩家一击秒 BOSS 不反击⑤玩家归零判 Defeat⑥atk=0 每回合至少掉 flat 血（伤害下限）⑦跑满 max_rounds=3 兜底 Defeat⑧from_balance 路径同 seed 同结果（档 1 真实 balance）⑨同 seed 同轨迹/胜方/回合数（1234 显式播种）⑩player_first 先手顺序固定（一击秒 BOSS 玩家 HP 不变）⑪player_first=false 顺序翻转（BOSS 先手可观测）⑫from_balance 越界档 99 无效（真实 balance 路径）⑬max_rounds=1000 拉锯兜底 Enemy（防无限拉锯）⑭BOSS 档表逐档走 balance（S37 0..=19，前 5 档+档 20 越界）⑮火药桶固定 300 伤害（不吃 atk/随机）⑯医疗包按上限 % 回复且封顶不超上限⑰朗姆酒 3 回合 atk×1.5 到期失效⑱烟雾弹只挡 1 次反击（下回合恢复掉血）⑲防御当回合反击减半（100→50）⑳道具不消耗 RNG（同 seed 轨迹守恒）。"
-  },
-  {
    "id": "rules_trade",
    "level": "L1",
    "category": "functional",
@@ -118,19 +105,6 @@
    "timeout_s": 900,
    "prove": "evidence/tests/font_parity/",
    "desc": "做什么：跑中文字形点阵逐位对照，TTF 渲染输出 vs 基准。测什么：中文字形渲染一致性。达到效果：字体改动/换字库时字形不漂移。 逐测：中文字形 TTF 渲染点阵 vs 基准逐位比对。断言字形 0 漂移。"
-  },
-  {
-   "id": "exhaust_combat",
-   "level": "L2",
-   "category": "functional",
-   "type": "ci",
-   "name": "战斗穷举",
-   "command": "cargo test -p ti-core --test exhaust_combat",
-   "evidence": "evidence/S15.3.log",
-   "group": "core",
-   "timeout_s": 1800,
-   "prove": "evidence/tests/exhaust_combat/",
-   "desc": "做什么：跑战斗穷举测试，遍历战斗状态空间全组合，断言每格规则结果。测什么：combat 规则的全输入覆盖（非抽样）。达到效果：战斗边界 case（满血/0 兵/全暴击）无未定义行为。 逐测：遍历战斗状态空间全组合（HP/atk/暴击/闪避边界），断言每格规则结果。覆盖满血/0 兵/全暴击边界。"
   },
   {
    "id": "exhaust_economy",

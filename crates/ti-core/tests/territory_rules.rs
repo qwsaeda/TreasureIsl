@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 
 use ti_core::data::{Balance, BoardMap, balance, board};
+use ti_core::rules::force::{self as force, Force, ForceSide};
 use ti_core::rules::saveload::{
     SaveSlotV2, SaveSlotV3, SaveSlotV4, SaveSlotV5, SeatSave, TerritorySave,
 };
@@ -342,38 +343,30 @@ fn save_roundtrip_restores_territories() {
     assert_eq!(back.current_seat, 3, "当前席位还原");
 }
 
-/// S28.6/§9：副本守军战 = 同一战斗模型（`BattleSession::new_with_enemy` + `defender_unit`；
-/// 确定性 = 同 seed 同轨迹；守军强度随加固等级提高）。
+/// S28.6/§9（兵力模型口径，S34.6 D5）：副本守军战 = 守方兵力 `defense_at(isle, level)`
+/// （建筑防御 + 驻军，`defender_unit` 守军强度同源）；确定性 = 同参数同结果（`force::resolve`
+/// 无随机）；守军强度随加固等级提高（§4.1 公式）。
 #[test]
 fn dungeon_battle_shares_combat_model() {
     let (_map, bal, state) = fixture();
     let rules = TerritoryRules::new(bal);
-    let player = ti_core::domain::combat::Unit { hp: 100, atk: 30 };
-    let enemy1 = rules.defender_unit("wreck", 1);
-    let enemy3 = rules.defender_unit("wreck", 3);
-    assert!(enemy1.hp > 0, "守军 HP > 0（defense_base × 系数）");
-    assert!(enemy3.hp > enemy1.hp, "加固后守军 HP 提高（§4.1 公式）");
-    assert!(enemy1.atk > 0, "守军 ATK = 守军强度 × dungeon_attack_coef");
-    // 确定性：同 seed 同参数 ⇒ 同轨迹（`rules::battle` 同模型）
-    let mut a = ti_core::rules::battle::BattleSession::new_with_enemy(
-        bal.combat.clone(),
-        7,
-        player,
-        enemy1,
+    // 守方防御随加固等级提高（`defense_at` §4.1：defense_base + defense_per_level×level）
+    let d1 = rules.defense_at("wreck", 1);
+    let d3 = rules.defense_at("wreck", 3);
+    assert!(d1 > 0, "1 级守军防御 > 0（defense_base × 系数）");
+    assert!(d3 > d1, "加固到 3 级守军防御提高（§4.1 公式）");
+    // 确定性 + 胜负（`force::resolve` 兵力模型，无 HP 回合）
+    let attacker = Force::new(100, 30); // 强玩家兵力（hp=100, atk=30 对应兵力口径）
+    let defender = Force::new(d1, d1);
+    let res = force::resolve(attacker, defender, bal.manpower);
+    assert_eq!(
+        res.winner,
+        ForceSide::Attacker,
+        "强玩家兵力 > 1 级守军 ⇒ 攻方胜（副本胜利 = 占领，§3）"
     );
-    let mut b = ti_core::rules::battle::BattleSession::new_with_enemy(
-        bal.combat.clone(),
-        7,
-        player,
-        enemy1,
-    );
-    let (trace_a, winner_a, rounds_a) = a.finish();
-    let (trace_b, winner_b, rounds_b) = b.finish();
-    assert_eq!(trace_a, trace_b, "同 seed 同轨迹");
-    assert_eq!(winner_a, winner_b);
-    assert_eq!(rounds_a, rounds_b);
-    // 玩家强于 1 级守军 ⇒ 胜（副本胜利 = 占领，§3）
-    assert_eq!(winner_a, ti_core::domain::combat::Side::Player, "强玩家胜 1 级守军");
+    // 同参数同结果（确定性）
+    let res2 = force::resolve(attacker, defender, bal.manpower);
+    assert_eq!(res.winner, res2.winner, "同参数同胜负（确定性）");
     let _ = &state;
 }
 #[test]

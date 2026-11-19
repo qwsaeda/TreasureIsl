@@ -11,10 +11,7 @@
 //! ——等级链 99/150/240/400 与加成 0/4/9/15、0/80/180/320 ——锁规格，不复制实现）。
 
 use ti_core::data::balance;
-use ti_core::domain::combat::Unit;
-use ti_core::rules::battle::{BattleSession, CombatBonus};
 use ti_core::rules::boat::{BoatErr, BoatSession};
-use ti_core::rules::build::{Bank, BuildManager};
 use ti_core::rules::trade::{TradeErr, TradeLedger};
 
 /// 规则 1：造船扣金 + 抬 cargo/atk/hp（立即生效）。
@@ -121,46 +118,6 @@ fn boat_level_monotonic() {
     // 无降级接口（API 面只有 upgrade ⇒ 编译期即不可降级）
 }
 
-/// 规则 4：船加成与建筑加成叠加进战斗（总 atk/hp = 建筑 Σ + 船累计值）。
-#[test]
-fn combat_bonus_includes_boat() {
-    let b = balance().expect("balance.json 有效");
-
-    // 建筑侧：建 1 级 Castle ⇒ 取其 Σ 加成
-    let mut mgr = BuildManager::new(b.build.clone(), Bank::new(10_000), &[]);
-    mgr.build("Castle").expect("金足应建成 Castle");
-    let build_atk = mgr.build_atk_bonus();
-    let build_hp = mgr.build_hp_bonus();
-    assert!(build_atk > 0 && build_hp > 0, "Castle 有战斗加成");
-
-    // 船侧：3 级（三桅大帆船）累计 atk 9 / hp 180
-    let boat = BoatSession::new(b.boat.clone(), 3);
-    assert_eq!(boat.atk(), 9, "3 级累计 atk 9");
-    assert_eq!(boat.hp(), 180, "3 级累计 hp 180");
-
-    // 叠加：总加成 = 建筑 Σ + 船累计值
-    let bonus = CombatBonus::combine(build_atk, build_hp, &boat);
-    assert_eq!(bonus.atk, build_atk + boat.atk(), "总 atk = 建筑 Σ + 船");
-    assert_eq!(bonus.hp, build_hp + boat.hp(), "总 hp = 建筑 Σ + 船");
-
-    let base = Unit { hp: 1_000, atk: 100 };
-    let unit = bonus.apply(base);
-    assert_eq!(unit.atk, 100 + build_atk + boat.atk(), "玩家 atk = 基础 + 建筑 + 船");
-    assert_eq!(unit.hp, 1_000 + build_hp + boat.hp(), "玩家 hp = 基础 + 建筑 + 船");
-
-    // 战斗内生效：同 seed 下带加成 ⇒ BOSS 掉血更多（船加成进伤害公式）
-    let mut plain = BattleSession::new_with_cfg(b.combat.clone(), 42, base, 0);
-    let mut buffed = BattleSession::new_with_bonus(b.combat.clone(), 42, base, 0, bonus);
-    let (_, boss_hp_plain, _) = plain.step();
-    let (_, boss_hp_buffed, _) = buffed.step();
-    assert!(
-        boss_hp_buffed < boss_hp_plain,
-        "船加成进伤害公式：BOSS 剩余 HP {boss_hp_buffed} 应 < {boss_hp_plain}"
-    );
-
-    // 1 级船加成 = 0 ⇒ 与「只有建筑加成」等价（1 级 ≡ 现状）
-    let boat1 = BoatSession::new(b.boat.clone(), 1);
-    let bonus1 = CombatBonus::combine(build_atk, build_hp, &boat1);
-    assert_eq!(bonus1.atk, build_atk, "1 级船无 atk 加成");
-    assert_eq!(bonus1.hp, build_hp, "1 级船无 hp 加成");
-}
+// 规则 4：船加成与建筑加成叠加进战斗（`combat_bonus_includes_boat`）已删（S34.6 D5 兵力模型：
+// 建筑/船 atk/hp 加成不喂 `force::resolve`，`CombatBonus`/`BattleSession` 随 `rules::battle` 删除；
+// 船累计 atk/hp 值本身仍由 `BoatSession::atk()/hp()` 校验，见 `boat_level_monotonic`）。

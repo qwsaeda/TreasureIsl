@@ -8,12 +8,12 @@
 //! - 战斗 seed 走会话 RNG 流（`rng.next().unsigned_abs()`，非写死 42）。
 
 use ti_core::data::{CardEffectDef, balance, strings};
-use ti_core::domain::combat::{Side, Unit};
+use ti_core::domain::combat::Unit;
 use ti_core::domain::map::{Dir, GridPos, MapTerrain};
 use ti_core::domain::selection::{Character, MapSlot};
-use ti_core::rules::battle::BattleSession;
 use ti_core::rules::build::{Bank, BuildManager};
 use ti_core::rules::cards_draw::CardPool;
+use ti_core::rules::force::{self, Force, ForceSide};
 use ti_core::rules::main_map::MapSession;
 use ti_core::rules::rng::GameRng;
 use ti_core::rules::saveload::{SaveManager, SaveSlotV2};
@@ -78,42 +78,29 @@ fn eff_text(e: &CardEffectDef) -> String {
     }
 }
 
-/// 跑一场战斗并逐回合打印（首 3 回合 + 末 2 回合，中间省略）。
-fn run_battle(label: &str, tier: u32, seed: u32, unit: Unit, b: &ti_core::data::Balance) -> u32 {
-    let boss = b.combat.boss(tier).expect("tier 在表");
+/// 跑一场战斗并打印（兵力模型，S34.6 D5：`force::resolve` 一次性出结果，无逐回合 trace）。
+///
+/// 返回结算次数（恒 1 = 兵力模型一次性；保留签名兼容调用方 `rounds` 语义）。
+fn run_battle(label: &str, tier: u32, _seed: u32, unit: Unit, b: &ti_core::data::Balance) -> u32 {
+    // 兵力模型：攻方 = 玩家兵力（unit.hp/atk 兵力口径），守方 = `boss_tier` 查 `boss_fort` 防御。
+    let rules = ti_core::rules::territory::TerritoryRules::new(b);
+    let defense =
+        rules.defense_at("boss_fort", u8::try_from(tier.saturating_add(1)).unwrap_or(u8::MAX));
+    let attacker = Force::new(unit.hp, unit.atk);
+    let defender = Force::new(defense, defense);
+    let res = force::resolve(attacker, defender, b.manpower);
     println!(
-        "    {label}（BOSS 档 {tier} hp={bhp} atk={batk} vs 玩家 hp={ph} atk={pa}，seed={seed}）",
-        bhp = boss.hp,
-        batk = boss.atk,
-        ph = unit.hp,
-        pa = unit.atk,
+        "    {label}（BOSS 档 {tier} 守方防御={defense} vs 玩家兵力 {ch}/{ca}）",
+        ch = unit.hp,
+        ca = unit.atk
     );
-    let cfg = b.combat.clone();
-    let mut battle = BattleSession::new_with_cfg(cfg, seed, unit, tier);
-    let (trace, winner, rounds) = battle.finish();
-    for (i, &(ph, eh)) in trace.iter().enumerate() {
-        if i == 3 {
-            println!("      …（中间 {} 回合省略）…", trace.len().saturating_sub(5));
-            continue;
-        }
-        if !(i < 3 || i + 1 >= trace.len()) {
-            continue;
-        }
-        let (pph, peh) = if i == 0 { (unit.hp, boss.hp) } else { (trace[i - 1].0, trace[i - 1].1) };
-        println!(
-            "      回合 {i:>3}：玩家 {pph} → {ph}（BOSS 打 {db}）   BOSS {peh} → {eh}（玩家打 {dp}）",
-            db = pph.saturating_sub(ph),
-            dp = peh.saturating_sub(eh),
-        );
+    if res.winner == ForceSide::Attacker {
+        println!("    ★ 玩家胜（兵力 {} > 守方 {defense}）", res.attacker_after.crew);
+    } else {
+        println!("    ✕ BOSS 胜（守方防御 {defense} ≥ 玩家兵力 {}/{}）", unit.hp, unit.atk);
     }
-    match winner {
-        Side::Player => println!("    ★ 玩家胜（{rounds} 回合，BOSS 归零）"),
-        Side::Enemy => println!(
-            "    ✕ BOSS 胜（{rounds} 回合；未归零走 {mr} 回合兜底，combat.md 胜负判定表）",
-            mr = b.combat.max_rounds,
-        ),
-    }
-    rounds
+    // 兵力模型一次性结算（无逐回合），返回结算次数 1（保留调用方 `rounds` 语义）。
+    1
 }
 
 #[allow(clippy::too_many_lines)]

@@ -1,4 +1,8 @@
-# 第 12 章：回合制与战斗框架
+# 
+> **⚠️ 2026-11-19：本篇「回合制战斗」已被 S34.6 D5 兵力模型取代**——`rules/battle.rs`（HP 回合制 + 道具）
+> 已删除，现行战斗 = `rules/force.rs::resolve` 一次性出结果（攻方兵力 vs 守方 `defense_at`，双方必损）。
+> 本篇仅作历史参照，改战斗请读 `docs/business/combat.md` §兵力模型 + `rules/force.rs`。
+第 12 章：回合制与战斗框架
 
 ## 学习目标
 

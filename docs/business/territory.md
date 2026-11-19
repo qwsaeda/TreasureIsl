@@ -38,8 +38,15 @@
 > `ai ≥ 0` 可配；同局内同一席位不得既是玩家又是 AI；**在席席位 = 玩家席 ∪ AI 席**。
 
 > **AI 决策参数**（`balance.territory.ai`，`territory_v2::ai_policy_v2` 读取；S33.6 兵力模型决策）：
-> `attack_threshold: 0.6`（强舰队 → 攻占阈值）、`toll_aversion: 0.5`（弱舰队 → 交过路费倾向）、
-> `upgrade_priority: 0.3`（升级加固倾向）。三值 ∈ [0,1] 相对权重，非百分比累加。
+> `attack_threshold: 0.6`（强舰队 → 攻占阈值）、`toll_aversion: 0.5`（弱舰队 → 交过路费倾向，
+> **v1 `ai_policy` 死参**，v2 不用）、`upgrade_priority: 0.3`（升级加固倾向）。三值 ∈ [0,1] 相对权重，非百分比累加。
+>
+> **公式形态数据驱动（EXP-196，易变平衡禁写进 rules 函数体）**：攻占/升级的决策公式形态
+> 本身也可配（`balance.territory.ai`）——`siege_mode`（`ratio` = 战力比门控，攻方战力 ≥
+> `attack_threshold`×守方战力才攻占〔默认〕/ `win_only` = 预测胜即攻占）+ `upgrade_mode`
+> （`gold_buffer` = 金 ≥ 升级费×(1.0+`upgrade_priority`) 才升级〔默认〕/ `priority_gate` =
+> `upgrade_priority >= 0.5` 硬阈值）。代码只 `match` 形态选分支、系数读数据，改 AI 激进/保守
+> 只改 `balance.json` 不碰 `rules`（CS-5 门禁守 rules 层非中性浮点系数）。
 
 ### 1.1 v2 实测缺陷清单（v3 修复依据，2026-11-03）
 
@@ -63,8 +70,9 @@
 | 平局 | 理论上多人同时破产 ⇒ 判**无胜者**，对局结束（`victory_seat` 返回 `None`） |
 
 > **AI 决策参数**（`balance.territory.ai`，`territory_v2::ai_policy_v2` 读取；S33.6 兵力模型决策）：
-> `attack_threshold: 0.6`（强舰队 → 攻占阈值）、`toll_aversion: 0.5`（弱舰队 → 交过路费倾向）、
-> `upgrade_priority: 0.3`（升级加固倾向）。三值 ∈ [0,1] 相对权重，非百分比累加。
+> `attack_threshold: 0.6`（强舰队 → 攻占阈值）、`toll_aversion: 0.5`（弱舰队 → 交过路费倾向，
+> **v1 死参**，v2 不用）、`upgrade_priority: 0.3`（升级加固倾向）。三值 ∈ [0,1] 相对权重，非百分比累加。
+> 公式形态数据驱动（`siege_mode`/`upgrade_mode`，EXP-196）见 §1.1 AI 决策参数段。
 
 ### 1.3 v3 棋盘多席位渲染规则（同格散开 + 席位徽标）
 

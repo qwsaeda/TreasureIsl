@@ -63,6 +63,17 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 > 实现：`BattleSnapshot` 带兵力（`attacker_crew/arms` + `defender_crew/arms`）+ 战后
 > （`after_crew/arms`）+ `resolved` 标记；vs.rs 渲染 clash 战前 / result 战后。
 >
+> **2026-11-19 HP 本体彻底删除（用户拍板「全删 HP 本体」，收口 S34.6 D5 迁移残留）**：
+> 旧 HP 回合制代码/数据全部清理 —— 规则层 HP 会话（`BattleSession`/`CombatBonus`/`step`）
+> 整删 + HP 差分基准文件（无消费方）整删 + `combat.items` 4 道具
+> （`CombatItemDef`/`ItemEffect`/`CombatAction` + `balance.combat.items[]` + `combat.item.*` i18n）
+> 全删（B-01 死内容：4 道具无获取路径，兵力模型无逐回合道具机制）+ 3 纯 HP 测试
+> （`rules_battle`/`battle_rules`/`exhaust_combat`）+ 3 example（`full_run`/`cross_map`/
+> `random_session`）战斗段改 `force::resolve` 一次性。保留面：`boss_tiers` 表（难度阶梯数据，
+> `defender_force` 用 `boss_tier+1` 查 `boss_fort` 防御）/ `Unit`/`CombatCfg.player`（活数据字段）/
+> `combat.anim.items`（道具动效表，渲染 `vs_anim_v4` 缺省回退）。`vs_duel.rs`（引擎渲染原型）
+> 仍保留作动效骨架参考（见 F-05，0 live 调用，不参与兵力结算）。
+>
 > **S38 审计 F-05（2026-11-05）——`vs_duel.rs` 模块状态判定**：`crates/ti-engine/src/vs_duel.rs`
 > （S27.7 横版对峙动效骨架）实现的是**作废的 HP 回合制原型**（`DuelStage.player_hp=2000` /
 > 三动作 `Attack/Item/Defend` / 4 道具 / HP 条 + 冲刺/定格/震动动效），与兵力模型业务
@@ -120,7 +131,7 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 | 双方必损（人手 + 武器都掉） | `both_sides_attrition`（force.rs 内联） |
 | 败方交双倍过路费 | `siege_loss_pays_double_toll` |
 | 胜方占领重定驻军 | `siege_win_recaptures_with_level_one` |
-| 同 seed 同兵力 ⇒ 同结果（复现） | `combat_same_seed_same_result`（tests/rules_battle.rs） |
+| 同兵力同参数 ⇒ 同结果（确定性） | `deterministic_same_input_same_result`（force.rs 内联，兵力模型 `force::resolve` 无随机） |
 
 ## 数值平衡指引（非规则，供调参参考）
 

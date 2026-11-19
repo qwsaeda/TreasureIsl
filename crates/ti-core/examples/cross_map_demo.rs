@@ -19,9 +19,9 @@ use ti_core::data::{CardEffectDef, balance};
 use ti_core::domain::combat::Unit;
 use ti_core::domain::map::{Dir, GridPos, MapTerrain};
 use ti_core::domain::selection::{Character, MapSlot};
-use ti_core::rules::battle::BattleSession;
 use ti_core::rules::build::{Bank, BuildErr, BuildManager};
 use ti_core::rules::cards_draw::CardPool;
+use ti_core::rules::force::{self, Force};
 use ti_core::rules::main_map::MapSession;
 use ti_core::rules::progression::ProgressionState;
 use ti_core::rules::rng::GameRng;
@@ -219,16 +219,19 @@ fn play_map(m: MapSlot, b: &ti_core::data::Balance, rng: &mut GameRng) -> bool {
         "近",
     );
 
-    // 战斗
+    // 战斗（兵力模型，S34.6 D5：`force::resolve` 一次性出结果，无 HP 回合）
     let battle_seed = rng.next().unsigned_abs();
     let unit = host.battle_unit(base_player, &builder);
-    let mut bs =
-        BattleSession::new_with_cfg(b.combat.clone(), battle_seed, unit, map_def.boss_tier);
-    let (_trace, winner, rounds) = bs.finish();
-    assert!(rounds <= b.combat.max_rounds, "战斗超回合上限（不变式）");
-    let won = winner == ti_core::domain::combat::Side::Player;
+    let rules = ti_core::rules::territory::TerritoryRules::new(b);
+    let defense = rules.defense_at(
+        "boss_fort",
+        u8::try_from(map_def.boss_tier.saturating_add(1)).unwrap_or(u8::MAX),
+    );
+    let res =
+        force::resolve(Force::new(unit.hp, unit.atk), Force::new(defense, defense), b.manpower);
+    let won = res.winner == force::ForceSide::Attacker;
     println!(
-        "    战斗：玩家 hp={} atk={} vs BOSS 档 {}（seed={battle_seed}）→ {rounds} 回合，{}",
+        "    战斗：玩家兵力 {}/{} vs BOSS 档 {}（守方防御 {defense}，seed={battle_seed}）→ {}",
         unit.hp,
         unit.atk,
         map_def.boss_tier,

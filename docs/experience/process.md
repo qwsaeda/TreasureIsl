@@ -723,3 +723,14 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **落地**（A-02/B-02 修正）：`ai_policy_v2` 加 `siege_mode`（`ratio`/`win_only`）+ `upgrade_mode`（`gold_buffer`/`priority_gate`）两数据字段（`balance.territory.ai`，`territory_cfg.rs` `SiegeMode`/`UpgradeMode` 枚举 + `RawTerritoryAi` String serde + `convert` match 转换），函数体 `match ai.siege_mode` 选公式形态、系数读 `ai.attack_threshold`/`ai.upgrade_priority`。改 AI 行为 = 改 balance.json 两字符串，零代码。
 - **门禁面**：新增易变平衡公式时，先落 `balance.json` 字段 + `territory_cfg.rs` 结构 + `convert`，再改 rules 函数体读它；禁在 rules 函数体新写 `f32/f64 字面量系数`（如 `× 1.3`/`>= 0.5`/`0.6`）进平衡公式。轻量守门 = grep `rules/` 新增浮点字面量进系数乘法/比较（`check_code_standards.py` CS 候选扩展面，或 doccheck2 断言；误报面 = 正常逻辑常量如 `round_pct`/损耗率，须白名单）。
 - **关联**：EXP-066（战斗玩家数值数据驱动）同类；CS-1（资产路径单源）同数据驱动纪律族。
+
+#### HP 模型（旧 HP 回合制 + 道具）彻底删除（S34.6 D5 收口，用户拍板「全删 HP 本体」）
+- **背景**：S34.6 D5 迁移兵力模型后，旧 HP 回合制（`rules::battle::BattleSession` 逐回合 + `combat.items` 4 道具 + `combat.action` 3 动作）成残留；`combat.md`/`11_vs_spec.md` 早已标注作废，但代码/数据/i18n/测试/example 未清。双盲对抗 B 侧报 B-01（4 道具死内容）/B-05（`boss_tiers` 表）= 同残留族。
+- **删除面**（系统重构，先调用方→后实现→最后数据/i18n）：
+  - `rules/battle.rs` 整删（`BattleSession`/`CombatBonus`/`step`/`step_with`/`boss_hp`）+ `rules/mod.rs` 声明 + `oracle/battle.rs` 整删（无 reference_diff 消费方，纯死基准）+ `oracle/mod.rs` 声明。
+  - `combat.items` 4 道具（`RawCombatItem`/`RawItemEffect`/`CombatItemDef`/`ItemEffect`/`CombatAction`/`item()`）+ `balance.json combat.items[]` + `combat.item.*` i18n 4 键（保留 `combat.anim.items` 道具动效表 = 渲染 `vs_anim_v4` 缺省回退，无道具逻辑消费 = 空表安全退化）。
+  - ti-app 侧（前轮已清）：`BattleView` 7 HP 字段 + `BattleSnapshot` 5 HP 字段 + `start_battle`/`start_dungeon_battle` 走 `defender_force` + `displayed_*_hp` 全链 + `vs_proto`/`treasure_headless`/e2e 读兵力量。
+  - 测试/example：`rules_battle.rs`/`battle_rules.rs`/`exhaust_combat.rs` 整删 + `rules_boat` 删 `combat_bonus_includes_boat`（船加成进 HP 公式无兵力意义）+ `exhaust_random_session`/`territory_rules` 战斗段改 `force::resolve` + 3 example（`full_run`/`cross_map`/`random_session`）`BattleSession` 改 `force::resolve` 一次性。
+  - `boss_tiers` 表**保留**（`defender_force` 用 `boss_tier+1` 查 `boss_fort` 防御 = 难度阶梯数据，非 HP 模型本身；`difficulty_ladder` 测试依赖）。
+- **判定**：`Unit`/`Side`/`defender_unit`/`CombatCfg.player` 保留（`CombatCfg.player: Option<Unit>` 数据字段仍活 + `defender_unit` 守军强度口径仍被注释引用；纯死代码清理不强行删活数据字段）。
+- **教训**：迁移类重构（HP→兵力）须**同步清**「实现 + 数据 + i18n + 资产 + 测试 + example + 文档」，否则残留成死代码长期挂编译面；双盲对抗 B 侧抓的"死内容"（B-01/B-05）= 迁移未清残留的典型，须系统删除面摸排（subagent 摸排 + 主线程逐层验证）而非逐点删。

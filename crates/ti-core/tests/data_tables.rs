@@ -236,7 +236,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             damage: DamageCfg { flat: 1, atk_coef: 1.0, rng_span: 1 },
             boss_tiers: vec![BossTier { tier: 0, hp: 10, atk: 1 }],
             defend_reduction_pct: 50,
-            items: Vec::new(),
+            // 战斗道具表（`items`）已删（B-01 死内容，S34.6 D5 兵力模型）。
             anim: ti_core::data::CombatAnimCfg::default(),
         },
         trade: ti_core::data::TradeCfg {

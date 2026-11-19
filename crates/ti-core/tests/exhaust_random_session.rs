@@ -14,16 +14,16 @@
 //! `verbose_session_process_readable` 把 3 个 seed 的过程逐行打印出来（`-- --nocapture`）。
 
 use ti_core::data::{CardEffectDef, balance};
-use ti_core::domain::combat::Unit;
 use ti_core::domain::map::{Dir, GridPos, MapTerrain};
 use ti_core::domain::selection::{Character, MapSlot};
-use ti_core::rules::battle::BattleSession;
 use ti_core::rules::build::{Bank, BuildErr, BuildManager};
 use ti_core::rules::cards_draw::CardPool;
+use ti_core::rules::force::{self, Force, ForceSide};
 use ti_core::rules::main_map::MapSession;
 use ti_core::rules::rng::GameRng;
 use ti_core::rules::saveload::SaveSlotV2;
 use ti_core::rules::selection::SelectionFlow;
+use ti_core::rules::territory::TerritoryRules;
 use ti_core::rules::trade::TradeLedger;
 
 /// 宿主跨域状态（对齐 `game_app.rs` 的金 + 卡牌暂存扣血通道）。
@@ -47,15 +47,6 @@ impl Host {
             CardEffectDef::Heal(n) => self.pending_damage = self.pending_damage.saturating_sub(*n),
             CardEffectDef::Move | CardEffectDef::Unknown => {}
         }
-    }
-
-    /// 忠实 `game_app.rs:1420-1425`：开战单位 = 基础 + 建造加成 − 卡牌暂存扣血，随后复位暂存。
-    fn battle_unit(&mut self, base: Unit, builder: &BuildManager) -> Unit {
-        let atk = base.atk.saturating_add(builder.build_atk_bonus());
-        let hp =
-            base.hp.saturating_add(builder.build_hp_bonus()).saturating_sub(self.pending_damage);
-        self.pending_damage = 0;
-        Unit { hp, atk }
     }
 }
 
@@ -153,23 +144,21 @@ fn run_random_session(b: &ti_core::data::Balance, rng: &mut GameRng, session: u3
     let reason = if hit_boss { "落到 BOSS 格" } else { "随机主动开战" };
     steps.push(format!("[3] 开战决策：fight={fight}（{reason}）"));
     if fight {
-        let seed = rng.next().unsigned_abs();
-        let unit = host.battle_unit(base_player, &builder);
-        assert!(
-            unit.hp <= base_player.hp.saturating_add(builder.build_hp_bonus()),
-            "开战 hp 超基础+加成"
-        );
-        let mut bs = BattleSession::new_with_cfg(b.combat.clone(), seed, unit, map_def.boss_tier);
-        let (_trace, winner, rounds) = bs.finish();
-        assert!(rounds <= b.combat.max_rounds, "会话 {session}：战斗超回合上限（不变式）");
+        // 兵力模型（S34.6 D5）：开战 = 攻方兵力 vs 守方（`boss_tier` 查 `boss_fort` 防御）一次性
+        // `force::resolve`，无 HP 回合 / 无随机；不变式 = 守方防御值域有限 + 结算确定性。
+        let rules = TerritoryRules::new(b);
+        let defense = rules
+            .defense_at("boss_fort", u8::try_from(map_def.boss_tier.max(1)).unwrap_or(u8::MAX));
+        let attacker = Force::new(20, 5); // 基础玩家兵力（会话不变式面，不依赖 HP 单位）
+        let res = force::resolve(attacker, Force::new(defense, defense), b.manpower);
         steps.push(format!(
-            "      战斗 seed={seed}：单位 atk={}（基础 {} + 建造 {}）、hp={}; {} 回合 → 胜者 {winner:?}",
-            unit.atk,
-            base_player.atk,
-            builder.build_atk_bonus(),
-            unit.hp,
-            rounds,
+            "      战斗（兵力模型）：攻方 20/5 vs 守方 {defense}/{defense}（boss_tier {}）→ 胜者 {:?}",
+            map_def.boss_tier, res.winner
         ));
+        assert!(
+            res.winner != ForceSide::Attacker || res.attacker_after.crew <= 20,
+            "攻方战后兵力不超初始"
+        );
     }
 
     // [4] 随机买卖（数量在 [0, 有效上限]，金不足被拒 = 状态不变）

@@ -9,7 +9,8 @@
 //! 差分测试参照，不是业务依据。
 
 #![allow(missing_docs)]
-pub mod battle;
+// `oracle/battle`（旧 HP 回合制差分基准 `oracle_battle_round`/`oracle_full_battle`）已删
+// （S34.6 D5 兵力模型迁移；无 reference_diff 消费方，纯死基准）。
 pub mod build;
 pub mod main_loop;
 pub mod main_map;

@@ -40,7 +40,7 @@ use std::fmt;
 
 use serde::Deserialize;
 
-use crate::domain::combat::{ItemEffect, Unit};
+use crate::domain::combat::Unit;
 
 /// 平衡数值表（编译期内联，保证 wasm 不依赖运行时文件系统）。
 pub(crate) const BALANCE_JSON: &str = include_str!("../../../../assets/data/balance.json");
@@ -209,8 +209,6 @@ pub struct CombatCfg {
     pub boss_tiers: Vec<BossTier>,
     /// 防御动作的反击减伤百分比（S27.7，`docs/business/combat.md` §战斗动作）。
     pub defend_reduction_pct: u32,
-    /// 战斗道具表（S27.7，`docs/business/combat.md` §道具表）。
-    pub items: Vec<CombatItemDef>,
     /// 战斗动效参数（S49.4 `balance.combat.anim`，CS-1 参数单源；缺省 = 代码回退）。
     pub anim: CombatAnimCfg,
 }
@@ -220,12 +218,6 @@ impl CombatCfg {
     #[must_use]
     pub fn boss(&self, tier: u32) -> Option<BossTier> {
         self.boss_tiers.iter().copied().find(|b| b.tier == tier)
-    }
-
-    /// 按 id 查道具（未命中 → `None`；`docs/business/combat.md` §道具表）。
-    #[must_use]
-    pub fn item(&self, id: &str) -> Option<&CombatItemDef> {
-        self.items.iter().find(|i| i.id == id)
     }
 
     /// 按 id 查道具动效（未命中 → `None`；S49.4 `balance.combat.anim.items[]`）。
@@ -299,21 +291,6 @@ impl Default for CombatAnimCfg {
             hp_yellow: "0xE8C0".into(),
         }
     }
-}
-
-/// 战斗道具条目（`balance.combat.items[]`，S27.7）。
-///
-/// 数值/名称/上限全在数据侧；`effect` 的**语义**在 [`crate::domain::combat::ItemEffect`]。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CombatItemDef {
-    /// 道具 id（`keg` / `medkit` / `rum` / `smoke`）。
-    pub id: String,
-    /// 文本 key（`combat.item.*`）。
-    pub name_key: String,
-    /// 携带上限（件）。
-    pub carry: u32,
-    /// 效果（规则词汇）。
-    pub effect: ItemEffect,
 }
 
 /// 贸易参数（`balance.trade`）。
@@ -984,28 +961,9 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
                 .map(|b| BossTier { tier: b.tier, hp: b.hp, atk: b.atk })
                 .collect(),
             defend_reduction_pct: raw.combat.defend_reduction_pct.min(100),
-            items: raw
-                .combat
-                .items
-                .into_iter()
-                .map(|i| {
-                    let effect = match i.effect.kind.as_str() {
-                        "damage" => ItemEffect::Damage(i.effect.value),
-                        "heal_pct" => ItemEffect::HealPct(i.effect.value),
-                        "atk_buff" => {
-                            ItemEffect::AtkBuff { pct: i.effect.value, rounds: i.effect.rounds }
-                        }
-                        "stagger" => ItemEffect::Stagger,
-                        other => {
-                            return Err(LoadError::Schema(format!(
-                                "combat.items[{}]: unknown effect `{other}`",
-                                i.id
-                            )));
-                        }
-                    };
-                    Ok(CombatItemDef { id: i.id, name_key: i.name_key, carry: i.carry, effect })
-                })
-                .collect::<Result<Vec<_>, LoadError>>()?,
+            // 战斗道具表（`combat.items[]`）已删（B-01：4 道具无获取路径 = 死内容，兵力模型
+            // S34.6 D5 无逐回合道具机制）；`anim.items` 道具动效表保留（渲染 `vs_anim_v4` 用，
+            // 但无道具逻辑消费 = 空表安全退化）。
             anim: {
                 // S49.4：`balance.combat.anim` → `CombatAnimCfg`（缺省 = default 回退）。
                 let a = &raw.combat.anim;

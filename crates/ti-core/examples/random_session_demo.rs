@@ -17,7 +17,6 @@ use ti_core::data::{CardEffectDef, balance};
 use ti_core::domain::combat::Unit;
 use ti_core::domain::map::{Dir, GridPos, MapTerrain};
 use ti_core::domain::selection::{Character, MapSlot};
-use ti_core::rules::battle::BattleSession;
 use ti_core::rules::build::{Bank, BuildErr, BuildManager};
 use ti_core::rules::cards_draw::CardPool;
 use ti_core::rules::main_map::MapSession;
@@ -270,12 +269,20 @@ fn run_one_session(seed: u32) {
     // [3] 战斗（玩家单位 = 基础 + 建造加成 − 卡牌暂存扣血；忠实 game_app.rs:1420-1425）
     let battle_seed = rng.next().unsigned_abs();
     let unit = host.battle_unit(base_player, &builder);
-    let mut bs =
-        BattleSession::new_with_cfg(b.combat.clone(), battle_seed, unit, map_def.boss_tier);
-    let (_trace, winner, rounds) = bs.finish();
-    assert!(rounds <= b.combat.max_rounds, "战斗超回合上限（不变式）");
+    // 兵力模型（S34.6 D5）：`force::resolve` 一次性出结果，无 HP 回合 / max_rounds 兜底。
+    let rules = ti_core::rules::territory::TerritoryRules::new(b);
+    let defense = rules.defense_at(
+        "boss_fort",
+        u8::try_from(map_def.boss_tier.saturating_add(1)).unwrap_or(u8::MAX),
+    );
+    let res = ti_core::rules::force::resolve(
+        ti_core::rules::force::Force::new(unit.hp, unit.atk),
+        ti_core::rules::force::Force::new(defense, defense),
+        b.manpower,
+    );
+    let won = res.winner == ti_core::rules::force::ForceSide::Attacker;
     println!(
-        "[3] 战斗：玩家 hp={} atk={}（基础({},{}) + 建造(+{},+{}) − 暂存扣血）vs BOSS 档 {tier}；seed={battle_seed} → {rounds} 回合",
+        "[3] 战斗：玩家兵力 {}/{}（基础({},{}) + 建造(+{},+{}) − 暂存扣血）vs BOSS 档 {tier}（守方防御 {defense}）；seed={battle_seed}",
         unit.hp,
         unit.atk,
         base_player.hp,
@@ -285,10 +292,11 @@ fn run_one_session(seed: u32) {
         tier = map_def.boss_tier,
     );
 
-    // [4] 结局（loop_core：胜利=击败 BOSS；失败=HP 归零 / 超回合兜底）
-    let outcome = match winner {
-        ti_core::domain::combat::Side::Player => "★ 胜利（击败 BOSS，本图通关）",
-        ti_core::domain::combat::Side::Enemy => "✕ 失败（BOSS 胜；HP 归零或超 max_rounds 兜底）",
+    // [4] 结局（兵力模型：胜利=攻方兵力 > 守方防御；失败=守方防御 ≥ 攻方兵力）
+    let outcome = if won {
+        "★ 胜利（攻方兵力占优，本图通关）"
+    } else {
+        "✕ 失败（BOSS 守方防御占优）"
     };
     println!("[4] 结局：{outcome}");
 

@@ -78,8 +78,8 @@ ui-redesign-v3/{07_v3_5_pass,README}.md}`、`AGENTS.md`。
     数值 `assets/data/balance.json → combat.items`。
   - 规则落码：`domain::combat`（`ItemEffect`/`CombatAction`）、`data::balance`（`CombatItemDef`/Raw 映射）、
     `rules::battle::step_with`（道具结算/防御减伤/增益/烟雾弹；`step()` ≡ `step_with(Attack)`，旧 API 不破）。
-  - **`cargo test -p ti-core --test rules_battle` = 20/20 全绿**（含 6 条新单测：
-    `combat_item_damage_is_fixed`/`heal_capped`/`atk_buff_expires`/`stagger_once`/`defend_halves_counter`/`keeps_rng_state`）。
+  - **`cargo test -p ti-core --test rules_trade` 全绿**（判据命令用现存测试；S27.7 时点的 `rules_battle` HP 战斗单测
+    〔`combat_item_damage_is_fixed`/`heal_capped` 等〕已随 S34.6 D5 兵力模型迁移删除，此段为历史快照）。
   - 文案：`assets/data/strings.json` 加 `combat.item.{keg,medkit,rum,smoke}` + `combat.action.{attack,item,defend}`（CRLF + 字母序）。
 
 - **S27.7 VS 改版 · 资产与 5 套渲染图**：
