@@ -59,6 +59,12 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 > 消费点 2026-11-19 全删（`host.rs::apply_card_effect` 改写 `seat_crew`，`mod.rs` 删
 > `card_state` 字段）。`progression.md` §卡牌事件 / `01_game_logic_overview.md` §4.2 同改口径
 > （卡牌金 = 加金；血/伤 = 增减人手，非 HP 暂存）。
+> **rules 层口径对齐（飞轮 R18，2026-11-19）**：app `host.rs::apply_card_effect` 改 `seat_crew`
+> 后，rules 层 `rules/cards.rs::apply_card` 仍写 `CardState.hp`（HP 暂存死通道）= 两条路径口径
+> 分裂（EXP-199 六面漏「rules 层」面）。R18 FIND 抓出 ⇒ `CardState` 加 `crew` 字段（删
+> `hp`/`hp_max`）+ `apply_card` `Damage`/`Heal` 写 `state.crew`（与 app `seat_crew` 同口径）+
+> doccheck2 第 52 项 `card-crew-alignment` 守门（防回归，EXP-200）。**EXP-199 六面扩七面 = +rules
+> 层 app↔rules 双侧一致**。
 > **`combat.player` 字段现状**：原「活数据字段」（卡牌 HP 钳制上限）消费点 2026-11-19 删后
 > = 无 live 消费（仅 `boss_tiers` 难度阶梯 + `force` 守方 `defender_unit` 仍用 `Unit` 结构体）；
 > 后续轮可评估整删 `combat.player`（不属本轮范围）。
