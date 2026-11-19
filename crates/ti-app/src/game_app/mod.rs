@@ -315,6 +315,11 @@ pub struct GameApp {
     /// S33.5 待确认的攻占选择（`Some((格序号, 守方席))` = 落**他人**领地格后玩家二选一：
     /// 主地图 `Confirm` = 攻占（进 VS 攻占战报），`Back` = 交过路费；再次摇骰 = 自动清除）。
     pub pending_siege: Option<(u32, SeatIdx)>,
+    /// A-06 待确认的**自己格**升级/领产出选择（`Some(格序号)` = 落**自己**领地格后玩家二选一，
+    /// `territory.md` §4「T 属于你 → 玩家可选 ①升级 ②领产出」；主地图 `Confirm` = 升级加固
+    /// （金足时），`Back` = 领取产出；金不足/满级时 `Confirm` 自动退化为领产出。
+    /// 旧实现落自己格**自动**升级/领产出（无选择权，违背规格「玩家可选」），A-06 修 = 给玩家选择。
+    pub pending_own: Option<u32>,
     /// S33.5 攻占战报视图（`Vs` 场景时有效；`assault` 是**一次性确定性结算**，非 HP 回合制，
     /// 所以不复用 [`BattleView`]——攻方舰队 vs 守方驻军+建筑防御，Attack 结算一次出结果）。
     pub siege_view: Option<SiegeView>,
@@ -569,6 +574,7 @@ impl GameApp {
             last_ai_toast: None,
             pending_dungeon: None,
             pending_siege: None,
+            pending_own: None,
             siege_view: None,
             seat_marks: Vec::new(),
             seat_ai_count: None,

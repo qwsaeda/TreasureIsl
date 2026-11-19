@@ -447,6 +447,110 @@ impl MapHost for GameApp {
         true
     }
 
+    /// A-06 确认升级（`pending_own` 在位时主地图 `Confirm`）：自己领地格升级加固（§4「玩家可选」①）。
+    /// 金足 = 升级（扣 `upgrade_cost`，`apply_upgrade` 提级）；金不足/满级 = 退化为领取产出
+    /// （`apply_collect`，金币守恒）。清待决。返回 `true` = 已消费。
+    fn confirm_own(&mut self) -> bool {
+        let Some(cell) = self.pending_own.take() else {
+            return false;
+        };
+        let Some(mut terr) = self.territory.take() else {
+            return false;
+        };
+        let Ok(b) = data::balance() else {
+            self.territory = Some(terr);
+            return false;
+        };
+        let rules = TerritoryRules::new(b);
+        let seat = self.turn_cycle.current;
+        // `isle` 取自有 String（非 `&str` 借 `terr`），避免 L 后续 `terr.apply_*`（&mut）与不可变借冲突。
+        let isle = terr.isle_cells_by_index(cell).unwrap_or("").to_string();
+        let level_before = terr.ownership(cell).map_or(1, |o| o.level.max(1));
+        let cost = rules.upgrade_cost_at(&isle, level_before);
+        let afford = self.seat_gold[seat as usize] >= cost;
+        if afford && terr.apply_upgrade(&rules, cell, seat) {
+            // 升级加固：扣费（守恒），提级（防御/产出/过路费同步提高，§4.1）。
+            self.seat_gold[seat as usize] -= cost;
+            let level_after = terr.ownership(cell).map_or(level_before, |o| o.level);
+            let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
+            let my_name = self.selection.character.map_or_else(String::new, |ch| {
+                crate::i18n::sget(&format!("role.name.{}", ch.label())).to_string()
+            });
+            self.territory = Some(terr);
+            self.toast(
+                i18n_fmt(
+                    "scene.main_map.toast.own_upgrade_fmt",
+                    &[
+                        &my_name as &dyn std::fmt::Display,
+                        &isle_name as &dyn std::fmt::Display,
+                        &level_after as &dyn std::fmt::Display,
+                    ],
+                ),
+                Some(Sfx::Press),
+            );
+        } else {
+            // 金不足 / 满级 ⇒ 退化领取产出（§4「玩家可选」②；`apply_collect` 产出入账自己，守恒）。
+            // 先局部 `terr` 算产出 + 文案（无 &mut self），再入账/回写/提示（&mut self），避免借用混排。
+            let rules2 = TerritoryRules::new(b);
+            let amt = terr.apply_collect(&rules2, cell, seat);
+            let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
+            let my_name = self.selection.character.map_or_else(String::new, |ch| {
+                crate::i18n::sget(&format!("role.name.{}", ch.label())).to_string()
+            });
+            self.credit_seat_gold(seat, amt, b);
+            self.territory = Some(terr);
+            self.toast(
+                i18n_fmt(
+                    "scene.main_map.toast.own_collect_fmt",
+                    &[
+                        &my_name as &dyn std::fmt::Display,
+                        &isle_name as &dyn std::fmt::Display,
+                        &amt as &dyn std::fmt::Display,
+                    ],
+                ),
+                Some(Sfx::Press),
+            );
+        }
+        true
+    }
+
+    /// A-06 直接领取产出（`pending_own` 在位时主地图 `Back`）：自己领地格领产出（§4「玩家可选」②）。
+    /// 金币守恒：`apply_collect` 产出入账自己。清待决。返回 `true` = 已消费。
+    fn abandon_own(&mut self) -> bool {
+        let Some(cell) = self.pending_own.take() else {
+            return false;
+        };
+        let Some(mut terr) = self.territory.take() else {
+            return false;
+        };
+        let Ok(b) = data::balance() else {
+            self.territory = Some(terr);
+            return false;
+        };
+        let rules = TerritoryRules::new(b);
+        let seat = self.turn_cycle.current;
+        let isle = terr.isle_cells_by_index(cell).unwrap_or("").to_string();
+        let amt = terr.apply_collect(&rules, cell, seat);
+        let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
+        let my_name = self.selection.character.map_or_else(String::new, |ch| {
+            crate::i18n::sget(&format!("role.name.{}", ch.label())).to_string()
+        });
+        self.credit_seat_gold(seat, amt, b);
+        self.territory = Some(terr);
+        self.toast(
+            i18n_fmt(
+                "scene.main_map.toast.own_collect_fmt",
+                &[
+                    &my_name as &dyn std::fmt::Display,
+                    &isle_name as &dyn std::fmt::Display,
+                    &amt as &dyn std::fmt::Display,
+                ],
+            ),
+            Some(Sfx::Press),
+        );
+        true
+    }
+
     /// S33.5 攻占战报快照（`Vs` 渲染层只读；`None` = 非攻占战）。
     fn siege_snapshot(&self) -> Option<SiegeSnapshot> {
         self.siege_view.as_ref().map(|v| SiegeSnapshot {

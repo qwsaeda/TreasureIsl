@@ -68,6 +68,12 @@ pub enum AssaultOutcome {
 /// - 用 [`force::resolve`]（确定性 VS + 双方必损）。
 /// - **胜**：`O = 攻方`，`L = 1`，重定驻军 `new_garrison`（从攻方战后舰队分出，守恒）。
 /// - **败**：攻方交**双倍过路费**（惩罚），守方驻军按战后剩余减员。
+///
+/// **前置契约（`territory.md` §4 三支分叉）**：本函数仅适用**他人格**（`own.owner = Some(o)`
+/// 且 `o != seat_idx`）。无主格走副本（`EnterDungeon`/`capture_cell`）、自己格走升级/驻军/领产出，
+/// 均不经本函数。生产调用方（`board.rs` AI `Siege` 分支经 `ai_policy_v2` 仅在他人格产生；
+/// `host.rs` `settle_siege` 的 `pending_siege` 待决格 = 落他人格时置）已保证；`debug_assert` 在
+/// 测试/开发期抓误用（A-08 防御性：无主/自格调 `assault` 语义错，须走对应分支）。
 #[must_use]
 pub fn assault(
     balance: &Balance,
@@ -80,6 +86,12 @@ pub fn assault(
     let rules = TerritoryRules::new(balance);
     let isle = terr.isle_cells_by_index(idx).unwrap_or("");
     let own = terr.ownership(idx).copied().unwrap_or(Ownership::unowned());
+    // A-08 前置契约：须为他人格（owner 有值且 ≠ 自己；无主格走副本、自己格走升级，均非法）。
+    // 生产调用方已保证；测试/开发期 `debug_assert` 抓误用。
+    debug_assert!(
+        matches!(own.owner, Some(o) if o != seat_idx),
+        "assault 仅适用他人格（§4 三支分叉）；无主格应走副本、自己格应走升级/驻军"
+    );
     let defense_units = rules.defense_at(isle, own.level.max(1));
     let defender = Force::new(own.garrison.saturating_add(defense_units), defense_units);
     let attacker = seat.fleet();

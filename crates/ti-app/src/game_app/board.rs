@@ -311,6 +311,7 @@ impl GameApp {
     pub fn spin_board(&mut self) -> Option<Turn> {
         self.pending_dungeon = None; // S28.6：新摇骰 = 旧副本入口失效（落格后按新落格重设）
         self.pending_siege = None; // S33.5：新摇骰 = 旧攻占选择失效（同上）
+        self.pending_own = None; // A-06：新摇骰 = 旧自己格升级/领产出选择失效（同上）
         // v3：热座交接未确认 ⇒ 不允许摇骰（§1 热座 + §1.2 隐藏信息）。
         if self.handoff_pending.is_some() {
             return None;
@@ -719,10 +720,9 @@ impl GameApp {
             return;
         };
         let cell = u32::try_from(sess.index()).unwrap_or(0);
-        let Some(mut terr) = self.territory.take() else {
+        let Some(terr) = self.territory.take() else {
             return;
         };
-        let rules = TerritoryRules::new(balance);
         let seat = self.turn_cycle.current;
         let my_name = self.selection.character.map_or_else(String::new, |ch| {
             crate::i18n::sget(&format!("role.name.{}", ch.label())).to_string()
@@ -757,43 +757,25 @@ impl GameApp {
                     Some(Sfx::Press),
                 );
             }
-            Some(owner) => {
-                // 自己 → 升级加固（金足）/ 产出领取（金不足或满级）（§4.1/§4.3）
-                let level_before = terr.ownership(cell).map_or(1, |o| o.level.max(1));
-                let cost = rules.upgrade_cost_at(isle, level_before);
-                let afford = self.seat_gold[owner as usize] >= cost;
-                // 先判金再应用（`apply_upgrade` 有状态变更，金不足不得先改账本）
-                if afford && terr.apply_upgrade(&rules, cell, owner) {
-                    self.seat_gold[owner as usize] =
-                        self.seat_gold[owner as usize].saturating_sub(cost);
-                    let level_after = terr.ownership(cell).map_or(level_before, |o| o.level);
-                    self.toast(
-                        i18n_fmt(
-                            "scene.main_map.toast.ai_upgrade_fmt",
-                            &[
-                                &my_name as &dyn std::fmt::Display,
-                                &isle_name as &dyn std::fmt::Display,
-                                &level_after as &dyn std::fmt::Display,
-                            ],
-                        ),
-                        Some(Sfx::Press),
-                    );
-                } else {
-                    let amt = terr.apply_collect(&rules, cell, owner);
-                    self.credit_seat_gold(owner, amt, balance);
-                    self.toast(
-                        i18n_fmt(
-                            "scene.main_map.toast.ai_collect_fmt",
-                            &[
-                                &my_name as &dyn std::fmt::Display,
-                                &isle_name as &dyn std::fmt::Display,
-                                &amt as &dyn std::fmt::Display,
-                            ],
-                        ),
-                        Some(Sfx::Press),
-                    );
-                }
+            Some(_owner) => {
+                // 自己 → A-06 修：玩家可选（§4「T 属于你 → 玩家可选 ①升级 ②领产出」），不自动。
+                // 置 `pending_own` 待决：主地图 `Confirm` = 升级加固（金足时；金不足/满级自动退化
+                // 为领产出），`Back` = 直接领取产出。选分支的结算在 `host.rs::confirm_own` /
+                // `abandon_own`（对齐 `pending_siege` 的 Confirm/Back 二选一模式）。
+                let level = terr.ownership(cell).map_or(1, |o| o.level.max(1));
                 self.territory = Some(terr);
+                self.pending_own = Some(cell);
+                self.toast(
+                    i18n_fmt(
+                        "scene.main_map.toast.own_choice_fmt",
+                        &[
+                            &my_name as &dyn std::fmt::Display,
+                            &isle_name as &dyn std::fmt::Display,
+                            &level as &dyn std::fmt::Display,
+                        ],
+                    ),
+                    Some(Sfx::Press),
+                );
             }
         }
     }

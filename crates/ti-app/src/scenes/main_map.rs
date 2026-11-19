@@ -654,15 +654,15 @@ impl Scene for MainMapScene {
                     host.enter(SceneKind::Index);
                     return true;
                 }
-                if host.confirm_siege() {
-                    true
-                } else {
+                // A-06 自己格 `Confirm` = 升级加固 / S33.5 他人格 `Confirm` = 攻占 / S28.6 无主格 `Confirm` = 进副本。
+                // 三者 `pending_*` 互斥（落格只置一个），`||` 短路消费首个在位者。
+                host.confirm_own() || host.confirm_siege() || {
                     host.confirm_dungeon();
                     false
                 }
             }
-            // S33.5：落他人领地格后的待决攻占，`Back` = 放弃攻占交过路费（`pending_siege` 在位）。
-            GameInput::Back => host.pay_siege_toll(),
+            // 落格待决的「返回」分支：A-06 自己格 `pending_own` = 领取产出；S33.5 他人格 `pending_siege` = 交过路费。
+            GameInput::Back => host.abandon_own() || host.pay_siege_toll(),
             _ => false,
         }
     }

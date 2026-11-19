@@ -16,6 +16,52 @@ fn enter_main_map(app: &mut GameApp) {
     assert_eq!(app.scene(), Scene::MainMap, "应进主地图");
 }
 
+/// A-06 玩家落**自己**领地格 = 玩家可选（§4「T 属于你 → 玩家可选 ①升级 ②领产出」），不自动。
+///
+/// 置 `pending_own` 待决：`confirm_own`（主地图 `Confirm`）= 升级加固（金足）；`abandon_own`
+/// （主地图 `Back`）= 领取产出（金币守恒：产出入账自己）。旧实现落自己格自动升级/领产出（无选择权）。
+#[test]
+fn own_landing_gives_player_choice() {
+    let mut app = GameApp::new(1080.0, 1920.0);
+    app.set_rng_seed(11);
+    enter_main_map(&mut app);
+    let me = app.turn_cycle.current;
+    // 让玩家占 harbour 首格（构造"自己格"）。
+    let cell = app
+        .territory
+        .as_ref()
+        .expect("领地账本")
+        .isle_cells("harbour")
+        .first()
+        .copied()
+        .expect("m01 有 harbour");
+    {
+        let mut seat = ti_core::rules::territory_v2::SeatState::new(1000, 30, 20, 0);
+        if let Some(terr) = app.territory.as_mut() {
+            let _ = ti_core::rules::territory_v2::capture_cell(&mut seat, terr, cell, me, 5);
+        }
+    }
+    // 摇骰直到落回自己格（`pending_own` 在位 = A-06 待决升级/领产出）。
+    let mut saw_own = false;
+    for _ in 0..80 {
+        app.handle(GameInput::Spin);
+        if app.pending_own.is_some() {
+            saw_own = true;
+            break;
+        }
+    }
+    assert!(saw_own, "玩家摇骰应落回自己领地格（`pending_own` 在位，A-06 玩家可选）");
+    let pending_cell = app.pending_own.expect("待决自己格应在位");
+    // 领取产出前记录自己金币（守恒基准）。
+    let gold_before = app.seat_gold[me as usize];
+    // 领产出（`Back` = abandon_own）：产出入账自己（金币守恒，gold 不减少）。
+    let consumed = app.abandon_own();
+    assert!(consumed, "abandon_own 应消费待决");
+    assert!(app.pending_own.is_none(), "领产出后待决应清");
+    assert!(app.seat_gold[me as usize] >= gold_before, "领产出 = 产出入账自己（金币守恒，不减少）");
+    let _ = pending_cell;
+}
+
 /// §6：玩家摇骰后 4 AI 自动连动；轮转回玩家席；领地账本/席位金币被真实变更。
 #[test]
 fn ai_turns_run_after_player_spin() {

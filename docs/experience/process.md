@@ -734,3 +734,8 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
   - `boss_tiers` 表**保留**（`defender_force` 用 `boss_tier+1` 查 `boss_fort` 防御 = 难度阶梯数据，非 HP 模型本身；`difficulty_ladder` 测试依赖）。
 - **判定**：`Unit`/`Side`/`defender_unit`/`CombatCfg.player` 保留（`CombatCfg.player: Option<Unit>` 数据字段仍活 + `defender_unit` 守军强度口径仍被注释引用；纯死代码清理不强行删活数据字段）。
 - **教训**：迁移类重构（HP→兵力）须**同步清**「实现 + 数据 + i18n + 资产 + 测试 + example + 文档」，否则残留成死代码长期挂编译面；双盲对抗 B 侧抓的"死内容"（B-01/B-05）= 迁移未清残留的典型，须系统删除面摸排（subagent 摸排 + 主线程逐层验证）而非逐点删。
+
+#### 双盲对抗设计缺陷处置（A-06/A-08 落地 + B-03 待裁，2026-11-19）
+- **A-06（玩家落自己格无选择权，规格 §4「玩家可选 ①升级 ②领产出」）= 已修**：落自己格从「自动升级/领产出」改为置 `pending_own` 待决 + 提示二选一，主地图 `Confirm`=`confirm_own`（升级加固，金不足/满级退化领产出）/`Back`=`abandon_own`（领产出），对齐 `pending_siege`/`pending_dungeon` 的玩家选择权模式。金币守恒：升级扣费/领产出入账自己（`credit_seat_gold`）。补 e2e `own_landing_gives_player_choice`。规格 §4 第三支「增减驻军」未做（独立交互，留后续轮）。
+- **A-08（`assault` 无格属前置校验，无主格/自格调攻占语义错）= 已修（防御性）**：`assault` 加 `debug_assert!(matches!(own.owner, Some(o) if o != seat_idx))` + 文档前置契约（仅适用他人格，生产调用方 `ai_policy_v2` 他人格产生 `Siege` + `pending_siege` 落他人格已保证；无主走副本、自己走升级）。`debug_assert` 零生产成本，测试/开发期抓误用；不改 `AssaultOutcome`（Win/Loss 两态不变，避免改枚举传染）。
+- **B-03（雪崩：先占者收入优势 ~7.5×，20 图 campaign ~5 图后无意义，缺 catch-up）= 待人裁决**：核实无 catch-up 机制（领地收入 `production_base` 45~100/圈 + `lap_bonus` 150 + `first_capture_bonus` 150 累积优势真实）。**大富翁类游戏固有特性**（Monopoly 本就先占者胜），加 catch-up（落后者加成）= 改玩法平衡取舍，非 bug，须用户拍板方向（加落后者加成 / 缩短 campaign / 保持现状接受雪崩）。非机械可判，不自决。

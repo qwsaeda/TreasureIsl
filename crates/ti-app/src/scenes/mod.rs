@@ -591,6 +591,16 @@ pub trait MapHost {
         false
     }
 
+    /// A-06 确认升级（`pending_own` 在位：主地图 `Confirm` 升级加固，金不足退化领产出；返回 `true` = 已消费；缺省 `false`）。
+    fn confirm_own(&mut self) -> bool {
+        false
+    }
+
+    /// A-06 直接领取产出（`pending_own` 在位：主地图 `Back` 领产出；返回 `true` = 已消费；缺省 `false`）。
+    fn abandon_own(&mut self) -> bool {
+        false
+    }
+
     /// S33.5 攻占战报快照（`Vs` 场景时有效；`None` = 非攻占战）。
     fn siege_snapshot(&self) -> Option<SiegeSnapshot> {
         None
