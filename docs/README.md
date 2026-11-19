@@ -40,6 +40,7 @@
 | [`git.md`](git.md) | 推送规范（远端 origin/分支模型/推送规则/commit 格式/推送检查清单） |
 | [`check_ledger_reality.md`](check_ledger_reality.md) | 防虚报：台账 `verified` ↔ `evidence` ↔ 代码符号三方对账（EXP-058；gate 第 23 项） |
 | [`plan-archive.md`](plan-archive.md) | **历史阶段计划归档索引**（S0~S8 逐阶段摘要 + 原文件位置；查背景用，非开发依据） |
+| [`audit/module_responsibility_audit.md`](audit/module_responsibility_audit.md) | **模块/玩法/逻辑审计（职责分离 + 边界）**：9 crate 职责分离矩阵 + 玩法逻辑分层图（数据→规则→会话→场景→渲染）+ 包↔系统↔场景映射 + 边界漂移 findings（packages.yaml P1 已删 battle.rs / 07_ui_flow 176×220 旧口径）；mermaid 图文，只登记 findings 不复述规则（规则引单一事实源） |
 
 ### 标准化流程（`docs/process/`，不依赖逆向产物）
 

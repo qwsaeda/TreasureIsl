@@ -31,14 +31,14 @@ packages:
     status: draft
     depends_on: [D]
     files:
-      - crates/ti-core/src/rules/battle.rs
+      # 战斗域现行 = 兵力模型 `force.rs`（S34.6 D5 迁移 + 2026-11-19 HP 本体删除；旧 `rules/battle.rs` 已删）。
+      - crates/ti-core/src/rules/force.rs
       - crates/ti-core/src/domain/combat.rs
       # 会话 demo（S15.1/S5.1 可玩演示，P1 持有；勿在其他包重复登记，第 12 轮审计 Q013）
       - crates/ti-core/examples/random_session_demo.rs
       - crates/ti-core/examples/full_run_demo.rs
     tests:
-      - crates/ti-core/tests/rules_battle.rs
-      - crates/ti-core/tests/exhaust_combat.rs
+      # 旧 HP 战斗测试 `rules_battle`/`exhaust_combat` 已随 S34.6 D5 兵力模型删除（2026-11-19）。
       # 跨域闭环集成测试（选角→地图→战斗→贸易建造→存档，选择全由 seeded RNG 随机穷举、
       # 逐步断言业务不变式）。因含战斗高潮归 P1 唯一持有（白名单两两交集须为 ∅，勿在 P2–P5 重复登记）。
       - crates/ti-core/tests/exhaust_random_session.rs

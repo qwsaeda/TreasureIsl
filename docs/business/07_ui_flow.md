@@ -65,7 +65,7 @@
 | `Index` | 确认 | 菜单项 0..=5 → 见 §1 |
 | `SelectRole`/`SelectMap` | ↑/←、↓/→ | `Prev`/`Next` |
 | `SelectRole`/`SelectMap` | 确认、返回 | `Confirm`/`Back` |
-| `MainMap` | ↑/↓/←/→ | `Walk(North/South/West/East)` |
+| `MainMap` | 摇骰 | `Spin`（S19.1 起方向键自由移动已删，主地图移动只留摇骰；领地/落格见 territory.md §4）|
 | `MainMap` | Shift+↑/↓ | 切换选中商品与选中建筑 |
 | `MainMap` | T / Y / B | `TradeBuy`/`TradeSell`/`Build`（作用在当前选中项） |
 | `MainMap` | 据点键 | `Landmark(6)` |
@@ -88,7 +88,7 @@
 
 **坐标约定（硬规则）**
 
-1. 表现层一切坐标都是 **176×220 逻辑坐标**；屏幕坐标由
+1. 表现层一切坐标都是 **1080×1920 逻辑坐标**（S18 起现行口径；旧 176×220 为 legacy 像素分辨率，已废弃）；屏幕坐标由
    `Viewport::screen_to_logical` 反变换后再进业务层；
 2. 主地图点按**必须**走等距投影逆变换（与渲染同一坐标系），
    公式与 [`progression.md`](progression.md) §地图结构一致；渲染与触摸用两套坐标系 = 界错乱（S10.1）；
@@ -107,7 +107,7 @@
 
 | # | 约束 | 理由 |
 |---|---|---|
-| 1 | 逻辑分辨率固定 176×220，缩放只改呈现不改逻辑 | 三端坐标一致，P4-2 互逆不变式 |
+| 1 | 逻辑分辨率固定 1080×1920（S18 起现行；旧 176×220 legacy 已废弃），缩放只改呈现不改逻辑 | 三端坐标一致，P4-2 互逆不变式 |
 | 2 | 滤波 Nearest/Linear 由设置切换，坐标换算不变 | 画质切换不得改变判定位置 |
 | 3 | 等距朝向由 `iso_y = 16*(row + grid_w - 1 - col)` 决定 | 上下颠倒会让人以为走反方向 |
 | 4 | 场景资源键 = `SceneKind::asset_name()`（`Intro` 复用 `index.Map`，`Exit` 无资源） | HD 注入按名寻址，键必须唯一 |
