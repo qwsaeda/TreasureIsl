@@ -42,17 +42,6 @@ pub const HERO_BACK: &str = "ui/hero_back.png";
 /// 敌方立绘（正面船长）。
 pub const BOSS_CAPTAIN: &str = "ui/boss_captain.png";
 
-/// 战斗动作（业务规则见 `docs/business/combat.md` §战斗动作）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DuelAction {
-    /// 攻击（走 `rules::battle::step_with` 的 Attack 分支）。
-    Attack,
-    /// 防御（减伤，见 `balance.combat.defend_reduction_pct`）。
-    Defend,
-    /// 使用道具（4 道具见 `balance.combat.items`）。
-    Item,
-}
-
 /// 舞台阶段（动效状态机）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DuelPhase {

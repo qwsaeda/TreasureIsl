@@ -6,6 +6,11 @@
 //!   其字节布局须从 S3 存档逻辑 + oracle 反推，字段表待 S3.10 落地。
 //!
 //! 本模块交付：可往返的设置记录结构 + 版本化存档封套（SaveCodec）骨架。
+//!
+//! **工具面（B 收窄 2026-11，`docs/audit/module_responsibility_audit.md` §6.4）**：
+//! 存档现行走 JSON v5（`ti-core::rules::saveload_json` + `persistence.md`），运行时 0 处读/写
+//! 原版 `.sav`/`.settings.dat` 二进制；本模块仅 `ti-tools`（逆向参照 + roundtrip 测试）消费，
+//! 非发货运行时路径。`ti-formats` 收窄到逆向工具面后，此模块即「工具/逆向参照」定位。
 
 use crate::error::{Error, ParseKind, Result};
 

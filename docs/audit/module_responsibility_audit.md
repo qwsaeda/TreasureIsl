@@ -257,6 +257,68 @@ stateDiagram-v2
    - B = **收窄到逆向工具面**（删发货休眠解包链 + save 退工具 + 死模块清理，`ti-formats` 退成纯逆向/工具 crate）。
    判据 = 「发货是否要带原版 pak 高清资产」（若否 = B 可行；若可能 = A 保留休眠链）。
 
+**B 已执行（2026-11-19 用户拍板收窄到逆向工具面）**：
+- **native 喂原版 pak 段已删**（`treasure_bevy.rs` `load_resources` 的 `set_atlas`/`set_terrain`
+  原版 pak 字节解包）：解出的 `atlas`/`terrain_atlas` 在场景渲染 0 blit（现行主链 = PNG 数据管线
+  + HD pack），喂 pak 字节只是休眠回退路径；删后 0 视觉变化（`atlas`/`terrain_atlas` 字段保留——
+  HD pack `load_hd_pack_from_dir` 真喂 RGBA，调试 bin `element-dump`/`sprite-step` 独立 `SpriteAtlas::new` 真用）。
+- **`save.rs` 退工具面**（顶部注释标注：存档走 JSON v5，运行时 0 用，仅 `ti-tools` 逆向参照消费）。
+- **Android 解包链保留**（`android_shell.rs` 喂 `assets/ui.pak` = APK 真带 pak，Android 态活跃，
+  与 native/wasm 不同）；**6 内部基础设施模块保留**（`error`/`field`/`ini`/`ids`/`resource_names`/
+  `macros` 是 `define_format!` + 各格式内部依赖，非死代码）。
+
+---
+
+## 7. 第一性模块功能审计（从代码实际调用面，非文档声明）
+
+> **方法**：不参考「文档说模块干什么」，只查**代码里谁真 import / 调用谁**（跨 crate 边 + 模块内
+> pub 真消费面），从第一性原理判定每个模块的真实功能 + 死面 + 漂移。本节 findings 均已修复。
+
+### 7.1 跨 crate 调用边（谁真用谁，代码 ground truth）
+
+| crate | 被谁 import（运行时） | 中心度 |
+|---|---|---|
+| `ti-core` | ti-app + ti-engine + examples | **最中心**（71 文件） |
+| `ti-app` | ti-engine | 组装层，被壳消费 |
+| `ti-formats` | ti-app + ti-platform + ti-tools | 资产解包（B 收窄后 = 逆向工具面 + Android） |
+| `ti-render` | ti-app + ti-engine + ti-platform | 渲染框架（横向共享） |
+| `ti-platform` | ti-app + ti-engine + ti-tools | 平台抽象 |
+| `ti-devmeta` | ti-console + ti-tools | 管理链共享层 |
+| `ti-tools` / `ti-console` | 仅自身/tests | 工具/管理 bin 终点 |
+
+### 7.2 ti-core::rules 22 模块真用面（外部运行时调用文件数）
+
+**全部 22 模块均有真用面**（无死模块）：`board`(7) / `build`(5) / `progression`(6) / `main_map`(4) /
+`trade`(4) / `territory`(4) / `territory_v2`(3) / `selection`(4) / `cards`(3) / `boat`(4) / `force`(2) /
+`messages`(4) / `rng`(4) / `main_loop`(2) / `saveload`(1) / `saveload_json`(1) / `cards_draw`(1) /
+`events`(被 data 层) / `menu`(被测试+data) / `merchant`(被 data) / `render`(自身)。**0 死模块**——
+「0 外部调用」的模块（events/menu/merchant/render/saveload_json）各有消费面（data 层 / 测试 / 自身），
+非死代码。
+
+### 7.3 战斗模型双类型并存判定（第一性核心发现）
+
+`rules/force.rs`（兵力模型：`Force`/`ForceSide`/`ForceResult` + `resolve`）= **现行战斗**；
+`domain/combat.rs`（`Unit`/`Side`，`hp`/`atk` 字段）= **数据载体**（非旧 HP 血条）——
+`defender_unit()`（territory.rs:585）用 `Unit.hp`=守军人手、`Unit.atk`=武器数承载兵力，经
+`force::resolve` 一次性结算。`combat::Unit` 真被 data/mod.rs:951（构造）/ territory.rs（守军）/
+saveload.rs（存档 hp 字段）消费，**非死**，但头注仍描述「`rules::battle::BattleSession` 回合推进」
+= 旧 HP 模型漂移（已修，§7.4）。
+
+### 7.4 死代码 / 注释漂移 findings（本轮已修）
+
+| # | 位置 | 第一性判定 | 处置 |
+|---|---|---|---|
+| **M-01** | `vs_duel.rs::DuelAction`（Attack/Defend/Item） | **死枚举**：全仓 0 消费（旧 HP 动作残骸，随 battle 删除；vs_duel 其余 `DuelPhase`/`trigger_strike`/`animate_stage` 全活） | **删** |
+| **M-02** | `combat.rs` 头注（提 `rules::battle::BattleSession` 回合推进） | 注释漂移（battle 已删，现行 `force::resolve`） | **修注释** |
+| **M-03** | `territory.rs`（口径同 `rules::battle` / `BattleSession::new_with_enemy` 注入 / 守军 HP/ATK） | 注释漂移（旧 HP 措辞） | **修注释**（兵力口径） |
+| **M-04** | `boat.rs`（叠加 `rules::battle::CombatBonus`） | 注释漂移（CombatBonus 已删） | **修注释**（经 force 结算） |
+| **M-05** | `chrome.rs`（环形取整 `rules::battle` 同口径） | 注释漂移 | **修注释**（force 数值口径） |
+| **M-06** | `treasure_bevy.rs` native 喂原版 pak 段 | 休眠路径（解包结果渲染 0 blit，B 收窄） | **删**（§6.4） |
+
+**结论**：ti-core 模块层**无死模块**（22 rules 全活）；死面集中在**注释残留**（5 处提已删 `rules::battle`）
++ **1 个死枚举**（`DuelAction`）——均本轮修。战斗口径统一 = `force::resolve`（兵力模型），
+`combat::Unit` 降级为兵力数据载体（非旧 HP 血条语义）。
+
 ---
 
 ## 附录：单一事实源路由（本审计引用但不复述）

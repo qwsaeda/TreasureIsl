@@ -691,7 +691,7 @@ pub fn ring_geom(layout: &data::SceneLayout) -> RingGeom {
     }
 }
 
-/// 环形坐标取整（f64 → i32；钳制到 ±2.1e7 后转换，`rules::battle` 同口径的局部 allow）。
+/// 环形坐标取整（f64 → i32；钳制到 ±2.1e7 后转换，同 `rules::force` 数值口径的局部 allow）。
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn round_coord(value: f64) -> i32 {
     i32::try_from(value.round().clamp(-21_474_836.0, 21_474_836.0) as i64).unwrap_or(0)

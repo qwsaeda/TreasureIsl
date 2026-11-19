@@ -11,7 +11,7 @@
 //! - **货舱容量 = 单次贸易数量上限**：`effective = min(goods.qty_max, cargo)`，
 //!   钳制落在 [`crate::rules::trade::TradeLedger`]（`set_cargo_cap`）；
 //! - **战斗加成**：`atk`/`hp` 是**累计值**（直接加，不经 `× level`），
-//!   与建筑加成叠加（[`crate::rules::battle::CombatBonus`]）；
+//!   与建筑加成叠加（经 `rules::force` 兵力模型一次性结算；旧 `rules::battle::CombatBonus` 已删）；
 //! - 纯逻辑、零 IO、确定性（同输入同输出）；数值不写死在 Rust（全部来自
 //!   [`crate::data::BoatCfg`]）。
 

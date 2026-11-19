@@ -1,7 +1,7 @@
 //! 战斗域类型（业务文档：`docs/business/combat.md`）。
 //!
-//! 只放**类型定义与纯查询**，不含回合推进（战斗推进在 `rules::battle::BattleSession`，
-//! 数值全部从 `balance.combat` 注入）。
+//! 只放**类型定义与纯查询**，不含回合推进（现行战斗 = `rules::force::resolve` 一次性兵力
+//! 结算；旧 HP 回合制 `BattleSession` 已删，数值全部从 `balance.combat` 注入）。
 
 /// 战斗单位（玩家棋子或 BOSS）。
 ///

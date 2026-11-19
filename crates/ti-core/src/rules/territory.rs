@@ -354,7 +354,7 @@ pub enum SiegeOutcome {
 }
 
 /// 公式族四舍五入取整（非负有限值钳制 `u32::MAX`；clippy pedantic 的 f64 转整在此统一
-/// `allow`，口径同 `rules::battle` `cast_atk_base`）。
+/// `allow`，口径同 `rules::force` 数值合成）。
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn round_to_u32(value: f64) -> u32 {
     let value = value.round();
@@ -578,9 +578,10 @@ pub trait TerritoryApply {
 }
 
 /// 副本 / 攻占守军单位（`territory.md` §9：副本守军战 / 攻占战 / BOSS 战共用同一战斗模型；
-/// 守军 HP = [`TerritoryRules::defense_at`]，ATK = 守军强度 × `dungeon_attack_coef`）。
+/// 守军人手 = [`TerritoryRules::defense_at`]，武器数 = 守军强度 × `dungeon_attack_coef`）。
 impl TerritoryRules<'_> {
-    /// 守军 [`Unit`](crate::domain::combat::Unit)（战斗层 `BattleSession::new_with_enemy` 注入）。
+    /// 守军 [`Unit`](crate::domain::combat::Unit)（兵力模型数据载体：`Unit.hp`=守军人手、`Unit.atk`=武器数，
+    /// 经 `rules::force::resolve` 一次性结算；旧 HP 回合制 `BattleSession` 已删）。
     #[must_use]
     pub fn defender_unit(&self, isle: &str, level: u8) -> crate::domain::combat::Unit {
         let defense = self.defense_at(isle, level);

@@ -1804,12 +1804,11 @@ fn load_resources(game: &mut GameApp) {
     if let (Some(font), Some(charset)) = (read_local("GoldLand.Fnt"), read_local("font.dat")) {
         game.shell_mut().set_font(parse_font_bytes(&font, &charset));
     }
-    if let Some(ui_pak) = read_local("ui.pak") {
-        game.set_atlas(&ui_pak);
-    }
-    if let (Some(pak), Some(map)) = (read_local("glmap_m01.pak"), read_local("glmapm01.Map")) {
-        game.set_terrain(&pak, &map, "glmapm01.Map");
-    }
+    // B 收窄（2026-11）：原版 pak 字节解包（`set_atlas`/`set_terrain`）发货态休眠已删——
+    // 解出的 atlas/terrain_atlas 在场景渲染 0 blit（现行主链 = PNG 数据管线 + HD pack），
+    // 喂 pak 字节只是给调试/快照留的回退路径。HD pack（`assets_hd_pack`）喂 atlas 的
+    // `load_hd_pack_from_dir` 仍保留（见下）。`ti-formats` 退到逆向工具面（save 退工具 +
+    // 解包器仅调试 bin 用），见 `docs/audit/module_responsibility_audit.md` §6.4。
     {
         let hd_dir = repo_root().join("assets_hd_pack").join("1x");
         if hd_dir.is_dir() {
