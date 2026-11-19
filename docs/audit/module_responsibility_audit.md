@@ -65,7 +65,7 @@ flowchart TD
 
 | crate | 负责 | 不碰（边界红线） |
 |---|---|---|
-| **ti-formats** | 原版二进制资源解析/序列化（lpk/PCX/.Map/INI/save），0 未知字节 + roundtrip 逐字节 | 玩法/渲染/平台 IO；叶子 crate 0 依赖 |
+| **ti-formats** | 原版二进制资源解析/序列化（lpk/PCX/.Map/INI/save），0 未知字节 + roundtrip 逐字节 | 玩法/渲染/平台 IO；叶子 crate 0 依赖。⚠️ **发货态休眠**（见 §1.2）：解析器本体保留但发货产物不喂原版 pak |
 | **ti-core** | 玩法数值/规则/状态机（`rules/`）+ 业务类型（`domain/`）+ 数据表加载（`data/`）+ 逆向差分基准（`oracle/`） | 任何平台/IO 后端；只依赖 `ti-formats`，可无窗口跑差分/回归 |
 | **ti-platform** | 平台能力 trait（gfx/input/audio/storage/clock）+ 纯计算内核 | 玩法数值（全在 ti-core）；真实上屏（Bevy 壳承担） |
 | **ti-render** | 纯渲染框架：Canvas/drawlist/theme/font/framebuffer，**零游戏语义** | 场景名/角色/战斗等游戏概念；z-order 层枚举（层序权威在 ti-app `chrome`，契约 09） |
@@ -74,6 +74,25 @@ flowchart TD
 | **ti-tools** | 13 bin：门禁执行体（doccheck/doccheck2）+ 资产构建 + 逆向工具 | 游戏运行时；依赖 ti-formats/ti-platform/ti-devmeta，不依赖 ti-core/ti-app/ti-engine |
 | **ti-devmeta** | ledger 解析 + 最小 HTTP（纯 std） | 任何游戏逻辑；被 ti-tools/ti-console 共享 |
 | **ti-console** | 开发管理平台（看板/门禁/测试运行/审计/内容运营向导） | 游戏运行时（0 游戏依赖，双向解耦） |
+
+---
+
+### 1.2 ti-formats 与原版关系审计（发货态休眠）
+
+**关键事实**（代码 + 构建 ground truth，2026-11 审计）：`ti-formats` 解析的原版 `.pak`
+（`ui.pak`/`glmap_m0*.pak`/`glpics.pak`）**现只在 `legacy/data/`（逆向归档），不进发货产物**——
+发货（native/wasm）实际 UI 资产 = `assets/ui/*.png`（PNG 数据管线：`ui_assets.py` 生图 +
+`ui_manifest.json` 登记 + `scenes.json` 版面），**原版 pak 不参与发货渲染**。
+
+| 面 | 现状 | 与原版关系 |
+|---|---|---|
+| 运行时资产解包（`lucency`/`pcx`/`font`/`terrain`） | 代码在（`sprite_atlas`/`terrain_atlas`/`menu_shell`），但发货**不喂 pak 字节**，`set_atlas`/`set_terrain` 解析失败保持 `None` → 渲染**退回占位网格**（不黑屏） | 解包器为原版 pak 写，发货态**休眠**（主链 = PNG 数据管线） |
+| 存档二进制（`save.rs`） | 运行时 0 处读/写，存档走 **JSON v5**（`rules/saveload_json` + `persistence.md`） | 纯逆向参照 |
+| 工具/逆向（`unpak`/`map2json`/`controls` + 调试 bin `element-dump`/`sprite-step`/`render-png`） | 读 `legacy/data/*.pak` 做逆向导出/像素快照 | **真用原版**（唯一活跃面） |
+| 0 直接消费模块（`ids`/`ini`/`resource_names`/`field`/`error`/`macros`） | 被 `define_format!` 宏内部用或真死 | 待核（非宏内部用 = 死代码） |
+
+**判定**：`ti-formats` 本体职责（解析原版二进制）**已与发货运行时脱钩**——原版 pak 不进产物，
+解包路径在发货态休眠。它**仍有独立存在必要**（①逆向工具链真读 `legacy/data/`；②若将来要发货带原版高清资产可重新喂 pak 激活；③`legacy/exe` 逆向参照面），但**有模块级收窄空间**（`save` 退工具面 + 6 个 0 消费死模块待核）——见 §6.4 后续项。
 
 ---
 
@@ -224,6 +243,19 @@ stateDiagram-v2
 - HP 本体残留 → 彻底删除（`rules/battle.rs`/`combat.items`/3 测试/3 example/oracle）
 - 玩家自己格无选择权 → `pending_own` 待决 + 玩家可选（A-06）
 - `assault` 无格属校验 → `debug_assert` 前置契约（A-08）
+
+### 6.4 后续项：ti-formats 模块级收窄（非本轮必做，须用户拍板）
+
+审计发现 `ti-formats` **发货态休眠**（§1.2）：原版 pak 不进发货产物，解包路径发货态退回占位，
+真用面仅剩逆向工具链。后续可做（按价值降序，须确认「是否要保留发货带原版高清资产」方向后定）：
+
+1. **死模块清理**：核 6 个 0 直接消费模块（`ids`/`ini`/`resource_names`/`field`/`error`/`macros`）
+   是否被 `define_format!` 宏内部用（grep 宏展开）→ 真死代码删除（须过 `check_hardcode`/占位门禁）。
+2. **`save.rs` 退工具面**：存档已走 JSON v5，`save.rs` 运行时 0 用 → 标注「仅工具/逆向参照」或移入 ti-tools。
+3. **方向二选一**（用户拍板）：
+   - A = **保留全模块 + 发货态休眠**（现状；万一将来要发货带原版高清资产可重新喂 pak 激活，零改动）；
+   - B = **收窄到逆向工具面**（删发货休眠解包链 + save 退工具 + 死模块清理，`ti-formats` 退成纯逆向/工具 crate）。
+   判据 = 「发货是否要带原版 pak 高清资产」（若否 = B 可行；若可能 = A 保留休眠链）。
 
 ---
 
