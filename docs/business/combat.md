@@ -3,7 +3,7 @@
 > 2026-10-30 业务逻辑大改（v2，用户定案）：战斗从「HP 回合制（攻击/道具/防御 + 随机伤害）」
 > 改为**兵力模型（人手 + 武器，确定性 VS + 双方必损 + 自动动效）**。
 > 数值单一事实源 = `assets/data/balance.json → combat`（兵力段新增）；
-> 规则实现 = `rules::battle` 兵力模型；领地/攻占接线 = [`territory.md`](territory.md) §4。
+> 规则实现 = `rules::force` 兵力模型（`rules/battle.rs` 旧 HP 回合制已删 S34.6 D5）；领地/攻占接线 = [`territory.md`](territory.md) §4。
 
 ## 设计意图
 

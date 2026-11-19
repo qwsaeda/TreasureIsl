@@ -1,14 +1,27 @@
 # 战斗系统实现规格
 
-> ⚠️ **历史实现规格**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 = `00_index.md`（业务 → `../business/00_index.md`，流程 → `../process/00_index.md`，数值 → `../assets/data/*.json`）。仅作背景参考，不作为验收基准。
+> ⚠️ **历史实现规格（已废弃）**：本文属 `docs/impl/`（S3 时期实现手册）；当前开发依据 =
+> `00_index.md`（业务 → `../business/00_index.md`，数值 → `../assets/data/balance.json`）。仅作逆向背景参考，**不作验收基准**。
+>
+> **正文整篇描述已删除的 HP 回合制**（`rules::battle.rs` / `BattleSession` / `step_with` / 4 道具 /
+> 逐回合伤害）—— S34.6 D5（2026-11）战斗已迁移到**兵力模型**（`rules::force::resolve` 一次性结算，
+> 无回合、无 HP 血条、无道具）；`rules/battle.rs` + `oracle/battle.rs` 已删。**现行战斗以
+> [`../business/combat.md`](../business/combat.md) §兵力模型 + `rules/force.rs` 为准**。下文 §1~§4 的
+> `Unit`/`BattleSession`/回合制流程仅作逆向历史，勿用于实现。
 
 本文档是战斗系统的完整实现规格，实现者无需阅读其他文档即可写出正确的战斗逻辑代码。
 
 > 事实来源：`docs/business/combat.md`（伤害模型/胜负判定节）+ `legacy/docs/design/constants.md` §4 + `legacy/docs/facts/exe.md`。
+> **（注意：上列 combat.md 现行为兵力模型，本 impl 正文 HP 口径已失效。）**
 
 ---
 
 ## 1. 类型定义
+
+> ⚠️ **已删（S34.6 D5）**：下文 `Unit`/`BattleSession`（HP 回合制 + `player_hp`/`player_atk` 血条字段）
+> 随 `rules/battle.rs` 删除。现行战斗类型 = `rules::force` 的 `Force`/`ForceSide`/`ForceResult`
+> （人手 + 武器，无 HP 血条）；`domain::combat::Unit` 降级为兵力数据载体（`hp`=守军人手、`atk`=武器数）。
+> 本节仅作逆向历史，勿用于实现。
 
 > S8.3.a 起 `rules::battle.rs` 数值走 `CombatCfg` + `GameRng`（battle.rs:30），
 > 本结构（`seed/player:Unit/enemy:Unit/round/outcome`）为 oracle 占位。
@@ -107,6 +120,10 @@ pub fn damage(seed: u32, atk: u32) -> u32 {
 ---
 
 ## 4. 回合制流程
+
+> ⚠️ **已删（S34.6 D5）**：回合制战斗（逐回合 player/enemy 行动 + 道具 + HP 血条）随 `rules/battle.rs`
+> 删除。现行 = `rules::force::resolve` **一次性**兵力结算（无回合、无道具、无血条，双方必损出胜负）。
+> 本节仅作逆向历史。
 
 每回合双方各行动一次，**玩家先手**：
 
