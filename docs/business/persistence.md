@@ -28,7 +28,7 @@
   "hp": 85,
   "buildings": ["Castle", "Bank"],     // v4 起走 seats[].buildings（保留 v3 兼容）
   "goods": [ { "id": 1, "qty": 5 } ],
-  "rng_seed": 0,                 // 复现关键：固定默认种子（存时间戳会破坏可复现性）
+  "rng_seed": 42,                // 复现关键：固定默认种子 = `DEFAULT_RNG_SEED`（存时间戳会破坏可复现性）
   "rng_steps": 0,                // RNG 已消费 next_u64 次数
   "bank": 300,
   "unlocked_maps": ["m01", "m02"],
@@ -45,9 +45,15 @@
   （`version=2`、`bank=0`、`rng_seed=0`（固定默认种子，保证可复现，不存时间戳））；
 - 迁移函数纯函数、幂等、可单测（`tests/save_migration.rs`，已存在）；
   注：business 可测规则单测（`save_*` 等）待 S8.3.d 落地。
-- app 侧存档槽（`rules::saveload::SaveSlotV5`，JSON v5 schema）：v3 起 `unlocked_maps: Vec<String>`；
-  S15.2 时代的 `unlocked_mask: u8`（逐图推进位，bit 0/1/2 = m01/m02/m03 已解锁，bit 3 = CLEARED 通关位）
-  为 v2 字段，v3 起改为列表；字段口径与读档还原规则 = [`progression.md`](progression.md) §与存档一致（单一事实源）。
+- app 侧 on-disk 存档槽（`domain::persistence::SaveSlot` + `SaveSlotV4Ext`，JSON v5 schema）：
+  解锁链 = **`unlocked_mask: u32`**（S37 起 20 图口径，bit j = m(j+1) 已解锁，bit 19 = CLEARED 通关位；
+  旧 `u8` 档读时高 24 位 = 0 向后兼容）+ `SaveSlotV4Ext { seats, territories, current_seat }`
+  （席位全量 + 领地图 + 热座当前席，v5 = 兵力模型席位/驻地字段，见 [`territory.md`](territory.md) §8）；
+  `rng_seed` 默认 = `DEFAULT_RNG_SEED`（42，`rules/saveload*.rs`）。
+  > **勘误（2026-11-19 审计）**：旧措辞「v3 起 `unlocked_maps: Vec<String>`」是**规则层**
+  > `rules::saveload_json::SaveSlot`（`unlocked_maps` 字段）口径；**on-disk 真源 = `unlocked_mask: u32`**
+  > （app `SaveSlot`，`progression.md` §与存档一致 单一事实源；两者并存：`Vec<String>` 为规则层
+  > 镜像，`u32` mask 为落盘口径）。
 - **v2 → v3（S21.2 船系统，实现 S21.11）**：新增 `boat_level: u8`（1..=4，船等级 1-based，
   `balance.boat.levels` 有效域）；v2 旧档缺字段 = 迁移补 **1（小船）**，不回退不报错；
   迁移纯函数、幂等（再迁不变），单测锚点 `save_migrate_v2_to_v3_defaults_boat_level`（`tests/save_migration.rs`，飞轮 R6 B-08 补全旧省略后缀）。

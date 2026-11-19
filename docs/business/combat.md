@@ -48,6 +48,25 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 比较战力 → 判胜败 → 双方必损（武器 + 水手）→ 败方交钱（双倍过路费）/ 胜方占领
 ```
 
+### 卡牌效果口径（2026-11-19 拍板②：改为人手增减，对齐兵力模型）
+
+> **审计登记**：卡牌 `Heal`/`Damage` 旧口径写 `card_state.hp`（暂存 HP，钳制 `hp_max =
+> balance.combat.player.hp`），但兵力模型（`force::resolve`）战斗结算**不用 HP** ⇒ 旧
+> 卡牌 HP 效果 = **死效果**（暂存不进 `seat_crew`，不影响兵力战斗）。
+> **拍板②（2026-11-19）**：卡牌 `Damage`/`Heal` 改作用**当前席人手 `seat_crew`**（对齐
+> 兵力模型，与商人 `buy_crew` 同账本）：`Damage(n)` = `seat_crew.saturating_sub(n)`（扣人手），
+> `Heal(n)` = `seat_crew.saturating_add(n)`（加人手）。`card_state` 字段 + `combat.player`
+> 消费点 2026-11-19 全删（`host.rs::apply_card_effect` 改写 `seat_crew`，`mod.rs` 删
+> `card_state` 字段）。`progression.md` §卡牌事件 / `01_game_logic_overview.md` §4.2 同改口径
+> （卡牌金 = 加金；血/伤 = 增减人手，非 HP 暂存）。
+> **`combat.player` 字段现状**：原「活数据字段」（卡牌 HP 钳制上限）消费点 2026-11-19 删后
+> = 无 live 消费（仅 `boss_tiers` 难度阶梯 + `force` 守方 `defender_unit` 仍用 `Unit` 结构体）；
+> 后续轮可评估整删 `combat.player`（不属本轮范围）。
+> **`combat.item.*` i18n 孤儿（4 条）**：随 `combat.items` 表删（B-01 死内容，S34.6 D5）
+> 后 `strings.json` 4 文案（`combat.item.keg/medkit/rum/smoke`）+ `chrome.rs` 4 个 vs 道具
+> 图标常量残留（`vs_anim_v4` 渲染回退用）；`doccheck2` i18n 孤儿 WARN 4 条登记待清（与 B-01
+> 同源，下一轮清 `strings.json` + `chrome.rs` 4 常量，非本轮）。
+
 ## 回合流程（v2 简化为一次结算）
 
 - 攻占 / 多人同格遭遇：**进入 VS 界面 → 英雄 + 水手自动动效（双方列阵对攻）→ 出结果**
@@ -121,7 +140,7 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 
 ## 可测试规则（每条 → 单测名）
 
-| 规则 | 单测（`rules/force.rs` 内联 `#[cfg(test)]` + `tests/territory_v2_rules.rs`，飞轮 R6 B-01 勘误旧表头指向 rules_battle.rs） |
+| 规则 | 单测（`rules/force.rs` 内联 `#[cfg(test)]` + `tests/territory_v2_rules.rs`；旧 HP `rules_battle.rs` 已删 S34.6 D5，本表指向兵力模型） |
 |---|---|
 | 武装 = min(人手, 武器)；武器多余无效 | `armed_power_caps_at_manpower`（tests/territory_v2_rules.rs） |
 | 人手 > 武器 ⇒ 徒手战力折减 | `power_weights_armed_over_barehand`（force.rs 内联） |

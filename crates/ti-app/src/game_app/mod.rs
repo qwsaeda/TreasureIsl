@@ -37,7 +37,6 @@ use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::BoardSession;
 use ti_core::rules::boat::BoatSession;
-use ti_core::rules::cards;
 use ti_core::rules::force::Force;
 use ti_core::rules::main_loop::SceneStack;
 use ti_core::rules::main_map::MapSession;
@@ -334,9 +333,6 @@ pub struct GameApp {
     pub build_panel_sel: u8,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
-    /// P1-7（M5）：卡牌效果状态（`rules::cards::CardState`，`MainMap` 场景时有效）。
-    /// 初始 hp/gold = 0，`hp_max`/`gold_max` 钳制上限走 `balance.combat.player` / `balance.economy.gold_max`。
-    pub card_state: cards::CardState,
     /// 战斗会话（`Vs` 场景时有效）。
     /// 初始值来自 `BattleSession::from_balance`（`balance.combat.player` + `boss_tier`）。
     pub battle: Option<BattleView>,
@@ -537,7 +533,6 @@ impl GameApp {
             build_panel_open: false,
             build_panel_sel: 0,
             buildings: Vec::new(),
-            card_state: cards::CardState::default(),
             battle: None,
             rng: GameRng::new(0),
             rng_seed: 0,

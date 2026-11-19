@@ -47,7 +47,9 @@ pub fn track_node_effect(kind: SpaceKind, b: &Balance) -> Option<String> {
             Some(i18n::sgetf("scene.main_map.toast.treasure_fmt", &[&b.board.treasure_gold]))
         }
         SpaceKind::Battle => {
-            Some(i18n::sgetf("scene.main_map.toast.battle_fmt", &[&b.board.battle_damage]))
+            // v5 无遭遇格（`board_data_matches_extraction` 断言），死格回退 = 无签（2026-11-19
+            // 随 `Landing::Battle` 死分支清理；`toast.battle_fmt` 文案同轮删）。
+            None
         }
         _ => None,
     }

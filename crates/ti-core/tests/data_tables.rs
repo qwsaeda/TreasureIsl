@@ -85,9 +85,8 @@ fn board_cfg_economy_is_sane() {
     // 摇骰步数域：骰面 ≥1 且步数上限不小于骰面（否则步数被截断，骰点无效）
     assert!(bd.dice_sides >= 1, "dice_sides must be >= 1");
     assert!(bd.max_steps >= bd.dice_sides, "max_steps < dice_sides 会截断步数");
-    // 遭遇格必须是真实代价（扣 HP + 失金），否则无风险-收益（S19.2 数值打磨）
-    assert!(bd.battle_damage > 0, "battle_damage must be > 0（遭遇扣 HP）");
-    assert!(bd.battle_gold_loss > 0, "battle_gold_loss must be > 0（遭遇失金）");
+    // v5 赛道无遭遇格（`battle_damage`/`battle_gold_loss` 字段 2026-11-19 随 `Landing::Battle`
+    // 死分支清理；遭遇并入领地副本，`territory` 格走 `combat` 兵力模型，不再用 board 段数值）。
     // 奖励梯度：宝藏（大奖）> 城镇（小奖励），且均 > 0（treasure 格 S19.2 起实际可达）
     assert!(bd.treasure_gold > 0, "treasure_gold must be > 0");
     assert!(bd.city_gold > 0, "city_gold must be > 0");
@@ -266,8 +265,6 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             dice_sides: 6,
             max_steps: 6,
             lap_bonus_gold: 0,
-            battle_damage: 0,
-            battle_gold_loss: 0,
             treasure_gold: 0,
             city_gold: 0,
             boss_min_laps: 1,

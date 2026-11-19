@@ -405,10 +405,6 @@ pub struct BoardCfg {
     pub max_steps: u32,
     /// 每绕岛一圈的补给金币。
     pub lap_bonus_gold: u32,
-    /// 遭遇格扣血。
-    pub battle_damage: u32,
-    /// 遭遇格损失金币。
-    pub battle_gold_loss: u32,
     /// 宝藏格获得金币。
     pub treasure_gold: u32,
     /// 城镇格获得金币。
@@ -999,8 +995,6 @@ fn convert(raw: RawBalance) -> Result<Balance, LoadError> {
             dice_sides: raw.board.dice_sides.max(1),
             max_steps: raw.board.max_steps.max(1),
             lap_bonus_gold: raw.board.lap_bonus_gold,
-            battle_damage: raw.board.battle_damage,
-            battle_gold_loss: raw.board.battle_gold_loss,
             treasure_gold: raw.board.treasure_gold,
             city_gold: raw.board.city_gold,
             boss_min_laps: raw.board.boss_min_laps,

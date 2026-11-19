@@ -49,7 +49,7 @@ Space（空格）/ 点按「摇骰前进」
       港口 port   → 提示「可贸易/建造」（经济经 HUD 命令盘）
       城镇 city   → +`city_gold`（默认 50）
       事件/卡牌格 → 抽一张卡（`balance.cards` 卡池，`apply_card_effect` 结算；`event` 与 `card` 两类落格行为一致）
-      遭遇 battle → 扣 `battle_damage` HP + 失 `battle_gold_loss` 金（默认 30/20）
+      遭遇 battle →〔v4 历史，v5 无遭遇格〕扣 `battle_damage` HP + 失 `battle_gold_loss` 金（默认 30/20）
       宝藏 treasure → +`treasure_gold`（默认 200）
       BOSS boss   → 见下「BOSS 触发规则」（进战斗场景；`combat.md`；击败 BOSS = 跨图推进，下节）
 ```
@@ -66,18 +66,28 @@ Space（空格）/ 点按「摇骰前进」
 | 拦停 | 现身时位置停到 BOSS 格（被 BOSS 拦停，视觉与位置一致） | 玩家一眼看出「在这打」 |
 | 跨图推进 | 击败 BOSS → 解锁下一图（`MapSlot` / `unlocked_maps`），m20 BOSS = 通关（20 图 m01~m20，飞轮 R3 N-A2 勘误旧 m03 口径） | 已有实现（`battle_step` → `on_boss_defeated`） |
 
-**跨图节奏实测**（蒙特卡洛 2 万次，`dice_sides=6`、`boss_min_laps=1`）：
+**跨图节奏实测**（蒙特卡洛 4 万次/图，`dice_sides=6`、`boss_min_laps=1`；
+**M6 口径 2026-11-19：`board_measure.py` 已扩「见 BOSS 累计金」= 落格净金 + 领地通道
+〔首占奖励 + 每圈领地产出 + 每圈过路费〕**）：
 
-| 地图 | 赛道 | BOSS 序号 | 实测 E[摇骰次数] | 实测 E[见 BOSS 时金]（S28.8 31 格 + 领地带复测） |
-|---|---|---|---|---|
-| m01 | 31 格 | 15 | **13.6** | 1338 |
-| m02 | 31 格 | 15 | **13.6** | 1338 |
-| m03 | 31 格 | 15 | **13.6** | 1338 |
+| 地图 | 赛道 | BOSS 序号 | E[摇骰次数] | E[落格净金] | E[见 BOSS 累计金] | 含 initial_gold |
+|---|---|---|---|---|---|---|
+| m01 | 31 格 | 15 | **13.6** | 488 | **4620** | **5620** |
+| m02 | 31 格 | 15 | **13.6** | 488 | **4620** | **5620** |
+| m03 | 31 格 | 15 | **13.6** | 488 | **4620** | **5620** |
+| m04~m20 | 31 格 | 15 | **13.6** | 488 | **4620** | **5620** |
+
+> **口径说明（M6 勘误 2026-11-19）**：旧「E[见 BOSS 时金]=1338」是**旧口径**（S28.8 复测，
+> 落格净金未含领地通道）。`board_measure.py` 现口径 = **落格净金 488**（宝藏 2×200 + 城镇
+> 50 + 绕圈 150 + 抽卡期望金 − 遭遇〔v5 无遭遇格 = 0〕）；**见 BOSS 累计金 = 落格净金 488 +
+> 领地通道（首占 `first_capture_bonus` 150 + 每圈领地产出 1920 + 每圈过路费 2212，level 1
+> 基准，`territory.md` §4.2 公式）** = **4620**，含 `initial_gold` 1000 = **5620**。
+> 20 图 31 格定构一致 ⇒ 全图同值；`boss_fort` 占格不计产出通道（只占格不领产出）。
+> 复测命令 = `python scripts/board_measure.py`（漂移非 0 = 数值已变，须回写本表）。
 
 → S27.4 环岛 31 格 + 领地系统（S28）后，三图节奏收敛到 ~14 次摇骰（≈ 1 圈 + 半），
-到 BOSS 时已攒到 ~1338 金（够 `Investment 500` + `Bank 200` + 建造，`build` 加成 atk/hp 直通战斗；
-领地产出/过路费/加固成本见 `territory.md` §4.1 公式 + `balance.territory`）。
-复测命令 = `python scripts/board_measure.py`（漂移非 0 = 数值已变，须回写本表）。
+见 BOSS 时累计 ~5620 金（含 initial_gold；够 2~3 次建造 + 造船 2 级 800 + 战斗余量；
+领地产出/过路费/加固成本见 `territory.md` §4.2 公式 + `balance.territory`）。
 
 - 落格结果以**提示条**（toast）显示在摇骰按钮下方（文案 `strings.json` `scene.main_map.toast.*`）。
 - 确定性：同 seed + 同摇骰序列 ⇒ 同落格串（可回放，`e2e_board_spin_loop` 判据）。
@@ -109,14 +119,19 @@ Space（空格）/ 点按「摇骰前进」
 | 跨图宝藏密度 | m03 仅 3% | **m03 6.1%** | 与 m01/m02 对齐（比例化分配后跨图节奏一致） |
 | 遭遇密度 | 2/14 | 2/12 | 实测每图 1.9~2.6 次、暂存扣血 58~77（玩家 HP 2000 ⇒ 3~4%）⇒ 仍是可控风险 |
 
-**跨图实测**（蒙特卡洛 2 万次/图，`dice_sides=6`、`boss_min_laps=1`、终点格结算；**v5 领地系统（S27/S28/S33）后**——v5 定构 = 31 格（start1 + territory20 + event4 + card3 + treasure2 + boss1，`territory.md` §2 + `21_map_package_spec` I1~I5），**无 battle/plain 格**（领地落格三支分叉取代 v4 抽卡；E[摇骰] = 13.6 已 S28.8 复测，见 §跨图节奏实测；E[抽卡]/E[遭遇]/E[宝藏] 分布见上表））：
+**跨图实测**（蒙特卡洛 4 万次/图，`dice_sides=6`、`boss_min_laps=1`、终点格结算；**v5 领地系统（S27/S28/S33）后**——v5 定构 = 31 格（start1 + territory20 + event4 + card3 + treasure2 + boss1，`territory.md` §2 + `21_map_package_spec` I1~I5），**无 battle/plain 格**（领地落格三支分叉取代 v4 抽卡；E[摇骰] = 13.6 已 S28.8 复测，见 §跨图节奏实测；E[抽卡]/E[遭遇]/E[宝藏] 分布见上表；**E[见 BOSS 累计金] M6 口径 2026-11-19 已回填**））：
 
-| 地图 | 赛道 | 落格分布（event/card/battle/treasure/plain/territory） | 密度 | E[摇骰] | E[抽卡] | E[遭遇] | E[宝藏] | E[见 BOSS 时金] |
+| 地图 | 赛道 | 落格分布（event/card/battle/treasure/plain/territory） | 密度 | E[摇骰] | E[抽卡] | E[遭遇] | E[宝藏] | E[见 BOSS 累计金] |
 |---|---|---|---|---|---|---|---|---|
-| m01 | 31 格 | 4 / 3 / 0 / 2 / 0 / 20 | 12.9% / 9.7% / 0% / 6.5% / 0% / 64.5% | 待重估 | 待重估 | 待重估 | 待重估 | 待重估 |
-| m02 | 31 格 | 4 / 3 / 0 / 2 / 0 / 20 | 12.9% / 9.7% / 0% / 6.5% / 0% / 64.5% | 待重估 | 待重估 | 待重估 | 待重估 | 待重估 |
-| m03 | 31 格 | 4 / 3 / 0 / 2 / 0 / 20 | 12.9% / 9.7% / 0% / 6.5% / 0% / 64.5% | 待重估 | 待重估 | 待重估 | 待重估 | 待重估 |
-| m04 | 31 格 | 4 / 3 / 0 / 2 / 0 / 20 | 12.9% / 9.7% / 0% / 6.5% / 0% / 64.5% | 待重估 | 待重估 | 待重估 | 待重估 | 待重估 |
+| m01 | 31 格 | 4 / 3 / 0 / 2 / 0 / 20 | 12.9% / 9.7% / 0% / 6.5% / 0% / 64.5% | 13.6 | 3.0 | 0 | 0.9 | **4620** |
+| m02 | 31 格 | 4 / 3 / 0 / 2 / 0 / 20 | 12.9% / 9.7% / 0% / 6.5% / 0% / 64.5% | 13.6 | 3.0 | 0 | 0.9 | **4620** |
+| m03 | 31 格 | 4 / 3 / 0 / 2 / 0 / 20 | 12.9% / 9.7% / 0% / 6.5% / 0% / 64.5% | 13.6 | 3.0 | 0 | 0.9 | **4620** |
+| m04 | 31 格 | 4 / 3 / 0 / 2 / 0 / 20 | 12.9% / 9.7% / 0% / 6.5% / 0% / 64.5% | 13.6 | 3.0 | 0 | 0.9 | **4620** |
+
+> **E[见 BOSS 累计金]=4620**（M6 口径 2026-11-19：落格净金 488 + 领地通道〔首占 150 + 每圈
+> 产出 1920 + 每圈过路费 2212，level 1 基准〕；含 `initial_gold` 1000 = 5620。20 图 31 格定构
+> 一致 ⇒ 全图同值，m05~m20 同；`boss_fort` 占格不计产出通道。复测 = `python scripts/board_measure.py`，
+> 漂移即回写本表）。
 
 > m04 = [`design-sheets/m04.sheet.md`](../design-sheets/m04.sheet.md) 空样例（未实现真内容），非可玩图；其分布数值为模板占位。
 - **v4 历史值**（S27 前，45/46/33 格抽卡赛道）：「见 BOSS 时金」三图收敛 1328~1371（极差 3.2%）⇒ 攒金节奏跨图一致（历史记录，v5 领地系统作废）。
@@ -128,8 +143,8 @@ Space（空格）/ 点按「摇骰前进」
 **设计意图**：地图 index 越大 ⇒ BOSS 越强 ⇒ 必须攒更多金、建更多建筑才打得过 ⇒
 「攒金 → 建造 → 打 BOSS」闭环是**难度阶梯的承重结构**（不是可选策略）。
 
-**阶梯实测**（`balance.json` + `board.json`，蒙特卡洛 4 万次/图，seed=42；
-战斗按 `atk_plus_flat` 模型逐回合模拟，seed=11）：
+**阶梯实测（v4 历史，S27 前 45/46/33 格 + HP 回合制战斗；v5 31 格兵力模型下「战斗前有效 HP/余血」列作废）**
+（`balance.json` + `board.json`，蒙特卡洛 4 万次/图，seed=42；战斗按 `atk_plus_flat` 模型逐回合模拟，seed=11）：
 
 | 地图 | tier | BOSS HP/ATK | 赛道 | E[摇骰到 BOSS] | 见 BOSS 时金 | 战斗前有效 HP | 不建造余血 | 造 Castle 余血 |
 |---|---|---|---|---|---|---|---|---|
@@ -170,9 +185,9 @@ Space（空格）/ 点按「摇骰前进」
 | `treasure_gold` | 200 | 大奖（`treasure` 格 S19.2 起实际可达，密度 1/12，见 §落格节奏） |
 | `city_gold` | 50 | 小奖励（据点，~1 格/图） |
 | `lap_bonus_gold` | 150 | 每圈固定补给 |
-| `battle_damage` / `battle_gold_loss` | 30 / 20 | 遭遇格真实代价（扣 HP 暂存 + 失金，`card_state.hp` 入战斗前并入） |
+| 〔v4 历史〕`battle_damage` / `battle_gold_loss` | 〔已删〕 |〔v4 遭遇格〕2026-11-19 字段随 `Landing::Battle` 死分支清理（v5 无遭遇格，`board` 段已删此二键；`balance.json`/`data::BoardCfg`/`RawBoard` 同步） |
 
-- **不变量（测试固化）**：`treasure_gold > city_gold > 0`、`battle_damage > 0`、`battle_gold_loss > 0`、`lap_bonus_gold > 0`、`max_steps ≥ dice_sides ≥ 1`（`ti-core` `board_cfg_economy_is_sane`）；每图赛道必含 ≥1 `treasure` 格（`rules::board` `board_data_matches_extraction`，防宝藏格再变死数值）；`boss_min_laps ≥ 1`（S19.3 跨图节奏门槛）。
+- **不变量（测试固化）**：`treasure_gold > city_gold > 0`、`lap_bonus_gold > 0`、`max_steps ≥ dice_sides ≥ 1`（`ti-core` `board_cfg_economy_is_sane`；〔v4 历史〕`battle_damage > 0`/`battle_gold_loss > 0` 断言 2026-11-19 随字段删除）；每图赛道必含 ≥1 `treasure` 格（`rules::board` `board_data_matches_extraction`，防宝藏格再变死数值）；`boss_min_laps ≥ 1`（S19.3 跨图节奏门槛）。
 - 节奏目标：单圈净金 > 0（宝藏 +200 主导），遭遇为可控风险（实测每图 1.9~2.6 次遭遇 = 失金 38~52 + 暂存扣血 58~77，玩家 HP 2000 ⇒ 3~4%），保证 BOSS 战前可攒金建造（`build` 加成 atk/hp）。
 - **与 BOSS 门槛的关系**：`boss_min_laps=1` ⇒ 玩家必先绕岛 1 圈才见 BOSS ⇒ 圈补给（+150）+ 沿途宝藏（~2~3 个 ×200）+ 城镇（50）构成「BOSS 战前基金」（实测 ~1300 金），正好支撑 `Investment 500` / `Bank 200` / `Fort 800` 的建造选择。
 
@@ -245,19 +260,24 @@ Space（空格）/ 点按「摇骰前进」
 
 ### 效果结算
 
-- `gold`/`hp` 增减后立即做区间钳制（`0 ≤ gold ≤ gold_max`、`0 ≤ hp ≤ hp_max`）；
+- **2026-11-19 拍板②（兵力模型对齐）**：卡牌效果码 `damage`/`heal` 语义改 = **增减当前席人手**
+  （`seat_crew`，与商人 `buy_crew` 同账本），非旧「HP 暂存 `card_state.hp`」（该暂存不进
+  `force::resolve`，死效果已删）；`gold` 仍 = 加减金（钳 `gold_max`）；`move`/`unknown` 无操作。
+  结算入口 = `host.rs::apply_card_effect`（改写 `seat_crew`，`card_state` 字段 2026-11-19 删）。
+- 区间钳制（`0 ≤ gold ≤ gold_max`；人手 `saturating_sub` 到 0 / `saturating_add`，无上限——
+  船容量约束在商人面，非卡牌面）；
 - 效果码采用「加法为主、覆盖为辅」，便于扩展而不改结算器。
 
 ## 可测试规则
 
 | 规则 | 单测 |
 |---|---|
-| 越界/不可通行不移动、不消耗回合 | `map_blocked_step_is_noop`（待 S8.3.c 补单测落地） |
-| 移动一格必触发一次落格结算 | `map_step_triggers_settle_once`（待 S8.3.c 补单测落地） |
-| BOSS 格进入战斗 | `map_boss_tile_enters_combat`（待 S8.3.c 补单测落地） |
-| 同 seed 同路径 ⇒ 同卡牌串 | `cards_same_seed_same_sequence`（待 S8.3.c 补单测落地） |
-| 效果后 HP/金钳制在合法域 | `cards_effects_clamped`（待 S8.3.c 补单测落地） |
-| 权重抽卡分布合理（单测只断言「可复现」，分布靠统计脚本） | `cards_weighted_pick_reproducible`（待 S8.3.c 补单测落地） |
+| 越界/不可通行不移动、不消耗回合 | `map_blocked_step_is_noop`（已落地 `tests/reference_diff_main_map.rs`） |
+| 移动一格必触发一次落格结算 | `map_step_triggers_settle_once`（已落地 `tests/reference_diff_main_map.rs`） |
+| BOSS 格进入战斗 | `map_boss_tile_enters_combat`（已落地 `tests/reference_diff_main_map.rs`） |
+| 同 seed 同路径 ⇒ 同卡牌串 | `cards_same_seed_same_sequence`（已落地 `tests/reference_diff_cards.rs`） |
+| 效果后 HP/金钳制在合法域 | `cards_effects_clamped`（已落地 `tests/reference_diff_cards.rs`） |
+| 权重抽卡分布合理（单测只断言「可复现」，分布靠统计脚本） | `cards_weighted_pick_reproducible`（已落地 `tests/reference_diff_cards.rs`） |
 
 ## 跨图推进（地图解锁 `unlocked_maps`）
 

@@ -69,10 +69,9 @@
 | 失败 | 玩家（人类）席全部破产 ⇒ 玩家失败，对局结束 |
 | 平局 | 理论上多人同时破产 ⇒ 判**无胜者**，对局结束（`victory_seat` 返回 `None`） |
 
-> **AI 决策参数**（`balance.territory.ai`，`territory_v2::ai_policy_v2` 读取；S33.6 兵力模型决策）：
-> `attack_threshold: 0.6`（强舰队 → 攻占阈值）、`toll_aversion: 0.5`（弱舰队 → 交过路费倾向，
-> **v1 死参**，v2 不用）、`upgrade_priority: 0.3`（升级加固倾向）。三值 ∈ [0,1] 相对权重，非百分比累加。
-> 公式形态数据驱动（`siege_mode`/`upgrade_mode`，EXP-196）见 §1.1 AI 决策参数段。
+> **AI 决策参数**（`balance.territory.ai`，`territory_v2::ai_policy_v2` 读取；S33.6 兵力模型决策）
+> 见 §1 末段（避免重复）：`attack_threshold`/`toll_aversion`/`upgrade_priority` + 公式形态
+> `siege_mode`/`upgrade_mode`（EXP-196）。
 
 ### 1.3 v3 棋盘多席位渲染规则（同格散开 + 席位徽标）
 
@@ -289,18 +288,18 @@
 | # | 未决 | 影响 | 当前处置 |
 |---|---|---|---|
 | U1 | 战力合成公式（人手 + 武器怎么合） | 攻占/遭遇胜负 | **已定案**：`战力 = 武装 × 武器系数 + (人手 − 武装) × 徒手系数`，`weapon_coef=2 / barehand_coef=1`（`balance.manpower`，见 [`combat.md`](combat.md) §兵力模型） |
-| U2 | 战斗「必损」量级 | 双方损耗 | **已定案**：人手损 `balance.manpower.loss_pct=15%` + 武器损 `weapon_loss_pct=20%`（按 `force.rs` 公式 `armed=crew×weapon_coef` 合成） |
+| U2 | 战斗「必损」量级 | 双方损耗 | **已定案**：人手损 `balance.manpower.loss_pct=15%` + 武器损 `weapon_loss_pct=20%`（战力合成 = `armed × weapon_coef + unarmed × barehand_coef`，`armed = min(人手, 武器)`，`force.rs`；勘误 2026-11-19 旧措辞误写 `armed=crew×weapon_coef`） |
 | U3 | **无主副本 / BOSS 战**是否同用兵力模型 | 副本/BOSS 工作量 | 攻占/遭遇 = 兵力模型；副本/BOSS = 也走兵力模型（用户「VS 就是人手+武器」指向全局） |
 | U4 | 初始人手 / 船容量 / 驻军 / 武器价 / 水手价 量级 | 节奏 | **已定案**：初始人手 `balance.manpower.initial_crew=20` / 初始武器 `initial_arms=5`；驻军按玩家自定（`territory.md §4`）；价格走 `balance.goods` |
 | U5 | 多人同格「BOSS 战」语义（a/b/c 只打前一个）确认 | 遭遇战设计 | 按 §4.3 整理；BOSS 格 + 普通格同规则，待实测 |
-| U6 | 格产出「每轮结算一次」的时机 | 节奏 | 建议轮到该格或每圈末统一结算，二选一待定 |
+| U6 | 格产出「每轮结算一次」的时机 | 节奏 | **已定案**：落格时所有者领取（`SettleAction::Collect`，`territory.rs`；交钱者本圈无收益，他人格归零），非每圈末统一结算（勘误 2026-11-19 旧「二选一待定」措辞滞后于代码） |
 | U7 | 热座是否保留（选 2..5 人） | 是否要交接 UI | **已定案（v3）**：保留，选 **2..5** 人类席 + 可配 AI 席；交接提示按 §1 落 |
 | U8 | v3：AI 席数上限 / 人类席下限 | 选角 UI | **已定案**：人类席 `2..5`（单人局 = 假多人，v2 缺陷）；AI 席 `0..=(5-人类席数)` |
 | U9 | v3：热座交接的遮蔽形态（整屏盖板 vs 角落提示） | 表现 | 待出图定稿；规则层只要求「显式确认 + 不泄露他人情报」 |
 
 ## 12. 改动面声明（硬规则 7）
 
-| 块 | 本规格（v2 整理稿） | 落码任务 |
+| 块 | 本规格（v2 整理稿，v3 口径见 §12.1） | 落码任务 |
 |---|---|---|
 | 业务规则 | **有**（领地/驻军/攻占/破产/多人同格/资源/商人/事件） = 本文件 + `combat.md` | — |
 | 数据 | 有（`balance.json` 新增 `manpower/weapons/garrison/events/merchants` 段 + `map.json` 逐格地形/建筑/事件 + 每图商人） | S28.3 重做 |

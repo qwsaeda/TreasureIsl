@@ -347,8 +347,6 @@
   "dice_sides": 6,
   "max_steps": 6,
   "lap_bonus_gold": 150,
-  "battle_damage": 30,
-  "battle_gold_loss": 20,
   "treasure_gold": 200,
   "city_gold": 50,
   "boss_min_laps": 1

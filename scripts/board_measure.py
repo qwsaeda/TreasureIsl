@@ -45,17 +45,45 @@ def load():
 
 
 def track_income(bal, spaces, spins=SPINS, seed=SEED):
-    """赛道跑到 BOSS 的期望：摇骰次数 / 收入 / 暂存扣血。"""
+    """赛道跑到 BOSS 的期望：摇骰次数 / 收入 / 暂存扣血 + 领地通道（见 BOSS 累计金）。
+
+    **见 BOSS 累计金（2026-11-19 M6 扩口径）**：旧 `income` 只算「落格净金」
+    （宝藏/城镇/绕圈 + 抽卡期望金 − 遭遇失金），不含领地系统（S28 后新增通道）。
+    本函数补全**领地通道**（首占奖励 + 每圈领地产出 + 每圈过路费）⇒ `cum_gold`
+    = 见 BOSS 时累计金币（落格净金 + 领地通道金）。`progression.md` §跨图节奏实测 的
+    「E[见 BOSS 时金]」列 = `initial_gold + cum_gold`（口径 = 含领地通道；漂即回写）。
+    """
     cfg = bal['board']
+    terr = bal.get('territory', {})
+    protos = {p['id']: p for p in terr.get('prototypes', [])}
+    prod_coef = float(terr.get('production_per_level', 0.5))
+    toll_coef = float(terr.get('toll_per_level', 0.25))
+    cap_bonus = int(terr.get('first_capture_bonus', 0))
     min_laps = int(cfg.get('boss_min_laps', 1))
     rnd = random.Random(seed)
     n = len(spaces)
     boss = [i for i, s in enumerate(spaces) if s['kind'] == 'boss'][0]
+
+    # 领地格「每圈产出/过路费」基准（level 1 口径，公式 = base × (1 + coef×level)，
+    # 与 `territory.rs::formula` 一致；boss_fort 占格无产出通道，跳过）。
+    lap_prod = lap_toll = 0
+    for s in spaces:
+        if s['kind'] != 'territory' or s.get('isle') == 'boss_fort':
+            continue
+        p = protos.get(s.get('isle'))
+        if p is None:
+            continue
+        lvl = 1
+        lap_prod += int(round(p['production_base'] * (1.0 + prod_coef * lvl)))
+        lap_toll += int(round(p['toll_base'] * (1.0 + toll_coef * lvl)))
+
     tot_spins = tot_gold = tot_dmg = 0
+    tot_cum = 0
     tot_cards = tot_battles = tot_treasures = 0
     for _ in range(spins):
         idx = laps = gold = dmg = 0
         count = cards = battles = treasures = 0
+        cap_bonus_got = False
         while True:
             roll = rnd.randint(1, 6)
             count += 1
@@ -74,16 +102,25 @@ def track_income(bal, spaces, spins=SPINS, seed=SEED):
             elif kind == 'city':
                 gold += int(cfg['city_gold'])
             elif kind == 'battle':
-                gold -= int(cfg['battle_gold_loss'])
-                dmg += int(cfg['battle_damage'])
+                gold -= int(cfg.get('battle_gold_loss', 0))
+                dmg += int(cfg.get('battle_damage', 0))
                 battles += 1
             elif kind in ('card', 'event'):
                 gold += CARD_GOLD_EXP
                 cards += 1
+            elif kind == 'territory' and not cap_bonus_got:
+                # 落格领地（v5 三支分叉之一 = 副本占领）⇒ 首占奖励（只计一次，
+                # 后续同岛两格已归所有，不再首占；产出/过路费走每圈结算通道）。
+                gold += cap_bonus
+                cap_bonus_got = True
             if crossed and laps >= min_laps:
                 break
+        # 领地通道：每圈领地产出 + 每圈过路费（首圈绕岛满 min_laps 后，
+        # 已占领地在后续 min_laps 圈内持续结算 = 见 BOSS 前累计 min_laps 圈）。
+        cum = gold + laps * (lap_prod + lap_toll)
         tot_spins += count
         tot_gold += gold
+        tot_cum += cum
         tot_dmg += dmg
         tot_cards += cards
         tot_battles += battles
@@ -92,6 +129,9 @@ def track_income(bal, spaces, spins=SPINS, seed=SEED):
     return {
         'spins': tot_spins / k,
         'income': tot_gold / k,
+        'cum_gold': tot_cum / k,
+        'lap_production': lap_prod,
+        'lap_toll': lap_toll,
         'pending_damage': tot_dmg / k,
         'cards': tot_cards / k,
         'battles': tot_battles / k,
@@ -240,14 +280,19 @@ def main() -> int:
         if args.json:
             print(json.dumps(rows, ensure_ascii=False, indent=1))
         else:
+            init_gold = int(bal.get('economy', {}).get('initial_gold', 0))
             print('=== 落格节奏（实测，%d 次/图，seed=%d）===' % (SPINS, SEED))
             for r in rows:
                 dens = ' / '.join('%s %d(%.1f%%)' % (k, v, r['density'][k])
                                   for k, v in sorted(r['counts'].items()))
                 print('%s %d格 BOSS@%d ｜ %s' % (r['map'], r['cells'], r['boss_index'], dens))
-                print('    E[摇骰]=%.1f  E[金]=%.0f  E[抽卡]=%.1f  E[遭遇]=%.1f  E[宝藏]=%.1f  暂存扣血=%.0f'
+                print('    E[摇骰]=%.1f  E[落格净金]=%.0f  E[抽卡]=%.1f  E[遭遇]=%.1f  E[宝藏]=%.1f  暂存扣血=%.0f'
                       % (r['spins'], r['income'], r['cards'], r['battles'], r['treasures'],
                          r['pending_damage']))
+                print('    E[见BOSS累计金]=%.0f（落格净金 + 领地通道〔首占 %d + 每圈产出 %d + 每圈过路费 %d〕；'
+                      '含 initial_gold %d = %.0f；M6 口径，回填 progression.md §跨图节奏实测）'
+                      % (r['cum_gold'], int(bal.get('territory', {}).get('first_capture_bonus', 0)),
+                         r['lap_production'], r['lap_toll'], init_gold, init_gold + r['cum_gold']))
 
     if args.check:
         errors = check_drift(bal, board)

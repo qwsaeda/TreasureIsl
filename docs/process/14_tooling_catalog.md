@@ -103,7 +103,7 @@ python scripts/ui_shot_probe.py evidence/bevy_native_main_map.png --crop 300,100
 python scripts/extract_board.py
 python scripts/extract_board.py --check          # 幂等校验（与脚本输出逐字节一致）
 # 2) 节奏 / 难度阶梯实测（业务规格里的数字来源；balance 一改就重跑）
-python scripts/board_measure.py                   # 落格节奏表
+python scripts/board_measure.py                   # 落格节奏表（M6 口径 2026-11-19 扩「见 BOSS 累计金」= 落格净金 + 领地通道）
 python scripts/board_measure.py --ladder          # 跨图难度阶梯表（含 BOSS 战模拟）
 python scripts/board_measure.py --check           # 规格与 balance 一致性（漂移 ⇒ 非 0）
 # 3) 规则层不变量
@@ -204,7 +204,7 @@ python scripts/map_pack.py check
 | 工具 | 用途 | 用法 | 幂等 / 退出码 |
 |---|---|---|---|
 | `extract_board.py` | **环岛赛道数据生成**（地形陆格掩码 → Moore 轮廓 → 落格类型按比例分配） | `python scripts/extract_board.py` / `--check` | 幂等（`--check` 逐字节比对）；不一致非 0 |
-| `board_measure.py` | **赛道节奏 / 跨图难度阶梯实测**（规格数字来源 + 漂移检查） | `python scripts/board_measure.py` / `--ladder` / `--check` / `--json` | 幂等只读；规格漂移非 0 |
+| `board_measure.py` | **赛道节奏 / 跨图难度阶梯实测**（规格数字来源 + 漂移检查；M6 口径 2026-11-19 扩「见 BOSS 累计金」= 落格净金 + 领地通道〔首占 + 每圈产出 + 过路费〕） | `python scripts/board_measure.py` / `--ladder` / `--check` / `--json` | 幂等只读；规格漂移非 0 |
 | `code_outline.py` | **源结构清单**（文件 / 顶层项 / 方法 + 行范围 ⇒ 拆分前的模块边界与函数清单） | `python scripts/code_outline.py <file.rs>` / `--crate ti-app` / `--json` / `--check` | 幂等只读；孤立顶层 fn 非 0 |
 | `ui_shot_probe.py` | **出图取样**（区域主色 / 最亮像素 / 裁剪放大 ⇒ UI 出图验收的像素证据） | `python scripts/ui_shot_probe.py <png> --region x,y,w,h` / `--crop x,y,w,h --out` / `--check` | 幂等只读；空帧非 0 |
 | `ui_assets.py` | **UI 资产清单驱动**（add/build/verify/rekey/normalize；**原图落点 = `evidence/gen_tmp/raw_<name>.png`**（13 号 §2.2），rekey 旧路径 `ui_concept/raw_*.png` 只读兼容） | `python scripts/ui_assets.py add --name <n> --role <r> --what "<w>"` / `build` / `verify` / `rekey --name <n>` / `normalize --name <n>` | build 幂等（已生成不重做）；verify 不一致非 0 |

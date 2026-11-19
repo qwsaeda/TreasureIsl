@@ -852,7 +852,10 @@ impl EconomyHost for GameApp {
     }
 
     /// P1-7（M5）：卡牌效果真接进可玩路径——`event_id` 经 `rules::cards::CardEngine`
-    /// 映射到 `balance.cards` 卡，`apply_card` 结算（扣金/加金/扣 HP/加 HP，区间钳制）。
+    /// 映射到 `balance.cards` 卡，`apply_card` 结算（**2026-11-19 兵力模型对齐**：
+    /// `Damage` 扣当前席人手 / `Heal` 加当前席人手（对齐 `combat.md` §兵力模型，
+    /// 替代旧「HP 暂存 `card_state.hp`」死效果——该暂存不进 `force::resolve`，作废）；
+    /// `Gold` 加减金（钳 `gold_max`），`Move`/`Unknown` 无操作）。
     ///
     /// 返回是否实际改动状态（`Applied` = true，`UnknownEvent` = false）。
     fn apply_card_effect(&mut self, event_id: u32) -> bool {
@@ -860,47 +863,36 @@ impl EconomyHost for GameApp {
         let Some(card) = cards::event_to_card(event_id, engine.catalog()) else {
             return false;
         };
-        // 钳制上限：hp_max = balance.combat.player.hp，gold_max = balance.economy.gold_max
-        let (hp_max, gold_max) = match data::balance() {
-            Ok(b) => {
-                let hp = match b.combat.player {
-                    Some(p) => p.hp,
-                    None => u32::MAX,
-                };
-                (hp, b.economy.gold_max)
-            }
-            Err(_) => (u32::MAX, u32::MAX),
-        };
-        // 卡牌状态从宿主现状出发（Damage/Heal 改当前 hp，Gold 改当前 gold）
-        let mut state =
-            cards::CardState { hp: 0, gold: self.current_seat_gold(), hp_max, gold_max };
-        let result = cards::apply_card(card, &mut state);
-        match result {
-            cards::CardResult::Applied(eff) => {
-                match eff {
-                    cards::CardEffect::Gold(n) => {
-                        // v3：卡牌加金走唯一账本 `seat_gold[]`（saturating_add + 钳 gold_max）。
-                        let seat = self.turn_cycle.current as usize;
-                        if let Some(g) = self.seat_gold.get_mut(seat) {
-                            *g = g.saturating_add(n).min(gold_max);
-                        }
-                        self.sync_gold_mirror();
-                    }
-                    cards::CardEffect::Damage(n) => {
-                        // 扣 HP：暂存到 `card_state.hp`（本次掉了 n），
-                        // 下次 `start_battle` 时并入玩家 hp（成长机制 + 卡牌 debuff 同通道）。
-                        self.card_state.hp = self.card_state.hp.saturating_add(n);
-                    }
-                    cards::CardEffect::Heal(n) => {
-                        // 加 HP：从暂存扣减（Heal 抵消之前的 Damage 暂存，钳 0）
-                        self.card_state.hp = self.card_state.hp.saturating_sub(n);
-                    }
-                    cards::CardEffect::Move | cards::CardEffect::Unknown => {}
+        // 金钳制上限 = balance.economy.gold_max（人手不设上限：`Damage` 扣减到 0 即封顶，
+        // `Heal` 加入 `seat_crew` 与商人 `buy_crew` 同账本（船容量约束在商人面，非卡牌面））。
+        let gold_max = data::balance().map_or(u32::MAX, |b| b.economy.gold_max);
+        let seat = self.turn_cycle.current as usize;
+        match card.effect {
+            cards::CardEffect::Gold(n) => {
+                // v3：卡牌加金走唯一账本 `seat_gold[]`（saturating_add + 钳 gold_max）。
+                if let Some(g) = self.seat_gold.get_mut(seat) {
+                    *g = g.saturating_add(n).min(gold_max);
                 }
-                true
+                self.sync_gold_mirror();
             }
-            cards::CardResult::UnknownEvent => false,
+            cards::CardEffect::Damage(n) => {
+                // 兵力模型：扣当前席人手（`seat_crew`，`force` 战斗输入；`saturating_sub` 钳 0）。
+                if let Some(c) = self.seat_crew.get_mut(seat) {
+                    *c = c.saturating_sub(n);
+                }
+            }
+            cards::CardEffect::Heal(n) => {
+                // 兵力模型：加当前席人手（`seat_crew`，与商人 `buy_crew` 同账本）。
+                if let Some(c) = self.seat_crew.get_mut(seat) {
+                    *c = c.saturating_add(n);
+                }
+            }
+            cards::CardEffect::Move | cards::CardEffect::Unknown => {}
         }
+        matches!(
+            card.effect,
+            cards::CardEffect::Gold(_) | cards::CardEffect::Damage(_) | cards::CardEffect::Heal(_)
+        )
     }
 }
 /// S34.6 D4/D5：战斗守方兵力（`defense_at` 口径，守军全武装假设 ⇒ 人手 = 武器 = defense）。

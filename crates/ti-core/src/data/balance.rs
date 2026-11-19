@@ -346,10 +346,6 @@ pub(crate) struct RawBoard {
     #[serde(default)]
     pub(crate) lap_bonus_gold: u32,
     #[serde(default)]
-    pub(crate) battle_damage: u32,
-    #[serde(default)]
-    pub(crate) battle_gold_loss: u32,
-    #[serde(default)]
     pub(crate) treasure_gold: u32,
     #[serde(default)]
     pub(crate) city_gold: u32,

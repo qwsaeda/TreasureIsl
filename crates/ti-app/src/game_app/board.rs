@@ -300,8 +300,8 @@ impl GameApp {
     /// 结算（数值全走 `balance.board`，规则层 `rules::board::Turn`/`Landing` 分派）：
     /// - 绕岛过起点 → 每圈 `lap_bonus_gold`；
     /// - 港口 → 提示条（贸易/建造经 HUD 命令盘）；城镇 → `city_gold`；
-    /// - 事件/卡牌格 → 抽一张卡经 `apply_card_effect` 结算；
-    /// - 遭遇格 → 扣 `battle_damage` HP + 失 `battle_gold_loss` 金；
+    /// - 事件/卡牌格 → 抽一张卡经 `apply_card_effect` 结算（兵力模型：Damage/Heal 改人手，
+    ///   Gold 改金，2026-11-19）；
     /// - 宝藏格 → `treasure_gold`；
     /// - BOSS（S19.3）：**经过或落在 BOSS 格**即遇 BOSS；绕岛满 `boss_min_laps` 圈
     ///   才现身（`Turn::boss = Engaged` → 调用方进战斗场景），未满圈 = 未现
@@ -628,23 +628,14 @@ impl GameApp {
             self.last_sfx = Some(s);
         }
     }
-    /// 落格结算（`Landing` → 金 / HP / 卡 / 提示条；数值全走 `balance.board`）。
+    /// 落格结算（`Landing` → 金 / 卡 / 提示条；数值全走 `balance.board`）。
+    ///
+    /// **2026-11-19**：`Landing::Battle`（v4 遭遇格「扣血 + 失金」）死分支已删——v5 定构
+    /// 赛道**无遭遇格**（`rules::board::board_data_matches_extraction` 断言遭遇格 = 0，
+    /// 遭遇并入领地副本），故该分支不可达；`battle_damage`/`battle_gold_loss` 字段与
+    /// `toast.battle_fmt` 文案同轮清理（见 `main_map_node.rs` / `balance.board`）。
     fn settle_board_landing(&mut self, landing: Landing, b: &data::Balance) {
         match landing {
-            Landing::Battle => {
-                self.card_state.hp = self.card_state.hp.saturating_add(b.board.battle_damage);
-                // v3：金币走唯一账本 `seat_gold[]`（D3）。
-                let loss = b.board.battle_gold_loss;
-                let seat = self.turn_cycle.current as usize;
-                if let Some(g) = self.seat_gold.get_mut(seat) {
-                    *g = g.saturating_sub(loss);
-                }
-                self.sync_gold_mirror();
-                self.toast(
-                    i18n_fmt("scene.main_map.toast.battle_fmt", &[&b.board.battle_damage]),
-                    Some(Sfx::Invalid),
-                );
-            }
             Landing::Treasure => {
                 self.add_current_seat_gold(b.board.treasure_gold);
                 let cap = b.economy.gold_max;
@@ -700,7 +691,7 @@ impl GameApp {
                 }
             }
 
-            Landing::Boss | Landing::Start | Landing::Plain => {}
+            Landing::Boss | Landing::Start | Landing::Plain | Landing::Battle => {}
             Landing::Territory => {
                 self.settle_territory_landing(b);
             }

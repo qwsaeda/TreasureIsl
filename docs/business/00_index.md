@@ -33,7 +33,7 @@
 | [`economy.md`](economy.md) | 贸易 / 建造 / 银行 | 商品、价格、买卖、建筑升级、金上限 |
 | [`combat.md`](combat.md) | 战斗 | BOSS 档、伤害模型、回合流程、胜负 |
 | [`progression.md`](progression.md) | 地图 / 据点 / 卡牌事件 / 跨图推进 | 网格地图、移动、探索事件、卡牌、地图解锁链与通关判定 |
-| [`territory.md`](territory.md) | **领地 / 副本 / 对手（v5）** | 领地格 vs 功能格、10 类岛与专属副本、占领/交钱/攻占/升级加固、5 席位（≥1 玩家 + 4 AI）、热座、存档 v5 |
+| [`territory.md`](territory.md) | **领地 / 副本 / 对手（v5，v3 热座口径）** | 领地格 vs 功能格、10 类岛与专属副本、占领/交钱/攻占/升级加固、2..5 人类热座 + 可配 AI 席（`min_players=2`/`max_ai_seats=4`，v3 定案）、破产出局、存档 v5 |
 | [`persistence.md`](persistence.md) | 存读档 / 设置 / RNG | 存档字段、迁移、RNG 可复现 |
 | [`01_game_logic_overview.md`](01_game_logic_overview.md) | **游戏逻辑总览（S37 新增）** | 全局业务逻辑按章节整理 + 流程图（Mermaid）：核心循环/场景态图/多席热座/20 图推进链/选角/选图/落格结算分叉/领土战争/战斗/经济/对局生命周期/存档迁移/失败边界/数值锚点；**只做总览 + 索引，规则细节引用各系统单一事实源** |
 | [`07_ui_flow.md`](07_ui_flow.md) | **UI 流程（S11 新增）** | 场景流/控件/键盘触摸输入/消息分页/UI 约束；表现层并行开发唯一依据 |

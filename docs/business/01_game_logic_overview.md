@@ -229,7 +229,7 @@ flowchart TD
     Kind -->|"start 起点"| Lap["+lap_bonus_gold(150)<br/>(过起点每圈)"]
     Kind -->|"territory 领地格"| Own{"归属?"}
     Kind -->|"event 事件格"| Event["随机事件(§10 U 类)<br/>海事事件集(风神保佑/翻车/宝藏沉船/风浪…)<br/>概率触发, 非必发生"]
-    Kind -->|"card 卡牌格"| Card["抽一张卡(balance.cards deck 1..5)<br/>立即生效(金/血/伤), 钳制 0≤hp≤hp_max"]
+    Kind -->|"card 卡牌格"| Card["抽一张卡(balance.cards deck 1..5)<br/>金效果加金(钳 gold_max); 血/伤改当前席人手 seat_crew(Damage 减/Heal 加, 对齐兵力模型, 2026-11-19 拍板②; 旧 card_state.hp 暂存已删, 见 combat.md §卡牌效果口径)"]
     Kind -->|"treasure 宝藏格"| Treasure["+treasure_gold(200)<br/>唯一大额奖励通道"]
     Kind -->|"boss BOSS 格"| BossCheck{"圈数满<br/>boss_min_laps?"}
     BossCheck -->|"否"| BossWait["提示: 还需 N 圈<br/>(不拦停)"]
@@ -539,7 +539,7 @@ flowchart LR
 | BOSS | `combat.boss_tiers[0..=19]` | 每档 `hp`/`atk`（tier 0..=19 严格递增，S37） | 选图卡难度星 = tier+1 |
 | 席位 | `selection` | `min_players=2`、`max_ai_seats=4`、`map_count=20` | 热座 + 20 图 |
 | 地图 | `selection.maps[0..=19]` | 每图 `id`/`index`/`boss_tier`/`grid_w`/`grid_h`/`player_start` | m01~m20 20 条 |
-| 赛道 | `board` | `dice_sides=6`、`lap_bonus_gold=150`、`city_gold=50`、`battle_damage=30`、`battle_gold_loss=20`、`treasure_gold=200` | 31 格定构 |
+| 赛道 | `board` | `dice_sides=6`、`lap_bonus_gold=150`、`city_gold=50`、`treasure_gold=200` | 31 格定构（〔v4 历史〕`battle_damage`/`battle_gold_loss` 2026-11-19 随 `Landing::Battle` 死分支删，`board` 段无此二键） |
 | 卡牌 | `cards` | `deck[1..5]`、`event_chance`、`hand_size=1` | 单卡 roguelite 事件 |
 | 商人 | `merchants` | `weapon_price`、`slave_price` | 每图必有 |
 | 海事事件 | `events` | 常用集 + 每图 `events[]` 特有 | 功能格概率触发 |
