@@ -3112,6 +3112,29 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
                         }
                     }
                 }
+                // 「N 全 verified」台账清零态声称（2026-11-19 扩面，C 侧对抗审计盲区）：
+                // 「台账 N 全 verified 清零态」/「N 全 verified 清零态」不含「任务」二字 = 旧
+                // 「N 任务」守门漏网（26号:163「350 全 verified 清零态」靠人工注释〔S60.0 后 351〕
+                // 兜底，非机器豁免）⇒ 现状区（非里程碑块）N ≠ 台账 = FAIL；里程碑块内（时点快照）
+                // 结构豁免（同「N 任务」的 `milestone_span_contains` 判定）。
+                // 语境限定 = 行内须含「台账」（防误报 S 阶段清零态「S12 全 verified」——那是
+                // 阶段内任务数非台账总数；「台账 350 全 verified」才是台账总数声称）。
+                let ledger_zero_ctx = line.contains("台账");
+                if ledger_zero_ctx {
+                    for m in line.match_indices("全 verified") {
+                        let before = &line[..m.0];
+                        let digits = scan_digits_before(before);
+                        if let Some(n) = digits {
+                            let in_milestone = milestone_span_contains(before, m.0);
+                            if n >= 10 && n != tasks && !in_milestone {
+                                errors.push(format!(
+                                    "计数守门：{rel}:{} 声称「{n} 全 verified」≠ 实测台账 {tasks} 任务（台账清零态声称漂移，独立里程碑行才豁免）",
+                                    i + 1
+                                ));
+                            }
+                        }
+                    }
+                }
                 // 「N 项」gate 项数现状声称（仅拦 gate 表头横幅「N 项固定 Report」类声称；
                 // 路由表行内「N 项工具契约/N 项过程约束」等小数字是任务描述非 gate 项数，不限）
                 if let Some(claimed) = extract_count_claim(line, '项') {
@@ -3160,26 +3183,16 @@ fn milestone_span_contains(before: &str, pos: usize) -> bool {
     let Some(mstart) = last_milestone else {
         return false;
     };
-    // 2) `mstart` 后第一个 `**`（加粗块起点）
-    let after = &b[mstart..];
-    let mut k = 0;
-    let mut bold_open = None;
-    while k + 1 < after.len() {
-        if after[k] == b'*' && after[k + 1] == b'*' {
-            bold_open = Some(k);
-            break;
-        }
-        k += 1;
-    }
-    let Some(bold_open) = bold_open else {
-        return false;
-    };
-    // 3) 加粗块内字符段 = `**` 后到行尾（before 只到命中点；命中点本身在「任务」前）
-    //    命中点相对 `mstart` 的偏移 = pos - mstart；须 ≥ bold_open + 2（块开 `**` 之后）
-    //    且 ≤ before 长度（命中点在 before 内，天然成立）。
-    //    块内判定 = 命中点在「`**` 开」之后 = pos - mstart > bold_open。
-    let rel = pos - mstart;
-    rel > bold_open
+    // 2) 里程碑段 = 「里程碑：」之后整段（含标题文字 + `**…**` 加粗块）。命中点 `pos`
+    //    在 `mstart` 之后（`rel = pos - mstart > 0`）= 该里程碑时点快照，豁免。
+    //    2026-11-19 扩面：旧逻辑只豁免「`**` 加粗块内」（`rel > bold_open`），导致写在
+    //    标题段（「里程碑：S59 收口（S59 时点台账 350 全 verified）」）的时点值被误拦；
+    //    现整段（标题 + 加粗块）= 该里程碑时点快照，统一豁免。
+    //    防滥用：纯位置判定（命中点在「里程碑：」词之后），不认「历史时点值」字样。
+    //    现状声称（行首「当前 N 任务」/ 非「里程碑：」后的「N 全 verified」）mstart = None
+    //    或 `rel < 0`（命中点在「里程碑：」前）⇒ 仍拦。
+    let rel = pos.saturating_sub(mstart);
+    rel > 0
 }
 
 /// 抽 CJK 串（如「任务」「verified」）前紧邻的数字串（左边界非数字；中间只许空白/「/」）。
