@@ -428,12 +428,6 @@ impl ti_app::scenes::SessionHost for VsHost {
     fn unlocked_mask(&self) -> u32 {
         0
     }
-    fn displayed_player_hp(&self) -> u32 {
-        0
-    }
-    fn displayed_boss_hp(&self) -> u32 {
-        0
-    }
 }
 
 impl ti_app::scenes::SceneHost for VsHost {}
@@ -486,13 +480,10 @@ fn key_rects_have_pixels() {
         panic!("scenes.json 缺 vs");
     };
     let _ph = layout_vs.extra.get("player_hp").expect("player_hp 缺");
+    // 兵力模型（S34.6 D5）：`BattleSnapshot` 已删 HP 字段（`player_hp`/`boss_hp`/`rounds`/`*_max`），
+    // 渲染走兵力量（`attacker/defender_crew/arms` + `after_*` + `resolved`）。
     let mut vs_host = VsHost::new(Some(ti_app::game_app::BattleSnapshot {
-        player_hp: 10,
-        boss_hp: 20,
-        rounds: 1,
         outcome: None,
-        player_hp_max: 10,
-        boss_hp_max: 20,
         attacker_crew: 0,
         attacker_arms: 0,
         defender_crew: 0,

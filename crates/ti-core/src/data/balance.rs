@@ -555,6 +555,12 @@ pub(crate) struct RawTerritoryAi {
     /// 升级优先阈值：自己领地收益低于此值 ⇒ 优先升级。
     #[serde(default)]
     pub(crate) upgrade_priority: f32,
+    /// 攻占决策公式形态（`"ratio"`=战力比门控〔默认〕/ `"win_only"`=预测胜即攻占；易变平衡项，数据驱动）。
+    #[serde(default)]
+    pub(crate) siege_mode: String,
+    /// 升级决策公式形态（`"gold_buffer"`=金富余门控〔默认〕/ `"priority_gate"`=优先度硬阈值；易变平衡项）。
+    #[serde(default)]
+    pub(crate) upgrade_mode: String,
 }
 
 /// 单个岛原型 serde 形状（`balance.territory.prototypes[]`）。

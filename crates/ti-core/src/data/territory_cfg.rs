@@ -44,6 +44,30 @@ pub struct HomeUpgradeCfg {
     pub max_level: u32,
 }
 
+/// AI 攻占决策公式形态（易变平衡项，`balance.territory.ai.siege_mode`；数据驱动，改 AI 激进/保守不改代码）。
+///
+/// - `WinOnly`：预测胜即攻占（旧 `attack_threshold > 0.0` 开关语义，等价 `>= 1.0` 战力比门控全开）。
+/// - `Ratio`：攻方战力 ≥ `attack_threshold` × 守方战力才攻占（`attack_threshold` 为战力比，体现「强舰队才攻占」梯度）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SiegeMode {
+    /// 预测胜即攻占。
+    WinOnly,
+    /// 战力比门控（`attack_threshold` = 战力比阈值）。
+    Ratio,
+}
+
+/// AI 自己格升级决策公式形态（易变平衡项，`balance.territory.ai.upgrade_mode`）。
+///
+/// - `PriorityGate`：`upgrade_priority >= 0.5` 硬阈值才升级（旧实现；0.3 的 AI 永不升级）。
+/// - `GoldBuffer`：金 ≥ 升级费 × (1.0 + `upgrade_priority`) 才升级（金富余门控；`upgrade_priority` 越高留缓冲越大、越克制）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UpgradeMode {
+    /// 优先度硬阈值门控。
+    PriorityGate,
+    /// 金富余门控。
+    GoldBuffer,
+}
+
 /// AI 席位策略参数。
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TerritoryAiCfg {
@@ -53,6 +77,10 @@ pub struct TerritoryAiCfg {
     pub toll_aversion: f32,
     /// 升级优先阈值。
     pub upgrade_priority: f32,
+    /// 攻占决策公式形态（`SiegeMode`，数据驱动）。
+    pub siege_mode: SiegeMode,
+    /// 升级决策公式形态（`UpgradeMode`，数据驱动）。
+    pub upgrade_mode: UpgradeMode,
 }
 
 /// 单个岛原型配置。
@@ -102,6 +130,15 @@ pub(crate) fn convert(raw: RawTerritory) -> TerritoryCfg {
             attack_threshold: raw.ai.attack_threshold,
             toll_aversion: raw.ai.toll_aversion,
             upgrade_priority: raw.ai.upgrade_priority,
+            // 缺省 = 现行形态（战力比门控 + 金富余门控，A-02/B-02 修复行为）；数据可换 win_only/priority_gate。
+            siege_mode: match raw.ai.siege_mode.as_str() {
+                "win_only" => SiegeMode::WinOnly,
+                _ => SiegeMode::Ratio,
+            },
+            upgrade_mode: match raw.ai.upgrade_mode.as_str() {
+                "priority_gate" => UpgradeMode::PriorityGate,
+                _ => UpgradeMode::GoldBuffer,
+            },
         },
         prototypes: raw
             .prototypes

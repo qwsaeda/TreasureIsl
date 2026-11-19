@@ -3,7 +3,7 @@
 //! 拆分自 `game_app.rs`（S20.0b）：绘制**只做转发**，场景绘制逻辑在 `scenes/*.rs`
 //!（`docs/process/08_render_arch.md` 契约）。
 
-use super::{GameApp, TransitionState, advance_transition_t, approach_ms, transition_ease};
+use super::{GameApp, TransitionState, advance_transition_t, transition_ease};
 use crate::scenes::{RenderHost, SceneHost, SceneKind, route_render};
 
 impl GameApp {
@@ -39,8 +39,6 @@ impl GameApp {
         crate::scenes::chrome::tick_press_flash(self.frame_delta_ms);
         // S18.5：FX 粒子推进（确定性：同 seed + 同 delta 序列 = 同画面；快照路径先 clear）。
         self.fx.advance(self.frame_delta_ms);
-        // HP 条平滑插值（EXP-085）：每帧向实际值推进，步长 = 差值的 25% 或最小 1。
-        self.update_displayed_hp();
         // 环岛赛道落格提示条：逐帧衰减（主地图渲染读 `board_toast` 时已过期则不画）。
         if self.board_toast_ticks > 0 {
             self.board_toast_ticks -= 1;
@@ -102,19 +100,6 @@ impl GameApp {
             route_render(host, kind);
         }
         self.rendered_once = true;
-    }
-    /// HP 条平滑插值（EXP-085 → S17.4 时间制）：按 `MOTION_HP_LERP_MS`=160ms 线性趋近目标，
-    /// 帧率无关（旧实现按帧推进差值的 25%）。
-    fn update_displayed_hp(&mut self) {
-        let Some(b) = self.battle.as_ref() else {
-            return;
-        };
-        let frac = f64::from(self.frame_delta_ms)
-            / f64::from(crate::scenes::chrome::MOTION_HP_LERP_MS.max(1));
-        let target_p = b.player_hp;
-        let target_b = b.boss_hp;
-        self.displayed_player_hp = approach_ms(self.displayed_player_hp, target_p, frac);
-        self.displayed_boss_hp = approach_ms(self.displayed_boss_hp, target_b, frac);
     }
     /// 场景切换过渡是否进行中（S17.9：主循环 render 门控用——过渡窗口内强制逐帧
     /// `render()`，否则 S4.3 静止帧跳渲染会把交叉淡化冻结在首帧 ~7% 旧画面，切屏残影）。

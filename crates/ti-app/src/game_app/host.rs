@@ -6,7 +6,7 @@
 use ti_core::data;
 use ti_core::data::balance;
 use ti_core::data::table_source;
-use ti_core::domain::combat::{Side, Unit};
+use ti_core::domain::combat::Side;
 use ti_core::domain::economy::Building;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::map::{GridPos, MapTerrain, SceneTarget};
@@ -203,32 +203,11 @@ impl MapHost for GameApp {
     }
 
     fn start_battle(&mut self) {
-        let seed = self.rng.next().unsigned_abs();
-        // 据点档用当前地图对应的固定 boss_tier（非随机）：`enter_main_map` 已按 map_slot 写入
+        // 据点档用当前地图对应的固定 boss_tier（非随机）：`enter_main_map` 已按 map_slot 写入。
+        // 兵力模型（S34.6 D5）：开打即切 Vs，攻/守兵力由 `battle_step` 经 `defender_force`
+        // （守方 `boss_tier` 查 `boss_fort` 防御）+ 席位 `seat_crew/arms`（攻方）结算。
         let tier = self.current_boss_tier;
-        // FIND-013：玩家单位读 `balance.combat.player`（EXP-066 重复踩坑闭环：不再写死 1000/150）；
-        // 硬报错口径与 `enter_main_map` 的 initial_gold 一致（数据缺失 = eprintln + return，不静默 fallback）
-        let b = match balance() {
-            Ok(b) => b,
-            Err(_e) => {
-                #[cfg(feature = "stats")]
-                eprintln!("[stats] start_battle: balance.json 加载失败（硬错误，不 fallback）");
-                return;
-            }
-        };
-        let Some(player) = b.combat.player else {
-            eprintln!("start_battle: balance.combat.player 缺失（硬错误，不 fallback）");
-            return;
-        };
-        // 成长机制（docs/business/combat.md §建造加成）：玩家 atk/hp = 基础值 + 已建建筑加成。
-        // 无建筑 → 加成为 0，退化为 base 战斗（与原行为一致，EXP-066 闭环不受影响）。
-        let player_atk = player.atk.saturating_add(self.build_atk_bonus());
-        // P1-7（M5）：卡牌 Damage 暂存（`card_state.hp`）并入战斗——减益后开打。
-        let player_hp = player.hp.saturating_add(self.build_hp_bonus());
-        let player_hp = player_hp.saturating_sub(self.card_state.hp);
-        let player_unit = Unit { hp: player_hp, atk: player_atk };
-        self.card_state = cards::CardState::default();
-        self.battle = BattleView::new(seed, player_unit, tier);
+        self.battle = Some(BattleView::new(tier));
         self.battle_won = false; // Q005：开新战斗复位（防上一场陈旧结果）
         self.scene = Scene::Vs;
     }
@@ -913,12 +892,7 @@ impl SessionHost for GameApp {
                 Err(_e) => (0, 0),
             };
             BattleSnapshot {
-                player_hp: b.player_hp,
-                boss_hp: b.boss_hp,
-                rounds: b.rounds,
                 outcome: b.outcome,
-                player_hp_max: b.player_hp_max,
-                boss_hp_max: b.boss_hp_max,
                 attacker_crew: atk_crew,
                 attacker_arms: atk_arms,
                 defender_crew: def_crew,
@@ -930,14 +904,6 @@ impl SessionHost for GameApp {
                 is_dungeon: b.dungeon.is_some(),
             }
         })
-    }
-
-    fn displayed_player_hp(&self) -> u32 {
-        self.displayed_player_hp
-    }
-
-    fn displayed_boss_hp(&self) -> u32 {
-        self.displayed_boss_hp
     }
 
     fn msg_kind(&self) -> Option<MsgKind> {

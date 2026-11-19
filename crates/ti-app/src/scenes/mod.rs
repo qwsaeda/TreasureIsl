@@ -728,12 +728,6 @@ pub trait SessionHost {
     /// 战斗面板快照（渲染用）。
     fn battle_snapshot(&self) -> Option<BattleSnapshot>;
 
-    /// 显示用玩家 HP（平滑插值，EXP-085 HUD 平滑动画）。
-    fn displayed_player_hp(&self) -> u32;
-
-    /// 显示用 BOSS HP（平滑插值）。
-    fn displayed_boss_hp(&self) -> u32;
-
     /// 当前消息种类。
     fn msg_kind(&self) -> Option<MsgKind>;
 

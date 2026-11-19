@@ -9,6 +9,7 @@
 //! 便于存档 v5（S33.4）直接引用。
 
 use crate::data::Balance;
+use crate::data::territory_cfg::{SiegeMode, UpgradeMode};
 use crate::rules::force::{self, Force, ForceSide};
 use crate::rules::territory::{Ownership, SeatIdx, SettleAction, TerritoryRules, TerritoryState};
 
@@ -284,6 +285,8 @@ pub fn previous_occupant(arrivals: &[SeatIdx], current: SeatIdx) -> Option<SeatI
 /// - 自己格：未满级 + 金够升级费 + `upgrade_priority` ≥ 0.5 → `Upgrade`；满级 → `Maxed`；
 ///   否则 `Collect`（领产出）。
 #[must_use]
+// 战力比门控 `power` u64→u32 缩放（兵力模型 power 值域远小于 u32 上限，无实际截断）。
+#[allow(clippy::cast_possible_truncation)]
 pub fn ai_policy_v2(
     balance: &Balance,
     state: &TerritoryState,
@@ -303,13 +306,26 @@ pub fn ai_policy_v2(
             // 守方 = 驻军 + 建筑防御；攻方 = 舰队（人手+武器）。
             let defender = Force::new(own.garrison.saturating_add(defense_units), defense_units);
             let attacker = Force::new(crew, arms);
+            let manpower = balance.manpower;
+            // 攻占判定（`territory.md` §1.2「强舰队 → 攻占阈值」，A-02 修：连续梯度而非 >0 开关）：
+            // ① 预测胜（`force::resolve`）；② 攻方战力 ≥ `attack_threshold` × 守方战力
+            //    （0.6 = 需明显强于守方才打，体现「强舰队才攻占」梯度；旧实现 `>0.0` 恒真丢梯度）；
+            // ③ 金币够付过路费（败方兜底）。三条齐 ⇒ `Siege`；否则 `PayToll`。
             let will_win =
-                force::resolve(attacker, defender, balance.manpower).winner == ForceSide::Attacker;
-            let cfg = &balance.territory.ai;
-            if will_win
-                && cfg.attack_threshold > 0.0
-                && gold >= rules.toll_at(isle, own.level.max(1))
-            {
+                force::resolve(attacker, defender, manpower).winner == ForceSide::Attacker;
+            // 攻占公式形态数据驱动（`balance.territory.ai.siege_mode`，易变平衡项不改代码）：
+            // `Ratio` = 攻方战力 ≥ `attack_threshold` × 守方战力（`attack_threshold` 为战力比，强舰队梯度）；
+            // `WinOnly` = 预测胜即攻占（旧 `>0.0` 开关语义）。
+            let ai = &balance.territory.ai;
+            let strong_enough = match ai.siege_mode {
+                SiegeMode::WinOnly => true,
+                SiegeMode::Ratio => {
+                    f64::from(attacker.power(manpower) as u32)
+                        >= f64::from(ai.attack_threshold)
+                            * f64::from(defender.power(manpower) as u32)
+                }
+            };
+            if will_win && strong_enough && gold >= rules.toll_at(isle, own.level.max(1)) {
                 SettleAction::Siege
             } else {
                 SettleAction::PayToll
@@ -321,10 +337,18 @@ pub fn ai_policy_v2(
             let cost = rules.upgrade_cost_at(isle, own.level.max(1));
             if own.level >= cap {
                 SettleAction::Maxed
-            } else if gold >= cost && balance.territory.ai.upgrade_priority >= 0.5 {
-                SettleAction::Upgrade
             } else {
-                SettleAction::Collect
+                // 升级公式形态数据驱动（`balance.territory.ai.upgrade_mode`，易变平衡项不改代码）：
+                // `GoldBuffer`（缺省）= 金 ≥ 升级费 × (1.0 + `upgrade_priority`) 才升（金富余门控，0.3 = 金≥cost×1.3）；
+                // `PriorityGate`（旧）= `upgrade_priority >= 0.5` 硬阈值（0.3 永不升级）。
+                let ai = &balance.territory.ai;
+                let want_upgrade = match ai.upgrade_mode {
+                    UpgradeMode::PriorityGate => ai.upgrade_priority >= 0.5 && gold >= cost,
+                    UpgradeMode::GoldBuffer => {
+                        f64::from(gold) >= f64::from(cost) * (1.0 + f64::from(ai.upgrade_priority))
+                    }
+                };
+                if want_upgrade { SettleAction::Upgrade } else { SettleAction::Collect }
             }
         }
     }

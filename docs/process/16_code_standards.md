@@ -15,13 +15,14 @@
 | **职责声明 / 内聚** | `src/` 每个 `.rs` 文件首部必须有 `//!` 模块文档（负责什么 / 不负责什么；`02_conventions` §9.1「一个文件 = 一个职责」）（CS-2） | 同上 | `cs2_doc_grandfathered`（存量 10 = oracle 分卷） |
 | **函数命名** | `fn` 参数名禁单字母（例外仅坐标 `{x, y}`；`02_conventions` §3「禁无意义缩写」）（CS-3） | 同上 | `cs3_param_grandfathered`（存量 136） |
 | **架构 / 窄接缝** | 场景层（`scenes/`）禁构造持久会话（`BoatSession`/`BoardSession`/`MapSession`/`BattleSession`）——会话归 `game_app` 层，场景只经 `SceneHost` 窄接缝读写（一次性规则对象 `BuildManager`/`TradeLedger` 按次结算即弃，不在此列）（CS-4） | 同上 | `cs4_scene_grandfathered`（当前 **0**） |
+| **数据驱动 / 易变平衡** | rules 层函数体禁写死**非中性浮点系数**（非 `0`/`1`/`0.0`/`1.0`）进平衡公式（系数乘法 `x * LIT` / 比较门槛 `LIT >= x`）——易变平衡项须走 `balance.json` 数据参数，代码只读字段选形态（`EXP-196`；中性值 `0.5`=四舍五入、整数缩放除外）（CS-5） | `scripts/check_code_standards.py --check` | `cs5_balance_grandfathered`（存量 7） |
 | **职责拆分 / 内聚（规模面）** | 文件 ≤900 行 / 函数 ≤140 行 / 同骨架重复 ≥N 次 | `scripts/audit_code.py`（gate 独立项） | `scripts/code_budget.json` 棘轮基线 |
 | **lint 红线** | `cargo fmt` 0 diff / `clippy -D warnings` 0 警 / 库代码 0 `unwrap`·`expect` / 0 `TODO`·`FIXME`·`unimplemented!`·`panic!` | gate 项 1~2 + 占位/unwrap 扫描项 | —（零豁免） |
 | **重构纪律** | 批量编辑 → 一次编译；报错一次性收口；禁「改一处编一次」探针节奏（`02_conventions` §9.2） | 人工（飞轮审计抽查，`06_flywheel.md`） | — |
 
 ## 2. 工具契约（`check_code_standards.py`）
 
-- **4 项检查 CS-1~CS-4**（上表前 4 行），只读：从不写 `.rs`；`--check` = 门禁判定（违例超基线 ⇒ 非 0 退出）；
+- **5 项检查 CS-1~CS-5**（上表前 5 行；CS-5 = rules 层易变平衡公式字面量守门，EXP-196 数据驱动），只读：从不写 `.rs`；`--check` = 门禁判定（违例超基线 ⇒ 非 0 退出）；
   `--report` = 信息性明细（恒 0）；`--update-baseline` = 写回豁免基线（仅 `process_ratchet.json`）。
 - **棘轮只收紧不放宽**：豁免 = 存量违例点（`reason` + `fix_in` 任务号，15_process_ledger §2 纪律）；
   **新增代码零豁免**——新文件/新函数/新参数命中任何 CS 项 = gate FAIL。

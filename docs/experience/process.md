@@ -716,3 +716,10 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
   - 死内容/死参/死数据 = B-01（4 combat items keg/medkit/rum/smoke 无获取路径，卡片/事件/商人均不产 item）/ B-04（`toll_aversion` 仅 v1 `ai_policy` 用，v2 `ai_policy_v2` 死参）/ B-05（`boss_tiers` 旧 HP 表仅 `difficulty_ladder`/`rules_battle` 测试引用，active combat 用 `force::resolve` 不用，vestigial）。
   - 设计缺陷（合理性，待裁决）= B-02（`upgrade_priority=0.3 < 0.5` 阈值 ⇒ AI 永不升级，领地永远 L1）/ B-03（雪崩：先占者收入优势 7.5×，20 图 campaign 在 ~5 图后无意义，缺 catch-up 机制）。
 - **教训**：金币守恒类 bug 最易漏（扣款方扣了、收款方没入账 = 净消失；或超额入账 = 净产生），双盲对抗 A 侧独立抓出 3 处同类（`settle_siege` 攻占败 / AI 交钱 / 玩家交钱），须统一「实付 = min(应付, 实有)」+ 收方入实付的守恒契约；测试盲区 M-04/M-05 补 e2e 守恒断言。设计缺陷类（A-02/A-06/B-01/B-02/B-03）= 实现偏离规格或数值失衡，须用户裁决方向（自动化 vs 选择 UI / 死内容接线 / AI 升级 / 雪崩 catch-up），非机械可判。
+
+### EXP-196 · 易变平衡逻辑禁写进 rules 函数体（数据驱动纪律）
+- **坑**：双盲对抗 A-02/B-02 修复时，把 AI 决策公式（`攻方战力 ≥ attack_threshold × 守方战力` 战力比门控 / `金 ≥ 升级费 × (1.0 + upgrade_priority)` 金富余门控）写进了 `rules/territory_v2.rs::ai_policy_v2` **函数体**。用户点出「易变逻辑写进代码层」= 违背 `economy.md` L12「数值全在 balance.json，调平衡不改代码」+ `01_architecture.md` 数据驱动分层。AI 激进/保守本是易变平衡项，改它不该改代码。
+- **准则**：rules 层函数体只实现「读数据参数 → 选分支 → 出结果」的**骨架**；任何**平衡公式的系数/门槛/形态**（战力比阈值、金富余缓冲、概率、等级曲线）一律进 `balance.json`，代码读字段选形态。判定 = 「这条若改了算不算改平衡？」是 ⇒ 进数据层，禁写死函数体。
+- **落地**（A-02/B-02 修正）：`ai_policy_v2` 加 `siege_mode`（`ratio`/`win_only`）+ `upgrade_mode`（`gold_buffer`/`priority_gate`）两数据字段（`balance.territory.ai`，`territory_cfg.rs` `SiegeMode`/`UpgradeMode` 枚举 + `RawTerritoryAi` String serde + `convert` match 转换），函数体 `match ai.siege_mode` 选公式形态、系数读 `ai.attack_threshold`/`ai.upgrade_priority`。改 AI 行为 = 改 balance.json 两字符串，零代码。
+- **门禁面**：新增易变平衡公式时，先落 `balance.json` 字段 + `territory_cfg.rs` 结构 + `convert`，再改 rules 函数体读它；禁在 rules 函数体新写 `f32/f64 字面量系数`（如 `× 1.3`/`>= 0.5`/`0.6`）进平衡公式。轻量守门 = grep `rules/` 新增浮点字面量进系数乘法/比较（`check_code_standards.py` CS 候选扩展面，或 doccheck2 断言；误报面 = 正常逻辑常量如 `round_pct`/损耗率，须白名单）。
+- **关联**：EXP-066（战斗玩家数值数据驱动）同类；CS-1（资产路径单源）同数据驱动纪律族。

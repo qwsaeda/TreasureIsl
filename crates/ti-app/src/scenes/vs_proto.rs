@@ -92,12 +92,13 @@ impl ProtoState {
                 damage: DEMO_DAMAGE,
             };
         };
+        // 兵力模型（S34.6 D5）：`BattleSnapshot` 已删 HP 字段，原型演示读兵力量（攻/守 fleet 人手）。
         Self {
-            player_hp: s.player_hp,
-            player_hp_max: s.player_hp_max.max(1),
-            boss_hp: s.boss_hp,
-            boss_hp_max: s.boss_hp_max.max(1),
-            round: s.rounds,
+            player_hp: s.attacker_crew,
+            player_hp_max: s.attacker_crew.max(1),
+            boss_hp: s.defender_crew,
+            boss_hp_max: s.defender_crew.max(1),
+            round: 0,
             damage: DEMO_DAMAGE,
         }
     }

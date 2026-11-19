@@ -429,7 +429,9 @@
   "ai": {
    "attack_threshold": 0.6,
    "toll_aversion": 0.5,
-   "upgrade_priority": 0.3
+   "upgrade_priority": 0.3,
+   "siege_mode": "ratio",
+   "upgrade_mode": "gold_buffer"
   },
   "prototypes": [
    {

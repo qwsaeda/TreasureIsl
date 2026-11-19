@@ -124,13 +124,13 @@ fn dispatch_vs_attack_does_not_consume() {
     app.handle(GameInput::Landmark(6));
     assert_eq!(app.scene(), Scene::Vs);
 
-    let rounds_before = app.battle().expect("战斗应已开启").rounds;
+    let outcome_before = app.battle().expect("战斗应已开启").outcome();
     // S34.6 D5（兵力模型迁移）：Attack = `force::resolve` 一次性确定性结算，不再逐回合推进
-    // （`rounds` 不再增长）⇒ 第一步即出结果，场景停留 VS 展示结果帧。
+    // （无 `rounds`/HP 字段）⇒ 第一步即出结果，场景停留 VS 展示结果帧。
     let _consumed = app.dispatch(GameCommand::Attack);
     assert!(
         app.battle().expect("战斗应仍在").outcome().is_some(),
-        "兵力模型下 Attack 应一次性结算出结果（rounds_before={rounds_before}）"
+        "兵力模型下 Attack 应一次性结算出结果（结算前 outcome={outcome_before:?}）"
     );
     assert_eq!(app.scene(), Scene::Vs, "结算后停留 VS 结果帧（Back 才离开）");
 }

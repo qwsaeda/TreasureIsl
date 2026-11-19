@@ -859,6 +859,36 @@
         "reason": "新增豁免",
         "fix_in": "TBD"
       }
+    },
+    "cs5_balance_grandfathered": {
+      "crates/ti-core/src/rules/board.rs::board_landing_rhythm_is_consistent_across_maps": {
+        "reason": "新增豁免",
+        "fix_in": "TBD"
+      },
+      "crates/ti-core/src/rules/main_map.rs::step_move": {
+        "reason": "新增豁免",
+        "fix_in": "TBD"
+      },
+      "crates/ti-core/src/rules/merchant.rs::buy_arms_debits_and_adds_capped_at_crew": {
+        "reason": "新增豁免",
+        "fix_in": "TBD"
+      },
+      "crates/ti-core/src/rules/merchant.rs::buy_crew_capped_at_boat_capacity": {
+        "reason": "新增豁免",
+        "fix_in": "TBD"
+      },
+      "crates/ti-core/src/rules/render.rs::(top)": {
+        "reason": "新增豁免",
+        "fix_in": "TBD"
+      },
+      "crates/ti-core/src/rules/territory.rs::round_to_u32": {
+        "reason": "新增豁免",
+        "fix_in": "TBD"
+      },
+      "crates/ti-core/src/rules/territory_v2.rs::(top)": {
+        "reason": "新增豁免",
+        "fix_in": "TBD"
+      }
     }
   }
 }

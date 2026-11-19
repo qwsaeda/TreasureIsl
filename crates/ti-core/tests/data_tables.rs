@@ -307,6 +307,8 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
                 attack_threshold: 0.6,
                 toll_aversion: 0.5,
                 upgrade_priority: 0.3,
+                siege_mode: ti_core::data::SiegeMode::Ratio,
+                upgrade_mode: ti_core::data::UpgradeMode::GoldBuffer,
             },
             prototypes: Vec::new(),
         },

@@ -631,7 +631,9 @@ pub struct Balance {
 // ------------------------------------------------------- 领地系统（S28.3）re-export
 
 pub use manpower_cfg::{EventCfg, ManpowerCfg, MerchantCfg};
-pub use territory_cfg::{HomeUpgradeCfg, TerritoryAiCfg, TerritoryCfg, TerritoryPrototypeCfg};
+pub use territory_cfg::{
+    HomeUpgradeCfg, SiegeMode, TerritoryAiCfg, TerritoryCfg, TerritoryPrototypeCfg, UpgradeMode,
+};
 // ------------------------------------------------------- serde 中间层（JSON 形状）
 
 /// 文本表 serde 中间层（JSON 形状：`string→string` 映射 + `schema_version`）。

@@ -173,17 +173,16 @@ fn main() {
         }
     }
 
-    // battle progress check (Vs scene should advance rounds; `rounds > 0` proves combat ran)
+    // battle progress check（兵力模型，S34.6 D5：`outcome` 在位 = 战斗已结算；无逐回合 rounds）。
     if let Some(b) = app.battle() {
         println!(
-            "  battle: rounds={} player_hp={} boss_hp={} outcome={:?}",
-            b.rounds,
-            b.player_hp(),
-            b.boss_hp(),
+            "  battle: after_crew={:?} after_arms={:?} outcome={:?}",
+            b.after_crew,
+            b.after_arms,
             b.outcome()
         );
-        if b.rounds == 0 {
-            println!("  warn: battle 0 rounds (script did not advance attack), scene-flow only");
+        if b.outcome().is_none() {
+            println!("  warn: battle 未结算（脚本未推进 Attack），scene-flow only");
         }
     }
 

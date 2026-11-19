@@ -272,12 +272,13 @@ fn ai_policy_unowned_and_self() {
     assert_eq!(unowned, SettleAction::EnterDungeon, "无主格 → 副本");
     let mut seat = SeatState::new(1000, 200, 200, 0);
     let _ = capture_cell(&mut seat, &mut terr, cell, 0, 5);
+    // B-02 修（金富余门控）：自己格升级判定 = 金 ≥ 升级费 × (1.0 + upgrade_priority)。
+    // 金 10000 富余（harbour L1 升级费远小于 10000/(1+0.3)）⇒ 默认 0.3 也会升级（非旧「永不升级」）。
     let self_own = ai_policy_v2(&bal, &terr, 0, cell, 10_000, 200, 200);
-    assert_eq!(self_own, SettleAction::Collect, "自己格 upgrade_priority<0.5 → 领产出");
-    let mut bal2 = bal.clone();
-    bal2.territory.ai.upgrade_priority = 0.6;
-    let up = ai_policy_v2(&bal2, &terr, 0, cell, 10_000, 200, 200);
-    assert_eq!(up, SettleAction::Upgrade, "自己格 upgrade_priority≥0.5 + 金足 → 升级");
+    assert_eq!(self_own, SettleAction::Upgrade, "自己格金富余（≥cost×1.3）→ 升级");
+    // 金不足富余门槛 ⇒ 领产出（金 < cost×(1+0.3)）。
+    let collect = ai_policy_v2(&bal, &terr, 0, cell, 10, 200, 200);
+    assert_eq!(collect, SettleAction::Collect, "自己格金不富余 → 领产出");
 }
 
 /// v3 胜负：只在在局席位内判最后存活者（`victory_seat_active`，D4 修复）。

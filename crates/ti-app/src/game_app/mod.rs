@@ -92,18 +92,8 @@ impl Scene {
 /// 战斗面板快照（渲染层只读视图，避免与帧缓冲借用重叠）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BattleSnapshot {
-    /// 玩家当前 HP。
-    pub player_hp: u32,
-    /// BOSS 当前 HP。
-    pub boss_hp: u32,
-    /// 已战回合数。
-    pub rounds: u32,
-    /// 胜方（`None` = 未结束）。
+    /// 胜方（`None` = 未结束；兵力模型一次性结算，无逐回合 HP）。
     pub outcome: Option<Side>,
-    /// 玩家初始 HP（血条分母，`balance.combat.player.hp`）。
-    pub player_hp_max: u32,
-    /// BOSS 初始 HP（血条分母，`balance.combat.boss_tiers[tier].hp`）。
-    pub boss_hp_max: u32,
     /// 攻方舰队人手（运行态兵力，`seat_crew[current]`；S34.6 D4 数据绑定，spec §2.5）。
     pub attacker_crew: u32,
     /// 攻方舰队武器（`seat_arms[current]`）。
@@ -390,10 +380,6 @@ pub struct GameApp {
     pub press_held: bool,
     /// 是否已完成过至少一次场景渲染（首帧前无旧画面可混合，跳过过渡防黑闪，EXP-081）。
     pub rendered_once: bool,
-    /// 显示用玩家 HP（平滑插值，每帧向实际值推进，EXP-085 HUD 平滑动画）。
-    pub displayed_player_hp: u32,
-    /// 显示用 BOSS HP（平滑插值）。
-    pub displayed_boss_hp: u32,
     /// S18.5：主地图相机 zoom/pan 纯函数模型（`world_canvas` 镜头；Bevy 壳 GPU 侧接线，
     /// CPU terrain 相机接线挂 S18.6 像素基线重建同轮）。
     pub world_cam: crate::world_camera::WorldCam,
@@ -439,21 +425,6 @@ pub enum MatchOutcome {
 }
 /// S18.5：FX 粒子 LCG 固定 seed（确定性视觉验收；不进业务 RNG `rules::rng::GameRng`）。
 pub const FX_SEED: u64 = 0xC0_FF_EE;
-/// HP 平滑插值（S17.4 时间制）：向目标推进「剩余差值 × 本帧时间占比」，帧率无关；
-/// 每次至少推进 1（防小差值卡死），`frac <= 0` 时保持不动。
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn approach_ms(current: u32, target: u32, frac: f64) -> u32 {
-    if current == target || frac <= 0.0 {
-        return current;
-    }
-    let diff = target.abs_diff(current);
-    let step = ((f64::from(diff) * frac).round().max(1.0) as u32).min(diff);
-    if current < target {
-        current.saturating_add(step).min(target)
-    } else {
-        current.saturating_sub(step).max(target)
-    }
-}
 /// S17.4：过渡进度时间制推进（`MOTION_TRANSITION_MS` 内 delta 占比；f64 中间值 →
 /// f32 末位截断不影响单调性）。delta 按 `u16` 上限封顶（壳层本就 clamp ≤250ms）。
 #[allow(clippy::cast_possible_truncation)]
@@ -584,8 +555,6 @@ impl GameApp {
             transition: None,
             press_held: false,
             rendered_once: false,
-            displayed_player_hp: 0,
-            displayed_boss_hp: 0,
             world_cam: crate::world_camera::WorldCam::default(),
             fx: crate::particles::ParticleFx::deterministic(FX_SEED),
             // S28.7 领地/席位初值（`territory.md` §1：单席位开局，领地空账本）。

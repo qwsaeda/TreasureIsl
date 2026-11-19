@@ -808,30 +808,35 @@ fn check_flywheel_readback(root: &Path) -> Vec<String> {
     errors
 }
 
-/// 9. 战斗玩家数值数据驱动（EXP-066 闭环）：`game_app/host.rs` 的 `start_battle`
-///    不得写死 `Unit { hp: 1000, atk: 150 }`，须读 `balance().combat.player`。
-///    机械判据：`game_app.rs` 里 `start_battle` 函数体须含 `balance().combat.player`
-///    或 `combat.player` 引用（P0-1 修复后闭环验证，防再次回归）。
+/// 战斗数值数据驱动（EXP-066 闭环；S34.6 D5 兵力模型口径）。
+///
+/// 守方兵力入口 `defender_force` 不得写死守方数值，须读 `data::balance()` 经
+/// `TerritoryRules::defense_at` 查（兵力模型：攻方 = 席位 `seat_crew/arms`，守方 = 驻军
+/// 以及建筑防御，全走 balance 数据；旧 HP 模型 `start_battle` 读 `balance.combat.player`
+/// 构造玩家 `Unit` 已删，改由 `defender_force` 经 `TerritoryRules::defense_at` 查守方）。
+/// 机械判据：`defender_force` 函数体须含 `TerritoryRules::new` + `defense_at` 引用（防守方数值写死回归）。
 fn check_battle_player_data_driven(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(game_app) = read_file(root, "crates/ti-app/src/game_app/host.rs") else {
-        return vec!["game_app/host.rs 不存在，无法校验战斗玩家数值数据驱动".to_string()];
+        return vec!["game_app/host.rs 不存在，无法校验战斗数值数据驱动".to_string()];
     };
-    let Some(sb_start) = game_app.find("fn start_battle") else {
-        return vec!["game_app/host.rs 缺少 `fn start_battle`".to_string()];
+    let Some(df_start) = game_app.find("fn defender_force") else {
+        return vec![
+            "game_app/host.rs 缺少 `fn defender_force`（守方兵力数据驱动入口）".to_string(),
+        ];
     };
-    // 取 start_battle 函数体（到下一个 `}` 闭合为止，简化取 800 字符窗口，按 char 边界截取；
-    // 800 足以覆盖到 `b.combat.player` 引用行（FIND-013 改后引用在函数体中部）
-    let raw_end = (sb_start + 800).min(game_app.len());
-    // 回退到合法 char 边界（floor_char_boundary 需 Rust 1.91，MSRV 1.85 故手动回退）
+    // 取 defender_force 函数体（800 字符窗口，按 char 边界截取；须含 `data::balance()` + `defense_at`）
+    let raw_end = (df_start + 800).min(game_app.len());
     let mut end = raw_end;
-    while end > sb_start && !game_app.is_char_boundary(end) {
+    while end > df_start && !game_app.is_char_boundary(end) {
         end -= 1;
     }
-    let body = &game_app[sb_start..end];
-    if !body.contains("combat.player") {
+    let body = &game_app[df_start..end];
+    // 守方兵力数据驱动 = `TerritoryRules::new(bal)` 经 `defense_at` 查（bal 由调用方 `data::balance()` 注入）；
+    // 须含 `TerritoryRules::new` + `defense_at`（防写死守方数值回归）。
+    if !body.contains("TerritoryRules::new") || !body.contains("defense_at") {
         errors.push(
-            "game_app.rs start_battle 未读 balance.combat.player（EXP-066 未闭环，战斗玩家数值写死）"
+            "game_app/host.rs defender_force 未走 TerritoryRules::defense_at（EXP-066 未闭环，守方兵力写死）"
                 .to_string(),
         );
     }

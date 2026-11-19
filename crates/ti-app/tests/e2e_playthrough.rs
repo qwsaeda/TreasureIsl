@@ -410,9 +410,12 @@ fn e2e_battle_determinism() {
             break;
         }
     }
+    // 兵力模型（S34.6 D5）：战斗一次性 `force::resolve` 结算，无逐回合 rounds/HP；
+    // 确定性 = 同 seed 同序列 ⇒ 同 outcome + 同 `after_crew/after_arms`（战后兵力守恒可复现）。
     let outcome1 = app1.battle().map(BattleView::outcome);
-    let player_hp1 = app1.battle().map(BattleView::player_hp);
-    let boss_hp1 = app1.battle().map(BattleView::boss_hp);
+    let after_crew1 = app1.battle().and_then(|b| b.after_crew);
+    let after_arms1 = app1.battle().and_then(|b| b.after_arms);
+    let _ = rounds1; // 兵力模型下逐回合 Attack 循环不再推进，保留计数无害（不用于断言）
 
     // 第二次战斗（相同种子）
     let mut app2 = GameApp::new(1080.0, 1920.0);
@@ -435,14 +438,14 @@ fn e2e_battle_determinism() {
         }
     }
     let outcome2 = app2.battle().map(BattleView::outcome);
-    let player_hp2 = app2.battle().map(BattleView::player_hp);
-    let boss_hp2 = app2.battle().map(BattleView::boss_hp);
+    let after_crew2 = app2.battle().and_then(|b| b.after_crew);
+    let after_arms2 = app2.battle().and_then(|b| b.after_arms);
+    let _ = rounds2;
 
-    // 两次战斗结果应完全一致
-    assert_eq!(rounds1, rounds2, "相同种子战斗回合数应一致");
+    // 两次战斗结果应完全一致（兵力模型确定性：同 seed 同 outcome + 同战后兵力）
     assert_eq!(outcome1, outcome2, "相同种子战斗结果应一致");
-    assert_eq!(player_hp1, player_hp2, "相同种子玩家 HP 应一致");
-    assert_eq!(boss_hp1, boss_hp2, "相同种子 BOSS HP 应一致");
+    assert_eq!(after_crew1, after_crew2, "相同种子战后攻方人手应一致");
+    assert_eq!(after_arms1, after_arms2, "相同种子战后攻方武器应一致");
 }
 
 /// S19：环岛赛道摇骰闭环（e2e）：进图 → 赛道会话在位 → 摇骰前进（索引推进 + 位置 = 赛道格 +

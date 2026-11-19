@@ -137,11 +137,53 @@ def cs4_scene_violations():
     return out
 
 
+# CS-5 易变平衡公式字面量守门（EXP-196）：rules 层函数体禁写死**非中性浮点系数**进平衡
+# 公式（系数乘法：`变量 * LIT` 或 `LIT * 变量`，LIT 非 {0,1,0.0,1.0} 中性值；或 `LIT >=/<= 变量`
+# 比较门槛），须走 balance.json 数据参数。误报控制 = 只认「字面量直接邻接乘法运算符」或
+# 「字面量作为比较门槛右/左侧」，排除独立赋值/概率常量（cards_draw 0.35 走数据）。
+CS5_RULES_DIR = "crates/ti-core/src/rules/"
+CS5_NEUTRAL = {"0", "0.0", "1", "1.0"}
+CS5_MULT_RE = re.compile(r"([0-9]+(?:\.[0-9]+)?)\s*\*|\*\s*([0-9]+(?:\.[0-9]+)?)")
+CS5_CMP_RE = re.compile(r"(>=|<=|>|<)\s*([0-9]+\.[0-9]+)|([0-9]+\.[0-9]+)\s*(>=|<=|>|<)")
+
+
+def _cs5_nonneutral(lit: str) -> bool:
+    return lit not in CS5_NEUTRAL
+
+
+def cs5_balance_literal_violations():
+    """rules 层非中性浮点系数进乘法/比较门槛（平衡公式硬编码，EXP-196）。"""
+    out = []
+    for p in iter_src_rs():
+        rp = rel(p)
+        if not rp.startswith(CS5_RULES_DIR):
+            continue
+        cur_fn = "(top)"
+        for i, line in enumerate(read(p), 1):
+            stripped = line.strip()
+            if is_comment(stripped):
+                continue
+            fm = re.match(r"fn\s+([a-z_][a-z0-9_]*)", stripped)
+            if fm:
+                cur_fn = fm.group(1)
+                continue
+            for m in CS5_MULT_RE.finditer(stripped):
+                lit = m.group(1) or m.group(2)
+                if _cs5_nonneutral(lit):
+                    out.append((f"{rp}::{cur_fn}", i, f"{lit}*（乘法系数）"))
+            for m in CS5_CMP_RE.finditer(stripped):
+                lit = m.group(2) or m.group(3)
+                if _cs5_nonneutral(lit) and "." in lit:
+                    out.append((f"{rp}::{cur_fn}", i, f"{lit}（比较门槛）"))
+    return out
+
+
 CHECKS = {
     "CS-1 asset_path_hardcode": cs1_asset_violations,
     "CS-2 file_doc_present": cs2_doc_violations,
     "CS-3 fn_param_naming": cs3_param_violations,
     "CS-4 scene_session_ctor": cs4_scene_violations,
+    "CS-5 balance_literal_in_rules": cs5_balance_literal_violations,
 }
 
 BASELINE_KEY = {
@@ -149,6 +191,7 @@ BASELINE_KEY = {
     "CS-2 file_doc_present": "cs2_doc_grandfathered",
     "CS-3 fn_param_naming": "cs3_param_grandfathered",
     "CS-4 scene_session_ctor": "cs4_scene_grandfathered",
+    "CS-5 balance_literal_in_rules": "cs5_balance_grandfathered",
 }
 
 DESC = {
@@ -156,6 +199,7 @@ DESC = {
     "CS-2 file_doc_present": "src 文件缺 //! 模块文档（职责声明）",
     "CS-3 fn_param_naming": "fn 参数单字母（非 x/y）",
     "CS-4 scene_session_ctor": "场景层构造持久会话（窄接缝）",
+    "CS-5 balance_literal_in_rules": "rules 层函数体写死浮点平衡系数（非 0/1 中性值，EXP-196 数据驱动）",
 }
 
 
