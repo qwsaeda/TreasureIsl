@@ -739,3 +739,21 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **A-06（玩家落自己格无选择权，规格 §4「玩家可选 ①升级 ②领产出」）= 已修**：落自己格从「自动升级/领产出」改为置 `pending_own` 待决 + 提示二选一，主地图 `Confirm`=`confirm_own`（升级加固，金不足/满级退化领产出）/`Back`=`abandon_own`（领产出），对齐 `pending_siege`/`pending_dungeon` 的玩家选择权模式。金币守恒：升级扣费/领产出入账自己（`credit_seat_gold`）。补 e2e `own_landing_gives_player_choice`。规格 §4 第三支「增减驻军」未做（独立交互，留后续轮）。
 - **A-08（`assault` 无格属前置校验，无主格/自格调攻占语义错）= 已修（防御性）**：`assault` 加 `debug_assert!(matches!(own.owner, Some(o) if o != seat_idx))` + 文档前置契约（仅适用他人格，生产调用方 `ai_policy_v2` 他人格产生 `Siege` + `pending_siege` 落他人格已保证；无主走副本、自己走升级）。`debug_assert` 零生产成本，测试/开发期抓误用；不改 `AssaultOutcome`（Win/Loss 两态不变，避免改枚举传染）。
 - **B-03（雪崩：先占者收入优势 ~7.5×，20 图 campaign ~5 图后无意义，缺 catch-up）= 用户拍板接受现状**：核实无 catch-up 机制（领地收入 `production_base` 45~100/圈 + `lap_bonus` 150 + `first_capture_bonus` 150 累积优势真实）。**大富翁类游戏固有特性**（Monopoly 本就先占者胜）。用户 2026-11-19 拍板「接受大富翁滚雪球，先占者胜是玩法的一部分」= **设计选择保留，不加 catch-up 落后者加成**（避免破坏大富翁核心爽感），登记 `territory.md` B-03 段。对局胜负仍走 `victory_seat`/`bankrupt`。
+
+### EXP-197 流程：i18n 孤儿 ≠ 死代码：渲染活路径消费的 key 禁删
+- **现象**：X2 删 Landing::Battle 后 battle_fmt i18n 孤儿 1 条（可删）；但同轮 combat.item.* 4 key 看着像孤儿（combat.items 表已删 B-01）。
+- **根因**：combat.item.* 的 i18n key 经 chrome.rs 的 VS_ITEM_KEG/MEDKIT/RUM/SMOKE 常量被 vs_proto.rs L46-49 + vs_anim_v4.rs L613 消费（vs_duel 原型 = F-05 保留作动效骨架参考，渲染 vs 道具图标）。doccheck2 i18n 孤儿判定 = 静态扫 i18n_fmt 字面量，渲染层经常量间接引用 ⇒ 假孤儿（EXP-187 同类盲区：动态拼接/常量中转）。
+- **解法**：删 i18n key 前 grep 代码消费点（含渲染层常量中转）+ 查 F-ID 登记（F-05 保留判定）。battle_fmt = 0 消费真删；combat.item.* = 活路径保留（4 条 WARN 登记，不静默清）。
+- **验证**：grep -rn combat.item chrome.rs vs_proto.rs vs_anim_v4.rs ⇒ 4 常量 + 渲染调用；doccheck2 i18n 孤儿 WARN 4 条 = 已知保留面（非 FAIL）。
+
+### EXP-198 流程：业务规格审计 4 分类处置 + 数值口径勘误（真漂移 vs 笔误 vs 设计空洞 vs 死代码）
+- **现象**：docs/business/ 14 疑点审计：1338 金（progression §跨图节奏）vs 实测 338（board_measure 落格净金）= 数值漂移；boss_tiers 3 档（文档旧表）vs 20 档（balance 实际）= 笔误滞后；卡牌 HP 空洞（combat.md 删 HP 但 progression 仍写卡牌扣血）= 设计空洞；Landing::Battle（v5 无遭遇格但代码留分支）= 死代码。
+- **根因**：文档镜像（progression 难度阶梯表 / 数值锚点）是手工同步的 v4 历史值，v5/v3/兵力模型大改后未回写；「见 BOSS 时金」口径演变（落格净金 vs 含领地通道）文档没标口径，读者误读。
+- **解法**：① 逐疑点 grep 代码坐实（rules/ tests/ balance.json 三方）→ 4 分类处置（真漂移改值 / 笔误改措辞 / 空洞记现状待拍板 / 死代码删+登记）；② 数值声称点一律跑 board_measure.py 实测回写，禁抄文档旧值；③ 口径演变必须标「M6 口径」+ 旧口径勘误注。
+- **验证**：doccheck 0 error + doccheck2 cross-doc-counts 0 + board_measure --check PASS（业务规格难度档位与 balance 一致）。4 分类 = 本轮 15 条勘误 + H1②/X2/M6 三项拍板的处置法。
+
+### EXP-199 流程：迁移类重构须同步清「实现+数据+i18n+资产+测试+example+文档」六面，否则残留成死代码
+- **现象**：S34.6 D5 删 HP 回合制后，card_state.hp 暂存通道（卡牌扣血）+ balance.board.battle_damage/battle_gold_loss 字段 + toast.battle_fmt i18n + board.rs Landing::Battle 落格分支 = 全残留（v5 无遭遇格，死分支不可达）；审计才暴露。
+- **根因**：迁移类重构（HP→兵力模型）只清了 rules 层主路径（BattleSession/combat.items），未同步清「表现层死分支 + 数据段死字段 + i18n 死文案 + 落格死 arm」——六面中清了一面（rules），其余五面挂编译面长期漂移。
+- **解法**：迁移类重构收口时，按六面清单系统摸排：① 实现（死分支/死字段/死函数）② 数据（balance 段死键）③ i18n（strings 死文案）④ 资产（ui 死图，查 vs 渲染活路径）⑤ 测试（断言死字段）⑥ 文档（规格旧口径）；逐层 grep 消费点 + 查 F-ID 保留判定（EXP-197）。本轮 = 删 battle_* 字段 + Battle 分支 + battle_fmt i18n + data_tables 断言 + 文档勘误。
+- **验证**：grep -rn battle_damage/battle_gold_loss/board.card_state 全库 0 活消费（仅历史注释）；cargo test 990/0 + gate 36 项 0 failure；doccheck2 i18n 孤儿面 = 已知保留（combat.item.* vs 渲染活路径，EXP-197）。
