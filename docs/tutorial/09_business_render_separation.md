@@ -112,7 +112,7 @@
 ```
 战斗数值：  docs/business/combat.md（兵力公式定案）
             → assets/data/balance.json §combat（数值落地）
-            → crates/ti-core/src/rules/battle.rs（公式实现，只读表）
+            → crates/ti-core/src/rules/force.rs（兵力模型公式 `force::resolve`，只读表；旧 HP 模型 rules/battle.rs 已删 S34.6 D5）
 
 怪物/岛：   docs/business/territory.md（10 类岛 + 副本规则）
             → assets/data/board.json（赛道 31 格 + 岛类分布）
@@ -124,7 +124,7 @@
 ```
 
 **规则：数值定案在 `docs/business/` → 落 JSON 表 → 代码只读表。**
-改数值 = 改 `balance.json`（先改文档），不改 `rules/battle.rs` 公式。
+改数值 = 改 `balance.json`（先改文档），不改 `rules/force.rs` 公式。
 
 详见 `docs/process/18_asset_content_pipeline.md` §数据分离原则。
 

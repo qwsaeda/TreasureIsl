@@ -59,7 +59,6 @@ ti_core::domain::persistence::SaveSlot
 ti_core::domain::selection::Character
 ti_core::domain::flow::MenuScene
 ti_core::rules::rng::GameRng
-ti_core::rules::battle::BattleSession
 ti_core::rules::main_map::MapSession
 ti_core::rules::main_loop::SceneStack
 ti_core::rules::board::SpaceKind

@@ -39,7 +39,8 @@
 4. **oracle 差分测试**：把伪代码**直译**成 `ti-core/src/oracle/<module>.rs`（测试专用、允许与正式实现重复），同一 RNG 种子、同一输入 → 输出完全相同。
 
 ```
-diff_test!(oracle::battle::resolve, rules::battle::resolve, cases)
+// 旧 HP 战斗 oracle 差分（`oracle::battle` vs `rules::battle::resolve`）已删（S34.6 D5 兵力模型迁移，oracle/battle.rs + rules/battle.rs 全删）。
+// 现行战斗 = `rules::force::resolve` 兵力模型（确定性 = 同输入同结果，无随机无需 oracle 差分，force.rs 内联单测守护）。
 → cargo test -p ti-core --test diff_<module>  全绿
 ```
 

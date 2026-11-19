@@ -563,7 +563,7 @@ flowchart LR
 
 | 系统 | 关系 |
 |---|---|
-| 战斗 `rules::battle` | v2 = 兵力模型（`combat.md` §兵力模型）；副本/BOSS 同模型 |
+| 战斗 `rules::force`（兵力模型） | v2 = 兵力模型（`combat.md` §兵力模型）；副本/BOSS 同模型；旧 HP `rules::battle` 已删 S34.6 D5 |
 | 建造 `rules::build` | 建筑 = 个人成长线；领地建筑 = 地图成长线（独立叠加） |
 | 船只 `rules::boat` | 船等级 = 人手容量上限 + 贸易上限；不影响领地攻防公式 |
 | 跨图推进 `rules::progression` | 击败本图 BOSS = 解锁下一图；被 AI 击败不影响玩家解锁 |

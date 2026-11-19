@@ -97,7 +97,7 @@
 | 主地图移动 | `rules::main_map` | map_system.md |
 | 贸易 | `rules::trade` | economy.md |
 | 建造/银行 | `rules::build` | economy.md |
-| 战斗 | `rules::battle` | combat.md |
+| 战斗 | `rules::force`（兵力模型，S34.6 D5） | combat.md |
 | 卡牌 | `rules::cards` | combat.md |
 | 存读档 | `rules::saveload` | persistence.md |
 | 消息 | `rules::messages` | ui_controls.md |

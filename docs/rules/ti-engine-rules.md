@@ -25,7 +25,7 @@ paths:
    `draw_rounded_rect_gradient(...)` 未登记。
 4. **零游戏业务逻辑**：`ti-engine` 不得含战斗/经济/存档规则（归 `ti-core` 的 `rules/*` / `domain/*`）；
    引擎层只负责「把数据画出来 + 命中转 `HitData`」，规则判定全在 `ti-core`。反例：`ti-engine/src/vs_proto.rs`
-   写伤害结算公式（应 = `rules::battle` 算完传结果进来画）。
+   写战斗结算公式（应 = `rules::force` 兵力模型 `force::resolve` 算完传结果进来画；旧 HP 模型 rules/battle.rs 已删 S34.6 D5）。
 5. **多相机口径**：UI 相机 `IsDefaultUiCamera` order=1 / clear None + `RenderLayers::layer(1)` 隔离；
    世界相机 `WorldCam` 标记（`camera_system` / `resizetest` 须显式 `WorldCam`，防多实体 `single()`
    失败致正交 scale 静默不更新，`19_bevy_ui.md` 坑位 9.8-10 + S29.5 缺陷）。反例：`camera_system` 用

@@ -27,7 +27,7 @@ paths:
 5. **oracle 参照物边界**：`oracle/*` 是逆向参照实现（唯一源 `ti-core/src/oracle`），`rules/*` 不得
    反向依赖 `oracle` 内部函数（`shell` 层 0 个 `oracle_*` 函数调用，gate 第 11 项
    `check_oracle_boundary`）；oracle 仅作 diff 基准，不是生产路径。反例：`battle.rs` 调
-   `oracle::battle::step(...)` 取结果（应自己实现 `rules::battle::step`，diff 测试对照 oracle）。
+   `oracle` 取结果（旧 HP 战斗 `rules::battle::step` + oracle/battle.rs 已删〔S34.6 D5 兵力模型〕；现行战斗 = `rules::force::resolve` 兵力模型，无逐回合 oracle 对照）。
 
 ## 正确 / 反例（1~2 条，给子代理开轮速查）
 
