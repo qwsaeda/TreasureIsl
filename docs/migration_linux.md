@@ -73,6 +73,10 @@ ui-redesign-v3/{07_v3_5_pass,README}.md}`、`AGENTS.md`。
     bevy 全家 = 0.20.0。
 
 - **S27.7 VS 改版 · 业务与规则**：
+   > ⚠️ **L76~L83 为 S27.7 时点历史快照（旧 HP 道具回合制战斗，已删 S34.6 D5）**：下文「战斗动作=攻击/道具/
+   > 防御 + 4 道具 + `rules::battle::step_with`」整段已随兵力模型迁移删除，**现行战斗 = `rules::force::resolve`
+   > 一次性兵力结算（无回合/无道具/无血条）**；`combat.items` 道具表 + `combat.item.*` 文案已删（B-01 死内容）。
+   > 本段仅留作逆向迁移背景，勿用于现行实现。
   - 战斗动作 = 攻击/道具/防御；4 道具 = 火药桶(固定300)/医疗包(25%上限)/朗姆酒(3回合×1.5)/烟雾弹(挡1次反击)；
     携带上限 3/3/2/2；`defend_reduction_pct=50`。单一事实源 `docs/business/combat.md` §战斗动作，
     数值 `assets/data/balance.json → combat.items`。

@@ -43,8 +43,8 @@
 ## 5. 包依赖铁律（跨包只经两条通道）
 
 1. **类型通道**：只 use 本文 §1/§3/§4 列出的公共类型（经 `domain` / `data` 重导出，不直连子模块）；
-   会话对象（`rules::battle::BattleSession`、`rules::main_map::MapSession`、
-   `rules::main_loop::SceneStack` 等）属包内实现，跨包经 `SceneHost` 方法访问（见 c3），不直接构造；
+   会话对象（`rules::force::resolve`（战斗，一次性兵力结算）、`rules::main_map::MapSession`、
+   `rules::main_loop::SceneStack` 等；旧 HP 回合制 `rules::battle::BattleSession` 已删 S34.6 D5）属包内实现，跨包经 `SceneHost` 方法访问（见 c3），不直接构造；
 2. **数据通道**：数值/文案只读 §3 访问器返回的 key，不在代码里写死。
 
 ## 校验锚点
