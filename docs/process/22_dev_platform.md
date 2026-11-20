@@ -38,6 +38,7 @@
      | 动作 | 脚本写点（git 跟踪，除注明外） | 备注 |
      |---|---|---|
      | 跑门禁 `scripts/gate.ps1` | `evidence/web_playtest.log`、`evidence/web_playtest.png`、`evidence/font_render.txt` | **实测**：第 23 项 browser-playtest **无分档守卫**（三档都会执行）⇒ 跑一次门禁必改前两个跟踪文件；`font_render.txt` 由 `cargo test --workspace` 的 `ti-formats` font_parity 测试写（内容确定 ⇒ 无 diff，但写点客观存在） |
+     | 平台作业证明落点 `jobs.rs::persist_proof`（23 号 §6.2 证明行，审计 Q013） | `evidence/tests/<id>/<id>-<ts>/{run.log,state.json}` | **gitignored**（`.gitignore` `/evidence/tests/`，飞轮 R19 登记）⇒ 运行时证明产物，与 `evidence/console/jobs/` 同类不入 git；**表外写点发现 ⇒ 补表后再上线**纪律兑现行 |
      | 只读收口体检 `scripts/task_close.py --check` | 无 | 只读 |
      | 收口 `scripts/task_close.py` | `evidence/<task>.log`、`plan/ledger.yaml`（任务行）、`docs/release.md`（计数） | 平台**默认只开放 `--check`**；写入口受 §4.2 白名单 id 约束 |
      | EXP 查重 `scripts/exp_log.py --check` | 无 | **当前不开放写入入口**（将来开放须同步本表 + §4.2） |

@@ -411,11 +411,10 @@
     "--test",
     "reference_diff_cards"
    ],
-   "writes": [
-    "evidence/reference_diff_cards.log"
-   ],
+   "writes": [],
    "enabled_by_default": true,
-   "command": "cargo test -p ti-core --test reference_diff_cards"
+   "command": "cargo test -p ti-core --test reference_diff_cards",
+   "_writes_note": "只读测试：cargo test 零写盘（writes=[]）；evidence/reference_diff_*.log 为审计实跑手工重定向产物（非命令副作用写面），不在写点豁免语义内（飞轮 R19-06）"
   },
   {
    "id": "oracle_diff_main_map",
@@ -428,11 +427,10 @@
     "--test",
     "reference_diff_main_map"
    ],
-   "writes": [
-    "evidence/reference_diff_main_map.log"
-   ],
+   "writes": [],
    "enabled_by_default": true,
-   "command": "cargo test -p ti-core --test reference_diff_main_map"
+   "command": "cargo test -p ti-core --test reference_diff_main_map",
+   "_writes_note": "只读测试：cargo test 零写盘（writes=[]）；evidence/reference_diff_*.log 为审计实跑手工重定向产物（非命令副作用写面），不在写点豁免语义内（飞轮 R19-06）"
   },
   {
    "id": "oracle_diff_rng",
@@ -445,11 +443,10 @@
     "--test",
     "reference_diff_rng"
    ],
-   "writes": [
-    "evidence/reference_diff_rng.log"
-   ],
+   "writes": [],
    "enabled_by_default": true,
-   "command": "cargo test -p ti-core --test reference_diff_rng"
+   "command": "cargo test -p ti-core --test reference_diff_rng",
+   "_writes_note": "只读测试：cargo test 零写盘（writes=[]）；evidence/reference_diff_*.log 为审计实跑手工重定向产物（非命令副作用写面），不在写点豁免语义内（飞轮 R19-06）"
   }
  ]
 }

@@ -7,7 +7,7 @@
 
 ## 0. 定位
 
-本文把仓库**已有的**测试事实（103 个集成测试文件（`crates/*/tests/*.rs` 实测 2026-11-19 审计回写；R12 AUDIT P025 勘误旧 106→105，HP 本体删除 commit `2170700` 删 `battle_rules`/`exhaust_combat`/`rules_battle` 3 文件 ⇒ 105→103，审计 Q001 回写） + 门禁 36 项 + 试玩闭环 4 报告 + `evidence/` 560 文件（git-tracked，**排除 `console/` 侧车**；实测 = 全量 763 − console 203 = 560，2026-11-19 审计 Q002 勘误旧「757 文件〔排除 console/〕」口径矛盾——757 ≈ 当时全量口径，与括注「排除 console/」自相矛盾，回写为排除口径实测 560；历史快照 R10 82/327→507→534→R11 535→R12 543→R15 757〔全量〕））
+本文把仓库**已有的**测试事实（104 个集成测试文件（`crates/*/tests/*.rs` 实测 2026-11-19 审计回写；R12 AUDIT P025 勘误旧 106→105，HP 本体删除 commit `2170700` 删 3 文件 ⇒ 105→103，飞轮 R19 补 `ti-console/tests/jobs_proof_tests.rs`〔Q013 证明落点机器判据 3 条〕⇒ 103→104） + 门禁 36 项 + 试玩闭环 4 报告 + `evidence/` 565 文件（git-tracked，**排除 `console/` 侧车**；实测 2026-11-20 飞轮 R19 回写 = 560 + 上轮审计 5 新 tracked〔test_system_audit_round1.log/test_system_audit_2026-11-19.log/reference_diff_{cards,main_map,rng}.log + S60.0.log〕= 565；2026-11-19 审计 Q002 勘误旧「757 文件〔排除 console/〕」口径矛盾回写 560；历史快照 R10 82/327→507→534→R11 535→R12 543→R15 757〔全量〕→审计 560→R19 565））
 归入一套**标准化标杆**：按**级**（L1 单元→L4 验收）、**类**（功能/回归/视觉/音频/性能/兼容）、
 **型**（冒烟/CI/试玩/探索/基准）三维分类，并给出行业常用方案与 Bevy 官方推荐作为参照。
 **不是**新增一套独立测试体系——是给既有测试**统一口径、编号、归类**，并让平台可见。
@@ -29,7 +29,7 @@
 | **回归**（Regression） | 改动不破坏既有行为 | 门禁 36 项全量（`gate.ps1`，`docs/parity.md` §门禁口径） |
 | **视觉**（Visual） | 渲染/版面/资产/像素 | `render_parity_*`、`render_invariants`、`bevy-cpu-parity`、`--scene=X --shot` 出图 `evidence/bevy_native_*.png` |
 | **音频**（Audio） | 音乐/音效播放（S34 原版音频接入后） | S34 新增：BGM `glmusic.wav` 循环 + SFX `press/invalid/victory.wav` 一次，`registry.audio` 对账 + 无音频设备降级断言 |
-| **性能**（Performance） | fps/加载/体积基准 | `stats`（fps）、wasm 体积 `evidence/S18.8a-wasm-size.log`（主体 **45,931,492 B ≈ 43.8 MiB**，≤8MB 预算；审计 Q004 回写旧「44.8MB」陈旧快照，`11_bevy_migration.md` §3 预算口径） |
+| **性能**（Performance） | fps/加载/体积基准 | `stats`（fps）、wasm 体积 `evidence/S18.8a-wasm-size.log`（主体 **45,931,492 B ≈ 43.8 MiB**，**超 ≤8MB 预算**〔实态 43.8 MiB ≈ 5.5× 预算，超标定态非达标；预算口径 = `11_bevy_migration.md` §3（S18.0 重立 ≤8MB）。**达标动作 = S18.8e LTO+strip 实测 48,765,303 B ≈ 46.6 MB 超预算 6 倍**（`evidence/S18.8e.log`，台账 S18.8 dod「Bevy wasm LTO 46.6MB 超 8MB 预算留痕」），wasm-opt -Oz + 代码分包挂 S18.8 收口（未达标留痕，未收口）；审计 Q004 回写旧「44.8MB」陈旧快照，飞轮 R19 勘误「S18.6 LTO 未收口」指向错任务（S18.6 实做 = 像素基线/门禁重建，LTO 达标动作实际在 S18.8e） |
 | **兼容**（Compatibility） | native/wasm/android 三端一致 | `smoke.ps1`（两端冒烟）、gate 条件项（wasm/android SKIP 判定）、`bevy_native_*.png` ↔ wasm 同缺陷排查、**Android 真机 P5**（`android_device_test.py --run`，见下补强注） |
 
 > **S49.4e 补强（2026-11-09 真机反馈「全屏/菜单无响应/后台音乐不停」根因审计）**：本类原写
@@ -137,7 +137,7 @@
 | 状态文件 | `evidence/console/jobs/<kind>-<id>.json`（统一目录，gitignored）：`{kind,id,running,pid,exit_code,started_ts,ended_ts,log,evidence[],note}` |
 | 日志 | `evidence/console/logs/<kind>-<id>-<ts>.log`（**流式**写 ⇒ 构建/测试输出实时可见） |
 | 收割 | spawn 后**收割线程**等子进程退出 → 写 `running=false` + `exit_code` + `ended_ts` ⇒ 「跑完了吗 / 成没成」有机器判据（不靠日志字符串猜） |
-| 证明 | 作业产物（日志 + 报告 + 截图）登记进状态文件 `evidence[]`，落 `evidence/tests/<id>/<id>-<ts>/`（`run.log` 日志副本 + `state.json` 终态快照；`jobs.rs::persist_proof` 实现，收割线程在作业结束时落盘 + 登记）⇒ **证明与本次运行绑定**（审计 Q013 2026-11-19 落地，机器判据 = `ti-console/tests/jobs_proof_tests.rs` 3 条） |
+| 证明 | 作业产物（日志 + 报告 + 截图）登记进状态文件 `evidence[]`，落 `evidence/tests/<id>/<id>-<ts>/`（`run.log` 日志副本 + `state.json` 终态快照；`jobs.rs::persist_proof` 实现，收割线程在作业结束时落盘 + 登记）⇒ **证明与本次运行绑定**（审计 Q013 2026-11-19 落地，机器判据 = `ti-console/tests/jobs_proof_tests.rs` 3 条；**写点属性** = 平台运行时证明落点，飞轮 R19 登记：`evidence/tests/` = 作业模型产物（与 `evidence/console/jobs/` 同类 = 运行时车，不入 git tracked——gitignored，23 号 §6.2 状态行口径；「审计凭证」角色由静态基线 `evidence` 字段 + 平台日志 `evidence/console/logs/` 承担，证明目录本身不 commit） |
 | 查询 | `GET /api/jobs?kind=<kind>`（列表 + 状态）/ `?kind=<kind>&id=<id>`（详情 + 日志尾 + 证明） |
 
 **迁移对照**（S49.7 全迁）：

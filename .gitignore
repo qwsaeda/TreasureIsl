@@ -71,6 +71,9 @@ __pycache__/
 /evidence/console/jobs/
 # S44 地图/UI 工作台向导状态（平台自身写点；22 号 §3.1，gitignored）
 /evidence/console/content-*.json
+# 飞轮 R19（2026-11-20）：统一作业模型证明落点（jobs.rs::persist_proof；23 号 §6.2 证明行）
+# = 本次运行产物（run.log 日志副本 + state.json 终态快照），与 evidence/console/jobs/ 同类运行时车，gitignored
+/evidence/tests/
 
 # 第三方 node 依赖（playwright 等；不入库）
 /node_modules/
