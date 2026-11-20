@@ -5,8 +5,8 @@
 > 单一事实源：场景枚举 = `Scene`；场景态流转 = `docs/gamebook.md` §场景流转表 + `docs/00_design.md`；
 > 逐场景版面/坐标 = `docs/business/08_layout_design.md`；逐场景 UI 重设计规格 = `docs/ui-redesign-v3/`。
 > **截图 = 当前代码最新渲染**（`evidence/bevy_native_<scene>.png`，2026-11-20 用 `xvfb-run
-> treasure-bevy-native -- --scene=X --shot` 实时出图，main_map 带 `--spin=5` seed=42 可复现运行时态；
-> 旧 S26~S39 时点存档已废弃，本表全部重出最新态；表现层静态帧载体，动态过程截不动）。
+> treasure-bevy-native -- --scene=X --shot` 实时出图，main_map 带 `--viewport=1920x1080` 横屏主语面 + main_map 带 `--spin=5` seed=42 可复现运行时态；
+> 旧 S26~S39 时点存档已废弃，本表全部重出最新态；**横屏 1920×1080 为主语面**（S39 index 横版重设计 / U23 横屏适配，竖屏 1080×1920 为兼容保留，旧竖屏截图 = S22 早期版面，勿用）；表现层静态帧载体，动态过程截不动）。
 
 ## 场景态流转图
 
@@ -54,11 +54,11 @@
 **版面规格**：`docs/ui-redesign-v3/09_index_compass_spec.md`（竖屏）+ `14_index_treasure_map_spec.md`（横屏）。
 **输入**：确认菜单项 → SelectRole。
 
-![Index 主菜单](../evidence/bevy_native_index.png)
+![Index 主菜单](../evidence/bevy_native_index_1920x1080.png)
 
-*最新渲染 2026-11-20（当前代码）*
+*最新渲染 2026-11-20（当前代码，横屏 1920×1080）*
 
-*最新渲染 2026-11-20（当前代码）*
+*最新渲染 2026-11-20（当前代码，横屏 1920×1080）*
 
 ---
 
@@ -68,9 +68,9 @@
 **版面规格**：`docs/business/08_layout_design.md` §select_role。
 **输入**：确认 → SelectMap（席位池 = 已选人类席 + 可配 AI 席）。
 
-![SelectRole 角色选择](../evidence/bevy_native_select_role.png)
+![SelectRole 角色选择](../evidence/bevy_native_select_role_1920x1080.png)
 
-*最新渲染 2026-11-20（当前代码）*
+*最新渲染 2026-11-20（当前代码，横屏 1920×1080）*
 
 ---
 
@@ -80,9 +80,9 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **版面规格**：`docs/business/08_layout_design.md` §select_map。
 **输入**：确认地图 → MainMap（`enter_main_map_at` 全量重建 board/territory）。
 
-![SelectMap 地图选择](../evidence/bevy_native_select_map.png)
+![SelectMap 地图选择](../evidence/bevy_native_select_map_1920x1080.png)
 
-*最新渲染 2026-11-20（当前代码）*
+*最新渲染 2026-11-20（当前代码，横屏 1920×1080）*
 
 ---
 
@@ -98,9 +98,9 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **版面规格**：`docs/ui-redesign-v3/10_main_map_v5_spec.md`（v5 中央据点岛 + 环形格子环）+ `territory.md`。
 **出图态**：`--spin=5` seed=42 可复现运行时帧。
 
-![MainMap 主地图](../evidence/bevy_native_main_map.png)
+![MainMap 主地图](../evidence/bevy_native_main_map_1920x1080.png)
 
-*最新渲染 2026-11-20（当前代码，--spin=5 运行时态）*
+*最新渲染 2026-11-20（当前代码，横屏 1920×1080，--spin=5 运行时态）*
 
 ---
 
@@ -112,9 +112,9 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **业务规则**：`docs/business/combat.md` §兵力模型。
 **输入**：自动播完即结算 → 回 MainMap（胜 = 占领/通关，败 = 交双倍过路费）。
 
-![Vs 战斗](../evidence/bevy_native_vs.png)
+![Vs 战斗](../evidence/bevy_native_vs_1920x1080.png)
 
-*最新渲染 2026-11-20（当前代码）*
+*最新渲染 2026-11-20（当前代码，横屏 1920×1080）*
 
 ---
 
@@ -123,9 +123,9 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **版面规格**：`docs/business/08_layout_design.md` §message。
 **输入**：确认/方向翻面板 → 回 MainMap。
 
-![Message 消息面板](../evidence/bevy_native_message.png)
+![Message 消息面板](../evidence/bevy_native_message_1920x1080.png)
 
-*最新渲染 2026-11-20（当前代码）*
+*最新渲染 2026-11-20（当前代码，横屏 1920×1080）*
 
 ---
 
@@ -135,9 +135,9 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **版面规格**：`docs/business/08_layout_design.md` §saveload + `persistence.md`。
 **输入**：选槽确认 → 读档重建 / 写档 → 回 MainMap。
 
-![Saveload 存读档](../evidence/bevy_native_saveload.png)
+![Saveload 存读档](../evidence/bevy_native_saveload_1920x1080.png)
 
-*最新渲染 2026-11-20（当前代码）*
+*最新渲染 2026-11-20（当前代码，横屏 1920×1080）*
 
 ---
 
@@ -149,8 +149,11 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 ## 出图命令（复现本说明的截图）
 
 ```
-powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 index select_role select_map main_map vs message saveload
-# main_map 带 --spin=5（seed=42 可复现运行时态）；Linux headless 自动包 xvfb-run。
+xvfb-run -a treasure-bevy-native -- --scene=<场景> --shot --viewport=1920x1080   # 横屏主语面
+# main_map 另加 --spin=5（seed=42 可复现运行时态）；
+# 或 pwsh -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 --viewport=1920x1080 index select_role ...
+# （产物带 _1920x1080 后缀 = 横屏最新主语面）。
+# 竖屏（1080×1920）= 兼容保留，旧竖屏图（S22 罗盘环 index 等）为早期版面，勿作最新态引用。
 # 产物 = evidence/bevy_native_<scene>.png；逐场景变体（vs 动效阶段 / main_map 地图包 m01..m40 /
 # index 主题 t01..t10）见 evidence/ 同名前缀文件。
 ```
