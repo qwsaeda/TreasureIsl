@@ -4578,6 +4578,10 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     // 守门 = `rules/cards.rs` `CardState` 含 `crew` 字段（非旧 `hp` HP 暂存死通道）+ `apply_card`
     // 的 `Damage`/`Heal` 分支写 `state.crew`（防回归到 `state.hp`）。
     ("card-crew-alignment", check_card_crew_alignment),
+    // 测试体系专项审计 Q011（2026-11-19）：manifest `gate` 项号须与 posmap 机读源语义对齐
+    // （Q009 曾错位：web_playtest=23→应 33 / bevy_cpu_parity=21→应 31 / wasm_browser_e2e=22→应 32；
+    // validate_data 只校验 1..=36 形状不校验语义 ⇒ 本断言补语义守门）。
+    ("manifest-gate-posmap", check_manifest_gate_posmap),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：
@@ -5023,6 +5027,70 @@ fn check_landscape_no_portrait_hardcode(root: &Path) -> Vec<String> {
 /// N ≠ posmap[短名] = 现状区漂移 FAIL；带「时点/历史/旧第 N 项」标注行 = 豁免（时点值不回改）。
 /// 负例护栏：改 1 处 gate 项号（如「第 35 项 dod-commands」→「第 25 项」）必 FAIL 精准点名；还原 0 error。
 /// 载体 = `assets/gate_item_posmap.json`（`scripts/gate_item_posmap.py --fix` 回写，gate 加减项后重跑）。
+/// 测试体系专项审计 Q011（2026-11-19）：`test_manifest.json` 的 `gate` 项号须与
+/// `assets/gate_item_posmap.json` 机读源**语义对齐**（非仅 1..=36 形状合法）。
+/// 语义映射表（测试 id → posmap short，审计 Q009 错位的 3 条 + 条件项 4c 白名单）：
+/// - `web_playtest` → `browser-playtest`（pos33；旧错 23 = `check_ledger_reality`）
+/// - `bevy_cpu_parity` → `bevy-cpu-parity`（pos31；旧错 21 = `no-macroquad`）
+/// - `wasm_browser_e2e` → `wasm-browser-e2e`（pos32；旧错 22 = `doccheck2`）
+/// - `android_device_test` → `7`（条件项 Android 真机，字符串 "4c" 兼容别名）
+fn check_manifest_gate_posmap(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(manifest_text) = read_file(root, "assets/data/test_manifest.json") else {
+        return vec!["test_manifest.json 不存在（gate 项号语义守门无机读源）".to_string()];
+    };
+    let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&manifest_text) else {
+        return vec!["test_manifest.json 解析失败".to_string()];
+    };
+    let Some(posmap_text) = read_file(root, "assets/gate_item_posmap.json") else {
+        return vec!["gate_item_posmap.json 不存在（gate 项号语义守门无机读源）".to_string()];
+    };
+    let shorts = parse_posmap_shorts(&posmap_text);
+    if shorts.is_empty() {
+        return vec!["gate_item_posmap.json 解析出 0 项（gate 项号语义守门无基准）".to_string()];
+    }
+    // shorts = Vec<(short, pos)>；建 short→pos 查表
+    let pos_of =
+        |short: &str| -> Option<i64> { shorts.iter().find(|(s, _)| s == short).map(|(_, p)| *p) };
+    let expected: [(&str, &str); 3] = [
+        ("web_playtest", "browser-playtest"),
+        ("bevy_cpu_parity", "bevy-cpu-parity"),
+        ("wasm_browser_e2e", "wasm-browser-e2e"),
+    ];
+    let tests = manifest.get("tests").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+    for (tid, short) in expected {
+        let Some(item) = tests.iter().find(|t| t.get("id").and_then(|v| v.as_str()) == Some(tid))
+        else {
+            continue;
+        };
+        let got = item.get("gate").and_then(serde_json::Value::as_u64);
+        let want = pos_of(short);
+        match (got, want) {
+            (Some(g), Some(w)) if usize::try_from(w).map_or(true, |w| g != w as u64) => errors.push(format!(
+                "test_manifest: `{tid}` gate={g} 与 posmap 机读源 `{short}` 的 pos={w} 语义错位（Q009 同类回归）"
+            )),
+            (Some(_), None) => errors.push(format!(
+                "posmap: 缺 `{short}` short 项（gate 项号语义守门无法对账）"
+            )),
+            _ => {}
+        }
+    }
+    // android_device_test 条件项：gate="4c" 或 posmap 的 pos7 均可
+    if let Some(item) =
+        tests.iter().find(|t| t.get("id").and_then(|v| v.as_str()) == Some("android_device_test"))
+    {
+        let g = item.get("gate");
+        let ok = g.and_then(serde_json::Value::as_str).is_some_and(|s| s == "4c")
+            || g.and_then(serde_json::Value::as_u64).is_some_and(|n| n == 7);
+        if !ok {
+            errors.push(format!(
+                "test_manifest: `android_device_test` gate={g:?} 非 \"4c\" 别名或 pos7（Android 真机条件项）"
+            ));
+        }
+    }
+    errors
+}
+
 /// 飞轮 R18（2026-11-19 业务规格审计收口）：rules 层卡牌 `Damage`/`Heal` 人手口径守门。
 ///
 /// H1② 拍板②（兵力模型对齐）：`rules/cards.rs` `CardState` 的 `Damage`/`Heal` 目标字段

@@ -382,6 +382,10 @@
   {
    "id": "card-crew-alignment",
    "impl": "rust"
+  },
+  {
+   "id": "manifest-gate-posmap",
+   "impl": "rust"
   }
  ]
 }

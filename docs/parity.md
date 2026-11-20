@@ -96,7 +96,7 @@
 > **P5 达标口径**：P5-4 PASS + P5-1/P5-2/P5-3 在有 GPU 设备（arm64 真机）上 PASS；
 > GPU 转译层设备（MuMu Adreno 640 伪装 + redroid 纯 CPU pastel）= P5-2/P5-3 SKIP 记名
 > + P5-1 设备标定 FAIL（窗口不驻留）；P5-4 照跑，`evidence/android_device_test.log`
-> 含设备 serial 可回溯（2026-11-10 MuMu 实测：P5-2 PASS / P5-4 PASS / P5-1 设备标定 / P5-3 SKIP）。
+> 含设备 serial 可回溯（**现存唯一证据 = redroid `127.0.0.1:5556`**：P5-4 PASS / P5-1 FAIL〔设备标定〕/ P5-2 SKIP / P5-3 SKIP；2026-11-19 审计 Q017 勘误旧「MuMu P5-2 PASS」——对应日志已不可考）。
 
 ## 代码质量门禁 `scripts/gate.ps1`（36 项，循环每轮强制；S31.3 起含 wasm 浏览器端 e2e 第 22 项；S16.1 起含 browser-playtest 第 23 项；S16.2 起含 playtest-loop 第 24 项）
 
@@ -166,14 +166,11 @@
       （历史：10c 曾单列为「第 12 项」，已并入本组；第 12 项编号作废不再复用）
  11 oracle 边界（S8.8）：python scripts/check_oracle_boundary.py --check
      （shell 层 0 个 oracle_* 函数调用；oracle 仅 rules 内部参照物，类型重导出允许）
- 13 doccheck2（双 agent 审计固化断言，第 1~6 轮审计高频项）：
+ 13 doccheck2（双 agent 审计固化断言，历轮审计高频项）：
        cargo run -q -p ti-tools --bin doccheck2 .
-       （文档↔代码/数据一致性 19 项：audio ChannelState API 一致性 / shell 层 oracle_* 残留 /
+       （文档↔代码/数据一致性断言，**项数以 `assets/gate_data.json::doccheck2_checks` 数组长度为准〔现行 52 项，2026-11-19 审计 Q024 勘误旧「19 项」第 1~6 轮子集快照〕**，含 audio ChannelState API 一致性 / shell 层 oracle_* 残留 /
         LCG hex 误算（0x3443D）/ 据点阈值反向断言（<= 40）/ i18n 孤儿 key / gate 项数漂移 /
-        headless BattleView API / 飞轮回读 / 战斗玩家数值数据驱动 / 飞轮脚本 /
-        触摸渲染正逆成对 / 场景 band 数 / 场景布局保真 / HD 精灵透明 /
-        map_slot 写档 0 起 zero_index 基准（FIND-203）/ exhaust 双写对账 /
-        经验库分卷条数 / 运行时 legacy 坐标禁 / 基线镜像恒等；
+        card-crew-alignment（飞轮 R18 卡牌人手口径守门）/ 台账/计数/飞轮/渲染/资产等机器化断言；
         替代每轮双 agent 审计里靠子代理现场 grep 的重复检查，见 docs/experience/build.md）
 14 台账三方对账（S10.0，防子代理虚报，EXP-058）：
        python scripts/check_ledger_reality.py

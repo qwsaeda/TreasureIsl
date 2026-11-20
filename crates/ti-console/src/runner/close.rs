@@ -20,7 +20,7 @@ use crate::runner::apply_minimal_env;
 
 /// 22 号 §4.2 人读视图动作 id 集合（机器断言镜像；S32.6 白名单对账断言）。
 /// 必须与 `console_commands.json` `commands[].id` 集合逐字一致（`whitelist_audit` 断言）。
-pub const HUMAN_VIEW_IDS: [&str; 24] = [
+pub const HUMAN_VIEW_IDS: [&str; 27] = [
     "gate",
     "close_check",
     "close_run",
@@ -45,6 +45,11 @@ pub const HUMAN_VIEW_IDS: [&str; 24] = [
     "build_native",
     "build_list",
     "build_artifacts_check",
+    // 测试体系专项审计 Q012（2026-11-19）：3 条 oracle 差分测试登记 console_commands 后
+    // 同步人读视图镜像（§4.2 本表 ↔ 镜像逐字一致为设计不变量）。
+    "oracle_diff_cards",
+    "oracle_diff_main_map",
+    "oracle_diff_rng",
 ];
 
 /// `console_commands.json` 路径（相对仓库根）。

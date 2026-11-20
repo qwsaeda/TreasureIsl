@@ -116,6 +116,9 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | `ui_theme` | `python3` + `scripts/ui_theme.py apply` | `<theme>` = 主题包 id（`assets/themes/<id>/`，`^[a-z0-9_]{1,16}$` 白名单，不接受自由字符串） | `assets/data/scenes.json` + `assets/ui/` + `ui_manifest.json`（主题构图回注，S48.0 全主题创新；飞轮 R10 F3-1 补漏行） | **否**（需 `--enable-write`） |
 | `map_shot` | 平台自身（`treasure-bevy-native --shot --scene=main_map`，env `TI_MAP=<id>`） | `<id>` = 已装包 id | `evidence/` 预览（gitignored 侧车） | 是 |
 | `publish` | `pwsh`/`powershell` + `-File scripts/publish_web.ps1` | 无 | `web/` + `docs/release.md` + gh-pages 远端 | **否** |
+| `oracle_diff_cards` | `cargo` + `test -p ti-core --test reference_diff_cards` | 无 | 无（只读测试，审计 Q012 补映射） | 是 |
+| `oracle_diff_main_map` | `cargo` + `test -p ti-core --test reference_diff_main_map` | 无 | 无（只读测试，审计 Q012 补映射） | 是 |
+| `oracle_diff_rng` | `cargo` + `test -p ti-core --test reference_diff_rng` | 无 | 无（只读测试，审计 Q012 补映射） | 是 |
 | `audit_book` | 平台自身 | `--task <台账 id> --round <n> --role <a\|b>` | 只写 `evidence/console/` | 是 |
 | `build_apk` | `python3` + `scripts/build_artifacts.py run apk`（= `build_apk.sh` + 构建后 `apk_audit.py --apk` 复检，S35.1 24 号 §4.1） | 无（kind 固定 `apk`；后台执行，日志落 `evidence/console/logs/` gitignored） | `dist/TreasureIsl-arm64.apk` + `evidence/console/logs/`（gitignored） | 是 |
 | `build_wasm` | `python3` + `scripts/build_artifacts.py run wasm`（= `build_wasm.ps1`） | 无（后台执行） | `web/` + `evidence/console/logs/`（gitignored） | 是 |

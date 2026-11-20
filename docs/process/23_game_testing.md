@@ -16,9 +16,9 @@
 
 | 级 | 名称 | 覆盖 | 现有对应（示例） |
 |---|---|---|---|
-| **L1** | 单元（Unit） | 单规则/单函数最小逻辑（纯函数、不碰表现层/IO） | `ti-core/tests/rules_{battle,trade,build,boat,saveload,territory}.rs`、`reference_diff_*`（oracle 差分，`ti-core/src/oracle` 同种子同输入→同输出）、`ti-tools/tests/pcx_ref.rs`（PCX 解码 vs `scripts/pcx_ref.py` 独立参考，P0-4） |
-| **L2** | 集成（Integration） | 跨模块/子系统交互（规则↔数据↔存档/地图包） | `ti-core/tests/exhaust_{combat,economy,progression,menu}.rs`、`map_pack.rs`、`territory_rules.rs`、`ti-app/tests/main_map_pick_e2e.rs`、`render_invariants.rs` |
-| **L3** | 系统（System） | 完整场景/全流程（一局可玩链路） | `tests/scripts/full_run.json`（seed=42，16 步）、`ti-app/tests/e2e_playthrough.rs`、`app_{ai_turn,dungeon,siege,territory}_e2e.rs`、`game_app_flow.rs`、`save_migration.rs` |
+| **L1** | 单元（Unit） | 单规则/单函数最小逻辑（纯函数、不碰表现层/IO） | `ti-core/tests/rules_{trade,build,boat,saveload,messages}.rs` + `rules_saveload_json.rs`、`ti-core/tests/territory_rules.rs`、`reference_diff_*`（4 个：main_loop/cards/main_map/rng，oracle 差分，`ti-core/src/oracle` 同种子同输入→同输出；旧 `rules_battle`/`rules_territory` 路径已删〔HP 本体删除 / 合并入 territory_rules〕，审计 Q001 回写）、`ti-tools/tests/pcx_ref.rs`（PCX 解码 vs `scripts/pcx_ref.py` 独立参考，P0-4） |
+| **L2** | 集成（Integration） | 跨模块/子系统交互（规则↔数据↔存档/地图包） | `ti-core/tests/exhaust_{economy,progression,menu,main_loop,saveload,random_session}.rs`（旧 `exhaust_combat` 已删 HP 本体，审计 Q002）、`map_pack.rs`、`territory_rules.rs`、`ti-app/tests/main_map_pick_e2e.rs`、`render_invariants.rs` |
+| **L3** | 系统（System） | 完整场景/全流程（一局可玩链路） | `tests/scripts/full_run.json`（seed=42，16 步）、`ti-app/tests/e2e_playthrough.rs`、`app_{ai_turn,dungeon,siege,seats}_e2e.rs` + `app_territory_turns.rs`（旧 `app_territory_e2e` 不存在，审计 Q003）、`game_app_flow.rs`、`save_migration.rs` |
 | **L4** | 验收（Acceptance） | 用户可玩/视觉/性能/兼容终验 | `web_playtest`（CDP 按键驱动 菜单→选人→选图→主地图）、`fuzz_playtest.rs`、`bevy-cpu-parity`（GPU 离屏读回 vs CPU 逐像素，通道 ≤8 LSB 超差 <0.5%）、`render_parity_{gpu,hd}.rs`、视觉签收 S17.5/S21.9/S27.5、**Android 真机验收 P5**（`scripts/android_device_test.py --run`，见 §2 兼容类） |
 
 ## 2. 测试分类（Categories，横向维度）
@@ -29,7 +29,7 @@
 | **回归**（Regression） | 改动不破坏既有行为 | 门禁 36 项全量（`gate.ps1`，`docs/parity.md` §门禁口径） |
 | **视觉**（Visual） | 渲染/版面/资产/像素 | `render_parity_*`、`render_invariants`、`bevy-cpu-parity`、`--scene=X --shot` 出图 `evidence/bevy_native_*.png` |
 | **音频**（Audio） | 音乐/音效播放（S34 原版音频接入后） | S34 新增：BGM `glmusic.wav` 循环 + SFX `press/invalid/victory.wav` 一次，`registry.audio` 对账 + 无音频设备降级断言 |
-| **性能**（Performance） | fps/加载/体积基准 | `stats`（fps）、wasm 体积 `evidence/S18.8a-wasm-size.log`（44.8MB，`11_bevy_migration.md` §3 预算口径） |
+| **性能**（Performance） | fps/加载/体积基准 | `stats`（fps）、wasm 体积 `evidence/S18.8a-wasm-size.log`（主体 **45,931,492 B ≈ 43.8 MiB**，≤8MB 预算；审计 Q004 回写旧「44.8MB」陈旧快照，`11_bevy_migration.md` §3 预算口径） |
 | **兼容**（Compatibility） | native/wasm/android 三端一致 | `smoke.ps1`（两端冒烟）、gate 条件项（wasm/android SKIP 判定）、`bevy_native_*.png` ↔ wasm 同缺陷排查、**Android 真机 P5**（`android_device_test.py --run`，见下补强注） |
 
 > **S49.4e 补强（2026-11-09 真机反馈「全屏/菜单无响应/后台音乐不停」根因审计）**：本类原写
@@ -55,7 +55,7 @@
 >    自动记 **SKIP（设备渲染限制，非 app bug，exit 0）**；P5-1 窗口不驻留 = 设备标定 FAIL（需前台稳定设备）；
 >    P5-4 照跑。**P5 达标口径** = P5-4 PASS + P5-1/P5-2/P5-3 在 GPU 正常 + 前台稳定设备（arm64 真机）上 PASS；
 >    GPU 转译层设备（MuMu Adreno 640 伪装）/ 纯 CPU 设备（redroid pastel）= P5-2/P5-3 SKIP 记名 +
->    P5-1 设备标定，`evidence/android_device_test.log` 含设备 serial 可回溯。MuMu 实测（2026-11-10）：P5-2 PASS / P5-4 PASS / P5-1 设备标定 / P5-3 SKIP。
+>    P5-1 设备标定，`evidence/android_device_test.log` 含设备 serial 可回溯。**唯一证据日志实测**（2026-11-19 审计 Q017 勘误旧「MuMu P5-2 PASS」——日志设备 = redroid `127.0.0.1:5556`，非 MuMu）：P5-4 PASS / P5-1 FAIL（设备标定：窗口不驻留）/ P5-2 SKIP（redroid 0fps 软渲染）/ P5-3 SKIP（渲染链路未起）。MuMu 历史实测（P5-2 PASS）对应日志已不可考，以现存 redroid 日志为准。
 
 ## 3. 测试类型（Types，执行方式）
 
@@ -115,8 +115,8 @@
 - **白名单 id**：`/api/tests?run=<id>`，`<id>` 必须 = `test_manifest.json` 登记的 `tests[].id`（枚举，非自由字符串，22 号 §10.3）。
 - **命令来源**：该 test 的 `command` 字段（禁前端/用户传命令，防任意执行）。
 - **程序白名单**：`cargo` / `python3` / `pwsh` / `powershell`（其余程序 = 400 拒绝；`sh -c`/`cmd /c` 字符串拼接禁用，22 号禁止 2）。
-- **执行形态**：逐参数 `Command::new(program).args([...])`，`current_dir = repo_root`，后台 spawn（`Stdio::null`），日志落 `evidence/console/logs/test-<id>-<ts>.log`（gitignored）。
-- **判定**：日志含 `test result: ok` = PASS、`FAILED`/`error[`/`panicked` = FAIL；前端每 2s 轮询尾部增量回显。
+- **执行形态**：逐参数 `Command::new(program).args([...])`，`current_dir = repo_root`，后台 spawn（日志**流式**写盘，非 `Stdio::null`——审计 Q016 勘误旧措辞），日志落 `evidence/console/logs/<kind>-<id>-<ts>.log`（gitignored）。
+- **判定**：**已由 §6.2 统一作业模型取代**——收割线程写 `exit_code` 落盘（机器判据，**不靠日志字符串猜**），前端轮询 `GET /api/jobs?kind=test&id=<id>` 取 `exit_code` + 耗时 + 日志尾实时回显。旧「日志含 `test result: ok` = PASS」判据为 S49.7 迁移前自写 spawn 的历史口径（与 §6.2/§9.4 自相矛盾，审计 Q016 回写）。
 - **不可自动运行**：人工验收（如 `visual_signoff`「用户视觉验收」无白名单程序）、无 `command` 字段 → 按钮禁用并注明。
 
 **不做什么**：不重放断言（运行测试走 test_manifest 命令本体）；门禁/试玩仍由 `gate.ps1`/`playtest.ps1` 触发，
@@ -133,7 +133,7 @@
 | 面 | 契约 |
 |---|---|
 | 作业种类 `kind` | `test` / `build` / `publish` / `gate`（`runner::jobs::JobKind`） |
-| 作业条目 `JobSpec` | `{ kind, id, program, args, meta }`；`program` ∈ 白名单 `cargo`/`python3`/`pwsh`/`powershell`（22 号 §10.3）；**逐参数非 shell**（禁 `sh -c`/`cmd /c`） |
+| 作业条目 `JobSpec` | `{ kind, id, program, args, meta, timeout_s? }`（`timeout_s` 可选超时字段，审计 Q026 补；`runner/jobs.rs` 实现）；`program` ∈ 白名单 `cargo`/`python3`/`pwsh`/`powershell`（22 号 §10.3）；**逐参数非 shell**（禁 `sh -c`/`cmd /c`） |
 | 状态文件 | `evidence/console/jobs/<kind>-<id>.json`（统一目录，gitignored）：`{kind,id,running,pid,exit_code,started_ts,ended_ts,log,evidence[],note}` |
 | 日志 | `evidence/console/logs/<kind>-<id>-<ts>.log`（**流式**写 ⇒ 构建/测试输出实时可见） |
 | 收割 | spawn 后**收割线程**等子进程退出 → 写 `running=false` + `exit_code` + `ended_ts` ⇒ 「跑完了吗 / 成没成」有机器判据（不靠日志字符串猜） |
@@ -157,7 +157,7 @@
 
 | 区 | 内容 | 机器判据 |
 |---|---|---|
-| 侧栏 | **业务域分组**（`group`，§7.2）→ 域内**分类**（`category`）计数；搜索框按 name/id/command 过滤 | 分组计数 = manifest 实际条目数（机器对账） |
+| 侧栏 | **业务域分组**（`group`，§7.2）→ 域内**分类**（`category`）计数；搜索框按 name/id/command 过滤 | 前端对 API 返回数组计数；manifest 条目本身由 `validate_data::check_test_manifest` 对账（id 唯一/schema/命令真实性），**无「分组计数快照」独立机器断言**——审计 Q027 勘误旧「分组计数 = manifest 实际条目数（机器对账）」措辞（分组计数变更走前端自渲染，改动面已在 manifest 门禁覆盖） |
 | 主区 | 折叠分组列表（业务域 → 分类 → 条目）；每条 = 名称 + id + `level`/`type` 徽章 + 证据在位/断链 + **状态徽章**（未跑 / 跑中 / 通过 / 失败+`exit_code`+耗时） | 条目数 = manifest 条目数（无遗漏无重复） |
 | 运行 | 每条「▶ 运行」+ 分组「运行本组」（**串行**：同目标目录会互踩 cargo 锁，同 S46.3「单构建互斥」纪律） | 点击后 ≤2s 内出现「跑中」徽章（**不刷新页面**） |
 | 结果 | 轮询 `GET /api/jobs?kind=test&id=<id>` → `exit_code` + 耗时 + **日志尾实时回显** | `exit_code` 落盘（跑完即有） |

@@ -1,6 +1,6 @@
 {
  "version": 1,
- "_note": "游戏测试标杆机读清单（23_game_testing.md §7）。级=level(L1..L4)/类=category(功能·回归·视觉·音频·性能·兼容)/型=type(冒烟·CI·试玩·探索·基准)。evidence 与 gate 至少一者：evidence 指向 evidence/ 下日志（或 gate=门禁项号 1..=36（飞轮 R11 勘误旧 33），证据=对应 gate 运行日志）。validate_data::check_test_manifest 对账。S49.7 扩展：group=业务域主分组（core 核心规则/asset 资产管线/platform 平台工具/device 端侧兼容/perf 性能体积）、timeout_s=作业超时（23 号 §6.2 收割）、prove=本次运行证明落点（23 号 §6.2 证明行）。",
+ "_note": "游戏测试标杆机读清单（23_game_testing.md §7）。级=level(L1..L4)/类=category(功能·回归·视觉·音频·性能·兼容)/型=type(冒烟·CI·试玩·探索·基准)。evidence 与 gate 至少一者：evidence 指向 evidence/ 下日志（或 gate=门禁项号 1..=36（飞轮 R11 勘误旧 33），证据=对应 gate 运行日志）。validate_data::check_test_manifest 对账。S49.7 扩展：group=业务域主分组（core 核心规则/asset 资产管线/platform 平台工具/device 端侧兼容/perf 性能体积）、timeout_s=作业超时（23 号 §6.2 收割）、prove=本次运行证明落点（23 号 §6.2 证明行）。 收录边界（审计 Q028）：本清单登记「平台测试页可见且需单独运行/证明」的代表条目（31 条），并非全部判据载体——P4-1/P4-4 `render_parity*`、`controls` 等由 gate/专用脚本覆盖但不入清单；P3-3/P0-4/P4-3 已映射。",
  "tests": [
   {
    "id": "rules_trade",
@@ -65,7 +65,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/territory_rules/",
-   "desc": "做什么：跑领地/大富翁规则单测（领地格 vs 功能格/落格分叉/攻占/升级加固），与 territory.md 规则表 13 条比对。测什么：territory.rs 规则。达到效果：S28/S33 领地系统业务逻辑正确。 逐测：领地格 vs 功能格 + 落格三支分叉（无主→副本占领/他人→交钱或攻占/自己→升级加固）+ 10 类岛专属副本 + 4 AI 席位。断言对照 territory.md 可测规则表 13 条。"
+   "desc": "做什么：跑领地/大富翁规则单测（领地格 vs 功能格/落格分叉/攻占/升级加固），与 territory.md 规则表 35 条比对。测什么：territory.rs 规则。达到效果：S28/S33 领地系统业务逻辑正确。 逐测：领地格 vs 功能格 + 落格三支分叉（无主→副本占领/他人→交钱或攻占/自己→升级加固）+ 10 类岛专属副本 + 4 AI 席位。断言对照 territory.md 可测规则表 35 条。"
   },
   {
    "id": "oracle_diff",
@@ -169,7 +169,7 @@
    "group": "asset",
    "timeout_s": 1800,
    "prove": "evidence/tests/render_invariants/",
-   "desc": "做什么：跑 7 场景渲染结构不变式断言（非黑覆盖率/内容签名互异/暖色板在位/TTF 在位），无像素基线。测什么：Bevy 渲染链路出帧 + 场景视觉完整性。达到效果：渲染改动后 7 场景结构不退化（S18.7b 取代三套 golden PNG）。 逐测：7 场景 × 非黑覆盖率 ≥90% + 内容签名互异 + 暖色板在位 + TTF 在位（无像素基线，S18.7b）。"
+   "desc": "做什么：跑 7 场景渲染结构不变式断言（非黑覆盖率/内容签名互异/暖色板在位/TTF 在位），无像素基线。测什么：Bevy 渲染链路出帧 + 场景视觉完整性。达到效果：渲染改动后 7 场景结构不退化（S18.7b 取代三套 golden PNG）。 逐测：7 场景 × 非黑覆盖率：vs ≥85%（暗色 boss 背景放宽 850‰）、其余 ≥90%（900‰） + 内容签名互异 + 暖色板在位 + TTF 在位（无像素基线，S18.7b）。"
   },
   {
    "id": "full_run",
@@ -195,7 +195,7 @@
    "group": "core",
    "timeout_s": 1800,
    "prove": "evidence/tests/e2e_playthrough/",
-   "desc": "做什么：跑端到端通关链路测试，从首页到通关全场景流转。测什么：场景状态机完整链路。达到效果：P3 全流程 7 项断言（tests/game_app_flow.rs）。 逐测：端到端通关链路，从首页到通关全场景流转，断言场景状态机 7 项（P3 全流程）。"
+   "desc": "做什么：跑端到端通关链路测试，从首页到通关全场景流转。测什么：场景状态机完整链路。达到效果：P3 全流程 7 项断言（tests/e2e_playthrough.rs，审计 Q007 勘误旧 game_app_flow 引用）。 逐测：端到端通关链路，从首页到通关全场景流转，断言场景状态机 7 项（P3 全流程）。"
   },
   {
    "id": "game_app_flow",
@@ -218,7 +218,7 @@
    "name": "浏览器真运行时试玩（CDP 按键驱动）",
    "command": null,
    "evidence": "evidence/web_playtest.log",
-   "gate": 23,
+   "gate": 33,
    "group": "device",
    "timeout_s": 1800,
    "desc": "做什么：跑浏览器真运行时试玩，CDP 按键驱动 菜单→选人→选图→主地图，断言 console 致命错误=0 + 截图墨点>阈值 + 场景切换帧有变化。测什么：wasm 浏览器端 L1~L4 全链路（S16.1）。达到效果：浏览器版可玩（P3/P4 判据载体）。 逐测：CDP 按键驱动 菜单→选人→选图→主地图，断言 console 致命错误=0 + 截图墨点>5% + 场景切换帧有变化（L1~L4）。"
@@ -244,7 +244,7 @@
    "name": "GPU↔CPU 像素对照（仅游戏世界，UI 层排除）",
    "command": null,
    "evidence": "evidence/linux_gate_green.log",
-   "gate": 21,
+   "gate": 31,
    "group": "device",
    "timeout_s": 900,
    "desc": "做什么：跑 GPU↔CPU 像素对照（ti-engine bevy_vs_cpu_pixel example），Bevy 真实 GPU 离屏渲染 vs CPU 期望逐像素比对（通道 ≤8 LSB 且超差 <0.5%）。测什么：双渲染期 CPU 逻辑层与 GPU 呈现层一致性（S18.16）。达到效果：删 macroquad 后 Bevy 渲染无 1 像素漂移（P4 渲染对齐判据）。 逐测：Bevy GPU 真实离屏渲染 vs CPU 期望逐像素对照（通道 ≤8 LSB 且超差 <0.5%，仅游戏世界 UI 层已排除，S18.16）。"
@@ -257,7 +257,7 @@
    "name": "wasm 浏览器端 4 层 e2e（实例化/渲染/交互/场景切换）",
    "command": null,
    "evidence": "evidence/wasm_browser_e2e.png",
-   "gate": 22,
+   "gate": 32,
    "group": "device",
    "timeout_s": 1800,
    "desc": "做什么：跑 wasm 浏览器端 4 层 e2e（L1 实例化/L2 渲染/L3 交互/L4 select_map 点 m01 切 main_map）。测什么：wasm 交付产物在浏览器真运行时的 4 层行为（S31.3）。达到效果：浏览器版 4 层全过 = 可发货（P0-P4 浏览器端判据）。 逐测：wasm 浏览器 4 层（L1 实例化/L2 渲染资产/L3 交互无 pageerror/L4 select_map 点 m01 切 main_map），断言 4 层全过。"
@@ -273,7 +273,7 @@
    "group": "asset",
    "timeout_s": 1800,
    "prove": "evidence/tests/scene_shot/",
-   "desc": "做什么：跑 7 场景冒烟出图（cargo run --bin treasure-bevy-native --shot --scene=X），每场景出 1 张 PNG。测什么：渲染冒烟（出图非黑 + 资产在位）。达到效果：7 场景视觉冒烟 0 黑屏（L4 视觉判据）。 逐测：7 场景各出 1 张 PNG（--shot），断言非黑 + 资产在位（视觉冒烟）。"
+   "desc": "做什么：跑**单场景**冒烟出图（cargo run --bin treasure-bevy-native --shot --scene=X，本条目 command 固定 main_map），出 1 张 PNG；7 场景全量由 gate 冒烟项覆盖（审计 Q008 勘误旧「7 场景各出 1 张」与单场景 command 不符）。测什么：渲染冒烟（出图非黑 + 资产在位）。达到效果：单场景视觉冒烟 0 黑屏（L4 视觉判据）。 逐测：main_map 单场景出 1 张 PNG（--shot），断言非黑 + 资产在位（视觉冒烟）。"
   },
   {
    "id": "audio_sfx",
@@ -373,7 +373,7 @@
    "type": "ci",
    "name": "卡牌 oracle 差分（reference_diff_cards：卡牌效果码/权重抽牌 vs 参照实现）",
    "command": "cargo test -p ti-core --test reference_diff_cards",
-   "evidence": "evidence/S20.2.log",
+   "evidence": "evidence/reference_diff_cards.log",
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/oracle_diff_cards/",
@@ -386,7 +386,7 @@
    "type": "ci",
    "name": "主地图 oracle 差分（reference_diff_main_map：移动/落格 vs 参照实现）",
    "command": "cargo test -p ti-core --test reference_diff_main_map",
-   "evidence": "evidence/S20.2.log",
+   "evidence": "evidence/reference_diff_main_map.log",
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/oracle_diff_main_map/",
@@ -399,7 +399,7 @@
    "type": "ci",
    "name": "RNG oracle 差分（reference_diff_rng：可播种流 vs 参照实现）",
    "command": "cargo test -p ti-core --test reference_diff_rng",
-   "evidence": "evidence/S20.2.log",
+   "evidence": "evidence/reference_diff_rng.log",
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/oracle_diff_rng/",

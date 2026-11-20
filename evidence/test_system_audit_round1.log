@@ -1,0 +1,24 @@
+# 测试体系专项审计 Round 1（2026-11-19，FIND→AUDIT→FIX）
+
+方法：FIND subagent 落盘 28 条（Q001..Q028）+ AUDIT subagent 独立裁决 27 CONFIRMED / 0 REJECTED / 1 PARTIAL（Q027）+ 主线程独立复核 top 8 全 CONFIRMED（EXP-038）。
+
+## FIX 已修（24 条 CONFIRMED）
+- Q001-Q003: 23号 §1 测试路径（rules_battle/rules_territory/exhaust_combat/app_territory_e2e 已删/改名）按实测回写
+- Q004-Q008: wasm 体积 44.8MB→45,931,492B；territory 规则表 13→35；render_invariants vs≥85%/其余≥90%；e2e_playthrough 引用勘误；scene_shot 单场景口径
+- Q009+Q011: manifest gate 23/21/22→33/31/32（posmap 语义错位）+ doccheck2 第 53 项 manifest-gate-posmap 守门（负例 gate 33→23 必 FAIL + 还原 0 error）
+- Q010: gate.ps1 注释旧编号 22/23/24/25/4c/25b→posmap 现行 32/33/34/35/7/36
+- Q012: studio_tests --check exit 1（我审前引入的 3 条 oracle_diff_* 未映射 console_commands）⇒ 补 3 条真映射（不扩豁免），重跑 exit 0
+- Q016-Q018: §6.1 日志判据/Stdio::null 自相矛盾→exit_code 统一口径；P5 MuMu→redroid 证据回写（23号+parity.md）；31号 §引用偏移 §2/3/4→§1/2/3
+- Q019-Q021: reference_diff_cards/exhaust_progression 文件头 hp→crew；exhaust 夹具+ExhaustCardState hp/hp_max→crew 字段重命名（全链 compile OK）
+- Q022: 3 条 oracle_diff_* evidence S20.2.log（v4 面板日志）→专属实跑日志（11/8/7 passed）
+- Q023-Q028: waiver 死 id（exhaust_combat/rules_battle）删；parity.md doccheck2 19 项→动态口径 52/53；AGENTS 51/52→53；JobSpec 补 timeout_s；分组计数措辞降级；manifest 收录边界声明
+
+## 待拍板（3 条，EXP-202 登记，不擅自改前端）
+- Q013: prove evidence/tests/<id>/<ts>/ 承诺落点未实现（run_test 仅登记 console 日志）
+- Q014: 平台测试详情页不渲染作业 evidence[]（§6.3 本次运行证明未落地）
+- Q015: 点「运行」后不立即刷新跑中徽章（§6.3 ≤2s 不可达）
+
+处置选项 = 功能补完（改 ti-console 前端+run_test）或规范降级（改 23 号措辞为现状）。
+
+## 验证
+studio_tests --check exit 0 + validate_data OK（31 条）+ doccheck 180/38/198/345 0 error + doccheck2 53 项 0 error + clippy 0 + 4 个 reference_diff_* 独立实跑全过 + Q009 负例护栏实跑。

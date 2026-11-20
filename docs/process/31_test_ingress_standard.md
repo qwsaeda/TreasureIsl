@@ -26,9 +26,9 @@
 | 字段 | 必填 | 契约 |
 |---|---|---|
 | `id` | ✓ | 唯一（无重复）；`^[a-z0-9_]+$`（平台 `?run=<id>` 枚举 id） |
-| `level` | ✓ | `L1`（单元）`L2`（集成/模块）`L3`（系统/流程）`L4`（验收/端到端）——23 号 §2 分级 |
-| `category` | ✓ | `functional` `regression` `visual` `audio` `performance` `compatibility`——23 号 §3 分类 |
-| `type` | ✓ | `smoke` `ci` `playtest` `exploratory` `benchmark`——23 号 §4 类型 |
+| `level` | ✓ | `L1`（单元）`L2`（集成/模块）`L3`（系统/流程）`L4`（验收/端到端）——23 号 §1 分级（审计 Q018 勘误旧「§2」偏移） |
+| `category` | ✓ | `functional` `regression` `visual` `audio` `performance` `compatibility`——23 号 §2 分类（旧「§3」勘误） |
+| `type` | ✓ | `smoke` `ci` `playtest` `exploratory` `benchmark`——23 号 §3 类型（旧「§4」勘误） |
 | `name` | ✓ | 人类可读名（平台测试页展示） |
 | `desc` | ✓ | 测试用例说明（做什么/测什么/达到什么效果，≥20 字符；平台测试页展开渲染，S49.7 补强（2026-11-10 用户「光有测试用例不行，要有说明」）——「光有测试用例不行，要有说明」） |
 | `command` | ✓ | 可运行命令串（§3 command 契约）；`null`/缺 = 不可自动运行（人工验收 / gate 覆盖 / 证据基，平台禁 run） |

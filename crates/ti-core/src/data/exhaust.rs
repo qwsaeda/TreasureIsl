@@ -238,22 +238,22 @@ pub struct ExhaustMainLoop {
 pub struct ExhaustProgression {
     /// 卡牌域 RNG 种子档位（确定性对账：同 seed + 同事件序列 ⇒ 同结果）。
     pub card_seeds: Vec<u32>,
-    /// 卡牌状态档位（hp/gold 初值 + 钳制上限，验证 [`apply`](crate::rules::cards) 的
-    /// `0`/`hp_max`/`gold_max` 边界）。
+    /// 卡牌状态档位（crew/gold 初值 + 钳制上限，验证 [`apply`](crate::rules::cards) 的
+    /// 人手 `crew`〔无上限〕/`gold_max`〔Gold 钳制〕边界；H1② 人手口径审计 Q021）。
     pub card_state_variants: Vec<ExhaustCardState>,
     /// 卡牌事件 id 上界（`progression.md`：`event_id` 1..=25 全处理路径，`all_event_ids`）。
     pub card_event_id_max: u32,
 }
 
 /// 卡牌状态档位（与 `rules/cards.rs` `CardState` 字段对齐，夹具初值 + 钳制上限）。
+/// **2026-11-19 H1② 人手口径**（审计 Q021）：`hp`→`crew`（人手，无上限——船容量约束在
+/// 商人面，非卡牌面），删 `hp_max`（旧 HP 钳制字段，随 `CardState.hp` 整删）。
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct ExhaustCardState {
-    /// 初始 HP。
-    pub hp: u32,
+    /// 初始人手（兵力模型，与 `seat_crew` 同口径）。
+    pub crew: u32,
     /// 初始金币。
     pub gold: u32,
-    /// HP 上限（`Heal` 钳制上界）。
-    pub hp_max: u32,
     /// 金币上限（`Gold` 钳制上界）。
     pub gold_max: u32,
 }

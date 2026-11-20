@@ -6,7 +6,7 @@
 //!   自由几何判定 `can_walk`（确定性 + 边界钳制精确值）+ `move_to` 位置/BOSS 不变式
 //!   （不越界、`moved`/`boss` 标志精确值、同 seed 逐位一致）；
 //! - 卡牌侧：事件 id（`0..=card_event_id_max`）× 种子档位 × 状态档位
-//!   —— `CardEngine::apply` 确定性 + 钳制不变式（`hp` 不超过 `hp_max`、`gold` 不超过 `gold_max`）
+//!   —— `CardEngine::apply` 确定性 + 钳制不变式（**H1② 人手口径**：`crew` 无上限〔船容量约束在商人面〕、`gold` 不超过 `gold_max`，审计 Q020 回写）
 //!   + `draw_one` 同 seed 可复现。
 //!
 //! 枚举维度（种子/状态档位/事件 id 上界）由 `assets/data/exhaust_scenarios.json`
@@ -156,7 +156,7 @@ fn exhaust_progression_map_move_to_invariants() {
 ///
 /// 两次独立跑同事件 ⇒ 终态逐字段一致（确定性，`apply` 不耗 RNG）；终态恒满足
 /// **2026-11-19 H1② 兵力模型对齐**：人手 `crew`（`Damage` 扣 / `Heal` 加，无上限——船容量
-/// 约束在商人面非卡牌面，`v.hp` 档位映射为 `crew` 初值）、`gold` 不超过 `gold_max`；
+/// 约束在商人面非卡牌面，`v.crew` 档位映射为 `crew` 初值）、`gold` 不超过 `gold_max`；
 /// `UnknownEvent` 不得改动状态。
 #[test]
 fn exhaust_progression_cards_apply_all_events_states() {
@@ -169,8 +169,8 @@ fn exhaust_progression_cards_apply_all_events_states() {
     let mut combos: u32 = 0;
     for event_id in 0..=event_max {
         for v in states {
-            // H1②：exhaust 夹具 `v.hp` 档位映射为 `CardState.crew`（人手初值）；`hp_max` 字段已删。
-            let base = CardState { crew: v.hp, gold: v.gold, gold_max: v.gold_max };
+            // H1②：exhaust 夹具 `v.crew` 档位映射为 `CardState.crew`（人手初值）；`hp_max` 字段已删。
+            let base = CardState { crew: v.crew, gold: v.gold, gold_max: v.gold_max };
             let mut a = base;
             let ra = engine.apply(event_id, &mut a);
             let mut b = base;

@@ -399,6 +399,57 @@
     "docs/release.md"
    ],
    "enabled_by_default": false
+  },
+  {
+   "id": "oracle_diff_cards",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-core",
+    "--test",
+    "reference_diff_cards"
+   ],
+   "writes": [
+    "evidence/reference_diff_cards.log"
+   ],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-core --test reference_diff_cards"
+  },
+  {
+   "id": "oracle_diff_main_map",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-core",
+    "--test",
+    "reference_diff_main_map"
+   ],
+   "writes": [
+    "evidence/reference_diff_main_map.log"
+   ],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-core --test reference_diff_main_map"
+  },
+  {
+   "id": "oracle_diff_rng",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-core",
+    "--test",
+    "reference_diff_rng"
+   ],
+   "writes": [
+    "evidence/reference_diff_rng.log"
+   ],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-core --test reference_diff_rng"
   }
  ]
 }

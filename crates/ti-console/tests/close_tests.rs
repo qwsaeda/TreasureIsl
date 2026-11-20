@@ -37,7 +37,8 @@ fn whitelist_audit_ok() {
     // S44.1 新增 9 动作（mappack_add/syncmap/pack/install/sync/uninstall + ui_variant + map_shot + publish）。
     let v = whitelist_audit(&repo_root()).expect("白名单对账应通过");
     assert_eq!(v["ok"], true);
-    assert_eq!(v["count"], 24);
+    // 测试体系专项审计 Q012（2026-11-19）：新增 3 条 oracle 差分测试映射 ⇒ 24→27。
+    assert_eq!(v["count"], 27);
     // 写面动作默认关（enabled_by_default=false）：close_run + 9 个内容运营写动作（30 号 §3.1）；
     // map_shot 只读出图默认开。S48.0 加 ui_theme（主题构图应用，写 scenes.json + assets/ui + ui_manifest）。
     let wr: Vec<&str> = v["write_required"]

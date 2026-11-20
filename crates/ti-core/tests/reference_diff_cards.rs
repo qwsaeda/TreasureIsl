@@ -1,6 +1,6 @@
 //! S3.9 卡牌/事件系统性质测试。
 //!
-//! 遍历（catalog 5 张卡 × `event_id` 0..=25 × 各 state `hp`/`gold` 组合），
+//! 遍历（catalog 5 张卡 × `event_id` 0..=25 × 各 state `crew`/`gold` 组合；**H1② 人手口径**，审计 Q019 回写），
 //! 验证 `CardEngine` 的映射 / 效果应用 / 全事件清单行为；
 //! + 语义测试（全部 `event_id` 都有处理路径 → 覆盖率 100% 证明：
 //!   对 `all_event_ids` 的每个 id，`apply` 都返回 `Applied` 而非 `UnknownEvent`，
