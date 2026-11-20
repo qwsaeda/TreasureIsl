@@ -1,0 +1,64 @@
+[
+  {
+    "alive": [
+      false,
+      false,
+      true,
+      false
+    ],
+    "boss_final": true,
+    "crew": [
+      20,
+      20,
+      20,
+      20
+    ],
+    "gold": [
+      2510,
+      1494,
+      1631,
+      940
+    ],
+    "positions": [
+      7,
+      1,
+      15,
+      13
+    ],
+    "rounds": 12,
+    "seats": 4,
+    "seed": 2026,
+    "winner": 2
+  },
+  {
+    "alive": [
+      true,
+      false,
+      false,
+      false
+    ],
+    "boss_final": true,
+    "crew": [
+      20,
+      20,
+      20,
+      20
+    ],
+    "gold": [
+      1982,
+      687,
+      905,
+      2032
+    ],
+    "positions": [
+      15,
+      5,
+      28,
+      12
+    ],
+    "rounds": 12,
+    "seats": 4,
+    "seed": 7,
+    "winner": 0
+  }
+]

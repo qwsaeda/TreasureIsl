@@ -54,7 +54,7 @@ pub struct SaveSlotV2 {
     pub gold: u32,
     /// 玩家 HP（**顶层 hp 退役**，飞轮 R20 Q008：v5 兵力模型走 `seats[].crew`；老档兼容保留字段，标 deprecated）。
     #[serde(default)]
-    #[deprecated = "顶层 hp 退役（v5 兵力模型走 seats[].crew；老档兼容保留字段），飞轮 R20 Q008"]
+    #[deprecated = "top-level hp retired (v5 manpower model uses seats[].crew; legacy save compat keeps the field), R20 Q008"]
     pub hp: u32,
     /// 已建建筑 id 列表（稳定字符串，如 `"Castle"`）。
     #[serde(default)]
@@ -322,7 +322,7 @@ pub struct SaveSlotV3 {
     pub gold: u32,
     /// 玩家 HP（**顶层 hp 退役**，飞轮 R20 Q008：v5 兵力模型走 `seats[].crew`；老档兼容保留字段，标 deprecated）。
     #[serde(default)]
-    #[deprecated = "顶层 hp 退役（v5 兵力模型走 seats[].crew；老档兼容保留字段），飞轮 R20 Q008"]
+    #[deprecated = "top-level hp retired (v5 manpower model uses seats[].crew; legacy save compat keeps the field), R20 Q008"]
     pub hp: u32,
     /// 已建建筑 id 列表（稳定字符串，如 `"Castle"`）。
     #[serde(default)]
@@ -438,7 +438,7 @@ pub struct SaveSlotV4 {
     pub gold: u32,
     /// 主玩家 HP（**顶层 hp 退役**，飞轮 R20 Q008：v5 兵力模型走 `seats[].crew`；老档兼容保留字段，标 deprecated）。
     #[serde(default)]
-    #[deprecated = "顶层 hp 退役（v5 兵力模型走 seats[].crew；老档兼容保留字段），飞轮 R20 Q008"]
+    #[deprecated = "top-level hp retired (v5 manpower model uses seats[].crew; legacy save compat keeps the field), R20 Q008"]
     pub hp: u32,
     /// 已建建筑 id 列表（v4 起走 `seats[].buildings`；本字段保留 v3 兼容）。
     #[serde(default)]
@@ -557,7 +557,7 @@ pub struct SaveSlotV5 {
     pub gold: u32,
     /// 主玩家 HP（**顶层 hp 退役**，飞轮 R20 Q008：v5 兵力模型走 `seats[].crew`；老档兼容保留字段，标 deprecated）。
     #[serde(default)]
-    #[deprecated = "顶层 hp 退役（v5 兵力模型走 seats[].crew；老档兼容保留字段），飞轮 R20 Q008"]
+    #[deprecated = "top-level hp retired (v5 manpower model uses seats[].crew; legacy save compat keeps the field), R20 Q008"]
     pub hp: u32,
     /// 已建建筑 id 列表（v4 起走 `seats[].buildings`；保留 v3 兼容）。
     #[serde(default)]

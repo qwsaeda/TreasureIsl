@@ -245,6 +245,12 @@ impl TerritoryState {
         self.cells.iter().filter(|(_, o)| o.owner == Some(seat)).map(|(k, _)| *k).collect()
     }
 
+    /// 某席位拥有的领地格数（S61 飞轮 R21：每圈维护费 = 拥有格数 × `maintenance_per_lap`）。
+    #[must_use]
+    pub fn owned_count(&self, seat: SeatIdx) -> u32 {
+        u32::try_from(self.owned_indices(seat).len()).unwrap_or(0)
+    }
+
     /// 某席位驻军总量（§4.1 守恒：每**领地**（岛）只计一次驻军，两格同领地不重复计数）。
     #[must_use]
     pub fn garrison_total(&self, seat: SeatIdx) -> u32 {

@@ -967,6 +967,12 @@ impl SessionHost for GameApp {
                         self.cleared = true;
                     }
                 }
+                // S61（飞轮 R21 A1）：击败 BOSS = 本图胜者，对局终局（大富翁式「绕满 N 圈打 BOSS
+                // 通关」；`territory.md` §1.2 双通道①）。单玩家局 = 通关 Victory；多玩家局 = 先打
+                // BOSS 胜的席为本图胜者（对局收敛通道，与领地维护费②并轨）。
+                let winner_seat = self.turn_cycle.current;
+                self.match_outcome = Some(super::MatchOutcome::Victory { seat: winner_seat });
+                self.handoff_pending = None;
             }
         }
     }

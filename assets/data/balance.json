@@ -369,6 +369,7 @@
   "production_per_level": 0.5,
   "defense_per_level": 0.4,
   "first_capture_bonus": 150,
+  "maintenance_per_lap": 50,
   "home_upgrade": {
    "base_cost": 200,
    "per_level": 0.35,

@@ -21,6 +21,10 @@ pub struct TerritoryCfg {
     pub defense_per_level: f32,
     /// 首占奖励（金）。
     pub first_capture_bonus: u32,
+    /// 每圈领地维护费（金，S61 飞轮 R21）：每圈过起点按「拥有领地格数 × 此值」扣金，
+    /// 让金随圈数可耗尽 ⇒ 破产可触发（消除旧「金单调累积无衰减」对局不收敛根因）。
+    /// 缺省 0 = 维持旧行为（无维护费，向后兼容老档/旧 balance）。
+    pub maintenance_per_lap: u32,
     /// 副本守军 atk 系数（`atk = defense × 系数`；S28.6）。
     pub dungeon_attack_coef: f32,
     /// 据点岛升级参数。
@@ -119,6 +123,7 @@ pub(crate) fn convert(raw: RawTerritory) -> TerritoryCfg {
         production_per_level: raw.production_per_level,
         defense_per_level: raw.defense_per_level,
         first_capture_bonus: raw.first_capture_bonus,
+        maintenance_per_lap: raw.maintenance_per_lap,
         dungeon_attack_coef: raw.dungeon_attack_coef,
         home_upgrade: HomeUpgradeCfg {
             base_cost: raw.home_upgrade.base_cost,

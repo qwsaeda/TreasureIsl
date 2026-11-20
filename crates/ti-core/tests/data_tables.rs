@@ -293,6 +293,7 @@ fn balance_fixture_is_constructible_for_future_rules_tests() {
             production_per_level: 0.5,
             defense_per_level: 0.4,
             first_capture_bonus: 150,
+            maintenance_per_lap: 0,
             dungeon_attack_coef: 0.5,
             home_upgrade: ti_core::data::HomeUpgradeCfg {
                 base_cost: 200,

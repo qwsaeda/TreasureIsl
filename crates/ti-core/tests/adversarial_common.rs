@@ -87,9 +87,28 @@ pub fn run_adversarial_game(seed: u32, seats: u8, max_rounds: u32) -> GameOutcom
             if !active[s] {
                 continue;
             }
-            boards[s].step(&mut rng, sides, boss_laps);
+            let laps_before = boards[s].laps();
+            let turn = boards[s].step(&mut rng, sides, boss_laps);
+            let laps_after = boards[s].laps();
             let idx = boards[s].position_index();
             let seat_idx = u8::try_from(s).expect("席数 ≤ 5");
+            // A1（BOSS 终结）：绕满 `boss_min_laps` 圈 BOSS 现身 + 当前席「击败 BOSS」⇒ 该席胜本图
+            // （大富翁式「绕满 N 圈打 BOSS 通关」，规则层终局；app 壳 = `host` BOSS 战胜 → `match_outcome`）。
+            if turn.boss.engaged() {
+                return boss_victory(s, &boards, &seats_state, rounds, &active);
+            }
+            // A2（金衰减）：落圈扣领地维护费（拥有格数 × `maintenance_per_lap`，金可耗尽 ⇒ 破产可触发）。
+            let lap_delta = laps_after.saturating_sub(laps_before);
+            if lap_delta > 0 {
+                let maintenance = b
+                    .territory
+                    .maintenance_per_lap
+                    .saturating_mul(terr.owned_count(seat_idx))
+                    .saturating_mul(lap_delta);
+                if maintenance > 0 {
+                    seats_state[s].gold = seats_state[s].gold.saturating_sub(maintenance);
+                }
+            }
             settle_ai_landing(b, &mut terr, &rules, s, seat_idx, idx, &mut seats_state);
             // 破产判定：结算后**金耗尽**（金币 = 硬资源；兵力经 `assault` 1/3 驻军损耗恒 >0
             // 不淘汰 ⇒ 单用兵力判破产 = 对局无自然终局）。金耗尽 = 出局，`bankrupt` 清空占领格。
@@ -105,6 +124,28 @@ pub fn run_adversarial_game(seed: u32, seats: u8, max_rounds: u32) -> GameOutcom
         rounds,
         positions: boards.iter().map(BoardSession::position_index).collect(),
         alive: active,
+        gold: seats_state.iter().map(|st| st.gold).collect(),
+        crew: seats_state.iter().map(|st| st.crew).collect(),
+    }
+}
+
+/// A1（BOSS 终结）：当前席击败 BOSS ⇒ 该席胜本图，对局终局（大富翁式「绕满 N 圈打 BOSS 通关」）。
+/// 终局快照 = 胜者席位 + 当前回合数 + 各席位置/兵力（确定性可比对；金在 BOSS 战胜瞬间定格）。
+fn boss_victory(
+    winner_seat: usize,
+    boards: &[BoardSession],
+    seats_state: &[SeatState],
+    rounds: u32,
+    active: &[bool],
+) -> GameOutcome {
+    // BOSS 通关 = 唯一胜者：胜者存活，其余席全部出局（大富翁式「先打 BOSS 者通本图」，
+    // 终局快照「恰 1 存活席」自洽，供快照断言 + 出图标「唯一胜者」）。
+    let alive: Vec<bool> = active.iter().enumerate().map(|(i, a)| *a && i == winner_seat).collect();
+    GameOutcome {
+        winner: Some(u8::try_from(winner_seat).expect("席数 ≤ 5")),
+        rounds,
+        positions: boards.iter().map(BoardSession::position_index).collect(),
+        alive,
         gold: seats_state.iter().map(|st| st.gold).collect(),
         crew: seats_state.iter().map(|st| st.crew).collect(),
     }

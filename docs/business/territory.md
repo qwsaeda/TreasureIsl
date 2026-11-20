@@ -69,6 +69,18 @@
 | 失败 | 玩家（人类）席全部破产 ⇒ 玩家失败，对局结束 |
 | 平局 | 理论上多人同时破产 ⇒ 判**无胜者**，对局结束（`victory_seat` 返回 `None`） |
 
+> **对局收敛双通道（S61，飞轮 R21，2026-11-20 用户拍板「直接进生产」）**：旧版对局
+> **不自然收敛到唯一胜者**（飞轮 R21 探针：400 回合多数 seed 仍 2 席存活 + 金暴涨 `winner=None`，
+> 因 `apply_collect` 每圈产出无衰减 + 破产仅 `gold==0 && crew==0` 双零判据，兵力经 `assault`
+> 1/3 驻军损耗恒 >0 不淘汰）。补**两条终局通道**让对局必达终局（收敛率 → 100%）：
+> ① **BOSS 终结**（`progression.md` §BOSS 触发）：绕满 `boss_min_laps` 圈 BOSS 现身，
+> **当前行动席击败 BOSS ⇒ 该席 = 本图胜者**（`check_match_end` 补 BOSS 战胜 ⇒ `match_outcome=Victory{seat}`），
+> 对局在「打 BOSS」自然收口（大富翁式「绕满 N 圈打 BOSS 通关」语义）。
+> ② **领地维护费**（§4.2 产出段 + `economy.md`）：每圈过起点扣 `balance.territory.maintenance_per_lap`
+> （拥有领地越多扣越多，`Σ占领格 × 系数`），金随圈数**可耗尽** ⇒ 破产可触发（旧「金单调累积无衰减」
+> 根因消除）。两通道 = 终局必达（BOSS 胜 或 金耗尽破产），`victory_seat_active`/全破产 双判据兜底。
+> 数值 = `balance.territory.maintenance_per_lap`（缺省 0 = 维持旧行为，调参不改代码，EXP-196 同纪律）。
+
 > **AI 决策参数**（`balance.territory.ai`，`territory_v2::ai_policy_v2` 读取；S33.6 兵力模型决策）
 > 见 §1 末段（避免重复）：`attack_threshold`/`toll_aversion`/`upgrade_priority` + 公式形态
 > `siege_mode`/`upgrade_mode`（EXP-196）。

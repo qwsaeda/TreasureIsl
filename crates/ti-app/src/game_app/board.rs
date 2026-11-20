@@ -351,6 +351,19 @@ impl GameApp {
         if lap_delta > 0 {
             let bonus = b.board.lap_bonus_gold.saturating_mul(lap_delta);
             self.add_current_seat_gold(bonus);
+            // S61（飞轮 R21）：每圈领地维护费（拥有领地格数 × `maintenance_per_lap`，扣金可耗尽 ⇒
+            // 破产可触发；旧「金单调累积无衰减」对局不收敛根因消除，`territory.md` §1.2 双通道②）。
+            // 缺省 0 = 无维护费（向后兼容）。
+            let maintenance = b
+                .territory
+                .maintenance_per_lap
+                .saturating_mul(self.territory.as_ref().map_or(0, |t| t.owned_count(seat)))
+                .saturating_mul(lap_delta);
+            if maintenance > 0 {
+                if let Some(g) = self.seat_gold.get_mut(seat as usize) {
+                    *g = g.saturating_sub(maintenance);
+                }
+            }
             let cap = b.economy.gold_max;
             if let Some(g) = self.seat_gold.get_mut(seat as usize) {
                 *g = (*g).min(cap);

@@ -65,6 +65,7 @@ Space（空格）/ 点按「摇骰前进」
 | 现身门槛 | 绕岛满 `boss_min_laps` 圈（默认 1）才现身；未满圈 = 「BOSS 尚未现身（还需绕岛 N 圈）」提示，不进战斗 | 跨图节奏对齐 + 保证攒金建造时间（攒金→建造→打 BOSS 闭环） |
 | 拦停 | 现身时位置停到 BOSS 格（被 BOSS 拦停，视觉与位置一致） | 玩家一眼看出「在这打」 |
 | 跨图推进 | 击败 BOSS → 解锁下一图（`MapSlot` / `unlocked_maps`），m20 BOSS = 通关（20 图 m01~m20，飞轮 R3 N-A2 勘误旧 m03 口径） | 已有实现（`battle_step` → `on_boss_defeated`） |
+| **对局终局（S61）** | 绕满 `boss_min_laps` 圈 BOSS 现身后，**当前行动席击败 BOSS ⇒ 该席胜本图，对局终局**（`match_outcome=Victory{seat}`，`check_match_end` 补 BOSS 战胜通道） | 大富翁式「绕满 N 圈打 BOSS 通关」；与领地维护费（`territory.md` §1.2 ②）双通道保对局收敛（飞轮 R21，旧对局 `winner=None` 不收敛缺口修复） |
 
 **跨图节奏实测**（蒙特卡洛 4 万次/图，`dice_sides=6`、`boss_min_laps=1`；
 **M6 口径 2026-11-19：`board_measure.py` 已扩「见 BOSS 累计金」= 落格净金 + 领地通道

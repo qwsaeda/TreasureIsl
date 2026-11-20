@@ -430,6 +430,10 @@ pub(crate) struct RawTerritory {
     /// 首占奖励（金）。
     #[serde(default)]
     pub(crate) first_capture_bonus: u32,
+    /// 每圈领地维护费（金，S61 飞轮 R21；拥有格数 × 此值 × 圈数扣金，金可耗尽 ⇒ 破产可触发；
+    /// 缺省 0 = 无维护费向后兼容）。
+    #[serde(default)]
+    pub(crate) maintenance_per_lap: u32,
     /// 副本守军 atk 系数（`atk = defense × 系数`，S28.6 副本战斗；缺省 0.5）。
     #[serde(default = "default_dungeon_attack_coef")]
     pub(crate) dungeon_attack_coef: f32,

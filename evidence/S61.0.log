@@ -1,0 +1,52 @@
+# S61.0 AI 玩家自动化对抗 E2E（A 规则层 + B app 壳 + C 调参统计）+ 对局收敛 A1/A2 + 各环节出图
+
+用户 2026-11-20 拍板「AI 玩家自动化对抗真实 E2E 玩」→ 方案对比（A/B/C）→「ABC 顺序来」
+→ C 降级调参统计面（零 ML）→「直接进生产」（A1 BOSS 终结 + A2 领地维护费）+「各环节图」。
+
+## A · 规则层驱动器（ti-core/tests/adversarial_common.rs + adversarial_e2e.rs）
+N 个 AI 席 headless 自动对抗完整对局（复用 BoardSession::step + ai_policy_v2 + TerritoryApply +
+assault + bankrupt/victory_seat_active，零新规则代码）。5 条对局性质判据：
+① 确定性（同 seed 同席数 ⇒ 终局快照逐位复现，不同 seed 不同轨迹）
+② 不无限拉锯（rounds ≤ 兜底上限；终局态 = 胜者/全破产/达上限）
+③ 金有界（≤ balance.economy.gold_max）④ 多席不串（快照长度 = 席数）⑤ 回合上限兜底
+实跑：cargo test -p ti-core --test adversarial_e2e = 5 passed。
+
+## B · app 壳真链路（ti-app/tests/app_adversarial_e2e.rs）
+真实 UI 路径（Index→选角→选图→主地图，app_seats_e2e 同模式）进 2 玩家 + N AI 局，
+自动 GameInput::Spin（turn_cycle 轮转 AI 席 + settle_ai_landing 自动结算）。4 条判据：
+① 场景恒 MainMap（AI 自动结算不崩不跳场景）② AI toast 可见（48 回合内必有）
+③ 确定性（同 seed 同 spin ⇒ 同场景 + 同末次 toast）④ 终局读面在位（match_outcome 可达）。
+实跑：cargo test -p ti-app --test app_adversarial_e2e = 4 passed。
+
+## C · 调参统计面（ti-core/tests/adversarial_stats.rs，零 ML 复用 ai_policy_v2）
+多 seed × 多 AI 席分布统计（胜率/破产/通关/金极差/回合数）。3 条判据：
+① 分布可复现（同 seed 集 ⇒ 快照逐位复现）② 收敛观测（如实记录现状收敛率，非强制 100%）
+③ 多席互咬密度（5 席 ≥ 2 席）。改 balance.territory.ai 系数 = 分布变（数据驱动，零代码）。
+实跑：cargo test -p ti-core --test adversarial_stats = 3 passed。
+
+## 对局收敛 A1 + A2（生产，直接进业务）
+探针坐实旧对局不收敛（400 回合 winner=None，金暴涨 72078，因 apply_collect 每圈产出无衰减 +
+破产仅 gold==0&&crew==0 双零判据，兵力 1/3 驻军损耗恒 >0）。补双通道终局：
+- A1 BOSS 终结：boss_min_laps 满圈 BOSS 现身，当前席击败 BOSS ⇒ 该席胜本图（host.rs BOSS 战胜
+  段补 match_outcome=Victory{seat}；规则层驱动器 turn.boss.engaged() 即 BOSS 终局）。
+  业务定案 = territory.md §1.2 双通道① + progression.md BOSS 触发段「对局终局」行。
+- A2 领地维护费：每圈过起点扣「拥有格数 × balance.territory.maintenance_per_lap」（新参数，
+  缺省 0 向后兼容；balance.json 设 50）⇒ 金可耗尽 ⇒ 破产可触发。业务定案 = territory.md §1.2 ②
+  + economy.md。代码 = TerritoryCfg/RawTerritory 加 maintenance_per_lap + board.rs 落圈扣费 +
+  TerritoryState::owned_count + 驱动器落圈扣费。
+收敛实测：cargo test 探针 → 4AI cap300/400 = **6/6 收敛（100%）**，rounds 11-14（BOSS 终结）。
+
+## 各环节出图（adversarial_shot.py，工具契约 3 处登记 14号/04号/README）
+- 规则层对局快照（各环节 ASCII→PNG）：cargo test --test adversarial_snapshot（env 传参）导出
+  evidence/adv_snapshot.json + PIL 绘制 evidence/adv_seed{2026,7,11,42}_r{12,12,14,11}.png
+  （31 格环赛道 + 各席棋子 + 席位金/兵力/存活表 + 终局标注）。
+- 收敛前后对比：evidence/adv_convergence_compare.png（A2 前 winner=None vs A1+A2 后 4/4 收敛）。
+- 表现层静态帧：evidence/bevy_native_main_map.png（xvfb-run --shot main_map；DISPLAY 无头限制，
+  动态过程截不动 = 「规则层快照为主、表现层静态帧为辅」依据）。
+实跑：python3 scripts/adversarial_shot.py --seeds 2026,7,11,42 --seats 4 --rounds 400 = 4 张 PNG。
+
+## 全链验证
+cargo test 1007/0（+A5 +B4 +C3 +snapshot2）+ clippy 0（全 all-targets）+ doccheck 180/38/199/345 0
++ doccheck2 53 项 0 + validate_data OK + board_measure --check PASS + gate 36 项 0 failure
+（8080 服务在位；浏览器面 3 项 PASS）。
+出图：evidence/adv_seed*.png ×4 + adv_convergence_compare.png + bevy_native_main_map.png。
