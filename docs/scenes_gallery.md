@@ -53,7 +53,7 @@
 **版面规格**：`docs/ui-redesign-v3/09_index_compass_spec.md`（竖屏）+ `14_index_treasure_map_spec.md`（横屏）。
 **输入**：确认菜单项 → SelectRole。
 
-![Index 主菜单](../../evidence/bevy_native_index.png)
+![Index 主菜单](../evidence/bevy_native_index.png)
 
 ---
 
@@ -63,7 +63,7 @@
 **版面规格**：`docs/business/08_layout_design.md` §select_role。
 **输入**：确认 → SelectMap（席位池 = 已选人类席 + 可配 AI 席）。
 
-![SelectRole 角色选择](../../evidence/bevy_native_select_role.png)
+![SelectRole 角色选择](../evidence/bevy_native_select_role.png)
 
 ---
 
@@ -73,7 +73,7 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **版面规格**：`docs/business/08_layout_design.md` §select_map。
 **输入**：确认地图 → MainMap（`enter_main_map_at` 全量重建 board/territory）。
 
-![SelectMap 地图选择](../../evidence/bevy_native_select_map.png)
+![SelectMap 地图选择](../evidence/bevy_native_select_map.png)
 
 ---
 
@@ -89,7 +89,7 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **版面规格**：`docs/ui-redesign-v3/10_main_map_v5_spec.md`（v5 中央据点岛 + 环形格子环）+ `territory.md`。
 **出图态**：`--spin=5` seed=42 可复现运行时帧。
 
-![MainMap 主地图](../../evidence/bevy_native_main_map.png)
+![MainMap 主地图](../evidence/bevy_native_main_map.png)
 
 ---
 
@@ -101,7 +101,7 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **业务规则**：`docs/business/combat.md` §兵力模型。
 **输入**：自动播完即结算 → 回 MainMap（胜 = 占领/通关，败 = 交双倍过路费）。
 
-![Vs 战斗](../../evidence/bevy_native_vs.png)
+![Vs 战斗](../evidence/bevy_native_vs.png)
 
 ---
 
@@ -110,7 +110,7 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **版面规格**：`docs/business/08_layout_design.md` §message。
 **输入**：确认/方向翻面板 → 回 MainMap。
 
-![Message 消息面板](../../evidence/bevy_native_message.png)
+![Message 消息面板](../evidence/bevy_native_message.png)
 
 ---
 
@@ -120,7 +120,7 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **版面规格**：`docs/business/08_layout_design.md` §saveload + `persistence.md`。
 **输入**：选槽确认 → 读档重建 / 写档 → 回 MainMap。
 
-![Saveload 存读档](../../evidence/bevy_native_saveload.png)
+![Saveload 存读档](../evidence/bevy_native_saveload.png)
 
 ---
 
