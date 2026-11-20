@@ -35,6 +35,7 @@
 | [`00_design.md`](00_design.md) | **正向设计总入口**：核心循环 + 数据驱动分层 + crate 架构 + 9 场景流 + 模块包 + 场景宿主窄接口（不读 legacy/） |
 | [`parity.md`](parity.md) | P0~P4 对齐标准 + **门禁项数与计数约定的唯一事实源**（doccheck 门禁第 13 项含跨文档数值漂移 + release 台账计数同步） |
 | [`gamebook.md`](gamebook.md) | **可玩实现手册**：把已验证 `rules` 接进交互壳的全流程接线规格（S5 起） |
+| [`scenes_gallery.md`](scenes_gallery.md) | **游戏态（场景）全览 · 截图 + 图文说明**：8 游戏态（7 可渲染 + Intro/Exit）场景态流转图 + 逐场景（Index/SelectRole/SelectMap/MainMap/Vs/Message/Saveload）职责/版面规格/输入 + `evidence/bevy_native_*.png` 截图；出图命令 = `ui_preview.ps1`（表现层静态帧；动态过程走规则层 `adv_seed*.png`） |
 | [`release.md`](release.md) | 发布说明（项目概况/平台产物/体积预算/可玩收口/已知限制/如何运行/验收）⚠️ **GBK 编码，勿用 `Set-Content` 编辑** |
 | [`style.md`](style.md) | Rust 工程规范（workspace/lints/常量/宏/错误/trait/测试/命名/依赖/clippy/MCP；**§5.6.6 标准库 trait 选用矩阵 + 重构操作规程**） |
 | [`git.md`](git.md) | 推送规范（远端 origin/分支模型/推送规则/commit 格式/推送检查清单） |
