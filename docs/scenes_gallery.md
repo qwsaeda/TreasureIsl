@@ -4,8 +4,9 @@
 > （`Intro` 触发即自动跳 `Index`，无独立帧；`Exit` 是动作非场景，不渲染）。
 > 单一事实源：场景枚举 = `Scene`；场景态流转 = `docs/gamebook.md` §场景流转表 + `docs/00_design.md`；
 > 逐场景版面/坐标 = `docs/business/08_layout_design.md`；逐场景 UI 重设计规格 = `docs/ui-redesign-v3/`。
-> 截图 = `evidence/bevy_native_<scene>.png`（`scripts/ui_preview.ps1 <scene>` 出图，main_map 带
-> `--spin=5` seed=42 可复现运行时态；表现层静态帧载体，动态过程截不动）。
+> **截图 = 当前代码最新渲染**（`evidence/bevy_native_<scene>.png`，2026-11-20 用 `xvfb-run
+> treasure-bevy-native -- --scene=X --shot` 实时出图，main_map 带 `--spin=5` seed=42 可复现运行时态；
+> 旧 S26~S39 时点存档已废弃，本表全部重出最新态；表现层静态帧载体，动态过程截不动）。
 
 ## 场景态流转图
 
@@ -54,6 +55,8 @@
 **输入**：确认菜单项 → SelectRole。
 
 ![Index 主菜单](../evidence/bevy_native_index.png)
+
+*最新渲染 2026-11-20（当前代码）*
 
 ---
 
