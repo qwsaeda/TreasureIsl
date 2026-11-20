@@ -646,6 +646,28 @@ pub trait MapHost {
     /// S63 贸易面板选中项 setter（默认 no-op）。
     fn set_trade_panel_sel(&mut self, _sel: u8) {}
 
+    /// S63 商人面板是否打开（默认关闭）。
+    fn merchant_panel_open(&self) -> bool {
+        false
+    }
+    /// S63 商人面板开关（默认 no-op）。
+    fn set_merchant_panel_open(&mut self, _open: bool) {}
+    /// S63 商人面板选中项（0=买人手 / 1=买武器）。
+    fn merchant_panel_sel(&self) -> u8 {
+        0
+    }
+    /// S63 商人面板选中项 setter（默认 no-op）。
+    fn set_merchant_panel_sel(&mut self, _sel: u8) {}
+
+    /// S63 事件面板是否打开（默认关闭）。
+    fn event_panel_open(&self) -> bool { false }
+    /// S63 事件面板开关（默认 no-op）。
+    fn set_event_panel_open(&mut self, _open: bool) {}
+    /// S63 事件面板选中项（默认 0）。
+    fn event_panel_sel(&self) -> u8 { 0 }
+    /// S63 事件面板选中项 setter（默认 no-op）。
+    fn set_event_panel_sel(&mut self, _sel: u8) {}
+
     /// S21.12 造船（船系统单向升级：扣金 + 抬 cargo/atk/hp，立即生效）。
     ///
     /// 返回 `true` = 升级成功；`false` = 金不够 / 已满级（场景层给提示文案）。
@@ -678,6 +700,25 @@ pub trait EconomyHost {
 
     /// 置当前金。
     fn set_gold(&mut self, value: u32);
+
+    /// S63 T7：当前席人手（兵力模型，`rules::merchant::buy_crew` 用）。
+    fn crew(&self) -> u32 {
+        0
+    }
+    /// S63 T7：当前席武器（兵力模型，`rules::merchant::buy_arms` 用）。
+    fn arms(&self) -> u32 {
+        0
+    }
+    /// S63 T7：船容量上限（`BoatSession::cargo`，买人手上限）。
+    fn boat_cap(&self) -> u32 {
+        0
+    }
+    /// S63 T7：买人手结果写回（当前席）。
+    fn set_crew_gold(&mut self, _crew: u32, _gold: u32) {}
+    /// S63 T7：买武器结果写回（当前席）。
+    fn set_arms_gold(&mut self, _arms: u32, _gold: u32) {}
+    /// S63 T6：海事事件效果写回（当前席 gold/crew/arms，i64/i32 增量 saturating）。
+    fn apply_event_effect(&mut self, _gold_delta: i64, _crew_delta: i32, _arms_delta: i32, _gold_loss_pct: u32, _crew_loss_pct: u32, _arms_loss_pct: u32) {}
 
     /// 持有表中 `gid` 的下标。
     fn owned_index_of(&self, gid: u32) -> Option<usize>;

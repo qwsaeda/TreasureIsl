@@ -69,6 +69,12 @@ impl GameApp {
                 if k.build {
                     changed = self.handle(GameInput::OpenBuildPanel) || changed;
                 }
+                if k.merchant {
+                    changed = self.handle(GameInput::OpenMerchantPanel) || changed;
+                }
+                if k.event {
+                    changed = self.handle(GameInput::OpenEventPanel) || changed;
+                }
                 if k.landmark {
                     changed = self.handle(GameInput::Landmark(1)) || changed;
                 }

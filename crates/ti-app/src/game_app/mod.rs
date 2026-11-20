@@ -192,6 +192,10 @@ pub enum GameInput {
     OpenTradePanel,
     /// S63 建造面板开关（B 键打开；此前 `set_build_panel_open(true)` 0 命中=死代码，S34 删入口遗留）。
     OpenBuildPanel,
+    /// S63 商人面板开关（M 键打开：买人手/买武器，走 `rules::merchant`）。
+    OpenMerchantPanel,
+    /// S63 事件面板开关（V 键打开：海事事件展示 + 应用效果，走 `rules::events::effect`）。
+    OpenEventPanel,
     /// 主地图建造（`kind`）。
     Build(Building),
     /// S21.12 主地图造船（船系统单向升级，`rules::boat::BoatSession`；与 4 建筑并列第 5 入口）。
@@ -339,6 +343,14 @@ pub struct GameApp {
     pub trade_panel_open: bool,
     /// S63 贸易面板当前选中商品（0..=goods.len()-1，越界钳到末项）。
     pub trade_panel_sel: u8,
+    /// S63 商人面板是否打开（M 键开关：买人手/买武器）。
+    pub merchant_panel_open: bool,
+    /// S63 商人面板选中项（0=买人手 / 1=买武器）。
+    pub merchant_panel_sel: u8,
+    /// S63 事件面板是否打开（V 键开关）。
+    pub event_panel_open: bool,
+    /// S63 事件面板选中事件（0..=6，7 种 `MaritimeEvent`）。
+    pub event_panel_sel: u8,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// 战斗会话（`Vs` 场景时有效，兵力模型 `force::resolve` 一次性结算）。
@@ -484,6 +496,10 @@ pub struct KeyState {
     pub sell: bool,
     /// 建造（B）。
     pub build: bool,
+    /// 商人（M，S63 T7）。
+    pub merchant: bool,
+    /// 海事事件（V，S63 T6）。
+    pub event: bool,
 }
 /// 场景切换过渡状态机（EXP-081 → S17.4：真交叉淡化，`MOTION_TRANSITION_MS` 时间制推进）。
 #[derive(Debug, Clone, Default)]
@@ -543,6 +559,10 @@ impl GameApp {
             build_panel_sel: 0,
             trade_panel_open: false,
             trade_panel_sel: 0,
+            merchant_panel_open: false,
+            merchant_panel_sel: 0,
+            event_panel_open: false,
+            event_panel_sel: 0,
             buildings: Vec::new(),
             battle: None,
             rng: GameRng::new(0),

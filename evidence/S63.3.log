@@ -1,0 +1,16 @@
+# S63.3 商人面板（2026-11-20）
+
+用户拍板 8 面板补全，T7 商人 = 真缺口（rules::merchant buy_crew/buy_arms 有 API 但无 UI 入口）。
+
+## 落码
+- GameInput +OpenMerchantPanel；KeyState +merchant（M 键，键盘映射 raw/key_edge）
+- EconomyHost +crew/arms/boat_cap/set_crew_gold/set_arms_gold；host impl（写回 seat_crew/seat_arms/gold）
+- main_map handle_merchant_buy（走 rules::merchant::buy_crew/buy_arms，slave_price 30/weapon_price 50）
+- render_merchant_panel（候选 A 羊皮卷轴居中，2 条目：买人手 20/99 · 30金 / 买武器 5/20 · 50金）
+- 面板切换键统一前置（三面板互斥：trade/build/merchant）
+- i18n +4 键；treasure_bevy.rs --panel=merchant 出图参数
+
+## 验证
+app_merchant_panel_e2e 3 passed（开关/选择/互斥 + 买人手 +1金-30 + 买武器 +1金-50）
++ cargo test 1012/0 + clippy 0 + doccheck/doccheck2 0
++ --shot --panel=merchant 横屏出图居中 → evidence/ui_candidate/merchant_panel_live.png

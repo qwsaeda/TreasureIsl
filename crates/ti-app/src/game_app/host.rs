@@ -15,6 +15,7 @@ use ti_core::domain::persistence::{SaveSlot, SaveSlotV4Ext, SeatSave, TerritoryS
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{BoardSession, TrackSpace, Turn};
 use ti_core::rules::build::overflow_to_deposit;
+use ti_core::rules::boat::BoatSession;
 use ti_core::rules::cards;
 use ti_core::rules::force::{Force, ForceSide, resolve};
 use ti_core::rules::messages::total_pages;
@@ -313,6 +314,35 @@ impl MapHost for GameApp {
 
     fn set_trade_panel_sel(&mut self, sel: u8) {
         self.trade_panel_sel = sel;
+    }
+
+    fn merchant_panel_open(&self) -> bool {
+        self.merchant_panel_open
+    }
+
+    fn set_merchant_panel_open(&mut self, open: bool) {
+        self.merchant_panel_open = open;
+    }
+
+    fn merchant_panel_sel(&self) -> u8 {
+        self.merchant_panel_sel
+    }
+
+    fn set_merchant_panel_sel(&mut self, sel: u8) {
+        self.merchant_panel_sel = sel;
+    }
+
+    fn event_panel_open(&self) -> bool {
+        self.event_panel_open
+    }
+    fn set_event_panel_open(&mut self, open: bool) {
+        self.event_panel_open = open;
+    }
+    fn event_panel_sel(&self) -> u8 {
+        self.event_panel_sel
+    }
+    fn set_event_panel_sel(&mut self, sel: u8) {
+        self.event_panel_sel = sel;
     }
 
     /// S21.12 造船：走 `rules::boat::BoatSession::upgrade`（单向升级链 + 扣金 + 抬加成），
@@ -784,6 +814,48 @@ impl EconomyHost for GameApp {
     fn gold(&self) -> u32 {
         // v3：唯一金币账本 = `seat_gold[]`；当前行动席的值（D3 修复：v2 双账本漂移）。
         self.current_seat_gold()
+    }
+
+    fn crew(&self) -> u32 {
+        self.seat_crew[self.turn_cycle.current as usize]
+    }
+    fn arms(&self) -> u32 {
+        self.seat_arms[self.turn_cycle.current as usize]
+    }
+    fn boat_cap(&self) -> u32 {
+        let Ok(b) = balance() else { return 0 };
+        BoatSession::new(b.boat.clone(), u32::from(self.boat_level())).cargo()
+    }
+    fn set_crew_gold(&mut self, crew: u32, gold: u32) {
+        let s = self.turn_cycle.current as usize;
+        self.seat_crew[s] = crew;
+        self.seat_gold[s] = gold;
+        self.sync_gold_mirror();
+    }
+    fn set_arms_gold(&mut self, arms: u32, gold: u32) {
+        let s = self.turn_cycle.current as usize;
+        self.seat_arms[s] = arms;
+        self.seat_gold[s] = gold;
+        self.sync_gold_mirror();
+    }
+    fn apply_event_effect(&mut self, gold_delta: i64, crew_delta: i32, arms_delta: i32, gold_loss_pct: u32, crew_loss_pct: u32, arms_loss_pct: u32) {
+        let s = self.turn_cycle.current as usize;
+        // pct 损耗按万分比扣（saturating），delta 增减（saturating），金钳到 gold_cap。
+        let cur_gold = self.seat_gold[s];
+        let after_loss = cur_gold.saturating_sub(u32::try_from(u64::from(cur_gold) * u64::from(gold_loss_pct) / 10_000).unwrap_or(0));
+        let g = if gold_delta >= 0 {
+            after_loss.saturating_add(u32::try_from(gold_delta).unwrap_or(0))
+        } else {
+            after_loss.saturating_sub(u32::try_from(-gold_delta).unwrap_or(0))
+        };
+        self.seat_gold[s] = g.min(self.gold_cap());
+        let cur_crew = self.seat_crew[s];
+        let crew_after_loss = cur_crew.saturating_sub(u32::try_from(u64::from(cur_crew) * u64::from(crew_loss_pct) / 10_000).unwrap_or(0));
+        self.seat_crew[s] = if crew_delta >= 0 { crew_after_loss.saturating_add(u32::try_from(crew_delta).unwrap_or(0)) } else { crew_after_loss.saturating_sub(crew_delta.unsigned_abs()) };
+        let cur_arms = self.seat_arms[s];
+        let arms_after_loss = cur_arms.saturating_sub(u32::try_from(u64::from(cur_arms) * u64::from(arms_loss_pct) / 10_000).unwrap_or(0));
+        self.seat_arms[s] = if arms_delta >= 0 { arms_after_loss.saturating_add(u32::try_from(arms_delta).unwrap_or(0)) } else { arms_after_loss.saturating_sub(arms_delta.unsigned_abs()) };
+        self.sync_gold_mirror();
     }
 
     fn set_gold(&mut self, value: u32) {

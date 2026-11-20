@@ -909,6 +909,8 @@ fn input_system(
         buy: kb.pressed(KeyCode::KeyT),
         sell: kb.pressed(KeyCode::KeyY),
         build: kb.pressed(KeyCode::KeyB),
+        merchant: kb.pressed(KeyCode::KeyM),
+        event: kb.pressed(KeyCode::KeyV),
     };
     let key_edge = |current: bool, previous: bool| current && !previous;
     let k = KeyState {
@@ -923,6 +925,8 @@ fn input_system(
         buy: key_edge(raw.buy, state.prev_keys.buy),
         sell: key_edge(raw.sell, state.prev_keys.sell),
         build: key_edge(raw.build, state.prev_keys.build),
+        merchant: key_edge(raw.merchant, state.prev_keys.merchant),
+        event: key_edge(raw.event, state.prev_keys.event),
     };
     g.poll(&k);
 
@@ -2374,6 +2378,8 @@ fn run() {
         game.handle(match panel {
             "trade" => ti_app::GameInput::OpenTradePanel,
             "build" => ti_app::GameInput::OpenBuildPanel,
+            "merchant" => ti_app::GameInput::OpenMerchantPanel,
+            "event" => ti_app::GameInput::OpenEventPanel,
             _ => ti_app::GameInput::MapBack, // 未知面板名 = 不开（不崩）
         });
     }

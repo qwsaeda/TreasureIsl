@@ -1,0 +1,16 @@
+# S63.4 事件面板（2026-11-20）
+
+S63 最后一个真缺口：rules::events::effect 有 API 但 app 壳 0 调用。
+
+## 落码
+- GameInput +OpenEventPanel；KeyState +event（V 键）；键盘映射 raw/key_edge
+- EconomyHost +apply_event_effect（pct 损耗按实际资源扣 + delta 增减，saturating，金钳 gold_cap）
+- main_map EVENT_KINDS（7 种 MaritimeEvent 数据）+ handle_event_apply（effect() 算 + 写回）
+- render_event_panel（候选 A 羊皮卷轴居中，7 事件 + 金/人手/武器/损耗效果预览）
+- 面板切换统一前置（四面板互斥）；i18n +9 键；--panel=event 出图参数
+- jump/extra_roll = 赛道层效果仅展示（不改 BoardSession 位置，避免破坏落格状态）
+
+## 验证
+app_event_panel_e2e 3 passed（开关+环形选择+互斥 + 宝藏沉船金+200武器+3 + 流浪儿人手+4）
++ cargo test 1015/0 + clippy 0 + validate_data OK + --shot --panel=event 横屏出图
+→ evidence/ui_candidate/event_panel_live.png
