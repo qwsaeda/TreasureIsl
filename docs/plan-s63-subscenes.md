@@ -40,13 +40,18 @@
 
 | 任务 | 内容 | 改动面 | dod | deps |
 |---|---|---|---|---|
-| **T0** | 立项 + 本 WBS + 5 面板规格总览 | 文档 | WBS 登记台账 + docs/README 登记；用户确认面板清单 | — |
-| **T1** | 贸易面板（买/卖） | `scenes.json::main_map.panel_trade` + 资产 + i18n + app 壳 `TradeLedger` 接线 | 横屏 `--shot` 出图 + 用户视觉签收 + 单测：买/卖改金币/货物与 `TradeLedger` 一致 | T0 |
-| **T2** | 建造面板落数据化 | `panel_build` 段（替换 `build_panel_open` 无原语现状）+ 复用 `BuildManager` | 出图 + 单测：建建筑扣金/加成写入 | T0 |
+| **T0** | 立项 + 本 WBS + 8 面板规格总览（用户 2026-11-20 确认面板清单 = 5 核心 + 3 补充〔海事事件/商人/卡牌详情〕+ ②角色Vs美术并入） | 文档 | WBS 登记台账 + docs/README 登记；用户确认面板清单 ✅ | — |
+| **T0a** | **视觉候选图（先做）**：出 `--shot` 候选版面图给用户挑（每面板 2~3 变体 + ②角色Vs美术重排候选）；用户选定后各面板才落数据 | 数据（候选变体，`scenes.json` 临时态或独立候选段）+ 出图 | 每面板 ≥2 张横屏候选图 → 用户视觉签收（留痕）→ 定稿 | T0 |
+| **T1** | 贸易面板（买/卖） | `scenes.json::main_map.panel_trade` + 资产 + i18n + app 壳 `TradeLedger` 接线 | 横屏 `--shot` 出图 + 用户视觉签收 + 单测：买/卖改金币/货物与 `TradeLedger` 一致 | T0a |
+| **T2** | 建造面板落数据化 | `panel_build` 段（替换 `build_panel_open` 无原语现状）+ 复用 `BuildManager` | 出图 + 单测：建建筑扣金/加成写入 | T0a |
 | **T3** | 造船面板 | `panel_ship` 段 + `BoatSession` 接线 | 出图 + 单测：升级扣金/货舱提升 | T1 |
-| **T4** | 副本面板 | `panel_dungeon` 段 + `apply_dungeon`/`defense_at` 展示 | 出图 + 单测：守军/奖励展示与 rules 一致 | T0 |
+| **T4** | 副本面板 | `panel_dungeon` 段 + `apply_dungeon`/`defense_at` 展示 | 出图 + 单测：守军/奖励展示与 rules 一致 | T0a |
 | **T5** | 领地升级面板 | `panel_territory` 段 + `apply_upgrade`/`upgrade_cost_at` 接线 | 出图 + 单测：升级扣金/等级+1 | T2 |
-| **T6** | 收口：全面板 e2e + 文档 | 集成测试 + `scenes_gallery.md` 更新 + gate | 5 面板全可玩链路 e2e + gate 36 项 0 failure + 352→358 台账 | T1~5 |
+| **T6** | 海事事件面板 | `panel_event` 段 + `events::effect` 展示 + `main_map` 事件格落格接线 | 出图 + 单测：事件效果展示与 rules 一致 | T0a |
+| **T7** | 商人面板 | `panel_merchant` 段 + `buy_crew`/`buy_arms` 展示 | 出图 + 单测：买人/买武器扣金与 rules 一致 | T1 |
+| **T8** | 卡牌详情面板 | `panel_card` 段 + `CardEngine::apply` 结果展示 | 出图 + 单测：卡牌效果展示与 rules 一致 | T0a |
+| **T9** | **②角色/Vs 美术重排（并入本批）** | `scenes.json` select_role/vs 段坐标 + 资产替换（立绘放大/居中/填充留白），零 Rust | 横屏候选图用户选定 → 落数据 → 出图签收 | T0a |
+| **T10** | 收口：全面板 e2e + 文档 | 集成测试 + `scenes_gallery.md` 更新 + gate | 8 面板 + 角色Vs美术 全链路 e2e + gate 36 项 0 failure + 台账同步 | T1~T9 |
 
 ## 5. 验收判据（全局）
 
@@ -56,10 +61,11 @@
 - **门禁**：cargo test/clippy/doccheck/doccheck2/validate_data/gate 36 项全绿。
 - **文档**：`scenes_gallery.md` 补 5 面板子场景截图 + 说明；`plan-s63-subscenes.md` 本 WBS 同步。
 
-## 6. 待用户拍板（任务号 T0~T6 = 规划占位，正式任务号立项时登记台账）
+## 6. 用户拍板结果（2026-11-20 ✅）
 
-待用户拍板
+- **面板清单** = 8 个：5 核心（贸易/建造/造船/副本/领地升级）+ 3 补充（**海事事件/商人/卡牌详情**）。
+- **视觉方向** = 我出 `--shot` 候选图（每面板 2~3 变体）给用户挑 → T0a 先做。
+- **②角色/Vs 美术并入本批**（T9，同批改 `scenes.json` + 资产，零 Rust）。
 
-- 面板清单是否就是这 5 个（贸易/建造/造船/副本/领地升级）？还有没有遗漏（如海事事件/商人/卡牌详情）？
-- 每个面板的**视觉方向**（布局/风格/交互）由你给，还是我出 `--shot` 候选图给你挑？
-- ②角色/Vs 美术是否并入 T6 一起改 `scenes.json`（同一批换数据+资产），还是单独轮？
+> 下一步 = T0a 出候选图：探查现有资产 + `scenes.json` 版面段 → 出横屏候选（`evidence/ui_candidate/`）
+> → 用户逐面板挑定 → 各任务落数据 + 接线。

@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""视觉候选图合成（飞轮 R21 / S63 T0a）：用现成 UI 资产 + PIL 合成「面板/场景重排」候选看板，
+给用户挑风格基准（选定后批量套用 8 面板）。零 Rust、零 scenes.json 改动（候选阶段）。
+
+变体：
+  select_role：A 立绘全高左半屏 / B 立绘居中 + 两侧列表 / C 双立绘对置
+  vs：         A 双人对峙居中 / B 斜向列阵 / C 当前版放大版
+  panel（通用面板风格基准，以贸易为例）：A 羊皮卷轴居中 / B 木质牌匾左列 / C 底部抽屉式
+
+用法：python3 scripts/ui_candidate_render.py --out evidence/ui_candidate
+"""
+from __future__ import annotations
+
+import argparse
+import math
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+UI = ROOT / "assets" / "ui"
+CJK = "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"
+
+
+def _font(sz: int):
+    from PIL import ImageFont  # noqa: PLC0415
+    return ImageFont.truetype(CJK, sz) if Path(CJK).exists() else ImageFont.load_default()
+
+
+def _img(name: str):
+    from PIL import Image  # noqa: PLC0415
+    return Image.open(UI / f"{name}.png").convert("RGBA")
+
+
+def _parchment_bg(w: int, h: int):
+    """羊皮纸底：chart_wide 拉伸铺底 + 暗角。"""
+    from PIL import Image, ImageDraw  # noqa: PLC0415
+    base = _img("chart_wide").resize((w, h))
+    layer = Image.new("RGBA", (w, h), (18, 14, 8, 96))
+    base.alpha_composite(layer)
+    return base
+
+
+def _panel_box(draw, x, y, w, h, title, accent="#d4a017"):
+    """羊皮面板框（半透明底 + 金边 + 标题牌）。"""
+    draw.rounded_rectangle([x, y, x + w, y + h], radius=18, fill=(28, 22, 12, 210), outline=accent, width=3)
+    draw.rounded_rectangle([x + 24, y + 16, x + w - 24, y + 66], radius=8, fill=(60, 40, 18, 230), outline=accent, width=2)
+    draw.text((x + 40, y + 26), title, fill="#f5d76e", font=_font(26))
+
+
+def render_select_role(out: Path, variant: str):
+    from PIL import Image, ImageDraw  # noqa: PLC0415
+    W, H = 1920, 1080
+    im = _parchment_bg(W, H)
+    dr = ImageDraw.Draw(im)
+    portrait = _img("role_drake")
+    dr.text((40, 24), f"角色选择重排 · 候选 {variant}（S63 T0a）", fill="#fff", font=_font(30))
+    if variant == "A":
+        # 立绘占左半屏全高，右侧大字列表
+        p = portrait.resize((820, 900))
+        im.alpha_composite(p, (40, 120))
+        _panel_box(dr, 920, 120, 940, 900, "选择船员")
+        for i, n in enumerate(["潘达 · 商人", "泰奇 · 船长", "基德 · 猎手", "德雷克 · 海盗", "凯瑟琳 · 贵妇"]):
+            dr.text((970, 200 + i * 120), n, fill="#f5d76e", font=_font(30))
+    elif variant == "B":
+        # 立绘居中大图，两侧列表
+        p = portrait.resize((700, 820))
+        im.alpha_composite(p, (610, 180))
+        _panel_box(dr, 40, 180, 520, 820, "船员（左）")
+        _panel_box(dr, 1360, 180, 520, 820, "船员详情（右）")
+        for i, n in enumerate(["潘达", "泰奇", "基德", "德雷克", "凯瑟琳"]):
+            dr.text((90, 280 + i * 130), n, fill="#f5d76e", font=_font(30))
+        dr.text((1410, 300), "立绘居中", fill="#f5d76e", font=_font(28))
+        dr.text((1410, 360), "左右列表", fill="#f5d76e", font=_font(28))
+    else:  # C
+        # 双立绘对置（当前选中 + 上一角色）
+        p1 = portrait.resize((640, 900))
+        p2 = _img("role_panda").resize((640, 900))
+        im.alpha_composite(p2, (120, 120))
+        im.alpha_composite(p1, (1160, 120))
+        _panel_box(dr, 660, 300, 600, 480, "当前 / 上一角色")
+        dr.text((700, 420), "双立绘对置", fill="#f5d76e", font=_font(32))
+        dr.text((700, 480), "PvP 选人感", fill="#f5d76e", font=_font(28))
+    im.convert("RGB").save(out)
+
+
+def render_vs(out: Path, variant: str):
+    from PIL import Image, ImageDraw  # noqa: PLC0415
+    W, H = 1920, 1080
+    im = _parchment_bg(W, H)
+    dr = ImageDraw.Draw(im)
+    hero = _img("hero_back")
+    boss = _img("boss_captain")
+    dr.text((40, 24), f"Vs 战斗重排 · 候选 {variant}（S63 T0a）", fill="#fff", font=_font(30))
+    if variant == "A":
+        # 双人对峙居中
+        im.alpha_composite(hero.resize((560, 760)), (240, 240))
+        im.alpha_composite(boss.resize((560, 760)), (1120, 240))
+        dr.text((860, 500), "VS", fill="#f5d76e", font=_font(80))
+        _panel_box(dr, 40, 40, 700, 110, "我方舰队 · 兵力 HUD")
+        _panel_box(dr, 1180, 40, 700, 110, "敌方驻军 · 兵力 HUD")
+    elif variant == "B":
+        # 斜向列阵（我方左下 3 人，敌方右上 BOSS）
+        for i in range(3):
+            im.alpha_composite(hero.resize((320, 480)), (120 + i * 200, 520 - i * 90))
+        im.alpha_composite(boss.resize((640, 760)), (1180, 180))
+        dr.text((700, 300), "VS", fill="#f5d76e", font=_font(70))
+        _panel_box(dr, 40, 40, 700, 110, "我方舰队（斜列）")
+        _panel_box(dr, 1180, 40, 700, 110, "敌方驻军")
+    else:  # C
+        # 当前版放大（保留炮台 + 双方立绘，仅放大居中）
+        im.alpha_composite(_img("deck_battle").resize((1920, 700)), (0, 200))
+        im.alpha_composite(hero.resize((460, 620)), (180, 400))
+        im.alpha_composite(boss.resize((460, 620)), (1280, 400))
+        dr.text((880, 480), "VS", fill="#f5d76e", font=_font(70))
+    im.convert("RGB").save(out)
+
+
+def render_panel(out: Path, variant: str):
+    """通用面板风格基准（以贸易面板为例：5 商品列表 + 买/卖 + 金币）。"""
+    from PIL import Image, ImageDraw  # noqa: PLC0415
+    W, H = 1920, 1080
+    im = _parchment_bg(W, H)
+    dr = ImageDraw.Draw(im)
+    dr.text((40, 24), f"贸易面板（通用面板风格基准）· 候选 {variant}（S63 T0a）", fill="#fff", font=_font(30))
+    if variant == "A":
+        # 羊皮卷轴居中（圆角羊皮 + 金边）
+        _panel_box(dr, 360, 120, 1200, 860, "贸易 · 买卖货物")
+        for i, n in enumerate(["布匹", "香料", "朗姆酒", "火药", "木材"]):
+            dr.text((460, 240 + i * 110), f"{n}  买/卖  [按钮]", fill="#f5d76e", font=_font(30))
+        dr.text((1250, 240), "金 1000", fill="#2ecc71", font=_font(34))
+    elif variant == "B":
+        # 木质牌匾左列（竖排商品 + 右侧详情）
+        _panel_box(dr, 80, 140, 620, 820, "商品")
+        for i, n in enumerate(["布匹", "香料", "朗姆酒", "火药", "木材"]):
+            dr.text((140, 260 + i * 120), n, fill="#f5d76e", font=_font(32))
+        _panel_box(dr, 760, 140, 1080, 820, "交易详情")
+        dr.text((840, 280), "选中商品 · 数量 · 价格", fill="#f5d76e", font=_font(28))
+        dr.text((840, 380), "买入 / 卖出 按钮", fill="#f5d76e", font=_font(28))
+        dr.text((840, 480), "金 1000", fill="#2ecc71", font=_font(34))
+    else:  # C
+        # 底部抽屉式（半屏面板从底部升起，背景半透主地图）
+        dr.rectangle([0, 520, W, H], fill=(24, 18, 10, 235), outline="#d4a017", width=3)
+        dr.text((60, 560), "贸易 · 底部抽屉式", fill="#f5d76e", font=_font(32))
+        for i, n in enumerate(["布匹", "香料", "朗姆酒", "火药", "木材"]):
+            x = 80 + i * 350
+            dr.rounded_rectangle([x, 660, x + 300, 900], radius=12, fill=(50, 36, 18, 240), outline="#d4a017", width=2)
+            dr.text((x + 30, 710), n, fill="#f5d76e", font=_font(28))
+            dr.text((x + 30, 770), "买 / 卖", fill="#2ecc71", font=_font(24))
+    im.convert("RGB").save(out)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="视觉候选图合成（S63 T0a）")
+    ap.add_argument("--out", default=str(ROOT / "evidence" / "ui_candidate"))
+    ap.add_argument("--check", action="store_true", help="只读体检：资产 + CJK 字体在位（0 写盘）")
+    args = ap.parse_args()
+    if args.check:
+        need = ["chart_wide.png", "role_drake.png", "role_panda.png", "hero_back.png", "boss_captain.png", "deck_battle.png"]
+        missing = [n for n in need if not (UI / n).exists()]
+        if missing:
+            raise SystemExit(f"[check] 缺资产：{missing}")
+        if not Path(CJK).exists():
+            raise SystemExit(f"[check] 缺 CJK 字体：{CJK}")
+        print(f"[check] {len(need)} 资产 + CJK 字体在位（0 写盘）：PASS")
+        return
+    out = Path(args.out)
+    if not out.is_absolute():
+        out = ROOT / out
+    out.mkdir(parents=True, exist_ok=True)
+    for scene, fn in [("select_role", render_select_role), ("vs", render_vs), ("panel_trade", render_panel)]:
+        for v in ["A", "B", "C"]:
+            p = out / f"{scene}_{v}.png"
+            fn(p, v)
+            print(f"  出图 {p.relative_to(ROOT)}")
+    print(f"ui_candidate: 9 张候选图 → {out}")
+
+
+if __name__ == "__main__":
+    main()

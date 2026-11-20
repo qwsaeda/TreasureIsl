@@ -8,6 +8,7 @@
 | 工具 | 语言 | 作用 | 幂等 |
 |---|---|---|---|
 | `scripts/gate.ps1` | PowerShell | 全库门禁（fmt/clippy/test/build×3/占位/unwrap/台账 + doccheck） | — |
+| `scripts/ui_candidate_render.py` | Python | 视觉候选图合成（S63 T0a：现成资产 + PIL 出重排候选看板给用户挑风格，select_role/vs/panel_trade 各 A/B/C；`--out`） | 出图可重跑覆盖 |
 | `scripts/adversarial_shot.py` | Python | AI 对抗对局快照出图（飞轮 R21/S61：规则层 N AI 席对局 → 31 格环赛道 + 席位状态 PNG + 收敛前后对比；`--seeds/--seats/--rounds/--out`，`--check` 只读） | 出图可重跑覆盖；`--check` 只读 |
 | `scripts/build_wasm.ps1` | PowerShell | 产出 `web/`（wasm + gl.js + 资源） | 是 |
 | `scripts/smoke.ps1` | PowerShell | native + wasm 两端冒烟 | — |

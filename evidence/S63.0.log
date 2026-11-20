@@ -17,3 +17,11 @@
 ## 验证
 doccheck 182 docs/38 facts/199 experiences/347 task refs 0 error + doccheck2 53 项 0 + ledger 353/352 verified/1 pending 0 error。
 S63.1~6 待用户拍板面板清单/视觉方向/是否并入②美术后逐项立项。
+
+## T0a 视觉候选图（用户拍板「--shot 候选图给用户挑」）
+出候选工具 scripts/ui_candidate_render.py（现成资产 + PIL，零 Rust 零 scenes.json 改动，工具契约 3 处登记），
+9 张候选 → evidence/ui_candidate/：
+- select_role A（立绘全高左半屏 + 右列表）/ B（立绘居中 + 两侧列表）/ C（双立绘对置）
+- vs A（双人对峙居中）/ B（斜向列阵）/ C（当前版放大）
+- panel_trade A（羊皮卷轴居中）/ B（木牌左列+右详情）/ C（底部抽屉式）= 通用面板风格基准
+用户从 9 张挑定风格 → 批量套用 8 面板 + ②角色Vs美术落数据（T1~T9）。
