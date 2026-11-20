@@ -1,0 +1,21 @@
+# S63.2 建造面板横屏适配 + 角色立绘候选 A 落数据（2026-11-20）
+
+用户拍板 A/A/A 后「继续」推进 T2 + T9 纯数据部分。
+
+## T2 建造面板
+- render_build_panel 加 landscape 参数：横屏 1120×820 居中（旧 BUILD_PANEL 竖屏常量横屏左下裁切）
+- 条目框自算 entry_h=120，4 渲染路径全传 landscape
+- --shot --panel=build 横屏出图：5 条目（城堡/商行/银行/要塞/造船）+ 造价全显居中
+  → evidence/ui_candidate/build_panel_live.png
+
+## T9 角色立绘（纯数据）
+- scenes.json select_role.landscape.primitives 30 处 rect 改：立绘 560×700→720×810 (x60→40,y110→90)，
+  边框/名字/职业/标题同步；标题回左上 (40,16) 避免被列表框盖住
+- include_str 内嵌须 rebuild → --shot select_role 横屏出图：立绘放大左半屏 + 标题完整 + 右列表
+  → evidence/ui_candidate/select_role_after_A.png（基线 before 存 select_role_before.png）
+- Vs 立绘 = 运行时代码绘制（scenes.json Vs primitives 无角色 asset，仅背景/边框/HUD），当前已是我方
+  vs 敌方对峙布局（方向符合候选 A），比例精调需改 Rust 留后续增量。
+
+## 验证
+cargo test 1009/0（landscape_drawlist 坐标断言 60,110,560,700→40,90,720,810 同步）
++ clippy 0 + validate_data OK + doccheck/doccheck2 0

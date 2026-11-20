@@ -475,7 +475,8 @@ fn render_track_tail(host: &mut dyn SceneHost, layout: &SceneLayout) {
     // 6) 落格提示签条（S21.6 v4 = `hint` 键中心；`board_toast` 过期 = `None`）
     // 6.5) S21.12 建造面板覆盖层（状态在 `GameApp`；关闭 = 不画）
     if host.build_panel_open() {
-        render_build_panel(host);
+        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_build_panel(host, landscape);
     }
     if host.trade_panel_open() {
         let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
@@ -510,8 +511,15 @@ fn handle_boat_upgrade(host: &mut dyn SceneHost) {
 }
 
 /// S21.12 建造面板渲染（主地图覆盖层；标题 + 5 条目 + 底部提示，toast 同底板风格）。
-fn render_build_panel(host: &mut dyn SceneHost) {
-    let (bx, by, bw, bh) = chrome::BUILD_PANEL;
+/// S63 T2：横屏（1920×1080）坐标居中适配（旧 `BUILD_PANEL` = 竖屏常量，横屏下左下被裁切）。
+fn render_build_panel(host: &mut dyn SceneHost, landscape: bool) {
+    let (bx, by, bw, bh) = if landscape {
+        ((1920 - 1120) / 2, (1080 - 820) / 2, 1120, 820)
+    } else {
+        chrome::BUILD_PANEL
+    };
+    let header_h = chrome::BUILD_PANEL_HEADER_H;
+    let entry_h = if landscape { 120 } else { chrome::BUILD_PANEL_ENTRY_H };
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -537,7 +545,9 @@ fn render_build_panel(host: &mut dyn SceneHost) {
     };
     let sel = panel_sel_clamped(host);
     for i in 0..chrome::BUILD_PANEL_ENTRIES {
-        let (ex, ey, ew, eh) = chrome::build_entry_rect(i);
+        let pad = chrome::BUILD_PANEL_PAD;
+        let row_y = by + header_h + entry_h * i32::try_from(i).unwrap_or(0);
+        let (ex, ey, ew, eh) = (bx + pad, row_y + 4, bw - pad * 2, entry_h - 8);
         if i == sel {
             host.fill_rect(ex, ey, ew, eh, brass);
         }
@@ -1075,7 +1085,8 @@ fn render_v5_ring(
     }
     // 6) 建造面板 + 落格提示签条（v5 不画航程进度尺）
     if host.build_panel_open() {
-        render_build_panel(host);
+        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_build_panel(host, landscape);
     }
     if host.trade_panel_open() {
         let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
@@ -1336,7 +1347,8 @@ fn render_v6_proto(
     // 旧覆盖逻辑是死代码，一并删除。建造面板（`build_panel_open`）交互 = 键盘（on_input），
     // 面板 + 提示签条照旧。
     if host.build_panel_open() {
-        render_build_panel(host);
+        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_build_panel(host, landscape);
     }
     if host.trade_panel_open() {
         let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
@@ -1555,7 +1567,8 @@ fn render_v6_elem(
         render_trade_panel(host, landscape);
     }
     if host.build_panel_open() {
-        render_build_panel(host);
+        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_build_panel(host, landscape);
     }
 }
 

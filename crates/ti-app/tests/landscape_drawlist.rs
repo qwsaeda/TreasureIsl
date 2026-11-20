@@ -135,9 +135,9 @@ fn select_role_landscape_world_layer() {
     );
     assert!(
         rects.iter().any(|(a, x, y, w, h)| {
-            a.contains("role_") && *x == 60 && *y == 110 && *w == 560 && *h == 700
+            a.contains("role_") && *x == 40 && *y == 90 && *w == 720 && *h == 810
         }),
-        "select_role 横屏立绘应在左侧面板 (60,110,560,700)，got {rects:?}"
+        "select_role 横屏立绘应在左侧面板 (40,90,720,810，S63 T9 候选 A 放大)，got {rects:?}"
     );
 
     // 竖屏对照
