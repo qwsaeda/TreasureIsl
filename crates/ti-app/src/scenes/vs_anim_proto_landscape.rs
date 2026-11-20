@@ -88,35 +88,37 @@ pub(crate) fn render_v2_elem_landscape(
     let t = anim_ms(host);
     match phase {
         "clash" => {
-            // 兵对兵：左中 crew 冲锋 + 左下 hero + 右上 enemy（对角）
-            let hb = tri(t, 900, 10);
+            // S63 候选 A「双人对峙居中」：hero 左中 / enemy 右中（480×680 放大对称），
+            // 保留 tri() 微动作战感；crew 冲锋居中偏下作前景。
+            let hb = tri(t, 900, 8);
             let eb = -tri(t, 1100, 8);
             let cx = tri(t, 700, 14);
-            host.blit_image(chrome::V2_CREW, 120 + cx, 420, 380, 320);
-            host.blit_image(chrome::V2_HERO, 60, 600 + hb, 300, 440);
-            host.blit_image(chrome::V2_ENEMY, 1480, 100 + eb, 300, 440);
+            host.blit_image(chrome::V2_CREW, 820 + cx, 560, 280, 240);
+            host.blit_image(chrome::V2_HERO, 360, 280 + hb, 480, 680);
+            host.blit_image(chrome::V2_ENEMY, 1080, 280 + eb, 480, 680);
             for i in 0..6 {
-                let sx = 700 + i * 80;
+                let sx = 840 + i * 40;
                 if (t / 120) % 2 == 0 {
-                    host.fill_rect(sx, 500 + (i % 2) * 30, 30, 4, c3);
+                    host.fill_rect(sx, 520 + (i % 2) * 30, 24, 4, c3);
                 }
             }
         }
         "duel" => {
-            // 将对将：左下 hero vs 右上 enemy 逼近中央（对角）
-            let hx = tri(t, 800, 16);
-            let ex = -tri(t, 800, 16);
-            host.blit_image(chrome::V2_HERO, 120 + hx, 500, 300, 440);
-            host.blit_image(chrome::V2_ENEMY, 1500 + ex, 90, 300, 440);
+            // S63 候选 A「双人对峙居中」：hero 左中 / enemy 右中（480×680 放大对称），
+            // tri() 向屏心逼近（hx 向右 / ex 向左），中央 VS 徽标保持屏心。
+            let hx = tri(t, 800, 12);
+            let ex = -tri(t, 800, 12);
+            host.blit_image(chrome::V2_HERO, 360 + hx, 280, 480, 680);
+            host.blit_image(chrome::V2_ENEMY, 1080 + ex, 280, 480, 680);
             let burst = (t / 150) % 3 == 0;
             for i in 0..9 {
-                let sx = 820 + (i % 3) * 40;
-                let sy = 450 + (i / 3) * 50;
+                let sx = 880 + (i % 3) * 40;
+                let sy = 440 + (i / 3) * 50;
                 if burst || i < 3 {
                     host.fill_rect(sx, sy, 12, 12, c3);
                 }
             }
-            host.fill_rect(780, 480, 360, 5, c3);
+            host.fill_rect(800, 480, 320, 5, c3);
         }
         "result_win" | "result_lose" => {
             draw_result_scene_landscape(

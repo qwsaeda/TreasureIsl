@@ -280,14 +280,26 @@ fn vs_landscape_world_layer() {
         }),
         "vs 横屏 bg 应在羊皮框内 (44,44,1832,992)，got {imgs:?}"
     );
-    // clash 帧：crew 冲锋 + hero 左下 + enemy 右上（对角）
+    // S63 候选 A：clash 帧 = hero 左中 (360,280) 480×680 + enemy 右中 (1080,280) + crew 居中前景 (820,560)
     assert!(
-        imgs.iter().any(|(a, x, y, ..)| a.ends_with("crew.png") && *x == 120 && *y == 420),
-        "vs 横屏 clash crew 应在 (120,420)，got {imgs:?}"
+        imgs.iter().any(|(a, x, y, ..)| a.ends_with("crew.png") && *x == 820 && *y == 560),
+        "vs 横屏 clash crew 应在 (820,560，S63 候选A居中前景)，got {imgs:?}"
     );
     assert!(
-        imgs.iter().any(|(a, x, y, ..)| a.ends_with("hero.png") && *x == 60 && *y == 600),
-        "vs 横屏 clash hero 应在 (60,600)，got {imgs:?}"
+        imgs.iter().any(|(a, x, y, w, h)| a.ends_with("hero.png")
+            && *x == 360
+            && *y == 280
+            && *w == 480
+            && *h == 680),
+        "vs 横屏 clash hero 应在 (360,280,480,680，S63 候选A左中)，got {imgs:?}"
+    );
+    assert!(
+        imgs.iter().any(|(a, x, y, w, h)| a.ends_with("enemy.png")
+            && *x == 1080
+            && *y == 280
+            && *w == 480
+            && *h == 680),
+        "vs 横屏 clash enemy 应在 (1080,280,480,680，S63 候选A右中)，got {imgs:?}"
     );
     let rects = rect_rects(&app);
     // 顶双 HP 状态框（左攻 64,40 / 右守 976,40，880×110）

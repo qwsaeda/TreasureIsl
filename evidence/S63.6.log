@@ -1,0 +1,20 @@
+# S63.6 Vs 立绘候选 A 兑现（2026-11-20）
+
+用户拍板「改 Rust 运行时立绘，兑现候选 A 的双人对峙居中」。
+
+## 根因
+Vs 立绘是运行时代码绘制（vs_anim_proto_landscape.rs），非 scenes.json 数据——验证了「Vs 美术需改代码、
+非纯资源替换」。旧 clash/duel 帧 = hero 左下 300×440 vs enemy 右上 300×440 对角小图。
+
+## 落码
+- clash 帧：hero (60,600) 300×440 → (360,280) 480×680 左中；enemy (1480,100) → (1080,280) 右中；
+  crew 居中前景 (820+cx,560)；tri() 微动保留
+- duel 帧：hero (120+hx,500) → (360+hx,280)；enemy (1500+ex,90) → (1080+ex,280)，各 480×680；
+  tri() 向屏心逼近；VS 徽标屏心 (960,540) 不变
+- result 帧：胜方已居中 400×560（无需改），败方对角叙事保留（合理）
+- scenes_gallery Vs 段补候选 A 说明
+
+## 验证
+--vs-phase=clash|duel 横屏出图：hero 左中 / enemy 右中 / VS 屏心 / crew 前景 = 双人对峙居中
+→ evidence/ui_candidate/vs_{clash,duel}_A.png
++ cargo test 1017/0 + clippy 0 + doccheck/doccheck2 0
