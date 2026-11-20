@@ -3,8 +3,6 @@
 //! 拆分自 `game_app.rs`（S20.0b）：输入只做**路由**，判定在 `scenes/*.rs`。
 //! S29.2：触摸手势路由（`poll_touch`）退役为 Bevy 拾取命中路由（`poll_hit`，B1 命中层）。
 
-use ti_core::domain::economy::Building;
-
 use super::{GameApp, GameInput, HitData, KeyState, Scene};
 use crate::scenes::chrome;
 use crate::scenes::{SceneKind, route_hit, route_input};
@@ -60,14 +58,16 @@ impl GameApp {
                 if k.spin {
                     changed = self.handle(GameInput::Spin) || changed;
                 }
+                // S63：T/B 打开可视化面板（面板内 ↑↓/Enter/Y/Back 由 `on_input` 消费）；
+                // 旧 T=直接买 gid1 / B=直接建 Castle 的"无面板盲操作"废弃（场景不全根因）。
                 if k.buy {
-                    changed = self.handle(GameInput::TradeBuy(1)) || changed;
+                    changed = self.handle(GameInput::OpenTradePanel) || changed;
                 }
                 if k.sell {
                     changed = self.handle(GameInput::TradeSell(1)) || changed;
                 }
                 if k.build {
-                    changed = self.handle(GameInput::Build(Building::Castle)) || changed;
+                    changed = self.handle(GameInput::OpenBuildPanel) || changed;
                 }
                 if k.landmark {
                     changed = self.handle(GameInput::Landmark(1)) || changed;

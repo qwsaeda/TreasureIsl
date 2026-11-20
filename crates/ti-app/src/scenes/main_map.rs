@@ -477,6 +477,10 @@ fn render_track_tail(host: &mut dyn SceneHost, layout: &SceneLayout) {
     if host.build_panel_open() {
         render_build_panel(host);
     }
+    if host.trade_panel_open() {
+        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_trade_panel(host, landscape);
+    }
     render_board_toast(host);
     // S36.3 终局面板（`territory.md` §4.4）：`match_outcome` 在位 = 对局结束，
     // 主地图中心画胜利/失败/平局面板 + 「按 Confirm 返回主菜单」提示。
@@ -560,11 +564,73 @@ fn render_build_panel(host: &mut dyn SceneHost) {
     );
 }
 
+/// S63 贸易面板渲染（CPU 画布；候选 A「羊皮卷轴居中 + 金边 + 商品列表」，零 Rust 硬编码坐标——
+/// 几何 = `chrome::TRADE_PANEL` 数据化常量，文案 = i18n，商品 = `balance.trade` + `host.owned`）。
+fn render_trade_panel(host: &mut dyn SceneHost, landscape: bool) {
+    // 横屏 1920×1080 = 候选 A「羊皮卷轴居中」(居中 1120×820)；竖屏 = 旧常量（居中）。
+    let (bx, by, bw, bh) = if landscape {
+        ((1920 - 1120) / 2, (1080 - 820) / 2, 1120, 820)
+    } else {
+        chrome::TRADE_PANEL
+    };
+    let entry_h = if landscape { 120 } else { chrome::TRADE_PANEL_ENTRY_H };
+    let header_h = chrome::TRADE_PANEL_HEADER_H;
+    let theme = host.theme().clone();
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    // 羊皮卷轴底（半透明深棕 + 金边，候选 A 风格）
+    host.fill_rect(bx, by, bw, bh, panel);
+    for t in [0, bh - 3] {
+        host.fill_rect(bx, by + t, bw, 3, brass);
+    }
+    for l in [0, bw - 3] {
+        host.fill_rect(bx + l, by, 3, bh, brass);
+    }
+    host.draw_title_text(
+        i18n::sget("scene.main_map.trade.panel_title"),
+        bx + 24,
+        by + 18,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    let sel = usize::from(host.trade_panel_sel()).min(chrome::TRADE_PANEL_ENTRIES - 1);
+    for i in 0..chrome::TRADE_PANEL_ENTRIES {
+        let pad = chrome::TRADE_PANEL_PAD;
+        let row_y = by + header_h + entry_h * i32::try_from(i).unwrap_or(0);
+        let (ex, ey, ew, eh) = (bx + pad, row_y + 4, bw - pad * 2, entry_h - 8);
+        if i == sel {
+            host.fill_rect(ex, ey, ew, eh, brass);
+        }
+        let gid = u32::try_from(i + 1).unwrap_or(1);
+        let name_key = format!("goods.{gid}");
+        let name = i18n::sget(&name_key);
+        host.draw_text(name, ex + 16, ey + 12);
+        let buy_price = host.price_of(gid).unwrap_or(0);
+        let owned = host
+            .owned_snapshot()
+            .iter()
+            .find(|(g, _)| *g == gid)
+            .map_or(0, |(_, q)| *q);
+        host.draw_hint_text(
+            &format!("买 {buy_price} · 持有 {owned}"),
+            ex + 16,
+            ey + 52,
+            chrome::COLOR_TEXT_ON_PARCH,
+        );
+    }
+    host.draw_hint_text(
+        &format!("{} · 金 {}", i18n::sget("scene.main_map.trade.hint"), host.gold()),
+        bx + 24,
+        by + bh - 42,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+}
+
 impl Scene for MainMapScene {
     fn kind(&self) -> SceneKind {
         SceneKind::MainMap
     }
 
+    #[allow(clippy::too_many_lines)] // S63 多面板（建造/贸易）键盘分支同表，拆分割裂输入语义
     fn on_input(&mut self, host: &mut dyn SceneHost, input: GameInput) -> bool {
         // S21.12 建造面板键盘控制（↑↓ 选 / Enter 确认 / Back 关闭；面板打开时吞掉其它输入）
         if host.build_panel_open() {
@@ -589,7 +655,49 @@ impl Scene for MainMapScene {
                 _ => return false,
             }
         }
+        // S63 贸易面板：打开时吞掉其它输入（↑↓ 选商品 / Enter 买 / Y 卖 / Back 关）。
+        if host.trade_panel_open() {
+            match input {
+                GameInput::MoveUp => {
+                    let n = usize::from(host.trade_panel_sel());
+                    host.set_trade_panel_sel(if n == 0 { chrome::TRADE_LAST_ENTRY } else { u8::try_from(n - 1).unwrap_or(chrome::TRADE_LAST_ENTRY) });
+                    host.play_sfx(Sfx::Press);
+                    return true;
+                }
+                GameInput::MoveDown => {
+                    let n = usize::from(host.trade_panel_sel());
+                    host.set_trade_panel_sel(if n >= usize::from(chrome::TRADE_LAST_ENTRY) { 0 } else { u8::try_from(n + 1).unwrap_or(0) });
+                    host.play_sfx(Sfx::Press);
+                    return true;
+                }
+                GameInput::Confirm => {
+                    let gid = u32::from(host.trade_panel_sel()) + 1;
+                    handle_trade_buy(host, gid);
+                    return true;
+                }
+                GameInput::TradeSell(gid) => {
+                    let gid = if gid == 1 { u32::from(host.trade_panel_sel()) + 1 } else { gid };
+                    handle_trade_sell(host, gid);
+                    return true;
+                }
+                GameInput::Back => {
+                    host.set_trade_panel_open(false);
+                    return true;
+                }
+                _ => return false,
+            }
+        }
         match input {
+            GameInput::OpenTradePanel => {
+                host.set_trade_panel_open(true);
+                host.set_build_panel_open(false);
+                true
+            }
+            GameInput::OpenBuildPanel => {
+                host.set_build_panel_open(true);
+                host.set_trade_panel_open(false);
+                true
+            }
             GameInput::Landmark(code) => {
                 // `rules::main_map::MapSession::dispatch` 行为（事件码 → 场景目标）
                 let target = host.map_session_dispatch(code);
@@ -624,8 +732,9 @@ impl Scene for MainMapScene {
                 };
                 // S21.7：摇骰 = 移动唯一入口 ⇒ 预览选中清空（落点脉冲由 toast 窗口接管）。
                 host.set_track_node_sel(None);
-                // S21.12：离开主地图状态（摇骰/进战斗）前关闭建造面板
+                // S21.12/S63：离开主地图状态（摇骰/进战斗）前关闭面板
                 host.set_build_panel_open(false);
+                host.set_trade_panel_open(false);
                 if turn.boss.engaged() {
                     host.start_battle();
                     return true;
@@ -634,6 +743,7 @@ impl Scene for MainMapScene {
             }
             GameInput::MapBack => {
                 host.set_build_panel_open(false);
+                host.set_trade_panel_open(false);
                 host.enter(SceneKind::Index);
                 true
             }
@@ -967,6 +1077,10 @@ fn render_v5_ring(
     if host.build_panel_open() {
         render_build_panel(host);
     }
+    if host.trade_panel_open() {
+        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_trade_panel(host, landscape);
+    }
     // 7) 摇骰 CTA 轴心骰点（`dice.png`；S27.5 用户报「没有筛子」= CTA 只有空舵轮；
     // 舵轮本体 = `scenes.json` 原语（更早画），此处补轴心骰点，与卡环区无重叠）。
     render_spin_die(host, layout);
@@ -1224,6 +1338,10 @@ fn render_v6_proto(
     if host.build_panel_open() {
         render_build_panel(host);
     }
+    if host.trade_panel_open() {
+        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_trade_panel(host, landscape);
+    }
     render_board_toast(host);
     // S36.3 飞轮 F-7.3：v6 原型路径补终局面板 + 热座交接提示。
     render_match_outcome(host);
@@ -1430,6 +1548,15 @@ fn render_v6_elem(
     // S36.3 R2-F2：v6 默认路径补终局面板 + 交接提示（R1 漏 v6_elem 主渲染路径）。
     render_match_outcome(host);
     render_handoff(host);
+    // S63 T1/T2：v6 默认路径补贸易/建造面板（S34 删三键入口后面板渲染代码曾全无调用者；
+    // 此前只在 render()/render_v6_proto 加了检查点，默认 render_v6_elem 漏 ⇒ 面板图不出现）。
+    if host.trade_panel_open() {
+        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_trade_panel(host, landscape);
+    }
+    if host.build_panel_open() {
+        render_build_panel(host);
+    }
 }
 
 /// v6 名牌文字**真截断**（逐字测宽，超 `max_w` 截断 + "…"；`draw_hint_text` 画全宽无截断，

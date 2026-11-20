@@ -188,6 +188,10 @@ pub enum GameInput {
     TradeBuy(u32),
     /// 主地图贸易：卖（`gid`）。
     TradeSell(u32),
+    /// S63 贸易面板开关（T 键打开可视化面板，面板内 ↑↓选商品/Enter买/Y卖/Back关）。
+    OpenTradePanel,
+    /// S63 建造面板开关（B 键打开；此前 `set_build_panel_open(true)` 0 命中=死代码，S34 删入口遗留）。
+    OpenBuildPanel,
     /// 主地图建造（`kind`）。
     Build(Building),
     /// S21.12 主地图造船（船系统单向升级，`rules::boat::BoatSession`；与 4 建筑并列第 5 入口）。
@@ -331,6 +335,10 @@ pub struct GameApp {
     pub build_panel_open: bool,
     /// S21.12 建造面板当前选中项（0..=4 = 城堡/投资/银行/要塞/造船）。
     pub build_panel_sel: u8,
+    /// S63 贸易面板是否打开（T 键开关；面板渲染 `render_trade_panel` + 键盘 ↑↓/Enter/Y/Back）。
+    pub trade_panel_open: bool,
+    /// S63 贸易面板当前选中商品（0..=goods.len()-1，越界钳到末项）。
+    pub trade_panel_sel: u8,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// 战斗会话（`Vs` 场景时有效，兵力模型 `force::resolve` 一次性结算）。
@@ -533,6 +541,8 @@ impl GameApp {
             track_node_sel: None,
             build_panel_open: false,
             build_panel_sel: 0,
+            trade_panel_open: false,
+            trade_panel_sel: 0,
             buildings: Vec::new(),
             battle: None,
             rng: GameRng::new(0),

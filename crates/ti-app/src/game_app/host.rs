@@ -299,6 +299,22 @@ impl MapHost for GameApp {
         self.build_panel_sel = sel;
     }
 
+    fn trade_panel_open(&self) -> bool {
+        self.trade_panel_open
+    }
+
+    fn set_trade_panel_open(&mut self, open: bool) {
+        self.trade_panel_open = open;
+    }
+
+    fn trade_panel_sel(&self) -> u8 {
+        self.trade_panel_sel
+    }
+
+    fn set_trade_panel_sel(&mut self, sel: u8) {
+        self.trade_panel_sel = sel;
+    }
+
     /// S21.12 造船：走 `rules::boat::BoatSession::upgrade`（单向升级链 + 扣金 + 抬加成），
     /// 成功后把差额从钱包扣掉（与建筑建造同一钱包口径）。
     fn boat_upgrade(&mut self) -> bool {

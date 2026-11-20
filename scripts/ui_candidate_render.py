@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -157,9 +158,11 @@ def main():
         need = ["chart_wide.png", "role_drake.png", "role_panda.png", "hero_back.png", "boss_captain.png", "deck_battle.png"]
         missing = [n for n in need if not (UI / n).exists()]
         if missing:
-            raise SystemExit(f"[check] 缺资产：{missing}")
+            print(f"[check] 缺资产：{missing}", file=sys.stderr)
+            raise SystemExit(1)
         if not Path(CJK).exists():
-            raise SystemExit(f"[check] 缺 CJK 字体：{CJK}")
+            print(f"[check] 缺 CJK 字体：{CJK}", file=sys.stderr)
+            raise SystemExit(1)
         print(f"[check] {len(need)} 资产 + CJK 字体在位（0 写盘）：PASS")
         return
     out = Path(args.out)

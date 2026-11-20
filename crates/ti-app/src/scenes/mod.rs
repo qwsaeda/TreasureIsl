@@ -633,6 +633,19 @@ pub trait MapHost {
     /// S21.12 建造面板选中项 setter（默认 no-op）。
     fn set_build_panel_sel(&mut self, _sel: u8) {}
 
+    /// S63 贸易面板是否打开（默认关闭）。
+    fn trade_panel_open(&self) -> bool {
+        false
+    }
+    /// S63 贸易面板开关（默认 no-op）。
+    fn set_trade_panel_open(&mut self, _open: bool) {}
+    /// S63 贸易面板选中商品（默认 0）。
+    fn trade_panel_sel(&self) -> u8 {
+        0
+    }
+    /// S63 贸易面板选中项 setter（默认 no-op）。
+    fn set_trade_panel_sel(&mut self, _sel: u8) {}
+
     /// S21.12 造船（船系统单向升级：扣金 + 抬 cargo/atk/hp，立即生效）。
     ///
     /// 返回 `true` = 升级成功；`false` = 金不够 / 已满级（场景层给提示文案）。

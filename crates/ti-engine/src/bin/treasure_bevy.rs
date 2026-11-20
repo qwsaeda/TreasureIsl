@@ -2074,6 +2074,8 @@ struct Args {
     viewport: Option<(u32, u32)>,
     /// 摇骰次数（`--spin=N`，S19.7 D5；缺 = 0）。
     spin_n: u32,
+    /// 面板出图（`--panel=trade|build`，S63 T0a/T1；缺 = 无面板）。
+    panel: Option<String>,
 }
 
 impl Args {
@@ -2091,11 +2093,12 @@ impl Args {
                 scene_id: arg_value("--scene=").unwrap_or_else(|| "index".to_owned()),
                 viewport: arg_value("--viewport=").and_then(|v| parse_viewport(&v)),
                 spin_n: arg_value("--spin=").and_then(|v| v.parse::<u32>().ok()).unwrap_or(0),
+                panel: arg_value("--panel="),
             }
         }
         #[cfg(target_arch = "wasm32")]
         {
-            Self { mode_flags: Vec::new(), scene_id: "index".to_owned(), viewport: None, spin_n: 0 }
+            Self { mode_flags: Vec::new(), scene_id: "index".to_owned(), viewport: None, spin_n: 0, panel: None }
         }
     }
 }
@@ -2331,6 +2334,7 @@ fn wasm_viewport_resolution() -> Option<(u32, u32)> {
     if iw > 0.0 && ih > 0.0 { Some(((iw * dpr) as u32, (ih * dpr) as u32)) } else { None }
 }
 
+#[allow(clippy::too_many_lines)] // 启动/出图分发（selftest/shot/resize + S63 panel 参数），集中一处
 fn run() {
     let args = Args::parse();
     let selftest = args.mode_flags.contains(&"--selftest".to_owned());
@@ -2364,6 +2368,14 @@ fn run() {
             game.handle(ti_app::GameInput::Spin);
         }
         game.hold_board_toast();
+    }
+    // S63 T1：`--panel=trade|build` 在 main_map 出面板态（真实 GameInput 分发，非伪造渲染）。
+    if let Some(panel) = args.panel.as_deref() {
+        game.handle(match panel {
+            "trade" => ti_app::GameInput::OpenTradePanel,
+            "build" => ti_app::GameInput::OpenBuildPanel,
+            _ => ti_app::GameInput::MapBack, // 未知面板名 = 不开（不崩）
+        });
     }
     if !selftest {
         game.set_record_draw(true);

@@ -1,0 +1,24 @@
+# S63.1 贸易面板（2026-11-20）
+
+用户拍板「继续」= 按推荐 A/A/A（角色A立绘全高左半 / VsA双人对峙 / 面板A羊皮卷轴居中）落码。
+
+## 根因（场景不全）
+- S34「删底部三键」后：HUD 三经济臂命中删除（on_hit 只余 key=4 摇骰）、
+  `set_build_panel_open(true)` 0 命中（建造面板渲染/交互代码在但入口删=死代码）、
+  T/B 键直接买 gid1/建 Castle（无面板盲操作）、TradeBuy/Sell 结算逻辑在但无入口。
+- 面板渲染代码（render_build_panel）此前在 render()/render_v6_proto 加了检查点，但默认出图走
+  `render_v6_elem` 漏加 ⇒ 面板图不出现（本轮修复）。
+
+## 落码（一次编译）
+- GameInput +OpenTradePanel/+OpenBuildPanel；input.rs T/B 键改开面板
+- GameApp +trade_panel_open/trade_panel_sel 字段；SceneHost trait + host impl 4 方法
+- chrome +TRADE_PANEL 系列常量（横屏 1120×820 居中/竖屏 fallback）
+- main_map render_trade_panel（候选 A 风格：羊皮卷轴+金边+5 商品+价格+持有+i18n 提示+金）；
+  4 个渲染路径（render/render_v6_proto/render_v6_elem/main）全接面板；on_input 面板态分支
+  （↑↓选/Enter买/Y卖/Back关）+ Spin/MapBack 关面板
+- i18n +2 键（scene.main_map.trade.panel_title/hint）
+- treasure_bevy.rs --panel=trade|build 出图参数（真实 GameInput 分发）
+
+## 验证
+app_trade_panel_e2e 4 passed（开关+选择钳制+买卖账本+面板吞 Spin+建造入口恢复）
++ cargo test 1009/0 + clippy 0 + --shot --panel=trade 横屏图居中 → evidence/ui_candidate/trade_panel_live.png

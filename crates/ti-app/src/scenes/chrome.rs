@@ -568,6 +568,30 @@ pub const BUILD_PANEL_ENTRIES: usize = 5;
 /// 末条目序号（u8 选中域 0..=4；面板选中状态与键盘钳制用）。
 pub const BUILD_LAST_ENTRY: u8 = 4;
 
+/// S63 贸易面板：羊皮卷轴居中风格（候选 A，1080×1920 居中；标题 64 + 5 商品×100 + 提示 96）。
+/// 几何 = CPU 画布常量（`scenes.json` 无对应段，S29.3e 判定 `main_map` 留 1080）。
+pub const TRADE_PANEL: (i32, i32, i32, i32) = (144, 600, 768, 720);
+/// 贸易面板标题条高度。
+pub const TRADE_PANEL_HEADER_H: i32 = 64;
+/// 贸易面板单条目高度（5 商品）。
+pub const TRADE_PANEL_ENTRY_H: i32 = 100;
+/// 贸易面板内边距。
+pub const TRADE_PANEL_PAD: i32 = 24;
+/// 贸易面板条目数（`balance.trade.goods` 5 商品）。
+pub const TRADE_PANEL_ENTRIES: usize = 5;
+/// 贸易面板末条目序号（u8 选中域 0..=4）。
+pub const TRADE_LAST_ENTRY: u8 = 4;
+
+/// 贸易面板第 `entry` 条目的绘制框（8pt 栅格）。
+#[must_use]
+pub fn trade_entry_rect(entry: usize) -> (i32, i32, i32, i32) {
+    let (bx, by, bw, _bh) = TRADE_PANEL;
+    let clamped = entry.min(TRADE_PANEL_ENTRIES - 1);
+    let row_y =
+        by + TRADE_PANEL_HEADER_H + TRADE_PANEL_ENTRY_H * i32::try_from(clamped).unwrap_or(0);
+    (bx + TRADE_PANEL_PAD, row_y + 4, bw - TRADE_PANEL_PAD * 2, TRADE_PANEL_ENTRY_H - 8)
+}
+
 /// S21.12 建造面板条目图标（0..3 = 城堡/投资/银行/要塞白蒙版图标；资产路径单一读点，§1 禁硬编码）。
 pub const BUILD_ENTRY_ICONS: [&str; 4] = [
     "assets/ui/icon_castle.png",

@@ -236,7 +236,7 @@ cargo run -q -p ti-app --features headless --bin treasure-headless -- --script t
 ## 验收
 
 - `scripts/gate.ps1` 全项绿（门禁项数与口径**单一事实源**见 `docs/parity.md` §代码质量门禁；doccheck / doccheck2 / 台账三方对账 / 业务闭环 / 模块并行 / 飞轮开轮必读 / 视觉回归等独立门禁项已陆续并入，逐项编号见 parity.md，不再在此硬编码）
-- `plan/ledger.yaml` 353 任务（352 verified + 1 pending〔S63.0 子场景 WBS〕 + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E 收口 verified〔S63.0 子场景 WBS 立项 pending〕；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）；台账计数随 S8–S49.9 演进，`doccheck` 断言锁定防漂移（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
+- `plan/ledger.yaml` 354 任务（353 verified + 1 pending〔S63.0 子场景 WBS〕 + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E + S63.1 贸易面板收口 verified〔S63.0 子场景 WBS 立项 pending〕；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）；台账计数随 S8–S49.9 演进，`doccheck` 断言锁定防漂移（台账实时值，`cargo run -q -p ti-tools --bin ledger` 实测）
 - S5.1 全链路 7 项断言（`tests/game_app_flow.rs`）+ S5.2 headless 全流程 16/16 步（P3-3）
   + S5.3 渲染对齐 5 项（P4-1，`tests/render_parity.rs`）全绿
 - 产物 sha256 记录于 `evidence/S4.4.log` 与 `evidence/S5.4.log`
