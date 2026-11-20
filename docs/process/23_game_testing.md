@@ -137,7 +137,7 @@
 | 状态文件 | `evidence/console/jobs/<kind>-<id>.json`（统一目录，gitignored）：`{kind,id,running,pid,exit_code,started_ts,ended_ts,log,evidence[],note}` |
 | 日志 | `evidence/console/logs/<kind>-<id>-<ts>.log`（**流式**写 ⇒ 构建/测试输出实时可见） |
 | 收割 | spawn 后**收割线程**等子进程退出 → 写 `running=false` + `exit_code` + `ended_ts` ⇒ 「跑完了吗 / 成没成」有机器判据（不靠日志字符串猜） |
-| 证明 | 作业产物（日志 + 报告 + 截图）登记进状态文件 `evidence[]`，落 `evidence/tests/<id>/<ts>/` ⇒ **证明与本次运行绑定** |
+| 证明 | 作业产物（日志 + 报告 + 截图）登记进状态文件 `evidence[]`，落 `evidence/tests/<id>/<id>-<ts>/`（`run.log` 日志副本 + `state.json` 终态快照；`jobs.rs::persist_proof` 实现，收割线程在作业结束时落盘 + 登记）⇒ **证明与本次运行绑定**（审计 Q013 2026-11-19 落地，机器判据 = `ti-console/tests/jobs_proof_tests.rs` 3 条） |
 | 查询 | `GET /api/jobs?kind=<kind>`（列表 + 状态）/ `?kind=<kind>&id=<id>`（详情 + 日志尾 + 证明） |
 
 **迁移对照**（S49.7 全迁）：
@@ -159,9 +159,9 @@
 |---|---|---|
 | 侧栏 | **业务域分组**（`group`，§7.2）→ 域内**分类**（`category`）计数；搜索框按 name/id/command 过滤 | 前端对 API 返回数组计数；manifest 条目本身由 `validate_data::check_test_manifest` 对账（id 唯一/schema/命令真实性），**无「分组计数快照」独立机器断言**——审计 Q027 勘误旧「分组计数 = manifest 实际条目数（机器对账）」措辞（分组计数变更走前端自渲染，改动面已在 manifest 门禁覆盖） |
 | 主区 | 折叠分组列表（业务域 → 分类 → 条目）；每条 = 名称 + id + `level`/`type` 徽章 + 证据在位/断链 + **状态徽章**（未跑 / 跑中 / 通过 / 失败+`exit_code`+耗时） | 条目数 = manifest 条目数（无遗漏无重复） |
-| 运行 | 每条「▶ 运行」+ 分组「运行本组」（**串行**：同目标目录会互踩 cargo 锁，同 S46.3「单构建互斥」纪律） | 点击后 ≤2s 内出现「跑中」徽章（**不刷新页面**） |
+| 运行 | 每条「▶ 运行」+ 分组「运行本组」（**串行**：同目标目录会互踩 cargo 锁，同 S46.3「单构建互斥」纪律） | 点击后 ≤2s 内出现「跑中」徽章（**不刷新页面**）——`tsRunTest` 启动成功后立即 `loadTests()` 重取列表（后端 `/api/tests` 附 `x.job.running=true`），`tsPollJob` 不再对非当前打开测试早退（审计 Q015 2026-11-19 落地） |
 | 结果 | 轮询 `GET /api/jobs?kind=test&id=<id>` → `exit_code` + 耗时 + **日志尾实时回显** | `exit_code` 落盘（跑完即有） |
-| 证明 | 每条列**本次运行**的证明（作业状态 `evidence[]`：日志 + 报告 + 截图）+ 清单里静态基线证据 | 证明路径存在且与本次作业 id/时间戳对应 |
+| 证明 | 每条列**本次运行**的证明（`renderTestDetail` 渲染作业状态 `evidence[]`：日志/快照/截图可点链接）+ 清单里静态基线证据 + exit_code/时间戳 | 证明路径存在且与本次作业 id/时间戳对应（审计 Q014 2026-11-19 落地，前端渲染 `x.job.evidence[]`） |
 | 禁跑 | `command` 缺/`null`（人工视觉验收 / gate 覆盖）→ 按钮禁用**并注明原因** | 禁用原因可见（不静默） |
 
 

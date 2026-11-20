@@ -215,6 +215,48 @@ pub struct SpawnOpts {
     pub mirror_path: Option<PathBuf>,
 }
 
+/// 证明落点（23 号 §6.2 证明行，审计 Q013）：`prove` 前缀（如 `evidence/tests/<id>/`）
+/// 下建 `<id>-<ts>/`，落日志副本 `run.log` + 终态快照 `state.json`，并把两路径登记进
+/// 作业状态 `evidence[]` ⇒ 「本次运行证明」与作业 id/时间戳绑定。
+pub fn persist_proof(
+    repo_root: &Path,
+    prove_prefix: Option<&str>,
+    kind: &str,
+    id: &str,
+    log_rel: Option<&str>,
+    ended_ts: u64,
+    state: &Value,
+) {
+    let Some(prefix) = prove_prefix else { return };
+    if prefix.is_empty() || id.is_empty() {
+        return;
+    }
+    let stamp = format!("{id}-{ended_ts}");
+    let prove_dir = repo_root.join(prefix).join(&stamp);
+    if std::fs::create_dir_all(&prove_dir).is_err() {
+        return;
+    }
+    let log_copy = prove_dir.join("run.log");
+    if let Some(rel) = log_rel {
+        if let Ok(bytes) = std::fs::read(repo_root.join(rel)) {
+            let _ = std::fs::write(&log_copy, bytes);
+        }
+    }
+    let snapshot = prove_dir.join("state.json");
+    let _ = std::fs::write(&snapshot, state.to_string());
+    let rel = |p: &PathBuf| -> String {
+        p.strip_prefix(repo_root).map_or_else(
+            |_| p.to_string_lossy().to_string(),
+            |q| q.to_string_lossy().replace('\\', "/"),
+        )
+    };
+    let mut paths = vec![rel(&snapshot)];
+    if log_copy.exists() {
+        paths.insert(0, rel(&log_copy));
+    }
+    register_evidence(repo_root, kind, id, &paths);
+}
+
 /// 后台 spawn（候选程序回退 + 日志落盘 + 收割线程记终态 + 可选超时 + 可选统一状态镜像）。
 ///
 /// 收割线程：轮询 `try_wait`（超时判定）→ 正常退出记 `exit_code`（信号终止 = `-1`）；
@@ -262,9 +304,15 @@ pub fn spawn_program_logged(opts: &SpawnOpts) -> Result<SpawnOutcome, String> {
                     let _ = std::fs::write(mirror_path, meta.to_string());
                 }
                 // 收割线程：等退出（可超时）⇒ 写 running=false + exit_code + ended_ts。
+                // 证明落点（23 号 §6.2 证明行）：test 作业 meta.prove 给出落点前缀
+                // （如 `evidence/tests/<id>/`），线程结束时在该前缀下建 `<ts>/` 子目录，
+                // 落日志副本 + 终态快照，并把两者登记进作业状态 `evidence[]`
+                // ⇒ 「本次运行证明」与作业 id/时间戳绑定（审计 Q013 落地）。
                 let meta_path = opts.state_path.clone();
                 let mirror_path = opts.mirror_path.clone();
                 let timeout_s = opts.timeout_s;
+                // prove/kind/id/log 已在 meta 内（spawn_job 写入），终态 `done` 直接读取，无需额外捕获。
+                let job_cwd = opts.cwd.clone();
                 std::thread::spawn(move || {
                     let mut code: Option<i32> = None;
                     let mut timed_out = false;
@@ -307,6 +355,12 @@ pub fn spawn_program_logged(opts: &SpawnOpts) -> Result<SpawnOutcome, String> {
                     if let Some(mirror_path) = mirror_path {
                         let _ = std::fs::write(&mirror_path, done.to_string());
                     }
+                    // 证明落点（Q013）：prove 前缀 + <ts>/ 落日志副本 + 终态快照 + 登记 evidence[]。
+                    let prove_root = done.get("prove").and_then(Value::as_str);
+                    let job_kind = done.get("kind").and_then(Value::as_str).unwrap_or("test");
+                    let job_id = done.get("id").and_then(Value::as_str).unwrap_or("");
+                    let job_log = done.get("log").and_then(Value::as_str);
+                    persist_proof(&job_cwd, prove_root, job_kind, job_id, job_log, ended_ts, &done);
                 });
                 return Ok(SpawnOutcome { pid, program: program.clone() });
             }

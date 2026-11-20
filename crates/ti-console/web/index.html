@@ -2815,6 +2815,9 @@ function tsRunTest(id, btn) {
   if (msg) msg.textContent = '启动 ' + id + '…';
   api('/api/tests?run=' + encodeURIComponent(id)).then((r) => {
     if (msg) msg.textContent = id + ' 已启动（pid ' + (r.pid || '?') + '）';
+    // Q015（2026-11-19 审计）：启动成功后立即 loadTests() 重取列表 ⇒ 徽章 ≤2s 内变「跑中」
+    //（后端 /api/tests 已附 x.job.running=true；不等跑完才刷新，满足 23 号 §6.3「≤2s 出现跑中徽章」）。
+    loadTests();
     tsPollJob(id, btn);
   }).catch((e) => {
     if (msg) msg.textContent = id + ' 启动失败：' + String(e);
@@ -2831,8 +2834,9 @@ function tsPollJob(id, btn) {
       const out = $('ts-run-out');
       const wrap = $('ts-run-out-wrap');
       // 只在当前打开的明细 = 此 id 时才更新日志框，防串（用户 2026-11-10）
-      if (id !== tsOpenTestId) return;
-      if (tail && out) {
+      // Q015：不再早退整个 handler——跑完的终态/徽章刷新对非当前打开测试也须生效（组运行场景）。
+      const isOpen = id === tsOpenTestId;
+      if (tail && out && isOpen) {
         // 只在用户已在（或接近）底部时才自动跟随滚动，避免往上读日志时被拽回
         const nearBottom = out.scrollHeight - out.scrollTop - out.clientHeight < 40;
         const prevLen = out._len || 0;
@@ -2962,6 +2966,15 @@ function renderTestDetail(id) {
     h += concH;
   }
   h += rows.map(([k, v]) => `<div class="meta-row"><span class="k">${k}</span><span>${esc(v)}</span></div>`).join('');
+  // Q014（2026-11-19 审计）：本次运行证明（作业 evidence[]：日志/状态快照/截图）——与静态基线证据分开。
+  // 后端 /api/tests 已附 x.job（作业状态，含 evidence[]），此处渲染为可点链接（23 号 §6.3「出证明」行）。
+  if (x.job && x.job.evidence && x.job.evidence.length) {
+    h += `<div style="margin:8px 0;padding:8px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">本次运行证明（与本次作业 id/时间戳绑定，23 号 §6.2）</div>
+      ${x.job.evidence.map((p) => `<div style="font-size:12px;margin:2px 0"><a href="/${esc(String(p)).replace(/^\/+/, '')}" target="_blank" style="color:var(--accent);text-decoration:none">📎 ${esc(p)}</a></div>`).join('')}
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">exit=${esc(x.job.exit_code == null ? '?' : x.job.exit_code)} · ${esc(x.job.started_ts || '')}${x.job.ended_ts ? ' → ' + esc(x.job.ended_ts) : ''}</div>
+    </div>`;
+  }
   // S32 用户拍板「测试能实际运行」（23 号 §6 平台集成）：点运行 → POST /api/tests?run=<id> 后台 spawn
   //（白名单枚举 id；日志落 evidence/console/logs/test-<id>-<ts>.log，轮询读尾部）。人工/无命令 = 禁用。
   const runnable = x.command && /^(cargo|python3|pwsh|powershell)\b/.test(x.command);
