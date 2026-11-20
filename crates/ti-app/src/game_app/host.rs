@@ -1070,10 +1070,11 @@ impl SessionHost for GameApp {
         self.rng.steps_taken()
     }
 
-    /// S15.2（F23）：写档捕获当前跨图推进解锁位掩码（口径 = 规则层 `unlocked_mask()`）。
+    /// S15.2（F23）/ S62 全解锁：写档掩码**只写通关位** `bit19`（解锁已恒全开，不再持久化）。
+    /// 旧实现 `from_unlocked(&self.unlocked_maps).unlocked_mask()` 在全解锁下 `unlocked_maps=全部 20 图`
+    /// ⇒ 掩码 bit0..18 全 1 ⇒ 读档 `from_mask` 把 bit1..19 误读成「全图已击败 + 已通关」（S62 勘误）。
     fn unlocked_mask(&self) -> u32 {
-        let base = ProgressionState::from_unlocked(&self.unlocked_maps).unlocked_mask();
-        if self.cleared { base | CLEARED_BIT } else { base }
+        if self.cleared { CLEARED_BIT } else { 0 }
     }
 
     fn saveload_cursor(&self) -> usize {

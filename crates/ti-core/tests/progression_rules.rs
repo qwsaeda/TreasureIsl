@@ -1,29 +1,34 @@
 //! 跨图推进规则集成测试（S52.1；`docs/business/progression.md` 跨图推进）。
 //!
 //! S52.1 补测：`progression.rs` 7 个 pub fn 此前 0 集成测试（飞轮 R2 找问题 P1-4）。
-//! oracle = `docs/business/progression.md` §跨图推进（m01 恒解锁，m(i+1) 需击败 m(i)，
-//! m20 BOSS = 通关位；掩码 bit j = m(j+1) 解锁）。判据：`cargo test -p ti-core --test progression_rules` 全绿。
+//! oracle = `docs/business/progression.md` §跨图推进（**S62 全解锁**：20 图开局全可选，
+//! `can_select` 恒 true；`defeated[]` / `on_boss_defeated` / `is_cleared` 通关位语义保留，
+//! 仅废弃"击败前图才解锁"门禁；掩码不再持久化解锁位（bit0..18 恒 0），仅 bit19 = 通关位）。
+//! 判据：`cargo test -p ti-core --test progression_rules` 全绿。
 
 use ti_core::domain::selection::MapSlot;
-use ti_core::rules::progression::{ProgressionState, boss_tier_of};
+use ti_core::rules::progression::{CLEARED_BIT, ProgressionState, boss_tier_of};
 
-/// `initial_unlocked`：初始仅 m01 解锁。
+/// `initial_unlocked`：S62 全解锁 ⇒ 初始全部 20 图可选。
 #[test]
-fn initial_unlocked_is_m01_only() {
+fn initial_unlocked_is_all_maps() {
     let st = ProgressionState::initial();
     let unlocked = ProgressionState::initial_unlocked();
-    assert_eq!(unlocked, vec![MapSlot::M01], "初始 = 仅 m01");
-    assert!(st.can_select(MapSlot::M01), "m01 可选");
-    assert!(!st.can_select(MapSlot::M02), "m02 未解锁（需击败 m01）");
+    assert_eq!(unlocked, MapSlot::all(), "全解锁 = 全部 20 图（用户 2026-11-20 拍板）");
+    assert_eq!(unlocked.len(), 20, "20 图全开");
+    for m in MapSlot::all() {
+        assert!(st.can_select(m), "{m:?} 可选（全解锁）");
+    }
 }
 
-/// `on_boss_defeated` + `can_select`：击败 m01 BOSS ⇒ m02 解锁（单调链）。
+/// `on_boss_defeated` + `can_select`：全解锁下击败记录仅作进度/通关，不再门禁下一图。
 #[test]
-fn on_boss_defeated_unlocks_next_map() {
+fn on_boss_defeated_tracks_progress_not_gate() {
     let st = ProgressionState::initial();
     let st2 = st.on_boss_defeated(MapSlot::M01);
-    assert!(st2.can_select(MapSlot::M02), "击败 m01 ⇒ m02 解锁");
-    assert!(st2.is_map_defeated(MapSlot::M01), "m01 标记已击败");
+    assert!(st.can_select(MapSlot::M02), "全解锁：未击败 m01 时 m02 已可选");
+    assert!(st2.can_select(MapSlot::M02), "击败 m01 后 m02 仍可选（非门禁）");
+    assert!(st2.is_map_defeated(MapSlot::M01), "m01 标记已击败（进度语义保留）");
     assert!(!st2.is_map_defeated(MapSlot::M02), "m02 尚未击败");
 }
 
@@ -81,14 +86,19 @@ fn boss_tier_of_maps_selection_entries() {
     // （选图 UI 只走 m01..m20，m21+ 无选图入口——飞轮 R2 P1-6 定位）
 }
 
-/// `from_mask` / `unlocked_mask` 互逆（§8 存档 v5：解锁集合以存档为事实源）。
+/// `unlocked_mask`：S62 全解锁 ⇒ 解锁位不持久化（bit0..18 恒 0），仅通关位 bit19 有效。
 #[test]
-fn unlocked_mask_roundtrip() {
-    let st =
-        ProgressionState::initial().on_boss_defeated(MapSlot::M01).on_boss_defeated(MapSlot::M02);
+fn unlocked_mask_all_unlocked() {
+    let st = ProgressionState::initial().on_boss_defeated(MapSlot::M01).on_boss_defeated(MapSlot::M02);
     let mask = st.unlocked_mask();
+    // 全解锁：bit0..18 恒 0（避免读档 from_mask 误读为全图击败+通关），仅 bit19 通关。
+    assert_eq!(mask, 0, "全解锁掩码 = 0（未通关）；解锁恒全开不持久化");
+    assert_eq!(mask & CLEARED_BIT, 0, "未通关：bit19=0");
     let back = ProgressionState::from_mask(mask);
-    assert_eq!(back, st, "mask → from_mask 互逆");
+    for m in MapSlot::all() {
+        assert!(back.can_select(m), "from_mask 后仍全可选");
+    }
+    assert_eq!(back.defeated_count(), 0, "S62：mask 不持久化击败进度（仅通关位），读回无击败记录");
 }
 
 /// `for_save_restore`：`mask == 0`（旧档）⇒ 最小前置链兜底；`mask` 缺当前图 ⇒ 补最小链。

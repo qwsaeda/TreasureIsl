@@ -58,18 +58,14 @@ impl GameApp {
     pub fn is_cleared(&self) -> bool {
         self.cleared
     }
-    /// 某图 BOSS 是否已击败（逐图门禁判据，`rules::progression`）：
-    /// m(i) 的击败位 = 下一图已解锁（`can_select` 口径），m20 的击败位 = 通关位。
+    /// 某图 BOSS 是否已击败（`rules::progression`）。
+    ///
+    /// **S62 全解锁勘误**：旧口径「m(i) 击败位 = 下一图已解锁」在全解锁下恒 true（解锁集全 20 图），
+    /// 不再是有效进度判据。全解锁口径 = **仅 m20 通关位有效**，其余图恒 `false`（逐图击败进度
+    /// 展示降级；通关/解锁已由 `cleared` + `unlocked_maps` 全开承担）。逐图门禁语义随单调链废弃。
     #[must_use]
     pub fn is_map_cleared(&self, m: MapSlot) -> bool {
-        let next = m.zero_index().saturating_add(1);
-        if next < 19 {
-            let next_slot = MapSlot::from_index(next).unwrap_or(MapSlot::M01);
-            self.unlocked_maps.contains(&next_slot)
-        } else {
-            // m20 = 最后一张图，击败位 = 通关位
-            self.cleared
-        }
+        m == MapSlot::M20 && self.cleared
     }
     /// BOSS 格坐标（`MapSession::boss_tile`，主地图渲染橙红标记 + 战斗触发用，只读）。
     #[must_use]

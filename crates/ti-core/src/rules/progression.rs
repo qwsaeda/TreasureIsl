@@ -55,7 +55,10 @@ pub const MASK_BITS: u32 = 20;
 
 /// 跨图推进状态：记录每张图（按 `MapSlot::all()` 顺序）是否已击败其 BOSS。
 ///
-/// 解锁链单调：`m(i) 已解锁 ⟺ i==0 || defeated[i-1]`（m01 恒解锁，m02 需击败 m01，… m20 需击败 m19）。
+/// **全解锁口径（S62 / 用户 2026-11-20 拍板「全部能玩」）**：`can_select` 恒 `true`
+/// （20 图开局全可选），单调解锁链废弃；`defeated[]` / `on_boss_defeated` /
+/// `is_cleared`（通关位）/ `defeated_count`（进度计数）语义保留，仅不再作为「选择门禁」。
+/// 旧单调链（`m(i) 已解锁 ⟺ i==0 || defeated[i-1]`，m01 恒解锁…m20 需击败 m19）已作废。
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ProgressionState {
     /// 每张图 BOSS 是否已击败（`[m01, m02, …, m20]`）。
@@ -63,29 +66,30 @@ pub struct ProgressionState {
 }
 
 impl ProgressionState {
-    /// 初始推进状态：无任何图被击败 → 仅 m01 解锁。
+    /// 初始推进状态：无任何图被击败（全解锁口径下仅表示"尚无通关进度"，不影响可选图）。
     #[must_use]
     pub const fn initial() -> Self {
         Self { defeated: [false; 20] }
     }
 
-    /// 初始解锁集合（= `ProgressionState::initial().unlocked()`，即 `[m01]`）。
+    /// 初始解锁集合 = **全部 20 图**（S62 全解锁，用户 2026-11-20 拍板）。
     #[must_use]
     pub fn initial_unlocked() -> Vec<MapSlot> {
         Self::initial().unlocked()
     }
 
-    /// 当前解锁集合（m01 恒解锁；m02 需击败 m01；… m20 需击败 m19）。
+    /// 当前解锁集合 = 全部 20 图（全解锁口径；`can_select` 恒 true）。
     #[must_use]
     pub fn unlocked(self) -> Vec<MapSlot> {
         MapSlot::all().iter().copied().filter(|m| self.can_select(*m)).collect()
     }
 
-    /// 某图是否已解锁（可选中）。
+    /// 任意图均可选中（S62 全解锁，废弃单调解锁门禁）。
+    /// `self`/`_m` 保留 = 维持原方法签名（调用方 + 存档口径兼容），允许 unused。
+    #[allow(clippy::unused_self)]
     #[must_use]
-    pub fn can_select(self, m: MapSlot) -> bool {
-        let i = usize::try_from(m.zero_index()).unwrap_or(0);
-        i == 0 || self.defeated.get(i.saturating_sub(1)).copied().unwrap_or(false)
+    pub fn can_select(&self, _m: MapSlot) -> bool {
+        true
     }
 
     /// 标记某图 BOSS 已击败（推进）；**按值消费 `self`，返回新状态**（功能式，纯）。
@@ -151,14 +155,12 @@ impl ProgressionState {
     /// 解锁位掩码（存档字段 `SaveSlot::unlocked_mask` 的唯一编解码口径，S15.2 / S37 升 `u32`）：
     /// - bit 0..=18 = 第 1..=19 张图是否**已解锁**（bit 0 恒 1：m01 恒解锁）；
     /// - bit 19 = **通关**（m20 BOSS 已击败，通关不新增解锁项，需单独 1 位）。
+    ///
+    /// **S62 全解锁勘误**：解锁恒全开，不再逐图持久化（bit0..18 恒 0，避免读档 `from_mask`
+    /// 把「全 1 解锁位」误读成「全图已击败 + 通关」）。掩码仅承载通关位 `CLEARED_BIT`（bit19）。
     #[must_use]
     pub fn unlocked_mask(self) -> u32 {
-        let bits = MapSlot::all()
-            .iter()
-            .copied()
-            .enumerate()
-            .fold(0u32, |acc, (i, m)| acc | if self.can_select(m) { 1u32 << i } else { 0u32 });
-        bits | if self.is_cleared() { CLEARED_BIT } else { 0u32 }
+        if self.is_cleared() { CLEARED_BIT } else { 0 }
     }
 
     /// 从解锁位掩码重建推进状态（读档用）。映射与 [`Self::unlocked_mask`] 严格互逆：
@@ -200,63 +202,47 @@ impl ProgressionState {
 mod tests {
     use super::*;
 
-    /// 初始仅 m01 解锁。
+    /// S62 全解锁：初始 20 图全可选（旧「仅 m01」口径废弃，用户 2026-11-20 拍板）。
     #[test]
-    fn progression_initial_unlocks_only_m01() {
+    fn progression_initial_all_unlocked() {
         let s = ProgressionState::initial();
-        assert_eq!(s.unlocked(), vec![MapSlot::M01]);
-        assert_eq!(ProgressionState::initial_unlocked(), vec![MapSlot::M01]);
-        assert!(s.can_select(MapSlot::M01));
-        assert!(!s.can_select(MapSlot::M02));
-        assert!(!s.can_select(MapSlot::M20));
-        assert!(!s.is_cleared());
-    }
-
-    /// 击败 m01 → 仅解锁 m02（m03~m20 仍锁）。
-    #[test]
-    fn progression_defeat_m01_unlocks_m02_only() {
-        let s = ProgressionState::initial();
-        let s = s.on_boss_defeated(MapSlot::M01);
-        assert!(!s.is_cleared(), "击败 m01 非通关");
-        assert_eq!(s.unlocked(), vec![MapSlot::M01, MapSlot::M02]);
-        assert!(s.can_select(MapSlot::M02));
-        assert!(!s.can_select(MapSlot::M03));
-        assert!(!s.can_select(MapSlot::M20));
-    }
-
-    /// 击败 m02 → 解锁 m03。
-    #[test]
-    fn progression_defeat_m02_unlocks_m03() {
-        let s = ProgressionState::initial();
-        let s = s.on_boss_defeated(MapSlot::M01);
-        let s = s.on_boss_defeated(MapSlot::M02);
-        assert!(!s.is_cleared(), "击败 m02 非通关");
-        assert_eq!(s.unlocked(), vec![MapSlot::M01, MapSlot::M02, MapSlot::M03]);
-        assert!(s.can_select(MapSlot::M03));
-    }
-
-    /// 击败 m19 → 解锁 m20。
-    #[test]
-    fn progression_defeat_m19_unlocks_m20() {
-        let s = ProgressionState::initial();
-        let mut s = s;
-        for i in 0..18 {
-            if let Some(slot) = MAP_SEQUENCE.get(i) {
-                s = s.on_boss_defeated(*slot);
-            }
+        assert_eq!(s.unlocked().len(), 20, "初始全 20 图解锁");
+        assert_eq!(ProgressionState::initial_unlocked().len(), 20);
+        for m in MapSlot::all() {
+            assert!(s.can_select(m), "{m:?} 可选（全解锁）");
         }
-        let s = s.on_boss_defeated(MAP_SEQUENCE[18]);
-        assert!(!s.is_cleared(), "击败 m19 非通关");
-        assert!(s.can_select(MapSlot::M20));
-        assert_eq!(s.unlocked().len(), 20, "m01~m20 全解锁");
+        assert!(!s.is_cleared(), "初始未通关");
     }
 
-    /// 击败 m20 = 通关、无下一图。
+    /// 击败记录不再门禁：击败 m01 后所有图仍全可选（进度语义 = defeated[] 保留）。
+    #[test]
+    fn progression_defeat_tracks_progress_not_gate() {
+        let s = ProgressionState::initial().on_boss_defeated(MapSlot::M01);
+        assert!(!s.is_cleared(), "击败 m01 非通关");
+        assert_eq!(s.unlocked().len(), 20, "全解锁： defeating 不改可选集合");
+        assert!(s.can_select(MapSlot::M02));
+        assert!(s.can_select(MapSlot::M03));
+        assert!(s.is_map_defeated(MapSlot::M01), "m01 击败位保留（进度语义）");
+        assert!(!s.is_map_defeated(MapSlot::M02), "m02 未击败");
+    }
+
+    /// 击败 m19 仍非通关，m20 全可选（门禁废弃）。
+    #[test]
+    fn progression_defeat_m19_not_cleared() {
+        let mut s = ProgressionState::initial();
+        for slot in MAP_SEQUENCE.iter().take(19) {
+            s = s.on_boss_defeated(*slot);
+        }
+        assert!(!s.is_cleared(), "击败 m19 非通关");
+        assert!(s.can_select(MapSlot::M20), "m20 全解锁可选");
+        assert_eq!(s.unlocked().len(), 20);
+    }
+
+    /// 击败 m20 = 通关、`defeated_count` 保留（S62 进度语义不删）。
     #[test]
     fn progression_defeat_m20_clears_game() {
-        let s = ProgressionState::initial();
-        let mut s = s;
-        for slot in &MAP_SEQUENCE[0..19] {
+        let mut s = ProgressionState::initial();
+        for slot in MAP_SEQUENCE.iter().take(19) {
             s = s.on_boss_defeated(*slot);
         }
         let s = s.on_boss_defeated(MapSlot::M20);
@@ -264,176 +250,95 @@ mod tests {
         assert_eq!(s.defeated_count(), 20);
     }
 
-    /// 失败（未击败）不解锁：不调用 `on_boss_defeated` 则推进不变。
+    /// 不击败任何图：全解锁仍可选，但无进度（进度语义 = `defeated_count` 0）。
     #[test]
-    fn progression_loss_does_not_unlock() {
+    fn progression_no_defeat_still_all_unlocked() {
         let s = ProgressionState::initial();
-        assert_eq!(s.unlocked(), vec![MapSlot::M01]);
-        assert!(!s.can_select(MapSlot::M02));
+        assert_eq!(s.unlocked().len(), 20, "全解锁：不击败也全可选");
+        assert_eq!(s.defeated_count(), 0, "但无击败进度");
         assert!(!s.is_cleared());
     }
 
-    /// 解锁链单调：只增不降，m01 恒解锁。
+    /// 全解锁恒成立（幂等、无单调链依赖）。
     #[test]
-    fn progression_unlocks_monotonic() {
+    fn progression_unlocks_always_all() {
         let s = ProgressionState::initial();
-        let prev = s.unlocked();
         let s1 = s.on_boss_defeated(MapSlot::M01);
-        let after_m01 = s1.unlocked();
         let s2 = s1.on_boss_defeated(MapSlot::M02);
-        let after_m02 = s2.unlocked();
-        let s3 = s2.on_boss_defeated(MapSlot::M03);
-        let after_m03 = s3.unlocked();
-        assert_subset(&prev, &after_m01);
-        assert_subset(&after_m01, &after_m02);
-        assert_subset(&after_m02, &after_m03);
-        assert!(s3.can_select(MapSlot::M01), "m01 恒解锁");
-    }
-
-    /// 辅助：断言 `sub ⊆ sup`。
-    fn assert_subset(sub: &[MapSlot], sup: &[MapSlot]) {
-        for x in sub {
-            assert!(sup.contains(x), "{x:?} 应在 {sup:?} 中（解锁链单调不减）");
+        for st in [s, s1, s2] {
+            assert_eq!(st.unlocked().len(), 20, "任意进度下全 20 图可选");
         }
     }
 
-    /// `from_unlocked` + 步进：`[m01, m02, m03]`（= 已击败 m01+m02）再击败 m03 → m04 解锁。
+    /// `from_unlocked`：全解锁恒全可选（旧「解锁集→击败位」重建保留兼容，但非门禁）。
     #[test]
-    fn from_unlocked_feeds_boss_defeat_step() {
-        let unlocked = vec![MapSlot::M01, MapSlot::M02, MapSlot::M03];
-        let s = ProgressionState::from_unlocked(&unlocked);
-        let s = s.on_boss_defeated(MapSlot::M03);
-        assert!(s.can_select(MapSlot::M04), "击败 m03 后 m04 应解锁");
-        assert!(!s.is_cleared(), "击败 m03 非通关（通关 = m20）");
+    fn from_unlocked_all_selectable() {
+        let s = ProgressionState::from_unlocked(&[MapSlot::M01, MapSlot::M02, MapSlot::M03]);
+        assert_eq!(s.unlocked().len(), 20, "旧档重建后仍全可选（S62）");
+        assert!(s.can_select(MapSlot::M04));
+        assert!(!s.is_cleared());
     }
 
-    /// 全解锁集重建后击败 m20 = 通关（app 层重复调用结算时状态稳定）。
+    /// 全解锁集 + m20 击败 = 通关（app 层重复结算稳定）。
     #[test]
     fn from_unlocked_all_then_m20_clears() {
         let all: Vec<MapSlot> = MapSlot::all().to_vec();
         let s = ProgressionState::from_unlocked(&all).on_boss_defeated(MapSlot::M20);
         assert!(s.is_cleared());
         assert_eq!(s.defeated_count(), 20);
-        // 幂等：全解锁集上重复结算 m20 不变
         let again = ProgressionState::from_unlocked(&all).on_boss_defeated(MapSlot::M20);
-        assert_eq!(s.unlocked(), again.unlocked());
+        assert_eq!(s.unlocked(), again.unlocked(), "幂等");
     }
 
-    /// 旧档异常解锁集（`[m01, m03]` 独缺 m02）忠实重建：不强行修正，
-    /// 后续步进仍走规则（击败 m02 后补齐 m02 的解锁依赖不再缺失）。
+    /// 旧档异常解锁集：全解锁下不再有「独缺 m02」门禁（任意图可选）。
     #[test]
-    fn from_unlocked_legacy_anomaly_is_faithful() {
-        let weird = vec![MapSlot::M01, MapSlot::M03];
-        let s = ProgressionState::from_unlocked(&weird);
-        assert!(s.can_select(MapSlot::M03), "旧档 m03 已解锁须保留");
-        assert!(!s.can_select(MapSlot::M02), "旧档未解锁 m02 不臆造解锁");
-        assert_eq!(s.unlocked(), weird, "重建的解锁集合 = 原集合（忠实不修正）");
-    }
-
-    /// `min_progression_to_select`：选中 m(i) 的最小前置 = 击败 m(0)..m(i-1)。
-    #[test]
-    fn min_progression_to_select_chain() {
-        assert_eq!(
-            ProgressionState::min_progression_to_select(MapSlot::M01).unlocked(),
-            vec![MapSlot::M01]
-        );
-        assert_eq!(
-            ProgressionState::min_progression_to_select(MapSlot::M02).unlocked(),
-            vec![MapSlot::M01, MapSlot::M02]
-        );
-        assert_eq!(
-            ProgressionState::min_progression_to_select(MapSlot::M03).unlocked(),
-            vec![MapSlot::M01, MapSlot::M02, MapSlot::M03]
-        );
-        // S37：选 m20 = 击败 m01~m19
-        let s = ProgressionState::min_progression_to_select(MapSlot::M20);
-        assert!(s.can_select(MapSlot::M20), "最小前置链应能选中 m20");
-        assert!(!s.is_cleared(), "最小前置链 = m20 解锁但未击败");
-    }
-
-    /// 掩码往返：任意推进态 ↔ `unlocked_mask` ↔ `from_mask` 保持解锁集合一致。
-    #[test]
-    fn unlocked_mask_round_trip() {
-        let states = [
-            ProgressionState::initial(),
-            ProgressionState::initial().on_boss_defeated(MapSlot::M01),
-            ProgressionState::initial()
-                .on_boss_defeated(MapSlot::M01)
-                .on_boss_defeated(MapSlot::M02),
-            ProgressionState::initial()
-                .on_boss_defeated(MapSlot::M01)
-                .on_boss_defeated(MapSlot::M02)
-                .on_boss_defeated(MapSlot::M03)
-                .on_boss_defeated(MapSlot::M04),
-        ];
-        for s in states {
-            let mask = s.unlocked_mask();
-            assert_eq!(
-                ProgressionState::from_mask(mask).unlocked(),
-                s.unlocked(),
-                "mask={mask} 往返不一致"
-            );
-        }
-        assert_eq!(ProgressionState::initial().unlocked_mask(), 0b0000_0001, "初始 = 仅 m01");
-        assert_eq!(
-            ProgressionState::initial().on_boss_defeated(MapSlot::M01).unlocked_mask(),
-            0b0000_0011,
-            "击败 m01 = m01+m02 解锁"
-        );
-        // 击败 m19 → m20 解锁（bit 19 = 1）
-        let mut s = ProgressionState::initial();
-        for slot in &MAP_SEQUENCE[0..19] {
-            s = s.on_boss_defeated(*slot);
-        }
-        assert!(s.unlocked_mask() & (1u32 << 19) != 0, "击败 m19 后 bit 19 = 1（m20 解锁）");
-        // 击败 m20 → 通关位（bit 19 = CLEARED_BIT）
-        let s = s.on_boss_defeated(MapSlot::M20);
-        assert!(s.is_cleared());
-        assert!(s.unlocked_mask() & CLEARED_BIT != 0, "通关位 = CLEARED_BIT");
-    }
-
-    /// `mask == 0`（旧档无字段）→ 退回 `map_slot` 最小前置链，不丢当前图。
-    #[test]
-    fn for_save_restore_legacy_mask_zero_falls_back_to_chain() {
-        assert_eq!(
-            ProgressionState::for_save_restore(0, MapSlot::M01).unlocked(),
-            vec![MapSlot::M01]
-        );
-        assert_eq!(
-            ProgressionState::for_save_restore(0, MapSlot::M02).unlocked(),
-            vec![MapSlot::M01, MapSlot::M02],
-            "旧档（mask=0）选中 m02 仍须回读到 m02"
-        );
-        assert_eq!(
-            ProgressionState::for_save_restore(0, MapSlot::M03).unlocked(),
-            vec![MapSlot::M01, MapSlot::M02, MapSlot::M03]
-        );
-        // S37：旧档（mask=0）选中 m20 → 最小前置链 m01~m20 全解锁
-        let s = ProgressionState::for_save_restore(0, MapSlot::M20);
-        assert!(s.can_select(MapSlot::M20), "旧档选中 m20 须能回读");
-        assert_eq!(s.unlocked().len(), 20);
-    }
-
-    /// 非零掩码忠实还原（不退回最小链）：m01 击败后未切图的档仍保住 m02 解锁。
-    #[test]
-    fn for_save_restore_nonzero_mask_is_faithful() {
-        // mask = 0b011（m01 已击败 → m02 已解锁），当前仍在 m01
-        let s = ProgressionState::for_save_restore(0b011, MapSlot::M01);
-        assert_eq!(s.unlocked(), vec![MapSlot::M01, MapSlot::M02], "掩码须忠实还原（F23）");
+    fn from_unlocked_legacy_anomaly_all_selectable() {
+        let s = ProgressionState::from_unlocked(&[MapSlot::M01, MapSlot::M03]);
+        assert_eq!(s.unlocked().len(), 20, "全解锁：旧档异常集也全可选");
         assert!(s.can_select(MapSlot::M02));
-        assert!(!s.can_select(MapSlot::M03));
     }
 
-    /// 掩码与当前所在图自相矛盾（当前图未解锁）→ 补齐最小链，不把玩家锁在档外。
+    /// `min_progression_to_select`：S62 全解锁下恒全可选（旧「最小前置链」语义废弃）。
     #[test]
-    fn for_save_restore_contradictory_mask_repairs_current_map() {
-        // mask = 0b001（仅 m01 解锁）但 map_slot = m20 → 补齐到能选中 m20
-        let s = ProgressionState::for_save_restore(0b001, MapSlot::M20);
-        assert!(s.can_select(MapSlot::M20), "读档后当前图必须可选");
-        assert!(s.can_select(MapSlot::M01));
+    fn min_progression_to_select_all_selectable() {
+        for m in MapSlot::all() {
+            let s = ProgressionState::min_progression_to_select(m);
+            assert_eq!(s.unlocked().len(), 20, "任意选中图的推进态均全可选");
+            assert!(!s.is_cleared(), "前置链不含通关位");
+        }
     }
 
-    /// 逐图门禁判据：`is_map_defeated` 只认被击败的那张图，通关标志另计。
+    /// 掩码往返：S62 全解锁下 `unlocked_mask` 仅承载通关位（bit19）；解锁恒全开不持久化。
+    #[test]
+    fn unlocked_mask_cleared_bit_only() {
+        let s = ProgressionState::initial().on_boss_defeated(MapSlot::M01).on_boss_defeated(MapSlot::M02);
+        let mask = s.unlocked_mask();
+        assert_eq!(mask & ((1u32 << 19) - 1), 0, "全解锁：bit0..18 恒 0（不持久化解锁）");
+        assert_eq!(mask & CLEARED_BIT, 0, "未通关：bit19=0");
+        let back = ProgressionState::from_mask(mask);
+        assert_eq!(back.unlocked().len(), 20, "from_mask 后仍全可选");
+        // 通关位
+        let mut full = ProgressionState::initial();
+        for slot in MAP_SEQUENCE.iter().take(19) { full = full.on_boss_defeated(*slot); }
+        let full = full.on_boss_defeated(MapSlot::M20);
+        assert!(full.is_cleared());
+        assert!(full.unlocked_mask() & CLEARED_BIT != 0, "通关位 = CLEARED_BIT");
+    }
+
+    /// `for_save_restore`：全解锁下任意 mask/选中图都全可选；通关位由 bit19 还原。
+    #[test]
+    fn for_save_restore_all_selectable() {
+        for mask in [0u32, 0b001, 0b011, CLEARED_BIT, u32::MAX] {
+            for m in MapSlot::all() {
+                let s = ProgressionState::for_save_restore(mask, m);
+                assert_eq!(s.unlocked().len(), 20, "任意 mask/map 全可选");
+            }
+        }
+        assert!(!ProgressionState::for_save_restore(0, MapSlot::M01).is_cleared());
+        assert!(ProgressionState::for_save_restore(CLEARED_BIT, MapSlot::M20).is_cleared(), "通关位还原");
+    }
+
+    /// 逐图击败位：`is_map_defeated` 忠实反映 defeated[]（进度语义，非门禁）。
     #[test]
     fn is_map_defeated_is_per_map() {
         let s = ProgressionState::initial().on_boss_defeated(MapSlot::M01);
@@ -443,14 +348,12 @@ mod tests {
         assert!(!s.is_cleared(), "击败 m01 非通关");
     }
 
-    /// S37：旧 `u8` 掩码（3 图）扩展为 `u32` 兼容。
+    /// S37：旧 `u8` 掩码扩展为 `u32`（`from_mask` 仍按 bit 解析击败位，兼容旧档）。
     #[test]
     fn legacy_u8_mask_extends_to_u32() {
-        // 旧 3 图掩码 0b1111（bit 3 = 通关）→ 20 图掩码 = 0x0000_1111（bit 0..=3）
-        let legacy_u8: u32 = 0b1111;
-        let s = ProgressionState::from_mask(legacy_u8);
-        // 旧 bit 3 = m03 通关 → 20 图 bit 3 = m04 解锁（bit 0=m01, bit 1=m02, bit 2=m03, bit 3=m04）
-        assert!(s.can_select(MapSlot::M04), "旧 3 图通关 → m04 应解锁");
+        let s = ProgressionState::from_mask(0b1111u32);
+        assert_eq!(s.unlocked().len(), 20, "旧档读回全可选（S62）");
         assert!(!s.is_cleared(), "旧 3 图通关 ≠ 20 图通关");
+        assert!(s.is_map_defeated(MapSlot::M01), "旧 bit1 = m01 击败位保留");
     }
 }

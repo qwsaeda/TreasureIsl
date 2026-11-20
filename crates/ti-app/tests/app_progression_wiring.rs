@@ -1,7 +1,7 @@
 //! 跨图推进 app 层接线验收（`docs/business/progression.md` §跨图推进 定稿 → 接线）。
 //!
 //! 覆盖三条接线（`crates/ti-app/src/game_app.rs`）：
-//! 1. 新档 `unlocked_maps` = 规则层初始值（仅 m01，`ProgressionState::initial_unlocked`）；
+//! 1. 新档 `unlocked_maps` = 规则层初始值（S62 全解锁 = 全部 20 图，`ProgressionState::initial_unlocked`）；
 //! 2. 击败当前图 BOSS → 解锁下一图（`battle_step` 结算钩，走规则层、幂等）；
 //! 3. 读档按存档 `unlocked_mask` 忠实还原解锁链（`restore_save`）：非零掩码逐位还原
 //!    （含 CLEARED 位 bit 3 = 通关门禁），`mask=0` 旧档退「最小前置链」可回读；
@@ -56,40 +56,42 @@ fn run_boss_battle_to_end(app: &mut GameApp) {
     );
 }
 
-/// 接线 1：新档仅 m01 解锁；锁定图 Confirm 被拒（停留选图、选择态不变）。
+/// 接线 1（S62 全解锁）：新档 20 图全可选，任意图 Confirm 直接进主地图（无锁图拒绝）。
 #[test]
-fn app_new_game_starts_with_only_m01_unlocked() {
+fn app_new_game_all_maps_selectable() {
     let mut app = GameApp::new(1080.0, 1920.0);
     assert_eq!(
         app.unlocked_maps,
-        vec![MapSlot::M01],
-        "新档解锁集合 = 规则层初始值（仅 m01，非 MapSlot::all() 全开）"
+        MapSlot::all(),
+        "S62 全解锁：新档解锁集合 = 全部 20 图（用户 2026-11-20 拍板）"
     );
+    assert_eq!(app.unlocked_maps.len(), 20, "20 图全开");
 
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Next);
     app.handle(GameInput::Confirm); // → SelectMap（map_slot=None）
-    // 锁定 m02 / m03 / m20：Confirm 应被拒（Sfx::Invalid，场景停留、选择态不变）
-    app.handle(GameInput::Next); // 首次 Next → M01（已解锁，暂存 map_slot）
-    app.handle(GameInput::Next); // M02（未解锁）
+    // 任意图（含 m02/m03/m20）Confirm 均直接进主地图（无门禁）。
+    app.handle(GameInput::Next); // 首次 Next → M01（暂存 map_slot）
+    app.handle(GameInput::Next); // M02
     app.handle(GameInput::Confirm);
-    assert_eq!(app.scene(), Scene::SelectMap, "未解锁 m02 的 Confirm 应被拒（停留选图）");
-    assert_eq!(app.selection.map_slot, None, "被拒后选择态不应提交 m02");
-    app.handle(GameInput::Next); // M03（未解锁）
-    app.handle(GameInput::Confirm);
-    assert_eq!(app.scene(), Scene::SelectMap, "未解锁 m03 的 Confirm 应被拒（停留选图）");
-    // S37：m20（最后一张图）也锁定
-    for _ in 0..17 {
-        app.handle(GameInput::Next); // M04 → M20
-    }
-    assert_eq!(app.map_slot(), Some(MapSlot::M20), "Next×17 后应到 m20");
-    app.handle(GameInput::Confirm);
-    assert_eq!(app.scene(), Scene::SelectMap, "未解锁 m20 的 Confirm 应被拒（停留选图）");
-    // 解锁 m01：从 m20（zero_index=19）Next×1 = (19+1)%20=0 = M01（20 图环形）
+    assert_eq!(app.scene(), Scene::MainMap, "S62 全解锁：m02 可直接进主地图");
+    assert_eq!(app.map_slot(), Some(MapSlot::M02), "选择态提交 m02");
+}
+
+/// S62 全解锁：m20（最后一张图）同样可直接进主地图（环形导航 + 无门禁）。
+#[test]
+fn app_m20_directly_selectable_when_all_unlocked() {
+    let mut app = GameApp::new(1080.0, 1920.0);
+    app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Next);
-    assert_eq!(app.map_slot(), Some(MapSlot::M01), "m20 后 Next×1 即回 m01（S37 环形）");
+    app.handle(GameInput::Confirm); // → SelectMap
+    for _ in 0..20 {
+        // 首次 Next=M01，再 19 次到 M20（20 图环形）
+        app.handle(GameInput::Next);
+    }
+    assert_eq!(app.map_slot(), Some(MapSlot::M20), "Next×20 后应到 m20（S37 环形）");
     app.handle(GameInput::Confirm);
-    assert_eq!(app.scene(), Scene::MainMap, "m01 已解锁应可进主地图");
+    assert_eq!(app.scene(), Scene::MainMap, "S62 全解锁：m20 可直接进主地图");
 }
 
 /// 接线 2：击败 m01 BOSS → 解锁 m02；战斗结束后重复结算不改变集合（幂等）。
@@ -99,16 +101,16 @@ fn app_boss_victory_unlocks_next_map_and_is_idempotent() {
     app.rng_mut().set_seed(42);
     app.set_rng_seed(42);
     enter_m01(&mut app);
-    assert_eq!(app.unlocked_maps, vec![MapSlot::M01]);
+    assert_eq!(app.unlocked_maps, MapSlot::all());
 
     run_boss_battle_to_end(&mut app);
-    assert_eq!(app.unlocked_maps, vec![MapSlot::M01, MapSlot::M02], "击败 m01 BOSS 后应解锁 m02");
+    assert_eq!(app.unlocked_maps, MapSlot::all(), "S62 全解锁：击败 m01 后仍全部可选（进度记 defeated）");
 
     // 战斗已结束：继续攻击不改变解锁集合（结算钩幂等）
     for _ in 0..5 {
         app.handle(GameInput::Attack);
     }
-    assert_eq!(app.unlocked_maps, vec![MapSlot::M01, MapSlot::M02], "重复结算不应改变解锁集合");
+    assert_eq!(app.unlocked_maps, MapSlot::all(), "重复结算幂等（全解锁集合不变）");
 }
 
 /// 接线 2 全链路：m01 胜 → 选 m02 → 胜 → 全解锁（实机可玩路径的跨图闭环）。
@@ -119,7 +121,7 @@ fn app_full_chain_m01_then_m02_unlocks_all_maps() {
     app.set_rng_seed(7);
     enter_m01(&mut app);
     run_boss_battle_to_end(&mut app);
-    assert_eq!(app.unlocked_maps, vec![MapSlot::M01, MapSlot::M02]);
+    assert_eq!(app.unlocked_maps, MapSlot::all());
 
     // 战斗结束 → 主菜单（菜单选中位保持 0 = 新游戏）→ 重进选图（m02 此时应可选）
     app.handle(GameInput::Back);
@@ -143,7 +145,7 @@ fn app_full_chain_m01_then_m02_unlocks_all_maps() {
     run_boss_battle_to_end(&mut app);
     assert_eq!(
         app.unlocked_maps,
-        vec![MapSlot::M01, MapSlot::M02, MapSlot::M03],
+        MapSlot::all(),
         "击败 m02 BOSS 后应解锁 m03（全图开放）"
     );
 }
@@ -182,7 +184,7 @@ fn app_save_load_restores_unlock_chain() {
     assert_eq!(app.map_slot(), Some(MapSlot::M02));
     assert_eq!(
         app.unlocked_maps,
-        vec![MapSlot::M01, MapSlot::M02],
+        MapSlot::all(),
         "选中 M02 的存档 ⇒ 解锁链 = [m01, m02]（最小前置）"
     );
     // Q007：读档恢复存档值（不被 enter_main_map 的 initial_gold 覆写）
@@ -213,7 +215,7 @@ fn app_save_load_restores_unlock_chain() {
     assert_eq!(app2.map_slot(), Some(MapSlot::M03));
     assert_eq!(
         app2.unlocked_maps,
-        vec![MapSlot::M01, MapSlot::M02, MapSlot::M03],
+        MapSlot::all(),
         "旧档（高图直选）按链回读 = 全解锁，不迁移 schema"
     );
     assert_eq!(app2.gold(), 800, "读档后金应恢复存档值 800（Q007）");
@@ -241,7 +243,7 @@ fn app_save_load_restores_mask_faithfully() {
     assert_eq!(app.map_slot(), Some(MapSlot::M01));
     assert_eq!(
         app.unlocked_maps,
-        vec![MapSlot::M01, MapSlot::M02],
+        MapSlot::all(),
         "非零掩码忠实还原（选中 m01 但 m02 已解锁的进度不丢失）"
     );
     assert!(!app.is_cleared(), "非通关掩码读档后 cleared 应为 false");
@@ -272,5 +274,6 @@ fn app_save_load_restores_cleared_gate() {
     assert_eq!(app.unlocked_maps.len(), 20, "通关档读档后全图 20 解锁");
     assert!(app.is_cleared(), "CLEARED 位读档后应还原通关位");
     assert!(app.is_map_cleared(MapSlot::M20), "m20 击败位 = 通关位");
-    assert!(app.is_map_cleared(MapSlot::M01), "通关档 m01 击败位应为 true");
+    // S62 全解锁：逐图击败位不再从解锁集推导，仅 m20 通关位有效；m01 恒 false（进度展示降级）。
+    assert!(!app.is_map_cleared(MapSlot::M01), "全解锁口径：m01 击败位恒 false（非门禁）");
 }
