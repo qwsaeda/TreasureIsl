@@ -242,5 +242,7 @@
  "glmapm17.Map": "水晶港湾",
  "glmapm18.Map": "风暴残骸",
  "glmapm19.Map": "珊瑚环礁",
- "glmapm20.Map": "火山之眼"
+ "glmapm20.Map": "火山之眼",
+ "scene.main_map.ship.panel_title": "造船厂",
+ "scene.main_map.ship.hint": "Enter 升级 · Back 关闭"
 }

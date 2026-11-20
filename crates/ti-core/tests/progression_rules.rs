@@ -89,7 +89,8 @@ fn boss_tier_of_maps_selection_entries() {
 /// `unlocked_mask`：S62 全解锁 ⇒ 解锁位不持久化（bit0..18 恒 0），仅通关位 bit19 有效。
 #[test]
 fn unlocked_mask_all_unlocked() {
-    let st = ProgressionState::initial().on_boss_defeated(MapSlot::M01).on_boss_defeated(MapSlot::M02);
+    let st =
+        ProgressionState::initial().on_boss_defeated(MapSlot::M01).on_boss_defeated(MapSlot::M02);
     let mask = st.unlocked_mask();
     // 全解锁：bit0..18 恒 0（避免读档 from_mask 误读为全图击败+通关），仅 bit19 通关。
     assert_eq!(mask, 0, "全解锁掩码 = 0（未通关）；解锁恒全开不持久化");

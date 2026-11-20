@@ -911,6 +911,7 @@ fn input_system(
         build: kb.pressed(KeyCode::KeyB),
         merchant: kb.pressed(KeyCode::KeyM),
         event: kb.pressed(KeyCode::KeyV),
+        ship: kb.pressed(KeyCode::KeyN),
     };
     let key_edge = |current: bool, previous: bool| current && !previous;
     let k = KeyState {
@@ -927,6 +928,7 @@ fn input_system(
         build: key_edge(raw.build, state.prev_keys.build),
         merchant: key_edge(raw.merchant, state.prev_keys.merchant),
         event: key_edge(raw.event, state.prev_keys.event),
+        ship: key_edge(raw.ship, state.prev_keys.ship),
     };
     g.poll(&k);
 
@@ -2102,7 +2104,13 @@ impl Args {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            Self { mode_flags: Vec::new(), scene_id: "index".to_owned(), viewport: None, spin_n: 0, panel: None }
+            Self {
+                mode_flags: Vec::new(),
+                scene_id: "index".to_owned(),
+                viewport: None,
+                spin_n: 0,
+                panel: None,
+            }
         }
     }
 }
@@ -2380,6 +2388,7 @@ fn run() {
             "build" => ti_app::GameInput::OpenBuildPanel,
             "merchant" => ti_app::GameInput::OpenMerchantPanel,
             "event" => ti_app::GameInput::OpenEventPanel,
+            "ship" => ti_app::GameInput::OpenShipPanel,
             _ => ti_app::GameInput::MapBack, // 未知面板名 = 不开（不崩）
         });
     }

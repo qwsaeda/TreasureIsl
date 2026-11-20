@@ -56,7 +56,10 @@ fn trade_panel_buy_and_sell_via_rules() {
     app.handle(GameInput::TradeSell(2));
     let owned_after_sell = app.owned.iter().find(|(g, _)| *g == 2).map_or(0, |(_, q)| *q);
     assert_eq!(owned_after_sell, 0, "卖清空持有");
-    assert!(app.gold() >= gold_before.saturating_sub(app.gold().saturating_sub(gold_before)), "卖出有金入账");
+    assert!(
+        app.gold() >= gold_before.saturating_sub(app.gold().saturating_sub(gold_before)),
+        "卖出有金入账"
+    );
 }
 
 #[test]

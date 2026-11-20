@@ -1,0 +1,19 @@
+# S63.5 造船面板 + S63 子场景补全收口（2026-11-20）
+
+## T3 造船面板（N 键）
+- GameInput +OpenShipPanel + KeyState ship(N键) + 键盘映射
+- SceneHost +ship_panel_open/set + GameApp 状态；四面板互斥前置完整
+- render_ship_panel（候选A羊皮卷轴居中：当前船级/货舱99/火力/下一级造价800）
+- on_input Enter 走 handle_boat_upgrade（rules::boat upgrade：扣 bank_gold + 船级+1），满级自动关
+- app_ship_panel_e2e 2 条（开关+互斥 + 升级船级+1扣bank_gold800）
+- i18n +2 键；--panel=ship 出图 → evidence/ui_candidate/ship_panel_live.png
+
+## T4/T5/T8 降级说明（逻辑已可玩）
+- 副本 pending_dungeon+confirm_dungeon（落格自动进守军战）
+- 领地升级 pending_own+confirm_own（落格自己格 Confirm 升级/领产出）
+- 卡牌详情 draw_one+apply_card_effect（落格即时结算+toast）
+三者无持久待决展示态，按键开面板会空白 ⇒ 不做独立面板（UX 增强降级），
+如需独立面板须先扩展 SceneHost 待决查询接口（后续轮）。记入 plan-s63-subscenes.md。
+
+## 验证
+cargo test 1017/0 + clippy 0 + doccheck/doccheck2 0 + scenes_gallery 补 5 面板表 + 出图命令

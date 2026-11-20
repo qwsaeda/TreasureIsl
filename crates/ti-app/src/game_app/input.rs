@@ -75,6 +75,9 @@ impl GameApp {
                 if k.event {
                     changed = self.handle(GameInput::OpenEventPanel) || changed;
                 }
+                if k.ship {
+                    changed = self.handle(GameInput::OpenShipPanel) || changed;
+                }
                 if k.landmark {
                     changed = self.handle(GameInput::Landmark(1)) || changed;
                 }

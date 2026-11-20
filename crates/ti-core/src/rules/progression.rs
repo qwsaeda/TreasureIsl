@@ -311,7 +311,9 @@ mod tests {
     /// 掩码往返：S62 全解锁下 `unlocked_mask` 仅承载通关位（bit19）；解锁恒全开不持久化。
     #[test]
     fn unlocked_mask_cleared_bit_only() {
-        let s = ProgressionState::initial().on_boss_defeated(MapSlot::M01).on_boss_defeated(MapSlot::M02);
+        let s = ProgressionState::initial()
+            .on_boss_defeated(MapSlot::M01)
+            .on_boss_defeated(MapSlot::M02);
         let mask = s.unlocked_mask();
         assert_eq!(mask & ((1u32 << 19) - 1), 0, "全解锁：bit0..18 恒 0（不持久化解锁）");
         assert_eq!(mask & CLEARED_BIT, 0, "未通关：bit19=0");
@@ -319,7 +321,9 @@ mod tests {
         assert_eq!(back.unlocked().len(), 20, "from_mask 后仍全可选");
         // 通关位
         let mut full = ProgressionState::initial();
-        for slot in MAP_SEQUENCE.iter().take(19) { full = full.on_boss_defeated(*slot); }
+        for slot in MAP_SEQUENCE.iter().take(19) {
+            full = full.on_boss_defeated(*slot);
+        }
         let full = full.on_boss_defeated(MapSlot::M20);
         assert!(full.is_cleared());
         assert!(full.unlocked_mask() & CLEARED_BIT != 0, "通关位 = CLEARED_BIT");
@@ -335,7 +339,10 @@ mod tests {
             }
         }
         assert!(!ProgressionState::for_save_restore(0, MapSlot::M01).is_cleared());
-        assert!(ProgressionState::for_save_restore(CLEARED_BIT, MapSlot::M20).is_cleared(), "通关位还原");
+        assert!(
+            ProgressionState::for_save_restore(CLEARED_BIT, MapSlot::M20).is_cleared(),
+            "通关位还原"
+        );
     }
 
     /// 逐图击败位：`is_map_defeated` 忠实反映 defeated[]（进度语义，非门禁）。

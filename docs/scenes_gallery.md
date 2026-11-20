@@ -141,6 +141,26 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 
 ---
 
+## MainMap 子面板（S63 补全，叠加层非独立 Scene）
+
+> 5 个可玩子面板 = 主地图上的叠加层（bevy_ui 世界场景层 CPU 画布，`samescene`），
+> 键位开关互斥（trade/build/merchant/event/ship 同时只开一个）。
+> 截图 = `evidence/ui_candidate/*_panel_live.png`（`--shot --panel=<id>` 横屏出图）。
+
+| 面板 | 键位 | 职责（rules 接线） | 截图 |
+|---|---|---|---|
+| 贸易 | T | 买/卖货物走 `TradeLedger`，扣金/持有入账 | `ui_candidate/trade_panel_live.png` |
+| 建造 | B | 建建筑走 `BuildManager`（原 S34 删入口已恢复）+ 造价 | `ui_candidate/build_panel_live.png` |
+| 商人 | M | 买人手/武器走 `rules::merchant`，写回 seat_crew/seat_arms（船容量约束） | `ui_candidate/merchant_panel_live.png` |
+| 海事事件 | V | 7 种 `MaritimeEvent` 展示 + `events::effect` 应用（金/人手/武器增减+损耗） | `ui_candidate/event_panel_live.png` |
+| 造船厂 | N | `BoatSession` 当前船级/货舱/火力/下一级造价 + Enter 升级（扣 bank_gold） | `ui_candidate/ship_panel_live.png` |
+
+**未做独立面板（逻辑已可玩，UX 增强降级，见 `plan-s63-subscenes.md`）**：
+- 副本（`pending_dungeon`+`confirm_dungeon` 落格自动进守军战）、
+- 领地升级（`pending_own`+`confirm_own` 落格自己格 Confirm 升级/领产出）、
+- 卡牌详情（落格 `draw_one`+`apply_card_effect` 即时结算+toast）——三者无持久待决展示态，按键开面板会空白，
+  如需独立面板须先扩展 SceneHost 待决查询接口（后续轮）。
+
 ## 非渲染态
 
 - **Intro**（片头）：触发即自动跳 `Index`，无独立帧（可选片头过场）。
@@ -151,6 +171,7 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 ```
 xvfb-run -a treasure-bevy-native -- --scene=<场景> --shot --viewport=1920x1080   # 横屏主语面
 # main_map 另加 --spin=5（seed=42 可复现运行时态）；
+# main_map 子面板：--panel=trade|build|merchant|event|ship（S63 五面板出图）；
 # 或 pwsh -ExecutionPolicy Bypass -File scripts/ui_preview.ps1 --viewport=1920x1080 index select_role ...
 # （产物带 _1920x1080 后缀 = 横屏最新主语面）。
 # 竖屏（1080×1920）= 兼容保留，旧竖屏图（S22 罗盘环 index 等）为早期版面，勿作最新态引用。

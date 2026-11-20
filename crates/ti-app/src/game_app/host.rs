@@ -14,8 +14,8 @@ use ti_core::domain::messages::MsgKind;
 use ti_core::domain::persistence::{SaveSlot, SaveSlotV4Ext, SeatSave, TerritorySave};
 use ti_core::domain::selection::{Character, MapSlot, SelectionState};
 use ti_core::rules::board::{BoardSession, TrackSpace, Turn};
-use ti_core::rules::build::overflow_to_deposit;
 use ti_core::rules::boat::BoatSession;
+use ti_core::rules::build::overflow_to_deposit;
 use ti_core::rules::cards;
 use ti_core::rules::force::{Force, ForceSide, resolve};
 use ti_core::rules::messages::total_pages;
@@ -343,6 +343,13 @@ impl MapHost for GameApp {
     }
     fn set_event_panel_sel(&mut self, sel: u8) {
         self.event_panel_sel = sel;
+    }
+
+    fn ship_panel_open(&self) -> bool {
+        self.ship_panel_open
+    }
+    fn set_ship_panel_open(&mut self, open: bool) {
+        self.ship_panel_open = open;
     }
 
     /// S21.12 造船：走 `rules::boat::BoatSession::upgrade`（单向升级链 + 扣金 + 抬加成），
@@ -826,6 +833,14 @@ impl EconomyHost for GameApp {
         let Ok(b) = balance() else { return 0 };
         BoatSession::new(b.boat.clone(), u32::from(self.boat_level())).cargo()
     }
+    fn boat_atk(&self) -> u32 {
+        let Ok(b) = balance() else { return 0 };
+        BoatSession::new(b.boat.clone(), u32::from(self.boat_level())).atk()
+    }
+    fn boat_hp(&self) -> u32 {
+        let Ok(b) = balance() else { return 0 };
+        BoatSession::new(b.boat.clone(), u32::from(self.boat_level())).hp()
+    }
     fn set_crew_gold(&mut self, crew: u32, gold: u32) {
         let s = self.turn_cycle.current as usize;
         self.seat_crew[s] = crew;
@@ -838,11 +853,21 @@ impl EconomyHost for GameApp {
         self.seat_gold[s] = gold;
         self.sync_gold_mirror();
     }
-    fn apply_event_effect(&mut self, gold_delta: i64, crew_delta: i32, arms_delta: i32, gold_loss_pct: u32, crew_loss_pct: u32, arms_loss_pct: u32) {
+    fn apply_event_effect(
+        &mut self,
+        gold_delta: i64,
+        crew_delta: i32,
+        arms_delta: i32,
+        gold_loss_pct: u32,
+        crew_loss_pct: u32,
+        arms_loss_pct: u32,
+    ) {
         let s = self.turn_cycle.current as usize;
         // pct 损耗按万分比扣（saturating），delta 增减（saturating），金钳到 gold_cap。
         let cur_gold = self.seat_gold[s];
-        let after_loss = cur_gold.saturating_sub(u32::try_from(u64::from(cur_gold) * u64::from(gold_loss_pct) / 10_000).unwrap_or(0));
+        let after_loss = cur_gold.saturating_sub(
+            u32::try_from(u64::from(cur_gold) * u64::from(gold_loss_pct) / 10_000).unwrap_or(0),
+        );
         let g = if gold_delta >= 0 {
             after_loss.saturating_add(u32::try_from(gold_delta).unwrap_or(0))
         } else {
@@ -850,11 +875,23 @@ impl EconomyHost for GameApp {
         };
         self.seat_gold[s] = g.min(self.gold_cap());
         let cur_crew = self.seat_crew[s];
-        let crew_after_loss = cur_crew.saturating_sub(u32::try_from(u64::from(cur_crew) * u64::from(crew_loss_pct) / 10_000).unwrap_or(0));
-        self.seat_crew[s] = if crew_delta >= 0 { crew_after_loss.saturating_add(u32::try_from(crew_delta).unwrap_or(0)) } else { crew_after_loss.saturating_sub(crew_delta.unsigned_abs()) };
+        let crew_after_loss = cur_crew.saturating_sub(
+            u32::try_from(u64::from(cur_crew) * u64::from(crew_loss_pct) / 10_000).unwrap_or(0),
+        );
+        self.seat_crew[s] = if crew_delta >= 0 {
+            crew_after_loss.saturating_add(u32::try_from(crew_delta).unwrap_or(0))
+        } else {
+            crew_after_loss.saturating_sub(crew_delta.unsigned_abs())
+        };
         let cur_arms = self.seat_arms[s];
-        let arms_after_loss = cur_arms.saturating_sub(u32::try_from(u64::from(cur_arms) * u64::from(arms_loss_pct) / 10_000).unwrap_or(0));
-        self.seat_arms[s] = if arms_delta >= 0 { arms_after_loss.saturating_add(u32::try_from(arms_delta).unwrap_or(0)) } else { arms_after_loss.saturating_sub(arms_delta.unsigned_abs()) };
+        let arms_after_loss = cur_arms.saturating_sub(
+            u32::try_from(u64::from(cur_arms) * u64::from(arms_loss_pct) / 10_000).unwrap_or(0),
+        );
+        self.seat_arms[s] = if arms_delta >= 0 {
+            arms_after_loss.saturating_add(u32::try_from(arms_delta).unwrap_or(0))
+        } else {
+            arms_after_loss.saturating_sub(arms_delta.unsigned_abs())
+        };
         self.sync_gold_mirror();
     }
 

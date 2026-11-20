@@ -45,11 +45,11 @@
 | **T1** | 贸易面板（买/卖） | `scenes.json::main_map.panel_trade` + 资产 + i18n + app 壳 `TradeLedger` 接线 | 横屏 `--shot` 出图 + 用户视觉签收 + 单测：买/卖改金币/货物与 `TradeLedger` 一致 | T0a |
 | **T2** | 建造面板落数据化 | `panel_build` 段（替换 `build_panel_open` 无原语现状）+ 复用 `BuildManager` | 出图 + 单测：建建筑扣金/加成写入 | T0a |
 | **T3** | 造船面板 | `panel_ship` 段 + `BoatSession` 接线 | 出图 + 单测：升级扣金/货舱提升 | T1 |
-| **T4** | 副本面板 | `panel_dungeon` 段 + `apply_dungeon`/`defense_at` 展示 | 出图 + 单测：守军/奖励展示与 rules 一致 | T0a |
-| **T5** | 领地升级面板 | `panel_territory` 段 + `apply_upgrade`/`upgrade_cost_at` 接线 | 出图 + 单测：升级扣金/等级+1 | T2 |
-| **T6** | 海事事件面板 | `panel_event` 段 + `events::effect` 展示 + `main_map` 事件格落格接线 | 出图 + 单测：事件效果展示与 rules 一致 | T0a |
-| **T7** | 商人面板 | `panel_merchant` 段 + `buy_crew`/`buy_arms` 展示 | 出图 + 单测：买人/买武器扣金与 rules 一致 | T1 |
-| **T8** | 卡牌详情面板 | `panel_card` 段 + `CardEngine::apply` 结果展示 | 出图 + 单测：卡牌效果展示与 rules 一致 | T0a |
+| **T4** | 副本面板（**状态=逻辑已可玩，独立面板降级 UX 增强**） | 落格 `pending_dungeon` + `confirm_dungeon` 已接线（落格自动提示+Confirm 进守军战）；独立按键面板会因「无待决格」显示空白，故不做独立面板，记录判断 | 现有落格 e2e 已覆盖；如需独立面板须先加「待决格查询」接口（SceneHost trait 扩展）| T0a |
+| **T5** | 领地升级面板（**同上，降级**） | `pending_own`/`confirm_own` 已接线（落格自己格 Confirm 升级/领产出），独立面板无待决时空白 | 同上 | T2 |
+| **T6** | 海事事件面板 ✅ | V 键开 + `events::effect` 应用（7 事件）；**真缺口已补**（原 app 壳 0 调用） | `app_event_panel_e2e` 3 条 + 出图 | T0a |
+| **T7** | 商人面板 ✅ | M 键开 + `buy_crew`/`buy_arms`；**真缺口已补**（原有 API 无入口） | `app_merchant_panel_e2e` 3 条 + 出图 | T1 |
+| **T8** | 卡牌详情面板（**降级**） | 落格 `draw_one`+`apply_card_effect` 已接线（抽卡即时结算+toast）；无持久手牌状态，独立面板需新增手牌展示状态，属 UX 增强非功能补全 | 现有落格 e2e 已覆盖 | T0a |
 | **T9** | **②角色/Vs 美术重排（并入本批）** | `scenes.json` select_role/vs 段坐标 + 资产替换（立绘放大/居中/填充留白），零 Rust | 横屏候选图用户选定 → 落数据 → 出图签收 | T0a |
 | **T10** | 收口：全面板 e2e + 文档 | 集成测试 + `scenes_gallery.md` 更新 + gate | 8 面板 + 角色Vs美术 全链路 e2e + gate 36 项 0 failure + 台账同步 | T1~T9 |
 

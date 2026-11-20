@@ -104,7 +104,11 @@ fn app_boss_victory_unlocks_next_map_and_is_idempotent() {
     assert_eq!(app.unlocked_maps, MapSlot::all());
 
     run_boss_battle_to_end(&mut app);
-    assert_eq!(app.unlocked_maps, MapSlot::all(), "S62 全解锁：击败 m01 后仍全部可选（进度记 defeated）");
+    assert_eq!(
+        app.unlocked_maps,
+        MapSlot::all(),
+        "S62 全解锁：击败 m01 后仍全部可选（进度记 defeated）"
+    );
 
     // 战斗已结束：继续攻击不改变解锁集合（结算钩幂等）
     for _ in 0..5 {
@@ -143,11 +147,7 @@ fn app_full_chain_m01_then_m02_unlocks_all_maps() {
     assert_eq!(app.scene(), Scene::MainMap, "击败 m01 后 m02 应可选并进主地图");
 
     run_boss_battle_to_end(&mut app);
-    assert_eq!(
-        app.unlocked_maps,
-        MapSlot::all(),
-        "击败 m02 BOSS 后应解锁 m03（全图开放）"
-    );
+    assert_eq!(app.unlocked_maps, MapSlot::all(), "击败 m02 BOSS 后应解锁 m03（全图开放）");
 }
 
 /// 接线 3：读档按存档 `map_slot` 的最小前置链恢复解锁（schema 不变，旧档可回读）；

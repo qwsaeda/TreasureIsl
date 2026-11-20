@@ -477,20 +477,29 @@ fn render_track_tail(host: &mut dyn SceneHost, layout: &SceneLayout) {
     // 6) 落格提示签条（S21.6 v4 = `hint` 键中心；`board_toast` 过期 = `None`）
     // 6.5) S21.12 建造面板覆盖层（状态在 `GameApp`；关闭 = 不画）
     if host.build_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_build_panel(host, landscape);
     }
     if host.trade_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_trade_panel(host, landscape);
     }
     if host.merchant_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_merchant_panel(host, landscape);
     }
     if host.event_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_event_panel(host, landscape);
+    }
+    if host.ship_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_ship_panel(host, landscape);
     }
     render_board_toast(host);
     // S36.3 终局面板（`territory.md` §4.4）：`match_outcome` 在位 = 对局结束，
@@ -625,11 +634,7 @@ fn render_trade_panel(host: &mut dyn SceneHost, landscape: bool) {
         let name = i18n::sget(&name_key);
         host.draw_text(name, ex + 16, ey + 12);
         let buy_price = host.price_of(gid).unwrap_or(0);
-        let owned = host
-            .owned_snapshot()
-            .iter()
-            .find(|(g, _)| *g == gid)
-            .map_or(0, |(_, q)| *q);
+        let owned = host.owned_snapshot().iter().find(|(g, _)| *g == gid).map_or(0, |(_, q)| *q);
         host.draw_hint_text(
             &format!("买 {buy_price} · 持有 {owned}"),
             ex + 16,
@@ -689,12 +694,27 @@ fn render_merchant_panel(host: &mut dyn SceneHost, landscape: bool) {
     for l in [0, bw - 3] {
         host.fill_rect(bx + l, by, 3, bh, brass);
     }
-    host.draw_title_text(i18n::sget("scene.main_map.merchant.panel_title"), bx + 24, by + 18, chrome::COLOR_TEXT_ON_PARCH);
+    host.draw_title_text(
+        i18n::sget("scene.main_map.merchant.panel_title"),
+        bx + 24,
+        by + 18,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
     let sel = usize::from(host.merchant_panel_sel()).min(1);
     let Ok(b) = balance() else { return };
     let rows = [
-        (i18n::sget("scene.main_map.merchant.crew"), b.merchants.slave_price, host.crew(), host.boat_cap()),
-        (i18n::sget("scene.main_map.merchant.arms"), b.merchants.weapon_price, host.arms(), host.crew()),
+        (
+            i18n::sget("scene.main_map.merchant.crew"),
+            b.merchants.slave_price,
+            host.crew(),
+            host.boat_cap(),
+        ),
+        (
+            i18n::sget("scene.main_map.merchant.arms"),
+            b.merchants.weapon_price,
+            host.arms(),
+            host.crew(),
+        ),
     ];
     for (i, (name, price, have, cap)) in rows.iter().enumerate() {
         let ey = by + 90 + i32::try_from(i).unwrap_or(0) * 130;
@@ -702,9 +722,19 @@ fn render_merchant_panel(host: &mut dyn SceneHost, landscape: bool) {
             host.fill_rect(bx + 24, ey - 6, bw - 48, 120, brass);
         }
         host.draw_text(name, bx + 48, ey + 8);
-        host.draw_hint_text(&format!("持有 {have} / 上限 {cap} · 买 1 需 {price} 金"), bx + 48, ey + 56, chrome::COLOR_TEXT_ON_PARCH);
+        host.draw_hint_text(
+            &format!("持有 {have} / 上限 {cap} · 买 1 需 {price} 金"),
+            bx + 48,
+            ey + 56,
+            chrome::COLOR_TEXT_ON_PARCH,
+        );
     }
-    host.draw_hint_text(&format!("{} · 金 {}", i18n::sget("scene.main_map.merchant.hint"), host.gold()), bx + 24, by + bh - 44, chrome::COLOR_TEXT_ON_PARCH);
+    host.draw_hint_text(
+        &format!("{} · 金 {}", i18n::sget("scene.main_map.merchant.hint"), host.gold()),
+        bx + 24,
+        by + bh - 44,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
 }
 
 /// S63 T6 七种海事事件（与 `rules::events::MaritimeEvent` 枚举同序，i18n 键后缀）。
@@ -728,7 +758,14 @@ fn handle_event_apply(host: &mut dyn SceneHost, sel: usize) {
         return;
     };
     let fx = ev.effect(b.events);
-    host.apply_event_effect(fx.gold_delta, fx.crew_delta, fx.arms_delta, fx.gold_loss_pct, fx.crew_loss_pct, fx.arms_loss_pct);
+    host.apply_event_effect(
+        fx.gold_delta,
+        fx.crew_delta,
+        fx.arms_delta,
+        fx.gold_loss_pct,
+        fx.crew_loss_pct,
+        fx.arms_loss_pct,
+    );
     // jump/extra_roll = 赛道层效果，本面板只展示（不改 BoardSession 位置，避免破坏落格状态）。
     host.play_sfx(Sfx::Press);
 }
@@ -747,7 +784,12 @@ fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
     for t in [0, bh - 3] {
         host.fill_rect(bx, by + t, bw, 3, brass);
     }
-    host.draw_title_text(i18n::sget("scene.main_map.event.panel_title"), bx + 24, by + 18, chrome::COLOR_TEXT_ON_PARCH);
+    host.draw_title_text(
+        i18n::sget("scene.main_map.event.panel_title"),
+        bx + 24,
+        by + 18,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
     let Ok(b) = balance() else { return };
     let sel = usize::from(host.event_panel_sel()).min(EVENT_KINDS.len() - 1);
     for (i, (key, ev)) in EVENT_KINDS.iter().enumerate() {
@@ -759,9 +801,76 @@ fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
         let name = i18n::sget(&name_key).to_owned();
         host.draw_text(&name, bx + 44, ey + 6);
         let fx = ev.effect(b.events);
-        host.draw_hint_text(&format!("金{:+} 人手{:+} 武器{:+} 损耗 {}%/{}%/{}%", fx.gold_delta, fx.crew_delta, fx.arms_delta, fx.gold_loss_pct / 100, fx.crew_loss_pct / 100, fx.arms_loss_pct / 100), bx + 44, ey + 44, chrome::COLOR_TEXT_ON_PARCH);
+        host.draw_hint_text(
+            &format!(
+                "金{:+} 人手{:+} 武器{:+} 损耗 {}%/{}%/{}%",
+                fx.gold_delta,
+                fx.crew_delta,
+                fx.arms_delta,
+                fx.gold_loss_pct / 100,
+                fx.crew_loss_pct / 100,
+                fx.arms_loss_pct / 100
+            ),
+            bx + 44,
+            ey + 44,
+            chrome::COLOR_TEXT_ON_PARCH,
+        );
     }
-    host.draw_hint_text(&format!("{} · 金 {}", i18n::sget("scene.main_map.event.hint"), host.gold()), bx + 24, by + bh - 42, chrome::COLOR_TEXT_ON_PARCH);
+    host.draw_hint_text(
+        &format!("{} · 金 {}", i18n::sget("scene.main_map.event.hint"), host.gold()),
+        bx + 24,
+        by + bh - 42,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+}
+
+/// S63 T3 造船面板渲染（候选 A 风格：当前船级/货舱/火力/造价 + 升级提示）。
+fn render_ship_panel(host: &mut dyn SceneHost, landscape: bool) {
+    let (bx, by, bw, bh) = if landscape {
+        ((1920 - 1120) / 2, (1080 - 620) / 2, 1120, 620)
+    } else {
+        (144, 640, 768, 640)
+    };
+    let theme = host.theme().clone();
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    host.fill_rect(bx, by, bw, bh, panel);
+    for t in [0, bh - 3] {
+        host.fill_rect(bx, by + t, bw, 3, brass);
+    }
+    host.draw_title_text(
+        i18n::sget("scene.main_map.ship.panel_title"),
+        bx + 24,
+        by + 18,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    let name_key = format!("boat.{}", host.boat_level());
+    let cur_name = i18n::sget(&name_key).to_owned();
+    host.draw_text(&cur_name, bx + 48, by + 96);
+    host.draw_hint_text(
+        &format!(
+            "货舱 {} · 火力 atk{} / hp{} · 金 {}",
+            host.boat_cap(),
+            host.boat_atk(),
+            host.boat_hp(),
+            host.gold()
+        ),
+        bx + 48,
+        by + 146,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    if let Some(cost) = host.boat_next_cost() {
+        let next_name = i18n::sget(&format!("boat.{}", host.boat_level() + 1)).to_owned();
+        host.draw_text(&format!("下一级：{next_name} · 升级需 {cost} 金"), bx + 48, by + 230);
+    } else {
+        host.draw_text(i18n::sget("boat.max"), bx + 48, by + 230);
+    }
+    host.draw_hint_text(
+        i18n::sget("scene.main_map.ship.hint"),
+        bx + 24,
+        by + bh - 44,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
 }
 
 impl Scene for MainMapScene {
@@ -777,6 +886,7 @@ impl Scene for MainMapScene {
                 host.set_trade_panel_open(true);
                 host.set_build_panel_open(false);
                 host.set_merchant_panel_open(false);
+                host.set_ship_panel_open(false);
                 return true;
             }
             GameInput::OpenBuildPanel => {
@@ -784,6 +894,7 @@ impl Scene for MainMapScene {
                 host.set_trade_panel_open(false);
                 host.set_merchant_panel_open(false);
                 host.set_event_panel_open(false);
+                host.set_ship_panel_open(false);
                 return true;
             }
             GameInput::OpenMerchantPanel => {
@@ -791,6 +902,7 @@ impl Scene for MainMapScene {
                 host.set_trade_panel_open(false);
                 host.set_build_panel_open(false);
                 host.set_event_panel_open(false);
+                host.set_ship_panel_open(false);
                 return true;
             }
             GameInput::OpenEventPanel => {
@@ -798,6 +910,15 @@ impl Scene for MainMapScene {
                 host.set_trade_panel_open(false);
                 host.set_build_panel_open(false);
                 host.set_merchant_panel_open(false);
+                host.set_ship_panel_open(false);
+                return true;
+            }
+            GameInput::OpenShipPanel => {
+                host.set_ship_panel_open(true);
+                host.set_trade_panel_open(false);
+                host.set_build_panel_open(false);
+                host.set_merchant_panel_open(false);
+                host.set_event_panel_open(false);
                 return true;
             }
             _ => {}
@@ -830,13 +951,21 @@ impl Scene for MainMapScene {
             match input {
                 GameInput::MoveUp => {
                     let n = usize::from(host.trade_panel_sel());
-                    host.set_trade_panel_sel(if n == 0 { chrome::TRADE_LAST_ENTRY } else { u8::try_from(n - 1).unwrap_or(chrome::TRADE_LAST_ENTRY) });
+                    host.set_trade_panel_sel(if n == 0 {
+                        chrome::TRADE_LAST_ENTRY
+                    } else {
+                        u8::try_from(n - 1).unwrap_or(chrome::TRADE_LAST_ENTRY)
+                    });
                     host.play_sfx(Sfx::Press);
                     return true;
                 }
                 GameInput::MoveDown => {
                     let n = usize::from(host.trade_panel_sel());
-                    host.set_trade_panel_sel(if n >= usize::from(chrome::TRADE_LAST_ENTRY) { 0 } else { u8::try_from(n + 1).unwrap_or(0) });
+                    host.set_trade_panel_sel(if n >= usize::from(chrome::TRADE_LAST_ENTRY) {
+                        0
+                    } else {
+                        u8::try_from(n + 1).unwrap_or(0)
+                    });
                     host.play_sfx(Sfx::Press);
                     return true;
                 }
@@ -882,13 +1011,17 @@ impl Scene for MainMapScene {
             match input {
                 GameInput::MoveUp => {
                     let n = usize::from(host.event_panel_sel());
-                    host.set_event_panel_sel(u8::try_from(if n == 0 { 6 } else { n - 1 }).unwrap_or(6));
+                    host.set_event_panel_sel(
+                        u8::try_from(if n == 0 { 6 } else { n - 1 }).unwrap_or(6),
+                    );
                     host.play_sfx(Sfx::Press);
                     return true;
                 }
                 GameInput::MoveDown => {
                     let n = usize::from(host.event_panel_sel());
-                    host.set_event_panel_sel(u8::try_from((n + 1) % EVENT_KINDS.len()).unwrap_or(0));
+                    host.set_event_panel_sel(
+                        u8::try_from((n + 1) % EVENT_KINDS.len()).unwrap_or(0),
+                    );
                     host.play_sfx(Sfx::Press);
                     return true;
                 }
@@ -899,6 +1032,23 @@ impl Scene for MainMapScene {
                 }
                 GameInput::Back => {
                     host.set_event_panel_open(false);
+                    return true;
+                }
+                _ => return false,
+            }
+        }
+        // S63 造船面板：Enter 升级 / Back 关。
+        if host.ship_panel_open() {
+            match input {
+                GameInput::Confirm => {
+                    handle_boat_upgrade(host);
+                    if host.boat_next_cost().is_none() {
+                        host.set_ship_panel_open(false);
+                    }
+                    return true;
+                }
+                GameInput::Back => {
+                    host.set_ship_panel_open(false);
                     return true;
                 }
                 _ => return false,
@@ -953,6 +1103,7 @@ impl Scene for MainMapScene {
                 host.set_trade_panel_open(false);
                 host.set_merchant_panel_open(false);
                 host.set_event_panel_open(false);
+                host.set_ship_panel_open(false);
                 host.enter(SceneKind::Index);
                 true
             }
@@ -1188,6 +1339,7 @@ impl Scene for MainMapScene {
     }
 }
 
+#[allow(clippy::too_many_lines)] // v5 环形棋盘绘制（31 卡+中央岛+实体），fmt 后 101 行
 fn render_v5_ring(
     host: &mut dyn SceneHost,
     layout: &SceneLayout,
@@ -1284,20 +1436,29 @@ fn render_v5_ring(
     }
     // 6) 建造面板 + 落格提示签条（v5 不画航程进度尺）
     if host.build_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_build_panel(host, landscape);
     }
     if host.trade_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_trade_panel(host, landscape);
     }
     if host.merchant_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_merchant_panel(host, landscape);
     }
     if host.event_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_event_panel(host, landscape);
+    }
+    if host.ship_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_ship_panel(host, landscape);
     }
     // 7) 摇骰 CTA 轴心骰点（`dice.png`；S27.5 用户报「没有筛子」= CTA 只有空舵轮；
     // 舵轮本体 = `scenes.json` 原语（更早画），此处补轴心骰点，与卡环区无重叠）。
@@ -1554,20 +1715,29 @@ fn render_v6_proto(
     // 旧覆盖逻辑是死代码，一并删除。建造面板（`build_panel_open`）交互 = 键盘（on_input），
     // 面板 + 提示签条照旧。
     if host.build_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_build_panel(host, landscape);
     }
     if host.trade_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_trade_panel(host, landscape);
     }
     if host.merchant_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_merchant_panel(host, landscape);
     }
     if host.event_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_event_panel(host, landscape);
+    }
+    if host.ship_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_ship_panel(host, landscape);
     }
     render_board_toast(host);
     // S36.3 飞轮 F-7.3：v6 原型路径补终局面板 + 热座交接提示。
@@ -1778,19 +1948,28 @@ fn render_v6_elem(
     // S63 T1/T2：v6 默认路径补贸易/建造面板（S34 删三键入口后面板渲染代码曾全无调用者；
     // 此前只在 render()/render_v6_proto 加了检查点，默认 render_v6_elem 漏 ⇒ 面板图不出现）。
     if host.trade_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_trade_panel(host, landscape);
     }
     if host.merchant_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_merchant_panel(host, landscape);
     }
     if host.event_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_event_panel(host, landscape);
     }
+    if host.ship_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_ship_panel(host, landscape);
+    }
     if host.build_panel_open() {
-        let landscape = host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_build_panel(host, landscape);
     }
 }

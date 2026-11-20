@@ -196,6 +196,8 @@ pub enum GameInput {
     OpenMerchantPanel,
     /// S63 事件面板开关（V 键打开：海事事件展示 + 应用效果，走 `rules::events::effect`）。
     OpenEventPanel,
+    /// S63 造船面板开关（N 键打开：船级/货舱/造价展示 + 升级）。
+    OpenShipPanel,
     /// 主地图建造（`kind`）。
     Build(Building),
     /// S21.12 主地图造船（船系统单向升级，`rules::boat::BoatSession`；与 4 建筑并列第 5 入口）。
@@ -351,6 +353,8 @@ pub struct GameApp {
     pub event_panel_open: bool,
     /// S63 事件面板选中事件（0..=6，7 种 `MaritimeEvent`）。
     pub event_panel_sel: u8,
+    /// S63 造船面板是否打开（N 键开关）。
+    pub ship_panel_open: bool,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// 战斗会话（`Vs` 场景时有效，兵力模型 `force::resolve` 一次性结算）。
@@ -500,6 +504,8 @@ pub struct KeyState {
     pub merchant: bool,
     /// 海事事件（V，S63 T6）。
     pub event: bool,
+    /// 造船（N，S63 T3）。
+    pub ship: bool,
 }
 /// 场景切换过渡状态机（EXP-081 → S17.4：真交叉淡化，`MOTION_TRANSITION_MS` 时间制推进）。
 #[derive(Debug, Clone, Default)]
@@ -563,6 +569,7 @@ impl GameApp {
             merchant_panel_sel: 0,
             event_panel_open: false,
             event_panel_sel: 0,
+            ship_panel_open: false,
             buildings: Vec::new(),
             battle: None,
             rng: GameRng::new(0),

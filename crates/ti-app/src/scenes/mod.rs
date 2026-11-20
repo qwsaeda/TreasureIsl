@@ -660,13 +660,24 @@ pub trait MapHost {
     fn set_merchant_panel_sel(&mut self, _sel: u8) {}
 
     /// S63 事件面板是否打开（默认关闭）。
-    fn event_panel_open(&self) -> bool { false }
+    fn event_panel_open(&self) -> bool {
+        false
+    }
     /// S63 事件面板开关（默认 no-op）。
     fn set_event_panel_open(&mut self, _open: bool) {}
     /// S63 事件面板选中项（默认 0）。
-    fn event_panel_sel(&self) -> u8 { 0 }
+    fn event_panel_sel(&self) -> u8 {
+        0
+    }
     /// S63 事件面板选中项 setter（默认 no-op）。
     fn set_event_panel_sel(&mut self, _sel: u8) {}
+
+    /// S63 造船面板是否打开（默认关闭）。
+    fn ship_panel_open(&self) -> bool {
+        false
+    }
+    /// S63 造船面板开关（默认 no-op）。
+    fn set_ship_panel_open(&mut self, _open: bool) {}
 
     /// S21.12 造船（船系统单向升级：扣金 + 抬 cargo/atk/hp，立即生效）。
     ///
@@ -713,12 +724,29 @@ pub trait EconomyHost {
     fn boat_cap(&self) -> u32 {
         0
     }
+    /// S63 T3：当前船火力 `atk` / `hp`（造船面板展示，host 侧构造 `BoatSession` 不违场景层窄接缝）。
+    fn boat_atk(&self) -> u32 {
+        0
+    }
+    /// S63 T3：当前船火力 hp（造船面板展示）。
+    fn boat_hp(&self) -> u32 {
+        0
+    }
     /// S63 T7：买人手结果写回（当前席）。
     fn set_crew_gold(&mut self, _crew: u32, _gold: u32) {}
     /// S63 T7：买武器结果写回（当前席）。
     fn set_arms_gold(&mut self, _arms: u32, _gold: u32) {}
     /// S63 T6：海事事件效果写回（当前席 gold/crew/arms，i64/i32 增量 saturating）。
-    fn apply_event_effect(&mut self, _gold_delta: i64, _crew_delta: i32, _arms_delta: i32, _gold_loss_pct: u32, _crew_loss_pct: u32, _arms_loss_pct: u32) {}
+    fn apply_event_effect(
+        &mut self,
+        _gold_delta: i64,
+        _crew_delta: i32,
+        _arms_delta: i32,
+        _gold_loss_pct: u32,
+        _crew_loss_pct: u32,
+        _arms_loss_pct: u32,
+    ) {
+    }
 
     /// 持有表中 `gid` 的下标。
     fn owned_index_of(&self, gid: u32) -> Option<usize>;
