@@ -45,8 +45,8 @@
 
 `Cargo.toml` / `Cargo.lock`（workspace 合并）、`crates/ti-app/{Cargo.toml,src/android_shell.rs,
 src/game_app/board.rs,src/scenes/{chrome,main_map,mod,vs}.rs,tests/s43_fps_smoke.rs}`、
-`crates/ti-core/{src/data/{balance,mod}.rs,src/domain/combat.rs,src/rules/battle.rs,
-tests/{data_tables,exhaust_combat,rules_battle}.rs}`、`crates/ti-engine/{Cargo.toml,
+`crates/ti-core/{src/data/{balance,mod}.rs,src/domain/combat.rs,src/rules/battle.rs〔S34.6 D5 已删，现行 force.rs〕,
+tests/{data_tables,exhaust_combat,rules_battle}.rs〔exhaust_combat/rules_battle S34.6 D5 已删〕}`、`crates/ti-engine/{Cargo.toml,
 src/bin/treasure_bevy.rs,src/scene_render.rs}`、`crates/ti-render/{src/canvas.rs,src/drawlist.rs}`、
 `assets/data/{balance,scenes,strings,theme}.json`、`assets/ui/{boat_1..4,island_home_m01..m03}.png`、
 `assets/ui_manifest.json`、`docs/{README.md,business/combat.md,experience/{build,index}.md,

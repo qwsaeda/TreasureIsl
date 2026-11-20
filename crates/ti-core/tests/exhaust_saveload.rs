@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+//! 飞轮 R20 Q008：本测试 round-trip 旧顶层 `hp` 字段（saveload.rs 已标 `#[deprecated]`；老档兼容读回，S52.3 B 方案文件级豁免）。
+//!
 //! S15.1 存读档域业务场景穷举测试（`exhaust_saveload`）。
 //!
 //! 枚举空间全部由 `assets/data/exhaust_scenarios.json`（`ti_core::data::exhaust()`）驱动，

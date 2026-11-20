@@ -25,7 +25,7 @@
   "scene": "MainMap",            // 退出时所在场景
   "position": { "row": 5, "col": 7 },  // v4 起席位位置走 seats[].position（保留 v3 兼容）
   "gold": 1200,                  // v4 起走 seats[]（保留 v3 兼容）
-  "hp": 85,
+  "hp": 85,   /* 飞轮 R20 Q009 注记：顶层 hp = v5 退役字段（无 gameplay 语义，v5 兵力走 seats[].crew）；示例保留老档兼容结构 */
   "buildings": ["Castle", "Bank"],     // v4 起走 seats[].buildings（保留 v3 兼容）
   "goods": [ { "id": 1, "qty": 5 } ],
   "rng_seed": 42,                // 复现关键：固定默认种子 = `DEFAULT_RNG_SEED`（存时间戳会破坏可复现性）
@@ -62,6 +62,13 @@
 - **v4 → v5（S33.4 存档 v5，领地 v2 兵力模型）**：席位补默认人手/武器
   （`balance.manpower.initial_crew/arms`）+ 领地驻军空；迁移纯函数、幂等
   （单测锚点 `save_migrate_v4_to_v5_defaults`），见 [`territory.md`](territory.md) §8。
+- **顶层 `hp` 字段退役定案（飞轮 R20 Q008/Q015，2026-11-20）**：`SaveSlotV3/V4/V5` 顶层
+  `pub hp`（`saveload.rs`）= 旧 HP 模型玩家生命值，**v5 兵力模型走 `seats[].crew`（每席人手），
+  顶层 hp 无 gameplay 消费者**（ti-app gameplay 读 `SeatSave.crew` + `seat_crew[]`，不读顶层 hp）。
+  处置 = 标 `#[deprecated]`（老档兼容保留字段，迁移链 v2→v3→v4→v5 读回不崩）+ 读取侧文件级
+  `allow(deprecated)`（saveload.rs/examples/tests 7 文件，S52.3 B 方案同款）；**不整删**（老档 JSON
+  含 `hp` 键，删字段 = 读老档 panic/丢数据）。退役定案单一事实源 = `combat.md` §兵力模型 段尾
+  （R20 Q015）。
 
 ## RNG 设计（可复现）
 

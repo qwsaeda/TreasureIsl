@@ -90,11 +90,11 @@ v2 定案：随机伤害在多人领土战里不可控（双倍过路费 + 驻�
 | 层 | 位置 | 职责 |
 |---|---|---|
 | 业务 | `docs/business/combat.md` §兵力模型 | 兵力公式 + 过路费规则（单一事实源） |
-| 规则 | `crates/ti-core/src/rules/battle.rs` | 兵力计算 + 胜负判定函数（无渲染依赖） |
+| 规则 | `crates/ti-core/src/rules/force.rs`（旧 `rules/battle.rs` HP 回合制已删 S34.6 D5，飞轮 R20 Q013） | 兵力计算 + 胜负判定函数（无渲染依赖） |
 | 场景 | `crates/ti-render/src/scenes/vs_proto.rs` | VS 场景：列阵 + 炮火演出 + 结果横幅 |
 | 资产 | `assets/ui/boss_captain.png` 等 4 枚 | 角色立绘 + 甲板背景 + 道具图标 |
 
-**改战斗数值前先改 `docs/business/combat.md`**（硬规则 7），再动 `balance.json`，最后改 `rules/battle.rs`。
+**改战斗数值前先改 `docs/business/combat.md`**（硬规则 7），再动 `balance.json`，最后改 `rules/force.rs`（旧 `rules/battle.rs` 已删 S34.6 D5，飞轮 R20 Q013）。
 顺序反了 = 返工。
 
 ---

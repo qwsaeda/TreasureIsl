@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+//! 飞轮 R20 Q008：line 245 `slot.hp`（saveload 顶层 hp 已标 `#[deprecated]`；示例老档字段写回，文件级豁免）。
+//!
 //! 跨图推进演示（`ti-core`，纯玩法层）：打满 20 图（m01→m20，`MapSlot::all()`）。
 //!
 //! 忠实 `docs/business/progression.md`「跨图推进」+ `loop_core.md`：

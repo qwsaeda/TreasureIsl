@@ -37,29 +37,34 @@ pub struct ExhaustCombat {
     pub fixture: ExhaustCombatFixture,
 }
 
-/// 玩家属性档。
+/// 玩家属性档（**退役 HP 模型夹具**，飞轮 R20 Q007：exhaust 战斗段无活消费者〔`exhaust_combat.rs`
+/// 已删〕，字段保留 = `exhaust_scenarios.json` 数据兼容 + `data_tables` 非空断言；现行战斗 = 兵力模型）。
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct ExhaustUnit {
-    /// HP。
+    /// HP（**退役 HP 模型字段**，飞轮 R20 Q007 注记：exhaust 战斗段随 S34.6 D5 兵力模型退役，
+    /// 旧 `exhaust_combat.rs` 消费者已删；字段名保留 = `exhaust_scenarios.json` 战斗段数据兼容，
+    /// 无活 gameplay 语义；现行战斗口径 = `rules/force.rs` 兵力模型（`crew`/`arms`））。
     pub hp: u32,
-    /// 攻击力。
+    /// 攻击力（同上，退役 HP 模型字段，保留数据兼容）。
     pub atk: u32,
 }
 
-/// 单点用例（seed + 玩家属性 + 目标 BOSS 档）。
+/// 单点用例（seed + 玩家属性 + 目标 BOSS 档；**退役 HP 模型**，飞轮 R20 Q007：
+/// `player_hp`/`player_atk` = 旧 HP 回合制字段，无活消费者，保留数据兼容）。
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct ExhaustCase {
     /// RNG 种子。
     pub seed: u32,
-    /// 玩家初始 HP。
+    /// 玩家初始 HP（退役 HP 模型字段，保留数据兼容）。
     pub player_hp: u32,
-    /// 玩家攻击力。
+    /// 玩家攻击力（退役 HP 模型字段，保留数据兼容）。
     pub player_atk: u32,
     /// 目标 BOSS 档。
     pub boss_tier: u32,
 }
 
-/// 战斗夹具隔离配置。
+/// 战斗夹具隔离配置（**退役 HP 模型**，飞轮 R20 Q007：`player_hp`/`player_atk`/`boss_tiers[].hp`
+/// 旧 HP 字段无活消费者，保留 `exhaust_scenarios.json` 数据兼容）。
 #[derive(Debug, Clone, Deserialize)]
 pub struct ExhaustCombatFixture {
     /// 夹具 BOSS 档（假值，与真实表数值无关）。
@@ -73,14 +78,14 @@ pub struct ExhaustCombatFixture {
     pub player_atk: u32,
 }
 
-/// 夹具 BOSS 档（假值）。
+/// 夹具 BOSS 档（假值；**退役 HP 模型**，飞轮 R20 Q007：`hp`/`atk` 旧 HP 字段无活消费者，保留数据兼容）。
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct ExhaustBossTier {
     /// 档位号。
     pub tier: u32,
-    /// 初始 HP。
+    /// 初始 HP（退役 HP 模型字段，保留数据兼容）。
     pub hp: u32,
-    /// 攻击力。
+    /// 攻击力（退役 HP 模型字段，保留数据兼容）。
     pub atk: u32,
 }
 

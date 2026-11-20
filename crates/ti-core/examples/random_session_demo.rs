@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+//! 飞轮 R20 Q008：line 310 `slot.hp`（saveload 顶层 hp 已标 `#[deprecated]`；示例演示老档字段写回，文件级豁免）。
+//!
 //! 随机穷举「一局」演示（`ti-core`，纯玩法层）。
 //!
 //! **忠实核心循环**（`docs/business/loop_core.md`）：胜利=击败 BOSS、失败=HP 归零。

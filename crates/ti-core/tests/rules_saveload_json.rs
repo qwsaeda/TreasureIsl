@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+//! 飞轮 R20 Q008：本测试读写 saveload 顶层 `hp`（已标 `#[deprecated]`；老档兼容面，文件级豁免）。
+//!
 //! S8.3.d / S12.5 存读档（`rules/saveload_json`）测试。
 //!
 //! 依据 `docs/business/persistence.md` 可测试规则（`save_*` 系列，S8.3.d 落地）：

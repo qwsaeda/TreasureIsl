@@ -42,7 +42,7 @@
 |---|---|---|---|
 | wasm 主体（bevy render 含 wgpu/wasm-bindgen） | ≤800 KB | **≤8 MB** | S18.1 实测（spike 裸跑，未 LTO/opt）：原始 65.4 MB / strip 后 **36.62 MB**（`evidence/S18.1.log` §3）；**达标挂 S18.6**（LTO+wasm-opt -Oz 后重测回填；〔飞轮 R19 勘误注：LTO+strip 达标动作实际由 S18.8e 执行 = 46.6 MB 仍超预算 6 倍，wasm-opt -Oz + 代码分包挂 S18.8 收口；本行「达标挂 S18.6」为 S18.1 时点口径〕） |
 | 首屏附属资源（JS shim + 字体 + 贴图） | ≤490 KB | **≤4 MB** | 字体/贴图资产量级按 CJK 子集 TTF（S18.3）+ v3 四场景贴图（S18.7）估算，S18.6 门禁实测锁 |
-| 首屏总下载 | ~560 KB | **≤12 MB** | 当前实测 36.62 MB 未达标（同一 S18.6 LTO/opt 路径）；达标前 web 发布挂「实验通道」 |
+| 首屏总下载 | ~560 KB | **≤12 MB** | 当前实测 36.62 MB 未达标（LTO/opt 路径，飞轮 R20 Q002 勘误：S18.6 时点口径，LTO+strip 达标动作实际 S18.8e 执行 = 46.6 MB 仍超）；达标前 web 发布挂「实验通道」 |
 | Android | 无体积约束 | 无 | APK 不卡 800KB 口径 |
 
 > S18.1 实测已回填（2026-10-19，`evidence/S18.1.log`）；S18.6 门禁重建时把 LTO/opt 后数字锁进 `doccheck` 断言。
@@ -76,7 +76,7 @@
 | S18.1 | spike：`ti-engine` crate + Bevy 0.20 最小 app（native 跑 index 一场景：1 矩形 + 1 段 TTF 文字）；wasm webgl2 编译 + 浏览器可跑；android 目标编译（Mac 出包链路文档更新）；浏览器触摸映射结论（winit 无原生 touch → 自写 system 或指针事件） | 三端编译/可跑 + 实测体积回填 §3 + 触摸结论文档（**✅ verified 2026-10-19，`evidence/S18.1.log`；android 项本机无 NDK = SKIP 口径，Mac 链路随 S18.8**） |
 | S18.2 | `BevyCanvas`：Canvas trait 的 Bevy 实现（op 记录制 + `flush` 落 ECS；`fill_rect` → `Sprite::from_color`、三档文本 → `Text2d`、`clear_frame` → `ClearColor`；1080 坐标契约 + `viewport_scale` letterbox；层序用 `Transform.translation.z`）；单场景 GPU/CPU 像素对照 | **✅ verified 2026-10-19**（契约测试 11/11；色块内部 1,607,576 像素 **0 超差 / 最大通道差 0 LSB**；clippy 0 warning；`evidence/S18.2.log`）。残留：文本 GPU 字形对齐→S18.3，边缘栅格化口径→S18.6 |
 | S18.3 | 字体：TTF GPU 文字（CJK 子集）+ 位图 advance 回退；三档字号对齐旧基线 | **✓ verified 2026-10-19**：advance 比例 ∈ [0.80,1.30] + GPU 非黑像素 >0；clippy 0 warning；`evidence/S18.3.log`；逐像素覆盖率不作判据（S18.2 色块内部已覆盖坐标契约） |
-| S18.4 | 三端 bin 挂 bevy + 音频（bevy_audio/rodio）+ 存储/输入迁移 + stats.rs 重锚（静止跳帧指标退役） | 三端可玩 + e2e 全绿；**✅ verified 2026-10-20**（bevy 壳 bin 落 `ti-engine` 独立 workspace `treasure-bevy` ×2〔native/wasm 同源 cfg 分支〕；`links=alsa` 根因 + optional 依赖亦入 resolution 图 → ti-app 不可持 bevy；`--selftest` e2e 16/16 PASS（full_run.json 主循环同构映射）；macroquad-audio 拆 feature；stats `FpsMeter::bevy_tick` 重锚；native 实测 + wasm 39MB 未 strip〔≤8MB 挂 S18.6 LTO/wasm-opt〕+ android SKIP〔S18.8 Mac〕；音频单后端恢复挂 S18.8；gate 0 failure；`evidence/S18.4.log`） |
+| S18.4 | 三端 bin 挂 bevy + 音频（bevy_audio/rodio）+ 存储/输入迁移 + stats.rs 重锚（静止跳帧指标退役） | 三端可玩 + e2e 全绿；**✅ verified 2026-10-20**（bevy 壳 bin 落 `ti-engine` 独立 workspace `treasure-bevy` ×2〔native/wasm 同源 cfg 分支〕；`links=alsa` 根因 + optional 依赖亦入 resolution 图 → ti-app 不可持 bevy；`--selftest` e2e 16/16 PASS（full_run.json 主循环同构映射）；macroquad-audio 拆 feature；stats `FpsMeter::bevy_tick` 重锚；native 实测 + wasm 39MB 未 strip〔≤8MB 挂 LTO/wasm-opt，飞轮 R20 Q002 勘误：S18.6 时点口径，达标动作实际 S18.8e 执行〕+ android SKIP〔S18.8 Mac〕；音频单后端恢复挂 S18.8；gate 0 failure；`evidence/S18.4.log`） |
 | S18.5 | z_index 层系统 + 主地图相机 zoom/pan + 轻量粒子（金币光/命中火花）+ 过渡 ease-in-out 落 Bevy（S17.9 纯函数沿用） | 单测 + 视觉验收；**✅ verified 2026-10-20**（z_layers 值域常量表 + world_camera 纯函数模型 + particles 确定性 LCG 三模块单测完备；GameApp 接线 FX 触发/渲染/快照 clear；Bevy 壳 camera_system zoom/pan + 键盘 `=`/`-` + 左键拖拽；transition_ease/advance_transition_t pub 复用；selftest 16/16 PASS；gate 0 failure；`evidence/S18.5.log`；残留：滚轮 zoom 挂 S18.8、CPU terrain 相机接线挂 S18.6、视觉验收待用户） |
 | S18.6 | 门禁重建：像素基线换 Bevy 版重生成（三套）；doccheck2 框架边界断言更新（bevy 进 ti-engine 依赖锁）；CPU 画布降级口径写入 08 | gate 全绿 + 基线签收；**✅ verified 2026-10-20**（**声明式原语表** = 数据驱动边界：`scenes.json` `primitives` 数组 = 界面元素（kind+rect+param+color 令牌名），渲染层只做 dispatch（`chrome::render_primitives_bg/fg`）；改版面/顺序/参数/配色 = 只改 JSON；新增原语种类才需 1 处代码；未知 kind 跳过不 panic）；首界面暖金版式重绘（3 暖色令牌 wood_warm/gold_warm/sky_navy 三方对账 + 仪式木框替代细标题条 + 紧凑居中菜单 + 渐变夜空/月光晕/海平线）；顺带修 `ui_icons.json` 绑定形状 bug（对象→字符串，图标注册表此前整体解析失败）；像素基线三套重生成（EXP-076 删旧重写）；doccheck2 24 检查 0 error；gate 0 failure；`evidence/S18.6.log`；**用户视觉签收留痕待用户**） |
 | S18.7 | HD 贴图管线（新绘 PNG 图标/立绘 → bevy sprite atlas，代码绘制保留回退）+ **v3 四场景在 Bevy 落地**（select_role/select_map/message/saveload；原语 = Bevy 绘制系统，版面数据沿用 scenes.json v3 键） | 四场景验收 + N8 全场景激活 |
@@ -108,7 +108,7 @@
 |---|---|
 | Bevy 版本迭代快（0.20→0.21 破坏性变更） | 迁移窗口锁 0.20.x；Cargo.lock pin |
 | 浏览器触摸无 winit 一等支持 | **S18.1 结论已出**（`evidence/S18.1.log` §4）：bevy `touch` 特性 + `TouchInput` 通道统一消费指针/触摸事件，1080 换算走 BevyCanvas 相机契约（S18.2）；不自写 winit 事件 system |
-| wasm 体积 5–10× 增长 | §3 新预算明文 + 分包（wasm 分 chunk）；**S18.1 实测 strip 后 36.62 MB，≤8 MB 未达标，达标动作 = S18.6 LTO+wasm-opt 重测** |
+| wasm 体积 5–10× 增长 | §3 新预算明文 + 分包（wasm 分 chunk）；**S18.1 实测 strip 后 36.62 MB，≤8 MB 未达标，达标动作 = S18.6 LTO+wasm-opt 重测（飞轮 R20 Q002 勘误：实际由 S18.8e 执行 LTO+strip = 46.6 MB 仍超预算 6 倍，未收口）** |
 | Android（Mac 侧 cargo-apk + wgpu-vulkan） | S18.1 本机无 NDK = SKIP 口径；wgpu 打包验证移至 S18.4（Mac 侧），`android/README.md` 随 S18.8 更新 |
 | 像素基线换血 | headless CPU 画布保逻辑门禁；像素基线一次重生 + 用户视觉签收（既定规程） |
 | 迁移期不可玩 | 双渲染 feature 期 macroquad 保发货；S18.7 才切换 |

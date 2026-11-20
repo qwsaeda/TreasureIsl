@@ -3,7 +3,7 @@
 //! 依据 `legacy/docs/spec/cards.md`：
 //! - 卡牌效果 [`CardEffect`]（Damage/Heal/Gold/Move/Unknown，spec §c `效果类型码解码` 4 种效果码）；
 //! - 卡牌定义 [`CardDef`]（`id` + `effect`）；
-//! - 卡牌状态 [`CardState`]（`hp` + `gold`）；
+//! - 卡牌状态 [`CardState`]（`crew` + `gold` + `gold_max`；飞轮 R20 勘误旧注释 `hp`——H1② 人手口径，`hp` 字段已改 `crew`）；
 //! - 应用结果 [`CardResult`]（`Applied(CardEffect)` / `UnknownEvent`）；
 //! - [`CardEngine`]：卡牌引擎（卡池走 `balance.cards`，S10.3 改动 8 数据化）；
 //! - `event_to_card` / `apply` / `all_event_ids` / `card_by_id` 方法。

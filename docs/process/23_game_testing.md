@@ -7,7 +7,7 @@
 
 ## 0. 定位
 
-本文把仓库**已有的**测试事实（104 个集成测试文件（`crates/*/tests/*.rs` 实测 2026-11-19 审计回写；R12 AUDIT P025 勘误旧 106→105，HP 本体删除 commit `2170700` 删 3 文件 ⇒ 105→103，飞轮 R19 补 `ti-console/tests/jobs_proof_tests.rs`〔Q013 证明落点机器判据 3 条〕⇒ 103→104） + 门禁 36 项 + 试玩闭环 4 报告 + `evidence/` 565 文件（git-tracked，**排除 `console/` 侧车**；实测 2026-11-20 飞轮 R19 回写 = 560 + 上轮审计 5 新 tracked〔test_system_audit_round1.log/test_system_audit_2026-11-19.log/reference_diff_{cards,main_map,rng}.log + S60.0.log〕= 565；2026-11-19 审计 Q002 勘误旧「757 文件〔排除 console/〕」口径矛盾回写 560；历史快照 R10 82/327→507→534→R11 535→R12 543→R15 757〔全量〕→审计 560→R19 565））
+本文把仓库**已有的**测试事实（**104** 个集成测试文件（`crates/*/tests/*.rs` 实测 2026-11-20 飞轮 R20 回写，**口径拆分**：游戏 crate 75〔ti-core 30/ti-app 27/ti-engine 6/ti-render 4/ti-platform 4/ti-formats 3，飞轮 R20 Q014 拆口径〕+ 平台/工具 crate 29〔ti-tools 14/ti-console 15/ti-devmeta 0〕= 104；HP 本体删除 commit `2170700` 删 3 文件〔battle_rules/exhaust_combat/rules_battle〕106→103，飞轮 R19 补 `ti-console/tests/jobs_proof_tests.rs`〔Q013 证明落点机器判据 3 条〕103→104；git 坐实 `2170700~1`=106 / `2170700`=103 / HEAD=104。旧「R12 AUDIT P025 勘误 106→105」+「105→103→104」历史链计数全错〔R12 时点 HP 删前实为 106 非 105〕，飞轮 R20 Q011 勘误） + 门禁 36 项 + 试玩闭环 4 报告 + `evidence/` **566** 文件（git-tracked，**排除 `console/` 侧车**；实测 2026-11-20 飞轮 R20 回写 = 565 + 飞轮 R19 FIX commit `17a18c1` 新增 `evidence/flywheel-R19.md` 1 个 = 566〔R19 回写 565 漏算自身新增，off-by-one，飞轮 R20 Q001 勘误〕；**本段 commit 后 = 567**〔新增 `evidence/flywheel-R20.md` 自身，同 off-by-one 模式——每轮飞轮/审计 commit 新增自身 evidence 日志，回写计数点 = commit 前时点值，commit 后 +1；历史快照 R10 82/327→507→534→R11 535→R12 543→R15 757〔全量〕→审计 560→R19 565→R20 566→R20 commit 后 567〕））
 归入一套**标准化标杆**：按**级**（L1 单元→L4 验收）、**类**（功能/回归/视觉/音频/性能/兼容）、
 **型**（冒烟/CI/试玩/探索/基准）三维分类，并给出行业常用方案与 Bevy 官方推荐作为参照。
 **不是**新增一套独立测试体系——是给既有测试**统一口径、编号、归类**，并让平台可见。

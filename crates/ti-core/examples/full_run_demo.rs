@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+//! 飞轮 R20 Q008：本示例写 saveload 顶层 `hp`（已标 `#[deprecated]`；老档字段写回，文件级豁免）。
+//!
 //! 完整一局《金银岛》全链路 demo（纯玩法层 `ti-core`，零渲染、零 IO）。
 //!
 //! **忠实接线**（逐行对齐 `ti-app/game_app.rs` 的真实主循环，非手拼）：

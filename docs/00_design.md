@@ -74,7 +74,7 @@
 | 包 | 域 | 依赖 |
 |---|---|---|
 | D | 数据/工具（`assets/data/*.json` + `ti-core/data` 访问器） | 先行 |
-| P1 | 战斗（`rules/battle` + `domain/combat`） | D |
+| P1 | 战斗（`rules/force` 兵力模型 + `domain/combat`；旧 `rules/battle` HP 回合制已删 S34.6 D5） | D |
 | P2 | 经济（`trade` + `build`） | D |
 | P3 | 地图/卡牌（`main_map` + `cards`） | D |
 | P4 | 流程/菜单/消息（`menu`/`selection`/`messages`/`main_loop`/`render`） | D |

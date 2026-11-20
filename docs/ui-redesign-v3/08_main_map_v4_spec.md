@@ -119,7 +119,7 @@
 | 顶角铜牌 | `assets/ui/hud_plaque.png`（`plaque` 21:9 magenta） | 已入仓（S21.1） |
 | 底部命令铜牌 | `assets/ui/deck_plaque.png`（`plaque` 21:9 magenta） | 已入仓（S21.1） |
 | 舵轮 CTA | `assets/ui/btn_spin.png`（`medallion` 1:1 luma） | 已入仓（S21.1） |
-| 节点牌 ×9 | `assets/ui/node_{start,city,port,event,card,battle,treasure,boss,plain}.png`（`medallion` luma） | 已入仓（S21.1） |
+| 节点牌 ×8 | `assets/ui/node_{start,city,port,event,card,treasure,boss,plain}.png`（`medallion` luma） | 已入仓（S21.1）；`node_battle.png` 已删（飞轮 R20 Q006 勘误旧「×9 含 battle」——v5 无遭遇格，遭遇/BOSS 节点走 `node_boss`/`node_event`，见下映射表 line 134） |
 | 玩家船（1 级顶替 / 默认） | `assets/ui/ship_player.png`（`medallion` luma） | 已入仓（S21.1） |
 | 玩家船 ×4（按 `boat_level`） | `assets/ui/boat_{1,2,3,4}.png`（`medallion` luma） | **待 S21.12 生成**（`main_map_v4.json` 批次补 4 条） |
 | 罗盘玫瑰（若海图未含） | `assets/ui/compass_rose.png`（`medallion` luma） | 已入仓（S21.1，备选） |

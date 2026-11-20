@@ -1,3 +1,7 @@
+#![allow(deprecated)]
+//! 飞轮 R20 Q008：顶层 `hp` 字段标 `#[deprecated]`（v5 兵力模型走 `seats[].crew`；老档兼容保留字段），
+//! 迁移链 v2→v3→v4→v5 读取顶层 hp（老档读回），本文件文件级豁免（S52.3 B 方案同款）。
+//!
 //! S3.10 / S8.3.d / S12.5 存读档/设置正式实现（JSON v2 + 可复现 RNG，去二进制推测格式）。
 //!
 //! 本模块与 [`saveload_json`](super::saveload_json) 语义等价，API 面略宽
@@ -48,8 +52,9 @@ pub struct SaveSlotV2 {
     /// 金币。
     #[serde(default)]
     pub gold: u32,
-    /// 玩家 HP。
+    /// 玩家 HP（**顶层 hp 退役**，飞轮 R20 Q008：v5 兵力模型走 `seats[].crew`；老档兼容保留字段，标 deprecated）。
     #[serde(default)]
+    #[deprecated = "顶层 hp 退役（v5 兵力模型走 seats[].crew；老档兼容保留字段），飞轮 R20 Q008"]
     pub hp: u32,
     /// 已建建筑 id 列表（稳定字符串，如 `"Castle"`）。
     #[serde(default)]
@@ -315,8 +320,9 @@ pub struct SaveSlotV3 {
     /// 金币。
     #[serde(default)]
     pub gold: u32,
-    /// 玩家 HP。
+    /// 玩家 HP（**顶层 hp 退役**，飞轮 R20 Q008：v5 兵力模型走 `seats[].crew`；老档兼容保留字段，标 deprecated）。
     #[serde(default)]
+    #[deprecated = "顶层 hp 退役（v5 兵力模型走 seats[].crew；老档兼容保留字段），飞轮 R20 Q008"]
     pub hp: u32,
     /// 已建建筑 id 列表（稳定字符串，如 `"Castle"`）。
     #[serde(default)]
@@ -430,8 +436,9 @@ pub struct SaveSlotV4 {
     /// 主玩家金币（v4 起走 `seats[]`；本字段保留 v3 兼容）。
     #[serde(default)]
     pub gold: u32,
-    /// 主玩家 HP。
+    /// 主玩家 HP（**顶层 hp 退役**，飞轮 R20 Q008：v5 兵力模型走 `seats[].crew`；老档兼容保留字段，标 deprecated）。
     #[serde(default)]
+    #[deprecated = "顶层 hp 退役（v5 兵力模型走 seats[].crew；老档兼容保留字段），飞轮 R20 Q008"]
     pub hp: u32,
     /// 已建建筑 id 列表（v4 起走 `seats[].buildings`；本字段保留 v3 兼容）。
     #[serde(default)]
@@ -548,8 +555,9 @@ pub struct SaveSlotV5 {
     /// 主玩家金币（v4 起走 `seats[]`；保留 v3 兼容）。
     #[serde(default)]
     pub gold: u32,
-    /// 主玩家 HP。
+    /// 主玩家 HP（**顶层 hp 退役**，飞轮 R20 Q008：v5 兵力模型走 `seats[].crew`；老档兼容保留字段，标 deprecated）。
     #[serde(default)]
+    #[deprecated = "顶层 hp 退役（v5 兵力模型走 seats[].crew；老档兼容保留字段），飞轮 R20 Q008"]
     pub hp: u32,
     /// 已建建筑 id 列表（v4 起走 `seats[].buildings`；保留 v3 兼容）。
     #[serde(default)]

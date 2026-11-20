@@ -72,6 +72,13 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 > 后 `strings.json` 4 文案（`combat.item.keg/medkit/rum/smoke`）+ `chrome.rs` 4 个 vs 道具
 > 图标常量残留（`vs_anim_v4` 渲染回退用）；`doccheck2` i18n 孤儿 WARN 4 条登记待清（与 B-01
 > 同源，下一轮清 `strings.json` + `chrome.rs` 4 常量，非本轮）。
+> **退役 HP 模型残留定案（飞轮 R20 Q015，2026-11-20）**：兵力模型（§兵力模型）退役 HP 后，
+> 两处退役 HP 字段留痕 = ① `exhaust_scenarios.json` 战斗段（`ExhaustUnit.hp`/`ExhaustCase.player_hp`/
+> `ExhaustBossTier.hp`，旧 `exhaust_combat.rs` 消费者已删 S34.6 D5，无活 gameplay 语义，字段保留 =
+> JSON 数据兼容 + `data_tables` 非空断言，`exhaust.rs` 注释已标退役〔R20 Q007〕）；② 存档顶层 `hp`
+> 字段（`saveload.rs` SaveSlotV3/V4/V5 `pub hp`，v5 兵力走 `seats[].crew`，顶层 hp 无 gameplay 消费者，
+> 标 `#[deprecated]` 老档兼容保留〔R20 Q008〕，见 `persistence.md` §迁移）。**不整删**（数据兼容 + 老档
+> 读回面），后续轮可评估退役字段清理（同 `combat.player` 现状评估）。
 
 ## 回合流程（v2 简化为一次结算）
 

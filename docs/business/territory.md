@@ -305,7 +305,7 @@
 |---|---|---|
 | 业务规则 | **有**（领地/驻军/攻占/破产/多人同格/资源/商人/事件） = 本文件 + `combat.md` | — |
 | 数据 | 有（`balance.json` 新增 `manpower/weapons/garrison/events/merchants` 段 + `map.json` 逐格地形/建筑/事件 + 每图商人） | S28.3 重做 |
-| 规则 | 有（`rules/territory.rs` + `rules/battle.rs` 兵力模型 + `rules/events.rs` 海事事件 + `rules/merchant.rs`） | S28.1 重做 |
+| 规则 | 有（`rules/territory.rs` + `rules/force.rs` 兵力模型〔旧 `rules/battle.rs` HP 回合制已删 S34.6 D5，飞轮 R20 Q013〕+ `rules/events.rs` 海事事件 + `rules/merchant.rs`） | S28.1 重做 |
 | 表现 | 有（VS 界面 = 英雄+水手自动动效；驻军显示；攻占选项 UI） | S28.6/S27.7 重做 |
 | 资产 | 有（商人图标 / 事件图标 / 地形贴图） | 资产批次 |
 
