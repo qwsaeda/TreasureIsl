@@ -91,5 +91,36 @@
     "seats": 4,
     "seed": 11,
     "winner": 2
+  },
+  {
+    "alive": [
+      false,
+      true,
+      false,
+      false
+    ],
+    "boss_final": true,
+    "crew": [
+      20,
+      20,
+      20,
+      20
+    ],
+    "gold": [
+      1368,
+      1817,
+      1085,
+      1842
+    ],
+    "positions": [
+      7,
+      15,
+      7,
+      14
+    ],
+    "rounds": 11,
+    "seats": 4,
+    "seed": 42,
+    "winner": 1
   }
 ]

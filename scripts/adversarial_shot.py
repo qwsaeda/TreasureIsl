@@ -54,6 +54,8 @@ def export_snapshot(seeds: list[int], seats: int, rounds: int) -> None:
         TI_ADV_SEATS=str(seats),
         TI_ADV_ROUNDS=str(rounds),
     )
+    # 子进程补 `~/.cargo/bin`（工具契约：cargo 缺位回退；EXP 同类 build_artifacts.py）。
+    env["PATH"] = f"{Path.home()}/.cargo/bin:{env.get('PATH', '')}"
     r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=env)
     if r.returncode != 0:
         print((r.stdout or "")[-400:] + (r.stderr or "")[-400:], file=sys.stderr)
@@ -62,10 +64,28 @@ def export_snapshot(seeds: list[int], seats: int, rounds: int) -> None:
         raise SystemExit(f"快照未生成：{SNAPSHOT}")
 
 
+def _font(size: int):
+    """CJK 字体（文泉驿正黑）；缺位才兜底默认（中文豆腐块），飞轮 R21 勘误旧「默认位图字体无 CJK」。"""
+    from PIL import ImageFont  # noqa: PLC0415
+    for cand in [
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]:
+        if Path(cand).exists():
+            try:
+                return ImageFont.truetype(cand, size)
+            except Exception:  # noqa: BLE001
+                continue
+    return ImageFont.load_default()
+
+
 def draw_shot(record: dict, track_kinds: list[str], out_png: Path) -> None:
     """单 seed 对局快照 → PNG（31 格环赛道 + 席位状态表 + 终局标注）。"""
     Image, _ = _load_pil()
     from PIL import ImageDraw  # noqa: PLC0415
+    font = _font(18)
+    fbig = _font(26)
     W, H = 900, 640
     img = Image.new("RGB", (W, H), "#1a1a2e")
     dr = ImageDraw.Draw(img)
@@ -82,33 +102,33 @@ def draw_shot(record: dict, track_kinds: list[str], out_png: Path) -> None:
         r = 22 if kind == "boss" else 16
         dr.ellipse([x - r, y - r, x + r, y + r], fill=kind_color.get(kind, "#34495e"), outline="#000")
         if kind in ("boss", "start"):
-            dr.text((x - 8, y - 6), "BOSS" if kind == "boss" else "起", fill="#fff")
+            dr.text((x - 8, y - 6), "BOSS" if kind == "boss" else "起", fill="#fff", font=font)
     for s, pos in enumerate(record.get("positions", [])):
         if pos is None or pos >= n:
             continue
         a = -math.pi / 2 + pos * 2 * math.pi / n
         x, y = cx + (R - 34) * math.cos(a), cy + (R - 34) * math.sin(a)
         dr.ellipse([x - 9, y - 9, x + 9, y + 9], fill=owner_color.get(s, "#fff"), outline="#000")
-        dr.text((x - 4, y - 6), str(s), fill="#000")
+        dr.text((x - 4, y - 6), str(s), fill="#000", font=font)
     winner = record.get("winner")
     alive = record.get("alive", [])
-    dr.text((cx - 60, cy - 30), f"seed={record.get('seed')}  rounds={record.get('rounds')}", fill="#f5d76e")
+    dr.text((cx - 60, cy - 30), f"seed={record.get('seed')}  rounds={record.get('rounds')}", fill="#f5d76e", font=fbig)
     if winner is not None:
         sub = f"终局 = 胜者 席{winner}" + ("（BOSS 通关）" if record.get("boss_final") else "（唯一存活）")
-        dr.text((cx - 60, cy - 8), sub, fill="#2ecc71")
+        dr.text((cx - 60, cy - 8), sub, fill="#2ecc71", font=fbig)
     else:
         sub = "终局 = 全破产（平局）" if all(a is False for a in alive) else f"未收敛（存活 {sum(1 for a in alive if a)} 席）"
-        dr.text((cx - 60, cy - 8), sub, fill="#e74c3c")
+        dr.text((cx - 60, cy - 8), sub, fill="#e74c3c", font=fbig)
     y0 = H - 150
-    dr.text((20, y0 - 16), "席位状态（金 / 兵力 / 存活）", fill="#ccc")
+    dr.text((20, y0 - 16), "席位状态（金 / 兵力 / 存活）", fill="#ccc", font=font)
     golds = record.get("gold", [])
     crews = record.get("crew", [])
     for s in range(len(alive)):
         yy = y0 + s * 26
-        dr.text((20, yy), f"席{s}", fill=owner_color.get(s, "#fff"))
-        dr.text((70, yy), f"gold={golds[s] if s < len(golds) else '?'}", fill="#f5d76e")
-        dr.text((280, yy), f"crew={crews[s] if s < len(crews) else '?'}", fill="#3498db")
-        dr.text((460, yy), "存活" if alive[s] else "破产", fill="#2ecc71" if alive[s] else "#e74c3c")
+        dr.text((20, yy), f"席{s}", fill=owner_color.get(s, "#fff"), font=font)
+        dr.text((70, yy), f"gold={golds[s] if s < len(golds) else '?'}", fill="#f5d76e", font=font)
+        dr.text((280, yy), f"crew={crews[s] if s < len(crews) else '?'}", fill="#3498db", font=font)
+        dr.text((460, yy), "存活" if alive[s] else "破产", fill="#2ecc71" if alive[s] else "#e74c3c", font=font)
     img.save(out_png)
 
 
