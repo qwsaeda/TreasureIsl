@@ -1,0 +1,19 @@
+# S63.0 补全业务子场景立项 + WBS（2026-11-20）
+
+用户 2026-11-20 拍板 3 项：①地图永久全解锁（已先行 S62 收口，commit 590828d）
+②角色/Vs 美术改数据+资产（待用户给方向，单独轮）③补全子场景 WBS（本任务）。
+
+## 差距分析（本轮坐实）
+- rules 层有 17 规则模块业务能力；app 壳只接了 CardEngine/buy_crew/effect + build_panel_open 键盘交互；
+  TradeLedger/BuildManager 完整 UI 缺失（deck_trade/deck_sell/deck_build 自 S34 删底部三键后为空壳矩形）。
+- 5 个核心缺口子面板：贸易/建造/造船/副本/领地升级（rules 全有，UI 无/空壳）。
+
+## 产出
+- docs/plan-s63-subscenes.md：差距清单 + 设计原则（不新增 Scene，子面板 = MainMap bevy_ui 叠加层 +
+  数据驱动 scenes.json + rules 窄接缝 + 视觉 A 纪律）+ 6 任务 WBS（T0 立项/T1 贸易/T2 建造/
+  T3 造船/T4 副本/T5 领地升级/T6 收口；T# = 规划占位，立项时登记正式号）+ 验收判据 + 待拍板 3 问。
+- docs/README.md 登记 + plan/ledger.yaml S63.0 pending（deps S61.0，改动面声明完整）。
+
+## 验证
+doccheck 182 docs/38 facts/199 experiences/347 task refs 0 error + doccheck2 53 项 0 + ledger 353/352 verified/1 pending 0 error。
+S63.1~6 待用户拍板面板清单/视觉方向/是否并入②美术后逐项立项。

@@ -133,6 +133,7 @@
 | [`plan-s44-content-ops-platform.md`](plan-s44-content-ops-platform.md) | **S44 内容运营平台化 WBS**（TI Dev Console 固定流程向导：S44.0 定案 → S44.1 工具与写面 → S44.2 地图工作台 → S44.3 UI 工作台 → S44.4 打包/分发 → S44.5 固化收口；定案 = `process/30_content_ops_platform.md`） |
 | [`plan-s45-test-ingress.md`](plan-s45-test-ingress.md) | **S45 测试接入标准固化 WBS**（S45.0 定案 → S45.1 落地：validate_data 强化 + 平台测试页展示标准 + 新增测试端到端 + 零平台代码断言；定案 = `process/31_test_ingress_standard.md`；S44.5 后独立） |
 | [`plan-s49.md`](plan-s49.md) | **S49 内容运营续集 + 平台主题管理 + 玩法补强 WBS**（四方向 = 主题续集竖屏主题化 / 新地图 m33~m40 / 平台主题管理页 / 战斗动效，都做；用户 2026-11-08 拍板；子任务见 WBS 表） |
+| [`plan-s63-subscenes.md`](plan-s63-subscenes.md) | **S63 补全业务子场景 WBS**（用户 2026-11-20 拍板「场景不全」：rules 层有贸易/建造/造船/副本/领地升级能力但 UI 空壳〔deck_* 删三键后无原语〕；5 子面板 + 收口共 6 任务（T1~T6 规划占位，立项时登记正式号），数据驱动 `scenes.json` + 视觉 A 纪律出图签收；地图全解锁已先行收口） |
 
 ### 工具与产出物索引
 

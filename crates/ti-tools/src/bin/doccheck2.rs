@@ -3057,7 +3057,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 0 pending + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E 收口 verified；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）"
+                "{tasks} 任务（{verified} verified + 1 pending〔S63.0 子场景 WBS〕 + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E 收口 verified〔S63.0 子场景 WBS 立项 pending〕；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。
