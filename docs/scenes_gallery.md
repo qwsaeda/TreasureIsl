@@ -58,6 +58,8 @@
 
 *最新渲染 2026-11-20（当前代码）*
 
+*最新渲染 2026-11-20（当前代码）*
+
 ---
 
 ### 2. SelectRole（角色/席位选择）
@@ -68,6 +70,8 @@
 
 ![SelectRole 角色选择](../evidence/bevy_native_select_role.png)
 
+*最新渲染 2026-11-20（当前代码）*
+
 ---
 
 ### 3. SelectMap（地图选择）
@@ -77,6 +81,8 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **输入**：确认地图 → MainMap（`enter_main_map_at` 全量重建 board/territory）。
 
 ![SelectMap 地图选择](../evidence/bevy_native_select_map.png)
+
+*最新渲染 2026-11-20（当前代码）*
 
 ---
 
@@ -94,6 +100,8 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 
 ![MainMap 主地图](../evidence/bevy_native_main_map.png)
 
+*最新渲染 2026-11-20（当前代码，--spin=5 运行时态）*
+
 ---
 
 ### 5. Vs（战斗 · 兵力模型一次性结算）
@@ -106,6 +114,8 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 
 ![Vs 战斗](../evidence/bevy_native_vs.png)
 
+*最新渲染 2026-11-20（当前代码）*
+
 ---
 
 ### 6. Message（消息/帮助/据点面板，叠加窗口）
@@ -114,6 +124,8 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **输入**：确认/方向翻面板 → 回 MainMap。
 
 ![Message 消息面板](../evidence/bevy_native_message.png)
+
+*最新渲染 2026-11-20（当前代码）*
 
 ---
 
@@ -124,6 +136,8 @@ S31 地图包运行期换图）；锁/开放态金边条标记，未注入包 = 
 **输入**：选槽确认 → 读档重建 / 写档 → 回 MainMap。
 
 ![Saveload 存读档](../evidence/bevy_native_saveload.png)
+
+*最新渲染 2026-11-20（当前代码）*
 
 ---
 
