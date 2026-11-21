@@ -567,6 +567,22 @@ def check_test_manifest(root: Path, problems: list[str]) -> None:
             problems.append(
                 f"test_manifest: `{tid}` 缺 desc（必填；说明「做什么/测什么/达到什么效果」，≥20 字符，23 号 §7.2）"
             )
+        # R26 F-01 固化：desc 里「实测 N 条断言」须 == 测试文件 assert 宏静态数
+        # （R25 出现过 keyboard desc 写 30 但源码 33 的漂移，本断言兜底防复发）。
+        elif "实测 " in desc and " 条断言" in desc:
+            import re as _re
+            m = _re.search(r"实测 (\d+) 条断言", desc)
+            if m:
+                claimed = int(m.group(1))
+                test_src = ROOT / "crates" / "ti-app" / "tests" / f"{tid}.rs"
+                if test_src.exists():
+                    n_assert = len(_re.findall(
+                        r"\bassert(?:_eq|_ne)?!\(", test_src.read_text(encoding="utf-8")
+                    ))
+                    if claimed != n_assert:
+                        problems.append(
+                            f"test_manifest: `{tid}` desc 声称断言数 {claimed} != 源码实测 {n_assert}（R26 F-01 防漂移）"
+                        )
         # S49.7 强化：timeout_s = 1..=7200 的整数（缺省 = 不限；23 号 §6.2 收割）。
         tmo = t.get("timeout_s")
         if tmo is not None and not (isinstance(tmo, int) and not isinstance(tmo, bool) and 1 <= tmo <= 7200):

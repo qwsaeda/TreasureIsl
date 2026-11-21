@@ -241,10 +241,14 @@ Report ($LASTEXITCODE -eq 0) 'gen_layout --check (idempotent)'
 #     10c) check_hardcode：严格模式（发现硬编码即 FAIL）。2026-10 已清零 37 处债务，
 #          玩家可见中文全进 strings.json、布局色全走 COLOR_* 常量；诊断/CLI 经 EXEMPT 豁免。
 if (Tier 'skip') {
+    # R26 F-06：先跑 --selftest（STR_LIT + 诊断宏括号栈 7 fixtures 可一键复现），再严格扫描。
+    $hcSelf = & $py scripts/check_hardcode.py --selftest 2>&1
+    $hcSelf | ForEach-Object { Write-Host "        $_" }
+    $hcSelfOk = ($LASTEXITCODE -eq 0)
     $hcOut = & $py scripts/check_hardcode.py 2>&1
     $hcHits = @($hcOut | Where-Object { $_ -match 'hit\(s\)' })
     $hcHits | ForEach-Object { Write-Host "        $_" }
-    Report ($LASTEXITCODE -eq 0) 'check_hardcode (strict; 0 hits required)'
+    Report ($hcSelfOk -and $LASTEXITCODE -eq 0) 'check_hardcode (selftest + strict; 0 hits required)'
 } else { Skip 'check_hardcode' 'dev tier（-Touch/--fast）' }
 
 #     22) 数据分离门禁（S18.7：界面 = 数据；渲染层不认场景语义；通用原语闭集）

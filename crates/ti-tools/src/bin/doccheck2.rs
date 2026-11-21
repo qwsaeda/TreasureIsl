@@ -433,9 +433,27 @@ fn check_event_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<St
     };
     // R25 F-02：以 `const EVENT_KINDS:` 后的 `];` 闭合为段边界（替固定 3200 截断），
     // 事件增长不留漏；解析出的 key 数须 == `MaritimeEvent::` 出现数，不等 = 形状变动报错。
+    // R26 F-08：剥注释后 count（注释里的 MaritimeEvent:: 不算）；以首个配平 `]` 为段边界
+    // （不依赖 `\n];` 换行形状，末项同行 `)];` 也能正确收尾）。
     let tail = &src[start..];
-    let end = tail.find("\n];").unwrap_or(tail.len());
-    let seg: String = tail[..end].to_string();
+    let code_no_comments: String =
+        tail.lines().map(|l| l.split("//").next().unwrap_or("")).collect::<Vec<_>>().join("\n");
+    // 从 `= [` 起配平（`const EVENT_KINDS: [(&str, ...); 7]` 的类型方括号会提前归零）。
+    let arr_start = code_no_comments.find("= [").map_or(0, |i| i + 2);
+    let mut depth = 0i32;
+    let mut end = code_no_comments.len();
+    for (i, ch) in code_no_comments[arr_start..].char_indices() {
+        if ch == '[' {
+            depth += 1;
+        } else if ch == ']' {
+            depth -= 1;
+            if depth == 0 {
+                end = arr_start + i + 1;
+                break;
+            }
+        }
+    }
+    let seg: String = code_no_comments[arr_start..end].to_string();
     let expected = seg.matches("MaritimeEvent::").count();
     let caps = regex_captures_pair(&seg);
     if caps.len() != expected || caps.is_empty() {
@@ -458,9 +476,18 @@ fn check_event_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<St
     }
     // R24 FIND-014 反向对账：strings 里 event.* 非固定 key（排除 panel_title/hint/effect_fmt）须被消费。
     // R25 F-01：固定 key 从 gate_data.json 机读源读（数据新增不改 Rust）。
-    let gate_data = read_file(root, "assets/gate_data.json")
-        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
-        .unwrap_or(serde_json::Value::Null);
+    // R26 F-10：区分读失败与解析失败（不吞根因）。
+    let Some(gate_text) = read_file(root, "assets/gate_data.json") else {
+        errors.push("i18n 正向检查：assets/gate_data.json 读失败（路径/权限）".to_string());
+        return errors;
+    };
+    let gate_data: serde_json::Value = match serde_json::from_str(&gate_text) {
+        Ok(v) => v,
+        Err(e) => {
+            errors.push(format!("i18n 正向检查：gate_data.json 解析失败: {e}"));
+            return errors;
+        }
+    };
     let fixed: std::collections::BTreeSet<String> = gate_data
         .get("event_static_keys")
         .and_then(|v| v.as_array())
@@ -471,6 +498,18 @@ fn check_event_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<St
             "i18n 正向检查：gate_data.json 缺 `event_static_keys`（event.* 反向对账不可空转）"
                 .to_string(),
         );
+    }
+    // R26 F-07：白名单内容验真——每个 fixed key 须在 strings.json 实存且确为静态
+    // （不在 EVENT_KINDS 消费集；防止「往白名单加孤儿 key」吸收真孤儿）。
+    for k in &fixed {
+        if !json_keys.contains(k) {
+            errors.push(format!(
+                "i18n 正向检查：gate_data.json event_static_keys 含不存在的 key `{k}`"
+            ));
+        }
+        if consumed.contains(k) {
+            errors.push(format!("i18n 正向检查：gate_data.json event_static_keys 含动态消费 key `{k}`（静态白名单不应含枚举 key）"));
+        }
     }
     for k in json_keys.iter().filter(|k| k.starts_with("scene.main_map.event.")) {
         if !fixed.contains(k.as_str()) && !consumed.contains(k) {
@@ -895,6 +934,30 @@ fn check_flywheel_readback(root: &Path) -> Vec<String> {
     let exp_index = read_file(root, "docs/experience/index.md").unwrap_or_default();
     if !exp_index.contains("EXP-068") {
         errors.push("docs/experience/index.md 未登记 EXP-068（飞轮回读）".to_string());
+    }
+    // R26 F-02/F-03：停机口径 M-24（第 1 个 0 轮即通过）守门并入本 check（不新增项数）。
+    // 覆盖扫描面外载体 .opencode/skills/ + 15号 row21 + 26号 + rules；
+    // 旧「连续 2 轮才可」只允许出现在带「历史快照/快照/历史 R3~R11」标记的行。
+    let stop_files = [
+        ".opencode/skills/flywheel-kickoff/SKILL.md",
+        "docs/process/15_process_ledger.md",
+        "docs/process/26_dev_stages_overview.md",
+        "docs/rules/ti-console-rules.md",
+    ];
+    for rel in stop_files {
+        if let Some(text) = read_file(root, rel) {
+            for line in text.lines() {
+                if line.contains("连续 2 轮才可") || line.contains("连续 2 轮 0/0/0 才停机")
+                {
+                    let snap = line.contains("历史") || line.contains("快照");
+                    if !snap {
+                        errors.push(format!(
+                            "停机口径漂移：{rel} 现行行仍写「连续 2 轮才可」（M-24/EXP-190 已废止为第 1 个 0 轮即通过；仅历史快照行可保留）"
+                        ));
+                    }
+                }
+            }
+        }
     }
     errors
 }
@@ -2358,6 +2421,7 @@ fn ui_panel_landscape_8pt_check(root: &Path) -> Vec<String> {
         let nums: Vec<&str> = trimmed[eq + lp + 1..eq + rp].split(',').map(str::trim).collect();
         if nums.len() != 4 {
             errors.push(format!("8pt: PANEL_LANDSCAPE 分量数 {} != 4: {trimmed}", nums.len()));
+            found += 1; // R26 F-11：形状错误已报，计入 found 避免末尾总数断言双报
             continue;
         }
         found += 1;
@@ -3187,6 +3251,14 @@ fn check_wbs_checkbox_sync(root: &Path) -> Vec<String> {
     errors
 }
 
+/// R26 F-09：从现状行抽 `S61.1 飞轮R22 … N 条 verified` 的签名（三文档须一致）。
+fn wheel_list_sig(text: &str) -> Option<String> {
+    let line = text.lines().find(|l| l.contains("S61.1 飞轮R22"))?;
+    let sig = line.split("S61.1 飞轮R22").nth(1)?.split(" verified").next()?;
+    Some(sig.to_string())
+}
+
+#[allow(clippy::too_many_lines)] // R26 轮次列表守门 extend + 原计数守门，集中一处
 fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(ledger_text) = read_file(root, "plan/ledger.yaml") else {
@@ -3225,6 +3297,21 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
             errors.push(format!(
                 "计数守门：{rel} 缺现状声称点「{phrase}」（须保留；删 = 进度面漂移）"
             ));
+        }
+    }
+    // R26 F-09：飞轮轮次列表轻量守门——AGENTS/release/26号 三处的 R22~R25 列表与「N 条 verified」
+    // 须逐字一致（claims[0] 缩锚后该列表脱离精确匹配，此处独立守；不恢复长锚、不增 doccheck2 项数）。
+    let mut wheel_sig: Option<String> = None;
+    for rel in ["AGENTS.md", "docs/release.md", "docs/process/26_dev_stages_overview.md"] {
+        match read_file(root, rel).and_then(|t| wheel_list_sig(&t)) {
+            Some(sig) => match &wheel_sig {
+                None => wheel_sig = Some(sig),
+                Some(first) if first != &sig => errors.push(format!(
+                    "轮次列表漂移：{rel} 的 S61.x 飞轮列表与 AGENTS/release 不一致（{sig}）"
+                )),
+                _ => {}
+            },
+            None => errors.push(format!("轮次列表守门：{rel} 缺 `S61.1 飞轮R22` 现状声称行")),
         }
     }
     // 过期数值守门：现状区出现的 台账任务数/gate 项数 若 ≠ 实测即 FAIL（327/35/41 旧值防再犯）。

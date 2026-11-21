@@ -28,4 +28,4 @@
 
 ## 验证
 cargo test 1026/0 + clippy 0 + audit_code 0 + CS 0 + check_hardcode 0 hits + validate_data OK
-+ studio_tests OK + doccheck 182/38/200/356 0 + doccheck2 53 项 0 + gate 36 项 0 failure。
++ studio_tests OK + doccheck 182/38/200/357 0 + doccheck2 53 项 0 + gate 36 项 0 failure。

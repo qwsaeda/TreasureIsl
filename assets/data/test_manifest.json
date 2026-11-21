@@ -468,7 +468,7 @@
    "group": "core",
    "timeout_s": 900,
    "prove": "evidence/tests/app_panel_keyboard_e2e/",
-   "desc": "做什么：跑 app_panel_keyboard_e2e 面板端到端测试。测什么：经poll()开/选/买/关+5面板互斥+吞spin）。达到效果：S63 面板可玩闭环机器判据。 逐测：实测 30 条断言（开关/选择/账本/互斥/边界，R24 FIND-009 对齐）。"
+   "desc": "做什么：跑 app_panel_keyboard_e2e 面板端到端测试。测什么：经poll()开/选/买/关+5面板互斥+吞spin）。达到效果：S63 面板可玩闭环机器判据。 逐测：实测 33 条断言（开关/选择/账本/互斥/边界，R24 FIND-009 对齐）。"
   }
  ]
 }

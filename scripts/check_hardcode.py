@@ -27,30 +27,56 @@ from pathlib import Path
 CJK = re.compile(r"[\u4e00-\u9fff]")
 # R24 FIND-002 / R25 F-03：诊断宏（终端输出，非玩家 UI）——文件级 CJK 豁免仅对
 # 字面量确实处于诊断宏**未闭合括号**内时成立（非整行 search：同行混合/跨行都判准）。
-CALL_OPEN = re.compile(r"\b([A-Za-z_]\w*)\s*!?\(\s*$")  # 字面量前最近的调用起始 `name!(` / `name(`
-MACRO_NAMES = {"eprintln", "println", "eprint", "print", "dbg", "debug", "info", "warn", "error", "trace", "write", "writeln"}
+MACRO_NAMES = {"eprintln", "println", "eprint", "print", "dbg", "debug", "info", "warn", "error", "trace", "write", "writeln", "format_args"}
+# 诊断宏参数子树内的嵌套包装（继续向外找外层诊断宏，而非当作玩家可见调用拒绝）。
+NESTED_IN_DIAGNOSTIC = {"format", "format_args", "Some", "Ok", "Err", "vec", "AsRef", "into", "as_str"}
+# R26 F-04/F-05：用真括号栈判定替代 R25 的「最近调用名 + 固定 4 行」启发式。
+# 向前扫描源码（从字面量起点回溯到文件开头），逆序配对括号：
+#   遇 `)`/`}` → 期望的配对数 +1（表示前面有未闭合开括号需跨过）；
+#   遇 `(`/`{` → 若期望配对数 == 0，则它是字面量的**最近未闭合包裹括号**，
+#                取它前面的标识符判断是否为诊断宏；否则期望配对数 -1。
+# 这样：`eprintln!("诊断", format!("x"))` 中 format!( 被 `)` 配对抵消 → 落到 eprintln!（真豁免）；
+#       `eprintln!("a"); draw_text("玩家可见")` 中 draw_text( 直接是最近未闭合 → 不豁免（真拒绝）；
+#       跨行 eprintln!(\n  "诊断") 也正确（无固定窗口）。
+OPEN_TO_CLOSE = {"(": ")", "{": "}"}
 
 
 def in_diagnostic_macro(lines: list[str], lineno: int, col: int) -> bool:
-    """R25 F-03：判定 (lineno, col) 处字面量的**最近包裹调用**是否为诊断宏。
-
-    取字面量前紧邻的 `name!(` / `name(`（容许 `&` 前缀与换行空白）；是诊断宏才豁免。
-    同行混合 `eprintln!("诊断"); draw_text("玩家可见")` → 字面量前最近是 draw_text → 不豁免。
-    跨行 `eprintln!(\n "诊断")` → 最近调用是上一行 eprintln! → 豁免。
-    """
-    # 从字面量起点往前扫，跳过空白/&/字符串前缀，找最近调用名。
-    parts = lines[max(0, lineno - 4):lineno]
-    prefix = "\n".join(parts) + ("\n" if parts else "") + lines[lineno][:col]
-    # 去掉尾部空白与 `&` 取引用
-    trimmed = prefix.rstrip()
-    trimmed = trimmed.rstrip("&").rstrip()
-    # 跨行字面量：前缀尾部是起始引号 `"`，去掉它再找调用名。
-    if trimmed.endswith('"'):
-        trimmed = trimmed[:-1].rstrip()
-    m = CALL_OPEN.search(trimmed)
-    if not m:
-        return False
-    return m.group(1) in MACRO_NAMES
+    """R26 F-04/F-05：判定字面量是否处于诊断宏的未闭合括号参数子树内（真括号栈）。"""
+    need_close = 0  # 向前遇到 `)`/`}` 时累加（需由更早的 `(`/`{` 配对）
+    for ln in range(lineno, -1, -1):
+        text = lines[ln]
+        end = col if ln == lineno else len(text)
+        for idx in range(end - 1, -1, -1):
+            ch = text[idx]
+            if ch in (")", "}"):
+                need_close += 1
+            elif ch in ("(", "{"):
+                if need_close > 0:
+                    need_close -= 1
+                    continue
+                # 找开括号前的标识符（允许 `!`/空白），即包裹调用名
+                j = idx - 1
+                while j >= 0 and text[j].isspace():
+                    j -= 1
+                bang = False
+                if j >= 0 and text[j] == "!":
+                    bang = True
+                    j -= 1
+                    while j >= 0 and text[j].isspace():
+                        j -= 1
+                k = j
+                while k >= 0 and (text[k].isalnum() or text[k] == "_" or text[k] == ":"):
+                    k -= 1
+                name = text[k + 1:j + 1] if j > k else ""
+                if name in MACRO_NAMES or (bang and name.endswith("log")):
+                    return True
+                # R26 F-05：诊断宏的参数子树内嵌套 format!/Some/vec!/& 等 → 继续向外找外层
+                # 包裹调用（它们是诊断串的一部分，不是独立玩家可见渲染）。
+                if name in NESTED_IN_DIAGNOSTIC:
+                    continue  # 跳过嵌套包装的 `(`，继续向外找诊断宏的包裹括号
+                return False  # draw_text/draw_hint_text 等玩家可见调用 → 不豁免
+    return False
 # 飞轮 R1 ⑤-05 修复：旧式 `"([^"\\]|\\.)*"` 捕获组只保留 `*` 量词内最后一次迭代
 # （= 字面量末字符），CJK 通道对「以标点/ASCII 结尾」的中文字面量失明（如
 # `…不 fallback）` 只捕获到 `）`）。改用非捕获外层 + 原子式内层，group(1) = 完整字面量内容。
@@ -190,13 +216,27 @@ def selftest() -> int:
     for m in STR_LIT.finditer('let v = "plain ascii";'):
         if m.group(1) and CJK.search(m.group(1)):
             failures.append("ASCII 串误报 CJK")
+    # 6) R26 F-04/F-05：诊断宏括号栈判定边界（7 合法 fixture）
+    def expect_diag(lines: list[str], ln: int, lit: str, want: bool, label: str) -> None:
+        col = lines[ln].find(lit) + 1
+        got = in_diagnostic_macro(lines, ln, col)
+        if got != want:
+            failures.append(f"诊断宏括号栈判定错误: {label} got={got} want={want}")
+
+    expect_diag(['eprintln!("诊断"); draw_text("玩家可见");'], 0, "玩家可见", False, "同行混合玩家可见")
+    expect_diag(['eprintln!(', '    "诊断"', ');'], 1, "诊断", True, "跨行 eprintln")
+    expect_diag(['eprintln!("{}", format!("诊断"));'], 0, "诊断", True, "嵌套 format")
+    expect_diag(['eprintln!("{:?}", Some("诊断"));'], 0, "诊断", True, "Some 包裹")
+    expect_diag(['eprintln!("{:?}", vec!["诊断"]);'], 0, "诊断", True, "vec! 包裹")
+    expect_diag(['eprintln!("{}", &"诊断");'], 0, "诊断", True, "& 引用")
+    expect_diag(['info! { "诊断" }'], 0, "诊断", True, "花括号宏")
 
     if failures:
         for f in failures:
             print("  selftest FAIL: %s" % f)
         print("check_hardcode: selftest FAILED (%d)" % len(failures))
         return 1
-    print("check_hardcode: selftest OK (STR_LIT full-capture + CJK fixtures)")
+    print("check_hardcode: selftest OK (STR_LIT full-capture + CJK + 诊断宏括号栈 7 fixtures)")
     return 0
 
 
