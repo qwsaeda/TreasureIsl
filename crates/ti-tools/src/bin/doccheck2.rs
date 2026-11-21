@@ -431,10 +431,19 @@ fn check_event_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<St
         errors.push("i18n 正向检查：main_map.rs 缺 `const EVENT_KINDS:` 定义（check_event_keys_present 空转风险）".to_string());
         return errors;
     };
-    let seg: String = src[start..].chars().take(3200).collect();
+    // R25 F-02：以 `const EVENT_KINDS:` 后的 `];` 闭合为段边界（替固定 3200 截断），
+    // 事件增长不留漏；解析出的 key 数须 == `MaritimeEvent::` 出现数，不等 = 形状变动报错。
+    let tail = &src[start..];
+    let end = tail.find("\n];").unwrap_or(tail.len());
+    let seg: String = tail[..end].to_string();
+    let expected = seg.matches("MaritimeEvent::").count();
     let caps = regex_captures_pair(&seg);
-    if caps.is_empty() {
-        errors.push("i18n 正向检查：EVENT_KINDS 解析出 0 个 key（形状变动/解析失配，check_event_keys_present 不可静默空转）".to_string());
+    if caps.len() != expected || caps.is_empty() {
+        errors.push(format!(
+            "i18n 正向检查：EVENT_KINDS 解析 {} key != 声明 {} 项（形状变动/截断，不静默空转）",
+            caps.len(),
+            expected
+        ));
         return errors;
     }
     let consumed: std::collections::BTreeSet<String> =
@@ -448,13 +457,23 @@ fn check_event_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<St
         }
     }
     // R24 FIND-014 反向对账：strings 里 event.* 非固定 key（排除 panel_title/hint/effect_fmt）须被消费。
-    let fixed = [
-        "scene.main_map.event.panel_title",
-        "scene.main_map.event.hint",
-        "scene.main_map.event.effect_fmt",
-    ];
+    // R25 F-01：固定 key 从 gate_data.json 机读源读（数据新增不改 Rust）。
+    let gate_data = read_file(root, "assets/gate_data.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .unwrap_or(serde_json::Value::Null);
+    let fixed: std::collections::BTreeSet<String> = gate_data
+        .get("event_static_keys")
+        .and_then(|v| v.as_array())
+        .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
+    if fixed.is_empty() {
+        errors.push(
+            "i18n 正向检查：gate_data.json 缺 `event_static_keys`（event.* 反向对账不可空转）"
+                .to_string(),
+        );
+    }
     for k in json_keys.iter().filter(|k| k.starts_with("scene.main_map.event.")) {
-        if !fixed.contains(&k.as_str()) && !consumed.contains(k) {
+        if !fixed.contains(k.as_str()) && !consumed.contains(k) {
             errors.push(format!(
                 "i18n 孤儿 key `{k}`（strings 有 scene.main_map.event.* 但 EVENT_KINDS 无对应事件；前缀豁免不得遮蔽死 key）"
             ));
@@ -2317,17 +2336,28 @@ fn ui_panel_landscape_8pt_check(root: &Path) -> Vec<String> {
     let Some(src) = read_file(root, "crates/ti-app/src/scenes/chrome.rs") else {
         return errors;
     };
+    let declared =
+        src.lines().filter(|l| l.trim().starts_with("pub const PANEL_LANDSCAPE")).count();
     let mut found = 0usize;
     for line in src.lines() {
         let trimmed = line.trim();
         if !trimmed.starts_with("pub const PANEL_LANDSCAPE") {
             continue;
         }
-        let Some(eq) = trimmed.find('=') else { continue };
-        let Some(lp) = trimmed[eq..].find('(') else { continue };
-        let Some(rp) = trimmed[eq..].find(')') else { continue };
+        // R25 F-05：形状不符一律报 error（不静默 continue），防新增多行常量脱离守门。
+        let Some(eq) = trimmed.find('=') else {
+            errors.push(format!("8pt: PANEL_LANDSCAPE 声明缺 `=`: {trimmed}"));
+            continue;
+        };
+        let (Some(lp), Some(rp)) = (trimmed[eq..].find('('), trimmed[eq..].find(')')) else {
+            errors.push(format!(
+                "8pt: PANEL_LANDSCAPE 声明非 4 元组（多行/变形，不静默跳过）: {trimmed}"
+            ));
+            continue;
+        };
         let nums: Vec<&str> = trimmed[eq + lp + 1..eq + rp].split(',').map(str::trim).collect();
         if nums.len() != 4 {
+            errors.push(format!("8pt: PANEL_LANDSCAPE 分量数 {} != 4: {trimmed}", nums.len()));
             continue;
         }
         found += 1;
@@ -2346,8 +2376,9 @@ fn ui_panel_landscape_8pt_check(root: &Path) -> Vec<String> {
             }
         }
     }
-    if found == 0 {
-        errors.push("8pt: chrome.rs 未解析到任何 `PANEL_LANDSCAPE*` 常量（形状变动，ui_panel_landscape_8pt_check 不可静默空转）".to_string());
+    // R25 F-05：解析数须 == 声明数（多行常量变形会被上面的 error 覆盖，这里兜底总数）。
+    if declared == 0 || found != declared {
+        errors.push(format!("8pt: chrome.rs PANEL_LANDSCAPE 声明 {declared} 个但解析 {found} 个（形状变动，不可静默空转）"));
     }
     errors
 }
@@ -3172,10 +3203,10 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
     // 现状声称点锚定短语（`doc_numbers.py --fix` 回写同一组短语 = 双保险）
     let claims: [(&str, &str); 3] = [
         (
+            // R25 F-06：短语缩到稳定锚（只守 ledger 实测的任务/verified 数），飞轮轮次列表移出精确匹配
+            // —— 避免每轮改 doccheck2.rs + AGENTS + release + 26号 4 处的 perpetual 漂移。
             "docs/release.md",
-            &format!(
-                "{tasks} 任务（{verified} verified + 1 pending〔S63.0 子场景 WBS〕 + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E + S63.1 贸易面板 + S63.2 建造横屏与角色立绘 + S63.3 商人面板 + S63.4 事件面板 + S63.5 造船面板 + S63.6 Vs立绘对峙 + S61.1 飞轮R22 + S61.2 飞轮R23 + S61.3 飞轮R24 10 条 verified〔S63.0 子场景 WBS 立项 pending〕；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）"
-            ),
+            &format!("{tasks} 任务（{verified} verified"),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。
         // 实测基准 = e1cf0f8^ 迁移前 `crates/ti-core/src/rules/territory_v2.rs` `#[test]` 数 = 18

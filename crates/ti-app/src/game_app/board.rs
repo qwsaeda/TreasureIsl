@@ -489,12 +489,9 @@ impl GameApp {
             self.switch_to_seat(seat);
             if active_players >= 2 {
                 self.handoff_pending = Some(seat);
+                // R25 F-04：删玩家可见 CJK 硬编码 fallback，直接读 i18n（缺 key = 数据问题应暴露）。
                 let hint = crate::i18n::sget("scene.main_map.toast.handoff");
-                self.last_ai_toast = if hint.contains("scene.main_map") {
-                    Some("热座交接：轮到玩家席（按确认摇骰开始回合）".to_string())
-                } else {
-                    Some(hint.to_string())
-                };
+                self.last_ai_toast = Some(hint.to_string());
             } else {
                 self.handoff_pending = None;
             }

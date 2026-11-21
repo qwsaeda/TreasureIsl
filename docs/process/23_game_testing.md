@@ -7,7 +7,7 @@
 
 ## 0. 定位
 
-本文把仓库**已有的**测试事实（**113** 个集成测试文件（`crates/*/tests/*.rs` 顶层实测 2026-11-21 飞轮 R23 回写；含 `tests/common/` 嵌套 = 114；**口径拆分**：游戏 crate 84〔ti-core 34/ti-app 33/ti-engine 6/ti-render 4/ti-platform 4/ti-formats 3〕+ 平台/工具 crate 29〔ti-tools 14/ti-console 15/ti-devmeta 0〕= 113（分项实测和 = 顶层 113；含嵌套 114）；S63 新增 5 面板 e2e〔app_trade/merchant/event/ship/keyboard〕ti-app 28→33 + ti-core S61 新增 adversarial 3 = 108→113；git 坐实 `2170700~1`=106 / `2170700`=103 / R23 worktree=113。旧「R12 106→105」历史链计数全错〔R12 时点 HP 删前实为 106〕，飞轮 R20 Q011 勘误；口径 = 顶层 113 / 含嵌套 114，分项求和以顶层为准） + 试玩闭环 4 报告 + `evidence/` **610** 文件（git-tracked，**排除 `console/` 侧车**；实测 2026-11-21 R24 = 611〔commit 前时点；每轮 commit 自身 evidence 日志 +1〕，旧 610/566/567 为 R23/R20/R21 时点值））
+本文把仓库**已有的**测试事实（**113** 个集成测试文件（`crates/*/tests/*.rs` 顶层实测 2026-11-21 飞轮 R23 回写；含 `tests/common/` 嵌套 = 114；**口径拆分**：游戏 crate 84〔ti-core 34/ti-app 33/ti-engine 6/ti-render 4/ti-platform 4/ti-formats 3〕+ 平台/工具 crate 29〔ti-tools 14/ti-console 15/ti-devmeta 0〕= 113（分项实测和 = 顶层 113；含嵌套 114）；S63 新增 5 面板 e2e〔app_trade/merchant/event/ship/keyboard〕ti-app 28→33 + ti-core S61 新增 adversarial 3 = 108→113；git 坐实 `2170700~1`=106 / `2170700`=103 / R23 worktree=113。旧「R12 106→105」历史链计数全错〔R12 时点 HP 删前实为 106〕，飞轮 R20 Q011 勘误；口径 = 顶层 113 / 含嵌套 114，分项求和以顶层为准） + 试玩闭环 4 报告 + `evidence/` 文件数（**以 `git ls-files evidence/ | grep -v '^evidence/console/' | wc -l` 实测为准**，不在正文写死整数——该文件数随每轮 flywheel evidence 日志 +1，历史时点链见文末「计数变更历史」））
 归入一套**标准化标杆**：按**级**（L1 单元→L4 验收）、**类**（功能/回归/视觉/音频/性能/兼容）、
 **型**（冒烟/CI/试玩/探索/基准）三维分类，并给出行业常用方案与 Bevy 官方推荐作为参照。
 **不是**新增一套独立测试体系——是给既有测试**统一口径、编号、归类**，并让平台可见。
@@ -196,7 +196,7 @@ bin 名与源文件名不一致 3 类陈旧项）。
 |---|---|---|
 | `group` | ✓（S49.7 起） | **业务域**：`core`（核心规则/玩法）/ `asset`（资产与内容管线）/ `platform`（平台与工具）/ `device`（端侧与兼容）/ `perf`（性能与体积）—— 主分组维度（§6.3 侧栏） |
 | `timeout_s` | ○ | 作业超时（秒；缺省 = 不限；超时 ⇒ 作业记 `exit_code=-1` + note `timeout`） |
-| `prove` | ✓（可自动运行者） | 本次运行**证明落点**（`evidence/tests/<id>/`）；与 `evidence`（静态基线证据）并存不冲突（§6.3「证明」行） |
+| `prove` | ✓（可自动运行者） | 本次运行**证明落点**（`evidence/tests/<id>/`）；与 `evidence`（静态基线证据）并存不冲突（§6.3「证明」行）。**R25 F-10 口径**：平台 `persist_proof` 写 `evidence/tests/<id>/<id>-<ts>/{run.log,state.json}`（时间戳子目录 + 终态快照）；手工落证据亦须同构（`<ts>/` 子目录，不写平铺 `run.log`），`prove` 前缀可预声明、目录由运行创建 |
 
 ## 8. 执行入口
 
@@ -219,3 +219,9 @@ bin 名与源文件名不一致 3 类陈旧项）。
 6. **互斥显式**：会互相踩目标目录/锁文件的动作（构建/门禁）= 作业模型 + 显式互斥检查（busy 回显），不做隐式串行。
 7. **0 游戏依赖**：平台本体（`ti-console`/`ti-devmeta`）不引游戏 crate；作业模型只管进程与文件。
 8. **规范优先于实现**：测试相关改动先改本规范（分级/分类/类型/schema/交互/作业模型），再落码；判据以本规范为准。
+
+## 计数变更历史（现状值不写死在正文，本节仅存档时点）
+
+- evidence 文件数（排除 console/）：R20=566 / R21=567 / R23=610 / R24=611 / R25=612+（每轮 commit 自身 evidence 日志 +1）。
+- 集成测试文件数（顶层）：R20=103 / R23=108 / S63+R22=113（含嵌套 114）。
+

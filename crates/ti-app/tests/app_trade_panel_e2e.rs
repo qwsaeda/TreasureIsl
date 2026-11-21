@@ -10,7 +10,6 @@ use ti_app::{GameApp, GameInput, Scene};
 
 fn enter_main_map() -> GameApp {
     let mut app = GameApp::new(1080.0, 1920.0);
-    app.rng_mut().set_seed(42);
     app.set_rng_seed(42);
     app.handle(GameInput::Confirm); // Index → SelectRole
     app.handle(GameInput::Confirm); // 无 marks = 旧单选流 → SelectMap

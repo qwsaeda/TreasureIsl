@@ -70,7 +70,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package <�
 【五步回执】（同上）
 ```
 
-- **收敛判据**（CCGS 双审计 §7.4）：A/B 各出 findings → 主线程合并 → 修复 → **再开 A/B r2** → 连续 **2 轮 0/0/0**（0 新发现 / 0 误报 / 0 残留）才停机。
+- **收敛判据**（CCGS 双审计 §7.4）：A/B 各出 findings → 主线程合并 → 修复 → **再开 A/B r2**（可选）→ **第 1 个 0 轮即通过**（M-24/EXP-190 废止「连续 2 轮」；第 2 轮降级可选，历史 R3~R11 的 2 轮口径 = 快照不回改）。
 - 主线程对最高价值 8 条 P0 **亲自 Read/Grep 复核**（EXP-038/058：子代理声称不算数），复核结论写 evidence。
 
 ### ④ 修复 + 自验（写码 agent，CCGS 五步全走）
@@ -90,7 +90,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Package <�
 - 每处文档/代码改动**用 Edit 工具精确替换，禁 PowerShell `Set-Content`/`Out-File` 改 CJK 文件**（EXP-051）。
 
 ### ⑤ 主线程复核 + 停机判定（06_flywheel §4）
-某轮**同时**满足才停机：找问题 = 0 新发现 **且** 审计 A/B = 0 误报 **且** 修复 = 0 残留（无 blocked/需人裁决遗留）+ **A/B 连续 2 轮 0/0/0 收敛**。
+某轮**同时**满足才停机：找问题 = 0 新发现 **且** 审计 A/B = 0 误报 **且** 修复 = 0 残留（无 blocked/需人裁决遗留）+ **第 1 个 0 轮即通过（M-24），A/B r2 可选**。
 - 四条齐 → 停机，停机结论 + 复核证据写 `evidence/flywheel.log`。
 - 任一未满足 → 开下一轮（回 ①）。
 
@@ -117,7 +117,7 @@ powershell -ExecutionPolicy Bypass -File scripts/flywheel_readme.ps1 -Check  # �
 - 3 角色里**找问题/审计 只读**，只有修复 agent 能改文件，且不得改审计结论。
 - **规范结构下发强制**：3 角色 subagent prompt 头部 = `flywheel_readme.ps1` 输出全文（不手搓任务描述式 prompt，防机制两张皮）。
 - **五步回执强制**：写码类 agent 回报必含「提问/决策点+拍板留痕/草稿批准状态」3 字段；只读角色报「0 个决策点」+「草稿批准状态=豁免」。缺字段 = 主线程拒收回报。
-- **审计 = A/B 双 agent 对抗**（不降级单线程）；连续 2 轮 0/0/0 才停机（CCGS 双审计 §7.4 轮次完整性口径）。
+- **审计 = A/B 双 agent 对抗**（不降级单线程）；第 1 个 0 轮即通过、第 2 轮可选（M-24/EXP-190；CCGS 双审计 §7.4 现行口径）。
 - 自验（cargo test/clippy）全绿前**不许**回写（EXP-048/飞轮 §3 判据）。
 - 停机结论**必须主线程复核**（子代理声称「收敛」不算数，EXP-038/058），复核证据入 `evidence/flywheel.log`。
 - 飞轮本身**不写 ledger verified**（除非并入集成轮，06_flywheel §5）。

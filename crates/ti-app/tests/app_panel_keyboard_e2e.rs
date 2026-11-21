@@ -2,6 +2,8 @@
 //! R22-010 回归：面板必须经**真实 `poll()` 键盘路径**可交互（不是只靠 `handle()` 直接分发）。
 //! 5 个面板 e2e 此前均绕过 `poll()`，导致 `input.rs` `MainMap` 分支漏路由 ↑↓/Confirm/Back 长期漏网。
 //! 本测试构造 `KeyState` 走 `app.poll()`，断言：开面板 → ↑↓ 改选中 → Enter 执行 → Back 仅关面板（不退出 `MainMap`）。
+//! R25 F-16 口径说明：5 条 `*_via_poll_keyboard` 覆盖 poll 路由；`all_five_panels_pairwise_mutual_exclusion`
+//! 专验 `handle()` 层两两互斥（R22-011 遗留），两者分工不同、不重复。
 
 use ti_app::{GameApp, GameInput, KeyState, Scene};
 
@@ -104,10 +106,16 @@ fn merchant_panel_via_poll_keyboard() {
     k.down = true;
     app.poll(&k);
     assert_eq!(app.merchant_panel_sel, 1, "poll ↓ 应改商人选中");
+    // R25 F-14：Enter 须真消费——买到武器（sel=1）：arms +1 / gold -50（不是只断言面板仍开）。
+    let seat = app.turn_cycle.current as usize;
+    let arms0 = app.seat_arms[seat];
+    let gold0 = app.seat_gold[seat];
     let mut k = keys();
     k.confirm = true;
     app.poll(&k);
     assert!(app.merchant_panel_open, "poll Enter 买后仍在商人面板");
+    assert_eq!(app.seat_arms[seat], arms0 + 1, "poll Enter 真买武器：arms +1（R25 F-14 去弱断言）");
+    assert_eq!(app.seat_gold[seat], gold0 - 50, "poll Enter 真扣金：gold -50");
     let mut k = keys();
     k.back = true;
     app.poll(&k);
@@ -155,10 +163,17 @@ fn ship_panel_via_poll_keyboard() {
     k.ship = true;
     app.poll(&k);
     assert!(app.ship_panel_open, "poll N 键应开造船面板");
+    // R25 F-14：Enter 须真消费——船级 +1（不是只断言面板仍开）。
+    let level0 = app.boat.level();
     let mut k = keys();
     k.confirm = true;
     app.poll(&k);
     assert!(app.ship_panel_open, "poll Enter 升级后仍在造船面板；船无 sel 字段");
+    assert_eq!(
+        app.boat.level(),
+        level0 + 1,
+        "poll Enter 真升级：boat level +1（R25 F-14 去弱断言）"
+    );
     let mut k = keys();
     k.back = true;
     app.poll(&k);

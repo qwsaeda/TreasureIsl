@@ -28,7 +28,7 @@ paths:
 ## 4. 双审计协议（audit/ 面）
 - `audit/judge.rs` 收敛判定（§7.3/§7.4 四行机器字段 task/round/侧/新发现/误报/残留）↔
   `GET /api/audit` 收敛表口径；`audit/taskbook.rs` 八要素模板机器断言（`uncovered_elements` 空 = 全覆盖）。
-- 双审计 2 轮 0/0/0 停机判据（22 号 §7.4）= CCGS 口径（docs/process/06_flywheel.md §4 同源）。
+- 双审计停机判据 = 第 1 个 0 轮即通过、第 2 轮可选（M-24/EXP-190，22 号 §7.4 现行口径；06 号 §4 同源；R3~R11 的「2 轮」= 历史快照）。
 
 ## 5. 资产/地图数据面
 - 资产直读 = `assets/ui/` 白名单前缀（防路径穿越）；地图包 = `assets/maps/<id>/` I1~I9 不变量

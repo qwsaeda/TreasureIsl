@@ -387,5 +387,10 @@
    "id": "manifest-gate-posmap",
    "impl": "rust"
   }
+ ],
+ "event_static_keys": [
+  "scene.main_map.event.panel_title",
+  "scene.main_map.event.hint",
+  "scene.main_map.event.effect_fmt"
  ]
 }

@@ -25,8 +25,32 @@ import sys
 from pathlib import Path
 
 CJK = re.compile(r"[\u4e00-\u9fff]")
-# R24 FIND-002：诊断宏（终端输出，非玩家 UI）——文件级 CJK 豁免仅对这些行成立。
-DIAGNOSTIC_MACRO = re.compile(r"\b(?:eprintln|println|print|dbg|debug|info|warn|error|trace)!\s*\(")
+# R24 FIND-002 / R25 F-03：诊断宏（终端输出，非玩家 UI）——文件级 CJK 豁免仅对
+# 字面量确实处于诊断宏**未闭合括号**内时成立（非整行 search：同行混合/跨行都判准）。
+CALL_OPEN = re.compile(r"\b([A-Za-z_]\w*)\s*!?\(\s*$")  # 字面量前最近的调用起始 `name!(` / `name(`
+MACRO_NAMES = {"eprintln", "println", "eprint", "print", "dbg", "debug", "info", "warn", "error", "trace", "write", "writeln"}
+
+
+def in_diagnostic_macro(lines: list[str], lineno: int, col: int) -> bool:
+    """R25 F-03：判定 (lineno, col) 处字面量的**最近包裹调用**是否为诊断宏。
+
+    取字面量前紧邻的 `name!(` / `name(`（容许 `&` 前缀与换行空白）；是诊断宏才豁免。
+    同行混合 `eprintln!("诊断"); draw_text("玩家可见")` → 字面量前最近是 draw_text → 不豁免。
+    跨行 `eprintln!(\n "诊断")` → 最近调用是上一行 eprintln! → 豁免。
+    """
+    # 从字面量起点往前扫，跳过空白/&/字符串前缀，找最近调用名。
+    parts = lines[max(0, lineno - 4):lineno]
+    prefix = "\n".join(parts) + ("\n" if parts else "") + lines[lineno][:col]
+    # 去掉尾部空白与 `&` 取引用
+    trimmed = prefix.rstrip()
+    trimmed = trimmed.rstrip("&").rstrip()
+    # 跨行字面量：前缀尾部是起始引号 `"`，去掉它再找调用名。
+    if trimmed.endswith('"'):
+        trimmed = trimmed[:-1].rstrip()
+    m = CALL_OPEN.search(trimmed)
+    if not m:
+        return False
+    return m.group(1) in MACRO_NAMES
 # 飞轮 R1 ⑤-05 修复：旧式 `"([^"\\]|\\.)*"` 捕获组只保留 `*` 量词内最后一次迭代
 # （= 字面量末字符），CJK 通道对「以标点/ASCII 结尾」的中文字面量失明（如
 # `…不 fallback）` 只捕获到 `）`）。改用非捕获外层 + 原子式内层，group(1) = 完整字面量内容。
@@ -115,9 +139,10 @@ def scan_file(path: Path) -> list[tuple[str, str, int, str]]:
             lit = m.group(1)
             if lit and CJK.search(lit):
                 why = exempt_for(rel, "cjk")
-                # R24 FIND-002：文件级 CJK 豁免收窄——main_map.rs 的豁免理由仅覆盖诊断宏
-                # （eprintln!/println!/debug!/warn!/error!），玩家可见 draw_* 文本不许借豁免隐身。
-                if why is not None and "scenes/main_map.rs" in rel and not DIAGNOSTIC_MACRO.search(code):
+                # R24 FIND-002 / R25 F-03：宽豁免文件（main_map.rs + game_app/）的 CJK 豁免收窄为
+                # 「字面量处于诊断宏未闭合括号内」；玩家可见 draw_* 文本不许借豁免隐身。
+                if why is not None and ("scenes/main_map.rs" in rel or "game_app/" in rel) \
+                        and not in_diagnostic_macro(lines, i, m.start()):
                     why = None
                 if why is None:
                     hits.append((rel, "cjk", i + 1, lit[:24]))
