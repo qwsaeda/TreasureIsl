@@ -404,6 +404,71 @@
    "timeout_s": 900,
    "prove": "evidence/tests/oracle_diff_rng/",
    "desc": "做什么：跑 RNG oracle 差分（reference_diff_rng，7 条），断言同 seed 同序列逐位一致 + `GameRng` 可播种可复现。测什么：rules::rng PCG 实现 vs 参照（persistence.md RNG 设计）。达到效果：RNG 改动不破坏全流程可复现性（回归测试基础）。逐测：同 seed 同输出/不同 seed 不同输出/存档 rng_seed+rng_steps 精确续流。"
+  },
+  {
+   "id": "app_trade_panel_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "贸易面板 e2e（S63 T1：T键开/买卖走TradeLedger/面板互斥）",
+   "command": "cargo test -p ti-app --test app_trade_panel_e2e",
+   "evidence": "evidence/S63.0.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_trade_panel_e2e/",
+   "desc": "做什么：跑 app_trade_panel_e2e 面板端到端测试。测什么：T键开/买卖走TradeLedger/面板互斥）。达到效果：S63 面板可玩闭环机器判据。 逐测：见测试文件内 3~4 条断言（开关/选择/账本/互斥/边界）。"
+  },
+  {
+   "id": "app_merchant_panel_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "商人面板 e2e（S63 T7：M键开/买人手武器走merchant/金不足拒绝）",
+   "command": "cargo test -p ti-app --test app_merchant_panel_e2e",
+   "evidence": "evidence/S63.0.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_merchant_panel_e2e/",
+   "desc": "做什么：跑 app_merchant_panel_e2e 面板端到端测试。测什么：M键开/买人手武器走merchant/金不足拒绝）。达到效果：S63 面板可玩闭环机器判据。 逐测：见测试文件内 3~4 条断言（开关/选择/账本/互斥/边界）。"
+  },
+  {
+   "id": "app_event_panel_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "事件面板 e2e（S63 T6：V键开/7事件走events::effect/环形选择）",
+   "command": "cargo test -p ti-app --test app_event_panel_e2e",
+   "evidence": "evidence/S63.0.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_event_panel_e2e/",
+   "desc": "做什么：跑 app_event_panel_e2e 面板端到端测试。测什么：V键开/7事件走events::effect/环形选择）。达到效果：S63 面板可玩闭环机器判据。 逐测：见测试文件内 3~4 条断言（开关/选择/账本/互斥/边界）。"
+  },
+  {
+   "id": "app_ship_panel_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "造船面板 e2e（S63 T3：N键开/升级走boat扣bank_gold）",
+   "command": "cargo test -p ti-app --test app_ship_panel_e2e",
+   "evidence": "evidence/S63.0.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_ship_panel_e2e/",
+   "desc": "做什么：跑 app_ship_panel_e2e 面板端到端测试。测什么：N键开/升级走boat扣bank_gold）。达到效果：S63 面板可玩闭环机器判据。 逐测：见测试文件内 3~4 条断言（开关/选择/账本/互斥/边界）。"
+  },
+  {
+   "id": "app_panel_keyboard_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "面板真实键盘 e2e（飞轮R22 P0：经poll()开/选/买/关+5面板互斥+吞spin）",
+   "command": "cargo test -p ti-app --test app_panel_keyboard_e2e",
+   "evidence": "evidence/S63.0.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_panel_keyboard_e2e/",
+   "desc": "做什么：跑 app_panel_keyboard_e2e 面板端到端测试。测什么：经poll()开/选/买/关+5面板互斥+吞spin）。达到效果：S63 面板可玩闭环机器判据。 逐测：见测试文件内 3~4 条断言（开关/选择/账本/互斥/边界）。"
   }
  ]
 }

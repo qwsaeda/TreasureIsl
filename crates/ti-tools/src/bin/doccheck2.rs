@@ -415,6 +415,54 @@ fn check_isle_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<Str
     errors
 }
 
+/// 飞轮 R23 FIND-001：`scene.main_map.event.*` 动态拼接 key 正向存在性。
+/// `main_map.rs::EVENT_KINDS` 的 7 个事件 key 经 `format!("scene.main_map.event.{key}")` 拼接消费，
+/// 静态扫描读不出（`sget(&name_key)` 非字面量）⇒ 整前缀豁免会遮蔽漏配文案。本断言 =
+/// `EVENT_KINDS` 每类事件 `scene.main_map.event.<key>` 须在 strings.json 实存（新增事件漏配即 FAIL），
+/// 与 `isle.*` 正向检查同款「先正向再豁免」顺序。
+fn check_event_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(src) = read_file(root, "crates/ti-app/src/scenes/main_map.rs") else {
+        return errors;
+    };
+    // 从 EVENT_KINDS 数组抽 ("key", MaritimeEvent::...) 里的 key 字面量。
+    let Some(start) = src.find("EVENT_KINDS") else {
+        return errors;
+    };
+    let seg: String = src[start..].chars().take(1600).collect();
+    for cap in regex_captures_pair(&seg) {
+        let key = format!("scene.main_map.event.{cap}");
+        if !json_keys.contains(&key) {
+            errors.push(format!(
+                "i18n 动态 key `{key}` 缺失（EVENT_KINDS 事件 {cap} 无对应 strings.json 文案；main_map.rs `event.{{}}` 拼接消费将显示裸 key）"
+            ));
+        }
+    }
+    errors
+}
+
+/// 从 `EVENT_KINDS` 片段抽 `("xxx", MaritimeEvent::...)` 的字面 key（轻量扫描，无 regex crate 依赖）。
+fn regex_captures_pair(seg: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut rest = seg;
+    while let Some(i) = rest.find("(\"") {
+        let after = &rest[i + 2..];
+        if let Some(j) = after.find("\",") {
+            let key = &after[..j];
+            if key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                && after[j + 2..].trim_start().starts_with("MaritimeEvent::")
+            {
+                out.push(key);
+            }
+            rest = &after[j + 2..];
+        } else {
+            break;
+        }
+    }
+    out
+}
+
+#[allow(clippy::too_many_lines)] // R23 event 正向检查 extend + 原孤儿扫描，集中一处
 fn check_i18n_orphans(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(strings_json) = read_file(root, "assets/data/strings.json") else {
@@ -517,6 +565,7 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
         "isle.",
         "scene.main_map.node.",
         "scene.main_map.hud.",
+        "scene.main_map.event.", // R23 FIND-001：改由 check_event_keys_present 正向守护后豁免消 WARN
         "glmapm",
         "scene.index.",
     ];
@@ -534,6 +583,7 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
     ];
     // 飞轮 R4 A-P2-2：动态 isle.* key 正向存在性（balance 岛类 ↔ strings isle.<id> 对账）
     errors.extend(check_isle_keys_present(root, &json_keys));
+    errors.extend(check_event_keys_present(root, &json_keys)); // R23 FIND-001：event.* 先正向再豁免
     for k in &json_keys {
         if exempt_prefixes.iter().any(|p| k.starts_with(p)) {
             continue;
@@ -3057,7 +3107,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 1 pending〔S63.0 子场景 WBS〕 + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E + S63.1 贸易面板 + S63.2 建造横屏与角色立绘 + S63.3 商人面板 + S63.4 事件面板 + S63.5 造船面板 + S63.6 Vs立绘对峙 + S61.1 飞轮R22 7 条 verified〔S63.0 子场景 WBS 立项 pending〕；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）"
+                "{tasks} 任务（{verified} verified + 1 pending〔S63.0 子场景 WBS〕 + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E + S63.1 贸易面板 + S63.2 建造横屏与角色立绘 + S63.3 商人面板 + S63.4 事件面板 + S63.5 造船面板 + S63.6 Vs立绘对峙 + S61.1 飞轮R22 + S61.2 飞轮R23 8 条 verified〔S63.0 子场景 WBS 立项 pending〕；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。

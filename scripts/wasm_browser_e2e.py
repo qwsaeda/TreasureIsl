@@ -194,7 +194,20 @@ def main() -> int:
         page.mouse.click(270, 480)
         page.wait_for_timeout(3_000)
         after = page.evaluate("document.getElementById('status')?.textContent ?? ''")
-        checks["L3_input"] = {"after": after, "page_errors": page_errors}
+        # R23 FIND-013：S63 五面板入口键 T/B/M/V/N 浏览器层尽力而为覆盖
+        # （面板开关/账本已由 native app_*_panel_e2e 经 poll() 真键盘断言；此处只验浏览器端按键 0 pageerror，
+        # 不做场景/像素强断言——横屏 L4 导航有亮度阈值已知边界）。
+        panel_keys = ["t", "b", "m", "v", "n"]
+        for pk in panel_keys:
+            page.keyboard.press(pk)
+            page.wait_for_timeout(500)
+            page.keyboard.press("Backspace")  # 关面板，回主地图
+            page.wait_for_timeout(500)
+        checks["L3_input"] = {
+            "after": after,
+            "page_errors": page_errors,
+            "panel_keys_tested": panel_keys,  # R23 FIND-013：S63 五面板键浏览器层覆盖
+        }
 
         # ── L4 场景切换：select_map 鼠标点 m01 卡片 ⇒ main_map（增量判据）──
         # 从任意场景走 Enter 链直达 select_map（menu_selected 持久化；select_role/select_map

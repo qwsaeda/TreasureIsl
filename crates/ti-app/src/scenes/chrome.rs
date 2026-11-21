@@ -582,6 +582,16 @@ pub const TRADE_PANEL_ENTRIES: usize = 5;
 /// 贸易面板末条目序号（u8 选中域 0..=4）。
 pub const TRADE_LAST_ENTRY: u8 = 4;
 
+/// S63 五面板横屏几何（R23 FIND-007~012：y 必须 8 整除，8pt 栅格 EXP-157）。
+/// 旧内联 `(1080-N)/2` 派生 y=130/190/230 非 8 倍数且散落 Rust，现集中具名常量 + 8 整除。
+pub const PANEL_LANDSCAPE: (i32, i32, i32, i32) = (400, 128, 1120, 820); // y=128（8×16）
+/// 事件面板横屏几何（7 事件列表，偏高，y=128 8 整除）。
+pub const PANEL_LANDSCAPE_TALL: (i32, i32, i32, i32) = (400, 128, 1120, 824); // 事件面板 y=128
+/// 商人面板横屏几何（2 条目，y=192 8×24）。
+pub const PANEL_LANDSCAPE_MERCHANT: (i32, i32, i32, i32) = (400, 192, 1120, 696); // y=192（8×24）
+/// 造船面板横屏几何（y=232 8×29）。
+pub const PANEL_LANDSCAPE_SHIP: (i32, i32, i32, i32) = (400, 232, 1120, 616); // y=232（8×29）
+
 /// 贸易面板第 `entry` 条目的绘制框（8pt 栅格）。
 #[must_use]
 pub fn trade_entry_rect(entry: usize) -> (i32, i32, i32, i32) {

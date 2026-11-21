@@ -153,6 +153,14 @@ async function main() {
   log(`  L3/L4 按键 3×Enter 后墨点序列=${JSON.stringify(frames)}（变化帧 ${sceneChanges}/3）`);
   const l4ok = sceneChanges >= 1; // 至少一帧有场景推进（防卡死在首场景仍"全绿"）
 
+  // R23 FIND-014：S63 五面板入口键 T/B/M/V/N 浏览器层尽力覆盖（面板账本由 native e2e 断言；此处 0 pageerror）
+  const panelKeys = ['t', 'b', 'm', 'v', 'n'];
+  for (const pk of panelKeys) {
+    await press(pk);
+    await press('Backspace');
+  }
+  log(`  L3b 面板键 ${panelKeys.join('/')} 已遍历（0 pageerror 判据见上）`);
+
   const s1 = await status();
   log(`  终态 status="${s1}" console致命错误=${consoleErrors.length} 页面异常=${pageErrors.length}`);
   consoleErrors.slice(0, 5).forEach((c) => log(`    console: ${c}`));

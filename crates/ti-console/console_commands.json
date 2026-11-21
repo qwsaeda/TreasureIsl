@@ -447,6 +447,81 @@
    "enabled_by_default": true,
    "command": "cargo test -p ti-core --test reference_diff_rng",
    "_writes_note": "只读测试：cargo test 零写盘（writes=[]）；evidence/reference_diff_*.log 为审计实跑手工重定向产物（非命令副作用写面），不在写点豁免语义内（飞轮 R19-06）"
+  },
+  {
+   "id": "app_trade_panel_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "app_trade_panel_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test app_trade_panel_e2e"
+  },
+  {
+   "id": "app_merchant_panel_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "app_merchant_panel_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test app_merchant_panel_e2e"
+  },
+  {
+   "id": "app_event_panel_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "app_event_panel_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test app_event_panel_e2e"
+  },
+  {
+   "id": "app_ship_panel_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "app_ship_panel_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test app_ship_panel_e2e"
+  },
+  {
+   "id": "app_panel_keyboard_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "app_panel_keyboard_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test app_panel_keyboard_e2e"
   }
  ]
 }

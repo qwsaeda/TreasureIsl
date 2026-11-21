@@ -29,8 +29,9 @@
 - R22-021/022/023/024/025：真实 poll e2e + 两两互斥 + 商人金不足拒绝 + trade 卖金断言直白化。
 
 ## 残留（诚实登记，非 blocked）
-- R22-002（from_unlocked/from_mask 旧链重建逻辑）：生产 0 消费方（仅 defeated_count/is_map_defeated 测试用），
-  S62 defeated[] 进度语义保留，行为无玩家可见错误；标「旧档兼容占位」非真漂移，未改。
+- R22-002（from_unlocked/from_mask 旧链重建逻辑）：**BOSS 击败钩 host.rs:1090 为唯一生产消费方**（FIND R23-017 更正：R22 原写「生产 0 消费方」为事实漂移）——
+  `from_unlocked(all).on_boss_defeated(ms).unlocked()` 在全解锁下恒等（结果仍全 20 图），旧链重建语义在该路径不生效；
+  S62 defeated[] 进度语义保留，行为无玩家可见错误；标「非功能缺口」裁决不变，仅更正消费方事实。
 - R22-013（面板格式串硬编码中文）/ R22-014（横屏坐标非 8pt）：P2 UX/规范项，非功能错误；
   i18n 键孤儿 WARN（event.blacksmith 等）实为 doccheck2 不认 format! 动态拼 key 的扫描盲区，运行时消费正常。
 - R22-019（竖屏 Vs 立绘旧对角）：用户仅看横屏，按现状保留。

@@ -532,11 +532,7 @@ fn handle_boat_upgrade(host: &mut dyn SceneHost) {
 /// S21.12 建造面板渲染（主地图覆盖层；标题 + 5 条目 + 底部提示，toast 同底板风格）。
 /// S63 T2：横屏（1920×1080）坐标居中适配（旧 `BUILD_PANEL` = 竖屏常量，横屏下左下被裁切）。
 fn render_build_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) = if landscape {
-        ((1920 - 1120) / 2, (1080 - 820) / 2, 1120, 820)
-    } else {
-        chrome::BUILD_PANEL
-    };
+    let (bx, by, bw, bh) = if landscape { chrome::PANEL_LANDSCAPE } else { chrome::BUILD_PANEL };
     let header_h = chrome::BUILD_PANEL_HEADER_H;
     let entry_h = if landscape { 120 } else { chrome::BUILD_PANEL_ENTRY_H };
     let theme = host.theme().clone();
@@ -597,11 +593,7 @@ fn render_build_panel(host: &mut dyn SceneHost, landscape: bool) {
 /// 几何 = `chrome::TRADE_PANEL` 数据化常量，文案 = i18n，商品 = `balance.trade` + `host.owned`）。
 fn render_trade_panel(host: &mut dyn SceneHost, landscape: bool) {
     // 横屏 1920×1080 = 候选 A「羊皮卷轴居中」(居中 1120×820)；竖屏 = 旧常量（居中）。
-    let (bx, by, bw, bh) = if landscape {
-        ((1920 - 1120) / 2, (1080 - 820) / 2, 1120, 820)
-    } else {
-        chrome::TRADE_PANEL
-    };
+    let (bx, by, bw, bh) = if landscape { chrome::PANEL_LANDSCAPE } else { chrome::TRADE_PANEL };
     let entry_h = if landscape { 120 } else { chrome::TRADE_PANEL_ENTRY_H };
     let header_h = chrome::TRADE_PANEL_HEADER_H;
     let theme = host.theme().clone();
@@ -636,14 +628,17 @@ fn render_trade_panel(host: &mut dyn SceneHost, landscape: bool) {
         let buy_price = host.price_of(gid).unwrap_or(0);
         let owned = host.owned_snapshot().iter().find(|(g, _)| *g == gid).map_or(0, |(_, q)| *q);
         host.draw_hint_text(
-            &format!("买 {buy_price} · 持有 {owned}"),
+            &i18n::sgetf("scene.main_map.trade.row_fmt", &[&buy_price, &owned]),
             ex + 16,
             ey + 52,
             chrome::COLOR_TEXT_ON_PARCH,
         );
     }
     host.draw_hint_text(
-        &format!("{} · 金 {}", i18n::sget("scene.main_map.trade.hint"), host.gold()),
+        &i18n::sgetf(
+            "scene.main_map.panel.gold_hint",
+            &[&i18n::sget("scene.main_map.trade.hint"), &host.gold()],
+        ),
         bx + 24,
         by + bh - 42,
         chrome::COLOR_TEXT_ON_PARCH,
@@ -679,11 +674,8 @@ fn handle_merchant_buy(host: &mut dyn SceneHost, kind: u8) {
 
 /// S63 T7 商人面板渲染（候选 A 风格：羊皮卷轴居中 + 2 条目 + 容量/价格/提示）。
 fn render_merchant_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) = if landscape {
-        ((1920 - 1120) / 2, (1080 - 700) / 2, 1120, 700)
-    } else {
-        (144, 640, 768, 640)
-    };
+    let (bx, by, bw, bh) =
+        if landscape { chrome::PANEL_LANDSCAPE_MERCHANT } else { (144, 640, 768, 640) };
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -723,18 +715,26 @@ fn render_merchant_panel(host: &mut dyn SceneHost, landscape: bool) {
         }
         host.draw_text(name, bx + 48, ey + 8);
         host.draw_hint_text(
-            &format!("持有 {have} / 上限 {cap} · 买 1 需 {price} 金"),
+            &i18n::sgetf("scene.main_map.merchant.row_fmt", &[&have, &cap, &price]),
             bx + 48,
             ey + 56,
             chrome::COLOR_TEXT_ON_PARCH,
         );
     }
     host.draw_hint_text(
-        &format!("{} · 金 {}", i18n::sget("scene.main_map.merchant.hint"), host.gold()),
+        &i18n::sgetf(
+            "scene.main_map.panel.gold_hint",
+            &[&i18n::sget("scene.main_map.merchant.hint"), &host.gold()],
+        ),
         bx + 24,
         by + bh - 44,
         chrome::COLOR_TEXT_ON_PARCH,
     );
+}
+
+/// 带符号数字格式化（i18n 位置参数 `{}` 不支持 `{:+}` 格式符，R23 FIND-005）。
+fn sign_num(value: i64) -> String {
+    if value >= 0 { format!("+{value}") } else { value.to_string() }
 }
 
 /// S63 T6 七种海事事件（与 `rules::events::MaritimeEvent` 枚举同序，i18n 键后缀）。
@@ -772,11 +772,8 @@ fn handle_event_apply(host: &mut dyn SceneHost, sel: usize) {
 
 /// S63 T6 事件面板渲染（候选 A 风格：羊皮卷轴居中 + 7 事件列表 + 效果预览）。
 fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) = if landscape {
-        ((1920 - 1120) / 2, (1080 - 820) / 2, 1120, 820)
-    } else {
-        (144, 600, 768, 720)
-    };
+    let (bx, by, bw, bh) =
+        if landscape { chrome::PANEL_LANDSCAPE_TALL } else { (144, 600, 768, 720) };
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -802,14 +799,16 @@ fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
         host.draw_text(&name, bx + 44, ey + 6);
         let fx = ev.effect(b.events);
         host.draw_hint_text(
-            &format!(
-                "金{:+} 人手{:+} 武器{:+} 损耗 {}%/{}%/{}%",
-                fx.gold_delta,
-                fx.crew_delta,
-                fx.arms_delta,
-                fx.gold_loss_pct / 100,
-                fx.crew_loss_pct / 100,
-                fx.arms_loss_pct / 100
+            &i18n::sgetf(
+                "scene.main_map.event.effect_fmt",
+                &[
+                    &sign_num(fx.gold_delta),
+                    &sign_num(i64::from(fx.crew_delta)),
+                    &sign_num(i64::from(fx.arms_delta)),
+                    &fx.gold_loss_pct,
+                    &fx.crew_loss_pct,
+                    &fx.arms_loss_pct,
+                ],
             ),
             bx + 44,
             ey + 44,
@@ -817,7 +816,10 @@ fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
         );
     }
     host.draw_hint_text(
-        &format!("{} · 金 {}", i18n::sget("scene.main_map.event.hint"), host.gold()),
+        &i18n::sgetf(
+            "scene.main_map.panel.gold_hint",
+            &[&i18n::sget("scene.main_map.event.hint"), &host.gold()],
+        ),
         bx + 24,
         by + bh - 42,
         chrome::COLOR_TEXT_ON_PARCH,
@@ -826,11 +828,8 @@ fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
 
 /// S63 T3 造船面板渲染（候选 A 风格：当前船级/货舱/火力/造价 + 升级提示）。
 fn render_ship_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) = if landscape {
-        ((1920 - 1120) / 2, (1080 - 620) / 2, 1120, 620)
-    } else {
-        (144, 640, 768, 640)
-    };
+    let (bx, by, bw, bh) =
+        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -861,7 +860,11 @@ fn render_ship_panel(host: &mut dyn SceneHost, landscape: bool) {
     );
     if let Some(cost) = host.boat_next_cost() {
         let next_name = i18n::sget(&format!("boat.{}", host.boat_level() + 1)).to_owned();
-        host.draw_text(&format!("下一级：{next_name} · 升级需 {cost} 金"), bx + 48, by + 230);
+        host.draw_text(
+            &i18n::sgetf("scene.main_map.ship.next_fmt", &[&next_name, &cost]),
+            bx + 48,
+            by + 230,
+        );
     } else {
         host.draw_text(i18n::sget("boat.max"), bx + 48, by + 230);
     }
