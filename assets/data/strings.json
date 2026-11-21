@@ -250,5 +250,10 @@
  "scene.main_map.merchant.row_fmt": "持有 {0} / 上限 {1} · 买 1 需 {2} 金",
  "scene.main_map.event.effect_fmt": "金{0} 人手{1} 武器{2} 损耗 {3}%/ {4}%/ {5}%",
  "scene.main_map.ship.next_fmt": "下一级：{0} · 升级需 {1} 金",
- "scene.main_map.ship.stat_fmt": "货舱 {0} · 火力 atk{1} / hp{2} · 金 {3}"
+ "scene.main_map.ship.stat_fmt": "货舱 {0} · 火力 atk{1} / hp{2} · 金 {3}",
+ "scene.main_map.garrison.panel_title": "驻军自定",
+ "scene.main_map.garrison.stat_fmt": "当前驻军 {0} · 舰队+驻军总人手 {1}",
+ "scene.main_map.garrison.available_fmt": "可调范围 0 ~ {0}（驻军+舰队守恒）",
+ "scene.main_map.garrison.hint": "←/→ 调驻军 · Enter 确认 · Back 关闭",
+ "scene.main_map.toast.garrison_fmt": "驻军设为 {0} · 舰队人手 {1}"
 }

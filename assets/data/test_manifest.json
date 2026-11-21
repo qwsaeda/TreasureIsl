@@ -469,6 +469,19 @@
    "timeout_s": 900,
    "prove": "evidence/tests/app_panel_keyboard_e2e/",
    "desc": "做什么：跑 app_panel_keyboard_e2e 面板端到端测试。测什么：经poll()开/选/买/关+5面板互斥+吞spin）。达到效果：S63 面板可玩闭环机器判据。 逐测：实测 33 条断言（开关/选择/账本/互斥/边界，R24 FIND-009 对齐）。"
+  },
+  {
+   "id": "app_garrison_panel_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "驻军自定面板 e2e（S64：G键开/驻军±守恒/钳位/非所有者拒绝/互斥/G键poll路由）",
+   "command": "cargo test -p ti-app --test app_garrison_panel_e2e",
+   "evidence": "evidence/tests/app_garrison_panel_e2e/run.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_garrison_panel_e2e/",
+   "desc": "做什么：跑 app_garrison_panel_e2e 驻军面板端到端测试。测什么：G键开/驻军±守恒/钳位/互斥/poll路由。达到效果：S64 驻军自定玩法可玩机器判据。 逐测：实测 21 条断言（开关/守恒/钳位/互斥/poll）。"
   }
  ]
 }

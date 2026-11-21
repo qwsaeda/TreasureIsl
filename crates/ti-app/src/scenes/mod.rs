@@ -679,6 +679,36 @@ pub trait MapHost {
     /// S63 造船面板开关（默认 no-op）。
     fn set_ship_panel_open(&mut self, _open: bool) {}
 
+    // ---- S64 驻军自定面板（默认 no-op；fake 宿主不实现 ⇒ 驻军面板不生效，不影响其它场景）----
+    /// S64：驻军面板是否打开（默认关闭）。
+    fn garrison_panel_open(&self) -> bool {
+        false
+    }
+    /// S64：驻军面板开关（默认 no-op）。
+    fn set_garrison_panel_open(&mut self, _open: bool) {}
+    /// S64：驻军面板目标值（默认 0）。
+    fn garrison_sel(&self) -> u32 {
+        0
+    }
+    /// S64：驻军面板目标值 setter（默认 no-op）。
+    fn set_garrison_sel(&mut self, _want: u32) {}
+    /// S64：驻军可调上限 = 当前驻军+舰队人手（默认 0）。
+    fn garrison_available(&self) -> u32 {
+        0
+    }
+    /// S64：当前格驻军值（面板打开时的初始值）。
+    fn current_garrison(&self) -> u32 {
+        0
+    }
+    /// S64：是否落自己格待决（`pending_own` 在位）——驻军面板仅此时可开。
+    fn has_pending_own(&self) -> bool {
+        false
+    }
+    /// S64：确认驻军（默认 no-op，返回 false）。
+    fn confirm_garrison(&mut self) -> bool {
+        false
+    }
+
     /// S21.12 造船（船系统单向升级：扣金 + 抬 cargo/atk/hp，立即生效）。
     ///
     /// 返回 `true` = 升级成功；`false` = 金不够 / 已满级（场景层给提示文案）。

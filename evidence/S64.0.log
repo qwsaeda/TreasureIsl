@@ -1,0 +1,33 @@
+# app_garrison_panel_e2e 真跑测证据（飞轮 S64 · 2026-11-21T09:20:24Z）
+$ cargo test -p ti-app --test app_garrison_panel_e2e
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+   Compiling ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.84s
+     Running tests/app_garrison_panel_e2e.rs (/disk/target/debug/deps/app_garrison_panel_e2e-beb309c46562a81b)
+
+running 6 tests
+test garrison_clamped_to_available ... ok
+test garrison_panel_open_only_with_pending_own ... ok
+test garrison_panel_mutual_exclusion ... ok
+test garrison_panel_via_poll_keyboard ... ok
+test garrison_decrease_conserves_crew ... ok
+test garrison_increase_conserves_crew ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+exit=0
+
+## S64.0 收口判据（业务玩法补全，非门禁自举）
+- 真实缺口：探索代理坐实 territory.md §4 第三支「增减驻军」规则层 set_garrison 已实现但 app 壳零入口；
+  这是原版核心战略取舍（守厚则舰队人手少/守薄则机动），玩家此前碰不到。
+- 改动面四面：业务规则(territory.md §4 注记)/数据(strings +5 键)/规则实现(GameInput/KeyState G键/input.rs/host
+  confirm_garrison 封装 set_garrison 守恒钳位)/表现(main_map render_garrison_panel 复用已签收候选A羊皮卷轴)。
+- 新 e2e 6 条全过：仅 pending_own 可开 / 驻军±N 守恒(舰队∓N) / 钳到[0,驻军+舰队] / 互斥 / G键 poll 路由。
+- 出图：evidence/bevy_native_main_map_1920x1080.png 非黑像素 2062353/2073600≈99.5% 无渲染回归
+  （驻军面板本身需 pending_own 状态无 CLI 触发，由 e2e+复用已签收风格保证；符合 U9 引擎真实渲染纪律）。
+- 登记：test_manifest +1(37)/console_commands +1/close 白名单 32→33 + run.log 实跑。
+- 验证：cargo test 1032/0(+6) + clippy 0 + audit_code 0 + CS 0 + check_hardcode 0 + validate_data OK
+  + doccheck 183/38/200/359 0 + doccheck2 53 项 0 + ledger 365/364/0 pending 0 error + gate 36 项 0 failure。

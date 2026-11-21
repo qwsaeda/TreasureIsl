@@ -27,6 +27,7 @@ fn keys() -> KeyState {
         merchant: false,
         event: false,
         ship: false,
+        garrison: false, // S64：驻军自定面板（G 键）
     }
 }
 

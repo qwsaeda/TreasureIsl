@@ -352,6 +352,70 @@ impl MapHost for GameApp {
         self.ship_panel_open = open;
     }
 
+    // ---- S64 驻军自定面板（territory.md §4 第三支，人机守恒）----
+    fn garrison_panel_open(&self) -> bool {
+        self.garrison_panel_open
+    }
+    fn set_garrison_panel_open(&mut self, open: bool) {
+        self.garrison_panel_open = open;
+    }
+    fn garrison_sel(&self) -> u32 {
+        self.garrison_sel
+    }
+    fn set_garrison_sel(&mut self, want: u32) {
+        self.garrison_sel = want;
+    }
+    fn current_garrison(&self) -> u32 {
+        let Some(terr) = &self.territory else {
+            return 0;
+        };
+        terr.ownership(self.pending_own.unwrap_or(u32::MAX)).map_or(0, |o| o.garrison)
+    }
+    fn has_pending_own(&self) -> bool {
+        self.pending_own.is_some()
+    }
+    /// S64：目标驻军上限 = 当前驻军 + 舰队人手（守恒钳位，规则层同口径）。
+    fn garrison_available(&self) -> u32 {
+        let Some(terr) = &self.territory else {
+            return 0;
+        };
+        let seat = self.turn_cycle.current;
+        terr.ownership(self.pending_own.unwrap_or(u32::MAX))
+            .map_or(0, |o| o.garrison)
+            .saturating_add(self.seat_crew[seat as usize])
+    }
+    /// S64 确认驻军（面板 Enter）：走 `rules::territory_v2::set_garrison`（守恒），
+    /// 把临时 `SeatState` 的 crew 变化写回 `seat_crew[seat]`。返回 true = 驻军真变化。
+    fn confirm_garrison(&mut self) -> bool {
+        let Some(cell) = self.pending_own.take() else {
+            return false;
+        };
+        let Some(mut terr) = self.territory.take() else {
+            return false;
+        };
+        let seat = self.turn_cycle.current;
+        let mut seat_state = SeatState::new(
+            self.seat_gold[seat as usize],
+            self.seat_crew[seat as usize],
+            self.seat_arms[seat as usize],
+            self.boat.level(),
+        );
+        let after =
+            territory_v2::set_garrison(&mut seat_state, &mut terr, cell, seat, self.garrison_sel);
+        self.seat_crew[seat as usize] = seat_state.crew; // 守恒写回
+        self.territory = Some(terr);
+        self.garrison_panel_open = false;
+        // 确认后总给反馈（钳位可能使 want 被截断，玩家需看到实际值）；返回 true = 已消费。
+        self.toast(
+            i18n_fmt(
+                "scene.main_map.toast.garrison_fmt",
+                &[&after as &dyn std::fmt::Display, &seat_state.crew as &dyn std::fmt::Display],
+            ),
+            Some(Sfx::Press),
+        );
+        true
+    }
+
     /// S21.12 造船：走 `rules::boat::BoatSession::upgrade`（单向升级链 + 扣金 + 抬加成），
     /// 成功后把差额从钱包扣掉（与建筑建造同一钱包口径）。
     fn boat_upgrade(&mut self) -> bool {

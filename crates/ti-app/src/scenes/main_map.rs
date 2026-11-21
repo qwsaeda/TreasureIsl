@@ -501,6 +501,11 @@ fn render_track_tail(host: &mut dyn SceneHost, layout: &SceneLayout) {
             host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_ship_panel(host, landscape);
     }
+    if host.garrison_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_garrison_panel(host, landscape);
+    }
     render_board_toast(host);
     // S36.3 终局面板（`territory.md` §4.4）：`match_outcome` 在位 = 对局结束，
     // 主地图中心画胜利/失败/平局面板 + 「按 Confirm 返回主菜单」提示。
@@ -873,6 +878,46 @@ fn render_ship_panel(host: &mut dyn SceneHost, landscape: bool) {
     );
 }
 
+/// S64 驻军自定面板（复用已签收候选 A 羊皮卷轴风格，与造船同几何）。
+/// 展示当前驻军 / 舰队人手 / 可调范围，玩家 ↑↓ 调目标值后 Enter 确认走守恒钳位。
+fn render_garrison_panel(host: &mut dyn SceneHost, landscape: bool) {
+    let (bx, by, bw, bh) =
+        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+    let theme = host.theme().clone();
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    host.fill_rect(bx, by, bw, bh, panel);
+    for t in [0, bh - 3] {
+        host.fill_rect(bx, by + t, bw, 3, brass);
+    }
+    host.draw_title_text(
+        i18n::sget("scene.main_map.garrison.panel_title"),
+        bx + 24,
+        by + 18,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    let avail = host.garrison_available();
+    host.draw_text(
+        &i18n::sgetf("scene.main_map.garrison.stat_fmt", &[&host.current_garrison(), &avail]),
+        bx + 48,
+        by + 96,
+    );
+    host.draw_hint_text(
+        &i18n::sgetf("scene.main_map.garrison.available_fmt", &[&avail]),
+        bx + 48,
+        by + 146,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    // 目标值大号居中显示（玩家直观看到将设的驻军数）。
+    host.draw_text(&host.garrison_sel().to_string(), bx + 48, by + 220);
+    host.draw_hint_text(
+        i18n::sget("scene.main_map.garrison.hint"),
+        bx + 24,
+        by + bh - 44,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+}
+
 impl Scene for MainMapScene {
     fn kind(&self) -> SceneKind {
         SceneKind::MainMap
@@ -884,6 +929,7 @@ impl Scene for MainMapScene {
         match input {
             GameInput::OpenTradePanel => {
                 host.set_trade_panel_open(true);
+                host.set_garrison_panel_open(false);
                 host.set_build_panel_open(false);
                 host.set_merchant_panel_open(false);
                 host.set_ship_panel_open(false);
@@ -892,6 +938,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenBuildPanel => {
                 host.set_build_panel_open(true);
+                host.set_garrison_panel_open(false);
                 host.set_trade_panel_open(false);
                 host.set_merchant_panel_open(false);
                 host.set_event_panel_open(false);
@@ -900,6 +947,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenMerchantPanel => {
                 host.set_merchant_panel_open(true);
+                host.set_garrison_panel_open(false);
                 host.set_trade_panel_open(false);
                 host.set_build_panel_open(false);
                 host.set_event_panel_open(false);
@@ -908,6 +956,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenEventPanel => {
                 host.set_event_panel_open(true);
+                host.set_garrison_panel_open(false);
                 host.set_trade_panel_open(false);
                 host.set_build_panel_open(false);
                 host.set_merchant_panel_open(false);
@@ -916,10 +965,24 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenShipPanel => {
                 host.set_ship_panel_open(true);
+                host.set_garrison_panel_open(false);
                 host.set_trade_panel_open(false);
                 host.set_build_panel_open(false);
                 host.set_merchant_panel_open(false);
                 host.set_event_panel_open(false);
+                return true;
+            }
+            GameInput::OpenGarrisonPanel => {
+                // S64：仅落自己格待决时可开驻军面板；否则消费掉但不打开（避免空面板）。
+                if host.has_pending_own() {
+                    host.set_garrison_sel(host.current_garrison());
+                    host.set_garrison_panel_open(true);
+                    host.set_trade_panel_open(false);
+                    host.set_build_panel_open(false);
+                    host.set_merchant_panel_open(false);
+                    host.set_event_panel_open(false);
+                    host.set_ship_panel_open(false);
+                }
                 return true;
             }
             _ => {}
@@ -1051,6 +1114,30 @@ impl Scene for MainMapScene {
                 }
                 GameInput::Back => {
                     host.set_ship_panel_open(false);
+                    return true;
+                }
+                _ => return false,
+            }
+        }
+        // S64 驻军面板：↑/↓ 调目标驻军 ±1（钳到可用上限）/ Enter 确认守恒 / Back 关。
+        if host.garrison_panel_open() {
+            match input {
+                GameInput::MoveUp => {
+                    let avail = host.garrison_available();
+                    let cur = host.garrison_sel().min(avail);
+                    host.set_garrison_sel(cur.saturating_add(1).min(avail));
+                    return true;
+                }
+                GameInput::MoveDown => {
+                    host.set_garrison_sel(host.garrison_sel().saturating_sub(1));
+                    return true;
+                }
+                GameInput::Confirm => {
+                    host.confirm_garrison();
+                    return true;
+                }
+                GameInput::Back => {
+                    host.set_garrison_panel_open(false);
                     return true;
                 }
                 _ => return false,
@@ -1462,6 +1549,11 @@ fn render_v5_ring(
             host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_ship_panel(host, landscape);
     }
+    if host.garrison_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_garrison_panel(host, landscape);
+    }
     // 7) 摇骰 CTA 轴心骰点（`dice.png`；S27.5 用户报「没有筛子」= CTA 只有空舵轮；
     // 舵轮本体 = `scenes.json` 原语（更早画），此处补轴心骰点，与卡环区无重叠）。
     render_spin_die(host, layout);
@@ -1741,6 +1833,11 @@ fn render_v6_proto(
             host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_ship_panel(host, landscape);
     }
+    if host.garrison_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_garrison_panel(host, landscape);
+    }
     render_board_toast(host);
     // S36.3 飞轮 F-7.3：v6 原型路径补终局面板 + 热座交接提示。
     render_match_outcome(host);
@@ -1968,6 +2065,11 @@ fn render_v6_elem(
         let landscape =
             host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_ship_panel(host, landscape);
+    }
+    if host.garrison_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_garrison_panel(host, landscape);
     }
     if host.build_panel_open() {
         let landscape =
