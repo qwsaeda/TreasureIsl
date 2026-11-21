@@ -887,6 +887,7 @@ impl Scene for MainMapScene {
                 host.set_build_panel_open(false);
                 host.set_merchant_panel_open(false);
                 host.set_ship_panel_open(false);
+                host.set_event_panel_open(false); // R22 Q-A：原漏关 event ⇒ trade+event 双面板叠加
                 return true;
             }
             GameInput::OpenBuildPanel => {
@@ -1012,7 +1013,8 @@ impl Scene for MainMapScene {
                 GameInput::MoveUp => {
                     let n = usize::from(host.event_panel_sel());
                     host.set_event_panel_sel(
-                        u8::try_from(if n == 0 { 6 } else { n - 1 }).unwrap_or(6),
+                        u8::try_from(if n == 0 { EVENT_KINDS.len() - 1 } else { n - 1 })
+                            .unwrap_or(0),
                     );
                     host.play_sfx(Sfx::Press);
                     return true;

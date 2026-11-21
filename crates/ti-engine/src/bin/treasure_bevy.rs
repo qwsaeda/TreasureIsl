@@ -2080,7 +2080,7 @@ struct Args {
     viewport: Option<(u32, u32)>,
     /// 摇骰次数（`--spin=N`，S19.7 D5；缺 = 0）。
     spin_n: u32,
-    /// 面板出图（`--panel=trade|build`，S63 T0a/T1；缺 = 无面板）。
+    /// 面板出图（`--panel=trade|build|merchant|event|ship`，S63；缺 = 无面板）。
     panel: Option<String>,
 }
 

@@ -48,6 +48,20 @@ fn merchant_buy_crew_via_rules() {
     assert_eq!(app.seat_gold[seat], gold0 - 30, "金 -30（slave_price）");
 }
 
+/// R22-024：金不足时买人被拒（状态不变，走 `Sfx::Invalid`）。
+#[test]
+fn merchant_buy_rejected_when_insufficient_gold() {
+    let mut app = enter_main_map();
+    let seat = app.turn_cycle.current as usize;
+    // 压金到 0（< slave_price 30）
+    app.seat_gold[seat] = 0;
+    let crew0 = app.seat_crew[seat];
+    app.handle(GameInput::OpenMerchantPanel);
+    app.handle(GameInput::Confirm); // 买人手（应被拒）
+    assert_eq!(app.seat_crew[seat], crew0, "金不足：人手不变（buy_crew Err）");
+    assert_eq!(app.seat_gold[seat], 0, "金不足：金不变");
+}
+
 #[test]
 fn merchant_buy_arms_via_rules() {
     let mut app = enter_main_map();

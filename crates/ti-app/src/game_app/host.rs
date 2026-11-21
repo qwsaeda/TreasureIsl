@@ -873,7 +873,9 @@ impl EconomyHost for GameApp {
         } else {
             after_loss.saturating_sub(u32::try_from(-gold_delta).unwrap_or(0))
         };
-        self.seat_gold[s] = g.min(self.gold_cap());
+        // R22-012：gold_cap()==0 = 不限制（trait 口径 / balance 缺失时返回 0），不能 min(0) 清零。
+        let cap = self.gold_cap();
+        self.seat_gold[s] = if cap == 0 { g } else { g.min(cap) };
         let cur_crew = self.seat_crew[s];
         let crew_after_loss = cur_crew.saturating_sub(
             u32::try_from(u64::from(cur_crew) * u64::from(crew_loss_pct) / 10_000).unwrap_or(0),

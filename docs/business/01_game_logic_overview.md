@@ -120,7 +120,7 @@ flowchart TD
 ### 1.4 20 图推进链（S37，`progression.md` §跨图推进 + `selection.rs` 单一事实源）
 
 - 20 张图 m01~m20，难度按 `boss_tier` 升序（0→19）；`MapSlot::count()=20`。
-- 推进规则 = **击败当前图 BOSS 才解锁下一图**；m01 恒解锁；**击败 m20 = 通关**（`CLEARED_BIT=bit19`）。
+- 推进规则 = **S62 全解锁：20 图开局全部可选**（旧「击败当前图 BOSS 才解锁下一图、m01 恒解锁」单调链已废弃）；击败记录仅作进度，**击败 m20 = 通关**（`CLEARED_BIT=bit19`）。
 - `unlocked_mask` = `u32`（bit 0..=18 = 第 1..=19 图已解锁；bit 19 = 通关位）；旧 `u8` 档读档时高 24 位=0 兼容。
 - 失败（未击败）不解锁，可重试当前图。
 
@@ -165,7 +165,7 @@ flowchart TD
 ```mermaid
 stateDiagram-v2
     [*] --> M01_unlocked
-    M01_unlocked: 初始: defeated=[false;20]<br/>unlocked_mask=0b0001<br/>(仅 m01)
+    M01_unlocked: 初始: defeated=[false;20]<br/>unlocked_mask=0（S62 全解锁：解锁位不持久化，仅 bit19 通关位）<br/>(20 图全可选)
     M01_unlocked --> M02_unlocked : 击败 m01 BOSS<br/>defeated[0]=true
     M02_unlocked --> M03_unlocked : 击败 m02 BOSS
     M03_unlocked --> M04_unlocked : 击败 m03 BOSS

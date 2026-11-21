@@ -19,7 +19,7 @@
 | **对抗流水线飞轮（找问题→审计→修复→回写）** | [`process/06_flywheel.md`](process/06_flywheel.md)（3 角色 + 开轮必读 7 条〔S51.0 起含第 7 条「开轮协作五步」〕+ 飞轮回写 + 停机条件，EXP-068） |
 | 查业务规则（战斗/经济/地图/存档） | [`business/`](business/00_index.md) 各系统文档（含 [`07_ui_flow.md`](business/07_ui_flow.md) 场景流/控件/输入/消息） |
 | S8 标准化改造 | [`plan-s8-refactor.md`](plan-s8-refactor.md) |
-| 逆向 exe 或 `data/` 格式（**仅参照物**） | [`facts/index.md`](facts/index.md) |
+| 逆向 exe 或 `data/` 格式（**仅参照物**） | [`facts/index.md`](../legacy/docs/facts/index.md) |
 | 找当前阶段任务与验收命令 | [`plan-s0-s2.md`](plan-s0-s2.md)、[`plan-s3.md`](plan-s3.md)、[`plan-s4.md`](plan-s4.md)、[`plan-s5.md`](plan-s5.md)、[`plan-s7.md`](plan-s7.md)、[`plan-s8-refactor.md`](plan-s8-refactor.md) |
 | 避免重复踩坑 | [`experience/index.md`](experience/index.md) |
 | 引入新依赖 / 改 workspace 结构 | [`process/01_architecture.md`](process/01_architecture.md) §4（现成库清单）+ [`style.md`](style.md) §5.9 |

@@ -49,17 +49,15 @@ fn trade_panel_buy_and_sell_via_rules() {
     app.handle(GameInput::MoveDown); // sel 0 → 1
     app.handle(GameInput::Confirm); // 买 gid=2
     assert!(app.trade_panel_open, "买入后面板保持打开");
-    assert!(app.gold() < gold_before, "买入扣金（rules::TradeLedger）");
+    let gold_after_buy = app.gold();
+    assert!(gold_after_buy < gold_before, "买入扣金（rules::TradeLedger）");
     let owned_after_buy = app.owned.iter().find(|(g, _)| *g == 2).map_or(0, |(_, q)| *q);
     assert!(owned_after_buy > 0, "持有 +1（rules 账本）");
-    // 卖同商品
+    // 卖同商品（R22-025：直接比买卖后金，替换原晦涩近似断言）
     app.handle(GameInput::TradeSell(2));
     let owned_after_sell = app.owned.iter().find(|(g, _)| *g == 2).map_or(0, |(_, q)| *q);
     assert_eq!(owned_after_sell, 0, "卖清空持有");
-    assert!(
-        app.gold() >= gold_before.saturating_sub(app.gold().saturating_sub(gold_before)),
-        "卖出有金入账"
-    );
+    assert!(app.gold() > gold_after_buy, "卖出有金入账（gold_after_sell > gold_after_buy）");
 }
 
 #[test]

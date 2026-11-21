@@ -50,7 +50,7 @@ pub mod stats;
 
 pub use commands::{Command as CommandTrait, GameCommand};
 pub use error::{Error, Result};
-pub use game_app::{BattleSnapshot, BattleView, GameApp, GameInput, Scene};
+pub use game_app::{BattleSnapshot, BattleView, GameApp, GameInput, KeyState, Scene};
 pub use i18n::{sget, sgetf, try_sget};
 pub use menu_shell::MenuShell;
 pub use particles::{FxKind, ParticleFx};

@@ -22,6 +22,7 @@ impl GameApp {
     ///
     /// 返回是否发生场景切换（壳层据此强制整帧渲染）。
     /// 同一帧内多个键可同时命中（如 confirm + move），按场景语义合并。
+    #[allow(clippy::too_many_lines)] // 7 场景输入路由 + R22-010 面板态 ↑↓/Enter/Back 分支，集中一处
     pub fn poll(&mut self, k: &KeyState) -> bool {
         // 按住态快照（菜单项按下凹陷，EXP-079 §7.3）：每帧从键位布尔取。
         self.press_held = k.confirm;
@@ -53,11 +54,6 @@ impl GameApp {
                 }
             }
             Scene::MainMap => {
-                // 环岛赛道玩法（S19）：主地图不再 4 方向自由走位，
-                // 一次操作 = 摇骰（Space）→ 沿赛道前进 N 格 → 落格结算。
-                if k.spin {
-                    changed = self.handle(GameInput::Spin) || changed;
-                }
                 // S63：T/B 打开可视化面板（面板内 ↑↓/Enter/Y/Back 由 `on_input` 消费）；
                 // 旧 T=直接买 gid1 / B=直接建 Castle 的"无面板盲操作"废弃（场景不全根因）。
                 if k.buy {
@@ -78,11 +74,39 @@ impl GameApp {
                 if k.ship {
                     changed = self.handle(GameInput::OpenShipPanel) || changed;
                 }
-                if k.landmark {
-                    changed = self.handle(GameInput::Landmark(1)) || changed;
-                }
-                if k.back {
-                    changed = self.handle(GameInput::MapBack) || changed;
+                // R22-010：任一 S63 面板打开时，↑↓/Enter/Back 必须路由到面板事件——
+                // 否则真实键盘无法选/买/关面板（5 个 e2e 直接 handle() 绕过 poll() 故长期漏网）。
+                let panel_open = self.trade_panel_open
+                    || self.build_panel_open
+                    || self.merchant_panel_open
+                    || self.event_panel_open
+                    || self.ship_panel_open;
+                if panel_open {
+                    if k.up {
+                        changed = self.handle(GameInput::MoveUp) || changed;
+                    }
+                    if k.down {
+                        changed = self.handle(GameInput::MoveDown) || changed;
+                    }
+                    // Enter（k.confirm）独立作面板确认；Space（k.spin）在面板态不摇骰。
+                    if k.confirm {
+                        changed = self.handle(GameInput::Confirm) || changed;
+                    }
+                    if k.back {
+                        changed = self.handle(GameInput::Back) || changed;
+                    }
+                } else {
+                    // 环岛赛道玩法（S19）：无面板时一次操作 = 摇骰（Space）→ 前进 N 格 → 落格结算。
+                    if k.spin {
+                        changed = self.handle(GameInput::Spin) || changed;
+                    }
+                    if k.landmark {
+                        changed = self.handle(GameInput::Landmark(1)) || changed;
+                    }
+                    if k.back {
+                        changed = self.handle(GameInput::MapBack) || changed;
+                    }
+                    // 无面板时 Space 摇骰（见上方 k.spin）；Shift+Y 卖出等保持原路径。
                 }
             }
             Scene::Vs => {
