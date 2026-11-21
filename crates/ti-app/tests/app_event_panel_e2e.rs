@@ -45,8 +45,8 @@ fn event_treasure_wreck_applies_gold_and_arms() {
     app.handle(GameInput::MoveDown); // 1→2 (宝藏沉船)
     assert_eq!(app.event_panel_sel, 2);
     app.handle(GameInput::Confirm);
-    assert!(app.seat_gold[seat] > gold0, "宝藏沉船：金 +200");
-    assert!(app.seat_arms[seat] > arms0, "宝藏沉船：武器 +3");
+    assert_eq!(app.seat_gold[seat], gold0 + 200, "宝藏沉船：金精确 +200（R24 FIND-006 去弱断言）");
+    assert_eq!(app.seat_arms[seat], arms0 + 3, "宝藏沉船：武器精确 +3（R24 FIND-006 去弱断言）");
 }
 
 #[test]

@@ -38,3 +38,22 @@ fn ship_panel_upgrade_via_rules() {
     assert_eq!(app.boat_level(), level0 + 1, "船级 +1（rules::boat upgrade）");
     assert!(app.bank_gold() < bank0, "升级扣银行金（rules::boat 走 bank_gold，800）");
 }
+
+/// R24 FIND-013：满级（level 4）时 Enter 升级后 `boat_next_cost()==None` ⇒ 面板自动关。
+#[test]
+fn ship_panel_auto_close_at_max_level() {
+    let mut app = enter_main_map();
+    app.bank.gold = 20_000; // 足以连升到满级（800+2500+6000=9300）
+    app.handle(GameInput::OpenShipPanel);
+    let max_level = app.boat.max_level();
+    // 连续 Enter 升级，满级那次应自动关面板（循环上界 max+2 防死循环）。
+    for _ in 0..(max_level + 2) {
+        if !app.ship_panel_open {
+            break;
+        }
+        app.handle(GameInput::Confirm);
+    }
+    assert_eq!(app.boat.level(), max_level, "应升到满级（max={max_level}）");
+    assert!(!app.ship_panel_open, "满级后 Enter 应自动关造船面板（R24 FIND-013）");
+    assert_eq!(app.scene(), Scene::MainMap);
+}

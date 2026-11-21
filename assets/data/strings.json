@@ -249,5 +249,6 @@
  "scene.main_map.trade.row_fmt": "买 {0} · 持有 {1}",
  "scene.main_map.merchant.row_fmt": "持有 {0} / 上限 {1} · 买 1 需 {2} 金",
  "scene.main_map.event.effect_fmt": "金{0} 人手{1} 武器{2} 损耗 {3}%/ {4}%/ {5}%",
- "scene.main_map.ship.next_fmt": "下一级：{0} · 升级需 {1} 金"
+ "scene.main_map.ship.next_fmt": "下一级：{0} · 升级需 {1} 金",
+ "scene.main_map.ship.stat_fmt": "货舱 {0} · 火力 atk{1} / hp{2} · 金 {3}"
 }

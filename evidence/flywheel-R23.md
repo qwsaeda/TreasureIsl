@@ -27,4 +27,4 @@
 
 ## 验证
 cargo test 1022/0 + clippy 0 + audit_code 0 + CS 0 + validate_data OK（36 manifest）
-+ doccheck 182/38/199/354 0 + doccheck2 53 项 0 + gate 36 项 0 failure。
++ doccheck 182/38/199/355 0 + doccheck2 53 项 0 + gate 36 项 0 failure。

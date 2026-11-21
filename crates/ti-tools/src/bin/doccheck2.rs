@@ -425,16 +425,38 @@ fn check_event_keys_present(root: &Path, json_keys: &BTreeSet<String>) -> Vec<St
     let Some(src) = read_file(root, "crates/ti-app/src/scenes/main_map.rs") else {
         return errors;
     };
-    // 从 EVENT_KINDS 数组抽 ("key", MaritimeEvent::...) 里的 key 字面量。
-    let Some(start) = src.find("EVENT_KINDS") else {
+    // 从 EVENT_KINDS 定义抽 ("key", MaritimeEvent::...) 里的 key 字面量。
+    // R24 FIND-003：定位 `const EVENT_KINDS:` 而非首个提及（可能是注释）；捕获 0 = error 不静默空转。
+    let Some(start) = src.find("const EVENT_KINDS:") else {
+        errors.push("i18n 正向检查：main_map.rs 缺 `const EVENT_KINDS:` 定义（check_event_keys_present 空转风险）".to_string());
         return errors;
     };
-    let seg: String = src[start..].chars().take(1600).collect();
-    for cap in regex_captures_pair(&seg) {
+    let seg: String = src[start..].chars().take(3200).collect();
+    let caps = regex_captures_pair(&seg);
+    if caps.is_empty() {
+        errors.push("i18n 正向检查：EVENT_KINDS 解析出 0 个 key（形状变动/解析失配，check_event_keys_present 不可静默空转）".to_string());
+        return errors;
+    }
+    let consumed: std::collections::BTreeSet<String> =
+        caps.iter().map(|c| format!("scene.main_map.event.{c}")).collect();
+    for cap in caps {
         let key = format!("scene.main_map.event.{cap}");
         if !json_keys.contains(&key) {
             errors.push(format!(
                 "i18n 动态 key `{key}` 缺失（EVENT_KINDS 事件 {cap} 无对应 strings.json 文案；main_map.rs `event.{{}}` 拼接消费将显示裸 key）"
+            ));
+        }
+    }
+    // R24 FIND-014 反向对账：strings 里 event.* 非固定 key（排除 panel_title/hint/effect_fmt）须被消费。
+    let fixed = [
+        "scene.main_map.event.panel_title",
+        "scene.main_map.event.hint",
+        "scene.main_map.event.effect_fmt",
+    ];
+    for k in json_keys.iter().filter(|k| k.starts_with("scene.main_map.event.")) {
+        if !fixed.contains(&k.as_str()) && !consumed.contains(k) {
+            errors.push(format!(
+                "i18n 孤儿 key `{k}`（strings 有 scene.main_map.event.* 但 EVENT_KINDS 无对应事件；前缀豁免不得遮蔽死 key）"
             ));
         }
     }
@@ -1777,6 +1799,7 @@ fn check_std_traits_matrix(root: &Path) -> Vec<String> {
 fn check_ui_redesign_tokens(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     errors.extend(ui_8pt_check(root));
+    errors.extend(ui_panel_landscape_8pt_check(root)); // R24 FIND-004：Rust 面板常量 8pt 守门（ui_8pt_check 只扫 scenes.json）
     errors.extend(ui_palette_triple_check(root));
     // S17.4 数据/算法分离：数值锚点（图标数/别名/绑定键、动效 4 参数）读 `assets/gate_data.json`，
     // 改数值只改数据文件；引擎（本文件）只留谓词逻辑。
@@ -2281,6 +2304,50 @@ fn ui_8pt_check(root: &Path) -> Vec<String> {
             continue;
         }
         ui_8pt_walk(val, false, key, key, &mut errors);
+    }
+    errors
+}
+
+/// R24 FIND-004：`chrome.rs` 中 `PANEL_LANDSCAPE*` 四元组的每个分量须 8pt 整除。
+/// R23 把 5 面板横屏坐标从 scenes.json 搬进 Rust 常量后 `ui_8pt_check` 扫不到，本断言补盲区：
+/// 从源码抽 `pub const PANEL_LANDSCAPE...: (i32,i32,i32,i32) = (x,y,w,h)`，逐分量 `% 8 == 0`。
+/// 解析 0 常量 = error（防形状变动静默空转，EXP-108）。
+fn ui_panel_landscape_8pt_check(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(src) = read_file(root, "crates/ti-app/src/scenes/chrome.rs") else {
+        return errors;
+    };
+    let mut found = 0usize;
+    for line in src.lines() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("pub const PANEL_LANDSCAPE") {
+            continue;
+        }
+        let Some(eq) = trimmed.find('=') else { continue };
+        let Some(lp) = trimmed[eq..].find('(') else { continue };
+        let Some(rp) = trimmed[eq..].find(')') else { continue };
+        let nums: Vec<&str> = trimmed[eq + lp + 1..eq + rp].split(',').map(str::trim).collect();
+        if nums.len() != 4 {
+            continue;
+        }
+        found += 1;
+        for (idx, n) in nums.iter().enumerate() {
+            match n.parse::<i32>() {
+                Ok(v) if v % 8 != 0 => errors.push(format!(
+                    "8pt: chrome.rs {} 第 {} 分量 {} 非 8 整除（R24 FIND-004）",
+                    trimmed.split_whitespace().nth(2).unwrap_or("PANEL_LANDSCAPE"),
+                    idx,
+                    v
+                )),
+                Ok(_) => {}
+                Err(_) => errors.push(format!(
+                    "8pt: chrome.rs PANEL_LANDSCAPE 常量第 {idx} 分量 `{n}` 非整数（解析异常）"
+                )),
+            }
+        }
+    }
+    if found == 0 {
+        errors.push("8pt: chrome.rs 未解析到任何 `PANEL_LANDSCAPE*` 常量（形状变动，ui_panel_landscape_8pt_check 不可静默空转）".to_string());
     }
     errors
 }
@@ -3107,7 +3174,7 @@ fn check_cross_doc_counts(root: &Path) -> Vec<String> {
         (
             "docs/release.md",
             &format!(
-                "{tasks} 任务（{verified} verified + 1 pending〔S63.0 子场景 WBS〕 + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E + S63.1 贸易面板 + S63.2 建造横屏与角色立绘 + S63.3 商人面板 + S63.4 事件面板 + S63.5 造船面板 + S63.6 Vs立绘对峙 + S61.1 飞轮R22 + S61.2 飞轮R23 8 条 verified〔S63.0 子场景 WBS 立项 pending〕；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）"
+                "{tasks} 任务（{verified} verified + 1 pending〔S63.0 子场景 WBS〕 + 0 blocked（S52 全收口 + S54/S55 断言固化 + S56.0 + S57.0~S57.2b/S58.0~S58.3 流程强化 11 条 + S59.0/S59.1 第四批 2 条 + S60.0 业务规格审计 + S61.0 AI 对抗 E2E + S63.1 贸易面板 + S63.2 建造横屏与角色立绘 + S63.3 商人面板 + S63.4 事件面板 + S63.5 造船面板 + S63.6 Vs立绘对峙 + S61.1 飞轮R22 + S61.2 飞轮R23 + S61.3 飞轮R24 10 条 verified〔S63.0 子场景 WBS 立项 pending〕；竖屏主题化已删除〔用户 2026-11-08 拍板作废〕）"
             ),
         ),
         // 飞轮 R3 F-R3-01 固化（2026-11-12）：territory_v2 内联迁移数声称点守门。

@@ -805,9 +805,9 @@ fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
                     &sign_num(fx.gold_delta),
                     &sign_num(i64::from(fx.crew_delta)),
                     &sign_num(i64::from(fx.arms_delta)),
-                    &fx.gold_loss_pct,
-                    &fx.crew_loss_pct,
-                    &fx.arms_loss_pct,
+                    &(fx.gold_loss_pct / 100),
+                    &(fx.crew_loss_pct / 100),
+                    &(fx.arms_loss_pct / 100),
                 ],
             ),
             bx + 44,
@@ -847,12 +847,9 @@ fn render_ship_panel(host: &mut dyn SceneHost, landscape: bool) {
     let cur_name = i18n::sget(&name_key).to_owned();
     host.draw_text(&cur_name, bx + 48, by + 96);
     host.draw_hint_text(
-        &format!(
-            "货舱 {} · 火力 atk{} / hp{} · 金 {}",
-            host.boat_cap(),
-            host.boat_atk(),
-            host.boat_hp(),
-            host.gold()
+        &i18n::sgetf(
+            "scene.main_map.ship.stat_fmt",
+            &[&host.boat_cap(), &host.boat_atk(), &host.boat_hp(), &host.gold()],
         ),
         bx + 48,
         by + 146,

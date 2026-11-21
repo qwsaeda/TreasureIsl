@@ -25,6 +25,8 @@ import sys
 from pathlib import Path
 
 CJK = re.compile(r"[\u4e00-\u9fff]")
+# R24 FIND-002：诊断宏（终端输出，非玩家 UI）——文件级 CJK 豁免仅对这些行成立。
+DIAGNOSTIC_MACRO = re.compile(r"\b(?:eprintln|println|print|dbg|debug|info|warn|error|trace)!\s*\(")
 # 飞轮 R1 ⑤-05 修复：旧式 `"([^"\\]|\\.)*"` 捕获组只保留 `*` 量词内最后一次迭代
 # （= 字面量末字符），CJK 通道对「以标点/ASCII 结尾」的中文字面量失明（如
 # `…不 fallback）` 只捕获到 `）`）。改用非捕获外层 + 原子式内层，group(1) = 完整字面量内容。
@@ -113,6 +115,10 @@ def scan_file(path: Path) -> list[tuple[str, str, int, str]]:
             lit = m.group(1)
             if lit and CJK.search(lit):
                 why = exempt_for(rel, "cjk")
+                # R24 FIND-002：文件级 CJK 豁免收窄——main_map.rs 的豁免理由仅覆盖诊断宏
+                # （eprintln!/println!/debug!/warn!/error!），玩家可见 draw_* 文本不许借豁免隐身。
+                if why is not None and "scenes/main_map.rs" in rel and not DIAGNOSTIC_MACRO.search(code):
+                    why = None
                 if why is None:
                     hits.append((rel, "cjk", i + 1, lit[:24]))
         if LAYOUT_CALL.search(code) and COLOR_HEX.search(code):

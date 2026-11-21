@@ -45,7 +45,7 @@ fn trade_panel_buy_and_sell_via_rules() {
     let mut app = enter_main_map();
     app.handle(GameInput::OpenTradePanel);
     let gold_before = app.gold();
-    // 选商品 1（gid=1，香料）+ 买入
+    // 选第 2 行（sel 1，对应 gid=2）+ 买入（R24 FIND-012 注释对齐代码）
     app.handle(GameInput::MoveDown); // sel 0 → 1
     app.handle(GameInput::Confirm); // 买 gid=2
     assert!(app.trade_panel_open, "买入后面板保持打开");
@@ -68,8 +68,12 @@ fn trade_panel_swallows_spin_while_open() {
     let roll_before = app.board.as_ref().map(ti_core::rules::board::BoardSession::last_roll);
     app.handle(GameInput::Spin); // 面板打开时应被吞掉
     let pos_after = app.board.as_ref().map(ti_core::rules::board::BoardSession::position_index);
+    let roll_after = app.board.as_ref().map(ti_core::rules::board::BoardSession::last_roll);
     assert_eq!(pos_before, pos_after, "面板打开时 Spin 不改位置（不误摇骰）");
-    let _ = roll_before;
+    assert_eq!(
+        roll_before, roll_after,
+        "面板打开时 Spin 不改骰点（R24 去摆设：原 let _ = 吞结果）"
+    );
 }
 
 #[test]

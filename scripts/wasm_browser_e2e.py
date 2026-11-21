@@ -198,15 +198,25 @@ def main() -> int:
         # （面板开关/账本已由 native app_*_panel_e2e 经 poll() 真键盘断言；此处只验浏览器端按键 0 pageerror，
         # 不做场景/像素强断言——横屏 L4 导航有亮度阈值已知边界）。
         panel_keys = ["t", "b", "m", "v", "n"]
+        # R24 FIND-008：逐键 pageerror 切片——面板键阶段新注入的异常单独记账，
+        # 不被 L4 环境降级吞成 PASS（面板态/账本真断言由 native app_*_panel_e2e 经 poll() 覆盖；
+        # 浏览器层 status 仅加载文案、无 DOM 面板态，像素签名在 SwiftShader 下易 stall 故不采）。
+        panel_errors_before = len(page_errors)
+        panel_key_errors: dict[str, int] = {}
         for pk in panel_keys:
+            err_before = len(page_errors)
             page.keyboard.press(pk)
             page.wait_for_timeout(500)
             page.keyboard.press("Backspace")  # 关面板，回主地图
             page.wait_for_timeout(500)
+            panel_key_errors[pk] = len(page_errors) - err_before
+        panel_phase_errors = page_errors[panel_errors_before:]
         checks["L3_input"] = {
             "after": after,
             "page_errors": page_errors,
             "panel_keys_tested": panel_keys,  # R23 FIND-013：S63 五面板键浏览器层覆盖
+            "panel_key_errors": panel_key_errors,  # R24 FIND-008：逐键 pageerror 切片
+            "panel_phase_errors": panel_phase_errors,
         }
 
         # ── L4 场景切换：select_map 鼠标点 m01 卡片 ⇒ main_map（增量判据）──
@@ -395,8 +405,11 @@ def main() -> int:
         for e in console_errors[:5]:
             print("  ", e)
     if degraded:
-        print("[wasm-browser-e2e] PASS（部分层因浏览器 GPU 子进程崩溃降级 SKIP；非 wasm 代码缺陷）")
-        return 0
+        # R24 FIND-008：L4 可因 GPU stall 降级 SKIP，但 L1/L2/L3/L5 必须真过——
+        # 尤其面板键阶段 pageerror 计入 L3，不得被 L4 降级吞成 PASS。
+        non_l4_ok = l1 and l2r and l2a and l3 and l5
+        print(f"[wasm-browser-e2e] {'PASS' if non_l4_ok else 'FAIL'}（部分层降级 SKIP；L3 面板键 pageerror={len(checks['L3_input'].get('panel_phase_errors', []))} 不被 L4 降级吞）")
+        return 0 if non_l4_ok else 1
     return 0 if ok else 1
 
 

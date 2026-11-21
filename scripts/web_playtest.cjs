@@ -154,12 +154,16 @@ async function main() {
   const l4ok = sceneChanges >= 1; // 至少一帧有场景推进（防卡死在首场景仍"全绿"）
 
   // R23 FIND-014：S63 五面板入口键 T/B/M/V/N 浏览器层尽力覆盖（面板账本由 native e2e 断言；此处 0 pageerror）
+  // R24 FIND-008：逐键 pageerror 切片；envStall 降级已要求 pageErrors=0，故面板键异常不会被降级吞。
   const panelKeys = ['t', 'b', 'm', 'v', 'n'];
+  const panelKeyErrors = {};
   for (const pk of panelKeys) {
+    const before = pageErrors.length;
     await press(pk);
     await press('Backspace');
+    panelKeyErrors[pk] = pageErrors.length - before;
   }
-  log(`  L3b 面板键 ${panelKeys.join('/')} 已遍历（0 pageerror 判据见上）`);
+  log(`  L3b 面板键 ${panelKeys.join('/')} 已遍历（逐键 pageerror=${JSON.stringify(panelKeyErrors)}；envStall 降级要求 pageErrors=0，不被吞）`);
 
   const s1 = await status();
   log(`  终态 status="${s1}" console致命错误=${consoleErrors.length} 页面异常=${pageErrors.length}`);
