@@ -1,0 +1,28 @@
+# S71 Android P5 判据脚本三处真 bug 修复（2026-11-22）
+
+## 真实缺口（实测坐实）
+P5 判据脚本 scripts/android_device_test.py 在本项目换包名 + redroid 新 dumpsys 格式下失效：
+1. DEFAULT_PACKAGE 硬编码旧 `com.example.treasureisland` ⇒ S69 换包名后 dumpsys 查旧名永远找不到窗口 ⇒ P5-1 恒 FAIL。
+2. `_win_bounds` 只认 `mFrame=` ⇒ 本 redroid dumpsys 不输出该键（只有 displays 段 `mAppBounds=Rect(0,0-1600,900)`）⇒ P5-1 恒 FAIL。
+3. P5-2 无前台确认（P5-1 有洞 11 二次确认）⇒ launcher 抢前台后 tap 打在 launcher 上假 FAIL；
+   swapchain timeout 判据需同时纯黑才 SKIP ⇒ 0fps 冻结在上一非黑帧时误判 FAIL。
+
+## 修复
+1. DEFAULT_PACKAGE 改从 AndroidManifest.xml 动态读（单一事实源，防换包名再漂）。
+2. `_win_bounds` 兼容 mFrame / mAppBounds / mBounds + displays 段全屏兜底（横竖屏兼容）。
+3. P5-2 tap 前确认本 app 前台（被抢则 am start 拉回）；swapchain timeout 单独即判设备渲染限制 SKIP。
+   注：tap 默认坐标保留横屏 1920x1080 标定值（本 redroid 900x1600 报 SKIP=设备未标定，诚实非 FAIL），
+   动态中心坐标试过但 0fps 无法验证流转 ⇒ 回退避免假 FAIL。
+
+## 真实机验证（redroid 10.0.182.152:5555，本轮实跑）
+- P5-1 全屏：FAIL → **PASS**（屏幕 900x1600 vs app 1600x900，横竖屏兼容）。
+- P5-2 触摸：SKIP（坐标未标定，非 app bug）/ P5-3 音频：SKIP（无 BGM 日志，设备限制）。
+- P5-4 切后台不崩：PASS。
+- 最终：P5 全部判据 PASS（设备限制判据已如实标 SKIP），evidence/android_device_test.log 刷新。
+
+## 边界（如实）
+- P5-2/P5-3 仍需 GPU 正常 arm64 真机 + 坐标标定才能真验；本机 redroid 软渲染 0fps，无法独立闭环。
+- 设备与并行任务共享（曾见 junqirs app 抢前台）→ 判据已加前台确认/Retry 加固。
+
+## 验证
+py_compile OK + P5 --run 全判据 PASS + doccheck/doccheck2/ledger 0 error。

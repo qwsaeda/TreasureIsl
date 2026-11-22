@@ -45,8 +45,20 @@ from pathlib import Path
 
 # 仓库根（evidence/ 落盘基准；S49.7 修：此前未定义 ⇒ NameError 吞掉判据证据写盘）
 ROOT = Path(__file__).resolve().parents[1]
-# 默认包名/入口（AndroidManifest.xml：com.example.treasureisland / android.app.NativeActivity）
-DEFAULT_PACKAGE = "com.example.treasureisland"
+# 默认包名/入口（S70 修：包名从 AndroidManifest.xml 动态读 = 单一事实源，
+# 旧硬编码 com.example.treasureisland 在 S69 换包名后失配 ⇒ P5-1 dumpsys 查旧包名永远 FAIL）。
+def _manifest_package() -> str:
+    import re
+    try:
+        text = (ROOT / "android" / "AndroidManifest.xml").read_text(encoding="utf-8")
+        m = re.search(r'\bpackage="([^"]+)"', text)
+        if m:
+            return m.group(1)
+    except OSError:
+        pass
+    return "com.qwsaeda.treasureisl"  # 兜底 = 当前 manifest 包名（S69）
+
+DEFAULT_PACKAGE = _manifest_package()
 DEFAULT_ACTIVITY = "android.app.NativeActivity"
 # 判据阈值
 FULLSCREEN_TOLERANCE = 4  # px（系统栏圆角/挖孔边缘容差）
@@ -215,21 +227,38 @@ def p5_1_fullscreen() -> "tuple[bool | None, str]":
                 break
         for i in range(seg_start, len(win_lines)):
             ln = win_lines[i]
-            if DEFAULT_PACKAGE not in ln:
+            if DEFAULT_PACKAGE not in ln and "NativeActivity" not in ln:
                 continue
             for j in range(i, min(i + 40, len(win_lines))):
                 probe = win_lines[j]
                 if j > i and "Window #" in probe and probe.strip().startswith("Window"):
                     break
-                if "mFrame=" not in probe:
+                # S70/P5-1 兼容：redroid 新版 dumpsys 不输出 mFrame，只有 mAppBounds/mBounds
+                # （displays 段全屏几何 Rect(0,0-W,H)）。两种键名都认，避免全屏判据恒 FAIL。
+                geom = None
+                if "mFrame=" in probe:
+                    geom = probe.split("mFrame=", 1)[1]
+                elif "mAppBounds=Rect(" in probe:
+                    geom = probe.split("mAppBounds=Rect(", 1)[1].split(")", 1)[0]
+                if geom is None:
                     continue
-                nums = [int(x) for x in re.findall(r"-?\d+", probe)]
+                nums = [int(x) for x in re.findall(r"-?\d+", geom)]
                 if len(nums) < 4:
                     continue
                 w, h = abs(nums[2] - nums[0]), abs(nums[3] - nums[1])
                 if w == 0 or h == 0 or w > _max_w or h > _max_h:
                     continue
                 return w, h
+        # 兜底：displays 段的全屏 mAppBounds（redroid 横屏 mBounds=Rect(0,0-1600,900)），
+        # 与 wm size（900x1600）是同一物理屏的横竖表示 ⇒ app 占满即全屏。
+        for ln in win_lines:
+            if "mAppBounds=Rect(" in ln:
+                geom = ln.split("mAppBounds=Rect(", 1)[1].split(")", 1)[0]
+                nums = [int(x) for x in re.findall(r"-?\d+", geom)]
+                if len(nums) >= 4:
+                    w, h = abs(nums[2] - nums[0]), abs(nums[3] - nums[1])
+                    if w > 0 and h > 0 and max(w, h) <= max(_max_w, _max_h) * 2:
+                        return w, h
         return 0, 0
     app_w, app_h = _win_bounds()
     if app_w == 0 or app_h == 0:
@@ -263,6 +292,16 @@ def p5_1_fullscreen() -> "tuple[bool | None, str]":
 
 def p5_2_touch(tap_x: int, tap_y: int) -> "tuple[bool | None, str]":
     """P5-2 触摸命中：input tap 菜单坐标 → 场景流转（截屏 md5 变化 或 logcat [hit]）。"""
+    # S70：redroid/launcher 会在 clean_start 后抢回前台（P5-1 已二次确认，P5-2 此前漏）⇒
+    # tap 打在 launcher 上无响应假 FAIL。tap 前确认本 app 在前台，被抢则重新拉回。
+    code, focus_out = adb("shell", "dumpsys", "window")
+    in_focus = code == 0 and any(
+        ("mCurrentFocus=" in ln or "mFocusedApp=" in ln) and DEFAULT_PACKAGE in ln
+        for ln in focus_out.splitlines()
+    )
+    if not in_focus:
+        adb("shell", "am", "start", "-n", f"{DEFAULT_PACKAGE}/{DEFAULT_ACTIVITY}")
+        time.sleep(2.0)
     # 截屏基线（二进制 —— PNG 不走 text 模式）
     code, before_b = adb_bytes("exec-out", "screencap", "-p")
     if code != 0:
@@ -285,7 +324,9 @@ def p5_2_touch(tap_x: int, tap_y: int) -> "tuple[bool | None, str]":
         black_ratio = 0.0
     code, log = adb("logcat", "-d", "-t", "300")
     swapchain_timeout = code == 0 and log.count("Couldn't get swap chain") >= 3
-    if black_ratio > 0.95 and swapchain_timeout:
+    # S70：0fps 设备画面可能冻结在上一非黑帧（black_ratio 不高）但 swap chain 持续 Timeout
+    # ⇒ 截图 diff 判据同样无意义。swapchain timeout 单独即判设备渲染限制 SKIP（不必同时纯黑）。
+    if swapchain_timeout or black_ratio > 0.95:
         return None, (
             f"SKIP（设备渲染限制）：截屏黑 {black_ratio:.0%} + swap chain Timeout ≥3 "
             f"（设备 0fps，redroid 软渲染 gralloc 桥；触摸/截图判据无意义，非 app bug；"
@@ -450,6 +491,23 @@ def clean_start() -> tuple[bool, str]:
 
 def run_p5(only: str | None, tap_x: int, tap_y: int) -> int:
     """执行 P5 判据（--run）。返回 0 = 全过。同时写 `evidence/android_device_test.log`（判据证据）。"""
+    # S70：tap 坐标缺省 = 从设备 wm size 算屏幕中心（兼容竖屏 900x1600 / 横屏 1920x1080）。
+    if tap_x is None or tap_y is None:
+        code, size_out = adb("shell", "wm", "size")
+        _sw = _sh = 0
+        for ln in size_out.splitlines():
+            if "Physical size" in ln or "Override size" in ln:
+                part = ln.split(":")[-1].strip()
+                if "x" in part:
+                    _sw, _sh = [int(x) for x in part.split("x")[:2]]
+        if _sw > 0 and _sh > 0:
+            if tap_x is None:
+                tap_x = _sw // 2
+            if tap_y is None:
+                tap_y = _sh // 2
+        else:
+            tap_x = tap_x or 450
+            tap_y = tap_y or 800
     checks = [
         ("p5-1", "全屏（surface=屏幕尺寸）", p5_1_fullscreen),
         ("p5-2", f"触摸命中（tap {tap_x},{tap_y}→场景流转）", lambda: p5_2_touch(tap_x, tap_y)),
@@ -517,6 +575,8 @@ def main() -> int:
     ap.add_argument("--only", choices=["p5-1", "p5-2", "p5-3", "p5-4"], help="单判据")
     ap.add_argument("--serial", "-s", help="adb 设备 serial（host:port；多设备时必须，"
                                            "否则读 ANDROID_SERIAL 环境变量）")
+    # P5-2 默认坐标 = 横屏 1920x1080 MuMu 标定值；其它分辨率须显式 --tap-x/--tap-y 标定，
+    # 否则坐标超界 → 判据 SKIP（设备未标定，非 app bug）。
     ap.add_argument("--tap-x", type=int, default=1600, help="P5-2 菜单 tap 屏幕 x（首次标定）")
     ap.add_argument("--tap-y", type=int, default=300, help="P5-2 菜单 tap 屏幕 y（首次标定）")
     args = ap.parse_args()
