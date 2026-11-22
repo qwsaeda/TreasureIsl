@@ -190,9 +190,12 @@ def render_handoff_overall(out: Path, variant: str):
     W, H = im.size
     dr = ImageDraw.Draw(im, "RGBA")
     if variant == "A":
-        # 整屏盖板：在真实棋盘上盖深色半透明层（保留一点棋盘轮廓暗示"下面是对局"），
-        # 中央罗盘 + 文案 + 按钮（与孤立候选 A 同视觉语言）。
-        dr.rectangle([0, 0, W, H], fill=(10, 8, 5, 245))
+        # 整屏盖板：在真实棋盘上盖深色半透明层（保留棋盘轮廓暗示"下面是对局"）。
+        # 关键：PIL 在 RGBA 底图上用 ImageDraw 画半透明矩形是「替换」不混合 ⇒ 必须
+        # 用独立 layer + alpha_composite 才能真正透出底图（之前全黑就是这个 bug）。
+        veil = Image.new("RGBA", (W, H), (10, 8, 5, 205))
+        im.alpha_composite(veil)
+        dr = ImageDraw.Draw(im, "RGBA")
         rose = _img("compass_rose").resize((300, 300))
         im.alpha_composite(rose, (W // 2 - 150, 180))
         dr.text((W // 2 - 300, 560), "轮到玩家 2", fill="#f5d76e", font=_font(56))
