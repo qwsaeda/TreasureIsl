@@ -710,6 +710,16 @@ pub trait MapHost {
     }
     /// S68：卡牌图鉴翻页 setter（默认 no-op）。
     fn set_card_sel(&mut self, _sel: usize) {}
+    /// S72：成就面板是否打开（默认关闭）。
+    fn achievement_panel_open(&self) -> bool {
+        false
+    }
+    /// S72：成就面板开关（默认 no-op）。
+    fn set_achievement_panel_open(&mut self, _open: bool) {}
+    /// S72：成就位掩码（默认 0）。
+    fn achievement_mask(&self) -> u64 {
+        0
+    }
     /// S66：是否有待决副本入口（`pending_dungeon` 在位）。
     fn pending_dungeon_is_some(&self) -> bool {
         false

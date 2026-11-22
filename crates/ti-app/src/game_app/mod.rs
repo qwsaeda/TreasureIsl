@@ -206,6 +206,8 @@ pub enum GameInput {
     OpenDungeonPanel,
     /// S68 卡牌图鉴面板开关（C 键打开：查看卡池构成与效果）。
     OpenCardPanel,
+    /// S72 成就面板开关（P 键打开：查看成就清单）。
+    OpenAchievementPanel,
     /// 主地图建造（`kind`）。
     Build(Building),
     /// S21.12 主地图造船（船系统单向升级，`rules::boat::BoatSession`；与 4 建筑并列第 5 入口）。
@@ -371,6 +373,12 @@ pub struct GameApp {
     pub upgrade_panel_open: bool,
     /// S66 副本情报面板是否打开（J 键开关；仅 `pending_dungeon` 在位时可开）。
     pub dungeon_panel_open: bool,
+    /// S72 成就位掩码（`rules::achievements`；账号级，持久到存档 v4ext）。
+    pub achievements: u64,
+    /// S72 金币峰值（本档历史最高，用于 tycoon 成就；纯统计不进玩法）。
+    pub peak_gold: u32,
+    /// S72 成就面板是否打开（P 键开关）。
+    pub achievement_panel_open: bool,
     /// S68 卡牌图鉴面板是否打开（C 键开关）。
     pub card_panel_open: bool,
     /// S68 卡牌图鉴当前翻页序号（0..=card_count-1）。
@@ -534,6 +542,8 @@ pub struct KeyState {
     pub dungeon: bool,
     /// 卡牌图鉴（C，S68：查看卡池构成）。
     pub card: bool,
+    /// 成就面板（P，S72：查看成就清单）。
+    pub achievement: bool,
 }
 /// 场景切换过渡状态机（EXP-081 → S17.4：真交叉淡化，`MOTION_TRANSITION_MS` 时间制推进）。
 #[derive(Debug, Clone, Default)]
@@ -602,6 +612,9 @@ impl GameApp {
             garrison_sel: 0,
             upgrade_panel_open: false,
             dungeon_panel_open: false,
+            achievements: 0,
+            peak_gold: 0,
+            achievement_panel_open: false,
             card_panel_open: false,
             card_sel: 0,
             buildings: Vec::new(),

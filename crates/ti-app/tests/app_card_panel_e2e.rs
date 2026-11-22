@@ -25,6 +25,7 @@ fn keys() -> KeyState {
         upgrade: false,
         dungeon: false,
         card: false,
+        achievement: false, // S72：成就面板（P 键）
     }
 }
 

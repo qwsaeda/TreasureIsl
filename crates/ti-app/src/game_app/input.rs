@@ -62,29 +62,21 @@ impl GameApp {
                 if k.sell {
                     changed = self.handle(GameInput::TradeSell(1)) || changed;
                 }
-                if k.build {
-                    changed = self.handle(GameInput::OpenBuildPanel) || changed;
-                }
-                if k.merchant {
-                    changed = self.handle(GameInput::OpenMerchantPanel) || changed;
-                }
-                if k.event {
-                    changed = self.handle(GameInput::OpenEventPanel) || changed;
-                }
-                if k.ship {
-                    changed = self.handle(GameInput::OpenShipPanel) || changed;
-                }
-                if k.garrison {
-                    changed = self.handle(GameInput::OpenGarrisonPanel) || changed;
-                }
-                if k.upgrade {
-                    changed = self.handle(GameInput::OpenUpgradePanel) || changed;
-                }
-                if k.dungeon {
-                    changed = self.handle(GameInput::OpenDungeonPanel) || changed;
-                }
-                if k.card {
-                    changed = self.handle(GameInput::OpenCardPanel) || changed;
+                // S72：面板 opener 表驱动（避免 poll 随面板增加持续膨胀超函数长度基线）。
+                for (pressed, open) in [
+                    (k.build, GameInput::OpenBuildPanel),
+                    (k.merchant, GameInput::OpenMerchantPanel),
+                    (k.event, GameInput::OpenEventPanel),
+                    (k.ship, GameInput::OpenShipPanel),
+                    (k.garrison, GameInput::OpenGarrisonPanel),
+                    (k.upgrade, GameInput::OpenUpgradePanel),
+                    (k.dungeon, GameInput::OpenDungeonPanel),
+                    (k.card, GameInput::OpenCardPanel),
+                    (k.achievement, GameInput::OpenAchievementPanel),
+                ] {
+                    if pressed {
+                        changed = self.handle(open) || changed;
+                    }
                 }
                 // R22-010：任一 S63/S64 面板打开时，↑↓/Enter/Back 必须路由到面板事件——
                 // 否则真实键盘无法选/买/关面板（5 个 e2e 直接 handle() 绕过 poll() 故长期漏网）。
@@ -96,7 +88,8 @@ impl GameApp {
                     || self.garrison_panel_open
                     || self.upgrade_panel_open
                     || self.dungeon_panel_open
-                    || self.card_panel_open;
+                    || self.card_panel_open
+                    || self.achievement_panel_open;
                 if panel_open {
                     if k.up {
                         changed = self.handle(GameInput::MoveUp) || changed;

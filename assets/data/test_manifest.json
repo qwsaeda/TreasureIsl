@@ -547,6 +547,19 @@
    "timeout_s": 900,
    "prove": "evidence/tests/app_card_panel_e2e/",
    "desc": "做什么：跑 app_card_panel_e2e 卡牌图鉴面板端到端测试。测什么：C键开/卡池数据/翻页/互斥。达到效果：S68 卡牌图鉴可玩机器判据。 逐测：实测 19 条断言。"
+  },
+  {
+   "id": "app_achievement_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "成就系统 e2e（S72：P键面板/掩码/存档往返/互斥/P键poll）",
+   "command": "cargo test -p ti-app --test app_achievement_e2e",
+   "evidence": "evidence/tests/app_achievement_e2e/run.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_achievement_e2e/",
+   "desc": "做什么：跑 app_achievement_e2e 成就系统端到端测试。测什么：P键面板/掩码/存档往返/互斥。达到效果：S72 成就可玩机器判据。 逐测：实测 14 条断言。"
   }
  ]
 }

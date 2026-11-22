@@ -38,7 +38,7 @@ fn whitelist_audit_ok() {
     let v = whitelist_audit(&repo_root()).expect("白名单对账应通过");
     assert_eq!(v["ok"], true);
     // 测试体系专项审计 Q012（2026-11-19）：新增 3 条 oracle 差分测试映射 ⇒ 24→27。
-    assert_eq!(v["count"], 38);
+    assert_eq!(v["count"], 39);
     // 写面动作默认关（enabled_by_default=false）：close_run + 9 个内容运营写动作（30 号 §3.1）；
     // map_shot 只读出图默认开。S48.0 加 ui_theme（主题构图应用，写 scenes.json + assets/ui + ui_manifest）。
     let wr: Vec<&str> = v["write_required"]

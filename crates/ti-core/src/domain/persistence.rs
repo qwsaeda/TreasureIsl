@@ -123,6 +123,9 @@ pub struct SaveSlotV4Ext {
     /// 当前轮到哪个席位（热座交接；缺省 0）。
     #[serde(default)]
     pub current_seat: u8,
+    /// 成就位掩码（`docs/business/achievements.md`；缺省 0 = 旧档无成就，零迁移）。
+    #[serde(default)]
+    pub achievements: u64,
 }
 
 impl Default for SaveSlot {

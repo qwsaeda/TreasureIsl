@@ -375,6 +375,15 @@ impl MapHost for GameApp {
     fn set_card_panel_open(&mut self, open: bool) {
         self.card_panel_open = open;
     }
+    fn achievement_panel_open(&self) -> bool {
+        self.achievement_panel_open
+    }
+    fn set_achievement_panel_open(&mut self, open: bool) {
+        self.achievement_panel_open = open;
+    }
+    fn achievement_mask(&self) -> u64 {
+        self.achievements
+    }
     fn card_sel(&self) -> usize {
         self.card_sel
     }
@@ -530,6 +539,7 @@ impl MapHost for GameApp {
             Ok(_) => {
                 let spent = before.saturating_sub(gold);
                 self.spend_bank_gold(spent);
+                self.refresh_achievements(); // S72 船升级（含满级）刷新成就
                 true
             }
             Err(_) => false,
@@ -881,7 +891,12 @@ impl MapHost for GameApp {
                 vec![TerritorySave { map: map_id, cells, garrisons }]
             })
             .unwrap_or_default();
-        Some(SaveSlotV4Ext { seats, territories, current_seat: self.turn_cycle.current })
+        Some(SaveSlotV4Ext {
+            seats,
+            territories,
+            current_seat: self.turn_cycle.current,
+            achievements: self.achievements, // S72 成就位掩码随存档持久化
+        })
     }
 
     /// S28.2/S33.4 存档扩展还原（§8）：席位金/人手/武器 + 当前席 + 当前图领地账本 + 驻军
@@ -895,6 +910,9 @@ impl MapHost for GameApp {
         if ext.current_seat < 5 {
             self.turn_cycle.current = ext.current_seat;
         }
+        // S72 成就位掩码还原（缺省 0 = 旧档无成就）；peak_gold 从当前 seat_gold 重算起。
+        self.achievements = ext.achievements;
+        self.peak_gold = self.seat_gold.iter().copied().max().unwrap_or(0);
         // v3：逐席回填存活态（破产出局席 `alive=false`；旧存档缺省 `true` 全活）。
         // S36.3 飞轮 F-5.1：回填在 `current_seat` 写入**之后**，故 `mark_bankrupt` 作用于
         // 已构建的 `TurnCycle`（`restore_save` 先 `enter_main_map_at` → `init_territory` 建池，
@@ -1269,6 +1287,10 @@ impl SessionHost for GameApp {
                 self.match_outcome = Some(super::MatchOutcome::Victory { seat: winner_seat });
                 self.handoff_pending = None;
             }
+            // S72 胜利后刷新成就（BOSS/副本占领/通关均在此汇总；borrow 已结束）。
+            if won {
+                self.refresh_achievements();
+            }
         }
     }
 
@@ -1382,6 +1404,32 @@ impl SessionHost for GameApp {
 }
 impl SceneHost for GameApp {}
 impl GameApp {
+    /// S72 汇总成就统计 + 计算新解锁（纯读现有状态）；新解锁时 toast 提示首个。
+    /// 精简口径：`boss_defeats` = 解锁数-1（解锁下一图=击败 BOSS 的结果）；
+    /// `cleared_m01` = `unlocked_maps.len() > 1`（非 m01 解锁即 m01 已通）；
+    /// `peak_gold` = max(历史, 当前 `seat_gold`)；`owned_cells` = 领地格 `owner=Some` 数。
+    pub(crate) fn refresh_achievements(&mut self) {
+        use ti_core::rules::achievements as ach;
+        self.peak_gold = self.peak_gold.max(self.seat_gold.iter().copied().max().unwrap_or(0));
+        let owned_cells = self.territory.as_ref().map_or(0, |t| {
+            u32::try_from(t.cells().filter(|o| o.owner.is_some()).count()).unwrap_or(u32::MAX)
+        });
+        let stats = ach::AchievementStats {
+            boss_defeats: u32::try_from(self.unlocked_maps.len().saturating_sub(1))
+                .unwrap_or(u32::MAX),
+            owned_cells,
+            cleared_m01: self.unlocked_maps.len() > 1 || self.cleared,
+            peak_gold: self.peak_gold,
+            boat_level: self.boat.level(),
+        };
+        let (mask, newly) = ach::eval(self.achievements, &stats);
+        self.achievements = mask;
+        if let Some(&first) = newly.first() {
+            let name = crate::i18n::sget(ach::name_key(first));
+            self.toast(i18n_fmt("achievement.unlocked_fmt", &[&name]), Some(Sfx::Press));
+        }
+    }
+
     /// S28.6 副本胜利结算（territory.md §4）：占领该岛两格（level = 1）+ 首占奖励入玩家席金币。
     fn settle_dungeon_win(&mut self, cell: u32, isle: &str) {
         let Ok(b) = data::balance() else {
@@ -1402,6 +1450,7 @@ impl GameApp {
         let isle_name = crate::i18n::sget(&format!("isle.{isle}")).to_string();
         self.board_toast = Some(i18n_fmt("scene.main_map.toast.territory_fmt", &[&isle_name]));
         self.board_toast_ticks = 240;
+        self.refresh_achievements(); // S72 占领领地刷新成就（conqueror）
     }
 
     /// S28.6 副本失败提示（§4：失败 = 现状不变，无账本变更）。

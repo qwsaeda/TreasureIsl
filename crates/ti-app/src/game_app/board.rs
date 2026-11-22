@@ -504,6 +504,8 @@ impl GameApp {
     pub(crate) fn credit_seat_gold(&mut self, seat: SeatIdx, amount: u32, bal: &data::Balance) {
         let idx = seat as usize;
         self.seat_gold[idx] = self.seat_gold[idx].saturating_add(amount).min(bal.economy.gold_max);
+        // S72 金币入账后刷新成就（tycoon 峰值达标）；与 battle_step 胜利钩子同口径。
+        self.refresh_achievements();
     }
 
     /// S28.7 AI 落格结算（§6：与玩家同一分支表，策略只选分支；战斗类 = 阈值确定性：

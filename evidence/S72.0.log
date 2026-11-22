@@ -1,0 +1,21 @@
+# S72 成就系统（release §后续 最后一块可独立做的真实玩法，2026-11-22）
+
+## 真实缺口
+release.md §后续列的「成就系统」= 明确未实现的用户可见玩法，无规格无代码。本轮完整落地。
+
+## 规格（docs/business/achievements.md 单一事实源）
+5 成就（首杀BOSS/占领领地/通关m01/金币1万/船满级），u64 位掩码 bit0..=4，
+账号级、单调递增、纯记录不影响玩法。阈值常量在规则层（不扩散 balance schema）。
+
+## 落地（四面）
+- 规则层 ti-core/src/rules/achievements.rs：eval(mask,stats) 纯函数 + 4 单测（移 tests/ 守内联禁令）
+- 存档：SaveSlotV4Ext.achievements: u64（serde default，旧档=0 零迁移），save_v4_ext 捕获 + restore 还原
+- app 钩子：refresh_achievements 在 battle_step 胜利 / credit_seat_gold / boat_upgrade /
+  settle_dungeon_win 触发，新解锁 toast（achievement.unlocked_fmt）
+- 表现：P 键成就面板（render_achievement_panel 复用已签收羊皮卷轴 + 列 5 项解锁态），与其余面板互斥
+- 登记：test_manifest + console + close 白名单 38→39 + e2e 5 条 + 出图 bevy_native_panel_achievement.png
+
+## 验证
+cargo test --workspace 1060/0 + clippy 0 + audit_code 0 + CS 0 + hardcode 0(207 files)
++ validate_data OK + studio_tests OK + doccheck 189/38/203/371 0 + doccheck2 54 项 0
++ ledger 378/378 + check_ledger_reality 全绿 + 出图非黑 2066835（面板渲染生效）。

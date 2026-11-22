@@ -916,6 +916,7 @@ fn input_system(
         upgrade: kb.pressed(KeyCode::KeyH),  // S65：自己领地格升级/产出面板
         dungeon: kb.pressed(KeyCode::KeyJ),  // S66：无主格副本情报面板
         card: kb.pressed(KeyCode::KeyC),     // S68：卡牌图鉴面板
+        achievement: kb.pressed(KeyCode::KeyP), // S72：成就面板
     };
     let key_edge = |current: bool, previous: bool| current && !previous;
     let k = KeyState {
@@ -937,6 +938,7 @@ fn input_system(
         upgrade: key_edge(raw.upgrade, state.prev_keys.upgrade),
         dungeon: key_edge(raw.dungeon, state.prev_keys.dungeon),
         card: key_edge(raw.card, state.prev_keys.card),
+        achievement: key_edge(raw.achievement, state.prev_keys.achievement),
     };
     g.poll(&k);
 
@@ -2428,10 +2430,11 @@ fn run() {
             "merchant" => ti_app::GameInput::OpenMerchantPanel,
             "event" => ti_app::GameInput::OpenEventPanel,
             "ship" => ti_app::GameInput::OpenShipPanel,
-            // S64/S65/S66：新面板出图入口（需配合 --spin 落到对应格产生 pending 态）。
+            // S64/S65/S66/S68/S72：新面板出图入口（需配合 --spin 落到对应格产生 pending 态）。
             "garrison" => ti_app::GameInput::OpenGarrisonPanel,
             "upgrade" => ti_app::GameInput::OpenUpgradePanel,
             "dungeon" => ti_app::GameInput::OpenDungeonPanel,
+            "achievement" => ti_app::GameInput::OpenAchievementPanel,
             _ => ti_app::GameInput::MapBack, // 未知面板名 = 不开（不崩）
         });
     }
