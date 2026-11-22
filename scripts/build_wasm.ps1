@@ -81,6 +81,29 @@ if ($LASTEXITCODE -ne 0) {
     Select-Object -Last 5 | ForEach-Object { Say "  wasm-bindgen: $_" }
 if ($LASTEXITCODE -ne 0) { Write-Host "  FAIL  wasm-bindgen" -ForegroundColor Red; exit 1 }
 
+# 2c) S70：wasm-opt -Oz 体积优化（binaryen；实测 47.8MB→30MB，省 37%）。
+#     wasm-bindgen 产出的 `_bg.wasm` 是页面实际加载产物，优化它才生效。
+#     工具缺失 = WARN 降级（不阻塞构建；CI/发布机须装 binaryen 才能达标）。
+$bgWasm = Join-Path $outDir 'treasure-bevy-wasm_bg.wasm'
+$wasmOptCmd = Get-Command wasm-opt -ErrorAction SilentlyContinue
+if ($wasmOptCmd) {
+    Say "wasm-opt -Oz（精确特性集；S70 体积优化，约 3 分钟）..."
+    $optTmp = Join-Path $outDir 'treasure-bevy-wasm_bg.opt.wasm'
+    # S70 修正：`--all-features` 会启用浏览器未普及的 GC/memory64/reference-types ⇒
+    # 实例化 CompileError（invalid value type 0x0）。只启用 wasm-bindgen/Rust 实际需要的特性。
+    & wasm-opt $bgWasm -Oz --enable-nontrapping-float-to-int --enable-bulk-memory --enable-mutable-globals --enable-sign-ext --enable-simd -o $optTmp 2>&1 |
+        Select-Object -Last 5 | ForEach-Object { Say "  wasm-opt: $_" }
+    if ($LASTEXITCODE -eq 0 -and (Test-Path $optTmp) -and ((Get-Item $optTmp).Length -gt 0)) {
+        Move-Item $optTmp $bgWasm -Force
+        Say "  wasm-opt OK：优化后 $([math]::Round((Get-Item $bgWasm).Length / 1MB, 1)) MB"
+    } else {
+        Write-Host "  WARN  wasm-opt 优化失败 → 用未优化产物（体积超预算）" -ForegroundColor Yellow
+        if (Test-Path $optTmp) { Remove-Item $optTmp -Force }
+    }
+} else {
+    Write-Host "  WARN  wasm-opt 未安装（binaryen）→ 跳过体积优化；装 binaryen 后重构建可省 ~37%" -ForegroundColor Yellow
+}
+
 # 3) 拷贝 wasm 到 web/
 # S25 版本规范（25_versioning.md §2）：产物名带 x.y.z，版本单源 = `Cargo.toml` `[workspace.package] version`
 # （禁散写版本字面量；产物名与版本不一致 = 打包漂移，validate_data check_version_consistency 兜底）。
@@ -301,12 +324,10 @@ $nonFirstScreen += (Get-ChildItem $assetsDir -ErrorAction SilentlyContinue |
 
 $fsBytes = ($firstScreen | Measure-Object -Property Length -Sum).Sum
 $nfsBytes = ($nonFirstScreen | Measure-Object -Property Length -Sum).Sum
-# S36.1：wasm 主体 = **本段实际产出的最大 `*.wasm`**（wasm-bindgen 输出
-# `treasure-bevy-wasm_bg.wasm` + 版本化副本 `treasure_bevy_wasm-<ver>.wasm`）。
-# 旧口径写死 `treasure_bevy_wasm.wasm`（S18.8a 时代名，S31.2c 后已不存在）⇒ 实测恒 0 B，
-# 台账把 45 MB wasm 记成 0 = 体积口径失真。取最大者 = 与 web/ 产物列表同源。
-$wasmFiles = Get-ChildItem $outDir -Filter '*.wasm' -File -ErrorAction SilentlyContinue
-$wasmItem = $wasmFiles | Sort-Object Length -Descending | Select-Object -First 1
+# S36.1/S70：wasm 主体 = **本轮产出的版本化副本** `treasure_bevy_wasm-<version>.wasm`。
+# 旧口径「取 web/ 最大 wasm」会被残留的旧版本副本（如 0.1.0 未优化 45MB）污染 ⇒
+# 本轮已 wasm-opt 优化到 34.9MB 却记成旧的 45MB。改按当前版本名精确取（与 Cargo.toml 版本单源同源）。
+$wasmItem = Get-Item (Join-Path $outDir "treasure_bevy_wasm-$version.wasm") -ErrorAction SilentlyContinue
 $wasmBytes = if ($wasmItem) { $wasmItem.Length } else { 0 }
 $wasmName = if ($wasmItem) { $wasmItem.Name } else { '(无)' }
 

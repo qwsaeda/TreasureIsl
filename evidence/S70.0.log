@@ -1,0 +1,24 @@
+# S70 wasm 体积优化链落地：wasm-opt -Oz 集成 + 特性集修正 + 体积记录口径 bug（2026-11-22）
+
+## 真实缺口
+- wasm 主体 47.8MB（LTO fat + strip 已开，但 wasm-opt 从未真正集成——11 号文档只口头声称「S18.6 叠加」）。
+- 实测环境：wasm32 target 已装、无 wasm-opt。apt 装 binaryen（wasm-opt 108）成功。
+
+## 修复
+- build_wasm.ps1 加 2c 段：wasm-bindgen 产出 `_bg.wasm` 后跑 wasm-opt -Oz；工具缺失 = WARN 降级不阻塞。
+- **关键坑（实测踩到）**：`--all-features` 启用 GC/memory64/reference-types 等浏览器未普及特性 ⇒
+  优化产物 29.1MB 但实例化 CompileError「invalid value type 0x0 @+173」（L1 实例化 False）。
+  改用精确特性集（--enable-nontrapping-float-to-int / bulk-memory / mutable-globals / sign-ext / simd）
+  ⇒ 34.9MB 且 L1 实例化 True（浏览器 e2e L1/L2/L3/L5 全 True，L4 SwiftShader 环境降级，整体 PASS）。
+- 顺带修体积记录口径 bug：旧「取 web/ 最大 wasm」被残留 0.1.0（45.7MB 未优化）污染，
+  本轮优化到 34.9MB 却记成旧 45MB；改按当前版本名 `treasure_bevy_wasm-<version>.wasm` 精确取
+  ⇒ S18.8a-wasm-size.log 现记 0.2.0 = 36,546,960 B（34.9MB）。
+
+## 实测数据
+- raw wasm 47.8MB → wasm-opt -Oz 精确特性 34.9MB（省 27%，相对 web/ 旧 43.8MB 省 20%）。
+- 仍超 ≤8MB 预算 4 倍（Bevy+wgpu+13.5MB 字体内嵌结构性所致，非优化级别可解）——如实保留超预算事实。
+- 浏览器 e2e（优化后产物）：L1 实例化=True / L2 渲染=True / L3 交互=True / L5 环资产=True /
+  L4 场景切换=SKIP（SwiftShader GPU stall 记名降级）⇒ 整体 PASS。
+
+## 验证
+build_wasm.ps1 exit 0 + wasm-opt OK 34.9MB + 浏览器 e2e PASS + doccheck/doccheck2/ledger 0 error。

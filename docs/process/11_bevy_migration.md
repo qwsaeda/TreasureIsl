@@ -40,7 +40,7 @@
 
 | 项 | 旧预算 | **新预算** | 依据 |
 |---|---|---|---|
-| wasm 主体（bevy render 含 wgpu/wasm-bindgen） | ≤800 KB | **≤8 MB** | S18.1 实测（spike 裸跑，未 LTO/opt）：原始 65.4 MB / strip 后 **36.62 MB**（`evidence/S18.1.log` §3）；**达标挂 S18.6**（LTO+wasm-opt -Oz 后重测回填；〔飞轮 R19 勘误注：LTO+strip 达标动作实际由 S18.8e 执行 = 46.6 MB 仍超预算 6 倍，wasm-opt -Oz + 代码分包挂 S18.8 收口；本行「达标挂 S18.6」为 S18.1 时点口径〕） |
+| wasm 主体（bevy render 含 wgpu/wasm-bindgen） | ≤800 KB | **≤8 MB** | S18.1 实测（spike 裸跑，未 LTO/opt）：原始 65.4 MB / strip 后 **36.62 MB**；**S70 实测 2026-11-22**：wasm-opt -Oz（精确特性集）47.8MB→**34.9MB**，浏览器 e2e 功能完好，但仍超 ≤8MB（结构性，如实留痕，`evidence/S70.0.log`）（`evidence/S18.1.log` §3）；**达标挂 S18.6**（LTO+wasm-opt -Oz 后重测回填；〔飞轮 R19 勘误注：LTO+strip 达标动作实际由 S18.8e 执行 = 46.6 MB 仍超预算 6 倍，wasm-opt -Oz + 代码分包挂 S18.8 收口；本行「达标挂 S18.6」为 S18.1 时点口径〕） |
 | 首屏附属资源（JS shim + 字体 + 贴图） | ≤490 KB | **≤4 MB** | 字体/贴图资产量级按 CJK 子集 TTF（S18.3）+ v3 四场景贴图（S18.7）估算，S18.6 门禁实测锁 |
 | 首屏总下载 | ~560 KB | **≤12 MB** | 当前实测 36.62 MB 未达标（LTO/opt 路径，飞轮 R20 Q002 勘误：S18.6 时点口径，LTO+strip 达标动作实际 S18.8e 执行 = 46.6 MB 仍超）；达标前 web 发布挂「实验通道」 |
 | Android | 无体积约束 | 无 | APK 不卡 800KB 口径 |
