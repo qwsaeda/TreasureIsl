@@ -133,8 +133,11 @@ def _resolve_artifact(kind: str) -> Path | None:
         return None
     p = REPO / art
     if "*" in art:
-        matches = sorted(p.parent.glob(p.name))
-        return matches[-1] if matches else None
+        # S69 修：glob 按字符串排序会让 `x86_64 > aarch64` 恒选旧 x86_64 产物
+        # （注释承诺「取最新匹配」但实现是字典序最大）⇒ post 复检验错 APK、误报未引用资产。
+        # 改为按 mtime 取真正最新的产物。
+        matches = list(p.parent.glob(p.name))
+        return max(matches, key=lambda m: m.stat().st_mtime) if matches else None
     return p if p.is_file() else None
 
 

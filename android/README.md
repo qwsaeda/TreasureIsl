@@ -12,7 +12,7 @@
 #   │   ├── android-activity/       # JNI 入口（miniquad 的 android 后端 → ti-app 主循环）
 #   │   │   ├── Cargo.toml          # cdylib 壳 crate（本仓已预写）
 #   │   │   └── src/lib.rs          # miniquad::run(game_loop) → ti_app::android_shell::run（已预写）
-#   │   ├── AndroidManifest.xml     # 包名/权限/横竖屏（本仓已预写，包名 com.example.treasureisland 占位）
+#   │   ├── AndroidManifest.xml     # 包名/权限/横竖屏（本仓已预写，包名 com.qwsaeda.treasureisl）
 #   │   └── assets/                 # 打进 APK 的资源（macroquad::file::load_file 读取）
 #   │       ├── GoldLand.Fnt        # ← 从 data/GoldLand.Fnt 复制（构建前手动/脚本）
 #   │       ├── font.dat            # ← 从 data/font.dat 复制
@@ -34,7 +34,7 @@
 #   # 2. 把资源打进 APK assets
 #   mkdir -p android/assets
 #   cp data/GoldLand.Fnt data/font.dat data/settings.dat data/music.lpk android/assets/
-#   # 3. 按你的包名改 android/AndroidManifest.xml 的 package（占位 com.example.treasureisland）
+#   # 3. 按你的包名改 android/AndroidManifest.xml 的 package（已设自有反向域名 com.qwsaeda.treasureisl）
 #   # 4. 编译 + 装机
 #   cargo apk build -p ti-app --features android-shell
 #   adb install target/universal-debug.apk

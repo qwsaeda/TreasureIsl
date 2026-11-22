@@ -62,6 +62,11 @@
    日志落 `evidence/console/logs/test-<id>-<ts>.log`（gitignored）。
 6. **证据**：测试实跑输出 / 截图落 `evidence/`；`evidence` 字段指向之（与清单对账）。
 
+### 4.1 已接入实例（S67.5）
+
+- `ui_verify`（设备矩阵出图验收）：`test_manifest.json` id=`ui_verify`，command=`python3 scripts/ui_verify.py`（默认 2 档快速矩阵，`timeout_s`=1200），`evidence`=`evidence/S67.0.log`，`prove`=`evidence/tests/ui_verify/`，`group`=`platform`；平台 `console_commands.json` 同 id 白名单 + `close.rs::HUMAN_VIEW_IDS` 镜像（37 项）；平台「测试」页自动可见，`/api/tests?run=ui_verify` 一键跑。
+- `evidence/ui_verify_*` 为测试产物（非写点），同 `reference_diff_*` 口径（`writes=[]`）。
+
 ## 5. 平台接入口径（data-driven，零平台代码）
 
 - 平台测试页 = **读 `test_manifest.json`**（`repo::data::tests`，白名单数据源路径）；登记即接入，

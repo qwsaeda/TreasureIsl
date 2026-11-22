@@ -4,6 +4,7 @@
 //!（`docs/process/01_architecture.md` §2 依赖倒置）。
 
 use ti_core::data;
+use ti_core::data::CardEffectDef;
 use ti_core::data::balance;
 use ti_core::data::table_source;
 use ti_core::domain::combat::Side;
@@ -401,11 +402,11 @@ impl MapHost for GameApp {
         let Ok(b) = data::balance() else { return String::new() };
         let Some(c) = b.cards.deck.get(idx) else { return String::new() };
         let (kind, val) = match &c.effect {
-            ti_core::data::CardEffectDef::Damage(v) => ("damage", *v),
-            ti_core::data::CardEffectDef::Heal(v) => ("heal", *v),
-            ti_core::data::CardEffectDef::Gold(v) => ("gold", *v),
-            ti_core::data::CardEffectDef::Move => ("move", 0),
-            ti_core::data::CardEffectDef::Unknown => ("unknown", 0),
+            CardEffectDef::Damage(v) => ("damage", *v),
+            CardEffectDef::Heal(v) => ("heal", *v),
+            CardEffectDef::Gold(v) => ("gold", *v),
+            CardEffectDef::Move => ("move", 0),
+            CardEffectDef::Unknown => ("unknown", 0),
         };
         crate::i18n::sgetf("scene.main_map.card.effect_fmt", &[&kind, &val, &c.weight])
     }

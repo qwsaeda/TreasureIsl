@@ -28,7 +28,8 @@
   "crates/ti-app/src/scenes/vs_anim_proto.rs::render_v2_elem": "S34.6 起超限（163>140）：2026-11-03 S34.6 D3 格类分层代码叠加，该函数为 S34.6 新增，按豁免处理",
   "crates/ti-app/src/scenes/main_map.rs::render_v6_elem": "S36.3 飞轮 R2-F1 起（140=上限，R3 登记防下轮视觉改动触审计 FAIL；限期整改）",
   "crates/ti-app/src/scenes/main_map.rs::on_input": "S63 5 面板（贸易/建造/商人/事件/造船）键盘分支同表 + 主地图原有分叉，集中一处可审；clippy too_many_lines 已 allow",
-  "crates/ti-app/src/scenes/main_map.rs::render_v5_ring": "S64~S66 面板渲染逐次增加（驻军/升级/副本，140→141）：2026-11-22 门禁对账补登基线（限期整改）"
+  "crates/ti-app/src/scenes/main_map.rs::render_v5_ring": "S64~S66 面板渲染逐次增加（驻军/升级/副本，140→141）：2026-11-22 门禁对账补登基线（限期整改）",
+  "crates/ti-engine/src/bin/treasure_bevy.rs::run": "S66/S67 后续出图与面板分支累加（163>140）：2026-11-22 门禁对账补登基线（限期整改；非 S67 本轮引入）"
  },
  "exempt_repeats": {
   "i18n 文案取值 sgetf@crates/ti-app/src/scenes/main_map.rs": {

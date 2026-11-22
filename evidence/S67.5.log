@@ -1,0 +1,9 @@
+S67.5 判据：ui_verify 接入平台测试页（test_manifest + console_commands + HUMAN_VIEW_IDS 镜像）
+validate_data: OK（4 表，strings 265 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+doccheck2: 0 error(s) across 54 audit-codified checks 
+  2. test_manifest↔console_commands 映射 : OK
+  3. 工具台账三处登记核验                : OK
+[studio_tests] 3 类断言全 OK（exit 0）
+[S67.5 实测] /api/tests 返回 41 条，ui_verify 命中（group=platform, command=python3 scripts/ui_verify.py）— 平台测试页可见，?run=ui_verify 白名单可执行
