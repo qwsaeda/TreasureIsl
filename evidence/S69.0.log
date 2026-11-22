@@ -1,0 +1,26 @@
+# S69 Android 占位包名消项（Q050）+ build_artifacts post 产物选择 bug（2026-11-22）
+
+## 真实缺口
+- Q050（docs/experience/build.md）：AndroidManifest package 占位 `com.example.treasureisland`，
+  发布阻塞（占位包名无法正式上架，决定应用身份/升级路径）。
+- 实测发现新 bug：build_artifacts.py `_resolve_artifact` 用 glob 字符串排序取 matches[-1]，
+  `x86_64 > aarch64` 字典序恒选旧 x86_64 APK 复检（注释承诺「取最新」但实现错）⇒
+  post 复检验错产物、误报未引用资产 node_battle.png。
+
+## 修复
+- AndroidManifest package → `com.qwsaeda.treasureisl`（owner qwsaeda + 项目名，自有反向域名）；
+  android/README + build.md Q050 同步（消项注记，注明换正式域名 = 改 package + aapt2 link + 重装机）。
+- build_artifacts.py `_resolve_artifact` glob 改 `max(matches, key=mtime)`（真正取最新产物）。
+- 代码改动已随并行提交 0679cee 进入远端（并行 agent git add -A 带入）。
+
+## 真实验证（本机，非推测）
+- build_apk.sh 重构建（mtime 锚定复用 .so，仅重跑 aapt2 link + 签名）：
+  `dist/TreasureIsl-0.2.0-aarch64.apk` 210MB（Nov 22 14:08），.so Deflate 38%，引用集漂移 0。
+- aapt dump badging：`package: name='com.qwsaeda.treasureisl' versionCode='2' versionName='0.2.0'` ✓
+- redroid 真机装机 `adb -s 10.0.182.152:5555 install -r`：Success（streamed 210070283 bytes）✓
+- build_artifacts post 复检（修复后选 aarch64 产物）：OK 漂移 0（修复前误选 x86_64 报 node_battle FAIL）。
+- doccheck 188 docs/38 facts/203 experiences/368 refs 0 + doccheck2 54 项 0 + ledger 374/374 0 error。
+
+## 边界
+- keystore 仍 debug 签名：release 前须换正式签名（非本项范围，已登记 build.md）。
+- 包名变更 = 应用身份变更，若已装机旧包名须卸载重装（升级路径不兼容），已注明。
