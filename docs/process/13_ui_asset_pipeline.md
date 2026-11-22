@@ -193,7 +193,7 @@ powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1        # 全部 
 ① 出设计图/概念图（Agnes 生图 → evidence/ui_concept/ 参考；原图/临时图 → evidence/gen_tmp/ §2.2）
 ② 定资产清单（背景/木牌/纹章/立绘…）→ python scripts/ui_assets.py add ...
 ③ 改界面数据（assets/data/scenes.json 的 primitives：image 原语 + 文本/矩形）
-④ 出图看效果 → python scripts/ui_preview.ps1 <scene>   （evidence/ui_preview/ 缩略图 + 非黑像素统计）
+④ 出图看效果 → python scripts/ui_preview.ps1 <scene>   （evidence/ui_preview/ 缩略图 + 非黑像素统计）；批量设备矩阵 = python3 scripts/ui_verify.py（S67.0：场景×设备视口 + 非黑/探针断言 + --json 汇总，--check 只读）
 ⑤ 迭代 ③~④ 直到对齐设计图
 ⑥ 门禁全绿 + 用户过目签字
 ```

@@ -4745,6 +4745,44 @@ fn check_node_kind_asset_map(root: &Path) -> Vec<String> {
 /// 动机：内联单测写在 `crates/**/src/**` 里，其中的 `expect`/`panic!` 会被 gate 第 5/6 项
 /// （占位 / unwrap 扫描）拦下 ⇒ 写完跑 gate 才被自己的单测拦白跑一轮。规定单测只放
 /// `crates/*/tests/`（项目既有约定），`src` 内联单测一律提前拦。
+/// S67.2：`--json` 契约的注册级判据。第 29 项 `tooling-contract` 是纯源码子串匹配
+/// （出现 `--json` token 即过），本项要求白名单工具的源码里有**真实注册**
+/// （argparse `add_argument("--json")` 或 `"--json" in sys.argv`），堵住「注释里写
+/// token 就算支持」的假达标。白名单 = `gate_data.json::cli_json_required`。
+fn check_cli_json_contract(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(text) = read_file(root, "assets/gate_data.json") else {
+        return vec!["gate_data.json 不存在（--json 契约白名单无机读源）".to_string()];
+    };
+    let Ok(data) = serde_json::from_str::<serde_json::Value>(&text) else {
+        return vec!["gate_data.json 解析失败（--json 契约白名单）".to_string()];
+    };
+    let Some(names) = data.get("cli_json_required").and_then(|value| value.as_array()) else {
+        return vec!["gate_data.json 缺 cli_json_required 数组（--json 契约白名单）".to_string()];
+    };
+    for name in names {
+        let Some(tool) = name.as_str() else {
+            continue;
+        };
+        let path = format!("scripts/{tool}");
+        let Some(source) = read_file(root, &path) else {
+            errors.push(format!("{path}: 文件不存在（--json 契约白名单项）"));
+            continue;
+        };
+        let registered = source.contains("add_argument(\"--json\"")
+            || source.contains("add_argument('--json'")
+            || source.contains("\"--json\" in sys.argv")
+            || source.contains("\"--json\" not in sys.argv")
+            || source.contains("'--json' in sys.argv");
+        if !registered {
+            errors.push(format!(
+                "{path}: 缺真实 --json 注册（须 argparse add_argument 或 sys.argv 判定；文本 token 不算）"
+            ));
+        }
+    }
+    errors
+}
+
 /// 单个检查项实现签名（`fn(仓库根) -> 错误列表`）。
 type CheckFn = fn(&Path) -> Vec<String>;
 
@@ -4817,6 +4855,9 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     // （Q009 曾错位：web_playtest=23→应 33 / bevy_cpu_parity=21→应 31 / wasm_browser_e2e=22→应 32；
     // validate_data 只校验 1..=36 形状不校验语义 ⇒ 本断言补语义守门）。
     ("manifest-gate-posmap", check_manifest_gate_posmap),
+    // S67.2：第 29 项 `tooling-contract` 只做源码子串匹配（含 `--json` token 即过），
+    // 本项把「验类/写类工具的 --json 支持」提升为注册级判据（argparse/sys.argv 真实注册）。
+    ("cli-json-contract", check_cli_json_contract),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

@@ -198,6 +198,11 @@ bin 名与源文件名不一致 3 类陈旧项）。
 | `timeout_s` | ○ | 作业超时（秒；缺省 = 不限；超时 ⇒ 作业记 `exit_code=-1` + note `timeout`） |
 | `prove` | ✓（可自动运行者） | 本次运行**证明落点**（`evidence/tests/<id>/`）；与 `evidence`（静态基线证据）并存不冲突（§6.3「证明」行）。**R25 F-10 口径**：平台 `persist_proof` 写 `evidence/tests/<id>/<id>-<ts>/{run.log,state.json}`（时间戳子目录 + 终态快照）；手工落证据亦须同构（`<ts>/` 子目录，不写平铺 `run.log`），`prove` 前缀可预声明、目录由运行创建 |
 
+### 7.1 确定性测试约定（S67.4，LGUI test 假时钟借鉴）
+
+- 涉及 RNG / 动画的 UI 流程测试必须固定时间源：`set_rng_seed(seed)` + `set_frame_delta_ms(固定值)`（假时钟等价物）；判据 = 同 seed + 同输入序列两次运行快照逐字段一致，异 seed 轨迹分叉（`crates/ti-app/tests/e2e_ui_flow_deterministic.rs`）。
+- 登记：测试 id = `ui_flow_deterministic`，command = `cargo test -p ti-app --test e2e_ui_flow_deterministic`；平台执行映射 = `crates/ti-console/console_commands.json` 同 id（零平台 Rust 改动）。
+
 ## 8. 执行入口
 
 | 入口 | 命令 |

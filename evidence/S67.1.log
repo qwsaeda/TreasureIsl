@@ -1,0 +1,6 @@
+[S67.1 判据] 默认全0 = 零视觉变化 PASS
+[S67.1 判据] 非0配置 + 横竖双份独立 PASS
+[S67.1 判据] *_safe.png 四边遮罩宽度=配置值 PASS ui_verify_index_844x390_safe.png
+[S67.1 判据] 负例缺字段非0 PASS
+[S67.1 判据] 负例负值非0 PASS
+[ui_verify] --check PASS（2 张截图非黑 + 安全区配置一致）

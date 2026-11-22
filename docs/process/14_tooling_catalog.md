@@ -50,6 +50,7 @@
 | 2 | **台账登记 = 表格行** | `scripts/x.py` 必须在 §3.1~§3.4 某张表里有 `\| \`x.py\` \|` 行（§3 第 28 项只查「出现过」）；cargo bin / crate 工具须在 §3.5 登记 | doccheck2 FAIL |
 | 3 | **登记要素齐全** | 该行须声明「幂等/只读」与退出码语义（「非 0 退出」或等价表述） | doccheck2 FAIL |
 | 4 | **只读模式 + 非 0 退出** | 新增工具（不在棘轮基线内）源码须含 `--check`/`--verify`/`--report` 之一，且违规时非 0 退出；**豁免 = cargo bin / crate 工具类**（§3.5，服务形态 bin：只读/写面语义由 22 号 §4.2 白名单 + §10.3 执行面接管，`check_tooling_contract` 实扫面 = `scripts/` 的 `.py`/`.ps1`，不含 `crates/`） | doccheck2 FAIL |
+| 5 | **`--json` 真实注册（S67.2，第 54 项 `cli-json-contract`）** | 白名单工具（机读源 `assets/gate_data.json::cli_json_required`）源码须含真实 `--json` 注册（argparse `add_argument` 或 `sys.argv` 判定），而非仅在注释/文本里出现 token；第 29 项的只读子串匹配不算数 | doccheck2 FAIL |
 
 ### 1.5 组合优先（不新增工具的优先序）
 
@@ -255,6 +256,8 @@ python scripts/map_pack.py check
 | `publish_web.ps1` | **一键发布 publish-web（S16.3）**：gate 全绿前置 → build_wasm 重建 `web/` → 本地 `serve` 静态断言（index/wasm/js 200 + content-type）→ 发布历史（sha256 + git short sha + 日期）入 `release.md`「发布」节 → `git worktree` 推 `gh-pages`（不污染 master）→ 线上 URL 复跑 `web_playtest` 全交互 0 失败；Pages/远端不可达 = 实测定态降级登记 release.md 已知限制（不静默绕过） | `pwsh -File scripts/publish_web.ps1` / `-Check`（只读前置体检：不构建/不推/不写 release.md） | 幂等（重跑覆盖发布历史行）；前置 gate 非全绿 ⇒ 非 0 退出；线上不可达 = 记名降级非 FAIL |
 | `smoke.ps1` | native + wasm 冒烟 | `powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1` | 幂等；失败非 0 |
 | `playbook.ps1` | 常用命令一键入口（`-List` 实打 20 条 / switch 22 分支） | `powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -List` / `<cmd>` / `-Check` | 幂等只读转发器（判定 / 退出码由被转发工具承担）；未知命令 / 转发失败 ⇒ 非 0 退出；`-Check` = 被转发目标在位性只读体检（不执行被转发工具，缺失非 0 退出） |
+
+| `ui_verify.py` | **设备矩阵出图验收（S67.0，LGUI verify 借鉴）**：一条命令跑「场景 × 6 组设备视口」出图，逐图非黑像素 + bevy_ui 探针断言，`--json` 汇总 `evidence/ui_verify_report.json`；`--check` 只读校验既有证据（不出图不写盘）；`--devices=quick` 3 组横屏档；安全区 `*_safe.png` 叠加（S67.1） | `python3 scripts/ui_verify.py [--check] [--json] [--devices=quick] [--scenes=index,main_map]` | 幂等（重跑覆盖同名截图与 report）；`--check` 只读 0 写盘；空帧/探针缺/非法输入 ⇒ 非 0 退出（exit 1/2）；缺 cargo/xvfb 环境降级记名 |
 
 ### 3.3 一次性工具（标注：不做门禁 / 用完即弃）
 

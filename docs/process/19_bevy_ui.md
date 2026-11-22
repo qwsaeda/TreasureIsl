@@ -162,6 +162,15 @@ y% = cy + ry·sin(angle_i)      // cy/ry = 环心/半径 y（`%` 高，屏幕 y 
 | 9.8-15 | **bevy_ui 只渲染带 `Node` 组件的实体**（`extract_uinodes` 按 `Node` 提取）⇒ `ImageNode`/`Text`/`BackgroundColor` 必须与 `Node` **同实体** | 内容组件放**无 `Node` 的子实体**（`spawn((ImageNode, ChildOf(node)))`）= taffy 布局不提取、UI pass 不绘制 ⇒ **静默不渲染**（截图非黑达标但内容缺失 = 假达标）。S39.0 实测（EXP-168）：旧 `build_index_chrome`（S29.3d）`Node + ImageNode` 同实体正确，新 `build_data_chrome` 拆开 = 回归。修法 = `commands.entity(node).insert((ImageNode, ...))` |
 | 9.8-16 | **per-scene bevy_ui chrome 重建键须含方向判别**（`chrome_ui_system` 的 `built` 键） | 重建键 = `(场景, 选中)` 不含方向 ⇒ `--shot --viewport=1920x1080` 下 orientation 由 main() 显式设 Landscape，但首跑（可能竖屏数据）建树后 `sel_key` 不变即**永不重建** ⇒ 横屏原语永不生效。修法 = 键加 `orientation_disc`（Landscape=1/Portrait=0），EXP-168 |
 
+## 9.9 安全区截图模拟（S67.1）
+
+- **单一事实源**：`assets/data/ui_schema/safe_area.json`（横竖各一组四边 inset，顺序 = 上右下左，逻辑像素）。运行时不消费本配置——它是**验收取证层**数据：`scripts/ui_verify.py` 按当前视口宽高比选 `landscape`/`portrait`，在非 0 inset 时于截图叠加半透明遮罩 + 参考线，产出 `*_safe.png`，供人/Agent 判定关键元素是否避开刘海区。
+- **默认全 0 = 零视觉变化**：不产出 `*_safe.png`，现有画面逐字节不变；本轮不触发 A 纪律（设计稿先行）。
+- **横竖跟随**：`width > height` ⇒ landscape，否则 portrait；旋转即换四元组，与 LGUI `window.__lguiSafeArea` 的转屏 90° 跟随同口径（本项目为静态配置双份，不做运行时旋转动画）。
+- **启用非 0 inset = 新视觉意图**：任何元素落点变化须重新出图并用户过目（硬规则 9 / EXP-114）。
+- **边界**：Android 侧当前无 notch/cutout 配置（0 命中），本能力只做**截图取证模拟**，不做渲染层避让；若要真避让需另立任务改 taffy 布局约束。
+- **机检**：`python3 scripts/ui_verify.py --check` 校验 report + 截图非黑；负例（缺字段/负值）非 0 退出。
+
 ## 10. 相关文档
 
 - [`12_bevy_usage.md`](12_bevy_usage.md)：通用约定（插件组 / 坐标 / z 层 / 离屏截图 / 预算）

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "task": "S67.0",
+  "scenes": [
+    "index"
+  ],
+  "devices": [
+    "desktop",
+    "phone_landscape"
+  ],
+  "results": [
+    {
+      "scene": "index",
+      "device": "desktop",
+      "viewport": "1920x1080",
+      "orientation": "landscape",
+      "shot": "evidence/ui_verify_index_1920x1080.png",
+      "nonblack": 1990204,
+      "probe_ok": true,
+      "safe_area": null,
+      "safe_inset": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "ok": true
+    },
+    {
+      "scene": "index",
+      "device": "phone_landscape",
+      "viewport": "844x390",
+      "orientation": "landscape",
+      "shot": "evidence/ui_verify_index_844x390.png",
+      "nonblack": 321215,
+      "probe_ok": true,
+      "safe_area": null,
+      "safe_inset": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "ok": true
+    }
+  ],
+  "pass": true
+}

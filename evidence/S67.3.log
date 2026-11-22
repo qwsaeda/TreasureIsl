@@ -1,0 +1,4 @@
+S67.3 判据：TI-UI-xxx 稳定错误码表 + 索引登记
+码表行数=10
+doccheck: 187 docs, 38 facts, 200 experiences, 366 task refs, 4 assertions, 0 error(s)
+doccheck2: 0 error(s) across 54 audit-codified checks 

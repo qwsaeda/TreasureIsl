@@ -386,11 +386,23 @@
   {
    "id": "manifest-gate-posmap",
    "impl": "rust"
+  },
+  {
+   "id": "cli-json-contract",
+   "impl": "rust"
   }
  ],
  "event_static_keys": [
   "scene.main_map.event.panel_title",
   "scene.main_map.event.hint",
   "scene.main_map.event.effect_fmt"
+ ],
+ "cli_json_required": [
+  "apk_audit.py",
+  "board_measure.py",
+  "build_artifacts.py",
+  "check_dod_commands.py",
+  "code_outline.py",
+  "ui_verify.py"
  ]
 }

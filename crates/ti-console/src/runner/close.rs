@@ -21,7 +21,7 @@ use crate::runner::apply_minimal_env;
 /// 22 号 §4.2 人读视图动作 id 集合（机器断言镜像；S32.6 白名单对账断言）。
 /// 必须与 `console_commands.json` `commands[].id` 集合逐字一致（`whitelist_audit` 断言）。
 /// 22 号 §4.2 人读视图白名单 id 镜像（测试体系专项审计 Q012 补 3 条 oracle 差分映射后 24→27）。
-pub const HUMAN_VIEW_IDS: [&str; 35] = [
+pub const HUMAN_VIEW_IDS: [&str; 36] = [
     "gate",
     "close_check",
     "close_run",
@@ -58,6 +58,7 @@ pub const HUMAN_VIEW_IDS: [&str; 35] = [
     "app_garrison_panel_e2e", // S64
     "app_upgrade_panel_e2e",  // S65
     "app_dungeon_panel_e2e",  // S66
+    "ui_flow_deterministic",  // S67.4 确定性 UI 流程测试
 ];
 
 /// `console_commands.json` 路径（相对仓库根）。

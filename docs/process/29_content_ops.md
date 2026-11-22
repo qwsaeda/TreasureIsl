@@ -71,7 +71,7 @@
 | 1 | **设计稿先行**（A 纪律，硬规则 9）：改 `scenes.json` 或换 `assets/ui/` → `--shot --viewport` 出图 → **用户视觉确认留痕** → 才固化 | `design` | 平台自身面（scene shot 当前状态出图） | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
 | 2 | **改数据**：`scenes.json`（版面/配色原语）+ 或换资产（着色/新图 `assets/ui/`） | `variant` + `theme` + `layout` | `ui_variant`（换资产）+ `ui_theme`（主题构图应用，S48.0 全主题创新）+ 平台自身面（版面原语只读断言） | `variant`：exit=0 + ui_manifest 登记一致（disk↔registry，validate_data 0 违规）；`theme`：exit=0 + 输出含 validate_data 0 违规（主题构图回注 + 资产部署）；`layout`：exit=0（scenes.json indent=1 规范形 + check_scenes_canonical 0 差） | `variant`：`assets/ui/` + `assets/ui_manifest.json`；`theme`：`assets/data/scenes.json` + `assets/ui/` + `assets/ui_manifest.json`；`layout`：只读（可选跳过断言） |
 | 3 | **重建二进制**（⚠ 坑位，见 §5）：`scenes.json` 是 `include_str!` **编译期内嵌**——改它必须 `cargo build` 才生效；`assets/ui/*.png` 运行时读盘，无需 rebuild | `build` | 平台自身面（`cargo build`） | exit=0（build 成功，scenes.json 生效） | 只读（产物落 `target/`，非冻结路径） |
-| 4 | **出图**：`--shot --scene=<id> --viewport=<方向>`（多视口） | `shot` | 平台自身面（scene shot 多视口） | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
+| 4 | **出图**：`--shot --scene=<id> --viewport=<方向>`（多视口；批量设备矩阵 = `scripts/ui_verify.py`〔S67.0，非黑/探针机检 + `--json` 汇总〕） | `shot` | 平台自身面（scene shot 多视口） | exit=0（出图成功 + 图像非黑判据复核） | `evidence/` |
 | 5 | **零 Rust 判据**：`git diff crates/` = 空（重建不改 Rust 源码，仅内嵌数据 blob） | `zero_rust` | 平台自身面（`git diff --quiet -- crates/…`） | exit=0 + git diff crates/ 空（游戏产品 6 crate） | 只读 |
 | 6 | **视觉签收留痕**：`evidence/<id>.log` 含「用户视觉验收/过目/确认/签收」之一（doccheck2 第 37 项 `visual-signoff` 检查，飞轮 R10 勘误旧「第 35 项」序号）——与第 5 步**同一步**，是 `zero_rust` 判据的后半段 | `zero_rust` | 平台自身面（同第 5 步） | exit=0 + git diff crates/ 空 + `state.signoff` 含签收关键词（A 纪律 EXP-114） | 只读 |
 

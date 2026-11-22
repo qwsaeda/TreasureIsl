@@ -204,3 +204,9 @@ v5「岛型卡」→ v6「不规则多边形地块」的演进中，资产命名
 解法：① 资产命名从按岛型（`tile_<isle>.png`，10 张共用）改按格（`tile_<map_id>_<格号>.png`，31 格各自独立，命名约定自动发现 0 描述符改动，同 `island_home_<map_id>.png` 口径）；② 提示词模板统一加**负向清单**（地块图 = 该岛标志物 + 牌面风格；静态地标如沉船残骸/灯塔剪影可留，航行中的船/旗帜/角色/动物/文字一律不画）；③ 新增 `docs/ui-redesign-v3/14_plot_tile_spec.md` 单一事实源（一格 = 格子底 + 地块图 + 归属色带三层模型 + 运行时叠层区分；收口 v5「岛型卡」/v6「插旗」散落旧措辞）；④ 全 10 类岛 m04 首格全量重生成入仓（`ui_assets.py register-plot` 唯一清单写入路径，EXP-184 零 churn）。
 验证：按格 blit 真渲染出图（有图格 vs 回退格像素分布不同）+ 契约测试 2 passed + doccheck 0 error（170 docs）+ gate -Touch 0 failure + 用户三轮视觉确认（「只画标志物（像牌）」定案）。
 通用教训：**地图地块图是「该格地标」，不是「玩家棋子」，更不是「岛型卡」**——命名（按格 `tile_<map_id>_<idx>.png`）、生成（提示词负向清单禁船/旗/角色/动物/文字）、文档（14 号单一事实源）三者必须对齐；否则 AI 生成的图与运行时叠层撞车。
+
+### EXP-205 工具：工具契约静态 token 扫描≠执行级判据：--json 假达标
+- **现象**：S67.2 要给工具契约补 --json 的支持判据，但 doccheck2 第29项只是源码含 --json token 即过，注释里的 token 也算，无法拦假达标。\n- **根因**：契约是静态文本扫描（READONLY 7 token 之一），不验证 flag 是否真注册；我首版新断言用 trim.contains("--json") 同样宽松，把 add_argument("--jsonx") 也放过了。\n- **解法**：gate_data.json::cli_json_required 白名单 + doccheck2 第54项 cli-json-contract（53→54），精确匹配 add_argument("--json"/'--json' 或 sys.argv 判定含 not 变体）；双负例实跑。\n- **验证**：改 ui_verify.py 的 flag 为 --jsonx ⇒ 精准 FAIL「缺真实 --json 注册」，还原 ⇒ 54 项 0 error。
+
+### EXP-206 工具：出图工具 TI_SHOT_NAME 必须传子进程环境；200MB 资产预载决定默认矩阵规模
+- **现象**：首张出图 nonblack=0 但探针在，报告 pass=false；默认 6 设备×2 场景 900s 超时只出 3 张。\n- **根因**：① TI_SHOT_NAME 只在注释里声明，未传 subprocess env ⇒ 引擎按默认名落盘，工具读另一个名字；② 引擎 run_shot 每次冷启动预载 200MB+ 资产（S39 把循环上限放宽到 6000），GPU poll 软件渲染下单张 ~200s。\n- **解法**：run_matrix 构造 child_env 传 TI_SHOT_NAME=ui_verify_<scene>；默认设备缩为 2 档（desktop+phone_landscape）、默认场景 1 个，全 6 档走 --devices=all，subprocess timeout 300→600s。\n- **验证**：desktop 出图 nonblack=1990204、phone_landscape=321215、探针全在、默认矩阵 2 张 pass=true。
