@@ -2387,6 +2387,37 @@ fn run() {
         }
         game.hold_board_toast();
     }
+    // S64/S65/S66：新面板需 pending 态才能开——出图前按需造待决格（仅离线出图路径，非游戏逻辑）。
+    // garrison/upgrade：取第一个领地格造自己格 pending_own；dungeon：spin 到无主格造 pending_dungeon。
+    if let Some(panel) = args.panel.as_deref() {
+        match panel {
+            "garrison" | "upgrade" if game.pending_own.is_none() => {
+                let cell = (0..40u32)
+                    .find(|&i| game.territory.as_ref().is_some_and(|t| t.ownership(i).is_some()));
+                if let (Some(cell), Some(terr)) = (cell, game.territory.as_mut()) {
+                    let seat = game.turn_cycle.current;
+                    terr.mutate(
+                        cell,
+                        ti_core::rules::territory::Ownership {
+                            owner: Some(seat),
+                            level: 1,
+                            garrison: 2,
+                        },
+                    );
+                    game.pending_own = Some(cell);
+                }
+            }
+            "dungeon" if game.pending_dungeon.is_none() => {
+                for _ in 0..40 {
+                    game.handle(ti_app::GameInput::Spin);
+                    if game.pending_dungeon.is_some() {
+                        break;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
     // S63 T1：`--panel=trade|build` 在 main_map 出面板态（真实 GameInput 分发，非伪造渲染）。
     if let Some(panel) = args.panel.as_deref() {
         game.handle(match panel {
@@ -2395,6 +2426,10 @@ fn run() {
             "merchant" => ti_app::GameInput::OpenMerchantPanel,
             "event" => ti_app::GameInput::OpenEventPanel,
             "ship" => ti_app::GameInput::OpenShipPanel,
+            // S64/S65/S66：新面板出图入口（需配合 --spin 落到对应格产生 pending 态）。
+            "garrison" => ti_app::GameInput::OpenGarrisonPanel,
+            "upgrade" => ti_app::GameInput::OpenUpgradePanel,
+            "dungeon" => ti_app::GameInput::OpenDungeonPanel,
             _ => ti_app::GameInput::MapBack, // 未知面板名 = 不开（不崩）
         });
     }
