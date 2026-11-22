@@ -308,7 +308,7 @@
 | U2 | 战斗「必损」量级 | 双方损耗 | **已定案**：人手损 `balance.manpower.loss_pct=15%` + 武器损 `weapon_loss_pct=20%`（战力合成 = `armed × weapon_coef + unarmed × barehand_coef`，`armed = min(人手, 武器)`，`force.rs`；勘误 2026-11-19 旧措辞误写 `armed=crew×weapon_coef`） |
 | U3 | **无主副本 / BOSS 战**是否同用兵力模型 | 副本/BOSS 工作量 | 攻占/遭遇 = 兵力模型；副本/BOSS = 也走兵力模型（用户「VS 就是人手+武器」指向全局） |
 | U4 | 初始人手 / 船容量 / 驻军 / 武器价 / 水手价 量级 | 节奏 | **已定案**：初始人手 `balance.manpower.initial_crew=20` / 初始武器 `initial_arms=5`；驻军按玩家自定（`territory.md §4`）；价格走 `balance.goods` |
-| U5 | 多人同格「BOSS 战」语义（a/b/c 只打前一个）确认 | 遭遇战设计 | 按 §4.3 整理；BOSS 格 + 普通格同规则，待实测 |
+| U5 | 多人同格「BOSS 战」语义（a/b/c 只打前一个）确认 | 遭遇战设计 | **已定案 + 已实测**：§4.3「后到者决定打不打前一个、只打前一个」= `rules::territory_v2::previous_occupant`（`a→b→c` 序列测试 `territory_v2_rules.rs::later_arrival_decides_duel_previous` + 败者交钱损水手 `duel_loser_pays_and_loses_crew`）；BOSS 格 + 普通格同规则 |
 | U6 | 格产出「每轮结算一次」的时机 | 节奏 | **已定案**：落格时所有者领取（`SettleAction::Collect`，`territory.rs`；交钱者本圈无收益，他人格归零），非每圈末统一结算（勘误 2026-11-19 旧「二选一待定」措辞滞后于代码） |
 | U7 | 热座是否保留（选 2..5 人） | 是否要交接 UI | **已定案（v3）**：保留，选 **2..5** 人类席 + 可配 AI 席；交接提示按 §1 落 |
 | U8 | v3：AI 席数上限 / 人类席下限 | 选角 UI | **已定案**：人类席 `2..5`（单人局 = 假多人，v2 缺陷）；AI 席 `0..=(5-人类席数)` |
