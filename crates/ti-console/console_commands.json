@@ -582,6 +582,31 @@
    "writes": [],
    "enabled_by_default": true,
    "command": "cargo test -p ti-app --test e2e_ui_flow_deterministic"
+  },
+  {
+   "id": "ui_verify",
+   "runner": "python3",
+   "script": "scripts/ui_verify.py",
+   "args": [],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "python3 scripts/ui_verify.py",
+   "_writes_note": "evidence/ui_verify_* 为测试产物（非写点），同 reference_diff 口径"
+  },
+  {
+   "id": "app_card_panel_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "app_card_panel_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test app_card_panel_e2e"
   }
  ]
 }

@@ -138,6 +138,7 @@
 | [`plan-s64-garrison.md`](plan-s64-garrison.md) | **S64 领地驻军自定面板 WBS**（原版核心战略取舍：玩家自定驻军 G，从舰队分出/调回，人手守恒；补齐 territory.md §4 第三支交互，规则层 set_garrison 已实现、UI 新入口） |
 | [`plan-s65-upgrade-panel.md`](plan-s65-upgrade-panel.md) | **S65 领地升级面板 WBS**（S63 T5 补齐：落自己格主动查看等级/升级造价/产出/防御，独立 H 键面板，扩展 SceneHost 待决查询接口） |
 | [`plan-s66-dungeon-panel.md`](plan-s66-dungeon-panel.md) | **S66 副本情报面板 WBS**（S63 T4 补齐：落无主格按 J 看岛名/守军人手/武器/奖励，Confirm 进守军战） |
+| [`plan-s68-card-panel.md`](plan-s68-card-panel.md) | **S68 卡牌图鉴面板 WBS**（S63 T8 补齐 8 面板最后一块：C 键看卡池构成/效果，纯读 balance.cards 不改规则） |
 | [`plan-s67-lgui-absorption.md`](plan-s67-lgui-absorption.md) | **S67 LGUI 验收机制吸收 WBS**（用户 2026-11-22 拍板「全部 5 条」：设备矩阵出图验收 + 安全区截图模拟 + CLI `--json` 全覆盖 + 稳定错误码表 + 确定性 UI 流程测试；5 任务 S67.0~S67.4） |
 
 ### 工具与产出物索引

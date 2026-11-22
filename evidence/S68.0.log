@@ -1,0 +1,29 @@
+# app_card_panel_e2e 真跑测证据（S68 · 2026-11-22T13:04:45Z）
+$ cargo test -p ti-app --test app_card_panel_e2e
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+     Running tests/app_card_panel_e2e.rs (/disk/target/debug/deps/app_card_panel_e2e-9293607b23e23781)
+
+running 5 tests
+test card_panel_open_and_data ... ok
+test card_panel_paging_clamped ... ok
+test card_panel_via_poll_keyboard ... ok
+test card_panel_mutual_exclusion ... ok
+test card_panel_back_closes ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+exit=0
+
+## S68.0 收口判据（S63 WBS T8 补齐，8 面板最后一块）
+- 真实缺口：plan-s63-subscenes.md T8 降级——抽卡即时结算无持久手牌状态。
+  本任务用图鉴式展示（展示 balance.cards.deck 全部卡牌定义）绕开该约束：纯读数据、
+  不改游戏规则、不需存档兼容。至此 8 面板全部兑现。
+- 改动面：规则实现(SceneHost card_count/card_name/card_effect_text + C 键)+数据(strings +4)
+  +表现(render_card_panel 羊皮卷轴+↑↓翻页+互斥)+测试(app_card_panel_e2e 5 条+登记 manifest/console/close 白名单 38)。
+- e2e 5 条：C键开/卡池数据与 balance 一致/翻页钳位/互斥/C键poll路由。
+- 验证：cargo test -p ti-app --test app_card_panel_e2e 5/0 + clippy 0 + audit_code 0 + CS 0
+  + hardcode 0 + validate_data OK + studio_tests OK + doccheck/doccheck2 0 + gate 36 项 0 failure + 出图。

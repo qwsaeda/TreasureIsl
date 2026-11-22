@@ -915,6 +915,7 @@ fn input_system(
         garrison: kb.pressed(KeyCode::KeyG), // S64：自己领地格自定驻军
         upgrade: kb.pressed(KeyCode::KeyH),  // S65：自己领地格升级/产出面板
         dungeon: kb.pressed(KeyCode::KeyJ),  // S66：无主格副本情报面板
+        card: kb.pressed(KeyCode::KeyC),     // S68：卡牌图鉴面板
     };
     let key_edge = |current: bool, previous: bool| current && !previous;
     let k = KeyState {
@@ -935,6 +936,7 @@ fn input_system(
         garrison: key_edge(raw.garrison, state.prev_keys.garrison),
         upgrade: key_edge(raw.upgrade, state.prev_keys.upgrade),
         dungeon: key_edge(raw.dungeon, state.prev_keys.dungeon),
+        card: key_edge(raw.card, state.prev_keys.card),
     };
     g.poll(&k);
 

@@ -204,6 +204,8 @@ pub enum GameInput {
     OpenUpgradePanel,
     /// S66 副本情报面板开关（J 键打开：查看守军情报 + 进副本战/放弃）。
     OpenDungeonPanel,
+    /// S68 卡牌图鉴面板开关（C 键打开：查看卡池构成与效果）。
+    OpenCardPanel,
     /// 主地图建造（`kind`）。
     Build(Building),
     /// S21.12 主地图造船（船系统单向升级，`rules::boat::BoatSession`；与 4 建筑并列第 5 入口）。
@@ -369,6 +371,10 @@ pub struct GameApp {
     pub upgrade_panel_open: bool,
     /// S66 副本情报面板是否打开（J 键开关；仅 `pending_dungeon` 在位时可开）。
     pub dungeon_panel_open: bool,
+    /// S68 卡牌图鉴面板是否打开（C 键开关）。
+    pub card_panel_open: bool,
+    /// S68 卡牌图鉴当前翻页序号（0..=card_count-1）。
+    pub card_sel: usize,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// 战斗会话（`Vs` 场景时有效，兵力模型 `force::resolve` 一次性结算）。
@@ -526,6 +532,8 @@ pub struct KeyState {
     pub upgrade: bool,
     /// 副本情报（J，S66：无主领地格查看守军情报）。
     pub dungeon: bool,
+    /// 卡牌图鉴（C，S68：查看卡池构成）。
+    pub card: bool,
 }
 /// 场景切换过渡状态机（EXP-081 → S17.4：真交叉淡化，`MOTION_TRANSITION_MS` 时间制推进）。
 #[derive(Debug, Clone, Default)]
@@ -594,6 +602,8 @@ impl GameApp {
             garrison_sel: 0,
             upgrade_panel_open: false,
             dungeon_panel_open: false,
+            card_panel_open: false,
+            card_sel: 0,
             buildings: Vec::new(),
             battle: None,
             rng: GameRng::new(0),

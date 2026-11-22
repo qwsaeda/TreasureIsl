@@ -25,6 +25,7 @@ fn keys() -> KeyState {
         garrison: false,
         upgrade: false,
         dungeon: false,
+        card: false, // S68：卡牌图鉴（C 键）
     }
 }
 

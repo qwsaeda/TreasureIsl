@@ -514,6 +514,9 @@ fn render_track_tail(host: &mut dyn SceneHost, layout: &SceneLayout) {
     if host.dungeon_panel_open() {
         render_dungeon_panel(host);
     }
+    if host.card_panel_open() {
+        render_card_panel(host);
+    }
     render_board_toast(host);
     // S36.3 终局面板（`territory.md` §4.4）：`match_outcome` 在位 = 对局结束，
     // 主地图中心画胜利/失败/平局面板 + 「按 Confirm 返回主菜单」提示。
@@ -1011,6 +1014,50 @@ fn render_dungeon_panel(host: &mut dyn SceneHost) {
     );
 }
 
+/// S68 卡牌图鉴面板（复用已签收候选 A 羊皮卷轴）。纯读 `balance.cards.deck` 展示卡池，
+/// ↑↓ 翻页；不改游戏规则、不需存档兼容（图鉴式绕开「无持久手牌状态」降级约束）。
+fn render_card_panel(host: &mut dyn SceneHost) {
+    let landscape =
+        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    let (bx, by, bw, bh) =
+        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+    let theme = host.theme().clone();
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    host.fill_rect(bx, by, bw, bh, panel);
+    for t in [0, bh - 3] {
+        host.fill_rect(bx, by + t, bw, 3, brass);
+    }
+    host.draw_title_text(
+        i18n::sget("scene.main_map.card.panel_title"),
+        bx + 24,
+        by + 18,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    let count = host.card_count();
+    let sel = host.card_sel().min(count.saturating_sub(1));
+    host.draw_text(
+        &i18n::sgetf("scene.main_map.card.page_fmt", &[&(sel + 1), &count]),
+        bx + 48,
+        by + 88,
+    );
+    if count > 0 {
+        host.draw_text(&host.card_name(sel), bx + 48, by + 140);
+        host.draw_hint_text(
+            &host.card_effect_text(sel),
+            bx + 48,
+            by + 190,
+            chrome::COLOR_TEXT_ON_PARCH,
+        );
+    }
+    host.draw_hint_text(
+        i18n::sget("scene.main_map.card.hint"),
+        bx + 24,
+        by + bh - 44,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+}
+
 impl Scene for MainMapScene {
     fn kind(&self) -> SceneKind {
         SceneKind::MainMap
@@ -1022,6 +1069,7 @@ impl Scene for MainMapScene {
         match input {
             GameInput::OpenTradePanel => {
                 host.set_trade_panel_open(true);
+                host.set_card_panel_open(false);
                 host.set_dungeon_panel_open(false);
                 host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
@@ -1033,6 +1081,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenBuildPanel => {
                 host.set_build_panel_open(true);
+                host.set_card_panel_open(false);
                 host.set_dungeon_panel_open(false);
                 host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
@@ -1044,6 +1093,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenMerchantPanel => {
                 host.set_merchant_panel_open(true);
+                host.set_card_panel_open(false);
                 host.set_dungeon_panel_open(false);
                 host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
@@ -1055,6 +1105,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenEventPanel => {
                 host.set_event_panel_open(true);
+                host.set_card_panel_open(false);
                 host.set_dungeon_panel_open(false);
                 host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
@@ -1066,6 +1117,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenShipPanel => {
                 host.set_ship_panel_open(true);
+                host.set_card_panel_open(false);
                 host.set_dungeon_panel_open(false);
                 host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
@@ -1080,6 +1132,7 @@ impl Scene for MainMapScene {
                 if host.has_pending_own() {
                     host.set_garrison_sel(host.current_garrison());
                     host.set_garrison_panel_open(true);
+                    host.set_card_panel_open(false);
                     host.set_dungeon_panel_open(false);
                     host.set_upgrade_panel_open(false);
                     host.set_trade_panel_open(false);
@@ -1094,6 +1147,7 @@ impl Scene for MainMapScene {
                 // S65：仅落自己格待决时可开升级面板（等级/造价/产出，Confirm 升级/Back 领产出）。
                 if host.has_pending_own() {
                     host.set_upgrade_panel_open(true);
+                    host.set_card_panel_open(false);
                     host.set_dungeon_panel_open(false);
                     host.set_garrison_panel_open(false);
                     host.set_trade_panel_open(false);
@@ -1108,6 +1162,7 @@ impl Scene for MainMapScene {
                 // S66：仅落无主格待决时可开副本情报面板（守军情报，Confirm 进战/Back 放弃）。
                 if host.pending_dungeon_is_some() {
                     host.set_dungeon_panel_open(true);
+                    host.set_card_panel_open(false);
                     host.set_trade_panel_open(false);
                     host.set_build_panel_open(false);
                     host.set_merchant_panel_open(false);
@@ -1116,6 +1171,20 @@ impl Scene for MainMapScene {
                     host.set_garrison_panel_open(false);
                     host.set_upgrade_panel_open(false);
                 }
+                return true;
+            }
+            GameInput::OpenCardPanel => {
+                // S68：卡牌图鉴面板（随时可开，纯读卡池数据）。
+                host.set_card_sel(0);
+                host.set_card_panel_open(true);
+                host.set_trade_panel_open(false);
+                host.set_build_panel_open(false);
+                host.set_merchant_panel_open(false);
+                host.set_event_panel_open(false);
+                host.set_ship_panel_open(false);
+                host.set_garrison_panel_open(false);
+                host.set_upgrade_panel_open(false);
+                host.set_dungeon_panel_open(false);
                 return true;
             }
             _ => {}
@@ -1302,6 +1371,30 @@ impl Scene for MainMapScene {
                 }
                 GameInput::Back => {
                     host.abandon_dungeon();
+                    return true;
+                }
+                _ => return false,
+            }
+        }
+        // S68 卡牌图鉴面板：↑/↓ 翻页（钳到 [0, card_count-1]）/ Back 关闭。
+        if host.card_panel_open() {
+            match input {
+                GameInput::MoveUp => {
+                    let n = host.card_count();
+                    if n > 0 {
+                        host.set_card_sel(host.card_sel().saturating_sub(1).min(n - 1));
+                    }
+                    return true;
+                }
+                GameInput::MoveDown => {
+                    let n = host.card_count();
+                    if n > 0 {
+                        host.set_card_sel((host.card_sel() + 1).min(n - 1));
+                    }
+                    return true;
+                }
+                GameInput::Back => {
+                    host.set_card_panel_open(false);
                     return true;
                 }
                 _ => return false,
@@ -1726,6 +1819,9 @@ fn render_v5_ring(
     if host.dungeon_panel_open() {
         render_dungeon_panel(host);
     }
+    if host.card_panel_open() {
+        render_card_panel(host);
+    }
     // 7) 摇骰 CTA 轴心骰点（`dice.png`；S27.5 用户报「没有筛子」= CTA 只有空舵轮；
     // 舵轮本体 = `scenes.json` 原语（更早画），此处补轴心骰点，与卡环区无重叠）。
     render_spin_die(host, layout);
@@ -2018,6 +2114,9 @@ fn render_v6_proto(
     if host.dungeon_panel_open() {
         render_dungeon_panel(host);
     }
+    if host.card_panel_open() {
+        render_card_panel(host);
+    }
     render_board_toast(host);
     // S36.3 飞轮 F-7.3：v6 原型路径补终局面板 + 热座交接提示。
     render_match_outcome(host);
@@ -2258,6 +2357,9 @@ fn render_v6_elem(
     }
     if host.dungeon_panel_open() {
         render_dungeon_panel(host);
+    }
+    if host.card_panel_open() {
+        render_card_panel(host);
     }
     if host.build_panel_open() {
         let landscape =

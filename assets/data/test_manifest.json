@@ -521,6 +521,32 @@
    "timeout_s": 900,
    "prove": "evidence/tests/e2e_ui_flow_deterministic/",
    "desc": "做什么：跑 e2e_ui_flow_deterministic 确定性 UI 流程测试。测什么：同 seed+固定 frame_delta_ms 假时钟+同输入序列的两次运行快照逐字段一致，异 seed 轨迹分叉。达到效果：UI 流程测试可复现、无 wall-clock 漂移。 逐测：2 条（同 seed 同快照 / 异 seed 不同轨迹）。"
+  },
+  {
+   "id": "ui_verify",
+   "level": "L2",
+   "category": "visual",
+   "type": "playtest",
+   "name": "设备矩阵出图验收（S67.0：场景×设备视口批量出图 + 非黑/探针机检 + 安全区叠加）",
+   "command": "python3 scripts/ui_verify.py",
+   "evidence": "evidence/S67.0.log",
+   "group": "platform",
+   "timeout_s": 1200,
+   "prove": "evidence/tests/ui_verify/",
+   "desc": "做什么：跑 ui_verify 设备矩阵出图验收。测什么：场景×设备视口批量 --shot、逐图非黑像素 + bevy_ui 探针、安全区叠加、--json 汇总。达到效果：验收从人肉点一遍变成一张可机检的截图。 逐测：默认 desktop+phone_landscape 2 档（全 6 档用 --devices=all），空帧/探针缺/配置非法非 0 退出。"
+  },
+  {
+   "id": "app_card_panel_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "卡牌图鉴面板 e2e（S68：C键开/卡池数据/翻页钳位/互斥/C键poll路由）",
+   "command": "cargo test -p ti-app --test app_card_panel_e2e",
+   "evidence": "evidence/tests/app_card_panel_e2e/run.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_card_panel_e2e/",
+   "desc": "做什么：跑 app_card_panel_e2e 卡牌图鉴面板端到端测试。测什么：C键开/卡池数据/翻页/互斥。达到效果：S68 卡牌图鉴可玩机器判据。 逐测：实测 19 条断言。"
   }
  ]
 }

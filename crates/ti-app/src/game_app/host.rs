@@ -368,12 +368,46 @@ impl MapHost for GameApp {
     fn dungeon_panel_open(&self) -> bool {
         self.dungeon_panel_open
     }
+    fn card_panel_open(&self) -> bool {
+        self.card_panel_open
+    }
+    fn set_card_panel_open(&mut self, open: bool) {
+        self.card_panel_open = open;
+    }
+    fn card_sel(&self) -> usize {
+        self.card_sel
+    }
+    fn set_card_sel(&mut self, sel: usize) {
+        self.card_sel = sel;
+    }
     fn pending_dungeon_is_some(&self) -> bool {
         self.pending_dungeon.is_some()
     }
     fn abandon_dungeon(&mut self) {
         self.pending_dungeon = None;
         self.dungeon_panel_open = false;
+    }
+
+    // ---- S68 卡牌图鉴只读查询（读 balance.cards.deck，纯展示不改规则）----
+    fn card_count(&self) -> usize {
+        data::balance().map_or(0, |b| b.cards.deck.len())
+    }
+    fn card_name(&self, idx: usize) -> String {
+        let Ok(b) = data::balance() else { return String::new() };
+        let Some(c) = b.cards.deck.get(idx) else { return String::new() };
+        crate::i18n::sget(&c.name_key).to_string()
+    }
+    fn card_effect_text(&self, idx: usize) -> String {
+        let Ok(b) = data::balance() else { return String::new() };
+        let Some(c) = b.cards.deck.get(idx) else { return String::new() };
+        let (kind, val) = match &c.effect {
+            ti_core::data::CardEffectDef::Damage(v) => ("damage", *v),
+            ti_core::data::CardEffectDef::Heal(v) => ("heal", *v),
+            ti_core::data::CardEffectDef::Gold(v) => ("gold", *v),
+            ti_core::data::CardEffectDef::Move => ("move", 0),
+            ti_core::data::CardEffectDef::Unknown => ("unknown", 0),
+        };
+        crate::i18n::sgetf("scene.main_map.card.effect_fmt", &[&kind, &val, &c.weight])
     }
     fn set_dungeon_panel_open(&mut self, open: bool) {
         self.dungeon_panel_open = open;

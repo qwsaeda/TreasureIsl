@@ -698,12 +698,38 @@ pub trait MapHost {
     }
     /// S66：副本情报面板开关（默认 no-op）。
     fn set_dungeon_panel_open(&mut self, _open: bool) {}
+    /// S68：卡牌图鉴面板是否打开（默认关闭）。
+    fn card_panel_open(&self) -> bool {
+        false
+    }
+    /// S68：卡牌图鉴面板开关（默认 no-op）。
+    fn set_card_panel_open(&mut self, _open: bool) {}
+    /// S68：卡牌图鉴翻页序号（默认 0）。
+    fn card_sel(&self) -> usize {
+        0
+    }
+    /// S68：卡牌图鉴翻页 setter（默认 no-op）。
+    fn set_card_sel(&mut self, _sel: usize) {}
     /// S66：是否有待决副本入口（`pending_dungeon` 在位）。
     fn pending_dungeon_is_some(&self) -> bool {
         false
     }
     /// S66：放弃待决副本（清 `pending_dungeon`，默认 no-op）。
     fn abandon_dungeon(&mut self) {}
+
+    // ---- S68 卡牌图鉴只读查询（默认空/0）----
+    /// S68：卡池卡牌数。
+    fn card_count(&self) -> usize {
+        0
+    }
+    /// S68：第 idx 张卡名称（i18n `cards.{id}`）。
+    fn card_name(&self, _idx: usize) -> String {
+        String::new()
+    }
+    /// S68：第 idx 张卡效果描述（damage/heal/gold/move/unknown + 值 + 权重）。
+    fn card_effect_text(&self, _idx: usize) -> String {
+        String::new()
+    }
     /// S64：驻军面板目标值（默认 0）。
     fn garrison_sel(&self) -> u32 {
         0

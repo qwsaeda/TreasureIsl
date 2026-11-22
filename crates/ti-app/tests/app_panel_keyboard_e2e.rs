@@ -29,7 +29,8 @@ fn keys() -> KeyState {
         ship: false,
         garrison: false,
         upgrade: false,
-        dungeon: false, // S66：副本情报面板（J 键） // S65：领地升级面板（H 键） // S64：驻军自定面板（G 键）
+        dungeon: false,
+        card: false, // S68：卡牌图鉴（C 键） // S66：副本情报面板（J 键） // S65：领地升级面板（H 键） // S64：驻军自定面板（G 键）
     }
 }
 

@@ -264,5 +264,9 @@
  "scene.main_map.dungeon.panel_title": "副本情报",
  "scene.main_map.dungeon.defender_fmt": "守军人手 {0} · 守军武器 {1}",
  "scene.main_map.dungeon.reward_fmt": "占领 {0} 可获该岛产出",
- "scene.main_map.dungeon.hint": "Enter 进守军战 · Back 放弃"
+ "scene.main_map.dungeon.hint": "Enter 进守军战 · Back 放弃",
+ "scene.main_map.card.panel_title": "卡牌图鉴",
+ "scene.main_map.card.page_fmt": "第 {0} / {1} 张",
+ "scene.main_map.card.effect_fmt": "效果 {0} {1} · 权重 {2}",
+ "scene.main_map.card.hint": "↑↓ 翻页 · Back 关闭"
 }
