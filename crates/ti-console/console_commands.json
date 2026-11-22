@@ -552,6 +552,36 @@
    "writes": [],
    "enabled_by_default": true,
    "command": "cargo test -p ti-app --test app_upgrade_panel_e2e"
+  },
+  {
+   "id": "app_dungeon_panel_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "app_dungeon_panel_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test app_dungeon_panel_e2e"
+  },
+  {
+   "id": "ui_flow_deterministic",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "e2e_ui_flow_deterministic"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test e2e_ui_flow_deterministic"
   }
  ]
 }

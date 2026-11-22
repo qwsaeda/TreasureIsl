@@ -25,6 +25,7 @@ fn keys() -> KeyState {
         ship: false,
         garrison: false,
         upgrade: false,
+        dungeon: false, // S66：副本情报面板（J 键）
     }
 }
 

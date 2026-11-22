@@ -92,6 +92,7 @@
 | [process/31_test_ingress_standard.md](process/31_test_ingress_standard.md) | **测试接入标准（S45，单一事实源）**：把「新增测试按标准写 + 登记 `test_manifest.json` → 平台自动接入可跑」固化——schema 契约（id 唯一/level/category/type/name/command/evidence XOR gate）+ command 契约（首词程序白名单 + 逐参数非 shell + 命令真实性）+ 登记流程（写测试→登记→validate_data 过→平台自动出现→白名单执行）+ 平台接入口径（data-driven，零平台 Rust）+ 门禁断言（`check_test_manifest` 强化）。**新增测试接入平台前必读** |
 | [process/32_ccgs_borrow.md](process/32_ccgs_borrow.md) | **CCGS 工作室制度借鉴（决策依据，S50.0）**：Claude-Code-Game-Studios（49 agent + 75 skill + 15 hook + 14 路径规则）调研摘录 + 机制级对照 + 3 借鉴点（状态文件即记忆 / 元测试面 / 路径作用域红线）+ 4 不借鉴理由 + 1 隐藏风险点（门禁断言自身触发面）。WBS = [`plan-s50-studio-interface.md`](plan-s50-studio-interface.md) |
 | [process/19_bevy_ui.md](process/19_bevy_ui.md) | **bevy_ui 专题（单一事实源）**：UI 相机分层（`IsDefaultUiCamera` order=1/clear None）/ `Node` 字段全 inline / `Text`+`TextFont` / **UI 图片 = `ImageNode`**（0.20 新 API，非旧 `Image`/`Sprite`）/ **taffy 自动布局 = 意图化（flex column+gap+% 定位，resize 真重排，不手写像素）** / `ComputedNode` 探针证据口径 / 0.20 坑位清单。改 UI chrome·加控件·改版面坐标前必读 |
+| [process/ui-error-codes.md](process/ui-error-codes.md) | **UI 错误码表（S67.3，单一事实源）**：`TI-UI-xxx` 稳定码 = UI/工具链高频失败模式（资产漏登记 / scenes 非规范形 / 版本漂移 / 出图空帧 / bevy_ui 静默不渲染 + S67 新增安全区/登记/JSON 注册码）与机读判据对照；其他文档引用码而非复述错误文本 |
 | [process/20_bevy_picking.md](process/20_bevy_picking.md) | **bevy_picking 专题（单一事实源）**：0.20 拾取结构（无 `PickingSection`/`PickingHandler`；`Pickable`+`MeshPickingSettings`）/ 指针事件（`PointerClick`=tap、`PointerDragEnd.distance`=swipe）/ **0.20 `Message` 取代 `Event`**（`add_message`+`MessageWriter::write`+`MessageReader::read`）/ 本项目命中契约（`PickTarget`/`PickEvent`/`HitData`/`register_pick`/`swipe_dir_from`）/ 数据化命中（`scenes.json` `pick_key`/`pick_index`）/ 观察者参数最小化 / 坑位清单。改命中·加可点元素前必读 |
 
 ### 业务设计（`docs/business/`，唯一事实源，不依赖逆向产物）
@@ -136,6 +137,8 @@
 | [`plan-s63-subscenes.md`](plan-s63-subscenes.md) | **S63 补全业务子场景 WBS**（用户 2026-11-20 拍板「场景不全」：rules 层有贸易/建造/造船/副本/领地升级能力但 UI 空壳〔deck_* 删三键后无原语〕；5 子面板 + 收口共 6 任务（T1~T6 规划占位，立项时登记正式号），数据驱动 `scenes.json` + 视觉 A 纪律出图签收；地图全解锁已先行收口） |
 | [`plan-s64-garrison.md`](plan-s64-garrison.md) | **S64 领地驻军自定面板 WBS**（原版核心战略取舍：玩家自定驻军 G，从舰队分出/调回，人手守恒；补齐 territory.md §4 第三支交互，规则层 set_garrison 已实现、UI 新入口） |
 | [`plan-s65-upgrade-panel.md`](plan-s65-upgrade-panel.md) | **S65 领地升级面板 WBS**（S63 T5 补齐：落自己格主动查看等级/升级造价/产出/防御，独立 H 键面板，扩展 SceneHost 待决查询接口） |
+| [`plan-s66-dungeon-panel.md`](plan-s66-dungeon-panel.md) | **S66 副本情报面板 WBS**（S63 T4 补齐：落无主格按 J 看岛名/守军人手/武器/奖励，Confirm 进守军战） |
+| [`plan-s67-lgui-absorption.md`](plan-s67-lgui-absorption.md) | **S67 LGUI 验收机制吸收 WBS**（用户 2026-11-22 拍板「全部 5 条」：设备矩阵出图验收 + 安全区截图模拟 + CLI `--json` 全覆盖 + 稳定错误码表 + 确定性 UI 流程测试；5 任务 S67.0~S67.4） |
 
 ### 工具与产出物索引
 
@@ -168,6 +171,7 @@
 | `scripts/map_pack.py` | **地图包工具**（S31 / `21_map_package_spec.md`：一张图 = 一个自包含可分发包 —— `pack` 出一包（`dist/maps/<id>.map-pack/` + sha256 清单）/ `verify` 校验（schema·兼容·资产齐+哈希·31 格不变量，违规非 0）/ `install` 装上 + 接线 / `uninstall` / `list` / `check` 漂移对账；运行期可切包） |
 | `scripts/map_editor_design_gen.py` | **地图编辑器设计概念稿生成器**（为 `docs/map_editor_guide.md` 出一批 PNG 到 `evidence/ui_concept/`：主编辑器概念图〔环形画布 + 节点属性面板 + 实时 I1~I9 校验条；节点底图两态 `tile_owned`/`tile_deny` + 10 类岛闭集分配，非按 kind 画死〕 + 10 步向导逐步渲染图；`--check` 只读） |
 | `scripts/map_editor_visual_signoff.py` | **地图编辑器前端视觉签收出图**（Playwright 无头 Chromium 开平台「地图」页 → 编辑器 + 内容面板 + 10 步向导 → 4 张截图落 `evidence/ui_concept/map_editor_signoff_*`；`docs/map_editor_guide.md` 设计稿实现的最终视觉签收面；前置平台 8787 在跑，缺则非 0；`--check` 只读） |
+| `scripts/ui_verify.py` | **设备矩阵出图验收（S67.0）**：场景 × 设备视口批量出图 + 非黑/探针机检 + `--json` 汇总，`--check` 只读，FAIL 非 0 |
 | `scripts/map_editor_redesign_concepts.py` | **地图编辑器 3 方向概念稿生成器**（A 纪律：3 方向横版概念稿 → `evidence/ui_concept/map_editor_redesign_{A,B,C}.png`；`--check` 只读） |
 | `scripts/map_editor_redesign_v3_minimal.py` | **地图编辑器「极简分步」3 变体概念图**（一次只亮当前步 → `evidence/ui_concept/map_editor_v3_minimal_{a,b,c}.png`；`--check` 只读） |
 | `scripts/map_editor_step_render.py` | **地图编辑器 10 步逐步设计渲染图生成器**（10 步各 1 张 + 总览拼图 → `evidence/ui_concept/map_editor_step_*.png`；`--check` 只读） |

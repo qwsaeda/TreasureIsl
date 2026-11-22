@@ -692,6 +692,18 @@ pub trait MapHost {
     }
     /// S65：升级面板开关（默认 no-op）。
     fn set_upgrade_panel_open(&mut self, _open: bool) {}
+    /// S66：副本情报面板是否打开（默认关闭）。
+    fn dungeon_panel_open(&self) -> bool {
+        false
+    }
+    /// S66：副本情报面板开关（默认 no-op）。
+    fn set_dungeon_panel_open(&mut self, _open: bool) {}
+    /// S66：是否有待决副本入口（`pending_dungeon` 在位）。
+    fn pending_dungeon_is_some(&self) -> bool {
+        false
+    }
+    /// S66：放弃待决副本（清 `pending_dungeon`，默认 no-op）。
+    fn abandon_dungeon(&mut self) {}
     /// S64：驻军面板目标值（默认 0）。
     fn garrison_sel(&self) -> u32 {
         0
@@ -731,6 +743,16 @@ pub trait MapHost {
     /// S65：待决格所属岛 i18n 名称（如 `isle.town` 对应的文案）。
     fn own_isle_name(&self) -> String {
         String::new()
+    }
+
+    // ---- S66 副本情报面板只读查询（默认空/0）----
+    /// S66：待决副本岛 i18n 名称。
+    fn dungeon_isle_name(&self) -> String {
+        String::new()
+    }
+    /// S66：待决副本守军强度 `(人手, 武器)`（0,0 = 无）。
+    fn dungeon_defender(&self) -> (u32, u32) {
+        (0, 0)
     }
 
     /// S21.12 造船（船系统单向升级：扣金 + 抬 cargo/atk/hp，立即生效）。

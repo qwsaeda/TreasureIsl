@@ -1,0 +1,31 @@
+# app_dungeon_panel_e2e 真跑测证据（S66 · 2026-11-22T08:09:18Z）
+$ cargo test -p ti-app --test app_dungeon_panel_e2e
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+   Compiling ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.79s
+     Running tests/app_dungeon_panel_e2e.rs (/disk/target/debug/deps/app_dungeon_panel_e2e-e30e6ef2a423df5c)
+
+running 6 tests
+test dungeon_panel_open_only_with_pending ... ok
+test dungeon_panel_confirm_enters_vs_battle ... ok
+test dungeon_panel_mutual_exclusion ... ok
+test dungeon_panel_back_abandons_pending ... ok
+test dungeon_panel_queries_match_battle ... ok
+test dungeon_panel_via_poll_keyboard ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+exit=0
+
+## S66.0 收口判据（S63 WBS T4 补齐，真实功能补全）
+- 真实缺口：plan-s63-subscenes.md T4 降级——落无主格 pending_dungeon 自动提示+Confirm 盲操作，
+  独立面板无待决展示态会空白。本任务扩展 SceneHost 查询(dungeon_isle_name/dungeon_defender 复用
+  defender_unit) + J 键面板完整兑现，8 面板补全最后一块可独立做的。
+- 改动面：规则实现(2 查询+J键+confirm_dungeon 已有+abandon_dungeon)+数据(strings +4)+表现
+  (render_dungeon_panel 复用已签收羊皮卷轴+互斥)+测试(app_dungeon_panel_e2e 6 条+登记)。
+- e2e 6 条：仅 pending 可开/守军查询>0/Confirm 进 Vs 副本战/Back 放弃待决/互斥/J键poll。
+- 验证：cargo test 1045/0(+6)+clippy 0+audit_code 0+CS 0+hardcode 0+validate_data OK
+  +studio_tests OK+doccheck/doccheck2 0+ledger 367/367 0 pending+gate 36 项 0 failure+出图。

@@ -80,6 +80,9 @@ impl GameApp {
                 if k.upgrade {
                     changed = self.handle(GameInput::OpenUpgradePanel) || changed;
                 }
+                if k.dungeon {
+                    changed = self.handle(GameInput::OpenDungeonPanel) || changed;
+                }
                 // R22-010：任一 S63/S64 面板打开时，↑↓/Enter/Back 必须路由到面板事件——
                 // 否则真实键盘无法选/买/关面板（5 个 e2e 直接 handle() 绕过 poll() 故长期漏网）。
                 let panel_open = self.trade_panel_open
@@ -88,7 +91,8 @@ impl GameApp {
                     || self.event_panel_open
                     || self.ship_panel_open
                     || self.garrison_panel_open
-                    || self.upgrade_panel_open;
+                    || self.upgrade_panel_open
+                    || self.dungeon_panel_open;
                 if panel_open {
                     if k.up {
                         changed = self.handle(GameInput::MoveUp) || changed;

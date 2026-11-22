@@ -495,6 +495,32 @@
    "timeout_s": 900,
    "prove": "evidence/tests/app_upgrade_panel_e2e/",
    "desc": "做什么：跑 app_upgrade_panel_e2e 领地升级面板端到端测试。测什么：H键开/等级造价产出查询/升级金守恒/退化领产出/互斥。达到效果：S65 领地升级可玩机器判据。 逐测：实测 21 条断言（开关/查询/升级/产出/互斥/poll）。"
+  },
+  {
+   "id": "app_dungeon_panel_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "副本情报面板 e2e（S66：J键开/守军查询/进Vs战/放弃/互斥/J键poll路由）",
+   "command": "cargo test -p ti-app --test app_dungeon_panel_e2e",
+   "evidence": "evidence/tests/app_dungeon_panel_e2e/run.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/app_dungeon_panel_e2e/",
+   "desc": "做什么：跑 app_dungeon_panel_e2e 副本情报面板端到端测试。测什么：J键开/守军查询/进Vs战/放弃待决/互斥。达到效果：S66 副本情报可玩机器判据。 逐测：实测 21 条断言。"
+  },
+  {
+   "id": "ui_flow_deterministic",
+   "level": "L2",
+   "category": "regression",
+   "type": "ci",
+   "name": "确定性 UI 流程测试（S67.4：固定 seed + 固定帧时间，同输入两次逐字节一致）",
+   "command": "cargo test -p ti-app --test e2e_ui_flow_deterministic",
+   "evidence": "evidence/S67.4.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/e2e_ui_flow_deterministic/",
+   "desc": "做什么：跑 e2e_ui_flow_deterministic 确定性 UI 流程测试。测什么：同 seed+固定 frame_delta_ms 假时钟+同输入序列的两次运行快照逐字段一致，异 seed 轨迹分叉。达到效果：UI 流程测试可复现、无 wall-clock 漂移。 逐测：2 条（同 seed 同快照 / 异 seed 不同轨迹）。"
   }
  ]
 }

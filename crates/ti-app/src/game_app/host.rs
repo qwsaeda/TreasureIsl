@@ -365,6 +365,19 @@ impl MapHost for GameApp {
     fn set_upgrade_panel_open(&mut self, open: bool) {
         self.upgrade_panel_open = open;
     }
+    fn dungeon_panel_open(&self) -> bool {
+        self.dungeon_panel_open
+    }
+    fn pending_dungeon_is_some(&self) -> bool {
+        self.pending_dungeon.is_some()
+    }
+    fn abandon_dungeon(&mut self) {
+        self.pending_dungeon = None;
+        self.dungeon_panel_open = false;
+    }
+    fn set_dungeon_panel_open(&mut self, open: bool) {
+        self.dungeon_panel_open = open;
+    }
     fn garrison_sel(&self) -> u32 {
         self.garrison_sel
     }
@@ -406,6 +419,29 @@ impl MapHost for GameApp {
         let Some(cell) = self.pending_own else { return String::new() };
         let isle = terr.isle_cells_by_index(cell).unwrap_or("");
         crate::i18n::sget(&format!("isle.{isle}")).to_string()
+    }
+
+    // ---- S66 副本情报面板只读查询 ----
+    fn dungeon_isle_name(&self) -> String {
+        if self.pending_dungeon.is_none() {
+            return String::new();
+        }
+        let Some(sess) = &self.board else { return String::new() };
+        let Some(sp) = sess.current() else { return String::new() };
+        let isle = sp.isle.as_deref().unwrap_or("");
+        crate::i18n::sget(&format!("isle.{isle}")).to_string()
+    }
+    fn dungeon_defender(&self) -> (u32, u32) {
+        if self.pending_dungeon.is_none() {
+            return (0, 0);
+        }
+        let Some(sess) = &self.board else { return (0, 0) };
+        let Some(sp) = sess.current() else { return (0, 0) };
+        let Some(isle) = sp.isle.as_deref() else { return (0, 0) };
+        let Ok(b) = data::balance() else { return (0, 0) };
+        let rules = TerritoryRules::new(b);
+        let unit = rules.defender_unit(isle, 1);
+        (unit.hp, unit.atk)
     }
     /// S64：目标驻军上限 = 当前驻军 + 舰队人手（守恒钳位，规则层同口径）。
     fn garrison_available(&self) -> u32 {
