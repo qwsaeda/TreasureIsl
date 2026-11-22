@@ -537,6 +537,21 @@
    "writes": [],
    "enabled_by_default": true,
    "command": "cargo test -p ti-app --test app_garrison_panel_e2e"
+  },
+  {
+   "id": "app_upgrade_panel_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "app_upgrade_panel_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test app_upgrade_panel_e2e"
   }
  ]
 }

@@ -913,6 +913,7 @@ fn input_system(
         event: kb.pressed(KeyCode::KeyV),
         ship: kb.pressed(KeyCode::KeyN),
         garrison: kb.pressed(KeyCode::KeyG), // S64：自己领地格自定驻军
+        upgrade: kb.pressed(KeyCode::KeyH),  // S65：自己领地格升级/产出面板
     };
     let key_edge = |current: bool, previous: bool| current && !previous;
     let k = KeyState {
@@ -931,6 +932,7 @@ fn input_system(
         event: key_edge(raw.event, state.prev_keys.event),
         ship: key_edge(raw.ship, state.prev_keys.ship),
         garrison: key_edge(raw.garrison, state.prev_keys.garrison),
+        upgrade: key_edge(raw.upgrade, state.prev_keys.upgrade),
     };
     g.poll(&k);
 

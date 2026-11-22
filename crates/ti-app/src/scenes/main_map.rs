@@ -506,6 +506,11 @@ fn render_track_tail(host: &mut dyn SceneHost, layout: &SceneLayout) {
             host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_garrison_panel(host, landscape);
     }
+    if host.upgrade_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_upgrade_panel(host, landscape);
+    }
     render_board_toast(host);
     // S36.3 终局面板（`territory.md` §4.4）：`match_outcome` 在位 = 对局结束，
     // 主地图中心画胜利/失败/平局面板 + 「按 Confirm 返回主菜单」提示。
@@ -918,6 +923,50 @@ fn render_garrison_panel(host: &mut dyn SceneHost, landscape: bool) {
     );
 }
 
+/// S65 领地升级面板（复用已签收候选 A 羊皮卷轴，与驻军同几何）。
+/// 展示待决格所属岛 / 当前等级 / 升级造价 / 本圈产出；玩家 Confirm 升级（金不足退化领产出）、Back 领产出。
+fn render_upgrade_panel(host: &mut dyn SceneHost, landscape: bool) {
+    let (bx, by, bw, bh) =
+        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+    let theme = host.theme().clone();
+    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
+    let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
+    host.fill_rect(bx, by, bw, bh, panel);
+    for t in [0, bh - 3] {
+        host.fill_rect(bx, by + t, bw, 3, brass);
+    }
+    host.draw_title_text(
+        i18n::sget("scene.main_map.upgrade.panel_title"),
+        bx + 24,
+        by + 18,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    host.draw_text(&host.own_isle_name(), bx + 48, by + 88);
+    host.draw_text(
+        &i18n::sgetf("scene.main_map.upgrade.level_fmt", &[&host.own_level()]),
+        bx + 48,
+        by + 136,
+    );
+    host.draw_hint_text(
+        &i18n::sgetf("scene.main_map.upgrade.cost_fmt", &[&host.own_upgrade_cost()]),
+        bx + 48,
+        by + 184,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    host.draw_hint_text(
+        &i18n::sgetf("scene.main_map.upgrade.production_fmt", &[&host.own_production()]),
+        bx + 48,
+        by + 232,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+    host.draw_hint_text(
+        i18n::sget("scene.main_map.upgrade.hint"),
+        bx + 24,
+        by + bh - 44,
+        chrome::COLOR_TEXT_ON_PARCH,
+    );
+}
+
 impl Scene for MainMapScene {
     fn kind(&self) -> SceneKind {
         SceneKind::MainMap
@@ -929,6 +978,7 @@ impl Scene for MainMapScene {
         match input {
             GameInput::OpenTradePanel => {
                 host.set_trade_panel_open(true);
+                host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
                 host.set_build_panel_open(false);
                 host.set_merchant_panel_open(false);
@@ -938,6 +988,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenBuildPanel => {
                 host.set_build_panel_open(true);
+                host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
                 host.set_trade_panel_open(false);
                 host.set_merchant_panel_open(false);
@@ -947,6 +998,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenMerchantPanel => {
                 host.set_merchant_panel_open(true);
+                host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
                 host.set_trade_panel_open(false);
                 host.set_build_panel_open(false);
@@ -956,6 +1008,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenEventPanel => {
                 host.set_event_panel_open(true);
+                host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
                 host.set_trade_panel_open(false);
                 host.set_build_panel_open(false);
@@ -965,6 +1018,7 @@ impl Scene for MainMapScene {
             }
             GameInput::OpenShipPanel => {
                 host.set_ship_panel_open(true);
+                host.set_upgrade_panel_open(false);
                 host.set_garrison_panel_open(false);
                 host.set_trade_panel_open(false);
                 host.set_build_panel_open(false);
@@ -977,6 +1031,20 @@ impl Scene for MainMapScene {
                 if host.has_pending_own() {
                     host.set_garrison_sel(host.current_garrison());
                     host.set_garrison_panel_open(true);
+                    host.set_upgrade_panel_open(false);
+                    host.set_trade_panel_open(false);
+                    host.set_build_panel_open(false);
+                    host.set_merchant_panel_open(false);
+                    host.set_event_panel_open(false);
+                    host.set_ship_panel_open(false);
+                }
+                return true;
+            }
+            GameInput::OpenUpgradePanel => {
+                // S65：仅落自己格待决时可开升级面板（等级/造价/产出，Confirm 升级/Back 领产出）。
+                if host.has_pending_own() {
+                    host.set_upgrade_panel_open(true);
+                    host.set_garrison_panel_open(false);
                     host.set_trade_panel_open(false);
                     host.set_build_panel_open(false);
                     host.set_merchant_panel_open(false);
@@ -1138,6 +1206,22 @@ impl Scene for MainMapScene {
                 }
                 GameInput::Back => {
                     host.set_garrison_panel_open(false);
+                    return true;
+                }
+                _ => return false,
+            }
+        }
+        // S65 升级面板：Confirm = 升级加固（走 confirm_own 金守恒，金不足/满级退化领产出）/ Back = 领产出。
+        if host.upgrade_panel_open() {
+            match input {
+                GameInput::Confirm => {
+                    host.confirm_own();
+                    host.set_upgrade_panel_open(false);
+                    return true;
+                }
+                GameInput::Back => {
+                    host.abandon_own();
+                    host.set_upgrade_panel_open(false);
                     return true;
                 }
                 _ => return false,
@@ -1554,6 +1638,11 @@ fn render_v5_ring(
             host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_garrison_panel(host, landscape);
     }
+    if host.upgrade_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_upgrade_panel(host, landscape);
+    }
     // 7) 摇骰 CTA 轴心骰点（`dice.png`；S27.5 用户报「没有筛子」= CTA 只有空舵轮；
     // 舵轮本体 = `scenes.json` 原语（更早画），此处补轴心骰点，与卡环区无重叠）。
     render_spin_die(host, layout);
@@ -1838,6 +1927,11 @@ fn render_v6_proto(
             host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_garrison_panel(host, landscape);
     }
+    if host.upgrade_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_upgrade_panel(host, landscape);
+    }
     render_board_toast(host);
     // S36.3 飞轮 F-7.3：v6 原型路径补终局面板 + 热座交接提示。
     render_match_outcome(host);
@@ -2070,6 +2164,11 @@ fn render_v6_elem(
         let landscape =
             host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
         render_garrison_panel(host, landscape);
+    }
+    if host.upgrade_panel_open() {
+        let landscape =
+            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+        render_upgrade_panel(host, landscape);
     }
     if host.build_panel_open() {
         let landscape =

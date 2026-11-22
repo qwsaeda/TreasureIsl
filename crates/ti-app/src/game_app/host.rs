@@ -359,6 +359,12 @@ impl MapHost for GameApp {
     fn set_garrison_panel_open(&mut self, open: bool) {
         self.garrison_panel_open = open;
     }
+    fn upgrade_panel_open(&self) -> bool {
+        self.upgrade_panel_open
+    }
+    fn set_upgrade_panel_open(&mut self, open: bool) {
+        self.upgrade_panel_open = open;
+    }
     fn garrison_sel(&self) -> u32 {
         self.garrison_sel
     }
@@ -373,6 +379,33 @@ impl MapHost for GameApp {
     }
     fn has_pending_own(&self) -> bool {
         self.pending_own.is_some()
+    }
+
+    // ---- S65 领地升级面板只读查询（复用 confirm_own 同款 balance 计算）----
+    fn own_level(&self) -> u8 {
+        let Some(terr) = &self.territory else { return 0 };
+        let Some(cell) = self.pending_own else { return 0 };
+        terr.ownership(cell).map_or(1, |o| o.level.max(1))
+    }
+    fn own_upgrade_cost(&self) -> u32 {
+        let (Some(terr), Some(cell)) = (&self.territory, self.pending_own) else { return 0 };
+        let Ok(b) = data::balance() else { return 0 };
+        let rules = TerritoryRules::new(b);
+        let isle = terr.isle_cells_by_index(cell).unwrap_or("");
+        rules.upgrade_cost_at(isle, terr.ownership(cell).map_or(1, |o| o.level.max(1)))
+    }
+    fn own_production(&self) -> u32 {
+        let (Some(terr), Some(cell)) = (&self.territory, self.pending_own) else { return 0 };
+        let Ok(b) = data::balance() else { return 0 };
+        let rules = TerritoryRules::new(b);
+        let isle = terr.isle_cells_by_index(cell).unwrap_or("");
+        rules.production_at(isle, terr.ownership(cell).map_or(1, |o| o.level.max(1)))
+    }
+    fn own_isle_name(&self) -> String {
+        let Some(terr) = &self.territory else { return String::new() };
+        let Some(cell) = self.pending_own else { return String::new() };
+        let isle = terr.isle_cells_by_index(cell).unwrap_or("");
+        crate::i18n::sget(&format!("isle.{isle}")).to_string()
     }
     /// S64：目标驻军上限 = 当前驻军 + 舰队人手（守恒钳位，规则层同口径）。
     fn garrison_available(&self) -> u32 {

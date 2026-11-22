@@ -1,0 +1,33 @@
+# app_upgrade_panel_e2e 真跑测证据（S65 · 2026-11-22T07:07:12Z）
+$ cargo test -p ti-app --test app_upgrade_panel_e2e
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.27s
+     Running tests/app_upgrade_panel_e2e.rs (/disk/target/debug/deps/app_upgrade_panel_e2e-f89b2a9eee66f3db)
+
+running 7 tests
+test upgrade_panel_confirm_upgrades_and_conserves_gold ... ok
+test upgrade_panel_back_collects_production ... ok
+test upgrade_panel_mutual_exclusion ... ok
+test upgrade_panel_insufficient_gold_degrades_to_collect ... ok
+test upgrade_panel_via_poll_keyboard ... ok
+test upgrade_panel_queries_match_rules ... ok
+test upgrade_panel_open_only_with_pending_own ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+exit=0
+
+## S65.0 收口判据（S63 WBS T5 补齐，真实功能补全）
+- 真实缺口：plan-s63-subscenes.md T5 降级——落自己格升级/领产出只能 Confirm 盲操作，
+  独立面板因无待决查询接口会空白。本任务扩展 SceneHost 4 只读查询（own_level/own_upgrade_cost/
+  own_production/own_isle_name）+ H 键独立面板完整兑现。
+- 改动面：规则实现(SceneHost 4 查询 + host 复用 confirm_own 同款 balance 计算)+数据(strings +5 键)
+  +表现(render_upgrade_panel 复用已签收候选A羊皮卷轴 + H键 + 与驻军/5面板互斥)+测试(app_upgrade_panel_e2e 7 条)。
+- e2e 7 条：仅 pending_own 可开 / 查询与 rules 一致 / Confirm 升级金守恒(1→2,扣造价) /
+  金不足退化领产出 / Back 领产出 / 互斥 / H键 poll 路由。
+- 登记：manifest +1(38)/console +1/close 白名单 33→34 + run.log 实跑。
+- 验证：cargo test 1039/0(+7) + clippy 0 + audit_code 0 + CS 0 + hardcode 0 + validate_data OK
+  + studio_tests OK + doccheck/doccheck2 0 + ledger 366/366 0 pending + gate 36 项 0 failure。

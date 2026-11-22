@@ -200,6 +200,8 @@ pub enum GameInput {
     OpenShipPanel,
     /// S64 驻军面板开关（G 键打开：玩家自定领地驻军 G，人手守恒）。
     OpenGarrisonPanel,
+    /// S65 领地升级面板开关（H 键打开：查看等级/造价/产出 + 升级/领产出）。
+    OpenUpgradePanel,
     /// 主地图建造（`kind`）。
     Build(Building),
     /// S21.12 主地图造船（船系统单向升级，`rules::boat::BoatSession`；与 4 建筑并列第 5 入口）。
@@ -361,6 +363,8 @@ pub struct GameApp {
     pub garrison_panel_open: bool,
     /// S64 驻军面板目标值（玩家用 ←/→ 调；确认走 `set_garrison` 守恒钳位）。
     pub garrison_sel: u32,
+    /// S65 领地升级面板是否打开（H 键开关；仅自己领地格 `pending_own` 在位时可开）。
+    pub upgrade_panel_open: bool,
     /// 建筑列表（`(kind, level)`，`rules::build` 行为镜像，`MainMap` 场景时有效）。
     pub buildings: Vec<(Building, u32)>,
     /// 战斗会话（`Vs` 场景时有效，兵力模型 `force::resolve` 一次性结算）。
@@ -514,6 +518,8 @@ pub struct KeyState {
     pub ship: bool,
     /// 驻军自定（G，S64：自己领地格玩家自定驻军人手）。
     pub garrison: bool,
+    /// 领地升级（H，S65：自己领地格查看等级/造价/产出）。
+    pub upgrade: bool,
 }
 /// 场景切换过渡状态机（EXP-081 → S17.4：真交叉淡化，`MOTION_TRANSITION_MS` 时间制推进）。
 #[derive(Debug, Clone, Default)]
@@ -580,6 +586,7 @@ impl GameApp {
             ship_panel_open: false,
             garrison_panel_open: false,
             garrison_sel: 0,
+            upgrade_panel_open: false,
             buildings: Vec::new(),
             battle: None,
             rng: GameRng::new(0),

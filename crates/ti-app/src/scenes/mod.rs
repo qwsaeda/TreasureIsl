@@ -686,6 +686,12 @@ pub trait MapHost {
     }
     /// S64：驻军面板开关（默认 no-op）。
     fn set_garrison_panel_open(&mut self, _open: bool) {}
+    /// S65：升级面板是否打开（默认关闭）。
+    fn upgrade_panel_open(&self) -> bool {
+        false
+    }
+    /// S65：升级面板开关（默认 no-op）。
+    fn set_upgrade_panel_open(&mut self, _open: bool) {}
     /// S64：驻军面板目标值（默认 0）。
     fn garrison_sel(&self) -> u32 {
         0
@@ -707,6 +713,24 @@ pub trait MapHost {
     /// S64：确认驻军（默认 no-op，返回 false）。
     fn confirm_garrison(&mut self) -> bool {
         false
+    }
+
+    // ---- S65 领地升级面板只读查询（默认空/0；fake 宿主不实现 ⇒ 面板显示空，不影响其它场景）----
+    /// S65：待决格当前加固等级（1..=上限）。
+    fn own_level(&self) -> u8 {
+        0
+    }
+    /// S65：待决格升到下一级造价。
+    fn own_upgrade_cost(&self) -> u32 {
+        0
+    }
+    /// S65：待决格本圈产出（领产出所得金币）。
+    fn own_production(&self) -> u32 {
+        0
+    }
+    /// S65：待决格所属岛 i18n 名称（如 `isle.town` 对应的文案）。
+    fn own_isle_name(&self) -> String {
+        String::new()
     }
 
     /// S21.12 造船（船系统单向升级：扣金 + 抬 cargo/atk/hp，立即生效）。

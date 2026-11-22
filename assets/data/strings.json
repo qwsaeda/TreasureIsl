@@ -255,5 +255,10 @@
  "scene.main_map.garrison.stat_fmt": "当前驻军 {0} · 舰队+驻军总人手 {1}",
  "scene.main_map.garrison.available_fmt": "可调范围 0 ~ {0}（驻军+舰队守恒）",
  "scene.main_map.garrison.hint": "←/→ 调驻军 · Enter 确认 · Back 关闭",
- "scene.main_map.toast.garrison_fmt": "驻军设为 {0} · 舰队人手 {1}"
+ "scene.main_map.toast.garrison_fmt": "驻军设为 {0} · 舰队人手 {1}",
+ "scene.main_map.upgrade.panel_title": "领地升级",
+ "scene.main_map.upgrade.level_fmt": "当前等级 Lv.{0}",
+ "scene.main_map.upgrade.cost_fmt": "升级造价 {0} 金",
+ "scene.main_map.upgrade.production_fmt": "本圈产出 {0} 金",
+ "scene.main_map.upgrade.hint": "Enter 升级加固（金不足则领产出）· Back 领产出"
 }

@@ -24,6 +24,7 @@ fn keys() -> KeyState {
         event: false,
         ship: false,
         garrison: false,
+        upgrade: false, // S65：领地升级面板（H 键）
     }
 }
 

@@ -27,7 +27,8 @@ fn keys() -> KeyState {
         merchant: false,
         event: false,
         ship: false,
-        garrison: false, // S64：驻军自定面板（G 键）
+        garrison: false,
+        upgrade: false, // S65：领地升级面板（H 键） // S64：驻军自定面板（G 键）
     }
 }
 
