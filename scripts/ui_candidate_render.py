@@ -149,8 +149,38 @@ def render_panel(out: Path, variant: str):
     im.convert("RGB").save(out)
 
 
+def render_handoff(out: Path, variant: str):
+    """热座交接遮蔽形态候选（territory.md §11 U9）：整屏盖板 A / 角落提示条 B。
+    横屏 1920×1080；羊皮底模拟主地图，确认前是否可见棋盘 = 两变体核心差异。"""
+    from PIL import Image, ImageDraw  # noqa: PLC0415
+    W, H = 1920, 1080
+    im = _parchment_bg(W, H)
+    dr = ImageDraw.Draw(im, "RGBA")
+    if variant == "A":
+        # 整屏不透明盖板：确认前完全遮蔽棋盘（符合「不泄露他人情报」最强口径）。
+        dr.rectangle([0, 0, W, H], fill=(12, 9, 5, 250))
+        rose = _img("compass_rose").resize((360, 360))
+        im.alpha_composite(rose, (W // 2 - 180, 220))
+        dr.text((W // 2 - 300, 640), "轮到玩家 2", fill="#f5d76e", font=_font(52))
+        dr.text((W // 2 - 360, 730), "按确认开始你的回合", fill="#e8d8a0", font=_font(38))
+        dr.rounded_rectangle([W // 2 - 220, 820, W // 2 + 220, 910], radius=16,
+                             fill=(60, 40, 18, 240), outline="#d4a017", width=3)
+        dr.text((W // 2 - 130, 845), "Enter 确认", fill="#2ecc71", font=_font(34))
+        dr.text((60, H - 80), "A · 整屏盖板（棋盘完全遮蔽）", fill="#d4a017", font=_font(26))
+    else:
+        # 角落提示条（当前实现）：底部 56px 提示条 + P# 席位，棋盘在确认前仍可见。
+        pw, ph = 620, 72
+        px, py = W // 2 - pw // 2, H - 130
+        dr.rounded_rectangle([px, py, px + pw, py + ph], radius=12,
+                             fill=(28, 22, 12, 230), outline="#d4a017", width=3)
+        dr.text((px + 40, py + 18), "轮到玩家 2 · 按确认摇骰开始回合（P2）",
+                fill="#f5d76e", font=_font(28))
+        dr.text((60, H - 60), "B · 角落提示条（棋盘仍可见）", fill="#d4a017", font=_font(26))
+    im.convert("RGB").save(out)
+
+
 def main():
-    ap = argparse.ArgumentParser(description="视觉候选图合成（S63 T0a）")
+    ap = argparse.ArgumentParser(description="视觉候选图合成（S63 T0a / S73 U9）")
     ap.add_argument("--out", default=str(ROOT / "evidence" / "ui_candidate"))
     ap.add_argument("--check", action="store_true", help="只读体检：资产 + CJK 字体在位（0 写盘）")
     args = ap.parse_args()
@@ -174,7 +204,11 @@ def main():
             p = out / f"{scene}_{v}.png"
             fn(p, v)
             print(f"  出图 {p.relative_to(ROOT)}")
-    print(f"ui_candidate: 9 张候选图 → {out}")
+    for v in ["A", "B"]:
+        p = out / f"handoff_{v}.png"
+        render_handoff(p, v)
+        print(f"  出图 {p.relative_to(ROOT)}")
+    print(f"ui_candidate: 11 张候选图（含 U9 handoff A/B）→ {out}")
 
 
 if __name__ == "__main__":
