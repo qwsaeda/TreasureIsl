@@ -179,6 +179,43 @@ def render_handoff(out: Path, variant: str):
     im.convert("RGB").save(out)
 
 
+def render_handoff_overall(out: Path, variant: str):
+    """U9 整体效果：在**真实主地图引擎截图**上叠加交接层，看整体画面（非孤立盖板）。
+    底图 = evidence/bevy_native_main_map_1920x1080.png（引擎真实渲染，U9 纪律）。"""
+    from PIL import Image, ImageDraw  # noqa: PLC0415
+    base_path = ROOT / "evidence" / "bevy_native_main_map_1920x1080.png"
+    if not base_path.exists():
+        raise SystemExit(f"缺主地图底图：{base_path}（先跑 --shot main_map）")
+    im = Image.open(base_path).convert("RGBA")
+    W, H = im.size
+    dr = ImageDraw.Draw(im, "RGBA")
+    if variant == "A":
+        # 整屏盖板：在真实棋盘上盖深色半透明层（保留一点棋盘轮廓暗示"下面是对局"），
+        # 中央罗盘 + 文案 + 按钮（与孤立候选 A 同视觉语言）。
+        dr.rectangle([0, 0, W, H], fill=(10, 8, 5, 245))
+        rose = _img("compass_rose").resize((300, 300))
+        im.alpha_composite(rose, (W // 2 - 150, 180))
+        dr.text((W // 2 - 300, 560), "轮到玩家 2", fill="#f5d76e", font=_font(56))
+        dr.text((W // 2 - 340, 660), "确认前棋盘完全遮蔽", fill="#c9b888", font=_font(30))
+        dr.text((W // 2 - 360, 720), "按确认开始你的回合", fill="#e8d8a0", font=_font(36))
+        dr.rounded_rectangle([W // 2 - 200, 820, W // 2 + 200, 900], radius=14,
+                             fill=(60, 40, 18, 240), outline="#d4a017", width=3)
+        dr.text((W // 2 - 110, 843), "Enter 确认", fill="#2ecc71", font=_font(32))
+        dr.text((50, 40), "A · 整屏盖板（真实棋盘上叠加，确认前完全遮蔽）",
+                fill="#f5d76e", font=_font(28))
+    else:
+        # 角落提示条：真实棋盘全可见 + 底部提示条。
+        pw, ph = 720, 76
+        px, py = W // 2 - pw // 2, H - 150
+        dr.rounded_rectangle([px, py, px + pw, py + ph], radius=12,
+                             fill=(28, 22, 12, 235), outline="#d4a017", width=3)
+        dr.text((px + 40, py + 20), "轮到玩家 2 · 按确认摇骰开始回合（P2）",
+                fill="#f5d76e", font=_font(30))
+        dr.text((50, 40), "B · 角落提示条（真实棋盘仍全部可见）",
+                fill="#f5d76e", font=_font(28))
+    im.convert("RGB").save(out)
+
+
 def main():
     ap = argparse.ArgumentParser(description="视觉候选图合成（S63 T0a / S73 U9）")
     ap.add_argument("--out", default=str(ROOT / "evidence" / "ui_candidate"))
@@ -208,7 +245,11 @@ def main():
         p = out / f"handoff_{v}.png"
         render_handoff(p, v)
         print(f"  出图 {p.relative_to(ROOT)}")
-    print(f"ui_candidate: 11 张候选图（含 U9 handoff A/B）→ {out}")
+        # U9 整体效果（真实棋盘叠加），看整体画面。
+        po = out / f"handoff_{v}_overall.png"
+        render_handoff_overall(po, v)
+        print(f"  出图 {po.relative_to(ROOT)}")
+    print(f"ui_candidate: 13 张候选图（含 U9 handoff A/B + 整体效果）→ {out}")
 
 
 if __name__ == "__main__":
