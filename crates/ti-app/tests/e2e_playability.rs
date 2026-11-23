@@ -359,7 +359,13 @@ fn playability_layout_key_controls_in_viewport() {
     let scenes = ti_core::data::scenes().expect("scenes.json 加载");
     for key in ["index", "select_role", "select_map", "saveload", "message", "main_map", "vs"] {
         let layout = scenes.get(key).expect("scenes.json 缺关键场景");
-        let texts: Vec<_> = layout.primitives.iter().filter(|p| p.kind == "text").collect();
+        // S81：带 params.derived 的文本原语坐标由运行期参数算出（JSON 里 x/y/w/h=0 是
+        // 已删除的死坐标标记），真实的视口/高度断言由 index 出图对拍覆盖 ⇒ 此处跳过。
+        let texts: Vec<_> = layout
+            .primitives
+            .iter()
+            .filter(|p| p.kind == "text" && !p.params.contains_key("derived"))
+            .collect();
         assert!(!texts.is_empty(), "{key} 应至少有 1 个文本原语");
         for prim in texts {
             let rect = &prim.rect;

@@ -1,0 +1,24 @@
+S81 index 运行期参数化全量对齐 main_map · 收口证据
+
+== 改动面 ==
+文档收口（纯收口零新增，面族=台账/证据/门禁收敛判定）。
+
+== 判据 1：S81 三件套落地 ==
+- S81.0：extra_scalar ring.*/menu.* 参数 + 8pt 前缀豁免 + 08_layout_design 镜像同步 + validate_data _dx/_dy 豁免
+- S81.1：index_data_items 运行期算（ring_card_center 同构）+ 竖屏 36 行死坐标删除 + 视觉 0 变化
+- S81.2：横屏 18 行参数化 + 视觉 0 变化
+
+== 判据 2：门禁（收口实跑）==
+$ pwsh -NoProfile -File scripts/gate.ps1 → GATE_EXIT=0，0 failure（2 项环境 SKIP：Android NDK / legacy 无数据改动）
+doccheck 197 docs / 401 task refs / 0 error；doccheck2 0 error（57 项，含 no-handwritten-grid）
+check_ledger_reality 全绿 / doc_numbers 0 漂移 / validate_data OK / generator --check 0 漂移
+cargo test --workspace 1088/0；CPU 渲染测试（render_intent 12/0、landscape_drawlist 7/0、e2e_playability 7/0）经参数化适配后全过
+出图 --shot index 竖/横与改前基线逐像素对拍 diff bbox=None（视觉 0 变化）
+
+== 判据 3：台账 + 三方对账 ==
+plan/ledger.yaml: 407 tasks / 407 verified / 0 error（S81 4 条 + S80/S79/S78/S76/S74）
+check_ledger_reality 全绿。
+
+== 结论 ==
+index 全量对齐 main_map：运行期从参数算坐标 + 死坐标删除（54 行）+ 横屏参数化，视觉 0 变化。
+S81.3 收口完成。

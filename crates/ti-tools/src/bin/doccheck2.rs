@@ -2333,13 +2333,17 @@ fn ui_8pt_walk(
             // S27.4 v5 环形棋盘运行时几何（`main_map.ring.*`：环心/半径/卡宽高/据点尺寸；
             // 非 8pt 栅格排版坐标，口径同 v3 叙事键；`10_main_map_v5_spec.md` §2）
             | "ring.center_y" | "ring.radius"
-            // S80（EXP-210）index 罗盘环参数化子树（`index.ring.*`：环心/半径/数量/尺寸；
-            // 非 8pt 栅格排版坐标，口径同 main_map.ring；由 gen_index_medallions.py 算 36 行坐标）
-            | "ring"
+            // S80/S81 index 参数化子树（`index.ring` 罗盘环 + `index.menu` 横屏木牌）：
+            // 环心/半径/数量/尺寸/偏移 = 非 8pt 栅格排版坐标，口径同 main_map.ring；
+            // 嵌套对象整体豁免（layout.rs 自动展开成 extra_scalar 的 ring.*/menu.*）。
+            | "ring" | "menu"
             // 原语表子树整体豁免：装饰细线（1–4px）与星点尺寸本就非 8pt；
             // 元素**位置**仍按 8pt 排布（数据侧自律）。
             | "primitives"
     );
+    // S81：参数化布局的扁平标量键（`extra_scalar` 里的 `ring.*` / `menu.*`）非 8pt
+    // 排版坐标，口径同 main_map.ring.* —— 整族前缀豁免（index 罗盘环 + 横屏木牌几何）。
+    let exempt_by_key = exempt_by_key || key.starts_with("ring.") || key.starts_with("menu.");
     match obj {
         serde_json::Value::Object(map) => {
             for (k, v) in map {

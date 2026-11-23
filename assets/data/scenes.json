@@ -108,10 +108,10 @@
    {
     "kind": "image",
     "rect": {
-     "x": 468,
-     "y": 498,
-     "w": 144,
-     "h": 144
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -8,
     "item": 0,
@@ -122,16 +122,17 @@
      "badge": true,
      "pick_key": 1,
      "pick_index": 0,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 492,
-     "y": 522,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 0,
@@ -140,16 +141,17 @@
     "params": {
      "icon": "compass",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 492,
-     "y": 522,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 0,
@@ -158,16 +160,17 @@
     "params": {
      "icon": "compass",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "rect",
     "rect": {
-     "x": 468,
-     "y": 654,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 0,
@@ -176,16 +179,17 @@
     "text": "",
     "tier": "",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 468,
-     "y": 654,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 0,
@@ -194,16 +198,17 @@
     "text": "新游戏",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 468,
-     "y": 654,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 0,
@@ -212,16 +217,17 @@
     "text": "新游戏",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "image",
     "rect": {
-     "x": 814,
-     "y": 698,
-     "w": 144,
-     "h": 144
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -8,
     "item": 1,
@@ -232,16 +238,17 @@
      "badge": true,
      "pick_key": 1,
      "pick_index": 1,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 838,
-     "y": 722,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 1,
@@ -250,16 +257,17 @@
     "params": {
      "icon": "chest",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 838,
-     "y": 722,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 1,
@@ -268,16 +276,17 @@
     "params": {
      "icon": "chest",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "rect",
     "rect": {
-     "x": 814,
-     "y": 854,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 1,
@@ -286,16 +295,17 @@
     "text": "",
     "tier": "",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 814,
-     "y": 854,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 1,
@@ -304,16 +314,17 @@
     "text": "载入游戏",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 814,
-     "y": 854,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 1,
@@ -322,16 +333,17 @@
     "text": "载入游戏",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "image",
     "rect": {
-     "x": 814,
-     "y": 1098,
-     "w": 144,
-     "h": 144
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -8,
     "item": 2,
@@ -342,16 +354,17 @@
      "badge": true,
      "pick_key": 1,
      "pick_index": 2,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 838,
-     "y": 1122,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 2,
@@ -360,16 +373,17 @@
     "params": {
      "icon": "anchor",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 838,
-     "y": 1122,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 2,
@@ -378,16 +392,17 @@
     "params": {
      "icon": "anchor",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "rect",
     "rect": {
-     "x": 814,
-     "y": 1254,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 2,
@@ -396,16 +411,17 @@
     "text": "",
     "tier": "",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 814,
-     "y": 1254,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 2,
@@ -414,16 +430,17 @@
     "text": "读取存档",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 814,
-     "y": 1254,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 2,
@@ -432,16 +449,17 @@
     "text": "读取存档",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "image",
     "rect": {
-     "x": 468,
-     "y": 1298,
-     "w": 144,
-     "h": 144
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -8,
     "item": 3,
@@ -452,16 +470,17 @@
      "badge": true,
      "pick_key": 1,
      "pick_index": 3,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 492,
-     "y": 1322,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 3,
@@ -470,16 +489,17 @@
     "params": {
      "icon": "gear",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 492,
-     "y": 1322,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 3,
@@ -488,16 +508,17 @@
     "params": {
      "icon": "gear",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "rect",
     "rect": {
-     "x": 468,
-     "y": 1454,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 3,
@@ -506,16 +527,17 @@
     "text": "",
     "tier": "",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 468,
-     "y": 1454,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 3,
@@ -524,16 +546,17 @@
     "text": "选项设置",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 468,
-     "y": 1454,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 3,
@@ -542,16 +565,17 @@
     "text": "选项设置",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "image",
     "rect": {
-     "x": 122,
-     "y": 1098,
-     "w": 144,
-     "h": 144
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -8,
     "item": 4,
@@ -562,16 +586,17 @@
      "badge": true,
      "pick_key": 1,
      "pick_index": 4,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 146,
-     "y": 1122,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 4,
@@ -580,16 +605,17 @@
     "params": {
      "icon": "book",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 146,
-     "y": 1122,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 4,
@@ -598,16 +624,17 @@
     "params": {
      "icon": "book",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "rect",
     "rect": {
-     "x": 122,
-     "y": 1254,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 4,
@@ -616,16 +643,17 @@
     "text": "",
     "tier": "",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 122,
-     "y": 1254,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 4,
@@ -634,16 +662,17 @@
     "text": "帮助说明",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 122,
-     "y": 1254,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 4,
@@ -652,16 +681,17 @@
     "text": "帮助说明",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "image",
     "rect": {
-     "x": 122,
-     "y": 698,
-     "w": 144,
-     "h": 144
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -8,
     "item": 5,
@@ -672,16 +702,17 @@
      "badge": true,
      "pick_key": 1,
      "pick_index": 5,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 146,
-     "y": 722,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 5,
@@ -690,16 +721,17 @@
     "params": {
      "icon": "door",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "icon",
     "rect": {
-     "x": 146,
-     "y": 722,
-     "w": 96,
-     "h": 96
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 5,
@@ -708,16 +740,17 @@
     "params": {
      "icon": "door",
      "size": 96,
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "rect",
     "rect": {
-     "x": 122,
-     "y": 854,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -7,
     "item": 5,
@@ -726,16 +759,17 @@
     "text": "",
     "tier": "",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 122,
-     "y": 854,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 5,
@@ -744,16 +778,17 @@
     "text": "离开游戏",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
     "kind": "text",
     "rect": {
-     "x": 122,
-     "y": 854,
-     "w": 144,
-     "h": 40
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
     },
     "z": -6,
     "item": 5,
@@ -762,7 +797,8 @@
     "text": "离开游戏",
     "tier": "body",
     "params": {
-     "ui_layer": "bevy_ui"
+     "ui_layer": "bevy_ui",
+     "derived": "ring"
     }
    },
    {
@@ -834,10 +870,10 @@
     {
      "kind": "image",
      "rect": {
-      "x": 1446,
-      "y": 176,
-      "w": 434,
-      "h": 92
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -10,
      "item": 0,
@@ -847,14 +883,15 @@
       "asset": "assets/ui/index_plank_0.png",
       "pick_key": 1,
       "pick_index": 0,
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1483,
-      "y": 191,
+      "x": 0,
+      "y": 0,
       "w": 51,
       "h": 63
      },
@@ -864,16 +901,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_icon_compass.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1446,
-      "y": 176,
-      "w": 434,
-      "h": 92
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -8,
      "item": 0,
@@ -881,16 +919,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_plank_sel.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1444,
-      "y": 274,
-      "w": 438,
-      "h": 108
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -10,
      "item": 1,
@@ -900,14 +939,15 @@
       "asset": "assets/ui/index_plank_1.png",
       "pick_key": 1,
       "pick_index": 1,
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1476,
-      "y": 302,
+      "x": 0,
+      "y": 0,
       "w": 64,
       "h": 53
      },
@@ -917,16 +957,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_icon_chest.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1446,
-      "y": 282,
-      "w": 434,
-      "h": 92
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -8,
      "item": 1,
@@ -934,16 +975,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_plank_sel.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1444,
-      "y": 380,
-      "w": 438,
-      "h": 108
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -10,
      "item": 2,
@@ -953,14 +995,15 @@
       "asset": "assets/ui/index_plank_2.png",
       "pick_key": 1,
       "pick_index": 2,
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1476,
-      "y": 405,
+      "x": 0,
+      "y": 0,
       "w": 64,
       "h": 58
      },
@@ -970,16 +1013,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_icon_book.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1446,
-      "y": 388,
-      "w": 434,
-      "h": 92
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -8,
      "item": 2,
@@ -987,16 +1031,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_plank_sel.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1444,
-      "y": 486,
-      "w": 438,
-      "h": 108
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -10,
      "item": 3,
@@ -1006,14 +1051,15 @@
       "asset": "assets/ui/index_plank_3.png",
       "pick_key": 1,
       "pick_index": 3,
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1476,
-      "y": 512,
+      "x": 0,
+      "y": 0,
       "w": 64,
       "h": 56
      },
@@ -1023,16 +1069,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_icon_gear.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1446,
-      "y": 494,
-      "w": 434,
-      "h": 92
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -8,
      "item": 3,
@@ -1040,16 +1087,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_plank_sel.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1444,
-      "y": 592,
-      "w": 438,
-      "h": 108
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -10,
      "item": 4,
@@ -1059,14 +1107,15 @@
       "asset": "assets/ui/index_plank_4.png",
       "pick_key": 1,
       "pick_index": 4,
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1481,
-      "y": 614,
+      "x": 0,
+      "y": 0,
       "w": 54,
       "h": 64
      },
@@ -1076,16 +1125,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_icon_flag.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1446,
-      "y": 600,
-      "w": 434,
-      "h": 92
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -8,
      "item": 4,
@@ -1093,16 +1143,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_plank_sel.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1444,
-      "y": 698,
-      "w": 438,
-      "h": 108
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -10,
      "item": 5,
@@ -1112,14 +1163,15 @@
       "asset": "assets/ui/index_plank_5.png",
       "pick_key": 1,
       "pick_index": 5,
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1487,
-      "y": 720,
+      "x": 0,
+      "y": 0,
       "w": 42,
       "h": 64
      },
@@ -1129,16 +1181,17 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_icon_door.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
      "kind": "image",
      "rect": {
-      "x": 1446,
-      "y": 706,
-      "w": 434,
-      "h": 92
+      "x": 0,
+      "y": 0,
+      "w": 0,
+      "h": 0
      },
      "z": -8,
      "item": 5,
@@ -1146,7 +1199,8 @@
      "color": "",
      "params": {
       "asset": "assets/ui/index_plank_sel.png",
-      "ui_layer": "bevy_ui"
+      "ui_layer": "bevy_ui",
+      "derived": "menu"
      }
     },
     {
@@ -1165,6 +1219,19 @@
      "text": "金银岛 v1 · 桌面版"
     }
    ]
+  },
+  "menu": {
+   "x": 1446,
+   "y0": 176,
+   "step": 106,
+   "count": 6,
+   "plank_w": 434,
+   "plank_h": 92,
+   "plank_rot_w": 438,
+   "plank_rot_h": 108,
+   "plank_rot_dx": -2,
+   "plank_rot_dy": -8,
+   "icon_dx": 62
   }
  },
  "select_role": {

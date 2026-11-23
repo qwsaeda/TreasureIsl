@@ -363,6 +363,10 @@ def check_theme(theme: dict, problems: list[str]) -> None:
 def check_v2(scenes: dict, problems: list[str]) -> None:
     """V2：全场景 extra 标量键（int/float 值）须为正整数字面量。"""
     known_rect = {"x", "y", "w", "h"}
+    # S81：相对偏移类键（_dx/_dy/_offset）可为负——它们是参数化布局的美术微调
+    # （如 index.extra_scalar.menu.plank_rot_dx=-2 / plank_rot_dy=-8 = 倾斜木牌 expand），
+    # 不是绝对坐标，不适用「正整数」约束。
+    offset_suffix = ("_dx", "_dy", "_offset")
     for sid, scene in scenes.items():
         if sid in ("schema_version",) or not isinstance(scene, dict):
             continue
@@ -371,7 +375,7 @@ def check_v2(scenes: dict, problems: list[str]) -> None:
                 continue
             if isinstance(val, dict):
                 for fk, fv in val.items():
-                    if fk in known_rect:
+                    if fk in known_rect or fk.endswith(offset_suffix):
                         continue
                     if isinstance(fv, (int, float)) and not isinstance(fv, bool):
                         if not is_positive_int(fv):

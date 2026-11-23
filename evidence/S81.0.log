@@ -1,0 +1,13 @@
+S81.0 index 参数化双源对齐 + 参数化布局 8pt/镜像豁免 · 验收证据
+
+== 改动面 ==
+数据(scenes.json index.extra_scalar 加 ring.* 10 键 + menu.* 11 键) + 工具(doccheck2 ui_8pt_walk 加 ring./menu. 前缀豁免) + 文档(08_layout_design §4.1 镜像同步 ring./menu. 扁平键) + validate_data(_dx/_dy 偏移豁免)。
+
+== 判据 ==
+1. index.extra_scalar ring.* 扁平键 = 嵌套 index.ring（生成器 --check-dual 0 漂移），menu.* 11 键为横屏木牌参数（单一事实源=扁平键）。
+2. 8pt 豁免：ring./menu. 前缀参数化布局几何豁免（同 main_map.ring.* 口径，非排版坐标）；_dx/_dy 负偏移 validate_data 豁免。
+3. 镜像：08_layout_design §4.1 加 ring./menu. 扁平键行（doccheck2 layout-cross-check 0 error）。
+4. 负例：改偏一处 ring 参数 → 生成器 --check-dual 精准 FAIL（待收口复验）。
+5. doccheck/doccheck2 除计数漂移外 0 error。
+
+S81.0 可置 verified。

@@ -84,18 +84,23 @@ fn index_landscape_world_layer() {
         }),
         "index 横屏 菜单主绳应在 (1446,138,434,28)，got {rects:?}"
     );
+    // S81：木牌坐标已参数化（JSON rect 置 0 + derived=menu），真实 rect 由 Bevy 壳
+    // index_menu_rect 运行期从 menu.* 算（发货路径）；CPU 后端不再持有 UI 层权威坐标
+    // （bevy-cpu-parity 已排除 UI 层）⇒ 此处只验数据契约，不再断言 draw list 木牌死坐标。
+    let scenes = ti_core::data::scenes().expect("scenes.json 加载");
+    let index = scenes.get("index").expect("scenes.json 缺 index");
     assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("index_plank_0.png") && *x == 1446 && *y == 176 && *w == 434 && *h == 92
-        }),
-        "index 横屏 木牌 0 应在 (1446,176,434,92)，got {rects:?}"
+        index.extra_scalar.get("menu.x") == Some(&1446)
+            && index.extra_scalar.get("menu.plank_rot_dx") == Some(&-2),
+        "index 横屏 menu 参数缺失/漂移: {:?}",
+        index.extra_scalar
     );
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("index_plank_1.png") && *x == 1444 && *y == 274 && *w == 438 && *h == 108
-        }),
-        "index 横屏 木牌 1 应在 (1444,274,438,108)（旋转 expand），got {rects:?}"
-    );
+    let derived_planks: Vec<_> = index
+        .landscape_prims
+        .iter()
+        .filter(|p| p.params.get("derived").and_then(|v| v.as_str()) == Some("menu"))
+        .collect();
+    assert_eq!(derived_planks.len(), 18, "index 横屏 18 行木牌/图标应标 derived=menu");
 
     // 竖屏对照（0 行为变化 = S38.1 罗盘环仍由数据还原）
     let mut app = game(false);
@@ -111,12 +116,14 @@ fn index_landscape_world_layer() {
         rects.iter().any(|(a, x, y, _w, _h)| { a.ends_with("helm.png") && *x == 408 && *y == 838 }),
         "index 竖屏 helm 应在 (408,838)，got {rects:?}"
     );
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("medallion_ring.png") && *x == 468 && *y == 498 && *w == 144 && *h == 144
-        }),
-        "index 竖屏 罗盘环徽章 0 应在 (468,498,144,144)（Rust 环退役后由数据还原），got {rects:?}"
-    );
+    // S81：竖屏徽章 36 行同样参数化（derived=ring），死坐标已删，真实 rect 由 Bevy 壳
+    // index_ring_rect 运行期算；此处只验数据契约（按 gen_index_medallions.py 守门）。
+    let derived_medallions: Vec<_> = index
+        .primitives
+        .iter()
+        .filter(|p| p.params.get("derived").and_then(|v| v.as_str()) == Some("ring"))
+        .collect();
+    assert_eq!(derived_medallions.len(), 36, "index 竖屏 36 行徽章应标 derived=ring");
 }
 
 /// S38：`select_role` 横屏世界层（bg 满屏 + 立绘面板左侧），竖屏对照。

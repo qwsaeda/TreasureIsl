@@ -1,0 +1,13 @@
+S81.1 index 运行期参数化 + 删死坐标 · 验收证据
+
+== 改动面 ==
+Rust(treasure_bevy.rs index_data_items 加 index_ring_rect/index_menu_rect 助手，运行期从 extra_scalar 算 rect) + 数据(竖屏 36 行 + 横屏 18 行 x/y 置 0 + derived 标记) + 工具(gen_index_medallions.py check 语义改为「死坐标已删 + derived 标记 + 双源一致」)。
+
+== 判据 ==
+1. 运行期算：竖屏 6 枚徽章 36 行从 ring.* 参数 + 正六边形公式算（θ=-90°+i·360°/6，0 误差还原）；横屏 6 木牌+6 金边+6 图标 18 行从 menu.* 线性参数算（首项 434×92、其余 438×108 dx=-2/dy=-8、图标跟随木牌中心）——全部像 main_map ring_card_center 那样运行期算。
+2. 删死坐标：54 行 x/y=0 + derived=ring/menu 标记，真实 rect 由 Rust 算（JSON 不再存第二份死坐标）。
+3. 视觉 0 变化：出图 --shot index（竖 1080×1920）与 --shot index --viewport=1920x1080（横）与改前基线逐像素对拍，diff bbox 均 None。
+4. 生成器 --check：竖屏 36 + 横屏 18 死坐标已删、双源一致，0 漂移；幂等（md5 一致）。
+5. cargo fmt --all + cargo clippy -p ti-engine --bin treasure-bevy-native -- -D warnings 0 error。
+
+S81.1 可置 verified。

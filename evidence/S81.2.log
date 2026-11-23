@@ -1,0 +1,12 @@
+S81.2 index 横屏木牌参数化（合并入 S81.1 同批实现）· 验收证据
+
+== 说明 ==
+S81.2 的横屏 18 行参数化与 S81.1 同批完成（共用 index_data_items 改造），本证据独立留档。
+
+== 判据 ==
+1. 横屏 6 木牌 + 6 金边 + 6 图标 18 行 x/y=0 + derived=menu，运行期从 menu.* 参数算。
+2. 木牌 y0=176/step=106；首项 434×92，其余 438×108 且 dx=-2/dy=-8（S39 ±2° expand）；金边严格线性 y=176+i·106；图标中心 x=x+62、y=木牌中心，尺寸从原语固有 w/h 读。
+3. 出图 --shot index --viewport=1920x1080 与基线逐像素对拍 diff bbox=None（视觉 0 变化）。
+4. validate_data OK（menu.* 扁平键 + _dx/_dy 负偏移豁免）；doccheck2 镜像/8pt 0 error（除计数漂移）。
+
+S81.2 可置 verified。

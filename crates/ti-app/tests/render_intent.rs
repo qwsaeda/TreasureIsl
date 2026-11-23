@@ -455,17 +455,18 @@ fn key_rects_have_pixels() {
     };
     let bg_index = COLOR_PARCH_DARK; // QA046：判据色引 §2 单一源常量（禁内联 hex）
     shell.fb.clear(bg_index);
-    // S22 罗盘环：关键区 = item 0 medallion 徽章 rect（坐标 0 时不写像素 → 静默不画）
-    let med = layout
-        .primitives
-        .iter()
-        .find(|p| {
-            p.item == 0
-                && p.params.get("asset").and_then(|v| v.as_str())
-                    == Some("assets/ui/medallion_ring.png")
-        })
-        .expect("index S22 缺 medallion item0");
-    let mr = med.rect;
+    // S81：徽章 rect 由 index.ring 参数运行期算出（JSON 里 x/y/w/h=0 是死坐标标记）。
+    // 测试内按同构公式还原（测试专用公式副本，判据用；生产唯一源在 ti-engine index_ring_rect）。
+    let g = |k: &str| layout.extra_scalar.get(&format!("ring.{k}")).copied().unwrap_or(0);
+    let theta = -std::f32::consts::PI / 2.0; // item 0 = 正上方
+    let cx = g("center_x") + (f64::from(g("radius")) * f64::from(theta.cos())).round() as i32;
+    let cy = g("center_y") + (f64::from(g("radius")) * f64::from(theta.sin())).round() as i32;
+    let mr = ti_core::data::Rect {
+        x: cx - g("badge_w") / 2,
+        y: cy - g("badge_h") / 2,
+        w: g("badge_w"),
+        h: g("badge_h"),
+    };
     shell.fill_rect(mr.x, mr.y, mr.w, mr.h, COLOR_TITLE_BAR);
     let px = shell.fb.as_slice().to_vec();
     let ring_px = (mr.y..(mr.y + mr.h))
@@ -691,14 +692,24 @@ fn selected_state_marker_visible_and_no_leak() {
             let gold = ti_render::theme::Theme::default()
                 .by_name("gold_warm")
                 .unwrap_or(ti_app::menu_shell::COLOR_SELECTED);
-            let lbl = |i: i64| {
-                layout
-                    .primitives
-                    .iter()
-                    .find(|p| p.item == i && p.kind == "text")
-                    .expect("index S22 缺 medallion 标签原语")
+            // S81：标签 rect 由 ring 参数运行期算出（JSON rect=0 是死坐标标记）。
+            let rg = |k: &str| layout.extra_scalar.get(&format!("ring.{k}")).copied().unwrap_or(0);
+            let lbl_rect = |i: i64| -> ti_core::data::Rect {
+                let theta = (-90.0 + (i as f32) * 360.0 / (rg("count").max(1) as f32))
+                    * std::f32::consts::PI
+                    / 180.0;
+                let mx = rg("center_x")
+                    + (f64::from(rg("radius")) * f64::from(theta.cos())).round() as i32;
+                let my = rg("center_y")
+                    + (f64::from(rg("radius")) * f64::from(theta.sin())).round() as i32;
+                ti_core::data::Rect {
+                    x: mx - rg("label_w") / 2,
+                    y: my + rg("badge_h") / 2 + rg("label_dy"),
+                    w: rg("label_w"),
+                    h: rg("label_h"),
+                }
             };
-            let (r0, r1) = (lbl(0).rect, lbl(1).rect);
+            let (r0, r1) = (lbl_rect(0), lbl_rect(1));
             assert!(
                 region_color_count(&px, r0.x, r0.y, r0.w, r0.h, gold) > 0,
                 "index S22 选中徽章 0 标签区无 gold_warm（选中标签应变金）"
