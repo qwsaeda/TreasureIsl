@@ -2333,6 +2333,9 @@ fn ui_8pt_walk(
             // S27.4 v5 环形棋盘运行时几何（`main_map.ring.*`：环心/半径/卡宽高/据点尺寸；
             // 非 8pt 栅格排版坐标，口径同 v3 叙事键；`10_main_map_v5_spec.md` §2）
             | "ring.center_y" | "ring.radius"
+            // S80（EXP-210）index 罗盘环参数化子树（`index.ring.*`：环心/半径/数量/尺寸；
+            // 非 8pt 栅格排版坐标，口径同 main_map.ring；由 gen_index_medallions.py 算 36 行坐标）
+            | "ring"
             // 原语表子树整体豁免：装饰细线（1–4px）与星点尺寸本就非 8pt；
             // 元素**位置**仍按 8pt 排布（数据侧自律）。
             | "primitives"
@@ -4872,6 +4875,45 @@ fn check_orphan_rule_row(root: &Path) -> Vec<String> {
     errors
 }
 
+/// S80（EXP-210）：「不手写像素」总纲机器断言——index 罗盘环 6 徽章的 36 行坐标
+/// 必须由 `index.ring` 参数经生成器算出，不得手抄死数字。
+///
+/// 单一事实源：公式只在 `scripts/gen_index_medallions.py` 有一份，本断言调其 `--check`
+/// （不改产品代码、只读），避免 Rust/Python 两处公式漂移。生成器 --check 返回 0 =
+/// JSON 36 行坐标 == ring 参数算出；非 0 = 手写坐标漂移（FAIL）。
+fn check_no_handwritten_grid(root: &Path) -> Vec<String> {
+    let gen_path = root.join("scripts/gen_index_medallions.py");
+    if !gen_path.is_file() {
+        return vec![
+            "scripts/gen_index_medallions.py 缺失（不手写像素总纲无生成器/无机器断言）".to_string(),
+        ];
+    }
+    // 参数化前置：index.ring 必须在位（否则生成器 --check 会 exit 1，错误信息已含点名）。
+    let out = std::process::Command::new("python3")
+        .arg(&gen_path)
+        .arg("--check")
+        .current_dir(root)
+        .output();
+    let Ok(output) = out else {
+        return vec![
+            "check_no_handwritten_grid: python3 不可用（无法跑坐标生成器 --check）".to_string(),
+        ];
+    };
+    if output.status.success() {
+        return Vec::new();
+    }
+    let msg = String::from_utf8_lossy(&output.stderr);
+    let msg = if msg.trim().is_empty() {
+        String::from_utf8_lossy(&output.stdout).to_string()
+    } else {
+        msg.to_string()
+    };
+    vec![format!(
+        "index 罗盘环坐标漂移（违反「不手写像素」总纲，EXP-210）：{}",
+        msg.trim().lines().next().unwrap_or("生成器 --check 非 0")
+    )]
+}
+
 /// S67.2：`--json` 契约的注册级判据。第 29 项 `tooling-contract` 是纯源码子串匹配
 /// （出现 `--json` token 即过），本项要求白名单工具的源码里有**真实注册**
 /// （argparse `add_argument("--json")` 或 `"--json" in sys.argv`），堵住「注释里写
@@ -4989,6 +5031,8 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("export-icon-boundary", check_export_icon_boundary),
     // S74.3（W3）：业务规则行 ↔ rule_test_matrix.json 双向对账（孤立规则行 = FAIL）。
     ("orphan-rule-row", check_orphan_rule_row),
+    // S80（EXP-210）：不手写像素总纲——index 徽章坐标须由 ring 参数生成器算出。
+    ("no-handwritten-grid", check_no_handwritten_grid),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

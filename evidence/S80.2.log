@@ -1,0 +1,23 @@
+S80 不手写像素总纲治本 · 收口证据（2026-11-23）
+
+== 改动面声明 ==
+文档收口（纯收口零新增，面族=台账/证据/门禁收敛判定）。
+
+== 判据 1：三件套落地复核 ==
+- S80.0：doccheck2 第 57 项 no-handwritten-grid（负例精准 FAIL + 还原 PASS）+ gen_index_medallions.py 生成器（幂等 + --check 0 漂移）+ 3 处登记 + 08_layout_design 镜像同步
+- S80.1：index.ring 参数化 36 行坐标（0 误差还原、视觉零变化）+ index.md §10.0 标「违规→已修」+ EXP-210
+- S80.2：本收口
+
+== 判据 2：门禁（收口实跑）==
+$ pwsh -NoProfile -File scripts/gate.ps1 → GATE_EXIT=0，0 failure（2 项环境 SKIP：Android NDK / legacy 无数据改动）
+doccheck 197 docs / 205 experiences / 397 task refs / 0 error
+doccheck2 0 error（57 项，含 no-handwritten-grid）
+check_ledger_reality 全绿 / doc_numbers 0 漂移 / validate_data OK / studio_tests 3 类 OK
+
+== 判据 3：台账 + 三方对账 ==
+plan/ledger.yaml: 403 tasks / 403 verified / 0 error（S80 3 条 + S79/S78/S76/S74）
+check_ledger_reality 全绿。
+
+== 结论 ==
+「不手写像素」总纲从「只有文档」补成「文档 + 机器断言 + 参数化生成器」，index 徽章手写坐标漂移已根治。
+S80.2 收口完成。

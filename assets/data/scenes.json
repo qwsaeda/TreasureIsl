@@ -5,6 +5,18 @@
    "x": 540,
    "y": 1840
   },
+  "ring": {
+   "center_x": 540,
+   "center_y": 970,
+   "radius": 400,
+   "badge_w": 144,
+   "badge_h": 144,
+   "count": 6,
+   "icon_w": 96,
+   "label_w": 144,
+   "label_h": 40,
+   "label_dy": 12
+  },
   "focus_anchor": {
    "type": "compass_ring",
    "bbox": {

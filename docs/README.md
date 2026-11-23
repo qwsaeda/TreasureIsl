@@ -187,6 +187,7 @@
 | `scripts/map_editor_visual_signoff.py` | **地图编辑器前端视觉签收出图**（Playwright 无头 Chromium 开平台「地图」页 → 编辑器 + 内容面板 + 10 步向导 → 4 张截图落 `evidence/ui_concept/map_editor_signoff_*`；`docs/map_editor_guide.md` 设计稿实现的最终视觉签收面；前置平台 8787 在跑，缺则非 0；`--check` 只读） |
 | `scripts/ui_verify.py` | **设备矩阵出图验收（S67.0）**：场景 × 设备视口批量出图 + 非黑/探针机检 + `--json` 汇总，`--check` 只读，FAIL 非 0 |
 | `scripts/ui_assembly.py` | **零件组装装配图（S76，S39 拆件组件化概念）**：scenes.json z 层叠加真实拆件出分层装配图 + 拆件目录，`--check`/`--json`/`--list`，缺拆件/场景非 0 |
+| `scripts/gen_index_medallions.py` | **index 徽章坐标参数化生成器（S80/EXP-210，不手写像素总纲）**：ring 参数算 36 行坐标 + `--check` 对账（doccheck2 第57项守门）+ `--ring R` 试算，漂移非 0 |
 | `scripts/mutation_gate.py` | **变异测试基线（S74.4）**：封装 cargo-mutants 向 ti-core 注入变更统计测试杀死率（变异得分 = killed/total），报告 `evidence/mutation_baseline.json`，`--check` 只读出报告，FAIL 非 0 |
 | `scripts/map_editor_redesign_concepts.py` | **地图编辑器 3 方向概念稿生成器**（A 纪律：3 方向横版概念稿 → `evidence/ui_concept/map_editor_redesign_{A,B,C}.png`；`--check` 只读） |
 | `scripts/map_editor_redesign_v3_minimal.py` | **地图编辑器「极简分步」3 变体概念图**（一次只亮当前步 → `evidence/ui_concept/map_editor_v3_minimal_{a,b,c}.png`；`--check` 只读） |

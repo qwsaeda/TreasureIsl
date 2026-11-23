@@ -285,25 +285,36 @@ index 本身**不改业务规则**（`09_index_compass_spec.md` §7 改动面声
 
 **当前定案（S39.0 数据化重构后）**：index 全部视觉 = `scenes.json` 数据 + `assets/ui/` 资产，**Rust 零改动**（`IndexScene::on_hit` 只读 `hit.key/index`，不含版面数学；罗盘环 Rust 实现已删除，竖屏环由数据还原）。
 
-### 10.0 坐标是「写死 + 等比缩放」，不是「参数化算出来的」（重要权衡）
+### 10.0 徽章坐标：曾违反「不手写像素」总纲，S80 已参数化修复
 
-那 36 条徽章原语（§4 `#5–40`，每枚 6 原语）的坐标**逐条手写在 `scenes.json`**，没有算法实时算环位置。但渲染不是拿绝对像素直接画，而是**设计空间固定坐标 → 百分比缩放**：
+> **违规 → 修复记录（EXP-210）**：36 条徽章原语（§4 `#5–40`，每枚 6 原语）的坐标曾逐条手抄进 `scenes.json`，
+> 违反总纲「不手写像素：声明意图/数据，引擎算坐标」（`docs/process/18_asset_content_pipeline.md` §15）。
+> 规范早有，但**无机器断言**，漂移无人发现，直到用户质疑；S80 补 `scripts/gen_index_medallions.py`
+> 生成器 + doccheck2 第 57 项 `no-handwritten-grid` 守门，已修复。
+
+**现状：坐标由参数算出，不再手写**。`scenes.json` 新增 `index.ring` 参数（机读源）：
 
 ```
-scenes.json rect (468,498,144,144)           # 徽章 0，竖屏设计空间 1080×1920
-  ↓ index_data_items()   [treasure_bevy.rs:1067]
-DataChromeItem.rect
-  ↓ build_data_chrome()  [ti-engine/src/ui.rs:681-689]
-left=43.33%  top=25.94%  width=13.33%  height=7.5%   # ÷ 设计空间 1080×1920
-  ↓ bevy_ui Node(Val::Percent) + taffy 布局
-任意视口自适应位置
+index.ring = { center_x:540, center_y:970, radius:400, badge_w:144, badge_h:144,
+               count:6, icon_w:96, label_w:144, label_h:40, label_dy:12 }
+   ↓ gen_index_medallions.py（正六边形公式，与 chrome::ring_card_center 同构）
+中心_i = (cx + round(R·cos θ), cy + round(R·sin θ)),  θ = -90° + i·360°/count
+   ↓ 每枚 6 原语 rect：徽章底 / 图标×2 / 标签底 / 文本×2
+36 行坐标（实测 0 误差还原原布局）
 ```
 
-- **是写死的**：想移动徽章/改环排布，得改那 36 行坐标（或横版木牌坐标），没有「给环心 + 半径，引擎算 6 个位置」这种参数化。
-- **但不是纯绝对像素**：`build_data_chrome` 把 rect 换成 `Val::Percent`，窗口 resize 时按百分比缩放。`evidence/S29.5.log` 实测：`1080×1920 → 540×960` 时 UI 布局根跟着视口变、节点数 `25 → 25`（只重排不重建）。所以它是**等比缩放**保证位置不偏，而非内容智能重排。
-- **横竖屏是两套独立坐标**：竖屏 `index.primitives`（42 条罗盘环）vs 横屏 `index.landscape.primitives`（22 条木牌），不是同一套坐标自动重排——切换靠 `Settings.orientation` 择一。
-- **历史对照**：早期 `build_index_chrome` 曾用 `cos/sin + 半径` 代码算 6 枚 medallion 中心；S39 数据化重构删掉该算法、坐标固化进 JSON（换来「换 UI 零 Rust」，代价 = 改布局要改数据而非调参数）。`treasure_bevy.rs:1051-1057` 注释明留此痕迹：「数据化后罗盘环删了，但派生式保留作设计空间锚点」。
-- **与 main_map 的对比**：`main_map` 的 31 格环是**参数化**的（`ring.{center_x,center_y,radius,card_w,card_h}` + `ring_card_center(index,count,layout)` 算坐标，见 `main_map.md` §4.3）——改参数即换环布局；index 是**固定坐标**——改布局要改 36 行数据。两者同属「数据驱动」，但一个参数化、一个手写死坐标，改法不同。
+- **改布局 = 改参数 + 跑生成器**：`python3 scripts/gen_index_medallions.py`（回写坐标）→ `--check` 只读对账。
+  试算 `python3 scripts/gen_index_medallions.py --ring 350` 可预览半径变化（不写文件）。
+- **机器守门**：doccheck2 第 57 项 `no-handwritten-grid` 调生成器 `--check`——任何徽章坐标被手改偏，
+  gate 精准 FAIL（负例实测：`#5 item=0 slot=0: rect x=471 应=468`）。公式只此一份（Python 生成器），
+  Rust 断言调它，零公式漂移。
+- **渲染链路不变**：`build_data_chrome` 把 rect 换成 `Val::Percent`（设计空间 1080×1920），
+  resize 等比缩放；`evidence/S29.5.log` 实测 1080×1920→540×960 节点数 `25→25`（只重排不重建）。
+- **横竖屏两套独立参数**：竖屏 `index.ring` 参数化环（42 原语）vs 横屏 `index.landscape.primitives`（22 木牌，
+  尚未参数化——第二期待办），切换靠 `Settings.orientation` 择一。
+- **历史对照**：早期 `build_index_chrome` 曾用 `cos/sin + 半径` 算 6 枚中心；S39 数据化重构删掉算法、
+  坐标固化进 JSON（`treasure_bevy.rs:1051-1057` 注释留痕）；S80 把「算」从 Rust 挪回**数据层生成器**，
+  兼顾「换 UI 零 Rust」与「不手写像素」。
 
 **换 UI / 改坐标 / 换资产步骤**：
 

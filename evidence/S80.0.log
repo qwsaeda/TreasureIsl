@@ -1,0 +1,30 @@
+S80.0 doccheck2 第 57 项 no-handwritten-grid + 参数化生成器 · 验收证据（2026-11-23）
+
+== 改动面声明 ==
+工具(doccheck2.rs 新断言 + gate_data.json 56→57 + ui_8pt_walk ring 豁免) + 生成器(scripts/gen_index_medallions.py + 3 处登记)。
+
+== 触发 ==
+EXP-210：用户质疑「一再强调不硬编码却没发现」——「不手写像素」总纲只有文档无机器断言，index 徽章 36 行手写坐标漂移无人知。
+
+== 判据 1：生成器契约全过 ==
+$ python3 scripts/gen_index_medallions.py --check → 6 枚 × 6 原语 = 36 行坐标 == ring 参数算出（0 漂移），exit 0
+$ python3 scripts/gen_index_medallions.py --ring 350 → 试算 R=350 徽章 0 从 y=498→548（证明参数真驱动，不写文件）
+幂等：连跑两次生成，scenes.json md5 一致（b6d87f89...），回写 0 行
+负例：index.ring 缺 / 坐标漂移 → exit 1；scenes.json 读失败 → exit 2
+公式：正六边形 中心_i=(cx+round(R·cosθ), cy+round(R·sinθ)), θ=-90°+i·360°/6
+  实测环心(540,970)/R400 精确还原原 36 行（0 误差）；与 chrome::ring_card_center 同构
+
+== 判据 2：doccheck2 第 57 项 no-handwritten-grid ==
+- 断言调用生成器 --check（公式单一事实源在 Python，Rust 不重复写公式，零漂移）
+- gate_data.json doccheck2_checks 56→57，id=no-handwritten-grid
+- 负例护栏：临时把 item0 徽章 x 改 468→471 → 精准 FAIL「#5 item=0 slot=0: rect x=471 应=468」；还原 PASS
+- 8pt 豁免：index.ring 子树加豁免（参数化环几何口径同 main_map.ring，非排版坐标）
+
+== 判据 3：工具 3 处登记 ==
+14号工具台账 / 04号速查 / docs/README.md 均命中（doccheck2 tooling-registration 0 error）
+
+== 判据 4：文档镜像同步 ==
+08_layout_design.md §4.1 加 ring 参数行（人读镜像与 JSON 对账，doccheck2 layout-cross-check 0 error）
+
+== 结论 ==
+机器断言 + 生成器 + 3 处登记 + 文档镜像全部落地，负例护栏有效。S80.0 可置 verified。

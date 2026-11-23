@@ -398,6 +398,10 @@
   {
    "id": "orphan-rule-row",
    "impl": "rust"
+  },
+  {
+   "id": "no-handwritten-grid",
+   "impl": "rust"
   }
  ],
  "event_static_keys": [
