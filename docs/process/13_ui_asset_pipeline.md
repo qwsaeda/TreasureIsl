@@ -183,6 +183,7 @@ powershell -ExecutionPolicy Bypass -File scripts/ui_preview.ps1        # 全部 
 | `check_data_driven` | `scripts/check_data_driven.py` | ① `image` 原语的资产**文件存在**；② 资产**已登记**在清单；③ 原语闭集 = 7 种（多一种即 FAIL） |
 | `check_primitives_data` | `crates/ti-tools/src/bin/doccheck2.rs` | 同上（Rust 侧双保险） |
 | `ui_assets verify` | `scripts/ui_assets.py` | 清单 ↔ 文件 ↔ `scenes.json` 引用三方一致 + **孤儿文件**（`assets/ui/` 下未登记的文件） |
+| `export-icon-boundary` | `crates/ti-tools/src/bin/doccheck2.rs`（第 55 项） | `scenes.json` 的 `params.icon` 必须有 `ui_manifest.json` 登记 `icon_<id>.png`（LGUI 导出边界等价：禁交付版静默回退 `icons.rs` 代码矢量，`TI-UI-009`） |
 
 > **为什么要「登记」这道关**：资产文件存在 ≠ 界面会用到它。未登记的文件会堆积成
 > 「没人知道它是什么、也不确定能不能删」的黑洞（与 EXP-101/108 同类的静默漂移）。

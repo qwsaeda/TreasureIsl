@@ -4745,6 +4745,60 @@ fn check_node_kind_asset_map(root: &Path) -> Vec<String> {
 /// 动机：内联单测写在 `crates/**/src/**` 里，其中的 `expect`/`panic!` 会被 gate 第 5/6 项
 /// （占位 / unwrap 扫描）拦下 ⇒ 写完跑 gate 才被自己的单测拦白跑一轮。规定单测只放
 /// `crates/*/tests/`（项目既有约定），`src` 内联单测一律提前拦。
+/// S73.0：LGUI「能导的有边界」（文章 04 节代价②）等价断言。`scenes.json` 的 icon
+/// 原语（`params.icon`）必须在 `ui_manifest.json` 登记 `icon_<id>.png`；缺登记时
+/// 交付版会静默回退 `icons.rs` 代码矢量（与 LGUI 导出拒绝 `icon://` / CLI-144 同类风险）。
+/// 错误码 `TI-UI-009`。
+fn check_export_icon_boundary(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(scenes) = read_file(root, "assets/data/scenes.json") else {
+        return vec!["scenes.json 不存在（导出图标边界无机读源）".to_string()];
+    };
+    let Some(manifest_text) = read_file(root, "assets/ui_manifest.json") else {
+        return vec!["ui_manifest.json 不存在（导出图标边界无登记源）".to_string()];
+    };
+    let Ok(manifest) = serde_json::from_str::<serde_json::Value>(&manifest_text) else {
+        return vec!["ui_manifest.json 解析失败（导出图标边界）".to_string()];
+    };
+    let registered: Vec<String> = manifest
+        .get("assets")
+        .and_then(|value| value.as_array())
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|asset| asset.get("file").and_then(|file| file.as_str()))
+        .map(|file| file.rsplit('/').next().unwrap_or(file).to_string())
+        .collect();
+    for id in extract_icon_ids(&scenes) {
+        let png = format!("icon_{id}.png");
+        if !registered.iter().any(|file| file == &png) {
+            errors.push(format!(
+                "icon 原语 `{id}` 缺登记 PNG `{png}`（TI-UI-009：须登记到 ui_manifest.json，禁代码矢量回退）"
+            ));
+        }
+    }
+    errors
+}
+
+/// 从 scenes.json 提取所有 `params.icon` id（规范形：双引号键值，值为简单标识符）。
+fn extract_icon_ids(text: &str) -> Vec<String> {
+    let needle = "\"icon\":";
+    let mut ids = Vec::new();
+    let mut rest = text;
+    while let Some(pos) = rest.find(needle) {
+        rest = &rest[pos + needle.len()..];
+        let Some(value) = rest.trim_start().strip_prefix('"') else {
+            continue;
+        };
+        let Some(end) = value.find('"') else {
+            continue;
+        };
+        ids.push(value[..end].to_string());
+        rest = &value[end + 1..];
+    }
+    ids
+}
+
 /// S67.2：`--json` 契约的注册级判据。第 29 项 `tooling-contract` 是纯源码子串匹配
 /// （出现 `--json` token 即过），本项要求白名单工具的源码里有**真实注册**
 /// （argparse `add_argument("--json")` 或 `"--json" in sys.argv`），堵住「注释里写
@@ -4858,6 +4912,8 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     // S67.2：第 29 项 `tooling-contract` 只做源码子串匹配（含 `--json` token 即过），
     // 本项把「验类/写类工具的 --json 支持」提升为注册级判据（argparse/sys.argv 真实注册）。
     ("cli-json-contract", check_cli_json_contract),
+    // S73.0：LGUI-CLI-144 等价的导出边界——icon 原语须有登记 PNG，禁代码矢量回退。
+    ("export-icon-boundary", check_export_icon_boundary),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

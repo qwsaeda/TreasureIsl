@@ -21,6 +21,7 @@
 | `TI-UI-006` | 安全区配置非法（缺字段 / 负值 / 非 4 元组） | `ui_verify.py::load_safe_area`（S67.1，默认全 0 不触发） | 按上右下左四元组补 `assets/data/ui_schema/safe_area.json` |
 | `TI-UI-007` | 工具未三处登记 | doccheck2 `tooling-registration`（第 35 项）+ `studio_tests.py` 断言 3 | 14 号表格行 + 04 号速查 + README 索引（14 号 §1.2） |
 | `TI-UI-008` | `--json` 仅在文本里出现、无真实注册 | doccheck2 `cli-json-contract`（第 54 项） | argparse `add_argument("--json")` 或 `"--json" in sys.argv` 实际注册 |
+| `TI-UI-009` | icon 原语缺登记 PNG（交付版静默回退 `icons.rs` 代码矢量） | doccheck2 `export-icon-boundary`（第 55 项） | 把 `icon_<id>.png` 登记进 `assets/ui_manifest.json`（LGUI `LGUI-CLI-144` 等价边界：导出/交付禁代码图标） |
 
 ## 3. 使用纪律
 

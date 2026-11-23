@@ -390,6 +390,10 @@
   {
    "id": "cli-json-contract",
    "impl": "rust"
+  },
+  {
+   "id": "export-icon-boundary",
+   "impl": "rust"
   }
  ],
  "event_static_keys": [

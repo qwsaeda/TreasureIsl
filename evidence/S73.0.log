@@ -1,0 +1,5 @@
+S73.0 判据：LGUI 导出边界（export-icon-boundary，第55项）双负例
+[负例] 改坏 compass→compassx:
+  ERROR icon 原语 `compassx` 缺登记 PNG `icon_compassx.png`（TI-UI-009：须登记到 ui_manifest.json，禁代码矢量回退）
+[还原] 现行 8 icon id:
+doccheck2: 0 error(s) across 55 audit-codified checks 
