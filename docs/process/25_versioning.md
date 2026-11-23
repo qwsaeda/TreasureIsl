@@ -12,7 +12,7 @@
 | 位 | 语义 | 何时 bump | 例 |
 |---|---|---|---|
 | **major (x)** | 不兼容破坏 | 架构重写 / 数据格式不兼容 / 玩家存档破坏 / 系统级重设计 | `0.1.0 → 1.0.0` |
-| **minor (y)** | 向后兼容新功能 | 新场景 / 新系统（船、领地、副本）/ 新玩法 / 新内容包 | `0.1.0 → 0.2.0` |
+| **minor (y)** | 向后兼容新功能 | 新场景 / 新系统（船、领地、副本）/ 新玩法 / 新内容包 | `0.1.0 → 0.3.0` |
 | **patch (z)** | 向后兼容 bug 修复 | 任何 bug 修复 / 视觉修正 / 性能修正 / 文案修正 | `0.1.0 → 0.1.1` |
 
 **当前版本**：`0.1.0`（2026-11-01 起，S0–S35 演进中；pre-1.0 阶段 major 恒 0，minor 随新系统）。
@@ -81,9 +81,20 @@
 **版本漂移检测**：`scripts/validate_data.py` 增 `check_version_consistency`（Cargo.toml version ↔
 AndroidManifest versionName ↔ 产物名）——构建侧工具读同一 version，产物名与版本不符即 FAIL。
 
+**机读版本功能清单（S75 交付事故根治）**：`assets/data/release_features.json` = 当前版本包含的功能
+清单（id/任务号/说明/产物名），`check_version_consistency` 校验 `features.version == Cargo.toml version`
+且产物名嵌该版本。用户装完 APK 可核对功能清单（"说好改的东西装完还是老设计"= 版本/功能对不上）；
+构建侧 `build_apk.sh` 同时改 .so 复用判据为**全源码内容哈希指纹**（旧 mtime 判据只看单文件，
+S62/S64~S72 改 ti-app/ti-core 几十个 .rs 不会触发重编 ⇒ 交付了 11-07 旧 .so = 老设计）。
+
 ## 6. 已知限制 / 说明
 
 - **pre-1.0**：major 恒 0（`0.y.z`），minor 随新系统 bump；1.0.0 = 首版完整玩法定稿。
 - **存档兼容**：破坏性改动（major bump）须出**存档迁移**（`saveload.rs` 版本字段），不静默破坏旧存档。
 - **wasm 产物体积**：`treasure_bevy_wasm-<x.y.z>.wasm` 体积预算见 `11_bevy_migration.md` §3（≤8MB 目标，
   当前实测超标，见 `release.md` 已知限制，属**体积规范** S35 专项，不随版本规范处理）。
+- **交付事故教训（S75，2026-11-23）**：用户装 APK 发现「键盘非触摸/地图仍解锁/老设计」——根因 =
+  .so 复用判据只看 `treasure_bevy.rs` mtime，而功能改动在 ti-app/ti-core（mtime 未变）⇒ 11-07 旧 .so
+  一直被复用到 11-23。两条根治：① .so 复用改全源码哈希指纹（源码变必重编）② 机读功能清单 + 版本
+  bump（0.2.0→0.3.0）让用户可核对产物。**教训：产物复用判据必须覆盖全部影响源码，不能只看壳文件；
+  新功能必须 bump minor，否则用户无法区分新旧包。**

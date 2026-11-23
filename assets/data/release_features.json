@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "version": "0.3.0",
+  "released": "2026-11-23",
+  "note": "机读版本功能清单：产物必须通过 gate check_release_features 校验源码版本 == 本清单 version；APK/wasm 产物名含此版本。用户装完可用此清单核对是否最新版（docs/process/25_versioning.md）。",
+  "platforms": {
+    "android": "dist/TreasureIsl-0.3.0-aarch64.apk",
+    "wasm": "web/treasure_bevy_wasm-0.3.0.wasm"
+  },
+  "features": [
+    { "id": "full_map_unlock", "name": "地图全解锁", "task": "S62", "desc": "20 图开局全可选，无击败解锁门槛" },
+    { "id": "touch_input", "name": "Android 触摸输入", "task": "S49.4d", "desc": "Touches tap → 命中派发，非键盘模拟" },
+    { "id": "panel_trade", "name": "贸易面板", "task": "S63.1", "desc": "T 键买卖走 TradeLedger" },
+    { "id": "panel_build", "name": "建造面板", "task": "S63.2", "desc": "B 键建造走 BuildManager" },
+    { "id": "panel_ship", "name": "造船面板", "task": "S63.5", "desc": "N 键升级走 BoatSession" },
+    { "id": "panel_event", "name": "事件面板", "task": "S63.4", "desc": "V 键 7 事件走 events::effect" },
+    { "id": "panel_merchant", "name": "商人面板", "task": "S63.3", "desc": "M 键买卖人手/武器" },
+    { "id": "panel_garrison", "name": "驻军自定面板", "task": "S64", "desc": "G 键自定驻军，人手守恒" },
+    { "id": "panel_upgrade", "name": "领地升级面板", "task": "S65", "desc": "H 键升级/领产出" },
+    { "id": "panel_dungeon", "name": "副本情报面板", "task": "S66", "desc": "J 键查看守军情报" },
+    { "id": "panel_card", "name": "卡牌图鉴面板", "task": "S68", "desc": "C 键查看卡池构成" },
+    { "id": "achievements", "name": "成就系统", "task": "S72", "desc": "5 成就位掩码 + P 键清单 + 存档持久" },
+    { "id": "wasm_optimized", "name": "wasm 体积优化", "task": "S70", "desc": "wasm-opt -Oz 47.8MB→34.9MB" },
+    { "id": "android_package", "name": "正式包名", "task": "S69", "desc": "com.qwsaeda.treasureisl（替换 com.example 占位）" },
+    { "id": "p5_device", "name": "P5 真机判据", "task": "S71", "desc": "redroid 全判据 PASS（设备限制 SKIP）" }
+  ]
+}

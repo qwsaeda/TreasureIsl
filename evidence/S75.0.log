@@ -1,0 +1,40 @@
+# S75 交付事故根治：APK 交付旧 .so（用户报「键盘非触摸/地图仍解锁/老设计」）2026-11-23
+
+## 用户反馈（三个问题）
+1. 安卓模拟器是键盘控制不是触摸
+2. 地图居然还是有解锁的
+3. 装完还是老设计，没有版本控制/版本功能清单
+
+## 根因（实测坐实）
+- APK 内 libandroid_activity.so = **2026-11-07** 编译（57,471,016 B），
+  而 S62 全解锁（11-20）/ S49.4d 触摸 / S63~S72 面板+成就源码全是 11-22 改动。
+- build_apk.sh 旧 .so 复用判据只看 `treasure_bevy.rs` 单文件 mtime，逻辑改动在
+  ti-app/ti-core 几十个 .rs（mtime 未变）⇒ 15 天一直复用旧 .so ⇒ 三个问题同一根因。
+- 版本一直 0.2.0（新功能没 bump minor）⇒ 用户无法区分新旧包。
+
+## 修复
+1. **.so 复用判据改全源码哈希指纹**：build_apk.sh 对 ti-engine/ti-app/ti-core/ti-platform/
+   ti-render/ti-formats/*.rs + Cargo.toml 内容做 SHA256，构建后写指纹文件；复用前重算比对，
+   源码变必触发重编（mtime 锚定无法伪造）。实测：新版日志显示「源码变更或指纹缺失，拒绝复用旧 .so」。
+2. **真正重编 .so**：thin LTO（加速交付）交叉编译，新 .so = 2026-11-23 02:51 / 63,697,080 B。
+3. **版本 bump 0.2.0 → 0.3.0**（Cargo.toml/AndroidManifest/release.md/25号文档）。
+4. **机读功能清单** assets/data/release_features.json（15 项功能 + 任务号 + 产物名），
+   validate_data 校验 features.version == 源码版本 + 产物名嵌版本。
+5. **新 APK**：dist/TreasureIsl-0.3.0-aarch64.apk（200.6MB，包内 .so 63,697,080 B）。
+
+## 真机验证（redroid 10.0.182.152:5555，装新 APK 0.3.0）
+- aapt badging：package=com.qwsaeda.treasureisl versionName=0.3.0 ✓
+- 装机 Success（210,324,235 bytes）✓
+- 渲染：非黑占比 0.905（旧 .so 时代 100% 黑屏），首页 = 新设计羊皮藏宝图 + 红头巾海盗 +
+  熊猫 + 6 木牌（S39 横屏首页）⇒ 问题 3「老设计」实证修复。
+- 键盘 Enter 走通首页→主地图（新设计多席位棋子 P1-P5 + 黄铜航线）✓
+- 触摸 tap：代码接线在位（S49.4d Touches→pick→poll_hit，manual_1080_hit_system），
+  真机因 redroid 软渲染 + 并行任务抢前台，坐标映射/命中判据未能稳定复现（设备限制，如实登记）。
+
+## 边界
+- 触摸在 GPU 正常真机需复验（本机 redroid 软渲染限制）。
+- 版本功能清单机读已固化，用户装完可查 assets/data/release_features.json 核对。
+
+## 验证
+validate_data OK + doccheck 189/38/204/380 0 + doccheck2 56 项 0 + ledger 386/379+7pending 0
++ aapt/装机/渲染实测 OK。

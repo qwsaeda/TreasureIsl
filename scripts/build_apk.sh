@@ -80,15 +80,51 @@ APK_OUT="$OUT/TreasureIsl-${VERSION}-${ARCH}.apk"
 cd "$REPO"
 echo "=== S2.6 Android APK 构建（${TARGET} / ABI ${ABI}）==="
 
-# [1/5] 交叉编译 cdylib（.so）——已存在且比壳源新且非 --force ⇒ 复用（2026-11-01 S35 用户拍板：
-# 手动改过 .rs 的 mtime 会误触发 15min 重编；判据只看「.rs 是否真比 .so 新」，平台侧构建前
-# 由 `scripts/build_artifacts.py pre` 锚定 mtime，构建后 `post` 复原）
+# [1/5] 交叉编译 cdylib（.so）——S75 交付事故根治：旧判据只看 treasure_bevy.rs 单文件 mtime，
+# 而玩法逻辑在 ti-app/ti-core 等几十个 .rs（S62 全解锁/触摸/面板改动全在这些文件）⇒
+# mtime 未变 ⇒ 复用 11-07 旧 .so ⇒ 用户装的 APK 还是老设计。改为**全源码内容哈希指纹**：
+# .so 构建成功后写入 FINGERPRINT_FILE（含 ti-engine/ti-app/ti-core/ti-platform/ti-render/*.rs
+# 内容哈希）；复用前重算比对，一致才复用（源码真变了必触发重编，mtime 锚定无法伪造）。
 SHELL_SRC="$REPO/crates/ti-engine/src/bin/treasure_bevy.rs"
+FINGERPRINT_FILE="/disk/target/${TARGET}/release/.so_source_fingerprint"
+_refresh_fingerprint() {
+    python3 - "$REPO" "$FINGERPRINT_FILE" <<'PYEOF'
+import hashlib, sys
+from pathlib import Path
+root = Path(sys.argv[1]); out = Path(sys.argv[2])
+h = hashlib.sha256()
+crates = ["ti-engine", "ti-app", "ti-core", "ti-platform", "ti-render", "ti-formats"]
+for c in crates:
+    for f in sorted((root / "crates" / c).rglob("*.rs")):
+        h.update(f.relative_to(root).as_posix().encode()); h.update(f.read_bytes())
+manifest = root / "Cargo.toml"
+if manifest.exists(): h.update(manifest.read_bytes())
+out.write_text(h.hexdigest())
+print(h.hexdigest()[:16])
+PYEOF
+}
+_so_fresh() {
+    [ -f "$SRC_SO" ] && [ -f "$FINGERPRINT_FILE" ] || return 1
+    local cur
+    cur=$(python3 - "$REPO" <<'PYEOF'
+import hashlib, sys
+from pathlib import Path
+root = Path(sys.argv[1]); h = hashlib.sha256()
+for c in ["ti-engine", "ti-app", "ti-core", "ti-platform", "ti-render", "ti-formats"]:
+    for f in sorted((root / "crates" / c).rglob("*.rs")):
+        h.update(f.relative_to(root).as_posix().encode()); h.update(f.read_bytes())
+m = root / "Cargo.toml"
+if m.exists(): h.update(m.read_bytes())
+print(h.hexdigest())
+PYEOF
+)
+    [ "$cur" = "$(cat "$FINGERPRINT_FILE")" ]
+}
 REFSET=$(python3 "$REPO/scripts/apk_audit.py" --refset)
-if [ "$FORCE" != "--force" ] && [ -f "$SRC_SO" ] && [ "$SRC_SO" -nt "$SHELL_SRC" ]; then
-    echo "[1/5] 复用现有 .so（${SRC_SO}；--force 强制重编）"
+if [ "$FORCE" != "--force" ] && _so_fresh; then
+    echo "[1/5] 复用现有 .so（源码哈希指纹一致；--force 强制重编）"
 else
-    echo "[1/5] 交叉编译 cdylib（.so）…"
+    echo "[1/5] 交叉编译 cdylib（.so）…（源码变更或指纹缺失，拒绝复用旧 .so）"
     # ③ android-activity 不在根 members ⇒ 临时加回构建，trap 恢复 Cargo.toml/lock
     cp "$REPO/Cargo.toml" "$WORK/Cargo.toml.bak"
     cp "$REPO/Cargo.lock" "$WORK/Cargo.lock.bak" 2>/dev/null || true
@@ -109,6 +145,13 @@ PYEOF
         "AR_${TARGET}=$BIN/llvm-ar" \
         RUSTFLAGS="-C linker=$BIN/${ARCH}-linux-android${API}-clang" \
         cargo build -p android-activity@0.1.0 --release --target "$TARGET"
+fi
+# S75：编译成功后写源码哈希指纹（供下次复用判据比对；源码变了指纹即变）。
+if [ -f "$SRC_SO" ]; then
+    echo "  写 .so 源码指纹：$(_refresh_fingerprint)"
+else
+    echo "  FAIL  编译后 .so 不存在：$SRC_SO" >&2
+    exit 1
 fi
 
 # [2/5] aapt2 link（每次重跑：manifest 变更生效，如 extractNativeLibs）

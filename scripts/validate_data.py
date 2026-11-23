@@ -751,6 +751,27 @@ def check_version_consistency(root: Path, problems: list[str]) -> None:
         if f"`{version}`" not in text:
             problems.append(f"version: release.md 缺当前版本 {version} 版本规划行（25_versioning.md §3.3）")
 
+    # S75 机读版本功能清单：version 必须 == 单源（用户装完可核对产物功能，25_versioning.md §5）
+    feats = root / "assets" / "data" / "release_features.json"
+    if not feats.is_file():
+        problems.append("version: assets/data/release_features.json 缺失（S75 版本功能清单）")
+    else:
+        try:
+            feat_data = json.loads(feats.read_text(encoding="utf-8"))
+            fv = feat_data.get("version")
+            if fv != version:
+                problems.append(
+                    f"version: release_features.json version={fv} ≠ Cargo.toml {version}（S75 版本功能清单漂移）"
+                )
+            # 产物名也必须嵌本版本（防用户装到旧版无法区分）
+            for plat, name in feat_data.get("platforms", {}).items():
+                if version not in name:
+                    problems.append(f"version: release_features.json platforms.{plat}={name} 未嵌版本 {version}")
+            if not feat_data.get("features"):
+                problems.append("version: release_features.json features 为空（版本功能清单无内容）")
+        except (json.JSONDecodeError, OSError) as e:
+            problems.append(f"version: release_features.json 读取/解析失败 {e}")
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="数据表兜底校验（gate 第 10a 项统一入口）")
