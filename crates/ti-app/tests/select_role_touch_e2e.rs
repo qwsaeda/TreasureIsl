@@ -1,8 +1,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 //! S77 选角页触摸端到端：点未勾选席位 = 加入多选；点已勾选席位 = 确认推进（对齐 `select_map`）。
 
-use ti_app::game_app::{GameApp, GameInput, HitData, Scene};
 use ti_app::MapHost;
+use ti_app::game_app::{GameApp, GameInput, HitData, Scene};
 
 fn enter_select_role() -> GameApp {
     let mut app = GameApp::new(1080.0, 1920.0);
