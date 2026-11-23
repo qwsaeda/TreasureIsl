@@ -1,0 +1,41 @@
+S74.7 变异存活子补测 + 完整基线重扫 + 棘轮提升 · 验收证据（2026-11-23）
+
+== 改动面声明 ==
+工具测试(crates/ti-core/tests/rng_free_functions.rs 新 + crates/ti-app/tests/settle_once_no_chain.rs 新)
++ 数据(assets/data/rule_test_matrix.json 2 条转 covered + evidence/mutation_baseline.json 完整基线
++ scripts/process_ratchet.json 棘轮提升)。跨模块原因=存活子补测须同时修测试+矩阵+基线+棘轮才闭环。
+
+== 判据 1：rng_free_functions 8 条全绿 + 负例自证 ==
+$ cargo test -p ti-core --test rng_free_functions → 8 passed / 0 failed
+  覆盖：srand 重播种 / rand 值域 / rand 流非恒定 / seq 长度 / seq 与逐次 rand 一致 /
+        seq 状态推进 / advance(0) no-op / advance(n) 精确续流
+自证（注入→FAIL→还原→PASS）：
+  - srand 删语句 → srand_resets_stream_to_seed FAILED ✓
+  - rand 固定返回 0 → rand_stream_is_not_constant FAILED ✓
+  - seq 固定 vec![0] → seq_matches_repeated_rand + seq_advances_state_between_calls FAILED ✓
+  还原 → 8 passed ✓
+
+== 判据 2：完整变异重扫得分提升 ==
+$ cargo mutants -p ti-core -f 'crates/ti-core/src/rules/rng.rs' --no-shuffle --no-times -o /tmp/mut_rng_full
+38 mutants tested: 2 missed, 36 caught → score 94.7%（旧基线 30 mutants/70%）
+2 个 Missed 均为 advance(0) 边界变异（RngState::advance / GameRng::restore_state）：
+  等价变异——PCG64 底层 advance(0) 本身 no-op，且 restore_state 在 steps==0 时不调 advance；
+  无法通过行为测试杀死（非缺陷，如实标注于报告 scan.note）。
+evidence/mutation_baseline.json：schema mutation-baseline/1，38 条 mutants 明细按 name 排序，
+  totals.score=94.7，scan.complete=true。
+scripts/process_ratchet.json::mutation_score.baseline_score 70.0 → 94.7（只升不降）。
+
+== 判据 3：R-loopcore-1 / R-loopcore-4 补测，matrix 100% ==
+- R-loopcore-1「单次操作不多步连锁」：crates/ti-app/tests/settle_once_no_chain.rs（2 条）
+  → 一次 Spin 位移恰好等于骰点（(after+31-before)%31 == last_roll），连续 Spin 各自单次结算。
+  cargo test -p ti-app --test settle_once_no_chain → 2 passed / 0 failed。
+- R-loopcore-4「场景无死锁」：rules 层穷举 exhaust_main_loop_no_deadlock_within_max_back_steps
+  已覆盖（BFS 全状态码 ≤N 回主菜单，N=balance.ui.max_back_steps），W3 漏映射，本轮补登记。
+- matrix：99 rules / 99 covered / uncovered_items=[]（100%）。
+
+== 判据 4：质量 ==
+cargo fmt --all -- --check → 0；cargo clippy -p ti-core/ti-app --test <新文件> -- -D warnings → 0 error。
+
+== 结论 ==
+变异得分 70%→94.7%（7/9 存活子补杀，2 等价变异如实标注）；matrix 99/99 covered；
+两个补测文件全绿且负例自证有效。S74.7 可置 verified。
