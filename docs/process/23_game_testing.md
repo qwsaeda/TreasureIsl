@@ -7,7 +7,7 @@
 
 ## 0. 定位
 
-本文把仓库**已有的**测试事实（**113** 个集成测试文件（`crates/*/tests/*.rs` 顶层实测 2026-11-21 飞轮 R23 回写；含 `tests/common/` 嵌套 = 114；**口径拆分**：游戏 crate 84〔ti-core 34/ti-app 33/ti-engine 6/ti-render 4/ti-platform 4/ti-formats 3〕+ 平台/工具 crate 29〔ti-tools 14/ti-console 15/ti-devmeta 0〕= 113（分项实测和 = 顶层 113；含嵌套 114）；S63 新增 5 面板 e2e〔app_trade/merchant/event/ship/keyboard〕ti-app 28→33 + ti-core S61 新增 adversarial 3 = 108→113；git 坐实 `2170700~1`=106 / `2170700`=103 / R23 worktree=113。旧「R12 106→105」历史链计数全错〔R12 时点 HP 删前实为 106〕，飞轮 R20 Q011 勘误；口径 = 顶层 113 / 含嵌套 114，分项求和以顶层为准） + 试玩闭环 4 报告 + `evidence/` 文件数（**以 `git ls-files evidence/ | grep -v '^evidence/console/' | wc -l` 实测为准**，不在正文写死整数——该文件数随每轮 flywheel evidence 日志 +1，历史时点链见文末「计数变更历史」））
+本文把仓库**已有的**测试事实（**123** 个集成测试文件（`crates/*/tests/*.rs` 顶层实测 2026-11-23 S74.2 回写；含 `tests/common/` 嵌套 = 124；**口径拆分**：游戏 crate 93〔ti-core 35/ti-app 41/ti-engine 6/ti-render 4/ti-platform 4/ti-formats 3〕+ 平台/工具 crate 30〔ti-tools 14/ti-console 16/ti-devmeta 0〕= 123（分项实测和 = 顶层 123；含嵌套 124）；历史链：R20=103 / R23=108 / S63+R22=113 / S74.2 时点 123（含嵌套 124；旧「R12 106→105」计数全错〔R12 时点 HP 删前实为 106〕，飞轮 R20 Q011 勘误）；**S74.2 起全量登记**：123 个顶层测试文件 100% 进 `assets/data/test_manifest.json`（载体 123 条 + 人工/脚本/gate 覆盖类 12 条 = 135 条）；实时口径以 `find crates -path '*/tests/*.rs' -not -path '*/tests/common/*' | wc -l` 实测为准） + 试玩闭环 4 报告 + `evidence/` 文件数（**以 `git ls-files evidence/ | grep -v '^evidence/console/' | wc -l` 实测为准**，不在正文写死整数——该文件数随每轮 flywheel evidence 日志 +1，历史时点链见文末「计数变更历史」））
 归入一套**标准化标杆**：按**级**（L1 单元→L4 验收）、**类**（功能/回归/视觉/音频/性能/兼容）、
 **型**（冒烟/CI/试玩/探索/基准）三维分类，并给出行业常用方案与 Bevy 官方推荐作为参照。
 **不是**新增一套独立测试体系——是给既有测试**统一口径、编号、归类**，并让平台可见。
@@ -160,7 +160,7 @@
 | 侧栏 | **业务域分组**（`group`，§7.2）→ 域内**分类**（`category`）计数；搜索框按 name/id/command 过滤 | 前端对 API 返回数组计数；manifest 条目本身由 `validate_data::check_test_manifest` 对账（id 唯一/schema/命令真实性），**无「分组计数快照」独立机器断言**——审计 Q027 勘误旧「分组计数 = manifest 实际条目数（机器对账）」措辞（分组计数变更走前端自渲染，改动面已在 manifest 门禁覆盖） |
 | 主区 | 折叠分组列表（业务域 → 分类 → 条目）；每条 = 名称 + id + `level`/`type` 徽章 + 证据在位/断链 + **状态徽章**（未跑 / 跑中 / 通过 / 失败+`exit_code`+耗时） | 条目数 = manifest 条目数（无遗漏无重复） |
 | 运行 | 每条「▶ 运行」+ 分组「运行本组」（**串行**：同目标目录会互踩 cargo 锁，同 S46.3「单构建互斥」纪律） | 点击后 ≤2s 内出现「跑中」徽章（**不刷新页面**）——`tsRunTest` 启动成功后立即 `loadTests()` 重取列表（后端 `/api/tests` 附 `x.job.running=true`），`tsPollJob` 不再对非当前打开测试早退（审计 Q015 2026-11-19 落地） |
-| 结果 | 轮询 `GET /api/jobs?kind=test&id=<id>` → `exit_code` + 耗时 + **日志尾实时回显** | `exit_code` 落盘（跑完即有） |
+| 结果 | 轮询 `GET /api/jobs?kind=test&id=<id>` → `exit_code` + 耗时 + **C1 结构化结论**（`conclusion.tests[]={name,passed,failed,msg}`，优先读 `result.json`，缺失时解析**完整日志**）+ 日志尾实时回显 | `exit_code` 落盘；`conclusion.source` ∈ `result_json`/`full_log`/`legacy`；长日志首块不漏检（S74.2，见 §7.3） |
 | 证明 | 每条列**本次运行**的证明（`renderTestDetail` 渲染作业状态 `evidence[]`：日志/快照/截图可点链接）+ 清单里静态基线证据 + exit_code/时间戳 | 证明路径存在且与本次作业 id/时间戳对应（审计 Q014 2026-11-19 落地，前端渲染 `x.job.evidence[]`） |
 | 禁跑 | `command` 缺/`null`（人工视觉验收 / gate 覆盖）→ 按钮禁用**并注明原因** | 禁用原因可见（不静默） |
 
@@ -197,6 +197,29 @@ bin 名与源文件名不一致 3 类陈旧项）。
 | `group` | ✓（S49.7 起） | **业务域**：`core`（核心规则/玩法）/ `asset`（资产与内容管线）/ `platform`（平台与工具）/ `device`（端侧与兼容）/ `perf`（性能与体积）—— 主分组维度（§6.3 侧栏） |
 | `timeout_s` | ○ | 作业超时（秒；缺省 = 不限；超时 ⇒ 作业记 `exit_code=-1` + note `timeout`） |
 | `prove` | ✓（可自动运行者） | 本次运行**证明落点**（`evidence/tests/<id>/`）；与 `evidence`（静态基线证据）并存不冲突（§6.3「证明」行）。**R25 F-10 口径**：平台 `persist_proof` 写 `evidence/tests/<id>/<id>-<ts>/{run.log,state.json}`（时间戳子目录 + 终态快照）；手工落证据亦须同构（`<ts>/` 子目录，不写平铺 `run.log`），`prove` 前缀可预声明、目录由运行创建 |
+
+### 7.3 结构化结果协议（契约 C1，S74.2）
+
+> 诊断：`test_run_conclusion()` 旧实现只读 `job_log_tail(..., 400)`（clamp 400 行）后 grep
+> `Running tests/` 与 `test result:`。`gate_full`/`smoke` 等多 binary 长日志的前段 binary 被截断 ⇒
+> 结论静默失真（首块漏检）。清单旧 `_note` 自认「并非全部判据载体」，仅登记 31 条 --test 载体，
+> 大量测试文件平台不可见。**S74.2 两面同修**：结构化结果 + 清单全量登记。
+
+**C1 `result.json` 形状**（契约冻结，W1/W3/W4 判据输出同源）：
+
+```json
+{ "binary": "<binary 名>", "tests": [ { "name": "<binary>", "passed": 7, "failed": 0, "msg": "ok" } ],
+  "duration_ms": 2000, "exit_code": 0 }
+```
+
+| 面 | 契约 |
+|---|---|
+| 单一事实源 | `crates/ti-console/src/runner/result_schema.rs`：`TestResult`/`TestCaseResult` + `parse_test_blocks`（解析逻辑唯一实现，旧 `parse_test_log` 复用）+ `parse_result_json` |
+| 结论优先级 | `test_run_conclusion()`：① 外部 `result.json`（状态字段 `result_json` → `evidence[]` → `prove/<id>-<ts>/result.json`）② **完整日志**解析（`job_log_full`，无 400 行 clamp）③ 旧 tail 兼容回退 |
+| 结论字段 | `source`(`result_json`/`full_log`/`legacy`) + C1 `binary`/`tests`/`duration_ms`/`exit_code`；保留旧 `ok`/`total_passed`/`total_failed`/`binary_count`/`summary`/`details` 供既有前端消费 |
+| 全量登记 | `assets/data/test_manifest.json` `tests[]` = 123 条 --test 文件载体 + 12 条人工/gate/脚本类 = 135 条；`crates/*/tests/*.rs` 顶层 100% 可见（S74.2 实测 123 文件） |
+| 命令真实性 | 每条 --test 载体 `cargo test -p <pkg> --test <name>` → `crates/<pkg>/tests/<name>.rs` 必须存在（`validate_data::check_test_manifest` 已验，新增条目 0 违规） |
+| 判据证据 | `crates/ti-console/tests/result_schema_truncation.rs`：>400 行样本对比（新实现测到首块 `first_block`，旧 tail=400 测不到）+ 端到端 `conclusion.source=full_log` + `result.json` 优先 + C1 形状往返；`evidence/S74.2.log` |
 
 ### 7.1 确定性测试约定（S67.4，LGUI test 假时钟借鉴）
 

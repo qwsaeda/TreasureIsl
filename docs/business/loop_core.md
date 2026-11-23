@@ -42,10 +42,10 @@
 
 | 约束 | 断言 |
 |---|---|
-| 单次操作不产生多步连锁 | 一帧一次玩家操作 ⇒ 至多一次结算流水线 |
-| 金币非负、≤上限 | `0 ≤ gold ≤ balance.gold_max` 恒成立 |
-| HP ∈ [0, hp_max] | 扣血后不越界；归零即 `Defeat` |
-| 场景无死锁 | 任意场景可经 ≤ N 次操作回到主菜单（N 取 `balance.ui.max_back_steps`） |
+| 单次操作不产生多步连锁 | 一帧一次玩家操作 ⇒ 至多一次结算流水线 | <!-- R-loopcore-1 -->
+| 金币非负、≤上限 | `0 ≤ gold ≤ balance.gold_max` 恒成立 | <!-- R-loopcore-2 -->
+| HP ∈ [0, hp_max] | 扣血后不越界；归零即 `Defeat` | <!-- R-loopcore-3 -->
+| 场景无死锁 | 任意场景可经 ≤ N 次操作回到主菜单（N 取 `balance.ui.max_back_steps`） | <!-- R-loopcore-4 -->
 
 ## 与实现的接口
 

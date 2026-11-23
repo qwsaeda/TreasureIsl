@@ -155,15 +155,15 @@ attack_power > defense_power ⇒ 进攻方胜（占领，重定驻军）
 
 | 规则 | 单测（`rules/force.rs` 内联 `#[cfg(test)]` + `tests/territory_v2_rules.rs`；旧 HP `rules_battle.rs` 已删 S34.6 D5，本表指向兵力模型） |
 |---|---|
-| 武装 = min(人手, 武器)；武器多余无效 | `armed_power_caps_at_manpower`（tests/territory_v2_rules.rs） |
-| 人手 > 武器 ⇒ 徒手战力折减 | `power_weights_armed_over_barehand`（force.rs 内联） |
-| 战力确定性（同兵力同结果，不耗随机） | `deterministic_same_input_same_result`（force.rs 内联） |
-| 攻方战力 > 守方 ⇒ 攻方胜 | `attacker_power_wins`（force.rs 内联） |
-| 守方战力 ≥ 攻方 ⇒ 守方胜 | `defender_wins_on_tie_or_higher`（force.rs 内联） |
-| 双方必损（人手 + 武器都掉） | `both_sides_attrition`（force.rs 内联） |
-| 败方交双倍过路费 | `siege_loss_pays_double_toll` |
-| 胜方占领重定驻军 | `siege_win_recaptures_with_level_one` |
-| 同兵力同参数 ⇒ 同结果（确定性） | `deterministic_same_input_same_result`（force.rs 内联，兵力模型 `force::resolve` 无随机） |
+| 武装 = min(人手, 武器)；武器多余无效 | `armed_power_caps_at_manpower`（tests/territory_v2_rules.rs） | <!-- R-combat-1 -->
+| 人手 > 武器 ⇒ 徒手战力折减 | `power_weights_armed_over_barehand`（force.rs 内联） | <!-- R-combat-2 -->
+| 战力确定性（同兵力同结果，不耗随机） | `deterministic_same_input_same_result`（force.rs 内联） | <!-- R-combat-3 -->
+| 攻方战力 > 守方 ⇒ 攻方胜 | `attacker_power_wins`（force.rs 内联） | <!-- R-combat-4 -->
+| 守方战力 ≥ 攻方 ⇒ 守方胜 | `defender_wins_on_tie_or_higher`（force.rs 内联） | <!-- R-combat-5 -->
+| 双方必损（人手 + 武器都掉） | `both_sides_attrition`（force.rs 内联） | <!-- R-combat-6 -->
+| 败方交双倍过路费 | `siege_loss_pays_double_toll` | <!-- R-combat-7 -->
+| 胜方占领重定驻军 | `siege_win_recaptures_with_level_one` | <!-- R-combat-8 -->
+| 同兵力同参数 ⇒ 同结果（确定性） | `deterministic_same_input_same_result`（force.rs 内联，兵力模型 `force::resolve` 无随机） | <!-- R-combat-9 -->
 
 ## 数值平衡指引（非规则，供调参参考）
 

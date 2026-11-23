@@ -1,0 +1,144 @@
+================================================================================
+S74.5 W5 · 测试体系重做（诊断 + 提案 + 稳定性测试）
+执行日：2026-11-23  |  owner：W5  |  改动面：工具(gate分档=主线程落)+规则测试(seed/假时钟)+工具(平台target dir=主线程转达W2)
+================================================================================
+
+────────────────────────────────────────────────────────────────
+【改动面声明 / 五步回执】
+────────────────────────────────────────────────────────────────
+提问：测试慢且不稳——量基线、找慢测试、审计非确定性、查 cargo 锁竞争。
+方案：①实测计时 → 重测试清单；②grep 时间/RNG 面 → 风险清单；
+      ③新建 stability_repeat.rs（固定 seed+假时钟，3 次同进程一致性）；④只读 jobs.rs → target dir 建议。
+拍板：已按任务书执行（主线程已冻结契约 C1~C4 与写点所有权）。
+草稿：仅新建 crates/ti-app/tests/stability_repeat.rs + 本 evidence log（其余只读/仅诊断）。
+批准：待主线程复核（EXP-038：本 subagent 报告不自行声称 verified，由主线程独立复核）。
+
+跨模块原因：执行分层须门禁(gate 分档)+测试(稳定性)+平台(target dir)同改；
+            三处写点分属主线程/W5/W2，故本路只交付诊断与可独立落地的测试文件，
+            门禁分档与平台改造以「需求清单」形式交主线程集中执行（不越权写文件）。
+
+写域自检：仅写了 crates/ti-app/tests/stability_repeat.rs（本人新建）+ evidence/S74.5.log（本人）。
+          未写 gate.ps1 / jobs.rs / doccheck2.rs / ledger / fuzz_playtest.rs / e2e_playplayability.rs。
+
+────────────────────────────────────────────────────────────────
+【判据 ① 实跑输出：stability_repeat 全绿，3 次一致性】
+────────────────────────────────────────────────────────────────
+命令：export PATH="$PATH:/root/.cargo/bin"; cd /disk/workspaces/treasureIsl;
+      cargo test -p ti-app --test stability_repeat
+结果：test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+带 --nocapture 的 3 次一致性输出（证据核心）：
+  [stability] run 1/3: scene=MainMap|seed=20241123|gold=1010|bank=1000|pos=Some(GridPos { row: 18, col: 10 })|owned=0|buildings=0|boat=1
+  [stability] run 2/3: scene=MainMap|seed=20241123|gold=1010|bank=1000|pos=Some(GridPos { row: 18, col: 10 })|owned=0|buildings=0|boat=1
+  [stability] run 3/3: scene=MainMap|seed=20241123|gold=1010|bank=1000|pos=Some(GridPos { row: 18, col: 10 })|owned=0|buildings=0|boat=1
+  [stability] 3/3 快照逐字节一致（0 flaky）：scene=MainMap|seed=20241123|gold=1010|bank=1000|pos=Some(GridPos { row: 18, col: 10 })|owned=0|buildings=0|boat=1
+  [stability] seed=20241124: scene=MainMap|gold=1030|pos=Some(GridPos { row: 15, col: 16 })  ← 负例护栏：不同 seed 轨迹不同（防 RNG 脱钩假确定性）
+  test stability_repeat_three_runs_identical ... ok
+  test stability_different_seed_differs ... ok
+手段：固定 seed（set_rng_seed + rng_mut().set_seed）+ 假时钟（set_frame_delta_ms(16)），
+      关键路径 = index→select_role→select_map→main_map→摇骰×3→贸易买/卖；每次独立 GameApp::new。
+
+────────────────────────────────────────────────────────────────
+【判据 ②-a 基线计时（实测）】
+────────────────────────────────────────────────────────────────
+环境：Linux；CARGO_TARGET_DIR 环境变量 = 空；.cargo/config.toml [build] target-dir = "/disk/target"（全仓共享单一 target）。
+
+cargo test -p ti-core：
+  · 冷（含首次编译）：WALL 1:57.73（USER 48.59 / SYS 5.07）
+  · 缓存态重跑：WALL 47.03（USER 36.48 / SYS 0.19）——测试体本身几乎全 <0.5s，墙钟被并发重编译吃掉。
+  · --no-fail-fast 全量：WALL 96.39（USER 37.26）——并发 agent 共享 /disk/target 导致重复编译放大。
+
+cargo test -p ti-app：
+  · 缓存态重跑：WALL 87.42（USER 23.19 / SYS 8.64）——同样被并发重编译 + 锁等待放大。
+  · s43_fps_smoke 单独：WALL 0.41（测试体 0.00s；Instant 实时等待在本机未构成瓶颈，但结构上仍是时间依赖）。
+
+【重测试清单（应移出 fast 档到 full/nightly）】
+  | 测试二进制                       | 实测耗时  | 建议           | 理由 |
+  | exhaust_menu (ti-core)           | 64.98s    | full/nightly   | ti-core 绝对瓶颈，占全量测试时间 ~67% |
+  | fuzz_playtest (ti-app)           | 6.06s     | full/nightly   | 32 seed × 2000 步 fuzz；W1 独占该文件，分档由主线程协调 |
+  | exhaust_progression (ti-core)    | 0.48s     | full（可选）   | 穷举类，次慢 |
+  | 其余全部（约 60 个二进制）        | ≤0.41s    | fast 保留      | 含 stability_repeat 0.14s、各 rules/e2e |
+  注：fast 档「秒级」真瓶颈 = 共享 /disk/target 的编译/锁，而非测试体；
+      移除上面 3 项后测试体总量 <1s，但冷/争用编译仍数十秒 ⇒ 必须配合 target dir 改造（见 ②-d）。
+
+────────────────────────────────────────────────────────────────
+【判据 ②-b 非确定性风险清单（grep 全仓 tests/ + 实测 flaky）】
+────────────────────────────────────────────────────────────────
+R-1【已观测 flaky·高】crates/ti-core/tests/map_pack.rs::available_ids_and_default_pointer
+    现象：全量 cargo test -p ti-core 第二次跑 FAILED「S31.1 已装包 m01 须在册（实得 []）」；
+         单独连跑 3 次全过（7 passed×3）；--no-fail-fast 全量重跑又全过（exit 0）。
+    根因：该测试直读活文件系统 assets/maps/；并行 agent / map_pack 工具在改 assets/maps/index.json
+         （实测 mtime = 今日 14:57），读清单撞上写入窗口 ⇒ 短暂空清单。非被测代码逻辑 bug。
+    建议（交主线程/对应 owner）：把该测试改成 hermetic——用内存后端
+         map_pack::available_pack_ids_with / default_pack_id_with + MemoryPackReader（源码 map_pack.rs:224+ 已有）
+         喂固定夹具，不撞活 FS。属 W?/主线程写域，本路不改。
+
+R-2【已观测 FAILED·归属 W1】crates/ti-app/tests/fuzz_playtest.rs::panic_payload_extraction
+    现象：全量 cargo test -p ti-app 中 4 passed / 1 FAILED；断言 left="<non-string panic payload>" vs
+         right="injected-panic-42"（源码 fuzz_playtest.rs:459-461）。该文件 W1 独占且本轮并行中可能被 W1 编辑。
+    处置：记录为未决项交主线程/ W1 确认（本路按写域红线不改 W1 文件）。
+
+R-3【结构性时间依赖·中低】crates/ti-app/tests/s43_fps_smoke.rs:20,46,48
+    std::time::Instant + Duration::from_secs(WAIT_SECS) deadline 轮询。本机单独跑 0.00s 未触发，
+    但负载/并行下 FPS 与等待属时间依赖 ⇒ 归 full/nightly，不进 fast。
+
+R-4【命名用时钟·低】crates/ti-console/tests/result_schema_truncation.rs:63,103、gate_tests.rs:103
+    用 SystemTime::now() 生成唯一临时名/时间戳；仅命名，不参与断言排序，风险低。
+
+R-5【已核对 OK】绝大多数规则/参考测试用固定 seed（GameRng::new(42/1/7/...)），无 thread_rng；
+    exhaust_random_session.rs 的变量名 `ts` 实为固定 top_seeds 数组 [0,1,7,42,...]（非 wall-clock），确定。
+    未发现库测试里未固定的 GameRng::new(SystemTime...) / rand::thread_rng。
+    S67.4 e2e_ui_flow_deterministic.rs 的固定 seed + set_frame_delta_ms 模式已被本路 stability_repeat 复用并验证 0 flaky。
+
+────────────────────────────────────────────────────────────────
+【判据 ②-c/d cargo 锁竞争诊断 + 平台 target dir 改造建议（只读 jobs.rs，不改）】
+────────────────────────────────────────────────────────────────
+诊断（实证 + 源码）：
+  1) .cargo/config.toml [build] target-dir = "/disk/target" ⇒ 所有 cargo 作业共享唯一编译目录；
+     并行 agent / 平台多作业同时 test/build ⇒ "Blocking waiting for file lock on build directory" + 重复编译
+     （本路实测：缓存态单 crate 测试墙钟仍 47s/87s，而测试体 <1s —— 编译与锁等待是主因）。
+  2) crates/ti-console/src/runner/jobs.rs:161 —— spawn_job 把 cwd 固定为 repo_root，未设独立 target。
+  3) crates/ti-console/src/runner/mod.rs:21-36 MINIMAL_ENV_KEYS 白名单 **不含 CARGO_TARGET_DIR**；
+     apply_minimal_env (mod.rs:40-46) 先 env_clear() 再逐键透传 ⇒ 即便父进程设了 CARGO_TARGET_DIR 也被清掉，
+     所有平台 cargo 作业必然落到 /disk/target 争锁。
+  4) gate 作业已有单实例锁 evidence/console/gate.lock（runner/gate.rs）；但 test/build/publish 作业无跨种类互斥 ⇒
+     跨种类 cargo 竞争无解。
+
+改造建议（W2 在 jobs.rs 落地，主线程转达；二选一或组合）：
+  方案 A（最小安全·推荐先落）——显式串行化 cargo 作业：
+    在 spawn_program_logged 之后、所有 cargo 类作业（program=="cargo"）获取全局文件锁
+    （如 evidence/console/cargo.lock，借鉴 gate.lock 模式），持锁到收割线程写终态后释放。
+    收益：零额外磁盘、彻底消除锁竞争；代价：cargo 作业串行、并发吞吐降低。适合 fast 反馈优先。
+  方案 B（吞吐优先）——per-job / per-kind 独立 CARGO_TARGET_DIR：
+    在 jobs.rs 的 SpawnOpts 增 env_overrides（或在 cargo 分支）于 apply_minimal_env **之后**执行
+      cmd.env("CARGO_TARGET_DIR", repo_root.join(format!("evidence/console/target/{kind}-{id}")))
+    （id 已经 is_legal_job_id 校验为 ^[a-z0-9_-]{1,64}$，可作安全路径分量，无穿越风险）。
+    风险点：
+      · 磁盘放大 N×（本 workspace /disk/target 已大；每 job 冷编译 ⇒ 首次更慢）→ 建议按 kind（test/build/gate/publish）
+        分目录而非按每次 id，或共享父目录 + 定期清理；
+      · 安全口径（22号 §10.3）：不要把 CARGO_TARGET_DIR 加进 MINIMAL_ENV_KEYS 白名单（会让任意调用方传任意路径），
+        应在 jobs.rs 内部程序化注入；
+      · 顺序：必须在 apply_minimal_env 之后设置，否则被 env_clear 冲掉。
+  推荐组合：fast 档走方案 A（秒级反馈、零磁盘代价）；full/nightly 重测试（exhaust_menu/fuzz）走方案 B 独立 target 并行。
+  注：方案 A/B 均属 W2 写域（jobs.rs）+ 主线程 gate 分档，本路仅提案。
+
+────────────────────────────────────────────────────────────────
+【回报四要素 / 未决项（交主线程集中执行）】
+────────────────────────────────────────────────────────────────
+改动面声明：工具(gate 分档=主线程落) + 规则测试(固定 seed/假时钟，本路新建 stability_repeat.rs) + 工具(平台 target dir=主线程转达 W2)。
+实跑判据摘要：cargo test -p ti-app --test stability_repeat → 2 passed / 0 failed；3/3 快照逐字节一致（0 flaky）。
+evidence 路径：evidence/S74.5.log（本文件）；新建测试 crates/ti-app/tests/stability_repeat.rs。
+
+未决项（明确具体落点，本路不改他人文件）：
+  U-1【主线程·gate 分档】把 exhaust_menu(ti-core,65s)、fuzz_playtest(ti-app,6s)、exhaust_progression(0.5s)
+       从 fast 移到 full/nightly；fast 档只留 <0.5s 测试（含 stability_repeat 0.14s）。
+  U-2【主线程转发 W2·平台 target dir】按上面方案 A（cargo 作业全局文件锁，优先）/ 方案 B（独立 CARGO_TARGET_DIR，
+       apply_minimal_env 之后注入）改 jobs.rs；gate.lock 经验可复用；不要扩大 MINIMAL_ENV_KEYS 白名单。
+  U-3【W1/主线程】fuzz_playtest::panic_payload_extraction 本轮观测 FAILED（left=<non-string panic payload>） —
+       确认是否为 W1 并行编辑中间态；若稳定复现需 W1 修其测试（本路不碰 W1 文件）。
+  U-4【主线程/对应 owner】map_pack 测试改 hermetic（用 MemoryPackReader + 固定夹具替代直读 assets/maps/），
+       消除与并行地图编辑的 FS 竞态（本路观测到 1 次 flaky）。
+  U-5【主线程·fast 反馈】即使移走重测试，共享 /disk/target 的编译/锁仍使 fast 墙钟数十秒；
+       U-1+U-2 需同时落地才能达成「默认 fast 秒级」目标。
+
+签名：W5（subagent）· 不 git commit/push · 不写台账 · 主线程依 EXP-038 独立复核。

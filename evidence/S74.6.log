@@ -1,0 +1,52 @@
+S74 测试体系重做 · 集成收口证据（2026-11-23）
+
+== 改动面声明 ==
+文档收口（纯收口零新增，面族=台账/证据/门禁收敛判定）。
+
+== 判据 1：gate 全量 36 项 0 failure ==
+$ export PATH="$PATH:/root/.cargo/bin"; pwsh -NoProfile -File scripts/gate.ps1
+GATE_EXIT=0
+  PASS 36 项（含 fmt / clippy workspace / cargo test --workspace / doccheck / doccheck2(56) /
+  studio-tests / validate_data / 三方对账 / 业务闭环 / wasm e2e / 浏览器试玩 / 渲染不变式 等）
+  SKIP 2 项（条件项，非ailure）：
+    - cargo build (aarch64-linux-android)：本机无 NDK（挂 S18.8d Mac 编译，既定）
+    - 渲染快照：legacy/data/ 无 .Map/.pak 改动（无触发，既定）
+  gate: 0 failure(s)
+
+== 判据 2：五路 subagent 产出主线程独立复核（EXP-038）==
+- W1 S74.1 fuzz 假判据：cargo test -p ti-app --test fuzz_playtest → 5 passed/0 failed；
+  自证「注入金币上限 bug → 2 FAILED（报错含 seed/step/invariant 定位）→ 还原 → 5 PASS」（evidence/S74.1.log）
+- W2 S74.2 平台结果协议：cargo test -p ti-console 全绿（含 result_schema_truncation 4/4 截断自证：
+  旧 tail=400 只测到尾块，新全文解析测到首块+尾块）；manifest 45→135 条全量（evidence/S74.2.log）
+- W3 S74.3 规则矩阵+E2E：cargo test -p ti-app --test e2e_playability → 7/0；
+  matrix 99 规则行 ↔ 8 文档 99 锚点双向 0 差异；变异自证 siege.won 反转 → FAIL → 还原 PASS（evidence/S74.3.log）
+- W4 S74.4 变异测试：python3 scripts/mutation_gate.py --check → EXIT=0，score=70%（21/30 killed, 9 survived）；
+  负例（阈值越界 exit3 / 工具缺位 exit2 / 得分低于阈值 exit3）+ 幂等 3 次一致（evidence/S74.4.log）
+- W5 S74.5 稳定性：cargo test -p ti-app --test stability_repeat → 2/0（3 次逐字节一致，0 flaky）（evidence/S74.5.log）
+
+== 判据 3：集成项（主线程落）==
+- doccheck2 第 56 项 orphan-rule-row（规则行 ↔ matrix 双向对账）：负例实测有效（删 R-uiflow-1 锚点
+  → 精准报错「无锚点」，还原 0 error）；gate_data.json 55→56 项。
+- 工具台账 3 处登记：mutation_gate.py → 14号/04号/README 均命中（studio_tests 断言③ OK）。
+- studio-tests 映射：manifest 135 条 command，39 已在 console_commands（人读视图白名单，close_tests
+  强等价守此边界），92 条新增 cargo test 进 studio_tests_waiver（gate cargo test 覆盖，暂不单独映射）。
+- fmt/clippy：doccheck2.rs 新函数 5 处告警（doc_markdown×2 / redundant_closure×2 / case_sensitive_ext）
+  一次性收口，cargo fmt --all + clippy --workspace --all-targets -D warnings 0 error。
+- EXP-208 踩坑回写（测试假判据三型 + 虚荣指标 + 五路解法）。
+- 计数声称点：386→387 任务（S75 并发加 1 任务并 verified），S74 七条 verified 后同步至 387/387/0。
+
+== 判据 4：三方对账 + 快速门禁 ==
+$ python3 scripts/check_ledger_reality.py → 全绿（0 孤儿 evidence）
+$ python3 scripts/validate_data.py → OK（版本 0.3.0 对齐）
+$ python3 scripts/doc_numbers.py --dry-run → 声称点与实测一致（0 漂移，收口后同步 387/387）
+$ python3 scripts/check_dod_commands.py --check → PASS
+
+== 外部会话协同说明 ==
+S75（版本 0.2.0→0.3.0 + 真机 APK 验收）与本任务文件域不相交，但其 release_features.json ↔
+Cargo.toml 版本校验被 validate_data 全局消费 ⇒ 提交态须含版本改动。提交时精确 stage：
+S74 全部文件 + S75 版本文件（Cargo.toml/Cargo.lock/AndroidManifest/release_features.json/
+25_versioning/build_apk.sh/validate_data.py/android_device_test.log）；
+gate 副产物 evidence/web_playtest.log/png 已 git checkout 还原（环境噪声非交付）。
+
+== 结论 ==
+gate 36 项 0 failure + 五路复核全过 + 三方对账全绿 + 集成项落地 ⇒ S74.0~S74.6 全部可置 verified。

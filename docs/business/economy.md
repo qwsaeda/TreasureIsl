@@ -128,10 +128,10 @@
 
 | 规则 | 单测 |
 |---|---|
-| 造船扣金 + 抬 cargo/atk/hp（立即生效） | `boat_upgrade_debits_and_raises` |
-| 单次贸易数量上限 = min(qty_max, cargo)；1 级 ≡ 现状 | `trade_qty_capped_by_boat_cargo` |
-| 等级单调（不可降级；满级无操作；金不够拒绝） | `boat_level_monotonic` |
-| 船加成与建筑加成叠加进战斗 | `combat_bonus_includes_boat` |
+| 造船扣金 + 抬 cargo/atk/hp（立即生效） | `boat_upgrade_debits_and_raises` | <!-- R-economy-boat-1 -->
+| 单次贸易数量上限 = min(qty_max, cargo)；1 级 ≡ 现状 | `trade_qty_capped_by_boat_cargo` | <!-- R-economy-boat-2 -->
+| 等级单调（不可降级；满级无操作；金不够拒绝） | `boat_level_monotonic` | <!-- R-economy-boat-3 -->
+| 船加成与建筑加成叠加进战斗 | `combat_bonus_includes_boat` | <!-- R-economy-boat-4 -->
 
 ## 资源（人手 / 武器，v2 新增，2026-10-30 用户定案）
 
@@ -159,13 +159,13 @@
 
 | 规则 | 单测 |
 |---|---|
-| 买入扣金币、货物 +qty | `trade_buy_debits_gold_adds_goods` |
-| 卖出加金币、货物 -qty | `trade_sell_credits_gold_removes_goods` |
-| qty 越界拒绝 | `trade_qty_bounds_enforced` |
-| 售价 = buy*markup | `trade_sell_price_from_markup` |
-| 建造扣金币 + 抬上限 | `build_debits_and_raises_cap` |
-| 金币恒 ≤ 上限（银行承接溢出） | `economy_gold_never_exceeds_cap`（已落地 `rules_build.rs`；穷举覆盖见 `crates/ti-core/tests/exhaust_economy.rs`：贸易侧 `sell` 后 `gold_left ≤ gold_cap`、建造侧 `build` 后 `bank().gold ≤ u32::MAX/4`（上界不越初始值，`saturating_sub` 保证无下溢），S15.1 verified） |
-| 建筑单调解锁 | `build_unlocks_monotonic` |
+| 买入扣金币、货物 +qty | `trade_buy_debits_gold_adds_goods` | <!-- R-economy-1 -->
+| 卖出加金币、货物 -qty | `trade_sell_credits_gold_removes_goods` | <!-- R-economy-2 -->
+| qty 越界拒绝 | `trade_qty_bounds_enforced` | <!-- R-economy-3 -->
+| 售价 = buy*markup | `trade_sell_price_from_markup` | <!-- R-economy-4 -->
+| 建造扣金币 + 抬上限 | `build_debits_and_raises_cap` | <!-- R-economy-5 -->
+| 金币恒 ≤ 上限（银行承接溢出） | `economy_gold_never_exceeds_cap`（已落地 `rules_build.rs`；穷举覆盖见 `crates/ti-core/tests/exhaust_economy.rs`：贸易侧 `sell` 后 `gold_left ≤ gold_cap`、建造侧 `build` 后 `bank().gold ≤ u32::MAX/4`（上界不越初始值，`saturating_sub` 保证无下溢），S15.1 verified） | <!-- R-economy-6 -->
+| 建筑单调解锁 | `build_unlocks_monotonic` | <!-- R-economy-7 -->
 
 （上表单测已落地于 `crates/ti-core/tests/rules_trade.rs` / `rules_build.rs`（S8.3.b verified）；
 `economy_gold_never_exceeds_cap` 已由 `rules_build.rs::economy_gold_never_exceeds_cap` +

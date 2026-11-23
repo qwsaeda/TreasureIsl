@@ -258,6 +258,7 @@ python scripts/map_pack.py check
 | `playbook.ps1` | 常用命令一键入口（`-List` 实打 20 条 / switch 22 分支） | `powershell -ExecutionPolicy Bypass -File scripts/playbook.ps1 -List` / `<cmd>` / `-Check` | 幂等只读转发器（判定 / 退出码由被转发工具承担）；未知命令 / 转发失败 ⇒ 非 0 退出；`-Check` = 被转发目标在位性只读体检（不执行被转发工具，缺失非 0 退出） |
 
 | `ui_verify.py` | **设备矩阵出图验收（S67.0，LGUI verify 借鉴）**：一条命令跑「场景 × 6 组设备视口」出图，逐图非黑像素 + bevy_ui 探针断言，`--json` 汇总 `evidence/ui_verify_report.json`；`--check` 只读校验既有证据（不出图不写盘）；`--devices=quick` 3 组横屏档；安全区 `*_safe.png` 叠加（S67.1） | `python3 scripts/ui_verify.py [--check] [--json] [--devices=quick] [--scenes=index,main_map]` | 幂等（重跑覆盖同名截图与 report）；`--check` 只读 0 写盘；空帧/探针缺/非法输入 ⇒ 非 0 退出（exit 1/2）；缺 cargo/xvfb 环境降级记名 |
+| `mutation_gate.py` | **变异测试基线（S74.4 / W4）**：封装 cargo-mutants 向 ti-core 规则层注入变更（改比较符/常量/删语句），统计测试杀死变异子的得分 = killed/total；报告落 `evidence/mutation_baseline.json`，不改产品代码（cargo-mutants 在 gitignored 临时目录复制源码树变异） | `python3 scripts/mutation_gate.py --check [--scope ti-core] [--file <glob>] [--output <path>] [--timeout-multiplier N] [--min-score N]` | 幂等（重跑覆盖同名报告）；`--check` 只读出报告；工具缺位/扫描出错/得分 < `--min-score` ⇒ 非 0（exit 1/2）；报告子项排序稳定可 diff |
 
 ### 3.3 一次性工具（标注：不做门禁 / 用完即弃）
 

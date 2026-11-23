@@ -1,5 +1,23 @@
 {
   "version": 1,
+  "mutation_score": {
+    "_comment": "C4 棘轮基线（S74.0.state.md）：变异测试得分基线；棘轮只升不降。本项来自实测，非存量豁免。",
+    "scope": "ti-core / crates/ti-core/src/rules/rng.rs",
+    "baseline_score": 70.0,
+    "score_unit": "percent",
+    "score_formula": "killed / mutants_total * 100",
+    "mutants_total": 30,
+    "mutants_planned": 38,
+    "killed": 21,
+    "survived": 9,
+    "timeout": 0,
+    "unviable": 0,
+    "scan_complete": false,
+    "measured_at": "2026-11-23T03:14:16.669954+00:00",
+    "evidence": "evidence/mutation_baseline.json",
+    "direction": "只升不降：后续轮次得分不得低于 baseline_score；补测把 survived 转为 killed 后再上调基线",
+    "refresh_cmd": "python3 scripts/mutation_gate.py --check --fresh"
+  },
   "_comment": "流程固化棘轮基线（docs/process/15_process_ledger.md §2 的存量豁免）：只豁免「2026-10-22 之前落地」的工具/流程，**新增工具与新增流程零豁免**（棘轮只收紧不放宽）。豁免须带理由 + 整改任务号；存量清零后本表可删。",
   "tooling_registration_grandfathered": {
     "agnes_vision.py": {

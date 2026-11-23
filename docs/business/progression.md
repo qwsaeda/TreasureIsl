@@ -273,12 +273,12 @@ Space（空格）/ 点按「摇骰前进」
 
 | 规则 | 单测 |
 |---|---|
-| 越界/不可通行不移动、不消耗回合 | `map_blocked_step_is_noop`（已落地 `tests/reference_diff_main_map.rs`） |
-| 移动一格必触发一次落格结算 | `map_step_triggers_settle_once`（已落地 `tests/reference_diff_main_map.rs`） |
-| BOSS 格进入战斗 | `map_boss_tile_enters_combat`（已落地 `tests/reference_diff_main_map.rs`） |
-| 同 seed 同路径 ⇒ 同卡牌串 | `cards_same_seed_same_sequence`（已落地 `tests/reference_diff_cards.rs`） |
-| 效果后 HP/金钳制在合法域 | `cards_effects_clamped`（已落地 `tests/reference_diff_cards.rs`） |
-| 权重抽卡分布合理（单测只断言「可复现」，分布靠统计脚本） | `cards_weighted_pick_reproducible`（已落地 `tests/reference_diff_cards.rs`） |
+| 越界/不可通行不移动、不消耗回合 | `map_blocked_step_is_noop`（已落地 `tests/reference_diff_main_map.rs`） | <!-- R-progression-1 -->
+| 移动一格必触发一次落格结算 | `map_step_triggers_settle_once`（已落地 `tests/reference_diff_main_map.rs`） | <!-- R-progression-2 -->
+| BOSS 格进入战斗 | `map_boss_tile_enters_combat`（已落地 `tests/reference_diff_main_map.rs`） | <!-- R-progression-3 -->
+| 同 seed 同路径 ⇒ 同卡牌串 | `cards_same_seed_same_sequence`（已落地 `tests/reference_diff_cards.rs`） | <!-- R-progression-4 -->
+| 效果后 HP/金钳制在合法域 | `cards_effects_clamped`（已落地 `tests/reference_diff_cards.rs`） | <!-- R-progression-5 -->
+| 权重抽卡分布合理（单测只断言「可复现」，分布靠统计脚本） | `cards_weighted_pick_reproducible`（已落地 `tests/reference_diff_cards.rs`） | <!-- R-progression-6 -->
 
 ## 跨图推进（地图解锁 `unlocked_maps`）
 
@@ -306,14 +306,14 @@ Space（空格）/ 点按「摇骰前进」
 
 | 规则 | 单测（现行） |
 |---|---|
-| 初始 20 图全解锁（`can_select` 恒 true） | `initial_unlocked_is_all_maps` |
-| 击败不门禁（击败 m01 后所有图仍可选，进度记 defeated） | `on_boss_defeated_tracks_progress_not_gate` |
-| 击败图数累计（defeated_count） | `defeated_count_tracks_maps_beaten` |
-| 击败 m20 = 通关、m03 击败 ≠ 通关（20 图需 m20） | `is_cleared_when_m20_boss_beaten` |
-| 选图 BOSS 档读 `balance.selection.maps`（m01..m20 有档） | `boss_tier_of_maps_selection_entries` |
-| 掩码仅承载通关位（bit0..18 恒 0，bit19 = CLEARED） | `unlocked_mask_all_unlocked` |
-| 读档任意 mask/选中图全可选 + 通关位还原 | `for_save_restore_fallback_for_legacy_and_broken_mask` |
-| 解锁集合 → 推进态重建（全可选，击败位兼容保留） | `from_unlocked_reconstructs_defeated_bits` |
+| 初始 20 图全解锁（`can_select` 恒 true） | `initial_unlocked_is_all_maps` | <!-- R-progression-s62-1 -->
+| 击败不门禁（击败 m01 后所有图仍可选，进度记 defeated） | `on_boss_defeated_tracks_progress_not_gate` | <!-- R-progression-s62-2 -->
+| 击败图数累计（defeated_count） | `defeated_count_tracks_maps_beaten` | <!-- R-progression-s62-3 -->
+| 击败 m20 = 通关、m03 击败 ≠ 通关（20 图需 m20） | `is_cleared_when_m20_boss_beaten` | <!-- R-progression-s62-4 -->
+| 选图 BOSS 档读 `balance.selection.maps`（m01..m20 有档） | `boss_tier_of_maps_selection_entries` | <!-- R-progression-s62-5 -->
+| 掩码仅承载通关位（bit0..18 恒 0，bit19 = CLEARED） | `unlocked_mask_all_unlocked` | <!-- R-progression-s62-6 -->
+| 读档任意 mask/选中图全可选 + 通关位还原 | `for_save_restore_fallback_for_legacy_and_broken_mask` | <!-- R-progression-s62-7 -->
+| 解锁集合 → 推进态重建（全可选，击败位兼容保留） | `from_unlocked_reconstructs_defeated_bits` | <!-- R-progression-s62-8 -->
 
 > 实现落点：`crates/ti-core/src/rules/progression.rs`（`ProgressionState`：`initial_unlocked` /
 > `unlocked` / `on_boss_defeated` / `is_cleared` / `can_select` / `from_unlocked` / `min_progression_to_select`

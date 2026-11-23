@@ -1,0 +1,131 @@
+# S74.4 / W4 — cargo-mutants 变异测试基线工具 + 基线报告
+
+日期：2026-11-23（UTC）  分支：master（基线 HEAD e62ca1f）  任务：测试体系重做五路并行 W4
+
+## 五步协作回执（S51.0）
+1. **提问**：仓库缺「测试有效性」度量；测试文件数、用例数是虚荣指标，无法回答「测试是否真能发现代码错误」。
+2. **方案**：引入 cargo-mutants 27.1.0（已装），Python 封装成正式工具 `scripts/mutation_gate.py`，
+   作用域先限 `ti-core` 规则层（假判据重灾区 / ROI 最高），产结构化基线报告 + 棘轮字段。
+3. **拍板**：按任务书 S74.4 执行（已拍板，无分歧）。
+4. **草稿**：本轮落地 = 新工具 + 报告 + ratchet 字段 + 本日志；不改产品代码、不写台账/共享文档。
+5. **批准**：待主线程复核（本路只交独占写点文件）。
+
+## 改动面声明（硬规则 7）
+```
+改动面：工具=scripts/mutation_gate.py（新建正式工具，--check 只读 + 非 0 退出 + 幂等）
+      | 数据=scripts/process_ratchet.json（仅新增顶层 mutation_score 字段，既有键零改动）
+      | 文档=工具台账 14号/04号/README 三处（主线程独占登记，本路不写）
+      | 产品代码=无（ti-core src 零 diff）
+跨模块原因：变异工具须消费 cargo-mutants 并把实测得分落 C4 棘轮基线才形成「度量→复测→收紧」
+       闭环；工具登记属共享文档，按 state.md 写点所有权表交主线程统一落项号。
+```
+
+## 环境与作用域
+- Linux；`PATH` 追加 `/root/.cargo/bin`（`cargo 1.99.1` / `cargo-mutants 27.1.0`）。
+- 被测 crate：`ti-core`；基线文件：`crates/ti-core/src/rules/rng.rs`（确定性 RNG 规则，测试密集，
+  规则层代表样本）。全规则层约 1077 mutants，单文件基线 38 mutants 为 tractable 首轮。
+- 并行干扰：另一会话 S75 跑 Android release 构建（`cargo build --target aarch64-linux-android`），
+  长期占共享 `/disk/target` cargo 锁 + CPU；本工具已把 fresh 扫描的 `CARGO_TARGET_DIR` 独立到
+  `target/mutation_gate/cargo-target` 避开锁竞争，并提供缓存快路径。
+
+## 基线实测结果（evidence/mutation_baseline.json）
+```
+scope      = ti-core / crates/ti-core/src/rules/rng.rs
+mutants    = 30（计划 38；扫描被外部中断，scan.complete=false，已如实记录）
+killed     = 21
+survived   = 9
+timeout    = 0
+unviable   = 0
+score      = 70.0%   （= killed / mutants_total * 100）
+```
+存活变异子样本（= 现有测试杀不掉的语义变更，直接印证「测试文件数是虚荣指标」）：
+```
+crates/ti-core/src/rules/rng.rs:61:14: replace > with >= in RngState::advance
+crates/ti-core/src/rules/rng.rs:75:5: replace srand with ()
+crates/ti-core/src/rules/rng.rs:81:5: replace rand -> i32 with -1 / 0 / 1
+```
+报告 schema = `mutation-baseline/1`；变异子按 `name` 排序，剔除 cargo-mutants 的易变时间/耗时字段，
+只保留顶层 `generated_at`，故重复运行除时间戳外逐字节一致。
+
+## 卡死根因 + 修复（EXP 素材，建议主线程回写 experience）
+```
+现象：--check 首次扫描从 02:18 跑至 02:46 未退出；后续两次 fresh 扫描同样被超时 SIGTERM。
+根因 A（主因）：cargo-mutants 在存在 Missed（存活 mutant）时按设计返回 exit=1（正常结果，
+  非失败）。W4 首版 `_scan` 把 exit=1 误判为失败，且 combined 输出命中 cargo-mutants 日志里
+  常见短语 "No such file or directory"，被判为「并发复制瞬断」→ 触发 3 次全量重扫
+  （38 mutants × 每次重编译约 10min）→ 卡死约 22min。
+  修复（主线程介入）：每次 attempt 后若 outcomes.json 存在且 total_mutants>0 就直接 return
+  （exit=0 或 1 均接受），只有产物缺失才判失败/重试。
+根因 B：共享 /disk/target 被 S75 Android 构建占锁，每个 mutant 重编译排队等锁。
+  修复：fresh 扫描设独立 CARGO_TARGET_DIR，产物落 gitignored 独立目录。
+根因 C：cargo-mutants 在 -o 目录已有 mutants.out 时把旧产物改名 mutants.out.old；
+  缓存读取只认 mutants.out/outcomes.json ⇒ 误判无缓存反复重扫。
+  修复：_cached_outcomes() 同时认 mutants.out 与 mutants.out.old 两种布局。
+根因 D（本路自查）：summary 字段名是 `MissedMutant`（27.1.0 实测），不是 `Missed`；
+  首版映射漏掉 ⇒ 9 个存活子落进 other、survived 显示 0。已补映射。
+教训：① 外部工具的「非 0 退出」不一定=失败，须先认产物再判错，别用日志短语做瞬断特征；
+     ② 昂贵扫描要有持久缓存快路径 + 独立构建目录，避免并行构建占锁放大成本；
+     ③ 字段名以实测 outcomes.json 为准，不凭印象写映射表。
+```
+
+## dod 判据实跑输出
+```
+>>> python3 -m py_compile scripts/mutation_gate.py
+<<< EXIT=0
+
+>>> python3 scripts/mutation_gate.py --check
+[mutation_gate:INFO] tool: /root/.cargo/bin/cargo / cargo-mutants 27.1.0
+[mutation_gate:INFO] 复用已有扫描产物（--fresh 强制重扫）: .../target/mutation_baseline_cache/mutants.out/outcomes.json
+[mutation_gate:INFO] scope=ti-core file=crates/ti-core/src/rules/rng.rs | mutants=30 killed=21 survived=9 timeout=0 unviable=0 | score=70.0% | scan=cached complete=False planned=38
+[mutation_gate:INFO] report: .../evidence/mutation_baseline.json
+<<< EXIT=0
+
+>>> python3 scripts/mutation_gate.py --check --min-score 101     # 负例：阈值越界
+[mutation_gate:ERROR] --min-score 越界: 101.0（得分按百分比 0..100 计）
+<<< EXIT=3
+
+>>> env PATH=/usr/bin:/bin python3 scripts/mutation_gate.py --check   # 负例：工具缺位
+[mutation_gate:ERROR] cargo 不在 PATH；先执行 export PATH="$PATH:/root/.cargo/bin"
+<<< EXIT=2
+
+>>> python3 scripts/mutation_gate.py --check --min-score 99      # 负例：得分低于阈值（后验比较路径）
+[mutation_gate:INFO] ... score=70.0% ...
+[mutation_gate:ERROR] 得分 70.0% 低于阈值 99.0%
+<<< EXIT=3
+
+>>> python3 scripts/mutation_gate.py --check                      # 幂等第 1 次
+<<< EXIT=0
+>>> python3 scripts/mutation_gate.py --check                      # 幂等第 2 次
+<<< EXIT=0
+>>> python3 scripts/mutation_gate.py --check                      # 幂等第 3 次
+<<< EXIT=0
+
+=== 幂等 diff（三次报告剔除 generated_at 后逐字节比较）===
+run1==run2 OK
+run2==run3 OK
+
+=== 棘轮字段在位 ===
+$ grep -n 'mutation_score' scripts/process_ratchet.json
+3:  "mutation_score": {
+$ python3 -c "import json; d=json.load(open('scripts/process_ratchet.json')); print(d['mutation_score']['baseline_score'])"
+70.0
+```
+
+## evidence 路径
+- 工具：`scripts/mutation_gate.py`（新正式工具，已含 `--check` 只读 + 退出码 0/1/2/3 + 幂等 + 缓存快路径）
+- 报告：`evidence/mutation_baseline.json`（schema mutation-baseline/1，30 变异子明细 + 汇总）
+- 棘轮：`scripts/process_ratchet.json` 顶层 `mutation_score`（baseline_score=70.0，只升不降）
+- 本日志：`evidence/S74.4.log`
+- 扫描原始产物（gitignored）：`target/mutation_baseline_cache/mutants.out/outcomes.json`
+
+## 未决项 / 交主线程
+1. 工具台账 14号/04号/README 三处登记：主线程已完成（勿重复）。
+2. doccheck2 第 56 项 orphan-rule-row：主线程已加（勿重复）。
+3. 建议后续轮把 mutation 得分接入 gate / doccheck2：读取 `evidence/mutation_baseline.json`
+   `totals.score`，与 `process_ratchet.json::mutation_score.baseline_score` 比较，低于即 FAIL
+   （棘轮只升不降）；本任务按分工**不并入 gate 36 项**。
+4. 本次基线为部分扫描（30/38，scan.complete=false）：因并行 Android 构建占锁 + 首版误判重扫
+   中断，数据已如实标注。建议无人占锁时跑 `python3 scripts/mutation_gate.py --check --fresh`
+   刷成完整 38/38 基线，并据存活子补测把得分抬升后再上调棘轮。
+5. 9 个存活变异子是明确的测试缺口清单（RNG advance 边界 / srand 删除 / rand 固定返回值），
+   建议 W1/W3 后续补测轮消费 `evidence/mutation_baseline.json` 的 survived 明细。

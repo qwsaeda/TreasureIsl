@@ -93,6 +93,18 @@ evidence 路径存在 / `gate`∈1..=36 / command 真实性（--test/--bin 路�
 - **timeout_s 合理性**：`timeout_s` 若给出须为正整数（≤ 7200）；
 - **零平台代码断言续**：新增测试登记后 `git diff crates/ti-console/` = 空（平台未改；仅 `test_manifest.json` + 测试文件变化）。
 
+### 6.1 结构化结果与全量登记（S74.2，契约 C1）
+
+> S74.2 诊断两面：① 平台结论靠 grep 日志且只读尾部 400 行 ⇒ 多 binary 长日志首块静默漏检；
+> ② 清单旧边界自认「并非全部判据载体」，仅 31 条 --test 载体 ⇒ 大量测试文件平台不可见。
+
+| 面 | 契约（单一事实源 = 23 号 §7.3） |
+|---|---|
+| 结果形状 | C1 `result.json = {binary, tests:[{name,passed,failed,msg}], duration_ms, exit_code}`；`crates/ti-console/src/runner/result_schema.rs` 定义 + `parse_test_blocks` 解析唯一实现 |
+| 结论优先级 | 平台 `/api/jobs?kind=test&id=<id>` 的 `conclusion`：① 外部 `result.json`（W1/W3/W4 判据输出同源）② `job_log_full` 完整日志解析（无 400 行 clamp）③ 旧 tail 兼容回退；`source` 字段标明来源 |
+| 全量登记 | `test_manifest.json` `tests[]` = 123 条 `--test` 文件载体（顶层 `crates/*/tests/*.rs` 100% 可见）+ 12 条人工/gate/脚本类 = 135 条（S74.2 实测）；补登条目按 §2 字段表齐备且 `validate_data::check_test_manifest` 0 违规 |
+| 命令真实性 | 补登 `cargo test -p <pkg> --test <name>` 一一对应真实测试文件；`gate=3`（`cargo test --workspace` 覆盖）满足 evidence XOR gate；`prove=evidence/tests/<id>/` |
+
 ## 7. 关联与登记
 
 - 单一事实源引用（不复述）：`23_game_testing.md`（分级/分类/类型/行业参照/平台测试页）、

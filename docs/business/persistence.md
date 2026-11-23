@@ -93,9 +93,9 @@
 
 | 规则 | 单测 |
 |---|---|
-| 存→读往返逐字段一致 | `save_roundtrip_preserves_fields`（已落地于 `crates/ti-core/tests/rules_saveload_json.rs`） |
-| v1 → v2 迁移补默认值 | `save_migrate_v1_to_v2_defaults`（同上） |
-| 迁移幂等（再迁一次不变） | `save_migration_idempotent`（同上） |
-| 同 seed + 同操作 ⇒ 同随机流 | `rng_same_seed_same_stream`（同上） |
-| 存档含 rng_seed，读档后可续 | `save_rng_seed_restores_stream`（同上） |
-| 设置不改变玩法状态 | `settings_do_not_affect_gameplay`（同上） |
+| 存→读往返逐字段一致 | `save_roundtrip_preserves_fields`（已落地于 `crates/ti-core/tests/rules_saveload_json.rs`） | <!-- R-persistence-1 -->
+| v1 → v2 迁移补默认值 | `save_migrate_v1_to_v2_defaults`（同上） | <!-- R-persistence-2 -->
+| 迁移幂等（再迁一次不变） | `save_migration_idempotent`（同上） | <!-- R-persistence-3 -->
+| 同 seed + 同操作 ⇒ 同随机流 | `rng_same_seed_same_stream`（同上） | <!-- R-persistence-4 -->
+| 存档含 rng_seed，读档后可续 | `save_rng_seed_restores_stream`（同上） | <!-- R-persistence-5 -->
+| 设置不改变玩法状态 | `settings_do_not_affect_gameplay`（同上） | <!-- R-persistence-6 -->

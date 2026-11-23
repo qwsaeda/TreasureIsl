@@ -1,0 +1,134 @@
+=== S74.2 W2 · 测试体系重做五路并行 · 平台结构化结果 + 清单全量登记 ===
+
+【改动面声明（硬规则 7）】
+- 工具(crates/ti-console/src/runner/jobs.rs + 新建 result_schema.rs + mod.rs 注册一行)
+- 数据(assets/data/test_manifest.json：92 条补登 + _note 改写)
+- 文档(docs/process/23_game_testing.md §0/§6.3/§7.3 + 31_test_ingress_standard.md §6.1)
+- 跨模块原因：结果协议须平台(jobs)+解析(result_schema)+清单(manifest)+文档(23/31)四面同改才可验收集成：
+  C1 形状由 result_schema 定义、jobs 的 conclusion 消费、manifest 全量可见性证明、文档冻结契约。
+- 平台红线 §6：0 游戏 crate diff（只碰 ti-console + 清单 + 文档，ti-core/ti-app/ti-engine/ti-render/ti-platform/ti-formats src 全 0 diff）。
+- 程序白名单未变（cargo/python3/pwsh/powershell），无 shell 拼接。
+
+【五步协作回执】
+- 提问：诊断已坐实（conclusion 靠 grep 尾 400 行 + 清单只登记 31/123 载体）。
+- 方案：C1 result.json 协议 + 完整日志解析 + 结论优先级 + 清单按 31 号 schema 全量补登。
+- 拍板：已拍板按任务书执行（契约 C1 冻结）。
+- 草稿：落码 + 4 条新测试 + 92 条清单补登 + 文档更新（见下判据）。
+- 批准：主线程复核后介入（本 subagent 不写台账/不提交）。
+
+=== 判据 1：validate_data.py 0 违规（贴 test_manifest 对账行）===
+--- 命令 ---
+python3 scripts/validate_data.py
+--- 输出（全量）---
+validate_data: OK（4 表，strings 280 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+--- test_manifest 专项：0 违规自证 ---
+validate_data: OK（4 表，strings 280 键；main_map.grid 三键 + 全场景 extra 标量正整数 + scenes.json indent=1 规范形 + 全类型资产 disk<->registry 双向同步 + test_manifest 分级/类/型对账）
+（若有上式则 = test_manifest 违规；无输出即 0 违规）
+--- 外部并发漂移说明（非 W2 写点）---
+validate_data 当前 3 problem(s) 全部来自 release_features.json version=0.3.0 ≠ Cargo.toml 0.2.0（并行 S75 版本功能清单在途改动，非 test_manifest；W2 无该文件写权）。基线 state.md 记 validate_data OK；本任务清单面 0 违规（见上）。
+
+=== 判据 2：cargo test -p ti-console 全绿 ===
+--- 命令 ---
+cargo test -p ti-console
+--- 各测试二进制 test result 行 ---
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/audit_tests.rs (/disk/target/debug/deps/audit_tests-6e8b4cbd0ddccfba)
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/close_tests.rs (/disk/target/debug/deps/close_tests-e4c17dac31a526f6)
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+     Running tests/config_tests.rs (/disk/target/debug/deps/config_tests-793486dd73b476c2)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/content_docmap_tests.rs (/disk/target/debug/deps/content_docmap_tests-f60a55fd7ce49744)
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+     Running tests/content_map_wizard_tests.rs (/disk/target/debug/deps/content_map_wizard_tests-59b7cd2ba876fba7)
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/content_ui_wizard_tests.rs (/disk/target/debug/deps/content_ui_wizard_tests-309debb48b34182b)
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 27.10s
+     Running tests/data_tests.rs (/disk/target/debug/deps/data_tests-b73e78d233603cd3)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/gate_tests.rs (/disk/target/debug/deps/gate_tests-47b793032b9793a4)
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/guard_tests.rs (/disk/target/debug/deps/guard_tests-b76ad326a660ba86)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/jobs_proof_tests.rs (/disk/target/debug/deps/jobs_proof_tests-4300d9f0c7e29262)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/map_pack_edit_tests.rs (/disk/target/debug/deps/map_pack_edit_tests-0f0b433eaa2a8005)
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/parse_test_log.rs (/disk/target/debug/deps/parse_test_log-eb0e564b47a5dd3a)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+     Running tests/result_schema_truncation.rs (/disk/target/debug/deps/result_schema_truncation-7b0f711803ef4cd2)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/search_tests.rs (/disk/target/debug/deps/search_tests-bbedbe1fec78c1d6)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/snapshot_tests.rs (/disk/target/debug/deps/snapshot_tests-dab9cb2bf27e9839)
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/ui_manifest_register_tests.rs (/disk/target/debug/deps/ui_manifest_register_tests-1847c5be0ec2eb72)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+   Doc-tests ti_console
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+--- 汇总 ---
+test result: ok 行数=19（0 failed 即全绿）
+--- clippy -D warnings（代码标准）---
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.30s
+
+=== 判据 3：截断修复自证（>400 行样本，新实现测到首块 / 旧实现测不到）===
+--- 命令 ---
+cargo test -p ti-console --test result_schema_truncation -- --nocapture
+--- 新旧对比输出（测试内 eprintln，实测摘录）---
+running 4 tests
+[S74.2 result.json 优先] conclusion = {"binary":"w1_demo","binary_count":1,"details":[],"duration_ms":777,"exit_code":0,"ok":true,"source":"result_json","summary":"全部通过：1 个 binary，共 42 条断言。","tests":[{"failed":0,"msg":"test c1_shape_roundtrip ... from W1","name":"w1_demo","passed":42}],"total_failed":0,"total_passed"ok:42}
+[S74.2 端到端] conclusion = {"binary":"longlog_demo","binary_count":2,"details":[{"binary":"test conclusion_prefers_external_result_json ... ok
+[S74.2 对比] 日志总行数=508
+[S74.2 对比] 旧实现(tail=400) 测到的 binary: ["tail_block"]
+[S74.2 对比] 新实现(full)     测到的 binary: ["first_block", "tail_block"]
+[S74.2 对比] 新实现 passed 合计=10 failed 合计=0
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+--- 结论 ---
+日志样本 508 行：首块 first_block（7 passed）在最前，尾块 tail_block（3 passed）在末尾。
+旧实现（job_log_tail clamp 400 → 只读尾 400 行）测到的 binary = ["tail_block"]（首块漏检 = 诊断复现）。
+新实现（job_log_full 完整日志 → result_schema::parse_cargo_test_result）测到 ["first_block", "tail_block"]（10 passed）。
+端到端 conclusion.source = full_log，duration_ms = 2000，tests[] 两条齐全；
+外部 result.json 产物 source = result_json，passed=42/msg=from W1 原样回显（C1 契约）。
+
+=== 判据 4：清单覆盖率实测对账 ===
+--- 命令 ---
+find crates -path '*/tests/*.rs' -not -path '*/tests/common/*' | wc -l
+--- 实测 ---
+测试文件顶层数 = 123
+含 common 嵌套数 = 124
+manifest 条目总数 = 135
+  --test 文件载体 = 123
+  非 --test 条目（人工/gate/脚本类）= 12
+  其中 command=null 人工类 = 5 ['web_playtest', 'bevy_cpu_parity', 'wasm_browser_e2e', 'wasm_size', 'visual_signoff']
+报告：123 文件 → manifest 135 条（含 command=null 人工类 5，另 7 条 python/pwsh 脚本入口）
+--- 对账结论 ---
+123 个顶层测试文件 → 123 条 --test 载体（100% 可见，0 遗漏）；
+manifest 135 条 = 123 载体 + 12 非载体（其中 command=null 人工类 5 + python/pwsh 脚本入口 7）。
+已登记 43 条原有条目保持不动；本轮只补缺（92 条：含并行新增测试文件）。
+
+=== 未决项 / 需主线程处理 ===
+1. 【外部并发漂移，非 W2 责任】validate_data 当前 3 problem(s) = release_features.json version=0.3.0
+   与 Cargo.toml 0.2.0 不一致（并行 S75 版本功能清单在途改动）。W2 无该文件写权；本任务 manifest 面
+   0 违规。主线程集成时需等该路收口（或统一 bump Cargo.toml 至 0.3.0）后再跑 validate_data 全绿。
+2. 【doccheck2/gate 项号】W2 未改 gate.ps1 / doccheck2.rs / 项号文字：新增 manifest 条目统一用 gate=3
+   （cargo test --workspace，posmap pos3），与 doccheck2::check_manifest_gate_posmap 的 4 条白名单
+   （web_playtest/bevy_cpu_parity/wasm_browser_e2e/android_device_test）无交集，不触发其断言。
+   若主线程要为「清单全量登记」加新 doccheck2 断言（如 manifest 条目数 == 顶层测试文件载体数 + 12），
+   需统一落项号并回写 15 号行 doc_numbers 声称点；W2 文档正文已写实测 123/135，可直接作为断言基准。
+3. 【23 号 §0 计数】已把 113→123（含嵌套 114→124，分项 93+30），历史链保留；并行 agent 若继续新增
+   测试文件，需重跑判据 4 的 find 对账并同步 §0/_note 数字（本轮收口时点实测稳定 123/135）。
+4. 【零平台代码断言】31 号 §5 原声明「新增测试登记后 git diff crates/ti-console/ = 空」在本次不适用：
+   S74.2 本身是平台结果协议改造（C1），ti-console 有合法 diff。主线程如保留该断言需加 S74.2 白名单例外
+   （结果协议是平台自身能力升级，非「新增测试登记」场景）。
+
+=== 改动文件清单（W2 独占写点，均未提交）===
+- crates/ti-console/src/runner/result_schema.rs（新建，C1 协议 + 完整日志解析单一事实源）
+- crates/ti-console/src/runner/jobs.rs（job_log_full + find_result_json + structured_conclusion + test_run_conclusion 重做；parse_cargo_test_blocks 委托 result_schema）
+- crates/ti-console/src/runner/mod.rs（+pub mod result_schema 一行）
+- crates/ti-console/tests/result_schema_truncation.rs（新建，4 条判据测试）
+- assets/data/test_manifest.json（92 条补登 + _note 改写，43 原有条目不动）
+- docs/process/23_game_testing.md（§0 计数 / §6.3 结果行 / §7.3 C1 协议段）
+- docs/process/31_test_ingress_standard.md（§6.1 结构化结果与全量登记）
+- evidence/S74.2.log（本文件）

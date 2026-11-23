@@ -2,9 +2,9 @@
 
 设备：serial=10.0.182.152:5555 屏幕=900x1600
 
-  [PASS] clean-start 首启 pid=49464（6s 清场后）
+  [PASS] clean-start 首启 pid=59818（6s 清场后）
   [PASS] p5-1 全屏（surface=屏幕尺寸）：屏幕 900x1600 vs app 1600x900
-  [SKIP] p5-2 触摸命中（tap 1600,300→场景流转）：SKIP（设备渲染限制）：截屏黑 97% + swap chain Timeout ≥3 （设备 0fps，redroid 软渲染 gralloc 桥；触摸/截图判据无意义，非 app bug；真机或 GPU 正常的设备应渲染出帧后重跑）
-  [SKIP] p5-3 音频生命周期（切后台暂停/回前台恢复）：SKIP（无 BGM 日志）：winit 生命周期事件 0 条 + 无 [audio] 日志 = 容器/设备 AppLifecycle 通道断裂（redroid/MuMu 上 winit 生命周期未投递），无法验证 BGM 暂停/恢复；需真机或正常 winit 生命周期设备重跑
-  [PASS] p5-4 切后台不崩（进程存活+无 FATAL）：HOME 切后台后进程挂起存活 + 无 FATAL/ANR（同一 pid=49464）
+  [SKIP] p5-2 触摸命中（tap 1600,300→场景流转）：SKIP（设备渲染限制）：截屏黑 100% + swap chain Timeout ≥3 （设备 0fps，redroid 软渲染 gralloc 桥；触摸/截图判据无意义，非 app bug；真机或 GPU 正常的设备应渲染出帧后重跑）
+  [PASS] p5-3 音频生命周期（切后台暂停/回前台恢复）：BGM 暂停（切后台）+ BGM 恢复（回前台）
+  [PASS] p5-4 切后台不崩（进程存活+无 FATAL）：HOME 切后台后进程挂起存活 + 无 FATAL/ANR（同一 pid=59818）
 P5: 全部判据 PASS（设备限制判据已如实标 SKIP）

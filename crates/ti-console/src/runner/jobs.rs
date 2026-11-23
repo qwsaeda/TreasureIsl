@@ -22,6 +22,8 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
+use crate::runner::result_schema;
+
 /// 作业种类（23 号 §6.2）。
 pub const JOB_KINDS: [&str; 4] = ["test", "build", "publish", "gate"];
 
@@ -433,6 +435,18 @@ pub fn job_log_tail(repo_root: &Path, kind: &str, id: &str, lines: usize) -> Opt
     Some(all[start..].join("\n"))
 }
 
+/// 作业日志**完整内容**（无 400 行 clamp）——结构化结论解析专用读路径。
+///
+/// `job_log_tail` 的 `lines.clamp(1, 400)` 是**前端回显**上限（实时展示最近输出），
+/// 不能用于结论判定：`gate_full`/`smoke` 多 binary 长日志的前段 binary 会被静默截断
+/// （S74.2 诊断根因）。本函数直读整份日志，供 [`test_run_conclusion`] 构造 C1 结构化结果。
+#[must_use]
+pub fn job_log_full(repo_root: &Path, kind: &str, id: &str) -> Option<String> {
+    let state = job_status(repo_root, kind, id)?;
+    let rel = state.get("log").and_then(Value::as_str)?;
+    std::fs::read_to_string(repo_root.join(rel)).ok()
+}
+
 /// 登记作业证明（产物路径并入状态文件 `evidence[]`；幂等去重）。
 pub fn register_evidence(repo_root: &Path, kind: &str, id: &str, paths: &[String]) -> bool {
     let path = job_state_path(repo_root, kind, id);
@@ -485,7 +499,7 @@ pub fn jobs_view(repo_root: &Path, kind: Option<&str>, id: Option<&str>) -> Valu
             "log_tail": tail.unwrap_or_default(),
             "evidence": evidence,
             "conclusion": conclusion,
-            "note": "统一作业模型查询面（23 号 §6.2）；exit_code = 机器判据（0 通过），evidence[] = 本次运行证明；conclusion = 自解释结论（test kind）",
+            "note": "统一作业模型查询面（23 号 §6.2）；exit_code = 机器判据（0 通过），evidence[] = 本次运行证明；conclusion = C1 结构化结论（test kind：source=result_json|full_log|legacy，tests[]={name,passed,failed,msg}）",
         });
     }
     let list = job_list(repo_root, kind.filter(|k| !k.is_empty()));
@@ -499,7 +513,10 @@ pub fn jobs_view(repo_root: &Path, kind: Option<&str>, id: Option<&str>) -> Valu
     })
 }
 
-/// 解析 cargo test 日志 → 自解释结构化结论（2026-11-10「单独 Agent 也能看懂」层）。
+/// 解析 cargo test 日志 → 旧格式自解释结论（2026-11-10「单独 Agent 也能看懂」层）。
+///
+/// S74.2 起为**兼容回退**：`test_run_conclusion` 优先 C1 结构化结果 + 完整日志解析
+/// （[`result_schema::parse_test_blocks`]），本函数保留供既有前端 `details` 字段与测试消费。
 ///
 /// 支持两种日志格式：
 /// - 完整 cargo test（`Running tests/xxx.rs` 头 + 逐 test 行 + `test result:`）
@@ -567,6 +584,8 @@ fn manifest_binary_desc_map(repo_root: &Path) -> std::collections::HashMap<Strin
     m
 }
 
+/// 旧日志格式兼容回退：`parse_test_log` 使用的块结构。
+/// 解析逻辑已收敛到 [`result_schema::parse_test_blocks`]（C1 单一事实源），此处只做类型转换。
 struct TestBlock {
     name: String,
     passed: u32,
@@ -574,86 +593,94 @@ struct TestBlock {
     failures: Vec<String>,
 }
 
-/// 分块状态 flush（`cur_name` 有值 ⇒ 推入 `blocks` 并清零计数）。
-fn flush_test_block(
-    blocks: &mut Vec<TestBlock>,
-    cur_name: &mut Option<String>,
-    cur_passed: &mut u32,
-    cur_failed: &mut u32,
-    cur_failures: &mut Vec<String>,
-) {
-    if let Some(n) = cur_name.take() {
-        blocks.push(TestBlock {
-            name: n,
-            passed: *cur_passed,
-            failed: *cur_failed,
-            failures: std::mem::take(cur_failures),
-        });
-        *cur_passed = 0;
-        *cur_failed = 0;
-    }
+/// 分块解析委托给 C1 单一事实源（避免两份解析逻辑漂移）。
+fn parse_cargo_test_blocks(log_text: &str) -> Vec<TestBlock> {
+    result_schema::parse_test_blocks(log_text)
+        .into_iter()
+        .map(|b| TestBlock {
+            name: b.name,
+            passed: b.passed,
+            failed: b.failed,
+            failures: b.failures,
+        })
+        .collect()
 }
 
-fn parse_cargo_test_blocks(log_text: &str) -> Vec<TestBlock> {
-    let mut blocks: Vec<TestBlock> = Vec::new();
-    let mut cur_name: Option<String> = None;
-    let mut cur_passed: u32 = 0;
-    let mut cur_failed: u32 = 0;
-    let mut cur_failures: Vec<String> = Vec::new();
-
-    for line in log_text.lines() {
-        let stripped = line.trim();
-        if let Some(rest) = stripped.strip_prefix("Running tests/") {
-            flush_test_block(
-                &mut blocks,
-                &mut cur_name,
-                &mut cur_passed,
-                &mut cur_failed,
-                &mut cur_failures,
-            );
-            let fname = rest.split_whitespace().next().unwrap_or("");
-            cur_name = Some(fname.strip_suffix(".rs").unwrap_or(fname).to_owned());
-        } else if let Some(res) = stripped.strip_prefix("test result:") {
-            if cur_name.is_some() {
-                // res = " ok. 20 passed; 0 failed; ..." — 找 " N passed" / " M failed"
-                let res_str = res.trim();
-                cur_passed = extract_count(res_str, " passed");
-                cur_failed = extract_count(res_str, " failed");
-            }
-        } else if stripped.starts_with("test ") && stripped.contains("FAILED") && cur_name.is_some()
-        {
-            let tname = stripped
-                .strip_prefix("test ")
-                .and_then(|s| s.split(" ...").next())
-                .unwrap_or("")
-                .trim()
-                .to_owned();
-            cur_failures.push(tname);
+/// 找外部落盘的 C1 `result.json`（W1/W3/W4 判据产物；S74.2 结构化结果优先源）。
+///
+/// 优先级 ① 状态字段 `result_json` 显式路径 ② `evidence[]` 中 `*result.json` 路径
+/// ③ `prove` 前缀下 `<id>-<ts>/result.json`（取字典序最大 = 最新时间戳）。
+fn find_result_json(repo_root: &Path, state: &Value) -> Option<String> {
+    if let Some(p) = state.get("result_json").and_then(Value::as_str) {
+        let path = repo_root.join(p);
+        if path.is_file() {
+            return std::fs::read_to_string(path).ok();
         }
     }
-    flush_test_block(
-        &mut blocks,
-        &mut cur_name,
-        &mut cur_passed,
-        &mut cur_failed,
-        &mut cur_failures,
-    );
-    blocks
+    if let Some(arr) = state.get("evidence").and_then(Value::as_array) {
+        for v in arr {
+            if let Some(p) = v.as_str().filter(|s| s.ends_with("result.json")) {
+                if let Ok(text) = std::fs::read_to_string(repo_root.join(p)) {
+                    return Some(text);
+                }
+            }
+        }
+    }
+    let prove = state.get("prove").and_then(Value::as_str).unwrap_or("");
+    let id = state.get("id").and_then(Value::as_str).unwrap_or("");
+    if !prove.is_empty() && !id.is_empty() {
+        let mut cands: Vec<(String, PathBuf)> = Vec::new();
+        if let Ok(rd) = std::fs::read_dir(repo_root.join(prove)) {
+            for entry in rd.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.starts_with(id) && entry.path().is_dir() {
+                    let rj = entry.path().join("result.json");
+                    if rj.is_file() {
+                        cands.push((name, rj));
+                    }
+                }
+            }
+        }
+        cands.sort_by(|a, b| a.0.cmp(&b.0));
+        if let Some((_, path)) = cands.last() {
+            return std::fs::read_to_string(path).ok();
+        }
+    }
+    None
 }
 
-/// 从 `test result: ok. N passed; M failed;` 提取关键词后的数字。
-/// 从 `test result` 行提取 `" N passed"` / `" M failed"` 中的数字。
-/// `needle` 带前导空格（`" passed"` / `" failed"`），避免匹配 `FAILED` 大写。
-fn extract_count(line: &str, needle: &str) -> u32 {
-    let Some(idx) = line.find(needle) else {
-        return 0;
-    };
-    let before = &line[..idx];
-    let digits: String = before.chars().rev().take_while(char::is_ascii_digit).collect();
-    digits.chars().rev().collect::<String>().parse::<u32>().unwrap_or(0)
+/// C1 结构化结果 → `conclusion` JSON（保留旧字段 `ok/total_*/binary_count/summary/details`
+/// 供既有前端与测试消费，新增 `source`/C1 形状字段为权威结论）。
+fn structured_conclusion(tr: &result_schema::TestResult, source: &str, legacy: &Value) -> Value {
+    let mut v = tr.to_value();
+    if let Some(obj) = v.as_object_mut() {
+        obj.insert("source".into(), json!(source));
+        obj.insert("ok".into(), json!(tr.is_ok()));
+        obj.insert("total_passed".into(), json!(tr.total_passed()));
+        obj.insert("total_failed".into(), json!(tr.total_failed()));
+        obj.insert("binary_count".into(), json!(tr.tests.len()));
+        obj.insert(
+            "summary".into(),
+            json!(if tr.is_ok() {
+                format!("全部通过：{} 个 binary，共 {} 条断言。", tr.tests.len(), tr.total_passed())
+            } else {
+                format!("有失败：共 {} 条失败。", tr.total_failed())
+            }),
+        );
+        if let Some(details) = legacy.get("details") {
+            obj.insert("details".into(), details.clone());
+        }
+    }
+    v
 }
 
-/// 测试作业「自解释结论」：读日志尾 → `parse_test_log`。
+/// 测试作业「自解释结论」（S74.2 结构化重做）：
+///
+/// ① 优先外部结构化 `result.json`（C1 契约产物，W1/W3/W4 判据输出同源）；
+/// ② 回退读**完整日志**解析 C1 结构化结果（根治旧实现只读尾部 400 行导致长日志前段
+///    binary 静默漏检——`gate_full`/`smoke` 多 binary 场景结论失真）；
+/// ③ 兼容回退旧 `parse_test_log`（无 `Running` 块可解析的裸文本日志）。
+///
 /// 仅对已结束（`running=false`）的 test 作业有效；缺失/未完成 = `None`。
 #[must_use]
 pub fn test_run_conclusion(repo_root: &Path, kind: &str, id: &str) -> Option<Value> {
@@ -661,6 +688,29 @@ pub fn test_run_conclusion(repo_root: &Path, kind: &str, id: &str) -> Option<Val
     if state.get("running").and_then(Value::as_bool).unwrap_or(true) {
         return None;
     }
+    let exit_code =
+        i32::try_from(state.get("exit_code").and_then(Value::as_i64).unwrap_or(-1)).unwrap_or(-1);
+    let started = state.get("started_ts").and_then(Value::as_u64).unwrap_or(0);
+    let ended = state.get("ended_ts").and_then(Value::as_u64).unwrap_or(0);
+    let duration_ms = ended.saturating_sub(started).saturating_mul(1000);
+    let full = job_log_full(repo_root, kind, id);
+
+    // ① 外部结构化结果（C1）——优先，W1/W3/W4 判据产物直接回显。
+    if let Some(text) = find_result_json(repo_root, &state) {
+        if let Some(tr) = result_schema::parse_result_json(&text) {
+            let legacy = parse_test_log(full.as_deref().unwrap_or(""), repo_root);
+            return Some(structured_conclusion(&tr, "result_json", &legacy));
+        }
+    }
+    // ② 完整日志 → C1 结构化结果（截断修复主路径）。
+    if let Some(text) = full.as_deref() {
+        let tr = result_schema::parse_cargo_test_result(text, id, duration_ms, exit_code);
+        if !tr.tests.is_empty() {
+            let legacy = parse_test_log(text, repo_root);
+            return Some(structured_conclusion(&tr, "full_log", &legacy));
+        }
+    }
+    // ③ 旧日志格式兼容回退（尾部 400 行；仅对无结构可解析的裸日志）。
     let tail = job_log_tail(repo_root, kind, id, 400)?;
     Some(parse_test_log(&tail, repo_root))
 }

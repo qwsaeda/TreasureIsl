@@ -792,3 +792,9 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 
 ### EXP-207 流程：doc_numbers.py --fix 漏回写 AGENTS.md/26号现状区；task_close 只同步 release.md
 - **现象**：每跑一次 task_close.py，release.md 计数同步了，但 doccheck2 报 AGENTS.md 缺现状声称点、26号三处仍是旧 verified 数，gate 红。\n- **根因**：doc_numbers.py 的『现状区/时点行豁免』逻辑跳过了 AGENTS.md:8 与 26号:14/155/163，所以 --fix 自报 0 漂移却与 doccheck2::check_cross_doc_counts 口径不一致；task_close.py::sync_release_counts 只管 release.md。\n- **解法**：把 AGENTS.md 当前 N 行 + 26号进度/下一节点 4 处随每次 verified 递增手工回写（本次 367→368→369→370→371→372 共 5 轮）。\n- **验证**：最终 AGENTS.md/release.md/26号 全为 372 任务/372 verified，doccheck 0 error + doccheck2 54 项 0 error + doc_numbers 0 漂移。
+
+### EXP-208 流程：测试有效性假判据三型（恒真式/手搓夹具/吞现场）+ 虚荣指标：测试数量≠质量，须变异得分+结构化结果+规则矩阵三面度量
+- 现象：测试体系表面繁荣（113 集成测试文件 + gate 36 项 + 45 条 manifest），但用户判「测试实现不行」全选 5 痛点。实测诊断三处假判据：`fuzz_playtest.rs` 的 `scene_valid()` 对 Scene 枚举 9 变体全穷举返回 0..=8 后 `(0..=8).contains` = 恒真，文档宣称的「状态机越界检测」从未抓到任何异常；`build_slot()` 硬编码 version/rng/unlocked_mask/v4 = 测手搓夹具往返而非真实序列化路径；`catch_unwind` 丢弃 panic payload = 失败只知「某 seed 崩了」无定位。平台侧 `jobs.rs::test_run_conclusion` 只读日志尾 400 行再 grep = 长日志前段静默失真，manifest 只登记 45/113。
+- 根因：把「测试数量/gate 项数」当成质量指标（虚荣指标），测试有效性从未被机器度量（仓库无变异测试/覆盖率/规则↔测试矩阵）；判据写成自证明的恒真式或手搓夹具，看着绿实则空转；结论靠解析日志文本而非结构化数据。
+- 解法：系统性重做五路并行（S74）——W1 修 fuzz 假判据（真实语义不变式 + 真实存档往返 + panic payload 保留）；W2 平台 result.json 结构化结果替 grep 日志 + manifest 45→113 全量；W3 规则↔测试矩阵（rule_test_matrix.json，规则行无映射即 FAIL）+ 玩法 E2E；W4 引入 cargo-mutants 变异得分基线 + 棘轮（mutation_score）；W5 执行分层（fast/full/nightly）+ 确定性 + target dir 消锁竞争。原则 = 测试=代码/结果=数据/有效性可度量/范围由规则驱动。
+- 验证：五路 subagent 并行实施中；每路自证「注入已知 bug ⇒ FAIL ⇒ 还原 ⇒ PASS」防空转，主线程独立复核（EXP-038）+ gate 全绿 + doccheck/doccheck2 0 error 才置 verified。

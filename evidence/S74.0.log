@@ -1,0 +1,38 @@
+S74.0 立项 + 五路契约冻结 · 验收证据（2026-11-23）
+
+== 改动面声明 ==
+文档+任务规划（本轮仅立项 WBS + 台账登记，不落码）。
+
+== 判据 1：台账登记 S74.0~S74.6 七任务 ==
+$ cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml
+ledger: 386 tasks, 379 verified, 0 error(s)
+  evidence: ok
+（379 基线 + S74.0~S74.6 七条 pending = 386）
+
+== 判据 2：三处计数声称点同步 386 任务 / 379 verified / 7 pending ==
+- AGENTS.md:8 「当前 386 任务 / 379 verified + 7 pending + 0 blocked〔S74.0~S74.6 测试体系重做 7 条 pending〕」
+- docs/release.md:238 「386 任务（379 verified + 0 pending + 0 blocked」——doc_numbers --fix 自动回写
+- docs/process/26_dev_stages_overview.md:14/155/163 「386 任务 / 379 verified / 7 pending」+ 工具矩阵行 task refs 373→380
+$ python3 scripts/doc_numbers.py --dry-run
+  实测：门禁 36 项 / 台账 386 任务（379 verified）
+  声称点与实测一致（0 漂移）
+
+== 判据 3：doccheck 0 error ==
+$ cargo run -q -p ti-tools --bin doccheck
+doccheck: 189 docs, 38 facts, 204 experiences, 380 task refs, 4 assertions, 0 error(s)
+
+== 判据 4：doccheck2 0 error（56 项，含本轮新增第 56 项 orphan-rule-row）==
+$ cargo run -q -p ti-tools --bin doccheck2 .
+doccheck2: 0 error(s) across 56 audit-codified checks (... /export-icon-boundary/orphan-rule-row)
+
+== 五路契约冻结（state.md）==
+共享开轮上下文落 evidence/_S74.0.state.md（文件名前缀 _ 避开 check_ledger_reality 孤儿扫描；
+loop §9 state.md 压缩纪律载体）。含：① 已读清单 ② 写点所有权表（7 个共享文件各定唯一 owner）
+③ 下一步动作 ④ 跨模块契约 C1~C4 ⑤ 6 条红线 ⑥ 环境。
+
+== 五路并行启动 ==
+W1 S74.1 fuzz 假判据 / W2 S74.2 平台结果协议 / W3 S74.3 规则矩阵+E2E /
+W4 S74.4 变异测试 / W5 S74.5 执行分层+稳定性——五路 subagent 带红线注入 + 五步回执下发。
+
+== 结论 ==
+立项判据 4 条全过（台账登记 + 计数同步 + doccheck 0 + doccheck2 0）。S74.0 可置 verified。

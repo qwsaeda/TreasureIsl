@@ -1,0 +1,827 @@
+{
+  "schema_version": 1,
+  "doc": "docs/process/23_game_testing.md / S74.3 — 规则↔测试矩阵（business 可测规则表每行 → test id）",
+  "id_contract": "C2: R-<doc>-<n>；doc token 映射见 doc_tokens",
+  "doc_tokens": {
+    "territory": "docs/business/territory.md §10 可测规则表",
+    "uiflow": "docs/business/07_ui_flow.md §6 可测试规则表",
+    "persistence": "docs/business/persistence.md §可测试规则",
+    "progression": "docs/business/progression.md §可测试规则",
+    "progression-s62": "docs/business/progression.md §可测试规则（S62 全解锁口径）",
+    "economy-boat": "docs/business/economy.md §船系统可测试规则",
+    "economy": "docs/business/economy.md §可测试规则",
+    "combat": "docs/business/combat.md §可测试规则",
+    "layout": "docs/business/08_layout_design.md §7 可测试规则",
+    "loopcore": "docs/business/loop_core.md §设计约束（写进单测）"
+  },
+  "notes": "test_ids 为该行当前已有的测试锚点（单测名或审计项名）；E2E 补强新增的 e2e_playability::* 测试按覆盖关系追加到对应规则行。covered=false 行见 uncovered_items，交主线程裁决。",
+  "rules": [
+    {
+      "rule_id": "R-territory-1",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "v3：选 2..5 人类席 + 可配 AI 席数（players + ai ≤ 5）",
+      "test_ids": ["seat_pool_caps_ai_at_five_minus_humans"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-2",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "v3：人类席勾选（键盘 + 触屏等价）+ 勾选数 ≥2 才允许开局",
+      "test_ids": ["seat_selection_keeps_at_least_one_player", "seat_selection_toggle_and_order"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-3",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "v3：每席独立赛道会话（人类席不再共用会话）",
+      "test_ids": ["two_players_three_ai_independent_sessions"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-4",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "v3：单一金币账本（AI 收过路费 ⇒ 玩家席金币同步减少）",
+      "test_ids": ["ai_landing_settlement_is_deterministic"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-5",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "v3：破产出局 ⇒ 回合轮转跳过该席",
+      "test_ids": ["turn_cycle_is_playing_requires_active_and_alive", "seat_save_alive_roundtrip_backfills_turn_cycle"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-6",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "v3：app 层终局接线（破产 ⇒ 对局结束 + 胜者判定）",
+      "test_ids": ["two_players_bankruptcy_yields_victory", "e2e_playability::playability_full_match_to_victory_and_restart"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-7",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "v3：热座交接（轮到下一人类席前必须显式确认）",
+      "test_ids": ["handoff_blocks_spin_until_confirmed", "two_players_hot_seat_full_turn_cycle"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-8",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "选 ≥1 玩家，其余补 AI，合计 5",
+      "test_ids": ["seats_split_players_and_ai_to_five"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-9",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "功能格不能占领（领地格才可占领）",
+      "test_ids": ["feature_tiles_not_capturable"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-10",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "风神保佑 = 多扔骰子一次 / 随机前进或后退 N 格",
+      "test_ids": ["wind_god_extra_roll_when_jump_zero", "wind_god_jump_when_nonzero"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-11",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "席位顺序 = 角色 index 升序",
+      "test_ids": ["seat_order_follows_character_index"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-12",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "无主格副本胜利 ⇒ 易主 + level 1 + 自定驻军，两格同易主",
+      "test_ids": ["capture_wins_takes_both_cells_of_isle"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-13",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "副本失败 ⇒ 归属不变",
+      "test_ids": ["capture_loss_keeps_ownership"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-14",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "他人格交钱 ⇒ 付 toll 给所有者",
+      "test_ids": ["paying_toll_transfers_output_to_owner"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-15",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "他人格攻占胜 ⇒ 占领 + 重定驻军",
+      "test_ids": ["siege_win_recaptures_with_level_one", "e2e_playability::playability_siege_and_capture"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-16",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "攻占败 ⇒ 交双倍过路费",
+      "test_ids": ["siege_loss_pays_double_toll"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-17",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "自己格升级 ⇒ level+1 且防御/产出/过路费同步提高",
+      "test_ids": ["upgrade_raises_output_defense_and_toll"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-18",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "自己格增减驻军 ⇒ 人手守恒（驻军 + 舰队 = 总人手）",
+      "test_ids": ["garrison_change_conserves_manpower"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-19",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "升级不超上限",
+      "test_ids": ["upgrade_caps_at_isle_max_level"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-20",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "武装 = min(人手, 武器)；武器多余无效",
+      "test_ids": ["armed_power_caps_at_manpower"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-21",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "多人同格：后到者决定打不打前一个，只打前一个",
+      "test_ids": ["later_arrival_decides_duel_previous"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-22",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "败者交钱 + 损水手；胜者占领",
+      "test_ids": ["duel_loser_pays_and_loses_crew"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-23",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "破产 ⇒ 席出局 + 全部占领格变空",
+      "test_ids": ["bankrupt_empties_all_territories"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-24",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "胜利 = 所有对手破产",
+      "test_ids": ["victory_when_all_opponents_bankrupt", "e2e_playability::playability_full_match_to_victory_and_restart"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-25",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "失败 = 玩家破产直接结束",
+      "test_ids": ["defeat_when_player_bankrupt_ends_game", "e2e_playability::playability_defeat_when_all_human_seats_bankrupt"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-26",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "不能卖占领格",
+      "test_ids": ["territory_not_sellable"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-27",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "每图必有武器商人 + 奴隶商人",
+      "test_ids": ["all_maps_have_v2_events_and_merchants"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-28",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "每图配特有事件（地图层 events[] 与常用集合并）",
+      "test_ids": ["all_maps_have_v2_events_and_merchants"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-29",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "每图赛道 = 31 格 = 起点 1 + 领地 20 + 功能 9 + BOSS 1",
+      "test_ids": ["v5_track_has_31_cells_composition"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-30",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "每类岛两格同属一个领地",
+      "test_ids": ["isle_cells_share_one_territory"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-31",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "AI 走同一分支表（策略只选分支）",
+      "test_ids": ["ai_uses_same_settlement_table", "e2e_playability::playability_ai_turns_visible_and_deterministic"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-32",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "AI 攻占判定 = 兵力模型（force::resolve 预测）",
+      "test_ids": ["ai_policy_uses_force_model", "e2e_playability::playability_ai_turns_visible_and_deterministic"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-33",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "AI 攻占后驻军自定（战后舰队 1/3 留守，守恒）",
+      "test_ids": ["manpower_conserved_after_transfer", "ai_sieges_player_cell_with_visible_feedback", "e2e_playability::playability_ai_turns_visible_and_deterministic"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-34",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "存档 v4 → v5 迁移 = 单席位 + 人手/武器默认 + 空领地",
+      "test_ids": ["save_migrate_v4_to_v5_defaults"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-territory-35",
+      "source_doc": "docs/business/territory.md",
+      "source_section": "§10 可测规则表",
+      "description": "存档往返还原归属/金币/人手/武器/驻军/当前席位",
+      "test_ids": ["save_roundtrip_restores_territories", "e2e_playability::playability_save_and_resume"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-uiflow-1",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "菜单项 0..5 上下循环不越界",
+      "test_ids": ["menu_cursor_wraps"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-2",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "菜单项 0/1/5 分别跳 SelectRole/Saveload/退出",
+      "test_ids": ["menu_item_targets"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-3",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "非法转换不可构造（编译期）",
+      "test_ids": ["scenes/mod.rs::compile_fail 文档测试"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-4",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "9 个场景判别值互不相同",
+      "test_ids": ["scene_discriminants_unique"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-5",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "控件可见性判定（flags&1 + 尺寸）",
+      "test_ids": ["widget_visible_filter"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-6",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "控件 hit 边界矩形内外各一点",
+      "test_ids": ["widget_hit_bounds"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-7",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "触摸坐标反变换往返一致",
+      "test_ids": ["touch_logical_roundtrip"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-8",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "主地图点按与棋子移动方向一致（同坐标系）",
+      "test_ids": ["iso_touch_matches_move"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-9",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "手势阈值：位移 <20 判点按、≥20 判滑动",
+      "test_ids": ["gesture_threshold_split"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-10",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "消息翻页首尾钳位",
+      "test_ids": ["msg_page_clamped"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-11",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "消息关闭回到打开源场景",
+      "test_ids": ["msg_close_returns_source"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-uiflow-12",
+      "source_doc": "docs/business/07_ui_flow.md",
+      "source_section": "§6 可测试规则表",
+      "description": "切场景后选中项/页码复位（无残留）",
+      "test_ids": ["scene_switch_resets_state"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-persistence-1",
+      "source_doc": "docs/business/persistence.md",
+      "source_section": "§可测试规则",
+      "description": "存→读往返逐字段一致",
+      "test_ids": ["save_roundtrip_preserves_fields", "e2e_playability::playability_save_and_resume"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-persistence-2",
+      "source_doc": "docs/business/persistence.md",
+      "source_section": "§可测试规则",
+      "description": "v1 → v2 迁移补默认值",
+      "test_ids": ["save_migrate_v1_to_v2_defaults"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-persistence-3",
+      "source_doc": "docs/business/persistence.md",
+      "source_section": "§可测试规则",
+      "description": "迁移幂等（再迁一次不变）",
+      "test_ids": ["save_migration_idempotent"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-persistence-4",
+      "source_doc": "docs/business/persistence.md",
+      "source_section": "§可测试规则",
+      "description": "同 seed + 同操作 ⇒ 同随机流",
+      "test_ids": ["rng_same_seed_same_stream"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-persistence-5",
+      "source_doc": "docs/business/persistence.md",
+      "source_section": "§可测试规则",
+      "description": "存档含 rng_seed，读档后可续",
+      "test_ids": ["save_rng_seed_restores_stream"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-persistence-6",
+      "source_doc": "docs/business/persistence.md",
+      "source_section": "§可测试规则",
+      "description": "设置不改变玩法状态",
+      "test_ids": ["settings_do_not_affect_gameplay"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-progression-1",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则",
+      "description": "越界/不可通行不移动、不消耗回合",
+      "test_ids": ["map_blocked_step_is_noop"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-2",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则",
+      "description": "移动一格必触发一次落格结算",
+      "test_ids": ["map_step_triggers_settle_once"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-3",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则",
+      "description": "BOSS 格进入战斗",
+      "test_ids": ["map_boss_tile_enters_combat"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-4",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则",
+      "description": "同 seed 同路径 ⇒ 同卡牌串",
+      "test_ids": ["cards_same_seed_same_sequence"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-5",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则",
+      "description": "效果后 HP/金钳制在合法域",
+      "test_ids": ["cards_effects_clamped"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-6",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则",
+      "description": "权重抽卡分布合理（单测只断言可复现）",
+      "test_ids": ["cards_weighted_pick_reproducible"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-progression-s62-1",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则（S62 全解锁口径）",
+      "description": "初始 20 图全解锁（can_select 恒 true）",
+      "test_ids": ["initial_unlocked_is_all_maps"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-s62-2",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则（S62 全解锁口径）",
+      "description": "击败不门禁（击败 m01 后所有图仍可选，进度记 defeated）",
+      "test_ids": ["on_boss_defeated_tracks_progress_not_gate"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-s62-3",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则（S62 全解锁口径）",
+      "description": "击败图数累计（defeated_count）",
+      "test_ids": ["defeated_count_tracks_maps_beaten"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-s62-4",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则（S62 全解锁口径）",
+      "description": "击败 m20 = 通关、m03 击败 ≠ 通关",
+      "test_ids": ["is_cleared_when_m20_boss_beaten"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-s62-5",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则（S62 全解锁口径）",
+      "description": "选图 BOSS 档读 balance.selection.maps（m01..m20 有档）",
+      "test_ids": ["boss_tier_of_maps_selection_entries"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-s62-6",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则（S62 全解锁口径）",
+      "description": "掩码仅承载通关位（bit0..18 恒 0，bit19 = CLEARED）",
+      "test_ids": ["unlocked_mask_all_unlocked"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-s62-7",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则（S62 全解锁口径）",
+      "description": "读档任意 mask/选中图全可选 + 通关位还原",
+      "test_ids": ["for_save_restore_fallback_for_legacy_and_broken_mask"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-progression-s62-8",
+      "source_doc": "docs/business/progression.md",
+      "source_section": "§可测试规则（S62 全解锁口径）",
+      "description": "解锁集合 → 推进态重建（全可选，击败位兼容保留）",
+      "test_ids": ["from_unlocked_reconstructs_defeated_bits"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-economy-boat-1",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§船系统可测试规则",
+      "description": "造船扣金 + 抬 cargo/atk/hp（立即生效）",
+      "test_ids": ["boat_upgrade_debits_and_raises"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-boat-2",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§船系统可测试规则",
+      "description": "单次贸易数量上限 = min(qty_max, cargo)；1 级 ≡ 现状",
+      "test_ids": ["trade_qty_capped_by_boat_cargo"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-boat-3",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§船系统可测试规则",
+      "description": "等级单调（不可降级；满级无操作；金不够拒绝）",
+      "test_ids": ["boat_level_monotonic"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-boat-4",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§船系统可测试规则",
+      "description": "船加成与建筑加成叠加进战斗",
+      "test_ids": ["combat_bonus_includes_boat"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-economy-1",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§可测试规则",
+      "description": "买入扣金币、货物 +qty",
+      "test_ids": ["trade_buy_debits_gold_adds_goods", "e2e_playability::playability_multi_round_economy_loop"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-2",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§可测试规则",
+      "description": "卖出加金币、货物 -qty",
+      "test_ids": ["trade_sell_credits_gold_removes_goods", "e2e_playability::playability_multi_round_economy_loop"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-3",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§可测试规则",
+      "description": "qty 越界拒绝",
+      "test_ids": ["trade_qty_bounds_enforced"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-4",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§可测试规则",
+      "description": "售价 = buy*markup",
+      "test_ids": ["trade_sell_price_from_markup"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-5",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§可测试规则",
+      "description": "建造扣金币 + 抬上限",
+      "test_ids": ["build_debits_and_raises_cap", "e2e_playability::playability_multi_round_economy_loop"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-6",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§可测试规则",
+      "description": "金币恒 ≤ 上限（银行承接溢出）",
+      "test_ids": ["economy_gold_never_exceeds_cap", "e2e_playability::playability_multi_round_economy_loop"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-economy-7",
+      "source_doc": "docs/business/economy.md",
+      "source_section": "§可测试规则",
+      "description": "建筑单调解锁",
+      "test_ids": ["build_unlocks_monotonic"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-combat-1",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "武装 = min(人手, 武器)；武器多余无效",
+      "test_ids": ["armed_power_caps_at_manpower"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-combat-2",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "人手 > 武器 ⇒ 徒手战力折减",
+      "test_ids": ["power_weights_armed_over_barehand"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-combat-3",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "战力确定性（同兵力同结果，不耗随机）",
+      "test_ids": ["deterministic_same_input_same_result"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-combat-4",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "攻方战力 > 守方 ⇒ 攻方胜",
+      "test_ids": ["attacker_power_wins"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-combat-5",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "守方战力 ≥ 攻方 ⇒ 守方胜",
+      "test_ids": ["defender_wins_on_tie_or_higher"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-combat-6",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "双方必损（人手 + 武器都掉）",
+      "test_ids": ["both_sides_attrition"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-combat-7",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "败方交双倍过路费",
+      "test_ids": ["siege_loss_pays_double_toll"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-combat-8",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "胜方占领重定驻军",
+      "test_ids": ["siege_win_recaptures_with_level_one"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-combat-9",
+      "source_doc": "docs/business/combat.md",
+      "source_section": "§可测试规则",
+      "description": "同兵力同参数 ⇒ 同结果（确定性）",
+      "test_ids": ["deterministic_same_input_same_result"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-layout-1",
+      "source_doc": "docs/business/08_layout_design.md",
+      "source_section": "§7 可测试规则",
+      "description": "各场景版面坐标 == scenes.json 实值（1080 空间）",
+      "test_ids": ["index_layout_matches_doc", "select_scenes_layout_matches_doc", "main_map_layout_matches_doc", "vs_layout_matches_doc", "message_layout_matches_doc", "saveload_layout_matches_doc", "e2e_playability::playability_layout_key_controls_in_viewport"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-layout-2",
+      "source_doc": "docs/business/08_layout_design.md",
+      "source_section": "§7 可测试规则",
+      "description": "血条 x+w ≤ 1080、HUD 与等距区不重叠",
+      "test_ids": ["vs_layout_matches_doc", "main_map_layout_matches_doc", "e2e_playability::playability_layout_key_controls_in_viewport"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-layout-3",
+      "source_doc": "docs/business/08_layout_design.md",
+      "source_section": "§7 可测试规则",
+      "description": "代码绘制动态实体落在 portrait_zones 声明区内",
+      "test_ids": ["large_portraits_respect_layout_zones"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-layout-4",
+      "source_doc": "docs/business/08_layout_design.md",
+      "source_section": "§7 可测试规则",
+      "description": "关键矩形渲染后有非背景像素",
+      "test_ids": ["key_rects_have_pixels"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-layout-5",
+      "source_doc": "docs/business/08_layout_design.md",
+      "source_section": "§7 可测试规则",
+      "description": "各场景文字区场景层有独立贡献像素",
+      "test_ids": ["scene_layer_contributes_text_region_pixels"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-layout-6",
+      "source_doc": "docs/business/08_layout_design.md",
+      "source_section": "§7 可测试规则",
+      "description": "场景渲染确定性 / 非空 / 场景区分",
+      "test_ids": ["render_parity.rs::render_is_deterministic_per_scene", "render_parity.rs::each_scene_renders_real_content", "render_parity.rs::distinct_scenes_produce_distinct_frames"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-layout-7",
+      "source_doc": "docs/business/08_layout_design.md",
+      "source_section": "§7 可测试规则",
+      "description": "呈现坐标系唯一（禁 legacy 像素/坐标泄漏）",
+      "test_ids": ["doccheck2::runtime-no-legacy-coords"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-layout-8",
+      "source_doc": "docs/business/08_layout_design.md",
+      "source_section": "§7 可测试规则",
+      "description": "§4 表 == scenes.json 同名键（本文不漂移）",
+      "test_ids": ["doccheck2::check_layout_doc_table_cross_check"],
+      "covered": true
+    },
+
+    {
+      "rule_id": "R-loopcore-1",
+      "source_doc": "docs/business/loop_core.md",
+      "source_section": "§设计约束（写进单测）",
+      "description": "单次操作不产生多步连锁（一帧一次玩家操作 ⇒ 至多一次结算流水线）",
+      "test_ids": [],
+      "covered": false,
+      "note": "无直接对应单测；现有 map_step_triggers_settle_once 只断言「每步一次结算」，未断言「不多步连锁」。需主线程裁决是否补规则层测试。"
+    },
+    {
+      "rule_id": "R-loopcore-2",
+      "source_doc": "docs/business/loop_core.md",
+      "source_section": "§设计约束（写进单测）",
+      "description": "金币非负、≤上限（0 ≤ gold ≤ balance.gold_max）",
+      "test_ids": ["economy_gold_never_exceeds_cap", "e2e_playability::playability_multi_round_economy_loop"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-loopcore-3",
+      "source_doc": "docs/business/loop_core.md",
+      "source_section": "§设计约束（写进单测）",
+      "description": "HP ∈ [0, hp_max]（扣血不越界；归零即 Defeat）",
+      "test_ids": ["cards_effects_clamped"],
+      "covered": true
+    },
+    {
+      "rule_id": "R-loopcore-4",
+      "source_doc": "docs/business/loop_core.md",
+      "source_section": "§设计约束（写进单测）",
+      "description": "场景无死锁（任意场景可经 ≤N 次操作回主菜单）",
+      "test_ids": [],
+      "covered": false,
+      "note": "无直接对应单测；需主线程裁决补测（建议走 e2e_invalid_inputs_no_crash 同形态做全场景返回路径）。"
+    }
+  ],
+  "uncovered_items": [
+    "R-loopcore-1：单次操作不产生多步连锁（无直接单测）——建议主线程在 rules 层补一帧一次结算的负例测试",
+    "R-loopcore-4：场景无死锁（任意场景 ≤N 次操作回主菜单，N 来自 balance.ui.max_back_steps）——无直接单测，建议补全场景返回路径 E2E"
+  ]
+}

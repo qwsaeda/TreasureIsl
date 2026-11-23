@@ -394,6 +394,10 @@
   {
    "id": "export-icon-boundary",
    "impl": "rust"
+  },
+  {
+   "id": "orphan-rule-row",
+   "impl": "rust"
   }
  ],
  "event_static_keys": [

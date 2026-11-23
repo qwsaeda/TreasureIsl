@@ -1,0 +1,312 @@
+S74.1 (W1 止血子任务) — fuzz_playtest.rs 三处假判据修复 · 实跑验收日志
+==========================================================================
+任务：crates/ti-app/tests/fuzz_playtest.rs（唯一可写文件）+ 本 evidence log
+改动面：工具（测试文件职责 = 随机输入鲁棒性），纯单文件，无跨模块
+五步回执：
+  提问   = 无歧义（诊断已坐实，按任务书执行）
+  方案   = ①scene_valid 恒真 → assert_state_invariants 3 条真实不变式（契约 C3）
+           ②手搓 slot 往返 → 生产 GameInput::WriteSave / restore_save 路径
+           ③catch_unwind 丢 payload → downcast 提取 + seed/step/scene 定位信息
+  拍板   = 已拍板（按 S74.1 任务书）
+  草稿   = crates/ti-app/tests/fuzz_playtest.rs（下方为实跑判据）
+  批准   = 待主线程复核（subagent 不自行置 verified / 不写台账）
+
+不变式数值来源：assets/data/balance.json → economy.gold_max = 999999；
+写档版本 3 来源：crates/ti-app/src/scenes/saveload.rs::WRITE_VERSION = 3；
+赛道格数来源：assets/data/board.json（经 BoardSession::track().len()）。
+
+下方依次记录：
+  STEP 1  最终态 cargo test -p ti-app --test fuzz_playtest（全绿）
+  STEP 2a 注入已知 bug（gold-cap 比较符 > 改 <）→ 测试 FAIL，报错须含 seed/step 定位
+  STEP 2b 还原后 cargo test -p ti-app --test fuzz_playtest（复绿）
+  STEP 3a scoped clippy：cargo clippy -p ti-app --test fuzz_playtest -- -D warnings
+  STEP 3b 全量 clippy：cargo clippy -p ti-app --tests -- -D warnings
+
+===== STEP 1: final-state cargo test -p ti-app --test fuzz_playtest =====
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.31s
+     Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-fe4a3f731e2f8d7d)
+
+running 5 tests
+test panic_payload_extraction ... ok
+test restore_save_invalid_slot_does_not_pollute_character ... ok
+test deterministic_replay ... ok
+test fuzz_single_seed_quick ... ok
+test fuzz_32_seeds ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.49s
+
+
+===== STEP 2a: INJECT BUG (gold-cap '>' flipped to '<') => expect FAIL with seed/step detail =====
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+   Compiling ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.88s
+     Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-fe4a3f731e2f8d7d)
+
+running 5 tests
+test panic_payload_extraction ... ok
+test restore_save_invalid_slot_does_not_pollute_character ... ok
+test deterministic_replay ... ok
+test fuzz_single_seed_quick ... FAILED
+test fuzz_32_seeds ... FAILED
+
+failures:
+
+---- fuzz_single_seed_quick stdout ----
+
+thread 'fuzz_single_seed_quick' (829776) panicked at crates/ti-app/tests/fuzz_playtest.rs:451:5:
+assertion `left == right` failed: seed=5 应 0 异常，实际 SeedResult { steps: 2000, final_scene: "Exit", anomalies: 2003, panics: 0, invariant_violations: 2003, save_corruptions: 0, detail: Some("seed=5 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999") }
+  left: 2003
+ right: 0
+
+---- fuzz_32_seeds stdout ----
+seed= 0  steps=2000  final_scene=Exit  anomalies=2003
+seed=0 detail: seed=0 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=0 invariant violations=2003
+seed= 1  steps=2000  final_scene=Exit  anomalies=2003
+seed=1 detail: seed=1 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=1 invariant violations=2003
+seed= 2  steps=2000  final_scene=Exit  anomalies=2003
+seed=2 detail: seed=2 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=2 invariant violations=2003
+seed= 3  steps=2000  final_scene=Exit  anomalies=2003
+seed=3 detail: seed=3 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=3 invariant violations=2003
+seed= 4  steps=2000  final_scene=Exit  anomalies=2003
+seed=4 detail: seed=4 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=4 invariant violations=2003
+seed= 5  steps=2000  final_scene=Exit  anomalies=2003
+seed=5 detail: seed=5 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=5 invariant violations=2003
+seed= 6  steps=2000  final_scene=Exit  anomalies=2003
+seed=6 detail: seed=6 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=6 invariant violations=2003
+seed= 7  steps=2000  final_scene=Exit  anomalies=2003
+seed=7 detail: seed=7 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=7 invariant violations=2003
+seed= 8  steps=2000  final_scene=Exit  anomalies=2003
+seed=8 detail: seed=8 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=8 invariant violations=2003
+seed= 9  steps=2000  final_scene=Exit  anomalies=2003
+seed=9 detail: seed=9 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=9 invariant violations=2003
+seed=10  steps=2000  final_scene=Exit  anomalies=2003
+seed=10 detail: seed=10 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=10 invariant violations=2003
+seed=11  steps=2000  final_scene=Exit  anomalies=2003
+seed=11 detail: seed=11 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=11 invariant violations=2003
+seed=12  steps=2000  final_scene=Exit  anomalies=2003
+seed=12 detail: seed=12 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=12 invariant violations=2003
+seed=13  steps=2000  final_scene=Exit  anomalies=2003
+seed=13 detail: seed=13 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=13 invariant violations=2003
+seed=14  steps=2000  final_scene=Index  anomalies=2003
+seed=14 detail: seed=14 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=14 invariant violations=2003
+seed=15  steps=2000  final_scene=Exit  anomalies=2003
+seed=15 detail: seed=15 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=15 invariant violations=2003
+seed=16  steps=2000  final_scene=Exit  anomalies=2003
+seed=16 detail: seed=16 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=16 invariant violations=2003
+seed=17  steps=2000  final_scene=Exit  anomalies=2003
+seed=17 detail: seed=17 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=17 invariant violations=2003
+seed=18  steps=2000  final_scene=Exit  anomalies=2003
+seed=18 detail: seed=18 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=18 invariant violations=2003
+seed=19  steps=2000  final_scene=Exit  anomalies=2003
+seed=19 detail: seed=19 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=19 invariant violations=2003
+seed=20  steps=2000  final_scene=Exit  anomalies=2003
+seed=20 detail: seed=20 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=20 invariant violations=2003
+seed=21  steps=2000  final_scene=Exit  anomalies=2003
+seed=21 detail: seed=21 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=21 invariant violations=2003
+seed=22  steps=2000  final_scene=Exit  anomalies=2003
+seed=22 detail: seed=22 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=22 invariant violations=2003
+seed=23  steps=2000  final_scene=Exit  anomalies=2003
+seed=23 detail: seed=23 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=23 invariant violations=2003
+seed=24  steps=2000  final_scene=Exit  anomalies=2003
+seed=24 detail: seed=24 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=24 invariant violations=2003
+seed=25  steps=2000  final_scene=Exit  anomalies=2003
+seed=25 detail: seed=25 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=25 invariant violations=2003
+seed=26  steps=2000  final_scene=Exit  anomalies=2003
+seed=26 detail: seed=26 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=26 invariant violations=2003
+seed=27  steps=2000  final_scene=Exit  anomalies=2003
+seed=27 detail: seed=27 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=27 invariant violations=2003
+seed=28  steps=2000  final_scene=Exit  anomalies=2003
+seed=28 detail: seed=28 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=28 invariant violations=2003
+seed=29  steps=2000  final_scene=Exit  anomalies=2003
+seed=29 detail: seed=29 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=29 invariant violations=2003
+seed=30  steps=2000  final_scene=Exit  anomalies=2003
+seed=30 detail: seed=30 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=30 invariant violations=2003
+seed=31  steps=2000  final_scene=Exit  anomalies=2003
+seed=31 detail: seed=31 step=0 scene=Index invariant: gold-cap: gold()=0 cap=999999
+seed=31 invariant violations=2003
+0/32 seeds clean
+
+thread 'fuzz_32_seeds' (829775) panicked at crates/ti-app/tests/fuzz_playtest.rs:405:5:
+assertion `left == right` failed: 32 seed 应 0 异常（当前总异常 64096）
+  left: 64096
+ right: 0
+
+
+failures:
+    fuzz_32_seeds
+    fuzz_single_seed_quick
+
+test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.99s
+
+error: test failed, to rerun pass `-p ti-app --test fuzz_playtest`
+
+===== STEP 2b: REVERT bug ('>' restored) => expect PASS =====
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+   Compiling ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.73s
+     Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-fe4a3f731e2f8d7d)
+
+running 5 tests
+test panic_payload_extraction ... ok
+test restore_save_invalid_slot_does_not_pollute_character ... ok
+test deterministic_replay ... ok
+test fuzz_single_seed_quick ... ok
+test fuzz_32_seeds ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.37s
+
+
+===== STEP 3a: scoped clippy (my test target only) =====
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Checking ti-formats v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-formats)
+    Checking ti-render v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-render)
+    Checking ti-core v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-core)
+    Checking ti-platform v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-platform)
+    Checking ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.70s
+
+===== STEP 3b: full clippy (--tests) =====
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Checking ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+error: long literal lacking separators
+  --> crates/ti-app/tests/stability_repeat.rs:14:29
+   |
+14 | const STABILITY_SEED: u32 = 20241123;
+   |                             ^^^^^^^^ help: consider: `20_241_123`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#unreadable_literal
+   = note: `-D clippy::unreadable-literal` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::unreadable_literal)]`
+
+error: item in documentation is missing backticks
+ --> crates/ti-app/tests/stability_repeat.rs:5:20
+  |
+5 | //! 关键路径 = index → select_role → select_map → main_map → 摇骰 ×N → 贸易买/卖 → 建造。
+  |                        ^^^^^^^^^^^
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#doc_markdown
+  = note: `-D clippy::doc-markdown` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::doc_markdown)]`
+help: try
+  |
+5 - //! 关键路径 = index → select_role → select_map → main_map → 摇骰 ×N → 贸易买/卖 → 建造。
+5 + //! 关键路径 = index → `select_role` → select_map → main_map → 摇骰 ×N → 贸易买/卖 → 建造。
+  |
+
+error: item in documentation is missing backticks
+ --> crates/ti-app/tests/stability_repeat.rs:5:34
+  |
+5 | //! 关键路径 = index → select_role → select_map → main_map → 摇骰 ×N → 贸易买/卖 → 建造。
+  |                                      ^^^^^^^^^^
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#doc_markdown
+help: try
+  |
+5 - //! 关键路径 = index → select_role → select_map → main_map → 摇骰 ×N → 贸易买/卖 → 建造。
+5 + //! 关键路径 = index → select_role → `select_map` → main_map → 摇骰 ×N → 贸易买/卖 → 建造。
+  |
+
+error: item in documentation is missing backticks
+ --> crates/ti-app/tests/stability_repeat.rs:5:47
+  |
+5 | //! 关键路径 = index → select_role → select_map → main_map → 摇骰 ×N → 贸易买/卖 → 建造。
+  |                                                   ^^^^^^^^
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#doc_markdown
+help: try
+  |
+5 - //! 关键路径 = index → select_role → select_map → main_map → 摇骰 ×N → 贸易买/卖 → 建造。
+5 + //! 关键路径 = index → select_role → select_map → `main_map` → 摇骰 ×N → 贸易买/卖 → 建造。
+  |
+
+error: could not compile `ti-app` (test "stability_repeat") due to 4 previous errors
+warning: build failed, waiting for other jobs to finish...
+
+===== STEP 3b 说明（并行冲突，非 W1 改动面） =====
+全量 --tests clippy 当前 4 条 error 全部来自 crates/ti-app/tests/stability_repeat.rs
+（S74.5 / W5 并行撰写中的文件，写点所有权表归 W5，W1 禁写）：
+  - L14 unreadable_literal（20241123 建议 20_241_123）
+  - L5 doc_markdown ×3（select_role / select_map / main_map 缺反引号）
+W1 自有目标已自证 0 警告：STEP 3a scoped clippy（--test fuzz_playtest）Finished 无 error。
+主线程集成时待 W5 收口该文件后重跑全量 --tests clippy 即可满足 dod 第 3 条完整口径。
+
+===== STEP 4: final re-verify after cosmetic cleanup (test + scoped clippy) =====
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Blocking waiting for file lock on build directory
+   Compiling ti-formats v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-formats)
+   Compiling ti-render v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-render)
+   Compiling ti-core v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-core)
+   Compiling ti-platform v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-platform)
+   Compiling ti-app v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 59.61s
+     Running tests/fuzz_playtest.rs (/disk/target/debug/deps/fuzz_playtest-981c1bb2206d93a1)
+
+running 5 tests
+test panic_payload_extraction ... ok
+test restore_save_invalid_slot_does_not_pollute_character ... ok
+test deterministic_replay ... ok
+test fuzz_single_seed_quick ... ok
+test fuzz_32_seeds ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.56s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Checking ti-formats v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-formats)
+    Checking ti-render v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-render)
+    Checking ti-core v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-core)
+    Checking ti-platform v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-platform)
+    Checking ti-app v0.3.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.02s

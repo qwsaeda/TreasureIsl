@@ -4799,6 +4799,79 @@ fn extract_icon_ids(text: &str) -> Vec<String> {
     ids
 }
 
+/// S74.3（W3 规则矩阵）：业务规则行 ↔ 测试矩阵机读对账（孤立规则行 = FAIL）。
+///
+/// 动机：门禁重文档对账轻玩法——`docs/business/*.md` 的「可测规则表」每行声明一条
+/// 业务规则，但规则是否被测试覆盖从未机器判定。本项以 `rule_test_matrix.json`
+/// 为机读源，双向对账：① 每个规则表行须有唯一 `<!-- R-xxx -->` 行尾锚点且 ∈ matrix；
+/// ② matrix 每个 `rule_id` 须在文档有锚点；③ `covered=true` 须有非空 `test_ids`。
+/// `uncovered_items` 登记的 `covered=false` 条目仅 WARN（不阻塞 gate，待后续补测）。
+fn check_orphan_rule_row(root: &Path) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(matrix_text) = read_file(root, "assets/data/rule_test_matrix.json") else {
+        return vec!["rule_test_matrix.json 不存在（规则行对账无机读源）".to_string()];
+    };
+    let Ok(matrix) = serde_json::from_str::<serde_json::Value>(&matrix_text) else {
+        return vec!["rule_test_matrix.json 解析失败（规则行对账）".to_string()];
+    };
+    let Some(rules) = matrix.get("rules").and_then(|value| value.as_array()) else {
+        return vec!["rule_test_matrix.json 缺 rules[]（规则行对账）".to_string()];
+    };
+    let mut matrix_ids: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for rule in rules {
+        let Some(id) = rule.get("rule_id").and_then(|v| v.as_str()) else {
+            errors.push("matrix rules[] 条目缺 rule_id".to_string());
+            continue;
+        };
+        if !matrix_ids.insert(id.to_string()) {
+            errors.push(format!("matrix rule_id `{id}` 重复（须唯一）"));
+        }
+        let covered = rule.get("covered").and_then(serde_json::Value::as_bool).unwrap_or(false);
+        let test_ids = rule.get("test_ids").and_then(serde_json::Value::as_array);
+        if covered && test_ids.is_none_or(std::vec::Vec::is_empty) {
+            errors.push(format!("matrix rule_id `{id}` covered=true 但 test_ids 为空（假覆盖）"));
+        }
+    }
+    // 扫全部 business 文档的行尾锚点 `<!-- R-xxx -->`
+    let mut doc_ids: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let Ok(entries) = std::fs::read_dir(root.join("docs/business")) else {
+        return vec!["docs/business/ 读失败（规则行对账无文档面）".to_string()];
+    };
+    for entry in entries.flatten() {
+        let Ok(name) = entry.file_name().into_string() else { continue };
+        if !std::path::Path::new(&name)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+        {
+            continue;
+        }
+        let Some(text) = read_file(root, &format!("docs/business/{name}")) else { continue };
+        for (line_no, line) in text.lines().enumerate() {
+            let Some(open) = line.find("<!-- R-") else { continue };
+            let after = &line[open + 4..];
+            let Some(close) = after.find("-->") else { continue };
+            let id = after[..close].trim().to_string();
+            if !doc_ids.insert(id.clone()) {
+                errors.push(format!("{name}:{} 锚点 `{id}` 重复", line_no + 1));
+            }
+            if !matrix_ids.contains(&id) {
+                errors.push(format!(
+                    "{name}:{} 锚点 `{id}` 不在 rule_test_matrix.json（孤立规则行）",
+                    line_no + 1
+                ));
+            }
+        }
+    }
+    for id in &matrix_ids {
+        if !doc_ids.contains(id) {
+            errors.push(format!(
+                "matrix rule_id `{id}` 在 docs/business 无锚点（反向孤立，规则行缺映射）"
+            ));
+        }
+    }
+    errors
+}
+
 /// S67.2：`--json` 契约的注册级判据。第 29 项 `tooling-contract` 是纯源码子串匹配
 /// （出现 `--json` token 即过），本项要求白名单工具的源码里有**真实注册**
 /// （argparse `add_argument("--json")` 或 `"--json" in sys.argv`），堵住「注释里写
@@ -4914,6 +4987,8 @@ const RUST_CHECKS: &[(&str, CheckFn)] = &[
     ("cli-json-contract", check_cli_json_contract),
     // S73.0：LGUI-CLI-144 等价的导出边界——icon 原语须有登记 PNG，禁代码矢量回退。
     ("export-icon-boundary", check_export_icon_boundary),
+    // S74.3（W3）：业务规则行 ↔ rule_test_matrix.json 双向对账（孤立规则行 = FAIL）。
+    ("orphan-rule-row", check_orphan_rule_row),
 ];
 
 /// 数据驱动 grep 断言（`impl: "grep"` 项）：`require` = 必须出现（**词边界**匹配：

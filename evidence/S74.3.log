@@ -1,0 +1,124 @@
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+    Blocking waiting for file lock on build directory
+   Compiling ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 16.27s
+     Running tests/e2e_playability.rs (/disk/target/debug/deps/e2e_playability-58d42c6da4e0e84c)
+
+running 7 tests
+test playability_layout_key_controls_in_viewport ... ok
+test playability_ai_turns_visible_and_deterministic ... FAILED
+test playability_multi_round_economy_loop ... ok
+test playability_full_match_to_victory_and_restart ... ok
+test playability_defeat_when_all_human_seats_bankrupt ... ok
+test playability_siege_and_capture ... ok
+test playability_save_and_resume ... ok
+
+failures:
+
+---- playability_ai_turns_visible_and_deterministic stdout ----
+
+thread 'playability_ai_turns_visible_and_deterministic' (821581) panicked at crates/ti-app/tests/e2e_playability.rs:282:9:
+assertion `left == right` failed: AI 自动结算后应恒主地图（不崩不跳场景）
+  left: Vs
+ right: MainMap
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    playability_ai_turns_visible_and_deterministic
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+
+error: test failed, to rerun pass `-p ti-app --test e2e_playability`
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+   Compiling ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.18s
+     Running tests/e2e_playability.rs (/disk/target/debug/deps/e2e_playability-58d42c6da4e0e84c)
+
+running 7 tests
+test playability_layout_key_controls_in_viewport ... ok
+test playability_defeat_when_all_human_seats_bankrupt ... ok
+test playability_full_match_to_victory_and_restart ... ok
+test playability_multi_round_economy_loop ... ok
+test playability_siege_and_capture ... ok
+test playability_ai_turns_visible_and_deterministic ... ok
+test playability_save_and_resume ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+   Compiling ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.74s
+     Running tests/e2e_playability.rs (/disk/target/debug/deps/e2e_playability-58d42c6da4e0e84c)
+
+running 1 test
+test playability_siege_and_capture ... FAILED
+
+failures:
+
+---- playability_siege_and_capture stdout ----
+
+thread 'playability_siege_and_capture' (827770) panicked at crates/ti-app/tests/e2e_playability.rs:191:5:
+assertion `left == right` failed: 强攻方必胜（兵力模型确定性）
+  left: Some(true)
+ right: Some(false)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    playability_siege_and_capture
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.07s
+
+error: test failed, to rerun pass `-p ti-app --test e2e_playability`
+warning: crates/ti-engine/Cargo.toml: file `/disk/workspaces/treasureIsl/crates/ti-engine/src/bin/treasure_bevy.rs` found to be present in multiple build targets:
+  * `bin` target `treasure-bevy-native`
+  * `bin` target `treasure-bevy-wasm`
+warning: `ti-engine` (manifest) generated 1 warning
+   Compiling ti-app v0.2.0 (/disk/workspaces/treasureIsl/crates/ti-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.80s
+     Running tests/e2e_playability.rs (/disk/target/debug/deps/e2e_playability-58d42c6da4e0e84c)
+
+running 7 tests
+test playability_layout_key_controls_in_viewport ... ok
+test playability_defeat_when_all_human_seats_bankrupt ... ok
+test playability_full_match_to_victory_and_restart ... ok
+test playability_multi_round_economy_loop ... ok
+test playability_ai_turns_visible_and_deterministic ... ok
+test playability_siege_and_capture ... ok
+test playability_save_and_resume ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+
+===== S74.3 判据汇总（subagent 回报摘要）=====
+[判据1] cargo test -p ti-app --test e2e_playability：7 passed / 0 failed
+  覆盖行为：胜利终局+重开 / 全人类席破产失败 / 领地攻占(易主+驻军守恒) /
+  4轮买卖建造闭环精确核账 / AI回合可见+同seed确定性 / 存档续玩+首步响应 /
+  元素级版面(视口内+字号代理+不重叠)
+[判据2] python3 json 统计：rules 99 covered 97（uncovered 2 见未决项）
+  锚点对账：matrix ids 99 == docs/business/* 中 <!-- R-xxx --> 锚点 99，双向 0 差异
+[判据3] 变异自证（见上两次单测输出）：
+  反例 `siege.won=Some(false)` → FAILED（left Some(true), right Some(false)，真实可失败）
+  还原 `siege.won=Some(true)` → 7 passed
+[四要素]
+  改动面：数据=assets/data/rule_test_matrix.json(新建) | 工具测试=crates/ti-app/tests/e2e_playability.rs(新建)
+          | 业务文档=docs/business/{territory,07_ui_flow,persistence,progression,economy,combat,08_layout_design,loop_core}.md
+          仅规则表行尾加 <!-- R-xxx --> 锚点(99 行, 99增99删, 零语义/数值改动)
+  跨模块原因：规则矩阵(机读源)+E2E(映射目标)+文档锚点(对账锚)须同改才可机器对账；三者互不拆分为独立可验收子任务。
+  判据输出：见上（7 passed / 99 rules 97 covered / 变异 FAIL→PASS）。
+  evidence：evidence/S74.3.log
+  未决项：①doccheck2 新增「孤立规则行=FAIL」断言需求（交主线程独占落项号）；
+          ②uncovered 规则 2 条：R-loopcore-1(单次操作不产生多步连锁,无直接单测)、
+            R-loopcore-4(场景无死锁 ≤N 步回主菜单,无直接单测)——需主线程裁决补测或豁免。
+  旁路发现(非本任务域)：validate_data.py 报 3 处 release_features.json 版本漂移(0.3.0≠Cargo.toml 0.2.0)，
+          系并行 worker 在途改动，W3 未触碰，交主线程集成时收口。

@@ -312,14 +312,14 @@
 
 | 规则 | 单测（`render_intent.rs` / `render_parity.rs`） |
 |---|---|
-| **各场景版面坐标 == `scenes.json` 实值**（1080 空间）。单测断言的是 `scenes.json` 的**实测值**（如 `row_h=300`、`hint.y=1840`、`title.h=90`），§4 表是该数据的人读镜像 | `index_layout_matches_doc` / `select_scenes_layout_matches_doc` / `main_map_layout_matches_doc` / `vs_layout_matches_doc` / `message_layout_matches_doc` / `saveload_layout_matches_doc` |
-| 血条 x+w ≤ 1080、HUD 与等距区不重叠 | `vs_layout_matches_doc` / `main_map_layout_matches_doc` |
-| 代码绘制动态实体落在 `portrait_zones` 声明区内 | `large_portraits_respect_layout_zones`（**重锚**：判据 = 代码棋子/据点矩形 ∈ 声明区，不再判 legacy 精灵像素） |
-| 关键矩形渲染后有非背景像素（标题条/血条/HUD/正文） | `key_rects_have_pixels`（含 vs `bar_slot` 槽底 fill 断言） |
-| 各场景文字区场景层有独立贡献像素（非全被背景淹没） | `scene_layer_contributes_text_region_pixels`（**重锚**：场景层 vs 背景 XOR，无 legacy 精灵层参与） |
-| 场景渲染确定性 / 非空 / 场景区分 | `render_parity.rs`（`render_is_deterministic_per_scene` / `each_scene_renders_real_content` / `distinct_scenes_produce_distinct_frames`） |
-| 呈现坐标系唯一（禁 legacy 像素/坐标泄漏） | `doccheck2` grep 不变量：`ti-platform`/`chrome`/`scenes` 禁字面 176/220 |
-| **§4 表 == `scenes.json` 同名键**（本文不漂移） | `doccheck2::check_layout_doc_table_cross_check` 逐项对账本文 §4 表数值对与 `assets/data/scenes.json` |
+| **各场景版面坐标 == `scenes.json` 实值**（1080 空间）。单测断言的是 `scenes.json` 的**实测值**（如 `row_h=300`、`hint.y=1840`、`title.h=90`），§4 表是该数据的人读镜像 | `index_layout_matches_doc` / `select_scenes_layout_matches_doc` / `main_map_layout_matches_doc` / `vs_layout_matches_doc` / `message_layout_matches_doc` / `saveload_layout_matches_doc` | <!-- R-layout-1 -->
+| 血条 x+w ≤ 1080、HUD 与等距区不重叠 | `vs_layout_matches_doc` / `main_map_layout_matches_doc` | <!-- R-layout-2 -->
+| 代码绘制动态实体落在 `portrait_zones` 声明区内 | `large_portraits_respect_layout_zones`（**重锚**：判据 = 代码棋子/据点矩形 ∈ 声明区，不再判 legacy 精灵像素） | <!-- R-layout-3 -->
+| 关键矩形渲染后有非背景像素（标题条/血条/HUD/正文） | `key_rects_have_pixels`（含 vs `bar_slot` 槽底 fill 断言） | <!-- R-layout-4 -->
+| 各场景文字区场景层有独立贡献像素（非全被背景淹没） | `scene_layer_contributes_text_region_pixels`（**重锚**：场景层 vs 背景 XOR，无 legacy 精灵层参与） | <!-- R-layout-5 -->
+| 场景渲染确定性 / 非空 / 场景区分 | `render_parity.rs`（`render_is_deterministic_per_scene` / `each_scene_renders_real_content` / `distinct_scenes_produce_distinct_frames`） | <!-- R-layout-6 -->
+| 呈现坐标系唯一（禁 legacy 像素/坐标泄漏） | `doccheck2` grep 不变量：`ti-platform`/`chrome`/`scenes` 禁字面 176/220 | <!-- R-layout-7 -->
+| **§4 表 == `scenes.json` 同名键**（本文不漂移） | `doccheck2::check_layout_doc_table_cross_check` 逐项对账本文 §4 表数值对与 `assets/data/scenes.json` | <!-- R-layout-8 -->
 
 > **legacy z 语义降级**：`e2e_render_alignment.rs` 原「.Map 文件序 z-order 逐像素」判据随
 > legacy 像素层退出而失效，改为 `ti_formats` 层的**纯数据**断言（`.Map` 解析保留文件序，

@@ -118,15 +118,15 @@
 
 | # | 规则 | 单测名（`crates/ti-app/tests/`） |
 |---|---|---|
-| 1 | 菜单项 0..5 上下循环不越界 | `menu_cursor_wraps` |
-| 2 | 菜单项 0/1/5 分别跳 `SelectRole`/`Saveload`/退出 | `menu_item_targets` |
-| 3 | 非法转换不可构造（编译期） | `scenes/mod.rs` 的 `compile_fail` 文档测试 |
-| 4 | 9 个场景判别值互不相同 | `scene_discriminants_unique` |
-| 5 | 控件可见性判定（`flags&1` + 尺寸） | `widget_visible_filter` |
-| 6 | 控件 hit 边界矩形内外各一点 | `widget_hit_bounds` |
-| 7 | 触摸坐标反变换往返一致 | `touch_logical_roundtrip` |
-| 8 | 主地图点按与棋子移动方向一致（同坐标系） | `iso_touch_matches_move` |
-| 9 | 手势阈值：位移 <20 判点按、≥20 判滑动 | `gesture_threshold_split` |
-| 10 | 消息翻页首尾钳位 | `msg_page_clamped` |
-| 11 | 消息关闭回到打开源场景 | `msg_close_returns_source` |
-| 12 | 切场景后选中项/页码复位（无残留） | `scene_switch_resets_state` |
+| 1 | 菜单项 0..5 上下循环不越界 | `menu_cursor_wraps` | <!-- R-uiflow-1 -->
+| 2 | 菜单项 0/1/5 分别跳 `SelectRole`/`Saveload`/退出 | `menu_item_targets` | <!-- R-uiflow-2 -->
+| 3 | 非法转换不可构造（编译期） | `scenes/mod.rs` 的 `compile_fail` 文档测试 | <!-- R-uiflow-3 -->
+| 4 | 9 个场景判别值互不相同 | `scene_discriminants_unique` | <!-- R-uiflow-4 -->
+| 5 | 控件可见性判定（`flags&1` + 尺寸） | `widget_visible_filter` | <!-- R-uiflow-5 -->
+| 6 | 控件 hit 边界矩形内外各一点 | `widget_hit_bounds` | <!-- R-uiflow-6 -->
+| 7 | 触摸坐标反变换往返一致 | `touch_logical_roundtrip` | <!-- R-uiflow-7 -->
+| 8 | 主地图点按与棋子移动方向一致（同坐标系） | `iso_touch_matches_move` | <!-- R-uiflow-8 -->
+| 9 | 手势阈值：位移 <20 判点按、≥20 判滑动 | `gesture_threshold_split` | <!-- R-uiflow-9 -->
+| 10 | 消息翻页首尾钳位 | `msg_page_clamped` | <!-- R-uiflow-10 -->
+| 11 | 消息关闭回到打开源场景 | `msg_close_returns_source` | <!-- R-uiflow-11 -->
+| 12 | 切场景后选中项/页码复位（无残留） | `scene_switch_resets_state` | <!-- R-uiflow-12 -->

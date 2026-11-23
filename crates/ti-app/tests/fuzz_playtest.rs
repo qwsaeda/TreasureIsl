@@ -1,18 +1,28 @@
 //! S13.1 种子化自动 playtest：32 个 seed × 2000 步确定性随机输入 fuzz。
 //!
-//! 检测 3 类异常：
-//! - panic（任何 `panic!`/`unwrap`/`expect` 触发，经 `catch_unwind` 捕获）
-//! - 状态机越界（场景判别值 0..=8 合法性检查）
-//! - 存档损坏（每 500 步 save→load 往返字段一致性）
+//! S74.1 测试体系重做（三处假判据 → 真实判据）：
+//! - **panic**：`catch_unwind` + `downcast_ref::<&str>/<String>` 提取 payload，
+//!   失败输出 seed / `last_step` / `last_scene` / panic 消息（`SeedResult.detail`）；
+//!   `extract_panic_message` 单测用 `panic_any` 验证自定义负载提取。
+//! - **状态不变式**：[`assert_state_invariants`]（契约 C3）逐步检查 3 条**真实可违反**的
+//!   语义不变式（金币上限 / 每席赛道位置合法域 / 解锁链非空），替换旧 `scene_valid()` 恒真式。
+//! - **存档往返**：走生产路径 `GameInput::WriteSave`（`SaveloadScene::on_input` 实建槽）
+//!   → `save_slots()` 读回 → `restore_save` 实恢复 → 二次写回比对稳定字段；
+//!   替换旧「手搓 slot 自读自写」假往返。夹具数值来自 `assets/data/balance.json`。
 //!
 //! 可复现：同 seed 二次运行输入序列逐帧一致（`deterministic_replay` 测试）。
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+use std::any::Any;
+use std::cell::Cell;
 use std::panic::{self, AssertUnwindSafe};
 
 use ti_app::game_app::{GameApp, GameInput, HitData, Scene};
 use ti_core::domain::economy::Building;
 use ti_core::domain::persistence::SaveSlot;
-use ti_core::domain::selection::Character;
+use ti_core::domain::selection::{Character, MapSlot};
+use ti_core::rules::progression::CLEARED_BIT;
 use ti_core::rules::rng::GameRng;
 
 /// 每局步数。
@@ -21,6 +31,10 @@ const STEPS: u32 = 2000;
 const SAVE_CHECK_INTERVAL: u32 = 500;
 /// seed 总数。
 const SEED_COUNT: u32 = 32;
+/// 生产写档版本号（`scenes/saveload.rs::WRITE_VERSION` = v3，带 `boat_level`）。
+const REAL_SAVE_VERSION: u32 = 3;
+/// 往返检查使用的槽位（写档/读档均在 0 号槽）。
+const SAVE_SLOT: usize = 0;
 
 /// 单 seed 运行结果。
 #[derive(Debug)]
@@ -29,14 +43,16 @@ struct SeedResult {
     steps: u32,
     /// 终止场景名。
     final_scene: &'static str,
-    /// 异常数（panic + 场景越界 + 存档损坏）。
+    /// 异常数（panic + 不变式违背 + 存档损坏）。
     anomalies: u32,
     /// panic 计数。
     panics: u32,
-    /// 场景越界计数。
-    scene_violations: u32,
+    /// 不变式违背计数（替换旧「场景越界」假判据）。
+    invariant_violations: u32,
     /// 存档损坏计数。
     save_corruptions: u32,
+    /// 首个失败的定位信息（panic 消息 / 不变式违背 / 存档不一致），供 eprintln 输出。
+    detail: Option<String>,
 }
 
 /// 场景名（报告用，与 `Scene` 变体一一对应）。
@@ -54,12 +70,8 @@ fn scene_name(scene: Scene) -> &'static str {
     }
 }
 
-/// 场景判别值合法（0..=8，`Scene` 枚举 9 变体；`SceneKind::discriminant` 语义）。
-fn scene_valid(scene: Scene) -> bool {
-    (0..=8).contains(&scene_discriminant(scene))
-}
-
 /// 场景判别值（与 `Scene::key` 不同——`key` 有 Intro/Exit 碰撞，用本函数报告 0..=8 唯一值）。
+/// 仅用于 `deterministic_replay` 记录逐帧场景序列（该用途合法，非越界判定）。
 fn scene_discriminant(scene: Scene) -> i32 {
     match scene {
         Scene::Intro => 0,
@@ -71,6 +83,61 @@ fn scene_discriminant(scene: Scene) -> i32 {
         Scene::Message => 6,
         Scene::Saveload => 7,
         Scene::Exit => 8,
+    }
+}
+
+/// 真实语义不变式（契约 C3）：只读 `GameApp` 公开字段/访问器，返回全部违背项。
+///
+/// 每条都不依赖「枚举穷举恒真」——它们绑定业务数值（`assets/data/balance.json`）
+/// 与会话内部一致性，代码埋 bug 时**能真正失败**：
+/// 1. 金币上限：`gold() <= balance.economy.gold_max`（0 = 不限）；数值单源 = balance.json。
+/// 2. 赛道位置合法域：当前 `board` 与 5 个 `seat_sessions` 的 `position_index < track.len()`。
+/// 3. 解锁链非空：`unlocked_maps` 至少含一张图（`ProgressionState::initial_unlocked` 口径）。
+fn assert_state_invariants(app: &GameApp) -> Result<(), String> {
+    let mut errs = Vec::new();
+
+    // I1 金币上限（economy.gold_max；0 = 不限制）。
+    if let Ok(b) = ti_core::data::balance() {
+        let cap = b.economy.gold_max;
+        if cap > 0 && app.gold() > cap {
+            errs.push(format!("gold-cap: gold()={} cap={cap}", app.gold()));
+        }
+    }
+
+    // I2 赛道位置合法域（board.json 格数；BoardSession::new/advance 须保持 index < len）。
+    if let Some(board) = &app.board {
+        let len = board.track().len();
+        let pos = usize::try_from(board.position_index()).unwrap_or(usize::MAX);
+        if len > 0 && pos >= len {
+            errs.push(format!("board-pos: current pos={pos} >= track.len={len}"));
+        }
+    }
+    for (seat, sess) in app.seat_sessions.iter().enumerate() {
+        if let Some(board) = sess {
+            let len = board.track().len();
+            let pos = usize::try_from(board.position_index()).unwrap_or(usize::MAX);
+            if len > 0 && pos >= len {
+                errs.push(format!("seat-board-pos: seat[{seat}] pos={pos} >= track.len={len}"));
+            }
+        }
+    }
+
+    // I3 解锁链非空（开档仅 m01；清空 = 跨图推进状态被破坏）。
+    if app.unlocked_maps.is_empty() {
+        errs.push("unlocked-maps: empty (开档应至少含一张图)".to_string());
+    }
+
+    if errs.is_empty() { Ok(()) } else { Err(errs.join("; ")) }
+}
+
+/// 从 panic payload 提取消息（`&str` / `String` 两种标准负载；其他负载留标记）。
+fn extract_panic_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(s) = payload.downcast_ref::<&str>() {
+        (*s).to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "<non-string panic payload>".to_string()
     }
 }
 
@@ -109,16 +176,116 @@ fn random_hit(rng: &mut GameRng) -> HitData {
     }
 }
 
+/// 真实存档往返：经生产写档路径建槽 → 读回 → 恢复 → 二次写回比对。
+///
+/// 返回 `Ok(())` 表示写/读/再写链路字段一致；`Err(msg)` 给出首个不一致字段（定位用）。
+fn real_save_roundtrip(app: &GameApp, seed: u32, step: u32) -> Result<(), String> {
+    // 记录源 app 的可观测字段（写档前快照）。
+    let source_gold = app.gold();
+    let source_character = app.character().map_or(1, |c| c.index() + 1);
+    let source_map = app.map_slot().map_or(0, MapSlot::zero_index);
+    let source_boat = app.boat_level();
+
+    // ① 生产写档路径：临时切到 Saveload 场景，由 SaveloadScene::on_input 用全部真实
+    //    访问器（rng_steps/unlocked_mask/save_v4_ext/boat_level...）构造槽并写 0 号位；
+    //    WriteSave 不切场景（返回 false），写完即还原原场景，不扰动 fuzz 状态机。
+    let mut writer = GameApp::new(1080.0, 1920.0);
+    // 用「镜像 app」写档：把源 app 的公开字段灌入 writer 后走真实 on_input，避免改源 app.scene。
+    // （writer 只承担构造槽的职责；字段与源 app 逐项对齐，见下方校验。）
+    mirror_into_writer(&mut writer, app, seed);
+    writer.scene = Scene::Saveload;
+    writer.handle(GameInput::WriteSave(SAVE_SLOT));
+    let written = writer.save_slots()[SAVE_SLOT].clone();
+
+    // ② 写档保真：真实槽须反映源 app 的可观测状态（旧硬编码夹具 version=2/rng_steps=0 在此露馅）。
+    if written.version != REAL_SAVE_VERSION
+        || written.gold != source_gold
+        || written.character != source_character
+        || written.map_slot != source_map
+        || written.boat_level != source_boat
+    {
+        return Err(format!(
+            "seed={seed} step={step} write-fidelity written={{v:{},gold:{},char:{},map:{},boat:{}}} source={{v:{REAL_SAVE_VERSION},gold:{source_gold},char:{source_character},map:{source_map},boat:{source_boat}}}",
+            written.version, written.gold, written.character, written.map_slot, written.boat_level
+        ));
+    }
+
+    // ③ 生产读档路径：新壳 restore_save 真实恢复（不手搓 slot）。
+    let mut restored = GameApp::new(1080.0, 1920.0);
+    restored.set_rng_seed(seed);
+    restored.restore_save(written.clone());
+    if restored.boat_level() != written.boat_level.max(1)
+        || restored.is_cleared() != (written.unlocked_mask & CLEARED_BIT != 0)
+    {
+        return Err(format!(
+            "seed={seed} step={step} load-fidelity restored={{boat:{},cleared:{}}} written={{boat:{},mask:{}}}",
+            restored.boat_level(),
+            restored.is_cleared(),
+            written.boat_level,
+            written.unlocked_mask
+        ));
+    }
+
+    // ④ 再写回：读档后的壳经同一生产路径写档，稳定字段须与原槽一致（完整往返闭环）。
+    restored.scene = Scene::Saveload;
+    restored.handle(GameInput::WriteSave(SAVE_SLOT));
+    let rewritten = restored.save_slots()[SAVE_SLOT].clone();
+    if rewritten.character != written.character
+        || rewritten.map_slot != written.map_slot
+        || rewritten.rng_steps != written.rng_steps
+        || rewritten.unlocked_mask != written.unlocked_mask
+        || rewritten.boat_level != written.boat_level
+    {
+        return Err(format!(
+            "seed={seed} step={step} roundtrip written={{char:{},map:{},steps:{},mask:{},boat:{}}} rewritten={{char:{},map:{},steps:{},mask:{},boat:{}}}",
+            written.character,
+            written.map_slot,
+            written.rng_steps,
+            written.unlocked_mask,
+            written.boat_level,
+            rewritten.character,
+            rewritten.map_slot,
+            rewritten.rng_steps,
+            rewritten.unlocked_mask,
+            rewritten.boat_level
+        ));
+    }
+
+    Ok(())
+}
+
+/// 把源 app 的可观测字段灌入新壳（仅为让生产写档路径看到与源一致的视图）。
+fn mirror_into_writer(writer: &mut GameApp, source: &GameApp, seed: u32) {
+    writer.set_rng_seed(seed);
+    writer.character = source.character();
+    writer.map_slot = source.map_slot();
+    writer.map_pos = source.map_pos();
+    writer.boat = source.boat.clone();
+    writer.cleared = source.is_cleared();
+    writer.unlocked_maps.clone_from(&source.unlocked_maps);
+    writer.gold = source.gold();
+    writer.seat_gold = source.seat_gold;
+    writer.turn_cycle = source.turn_cycle;
+    writer.selection = source.selection;
+    writer.rng = source.rng.clone();
+    writer.saveload_cursor = source.saveload_cursor;
+}
+
 /// 单 seed 执行 2000 步 fuzz（确定性 `GameRng` 输入流），返回结果统计。
 ///
-/// panic 经 `catch_unwind` 捕获后计为异常，该 seed 提前终止；场景越界 /
-/// 存档损坏逐步累计。每 500 步做一次 save→load 往返断言。
+/// panic 经 `catch_unwind` 捕获并提取 payload；不变式违背 / 存档损坏逐步累计，
+/// 首个失败写入 `detail`（含 seed + step + 场景 + 原因）。每 500 步做一次真实存档往返。
 fn run_playtest(seed: u32) -> SeedResult {
     let mut panics = 0u32;
-    let mut scene_violations = 0u32;
+    let mut invariant_violations = 0u32;
     let mut save_corruptions = 0u32;
     let mut steps_executed = 0u32;
     let mut final_scene = Scene::Index;
+    let mut detail: Option<String> = None;
+
+    // panic 后闭包内局部变量不可跨 unwind 取出 ⇒ 用 Cell 把最后一步/场景外泄。
+    let last_step = Cell::new(0u32);
+    let last_scene = Cell::new(Scene::Index);
 
     let closure = AssertUnwindSafe(|| {
         let mut rng = GameRng::new(seed);
@@ -127,9 +294,18 @@ fn run_playtest(seed: u32) -> SeedResult {
 
         for step in 0..STEPS {
             final_scene = app.scene();
-            // 状态机越界检查：场景判别值必须 0..=8
-            if !scene_valid(final_scene) {
-                scene_violations = scene_violations.saturating_add(1);
+            last_step.set(step);
+            last_scene.set(final_scene);
+
+            // 真实语义不变式（逐步累计，替换旧 scene_valid 恒真式）。
+            if let Err(msg) = assert_state_invariants(&app) {
+                invariant_violations = invariant_violations.saturating_add(1);
+                if detail.is_none() {
+                    detail = Some(format!(
+                        "seed={seed} step={step} scene={} invariant: {msg}",
+                        scene_name(final_scene)
+                    ));
+                }
             }
 
             // 本步输入：60% 键盘随机事件 + 40% 触摸采样（确定性走 rng 流；
@@ -142,20 +318,24 @@ fn run_playtest(seed: u32) -> SeedResult {
                 let _ = app.poll_hit(Some(hit));
             }
 
-            // 存档往返：每 500 步做一次 save→load，断言字段一致
+            // 真实存档往返：每 500 步走生产写档→读档→再写回链路。
             if step > 0 && step % SAVE_CHECK_INTERVAL == 0 {
-                let slot = build_slot(&app);
-                let mut restored = GameApp::new(1080.0, 1920.0);
-                restored.set_rng_seed(seed);
-                restored.write_save_slot(0, slot.clone());
-                restored.restore_save(slot.clone());
-                let slot_after = restored.save_slots()[0].clone();
-                if slot_after != slot {
+                if let Err(msg) = real_save_roundtrip(&app, seed, step) {
                     save_corruptions = save_corruptions.saturating_add(1);
+                    if detail.is_none() {
+                        detail = Some(msg);
+                    }
                 }
-                // 往返后场景必须合法（restore 落在 MainMap / SelectRole）
-                if !scene_valid(restored.scene()) {
-                    scene_violations = scene_violations.saturating_add(1);
+                // 恢复壳也必须满足不变式（restore_save 不得留下半初始化态）。
+                let mut probe = GameApp::new(1080.0, 1920.0);
+                probe.set_rng_seed(seed);
+                let slot = app.save_slots()[SAVE_SLOT].clone();
+                probe.restore_save(slot);
+                if let Err(msg) = assert_state_invariants(&probe) {
+                    invariant_violations = invariant_violations.saturating_add(1);
+                    if detail.is_none() {
+                        detail = Some(format!("seed={seed} step={step} restored-invariant: {msg}"));
+                    }
                 }
             }
 
@@ -163,37 +343,29 @@ fn run_playtest(seed: u32) -> SeedResult {
         }
     });
 
-    if panic::catch_unwind(closure).is_err() {
-        panics = 1;
-        // panic 中止：终止场景不可跨 unwind 取出，以 Index 占位；步数记 0
-        final_scene = Scene::Index;
+    match panic::catch_unwind(closure) {
+        Ok(()) => {}
+        Err(payload) => {
+            panics = 1;
+            let msg = extract_panic_message(payload.as_ref());
+            detail = Some(format!(
+                "seed={seed} panic last_step={} last_scene={}: {msg}",
+                steps_executed,
+                scene_name(last_scene.get())
+            ));
+            final_scene = Scene::Index;
+        }
     }
 
-    let anomalies = panics + scene_violations + save_corruptions;
+    let anomalies = panics + invariant_violations + save_corruptions;
     SeedResult {
         steps: if panics > 0 { 0 } else { steps_executed },
         final_scene: scene_name(final_scene),
         anomalies,
         panics,
-        scene_violations,
+        invariant_violations,
         save_corruptions,
-    }
-}
-
-/// 从当前 `GameApp` 状态构造存档槽（与 `saveload.rs::WriteSave` 同口径）。
-fn build_slot(app: &GameApp) -> SaveSlot {
-    let character = app.character().map_or(1, |c| c.index() + 1);
-    let map_slot = app.map_slot().map_or(0, ti_core::domain::selection::MapSlot::zero_index);
-    SaveSlot {
-        version: 2,
-        character,
-        gold: app.gold(),
-        map_slot,
-        position: app.map_pos().map_or(0, |p| p.index(20)),
-        rng_steps: 0,
-        unlocked_mask: 0,
-        boat_level: 1,
-        v4: None,
+        detail,
     }
 }
 
@@ -213,11 +385,14 @@ fn fuzz_32_seeds() {
             "seed={seed:>2}  steps={}  final_scene={}  anomalies={}",
             r.steps, r.final_scene, r.anomalies
         );
+        if let Some(d) = &r.detail {
+            eprintln!("seed={seed} detail: {d}");
+        }
         if r.panics > 0 {
             eprintln!("seed={seed} panic detected at/before fuzz loop");
         }
-        if r.scene_violations > 0 {
-            eprintln!("seed={seed} scene violations={}", r.scene_violations);
+        if r.invariant_violations > 0 {
+            eprintln!("seed={seed} invariant violations={}", r.invariant_violations);
         }
         if r.save_corruptions > 0 {
             eprintln!("seed={seed} save corruptions={}", r.save_corruptions);
@@ -272,6 +447,24 @@ fn fuzz_single_seed_quick() {
     let r = run_playtest(5);
     assert_eq!(r.anomalies, 0, "seed=5 应 0 异常，实际 {r:?}");
     assert_eq!(r.steps, STEPS, "seed=5 应跑满 2000 步");
+}
+
+/// panic payload 提取：`panic_any` 注入 `String` 负载，须原样还原（定位信息不丢）。
+/// tests/ 允许主动 panic 构造负例（库代码 0 panic 红线不适用）。
+#[test]
+#[allow(clippy::panic)]
+fn panic_payload_extraction() {
+    let payload = format!("injected-panic-{}", 42);
+    let caught = panic::catch_unwind(AssertUnwindSafe(|| panic::panic_any(payload.clone())));
+    match caught {
+        Err(p) => assert_eq!(extract_panic_message(p.as_ref()), payload),
+        Ok(()) => panic!("panic_any 应被 catch_unwind 捕获"),
+    }
+    let caught_str = panic::catch_unwind(AssertUnwindSafe(|| panic::panic_any("static-boom")));
+    match caught_str {
+        Err(p) => assert_eq!(extract_panic_message(p.as_ref()), "static-boom"),
+        Ok(()) => panic!("panic_any 应被 catch_unwind 捕获"),
+    }
 }
 
 /// FIND-204 回归测试：越界槽读档不污染 character 字段。
