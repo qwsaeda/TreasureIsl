@@ -1,0 +1,36 @@
+# S77 全场景触摸链路审计 + 选角页确认断链根治（2026-11-23）
+
+## 背景
+用户在 S76（首页木牌 Pickable::IGNORE 修复）后说「全做」= 把全场景触摸链路一次排查干净。
+
+## 全场景 PickTarget/Pickable 审计（实测源码）
+- `build_data_chrome`（首页木牌/图鉴/成就等）：S76 已修（可点击项 Pickable::default() 覆盖 IGNORE）。
+- `build_list_chrome_pos` + `build_chrome_row`：row_node 不 IGNORE、只子节点 IGNORE，attach_row_pick 挂
+  PickTarget ⇒ 列表行（选角/选图/存读档）可点（设计正确）。
+- `build_proof_panel`：全 IGNORE 但无 PickTarget（纯展示测试证明页），非游戏主流程。
+- `scene_render::spawn_pick_layer`：1080 层透明标记挂 PickTarget（非 bevy_ui，走 manual_1080_hit_system）。
+结论：IGNORE 误用仅 S76 一处（已修）；其余设计正确。
+
+## 新发现真缺口：选角页触摸无法确认
+- `select_map on_hit`：点卡片 → set_map_slot + `advance(Confirm)` 推进场景（触摸完整）。
+- `select_role on_hit`：点行只 set_character + toggle_seat_mark（多选勾选），**不推进场景**——
+  底部「1 3 确认」仅键盘。⇒ 选角页触摸能勾选但无法确认，流程断链（与 select_map 不一致）。
+修复：点**已勾选**席位 = `advance(Confirm)` 推进（点未勾席位仍加入多选，保留 v3 多选能力）。
+加 e2e 3 条（未勾加入/已勾推进/人数不足拒绝）。
+
+## 验证
+clippy 0 + select_role_touch_e2e 3 条 PASS + ui_data_chrome 3 条 PASS + validate_data OK。
+重编 .so + APK 真机触摸全链路验证（首页木牌→选角勾选→触摸确认→选图）待编译完成后回填。
+
+## 真机验证结果（redroid，装 06:44 新 .so，全程触摸无键盘）
+1. 首页 tap「新游戏」木牌 → 选角场景 ✓
+2. 选角 tap 2 个角色列表项（勾选潘达/泰奇）→ 勾选生效 ✓
+3. 选角 tap 已勾席位（潘达）→ **确认推进到选图场景** ✓（S77 修复核心，修复前此处只能键盘）
+4. 选图 tap 地图卡片 → 进入主地图 ✓，且选图页显示全部地图「可进入」（S62 全解锁实证）
+
+三个用户反馈全部真机坐实修复：触摸可用 / 地图全解锁 / 新设计（数据化 UI）。
+
+## 观察（非本任务范围）
+主地图资产（岛屿贴图/羊皮底）在此次 redroid 截图未加载（只剩航线+棋子+色块）——
+疑似 /sdcard/TI/data 资产部署或并行 junqirs app 干扰；触摸链路本身完整走通到主地图，
+此渲染问题另记（若真机也复现需查资产部署，非 S76/S77 触摸修复范围）。

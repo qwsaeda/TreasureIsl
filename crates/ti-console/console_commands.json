@@ -622,6 +622,21 @@
    "writes": [],
    "enabled_by_default": true,
    "command": "cargo test -p ti-app --test app_achievement_e2e"
+  },
+  {
+   "id": "select_role_touch_e2e",
+   "runner": "cargo",
+   "script": "",
+   "args": [
+    "test",
+    "-p",
+    "ti-app",
+    "--test",
+    "select_role_touch_e2e"
+   ],
+   "writes": [],
+   "enabled_by_default": true,
+   "command": "cargo test -p ti-app --test select_role_touch_e2e"
   }
  ]
 }

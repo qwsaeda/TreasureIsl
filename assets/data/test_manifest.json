@@ -1756,6 +1756,19 @@
    "timeout_s": 900,
    "prove": "evidence/tests/verify_zero_unknown/",
    "desc": "做什么：运行 ti-tools/tests/verify_zero_unknown.rs（`cargo test -p ti-tools --test verify_zero_unknown`）。测什么：退化与鲁棒性边界（对抗/模糊/零未知回归）。达到效果：该测试文件已全量登记进平台测试页可见清单，可由 `/api/tests?run=verify_zero_unknown` 单独运行，结论以 C1 `result.json` 结构化结果回显。"
+  },
+  {
+   "id": "select_role_touch_e2e",
+   "level": "L2",
+   "category": "functional",
+   "type": "ci",
+   "name": "选角页触摸端到端（S77：点未勾席位加入多选/点已勾席位确认推进/人数不足拒绝）",
+   "command": "cargo test -p ti-app --test select_role_touch_e2e",
+   "evidence": "evidence/tests/select_role_touch_e2e/run.log",
+   "group": "core",
+   "timeout_s": 900,
+   "prove": "evidence/tests/select_role_touch_e2e/",
+   "desc": "做什么：选角页触摸命中端到端。测什么：点未勾加入/点已勾确认推进/人数不足拒绝。达到效果：触摸可走完整选角流程。 逐测：实测 6 条断言。"
   }
  ]
 }

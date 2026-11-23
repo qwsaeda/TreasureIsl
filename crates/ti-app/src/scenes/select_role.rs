@@ -148,6 +148,13 @@ impl Scene for SelectRoleScene {
         host.set_character(Some(picked));
         host.selection_mut().character = Some(picked);
         chrome::flash_press();
+        // S77 触摸端到端：点未勾选席位 = 加入多选；点**已勾选**席位 = 确认推进
+        // （对齐 select_map on_hit 的 touch→Confirm）。此前 on_hit 只勾选不确认 ⇒
+        // 选角页触摸无法进入下一场景（底部「确认」仅键盘），与 select_map 不一致。
+        let already_marked = host.player_seats().contains(&picked);
+        if already_marked {
+            return host.advance(GameInput::Confirm);
+        }
         toggle_seat_mark(host, picked);
         false
     }
