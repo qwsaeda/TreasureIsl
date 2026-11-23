@@ -1,0 +1,27 @@
+S79.0 index 文档坐标权衡补充 · 验收证据（2026-11-23）
+
+== 改动面声明 ==
+文档（docs/scenes/index.md §10.0 单节新增）。
+
+== 触发 ==
+用户问「罗盘环徽章层坐标都是固定死的？」——查实测后补文档，避免虚报成「自动布局算出来的」。
+
+== 判据 1：10.0 节在位 ==
+docs/scenes/index.md `## 10. 数据驱动改法` 下新增 `### 10.0 坐标是「写死+等比缩放」，不是「参数化算出来的」（重要权衡）`。
+内容：① 坐标链路图（scenes.json rect → index_data_items → build_data_chrome → Val::Percent → taffy）
+② 实测换算 (468,498,144,144) → left 43.33% / top 25.94% / w 13.33% / h 7.5%
+③ 三层事实：写死 / 等比缩放非智能重排（S29.5 证据 1080×1920→540×960 节点25→25）/ 横竖屏两套独立坐标
+④ 历史对照：早期 cos/sin 算环已删，treasure_bevy.rs:1051-1057 注释明留痕迹
+⑤ 与 main_map 参数化环对比（ring.center/radius + ring_card_center）
+
+== 判据 2：引用源码符号实测存在 ==
+- crates/ti-engine/src/bin/treasure_bevy.rs:1052 「数据化后罗盘环删了，但派生式保留作设计空间锚点」✓
+- crates/ti-engine/src/ui.rs:686 `left: Val::Percent(x / design_w * 100.0)` ✓
+- crates/ti-app/src/scenes/chrome.rs:740 `pub fn ring_card_center(...)` ✓
+- evidence/S29.5.log resize 真重排证据 ✓
+
+== 判据 3：门禁 ==
+doccheck 197 docs/393 task refs 0 error；doccheck2 0 error（56 项）；gate 36 项 0 failure。
+
+== 结论 ==
+坐标权衡已如实补进 index.md §10.0，引用符号全部实测存在。S79.0 可置 verified。

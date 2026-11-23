@@ -285,6 +285,26 @@ index 本身**不改业务规则**（`09_index_compass_spec.md` §7 改动面声
 
 **当前定案（S39.0 数据化重构后）**：index 全部视觉 = `scenes.json` 数据 + `assets/ui/` 资产，**Rust 零改动**（`IndexScene::on_hit` 只读 `hit.key/index`，不含版面数学；罗盘环 Rust 实现已删除，竖屏环由数据还原）。
 
+### 10.0 坐标是「写死 + 等比缩放」，不是「参数化算出来的」（重要权衡）
+
+那 36 条徽章原语（§4 `#5–40`，每枚 6 原语）的坐标**逐条手写在 `scenes.json`**，没有算法实时算环位置。但渲染不是拿绝对像素直接画，而是**设计空间固定坐标 → 百分比缩放**：
+
+```
+scenes.json rect (468,498,144,144)           # 徽章 0，竖屏设计空间 1080×1920
+  ↓ index_data_items()   [treasure_bevy.rs:1067]
+DataChromeItem.rect
+  ↓ build_data_chrome()  [ti-engine/src/ui.rs:681-689]
+left=43.33%  top=25.94%  width=13.33%  height=7.5%   # ÷ 设计空间 1080×1920
+  ↓ bevy_ui Node(Val::Percent) + taffy 布局
+任意视口自适应位置
+```
+
+- **是写死的**：想移动徽章/改环排布，得改那 36 行坐标（或横版木牌坐标），没有「给环心 + 半径，引擎算 6 个位置」这种参数化。
+- **但不是纯绝对像素**：`build_data_chrome` 把 rect 换成 `Val::Percent`，窗口 resize 时按百分比缩放。`evidence/S29.5.log` 实测：`1080×1920 → 540×960` 时 UI 布局根跟着视口变、节点数 `25 → 25`（只重排不重建）。所以它是**等比缩放**保证位置不偏，而非内容智能重排。
+- **横竖屏是两套独立坐标**：竖屏 `index.primitives`（42 条罗盘环）vs 横屏 `index.landscape.primitives`（22 条木牌），不是同一套坐标自动重排——切换靠 `Settings.orientation` 择一。
+- **历史对照**：早期 `build_index_chrome` 曾用 `cos/sin + 半径` 代码算 6 枚 medallion 中心；S39 数据化重构删掉该算法、坐标固化进 JSON（换来「换 UI 零 Rust」，代价 = 改布局要改数据而非调参数）。`treasure_bevy.rs:1051-1057` 注释明留此痕迹：「数据化后罗盘环删了，但派生式保留作设计空间锚点」。
+- **与 main_map 的对比**：`main_map` 的 31 格环是**参数化**的（`ring.{center_x,center_y,radius,card_w,card_h}` + `ring_card_center(index,count,layout)` 算坐标，见 `main_map.md` §4.3）——改参数即换环布局；index 是**固定坐标**——改布局要改 36 行数据。两者同属「数据驱动」，但一个参数化、一个手写死坐标，改法不同。
+
 **换 UI / 改坐标 / 换资产步骤**：
 
 1. 改数据：编辑 `assets/data/scenes.json` 的 `index.primitives`（竖屏 42 条）/ `index.landscape.primitives`（横屏 22 条）——坐标/尺寸/层序 `z`/`when`/`item`/`pick_key` 全在此。若要换焦点锚，同步 `index.focus_anchor.bbox` 与 `scene_manifest_v3.json` `index.focus.bbox_pct`（N8 对账，±1px）。
