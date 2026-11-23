@@ -64,6 +64,27 @@ assets/data/scenes.json（每场景原语清单 + 参数）
 
 **为什么 main_map / vs 的游戏世界留 1080 而不进 bevy_ui**：S29.3e 判定——bevy_ui UI 相机叠在世界相机之上，同屏位会遮住动态实体（棋盘/立绘/HP 条）；游戏世界保持 1080 正交 + 数据驱动，chrome 才进 bevy_ui。见 `19_bevy_ui.md` 坑位 9.8-13。
 
+### 3.1 各场景「不手写像素」落地状态（2026-11-23 实测）
+
+总纲 = `docs/process/18_asset_content_pipeline.md` §15「不手写像素：声明意图/数据，引擎算坐标」。
+**关键区分**：该治的是「**规律排列的重复结构**被逐条手写坐标」；单件元素（背景/标题/单面板）写坐标是合理的（无可抽参数）。
+下表为逐场景实测（`scenes.json` 原语的 `derived` / `ui_layer` 标记统计 + Rust 构建方式）：
+
+| 场景 | 重复结构 | 位置真正来源 | 死坐标风险 | 参数化状态 |
+|---|---|---|---|---|
+| `index` | 6 徽章 × 6 原语 = 36 行（横屏 18 行木牌/图标） | 竖屏 `index.ring` / 横屏 `index.menu` 参数 + `index_param_rect` 运行期算（S81） | 曾有（**已修**） | ✅ 参数化：36+18 行标 `derived`，x/y=0 |
+| `select_role` | 5 行角色 | Rust `build_list_chrome`（flex column + gap + `%`），20 原语标 `ui_layer=bevy_ui` | 无 | ✅ 自动布局（S29.3 早已迁） |
+| `select_map` | 3 张地图卡 | Rust `build_list_chrome_pos`（% 贴边 + flex），18 原语标 `ui_layer=bevy_ui` | 无 | ✅ 自动布局（S29.3） |
+| `saveload` | 5 槽位 | Rust `build_list_chrome_pos(PanelSide::Left)`，5 原语标 `ui_layer=bevy_ui` | 无 | ✅ 自动布局（S29.3b） |
+| `message` | 无（单面板） | Rust `build_message_chrome`（% 居中 + 文本自动折行），4 原语标 `ui_layer=bevy_ui` | 无 | ✅ 意图化（S29.3e） |
+| `vs` | 无重复列表 | 代码绘制立绘/HP 条（运行时），游戏世界留 1080（S29.3e） | 无（单件） | 合理写坐标（无可抽重复参数） |
+| `main_map` | 31 格环 | `ring.{center_x,center_y,radius,card_w,card_h}` + `ring_card_center` 运行期算 | 无 | ✅ 参数化（S27.4 早已做） |
+
+**结论**：除 `index`（原手写重复结构，S80 机器断言 + S81 运行期参数化已修）外，其它场景要么早已自动布局（4 个纯 UI 场景）、要么早已参数化（main_map 31 格环）、要么单件无需参数化（vs）。
+注意：`select_role`/`select_map`/`saveload` 的 `scenes.json` 原语 rect 仍是非零手写值，但那是 **CPU 世界层版面规格 / 人读镜像**（`ui_layer=bevy_ui` 原语在 Bevy 壳被跳过），真正位置由 Rust flex 算——按 `17_layout_engine.md` §S29.4 口径合规，不是「渲染依赖的死坐标」。
+
+> 机器守门：doccheck2 第 57 项 `no-handwritten-grid` 调 `scripts/gen_index_medallions.py --check` 守 index 的 `derived` 标记 + 双源一致；`scripts/validate_data.py` V2 守参数键合法性（含 `_dx/_dy` 负偏移豁免）。
+
 ## 4. 每份场景文档的 10 固定章节（通用阅读法）
 
 1. 场景职责与状态机位置（进入/退出、前后流转）

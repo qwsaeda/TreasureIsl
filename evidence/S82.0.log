@@ -1,0 +1,21 @@
+S82.0 scenes 总览补「各场景不手写像素落地状态」· 验收证据（2026-11-23）
+
+== 改动面 ==
+文档（docs/scenes/README.md §3.1 新节）。触发：用户问「其它场景ui呢」——需如实说明 7 场景参数化状态，不能只说 index。
+
+== 判据 1：§3.1 节在位 + 实测数据一致 ==
+docs/scenes/README.md §3.1 表格逐场景列出：重复结构 / 位置真正来源 / 死坐标风险 / 参数化状态。
+实测统计（scenes.json）：
+- index: 竖 42 原语/36 derived、横 22/18 derived，参数 ring+menu，S81 已修
+- select_role: 竖 45/0 derived/20 ui_layer=bevy_ui，Rust build_list_chrome 自动布局
+- select_map: 竖 31/0/18 ui_layer，Rust build_list_chrome_pos 自动布局
+- saveload: 竖 13/0/5 ui_layer，Rust build_list_chrome_pos(Left) 自动布局
+- message: 竖 5/0/4 ui_layer，Rust build_message_chrome % 居中
+- vs: 19/16 原语，0 derived/ui_layer，代码绘制游戏世界留 1080（单件无需参数化）
+- main_map: ring 参数 + ring_card_center，S27.4 已参数化
+关键区分已写明：治"规律排列重复结构手写坐标"，单件写坐标合理。
+
+== 判据 2：门禁 ==
+doccheck/doccheck2 0 error（除计数漂移）；文档无占位、无 >300 字表格单元格。
+
+S82.0 可置 verified。
