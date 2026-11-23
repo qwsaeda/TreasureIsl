@@ -60,6 +60,16 @@ scenes.json 原语 + 「无战斗」（`scene.vs.empty`）。
 > `--vs-phase=clash|duel` 横屏定格图，机制见 §5/§10；引擎真实渲染截图仍以上面两张为准（红线：
 > AI 概念图不得当验收图）。
 
+### 2.5 零件组装装配图（S39 拆件组件化概念）
+
+![vs 零件组装装配图](../evidence/scenes_assembly_vs_portrait.png)
+
+由正式工具 `scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**产出（非 PIL 裁切完整图、非 AI 概念图），portrait 1080×1920，5 个 z 层 / 19 原语 / 5 个资产零件。
+
+- 复现：`python3 scripts/ui_assembly.py --scene vs --orientation portrait --output evidence/scenes_assembly_vs_portrait.png`
+- 读法：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
+- 说明：立绘/动画为运行时代码绘制（见 §4.3），资产层主要是背景/血条/rect
+
 ## 3. ASCII 布局图
 
 **竖屏 1080×1920**（坐标 = scenes.json 实测；底层 = 空态框架，立绘层 = 代码绘制叠加）：

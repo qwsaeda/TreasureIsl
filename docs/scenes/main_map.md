@@ -39,6 +39,16 @@ Intro → Index → SelectRole → SelectMap → MainMap ⇄ Vs / Message
 
 ---
 
+### 2.5 零件组装装配图（S39 拆件组件化概念）
+
+![main_map 零件组装装配图](../evidence/scenes_assembly_main_map_portrait.png)
+
+由正式工具 `scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**产出（非 PIL 裁切完整图、非 AI 概念图），portrait 1080×1920，5 个 z 层 / 7 原语 / 6 个资产零件。
+
+- 复现：`python3 scripts/ui_assembly.py --scene main_map --orientation portrait --output evidence/scenes_assembly_main_map_portrait.png`
+- 读法：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
+- 说明：**主体（31 格环/岛/船/棋盘）为运行时代码绘制、非独立拆件** ⇒ 装配图只显出 6 个资产层，中间空白属诚实呈现
+
 ## 3. ASCII 布局图
 
 **竖屏 1080×1920**（坐标 = scenes.json 竖屏实测；世界画布 `world_canvas (11,250,1048,1056)`）：

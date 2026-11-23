@@ -34,6 +34,16 @@ Saveload → SelectRole（读档恢复：角色/地图缺失）
 - 可见元素：同一夜海底；左上 bevy_ui 5 槽面板（位 1 选中黄铜底）；中上金色「存读档」标题（数据原语 x=354）；右侧一整条深棕木色竖带（x=760 的 5 块 meta 面板）；底部「上下选位 13 读/写」提示（数据原语 y=1648）。
 - 验收口径：引擎离屏真实渲染（GPU 读回 PNG），非 AI 概念图；出图探针日志 `node/text/computed_layout` 证明 bevy_ui taffy 自动布局真跑。
 
+### 2.5 零件组装装配图（S39 拆件组件化概念）
+
+![saveload 零件组装装配图](../evidence/scenes_assembly_saveload_portrait.png)
+
+由正式工具 `scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**产出（非 PIL 裁切完整图、非 AI 概念图），portrait 1080×1920，4 个 z 层 / 13 原语 / 1 个资产零件。
+
+- 复现：`python3 scripts/ui_assembly.py --scene saveload --orientation portrait --output evidence/scenes_assembly_saveload_portrait.png`
+- 读法：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
+- 说明：槽位列表走 bevy_ui（1 资产件），选中态由 ChromeRow 渲染
+
 ## 3. ASCII 布局图
 
 **竖屏 1080×1920**（图示按 1080 逻辑坐标；实际 bevy_ui 面板用 `%` 定位 ≈ left 3% / width 34%）

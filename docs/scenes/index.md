@@ -53,6 +53,16 @@
 
 > 注：两图均为 Bevy 引擎真实离屏渲染（`evidence/bevy_native_*.png`），符合 A 纪律验收口径；AI 概念稿（`evidence/ui_concept/index_compass_*.png`、`index_v2.png`）仅作设计参考，不作验收图。
 
+### 2.5 零件组装装配图（S39 拆件组件化概念）
+
+![index 零件组装装配图](../evidence/scenes_assembly_index_landscape.png)
+
+由正式工具 `scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**产出（非 PIL 裁切完整图、非 AI 概念图），landscape 1920×1080，7 个 z 层 / 22 原语 / 21 个资产零件。
+
+- 复现：`python3 scripts/ui_assembly.py --scene index --orientation landscape --output evidence/scenes_assembly_index_landscape.png`
+- 读法：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
+- 说明：16 件拆件组件化（底图烘焙标题 + 人物 + 绳 + 6 木牌 + 6 图标 + 金边），逐层加载渲染，S39 spec 标准样本
+
 ## 3. ASCII 布局图
 
 **竖屏 1080×1920（罗盘环版，坐标系 1080 基准）**

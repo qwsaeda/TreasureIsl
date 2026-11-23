@@ -48,6 +48,16 @@
 harbour / open_sea / reef）+ 右侧 3 张地图选项卡（地图图标 + 中文图名「m01/海图二/海图三」
 + 选中金边 + 未解锁锁条 + BOSS 难度星）+ 顶部金标题「选择地图」+ 底部操作提示「38/40 切换  13 确认」。
 
+### 2.5 零件组装装配图（S39 拆件组件化概念）
+
+![select_map 零件组装装配图](../evidence/scenes_assembly_select_map_portrait.png)
+
+由正式工具 `scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**产出（非 PIL 裁切完整图、非 AI 概念图），portrait 1080×1920，7 个 z 层 / 31 原语 / 10 个资产零件。
+
+- 复现：`python3 scripts/ui_assembly.py --scene select_map --orientation portrait --output evidence/scenes_assembly_select_map_portrait.png`
+- 读法：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
+- 说明：地图包卡片分层；封面图 + 选中态/锁条，卡片行走 bevy_ui
+
 ## 3. ASCII 布局图
 
 **竖屏 1080×1920**（坐标 = scenes.json 实测）：

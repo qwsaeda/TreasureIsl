@@ -1,0 +1,34 @@
+S78 UI 零件组装装配图正式工具 + 7 场景装配图 + 嵌入文档 · 验收证据（2026-11-23）
+
+== 改动面声明 ==
+工具(scripts/ui_assembly.py 新正式工具) + 文档(14号/04号/README 三处登记 + 7 场景文档嵌入 §2.5 装配图) + 证据(evidence/scenes_assembly_*.png 7 张)。
+跨模块原因=装配图工具须同时消费 scenes.json 分层数据 + assets/ui 拆件 + 嵌入文档才可闭环。
+
+== 概念依据（用户拍板「零件组装」）==
+docs/ui-redesign-v3/14_index_treasure_map_spec.md §0/§1：S39「拆件组件化 + 多贴图分层渲染，不 AI 一张包圆」——
+每个元素 = 独立资产组件，运行时按组件加载渲染。装配图 = 该概念的可视化实证。
+废弃方案（已删）：PIL 拼完整图的样张（assembly_sample_main_map.png）≠ 零件组装，用户否。
+
+== 判据 1：工具契约全过 ==
+$ python3 scripts/ui_assembly.py --list          → 14 行（7 场景 × 竖/横，含 z 层数）
+$ python3 scripts/ui_assembly.py --scene index --check → 只读体检 OK（7 z 层 / 22 原语 / 21 资产件）
+$ python3 scripts/ui_assembly.py --scene main_map --orientation portrait --json → 机读分层清单
+$ python3 scripts/ui_assembly.py --scene index --orientation landscape --output ... → 出图 OK
+幂等：同参数两次出图 md5 一致（99bfb75a...）
+负例：--scene nosuch --check → exit 1（场景不存在）
+负例：拆件缺 → exit 1（check_parts 精准报错）
+依赖缺：Pillow/字体 → exit 2
+
+== 判据 2：7 场景装配图产出 + 嵌入 ==
+evidence/scenes_assembly_index_landscape.png（7 层，16 件拆件标准样本）
+evidence/scenes_assembly_main_map_portrait.png（5 层/6 资产件；主体代码绘制，中间空白如实呈现）
+evidence/scenes_assembly_{select_role,select_map,vs,message,saveload}_portrait.png（5 张）
+7 份场景文档 §2.5 全部嵌入装配图引用（每份 2 处：图片 + 复现命令）
+
+== 判据 3：工具登记 3 处 + 门禁 ==
+14号工具台账 / 04号速查 / docs/README.md 三处命中（doccheck2 tooling-registration 0 error）
+一次性脚本 scripts/tmp/assembly_index_v2.py 与 embed_assembly.py 已删（脚本纪律）
+doccheck 0 error / doccheck2 0 error（56 项）/ 三方对账全绿 / gate 36 项 0 failure
+
+== 结论 ==
+正式工具 + 7 场景装配图 + 文档嵌入全部落地，工具契约与门禁全过。S78.0 可置 verified。

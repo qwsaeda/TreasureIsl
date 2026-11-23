@@ -35,6 +35,16 @@
 - 两文件大小/尺寸实测：横屏 8,296,178 B / 1920×1080 RGBA；竖屏 8,297,018 B / 1080×1920 RGBA。
 - **图中可见元素**（对照 §4 坐标）：夜海渐变满屏底 `#0`；左侧木底立绘面板（竖屏 76,184,440,664；横屏 40,90,720,810）+ 当前角色 PNG 立绘 + 黄铜描边 + 名牌标题/简介；右侧 5 行角色选项（竖屏 x=600, y=480..1440，含小图标+名+简介；横屏见 §5 差异）；顶部金标题 `scene.select_role.title`；底部导航提示 `scene.select_role.nav_hint`（竖屏 y=1648 / 横屏 y=1042）。选中行黄铜高亮边框由 `chrome::selected_border` 绘制（Bevy 侧由 `build_list_chrome` 接管，见 §7）。
 
+### 2.5 零件组装装配图（S39 拆件组件化概念）
+
+![select_role 零件组装装配图](../evidence/scenes_assembly_select_role_portrait.png)
+
+由正式工具 `scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**产出（非 PIL 裁切完整图、非 AI 概念图），portrait 1080×1920，4 个 z 层 / 45 原语 / 11 个资产零件。
+
+- 复现：`python3 scripts/ui_assembly.py --scene select_role --orientation portrait --output evidence/scenes_assembly_select_role_portrait.png`
+- 读法：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
+- 说明：立绘铜牌/名牌分层；主体列表行走 bevy_ui（11 资产件 + 数据驱动列表）
+
 ## 3. ASCII 布局图
 
 **竖屏 1080×1920**（框内数字 = §4 原语序号段）

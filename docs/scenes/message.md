@@ -35,6 +35,16 @@
 - 两文件大小/尺寸实测：横屏 8,296,178 B / 1920×1080；竖屏 8,297,018 B / 1080×1920（均为 RGBA）。
 - **图中可见元素**（对照 §4/§5 坐标）：夜海渐变满屏底 `bg_night_sea.png`（星空/月亮/云层/海平面）；中部深棕木卡（竖屏 400,704,608,336；横屏居中 55%≈432,243,1056,594）；卡内三行文本自上而下——标题「帮助」（金亮 `PARCH_BRIGHT`，30px）、正文「玩法：点舵轮摇骰定步数，沿环岛赛道前进，落到哪格就在哪格结算收益；遇到 BOSS 格会开战。」（奶油 `PARCH_CREAM`，20px，自动折行）、3 枚页点（第 1 枚实心、其余暗底）+ 页码「1/3」（暗金 `MUTED_GOLD`，18px）；底部全宽提示「左屏关 · 右屏翻页 · 上下滑翻页」（`scene.message.nav_hint`，竖屏 y≈1648 / 横屏 y≈929，暗金）。**注意**：标题/正文/页点/页码/提示均由 **bevy_ui 文本节点**承载（§7/§10），`scenes.json` 原语里只有底图、木卡、头带、金线、提示行 5 条——这是 message 场景「原语少但文字多」的关键。
 
+### 2.5 零件组装装配图（S39 拆件组件化概念）
+
+![message 零件组装装配图](../evidence/scenes_assembly_message_portrait.png)
+
+由正式工具 `scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**产出（非 PIL 裁切完整图、非 AI 概念图），portrait 1080×1920，4 个 z 层 / 5 原语 / 1 个资产零件。
+
+- 复现：`python3 scripts/ui_assembly.py --scene message --orientation portrait --output evidence/scenes_assembly_message_portrait.png`
+- 读法：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
+- 说明：原语仅 5 个（1 资产件），正文由 bevy_ui 文本节点承载（见 §4）
+
 ## 3. ASCII 布局图
 
 **竖屏 1080×1920**（框内 # = §4.1 原语序号；文本为 bevy_ui 节点，不在原语表内）
