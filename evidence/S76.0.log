@@ -1,0 +1,22 @@
+S76.0 七场景图文文档总览 + 索引 · 验收证据（2026-11-23）
+
+== 改动面声明 ==
+文档（docs/scenes/README.md 总览 + docs/README.md 登记 + 模板），本轮 S76.0 为总览与索引，7 份场景文档由 S76.1~S76.7 并行产出。
+
+== 判据 1：总览内容 ==
+docs/scenes/README.md 含 6 节：① 7 场景索引表（文档/职责/原语数/截图）② 9 场景态图（ASCII 流程图，7 有界面 + Intro/Exit 逻辑态）③ 布局组合链路（世界层 1080 + chrome bevy_ui + 双相机 + 命中，引用 17_layout_engine.md §1/§2 单一事实源）④ 10 固定章节阅读法 ⑤ 出图口径（--shot 命令 + ui_verify.py，引擎真实图非 AI 概念图）⑥ 登记与治理。
+
+== 判据 2：docs/README.md 登记 ==
+新增「### 场景图文拆解（docs/scenes/）」段，含总览 + 7 场景文档链接（doccheck 跨文档引用校验覆盖）。
+
+== 判据 3：7 场景文档全量复核（主线程 EXP-038）==
+index 285 行 / select_role 301 / select_map 265 / main_map 269 / vs 337 / message 195 / saveload 211。
+- 10/10 固定章节标题全部齐全（逐文档 grep `^## N.`）
+- 逐元素坐标表条数 == scenes.json 实测：42/22、45/31、31/13、7/6、19/16、5/1、13/8
+- main_map 专属几何参数节覆盖 ring(center_x/center_y/radius/card_w/card_h)/grid/world_canvas/hud
+- 截图引用存在性：0 缺失（全部指向 evidence/bevy_native_*.png 引擎真实渲染图）
+- 占位/未闭合扫描：0 命中
+- doccheck：0 error
+
+== 结论 ==
+总览 + 索引 + 7 场景文档全部落地并复核通过。S76.0 可置 verified。

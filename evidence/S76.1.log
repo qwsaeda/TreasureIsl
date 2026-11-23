@@ -1,0 +1,59 @@
+S76.1（场景图文文档七路并行之一）· index 场景详细图文文档 · 验收证据（2026-11-23）
+
+== 改动面声明 ==
+纯文档 + 自有 evidence。唯一写入 = docs/scenes/index.md（新建）+ evidence/S76.1.log（本文件）。
+未触台账 / AGENTS / release / 26号 / docs/README.md / 其它场景文档 / 任何代码或数据文件。
+
+== 判据 1：10 固定章节标题（逐条 grep）==
+$ grep -n '^## ' docs/scenes/index.md
+14:## 1. 场景职责与状态机位置
+40:## 2. 真实渲染截图
+56:## 3. ASCII 布局图
+105:## 4. 逐元素坐标表
+200:## 5. 横屏差异
+217:## 6. 资产接线
+244:## 7. 命中契约
+254:## 8. 业务规则
+263:## 9. 测试覆盖
+274:## 10. 数据驱动改法
+标题行：1:# index 场景 · 详细图文拆解
+=> 10/10 固定章节齐备 ✓
+
+== 判据 2：逐元素坐标表条数 == scenes.json 实测 ==
+$ python3（解析 scenes.json + 统计文档表格 | N | 行）
+vert rows: 42  indices: [0..41] 全部连续
+land rows: 22  indices: [0..21] 全部连续
+VERT OK（== scenes.json index.primitives 42）  LAND OK（== index.landscape.primitives 22）
+数据源实测（python3 -c）：
+  index 顶层 keys = ['status','focus_anchor','primitives','landscape']
+  primitives count: 42 / landscape primitives count: 22
+  focus_anchor = {"type":"compass_ring","bbox":{"x":65,"y":500,"w":950,"h":941}}
+  status = {"x":540,"y":1840}
+=> 条数与实测一致 ✓
+
+== 判据 3：引用截图存在 ==
+$ for f in evidence/bevy_native_index_1920x1080.png evidence/bevy_native_index.png; do test -f "$f"; done
+OK evidence/bevy_native_index_1920x1080.png（PIL 实测 1920×1080，横屏优先）
+OK evidence/bevy_native_index.png（PIL 实测 1080×1920，竖屏）
+=> 2 张引擎真实渲染截图均在位 ✓（Markdown 图片引用路径已核对）
+另：禁占位扫描 grep 'TODO|FIXME|unimplemented!|todo!|panic!' docs/scenes/index.md => none ✓
+
+== 判据 4：doccheck ==
+$ /root/.cargo/bin/cargo run -q -p ti-tools --bin doccheck
+doccheck: 194 docs, 38 facts, 204 experiences, 391 task refs, 4 assertions, 2 error(s)
+  ERROR docs/scenes/select_map.md:209 references task `S31.2d` not in plan/ledger.yaml
+  ERROR docs/release.md:238 台账任务总数声明 388，ledger 实测 397
+归因：2 error 均不在本任务写入面（docs/scenes/index.md）。交叉验证：
+$ cargo run ... | grep -i "index.md" => NO error referencing docs/scenes/index.md
+文件时间戳：select_map.md 06:08:36（并行 subagent 06:08:35 写完 index.md 后 1 秒落盘，正在写入中）；
+  release.md 05:01:06（他路任务计数漂移，非本任务）。
+=> docs/scenes/index.md 自身贡献 0 error（无 ID 冲突、无未登记引用）；全局 2 error 属并行在途文件，非本任务引入 ✓
+
+== 四要素回报 ==
+1) 改动面：纯文档（docs/scenes/index.md 新建）+ 自有 evidence；零代码/数据/台账改动。
+2) 实跑判据摘要：10 固定章节齐备；竖屏表 42 条 / 横屏表 22 条与 scenes.json 实测逐条对齐（下标 0..41 / 0..21 连续）；2 张引擎截图存在；禁占位 0 命中；doccheck 自身文件 0 error（全局 2 error 来自并行 select_map.md / release.md，非本任务面）。
+3) evidence 路径：evidence/S76.1.log（本文件）；文档产物 docs/scenes/index.md。
+4) 未决项：
+   - 全局 doccheck 2 error 待对应 owner 收口（select_map.md 的 S31.2d 任务引用、release.md 任务总数 388→397 漂移），本任务不跨写点边界处理。
+   - 两版设计差异已在文档 §1/§5/§10 讲清：竖屏 S22 罗盘环（09 spec）与横屏 S39 羊皮藏宝图+绳挂木牌（14 spec）由 Settings.orientation 择一，命中契约统一；S39.0 数据化重构后换 UI=改数据零 Rust。
+   - 用户视觉签收（A 纪律）为截图验收的后续动作，非本次文档任务范围。

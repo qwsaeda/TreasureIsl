@@ -1,0 +1,48 @@
+S76.6 验收证据 — message（消息/帮助场景）详细图文文档
+时点：2026-11-23
+写点边界：仅 docs/scenes/message.md + 本 evidence/S76.6.log（未写台账/AGENTS/release/26号/docs/README.md/其它场景文档/代码/数据）
+
+[1] 10 固定章节标题 grep 确认
+命令：grep -nE '^#{1,2} ' docs/scenes/message.md
+实测命中 11 行 = 1 个 H1 + 10 个 H2：
+  L1   # 消息/帮助（message）场景 · 详细图文拆解
+  L14  ## 1. 场景职责与状态机位置
+  L24  ## 2. 真实渲染截图
+  L38  ## 3. ASCII 布局图
+  L89  ## 4. 逐元素坐标表
+  L124 ## 5. 横屏差异
+  L133 ## 6. 资产接线
+  L146 ## 7. 命中契约
+  L154 ## 8. 业务规则
+  L165 ## 9. 测试覆盖
+  L185 ## 10. 数据驱动改法
+结论：10 固定章节标题文字与 docs/scenes/_TEMPLATE.md 逐字一致，PASS。
+
+[2] 逐元素坐标表条数 == scenes.json 实测
+命令：python3 -c "import json; m=json.load(open('assets/data/scenes.json'))['message']; print(len(m['primitives']), len(m['landscape']['primitives']))"
+实测输出：5 1
+message.primitives（5 条，本文 §4.1 表 5 行，逐条一一对应）：
+  0 image 0,0,1080,1920        z3  asset=assets/ui/bg_night_sea.png
+  1 rect  400,704,608,336      z4  panel_wood, ui_layer=bevy_ui
+  2 rect  402,708,604,48       z4  wood_warm,  ui_layer=bevy_ui
+  3 rect  402,756,604,4        z5  gold_warm,  ui_layer=bevy_ui
+  4 text  0,1648,1080,56       z11 tier=hint, text_key=scene.message.nav_hint, ui_layer=bevy_ui
+message.landscape.primitives（1 条，本文 §4.2 表 1 行）：
+  0 image 0,0,1920,1080        z3  asset=assets/ui/bg_night_sea.png
+附加核对：5 条竖屏原语 + 1 条横屏原语均无 pick_key/pick_index（§7 如实记录「本场景无数据化命中」）。
+结论：竖屏 5 == 5、横屏 1 == 1，PASS。
+
+[3] 截图存在 + doccheck 0 error
+命令：ls -l evidence/bevy_native_message.png evidence/bevy_native_message_1920x1080.png
+  横屏 8296178 B（bevy_native_message_1920x1080.png, 1920×1080）
+  竖屏 8297018 B（bevy_native_message.png, 1080×1920）
+  两图均为引擎真实离屏渲染出图（非 AI 概念图），本文 §2 Markdown 引用指向 ../evidence/ 同名文件，路径存在。
+命令：export PATH="$HOME/.cargo/bin:$PATH" && cargo run -q -p ti-tools --bin doccheck
+输出：doccheck: 197 docs, 38 facts, 204 experiences, 391 task refs, 4 assertions, 0 error(s)
+结论：截图在位、doccheck 0 error，PASS。
+
+[4] 回报四要素
+① 产出：docs/scenes/message.md（10 固定章节齐全），重点覆盖 message「原语少（5）但 chrome 文字多」——详述 build_message_chrome / message_chrome_footer 的 bevy_ui 文本节点承载标题(msg.<kind>)/正文(msg.<kind>.<n> 自动折行)/页点/页码(scene.message.page)/提示(nav_hint)，以及 chrome_ui_system 以 page*16+kind_idx 为键的翻页重建机制、CPU 路径 chrome_in_bevy_ui() 提前 return 的双层归属。
+② 判据/证据：10 章节 grep 11 命中（1 H1 + 10 H2）；坐标表 5+1 与 scenes.json 实测完全一致；两张引擎截图在位；doccheck 0 error（详见 [1][2][3]）。
+③ 关键实测数据：竖屏 5 原语（1 image+3 rect+1 text，z=3/4/4/5/11）；横屏 1 原语（满屏 bg）；balance.messages.pages={msgs:1,msgl:1,msgm:1,help:3,info:1}；bevy 面板竖屏 56.30%/17.5%/37.04%/36.67%、横屏 55%/55%/22.5%/22.5%；focus_anchor bbox(400,230,605,1210) ↔ manifest bbox_pct(37,12,56,63)。
+④ 边界与状态：仅写 2 个授权文件；未 commit、未 push、未改台账、未改 AGENTS/release/26号/docs/README.md/其它场景文档/代码/数据。如实记录 1 处观察（MsgKind::label() 的 landmark/panel 与 strings.json 标题键 msg.msgl/msg.msgm 命名不一致，Help/Info/Msgs 正常；非本次修复项）与 1 处边界（bevy_ui 面板几何/配色为 Rust 常量，§10 明确标注非零 Rust，不虚报）。任务完成，待主会话收口。

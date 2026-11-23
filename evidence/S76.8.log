@@ -1,0 +1,32 @@
+S76 七场景图文文档 · 集成收口证据（2026-11-23）
+
+== 改动面声明 ==
+文档收口（纯收口零新增，面族=台账/证据/门禁收敛判定）。
+
+== 判据 1：7 场景文档 + 总览全量复核（主线程 EXP-038）==
+7 份场景文档全部 10/10 固定章节，逐元素坐标表条数 == scenes.json 实测：
+index 42/22、select_role 45/31、select_map 31/13、main_map 7/6、vs 19/16、message 5/1、saveload 13/8。
+main_map 附加 §4.3 场景专属几何参数表（ring/world_canvas/hud_*/grid/deck_* 实测值）。
+截图引用 0 缺失、0 占位、docs/README.md 已登记「场景图文拆解」段。
+
+== 判据 2：doccheck / doccheck2 / 三方对账 ==
+doccheck: 197 docs / 204 experiences / 391 task refs / 0 error
+doccheck2: 0 error across 56 checks
+check_ledger_reality: 全绿（0 孤儿 evidence）
+doc_numbers --dry-run: 声称点与实测一致（0 漂移，397/397）
+validate_data: OK；studio_tests: 3 类断言全 OK；check_dod_commands: PASS
+
+== 判据 3：gate 全量 36 项 0 failure（实跑）==
+$ pwsh -NoProfile -File scripts/gate.ps1 → GATE_EXIT=0
+  36 项 PASS，0 FAIL；2 项环境 SKIP（Android NDK 本机缺 + legacy 无数据改动，既定条件项）。
+  注：收口期间并行 S77 会话（选角页触摸 e2e）的在途文件曾致 fmt/clippy 红，待其收敛 +
+  cargo fmt --all 统一后 gate 全绿；S76 文档写点与其不相交。
+
+== 判据 4：台账 + 三方对账（实跑）==
+plan/ledger.yaml: 398 tasks / 398 verified / 0 error（S76 9 条 + S77 1 条已并入）
+check_ledger_reality: 全绿（0 孤儿 evidence）
+doccheck: 197 docs / 392 task refs / 0 error；doccheck2: 0 error（56 项）；doc_numbers: 0 漂移
+
+== 结论 ==
+7 场景图文文档 + 总览 + 索引全部落地，文档/坐标/截图全量复核通过；
+gate 36 项 0 failure + 三方对账全绿 + 台账 398/398。S76.8 收口完成。

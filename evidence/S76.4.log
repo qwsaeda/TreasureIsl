@@ -1,0 +1,47 @@
+S76.4 · 场景图文文档（main_map 主地图）· 验收证据
+时点 2026-11-23 · 七路并行之一（最复杂场景）
+
+## 写点边界（硬）合规
+- 仅写：`docs/scenes/main_map.md` + 本 `evidence/S76.4.log`。
+- 未碰：台账 / AGENTS / release / 26 号 / docs/README.md / 其它场景文档 / 任何代码与数据文件。
+- git status 中 AGENTS.md / docs/README.md / 26 号 / release / ledger 及 S76.1~S76.7 其它 log = 并行会话产物，非本任务改动。
+
+## 验收 1：10 固定章节标题 grep 确认
+命令：grep -nE '^# main_map 场景 · 详细图文拆解|^## ([1-9]|10)\. ' docs/scenes/main_map.md
+输出（11 行 = 1 个 H1 + 10 个 H2，全部命中，标题文字照抄模板）：
+  1:# main_map 场景 · 详细图文拆解
+  7:## 1. 场景职责与状态机位置
+  28:## 2. 真实渲染截图
+  42:## 3. ASCII 布局图
+  90:## 4. 逐元素坐标表
+  171:## 5. 横屏差异
+  189:## 6. 资产接线
+  213:## 7. 命中契约
+  222:## 8. 业务规则
+  234:## 9. 测试覆盖
+  254:## 10. 数据驱动改法（换图 / 改坐标 / 换资产，零 Rust）
+=> 10 固定章节齐全。
+
+## 验收 2：逐元素坐标表条数 == 实测 + 专属几何参数表
+- scenes.json main_map.primitives 实测 = 7；文档 §4.1 表 = 7 条（逐条 kind/rect/z/when/params/color，无「等」）。
+- scenes.json main_map.landscape.primitives 实测 = 6；文档 §4.2 表 = 6 条（横屏单独一节）。
+- 额外节：§4.3「场景专属几何参数表」= 1 处（grep 命中 1），逐项列出 title/hud/hud_trade/hud_sell/hud_build/fx_coin/grid/player/landmark/boss/hint/portrait_zones/world_canvas/hud_gold/hud_player/hud_plaque_l/hud_plaque_r/deck_*/canvas_entities/track_node/track_ship/focus_anchor/deck_spin/voyage_bar/extra_scalar.ring.*/island_home/ring + landscape.extra 四键，值均来自 scenes.json 实测；并标注 extra_scalar.ring(780/474) 与 ring/layout.json(784/480) 两处时点差。
+- pick_key 分布实测 = [4]（竖屏摇骰 CTA 1 个；5/6/7 已随 S34 三键取掉删除），文档 §7 已说明。
+- 占位禁令：grep -cE 'TODO|FIXME|unimplemented!|todo!' = 0。
+
+## 验收 3：截图存在 + doccheck 0 error
+- evidence/bevy_native_main_map_1920x1080.png：1920×1080 RGBA，8,296,178 B，Nov 22 15:35（file 实测）。
+- evidence/bevy_native_main_map.png：1080×1920 RGBA，8,297,018 B，Nov 20 11:16（file 实测）。
+- doccheck：PATH=/root/.cargo/bin:$PATH cargo run -q -p ti-tools --bin doccheck
+  => doccheck: 198 docs, 38 facts, 204 experiences, 391 task refs, 4 assertions, **0 error(s)**。
+
+## 特别要求覆盖
+1. 「为什么 main_map 世界层不在 bevy_ui」= §5.1（坑位 9.8-13 / S29.3e 判定：UI 相机 order=1 层叠遮挡 + chrome/world 交叠 + B1 游戏世界保持 1080 + bevy-cpu-parity 改口径）。
+2. 「参数化地图包换图零 Rust」= §10.A（map_pack add/verify/pack/install/check/sync + 命名约定 island_home_/tile_/isle_ + ring_geom/ring_card_center 数据驱动 + TI_MAP 运行期注入 + git diff crates/ 为空判据）。
+3. 地块格三层模型（14_plot_tile_spec）/ 12 号 v6 不规则岛 / 21 号地图包 I1~I9 / 业务三支分叉均有引用（§6/§8）。
+
+## 回报四要素
+- ① 改动面：文档层（场景图文文档），新增 docs/scenes/main_map.md（1 文件，269 行）。
+- ② 数据源：assets/data/scenes.json（main_map 实测）+ scene_manifest_v3 + main_map.rs/node/island/chrome.rs + 两张引擎真渲染截图 + 地图包 m01~m40 + 业务/规范文档，全部实测留痕。
+- ③ 验收：10 章标题齐全（11 行 grep）／逐元素表 7+6 与实测一致／专属几何参数节在位／截图 2 张在位／doccheck 0 error／无占位。
+- ④ 结论与限制：main_map 图文文档完成，符合模板与写点边界；未 commit/push，未改台账。截图为引擎实拍（横屏 S38.0 非黑≈99.8%，竖屏 S38.0 非动画区 diff=0），非 AI 概念图。

@@ -1,0 +1,69 @@
+S76.5 · vs（对战场景）详细图文文档 · 验收证据
+时点：2026-11-23
+写点边界：仅写 docs/scenes/vs.md（唯一文档写点）+ evidence/S76.5.log（本文件）；
+未写台账 / AGENTS / release / 26号 / docs/README.md / 其它场景文档 / 任何代码或数据文件；未 commit / push。
+
+════════════════════════════════════════
+[1] 10 固定章节标题 grep 确认：PASS
+════════════════════════════════════════
+$ grep -nE '^## [0-9]+\. ' docs/scenes/vs.md
+14:## 1. 场景职责与状态机位置
+39:## 2. 真实渲染截图
+63:## 3. ASCII 布局图
+109:## 4. 逐元素坐标表
+205:## 5. 横屏差异
+226:## 6. 资产接线
+255:## 7. 命中契约
+273:## 8. 业务规则
+290:## 9. 测试覆盖
+310:## 10. 数据驱动改法
+主标题 1:# vs 场景 · 详细图文拆解（与模板逐字一致）；单一事实源声明 3–8 行。
+$ grep -cE '^## [0-9]+\. ' docs/scenes/vs.md → 10（恰 10 章，标题文字与 _TEMPLATE.md 逐字一致）。
+
+════════════════════════════════════════
+[2] 逐元素坐标表条数 == scenes.json 实测：PASS
+════════════════════════════════════════
+命令（python3 解析 scenes.json + 逐行解析本文 §4.1/§4.2 表格，比对 #/kind/rect/z）：
+  DOC 4.1 rows: 19  JSON vs.primitives: 19  EXACT MATCH: True  序号 1..19 连续
+  DOC 4.2 rows: 16  JSON vs.landscape.primitives: 16  EXACT MATCH: True  序号 1..16 连续
+竖屏 19 条分组：背景 2（#1–2）+ HP 槽/竞技框 9（#3–11）+ 准星 3（#12–14）+ 文本 2（#15–16）+ 指令按钮 3（#17–19）。
+横屏 16 条分组：背景 2（#1–2）+ HP 槽/竞技框 9（#3–11）+ 准星 3（#12–14）+ 文本 2（#15–16）。
+横屏差异：无竖屏 #17–19 三枚 chart_wide 指令原语（指令由代码层 v4_cmd_* 承担，§5 如实说明）。
+场景专属参数（title/player_hp/boss_hp/rounds/outcome/empty/fx_hit/hint/portrait_zones/
+battle_arena/focus_anchor）与 landscape.extra（6 键）以文字列出，不计入表格行。
+立绘/动画帧另设 §4.3 专节说明——**运行时代码绘制（vs_anim_v4.rs /
+vs_anim_proto_landscape.rs / chrome::V2_*），不在 scenes.json**（S63.6 根因实证）。
+
+════════════════════════════════════════
+[3] 截图存在 + doccheck 0 error：PASS
+════════════════════════════════════════
+$ for f in evidence/bevy_native_vs_1920x1080.png evidence/bevy_native_vs.png \
+           evidence/ui_candidate/vs_clash_A.png evidence/ui_candidate/vs_duel_A.png; do test -s "$f"; done
+OK  8296178 B  evidence/bevy_native_vs_1920x1080.png（1920×1080 引擎真实渲染，§2 横屏验收图）
+OK  8297018 B  evidence/bevy_native_vs.png           （1080×1920 引擎真实渲染，§2 竖屏验收图）
+OK  8296178 B  evidence/ui_candidate/vs_clash_A.png  （S63.6 候选 A，仅对照、非验收图）
+OK  8296178 B  evidence/ui_candidate/vs_duel_A.png   （S63.6 候选 A，仅对照、非验收图）
+§2 Markdown 引用 ../evidence/... 路径已核对；AI 概念图未当验收图（红线遵守）。
+$ grep -nE 'TODO|FIXME|unimplemented!|todo!|panic!' docs/scenes/vs.md → none（禁占位 0 命中）
+$ python3 检查表格单元格长度 >300 字 → none（长行禁令遵守）
+$ export PATH="$HOME/.cargo/bin:$PATH" && cargo run -q -p ti-tools --bin doccheck
+doccheck: 197 docs, 38 facts, 204 experiences, 391 task refs, 4 assertions, 0 error(s)
+（基线 194 docs 0 error → 落盘后 197 docs 0 error；本篇贡献 0 error）
+
+════════════════════════════════════════
+[4] 回报四要素
+════════════════════════════════════════
+① 产出：docs/scenes/vs.md（10 固定章节齐全）。重点讲清 VS 立绘是运行时代码绘制
+   （S63.6 双人对峙居中：横屏 clash/duel hero (360,280) / enemy (1080,280) 各 480×680、
+   crew (820,560)；竖屏 v4 v6 对角构图），**不在 scenes.json**；与 main_map 同属
+   「游戏世界留 1080」场景（无 bevy_ui chrome、纳入 bevy-cpu-parity）。
+② 判据/证据：10 章节 grep 11 命中（1 H1 + 10 H2）；竖屏表 19/19、横屏表 16/16 与
+   scenes.json 逐条 kind/rect/z 全等；2 张引擎截图在位 + 2 张候选图标注；doccheck 0 error。
+③ 关键实测数据：vs.primitives=19、landscape.primitives=16；focus_anchor bbox(76,230,918,998)
+   ↔ manifest bbox_pct(7,12,85,52)；pick_key 2/3/4 = 跳过/确认/重打；
+   landscape.extra 6 键；S63.6 代码坐标见 §4.3 / §5；
+   combat 兵力模型 loss_pct=1500 万分比 / weapon_loss_pct=2000。
+④ 边界与状态：仅写 2 个授权文件；零代码/数据/台账改动；未 commit、未 push。
+   如实记录：竖屏 v4（对角、v6 默认）与横屏 S38+S63.6（双人对峙居中）是不同构图，
+   改立绘位置/尺寸必须改 Rust（非纯资源替换，S63.6 根因），§10 已明示非零 Rust 边界。
+   任务完成，待主会话收口。

@@ -1,0 +1,55 @@
+S76.7 · saveload（存档/读档）场景图文文档 · 验收证据
+时点：2026-11-23
+写点边界：仅 docs/scenes/saveload.md + evidence/S76.7.log（未改台账/AGENTS/release/26号/docs README/其它场景/代码/数据）
+
+===== 四要素 1：10 固定章节标题 grep 确认 =====
+$ grep -nE '^(# |## [0-9]+\.)' docs/scenes/saveload.md
+1:# saveload（存档/读档）场景 · 详细图文拆解
+5:## 1. 场景职责与状态机位置
+24:## 2. 真实渲染截图
+37:## 3. ASCII 布局图
+76:## 4. 逐元素坐标表
+137:## 5. 横屏差异
+152:## 6. 资产接线
+163:## 7. 命中契约
+175:## 8. 业务规则
+186:## 9. 测试覆盖
+202:## 10. 数据驱动改法
+→ 标题 + 10 章节齐全（1~10 连续，标题文字照抄模板），PASS。
+
+===== 四要素 2：逐元素坐标表条数 == scenes.json 实测 =====
+实测源：
+$ python3 -c "d=json.load(open('assets/data/scenes.json'))['saveload']; print(len(d['primitives']), len(d['landscape']['primitives']), sorted({p['params']['pick_index'] for p in d['primitives'] if p.get('params',{}).get('pick_key')==3}))"
+13 8 [0, 1, 2, 3, 4]
+
+文档表行数：
+$ sed -n '/### 4.1/,/### 4.2/p' docs/scenes/saveload.md | grep -cE '^\| [0-9]+ \|'
+13
+$ sed -n '/### 4.2/,/### 4.3/p' docs/scenes/saveload.md | grep -cE '^\| [0-9]+ \|'
+8
+$ sed -n '/### 4.3/,/^## 5\./p' docs/scenes/saveload.md | grep -cE '^\| 位 [1-5] \|'
+5
+→ 竖屏表 13 == primitives 13；横屏表 8 == landscape.primitives 8；5 槽位映射 == pick_index 0..4，PASS。
+
+===== 四要素 3：截图存在（引擎真实渲染） =====
+$ ls -l evidence/bevy_native_saveload.png evidence/bevy_native_saveload_1920x1080.png
+-rw-r--r-- 1 root root 8296178 Nov 20 07:41 evidence/bevy_native_saveload_1920x1080.png
+-rw-r--r-- 1 root root 8297018 Nov 20 05:35 evidence/bevy_native_saveload.png
+→ 两张引擎 --shot 离屏渲染 PNG 均在位（1920×1080 横屏 + 1080×1920 竖屏），文档 §2 双图引用，PASS。
+
+===== 四要素 4：doccheck 0 error =====
+$ cargo run -q -p ti-tools --bin doccheck
+doccheck: 197 docs, 38 facts, 204 experiences, 391 task refs, 4 assertions, 0 error(s)
+→ 0 error，PASS。
+
+===== 特别要求核对 =====
+§4.3「选中态（bevy_ui 黄铜底）↔ SaveSlot 字段的对应（5 槽位）」逐槽列出 cursor 0..4 ↔ save_slots()[0..4] ↔ ChromeRow.selected ↔ BRASS_SELECT 底色 ↔ 行文案字段（version/character/gold/rng_steps）；并写明 SaveSlot{v4:SaveSlotV4Ext} 席位/领地/热座/成就扩展位 + WRITE_VERSION=3 与业务 v5 迁移链的关系。PASS。
+
+===== 红线自查 =====
+- 截图均为 evidence/bevy_native_*.png 引擎真跑图，无 AI 概念图冒充验收图。
+- 表格单元格无 >300 字散文。
+- 坐标直接抄 scenes.json 实测值；规则引用文档 ID / 文件名不复述。
+- 未写 TODO/FIXME/unimplemented!；未改任何代码/数据。
+- 未 commit / push / 改台账。
+
+结论：S76.7 四项验收全 PASS。

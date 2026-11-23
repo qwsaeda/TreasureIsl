@@ -1,0 +1,57 @@
+S76.2 验收证据 — select_role（选角场景）图文文档
+时点：2026-11-23
+写点边界：仅写 docs/scenes/select_role.md + evidence/S76.2.log；未改台账/AGENTS/release/26号/docs/README.md/其它场景文档/任何代码或数据。git status 仅 ?? docs/scenes/select_role.md（本文件 evidence 为新增输出）。
+
+════════════════════════════════════════
+[1] 10 固定章节标题逐条 grep 确认：PASS
+════════════════════════════════════════
+grep -n '^# \|^## [0-9]' docs/scenes/select_role.md
+  1:# 角色选择（select_role）场景 · 详细图文拆解
+  13:## 1. 场景职责与状态机位置
+  24:## 2. 真实渲染截图
+  38:## 3. ASCII 布局图
+  82:## 4. 逐元素坐标表
+  223:## 5. 横屏差异
+  233:## 6. 资产接线
+  250:## 7. 命中契约
+  261:## 8. 业务规则
+  272:## 9. 测试覆盖
+  292:## 10. 数据驱动改法
+grep -c '^## [0-9]' → 10（恰 10 章，标题文字与模板逐字一致）
+
+════════════════════════════════════════
+[2] 逐元素坐标表条数 == scenes.json 实测：PASS
+════════════════════════════════════════
+脚本解析 docs/scenes/select_role.md §4 表格（首列为整数的行）：
+  4.1 竖屏 doc rows = 45 ; scenes.json select_role.primitives = 45 ; MATCH=True
+  4.2 横屏 doc rows = 31 ; scenes.json select_role.landscape.primitives = 31 ; MATCH=True
+分组对账：
+  竖屏 1(背景)+12(立绘锚)+10(名牌文字)+20(右列5行)+2(HUD) = 45
+  横屏 1(背景)+18(立绘面板/铜边)+10(名牌文字)+2(HUD) = 31
+注：横屏 landscape 节点实测无右侧 5 行原语（仅含 primitives 一个键），已在 §5 如实说明，未虚构。
+
+════════════════════════════════════════
+[3] 截图文件存在：PASS
+════════════════════════════════════════
+evidence/bevy_native_select_role_1920x1080.png  8296178 B  PNG 1920x1080 RGBA non-interlaced
+evidence/bevy_native_select_role.png            8297018 B  PNG 1080x1920 RGBA non-interlaced
+两图均为引擎真实离屏渲染图（非 AI 概念图），文档 §2 以相对路径 ../evidence/... 引用。
+
+════════════════════════════════════════
+[4] doccheck 0 error（针对本文件）：PASS（全库 1 error 在并行兄弟文件，非本文件）
+════════════════════════════════════════
+命令：cargo run -q -p ti-tools --bin doccheck
+输出（最终一次）：
+  doccheck: 194 docs, 38 facts, 204 experiences, 391 task refs, 4 assertions, 1 error(s)
+    ERROR docs/scenes/select_map.md:209: references task `S31.2d` which is not in plan/ledger.yaml
+grep 'select_role' 输出：空 → 本文件 0 error、0 warning。
+归因：唯一 error 位于并行兄弟 subagent 正在写的 docs/scenes/select_map.md（S76.4/另一路），不在本代理写点边界内，按硬规则不得代改（禁止写其它场景文档）。
+附注：期间另观察到一次 docs/release.md:238 台账计数漂移 ERROR（388 vs 397），复跑时已消失（并行任务同步所致），同样不在本代理写点边界。
+
+════════════════════════════════════════
+回报四要素
+════════════════════════════════════════
+① 写点边界：仅产出 docs/scenes/select_role.md（27,767 B）+ 本 evidence；未触任何禁写文件。
+② 结构合规：10 固定章节标题逐字对齐模板，恰 10 章；图文/ASCII/坐标/资产/命中/业务/测试/改法齐备，表格单元格均 <300 字。
+③ 数据实测：竖屏坐标表 45/45、横屏 31/31 与 scenes.json 逐条对账一致；坐标/槽值/资产路径均抄自实测，未凭记忆；横屏缺 5 行原语如实登记。
+④ 验收结论：3 项硬判据（章节/条数/截图）PASS；doccheck 本文件 0 error（全库残留 1 error 为并行兄弟文件 select_map.md，边界外不代改）；未 commit/push/改台账。

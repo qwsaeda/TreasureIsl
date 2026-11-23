@@ -122,6 +122,19 @@
 | [`contracts/c2_data_keys.md`](contracts/c2_data_keys.md) | `assets/data/*.json` 的 key 契约（四张表 + 加载纪律） |
 | [`contracts/c3_app_host_api.md`](contracts/c3_app_host_api.md) | 表现层会话 API（`SceneHost` 冻结面 / `MenuShell` / `GpuRenderer`） |
 
+### 场景图文拆解（`docs/scenes/`，7 场景逐元素 + 真实渲染图）
+
+| 文件 | 内容 |
+|---|---|
+| [`scenes/README.md`](scenes/README.md) | 七场景总览：9 场景态图 + 布局组合链路（世界层 1080 + chrome bevy_ui）+ 10 章节阅读法 + 出图口径 |
+| [`scenes/index.md`](scenes/index.md) | 首页（罗盘环 → 羊皮藏宝图两代设计） |
+| [`scenes/select_role.md`](scenes/select_role.md) | 选角（立绘 + 列表 + 铜牌） |
+| [`scenes/select_map.md`](scenes/select_map.md) | 选图（地图包卡片 + 锁/开放态） |
+| [`scenes/main_map.md`](scenes/main_map.md) | 主地图（环岛赛道 + 领地 + 参数化地图包 + 8 面板） |
+| [`scenes/vs.md`](scenes/vs.md) | 对战（立绘对峙 + 战斗动画 + 兵力 HUD） |
+| [`scenes/message.md`](scenes/message.md) | 消息/帮助（面板正文 + 翻页） |
+| [`scenes/saveload.md`](scenes/saveload.md) | 存读档（5 槽位 + 选中态） |
+
 ### 计划
 
 | 文件 | 覆盖 |

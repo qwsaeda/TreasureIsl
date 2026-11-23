@@ -1,0 +1,63 @@
+S76.3 · select_map（选图场景）详细图文文档 · 验收日志
+时间：2026-11-23
+写点：docs/scenes/select_map.md（唯一文档写点） + evidence/S76.3.log（本日志）
+约束：未写台账 / AGENTS / release / 26号 / docs/README.md / 其它场景文档 / 任何代码或数据文件；未 commit / push。
+
+=== 验收 1：10 固定章节标题 grep 确认 ===
+$ grep -cE '^(## [1-9]\. |## 10\. )' docs/scenes/select_map.md
+10
+逐条命中：
+  1:## 1. 场景职责与状态机位置
+  2:## 2. 真实渲染截图
+  3:## 3. ASCII 布局图
+  4:## 4. 逐元素坐标表
+  5:## 5. 横屏差异
+  6:## 6. 资产接线
+  7:## 7. 命中契约
+  8:## 8. 业务规则
+  9:## 9. 测试覆盖
+  10:## 10. 数据驱动改法
+主标题 = "# select_map 场景 · 详细图文拆解"（第 1 行）；单一事实源声明块 = 第 3–9 行。
+结论：10/10 固定章节标题齐备（PASS）。
+
+=== 验收 2：逐元素坐标表条数 == scenes.json 实测 ===
+竖屏 select_map.primitives（4.1 节，行 98–153）：
+$ sed -n '98,153p' docs/scenes/select_map.md | grep -cE '^\| [0-9]+ \| (image|rect|icon|text) \|'
+31
+scenes.json select_map.primitives 实测（grep "kind" 区间 2424–2916）= 31。
+横屏 landscape.primitives（4.2 节，行 154–171）：
+$ sed -n '154,171p' docs/scenes/select_map.md | grep -cE '^\| [0-9]+ \| (image|rect|icon|text) \|'
+13
+scenes.json select_map.landscape.primitives 实测（区间 2927–3117）= 13。
+合计表格行 = 44 = 31 + 13。
+结论：竖屏 31 == 31、横屏 13 == 13（PASS）。
+
+=== 验收 3：截图存在 + doccheck + 红线 ===
+$ ls -la evidence/bevy_native_select_map.png evidence/bevy_native_select_map_1920x1080.png
+-rw-r--r-- 1 root root 8297018 Nov 20 05:31 evidence/bevy_native_select_map.png             (1080×1920 竖屏)
+-rw-r--r-- 1 root root 8296178 Nov 20 09:11 evidence/bevy_native_select_map_1920x1080.png  (1920×1080 横屏)
+两张均为引擎真实渲染截图（非 AI 概念图），Markdown 已以 ../evidence/ 相对路径引用。
+结论：截图存在（PASS）。
+
+$ export PATH="$HOME/.cargo/bin:$PATH"; cargo run -q -p ti-tools --bin doccheck
+doccheck: 194 docs, 38 facts, 204 experiences, 391 task refs, 4 assertions, 0 error(s)
+（过程中捕获自身一处虚构任务号，已据 plan/ledger.yaml grep 确认并更正为真实任务号
+  S29.3c（attach_row_pick 拆分）+ S31.3（行鼠标命中根治）；
+  另一条 docs/release.md 388↔397 漂移为并行 subagent 在途改动，非本写点，复查时已 0 error。）
+结论：doccheck 0 error（PASS）。
+
+$ grep -nE 'TODO|FIXME|unimplemented!|todo!' docs/scenes/select_map.md
+0 命中（PASS）。
+最长表格行 148 字符 < 300（长行禁令 PASS）。
+
+=== 回报四要素 ===
+① 写点：仅 docs/scenes/select_map.md（新建）+ evidence/S76.3.log（本日志）；零越界写。
+② 数据源实测：scenes.json select_map.primitives=31 / landscape.primitives=13；
+   scene_manifest_v3 select_map focus=bbox_pct{7,12,52,62}、mood=map_overview；
+   ui_manifest 登记 bg_night_sea/map_harbour/map_open_sea/map_reef/icon_map；
+   strings.json 键 glmapm0N.Map + scene.select_map.{title,nav_hint}；
+   命中 pick_key=2 / pick_index=0/1/2；源码 select_map.rs + treasure_bevy.rs build_select_map_chrome；
+   e2e = map_pack_select_e2e / e2e_playthrough / app_progression_wiring / app_seats_e2e / render_intent。
+③ 验收：10 章节标题齐、坐标表 31/13 与 JSON 一致、双截图在位、doccheck 0 error、红线 0。
+④ 边界/遗留：无。未改台账/AGENTS/release/26号/README/其它场景/代码/数据；未 commit/push。
+   运行期「全部 20 图」扩槽属规则/代码改动，已在文档 §8/§10 标注不在零 Rust 范围。
