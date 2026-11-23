@@ -22,3 +22,13 @@ fn tier_font_px_title_larger_than_body() {
     assert!(title > body);
     assert!(body > hint);
 }
+
+/// S77：带 `pick` 契约的 `bevy_ui` 项必须可拾取（非 `Pickable::IGNORE`）。
+/// 回归「首页 6 木牌挂 `PickTarget` 但被 `IGNORE` ⇒ 鼠标/触摸都点不动」。
+#[test]
+fn pickable_default_is_hittable_not_ignored() {
+    use bevy::picking::Pickable;
+    let pickable = Pickable::default();
+    // IGNORE = 完全跳过拾取；default = 可拾取且挡下层（可点击项的正确语义）。
+    assert_ne!(pickable, Pickable::IGNORE, "可点击项不能用 Pickable::IGNORE");
+}

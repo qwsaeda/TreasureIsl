@@ -755,9 +755,16 @@ pub fn build_data_chrome(
             }
             _ => {}
         }
-        // 命中：带 pick 契约的项挂 PickTarget（bevy_picking 直接拾取 Node 实体）
+        // 命中：带 pick 契约的项挂 PickTarget（bevy_picking 直接拾取 Node 实体）。
+        // S76 根治：上面各 kind 分支给 node 挂了 `Pickable::IGNORE`（当初为防全屏根挡事件），
+        // 但 IGNORE 让 bevy_picking 完全跳过该实体 ⇒ PickTarget 挂了也永不命中 ⇒
+        // 首页 6 木牌（bevy_ui 层）鼠标/触摸都点不动，只能键盘。此处对可点击项用
+        // `Pickable::default()`（可拾取）覆盖 IGNORE，PickTarget 才生效。
         if let Some((key, index)) = item.pick {
-            commands.entity(node).insert(crate::pick::PickTarget { key, index });
+            commands.entity(node).insert((
+                crate::pick::PickTarget { key, index },
+                Pickable::default(), // 覆盖 IGNORE：可点击项必须可拾取
+            ));
         }
     }
     Some(root)

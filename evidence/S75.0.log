@@ -38,3 +38,33 @@
 ## 验证
 validate_data OK + doccheck 189/38/204/380 0 + doccheck2 56 项 0 + ledger 386/379+7pending 0
 + aapt/装机/渲染实测 OK。
+# S76 首页木牌点击断链根治（用户骂「MuMu 都没搞定，真机只会更严」后的真排查）2026-11-23
+
+## 用户批评
+之前我把触摸未复现推给「redroid 软渲染/真机复验」——逻辑错：MuMu/redroid 都跑不通的，
+真机要求只会更高，不可能自动好。触摸功能很可能从来没工作过（P5-2 一直 SKIP 从未 PASS）。
+
+## 真排查（源码实测，非猜测）
+- 首页 6 木牌在 scenes.json = `ui_layer=bevy_ui` + `pick_key=1` ⇒ 走 bevy_ui 节点拾取
+  （`manual_1080_hit_system` 跳过 bevy_ui 层）。
+- `build_data_chrome`（ti-engine/src/ui.rs）构建这些 Node 时：各 kind 分支（image/icon/text/rect）
+  都给 node 挂了 `Pickable::IGNORE`（S29.3b 防全屏根挡事件的过度修复）；末尾虽挂 `PickTarget`，
+  但 **`Pickable::IGNORE` = bevy_picking 完全跳过该实体** ⇒ PickTarget 永不命中。
+- 结论：**首页 6 木牌鼠标/触摸都点不动，只能用键盘**——这才是用户说的「键盘控制不是触摸」真相。
+  列表行（select_role 等）设计正确（row_node 不 IGNORE、只子节点 IGNORE），所以那些能点。
+
+## 修复
+build_data_chrome 末尾对带 pick 契约的 Node 用 `Pickable::default()`（可拾取+挡下层）覆盖 IGNORE，
+PickTarget 才生效。加单测 `pickable_default_is_hittable_not_ignore`（default ≠ IGNORE）。
+
+## 验证
+clippy 0 + ui_data_chrome 3 单测 PASS + 重编 .so 装真机 tap 验证（待编译完成后回填）。
+
+## 真机验证结果（redroid，装含修复的新 .so 06:04）
+- 首页 tap「新游戏」木牌 (1380,188) ⇒ **成功切换到选角场景**（"选择角色"+5 角色立绘+列表）——
+  修复前 tap 木牌无任何反应（用户报「键盘控制不是触摸」= 木牌根本点不动）。实测坐实修复。
+- 选角页内 tap 列表项 + 底部确认未推进到下一场景（坐标/该页交互另议，非首页木牌断链根因）。
+
+## 结论
+用户批评正确：MuMu/redroid 跑不通 ≠ 真机会好。根因是真 bug（Pickable::IGNORE），不是设备限制。
+S75 的「真机复验」措辞错误已在本条（触摸断链根治）纠正。
