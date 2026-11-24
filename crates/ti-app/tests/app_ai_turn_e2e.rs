@@ -8,7 +8,7 @@ use ti_app::{GameApp, GameInput, Scene};
 use ti_core::rules::territory_v2::SeatState;
 
 fn main_map_with_board() -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(2026);
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Confirm);

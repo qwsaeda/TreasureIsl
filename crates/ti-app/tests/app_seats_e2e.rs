@@ -27,7 +27,7 @@ fn non_current_session_count(app: &GameApp) -> u8 {
 /// 席位分配由 `SeatPool::build_with_ai` 决定：
 /// 人类席 = 最低 index 优先；2 人类 + 0 AI ⇒ 在局 = 2 席。
 fn enter_main_map_two_players() -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     // Index → SelectRole
@@ -52,7 +52,7 @@ fn enter_main_map_two_players() -> GameApp {
 
 /// 2 玩家 + 3 AI（`seat_ai_count = Some(3)`）主地图。
 fn enter_main_map_two_players_with_ai() -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     app.handle(GameInput::Confirm); // Index → SelectRole
@@ -70,7 +70,7 @@ fn enter_main_map_two_players_with_ai() -> GameApp {
 
 /// 旧单选流（0 `MarkSeat`）：`Confirm` 直接进选图，`seat_marks` 空 = v2 兼容。
 fn enter_main_map_single_player() -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     app.handle(GameInput::Confirm); // Index → SelectRole
@@ -231,7 +231,7 @@ fn after_match_end_spin_is_noop() {
 /// 只勾选 1 席：`Confirm` 被拒（停留选角）。
 #[test]
 fn min_players_gate_rejects_single_seat_via_ui() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     app.handle(GameInput::Confirm); // Index → SelectRole
@@ -245,7 +245,7 @@ fn min_players_gate_rejects_single_seat_via_ui() {
 /// 勾选 2 席：`Confirm` 通过（进选图）。
 #[test]
 fn min_players_gate_passes_two_seats_via_ui() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     app.handle(GameInput::Confirm);
@@ -261,7 +261,7 @@ fn min_players_gate_passes_two_seats_via_ui() {
 /// 取消勾选（`MarkSeat` 再按一次）⇒ 席标清零，`Confirm` 走旧流豁免。
 #[test]
 fn unmark_seat_clears_and_gate_exempts() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     app.handle(GameInput::Confirm);

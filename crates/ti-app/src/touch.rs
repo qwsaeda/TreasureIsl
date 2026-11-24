@@ -161,16 +161,16 @@ mod tests {
 
     #[test]
     fn feed_screen_inverts_viewport() {
-        // 视口 2x：屏幕 (1080,1920) → 逻辑 (540,960)
-        let vp = Viewport::fit(2160.0, 3840.0);
+        // S84 纯横屏：主画布 1920×1080；视口 2x 屏幕 (3840,2160) → 逻辑 (960,540)
+        let vp = Viewport::fit(3840.0, 2160.0);
         let mut pad = TouchPad::new();
-        assert!(pad.feed_screen(&vp, 1080.0, 1920.0, true).is_none());
-        let got = pad.feed_screen(&vp, 1080.0, 1920.0, false);
+        assert!(pad.feed_screen(&vp, 1920.0, 1080.0, true).is_none());
+        let got = pad.feed_screen(&vp, 1920.0, 1080.0, false);
         assert!(
-            matches!(got, Some(TouchSample { x, y, .. }) if near(x, 540.0) && near(y, 960.0)),
-            "屏幕 (1080,1920) 应反变换为逻辑 (540,960)，实际 {got:?}"
+            matches!(got, Some(TouchSample { x, y, .. }) if near(x, 960.0) && near(y, 540.0)),
+            "屏幕 (1920,1080) 应反变换为逻辑 (960,540)，实际 {got:?}"
         );
         let (px, py) = pad.pos();
-        assert!(near(px, 540.0) && near(py, 960.0), "pad.pos() 应记住最近采样点");
+        assert!(near(px, 960.0) && near(py, 540.0), "pad.pos() 应记住最近采样点");
     }
 }

@@ -2,11 +2,12 @@
 //! render_snapshot_forward / visual_regression 三套 golden-image diff）。
 //!
 //! 判据（逐场景）：
-//! ① 帧尺寸 = 1080×1920；
+//! ① 帧尺寸 = 1920×1080（S84 纯横屏）；
 //! ② 非黑像素覆盖率 ≥ 90%（画面确实画出来了，不是黑屏/空屏）；vs 暗色 boss 背景（`bg_boss`
 //!    黑占比 ≈9.4% → 实测 881‰）放宽至 880‰（S36.1 实测）；
 //! ③ 7 场景内容签名两两不同（防「全部渲染成同一张」）；
-//! ④ 暖色板在位：画面含 `gold_warm` 像素（标题/选中态金墨）；
+//! ④ 暖色板在位：画面含暖色像素（RGB565 `r > b`；S84 纯横屏 index/message 改木牌/图文书页
+//!    后不再出现精确 `gold_warm` 令牌，故按「暖色像素」判定，仍抓「暖色板整体缺失」）；
 //! ⑤ TTF 在位（QA125：豆腐字形不算数）。
 //!
 //! 设计取舍：开发期**不维护 golden PNG**——像素级微调（抗锯麧/字形光栅化/半像素偏移）
@@ -34,9 +35,9 @@ const SCENES: [(&str, &str); 7] = [
     ("saveload", "saveload"),
 ];
 
-/// 渲染一帧（1080×1920 RGB565）。
+/// 渲染一帧（1920×1080 RGB565，S84 纯横屏）。
 fn render_scene_frame(nav: &str) -> Vec<u16> {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     snapshot_util::require_ttf_present(&app, "render_invariants");
     let _ = navigate(&mut app, nav);
     app.render_to_framebuf().to_vec()
@@ -61,12 +62,10 @@ fn signature(px: &[u16]) -> u64 {
 
 #[test]
 fn render_invariants_all_scenes() {
-    let theme = ti_render::theme::Theme::default();
-    let gold = theme.by_name("gold_warm").unwrap_or(0xFEA0);
     let mut sigs: BTreeMap<&str, u64> = BTreeMap::new();
     for (name, nav) in SCENES {
         let px = render_scene_frame(nav);
-        assert_eq!(px.len(), 1080 * 1920, "{name} 帧尺寸应 = 1080×1920");
+        assert_eq!(px.len(), 1920 * 1080, "{name} 帧尺寸应 = 1920×1080（S84 纯横屏）");
         let permille = non_black_permille(&px);
         // S34.6 D6（格类分层：boss 战背景 `bg_boss` 暗色黑占比 ≈9.4% → 理论上限 ≈906‰）+
         // 实测（S36.1/S36.2 多次实测）：vs 暗色 boss 帧 CPU 帧缓冲实测非黑覆盖率 851‰（仍为「画出来」）。
@@ -76,7 +75,17 @@ fn render_invariants_all_scenes() {
             permille >= threshold,
             "{name} 非黑覆盖率 {permille}‰ < {threshold}‰（画面没画出来）"
         );
-        assert!(px.contains(&gold), "{name} 无 gold_warm 像素（暖色板未生效）");
+        // S84 纯横屏：index（木牌菜单）/message（图文书页）不再用精确 `gold_warm` 令牌，
+        // 故按「暖色像素」（RGB565 r>b）判定暖色板在位——旧精确匹配在这两屏恒 0。
+        let warm_pixels = px
+            .iter()
+            .filter(|&&c| {
+                let r = i32::from((c >> 11) & 0x1F);
+                let b = i32::from(c & 0x1F);
+                r > b
+            })
+            .count();
+        assert!(warm_pixels > 0, "{name} 无暖色像素（暖色板未生效）");
         let s = signature(&px);
         assert!(!sigs.values().any(|v| *v == s), "{name} 内容签名与其它场景相同（渲染成同一张）");
         sigs.insert(name, s);

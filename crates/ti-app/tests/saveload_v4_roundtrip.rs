@@ -10,7 +10,7 @@ use ti_core::rules::territory::{Ownership, TerritoryState};
 
 /// 进主地图并构建带占领的领地账本（确定性入口 = e2e 同款 3×Confirm）。
 fn app_with_territory() -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     app.handle(GameInput::Confirm);

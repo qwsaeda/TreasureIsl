@@ -21,7 +21,7 @@ use ti_app::{GameApp, GameInput, Scene};
 
 /// 走真实 UI 路径进 2 玩家 + `ai` 个 AI 席的主地图（`app_seats_e2e` 同模式）。
 fn enter_main_map_with_ai(seed: u32, ai: u32) -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(seed);
     app.set_rng_seed(seed);
     app.handle(GameInput::Confirm); // Index → SelectRole

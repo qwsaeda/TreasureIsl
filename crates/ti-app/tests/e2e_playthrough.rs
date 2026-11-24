@@ -17,7 +17,7 @@ use ti_core::rules::board::SpaceKind;
 #[allow(clippy::too_many_lines)]
 #[test]
 fn e2e_full_game_session() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(42);
     app.set_rng_seed(42);
 
@@ -195,7 +195,7 @@ fn e2e_full_game_session() {
 /// E2E 边界情况：非法输入不应崩溃或卡死。
 #[test]
 fn e2e_invalid_inputs_no_crash() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
 
     // 主菜单按返回（无效）
     app.handle(GameInput::Back);
@@ -246,7 +246,7 @@ fn e2e_invalid_inputs_no_crash() {
 /// E2E 状态一致性：多轮操作后状态应保持一致。
 #[test]
 fn e2e_state_consistency() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(123);
 
     // 快进到主地图
@@ -299,7 +299,7 @@ fn e2e_state_consistency() {
 #[allow(clippy::cast_precision_loss)] // i32 布局坐标 → f32 触摸坐标（1080 呈现层）
 #[test]
 fn e2e_touch_economy_loop() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     // S29.2 B1：命中 = Bevy 拾取层产出的归一 [`HitData`]（`key`/`index`/`swipe`），不再喂坐标。
@@ -391,7 +391,7 @@ fn e2e_battle_determinism() {
     let seed = 42u32;
 
     // 第一次战斗
-    let mut app1 = GameApp::new(1080.0, 1920.0);
+    let mut app1 = GameApp::new(1920.0, 1080.0);
     app1.rng_mut().set_seed(seed);
     app1.set_rng_seed(seed);
     app1.handle(GameInput::Confirm);
@@ -418,7 +418,7 @@ fn e2e_battle_determinism() {
     let _ = rounds1; // 兵力模型下逐回合 Attack 循环不再推进，保留计数无害（不用于断言）
 
     // 第二次战斗（相同种子）
-    let mut app2 = GameApp::new(1080.0, 1920.0);
+    let mut app2 = GameApp::new(1920.0, 1080.0);
     app2.rng_mut().set_seed(seed);
     app2.set_rng_seed(seed);
     app2.handle(GameInput::Confirm);
@@ -453,7 +453,7 @@ fn e2e_battle_determinism() {
 /// BOSS 格）→ 同 seed 同序列 = 同落格（确定性）。
 #[test]
 fn e2e_board_spin_loop() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     // 进入主地图（index 新游戏 → 选角色确认 → 选图 M01 确认）
@@ -504,10 +504,10 @@ fn e2e_board_spin_loop() {
     assert_eq!(app.map_pos(), Some(b2.pos()), "玩家位置 = BOSS 格");
 
     // 同 seed 复现：两条独立路径同序列 = 同落点 + 同触发回合
-    let mut a = GameApp::new(1080.0, 1920.0);
+    let mut a = GameApp::new(1920.0, 1080.0);
     a.rng_mut().set_seed(7);
     a.set_rng_seed(7);
-    let mut b = GameApp::new(1080.0, 1920.0);
+    let mut b = GameApp::new(1920.0, 1080.0);
     b.rng_mut().set_seed(7);
     b.set_rng_seed(7);
     for _ in 0..3 {
@@ -528,7 +528,7 @@ fn e2e_board_spin_loop() {
 /// E2E 存档 v3（S21.11）：船等级逐档写入 + 读档还原（旧档缺字段 ⇒ 小舢板，零报错）。
 #[test]
 fn e2e_save_load_boat_level_roundtrip() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     // 主菜单 → 存读档场景（菜单项 1）
@@ -556,7 +556,7 @@ fn e2e_save_load_boat_level_roundtrip() {
 /// 保留下游行为断言（只读 / 摇骰清空 / 落格 toast / 自身格分派），坐标拾取活体验收 = S29.5。
 #[test]
 fn e2e_track_node_preview() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     // index S22 罗盘环 medallion 0 → 选角（v3 两阶段流：勾选 + 开始对局分离）

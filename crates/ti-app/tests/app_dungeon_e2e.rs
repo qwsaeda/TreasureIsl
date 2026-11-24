@@ -9,7 +9,7 @@ use ti_core::domain::combat::Side;
 use ti_core::rules::territory::Ownership;
 
 fn main_map_with_board() -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     app.handle(GameInput::Confirm);

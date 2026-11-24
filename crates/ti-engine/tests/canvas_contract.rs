@@ -2,7 +2,7 @@
 //!
 //! 覆盖：
 //! - RGB565 ↔ `Color` 双向转换（±1 LSB 量化容差）；
-//! - 1080 坐标契约：左上原点 → Bevy 世界坐标（y 翻转）+ letterbox scale；
+//! - 1920×1080 横屏坐标契约：左上原点 → Bevy 世界坐标（y 翻转）+ letterbox scale；
 //! - op 记录 → `flush` 落 ECS：色块 = 定尺寸 Sprite + Transform（含层序 z）、文本 = `Text2d`；
 //! - 帧间零残留：二次 `flush` 后旧帧实体全部 despawn；
 //! - 裁剪语义与 `Framebuf::fill_rect` 一致（越界裁剪 / 退化丢弃）；
@@ -36,10 +36,10 @@ fn rgb565_roundtrip_within_one_lsb() {
 
 #[test]
 fn viewport_scale_letterbox() {
-    // 1080×1920 同比例竖屏 → scale 1.0。
-    assert!((viewport_scale(1080.0, 1920.0) - 1.0).abs() < 1e-6);
-    // 半采样竖屏窗口 → 0.5。
-    assert!((viewport_scale(540.0, 960.0) - 0.5).abs() < 1e-6);
+    // 1920×1080 同比例横屏 → scale 1.0。
+    assert!((viewport_scale(1920.0, 1080.0) - 1.0).abs() < 1e-6);
+    // 半采样横屏窗口 → 0.5。
+    assert!((viewport_scale(960.0, 540.0) - 0.5).abs() < 1e-6);
     // 宽窗口（1080×1000，宽>高 = 横屏 S38 方向感知）→ 按 1920×1080 逻辑画布 contain：
     // min(1080/1920, 1000/1080) = 0.5625（宽受限）。
     let s = viewport_scale(1080.0, 1000.0);
@@ -83,14 +83,14 @@ fn fill_rect_clips_like_framebuf() {
 #[test]
 fn rect_transform_is_center_of_logical_rect() {
     let mut c = canvas();
-    // 逻辑矩形 (0,0,100,50) → 中心 (50,25) → 世界 (50-540, 960-25) = (-490, 935)。
+    // 逻辑矩形 (0,0,100,50) → 中心 (50,25) → 世界 (50-960, 540-25) = (-910, 515)。
     c.fill_rect(0, 0, 100, 50, 0x4E3D);
     let mut world = World::new();
     c.flush(&mut world);
     let mut q = world.query::<&Transform>();
     let t: Vec<Vec3> = q.iter(&world).map(|t| t.translation).collect();
     assert_eq!(t.len(), 1);
-    assert!((t[0].x - -490.0).abs() < 1e-4 && (t[0].y - 935.0).abs() < 1e-4, "got {t:?}");
+    assert!((t[0].x - -910.0).abs() < 1e-4 && (t[0].y - 515.0).abs() < 1e-4, "got {t:?}");
 }
 
 #[test]
@@ -183,21 +183,21 @@ fn canvas_entity_is_component() {
 
 #[test]
 fn world_extent_constants_unchanged() {
-    assert_eq!(LOGICAL_W_I32, 1080);
-    assert_eq!(LOGICAL_H_I32, 1920);
+    assert_eq!(LOGICAL_W_I32, 1920);
+    assert_eq!(LOGICAL_H_I32, 1080);
 }
 
 /// S38 方案 A：方向判定（宽 ≥ 高 = 横屏）。
 #[test]
 fn is_landscape_detects_orientation() {
-    assert!(!is_landscape(1080.0, 1920.0), "竖屏 1080×1920");
-    assert!(!is_landscape(540.0, 960.0), "小竖屏 540×960");
+    assert!(!is_landscape(1080.0, 1920.0), "Portrait 兼容分支 1080×1920");
+    assert!(is_landscape(960.0, 540.0), "小横屏 960×540");
     assert!(is_landscape(1920.0, 1080.0), "横屏 1920×1080");
     assert!(is_landscape(1280.0, 720.0), "小横屏 1280×720");
     assert!(is_landscape(100.0, 100.0), "正方形 = 横屏（宽≥高）");
 }
 
-/// S38 方案 A：逻辑画布尺寸随方向切换。
+/// S84 纯横屏：`LOGICAL_*` 与 `LANDSCAPE_*` 均为 1920×1080 同义副本（Portrait 兼容分支 S84.4 清理）。
 #[test]
 fn logical_dims_follow_orientation() {
     assert_eq!(logical_w_for(false), LOGICAL_W_I32);

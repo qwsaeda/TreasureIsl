@@ -189,7 +189,7 @@ fn real_save_roundtrip(app: &GameApp, seed: u32, step: u32) -> Result<(), String
     // ① 生产写档路径：临时切到 Saveload 场景，由 SaveloadScene::on_input 用全部真实
     //    访问器（rng_steps/unlocked_mask/save_v4_ext/boat_level...）构造槽并写 0 号位；
     //    WriteSave 不切场景（返回 false），写完即还原原场景，不扰动 fuzz 状态机。
-    let mut writer = GameApp::new(1080.0, 1920.0);
+    let mut writer = GameApp::new(1920.0, 1080.0);
     // 用「镜像 app」写档：把源 app 的公开字段灌入 writer 后走真实 on_input，避免改源 app.scene。
     // （writer 只承担构造槽的职责；字段与源 app 逐项对齐，见下方校验。）
     mirror_into_writer(&mut writer, app, seed);
@@ -211,7 +211,7 @@ fn real_save_roundtrip(app: &GameApp, seed: u32, step: u32) -> Result<(), String
     }
 
     // ③ 生产读档路径：新壳 restore_save 真实恢复（不手搓 slot）。
-    let mut restored = GameApp::new(1080.0, 1920.0);
+    let mut restored = GameApp::new(1920.0, 1080.0);
     restored.set_rng_seed(seed);
     restored.restore_save(written.clone());
     if restored.boat_level() != written.boat_level.max(1)
@@ -289,7 +289,7 @@ fn run_playtest(seed: u32) -> SeedResult {
 
     let closure = AssertUnwindSafe(|| {
         let mut rng = GameRng::new(seed);
-        let mut app = GameApp::new(1080.0, 1920.0);
+        let mut app = GameApp::new(1920.0, 1080.0);
         app.set_rng_seed(seed);
 
         for step in 0..STEPS {
@@ -327,7 +327,7 @@ fn run_playtest(seed: u32) -> SeedResult {
                     }
                 }
                 // 恢复壳也必须满足不变式（restore_save 不得留下半初始化态）。
-                let mut probe = GameApp::new(1080.0, 1920.0);
+                let mut probe = GameApp::new(1920.0, 1080.0);
                 probe.set_rng_seed(seed);
                 let slot = app.save_slots()[SAVE_SLOT].clone();
                 probe.restore_save(slot);
@@ -426,7 +426,7 @@ fn deterministic_replay() {
 fn record_scene_sequence(seed: u32) -> Vec<i32> {
     let mut seq = Vec::new();
     let mut rng = GameRng::new(seed);
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(seed);
     for _ in 0..STEPS {
         seq.push(scene_discriminant(app.scene()));
@@ -470,7 +470,7 @@ fn panic_payload_extraction() {
 /// FIND-204 回归测试：越界槽读档不污染 character 字段。
 #[test]
 fn restore_save_invalid_slot_does_not_pollute_character() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(42);
     // 先设一个已选角色（确保调用前 character 非 None，可观测「未被污染」）
     app.character = Some(Character::Drake);

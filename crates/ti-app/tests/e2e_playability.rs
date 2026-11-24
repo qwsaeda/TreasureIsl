@@ -31,7 +31,7 @@ use ti_core::rules::territory_v2::SeatState;
 
 /// 走真实 UI 路径进单玩家局主地图（旧单选流回退，0 `MarkSeat`）。
 fn enter_main_map(seed: u32) -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(seed);
     app.set_rng_seed(seed);
     app.handle(GameInput::Confirm); // Index → SelectRole
@@ -44,7 +44,7 @@ fn enter_main_map(seed: u32) -> GameApp {
 
 /// 走真实 UI 路径进 2 人热座 + `ai` 个 AI 席主地图（`app_seats_e2e` 同模式）。
 fn enter_hot_seat_with_ai(seed: u32, ai: u32) -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(seed);
     app.set_rng_seed(seed);
     app.handle(GameInput::Confirm); // Index → SelectRole
@@ -331,7 +331,7 @@ fn playability_save_and_resume() {
     assert_eq!(saved.boat_level, 2, "写档应捕获船级 2");
 
     // 续玩：新会话读档（restore_save = Saveload 场景 LoadSave 的同源调用）
-    let mut resumed = GameApp::new(1080.0, 1920.0);
+    let mut resumed = GameApp::new(1920.0, 1080.0);
     resumed.restore_save(saved);
     assert_eq!(resumed.scene(), Scene::MainMap, "读档应进主地图续玩");
     assert_eq!(resumed.gold(), gold_at_save, "读档还原金");
@@ -347,13 +347,13 @@ fn playability_save_and_resume() {
 
 // ── 7. 元素级版面断言（现行 1080 scenes.json，element-dump 思路）─────────────────
 
-/// 数据驱动元素级版面：关键文本原语在 1080×1920 视口内、字号代理高度 ≥ 阈值、
+/// 数据驱动元素级版面：关键文本原语在 1920×1080 视口内、字号代理高度 ≥ 阈值、
 /// 标题条与首列表项不重叠。判据取 `assets/data/scenes.json`（单一事实源），
 /// 与 `element-dump` 同思路但落现行 1080 数据（legacy .Map 已退役为参照物）。
 #[test]
 fn playability_layout_key_controls_in_viewport() {
-    const VIEW_W: i32 = 1080;
-    const VIEW_H: i32 = 1920;
+    const VIEW_W: i32 = 1920;
+    const VIEW_H: i32 = 1080;
     const MIN_TEXT_H: i32 = 32; // 文本矩形高度 = 字号代理（实测最小 40）
 
     let scenes = ti_core::data::scenes().expect("scenes.json 加载");
@@ -366,6 +366,11 @@ fn playability_layout_key_controls_in_viewport() {
             .iter()
             .filter(|p| p.kind == "text" && !p.params.contains_key("derived"))
             .collect();
+        // S84 纯横屏：message 场景文本全由 build_message_chrome 的 bevy_ui 节点运行时生成
+        // （S29.3e 迁移，数据层无 text 原语）⇒ 仅对有数据层文本的场景断言。
+        if key == "message" {
+            continue;
+        }
         assert!(!texts.is_empty(), "{key} 应至少有 1 个文本原语");
         for prim in texts {
             let rect = &prim.rect;
@@ -374,7 +379,7 @@ fn playability_layout_key_controls_in_viewport() {
                     && rect.y >= 0
                     && rect.x + rect.w <= VIEW_W
                     && rect.y + rect.h <= VIEW_H,
-                "{key} 文本原语越出 1080×1920 视口: {rect:?}"
+                "{key} 文本原语越出 1920×1080 视口: {rect:?}"
             );
             assert!(
                 rect.h >= MIN_TEXT_H,

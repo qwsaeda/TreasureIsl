@@ -1041,7 +1041,7 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
         );
     }
     // ①b 逐场景必需命中键（S27.5 教训固化，独立函数防本函数超长）。
-    check_scene_required_pick_keys(&scenes, &mut errors);
+    check_scene_required_pick_keys(root, &scenes, &mut errors);
     // ② 场景消费归一命中（`on_hit`/`HitData`），已退役坐标几何 API 不得残留。
     for rel in [
         "crates/ti-app/src/scenes/select_role.rs",
@@ -1108,18 +1108,27 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
     errors
 }
 
-/// ①b 逐场景必需命中键（S27.5 教训固化）：场景消费面（`on_hit`）用到的键在数据面
+/// ①b 逐场景必需命中键（S27.5 教训固化）：场景消费面（`on_hit`）用到的键在其命中面
 /// 必须存在，缺 = 该键不可点。键语义 = `20_bevy_picking.md` §6 约定
-/// （1=index 罗盘环徽章 / 2=列表行 / 3=存档槽 / 4=主地图摇骰 / 5..7=贸易·出售·建造）。
-/// S34 用户 2026-11-01「底部三键取掉」：main_map 5/6/7 已删（命中面只余 4），
-/// 必需键收窄为 [4]，且 5/6/7 恰 0 个（防回潮）。
-fn check_scene_required_pick_keys(scenes: &str, errors: &mut Vec<String>) {
-    const SCENE_REQUIRED_PICK_KEYS: &[(&str, &[u64])] = &[
-        ("index", &[1]),
-        ("select_role", &[2]),
-        ("select_map", &[2]),
-        ("saveload", &[3]),
-        ("main_map", &[4]),
+/// （1=index 木牌 / 2=列表行 / 3=存档槽 / 4=主地图摇骰 / 5..7=贸易·出售·建造）。
+///
+/// S84 纯横屏扁平化后分两条命中面：
+/// - **数据面**（`scenes.json` `primitives[].params.pick_key`）：`index` 木牌 `key=1`、
+///   `main_map` 摇骰 `key=4` 仍在此，保留数据断言；`main_map` `5/6/7` 已删（S34 用户拍板），
+///   恰 0 个防回潮。
+/// - **`bevy_ui` 面**（`treasure_bevy.rs` chrome → `attach_row_pick` → `PickTarget`）：
+///   `select_role` / `select_map` / `saveload` 的列表行命中在 S29.3 已迁 `bevy_ui`，
+///   横屏原语不再声明 `pick_key`（其 1080 层已标 `ui_layer` 跳过）。这三个场景改验
+///   **`bevy_ui` 契约**（build fn 在位 + `attach_row_pick` 传入正确 key + helper 挂 `PickTarget`），
+///   而非仅豁免：改坏 key 即 FAIL。
+fn check_scene_required_pick_keys(root: &Path, scenes: &str, errors: &mut Vec<String>) {
+    // 数据面场景（S84 横屏仍在 scenes.json）：index 木牌=1 / main_map 摇骰=4。
+    const SCENE_REQUIRED_PICK_KEYS: &[(&str, &[u64])] = &[("index", &[1]), ("main_map", &[4])];
+    // bevy_ui 面场景（S29.3 迁走，S84 横屏原语无 pick_key）：场景 → (build fn, PickTarget key)。
+    const BEVY_UI_PICK_CONTRACTS: &[(&str, &str, u32)] = &[
+        ("select_role", "build_select_role_chrome", 2),
+        ("select_map", "build_select_map_chrome", 2),
+        ("saveload", "build_saveload_chrome", 3),
     ];
     let Ok(json) = serde_json::from_str::<serde_json::Value>(scenes) else {
         return;
@@ -1144,7 +1153,7 @@ fn check_scene_required_pick_keys(scenes: &str, errors: &mut Vec<String>) {
         for key in *required {
             if !present.contains(key) {
                 errors.push(format!(
-                    "scenes.json `{scene_name}` 缺 `pick_key={key}`（命中数据面缺失 = 该键不可点；S27.5 教训）"
+                    "scenes.json `{scene_name}` 缺 `pick_key={key}`（S27.5 教训：命中数据面缺失 = 该键不可点）"
                 ));
             }
         }
@@ -1158,6 +1167,34 @@ fn check_scene_required_pick_keys(scenes: &str, errors: &mut Vec<String>) {
                 }
             }
         }
+    }
+    // bevy_ui 面：读壳源码逐场景对账（负例：build fn 丢失 / key 改错 / helper 不挂 PickTarget 均 FAIL）。
+    let shell = read_file(root, "crates/ti-engine/src/bin/treasure_bevy.rs").unwrap_or_default();
+    for (scene_name, build_fn, key) in BEVY_UI_PICK_CONTRACTS {
+        let Some(body) = fn_body(&shell, build_fn) else {
+            errors.push(format!(
+                "treasure_bevy.rs 缺 `{build_fn}`（{scene_name} 横屏列表行命中入口丢失，S29.3 bevy_ui 契约）"
+            ));
+            continue;
+        };
+        let calls_with_key = body.lines().any(|line| {
+            let line = line.trim();
+            line.starts_with("attach_row_pick(") && line.contains(&format!(", {key})"))
+        });
+        if !calls_with_key {
+            errors.push(format!(
+                "treasure_bevy.rs::{build_fn} 缺 `attach_row_pick(..., {key})`（{scene_name} 横屏列表行命中 key 错误/丢失 = 该行不可点；S29.3 bevy_ui 契约）"
+            ));
+        }
+    }
+    // helper 本体须真正挂 `PickTarget`（防只保留调用点名却不挂标记）。
+    if let Some(body) = fn_body(&shell, "attach_row_pick")
+        && !body.contains("PickTarget")
+    {
+        errors.push(
+            "treasure_bevy.rs::attach_row_pick 未挂 `PickTarget`（S29.3 bevy_ui 行命中契约失效）"
+                .to_string(),
+        );
     }
 }
 
@@ -1208,30 +1245,33 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         return vec!["assets/data/scenes.json 不存在，无法校验布局（S14）".to_string()];
     };
 
-    // 逐场景锚定 **1080 现代版面**（`08_layout_design.md` §4 / `scenes.json`，S16 渲染线；
-    // S17.2 起锚点 = 航海夜·精修 v2 8pt 值，`docs/process/10_ui_redesign.md` §4 增量）：
-    // 公共：标题条 h=96、提示/状态行 y=1840、列表 x=96 w=896
-    // index: list y=392 row_h=224 item_h=168 highlight_offset=40，status y=1840
-    // select_role: row_h=192（S18.7d v3 中央选项列）；select_map: row_h=320（v3 右列 3 卡）；
-    // saveload: row_h=256 gold_x=792（S20.2 v4 面板语言：行高加大 + 内容左移）
-    // vs: player_hp 64..512 / boss_hp 576..1024 y=168 w=448 h=48
-    // main_map: hud y=152 h=128（不与等距区 grid.y0=520 重叠）
+    // 逐场景锚定 **S84 纯横屏 1920×1080 版面**（`scenes.json` 扁平化后 landscape 提升为主）：
+    // 竖屏 1080×1920 时代锚（index 标题 h=96 / medallion_ring / chart_full、
+    // vs 血条 w=448、main_map btn_spin）随数据横屏化退役，改锚横屏现实资产/参数；
+    // 仍成立的版面/数据键（focus_anchor、row_h、hud、ring、island_home…）保留负向防漂移。
+    // index: 横屏木牌 menu.* + index_bg_map_h 满屏羊皮底 + index_hero_duo 互动层
+    // vs: 横屏血条 player_hp/boss_hp w=880（x 64 / 976，屏心 960）
+    // main_map: v6 landscape layout helm（另见独立锚）+ 摇骰命中 pick_key=4
     let anchors: &[(&str, &str, &str)] = &[
-        ("\"index\"", "\"h\": 96", "index 标题条高度 = 96（§4.1，S17.2 8pt）"),
+        (
+            "\"index\"",
+            "\"plank_w\": 434",
+            "index S84 横屏木牌参数 menu.plank_w = 434（S39 羊皮藏宝图右列绳挂木牌，运行期算坐标）",
+        ),
         (
             "\"index\"",
             "\"compass_ring\"",
-            "index S22 罗盘环焦点锚 type = compass_ring（§4.1 S22，09_index_compass_spec）",
+            "index 焦点锚 type = compass_ring（重心区语义锚，横屏沿用）",
         ),
         (
             "\"index\"",
-            "medallion_ring",
-            "index S22 罗盘环 6 徽章 = medallion_ring 铜底原语（§4.1 S22）",
+            "index_hero_duo",
+            "index S84 横屏红头巾海盗 & 熊猫海盗互动层 = index_hero_duo 贴图层（S39 拆件资产）",
         ),
         (
             "\"index\"",
-            "chart_full",
-            "index S22 满屏羊皮海图底 = chart_full（§4.1 S22，与 main_map 统一）",
+            "index_bg_map_h",
+            "index S84 横屏满屏羊皮藏宝图底 = index_bg_map_h（S39 羊皮底图，与竖屏 chart_full 不同）",
         ),
         ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，S17.2 8pt）"),
         (
@@ -1256,8 +1296,8 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         ),
         (
             "\"vs\"",
-            "\"w\": 448",
-            "vs 血条宽 = 448（§4.4，S17.2 8pt，QB120 解重叠 64..512/576..1024）",
+            "\"w\": 880",
+            "vs S84 横屏血条宽 = 880（player_hp x:64 / boss_hp x:976，1920 屏心 960 对称）",
         ),
         ("\"vs\"", "\"h\": 48", "vs 血条高 = 48（§4.4，8pt）"),
         (
@@ -1278,8 +1318,8 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         ),
         (
             "\"main_map\"",
-            "btn_spin",
-            "main_map S21.6 v4 舵轮 CTA 原语 = btn_spin 贴图（§4.3 S21.6，大号黄铜舵轮）",
+            "\"pick_key\": 4",
+            "main_map S84 横屏摇骰命中标记 pick_key=4（v6 landscape helm 资产定位另锚）",
         ),
         (
             "\"main_map\"",
@@ -1387,6 +1427,45 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         }
     }
 
+    // S84 纯横屏：main_map 舵轮 CTA 从竖屏 scenes.json `btn_spin` 原语迁到
+    // `main_map_v6_layout_landscape.json` 的 `helm` 数据（1920×1080 横屏布局），
+    // 壳侧 `chrome::V6_HELM` 取图 + `main_map.rs` 读 `v6.helm` 定位。三面对账防回退竖屏。
+    let v6_landscape = read_file(root, "assets/data/main_map_v6_layout_landscape.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok());
+    match v6_landscape {
+        Some(v6) => {
+            if v6.get("helm").is_none() {
+                errors.push(
+                    "main_map_v6_layout_landscape.json 缺 `helm`（S84 横屏舵轮 CTA 数据）"
+                        .to_string(),
+                );
+            }
+            let screen_ok =
+                v6.get("screen").and_then(serde_json::Value::as_array).is_some_and(|a| {
+                    a.first().and_then(serde_json::Value::as_i64) == Some(1920)
+                        && a.get(1).and_then(serde_json::Value::as_i64) == Some(1080)
+                });
+            if !screen_ok {
+                errors.push(
+                    "main_map_v6_layout_landscape.json `screen` 必须为 [1920,1080]（S84 纯横屏）"
+                        .to_string(),
+                );
+            }
+        }
+        None => errors.push(
+            "assets/data/main_map_v6_layout_landscape.json 缺失/解析失败（S84 横屏 helm 无基准）"
+                .to_string(),
+        ),
+    }
+    let chrome_src = read_file(root, "crates/ti-app/src/scenes/chrome.rs").unwrap_or_default();
+    if !chrome_src.contains("V6_HELM") {
+        errors.push("chrome.rs 缺 `V6_HELM`（S84 横屏舵轮贴图单源）".to_string());
+    }
+    let main_map_src = read_file(root, "crates/ti-app/src/scenes/main_map.rs").unwrap_or_default();
+    if !main_map_src.contains("v6.helm") {
+        errors.push("main_map.rs 未读 `v6.helm`（S84 横屏舵轮 CTA 定位未接线）".to_string());
+    }
+
     // 视觉回归必须掩背景（EXP-074：HD 背景 ≠ PCX 背景非排版漂移，只锁 UI 像素分布）。
     // S15.4：176×220 逐像素基线机制已暂移除（legacy 像素写帧层删除），`diff_frames_ui`/`is_bg_cur`
     // 不变量随 S15.5 重锚到 1080 代码绘制基线时重新落地；此期间门禁校验文件处于 S15.5 暂存状态。
@@ -1433,6 +1512,22 @@ fn scene_section(json: &str, scene_key: &str) -> String {
 ///     （即 md 表格 `{x:90, y:400, …}` 写法）出现在 md 文本中。
 ///     只查「存在性 + 数值字面」；漂移即改 md（scenes.json 不许改，改了破基线）。
 fn check_layout_doc_table_cross_check(root: &Path) -> Vec<String> {
+    // S84 纯横屏：`landscape` 段已扁平化提升到场景顶层，而 §4 表仍是竖屏 1080×1920
+    // 历史镜像（main_map 节自称「v2 历史版面」），故横屏专属值在 md 中**按设计缺席**。
+    // 下列白名单 = 显式钉死的横屏覆盖值「场景 + 键:值」，仅这些可豁免 md 镜像；
+    // 防漂移价值保留两层：
+    //   ① 改坏横屏值（如 main_map y:32→y:30）→ 新 pair 既不在 md 也不在白名单 → FAIL；
+    //   ② 删掉横屏值 → 下方「白名单必须仍在 JSON 中」存在性断言 → FAIL。
+    const LANDSCAPE_OVERRIDE_PAIRS: &[(&str, &str)] = &[
+        ("main_map", "y:32"),   // hud_gold / hud_player / hud_plaque_l / hud_plaque_r
+        ("main_map", "x:1424"), // hud_player / hud_plaque_r（1920-448-48）
+        ("vs", "w:880"),        // player_hp / boss_hp 横屏血条宽
+        ("vs", "x:976"),        // boss_hp 右血条起点
+        ("vs", "x:960"),        // rounds / outcome / empty / fx_hit 屏心
+        ("vs", "y:720"),        // outcome / empty
+        ("vs", "y:544"),        // fx_hit
+        ("vs", "y:384"),        // rounds
+    ];
     let mut errors = Vec::new();
     let Some(json_text) = read_file(root, "assets/data/scenes.json") else {
         return vec!["assets/data/scenes.json 不存在".to_string()];
@@ -1446,6 +1541,7 @@ fn check_layout_doc_table_cross_check(root: &Path) -> Vec<String> {
     let Some(scenes) = json.as_object() else {
         return vec!["scenes.json 顶层必须是对象".to_string()];
     };
+    let mut present_tokens: Vec<(String, String)> = Vec::new();
     let mut missing: Vec<String> = Vec::new();
     for (scene, val) in scenes {
         if scene == "schema_version" {
@@ -1466,11 +1562,17 @@ fn check_layout_doc_table_cross_check(root: &Path) -> Vec<String> {
         };
         collect_scalar_pairs(&stripped, &mut pairs);
         for (key, v) in pairs {
-            let comma = format!("{key}:{v},");
-            let braced = format!("{key}:{v}}}");
-            if !md.contains(&comma) && !md.contains(&braced) {
-                missing.push(format!("{scene}.{key}:{v}"));
+            let token = format!("{key}:{v}");
+            present_tokens.push((scene.clone(), token.clone()));
+            let comma = format!("{token},");
+            let braced = format!("{token}}}");
+            if md.contains(&comma)
+                || md.contains(&braced)
+                || LANDSCAPE_OVERRIDE_PAIRS.contains(&(scene.as_str(), token.as_str()))
+            {
+                continue;
             }
+            missing.push(format!("{scene}.{token}"));
         }
         // `portrait_zones` 在 md 里两种写法混用（index 用 `[{x:0,…}]`，其余用位置
         // 写法 `[{0,…}]`），任一命中即通过；数值以 scenes.json 为准
@@ -1489,9 +1591,15 @@ fn check_layout_doc_table_cross_check(root: &Path) -> Vec<String> {
             }
         }
     }
+    // 白名单存在性：横屏覆盖值必须在 JSON 中仍在（删/改名 = 横屏数据丢失，不能靠白名单蒙混）。
+    for (scene, token) in LANDSCAPE_OVERRIDE_PAIRS {
+        if !present_tokens.iter().any(|(s, t)| s == scene && t == token) {
+            missing.push(format!("{scene}.{token}（S84 横屏覆盖值缺失）"));
+        }
+    }
     if !missing.is_empty() {
         errors.push(format!(
-            "08_layout_design.md §4 表与 scenes.json 漂移（md 是 JSON 的人读镜像，改 md 不改 JSON）：{}",
+            "08_layout_design.md §4 表与 scenes.json 漂移（md 是 JSON 的人读镜像，改 md 不改 JSON；S84 横屏覆盖值白名单除外）：{}",
             missing.join(", ")
         ));
     }
@@ -1740,8 +1848,8 @@ fn check_runtime_no_legacy_coords(root: &Path) -> Vec<String> {
     let gfx = read_file(root, "crates/ti-platform/src/gfx.rs").unwrap_or_default();
     let render = read_file(root, "crates/ti-render/src/framebuffer.rs").unwrap_or_default();
     for (a, b, label) in [
-        ("pub const LOGICAL_W_I32: i32 = 1080;", "pub const CANVAS_W: u32 = 1080;", "宽度"),
-        ("pub const LOGICAL_H_I32: i32 = 1920;", "pub const CANVAS_H: u32 = 1920;", "高度"),
+        ("pub const LOGICAL_W_I32: i32 = 1920;", "pub const CANVAS_W: u32 = 1920;", "宽度"),
+        ("pub const LOGICAL_H_I32: i32 = 1080;", "pub const CANVAS_H: u32 = 1080;", "高度"),
     ] {
         if !render.contains(a) {
             errors.push(format!(
@@ -3612,21 +3720,36 @@ fn check_primitive_params(
 }
 
 /// 原语 `text` 校验（`text`/`text_key` 存在性 + `tier` 合法值）。
+///
+/// S84 纯横屏扁平化：横屏 text 原语把内容放 `params` 嵌套里
+/// （`params.text_key="scene.main_map.title"` / `params.tier="body"`），
+/// 竖屏遗留原语仍用顶层 `text`/`text_key`/`tier`。两种格式均合法（任一非空即通过），
+/// 负例：顶层与 params 两者皆缺 → 与旧格式一样 FAIL（空内容不画 / tier 非法）。
 fn check_primitive_text(
     obj: &serde_json::Map<String, serde_json::Value>,
     at: &str,
     strings: &serde_json::Value,
 ) -> Vec<String> {
     let mut errors = Vec::new();
-    let tk = obj.get("text_key").and_then(|v| v.as_str()).unwrap_or("");
-    let tx = obj.get("text").and_then(|v| v.as_str()).unwrap_or("");
+    let params = obj.get("params").and_then(|v| v.as_object());
+    // 顶层优先，回退 params 嵌套（S84 横屏现行格式）。
+    let field = |name: &str| -> String {
+        let top = obj.get(name).and_then(|v| v.as_str()).unwrap_or("");
+        if !top.is_empty() {
+            return top.to_string();
+        }
+        params.and_then(|p| p.get(name)).and_then(|v| v.as_str()).unwrap_or("").to_string()
+    };
+    let tk = field("text_key");
+    let tx = field("text");
+    let tier = field("tier");
     if tk.is_empty() && tx.is_empty() {
         errors.push(format!("{at}: text 缺 text/text_key（空内容不画）"));
     }
-    if !tk.is_empty() && strings.get(tk).is_none() {
+    if !tk.is_empty() && strings.get(&tk).is_none() {
         errors.push(format!("{at}: text_key='{tk}' 不在 strings.json（会显示裸 key）"));
     }
-    match obj.get("tier").and_then(|v| v.as_str()).unwrap_or("") {
+    match tier.as_str() {
         "title" | "body" | "hint" => {}
         other => {
             errors.push(format!("{at}: tier='{other}' 非法（仅 title/body/hint）"));
@@ -4879,43 +5002,53 @@ fn check_orphan_rule_row(root: &Path) -> Vec<String> {
     errors
 }
 
-/// S80（EXP-210）：「不手写像素」总纲机器断言——index 罗盘环 6 徽章的 36 行坐标
-/// 必须由 `index.ring` 参数经生成器算出，不得手抄死数字。
+/// 「不手写像素」总纲机器断言（S80 EXP-210 → S84 纯横屏改写）：
+/// index 横屏木牌（derived=menu）的坐标必须由 `index.menu.*` 参数运行期算出，
+/// JSON 里的 x/y=0 是已删死坐标标记，不得手抄。
 ///
-/// 单一事实源：公式只在 `scripts/gen_index_medallions.py` 有一份，本断言调其 `--check`
-/// （不改产品代码、只读），避免 Rust/Python 两处公式漂移。生成器 --check 返回 0 =
-/// JSON 36 行坐标 == ring 参数算出；非 0 = 手写坐标漂移（FAIL）。
+/// S84 改写：竖屏罗盘环 `index.ring` 与其生成器 `gen_index_medallions.py` 已退役；
+/// 本断言直接对账 scenes.json（derived=menu 原语 x/y=0 + menu 参数在位 + 行数 ≥18），
+/// 避免依赖外部脚本，负例（写成死坐标/删参数）仍 FAIL。
 fn check_no_handwritten_grid(root: &Path) -> Vec<String> {
-    let gen_path = root.join("scripts/gen_index_medallions.py");
-    if !gen_path.is_file() {
-        return vec![
-            "scripts/gen_index_medallions.py 缺失（不手写像素总纲无生成器/无机器断言）".to_string(),
-        ];
-    }
-    // 参数化前置：index.ring 必须在位（否则生成器 --check 会 exit 1，错误信息已含点名）。
-    let out = std::process::Command::new("python3")
-        .arg(&gen_path)
-        .arg("--check")
-        .current_dir(root)
-        .output();
-    let Ok(output) = out else {
-        return vec![
-            "check_no_handwritten_grid: python3 不可用（无法跑坐标生成器 --check）".to_string(),
-        ];
+    // S84 纯横屏：index 罗盘环（ring）已删，参数化原语改为横屏木牌（derived=menu，
+    // 坐标由 index.menu.* 参数运行期算）。旧生成器 gen_index_medallions.py 已退役。
+    // 守门改为直接对账 scenes.json：带 derived 标记的原语 x/y=0（死坐标已删）+ menu 参数在位。
+    let scenes_text = read_file(root, "assets/data/scenes.json").unwrap_or_default();
+    let scenes: serde_json::Value = match serde_json::from_str(&scenes_text) {
+        Ok(v) => v,
+        Err(_) => return vec!["scenes.json 解析失败（no-handwritten-grid 无基准）".to_string()],
     };
-    if output.status.success() {
-        return Vec::new();
-    }
-    let msg = String::from_utf8_lossy(&output.stderr);
-    let msg = if msg.trim().is_empty() {
-        String::from_utf8_lossy(&output.stdout).to_string()
-    } else {
-        msg.to_string()
+    let Some(index) = scenes.get("index") else {
+        return vec!["scenes.json 缺 index 场景（no-handwritten-grid 无基准）".to_string()];
     };
-    vec![format!(
-        "index 罗盘环坐标漂移（违反「不手写像素」总纲，EXP-210）：{}",
-        msg.trim().lines().next().unwrap_or("生成器 --check 非 0")
-    )]
+    if index.get("menu").is_none() {
+        return vec!["index.menu 参数对象缺失（S84 横屏木牌参数化源）".to_string()];
+    }
+    let mut problems = Vec::new();
+    let mut derived_count = 0usize;
+    if let Some(prims) = index.get("primitives").and_then(|v| v.as_array()) {
+        for (idx, p) in prims.iter().enumerate() {
+            if p.get("params").and_then(|v| v.get("derived")).and_then(|v| v.as_str())
+                != Some("menu")
+            {
+                continue;
+            }
+            derived_count += 1;
+            if let Some(rect) = p.get("rect") {
+                let x = rect.get("x").and_then(serde_json::Value::as_i64).unwrap_or(-1);
+                let y = rect.get("y").and_then(serde_json::Value::as_i64).unwrap_or(-1);
+                if x != 0 || y != 0 {
+                    problems.push(format!(
+                        "index 原语 #{idx} derived=menu 但 rect.x/y=({x},{y})≠0（死坐标未删，违反不手写像素总纲）"
+                    ));
+                }
+            }
+        }
+    }
+    if derived_count < 18 {
+        problems.push(format!("index 横屏木牌 derived=menu 原语仅 {derived_count} 行（期望 ≥18）"));
+    }
+    problems
 }
 
 /// S67.2：`--json` 契约的注册级判据。第 29 项 `tooling-contract` 是纯源码子串匹配

@@ -425,6 +425,8 @@ pub const VS_BG_NIGHT_SEA: &str = "assets/ui/bg_night_sea.png";
 
 /// v6 海洋全景底（AI 生成，画质来源；满屏背景）。
 pub const V6_OCEAN_BG: &str = "assets/ui/v6/ocean_bg.png";
+/// 热座交接整屏盖板的中央罗盘（S83 U9；CS-1 资产单源，禁止场景层硬编码路径）。
+pub const COMPASS_ROSE: &str = "assets/ui/compass_rose.png";
 /// v6 可占领铜牌（亮铜骷髅）。
 pub const V6_TILE_OWNED: &str = "assets/ui/v6/tile_owned.png";
 /// v6 不可占领铜牌（灰暗锁链）。
@@ -1281,55 +1283,22 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
     render_primitives_filtered(host, scene_id, selected, i32::MIN);
 }
 
-/// S81：index 参数化原语的 rect 计算（**公式单一事实源**，CPU 路径与 Bevy 壳共用）。
-/// 参数来自 `SceneLayout.extra_scalar`（layout.rs 把 scenes.json 的 `index.ring`/`index.menu`
-/// 嵌套对象自动展开成 `ring.*`/`menu.*` 扁平键）；带 `params.derived` 的原语才走此路径。
-/// 竖屏 = 正六边形环（同 `ring_card_center` 公式）；横屏 = 线性菜单（首项/倾斜 expand 偏移）。
+/// S84 纯横屏：index 横屏木牌原语的 rect 计算（**公式单一事实源**，CPU 路径与 Bevy 壳共用）。
+/// 参数来自 `SceneLayout.extra_scalar`（layout.rs 把 scenes.json 的 `index.menu` 嵌套对象
+/// 自动展开成 `menu.*` 扁平键）；带 `params.derived=menu` 的原语才走此路径。
+/// 线性菜单 = 首项普通尺寸 + 其余倾斜 expand 偏移（S39 spec §1）。
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
 #[must_use]
 pub fn index_param_rect(
     prim: &Primitive,
     layout: &data::SceneLayout,
-    landscape: bool,
-    item_slots: &mut std::collections::BTreeMap<i64, usize>,
     last_plank: &mut i64,
 ) -> Option<data::Rect> {
+    // S84 纯横屏：index 参数化原语仅横屏木牌（derived=menu），竖屏罗盘环已删。
     let derived = prim.params.get("derived").and_then(|v| v.as_str())?;
     let extra = &layout.extra_scalar;
     let g = |k: &str| extra.get(&format!("{derived}.{k}")).copied();
-    if !landscape {
-        // 竖屏罗盘环：item 的槽位 0..5（image/icon/icon/rect/text/text）
-        let item = prim.item;
-        let slot = item_slots.entry(item).or_insert(0);
-        let (cx, cy, radius, count, bw, bh, iw, lw, lh, ldy) = (
-            g("center_x")?,
-            g("center_y")?,
-            g("radius")?,
-            g("count")?,
-            g("badge_w")?,
-            g("badge_h")?,
-            g("icon_w")?,
-            g("label_w")?,
-            g("label_h")?,
-            g("label_dy")?,
-        );
-        if count <= 0 {
-            *slot += 1;
-            return None;
-        }
-        let theta = (-90.0 + (item as f32) * 360.0 / (count as f32)) * std::f32::consts::PI / 180.0;
-        let mx = cx + (f64::from(radius) * f64::from(theta.cos())).round() as i32;
-        let my = cy + (f64::from(radius) * f64::from(theta.sin())).round() as i32;
-        let rect = match *slot {
-            0 => data::Rect { x: mx - bw / 2, y: my - bh / 2, w: bw, h: bh },
-            1 | 2 => data::Rect { x: mx - iw / 2, y: my - iw / 2, w: iw, h: iw },
-            3..=5 => data::Rect { x: mx - lw / 2, y: my + bh / 2 + ldy, w: lw, h: lh },
-            _ => return None,
-        };
-        *slot += 1;
-        return Some(rect);
-    }
-    // 横屏线性菜单
+    // 线性菜单（menu.* 参数）
     let (x, y0, step, count, pw, ph, rw, rh, rdx, rdy, idx) = (
         g("x")?,
         g("y0")?,
@@ -1399,9 +1368,7 @@ pub fn render_primitives_filtered(
     // Bevy 壳由 `ti-engine` 的 bevy_ui 层画这些 chrome（避免 1080 + bevy_ui 双画）；
     // CPU 路径（无 bevy_ui 的后端）照旧画。
     let skip_migrated = host.chrome_in_bevy_ui();
-    // S81：index 参数化原语（params.derived）的 rect 由公共函数从参数算（CPU/Bevy 单一公式源）。
-    let mut index_item_slots: std::collections::BTreeMap<i64, usize> =
-        std::collections::BTreeMap::new();
+    // S84：index 横屏木牌原语（params.derived=menu）的 rect 由公共函数从参数算（CPU/Bevy 单一公式源）。
     let mut index_last_plank: i64 = -1;
     for p in prims {
         if p.z < min_z {
@@ -1415,8 +1382,7 @@ pub fn render_primitives_filtered(
         }
         let color = theme.by_name(&p.color).unwrap_or(theme.text_on_parch);
         let r = if scene_id == "index" {
-            index_param_rect(p, &layout, landscape, &mut index_item_slots, &mut index_last_plank)
-                .unwrap_or(p.rect)
+            index_param_rect(p, &layout, &mut index_last_plank).unwrap_or(p.rect)
         } else {
             p.rect
         };

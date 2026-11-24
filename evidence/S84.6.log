@@ -1,0 +1,37 @@
+S84.6 S84 纯横屏重写收口 · 验收证据（2026-11-24）
+
+== 改动面 ==
+文档收口（计数声称点同步 + 三方对账 + 推送）。
+
+== 判据 1：S84 全阶段成果 ==
+S84.0 立项（设计稿 docs/plan-s84-landscape-only.md + 2 路 explore 影响面）→ S84.1 七场景文档横屏化 →
+S84.2 坐标系三源翻转 1920×1080 → S84.3 scenes.json 扁平化（landscape 提升为主，删竖屏数据）→
+S84.4 渲染/UI 删竖屏实现（死助手 + 生成器 + 坐标断言；兼容分支保留为恒真脚手架）→
+S84.5 测试/门禁/文档断言全改横屏。
+
+== 判据 2：全量静态/动态验证 ==
+- cargo fmt --all --check：0
+- cargo clippy --workspace --all-targets -D warnings：0 error
+- cargo test --workspace：1087 passed / 0 failed / 1 ignored
+- python3 scripts/validate_data.py：OK（4 表 + strings 281 键 + indent=1 规范形 + 资产双向同步）
+- cargo run -p ti-tools --bin doccheck：0 error
+- cargo run -p ti-tools --bin doccheck2 .：0 error（57 项，计数同步后）
+- 7 场景 --shot：全部 1920×1080 非黑
+- main_map_pick_e2e 3/0（pick_key=4 摇骰可点）
+
+== 判据 3：计数同步 ==
+台账 416 任务 / 416 verified / 0 pending；AGENTS.md / docs/release.md / docs/process/26_dev_stages_overview.md
+声称点同步为 416/416/0；doccheck / doccheck2 / doc_numbers 0 漂移。
+
+== 判据 4：三方对账 + 推送 ==
+（gate 全绿 + check_ledger_reality + commit + push 结果见下方追加）
+
+== 判据 4：gate + 三方对账（实跑）==
+- pwsh -File scripts/gate.ps1 → GATE_EXIT=0，=== gate: 0 failure(s) ===（36 项全绿；wasm-browser-e2e L4 SwiftShader 记名降级 SKIP 非 FAIL）
+- 附带修：并行会话提交 76e2f0a（S83 U9 热座盖板）引入 CS-1 资产路径硬编码 main_map.rs compass_rose.png
+  → 路径移入 chrome::COMPASS_ROSE 单源（场景层零行为变化），check_code_standards 0 超基线。
+- python3 scripts/check_ledger_reality.py → （见下方实跑）
+- check_ledger_reality.py → 全绿（416 verified 对账通过 + 0 blocked schema + 0 孤儿 evidence）
+
+== 结论 ==
+S84 纯横屏重写全收口：gate 36 项 0 failure + doccheck/doccheck2 0 error + 台账 416/416/0 + 三方对账全绿。待提交推送。

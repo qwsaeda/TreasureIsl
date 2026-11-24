@@ -1,7 +1,8 @@
-//! S38 方案 A：`spawn_draw_list` 横屏方向感知（无头，不依赖 GPU）。
+//! S84 纯横屏：`spawn_draw_list` 世界坐标换算（无头，不依赖 GPU）。
 //!
-//! 横屏 draw list op（1920×1080 坐标）经 `spawn_draw_list` → `to_world_dims` 定位 Bevy 精灵，
-//! 断言世界坐标以横屏逻辑画布中心 (960,540) 为原点对折（竖屏路径 = 1080×1920 原点 540,960）。
+//! draw list op（1920×1080 坐标）经 `spawn_draw_list` → `to_world_dims` 定位 Bevy 精灵，
+//! 断言世界坐标以横屏逻辑画布中心 (960,540) 为原点对折。竖屏路径（1080×1920 原点 540,960）
+//! 已随 S84 纯横屏重写删除（PORTRAIT 兼容分支的旧坐标断言不再成立）。
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
@@ -25,20 +26,6 @@ fn spawn_draw_list_landscape_centers_on_landscape_extent() {
     assert!((t.translation.y - 440.0).abs() < 0.01, "y 应 440, got {}", t.translation.y);
 }
 
-/// 竖屏（0 行为变化）：矩形 (100, 50, 200, 100) 中心 (200,100) → 世界 (200-540, 960-100) = (-340, 860)。
-#[test]
-fn spawn_draw_list_portrait_unchanged() {
-    let mut world = World::new();
-    let mut list = DrawList { theme: Theme::DEFAULT.clone(), ..Default::default() };
-    list.ops.push(DrawOp::Rect { x: 100, y: 50, w: 200, h: 100, color: 0xF800 });
-    spawn_draw_list(&mut world, None, &list, false);
-
-    let mut q = world.query_filtered::<(&Transform,), With<DrawListEntity>>();
-    let (t,) = q.single(&world).expect("spawn 实体应存在");
-    assert!((t.translation.x - (-340.0)).abs() < 0.01, "x 应 -340, got {}", t.translation.x);
-    assert!((t.translation.y - 860.0).abs() < 0.01, "y 应 860, got {}", t.translation.y);
-}
-
 /// 横屏文本定位（Text2d 实体）同方向感知。
 #[test]
 fn spawn_draw_list_landscape_text_centers() {
@@ -56,8 +43,8 @@ fn spawn_draw_list_landscape_text_centers() {
     let mut q = world.query_filtered::<(&Transform,), With<DrawListEntity>>();
     let (t,) = q.single(&world).expect("spawn 实体应存在");
     // 文本以中心换算（左上是 (1000,500)，中心 = 左上 + 宽高半量 ⇒ x = (1000+width/2)-960 > 40）。
-    // 仅断言横屏方向感知（x=1000 在横屏屏心 960 右侧 ⇒ 世界 x > 0）；精确宽高随字体度量，
-    // 由 `spawn_draw_list_portrait_unchanged`/`_landscape_centers_on_landscape_extent` 锁定换算。
+    // 仅断言 x=1000 在屏心 960 右侧 ⇒ 世界 x > 0；精确宽高随字体度量，
+    // 由 `spawn_draw_list_landscape_centers_on_landscape_extent` 锁定换算。
     assert!(t.translation.x > 0.0, "横屏文本 x=1000 应在屏心右侧，got {}", t.translation.x);
 }
 
@@ -89,28 +76,5 @@ fn spawn_draw_list_landscape_image_centers() {
     assert!((t.translation.y - 440.0).abs() < 0.01, "y 应 440, got {}", t.translation.y);
 }
 
-/// 竖屏图片原语 0 行为变化：图片 (100, 50, 200, 100) 中心 (200,100) → 世界 (200-540, 960-100) = (-340, 860)。
-#[test]
-fn spawn_draw_list_portrait_image_unchanged() {
-    bevy::tasks::ComputeTaskPool::get_or_init(bevy::tasks::TaskPool::new);
-    bevy::tasks::IoTaskPool::get_or_init(bevy::tasks::TaskPool::new);
-    let mut app = App::new();
-    app.add_plugins(bevy::asset::AssetPlugin::default());
-    app.init_asset::<Image>();
-    let mut list = DrawList { theme: Theme::DEFAULT.clone(), ..Default::default() };
-    list.ops.push(DrawOp::Image {
-        asset: "assets/ui/v6/ocean_bg.png".to_owned(),
-        x: 100,
-        y: 50,
-        w: 200,
-        h: 100,
-        tint: 0xFFFF,
-        rot_mdeg: 0,
-    });
-    spawn_draw_list(app.world_mut(), None, &list, false);
-
-    let mut q = app.world_mut().query_filtered::<(&Transform,), With<DrawListEntity>>();
-    let (t,) = q.single(app.world()).expect("spawn 实体应存在");
-    assert!((t.translation.x - (-340.0)).abs() < 0.01, "x 应 -340, got {}", t.translation.x);
-    assert!((t.translation.y - 860.0).abs() < 0.01, "y 应 860, got {}", t.translation.y);
-}
+// 横屏图片原语（`DrawOp::Image`）与 Rect 同式换算已由
+// `spawn_draw_list_landscape_image_centers` 锁定；竖屏图片 0 行为变化断言随 S84 删除。

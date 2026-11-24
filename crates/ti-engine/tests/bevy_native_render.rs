@@ -54,18 +54,16 @@ fn spawn(app: &mut App, selected: i64) -> SceneEntities {
 fn generic_primitives_spawn_bevy_entities() {
     let mut app = app_with_theme();
     let entities = spawn(&mut app, 0);
-    // S39 数据化：index 罗盘环 36 原语全迁 bevy_ui ⇒ `spawn_primitives`（1080 生产路径）
-    // 跳过 bevy_ui 原语 ⇒ 1080 层无可选元素（罗盘环不双画；`ui_layer` 契约见 `scene_render.rs`）。
-    // 非 bevy_ui 原语（底图×2/标题/副标题/舵轮/尾行）item=-1 不进 selectable。
-    assert_eq!(entities.selectable.len(), 0, "S39 index 罗盘环迁 bevy_ui ⇒ 1080 层 0 可选元素");
-    // 文本走 Text2d（GPU 字体）：标题/副标题/尾行 = 3（非 bevy_ui text 原语）。
+    // S84 纯横屏：index 木牌/图标 18 原语迁 bevy_ui ⇒ `spawn_primitives`（1080 生产路径）
+    // 跳过 bevy_ui 原语 ⇒ 1080 层无可选元素（木牌不双画；`ui_layer` 契约见 `scene_render.rs`）。
+    assert_eq!(entities.selectable.len(), 0, "S84 index 木牌迁 bevy_ui ⇒ 1080 层 0 可选元素");
+    // 文本走 Text2d（GPU 字体）：S84 横屏 index 仅版本签 1 条非 bevy_ui text 原语
+    // （标题已 multiply 烘焙进 index_bg_map_h 底图、木牌文案走 bevy_ui）。
     let text_entity_count = app.world_mut().query::<&Text2d>().iter(app.world()).count();
     assert!(
-        text_entity_count >= 3,
-        "原生渲染须有 Text2d 实体（标题+副标题+尾行），实得 {text_entity_count}"
+        text_entity_count >= 1,
+        "原生渲染须有 ≥1 Text2d 实体（横屏版本签），实得 {text_entity_count}"
     );
-    // 底图/舵轮/罗盘环 = `image` 原语走生产 drawlist（spawn_primitives 不产 Sprite，
-    // 同 S22 注释口径）；1080 层无可选元素（罗盘环迁 bevy_ui 不双画）。
 }
 
 // S39：罗盘环 1080 层 when 过滤/图标烘焙/文字色契约已随数据化迁 bevy_ui

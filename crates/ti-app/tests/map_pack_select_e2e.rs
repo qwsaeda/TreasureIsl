@@ -15,7 +15,7 @@ fn enter_select_map(app: &mut GameApp) {
 /// 0 回归判据：未注入包时，包清单面 = `None`（`select_map` 走内嵌 3 槽旧流）。
 #[test]
 fn map_pack_ids_none_without_injection() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     enter_select_map(&mut app);
     assert_eq!(app.map_pack_ids(), None, "未注入包 = 清单面 None（0 行为变化）");
     assert_eq!(app.active_map_pack(), None, "未注入包 = 注入源 None");
@@ -25,7 +25,7 @@ fn map_pack_ids_none_without_injection() {
 /// `build_board_session` 读的是注入合并表 ⇒ 会话跟包走）。
 #[test]
 fn re_enter_main_map_rebuilds_board_session() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(7);
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Confirm);
@@ -49,7 +49,7 @@ fn re_enter_main_map_rebuilds_board_session() {
 /// 输入面：非导航输入经 `select_map` 的 `on_input` 不 panic、不改场景（0 行为变化口径）。
 #[test]
 fn select_map_input_surface_no_panic() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     enter_select_map(&mut app);
     for input in [
         GameInput::MoveUp,

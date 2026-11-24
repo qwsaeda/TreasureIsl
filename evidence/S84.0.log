@@ -1,0 +1,19 @@
+S84.0 纯横屏重写立项 · 验收证据（2026-11-24）
+
+== 改动面 ==
+文档（docs/plan-s84-landscape-only.md 设计稿 + README/AGENTS 登记 + 台账 S84.0~S84.6）。
+
+== 触发 ==
+用户 2026-11-24「竖屏，全部删除」+「1-3 全做」（延续 2026-11-08「不要竖屏，都是横屏」决策）：
+①删文档竖屏内容 ②删 scenes.json 竖屏数据 ③1080×1920 坐标系改纯横屏 1920×1080。
+
+== 判据 1：设计稿 + 影响面清单（2 路 explore 实测回填）==
+docs/plan-s84-landscape-only.md 含：WBS S84.0~S84.6 + 三层删除范围 + 坐标系三源（framebuffer/gfx/settings 必须同改）+ 数据层影响面（顶层 extra/extra_scalar 不可删、6A 扁平化技巧、main_map 横屏补 pick_key=4、退役 gen_index_medallions）+ 实现层方向分支清单（main_map.rs 37/treasure_bevy.rs 22/vs.rs 7）+ 必改文档 41 篇。
+实测数字：47 测试文件锚 1080/1920（35 夹具）、198 docs、57 doccheck2 检查。
+
+== 判据 2：登记 + 门禁 ==
+docs/README.md 计划段登记 S84 设计稿；AGENTS.md 路由表；台账 S84.0~S84.6 pending。
+doccheck 198 docs/410 task refs 0 error；doccheck2 0 error（57 项）；doc_numbers 0 漂移；ledger 416/409/7pending。
+
+== 结论 ==
+设计稿 + 影响面清单 + 台账 + 登记齐备。S84.0 可置 verified。

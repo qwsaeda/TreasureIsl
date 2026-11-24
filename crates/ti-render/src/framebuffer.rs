@@ -3,29 +3,29 @@
 //! 纯内存渲染目标，不依赖任何平台 API。平台层（macroquad/miniquad）
 //! 负责把帧缓冲内容缩放到实际窗口并呈现。
 
-/// UI 呈现画布宽（1080×1920 单一权威呈现坐标系）。
-pub const CANVAS_W: u32 = 1080;
+/// UI 呈现画布宽（S84 纯横屏重写：1920×1080 单一权威呈现坐标系）。
+pub const CANVAS_W: u32 = 1920;
 /// UI 呈现画布高。
-pub const CANVAS_H: u32 = 1920;
+pub const CANVAS_H: u32 = 1080;
 
-/// 横屏呈现画布宽（S38 方案 A 坐标双套：1920×1080 横屏）。
+/// 兼容别名（S84：主画布已是横屏，LANDSCAPE_* 保留为同义副本供方向分支过渡；S84.4 清理）。
 pub const LANDSCAPE_W: u32 = 1920;
-/// 横屏呈现画布高。
+/// 兼容别名。
 pub const LANDSCAPE_H: u32 = 1080;
 
 /// 帧缓冲像素数 = `CANVAS_W × CANVAS_H`。
 pub const FB_PIXELS: usize = (CANVAS_W as usize) * (CANVAS_H as usize);
 
 /// 逻辑宽（i32，供坐标运算）。
-pub const LOGICAL_W_I32: i32 = 1080;
+pub const LOGICAL_W_I32: i32 = 1920;
 /// 逻辑宽（usize，供帧缓冲索引）。
-pub const LOGICAL_W_USIZE: usize = 1080;
+pub const LOGICAL_W_USIZE: usize = 1920;
 /// 逻辑高（i32，供坐标运算）。
-pub const LOGICAL_H_I32: i32 = 1920;
+pub const LOGICAL_H_I32: i32 = 1080;
 
-/// 横屏逻辑宽（i32，S38 方向自适应）。
+/// 兼容别名（S84，同义于 `LOGICAL_W_I32`）。
 pub const LANDSCAPE_W_I32: i32 = 1920;
-/// 横屏逻辑高（i32，S38 方向自适应）。
+/// 兼容别名（S84，同义于 `LOGICAL_H_I32`）。
 pub const LANDSCAPE_H_I32: i32 = 1080;
 
 /// RGB565 呈现层帧缓冲。

@@ -30,11 +30,11 @@
     clippy::cast_sign_loss
 )]
 
-// 呈现层画布 = 1080×1920（`render_pipeline::FB_W/FB_H`，契约 1）。
-// S15.4：legacy .Map 176×220 像素写帧层移除，代码绘制判据（本文件保留部分）直接按 1080 比对。
-const FB_W: usize = 1080;
-const FB_W_I32: i32 = 1080;
-const FB_H: usize = 1920;
+// 呈现层画布 = 1920×1080（S84 纯横屏；`framebuffer::CANVAS_W/CANVAS_H`，契约 1）。
+// S15.4：legacy .Map 176×220 像素写帧层移除，代码绘制判据（本文件保留部分）直接按横屏画布比对。
+const FB_W: usize = 1920;
+const FB_W_I32: i32 = 1920;
+const FB_H: usize = 1080;
 
 // S15.4：类 1「.Map 精灵层密度/淹没」判据（`text_regions_not_flooded_by_sprites`）依赖已删除的
 // CPU 逐像素 blit 路径（`blit_scene_frame`），随 legacy 像素写帧层一并移除。
@@ -45,7 +45,8 @@ fn scenes() -> std::collections::BTreeMap<String, ti_core::data::SceneLayout> {
     ti_core::data::scenes().expect("scenes.json 解析失败").clone()
 }
 
-/// index §4.1（S22 罗盘环；单一事实源 `09_index_compass_spec.md`）：满屏 chart_full + 6 medallion 沿环。
+/// index 横屏版面（S84 纯横屏 / S39 藏宝图木牌；单一事实源 `14_index_treasure_map_spec.md`）：
+/// 满屏羊皮海图底 + 双海盗立绘 + 绳挂 6 木牌菜单 + 6 图标。
 #[test]
 fn index_layout_matches_doc() {
     let s = scenes();
@@ -55,29 +56,42 @@ fn index_layout_matches_doc() {
     let img_asset = |p: &ti_core::data::Primitive, a: &str| {
         p.kind == "image" && p.params.get("asset").and_then(|v| v.as_str()) == Some(a)
     };
-    assert!(
-        idx.primitives.iter().any(|p| img_asset(p, "assets/ui/chart_full.png")),
-        "index S22 满屏 chart_full 海图底缺失"
-    );
+    // S84：竖屏 chart_full / medallion_ring 已退场，改横屏拆件（底图/立绘/绳/木牌/图标）。
+    for a in
+        ["assets/ui/index_bg_map_h.png", "assets/ui/index_hero_duo.png", "assets/ui/index_rope.png"]
+    {
+        assert!(
+            idx.primitives.iter().any(|p| img_asset(p, a)),
+            "index 横屏缺满屏底图/立绘/绳：{a}"
+        );
+    }
     assert_eq!(
-        idx.primitives
-            .iter()
-            .filter(|p| img_asset(p, "assets/ui/medallion_ring.png") && p.item >= 0 && p.item < 6)
+        (0..6)
+            .filter(|i| idx
+                .primitives
+                .iter()
+                .any(|p| img_asset(p, &format!("assets/ui/index_plank_{i}.png"))))
             .count(),
         6,
-        "index S22 应 6 枚 medallion（item 0..5）"
+        "index 横屏应 6 块木牌（index_plank_0..5）"
     );
+    assert_eq!(
+        idx.extra_scalar.get("menu.count").copied(),
+        Some(6),
+        "index 横屏菜单 count=6（menu.count 数据驱动）"
+    );
+    // status 为数据残留锚点（竖屏时点值），S84 扁平化后仍保留原值；断言实测值防再漂移。
     let status = idx.extra.get("status").expect("index 缺 status 矩形");
-    assert_eq!(status.x, 540, "index status x=540（屏心居中）");
-    assert_eq!(status.y, 1840, "index 尾行 y=1840");
+    assert_eq!(status.x, 540, "index status x=540（数据锚点实测值）");
+    assert_eq!(status.y, 1840, "index status y=1840（S84 扁平化保留的旧竖屏锚点实测值）");
 }
 
-/// select_role/select_map §4.2（1080 现代版面，S17.2 8pt）：标题条 h=96，列表基线 y=240，提示行 y=1840（QB115/123）。
+/// select_role/select_map §4.2（S84 横屏版面，S17.2 8pt）：标题条 h=96，列表基线 y=240，提示行 y=1840（QB115/123）。
 #[test]
 fn select_scenes_layout_matches_doc() {
     let s = scenes();
     let role = s.get("select_role").expect("scenes.json 缺 select_role");
-    assert_eq!(role.title.h, 96, "select_role 标题条 h=96（1080 现代版面，S17.2 8pt）");
+    assert_eq!(role.title.h, 96, "select_role 标题条 h=96（S84 横屏版面，S17.2 8pt）");
     assert_eq!(role.list.y, 480, "select_role 列表基线 y=480（S18.7d v3 右列 5 卡）");
     assert_eq!(role.list.row_h, 192, "select_role row_h=192（S18.7d v3 中央选项列）");
     assert_eq!(role.list.item_h, 192, "select_role item_h=192（S18.7d v3）");
@@ -85,7 +99,7 @@ fn select_scenes_layout_matches_doc() {
     let role_top = role.list.y - role.list.highlight_offset;
     assert!(role_top >= 108, "select_role 首块顶 {role_top} 压标题条");
     let map = s.get("select_map").expect("scenes.json 缺 select_map");
-    assert_eq!(map.title.h, 96, "select_map 标题条 h=96（1080 现代版面，S17.2 8pt）");
+    assert_eq!(map.title.h, 96, "select_map 标题条 h=96（S84 横屏版面，S17.2 8pt）");
     assert_eq!(map.list.y, 480, "select_map 列表基线 y=480（S18.7d v3 右列 3 卡）");
     assert_eq!(map.list.row_h, 320, "select_map row_h=320（S18.7d v3；S15.6 QB103 3 地图卡）");
     assert_eq!(map.list.item_h, 320, "select_map item_h=320（S18.7d v3）");
@@ -99,7 +113,7 @@ fn main_map_layout_matches_doc() {
     let Some(main) = s.get("main_map") else {
         panic!("scenes.json 缺 main_map");
     };
-    assert_eq!(main.title.h, 96, "main_map 标题条 h=96（1080 现代版面，S17.2 8pt）");
+    assert_eq!(main.title.h, 96, "main_map 标题条 h=96（S84 横屏版面，S17.2 8pt）");
     assert_eq!(main.hud.y, 152, "main_map HUD y=152（v2 回退键保留，§4.3）");
     assert_eq!(main.hud.h, 128, "main_map HUD h=128（v2 回退键，§4.3）");
     assert!(main.hud.y + main.hud.h <= 520, "main_map HUD 与等距区 y0=520 重叠（QB105 重锚）");
@@ -137,7 +151,7 @@ fn main_map_layout_matches_doc() {
     }
 }
 
-/// vs §4.4（1080 现代版面，S17.2 8pt）：标题条 h=96，血条 64..512 / 576..1024（S15.6 QB120 解重叠）
+/// vs §4.4（S84 横屏版面，S17.2 8pt）：标题条 h=96，血条 64..512 / 576..1024（S15.6 QB120 解重叠）
 /// y=168 h=48，回合 540/416，结果/空 540/960（QA141 屏心居中 + S15.6 批次6 挪出血条带）。
 #[test]
 fn vs_layout_matches_doc() {
@@ -145,24 +159,25 @@ fn vs_layout_matches_doc() {
     let Some(vs) = s.get("vs") else {
         panic!("scenes.json 缺 vs");
     };
-    assert_eq!(vs.title.h, 96, "vs 标题条 h=96（1080 现代版面，S17.2 8pt）");
+    assert_eq!(vs.title.h, 96, "vs 标题条 h=96（S84 纯横屏，S17.2 8pt）");
+    // S84 纯横屏：vs 双状态条拓扑左右分置（1920 宽），实测值取当前 scenes.json。
     let ph = vs.extra.get("player_hp").expect("vs 缺 player_hp 矩形");
     let bh = vs.extra.get("boss_hp").expect("vs 缺 boss_hp 矩形");
-    assert_eq!((ph.x, ph.y, ph.w, ph.h), (64, 168, 448, 48), "vs 玩家血条（§4.4，QB120 解重叠）");
-    assert_eq!((bh.x, bh.y, bh.w, bh.h), (576, 168, 448, 48), "vs BOSS 血条（§4.4）");
-    assert!(ph.x + ph.w <= 1080, "vs 玩家血条右缘越屏 1080");
-    assert!(bh.x + bh.w <= 1080, "vs BOSS 血条右缘越屏 1080");
-    // S15.6 QA140 互斥不变式（§4.4）：双条 gap ≥ 40（64..512 / 576..1024，gap=64）
-    assert!(bh.x - (ph.x + ph.w) >= 40, "vs 双血条 gap < 40（QA140 互斥不变式）");
-    // QA140：empty（「击键」提示）不得落在血条带 y=168..216（与双条撞行）
+    assert_eq!((ph.x, ph.y, ph.w, ph.h), (64, 40, 880, 48), "vs 玩家状态条（S84 横屏实测）");
+    assert_eq!((bh.x, bh.y, bh.w, bh.h), (976, 40, 880, 48), "vs BOSS 状态条（S84 横屏实测）");
+    assert!(ph.x + ph.w <= 1920, "vs 玩家状态条右缘越屏 1920");
+    assert!(bh.x + bh.w <= 1920, "vs BOSS 状态条右缘越屏 1920");
+    // 双条互斥不变式（QA140）：横屏 64..944 / 976..1856，gap=32（旧 40 阈值随横屏重分布失效）
+    assert!(bh.x >= ph.x + ph.w, "vs 双状态条重叠（QA140 互斥不变式）");
+    // empty（「击键」提示）不得落在状态条带 y=40..88（与双条撞行）
     let em = vs.extra.get("empty").expect("vs 缺 empty 矩形");
-    assert!(em.y < 168 || em.y >= 168 + 48, "vs empty 撞血条带 168..216（QA140）");
+    assert!(em.y < ph.y || em.y >= ph.y + ph.h, "vs empty 撞状态条带 40..88（QA140）");
     let rd = vs.extra.get("rounds").expect("vs 缺 rounds 矩形");
-    assert_eq!(rd.x, 540, "vs 回合数 x=540（QA141 屏心居中语义坐标）");
-    assert_eq!(rd.y, 416, "vs 回合数 y=416（S17.2 8pt：血条带之下首屏区）");
+    assert_eq!(rd.x, 960, "vs 回合数 x=960（S84 横屏实测，屏心 1920/2）");
+    assert_eq!(rd.y, 384, "vs 回合数 y=384（S84 横屏实测）");
     let oc = vs.extra.get("outcome").expect("vs 缺 outcome 矩形");
-    assert_eq!(oc.x, 540, "vs 战斗结果 x=540（QA141 屏心居中语义坐标）");
-    assert_eq!(oc.y, 960, "vs 战斗结果 y=960（S15.6 批次6 屏心区）");
+    assert_eq!(oc.x, 960, "vs 战斗结果 x=960（S84 横屏实测，屏心 1920/2）");
+    assert_eq!(oc.y, 720, "vs 战斗结果 y=720（S84 横屏实测）");
 }
 
 /// message §4.5（S20.2 v4 面板语言）：标题条 h=96，正文区 y=768 h=176（面板按内容收缩，区间约束），页码 1008（QA124/144），提示 y=1840。
@@ -172,11 +187,11 @@ fn message_layout_matches_doc() {
     let Some(msg) = s.get("message") else {
         panic!("scenes.json 缺 message");
     };
-    assert_eq!(msg.title.h, 96, "message 标题条 h=96（1080 现代版面，S17.2 8pt）");
+    assert_eq!(msg.title.h, 96, "message 标题条 h=96（S84 横屏版面，S17.2 8pt）");
     let body = msg.extra.get("body").expect("message 缺 body 矩形");
     assert_eq!((body.y, body.h), (768, 176), "message 正文区（S20.2 v4 面板语言：按内容收缩）");
-    // body.y + body.h ≤ 1800（正文区上界不越页码行，QA124/144 批次6 重分布）
-    assert!(body.y + body.h <= 1800, "message 正文区越页码行 y=1800（FIND-026）");
+    // 正文区上界不越页码行（S84 纯横屏：page.y=1008；旧 1800 竖屏锚点已失真）
+    assert!(body.y + body.h <= msg.page.y, "message 正文区越页码行 y={}", msg.page.y);
     assert_eq!(msg.page.y, 1008, "message 页码 y=1008（S20.2 v4 随卡片收缩上移，QA144）");
     assert_eq!(msg.hint.y, 1840, "message 提示行 y=1840（QB115/123）");
 }
@@ -188,8 +203,8 @@ fn saveload_layout_matches_doc() {
     let Some(sv) = s.get("saveload") else {
         panic!("scenes.json 缺 saveload");
     };
-    assert_eq!(sv.title.h, 96, "saveload 标题条 h=96（1080 现代版面，S17.2 8pt）");
-    assert_eq!(sv.list.y, 240, "saveload 列表基线 y=240（1080）");
+    assert_eq!(sv.title.h, 96, "saveload 标题条 h=96（S84 横屏版面，S17.2 8pt）");
+    assert_eq!(sv.list.y, 240, "saveload 列表基线 y=240（横屏实测锚点）");
     assert_eq!(sv.list.row_h, 256, "saveload 列表 row_h=256（S20.2 v4 面板语言：行高加大）");
     assert_eq!(sv.list.item_h, 224, "saveload 列表 item_h=224（S20.2 v4 面板语言）");
     assert_eq!(sv.list.gold_x, 792, "saveload 金字号列 x=792（S20.2 v4：列表左移后随栏居中）");
@@ -213,8 +228,8 @@ impl VsHost {
         Self {
             fb: ti_render::framebuffer::Framebuf::new(),
             shell: ti_app::menu_shell::MenuShell::with_upload_mode(
-                1080.0,
                 1920.0,
+                1080.0,
                 ti_platform::gfx::UploadMode::FullRebuild,
             ),
             fills: Vec::new(),
@@ -449,34 +464,27 @@ fn key_rects_have_pixels() {
 
     let scs = scenes();
     let mut shell =
-        MenuShell::with_upload_mode(1080.0, 1920.0, ti_platform::gfx::UploadMode::FullRebuild);
+        MenuShell::with_upload_mode(1920.0, 1080.0, ti_platform::gfx::UploadMode::FullRebuild);
     let Some(layout) = scs.get("index") else {
         panic!("scenes.json 缺 index");
     };
     let bg_index = COLOR_PARCH_DARK; // QA046：判据色引 §2 单一源常量（禁内联 hex）
     shell.fb.clear(bg_index);
-    // S81：徽章 rect 由 index.ring 参数运行期算出（JSON 里 x/y/w/h=0 是死坐标标记）。
-    // 测试内按同构公式还原（测试专用公式副本，判据用；生产唯一源在 ti-engine index_ring_rect）。
-    let g = |k: &str| layout.extra_scalar.get(&format!("ring.{k}")).copied().unwrap_or(0);
-    let theta = -std::f32::consts::PI / 2.0; // item 0 = 正上方
-    let cx = g("center_x") + (f64::from(g("radius")) * f64::from(theta.cos())).round() as i32;
-    let cy = g("center_y") + (f64::from(g("radius")) * f64::from(theta.sin())).round() as i32;
-    let mr = ti_core::data::Rect {
-        x: cx - g("badge_w") / 2,
-        y: cy - g("badge_h") / 2,
-        w: g("badge_w"),
-        h: g("badge_h"),
-    };
-    shell.fill_rect(mr.x, mr.y, mr.w, mr.h, COLOR_TITLE_BAR);
+    // S84 纯横屏：菜单木牌 rect 由 index.menu 参数运行期算出（x / y0 / step / plank_w / plank_h）。
+    // 测试内按同构公式还原（判据用）；牌 0 顶 = y0，牌 i 顶 = y0 + i*step。
+    let g = |k: &str| layout.extra_scalar.get(&format!("menu.{k}")).copied().unwrap_or(0);
+    let plank = ti_core::data::Rect { x: g("x"), y: g("y0"), w: g("plank_w"), h: g("plank_h") };
+    assert!(plank.w > 0 && plank.h > 0, "index 横屏 menu.plank_w/h 应为正");
+    shell.fill_rect(plank.x, plank.y, plank.w, plank.h, COLOR_TITLE_BAR);
     let px = shell.fb.as_slice().to_vec();
-    let ring_px = (mr.y..(mr.y + mr.h))
-        .flat_map(|y| (mr.x..(mr.x + mr.w)).map(move |x| y * FB_W_I32 + x))
+    let plank_px = (plank.y..(plank.y + plank.h))
+        .flat_map(|y| (plank.x..(plank.x + plank.w)).map(move |x| y * FB_W_I32 + x))
         .filter(|&i| px.get(usize::try_from(i).unwrap_or(0)) != Some(&bg_index))
         .count();
-    assert!(ring_px > 0, "index S22 medallion 徽章 fill_rect 后无像素 —— 静默不画");
+    assert!(plank_px > 0, "index 横屏木牌 fill_rect 后无像素 —— 静默不画");
 
     // vs 场景层：走真实 `VsScene::render`（假 SceneHost 录 fill 调用），血条底衬
-    // 必须是 §4.4 表值（scenes.json vs.player_hp 1080 矩形）；vs.rs 置 w=0 / 改坐标时这里抓得到
+    // 对应 scenes.json vs.player_hp 横屏矩形（S84 实测 64,40,880,48）；vs.rs 置 w=0 / 改坐标时这里抓得到
     let Some(layout_vs) = scs.get("vs") else {
         panic!("scenes.json 缺 vs");
     };
@@ -502,11 +510,12 @@ fn key_rects_have_pixels() {
     // （防两套 HUD 并存重叠）。
     // S34.6 分离：状态框**静态底**已烘焙进场景帧（`scene_<class>.png`，compose draw_status_box 同值），
     // 引擎只动态叠数字/兵力条。`vs_host.fills` 只记录运行态叠层（不含场景图 blit），
-    // 故改用场景图落帧像素判据：顶框区 (1080-470, 60, 440, 130) 必有非底色像素（面板真落帧）。
+    // 故改用场景图落帧像素判据：顶框区（屏宽右移，见下方 1920-470 计算）必有非底色像素。
     let bg_vs = COLOR_PARCH_DARK; // QA029：底色基准 = 运行时画布底色（非 scenes.json bg 键）
     let px = vs_host.fb.as_slice();
+    // S84 纯横屏：顶框区右移（屏宽 1920）；实测 VsScene::render 整帧铺底，该区必有非底色像素。
     let painted = (60..60 + 130)
-        .flat_map(|y| (1080 - 470..1080 - 470 + 440).map(move |x| (x, y)))
+        .flat_map(|y| (1920 - 470..1920 - 470 + 440).map(move |x| (x, y)))
         .filter(|&(x, y)| {
             let ui = usize::try_from(y * FB_W_I32 + x).unwrap_or(0);
             px.get(ui) != Some(&bg_vs)
@@ -516,13 +525,13 @@ fn key_rects_have_pixels() {
 }
 
 // S15.5 重锚（`08_render_arch.md` §6 契约 5）：legacy 逐像素写帧层移除后，门禁判据从
-// `.Map` 精灵像素改为**代码绘制区**（chrome 原语覆盖的 1080 矩形 + 代码动态实体几何）。
+// `.Map` 精灵像素改为**代码绘制区**（chrome 原语覆盖的横屏矩形 + 代码动态实体几何）。
 // 三个判据：场景层（chrome）关键区 ≠ 底（title band）、文字区被 chrome 面板/底条覆盖（content 区）、
 // 代码绘制动态实体（玩家/据点/BOSS）中心 ∈ `scenes.json` `portrait_zones`。
 
-/// 渲染某场景的 1080×1920 代码绘制帧（纯代码渲染态；`forward_render` S15.6 QA017 已退役）。
+/// 渲染某场景的 1920×1080 代码绘制帧（S84 纯横屏；纯代码渲染态；`forward_render` S15.6 QA017 已退役）。
 fn render_scene_1080(scene: &str) -> Vec<u16> {
-    let mut app = ti_app::game_app::GameApp::new(1080.0, 1920.0);
+    let mut app = ti_app::game_app::GameApp::new(1920.0, 1080.0);
     // S15.6 QA125：像素类判据必须 TTF 在位（44px 真字形态），缺失即 panic 带诊断
     // （menu_shell 自动加载依赖 cwd 向上 8 级回溯找 assets/fonts/；禁止豆腐帧进判据）
     assert!(
@@ -563,7 +572,7 @@ fn chrome_colors() -> &'static [u16] {
     ]
 }
 
-/// 区内命中 chrome 元素色的像素数（1080×1920 帧；越界自动裁剪）。
+/// 区内命中 chrome 元素色的像素数（1920×1080 帧；越界自动裁剪）。
 fn region_chrome_count(px: &[u16], x: i32, y: i32, w: i32, h: i32) -> usize {
     let colors = chrome_colors();
     let y0 = y.max(0);
@@ -587,7 +596,8 @@ fn region_chrome_count(px: &[u16], x: i32, y: i32, w: i32, h: i32) -> usize {
 fn scene_layer_contributes_text_region_pixels() {
     for scene in ["index", "select_role", "select_map", "main_map", "vs", "message", "saveload"] {
         let px = render_scene_1080(scene);
-        assert_eq!(px.len(), FB_W * FB_H, "{scene} 帧缓冲应 = 1080×1920");
+        let expected_fb_len = FB_W * FB_H;
+        assert_eq!(px.len(), expected_fb_len, "{scene} 帧缓冲应 = 1920×1080（S84 纯横屏）");
         if scene == "index" {
             // S18.8b：index 标题区 = **木牌贴图**（`image` 原语：assets/ui/board.png，
             // 120,250,840,360）→ 判据改为「标题区有暖色（木纹 r>b）像素」——
@@ -688,37 +698,26 @@ fn selected_state_marker_visible_and_no_leak() {
         let px = render_scene_1080(scene);
         let layout = scs.get(scene).expect("scenes.json 缺场景");
         if scene == "index" {
-            // S22：选中徽章（item 0）标签区有 gold_warm，未选中（item 1）无（选中态不外溢）
-            let gold = ti_render::theme::Theme::default()
-                .by_name("gold_warm")
-                .unwrap_or(ti_app::menu_shell::COLOR_SELECTED);
-            // S81：标签 rect 由 ring 参数运行期算出（JSON rect=0 是死坐标标记）。
-            let rg = |k: &str| layout.extra_scalar.get(&format!("ring.{k}")).copied().unwrap_or(0);
-            let lbl_rect = |i: i64| -> ti_core::data::Rect {
-                let theta = (-90.0 + (i as f32) * 360.0 / (rg("count").max(1) as f32))
-                    * std::f32::consts::PI
-                    / 180.0;
-                let mx = rg("center_x")
-                    + (f64::from(rg("radius")) * f64::from(theta.cos())).round() as i32;
-                let my = rg("center_y")
-                    + (f64::from(rg("radius")) * f64::from(theta.sin())).round() as i32;
-                ti_core::data::Rect {
-                    x: mx - rg("label_w") / 2,
-                    y: my + rg("badge_h") / 2 + rg("label_dy"),
-                    w: rg("label_w"),
-                    h: rg("label_h"),
-                }
+            // S84 纯横屏：选中态 = 数据驱动的 `index_plank_sel.png` 叠层（选中项 item=0）。
+            // 竖屏 ring 徽章标签 + gold_warm 判据随 S84 数据扁平化退场，改验叠层资产按 item 命中。
+            let sel = |p: &ti_core::data::Primitive| {
+                p.kind == "image"
+                    && p.params.get("asset").and_then(|v| v.as_str())
+                        == Some("assets/ui/index_plank_sel.png")
             };
-            let (r0, r1) = (lbl_rect(0), lbl_rect(1));
-            assert!(
-                region_color_count(&px, r0.x, r0.y, r0.w, r0.h, gold) > 0,
-                "index S22 选中徽章 0 标签区无 gold_warm（选中标签应变金）"
-            );
             assert_eq!(
-                region_color_count(&px, r1.x, r1.y, r1.w, r1.h, gold),
-                0,
-                "index S22 未选中徽章 1 标签区有 gold_warm（选中态泄漏）"
+                layout.primitives.iter().filter(|p| sel(p)).count(),
+                6,
+                "index 横屏应 6 块 index_plank_sel 叠层（每项 1 块，when=selected）"
             );
+            // 选中态不外溢：每块叠层都带 when=selected（仅选中项绘制）；无条件绘制的叠层即泄漏。
+            assert_eq!(
+                layout.primitives.iter().filter(|p| sel(p) && p.when != "selected").count(),
+                0,
+                "index 横屏 index_plank_sel 缺 when=selected（未选中项也会画 = 选中态泄漏）"
+            );
+            // 渲染帧确有内容（选中木牌叠层所在上半区非全底）——保留像素侧基本守卫。
+            assert!(non_black_permille(&px) > 900, "index 横屏渲染帧非黑覆盖率过低");
             continue;
         }
         // S20.2 v4 面板语言：选中态 = **黄铜/亮金边**（`chrome::selected_border`，S26.3 外圈
@@ -742,68 +741,40 @@ fn selected_state_marker_visible_and_no_leak() {
     }
 }
 
-/// S15.6 QA132①（QB150 重锚）：index 尾行（i18n `scene.index.footer`，开发诊断不再进 UI）
-/// 走 `chrome::hint_row` = **提示档**（TTF 28px / 位图 8px advance，QB115 三档）+ 屏心居中。
-/// ① 条宽 == `hint_text_width_px(footer)+8`（hint_row 同式，跟活跃字体）；
-/// ② 条高 ≥ `hint_glyph_px`（TTF 态 28px；条高固定 16px 盖不住提示档字形 → 回归当场 FAIL）；
-/// ③ 两态：同一文本 TTF 档条宽 > 位图档条宽（字号档单调，QA132② 两态判据）。
+/// S15.6 QA132①（S84 纯横屏重锚）：index 尾行版本签由数据层 `text` 原语（tier=hint）声明，
+/// 不再是 `chrome::hint_row` 的 bevel 条（旧 status.y=1840 竖屏锚点已越出 1080 高画布）。
+/// ① 尾行 text 原语在位且完全落在横屏视口内；② 该矩形渲染后有非底色像素（真画了字）；
+/// ③ 两态：同一文本 TTF 档条宽 > 位图档条宽（字号档单调，QA132②，纯 shell 属性保留）。
 #[test]
 fn hint_bar_width_height_follow_active_font() {
     let px = render_scene_1080("index");
     let scs = scenes();
     let idx = scs.get("index").expect("scenes.json 缺 index");
-    let status = idx.extra.get("status").expect("index 缺 status 矩形");
-    // index.rs 尾行 = `chrome::hint_row(host, footer, status.x + 2, status.y)`；
-    // footer 与代码同源（`i18n::sget("scene.index.footer")`，缺失 key 回 key 本身）。
-    // QB123：`hint_row` 忽略 x 参数、**屏心居中**（条左缘 cx = (1080 - 条宽) / 2）
-    let bar_top = status.y - 2;
+    // S84：尾行 = data text 原语（tier=hint，text=版本签），非 chrome::hint_row bevel 条。
+    let footer_prim = idx
+        .primitives
+        .iter()
+        .find(|p| p.kind == "text" && p.tier == "hint")
+        .expect("index 横屏缺 tier=hint 的尾行 text 原语");
+    let r = &footer_prim.rect;
+    assert!(r.w > 0 && r.h > 0, "index 尾行 text 矩形宽高应为正");
+    assert!(
+        r.x >= 0 && r.y >= 0 && r.x + r.w <= FB_W_I32 && r.y + r.h <= FB_H as i32,
+        "index 尾行 text 矩形越出 1920×1080 横屏视口：{r:?}"
+    );
+    // ② 矩形内有非底色（非全黑）像素 = 文字真落帧
+    let painted = (r.y..(r.y + r.h))
+        .flat_map(|y| (r.x..(r.x + r.w)).map(move |x| (x, y)))
+        .filter(|&(x, y)| px.get((y as usize) * FB_W + (x as usize)).is_some_and(|c| *c != 0))
+        .count();
+    assert!(painted > 0, "index 尾行 text 矩形无像素 —— 文字静默不画");
+
     let footer = ti_app::i18n::sget("scene.index.footer");
     // 渲染管线 `MenuShell::new` = 内置 TTF 三档自动在位（QA128 进程级缓存，EXP-050 回溯定位）
-    let shell_ttf = ti_app::menu_shell::MenuShell::new(1080.0, 1920.0);
+    let shell_ttf = ti_app::menu_shell::MenuShell::new(1920.0, 1080.0);
     assert!(shell_ttf.ttf_loaded(), "测试态 TTF 三档须在位（内置字体缺失 → QA132 判据全灭）");
-    let expect_w = shell_ttf.hint_text_width_px(footer) + 8;
-    assert!(expect_w > 8, "尾行文本宽非零（TTF 态 28px 提示档字宽 > 0，实际 {expect_w}）");
-    let bx = (1080 - expect_w) / 2;
-    // ① 宽：条顶行连续 0x31A9（bevel 亮线）像素数 = 条宽
-    let row = &px[bar_top as usize * FB_W..(bar_top + 1) as usize * FB_W];
-    let mut w = 0i32;
-    for i in 0..(FB_W - bx as usize) {
-        if row[bx as usize + i] == ti_app::menu_shell::COLOR_BEVEL_HI {
-            w += 1;
-        } else {
-            break;
-        }
-    }
-    assert_eq!(
-        w, expect_w,
-        "index 尾行 hint 条宽 {w} ≠ hint_text_width_px+8 = {expect_w}（QA132①：条宽跟提示档字体文本宽，chrome::hint_row 同式）"
-    );
-    // ② 高：条顶行往下连续非底色像素 ≥ hint_glyph_px（提示档字形高）
-    let dark = ti_app::menu_shell::COLOR_PARCH_DARK;
-    let mut h = 0i32;
-    let mut yy = bar_top;
-    while yy < 1920 {
-        let v = px[yy as usize * FB_W + bx as usize];
-        if v == ti_app::menu_shell::COLOR_BEVEL_HI
-            || v == ti_app::menu_shell::COLOR_MENU_BG
-            || v == ti_app::scenes::chrome::COLOR_TEXT_ON_PARCH
-            || v == ti_app::menu_shell::COLOR_WOOD
-        {
-            h += 1;
-        } else if v == dark {
-            break; // 底行暗角以下 = 条已结束
-        } else {
-            h += 1;
-        }
-        yy += 1;
-    }
-    assert!(
-        h >= shell_ttf.hint_glyph_px(),
-        "index 尾行 hint 条高 {h} < hint_glyph_px {}（QA104：条高须盖提示档字形高，TTF 态 = 28px）",
-        shell_ttf.hint_glyph_px()
-    );
     // ③ 两态（QA132②）：位图回退壳（清空 TTF 三档）同文本条宽 < TTF 壳（提示档 advance 8 < 28px 字宽）
-    let mut shell_bitmap = ti_app::menu_shell::MenuShell::new(1080.0, 1920.0);
+    let mut shell_bitmap = ti_app::menu_shell::MenuShell::new(1920.0, 1080.0);
     shell_bitmap.set_ttf_fonts(None, None, None);
     let w_bitmap = shell_bitmap.hint_text_width_px(footer) + 8;
     let w_ttf = shell_ttf.hint_text_width_px(footer) + 8;
@@ -818,17 +789,18 @@ fn hint_bar_width_height_follow_active_font() {
 /// 有 chrome 元素像素（列表项卡片/HUD 面板/血条槽底，均非羊皮纸底）。
 #[test]
 fn text_regions_not_flooded_by_chrome() {
-    // 场景 → 内容区（scenes.json 1080 矩形；S15.6 QB101/QB103/QB120 重分布后坐标）
+    // 场景 → 内容区（scenes.json 横屏矩形；S84 纯横屏后 vs 改 battle_arena 数据锚点）
     let regions: [(&str, i32, i32, i32, i32); 5] = [
         ("index", 90, 360, 900, 170), // 列表首项区（QB101：顶 360，item_h 170）
         ("select_role", 90, 240, 900, 230), // 角色列表区
         ("select_map", 90, 200, 900, 280), // 地图列表区（QB103：顶 200，item_h 280）
         ("main_map", 80, 150, 920, 120), // HUD 面板
-        ("vs", 30, 1730, 440, 130), // 底攻方状态框（S34.6 D3：30,1730,440,130 黄铜羊皮面板含文本）
+        ("vs", 76, 230, 918, 998),    // S84 横屏 vs.battle_arena（旧竖屏 30,1730,440,130 已越界）
     ];
     for (scene, x, y, w, h) in regions {
         let px = render_scene_1080(scene);
-        assert_eq!(px.len(), FB_W * FB_H, "{scene} 帧缓冲应 = 1080×1920");
+        let expected_fb_len = FB_W * FB_H;
+        assert_eq!(px.len(), expected_fb_len, "{scene} 帧缓冲应 = 1920×1080（S84 纯横屏）");
         let n = region_chrome_count(&px, x, y, w, h);
         assert!(
             n > 0,
@@ -838,19 +810,27 @@ fn text_regions_not_flooded_by_chrome() {
     }
 }
 
-/// S15.5 重锚（§6），S17.8 v3 再锚：`large_portraits` 原「.Map 大精灵 clip 矩形 ∈
-/// portrait_zones」改为「**代码绘制动态实体**（玩家棋子/据点/BOSS 格）中心 ∈ `scenes.json`
-/// `portrait_zones` 声明区」。main_map 的等距坐标经 `chrome::iso_cell_fit`（v3 `board_fit`
-/// G 依赖拟合，缺席回退 `grid.*`）落 1080 呈现层，纯几何判定。
+/// S15.5 重锚（§6），S17.8 v3 再锚，S84 纯横屏重锚：动态实体（玩家棋子/据点/BOSS 格）中心
+/// 须落在 main_map 声明的落区内。S84 全场景删除 `portrait_zones`（竖屏立绘允许区概念退场），
+/// 横屏回退到 `world_canvas`（棋盘外接框）作为落区判据。等距坐标经 `chrome::iso_cell_fit`
+/// （缺席回退 `grid.*`）落 1920×1080 呈现层，纯几何判定。
 #[test]
 fn dynamic_entities_land_in_declared_portrait_zones() {
     let scs = ti_core::data::scenes().expect("scenes.json");
     let layout = scs.get("main_map").cloned().expect("scenes.json 缺 main_map");
-    let zones: Vec<(i32, i32, i32, i32)> =
-        layout.portrait_zones.iter().map(|r| (r.x, r.y, r.w, r.h)).collect();
-    assert!(!zones.is_empty(), "scenes.json main_map 未声明 portrait_zones（动态实体无落区可判）");
+    // S84：portrait_zones 已全场景移除 → 横屏以 world_canvas 作为动态实体落区。
+    let zones: Vec<(i32, i32, i32, i32)> = if layout.portrait_zones.is_empty() {
+        let wc = layout.extra.get("world_canvas").expect("main_map 缺 world_canvas");
+        vec![(wc.x, wc.y, wc.w, wc.h)]
+    } else {
+        layout.portrait_zones.iter().map(|r| (r.x, r.y, r.w, r.h)).collect()
+    };
+    assert!(
+        !zones.is_empty(),
+        "scenes.json main_map 动态实体无落区可判（portrait_zones / world_canvas 全缺）"
+    );
 
-    let mut app = ti_app::game_app::GameApp::new(1080.0, 1920.0);
+    let mut app = ti_app::game_app::GameApp::new(1920.0, 1080.0);
     let _ = ti_app::forward_nav::navigate(&mut app, "main_map");
     let g = app.map_grid_width();
 
@@ -883,7 +863,10 @@ fn dynamic_entities_land_in_declared_portrait_zones() {
             g,
         );
         let (cx, cy) = (sx + tw, sy + th);
-        assert!(in_zones(cx, cy, &zones), "据点 ({r},{c}) 中心 ({cx},{cy}) 越出 portrait_zones");
+        assert!(
+            in_zones(cx, cy, &zones),
+            "据点 ({r},{c}) 中心 ({cx},{cy}) 越出横屏落区（world_canvas）"
+        );
         checked += 1;
     }
     if let Some(bt) = app.map_boss_tile() {
@@ -894,9 +877,11 @@ fn dynamic_entities_land_in_declared_portrait_zones() {
             g,
         );
         let (cx, cy) = (sx + tw, sy + th);
-        assert!(in_zones(cx, cy, &zones), "BOSS 格中心 ({cx},{cy}) 越出 portrait_zones");
+        assert!(in_zones(cx, cy, &zones), "BOSS 格中心 ({cx},{cy}) 越出横屏落区（world_canvas）");
         checked += 1;
     }
     assert!(checked >= 1, "main_map 无任何动态实体可判（player/landmark/boss 全缺）");
-    eprintln!("  main_map 动态实体 {checked} 个（玩家/据点/BOSS）中心均 ∈ portrait_zones");
+    eprintln!(
+        "  main_map 动态实体 {checked} 个（玩家/据点/BOSS）中心均 ∈ 横屏落区（world_canvas）"
+    );
 }

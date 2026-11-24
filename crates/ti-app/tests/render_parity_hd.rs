@@ -5,7 +5,7 @@
 //! 2. 非空白：各场景 HD 渲染后墨点/色块数 > 0；
 //! 3. 场景区分：不同场景 HD 渲染结果不同；
 //! 4. 字形正确：主菜单标题命中真字形（与 `font_parity` 同口径）；
-//! 5. `FramebufRgba` 尺寸与呈现层分辨率 1080×1920 一致（QA112 注释同步）。
+//! 5. `FramebufRgba` 尺寸与呈现层分辨率 1920×1080 一致（S84 纯横屏）。
 //!
 //! 与 `render_parity.rs`（RGB565 原路径，P4-1）并行：默认构建本测试目标为空
 //! （feature 关闭时全部 `#[cfg]` 裁剪），开启 `hd-8bit` 后全绿。
@@ -15,8 +15,8 @@ mod tests {
     use ti_app::game_app::{GameApp, GameInput};
     use ti_render::framebuffer::FramebufRgba;
 
-    /// 呈现层帧像素数（`1080 × 1920`，§1 约束；legacy 176×220 统一缩放落画布）。
-    const FB_PIXELS: usize = 1080 * 1920;
+    /// 呈现层帧像素数（`1920 × 1080`，S84 纯横屏；legacy 176×220 统一缩放落画布）。
+    const FB_PIXELS: usize = 1920 * 1080;
 
     /// 渲染当前场景到 `GameApp.shell.fb_rgba`（RGBA8 HD 路径），返回帧缓冲像素切片。
     fn render_current_hd(app: &mut GameApp) -> Vec<u32> {
@@ -37,20 +37,20 @@ mod tests {
 
     /// 主菜单（Index 场景）HD 渲染。
     fn render_index_hd() -> Vec<u32> {
-        let mut app = GameApp::new(1080.0, 1920.0);
+        let mut app = GameApp::new(1920.0, 1080.0);
         render_current_hd(&mut app)
     }
 
     /// 选角场景 HD 渲染。
     fn render_select_role_hd() -> Vec<u32> {
-        let mut app = GameApp::new(1080.0, 1920.0);
+        let mut app = GameApp::new(1920.0, 1080.0);
         app.handle(GameInput::Confirm); // Index → SelectRole
         render_current_hd(&mut app)
     }
 
     /// 选图场景 HD 渲染。
     fn render_select_map_hd() -> Vec<u32> {
-        let mut app = GameApp::new(1080.0, 1920.0);
+        let mut app = GameApp::new(1920.0, 1080.0);
         app.handle(GameInput::Confirm); // → SelectRole
         app.handle(GameInput::Confirm); // → SelectMap
         render_current_hd(&mut app)
@@ -58,7 +58,7 @@ mod tests {
 
     /// 主地图场景 HD 渲染。
     fn render_main_map_hd() -> Vec<u32> {
-        let mut app = GameApp::new(1080.0, 1920.0);
+        let mut app = GameApp::new(1920.0, 1080.0);
         app.handle(GameInput::Confirm); // → SelectRole
         app.handle(GameInput::Next); // 选角
         app.handle(GameInput::Confirm); // → SelectMap
@@ -69,7 +69,7 @@ mod tests {
 
     /// 战斗场景 HD 渲染。
     fn render_vs_hd() -> Vec<u32> {
-        let mut app = GameApp::new(1080.0, 1920.0);
+        let mut app = GameApp::new(1920.0, 1080.0);
         app.handle(GameInput::Confirm);
         app.handle(GameInput::Next);
         app.handle(GameInput::Confirm);
@@ -97,7 +97,7 @@ mod tests {
                 _ => render_vs_hd(),
             };
             assert_eq!(pixels, again, "{name} 场景 HD 渲染应确定性（两次逐像素相同）");
-            assert_eq!(pixels.len(), FB_PIXELS, "{name} HD 帧缓冲尺寸应 = 1080×1920");
+            assert_eq!(pixels.len(), FB_PIXELS, "{name} HD 帧缓冲尺寸应 = 1920×1080（S84 纯横屏）");
         }
     }
 
@@ -143,13 +143,13 @@ mod tests {
         );
     }
 
-    /// P5-2 判据 5：`FramebufRgba` 尺寸与呈现层分辨率 1080×1920 一致。
+    /// P5-2 判据 5：`FramebufRgba` 尺寸与呈现层分辨率 1920×1080 一致（S84 纯横屏）。
     #[test]
     fn hd_framebuf_matches_logical_resolution() {
         let mut fb = FramebufRgba::new();
         fb.clear(0xFF00_0000);
-        assert_eq!(fb.as_slice().len(), FB_PIXELS, "HD 帧缓冲 = 1080×1920");
-        let mut app = GameApp::new(1080.0, 1920.0);
+        assert_eq!(fb.as_slice().len(), FB_PIXELS, "HD 帧缓冲 = 1920×1080（S84 纯横屏）");
+        let mut app = GameApp::new(1920.0, 1080.0);
         app.render_hd();
         let pixels = app.shell().fb_rgba.as_slice();
         assert!(pixels[0] != 0, "HD 主菜单第 0 行 x=0 应为标题条色（非黑）");

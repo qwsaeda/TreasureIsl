@@ -17,20 +17,20 @@
 
 use crate::settings::{FilterMode, ScaleMode};
 
-/// UI 呈现画布宽（1080×1920 单一权威呈现坐标系，`08_render_arch.md` 契约 1）。
-pub const CANVAS_W: u32 = 1080;
+/// UI 呈现画布宽（S84 纯横屏 1920×1080 单一权威呈现坐标系）。
+pub const CANVAS_W: u32 = 1920;
 /// UI 呈现画布高。
-pub const CANVAS_H: u32 = 1920;
+pub const CANVAS_H: u32 = 1080;
 
 /// 帧缓冲像素数 = `CANVAS_W × CANVAS_H`（UI 呈现层）。
 pub const FB_PIXELS: usize = (CANVAS_W as usize) * (CANVAS_H as usize);
 
 /// 画布宽的 f32 值（= `CANVAS_W`，避免 `u32 as f32` 精度告警）。
-const LW: f32 = 1080.0;
+const LW: f32 = 1920.0;
 /// 画布高的 f32 值（= `CANVAS_H`）。
-const LH: f32 = 1920.0;
+const LH: f32 = 1080.0;
 /// 画布高的 i32 版（供坐标运算）。
-const LH_I32: i32 = 1920;
+const LH_I32: i32 = 1080;
 
 // 帧缓冲类型归属（S15.10 单源）：帧缓冲本体在渲染框架 crate
 // （`ti_render::framebuffer::Framebuf` / `FramebufRgba`），本模块只做**呈现层**：
@@ -383,10 +383,10 @@ mod tests {
 
     #[test]
     fn coordinate_roundtrip_integer_scale_2x() {
-        // 呈现坐标系 1080×1920（契约 1）：2× 整数缩放 = 屏幕 2160×3840
-        let vp = Viewport::fit(2160.0, 3840.0);
+        // S84 纯横屏呈现坐标系 1920×1080：2× 整数缩放 = 屏幕 3840×2160
+        let vp = Viewport::fit(3840.0, 2160.0);
         assert!(approx_eq(vp.scale(), 2.0));
-        let points = [(0.0, 0.0), (540.0, 960.0), (1080.0, 1920.0), (1.0, 1.0)];
+        let points = [(0.0, 0.0), (960.0, 540.0), (1920.0, 1080.0), (1.0, 1.0)];
         for (lx, ly) in points {
             let (sx, sy) = vp.logical_to_screen(lx, ly);
             let (rx, ry) = vp.screen_to_logical(sx, sy);
@@ -397,8 +397,8 @@ mod tests {
 
     #[test]
     fn coordinate_roundtrip_non_integer_scale() {
-        let vp = Viewport::fit(1800.0, 3200.0);
-        let points = [(0.0, 0.0), (540.0, 960.0), (1080.0, 1920.0), (505.0, 755.0)];
+        let vp = Viewport::fit(3200.0, 1800.0);
+        let points = [(0.0, 0.0), (960.0, 540.0), (1920.0, 1080.0), (505.0, 755.0)];
         for (lx, ly) in points {
             let (sx, sy) = vp.logical_to_screen(lx, ly);
             let (rx, ry) = vp.screen_to_logical(sx, sy);
@@ -409,26 +409,26 @@ mod tests {
 
     #[test]
     fn coordinate_roundtrip_wide_screen_letterbox() {
-        let vp = Viewport::fit(2400.0, 1920.0);
+        let vp = Viewport::fit(2560.0, 1080.0);
         assert!(vp.scale() > 0.0);
-        let (sx, sy) = vp.logical_to_screen(540.0, 960.0);
+        let (sx, sy) = vp.logical_to_screen(960.0, 540.0);
         let (rx, ry) = vp.screen_to_logical(sx, sy);
-        assert!(approx_eq(rx, 540.0));
-        assert!(approx_eq(ry, 960.0));
+        assert!(approx_eq(rx, 960.0));
+        assert!(approx_eq(ry, 540.0));
     }
 
     #[test]
     fn coordinate_roundtrip_tall_screen_pillarbox() {
-        let vp = Viewport::fit(1080.0, 2400.0);
-        let (sx, sy) = vp.logical_to_screen(540.0, 960.0);
+        let vp = Viewport::fit(1080.0, 1920.0);
+        let (sx, sy) = vp.logical_to_screen(960.0, 540.0);
         let (rx, ry) = vp.screen_to_logical(sx, sy);
-        assert!(approx_eq(rx, 540.0));
-        assert!(approx_eq(ry, 960.0));
+        assert!(approx_eq(rx, 960.0));
+        assert!(approx_eq(ry, 540.0));
     }
 
     #[test]
     fn coordinate_roundtrip_screen_to_logical_then_back() {
-        let vp = Viewport::fit(1440.0, 2560.0);
+        let vp = Viewport::fit(2560.0, 1440.0);
         let screen_points = [(0.0, 0.0), (600.0, 1000.0), (1439.0, 2559.0), (605.5, 1005.5)];
         for (sx, sy) in screen_points {
             let (lx, ly) = vp.screen_to_logical(sx, sy);
@@ -441,7 +441,7 @@ mod tests {
     #[test]
     fn framebuf_size_matches_logical_resolution() {
         assert_eq!(FB_PIXELS, (CANVAS_W * CANVAS_H) as usize);
-        assert_eq!(FB_PIXELS, 1080 * 1920);
+        assert_eq!(FB_PIXELS, 1920 * 1080);
     }
 
     #[test]
@@ -469,40 +469,40 @@ mod tests {
 
     #[test]
     fn smooth_leaves_letterbox_but_keeps_square_pixels() {
-        let vp = Viewport::with_mode(1080.0, 2400.0, ScaleMode::Smooth, false);
+        // S84 纯横屏：1920×1080 呈现区放进 1920×1350 屏：等比 1× → 利用率 = 1080/1350 = 80%
+        let vp = Viewport::with_mode(1920.0, 1350.0, ScaleMode::Smooth, false);
         assert!((vp.scale_x() - vp.scale_y()).abs() < 1e-4, "等比模式横纵缩放应相等");
-        assert!(vp.offset_y > 1.0, "竖屏应留上下黑边");
-        // 1080×1920 呈现区放进 1080×2400 屏：等比 1× → 利用率 = 1920/2400 = 80%
-        let fill = screen_fill(&vp, 1080.0, 2400.0);
+        assert!(vp.offset_y > 1.0, "更高的屏应留上下黑边");
+        let fill = screen_fill(&vp, 1920.0, 1350.0);
         assert!(fill < 0.85 && fill > 0.75, "Smooth 利用率约 80%，实际 {fill}");
     }
 
     #[test]
     fn integer_scale_is_whole_number_and_centered() {
-        let vp = Viewport::with_mode(1080.0, 2400.0, ScaleMode::Integer, true);
+        let vp = Viewport::with_mode(3840.0, 2160.0, ScaleMode::Integer, true);
         let s = vp.scale();
         assert!((s - s.floor()).abs() < 1e-4, "Integer 缩放应为整数，实际 {s}");
         assert!(s >= 1.0, "缩放不小于 1×");
         // 居中：左右留边相等
-        assert!((vp.offset_x - (1080.0 - LW * s) * 0.5).abs() < 1e-3);
-        assert!(vp.scale() <= 1080.0 / LW, "向下取整后不放大");
+        assert!((vp.offset_x - (3840.0 - LW * s) * 0.5).abs() < 1e-3);
+        assert!(vp.scale() <= 3840.0 / LW, "向下取整后不放大");
     }
 
     #[test]
     fn stretch_fills_screen_entirely() {
-        let vp = Viewport::with_mode(1080.0, 2400.0, ScaleMode::Stretch, false);
+        let vp = Viewport::with_mode(1920.0, 1350.0, ScaleMode::Stretch, false);
         assert!((vp.offset_x - 0.0).abs() < 1e-4, "拉伸应无横向偏移");
         assert!((vp.offset_y - 0.0).abs() < 1e-4, "拉伸应无纵向偏移");
-        let fill = screen_fill(&vp, 1080.0, 2400.0);
+        let fill = screen_fill(&vp, 1920.0, 1350.0);
         assert!((fill - 1.0).abs() < 1e-4, "Stretch 利用率应为 100%，实际 {fill}");
-        assert!(vp.scale_x() < vp.scale_y(), "4:5 内容拉伸到 20:9 屏 → 横向比例更小");
+        assert!(vp.scale_x() < vp.scale_y(), "16:9 内容拉伸到更高屏 → 横向比例更小");
     }
 
     #[test]
     fn zoom_crop_fills_screen_keeping_square_pixels() {
-        let vp = Viewport::with_mode(1080.0, 2400.0, ScaleMode::ZoomCrop, false);
+        let vp = Viewport::with_mode(1920.0, 1350.0, ScaleMode::ZoomCrop, false);
         assert!((vp.scale_x() - vp.scale_y()).abs() < 1e-4, "裁剪模式像素仍方形");
-        let fill = screen_fill(&vp, 1080.0, 2400.0);
+        let fill = screen_fill(&vp, 1920.0, 1350.0);
         assert!(fill > 1.0, "裁剪模式下游戏区应超出屏幕（溢出部分被裁），实际 {fill}");
         assert!(vp.offset_x < 0.0, "横向溢出 → 偏移为负（左右各裁一半）");
     }
@@ -511,7 +511,7 @@ mod tests {
     fn all_modes_roundtrip_coordinates() {
         // P4-2 不变式：任何模式下 屏幕→逻辑→屏幕 都必须回到原点
         for mode in ScaleMode::ALL {
-            let vp = Viewport::with_mode(1080.0, 2400.0, mode, mode == ScaleMode::Integer);
+            let vp = Viewport::with_mode(1920.0, 1350.0, mode, mode == ScaleMode::Integer);
             for (lx, ly) in [(0.0_f32, 0.0_f32), (88.0, 110.0), (176.0, 220.0)] {
                 let (sx, sy) = vp.logical_to_screen(lx, ly);
                 let (rx, ry) = vp.screen_to_logical(sx, sy);
@@ -526,7 +526,7 @@ mod tests {
     #[test]
     fn stretch_touch_hit_testing_maps_back_to_logical() {
         // 拉伸模式下命中判定必须仍落到点击的逻辑位置（触屏正确性）
-        let vp = Viewport::with_mode(1080.0, 2400.0, ScaleMode::Stretch, false);
+        let vp = Viewport::with_mode(1920.0, 1350.0, ScaleMode::Stretch, false);
         let (sx, sy) = vp.logical_to_screen(44.0, 110.0); // 主菜单行 x 中点
         let (lx, ly) = vp.screen_to_logical(sx, sy);
         assert!((lx - 44.0).abs() < 1e-2 && (ly - 110.0).abs() < 1e-2, "拉伸下触摸反变换失真");
@@ -535,7 +535,7 @@ mod tests {
     /// S6.1：滤波模式不参与坐标变换——两种模式下 P4-2 往返不变式都成立。
     #[test]
     fn filter_mode_does_not_affect_coordinates() {
-        let vp = Viewport::with_mode(1080.0, 2400.0, ScaleMode::Smooth, false);
+        let vp = Viewport::with_mode(1920.0, 1350.0, ScaleMode::Smooth, false);
         for f in FilterMode::ALL {
             // 滤波只影响纹理采样器，不进入坐标变换；此处显式断言往返仍成立
             for (lx, ly) in [(0.0_f32, 0.0_f32), (88.0, 110.0), (176.0, 220.0)] {

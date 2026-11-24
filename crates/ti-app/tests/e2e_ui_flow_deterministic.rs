@@ -10,7 +10,7 @@ use ti_app::game_app::{GameApp, GameInput, HitData};
 /// 一次 UI 流程 = `index` → `select_role` → `select_map` → `main_map` → 摇骰×5 → 贸易买/卖。
 /// 返回可逐字节比较的状态快照字符串（确定性判据）。
 fn run_flow_with_seed(seed: u32) -> String {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(seed);
     app.set_rng_seed(seed);
     app.set_frame_delta_ms(16); // 假时钟：固定帧时间，杜绝 wall-clock 漂移

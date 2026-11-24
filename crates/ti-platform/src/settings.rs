@@ -66,18 +66,18 @@ impl ScaleMode {
     }
 }
 
-/// 屏幕方向。
+/// 屏幕方向（S84：默认横屏；Portrait 保留为兼容分支，S84.4 清理）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Orientation {
-    /// 竖屏（原版 176×220，宽 < 高）。
-    #[default]
+    /// 竖屏（兼容分支，宽 < 高；S84.4 待清）。
     Portrait,
-    /// 横屏（宽 > 高）。
+    /// 横屏（S84 默认，宽 > 高）。
+    #[default]
     Landscape,
 }
 
 impl Orientation {
-    /// 返回该方向下逻辑宽高（竖屏 1080×1920，横屏 1920×1080，现代 UI 分辨率）。
+    /// 返回该方向下逻辑宽高（S84：主画布 1920×1080；Portrait 兼容分支 1080×1920）。
     #[must_use]
     pub fn logical_size(self) -> (f32, f32) {
         match self {

@@ -3075,9 +3075,9 @@ fn render_handoff(host: &mut dyn SceneHost) {
     host.fill_rect(0, 0, 4, h, brass);
     host.fill_rect(w - 4, 0, 4, h, brass);
 
-    // 中央罗盘（已签收 compass_rose 资产，缺图不画不 panic）。
+    // 中央罗盘（已签收 compass_rose 资产，缺图不画不 panic；CS-1 资产路径单源 = chrome::COMPASS_ROSE）。
     let rose = 300i32;
-    host.blit_image("assets/ui/compass_rose.png", cx - rose / 2, h / 5, rose, rose);
+    host.blit_image(chrome::COMPASS_ROSE, cx - rose / 2, h / 5, rose, rose);
     // 文案：席位 + 确认提示（i18n）。
     let msg = i18n::sget("scene.main_map.toast.handoff");
     let seat_label = format!("P{seat}");

@@ -9,7 +9,7 @@ use ti_app::game_app::{GameApp, GameInput, Scene};
 /// 菜单→新游戏→选角→选图→主地图（P3-3 全链路前半段）。
 #[test]
 fn flow_menu_to_main_map() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     assert_eq!(app.scene(), Scene::Index);
 
     // 主菜单：菜单项 0（新游戏）确认
@@ -33,7 +33,7 @@ fn flow_menu_to_main_map() {
 /// 主地图：移动 + 贸易 + 建造。
 #[test]
 fn flow_main_map_move_trade_build() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -69,7 +69,7 @@ fn flow_main_map_move_trade_build() {
 /// 据点事件码 6 → 战斗场景。
 #[test]
 fn flow_landmark_to_battle() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -87,7 +87,7 @@ fn flow_landmark_to_battle() {
 /// 战斗：推进到结束 + 回主菜单。
 #[test]
 fn flow_battle_to_menu() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -115,7 +115,7 @@ fn flow_battle_to_menu() {
 /// 主地图 → 消息场景（事件码 1 据点）+ 翻页 + 关闭。
 #[test]
 fn flow_message_pages() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -137,7 +137,7 @@ fn flow_message_pages() {
 /// 存读档：写档 + 读档往返。
 #[test]
 fn flow_save_load_roundtrip() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 快进到主地图
     app.handle(GameInput::Confirm); // 新游戏 → SelectRole
     app.handle(GameInput::Next); // 选角 → Panda
@@ -168,7 +168,7 @@ fn flow_save_load_roundtrip() {
 /// 主菜单退出（菜单项 5 → quit）。
 #[test]
 fn flow_menu_quit() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 移动到菜单项 5（退出）
     for _ in 0..5 {
         app.handle(GameInput::MoveDown);
@@ -187,7 +187,7 @@ use ti_platform::settings::Gesture;
 /// 规则 1 `menu_cursor_wraps`：菜单项 0..5 上下循环不越界。
 #[test]
 fn menu_cursor_wraps() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 从 0 上移 → 回绕到 5；从 5 下移 1 次 → 回绕到 0
     app.handle(GameInput::MoveUp);
     assert_eq!(app.menu_selected(), 5, "0 上移应回绕到 5");
@@ -203,18 +203,18 @@ fn menu_cursor_wraps() {
 /// 规则 2 `menu_item_targets`：菜单项 0/1/5 分别跳 SelectRole/Saveload/退出。
 #[test]
 fn menu_item_targets() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 菜单项 0 → SelectRole
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::SelectRole, "菜单项 0 应进选角");
 
     // 回主菜单（选角 Back）
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.handle(GameInput::MoveDown); // 菜单项 1
     app.handle(GameInput::Confirm);
     assert_eq!(app.scene(), Scene::Saveload, "菜单项 1 应进存读档");
 
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     for _ in 0..5 {
         app.handle(GameInput::MoveDown); // 菜单项 5
     }
@@ -358,7 +358,7 @@ fn gesture_threshold_split() {
 /// 规则 10 `msg_page_clamped`：消息翻页首尾钳位。
 #[test]
 fn msg_page_clamped() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 快进到主地图 → 打开消息（事件码 1 → Msgl）
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
@@ -385,7 +385,7 @@ fn msg_page_clamped() {
 /// 规则 11 `msg_close_returns_source`：消息关闭回到打开源场景。
 #[test]
 fn msg_close_returns_source() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 快进到主地图 → 打开消息
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
@@ -399,7 +399,7 @@ fn msg_close_returns_source() {
     assert_eq!(app.scene(), Scene::MainMap, "主地图打开的消息关闭应回主地图");
 
     // 主菜单打开的帮助消息关闭 → 回主菜单
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 菜单项 2（选项/说明）→ Help 消息：从 0 起 MoveDown 2 次
     app.handle(GameInput::MoveDown);
     app.handle(GameInput::MoveDown);
@@ -414,7 +414,7 @@ fn msg_close_returns_source() {
 #[test]
 fn scene_switch_resets_state() {
     // 选角场景：角色 + 地图选定进主地图后，回选角应复位选中项
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Next); // 选角 → 第 1 个（Panda）
     let _char = app.character();
@@ -439,7 +439,7 @@ fn scene_switch_resets_state() {
     );
 
     // 消息页码复位：打开消息 → 翻到末页 → 关闭 → 再打开应回首页
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
     app.handle(GameInput::Confirm);

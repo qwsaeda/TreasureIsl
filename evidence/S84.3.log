@@ -1,0 +1,23 @@
+S84.3 数据层扁平化（landscape 提升为主，删竖屏数据）· 验收证据（2026-11-24）
+
+== 改动面 ==
+数据（assets/data/scenes.json 单一文件）+ 一次性脚本 scripts/tmp/flatten_landscape.py（用完即删）。
+
+== 判据 1：扁平化结果（7 场景实测）==
+- 每场景 primitives ← 原 landscape.primitives：index 22 / select_role 31 / select_map 13 / main_map 7 / vs 16 / message 1 / saveload 8
+- landscape 段全删（landscape 提升为主）；portrait_zones 全删（竖屏立绘安全带）
+- landscape.extra 横屏专属值覆盖顶层同名键（main_map 4 键 hud_*→横屏坐标；vs 6 键 hp/rounds/outcome/empty/fx_hit→横屏坐标）
+- index.ring（竖屏罗盘环参数）删；index.menu（横屏木牌参数）保留
+- main_map 补 pick_key=4 摇骰命中标记（rect 250,780,200,200，对齐 v6 landscape JSON 的 helm{cx:350,cy:880,w:200}）
+
+== 判据 2：判据实跑 ==
+- python3 scripts/validate_data.py → OK（indent=1 规范形保持）
+- cargo test -p ti-app --test main_map_pick_e2e → 3 passed（摇骰可点，pick_key=4 生效）
+- cargo test -p ti-core --test data_tables → 18 passed（场景加载正常）
+- --shot main_map / index → 出图 1920×1080
+- index 原语 derived 标记 18（横屏木牌），menu 参数在位、ring 已删
+
+== 保留（S84.4 再清）==
+Rust 侧 `if landscape` 分支 + index_param_rect 竖屏环分支 + gen_index_medallions.py 生成器仍留（其数据已删，S84.4 退役）。
+
+S84.3 可置 verified。

@@ -1,0 +1,31 @@
+S84.5 测试 / 门禁 / 文档断言全面改横屏 · 验收证据（2026-11-24）
+
+== 改动面 ==
+工具(测试+门禁脚本+文档断言)。
+
+== 判据 1：测试夹具与锚点全改 1920×1080 ==
+- 34 个测试文件 GameApp::new(1080.0,1920.0) → (1920.0,1080.0)（机械批量，无残留）
+- landscape_drawlist.rs：7 测试删全部竖屏对照段，game(bool)→game()（固定 1920×1080 + Landscape），index 读 .primitives（18 行 derived=menu），删竖屏 36 徽章断言 → 7/0
+- render_invariants/parity/parity_hd/intent：FB_PIXELS=1920×1080，视口断言 ≤1920/≤1080，竖屏资产锚改横屏（index_bg_map_h/index_hero_duo/vs w:880），portrait_zones 回退 world_canvas → 24/0
+- canvas_contract/pick_1080/settings_unit：屏心 (960,540)，LOGICAL 常量断言 1920/1080，默认方向 Landscape（Portrait 兼容分支测试保留）→ 13/4/28 全绿
+- e2e_playability：视口/Viewport 常量改横屏，message 跳过数据层 text 断言（bevy_ui 运行时生成）→ 7/0
+- bevy_native_render：Text2d ≥3 → ≥1（横屏标题烘焙进底图、木牌走 bevy_ui）→ 1/0
+- touch.rs inline：屏幕 (3840,2160)→逻辑 (960,540)；gfx.rs 8 个 inline viewport/坐标测试；input.rs inline；gfx_dirty.rs（脏行 0..=1079、stride FB_PIXELS/1080）；geometry.rs（title_bar 1896/1888、wood_frame 1920×1080）
+- landscape_spawn.rs：删 2 条竖屏坐标断言，3/0
+
+== 判据 2：doccheck2 断言改横屏（5 组，5 条负例自证）==
+- check_scene_required_pick_keys：select_role/select_map/saveload 改验 bevy_ui PickTarget key（2/2/3），index key=1 + main_map key=4 数据面保留
+- check_scene_layout_fidelity：竖屏资产锚退役改横屏（menu.plank_w / index_hero_duo / index_bg_map_h / vs w:880 / main_map pick_key:4）+ 新增 v6 landscape helm 三面对账
+- check_layout_doc_table_cross_check：加横屏覆盖白名单（8 组场景+键）+ 存在性断言两层防漂移
+- check_primitive_text：兼容顶层与 params 嵌套两种 text/tier 格式
+- check_no_handwritten_grid：重写为直接对账 derived=menu + menu 参数（详见 S84.4.log）
+负例自证 5 条（改坏→FAIL，还原→PASS）：删 text_key / 改 pick key / vs w:881 / screen 翻竖屏 / 回退竖屏底图资产。
+
+== 判据 3：门禁工具全绿 ==
+- cargo test --workspace：1087 passed / 0 failed / 1 ignored
+- cargo clippy --workspace --all-targets -D warnings：0 error
+- cargo fmt --all --check：0
+- python3 scripts/validate_data.py：OK
+- doccheck：0 error（除计数同步，S84.6 统一处理）；doccheck2：0 error（同上）
+
+S84.5 可置 verified。

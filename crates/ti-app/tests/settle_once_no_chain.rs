@@ -16,7 +16,7 @@ use ti_core::rules::board::BoardSession;
 
 /// 进主地图（复用 `fuzz_playtest`/`e2e_playability` 的公开 API 路径）。
 fn enter_main_map(seed: u32) -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(seed);
     app.handle(GameInput::Confirm); // Index → SelectRole
     app.handle(GameInput::Confirm); // → SelectMap

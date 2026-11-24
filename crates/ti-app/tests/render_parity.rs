@@ -22,8 +22,8 @@
 use ti_app::game_app::{GameApp, GameInput};
 use ti_render::framebuffer::Framebuf;
 
-/// 呈现层帧像素数（`1080 × 1920`，`08_layout_design.md` §1；legacy 176×220 统一缩放落画布）。
-const FB_PIXELS: usize = 1080 * 1920;
+/// 呈现层帧像素数（`1920 × 1080`，S84 纯横屏；legacy 176×220 统一缩放落画布）。
+const FB_PIXELS: usize = 1920 * 1080;
 
 /// 渲染当前场景到 `GameApp.shell.fb`，返回帧缓冲像素切片。
 fn render_current(app: &mut GameApp) -> Vec<u16> {
@@ -42,20 +42,20 @@ fn ink_ratio(pixels: &[u16]) -> f32 {
 
 /// 主菜单（Index 场景）渲染：标题 + 菜单项 + 状态行。
 fn render_index() -> Vec<u16> {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     render_current(&mut app)
 }
 
 /// 选角场景渲染。
 fn render_select_role() -> Vec<u16> {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.handle(GameInput::Confirm); // Index → SelectRole
     render_current(&mut app)
 }
 
 /// 选图场景渲染。
 fn render_select_map() -> Vec<u16> {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Confirm); // → SelectMap
     render_current(&mut app)
@@ -63,7 +63,7 @@ fn render_select_map() -> Vec<u16> {
 
 /// 主地图场景渲染。
 fn render_main_map() -> Vec<u16> {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Next); // 选角
     app.handle(GameInput::Confirm); // → SelectMap
@@ -74,7 +74,7 @@ fn render_main_map() -> Vec<u16> {
 
 /// 战斗场景渲染。
 fn render_vs() -> Vec<u16> {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Next);
     app.handle(GameInput::Confirm);
@@ -102,7 +102,7 @@ fn render_is_deterministic_per_scene() {
             _ => render_vs(),
         };
         assert_eq!(pixels, again, "{name} 场景渲染应确定性（两次渲染逐像素相同）");
-        assert_eq!(pixels.len(), FB_PIXELS, "{name} 帧缓冲尺寸应 = 1080×1920");
+        assert_eq!(pixels.len(), FB_PIXELS, "{name} 帧缓冲尺寸应 = 1920×1080（S84 纯横屏）");
     }
 }
 
@@ -154,13 +154,13 @@ fn index_scene_renders_real_glyphs_for_title() {
     );
 }
 
-/// P4-1 判据：`Framebuf` 尺寸与呈现层分辨率 1080×1920 一致（§1 约束；legacy 176×220 统一缩放落画布）。
+/// P4-1 判据：`Framebuf` 尺寸与呈现层分辨率 1920×1080 一致（S84 纯横屏；legacy 176×220 统一缩放落画布）。
 #[test]
 fn framebuf_matches_logical_resolution() {
     let mut fb = Framebuf::new();
     fb.clear(0x0000);
-    assert_eq!(fb.as_slice().len(), FB_PIXELS, "帧缓冲 = 1080×1920");
-    let mut app = GameApp::new(1080.0, 1920.0);
+    assert_eq!(fb.as_slice().len(), FB_PIXELS, "帧缓冲 = 1920×1080（S84 纯横屏）");
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.render();
     let pixels = app.shell_mut().fb.as_slice();
     // 标题条（v2 S15 木纹外框 COLOR_WOOD 0x59C4，index.title.h=24）覆盖第 0..24 行；

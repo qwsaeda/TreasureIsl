@@ -83,7 +83,7 @@ assets/data/scenes.json（每场景原语清单 + 参数）
 **结论**：除 `index`（原手写重复结构，S80 机器断言 + S81 运行期参数化已修）外，其它场景要么早已自动布局（4 个纯 UI 场景）、要么早已参数化（main_map 31 格环）、要么单件无需参数化（vs）。
 注意：`select_role`/`select_map`/`saveload` 的 `scenes.json` 原语 rect 仍是非零手写值，但那是 **CPU 世界层版面规格 / 人读镜像**（`ui_layer=bevy_ui` 原语在 Bevy 壳被跳过），真正位置由 Rust flex 算——按 `17_layout_engine.md` §S29.4 口径合规，不是「渲染依赖的死坐标」。
 
-> 机器守门：doccheck2 第 57 项 `no-handwritten-grid` 调 `scripts/gen_index_medallions.py --check` 守 index 的 `derived` 标记 + 双源一致；`scripts/validate_data.py` V2 守参数键合法性（含 `_dx/_dy` 负偏移豁免）。
+> 机器守门：doccheck2 第 57 项 `no-handwritten-grid` 直接对账 scenes.json——带 `derived=menu` 的横屏木牌原语 x/y=0（死坐标已删）+ `index.menu` 参数在位；`scripts/validate_data.py` V2 守参数键合法性（含 `_dx/_dy` 负偏移豁免）。旧 `gen_index_medallions.py`（服务竖屏 index.ring）已随 S84 纯横屏退役。
 
 ## 4. 每份场景文档的 10 固定章节（通用阅读法）
 

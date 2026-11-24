@@ -19,7 +19,7 @@ const REPEATS: u32 = 3;
 
 /// 一次流程 = 关键路径推进，返回可逐字节比较的状态快照字符串。
 fn run_key_path(seed: u32) -> String {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     // 固定 RNG 流（骰子/抽卡/AI 全部由 seed 决定）。
     app.rng_mut().set_seed(seed);
     app.set_rng_seed(seed);

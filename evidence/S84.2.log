@@ -1,0 +1,23 @@
+S84.2 坐标系常量翻转 1080×1920 → 1920×1080（纯横屏重写·最小闭环）· 验收证据（2026-11-24）
+
+== 改动面 ==
+规则实现(ti-render/framebuffer.rs) + 工具(ti-platform/gfx.rs + settings.rs + doccheck2.rs 字符串锁)。
+
+== 判据 1：三源同改（explore 强调：不同改则 bevy-cpu-parity 静默错位）==
+- ti-render/framebuffer.rs: CANVAS_W/H=1920/1080、LOGICAL_W_I32/USIZE=1920、LOGICAL_H_I32=1080；FB_PIXELS 自动变 1920×1080；LANDSCAPE_* 保留同义副本
+- ti-platform/gfx.rs: CANVAS/FB/LW/LH/LH_I32 同步 1920/1080
+- ti-platform/settings.rs: Orientation::default() → Landscape；logical_size() 横屏分支 1920×1080 不变
+- doccheck2.rs:1743-1744 字符串锁 `= 1920;`/`= 1080;`（否则第13项立刻 FAIL）
+
+== 判据 2：编译 + 出图 ==
+- cargo check --workspace → 0 error（三源一致，编译层通过）
+- --shot index（无 viewport）→ 出图尺寸 (1920,1080)（改前 1080×1920）✓
+- alsa 报错 = 环境无音频设备，无害
+
+== 判据 3：doccheck2 字符串锁通过 ==
+doccheck2 除计数漂移（S84.0/1 verified 后未同步）外 0 error → runtime-no-legacy-coords 字符串锁 PASS。
+
+== 保留（最小闭环策略）==
+全部 `if landscape` 分支未动（S84.4 再清）；scenes.json 竖屏数据未动（S84.3 再删）；测试 1080 锚点未改（S84.5 再改）——故 cargo test 此时会有 1080 断言 FAIL，属并行开发中间态。
+
+S84.2 可置 verified。

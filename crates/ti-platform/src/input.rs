@@ -91,20 +91,20 @@ mod tests {
 
     #[test]
     fn translate_screen_pointer_down_to_logical() {
-        // 呈现坐标系 1080×1920：2× 整数缩放下屏幕中心 (1080,1920) ↔ 逻辑中心 (540,960)
-        let vp = Viewport::fit(2160.0, 3840.0);
-        let screen_ev = Event::PointerDown { x: 1080.0, y: 1920.0 };
+        // S84 纯横屏 1920×1080：2× 整数缩放下屏幕中心 (1920,1080) ↔ 逻辑中心 (960,540)
+        let vp = Viewport::fit(3840.0, 2160.0);
+        let screen_ev = Event::PointerDown { x: 1920.0, y: 1080.0 };
         let logical_ev = translate_event(screen_ev, &vp);
         assert!(matches!(logical_ev, Event::PointerDown { .. }));
         if let Event::PointerDown { x, y } = logical_ev {
-            assert!(approx_eq(x, 540.0), "x={x}");
-            assert!(approx_eq(y, 960.0), "y={y}");
+            assert!(approx_eq(x, 960.0), "x={x}");
+            assert!(approx_eq(y, 540.0), "y={y}");
         }
     }
 
     #[test]
     fn translate_roundtrips_through_viewport() {
-        let vp = Viewport::fit(1440.0, 2560.0);
+        let vp = Viewport::fit(2560.0, 1440.0);
         for (sx, sy) in [(400.0, 640.0), (725.5, 1105.5)] {
             let logical_ev = translate_event(Event::PointerDown { x: sx, y: sy }, &vp);
             assert!(matches!(logical_ev, Event::PointerDown { .. }));

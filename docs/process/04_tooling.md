@@ -69,7 +69,6 @@
 
 | `scripts/ui_verify.py` | Python | **设备矩阵出图验收（S67.0）**：6 组设备视口 × 场景批量 `--shot`，非黑 + 探针机检 + `--json` 汇总；`--check` 只读 | 是（重跑覆盖证据）；空帧/探针缺 ⇒ 非 0 |
 | `scripts/ui_assembly.py` | Python | **零件组装装配图（S76）**：按 scenes.json z 层叠加真实拆件出装配图；`--check` 体检拆件、`--json` 分层清单、`--list` 场景 | 是（md5 一致）；场景/拆件缺 ⇒ 非 0 |
-| `scripts/gen_index_medallions.py` | Python | **index 徽章坐标参数化生成器（S80/EXP-210）**：从 ring 参数算 36 行坐标；`--check` 只读对账（doccheck2 第57项守门）、`--ring R` 试算 | 是（逐字节一致）；ring 缺/坐标漂移 ⇒ 非 0 |
 | `scripts/mutation_gate.py` | Python | **变异测试基线（S74.4）**：封装 cargo-mutants 注入代码变更统计测试杀死率得分；报告落 `evidence/mutation_baseline.json`；`--check` 只读出报告 | 是（重跑覆盖报告）；工具缺位/得分 < `--min-score` ⇒ 非 0 |
 | `scripts/audit_code.py` | 代码结构审计（`docs/style.md` §5.12 的执行手段）：文件规模（>900 行）/ 函数长度（>140 行）/ 重复模式（同一骨架 ≥N 次） | `--check` 只读检查、违规 ⇒ 非 0 退出码；`--report` 人读报告（永远 0 退出）；`--update-baseline` 写棘轮基线；阈值与基线豁免 = `scripts/code_budget.json`（每条豁免带整改任务号） |
 | `scripts/check_code_standards.py` | 代码标准 4 项机器检查（`16_code_standards.md` 执行矩阵：CS-1 资产路径单源 / CS-2 文件 `//!` 职责声明 / CS-3 参数禁单字母 / CS-4 场景层窄接缝禁构造会话；规模维度归 `audit_code.py`，不重复） | `--check` 门禁判定（违例超基线 ⇒ 非 0）；`--report` 明细（恒 0）；`--update-baseline` 写豁免（棘轮只收紧）；基线 = `scripts/process_ratchet.json::code_standards`（每条带 `reason`+`fix_in`） |

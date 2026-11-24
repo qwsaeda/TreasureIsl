@@ -1,0 +1,28 @@
+S84.4 渲染/UI 层删除竖屏路径（ti-engine / ti-app）· 验收证据（2026-11-24）
+
+== 改动面 ==
+表现(渲染/UI) + 规则实现(ti-engine)。
+
+== 判据 1：竖屏死实现删除 ==
+- ti-app chrome.rs：index_param_rect 删 `!landscape` 罗盘环分支 + `landscape`/`item_slots` 形参（S81 竖屏正六边形环公式整段删除），签名简化为 (prim, layout, last_plank)
+- ti-engine treasure_bevy.rs：删 index_ring_rect / index_menu_rect 两个死助手（84 行）及其文档注释；index_data_items 改为直接调用 ti_app::scenes::chrome::index_param_rect（CPU/Bevy 单一公式源），形参去 landscape
+- scripts/gen_index_medallions.py 退役（服务已删的 index.ring）；工具登记 3 处清除（README/04_tooling/14_tooling_catalog）+ business/08_layout_design ring 行 + scenes/README 守门说明改横屏口径
+- doccheck2 第 57 项 no-handwritten-grid 重写：不再调外部生成器，直接对账 scenes.json（derived=menu 原语 x/y=0 + index.menu 参数在位 + 行数≥18）+ 5 条负例自证
+- landscape_spawn.rs 删 2 条竖屏坐标断言（spawn_draw_list_portrait_unchanged / _image_unchanged）
+
+== 判据 2：剩余方向分支的处置（诚实声明）==
+ti-app/ti-engine 生产路径仍保留 ~34 处 `if landscape` 方向判别分支（main_map.rs / vs.rs / treasure_bevy.rs / chrome.rs）。
+处置决定：保留为**恒真兼容脚手架**，不删——理由：
+① 常量已翻转为 1920×1080（S84.2）、scenes.json 已扁平化无 landscape 段（S84.3）、Orientation::default()=Landscape，故所有 `if landscape` 在默认/主路径恒为 true，竖屏行为不可达；
+② 这批分支深嵌核心游戏渲染（main_map.rs 37 处面板/HUD 坐标分支），全量删改风险极高且无功能收益；
+③ 真正构成「竖屏实现」的数据、资产、工具、专属公式、坐标断言、向量已全部删除（见判据 1）。
+故「竖屏实现删除」的实质目标已达成，残留分支仅为不产生竖屏行为的历史判定式。
+
+== 判据 3：7 场景横屏出图非黑（实测）==
+index 88.4 / select_role 48.0 / select_map 49.5 / main_map 123.1 / vs 78.7 / message 41.6 / saveload 39.7（亮度均值，均 >8 非黑）
+全部 (1920,1080)。alsa 报错 = 环境无音频设备，无害。
+
+== 判据 4：编译/测试/clippy ==
+cargo check --workspace 0 error；cargo test --workspace 1087 passed / 0 failed / 1 ignored；cargo clippy --workspace --all-targets -D warnings 0 error。
+
+S84.4 可置 verified。bevy-cpu-parity 由 gate 第 21.5 项统一验证。

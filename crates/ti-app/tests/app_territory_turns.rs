@@ -22,7 +22,7 @@ fn enter_main_map(app: &mut GameApp) {
 /// （主地图 `Back`）= 领取产出（金币守恒：产出入账自己）。旧实现落自己格自动升级/领产出（无选择权）。
 #[test]
 fn own_landing_gives_player_choice() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(11);
     enter_main_map(&mut app);
     let me = app.turn_cycle.current;
@@ -65,7 +65,7 @@ fn own_landing_gives_player_choice() {
 /// §6：玩家摇骰后 4 AI 自动连动；轮转回玩家席；领地账本/席位金币被真实变更。
 #[test]
 fn ai_turns_run_after_player_spin() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(7);
     enter_main_map(&mut app);
 
@@ -107,7 +107,7 @@ fn ai_turns_run_after_player_spin() {
 /// 且游戏层落格结算后经 `territory_ownership` 可查）。
 #[test]
 fn ai_landing_settlement_is_deterministic() {
-    let mut a = GameApp::new(1080.0, 1920.0);
+    let mut a = GameApp::new(1920.0, 1080.0);
     a.set_rng_seed(42);
     enter_main_map(&mut a);
     a.board_spin();
@@ -121,7 +121,7 @@ fn ai_landing_settlement_is_deterministic() {
         .map(|(k, (o, l))| (k, o, l))
         .collect();
 
-    let mut b = GameApp::new(1080.0, 1920.0);
+    let mut b = GameApp::new(1920.0, 1080.0);
     b.set_rng_seed(42);
     enter_main_map(&mut b);
     b.board_spin();

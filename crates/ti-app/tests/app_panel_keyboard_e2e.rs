@@ -36,7 +36,7 @@ fn keys() -> KeyState {
 }
 
 fn enter_main_map() -> GameApp {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(42);
     app.handle(GameInput::Confirm);
     app.handle(GameInput::Confirm);

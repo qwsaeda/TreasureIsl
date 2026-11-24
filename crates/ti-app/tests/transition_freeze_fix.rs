@@ -18,7 +18,7 @@ use ti_app::game_app::{GameApp, GameInput};
 /// 判据 1：稳态无过渡。
 #[test]
 fn steady_state_has_no_active_transition() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_frame_delta_ms(16);
     app.render();
     app.render();
@@ -28,7 +28,7 @@ fn steady_state_has_no_active_transition() {
 /// 判据 2 + 3：切场景后过渡逐帧走完，终帧 = 纯新场景（无旧画面残留）。
 #[test]
 fn transition_completes_within_window_and_ends_on_pure_new_scene() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_frame_delta_ms(16);
     app.render(); // 首帧渲染（index 稳态），rendered_once = true
     assert!(!app.transition_active(), "切换前无过渡");
@@ -56,7 +56,7 @@ fn transition_completes_within_window_and_ends_on_pure_new_scene() {
     assert_eq!(final_frame, clean_frame, "过渡终帧应等于纯新场景渲染（无旧画面残色）");
 
     // 新旧场景帧互异（证明过渡确实发生过混合，非空转）。
-    let mut ref_app = GameApp::new(1080.0, 1920.0);
+    let mut ref_app = GameApp::new(1920.0, 1080.0);
     ref_app.set_frame_delta_ms(16);
     ref_app.render();
     let index_frame = ref_app.shell().fb.as_slice();

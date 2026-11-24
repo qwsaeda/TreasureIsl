@@ -65,7 +65,7 @@ fn main_map_hud_pick_keys_present() {
 /// ③：摇骰 CTA（键 4）经归一命中 → `GameInput::Spin` ⇒ 骰点 > 0（能摇）。
 #[test]
 fn spin_cta_hit_rolls_dice() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(42);
     enter_main_map(&mut app);
     assert_eq!(app.board_last_roll(), 0, "初始未摇骰");
@@ -77,7 +77,7 @@ fn spin_cta_hit_rolls_dice() {
 /// 边界：非 0 键（如 9）不触发摇骰（命中键严格按数据面约定）。
 #[test]
 fn unknown_pick_key_does_not_roll() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.set_rng_seed(42);
     enter_main_map(&mut app);
     app.poll_hit(Some(HitData { key: 99, index: -1, swipe: 0 }));

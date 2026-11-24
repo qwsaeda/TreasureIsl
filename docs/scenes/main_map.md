@@ -1,6 +1,6 @@
 # main_map 场景 · 详细图文拆解
 
-> **单一事实源声明（时点 2026-11-23）**：坐标/参数逐条抄自 `assets/data/scenes.json` 的 `main_map` 节点（竖屏 primitives 7 条 + `landscape.primitives` 6 条）与场景专属字段实测；叙事元数据抄自 `assets/data/ui_schema/scene_manifest_v3.json` 的 `main_map`；源码 = `crates/ti-app/src/scenes/{main_map.rs,main_map_node.rs,main_map_island.rs,chrome.rs}`；真渲染图 = `evidence/bevy_native_main_map_1920x1080.png`（1920×1080）+ `evidence/bevy_native_main_map.png`（1080×1920），均引擎 `--shot` 实拍；地图包 = `assets/maps/<id>/`（m01~m40）+ `docs/process/21_map_package_spec.md`；业务 = `docs/business/{territory,progression}.md`。结论引用文档 ID（EXP/S/F）不复述推导；坐标直接抄 JSON。
+> **单一事实源声明（时点 2026-11-24）**：本文只讲**横屏 1920×1080**（S84 纯横屏重写）；坐标/参数逐条抄自 `assets/data/scenes.json` 的 `main_map.landscape` 节点（`landscape.primitives` 6 条 + `landscape.extra`）与场景专属字段实测，横屏环几何抄自 `assets/data/main_map_v6_layout_landscape.json`（screen 1920×1080，逐格坐标）；叙事元数据抄自 `assets/data/ui_schema/scene_manifest_v3.json` 的 `main_map`；源码 = `crates/ti-app/src/scenes/{main_map.rs,main_map_node.rs,main_map_island.rs,chrome.rs}`；真渲染图 = `evidence/bevy_native_main_map_1920x1080.png`（1920×1080，引擎 `--shot` 实拍）；地图包 = `assets/maps/<id>/`（m01~m40）+ `docs/process/21_map_package_spec.md`；业务 = `docs/business/{territory,progression}.md`。结论引用文档 ID（EXP/S/F）不复述推导；坐标直接抄 JSON。
 
 ---
 
@@ -29,50 +29,23 @@ Intro → Index → SelectRole → SelectMap → MainMap ⇄ Vs / Message
 
 **横屏（主交付）**：`--shot --scene=main_map --viewport=1920x1080`（S29.5 多视口 + S38 方向感知，`evidence/S38.0.log:32-33`；非黑 2,069,073/2,073,600≈99.8%，无药丸黑边铺满）。
 
-![main_map 横屏真渲染图（1920×1080，v6 不规则岛 + 31 格木片环 + 双铜牌 HUD）](../evidence/bevy_native_main_map_1920x1080.png)
+![main_map 横屏真渲染图（1920×1080，v6 不规则岛 + 31 格木片环 + 双铜牌 HUD）](../../evidence/bevy_native_main_map_1920x1080.png)
 
-**竖屏（1080×1920）**：`--shot --scene=main_map`（`evidence/S61.0.log:44`，xvfb-run 无头；S38.0 竖屏对拍非动画区 diff=0）。
-
-![main_map 竖屏真渲染图（1080×1920）](../evidence/bevy_native_main_map.png)
-
-**图中可见元素**（两图同构，坐标按各自视口）：满屏羊皮做旧海图底（`chart_full.png`，外框木框 + 边缘暗角）；蓝绿海洋包围**中央不规则岛**（山峦 + 棕榈林 + 白沙滩 + 灯塔 + 海盗村落 + 岸边宝箱金币堆，拆分元素组合，12 号 spec §1.3）；约 **31 枚木片格**（海盗骷髅标记 = 可占领领地格，灰暗锁链/铜钱牌 = 功能格）沿岛轮廓不规则紧围（12 号 §1.1，凸包弧长等分）；格间缆绳路径深棕；底部黄铜**舵轮**摇骰 CTA（左）+ **罗盘**装饰（右）；顶角双铜牌（左「金 1000」金币图标 / 右「持有 0 种」宝箱图标）；玩家船与 `P1~P5` 席位徽标叠在格上（当前席金色船，余席暗灰旗，多席同格 `seat_slots` 扇出，`main_map.rs:300-343`）；海洋动画层（鲸鱼喷水等，S34.6 creatures 程序 bob，`CREATURES_ACC`）。**世界层（岛/格/牌/船/海洋）为代码绘制，非 primitives**——仅双铜牌/图标/标题/摇骰按钮来自 JSON 原语（见 §4）。
+**图中可见元素**（1920×1080）：满屏羊皮做旧海图底（`chart_full.png`，外框木框 + 边缘暗角）；蓝绿海洋包围**中央不规则岛**（山峦 + 棕榈林 + 白沙滩 + 灯塔 + 海盗村落 + 岸边宝箱金币堆，拆分元素组合，12 号 spec §1.3）；约 **31 枚木片格**（海盗骷髅标记 = 可占领领地格，灰暗锁链/铜钱牌 = 功能格）沿岛轮廓不规则紧围（12 号 §1.1，凸包弧长等分）；格间缆绳路径深棕；底部黄铜**舵轮**摇骰 CTA（左）+ **罗盘**装饰（右）；顶角双铜牌（左「金 1000」金币图标 / 右「持有 0 种」宝箱图标）；玩家船与 `P1~P5` 席位徽标叠在格上（当前席金色船，余席暗灰旗，多席同格 `seat_slots` 扇出，`main_map.rs:300-343`）；海洋动画层（鲸鱼喷水等，S34.6 creatures 程序 bob，`CREATURES_ACC`）。**世界层（岛/格/牌/船/海洋）为代码绘制，非 primitives**——横屏仅双铜牌/图标/标题来自 JSON 原语（见 §4），摇骰舵轮 CTA 为横屏布局 `helm` 数据驱动的代码绘制。
 
 ---
 
 ### 2.5 零件组装装配图（S39 拆件组件化概念）
 
-![main_map 零件组装装配图](../evidence/scenes_assembly_main_map_portrait.png)
-
-由正式工具 `scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**产出（非 PIL 裁切完整图、非 AI 概念图），portrait 1080×1920，5 个 z 层 / 7 原语 / 6 个资产零件。
-
-- 复现：`python3 scripts/ui_assembly.py --scene main_map --orientation portrait --output evidence/scenes_assembly_main_map_portrait.png`
-- 读法：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
-- 说明：**主体（31 格环/岛/船/棋盘）为运行时代码绘制、非独立拆件** ⇒ 装配图只显出 6 个资产层，中间空白属诚实呈现
+> ⚠️ 当前装配图仅有历史竖屏稿，**横屏装配图待重生成（S84.3）**。为避免混淆，本文不再引用历史竖屏装配图；横屏稿生成后再补图与读法。
+>
+> 生成方式：`scripts/ui_assembly.py` 按 scenes.json 的 z-order 逐层叠加 **assets/ui 真实拆件**（非 PIL 裁切完整图、非 AI 概念图），横屏用 `--orientation landscape`，落 `evidence/scenes_assembly_main_map_landscape.png`。
+>
+> 读法（横屏稿生成后适用）：上方每个 stage = 叠加一层后的画面，下方目录列出每件拆件的原尺寸 / 落点 rect / z 层。
+>
+> 说明：**主体（31 格环/岛/船/棋盘）为运行时代码绘制、非独立拆件** ⇒ 装配图只显出资产层，中间空白属诚实呈现。
 
 ## 3. ASCII 布局图
-
-**竖屏 1080×1920**（坐标 = scenes.json 竖屏实测；世界画布 `world_canvas (11,250,1048,1056)`）：
-
-```
-y=0   ┌──────────────────────────────────────────────┐
-      │   标题 text (496,40,88,44)  ·「地图」         │
-y=48  │ ┌─────铜牌L (48,48,448,192)────┐ ┌─铜牌R────┐ │
-      │ │ icon coin (104,96,96,96) 金1000│ │chest 持有│ │
-y=250│ └────────────────────────────────┘ └──────────┘ │
-      │ ┌────────── world_canvas (11,250,1048,1056) ─┐ │
-      │ │  ~~~~~~ 海洋 / 31 木片格环 / 中央岛 ~~~~~~  │ │
-      │ │      [格] [格] [格]   ← 缆绳相连            │ │
-      │ │        ╭────中央岛────╮   (岛心≈540,890)   │ │
-      │ │        │ 山/棕榈/灯塔/村 │  P1 船 · 宝箱    │ │
-      │ │        ╰──────────────╯                   │ │
-      │ │      [格] [格] [格]                       │ │
-y=1306│ └─────────────────────────────────────────────┘ │
-      │  摇骰 CTA: 舵轮 (176,1625,230,230) pick_key=4  │
-      │  骰数文本 (540,~1312)  ·  deck_spin(408,1336)  │
-y=1760│                 提示 hint (540,1760)          │
-y=1920└──────────────────────────────────────────────┘
-      x=0   x=540(屏心)                          x=1080
-```
 
 **横屏 1920×1080**（`landscape.primitives` 6 条 + `landscape.extra`；世界画布由布局适配铺满）：
 
@@ -93,7 +66,7 @@ y=1080└───────────────────────�
       x=0                    x=960(屏心)                          x=1920
 ```
 
-> 两图仅示意主区域；逐条精确坐标见 §4，专属几何参数见 §4.3。世界层坐标随视口由 `render_v6_elem(host,&layout,...,landscape)` 重算，横屏读 `main_map_v6_layout_landscape.json`（椭圆格环，S38 方案 A）。
+> 上图仅示意主区域；逐条精确坐标见 §4，专属几何参数见 §4.3。世界层坐标随视口由 `render_v6_elem(host,&layout,...,landscape)` 重算，横屏读 `main_map_v6_layout_landscape.json`（椭圆格环，S38 方案 A）。
 
 ---
 
@@ -101,19 +74,7 @@ y=1080└───────────────────────�
 
 > `primitives` = **chrome/UI 层**（资源由 `render_primitives_filtered` 绘制）；棋盘、岛、船、海洋等**游戏世界层不在 primitives 中**，走代码绘制（见 §5）。所有 `when=""`、`item=-1`。
 
-### 4.1 竖屏逐元素坐标表（`main_map.primitives`，共 7 条 == 实测 7）
-
-| # | kind | rect (x,y,w,h) | z | when | params（asset / icon / text_key / pick_key） | color |
-|---|---|---|---|---|---|---|
-| 1 | image | (0, 0, 1080, 1920) | 2 | "" | `asset=assets/ui/chart_full.png` | "" |
-| 2 | image | (48, 48, 448, 192) | 3 | "" | `asset=assets/ui/hud_plaque.png` | "" |
-| 3 | icon | (104, 96, 96, 96) | 4 | "" | `icon=coin, size=96` | gold_warm |
-| 4 | image | (584, 48, 448, 192) | 3 | "" | `asset=assets/ui/hud_plaque.png` | "" |
-| 5 | icon | (640, 96, 96, 96) | 4 | "" | `icon=chest, size=96` | gold_warm |
-| 6 | text | (496, 40, 88, 44) | 6 | "" | `text_key=scene.main_map.title, tier=body` | gold_warm |
-| 7 | image | (176, 1625, 230, 230) | 7 | "" | `asset=assets/ui/btn_spin.png, pick_key=4` | "" |
-
-### 4.2 横屏逐元素坐标表（`main_map.landscape.primitives`，共 6 条 == 实测 6）
+### 4.2 逐元素坐标表（`main_map.landscape.primitives`，共 6 条 == 实测 6）
 
 | # | kind | rect (x,y,w,h) | z | when | params | color |
 |---|---|---|---|---|---|---|
@@ -126,9 +87,11 @@ y=1080└───────────────────────�
 
 ### 4.3 场景专属几何参数表（`scenes.json main_map` 全量实测，单一事实源）
 
+> ⚠️ **横屏取值提示**：下表是 `scenes.json main_map` 的**历史竖屏 1080 基准实测值**。横屏（1920×1080）实际读取的只有下方「横屏专属 `landscape.extra`」四键 + `assets/data/main_map_v6_layout_landscape.json` 的逐格椭圆环坐标（`screen=[1920,1080]`、`island{cx:960,cy:520,w:560}`、`ship/helm/compass`、`tiles[]`）。下表所有 1080 基准像素值（`title/hud*/fx_coin/grid/hint/portrait_zones/world_canvas/island_home/deck_*/deck_spin/voyage_bar/focus_anchor`）与 **`extra_scalar.ring.*` / `ring.*` 环参数均为「历史竖屏值作废」**，保留仅供追溯。**含竖屏历史值待 S84.3 清理。**
+>
 > 矩形值 = `extra`（点号标量折叠进 `extra_scalar`）；下列均为 scenes.json 实测值。Rust 侧只通过 `chrome::keys::*` 常量读取（`chrome.rs:163-229`），0 裸字面量。
 
-| 键 | 值（x,y,w,h / 标量） | 用途 / 读取点 |
+| 键 | 值（x,y,w,h / 标量） | 用途 / 读取点（⚠️ = 历史竖屏值作废） |
 |---|---|---|
 | `title` | `{y:8, h:96}` | 标题条高（v2 回退用） |
 | `hud` | `{x:80,y:152,w:920,h:128}` | v2 羊皮 HUD 面板 |
@@ -141,7 +104,7 @@ y=1080└───────────────────────�
 | `landmark` | `{size:20}` | v2 据点边长回退 |
 | `boss` | `{size:24}` | v2 BOSS 边长回退 |
 | `hint` | `{x:540,y:1760}` | 落格提示签条中心（`keys::HINT`） |
-| `portrait_zones` | `[{x:0,y:150,w:1080,h:1680}]` | 竖屏内容安全带 |
+| `portrait_zones` | `[{x:0,y:150,w:1080,h:1680}]` | ⚠️ 历史竖屏值作废（内容安全带） |
 | `world_canvas` | `{x:11,y:250,w:1048,h:1056}` | v3 世界画布（`keys::WORLD_CANVAS`，`board_fit` 拟合基准） |
 | `hud_gold` | `{x:80,y:80,w:320,h:96}` | v3 顶左金币角（回退） |
 | `hud_player` | `{x:680,y:80,w:320,h:96}` | v3 顶右持有量角（回退） |
@@ -156,16 +119,16 @@ y=1080└───────────────────────�
 | `focus_anchor` | `{type:world_canvas, bbox:{x:11,y:250,w:1048,h:1056}}` | 场景叙事焦点锚点 |
 | `deck_spin` | `{x:408,y:1336,w:264,h:264}` | 摇骰 CTA 数据矩形（v5 残留位，v6 骰点改用 helm 定位） |
 | `voyage_bar` | `{x:48,y:1088,w:984,h:48}` | v4 航程进度尺（v6 dormant） |
-| `extra_scalar.ring.center_x` | `540` | 环心 x（`ring_geom.cx`，屏心豁免 8pt） |
-| `extra_scalar.ring.center_y` | `780` | 环心 y（`ring_geom.cy`） |
-| `extra_scalar.ring.radius` | `474` | 环半径（`ring_geom.r`；`2πr/31≈96`） |
-| `extra_scalar.ring.card_w` | `96` | 卡宽（`ring_geom.w`） |
-| `extra_scalar.ring.card_h` | `120` | 卡高（`ring_geom.h`） |
-| `extra_scalar.ring.home_size` | `760` | 中央岛尺寸 |
-| `island_home` | `{x:160,y:400,w:760,h:760}` | v5 中央据点岛贴图矩形 |
-| `ring` | `{center_x:540,center_y:784,radius:480,card_w:96,card_h:120}` | 包内 `layout.json` 同名字段（地图包注入口径） |
+| `extra_scalar.ring.center_x` | `540` | ⚠️ 历史竖屏值作废（环心 x，`ring_geom.cx`） |
+| `extra_scalar.ring.center_y` | `780` | ⚠️ 历史竖屏值作废（环心 y，`ring_geom.cy`） |
+| `extra_scalar.ring.radius` | `474` | ⚠️ 历史竖屏值作废（环半径，`ring_geom.r`） |
+| `extra_scalar.ring.card_w` | `96` | ⚠️ 历史竖屏值作废（卡宽，`ring_geom.w`） |
+| `extra_scalar.ring.card_h` | `120` | ⚠️ 历史竖屏值作废（卡高，`ring_geom.h`） |
+| `extra_scalar.ring.home_size` | `760` | ⚠️ 历史竖屏值作废（中央岛尺寸） |
+| `island_home` | `{x:160,y:400,w:760,h:760}` | ⚠️ 历史竖屏值作废（v5 中央据点岛贴图矩形） |
+| `ring` | `{center_x:540,center_y:784,radius:480,card_w:96,card_h:120}` | ⚠️ 历史竖屏值作废（包内 `layout.json` 同名字段）；横屏环几何读 `main_map_v6_layout_landscape.json` |
 
-> **注意两处时点差（均实测，非漂移）**：`extra_scalar.ring.center_y=780 / radius=474` 为 scenes.json 当前 v5 环参数；`ring.center_y=784 / radius=480` 与地图包 `layout.json` 一致（Rust `ring_geom` 缺键回退常量亦是 `RING_CENTER=(540,784)`、`RING_RADIUS=480`，`chrome.rs:694-701`）。v6 默认路径不读 `ring.*`，而读 `main_map_v6_layout.json` 的逐格坐标（12 号 §1.1）。
+> **注意（历史时点差，均已作废）**：`extra_scalar.ring.center_y=780 / radius=474` 与 `ring.center_y=784 / radius=480` 均为历史竖屏环参数（`RING_CENTER=(540,784)` / `RING_RADIUS=480` 回退常量同属竖屏基准）。横屏 v6 默认路径不读 `ring.*`，而读 `main_map_v6_layout_landscape.json` 的逐格椭圆环坐标（12 号 §1.1，S38 方案 A）。
 
 **横屏专属 `landscape.extra`**（`scenes.json main_map.landscape.extra` 实测）：
 
@@ -180,19 +143,21 @@ y=1080└───────────────────────�
 
 ## 5. 横屏差异
 
-- **原语数量**：竖屏 7 条 → 横屏 6 条（少第 7 条摇骰按钮 `btn_spin` 原语 + `pick_key=4`），即横屏 primitives 无命中键；世界层与 HUD 仍由代码绘制。横屏背景 `chart_full.png` 铺满 1920×1080（`evidence/S38.0.log:32-33` 非黑≈99.8%，无药丸黑边）。
-- **坐标变化**：铜牌左右镜像从 `(48,48)/(584,48)` → `(48,32)/(1424,32)`，尺寸 `448×192` → `448×160`；金币/宝箱 icon `96→80`，位置 `(104,96)/(640,96)` → `(104,80)/(1480,80)`；标题 `(496,40,88,44)` → `(860,24,200,44)`（x 随屏心 540→960 平移 + 加宽）。`landscape.extra` 四键给出横屏 HUD 铜牌位（`hud_gold/hud_player/hud_plaque_l/hud_plaque_r`）。
-- **orientation 切换逻辑**：`--shot --viewport=1920x1080` 由 `main()` 显式置 `Orientation::Landscape`（`evidence/S39.0.log:79`）；运行时 `window_resize_system` 纵横比变化 → `ti_app::menu_shell::set_orientation`（`evidence/S38.0.log:20-22`）。`main_map.rs` 中 `render_hud_v3` 用 `layout.extra_for(landscape)` 读当前方向 extra（`main_map.rs:128-132`），`render_v6_elem(..., landscape)` 读横屏布局 `main_map_v6_layout_landscape.json` 重算椭圆格环（S38 方案 A）。竖屏 0 行为变化已对拍证明（S38.0 非动画区 diff=0）。
+- **原语数量**：横屏 `landscape.primitives` 共 6 条，无摇骰按钮原语 / 无 `pick_key` 命中键；世界层与 HUD 仍由代码绘制。背景 `chart_full.png` 铺满 1920×1080（`evidence/S38.0.log:32-33` 非黑≈99.8%，无药丸黑边）。
+- **横屏 HUD 坐标**：铜牌左右位 `(48,32)` / `(1424,32)`，尺寸 `448×160`；金币/宝箱 icon `size=80`，位置 `(104,80)` / `(1480,80)`；标题 `(860,24,200,44)`。`landscape.extra` 四键给出横屏 HUD 铜牌位（`hud_gold/hud_player/hud_plaque_l/hud_plaque_r`），逐条见 §4.3 末表。
+- **横屏布局源**：`--shot --viewport=1920x1080` 由 `main()` 显式置 `Orientation::Landscape`（`evidence/S39.0.log:79`）；`main_map.rs` 中 `render_hud_v3` 用 `layout.extra_for(landscape)` 读横屏 extra（`main_map.rs:128-132`），`render_v6_elem(..., landscape)` 读横屏布局 `main_map_v6_layout_landscape.json`（`screen=[1920,1080]`）重算椭圆格环与中央岛/船/舵轮/罗盘（S38 方案 A）。
+
+> 本节只述横屏实现；历史竖屏对照与「0 行为变化对拍」结论已随 S84 纯横屏重写作废，不再作为验收口径。
 
 ### 5.1 为什么 main_map 的世界层不在 bevy_ui（S29.3e 判定）
 
-B1「全 bevy_ui 响应式」落地时（S29.3a~e），5 个**纯 UI 场景**（index/select_role/select_map/saveload/message）的 chrome 已迁 bevy_ui；但 **vs / main_map 整体留 1080**，原因即 `19_bevy_ui.md` 坑位 9.8-13（`docs/process/19_bevy_ui.md:160`）：
+B1「全 bevy_ui 响应式」落地时（S29.3a~e），5 个**纯 UI 场景**（index/select_role/select_map/saveload/message）的 chrome 已迁 bevy_ui；但 **vs / main_map 的世界层保持代码绘制、不走 bevy_ui**（此判定与屏幕方向无关，横屏同样适用），原因即 `19_bevy_ui.md` 坑位 9.8-13（`docs/process/19_bevy_ui.md:160`）：
 
 1. **相机层叠遮挡**：bevy_ui 的 UI 相机（`IsDefaultUiCamera`，`order=1`，clear None）叠在 1080 世界相机之上。同屏位的 bevy_ui 节点会**遮住**1080 动态内容。
 2. **本场景 chrome 与 world 层叠**：主地图的 HUD 铜牌/标题/摇骰按钮与棋盘格、中央岛、玩家船、HUD 数值同屏**交叠**（不是各自独立区域）。若把 chrome 迁 bevy_ui、动态世界留在 1080，铜牌背景板/节点会盖住岛与格、或世界内容穿透 UI 层。
 3. **判据**：B1 约定「游戏世界保持 1080」（`17_layout_engine.md` 三条松绑签核之一）⇒ vs/main_map 整体留 1080；`bevy-cpu-parity` 改口径只保游戏世界、UI 层排除（`12_bevy_usage.md:261-262`，`S29.4`）。
 
-因此 main_map 的 1080 世界层（岛/格/船/海洋/动态实体）与 chrome 原语统一走 CPU→1080 画布→Bevy `Sprite` 呈现；`scenes.json` 的 primitives 只承担**不交叠**的背景层（z=2 `chart_full`）+ 顶部铜牌/图标/标题（z=3~6）+ 摇骰按钮（z=7）。这也是 §2 截图中「岛/格/船清晰」而 primitives 仅 7~6 条的原因。
+因此 main_map 的世界层（岛/格/船/海洋/动态实体，横屏 1920×1080）与 chrome 原语统一走 CPU→画布→Bevy `Sprite` 呈现；`scenes.json` 的 primitives 只承担**不交叠**的背景层（z=2 `chart_full`）+ 顶部铜牌/图标/标题（z=3~6），摇骰舵轮 CTA 由横屏布局 `helm` 数据驱动的代码绘制。这也是 §2 截图中「岛/格/船清晰」而横屏 primitives 仅 6 条的原因。
 
 ---
 
@@ -204,7 +169,7 @@ B1「全 bevy_ui 响应式」落地时（S29.3a~e），5 个**纯 UI 场景**（
 |---|---|---|
 | `assets/ui/chart_full.png` | `name:chart_full` / `file:assets/ui/chart_full.png`（`:417`） | 满屏羊皮海图底（z=2） |
 | `assets/ui/hud_plaque.png` | `name:hud_plaque`（`:513`） | 顶角双铜牌底（z=3，左右各一） |
-| `assets/ui/btn_spin.png` | `name:btn_spin`（`:497`） | 摇骰舵轮 CTA（z=7，pick_key=4） |
+| `assets/ui/btn_spin.png` | `name:btn_spin`（`:497`） | ⚠️ 历史竖屏值作废：旧 z=7 / `pick_key=4` 摇骰原语；横屏舵轮 CTA 由 `main_map_v6_layout_landscape.json` 的 `helm` 数据驱动、代码绘制，不作为横屏 primitive 引用 |
 
 **icon 原语**：`icon=coin`（金币，左铜牌）/ `icon=chest`（宝箱，右铜牌），经 `chrome::hud_icon_def` → `assets/ui/icon_*.png` 白蒙版 + `gold_warm` tint（`S21.14`，export-icon-boundary 守门：图标只为 PNG 资产，代码矢量仅缺图回退，跨层 tint ≡ Bevy `Sprite.color`）。
 
@@ -222,7 +187,7 @@ B1「全 bevy_ui 响应式」落地时（S29.3a~e），5 个**纯 UI 场景**（
 
 ## 7. 命中契约
 
-- **数据化命中**：`spawn_pick_layer`（`ti-engine`）只认 `pick_key>0` 的 primitives。main_map 竖屏 primitives 中**仅第 7 条 `btn_spin` 带 `pick_key=4`**（横屏 6 条无命中键）；历史 5/6/7（贸易/出售/建造）随 S34「底部三键取掉」删除（`main_map_pick_e2e.rs:7-8`）。
+- **数据化命中**：`spawn_pick_layer`（`ti-engine`）只认 `pick_key>0` 的 primitives。**横屏 6 条 `landscape.primitives` 均无命中键**；摇骰舵轮 CTA 为代码绘制内容，其交互走世界层拾取（见下）。历史 `btn_spin`（`pick_key=4`，属 portrait primitives）与 5/6/7（贸易/出售/建造，S34「底部三键取掉」）不再作为横屏命中入口（`main_map_pick_e2e.rs:7-8`）；portrait 数据面断言的去留归 S84.3 清理。
 - **派发链**：物理点击 → `manual_1080_hit_system`（bevy_picking mesh 只拾取 Mesh2d/SimplifiedMesh，1080 标记是 Sprite ⇒ 手写几何拾取，`20_bevy_picking.md` 坑位 20-8/9）→ `PickEvent` → `poll_hit(HitData)` → `route_hit` → `Scene::on_hit`。主地图 `on_hit`（`main_map.rs:1566-1577`）：`swipe != 0` 直接吞；`key=4` → `host.advance(GameInput::Spin)`；其它键无动作。
 - **键盘等价**：`Space` = 摇骰（`GameInput::Spin`），`T/Y/B` 等经 `Open*Panel` 开面板，面板内 `↑↓/Enter/Back` 导航（`on_input`，`main_map.rs:1112-1559`）。S19 起**移动唯一入口 = 摇骰**，方向键自由移动已彻底删除。
 - **赛道/环格/中央岛命中**：v6 终码的 31 格与中央岛为代码绘制的 1080 内容，其交互走 `track_node_sel` 预览选中与落格分叉 `pending_*` + `Confirm/Back`，而非 primitives `pick_index`（`main_map_node::draw_node_card` 信息签只读预览）；e2e 由 `main_map_pick_e2e` + `app_*_panel_e2e` 覆盖。
@@ -245,7 +210,7 @@ B1「全 bevy_ui 响应式」落地时（S29.3a~e），5 个**纯 UI 场景**（
 
 | 测试文件 | 断言要点 |
 |---|---|
-| `crates/ti-app/tests/main_map_pick_e2e.rs`（3 测） | ① `pick_key=4` 恰 1 个、5/6/7 恰 0 个且矩形非零且在屏内；② `poll_hit(HitData{key:4})` → `board_last_roll()>0`（摇骰可达）；③ 未知键 99 不摇骰 |
+| `crates/ti-app/tests/main_map_pick_e2e.rs`（3 测） | ① `pick_key=4` 恰 1 个、5/6/7 恰 0 个且矩形非零且在屏内；② `poll_hit(HitData{key:4})` → `board_last_roll()>0`（摇骰可达）；③ 未知键 99 不摇骰。⚠️ ①/② 断言读 portrait primitives 数据面（摇骰键几何），横屏命中走世界层；portrait 数据面断言的去留归 S84.3 清理 |
 | `crates/ti-app/tests/app_trade_panel_e2e.rs`（4） | 贸易面板开关 / 选中钳位 / 买卖 |
 | `app_ship_panel_e2e.rs`（3） | 造船面板开关 / 互斥 |
 | `app_event_panel_e2e.rs`（3） | 事件面板开关 / 7 项循环选择 |
@@ -257,23 +222,23 @@ B1「全 bevy_ui 响应式」落地时（S29.3a~e），5 个**纯 UI 场景**（
 | `app_panel_keyboard_e2e.rs`（7） | 面板键盘路由总表 / 互斥 |
 | `crates/ti-app/tests/e2e_playability.rs`（7） | 完整对局到胜利+重开 / 破产失败 / 攻占 / 多轮经济 / AI 确定性 / 存读档 / 版面键控在视口内 |
 
-**门禁覆盖**：`gate.ps1` 中 `bevy-cpu-parity`（仅游戏世界口径，UI 层排除，`S29.4`）以 main_map 为像素对拍主场景，超差 0 LSB；`--shot main_map` 非黑率判据（竖屏 S38.0=diff0 / 横屏 99.8%）；`check_scene_narrative` 锚 `scene_manifest_v3` 的 `main_map`（focus=bbox_pct(1,13,97,55) ↔ world_canvas N8 ±1px）；`validate_data` 守资产/地图包/31 格不变量；`doccheck/doccheck2` 守跨文档数值一致。
+**门禁覆盖**：`gate.ps1` 中 `bevy-cpu-parity`（仅游戏世界口径，UI 层排除，`S29.4`）以 main_map 为像素对拍主场景，超差 0 LSB；`--shot --viewport=1920x1080 main_map` 非黑率判据 ≈99.8%（`evidence/S38.0.log:32-33`）；`check_scene_narrative` 锚 `scene_manifest_v3` 的 `main_map`（焦点锚点 N8 ±1px，横屏焦点随布局适配重算）；`validate_data` 守资产/地图包/31 格不变量；`doccheck/doccheck2` 守跨文档数值一致。
 
 ---
 
 ## 10. 数据驱动改法（换图 / 改坐标 / 换资产，零 Rust）
 
 **A. 换一张地图（内容运营主路径，零 Rust）**：
-1. `scripts/map_pack.py add <id>` 建包 → 填 `assets/maps/<id>/{map.json,layout.json,strings.json,manifest.json}`，其中 `layout.json` 的 `ring.{center_x,center_y,radius,card_w,card_h}` / `world_canvas` / `island_home` / `hint` 即几何数据。
+1. `scripts/map_pack.py add <id>` 建包 → 填 `assets/maps/<id>/{map.json,layout.json,strings.json,manifest.json}`，其中 `layout.json` 的 `ring.*` / `world_canvas` / `island_home` / `hint` 即几何数据；横屏椭圆环/中央岛/船/舵轮/罗盘的逐格坐标另由 `assets/data/main_map_v6_layout_landscape.json`（`screen=[1920,1080]`）给出。
 2. 资产按命名约定落位：`island_home_<id>.png`、`tile_<id>_<格号>.png`（0..=30）、`isle_<isle_id>.png` —— 无需描述符，代码 `central_island_path` / `tile_plot_path` / `isle_card_path` 自动发现（`chrome.rs:768-778`，`14_plot_tile_spec.md` §3）。
 3. `map_pack.py verify`（过 I1~I9）→ `pack` → `install`（写 `assets/maps/<id>/` + 更新 `.default`）→ `check` → `sync` 回注 `board.json`/`scenes.json`/`manifest`。
 4. `TI_MAP=<id> --shot --scene=main_map` 出图过目（`evidence/S31.2.log:26-29`：m02/m03 注入过，缺包回退内嵌 0 panic）。
 
-**零 Rust 证据**：Rust 侧只有「读数据 + 按命名约定拼路径 + 缺图回退」，`map_slot_id()`（`game_app/mod.rs:679`）来自运行态选图数据；换图 = 改 JSON + 换 PNG + `sync`，`git diff crates/` 为空（内容运营判据，`29_content_ops.md`）。`ring_geom` 读 `extra_scalar` 点号键、缺键回退常量（`chrome.rs:720-729`），`ring_card_center` 按 `θ=-90°+i·360°/count` 算 31 格中心（`chrome.rs:740-749`）——**环几何与格数全数据驱动**。
+**零 Rust 证据**：Rust 侧只有「读数据 + 按命名约定拼路径 + 缺图回退」，`map_slot_id()`（`game_app/mod.rs:679`）来自运行态选图数据；换图 = 改 JSON + 换 PNG + `sync`，`git diff crates/` 为空（内容运营判据，`29_content_ops.md`）。横屏 `render_v6_elem(..., landscape)` 按 `main_map_v6_layout_landscape.json` 的逐格 `tiles[]` 坐标绘制椭圆环；历史 `ring_geom` 读 `extra_scalar` 点号键（`chrome.rs:720-729`）与 `ring_card_center`（`chrome.rs:740-749`）属竖屏基准、**横屏不读**——**环几何与格数全数据驱动**。
 
 **B. 改 UI 坐标 / 换资产（不碰 Rust）**：
-- 改铜牌/标题/摇骰按钮位置：直接改 `scenes.json` 的 `main_map.primitives[]` / `landscape.primitives[]` 的 `rect`（min_z=3 原语在世界层之后绘制，见 §1）；横屏改 `landscape.extra`。
+- 改铜牌/标题位置：直接改 `scenes.json` 的 `main_map.landscape.primitives[]` 的 `rect`（min_z=3 原语在世界层之后绘制，见 §1）；铜牌位另由 `landscape.extra` 给出。摇骰舵轮位置改 `main_map_v6_layout_landscape.json` 的 `helm`（代码绘制，非 primitive）。
 - 换底图/铜牌/舵轮贴图：改 `params.asset` 指向的路径并在 `ui_manifest.json` 登记 + `ui_assets.py build`；或同名替换 PNG（注意 8pt/屏心豁免约束，`doccheck2` 8pt 守门）。
 - 换节点牌：改 `chrome::node_asset` 对应的 `assets/ui/node_*.png`（9 类形状，可见外接框归一化）；换中央岛/地块图：换 `island_home_<id>.png` / `tile_<id>_<格号>.png`。
-- 出图验收：`cargo run -q -p ti-engine --bin treasure-bevy-native -- --shot --scene=main_map`（竖屏）/ 加 `--viewport=1920x1080`（横屏），落 `evidence/bevy_native_main_map*.png` 过目；再跑 `gate.ps1` 全绿。
+- 出图验收：`cargo run -q -p ti-engine --bin treasure-bevy-native -- --shot --scene=main_map --viewport=1920x1080`，落 `evidence/bevy_native_main_map_1920x1080.png` 过目；再跑 `gate.ps1` 全绿。
 - 视觉改动遵守 **A 纪律（设计稿先行 + 用户确认）**：12 号 spec / 14 号 spec 定案 → 出图 → 用户过目留痕后才落终码（EXP-141/EXP-114）。

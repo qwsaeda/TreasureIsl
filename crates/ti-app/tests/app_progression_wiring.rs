@@ -59,7 +59,7 @@ fn run_boss_battle_to_end(app: &mut GameApp) {
 /// 接线 1（S62 全解锁）：新档 20 图全可选，任意图 Confirm 直接进主地图（无锁图拒绝）。
 #[test]
 fn app_new_game_all_maps_selectable() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     assert_eq!(
         app.unlocked_maps,
         MapSlot::all(),
@@ -81,7 +81,7 @@ fn app_new_game_all_maps_selectable() {
 /// S62 全解锁：m20（最后一张图）同样可直接进主地图（环形导航 + 无门禁）。
 #[test]
 fn app_m20_directly_selectable_when_all_unlocked() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.handle(GameInput::Confirm); // → SelectRole
     app.handle(GameInput::Next);
     app.handle(GameInput::Confirm); // → SelectMap
@@ -97,7 +97,7 @@ fn app_m20_directly_selectable_when_all_unlocked() {
 /// 接线 2：击败 m01 BOSS → 解锁 m02；战斗结束后重复结算不改变集合（幂等）。
 #[test]
 fn app_boss_victory_unlocks_next_map_and_is_idempotent() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(42);
     app.set_rng_seed(42);
     enter_m01(&mut app);
@@ -120,7 +120,7 @@ fn app_boss_victory_unlocks_next_map_and_is_idempotent() {
 /// 接线 2 全链路：m01 胜 → 选 m02 → 胜 → 全解锁（实机可玩路径的跨图闭环）。
 #[test]
 fn app_full_chain_m01_then_m02_unlocks_all_maps() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     app.rng_mut().set_seed(7);
     app.set_rng_seed(7);
     enter_m01(&mut app);
@@ -165,7 +165,7 @@ fn app_save_load_restores_unlock_chain() {
         .spaces
         .first()
         .expect("起点格");
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     let save = SaveSlot {
         version: 2,
         character: 1,
@@ -197,7 +197,7 @@ fn app_save_load_restores_unlock_chain() {
     );
 
     // 旧档回归：存档 map_slot=2（M03）→ 全解锁（多解锁值可回读）
-    let mut app2 = GameApp::new(1080.0, 1920.0);
+    let mut app2 = GameApp::new(1920.0, 1080.0);
     let save2 = SaveSlot {
         version: 2,
         character: 1,
@@ -225,7 +225,7 @@ fn app_save_load_restores_unlock_chain() {
 /// 多解锁进度，而非退「最小前置链」（`mask=0` 旧档才退链，见接线 3）。
 #[test]
 fn app_save_load_restores_mask_faithfully() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     let save = SaveSlot {
         version: 2,
         character: 1,
@@ -252,7 +252,7 @@ fn app_save_load_restores_mask_faithfully() {
 /// S15.2 / S37 逐图通关门禁：通关位（掩码 bit 19）读档还原 + 新档未通关。
 #[test]
 fn app_save_load_restores_cleared_gate() {
-    let mut app = GameApp::new(1080.0, 1920.0);
+    let mut app = GameApp::new(1920.0, 1080.0);
     assert!(!app.is_cleared(), "新档未通关");
     assert!(!app.is_map_cleared(MapSlot::M01));
     assert!(!app.is_map_cleared(MapSlot::M20));

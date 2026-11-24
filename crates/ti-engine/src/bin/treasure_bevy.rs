@@ -1056,7 +1056,7 @@ fn build_index_chrome(
         ti_render::framebuffer::LOGICAL_H_I32 as f32 / 2.0,
     );
     let selected = i64::try_from(g.menu_selected()).unwrap_or(-1);
-    let items = index_data_items(landscape, selected);
+    let items = index_data_items(selected);
     ti_engine::ui::build_data_chrome(commands, server, font, &items, selected, design_w, design_h)
 }
 
@@ -1064,106 +1064,14 @@ fn build_index_chrome(
 ///
 /// 文本走 `text_key` → i18n（壳侧解析，`ui.rs` 保持零游戏语义）；命中契约 `pick_key`/`pick_index`
 /// 透传（`pick_index` 缺省 = 原语 `item`）。
-/// S81：index 罗盘环徽章 rect 运行期参数化（对齐 `main_map` 的 `ring_card_center`）。
-/// 从 `SceneLayout.extra_scalar` 的 `ring.*` 扁平键读参数 + item/slot 算坐标，
-/// 取代 JSON 里逐条手写的死坐标（「不手写像素」总纲）。公式与
-/// `gen_index_medallions.py::expected_rects` / `chrome::ring_card_center` 同构：
-/// 中心 = (cx + round(R·cosθ), cy + round(R·sinθ)), θ = -90° + i·360°/`count`。
-/// `slot`: 0=徽章底, 1/2=图标, 3/4/5=标签底/text（每枚 6 原语按原顺序）。
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
-fn index_ring_rect(
-    item: i64,
-    slot: usize,
-    extra: &std::collections::BTreeMap<String, i32>,
-) -> Option<(f32, f32, f32, f32)> {
-    let g = |k: &str| extra.get(&format!("ring.{k}")).copied();
-    let cx = g("center_x")?;
-    let cy = g("center_y")?;
-    let radius = g("radius")?;
-    let count = g("count")?;
-    let badge_w = g("badge_w")?;
-    let badge_h = g("badge_h")?;
-    let icon_w = g("icon_w")?;
-    let label_w = g("label_w")?;
-    let label_h = g("label_h")?;
-    let label_dy = g("label_dy")?;
-    if count <= 0 {
-        return None;
-    }
-    let theta = (-90.0 + (item as f32) * 360.0 / (count as f32)) * std::f32::consts::PI / 180.0;
-    let mx = cx + (f64::from(radius) * f64::from(theta.cos())).round() as i32;
-    let my = cy + (f64::from(radius) * f64::from(theta.sin())).round() as i32;
-    let rect = match slot {
-        0 => (mx - badge_w / 2, my - badge_h / 2, badge_w, badge_h),
-        1 | 2 => (mx - icon_w / 2, my - icon_w / 2, icon_w, icon_w),
-        3..=5 => (mx - label_w / 2, my + badge_h / 2 + label_dy, label_w, label_h),
-        _ => return None,
-    };
-    Some((rect.0 as f32, rect.1 as f32, rect.2 as f32, rect.3 as f32))
-}
-
-/// S81：index 横屏绳挂木牌 rect 运行期参数化（线性菜单，非环形；对齐 `main_map` 参数驱动）。
-/// 从 `extra_scalar` 的 `menu.*` 扁平键 + item 算：木牌首项普通尺寸、其余 ±2° 倾斜 expand
-/// （dx/dy 偏移来自 S39 spec §1）；图标中心 x = x+`icon_dx`、y = 木牌中心（各图标尺寸从原语读）。
-/// `role`: `plank` / `sel`（金边）/ `icon`。
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn index_menu_rect(
-    role: &str,
-    item: i64,
-    icon_wh: (f32, f32),
-    extra: &std::collections::BTreeMap<String, i32>,
-) -> Option<(f32, f32, f32, f32)> {
-    let g = |k: &str| extra.get(&format!("menu.{k}")).copied();
-    let x = g("x")?;
-    let y0 = g("y0")?;
-    let step = g("step")?;
-    let count = g("count")?;
-    if item < 0 || item >= i64::from(count) {
-        return None;
-    }
-    let pw = g("plank_w")?;
-    let ph = g("plank_h")?;
-    let rw = g("plank_rot_w")?;
-    let rh = g("plank_rot_h")?;
-    let rdx = g("plank_rot_dx")?;
-    let rdy = g("plank_rot_dy")?;
-    let idx = g("icon_dx")?;
-    let base_y = y0 + (item as i32) * step;
-    let rect = match role {
-        "plank" if item == 0 => (x, base_y, pw, ph),
-        "plank" => (x + rdx, base_y + rdy, rw, rh),
-        "sel" => (x, base_y, pw, ph),
-        "icon" => {
-            let plank_cy = if item == 0 { base_y + ph / 2 } else { base_y + rdy + rh / 2 };
-            let (iw, ih) = icon_wh;
-            let cx = x + idx;
-            (
-                ((cx as f32) - iw / 2.0).round() as i32,
-                ((plank_cy as f32) - ih / 2.0).round() as i32,
-                iw as i32,
-                ih as i32,
-            )
-        }
-        _ => return None,
-    };
-    Some((rect.0 as f32, rect.1 as f32, rect.2 as f32, rect.3 as f32))
-}
-
-fn index_data_items(landscape: bool, _selected: i64) -> Vec<ti_engine::ui::DataChromeItem> {
+fn index_data_items(_selected: i64) -> Vec<ti_engine::ui::DataChromeItem> {
     let Ok(scenes) = ti_core::data::scenes() else {
         return Vec::new();
     };
     let Some(scene) = scenes.get("index") else {
         return Vec::new();
     };
-    let prims = scene.prims_for(landscape);
-    // S81：徽章 item 集合（params.badge=true 的底图标记）→ 这些 item 的 6 原语 rect 改由参数运行期算。
-    let badge_items: std::collections::BTreeSet<i64> = prims
-        .iter()
-        .filter(|p| p.params.get("badge").and_then(serde_json::Value::as_bool) == Some(true))
-        .filter_map(|p| (p.item >= 0).then_some(p.item))
-        .collect();
-    let mut item_slots: std::collections::BTreeMap<i64, usize> = std::collections::BTreeMap::new();
+    let prims = &scene.primitives; // S84 纯横屏：landscape 已提升为主
     let mut last_plank_item: i64 = -1;
     let mut items = Vec::new();
     for p in prims {
@@ -1171,45 +1079,10 @@ fn index_data_items(landscape: bool, _selected: i64) -> Vec<ti_engine::ui::DataC
             continue;
         }
         let raw = (p.rect.x as f32, p.rect.y as f32, p.rect.w as f32, p.rect.h as f32);
-        // 运行期参数化（覆盖 JSON 死坐标）：
-        // - 竖屏：徽章 item 的 6 原语按 ring.* 参数算（index_ring_rect）
-        // - 横屏：木牌/金边按 item + menu.* 算，图标按「上一个木牌 item」+ 自身尺寸算
-        let rect = if !landscape && badge_items.contains(&p.item) {
-            let slot = item_slots.entry(p.item).or_insert(0);
-            let computed = index_ring_rect(p.item, *slot, &scene.extra_scalar);
-            *slot += 1;
-            computed.unwrap_or(raw)
-        } else if landscape {
-            let asset = p.params.get("asset").and_then(serde_json::Value::as_str).unwrap_or("");
-            let role = if asset.contains("index_plank_") && asset.contains("_sel") {
-                Some("sel")
-            } else if asset.contains("index_plank_") {
-                Some("plank")
-            } else if asset.contains("index_icon_") {
-                Some("icon")
-            } else {
-                None
-            };
-            match role {
-                Some("plank") => {
-                    last_plank_item = p.item;
-                    index_menu_rect("plank", p.item, (0.0, 0.0), &scene.extra_scalar).unwrap_or(raw)
-                }
-                Some("sel") => {
-                    index_menu_rect("sel", p.item, (0.0, 0.0), &scene.extra_scalar).unwrap_or(raw)
-                }
-                Some("icon") => index_menu_rect(
-                    "icon",
-                    last_plank_item,
-                    (p.rect.w as f32, p.rect.h as f32),
-                    &scene.extra_scalar,
-                )
-                .unwrap_or(raw),
-                Some(_) | None => raw,
-            }
-        } else {
-            raw
-        };
+        // S84 纯横屏：木牌/金边/图标 rect 由公共函数 index_param_rect 从 menu.* 参数算
+        // （CPU 路径与 Bevy 壳单一公式源；竖屏罗盘环已删）。
+        let rect = ti_app::scenes::chrome::index_param_rect(p, scene, &mut last_plank_item)
+            .map_or(raw, |r| (r.x as f32, r.y as f32, r.w as f32, r.h as f32));
         let text = if p.text_key.is_empty() {
             p.text.clone()
         } else {
