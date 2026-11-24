@@ -33,10 +33,10 @@
 | [`reverse.md`](reverse.md) | **历史参照卷** 逆向方法论：exe 内部结构、语义交叉验证、结论推翻流程（非正向开发依据） | 4 |
   | [`tools.md`](tools.md) | 本机工具链与 MCP：IDA / Python / REA / clippy | 24 |
   | [`build.md`](build.md) | 构建与三端产物：工具链选型、wasm 壳、浏览器自动化 | 37 |
-  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114）、CCGS 借鉴分析「已替代」误判（EXP-186）、i18n 动态 key 拼接盲区（EXP-187）、双审计 A/B 协议（EXP-188）、doccheck2 项号文字漂移高频复现（EXP-189）、流程强化轮 3 面教训 git 还原/孤儿证据前缀/覆盖率分母（EXP-191）、数值声称点同组多文档口径漂移（EXP-192）、机器门禁自身结构失效盲区 wbs-checkbox-sync 加粗行解析（EXP-193）、gate 项号文字旧时点值全库残留（EXP-194）、gate 项号文字断言（S59.0 载体）+ WBS 表格形态对账（S59.1）三坑 + AUDIT R16/R17 处置 + 双盲对抗找游戏逻辑 bug/合理性（EXP-195）+ 易变平衡逻辑禁写进 rules 函数体（数据驱动，EXP-196） | 66 |
+  | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114）、CCGS 借鉴分析「已替代」误判（EXP-186）、i18n 动态 key 拼接盲区（EXP-187）、双审计 A/B 协议（EXP-188）、doccheck2 项号文字漂移高频复现（EXP-189）、流程强化轮 3 面教训 git 还原/孤儿证据前缀/覆盖率分母（EXP-191）、数值声称点同组多文档口径漂移（EXP-192）、机器门禁自身结构失效盲区 wbs-checkbox-sync 加粗行解析（EXP-193）、gate 项号文字旧时点值全库残留（EXP-194）、gate 项号文字断言（S59.0 载体）+ WBS 表格形态对账（S59.1）三坑 + AUDIT R16/R17 处置 + 双盲对抗找游戏逻辑 bug/合理性（EXP-195）+ 易变平衡逻辑禁写进 rules 函数体（数据驱动，EXP-196） | 67 |
 | EXP-195 | process | gate 项号文字断言（S59.0 载体）+ WBS 表格形态对账（S59.1）三坑：posmap 手工 JSON offset（`"short":` = 8 字符）值全解析成 `:` 恒 0 命中 / claimed 全行 contains 过宽 63 误报（改紧邻区 + 词边界防 doccheck 误吃 doccheck2）/ doccheck2 检查项号 ≠ gate 项号（历史条目时点豁免）/ S59.1 表格 pending 散字 3 误报（只认明确状态标注 + 历史文档豁免） |
 | EXP-196 | process | 易变平衡逻辑禁写进 rules 函数体（数据驱动纪律）：双盲对抗 A-02/B-02 修 AI 决策公式时把战力比门控/金富余门控写进 `ai_policy_v2` 函数体（违背 economy.md「调平衡不改代码」）；修正 = 公式形态参数化进 `balance.territory.ai`（`siege_mode`/`upgrade_mode` 枚举 + `attack_threshold`/`upgrade_priority` 系数），代码只读数据选分支；门禁 = `check_code_standards.py` CS-5（rules 层非中性浮点字面量进系数乘法/比较门槛，棘轮基线） |
-  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 59 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 60 |
 
 ## 条目索引
 
@@ -245,6 +245,8 @@
 | EXP-207 | process | | 台账加 5 条任务（367→372）后，doc_numbers.py --fix 只回写 release.md 一处，报『声称点与实测一致 0 漂移』但 doccheck2 仍报 AGENTS.md 缺现状声称点 + 26号:14/155/163 过期值。根因 = doc_numbers 的时点/现状区豁免把 AGENTS.md、26号行跳过了，而 doccheck2::check_cross_doc_counts 硬要求这些现状串。解法 = 手工按 task_close 每一步的 verified 数回写 AGENTS.md + 26号 4 处；收口完成再全部对到 372/372 正文见 `process.md` |
 | EXP-208 | process | | 测试假判据三型恒真式/手搓夹具/吞 panic 现场 + manifest 45/113 + 结论 grep 日志尾 400 行；根因把测试数量当质量；解法=五路并行 S74：真实不变式+结构化 result.json+规则矩阵+变异得分基线+执行分层；每路注入 bug 自证非空转 正文见 `process.md` |
 | EXP-210 | process | | 总纲「不手写像素」只文档无断言，index 徽章 36 行手写坐标漂移无人知；回答用户时还当中性权衡写进文档=粉饰。修=doccheck2「重复结构禁手写坐标」断言 + index 参数化生成器 + 文档标违规 + 质疑现状先查规范/断言如实判 正文见 `process.md` |
+| EXP-211 | code | | 坐标系常量翻转（1080×1920→1920×1080）后「编译过+测试绿」≠ 语义对：35 夹具静默错位 + 锚点散落 inline/几何/门禁字符串锁，靠测试逐个暴露跑 5 轮全量 = 重复劳动。修=动手前全库 grep 建锚点清单批量改 + 按新屏心重算期望 + 三源同改防 parity 静默错位。正文见 `code.md` |
+| EXP-212 | process | | 并行会话「已提交」改动引入 gate FAIL：EXP-078 只覆盖未提交半成品，已落地 commit 不能照搬「不替别人修」否则卡死收口。修=归因确认后替修走最小行为不变路线（字面量移入 chrome 常量表）+ evidence/commit 写明归因 + 已提交违例文件纳入暂存。正文见 `process.md` |
 
 ## 条目格式（写新条时照抄）
 

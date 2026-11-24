@@ -804,3 +804,9 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - 根因：①「不手写像素」只有文档，没有机器断言——gate 36 项里 check_hardcode.py 只扫 Rust 源码的 CJK/色值，check_scenes_canonical 只守 indent=1，没有任何检查问「这个坐标是算出来的还是手写的」。②地图（③参数化）有机器兜底，UI chrome（②自动布局）退化成逐条手写坐标却无人知。③回答现状时混淆「描述事实」与「举报违规」。
 - 解法：①给总纲补机器断言：doccheck2 加「重复结构禁手写坐标」检查（规律排列的 medallion/列表行/槽位须由参数生成器产出，--check 比对 JSON 坐标 == 参数算出）；②index 6 徽章改成参数化生成器：ring={center_x,center_y,radius,badge_w,badge_h,count} + 正六边形公式（实测环心540,970/R400/角度-90+60i，0 误差还原 36 行）；③文档把「写死」标为已修违规而非中性权衡；④回答用户对现状的质疑时，先查规范→查机器断言→如实判定是否违规，不得中性化粉饰。
 - 验证：待 S80 收口（生成器 --check 0 漂移 + doccheck2 新断言负例护栏 + gate 全绿）。
+
+### EXP-212 流程：并行会话「已提交」改动引入 gate FAIL —— EXP-078 只覆盖未提交半成品，已落地 commit 必须替修（最小行为不变）
+- **现象**（S84 收口）：gate `check_code_standards` CS-1 报新增违例 `main_map.rs:3080` 资产路径硬编码 `assets/ui/compass_rose.png`。归因发现非本轮改动，而是并行会话已提交的 `76e2f0a`（S83 U9 热座交接整屏盖板）引入——它**已落地本地 master 链**，不是工作区未提交半成品。
+- **根因**：EXP-078 的处置前提是「别人未提交，可等对方收口 / 不替别人修」，但本次对方改动**已 commit 且在我提交链上**，我要 push master 就必须 gate 全绿，既不能等也不适用「维持 in_progress 让别人修」；这是与 EXP-078 不同的场景（已落地 vs 未提交）。若照搬 EXP-078「不替别人修」会卡死本轮收口。
+- **解法**：① 仍先归因——`git log -1 -- <file>` + `git show <commit> -- <file>` 确认硬编码来源 commit 与行号，确认非本轮引入；② 已落地 commit 的违例**必须替对方修**，但走「最小行为不变」路线——把字面量移进 `chrome.rs` 资产常量表（`chrome::COMPASS_ROSE`），场景层只改引用、不改渲染逻辑，零行为变化（不替对方做设计决策）；③ evidence log 写明归因（哪个 commit、哪一行、为何替修）+ commit message 附带说明，便于双方回溯；④ commit 暂存策略：先 `git add -A` 再 `git reset HEAD` 排除对方**仍在改**的文件（本次 close.rs / android_device_test.log），但**已提交的违例文件本身要纳入**（它已在基线里，不纳入则 gate 仍红）。
+- **验证**：修后 `python3 scripts/check_code_standards.py --check` → PASS（0 项超基线）；重跑 gate → 36 项 0 failure；`git status` 未暂存仅剩对方 2 个文件。
