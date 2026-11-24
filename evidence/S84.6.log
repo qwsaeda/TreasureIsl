@@ -30,8 +30,8 @@ S84.5 测试/门禁/文档断言全改横屏。
 - pwsh -File scripts/gate.ps1 → GATE_EXIT=0，=== gate: 0 failure(s) ===（36 项全绿；wasm-browser-e2e L4 SwiftShader 记名降级 SKIP 非 FAIL）
 - 附带修：并行会话提交 76e2f0a（S83 U9 热座盖板）引入 CS-1 资产路径硬编码 main_map.rs compass_rose.png
   → 路径移入 chrome::COMPASS_ROSE 单源（场景层零行为变化），check_code_standards 0 超基线。
-- python3 scripts/check_ledger_reality.py → （见下方实跑）
-- check_ledger_reality.py → 全绿（416 verified 对账通过 + 0 blocked schema + 0 孤儿 evidence）
+- python3 scripts/check_ledger_reality.py → 全绿（416 verified 对账通过 + 0 blocked schema + 0 孤儿 evidence）
 
 == 结论 ==
-S84 纯横屏重写全收口：gate 36 项 0 failure + doccheck/doccheck2 0 error + 台账 416/416/0 + 三方对账全绿。待提交推送。
+S84 纯横屏重写全收口：gate 36 项 0 failure + doccheck/doccheck2 0 error + 台账 416/416/0 + 三方对账全绿。
+- git push origin master → 76e2f0a..1060aff master -> master（EXP-159 等待重试后成功）
