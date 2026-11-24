@@ -29,3 +29,5 @@ S85.5 完整清理（删 5 场景死 prim/shim/旧函数）→ S85.6 门禁迁�
 == 判据 4：三方对账 + 推送 ==
 （check_ledger_reality + commit + push 结果见下方追加）
 - check_ledger_reality.py → 全绿（424 verified 对账通过 + 0 blocked + 0 孤儿 evidence）
+- git push origin master → a45132d..fcc317b master -> master（EXP-159 等待重试后成功；
+  同时期其它会话 a45132d「交付链加固+EXP-213」为本次提交父，已包含）
