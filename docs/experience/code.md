@@ -204,6 +204,8 @@
   子代理修列表场景渲染/触摸时，必须先读 `touch.rs` 的 `scene_list_bands` /
   `slot_bands` 再动手，不得在场景文件里新建命中区常量。
 
+- **2026-11-24 S84 补（历史归档，原新增条目并入）**：坐标系常量翻转（1080×1920→1920×1080）暴露同类隐性错位——三源同改后 `cargo check` 0 error、测试大部分照跑，但 35 个 `GameApp::new(1080,1920)` 夹具不直接断言坐标 ⇒ 静默语义错位；锚点散落 inline 单测（gfx.rs/gfx_dirty.rs）、几何断言（geometry.rs）、doccheck2 字符串锁，只能靠测试失败逐个暴露（连跑 5 轮全量编译，违背硬规则 8）。教训 = 常量翻转前先全库 grep 建锚点清单批量改，按新屏心 (960,540) 重算期望值，否则「编译过+测试绿」≠ 语义对。
+
 ### EXP-073 触摸/渲染 band 数必须 == 渲染行数（`Character::all().len()`），禁止硬编码（S11 飞轮第 3 轮 N8）
 - 现象：`select_role.rs` `on_touch` 调 `scene_list_bands(..., 9)` 硬编码 9 条命中带，
   但渲染 `render` 只遍历 `Character::all()`（5 个角色，5 行）。触摸侧多出的第 6–9 条带
@@ -634,6 +636,7 @@ S34.0 违反项修复（U20 战报拆分 `draw_result_scene` + U21 生物移格�
 **现象**：S38 横屏 `--shot --viewport=1920x1080 --scene=main_map` 出图黑边 + 内容偏右上（岛在竖屏换算位而非 960,520 居中），竖屏 `--shot` 正常。\n\n**根因**：`crates/ti-engine/src/scene_render.rs::spawn_draw_list` 的 S38 方向感知**只改了 `Rect` 和 `Text`**（改用 `to_world_dims(…,lw,lh)`），`DrawOp::Image` 分支仍用竖屏硬编码 `to_world`（`x-540, 960-y`）。横屏下所有图片原语（ocean_bg/岛/舵轮/罗盘/骷髅格）被放到竖屏坐标 → 错位偏右上；Rect/Text 正常 → 画面半对半错。\n\n**解法**：`Image` op 改 `to_world_dims(cx, cy, lw, lh)`（与 Rect/Text 同口径）；竖屏 `to_world_dims(landscape=false)` ≡ `to_world`，0 行为变化。`landscape_spawn` 测试只覆盖 `spawn_draw_list` 的 Rect op（无 Image 断言）→ 未拦住。\n\n**验证**：横屏 `--shot` main_map 出图正确满屏（岛 960,520 居中 + 舵轮 350,880 + 罗盘 1560,880，无黑边）；竖屏无回归；landscape_spawn 3/3 + clippy 0 warning + gate 33 项 0 failure。\n\n**预判**：S38 方向感知改动要**逐分支核对**（Rect/Text/Image/Clear/其它）；给 `landscape_spawn` 补 Image op 断言（不只 Rect）。
 
 ### EXP-162 代码：横屏硬编码竖屏是模式性遗漏：人工逐点改易漏，固化 doccheck2 landscape-no-portrait-hardcode 守门
+> **status: superseded by S84（2026-11-24）**：本条记录的是 S38 时点「方向感知双套」的守门口径。S84 已改纯横屏 1920×1080，所有方向分支删除；该断言改写为**纯横屏不变量守门**（生产路径禁 `if landscape`/`Orientation::Portrait` 运行时切换），check id 与 57 项总数不变。下方正文保留为决策历史，勿照它行动。
 **现象**：S38 横屏适配后，横屏路径仍有竖屏硬编码残留（已证 `DrawOp::Image` 用 `to_world`、`letterbox_size` 用 `min(w/1080,h/1920)`、`zoom 锚点 (540,960)`、`resizetest` 画布断言 1080×1920）——人工逐点改「to_world→to_world_dims、方向感知 letterbox」天然易漏。\n\n**根因**：S38 方案 A 是**逐函数人工改**，无机器守门；`landscape_spawn` 测试只覆盖 `spawn_draw_list` 的 Rect op（无 Image），门禁无「横屏禁竖屏硬编码」检查。\n\n**解法**：固化 **doccheck2 第 39 项 `landscape-no-portrait-hardcode`**（函数级提取 `fn_body`，避免全文件 grep 误报 test-only 的 `spawn_primitives`）：\n①`scene_render.rs::spawn_draw_list`/`spawn_pick_layer` 禁 `to_world(`（须 `to_world_dims`）；\n②`bin/treasure_bevy.rs::letterbox_size` 须含 `LANDSCAPE_W_I32`/`LANDSCAPE_H_I32`（方向感知；竖屏分支用 `LOGICAL_W/H` 合法，故 require 非 forbid）。\n登记 `RUST_CHECKS` + `assets/gate_data.json`（双向自校验），doccheck2 39 项 0 error。\n\n**验证**：首次运行 forbid 模式抓到 `letterbox_size` 的 `LOGICAL_W/H`（证明检查能抓）；改 require 后 0 error（当前代码已方向感知）。\n\n**预判**：新增横屏方向感知函数时：①换算用 `to_world_dims(…,lw,lh)` 非 `to_world`；②letterbox/视口比用 `LANDSCAPE_W/H` 分支；③`landscape_spawn` 测试给每种 op（Rect/Text/Image）补横屏+竖屏断言。
 
 ### EXP-163 代码：wasm 横屏 e2e 视口已补（--viewport），但 L4 亮度导航是竖屏口径、横屏失效
@@ -721,9 +724,3 @@ S49.7 平台测试页重做后，用户报「平台里没有地图制作入口 /
 - **判据分级口径**：P5-1 = 窗口驻留依赖（需 app 窗口驻留 dumpsys windows 段，MuMu launcher 抢前台 + NativeActivity 0fps = 不驻留 → 设备标定）；P5-4 = 进程生命周期（任何 adb 设备可跑）；P5-2/P5-3 = 渲染出帧依赖（触摸需截屏非黑 / BGM 需渲染管线起 + winit AppLifecycle 通道通）。纯 CPU 设备（redroid pastel）/ GPU 转译层（MuMu Adreno 640 伪装 + 宿主 i915 无 Vulkan 驱动）上 P5-1/P5-2/P5-3 三重限制（窗口不驻留 + 渲染 0fps + winit 生命周期断裂）无法全过 = 设备能力边界。
 - **P5 判据 4 条在 arm64 真机（GPU 正常 + 前台稳定）上才可全 PASS**；本机纯 CPU 设备只能验 P5-4（生命周期）。gate 4c 项在纯 CPU 设备跑 P5 = P5-1 设备标定 FAIL → gate 非 0，故 gate 全量应在 GPU 正常设备跑。
 验证：`python3 scripts/android_device_test.py --run -s <serial>` 修复后红帽 = P5-4 PASS / P5-2 SKIP / P5-3 SKIP / P5-1 窗口不驻留；MuMu = P5-4 PASS（重启降级）/ P5-2 坐标未标定 / P5-3 SKIP / P5-1 窗口不驻留。
-
-### EXP-211 代码：坐标系常量翻转（1080×1920→1920×1080）后「编译过+测试绿」≠ 语义对；锚点散落全库靠测试逐个暴露 = 5 轮重复劳动
-- **现象**（S84 纯横屏重写）：三源（framebuffer/gfx/settings）常量翻转为 1920×1080 后 `cargo check --workspace` 0 error、`cargo test` 大部分照跑通过，但 35 个 `GameApp::new(1080.0,1920.0)` 夹具**静默语义错位**（不直接断言坐标 ⇒ 编译过、测试过、语义全错）；后续逐个爆出失败：gfx.rs inline `Viewport::fit(2160,3840)` 期望 scale=2、gfx_dirty.rs 脏行 `0..=1919`/stride `FB_PIXELS/1920`、geometry.rs `title_bar` 宽 1056 / `wood_frame` 1920 边、pick_1080 5 条向量、canvas_contract 屏心、landscape_spawn 竖屏对照、doccheck2 字符串锁。我按「跑全量 test → 修一个 → 再跑全量」节奏连续跑 5 次，每次编译 4~5 分钟。
-- **根因**：①坐标系是**全局隐式参数**，硬编码散落在测试夹具、inline 单测、几何断言、门禁字符串锁里——编译器只验类型不验数值语义，故「编译过」完全不代表「坐标对」；②没有先建「全库坐标锚点清单」，靠测试失败逐个暴露，每次失败只修眼前一个，违背 AGENTS.md 硬规则 8「批量编辑一次编译」；③三源必须同改，否则 `bevy-cpu-parity` 的 CPU Framebuf 与 GPU 离屏读回不同口径 = **静默错位而非编译失败**（最危险）。
-- **解法**：①常量翻转类改动**动手前先全库 grep 建锚点清单**（1080/1920/540/960/FB_PIXELS/stride/viewport/朝向枚举），一次性批量改完再跑一次编译+测试；②区分「编译正确」与「语义正确」——每个几何断言的期望值按新屏心 (960,540) 重算，不能只看测试绿不绿；③ doccheck2 的字符串锁（`runtime-no-legacy-coords`）与三源同批同步，否则 gate 第 13 项立刻 FAIL；④ 35 个夹具改完后，仍要对「不直接断言坐标但语义依赖画布」的测试做一次抽样复核（本轮 `gfx_dirty`/`geometry` 就是夹具改完才暴露）。
-- **验证**：最终 `cargo test --workspace` 1087 passed / 0 failed / 1 ignored；`cargo check` 0 error；`gate` 36 项 0 failure；7 场景 `--shot` 均 1920×1080 非黑；doccheck2 57 项 0 error。

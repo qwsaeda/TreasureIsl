@@ -1357,10 +1357,8 @@ pub fn render_primitives_filtered(
 ) {
     let layout = scene_layout(scene_id);
     let theme = host.theme().clone();
-    // S38 方案 A：横屏且场景声明了 `landscape.primitives` 时用横屏原语（1920×1080 坐标）。
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let prims_src = layout.prims_for(landscape);
+    // S84 纯横屏：场景声明了 `landscape.primitives` 时用它（1920×1080 坐标），否则回退通用原语。
+    let prims_src = layout.prims_for();
     // 层序：z 升序 = 越大越靠上（调用序即层序，`08_render_arch.md` 契约 1）。
     let mut prims: Vec<&Primitive> = prims_src.iter().collect();
     prims.sort_by_key(|p| p.z);

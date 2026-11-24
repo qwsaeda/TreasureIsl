@@ -90,14 +90,14 @@ pub fn scenes() -> Result<&'static BTreeMap<String, SceneLayout>, LoadError> {
         // S18.6 声明式原语表（`primitives` 数组；有序 = 绘制顺序；缺 = 空 Vec）。
         // 单项解析失败（形状不对）= 跳过该项（不 panic、不整场景失败）：数据先行、渲染后补。
         let primitives: Vec<Primitive> = parse_prim_values(r.primitives);
-        // S38 方案 A：横屏原语表（`landscape.primitives`；缺 = 空 = 回退竖屏 `primitives`）。
+        // 横屏原语表（`landscape.primitives`；缺 = 空 = 回退通用 `primitives`）。
         let landscape_prims: Vec<Primitive> = r
             .landscape
             .as_ref()
             .map(|l| parse_prim_values(l.primitives.clone()))
             .unwrap_or_default();
-        // S38 方案 A：横屏专属额外矩形（`landscape.extra`；缺 = 空 = 回退竖屏 `extra`）。
-        // 解析口径与竖屏 extra 一致（EXP-074/RectDefault：缺 w/h 填 0）。
+        // 横屏专属额外矩形（`landscape.extra`；缺 = 空 = 回退通用 `extra`）。
+        // 解析口径与 extra 一致（EXP-074/RectDefault：缺 w/h 填 0）。
         let landscape_extra: BTreeMap<String, Rect> = r
             .landscape
             .as_ref()
@@ -182,24 +182,24 @@ struct RawScene {
     /// S18.6 声明式原语表（有序 = 绘制顺序；缺 = 空）。
     #[serde(default)]
     primitives: Vec<serde_json::Value>,
-    /// S38 方案 A：横屏覆盖段（`landscape.primitives` = 横屏 1920×1080 原语表；缺 = 无横屏覆盖）。
+    /// 横屏覆盖段（`landscape.primitives` = 1920×1080 原语表；缺 = 回退通用 `primitives`）。
     #[serde(default)]
     landscape: Option<RawLandscape>,
 }
 
-/// 横屏覆盖段（S38 方案 A：每场景可声明 `landscape` 块，提供横屏 1920×1080 原语表）。
+/// 横屏覆盖段（每场景可声明 `landscape` 块，提供 1920×1080 原语表）。
 #[derive(Deserialize)]
 struct RawLandscape {
-    /// 横屏原语表（有序 = 绘制顺序；缺 = 空 = 回退竖屏 `primitives`）。
+    /// 横屏原语表（有序 = 绘制顺序；缺 = 空 = 回退通用 `primitives`）。
     #[serde(default)]
     primitives: Vec<serde_json::Value>,
-    /// S38 方案 A：横屏专属额外矩形（`landscape.player_hp`/`boss_hp`/`rounds`/`outcome`/`empty`
-    /// 等；缺 = 空 = 回退竖屏 `extra`）。坐标 1920×1080。
+    /// 横屏专属额外矩形（`landscape.player_hp`/`boss_hp`/`rounds`/`outcome`/`empty`
+    /// 等；缺 = 空 = 回退通用 `extra`）。坐标 1920×1080。
     #[serde(default)]
     extra: BTreeMap<String, serde_json::Value>,
 }
 
-/// 原语 JSON 值数组 → [`Primitive`]（单项解析失败 = 跳过该项；S38 抽出供竖屏/横屏共用）。
+/// 原语 JSON 值数组 → [`Primitive`]（单项解析失败 = 跳过该项；横屏/通用共用）。
 fn parse_prim_values(values: Vec<serde_json::Value>) -> Vec<Primitive> {
     values
         .into_iter()

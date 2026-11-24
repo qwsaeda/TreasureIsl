@@ -90,16 +90,16 @@ pub fn is_landscape(window_w: f32, window_h: f32) -> bool {
     window_w >= window_h
 }
 
-/// 当前方向的逻辑画布宽（横屏 = 1920，竖屏 = 1080）。
+/// 逻辑画布宽查表（S84：生产路径恒取横屏 1920；bool 形态仅留给 `canvas_contract` 双口径测试）。
 #[must_use]
 pub const fn logical_w_for(landscape: bool) -> i32 {
-    if landscape { LANDSCAPE_W_I32 } else { LOGICAL_W_I32 }
+    [LOGICAL_W_I32, LANDSCAPE_W_I32][landscape as usize]
 }
 
-/// 当前方向的逻辑画布高（横屏 = 1080，竖屏 = 1920）。
+/// 逻辑画布高查表（S84：生产路径恒取横屏 1080；bool 形态仅留给 `canvas_contract` 双口径测试）。
 #[must_use]
 pub const fn logical_h_for(landscape: bool) -> i32 {
-    if landscape { LANDSCAPE_H_I32 } else { LOGICAL_H_I32 }
+    [LOGICAL_H_I32, LANDSCAPE_H_I32][landscape as usize]
 }
 
 /// 三档文本（与 `MenuShell::tier_*` 同源）。

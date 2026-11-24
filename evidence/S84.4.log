@@ -10,13 +10,14 @@ S84.4 渲染/UI 层删除竖屏路径（ti-engine / ti-app）· 验收证据（2
 - doccheck2 第 57 项 no-handwritten-grid 重写：不再调外部生成器，直接对账 scenes.json（derived=menu 原语 x/y=0 + index.menu 参数在位 + 行数≥18）+ 5 条负例自证
 - landscape_spawn.rs 删 2 条竖屏坐标断言（spawn_draw_list_portrait_unchanged / _image_unchanged）
 
-== 判据 2：剩余方向分支的处置（诚实声明）==
-ti-app/ti-engine 生产路径仍保留 ~34 处 `if landscape` 方向判别分支（main_map.rs / vs.rs / treasure_bevy.rs / chrome.rs）。
-处置决定：保留为**恒真兼容脚手架**，不删——理由：
-① 常量已翻转为 1920×1080（S84.2）、scenes.json 已扁平化无 landscape 段（S84.3）、Orientation::default()=Landscape，故所有 `if landscape` 在默认/主路径恒为 true，竖屏行为不可达；
-② 这批分支深嵌核心游戏渲染（main_map.rs 37 处面板/HUD 坐标分支），全量删改风险极高且无功能收益；
-③ 真正构成「竖屏实现」的数据、资产、工具、专属公式、坐标断言、向量已全部删除（见判据 1）。
-故「竖屏实现删除」的实质目标已达成，残留分支仅为不产生竖屏行为的历史判定式。
+== 判据 2：残留方向分支彻底删除（用户复核后补做）==
+首轮 S84.4 曾保留 ~34 处 `if landscape` 恒真兼容脚手架并在本证据声明「不删」；用户复核要求「竖屏全部删除」后补做彻底清理：
+- main_map.rs / vs.rs / vs_anim_proto.rs / chrome.rs：删全部面板/立绘/动画方向分支与竖屏旧构图（~110 行）
+- treasure_bevy.rs：`letterbox_size` 恒 1920×1080；zoom 锚点/命中/相机恒横屏；`window_resize_system` 删 `Orientation::from_size` 运行时切换；`run_shot` 固定 Landscape
+- scene_render.rs：`logical_dims`/`to_world`/`spawn_draw_list`/`spawn_pick_layer` 去 bool 参数；ti-core `prims_for`/`extra_for` 去 bool（非空取横屏表，行为等价）
+- canvas.rs：`if landscape` 改等价查表（导出 API 不变）；doccheck2 `landscape-no-portrait-hardcode` 改写为纯横屏不变量守门（check id/57 项总数不变，负例注入→3 error 点名→还原→0 error）
+- 实删：`if landscape`/`if !landscape` 分支 32 处 + `let landscape=` 局部 47 处 + 竖屏相关 134 行；`Orientation::Portrait` 枚举本体保留（settings 兼容测试用），生产路径 0 命中
+- 全库 grep `if landscape|if !landscape|Orientation::Portrait`（ti-app/src/scenes + ti-engine/src + ti-core/src）→ 0 命中
 
 == 判据 3：7 场景横屏出图非黑（实测）==
 index 88.4 / select_role 48.0 / select_map 49.5 / main_map 123.1 / vs 78.7 / message 41.6 / saveload 39.7（亮度均值，均 >8 非黑）

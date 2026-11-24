@@ -17,7 +17,7 @@ fn spawn_draw_list_landscape_centers_on_landscape_extent() {
     let mut world = World::new();
     let mut list = DrawList { theme: Theme::DEFAULT.clone(), ..Default::default() };
     list.ops.push(DrawOp::Rect { x: 100, y: 50, w: 200, h: 100, color: 0xF800 });
-    spawn_draw_list(&mut world, None, &list, true);
+    spawn_draw_list(&mut world, None, &list);
 
     let mut q = world.query_filtered::<(&Transform,), With<DrawListEntity>>();
     let (t,) = q.single(&world).expect("spawn 实体应存在");
@@ -38,7 +38,7 @@ fn spawn_draw_list_landscape_text_centers() {
         tier: Tier::Title,
         color: 0xFFFF,
     });
-    spawn_draw_list(&mut world, None, &list, true);
+    spawn_draw_list(&mut world, None, &list);
 
     let mut q = world.query_filtered::<(&Transform,), With<DrawListEntity>>();
     let (t,) = q.single(&world).expect("spawn 实体应存在");
@@ -68,7 +68,7 @@ fn spawn_draw_list_landscape_image_centers() {
         tint: 0xFFFF,
         rot_mdeg: 0,
     });
-    spawn_draw_list(app.world_mut(), None, &list, true);
+    spawn_draw_list(app.world_mut(), None, &list);
 
     let mut q = app.world_mut().query_filtered::<(&Transform,), With<DrawListEntity>>();
     let (t,) = q.single(app.world()).expect("spawn 实体应存在");

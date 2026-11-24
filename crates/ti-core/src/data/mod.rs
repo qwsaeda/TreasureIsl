@@ -55,10 +55,10 @@ pub(crate) const BOARD_JSON: &str = include_str!("../../../../assets/data/board.
 ///
 /// 坐标由 `scripts/compose_main_map_v6.py` 导出至 `main_map_v6_layout.json`（逐格 `cx/cy`）。
 pub const V6_LAYOUT_JSON: &str = include_str!("../../../../assets/data/main_map_v6_layout.json");
-/// S38 方案 A：横屏 v6 布局数据源（1920×1080，椭圆格环 31 格均匀弧距；`S38.6`）。
+/// S84 纯横屏 v6 布局数据源（1920×1080，椭圆格环 31 格均匀弧距；`S38.6` 导出）。
 ///
-/// 由 `S38.6` 布局生成脚本导出至 `main_map_v6_layout_landscape.json`；竖屏仍走
-/// [`V6_LAYOUT_JSON`]（0 行为变化）。场景层 `main_map::v6_layout(landscape)` 按方向读对应源。
+/// 由 `S38.6` 布局生成脚本导出至 `main_map_v6_layout_landscape.json`（1920×1080 椭圆格环）。
+/// S84 纯横屏：场景层 `main_map::v6_layout()` 恒读本源；[`V6_LAYOUT_JSON`] 仅作历史数据保留。
 pub const V6_LAYOUT_JSON_LANDSCAPE: &str =
     include_str!("../../../../assets/data/main_map_v6_layout_landscape.json");
 /// 控件表（编译期内联；`scripts/gen_layout.py` 从 `ref/controls.json` 生成，
@@ -788,33 +788,25 @@ pub struct SceneLayout {
     pub portrait_zones: Vec<Rect>,
     /// 声明式原语表（`scenes.json` 的 `primitives`，有序 = 绘制顺序；缺 = 空 Vec）。
     pub primitives: Vec<Primitive>,
-    /// S38 方案 A：横屏原语表（`scenes.json` 的 `landscape.primitives`；非空 = 横屏
-    /// 覆盖 `primitives`，空 = 无横屏覆盖 → 回退竖屏）。坐标 1920×1080。
+    /// 横屏原语表（`scenes.json` 的 `landscape.primitives`；非空 = 实际原语表，
+    /// 空 = 回退通用 `primitives`）。坐标 1920×1080。
     pub landscape_prims: Vec<Primitive>,
-    /// S38 方案 A：横屏专属额外矩形（`scenes.json` 的 `landscape.extra`；非空 = 横屏
-    /// 覆盖 `extra`，空 = 回退竖屏）。坐标 1920×1080。
+    /// 横屏专属额外矩形（`scenes.json` 的 `landscape.extra`；非空 = 实际矩形表，
+    /// 空 = 回退通用 `extra`）。坐标 1920×1080。
     pub landscape_extra: BTreeMap<String, Rect>,
 }
 
 impl SceneLayout {
-    /// 当前方向的原语表（S38：横屏且声明了 `landscape_prims` 时用横屏，否则竖屏）。
+    /// 纯横屏原语表（S84：场景声明了 `landscape_prims` 时用它，否则回退 `primitives`）。
     #[must_use]
-    pub fn prims_for(&self, landscape: bool) -> &[Primitive] {
-        if landscape && !self.landscape_prims.is_empty() {
-            &self.landscape_prims
-        } else {
-            &self.primitives
-        }
+    pub fn prims_for(&self) -> &[Primitive] {
+        if self.landscape_prims.is_empty() { &self.primitives } else { &self.landscape_prims }
     }
 
-    /// 当前方向的额外矩形表（S38：横屏且声明了 `landscape_extra` 时用横屏，否则竖屏）。
+    /// 纯横屏额外矩形表（S84：场景声明了 `landscape_extra` 时用它，否则回退 `extra`）。
     #[must_use]
-    pub fn extra_for(&self, landscape: bool) -> &BTreeMap<String, Rect> {
-        if landscape && !self.landscape_extra.is_empty() {
-            &self.landscape_extra
-        } else {
-            &self.extra
-        }
+    pub fn extra_for(&self) -> &BTreeMap<String, Rect> {
+        if self.landscape_extra.is_empty() { &self.extra } else { &self.landscape_extra }
     }
 }
 

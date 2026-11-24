@@ -243,6 +243,8 @@
 - **解法**：(a) 用 git stash 基线对照法归因——stash 本轮改动跑 gate，凡 stash 后仍 FAIL 的项即既有/并行任务遗留，stash 后新出现的项才是本轮引入；(b) 本轮引入项必须修干净（fmt/clippy）；(c) 并行半成品项**不替别人修**，在 evidence log 里写明归因（哪些 FAIL 命中哪些未提交文件、哪个并行任务），台账维持 in_progress，待并行任务收口重跑 gate 全绿后再转 verified；(d) commit 只暂存本轮改的文件（git add 显式列文件，不用 git add -A），不裹挟并行半成品。
 - **验证**：git stash 前后 gate FAIL 项集合 diff + evidence/S10.2.log 末尾「gate FAIL 归因（非 S10.2 引起）」章节 + 台账 S10.2 维持 in_progress。
 
+- **2026-11-24 S84 补（历史归档，原新增条目并入）**：同场景变体——对方改动**已提交**而非未提交半成品（`76e2f0a` S83 U9 引入 CS-1 硬编码 `compass_rose.png`）。上面「不替别人修、维持 in_progress」的前提是对方未提交；已落地 commit 且挡住本轮 push 时必须**替修**（否则卡死收口），但走最小行为不变路线（字面量移入 `chrome::COMPASS_ROSE` 常量表，零行为变化），evidence + commit message 写明归因；暂存时排除对方仍在改的文件，但已提交违例文件本身要纳入。验证 = check_code_standards PASS + gate 36 项 0 failure。
+
 ### EXP-088 流程：机制 ≠ 规则 —— `unlocked_maps` 有字段/UI 置灰但无「打 BOSS 解锁下一图」推进规则；定稿跨图前必须查「规则是否存在」
 - **现象**：用户问「我们有『跨图推进』游戏业务吗」。排查发现：`unlocked_maps`（存档字段）+ `game_app.rs` 的 `map_unlocked()` 校验 + SelectMap 置灰是**机制**，但开档时 `game_app.rs:535` 把**三张图全部解锁**（`MapSlot::all().to_vec()`），全库**没有任何代码**会往 `unlocked_maps` 里加图，`docs/business` 也没有「击败 BOSS → 解锁下一张图」的规则 —— 「打满 3 图通关」从未被定义。
 - **根因**：数据字段 / UI 校验存在 ≠ 业务规则存在；把「有字段」当成「有玩法」就会凭空实现一条规则（= 臆造业务）。机制（能力）与规则（玩法定义）必须分开核对。
@@ -804,9 +806,3 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - 根因：①「不手写像素」只有文档，没有机器断言——gate 36 项里 check_hardcode.py 只扫 Rust 源码的 CJK/色值，check_scenes_canonical 只守 indent=1，没有任何检查问「这个坐标是算出来的还是手写的」。②地图（③参数化）有机器兜底，UI chrome（②自动布局）退化成逐条手写坐标却无人知。③回答现状时混淆「描述事实」与「举报违规」。
 - 解法：①给总纲补机器断言：doccheck2 加「重复结构禁手写坐标」检查（规律排列的 medallion/列表行/槽位须由参数生成器产出，--check 比对 JSON 坐标 == 参数算出）；②index 6 徽章改成参数化生成器：ring={center_x,center_y,radius,badge_w,badge_h,count} + 正六边形公式（实测环心540,970/R400/角度-90+60i，0 误差还原 36 行）；③文档把「写死」标为已修违规而非中性权衡；④回答用户对现状的质疑时，先查规范→查机器断言→如实判定是否违规，不得中性化粉饰。
 - 验证：待 S80 收口（生成器 --check 0 漂移 + doccheck2 新断言负例护栏 + gate 全绿）。
-
-### EXP-212 流程：并行会话「已提交」改动引入 gate FAIL —— EXP-078 只覆盖未提交半成品，已落地 commit 必须替修（最小行为不变）
-- **现象**（S84 收口）：gate `check_code_standards` CS-1 报新增违例 `main_map.rs:3080` 资产路径硬编码 `assets/ui/compass_rose.png`。归因发现非本轮改动，而是并行会话已提交的 `76e2f0a`（S83 U9 热座交接整屏盖板）引入——它**已落地本地 master 链**，不是工作区未提交半成品。
-- **根因**：EXP-078 的处置前提是「别人未提交，可等对方收口 / 不替别人修」，但本次对方改动**已 commit 且在我提交链上**，我要 push master 就必须 gate 全绿，既不能等也不适用「维持 in_progress 让别人修」；这是与 EXP-078 不同的场景（已落地 vs 未提交）。若照搬 EXP-078「不替别人修」会卡死本轮收口。
-- **解法**：① 仍先归因——`git log -1 -- <file>` + `git show <commit> -- <file>` 确认硬编码来源 commit 与行号，确认非本轮引入；② 已落地 commit 的违例**必须替对方修**，但走「最小行为不变」路线——把字面量移进 `chrome.rs` 资产常量表（`chrome::COMPASS_ROSE`），场景层只改引用、不改渲染逻辑，零行为变化（不替对方做设计决策）；③ evidence log 写明归因（哪个 commit、哪一行、为何替修）+ commit message 附带说明，便于双方回溯；④ commit 暂存策略：先 `git add -A` 再 `git reset HEAD` 排除对方**仍在改**的文件（本次 close.rs / android_device_test.log），但**已提交的违例文件本身要纳入**（它已在基线里，不纳入则 gate 仍红）。
-- **验证**：修后 `python3 scripts/check_code_standards.py --check` → PASS（0 项超基线）；重跑 gate → 36 项 0 failure；`git status` 未暂存仅剩对方 2 个文件。

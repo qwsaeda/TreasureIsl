@@ -41,6 +41,7 @@
 | **S35~S55 平台/测试/内容运营/流程强化** | APK 体积标准 + 构建编排（S35.0/S35.1，含版本打包规范面）/ Dev Console 平台面续集（S36~S39 平台 WBS）/ 内容运营平台化（S44）/ 测试接入标准（S45）/ 内容运营续集 + 平台主题 + 玩法补强（S49）/ CCGS 工作室制度借鉴（S50~S51）/ rules 测试盲区补测 + i18n 假孤儿清零 + 死代码 3 函数挂 deprecated（S52）/ 飞轮 R 断言固化 ×4（S53/S54.1/S55.1，doccheck2 44→47 项〔S55 时点值；现行 51 项〕）；计划 = [`plan-s49.md`](plan-s49.md) / [`plan-s44-content-ops-platform.md`](plan-s44-content-ops-platform.md) / [`plan-s45-test-ingress.md`](plan-s45-test-ingress.md) / [`plan-s50-studio-interface.md`](plan-s50-studio-interface.md)（S32~S48 平台/内容 WBS 各见对应 plan-sNN 文档，全 verified） | 全 verified（台账 327→341 阶段面） |
 | **S56~S57 流程强化（轨道 3 拍板面）** | S56.0 = `doc_numbers.py` 扩「doccheck2 项号文字 + 数值声称点」对账面（15 号行 36 载体，EXP-189 高频复现模式固化）；S57.0 = 红线挂包域补全（packages.yaml P7 引擎域 + P8 平台域，6 红线全挂）；S57.1 = state.md 压缩纪律载体面（doccheck2 第 48 项 `state-md-discipline`）；S57.2a/2b = 符号覆盖率第一批 28% 基线棘轮 + 第二批 `doc_numbers.py` 扩「符号覆盖率」回写面（M-04 阶梯判据面固化，后续 60%→100% = 覆盖率提升轮）；计划 = [`plan-s56-process-hardening.md`](plan-s56-process-hardening.md) | 全 verified（台账 341→345 阶段面，原竖屏 blocked 作废除外） |
 
+| **S84 纯横屏重写** | 用户拍板「竖屏全部删除 1-3 全做」（延续 2026-11-08「都是横屏」）：删 7 场景文档竖屏内容 + `scenes.json` 扁平化（landscape 提升为主、删 portrait_zones/ring）+ 坐标系 1080×1920→1920×1080 三源同改 + 测试/门禁断言全改横屏；S84.0~S84.6 全 verified，gate 36 项 0 failure（历史时点值，现行以 `docs/parity.md` 为准） | [`plan-s84-landscape-only.md`](plan-s84-landscape-only.md) |
 ## 仍在使用的计划（非归档，勿当历史）
 
 | 文件 | 状态 |

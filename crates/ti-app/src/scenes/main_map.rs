@@ -24,13 +24,6 @@ use crate::scenes::main_map_island;
 use crate::scenes::main_map_node;
 use crate::scenes::{Scene, SceneHost, SceneKind, enter_target};
 
-/// A5 生物动画时钟（S34.6 前处理）：`frame_delta_ms` 累计（帧率无关，S17.4 唯一时间源）。
-/// creatures.png 是单张合成生态场景（无法拆元素级鲨/触手/浪花），程序 bob 微动
-/// 满足 spec §1.4「海洋内容会动」+ U21 不叠格（位移 ±4px 保持原边界 1350>1349.2）。
-static CREATURES_ACC: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-/// `TI_MAP_ANIM_T0`：生物动画初始相位（ms；离屏出多相位帧证明逐帧 bob，默认 0）。
-static CREATURES_T0: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
-
 /// 主地图场景处理器（`MainMap`）。
 pub struct MainMapScene;
 
@@ -125,10 +118,8 @@ fn render_hud_button(host: &mut dyn SceneHost, layout: &SceneLayout, key: &str, 
 /// 运行时只画数值文本（金币数 / 持有量），面板 = `main_map.primitives` 原语。
 fn render_hud_v3(host: &mut dyn SceneHost, layout: &SceneLayout) {
     let (gold_str, own_str) = hud_labels(host);
-    // S38 方案 A：横屏读 `landscape.extra`（HUD 铜牌横屏位）；竖屏 = `extra`（0 行为变化）。
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let extra = layout.extra_for(landscape);
+    // S84 纯横屏：HUD 铜牌坐标读 `landscape.extra`（空则回退通用 `extra`）。
+    let extra = layout.extra_for();
     let mut plaque_text = |rc: &data::Rect, s: &str| {
         // 文本落铜牌右半（左侧 = 96/64px 图标区）：x = 牌左 + 176，基线 = 牌心 - 22
         chrome::draw_body_text(host, s, rc.x + 176, rc.y + rc.h / 2 - 22);
@@ -477,39 +468,25 @@ fn render_track_tail(host: &mut dyn SceneHost, layout: &SceneLayout) {
     // 6) 落格提示签条（S21.6 v4 = `hint` 键中心；`board_toast` 过期 = `None`）
     // 6.5) S21.12 建造面板覆盖层（状态在 `GameApp`；关闭 = 不画）
     if host.build_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_build_panel(host, landscape);
+        render_build_panel(host);
     }
     if host.trade_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_trade_panel(host, landscape);
+        render_trade_panel(host);
     }
     if host.merchant_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_merchant_panel(host, landscape);
+        render_merchant_panel(host);
     }
     if host.event_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_event_panel(host, landscape);
+        render_event_panel(host);
     }
     if host.ship_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_ship_panel(host, landscape);
+        render_ship_panel(host);
     }
     if host.garrison_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_garrison_panel(host, landscape);
+        render_garrison_panel(host);
     }
     if host.upgrade_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_upgrade_panel(host, landscape);
+        render_upgrade_panel(host);
     }
     if host.dungeon_panel_open() {
         render_dungeon_panel(host);
@@ -549,11 +526,11 @@ fn handle_boat_upgrade(host: &mut dyn SceneHost) {
 }
 
 /// S21.12 建造面板渲染（主地图覆盖层；标题 + 5 条目 + 底部提示，toast 同底板风格）。
-/// S63 T2：横屏（1920×1080）坐标居中适配（旧 `BUILD_PANEL` = 竖屏常量，横屏下左下被裁切）。
-fn render_build_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) = if landscape { chrome::PANEL_LANDSCAPE } else { chrome::BUILD_PANEL };
+/// S84 纯横屏：面板几何恒取 `chrome::PANEL_LANDSCAPE`（1920×1080 居中）。
+fn render_build_panel(host: &mut dyn SceneHost) {
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE;
     let header_h = chrome::BUILD_PANEL_HEADER_H;
-    let entry_h = if landscape { 120 } else { chrome::BUILD_PANEL_ENTRY_H };
+    let entry_h = 120;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -609,11 +586,11 @@ fn render_build_panel(host: &mut dyn SceneHost, landscape: bool) {
 }
 
 /// S63 贸易面板渲染（CPU 画布；候选 A「羊皮卷轴居中 + 金边 + 商品列表」，零 Rust 硬编码坐标——
-/// 几何 = `chrome::TRADE_PANEL` 数据化常量，文案 = i18n，商品 = `balance.trade` + `host.owned`）。
-fn render_trade_panel(host: &mut dyn SceneHost, landscape: bool) {
-    // 横屏 1920×1080 = 候选 A「羊皮卷轴居中」(居中 1120×820)；竖屏 = 旧常量（居中）。
-    let (bx, by, bw, bh) = if landscape { chrome::PANEL_LANDSCAPE } else { chrome::TRADE_PANEL };
-    let entry_h = if landscape { 120 } else { chrome::TRADE_PANEL_ENTRY_H };
+/// 几何 = `chrome::PANEL_LANDSCAPE` 数据化常量，文案 = i18n，商品 = `balance.trade` + `host.owned`）。
+fn render_trade_panel(host: &mut dyn SceneHost) {
+    // S84 纯横屏：候选 A「羊皮卷轴居中」(1120×816 @ 400,128)。
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE;
+    let entry_h = 120;
     let header_h = chrome::TRADE_PANEL_HEADER_H;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -692,9 +669,8 @@ fn handle_merchant_buy(host: &mut dyn SceneHost, kind: u8) {
 }
 
 /// S63 T7 商人面板渲染（候选 A 风格：羊皮卷轴居中 + 2 条目 + 容量/价格/提示）。
-fn render_merchant_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) =
-        if landscape { chrome::PANEL_LANDSCAPE_MERCHANT } else { (144, 640, 768, 640) };
+fn render_merchant_panel(host: &mut dyn SceneHost) {
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE_MERCHANT;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -790,9 +766,8 @@ fn handle_event_apply(host: &mut dyn SceneHost, sel: usize) {
 }
 
 /// S63 T6 事件面板渲染（候选 A 风格：羊皮卷轴居中 + 7 事件列表 + 效果预览）。
-fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) =
-        if landscape { chrome::PANEL_LANDSCAPE_TALL } else { (144, 600, 768, 720) };
+fn render_event_panel(host: &mut dyn SceneHost) {
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE_TALL;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -846,9 +821,8 @@ fn render_event_panel(host: &mut dyn SceneHost, landscape: bool) {
 }
 
 /// S63 T3 造船面板渲染（候选 A 风格：当前船级/货舱/火力/造价 + 升级提示）。
-fn render_ship_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) =
-        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+fn render_ship_panel(host: &mut dyn SceneHost) {
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE_SHIP;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -894,9 +868,8 @@ fn render_ship_panel(host: &mut dyn SceneHost, landscape: bool) {
 
 /// S64 驻军自定面板（复用已签收候选 A 羊皮卷轴风格，与造船同几何）。
 /// 展示当前驻军 / 舰队人手 / 可调范围，玩家 ↑↓ 调目标值后 Enter 确认走守恒钳位。
-fn render_garrison_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) =
-        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+fn render_garrison_panel(host: &mut dyn SceneHost) {
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE_SHIP;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -934,9 +907,8 @@ fn render_garrison_panel(host: &mut dyn SceneHost, landscape: bool) {
 
 /// S65 领地升级面板（复用已签收候选 A 羊皮卷轴，与驻军同几何）。
 /// 展示待决格所属岛 / 当前等级 / 升级造价 / 本圈产出；玩家 Confirm 升级（金不足退化领产出）、Back 领产出。
-fn render_upgrade_panel(host: &mut dyn SceneHost, landscape: bool) {
-    let (bx, by, bw, bh) =
-        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+fn render_upgrade_panel(host: &mut dyn SceneHost) {
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE_SHIP;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -979,10 +951,7 @@ fn render_upgrade_panel(host: &mut dyn SceneHost, landscape: bool) {
 /// S66 副本情报面板（复用已签收候选 A 羊皮卷轴，与其余面板同几何）。
 /// 展示待决副本岛名 / 守军人手 / 守军武器；Confirm 进守军战、Back 放弃待决。
 fn render_dungeon_panel(host: &mut dyn SceneHost) {
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let (bx, by, bw, bh) =
-        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE_SHIP;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -1020,10 +989,7 @@ fn render_dungeon_panel(host: &mut dyn SceneHost) {
 /// S68 卡牌图鉴面板（复用已签收候选 A 羊皮卷轴）。纯读 `balance.cards.deck` 展示卡池，
 /// ↑↓ 翻页；不改游戏规则、不需存档兼容（图鉴式绕开「无持久手牌状态」降级约束）。
 fn render_card_panel(host: &mut dyn SceneHost) {
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let (bx, by, bw, bh) =
-        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE_SHIP;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -1064,10 +1030,7 @@ fn render_card_panel(host: &mut dyn SceneHost) {
 /// S72 成就面板（复用已签收候选 A 羊皮卷轴）。列出 5 项成就及解锁态；纯展示不改玩法。
 fn render_achievement_panel(host: &mut dyn SceneHost) {
     use ti_core::rules::achievements as ach;
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let (bx, by, bw, bh) =
-        if landscape { chrome::PANEL_LANDSCAPE_SHIP } else { (144, 640, 768, 640) };
+    let (bx, by, bw, bh) = chrome::PANEL_LANDSCAPE_SHIP;
     let theme = host.theme().clone();
     let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
@@ -1733,17 +1696,15 @@ impl Scene for MainMapScene {
             } else {
                 // v6 终码：不规则岛 + 格子紧围岛不规则排列（布局 JSON = compose 导出，数据驱动）
                 // 世界层先画，再画 HUD 原语（z>=3），避免海图满屏盖住 HUD。
-                // S38 方案 A：横屏读 `main_map_v6_layout_landscape.json`（椭圆格环 1920×1080）。
-                let landscape = host.shell().settings.orientation
-                    == ti_platform::settings::Orientation::Landscape;
-                render_v6_elem(host, &layout, &mut entity_texts, landscape);
+                // S84 纯横屏：读 `main_map_v6_layout_landscape.json`（椭圆格环 1920×1080）。
+                render_v6_elem(host, &layout, &mut entity_texts);
                 chrome::render_primitives_filtered(host, "main_map", -1, 3);
                 // v6 补层（最上层）：①HUD 数值（`render_hud_v3` 在 642 行被 `v6_default`
                 // 跳过，此处海图+原语之后重画，顶角铜牌不再空）②摇骰 CTA 骰点 + 骰数
                 // （舵轮 = z=7 原语，骰点须叠其轴心之上，`render_spin_die` 的 `deck_spin`
                 // 是 v5 残留位 ⇒ 用 v6 布局 helm 定位）。
                 render_hud_v3(host, &layout);
-                render_v6_spin_die(host, landscape);
+                render_v6_spin_die(host);
             }
         } else {
             // S19：等距环岛赛道（路径连线 + 空间标记 + 骰子数 + 落格提示条）+ S19.7 航程条（v2 dormant）
@@ -1858,39 +1819,25 @@ fn render_v5_ring(
     }
     // 6) 建造面板 + 落格提示签条（v5 不画航程进度尺）
     if host.build_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_build_panel(host, landscape);
+        render_build_panel(host);
     }
     if host.trade_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_trade_panel(host, landscape);
+        render_trade_panel(host);
     }
     if host.merchant_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_merchant_panel(host, landscape);
+        render_merchant_panel(host);
     }
     if host.event_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_event_panel(host, landscape);
+        render_event_panel(host);
     }
     if host.ship_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_ship_panel(host, landscape);
+        render_ship_panel(host);
     }
     if host.garrison_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_garrison_panel(host, landscape);
+        render_garrison_panel(host);
     }
     if host.upgrade_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_upgrade_panel(host, landscape);
+        render_upgrade_panel(host);
     }
     if host.dungeon_panel_open() {
         render_dungeon_panel(host);
@@ -1958,10 +1905,10 @@ struct V6Tile {
     owned: bool,
 }
 
-/// 编译期读入 v6 布局（缺文件 = 空布局，回退环布局）。
-fn v6_layout(landscape: bool) -> V6Layout {
-    // S38 方案 A：横屏 = 读横屏 v6 布局（1920×1080 椭圆格环）；竖屏 = 原布局（0 行为变化）。
-    let src = if landscape { data::V6_LAYOUT_JSON_LANDSCAPE } else { data::V6_LAYOUT_JSON };
+/// 编译期读入 v6 横屏布局（缺文件 = 空布局，回退环布局）。
+fn v6_layout() -> V6Layout {
+    // S84 纯横屏：恒读 `main_map_v6_layout_landscape.json`（1920×1080 椭圆格环）。
+    let src = data::V6_LAYOUT_JSON_LANDSCAPE;
     serde_json::from_str(src).unwrap_or(V6Layout {
         tile_r: 36.0,
         island: V6Rect::default(),
@@ -2156,39 +2103,25 @@ fn render_v6_proto(
     // 旧覆盖逻辑是死代码，一并删除。建造面板（`build_panel_open`）交互 = 键盘（on_input），
     // 面板 + 提示签条照旧。
     if host.build_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_build_panel(host, landscape);
+        render_build_panel(host);
     }
     if host.trade_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_trade_panel(host, landscape);
+        render_trade_panel(host);
     }
     if host.merchant_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_merchant_panel(host, landscape);
+        render_merchant_panel(host);
     }
     if host.event_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_event_panel(host, landscape);
+        render_event_panel(host);
     }
     if host.ship_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_ship_panel(host, landscape);
+        render_ship_panel(host);
     }
     if host.garrison_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_garrison_panel(host, landscape);
+        render_garrison_panel(host);
     }
     if host.upgrade_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_upgrade_panel(host, landscape);
+        render_upgrade_panel(host);
     }
     if host.dungeon_panel_open() {
         render_dungeon_panel(host);
@@ -2251,20 +2184,18 @@ fn render_v6_elem(
     host: &mut dyn SceneHost,
     _layout: &SceneLayout,
     entity_texts: &mut Vec<(i32, i32, &str)>,
-    landscape: bool,
 ) {
     let spaces = host.board_spaces();
     let count = spaces.len();
     if count < 2 {
         return;
     }
-    let v6 = v6_layout(landscape);
-    // S38 方案 A：横屏画布 1920×1080（读 `main_map_v6_layout_landscape.json`）；
-    // 竖屏 = 原 1080×1920（0 行为变化）。
+    let v6 = v6_layout();
+    // S84 纯横屏：画布恒 1920×1080（读 `main_map_v6_layout_landscape.json`）。
     let theme = host.theme().clone();
     // 暗灰小旗（余席棋子旗图标；`territory.md` §1.3 行 78，色值单源 theme `isle_flag_dark`）
     let isle_flag_dark = theme.by_name("isle_flag_dark").unwrap_or(0x7BEF);
-    let (w, h) = if landscape { (1920i32, 1080i32) } else { (1080, 1920) };
+    let (w, h) = (1920i32, 1080i32);
     // 1) 海洋全景底（羊皮框由 ocean_bg 自身带；直接满屏）
     host.blit_image(chrome::V6_OCEAN_BG, 0, 0, w, h);
     // 2) 羊皮做旧边框（56px 木框，四边）
@@ -2383,22 +2314,11 @@ fn render_v6_elem(
         cw,
     );
 
-    // 7) 海洋生物（creatures.png = 单张合成海洋生态场景；竖屏 A4 单处放中央岛下方海域
-    // （x340-720/y1350-1600，不叠格环/CTA）+ A5 bob 微动（鲨鱼游弋/浪花翻涌，位移±4px）。
-    // S38 横屏：省略（概念图 `main_map_v6_landscape` 无海洋生物；格环椭圆占满横向，无空位）。
-    let ms = CREATURES_ACC.fetch_add(host.frame_delta_ms(), std::sync::atomic::Ordering::Relaxed);
-    let t0 = *CREATURES_T0.get_or_init(|| {
-        std::env::var("TI_MAP_ANIM_T0").ok().and_then(|v| v.parse::<u32>().ok()).unwrap_or(0)
-    });
-    let t = f64::from(ms.saturating_add(t0)) / 1000.0;
-    if !landscape {
-        let bob_x = (t.sin() * 4.0) as i32;
-        let bob_y = ((t * 0.7).sin() * 3.0) as i32;
-        host.blit_image(chrome::V6_CREATURES, 340 + bob_x, 1350 + bob_y, 380, 250);
-    }
+    // 7) 海洋生物：S84 纯横屏省略（概念图 `main_map_v6_landscape` 无海洋生物；
+    // 格环椭圆占满横向，无空位）——原竖屏 bob 微动分支及其时钟一并删除。
 
     // 8) 玩家位置名牌（当前格；`cur_idx` = 当前席 index）
-    let def_pos = if landscape { (960, 520) } else { (540, 890) };
+    let def_pos = (960, 520);
     let (px, py) = v6.tiles.get(cur_idx).map_or(def_pos, |t| (t.cx as i32, t.cy as i32));
     let lbl = i18n::sget("scene.main_map.player_label");
     entity_texts.push((px + 40, py - 6, lbl));
@@ -2408,34 +2328,22 @@ fn render_v6_elem(
     // S63 T1/T2：v6 默认路径补贸易/建造面板（S34 删三键入口后面板渲染代码曾全无调用者；
     // 此前只在 render()/render_v6_proto 加了检查点，默认 render_v6_elem 漏 ⇒ 面板图不出现）。
     if host.trade_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_trade_panel(host, landscape);
+        render_trade_panel(host);
     }
     if host.merchant_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_merchant_panel(host, landscape);
+        render_merchant_panel(host);
     }
     if host.event_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_event_panel(host, landscape);
+        render_event_panel(host);
     }
     if host.ship_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_ship_panel(host, landscape);
+        render_ship_panel(host);
     }
     if host.garrison_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_garrison_panel(host, landscape);
+        render_garrison_panel(host);
     }
     if host.upgrade_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_upgrade_panel(host, landscape);
+        render_upgrade_panel(host);
     }
     if host.dungeon_panel_open() {
         render_dungeon_panel(host);
@@ -2447,9 +2355,7 @@ fn render_v6_elem(
         render_achievement_panel(host);
     }
     if host.build_panel_open() {
-        let landscape =
-            host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-        render_build_panel(host, landscape);
+        render_build_panel(host);
     }
 }
 
@@ -2766,8 +2672,8 @@ fn render_spin_die(host: &mut dyn SceneHost, layout: &SceneLayout) {
 /// 本函数用 v6 布局 helm 定位：①骰点叠舵轮轴心（用户「看不见骰子，不知能否摇」）②最近骰数
 /// 在舵轮上方（`board_last_roll` = 0 不画）。缺骰图 = 只画骰数不画骰点（不抛异常）。
 #[allow(clippy::cast_possible_truncation)]
-fn render_v6_spin_die(host: &mut dyn SceneHost, landscape: bool) {
-    let v6 = v6_layout(landscape);
+fn render_v6_spin_die(host: &mut dyn SceneHost) {
+    let v6 = v6_layout();
     let hw = v6.helm.w.max(1.0) as i32;
     let hx = v6.helm.cx as i32;
     let hy = v6.helm.cy as i32;
@@ -2969,18 +2875,9 @@ fn render_board_toast(host: &mut dyn SceneHost) {
     let Some(toast) = toast else {
         return;
     };
-    let layout = chrome::scene_layout("main_map");
-    // S38 方案 A：横屏落格签条屏心 960、hint 走 `landscape.hint`（回退 960）；竖屏 = 原。
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let cx = if landscape { 960i32 } else { 540 };
-    let ty = if landscape {
-        1004
-    } else if layout.hint.y > 0 {
-        layout.hint.y
-    } else {
-        1760
-    };
+    // S84 纯横屏：落格签条屏心 x=960 / 纵向锚点 y=1004。
+    let cx = 960i32;
+    let ty = 1004;
     let tw = host.shell().hint_text_width_px(&toast);
     let pad = 24;
     let panel_w = (tw + pad * 2).max(392);
@@ -3019,10 +2916,8 @@ fn render_match_outcome(host: &mut dyn SceneHost) {
     let ink = chrome::COLOR_TEXT_ON_PARCH;
     let pw = 880i32;
     let ph = 320i32;
-    // S38 方案 A：横屏终局面板屏心 960、垂直居中（py=(1080-320)/2=380）；竖屏 = 原 (540,780)。
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let (cx, py) = if landscape { (960i32, 380i32) } else { (540, 780) };
+    // S84 纯横屏：终局面板屏心 960、垂直居中（py=(1080-320)/2=380）。
+    let (cx, py) = (960i32, 380i32);
     let px = cx - pw / 2;
     host.fill_rect(px, py, pw, ph, panel);
     host.fill_rect(px, py, pw, 3, brass);
@@ -3060,9 +2955,7 @@ fn render_handoff(host: &mut dyn SceneHost) {
     let theme = host.theme().clone();
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
     let ink = chrome::COLOR_TEXT_ON_PARCH;
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let (w, h) = if landscape { (1920i32, 1080i32) } else { (1080, 1920) };
+    let (w, h) = (1920i32, 1080i32);
     let cx = w / 2;
 
     // S77 U9 方案 A（整屏盖板）：确认前完全遮蔽棋盘 —— 满足「不泄露他人情报」硬要求。

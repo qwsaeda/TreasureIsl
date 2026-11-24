@@ -669,25 +669,19 @@ fn letterbox() -> f32 {
     letterbox_size(WIN_W as f32, WIN_H as f32)
 }
 
-/// 任意窗口物理尺寸的 letterbox 视口比（`min(w/LW, h/LH)` = 像素/逻辑单位；
+/// 任意窗口物理尺寸的 letterbox 视口比（`min(w/1920, h/1080)` = 像素/逻辑单位；
 /// 2026-10-26 窗口缩放跟随）。
 ///
-/// S38 方案 A：**方向感知**——横屏窗口用 `LANDSCAPE_W/H`（1920×1080）逻辑尺寸，
-/// 竖屏用 `LOGICAL_W/H`（1080×1920）。与 `canvas.rs::viewport_scale` 同口径
-/// （S38.0 曾遗漏本函数 ⇒ `--shot --viewport=1920x1080` 仍走竖屏 contain，横屏黑边 + 内容偏右）。
+/// S84 纯横屏：逻辑画布恒 `LANDSCAPE_W/H`（1920×1080），窗口无论宽高都按横屏 contain
+/// 渲染（曾因按方向切换逻辑尺寸导致 `--shot --viewport=1920x1080` 黑边 + 内容偏右）。
+/// 与 `canvas.rs::viewport_scale` 的横屏口径同源。
 ///
 /// ⚠️ 口径：这是 **shell 视口比**（`Viewport::fit` 同值），**不是** Bevy 正交 `scale`；
 /// Bevy 侧取其倒数（见 [`bevy_ortho_scale`]）。
 #[allow(clippy::cast_precision_loss)]
 fn letterbox_size(window_w: f32, window_h: f32) -> f32 {
-    let (lw, lh) = if window_w >= window_h {
-        (
-            ti_render::framebuffer::LANDSCAPE_W_I32 as f32,
-            ti_render::framebuffer::LANDSCAPE_H_I32 as f32,
-        )
-    } else {
-        (LOGICAL_W as f32, LOGICAL_H as f32)
-    };
+    let lw = ti_render::framebuffer::LANDSCAPE_W_I32 as f32;
+    let lh = ti_render::framebuffer::LANDSCAPE_H_I32 as f32;
     let w = window_w / lw;
     let h = window_h / lh;
     if w < h { w } else { h }
@@ -877,11 +871,9 @@ fn input_system(
     // S18.5 相机（world_canvas 镜头）：主地图场景才允许 zoom/pan（其它场景相机冻结）。
     let camera_live = g.scene() == Scene::MainMap;
     if camera_live {
-        // S38 方案 A：zoom 锚点/画布尺寸**方向感知**（横屏 1920×1080 / 竖屏 1080×1920；
-        // 曾硬编码 `LOGICAL_W/H` 竖屏 ⇒ 横屏主地图 zoom 中心错位）。
-        let landscape = window_size.x >= window_size.y;
-        let lw = ti_engine::logical_w_for(landscape) as f32;
-        let lh = ti_engine::logical_h_for(landscape) as f32;
+        // S84 纯横屏：zoom 锚点/画布尺寸恒 1920×1080（曾按窗口方向切换 ⇒ 横屏主地图 zoom 中心错位）。
+        let lw = ti_render::framebuffer::LANDSCAPE_W_I32 as f32;
+        let lh = ti_render::framebuffer::LANDSCAPE_H_I32 as f32;
         // 滚轮 0.20 event 接线挂 S18.8（winit MotionEvent 面）；键盘 `=`/`-` 同构 zoom（view 中心锚点）。
         if kb.just_pressed(KeyCode::Equal) {
             g.camera_zoom_at([lw / 2.0, lh / 2.0], 1.25, [lw, lh]);
@@ -986,11 +978,9 @@ fn scene_json_key(scene: Scene) -> &'static str {
 struct ChromeUi {
     /// 已建 chrome 根实体（`None` = 本场景无 `bevy_ui` chrome）。
     root: Option<Entity>,
-    /// 已建 chrome 的（场景判别, 选中下标, 方向判别）——任一变化才重建（避免每帧重建）。
-    /// 方向判别：S39（`--shot --viewport=1920x1080` 下 `set_orientation(Landscape)` 晚于
-    /// `chrome_ui_system` 首跑 ⇒ 首跑用竖屏数据建 chrome，后续 `sel_key` 不变不重建，
-    /// 横屏木牌永远不渲染；加方向进键 ⇒ orientation 变化时强制重建）。
-    built: Option<(i32, usize, u8)>,
+    /// 已建 chrome 的（场景判别, 选中下标）——任一变化才重建（避免每帧重建）。
+    /// S84 纯横屏：方向恒 Landscape，不再把方向纳入重建键。
+    built: Option<(i32, usize)>,
 }
 
 /// S29.3（B1）：按当前场景建 `bevy_ui` chrome（**自动布局**：行位置/高度由 taffy 算，
@@ -1028,26 +1018,19 @@ fn build_scene_chrome(
 
 /// 首页菜单 = **数据驱动 UI 层**（S39 数据化重构）。
 ///
-/// 版面全部来自 `scenes.json` 的 `index` 段原语（竖屏 = 罗盘环 S38.1 版，横屏 = 羊皮藏宝图 +
-/// 绳挂木牌新版）：壳侧只做「原语 → `ti_engine::ui::DataChromeItem`」转换（解析 i18n 文案）
+/// 版面全部来自 `scenes.json` 的 `index` 段原语（S84 纯横屏 = 羊皮藏宝图 + 绳挂木牌）：
+/// 壳侧只做「原语 → `ti_engine::ui::DataChromeItem`」转换（解析 i18n 文案）
 /// + 调用通用渲染器，**Rust 侧零坐标硬编码** ⇒ 之后换首页 UI = 改数据 + 换资产，Rust 零改动。
 ///
-/// 竖屏横屏各用自己的设计空间（1080×1920 / 1920×1080）⇒ 原语 rect 按当前方向换算 `%`。
+/// 设计空间恒 1920×1080 ⇒ 原语 rect 按横屏画布换算 `%`。
 fn build_index_chrome(
     commands: &mut Commands,
     server: &AssetServer,
     font: &Handle<Font>,
     g: &GameApp,
 ) -> Option<Entity> {
-    let landscape = g.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let (design_w, design_h) = if landscape {
-        (
-            ti_render::framebuffer::LANDSCAPE_W_I32 as f32,
-            ti_render::framebuffer::LANDSCAPE_H_I32 as f32,
-        )
-    } else {
-        (ti_render::framebuffer::LOGICAL_W_I32 as f32, ti_render::framebuffer::LOGICAL_H_I32 as f32)
-    };
+    let design_w = ti_render::framebuffer::LANDSCAPE_W_I32 as f32;
+    let design_h = ti_render::framebuffer::LANDSCAPE_H_I32 as f32;
     // 1080 单源契约（飞轮 R1 ③-17）：屏心锚点须 `LOGICAL_*_I32 as f32 / 2.0` 派生，
     // 禁裸 540.0/960.0 字面量。数据化后罗盘环删了，但派生式保留作设计空间锚点
     // （build_data_chrome 按设计空间换算 %；屏心 = design_w/2.0）。
@@ -1130,17 +1113,11 @@ fn index_data_items(_selected: i64) -> Vec<ti_engine::ui::DataChromeItem> {
 
 /// 消息/帮助场景：面板 + 动态标题（`msg.<kind>`）+ 正文（`bevy_ui` 自动折行）+ 页点 + 页码。
 /// 翻页/换页类型时经 `chrome_ui_system` 重建。
-/// S38 方案 A 辅助：面板定位（`%`，意图化）。横屏居中（宽/高 55%，left/top = (100-55)/2）；
-/// 竖屏 = 1080 rect 400,704,608,336 → `%`（0 行为变化）。返回 `(pw, ph, pl, pt)`。
+/// S84 纯横屏：面板居中（宽/高 55%，left/top = (100-55)/2，意图化 `%`）。
+/// 返回 `(pw, ph, pl, pt)`。
 #[allow(clippy::cast_precision_loss)]
-fn message_panel_params(landscape: bool) -> (f32, f32, f32, f32) {
-    if landscape {
-        (55.0, 55.0, 22.5, 22.5)
-    } else {
-        let cw = ti_render::framebuffer::LOGICAL_W_I32 as f32;
-        let ch = ti_render::framebuffer::LOGICAL_H_I32 as f32;
-        (608.0 / cw * 100.0, 336.0 / ch * 100.0, 400.0 / cw * 100.0, 704.0 / ch * 100.0)
-    }
+fn message_panel_params() -> (f32, f32, f32, f32) {
+    (55.0, 55.0, 22.5, 22.5)
 }
 
 fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &GameApp) -> Entity {
@@ -1164,11 +1141,8 @@ fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &Game
     let body_key = page_text(kind, page);
     let body = ti_app::i18n::sget(&body_key);
     let page_str = ti_app::i18n::sgetf("scene.message.page", &[&(page + 1), &total]);
-    // S38 方案 A：横屏面板居中（宽/高 55%，意图化 = 概念图 message_landscape 居中羊皮纸）；
-    // 竖屏 = 1080 rect 400,704,608,336 → `%`（0 行为变化）。
-    let landscape =
-        app.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let (pw, ph, pl, pt) = message_panel_params(landscape);
+    // S84 纯横屏：面板居中（宽/高 55%，意图化 = 概念图 message_landscape 居中羊皮纸）。
+    let (pw, ph, pl, pt) = message_panel_params();
     // 面板（暖棕底 + flex column）
     let panel = commands
         .spawn((
@@ -1504,9 +1478,7 @@ fn chrome_ui_system(
         }
         _ => 0,
     };
-    let orientation_disc =
-        u8::from(g.shell().settings.orientation == ti_platform::settings::Orientation::Landscape);
-    let key = (scene.discriminant(), sel_key, orientation_disc);
+    let key = (scene.discriminant(), sel_key);
     if chrome.built == Some(key) {
         return;
     }
@@ -1618,10 +1590,9 @@ fn manual_1080_hit_system(
             }
         }
     }
-    let landscape =
-        window.iter().next().is_some_and(|w| ti_engine::is_landscape(w.width(), w.height()));
-    let canvas_w = ti_engine::logical_w_for(landscape) as f32;
-    let canvas_h = ti_engine::logical_h_for(landscape) as f32;
+    // S84 纯横屏：命中换算恒用 1920×1080 逻辑画布（窗口宽高不再切方向）。
+    let canvas_w = ti_render::framebuffer::LANDSCAPE_W_I32 as f32;
+    let canvas_h = ti_render::framebuffer::LANDSCAPE_H_I32 as f32;
     let hit = ti_engine::pick::hit_1080_pick(
         win.width(),
         win.height(),
@@ -1668,10 +1639,8 @@ fn window_resize_system(
         return;
     };
     let mode = g.shell().scale_mode();
-    // S38 方案 A：方向感知（横屏 1920×1080 / 竖屏 1080×1920）。窗口纵横比变化
-    // 时更新 `Settings.orientation` ⇒ `viewport()` 按当前方向重算逻辑尺寸。
-    let orientation = ti_platform::settings::Orientation::from_size(wh.0, wh.1);
-    g.shell_mut().set_orientation(orientation);
+    // S84 纯横屏：方向恒 Landscape（启动已固定），窗口 resize 只重建 scale/视口，
+    // 不再按宽高比切竖屏；`viewport()` 始终按 1920×1080 逻辑画布计算。
     g.shell_mut().set_scale_mode(mode, wh.0, wh.1);
 }
 
@@ -1691,17 +1660,14 @@ fn camera_system(
     // 多实体 ⇒ `single_mut()` 失败 ⇒ **静默不更新**正交 scale ⇒ 窗口缩放跟随失效。
     mut cameras: Query<&mut Projection, With<WorldCam>>,
     mut sprite: Query<&mut Transform, (With<FrameSprite>, Without<Camera2d>)>,
-    // S38 方案 A：方向感知（横屏 1920×1080 / 竖屏 1080×1920）。
-    windows: Query<&Window>,
 ) {
     let Ok(g) = store.0.lock() else {
         return;
     };
     let cam = *g.world_cam();
-    let landscape =
-        windows.iter().next().is_some_and(|w| ti_engine::is_landscape(w.width(), w.height()));
-    let logical_w = ti_engine::logical_w_for(landscape) as f32;
-    let logical_h = ti_engine::logical_h_for(landscape) as f32;
+    // S84 纯横屏：画布/底色精灵恒 1920×1080（窗口宽高不再切方向）。
+    let logical_w = ti_render::framebuffer::LANDSCAPE_W_I32 as f32;
+    let logical_h = ti_render::framebuffer::LANDSCAPE_H_I32 as f32;
     let scale = bevy_ortho_scale(g.shell().vp.scale(), cam.zoom);
     if let Ok(mut proj) = cameras.single_mut() {
         if let Projection::Orthographic(o) = &mut *proj {
@@ -1711,8 +1677,7 @@ fn camera_system(
     if let Ok(mut st) = sprite.single_mut() {
         st.translation.x = cam.cam[0] - logical_w / 2.0;
         st.translation.y = logical_h / 2.0 - cam.cam[1];
-        // S38 方案 A：底色精灵随方向缩放（基准 1080×1920；横屏 ×(1920/1080, 1080/1920)），
-        // 方向切换（窗口 resize）时底色铺满新方向画布（0 行为变化：竖屏 scale=1.0）。
+        // S84 纯横屏：底色精灵按横屏/基准比例缩放（×(1920/1080, 1080/1920)）铺满画布。
         st.scale.x = logical_w / LOGICAL_W as f32;
         st.scale.y = logical_h / LOGICAL_H as f32;
     }
@@ -1755,8 +1720,7 @@ fn native_index_system(world: &mut World) {
     };
     let list = g.draw_list().clone();
     let scene_key = scene_json_key(g.scene());
-    // S38 方案 A：方向感知（横屏 = draw list/pick 层用 1920×1080 逻辑坐标）。
-    let landscape = g.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
+    // S84 纯横屏：draw list / pick 层恒用 1920×1080 逻辑坐标。
     drop(g);
 
     // S18.7a: 画制列表 -> Bevy 实体（**覆盖全 7 场景**：
@@ -1785,15 +1749,15 @@ fn native_index_system(world: &mut World) {
     let font = world
         .get_resource::<AssetServer>()
         .map(|server| server.load::<Font>("assets/fonts/lxgw-wenkai-reg.ttf"));
-    ti_engine::scene_render::spawn_draw_list(world, font, &list, landscape);
+    ti_engine::scene_render::spawn_draw_list(world, font, &list);
     // S29.2：拾取层（该场景 `primitives` 带 `pick_key` 者挂透明可拾取标记 + `PickTarget`）。
-    // S38：横屏且场景声明了 `landscape.primitives` 时用横屏原语（`prims_for`）。
+    // S84 纯横屏：场景声明了 `landscape.primitives` 时用横屏原语（`prims_for`）。
     let pick_prims: Vec<ti_core::data::Primitive> = ti_core::data::scenes()
         .ok()
         .and_then(|m| m.get(scene_key))
-        .map(|s| s.prims_for(landscape).to_vec())
+        .map(|s| s.prims_for().to_vec())
         .unwrap_or_default();
-    let _n_pick = ti_engine::scene_render::spawn_pick_layer(world, &pick_prims, landscape);
+    let _n_pick = ti_engine::scene_render::spawn_pick_layer(world, &pick_prims);
     native.content_hash = Some(content_hash);
     world.insert_resource(native);
 }
@@ -2450,16 +2414,9 @@ fn run() {
         game.set_chrome_in_bevy_ui(true);
     }
     game.shell_mut().set_audio(0, 0);
-    // S38 方案 A：--shot 多视口按目标宽高比定方向（横屏 target → 场景横屏 1920×1080 坐标渲染；
-    // 无窗（primary_window=None）故 window_resize_system 不跑，此处显式设方向）。
-    if let Some((vw, vh)) = viewport {
-        let orientation = if vw >= vh {
-            ti_platform::settings::Orientation::Landscape
-        } else {
-            ti_platform::settings::Orientation::Portrait
-        };
-        game.shell_mut().set_orientation(orientation);
-    }
+    // S84 纯横屏：方向恒 Landscape（无窗 --shot 路径下 window_resize_system 不跑，
+    // 此处显式固定；`--viewport=WxH` 只定截图目标尺寸，不再按宽高比切竖屏）。
+    game.shell_mut().set_orientation(ti_platform::settings::Orientation::Landscape);
     if selftest {
         game.set_rng_seed(SELFTEST_SEED);
     }
@@ -2477,11 +2434,10 @@ fn run() {
     {
         window.canvas = Some("#game".to_owned());
         // S38 wasm 横屏根因（EXP-164）：bevy 0.20 wasm 把 canvas 尺寸设为 `WindowResolution`
-        // （初始 = WIN_W×WIN_H = 540×960 竖屏），**覆盖**页面 CSS `100vw×100vh` ⇒ 无论浏览器
-        // 视口横竖，canvas 恒 540×960 ⇒ `is_landscape(540,960)=false` ⇒ 恒竖屏 letterbox
-        // （native `--viewport=1920x1080` 横屏满屏正确，但 wasm 端横屏从未生效）。
-        // 修复：wasm 初始窗口用**实际视口**（见 `wasm_viewport_resolution`），横屏显示器/宽
-        // 窗口 ⇒ 游戏横屏（方向感知随窗口尺寸）。
+        // （初始 = WIN_W×WIN_H = 540×960），**覆盖**页面 CSS `100vw×100vh` ⇒ 无论浏览器
+        // 视口宽高，canvas 恒 540×960，横屏 letterbox 错位（native 正确但 wasm 未生效）。
+        // 修复：wasm 初始窗口用**实际视口**（见 `wasm_viewport_resolution`）；
+        // S84 纯横屏：视口宽高只影响物理窗口尺寸，逻辑画布恒 1920×1080。
         if let Some((iw, ih)) = wasm_viewport_resolution() {
             window.resolution = WindowResolution::new(iw, ih);
         }
@@ -2573,25 +2529,18 @@ fn parse_viewport(spec: &str) -> Option<(u32, u32)> {
 fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
     // S18.7：离屏渲染目标（`--shot` 验证 Bevy 原生渲染真实出画）。
     // S29.5：`viewport` = 多视口出图（`--viewport=WxH`）⇒ 目标按该尺寸建 ⇒
-    // bevy_ui chrome 随视口**真重排**（taffy 重算 `%`/flex）；1080 世界按 contain 缩放
-    // （正交 `scale` = max(1080/W, 1920/H) ⇒ 画布恒完整可见，不裁切）。
+    // bevy_ui chrome 随视口**真重排**（taffy 重算 `%`/flex）；横屏世界按 contain 缩放
+    // （正交 `scale` = max(1920/W, 1080/H) ⇒ 画布恒完整可见，不裁切）。
     let (target_w, target_h) = viewport.unwrap_or((LOGICAL_W, LOGICAL_H));
     let mut target_image =
         Image::new_target_texture(target_w, target_h, TextureFormat::Rgba8UnormSrgb, None);
     target_image.asset_usage = RenderAssetUsages::RENDER_WORLD;
     let target_handle = app.world_mut().resource_mut::<Assets<Image>>().add(target_image);
     app.insert_resource(ShotTarget(target_handle.clone()));
-    // S38 方案 A：contain_scale 按**当前方向**的逻辑画布适配（横屏 target → 1920×1080 世界
-    // 恒完整可见；竖屏 → 1080×1920）。0 行为变化：竖屏 target = 原式 max(1080/W, 1920/H)。
-    let landscape_target = target_w >= target_h;
-    let (lw, lh) = if landscape_target {
-        (
-            ti_render::framebuffer::LANDSCAPE_W_I32 as f32,
-            ti_render::framebuffer::LANDSCAPE_H_I32 as f32,
-        )
-    } else {
-        (LOGICAL_W as f32, LOGICAL_H as f32)
-    };
+    // S84 纯横屏：contain_scale 恒按横屏逻辑画布 1920×1080 适配（视口宽高只定目标尺寸，
+    // 不再按宽高比切竖屏；世界恒完整可见）。
+    let lw = ti_render::framebuffer::LANDSCAPE_W_I32 as f32;
+    let lh = ti_render::framebuffer::LANDSCAPE_H_I32 as f32;
     let contain_scale = (lw / target_w as f32).max(lh / target_h as f32);
     app.world_mut().spawn((
         Camera2d,

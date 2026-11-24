@@ -236,145 +236,18 @@ pub(crate) fn render_v2_elem(
     resolved: bool,
     grid_class: &str,
 ) {
-    let theme = host.theme().clone();
-    let ink = theme.by_name("parch_dark").unwrap_or(chrome::COLOR_TEXT_ON_PARCH);
-    // 本地渲染色常量（v2 原型专用，不入 theme；走 chrome COLOR_* 有对应令牌时优先令牌）
-    let c1 = theme.by_name("ink_dark").unwrap_or(0x28C1);
-    let c2 = theme.by_name("brass_dark").unwrap_or(0x3942);
-    let c3 = theme.by_name("gold_warm").unwrap_or(0xF692);
-    // 背景（S34.5 按格类×地图主题：格类 → vs_theme 背景资产 + 主题 tint；收进 44px 羊皮框）
-    // S34.6 D6（格类分层 spec §2.4）：格类由调用方传（`grid_class`，vs.rs 从 battle 推导：
-    // 副本=raid / BOSS=boss），非环境变量默认 encounter —— 修复「BOSS 战显示甲板非炮台」。
-    let class = grid_class;
-    // S38 方案 A：横屏 = 走横屏构图（`vs_anim_proto_landscape`，1920×1080，双 HP 条顶 +
-    // 角色对角 + 指令区）；竖屏 = 原式（0 行为变化）。用户 2026-11-04 已过目 vs_landscape 概念图。
-    let landscape =
-        host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    // S49.4：v6 格子场景·水平对位·血条重做（用户 2026-11-08 三修正确认）→ **竖屏正式默认**
-    // 走 `render_v4_hud`（v6 风格，格子场景底 + 同一水平线 + 单条百分比绿黄红血条 + 时间轴）。
-    // 横屏保持 S38 独立路径（`vs_anim_proto_landscape`）；`TI_VS_V4=1` 强制走 v4（调试）。
-    if !landscape || v4_layout() {
+    // S84 纯横屏：恒走横屏构图（`vs_anim_proto_landscape`，1920×1080，双 HP 条顶 +
+    // 角色对角 + 指令区；用户 2026-11-04 已过目 vs_landscape 概念图）。
+    // `TI_VS_V4=1` 仍可强制走 v4 纯 HUD（调试开关，与方向无关）。
+    if v4_layout() {
         crate::scenes::vs_anim_v4::render_v4_hud(
-            host, phase, atk_crew, atk_arms, def_crew, def_arms, resolved, class,
+            host, phase, atk_crew, atk_arms, def_crew, def_arms, resolved, grid_class,
         );
         return;
     }
-    if landscape {
-        crate::scenes::vs_anim_proto_landscape::render_v2_elem_landscape(
-            host, phase, atk_crew, atk_arms, def_crew, def_arms, resolved, class,
-        );
-        return;
-    }
-    let th = vs_theme();
-    let bg = vs_bg_asset(class, th.as_ref());
-    host.blit_image_tint(&bg, 44, 44, 1080 - 88, 1920 - 88, vs_tint(th.as_ref()));
-    // 羊皮做旧边框
-    let c4 = theme.by_name("parch_dark").unwrap_or(0xDDD1);
-    let c5 = theme.by_name("brass").unwrap_or(0x7AC6);
-    let c6 = theme.by_name("parch_light").unwrap_or(0xDE32);
-    for (inset, col) in [(44i32, c6), (30, c5), (18, c5), (8, c4)] {
-        let w = 44 - inset + 8;
-        host.fill_rect(inset / 2, inset / 2, 1080 - inset, w, col);
-        host.fill_rect(inset / 2, 1920 - inset / 2 - w, 1080 - inset, w, col);
-        host.fill_rect(inset / 2, inset / 2, w, 1920 - inset, col);
-        host.fill_rect(1080 - inset / 2 - w, inset / 2, w, 1920 - inset, col);
-    }
-    host.fill_rect(0, 0, 1080, 9, c1);
-    host.fill_rect(0, 1911, 1080, 9, c1);
-    host.fill_rect(0, 0, 9, 1920, c1);
-    host.fill_rect(1071, 0, 9, 1920, c1);
-
-    // U20：兵力值 phase 相关（clash/duel 战前，result 战后）+ 满兵力基准 max_crew 对齐兵力条。
-    // S34.6 D4（spec §2.5 数据绑定）：`atk_crew/atk_arms/def_crew/def_arms` = **运行态兵力**
-    // 由调用方传入（vs.rs 从 `BattleSnapshot` 读席位舰队/守方），非演示常量。result 帧的
-    // 战后兵力 = 调用方已按 `balance.combat.manpower.loss_pct` 推算（同 `draw_result_scene` 战报）。
-    // U20：clash/duel 必带 HUD（spec §2.5 顶守/底攻）；result 战报框已含双侧兵力数据 ⇒
-    // 隐藏状态框避免与战报框重叠（U20「战报重叠」修复）。
-    if !matches!(phase, "result_win" | "result_lose") {
-        // 顶部守方状态框（右）+ 底部攻方状态框（左）——黄铜羊皮面板
-        draw_status_box(
-            host,
-            1080 - 470,
-            60,
-            440,
-            130,
-            i18n::sget("scene.vs.v2_elm_defender_label"),
-            def_crew,
-            def_arms,
-            def_crew.max(1),
-            true,
-        );
-        draw_status_box(
-            host,
-            30,
-            1920 - 190,
-            440,
-            130,
-            i18n::sget("scene.vs.v2_elm_attacker_label"),
-            atk_crew,
-            atk_arms,
-            atk_crew.max(1),
-            false,
-        );
-    }
-
-    // 中央 VS 徽标
-    host.fill_rect(540 - 70, 890 - 70, 140, 140, c2);
-    frame_v2(host, 540 - 70, 890 - 70, 140, 140, chrome::COLOR_GOLD_WARM);
-    let tw = host.shell().hint_text_width_px("VS");
-    host.draw_hint_text("VS", 540 - tw / 2, 875, c3);
-
-    // #3 逐帧时间轴（proto 路径）：英雄/敌军 bob、冲锋脉动、逼近/晃动（帧率无关）。
-    let t = anim_ms(host);
-
-    match phase {
-        "clash" => {
-            // 兵对兵：左下攻方 crew 冲锋 + hero 领军，右上守方 enemy 督战
-            // 2026-10-31 用户「整体重做背景/角色」→ 角色放大（hero/enemy 突出）
-            // #3 逐帧：hero/enemy bob + crew 冲锋脉动 + 刀光闪烁。
-            let hb = tri(t, 900, 10);
-            let eb = -tri(t, 1100, 8);
-            let cx = tri(t, 700, 14);
-            host.blit_image(chrome::V2_CREW, 430 - 190 + cx, 1130 - 160, 380, 320);
-            host.blit_image(chrome::V2_HERO, 215 - 130, 1500 - 190 + hb, 260, 380);
-            host.blit_image(chrome::V2_ENEMY, 845 - 130, 400 - 190 + eb, 260, 380);
-            // 冲锋刀光（中央，随 t 整体闪烁）
-            for i in 0..6 {
-                let sx = 300 + i * 80;
-                if (t / 120) % 2 == 0 {
-                    host.fill_rect(sx, 890 + (i % 2) * 30, 30, 4, c3);
-                }
-            }
-        }
-        "duel" => {
-            // 将对将：左下 hero vs 右上 enemy 刀光冲突（放大 + 突出上半身）
-            // #3 逐帧：双方逼近中央 + 火花脉动。
-            let hx = tri(t, 800, 16);
-            let ex = -tri(t, 800, 16);
-            host.blit_image(chrome::V2_HERO, 240 - 130 + hx, 1360 - 200, 260, 400);
-            host.blit_image(chrome::V2_ENEMY, 855 - 130 + ex, 460 - 200, 260, 400);
-            // 刀光火花（中央，脉动）
-            let burst = (t / 150) % 3 == 0;
-            for i in 0..9 {
-                let sx = 480 + (i % 3) * 40;
-                let sy = 850 + (i / 3) * 50;
-                if burst || i < 3 {
-                    host.fill_rect(sx, sy, 12, 12, c3);
-                }
-            }
-            host.fill_rect(440, 880, 200, 5, c3);
-        }
-        "result_win" | "result_lose" => {
-            // U20 拆分（render_v2_elem 超函数基线 140 行）：result 帧独立子函数。
-            // S34.6 D4：战报兵力 = 运行态（调用方传入），draw_result_scene 内按 loss_pct 推战后。
-            // S34.6 D5：`resolved` = 已结算 → 传入兵力即战后（`after_crew/arms` 真实值），不再推。
-            draw_result_scene(
-                host, phase, t, c4, c5, c2, atk_crew, atk_arms, def_crew, def_arms, resolved, true,
-            );
-        }
-        _ => {}
-    }
-    let _ = ink;
+    crate::scenes::vs_anim_proto_landscape::render_v2_elem_landscape(
+        host, phase, atk_crew, atk_arms, def_crew, def_arms, resolved, grid_class,
+    );
 }
 
 /// result 帧（胜/败）：角色 + 书法横幅 + 战报框（6 行双侧 16 参数，U20 拆分）。

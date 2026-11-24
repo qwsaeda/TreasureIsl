@@ -28,35 +28,27 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::text::{Font, FontSize, TextColor};
 
 use crate::canvas::rgb565_to_color;
-use ti_render::framebuffer::{LANDSCAPE_H_I32, LANDSCAPE_W_I32, LOGICAL_H_I32, LOGICAL_W_I32};
+use ti_render::framebuffer::{LANDSCAPE_H_I32, LANDSCAPE_W_I32};
 use ti_render::theme::Theme;
 
-/// 逻辑画布宽（1080×1920 单一坐标系，`08_render_arch.md` 契约；
-/// B8：从 ti-render `framebuffer` 单一 i32 源派生 f32，不再本地裸字面量副本）。
-const LOGICAL_W: f32 = LOGICAL_W_I32 as f32;
-/// 逻辑画布高度（同 B8 派生口径）。
-const LOGICAL_H: f32 = LOGICAL_H_I32 as f32;
-
-/// 逻辑 → Bevy 世界换算：`world = (cx - 540, 960 - cy)`（y 翻转，S18.2 契约）。
+/// 逻辑 → Bevy 世界换算：`world = (cx - 960, 540 - cy)`（y 翻转，S18.2 契约；
+/// S84 纯横屏：唯一逻辑画布 1920×1080，从 ti-render `framebuffer` 单一 i32 源派生）。
 #[inline]
 fn to_world(x: f32, y: f32) -> Vec2 {
-    to_world_dims(x, y, LOGICAL_W, LOGICAL_H)
+    let (lw, lh) = logical_dims();
+    to_world_dims(x, y, lw, lh)
 }
 
-/// S38 方案 A：逻辑 → Bevy 世界换算（方向感知——横屏传 1920×1080，竖屏 1080×1920）。
+/// 逻辑 → Bevy 世界换算（显式逻辑尺寸；`spawn_draw_list`/`spawn_pick_layer` 内部复用）。
 #[inline]
 fn to_world_dims(x: f32, y: f32, lw: f32, lh: f32) -> Vec2 {
     Vec2::new(x - lw / 2.0, lh / 2.0 - y)
 }
 
-/// S38：方向 → 逻辑画布尺寸（横屏 1920×1080，竖屏 1080×1920）。
+/// S84 纯横屏：唯一逻辑画布尺寸 1920×1080（方向参数与竖屏分支已删除）。
 #[inline]
-fn logical_dims(landscape: bool) -> (f32, f32) {
-    if landscape {
-        (LANDSCAPE_W_I32 as f32, LANDSCAPE_H_I32 as f32)
-    } else {
-        (LOGICAL_W, LOGICAL_H)
-    }
+fn logical_dims() -> (f32, f32) {
+    (LANDSCAPE_W_I32 as f32, LANDSCAPE_H_I32 as f32)
 }
 
 /// 烘焙位图（RGBA8）—— 供 `Sprite` 采样（图标 / 光晕等像素级形状）。
@@ -467,14 +459,10 @@ fn lerp_rgb565(from: u16, to: u16, t: f32) -> u16 {
 ///
 /// 返回挂出的标记数（`--shot` / 探针日志用）。
 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-pub fn spawn_pick_layer(
-    world: &mut World,
-    prims: &[ti_core::data::Primitive],
-    landscape: bool,
-) -> usize {
+pub fn spawn_pick_layer(world: &mut World, prims: &[ti_core::data::Primitive]) -> usize {
     use crate::pick::{PickLayerEntity, PickTarget};
 
-    let (lw, lh) = logical_dims(landscape);
+    let (lw, lh) = logical_dims();
     let mut count = 0usize;
     for p in prims {
         let key = p
@@ -542,10 +530,9 @@ pub fn spawn_draw_list(
     world: &mut World,
     font: Option<Handle<Font>>,
     list: &ti_render::drawlist::DrawList,
-    landscape: bool,
 ) -> usize {
     let total = list.ops.len();
-    let (lw, lh) = logical_dims(landscape);
+    let (lw, lh) = logical_dims();
     let mut count = 0usize;
     for (idx, op) in list.ops.iter().enumerate() {
         // 层序 = 绘制顺序（z 越大越靠上 = EXP-103）；
@@ -633,8 +620,8 @@ pub fn spawn_draw_list(
                 // （`to_world` 翻转）⇒ 世界角 = **取反**（`-θ`），同角度下屏幕/世界视觉一致。
                 let handle: Handle<Image> = world.resource::<AssetServer>().load(asset.clone());
                 let color = if *tint == 0xFFFF { Color::WHITE } else { rgb565_to_color(*tint) };
-                // S38 方案 A：方向感知（与 Rect/Text 同口径；曾遗漏用竖屏 `to_world`
-                // ⇒ 横屏下所有图片原语错位，`--shot --viewport=1920x1080` 黑边 + 内容偏右上）。
+                // S84 纯横屏：与 Rect/Text 同用横屏逻辑画布换算（`to_world_dims`），
+                // 曾因误用竖屏 `to_world` 导致图片原语错位，此处由 `logical_dims()` 单源锁定。
                 let mut transform = Transform::from_translation(
                     to_world_dims(*x as f32 + *w as f32 / 2.0, *y as f32 + *h as f32 / 2.0, lw, lh)
                         .extend(z),

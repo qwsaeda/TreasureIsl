@@ -5561,28 +5561,54 @@ fn check_wasm_viewport_init(root: &Path) -> Vec<String> {
     errors
 }
 
+/// S84 纯横屏不变量守门（原 S38「方向感知」断言改写，非删除）。
+///
+/// 用户 2026-11-24 要求「竖屏兼容分支彻底删除」：生产路径只存在 1920×1080 一个逻辑画布，
+/// 不再按窗口宽高比切方向。原断言要求 `letterbox_size` 同时含 LANDSCAPE_* 与竖屏回退分支，
+/// 删分支后该要求无意义 ⇒ 升级为纯横屏不变量：
+/// - ① EXP-161 防回归：`scene_render.rs::spawn_draw_list`/`spawn_pick_layer` 仍禁 `to_world(`
+///   （竖屏 `x-540,960-y` 换算），必须用 `to_world_dims`；
+/// - ② `treasure_bevy.rs` 的 `letterbox_size`/`run_shot` 恒用 LANDSCAPE_* 逻辑尺寸，
+///   `letterbox_size` 禁 `LOGICAL_W/H` 竖屏回退，`run_shot` 禁 Portrait 分支；
+/// - ③ `window_resize_system` 禁 `Orientation::from_size`/`set_orientation` 运行时切方向；
+/// - ④ 生产 src（`ti-app/src/scenes/`、`ti-engine/src/`，含 bin/）零 `if landscape` /
+///   `Orientation::Portrait` 字面量（`Orientation` 枚举本体与 settings 测试兼容分支在
+///   `ti-platform`，不在扫描面，按用户要求保留）。
+#[allow(clippy::too_many_lines)]
 fn check_landscape_no_portrait_hardcode(root: &Path) -> Vec<String> {
+    /// 递归收集目录下全部 `.rs`（含 bin/ 子目录）。
+    fn walk_rs(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else { return };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk_rs(&path, out);
+            } else if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+                out.push(path);
+            }
+        }
+    }
     let mut errors = Vec::new();
-    // `require`：true = 函数体必须含 needle（缺 = 仍纯竖屏硬编码）；false = 函数体禁 needle。
+    // `require`：true = 函数体必须含 needle；false = 函数体禁 needle。
     let mut scan_fn = |rel: &str, fn_name: &str, needles: &[&str], require: bool, what: &str| {
         let Some(text) = read_file(root, rel) else {
-            errors.push(format!("{rel}: 文件缺失，无法扫横屏硬编码"));
+            errors.push(format!("{rel}: 文件缺失，无法扫纯横屏不变量"));
             return;
         };
         let Some(body) = fn_body(&text, fn_name) else {
-            errors.push(format!("{rel}: 找不到函数 {fn_name}（横屏硬编码检查锚点漂移？）"));
+            errors.push(format!("{rel}: 找不到函数 {fn_name}（纯横屏断言锚点漂移？）"));
             return;
         };
         for needle in needles {
             let hit = body.contains(needle);
             if (require && !hit) || (!require && hit) {
-                let kind = if require { "缺方向感知标志" } else { "命中竖屏硬编码" };
-                errors.push(format!("{rel}::{fn_name}: {kind} `{needle}`（{what}，EXP-161）"));
+                let kind =
+                    if require { "缺横屏不变量标志" } else { "命中竖屏兼容残留" };
+                errors.push(format!("{rel}::{fn_name}: {kind} `{needle}`（{what}，S84）"));
             }
         }
     };
-    // scene_render.rs：live 横屏换算函数禁竖屏 `to_world(`。
-    // `to_world(` 精确匹配不含 `to_world_dims(`（后者是 `to_world_dims(`，`to_world` 后是 `_` 非 `(`）。
+    // ① EXP-161 防回归：`to_world(` 精确匹配不含 `to_world_dims(`（`to_world` 后是 `_` 非 `(`）。
     scan_fn(
         "crates/ti-engine/src/scene_render.rs",
         "spawn_draw_list",
@@ -5597,15 +5623,69 @@ fn check_landscape_no_portrait_hardcode(root: &Path) -> Vec<String> {
         false,
         "横屏拾取层须用 to_world_dims",
     );
-    // bin：letterbox_size 必须方向感知（含 LANDSCAPE_W_I32/H_I32 = 横屏逻辑尺寸分支；
-    // 竖屏分支用 LOGICAL_W/H 合法，故用 require 而非 forbid）。
+    // ② letterbox / run_shot：恒 1920×1080，不再按宽高比切方向。
+    let bin = "crates/ti-engine/src/bin/treasure_bevy.rs";
     scan_fn(
-        "crates/ti-engine/src/bin/treasure_bevy.rs",
+        bin,
         "letterbox_size",
         &["LANDSCAPE_W_I32", "LANDSCAPE_H_I32"],
         true,
-        "letterbox_size 须方向感知（横屏 1920×1080 / 竖屏 1080×1920）",
+        "letterbox_size 须恒用横屏逻辑尺寸 1920×1080",
     );
+    scan_fn(
+        bin,
+        "letterbox_size",
+        &["LOGICAL_W", "LOGICAL_H"],
+        false,
+        "letterbox_size 禁竖屏 1080×1920 回退",
+    );
+    scan_fn(
+        bin,
+        "run_shot",
+        &["Orientation::Portrait", "landscape_target"],
+        false,
+        "run_shot 禁按视口宽高比切竖屏",
+    );
+    scan_fn(
+        bin,
+        "run_shot",
+        &["LANDSCAPE_W_I32", "LANDSCAPE_H_I32"],
+        true,
+        "run_shot contain 缩放须恒用横屏逻辑尺寸",
+    );
+    // ③ 窗口 resize 不再切方向。
+    scan_fn(
+        bin,
+        "window_resize_system",
+        &["Orientation::from_size", "set_orientation", "Portrait"],
+        false,
+        "window_resize_system 禁运行时方向切换",
+    );
+
+    // ④ 生产 src 零方向分支（递归扫 .rs，含 bin/；tests/ 的兼容断言不在面内）。
+    let forbidden =
+        ["if landscape", "if !landscape", "Orientation::Portrait", "Orientation::from_size"];
+    for rel_root in ["crates/ti-app/src/scenes", "crates/ti-engine/src"] {
+        let mut files = Vec::new();
+        walk_rs(&root.join(rel_root), &mut files);
+        if files.is_empty() {
+            errors.push(format!("{rel_root}: 扫描面无 .rs 文件（纯横屏断言空跑）"));
+        }
+        for path in files {
+            let Ok(text) = std::fs::read_to_string(&path) else { continue };
+            let rel = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().into_owned();
+            for (line_no, line) in text.lines().enumerate() {
+                for needle in forbidden {
+                    if line.contains(needle) {
+                        errors.push(format!(
+                            "{rel}:{}: 生产路径命中竖屏兼容分支 `{needle}`（S84 纯横屏不变量：0 命中）",
+                            line_no + 1
+                        ));
+                    }
+                }
+            }
+        }
+    }
     errors
 }
 
