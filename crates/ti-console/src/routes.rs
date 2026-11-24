@@ -13,8 +13,12 @@
 //!   原生 JS + CSS 全内联无 npm；视觉令牌 = 游戏「航海夜·精修」，内联于 `index.html` `<style>`
 //!   （对齐 `docs/process/10_ui_redesign.md` §3 设计令牌 v2；单文件交付，0 外部静态资源依赖）；
 //!   图片（证据/资产/设计稿/地图描述符资产）走 `/` 仓库白名单直读，网页内直查 + 灯箱）；
+//! - S86.2 UI 组件可视化编辑器：`GET /api/ui/components?scene=` / `GET /api/ui/roles`（只读免 token）
+//!   + `POST /api/ui/components/validate`（只读 body 不落盘）/ `POST /api/ui/components/apply`
+//!     （唯一写点 `components_v1.json`；写面头部门控 + `api_endpoints` 白名单 id）；
 //! - 其余 = 静态映射（`ti-devmeta::http::resolve_or_404`，400/404 语义同 serve.rs 原型）；
-//! - 写操作（POST）骨架期走静态映射 ⇒ 非 403；POST 鉴权 + 403 语义 = S32.4 面（22 号 §10.1）。
+//! - 写操作（POST）骨架期走静态映射 ⇒ 非 403；POST 鉴权 + 403 语义 = S32.4 面（22 号 §10.1）；
+//! - S86.3 `POST /api/preview` = 真渲染预览写点（`repo::preview`，后台 job + PNG 回传，轮询走 `/api/jobs?kind=preview`）。
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
@@ -299,6 +303,12 @@ fn dispatch_get(
             }
         }
         "/api/themes" => crate::repo::themes::themes_get(repo_root, url, gz),
+        // S86.2 UI 组件可视化编辑器（只读免 token）：组件实例 + role/icon 下拉源。
+        "/api/ui/components" => {
+            let scene = percent_decode(query_param(url, "scene").unwrap_or(""));
+            crate::repo::ui_components::components_get_http(repo_root, &scene, gz)
+        }
+        "/api/ui/roles" => crate::repo::ui_components::roles_get_http(repo_root, gz),
         "/api/apk-size" => {
             api_500_or_json(load_json(repo_root, |s| data::apk_size(repo_root, s)), gz)
         }
@@ -621,8 +631,26 @@ fn handle_post(
         "/api/themes/apply" => {
             Some(crate::repo::themes::handle_themes_apply(repo_root, body, token, content_type, gz))
         }
+        // S86.2 UI 组件可视化编辑器：validate（只读 body 不落盘，仍走写面头部门控）/
+        // apply（唯一写点 components_v1.json）。白名单 id 见 console_commands.json::api_endpoints。
+        "/api/ui/components/validate" => Some(crate::repo::ui_components::validate_http(
+            repo_root,
+            body,
+            token,
+            content_type,
+            gz,
+        )),
+        "/api/ui/components/apply" => {
+            Some(crate::repo::ui_components::apply_http(repo_root, body, token, content_type, gz))
+        }
         // S32.6 任务收口（close_check 只读体检 / close_run 写 + EXP 查重）。
         "/api/close" => Some(close_api::handle_close(repo_root, body, token, content_type, gz)),
+        // S86.3 真渲染预览（X-TI-Token + enable_write 语义 + scene/viewport/id 白名单；
+        // 只写 gitignored evidence/console/preview/<id>/，后台 python3 包装 --shot 出图）。
+        // 轮询复用统一作业面 GET /api/jobs?kind=preview&id=<id>（无需另设 GET /api/preview）。
+        "/api/preview" => {
+            Some(crate::repo::preview::handle_preview(repo_root, body, token, content_type, gz))
+        }
         // S44.2/S44.3 地图/UI 向导执行一步（写动作需 enable_write；不可跳步 409；失败即停）。
         // F-1 修复：写路由须 X-TI-Token（22 号 §10.1）；F4：Content-Type application/json。
         "/api/content/map/step" => Some(crate::content::handle_wizard_step(

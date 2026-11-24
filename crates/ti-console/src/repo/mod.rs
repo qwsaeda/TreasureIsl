@@ -14,7 +14,9 @@
 //! 本模块 **0 游戏依赖**；只读面（`config`/`guard`/`data`/`snapshot`）自身 0 写盘（写点仅
 //! `evidence/console/` = 平台归档目录，快照对比报告由调用方落盘）；`import` = S32.15 ② **唯一受控写点**
 //! （`POST /api/map/import` 落 `assets/maps/<id>/` 四文件 + 同进程 `map_pack.py verify/sync`〔先判后回注〕，
-//! 平台其余 0 写盘，北极星「0 游戏产物变更」的受控例外，22 号 §10.1 + `snapshot::import_probe` 豁免面）。
+//! 平台其余 0 写盘，北极星「0 游戏产物变更」的受控例外，22 号 §10.1 + `snapshot::import_probe` 豁免面）；
+//! `preview` = S86.3 真渲染预览写点（只落 gitignored `evidence/console/preview/<id>/`，
+//! 后台 `python3 scripts/preview_shot.py` 出图，零跟踪文件写盘）。
 
 pub mod build_ops;
 pub mod config;
@@ -22,9 +24,11 @@ pub mod data;
 pub mod dist;
 pub mod guard;
 pub mod import;
+pub mod preview;
 pub mod search;
 pub mod snapshot;
 pub mod themes;
+pub mod ui_components;
 
 /// 百分号解码（query 参数；前端 `encodeURIComponent` 输出 `%XX`，服务端须解码后再匹配，
 /// 否则含空格/中文/保留字符的查询按字面 `%XX` 匹配 = 0 命中；S32.8 检索 + whitelist/evidence 路由）。

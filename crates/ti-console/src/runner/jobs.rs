@@ -5,7 +5,8 @@
 //! ⇒ 「跑完了吗 / 成没成 / 证明在哪」三个问题没有统一答案，平台测试页交互无法闭环。
 //!
 //! 统一口径（23 号 §6.2）：
-//! - **作业种类** = `test` / `build` / `publish` / `gate`（四类，见 `JOB_KINDS`）；
+//! - **作业种类** = `test` / `build` / `publish` / `gate` / `preview`（五类，见 `JOB_KINDS`；
+//!   `preview` = S86.3 真渲染预览，`python3` 包装 native `--shot`）；
 //! - **状态文件** `evidence/console/jobs/<kind>-<id>.json`：
 //!   `{kind,id,running,pid,exit_code,started_ts,ended_ts,log,evidence[],note,timeout_s}`；
 //! - **日志** `evidence/console/logs/<kind>-<id>-<ts>.log`（流式写 ⇒ 输出实时可见）；
@@ -24,8 +25,8 @@ use serde_json::{Value, json};
 
 use crate::runner::result_schema;
 
-/// 作业种类（23 号 §6.2）。
-pub const JOB_KINDS: [&str; 4] = ["test", "build", "publish", "gate"];
+/// 作业种类（23 号 §6.2；S86.3 增 `preview` = 真渲染预览后台出图）。
+pub const JOB_KINDS: [&str; 5] = ["test", "build", "publish", "gate", "preview"];
 
 /// 程序白名单（22 号 §10.3）。
 pub const JOB_PROGRAMS: [&str; 4] = ["cargo", "python3", "pwsh", "powershell"];
@@ -36,7 +37,7 @@ const SCRIPT_INTERPS: [&str; 2] = ["pwsh", "powershell"];
 /// 作业条目（声明式；`program` + `args` = 逐参数执行，禁 shell 拼接）。
 #[derive(Debug, Clone)]
 pub struct JobSpec {
-    /// 作业种类（`test`/`build`/`publish`/`gate`）。
+    /// 作业种类（`test`/`build`/`publish`/`gate`/`preview`）。
     pub kind: String,
     /// 业务 id（测试 id / `apk` / `publish` / `gate-fast` …；须匹配 `[a-z0-9_-]{1,64}`）。
     pub id: String,
@@ -55,7 +56,7 @@ impl JobSpec {
     ///
     /// # Errors
     ///
-    /// `kind` 不在四种之一 / `id` 不合法 / `program` 不在白名单 ⇒ 报错（不 spawn）。
+    /// `kind` 不在五种之一 / `id` 不合法 / `program` 不在白名单 ⇒ 报错（不 spawn）。
     pub fn new(
         kind: &str,
         id: &str,

@@ -45,6 +45,7 @@
      | 构建体检 `scripts/build_wasm.ps1 -Check` | 无 | 只读（不构建/不拷贝/不写 evidence）；**此 `-Check` 行本身只读** ⇒ 单次体检不改写 `web/` 与 `evidence/S18.8a-wasm-size.log`（构建执行 = 24 号 §4.1 编排器，S35.1） |
      | 地图包校验 `scripts/map_pack.py verify/check` | 无（只读） | 同脚本的写子命令**平台一律不开放**：`install/uninstall` 写 `assets/maps/<id>/` + `assets/maps/.default`（**条件写**：install 缺时 / uninstall 仅卸默认包时）+ `assets/maps/index.json` + `assets/data/board.json`；`add` 写 `assets/maps/<id>/`；`sync` 写 `assets/data/{board,scenes,strings}.json` + `assets/data/ui_schema/scene_manifest_v3.json`（写点清单以 21 号 §8 为准） |
 | 内容运营写动作（**S44.1 起开放，默认关**，30 号 §3.1） | `scripts/map_pack.py`（`add`/`syncmap`/`pack`/`install`/`sync`/`uninstall`）+ `scripts/ui_variant.py`（`tint`）+ `scripts/publish_web.ps1` | `mappack_add`→`assets/maps/`；`mappack_syncmap`→`assets/maps/<id>/manifest.json`；`mappack_pack`→`dist/maps/<id>.map-pack/`；`mappack_install`→`assets/maps/`+`board.json`+`index.json`+`ui_manifest.json`；`mappack_sync`→`assets/data/{board,scenes,strings}.json`+`scene_manifest_v3.json`；`mappack_uninstall`→`assets/maps/`+`.default`+`index.json`+`board.json`；`ui_variant`→`assets/ui/`+`ui_manifest.json`；`publish`→`web/`+`docs/release.md`。写点清单以 21 号 §8 / 30 号 §3.1 为准（S32.15 起「平台一律不开放地图写子命令」改为「开放但默认关 + 写点探针」） |
+| UI 组件写动作（**S86.2 开放，默认关**，30 号 §3.1） | `POST /api/ui/components/apply` → `assets/data/ui_schema/components_v1.json` | 唯一写点 = 单个组件实例文件（`json.dumps(indent=2)` 同口径保键序，**不重排其它场景**）；写前 `validate` 内存 schema（禁绝对坐标 `x/y/w/h/rect` + enum/登记对账）+ 子进程叙事门禁；写后复跑 `scripts/ui_schema_check.py --check`（FAIL 自动还原）+ `write_probe` 写点探针。`validate` 端点**只读 body 不落盘**，但仍走 `X-TI-Token` + `enable_write` + 白名单 `action` id |
 
 2. **只读默认**：写操作（跑门禁 / 收口体检 / EXP 查重 / 审计归档）必须显式触发，走 §4.2 命令白名单。
 3. **单一事实源**：业务结论只链接（`EXP-xxx` / `F-xxx` / 业务文档），平台不二次表述、不缓存结论。
@@ -471,3 +472,54 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 - 平台内**可执行动作的白名单与命令映射** = `crates/ti-console/console_commands.json`（机器真源）；
   22 号 §4.2 是人读视图，两者 id 集合须一致（S32.6 对账断言）；
 - 平台代码受 `docs/process/16_code_standards.md` 约束（新代码零豁免）。
+
+## 13. S86.2 UI 组件可视化编辑器（API 清单 / 三面对账）
+
+独立静态页 `crates/ti-console/web/ui_editor.html`（自成一体，内联 CSS/JS；导航入口由主线程并入看板）。
+数据源 = `assets/data/ui_schema/components_v1.json` / `asset_roles.json`（`console_sources.json` 只读登记），
+role/icon 下拉另读 `assets/data/ui_icons.json`。三面对账 = `routes.rs` 路由 ↔
+`console_commands.json::api_endpoints` 白名单 id ↔ 本表（新增端点须三处同改，幻影端点即漂移）。
+
+| 端点 | 方法 | token / 写面 | 用途 |
+|---|---|---|---|
+| `GET /api/ui/components?scene=` | GET | 免 token，只读 | 全场景组件实例 + `scene` 回显（前端 tab 切换） |
+| `GET /api/ui/roles` | GET | 免 token，只读 | role → 资产路径 + icon 名册（下拉选项） |
+| `POST /api/ui/components/validate` | POST | `X-TI-Token` + `enable_write` + 白名单 `action=ui_components_validate` | 内存 schema 实时校验（body 不落盘）：Rust 镜像 `ui_schema_check.py` 的 enum/禁绝对坐标/条件必填/登记对账 + 子进程 `ui_schema_check.py --check`（on-disk 基线）与 `check_scene_narrative.py --check`（叙事）；FAIL 前端红字 + 回滚该次拖拽 |
+| `POST /api/ui/components/apply` | POST | `X-TI-Token` + `enable_write` + 白名单 `action=ui_components_apply` | 规范化写 `components_v1.json`（indent=2 保序）+ 写后门禁复验（FAIL 还原）+ `write_probe` 写点探针 |
+
+- **拖拽反算**：Scene View 用百分比示意框渲染 `layout`；像素位移 ÷ 画布宽高 × 100 → 百分比，
+  写回 `layout.intent="anchored"` + `anchor` + `offset_pct{x,y}`（框心相对锚点）+ `size_pct{w,h}`；
+  右下角手柄拖拽改 `size_pct`。**任何 `x/y/w/h/rect` 出现在组件顶层即校验 FAIL**（禁绝对像素）。
+- **预览入口**：页面「预览真渲染」按钮调 `POST /api/preview`（S86.3 后端已落地，见 §14）；
+  `<img>` 走 `?t=Date.now()` 破缓存范式。前端须带 `X-TI-Token` 头 + body `enable_write:true`。
+- **鉴权次序**：403 token → 400 Content-Type → 413 请求体上限 → 400 JSON → 400 `enable_write` →
+  400 白名单 `action` id（22 号 §10.1/§10.3）。
+- **0 游戏依赖**：`crates/ti-console/src/repo/ui_components.rs` 本地 `std::fs` 读 schema 文件，
+  不引 `ti-core` / `ti-engine`（沿用 `themes.rs` 范式）；平台改动 0 游戏 crate diff。
+
+## 14. S86.3 真渲染预览服务（API 清单 / 三面对账）
+
+设计依据 = `docs/plan-s86-visual-editor.md` §2（C+A 定案）。三面对账 = `routes.rs` 路由 ↔
+`console_commands.json::api_endpoints` 白名单 id ↔ 本表（新增端点须三处同改，幻影端点即漂移）。
+
+| 端点 | 方法 | token / 写面 | 用途 |
+|---|---|---|---|
+| `POST /api/preview` | POST | `X-TI-Token` + `enable_write=true` + 白名单 `action=preview` | 未落盘编辑数据写 gitignored `evidence/console/preview/<id>/` → 后台 `python3 scripts/preview_shot.py` 调 `treasure-bevy-native --shot` → PNG 回传 |
+| `GET /api/jobs?kind=preview&id=<id>` | GET | 免 token，只读 | 统一作业模型查询面（23 号 §6.2）：exit_code + log_tail + evidence[]；无需另设 `GET /api/preview` |
+
+- **body 枚举**：`{scene, viewport?, id?, map_id?, schema_id?, enable_write, action?, schema_json?,
+  asset_roles_json?, board_json?, scenes_json?, strings_json?, map_json?, layout_json?, pack_strings_json?}`；
+  `scene` ∈ `index|select_role|select_map|saveload|message|main_map`，`viewport` ∈
+  `1920x1080|1080x1920|1280x720|960x540`，`id`/`map_id`/`schema_id` 仅 `[a-z0-9_-]` / `[a-z0-9_]`；
+  禁自由 shell / 自由路径；请求体 ≤ 64 KiB；鉴权次序 403 → 400 Content-Type → 413 → 400 JSON → 400 `enable_write` → 400 枚举。
+- **写点**：仅 `evidence/console/preview/<id>/`（写点白名单已登记 `evidence/console/`）+
+  出图侧车 `evidence/bevy_native_preview_<id>_<WxH>.png`（gitignored）；`assets/data/` 与
+  其它跟踪文件 0 改动（零跟踪文件写盘）。
+- **注入接缝**：env `TI_PREVIEW_DIR`（`apply_minimal_env` 后重设，同 `TI_SHOT_NAME`/`TI_MAP` 次序）
+  → 引擎 `inject_map_pack()` **之前** `ui_schema::install_injected` / `table_source::install`
+  （OnceLock 一次性 ⇒ 每请求一个进程，与 `--shot` 冷启天然契合）；缺目录 = 内嵌默认 0 行为变化。
+- **判据**：exit 0 + 日志含 `已写` + PNG 非纯色（字节多样性 ≥4，同 `shot_image_ok` 口径）；
+  `<img src="/evidence/bevy_native_preview_<id>_<WxH>.png?t=<ts>">` 破缓存（白名单 + ETag 已具备）。
+- **超时策略**：job 硬超时 900s（debug bin + llvmpipe 实测单 job 3~5min，多 job 并发更慢）；
+  超时记 `exit_code=-1` + `note=timeout`，前端据 `/api/jobs` 如实提示，不把旧 PNG 当成功证据
+  （脚本出图前先删同 id 旧图）。

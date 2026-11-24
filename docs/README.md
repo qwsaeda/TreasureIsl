@@ -161,8 +161,10 @@
 
 
 > S85 新增工具：`scripts/ui_schema_check.py`（`components_v1.json` 组件 schema 门禁，见 `process/33_ui_component_schema.md`）。
-| 文件 | 作用 |
-|---|---|
+
+> S86 新增工具：`scripts/preview_shot.py`（真渲染预览出图包装器，见 `process/22_dev_platform.md` §14）。| 文件 | 作用 |
+
+> S86 新增工具：`scripts/export_parity_check.py`（导出即生效像素判据，见 `process/22_dev_platform.md` §14）。|---|---|
 | `scripts/playbook.ps1` | **常用命令一键入口**（16 项命令固化：native 运行 / 无头回归 / wasm / 冒烟 / 门禁 / 测试 / fmt / clippy / 元素验证 / 逐精灵渲染 / 推送前置检查 / 台账 / doccheck / 硬编码扫描；`-List` 列全部；UTF-8 BOM 防 PowerShell 编码错位） |
 | `crates/ti-tools/src/bin/specskel.rs` | spec 骨架半自动生成（S0.7；命令见 `AGENTS.md` 命令节） |
 | `crates/ti-devmeta` | S32.1 平台共享层（台账解析 + 静态 HTTP，纯 std 0 游戏依赖；`ledger.rs` 上提自 `ti-tools`） |

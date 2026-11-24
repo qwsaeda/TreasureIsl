@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI 组件可视化编辑器 · TI Dev Console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%A7%A9%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg:#14161f; --panel:#1d2030; --panel2:#232740; --ink:#e8eaf2; --muted:#9aa0b8;
+    --accent:#7ec8e3; --ok:#58c47a; --warn:#e0b345; --err:#e06060; --border:#2e3350;
+  }
+  * { box-sizing:border-box; }
+  body { font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; margin:0;
+         background:var(--bg); color:var(--ink); font-size:14px; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 18px;
+           background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; }
+  header a { color:var(--accent); text-decoration:none; }
+  .muted { color:var(--muted); font-size:12px; }
+  .wrap { display:flex; gap:12px; padding:12px; align-items:flex-start; flex-wrap:wrap; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px; }
+  .list-col { width:280px; flex:0 0 280px; max-height:78vh; overflow:auto; }
+  .stage-col { flex:1 1 560px; min-width:420px; }
+  .prop-col { width:300px; flex:0 0 300px; max-height:78vh; overflow:auto; }
+  h2 { font-size:13px; margin:0 0 10px; color:var(--muted); font-weight:600; letter-spacing:.5px; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .tab, button { font:inherit; color:var(--ink); background:var(--panel2);
+                 border:1px solid var(--border); border-radius:6px; padding:6px 10px; cursor:pointer; }
+  .tab.on { background:var(--accent); color:#0d0f17; border-color:var(--accent); font-weight:600; }
+  button.primary { background:var(--accent); color:#0d0f17; border-color:var(--accent); font-weight:600; }
+  button.danger { background:#3a222c; border-color:#6d3340; color:#ffb4b4; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .elem { border:1px solid var(--border); border-radius:6px; padding:8px; margin-bottom:6px;
+          cursor:pointer; background:var(--panel2); }
+  .elem.on { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+  .elem .id { font-weight:600; }
+  .elem .meta { color:var(--muted); font-size:11px; margin-top:3px; }
+  #sceneCanvas { position:relative; width:100%; aspect-ratio:16/9; background:#0e1018;
+                 border:1px solid var(--border); border-radius:6px; overflow:hidden; touch-action:none; }
+  .box { position:absolute; border:1.5px dashed var(--accent); border-radius:4px;
+         background:rgba(126,200,227,.10); display:flex; align-items:flex-start;
+         padding:3px 5px; font-size:11px; color:var(--accent); cursor:grab;
+         white-space:nowrap; overflow:hidden; user-select:none; }
+  .box.on { border-style:solid; background:rgba(126,200,227,.22); box-shadow:0 0 0 1px var(--accent) inset; }
+  .box.dragging { cursor:grabbing; opacity:.85; }
+  .box .grp { position:absolute; right:-5px; bottom:-5px; width:12px; height:12px;
+              background:var(--warn); border-radius:3px; cursor:nwse-resize; }
+  .row { display:flex; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap; }
+  .row label { width:88px; color:var(--muted); font-size:12px; }
+  input, select { background:var(--bg); color:var(--ink); border:1px solid var(--border);
+                  border-radius:5px; padding:5px 7px; font:inherit; min-width:0; }
+  input[type=number] { width:86px; }
+  textarea { width:100%; height:130px; background:var(--bg); color:var(--ink);
+             border:1px solid var(--border); border-radius:6px; padding:8px; font-family:ui-monospace,monospace; }
+  #status { margin-top:10px; padding:8px 10px; border-radius:6px; border:1px solid var(--border);
+            background:var(--panel2); white-space:pre-wrap; word-break:break-all; font-size:12px; }
+  #status.pass { border-color:var(--ok); color:var(--ok); }
+  #status.fail { border-color:var(--err); color:#ffb4b4; }
+  #previewBox { margin-top:10px; display:none; }
+  #previewBox img { width:100%; border:1px solid var(--border); border-radius:6px; }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .legend { color:var(--muted); font-size:11px; line-height:1.6; margin-top:8px; }
+  code { color:var(--warn); }
+</style>
+</head>
+<body>
+<header>
+  <h1>UI 组件可视化编辑器</h1>
+  <span class="muted">S86.2 · components_v1.json · 禁绝对坐标（intent / anchored 百分比）</span>
+  <a href="/">← 返回看板</a>
+  <span style="flex:1"></span>
+  <span class="muted">token</span>
+  <input type="password" id="token" placeholder="TI_CONSOLE_TOKEN（sessionStorage）" style="width:190px">
+  <button id="tokenSave">保存</button>
+  <label class="muted" title="写操作默认关（30 号 §3.1）；校验 / apply 均需勾选"><input type="checkbox" id="enableWrite"> enable_write（写操作需勾选）</label>
+</header>
+
+<div class="wrap">
+  <div class="card list-col">
+    <h2>场景 / 组件</h2>
+    <div class="tabs" id="tabs"></div>
+    <div id="elemList"></div>
+    <div class="legend">点组件选中；画布拖拽改位置，右下角小柄拖拽改尺寸。每次落点自动校验，FAIL 自动回滚。</div>
+  </div>
+
+  <div class="card stage-col">
+    <h2>Scene View（1920×1080 示意 · 百分比坐标）</h2>
+    <div id="sceneCanvas"></div>
+    <div class="bar">
+      <button id="btnValidate">校验</button>
+      <button id="btnApply" class="primary">写盘 apply</button>
+      <button id="btnExport">导出 JSON</button>
+      <button id="btnReload">重新载入</button>
+      <button id="btnPreview">预览真渲染</button>
+    </div>
+    <div id="status">尚未载入组件数据。</div>
+    <div id="previewBox"><h2 style="margin-top:12px">真渲染预览</h2><img id="previewImg" alt="preview"></div>
+  </div>
+
+  <div class="card prop-col">
+    <h2>属性</h2>
+    <div id="props"><div class="muted">先选一个组件。</div></div>
+    <h2 style="margin-top:16px">schema 原文</h2>
+    <textarea id="rawJson" spellcheck="false"></textarea>
+  </div>
+</div>
+
+<script>
+'use strict';
+// S86.2 独立页面：自成一体，不依赖 index.html 的任何 JS；导航入口由主线程后续加。
+const SCENE_ORDER = ['index','select_role','select_map','message','saveload'];
+const ACTIONS = ['menu_select','character_select','map_select','slot_load','slot_write',
+  'msg_next','msg_prev','spin','back','attack','do_item','defend'];
+const TIERS = ['title','body','hint'];
+const STATES = ['normal','selected','hover','disabled'];
+const INTENTS = ['fill','center','side_left','side_right','bottom_bar','flex_col','flex_row','anchored'];
+const ANCHORS = ['top_left','top_right','top_center','bottom_left','bottom_right',
+  'bottom_center','center_left','center_right','center'];
+
+const S = { schema:null, scene:'index', selected:null, roles:[], icons:[], busy:false, drag:null };
+const $ = (id) => document.getElementById(id);
+const clone = (v) => JSON.parse(JSON.stringify(v));
+const round1 = (n) => Math.round(n * 10) / 10;
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+function status(text, kind) {
+  const el = $('status');
+  el.textContent = text;
+  el.className = kind || '';
+}
+
+function headers() {
+  const h = { 'Content-Type':'application/json' };
+  const t = sessionStorage.getItem('ti_console_token') || '';
+  if (t) h['X-TI-Token'] = t;
+  return h;
+}
+
+async function api(url, opt) {
+  const resp = await fetch(url, opt);
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch (_) { data = text; }
+  if (!resp.ok) throw new Error(resp.status + ' ' + (data && data.error ? data.error : data));
+  return data;
+}
+
+function envelope(action) {
+  if (!$('enableWrite').checked) throw new Error('请勾选 enable_write（30 号 §3.1 写面默认关）');
+  return JSON.stringify({
+    action: action,
+    enable_write: true,
+    schema_text: JSON.stringify(S.schema, null, 2)
+  });
+}
+
+async function postValidate() {
+  const body = envelope('ui_components_validate');
+  return api('/api/ui/components/validate', { method:'POST', headers:headers(), body });
+}
+
+// ---- 版面反算：像素位移 → 百分比，写回 anchored 的 offset_pct / size_pct ----
+function anchorPoint(name) {
+  switch (name) {
+    case 'top_left': return { x:0, y:0 };
+    case 'top_right': return { x:100, y:0 };
+    case 'top_center': return { x:50, y:0 };
+    case 'bottom_left': return { x:0, y:100 };
+    case 'bottom_right': return { x:100, y:100 };
+    case 'bottom_center': return { x:50, y:100 };
+    case 'center_left': return { x:0, y:50 };
+    case 'center_right': return { x:100, y:50 };
+    default: return { x:50, y:50 };
+  }
+}
+
+function pickAnchor(box) {
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  const ax = cx < 33 ? 'left' : cx > 67 ? 'right' : 'center';
+  const ay = cy < 33 ? 'top' : cy > 67 ? 'bottom' : 'center';
+  if (ax === 'center' && ay === 'center') return 'center';
+  if (ax === 'center') return ay + '_center';
+  if (ay === 'center') return 'center_' + ax;
+  return ay + '_' + ax;
+}
+
+function clampBox(b) {
+  const w = clamp(b.w, 3, 100), h = clamp(b.h, 3, 100);
+  return { x:clamp(b.x, 0, 100 - w), y:clamp(b.y, 0, 100 - h), w:w, h:h };
+}
+
+function layoutBox(layout) {
+  const l = layout || {};
+  const wp = typeof l.width_pct === 'number' ? l.width_pct : null;
+  const hp = typeof l.height_pct === 'number' ? l.height_pct : null;
+  switch (l.intent) {
+    case 'fill': return { x:0, y:0, w:100, h:100 };
+    case 'center': {
+      const w = wp || 40, h = hp || 30;
+      return clampBox({ x:(100 - w) / 2, y:(100 - h) / 2, w:w, h:h });
+    }
+    case 'side_left': return clampBox({ x:0, y:10, w:wp || 34, h:hp || 80 });
+    case 'side_right': return clampBox({ x:100 - (wp || 34), y:10, w:wp || 34, h:hp || 80 });
+    case 'bottom_bar': return clampBox({ x:0, y:100 - (hp || 10), w:100, h:hp || 10 });
+    case 'flex_col': return clampBox({ x:30, y:10, w:40, h:hp || 80 });
+    case 'flex_row': return clampBox({ x:10, y:35, w:80, h:30 });
+    case 'anchored': {
+      const ap = anchorPoint(l.anchor || 'center');
+      const off = l.offset_pct || { x:0, y:0 };
+      const sz = l.size_pct || { w:30, h:20 };
+      return clampBox({
+        x:ap.x + (off.x || 0) - sz.w / 2, y:ap.y + (off.y || 0) - sz.h / 2,
+        w:sz.w, h:sz.h
+      });
+    }
+    default: return { x:35, y:40, w:30, h:20 };
+  }
+}
+
+function setAnchored(layout, box) {
+  const b = clampBox(box);
+  const anchor = pickAnchor(b);
+  const ap = anchorPoint(anchor);
+  layout.intent = 'anchored';
+  layout.anchor = anchor;
+  layout.offset_pct = { x:round1(b.x + b.w / 2 - ap.x), y:round1(b.y + b.h / 2 - ap.y) };
+  layout.size_pct = { w:round1(b.w), h:round1(b.h) };
+  delete layout.width_pct;
+  delete layout.height_pct;
+  delete layout.align;
+}
+
+function currentScene() { return S.schema.scenes[S.scene]; }
+function findElement(id) {
+  const arr = currentScene() && currentScene().elements || [];
+  return arr.find((e) => e.id === id) || null;
+}
+
+// ---- 渲染 ----
+function renderTabs() {
+  const tabs = $('tabs');
+  tabs.innerHTML = '';
+  SCENE_ORDER.forEach((name) => {
+    if (!S.schema.scenes[name]) return;
+    const b = document.createElement('button');
+    b.className = 'tab' + (name === S.scene ? ' on' : '');
+    b.textContent = name;
+    b.onclick = async () => {
+      if (S.busy) return;
+      S.scene = name; S.selected = null;
+      renderAll();
+      // ?scene= 回显契约：切换时走只读 API 取该场景（0 写盘），保留全量 schema 供 tab 切换。
+      try { await api('/api/ui/components?scene=' + encodeURIComponent(name)); } catch (_) {}
+    };
+    tabs.appendChild(b);
+  });
+}
+
+function renderList() {
+  const list = $('elemList');
+  list.innerHTML = '';
+  (currentScene().elements || []).forEach((e) => {
+    const div = document.createElement('div');
+    div.className = 'elem' + (S.selected === e.id ? ' on' : '');
+    const l = e.layout || {};
+    const layoutText = l.intent === 'anchored'
+      ? 'anchored@' + (l.anchor || 'center')
+      : l.intent;
+    div.innerHTML = '<div class="id">' + esc(e.id) + ' <span class="muted">· ' + esc(e.type || '?') + '</span></div>'
+      + '<div class="meta">' + esc(e.role || e.binding || '—') + ' / ' + esc(layoutText)
+      + (e.action ? ' / ' + esc(e.action) : '') + (e.state ? ' / ' + esc(e.state.join(',')) : '') + '</div>';
+    div.onclick = () => { S.selected = e.id; renderAll(); };
+    list.appendChild(div);
+  });
+}
+
+function esc(v) {
+  return String(v).replace(/[&<>"]/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+}
+
+function renderCanvas() {
+  const canvas = $('sceneCanvas');
+  canvas.innerHTML = '';
+  (currentScene().elements || []).forEach((e) => {
+    const b = layoutBox(e.layout);
+    const box = document.createElement('div');
+    box.className = 'box' + (S.selected === e.id ? ' on' : '');
+    box.style.left = round1(b.x) + '%';
+    box.style.top = round1(b.y) + '%';
+    box.style.width = round1(b.w) + '%';
+    box.style.height = round1(b.h) + '%';
+    box.dataset.id = e.id;
+    box.innerHTML = '<span>' + esc(e.id) + '</span>';
+    const grip = document.createElement('div');
+    grip.className = 'grp';
+    grip.dataset.resize = e.id;
+    box.appendChild(grip);
+    box.addEventListener('pointerdown', (ev) => startDrag(ev, e.id, 'move'));
+    grip.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); startDrag(ev, e.id, 'resize'); });
+    canvas.appendChild(box);
+  });
+}
+
+function startDrag(ev, id, mode) {
+  if (S.busy || !ev.isPrimary) return;
+  const el = findElement(id);
+  if (!el) return;
+  ev.preventDefault();
+  const canvas = $('sceneCanvas');
+  S.drag = {
+    id:id, mode:mode, startX:ev.clientX, startY:ev.clientY,
+    rect:canvas.getBoundingClientRect(), startBox:layoutBox(el.layout),
+    snapshot:clone(S.schema), target:ev.currentTarget
+  };
+  S.drag.target.classList.add('dragging');
+  try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch (_) {}
+  window.addEventListener('pointermove', onDragMove);
+  window.addEventListener('pointerup', onDragEnd, { once:true });
+}
+
+function onDragMove(ev) {
+  const d = S.drag;
+  if (!d) return;
+  const dx = (ev.clientX - d.startX) / d.rect.width * 100;
+  const dy = (ev.clientY - d.startY) / d.rect.height * 100;
+  const b = d.startBox;
+  const next = d.mode === 'resize'
+    ? clampBox({ x:b.x, y:b.y, w:b.w + dx, h:b.h + dy })
+    : clampBox({ x:b.x + dx, y:b.y + dy, w:b.w, h:b.h });
+  d.target.style.left = round1(next.x) + '%';
+  d.target.style.top = round1(next.y) + '%';
+  d.target.style.width = round1(next.w) + '%';
+  d.target.style.height = round1(next.h) + '%';
+  d.nextBox = next;
+}
+
+async function onDragEnd(ev) {
+  window.removeEventListener('pointermove', onDragMove);
+  const d = S.drag;
+  if (!d) return;
+  S.drag = null;
+  d.target.classList.remove('dragging');
+  if (!d.nextBox) { renderCanvas(); return; }
+  const el = findElement(d.id);
+  if (!el || !el.layout) { renderCanvas(); return; }
+  setAnchored(el.layout, d.nextBox);
+  S.selected = d.id;
+  S.busy = true;
+  status('校验中…');
+  try {
+    const res = await postValidate();
+    if (res.ok) status('PASS · 已写回 layout.offset_pct / size_pct（anchored@' + el.layout.anchor + '）', 'pass');
+    else { S.schema = d.snapshot; status('FAIL · 拖拽已回滚：\n' + (res.errors || []).join('\n'), 'fail'); }
+  } catch (e) {
+    S.schema = d.snapshot;
+    status('FAIL · 校验请求异常，拖拽已回滚：' + e.message, 'fail');
+  } finally {
+    S.busy = false;
+    renderAll();
+  }
+}
+
+function renderProps() {
+  const host = $('props');
+  host.innerHTML = '';
+  const el = findElement(S.selected);
+  if (!el) { host.innerHTML = '<div class="muted">先选一个组件。</div>'; return; }
+  const l = el.layout || {};
+
+  function row(labelText, control) {
+    const div = document.createElement('div');
+    div.className = 'row';
+    const lab = document.createElement('label');
+    lab.textContent = labelText;
+    div.appendChild(lab);
+    div.appendChild(control);
+    host.appendChild(div);
+  }
+  function textField(key, obj) {
+    const inp = document.createElement('input');
+    inp.value = obj[key] || '';
+    inp.onchange = async () => { const old = clone(S.schema); obj[key] = inp.value; await commitChange(old); };
+    return inp;
+  }
+  function selectField(key, obj, choices, nullable) {
+    const sel = document.createElement('select');
+    if (nullable) { const o = document.createElement('option'); o.value = ''; o.textContent = '（无）'; sel.appendChild(o); }
+    choices.forEach((c) => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    });
+    sel.value = obj[key] || '';
+    sel.onchange = async () => { const old = clone(S.schema); obj[key] = sel.value; await commitChange(old); };
+    return sel;
+  }
+  function numberField(key, obj) {
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.step = '0.1';
+    inp.value = obj[key] === undefined ? '' : obj[key];
+    inp.onchange = async () => {
+      const old = clone(S.schema);
+      const n = Number(inp.value);
+      if (Number.isFinite(n)) obj[key] = n; else delete obj[key];
+      await commitChange(old);
+    };
+    return inp;
+  }
+
+  row('id', (() => { const s = document.createElement('span'); s.textContent = el.id; return s; })());
+  row('type', (() => { const s = document.createElement('span'); s.textContent = el.type || '?'; return s; })());
+  row('role', selectField('role', el, S.roles.map((r) => r.role), true));
+  row('icon', selectField('icon', el, S.icons, true));
+  row('binding', textField('binding', el));
+  row('action', selectField('action', el, ACTIONS, true));
+  row('tier', selectField('tier', el, TIERS, true));
+  row('state', (() => {
+    const wrap = document.createElement('span');
+    STATES.forEach((st) => {
+      const lab = document.createElement('label');
+      lab.style.width = 'auto';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = (el.state || []).includes(st);
+      cb.onchange = async () => {
+        const old = clone(S.schema);
+        const arr = Array.isArray(el.state) ? el.state.slice() : [];
+        if (cb.checked) { if (!arr.includes(st)) arr.push(st); } else {
+          const i = arr.indexOf(st); if (i >= 0) arr.splice(i, 1);
+        }
+        if (arr.length) el.state = arr; else delete el.state;
+        await commitChange(old);
+      };
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + st));
+      wrap.appendChild(lab);
+    });
+    return wrap;
+  })());
+  row('intent', selectField('intent', l, INTENTS, true));
+  if (l.intent === 'anchored') {
+    row('anchor', selectField('anchor', l, ANCHORS, true));
+    if (!l.offset_pct) l.offset_pct = { x:0, y:0 };
+    if (!l.size_pct) l.size_pct = { w:30, h:20 };
+    row('offset.x', numberField('x', l.offset_pct));
+    row('offset.y', numberField('y', l.offset_pct));
+    row('size.w', numberField('w', l.size_pct));
+    row('size.h', numberField('h', l.size_pct));
+  } else {
+    row('width_pct', numberField('width_pct', l));
+  }
+  row('z', numberField('z', el));
+}
+
+async function commitChange(snapshot) {
+  S.busy = true;
+  status('校验中…');
+  try {
+    const res = await postValidate();
+    if (res.ok) status('PASS · 属性已更新', 'pass');
+    else { S.schema = snapshot; status('FAIL · 修改已回滚：\n' + (res.errors || []).join('\n'), 'fail'); }
+  } catch (e) {
+    S.schema = snapshot;
+    status('FAIL · 校验请求异常，修改已回滚：' + e.message, 'fail');
+  } finally {
+    S.busy = false;
+    renderAll();
+  }
+}
+
+function renderRaw() { $('rawJson').value = JSON.stringify(S.schema, null, 2); }
+
+function renderAll() {
+  if (!S.schema) return;
+  renderTabs(); renderList(); renderCanvas(); renderProps(); renderRaw();
+}
+
+async function loadAll() {
+  status('载入中…');
+  try {
+    const [components, roles] = await Promise.all([
+      api('/api/ui/components?scene=' + encodeURIComponent(S.scene)),
+      api('/api/ui/roles')
+    ]);
+    S.schema = components.schema;
+    S.roles = roles.roles || [];
+    S.icons = roles.icons || [];
+    if (!S.schema.scenes[S.scene]) S.scene = Object.keys(S.schema.scenes)[0] || 'index';
+    renderAll();
+    status('已载入 ' + components.count + ' 个组件 / ' + Object.keys(S.schema.scenes).length + ' 个场景。', 'pass');
+  } catch (e) {
+    status('载入失败：' + e.message, 'fail');
+  }
+}
+
+async function doApply() {
+  if (S.busy) return;
+  S.busy = true;
+  status('apply 写盘中…');
+  try {
+    const body = envelope('ui_components_apply');
+    const res = await api('/api/ui/components/apply', { method:'POST', headers:headers(), body });
+    if (!res.ok) status('apply FAIL · ' + (res.errors || []).join('\n'), 'fail');
+    else status('apply PASS · 已写 components_v1.json（indent=2 保序）· write_probe=' + res.write_probe
+      + ' · ui_schema_check exit=' + (res.schema_check && res.schema_check.exit_code), 'pass');
+  } catch (e) {
+    status('apply FAIL：' + e.message, 'fail');
+  } finally { S.busy = false; renderRaw(); }
+}
+
+function doExport() {
+  const blob = new Blob([JSON.stringify(S.schema, null, 2) + '\n'], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'components_v1.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function doPreview() {
+  // S86.3 真渲染预览 = 前端约定（本任务不建后端）：未落盘 schema 走 schema_json blob，
+  // 作业轮询复用 GET /api/jobs?kind=preview&id=..；后端未上线 / 错误 = 如实降级提示。
+  if (S.busy) return;
+  if (!$('enableWrite').checked) { status('预览需勾选 enable_write（临时目录写面，30 号 §3.1）。', 'fail'); return; }
+  S.busy = true;
+  status('提交真渲染预览作业…');
+  try {
+    const id = 'preview_ui_' + Date.now();
+    const body = JSON.stringify({
+      action:'preview', scene:S.scene, viewport:'1920x1080', id:id,
+      enable_write:true, schema_json:JSON.stringify(S.schema, null, 2)
+    });
+    const res = await api('/api/preview', { method:'POST', headers:headers(), body });
+    const image = res.image || res.path || '';
+    if (!image) { status('预览服务待上线（S86.3）：返回无 image 字段。', 'fail'); return; }
+    // 作业异步出图：轮询统一作业面；exit_code=0 即为成功（23 号 §6.2）。
+    const poll = res.poll || ('/api/jobs?kind=preview&id=' + encodeURIComponent(res.id || id));
+    let done = false;
+    for (let i = 0; i < 120; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const job = await api(poll);
+      const state = job.state || {};
+      if (state.running === false) {
+        if (state.exit_code === 0) { done = true; break; }
+        status('预览作业失败：exit_code=' + state.exit_code + ' · ' + (job.log_tail || '').slice(-300), 'fail');
+        return;
+      }
+    }
+    if (!done) { status('预览作业超时（S86.3 冷启 + 预载可能需 30~90s）：' + poll, 'fail'); return; }
+    $('previewBox').style.display = 'block';
+    $('previewImg').src = '/' + String(image).replace(/^\//, '') + '?t=' + Date.now();
+    status('预览已加载：' + image + '（<img> 走 ?t=Date.now() 破缓存）', 'pass');
+  } catch (e) {
+    status('预览服务待上线（S86.3）：' + e.message, 'fail');
+  } finally { S.busy = false; }
+}
+
+$('token').value = sessionStorage.getItem('ti_console_token') || '';
+$('tokenSave').onclick = () => {
+  const v = $('token').value.trim();
+  if (v) sessionStorage.setItem('ti_console_token', v);
+  else sessionStorage.removeItem('ti_console_token');
+  status('token 已' + (v ? '保存' : '清除') + '（sessionStorage，与看板共用）。', 'pass');
+};
+$('btnValidate').onclick = async () => {
+  if (S.busy) return;
+  S.busy = true; status('校验中…');
+  try {
+    const res = await postValidate();
+    if (res.ok) status('PASS · enum / 禁绝对坐标 / 登记对账 / 叙事门禁全绿', 'pass');
+    else status('FAIL ·\n' + (res.errors || []).join('\n'), 'fail');
+  } catch (e) { status('校验请求异常：' + e.message, 'fail'); }
+  finally { S.busy = false; }
+};
+$('btnApply').onclick = doApply;
+$('btnExport').onclick = doExport;
+$('btnReload').onclick = loadAll;
+$('btnPreview').onclick = doPreview;
+
+loadAll();
+</script>
+</body>
+</html>

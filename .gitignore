@@ -81,3 +81,7 @@ __pycache__/
 # S18.8d 在途：Bevy Android JNI 壳（cargo-apk 标准布局）——本机无 NDK，
 android/android-activity/
 evidence/console/_mock/
+
+# S86.3 真渲染预览临时产物（零跟踪文件写盘）
+/evidence/console/preview/
+/evidence/bevy_native_preview_*.png

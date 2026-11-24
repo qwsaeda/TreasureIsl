@@ -1,5 +1,5 @@
 {
- "_comment": "S32.1 命令白名单机器真源（22 号 §4.2 人读视图的机器侧；S32.6 对账断言 id 集合 + 默认启用列 + 写面列（前缀形态条目按前缀匹配，不展开模板：close_run 写面第 3 项 `evidence/` = 运行时按台账 id 展开为 evidence/<task>.log））。参数只接受枚举/id，不接受自由字符串；--cmd 取值 = 本文件的 id（未登记 = 400）。",
+ "_comment": "S32.1 命令白名单机器真源（22 号 §4.2 人读视图的机器侧；S32.6 对账断言 id 集合 + 默认启用列 + 写面列（前缀形态条目按前缀匹配，不展开模板：close_run 写面第 3 项 `evidence/` = 运行时按台账 id 展开为 evidence/<task>.log））。参数只接受枚举/id，不接受自由字符串；--cmd 取值 = 本文件的 id（未登记 = 400）。S86.2：`api_endpoints` = HTTP 端点白名单 id 数据面（routes.rs ↔ 22 号 API 清单三面对账；与 `commands` 运行器白名单互不干扰）。",
  "commands": [
   {
    "id": "gate",
@@ -637,6 +637,61 @@
    "writes": [],
    "enabled_by_default": true,
    "command": "cargo test -p ti-app --test select_role_touch_e2e"
+  }
+ ],
+ "api_endpoints": [
+  {
+   "id": "ui_components_get",
+   "method": "GET",
+   "path": "/api/ui/components",
+   "auth": "none",
+   "write": false,
+   "writes": [],
+   "_note": "S86.2 组件实例只读源（?scene= 回显），免 token"
+  },
+  {
+   "id": "ui_roles_get",
+   "method": "GET",
+   "path": "/api/ui/roles",
+   "auth": "none",
+   "write": false,
+   "writes": [],
+   "_note": "S86.2 role/icon 下拉源，免 token"
+  },
+  {
+   "id": "ui_components_validate",
+   "method": "POST",
+   "path": "/api/ui/components/validate",
+   "auth": "X-TI-Token",
+   "write": false,
+   "writes": [],
+   "requires_flag": "enable_write",
+   "_note": "S86.2 内存 schema 实时校验（body 不落盘）；仍走 X-TI-Token + enable_write + 白名单 action id"
+  },
+  {
+   "id": "ui_components_apply",
+   "method": "POST",
+   "path": "/api/ui/components/apply",
+   "auth": "X-TI-Token",
+   "write": true,
+   "writes": [
+    "assets/data/ui_schema/components_v1.json"
+   ],
+   "requires_flag": "enable_write",
+   "_note": "S86.2 唯一写点：indent=2 保序写 components_v1.json + ui_schema_check 复验 + write_probe"
+  },
+  {
+   "id": "preview_post",
+   "method": "POST",
+   "path": "/api/preview",
+   "auth": "X-TI-Token",
+   "write": true,
+   "writes": [
+    "evidence/console/preview/",
+    "evidence/bevy_native_preview_"
+   ],
+   "requires_flag": "enable_write",
+   "_note": "S86.3 真渲染预览：body 未落盘数据只写 gitignored evidence/console/preview/<id>/，后台 python3 包装 treasure-bevy-native --shot 出图 evidence/bevy_native_preview_<id>_<WxH>.png；轮询 GET /api/jobs?kind=preview&id=<id>"
   }
  ]
 }

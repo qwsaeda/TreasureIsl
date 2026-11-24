@@ -58,6 +58,8 @@
 |---|---|---|
 | `scripts/gen_layout.py`（`legacy/scripts/` 逆向数据工具，gate 10b 项调用路径 `legacy/scripts/gen_layout.py --check`） | 把 `ref/controls.json` 2041 条控件记录转成 `assets/data/controls.json`（控件层数据源） | 连跑两次逐字节一致；`--check` 只读比对 |
 | `scripts/validate_data.py` | 手查 JSON 字段与数值域 | `--check` 校验（FIND-201 统一入口，并入原 legacy 脚本 + V1/V2 场景标量兜底）：必填字段、概率域、价格/权重>0、strings 覆盖每个 name_key（无孤儿）、scenes 覆盖 7 场景、controls record_total 与 legacy/ref 一致、main_map.grid 三键正整数、全场景 extra 标量键正整数 |
+| `scripts/preview_shot.py` | Python | **S86.3 真渲染预览出图包装器**（POST /api/preview 后台执行体；TI_PREVIEW_DIR 注入 + --shot + PNG 非纯色判据；`--check` 只读） | 否 |
+| `scripts/export_parity_check.py` | Python | S86.4 导出即生效像素判据（预览 PNG vs 导入后出图 PNG，diff=0 = PASS；`--check` 自检） | 否 |
 | `scripts/ui_schema_check.py` | S85 UI 组件 schema 门禁（`33_ui_component_schema.md`）：只读校验 `components_v1.json` 的 type/binding/layout/action/role enum + 禁绝对坐标 + 登记对账 | `python scripts/ui_schema_check.py --check` | 幂等只读；违规非 0 |
 | `scripts/check_hardcode.py` | 人眼找 `.rs` 里的硬编码数值/中文（`02_conventions.md` §1） | `--warn` 迁移期只报告（历史时点）；`--list` 按文件分类汇总；EXEMPT 豁免带理由（oracle/CLI/配置键）；当前严格模式 0 命中即绿 |
 | `crates/ti-tools --bin doccheck` | 跨文档 ID/数值漂移 + 数据文件一致性（对抗审计固化，gate 第 13 项） | 数值断言 4 条：UI 场景数=20、控件记录=2041、LCG hex=0x343FD（非 0x3443D）、save.magic=20011591（非 20125007）；扫描 docs + AGENTS.md + plan + assets/data/*.json |

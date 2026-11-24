@@ -1,0 +1,27 @@
+S86.2 UI 组件可视化编辑器 · 验收证据（2026-11-24）
+
+== 改动面 ==
+平台（web/ui_editor.html 新建 + repo/ui_components.rs 新建 + routes.rs + console_sources/commands.json + 22 号文档）+ 主线程加的 index.html 导航入口。
+
+== 判据 1：独立页面 + 4 API ==
+- ui_editor.html（583 行，自成一体）：5 场景 tab + 组件列表 + Scene View 拖拽画布 + 属性面板 + 校验/写盘/导出/预览按钮。
+- API：GET /api/ui/components?scene=（只读免 token）、GET /api/ui/roles、POST /api/ui/components/validate（只读 body 不落盘）、
+  POST /api/ui/components/apply（唯一写点 components_v1.json）。鉴权 403→400 CT→413→400 JSON→400 enable_write→400 白名单 action。
+- 平台 0 游戏依赖（repo 本地 std::fs 读 schema，沿用 themes.rs 范式）；components_v1.json indent=2 保序写 + 写点探针。
+
+== 判据 2：受限随意布局（拖拽反算 + FAIL 即禁摆）==
+- 拖拽像素位移 ÷ 画布宽高 ×100 得百分比，写回 layout.intent=anchored + anchor + offset_pct{x,y} + size_pct{w,h}；
+  右下手柄改 size_pct。组件顶层出现 x/y/w/h/rect 即 FAIL（layout 内嵌百分比键不算）。
+- 每次 drop/属性变更先调 validate，FAIL 红字逐条点名 + 回滚快照。
+
+== 判据 3：实跑验证 ==
+cargo check -p ti-console 0 error；cargo test -p ti-console --tests 125 passed/0 failed；
+cargo clippy -p ti-console --all-targets -D warnings 0 error；ui_schema_check OK（5 场景/19 组件）；
+真机 GET 两端点 200 + ui_editor.html 200；403/400 负例正确。
+
+== 判据 4：负例自证（起本地 console 8799 实跑）==
+注入 x:60 → validate/apply 均 FAIL 点名「出现绝对坐标字段 ["x"]（违反不手写像素总纲）」且文件 hash 不变；
+去掉 → PASS + schema/narrative exit=0；anchored 嵌套百分比 → PASS 无误报；
+无 token 403 / 未登记 action 400 / enable_write=false 400；合法 apply 文件 sha256 前后一致（5580 B indent=2 零 churn）。
+
+S86.2 可置 verified。

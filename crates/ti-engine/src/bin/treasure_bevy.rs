@@ -1805,6 +1805,83 @@ fn apply_map_pack() {
     });
 }
 
+/// S86.3 真渲染预览注入（平台 `POST /api/preview` → `TI_PREVIEW_DIR` 环境变量 → 本函数）。
+///
+/// 目录由平台写在 gitignored `evidence/console/preview/<id>/`，本函数只**读**（0 写盘）：
+/// - `components_v1.json` / `asset_roles.json` → `ui_schema::install_injected`（首访前一次性）；
+/// - `board.json` / `scenes.json` / `strings.json` 整表覆盖文本，或 `<map_id>/` 地图包段
+///   （经既有 `map_pack::read_pack_tables_with` 做 upsert 合并）→ `table_source::install`。
+///
+/// 缺目录 / 越界路径 / 缺文件 = 纯内嵌默认（0 行为变化，与 `TI_THEME` 缺位同口径）。
+/// 必须与 `inject_map_pack()` 中的其它注入同处首访之前；OnceLock 定型后迟注入无效。
+#[cfg(not(target_arch = "wasm32"))]
+fn apply_preview_injection() -> bool {
+    use ti_core::data::map_pack::PackReader;
+    use ti_core::data::{map_pack, table_source, ui_schema};
+
+    let Some(raw_dir) = std::env::var("TI_PREVIEW_DIR")
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+    else {
+        return false;
+    };
+    let dir = PathBuf::from(raw_dir);
+    let Some(canonical) = dir.canonicalize().ok() else {
+        eprintln!("[preview] TI_PREVIEW_DIR 不可读（{}）⇒ 内嵌默认", dir.display());
+        return false;
+    };
+    let allowed_root = repo_root().join("evidence").join("console").join("preview");
+    let allowed = allowed_root.canonicalize().unwrap_or(allowed_root);
+    if !canonical.starts_with(&allowed) {
+        eprintln!("[preview] TI_PREVIEW_DIR 越界（{}）⇒ 内嵌默认", canonical.display());
+        return false;
+    }
+    // ① UI schema（编辑器未落盘的组件声明；install_injected 与 table_source 是不同 OnceLock）。
+    let components = read_preview_text(&dir.join("components_v1.json"));
+    let asset_roles = read_preview_text(&dir.join("asset_roles.json"));
+    let schema_ok = (components.is_some() || asset_roles.is_some())
+        && ui_schema::install_injected(ui_schema::InjectedSchema { components, asset_roles });
+    if schema_ok {
+        eprintln!("[preview] 已注入 UI schema（零写面）");
+    }
+    // ② 表：整表覆盖 + 包段 upsert（包段优先；缺段仍走内嵌，与 §6 回退语义一致）。
+    let mut board = read_preview_text(&dir.join("board.json"));
+    let mut scenes = read_preview_text(&dir.join("scenes.json"));
+    let mut strings = read_preview_text(&dir.join("strings.json"));
+    let mut source_id: Option<String> = None;
+    let reader = map_pack::FsPackReader::new(&dir);
+    if let Some(pack_id) = reader.list_packs().into_iter().next() {
+        if let Some(tables) = map_pack::read_pack_tables_with(&reader, &pack_id) {
+            board = tables.board_json.or(board);
+            scenes = tables.scenes_json.or(scenes);
+            strings = tables.strings_json.or(strings);
+            source_id = Some(format!("preview:{pack_id}"));
+        }
+    }
+    if source_id.is_none() && (board.is_some() || scenes.is_some() || strings.is_some()) {
+        source_id = Some("preview:schema".to_owned());
+    }
+    let tables_ok = source_id.is_some()
+        && table_source::install(table_source::PackTables {
+            source_id,
+            board,
+            scenes,
+            strings,
+            available_ids: None,
+        });
+    if tables_ok {
+        eprintln!("[preview] 已注入表段（board/scenes/strings；缺段内嵌回退）");
+    }
+    schema_ok || tables_ok
+}
+
+/// 预览目录文本读取（缺文件 / 非 UTF-8 = `None`，0 行为变化，不 panic）。
+#[cfg(not(target_arch = "wasm32"))]
+fn read_preview_text(path: &Path) -> Option<String> {
+    std::fs::read_to_string(path).ok()
+}
+
 /// wasm / native 共用的注入段（reader 版；逐段预检 + `table_source::install`，0 平台分叉）。
 fn inject_pack_tables(
     reader: &dyn ti_core::data::map_pack::PackReader,
@@ -1908,11 +1985,16 @@ pub fn start() {
 /// S49.4c：主题预览注入（`TI_THEME=<tid>`）**优先**于地图包注入——主题注入先 set
 /// `table_source`（首访前），地图包注入随后 set 失败无害（主题保持；0 写面预览）。
 fn inject_map_pack() {
+    // S86.3 编辑器预览：**最先**注入（OnceLock 首访前定型；TI_PREVIEW_DIR 缺位 = 0 行为变化）。
+    // 已注入 ⇒ 跳过主题/地图包注入（否则 OnceLock 定型后的「迟注入」告警会误导为仍走内嵌默认）。
+    #[cfg(not(target_arch = "wasm32"))]
+    let preview_active = apply_preview_injection();
     // S49.4c 主题预览（`TI_THEME=<tid>`）：先注入（native 专属；平台后台预览）。
     #[cfg(not(target_arch = "wasm32"))]
-    apply_theme_preview(&repo_root().join("assets").join("themes"));
-    #[cfg(not(target_arch = "wasm32"))]
-    apply_map_pack(&repo_root().join("assets").join("maps"));
+    if !preview_active {
+        apply_theme_preview(&repo_root().join("assets").join("themes"));
+        apply_map_pack(&repo_root().join("assets").join("maps"));
+    }
     #[cfg(target_arch = "wasm32")]
     apply_map_pack();
 }

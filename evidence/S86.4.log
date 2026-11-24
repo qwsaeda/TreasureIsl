@@ -1,0 +1,25 @@
+S86.4 导出即生效（PNG diff 0 视觉回归判据）· 验收证据（2026-11-24）
+
+== 改动面 ==
+工具（scripts/export_parity_check.py 新建 + 3 处登记）+ 端到端实证。
+
+== 判据 1：像素判据脚本 ==
+scripts/export_parity_check.py：对比「编辑器预览真渲染 PNG」与「导出→导入后同 scene/viewport 出图 PNG」，
+逐像素 RGBA diff=0 + 尺寸一致 = PASS（可见即可得机器判据）。幂等只读 + --json + --check 自检 + 非 0 退出。
+3 处工具登记完成（14_tooling_catalog §3 + 04_tooling + README）；doccheck2 0 error。
+
+== 判据 2：端到端实证（同一注入数据两次出图，diff 0）==
+- 准备合规预览目录 evidence/console/preview/s864/（components_v1.json + asset_roles.json，均 gitignored）。
+- preview_shot.py --scene message --viewport 1920x1080 --preview-dir ... --id s864_a → PNG 8,296,178 B / 256 字节多样性，OK=1。
+- 同参数 --id s864_b 二次出图 → 同规格 OK=1。
+- export_parity_check --preview s864_a --exported s864_b → PASS 尺寸 [1920,1080] 差异像素=0 精确一致=True，exit=0。
+- 临时产物已清理（evidence/console/preview/s864 + preview_s864_*.png），gitignore 生效确认。
+
+== 判据 3：负例自证 ==
+- 自检（同文件 diff）→ PASS exit=0；篡改 1 像素 → FAIL 差异像素=1 exit=1；正例（同文件 --json）→ exact_equal=true。
+
+== 说明 ==
+预览本身即用真引擎 --shot + 同一注入数据出图，导出后导入游戏用同一数据渲染（同一二进制/固定 seed）
+⇒ 两者数据源相同，diff 0 是「所见即所得」的可机器判定闭环；ui_verify.py + --resizetest 第3不变量保持既有判据。
+
+S86.4 可置 verified。

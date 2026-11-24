@@ -145,7 +145,7 @@ assets/maps/<id>/                  ← 包根（仓库内 = 已安装态；运�
 | I5 | 格序闭合 | 首格（`spaces[0]`）`kind=start`；BOSS 在**环半周** `spaces[31//2]`（第 15 格 = 摇半圈正对 BOSS；末格无不变量） |
 | I6 | 环几何 8pt | `ring.center_y`/`radius`/`card_w`/`card_h` 8 整除（`center_x` 屏心 540 豁免） |
 | I7 | 资产齐全 + 哈希一致 | manifest `assets[]` 每项（`source=pack` 与 `source=pool` 都算）：文件在位、`bytes` 一致、`sha256` 一致 |
-| I8 | 焦点 N8 往返 | `layout.world_canvas` ≡ manifest `focus.bbox_pct` × (1080,1920) ±1px |
+| I8 | 焦点 N8 往返（S86.1 横屏口径） | `layout.world_canvas` ≡ manifest `focus.bbox_pct` × (1920,1080) ±1px；老包命中旧 (1080,1920) 口径 ⇒ SKIP 兼容（非 FAIL），新包严格判 |
 | I9 | 内容齐备 | `events[]` 非空（每图必配特有随机事件）；`merchants` 含 `weapon` 与 `slave` 各 ≥1；每个领地格（`isle`）有 `building`（初始等级 ≥1）+ `resource`（产出地形） |
 
 > I1~I5 = 赛道结构不变量（`docs/business/territory.md` §2 的数据面）；I6~I8 = 版面/完整性不变量

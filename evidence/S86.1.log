@@ -1,0 +1,30 @@
+S86.1 地图编辑器升级（横屏化 + 受限随意布局 + 真渲染预览入口）· 验收证据（2026-11-24）
+
+== 改动面 ==
+平台（index.html 地图段 + map_wizard.rs）+ 工具（map_pack.py I8 横屏化）。
+
+== 判据 1：viewBox 横屏化 + 3 处漂移修复 ==
+- viewBox 1080×1920 → 1920×1080（:354）；新增 ED_SCREEN={1920,1080} 单一源供 viewBox/I8/payload 共用。
+- 拖拽/平移换算统一为 edScreenScale()（kx===ky，读实际 viewBox + meet 留边），修原 ky=960/kx=1080 不一致漂移。
+- ring 几何单一源 ED_V6_RING（从 V6_CENTER/R 派生），edDefaultState().ring 不再手抄 784/480；v6 非 8pt 值加限定豁免。
+- I8 假校验修复：原硬编码 LAYOUT 自除自验恒过 → 用 st.canvas 对 1920×1080 ±1px 往返；map_pack.py 同步分母
+  + 老包 I8 SKIP 兼容（m01~m22 历史 1080×1920 口径，非 FAIL，新包严格判）。
+
+== 判据 2：受限随意布局（双闸）==
+- spaces[].pos 任意 [x,y] 但须落 world_canvas±4：前端 edValidate FAIL → edImport 拒导入；拖拽越界直接拒落位 + 红字；
+  后端 map_pack.py verify 终判禁导入。I1~I9+S34.5 全保留。
+- 导入 payload focus_bbox_pct 分母翻转 1920×1080。
+
+== 判据 3：真渲染预览入口 ==
+ed-preview-real-btn + edPreviewReal()：POST /api/preview body {scene:main_map, map_id, viewport:1920x1080}；
+后端未上线/404/网络异常 → 降级「预览服务待上线（S86.3）」不崩；成功按 image/path/url/screenshot 取图，?t= 破缓存。
+（主线程后续补齐 token + enable_write + 轮询 job 以对接 S86.3 实际 API。）
+
+== 判据 4：实跑验证 ==
+map_pack verify m01 → 0 违规（I8 SKIP 兼容）；40 包全跑 0 问题；check → 0 漂移。
+横屏新包正例/越界 pos 反例/界内正例 → PASS/按预期 FAIL/PASS。
+Node 跑 edValidate：默认 0 issue、越界红字、界内 0 issue；预览 handler 404/网络断降级正确。
+cargo test -p ti-console --tests 全绿；cargo check --workspace --exclude android-activity 0 error。
+grep 地图段竖屏 viewBox/换算 → 0 命中。
+
+S86.1 可置 verified。

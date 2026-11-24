@@ -1,0 +1,28 @@
+S86.3 真渲染预览服务（POST /api/preview + 后台 job + TI_PREVIEW_DIR 注入）· 验收证据（2026-11-24）
+
+== 改动面 ==
+平台（repo/preview.rs 新建 + routes.rs + jobs.rs + console_commands.json + 22 号文档）+ 引擎窄接缝（treasure_bevy.rs apply_preview_injection）+ 工具（scripts/preview_shot.py + 3 处登记 + .gitignore）。
+
+== 判据 1：API + 注入接缝 ==
+- POST /api/preview：403 token→400 CT→413 body→400 JSON→400 enable_write→400 action→scene/viewport/id/map_id 白名单→
+  写 gitignored evidence/console/preview/<id>/→spawn_job + evidence[] 登记。返回 {ok,id,kind,scene,viewport,image,status,log,pid,poll}。
+- GET /api/jobs?kind=preview&id= 复用统一作业面；JOB_KINDS 4→5（preview），JOB_PROGRAMS 未动（python3 包装）。
+- 引擎 apply_preview_injection() 在 inject_map_pack() 中最先调用：TI_PREVIEW_DIR（限定 evidence/console/preview/ 下）
+  → components_v1/asset_roles 走 ui_schema::install_injected，三段表+包段走 table_source::install；缺目录=0 行为变化。
+  OnceLock 首访前定型 ⇒ 每请求一个进程（与 --shot 冷启契合）。
+- preview_shot.py：逐参数 subprocess 非 shell + xvfb-run + PNG 非纯色判据 + 900s 硬超时；3 处工具登记 + .gitignore 2 行。
+
+== 判据 2：E2E + 负例 ==
+- POST {scene:message} → job exit=0，日志 OK=1，PNG 8,296,178 B / 256 字节多样性（非纯色）。
+- 注入实测：[preview] 已注入 UI schema（零写面）+ [preview] 已注入表段，无迟注入告警。
+- 缺 token 403 / 非法 scene 400 / 缺 enable_write 400；测试产物已清理，git status 无 assets/data 跟踪改动。
+
+== 判据 3：前端对接（主线程同步）==
+index.html::edPreviewReal 补 token + enable_write + 轮询 job（exit_code=0 才取图）；
+ui_editor.html::doPreview 已带 token/enable_write/轮询（S86.2 实现）。
+
+== 判据 4：全量验证（隔离其它会话 Cargo.toml 后）==
+doccheck 0 error；doccheck2 0 error（工具 3 处登记后）；cargo check -p ti-console/-p ti-engine --bin 0 error；
+cargo test -p ti-console --tests 全绿；cargo clippy --workspace --all-targets -D warnings 0 error；fmt 0；preview_shot.py --help/--check 正常。
+
+S86.3 可置 verified。

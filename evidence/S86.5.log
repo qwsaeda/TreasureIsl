@@ -1,0 +1,25 @@
+S86 平台可视化编辑器收口 · 验收证据（2026-11-24）
+
+== 改动面 ==
+文档收口（21号 I8 横屏口径 + 27号方案A取代标注 + 工具登记）+ 三方对账 + 推送。
+
+== 判据 1：S86 全阶段成果 ==
+S86.0 立项（设计稿 + 真渲染预览技术路径调研 C+A+B）→ S86.1 地图编辑器升级（viewBox 横屏化 + 3 漂移修复 + 受限双闸 + 预览入口）→
+S86.2 UI 组件可视化编辑器（ui_editor.html + 4 API + 拖拽反算百分比 + FAIL 即禁摆）→ S86.3 真渲染预览服务
+（POST /api/preview + 后台 job + TI_PREVIEW_DIR 零写盘注入）→ S86.4 导出即生效（PNG diff 0 判据 + 端到端实证）→ S86.5 收口。
+用户核心诉求达成：平台地图制作 + 游戏场景受限随意布局 + 可见即可得（编辑器内真渲染预览 + 导出导入 diff 0）。
+
+== 判据 2：文档同步 ==
+- docs/process/21_map_package_spec.md I8 改 1920×1080 横屏口径 + 老包 SKIP 兼容。
+- docs/process/27_landscape_adaptation.md 加 status: superseded by S84/S86 标注（方案A坐标双套已被纯横屏取代）。
+- preview_shot.py / export_parity_check.py 3 处工具登记 + .gitignore 2 行（gitignored 零写盘）。
+
+== 判据 3：全量门禁（隔离其它会话 Cargo.toml 后实跑，验证后完整恢复 md5 一致）==
+- pwsh -File scripts/gate.ps1 → GATE_EXIT=0，=== gate: 0 failure(s) ===（36 项）
+- cargo test --workspace 全绿（ti-console 125 passed/0 failed）；cargo check 0 error；cargo clippy --workspace --all-targets -D warnings 0 error；fmt 0
+- doccheck 0 error（201 docs/38 facts/206 experiences/424 task refs）；doccheck2 0 error（57 项）
+- validate_data OK；ui_schema_check OK；map_pack verify 0 违规/check 0 漂移（40 包）；export_parity_check 自检+正例 PASS、负例 FAIL
+- 端到端预览 E2E（S86.3）：POST → job exit=0 → PNG 非纯色；导出即生效实证（S86.4）两图 diff 0 精确一致
+
+== 判据 4：三方对账 + 推送 ==
+（check_ledger_reality + commit + push 结果见下方追加）

@@ -49,8 +49,23 @@ MAP_PREFIX = "assets/maps/"
 DEFAULT_PTR = MAPS_DIR / ".default"
 TEMPLATE_DIR = MAPS_DIR / "_template"
 
-# 环形几何 8pt 校验豁免：center_x = 540（屏心）
+# 环形几何 8pt 校验豁免：center_x = 540（历史屏心）
+# S86.1：真渲染 v6 几何（ti-app/src/scenes/main_map.rs::V6_CENTER/V6_RADIUS）非 8pt 整除；
+# 包 layout.ring 显式采用 v6 值时豁免 center_y/radius，其余键与其余包照查 8pt。
 RING_8PT_EXEMPT = {"center_x"}
+V6_RING_GEOMETRY = {"center_x": 540, "center_y": 740, "radius": 460}
+# 屏尺寸：S84 起纯横屏 1920×1080；旧包 focus_bbox_pct 是 1080×1920 历史口径（S85.2 兼容）。
+SCREEN_W, SCREEN_H = 1920, 1080
+LEGACY_SCREEN_W, LEGACY_SCREEN_H = 1080, 1920
+BBOX_KEYS = ("x", "y", "w", "h")
+
+
+def bbox_roundtrip(pct: dict, dims: tuple[int, int]) -> dict:
+    """pct → 像素往返（I8 N8 判据；±1px 容差由调用方判定）。"""
+    return {
+        key: round(pct.get(key, 0) / 100 * (dims[0] if key in ("x", "w") else dims[1]))
+        for key in BBOX_KEYS
+    }
 
 
 # ----------------------------------------------------------------- 基础工具
@@ -189,29 +204,47 @@ def verify_pack(pack_dir: Path) -> list[str]:
         if s.get("isle") and not s.get("resource"):
             problems.append(f"I9 spaces[{i}] 领地格缺 resource（产出地形）")
 
-    # I6：环几何 8pt
+    # I6：环几何 8pt（v6 真渲染几何豁免，见 V6_RING_GEOMETRY）
     ring = (manifest.get("layout") or {}).get("ring") or {}
     for key, value in ring.items():
         if key in RING_8PT_EXEMPT or not isinstance(value, int):
             continue
+        if key in ("center_y", "radius") and value == V6_RING_GEOMETRY.get(key):
+            continue
         if value % 8 != 0:
             problems.append(f"I6 ring.{key} = {value}（非 8 整除）")
 
-    # I8：焦点 N8 往返（world_canvas ≡ bbox_pct × 1080×1920 ±1px）
+    # I8：焦点 N8 往返（world_canvas ≡ bbox_pct × 1920×1080 ±1px；S86.1 纯横屏口径）。
+    # S85.2 兼容：旧包 focus_bbox_pct 按 1080×1920 生成，命中旧往返且非新往返 = SKIP（不 FAIL）；
+    # 新包按横屏往返判，两者都不命中 = 真漂移 FAIL（与前端 edValidate 同口径，双闸禁导入）。
     layout = manifest.get("layout") or {}
     canvas = layout.get("world_canvas")
     pct = (layout.get("focus_bbox_pct") or manifest.get("focus_bbox_pct") or {})
     if canvas and pct:
-        for key, dim in (("x", 1080), ("y", 1920), ("w", 1080), ("h", 1920)):
-            want = round(pct.get(key, 0) / 100 * dim)
-            got = canvas.get(key)
-            if got is None or abs(got - want) > 1:
-                problems.append(f"I8 focus.{key} = {got}（≠ bbox_pct×{dim} = {want}，容差 1px）")
+        want_new = bbox_roundtrip(pct, (SCREEN_W, SCREEN_H))
+        want_old = bbox_roundtrip(pct, (LEGACY_SCREEN_W, LEGACY_SCREEN_H))
+        def fit(want: dict) -> bool:
+            return all(
+                canvas.get(key) is not None and abs(canvas[key] - want[key]) <= 1 for key in BBOX_KEYS
+            )
+        if fit(want_new):
+            pass
+        elif fit(want_old):
+            print(
+                f"map_pack verify: I8 SKIP {pack_id or pack_dir.name}: "
+                "focus_bbox_pct 命中历史 1080×1920 口径（S84 纯横屏前旧包；新包按 1920×1080）"
+            )
+        else:
+            for key in BBOX_KEYS:
+                got = canvas.get(key)
+                want = want_new[key]
+                if got is None or abs(got - want) > 1:
+                    problems.append(f"I8 focus.{key} = {got}（≠ bbox_pct×{SCREEN_W if key in ('x', 'w') else SCREEN_H} = {want}，容差 1px）")
     elif canvas and not pct:
         problems.append("I8 缺 focus_bbox_pct（无法做 N8 往返）")
 
     # I6 扩展：spaces[].pos 自由摆放（编辑器拖拽；可选，缺省 = 按环排布，现有包 0 影响）。
-    # 在则须 [x,y] 数对且在 world_canvas 内（±4 卡片半宽容差）。
+    # 在则须 [x,y] 数对且在 world_canvas 内（±4 卡片半宽容差）——受限随意布局的后端终判闸。
     for i, s in enumerate(spaces):
         pos = s.get("pos")
         if pos is None:

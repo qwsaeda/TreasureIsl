@@ -163,6 +163,7 @@
   <nav>
     <button data-page="search">检索</button>
     <button data-page="settings">设置</button>
+    <a href="/ui_editor.html" style="display:block;width:100%;padding:9px 14px;margin-top:4px;text-align:left;color:var(--text);text-decoration:none;border:1px solid var(--border);border-radius:6px;background:var(--panel2);font:inherit;cursor:pointer" title="可视化编辑 components_v1.json（S86 声明式 UI 组件）">UI 组件 ↗</a>
   </nav>
 </aside>
 <main>
@@ -351,7 +352,7 @@
            <span style="font-size:11px;color:var(--muted)">点格铺岛 · 拖格摆位 · 滚轮缩放 · 自适应全屏</span>
          </div>
          <div style="flex:1;min-height:0;position:relative">
-           <svg id="ed-canvas" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;background:transparent;display:block"></svg>
+           <svg id="ed-canvas" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;background:transparent;display:block"></svg>
            <div id="ed-float-sel" style="position:absolute;left:14px;bottom:14px;max-width:300px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);font-size:11px;color:var(--ink)" hidden></div>
            <!-- 画布缩放控制条（滚轮/空白拖也可；用户 2026-11-10「不能放大」修复） -->
            <div style="position:absolute;right:14px;top:14px;display:flex;gap:4px;align-items:center;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel2);font-size:11px;color:var(--ink)">
@@ -376,6 +377,11 @@
          <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">校验（逐条 ✓/✗）</div>
          <div id="ed-validate" style="font-size:11px"></div>
          <span id="ed-import-msg" style="color:var(--muted);font-size:12px;display:block;margin-top:8px"></span>
+         <!-- S86.1：真渲染预览入口（后端 API = S86.3；未上线时只提示不崩） -->
+         <div style="font-size:12px;font-weight:600;color:var(--accent);margin:12px 0 8px">真渲染预览</div>
+         <button id="ed-preview-real-btn" style="padding:5px 12px;background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:5px;cursor:pointer;font-size:11px">📷 预览真渲染</button>
+         <div id="ed-preview-real-msg" style="font-size:11px;color:var(--muted);margin-top:6px">点按钮按 1920×1080 出 main_map 真渲染图（S86.3 /api/preview）。</div>
+         <img id="ed-preview-real-img" alt="main_map 真渲染预览" style="display:none;width:100%;margin-top:6px;border:1px solid var(--border);border-radius:6px;background:#0d0f17"/>
        </div>
      </div>
      <div class="card">
@@ -1185,7 +1191,7 @@ async function edLoadPack(id) {
     const d = await api('/api/map/pack?id=' + encodeURIComponent(id));
     const mf = d.manifest || {};
     const ring = (mf.layout && mf.layout.ring) || {};
-    const canvas = (mf.layout && mf.layout.world_canvas) || { x: 11, y: 250, w: 1048, h: 1056 };
+    const canvas = (mf.layout && mf.layout.world_canvas) || edDefaultState().canvas; // 缺省 = 横屏单一源
     const raw = (mf.map && mf.map.spaces) || [];
     const base = edDefaultState();
     edState = Object.assign(base, {
@@ -1273,7 +1279,10 @@ function pollPublish() {
 /* ==== 地图编辑器（环形画布 + I1~I8 前端判定 + 导入落盘，S32.14） ==== */
 /* I1~I8 前端镜像（与 map_pack.py verify_pack 逐条对齐；权威实现 = map_pack.py，前端 = 轻量镜像）：
    I1 31 格 / I2 start1+territory20+func9+boss1 / I3 每岛 2 格同 group / I4 isle∈值域(10 类)
-   / I5 首格 start + 第 15 格 boss / I6 ring 8pt / I7 资产齐（导入后端算） / I8 world_canvas≡bbox_pct×(1080,1920)±1px */
+   / I5 首格 start + 第 15 格 boss / I6 ring 8pt / I7 资产齐（导入后端算） / I8 world_canvas≡bbox_pct×(1920,1080)±1px
+   S86.1 兼容：旧包 bbox_pct 命中 (1080,1920) 历史往返 = SKIP（与 map_pack.py I8 同口径）。 */
+// 屏尺寸单一源：S84 起纯横屏；viewBox / 拖拽换算 / I8 / 导入 payload 全引用此常量。
+const ED_SCREEN = { w: 1920, h: 1080 };
 const ED_ISLES = ['boss_fort','harbour','lighthouse','lightship','pirate_lair','shipyard','skull_cliff','trading_post','volcano','wreck'];
 const ED_KINDS = ['start','territory','event','card','treasure','boss'];
 // 岛型 → 归属色带（theme.json isle_* 实测 RGB565 → 前端 888 近似；渲染层 main_map.rs::isle_token_color 同映射）。
@@ -1283,6 +1292,17 @@ const V6_CENTER = { x: 540, y: 740 };
 const V6_RADIUS = 460;
 const V6_TILE_D = 68;              // 格子直径（d=68 → 半径 34）
 const V6_TILE_R = V6_TILE_D / 2;
+// S86.1：环几何单一源 = V6 真渲染常量（ti-app/src/scenes/main_map.rs::V6_CENTER/V6_RADIUS）。
+// 缺省 state.ring 与画布绘制都从这组常量派生（载入包时 ring 来自包 layout）；不再两处手抄。
+const ED_V6_RING = { center_x: V6_CENTER.x, center_y: V6_CENTER.y, radius: V6_RADIUS };
+function edRingGeom() {
+  const r = (edState && edState.ring) || ED_V6_RING;
+  return {
+    cx: Number.isFinite(r.center_x) ? r.center_x : ED_V6_RING.center_x,
+    cy: Number.isFinite(r.center_y) ? r.center_y : ED_V6_RING.center_y,
+    radius: Number.isFinite(r.radius) ? r.radius : ED_V6_RING.radius,
+  };
+}
 // theme.json isle_* 令牌（RGB565 → hex；真渲染 by_name(isle_token_color) 源）
 const ED_ISLE_THEME = {
   harbour: '#dac8', lighthouse: '#e652', wreck: '#fe47', pirate_lair: '#4163',
@@ -1344,8 +1364,10 @@ function edDefaultState() {
   });
   return {
     id: 'm04', spaces,
-    ring: { center_x: 540, center_y: 784, radius: 480, card_w: 96, card_h: 120 },
-    canvas: { x: 11, y: 250, w: 1048, h: 1056 },
+    // S86.1：环心/半径不再手抄旧值（540,784/480），统一从 V6 真渲染常量派生。
+    ring: { ...ED_V6_RING, card_w: 96, card_h: 120 },
+    // 焦点画布 = bbox_pct {x:1,y:13,w:97,h:55} × 1920×1080（S84 纯横屏口径；旧包兼容由 I8 SKIP 兜）。
+    canvas: { x: 19, y: 140, w: 1862, h: 594 },
     // I9：每图特有随机事件 + 每图必有 weapon/slave 商人（territory.md §6/§7）
     events: [
       { id: 'm04_cur_event_a', kind: 'storm' },
@@ -1413,25 +1435,37 @@ function edValidate() {
   // I5：首格 start + 第 15 格 boss
   if (st.spaces[0] && st.spaces[0].kind !== 'start') issues.push('I5 首格不是 start');
   if (st.spaces[15] && st.spaces[15].kind !== 'boss') issues.push('I5 第 15 格不是 boss');
-  // I6：ring 8pt（center_x 屏心 540 豁免）
+  // I6：ring 8pt（center_x 历史屏心 540 豁免；S86.1 v6 真渲染几何 740/460 豁免，与 map_pack.py 同口径）
   const r = st.ring;
-  ['center_y','radius','card_w','card_h'].forEach((k) => { if (typeof r[k] === 'number' && r[k] % 8 !== 0) issues.push('I6 ring.' + k + '=' + r[k] + ' 非 8 整除'); });
-  // I6 扩展：spaces[].pos 自由摆放（可选；缺省 = 按环）。在则须 [x,y] 且在 world_canvas 内。
+  ['center_y','radius','card_w','card_h'].forEach((k) => {
+    if (typeof r[k] !== 'number') return;
+    if ((k === 'center_y' && r[k] === ED_V6_RING.center_y) || (k === 'radius' && r[k] === ED_V6_RING.radius)) return;
+    if (r[k] % 8 !== 0) issues.push('I6 ring.' + k + '=' + r[k] + ' 非 8 整除');
+  });
+  // I6 扩展（受限随意布局）：pos 任意 [x,y] 但必须落在 world_canvas 内（±4 卡片半宽容差）；
+  // FAIL 即禁摆 —— edImport 拒导入，后端 map_pack.py verify 终判双闸。
   st.spaces.forEach((s, i) => {
     if (Array.isArray(s.pos) && s.pos.length === 2 && isFinite(s.pos[0]) && isFinite(s.pos[1])) {
-      const c = st.canvas;
-      if (s.pos[0] < c.x - 4 || s.pos[0] > c.x + c.w + 4 || s.pos[1] < c.y - 4 || s.pos[1] > c.y + c.h + 4) {
+      if (!edPosInCanvas(s.pos, st.canvas, 4)) {
         issues.push('格' + i + ' pos=' + s.pos[0] + ',' + s.pos[1] + ' 超出 world_canvas');
       }
     }
   });
-  // I8：world_canvas ≡ focus_bbox_pct × (1080,1920) ±1px（导入时 canvas 由 pct 正算往返恒等；
-  // 前端同口径做 ±1px 逐维校验 = 与 verify_pack 一致，防前端全过但导入被 I8 拒（审计 r1 修））
-  const LAYOUT = { x: 11, y: 250, w: 1048, h: 1056 };
-  const pctOf = (px, dim) => Math.round(px / dim * 100);
-  for (const [k, dim] of [['x', 1080], ['y', 1920], ['w', 1080], ['h', 1920]]) {
-    const want = Math.round(pctOf(LAYOUT[k], dim) / 100 * dim);
-    if (Math.abs(want - LAYOUT[k]) > 1) issues.push('I8 world_canvas.' + k + ' = ' + LAYOUT[k] + '（bbox 往返超差 >1px）');
+  // I8：world_canvas ≡ bbox_pct × (1920,1080) ±1px（S84 纯横屏；与 verify_pack 逐维同口径）。
+  // 旧包 bbox_pct 命中历史 (1080,1920) 往返 = SKIP（与 map_pack.py 兼容分支一致）；两者皆不命中 = FAIL。
+  const c = st.canvas || {};
+  const vals = [c.x, c.y, c.w, c.h];
+  if (vals.every((v) => typeof v === 'number' && isFinite(v))) {
+    const rt = (w, h) => [c.x, c.y, c.w, c.h].map((v, i) => Math.round(Math.round(v / (i % 2 === 0 ? w : h) * 100) / 100 * (i % 2 === 0 ? w : h)));
+    const fits = (want) => vals.every((v, i) => Math.abs(v - want[i]) <= 1);
+    const newRt = rt(ED_SCREEN.w, ED_SCREEN.h);
+    if (!fits(newRt) && !fits(rt(1080, 1920))) {
+      for (const [i, k] of ['x','y','w','h'].entries()) {
+        if (Math.abs(vals[i] - newRt[i]) > 1) issues.push('I8 world_canvas.' + k + ' = ' + vals[i] + '（bbox_pct 往返 ' + newRt[i] + '，超差 >1px）');
+      }
+    }
+  } else {
+    issues.push('I8 world_canvas 非数对（无法做 N8 往返）');
   }
   // I9：内容齐备（每图 events[] 非空 + merchants 含 weapon/slave + 每个领地格有 building≥1 + resource）
   const evs = st.events || [];
@@ -1478,10 +1512,11 @@ function edTilePoints(pts) { return pts.map((p) => p[0].toFixed(1) + ',' + p[1].
 
 // 格 i 画布位置：优先 `spaces[i].pos`（拖过 = 自由摆放，存 map.json），缺省 = 按环几何算（向后兼容）。
 function edNodeXY(s, i) {
-  // 真渲染 v6 对齐：缺省位置按 V6_CENTER + V6_RADIUS（v6_pillar_center 同式）
+  // S86.1：环几何读 st.ring（缺省 = V6 真渲染常量 / 载入包 = 包 layout）；与 edDefaultState 同源。
   if (Array.isArray(s.pos) && s.pos.length === 2 && isFinite(s.pos[0]) && isFinite(s.pos[1])) return [s.pos[0], s.pos[1]];
+  const g = edRingGeom();
   const theta = (i / edState.spaces.length) * Math.PI * 2 - Math.PI / 2;
-  return [V6_CENTER.x + V6_RADIUS * Math.cos(theta), V6_CENTER.y + V6_RADIUS * Math.sin(theta)];
+  return [g.cx + g.radius * Math.cos(theta), g.cy + g.radius * Math.sin(theta)];
 }
 
 // 画布 viewBox 缩放（滚轮；1.0 = 适配，0.6 = 放大看细节；平移 = 空白拖）。
@@ -1491,9 +1526,10 @@ function edApplyView() {
   const svg = $('ed-canvas');
   if (!svg) return;
   // 缩放 + 平移合成 viewBox（edZoom=1.0 适配全图；>1 放大看细节；<1 缩小看全局；edPan=世界坐标平移）
-  const vw = 1080 / edZoom, vh = 1920 / edZoom;
-  const x = (1080 - vw) / 2 + edPan.x;
-  const y = (1920 - vh) / 2 + edPan.y;
+  // S86.1：横屏 1920×1080 单一源；拖拽/平移换算须与此处一致（edScreenScale 读实际 viewBox）。
+  const vw = ED_SCREEN.w / edZoom, vh = ED_SCREEN.h / edZoom;
+  const x = (ED_SCREEN.w - vw) / 2 + edPan.x;
+  const y = (ED_SCREEN.h - vh) / 2 + edPan.y;
   svg.setAttribute('viewBox', x + ' ' + y + ' ' + vw + ' ' + vh);
   const lbl = $('ed-zoom-label');
   if (lbl) lbl.textContent = Math.round(edZoom * 100) + '%';
@@ -1504,6 +1540,21 @@ function edSetZoom(z, pan) {
   edZoom = Math.max(0.5, Math.min(3.0, z));
   if (pan) edPan = { x: 0, y: 0 };
   edApplyView();
+}
+// 屏幕 px → SVG 用户单位（缩放 + preserveAspectRatio="xMidYMid meet" 留边统一口径）。
+// S86.1：旧版节点拖用 1080/960、空白移用 1080/1920，两套混算致缩放/留边后坐标漂移；
+// 现统一从实际 viewBox + 元素矩形反推，kx === ky（等比 viewBox）。
+function edScreenScale() {
+  const svg = $('ed-canvas');
+  const vb = svg.viewBox.baseVal;
+  const rect = svg.getBoundingClientRect();
+  const k = Math.min(rect.width / (vb.width || ED_SCREEN.w), rect.height / (vb.height || ED_SCREEN.h));
+  return k > 0 ? 1 / k : 1;
+}
+// 受限随意布局：[x,y] 必须落在 world_canvas 内（±容差）；校验与拖拽拒摆共用同一判据。
+function edPosInCanvas(pos, c, tol) {
+  return pos[0] >= c.x - tol && pos[0] <= c.x + c.w + tol
+      && pos[1] >= c.y - tol && pos[1] <= c.y + c.h + tol;
 }
 function edBindZoomButtons() {
   const zi = $('ed-zoom-in'), zo = $('ed-zoom-out'), zr = $('ed-zoom-reset');
@@ -1615,16 +1666,16 @@ function edGenClose() {
 function edRenderCanvas() {
   const st = edState;
   const svg = $('ed-canvas');
-  const ring = st.ring;
   const N = st.spaces.length;
   let g = '';
-  // 真渲染 v6 对齐：环心 = V6_CENTER(540,740)，环半径 = V6_RADIUS(460)（所见即所得）
-  const cx0 = V6_CENTER.x, cy0 = V6_CENTER.y, R0 = V6_RADIUS;
+  // S86.1：环心/半径读 st.ring（缺省 = V6 真渲染常量 / 载入包 = 包 layout），与 edNodeXY 同源。
+  const geom = edRingGeom();
+  const cx0 = geom.cx, cy0 = geom.cy, R0 = geom.radius;
   // 海面
   g += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + (R0 + 110) + '" fill="#1a3444" stroke="#2a4a5a" stroke-width="2"/>';
   // 环轨
   g += '<circle cx="' + cx0 + '" cy="' + cy0 + '" r="' + R0 + '" fill="none" stroke="#3a4155" stroke-width="2" stroke-dasharray="6 6"/>';
-  // 中央据点岛（真渲染：blit island_home_<id>.png @ (V6_CENTER-ir, 788×788)，缺图不画；
+  // 中央据点岛（真渲染：blit island_home_<id>.png @ (环心-ir, 788×788)，缺图不画；
   // 所见即所得 = 编辑器显示真渲染岛资产图；缺图回退绿圆占位）
   const ir = R0 - 66;
   const ix = cx0 - ir, iy = cy0 - ir;
@@ -1690,8 +1741,8 @@ function edRenderCanvas() {
       const idx = parseInt(n.dataset.idx, 10);
       const s = st.spaces[idx];
       const [ox, oy] = edNodeXY(s, idx);
-      const rect = svg.getBoundingClientRect();
-      const kx = 1080 / rect.width, ky = 960 / rect.height;
+      const k = edScreenScale(); // S86.1：与 viewBox/zoom/letterbox 同源（旧 1080/960 混算已废）
+      const kx = k, ky = k;
       const sx = ev.clientX, sy = ev.clientY;
       let dragged = false, ldx = 0, ldy = 0;
       const move = (ev2) => {
@@ -1705,8 +1756,15 @@ function edRenderCanvas() {
         document.removeEventListener('pointermove', move);
         document.removeEventListener('pointerup', up);
         if (dragged) {
-          s.pos = [Math.round(ox + ldx), Math.round(oy + ldy)];
-          edPushHistory();
+          const pos = [Math.round(ox + ldx), Math.round(oy + ldy)];
+          if (edPosInCanvas(pos, st.canvas, 4)) {
+            s.pos = pos;
+            edPushHistory();
+          } else {
+            // FAIL 即禁摆：越界不落 pos（与 edValidate / map_pack.py verify 同判据）。
+            const m = $('ed-import-msg');
+            if (m) { m.style.color = '#d05454'; m.textContent = '格 ' + idx + ' pos=' + pos.join(',') + ' 超出 world_canvas，已拒绝摆位（FAIL 即禁摆）'; }
+          }
           edRenderCanvas();
           edRenderFloats();
           edValidateBar();
@@ -1729,8 +1787,8 @@ function edRenderCanvas() {
   // 空白拖平移（点背景拖动看细节；节点自身 pointerdown 不触发）
   svg.addEventListener('pointerdown', (ev) => {
     if (ev.target.closest('.ed-node')) return;
-    const rect = svg.getBoundingClientRect();
-    const kx = (1080 / edZoom) / rect.width, ky = (1920 / edZoom) / rect.height;
+    const k = edScreenScale(); // S86.1：与节点拖同一横屏换算（旧 1920/edZoom 口径已废）
+    const kx = k, ky = k;
     const sx = ev.clientX, sy = ev.clientY, ox = edPan.x, oy = edPan.y;
     let dragging = false;
     const move = (ev2) => {
@@ -2329,7 +2387,8 @@ async function edImport() {
       deck_sell: { x: 384, y: 1608, w: 312, h: 136 },
       deck_build: { x: 720, y: 1608, w: 312, h: 136 },
       focus_anchor: { type: 'world_canvas', bbox: { x: st.canvas.x, y: st.canvas.y, w: st.canvas.w, h: st.canvas.h } },
-      focus_bbox_pct: { x: Math.round(st.canvas.x / 1080 * 100), y: Math.round(st.canvas.y / 1920 * 100), w: Math.round(st.canvas.w / 1080 * 100), h: Math.round(st.canvas.h / 1920 * 100) }
+      // S86.1：导入 payload 分母 = 纯横屏 1920×1080（旧 1080×1920 口径已废；与 map_pack.py I8 同口径）
+      focus_bbox_pct: { x: Math.round(st.canvas.x / ED_SCREEN.w * 100), y: Math.round(st.canvas.y / ED_SCREEN.h * 100), w: Math.round(st.canvas.w / ED_SCREEN.w * 100), h: Math.round(st.canvas.h / ED_SCREEN.h * 100) }
     },
     strings: { ['glmap' + st.id + '.Map']: st.id },
     assets: [],
@@ -2361,6 +2420,58 @@ async function edImport() {
     $('ed-import-msg').style.color = '#d05454';
   }
   return false;
+}
+
+// S86.1：真渲染预览入口（调用约定 = S86.3 后端 POST /api/preview；本任务只做前端约定）。
+// body 固定 { scene:'main_map', map_id:<id>, viewport:'1920x1080' }；后端未上线（404/405/非 JSON/网络错误）
+// 一律降级为「预览服务待上线（S86.3）」提示，不报错崩溃、不影响编辑器其它操作。
+async function edPreviewReal() {
+  const st = edState;
+  const msg = $('ed-preview-real-msg'), img = $('ed-preview-real-img');
+  if (!st || !msg || !img) return;
+  const degrade = (detail) => {
+    img.style.display = 'none';
+    msg.style.color = 'var(--muted)';
+    msg.textContent = '预览服务待上线（S86.3）' + (detail ? '：' + detail : '') + '；可先用向导第 9 步「执行出图」看验收图。';
+  };
+  const tok = sessionStorage.getItem('ti_console_token') || '';
+  if (!tok) { degrade('请先在设置页粘贴 token（X-TI-Token）'); return; }
+  const id = 'preview_map_' + Date.now();
+  const body = {
+    scene: 'main_map', map_id: st.id, viewport: ED_SCREEN.w + 'x' + ED_SCREEN.h,
+    id, action: 'preview', enable_write: true,
+  };
+  msg.style.color = 'var(--muted)';
+  msg.textContent = '真渲染预览中（' + body.viewport + '，首次冷启 30~90s）…';
+  try {
+    const resp = await fetch('/api/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-TI-Token': tok },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) { degrade('HTTP ' + resp.status + '（检查 token/enable_write）'); return; }
+    const out = await resp.json();
+    const poll = out.poll || ('/api/jobs?kind=preview&id=' + encodeURIComponent(out.id || id));
+    // 作业异步出图：轮询统一作业面，exit_code=0 才取图（否则首次取图 404）。
+    let done = false, lastLog = '';
+    for (let i = 0; i < 120; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      const job = await (await fetch(poll, { headers: { 'X-TI-Token': tok } })).json();
+      const state = job.state || {};
+      lastLog = (job.log_tail || '').slice(-200);
+      if (state.running === false) { done = state.exit_code === 0; break; }
+    }
+    if (!done) { degrade('预览作业失败/超时' + (lastLog ? '：' + esc(lastLog) : '')); return; }
+    const src = out.image || out.path || out.url || out.screenshot || '';
+    if (!src || typeof src !== 'string') { degrade('响应未带图片路径'); return; }
+    const href = (src.startsWith('/') ? src : '/' + src) + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+    img.src = href; // 破缓存（主题预览同范式）
+    img.style.display = 'block';
+    msg.style.color = '#3fb950';
+    msg.textContent = '✓ 真渲染预览（' + body.viewport + '；' + esc(src) + '）';
+  } catch (e) {
+    degrade(String(e));
+  }
 }
 
 function openMapEditor() {
@@ -2399,6 +2510,9 @@ function edSetTool(tool) {
 }
 
 $('map-edit-btn').addEventListener('click', openMapEditor);
+// S86.1：真渲染预览按钮（静态元素，顶层绑定一次；后端 S86.3 未上线时走降级提示）。
+const edPreviewBtn = $('ed-preview-real-btn');
+if (edPreviewBtn) edPreviewBtn.addEventListener('click', edPreviewReal);
 // AI 生图模态按钮（静态元素，顶层绑定一次）：生成预览 / 应用保存 / 取消 / ✕；Escape + 点遮罩关闭。
 $('ed-gen-modal-preview').addEventListener('click', edGenPreview);
 $('ed-gen-modal-apply').addEventListener('click', edGenApply);

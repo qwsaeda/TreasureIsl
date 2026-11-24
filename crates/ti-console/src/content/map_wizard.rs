@@ -460,10 +460,14 @@ fn resolve_execution(
     }
 }
 
-/// `map_shot` 步命令：运行 ti-engine 发货 bin（--shot `离屏），TI_MAP`=<id> 经 env 传。
+/// `map_shot` 步命令：运行 ti-engine 发货 bin（--shot 离屏），`TI_MAP`=<id> 经 env 传。
 /// 无头环境需虚拟显示（xvfb-run -a，Linux 迁移口径）；bin 路径 = 构建期 target-dir。
 /// 注：`--scene=<id>` 单参数（`arg_value("--scene=")` 只匹配 `=` 形式；旧分离 `--scene main_map`
 /// 会静默回退 index，属 S44.2 潜伏 bug 修复）。
+///
+/// S86.1 横屏口径：不传 `--viewport` —— bin 默认视口 = `LOGICAL_W/H`（ti-render framebuffer
+/// 1920×1080，S84 纯横屏），出图名 `bevy_native_main_map.png` 与 [`shot_image_ok`] 判据一致；
+/// 显式传 `--viewport=1920x1080` 会给文件名追加后缀导致判据读不到图（故保持不传）。
 fn shot_command(repo_root: &Path, id: &str) -> ExecSpec {
     let bin = resolve_bin_path(repo_root);
     let xvfb = Path::new("/usr/bin/xvfb-run");
