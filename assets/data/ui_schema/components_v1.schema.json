@@ -1,0 +1,276 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://treasureisland.local/ui_schema/components_v1.schema.json",
+  "title": "UI Component Schema v1 — S85 声明式组件（见 docs/process/33_ui_component_schema.md）",
+  "description": "5 纯 UI 场景的组件声明：type/binding/layout/action/role/state 受限枚举，禁绝对坐标。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "scenes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "scenes": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/Scene"
+      }
+    }
+  },
+  "$defs": {
+    "Scene": {
+      "type": "object",
+      "required": [
+        "scene_id",
+        "elements"
+      ],
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "enum": [
+            "index",
+            "select_role",
+            "select_map",
+            "message",
+            "saveload"
+          ]
+        },
+        "overrides": {
+          "$ref": "#/$defs/Overrides"
+        },
+        "elements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Component"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Component": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "layout"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "image",
+            "rect",
+            "text",
+            "button",
+            "input",
+            "list",
+            "badge",
+            "grad",
+            "glow",
+            "panel"
+          ]
+        },
+        "role": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "binding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "layout": {
+          "$ref": "#/$defs/Layout"
+        },
+        "action": {
+          "$ref": "#/$defs/Action"
+        },
+        "state": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "selected",
+              "hover",
+              "disabled"
+            ]
+          }
+        },
+        "text": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "title",
+            "body",
+            "hint"
+          ]
+        },
+        "icon": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "z": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "x"
+            ]
+          },
+          {
+            "required": [
+              "y"
+            ]
+          },
+          {
+            "required": [
+              "w"
+            ]
+          },
+          {
+            "required": [
+              "h"
+            ]
+          },
+          {
+            "required": [
+              "rect"
+            ]
+          }
+        ]
+      }
+    },
+    "Layout": {
+      "type": "object",
+      "required": [
+        "intent"
+      ],
+      "properties": {
+        "intent": {
+          "type": "string",
+          "enum": [
+            "fill",
+            "center",
+            "side_left",
+            "side_right",
+            "bottom_bar",
+            "flex_col",
+            "flex_row",
+            "anchored"
+          ]
+        },
+        "side": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ]
+        },
+        "width_pct": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "gap": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ]
+        },
+        "anchor": {
+          "type": "string",
+          "enum": [
+            "top_left",
+            "top_right",
+            "top_center",
+            "bottom_left",
+            "bottom_right",
+            "bottom_center",
+            "center_left",
+            "center_right",
+            "center"
+          ]
+        },
+        "offset_pct": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": -100,
+              "maximum": 100
+            },
+            "y": {
+              "type": "number",
+              "minimum": -100,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "size_pct": {
+          "type": "object",
+          "properties": {
+            "w": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "h": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "Action": {
+      "type": "string",
+      "enum": [
+        "menu_select",
+        "character_select",
+        "map_select",
+        "slot_load",
+        "slot_write",
+        "msg_next",
+        "msg_prev",
+        "spin",
+        "back",
+        "attack",
+        "do_item",
+        "defend"
+      ]
+    },
+    "Overrides": {
+      "type": "object",
+      "description": "主题覆盖层：role→资产路径，不写绝对坐标。",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

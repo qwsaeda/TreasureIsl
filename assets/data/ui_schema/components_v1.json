@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "_comment": "S85 声明式 UI 组件实例（5 纯 UI 场景，见 docs/process/33_ui_component_schema.md）。无功能元素只声明 role+layout（无绝对坐标）；有功能元素声明 type+binding+action。阴影期（S85.2）：旧 prim 暂留，渲染仍走旧路径；S85.3 起通用 builder 消费本文件。",
+  "scenes": {
+    "index": {
+      "scene_id": "index",
+      "elements": [
+        {
+          "id": "bg",
+          "type": "image",
+          "role": "index_bg",
+          "layout": {
+            "intent": "fill"
+          },
+          "z": 0
+        },
+        {
+          "id": "hero",
+          "type": "image",
+          "role": "index_hero",
+          "layout": {
+            "intent": "center"
+          },
+          "z": 1
+        },
+        {
+          "id": "menu",
+          "type": "list",
+          "binding": "menu",
+          "layout": {
+            "intent": "side_right",
+            "width_pct": 34,
+            "align": "stretch"
+          },
+          "action": "menu_select",
+          "state": [
+            "normal",
+            "selected"
+          ],
+          "z": 2
+        },
+        {
+          "id": "footer",
+          "type": "text",
+          "binding": "scene.index.footer",
+          "tier": "hint",
+          "layout": {
+            "intent": "bottom_bar"
+          },
+          "z": 3
+        }
+      ],
+      "overrides": {}
+    },
+    "select_role": {
+      "scene_id": "select_role",
+      "elements": [
+        {
+          "id": "bg",
+          "type": "image",
+          "role": "bg_night_sea",
+          "layout": {
+            "intent": "fill"
+          },
+          "z": 0
+        },
+        {
+          "id": "roster",
+          "type": "list",
+          "binding": "characters",
+          "layout": {
+            "intent": "side_right",
+            "width_pct": 34,
+            "align": "stretch"
+          },
+          "action": "character_select",
+          "state": [
+            "normal",
+            "selected"
+          ],
+          "z": 2
+        },
+        {
+          "id": "title",
+          "type": "text",
+          "binding": "scene.select_role.title",
+          "tier": "title",
+          "layout": {
+            "intent": "side_left"
+          },
+          "z": 3
+        },
+        {
+          "id": "nav",
+          "type": "text",
+          "binding": "scene.select_role.nav_hint",
+          "tier": "hint",
+          "layout": {
+            "intent": "bottom_bar"
+          },
+          "z": 3
+        }
+      ],
+      "overrides": {}
+    },
+    "select_map": {
+      "scene_id": "select_map",
+      "elements": [
+        {
+          "id": "bg",
+          "type": "image",
+          "role": "bg_night_sea",
+          "layout": {
+            "intent": "fill"
+          },
+          "z": 0
+        },
+        {
+          "id": "maps",
+          "type": "list",
+          "binding": "map_slots",
+          "layout": {
+            "intent": "side_right",
+            "width_pct": 34,
+            "align": "stretch"
+          },
+          "action": "map_select",
+          "state": [
+            "normal",
+            "selected"
+          ],
+          "z": 2
+        },
+        {
+          "id": "title",
+          "type": "text",
+          "binding": "scene.select_map.title",
+          "tier": "title",
+          "layout": {
+            "intent": "side_right"
+          },
+          "z": 3
+        },
+        {
+          "id": "nav",
+          "type": "text",
+          "binding": "scene.select_map.nav_hint",
+          "tier": "hint",
+          "layout": {
+            "intent": "bottom_bar"
+          },
+          "z": 3
+        }
+      ],
+      "overrides": {}
+    },
+    "message": {
+      "scene_id": "message",
+      "elements": [
+        {
+          "id": "bg",
+          "type": "image",
+          "role": "bg_night_sea",
+          "layout": {
+            "intent": "fill"
+          },
+          "z": 0
+        },
+        {
+          "id": "panel",
+          "type": "panel",
+          "binding": "msg_pages",
+          "layout": {
+            "intent": "center",
+            "width_pct": 55,
+            "align": "stretch"
+          },
+          "z": 2
+        },
+        {
+          "id": "nav",
+          "type": "text",
+          "binding": "scene.message.nav_hint",
+          "tier": "hint",
+          "layout": {
+            "intent": "bottom_bar"
+          },
+          "z": 3
+        }
+      ],
+      "overrides": {}
+    },
+    "saveload": {
+      "scene_id": "saveload",
+      "elements": [
+        {
+          "id": "bg",
+          "type": "image",
+          "role": "bg_night_sea",
+          "layout": {
+            "intent": "fill"
+          },
+          "z": 0
+        },
+        {
+          "id": "slots",
+          "type": "list",
+          "binding": "save_slots",
+          "layout": {
+            "intent": "side_left",
+            "width_pct": 34,
+            "align": "stretch"
+          },
+          "action": "slot_write",
+          "state": [
+            "normal",
+            "selected"
+          ],
+          "z": 2
+        },
+        {
+          "id": "title",
+          "type": "text",
+          "binding": "scene.saveload.title",
+          "tier": "title",
+          "layout": {
+            "intent": "side_left"
+          },
+          "z": 3
+        },
+        {
+          "id": "nav",
+          "type": "text",
+          "binding": "scene.saveload.nav_hint",
+          "tier": "hint",
+          "layout": {
+            "intent": "bottom_bar"
+          },
+          "z": 3
+        }
+      ],
+      "overrides": {}
+    }
+  }
+}

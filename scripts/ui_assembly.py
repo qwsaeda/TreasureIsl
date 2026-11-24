@@ -77,9 +77,13 @@ def icon_file(icon_name: str, manifest: dict) -> str | None:
 
 
 def layers_of(scene_data: dict, orientation: str) -> tuple[int, int, OrderedDict[int, list]]:
-    """返回 (design_w, design_h, {z: [primitive,...]})；z 升序即绘制顺序。"""
-    node = scene_data if orientation == "portrait" else scene_data["landscape"]
-    prims = node["primitives"]
+    """返回 (design_w, design_h, {z: [primitive,...]})；z 升序即绘制顺序。
+
+    S85.2 兼容：S84 纯横屏重写已移除 `landscape` 段，横屏原语即顶层 `primitives`。
+    无 `landscape` 键时回退顶层 `primitives`，不再 KeyError（有旧段仍优先旧段）。
+    """
+    node = scene_data if orientation == "portrait" else scene_data.get("landscape", scene_data)
+    prims = node.get("primitives", [])
     w = 1080 if orientation == "portrait" else 1920
     h = 1920 if orientation == "portrait" else 1080
     groups: OrderedDict[int, list] = OrderedDict()
@@ -219,7 +223,8 @@ def main(argv: list[str] | None = None) -> int:
             if not isinstance(data, dict) or "primitives" not in data:
                 continue  # 跳过 schema_version 等非场景键
             for orient in ("portrait", "landscape"):
-                node = data if orient == "portrait" else data.get("landscape", {})
+                # S85.2：无 landscape 段时回退顶层 primitives（S84 纯横屏口径）
+                node = data if orient == "portrait" else data.get("landscape", data)
                 prims = node.get("primitives", [])
                 zs = sorted({int(p.get("z", 0)) for p in prims})
                 print(f"{name:12} {orient:10} {len(prims):3} 原语 / {len(zs)} 层 (z={zs})")

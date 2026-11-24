@@ -610,12 +610,12 @@ fn resolve_execution(
             "design" | "shot" => Ok(scene_shot_command(repo_root, state)),
             // F1 修复（B 审计 r1 P1）：layout 步 = 纯视觉变体跳过（只读断言，0 scenes.json diff）；
             // 版面编辑（scenes.json 写）不在本向导（30 号 §2.2 step 3 已对齐，平台表单写端点为后续）。
-            // S48.0：theme 步已写构图（state.theme 非空）⇒ layout 步改验证 scenes.json 规范形（exit 0）。
+            // S85.2：theme 步已写 components_v1.json overrides（state.theme 非空）⇒ layout 步验证新 schema 结构（exit 0）。
             "layout" if !state.theme.is_empty() => Ok((
                 "python3".to_owned(),
                 vec![
                     "-c".to_owned(),
-                    "import json;d=json.load(open('assets/data/scenes.json'));assert d['index']['landscape']['primitives'],'empty';print('layout canon ok')"
+                    "import json;d=json.load(open('assets/data/ui_schema/components_v1.json'));assert d['scenes']['index']['elements'],'empty';print('layout canon ok')"
                         .to_owned(),
                 ],
                 Vec::new(),
@@ -826,31 +826,32 @@ fn scenes_json_no_diff(repo_root: &Path) -> (bool, String) {
     }
 }
 
-/// S48.0：主题构图已写后的 scenes.json 规范形验证（layout 步改验证规范形而非 0 diff）。
+/// S85.2：主题写点已迁到 `components_v1.json`（S84 后 scenes.json 无 `index.landscape` 段）。
+/// layout 步判据 = 新 schema 可解析 + `scenes.index.elements` 非空（组件声明在位）+
+/// `scenes.index.overrides` 为对象（apply 写点结构合法）。
 fn scenes_json_canonical(repo_root: &Path) -> (bool, String) {
-    let p = repo_root.join("assets/data/scenes.json");
+    let p = repo_root.join("assets/data/ui_schema/components_v1.json");
     let raw = match std::fs::read_to_string(&p) {
         Ok(r) => r,
-        Err(e) => return (false, format!("读 scenes.json 失败：{e}")),
+        Err(e) => return (false, format!("读 components_v1.json 失败：{e}")),
     };
     let obj: serde_json::Value = match serde_json::from_str(&raw) {
         Ok(o) => o,
-        Err(e) => return (false, format!("scenes.json JSON 语法错误：{e}")),
+        Err(e) => return (false, format!("components_v1.json JSON 语法错误：{e}")),
     };
-    // indent=1 规范形（check_scenes_canonical 同口径：json.dumps(obj, ensure_ascii=False, indent=1)）。
-    // serde_json 无 indent=1 参数；此处校验可解析 + 含 index.landscape.primitives（构图已回注）。
-    let has_landscape = obj
-        .get("index")
-        .and_then(|i| i.get("landscape"))
-        .and_then(|l| l.get("primitives"))
-        .and_then(|p| p.as_array())
+    let idx = obj.get("scenes").and_then(|s| s.get("index"));
+    let has_elements = idx
+        .and_then(|i| i.get("elements"))
+        .and_then(serde_json::Value::as_array)
         .is_some_and(|a| !a.is_empty());
-    let ok = has_landscape;
+    let overrides_ok =
+        idx.and_then(|i| i.get("overrides")).is_some_and(serde_json::Value::is_object);
+    let ok = has_elements && overrides_ok;
     let note = if ok {
-        "scenes.json 可解析 + index.landscape.primitives 非空（构图已回注；validate_data 0 违规由 theme 步确认）"
+        "components_v1.json 合法 + scenes.index.elements 非空 + overrides 为对象（主题写点就位）"
             .to_owned()
     } else {
-        "scenes.json 结构异常（缺 index.landscape.primitives）".to_owned()
+        "components_v1.json 结构异常（缺 scenes.index.elements 或 overrides 非对象）".to_owned()
     };
     (ok, note)
 }

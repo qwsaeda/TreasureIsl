@@ -139,6 +139,8 @@
 
 | 文件 | 覆盖 |
 |---|---|
+| [`plan-s85-ui-system.md`](plan-s85-ui-system.md) | **S85 完整 UI 系统重构 WBS**（用户 2026-11-24 拍板：声明式组件 schema，元素分功能/无功能、type 约束、业务绑定、事件绑定；设计稿待用户过目） |
+| [`plan-s86-visual-editor.md`](plan-s86-visual-editor.md) | **S86 平台可视化编辑器 WBS**（地图制作 + UI 组件，受限随意布局 + 可见即可得：内嵌真渲染预览 + 导出即生效；设计稿待用户过目） |
 | [`plan-s84-landscape-only.md`](plan-s84-landscape-only.md) | **S84 纯横屏重写 WBS**（用户 2026-11-24「竖屏全部删除 1-3 全做」：删文档竖屏内容 + scenes.json 竖屏数据 + 1080×1920 坐标系改 1920×1080；架构级重写） |
 | [`plan-archive.md`](plan-archive.md) | **已完成阶段（S0~S11）计划的单一索引**：逐阶段一句话概括 + 原文件跳转（原文件保留在 `docs/` 原位） |
 | [`plan-s12-parallel.md`](plan-s12-parallel.md) | **S12 模块化并行 WBS**（一轮 4 步执行：S12.0 契约冻结 → P1–P5 并行 → S12.6 集成；W2 起 P6 表现层） |
@@ -157,6 +159,8 @@
 
 ### 工具与产出物索引
 
+
+> S85 新增工具：`scripts/ui_schema_check.py`（`components_v1.json` 组件 schema 门禁，见 `process/33_ui_component_schema.md`）。
 | 文件 | 作用 |
 |---|---|
 | `scripts/playbook.ps1` | **常用命令一键入口**（16 项命令固化：native 运行 / 无头回归 / wasm / 冒烟 / 门禁 / 测试 / fmt / clippy / 元素验证 / 逐精灵渲染 / 推送前置检查 / 台账 / doccheck / 硬编码扫描；`-List` 列全部；UTF-8 BOM 防 PowerShell 编码错位） |

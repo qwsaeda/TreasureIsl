@@ -1,0 +1,31 @@
+S85 完整 UI 系统重构收口 · 验收证据（2026-11-24）
+
+== 改动面 ==
+文档收口（计数同步 + 陈旧文档更新）+ 三方对账 + 推送。
+
+== 判据 1：S85 全阶段成果 ==
+S85.0 立项（设计稿+3 路 explore 影响面+用户确认）→ S85.1 schema 规范（33 号+JSON Schema+校验器负例）→
+S85.2 数据落地（5 场景 19 组件+role 注册表+清 S84 landscape 漂移）→ S85.3 通用渲染器（UiAction 之前：build_component_chrome+
+ti-core ui_schema 加载器+4 场景切 schema）→ S85.4 事件绑定（UiAction 单一事实源+4 场景 on_hit 按 action 分派）→
+S85.5 完整清理（删 5 场景死 prim/shim/旧函数）→ S85.6 门禁迁移（测试/doccheck2/脚本全锚新 schema）→ S85.7 收口。
+用户核心诉求达成：名牌坐标逐条写死问题根治——UI 元素在 components_v1.json，改 layout 意图/锚点即可换位置（零 Rust），
+有功能控件走 action 单一事实源（schema 字符串/key/场景分派三处同源）。
+
+== 判据 2：全量门禁（gate 36 项 0 failure）==
+- pwsh -File scripts/gate.ps1 → GATE_EXIT=0，=== gate: 0 failure(s) ===（36 项；其它会话 Cargo.toml 在途改动 stash 隔离后实跑，
+  验证后完整恢复 md5 一致 7b56bcd0...，未替别人修、未纳入提交）
+- cargo test --workspace 1089 passed / 0 failed / 1 ignored；clippy -D warnings 0 error；fmt --check 0
+- doccheck 0 error（201 docs/38 facts/206 experiences/424 task refs）；doccheck2 0 error（57 项）
+- validate_data OK；ui_schema_check OK；ui_assets --check OK；audit_code 0 违规（ui.rs 拆分后 809 行 / build_component_chrome 13 行）
+- check_hardcode 0 hits（ui_schema.rs CJK 诊断串改英文）
+- 5 场景 --shot 1920×1080 全非黑（与改前逐像素一致）；bevy-cpu-parity 通过（0 超差，UI Node=0）
+
+== 判据 3：收口动作 ==
+- 陈旧文档更新：docs/scenes/README.md（5 场景参数化状态→schema）、docs/plan-s84-landscape-only.md（加 S85 取代标注）
+- doccheck2:547 文档反引号修复（clippy doc_markdown）
+- doccheck experiences 计数 205→206 同步
+- 计数同步 424 任务 / 424 verified / 0 pending
+
+== 判据 4：三方对账 + 推送 ==
+（check_ledger_reality + commit + push 结果见下方追加）
+- check_ledger_reality.py → 全绿（424 verified 对账通过 + 0 blocked + 0 孤儿 evidence）

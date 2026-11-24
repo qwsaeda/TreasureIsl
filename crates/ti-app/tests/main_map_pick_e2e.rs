@@ -62,6 +62,18 @@ fn main_map_hud_pick_keys_present() {
     }
 }
 
+/// S85.5：缺 `action` = 不可点。摇骰 CTA 的语义 action `spin` 必须在 schema 闭集表
+/// `UiAction::ACTION_TABLE` 中登记且映射到 key=4（与 ① 的数据面 `pick_key` 对账）。
+#[test]
+fn spin_action_is_declared_and_maps_to_key_four() {
+    use ti_core::domain::ui_action::UiAction;
+    assert_eq!(
+        UiAction::from_schema_str("spin").map(UiAction::key),
+        Some(4),
+        "schema action `spin` 缺登记或 key≠4（摇骰 CTA 不可点）"
+    );
+}
+
 /// ③：摇骰 CTA（键 4）经归一命中 → `GameInput::Spin` ⇒ 骰点 > 0（能摇）。
 #[test]
 fn spin_cta_hit_rolls_dice() {

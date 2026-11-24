@@ -158,3 +158,19 @@
 | 表现 | bevy_ui UI 层 + bevy_picking 命中 + resize 重排（全进 Bevy） | S29.1~S29.4 |
 | 资产 | 无（资产源不变，bevy_ui 走同一资产服务器） | — |
 | 文档 | 本文（B1 定案）+ 撤销原求解器方向 + 11/12/08/09 四篇同步 + 台账 WBS | S29.0 / S29.4 |
+
+## 8. S85 签核（2026-11-24）：5 纯 UI 场景 chrome 从「Bevy 代码硬拼」回退为「schema 数据 + 通用 Bevy builder」
+
+> S85 用户拍板「完整 UI 系统重构」，本条是对 B1 §2 约定③（UI chrome 转 Bevy 代码）的**受控回退签核**，
+> 不是推翻 B1。
+
+- **范围**：仅 5 个纯 UI 场景（index/select_role/select_map/message/saveload）的 chrome 来源，从
+  逐场景 `build_*_chrome` 里的 Rust 硬拼（i18n key `format!`、资产路径 `format!`、`if hit.key==N`）
+  改为 `assets/data/ui_schema/components_v1.json` 声明式组件 + `ti-engine::ui` 通用 builder
+  （扩展既有 `DataChromeItem`/`build_data_chrome`，见 `docs/process/33_ui_component_schema.md`）。
+- **不变**：B1 其余约定全部保留——bevy_ui taffy 自动布局 + resize 真重排、bevy_picking 命中、
+  游戏世界（vs/main_map）保持 1080 且不迁、bevy-cpu-parity 仅游戏世界（UI 层 Node=0）、`WindowCam` 相机契约。
+- **动机**：原「Bevy 代码硬拼」导致业务绑定/资产/i18n 散落 Rust，改 UI 要改码；用户要求元素按
+  有功能/无功能二分，有功能绑定业务 + type 约束，业务与 UI 两侧按同一 schema 对齐。
+- **机器守门**：`scripts/ui_schema_check.py`（禁绝对坐标字段、type/binding/action enum、role/icon 登记对账）；
+  出图/resize/parity 判据口径不变。

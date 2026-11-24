@@ -23,6 +23,7 @@ pub mod map_pack;
 mod strings;
 pub mod table_source;
 mod ui_icons;
+pub mod ui_schema;
 
 // re-export（保持 `ti_core::data::*` 公共 API 不变）
 pub use balance::balance;
@@ -34,6 +35,10 @@ pub use strings::{pairs, strings};
 pub use table_source::{PackTables, install as install_pack_tables, source_id};
 pub use terrain::{TerrainDb, TerrainLegend, TerrainMap, terrain};
 pub use ui_icons::{HudIcon, IconDef, IndexMenuIcon, UiIconBindings, UiIcons, icon_ids, ui_icons};
+pub use ui_schema::{
+    AssetRoles, Component, InjectedSchema, Layout, OffsetPct, SceneComponents, SizePct,
+    asset_roles, components, install_injected,
+};
 
 use std::collections::BTreeMap;
 use std::fmt;

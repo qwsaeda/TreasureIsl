@@ -2,6 +2,7 @@
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::persistence::SaveSlot;
 use ti_core::domain::selection::MapSlot;
+use ti_core::domain::ui_action::UiAction;
 
 use crate::game_app::{GameInput, HitData};
 use crate::i18n;
@@ -72,19 +73,25 @@ impl Scene for SaveloadScene {
         if hit.swipe == 2 {
             return host.advance(GameInput::SaveloadClose);
         }
-        if hit.swipe != 0 || hit.key != 3 {
+        if hit.swipe != 0 {
             return false;
         }
-        let slot = usize::try_from(hit.index.max(0)).unwrap_or(0);
-        // 有档（version > 0）→ 读档；空槽 → 存档
-        let has = host.save_slots().get(slot).is_some_and(|s| s.version > 0);
-        chrome::flash_press();
-        // S15.6 QB136：三态卡（has/empty/cursor）——点选先落光标（卡片描边态），再推进
-        host.set_saveload_cursor(slot);
-        if has {
-            host.advance(GameInput::LoadSave(slot))
-        } else {
-            host.advance(GameInput::WriteSave(slot))
+        // S85.4：按 action 语义分派（key=3 = 槽位族，含 slot_load/slot_write）。
+        match UiAction::from_key(hit.key) {
+            Some(UiAction::SlotLoad | UiAction::SlotWrite) => {
+                let slot = usize::try_from(hit.index.max(0)).unwrap_or(0);
+                // 有档（version > 0）→ 读档；空槽 → 存档
+                let has = host.save_slots().get(slot).is_some_and(|s| s.version > 0);
+                chrome::flash_press();
+                // S15.6 QB136：三态卡（has/empty/cursor）——点选先落光标（卡片描边态），再推进
+                host.set_saveload_cursor(slot);
+                if has {
+                    host.advance(GameInput::LoadSave(slot))
+                } else {
+                    host.advance(GameInput::WriteSave(slot))
+                }
+            }
+            _ => false,
         }
     }
 
@@ -97,7 +104,7 @@ impl Scene for SaveloadScene {
         let layout = chrome::scene_layout("saveload");
         let slots: Vec<SaveSlot> = host.save_slots().to_vec();
         let cursor = host.saveload_cursor();
-        chrome::render_primitives(host, "saveload", i64::try_from(cursor).unwrap_or(-1));
+        // S85.5：chrome 全部由 schema 通用 builder 渲染，CPU 死原语已删（不再画 prim）。
         // S29.3（B1）：槽位列表 chrome 已迁 Bevy `bevy_ui`（行位置由 taffy 算，不手写像素）⇒
         // CPU 路径跳过槽位木底/选中边/按压闪影/槽文案（Bevy 侧画）；未迁时照旧。
         if host.chrome_in_bevy_ui() {

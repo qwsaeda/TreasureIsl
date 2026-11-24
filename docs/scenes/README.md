@@ -72,9 +72,9 @@ assets/data/scenes.json（每场景原语清单 + 参数）
 
 | 场景 | 重复结构 | 位置真正来源 | 死坐标风险 | 参数化状态 |
 |---|---|---|---|---|
-| `index` | 6 徽章 × 6 原语 = 36 行（横屏 18 行木牌/图标） | 竖屏 `index.ring` / 横屏 `index.menu` 参数 + `index_param_rect` 运行期算（S81） | 曾有（**已修**） | ✅ 参数化：36+18 行标 `derived`，x/y=0 |
-| `select_role` | 5 行角色 | Rust `build_list_chrome`（flex column + gap + `%`），20 原语标 `ui_layer=bevy_ui` | 无 | ✅ 自动布局（S29.3 早已迁） |
-| `select_map` | 3 张地图卡 | Rust `build_list_chrome_pos`（% 贴边 + flex），18 原语标 `ui_layer=bevy_ui` | 无 | ✅ 自动布局（S29.3） |
+| `index` | 6 枚木牌/图标（横屏 18 行） | S85 后 = `components_v1.json` 的 `index.elements`（list `binding=menu` + role 意图） | 无 | ✅ 声明式 schema + role 意图（S85.5 已删旧 `index_param_rect`/死 prim） |
+| `select_role` | 5 行角色 | S85 后 = `components_v1.json` 的 `roster` list（`binding=characters` + `action=character_select`） | 无 | ✅ 声明式 schema（S85.5 已删旧 `build_list_chrome`/死 prim） |
+| `select_map` | 20 张地图卡 | S85 后 = `components_v1.json` 的 `maps` list（`binding=map_slots` + `action=map_select`） | 无 | ✅ 声明式 schema（S85.5） |
 | `saveload` | 5 槽位 | Rust `build_list_chrome_pos(PanelSide::Left)`，5 原语标 `ui_layer=bevy_ui` | 无 | ✅ 自动布局（S29.3b） |
 | `message` | 无（单面板） | Rust `build_message_chrome`（% 居中 + 文本自动折行），4 原语标 `ui_layer=bevy_ui` | 无 | ✅ 意图化（S29.3e） |
 | `vs` | 无重复列表 | 代码绘制立绘/HP 条（运行时），游戏世界留 1080（S29.3e） | 无（单件） | 合理写坐标（无可抽重复参数） |

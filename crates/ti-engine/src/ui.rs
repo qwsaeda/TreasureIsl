@@ -25,6 +25,9 @@ use bevy::prelude::*;
 use bevy::text::{FontSize, FontSource, TextColor, TextFont};
 use bevy::ui::IsDefaultUiCamera;
 use bevy::ui::prelude::{ImageNode, NodeImageMode};
+use ti_core::data::ui_schema::{AssetRoles, Component};
+
+pub use crate::ui_component::{BindingValue, ComponentHost};
 
 /// S38 审计 F-01/F-02（用户「引擎用了但很多硬编码」）：bevy_ui chrome + VS 原型的**视觉量
 /// 集中为具名常量**——消除 `Color::srgb()/srgba()` + 尺寸魔法数字字面量，CS-1 单源。
@@ -228,6 +231,11 @@ pub struct ChromeRow {
     pub line2: String,
     /// 是否选中行（高亮底色）。
     pub selected: bool,
+    /// 命中契约：该行对应的**业务下标**（`None` = 纯展示行，如面板标题，不挂 `PickTarget`）。
+    ///
+    /// `Some` 时由 [`build_component_chrome`] 挂 `PickTarget{key, index}`；
+    /// 与 `Vec` 位置解耦，避免插入标题行后下标漂移（S85.3）。
+    pub pick_index: Option<i32>,
 }
 
 /// 列表 chrome 产物（根实体 + 逐行 `Node` 实体；调用方给行实体挂 `PickTarget` 即可命中）。
@@ -364,7 +372,7 @@ pub fn build_list_chrome_pos(
 
 /// 列表 chrome 的**单行**（flex row = 缩略图 + 文案列；选中行换黄铜底色）。
 /// 返回行 `Node` 实体（调用方挂 `PickTarget` 即可命中，`UiPickingPlugin` 直接拾取 `Node`）。
-fn build_chrome_row(
+pub(crate) fn build_chrome_row(
     commands: &mut Commands,
     font: &Handle<Font>,
     row: &ChromeRow,
@@ -768,4 +776,34 @@ pub fn build_data_chrome(
         }
     }
     Some(root)
+}
+
+// ============================================================ S85.3 通用组件渲染器（实现见 ui_component）
+
+/// UI 层百分比屏心居中派生（S85.5）：`(100.0 - w) / 2.0`。
+///
+/// `ui_component::component_layout_node` 的 `center` 布局意图经本函数对齐屏心，
+/// 与 `canvas.rs` 世界层 `as f32 / 2.0` 半值派生成对（doccheck2 `check_engine_no_bare_half`）。
+#[must_use]
+pub(crate) fn centered_left_pct(size_pct: f32) -> f32 {
+    (100.0 - size_pct) / 2.0
+}
+
+/// 建**通用组件 schema chrome**：`ui_component::build_component_chrome` 的对外入口。
+///
+/// 实现（`BindingValue` / `ComponentHost` / type 分派 / layout 意图）已拆到 `ui_component`，
+/// 本入口保留 `ti_engine::ui::build_component_chrome` 公共路径，壳侧业务逻辑零改动。
+#[must_use]
+pub fn build_component_chrome(
+    commands: &mut Commands,
+    server: &AssetServer,
+    font: &Handle<Font>,
+    components: &[Component],
+    roles: &AssetRoles,
+    host: &dyn ComponentHost,
+    selected: i64,
+) -> Option<Entity> {
+    crate::ui_component::build_component_chrome(
+        commands, server, font, components, roles, host, selected,
+    )
 }

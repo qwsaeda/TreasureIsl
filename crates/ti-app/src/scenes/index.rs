@@ -1,6 +1,7 @@
 //! 主菜单场景（S9 骨架）：输入判定 / 拾取命中 / 绘制三面全部落在本文件，
 //! 宿主只提供状态读写能力（`SceneHost`）。
 use ti_core::domain::flow::Sfx;
+use ti_core::domain::ui_action::UiAction;
 
 use crate::game_app::{GameInput, HitData};
 use crate::scenes::chrome;
@@ -67,14 +68,16 @@ impl Scene for IndexScene {
         if hit.swipe != 0 {
             return false;
         }
-        // key=1 = 首页 medallion（数据 `pick_key`）；index = 徽章 0..5。
-        if hit.key != 1 {
-            return false;
+        // S85.4：按 action 语义分派（opaque key 由 `UiAction` 反解，不再写裸数字 1）。
+        match UiAction::from_key(hit.key) {
+            Some(UiAction::MenuSelect) => {
+                let idx = usize::try_from(hit.index.max(0)).unwrap_or(0);
+                host.set_menu_selected(idx);
+                chrome::flash_press();
+                host.advance(GameInput::Confirm)
+            }
+            _ => false,
         }
-        let idx = usize::try_from(hit.index.max(0)).unwrap_or(0);
-        host.set_menu_selected(idx);
-        chrome::flash_press();
-        host.advance(GameInput::Confirm)
     }
 
     /// 主菜单渲染（v2 概念图 `evidence/ui_concept/index_v2.png` 风格）：共享外壳
@@ -88,12 +91,10 @@ impl Scene for IndexScene {
     /// 外壳之后、菜单之前；双写期（v3.1）v2 菜单几何不动，v3.2 起菜单瘦身后面板
     /// 扩展为完整仪式感区。键缺失 = 该层不画（数据驱动，契约 4）。
     fn render(&mut self, host: &mut dyn SceneHost) {
-        // S18.7 声明式原语：界面元素全部来自 `scenes.json` 的 `index.primitives`
-        // （通用原语 rect/text/icon/grad/glow/disc；版面/顺序/配色 = 纯数据）。
-        // 绘制顺序 = 原语 `z` 升序（z 越大越靠上；与 Bevy 执行器同构）。
-        let sel = i64::try_from(host.menu_selected()).unwrap_or(-1);
-        chrome::render_primitives(host, "index", sel);
-        // 尾行（用户版信息，i18n）
+        // S85.5：5 纯 UI 场景 chrome 全部由 `components_v1.json` schema 经通用 Bevy
+        // builder 渲染（`chrome_in_bevy_ui=true`）；`scenes.json` 死原语已删，CPU 路径
+        // 不再绘制这些场景的 chrome（bevy-cpu-parity 只保游戏世界，口径不变）。
+        // 尾行（用户版信息，i18n；竖屏旧锚点 y=1840 越出横屏画布，实际不可见）
         let layout = chrome::scene_layout("index");
         // 飞轮 R1 ③-16：`status` 键并入 `chrome::keys` 键治理；`hint_row` 条体屏心居中
         // （忽略 x 入参，0 传参 = 无死偏移）。

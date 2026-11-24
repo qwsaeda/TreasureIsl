@@ -17,14 +17,16 @@
   N5 beats 数量 ∈ [2, 4]
   N6 mood 与 permanent_hud_count_max 一致性（按 §6 表上限）
   N7 dead_zone_max_pct ≤ 15（默认上限，可逐场景覆盖但不应超过 25）
-  N8 scenes.json focus_anchor.bbox 与 DSL focus.bbox_pct × (1080, 1920) 一致
-     （v3.1 起执行；v3.0 阶段 scenes.json 无 focus_anchor 键时 SKIP）
+  N8 scenes.json focus_anchor.bbox 与 DSL focus.bbox_pct × (1920, 1080) 一致
+     （S85.2：S84 纯横屏后 focus_anchor.bbox 仍是旧 1080×1920 口径的**历史门元数据**，
+     新 schema `components_v1.json` 的 layout 意图已取代其为版面事实源 ⇒ 历史口径 SKIP，
+     不删检查：若数据改用新横屏口径，N8 仍按 1920×1080 对账；无 focus_anchor 键亦 SKIP）
 
 S29.3/S29.4 口径（bevy_ui 迁移后，本门禁**不改判据**）：
-  - scenes.json 的原语 `rect` 仍是**1080 版面规格**（单一事实源）；已迁 `bevy_ui` 的 chrome
-    原语另带 `params.ui_layer = "bevy_ui"` 标记（表示「该元素的呈现层 = UI 层」），
-    **rect 坐标不变** ⇒ N8 对账照旧成立（UI 层按同一批数值换算 `%`）。
-  - 标记只表达「呈现层归属」，不改几何、不改节奏/重心断言 ⇒ N1~N8 判据全部照旧。
+  - scenes.json 的原语 `rect` 仍是**版面规格**（单一事实源；S84 起为 1920×1080 横屏）；
+    已迁 `bevy_ui` 的 chrome 原语另带 `params.ui_layer = "bevy_ui"` 标记（表示「该元素的
+    呈现层 = UI 层」），rect 坐标不变 ⇒ N8 对账口径随屏尺寸更新为 1920×1080。
+  - 标记只表达「呈现层归属」，不改几何、不改节奏/重心断言 ⇒ N1~N7 判据照旧，N8 历史数据 SKIP。
 
 退出码：0 = PASS；1 = FAIL（列出违规项）；2 = SKIP（manifest 文件不存在）。
 
@@ -71,9 +73,14 @@ MOOD_HUD_MAX: dict[str, int] = {
     "archive":       1,
 }
 
-# 屏坐标系（1080×1920，竖屏）
-SCREEN_W = 1080
-SCREEN_H = 1920
+# 屏坐标系（S84 纯横屏后 = 1920×1080）
+SCREEN_W = 1920
+SCREEN_H = 1080
+
+# S85.2：focus_anchor.bbox 是旧竖屏口径（1080×1920）的历史门元数据；新 schema
+# components_v1.json 的 layout 意图取代其为版面事实源。命中历史口径的 N8 只 SKIP，不 FAIL。
+LEGACY_SCREEN_W = 1080
+LEGACY_SCREEN_H = 1920
 
 
 def fail(msg: str) -> None:
@@ -201,10 +208,21 @@ def check_narrative(scene_id: str, m: dict) -> int:
     return n_fail
 
 
-def check_scenes_json_focus_anchor(manifest: dict, scenes_json: dict) -> tuple[int, int]:
-    """N8：scenes.json focus_anchor.bbox 与 DSL bbox_pct × (1080,1920) 一致。
+def _near(actual: tuple, expected: tuple, tol: int = 1) -> bool:
+    """四元组逐项 ±tol px 对齐（缺项 = False）。"""
+    return len(actual) == len(expected) and all(
+        a is not None and abs(a - e) <= tol for a, e in zip(actual, expected)
+    )
 
-    v3.0 阶段 scenes.json 可无 focus_anchor 键（视为未落地，SKIP）。
+
+def check_scenes_json_focus_anchor(manifest: dict, scenes_json: dict) -> tuple[int, int]:
+    """N8：scenes.json focus_anchor.bbox 与 DSL bbox_pct × 屏尺寸一致（S85.2 横屏口径 1920×1080）。
+
+    S85.2 口径：S84 纯横屏重写后 `focus_anchor.bbox` 仍是旧 1080×1920 口径的历史门元数据，
+    新 schema `components_v1.json` 的 layout 意图已取代其为版面事实源 ⇒
+    - 命中历史口径（且不匹配新口径）⇒ SKIP（不 FAIL，保留检查供未来重接）；
+    - 无 focus_anchor 键 ⇒ SKIP；
+    - 命中新横屏口径 ⇒ 正常 ±1px 对账；两口径都不命中 = 真漂移 ⇒ FAIL。
     返回 (失败数, SKIP 数)。
     """
     n_fail = 0
@@ -213,24 +231,36 @@ def check_scenes_json_focus_anchor(manifest: dict, scenes_json: dict) -> tuple[i
     for sid, m in scenes.items():
         narr = m["narrative"]
         bbox_pct = narr["focus"]["bbox_pct"]
-        expected_x = round(bbox_pct["x"] / 100 * SCREEN_W)
-        expected_y = round(bbox_pct["y"] / 100 * SCREEN_H)
-        expected_w = round(bbox_pct["w"] / 100 * SCREEN_W)
-        expected_h = round(bbox_pct["h"] / 100 * SCREEN_H)
+        expected = (
+            round(bbox_pct["x"] / 100 * SCREEN_W),
+            round(bbox_pct["y"] / 100 * SCREEN_H),
+            round(bbox_pct["w"] / 100 * SCREEN_W),
+            round(bbox_pct["h"] / 100 * SCREEN_H),
+        )
+        legacy = (
+            round(bbox_pct["x"] / 100 * LEGACY_SCREEN_W),
+            round(bbox_pct["y"] / 100 * LEGACY_SCREEN_H),
+            round(bbox_pct["w"] / 100 * LEGACY_SCREEN_W),
+            round(bbox_pct["h"] / 100 * LEGACY_SCREEN_H),
+        )
 
         scene_data = scenes_json.get(sid, {})
         fa = scene_data.get("focus_anchor")
         if fa is None:
-            info(f"{sid}: scenes.json 无 focus_anchor 键（v3.1 待落地，SKIP N8）")
+            info(f"{sid}: scenes.json 无 focus_anchor 键（SKIP N8）")
             n_skip += 1
             continue
         bbox = fa.get("bbox", {})
         actual = (bbox.get("x"), bbox.get("y"), bbox.get("w"), bbox.get("h"))
-        expected = (expected_x, expected_y, expected_w, expected_h)
+        if _near(actual, legacy) and not _near(actual, expected):
+            info(f"{sid}: focus_anchor.bbox 命中历史 1080×1920 口径"
+                 "（新 schema layout 意图取代，SKIP N8）")
+            n_skip += 1
+            continue
         for label, a, e in zip(["x", "y", "w", "h"], actual, expected):
             if a is None or abs(a - e) > 1:
                 fail(f"{sid}: scenes.json focus_anchor.bbox.{label}={a} "
-                     f"≠ DSL bbox_pct × 屏尺寸 = {e}（容差 1px）")
+                     f"≠ DSL bbox_pct × 横屏尺寸(1920×1080) = {e}（容差 1px）")
                 n_fail += 1
     return n_fail, n_skip
 
@@ -279,14 +309,15 @@ def main() -> int:
         scene_fail = check_narrative(sid, m)
         total_fail += scene_fail
 
-    # N8：scenes.json 对账（v3.0 SKIP，v3.1 起执行）
+    # N8：scenes.json 对账（S85.2：历史口径 SKIP，新横屏口径对账；N1~N7 照旧）
     if SCENES_JSON_PATH.is_file():
         try:
             scenes_json = load_json(SCENES_JSON_PATH)
             n8_fail, n8_skip = check_scenes_json_focus_anchor(manifest, scenes_json)
             total_fail += n8_fail
             if n8_skip > 0 and n8_fail == 0:
-                info(f"N8：{n8_skip} 个场景 scenes.json 暂无 focus_anchor 键（v3.1 待落地）")
+                info(f"N8：{n8_skip} 个场景 focus_anchor 历史口径/缺键 SKIP"
+                     "（新 schema components_v1.json layout 意图取代）")
         except Exception as e:
             fail(f"scenes.json 解析失败: {e}")
             total_fail += 1

@@ -1,6 +1,7 @@
 //! 地图选择场景（S9 骨架）：输入判定 / 拾取命中 / 绘制三面全部落在本文件。
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::selection::MapSlot;
+use ti_core::domain::ui_action::UiAction;
 use ti_core::rules::progression::boss_tier_of;
 
 use crate::game_app::{GameInput, HitData};
@@ -113,13 +114,19 @@ impl Scene for SelectMapScene {
         if hit.swipe == 2 {
             return host.advance(GameInput::Back);
         }
-        if hit.swipe != 0 || hit.key != 2 {
+        if hit.swipe != 0 {
             return false;
         }
-        let i = usize::try_from(hit.index.max(0)).unwrap_or(0);
-        host.set_map_slot(MapSlot::from_index(u32::try_from(i).unwrap_or(0)));
-        chrome::flash_press();
-        host.advance(GameInput::Confirm)
+        // S85.4：按 action 语义分派（key=2 = 列表行族，含 character_select/map_select）。
+        match UiAction::from_key(hit.key) {
+            Some(UiAction::CharacterSelect | UiAction::MapSelect) => {
+                let i = usize::try_from(hit.index.max(0)).unwrap_or(0);
+                host.set_map_slot(MapSlot::from_index(u32::try_from(i).unwrap_or(0)));
+                chrome::flash_press();
+                host.advance(GameInput::Confirm)
+            }
+            _ => false,
+        }
     }
 
     /// S18.7d 声明式原语化：版面（夜空 / 左地图拼贴面板 / 右 3 行选项 / 提示行）=
@@ -129,7 +136,7 @@ impl Scene for SelectMapScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("select_map");
         let current = host.map_slot().map_or(0, |m| m.zero_index() as usize);
-        chrome::render_primitives(host, "select_map", i64::try_from(current).unwrap_or(-1));
+        // S85.5：chrome 全部由 schema 通用 builder 渲染，CPU 死原语已删（不再画 prim）。
         // S29.3（B1）：右侧 3 卡片列表 chrome 已迁 Bevy `bevy_ui`（卡片名/锁态/选中态由 taffy 布局画）⇒
         // CPU 路径跳过卡片按压闪影 + 锁条 + BOSS 星（Bevy 侧画）；左侧地图预览/背景仍 1080。未迁时照旧。
         if host.chrome_in_bevy_ui() {

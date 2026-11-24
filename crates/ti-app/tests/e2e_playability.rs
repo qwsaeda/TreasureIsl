@@ -357,20 +357,29 @@ fn playability_layout_key_controls_in_viewport() {
     const MIN_TEXT_H: i32 = 32; // 文本矩形高度 = 字号代理（实测最小 40）
 
     let scenes = ti_core::data::scenes().expect("scenes.json 加载");
-    for key in ["index", "select_role", "select_map", "saveload", "message", "main_map", "vs"] {
-        let layout = scenes.get(key).expect("scenes.json 缺关键场景");
-        // S81：带 params.derived 的文本原语坐标由运行期参数算出（JSON 里 x/y/w/h=0 是
-        // 已删除的死坐标标记），真实的视口/高度断言由 index 出图对拍覆盖 ⇒ 此处跳过。
-        let texts: Vec<_> = layout
-            .primitives
+    // S85.5：5 纯 UI 场景文本/控件迁 `components_v1.json`，schema 用 layout intent 算坐标，
+    // 无绝对 rect ⇒ 断言组件声明在位（kind/binding/text 非空），视口边界由 --shot 探针守。
+    let schema = ti_core::data::ui_schema::components().expect("components_v1.json 加载");
+    for key in ["index", "select_role", "select_map", "saveload", "message"] {
+        let sc = schema.get(key).expect("components_v1.json 缺场景");
+        let controls: Vec<_> = sc
+            .elements
             .iter()
-            .filter(|p| p.kind == "text" && !p.params.contains_key("derived"))
+            .filter(|e| matches!(e.kind.as_str(), "text" | "button" | "list" | "panel"))
             .collect();
-        // S84 纯横屏：message 场景文本全由 build_message_chrome 的 bevy_ui 节点运行时生成
-        // （S29.3e 迁移，数据层无 text 原语）⇒ 仅对有数据层文本的场景断言。
-        if key == "message" {
-            continue;
+        assert!(!controls.is_empty(), "{key} schema 应至少有 1 个文本/控件组件");
+        for e in controls {
+            assert!(
+                !e.binding.is_empty() || !e.text.is_empty(),
+                "{key} 组件 `{}` 缺 binding/text（界面将显示空串）",
+                e.id
+            );
         }
+    }
+    // 游戏世界（vs/main_map）原语未迁：文本原语仍须在 1920×1080 视口内 + 字号高度代理。
+    for key in ["main_map", "vs"] {
+        let layout = scenes.get(key).expect("scenes.json 缺关键场景");
+        let texts: Vec<_> = layout.primitives.iter().filter(|p| p.kind == "text").collect();
         assert!(!texts.is_empty(), "{key} 应至少有 1 个文本原语");
         for prim in texts {
             let rect = &prim.rect;
@@ -389,7 +398,7 @@ fn playability_layout_key_controls_in_viewport() {
         }
     }
 
-    // 关键控件不重叠：标题条底 < 首列表项顶（列表场景）
+    // 关键控件不重叠：标题条底 < 首列表项顶（列表场景；版面锚仍在 scenes.json 数据面）
     for key in ["select_role", "select_map", "saveload"] {
         let layout = scenes.get(key).expect("scenes.json 缺列表场景");
         let title_bottom = layout.title.y + layout.title.h;

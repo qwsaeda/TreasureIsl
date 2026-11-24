@@ -186,6 +186,8 @@ use ti_app::menu_shell::parse_font_bytes;
 use ti_app::scenes::{SceneKind, SelectionHost, SessionHost};
 use ti_app::stats::FpsMeter;
 use ti_core::domain::messages::MsgKind;
+// S85.4：action→key 唯一事实源（33 号 schema 闭集），shell 侧不再手写数字 match。
+use ti_core::domain::ui_action::UiAction;
 use ti_core::rules::messages::page_text;
 use ti_platform::gfx::UploadMode;
 use ti_platform::settings::ScaleMode;
@@ -983,6 +985,221 @@ struct ChromeUi {
     built: Option<(i32, usize)>,
 }
 
+// ---------------------------------------------------- S85.3 schema 组件 binding 宿主
+
+/// S85.3：壳侧实现 [`ti_engine::ui::ComponentHost`]——把 schema 的语义字符串
+/// （binding / action）解析为渲染数据 / 命中 key。业务取数**只在这里**，
+/// `ti-engine::ui` 通用渲染器保持零游戏语义。
+///
+/// 本阶段 registration 为简化集（3 纯 UI 场景的业务 binding）；S85.4 将扩展为完整
+/// binding 名 → Rust 取值闭包注册表 + i18n key 模板解析器（`role.name.{label}` 等）。
+struct ShellComponentHost<'a> {
+    game: &'a GameApp,
+    server: &'a AssetServer,
+}
+
+impl ti_engine::ui::ComponentHost for ShellComponentHost<'_> {
+    fn resolve(&self, binding: &str) -> ti_engine::ui::BindingValue {
+        use ti_engine::ui::BindingValue;
+        match binding {
+            "menu" => BindingValue::Rows(menu_rows(self.game, self.server)),
+            "characters" => BindingValue::Rows(character_rows(self.game, self.server)),
+            "save_slots" => BindingValue::Rows(save_slot_rows(self.game)),
+            "map_slots" => BindingValue::Rows(map_slot_rows(self.game)),
+            "msg_pages" => BindingValue::Rows(message_rows(self.game)),
+            // 纯 i18n binding（`scene.*` / `msg.*`）：壳侧解析，ui.rs 不认 i18n 实现。
+            _ => BindingValue::Text(
+                if binding.starts_with("scene.") || binding.starts_with("msg.") {
+                    ti_app::i18n::sget(binding).to_owned()
+                } else {
+                    binding.to_owned()
+                },
+            ),
+        }
+    }
+
+    fn action_key(&self, action: &str) -> Option<u32> {
+        // S85.4：schema action 字符串→opaque key 全量派生自 `UiAction` 闭集表，
+        // 与场景侧 `UiAction::from_key` 反解同源；此处零数字/零字符串硬编码。
+        UiAction::from_schema_str(action).map(UiAction::key)
+    }
+}
+
+/// 首页木牌数（与 `index.rs::MENU_COUNT` + `index.menu.count` 数据同单源）。
+const MENU_ITEM_COUNT: usize = 6;
+
+/// `menu` binding → 6 行首页木牌（缩略图 + 选中态）。
+///
+/// S85.5：首页从 `scenes.json` 死原语迁到 `components_v1.json` 的 `list` 组件；
+/// 木牌/图标路径经 `asset_roles.json` role 解析（零 `format!` 拼资产路径），
+/// 6 枚菜单固定序与 `MENU_COUNT` 同单源（k/binding resolver 只做取数）。
+fn menu_rows(game: &GameApp, server: &AssetServer) -> Vec<ti_engine::ui::ChromeRow> {
+    let roles = ti_core::data::ui_schema::asset_roles().ok();
+    let selected = game.menu_selected();
+    (0..MENU_ITEM_COUNT)
+        .map(|idx| {
+            let plank = format!("index_plank_{idx}");
+            let image = roles
+                .and_then(|r| r.path(&plank).or_else(|| r.path("index_plank")))
+                .map(|path| server.load(path));
+            ti_engine::ui::ChromeRow {
+                image,
+                // 文案已烘焙进木牌图；此处不重复画文字（保改前视觉）。
+                line1: String::new(),
+                line2: String::new(),
+                selected: idx == selected,
+                pick_index: i32::try_from(idx).ok(),
+            }
+        })
+        .collect()
+}
+
+/// `characters` binding → 5 行角色（缩略图 + 两级文案 + 选中态）。
+fn character_rows(game: &GameApp, server: &AssetServer) -> Vec<ti_engine::ui::ChromeRow> {
+    let roles = ti_core::data::ui_schema::asset_roles().ok();
+    let selected = game.character().map_or(0usize, |c| c.index() as usize);
+    ti_core::domain::selection::Character::all()
+        .iter()
+        .enumerate()
+        .map(|(idx, ch)| {
+            let label = ch.label();
+            let role_key = format!("role_{label}");
+            let asset = roles
+                .and_then(|r| r.path(&role_key))
+                .map_or_else(|| format!("assets/ui/role_{label}.png"), str::to_owned);
+            ti_engine::ui::ChromeRow {
+                image: Some(server.load(asset)),
+                line1: ti_app::i18n::sget(&format!("role.name.{label}")).to_owned(),
+                line2: ti_app::i18n::sget(&format!("role.desc.{label}")).to_owned(),
+                selected: idx == selected,
+                pick_index: i32::try_from(idx).ok(),
+            }
+        })
+        .collect()
+}
+
+/// `save_slots` binding → 5 槽行（有档/空档 + 摘要 + 光标选中态）。
+fn save_slot_rows(game: &GameApp) -> Vec<ti_engine::ui::ChromeRow> {
+    let cursor = game.saveload_cursor();
+    let mut rows = vec![ti_engine::ui::ChromeRow {
+        image: None,
+        line1: ti_app::i18n::sget("scene.saveload.title").to_owned(),
+        line2: String::new(),
+        selected: false,
+        pick_index: None, // 纯标题行：不挂 PickTarget
+    }];
+    rows.extend(game.save_slots().iter().enumerate().map(|(i, s)| {
+        let has = s.version > 0;
+        let state = ti_app::i18n::sget(if has { "slot.has" } else { "slot.empty" });
+        let idx = i + 1;
+        ti_engine::ui::ChromeRow {
+            image: None,
+            line1: ti_app::i18n::sgetf("slot.label_fmt", &[&idx, &state]),
+            line2: if has {
+                ti_app::i18n::sgetf(
+                    "scene.saveload.slot_summary_fmt",
+                    &[&s.character, &s.gold, &s.rng_steps],
+                )
+            } else {
+                ti_app::i18n::sget("scene.saveload.empty_line").to_owned()
+            },
+            selected: i == cursor,
+            pick_index: i32::try_from(i).ok(),
+        }
+    }));
+    rows
+}
+
+/// `map_slots` binding → 3 地图卡行（卡名 + 锁/开放态 + 选中态）。
+fn map_slot_rows(game: &GameApp) -> Vec<ti_engine::ui::ChromeRow> {
+    let current = game.map_slot().map_or(0usize, |m| m.zero_index() as usize);
+    let mut rows = vec![ti_engine::ui::ChromeRow {
+        image: None,
+        line1: ti_app::i18n::sget("scene.select_map.title").to_owned(),
+        line2: String::new(),
+        selected: false,
+        pick_index: None, // 纯标题行：不挂 PickTarget
+    }];
+    rows.extend(ti_core::domain::selection::MapSlot::all().iter().enumerate().map(|(i, m)| {
+        let locked = !game.map_unlocked(*m);
+        ti_engine::ui::ChromeRow {
+            image: None,
+            line1: ti_app::i18n::sget(&format!("glmap{}.Map", m.id())).to_owned(),
+            line2: ti_app::i18n::sget(if locked {
+                "scene.select_map.locked"
+            } else {
+                "scene.select_map.open"
+            })
+            .to_owned(),
+            selected: i == current,
+            pick_index: i32::try_from(i).ok(),
+        }
+    }));
+    rows
+}
+
+/// `msg_pages` binding → 标题+正文 / 页码两行（面板内 flex column）。
+fn message_rows(game: &GameApp) -> Vec<ti_engine::ui::ChromeRow> {
+    let kind = game.msg_kind().unwrap_or(MsgKind::Help);
+    let page = game.msg_page();
+    let total = game.msg_total();
+    let title = ti_app::i18n::sget(&format!("msg.{}", kind.label())).to_owned();
+    let body = ti_app::i18n::sget(&page_text(kind, page)).to_owned();
+    let page_str = ti_app::i18n::sgetf("scene.message.page", &[&(page + 1), &total]);
+    vec![
+        ti_engine::ui::ChromeRow {
+            image: None,
+            line1: title,
+            line2: body,
+            selected: false,
+            pick_index: None,
+        },
+        ti_engine::ui::ChromeRow {
+            image: None,
+            line1: page_str,
+            line2: String::new(),
+            selected: false,
+            pick_index: None,
+        },
+    ]
+}
+
+/// S85.3/5：按 schema 组件声明建纯 UI 场景的 `bevy_ui` chrome。
+///
+/// 从 `ti_core::data::ui_schema` 取组件 + 资产角色表，业务数据经 [`ShellComponentHost`]
+/// resolver 注入，交 [`ti_engine::ui::build_component_chrome`] 通用渲染器。
+/// S85.5 起 5 纯 UI 场景 CPU 死原语全删 ⇒ 全屏背景等装饰层由本 builder 统一渲染，
+/// 壳侧不再按 `ui_layer` 过滤。
+fn build_schema_chrome(
+    commands: &mut Commands,
+    server: &AssetServer,
+    font: &Handle<Font>,
+    scene_id: &str,
+    g: &GameApp,
+) -> Option<Entity> {
+    let scenes = ti_core::data::ui_schema::components().ok()?;
+    let roles = ti_core::data::ui_schema::asset_roles().ok()?;
+    let scene = scenes.get(scene_id)?;
+    let selected = match scene_id {
+        "select_role" => g.character().map_or(0i64, |c| i64::from(c.index())),
+        "saveload" => i64::try_from(g.saveload_cursor()).unwrap_or(0),
+        "select_map" => g.map_slot().map_or(0i64, |m| i64::from(m.zero_index())),
+        "index" => i64::try_from(g.menu_selected()).unwrap_or(0),
+        // 消息场景无选中项（翻页/换型重建键在 chrome_ui_system）。
+        _ => -1,
+    };
+    let host = ShellComponentHost { game: g, server };
+    ti_engine::ui::build_component_chrome(
+        commands,
+        server,
+        font,
+        &scene.elements,
+        roles,
+        &host,
+        selected,
+    )
+}
+
 /// S29.3（B1）：按当前场景建 `bevy_ui` chrome（**自动布局**：行位置/高度由 taffy 算，
 /// 不手写像素行；面板宽 `%` ⇒ resize 真重排）。
 ///
@@ -999,11 +1216,14 @@ fn build_scene_chrome(
     g: &GameApp,
 ) -> Option<Entity> {
     match scene {
-        SceneKind::SelectRole => build_select_role_chrome(commands, server, font, g),
-        SceneKind::Saveload => Some(build_saveload_chrome(commands, font, g)),
-        SceneKind::SelectMap => Some(build_select_map_chrome(commands, font, g)),
-        SceneKind::Index => build_index_chrome(commands, server, font, g),
-        SceneKind::Message => Some(build_message_chrome(commands, font, g)),
+        // S85.3：4 个纯 UI 场景从 components_v1.json schema 渲染（旧 build_*_chrome
+        // 的业务取数逻辑已搬进 ShellComponentHost resolver）。
+        SceneKind::SelectRole => build_schema_chrome(commands, server, font, "select_role", g),
+        SceneKind::Saveload => build_schema_chrome(commands, server, font, "saveload", g),
+        SceneKind::SelectMap => build_schema_chrome(commands, server, font, "select_map", g),
+        // S85.5：index 同样走 components_v1.json schema（5 纯 UI 场景统一入口）。
+        SceneKind::Index => build_schema_chrome(commands, server, font, "index", g),
+        SceneKind::Message => build_schema_chrome(commands, server, font, "message", g),
         // vs / main_map / Intro / Exit = **游戏世界场景 / 无场景数据**（chrome 与 world
         // 层叠：vs HP 填充 / main_map 棋盘 + 实体 + toast + HUD 数值 在 1080 层；bevy_ui
         // UI 相机叠在 1080 之上 ⇒ 把 chrome 迁 bevy_ui 会**遮住** 1080 动态内容）。
@@ -1013,439 +1233,6 @@ fn build_scene_chrome(
         // resize 验证口径改走 `--resizetest`（`ComputedNode` 第 3 不变量，S29.5）+
         // `--resizeprobe` 活体探针，正常玩法画面 0 干扰。
         _ => None,
-    }
-}
-
-/// 首页菜单 = **数据驱动 UI 层**（S39 数据化重构）。
-///
-/// 版面全部来自 `scenes.json` 的 `index` 段原语（S84 纯横屏 = 羊皮藏宝图 + 绳挂木牌）：
-/// 壳侧只做「原语 → `ti_engine::ui::DataChromeItem`」转换（解析 i18n 文案）
-/// + 调用通用渲染器，**Rust 侧零坐标硬编码** ⇒ 之后换首页 UI = 改数据 + 换资产，Rust 零改动。
-///
-/// 设计空间恒 1920×1080 ⇒ 原语 rect 按横屏画布换算 `%`。
-fn build_index_chrome(
-    commands: &mut Commands,
-    server: &AssetServer,
-    font: &Handle<Font>,
-    g: &GameApp,
-) -> Option<Entity> {
-    let design_w = ti_render::framebuffer::LANDSCAPE_W_I32 as f32;
-    let design_h = ti_render::framebuffer::LANDSCAPE_H_I32 as f32;
-    // 1080 单源契约（飞轮 R1 ③-17）：屏心锚点须 `LOGICAL_*_I32 as f32 / 2.0` 派生，
-    // 禁裸 540.0/960.0 字面量。数据化后罗盘环删了，但派生式保留作设计空间锚点
-    // （build_data_chrome 按设计空间换算 %；屏心 = design_w/2.0）。
-    let _ = (
-        ti_render::framebuffer::LOGICAL_W_I32 as f32 / 2.0,
-        ti_render::framebuffer::LOGICAL_H_I32 as f32 / 2.0,
-    );
-    let selected = i64::try_from(g.menu_selected()).unwrap_or(-1);
-    let items = index_data_items(selected);
-    ti_engine::ui::build_data_chrome(commands, server, font, &items, selected, design_w, design_h)
-}
-
-/// `scenes.json` `index` 段 → 数据化 UI 层项（只取 `ui_layer="bevy_ui"` 的原语）。
-///
-/// 文本走 `text_key` → i18n（壳侧解析，`ui.rs` 保持零游戏语义）；命中契约 `pick_key`/`pick_index`
-/// 透传（`pick_index` 缺省 = 原语 `item`）。
-fn index_data_items(_selected: i64) -> Vec<ti_engine::ui::DataChromeItem> {
-    let Ok(scenes) = ti_core::data::scenes() else {
-        return Vec::new();
-    };
-    let Some(scene) = scenes.get("index") else {
-        return Vec::new();
-    };
-    let prims = &scene.primitives; // S84 纯横屏：landscape 已提升为主
-    let mut last_plank_item: i64 = -1;
-    let mut items = Vec::new();
-    for p in prims {
-        if p.params.get("ui_layer").and_then(serde_json::Value::as_str) != Some("bevy_ui") {
-            continue;
-        }
-        let raw = (p.rect.x as f32, p.rect.y as f32, p.rect.w as f32, p.rect.h as f32);
-        // S84 纯横屏：木牌/金边/图标 rect 由公共函数 index_param_rect 从 menu.* 参数算
-        // （CPU 路径与 Bevy 壳单一公式源；竖屏罗盘环已删）。
-        let rect = ti_app::scenes::chrome::index_param_rect(p, scene, &mut last_plank_item)
-            .map_or(raw, |r| (r.x as f32, r.y as f32, r.w as f32, r.h as f32));
-        let text = if p.text_key.is_empty() {
-            p.text.clone()
-        } else {
-            ti_app::i18n::sget(&p.text_key).to_owned()
-        };
-        let pick = p
-            .params
-            .get("pick_key")
-            .and_then(serde_json::Value::as_u64)
-            .and_then(|v| u32::try_from(v).ok())
-            .map(|key| {
-                let index = p
-                    .params
-                    .get("pick_index")
-                    .and_then(serde_json::Value::as_i64)
-                    .unwrap_or(p.item);
-                (key, i32::try_from(index).unwrap_or(-1))
-            });
-        items.push(ti_engine::ui::DataChromeItem {
-            kind: p.kind.clone(),
-            rect,
-            z: p.z,
-            when: p.when.clone(),
-            item: p.item,
-            color: p.color.clone(),
-            text,
-            tier: p.tier.clone(),
-            asset: p
-                .params
-                .get("asset")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or_default()
-                .to_owned(),
-            icon: p
-                .params
-                .get("icon")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or_default()
-                .to_owned(),
-            pick,
-        });
-    }
-    items
-}
-
-/// 消息/帮助场景：面板 + 动态标题（`msg.<kind>`）+ 正文（`bevy_ui` 自动折行）+ 页点 + 页码。
-/// 翻页/换页类型时经 `chrome_ui_system` 重建。
-/// S84 纯横屏：面板居中（宽/高 55%，left/top = (100-55)/2，意图化 `%`）。
-/// 返回 `(pw, ph, pl, pt)`。
-#[allow(clippy::cast_precision_loss)]
-fn message_panel_params() -> (f32, f32, f32, f32) {
-    (55.0, 55.0, 22.5, 22.5)
-}
-
-fn build_message_chrome(commands: &mut Commands, font: &Handle<Font>, app: &GameApp) -> Entity {
-    let root = commands
-        .spawn((
-            bevy::ui::Node {
-                width: bevy::ui::Val::Percent(100.0),
-                height: bevy::ui::Val::Percent(100.0),
-                display: bevy::ui::Display::Flex,
-                position_type: bevy::ui::PositionType::Relative,
-                ..Default::default()
-            },
-            bevy::picking::Pickable::IGNORE,
-        ))
-        .id();
-    let kind = app.msg_kind().unwrap_or(MsgKind::Help);
-    let page = app.msg_page();
-    let total = app.msg_total();
-    let title_key = format!("msg.{}", kind.label());
-    let title = ti_app::i18n::sget(&title_key);
-    let body_key = page_text(kind, page);
-    let body = ti_app::i18n::sget(&body_key);
-    let page_str = ti_app::i18n::sgetf("scene.message.page", &[&(page + 1), &total]);
-    // S84 纯横屏：面板居中（宽/高 55%，意图化 = 概念图 message_landscape 居中羊皮纸）。
-    let (pw, ph, pl, pt) = message_panel_params();
-    // 面板（暖棕底 + flex column）
-    let panel = commands
-        .spawn((
-            bevy::ui::Node {
-                width: bevy::ui::Val::Percent(pw),
-                height: bevy::ui::Val::Percent(ph),
-                position_type: bevy::ui::PositionType::Absolute,
-                left: bevy::ui::Val::Percent(pl),
-                top: bevy::ui::Val::Percent(pt),
-                display: bevy::ui::Display::Flex,
-                flex_direction: bevy::ui::FlexDirection::Column,
-                align_items: bevy::ui::AlignItems::Center,
-                justify_content: bevy::ui::JustifyContent::Center,
-                padding: bevy::ui::UiRect::px(
-                    ti_engine::ui::palette::MSG_PANEL_PAD,
-                    ti_engine::ui::palette::MSG_PANEL_PAD,
-                    ti_engine::ui::palette::MSG_PANEL_PAD,
-                    ti_engine::ui::palette::MSG_PANEL_PAD,
-                ),
-                row_gap: bevy::ui::Val::Px(ti_engine::ui::palette::MSG_PANEL_GAP),
-                border_radius: bevy::ui::BorderRadius::px(
-                    ti_engine::ui::palette::MSG_PANEL_RADIUS,
-                    ti_engine::ui::palette::MSG_PANEL_RADIUS,
-                    ti_engine::ui::palette::MSG_PANEL_RADIUS,
-                    ti_engine::ui::palette::MSG_PANEL_RADIUS,
-                ),
-                ..Default::default()
-            },
-            bevy::ui::BackgroundColor(ti_engine::ui::palette::PANEL_WOOD_BG),
-            bevy::picking::Pickable::IGNORE,
-            ChildOf(root),
-        ))
-        .id();
-    // 标题 / 正文（自动折行）/ 页码（面板内 flex column 子）
-    msg_text_child(
-        commands,
-        panel,
-        font,
-        title.to_string(),
-        None,
-        ti_engine::ui::palette::MSG_TITLE_FONT,
-        ti_engine::ui::palette::PARCH_BRIGHT,
-    );
-    msg_text_child(
-        commands,
-        panel,
-        font,
-        body.to_string(),
-        Some(ti_engine::ui::palette::MSG_BODY_WIDTH_PCT),
-        ti_engine::ui::palette::MSG_BODY_FONT,
-        ti_engine::ui::palette::PARCH_CREAM,
-    );
-    // 页点 + 页码 + 底部提示（提取为 helper，守 clippy `too_many_lines`）。
-    message_chrome_footer(commands, panel, root, font, total, page, page_str);
-    root
-}
-
-/// 消息面板底部：页点（`total` 个方点；`i < page` 实心）+ 页码文本 + 底部提示行（全宽绝对定位）。
-fn message_chrome_footer(
-    commands: &mut Commands,
-    panel: Entity,
-    root: Entity,
-    font: &Handle<Font>,
-    total: u32,
-    page: u32,
-    page_str: String,
-) {
-    // 页点（`total` 个方点；`i < page` 实心，否则暗底）
-    let dots_row = commands
-        .spawn((
-            bevy::ui::Node {
-                display: bevy::ui::Display::Flex,
-                flex_direction: bevy::ui::FlexDirection::Row,
-                justify_content: bevy::ui::JustifyContent::Center,
-                column_gap: bevy::ui::Val::Px(ti_engine::ui::palette::MSG_DOTS_GAP),
-                ..Default::default()
-            },
-            bevy::picking::Pickable::IGNORE,
-            ChildOf(panel),
-        ))
-        .id();
-    for i in 0..total {
-        msg_page_dot(commands, dots_row, i < page);
-    }
-    msg_text_child(
-        commands,
-        panel,
-        font,
-        page_str,
-        None,
-        ti_engine::ui::palette::MSG_PAGE_FONT,
-        ti_engine::ui::palette::MUTED_GOLD,
-    );
-    // 底部提示行（全宽绝对定位）
-    let hint = ti_app::i18n::sget("scene.message.nav_hint");
-    msg_text_child_abs(
-        commands,
-        root,
-        font,
-        hint.to_string(),
-        ti_engine::ui::palette::MSG_HINT_TOP_PCT,
-        ti_engine::ui::palette::MSG_HINT_FONT,
-        ti_engine::ui::palette::MUTED_GOLD,
-    );
-}
-
-/// 面板内 flex 子：居中文本（`width_pct` = 占父宽百分比，`None` = auto）。
-fn msg_text_child(
-    commands: &mut Commands,
-    parent: Entity,
-    font: &Handle<Font>,
-    content: String,
-    width_pct: Option<f32>,
-    size: f32,
-    color: bevy::color::Color,
-) {
-    let mut node = bevy::ui::Node {
-        display: bevy::ui::Display::Flex,
-        justify_content: bevy::ui::JustifyContent::Center,
-        align_items: bevy::ui::AlignItems::Center,
-        ..Default::default()
-    };
-    if let Some(w) = width_pct {
-        node.width = bevy::ui::Val::Percent(w);
-        node.height = bevy::ui::Val::Auto;
-    }
-    commands.spawn((
-        node,
-        bevy::prelude::Text(content),
-        bevy::text::TextFont {
-            font: bevy::text::FontSource::Handle(font.clone()),
-            font_size: bevy::text::FontSize::Px(size),
-            ..Default::default()
-        },
-        bevy::prelude::TextColor(color),
-        bevy::picking::Pickable::IGNORE,
-        ChildOf(parent),
-    ));
-}
-
-/// 全宽绝对定位文本（底部提示行；`top_pct` = 顶边 `%`）。
-/// 消息面板页点（10×10 圆角方点；`filled` = 实心金，否则暗棕底）。
-fn msg_page_dot(commands: &mut Commands, parent: Entity, filled: bool) {
-    let color = if filled {
-        ti_engine::ui::palette::PARCH_BRIGHT
-    } else {
-        ti_engine::ui::palette::DARK_BROWN_06
-    };
-    commands.spawn((
-        bevy::ui::Node {
-            width: bevy::ui::Val::Px(ti_engine::ui::palette::MSG_DOT_SIZE),
-            height: bevy::ui::Val::Px(ti_engine::ui::palette::MSG_DOT_SIZE),
-            border_radius: bevy::ui::BorderRadius::px(
-                ti_engine::ui::palette::MSG_DOT_RADIUS,
-                ti_engine::ui::palette::MSG_DOT_RADIUS,
-                ti_engine::ui::palette::MSG_DOT_RADIUS,
-                ti_engine::ui::palette::MSG_DOT_RADIUS,
-            ),
-            ..Default::default()
-        },
-        bevy::ui::BackgroundColor(color),
-        bevy::picking::Pickable::IGNORE,
-        ChildOf(parent),
-    ));
-}
-
-fn msg_text_child_abs(
-    commands: &mut Commands,
-    parent: Entity,
-    font: &Handle<Font>,
-    content: String,
-    top_pct: f32,
-    size: f32,
-    color: bevy::color::Color,
-) {
-    commands.spawn((
-        bevy::ui::Node {
-            width: bevy::ui::Val::Percent(100.0),
-            height: bevy::ui::Val::Percent(3.0),
-            position_type: bevy::ui::PositionType::Absolute,
-            left: bevy::ui::Val::Percent(0.0),
-            top: bevy::ui::Val::Percent(top_pct),
-            display: bevy::ui::Display::Flex,
-            justify_content: bevy::ui::JustifyContent::Center,
-            align_items: bevy::ui::AlignItems::Center,
-            ..Default::default()
-        },
-        bevy::prelude::Text(content),
-        bevy::text::TextFont {
-            font: bevy::text::FontSource::Handle(font.clone()),
-            font_size: bevy::text::FontSize::Px(size),
-            ..Default::default()
-        },
-        bevy::prelude::TextColor(color),
-        bevy::picking::Pickable::IGNORE,
-        ChildOf(parent),
-    ));
-}
-
-/// 选角 5 行列表（缩略图 + 两级文案 + 选中态）；行挂 `PickTarget` key=2。
-fn build_select_role_chrome(
-    commands: &mut Commands,
-    server: &AssetServer,
-    font: &Handle<Font>,
-    g: &GameApp,
-) -> Option<Entity> {
-    let strings = ti_core::data::strings().ok()?;
-    let selected = g.character().map_or(0usize, |c| c.index() as usize);
-    let rows: Vec<ti_engine::ui::ChromeRow> = ti_core::domain::selection::Character::all()
-        .iter()
-        .enumerate()
-        .map(|(idx, ch)| {
-            let label = ch.label();
-            let name_key = format!("role.name.{label}");
-            let desc_key = format!("role.desc.{label}");
-            ti_engine::ui::ChromeRow {
-                image: Some(server.load(format!("assets/ui/role_{label}.png"))),
-                line1: strings.get(&name_key).to_owned(),
-                line2: strings.get(&desc_key).to_owned(),
-                selected: idx == selected,
-            }
-        })
-        .collect();
-    let chrome = ti_engine::ui::build_list_chrome(commands, font, "", &rows);
-    attach_row_pick(commands, &chrome, 2);
-    Some(chrome.root)
-}
-
-/// 存读档 5 槽列表（i18n 槽文案 + 有档/空档 + 光标选中态）；行挂 `PickTarget` key=3。
-fn build_saveload_chrome(commands: &mut Commands, font: &Handle<Font>, game: &GameApp) -> Entity {
-    let slots: Vec<_> = game.save_slots().to_vec();
-    let cursor = game.saveload_cursor();
-    let rows: Vec<ti_engine::ui::ChromeRow> = slots
-        .iter()
-        .enumerate()
-        .map(|(i, s)| {
-            let has = s.version > 0;
-            let state = ti_app::i18n::sget(if has { "slot.has" } else { "slot.empty" });
-            let idx = i + 1;
-            let line1 = ti_app::i18n::sgetf("slot.label_fmt", &[&idx, &state]);
-            let line2 = if has {
-                ti_app::i18n::sgetf(
-                    "scene.saveload.slot_summary_fmt",
-                    &[&s.character, &s.gold, &s.rng_steps],
-                )
-            } else {
-                ti_app::i18n::sget("scene.saveload.empty_line").to_string()
-            };
-            ti_engine::ui::ChromeRow { image: None, line1, line2, selected: i == cursor }
-        })
-        .collect();
-    let chrome = ti_engine::ui::build_list_chrome_pos(
-        commands,
-        font,
-        ti_app::i18n::sget("scene.saveload.title"),
-        &rows,
-        ti_engine::ui::PanelSide::Left,
-    );
-    attach_row_pick(commands, &chrome, 3);
-    chrome.root
-}
-
-/// 选图 3 卡片列表（卡片名 i18n `glmapm0N.Map` + 锁/开放态 + 选中高亮）；行挂 `PickTarget` key=2。
-fn build_select_map_chrome(commands: &mut Commands, font: &Handle<Font>, game: &GameApp) -> Entity {
-    let current = game.map_slot().map_or(0usize, |m| m.zero_index() as usize);
-    let rows: Vec<ti_engine::ui::ChromeRow> = ti_core::domain::selection::MapSlot::all()
-        .iter()
-        .enumerate()
-        .map(|(i, m)| {
-            let name_key = format!("glmap{}.Map", m.id());
-            let line1 = ti_app::i18n::sget(&name_key).to_string();
-            let locked = !game.map_unlocked(*m);
-            let line2 = ti_app::i18n::sget(if locked {
-                "scene.select_map.locked"
-            } else {
-                "scene.select_map.open"
-            })
-            .to_string();
-            ti_engine::ui::ChromeRow { image: None, line1, line2, selected: i == current }
-        })
-        .collect();
-    let chrome = ti_engine::ui::build_list_chrome_pos(
-        commands,
-        font,
-        ti_app::i18n::sget("scene.select_map.title"),
-        &rows,
-        ti_engine::ui::PanelSide::Right,
-    );
-    attach_row_pick(commands, &chrome, 2);
-    chrome.root
-}
-
-/// 给列表 chrome 的逐**行 `Node` 实体**挂 `PickTarget`（S31.2d 根治「`bevy_ui` 行鼠标点不动」）。
-///
-/// `bevy_ui` 0.20 有自带拾取后端 `UiPickingPlugin`（`"2d"` 特性链自动启用）：
-/// `PointerClick` 观察者直接拾取 `Node` 实体（无需 `Mesh2d` marker），
-/// `pick_flush` 按被点实体查 `PickTarget` ⇒ 挂在行 Node 上即可命中。
-/// 1080 层该场景原语已标 `ui_layer` 跳过，不双发。
-fn attach_row_pick(commands: &mut Commands, chrome: &ti_engine::ui::ListChrome, key: u32) {
-    for (idx, row_entity) in chrome.rows.iter().enumerate() {
-        commands
-            .entity(*row_entity)
-            .insert(ti_engine::pick::PickTarget { key, index: i32::try_from(idx).unwrap_or(-1) });
     }
 }
 
@@ -2130,12 +1917,13 @@ fn inject_map_pack() {
     apply_map_pack();
 }
 
-/// S49.4c 主题预览注入（`TI_THEME=<tid>` → `assets/themes/<tid>/compose.json`）：
-/// 把 `landscape_primitives` 内存 upsert 进 `scenes.json` 的 `index.landscape.primitives`，
-/// 经 [`ti_core::data::table_source::install`] 注入（首访前；0 写面 = 不改仓库文件）。
-/// 资产回退：主题原语引用的 `assets/ui/<name>.png` 若磁盘缺失，从主题包 `assets/` 内
-/// 同名文件或默认 `assets/ui/` 同名资产解析（预览缺图兜底）；找不到 = 原路径（引擎
-/// 加载失败仅该元素缺图，不 panic）。
+/// S85.2 主题写点：主题覆盖的唯一事实源 = `assets/data/ui_schema/components_v1.json` 的
+/// `scenes.index.overrides`（role→资产路径，由 `scripts/ui_theme.py apply` 写盘）。
+/// 运行时预览（0 写面）读该文件；未 apply 过时从 compose 组件覆盖列表按 role 导出。
+/// 引擎尚未加载 `components_v1.json`（S85.3 才接通用 builder）⇒ 退化为读文件 + 按 role
+/// 替换内嵌 `scenes.json` **顶层** `index.primitives` 的资产路径（S84 后无 `landscape` 段）。
+/// 资产回退：覆盖路径磁盘缺失时，从主题包 `assets/` 同名或默认 `assets/ui/` 同名兜底；
+/// 找不到 = 保留原路径（仅该元素缺图，不 panic）。
 #[cfg(not(target_arch = "wasm32"))]
 fn apply_theme_preview(themes_dir: &std::path::Path) {
     use ti_core::data::table_source;
@@ -2152,25 +1940,31 @@ fn apply_theme_preview(themes_dir: &std::path::Path) {
         eprintln!("[theme-preview] {tid} compose.json 非法 JSON ⇒ 跳过预览注入");
         return;
     };
-    let Some(prims) = compose.get("landscape_primitives").and_then(serde_json::Value::as_array)
+    let repo_root = themes_dir.parent().and_then(|p| p.parent()).unwrap_or(themes_dir);
+    let schema_dir = repo_root.join("assets/data/ui_schema");
+    let role_paths = std::fs::read_to_string(schema_dir.join("asset_roles.json"))
+        .map(|raw| ti_core::data::map_pack::theme_role_paths(&raw))
+        .unwrap_or_default();
+    // 写点优先：components_v1.json scenes.index.overrides（apply 已写）。
+    let mut overrides = std::fs::read_to_string(schema_dir.join("components_v1.json"))
+        .map(|raw| ti_core::data::map_pack::theme_overrides(&raw))
+        .unwrap_or_default();
+    if overrides.is_empty() {
+        // 未 apply：从 compose 组件覆盖列表按 role 导出（与 ui_theme.py 同口径）。
+        overrides =
+            ti_core::data::map_pack::theme_overrides_from_compose(&compose, &tid, &role_paths);
+    }
+    if overrides.is_empty() {
+        eprintln!("[theme-preview] {tid} 无有效组件覆盖 ⇒ 跳过预览注入");
+        return;
+    }
+    let Some(scenes_json) = ti_core::data::map_pack::merge_theme_scenes(&overrides, &role_paths)
     else {
-        eprintln!("[theme-preview] {tid} 缺 landscape_primitives ⇒ 跳过预览注入");
+        eprintln!("[theme-preview] {tid} 顶层 index.primitives 无 role 命中 ⇒ 跳过预览注入");
         return;
     };
-    if prims.is_empty() {
-        eprintln!("[theme-preview] {tid} landscape_primitives 空 ⇒ 跳过预览注入");
-        return;
-    }
-    // 内存 upsert：内嵌 scenes.json 的 index.landscape.primitives ← 主题原语（0 写面）。
-    let mut scenes: serde_json::Value = serde_json::from_str(
-        &ti_core::data::map_pack::merge_theme_scenes(prims).unwrap_or_else(|| "{}".to_owned()),
-    )
-    .unwrap_or(serde_json::Value::Object(serde_json::Map::default()));
-    if !scenes.is_object() || scenes.get("index").is_none() {
-        eprintln!("[theme-preview] {tid} scenes.json 无 index.landscape ⇒ 跳过预览注入");
-        return;
-    }
-    // 资产回退：原语 asset 路径缺失 → 主题包 assets/ 同名 → 默认 assets/ui/ 同名。
+    let mut scenes: serde_json::Value = serde_json::from_str(&scenes_json)
+        .unwrap_or(serde_json::Value::Object(serde_json::Map::default()));
     patch_theme_assets(&mut scenes, &themes_dir.join(&tid));
     let Ok(scenes_json) = serde_json::to_string(&scenes) else {
         eprintln!("[theme-preview] {tid} 序列化失败 ⇒ 跳过预览注入");
@@ -2185,23 +1979,22 @@ fn apply_theme_preview(themes_dir: &std::path::Path) {
     };
     if table_source::install(tables) {
         eprintln!(
-            "[theme-preview] 已注入主题 {tid}（index.landscape.primitives {} 原语；零写面）",
-            prims.len()
+            "[theme-preview] 已注入主题 {tid}（components_v1.json overrides {} role→路径；零写面）",
+            overrides.len()
         );
     }
 }
 
-/// 主题预览资产回退（只读补路径，不改文件）：遍历 `index.landscape.primitives` 的
-/// `params.asset`，若 `assets/ui/<name>.png` 磁盘缺失，改指主题包 `assets/` 同名或
-/// 默认 `assets/ui/` 同名；仍缺 = 保留原路径（引擎加载失败仅缺图，不 panic）。
+/// 主题预览资产回退（只读补路径，不改文件）：遍历顶层 `index.primitives` 的 `params.asset`，
+/// 若 `assets/ui/<name>.png` 磁盘缺失，改指主题包 `assets/` 同名或默认 `assets/ui/` 同名；
+/// 仍缺 = 保留原路径（S85.2：S84 后无 `index.landscape` 段；无原语时 0 操作不 panic）。
 #[cfg(not(target_arch = "wasm32"))]
 fn patch_theme_assets(scenes: &mut serde_json::Value, theme_dir: &std::path::Path) {
     let ui_root = std::path::Path::new("assets/ui");
     let mut patched = 0usize;
     if let Some(prims) = scenes
         .get_mut("index")
-        .and_then(|i| i.get_mut("landscape"))
-        .and_then(|l| l.get_mut("primitives"))
+        .and_then(|i| i.get_mut("primitives"))
         .and_then(serde_json::Value::as_array_mut)
     {
         for p in prims.iter_mut() {

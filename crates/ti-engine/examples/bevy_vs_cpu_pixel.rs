@@ -345,7 +345,8 @@ fn main() {
         "诊断：GPU 非黑像素 {}（文本区字形对齐属 S18.3）",
         actual.iter().filter(|p| **p != 0).count()
     );
-    for (x, y) in [(0usize, 0usize), (1079, 1919), (60, 200), (540, 500)] {
+    // S84 纯横屏 1920×1080：诊断锚点须在画布内（旧竖屏 (1079,1919) 越界 panic）。
+    for (x, y) in [(0usize, 0usize), (1919, 1079), (60, 200), (960, 500)] {
         let idx = y * LOGICAL_W_I32 as usize + x;
         println!("  anchor ({x},{y}): cpu={:#06x} gpu={:#06x}", expected[idx], actual[idx]);
     }

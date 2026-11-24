@@ -53,33 +53,25 @@ fn index_layout_matches_doc() {
     let Some(idx) = s.get("index") else {
         panic!("scenes.json 缺 index");
     };
-    let img_asset = |p: &ti_core::data::Primitive, a: &str| {
-        p.kind == "image" && p.params.get("asset").and_then(|v| v.as_str()) == Some(a)
-    };
-    // S84：竖屏 chart_full / medallion_ring 已退场，改横屏拆件（底图/立绘/绳/木牌/图标）。
-    for a in
-        ["assets/ui/index_bg_map_h.png", "assets/ui/index_hero_duo.png", "assets/ui/index_rope.png"]
-    {
-        assert!(
-            idx.primitives.iter().any(|p| img_asset(p, a)),
-            "index 横屏缺满屏底图/立绘/绳：{a}"
-        );
+    // S85.5：首页 chrome 资产/组件迁 `components_v1.json` schema（scene 死原语已删）。
+    let sc = ti_core::data::ui_schema::components()
+        .expect("components_v1.json")
+        .get("index")
+        .expect("components_v1.json 缺 index")
+        .clone();
+    let roles = ti_core::data::ui_schema::asset_roles().expect("asset_roles.json");
+    let role_asset = |role: &str| roles.path(role).unwrap_or_else(|| panic!("缺 role {role}"));
+    // 竖屏 chart_full / medallion_ring 已退场，改横屏拆件（底图/立绘/木牌/图标）。
+    for (role, expect) in [
+        ("index_bg", "assets/ui/index_bg_map_h.png"),
+        ("index_hero", "assets/ui/index_hero_duo.png"),
+        ("index_plank", "assets/ui/index_plank_0.png"),
+    ] {
+        assert_eq!(role_asset(role), expect, "index 横屏 role→asset 漂移：{role}");
     }
-    assert_eq!(
-        (0..6)
-            .filter(|i| idx
-                .primitives
-                .iter()
-                .any(|p| img_asset(p, &format!("assets/ui/index_plank_{i}.png"))))
-            .count(),
-        6,
-        "index 横屏应 6 块木牌（index_plank_0..5）"
-    );
-    assert_eq!(
-        idx.extra_scalar.get("menu.count").copied(),
-        Some(6),
-        "index 横屏菜单 count=6（menu.count 数据驱动）"
-    );
+    let menu = sc.elements.iter().find(|e| e.id == "menu").expect("index 缺 menu 列表组件");
+    assert_eq!(menu.action, "menu_select", "首页 6 木牌须声明 menu_select action");
+    assert_eq!(idx.extra_scalar.get("menu.count").copied(), Some(6), "菜单 count=6 数据驱动");
     // status 为数据残留锚点（竖屏时点值），S84 扁平化后仍保留原值；断言实测值防再漂移。
     let status = idx.extra.get("status").expect("index 缺 status 矩形");
     assert_eq!(status.x, 540, "index status x=540（数据锚点实测值）");
@@ -594,38 +586,26 @@ fn region_chrome_count(px: &[u16], x: i32, y: i32, w: i32, h: i32) -> usize {
 /// 木纹/金条/标题文字）——替换旧「场景层帧 XOR 精灵层帧 > 0」判据（无 legacy 精灵层可比）。
 #[test]
 fn scene_layer_contributes_text_region_pixels() {
-    for scene in ["index", "select_role", "select_map", "main_map", "vs", "message", "saveload"] {
+    // S85.5：5 纯 UI 场景 chrome 已迁 schema（CPU 死原语删除，CPU 帧不再承载这些场景），
+    // 像素判据只保留游戏世界（vs/main_map）；5 场景改验 schema 背景 role→资产解析在位。
+    let roles = ti_core::data::ui_schema::asset_roles().expect("asset_roles.json");
+    let schema = ti_core::data::ui_schema::components().expect("components_v1.json");
+    for scene in ["index", "select_role", "select_map", "message", "saveload"] {
+        let sc = schema.get(scene).unwrap_or_else(|| panic!("components_v1.json 缺 {scene}"));
+        let bg = sc.elements.iter().find(|e| e.id == "bg").expect("{scene} 缺 bg 组件");
+        assert_eq!(bg.layout.intent, "fill", "{scene} 背景须声明 fill 意图");
+        assert!(
+            roles.path(&bg.role).is_some(),
+            "{scene} 背景 role `{}` 未在 asset_roles.json 登记",
+            bg.role
+        );
+    }
+    for scene in ["main_map", "vs"] {
         let px = render_scene_1080(scene);
         let expected_fb_len = FB_W * FB_H;
         assert_eq!(px.len(), expected_fb_len, "{scene} 帧缓冲应 = 1920×1080（S84 纯横屏）");
-        if scene == "index" {
-            // S18.8b：index 标题区 = **木牌贴图**（`image` 原语：assets/ui/board.png，
-            // 120,250,840,360）→ 判据改为「标题区有暖色（木纹 r>b）像素」——
-            // 既证明贴图被画上，又证明它压住了背景夜空（夜空是冷色 b>r）。
-            let n = region_warm_count(&px, 120, 250, 840, 360);
-            assert!(
-                n > 0,
-                "index 标题区（120,250,840,360）无木牌暖色像素 —— board 贴图未画 / 被盖死"
-            );
-            eprintln!("  index 木牌暖色像素 = {n}");
-            continue;
-        }
-        // S18.20：index / select_role 改**贴图版式**（AI 夜空背景全屏铺底）→
-        // 判据 = 标题区有「暖色像素」（木牌/立绘贴图把冷色夜空压住）。
-        if matches!(scene, "index" | "select_role") {
-            let region = if scene == "index" { (120, 250, 840, 360) } else { (76, 130, 356, 534) };
-            let n = region_warm_count(&px, region.0, region.1, region.2, region.3);
-            assert!(
-                n > 0,
-                "{scene} 标题/立绘区（{:?}, {:?}）无暖色像素 —— 贴图未画 / 被盖死",
-                region.0,
-                region.1
-            );
-            eprintln!("  {scene} 标题/立绘区暖色像素 = {n}");
-            continue;
-        }
-        // S18.20：其余 5 屏 = **贴图背景版式**（AI 夜空 / 俯视夜海全屏铺底，
-        // 旧木框与占位横线已退役）→ 判据 = 非黑覆盖率 ≥ 990‰（贴图铺满画面）。
+        // S18.20：游戏世界 = **贴图背景版式**（AI 夜空 / 俯视夜海全屏铺底）→
+        // 判据 = 非黑覆盖率 ≥ 阈值（贴图铺满画面）。
         // S34.6 D2（2026-11-03）：vs vs_theme 满屏背景（格类×地图主题）替换夜空底——
         // AI 主题贴图（羊皮海图/攻城/副本/BOSS）自然含暗色元素（黑边/暗角/海图墨线），
         // 非黑覆盖率上限 ≈ 955‰；门槛 950‰（容忍暗色元素，仍须「不黑屏」）。
@@ -644,25 +624,6 @@ fn scene_layer_contributes_text_region_pixels() {
     }
 }
 
-/// S15.6 QA131（S20.2 v4 面板语言重锚）：选中态判据——index = 选中标签变金（S18.8b）；
-/// select_role = **3px 黄铜边**（`chrome::selected_border`，旧 S18.7d「gold_warm 整块填充底」退役，
-/// 卡底统一 `panel_wood`）：行 0 卡顶缘外 3px 边带**有** `brass` 像素，行 1 卡对应边带**无**（边框不外溢）。
-fn region_color_count(px: &[u16], x: i32, y: i32, w: i32, h: i32, color: u16) -> usize {
-    let y0 = y.max(0);
-    let x0 = x.max(0);
-    let y1 = (y + h).min(FB_H as i32);
-    let x1 = (x + w).min(FB_W as i32);
-    let mut n = 0usize;
-    for py in y0..y1.max(y0) {
-        for pxx in x0..x1.max(x0) {
-            if px[(py as usize) * FB_W + (pxx as usize)] == color {
-                n += 1;
-            }
-        }
-    }
-    n
-}
-
 /// 非黑像素覆盖率（千分比；整数运算，无浮点转换）——贴图背景版式的判据。
 fn non_black_permille(px: &[u16]) -> u64 {
     let n = px.iter().filter(|c| **c != 0).count() as u64;
@@ -670,74 +631,35 @@ fn non_black_permille(px: &[u16]) -> u64 {
     n * 1000 / total
 }
 
-/// S18.8b：区域内「暖色」像素数（RGB565 解码后 `r > b`）——木纹/金调判据
-/// （夜空背景是冷色 `b > r` → 贴图压上后区域转暖）。
-fn region_warm_count(px: &[u16], x: i32, y: i32, w: i32, h: i32) -> usize {
-    let y0 = y.max(0);
-    let x0 = x.max(0);
-    let y1 = (y + h).min(FB_H as i32);
-    let x1 = (x + w).min(FB_W as i32);
-    let mut n = 0usize;
-    for py in y0..y1.max(y0) {
-        for pxx in x0..x1.max(x0) {
-            let c = px[(py as usize) * FB_W + (pxx as usize)];
-            let r = i32::from((c >> 11) & 0x1F);
-            let b = i32::from(c & 0x1F);
-            if r > b {
-                n += 1;
-            }
-        }
-    }
-    n
-}
-
 #[test]
 fn selected_state_marker_visible_and_no_leak() {
-    let scs = scenes();
-    for scene in ["index", "select_role"] {
-        let px = render_scene_1080(scene);
-        let layout = scs.get(scene).expect("scenes.json 缺场景");
-        if scene == "index" {
-            // S84 纯横屏：选中态 = 数据驱动的 `index_plank_sel.png` 叠层（选中项 item=0）。
-            // 竖屏 ring 徽章标签 + gold_warm 判据随 S84 数据扁平化退场，改验叠层资产按 item 命中。
-            let sel = |p: &ti_core::data::Primitive| {
-                p.kind == "image"
-                    && p.params.get("asset").and_then(|v| v.as_str())
-                        == Some("assets/ui/index_plank_sel.png")
-            };
-            assert_eq!(
-                layout.primitives.iter().filter(|p| sel(p)).count(),
-                6,
-                "index 横屏应 6 块 index_plank_sel 叠层（每项 1 块，when=selected）"
-            );
-            // 选中态不外溢：每块叠层都带 when=selected（仅选中项绘制）；无条件绘制的叠层即泄漏。
-            assert_eq!(
-                layout.primitives.iter().filter(|p| sel(p) && p.when != "selected").count(),
-                0,
-                "index 横屏 index_plank_sel 缺 when=selected（未选中项也会画 = 选中态泄漏）"
-            );
-            // 渲染帧确有内容（选中木牌叠层所在上半区非全底）——保留像素侧基本守卫。
-            assert!(non_black_permille(&px) > 900, "index 横屏渲染帧非黑覆盖率过低");
-            continue;
-        }
-        // S20.2 v4 面板语言：选中态 = **黄铜/亮金边**（`chrome::selected_border`，S26.3 外圈
-        // `gold_warm`，此前 = 整块金色填充，刺眼且抢戏；卡底统一 `panel_wood`，只画边不填底）；
-        // 判据 = 行 0 卡顶缘**外** 边带有 `gold_warm` 像素（该带只有选中边框会画）；
-        // 行 1 卡左缘**外** 竖条无（避开行 0 边框触及高度：其外框止于顶+高+边= top1-8 内）。
-        let sel = ti_render::theme::Theme::default()
-            .by_name("gold_warm")
-            .unwrap_or(ti_app::scenes::chrome::COLOR_GOLD_WARM);
-        let top0 = layout.list.y - layout.list.highlight_offset;
-        let top1 = top0 + layout.list.row_h;
+    // S85.5：选中态从 `scenes.json` 死原语（index_plank_sel when=selected）迁到 schema
+    // `list` 组件的 `state` 声明 + 通用 builder 的逐行 `ChromeRow.selected`（黄铜高亮）。
+    // 语义不变：① 列表须声明 selected 态（选中可见）；② 必须同时声明 normal 态
+    // （未选中行照常显示 = 无「选中态外溢」）；③ 选中高亮由行级 resolver 派生，
+    // 不存在「无条件绘制的叠层」（schema 无 when 字段，旧泄漏载体已随死原语删除）。
+    let schema = ti_core::data::ui_schema::components().expect("components_v1.json");
+    for (scene, list_id) in [
+        ("index", "menu"),
+        ("select_role", "roster"),
+        ("select_map", "maps"),
+        ("saveload", "slots"),
+    ] {
+        let sc = schema.get(scene).unwrap_or_else(|| panic!("缺场景 {scene}"));
+        let list = sc
+            .elements
+            .iter()
+            .find(|e| e.id == list_id)
+            .unwrap_or_else(|| panic!("{scene} 缺 {list_id}"));
         assert!(
-            region_color_count(&px, layout.list.x, top0 - 3, layout.list.w, 3, sel) > 0,
-            "{scene} 选中卡（行 0，顶 {top0}）顶外边带无 {sel:#06x} 像素（S20.2 QA131：选中态 = 3px 黄铜边）"
+            list.state.iter().any(|s| s == "selected"),
+            "{scene}.{list_id} 缺 selected 态（选中态不可见）"
         );
-        assert_eq!(
-            region_color_count(&px, layout.list.x - 3, top1 + 10, 3, layout.list.row_h - 20, sel),
-            0,
-            "{scene} 未选中卡（行 1，顶 {top1}）左外竖条不应有 {sel:#06x}（S20.2：选中边框泄漏）"
+        assert!(
+            list.state.iter().any(|s| s == "normal"),
+            "{scene}.{list_id} 缺 normal 态（未选中行不外显 = 选中态泄漏）"
         );
+        assert!(!list.action.is_empty(), "{scene}.{list_id} 缺 action（选中行不可点）");
     }
 }
 
@@ -747,27 +669,24 @@ fn selected_state_marker_visible_and_no_leak() {
 /// ③ 两态：同一文本 TTF 档条宽 > 位图档条宽（字号档单调，QA132②，纯 shell 属性保留）。
 #[test]
 fn hint_bar_width_height_follow_active_font() {
-    let px = render_scene_1080("index");
-    let scs = scenes();
-    let idx = scs.get("index").expect("scenes.json 缺 index");
-    // S84：尾行 = data text 原语（tier=hint，text=版本签），非 chrome::hint_row bevel 条。
-    let footer_prim = idx
-        .primitives
+    // S85.5：尾行 text 原语迁 schema（`footer` 组件 tier=hint + binding=i18n key）；
+    // 坐标由 `bottom_bar` 意图算，像素落帧由 --shot 探针守 ⇒ 此处守声明 + 字号档。
+    let sc = ti_core::data::ui_schema::components()
+        .expect("components_v1.json")
+        .get("index")
+        .expect("index 组件")
+        .clone();
+    let footer_comp = sc
+        .elements
         .iter()
-        .find(|p| p.kind == "text" && p.tier == "hint")
-        .expect("index 横屏缺 tier=hint 的尾行 text 原语");
-    let r = &footer_prim.rect;
-    assert!(r.w > 0 && r.h > 0, "index 尾行 text 矩形宽高应为正");
+        .find(|e| e.id == "footer" && e.tier == "hint")
+        .expect("index 缺 tier=hint 的 footer 文本组件");
+    assert_eq!(footer_comp.layout.intent, "bottom_bar", "尾行须声明 bottom_bar 意图");
+    assert_eq!(footer_comp.binding, "scene.index.footer", "尾行 i18n binding 漂移");
     assert!(
-        r.x >= 0 && r.y >= 0 && r.x + r.w <= FB_W_I32 && r.y + r.h <= FB_H as i32,
-        "index 尾行 text 矩形越出 1920×1080 横屏视口：{r:?}"
+        !ti_app::i18n::sget(&footer_comp.binding).is_empty(),
+        "scene.index.footer 解析为空（裸 key / 死 i18n）"
     );
-    // ② 矩形内有非底色（非全黑）像素 = 文字真落帧
-    let painted = (r.y..(r.y + r.h))
-        .flat_map(|y| (r.x..(r.x + r.w)).map(move |x| (x, y)))
-        .filter(|&(x, y)| px.get((y as usize) * FB_W + (x as usize)).is_some_and(|c| *c != 0))
-        .count();
-    assert!(painted > 0, "index 尾行 text 矩形无像素 —— 文字静默不画");
 
     let footer = ti_app::i18n::sget("scene.index.footer");
     // 渲染管线 `MenuShell::new` = 内置 TTF 三档自动在位（QA128 进程级缓存，EXP-050 回溯定位）
@@ -789,13 +708,30 @@ fn hint_bar_width_height_follow_active_font() {
 /// 有 chrome 元素像素（列表项卡片/HUD 面板/血条槽底，均非羊皮纸底）。
 #[test]
 fn text_regions_not_flooded_by_chrome() {
-    // 场景 → 内容区（scenes.json 横屏矩形；S84 纯横屏后 vs 改 battle_arena 数据锚点）
-    let regions: [(&str, i32, i32, i32, i32); 5] = [
-        ("index", 90, 360, 900, 170), // 列表首项区（QB101：顶 360，item_h 170）
-        ("select_role", 90, 240, 900, 230), // 角色列表区
-        ("select_map", 90, 200, 900, 280), // 地图列表区（QB103：顶 200，item_h 280）
+    // S85.5：5 纯 UI 场景内容区由 schema list/panel 组件声明（taffy 自动布局画面板），
+    // CPU 死原语已删 ⇒ 像素判据仅保留游戏世界（vs/main_map）。
+    let schema = ti_core::data::ui_schema::components().expect("components_v1.json");
+    for (scene, id) in [
+        ("index", "menu"),
+        ("select_role", "roster"),
+        ("select_map", "maps"),
+        ("message", "panel"),
+        ("saveload", "slots"),
+    ] {
+        let sc = schema.get(scene).unwrap_or_else(|| panic!("缺场景 {scene}"));
+        let comp =
+            sc.elements.iter().find(|e| e.id == id).unwrap_or_else(|| panic!("{scene} 缺 {id}"));
+        assert!(
+            matches!(comp.layout.intent.as_str(), "side_left" | "side_right" | "center"),
+            "{scene}.{id} 内容区意图 `{}` 非法（面板/列表须贴边或居中）",
+            comp.layout.intent
+        );
+        assert!(!comp.binding.is_empty(), "{scene}.{id} 缺 binding（内容区空白）");
+    }
+    // 游戏世界（vs/main_map）原语未迁：内容区仍须有 chrome 像素（面板/底条真落帧）。
+    let regions: [(&str, i32, i32, i32, i32); 2] = [
         ("main_map", 80, 150, 920, 120), // HUD 面板
-        ("vs", 76, 230, 918, 998),    // S84 横屏 vs.battle_arena（旧竖屏 30,1730,440,130 已越界）
+        ("vs", 76, 230, 918, 998),       // S84 横屏 vs.battle_arena
     ];
     for (scene, x, y, w, h) in regions {
         let px = render_scene_1080(scene);

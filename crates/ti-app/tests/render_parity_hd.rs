@@ -101,16 +101,16 @@ mod tests {
         }
     }
 
-    /// P5-2 判据 2：各场景 HD 渲染后都有真实内容（非黑屏/全背景）。
+    /// P5-2 判据 2：HD 渲染后有真实内容（非黑屏/全背景）。
+    /// S85.5：5 纯 UI 场景 chrome 迁 schema（CPU 死原语已删），像素判据只对游戏世界成立。
     #[test]
     fn hd_each_scene_renders_real_content() {
-        for (name, pixels) in [
-            ("Index", render_index_hd()),
-            ("SelectRole", render_select_role_hd()),
-            ("SelectMap", render_select_map_hd()),
-            ("MainMap", render_main_map_hd()),
-            ("Vs", render_vs_hd()),
-        ] {
+        let schema = ti_core::data::ui_schema::components().expect("components_v1.json");
+        for name in ["index", "select_role", "select_map", "message", "saveload"] {
+            let sc = schema.get(name).expect("缺 UI 场景组件");
+            assert!(!sc.elements.is_empty(), "{name} 组件表为空（画面将空白）");
+        }
+        for (name, pixels) in [("MainMap", render_main_map_hd()), ("Vs", render_vs_hd())] {
             let ratio = ink_ratio_rgba(&pixels);
             assert!(ratio > 0.01, "{name} 场景 HD 渲染应有真实内容（墨点率 {ratio} > 1%）");
         }
@@ -130,16 +130,21 @@ mod tests {
         assert_ne!(main_map, vs, "MainMap 与 Vs HD 应渲染不同画面");
     }
 
-    /// P5-2 判据 4：主菜单标题命中真字形（墨色 `0xFFFF_FFFF`，与 `font_parity` 同口径）。
+    /// P5-2 判据 4：主菜单标题命中真字形（与 `font_parity` 同口径）。
+    /// S85.5：标题烘焙进 `index_bg` 资产、文案走 schema 文本组件，CPU HD 帧不再承载首页；
+    /// 改验 schema 文案 binding 解析非空（真字形由 `--shot` bevy 探针守）。
     #[test]
     fn hd_index_scene_renders_real_glyphs_for_title() {
-        let pixels = render_index_hd();
-        // S15 v2：主菜单改用羊皮纸/木纹/金色系，UI 像素 = 非背景、非黑（标题条木纹、
-        // 羊皮纸棋盘、bevel 按钮、深墨文字）——比旧版白墨 0xFFFF_FFFF 判据更宽松。
-        let ui_pixels = pixels.iter().filter(|&&p| p != 0 && p != 0xFF_FD70).count();
+        let sc = ti_core::data::ui_schema::components()
+            .expect("components_v1.json")
+            .get("index")
+            .expect("index 组件")
+            .clone();
+        let footer = sc.elements.iter().find(|e| e.id == "footer").expect("index 缺 footer 组件");
+        assert_eq!(footer.binding, "scene.index.footer", "首页文案 binding 漂移");
         assert!(
-            ui_pixels > 10,
-            "主菜单标题+菜单项 HD 应渲染出真字形（非背景/非黑像素数 {ui_pixels} > 10）"
+            !ti_app::i18n::sget(&footer.binding).is_empty(),
+            "首页文案 i18n 解析为空（裸 key / 死文案）"
         );
     }
 
@@ -149,10 +154,22 @@ mod tests {
         let mut fb = FramebufRgba::new();
         fb.clear(0xFF00_0000);
         assert_eq!(fb.as_slice().len(), FB_PIXELS, "HD 帧缓冲 = 1920×1080（S84 纯横屏）");
+        let roles = ti_core::data::ui_schema::asset_roles().expect("asset_roles.json");
+        assert_eq!(
+            roles.path("index_bg"),
+            Some("assets/ui/index_bg_map_h.png"),
+            "首页底图 role 漂移"
+        );
+        // S85.5：首页 HD CPU 帧不再画（schema 由 bevy 渲染），像素判据改落游戏世界。
         let mut app = GameApp::new(1920.0, 1080.0);
+        app.handle(GameInput::Confirm);
+        app.handle(GameInput::Next);
+        app.handle(GameInput::Confirm);
+        app.handle(GameInput::Next);
+        app.handle(GameInput::Confirm); // → MainMap
         app.render_hd();
         let pixels = app.shell().fb_rgba.as_slice();
-        assert!(pixels[0] != 0, "HD 主菜单第 0 行 x=0 应为标题条色（非黑）");
+        assert!(pixels[0] != 0, "HD 游戏世界第 0 行 x=0 应为非黑（贴图铺满）");
     }
 
     // S15.4：legacy HD PNG 逐像素 blit 判据（判据 6/7）已随 legacy 像素写帧层移除而删除：

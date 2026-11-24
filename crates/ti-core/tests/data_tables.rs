@@ -176,6 +176,20 @@ fn scenes_table_loads_and_every_game_scene_present() {
     }
 }
 
+/// S85.5：5 纯 UI 场景的 chrome 单一事实源已迁 `components_v1.json`；
+/// 场景表仍保留版面锚（title/list/hint/extra），组件表须齐 5 场景且每场景非空。
+#[test]
+fn components_schema_loads_and_every_ui_scene_present() {
+    let cs = ti_core::data::ui_schema::components().expect("components_v1.json should parse");
+    for id in ["index", "select_role", "select_map", "message", "saveload"] {
+        assert!(cs.contains_key(id), "missing UI component scene `{id}`");
+        assert!(
+            cs.get(id).is_some_and(|scene| !scene.elements.is_empty()),
+            "UI scene `{id}` has no components"
+        );
+    }
+}
+
 #[test]
 fn scene_layout_rects_are_inside_logical_resolution() {
     let sc = scenes().expect("scenes");

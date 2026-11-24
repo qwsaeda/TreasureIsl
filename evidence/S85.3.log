@@ -1,0 +1,34 @@
+S85.3 通用 schema→bevy_ui 渲染器 · 验收证据（2026-11-24）
+
+== 改动面 ==
+表现+规则实现（ti-engine/ui.rs + treasure_bevy.rs）+ 数据加载（ti-core/src/data/ui_schema.rs + mod.rs）+ doccheck2 断言适配。
+
+== 判据 1：通用渲染器 ==
+- ti-core/src/data/ui_schema.rs：schema 加载器（components()/asset_roles()/install_injected() 一次性注入 hook + serde 类型），include_str!+OnceLock。
+- ui.rs：BindingValue{Text,Rows,Empty}（3 泛型 shape，无业务类型）+ ComponentHost trait（resolve/action_key 字符串接口，零游戏语义）
+  + build_component_chrome：z 升序 + state 过滤 + type 分派（image/rect/grad/glow 按 role 解析路径、text 按 binding 取 i18n、
+  list/panel 按 binding 展开行、button/badge/icon）+ layout 意图→taffy（fill/center/side/bottom_bar/flex_col/row/anchored
+  全用 Val::Percent/Auto 零绝对像素）+ action→opaque PickTarget。
+- treasure_bevy.rs：ShellComponentHost 实现（character_rows/save_slot_rows/map_slot_rows/message_rows + action_key 映射），
+  build_schema_chrome 替换 4 个旧 build_*_chrome；index 保留既有 build_data_chrome 数据化路径（视觉零变化）。
+
+== 判据 2：5 场景切换 + 画面零变化 ==
+- 4 场景（select_role/saveload/select_map/message）走 schema 渲染；index 保留旧数据化路径。
+- --shot 5 场景 @1920×1080 全非黑：index 1,990,204 / select_role 2,068,780 / select_map 2,073,544 /
+  message 2,073,594 / saveload 2,073,594（of 2,073,600）；视觉对比旧结构一致、index 字节一致。
+- --resizetest PASS（UI 根 960×540→1920×1080=视口，节点 14→14）。
+- 修正数据不匹配：select_role.roster side_left→side_right（schema 与旧视觉一致），画面复验非黑像素不变。
+
+== 判据 3：4 个同步项修复 ==
+- doccheck2 check_scene_required_pick_keys：从「查已删的 build_*_chrome + attach_row_pick」改为验证新契约
+  （action_key 的 menu_select=1/character_select=2/map_select=2/slot_write=3 映射 + 通用 builder 挂 PickTarget），负例改坏 key 即 FAIL。
+- check_code_standards CS-3：themes.rs::string_dict 单字母参数 v→value/k→key。
+- parity 示例诊断锚点 (1079,1919) 竖屏越界 → (1919,1079) 横屏有效；实跑 parity 通过 0 超差 0 LSB，Node=0 断言真跑到。
+- select_role.roster 数据修正（上）。
+
+== 判据 4：全量门禁 ==
+cargo check 0 error；cargo test --workspace 1087 passed/0 failed/1 ignored；
+cargo clippy --workspace --all-targets -D warnings 0 error；cargo fmt --check 0；
+doccheck 0 error；doccheck2 0 error；ui_schema_check OK；bevy-cpu-parity 通过（UI Node=0）。
+
+S85.3 可置 verified。

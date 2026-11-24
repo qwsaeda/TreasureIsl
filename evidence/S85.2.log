@@ -1,0 +1,35 @@
+S85.2 5 纯 UI 场景 schema 数据落地 + 清 S84 landscape 漂移 · 验收证据（2026-11-24）
+
+== 改动面 ==
+数据（components_v1.json 组件实例 + asset_roles.json role→路径注册表）+ 工具/平台（清 S84 遗留 landscape 漂移 8 文件）+ 文档规范（anchored 扩展）。
+
+== 判据 1：schema 数据落地 ==
+- assets/data/ui_schema/components_v1.json：5 场景（index/select_role/select_map/message/saveload）/ 19 组件，
+  无功能元素只声明 role+layout（无绝对坐标），有功能元素声明 type+binding+action+state。
+- asset_roles.json：role→资产路径单源（index_bg/hero/plank/icon、role_*、bg_night_sea、panel_wood），禁 Rust format! 拼路径。
+- 用户拍板「两者都要」：layout 扩 anchor+offset_pct+size_pct（anchored 精细定位，无功能装饰元素可用），语义布局仍为默认。
+- components_v1.schema.json + 33 号规范同步 anchored 枚举。
+
+== 判据 2：清 S84 landscape 漂移（subagent 8 文件）==
+- check_scene_narrative.py：屏尺寸 1920×1080；N8 历史口径 SKIP + 真漂移仍 FAIL；N1~N7 保留。
+- layout_spec_check.py / ui_assembly.py：N8 乘数横屏化 / layers_of 无 landscape 段回退顶层 prim（不 KeyError）。
+- ui_theme.py + map_pack.rs::merge_theme_scenes + treasure_bevy.rs apply_theme_preview/patch_theme_assets：
+  主题写点从 index.landscape.primitives 改为 components_v1.json overrides（role→路径）；共享 helper 统一口径。
+- ui_wizard.rs / themes.rs：布局步/主题列表改验 components_v1.json elements+overrides。
+- grep 8 文件 index.landscape.primitives / scene_data["landscape"] 残留 0（仅历史注释）。
+
+== 判据 3：实跑验证 ==
+- python3 scripts/ui_schema_check.py --check → OK（5 场景/19 组件，enum+禁绝对坐标+登记对账通过）
+- python3 scripts/check_scene_narrative.py → 0 failure（N1~N7 PASS，N8 历史口径 SKIP）
+- python3 scripts/ui_theme.py apply --theme t01 --check → 0（16 role→路径，写点结构合法）
+- python3 scripts/ui_assembly.py --scene index --orientation landscape --check → OK（1920x1080，22 prim/7 层，无 KeyError）
+- python3 scripts/validate_data.py → OK；apk_audit --refset 含新 schema 资产
+- cargo check --workspace → 0 error；cargo test -p ti-console --tests → 0 failed；cargo test -p ti-core --test map_pack → 7/0
+- cargo clippy -p ti-core -p ti-engine -p ti-console --all-targets -D warnings → 0 error
+- 负例自证（ui_schema_check）：注入非法 type+绝对坐标 → FAIL 3 项点名；还原 → OK；实例缺失 SKIP=2
+- 负例自证（主题写点，subagent /tmp/opencode/theme_neg）：elements=[] + overrides=[] → validate_theme_target 2 FAIL；还原 → PASS
+
+== 阴影期说明 ==
+旧 scenes.json prim 暂不删（S85.5 才删），引擎仍走旧原语路径 ⇒ 画面零变化、gate 不空窗；新 schema 消费从 S85.3 起。
+
+S85.2 可置 verified。

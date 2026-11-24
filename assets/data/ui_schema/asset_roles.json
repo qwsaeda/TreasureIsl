@@ -1,0 +1,23 @@
+{
+  "_comment": "S85 UI 组件资产角色注册表（33 号单一事实源）：role（语义名）→ 资产路径。组件只声明 role，渲染器按此解析，禁 Rust format! 拼路径。改图只改本文件 + ui_manifest 登记。",
+  "version": 1,
+  "roles": {
+    "index_bg": "assets/ui/index_bg_map_h.png",
+    "index_hero": "assets/ui/index_hero_duo.png",
+    "index_plank": "assets/ui/index_plank_0.png",
+    "index_plank_sel": "assets/ui/index_plank_sel.png",
+    "index_icon_compass": "assets/ui/icon_compass.png",
+    "index_icon_chest": "assets/ui/icon_chest.png",
+    "index_icon_book": "assets/ui/icon_book.png",
+    "index_icon_gear": "assets/ui/icon_gear.png",
+    "index_icon_flag": "assets/ui/icon_flag.png",
+    "index_icon_door": "assets/ui/icon_door.png",
+    "role_panda": "assets/ui/role_panda.png",
+    "role_tichy": "assets/ui/role_tichy.png",
+    "role_kidd": "assets/ui/role_kidd.png",
+    "role_drake": "assets/ui/role_drake.png",
+    "role_katharina": "assets/ui/role_katharina.png",
+    "bg_night_sea": "assets/ui/bg_night_sea.png",
+    "panel_wood": "assets/ui/card_panel.png"
+  }
+}

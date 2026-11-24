@@ -195,6 +195,7 @@ python scripts/map_pack.py check
 | `check_forward_closed.py` | 业务闭环 C1~C4（零逆向引用 / 单一 oracle 源 / 根目录清空 / 无重复 crate） | `python scripts/check_forward_closed.py --check` | 幂等只读；违规非 0 |
 | `check_module_contracts.py` | 模块并行契约（包白名单互斥 / 契约锚点 / 跨 crate 可见面） | `python scripts/check_module_contracts.py --check` | 幂等只读；违规非 0（WARN 级除外） |
 | `check_scene_narrative.py` | UI 场景叙事约束 DSL v3（mood / 重心 / 节奏权重 / HUD 上限 / 死区 / focus_anchor 对账） | `python scripts/check_scene_narrative.py` | 幂等只读；违规非 0 |
+| `ui_schema_check.py` | **S85 声明式 UI 组件 schema 门禁**（33 号单一事实源）：`components_v1.json` enum 校验（type/layout.intent/action/state/tier）+ 禁绝对坐标字段（不手写像素机器守门）+ 条件必填（role/binding/action）+ role/icon 登记对账 + i18n key 存在性 | `python scripts/ui_schema_check.py [--check]` | 幂等只读；违规非 0（gate 第 10d 项，S85.1）；实例缺失 SKIP=2 |
 | `check_code_standards.py` | 代码标准机器检查（`16_code_standards.md` 执行矩阵前 5 行：CS-1 资产单源 / CS-2 文件职责声明 / CS-3 参数命名 / CS-4 场景窄接缝 / CS-5 rules 层易变平衡公式字面量守门（EXP-196 数据驱动）+ 棘轮基线 `process_ratchet.json::code_standards`） | `python scripts/check_code_standards.py --check`（门禁）/ `--report`（明细）/ `--update-baseline`（写豁免） | 幂等只读；新增违例超基线 ⇒ 退出 1 |
 | `check_data_source.py` | 数据源门禁（`legacy/data/*` 相对 HEAD 变动 ⇒ 强制跑渲染快照） | `python scripts/check_data_source.py`（`--check` = 只读门禁别名） | 幂等只读；数据源改动且快照漂移 ⇒ 非 0 退出 |
 | `check_data_driven.py` | 数据驱动（渲染层不得认业务语义） | `python scripts/check_data_driven.py` | 幂等只读；违规非 0 |

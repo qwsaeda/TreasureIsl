@@ -448,7 +448,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         if not path.is_file():
             errors.append(f"清单资产 {asset.get('name')} 的文件不存在: {asset.get('file')}")
         registered.add(asset.get("file", ""))
-    # scenes.json 的 image 原语引用必须在清单里登记（防「用了没登记的资产」）
+    # scenes.json 的游戏世界 image 原语引用必须在清单里登记（vs/main_map 未迁，防「用了没登记的资产」）
     if SCENES.exists():
         scenes = json.loads(SCENES.read_text(encoding="utf-8"))
         for sid, scene in scenes.items():
@@ -462,6 +462,17 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     errors.append(
                         f'scenes.json "{sid}".primitives[{i}]: 资产 {asset_path!r} 未在 ui_manifest.json 登记'
                     )
+    # S85.5：5 纯 UI 场景资产经 `asset_roles.json` role→path 解析，同样须登记 + 文件在位。
+    roles_file = ROOT / "assets" / "data" / "ui_schema" / "asset_roles.json"
+    if roles_file.is_file():
+        roles = json.loads(roles_file.read_text(encoding="utf-8")).get("roles", {})
+        for role, asset_path in roles.items():
+            if not (ROOT / asset_path).is_file():
+                errors.append(f"asset_roles.json role {role!r} 资产文件不存在: {asset_path}")
+            if asset_path not in registered:
+                errors.append(
+                    f"asset_roles.json role {role!r}: 资产 {asset_path!r} 未在 ui_manifest.json 登记"
+                )
     # 孤儿文件：assets/ui 下存在但未登记
     if UI_DIR.exists():
         for png in sorted(UI_DIR.glob("*.png")):

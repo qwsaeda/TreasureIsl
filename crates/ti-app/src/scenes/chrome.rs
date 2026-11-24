@@ -1283,71 +1283,6 @@ pub fn render_primitives(host: &mut dyn SceneHost, scene_id: &str, selected: i64
     render_primitives_filtered(host, scene_id, selected, i32::MIN);
 }
 
-/// S84 纯横屏：index 横屏木牌原语的 rect 计算（**公式单一事实源**，CPU 路径与 Bevy 壳共用）。
-/// 参数来自 `SceneLayout.extra_scalar`（layout.rs 把 scenes.json 的 `index.menu` 嵌套对象
-/// 自动展开成 `menu.*` 扁平键）；带 `params.derived=menu` 的原语才走此路径。
-/// 线性菜单 = 首项普通尺寸 + 其余倾斜 expand 偏移（S39 spec §1）。
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
-#[must_use]
-pub fn index_param_rect(
-    prim: &Primitive,
-    layout: &data::SceneLayout,
-    last_plank: &mut i64,
-) -> Option<data::Rect> {
-    // S84 纯横屏：index 参数化原语仅横屏木牌（derived=menu），竖屏罗盘环已删。
-    let derived = prim.params.get("derived").and_then(|v| v.as_str())?;
-    let extra = &layout.extra_scalar;
-    let g = |k: &str| extra.get(&format!("{derived}.{k}")).copied();
-    // 线性菜单（menu.* 参数）
-    let (x, y0, step, count, pw, ph, rw, rh, rdx, rdy, idx) = (
-        g("x")?,
-        g("y0")?,
-        g("step")?,
-        g("count")?,
-        g("plank_w")?,
-        g("plank_h")?,
-        g("plank_rot_w")?,
-        g("plank_rot_h")?,
-        g("plank_rot_dx")?,
-        g("plank_rot_dy")?,
-        g("icon_dx")?,
-    );
-    let asset = prim.params.get("asset").and_then(|v| v.as_str()).unwrap_or("");
-    let role = if asset.contains("index_plank_") && asset.contains("_sel") {
-        "sel"
-    } else if asset.contains("index_plank_") {
-        "plank"
-    } else if asset.contains("index_icon_") {
-        "icon"
-    } else {
-        return None;
-    };
-    let item = if role == "icon" { *last_plank } else { prim.item };
-    if role == "plank" {
-        *last_plank = prim.item;
-    }
-    if item < 0 || item >= i64::from(count) {
-        return None;
-    }
-    let base_y = y0 + (item as i32) * step;
-    Some(match role {
-        "plank" if item == 0 => data::Rect { x, y: base_y, w: pw, h: ph },
-        "plank" => data::Rect { x: x + rdx, y: base_y + rdy, w: rw, h: rh },
-        "sel" => data::Rect { x, y: base_y, w: pw, h: ph },
-        "icon" => {
-            let plank_cy = if item == 0 { base_y + ph / 2 } else { base_y + rdy + rh / 2 };
-            let cx = x + idx;
-            data::Rect {
-                x: ((cx as f32) - prim.rect.w as f32 / 2.0).round() as i32,
-                y: ((plank_cy as f32) - prim.rect.h as f32 / 2.0).round() as i32,
-                w: prim.rect.w,
-                h: prim.rect.h,
-            }
-        }
-        _ => return None,
-    })
-}
-
 /// S31+/v6：按 z 下限过滤原语（`min_z` 以下跳过）。v6 模式先画世界层再画 HUD 原语（z≥3）避免海图盖住 HUD。
 pub fn render_primitives_filtered(
     host: &mut dyn SceneHost,
@@ -1366,8 +1301,7 @@ pub fn render_primitives_filtered(
     // Bevy 壳由 `ti-engine` 的 bevy_ui 层画这些 chrome（避免 1080 + bevy_ui 双画）；
     // CPU 路径（无 bevy_ui 的后端）照旧画。
     let skip_migrated = host.chrome_in_bevy_ui();
-    // S84：index 横屏木牌原语（params.derived=menu）的 rect 由公共函数从参数算（CPU/Bevy 单一公式源）。
-    let mut index_last_plank: i64 = -1;
+    // S85.5：index 木牌原语已迁 components_v1.json schema，CPU 路径不再参数化推导 rect。
     for p in prims {
         if p.z < min_z {
             continue;
@@ -1379,11 +1313,7 @@ pub fn render_primitives_filtered(
             continue;
         }
         let color = theme.by_name(&p.color).unwrap_or(theme.text_on_parch);
-        let r = if scene_id == "index" {
-            index_param_rect(p, &layout, &mut index_last_plank).unwrap_or(p.rect)
-        } else {
-            p.rect
-        };
+        let r = p.rect;
         with_canvas(host, |c| match p.kind.as_str() {
             "rect" => ti_render::generic::rect(c, r.x, r.y, r.w, r.h, color),
             "text" => {

@@ -42,6 +42,7 @@
 //! | [`persistence`] | 持久化（存档槽/错误） | `docs/business/persistence.md` |
 //! | [`selection`] | 选择（角色/地图/状态） | `docs/business/progression.md` §选择 |
 //! | [`render`] | 渲染资源（容器/引用/图层） | `docs/business/loop_core.md` §资源 |
+//! | [`ui_action`] | UI action 闭集（schema 字符串/key/场景分派单源） | `docs/process/33_ui_component_schema.md` §4 |
 
 pub mod combat;
 pub mod economy;
@@ -51,6 +52,7 @@ pub mod messages;
 pub mod persistence;
 pub mod render;
 pub mod selection;
+pub mod ui_action;
 
 pub use combat::{Side, Unit};
 pub use economy::{Bank, Building, Goods, PriceTable, TradeEvent};
@@ -60,3 +62,4 @@ pub use messages::{FlowSource, MsgEvent, MsgKind, MsgPage};
 pub use persistence::{MIN_SAVE_SIZE, REC_MAGIC, SaveErr, SaveSlot};
 pub use render::{RenderError, RenderPlan, ResourceContainer, ResourceRef, SceneAsset};
 pub use selection::{Character, MapSlot, SelectionState};
+pub use ui_action::UiAction;

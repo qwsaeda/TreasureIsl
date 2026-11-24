@@ -2,6 +2,7 @@
 use ti_core::data;
 use ti_core::domain::flow::Sfx;
 use ti_core::domain::selection::Character;
+use ti_core::domain::ui_action::UiAction;
 use ti_core::rules::selection;
 
 use crate::game_app::{GameInput, HitData};
@@ -138,25 +139,31 @@ impl Scene for SelectRoleScene {
         if hit.swipe == 2 {
             return host.advance(GameInput::Back);
         }
-        if hit.swipe != 0 || hit.key != 2 {
+        if hit.swipe != 0 {
             return false;
         }
-        let i = usize::try_from(hit.index.max(0)).unwrap_or(0);
-        let Some(picked) = Character::from_index(u32::try_from(i).unwrap_or(0)) else {
-            return false;
-        };
-        host.set_character(Some(picked));
-        host.selection_mut().character = Some(picked);
-        chrome::flash_press();
-        // S77 触摸端到端：点未勾选席位 = 加入多选；点**已勾选**席位 = 确认推进
-        // （对齐 select_map on_hit 的 touch→Confirm）。此前 on_hit 只勾选不确认 ⇒
-        // 选角页触摸无法进入下一场景（底部「确认」仅键盘），与 select_map 不一致。
-        let already_marked = host.player_seats().contains(&picked);
-        if already_marked {
-            return host.advance(GameInput::Confirm);
+        // S85.4：按 action 语义分派（key=2 = 列表行族，含 character_select/map_select）。
+        match UiAction::from_key(hit.key) {
+            Some(UiAction::CharacterSelect | UiAction::MapSelect) => {
+                let i = usize::try_from(hit.index.max(0)).unwrap_or(0);
+                let Some(picked) = Character::from_index(u32::try_from(i).unwrap_or(0)) else {
+                    return false;
+                };
+                host.set_character(Some(picked));
+                host.selection_mut().character = Some(picked);
+                chrome::flash_press();
+                // S77 触摸端到端：点未勾选席位 = 加入多选；点**已勾选**席位 = 确认推进
+                // （对齐 select_map on_hit 的 touch→Confirm）。此前 on_hit 只勾选不确认 ⇒
+                // 选角页触摸无法进入下一场景（底部「确认」仅键盘），与 select_map 不一致。
+                let already_marked = host.player_seats().contains(&picked);
+                if already_marked {
+                    return host.advance(GameInput::Confirm);
+                }
+                toggle_seat_mark(host, picked);
+                false
+            }
+            _ => false,
         }
-        toggle_seat_mark(host, picked);
-        false
     }
 
     /// S18.7d 声明式原语化：版面（夜空 / 左角色立绘锚 / 右 5 行选项 / 提示行）=
@@ -168,7 +175,7 @@ impl Scene for SelectRoleScene {
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("select_role");
         let current = host.character().map_or(0, |c| c.index() as usize);
-        chrome::render_primitives(host, "select_role", i64::try_from(current).unwrap_or(-1));
+        // S85.5：chrome 全部由 schema 通用 builder 渲染，CPU 死原语已删（不再画 prim）。
         // S29.3（B1）：右侧列表 chrome 已迁 Bevy `bevy_ui`（行位置由 taffy 算，不手写像素）⇒
         // CPU 路径跳过行的木底/选中边/按压闪影（Bevy 侧画）；未迁时照旧。
         if host.chrome_in_bevy_ui() {

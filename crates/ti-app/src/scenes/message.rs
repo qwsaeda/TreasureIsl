@@ -52,13 +52,12 @@ impl Scene for MessageScene {
         }
     }
 
-    /// S18.7d 声明式原语化：版面（夜空渐变 / 左侧立绘面板 / 右正文面板 / 页码带 / 海平面 /
-    /// 木框 / 提示行）= `scenes.json` `message.primitives`（z 序 = 绘制序，`render_primitives`
-    /// 统一 dispatch）；运行时内容 = 动态标题（msg 类型 i18n）/ 正文折行（QA111）/
-    /// 页点页码（QA144），全部按数据槽（`title`/`body`/`page`）落位，0 版面坐标代码。
+    /// S85.5：消息面板 chrome 已迁 `components_v1.json` schema（通用 Bevy builder 渲染）；
+    /// 运行时内容 = 动态标题（msg 类型 i18n）/ 正文折行（QA111）/ 页点页码（QA144），
+    /// 全部按数据槽（`title`/`body`/`page`）落位，0 版面坐标代码。
     fn render(&mut self, host: &mut dyn SceneHost) {
         let layout = chrome::scene_layout("message");
-        chrome::render_primitives(host, "message", -1);
+        // S85.5：chrome 全部由 schema 通用 builder 渲染，CPU 死原语已删（不再画 prim）。
         // S29.3（B1）：消息面板（面板/标题/正文自动折行/页点/页码/提示）已迁 Bevy `bevy_ui`
         // ⇒ CPU 路径跳过运行时面板绘制（Bevy 侧画）；未迁时照旧。
         if host.chrome_in_bevy_ui() {

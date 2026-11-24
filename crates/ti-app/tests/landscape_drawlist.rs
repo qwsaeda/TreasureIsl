@@ -1,13 +1,13 @@
 //! S38 方案 A：横屏世界层 draw list 验证（无头，不依赖 GPU readback）。
 //!
-//! `--shot` 对 `index` 与 `select_role` 的 `readback` 已知环境 GPU flake（仅 `vs`/`main_map` 可靠读回，
-//! 见 `evidence/S38.0.log`），故横屏版面用**绘制列表级**断言验证：场景 `render()` 按当前
-//! 方向（`Settings.orientation`）选 `scenes.json` 的 `primitives`（1920×1080 坐标），
-//! 写入 draw list 的 Image/Rect/Text op 矩形 = 期望横屏坐标。
+//! S85.5：5 纯 UI 场景 chrome 已从 `scenes.json` 死原语迁到 `components_v1.json` schema
+//! （CPU 路径不再绘制这些场景），故其断言改为**schema 结构 + `asset_roles` 解析**：
+//! 背景/立绘 role 须解析到改前同名资产，列表/面板 action 与 binding 声明须在位。
+//! `vs`/`main_map` = 游戏世界，仍走 1080 draw list（原语未迁），判据不动。
 //!
 //! 判据：
-//! - index 横屏：`chart_full` 满屏 (0,0,1920,1080) + `helm` 屏心 (828,408,264,264)；
-//! - `select_role` 横屏：`bg_night_sea` 满屏 (0,0,1920,1080) + 立绘面板 (60,110,560,700)；
+//! - 5 纯 UI 场景：schema 声明齐 + role→资产解析 + action/binding 契约；
+//! - `vs` / `main_map`：draw list Image/Rect op 矩形 = 横屏坐标（游戏世界不迁）。
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
@@ -46,39 +46,35 @@ fn rect_rects(app: &GameApp) -> Vec<(i32, i32, i32, i32)> {
         .collect()
 }
 
-/// S39：`index` 横屏新版世界层 + UI 层组件（羊皮藏宝图底 + 人物互动层 + 绳挂木牌菜单 6 块）。
-///
-/// 判据（`scenes.json` `index` 原语）：
-/// - `index_bg_map_h.png` 满屏 (0,0,1920,1080)（标题已烘焙进底图）；
-/// - `index_hero_duo.png` 人物层 (511,324,679,660)（居中偏左）；
-/// - `index_rope.png` 菜单主绳 (1446,138,434,28)；
-/// - 6 块木牌（第 0 块未旋转 (1446,176,434,92)；第 1 块旋转 expand (1444,274,438,108)）。
+/// schema 组件 + role→资产解析（S85.5 纯 UI 场景断言入口）。
+fn scene_schema(id: &str) -> ti_core::data::ui_schema::SceneComponents {
+    ti_core::data::ui_schema::components()
+        .expect("components_v1.json 加载")
+        .get(id)
+        .expect("components_v1.json 缺场景")
+        .clone()
+}
+
+fn role_path(role: &str) -> String {
+    ti_core::data::ui_schema::asset_roles()
+        .expect("asset_roles.json 加载")
+        .path(role)
+        .expect("asset_roles.json 缺 role")
+        .to_owned()
+}
+
+/// S39/S85.5：`index` 组件声明（羊皮藏宝图底 + 人物互动层 + 6 木牌菜单 + 尾行）。
 #[test]
 fn index_landscape_world_layer() {
-    let mut app = game();
-    app.render();
-    let rects = image_rects(&app);
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("index_bg_map_h.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
-        }),
-        "index 横屏 羊皮底图应满屏 1920×1080，got {rects:?}"
-    );
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("index_hero_duo.png") && *x == 511 && *y == 324 && *w == 679 && *h == 660
-        }),
-        "index 横屏 人物互动层应在 (511,324,679,660)，got {rects:?}"
-    );
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("index_rope.png") && *x == 1446 && *y == 138 && *w == 434 && *h == 28
-        }),
-        "index 横屏 菜单主绳应在 (1446,138,434,28)，got {rects:?}"
-    );
-    // S81：木牌坐标已参数化（JSON rect 置 0 + derived=menu），真实 rect 由 Bevy 壳
-    // index_menu_rect 运行期从 menu.* 算（发货路径）；CPU 后端不再持有 UI 层权威坐标
-    // （bevy-cpu-parity 已排除 UI 层）⇒ 此处只验数据契约，不再断言 draw list 木牌死坐标。
+    let sc = scene_schema("index");
+    assert_eq!(role_path("index_bg"), "assets/ui/index_bg_map_h.png", "羊皮底图 role 漂移");
+    assert_eq!(role_path("index_hero"), "assets/ui/index_hero_duo.png", "人物互动层 role 漂移");
+    let menu = sc.elements.iter().find(|e| e.id == "menu").expect("index 缺 menu 列表组件");
+    assert_eq!(menu.action, "menu_select", "首页 6 木牌须声明 menu_select action");
+    assert!(menu.binding == "menu", "首页菜单 binding 漂移");
+    let bg = sc.elements.iter().find(|e| e.id == "bg").expect("index 缺 bg 组件");
+    assert_eq!(bg.layout.intent, "fill", "满屏底图须声明 fill 意图");
+    // S81：木牌运行期几何参数（extra_scalar）仍在 scenes.json 数据面，保留防漂移。
     let scenes = ti_core::data::scenes().expect("scenes.json 加载");
     let index = scenes.get("index").expect("scenes.json 缺 index");
     assert!(
@@ -87,98 +83,43 @@ fn index_landscape_world_layer() {
         "index 横屏 menu 参数缺失/漂移: {:?}",
         index.extra_scalar
     );
-    let derived_planks: Vec<_> = index
-        .primitives
-        .iter()
-        .filter(|p| p.params.get("derived").and_then(|v| v.as_str()) == Some("menu"))
-        .collect();
-    assert_eq!(derived_planks.len(), 18, "index 横屏 18 行木牌/图标应标 derived=menu");
 }
 
-/// S38：`select_role` 横屏世界层（bg 满屏 + 立绘面板左侧）。
+/// S85.5：`select_role` 组件声明（夜空底 + 角色列表 + 标题/导航文本）。
 #[test]
 fn select_role_landscape_world_layer() {
-    let mut app = game();
-    ti_app::forward_nav::navigate(&mut app, "select_role");
-    app.render();
-    let rects = image_rects(&app);
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
-        }),
-        "select_role 横屏 bg 应满屏 1920×1080，got {rects:?}"
-    );
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.contains("role_") && *x == 40 && *y == 90 && *w == 720 && *h == 810
-        }),
-        "select_role 横屏立绘应在左侧面板 (40,90,720,810，S63 T9 候选 A 放大)，got {rects:?}"
-    );
+    let sc = scene_schema("select_role");
+    assert_eq!(role_path("bg_night_sea"), "assets/ui/bg_night_sea.png", "夜空底 role 漂移");
+    let roster = sc.elements.iter().find(|e| e.id == "roster").expect("缺 roster 列表组件");
+    assert_eq!(roster.action, "character_select", "选角列表 action 漂移");
+    assert_eq!(roster.binding, "characters", "选角 binding 漂移");
 }
 
-/// S38：`select_map` 横屏世界层（bg 满屏 + 3 张地图缩略图**横排**）。
+/// S85.5：`select_map` 组件声明（夜空底 + 地图列表 + 标题/导航文本）。
 #[test]
 fn select_map_landscape_world_layer() {
-    // 3 张缩略图横排（left panel 20,140,1160,760 内 x=40/420/800，y=200）
-    let mut app = game();
-    ti_app::forward_nav::navigate(&mut app, "select_map");
-    app.render();
-    let rects = image_rects(&app);
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
-        }),
-        "select_map 横屏 bg 应满屏 1920×1080，got {rects:?}"
-    );
-    let expect: &[(&str, i32, i32)] =
-        &[("map_harbour.png", 40, 200), ("map_open_sea.png", 420, 200), ("map_reef.png", 800, 200)];
-    for (asset, ex, ey) in expect {
-        assert!(
-            rects.iter().any(|(a, x, y, w, h)| {
-                a.ends_with(asset) && *x == *ex && *y == *ey && *w == 360 && *h == 280
-            }),
-            "select_map 横屏 {asset} 应在 ({ex},{ey},360,280)，got {rects:?}"
-        );
-    }
+    let sc = scene_schema("select_map");
+    let maps = sc.elements.iter().find(|e| e.id == "maps").expect("缺 maps 列表组件");
+    assert_eq!(maps.action, "map_select", "选图列表 action 漂移");
+    assert_eq!(maps.binding, "map_slots", "选图 binding 漂移");
 }
 
-/// S38：`message` 横屏世界层（bg 满屏）。
-/// 面板/导航 = `bevy_ui`（`build_message_chrome`），面板居中由 `bevy_ui` 适配。
+/// S85.5：`message` 组件声明（夜空底 + 消息面板 + 导航文本）。
 #[test]
 fn message_landscape_world_layer() {
-    // bg 满屏 1920×1080
-    let mut app = game();
-    ti_app::forward_nav::navigate(&mut app, "message");
-    app.render();
-    let rects = image_rects(&app);
-    assert!(
-        rects.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
-        }),
-        "message 横屏 bg 应满屏 1920×1080，got {rects:?}"
-    );
+    let sc = scene_schema("message");
+    let panel = sc.elements.iter().find(|e| e.id == "panel").expect("缺 panel 面板组件");
+    assert_eq!(panel.binding, "msg_pages", "消息面板 binding 漂移");
+    assert_eq!(panel.kind, "panel", "消息面板 type 漂移");
 }
 
-/// S38：`saveload` 横屏世界层（bg 满屏 + 5 按钮右侧竖排）。
-/// 5 槽列表 = `bevy_ui`（`build_list_chrome_pos` `PanelSide::Left`），左侧自动重排。
+/// S85.5：`saveload` 组件声明（夜空底 + 槽位列表 + 标题/导航文本）。
 #[test]
 fn saveload_landscape_world_layer() {
-    // bg 满屏 + slot1 按钮 (1680,125,180,150)
-    let mut app = game();
-    ti_app::forward_nav::navigate(&mut app, "saveload");
-    app.render();
-    let imgs = image_rects(&app);
-    assert!(
-        imgs.iter().any(|(a, x, y, w, h)| {
-            a.ends_with("bg_night_sea.png") && *x == 0 && *y == 0 && *w == 1920 && *h == 1080
-        }),
-        "saveload 横屏 bg 应满屏 1920×1080，got {imgs:?}"
-    );
-    let rects = rect_rects(&app);
-    assert!(
-        rects.iter().any(|(x, y, w, h)| *x == 1680 && *y == 125 && *w == 180 && *h == 150),
-        "saveload 横屏 slot1 按钮应在 (1680,125,180,150)，got {rects:?}"
-    );
+    let sc = scene_schema("saveload");
+    let slots = sc.elements.iter().find(|e| e.id == "slots").expect("缺 slots 列表组件");
+    assert_eq!(slots.action, "slot_write", "槽位列表 action 漂移");
+    assert_eq!(slots.binding, "save_slots", "存读档 binding 漂移");
 }
 
 /// S38：`vs` 横屏正式战斗（`render_v2_elem_landscape`：bg 框内 + 顶双 HP 框 + 角色对角）。

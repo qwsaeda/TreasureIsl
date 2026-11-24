@@ -1,14 +1,17 @@
 //! `/api/themes`：主题管理面（S49.3，S48.0 全主题创新）。
 //!
 //! 职责（30 号 §2.2.1 全主题规范 + 14 号 `ui_theme.py` 工具契约）：
-//! - `list`：`assets/themes/` 全部主题包（`compose` 合法 + 资产齐 + `applied` 态 vs 当前 `scenes.json`）；
-//! - `verify <tid>`：主题包校验（`compose`/`landscape_primitives`/`assets` 源 + `ui_manifest` 登记，只读）；
-//! - `apply <tid>`：`ui_theme.py apply`（写 `scenes.json` 构图 + 部署资产 + `validate_data`），
+//! - `list`：`assets/themes/` 全部主题包（`compose` 合法 + 资产齐 + `applied` 态 vs 当前
+//!   `components_v1.json` 的 `scenes.index.overrides`；S85.2 写点迁移）；
+//! - `verify <tid>`：主题包校验（`compose`/组件覆盖列表/`assets` 源 + `ui_manifest` 登记，只读）；
+//! - `apply <tid>`：`ui_theme.py apply`（写 `components_v1.json` overrides + 部署资产 + `validate_data`），
 //!   写面由调用方门控（X-TI-Token + `enable_write`，22 号 §10.1；同 S48.0 wizard theme 步路径）。
 //!
-//! 本模块 **0 游戏依赖**；只读面（list/verify）0 写盘；apply 写点 = `ui_theme.py` 子进程
-//! （`assets/data/scenes.json` + `assets/ui/` + `assets/ui_manifest.json`，S48.0 wizard theme 步同路径）。
+//! 本模块 **0 游戏依赖**（不引 ti-core；角色/覆盖导出逻辑在本模块内联，与 ti-core 同口径）；
+//! 只读面（list/verify）0 写盘；apply 写点 = `ui_theme.py` 子进程
+//! （`assets/data/ui_schema/components_v1.json` + `assets/ui/` + `assets/ui_manifest.json`）。
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use serde_json::{Value, json};
@@ -37,25 +40,113 @@ fn pick_scenes_path(repo_root: &Path, sources: &RepoSources) -> Result<std::path
     Err("console_sources.json 缺 scenes.json 数据源项（S49.3 漏登记）".to_owned())
 }
 
+/// JSON 对象 → 字符串字典（role→路径）；非对象 / 非字符串值忽略。
+fn string_dict(value: Option<&Value>) -> BTreeMap<String, String> {
+    value
+        .and_then(Value::as_object)
+        .map(|obj| {
+            obj.iter()
+                .filter_map(|(key, val)| val.as_str().map(|s| (key.clone(), s.to_owned())))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// `asset_roles.json` 的 roles 表（缺文件/非法 JSON = 空表；平台 0 游戏依赖故本地读）。
+fn asset_roles(repo_root: &Path) -> BTreeMap<String, String> {
+    let Ok(raw) = std::fs::read_to_string(repo_root.join("assets/data/ui_schema/asset_roles.json"))
+    else {
+        return BTreeMap::new();
+    };
+    let Ok(v) = serde_json::from_str::<Value>(&raw) else {
+        return BTreeMap::new();
+    };
+    string_dict(v.get("roles"))
+}
+
+/// 从主题 compose 组件覆盖列表导出 role→资产路径（与 `ui_theme.py::derive_overrides` 同口径）。
+fn overrides_from_compose(
+    compose: &Value,
+    tid: &str,
+    role_paths: &BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    if let Some(obj) = compose.get("overrides").and_then(Value::as_object) {
+        for (k, v) in obj {
+            if let Some(path) = v.as_str().filter(|s| s.starts_with("assets/")) {
+                out.insert(k.clone(), path.to_owned());
+            }
+        }
+        return out;
+    }
+    let Some(prims) = compose.get("landscape_primitives").and_then(Value::as_array) else {
+        return out;
+    };
+    for prim in prims {
+        let params = prim.get("params");
+        let asset = ["asset", "image", "src", "file"]
+            .iter()
+            .find_map(|k| params.and_then(|p| p.get(*k)).and_then(Value::as_str))
+            .or_else(|| prim.get("asset").and_then(Value::as_str));
+        let Some(asset) = asset.filter(|s| s.starts_with("assets/")) else {
+            continue;
+        };
+        let explicit = prim
+            .get("role")
+            .and_then(Value::as_str)
+            .or_else(|| params.and_then(|p| p.get("role")).and_then(Value::as_str))
+            .filter(|s| !s.is_empty());
+        let role = if let Some(r) = explicit {
+            r.to_owned()
+        } else {
+            let fname = Path::new(asset).file_name().and_then(|s| s.to_str()).unwrap_or("");
+            let stem = fname.strip_suffix(".png").unwrap_or(fname);
+            let prefix = format!("{tid}_");
+            let stripped = stem.strip_prefix(&prefix).unwrap_or(stem);
+            let mut candidates =
+                vec![stem.to_owned(), stripped.to_owned(), format!("index_{stripped}")];
+            if let Some(s) = stem.strip_prefix("index_") {
+                candidates.push(s.to_owned());
+            }
+            let found = candidates.iter().find_map(|cand| {
+                let want = format!("{cand}.png");
+                role_paths.iter().find_map(|(r, p)| {
+                    let base = Path::new(p).file_name().and_then(|s| s.to_str()).unwrap_or("");
+                    if p.as_str() == asset || base == want.as_str() {
+                        Some(r.clone())
+                    } else {
+                        None
+                    }
+                })
+            });
+            found.unwrap_or_else(|| {
+                if stripped == stem { stem.to_owned() } else { stripped.to_owned() }
+            })
+        };
+        out.insert(role, asset.to_owned());
+    }
+    out
+}
+
 /// `/api/themes` 只读面：全部主题包清单。
 ///
-/// `applied` = 当前 `scenes.json index.landscape.primitives` == 该主题 `landscape_primitives`
-/// （S48.0 回注验证后恢复 S39 默认；运行时默认不变，主题 apply 切换后匹配）。
+/// `applied` = 当前 `components_v1.json scenes.index.overrides`（role→路径）== 该主题 compose
+/// 导出的覆盖表（S85.2 写点迁移；S84 后 scenes.json 无 `index.landscape` 段）。
 ///
 /// # Errors
-/// scenes.json 读/解析失败（数据源面不可用）= `Err`（如实上报）。
+/// `components_v1.json` 读/解析失败（数据源面不可用）= `Err`（如实上报）。
 pub fn themes_list(repo_root: &Path, sources: &RepoSources) -> Result<Value, String> {
-    let scenes_path = pick_scenes_path(repo_root, sources)?;
-    let scenes_raw =
-        std::fs::read_to_string(&scenes_path).map_err(|e| format!("读 scenes.json 失败：{e}"))?;
-    let scenes: Value =
-        serde_json::from_str(&scenes_raw).map_err(|e| format!("scenes.json 非法 JSON：{e}"))?;
-    let current = scenes
-        .get("index")
-        .and_then(|i| i.get("landscape"))
-        .and_then(|l| l.get("primitives"))
-        .cloned()
-        .unwrap_or(Value::Array(vec![]));
+    // 保留 scenes.json 数据源登记校验（S49.3 repo_sources 仍在册；0 写盘）。
+    let _ = pick_scenes_path(repo_root, sources)?;
+    let components_path = repo_root.join("assets/data/ui_schema/components_v1.json");
+    let components_raw = std::fs::read_to_string(&components_path)
+        .map_err(|e| format!("读 components_v1.json 失败：{e}"))?;
+    let components: Value = serde_json::from_str(&components_raw)
+        .map_err(|e| format!("components_v1.json 非法 JSON：{e}"))?;
+    let current = string_dict(
+        components.get("scenes").and_then(|s| s.get("index")).and_then(|i| i.get("overrides")),
+    );
+    let roles = asset_roles(repo_root);
     let themes_dir = repo_root.join("assets/themes");
     let mut themes: Vec<Value> = Vec::new();
     if let Ok(rd) = std::fs::read_dir(&themes_dir) {
@@ -68,7 +159,7 @@ pub fn themes_list(repo_root: &Path, sources: &RepoSources) -> Result<Value, Str
             let raw = std::fs::read_to_string(&compose_path).unwrap_or_default();
             let Ok(compose) = serde_json::from_str::<Value>(&raw) else {
                 themes.push(json!({
-                    "id": name, "name": "", "scene": "", "primitives": 0,
+                    "id": name, "name": "", "scene": "", "primitives": 0, "overrides": 0,
                     "assets": [], "valid": false, "applied": false,
                     "error": "compose.json 非法 JSON",
                 }));
@@ -79,6 +170,7 @@ pub fn themes_list(repo_root: &Path, sources: &RepoSources) -> Result<Value, Str
                 .and_then(Value::as_array)
                 .cloned()
                 .unwrap_or_default();
+            let overrides = overrides_from_compose(&compose, &name, &roles);
             let assets_obj =
                 compose.get("assets").and_then(Value::as_object).cloned().unwrap_or_default();
             let mut asset_present = true;
@@ -88,13 +180,14 @@ pub fn themes_list(repo_root: &Path, sources: &RepoSources) -> Result<Value, Str
                     asset_present = false;
                 }
             }
-            let valid = !prims.is_empty() && asset_present;
-            let applied = !prims.is_empty() && current == Value::Array(prims.clone());
+            let valid = !overrides.is_empty() && asset_present;
+            let applied = !overrides.is_empty() && current == overrides;
             themes.push(json!({
                 "id": compose.get("id").and_then(Value::as_str).unwrap_or(&name),
                 "name": compose.get("name").and_then(Value::as_str).unwrap_or(""),
                 "scene": compose.get("scene").and_then(Value::as_str).unwrap_or(""),
                 "primitives": prims.len(),
+                "overrides": overrides.len(),
                 "assets": assets_obj.keys().cloned().collect::<Vec<_>>(),
                 "valid": valid,
                 "applied": applied,
@@ -106,13 +199,14 @@ pub fn themes_list(repo_root: &Path, sources: &RepoSources) -> Result<Value, Str
     Ok(json!({
         "count": themes.len(),
         "themes": themes,
-        "note": "S49.3 主题管理（S48.0 全主题创新）：applied = 当前 scenes.json index.landscape.primitives 匹配该主题",
+        "note": "S85.2 主题管理：applied = 当前 components_v1.json scenes.index.overrides 匹配该主题",
     }))
 }
 
 /// `/api/themes?verify=<tid>`：主题包校验（只读）。
 ///
-/// 判据 = `compose` 合法（`id`/`name`/`scene`/`landscape_primitives`/`assets`）+ `landscape_primitives` 非空
+/// 判据 = `compose` 合法（`id`/`name`/`scene`/组件覆盖列表 `landscape_primitives`/`assets`）
+/// + 组件覆盖列表非空（其 role→路径导出写入 `components_v1.json` overrides）
 /// + 每个 `compose.assets` 源文件在位 + 每个部署资产 `assets/ui/<name>.png` 在位
 /// + `ui_manifest` 登记（`file=assets/ui/<name>.png`）。违规清单非空 = `ok:false`。
 ///
@@ -194,7 +288,8 @@ pub fn theme_verify(repo_root: &Path, tid: &str) -> Result<Value, String> {
 ///
 /// 命令 = `treasure-bevy-native --shot --scene=index --viewport=1920x1080`（bin 路径 =
 /// [`crate::content::ui_wizard::resolve_bin_path`]），env `TI_THEME=<tid>`（引擎侧
-/// [`apply_theme_preview`] 注入 `index.landscape.primitives`，**不 apply 不改仓库**）。
+/// [`apply_theme_preview`] 读 `components_v1.json` overrides 按 role 替换顶层 index.primitives 资产，
+/// **不 apply 不改仓库**）。
 /// 无头环境走 `xvfb-run -a`（Linux 迁移口径，同 [`scene_shot_command`]）。
 /// 出图 = `evidence/bevy_native_theme_<tid>_1920x1080.png`（gitignored 侧车，平台面板内嵌展示）。
 ///
@@ -244,7 +339,7 @@ pub fn theme_preview(repo_root: &Path, tid: &str) -> Result<Value, String> {
         "shot_ok": shot_ok,
         "image": format!("evidence/{out_name}"),
         "output": output.chars().take(2000).collect::<String>(),
-        "note": "theme preview：TI_THEME 运行时注入 index.landscape.primitives + 资产回退，--shot 出图（零写面，不 apply 不改仓库）",
+        "note": "theme preview：TI_THEME 读 components_v1.json overrides 按 role 替换 index.primitives 资产 + 回退，--shot 出图（零写面，不 apply 不改仓库）",
     }))
 }
 
@@ -278,7 +373,7 @@ pub fn theme_apply(repo_root: &Path, tid: &str, register: bool) -> Result<Value,
         "register": register,
         "exit_code": exit_code,
         "output": output.chars().take(3000).collect::<String>(),
-        "note": "ui_theme.py apply：回注 scenes.json index.landscape.primitives + 部署资产 + 登记 + validate_data（S48.0）",
+        "note": "ui_theme.py apply：回注 components_v1.json scenes.index.overrides（role→路径）+ 部署资产 + 登记 + validate_data（S48.0，S85.2 写点迁移）",
     }))
 }
 

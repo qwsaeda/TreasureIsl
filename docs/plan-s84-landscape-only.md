@@ -35,7 +35,8 @@
 
 **6A 零 Rust 兼容技巧（推荐过渡）**：把每场景顶层 `primitives` 直接换成原 `landscape.primitives`（1920×1080）并删 `landscape` 段——因 `prims_for(true)` 回退条件 = `landscape_prims.is_empty()`（`ti-core/src/data/mod.rs:803`），横屏调用自然落到 `&primitives`；`extra_for` 同构。**全部横屏渲染路径立即正确，Rust 结构体可不动**。代价 = 仍留竖屏死代码，待 6B 逐步清。
 
-**6B 彻底简化的必改点**：
+**6B 彻底简化的必改点**（决策历史时点值；**S85 已进一步用声明式 schema 取代本节的 prim 扁平化路线**：
+`components_v1.json` 承载 5 纯 UI 场景组件，`index_param_rect`/`index_data_items`/`build_*_chrome` 与 5 场景死 prim 已于 S85.5 删除，见 `docs/process/33_ui_component_schema.md`）：
 - 数据结构：`ti-core/src/data/layout.rs` 删 RawLandscape/RawScene.landscape/portrait_zones/解析链；`mod.rs` 删 SceneLayout 对应字段 + `prims_for/extra_for`，消费方直接用 `.primitives/.extra`。
 - 引擎/应用：去方向分支——`index_data_items` 竖屏分支 + `index_ring_rect`、`index_param_rect` 竖屏环分支、`message_panel_params` else、main_map.rs 37 处 PANEL else、vs.rs 分支、`treasure_bevy.rs` 22 处方向判别。
 - 工具/平台改键目标：`ui_theme.py`/`map_pack.rs::merge_theme_scenes`/`ui_wizard.rs`/`ti-console themes.rs` 写 `index.landscape.primitives` → `index.primitives`；`validate_data::check_scenes_item_contract`/`check_data_driven`/`ui_assets` 原语扫描盲区（扁平化后反而更严，利好）。

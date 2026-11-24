@@ -343,33 +343,164 @@ fn merge_strings_upsert(strings_raw: Option<&str>) -> Option<String> {
     serde_json::to_string(&strings).ok()
 }
 
-/// S49.4c 主题预览构图合并（运行时注入，零写面）：
-/// 主题包 `landscape_primitives` 数组 upsert 进内嵌 `scenes.json` 的
-/// `index.landscape.primitives`（只改该键，其余原样 ⇒ 0 churn），返回整段 scenes.json
-/// 文本供 [`super::table_source::install`] 注入。缺 `index.landscape` 或 prims 空 = `None`。
+/// S85.2 主题写点迁移（运行时注入，零写面）：
+/// 主题的**唯一写点已改为** `assets/data/ui_schema/components_v1.json` 的
+/// `scenes.index.overrides`（role→资产路径，由 `scripts/ui_theme.py apply` 写盘）；
+/// S84 后 `scenes.json` 已无 `index.landscape` 段，本函数不再回注该旧键。
 ///
-/// 0 游戏语义：本函数只做「主题构图 → scenes.json index.landscape 段」的文本合并，
-/// 不含规则判定（与 `merge_scenes_upsert` 同层）。
+/// 本函数保留「主题覆盖 → 运行时 scenes.json」的内存合并能力：把引擎传入的
+/// `overrides`（role→path）按 `role_paths`（`asset_roles.json` role→默认路径）反查，
+/// 替换内嵌 `scenes.json` **顶层** `index.primitives` 中相应原语的 `params.asset`
+/// （阴影期渲染仍走旧原语；S85.3 新渲染器直接消费 overrides 后本函数可退役）。
+/// 缺任一输入 / 无原语命中 = `None`（调用方跳过注入，不 panic）。
+///
+/// 0 游戏语义：只做「主题覆盖 → scenes.json 资产路径」的文本替换，不含规则判定
+/// （与 `merge_scenes_upsert` 同层）。
 #[must_use]
-pub fn merge_theme_scenes(prims: &[serde_json::Value]) -> Option<String> {
-    if prims.is_empty() {
+pub fn merge_theme_scenes(
+    overrides: &BTreeMap<String, String>,
+    role_paths: &BTreeMap<String, String>,
+) -> Option<String> {
+    if overrides.is_empty() {
         return None;
     }
-    let mut scenes: serde_json::Value = serde_json::from_str(super::SCENES_JSON)
-        .unwrap_or(serde_json::Value::Object(serde_json::Map::default()));
-    let patched = scenes
+    let mut scenes: serde_json::Value = serde_json::from_str(super::SCENES_JSON).ok()?;
+    let mut patched = 0usize;
+    if let Some(prims) = scenes
         .get_mut("index")
         .and_then(serde_json::Value::as_object_mut)
-        .and_then(|idx| idx.get_mut("landscape"))
-        .and_then(serde_json::Value::as_object_mut)
-        .map(|land| {
-            land.insert("primitives".to_string(), serde_json::Value::Array(prims.to_vec()));
-        })
-        .is_some();
-    if !patched {
+        .and_then(|idx| idx.get_mut("primitives"))
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for prim in prims.iter_mut() {
+            let Some(params) = prim.get_mut("params").and_then(serde_json::Value::as_object_mut)
+            else {
+                continue;
+            };
+            let Some(asset) = params.get("asset").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            // 默认路径反查 role（asset_roles.json），再查覆盖表；无 role 命中时退到
+            // 资产 basename stem 候选（与 ui_theme.py::role_for_asset 同口径）。
+            let role = role_paths.iter().find_map(|(r, default_path)| {
+                let same = default_path == asset
+                    || Path::new(default_path).file_name() == Path::new(asset).file_name();
+                if same { Some(r.as_str()) } else { None }
+            });
+            let stem = Path::new(asset).file_name().and_then(|s| s.to_str()).unwrap_or("");
+            let stem = stem.strip_suffix(".png").unwrap_or(stem);
+            let override_path = role
+                .and_then(|r| overrides.get(r))
+                .or_else(|| overrides.get(stem))
+                .or_else(|| stem.strip_prefix("index_").and_then(|s| overrides.get(s)));
+            if let Some(path) = override_path {
+                params.insert("asset".to_owned(), serde_json::Value::String(path.clone()));
+                patched += 1;
+            }
+        }
+    }
+    if patched == 0 {
         return None;
     }
     serde_json::to_string(&scenes).ok()
+}
+
+/// 解析 `asset_roles.json` 文本 → role→默认资产路径表（缺键/非法 JSON = 空表）。
+#[must_use]
+pub fn theme_role_paths(raw: &str) -> BTreeMap<String, String> {
+    json_string_map_at(raw, &["roles"])
+}
+
+/// 解析 `components_v1.json` 文本 → `scenes.index.overrides`（role→资产路径；缺键 = 空表）。
+#[must_use]
+pub fn theme_overrides(raw: &str) -> BTreeMap<String, String> {
+    json_string_map_at(raw, &["scenes", "index", "overrides"])
+}
+
+/// 按路径取 JSON 对象的字符串字典（任一层非对象 / 非法 JSON = 空表）。
+fn json_string_map_at(raw: &str, path: &[&str]) -> BTreeMap<String, String> {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(raw) else {
+        return BTreeMap::new();
+    };
+    let mut node = &value;
+    for key in path {
+        let Some(next) = node.get(*key) else {
+            return BTreeMap::new();
+        };
+        node = next;
+    }
+    node.as_object()
+        .map(|obj| {
+            obj.iter().filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_owned()))).collect()
+        })
+        .unwrap_or_default()
+}
+
+/// 从主题 compose 组件覆盖列表导出 role→资产路径（与 `ui_theme.py::derive_overrides` 同口径）：
+/// 显式 `role` > `asset_roles` 反查（去 `<tid>_` 前缀 / `index_` 变体）> 去前缀 stem。
+#[must_use]
+pub fn theme_overrides_from_compose(
+    compose: &serde_json::Value,
+    tid: &str,
+    role_paths: &BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    if let Some(obj) = compose.get("overrides").and_then(serde_json::Value::as_object) {
+        for (k, v) in obj {
+            if let Some(path) = v.as_str().filter(|s| s.starts_with("assets/")) {
+                out.insert(k.clone(), path.to_owned());
+            }
+        }
+        return out;
+    }
+    let Some(prims) = compose.get("landscape_primitives").and_then(serde_json::Value::as_array)
+    else {
+        return out;
+    };
+    for prim in prims {
+        let params = prim.get("params");
+        let asset = ["asset", "image", "src", "file"]
+            .iter()
+            .find_map(|k| params.and_then(|p| p.get(*k)).and_then(serde_json::Value::as_str))
+            .or_else(|| prim.get("asset").and_then(serde_json::Value::as_str));
+        let Some(asset) = asset.filter(|s| s.starts_with("assets/")) else {
+            continue;
+        };
+        let explicit = prim
+            .get("role")
+            .and_then(serde_json::Value::as_str)
+            .or_else(|| params.and_then(|p| p.get("role")).and_then(serde_json::Value::as_str))
+            .filter(|s| !s.is_empty());
+        let role = if let Some(r) = explicit {
+            r.to_owned()
+        } else {
+            let fname = Path::new(asset).file_name().and_then(|s| s.to_str()).unwrap_or("");
+            let stem = fname.strip_suffix(".png").unwrap_or(fname);
+            let prefix = format!("{tid}_");
+            let stripped = stem.strip_prefix(&prefix).unwrap_or(stem);
+            let mut candidates =
+                vec![stem.to_owned(), stripped.to_owned(), format!("index_{stripped}")];
+            if let Some(s) = stem.strip_prefix("index_") {
+                candidates.push(s.to_owned());
+            }
+            let found = candidates.iter().find_map(|cand| {
+                let want = format!("{cand}.png");
+                role_paths.iter().find_map(|(r, p)| {
+                    let base = Path::new(p).file_name().and_then(|s| s.to_str()).unwrap_or("");
+                    if p.as_str() == asset || base == want.as_str() {
+                        Some(r.clone())
+                    } else {
+                        None
+                    }
+                })
+            });
+            found.unwrap_or_else(|| {
+                if stripped == stem { stem.to_owned() } else { stripped.to_owned() }
+            })
+        };
+        out.insert(role, asset.to_owned());
+    }
+    out
 }
 
 /// 包根目录（`TI_MAP_ROOT` 环境变量 > `assets/maps`，壳层相对 CWD 跑；0 硬编码绝对路径）。

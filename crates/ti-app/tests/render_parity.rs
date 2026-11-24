@@ -106,16 +106,17 @@ fn render_is_deterministic_per_scene() {
     }
 }
 
-/// P4-1 判据：各场景渲染后都有真实内容（非黑屏/全背景）。
+/// P4-1 判据：渲染后有真实内容（非黑屏/全背景）。
+/// S85.5：5 纯 UI 场景 chrome 迁 schema（CPU 死原语已删，CPU 帧不再承载），
+/// 像素判据只对游戏世界（MainMap/Vs）成立；5 场景改验 schema 组件表非空。
 #[test]
 fn each_scene_renders_real_content() {
-    for (name, pixels) in [
-        ("Index", render_index()),
-        ("SelectRole", render_select_role()),
-        ("SelectMap", render_select_map()),
-        ("MainMap", render_main_map()),
-        ("Vs", render_vs()),
-    ] {
+    let schema = ti_core::data::ui_schema::components().expect("components_v1.json");
+    for name in ["index", "select_role", "select_map", "message", "saveload"] {
+        let sc = schema.get(name).expect("缺 UI 场景组件");
+        assert!(!sc.elements.is_empty(), "{name} 组件表为空（画面将空白）");
+    }
+    for (name, pixels) in [("MainMap", render_main_map()), ("Vs", render_vs())] {
         let ratio = ink_ratio(&pixels);
         assert!(ratio > 0.01, "{name} 场景渲染应有真实内容（墨点率 {ratio} > 1%）");
     }
@@ -136,22 +137,19 @@ fn distinct_scenes_produce_distinct_frames() {
 }
 
 /// P4-1 判据：主菜单标题「金银岛」命中真字形（与 `font_parity` 同口径，P0 资源解码参考）。
+/// S85.5：标题已烘焙进 `index_bg` 资产、木牌文案走 schema 文本组件；CPU 帧不再承载首页，
+/// 故改验 schema 文本 binding 解析非空（真字形由 `--shot` bevy 探针守）。
 #[test]
 fn index_scene_renders_real_glyphs_for_title() {
-    let pixels = render_index();
-    // S17.2：墨色判定走 theme 令牌（`COLOR_TEXT_ON_PARCH` 正文墨 / `COLOR_TEXT_ON_WOOD` 标题墨，
-    // 航海夜·精修 v2），不再硬编码旧色值；判定 = 任一墨色出现 > 10 像素。
-    let ink_pixels = pixels
-        .iter()
-        .filter(|&&p| {
-            p == ti_app::scenes::chrome::COLOR_TEXT_ON_PARCH
-                || p == ti_app::scenes::chrome::COLOR_TEXT_ON_WOOD
-        })
-        .count();
-    assert!(
-        ink_pixels > 10,
-        "主菜单标题+菜单项应渲染出真字形（theme 墨色像素数 {ink_pixels} > 10）"
-    );
+    let sc = ti_core::data::ui_schema::components()
+        .expect("components_v1.json")
+        .get("index")
+        .expect("index 组件")
+        .clone();
+    let footer = sc.elements.iter().find(|e| e.id == "footer").expect("index 缺 footer 组件");
+    assert_eq!(footer.binding, "scene.index.footer", "首页文案 binding 漂移");
+    let text = ti_app::i18n::sget(&footer.binding);
+    assert!(!text.is_empty(), "首页文案 i18n 解析为空（裸 key / 死文案）");
 }
 
 /// P4-1 判据：`Framebuf` 尺寸与呈现层分辨率 1920×1080 一致（S84 纯横屏；legacy 176×220 统一缩放落画布）。
@@ -160,23 +158,27 @@ fn framebuf_matches_logical_resolution() {
     let mut fb = Framebuf::new();
     fb.clear(0x0000);
     assert_eq!(fb.as_slice().len(), FB_PIXELS, "帧缓冲 = 1920×1080（S84 纯横屏）");
-    let mut app = GameApp::new(1920.0, 1080.0);
-    app.render();
-    let pixels = app.shell_mut().fb.as_slice();
-    // 标题条（v2 S15 木纹外框 COLOR_WOOD 0x59C4，index.title.h=24）覆盖第 0..24 行；
-    // 第 0 列 x=0 应是木纹外框色。字形豆腐块（INK_COLOR=0xFFFF）叠在标题文字区（x≥50），
-    // 不覆盖 x=0。允许 0x59C4（木纹）或 0x8A22（羊皮纸棋盘暗格在 x=0 的 2×2 块）——
-    // 关键是「非背景色 0xFD70、非黑 0x0000」。
+    // S85.5：index chrome 迁 schema（CPU 帧不再画首页），(0,0) 像素判据只对游戏世界成立；
+    // index 背景由 `index_bg` role 指向 assets/ui/index_bg_map_h.png（--shot 非黑探针守）。
+    let roles = ti_core::data::ui_schema::asset_roles().expect("asset_roles.json");
+    assert_eq!(roles.path("index_bg"), Some("assets/ui/index_bg_map_h.png"), "首页底图 role 漂移");
+    let mut game = GameApp::new(1920.0, 1080.0);
+    game.handle(GameInput::Confirm);
+    game.handle(GameInput::Next);
+    game.handle(GameInput::Confirm);
+    game.handle(GameInput::Next);
+    game.handle(GameInput::Confirm); // → MainMap（游戏世界）
+    let world_pixels = render_current(&mut game);
     let wood = ti_app::menu_shell::COLOR_WOOD;
     let parch_dark = ti_app::menu_shell::COLOR_PARCH_DARK;
-    // S18.7：index 外框改为**数据驱动**的暖木框（`wood_warm` 令牌）→ 一并接受。
     let wood_warm = ti_app::scenes::chrome::COLOR_WOOD_WARM;
-    // S18.8b：index 改为**贴图版式**（背景图 assets/ui/bg_night_sea.png 全屏铺底）→
-    // (0,0) 不再是木框，而是夜空背景的左上像素 → 判据降为「非黑」（贴图确实铺满了画面）。
     assert!(
-        pixels[0] == wood || pixels[0] == parch_dark || pixels[0] == wood_warm || pixels[0] != 0,
-        "像素(0,0) 应为木纹外框/羊皮纸/暖木框/背景贴图（非黑），实为 {:#05X}",
-        pixels[0]
+        world_pixels[0] == wood
+            || world_pixels[0] == parch_dark
+            || world_pixels[0] == wood_warm
+            || world_pixels[0] != 0,
+        "游戏世界像素(0,0) 应为木纹/羊皮纸/背景贴图（非黑），实为 {:#05X}",
+        world_pixels[0]
     );
 }
 

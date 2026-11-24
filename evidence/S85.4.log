@@ -1,0 +1,32 @@
+S85.4 事件/业务绑定（action 单一事实源 + 场景按 action 分派）· 验收证据（2026-11-24）
+
+== 改动面 ==
+规则实现（ti-core domain/ui_action.rs + ti-app 4 场景 on_hit + ti-engine shell action_key）+ 工具（doccheck2 断言）。
+
+== 判据 1：UiAction 单一事实源 ==
+- crates/ti-core/src/domain/ui_action.rs：UiAction 12 项枚举 + ACTION_TABLE（字符串↔key↔variant 唯一表），
+  from_schema_str/as_str/key/from_key 四方法全量查表派生；放 ti-core::domain（三方公共依赖，零新增依赖/无循环，理由：domain = 类型定义唯一权威）。
+- shell action_key 改为 `UiAction::from_schema_str(action).map(UiAction::key)`（零裸字面量），替旧手写 match。
+- 4 纯 UI 场景（index/select_role/select_map/saveload）on_hit 把 `if hit.key != N` 改为
+  `match UiAction::from_key(hit.key)` 按 variant 族分派（CharacterSelect|MapSelect、SlotLoad|SlotWrite 同 key 族），
+  swipe/back 分支原样；HitData 未加字段（from_key 反解，兼容）。
+- vs/main_map on_hit 完全未动（B1 游戏世界 1080 边界）。
+- key 口径 = menu=1/character·map=2/slot=3/spin=4（沿用旧 route_hit）；vs attack/do_item/defend=2/3/4；
+  msg_next/msg_prev/back=8/9/10（预留，schema 当前未用）。33 号文档 §4 已补说明。
+
+== 判据 2：doccheck2 断言升级 ==
+check_scene_required_pick_keys 拆出 check_action_key_contract/parse_action_table/check_action_table_contract：
+shell 非硬编码断言（必须从 from_schema_str().key() 派生）+ 9 项 key 契约（点名 action）+ ACTION_TABLE↔schema action 闭集双向对账。检查项数仍 57。
+
+== 判据 3：负例自证（2 条，已还原）==
+① ACTION_TABLE character_select key 2→9 → doccheck2 FAIL 点名；还原 → 0 error。
+② action_key 退回裸 match 硬编码 → 2 条 FAIL（未派生/仍有裸字面量）；还原 → 0 error。
+
+== 判据 4：全量门禁 ==
+cargo fmt --check 0；cargo clippy --workspace --all-targets -D warnings 0 error；
+cargo test --workspace 1087 passed/0 failed/1 ignored；
+doccheck 0 error；doccheck2 0 error；ui_schema_check OK；
+e2e：main_map_pick_e2e 3 PASS（Spin key=4）/select_role_touch_e2e 3/map_pack_select_e2e 3/e2e_playability 7；
+5 场景 --shot 844x390 全非黑、画面零变化。
+
+S85.4 可置 verified。

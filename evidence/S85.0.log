@@ -1,0 +1,28 @@
+S85.0 UI 系统重构立项 · 验收证据（2026-11-24）
+
+== 改动面 ==
+文档（docs/plan-s85-ui-system.md 设计稿 + README 登记 + AGENTS/26号/release 计数同步 + 台账 S85.0~S85.7）。
+
+== 触发 ==
+用户 2026-11-24 复核发现 scenes.json 名牌文字（#19~#28）rect 坐标逐条写死（60,915,720,80 重复 5 次），
+且该批 prim 在 bevy_ui 发货路径根本不消费；用户拍板「完整 UI 系统重构」：元素分有功能/无功能，
+有功能绑定业务 + type 约束（按钮/输入框/列表），业务代码与 UI 两侧按同一 schema 对齐。
+
+== 判据 1：设计稿 + 影响面清单（3 路 explore 实测回填）==
+docs/plan-s85-ui-system.md（178 行）含：
+- 现状诊断（数据层死坐标 / 业务绑定硬编码 4 段 / 现有意图化基础）
+- 目标架构（元素二分 + 声明式 schema 示例 + 通用渲染器 + 事件系统）
+- 影响面 §2/§2b/§2c（三路 explore 带路径行号）：①bevy_ui 渲染/事件层——index 已是数据化种子，
+  DataChromeItem/build_data_chrome 可复用；②数据/业务可绑定性——三件套可复用 + binding resolver +
+  S84 遗留 landscape 漂移；③依赖/门禁/迁移——测试/gate/doccheck2/脚本/平台写点全清单 + 阴影期双轨。
+- WBS S85.0~S85.7 + 判据 + 风险 + 迁移底线。
+
+== 判据 2：用户确认留痕（硬规则 9 A 纪律）==
+2026-11-24 用户消息确认「通过，按 WBS 开工」——新 schema 渲染画面与现状一致，
+只换底层数据/绑定方式，不改视觉。确认后方可落码。
+
+== 判据 3：登记 + 门禁 ==
+docs/README.md 计划段登记设计稿；台账 S85.0~S85.7 全 pending；
+计数同步 424 任务/416 verified/8 pending；doccheck 0 error + doccheck2 0 error + doc_numbers 0 漂移。
+
+S85.0 可置 verified。

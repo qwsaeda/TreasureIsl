@@ -543,6 +543,37 @@ fn regex_captures_pair(seg: &str) -> Vec<&str> {
 }
 
 #[allow(clippy::too_many_lines)] // R23 event 正向检查 extend + 原孤儿扫描，集中一处
+/// 收集数据文件里的 i18n key 消费方（Q032 `scenes.json::text_key` + S85.5
+/// `components_v1.json` 组件 `binding`/`text`），从 `check_i18n_orphans` 拆出以守函数长度上限。
+fn collect_data_i18n_keys(root: &Path, used_keys: &mut BTreeSet<String>) {
+    if let Some(scn) = read_file(root, "assets/data/scenes.json") {
+        for line in scn.lines() {
+            let t = line.trim();
+            let Some(ki) = t.find("\"text_key\"") else { continue };
+            let rest = &t[ki + "\"text_key\"".len()..];
+            let Some(co) = rest.find(':') else { continue };
+            let after = &rest[co + 1..];
+            let Some(q) = after.find('"') else { continue };
+            let inner = &after[q + 1..];
+            let Some(end) = inner.find('"') else { continue };
+            used_keys.insert(inner[..end].to_string());
+        }
+    }
+    if let Some(src) = read_file(root, "assets/data/ui_schema/components_v1.json") {
+        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&src) {
+            for scene in data["scenes"].as_object().into_iter().flat_map(|m| m.values()) {
+                for element in scene["elements"].as_array().into_iter().flatten() {
+                    for field in ["binding", "text"] {
+                        if let Some(key) = element[field].as_str().filter(|k| k.contains('.')) {
+                            used_keys.insert(key.to_owned());
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn check_i18n_orphans(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
     let Some(strings_json) = read_file(root, "assets/data/strings.json") else {
@@ -583,21 +614,7 @@ fn check_i18n_orphans(root: &Path) -> Vec<String> {
             }
         }
     }
-    // 盲区修复（Q032）：`scenes.json` 原语 `text_key` 也是 i18n key 消费方（旧实现只扫
-    // ti-app/src ⇒ 仅 JSON 引用的 key 被误报孤儿）。并入 used_keys。
-    if let Some(scn) = read_file(root, "assets/data/scenes.json") {
-        for line in scn.lines() {
-            let t = line.trim();
-            let Some(ki) = t.find("\"text_key\"") else { continue };
-            let rest = &t[ki + "\"text_key\"".len()..];
-            let Some(co) = rest.find(':') else { continue };
-            let after = &rest[co + 1..];
-            let Some(q) = after.find('"') else { continue };
-            let inner = &after[q + 1..];
-            let Some(end) = inner.find('"') else { continue };
-            used_keys.insert(inner[..end].to_string());
-        }
-    }
+    collect_data_i18n_keys(root, &mut used_keys);
     // 盲区修复（Q014）：`assets/data/*.json` 数据驱动 `*_key`（name_key/text_key/
     // dungeon_name_key）也是 i18n key 消费方（balance.json boat.*/combat.item.*/isle.*）。
     collect_data_key_values(root, &mut used_keys);
@@ -1112,24 +1129,22 @@ fn check_touch_render_pair(root: &Path) -> Vec<String> {
 /// 必须存在，缺 = 该键不可点。键语义 = `20_bevy_picking.md` §6 约定
 /// （1=index 木牌 / 2=列表行 / 3=存档槽 / 4=主地图摇骰 / 5..7=贸易·出售·建造）。
 ///
-/// S84 纯横屏扁平化后分两条命中面：
-/// - **数据面**（`scenes.json` `primitives[].params.pick_key`）：`index` 木牌 `key=1`、
-///   `main_map` 摇骰 `key=4` 仍在此，保留数据断言；`main_map` `5/6/7` 已删（S34 用户拍板），
-///   恰 0 个防回潮。
+/// S84 纯横屏扁平化后分两条命中面（S85.5 再收窄）：
+/// - **数据面**（`scenes.json` `primitives[].params.pick_key`）：仅 `main_map` 摇骰 `key=4`
+///   仍在此（`main_map` 5/6/7 已删，恰 0 个防回潮）；`index` 木牌 `key=1` 已迁 schema
+///   `menu_select` action，由下方 `check_action_key_contract` 的 `ACTION_KEY_CONTRACTS` 对账。
 /// - **`bevy_ui` 面**（`treasure_bevy.rs` chrome → `attach_row_pick` → `PickTarget`）：
 ///   `select_role` / `select_map` / `saveload` 的列表行命中在 S29.3 已迁 `bevy_ui`，
 ///   横屏原语不再声明 `pick_key`（其 1080 层已标 `ui_layer` 跳过）。这三个场景改验
-///   **`bevy_ui` 契约**（build fn 在位 + `attach_row_pick` 传入正确 key + helper 挂 `PickTarget`），
-///   而非仅豁免：改坏 key 即 FAIL。
+///   **`bevy_ui` 契约**：S85.3 起列表命中由 schema 的 `action` + 通用 `build_component_chrome`
+///   派生（旧 `build_*_chrome`/`attach_row_pick` 已删）。S85.4 起映射单一事实源前移到
+///   `ti_core::domain::ui_action::ACTION_TABLE`：shell 侧 `action_key` 只做查表派生，
+///   场景侧 `on_hit` 用 `UiAction::from_key` 反解按 variant 分派。断言 = 表与 schema
+///   闭集一致 + action→key 契约正确 + shell 无裸数字/字符串 match + 通用 builder 真挂
+///   `PickTarget`：改坏映射/不挂标记即 FAIL。
 fn check_scene_required_pick_keys(root: &Path, scenes: &str, errors: &mut Vec<String>) {
-    // 数据面场景（S84 横屏仍在 scenes.json）：index 木牌=1 / main_map 摇骰=4。
-    const SCENE_REQUIRED_PICK_KEYS: &[(&str, &[u64])] = &[("index", &[1]), ("main_map", &[4])];
-    // bevy_ui 面场景（S29.3 迁走，S84 横屏原语无 pick_key）：场景 → (build fn, PickTarget key)。
-    const BEVY_UI_PICK_CONTRACTS: &[(&str, &str, u32)] = &[
-        ("select_role", "build_select_role_chrome", 2),
-        ("select_map", "build_select_map_chrome", 2),
-        ("saveload", "build_saveload_chrome", 3),
-    ];
+    // 数据面场景（S85.5）：仅游戏世界 main_map 摇骰=4（index 木牌已迁 schema action）。
+    const SCENE_REQUIRED_PICK_KEYS: &[(&str, &[u64])] = &[("main_map", &[4])];
     let Ok(json) = serde_json::from_str::<serde_json::Value>(scenes) else {
         return;
     };
@@ -1168,33 +1183,150 @@ fn check_scene_required_pick_keys(root: &Path, scenes: &str, errors: &mut Vec<St
             }
         }
     }
-    // bevy_ui 面：读壳源码逐场景对账（负例：build fn 丢失 / key 改错 / helper 不挂 PickTarget 均 FAIL）。
+    check_action_key_contract(root, errors);
+}
+
+/// S85.4 `bevy_ui` 面：shell 侧 `action_key` 查表派生 + 通用 builder 挂 `PickTarget`。
+fn check_action_key_contract(root: &Path, errors: &mut Vec<String>) {
     let shell = read_file(root, "crates/ti-engine/src/bin/treasure_bevy.rs").unwrap_or_default();
-    for (scene_name, build_fn, key) in BEVY_UI_PICK_CONTRACTS {
-        let Some(body) = fn_body(&shell, build_fn) else {
+    let ui_src = read_file(root, "crates/ti-engine/src/ui.rs").unwrap_or_default();
+    let action_src = read_file(root, "crates/ti-core/src/domain/ui_action.rs").unwrap_or_default();
+    if action_src.is_empty() {
+        errors.push(
+            "缺 crates/ti-core/src/domain/ui_action.rs（S85.4 action 单一事实源丢失）".to_string(),
+        );
+        return;
+    }
+    let Some(action_body) = fn_body(&shell, "action_key") else {
+        errors.push(
+            "treasure_bevy.rs 缺 `action_key`（S85.4 schema action→key 查表入口丢失）".to_string(),
+        );
+        return;
+    };
+    // 负例：shell 侧退回硬编码 match / 数字即 FAIL（必须全量派生自 UiAction）。
+    let derives_key = action_body.contains("UiAction::key") || action_body.contains(".key(");
+    if !action_body.contains("UiAction::from_schema_str") || !derives_key {
+        errors.push(
+            "treasure_bevy.rs::action_key 未从 `UiAction::from_schema_str(...).key()` 派生"
+                .to_string(),
+        );
+    }
+    if action_body.contains("match action") || action_body.contains("=> Some(") {
+        errors.push(
+            "treasure_bevy.rs::action_key 仍有裸数字/字符串 match（S85.4 要求 action→key 单源）"
+                .to_string(),
+        );
+    }
+    // 通用 builder 须真挂 `PickTarget`（防只保留 action 映射却没挂标记）。
+    if fn_body(&ui_src, "build_component_chrome").is_none()
+        || (!ui_src.contains("PickTarget") && !ui_src.contains("pick_target"))
+    {
+        errors.push(
+            "ui.rs::build_component_chrome 缺 `PickTarget`（S85.3 通用 schema 行命中契约失效）"
+                .to_string(),
+        );
+    }
+    let table = parse_action_table(&action_src);
+    check_action_table_contract(root, &action_src, &table, errors);
+}
+
+/// `ACTION_TABLE` 行解析：`("<action>", UiAction::<Variant>, <key>),`。
+fn parse_action_table(action_src: &str) -> Vec<(String, String, u32)> {
+    let mut table: Vec<(String, String, u32)> = Vec::new();
+    for line in action_src.lines() {
+        let Some(rest) = line.trim().strip_prefix("(\"") else { continue };
+        let Some((name, rest)) = rest.split_once("\", UiAction::") else { continue };
+        let Some((variant, rest)) = rest.split_once(", ") else { continue };
+        let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+        if let Ok(key) = digits.parse::<u32>() {
+            table.push((name.to_owned(), variant.to_owned(), key));
+        }
+    }
+    table
+}
+
+/// S85.4 action 闭集对账：枚举表 ↔ 33 号 schema 闭集 + action→key 契约。
+fn check_action_table_contract(
+    root: &Path,
+    action_src: &str,
+    table: &[(String, String, u32)],
+    errors: &mut Vec<String>,
+) {
+    // action→key 契约：action 名 → 必须映射到的 key（旧 route_hit 口径 + VS 世界键）。
+    const ACTION_KEY_CONTRACTS: &[(&str, u32)] = &[
+        ("menu_select", 1),
+        ("character_select", 2),
+        ("map_select", 2),
+        ("slot_load", 3),
+        ("slot_write", 3),
+        ("spin", 4),
+        ("attack", 2),
+        ("do_item", 3),
+        ("defend", 4),
+    ];
+    if table.is_empty() {
+        errors.push(
+            "ui_action.rs 缺 `ACTION_TABLE` 行（`(\"action\", UiAction::Variant, key)`）"
+                .to_string(),
+        );
+        return;
+    }
+    // 方法与枚举全量从表派生（防只改表却把某方法留成硬编码 match）。
+    for method in ["from_schema_str", "as_str", "key", "from_key"] {
+        match fn_body(action_src, method) {
+            Some(body) if body.contains("ACTION_TABLE") => {}
+            Some(_) => errors.push(format!(
+                "ui_action.rs::{method} 未派生自 `ACTION_TABLE`（S85.4 单一事实源失效）"
+            )),
+            None => errors.push(format!("ui_action.rs 缺 `{method}` 方法")),
+        }
+    }
+    // schema Action 闭集 ↔ 枚举表双向对账（多一项/少一项即 FAIL）。
+    let schema_src =
+        read_file(root, "assets/data/ui_schema/components_v1.schema.json").unwrap_or_default();
+    let schema_actions: Vec<String> = serde_json::from_str::<serde_json::Value>(&schema_src)
+        .ok()
+        .and_then(|value| value["$defs"]["Action"]["enum"].as_array().cloned())
+        .and_then(|arr| {
+            arr.iter().map(|v| v.as_str().map(str::to_owned)).collect::<Option<Vec<_>>>()
+        })
+        .unwrap_or_default();
+    if schema_actions.is_empty() {
+        errors.push(
+            "components_v1.schema.json 缺 `$defs.Action.enum`（33 号规范 action 闭集丢失）"
+                .to_string(),
+        );
+    }
+    for name in &schema_actions {
+        if !table.iter().any(|(action, ..)| action == name) {
             errors.push(format!(
-                "treasure_bevy.rs 缺 `{build_fn}`（{scene_name} 横屏列表行命中入口丢失，S29.3 bevy_ui 契约）"
-            ));
-            continue;
-        };
-        let calls_with_key = body.lines().any(|line| {
-            let line = line.trim();
-            line.starts_with("attach_row_pick(") && line.contains(&format!(", {key})"))
-        });
-        if !calls_with_key {
-            errors.push(format!(
-                "treasure_bevy.rs::{build_fn} 缺 `attach_row_pick(..., {key})`（{scene_name} 横屏列表行命中 key 错误/丢失 = 该行不可点；S29.3 bevy_ui 契约）"
+                "ui_action.rs `ACTION_TABLE` 缺 schema action `{name}`（S85.4 枚举与 33 号规范闭集不一致）"
             ));
         }
     }
-    // helper 本体须真正挂 `PickTarget`（防只保留调用点名却不挂标记）。
-    if let Some(body) = fn_body(&shell, "attach_row_pick")
-        && !body.contains("PickTarget")
-    {
-        errors.push(
-            "treasure_bevy.rs::attach_row_pick 未挂 `PickTarget`（S29.3 bevy_ui 行命中契约失效）"
-                .to_string(),
-        );
+    for (name, variant, _) in table {
+        if !schema_actions.contains(name) {
+            errors.push(format!(
+                "ui_action.rs `ACTION_TABLE` 多出非 schema action `{name}`（S85.4 枚举与 33 号规范闭集不一致）"
+            ));
+        }
+        if !action_src.contains(&format!("    {variant},")) {
+            errors.push(format!(
+                "ui_action.rs 缺 `UiAction::{variant}` 变体声明（表引用了不存在的变体）"
+            ));
+        }
+    }
+    // 负例：表内 key 改错即 FAIL（点名具体 action + 期望/实际 key）。
+    for (action, key) in ACTION_KEY_CONTRACTS {
+        match table.iter().find(|(name, ..)| name == action) {
+            Some((_, _, actual)) if *actual == *key => {}
+            Some((_, _, actual)) => errors.push(format!(
+                "ui_action.rs `ACTION_TABLE` 的 `{action}` key={actual}（应为 {key}，S85.4 schema 命中 key 错误 = 该行不可点）"
+            )),
+            None => errors.push(format!(
+                "ui_action.rs `ACTION_TABLE` 缺 `{action}`（应为 key={key}）"
+            )),
+        }
     }
 }
 
@@ -1262,16 +1394,6 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
             "\"index\"",
             "\"compass_ring\"",
             "index 焦点锚 type = compass_ring（重心区语义锚，横屏沿用）",
-        ),
-        (
-            "\"index\"",
-            "index_hero_duo",
-            "index S84 横屏红头巾海盗 & 熊猫海盗互动层 = index_hero_duo 贴图层（S39 拆件资产）",
-        ),
-        (
-            "\"index\"",
-            "index_bg_map_h",
-            "index S84 横屏满屏羊皮藏宝图底 = index_bg_map_h（S39 羊皮底图，与竖屏 chart_full 不同）",
         ),
         ("\"index\"", "\"y\": 1840", "index 状态行 y = 1840（§4.1，S17.2 8pt）"),
         (
@@ -1353,6 +1475,22 @@ fn check_scene_layout_fidelity(root: &Path) -> Vec<String> {
         let scene_block = scene_section(&json, scene_key);
         if !scene_block.contains(needle) {
             errors.push(format!("scenes.json {scene_key}: {msg}（须含 `{needle}`）"));
+        }
+    }
+
+    // S85.5：index 满屏羊皮底 + 人物互动层从 scenes.json 死原语迁 schema role，
+    // 资产锚改验 `asset_roles.json`（role→同名资产），防换图后视觉漂移。
+    let roles_src = read_file(root, "assets/data/ui_schema/asset_roles.json").unwrap_or_default();
+    let roles: serde_json::Value = serde_json::from_str(&roles_src).unwrap_or_default();
+    for (role, expect) in [
+        ("index_bg", "assets/ui/index_bg_map_h.png"),
+        ("index_hero", "assets/ui/index_hero_duo.png"),
+    ] {
+        let actual = roles["roles"][role].as_str().unwrap_or_default();
+        if actual != expect {
+            errors.push(format!(
+                "asset_roles.json role `{role}` = `{actual}`（应为 `{expect}`，S39 横屏羊皮底/互动层资产锚）"
+            ));
         }
     }
 
@@ -3876,6 +4014,85 @@ fn check_primitives_data(root: &Path) -> Vec<String> {
             }
         }
     }
+    // S85.5：5 纯 UI 场景 prim 已删 ⇒ 同一检查项扩验 `components_v1.json`（components-data），
+    // 资产必登记 / i18n 不裸 key / action 闭集 / 禁绝对坐标的语义随 schema 延续。
+    errors.extend(check_components_data(root, &registered_assets));
+    errors
+}
+
+/// S85.5：`components_v1.json` 数据合法性（5 纯 UI 场景的唯一事实源）。
+///
+/// - `type` ∈ 33 号规范闭集；`layout.intent` 只声明意图（禁 x/y/w/h/rect 绝对坐标）；
+/// - `role` 须在 `asset_roles.json` 登记，其资产路径须在 `ui_manifest.json` 登记且文件在位；
+/// - `binding`/`text` 像 i18n key（含点号）时须在 `strings.json`（防裸 key）；
+/// - `action` 须在 `components_v1.schema.json` 的 Action enum 且 key 表登记。
+fn check_components_data(
+    root: &Path,
+    registered_assets: &std::collections::HashSet<String>,
+) -> Vec<String> {
+    const TYPES: &[&str] =
+        &["image", "rect", "text", "button", "input", "list", "badge", "grad", "glow", "panel"];
+    const FORBIDDEN_COORD: &[&str] = &["x", "y", "w", "h", "rect"];
+    let mut errors = Vec::new();
+    let Some(src) = read_file(root, "assets/data/ui_schema/components_v1.json") else {
+        return vec!["components_v1.json 不存在，无法校验组件数据（S85.5）".to_string()];
+    };
+    let Ok(data) = serde_json::from_str::<serde_json::Value>(&src) else {
+        return vec!["components_v1.json 解析失败".to_string()];
+    };
+    let roles = read_file(root, "assets/data/ui_schema/asset_roles.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v.get("roles").cloned())
+        .unwrap_or(serde_json::Value::Null);
+    let strings = read_file(root, "assets/data/strings.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .unwrap_or(serde_json::Value::Null);
+    let action_enum = read_file(root, "assets/data/ui_schema/components_v1.schema.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v["$defs"]["Action"]["enum"].as_array().cloned())
+        .unwrap_or_default();
+    for (sid, scene) in data["scenes"].as_object().into_iter().flatten() {
+        for (i, element) in scene["elements"].as_array().into_iter().flatten().enumerate() {
+            let at = format!("components_v1.json {sid}.elements[{i}]");
+            let kind = element["type"].as_str().unwrap_or_default();
+            if !TYPES.contains(&kind) {
+                errors.push(format!("{at}: type='{kind}' 非法（33 号规范闭集）"));
+            }
+            for key in FORBIDDEN_COORD {
+                if element.get(*key).is_some() {
+                    errors.push(format!("{at}: 含绝对坐标字段 `{key}`（违反不手写像素总纲）"));
+                }
+            }
+            if let Some(role) = element["role"].as_str().filter(|r| !r.is_empty()) {
+                let Some(path) = roles[role].as_str() else {
+                    errors.push(format!("{at}: role='{role}' 未在 asset_roles.json 登记"));
+                    continue;
+                };
+                if !registered_assets.contains(path) {
+                    errors.push(format!(
+                        "{at}: role='{role}' 资产 '{path}' 未在 ui_manifest.json 登记"
+                    ));
+                }
+                if !root.join(path).is_file() {
+                    errors.push(format!("{at}: role='{role}' 资产文件不存在 '{path}'"));
+                }
+            }
+            for field in ["binding", "text"] {
+                if let Some(key) = element[field].as_str().filter(|k| k.contains('.')) {
+                    if strings.get(key).is_none() {
+                        errors.push(format!(
+                            "{at}: {field}='{key}' 在 strings.json 不存在（裸 key）"
+                        ));
+                    }
+                }
+            }
+            if let Some(action) = element["action"].as_str().filter(|a| !a.is_empty()) {
+                if !action_enum.iter().any(|v| v.as_str() == Some(action)) {
+                    errors.push(format!("{at}: action='{action}' 不在 33 号规范 Action 闭集"));
+                }
+            }
+        }
+    }
     errors
 }
 
@@ -4315,10 +4532,17 @@ fn check_tooling_stray_scripts(root: &Path) -> Vec<String> {
 
 /// 飞轮 R1 ⑥-01/③-17/③-18：`ti-engine` 渲染层禁裸 540.0/960.0（屏心半值字面量）——
 /// 一律经 `LOGICAL_W_I32`/`LOGICAL_H_I32`（`ti_render::framebuffer` 单一事实源）派生；
-/// 双守卫：① 裸字面量 0 命中；② 派生式 `as f32 / 2.0` 在位（防「全删了也没派生」假绿）。
+/// 双守卫：① 裸字面量 0 命中；② 派生式在位（防「全删了也没派生」假绿）。
+/// S85.5：屏幕坐标计算从壳 `treasure_bevy.rs` 迁到通用 builder `ui.rs`（schema 布局意图
+/// → taffy 百分比）⇒ 壳仍守「无裸字面量」，派生式判据改落 canvas.rs（世界层）+ ui.rs（UI 层
+/// `(100.0 - w) / 2.0` 居中），不再要求壳保留已删除的死坐标派生。
 fn check_engine_no_bare_half(root: &Path) -> Vec<String> {
     let mut errors = Vec::new();
-    for file in ["crates/ti-engine/src/canvas.rs", "crates/ti-engine/src/bin/treasure_bevy.rs"] {
+    for file in [
+        "crates/ti-engine/src/canvas.rs",
+        "crates/ti-engine/src/ui.rs",
+        "crates/ti-engine/src/bin/treasure_bevy.rs",
+    ] {
         let Some(src) = read_file(root, file) else {
             errors.push(format!("{file} 不存在，无法校验 1080 半值派生"));
             continue;
@@ -4337,9 +4561,19 @@ fn check_engine_no_bare_half(root: &Path) -> Vec<String> {
                 start = abs + needle.len();
             }
         }
-        if !src.contains("as f32 / 2.0") {
-            errors.push(format!("{file}: 缺 `as f32 / 2.0` 半值派生（飞轮 R1 ③-17 归一口径）"));
-        }
+    }
+    let canvas = read_file(root, "crates/ti-engine/src/canvas.rs").unwrap_or_default();
+    if !canvas.contains("as f32 / 2.0") {
+        errors.push(
+            "canvas.rs 缺 `as f32 / 2.0` 世界层半值派生（飞轮 R1 ③-17 归一口径）".to_string(),
+        );
+    }
+    let ui = read_file(root, "crates/ti-engine/src/ui.rs").unwrap_or_default();
+    if !ui.contains("(100.0 - w) / 2.0") {
+        errors.push(
+            "ui.rs 缺 `(100.0 - w) / 2.0` UI 层百分比居中派生（S85.5 schema 布局承接屏心锚点）"
+                .to_string(),
+        );
     }
     errors
 }
@@ -4757,7 +4991,8 @@ fn check_visual_design_signoff(root: &Path) -> Vec<String> {
     // 提 `scenes.json` 字样但改动面是纯文档/工具/断言（如 docs/rules 速查面、S50.x 断言面）
     // = 未改数据文件，不应触发视觉签收（S50.4 收口实证：S50.3 误触，dod 提 scenes.json
     // 但实际改动面 = 文档/门禁 + 0 Rust 改动）。
-    const TOUCH: [&str; 2] = ["scenes.json", "theme.json"];
+    // S85.5：5 纯 UI 场景版面事实源已迁 `components_v1.json`，改它同样属视觉数据面改动。
+    const TOUCH: [&str; 3] = ["scenes.json", "theme.json", "components_v1.json"];
     // 签收标记写在**证据**里（留痕的载体是证据，不是 dod 的措辞）
     // r3 对齐（S44.3 双审计）：真实留痕格式「用户 <日期> <任务> 视觉验收通过」经日期隔断「用户视觉验收」
     // 连续子串 ⇒ 追加核心动词短语「视觉验收」（与 ui_wizard SIGNOFF_KW 6 词同口径，防未来证据假阳性）。
@@ -4899,11 +5134,24 @@ fn check_export_icon_boundary(root: &Path) -> Vec<String> {
         .filter_map(|asset| asset.get("file").and_then(|file| file.as_str()))
         .map(|file| file.rsplit('/').next().unwrap_or(file).to_string())
         .collect();
-    for id in extract_icon_ids(&scenes) {
+    let mut ids = extract_icon_ids(&scenes);
+    // S85.5：index 图标原语已迁 schema `asset_roles.json`（index_icon_* → icon_<id>.png），
+    // 从 role 资产路径反解 icon id，保「能导的有边界」判据不随迁移丢失。
+    if let Some(roles_text) = read_file(root, "assets/data/ui_schema/asset_roles.json") {
+        for cap in roles_text.match_indices("assets/ui/icon_") {
+            let rest = &roles_text[cap.0 + "assets/ui/icon_".len()..];
+            let id: String =
+                rest.chars().take_while(|c| c.is_ascii_lowercase() || *c == '_').collect();
+            if !id.is_empty() {
+                ids.push(id);
+            }
+        }
+    }
+    for id in ids {
         let png = format!("icon_{id}.png");
         if !registered.iter().any(|file| file == &png) {
             errors.push(format!(
-                "icon 原语 `{id}` 缺登记 PNG `{png}`（TI-UI-009：须登记到 ui_manifest.json，禁代码矢量回退）"
+                "icon 资产 `{id}` 缺登记 PNG `{png}`（TI-UI-009：须登记到 ui_manifest.json，禁代码矢量回退）"
             ));
         }
     }
@@ -5002,51 +5250,62 @@ fn check_orphan_rule_row(root: &Path) -> Vec<String> {
     errors
 }
 
-/// 「不手写像素」总纲机器断言（S80 EXP-210 → S84 纯横屏改写）：
-/// index 横屏木牌（derived=menu）的坐标必须由 `index.menu.*` 参数运行期算出，
-/// JSON 里的 x/y=0 是已删死坐标标记，不得手抄。
-///
-/// S84 改写：竖屏罗盘环 `index.ring` 与其生成器 `gen_index_medallions.py` 已退役；
-/// 本断言直接对账 scenes.json（derived=menu 原语 x/y=0 + menu 参数在位 + 行数 ≥18），
-/// 避免依赖外部脚本，负例（写成死坐标/删参数）仍 FAIL。
+/// 「不手写像素」总纲机器断言（S80 EXP-210 → S84 纯横屏 → S85.5 schema 化）：
+/// 5 纯 UI 场景坐标已由 `components_v1.json` 的 `layout` 意图（`fill`/`center`/`side_*`/`bottom_bar`）
+/// 声明，schema 禁 x/y/w/h/rect 绝对坐标字段 ⇒ 本断言改验 schema 规范 + 数据双向守门：
+/// ① `components_v1.schema.json` 的 `not` 子句仍禁五类绝对坐标字段；
+/// ② `components_v1.json` 所有元素实例 0 命中绝对坐标字段；
+/// ③ index 木牌运行期参数 `index.menu.*` 仍在 scenes.json（参数化源未丢）。
+/// 负例（schema 放开绝对坐标 / 数据写死坐标 / 删 menu 参数）仍 FAIL。
 fn check_no_handwritten_grid(root: &Path) -> Vec<String> {
-    // S84 纯横屏：index 罗盘环（ring）已删，参数化原语改为横屏木牌（derived=menu，
-    // 坐标由 index.menu.* 参数运行期算）。旧生成器 gen_index_medallions.py 已退役。
-    // 守门改为直接对账 scenes.json：带 derived 标记的原语 x/y=0（死坐标已删）+ menu 参数在位。
+    let mut problems = Vec::new();
+    let schema_src =
+        read_file(root, "assets/data/ui_schema/components_v1.schema.json").unwrap_or_default();
+    let schema: serde_json::Value = serde_json::from_str(&schema_src).unwrap_or_default();
+    let forbidden = ["x", "y", "w", "h", "rect"];
+    let not_clause = schema["$defs"]["Component"]["not"]["anyOf"].as_array();
+    if let Some(clauses) = not_clause {
+        for key in forbidden {
+            if !clauses.iter().any(|c| {
+                c.get("required")
+                    .and_then(|v| v.as_array())
+                    .is_some_and(|req| req.iter().any(|r| r.as_str() == Some(key)))
+            }) {
+                problems.push(format!(
+                    "components_v1.schema.json 的 not 子句缺绝对坐标字段 `{key}` 禁令"
+                ));
+            }
+        }
+    } else {
+        problems.push(
+            "components_v1.schema.json 缺 `$defs.Component.not.anyOf`（绝对坐标禁令丢失）"
+                .to_string(),
+        );
+    }
+    let data_src = read_file(root, "assets/data/ui_schema/components_v1.json").unwrap_or_default();
+    let data: serde_json::Value = serde_json::from_str(&data_src).unwrap_or_default();
+    if let Some(scenes) = data["scenes"].as_object() {
+        for (scene_id, scene) in scenes {
+            if let Some(elements) = scene["elements"].as_array() {
+                for (idx, element) in elements.iter().enumerate() {
+                    for key in forbidden {
+                        if element.get(key).is_some() {
+                            problems.push(format!(
+                                "components_v1.json {scene_id}.elements[{idx}] 含绝对坐标字段 `{key}`（违反不手写像素总纲）"
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
     let scenes_text = read_file(root, "assets/data/scenes.json").unwrap_or_default();
     let scenes: serde_json::Value = match serde_json::from_str(&scenes_text) {
         Ok(v) => v,
         Err(_) => return vec!["scenes.json 解析失败（no-handwritten-grid 无基准）".to_string()],
     };
-    let Some(index) = scenes.get("index") else {
-        return vec!["scenes.json 缺 index 场景（no-handwritten-grid 无基准）".to_string()];
-    };
-    if index.get("menu").is_none() {
-        return vec!["index.menu 参数对象缺失（S84 横屏木牌参数化源）".to_string()];
-    }
-    let mut problems = Vec::new();
-    let mut derived_count = 0usize;
-    if let Some(prims) = index.get("primitives").and_then(|v| v.as_array()) {
-        for (idx, p) in prims.iter().enumerate() {
-            if p.get("params").and_then(|v| v.get("derived")).and_then(|v| v.as_str())
-                != Some("menu")
-            {
-                continue;
-            }
-            derived_count += 1;
-            if let Some(rect) = p.get("rect") {
-                let x = rect.get("x").and_then(serde_json::Value::as_i64).unwrap_or(-1);
-                let y = rect.get("y").and_then(serde_json::Value::as_i64).unwrap_or(-1);
-                if x != 0 || y != 0 {
-                    problems.push(format!(
-                        "index 原语 #{idx} derived=menu 但 rect.x/y=({x},{y})≠0（死坐标未删，违反不手写像素总纲）"
-                    ));
-                }
-            }
-        }
-    }
-    if derived_count < 18 {
-        problems.push(format!("index 横屏木牌 derived=menu 原语仅 {derived_count} 行（期望 ≥18）"));
+    if scenes.get("index").and_then(|v| v.get("menu")).is_none() {
+        problems.push("index.menu 参数对象缺失（S84 横屏木牌运行期参数化源）".to_string());
     }
     problems
 }

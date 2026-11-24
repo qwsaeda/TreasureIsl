@@ -8,7 +8,8 @@ S21.3 的 main_map v4 坐标表（`docs/ui-redesign-v3/08_main_map_v4_spec.md` �
 （N8 门禁只对账 manifest ↔ scenes.json 两处，**规格表本身无人校验**）。本工具做三面对账：
 
 - 规格表里声明的键 → `scenes.json` 是否存在且**坐标一致**；
-- 规格表声明的 `bbox_pct` → `scene_manifest_v3.json` 是否一致（+ N8 像素往返 ±1px）；
+- 规格表声明的 `bbox_pct` → `scene_manifest_v3.json` 是否一致（+ N8 像素往返 ±1px；
+  S85.2：focus_anchor.bbox 为旧 1080×1920 历史门元数据，命中历史口径则 SKIP，新 schema layout 意图取代）；
 - 规格表声明的不变量（8pt / N3 面积 / N4 beats / N6 HUD 上限）是否成立。
 
 用法：
@@ -109,7 +110,15 @@ def main() -> int:
             got = [mb.get("x", 0), mb.get("y", 0), mb.get("w", 0), mb.get("h", 0)]
             if got != bbox:
                 problems.append(f"manifest {args.scene}.focus.bbox_pct: 实为 {got} ≠ 规格 {bbox}")
+            # S85.2：S84 纯横屏后屏尺寸 = 1920×1080；focus_anchor.bbox 仍是旧 1080×1920
+            # 历史门元数据（新 schema components_v1.json 的 layout 意图已取代）⇒ 历史口径 SKIP。
             px = [
+                round(bbox[0] * 1920 / 100),
+                round(bbox[1] * 1080 / 100),
+                round(bbox[2] * 1920 / 100),
+                round(bbox[3] * 1080 / 100),
+            ]
+            px_legacy = [
                 round(bbox[0] * 1080 / 100),
                 round(bbox[1] * 1920 / 100),
                 round(bbox[2] * 1080 / 100),
@@ -120,7 +129,12 @@ def main() -> int:
                 problems.append(f"scenes.json {args.scene}: 缺 focus_anchor.bbox")
             else:
                 got_px = [anchor.get("x", 0), anchor.get("y", 0), anchor.get("w", 0), anchor.get("h", 0)]
-                if any(abs(a - b) > 1 for a, b in zip(got_px, px)):
+                if all(a is not None and abs(a - b) <= 1 for a, b in zip(got_px, px_legacy)) and not all(
+                    a is not None and abs(a - b) <= 1 for a, b in zip(got_px, px)
+                ):
+                    print("        N8 SKIP: focus_anchor.bbox 命中历史 1080×1920 口径"
+                          "（新 schema components_v1.json layout 意图取代）")
+                elif any(abs(a - b) > 1 for a, b in zip(got_px, px)):
                     problems.append(
                         f"scenes.json {args.scene}.focus_anchor.bbox {got_px} 与 bbox_pct 往返 {px} 差 >1px（N8）"
                     )

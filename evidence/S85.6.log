@@ -1,0 +1,29 @@
+S85.6 门禁/测试/工具全迁移到新 schema · 验收证据（2026-11-24）
+
+== 改动面 ==
+工具（doccheck2 + 6 脚本）+ 测试（7 文件）+ 平台（ui_wizard/themes）+ 越界写点（render_invariants/parity/parity_hd）。
+
+== 判据 1：三阶段迁移（双读兼容 → 删 prim → 只认 schema）==
+阶段 A：门禁/测试/工具改双读兼容——
+- 测试：render_intent（首页资产锚→role、选中态→schema state、像素→schema 结构）、landscape_drawlist（5 UI 场景 CPU draw-list 断言→schema+role，vs/main_map 未动）、
+  e2e_playability、main_map_pick_e2e（+spin action 闭集）、bevy_native_render（合成原语替 index prim）、data_tables（+schema 5 场景）。
+- doccheck2：action_key_contract/ACTION_TABLE 全量对账、engine-no-bare-half 迁 canvas.rs/ui.rs、i18n 收 components_v1.json binding、
+  check_components_data 并入 primitives-data、no-handwritten-grid/scene-layout-fidelity/export-icon-boundary/visual-signoff TOUCH(2→3)/pick_key 数据面全改锚新 schema。
+- 脚本：ui_assets.py --check 增 asset_roles.json 全部 role→路径的登记/文件在位校验。
+- 壳：menu binding resolver（menu_rows，role 经 asset_roles 解析，零 format! asset 路径）。
+阶段 B/C：删 prim 后去掉旧依赖，只认新 schema。
+
+== 判据 2：保留语义（未丢）==
+选中态不外溢（render_intent）/ 缺 action=不可点（main_map_pick_e2e Spin + doccheck2 action 契约）/ 资产必登记（components-data、
+export-icon-boundary、ui_assets.verify）/ i18n 不裸 key / 视觉签收 visual-signoff 含 components_v1.json / pick_key 5/6/7 防回潮。
+B1 边界：vs/main_map 游戏世界 prim + extra/ring/focus_anchor/world_canvas/地图包 layout.json 未删未动。
+doccheck2 检查项 id 未增删（57 项）⇒ gate_data.json/studio_tests.py/doc_numbers.py 无需同步（id 保留兼容名，语义改验新 schema）。
+
+== 判据 3：负例自证 ==
+注入未登记 role → ui_schema_check FAIL + doccheck2 FAIL；还原后 PASS（md5 一致）。
+
+== 判据 4：全量门禁（隔离其它会话 Cargo.toml 在途改动后实跑）==
+cargo test --workspace 1089 passed/0 failed/1 ignored；clippy -D warnings 0 error；fmt --check 0；
+doccheck2 0 error（57 项）；validate_data OK；ui_schema_check OK；ui_assets --check OK；5 场景 0 prim；parity 通过。
+
+S85.6 可置 verified。

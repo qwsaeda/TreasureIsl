@@ -62,8 +62,23 @@ fn signature(px: &[u16]) -> u64 {
 
 #[test]
 fn render_invariants_all_scenes() {
+    // S85.5：5 纯 UI 场景 chrome 迁 `components_v1.json` schema，CPU 死原语删除 ⇒
+    // CPU 帧不再承载这些场景；像素不变式只对游戏世界（vs/main_map）生效，
+    // 5 纯 UI 场景改验 schema 结构（背景 role 登记 + 组件/action/binding 在位），
+    // 其「不黑屏」判据由 `--shot` bevy 探针（`ui_verify.py`）守。
+    let schema = ti_core::data::ui_schema::components().expect("components_v1.json");
+    let roles = ti_core::data::ui_schema::asset_roles().expect("asset_roles.json");
+    for name in ["index", "select_role", "select_map", "message", "saveload"] {
+        let sc = schema.get(name).expect("缺 UI 场景组件");
+        assert!(!sc.elements.is_empty(), "{name} 组件表为空（画面将空白）");
+        let bg = sc.elements.iter().find(|e| e.id == "bg").expect("{name} 缺背景组件");
+        assert!(roles.path(&bg.role).is_some(), "{name} 背景 role 未登记（画面将空白）");
+    }
     let mut sigs: BTreeMap<&str, u64> = BTreeMap::new();
     for (name, nav) in SCENES {
+        if !matches!(name, "main_map" | "vs") {
+            continue;
+        }
         let px = render_scene_frame(nav);
         assert_eq!(px.len(), 1920 * 1080, "{name} 帧尺寸应 = 1920×1080（S84 纯横屏）");
         let permille = non_black_permille(&px);
@@ -90,5 +105,5 @@ fn render_invariants_all_scenes() {
         assert!(!sigs.values().any(|v| *v == s), "{name} 内容签名与其它场景相同（渲染成同一张）");
         sigs.insert(name, s);
     }
-    assert_eq!(sigs.len(), SCENES.len(), "7 场景签名应互异");
+    assert_eq!(sigs.len(), 2, "2 个游戏世界场景签名应互异（5 纯 UI 场景已迁 schema）");
 }

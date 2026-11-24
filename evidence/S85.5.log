@@ -1,0 +1,24 @@
+S85.5 删死 prim + shim + 旧函数（完整清理）· 验收证据（2026-11-24）
+
+== 改动面 ==
+数据（scenes.json 5 场景 prim 删除）+ 表现（treasure_bevy.rs / chrome.rs / 5 场景 render 调用）。
+
+== 判据 1：死数据/死代码删除 ==
+- assets/data/scenes.json：删 5 纯 UI 场景（index/select_role/select_map/message/saveload）的 `primitives` 键
+  （22/31/13/1/8 条），main_map 7 + vs 16 条游戏世界 prim + 全场景 extra/focus_anchor/地图包键原样保留；indent=1 规范形未漂移。
+- treasure_bevy.rs：删 `legacy_visual_parity` shim、`build_index_chrome`、`index_data_items` 死函数。
+- 5 场景删 `chrome::render_primitives(...)` 调用（发货走 schema，CPU 路径不再画这些场景；bevy-cpu-parity 的 draw_scene 用自带色块，不读这批 prim）。
+- chrome.rs：删 `index_param_rect` 及 rect 推导分支（唯一 CPU 调用点已删）。
+- index 收口：`SceneKind::Index` 从旧 build_data_chrome 切换点收口为 `build_schema_chrome("index")`，5 场景统一 schema 入口。
+
+== 判据 2：视觉零变化 ==
+- 5 场景 --shot 非黑像素与基线一致：index 1,994,215 / select_role 2,073,052 / select_map 2,073,600 /
+  message 2,073,594 / saveload 2,073,594（of 2,073,600），probe 有节点有文本。
+- bevy-cpu-parity：1,254,588 像素对照，超差 0、最大 0 LSB，通过。
+
+== 判据 3：全量门禁（其它会话 Cargo.toml 在途改动已 stash 隔离后实跑，验证后完整恢复 md5 一致）==
+cargo fmt --check 0；cargo clippy --workspace --all-targets -D warnings 0 error；cargo test --workspace 1089 passed/0 failed/1 ignored；
+doccheck 0 error；doccheck2 0 error（57 项）；validate_data OK；ui_schema_check OK；ui_assets --check OK；
+grep 5 场景无 primitives 键。
+
+S85.5 可置 verified。

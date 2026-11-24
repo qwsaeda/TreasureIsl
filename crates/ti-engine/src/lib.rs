@@ -13,6 +13,8 @@ pub mod canvas;
 pub mod pick;
 pub mod scene_render;
 pub mod ui;
+/// S85 通用组件渲染器：从 `ui.rs` 拆出的 schema 组件 → bevy_ui 节点树通道。
+pub mod ui_component;
 /// S27.7：VS 对战舞台（横版对峙范式：Bevy 实体 + 动效骨架）。
 pub mod vs_duel;
 
