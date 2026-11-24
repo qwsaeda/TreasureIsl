@@ -3058,27 +3058,33 @@ fn render_handoff(host: &mut dyn SceneHost) {
         return;
     };
     let theme = host.theme().clone();
-    let panel = theme.by_name("brass_dark").unwrap_or(chrome::COLOR_GOLD_WARM);
     let brass = theme.by_name("brass").unwrap_or(chrome::COLOR_GOLD_WARM);
     let ink = chrome::COLOR_TEXT_ON_PARCH;
-    let msg = i18n::sget("scene.main_map.toast.handoff");
-    let tw = host.shell().hint_text_width_px(msg);
-    let pad = 24;
-    let pw = (tw + pad * 2).max(392);
-    let ph = 56i32;
-    // S38 方案 A：横屏提示条屏心 960、底部 py=1004；竖屏 = 原 (540,1860)。
     let landscape =
         host.shell().settings.orientation == ti_platform::settings::Orientation::Landscape;
-    let cx = if landscape { 960i32 } else { 540 };
-    let px = cx - pw / 2;
-    let py = if landscape { 1004 } else { 1860 };
-    host.fill_rect(px, py, pw, ph, panel);
-    host.fill_rect(px, py, pw, 2, brass);
-    host.fill_rect(px, py + ph - 2, pw, 2, brass);
-    host.fill_rect(px, py, 2, ph, brass);
-    host.fill_rect(px + pw - 2, py, 2, ph, brass);
+    let (w, h) = if landscape { (1920i32, 1080i32) } else { (1080, 1920) };
+    let cx = w / 2;
+
+    // S77 U9 方案 A（整屏盖板）：确认前完全遮蔽棋盘 —— 满足「不泄露他人情报」硬要求。
+    // 深色全屏底用 fill_rect（不依赖资产加载，规避 PNG 加载时序）；中央罗盘用已签收资产。
+    host.fill_rect(0, 0, w, h, chrome::COLOR_BG);
+    // 黄铜双线边框（羊皮海图风格，复用既有色令牌）。
+    for t in [0, h - 4] {
+        host.fill_rect(0, t, w, 4, brass);
+    }
+    host.fill_rect(0, 0, 4, h, brass);
+    host.fill_rect(w - 4, 0, 4, h, brass);
+
+    // 中央罗盘（已签收 compass_rose 资产，缺图不画不 panic）。
+    let rose = 300i32;
+    host.blit_image("assets/ui/compass_rose.png", cx - rose / 2, h / 5, rose, rose);
+    // 文案：席位 + 确认提示（i18n）。
+    let msg = i18n::sget("scene.main_map.toast.handoff");
     let seat_label = format!("P{seat}");
     let full = format!("{msg}（{seat_label}）");
     let ftw = host.shell().hint_text_width_px(&full);
-    host.draw_hint_text(&full, cx - ftw / 2, py + ph / 2 + 4, ink);
+    host.draw_text(&full, cx - ftw / 2, h / 2 + 120);
+    let hint = i18n::sget("scene.main_map.handoff.confirm_hint");
+    let htw = host.shell().hint_text_width_px(hint);
+    host.draw_hint_text(hint, cx - htw / 2, h / 2 + 180, ink);
 }

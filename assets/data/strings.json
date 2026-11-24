@@ -279,5 +279,6 @@
  "scene.main_map.achievement.unlocked": "已解锁",
  "scene.main_map.achievement.locked": "未解锁",
  "scene.main_map.achievement.hint": "成就为账号级 · 不影响玩法",
- "scene.main_map.achievement.row_fmt": "{0} · {1}"
+ "scene.main_map.achievement.row_fmt": "{0} · {1}",
+ "scene.main_map.handoff.confirm_hint": "按确认开始回合"
 }
