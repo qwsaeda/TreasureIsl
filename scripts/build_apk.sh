@@ -121,6 +121,20 @@ PYEOF
     [ "$cur" = "$(cat "$FINGERPRINT_FILE")" ]
 }
 REFSET=$(python3 "$REPO/scripts/apk_audit.py" --refset)
+# S84 根治「并行 agent 编译期改源码 → .so 与指纹错配 → 假问题」：编译开始前抓当前源码指纹，
+# 编译后若源码指纹变了 ⇒ 拒绝交付（.so 与源码不一致），要求干净环境重编。
+_build_start_fp=$(python3 - "$REPO" <<'PYEOF'
+import hashlib, sys
+from pathlib import Path
+root = Path(sys.argv[1]); h = hashlib.sha256()
+for c in ["ti-engine","ti-app","ti-core","ti-platform","ti-render","ti-formats"]:
+    for f in sorted((root/"crates"/c).rglob("*.rs")):
+        h.update(f.relative_to(root).as_posix().encode()); h.update(f.read_bytes())
+m = root/"Cargo.toml"
+if m.exists(): h.update(m.read_bytes())
+print(h.hexdigest())
+PYEOF
+)
 if [ "$FORCE" != "--force" ] && _so_fresh; then
     echo "[1/5] 复用现有 .so（源码哈希指纹一致；--force 强制重编）"
 else
@@ -146,9 +160,28 @@ PYEOF
         RUSTFLAGS="-C linker=$BIN/${ARCH}-linux-android${API}-clang" \
         cargo build -p android-activity@0.1.0 --release --target "$TARGET"
 fi
-# S75：编译成功后写源码哈希指纹（供下次复用判据比对；源码变了指纹即变）。
+# S75/S84：编译成功后写**编译开始时**的源码指纹（= .so 真正的源码状态），并检测编译期
+# 源码是否被并行任务改动——若变了，.so 与当前源码不一致 ⇒ 拒绝交付，要求干净环境重编。
 if [ -f "$SRC_SO" ]; then
-    echo "  写 .so 源码指纹：$(_refresh_fingerprint)"
+    _build_end_fp=$(python3 - "$REPO" <<'PYEOF'
+import hashlib, sys
+from pathlib import Path
+root = Path(sys.argv[1]); h = hashlib.sha256()
+for c in ["ti-engine","ti-app","ti-core","ti-platform","ti-render","ti-formats"]:
+    for f in sorted((root/"crates"/c).rglob("*.rs")):
+        h.update(f.relative_to(root).as_posix().encode()); h.update(f.read_bytes())
+m = root/"Cargo.toml"
+if m.exists(): h.update(m.read_bytes())
+print(h.hexdigest())
+PYEOF
+)
+    if [ "$_build_end_fp" != "$_build_start_fp" ]; then
+        echo "  FAIL  编译期间源码被改动（开始 $_build_start_fp / 结束 $_build_end_fp）⇒ .so 与源码不一致，" >&2
+        echo "        拒绝交付中间态产物；请在无并行改动的环境重编（S84 根治并行污染）。" >&2
+        exit 1
+    fi
+    echo "$_build_start_fp" > "$FINGERPRINT_FILE"
+    echo "  写 .so 源码指纹：${_build_start_fp:0:16}（编译期源码未变，已校验）"
 else
     echo "  FAIL  编译后 .so 不存在：$SRC_SO" >&2
     exit 1
