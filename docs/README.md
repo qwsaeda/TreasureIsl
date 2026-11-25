@@ -141,6 +141,7 @@
 |---|---|
 | [`plan-s85-ui-system.md`](plan-s85-ui-system.md) | **S85 完整 UI 系统重构 WBS**（用户 2026-11-24 拍板：声明式组件 schema，元素分功能/无功能、type 约束、业务绑定、事件绑定；设计稿待用户过目） |
 | [`plan-s86-visual-editor.md`](plan-s86-visual-editor.md) | **S86 平台可视化编辑器 WBS**（地图制作 + UI 组件，受限随意布局 + 可见即可得：内嵌真渲染预览 + 导出即生效；设计稿待用户过目） |
+| [`plan-s87-world-layer.md`](plan-s87-world-layer.md) | **S87 世界层可视化编辑 WBS**（用户 2026-11-25 拍板「两个都做」：vs/main_map 纳入 schema→1080 CPU 世界层渲染器；设计稿待用户过目） |
 | [`plan-s84-landscape-only.md`](plan-s84-landscape-only.md) | **S84 纯横屏重写 WBS**（用户 2026-11-24「竖屏全部删除 1-3 全做」：删文档竖屏内容 + scenes.json 竖屏数据 + 1080×1920 坐标系改 1920×1080；架构级重写） |
 | [`plan-archive.md`](plan-archive.md) | **已完成阶段（S0~S11）计划的单一索引**：逐阶段一句话概括 + 原文件跳转（原文件保留在 `docs/` 原位） |
 | [`plan-s12-parallel.md`](plan-s12-parallel.md) | **S12 模块化并行 WBS**（一轮 4 步执行：S12.0 契约冻结 → P1–P5 并行 → S12.6 集成；W2 起 P6 表现层） |
@@ -159,12 +160,8 @@
 
 ### 工具与产出物索引
 
-
-> S85 新增工具：`scripts/ui_schema_check.py`（`components_v1.json` 组件 schema 门禁，见 `process/33_ui_component_schema.md`）。
-
-> S86 新增工具：`scripts/preview_shot.py`（真渲染预览出图包装器，见 `process/22_dev_platform.md` §14）。| 文件 | 作用 |
-
-> S86 新增工具：`scripts/export_parity_check.py`（导出即生效像素判据，见 `process/22_dev_platform.md` §14）。|---|---|
+| 文件 | 作用 |
+|---|---|
 | `scripts/playbook.ps1` | **常用命令一键入口**（16 项命令固化：native 运行 / 无头回归 / wasm / 冒烟 / 门禁 / 测试 / fmt / clippy / 元素验证 / 逐精灵渲染 / 推送前置检查 / 台账 / doccheck / 硬编码扫描；`-List` 列全部；UTF-8 BOM 防 PowerShell 编码错位） |
 | `crates/ti-tools/src/bin/specskel.rs` | spec 骨架半自动生成（S0.7；命令见 `AGENTS.md` 命令节） |
 | `crates/ti-devmeta` | S32.1 平台共享层（台账解析 + 静态 HTTP，纯 std 0 游戏依赖；`ledger.rs` 上提自 `ti-tools`） |
@@ -216,6 +213,18 @@
 | `scripts/agnes_vision.py` | Agnes 多模态看图（`agnes-2.5-flash`，`AGNES_API_KEY` 同生图；本地 PNG 转 Data URI 走 `chat/completions`） |
 | `scripts/agnes_gen.py` | Agnes AI 生图（`agnes-image-2.5-flash`，`AGNES_API_KEY`；用法见 `docs/process/04_tooling.md` §6） |
 | `scripts/agnes_video.py` | **Agnes AI 视频**（`agnes-video-2.5-flash` 异步任务：创建→轮询→下载；`AGNES_API_KEY`；`--check` 只读前置体检） |
+
+#### 本轮新增工具（S85~S87）
+
+> S85 新增工具：`scripts/ui_schema_check.py`（`components_v1.json` 组件 schema 门禁，见 `process/33_ui_component_schema.md`）。
+
+> S87.1 新增工具：`scripts/world_schema_check.py`（`world_components.json` 世界层 schema 门禁：type 三型闭集 / 禁裸坐标 / role 登记 / UiAction 15 项 / geometry.ref 源键解析，见 `plan-s87-world-layer.md` §2c）。
+
+> S86 新增工具：`scripts/preview_shot.py`（真渲染预览出图包装器，见 `process/22_dev_platform.md` §14）。
+
+> S87 新增工具：`scripts/draw_ui_system_map.py`（UI 系统电路板总图）+ `scripts/draw_ui_howto.py`（平台改元素使用说明图），图见 `evidence/ui_system_map.png` / `evidence/ui_howto.png`。
+
+> S86 新增工具：`scripts/export_parity_check.py`（导出即生效像素判据，见 `process/22_dev_platform.md` §14）。
 
 ### 归档参照物（`legacy/docs/`，**S11 已物理归档，不是开发依据也不是验收基准**）
 

@@ -7,6 +7,16 @@
 > 本文是「不手写像素」总纲（18 号）与 B1 布局引擎（17 号）的**继续**，不是推翻：
 > 新元素只写 `type`/`binding`/`layout`/`role`/`action`/`state`，**禁绝对 rect**。
 
+## 0. 系统总图与使用说明
+
+![UI 系统电路板（数据 → 加载 → 双后端渲染 → 命中 → 平台编辑器）](../../evidence/ui_system_map.png)
+
+> 图由 `scripts/draw_ui_system_map.py` 生成（真实接线，每个框 = 实际文件/函数）；机器可复跑。
+
+![使用说明 · 在平台改 UI 元素](../../evidence/ui_howto.png)
+
+> 图由 `scripts/draw_ui_howto.py` 生成。
+
 ## 1. 元素二分
 
 | 类 | 定义 | schema 表达 | 坐标 |
