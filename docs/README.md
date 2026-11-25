@@ -224,6 +224,7 @@
 
 > S87 新增工具：`scripts/draw_ui_system_map.py`（UI 系统电路板总图）+ `scripts/draw_ui_howto.py`（平台改元素使用说明图），图见 `evidence/ui_system_map.png` / `evidence/ui_howto.png`。
 
+> S87 新增工具：`scripts/draw_scene_parts_map.py`（每场景一张 UI 元器件说明图，电路板装配图范式；图见 `evidence/scene_parts/<scene>.png`）。
 > S86 新增工具：`scripts/export_parity_check.py`（导出即生效像素判据，见 `process/22_dev_platform.md` §14）。
 
 ### 归档参照物（`legacy/docs/`，**S11 已物理归档，不是开发依据也不是验收基准**）

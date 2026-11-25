@@ -17,6 +17,24 @@
 
 > 图由 `scripts/draw_ui_howto.py` 生成。
 
+## 0b. 每场景 UI 元器件说明图
+
+每个场景一张「元器件说明图」（电路板装配图范式）：画布按 1920×1080 真实布局摆元件，
+每元件 = 封装块 + 位号(id) + 引线标注，右侧配元件清单（位号 / 型号 / 位置 / 可替换 role / 可点 action）。
+
+| 场景 | 图 | 元件数 |
+|---|---|---|
+| index | ![index 元器件说明图](../../evidence/scene_parts/index.png) | 4 |
+| select_role | ![select_role 元器件说明图](../../evidence/scene_parts/select_role.png) | 4 |
+| select_map | ![select_map 元器件说明图](../../evidence/scene_parts/select_map.png) | 4 |
+| message | ![message 元器件说明图](../../evidence/scene_parts/message.png) | 3 |
+| saveload | ![saveload 元器件说明图](../../evidence/scene_parts/saveload.png) | 4 |
+| main_map | ![main_map 元器件说明图](../../evidence/scene_parts/main_map.png) | 35 |
+| vs | ![vs 元器件说明图](../../evidence/scene_parts/vs.png) | 21 |
+
+> 图由 `scripts/draw_scene_parts_map.py` 生成（真实数据，可复跑）。图即编辑器画布的静态对照：
+> 位号 = 组件 id，在平台「UI 组件 ↗」页同名画布上可直接拖动/替换。
+
 ## 1. 元素二分
 
 | 类 | 定义 | schema 表达 | 坐标 |

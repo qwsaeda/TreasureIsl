@@ -61,6 +61,7 @@
 | `scripts/preview_shot.py` | Python | **S86.3 真渲染预览出图包装器**（POST /api/preview 后台执行体；TI_PREVIEW_DIR 注入 + --shot + PNG 非纯色判据；`--check` 只读） | 否 |
 | `scripts/draw_ui_system_map.py` | Python | UI 系统电路板示意图生成器（真实接线总图，PIL + CJK 字体；`--check` 只读） | 否 |
 | `scripts/draw_ui_howto.py` | Python | UI 元素编辑使用说明图生成器（7 场景两条路线操作图；`--check` 只读） | 否 |
+| `scripts/draw_scene_parts_map.py` | Python | 场景 UI 元器件说明图生成器（每场景一张元器件装配图：真实布局 + 位号引线 + 元件清单；`--check` 只读） | 否 |
 | `scripts/export_parity_check.py` | Python | S86.4 导出即生效像素判据（预览 PNG vs 导入后出图 PNG，diff=0 = PASS；`--check` 自检） | 否 |
 | `scripts/ui_schema_check.py` | S85 UI 组件 schema 门禁（`33_ui_component_schema.md`）：只读校验 `components_v1.json` 的 type/binding/layout/action/role enum + 禁绝对坐标 + 登记对账 | `python scripts/ui_schema_check.py --check` | 幂等只读；违规非 0 |
 | `scripts/world_schema_check.py` | S87.1 世界层 schema 门禁（`docs/plan-s87-world-layer.md`）：只读校验 `world_components.json` 的 type 三型闭集 + 禁裸坐标 + role 登记/资产实存 + UiAction 15 项 + geometry.ref 源键解析；`--instance` 负例注入 | `python3 scripts/world_schema_check.py --check` | 幂等只读；违规非 0 |
