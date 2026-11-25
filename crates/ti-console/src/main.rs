@@ -66,9 +66,17 @@ fn write_lock(pid: u32) -> Result<std::path::PathBuf, String> {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map_or(0, |d| d.as_secs());
-                if !alive && now.saturating_sub(started) > LOCK_STALE_SECS {
+                // 进程不存在 ⇒ 锁必然无效（进程被杀/崩溃），**立即接管**，不等 30 分钟
+                // （旧判定要求「pid 不存在 且 超 30 分钟」才接管 ⇒ 崩后重启必被拦，平台起不来）。
+                // 30 分钟门槛只用于「pid 仍存活但疑似卡死」的情形。
+                if !alive {
                     eprintln!(
-                        "ti-console: 陈旧锁接管（pid {old} 不存在 + 起始超 30 分钟；stale-lock）"
+                        "ti-console: 陈旧锁接管（pid {old} 已不存在；stale-lock）"
+                    );
+                    let _ = std::fs::remove_file(&path);
+                } else if now.saturating_sub(started) > LOCK_STALE_SECS {
+                    eprintln!(
+                        "ti-console: 陈旧锁接管（pid {old} 仍存活但超 30 分钟；stale-lock）"
                     );
                     let _ = std::fs::remove_file(&path);
                 } else {

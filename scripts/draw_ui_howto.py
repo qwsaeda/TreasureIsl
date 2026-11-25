@@ -80,7 +80,7 @@ def build() -> Image.Image:
     d.rounded_rectangle((34, 112, 1466, 196), radius=8, fill=PANEL, outline=BLUE, width=2)
     d.text((50, 126), "0. 启动平台", font=font(21), fill=BLUE)
     d.text((50, 158),
-           "cargo run -p ti-console     →  浏览器打开 http://127.0.0.1:8080     （设置页粘贴 token，用于写操作）",
+           "cargo run -p ti-console     →  浏览器打开 http://127.0.0.1:8787/     （端口 8787；写操作需 X-TI-Token）",
            font=font(16), fill=TEXT)
 
     # ── 地图页 ──────────────────────────────────────────────
