@@ -1,0 +1,63 @@
+S87.5 — 编辑器扩到 7 场景（世界层元素可视化 + 真渲染预览）验收证据
+日期：2026-11-26
+
+改动面：平台 + 数据
+判据：7 场景可拖拽编辑 + FAIL 禁摆 + 预览可用
+
+=== 1. 七场景编辑器（前端场景列表）===
+crates/ti-console/web/ui_editor.html:
+  const SCENE_ORDER = ['index','select_role','select_map','message','saveload','main_map','vs'];
+  const WORLD_SCENES = ['main_map','vs'];
+→ 7 场景全量在列；main_map/vs 走 world tab（世界层元素可视化）。
+
+=== 2. 属性栏中文化（本轮增量）===
+ui_editor.html renderPropsUi/renderPropsWorld 全部 propRow 标签改为中文参数名 +
+作用说明（灰字小字 + title 悬浮提示）：位号/型号/资产角色/内容绑定/点击动作/布局意图/
+锚点/横向偏移%/层序/几何来源/几何引用/解除约束/动画引用/显示阶段/条件·数据路径 等。
+JS 语法校验：node --check OK。
+
+=== 3. FAIL 禁摆（geometry 引用受源约束）===
+ui_editor.html: 黄框 = geometry 引用元素，拖拽即 FAIL 禁摆并自动回滚；
+可在属性面板「解除约束→world_rect」转为可自由拖动。
+
+=== 4. 预览白名单补齐（本轮修复的 400 BUG）===
+根因：S87 把 vs 纳入世界层编辑器，但 preview.rs::PREVIEW_SCENES 仍停留在 S86
+时点 6 场景白名单（注释写"vs 不在 UI 编辑器范围"）⇒ 前端发 vs 即 400：
+  {"scene":"vs",...} → 400 scene 非法（白名单 [...6 项，无 vs]）
+修复三处（22 号文档已登记接线责任但代码未落地）：
+  - crates/ti-console/src/repo/preview.rs: PREVIEW_SCENES [&str;6]→[&str;7] 加 "vs"；
+    BLOB_FILES [8]→[9] 加 ("world_components_json","world_components.json")
+  - scripts/preview_shot.py: SCENES 加 "vs"；main_map/vs 设 env TI_WORLD_SCHEMA=1；
+    过时文案"冷启 3~6 分钟"改为"场景引用集预载"
+  - docs/process/22_dev_platform.md: body 枚举 scene 加 vs；落地口径改"已落地"
+
+=== 5. 真渲染预览实测（重启平台后）===
+POST /api/preview {"scene":"vs","viewport":"1920x1080","id":"vs_probe_fix",
+                   "enable_write":true,"action":"preview","world_components_json":{}}
+→ HTTP 200（修复前 400），ok=true，job 受理。
+轮询 GET /api/jobs?kind=preview&id=vs_probe_fix → exit_code=0，running=false。
+日志证据：evidence/console/logs/preview-vs_probe_fix-1795674258.log
+  [preview] 命令：xvfb-run -a treasure-bevy-native --shot --scene=vs --viewport=1920x1080
+  [shot] 预载 53 个资产（vs 引用集；旧全量=387）
+出图：evidence/bevy_native_preview_vs_probe_fix_1920x1080.png
+  1920×1080，8296178 B，非黑率 849‰（真内容非黑帧）。
+
+=== 6. index 画面回归修复（本轮增量）===
+用户报"渲染图少了 hero，menu 还是有问题"。根因与修复：
+  - hero：components_v1.json 中 layout.intent=center 且无 size_pct ⇒ 高度 Val::Auto
+    ⇒ ImageNode Stretch 0 高度不渲染。改 anchored + top_left，offset(26.6,30.0)/
+    size(35.4,61.1) ⇒ 双人海盗层正常显示（evidence/index_fix2.png 已核）。
+  - menu：build_chrome_row 把木牌渲成 72×96 缩略图（选角列表口径）。
+    新增 Component.row_style="image" + build_image_row（整图铺满 + 面板透明 +
+    金色半透明选中描边）；asset_roles 补登记 index_plank_0..5 ⇒ 6 木牌文案各异
+    （新游戏/载入游戏/读取存档/选项设置/帮助说明/离开游戏）。
+
+=== 7. 出图提速（本轮增量）===
+旧：全量预载 assets/ui/ 387 文件 / 200MB，软件渲染逐帧轮询 3000+ tick ⇒ 一张图 3~6 分钟。
+新：shot_refset(scene) 按场景引用集预载（scenes.json prim 资产 + asset_roles + 场景前缀 + 字体），
+排除 _uNN 历史主题变体。实测 index 16~17 秒、vs 53 资产，约 20 倍提速。
+
+=== 门禁 ===
+cargo clippy --workspace --all-targets -- -D warnings：0 error
+python scripts/ui_schema_check.py：OK（5 场景 / 19 组件）
+node --check ui_editor.html 内联 JS：OK

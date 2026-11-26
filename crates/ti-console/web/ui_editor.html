@@ -61,7 +61,8 @@
   #status.pass { border-color:var(--ok); color:var(--ok); }
   #status.fail { border-color:var(--err); color:#ffb4b4; }
   #previewBox { margin-top:10px; display:none; }
-  #previewBox img { width:100%; border:1px solid var(--border); border-radius:6px; }
+  #previewFrame { width:100%; aspect-ratio:16/9; border:1px solid var(--border);
+    border-radius:6px; background:#14100b; display:block; }
   .bar { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
   .legend { color:var(--muted); font-size:11px; line-height:1.6; margin-top:8px; }
   code { color:var(--warn); }
@@ -92,10 +93,11 @@
       <button id="btnApply" class="primary">写盘 apply</button>
       <button id="btnExport">导出 JSON</button>
       <button id="btnReload">重新载入</button>
-      <button id="btnPreview">预览真渲染</button>
+      <button id="btnPreview" class="primary">实时预览（用户 GPU）</button>
+      <button id="btnPreviewNative">服务端出图对照</button>
     </div>
     <div id="status">尚未载入组件数据。</div>
-    <div id="previewBox"><h2 style="margin-top:12px">真渲染预览</h2><img id="previewImg" alt="preview"></div>
+    <div id="previewBox"><h2 style="margin-top:12px">实时真渲染预览（浏览器 wasm · 用户 GPU）</h2><iframe id="previewFrame" title="实时预览"></iframe></div>
   </div>
 
   <div class="card prop-col">
@@ -447,13 +449,22 @@ async function onDragEnd() {
 }
 
 // ---- 属性面板公共控件（UI / world 共用） ----
-function propRow(host, labelText, control) {
+// 属性行：中文参数名 + 作用说明（灰字小字 + title 悬浮提示）。
+function propRow(host, labelText, control, hint) {
   const div = document.createElement('div');
   div.className = 'row';
+  div.style.flexWrap = 'wrap';
   const lab = document.createElement('label');
   lab.textContent = labelText;
+  if (hint) lab.title = hint;
   div.appendChild(lab);
   div.appendChild(control);
+  if (hint) {
+    const note = document.createElement('small');
+    note.textContent = hint;
+    note.style.cssText = 'color:var(--muted);flex-basis:100%;margin-top:2px;font-size:11px';
+    div.appendChild(note);
+  }
   host.appendChild(div);
 }
 
@@ -526,36 +537,36 @@ function ensureObj(parent, key, init) {
 
 function renderPropsUi(host, el) {
   const l = el.layout || {};
-  propRow(host, 'id', propSpan(host, el.id));
-  propRow(host, 'type', propSpan(host, el.type || '?'));
-  propRow(host, 'role', propSelect(host, 'role', el, S.roles.map((r) => r.role), true));
-  propRow(host, 'icon', propSelect(host, 'icon', el, S.icons, true));
-  propRow(host, 'binding', propText(host, 'binding', el));
-  propRow(host, 'action', propSelect(host, 'action', el, ACTIONS.slice(0, 12), true));
-  propRow(host, 'tier', propSelect(host, 'tier', el, TIERS, true));
-  propRow(host, 'state', propStates(host, el));
-  propRow(host, 'intent', propSelect(host, 'intent', l, INTENTS, true));
+  propRow(host, '位号', propSpan(host, el.id), '组件唯一标识（场景内不可重复），即元器件图上的位号');
+  propRow(host, '型号', propSpan(host, el.type || '?'), '元素种类：image 图片 / text 文本 / button 按钮 / list 列表 / panel 面板');
+  propRow(host, '资产角色', propSelect(host, 'role', el, S.roles.map((r) => r.role), true), '决定显示哪张图：从资产角色表选，禁止手写文件路径');
+  propRow(host, '图标', propSelect(host, 'icon', el, S.icons, true), '图标名（白蒙版），运行时按主题着色；留空表示不用图标');
+  propRow(host, '内容绑定', propText(host, 'binding', el), '取内容的来源：i18n 文案键（如 scene.index.title）或列表名（menu/characters 等）');
+  propRow(host, '点击动作', propSelect(host, 'action', el, ACTIONS.slice(0, 12), true), '点击后触发的业务动作（UiAction 闭集）；留空 = 不可点');
+  propRow(host, '字号档', propSelect(host, 'tier', el, TIERS, true), '文本字号：title 标题 / body 正文 / hint 提示');
+  propRow(host, '可见状态', propStates(host, el), '在什么状态下显示：normal 常态 / selected 选中 / hover 悬停 / disabled 禁用');
+  propRow(host, '布局意图', propSelect(host, 'intent', l, INTENTS, true), '自动布局方式：fill 满屏 / center 居中 / side_left/right 贴边 / flex 弹性 / anchored 锚点定位 / bottom_bar 底栏');
   if (l.intent === 'anchored') {
-    propRow(host, 'anchor', propSelect(host, 'anchor', l, ANCHORS, true));
+    propRow(host, '锚点', propSelect(host, 'anchor', l, ANCHORS, true), '以哪个角/边为基准定位（如 top_left 左上角）');
     if (!l.offset_pct) l.offset_pct = { x:0, y:0 };
     if (!l.size_pct) l.size_pct = { w:30, h:20 };
-    propRow(host, 'offset.x', propNumber(host, 'x', l.offset_pct));
-    propRow(host, 'offset.y', propNumber(host, 'y', l.offset_pct));
-    propRow(host, 'size.w', propNumber(host, 'w', l.size_pct));
-    propRow(host, 'size.h', propNumber(host, 'h', l.size_pct));
+    propRow(host, '横向偏移%', propNumber(host, 'x', l.offset_pct), '相对锚点的水平偏移，视口百分比（0~100），不是像素');
+    propRow(host, '纵向偏移%', propNumber(host, 'y', l.offset_pct), '相对锚点的垂直偏移，视口百分比（0~100），不是像素');
+    propRow(host, '宽度%', propNumber(host, 'w', l.size_pct), '元素宽度，视口百分比（0~100），不是像素');
+    propRow(host, '高度%', propNumber(host, 'h', l.size_pct), '元素高度，视口百分比（0~100），不是像素');
   } else {
-    propRow(host, 'width_pct', propNumber(host, 'width_pct', l));
+    propRow(host, '面板宽度%', propNumber(host, 'width_pct', l), '贴边/居中面板占视口的宽度百分比（1~100）');
   }
-  propRow(host, 'z', propNumber(host, 'z', el));
+  propRow(host, '层序', propNumber(host, 'z', el), '绘制顺序：数值越大越靠上（覆盖在下层之上）');
 }
 
 function renderPropsWorld(host, el) {
-  propRow(host, 'id', propSpan(host, el.id));
-  propRow(host, 'type', propSelect(host, 'type', el, WORLD_TYPES, false));
-  propRow(host, 'role', propSelect(host, 'role', el, S.roles.map((r) => r.role), true));
+  propRow(host, '位号', propSpan(host, el.id), '组件唯一标识（场景内不可重复）');
+  propRow(host, '型号', propSelect(host, 'type', el, WORLD_TYPES, false), 'CPU 世界层绘制类型：image 图片 / rect 色块 / text 文本');
+  propRow(host, '资产角色', propSelect(host, 'role', el, S.roles.map((r) => r.role), true), '决定显示哪张图：从资产角色表选，禁止手写文件路径');
   if (el.geometry) {
-    propRow(host, 'geometry.source', propSelect(host, 'source', el.geometry, WORLD_SOURCES, false));
-    propRow(host, 'geometry.ref', propText(host, 'ref', el.geometry));
+    propRow(host, '几何来源', propSelect(host, 'source', el.geometry, WORLD_SOURCES, false), '坐标来自哪份权威数据：v6 布局 JSON 或 scenes.json');
+    propRow(host, '几何引用', propText(host, 'ref', el.geometry), '指向源数据里的具体键（如 tiles[3]/helm）；受源约束，拖拽即 FAIL 禁摆');
     const unlock = document.createElement('button');
     unlock.textContent = '解除约束→world_rect';
     unlock.onclick = async () => {
@@ -566,22 +577,23 @@ function renderPropsWorld(host, el) {
       delete el.geometry;
       await commitChange(old);
     };
-    propRow(host, '约束', unlock);
+    propRow(host, '解除约束', unlock, '把 geometry 引用转成可自由拖动的 world_rect（当前解析矩形作为初值）');
   } else {
     const r = ensureObj(el, 'world_rect', { x:0, y:0, w:120, h:80 });
-    ['x', 'y', 'w', 'h'].forEach((key) => propRow(host, 'world_rect.' + key, propNumber(host, key, r)));
+    [['x','横坐标'],['y','纵坐标'],['w','宽度'],['h','高度']].forEach(([key,label]) =>
+      propRow(host, label, propNumber(host, key, r), '1920×1080 世界坐标整数像素；拖动画布元素会自动改写这四个值'));
   }
-  propRow(host, 'z', propNumber(host, 'z', el));
+  propRow(host, '层序', propNumber(host, 'z', el), '绘制顺序：数值越大越靠上');
   // pick：action（15 项）/ index；两键须同时在场。
   if (el.pick) {
     const pick = el.pick;
-    propRow(host, 'pick.action', propSelect(host, 'action', pick, ACTIONS, false));
-    propRow(host, 'pick.index', propNumber(host, 'index', pick));
+    propRow(host, '点击动作', propSelect(host, 'action', pick, ACTIONS, false), '点击触发的业务动作（UiAction 闭集）；决定这个元件点下去发生什么');
+    propRow(host, '目标下标', propNumber(host, 'index', pick), '动作作用的对象序号（如第几个席位/菜单项）；-1 = 无');
   } else {
     const addPick = document.createElement('button');
-    addPick.textContent = '＋ 加 pick';
+    addPick.textContent = '＋ 加点击动作';
     addPick.onclick = async () => { const old = clone(S.schema); el.pick = { action:'back', index:0 }; await commitChange(old); };
-    propRow(host, 'pick', addPick);
+    propRow(host, '点击动作', addPick, '给该元件加可点行为（动作 + 目标下标）');
   }
   // binding：i18n key 字符串，或 host:<白名单 path>（后端校验 host 白名单）。
   const bindInp = document.createElement('input');
@@ -595,10 +607,10 @@ function renderPropsWorld(host, el) {
     else delete el.binding;
     await commitChange(old);
   };
-  propRow(host, 'binding', bindInp);
-  propRow(host, 'tier', propSelect(host, 'tier', el, TIERS, true));
-  propRow(host, 'state', propStates(host, el));
-  propRow(host, 'anim_ref', propText(host, 'anim_ref', el));
+  propRow(host, '内容绑定', bindInp, '运行时取值：i18n 文案键，或 host:白名单路径（如 host:EconomyHost.gold）');
+  propRow(host, '字号档', propSelect(host, 'tier', el, TIERS, true), 'title 标题 / body 正文 / hint 提示');
+  propRow(host, '可见状态', propStates(host, el), 'normal 常态 / selected 选中 / hover 悬停 / disabled 禁用');
+  propRow(host, '动画引用', propText(host, 'anim_ref', el), '关联 Rust 过程式动画的时间轴名；动画本身不写进数据，只在此标注归属');
   const phaseInp = document.createElement('input');
   phaseInp.value = Array.isArray(el.visible_in_phase) ? el.visible_in_phase.join(',') : '';
   phaseInp.onchange = async () => {
@@ -607,22 +619,22 @@ function renderPropsWorld(host, el) {
     if (arr.length) el.visible_in_phase = arr; else delete el.visible_in_phase;
     await commitChange(old);
   };
-  propRow(host, 'visible_phase', phaseInp);
+  propRow(host, '显示阶段', phaseInp, '该元件在哪些战斗阶段显示（clash/result_win/result_lose，逗号分隔）；留空 = 全阶段');
   // visible_when：path（白名单）/ op / value（eq|ne 必填）。
   if (el.visible_when) {
     const when = el.visible_when;
-    propRow(host, 'when.path', propSelect(host, 'path', when, WORLD_HOST_PATHS, false));
-    propRow(host, 'when.op', propSelect(host, 'op', when, WORLD_OPS, false));
-    propRow(host, 'when.value', propText(host, 'value', when));
+    propRow(host, '条件·数据路径', propSelect(host, 'path', when, WORLD_HOST_PATHS, false), '从哪个运行时状态取值（白名单，如 MapHost.panel）');
+    propRow(host, '条件·比较', propSelect(host, 'op', when, WORLD_OPS, false), '比较方式：is_none 无值 / is_some 有值 / eq 等于 / ne 不等于');
+    propRow(host, '条件·目标值', propText(host, 'value', when), 'eq/ne 时要比较的值（如 build）；is_none/is_some 可留空');
   } else {
     const addWhen = document.createElement('button');
-    addWhen.textContent = '＋ 加 visible_when';
+    addWhen.textContent = '＋ 加显示条件';
     addWhen.onclick = async () => {
       const old = clone(S.schema);
       el.visible_when = { path:'MapHost.panel', op:'eq', value:'build' };
       await commitChange(old);
     };
-    propRow(host, 'visible_when', addWhen);
+    propRow(host, '显示条件', addWhen, '按运行时状态决定是否显示（如"轮到该席才显示船"）');
   }
 }
 
@@ -706,23 +718,35 @@ function doExport() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-async function doPreview() {
-  // S86.3 真渲染预览 + S87.5b world 注入：world 模式传 world_components_json（引擎
-  // TI_PREVIEW_DIR/world_components.json → install_injected world_components 字段），
-  // UI 模式沿用 schema_json；轮询统一作业面 GET /api/jobs?kind=preview&id=..。
+// S87.7 浏览器实时预览：编辑器数据写入 sessionStorage → iframe 加载 wasm 游戏壳
+// → web/main.js 在 init() 前同步读全局 → wasm install_injected。用户 GPU 真渲染，
+// 所见即所得、无冷启、无需服务端出图。每次点 = iframe reload（新 wasm 实例/新 OnceLock）。
+function doPreview() {
+  if (!S.schema) return;
+  try {
+    const payload = { scene: S.scene, mode: S.mode, schema: S.schema };
+    sessionStorage.setItem('ti_preview_inject', JSON.stringify(payload));
+  } catch (e) {
+    status('实时预览失败：sessionStorage 不可用 ' + e.message, 'fail');
+    return;
+  }
+  const frame = $('previewFrame');
+  const stamp = Date.now();
+  frame.onload = () => status('实时预览已加载：' + S.scene + '（浏览器 wasm · 用户 GPU 真渲染；改数据后再次点击即刷新）', 'pass');
+  frame.onerror = () => status('实时预览 iframe 加载失败', 'fail');
+  frame.src = '/web/index.html?scene=' + encodeURIComponent(S.scene) + '&preview=1&t=' + stamp;
+  $('previewBox').style.display = 'block';
+  status('实时预览启动中：' + S.scene + '（首次加载 wasm 需几秒，用户 GPU 真渲染）', 'pass');
+}
+
+// 回退对照：服务端 llvmpipe --shot 出 PNG（保留作无 GPU / 自动化取证路径）。
+async function doPreviewNative() {
   if (S.busy || !S.schema) return;
-  // 预览 = 只读观感操作（不改游戏数据；只写 gitignored 临时目录 + 出 PNG）⇒ 不需 enable_write
-  // （旧实现把「允许改游戏数据」的开关套在预览上是语义错配，后端已同步放开）。
   S.busy = true;
-  status('提交真渲染预览作业…');
+  status('提交服务端出图作业（llvmpipe 对照）…');
   try {
     const id = 'preview_' + S.scene + '_' + Date.now();
-    const bodyData = {
-      action:'preview', scene:S.scene, viewport:'1920x1080', id:id,
-      mode:S.mode
-    };
-    // 后端契约：`schema_json` / `world_components_json` 必须是 JSON object（整表/schema 形状），
-    // 不是 JSON.stringify 出来的字符串（旧实现发字符串 ⇒ 400「必须是 JSON object」）。
+    const bodyData = { action:'preview', scene:S.scene, viewport:'1920x1080', id:id, mode:S.mode };
     if (isWorld()) bodyData.world_components_json = S.schema;
     else bodyData.schema_json = S.schema;
     const res = await api('/api/preview', { method:'POST', headers:headers(), body:JSON.stringify(bodyData) });
@@ -730,9 +754,6 @@ async function doPreview() {
     if (!image) { status('预览服务返回无 image 字段：' + JSON.stringify(res).slice(0, 300), 'fail'); return; }
     const poll = res.poll || ('/api/jobs?kind=preview&id=' + encodeURIComponent(res.id || id));
     let done = false;
-    // 冷启 --shot 实测：message ≈ 250s，index（全量资产预载）≈ 350s+；
-    // 旧实现轮询 120 次（2 分钟）⇒ 用户在「提交真渲染预览作业…」卡住后超时，看不到任何图。
-    // 改为 600 次（10 分钟）+ 每 15 秒回显已等待时间，避免「假死」观感。
     const maxWait = 600;
     for (let i = 0; i < maxWait; i++) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -743,31 +764,20 @@ async function doPreview() {
         status('预览作业失败：exit_code=' + state.exit_code + ' · ' + (job.log_tail || '').slice(-300), 'fail');
         return;
       }
-      if ((i + 1) % 15 === 0) status('真渲染出图中…已等 ' + (i + 1) + 's（冷启全量资产预载通常 3~6 分钟）');
+      if ((i + 1) % 15 === 0) status('服务端出图中…已等 ' + (i + 1) + 's（llvmpipe 软件渲染较慢）');
     }
     if (!done) { status('预览作业超时（10 分钟）：' + poll, 'fail'); return; }
     $('previewBox').style.display = 'block';
-    $('previewImg').src = '/' + String(image).replace(/^\//, '') + '?t=' + Date.now();
-    status('预览已加载：' + image + '（<img> 走 ?t=Date.now() 破缓存；world 模式经 TI_PREVIEW_DIR 注入）', 'pass');
+    status('服务端出图完成：' + image + '（对照帧；实时预览请用「实时预览」按钮）', 'pass');
   } catch (e) {
     status('预览服务异常：' + e.message, 'fail');
   } finally { S.busy = false; }
 }
-
-$('btnValidate').onclick = async () => {
-  if (S.busy || !S.schema) return;
-  S.busy = true; status('校验中…');
-  try {
-    const res = await postValidate();
-    if (res.ok) status('PASS · ' + S.mode + ' 模式校验全绿', 'pass');
-    else status('FAIL ·\n' + (res.errors || []).join('\n'), 'fail');
-  } catch (e) { status('校验请求异常：' + e.message, 'fail'); }
-  finally { S.busy = false; }
-};
 $('btnApply').onclick = doApply;
 $('btnExport').onclick = doExport;
 $('btnReload').onclick = loadAll;
 $('btnPreview').onclick = doPreview;
+$('btnPreviewNative').onclick = doPreviewNative;
 
 renderAll();
 loadAll();

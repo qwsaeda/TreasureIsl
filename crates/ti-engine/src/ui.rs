@@ -63,6 +63,8 @@ pub mod palette {
     pub const BRASS_SELECT: Color = theme_color(Theme::DEFAULT.ui_brass_select, 1.0);
     /// 透明。
     pub const TRANSPARENT: Color = Color::srgba(0.0, 0.0, 0.0, 0.0);
+    /// 整图列表行选中态的半透明金色描边（S87.6 index 木牌菜单；走主题令牌单源）。
+    pub const SELECT_GLOW: Color = theme_color(Theme::DEFAULT.ui_gold_text, 0.55);
     /// 米白文本（副标题，ui.rs）。
     pub const CREAM_TEXT: Color = theme_color(Theme::DEFAULT.ui_cream_text, 1.0);
     /// 灰金副文本（ui.rs + `treasure_bevy`）。
@@ -372,6 +374,54 @@ pub fn build_list_chrome_pos(
 
 /// 列表 chrome 的**单行**（flex row = 缩略图 + 文案列；选中行换黄铜底色）。
 /// 返回行 `Node` 实体（调用方挂 `PickTarget` 即可命中，`UiPickingPlugin` 直接拾取 `Node`）。
+/// S87.6：整行图片列表行（木牌菜单专用）——图片铺满整行宽度、高度由原图比例决定，
+/// 不画缩略图/文案列；选中态用半透明金色描边（不遮挡木牌图）。
+/// 返回行 `Node` 实体（调用方挂 `PickTarget` 即可命中）。
+pub(crate) fn build_image_row(commands: &mut Commands, row: &ChromeRow, panel: Entity) -> Entity {
+    let row_bg = if row.selected {
+        // 半透明金色高亮：木牌图本身不透明，底色只在圆角缝隙透出一圈金边。
+        palette::SELECT_GLOW
+    } else {
+        palette::TRANSPARENT
+    };
+    let row_node = commands
+        .spawn((
+            Node {
+                display: Display::Flex,
+                width: Val::Percent(100.0),
+                align_items: AlignItems::Stretch,
+                border_radius: BorderRadius::px(
+                    palette::ROW_RADIUS,
+                    palette::ROW_RADIUS,
+                    palette::ROW_RADIUS,
+                    palette::ROW_RADIUS,
+                ),
+                ..Node::default()
+            },
+            BackgroundColor(row_bg),
+            ChildOf(panel),
+        ))
+        .id();
+    if let Some(img) = &row.image {
+        commands.spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Auto,
+                aspect_ratio: Some(434.0 / 92.0),
+                ..Node::default()
+            },
+            ImageNode {
+                image: img.clone(),
+                image_mode: NodeImageMode::Stretch,
+                ..Default::default()
+            },
+            Pickable::IGNORE,
+            ChildOf(row_node),
+        ));
+    }
+    row_node
+}
+
 pub(crate) fn build_chrome_row(
     commands: &mut Commands,
     font: &Handle<Font>,

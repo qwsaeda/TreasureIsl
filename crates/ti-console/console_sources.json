@@ -3,6 +3,7 @@
   "plan/ledger.yaml",
   "docs/",
   "evidence/",
+  "web/",
   "assets/gate_data.json",
   "assets/ui_manifest.json",
   "assets/registry.json",

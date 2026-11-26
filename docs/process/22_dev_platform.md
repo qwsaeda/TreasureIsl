@@ -516,15 +516,36 @@ role/icon 下拉另读 `assets/data/ui_icons.json`。三面对账 = `routes.rs` 
 | `POST /api/preview` | POST | `enable_write=true` + 白名单 `action=preview` | 未落盘编辑数据写 gitignored `evidence/console/preview/<id>/` → 后台 `python3 scripts/preview_shot.py` 调 `treasure-bevy-native --shot` → PNG 回传 |
 | `GET /api/jobs?kind=preview&id=<id>` | GET | 只读 | 统一作业模型查询面（23 号 §6.2）：exit_code + log_tail + evidence[]；无需另设 `GET /api/preview` |
 
+### 浏览器实时预览（S87.7，用户 GPU 真渲染，替代服务端 llvmpipe `--shot`）
+
+- **动因**：服务端 `POST /api/preview` 每次冷启 `treasure-bevy-native --shot`，本机 WGPU 选中的是
+  **llvmpipe 软件渲染**（`device_type: Cpu`），1920×1080 逐像素光栅化 + 资产预载 ⇒ 空载 16s、
+  并行抢 CPU 时 30~60s。浏览器 wasm 版本就是项目双端目标之一，跑在用户**真实 GPU** 上、
+  实时渲染无"出一张图"概念 ⇒ 所见即所得且零冷启。
+- **数据流（0 写面 / 0 服务端渲染）**：编辑器 `doPreview()` 把 `{scene, mode, schema}` 写入
+  `sessionStorage['ti_preview_inject']` → 建 `<iframe src="/web/index.html?scene=<scene>&preview=1&t=<ts>">`
+  → `scripts/web_main.js` 在 `init()` 前同步读 `sessionStorage` + URL 参数，挂到
+  `window.ti_preview_scene` / `window.ti_preview_inject` → wasm `Args::parse` 读场景、
+  `apply_preview_injection_wasm()` 经 `js_sys::Reflect::get` 读注入文本、调
+  `ui_schema::install_injected`（`inject_map_pack()` 首访前，早于建 `GameApp`）。
+  iframe 每次 reload = 新 wasm 实例 = 新 OnceLock ⇒ 编辑数据即时生效，无需重启平台/重编译。
+- **静态服务**：根 `web/` 加入 `console_sources.json::repo_sources`（目录前缀白名单），平台
+  `guarded_file` 直读 wasm/js/资产（同 `assets/ui/` 大二进制口径）；iframe 载荷全走此面。
+- **回退**：native `apply_preview_injection` + `scripts/preview_shot.py` + `POST /api/preview`
+  整条链**保留不动**，作为无 GPU / 自动化截图取证的对照路径（A/B 两套 OnceLock 互不干扰，
+  分属不同进程）。
+- **判据**：iframe 内 `#status` 显示"运行中"且 canvas 非黑（用户 GPU 真渲染）；编辑器改数据
+  后点预览 → iframe reload → 画面即时变化；native 路径回归 0 变化。
+
 - **world 模式预览契约（可视化编辑器 world tab）**：前端对 main_map/vs 发
   `world_components_json`（整份 world schema 原文）而非 `schema_json`，落临时目录同名文件 →
   引擎经 `TI_PREVIEW_DIR/world_components.json` 注入；`preview_shot` 对这两场景设
   `TI_WORLD_SCHEMA=1`。**接线责任**：前端已按此契约发送；`preview.rs`（`PREVIEW_SCENES` 加
   `vs` + `BLOB_FILES` 加 `world_components_json`）与 `scripts/preview_shot.py`（`SCENES` 加 `vs`
-  + env `TI_WORLD_SCHEMA=1`）由主线程同步落地，未落地前 world 预览如实报 400/降级提示。
+  + env `TI_WORLD_SCHEMA=1`）**已落地**（S87.5；7 场景预览均可真渲染）。
 - **body 枚举**：`{scene, viewport?, id?, map_id?, schema_id?, enable_write, action?, schema_json?,
   world_components_json?, asset_roles_json?, board_json?, scenes_json?, strings_json?, map_json?, layout_json?, pack_strings_json?}`；
-  `scene` ∈ `index|select_role|select_map|saveload|message|main_map`，`viewport` ∈
+  `scene` ∈ `index|select_role|select_map|saveload|message|main_map|vs`（S87.5 七场景全量），`viewport` ∈
   `1920x1080|1080x1920|1280x720|960x540`，`id`/`map_id`/`schema_id` 仅 `[a-z0-9_-]` / `[a-z0-9_]`；
   禁自由 shell / 自由路径；请求体 ≤ 64 KiB；前置次序 400 Content-Type → 413 → 400 JSON → 400 `enable_write` → 400 枚举（**无鉴权面**）。
 - **写点**：仅 `evidence/console/preview/<id>/`（写点白名单已登记 `evidence/console/`）+

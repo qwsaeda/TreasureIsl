@@ -1,0 +1,38 @@
+S87.6 — 门禁/测试/文档迁移 + 收口推送 验收证据
+日期：2026-11-26
+
+改动面：工具 + 文档
+判据：gate 36 项 0 failure + 三方对账 + push
+
+=== 1. gate 全绿 ===
+`pwsh -ExecutionPolicy Bypass -File scripts/gate.ps1` → rc=0，=== gate: 0 failure(s) ===
+34 PASS + 2 条件 SKIP（Android 真机本机无 NDK / wasm 条件构建）；
+关键项：cargo fmt/clippy -D warnings/test --workspace（1106 passed 0 failed）/
+build native+wasm / doccheck 0 error / doccheck2 0 error（57 项）/
+check_code_standards PASS / audit_code 0 违规 / check_ledger_reality 全绿 /
+bevy-cpu-parity 0 超差 / wasm-browser-e2e 4 层全过 / browser-playtest / playtest-loop 聚合 0 失败。
+证据：/tmp/opencode/gate_s87_7_final.log
+
+=== 2. 三方对账 ===
+`python3 scripts/check_ledger_reality.py` → 全绿：437 verified 对账通过
+（符号 grep 第三方验 21/21 = 覆盖率 100% + 0 blocked schema + 0 孤儿 evidence）。
+`cargo run -q -p ti-tools --bin ledger -- plan/ledger.yaml` → 438 tasks, 437 verified, 0 error。
+
+=== 3. 本阶段回写的文档/计数漂移 ===
+- AGENTS.md / docs/release.md / docs/process/26_dev_stages_overview.md：
+  台账计数 437→438（S87.7 浏览器实时预览立项），verified 435→436→437，pending 2→1→0；
+  26号历史快照行用「里程碑：」结构豁免（计数守门判定）。
+- docs/experience/index.md + process.md：EXP-214 / EXP-215 登记（含重复空壳清理 +
+  分卷条数 68/69 对账）；26号 doccheck 计数 202/38/208/432 实测回写。
+- docs/process/22_dev_platform.md：浏览器实时预览契约（S87.7）；
+  world 模式预览接线责任从「未落地」改「已落地」（S87.5）。
+- docs/process/26_dev_stages_overview.md：现状区进度行 + 下一节点行 + 工具矩阵行全回写。
+
+=== 4. 收口任务链 ===
+S87.0~S87.5 verified（立项/规范/渲染器/main_map/vs/编辑器扩 7 场景）
+S87.7 verified（浏览器 wasm 实时预览，见 evidence/S87.7.log）
+S87.6 verified（本证据）
+S87 阶段全收口，台账 438/438 verified。
+
+=== 5. 推送 ===
+见 git commit/push 记录（本证据落盘时推送待执行，完成后由 commit message 关联）。

@@ -41,7 +41,7 @@ PREVIEW_ROOT = (REPO / "evidence" / "console" / "preview").resolve()
 SHOT_DIR = REPO / "evidence"
 
 # 与 routes::PREVIEW_SCENES / PREVIEW_VIEWPORTS 同源（doccheck2 三面对账由主线程登记）。
-SCENES = ("index", "select_role", "select_map", "saveload", "message", "main_map")
+SCENES = ("index", "select_role", "select_map", "saveload", "message", "main_map", "vs")
 VIEWPORTS = ("1920x1080", "1080x1920", "1280x720", "960x540")
 ID_RE = re.compile(r"^[a-z0-9_-]{1,64}$")
 
@@ -180,11 +180,15 @@ def do_run(args: argparse.Namespace, preview_dir: Path) -> int:
     # 无 TI_PREVIEW_DIR 时引擎 0 行为变化（走内嵌默认包）。
     env["TI_PREVIEW_DIR"] = str(preview_dir)
     env["TI_SHOT_NAME"] = f"bevy_native_preview_{args.id}"
+    # S87.5 world 模式契约（22 号文档）：main_map/vs 的世界层元素走 world_components.json；
+    # 显式置 1 锁定语义（引擎默认已启用 schema，0 仅留 A/B 回退口径）。
+    if args.scene in ("main_map", "vs"):
+        env["TI_WORLD_SCHEMA"] = "1"
     if args.map_id:
         env["TI_MAP"] = args.map_id
     command = build_command(bin_path, args)
     print(f"[preview] 命令：{' '.join(command)}", flush=True)
-    print(f"[preview] 引擎冷启全量资产预载通常 3~6 分钟，日志实时刷新…", flush=True)
+    print(f"[preview] 场景引用集预载（S87.5 优化，非全量 387 资产）；日志实时刷新…", flush=True)
     # S87.5：旧实现 `subprocess.run(capture_output=True)` 把引擎输出全缓冲到进程结束才打印
     # ⇒ 用户点预览后日志 0 字节、前端「提交作业…」假死。改为 Popen 逐行转发 + flush，
     # 日志实时可见；超时原样保留（kill 子进程）。

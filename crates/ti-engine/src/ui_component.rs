@@ -276,21 +276,7 @@ fn spawn_component_content(
                 Pickable::IGNORE,
             ));
         }
-        "list" | "panel" => {
-            let BindingValue::Rows(rows) = host.resolve(&component.binding) else {
-                return;
-            };
-            let bg =
-                if component.kind == "panel" { palette::PANEL_WOOD_BG } else { palette::PANEL_BG };
-            commands.entity(node).insert((BackgroundColor(bg), Pickable::IGNORE));
-            let key = host.action_key(&component.action);
-            for row in &rows {
-                let row_entity = build_chrome_row(commands, font, row, node);
-                if let (Some(key), Some(index)) = (key, row.pick_index) {
-                    commands.entity(row_entity).insert(crate::pick::PickTarget { key, index });
-                }
-            }
-        }
+        "list" | "panel" => spawn_list_content(commands, font, component, host, node),
         "button" => {
             let text = match host.resolve(&component.binding) {
                 BindingValue::Text(t) => t,
@@ -344,6 +330,43 @@ fn spawn_component_content(
                 crate::pick::PickTarget { key, index: i32::try_from(selected).unwrap_or(0) },
                 Pickable::default(),
             ));
+        }
+    }
+}
+
+/// `list`/`panel` 组件内容（从 `spawn_component_content` 抽出，函数规模纪律）。
+///
+/// S87.6：`row_style=image` = 整图铺满、面板透明（木牌直接挂地图上无暗底）；
+/// 其余沿用缩略图行（`build_chrome_row`）。逐行 `PickTarget` 由 `pick_index` 派生。
+#[allow(clippy::too_many_arguments)]
+fn spawn_list_content(
+    commands: &mut Commands,
+    font: &Handle<Font>,
+    component: &Component,
+    host: &dyn ComponentHost,
+    node: Entity,
+) {
+    let BindingValue::Rows(rows) = host.resolve(&component.binding) else {
+        return;
+    };
+    let image_rows = component.row_style == "image";
+    let bg = if image_rows {
+        palette::TRANSPARENT
+    } else if component.kind == "panel" {
+        palette::PANEL_WOOD_BG
+    } else {
+        palette::PANEL_BG
+    };
+    commands.entity(node).insert((BackgroundColor(bg), Pickable::IGNORE));
+    let key = host.action_key(&component.action);
+    for row in &rows {
+        let row_entity = if image_rows {
+            crate::ui::build_image_row(commands, row, node)
+        } else {
+            build_chrome_row(commands, font, row, node)
+        };
+        if let (Some(key), Some(index)) = (key, row.pick_index) {
+            commands.entity(row_entity).insert(crate::pick::PickTarget { key, index });
         }
     }
 }

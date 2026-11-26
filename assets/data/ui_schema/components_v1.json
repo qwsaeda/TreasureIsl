@@ -19,7 +19,16 @@
           "type": "image",
           "role": "index_hero",
           "layout": {
-            "intent": "center"
+            "intent": "anchored",
+            "anchor": "top_left",
+            "offset_pct": {
+              "x": 26.6,
+              "y": 30.0
+            },
+            "size_pct": {
+              "w": 35.4,
+              "h": 61.1
+            }
           },
           "z": 1
         },
@@ -29,7 +38,7 @@
           "binding": "menu",
           "layout": {
             "intent": "side_right",
-            "width_pct": 34,
+            "width_pct": 25,
             "align": "stretch"
           },
           "action": "menu_select",
@@ -37,7 +46,8 @@
             "normal",
             "selected"
           ],
-          "z": 2
+          "z": 2,
+          "row_style": "image"
         },
         {
           "id": "footer",

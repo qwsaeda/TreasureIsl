@@ -569,9 +569,11 @@ fn request_shot(
     preload: Res<ShotPreload>,
     mut commands: Commands,
 ) {
-    // S18.8b：贴图资产是**异步 IO**（资产服务器读盘）→ 截图帧阈值从 12 提到 40，
-    // 否则截到的是「贴图未加载」的半成品帧。
-    if shot.0 || frames.0 < 40 {
+    // S87.5：帧阈值 40→3。S18.8b 提高阈值是为等贴图异步加载，但 S27.5 已有
+    // `ShotPreload` 逐帧轮询守卫（全部 handle Loaded 才 ready）+ `finish_shot` 的
+    // 「非空且非纯色」内容判据双兜底 ⇒ 40 帧纯属冗余等待（llvmpipe ~1fps 下 ≈40s）。
+    // 帧 3 = 等相机/清屏首帧稳定即可；预载未就绪仍由下方 `preload.ready` 拦住。
+    if shot.0 || frames.0 < 3 {
         return;
     }
     // S27.5：预载未就绪 = 不截（冷启动部分资产已上屏、部分缺席 = 「半成品帧」，
@@ -1842,6 +1844,47 @@ fn apply_disk_schema() {
 /// - `board.json` / `scenes.json` / `strings.json` 整表覆盖文本，或 `<map_id>/` 地图包段
 ///   （经既有 `map_pack::read_pack_tables_with` 做 upsert 合并）→ `table_source::install`。
 ///
+/// S87.7：浏览器实时预览注入（编辑器 → sessionStorage → JS 全局 → wasm → `install_injected`）。
+///
+/// 与 native 的 `apply_preview_injection` 同口径（首访前一次性；缺数据 = 内嵌默认 0 行为变化），
+/// 但数据源是 `window.ti_preview_inject`（JSON 字符串，同步读取，不用 fetch ⇒ 时序必然早于
+/// `GameApp` 构造）。iframe 每次 reload = 新 wasm 实例 = 新 OnceLock，天然隔离。
+#[cfg(target_arch = "wasm32")]
+fn apply_preview_injection_wasm() -> bool {
+    let Some(raw) = js_sys::Reflect::get(&js_sys::global(), &"ti_preview_inject".into())
+        .ok()
+        .and_then(|v| v.as_string())
+    else {
+        return false;
+    };
+    // 形状：{ "scene": "...", "mode": "ui|world", "schema": <整份 schema JSON> }。
+    // schema 直接是整表文本（S.schema 来自编辑器），无需重序列化 ⇒ 与原文件逐字节一致。
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw) else {
+        return false;
+    };
+    let Some(schema) = value.get("schema").and_then(|v| v.as_object()) else {
+        return false;
+    };
+    let world = value.get("mode").and_then(|v| v.as_str()) == Some("world");
+    let text = serde_json::to_string(schema).unwrap_or_default();
+    if text.is_empty() {
+        return false;
+    }
+    let injected = if world {
+        ti_core::data::ui_schema::InjectedSchema {
+            world_components: Some(text),
+            ..Default::default()
+        }
+    } else {
+        ti_core::data::ui_schema::InjectedSchema { components: Some(text), ..Default::default() }
+    };
+    let ok = ti_core::data::ui_schema::install_injected(injected);
+    if ok {
+        web_sys::console::log_1(&"[preview] wasm 注入编辑器 schema 生效（实时画面）".into());
+    }
+    ok
+}
+
 /// 缺目录 / 越界路径 / 缺文件 = 纯内嵌默认（0 行为变化，与 `TI_THEME` 缺位同口径）。
 /// 必须与 `inject_map_pack()` 中的其它注入同处首访之前；OnceLock 定型后迟注入无效。
 #[cfg(not(target_arch = "wasm32"))]
@@ -1984,13 +2027,14 @@ impl Args {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            Self {
-                mode_flags: Vec::new(),
-                scene_id: "index".to_owned(),
-                viewport: None,
-                spin_n: 0,
-                panel: None,
-            }
+            // S87.7 浏览器实时预览：编辑器经 `?scene=` 写入 window.ti_preview_scene，
+            // 让 wasm 壳导航到目标场景（缺省 index = 原行为 0 变化）。
+            let scene_id = js_sys::Reflect::get(&js_sys::global(), &"ti_preview_scene".into())
+                .ok()
+                .and_then(|v| v.as_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "index".to_owned());
+            Self { mode_flags: Vec::new(), scene_id, viewport: None, spin_n: 0, panel: None }
         }
     }
 }
@@ -2032,7 +2076,11 @@ fn inject_map_pack() {
         apply_map_pack(&repo_root().join("assets").join("maps"));
     }
     #[cfg(target_arch = "wasm32")]
-    apply_map_pack();
+    {
+        // S87.7：编辑器注入最先（OnceLock 首访前；缺数据 = 内嵌默认 0 行为变化）。
+        apply_preview_injection_wasm();
+        apply_map_pack();
+    }
 }
 
 /// S85.2 主题写点：主题覆盖的唯一事实源 = `assets/data/ui_schema/components_v1.json` 的
@@ -2437,6 +2485,73 @@ fn parse_viewport(spec: &str) -> Option<(u32, u32)> {
 /// S18.8b：贴图资产是**异步读盘**（Bevy 资产服务器）→ 每帧 sleep 4ms 让 IO 落地；
 /// 空帧自动重截（`finish_shot` 复位 `ShotDone`）。
 /// S27.5：启动时全量预载 `ui/`+`fonts/`（治冷启动半成品帧），就绪后才允许截图。
+/// S87.5：按场景计算 `--shot` 资产引用集（替代旧「全量 assets/ui/ 387 文件」预载）。
+///
+/// 引用集 = ① 该场景 `scenes.json` prim 的 `params.asset` / `params.icon`；
+/// ② `asset_roles.json` 全部 role→路径（世界层 schema 按 role blit，数量 ~44）；
+/// ③ 场景专属过程式前缀目录（`vs_v2/` / `v6/` / `icon_` / `isle_` / `tile_` 等，
+///    运行时按名拼接，静态扫描拿不到 ⇒ 整目录纳入，但只限该场景）；
+/// ④ 字体（`assets/fonts/*.ttf`）—— CJK 文本必需。
+/// 其余场景资产一律不加载（预载从 387 降到 ~50）。
+fn shot_refset(scene_id: &str) -> Vec<String> {
+    let mut out: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let repo = repo_root();
+    // ①② 走 ti_core::data 单源（禁表现层硬编码 assets/ 路径，CS-1）：
+    // 场景 prim 资产 + asset_roles 全部 role→路径（schema 按 role blit）。
+    if let Ok(scenes) = ti_core::data::scenes() {
+        if let Some(scene) = scenes.get(scene_id) {
+            for prim in scene.prims_for() {
+                if let Some(a) = prim.params.get("asset").and_then(|v| v.as_str()) {
+                    out.insert(a.to_owned());
+                }
+            }
+        }
+    }
+    if let Ok(roles) = ti_core::data::ui_schema::asset_roles() {
+        for path in roles.roles.values() {
+            out.insert(path.to_owned());
+        }
+    }
+    // ③ 场景专属过程式前缀目录
+    let prefixes: &[&str] = match scene_id {
+        "vs" => &["vs_v2/", "deck_", "icon_", "role_", "hud_plaque", "chart_wide"],
+        "main_map" => &[
+            "v6/", "tile_", "isle_", "island_", "node_", "icon_", "helm", "compass", "dice",
+            "boat_",
+        ],
+        _ => &["icon_", "index_"],
+    };
+    if let Ok(entries) = std::fs::read_dir(repo.join("assets/ui")) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            // 排除 `_uNN` 主题变体（index_plank_0_u23.png 等 10 套历史主题），
+            // 当前场景只用基础资产；主题预览由 TI_THEME 单独注入。
+            let is_theme_variant = name.rsplit_once('_').is_some_and(|(stem, tail)| {
+                stem.contains("_u")
+                    && tail.trim_end_matches(".png").bytes().all(|b| b.is_ascii_digit())
+            });
+            if prefixes.iter().any(|p| name.starts_with(p))
+                && name.to_ascii_lowercase().ends_with(".png")
+                && !is_theme_variant
+            {
+                out.insert(format!("assets/ui/{name}"));
+            }
+        }
+    }
+    // ④ 字体
+    if let Ok(entries) = std::fs::read_dir(repo.join("assets/fonts")) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.to_ascii_lowercase().ends_with(".ttf")
+                || name.to_ascii_lowercase().ends_with(".otf")
+            {
+                out.insert(format!("assets/fonts/{name}"));
+            }
+        }
+    }
+    out.into_iter().collect()
+}
+
 fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
     // S18.7：离屏渲染目标（`--shot` 验证 Bevy 原生渲染真实出画）。
     // S29.5：`viewport` = 多视口出图（`--viewport=WxH`）⇒ 目标按该尺寸建 ⇒
@@ -2464,34 +2579,21 @@ fn run_shot(app: &mut App, scene_id: &str, viewport: Option<(u32, u32)>) {
         RenderTarget::Image(target_handle.into()),
         Transform::IDENTITY,
     ));
-    // S27.5：资产预载（治冷启动「半成品帧」，EXP-127 后续实测）：`assets/ui/` +
-    // `assets/fonts/` 全量 `load_untyped`，`shot_preload_poll` 全部 Loaded 才放行
-    // 截图请求（`is_blank_frame` 纯色判据 + 600 帧兜底保留为纵深防御）。
+    // S87.5：资产预载**按场景引用集**（旧实现全量 `assets/ui/` 387 文件 / 200MB，
+    // 软件渲染逐帧轮询 3000+ tick ⇒ 一张图 3~6 分钟，荒谬）。只加载当前场景真正会用到的
+    // 资产 + 字体；`shot_preload_poll` 仍逐帧等全部 Loaded（保留「半成品帧」守卫语义）。
     let mut handles: Vec<bevy::asset::UntypedHandle> = Vec::new();
     let server = app.world().resource::<bevy::asset::AssetServer>().clone();
-    let repo = repo_root();
-    let mut dirs = vec![repo.join("assets/ui"), repo.join("assets/fonts")];
-    while let Some(dir) = dirs.pop() {
-        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
-        for entry in entries.flatten() {
-            let p = entry.path();
-            if p.is_dir() {
-                dirs.push(p);
-            } else {
-                let rel = p.strip_prefix(&repo).unwrap_or(&p).to_string_lossy().replace('\\', "/");
-                match p.extension().and_then(|e| e.to_str()) {
-                    Some("ttf" | "otf") => {
-                        handles.push(server.load::<Font>(rel).into());
-                    }
-                    Some("png") => {
-                        handles.push(server.load::<Image>(rel).into());
-                    }
-                    _ => {}
-                }
-            }
+    let asset_list = shot_refset(scene_id);
+    for rel in &asset_list {
+        if rel.to_ascii_lowercase().ends_with(".ttf") || rel.to_ascii_lowercase().ends_with(".otf")
+        {
+            handles.push(server.load::<Font>(rel.clone()).into());
+        } else {
+            handles.push(server.load::<Image>(rel.clone()).into());
         }
     }
-    eprintln!("[shot] 预载 {} 个资产（ui/ + fonts/）", handles.len());
+    eprintln!("[shot] 预载 {} 个资产（{scene_id} 引用集；旧全量=387）", handles.len());
     app.insert_resource(ShotPreload { handles, ready: false });
     app.init_resource::<ShotDone>()
         .add_observer(store_shot)

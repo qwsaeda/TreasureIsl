@@ -129,6 +129,10 @@ pub struct Component {
     /// 层序（升序绘制；同层后建者在上）。
     #[serde(default)]
     pub z: i32,
+    /// 列表行样式（`""` = 默认缩略图行 / `"image"` = 整行铺满图片，文案已烘焙进图）。
+    /// 仅 `type=list` 使用；S87.6 index 木牌菜单用 `image` 避免被缩略图化。
+    #[serde(default)]
+    pub row_style: String,
 }
 
 /// 布局意图（taffy 自动布局的输入；禁 x/y/w/h 绝对坐标字段）。

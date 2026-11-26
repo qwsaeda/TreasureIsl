@@ -121,6 +121,10 @@
         },
         "z": {
           "type": "integer"
+        },
+        "row_style": {
+          "type": "string",
+          "enum": ["", "image"]
         }
       },
       "additionalProperties": false,

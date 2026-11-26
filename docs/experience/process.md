@@ -809,3 +809,19 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 
 ### EXP-213 流程：并行 agent 活跃期编译→.so 与源码指纹错配→假问题（假资产缺失/假交互卡死）
 现象：S75~S83 真机验证反复出现『主地图资产缺失』『确认交互卡死』，桌面同源码正常、规则层 e2e 全过，无法用代码 bug 解释。\n根因：并行 agent 在我 20min APK 编译期间持续改源码，编译出的 .so 是『编译开始时的源码』，但 _refresh_fingerprint 在编译『结束后』算新源码指纹写入 ⇒ 下次复用判据比对一致 ⇒ 交付了与当前源码不符的中间态 .so ⇒ 真机表现出稳定代码没有的假问题。实测证据：源码指纹 5050 ≠ .so 指纹 bfaf。\n解法：build_apk.sh 编译开始前抓 _build_start_fp，编译结束后抓 _build_end_fp 比对；不等则 FAIL 拒绝交付（要求干净环境重编），等则写入 _build_start_fp（.so 真正的源码状态）。复用分支也走校验。\n验证：bash -n OK；复用分支实跑（指纹一致→复用→写校验后指纹→构建成功）；负例护栏静态确认存在。\n教训：并行活跃期的真机验证不可靠；先确认源码指纹一致再下结论；不把中间态问题甩给设备或误判为代码 bug。
+
+### EXP-214 代码/流程：约定写了接线责任但代码未落地 = 预览 400（vs 白名单漏项）+ 新功能触发两类门禁回归（硬编码颜色 / 函数超长）
+
+- **现象**：① S87 已把 vs 纳入世界层可视化编辑器，前端 `ui_editor.html` 的 `SCENE_ORDER` 含 vs、22 号文档明确登记「`preview.rs` PREVIEW_SCENES 加 vs + BLOB_FILES 加 world_components_json、`preview_shot.py` SCENES 加 vs」接线责任，但代码两处都没改 ⇒ 前端发 vs 预览即 `400 scene 非法（白名单 6 项无 vs）`。② 用户同时报 index 出图缺 hero、木牌菜单缩成小块。③ 新增渲染逻辑后 gate `audit_code` FAIL（`spawn_component_content` 144 行 > 140）、doccheck2 F-01 FAIL（新行 `Color::srgba(...)` 字面量）。
+- **根因**：① 「文档登记接线责任」≠「代码已落地」——S87 收口只改了前端与文档，后端白名单/脚本白名单两处漏同步，且 gate/doccheck 没有断言 "前端 SCENE_ORDER ⊆ 后端 PREVIEW_SCENES ⊆ 脚本 SCENES" 的三面对账，所以 6 vs 7 漂移一路漏到用户手上。② hero 缺失 = `layout.intent=center` 且无 `size_pct` ⇒ 高度 `Val::Auto` + `ImageNode Stretch` = 0 高度不渲染；menu 缩块 = 通用 `build_chrome_row` 按选角列表口径把图渲成 72×96 缩略图，木牌本是全宽 434×92 且文案已烘焙进图。③ 新功能必然推高函数行数/引入新颜色字面量，棘轮基线不认「新增代码」。
+- **解法**：① 三处同步落地：`preview.rs` PREVIEW_SCENES 6→7 + BLOB_FILES 8→9 加 `world_components_json`、`preview_shot.py` SCENES 加 vs 并对 main_map/vs 设 `TI_WORLD_SCHEMA=1`、文档口径改「已落地」；重启平台后实测 POST /api/preview scene=vs 从 400 → 200，PNG 8296178 B 非黑率 849‰。② hero 改 `anchored` + `top_left` + offset(26.6,30.0)/size(35.4,61.1)；新增 `Component.row_style=image` + `build_image_row`（整图铺满 + 面板透明 + 金色半透明选中描边），`asset_roles` 补登记 `index_plank_0..5` ⇒ 6 木牌文案各异。③ 颜色走 `ui.rs::palette::SELECT_GLOW = theme_color(ui_gold_text, 0.55)` 单源；list 分支抽 `spawn_list_content` helper 把函数降到 140 行内。
+- **验证**：POST /api/preview(scene=vs) HTTP 200 + job exit_code=0 + 真出图；脚本层 7 场景 `--check` 全受理；index 出图 hero 双人组 + 6 木牌文案各异；`cargo clippy --workspace 0 error` + `doccheck 0 error` + `doccheck2 0 error` + `audit_code 0 违规`。另：本轮顺带把 `--shot` 预载从全量 387 资产（`assets/ui/` 200MB，软件渲染 3~6 分钟）改为按场景引用集（index 219/vs 53），实测 index 16 秒（约 20 倍提速）。
+- **关联**：EXP-206（全量预载 3m28s 根因）的本轮治本；EXP-207（现状声称点回写，本轮 AGENTS.md/release.md 436 verified 同步）；EXP-210（规范写了没断言 = 漂移无人知，本轮同类「文档登记接线责任但代码没落地」）。
+
+### EXP-215 流程/工具：服务端 llvmpipe 软件渲染出图 16s 的根因 = 适配器 `device_type: Cpu`，治本 = 浏览器 wasm 用用户真 GPU（iframe 实时预览）
+
+- **现象**：Dev Console 可视化编辑器点「预览真渲染」→ 服务端 `treasure-bevy-native --shot` 一张 1920×1080 图空载 16s、并行抢 CPU 时 30~60s；用户质疑「一个场景渲染这么久？」「16s 也很慢」。引擎日志明证：`AdapterInfo { name: "llvmpipe (LLVM 20.1.2)", device_type: Cpu }` + `WARN ... only supports software rendering`。
+- **根因**：服务端无物理 GPU，WGPU 选中 llvmpipe ⇒ 1920×1080 逐像素 CPU 光栅化 + 33MB 像素 readback + 8MB PNG encode；每次预览 = 冷启新进程 + 全量资产预载。帧阈值 40（S18.8b 为等异步贴图遗留）在 preload 守卫已存在的今天纯属冗余等待。
+- **解法**：① 预载从全量 387 资产改按场景引用集（index 219/vs 53）+ 帧阈值 40→3 ⇒ 3~6 分钟→16s（治标）；② **治本 = 用浏览器真 GPU**：项目本就是 Bevy 0.20 wasm 双端目标，新增 wasm 注入接缝（`ti_preview_scene` 选场景 + `ti_preview_inject` JSON → `install_injected`），编辑器 `doPreview()` 改 iframe `/web/index.html?scene=&preview=1` + sessionStorage 传数据，无冷启/无服务端渲染/所见即所得；native `--shot` 路径保留作回退对照。静态服务复用 `console_sources.json` 加 `web/` 白名单 + `guarded_file`。
+- **验证**：Playwright 实测 iframe wasm 状态「运行中」+ 预览区非黑率 98%（index）、94%（vs world），0 pageerror；改 hero role 后画面变化 19% 像素（diff_bbox 覆盖 hero 区）⇒ 改数据即时生效；GET /web/{index.html,main.js,treasure-bevy-wasm_bg.wasm} 全 200。cargo clippy/doccheck/doccheck2/audit_code 全 0。
+- **关联**：EXP-206（全量预载 3m28s）的本轮治本；EXP-214（文档登记接线责任≠代码落地，本轮 wasm 注入先出设计留痕再落码）。

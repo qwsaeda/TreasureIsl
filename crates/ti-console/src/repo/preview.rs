@@ -20,9 +20,9 @@ use serde_json::{Value, json};
 use crate::routes::{json200, status_json};
 use crate::runner::jobs::{self, JobSpec};
 
-/// 可预览场景白名单（5 纯 UI 场景 + 主地图；vs 游戏世界层不在 UI 编辑器范围，见计划 §4）。
-pub const PREVIEW_SCENES: [&str; 6] =
-    ["index", "select_role", "select_map", "saveload", "message", "main_map"];
+/// 可预览场景白名单（7 场景全量；S87.5 起 vs 世界层纳入可视化编辑器，见 22 号 §world 模式契约）。
+pub const PREVIEW_SCENES: [&str; 7] =
+    ["index", "select_role", "select_map", "saveload", "message", "main_map", "vs"];
 
 /// 视口白名单（S84 纯横屏主判据 = 1920x1080；其余为 S29.5 多视口出图已有口径）。
 pub const PREVIEW_VIEWPORTS: [&str; 4] = ["1920x1080", "1080x1920", "1280x720", "960x540"];
@@ -39,8 +39,9 @@ const PREVIEW_ROOT: &str = "evidence/console/preview";
 
 /// body JSON blob 名 → 临时文件名。`@` 前缀 = 地图包段（落 `<dir>/<map_id>/`），
 /// 其余 = 整表/schema 文本（落 `<dir>/`）。名字全为固定字面量，不接受自由路径。
-const BLOB_FILES: [(&str, &str); 8] = [
+const BLOB_FILES: [(&str, &str); 9] = [
     ("schema_json", "components_v1.json"),
+    ("world_components_json", "world_components.json"),
     ("asset_roles_json", "asset_roles.json"),
     ("board_json", "board.json"),
     ("scenes_json", "scenes.json"),

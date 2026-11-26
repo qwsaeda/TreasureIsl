@@ -1,0 +1,57 @@
+S87.7 — 浏览器 wasm 实时预览（用户 GPU 真渲染，iframe + sessionStorage 注入）验收证据
+日期：2026-11-26
+
+改动面：平台 + 引擎 wasm 接缝
+判据：iframe 内 wasm 真 GPU 渲染非黑 + 编辑器改数据 reload 即时生效 + native 路径 0 变化
+
+=== 1. 动因：服务端 llvmpipe --shot 渲染一张图 16s（空载）/ 30~60s（并行抢 CPU）===
+引擎日志实测：`device_type: Cpu`, `name: "llvmpipe (LLVM 20.1.2)"` —— 服务端 WGPU
+选中软件渲染适配器，1920×1080 逐像素 CPU 光栅化。浏览器 wasm 跑在用户真 GPU 上，
+实时渲染无"出一张图"概念 ⇒ 所见即所得、零冷启。
+
+=== 2. 接线（0 写面 / 0 服务端渲染）===
+- `crates/ti-console/console_sources.json`: repo_sources 加 "web/"（目录前缀白名单），
+  平台 `guarded_file` 直读根 `web/` 的 wasm/js/资产（同 assets/ui/ 大二进制口径）。
+- `crates/ti-engine/src/bin/treasure_bevy.rs`:
+  - wasm `Args::parse` 读 `window.ti_preview_scene`（缺省 index = 原行为 0 变化）。
+  - 新增 `#[cfg(wasm32)] apply_preview_injection_wasm()`：从
+    `window.ti_preview_inject`（JSON 字符串，同步 Reflect::get）读 {scene,mode,schema}，
+    调 `ui_schema::install_injected`（world 模式注入 world_components 字段，UI 模式注入
+    components 字段），在 `inject_map_pack()` 首访前、建 GameApp 前完成。
+  - 帧阈值 40→3（S18.8b 遗留冗余等待，ShotPreload + 内容判据双兜底）。
+- `scripts/web_main.js`（→ web/main.js 构建产物）：init() 前读 `?scene=` + `?preview=1`
+  + sessionStorage['ti_preview_inject']，挂 window 全局供 wasm Reflect::get。
+- `crates/ti-console/web/ui_editor.html`: doPreview() = 写 sessionStorage + 建 iframe
+  `/web/index.html?scene=<scene>&preview=1&t=<ts>`；`<img>` → `<iframe>`；
+  新增 "服务端出图对照" 按钮保留 native 路径作回退。
+- `docs/process/22_dev_platform.md`: 新增"浏览器实时预览契约"段。
+
+=== 3. 实测 A：iframe wasm 真渲染非黑 ===
+Playwright（headless Chromium + SwiftShader）打开 /ui_editor.html → 注入 S.schema →
+建 iframe → 等 #status="运行中" → 截 iframe 区域。
+结果：iframe wasm 状态"运行中"，预览区非黑率 **98%**（651652/660000），0 pageerror。
+画面证据：/tmp/opencode/browser_preview_shot.png（hero 双人组 + 6 木牌文案 + 羊皮底 + 罗盘，
+经编辑器 schema 注入渲染，非默认画面）。
+平台静态服务：GET /web/index.html=200 /web/main.js=200 /web/treasure-bevy-wasm_bg.wasm=200（46MB）。
+
+=== 4. 实测 B：改数据即时生效（所见即所得）===
+同上流程渲两帧：帧1 = 原 schema；帧2 = 把 hero 的 role 从 index_hero 改成 index_plank_0。
+结果：画面变化 **19% 像素**，diff_bbox=(0,160,946,530) 正好覆盖 hero 区域。
+⇒ 编辑器改数据 → iframe reload → wasm install_injected → 真渲染即时变化，判据 PASS。
+证据：/tmp/opencode/data_change_{before,after}.png
+
+=== 4b. 实测 C：world 模式（vs/main_map）注入 ===
+Playwright 注入 world 模式 schema（scenes=[main_map,vs]）→ iframe `?scene=vs&preview=1`
+→ wasm `ti_preview_scene` 导航到 vs + `install_injected(world_components)`。
+结果：status"运行中"，vs 画面正确渲染（HP 条/双方立绘/战斗背景/道具按钮），
+非黑率 **94%**，判据 PASS。证据：/tmp/opencode/world_preview_vs.png。
+
+=== 5. 实测 D：native 路径 0 变化 ===
+`apply_preview_injection`（native）+ `scripts/preview_shot.py` + `POST /api/preview`
+整条链未改（仅 PREVIEW_SCENES 加 vs，属 S87.5）。wasm 注入走独立函数，两套 OnceLock
+分属不同进程，互不干扰。cargo test --workspace 0 failed（1106 passed）。
+
+=== 6. 静态门禁 ===
+cargo clippy --workspace 0 error + wasm target 0 error；
+doccheck 0 error / doccheck2 0 error（57 项）/ check_code_standards PASS /
+audit_code 0 违规 / JS 语法（ui_editor.html 内联 + web/main.js ESM）OK。
