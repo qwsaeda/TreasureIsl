@@ -1805,6 +1805,36 @@ fn apply_map_pack() {
     });
 }
 
+/// S87.5：**native 启动读磁盘 schema 注入**——编辑器 apply 写盘后游戏直接生效，无需 `cargo build`。
+///
+/// 背景：`ti_core::data::ui_schema` 的三个表（`components` / `world_components` / `asset_roles`）是
+/// `include_str!` 编译期内嵌；旧实现只有预览（`TI_PREVIEW_DIR`）会注入，正常 `--shot`/native
+/// 启动永远读编译时那份旧数据 ⇒ 用户在编辑器拖完元素、apply 写盘后，游戏画面仍是旧布局
+/// （看起来「被拖回去了」）。本函数把「磁盘优先、内嵌回退」落地到常规启动路径：
+/// native 启动读仓库磁盘 schema 注入（首访前 `OnceLock` 定型）；缺文件/解析失败 = 回退内嵌，0 行为变化。
+/// wasm 无文件系统，恒用内嵌（不调用此函数）。
+#[cfg(not(target_arch = "wasm32"))]
+fn apply_disk_schema() {
+    let schema_dir = repo_root().join("assets/data/ui_schema");
+    let read = |name: &str| {
+        let path = schema_dir.join(name);
+        std::fs::read_to_string(&path).ok()
+    };
+    let components = read("components_v1.json");
+    let asset_roles = read("asset_roles.json");
+    let world_components = read("world_components.json");
+    let any = components.is_some() || asset_roles.is_some() || world_components.is_some();
+    if any
+        && ti_core::data::ui_schema::install_injected(ti_core::data::ui_schema::InjectedSchema {
+            components,
+            asset_roles,
+            world_components,
+        })
+    {
+        eprintln!("[schema] 已注入磁盘 UI schema（编辑器写盘即生效，无需重编译）");
+    }
+}
+
 /// S86.3 真渲染预览注入（平台 `POST /api/preview` → `TI_PREVIEW_DIR` 环境变量 → 本函数）。
 ///
 /// 目录由平台写在 gitignored `evidence/console/preview/<id>/`，本函数只**读**（0 写盘）：
@@ -1840,8 +1870,13 @@ fn apply_preview_injection() -> bool {
     // ① UI schema（编辑器未落盘的组件声明；install_injected 与 table_source 是不同 OnceLock）。
     let components = read_preview_text(&dir.join("components_v1.json"));
     let asset_roles = read_preview_text(&dir.join("asset_roles.json"));
-    let schema_ok = (components.is_some() || asset_roles.is_some())
-        && ui_schema::install_injected(ui_schema::InjectedSchema { components, asset_roles });
+    let world_components = read_preview_text(&dir.join("world_components.json"));
+    let schema_ok = (components.is_some() || asset_roles.is_some() || world_components.is_some())
+        && ui_schema::install_injected(ui_schema::InjectedSchema {
+            components,
+            asset_roles,
+            world_components,
+        });
     if schema_ok {
         eprintln!("[preview] 已注入 UI schema（零写面）");
     }
@@ -1992,6 +2027,7 @@ fn inject_map_pack() {
     // S49.4c 主题预览（`TI_THEME=<tid>`）：先注入（native 专属；平台后台预览）。
     #[cfg(not(target_arch = "wasm32"))]
     if !preview_active {
+        apply_disk_schema();
         apply_theme_preview(&repo_root().join("assets").join("themes"));
         apply_map_pack(&repo_root().join("assets").join("maps"));
     }

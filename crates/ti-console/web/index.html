@@ -500,7 +500,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
         <button id="gate-run" style="background:var(--accent);border:1px solid var(--accent);color:#0d0f17;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600">▶ 运行门禁</button>
         <span style="color:var(--muted);font-size:12px" id="gate-msg"></span>
       </div>
-      <div style="margin-top:6px;color:var(--muted);font-size:12px">⚠ fast/touch 为开发档，<b>不构成 gate 全绿证据</b>；全量 full 才可置 verified（S32.4 dod）。写操作需设置页粘贴 token（X-TI-Token，22 号 §10.1）。</div>
+      <div style="margin-top:6px;color:var(--muted);font-size:12px">⚠ fast/touch 为开发档，<b>不构成 gate 全绿证据</b>；全量 full 才可置 verified（S32.4 dod）。本机开发工具，不启用鉴权（22 号 §10.1）。</div>
       <div id="gate-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:240px;overflow:auto;display:none"></div>
       <div id="gate-history" style="margin-top:8px"></div>
     </div>
@@ -553,7 +553,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
       <div id="themes-out" style="margin-top:12px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:220px;overflow:auto;display:none"></div>
       <div class="foot">
         `apply` 写 <code>scenes.json index.landscape.primitives</code> + 部署资产（<code>ui_theme.py apply</code>），
-        写面 = X-TI-Token + <code>enable_write=true</code>（30 号 §3.1 默认关）；`verify` = 只读校验（compose/资产源/ui_manifest 登记）。
+        写面 = <code>enable_write=true</code>（30 号 §3.1 默认关）；`verify` = 只读校验（compose/资产源/ui_manifest 登记）。
         单一事实源 = <code>docs/process/30_content_ops_platform.md</code> §2.2.1 + 工具 = <code>scripts/ui_theme.py</code>。
       </div>
     </div>
@@ -600,7 +600,7 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
         <button onclick="closeRun()">收口</button>
         <span style="color:var(--muted);font-size:12px" id="cl-run-msg"></span>
       </div>
-      <div style="margin-top:6px;color:var(--muted);font-size:12px">⚠ 未登记 id → 400（22 号 §4.2 禁止 1，禁透传自由字符串）；写操作需设置页粘贴 token。</div>
+      <div style="margin-top:6px;color:var(--muted);font-size:12px">⚠ 未登记 id → 400（22 号 §4.2 禁止 1，禁透传自由字符串）；写操作 = 本机开发工具，不启用鉴权。</div>
       <div id="cl-run-out" style="margin-top:8px;background:#0d0f17;border:1px solid var(--border);border-radius:6px;padding:8px;font:11px/1.45 monospace;color:#8fd38f;white-space:pre-wrap;max-height:240px;overflow:auto;display:none"></div>
     </div>
   </section>
@@ -623,18 +623,14 @@ python3 scripts/map_pack.py check       # 已装包漂移对账（0 漂移才绿
   <section id="page-settings" hidden>
     <div class="card">
       <h2>平台会话</h2>
-      <div class="row"><span class="k">token 在环境</span><span id="set-token">—</span></div>
+      <div class="row"><span class="k">鉴权</span><span>不启用（本机开发工具）</span></div>
       <div class="row"><span class="k">写操作开关（默认关）</span><span id="set-write">—</span></div>
       <div class="row"><span class="k">单实例锁</span><code>evidence/console/.lock</code></div>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <input type="password" id="set-token-input" placeholder="TI_CONSOLE_TOKEN（存 sessionStorage）" style="min-width:320px">
-        <button id="set-token-save" style="background:var(--panel2);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:7px 14px;cursor:pointer">保存（sessionStorage）</button>
-      </div>
     </div>
   </section>
 
   <div class="foot">
-    只读平台（写操作 = S32.4 起 POST + X-TI-Token）；数据源 = console_sources.json（11 条白名单，22 号 §5）；
+    本机开发工具（不启用鉴权；写操作 = S32.4 起 POST）；数据源 = console_sources.json（11 条白名单，22 号 §5）；
     「0 游戏产物变更」判定 = repo::snapshot 内容级指纹（22 号 §8，禁用 git status --porcelain）。
   </div>
 </main>
@@ -713,10 +709,8 @@ async function api(path, body, write) {
     if (!r.ok) throw new Error(path + ' → ' + r.status);
     return r.json();
   }
-  // POST 写操作（S32.4/S32.5）：X-TI-Token 鉴权 + Content-Type application/json。
+  // POST 写操作（S32.4/S32.5）：Content-Type application/json（本机开发工具，不启用鉴权）。
   const hdrs = { 'Content-Type': 'application/json' };
-  const token = sessionStorage.getItem('ti_console_token') || '';
-  if (token) hdrs['X-TI-Token'] = token;
   const r = await fetch(path, { method: 'POST', headers: hdrs, body: JSON.stringify(body) });
   const out = await r.json().catch(() => ({}));
   if (!r.ok || !out.ok) throw new Error(out.error || (path + ' → ' + r.status));
@@ -1243,8 +1237,6 @@ function runPublish(mode) {
   if (mode === 'run') body.enable_write = true;
   $('pub-msg').textContent = mode === 'run' ? '发布启动中…' : '体检中…';
   const hdrs = { 'Content-Type': 'application/json' };
-  const tok = sessionStorage.getItem('ti_console_token') || '';
-  if (tok) hdrs['X-TI-Token'] = tok;
   fetch('/api/publish', {
     method: 'POST',
     headers: hdrs,
@@ -2233,9 +2225,7 @@ async function edRunStepAction(i) {
       if (iss.length !== 0) {
         edStepResults[i] = { ok: false, text: '未就绪，' + iss.length + ' 项未过：' + iss.join('；') };
       } else {
-        const tok = sessionStorage.getItem('ti_console_token') || '';
         const hdrs = { 'Content-Type': 'application/json' };
-        if (tok) hdrs['X-TI-Token'] = tok;
         const resp = await fetch('/api/content/map/step', { method: 'POST', headers: hdrs,
           body: JSON.stringify({ id: st.id, step: 'add', enable_write: true, params: {} }) });
         const out = await resp.json();
@@ -2249,9 +2239,7 @@ async function edRunStepAction(i) {
       const ok = await edImport();
       if (ok) {
         // 后端 import 步 = map_pack.py verify（import 已 sync+verify，此处推进向导 cur）
-        const tok = sessionStorage.getItem('ti_console_token') || '';
         const hdrs = { 'Content-Type': 'application/json' };
-        if (tok) hdrs['X-TI-Token'] = tok;
         const resp = await fetch('/api/content/map/step', { method: 'POST', headers: hdrs,
           body: JSON.stringify({ id: st.id, step: 'import', enable_write: true, params: {} }) });
         const out = await resp.json();
@@ -2263,10 +2251,8 @@ async function edRunStepAction(i) {
         edStepResults[i] = { ok: false, text: '导入失败（校验未过或被拒）' };
       }
     } else {
-      // 第 3~10 步 = 调向导 API（POST /api/content/map/step，写步带 enable_write + token）
-      const tok = sessionStorage.getItem('ti_console_token') || '';
+      // 第 3~10 步 = 调向导 API（POST /api/content/map/step，写步带 enable_write）
       const hdrs = { 'Content-Type': 'application/json' };
-      if (tok) hdrs['X-TI-Token'] = tok;
       const body = { id: st.id, step: s.name, enable_write: true, params: {} };
       const resp = await fetch('/api/content/map/step', { method: 'POST', headers: hdrs, body: JSON.stringify(body) });
       const out = await resp.json();
@@ -2434,29 +2420,29 @@ async function edPreviewReal() {
     msg.style.color = 'var(--muted)';
     msg.textContent = '预览服务待上线（S86.3）' + (detail ? '：' + detail : '') + '；可先用向导第 9 步「执行出图」看验收图。';
   };
-  const tok = sessionStorage.getItem('ti_console_token') || '';
-  if (!tok) { degrade('请先在设置页粘贴 token（X-TI-Token）'); return; }
+  // 预览 = 只读观感操作（不改游戏数据）⇒ 不需 enable_write；
+  // 本机开发工具，不启用鉴权（22 号 §10.1）。
   const id = 'preview_map_' + Date.now();
   const body = {
     scene: 'main_map', map_id: st.id, viewport: ED_SCREEN.w + 'x' + ED_SCREEN.h,
-    id, action: 'preview', enable_write: true,
+    id, action: 'preview',
   };
   msg.style.color = 'var(--muted)';
   msg.textContent = '真渲染预览中（' + body.viewport + '，首次冷启 30~90s）…';
   try {
     const resp = await fetch('/api/preview', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-TI-Token': tok },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!resp.ok) { degrade('HTTP ' + resp.status + '（检查 token/enable_write）'); return; }
+    if (!resp.ok) { degrade('HTTP ' + resp.status); return; }
     const out = await resp.json();
     const poll = out.poll || ('/api/jobs?kind=preview&id=' + encodeURIComponent(out.id || id));
     // 作业异步出图：轮询统一作业面，exit_code=0 才取图（否则首次取图 404）。
     let done = false, lastLog = '';
     for (let i = 0; i < 120; i++) {
       await new Promise((r) => setTimeout(r, 1000));
-      const job = await (await fetch(poll, { headers: { 'X-TI-Token': tok } })).json();
+      const job = await (await fetch(poll)).json();
       const state = job.state || {};
       lastLog = (job.log_tail || '').slice(-200);
       if (state.running === false) { done = state.exit_code === 0; break; }
@@ -2588,10 +2574,7 @@ async function cwAdvance() {
   $('cw-msg').innerHTML = '执行第 ' + (cwState ? cwState.current_step + 1 : 1) + ' 步（' + step + '）…';
   try {
     // 用裸 fetch（非 api()）：步失败 = HTTP 200 + ok:false，须读 r.passed 回显，不抛。
-    // F-1 修复（B 审计 HIGH）：写路由须 X-TI-Token（22 号 §10.1），带 sessionStorage token。
     const hdrs = { 'Content-Type': 'application/json' };
-    const tok = sessionStorage.getItem('ti_console_token') || '';
-    if (tok) hdrs['X-TI-Token'] = tok;
     const r = await fetch('/api/content/map/step', {
       method: 'POST', headers: hdrs,
       body: JSON.stringify({ id: id, step: step, enable_write: enableWrite })
@@ -2696,10 +2679,7 @@ async function uwAdvance() {
   $('uw-msg').innerHTML = '执行第 ' + (uwState ? uwState.current_step + 1 : 1) + ' 步（' + step + '）…';
   try {
     // 裸 fetch（非 api()）：步失败 = HTTP 200 + ok:false，读 r.passed 回显，不抛。
-    // 写路由须 X-TI-Token（22 号 §10.1），带 sessionStorage token。
     const hdrs = { 'Content-Type': 'application/json' };
-    const tok = sessionStorage.getItem('ti_console_token') || '';
-    if (tok) hdrs['X-TI-Token'] = tok;
     const r = await fetch('/api/content/ui/step', {
       method: 'POST', headers: hdrs,
       body: JSON.stringify({ id: id, step: step, enable_write: enableWrite, params: params })
@@ -3297,14 +3277,12 @@ function wireGateRun() {
     const tier = $('gate-tier').value;
     const msg = $('gate-msg');
     const out = $('gate-out');
-    const token = sessionStorage.getItem('ti_console_token') || '';
     btn.disabled = true;
     btn.textContent = '运行中…';
     msg.textContent = '启动中…';
     out.style.display = 'block';
     out.textContent = '';
     const hdrs = { 'Content-Type': 'application/json' };
-    if (token) hdrs['X-TI-Token'] = token;
     fetch('/api/gate', { method: 'POST', headers: hdrs, body: JSON.stringify({ tier }) })
       .then(async (r) => {
         const body = await r.json().catch(() => ({}));
@@ -3611,17 +3589,10 @@ async function loadSettings() {
   loaded.settings = true;
   try {
     const s = await api('/api/session');
-    $('set-token').textContent = s.token_present ? '在位（环境）' : '无';
     $('set-write').textContent = s.write_enabled_default ? '开' : '关';
   } catch (e) {
-    $('set-token').textContent = '不可用：' + e;
+    $('set-write').textContent = '不可用：' + e;
   }
-  $('set-token-save').addEventListener('click', () => {
-    const v = $('set-token-input').value;
-    if (v) sessionStorage.setItem('ti_console_token', v);
-    else sessionStorage.removeItem('ti_console_token');
-    $('set-token').textContent = v ? '已存 sessionStorage（写操作 = S32.4 起生效）' : '已清';
-  });
 }
 
 function esc(s) {

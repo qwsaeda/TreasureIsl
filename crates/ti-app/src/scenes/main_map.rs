@@ -1697,8 +1697,19 @@ impl Scene for MainMapScene {
                 // v6 终码：不规则岛 + 格子紧围岛不规则排列（布局 JSON = compose 导出，数据驱动）
                 // 世界层先画，再画 HUD 原语（z>=3），避免海图满屏盖住 HUD。
                 // S84 纯横屏：读 `main_map_v6_layout_landscape.json`（椭圆格环 1920×1080）。
-                render_v6_elem(host, &layout, &mut entity_texts);
-                chrome::render_primitives_filtered(host, "main_map", -1, 3);
+                // S87.3 影子期：`TI_WORLD_SCHEMA=1` 且 schema 可渲染 ⇒ 静态世界层由
+                // `world_components.json` 数据驱动；`false`/缺表 ⇒ 回退原过程式（0 行为变化）。
+                // 动态层（棋子/名牌/终局/交接/面板由 `render_v6_dynamic_layer`，HUD 数值与
+                // 骰点由下方两行）两条路径都画，schema 只替代静态层。S87.6 决定是否转默认。
+                let schema_world = crate::scenes::world_schema::enabled()
+                    && crate::scenes::world_schema::render_world_components(host, "main_map", -1);
+                if schema_world {
+                    render_v6_dynamic_layer(host, &mut entity_texts);
+                    // 静态 HUD 原语已由 schema 的 `hud_plaque_*`/`spin_marker` 承担，不再重画 z>=3 原语。
+                } else {
+                    render_v6_elem(host, &layout, &mut entity_texts);
+                    chrome::render_primitives_filtered(host, "main_map", -1, 3);
+                }
                 // v6 补层（最上层）：①HUD 数值（`render_hud_v3` 在 642 行被 `v6_default`
                 // 跳过，此处海图+原语之后重画，顶角铜牌不再空）②摇骰 CTA 骰点 + 骰数
                 // （舵轮 = z=7 原语，骰点须叠其轴心之上，`render_spin_die` 的 `deck_spin`
@@ -2179,22 +2190,31 @@ fn rope_segment(
 /// 2026-10-31 用户「不规则岛，格子紧围岛不规则排列」：直接 blit AI 元素到 1080×1920，
 /// 布局 = `assets/data/main_map_v6_layout.json`（`compose_main_map_v6.py` 导出，数据驱动）。
 /// 元素路径 = `chrome::V6_*` 单源常量。
+///
+/// S87.3 影子期：拆成 [`render_v6_static_layer`] + [`render_v6_dynamic_layer`] 两段且保持原绘制序；
+/// `render_world_components` 在位且成功时由前者让位给 schema 静态层，后者（运行时数据）照旧。
 #[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
 fn render_v6_elem(
     host: &mut dyn SceneHost,
     _layout: &SceneLayout,
     entity_texts: &mut Vec<(i32, i32, &str)>,
 ) {
+    render_v6_static_layer(host);
+    render_v6_dynamic_layer(host, entity_texts);
+}
+
+/// S87.3：v6 静态世界层（海图底 / 木框 / 岛拆件 / 31 格 / 缆绳）。
+///
+/// 影子期与 `world_schema::render_world_components` 互斥：env 开启且 schema 解析成功时
+/// 由 schema 取代本函数；旧路径照旧调用，绘制序列逐 op 不变（0 行为变化）。
+#[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
+fn render_v6_static_layer(host: &mut dyn SceneHost) {
     let spaces = host.board_spaces();
-    let count = spaces.len();
-    if count < 2 {
+    if spaces.len() < 2 {
         return;
     }
     let v6 = v6_layout();
     // S84 纯横屏：画布恒 1920×1080（读 `main_map_v6_layout_landscape.json`）。
-    let theme = host.theme().clone();
-    // 暗灰小旗（余席棋子旗图标；`territory.md` §1.3 行 78，色值单源 theme `isle_flag_dark`）
-    let isle_flag_dark = theme.by_name("isle_flag_dark").unwrap_or(0x7BEF);
     let (w, h) = (1920i32, 1080i32);
     // 1) 海洋全景底（羊皮框由 ocean_bg 自身带；直接满屏）
     host.blit_image(chrome::V6_OCEAN_BG, 0, 0, w, h);
@@ -2261,6 +2281,22 @@ fn render_v6_elem(
             host.blit_image(path, t.cx as i32 - tile_r, t.cy as i32 - tile_r, size, size);
         }
     }
+}
+
+/// S87.3：v6 动态世界层（多席棋子 / 名牌 / 舵轮罗盘 / 终局 / 交接 / 面板）。
+///
+/// 运行时数据驱动（`seat_positions` / `match_outcome` / `handoff_pending` / 面板开合），
+/// `world_components.json` 只画静态层 ⇒ 新旧两条路径都必须调用本函数，动态实体不丢。
+#[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
+fn render_v6_dynamic_layer(host: &mut dyn SceneHost, entity_texts: &mut Vec<(i32, i32, &str)>) {
+    let count = host.board_spaces().len();
+    if count < 2 {
+        return;
+    }
+    let v6 = v6_layout();
+    let theme = host.theme().clone();
+    // 暗灰小旗（余席棋子旗图标；`territory.md` §1.3 行 78，色值单源 theme `isle_flag_dark`）
+    let isle_flag_dark = theme.by_name("isle_flag_dark").unwrap_or(0x7BEF);
 
     // 5) 多席棋子（v3：遍历 `seat_positions()`；当前席 = `V6_SHIP` 贴格，
     // 其余席 = 暗灰小旗；S34.6 玩家船站落格格 = 格径适配，不盖相邻格）。

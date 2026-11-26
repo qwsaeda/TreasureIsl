@@ -866,6 +866,14 @@
    "crates/ti-engine/src/bin/treasure_bevy.rs::out": {
     "reason": "局部 fn out 参数 s（2026-10-29 修复轮补登）",
     "fix_in": "S25.1"
+   },
+   "crates/ti-app/src/scenes/world_schema.rs::blit_image_tint": {
+    "reason": "Canvas trait impl 必须沿用 trait 签名参数名 w/h（S87.2 世界层渲染器，非自定义命名）",
+    "fix_in": "S87.2"
+   },
+   "crates/ti-app/src/scenes/world_schema.rs::fill_rect": {
+    "reason": "Canvas trait impl 必须沿用 trait 签名参数名 w/h（S87.2 世界层渲染器，非自定义命名）",
+    "fix_in": "S87.2"
    }
   },
   "cs4_scene_grandfathered": {},

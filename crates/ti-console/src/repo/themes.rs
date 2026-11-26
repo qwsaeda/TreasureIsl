@@ -5,7 +5,7 @@
 //!   `components_v1.json` 的 `scenes.index.overrides`；S85.2 写点迁移）；
 //! - `verify <tid>`：主题包校验（`compose`/组件覆盖列表/`assets` 源 + `ui_manifest` 登记，只读）；
 //! - `apply <tid>`：`ui_theme.py apply`（写 `components_v1.json` overrides + 部署资产 + `validate_data`），
-//!   写面由调用方门控（X-TI-Token + `enable_write`，22 号 §10.1；同 S48.0 wizard theme 步路径）。
+//!   写面由调用方门控（`enable_write`，22 号 §10.1；同 S48.0 wizard theme 步路径）。
 //!
 //! 本模块 **0 游戏依赖**（不引 ti-core；角色/覆盖导出逻辑在本模块内联，与 ti-core 同口径）；
 //! 只读面（list/verify）0 写盘；apply 写点 = `ui_theme.py` 子进程
@@ -416,18 +416,17 @@ pub fn themes_get(repo_root: &Path, url: &str, gz: bool) -> Vec<u8> {
 }
 
 /// `POST /api/themes/apply`：应用主题包（写 scenes.json + 部署资产）。
-/// 写操作鉴权（403）→ Content-Type application/json（400）→ body ≤ 64KiB（413）→
+/// Content-Type application/json（400）→ body ≤ 64KiB（413）→
 /// body `{"theme","register"?,"enable_write"}` → `enable_write=true`（400，30 号 §3.1 默认关）→
 /// [`theme_apply`]（`ui_theme.py apply` 子进程，工具契约）。
 #[must_use]
 pub fn handle_themes_apply(
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     want_gzip: bool,
 ) -> Vec<u8> {
-    let (theme, register) = match parse_themes_apply(body, token, content_type, want_gzip) {
+    let (theme, register) = match parse_themes_apply(body, content_type, want_gzip) {
         Ok(p) => p,
         Err(resp) => return resp,
     };
@@ -451,20 +450,9 @@ pub fn handle_themes_apply(
 /// 返回 `(theme, register)` 或**已构建的错误响应**。
 fn parse_themes_apply(
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     want_gzip: bool,
 ) -> Result<(String, bool), Vec<u8>> {
-    if !crate::routes::auth_ok(token) {
-        return Err(crate::routes::header_body(
-            "application/json",
-            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1）"}"#.as_bytes(),
-            "403 Forbidden",
-            "no-store",
-            None,
-            want_gzip,
-        ));
-    }
     let ct_ok = content_type.is_some_and(|c| {
         let base = c.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
         base == "application/json"

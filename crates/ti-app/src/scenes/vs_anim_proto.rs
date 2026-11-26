@@ -189,6 +189,7 @@ pub fn render(host: &mut dyn SceneHost, phase: &str) {
             DEMO_DEF_ARMS,
             false,
             selected_grid_class(),
+            false,
         );
         return;
     }
@@ -204,6 +205,7 @@ pub fn render(host: &mut dyn SceneHost, phase: &str) {
             DEMO_DEF_ARMS,
             false,
             selected_grid_class(),
+            false,
         );
         return;
     }
@@ -224,6 +226,10 @@ pub fn render(host: &mut dyn SceneHost, phase: &str) {
 /// 完整复用本构图（甲板插画 + crew/hero/enemy 分列 + 顶/底状态框 + VS 徽标）——
 /// 用户认可的是「这张好设计」，非 vs.rs 原海域图 + 叠小人的「屎」。导出 `pub(crate)`
 /// 供 vs.rs 正式战斗分支直接调用（phase 由 battle 结果推导）。
+///
+/// S87.5：`static_layer_from_schema=true` 时静态框/底由 `world_components.json` 提供，
+/// 本函数只画纯数值/时序（详见 `vs_anim_proto_landscape::render_v2_elem_landscape`）；
+/// 概念帧路径（`render`）恒传 `false`（0 行为变化）。
 #[allow(clippy::too_many_lines)]
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn render_v2_elem(
@@ -235,6 +241,7 @@ pub(crate) fn render_v2_elem(
     def_arms: u32,
     resolved: bool,
     grid_class: &str,
+    static_layer_from_schema: bool,
 ) {
     // S84 纯横屏：恒走横屏构图（`vs_anim_proto_landscape`，1920×1080，双 HP 条顶 +
     // 角色对角 + 指令区；用户 2026-11-04 已过目 vs_landscape 概念图）。
@@ -246,7 +253,15 @@ pub(crate) fn render_v2_elem(
         return;
     }
     crate::scenes::vs_anim_proto_landscape::render_v2_elem_landscape(
-        host, phase, atk_crew, atk_arms, def_crew, def_arms, resolved, grid_class,
+        host,
+        phase,
+        atk_crew,
+        atk_arms,
+        def_crew,
+        def_arms,
+        resolved,
+        grid_class,
+        static_layer_from_schema,
     );
 }
 
@@ -363,6 +378,10 @@ pub(crate) fn draw_result_scene(
 }
 
 /// v2 元素版状态框（顶守/底攻）：名牌 + 人手/武器/武装 + 兵力条。
+///
+/// `with_static_base=false`（S87.5 schema 模式）：框底 / 黄铜描边 / 兵力条槽底 / 槽描边
+/// 由 `world_components.json` 的 `hp_*_frame` 静态图提供，本函数只叠**纯数值**（名牌、
+/// 人手/武器数、填充比例条）；`true` = 旧路径全画（0 行为变化）。
 #[allow(clippy::too_many_arguments, clippy::many_single_char_names)]
 pub(crate) fn draw_status_box(
     host: &mut dyn SceneHost,
@@ -375,6 +394,7 @@ pub(crate) fn draw_status_box(
     arms: u32,
     max_crew: u32,
     def: bool,
+    with_static_base: bool,
 ) {
     let theme = host.theme().clone();
     let c6 = theme.by_name("parch_light").unwrap_or(0xDE32);
@@ -382,15 +402,19 @@ pub(crate) fn draw_status_box(
     let c2 = theme.by_name("brass_dark").unwrap_or(0x3942);
     let c7 = theme.by_name("ink").unwrap_or(0x4183);
     let c8 = theme.by_name("sea_deep").unwrap_or(0x28E2);
-    host.fill_rect(x, y, w, h, c6);
-    frame_v2(host, x, y, w, h, c5);
+    if with_static_base {
+        host.fill_rect(x, y, w, h, c6);
+        frame_v2(host, x, y, w, h, c5);
+    }
     host.draw_hint_text(name, x + 18, y + 12, c2);
     let armed = crew.min(arms);
     let info = i18n::sgetf("scene.vs.v2_elm_force_fmt", &[&crew, &arms, &armed]);
     host.draw_hint_text(&info, x + 18, y + 38, c7);
     // 兵力条（黄铜槽 + 绿守/红攻填充；U20 = 满兵力基准 max_crew，替代硬编码 40）
     let (bx, by, bw, bh) = (x + 18, y + h - 40, w - 36, 22);
-    host.fill_rect(bx, by, bw, bh, c8);
+    if with_static_base {
+        host.fill_rect(bx, by, bw, bh, c8);
+    }
     let frac = if max_crew == 0 {
         0.0
     } else {
@@ -408,7 +432,9 @@ pub(crate) fn draw_status_box(
     if fw > 0 {
         host.fill_rect(bx + 4, by + 4, fw, bh - 8, col);
     }
-    frame_v2(host, bx, by, bw, bh, chrome::COLOR_BRASS_DARK);
+    if with_static_base {
+        frame_v2(host, bx, by, bw, bh, chrome::COLOR_BRASS_DARK);
+    }
 }
 
 /// v2 元素版黄铜框（描边）。

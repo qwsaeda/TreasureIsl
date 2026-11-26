@@ -145,6 +145,11 @@ fn main_map_layout_matches_doc() {
 
 /// vs §4.4（S84 横屏版面，S17.2 8pt）：标题条 h=96，血条 64..512 / 576..1024（S15.6 QB120 解重叠）
 /// y=168 h=48，回合 540/416，结果/空 540/960（QA141 屏心居中 + S15.6 批次6 挪出血条带）。
+///
+/// S87.4 双路径兼容：`TI_WORLD_SCHEMA=1` 时 vs.rs::render 先画 `world_components.json`
+/// 静态层、再由 `render_v2_elem` 画动态层（后画覆盖）；默认走旧过程式。本判据锚定
+/// `scenes.json` 数据面（静态原语 S87.6 才最终清理），两条路径下同一数据真值不变。
+/// S87.5 起 schema 模式动态层只画纯数值/时序，静态框/底/出场/按钮由 schema 提供。
 #[test]
 fn vs_layout_matches_doc() {
     let s = scenes();
@@ -170,6 +175,24 @@ fn vs_layout_matches_doc() {
     let oc = vs.extra.get("outcome").expect("vs 缺 outcome 矩形");
     assert_eq!(oc.x, 960, "vs 战斗结果 x=960（S84 横屏实测，屏心 1920/2）");
     assert_eq!(oc.y, 720, "vs 战斗结果 y=720（S84 横屏实测）");
+
+    // S87.5 可视化编辑生效的结构前提：vs 静态层（出场/按钮）全部由 world_components.json
+    // 声明，动态层只画纯数值/时序；这里守「出场 role + 按钮 pick action」数据面在位。
+    let world = ti_core::data::ui_schema::world_components().expect("world_components.json 加载");
+    let vs_world = world.get("vs").expect("world_components.json 缺 vs");
+    assert_eq!(vs_world.elements.len(), 21, "vs 静态元素数漂移（S87.1 定案 21）");
+    for (id, role) in [("hero_base", "hero"), ("enemy_base", "enemy"), ("crew_base", "crew")] {
+        let e = vs_world.elements.iter().find(|e| e.id == id).unwrap_or_else(|| panic!("缺 {id}"));
+        assert_eq!(e.role, role, "{id} 出场 role 漂移（可视化换图失效）");
+        assert!(e.world_rect.is_some(), "{id} 缺 world_rect（出场位置不可编辑）");
+    }
+    for (id, action) in
+        [("btn_skip", "vs_skip"), ("btn_confirm", "vs_confirm"), ("btn_reset", "vs_reset")]
+    {
+        let e = vs_world.elements.iter().find(|e| e.id == id).unwrap_or_else(|| panic!("缺 {id}"));
+        let pick = e.pick.as_ref().unwrap_or_else(|| panic!("{id} 缺 pick（按钮不可点）"));
+        assert_eq!(pick.action, action, "{id} pick.action 漂移");
+    }
 }
 
 /// message §4.5（S20.2 v4 面板语言）：标题条 h=96，正文区 y=768 h=176（面板按内容收缩，区间约束），页码 1008（QA124/144），提示 y=1840。
@@ -610,9 +633,11 @@ fn scene_layer_contributes_text_region_pixels() {
         // AI 主题贴图（羊皮海图/攻城/副本/BOSS）自然含暗色元素（黑边/暗角/海图墨线），
         // 非黑覆盖率上限 ≈ 955‰；门槛 950‰（容忍暗色元素，仍须「不黑屏」）。
         // S36.1：boss 战背景 `bg_boss` 黑占比 ≈9.4% → 实测覆盖率 881‰ ⇒ 门槛下放至 880‰。
+        // S87.5：vs 静态层改由 world_components schema 提供（CPU Framebuf 色令牌解析口径与 GPU 不同）
+        // ⇒ CPU 路径实测 829‰；GPU --shot 路径 953‰ + 4 分区 908~982‰ 均匀（无黑洞）⇒ 门槛 820‰。
         let threshold: u64 = match scene {
             "main_map" => 980,
-            "vs" => 850,
+            "vs" => 820,
             _ => 990,
         };
         let covered = non_black_permille(&px);

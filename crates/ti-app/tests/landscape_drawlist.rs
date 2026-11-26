@@ -123,6 +123,12 @@ fn saveload_landscape_world_layer() {
 }
 
 /// S38：`vs` 横屏正式战斗（`render_v2_elem_landscape`：bg 框内 + 顶双 HP 框 + 角色对角）。
+///
+/// S87.4 双路径兼容：`TI_WORLD_SCHEMA=1` 时 `vs.rs::render` 先画 schema 静态层，随后
+/// `render_v2_elem` 动态层后画覆盖其上；默认（env 未设置）走旧过程式。本测试的四项
+/// 动态断言（bg / crew / hero / enemy，S34.6 起由 `render_v2_elem` 产出）在**默认路径**
+/// 全在；S87.5 起 schema 模式动态层只画数值/时序（bg / 框底 / VS 徽标由 schema 提供），
+/// 故这些断言锚定 env=0 的旧路径（0 行为变化），schema 模式拆分由 `world_schema_parity` 守。
 #[test]
 fn vs_landscape_world_layer() {
     // navigate("vs") 有 battle_snapshot → render_v2_elem_landscape（phase=clash）
@@ -132,7 +138,12 @@ fn vs_landscape_world_layer() {
     let imgs = image_rects(&app);
     assert!(
         imgs.iter().any(|(a, x, y, w, h)| {
-            a.contains("vs_v2/bg_") && *x == 44 && *y == 44 && *w == 1832 && *h == 992
+            // S87.5：schema 模式 bg role=vs_bg → `vs_bg_m<N>.png`；旧路径 → `vs_v2/bg_*.png`。
+            (a.contains("vs_v2/bg_") || a.contains("vs_bg_"))
+                && *x == 44
+                && *y == 44
+                && *w == 1832
+                && *h == 992
         }),
         "vs 横屏 bg 应在羊皮框内 (44,44,1832,992)，got {imgs:?}"
     );
@@ -159,13 +170,52 @@ fn vs_landscape_world_layer() {
     );
     let rects = rect_rects(&app);
     // 顶双 HP 状态框（左攻 64,40 / 右守 976,40，880×110）
+    // S87.5：schema 模式框底 = hud_plaque.png image（role=hud），旧路径 = fill_rect；
+    // 两种模式都不该在 HP 框位置留洞 ⇒ imgs / rects 任一命中即通过。
     assert!(
-        rects.iter().any(|(x, y, w, h)| *x == 64 && *y == 40 && *w == 880 && *h == 110),
-        "vs 横屏 attacker HP 框应在 (64,40,880,110)，got {rects:?}"
+        imgs.iter().any(|(_, x, y, w, h)| *x == 64 && *y == 40 && *w == 880 && *h == 110)
+            || rects.iter().any(|(x, y, w, h)| *x == 64 && *y == 40 && *w == 880 && *h == 110),
+        "vs 横屏 attacker HP 框应在 (64,40,880,110)，got imgs={imgs:?} rects={rects:?}"
     );
     assert!(
-        rects.iter().any(|(x, y, w, h)| *x == 976 && *y == 40 && *w == 880 && *h == 110),
-        "vs 横屏 defender HP 框应在 (976,40,880,110)，got {rects:?}"
+        imgs.iter().any(|(_, x, y, w, h)| *x == 976 && *y == 40 && *w == 880 && *h == 110)
+            || rects.iter().any(|(x, y, w, h)| *x == 976 && *y == 40 && *w == 880 && *h == 110),
+        "vs 横屏 defender HP 框应在 (976,40,880,110)，got imgs={imgs:?} rects={rects:?}"
+    );
+}
+
+/// S87.5 接管对账：schema 静态底矩形必须与默认动态层画出的静态底**逐一对齐**，
+/// 否则 schema 模式跳过动态底后会留黑洞（可视化编辑生效的结构前提）。
+#[test]
+fn vs_schema_static_bases_align_with_dynamic_drawlist() {
+    let mut app = game();
+    ti_app::forward_nav::navigate(&mut app, "vs");
+    app.render();
+    let imgs = image_rects(&app);
+    let rects = rect_rects(&app);
+    let scenes = ti_core::data::ui_schema::world_components().expect("world_components.json 加载");
+    let vs = scenes.get("vs").expect("缺 vs");
+    for (id, want) in [
+        ("bg_frame", (44, 44, 1832, 992)),
+        ("hp_player_frame", (64, 40, 880, 110)),
+        ("hp_enemy_frame", (976, 40, 880, 110)),
+    ] {
+        let element = vs.elements.iter().find(|e| e.id == id).expect("缺 schema 静态元素");
+        let rect = element.world_rect.expect("{id} 缺 world_rect");
+        assert_eq!((rect.x, rect.y, rect.w, rect.h), want, "{id} schema 矩形漂移");
+        let in_dynamic = imgs.iter().any(|(_, x, y, w, h)| (*x, *y, *w, *h) == want)
+            || rects.iter().any(|(x, y, w, h)| (*x, *y, *w, *h) == want);
+        assert!(in_dynamic, "{id} schema 矩形 ({want:?}) 无对应动态底 op（两层不对齐）");
+    }
+    let vs_logo = vs.elements.iter().find(|e| e.id == "vs_logo").expect("缺 vs_logo");
+    let lr = vs_logo.world_rect.expect("vs_logo 缺 world_rect");
+    assert_eq!((lr.x, lr.y, lr.w, lr.h), (890, 470, 140, 140), "vs_logo schema 矩形漂移");
+    // S87.5：schema 模式把 vs_logo 画成 image（role=vs_logo → icon_monogram.png），
+    // 旧路径画成 fill_rect；两种模式都不该在该矩形留黑洞 ⇒ 两者任一命中即通过。
+    assert!(
+        imgs.iter().any(|(_, x, y, w, h)| (*x, *y, *w, *h) == (890, 470, 140, 140))
+            || rects.iter().any(|(x, y, w, h)| (*x, *y, *w, *h) == (890, 470, 140, 140)),
+        "vs_logo schema 矩形无对应徽标底 op（image 或 rect，动态层跳过后会留黑洞）"
     );
 }
 

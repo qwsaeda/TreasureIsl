@@ -10,14 +10,14 @@
 //! 首访前经 `ui_schema::install_injected` / `table_source::install` 注入（OnceLock 一次性，
 //! 与 `--shot` 冷启天然契合）。
 //!
-//! 安全口径（22 号 §10.1/§10.3）：X-TI-Token 鉴权 403 + Content-Type application/json 400
+//! 安全口径（22 号 §10.3）：Content-Type application/json 400
 //! + 请求体 ≤ 64 KiB 413 + scene/viewport/id 白名单枚举 400；禁自由 shell / 自由路径。
 
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
-use crate::routes::{auth_ok, json200, status_json};
+use crate::routes::{json200, status_json};
 use crate::runner::jobs::{self, JobSpec};
 
 /// 可预览场景白名单（5 纯 UI 场景 + 主地图；vs 游戏世界层不在 UI 编辑器范围，见计划 §4）。
@@ -50,17 +50,14 @@ const BLOB_FILES: [(&str, &str); 8] = [
     ("pack_strings_json", "@strings.json"),
 ];
 
-/// `POST /api/preview` 总入口（写操作鉴权 → Content-Type → body 上限 → 参数白名单 → 后台 job）。
+/// `POST /api/preview` 总入口（Content-Type → body 上限 → 参数白名单 → 后台 job）。
+#[must_use]
 pub fn handle_preview(
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     want_gzip: bool,
 ) -> Vec<u8> {
-    if !auth_ok(token) {
-        return err_resp(403, "403: 写操作需 X-TI-Token（22 号 §10.1）", want_gzip);
-    }
     let ct_ok = content_type.is_some_and(|value| {
         value.split(';').next().unwrap_or("").trim().eq_ignore_ascii_case("application/json")
     });
@@ -78,10 +75,11 @@ pub fn handle_preview(
         Ok(value) => value,
         Err(error) => return err_resp(400, &format!("400: body 非合法 JSON：{error}"), want_gzip),
     };
-    // 写面默认关（30 号 §3.1）：body 数据落 gitignored 临时目录 ⇒ 须显式 enable_write=true。
-    if payload.get("enable_write").and_then(Value::as_bool) != Some(true) {
-        return err_resp(400, "400: 写动作需 enable_write=true（30 号 §3.1 默认关）", want_gzip);
-    }
+    // 预览是**只读观感操作**：只写 gitignored 临时目录（evidence/console/preview/<id>/）+
+    // 出一张 PNG，**不改任何游戏数据**（assets/data 下跟踪文件零写）⇒ 不属 30 号 §3.1 的
+    // 「写数据」面。旧实现要求 enable_write=true 是语义错配（拿「允许改游戏数据」的开关
+    // 去管一个只读预览），已移除：预览的写面风险由「参数白名单 + 逐参数非 shell + 后台 job
+    // 硬超时 + 只写 gitignored 路径」四重约束覆盖，不靠 enable_write。
     // 白名单 action id（与 console_commands.json::api_endpoints 对账；缺省 = 按端点自身 id）。
     let action = str_field(&payload, "action").unwrap_or_default();
     if !action.is_empty() && action != "preview" {

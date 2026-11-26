@@ -1,0 +1,28 @@
+S87.0 世界层可视化编辑立项 · 验收证据（2026-11-25）
+
+== 改动面 ==
+文档（docs/plan-s87-world-layer.md 设计稿 + README 登记 + AGENTS/26号/release 计数同步 + 台账 S87.0~S87.6）。
+
+== 触发 ==
+用户 2026-11-25「每个场景都可以调 ui 调元素了吧」→ 复核发现仅 5 纯 UI 场景可，vs/main_map 因 B1 留 1080 不可；
+用户拍板「两个都做（1080 世界层 schema 渲染器）」+ 补充「vs 的静态部分可以做，比如出场、按钮等」。
+
+== 判据 1：设计稿 + 影响面（3 路 explore 回填）==
+docs/plan-s87-world-layer.md（133 行）含：
+- 现状诊断（S85 只迁 5 纯 UI、B1 边界、vs/main_map 元素来源）
+- 目标 + 用户补充边界（vs 静态部分数据化、动画留码）
+- §1.1 CPU 世界层渲染定案（非 bevy_ui：schema→DrawList→Canvas，不遮动态内容、parity 口径不变）
+- §2/§2b/§2c 三路实测：①元素清单（默认只 render_v6_elem + render_v2_elem_landscape；静态可数据化/动画留码边界）
+  ②数据契约（独立 world_components.json + geometry 引用 v6 JSON + 合成 pick_key + SceneHost binding + UiAction 真漂移处理）
+  ③渲染器实现（放 ti-app::scenes::world_schema.rs + HostCanvas 复用 + 影子期并存 + 门禁迁移 + 17 号 §9 签核）
+- §3 WBS S87.0~S87.6 + §4 判据 + §5 风险
+
+== 判据 2：用户确认留痕（硬规则 9 A 纪律）==
+用户 2026-11-25 消息「通过，按 WBS 开工」= 设计稿通过（静态数据化 + 动画留码 + 影子期并存 + UiAction 扩 3 变体）。
+S87.0 deps=S86.5（S86 已全收口，依赖解除）。
+
+== 判据 3：登记 + 门禁 ==
+docs/README.md 计划段登记；台账 S87.0~S87.6 全 pending；计数同步 437 任务/430 verified/7 pending；
+doccheck 0 error（202 docs/38 facts/206 experiences/431 task refs）+ doccheck2 0 error + doc_numbers 0 漂移。
+
+S87.0 可置 verified。

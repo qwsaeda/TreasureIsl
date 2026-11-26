@@ -36,8 +36,9 @@ pub use table_source::{PackTables, install as install_pack_tables, source_id};
 pub use terrain::{TerrainDb, TerrainLegend, TerrainMap, terrain};
 pub use ui_icons::{HudIcon, IconDef, IndexMenuIcon, UiIconBindings, UiIcons, icon_ids, ui_icons};
 pub use ui_schema::{
-    AssetRoles, Component, InjectedSchema, Layout, OffsetPct, SceneComponents, SizePct,
-    asset_roles, components, install_injected,
+    AssetRoles, BindingSpec, Component, Geometry, InjectedSchema, Layout, OffsetPct, Pick,
+    SceneComponents, SizePct, VisibleWhen, WorldComponent, WorldRect, WorldScene, asset_roles,
+    components, install_injected, world_components,
 };
 
 use std::collections::BTreeMap;

@@ -151,23 +151,6 @@ dependencies = [
 
 [[package]]
 name = "android-activity"
-version = "0.1.0"
-dependencies = [
- "ab_glyph",
- "android-activity 0.6.1",
- "bevy",
- "futures-lite",
- "serde_json",
- "ti-app",
- "ti-core",
- "ti-engine",
- "ti-platform",
- "ti-render",
- "wgpu",
-]
-
-[[package]]
-name = "android-activity"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f2a1bb052857d5dd49572219344a7332b31b76405648eabac5bc68978251bcd"
@@ -472,7 +455,7 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17fd56a4708085b36f8aa1a011e347f8bd9334f0343bb3d5d9c3742897968a55"
 dependencies = [
- "android-activity 0.6.1",
+ "android-activity",
 ]
 
 [[package]]
@@ -6256,7 +6239,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6755fa58a9f8350bd1e472d4c3fcc25f824ec358933bba33306d0b63df5978d"
 dependencies = [
  "ahash",
- "android-activity 0.6.1",
+ "android-activity",
  "atomic-waker",
  "bitflags 2.13.2",
  "block2 0.5.1",

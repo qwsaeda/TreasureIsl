@@ -13,12 +13,14 @@ paths:
 ## 1. 写面白名单（repo/ 写点纪律）
 - 平台写面 = **白名单动作 + 枚举/id 参数**，禁任意 shell（22 号 §10.3 + 30 号 §2）。
 - 文档声称的每个写端点（`POST /api/...`）须在 `crates/ti-console/src/routes/` 实存对应 handler；
-  反向 `routes/` 里每个 POST 写端点须有 `X-TI-Token` 鉴权 + `enable_write` 门禁（22 号 §4.2 写面默认关）。
+  反向 `routes/` 里每个 POST 写端点须有 `enable_write` 门禁 + 参数白名单（22 号 §4.2 写面默认关）。
+  **鉴权面 = 无**（2026-11-25 用户拍板「本地开发工具不做鉴权」）：平台不读凭据环境变量、
+  不校验请求头、无 403 鉴权分支 ⇒ 审计面**不得**再出现 token 校验路径。
 - 写点探针 = `repo/guard.rs`（内容级快照判定），新增写面须登记 30 号 §3.1 写点表。
 
 ## 2. 端点 ↔ 文档对账
 - 22/30/31 号声称的每个 `GET/POST /api/<name>` 须在 `routes.rs`/`routes/*.rs` 实存（幻影端点 = ERROR）。
-- 端点参数契约（body 字段 / 白名单 regex / 鉴权次序 403→400→413→400）文档↔代码同义。
+- 端点参数契约（body 字段 / 白名单 regex / 前置次序 400→413→400）文档↔代码同义（**无鉴权次序**，见 §1）。
 
 ## 3. 程序白名单（runner/ spawn 面）
 - `runner/` 后台 spawn 的程序 = test_manifest `command` 白名单 `cargo/python3/pwsh/powershell`，

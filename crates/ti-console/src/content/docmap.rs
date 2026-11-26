@@ -13,7 +13,7 @@
 //! 3. **写面** = 文档「写面」列必须列出该步的**有效写点**（白名单动作取 `console_commands.json`
 //!    的 `writes`；平台自身步取向导登记写点）；有效写点为空 ⇒ 文档列须标「只读」。
 //!
-//! 端点：`GET /api/content/mapping`（只读免 token）= 映射报告 + 断言结果。
+//! 端点：`GET /api/content/mapping`（只读）= 映射报告 + 断言结果。
 
 use std::path::Path;
 

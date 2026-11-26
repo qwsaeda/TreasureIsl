@@ -49,6 +49,7 @@ pub mod vs_anim_proto;
 pub mod vs_anim_proto_landscape;
 pub mod vs_anim_v4;
 pub mod vs_proto;
+pub mod world_schema;
 
 pub use index::IndexScene;
 pub use main_map::MainMapScene;

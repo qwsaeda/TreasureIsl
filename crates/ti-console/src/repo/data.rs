@@ -436,8 +436,8 @@ fn snapshot_sample(snap: &super::snapshot::FrozenSnapshot) -> Vec<Value> {
     snap.files.iter().take(8).map(|(k, v)| json!({ "path": k, "fingerprint": v })).collect()
 }
 
-/// `/api/session`：平台会话信息（与 S32.3 设置页 token 粘贴 + 写操作开关配套；
-/// 只读：不读 token 值，只报「当前 token 是否存在于环境」+ 写操作开关的默认态 = 关）。
+/// `/api/session`：平台会话信息（与 S32.3 设置页写操作开关配套；
+/// 只读：本机开发工具不启用鉴权，只报写操作开关的默认态 = 关）。
 ///
 /// `/api/audit`：双审计报告清单（`evidence/console/audit-*.md` 文件名 + 抬头 §7.3
 /// 四行机器可解析字段〔总判定/新发现/误报/残留〕的解析；只读，0 写盘）。
@@ -710,12 +710,12 @@ pub fn whitelist_probe(repo_root: &Path, relative: &str) -> Value {
     })
 }
 
-/// `/api/session`：平台会话信息（只读；token 存在性 + 写操作默认态，22 号 §10.1）。
+/// `/api/session`：平台会话信息（只读；本机开发工具**不启用鉴权**，22 号 §10.1；
+/// 报写操作开关的默认态 = 关）。
 #[must_use]
 pub fn session() -> Value {
-    let token_present = std::env::var("TI_CONSOLE_TOKEN").is_ok();
     json!({
-        "token_present": token_present,
+        "auth": "none（本机开发工具不启用鉴权）",
         "write_enabled_default": false,
         "single_instance_lock": "evidence/console/.lock（S32.4 完整规格：起始时间 + 动作 id + 30 分钟 stale 接管）",
     })

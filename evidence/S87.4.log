@@ -1,0 +1,35 @@
+S87.4 vs 静态部分数据化接入（影子期）· 验收证据（2026-11-25）
+
+== 改动面 ==
+规则实现+表现（vs.rs render env 分支 + on_hit 接 3 action）+ 测试（world_schema_parity +2 / landscape_drawlist / render_intent 双路径说明）。
+
+== 判据 1：env 分支（默认 0 行为变化）==
+vs.rs render() 在 scene_layout 之后、battle_snapshot 分支之前加：
+  if world_schema::enabled() && world_schema::render_world_components(host,"vs",-1) { /* 静态层已画 */ }
+  // 下方 battle_snapshot → render_v2_elem 动态层照旧覆盖绘制
+selected=-1（vs 按钮 state=normal/hover/disabled，component_visible 要求 selected<0 可见）；
+默认 enabled()=false ⇒ && 短路；坏 schema ⇒ render_world_components false ⇒ 回退。
+两层遮挡纪律成立：schema 静态层先画，动态层后画覆盖，vs 元素走 Canvas、零 bevy_ui Node。
+
+== 判据 2：action 接线（不改现有交互）==
+保留裸 key 2/3/4 分支逐字不动；新增 UiAction::from_key 分派臂：
+11=VsSkip→skip_anim_to_banner / 12=VsConfirm→Back / 13=VsReset→reset_anim（与旧键同语义）。
+from_key(2/3/4) 代表元被显式 arm 截住不误入。新增测试 vs_action_keys_route_to_legacy_semantics + 沿用 derives_action_keys 覆盖 11/12/13。
+
+== 判据 3：实证（全实跑，vs 带 TI_VS_ANIM_T0=1 冻结帧时序）==
+- 默认 0 行为变化：A/B（改前无分支 vs 改后默认）export_parity_check diff 0 精确一致。
+- env 切换：TI_WORLD_SCHEMA=1 + T0=1 --shot vs → 非黑 1761078/2073600，无 panic，动态层像素在；env 连跑两张 diff 0（确定性）。
+- 负例：TI_PREVIEW_DIR 注入坏 schema + env=1 → 回退旧路径，与默认逐像素 diff 0，非黑无 panic。
+- 点击：key=12 单测可观测 Vs→Index；key=11/13 不换场景只驱动演出时钟。
+
+== 判据 4：全量门禁（隔离其它会话 Cargo.toml 后）==
+cargo test --workspace 1101 passed/0 failed（1099+2）；clippy 0 error；fmt 0；doccheck 0 error；doccheck2 0 error（57 checks）；
+world_schema_check OK；check_code_standards PASS；landscape_drawlist 7/7、render_intent 12/12、world_schema_parity 12/12。
+
+== ⚠️ 遗留（S87.5 必须解决，用户核心诉求）==
+schema 静态层当前被 render_v2_elem 动态层几乎完全遮住（自带满屏背景+HP 框+VS 徽标+甲板插画），
+env 开/关仅差 11 个 1-LSB 像素 ⇒ 此刻改 world_components.json 不显著改变 vs 画面。
+S87.5 需让 render_v2_elem 停止重复绘制那些静态框/底（动态层限定为纯数值/时序），
+使「可视化编辑 vs 静态部分真正生效」。影子期形态与「视觉一致即可」判据本阶段达成，不影响 S87.4 verified。
+
+S87.4 可置 verified。

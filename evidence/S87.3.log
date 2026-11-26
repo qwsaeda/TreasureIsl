@@ -1,0 +1,34 @@
+S87.3 main_map 世界层数据化接入（影子期 env 分支）· 验收证据（2026-11-25）
+
+== 改动面 ==
+规则实现+表现（main_map.rs render 分支 + render_v6_elem 拆 static/dynamic 层）+ 测试（main_map_pick_e2e 双源重锚 + world_schema_parity +2）+ schema 数据 bug 修复 + CS-3 豁免基线。
+
+== 判据 1：env 分支（默认 0 行为变化）==
+main_map.rs v6 默认分支：
+  let schema_world = world_schema::enabled() && world_schema::render_world_components(host,"main_map",-1);
+  if schema_world { render_v6_dynamic_layer(...) }  // 运行时数据照旧画
+  else { render_v6_elem(...); render_primitives_filtered(...); }
+  render_hud_v3(...); render_v6_spin_die(...);  // 两路径都画
+render_v6_elem 拆为 render_v6_static_layer（海图底/木框/岛拆件/31格/缆绳）+ render_v6_dynamic_layer（棋子/名牌/舵轮罗盘/终局/交接/面板），wrapper 按原序调用。
+false/默认 ⇒ && 短路回退；schema 缺/解析失败 ⇒ render_world_components 返回 false ⇒ 自动回退。
+
+== 判据 2：命中重锚（缺键=不可点守门）==
+影子期两源并存、旧 prim 不删：运行时 hit.key=4→Spin 仍走 scenes.json prim（manual_1080_hit_system）；
+schema 侧 helm_spin.pick.action="spin"→UiAction→key4、ResolvedDrawCmd.action_key=4 由测试守门。
+main_map_pick_e2e 改双源兼容（至少一处提供 spin=4）+ 新增 schema_declares_spin()；5/6/7 恰0个 + key=4→Spin 真摇骰保持。
+
+== 判据 3：实证（全实跑）==
+- 默认 0 行为变化：baseline shot vs 改后默认 shot → export_parity_check diff 0 精确一致。
+- env 切换：TI_WORLD_SCHEMA=1 --shot main_map --spin=5 → 非黑 2072283/2073600（99.94%）无 panic，动态层仍在；与默认 diff 2045195（新静态层确实生效）。
+- 负例：TI_PREVIEW_DIR 注入坏 schema（scenes:{}）+ env=1 → world_components() Err → 回退旧路径，非黑=baseline，无 panic。
+
+== 判据 4：同步项 ==
+- schema 数据 bug 修复：handoff_cover visible_when is_none→is_some（原常态全屏盖板遮住静态层）；toast_cover/outcome_cover 加 visible_when（ToastHost.text/OutcomeHost.text is_some）。
+- world_schema_parity::records_all_three_draw_op_kinds 适配：盖板改运行时可见后显式 set_build_panel_open(true) 让 panel_build(Rect) 进入 draw list，10/10 全绿。
+- CS-3 豁免 +2（world_schema.rs Canvas trait impl 的 w/h 参数名，trait 签名强制），process_ratchet.json 补登。
+
+== 判据 5：全量门禁（隔离其它会话 Cargo.toml 后）==
+cargo test --workspace 1099 passed/0 failed（1097+2）；clippy 0 error；fmt 0；doccheck 0 error；doccheck2 0 error（57 checks）；
+world_schema_check OK；audit_code PASS；check_code_standards PASS；main_map_pick_e2e 4/4、render_intent 12/12、world_schema_parity 10/10。
+
+S87.3 可置 verified。

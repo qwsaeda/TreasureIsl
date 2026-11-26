@@ -1,5 +1,6 @@
 //! 战斗场景（S9 骨架）：回合推进 / 战斗面板绘制。
 use ti_core::domain::combat::Side;
+use ti_core::domain::ui_action::UiAction;
 
 use crate::game_app::{GameInput, HitData, SiegeSnapshot};
 use crate::i18n;
@@ -47,6 +48,10 @@ impl Scene for VsScene {
     /// S29.2：点任意处（`key=0`）/ 上·左·右滑 = 攻击一回合；下滑 = 退出战斗。
     /// S49.4 交互契约（§2.6.1）：`pick_key` 2=跳过（快进横幅）/ 3=确认（结束回主地图）/
     /// 4=重打（重置演出）；无命中 = 现有 swipe/点按语义。
+    /// S87.4：schema 按钮 `vs_skip`/`vs_confirm`/`vs_reset`（key 11/12/13）经
+    /// [`UiAction::from_key`] 反解，与旧裸 key 2/3/4 **同语义**；旧分支原样保留（向后兼容）。
+    /// `from_key(2/3/4)` 的代表元是 `CharacterSelect`/`SlotLoad`/`Spin`，已被上面显式匹配
+    /// 截住，不会误入新分支。
     fn on_hit(&mut self, host: &mut dyn SceneHost, hit: &HitData) -> bool {
         match hit.key {
             2 => {
@@ -58,9 +63,20 @@ impl Scene for VsScene {
                 crate::scenes::vs_anim_proto::reset_anim();
                 false
             }
-            _ => match hit.swipe {
-                2 => host.advance(GameInput::Back),
-                _ => host.advance(GameInput::Attack),
+            key => match UiAction::from_key(key) {
+                Some(UiAction::VsSkip) => {
+                    crate::scenes::vs_anim_proto::skip_anim_to_banner();
+                    false
+                }
+                Some(UiAction::VsConfirm) => host.advance(GameInput::Back),
+                Some(UiAction::VsReset) => {
+                    crate::scenes::vs_anim_proto::reset_anim();
+                    false
+                }
+                _ => match hit.swipe {
+                    2 => host.advance(GameInput::Back),
+                    _ => host.advance(GameInput::Attack),
+                },
             },
         }
     }
@@ -86,6 +102,16 @@ impl Scene for VsScene {
             return;
         }
         let layout = chrome::scene_layout("vs");
+        // S87.4 影子期：`TI_WORLD_SCHEMA=1` 且 schema 可渲染 ⇒ 静态世界层由
+        // `world_components.json` 数据驱动（出场/按钮/HP 框/战报/徽标等静态版面）；
+        // 默认 / 缺表 ⇒ `&&` 短路回退旧过程式（0 行为变化）。
+        // S87.5 分层纪律（硬）：静态层**先画**，下面 `battle_snapshot` → `render_v2_elem`
+        // 的动态层**只画纯数值/时序**（HP 填充/兵力数字/动画帧/战报文本），后画叠在其上；
+        // 静态框/底由 schema 提供 ⇒ 改 `world_components.json` 才真正改变画面。
+        // `schema_static_layer` 把「静态层是否真画了」传给动态层，避免两层重复绘制同一元素。
+        // vs 元素走 Canvas 原语、不挂 `chrome_in_bevy_ui`（S29.3e 遮挡坑），UI Node 恒 0。
+        let schema_static_layer = crate::scenes::world_schema::enabled()
+            && crate::scenes::world_schema::render_world_components(host, "vs", -1);
         // S34.6 D3（用户 2026-11-03「之前设计的很好，你又瞎JB的乱设计」）：vs.rs 正式战斗
         // **完整复用 `vs_anim_proto::render_v2_elem` 好设计构图**（甲板插画 + crew/hero/enemy
         // 分列 + 顶/底兵力状态框 + 中央 VS 徽标 + 羊皮框），不再画 vs_theme 背景 +
@@ -114,6 +140,7 @@ impl Scene for VsScene {
                 b.defender_arms,
                 b.resolved,
                 grid_class,
+                schema_static_layer,
             );
             return;
         }

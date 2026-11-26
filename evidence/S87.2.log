@@ -1,0 +1,29 @@
+S87.2 世界层 schema 渲染器（影子期）· 验收证据（2026-11-25）
+
+== 改动面 ==
+规则实现+表现（ti-app/src/scenes/world_schema.rs 新建 585 行 + mod.rs 1 行）+ 测试（world_schema_parity.rs 8 条）+ doccheck2 clippy 收口。
+
+== 判据 1：渲染器结构（ResolvedDrawCmd 后端无关中间层）==
+- resolve_world_draw_cmds(&[WorldComponent],&AssetRoles,&dyn SceneHost,&Theme,selected) → Vec<ResolvedDrawCmd>：
+  z 升序 → state/visible_when 过滤 → world_rect/geometry 两源解析（v6 layout 中心化矩形+tile_r / scenes.json extra_for）
+  → binding 解析（i18n sget / host 白名单 14 path + sgetf）→ role→资产 → pick.action 经 UiAction 闭集派生 key。
+  ResolvedDrawCmd 只含字符串/整数/简单枚举，零业务类型（无 Character/MapSlot/GameApp/战斗快照命名）。
+- dispatch_draw_cmds(&mut dyn Canvas,...)：Rect→fill_rect / 三档 Text→draw_*_text / Image→blit_image_tint（恒等 tint，无颜色字面量），色走 Theme::by_name。
+- SceneHostCanvas 镜像 chrome.rs HostCanvas：每方法转发 RenderHost→draw_target()，记录型宿主可逐 op 观测（非「编译绿 0 调用」）。
+- 不产 bevy_ui Node、不挂 chrome_in_bevy_ui 守卫；enabled()/env_enabled() 单一事实源（TI_WORLD_SCHEMA=1，默认 false）。
+- 56 元素全消费不 panic；本阶段未在 main_map.rs/vs.rs 加 env 分支（S87.3/4 才切），默认路径零变化。
+
+== 判据 2：0 行为变化实证（A/B 同源码树增删一行 pub mod）==
+- main_map 1920×1080：export_parity_check → PASS 差异像素=0 精确一致
+- vs 1920×1080（TI_VS_ANIM_T0=1 冻结动画，否则同二进制连跑差 16.8 万像素属固有帧时序抖动）→ PASS diff 0
+- 5 纯 UI 场景 --shot 全非黑；临时图落 /tmp/opencode/ws87/ 已删除，tracked evidence 零改动。
+
+== 判据 3：8 条 parity 测试 ==
+56 元素全消费 / z 稳定排序 / 两源 geometry / i18n+host binding（金 1234）/ action key(4/11/12/13) / visible_when 过滤 / 三型 DrawOp 记录 / 影子开关。
+
+== 判据 4：全量门禁（隔离其它会话 Cargo.toml 后）==
+cargo test --workspace 1097 passed/0 failed/1 ignored（1089+8）；clippy --workspace --all-targets -D warnings 0 error；fmt 0；
+doccheck 0 error；doccheck2 0 error（57 checks）；audit_code 0 违规；world_schema_check OK；
+doccheck2 6 clippy 错误收口（文档反引号/函数拆分 check_world_action_enums+check_world_element/format!/is_none_or/allow too_many_arguments）。
+
+S87.2 可置 verified。

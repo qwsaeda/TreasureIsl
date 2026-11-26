@@ -158,7 +158,7 @@ fn check_payload_shape(payload: &Value) -> Result<&Value, String> {
 pub fn import_map_pack(repo_root: &Path, _sources: &RepoSources, payload: &Value) -> Value {
     // `_sources` = `console_sources.json` 数据源面（`write_whitelist` 语义 = 数据面登记「平台可写目录」，
     // 实码写点防线 = id 正则 + `assert_write_point` canonicalize 前缀断言；本函数不消费白名单做门禁。
-    // 参数保留与 `repo::` 模块签名一致，S32.4 鉴权面启用时在此接 token + 白名单消费校验）。
+    // 参数保留与 `repo::` 模块签名一致（S32.4 起平台不启用鉴权，此处不再接鉴权参数）。
     // 1) 形状校验（缺键不落盘）。
     let manifest = match check_payload_shape(payload) {
         Ok(m) => m,

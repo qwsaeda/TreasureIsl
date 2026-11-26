@@ -1,0 +1,318 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://treasureisland.local/ui_schema/world_components.schema.json",
+  "title": "World Component Schema v1 — S87 世界层声明式元素（1080 CPU Canvas）",
+  "description": "vs/main_map 静态可数据化元素的声明：type∈{Rect,Text,Image}（CPU DrawOp 三型），几何只走 geometry ref（v6 layout.json / scenes.json）或 world_rect；禁 grad/glow/panel 与散落裸坐标。动画/数值保留 Rust 过程式。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "scenes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "scenes": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/Scene"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Scene": {
+      "type": "object",
+      "required": [
+        "scene_id",
+        "elements"
+      ],
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "enum": [
+            "main_map",
+            "vs"
+          ]
+        },
+        "elements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Element"
+          }
+        },
+        "overrides": {
+          "$ref": "#/$defs/Overrides"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Element": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Rect",
+            "Text",
+            "Image"
+          ]
+        },
+        "role": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "geometry": {
+          "$ref": "#/$defs/Geometry"
+        },
+        "world_rect": {
+          "$ref": "#/$defs/WorldRect"
+        },
+        "z": {
+          "type": "integer"
+        },
+        "pick": {
+          "$ref": "#/$defs/Pick"
+        },
+        "binding": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "$ref": "#/$defs/HostBinding"
+            }
+          ]
+        },
+        "state": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "selected",
+              "hover",
+              "disabled"
+            ]
+          }
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "title",
+            "body",
+            "hint"
+          ]
+        },
+        "visible_when": {
+          "$ref": "#/$defs/VisibleWhen"
+        },
+        "anim_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "visible_in_phase": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "x"
+            ]
+          },
+          {
+            "required": [
+              "y"
+            ]
+          },
+          {
+            "required": [
+              "w"
+            ]
+          },
+          {
+            "required": [
+              "h"
+            ]
+          },
+          {
+            "required": [
+              "rect"
+            ]
+          },
+          {
+            "required": [
+              "layout"
+            ]
+          },
+          {
+            "required": [
+              "intent"
+            ]
+          }
+        ]
+      }
+    },
+    "Geometry": {
+      "type": "object",
+      "required": [
+        "source",
+        "ref"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "main_map_v6_layout_landscape.json",
+            "scenes.json"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "WorldRect": {
+      "type": "object",
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1920
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1080
+        },
+        "w": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1920
+        },
+        "h": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1080
+        }
+      },
+      "additionalProperties": false
+    },
+    "Pick": {
+      "type": "object",
+      "required": [
+        "action",
+        "index"
+      ],
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/Action"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "HostBinding": {
+      "type": "object",
+      "required": [
+        "kind",
+        "path"
+      ],
+      "properties": {
+        "kind": {
+          "const": "host"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fmt": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "VisibleWhen": {
+      "type": "object",
+      "required": [
+        "path",
+        "op"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "op": {
+          "type": "string",
+          "enum": [
+            "is_none",
+            "is_some",
+            "eq",
+            "ne"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Action": {
+      "type": "string",
+      "enum": [
+        "menu_select",
+        "character_select",
+        "map_select",
+        "slot_load",
+        "slot_write",
+        "msg_next",
+        "msg_prev",
+        "spin",
+        "back",
+        "attack",
+        "do_item",
+        "defend",
+        "vs_skip",
+        "vs_confirm",
+        "vs_reset"
+      ]
+    },
+    "Overrides": {
+      "type": "object",
+      "description": "主题覆盖层：role→资产路径，不写绝对坐标。",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

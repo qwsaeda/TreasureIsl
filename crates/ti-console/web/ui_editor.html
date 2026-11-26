@@ -28,6 +28,8 @@
   .tab, button { font:inherit; color:var(--ink); background:var(--panel2);
                  border:1px solid var(--border); border-radius:6px; padding:6px 10px; cursor:pointer; }
   .tab.on { background:var(--accent); color:#0d0f17; border-color:var(--accent); font-weight:600; }
+  .tab.world { border-color:var(--warn); color:var(--warn); }
+  .tab.world.on { background:var(--warn); color:#0d0f17; border-color:var(--warn); }
   button.primary { background:var(--accent); color:#0d0f17; border-color:var(--accent); font-weight:600; }
   button.danger { background:#3a222c; border-color:#6d3340; color:#ffb4b4; }
   button:disabled { opacity:.45; cursor:not-allowed; }
@@ -43,6 +45,7 @@
          padding:3px 5px; font-size:11px; color:var(--accent); cursor:grab;
          white-space:nowrap; overflow:hidden; user-select:none; }
   .box.on { border-style:solid; background:rgba(126,200,227,.22); box-shadow:0 0 0 1px var(--accent) inset; }
+  .box.locked { border-color:var(--warn); color:var(--warn); background:rgba(224,179,69,.10); }
   .box.dragging { cursor:grabbing; opacity:.85; }
   .box .grp { position:absolute; right:-5px; bottom:-5px; width:12px; height:12px;
               background:var(--warn); border-radius:3px; cursor:nwse-resize; }
@@ -67,12 +70,9 @@
 <body>
 <header>
   <h1>UI 组件可视化编辑器</h1>
-  <span class="muted">S86.2 · components_v1.json · 禁绝对坐标（intent / anchored 百分比）</span>
+  <span class="muted">S86.2 + S87.5b · 7 场景 · UI intent / 世界层 world_rect+geometry · FAIL 禁摆</span>
   <a href="/">← 返回看板</a>
   <span style="flex:1"></span>
-  <span class="muted">token</span>
-  <input type="password" id="token" placeholder="TI_CONSOLE_TOKEN（sessionStorage）" style="width:190px">
-  <button id="tokenSave">保存</button>
   <label class="muted" title="写操作默认关（30 号 §3.1）；校验 / apply 均需勾选"><input type="checkbox" id="enableWrite"> enable_write（写操作需勾选）</label>
 </header>
 
@@ -81,11 +81,11 @@
     <h2>场景 / 组件</h2>
     <div class="tabs" id="tabs"></div>
     <div id="elemList"></div>
-    <div class="legend">点组件选中；画布拖拽改位置，右下角小柄拖拽改尺寸。每次落点自动校验，FAIL 自动回滚。</div>
+    <div class="legend">点组件选中；画布拖拽改位置，右下角小柄拖拽改尺寸。每次落点自动校验，FAIL 红字点名 + 自动回滚。<br>黄框 = geometry 引用元素（受源数据约束，拖拽即 FAIL 禁摆；可在属性面板「解除约束→world_rect」）。</div>
   </div>
 
   <div class="card stage-col">
-    <h2>Scene View（1920×1080 示意 · 百分比坐标）</h2>
+    <h2>Scene View（1920×1080 示意 · UI 百分比 / 世界层整数像素）</h2>
     <div id="sceneCanvas"></div>
     <div class="bar">
       <button id="btnValidate">校验</button>
@@ -108,21 +108,36 @@
 
 <script>
 'use strict';
-// S86.2 独立页面：自成一体，不依赖 index.html 的任何 JS；导航入口由主线程后续加。
-const SCENE_ORDER = ['index','select_role','select_map','message','saveload'];
+// S86.2 = 5 纯 UI 场景（components_v1.json，intent/anchored 百分比）；
+// S87.5b = +2 世界场景（world_components.json，world_rect 整数 + geometry 两源引用）= 7 tab。
+// 本页自成一体，不依赖 index.html 的任何 JS；导航入口由主线程并入看板。
+const SCENE_ORDER = ['index','select_role','select_map','message','saveload','main_map','vs'];
+const WORLD_SCENES = ['main_map','vs'];
 const ACTIONS = ['menu_select','character_select','map_select','slot_load','slot_write',
-  'msg_next','msg_prev','spin','back','attack','do_item','defend'];
+  'msg_next','msg_prev','spin','back','attack','do_item','defend',
+  'vs_skip','vs_confirm','vs_reset'];
 const TIERS = ['title','body','hint'];
 const STATES = ['normal','selected','hover','disabled'];
 const INTENTS = ['fill','center','side_left','side_right','bottom_bar','flex_col','flex_row','anchored'];
 const ANCHORS = ['top_left','top_right','top_center','bottom_left','bottom_right',
   'bottom_center','center_left','center_right','center'];
+const WORLD_TYPES = ['Rect','Text','Image'];
+const WORLD_SOURCES = ['main_map_v6_layout_landscape.json','scenes.json'];
+const WORLD_HOST_PATHS = ['EconomyHost.gold','EconomyHost.cargo','MapHost.dice','MapHost.seat',
+  'MapHost.panel','MapHost.handoff_pending','BattleHost.hp_player','BattleHost.hp_enemy',
+  'BattleHost.crew','BattleHost.round','BattleHost.report','BattleHost.phase',
+  'ToastHost.text','OutcomeHost.text'];
+const WORLD_OPS = ['is_none','is_some','eq','ne'];
+const SCREEN_W = 1920, SCREEN_H = 1080;
 
-const S = { schema:null, scene:'index', selected:null, roles:[], icons:[], busy:false, drag:null };
+const S = { schema:null, scene:'index', mode:'ui', selected:null, roles:[], icons:[],
+            geometryRects:{}, busy:false, drag:null };
 const $ = (id) => document.getElementById(id);
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const round1 = (n) => Math.round(n * 10) / 10;
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const isWorldScene = (name) => WORLD_SCENES.includes(name);
+const isWorld = () => S.mode === 'world';
 
 function status(text, kind) {
   const el = $('status');
@@ -131,10 +146,7 @@ function status(text, kind) {
 }
 
 function headers() {
-  const h = { 'Content-Type':'application/json' };
-  const t = sessionStorage.getItem('ti_console_token') || '';
-  if (t) h['X-TI-Token'] = t;
-  return h;
+  return { 'Content-Type':'application/json' };
 }
 
 async function api(url, opt) {
@@ -150,6 +162,7 @@ function envelope(action) {
   if (!$('enableWrite').checked) throw new Error('请勾选 enable_write（30 号 §3.1 写面默认关）');
   return JSON.stringify({
     action: action,
+    mode: S.mode,
     enable_write: true,
     schema_text: JSON.stringify(S.schema, null, 2)
   });
@@ -160,7 +173,7 @@ async function postValidate() {
   return api('/api/ui/components/validate', { method:'POST', headers:headers(), body });
 }
 
-// ---- 版面反算：像素位移 → 百分比，写回 anchored 的 offset_pct / size_pct ----
+// ---- UI 版面反算：像素位移 → 百分比，写回 anchored 的 offset_pct / size_pct ----
 function anchorPoint(name) {
   switch (name) {
     case 'top_left': return { x:0, y:0 };
@@ -231,7 +244,26 @@ function setAnchored(layout, box) {
   delete layout.align;
 }
 
-function currentScene() { return S.schema.scenes[S.scene]; }
+// ---- 世界层反算：画布像素位移 → 1920×1080 逻辑整数 → world_rect（geometry 元素只读约束） ----
+function worldBox(e) {
+  // world_rect 是权威值（拖拽后即时生效）；geometry 元素用后端解析的只读矩形呈现。
+  const resolved = e.id ? S.geometryRects[S.scene + '.' + e.id] : null;
+  const r = e.world_rect || resolved;
+  if (r && typeof r.x === 'number' && typeof r.w === 'number') {
+    return { x:clamp(r.x, 0, SCREEN_W), y:clamp(r.y, 0, SCREEN_H),
+             w:clamp(r.w, 1, SCREEN_W), h:clamp(r.h, 1, SCREEN_H) };
+  }
+  return { x:880, y:500, w:160, h:80 };
+}
+
+function clampWorldBox(b) {
+  const w = Math.round(clamp(b.w, 1, SCREEN_W));
+  const h = Math.round(clamp(b.h, 1, SCREEN_H));
+  return { x:Math.round(clamp(b.x, 0, SCREEN_W - w)),
+           y:Math.round(clamp(b.y, 0, SCREEN_H - h)), w:w, h:h };
+}
+
+function currentScene() { return S.schema && S.schema.scenes ? S.schema.scenes[S.scene] : null; }
 function findElement(id) {
   const arr = currentScene() && currentScene().elements || [];
   return arr.find((e) => e.id === id) || null;
@@ -242,16 +274,19 @@ function renderTabs() {
   const tabs = $('tabs');
   tabs.innerHTML = '';
   SCENE_ORDER.forEach((name) => {
-    if (!S.schema.scenes[name]) return;
     const b = document.createElement('button');
-    b.className = 'tab' + (name === S.scene ? ' on' : '');
-    b.textContent = name;
+    const world = isWorldScene(name);
+    b.className = 'tab' + (name === S.scene ? ' on' : '') + (world ? ' world' : '');
+    b.textContent = world ? name + ' ·世界层' : name;
     b.onclick = async () => {
       if (S.busy) return;
-      S.scene = name; S.selected = null;
+      S.scene = name;
+      S.mode = world ? 'world' : 'ui';
+      S.selected = null;
+      S.schema = null;
+      S.geometryRects = {};
       renderAll();
-      // ?scene= 回显契约：切换时走只读 API 取该场景（0 写盘），保留全量 schema 供 tab 切换。
-      try { await api('/api/ui/components?scene=' + encodeURIComponent(name)); } catch (_) {}
+      await loadAll();
     };
     tabs.appendChild(b);
   });
@@ -260,16 +295,25 @@ function renderTabs() {
 function renderList() {
   const list = $('elemList');
   list.innerHTML = '';
-  (currentScene().elements || []).forEach((e) => {
+  const elems = currentScene() && currentScene().elements || [];
+  elems.forEach((e) => {
     const div = document.createElement('div');
     div.className = 'elem' + (S.selected === e.id ? ' on' : '');
-    const l = e.layout || {};
-    const layoutText = l.intent === 'anchored'
-      ? 'anchored@' + (l.anchor || 'center')
-      : l.intent;
+    let meta;
+    if (isWorld()) {
+      const text = typeof e.binding === 'string' ? e.binding
+        : (e.binding && e.binding.path ? 'host:' + e.binding.path : '—');
+      meta = (e.type || '?') + ' · ' + (e.role || text) + ' · z=' + (e.z === undefined ? '-' : e.z)
+        + (e.pick ? ' · ' + e.pick.action : '')
+        + (e.geometry ? ' · ⛓' + e.geometry.ref : '');
+    } else {
+      const l = e.layout || {};
+      const layoutText = l.intent === 'anchored' ? 'anchored@' + (l.anchor || 'center') : l.intent;
+      meta = (e.role || e.binding || '—') + ' / ' + layoutText
+        + (e.action ? ' / ' + e.action : '') + (e.state ? ' / ' + e.state.join(',') : '');
+    }
     div.innerHTML = '<div class="id">' + esc(e.id) + ' <span class="muted">· ' + esc(e.type || '?') + '</span></div>'
-      + '<div class="meta">' + esc(e.role || e.binding || '—') + ' / ' + esc(layoutText)
-      + (e.action ? ' / ' + esc(e.action) : '') + (e.state ? ' / ' + esc(e.state.join(',')) : '') + '</div>';
+      + '<div class="meta">' + esc(meta) + '</div>';
     div.onclick = () => { S.selected = e.id; renderAll(); };
     list.appendChild(div);
   });
@@ -282,16 +326,25 @@ function esc(v) {
 function renderCanvas() {
   const canvas = $('sceneCanvas');
   canvas.innerHTML = '';
-  (currentScene().elements || []).forEach((e) => {
-    const b = layoutBox(e.layout);
+  const elems = currentScene() && currentScene().elements || [];
+  elems.forEach((e) => {
+    const b = isWorld() ? worldBox(e) : layoutBox(e.layout);
     const box = document.createElement('div');
-    box.className = 'box' + (S.selected === e.id ? ' on' : '');
-    box.style.left = round1(b.x) + '%';
-    box.style.top = round1(b.y) + '%';
-    box.style.width = round1(b.w) + '%';
-    box.style.height = round1(b.h) + '%';
+    const locked = isWorld() && !e.world_rect;
+    box.className = 'box' + (S.selected === e.id ? ' on' : '') + (locked ? ' locked' : '');
+    if (isWorld()) {
+      box.style.left = round1(b.x / SCREEN_W * 100) + '%';
+      box.style.top = round1(b.y / SCREEN_H * 100) + '%';
+      box.style.width = round1(b.w / SCREEN_W * 100) + '%';
+      box.style.height = round1(b.h / SCREEN_H * 100) + '%';
+    } else {
+      box.style.left = round1(b.x) + '%';
+      box.style.top = round1(b.y) + '%';
+      box.style.width = round1(b.w) + '%';
+      box.style.height = round1(b.h) + '%';
+    }
     box.dataset.id = e.id;
-    box.innerHTML = '<span>' + esc(e.id) + '</span>';
+    box.innerHTML = '<span>' + esc(e.id) + (locked ? ' ⛓' : '') + '</span>';
     const grip = document.createElement('div');
     grip.className = 'grp';
     grip.dataset.resize = e.id;
@@ -308,9 +361,11 @@ function startDrag(ev, id, mode) {
   if (!el) return;
   ev.preventDefault();
   const canvas = $('sceneCanvas');
+  const world = isWorld();
   S.drag = {
     id:id, mode:mode, startX:ev.clientX, startY:ev.clientY,
-    rect:canvas.getBoundingClientRect(), startBox:layoutBox(el.layout),
+    rect:canvas.getBoundingClientRect(),
+    startBox:world ? worldBox(el) : layoutBox(el.layout),
     snapshot:clone(S.schema), target:ev.currentTarget
   };
   S.drag.target.classList.add('dragging');
@@ -322,20 +377,32 @@ function startDrag(ev, id, mode) {
 function onDragMove(ev) {
   const d = S.drag;
   if (!d) return;
-  const dx = (ev.clientX - d.startX) / d.rect.width * 100;
-  const dy = (ev.clientY - d.startY) / d.rect.height * 100;
+  const world = isWorld();
+  const dx = (ev.clientX - d.startX) / d.rect.width * (world ? SCREEN_W : 100);
+  const dy = (ev.clientY - d.startY) / d.rect.height * (world ? SCREEN_H : 100);
   const b = d.startBox;
-  const next = d.mode === 'resize'
-    ? clampBox({ x:b.x, y:b.y, w:b.w + dx, h:b.h + dy })
-    : clampBox({ x:b.x + dx, y:b.y + dy, w:b.w, h:b.h });
-  d.target.style.left = round1(next.x) + '%';
-  d.target.style.top = round1(next.y) + '%';
-  d.target.style.width = round1(next.w) + '%';
-  d.target.style.height = round1(next.h) + '%';
+  const next = world
+    ? clampWorldBox(d.mode === 'resize'
+        ? { x:b.x, y:b.y, w:b.w + dx, h:b.h + dy }
+        : { x:b.x + dx, y:b.y + dy, w:b.w, h:b.h })
+    : (d.mode === 'resize'
+        ? clampBox({ x:b.x, y:b.y, w:b.w + dx, h:b.h + dy })
+        : clampBox({ x:b.x + dx, y:b.y + dy, w:b.w, h:b.h }));
+  if (world) {
+    d.target.style.left = round1(next.x / SCREEN_W * 100) + '%';
+    d.target.style.top = round1(next.y / SCREEN_H * 100) + '%';
+    d.target.style.width = round1(next.w / SCREEN_W * 100) + '%';
+    d.target.style.height = round1(next.h / SCREEN_H * 100) + '%';
+  } else {
+    d.target.style.left = round1(next.x) + '%';
+    d.target.style.top = round1(next.y) + '%';
+    d.target.style.width = round1(next.w) + '%';
+    d.target.style.height = round1(next.h) + '%';
+  }
   d.nextBox = next;
 }
 
-async function onDragEnd(ev) {
+async function onDragEnd() {
   window.removeEventListener('pointermove', onDragMove);
   const d = S.drag;
   if (!d) return;
@@ -343,21 +410,219 @@ async function onDragEnd(ev) {
   d.target.classList.remove('dragging');
   if (!d.nextBox) { renderCanvas(); return; }
   const el = findElement(d.id);
-  if (!el || !el.layout) { renderCanvas(); return; }
-  setAnchored(el.layout, d.nextBox);
+  if (!el) { renderCanvas(); return; }
   S.selected = d.id;
   S.busy = true;
   status('校验中…');
   try {
+    if (isWorld()) {
+      // FAIL 禁摆：geometry 引用元素受源数据约束，禁拖改裸坐标。
+      if (!el.world_rect) {
+        const ref = el.geometry ? el.geometry.ref : '(无)';
+        throw new Error(S.scene + '.' + d.id + ' 是 geometry 引用元素（' + ref
+          + '），禁拖改裸坐标；请改 geometry.ref 或在属性面板「解除约束→world_rect」。已回滚。');
+      }
+      el.world_rect = d.nextBox;
+    } else {
+      if (!el.layout) throw new Error('组件缺 layout，无法拖拽反算');
+      setAnchored(el.layout, d.nextBox);
+    }
     const res = await postValidate();
-    if (res.ok) status('PASS · 已写回 layout.offset_pct / size_pct（anchored@' + el.layout.anchor + '）', 'pass');
-    else { S.schema = d.snapshot; status('FAIL · 拖拽已回滚：\n' + (res.errors || []).join('\n'), 'fail'); }
+    if (res.ok) {
+      const note = isWorld()
+        ? ' · world_rect=' + JSON.stringify(el.world_rect)
+        : ' · 已写回 layout.offset_pct / size_pct（anchored@' + el.layout.anchor + '）';
+      status('PASS' + note, 'pass');
+    } else {
+      S.schema = d.snapshot;
+      status('FAIL · 拖拽已回滚：\n' + (res.errors || []).join('\n'), 'fail');
+    }
   } catch (e) {
     S.schema = d.snapshot;
-    status('FAIL · 校验请求异常，拖拽已回滚：' + e.message, 'fail');
+    status('FAIL · ' + e.message, 'fail');
   } finally {
     S.busy = false;
     renderAll();
+  }
+}
+
+// ---- 属性面板公共控件（UI / world 共用） ----
+function propRow(host, labelText, control) {
+  const div = document.createElement('div');
+  div.className = 'row';
+  const lab = document.createElement('label');
+  lab.textContent = labelText;
+  div.appendChild(lab);
+  div.appendChild(control);
+  host.appendChild(div);
+}
+
+function propText(host, key, obj) {
+  const inp = document.createElement('input');
+  inp.value = obj[key] || '';
+  inp.onchange = async () => { const old = clone(S.schema); obj[key] = inp.value; await commitChange(old); };
+  return inp;
+}
+
+function propSelect(host, key, obj, choices, nullable) {
+  const sel = document.createElement('select');
+  if (nullable) { const o = document.createElement('option'); o.value = ''; o.textContent = '（无）'; sel.appendChild(o); }
+  choices.forEach((c) => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+  sel.value = obj[key] || '';
+  sel.onchange = async () => { const old = clone(S.schema); obj[key] = sel.value; await commitChange(old); };
+  return sel;
+}
+
+function propNumber(host, key, obj) {
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.step = isWorld() ? '1' : '0.1';
+  inp.value = obj[key] === undefined ? '' : obj[key];
+  inp.onchange = async () => {
+    const old = clone(S.schema);
+    const n = Number(inp.value);
+    if (Number.isFinite(n)) obj[key] = isWorld() ? Math.round(n) : n; else delete obj[key];
+    await commitChange(old);
+  };
+  return inp;
+}
+
+function propSpan(host, text) {
+  const s = document.createElement('span');
+  s.textContent = text;
+  return s;
+}
+
+function propStates(host, el) {
+  const wrap = document.createElement('span');
+  STATES.forEach((st) => {
+    const lab = document.createElement('label');
+    lab.style.width = 'auto';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = (el.state || []).includes(st);
+    cb.onchange = async () => {
+      const old = clone(S.schema);
+      const arr = Array.isArray(el.state) ? el.state.slice() : [];
+      if (cb.checked) { if (!arr.includes(st)) arr.push(st); } else {
+        const i = arr.indexOf(st); if (i >= 0) arr.splice(i, 1);
+      }
+      if (arr.length) el.state = arr; else delete el.state;
+      await commitChange(old);
+    };
+    lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + st));
+    wrap.appendChild(lab);
+  });
+  return wrap;
+}
+
+function ensureObj(parent, key, init) {
+  if (!parent[key] || typeof parent[key] !== 'object' || Array.isArray(parent[key])) parent[key] = init;
+  return parent[key];
+}
+
+function renderPropsUi(host, el) {
+  const l = el.layout || {};
+  propRow(host, 'id', propSpan(host, el.id));
+  propRow(host, 'type', propSpan(host, el.type || '?'));
+  propRow(host, 'role', propSelect(host, 'role', el, S.roles.map((r) => r.role), true));
+  propRow(host, 'icon', propSelect(host, 'icon', el, S.icons, true));
+  propRow(host, 'binding', propText(host, 'binding', el));
+  propRow(host, 'action', propSelect(host, 'action', el, ACTIONS.slice(0, 12), true));
+  propRow(host, 'tier', propSelect(host, 'tier', el, TIERS, true));
+  propRow(host, 'state', propStates(host, el));
+  propRow(host, 'intent', propSelect(host, 'intent', l, INTENTS, true));
+  if (l.intent === 'anchored') {
+    propRow(host, 'anchor', propSelect(host, 'anchor', l, ANCHORS, true));
+    if (!l.offset_pct) l.offset_pct = { x:0, y:0 };
+    if (!l.size_pct) l.size_pct = { w:30, h:20 };
+    propRow(host, 'offset.x', propNumber(host, 'x', l.offset_pct));
+    propRow(host, 'offset.y', propNumber(host, 'y', l.offset_pct));
+    propRow(host, 'size.w', propNumber(host, 'w', l.size_pct));
+    propRow(host, 'size.h', propNumber(host, 'h', l.size_pct));
+  } else {
+    propRow(host, 'width_pct', propNumber(host, 'width_pct', l));
+  }
+  propRow(host, 'z', propNumber(host, 'z', el));
+}
+
+function renderPropsWorld(host, el) {
+  propRow(host, 'id', propSpan(host, el.id));
+  propRow(host, 'type', propSelect(host, 'type', el, WORLD_TYPES, false));
+  propRow(host, 'role', propSelect(host, 'role', el, S.roles.map((r) => r.role), true));
+  if (el.geometry) {
+    propRow(host, 'geometry.source', propSelect(host, 'source', el.geometry, WORLD_SOURCES, false));
+    propRow(host, 'geometry.ref', propText(host, 'ref', el.geometry));
+    const unlock = document.createElement('button');
+    unlock.textContent = '解除约束→world_rect';
+    unlock.onclick = async () => {
+      const old = clone(S.schema);
+      const r = S.geometryRects[S.scene + '.' + el.id];
+      if (!r) { status('FAIL · geometry.ref 无解析矩形，无法解除约束', 'fail'); return; }
+      el.world_rect = { x:r.x, y:r.y, w:r.w, h:r.h };
+      delete el.geometry;
+      await commitChange(old);
+    };
+    propRow(host, '约束', unlock);
+  } else {
+    const r = ensureObj(el, 'world_rect', { x:0, y:0, w:120, h:80 });
+    ['x', 'y', 'w', 'h'].forEach((key) => propRow(host, 'world_rect.' + key, propNumber(host, key, r)));
+  }
+  propRow(host, 'z', propNumber(host, 'z', el));
+  // pick：action（15 项）/ index；两键须同时在场。
+  if (el.pick) {
+    const pick = el.pick;
+    propRow(host, 'pick.action', propSelect(host, 'action', pick, ACTIONS, false));
+    propRow(host, 'pick.index', propNumber(host, 'index', pick));
+  } else {
+    const addPick = document.createElement('button');
+    addPick.textContent = '＋ 加 pick';
+    addPick.onclick = async () => { const old = clone(S.schema); el.pick = { action:'back', index:0 }; await commitChange(old); };
+    propRow(host, 'pick', addPick);
+  }
+  // binding：i18n key 字符串，或 host:<白名单 path>（后端校验 host 白名单）。
+  const bindInp = document.createElement('input');
+  bindInp.value = typeof el.binding === 'string' ? el.binding
+    : (el.binding && el.binding.path ? 'host:' + el.binding.path : '');
+  bindInp.onchange = async () => {
+    const old = clone(S.schema);
+    const value = bindInp.value.trim();
+    if (value.startsWith('host:')) el.binding = { kind:'host', path:value.slice(5), fmt:'' };
+    else if (value) el.binding = value;
+    else delete el.binding;
+    await commitChange(old);
+  };
+  propRow(host, 'binding', bindInp);
+  propRow(host, 'tier', propSelect(host, 'tier', el, TIERS, true));
+  propRow(host, 'state', propStates(host, el));
+  propRow(host, 'anim_ref', propText(host, 'anim_ref', el));
+  const phaseInp = document.createElement('input');
+  phaseInp.value = Array.isArray(el.visible_in_phase) ? el.visible_in_phase.join(',') : '';
+  phaseInp.onchange = async () => {
+    const old = clone(S.schema);
+    const arr = phaseInp.value.split(',').map((s) => s.trim()).filter(Boolean);
+    if (arr.length) el.visible_in_phase = arr; else delete el.visible_in_phase;
+    await commitChange(old);
+  };
+  propRow(host, 'visible_phase', phaseInp);
+  // visible_when：path（白名单）/ op / value（eq|ne 必填）。
+  if (el.visible_when) {
+    const when = el.visible_when;
+    propRow(host, 'when.path', propSelect(host, 'path', when, WORLD_HOST_PATHS, false));
+    propRow(host, 'when.op', propSelect(host, 'op', when, WORLD_OPS, false));
+    propRow(host, 'when.value', propText(host, 'value', when));
+  } else {
+    const addWhen = document.createElement('button');
+    addWhen.textContent = '＋ 加 visible_when';
+    addWhen.onclick = async () => {
+      const old = clone(S.schema);
+      el.visible_when = { path:'MapHost.panel', op:'eq', value:'build' };
+      await commitChange(old);
+    };
+    propRow(host, 'visible_when', addWhen);
   }
 }
 
@@ -366,90 +631,8 @@ function renderProps() {
   host.innerHTML = '';
   const el = findElement(S.selected);
   if (!el) { host.innerHTML = '<div class="muted">先选一个组件。</div>'; return; }
-  const l = el.layout || {};
-
-  function row(labelText, control) {
-    const div = document.createElement('div');
-    div.className = 'row';
-    const lab = document.createElement('label');
-    lab.textContent = labelText;
-    div.appendChild(lab);
-    div.appendChild(control);
-    host.appendChild(div);
-  }
-  function textField(key, obj) {
-    const inp = document.createElement('input');
-    inp.value = obj[key] || '';
-    inp.onchange = async () => { const old = clone(S.schema); obj[key] = inp.value; await commitChange(old); };
-    return inp;
-  }
-  function selectField(key, obj, choices, nullable) {
-    const sel = document.createElement('select');
-    if (nullable) { const o = document.createElement('option'); o.value = ''; o.textContent = '（无）'; sel.appendChild(o); }
-    choices.forEach((c) => {
-      const o = document.createElement('option');
-      o.value = c; o.textContent = c;
-      sel.appendChild(o);
-    });
-    sel.value = obj[key] || '';
-    sel.onchange = async () => { const old = clone(S.schema); obj[key] = sel.value; await commitChange(old); };
-    return sel;
-  }
-  function numberField(key, obj) {
-    const inp = document.createElement('input');
-    inp.type = 'number'; inp.step = '0.1';
-    inp.value = obj[key] === undefined ? '' : obj[key];
-    inp.onchange = async () => {
-      const old = clone(S.schema);
-      const n = Number(inp.value);
-      if (Number.isFinite(n)) obj[key] = n; else delete obj[key];
-      await commitChange(old);
-    };
-    return inp;
-  }
-
-  row('id', (() => { const s = document.createElement('span'); s.textContent = el.id; return s; })());
-  row('type', (() => { const s = document.createElement('span'); s.textContent = el.type || '?'; return s; })());
-  row('role', selectField('role', el, S.roles.map((r) => r.role), true));
-  row('icon', selectField('icon', el, S.icons, true));
-  row('binding', textField('binding', el));
-  row('action', selectField('action', el, ACTIONS, true));
-  row('tier', selectField('tier', el, TIERS, true));
-  row('state', (() => {
-    const wrap = document.createElement('span');
-    STATES.forEach((st) => {
-      const lab = document.createElement('label');
-      lab.style.width = 'auto';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = (el.state || []).includes(st);
-      cb.onchange = async () => {
-        const old = clone(S.schema);
-        const arr = Array.isArray(el.state) ? el.state.slice() : [];
-        if (cb.checked) { if (!arr.includes(st)) arr.push(st); } else {
-          const i = arr.indexOf(st); if (i >= 0) arr.splice(i, 1);
-        }
-        if (arr.length) el.state = arr; else delete el.state;
-        await commitChange(old);
-      };
-      lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + st));
-      wrap.appendChild(lab);
-    });
-    return wrap;
-  })());
-  row('intent', selectField('intent', l, INTENTS, true));
-  if (l.intent === 'anchored') {
-    row('anchor', selectField('anchor', l, ANCHORS, true));
-    if (!l.offset_pct) l.offset_pct = { x:0, y:0 };
-    if (!l.size_pct) l.size_pct = { w:30, h:20 };
-    row('offset.x', numberField('x', l.offset_pct));
-    row('offset.y', numberField('y', l.offset_pct));
-    row('size.w', numberField('w', l.size_pct));
-    row('size.h', numberField('h', l.size_pct));
-  } else {
-    row('width_pct', numberField('width_pct', l));
-  }
-  row('z', numberField('z', el));
+  if (isWorld()) renderPropsWorld(host, el);
+  else renderPropsUi(host, el);
 }
 
 async function commitChange(snapshot) {
@@ -457,7 +640,7 @@ async function commitChange(snapshot) {
   status('校验中…');
   try {
     const res = await postValidate();
-    if (res.ok) status('PASS · 属性已更新', 'pass');
+    if (res.ok) status('PASS · 属性已更新（' + S.mode + ' 模式实时校验）', 'pass');
     else { S.schema = snapshot; status('FAIL · 修改已回滚：\n' + (res.errors || []).join('\n'), 'fail'); }
   } catch (e) {
     S.schema = snapshot;
@@ -468,10 +651,9 @@ async function commitChange(snapshot) {
   }
 }
 
-function renderRaw() { $('rawJson').value = JSON.stringify(S.schema, null, 2); }
+function renderRaw() { $('rawJson').value = S.schema ? JSON.stringify(S.schema, null, 2) : ''; }
 
 function renderAll() {
-  if (!S.schema) return;
   renderTabs(); renderList(); renderCanvas(); renderProps(); renderRaw();
 }
 
@@ -479,30 +661,37 @@ async function loadAll() {
   status('载入中…');
   try {
     const [components, roles] = await Promise.all([
-      api('/api/ui/components?scene=' + encodeURIComponent(S.scene)),
+      api('/api/ui/components?scene=' + encodeURIComponent(S.scene) + '&mode=' + S.mode),
       api('/api/ui/roles')
     ]);
     S.schema = components.schema;
+    S.mode = components.mode || S.mode;
     S.roles = roles.roles || [];
     S.icons = roles.icons || [];
+    S.geometryRects = components.geometry_rects || {};
     if (!S.schema.scenes[S.scene]) S.scene = Object.keys(S.schema.scenes)[0] || 'index';
     renderAll();
-    status('已载入 ' + components.count + ' 个组件 / ' + Object.keys(S.schema.scenes).length + ' 个场景。', 'pass');
+    status('已载入 ' + S.mode + ' 模式 · ' + components.count + ' 元素（' + S.scene + '）· '
+      + Object.keys(S.schema.scenes).length + ' 场景 / '
+      + Object.values(S.schema.scenes).reduce((n, s) => n + ((s.elements || []).length), 0) + ' 元素。', 'pass');
   } catch (e) {
     status('载入失败：' + e.message, 'fail');
   }
 }
 
 async function doApply() {
-  if (S.busy) return;
+  if (S.busy || !S.schema) return;
   S.busy = true;
   status('apply 写盘中…');
   try {
     const body = envelope('ui_components_apply');
     const res = await api('/api/ui/components/apply', { method:'POST', headers:headers(), body });
     if (!res.ok) status('apply FAIL · ' + (res.errors || []).join('\n'), 'fail');
-    else status('apply PASS · 已写 components_v1.json（indent=2 保序）· write_probe=' + res.write_probe
-      + ' · ui_schema_check exit=' + (res.schema_check && res.schema_check.exit_code), 'pass');
+    else {
+      const check = res.world_check || res.schema_check || {};
+      status('apply PASS · 已写 ' + res.path + '（indent=2 保序）· write_probe=' + res.write_probe
+        + ' · 门禁 exit=' + check.exit_code, 'pass');
+    }
   } catch (e) {
     status('apply FAIL：' + e.message, 'fail');
   } finally { S.busy = false; renderRaw(); }
@@ -512,28 +701,33 @@ function doExport() {
   const blob = new Blob([JSON.stringify(S.schema, null, 2) + '\n'], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'components_v1.json';
+  a.download = isWorld() ? 'world_components.json' : 'components_v1.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 async function doPreview() {
-  // S86.3 真渲染预览 = 前端约定（本任务不建后端）：未落盘 schema 走 schema_json blob，
-  // 作业轮询复用 GET /api/jobs?kind=preview&id=..；后端未上线 / 错误 = 如实降级提示。
-  if (S.busy) return;
-  if (!$('enableWrite').checked) { status('预览需勾选 enable_write（临时目录写面，30 号 §3.1）。', 'fail'); return; }
+  // S86.3 真渲染预览 + S87.5b world 注入：world 模式传 world_components_json（引擎
+  // TI_PREVIEW_DIR/world_components.json → install_injected world_components 字段），
+  // UI 模式沿用 schema_json；轮询统一作业面 GET /api/jobs?kind=preview&id=..。
+  if (S.busy || !S.schema) return;
+  // 预览 = 只读观感操作（不改游戏数据；只写 gitignored 临时目录 + 出 PNG）⇒ 不需 enable_write
+  // （旧实现把「允许改游戏数据」的开关套在预览上是语义错配，后端已同步放开）。
   S.busy = true;
   status('提交真渲染预览作业…');
   try {
-    const id = 'preview_ui_' + Date.now();
-    const body = JSON.stringify({
+    const id = 'preview_' + S.scene + '_' + Date.now();
+    const bodyData = {
       action:'preview', scene:S.scene, viewport:'1920x1080', id:id,
-      enable_write:true, schema_json:JSON.stringify(S.schema, null, 2)
-    });
-    const res = await api('/api/preview', { method:'POST', headers:headers(), body });
+      mode:S.mode
+    };
+    // 后端契约：`schema_json` / `world_components_json` 必须是 JSON object（整表/schema 形状），
+    // 不是 JSON.stringify 出来的字符串（旧实现发字符串 ⇒ 400「必须是 JSON object」）。
+    if (isWorld()) bodyData.world_components_json = S.schema;
+    else bodyData.schema_json = S.schema;
+    const res = await api('/api/preview', { method:'POST', headers:headers(), body:JSON.stringify(bodyData) });
     const image = res.image || res.path || '';
-    if (!image) { status('预览服务待上线（S86.3）：返回无 image 字段。', 'fail'); return; }
-    // 作业异步出图：轮询统一作业面；exit_code=0 即为成功（23 号 §6.2）。
+    if (!image) { status('预览服务返回无 image 字段：' + JSON.stringify(res).slice(0, 300), 'fail'); return; }
     const poll = res.poll || ('/api/jobs?kind=preview&id=' + encodeURIComponent(res.id || id));
     let done = false;
     for (let i = 0; i < 120; i++) {
@@ -549,25 +743,18 @@ async function doPreview() {
     if (!done) { status('预览作业超时（S86.3 冷启 + 预载可能需 30~90s）：' + poll, 'fail'); return; }
     $('previewBox').style.display = 'block';
     $('previewImg').src = '/' + String(image).replace(/^\//, '') + '?t=' + Date.now();
-    status('预览已加载：' + image + '（<img> 走 ?t=Date.now() 破缓存）', 'pass');
+    status('预览已加载：' + image + '（<img> 走 ?t=Date.now() 破缓存；world 模式经 TI_PREVIEW_DIR 注入）', 'pass');
   } catch (e) {
-    status('预览服务待上线（S86.3）：' + e.message, 'fail');
+    status('预览服务异常：' + e.message, 'fail');
   } finally { S.busy = false; }
 }
 
-$('token').value = sessionStorage.getItem('ti_console_token') || '';
-$('tokenSave').onclick = () => {
-  const v = $('token').value.trim();
-  if (v) sessionStorage.setItem('ti_console_token', v);
-  else sessionStorage.removeItem('ti_console_token');
-  status('token 已' + (v ? '保存' : '清除') + '（sessionStorage，与看板共用）。', 'pass');
-};
 $('btnValidate').onclick = async () => {
-  if (S.busy) return;
+  if (S.busy || !S.schema) return;
   S.busy = true; status('校验中…');
   try {
     const res = await postValidate();
-    if (res.ok) status('PASS · enum / 禁绝对坐标 / 登记对账 / 叙事门禁全绿', 'pass');
+    if (res.ok) status('PASS · ' + S.mode + ' 模式校验全绿', 'pass');
     else status('FAIL ·\n' + (res.errors || []).join('\n'), 'fail');
   } catch (e) { status('校验请求异常：' + e.message, 'fail'); }
   finally { S.busy = false; }
@@ -577,6 +764,7 @@ $('btnExport').onclick = doExport;
 $('btnReload').onclick = loadAll;
 $('btnPreview').onclick = doPreview;
 
+renderAll();
 loadAll();
 </script>
 </body>

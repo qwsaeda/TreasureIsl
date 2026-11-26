@@ -1,0 +1,31 @@
+S87.1 世界层 schema 规范定案 · 验收证据（2026-11-25）
+
+== 改动面 ==
+数据规范（world_components.json + .schema.json + world_schema_check.py + asset_roles 扩 27 world role）+ 规则实现（ti-core ui_schema 加载器 + UiAction 扩 3 变体）+ 工具（doccheck2 对账 + 3 处登记）+ 引擎一行预览注入兼容。
+
+== 判据 1：schema 契约定案 ==
+- assets/data/ui_schema/world_components.json：2 场景 56 元素（main_map=35 / vs=21），只含静态可数据化元素
+  （海图底/木框/岛拆件/31 地块/船/舵轮/HUD 铜牌/面板/toast/outcome/handoff、vs 背景框/HP 框/VS 徽标/战报框/按钮/角色基准落点）。
+- world_components.schema.json：draft-07，type 三型闭集(Rect/Text/Image) + Action 15 + geometry/world_rect + 禁顶层裸坐标。
+- binding 支持 i18n key 或 {kind:host,path,fmt}；pick→UiAction key；visible_when 白名单 path；anim_ref 留代码时间轴。
+- asset_roles.json +27 world role（路径实存且 ui_manifest 登记）；components_v1.schema.json Action enum 12→15。
+
+== 判据 2：加载器 + UiAction 扩表 ==
+- ui_schema.rs：WORLD_COMPONENTS_JSON + InjectedSchema.world_components + 独立 OnceLock 的 world_components() + 8 serde 类型。
+- UiAction ACTION_TABLE 12→15：vs_skip=11/vs_confirm=12/vs_reset=13（处理 attack/do_item/defend=2/3/4 与 vs 实际 on_hit 语义漂移；
+  vs_skip/confirm/reset 接线留 S87.4，不改现有 vs 交互）。
+- doccheck2：key 契约 +3 + check_world_components_data 并入 primitives-data + 三处 Action 闭集对账（15/15 相等）。
+
+== 判据 3：负例自证（4/4）==
+注入非法 type / 顶层裸 x / 未登记 role / 非法 action → world_schema_check exit 1；还原 → exit 0；临时注入文件已清理。
+
+== 判据 4：全量门禁（隔离其它会话 Cargo.toml 后）==
+world_schema_check OK（2 场景/56 元素）；cargo check -p ti-core 0；cargo test --workspace 1089 passed/0 failed/1 ignored；
+cargo clippy -p ti-core 0 error；cargo fmt 0；doccheck 0 error；doccheck2 0 error（57 checks）；studio_tests 3/3 OK；
+3 场景 --shot rc=0（schema 无消费者，0 行为变化）。
+
+== 说明 ==
+treasure_bevy.rs:1843 InjectedSchema 字面量补 world_components 字段（读 TI_PREVIEW_DIR/world_components.json），
+无 TI_PREVIEW_DIR 时 0 行为变化——S87.2 渲染器逻辑未动。
+
+S87.1 可置 verified。

@@ -45,7 +45,8 @@
      | 构建体检 `scripts/build_wasm.ps1 -Check` | 无 | 只读（不构建/不拷贝/不写 evidence）；**此 `-Check` 行本身只读** ⇒ 单次体检不改写 `web/` 与 `evidence/S18.8a-wasm-size.log`（构建执行 = 24 号 §4.1 编排器，S35.1） |
      | 地图包校验 `scripts/map_pack.py verify/check` | 无（只读） | 同脚本的写子命令**平台一律不开放**：`install/uninstall` 写 `assets/maps/<id>/` + `assets/maps/.default`（**条件写**：install 缺时 / uninstall 仅卸默认包时）+ `assets/maps/index.json` + `assets/data/board.json`；`add` 写 `assets/maps/<id>/`；`sync` 写 `assets/data/{board,scenes,strings}.json` + `assets/data/ui_schema/scene_manifest_v3.json`（写点清单以 21 号 §8 为准） |
 | 内容运营写动作（**S44.1 起开放，默认关**，30 号 §3.1） | `scripts/map_pack.py`（`add`/`syncmap`/`pack`/`install`/`sync`/`uninstall`）+ `scripts/ui_variant.py`（`tint`）+ `scripts/publish_web.ps1` | `mappack_add`→`assets/maps/`；`mappack_syncmap`→`assets/maps/<id>/manifest.json`；`mappack_pack`→`dist/maps/<id>.map-pack/`；`mappack_install`→`assets/maps/`+`board.json`+`index.json`+`ui_manifest.json`；`mappack_sync`→`assets/data/{board,scenes,strings}.json`+`scene_manifest_v3.json`；`mappack_uninstall`→`assets/maps/`+`.default`+`index.json`+`board.json`；`ui_variant`→`assets/ui/`+`ui_manifest.json`；`publish`→`web/`+`docs/release.md`。写点清单以 21 号 §8 / 30 号 §3.1 为准（S32.15 起「平台一律不开放地图写子命令」改为「开放但默认关 + 写点探针」） |
-| UI 组件写动作（**S86.2 开放，默认关**，30 号 §3.1） | `POST /api/ui/components/apply` → `assets/data/ui_schema/components_v1.json` | 唯一写点 = 单个组件实例文件（`json.dumps(indent=2)` 同口径保键序，**不重排其它场景**）；写前 `validate` 内存 schema（禁绝对坐标 `x/y/w/h/rect` + enum/登记对账）+ 子进程叙事门禁；写后复跑 `scripts/ui_schema_check.py --check`（FAIL 自动还原）+ `write_probe` 写点探针。`validate` 端点**只读 body 不落盘**，但仍走 `X-TI-Token` + `enable_write` + 白名单 `action` id |
+| UI 组件写动作（**S86.2 开放，默认关**，30 号 §3.1） | `POST /api/ui/components/apply` → `assets/data/ui_schema/components_v1.json` | 唯一写点 = 单个组件实例文件（`json.dumps(indent=2)` 同口径保键序，**不重排其它场景**）；写前 `validate` 内存 schema（禁绝对坐标 `x/y/w/h/rect` + enum/登记对账）+ 子进程叙事门禁；写后复跑 `scripts/ui_schema_check.py --check`（FAIL 自动还原）+ `write_probe` 写点探针。`validate` 端点**只读 body 不落盘**，但仍走 `enable_write` + 白名单 `action` id |
+| 世界层组件写动作（**世界层扩面开放，默认关**，30 号 §3.1） | `POST /api/ui/components/apply`（body `mode:"world"`）→ `assets/data/ui_schema/world_components.json` | 第二受控写点 = 世界层实例文件（main_map/vs 静态元素），与上行**同端点按 mode 二选一**；`indent=2` 保序写；写前 `validate` 跑 W1~W6 内存镜像 + `world_schema_check.py --check --instance`（内存数据落 gitignored `evidence/console/world_validate_<pid>_<seq>/`，用完即删）；写后复跑权威门禁（FAIL 自动还原）+ `write_probe` 写点探针。`world_rect` 整数 1920×1080 + `geometry.source/ref` 两源白名单；非法 type / 裸坐标 / 未登记 role / 非法 action = FAIL 红字点名 + 回滚（**FAIL 禁摆**） |
 
 2. **只读默认**：写操作（跑门禁 / 收口体检 / EXP 查重 / 审计归档）必须显式触发，走 §4.2 命令白名单。
 3. **单一事实源**：业务结论只链接（`EXP-xxx` / `F-xxx` / 业务文档），平台不二次表述、不缓存结论。
@@ -57,14 +58,19 @@
      （含 macroquad + opus 编码器），直接依赖 `ti-tools` 会让「零游戏依赖」在依赖图上失效；
      `ti-tools` 改为**薄 re-export**（行为不变，`cargo run -p ti-tools --bin ledger` 照旧输出不变）；
    - 机器断言：`cargo tree -p ti-console` 输出不得含上述游戏 crate（S32.1 DoD）。
-5. **局域网可访问（S44.3 补规范，2026-11-06 用户拍板「必须局域可以访问」）**：默认 `0.0.0.0:8787`（全接口）；
-   `--host 127.0.0.1` 可收窄回环；非回环未设 token 启动告警不拒绝（内网自用，§10.1）。
+5. **局域网可访问（S44.3 补规范，2026-11-06 用户拍板「必须局域可以访问」）**：默认绑 **IPv6 双栈 `[::]:8787`**
+   （同 socket 同收 IPv4；IPv6 不可用则退回 IPv4 通配 `0.0.0.0:8787`）；`--host 127.0.0.1` 可收窄回环；
+   非回环监听不启用鉴权（内网自用，§10.1）。
+6. **启动横幅给「直接可用的地址」（S87.5 追加）**：不再只打 `0.0.0.0`/`127.0.0.1` 这类**不可直接点击**的地址，
+   启动时枚举本机**默认路由所在主网卡**的 IPv4 + IPv6 并各打一行可点 URL（IPv6 link-local 带 zone，
+   URL 里 `%` 转义为 `%25`）；容器网桥（`docker0`/`br-*`/`veth*`）与回环地址不列（不是用户对外可达的地址）。
+   例：`IPv4 → http://10.0.182.131:8787/`、`IPv6 → http://[fe80::1a31:bfff:fe28:bfb6%25enp2s0]:8787/`。
 
 ## 4. 架构
 
 ```
 Browser（静态 UI，无 npm 构建）
-   │ fetch / 轮询（只读 GET 默认；写操作 POST + X-TI-Token）
+   │ fetch / 轮询（只读 GET 默认；写操作 POST）
 ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
    ├─ repo adapter：ledger / docs / evidence / assets 只读索引（唯一读点）
    ├─ runner：白名单命令执行（gate / task_close --check / exp_log --check / build_wasm -Check）
@@ -92,7 +98,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 > 两者动作 id 集合必须相等 ⇒ S32.6 DoD 加**对账断言**（集合一致；不一致即 FAIL）。
 > **S32.6 已机器化**：`runner::close::whitelist_audit` 断言 22 号 §4.2 人读视图 id 集合（
 > `HUMAN_VIEW_IDS` 常量镜像）== `console_commands.json` `commands[].id` 集合；不一致 → `Err` →
-> `POST /api/close` 回 500 不静默。只读对账面 = `GET /api/close?audit=1`（免 token）。
+> `POST /api/close` 回 500 不静默。只读对账面 = `GET /api/close?audit=1`（只读）。
 > **桥接说明（r1-B P3-5）**：`HUMAN_VIEW_IDS` 是本表（人读视图）的 **Rust 镜像常量**；机器断言
 > 覆盖 `console_commands.json`（机器真源）↔镜像。**本表 ↔ 镜像按约定双改**（改 §4.2 表须同步
 > `close.rs::HUMAN_VIEW_IDS`，反之亦然；改错时对账断言只抓 json↔镜像漂移，本表↔镜像靠人工同步
@@ -199,19 +205,19 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 | 概览 | 当前阶段 / 进度条 / 下一任务 / 阻塞清单 / 最近门禁 / 最近审计 | P0（S32.3） |
 | 任务 | 台账全表（按 status / 阶段 / rounds 筛选），任务详情含 dod + evidence 链接 | P0 |
 | 证据 | `evidence/` 浏览 + 缺失告警 + 双审计报告清单（`audit-*.md` 文件 + §7.3 四行机器字段：task/round/侧/新发现/误报/残留，`GET /api/audit` = 报告清单 + **收敛表**（按 task 分组：轮次完整性 + 收敛状态 pass/in_progress/escalate + 未闭环清单，S32.5 机械判定）） | P0 |
-| 双审计编排 | 任务书生成（`POST /api/audit/taskbook`：写操作 `X-TI-Token` 鉴权 403 + body `{"task","round","role","surface?"}` → 落 `evidence/console/audit-<task>-r<N>-<role>.prompt.md` + 返回 `uncovered_elements`〔八要素模板机器断言，空 = 全覆盖〕）+ 报告归档（`POST /api/audit/archive`：body `{"file","content"}` → 落 `evidence/console/audit-<task>-r<N>-<role>.md`，命名规则 + 防穿越 + 非空正文校验）+ 机械判定（`GET /api/audit` 收敛表，§7.3/§7.4） | P1（S32.5） |
-| 门禁 | 分档执行 + 轮询日志 + 历史（`GET /api/gate` = 状态 + 历史 + `?log=` 尾部，只读免 token；`POST /api/gate` = 写操作：`X-TI-Token` 鉴权 403 + `tier∈{fast,touch,full}` 校验 400 + 单实例锁 409 + 后台 spawn；日志落 `evidence/console/logs/gate-<ts>.log` gitignored；门禁既有副作用 `evidence/web_playtest.{log,png}`/`font_render.txt` 只记录不判定） | P1（S32.4） |
+| 双审计编排 | 任务书生成（`POST /api/audit/taskbook`：body `{"task","round","role","surface?"}` → 落 `evidence/console/audit-<task>-r<N>-<role>.prompt.md` + 返回 `uncovered_elements`〔八要素模板机器断言，空 = 全覆盖〕）+ 报告归档（`POST /api/audit/archive`：body `{"file","content"}` → 落 `evidence/console/audit-<task>-r<N>-<role>.md`，命名规则 + 防穿越 + 非空正文校验）+ 机械判定（`GET /api/audit` 收敛表，§7.3/§7.4） | P1（S32.5） |
+| 门禁 | 分档执行 + 轮询日志 + 历史（`GET /api/gate` = 状态 + 历史 + `?log=` 尾部，只读；`POST /api/gate` = 写操作：`tier∈{fast,touch,full}` 校验 400 + 单实例锁 409 + 后台 spawn；日志落 `evidence/console/logs/gate-<ts>.log` gitignored；门禁既有副作用 `evidence/web_playtest.{log,png}`/`font_render.txt` 只记录不判定） | P1（S32.4） |
 | 资产 | UI 图片预览（`ui_manifest` 全量登记图（登记数随资产批次增长，S32.3 快照 = 75 张） + **标签分组 = role + 时间倒序** `generated_at` 降序 + **lightbox 点击放大** + 元数据含 AI prompt 原文；图片直读 = `assets/ui/` 白名单前缀，`GET /api/assets`）/ 校验状态 | P0（S32.3 看板 v1）+ P2（S32.7 校验状态） |
 | 设计图 | AI 生成设计稿浏览（`evidence/ui_concept/`，**非运行截图**；`GET /api/evidence?sub=ui_concept` 子目录枚举〔**滤除 `.thumb.png` 侧车**〕+ 白名单直读 + 组别标签〔主地图/首页/岛型·地图/对战/界面/资产表/其他〕+ lightbox 放大。**默认只展示正式稿**：`raw_`（未抠原图）/`tmp_`（临时试稿）前缀 = 中间产物隐藏（`#design-mid` 勾选展开），命名口径 = 13 号 §2.1。**压缩预览**：卡读 `.thumb.png` 侧车（480px PNG-8，~53KB vs 原图 4-6MB）、lightbox 读原图，口径 = 13 号 §4.0） | P0（S32.3） |
  | 地图 | 地图包管理面（`assets/maps/<id>/` 已装包清单 + 描述符摘要〔schema/id/version/data_version/中央岛/岛型数/31 格不变量/环几何/资产数〕+ `.default` 指针 + 制作指引 `scripts/map_pack.py` 命令面 + 21 号标准链接；`GET /api/map` 只读浏览） + **地图编辑器**（环形 SVG 画布 31 节点 + 点节点改 kind/isle + 环几何输入 + I1~I9 前端实时校验条〔镜像 `map_pack.py verify_pack`，权威实现 = `map_pack.py`〕+ 生成 4 文件 JSON） + **`POST /api/map/import`**（S32.14 ② 免鉴权导入落盘面：写 `assets/maps/<id>/` 四文件 + 同进程 `map_pack.py sync` 回注 + `verify` 终判 I1~I9〔含 I7 资产哈希〕，违规 = `errors` 如实上报不静默绕过；写点纪律 = 21 号 §8 平台编辑器口径 + 本号 §10.1 唯一写点例外） | P0（S32.3 只读）+ S32.14（编辑器 + import） |
-| 内容运营向导 | 内容运营平台化（30 号）：**地图工作台**（S44.2 `GET /api/content/map?id=` 读向导状态 + `POST /api/content/map/step` 执行一步〔固定 10 步状态机 + 不可跳步 409 + 每步机器判据回显 + 写点探针 + 失败即停；**写操作 `X-TI-Token` 鉴权 403**（F-1 修复，非免 token 唯一写端点例外）+ 写动作须 `enable_write` 400〕，web 地图页纵向 stepper 卡片）+ **UI 工作台**（S44.3 6 步 + 视觉变体器 + 签收留痕，后续）+ **1:1 映射断言**（S44.5 `GET /api/content/mapping` 只读免 token = 29 号 §2 十步 ↔ 地图向导 / §3 六步 ↔ UI 向导的步骤 id / 判据 / 写面三件对照 + 断言结果 `problems`（空 = 全过）；§2 严格序号 1:1，§3 锚点映射〔§3.2 拆 `variant`+`layout`，§3.5+§3.6 合 `zero_rust`〕） | S44.2（地图向导）+ S44.3（UI 向导）+ S44.5（映射断言） |
+| 内容运营向导 | 内容运营平台化（30 号）：**地图工作台**（S44.2 `GET /api/content/map?id=` 读向导状态 + `POST /api/content/map/step` 执行一步〔固定 10 步状态机 + 不可跳步 409 + 每步机器判据回显 + 写点探针 + 失败即停；写动作须 `enable_write` 400〕，web 地图页纵向 stepper 卡片）+ **UI 工作台**（S44.3 6 步 + 视觉变体器 + 签收留痕，后续）+ **1:1 映射断言**（S44.5 `GET /api/content/mapping` 只读 = 29 号 §2 十步 ↔ 地图向导 / §3 六步 ↔ UI 向导的步骤 id / 判据 / 写面三件对照 + 断言结果 `problems`（空 = 全过）；§2 严格序号 1:1，§3 锚点映射〔§3.2 拆 `variant`+`layout`，§3.5+§3.6 合 `zero_rust`〕） | S44.2（地图向导）+ S44.3（UI 向导）+ S44.5（映射断言） |
 | AI 资产生成 | 地图编辑器「自己生成」（用户 2026-11-10）：`POST /api/gen-island`（body `{prompt,map_id,size?,ratio?}` → `assets/ui/island_home_<map_id>.png`，真渲染命名约定 `chrome::central_island_path`，0 游戏 crate 改动）+ `POST /api/gen-plot`（body `{prompt,map_id,idx,size?,ratio?}`，idx = 地块格号 0..=30 → `assets/ui/tile_<map_id>_<格号>.png`，**每地块专属**地块图，游戏 `render_v6_elem`/`draw_v6_tile` 按格 if-blit 回退共享石柱）；均 = `scripts/agnes_gen.py` Agnes 2.5 Flash 子进程（`AGNES_API_KEY` 项目 `.env` 或环境变量，缺失 = 400 如实上报；map_id 仅 `[a-z0-9_]` 防穿越；size/ratio 白名单；输出未落盘 = 500）；web 地图编辑器右侧「🤖 AI 生成」面板（中央岛图 + 地块图两入口，弹模态：提示词编辑框 + 预览 + 应用保存） | 用户 2026-11-10 |
 | 测试 | 游戏测试标杆（`GET /api/tests`：`assets/data/test_manifest.json` 机读清单 + evidence 存在性对账）——门禁 36 项总览（飞轮 R10 勘误旧「33 项」）（读 `evidence/gate.log` Report 行）+ **分组树 级(L1–L4)→类→型** + 点测试看**步骤/阶段**（解析 evidence 日志关键行）+ **截图证据**（evidence/ 清单匹配 `.png`，lightbox 放大）+ **▶ 运行测试**（`GET /api/tests?run=<id>` 白名单动作：test_manifest 登记 id 枚举 → command 逐参数 `Command::new` 后台 spawn → 日志落 `evidence/console/logs/test-<id>-<ts>.log` gitignored；程序白名单 cargo/python3/pwsh/powershell，禁 shell 拼接；人工验收/无命令 = 按钮禁用） | P0（S32.3 看板 v1 增量，23 号 §6） |
 | APK 体积 | APK/产物体积构成体检（`GET /api/apk-size`：`scripts/apk_audit.py --apk` 只读 = 判据① .so 压缩率 <90% + ② 未引用 UI 0 进包 + 目录构成表 + 引用集计数；`GET /api/build` = `build_artifacts.py list` 产物清单 + 最近构建日志尾行）。**此端点只读，不触发构建**（22 号 §1 边界：不做任意 shell）；**构建执行 = 24 号 §4.1 编排**（平台经 `build_artifacts.py` 白名单 kind `apk|wasm|native` 后台触发，不经手拼命令；日志落 `evidence/console/logs/` gitignored）。判据单一事实源 = 24 号 `docs/process/24_apk_size_std.md`（S35.0）；构建编排 = 24 号 §4.1（S35.1） | P0（S35.0 只读页 + S35.1 构建编排面） |
 | 文档 | 全文检索 + ID 反查（S32.8 已落地：`GET /api/search?q=`，白名单根 `docs/ crates/ scripts/ plan/`，文本扩展名白名单，`EXP-`/`F-`/任务 ID 精确引用反查，上限 3000 文件 / 512KB / 500 命中超限截断不阻塞，只读 0 写盘；**`q` 服务端先 `percent_decode`**〔前端 `encodeURIComponent`，中文/空格/保留字符才命中；非法 `%XX` 原样保留〕） | P2（S32.8） |
 | 构建 | `build_wasm -Check` 体检结果 + 产物清单 + `web/` 预览 | P2（S32.9） |
-| 打包/分发 | 内容运营平台化（30 号 §2.3）：**dist 浏览**（`GET /api/map` 的 `dist` 段 = `dist/maps/*.map-pack` 清单，每项 `{name,size,mtime}`〔size = 目录递归字节和；mtime = epoch 秒〕；web 地图页「打包/分发」卡片渲染） + **发布编排**（`POST /api/publish`：写操作 `X-TI-Token` 鉴权 403 + Content-Type application/json 400 + `mode∈{check,run}` 白名单 400 + **`run` 须 `enable_write=true` 400**〔发布写面最大 = `web/` + `docs/release.md` + gh-pages，单动作默认关，30 号 §2.3〕；`check` = 同步只读体检 `publish_web.ps1 -Check` 并回显 `exit_code` + 输出；`run` = 后台 spawn `publish_web.ps1`（含 gate 全绿前置）→ 日志落 `evidence/console/logs/publish-<ts>.log` gitignored） + **退出码上报**（`GET /api/publish` 只读免 token = 运行中标志 + 末次 `exit_code`〔非 0 = 硬失败〕+ 日志历史 + `?log=` 尾部〔形状校验 + 防穿越〕） | S44.4（打包/分发面） |
-| 设置 | token 粘贴（存 `sessionStorage`）+ 写操作开关 + 平台信息 | P0（S32.3，与 `GET /api/session` 配套） |
+| 打包/分发 | 内容运营平台化（30 号 §2.3）：**dist 浏览**（`GET /api/map` 的 `dist` 段 = `dist/maps/*.map-pack` 清单，每项 `{name,size,mtime}`〔size = 目录递归字节和；mtime = epoch 秒〕；web 地图页「打包/分发」卡片渲染） + **发布编排**（`POST /api/publish`：Content-Type application/json 400 + `mode∈{check,run}` 白名单 400 + **`run` 须 `enable_write=true` 400**〔发布写面最大 = `web/` + `docs/release.md` + gh-pages，单动作默认关，30 号 §2.3〕；`check` = 同步只读体检 `publish_web.ps1 -Check` 并回显 `exit_code` + 输出；`run` = 后台 spawn `publish_web.ps1`（含 gate 全绿前置）→ 日志落 `evidence/console/logs/publish-<ts>.log` gitignored） + **退出码上报**（`GET /api/publish` 只读 = 运行中标志 + 末次 `exit_code`〔非 0 = 硬失败〕+ 日志历史 + `?log=` 尾部〔形状校验 + 防穿越〕） | S44.4（打包/分发面） |
+| 设置 | 平台会话信息（鉴权口径 + 写操作开关 + 单实例锁） | P0（S32.3，与 `GET /api/session` 配套） |
 
 ### 6.2 能力矩阵
 
@@ -349,29 +355,30 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 
 ## 10. 安全与边界
 
-### 10.1 网络面与 token
+### 10.1 网络面（不启用鉴权）
 
-- 默认 `0.0.0.0:8787`（**局域网可访问**，2026-11-06 用户拍板「必须局域可以访问」）；`--host 127.0.0.1` 可收窄回环。
-  非回环未设 `TI_CONSOLE_TOKEN` → 启动**告警**（默认不启用强鉴权，便于内网开发机直接访问；
-  **S32.14 ② 例外见下**，用户 2026-10-30 拍板「内网自用不要鉴权」）。
-  **注（S32.5 同步口径）**：旧文「非回环 + 无 token ⇒ 拒绝启动」为 S32.1 期行为，已被 S32.14 ② 例外取代
-  （代码 `main.rs` 仅 `eprintln!` 告警不拒绝，与 :336-341 例外一致）；三方（文档/代码/`S32.1.log`）已对齐。
-- **token 存放**：默认落**仓库外**平台目录 —— Linux `$XDG_CONFIG_HOME/ti-console/token`（回退 `~/.config/ti-console/token`），
-  Windows `%APPDATA%\ti-console\token`；权限 `0600`（Windows 尽力）；
-  **禁止**写进 `evidence/console/`（git 跟踪目录）⇒ `.gitignore` 已加 `/evidence/console/token` 兜底；
-- **取得途径**：**挂账（S32.4 token 面维持挂账不阻塞本线）** —— 文档化的 `--token` CLI 参数与 `cargo run -p ti-console -- token` 子命令
-  **当前未实现**（`parse_args` 仅处理 `--host`/`--port`，其余静默忽略）；实际生效途径 = 环境变量 `TI_CONSOLE_TOKEN`
-  （`auth_ok` 读 env；env 未设 = 写面鉴权退化「非空头即可」，env 设了 = 精确匹配）。S32.4 鉴权/POST token 面维持挂账（见下 S32.14 ②）。
-- **token 分发**：平台**不回传 token**；`GET /api/session` 只返回 `{write_enabled: bool}`。
-  浏览器侧：用户在「设置」里粘贴 token → 存 `sessionStorage`（关闭即失）→ 写操作带 `X-TI-Token` 头；
-- 请求方法白名单：只读 `GET`；写操作 `POST` + `X-TI-Token`（缺 token ⇒ 403）；请求体上限 64 KiB；
-  只接受 `Content-Type: application/json`。
-- **S32.14 ② 内网自用例外（地图导入免鉴权，2026-10-30 用户拍板「不要鉴权」）**：平台定位 = 内网开发机自用
-  （`10.0.182.131:8787`），S32.4 鉴权/POST token 面维持挂账不阻塞本线。`POST /api/map/import` = **免 token 的唯一写端点**，
-  写点唯一且受控（`repo/import.rs`：只写 `assets/maps/<id>/{manifest,map,layout,strings}.json` 四文件，`id` 白名单
-  `^[a-z0-9_]{1,16}$` 防穿越 + canonicalize 前缀断言 + 同进程 `map_pack.py sync/verify` 终判 I1~I9）；
-  `write_whitelist` 扩 `assets/maps/`（`console_sources.json`，平台其余 0 写盘，北极星「0 游戏产物变更」
-  收敛为「唯一写点 = 地图导入口子」）。**将来真开放外网时 S32.4 补 `X-TI-Token` 鉴权 = 在该端点加 403 面即可，不重做**。
+> **口径变更（2026-11-25 用户拍板「本地开发工具不做鉴权」）**：平台是**本机/内网开发工具**，
+> **不启用任何鉴权机制**（无 token、无请求头校验、无环境变量开关）。旧文记载的
+> `TI_CONSOLE_TOKEN` 环境变量 + `X-TI-Token` 请求头 + `sessionStorage` 粘贴 + 403 鉴权面
+> **已整体删除**（含代码、前端、命令清单与本文）。
+
+- 默认绑 **IPv6 双栈 `[::]:8787`**（同收 IPv4；IPv6 不可用退回 IPv4 通配 `0.0.0.0:8787`）——
+  **局域网可访问**（2026-11-06 用户拍板「必须局域可以访问」）；`--host 127.0.0.1` 可收窄回环。
+  启动横幅另打**主网卡的具体 IPv4/IPv6 可点 URL**（S87.5；禁只给 `127.0.0.1`/`0.0.0.0`）。
+  **不启用鉴权 ⇒ 无「未设凭据」告警、无 403 鉴权面**；写端点直接放行。
+- **鉴权面 = 无**：平台不读环境变量、不校验请求头、不存凭据文件、不向前端回传任何凭据；
+  `GET /api/session` 只报 `{auth:"none（本机开发工具不启用鉴权）", write_enabled_default:false, ...}`。
+- **写面的约束仍在，但性质不同**（不是鉴权，是**数据面开关 + 白名单**）：
+  1. 请求方法白名单：只读 `GET`；写操作 `POST`；请求体上限 64 KiB；只接受 `Content-Type: application/json`；
+  2. **写数据类端点**（改游戏数据 / 写仓库跟踪文件）仍须显式 `enable_write=true`（30 号 §3.1 默认关）
+     —— 这是**数据面开关**（北极星「0 游戏产物变更」），**不是鉴权**，删除鉴权不影响它；
+  3. 写端点各自的**参数白名单 + 写点探针 + 门禁复验**全部保留（`routes.rs` / `repo/guard.rs` / 30 号 §3.1 写点表）。
+- **风险与边界（明示）**：不启用鉴权 ⇒ 任何能访问到该端口的设备都能调写端点。
+  平台默认绑全接口（局域可访问，用户拍板）⇒ **仅适用于可信内网自用**；若需暴露到公网，
+  应在**网络层**（防火墙 / 反向代理 / 仅绑定回环）收口，而非在平台内加鉴权。
+- **历史口径留档**：S32.4~S86 期间的 token + 请求头 + `sessionStorage` 粘贴鉴权面
+  已于 2026-11-25 整体删除（代码 / 前端 / `console_commands.json` / 本文同步），
+  期间旧 S32.14 ②「内网自用免鉴权例外」也随之作废（现在**所有**端点一律免鉴权）。
 
 ### 10.2 路径面
 
@@ -402,7 +409,7 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 - 只执行 §4.2 表内动作；参数只接受枚举/id；
 - 子进程环境变量**最小集**透传：`PATH`、`HOME`、`USERPROFILE`、`CARGO_HOME`、`RUSTUP_HOME`、
   `SYSTEMROOT`、`TEMP`、`TMP`、`APPDATA`、`LOCALAPPDATA`、`XDG_CACHE_HOME`、
-  `TI_CHROMIUM_PATH`、`TI_CONSOLE_TOKEN`；其余不透传
+  `TI_CHROMIUM_PATH`；其余不透传
   （`gate.ps1` 依赖 PATH/HOME 定位 cargo；node / Playwright 依赖 SYSTEMROOT/TEMP/APPDATA/XDG_CACHE_HOME）；
   平台按 OS 取该表的交集（Windows 侧忽略 `XDG_CACHE_HOME` 等 POSIX 专有项，反之亦然）；
 - 每次执行记录：动作 id / 参数 / 起止时间 / 退出码 / 输出落盘路径 / **执行前后 `git status` 快照（仅记录用，
@@ -476,24 +483,26 @@ ti-console（Rust bin；依赖 = ti-devmeta + serde_json）
 ## 13. S86.2 UI 组件可视化编辑器（API 清单 / 三面对账）
 
 独立静态页 `crates/ti-console/web/ui_editor.html`（自成一体，内联 CSS/JS；导航入口由主线程并入看板）。
-数据源 = `assets/data/ui_schema/components_v1.json` / `asset_roles.json`（`console_sources.json` 只读登记），
+数据源 = `assets/data/ui_schema/components_v1.json`（UI 模式 5 场景）/ `world_components.json`
+（world 模式 main_map/vs）/ `asset_roles.json`（`console_sources.json` 只读登记），
 role/icon 下拉另读 `assets/data/ui_icons.json`。三面对账 = `routes.rs` 路由 ↔
 `console_commands.json::api_endpoints` 白名单 id ↔ 本表（新增端点须三处同改，幻影端点即漂移）。
+**world 模式复用同 4 端点**（`?mode=world` / body `mode:"world"`），不新增幻影端点。
 
-| 端点 | 方法 | token / 写面 | 用途 |
+| 端点 | 方法 | 写面 | 用途 |
 |---|---|---|---|
-| `GET /api/ui/components?scene=` | GET | 免 token，只读 | 全场景组件实例 + `scene` 回显（前端 tab 切换） |
-| `GET /api/ui/roles` | GET | 免 token，只读 | role → 资产路径 + icon 名册（下拉选项） |
-| `POST /api/ui/components/validate` | POST | `X-TI-Token` + `enable_write` + 白名单 `action=ui_components_validate` | 内存 schema 实时校验（body 不落盘）：Rust 镜像 `ui_schema_check.py` 的 enum/禁绝对坐标/条件必填/登记对账 + 子进程 `ui_schema_check.py --check`（on-disk 基线）与 `check_scene_narrative.py --check`（叙事）；FAIL 前端红字 + 回滚该次拖拽 |
-| `POST /api/ui/components/apply` | POST | `X-TI-Token` + `enable_write` + 白名单 `action=ui_components_apply` | 规范化写 `components_v1.json`（indent=2 保序）+ 写后门禁复验（FAIL 还原）+ `write_probe` 写点探针 |
+| `GET /api/ui/components?scene=&mode=` | GET | 只读 | 组件实例 + `scene` 回显 + `scene_counts`；`mode=ui`（默认）= `components_v1.json` 5 场景，`mode=world` = `world_components.json` 2 世界场景 + `geometry_rects`（示意画布只读矩形） |
+| `GET /api/ui/roles` | GET | 只读 | role → 资产路径 + icon 名册（含世界层 role：`v6_ocean`/`plank`/`isle_*`/`hero`/`enemy` 等） |
+| `POST /api/ui/components/validate` | POST | `enable_write` + 白名单 `action=ui_components_validate` | UI 模式：内存 schema 实时校验（body 不落盘）+ `ui_schema_check.py --check` + 叙事门禁；world 模式：Rust 镜像 W1~W6 点名 + `world_schema_check.py --check --instance`（内存数据落 gitignored `evidence/console/world_validate_<pid>_<seq>/`，用完即删）；FAIL 前端红字 + 回滚该次拖拽 |
+| `POST /api/ui/components/apply` | POST | `enable_write` + 白名单 `action=ui_components_apply` | 按 body `mode` 二选一写点：UI = `components_v1.json`（indent=2 保序）+ `ui_schema_check` 复验；world = `world_components.json` + `world_schema_check` 复验；两者均 FAIL 还原 + `write_probe` 写点探针 |
 
 - **拖拽反算**：Scene View 用百分比示意框渲染 `layout`；像素位移 ÷ 画布宽高 × 100 → 百分比，
   写回 `layout.intent="anchored"` + `anchor` + `offset_pct{x,y}`（框心相对锚点）+ `size_pct{w,h}`；
   右下角手柄拖拽改 `size_pct`。**任何 `x/y/w/h/rect` 出现在组件顶层即校验 FAIL**（禁绝对像素）。
 - **预览入口**：页面「预览真渲染」按钮调 `POST /api/preview`（S86.3 后端已落地，见 §14）；
-  `<img>` 走 `?t=Date.now()` 破缓存范式。前端须带 `X-TI-Token` 头 + body `enable_write:true`。
-- **鉴权次序**：403 token → 400 Content-Type → 413 请求体上限 → 400 JSON → 400 `enable_write` →
-  400 白名单 `action` id（22 号 §10.1/§10.3）。
+  `<img>` 走 `?t=Date.now()` 破缓存范式。
+- **前置次序**：400 Content-Type → 413 请求体上限 → 400 JSON → 400 `enable_write` →
+  400 白名单 `action` id（22 号 §10.1/§10.3；**无鉴权面**）。
 - **0 游戏依赖**：`crates/ti-console/src/repo/ui_components.rs` 本地 `std::fs` 读 schema 文件，
   不引 `ti-core` / `ti-engine`（沿用 `themes.rs` 范式）；平台改动 0 游戏 crate diff。
 
@@ -502,16 +511,22 @@ role/icon 下拉另读 `assets/data/ui_icons.json`。三面对账 = `routes.rs` 
 设计依据 = `docs/plan-s86-visual-editor.md` §2（C+A 定案）。三面对账 = `routes.rs` 路由 ↔
 `console_commands.json::api_endpoints` 白名单 id ↔ 本表（新增端点须三处同改，幻影端点即漂移）。
 
-| 端点 | 方法 | token / 写面 | 用途 |
+| 端点 | 方法 | 写面 | 用途 |
 |---|---|---|---|
-| `POST /api/preview` | POST | `X-TI-Token` + `enable_write=true` + 白名单 `action=preview` | 未落盘编辑数据写 gitignored `evidence/console/preview/<id>/` → 后台 `python3 scripts/preview_shot.py` 调 `treasure-bevy-native --shot` → PNG 回传 |
-| `GET /api/jobs?kind=preview&id=<id>` | GET | 免 token，只读 | 统一作业模型查询面（23 号 §6.2）：exit_code + log_tail + evidence[]；无需另设 `GET /api/preview` |
+| `POST /api/preview` | POST | `enable_write=true` + 白名单 `action=preview` | 未落盘编辑数据写 gitignored `evidence/console/preview/<id>/` → 后台 `python3 scripts/preview_shot.py` 调 `treasure-bevy-native --shot` → PNG 回传 |
+| `GET /api/jobs?kind=preview&id=<id>` | GET | 只读 | 统一作业模型查询面（23 号 §6.2）：exit_code + log_tail + evidence[]；无需另设 `GET /api/preview` |
 
+- **world 模式预览契约（可视化编辑器 world tab）**：前端对 main_map/vs 发
+  `world_components_json`（整份 world schema 原文）而非 `schema_json`，落临时目录同名文件 →
+  引擎经 `TI_PREVIEW_DIR/world_components.json` 注入；`preview_shot` 对这两场景设
+  `TI_WORLD_SCHEMA=1`。**接线责任**：前端已按此契约发送；`preview.rs`（`PREVIEW_SCENES` 加
+  `vs` + `BLOB_FILES` 加 `world_components_json`）与 `scripts/preview_shot.py`（`SCENES` 加 `vs`
+  + env `TI_WORLD_SCHEMA=1`）由主线程同步落地，未落地前 world 预览如实报 400/降级提示。
 - **body 枚举**：`{scene, viewport?, id?, map_id?, schema_id?, enable_write, action?, schema_json?,
-  asset_roles_json?, board_json?, scenes_json?, strings_json?, map_json?, layout_json?, pack_strings_json?}`；
+  world_components_json?, asset_roles_json?, board_json?, scenes_json?, strings_json?, map_json?, layout_json?, pack_strings_json?}`；
   `scene` ∈ `index|select_role|select_map|saveload|message|main_map`，`viewport` ∈
   `1920x1080|1080x1920|1280x720|960x540`，`id`/`map_id`/`schema_id` 仅 `[a-z0-9_-]` / `[a-z0-9_]`；
-  禁自由 shell / 自由路径；请求体 ≤ 64 KiB；鉴权次序 403 → 400 Content-Type → 413 → 400 JSON → 400 `enable_write` → 400 枚举。
+  禁自由 shell / 自由路径；请求体 ≤ 64 KiB；前置次序 400 Content-Type → 413 → 400 JSON → 400 `enable_write` → 400 枚举（**无鉴权面**）。
 - **写点**：仅 `evidence/console/preview/<id>/`（写点白名单已登记 `evidence/console/`）+
   出图侧车 `evidence/bevy_native_preview_<id>_<WxH>.png`（gitignored）；`assets/data/` 与
   其它跟踪文件 0 改动（零跟踪文件写盘）。

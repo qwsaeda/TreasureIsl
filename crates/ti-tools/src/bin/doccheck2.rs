@@ -1263,6 +1263,11 @@ fn check_action_table_contract(
         ("attack", 2),
         ("do_item", 3),
         ("defend", 4),
+        // S87.1：vs 三新 action（修正 attack/do_item/defend=2/3/4 与 vs 实际 on_hit
+        // 快进/确认/重打 语义不符的真漂移；现有 key 与 on_hit 行为不变，S87.4 才接）。
+        ("vs_skip", 11),
+        ("vs_confirm", 12),
+        ("vs_reset", 13),
     ];
     if table.is_empty() {
         errors.push(
@@ -4017,6 +4022,8 @@ fn check_primitives_data(root: &Path) -> Vec<String> {
     // S85.5：5 纯 UI 场景 prim 已删 ⇒ 同一检查项扩验 `components_v1.json`（components-data），
     // 资产必登记 / i18n 不裸 key / action 闭集 / 禁绝对坐标的语义随 schema 延续。
     errors.extend(check_components_data(root, &registered_assets));
+    // S87.1：世界层 schema（vs/main_map 静态元素）随同一检查项校验，0 新增 gate/doccheck2 项。
+    errors.extend(check_world_components_data(root, &registered_assets));
     errors
 }
 
@@ -4094,6 +4101,222 @@ fn check_components_data(
         }
     }
     errors
+}
+
+/// S87.1：世界层 schema 数据合法性（`assets/data/ui_schema/world_components.json`）。
+///
+/// - `type` ∈ CPU `DrawOp` 三型（`Rect`/`Text`/`Image`）；禁 `grad`/`glow`/`panel` 与散落裸坐标；
+/// - `role` 须在 `asset_roles.json` 登记且资产实存；`pick.action` ∈ `UiAction` 15 项闭集；
+/// - `binding` i18n key 实存或 host path 白名单；`geometry.source/ref` 指向真实源键；
+/// - **三处 action 闭集对账**：`components_v1.schema.json` Action enum ↔ 世界 schema
+///   Action enum ↔ `ACTION_TABLE`（前者与表的对账见 `check_action_table_contract`）。
+///
+/// 数据合法性与完整负例见 `scripts/world_schema_check.py --check`。
+/// S87.1：Action enum 三处对账（`components_v1` ↔ `world_components` ↔ 15 项），从
+/// `check_world_components_data` 拆出以守函数长度上限。
+fn check_world_action_enums(enum_of: &dyn Fn(&str) -> BTreeSet<String>) -> Vec<String> {
+    let mut errors = Vec::new();
+    let ui_actions = enum_of("assets/data/ui_schema/components_v1.schema.json");
+    let world_actions = enum_of("assets/data/ui_schema/world_components.schema.json");
+    if ui_actions.is_empty() || world_actions.is_empty() {
+        errors
+            .push("components_v1 / world_components schema 缺 Action enum（闭集丢失）".to_string());
+        return errors;
+    }
+    if ui_actions != world_actions {
+        errors.push(format!(
+            "Action 闭集三处对账失败：components_v1.schema.json {ui_actions:?} ≠ world_components.schema.json {world_actions:?}"
+        ));
+    }
+    if ui_actions.len() != 15 {
+        errors.push(format!(
+            "Action 闭集应为 15 项，实得 {}（S87.1 vs_skip/vs_confirm/vs_reset 未同步）",
+            ui_actions.len()
+        ));
+    }
+    errors
+}
+
+// S87.1 world schema 校验常量（模块级，供主函数与 check_world_element 共享）。
+const WORLD_TYPES: &[&str] = &["Rect", "Text", "Image"];
+const WORLD_FORBIDDEN_COORD: &[&str] = &["x", "y", "w", "h", "rect", "layout", "intent"];
+const WORLD_SOURCES: &[&str] = &["main_map_v6_layout_landscape.json", "scenes.json"];
+const WORLD_HOST_PATHS: &[&str] = &[
+    "EconomyHost.gold",
+    "EconomyHost.cargo",
+    "MapHost.dice",
+    "MapHost.seat",
+    "MapHost.panel",
+    "MapHost.handoff_pending",
+    "BattleHost.hp_player",
+    "BattleHost.hp_enemy",
+    "BattleHost.crew",
+    "BattleHost.round",
+    "BattleHost.report",
+    "BattleHost.phase",
+    "ToastHost.text",
+    "OutcomeHost.text",
+];
+
+fn check_world_components_data(
+    root: &Path,
+    registered_assets: &std::collections::HashSet<String>,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    let Some(src) = read_file(root, "assets/data/ui_schema/world_components.json") else {
+        return vec!["world_components.json 不存在，无法校验世界层 schema（S87.1）".to_string()];
+    };
+    let Ok(data) = serde_json::from_str::<serde_json::Value>(&src) else {
+        return vec!["world_components.json 解析失败".to_string()];
+    };
+    let roles = read_file(root, "assets/data/ui_schema/asset_roles.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v.get("roles").cloned())
+        .unwrap_or(serde_json::Value::Null);
+    let strings = read_file(root, "assets/data/strings.json")
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .unwrap_or(serde_json::Value::Null);
+
+    // Action 闭集三处对账（UI schema ↔ world schema；UI schema ↔ ACTION_TABLE 见另一函数）。
+    let enum_of = |rel: &str| -> BTreeSet<String> {
+        read_file(root, rel)
+            .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+            .and_then(|v| v["$defs"]["Action"]["enum"].as_array().cloned())
+            .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect())
+            .unwrap_or_default()
+    };
+    let ui_actions = enum_of("assets/data/ui_schema/components_v1.schema.json");
+    errors.extend(check_world_action_enums(&enum_of));
+    let sources: BTreeMap<String, serde_json::Value> = WORLD_SOURCES
+        .iter()
+        .filter_map(|name| {
+            let rel = if *name == "scenes.json" {
+                "assets/data/scenes.json"
+            } else {
+                "assets/data/main_map_v6_layout_landscape.json"
+            };
+            read_file(root, rel)
+                .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+                .map(|v| ((*name).to_owned(), v))
+        })
+        .collect();
+
+    for (sid, scene) in data["scenes"].as_object().into_iter().flatten() {
+        for (i, elem) in scene["elements"].as_array().into_iter().flatten().enumerate() {
+            let at = format!("world_components.json {sid}.elements[{i}]");
+            check_world_element(
+                elem,
+                &at,
+                root,
+                &roles,
+                &strings,
+                registered_assets,
+                &ui_actions,
+                &sources,
+                &mut errors,
+            );
+        }
+    }
+    errors
+}
+
+/// 单个 world 元素的契约校验（type/裸坐标/role/action/binding/geometry），从
+/// `check_world_components_data` 拆出以守函数长度上限。
+// 校验函数需同时持有 9 项只读上下文（文件根/role 表/文案表/资产集/action 集/源表/错误收集），
+// 拆 struct 反而增加一层无业务意义的间接，故显式放行参数数上限。
+#[allow(clippy::too_many_arguments)]
+fn check_world_element(
+    elem: &serde_json::Value,
+    at: &str,
+    root: &Path,
+    roles: &serde_json::Value,
+    strings: &serde_json::Value,
+    registered_assets: &std::collections::HashSet<String>,
+    ui_actions: &BTreeSet<String>,
+    sources: &BTreeMap<String, serde_json::Value>,
+    errors: &mut Vec<String>,
+) {
+    let kind = elem["type"].as_str().unwrap_or_default();
+    if !WORLD_TYPES.contains(&kind) {
+        errors.push(format!("{at}: type='{kind}' 非法（世界层 CPU DrawOp 三型闭集）"));
+    }
+    for key in WORLD_FORBIDDEN_COORD {
+        if elem.get(*key).is_some() {
+            errors.push(format!(
+                "{at}: 含裸坐标/布局字段 `{key}`（只能在 world_rect / geometry.ref）"
+            ));
+        }
+    }
+    if elem.get("geometry").is_none() && elem.get("world_rect").is_none() {
+        errors.push(format!("{at}: 缺 geometry / world_rect 锚点"));
+    }
+    if let Some(role) = elem["role"].as_str().filter(|r| !r.is_empty()) {
+        let Some(path) = roles[role].as_str() else {
+            errors.push(format!("{at}: role='{role}' 未在 asset_roles.json 登记"));
+            return;
+        };
+        if !registered_assets.contains(path) {
+            errors.push(format!("{at}: role='{role}' 资产 '{path}' 未在 ui_manifest.json 登记"));
+        }
+        if !root.join(path).is_file() {
+            errors.push(format!("{at}: role='{role}' 资产文件不存在 '{path}'"));
+        }
+    }
+    if let Some(action) = elem["pick"]["action"].as_str()
+        && !ui_actions.contains(action)
+    {
+        errors.push(format!("{at}: pick.action='{action}' 不在 UiAction 15 项闭集"));
+    }
+    match elem.get("binding") {
+        Some(serde_json::Value::String(key)) => {
+            if key.contains('.') && strings.get(key).is_none() {
+                errors.push(format!("{at}: binding='{key}' 在 strings.json 不存在（裸 key）"));
+            }
+        }
+        Some(serde_json::Value::Object(obj)) => {
+            let path = obj.get("path").and_then(|v| v.as_str()).unwrap_or_default();
+            if obj.get("kind").and_then(|v| v.as_str()) != Some("host")
+                || !WORLD_HOST_PATHS.contains(&path)
+            {
+                errors.push(format!("{at}: binding.host path='{path}' 不在 SceneHost 白名单"));
+            }
+        }
+        _ => {}
+    }
+    if let Some(geo) = elem.get("geometry").and_then(|v| v.as_object()) {
+        let source = geo.get("source").and_then(|v| v.as_str()).unwrap_or_default();
+        let reference = geo.get("ref").and_then(|v| v.as_str()).unwrap_or_default();
+        if !WORLD_SOURCES.contains(&source) {
+            errors.push(format!("{at}: geometry.source='{source}' 非法（只许两源）"));
+        } else if !world_ref_exists(&sources[source], reference) {
+            errors.push(format!("{at}: geometry.ref='{reference}' 在 {source} 不存在"));
+        }
+    }
+}
+
+/// 轻量 ref 解析（dot 路径 + `[n]`/`[*]` 下标），与 `world_schema_check.py` 同口径。
+fn world_ref_exists(value: &serde_json::Value, reference: &str) -> bool {
+    let mut node = value;
+    for seg in reference.split('.') {
+        let (key, idx_part) = match seg.split_once('[') {
+            Some((k, rest)) => (k, format!("[{rest}")),
+            None => (seg, String::new()),
+        };
+        let Some(next) = node.get(key) else { return false };
+        node = next;
+        for idx in idx_part.trim_matches(['[', ']']).split(']').filter(|s| !s.is_empty()) {
+            if idx == "*" {
+                if node.as_array().is_none_or(Vec::is_empty) {
+                    return false;
+                }
+                continue;
+            }
+            let Ok(n) = idx.parse::<usize>() else { return false };
+            let Some(item) = node.as_array().and_then(|a| a.get(n)) else { return false };
+            node = item;
+        }
+    }
+    true
 }
 
 /// S18.9：地形表数据合法性（`assets/data/terrain.json`）。

@@ -1,0 +1,803 @@
+{
+  "schema_version": 1,
+  "scenes": {
+    "main_map": {
+      "scene_id": "main_map",
+      "elements": [
+        {
+          "id": "ocean_bg",
+          "type": "Image",
+          "role": "v6_ocean",
+          "world_rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1920,
+            "h": 1080
+          },
+          "z": 0
+        },
+        {
+          "id": "frame_top",
+          "type": "Image",
+          "role": "plank",
+          "world_rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1920,
+            "h": 24
+          },
+          "z": 10
+        },
+        {
+          "id": "frame_bottom",
+          "type": "Image",
+          "role": "plank",
+          "world_rect": {
+            "x": 0,
+            "y": 1056,
+            "w": 1920,
+            "h": 24
+          },
+          "z": 10
+        },
+        {
+          "id": "frame_left",
+          "type": "Image",
+          "role": "plank",
+          "world_rect": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 1080
+          },
+          "z": 10
+        },
+        {
+          "id": "frame_right",
+          "type": "Image",
+          "role": "plank",
+          "world_rect": {
+            "x": 1896,
+            "y": 0,
+            "w": 24,
+            "h": 1080
+          },
+          "z": 10
+        },
+        {
+          "id": "island_home",
+          "type": "Image",
+          "role": "island_home",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "island"
+          },
+          "z": 20
+        },
+        {
+          "id": "isle_harbour",
+          "type": "Image",
+          "role": "isle_harbour",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "tiles[0]"
+          },
+          "z": 21
+        },
+        {
+          "id": "isle_lighthouse",
+          "type": "Image",
+          "role": "isle_lighthouse",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "tiles[8]"
+          },
+          "z": 21
+        },
+        {
+          "id": "isle_volcano",
+          "type": "Image",
+          "role": "isle_volcano",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "tiles[16]"
+          },
+          "z": 21
+        },
+        {
+          "id": "isle_boss_fort",
+          "type": "Image",
+          "role": "isle_boss_fort",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "tiles[24]"
+          },
+          "z": 21
+        },
+        {
+          "id": "tile_template",
+          "type": "Image",
+          "role": "tile",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "tiles[*]"
+          },
+          "z": 30
+        },
+        {
+          "id": "ship",
+          "type": "Image",
+          "role": "ship",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "ship"
+          },
+          "z": 40
+        },
+        {
+          "id": "flag",
+          "type": "Image",
+          "role": "flag",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "tiles[15]"
+          },
+          "z": 41
+        },
+        {
+          "id": "helm",
+          "type": "Image",
+          "role": "helm",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "helm"
+          },
+          "z": 45
+        },
+        {
+          "id": "compass",
+          "type": "Image",
+          "role": "compass_rose",
+          "geometry": {
+            "source": "main_map_v6_layout_landscape.json",
+            "ref": "compass"
+          },
+          "z": 45
+        },
+        {
+          "id": "hud_plaque_left",
+          "type": "Image",
+          "role": "hud",
+          "geometry": {
+            "source": "scenes.json",
+            "ref": "main_map.hud_plaque_l"
+          },
+          "z": 50
+        },
+        {
+          "id": "hud_plaque_right",
+          "type": "Image",
+          "role": "hud",
+          "geometry": {
+            "source": "scenes.json",
+            "ref": "main_map.hud_plaque_r"
+          },
+          "z": 50
+        },
+        {
+          "id": "hud_gold_icon",
+          "type": "Image",
+          "role": "icon_coin",
+          "geometry": {
+            "source": "scenes.json",
+            "ref": "main_map.hud_gold"
+          },
+          "z": 51
+        },
+        {
+          "id": "hud_gold_text",
+          "type": "Text",
+          "binding": {
+            "kind": "host",
+            "path": "EconomyHost.gold",
+            "fmt": "hud.gold_fmt"
+          },
+          "geometry": {
+            "source": "scenes.json",
+            "ref": "main_map.hud_gold"
+          },
+          "tier": "body",
+          "z": 52
+        },
+        {
+          "id": "title_text",
+          "type": "Text",
+          "binding": "scene.main_map.title",
+          "world_rect": {
+            "x": 40,
+            "y": 40,
+            "w": 480,
+            "h": 60
+          },
+          "tier": "title",
+          "z": 55
+        },
+        {
+          "id": "spin_marker",
+          "type": "Image",
+          "role": "btn_spin",
+          "geometry": {
+            "source": "scenes.json",
+            "ref": "main_map.deck_spin"
+          },
+          "pick": {
+            "action": "spin",
+            "index": 4
+          },
+          "z": 60
+        },
+        {
+          "id": "dice_icon",
+          "type": "Image",
+          "role": "dice",
+          "world_rect": {
+            "x": 1720,
+            "y": 940,
+            "w": 80,
+            "h": 80
+          },
+          "z": 61
+        },
+        {
+          "id": "panel_build",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "build"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_trade",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "trade"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_merchant",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "merchant"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_event",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "event"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_ship",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "ship"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_garrison",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "garrison"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_upgrade",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "upgrade"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_dungeon",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "dungeon"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_card",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "card"
+          },
+          "z": 70
+        },
+        {
+          "id": "panel_achievement",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 360,
+            "y": 120,
+            "w": 1200,
+            "h": 840
+          },
+          "visible_when": {
+            "path": "MapHost.panel",
+            "op": "eq",
+            "value": "achievement"
+          },
+          "z": 70
+        },
+        {
+          "id": "handoff_cover",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1920,
+            "h": 1080
+          },
+          "visible_when": {
+            "path": "MapHost.handoff_pending",
+            "op": "is_some"
+          },
+          "anim_ref": "handoff_fade",
+          "z": 80
+        },
+        {
+          "id": "toast_cover",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 560,
+            "y": 900,
+            "w": 800,
+            "h": 80
+          },
+          "binding": {
+            "kind": "host",
+            "path": "ToastHost.text",
+            "fmt": ""
+          },
+          "z": 90,
+          "visible_when": {
+            "path": "ToastHost.text",
+            "op": "is_some"
+          }
+        },
+        {
+          "id": "outcome_cover",
+          "type": "Rect",
+          "role": "panel",
+          "world_rect": {
+            "x": 460,
+            "y": 340,
+            "w": 1000,
+            "h": 400
+          },
+          "binding": {
+            "kind": "host",
+            "path": "OutcomeHost.text",
+            "fmt": ""
+          },
+          "z": 95,
+          "visible_when": {
+            "path": "OutcomeHost.text",
+            "op": "is_some"
+          }
+        }
+      ],
+      "overrides": {}
+    },
+    "vs": {
+      "scene_id": "vs",
+      "elements": [
+        {
+          "id": "bg_frame",
+          "type": "Image",
+          "role": "vs_bg",
+          "world_rect": {
+            "x": 44,
+            "y": 44,
+            "w": 1832,
+            "h": 992
+          },
+          "z": 0
+        },
+        {
+          "id": "parchment_top",
+          "type": "Image",
+          "role": "frame",
+          "world_rect": {
+            "x": 44,
+            "y": 44,
+            "w": 1832,
+            "h": 40
+          },
+          "z": 5
+        },
+        {
+          "id": "parchment_bottom",
+          "type": "Image",
+          "role": "frame",
+          "world_rect": {
+            "x": 44,
+            "y": 996,
+            "w": 1832,
+            "h": 40
+          },
+          "z": 5
+        },
+        {
+          "id": "parchment_left",
+          "type": "Image",
+          "role": "frame",
+          "world_rect": {
+            "x": 44,
+            "y": 44,
+            "w": 40,
+            "h": 992
+          },
+          "z": 5
+        },
+        {
+          "id": "parchment_right",
+          "type": "Image",
+          "role": "frame",
+          "world_rect": {
+            "x": 1836,
+            "y": 44,
+            "w": 40,
+            "h": 992
+          },
+          "z": 5
+        },
+        {
+          "id": "hp_player_frame",
+          "type": "Image",
+          "role": "hud",
+          "world_rect": {
+            "x": 64,
+            "y": 40,
+            "w": 880,
+            "h": 110
+          },
+          "z": 10
+        },
+        {
+          "id": "hp_enemy_frame",
+          "type": "Image",
+          "role": "hud",
+          "world_rect": {
+            "x": 976,
+            "y": 40,
+            "w": 880,
+            "h": 110
+          },
+          "z": 10
+        },
+        {
+          "id": "hp_player_value",
+          "type": "Text",
+          "binding": {
+            "kind": "host",
+            "path": "BattleHost.hp_player",
+            "fmt": ""
+          },
+          "world_rect": {
+            "x": 64,
+            "y": 40,
+            "w": 880,
+            "h": 110
+          },
+          "tier": "body",
+          "z": 11
+        },
+        {
+          "id": "hp_enemy_value",
+          "type": "Text",
+          "binding": {
+            "kind": "host",
+            "path": "BattleHost.hp_enemy",
+            "fmt": ""
+          },
+          "world_rect": {
+            "x": 976,
+            "y": 40,
+            "w": 880,
+            "h": 110
+          },
+          "tier": "body",
+          "z": 11
+        },
+        {
+          "id": "hero_base",
+          "type": "Image",
+          "role": "hero",
+          "world_rect": {
+            "x": 300,
+            "y": 300,
+            "w": 320,
+            "h": 520
+          },
+          "visible_in_phase": [
+            "arrange",
+            "charge",
+            "clash"
+          ],
+          "z": 15
+        },
+        {
+          "id": "enemy_base",
+          "type": "Image",
+          "role": "enemy",
+          "world_rect": {
+            "x": 1300,
+            "y": 300,
+            "w": 320,
+            "h": 520
+          },
+          "visible_in_phase": [
+            "arrange",
+            "charge",
+            "clash"
+          ],
+          "z": 15
+        },
+        {
+          "id": "crew_base",
+          "type": "Image",
+          "role": "crew",
+          "world_rect": {
+            "x": 760,
+            "y": 520,
+            "w": 180,
+            "h": 300
+          },
+          "visible_in_phase": [
+            "arrange",
+            "clash"
+          ],
+          "z": 16
+        },
+        {
+          "id": "vs_logo",
+          "type": "Image",
+          "role": "vs_logo",
+          "world_rect": {
+            "x": 890,
+            "y": 470,
+            "w": 140,
+            "h": 140
+          },
+          "z": 20
+        },
+        {
+          "id": "report_frame",
+          "type": "Image",
+          "role": "report",
+          "world_rect": {
+            "x": 240,
+            "y": 720,
+            "w": 1440,
+            "h": 300
+          },
+          "z": 25
+        },
+        {
+          "id": "report_value",
+          "type": "Text",
+          "binding": {
+            "kind": "host",
+            "path": "BattleHost.report",
+            "fmt": ""
+          },
+          "world_rect": {
+            "x": 240,
+            "y": 720,
+            "w": 1440,
+            "h": 300
+          },
+          "tier": "body",
+          "z": 26
+        },
+        {
+          "id": "banner",
+          "type": "Image",
+          "role": "banner",
+          "world_rect": {
+            "x": 710,
+            "y": 80,
+            "w": 500,
+            "h": 300
+          },
+          "z": 30
+        },
+        {
+          "id": "banner_text",
+          "type": "Text",
+          "binding": "scene.vs.title",
+          "world_rect": {
+            "x": 710,
+            "y": 80,
+            "w": 500,
+            "h": 300
+          },
+          "tier": "title",
+          "z": 31
+        },
+        {
+          "id": "btn_skip",
+          "type": "Image",
+          "role": "btn",
+          "world_rect": {
+            "x": 120,
+            "y": 940,
+            "w": 200,
+            "h": 80
+          },
+          "pick": {
+            "action": "vs_skip",
+            "index": 11
+          },
+          "binding": "combat.action.attack",
+          "state": [
+            "normal",
+            "hover",
+            "disabled"
+          ],
+          "z": 40
+        },
+        {
+          "id": "btn_confirm",
+          "type": "Image",
+          "role": "btn",
+          "world_rect": {
+            "x": 860,
+            "y": 940,
+            "w": 200,
+            "h": 80
+          },
+          "pick": {
+            "action": "vs_confirm",
+            "index": 12
+          },
+          "binding": "combat.action.item",
+          "state": [
+            "normal",
+            "hover",
+            "disabled"
+          ],
+          "z": 40
+        },
+        {
+          "id": "btn_reset",
+          "type": "Image",
+          "role": "btn",
+          "world_rect": {
+            "x": 1600,
+            "y": 940,
+            "w": 200,
+            "h": 80
+          },
+          "pick": {
+            "action": "vs_reset",
+            "index": 13
+          },
+          "binding": "combat.action.defend",
+          "state": [
+            "normal",
+            "hover",
+            "disabled"
+          ],
+          "z": 40
+        },
+        {
+          "id": "hint_text",
+          "type": "Text",
+          "binding": "scene.vs.hint",
+          "world_rect": {
+            "x": 740,
+            "y": 1030,
+            "w": 440,
+            "h": 40
+          },
+          "tier": "hint",
+          "z": 50
+        }
+      ],
+      "overrides": {}
+    }
+  }
+}

@@ -262,7 +262,10 @@
         "back",
         "attack",
         "do_item",
-        "defend"
+        "defend",
+        "vs_skip",
+        "vs_confirm",
+        "vs_reset"
       ]
     },
     "Overrides": {

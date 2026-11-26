@@ -15,26 +15,14 @@ use std::path::Path;
 use serde_json::Value;
 
 /// `POST /api/publish`（S44.4 发布面）：body `{"mode":"check"|"run","enable_write"?}`。
-/// 鉴权（`403`）→ Content-Type application/json（`400`）→ mode 白名单（`400`）→ run 无 `enable_write`（`400`）。
+/// Content-Type application/json（`400`）→ mode 白名单（`400`）→ run 无 `enable_write`（`400`）。
 /// `check` = 只读体检（同步，`exit_code` 直接回显）；`run` = 后台 spawn（退出码经 `GET /api/publish` 上报）。
 pub(crate) fn handle_publish(
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     want_gzip: bool,
 ) -> Vec<u8> {
-    // 写路由须 X-TI-Token（22 号 §10.1）；缺 token ⇒ 403（镜像 handle_wizard_step / handle_audit_taskbook）。
-    if !crate::routes::auth_ok(token) {
-        return crate::routes::header_body(
-            "application/json",
-            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1）"}"#.as_bytes(),
-            "403 Forbidden",
-            "no-store",
-            None,
-            want_gzip,
-        );
-    }
     // Content-Type 必须 application/json（22 号 §10.3；镜像 handle_gate/handle_audit_taskbook）。
     let ct_ok = content_type.is_some_and(|c| {
         let base = c.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
@@ -187,7 +175,7 @@ fn publish_run(repo_root: &Path) -> Result<Value, (u16, String)> {
 }
 
 /// `GET /api/publish`（S44.4 发布面只读状态）：运行中标志 + 末次状态（含 `exit_code`）+ 日志历史 + 指定日志尾部。
-/// 免 token（只读面，镜像 `GET /api/gate` 口径）。
+/// 只读面（镜像 `GET /api/gate` 口径）。
 #[must_use]
 pub fn publish_status(repo_root: &Path, log_name: Option<String>) -> Value {
     let dir = repo_root.join("evidence/console/logs");

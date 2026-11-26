@@ -4,7 +4,7 @@
 //! - 静态壳（`web/`，原生 JS+CSS，无 npm 构建）+ `/api/health`；
 //! - S32.2：只读数据源 API（`/api/overview` `/api/tasks` `/api/evidence` `/api/assets`
 //!   `/api/tests` `/api/session`，`repo/` 适配层 + 路径白名单 + canonicalize 防穿越 + 0 写盘）；
-//! - 默认监听 `0.0.0.0:8787`（局域网可访问；非回环须显式 `--host` + token 强鉴权可选，22 号第 10.1 节）；
+//! - 默认监听 `0.0.0.0:8787`（局域网可访问；**本机开发工具，不启用鉴权**，22 号第 10.1 节）；
 //!   用户 2026-11-06 拍板「必须局域可以访问」⇒ 默认绑定全接口，`--host 127.0.0.1` 可收窄回环。
 //! - 单实例锁（`evidence/console/.lock`）；
 //! - 命令白名单 = `console_commands.json`（机器真源）；数据源 = `console_sources.json`。
@@ -13,6 +13,7 @@
 
 mod audit;
 mod content;
+mod netaddr;
 mod repo;
 mod routes;
 mod runner;
@@ -21,7 +22,7 @@ use std::io::Write;
 use std::net::TcpListener;
 use std::path::Path;
 
-/// 默认监听地址（非回环须显式 `--host`，鉴权负例见 22 号第 10.1 节）。
+/// 默认监听地址（非回环须显式 `--host`；本机开发工具不启用鉴权，22 号第 10.1 节）。
 const DEFAULT_BIND: &str = "0.0.0.0:8787";
 
 /// 平台进程锁陈旧接管阈值（22 号 §10.4：起始超 30 分钟 + pid 不存在 ⇒ 接管）。
@@ -70,14 +71,10 @@ fn write_lock(pid: u32) -> Result<std::path::PathBuf, String> {
                 // （旧判定要求「pid 不存在 且 超 30 分钟」才接管 ⇒ 崩后重启必被拦，平台起不来）。
                 // 30 分钟门槛只用于「pid 仍存活但疑似卡死」的情形。
                 if !alive {
-                    eprintln!(
-                        "ti-console: 陈旧锁接管（pid {old} 已不存在；stale-lock）"
-                    );
+                    eprintln!("ti-console: 陈旧锁接管（pid {old} 已不存在；stale-lock）");
                     let _ = std::fs::remove_file(&path);
                 } else if now.saturating_sub(started) > LOCK_STALE_SECS {
-                    eprintln!(
-                        "ti-console: 陈旧锁接管（pid {old} 仍存活但超 30 分钟；stale-lock）"
-                    );
+                    eprintln!("ti-console: 陈旧锁接管（pid {old} 仍存活但超 30 分钟；stale-lock）");
                     let _ = std::fs::remove_file(&path);
                 } else {
                     return Err(format!(
@@ -137,19 +134,49 @@ fn parse_args() -> String {
     format!("{host}:{p}")
 }
 
+/// 绑定监听套接字：默认 IPv6 双栈 `[::]:port`（同收 v4），IPv6 不可用则退回 IPv4 通配。
+///
+/// 返回 (listeners, 人类可读描述)。显式 `--host` 时按给定 host 绑单一 socket。
+fn bind_listeners(bind: &str, port: u16) -> (Vec<TcpListener>, String) {
+    let host = bind.split(':').next().unwrap_or("0.0.0.0");
+    let explicit = !matches!(host, "" | "0.0.0.0" | "::" | "[::]");
+    let hosts: Vec<String> = if explicit {
+        vec![host.to_owned()]
+    } else {
+        // 先试 IPv6 双栈，再试 IPv4 通配；双栈可用时同一端口即可服务 v4+v6。
+        let v6 = format!("[::]:{port}");
+        let v4 = format!("0.0.0.0:{port}");
+        match TcpListener::bind(&v6) {
+            Ok(listener) => return (vec![listener], format!("IPv6 双栈 [::]:{port}（同收 IPv4）")),
+            Err(_) => vec![v4],
+        }
+    };
+    let mut listeners = Vec::new();
+    let mut desc = Vec::new();
+    for h in hosts {
+        let addr = if h.contains(':') && !h.starts_with('[') {
+            format!("[{h}]:{port}")
+        } else {
+            format!("{h}:{port}")
+        };
+        match TcpListener::bind(&addr) {
+            Ok(listener) => {
+                desc.push(addr.clone());
+                listeners.push(listener);
+            }
+            Err(e) => eprintln!("ti-console: 无法监听 {addr} —— {e}"),
+        }
+    }
+    if listeners.is_empty() {
+        eprintln!("ti-console: 无可用监听地址（{bind}）");
+        std::process::exit(1);
+    }
+    (listeners, desc.join(" + "))
+}
+
 fn main() {
     let pid = std::process::id();
     let bind = parse_args();
-
-    // 非回环鉴权（22 号第 10.1 节）：默认 `0.0.0.0`（2026-11-06 用户拍板「必须局域可以访问」），
-    // 非回环未设 TI_CONSOLE_TOKEN 时**告警**（内网自用不启用强鉴权；设了 = 写操作面 S32.4 token 校验）。
-    let host_part = bind.split(':').next().unwrap_or("");
-    if !matches!(host_part, "127.0.0.1" | "localhost") && std::env::var("TI_CONSOLE_TOKEN").is_err()
-    {
-        eprintln!(
-            "ti-console: 局域网监听（{host_part}，默认 0.0.0.0 局域可访问）未设 TI_CONSOLE_TOKEN —— 写操作面（POST）要求 X-TI-Token 在场（env 未设 = 非空即可；env 设了 = 精确匹配；外网/生产部署须设 token 作强校验，22 号 §10.1；内网自用默认不启用强鉴权）"
-        );
-    }
 
     let lock = match write_lock(pid) {
         Ok(l) => l,
@@ -161,15 +188,23 @@ fn main() {
     let guard = LockGuard { path: lock };
 
     let web_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("web");
-    let listener = match TcpListener::bind(&bind) {
-        Ok(l) => l,
-        Err(e) => {
-            eprintln!("ti-console: 无法监听 {bind} —— {e}");
-            std::process::exit(1);
-        }
-    };
+    // 监听面（S87.5 追加）：默认绑 **IPv6 双栈** `[::]:port`（Linux bindv6only=0 ⇒ 同一 socket
+    // 同收 IPv4 连接）⇒ 一份监听同时服务 v4 + v6；若该机 IPv6 不可用则退回 IPv4 通配 `0.0.0.0:port`。
+    // 显式 `--host` 指定时按用户给定的 host 绑（不再自动双栈）。
+    let port: u16 = bind.rsplit(':').next().and_then(|s| s.parse().ok()).unwrap_or(8787);
+    let (listeners, listen_desc) = bind_listeners(&bind, port);
+    let (v4_addrs, v6_addrs) = netaddr::local_addresses();
 
-    println!("ti-console 已启动：http://{bind}/  (root = {})", web_root.display());
+    println!("ti-console 已启动（监听 {listen_desc}，root = {}）", web_root.display());
+    if v4_addrs.is_empty() && v6_addrs.is_empty() {
+        println!("  可访问地址：未探测到非回环网卡地址（仅本机回环可用）");
+    }
+    for ip in &v4_addrs {
+        println!("  IPv4  → {}", netaddr::url_for(ip, port));
+    }
+    for ip in &v6_addrs {
+        println!("  IPv6  → {}", netaddr::url_for(ip, port));
+    }
     println!("按 Ctrl+C 退出（单实例锁 = {}）", guard.path.display());
 
     // S32.2：仓库根 = CARGO_MANIFEST_DIR 上两级（**隐含假设 = crate 位于 `<repo>/crates/<crate>`**；
@@ -194,10 +229,16 @@ fn main() {
     // 用户报「/api/build 构建日志不实时更新」真根因（慢连接复现实测：curl 5s 超时 0 字节）。
     // 修复 = 单 scope 包住 accept 循环：连接并行（互不阻塞），scope 语义不变（线程不逃逸 main）。
     std::thread::scope(|s| {
-        for stream in listener.incoming().flatten() {
+        for listener in &listeners {
             let web_root = web_root.clone();
             let repo_root = repo_root.clone();
-            s.spawn(move || routes::serve(stream, &web_root, &repo_root));
+            s.spawn(move || {
+                for stream in listener.incoming().flatten() {
+                    let web_root = web_root.clone();
+                    let repo_root = repo_root.clone();
+                    s.spawn(move || routes::serve(stream, &web_root, &repo_root));
+                }
+            });
         }
     });
 }

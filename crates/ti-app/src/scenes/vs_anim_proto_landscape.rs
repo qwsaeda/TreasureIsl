@@ -19,8 +19,16 @@ use crate::scenes::vs_anim_proto::{
 /// S38 方案 A：横屏 vs 构图（1920×1080，`vs_landscape` 概念图：羊皮框 + 顶双 HP 状态框 +
 /// VS 徽标屏心 + 角色对角 + 指令区）。竖屏路径 = `render_v2_elem` 原式（0 行为变化）。
 /// 用户 2026-11-04 已过目 `vs_landscape` 概念图。
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn render_v2_elem_landscape(
+///
+/// S87.5 静态/动态分层：`static_layer_from_schema=false`（默认，旧路径）全画，0 行为变化；
+/// `true`（`TI_WORLD_SCHEMA=1` 且 schema 静态层已画）**只画纯数值/时序**——满屏背景、
+/// 4 层边框、HP 框底/槽、VS 徽标底、战报框底、横幅底均由 `world_components.json` 提供，
+/// 本函数跳过重复绘制，仅保留 HP 填充条/兵力数字/动画帧/受击特效/战报文本（画在静态层之上）。
+/// 这样改 schema 静态元素才能真正改变画面（可视化编辑生效）。
+///
+/// `pub` 暴露供集成测试直接注入 flag 验证两层拆分（避免进程级 env 的并行测试竞态）。
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+pub fn render_v2_elem_landscape(
     host: &mut dyn SceneHost,
     phase: &str,
     atk_crew: u32,
@@ -29,6 +37,7 @@ pub(crate) fn render_v2_elem_landscape(
     def_arms: u32,
     resolved: bool,
     grid_class: &str,
+    static_layer_from_schema: bool,
 ) {
     let theme = host.theme().clone();
     let c1 = theme.by_name("ink_dark").unwrap_or(0x28C1);
@@ -37,24 +46,28 @@ pub(crate) fn render_v2_elem_landscape(
     let c4 = theme.by_name("parch_dark").unwrap_or(0xDDD1);
     let c5 = theme.by_name("brass").unwrap_or(0x7AC6);
     let c6 = theme.by_name("parch_light").unwrap_or(0xDE32);
-    // 背景（格类 → vs_theme 背景资产 + tint；横屏铺满羊皮框内）
-    let th = vs_theme();
-    let bg = vs_bg_asset(grid_class, th.as_ref());
-    host.blit_image_tint(&bg, 44, 44, 1920 - 88, 1080 - 88, vs_tint(th.as_ref()));
-    // 羊皮做旧边框（横屏 1920×1080，inset 44）
-    for (inset, col) in [(44i32, c6), (30, c5), (18, c5), (8, c4)] {
-        let w = 44 - inset + 8;
-        host.fill_rect(inset / 2, inset / 2, 1920 - inset, w, col);
-        host.fill_rect(inset / 2, 1080 - inset / 2 - w, 1920 - inset, w, col);
-        host.fill_rect(inset / 2, inset / 2, w, 1080 - inset, col);
-        host.fill_rect(1920 - inset / 2 - w, inset / 2, w, 1080 - inset, col);
+    let with_static_base = !static_layer_from_schema;
+    // 背景 + 羊皮做旧边框（横屏 1920×1080，inset 44）—— schema 模式跳过：
+    // `world_components.json` 的 `bg_frame` / `parchment_{top,bottom,left,right}` 已提供。
+    if with_static_base {
+        let th = vs_theme();
+        let bg = vs_bg_asset(grid_class, th.as_ref());
+        host.blit_image_tint(&bg, 44, 44, 1920 - 88, 1080 - 88, vs_tint(th.as_ref()));
+        for (inset, col) in [(44i32, c6), (30, c5), (18, c5), (8, c4)] {
+            let w = 44 - inset + 8;
+            host.fill_rect(inset / 2, inset / 2, 1920 - inset, w, col);
+            host.fill_rect(inset / 2, 1080 - inset / 2 - w, 1920 - inset, w, col);
+            host.fill_rect(inset / 2, inset / 2, w, 1080 - inset, col);
+            host.fill_rect(1920 - inset / 2 - w, inset / 2, w, 1080 - inset, col);
+        }
+        host.fill_rect(0, 0, 1920, 9, c1);
+        host.fill_rect(0, 1071, 1920, 9, c1);
+        host.fill_rect(0, 0, 9, 1080, c1);
+        host.fill_rect(1911, 0, 9, 1080, c1);
     }
-    host.fill_rect(0, 0, 1920, 9, c1);
-    host.fill_rect(0, 1071, 1920, 9, c1);
-    host.fill_rect(0, 0, 9, 1080, c1);
-    host.fill_rect(1911, 0, 9, 1080, c1);
     // 顶双状态框（左攻 attacker / 右守 defender）—— 概念图双 HP 条顶；非 result 帧。
     // S38：x=64/976 对齐 8pt 栅格（10_ui_redesign §4），对称屏心 960（64+880=944, 976 距 960 16）。
+    // schema 模式框底/槽由 schema 的 `hp_*_frame` 提供；动态层只叠填充比例 + 兵力数字。
     if !matches!(phase, "result_win" | "result_lose") {
         draw_status_box(
             host,
@@ -67,6 +80,7 @@ pub(crate) fn render_v2_elem_landscape(
             atk_arms,
             atk_crew.max(1),
             false,
+            with_static_base,
         );
         draw_status_box(
             host,
@@ -79,13 +93,16 @@ pub(crate) fn render_v2_elem_landscape(
             def_arms,
             def_crew.max(1),
             true,
+            with_static_base,
         );
     }
-    // 中央 VS 徽标（屏心 960,540）
-    host.fill_rect(960 - 70, 540 - 70, 140, 140, c2);
-    frame_v2(host, 960 - 70, 540 - 70, 140, 140, chrome::COLOR_GOLD_WARM);
-    let tw = host.shell().hint_text_width_px("VS");
-    host.draw_hint_text("VS", 960 - tw / 2, 525, c3);
+    // 中央 VS 徽标（屏心 960,540）—— schema 模式跳过：由 `vs_logo` 静态图提供。
+    if with_static_base {
+        host.fill_rect(960 - 70, 540 - 70, 140, 140, c2);
+        frame_v2(host, 960 - 70, 540 - 70, 140, 140, chrome::COLOR_GOLD_WARM);
+        let tw = host.shell().hint_text_width_px("VS");
+        host.draw_hint_text("VS", 960 - tw / 2, 525, c3);
+    }
     let t = anim_ms(host);
     match phase {
         "clash" => {
@@ -123,7 +140,18 @@ pub(crate) fn render_v2_elem_landscape(
         }
         "result_win" | "result_lose" => {
             draw_result_scene_landscape(
-                host, phase, t, c4, c5, c2, atk_crew, atk_arms, def_crew, def_arms, resolved,
+                host,
+                phase,
+                t,
+                c4,
+                c5,
+                c2,
+                atk_crew,
+                atk_arms,
+                def_crew,
+                def_arms,
+                resolved,
+                with_static_base,
             );
         }
         _ => {}
@@ -132,6 +160,9 @@ pub(crate) fn render_v2_elem_landscape(
 
 /// S38 方案 A：横屏 result 帧（胜/败）：横幅顶部 + 角色对角 + 战报框底部横屏。
 /// 三段不重叠：横幅顶部（180）+ 角色中（300 起）+ 战报框底部（1080-360）。
+///
+/// `with_static_base=false`（S87.5 schema 模式）：跳过横幅底图与战报框底（由 schema 的
+/// `banner` / `report_frame` 提供），只保留角色时序帧 + 战报标题/数值文本。
 #[allow(clippy::too_many_arguments)]
 fn draw_result_scene_landscape(
     host: &mut dyn SceneHost,
@@ -145,6 +176,7 @@ fn draw_result_scene_landscape(
     def_crew: u32,
     def_arms: u32,
     resolved: bool,
+    with_static_base: bool,
 ) {
     let won = phase == "result_win";
     // 胜方 hero 居中偏下；败方 enemy 居中 + hero 倒地左下（对角）
@@ -156,12 +188,14 @@ fn draw_result_scene_landscape(
         host.blit_image(chrome::V2_HERO, 60, 780, 200, 130);
         host.blit_image(chrome::V2_ENEMY, 960 - 200 + sx, 180, 400, 560);
     }
-    // 书法横幅（上中，不遮顶部与角色头）
-    let banner = if won { chrome::V2_BANNER_WIN } else { chrome::V2_BANNER_LOSE };
-    host.blit_image(banner, 960 - 250, 80, 500, 300);
-    // 战报框（底部中）
-    host.fill_rect(240, 1080 - 360, 1920 - 480, 300, c4);
-    frame_v2(host, 240, 1080 - 360, 1920 - 480, 300, c5);
+    // 书法横幅（上中，不遮顶部与角色头）—— schema 模式由 `banner` 静态图提供。
+    if with_static_base {
+        let banner = if won { chrome::V2_BANNER_WIN } else { chrome::V2_BANNER_LOSE };
+        host.blit_image(banner, 960 - 250, 80, 500, 300);
+        // 战报框（底部中）—— schema 模式由 `report_frame` 静态图提供。
+        host.fill_rect(240, 1080 - 360, 1920 - 480, 300, c4);
+        frame_v2(host, 240, 1080 - 360, 1920 - 480, 300, c5);
+    }
     let title = if won {
         &i18n::sget("scene.vs.v2_elm_battle_win")
     } else {

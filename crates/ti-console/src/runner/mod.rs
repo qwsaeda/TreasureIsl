@@ -16,7 +16,7 @@ pub mod spawn;
 
 /// 子进程环境变量**最小集**白名单（22 号 §10.3 执行面：`PATH`/`HOME`/`USERPROFILE`/
 /// `CARGO_HOME`/`RUSTUP_HOME`/`SYSTEMROOT`/`TEMP`/`TMP`/`APPDATA`/`LOCALAPPDATA`/
-/// `XDG_CACHE_HOME`/`TI_CHROMIUM_PATH`/`TI_CONSOLE_TOKEN`/`ANDROID_SERIAL`（adb 目标设备 serial，
+/// `XDG_CACHE_HOME`/`TI_CHROMIUM_PATH`/`ANDROID_SERIAL`（adb 目标设备 serial，
 /// 多设备在线时 P5 真机判据须明确目标）；其余不透传。
 /// `gate.ps1` 依赖 `PATH`/`HOME` 定位 cargo；node / Playwright 依赖 `SYSTEMROOT`/`TEMP`/`APPDATA`/`XDG_CACHE_HOME`）。
 pub const MINIMAL_ENV_KEYS: &[&str] = &[
@@ -32,7 +32,6 @@ pub const MINIMAL_ENV_KEYS: &[&str] = &[
     "LOCALAPPDATA",
     "XDG_CACHE_HOME",
     "TI_CHROMIUM_PATH",
-    "TI_CONSOLE_TOKEN",
     "ANDROID_SERIAL",
 ];
 

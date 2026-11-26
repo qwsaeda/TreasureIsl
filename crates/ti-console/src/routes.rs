@@ -6,18 +6,20 @@
 //!   设计图页 `sub=ui_concept`）`/api/assets` `/api/tests` `/api/session` `/api/audit`
 //!   `/api/map` = 只读数据源适配（`repo::data`，22 号 §5/§10.2；路径全过 `resolve_guarded`
 //!   白名单 + canonicalize 防穿越；0 写盘）；
-//! - S32.4 门禁执行面：`GET /api/gate` = 运行状态 + 历史（只读，免 token）；
-//!   `POST /api/gate` = 写操作（X-TI-Token 鉴权 403 + 非法 tier 400 + 锁占用 409 + 后台 spawn，
+//! - S32.4 门禁执行面：`GET /api/gate` = 运行状态 + 历史（只读）；
+//!   `POST /api/gate` = 写操作（非法 tier 400 + 锁占用 409 + 后台 spawn，
 //!   22 号 §4.2 白名单 id `gate`；`runner::gate`）；
 //! - S32.3 静态面（`web/`）= 看板 UI v1（左菜单分组 8 页 = 概览/任务/证据/资产/设计图/地图/测试/设置；
 //!   原生 JS + CSS 全内联无 npm；视觉令牌 = 游戏「航海夜·精修」，内联于 `index.html` `<style>`
 //!   （对齐 `docs/process/10_ui_redesign.md` §3 设计令牌 v2；单文件交付，0 外部静态资源依赖）；
 //!   图片（证据/资产/设计稿/地图描述符资产）走 `/` 仓库白名单直读，网页内直查 + 灯箱）；
-//! - S86.2 UI 组件可视化编辑器：`GET /api/ui/components?scene=` / `GET /api/ui/roles`（只读免 token）
+//! - S86.2 UI 组件可视化编辑器：`GET /api/ui/components?scene=&mode=` / `GET /api/ui/roles`（只读）
 //!   + `POST /api/ui/components/validate`（只读 body 不落盘）/ `POST /api/ui/components/apply`
-//!     （唯一写点 `components_v1.json`；写面头部门控 + `api_endpoints` 白名单 id）；
+//!     （写面头部门控 + `api_endpoints` 白名单 id）；S87.5b 扩 7 场景：`mode=world` 复用同 4
+//!     端点，数据源/写点切 `world_components.json`（`main_map/vs` 世界层，FAIL 禁摆）；
 //! - 其余 = 静态映射（`ti-devmeta::http::resolve_or_404`，400/404 语义同 serve.rs 原型）；
-//! - 写操作（POST）骨架期走静态映射 ⇒ 非 403；POST 鉴权 + 403 语义 = S32.4 面（22 号 §10.1）；
+//! - 写操作（POST）骨架期走静态映射 ⇒ 非 403；写端点各自的**数据面白名单/开关**（如
+//!   `enable_write`）仍保留（那是数据面开关，不是鉴权）；
 //! - S86.3 `POST /api/preview` = 真渲染预览写点（`repo::preview`，后台 job + PNG 回传，轮询走 `/api/jobs?kind=preview`）。
 
 use std::io::{BufRead, BufReader, Write};
@@ -54,12 +56,11 @@ fn percent_decode(input: &str) -> String {
     crate::repo::percent_decode(input)
 }
 
-/// 请求头解析结果（S32.4：缓存/压缩协商 + POST body 长度 + 写操作 token + content-type）。
+/// 请求头解析结果（S32.4：缓存/压缩协商 + POST body 长度 + content-type）。
 struct ReqHeaders {
     if_none_match: Vec<String>,
     accept_gzip: bool,
     content_length: u64,
-    x_ti_token: Option<String>,
     content_type: Option<String>,
 }
 
@@ -69,7 +70,6 @@ fn read_headers(reader: &mut BufReader<TcpStream>) -> ReqHeaders {
         if_none_match: Vec::new(),
         accept_gzip: false,
         content_length: 0,
-        x_ti_token: None,
         content_type: None,
     };
     let mut hline = String::new();
@@ -91,10 +91,6 @@ fn read_headers(reader: &mut BufReader<TcpStream>) -> ReqHeaders {
         // POST body 长度（`Content-Length`；上限 256KB 防内存暴涨）。
         if let Some(v) = tl.to_lowercase().strip_prefix("content-length:") {
             hdrs.content_length = v.trim().parse().unwrap_or(0);
-        }
-        // 写操作 token（S32.4）：X-TI-Token（值原样，不 trim 空串为 None 语义在 auth_ok 判）。
-        if let Some(v) = tl.strip_prefix("X-TI-Token:") {
-            hdrs.x_ti_token = Some(v.trim().to_owned());
         }
         if let Some(v) = tl.strip_prefix("Content-Type:") {
             hdrs.content_type = Some(v.trim().to_owned());
@@ -134,14 +130,12 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
     let method = parts.next().unwrap_or("").to_uppercase();
     let url = parts.next().unwrap_or("/");
     let clean = url.split(['?', '#']).next().unwrap_or("/");
-    // 请求头面（S32.4：缓存/压缩协商 + POST body 长度 + 写操作 token + content-type）。
+    // 请求头面（S32.4：缓存/压缩协商 + POST body 长度 + content-type）。
     let hdrs = read_headers(&mut reader);
     let if_none_match = hdrs.if_none_match;
     let accept_gzip = hdrs.accept_gzip;
     let content_length = hdrs.content_length;
-    let x_ti_token = hdrs.x_ti_token;
     let content_type = hdrs.content_type;
-
     // POST /api/map/import：读 body（编辑器出描述符 → 落盘 + 回注，S32.14 ② 唯一写点）。
     let request_body = read_post_body(&mut reader, &method, content_length);
     // 统一 22 号 §10.1「请求体上限 64 KiB」口径：超限（含 >256KB 未读入者）一律 413，
@@ -156,14 +150,9 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
 
     // POST /api/gate|/api/map/import|/api/audit/* = 写操作面（鉴权在各 handler；返回 None 即不匹配）。
     if method == "POST" {
-        if let Some(response) = handle_post(
-            clean,
-            repo_root,
-            &request_body,
-            x_ti_token.as_deref(),
-            content_type.as_deref(),
-            gz,
-        ) {
+        if let Some(response) =
+            handle_post(clean, repo_root, &request_body, content_type.as_deref(), gz)
+        {
             let _ = stream.write_all(&response);
             let _ = stream.flush();
             return;
@@ -224,12 +213,12 @@ fn dispatch_get(
         "/api/map" => {
             api_500_or_json(load_json(repo_root, |s| data::map_packs_detail(repo_root, s)), gz)
         }
-        // 单包只读详情（编辑器「编辑已有包」载入面；0 写盘，免 token）。
+        // 单包只读详情（编辑器「编辑已有包」载入面；0 写盘）。
         "/api/map/pack" => {
             let id = percent_decode(query_param(url, "id").unwrap_or(""));
             api_500_or_json(load_json(repo_root, |s| data::map_pack_detail(repo_root, s, &id)), gz)
         }
-        // S44.4 发布面只读状态（运行中标志 + 末次 exit_code + 日志历史 + ?log= 尾部；免 token，镜像 GET /api/gate）。
+        // S44.4 发布面只读状态（运行中标志 + 末次 exit_code + 日志历史 + ?log= 尾部；，镜像 GET /api/gate）。
         "/api/publish" => publish_get(repo_root, url, gz),
         "/api/snapshot" => json200(
             &data::snapshot(repo_root, &load_sources_opt(repo_root).unwrap_or_default()),
@@ -246,7 +235,7 @@ fn dispatch_get(
         "/api/assets" => api_500_or_json(load_json(repo_root, |s| data::assets(repo_root, s)), gz),
         "/api/tests" => tests_get(repo_root, url, gz),
         // 统一作业模型查询面（23 号 §6.2；S49.7）：?kind=<kind>[&id=<id>]
-        // 列表 = 各作业状态；详情 = 状态 + 日志尾 + 证明（evidence[]）。只读，免 token。
+        // 列表 = 各作业状态；详情 = 状态 + 日志尾 + 证明（evidence[]）。只读。
         "/api/jobs" => jobs_get(repo_root, url, gz),
         "/api/gate" => {
             let log = query_param(url, "log");
@@ -270,7 +259,7 @@ fn dispatch_get(
             }
         }
         "/api/content/mapping" => {
-            // S44.5 固化收口：29 号 §2/§3 流程 ↔ 平台向导 1:1 映射断言（只读免 token）。
+            // S44.5 固化收口：29 号 §2/§3 流程 ↔ 平台向导 1:1 映射断言（只读）。
             json200(&crate::content::docmap::mapping_report(repo_root), gz)
         }
         "/api/build" => {
@@ -303,10 +292,12 @@ fn dispatch_get(
             }
         }
         "/api/themes" => crate::repo::themes::themes_get(repo_root, url, gz),
-        // S86.2 UI 组件可视化编辑器（只读免 token）：组件实例 + role/icon 下拉源。
+        // S86.2 UI 组件可视化编辑器（只读）：组件实例 + role/icon 下拉源。
         "/api/ui/components" => {
             let scene = percent_decode(query_param(url, "scene").unwrap_or(""));
-            crate::repo::ui_components::components_get_http(repo_root, &scene, gz)
+            // S87.5b：`?mode=world` 切世界层数据源（main_map/vs）；缺省 UI 模式行为不变。
+            let mode = percent_decode(query_param(url, "mode").unwrap_or("ui"));
+            crate::repo::ui_components::components_get_http(repo_root, &scene, &mode, gz)
         }
         "/api/ui/roles" => crate::repo::ui_components::roles_get_http(repo_root, gz),
         "/api/apk-size" => {
@@ -606,13 +597,12 @@ fn handle_post(
     clean: &str,
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     gz: bool,
 ) -> Option<Vec<u8>> {
     match clean {
-        // S32.4 门禁执行面（写操作：X-TI-Token 鉴权 + tier 分档 + 单实例锁 + spawn）。
-        "/api/gate" => Some(handle_gate(repo_root, body, token, content_type, gz)),
+        // S32.4 门禁执行面（写操作：tier 分档 + 单实例锁 + spawn）。
+        "/api/gate" => Some(handle_gate(repo_root, body, content_type, gz)),
         // S32.14 ② 唯一写点（编辑器描述符 → 落 assets/maps/<id>/ + 回注）。
         "/api/map/import" => Some(handle_map_import(repo_root, body, gz)),
         // 用户 2026-11-10「中央岛图/格子自己生成」+「格子卡图是过渡设计」：AI 提示词 →
@@ -621,53 +611,41 @@ fn handle_post(
         "/api/gen-island" => Some(handle_gen_asset(repo_root, body, gz, GenAssetKind::Island)),
         "/api/gen-plot" => Some(handle_gen_asset(repo_root, body, gz, GenAssetKind::Plot)),
         // S32.5 双审计编排（任务书生成 + 粘贴归档）。
-        "/api/audit/taskbook" => {
-            Some(handle_audit_taskbook(repo_root, body, token, content_type, gz))
-        }
-        "/api/audit/archive" => {
-            Some(handle_audit_archive(repo_root, body, token, content_type, gz))
-        }
-        // S49.3 主题管理：apply（写 scenes.json + 部署资产，X-TI-Token + enable_write 门控）。
+        "/api/audit/taskbook" => Some(handle_audit_taskbook(repo_root, body, content_type, gz)),
+        "/api/audit/archive" => Some(handle_audit_archive(repo_root, body, content_type, gz)),
+        // S49.3 主题管理：apply（写 scenes.json + 部署资产，enable_write 门控）。
         "/api/themes/apply" => {
-            Some(crate::repo::themes::handle_themes_apply(repo_root, body, token, content_type, gz))
+            Some(crate::repo::themes::handle_themes_apply(repo_root, body, content_type, gz))
         }
         // S86.2 UI 组件可视化编辑器：validate（只读 body 不落盘，仍走写面头部门控）/
-        // apply（唯一写点 components_v1.json）。白名单 id 见 console_commands.json::api_endpoints。
-        "/api/ui/components/validate" => Some(crate::repo::ui_components::validate_http(
-            repo_root,
-            body,
-            token,
-            content_type,
-            gz,
-        )),
+        // apply（写点 components_v1.json 或 world_components.json，按 body mode 二选一）。
+        // 白名单 id 见 console_commands.json::api_endpoints；S87.5b world 模式复用同 2 端点。
+        "/api/ui/components/validate" => {
+            Some(crate::repo::ui_components::validate_http(repo_root, body, content_type, gz))
+        }
         "/api/ui/components/apply" => {
-            Some(crate::repo::ui_components::apply_http(repo_root, body, token, content_type, gz))
+            Some(crate::repo::ui_components::apply_http(repo_root, body, content_type, gz))
         }
         // S32.6 任务收口（close_check 只读体检 / close_run 写 + EXP 查重）。
-        "/api/close" => Some(close_api::handle_close(repo_root, body, token, content_type, gz)),
-        // S86.3 真渲染预览（X-TI-Token + enable_write 语义 + scene/viewport/id 白名单；
+        "/api/close" => Some(close_api::handle_close(repo_root, body, content_type, gz)),
+        // S86.3 真渲染预览（enable_write 语义 + scene/viewport/id 白名单；
         // 只写 gitignored evidence/console/preview/<id>/，后台 python3 包装 --shot 出图）。
         // 轮询复用统一作业面 GET /api/jobs?kind=preview&id=<id>（无需另设 GET /api/preview）。
         "/api/preview" => {
-            Some(crate::repo::preview::handle_preview(repo_root, body, token, content_type, gz))
+            Some(crate::repo::preview::handle_preview(repo_root, body, content_type, gz))
         }
         // S44.2/S44.3 地图/UI 向导执行一步（写动作需 enable_write；不可跳步 409；失败即停）。
-        // F-1 修复：写路由须 X-TI-Token（22 号 §10.1）；F4：Content-Type application/json。
-        "/api/content/map/step" => Some(crate::content::handle_wizard_step(
-            repo_root,
-            body,
-            token,
-            content_type,
-            gz,
-            false,
-        )),
-        "/api/content/ui/step" => {
-            Some(crate::content::handle_wizard_step(repo_root, body, token, content_type, gz, true))
+        // F4：Content-Type application/json。
+        "/api/content/map/step" => {
+            Some(crate::content::handle_wizard_step(repo_root, body, content_type, gz, false))
         }
-        // S44.4 发布面（30 号 §2.3）：写操作鉴权（403）+ Content-Type（400）+ mode 白名单（400）
+        "/api/content/ui/step" => {
+            Some(crate::content::handle_wizard_step(repo_root, body, content_type, gz, true))
+        }
+        // S44.4 发布面（30 号 §2.3）：Content-Type（400）+ mode 白名单（400）
         // + run 无 enable_write（400）；check = 只读体检，run = 后台 spawn。
         "/api/publish" => {
-            Some(crate::content::publish::handle_publish(repo_root, body, token, content_type, gz))
+            Some(crate::content::publish::handle_publish(repo_root, body, content_type, gz))
         }
         _ => None,
     }
@@ -679,20 +657,9 @@ fn handle_post(
 fn handle_audit_taskbook(
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     want_gzip: bool,
 ) -> Vec<u8> {
-    if !auth_ok(token) {
-        return header_body(
-            "application/json",
-            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1）"}"#.as_bytes(),
-            "403 Forbidden",
-            "no-store",
-            None,
-            want_gzip,
-        );
-    }
     let ct_ok = content_type.is_some_and(|c| {
         let base = c.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
         base == "application/json"
@@ -773,20 +740,9 @@ fn handle_audit_taskbook(
 fn handle_audit_archive(
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     want_gzip: bool,
 ) -> Vec<u8> {
-    if !auth_ok(token) {
-        return header_body(
-            "application/json",
-            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1）"}"#.as_bytes(),
-            "403 Forbidden",
-            "no-store",
-            None,
-            want_gzip,
-        );
-    }
     let ct_ok = content_type.is_some_and(|c| {
         let base = c.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
         base == "application/json"
@@ -844,27 +800,15 @@ fn handle_audit_archive(
     }
 }
 
-/// `POST /api/gate`（S32.4 门禁执行面）：X-TI-Token 鉴权（403）→ tier 校验（400）
+/// `POST /api/gate`（S32.4 门禁执行面）：tier 校验（400）
 /// → 单实例锁（409）→ `runner::gate::run_gate` 后台 spawn（200）。
 /// body = `{"tier": "fast"|"touch"|"full"}`；Content-Type 只接受 application/json（22 号 §10.3）。
 fn handle_gate(
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     want_gzip: bool,
 ) -> Vec<u8> {
-    // 写操作鉴权（22 号 §10.1）：X-TI-Token 缺失或（env 设了但）不匹配 = 403。
-    if !auth_ok(token) {
-        return header_body(
-            "application/json",
-            r#"{"ok":false,"error":"403: 写操作需 X-TI-Token（22 号 §10.1；设置页粘贴 TI_CONSOLE_TOKEN）"}"#.as_bytes(),
-            "403 Forbidden",
-            "no-store",
-            None,
-            want_gzip,
-        );
-    }
     // 只接受 application/json（22 号 §10.3；精确匹配 + 可带 charset 参数）。
     let ct_ok = content_type.is_some_and(|c| {
         let base = c.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
@@ -921,17 +865,7 @@ fn handle_gate(
     }
 }
 
-/// 写操作鉴权（22 号 §10.1）：
-/// - `TI_CONSOLE_TOKEN` env 设了 → 头必须存在且精确匹配；
-/// - env 未设（本地内网自用）→ 头存在且非空即可（S32.14 ② 免鉴权例外之外，写面一律要求头在场）。
-pub(crate) fn auth_ok(token: Option<&str>) -> bool {
-    match (std::env::var("TI_CONSOLE_TOKEN").ok(), token) {
-        (Some(env), Some(hdr)) => !hdr.is_empty() && env == hdr,
-        (_, None) => false,
-        (None, Some(hdr)) => !hdr.is_empty(),
-    }
-}
-
+/// 500 兜底：把 `Result<Value, String>` 收敛成 JSON 响应（成功 200 / 失败 500）。
 pub(crate) fn api_500_or_json(result: Result<Value, String>, want_gzip: bool) -> Vec<u8> {
     match result {
         Ok(value) => json200(&value, want_gzip),
@@ -963,7 +897,6 @@ pub(crate) fn json200(value: &Value, want_gzip: bool) -> Vec<u8> {
 pub(crate) fn status_json(code: u16, value: &Value, want_gzip: bool) -> Vec<u8> {
     let status = match code {
         400 => "400 Bad Request",
-        403 => "403 Forbidden",
         409 => "409 Conflict",
         413 => "413 Payload Too Large",
         500 => "500 Internal Server Error",

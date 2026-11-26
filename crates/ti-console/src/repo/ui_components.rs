@@ -8,8 +8,17 @@
 //! - `apply_components`：规范化写 `components_v1.json`（`json.dumps(indent=2)` 同口径、保键序、
 //!   带尾换行）+ 写盘后门禁复验（FAIL 回滚）+ `write_probe` 写点探针。
 //!
+//! **S87.5b 世界层扩面**：`?mode=world`（GET）/ body `mode:"world"`（POST）复用同 4 端点，
+//! 数据源切 `world_components.json`（`main_map/vs` 静态元素）；校验/写盘逻辑在同目录子模块
+//! [`world`]（守住 900 行文件门禁）；合法 `world_rect` 拖拽与 `geometry` 引用白名单均受
+//! `scripts/world_schema_check.py --check` 终判，FAIL 点名 + 回滚（FAIL 禁摆）。
+//!
 //! 本模块 **0 游戏依赖**（不引 ti-core/ti-engine；沿用 `themes.rs` 本地 `std::fs` 范式）；
-//! 0 写盘面除 `apply_components` 的唯一写点 `components_v1.json`。
+//! 0 写盘面除 `apply_components` 的两个受控写点 `components_v1.json` / `world_components.json`
+//! （按 `mode` 二选一，写前 `enable_write` + 白名单 action id 门控）。
+
+/// S87.5b 世界层（main_map/vs）可视化编辑数据面（见 `world.rs` 子模块）。
+mod world;
 
 use std::collections::BTreeSet;
 use std::io::Write;
@@ -80,13 +89,27 @@ const ANCHORS: [&str; 9] = [
     "center",
 ];
 
-/// 数组成员判定（与 Python `in set` 同义）。
-fn contains(pool: &[&str], value: &str) -> bool {
+/// S87.5b 世界层唯一写点（只读源 + world 模式 apply 写点）。
+pub(super) const WORLD_COMPONENTS_REL: &str = "assets/data/ui_schema/world_components.json";
+
+/// 数组成员判定（与 Python `in set` 同义；子模块共用）。
+pub(super) fn contains(pool: &[&str], value: &str) -> bool {
     pool.contains(&value)
 }
 
-/// 读取并解析仓库 JSON（缺文件/非法 JSON = `Err`，如实上报不静默）。
-fn read_json(repo_root: &Path, relative: &str) -> Result<Value, String> {
+/// id 合法性：`^[a-z][a-z0-9_]*$`（子模块共用，不引 regex crate）。
+pub(super) fn id_ok(id: &str) -> bool {
+    let Some(first) = id.chars().next() else {
+        return false;
+    };
+    if !first.is_ascii_lowercase() {
+        return false;
+    }
+    id.chars().skip(1).all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+}
+
+/// 读取并解析仓库 JSON（缺文件/非法 JSON = `Err`，如实上报不静默；子模块共用）。
+pub(super) fn read_json(repo_root: &Path, relative: &str) -> Result<Value, String> {
     let path = repo_root.join(relative);
     let raw = std::fs::read_to_string(&path).map_err(|e| format!("读 {relative} 失败：{e}"))?;
     serde_json::from_str(&raw).map_err(|e| format!("{relative} 非法 JSON：{e}"))
@@ -94,23 +117,48 @@ fn read_json(repo_root: &Path, relative: &str) -> Result<Value, String> {
 
 /// `GET /api/ui/components`：全场景实例 + `scene` 回显（0 写盘）。
 ///
-/// 返回 `{ok, schema_version, schema, scene, count}`；`schema` = `components_v1.json` 原文
-/// 解析结果（前端 tab 切换只改本地选中态，不重复取数）。
+/// 返回 `{ok, schema_version, schema, scene, mode, count, scene_counts, geometry_rects}`：
+/// - `mode=ui`（默认）= `components_v1.json`（5 纯 UI 场景，intent/anchored 百分比）；
+/// - `mode=world` = `world_components.json`（`main_map/vs` 静态层，`world_rect` + `geometry.ref`）。
+///   `count` 在给出 `scene` 时 = 该场景元素数（世界层按场景计数：`main_map`=35 / `vs`=21）；
+///   `geometry_rects` = 后端解析 geometry 引用得到的矩形（示意画布只读呈现，禁散落裸像素）。
 ///
 /// # Errors
-/// `components_v1.json` 读失败 / 非法 JSON = `Err`（如实上报，不静默）。
-pub fn components_get(repo_root: &Path, scene: &str) -> Result<Value, String> {
-    let schema = read_json(repo_root, COMPONENTS_REL)?;
-    let count = schema.get("scenes").and_then(Value::as_object).map_or(0usize, |obj| {
-        obj.values().filter_map(|s| s.get("elements").and_then(Value::as_array)).map(Vec::len).sum()
-    });
+/// 对应 schema 文件读失败 / 非法 JSON = `Err`（如实上报，不静默）。
+pub fn components_get(repo_root: &Path, scene: &str, mode: &str) -> Result<Value, String> {
+    let is_world = mode == "world";
+    let path = if is_world { WORLD_COMPONENTS_REL } else { COMPONENTS_REL };
+    let schema = read_json(repo_root, path)?;
+    let mut total = 0usize;
+    let mut scene_counts = serde_json::Map::new();
+    let mut scene_count = 0usize;
+    if let Some(scenes) = schema.get("scenes").and_then(Value::as_object) {
+        for (key, value) in scenes {
+            let n = value.get("elements").and_then(Value::as_array).map_or(0, Vec::len);
+            total += n;
+            scene_counts.insert(key.clone(), json!(n));
+            if key == scene {
+                scene_count = n;
+            }
+        }
+    }
+    let count = if scene.is_empty() { total } else { scene_count };
+    let geometry_rects =
+        if is_world { world::geometry_rects(repo_root, &schema) } else { json!({}) };
     Ok(json!({
         "ok": true,
         "schema_version": schema.get("schema_version").cloned().unwrap_or(Value::Null),
         "schema": schema,
         "scene": scene,
+        "mode": mode,
         "count": count,
-        "note": "S86.2 组件可视化编辑器只读源；layout 禁绝对坐标（intent/anchored 百分比）",
+        "scene_counts": scene_counts,
+        "geometry_rects": geometry_rects,
+        "note": if is_world {
+            "S87.5b 世界层可视化编辑（world_rect 整数 1920×1080 / geometry.ref 两源白名单；FAIL 禁摆）"
+        } else {
+            "S86.2 组件可视化编辑器只读源；layout 禁绝对坐标（intent/anchored 百分比）"
+        },
     }))
 }
 
@@ -179,17 +227,6 @@ fn resolve_binding(key: &str) -> String {
         .replace("{id}", "m01")
         .replace("{idx}", "0")
         .replace("{kind}", "help")
-}
-
-/// id 合法性：`^[a-z][a-z0-9_]*$`（不引 regex crate，逐字符判定）。
-fn id_ok(id: &str) -> bool {
-    let Some(first) = id.chars().next() else {
-        return false;
-    };
-    if !first.is_ascii_lowercase() {
-        return false;
-    }
-    id.chars().skip(1).all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
 /// **内存 schema** 校验（不落盘）：镜像 `ui_schema_check.py` 的 S1~S6 + 禁绝对坐标点名。
@@ -362,10 +399,16 @@ fn run_check_script(repo_root: &Path, relative: &str) -> ScriptCheck {
 
 /// **内存 schema** 实时校验结果（POST /validate 数据源）。
 ///
-/// 三段判据：① Rust 镜像 enum/禁绝对坐标/登记对账；② `ui_schema_check.py --check`（on-disk
-/// 基线，证明确有该门禁脚本且当前数据合法）；③ `check_scene_narrative.py --check`（叙事约束）。
+/// UI 模式三段判据：① Rust 镜像 enum/禁绝对坐标/登记对账；② `ui_schema_check.py --check`
+/// （on-disk 基线）；③ `check_scene_narrative.py --check`（叙事约束）。
+/// world 模式两段判据：① Rust 镜像 W1~W6（点名非法 type / 裸坐标 / 未登记 role / 非法 action）；
+/// ② `world_schema_check.py --check --instance <内存数据落 gitignored 临时文件>`（权威门禁
+/// 直接判本次数据，非仅 on-disk 基线）；临时文件用完即删，0 跟踪文件写盘。
 #[must_use]
-pub fn validate_components(repo_root: &Path, schema: &Value) -> Value {
+pub fn validate_components(repo_root: &Path, schema: &Value, world: bool) -> Value {
+    if world {
+        return world::validate(repo_root, schema);
+    }
     let mut errors = validate_schema_value(repo_root, schema);
     let schema_check = run_check_script(repo_root, SCHEMA_SCRIPT);
     let narrative_check = run_check_script(repo_root, NARRATIVE_SCRIPT);
@@ -394,7 +437,7 @@ pub fn validate_components(repo_root: &Path, schema: &Value) -> Value {
 ///
 /// # Errors
 /// `python3` 缺位 / stdin 写入失败 / `json.dumps` 非 0 退出 = `Err`（如实上报）。
-fn canonicalize_indent2(raw_schema: &[u8]) -> Result<Vec<u8>, String> {
+pub(super) fn canonicalize_indent2(raw_schema: &[u8]) -> Result<Vec<u8>, String> {
     const CODE: &str = "import sys,json;sys.stdout.write(json.dumps(json.load(sys.stdin),indent=2,ensure_ascii=False)+chr(10))";
     let mut child = Command::new("python3")
         .arg("-c")
@@ -419,8 +462,8 @@ fn canonicalize_indent2(raw_schema: &[u8]) -> Result<Vec<u8>, String> {
 
 /// `POST /api/ui/components/apply` 核心：校验 → 写点 → 写盘 → 门禁复验（FAIL 回滚）→ 写点探针。
 ///
-/// 写前快照 + 写后快照逐文件比对，所有差异必须落在写点集 `components_v1.json` 内
-/// （22 号 §8 北极星「0 游戏产物变更」）。
+/// 写前快照 + 写后快照逐文件比对，所有差异必须落在写点集内（22 号 §8「0 游戏产物变更」）。
+/// `world=true` 时切到 `world.rs::apply`（写点 `world_components.json`，同一门控口径）。
 ///
 /// # Errors
 /// 组件文件读/写失败 / 规范化子进程失败 = `Err`；校验 FAIL 走 `Ok({"ok":false,...})` 不写盘。
@@ -428,7 +471,11 @@ pub fn apply_components(
     repo_root: &Path,
     schema: &Value,
     raw_schema: &[u8],
+    world: bool,
 ) -> Result<Value, String> {
+    if world {
+        return world::apply(repo_root, schema, raw_schema);
+    }
     let errors = validate_schema_value(repo_root, schema);
     if !errors.is_empty() {
         return Ok(
@@ -505,16 +552,16 @@ fn ui_error(msg: &str, status: &str, gz: bool) -> Vec<u8> {
     )
 }
 
-/// `GET /api/ui/components?scene=`（只读免 token）。
+/// `GET /api/ui/components?scene=&mode=`（只读；mode=world 切世界层数据源）。
 #[must_use]
-pub fn components_get_http(repo_root: &Path, scene: &str, gz: bool) -> Vec<u8> {
-    match components_get(repo_root, scene) {
+pub fn components_get_http(repo_root: &Path, scene: &str, mode: &str, gz: bool) -> Vec<u8> {
+    match components_get(repo_root, scene, mode) {
         Ok(v) => crate::routes::json200(&v, gz),
         Err(e) => ui_error(&e, "500 Internal Server Error", gz),
     }
 }
 
-/// `GET /api/ui/roles`（只读免 token）。
+/// `GET /api/ui/roles`（只读）。
 #[must_use]
 pub fn roles_get_http(repo_root: &Path, gz: bool) -> Vec<u8> {
     match roles_get(repo_root) {
@@ -524,20 +571,16 @@ pub fn roles_get_http(repo_root: &Path, gz: bool) -> Vec<u8> {
 }
 
 /// POST 请求体验证链（抽离控 handler 行数）：
-/// 403 token → 400 Content-Type → 413 上限 → 400 JSON → 400 `enable_write` → 400 白名单 id
-/// → 400 schema / `schema_text` → `(schema, 原始 schema 字节)`。
+/// 400 Content-Type → 413 上限 → 400 JSON → 400 `enable_write` → 400 白名单 id
+/// → 400 schema / `schema_text` → `(schema, 原始 schema 字节, world 模式)`。
 fn parse_ui_post(
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     action: &str,
     path: &str,
     gz: bool,
-) -> Result<(Value, Vec<u8>), Vec<u8>> {
-    if !crate::routes::auth_ok(token) {
-        return Err(ui_error("403: 写操作需 X-TI-Token（22 号 §10.1）", "403 Forbidden", gz));
-    }
+) -> Result<(Value, Vec<u8>, bool), Vec<u8>> {
     let ct_ok = content_type.is_some_and(|c| {
         c.split(';').next().unwrap_or("").trim().eq_ignore_ascii_case("application/json")
     });
@@ -561,6 +604,8 @@ fn parse_ui_post(
             return Err(ui_error(&format!("400: body 非合法 JSON：{e}"), "400 Bad Request", gz));
         }
     };
+    // world 模式复用同 4 端点 / 同白名单 action id，仅按 body `mode` 切数据源与写点。
+    let world = payload.get("mode").and_then(Value::as_str) == Some("world");
     if payload.get("enable_write").and_then(Value::as_bool) != Some(true) {
         return Err(ui_error(
             "400: 写动作需 enable_write=true（30 号 §3.1 默认关）",
@@ -590,30 +635,28 @@ fn parse_ui_post(
                 ));
             }
         };
-        return Ok((parsed, text.as_bytes().to_vec()));
+        return Ok((parsed, text.as_bytes().to_vec(), world));
     }
     if let Some(obj) = payload.get("schema").filter(|v| v.is_object()) {
         let bytes = serde_json::to_vec(obj).map_err(|e| {
             ui_error(&format!("400: schema 序列化失败：{e}"), "400 Bad Request", gz)
         })?;
-        return Ok((obj.clone(), bytes));
+        return Ok((obj.clone(), bytes, world));
     }
     Err(ui_error("400: 缺 schema / schema_text（对象或 JSON 字符串）", "400 Bad Request", gz))
 }
 
-/// `POST /api/ui/components/validate`（只读 body 不落盘；写面头部门控照旧）。
+/// `POST /api/ui/components/validate`（只读 body 不落盘；`enable_write` 门控照旧）。
 #[must_use]
 pub fn validate_http(
     repo_root: &Path,
     body: &[u8],
-    token: Option<&str>,
     content_type: Option<&str>,
     gz: bool,
 ) -> Vec<u8> {
-    let (schema, _) = match parse_ui_post(
+    let (schema, _, world) = match parse_ui_post(
         repo_root,
         body,
-        token,
         content_type,
         "ui_components_validate",
         "/api/ui/components/validate",
@@ -622,22 +665,15 @@ pub fn validate_http(
         Ok(v) => v,
         Err(resp) => return resp,
     };
-    crate::routes::json200(&validate_components(repo_root, &schema), gz)
+    crate::routes::json200(&validate_components(repo_root, &schema, world), gz)
 }
 
 /// `POST /api/ui/components/apply`（唯一写点 `components_v1.json`）。
 #[must_use]
-pub fn apply_http(
-    repo_root: &Path,
-    body: &[u8],
-    token: Option<&str>,
-    content_type: Option<&str>,
-    gz: bool,
-) -> Vec<u8> {
-    let (schema, raw) = match parse_ui_post(
+pub fn apply_http(repo_root: &Path, body: &[u8], content_type: Option<&str>, gz: bool) -> Vec<u8> {
+    let (schema, raw, world) = match parse_ui_post(
         repo_root,
         body,
-        token,
         content_type,
         "ui_components_apply",
         "/api/ui/components/apply",
@@ -646,7 +682,7 @@ pub fn apply_http(
         Ok(v) => v,
         Err(resp) => return resp,
     };
-    match apply_components(repo_root, &schema, &raw) {
+    match apply_components(repo_root, &schema, &raw, world) {
         Ok(v) => crate::routes::json200(&v, gz),
         Err(e) => ui_error(&e, "500 Internal Server Error", gz),
     }
