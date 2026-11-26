@@ -35,4 +35,6 @@ S87.6 verified（本证据）
 S87 阶段全收口，台账 438/438 verified。
 
 === 5. 推送 ===
-见 git commit/push 记录（本证据落盘时推送待执行，完成后由 commit message 关联）。
+已推送：`git commit 22785aa` → `git push origin master`（623d6fe..22785aa），
+22 文件 573 insertions/143 deletions，commit message 关联 S87.5~S87.7。
+排除其它会话残留 `crates/ti-console/src/runner/close.rs`（未纳入本次提交）。
