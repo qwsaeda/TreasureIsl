@@ -19,7 +19,8 @@ const previewScene = params.get("scene");
 if (previewScene) {
   window.ti_preview_scene = previewScene;
 }
-if (params.get("preview") === "1") {
+const isPreview = params.get("preview") === "1";
+if (isPreview) {
   try {
     const inject = sessionStorage.getItem("ti_preview_inject");
     if (inject) window.ti_preview_inject = inject;
@@ -38,7 +39,9 @@ canvas.addEventListener("webglcontextlost", (e) => {
 init()
   .then(() => {
     status.textContent =
-      "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）";
+      isPreview
+        ? "只读版面预览（输入已屏蔽 · 浏览器 wasm · 用户 GPU；改数据后再次点预览即刷新）"
+        : "运行中（方向键/空格摇骰，E 据点，Enter 确认，Back 返回；鼠标/触摸点击）";
   })
   .catch((err) => {
     status.textContent = "加载失败：" + String(err);

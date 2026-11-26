@@ -150,6 +150,12 @@ pub(crate) fn anim_ms(host: &dyn SceneHost) -> u32 {
     ANIM_ACC.load(Ordering::Relaxed)
 }
 
+/// S87.7 编辑器**只读预览**：冻结演出时钟到固定相位（绝对定格，同 `--shot` T0 口径）。
+/// 调用须在首次 `anim_ms` 之前（编辑器 wasm 注入在 `GameApp` 构造前，天然满足）。
+pub fn freeze_preview_anim() {
+    let _ = ANIM_T0.set(1000);
+}
+
 /// S49.4 交互契约：重打（`pick_key` = 4）= 重置演出时钟（`anim_ms` 归 0，列阵重播）。
 pub(crate) fn reset_anim() {
     use std::sync::atomic::Ordering;

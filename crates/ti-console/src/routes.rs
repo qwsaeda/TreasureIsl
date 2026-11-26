@@ -926,6 +926,18 @@ fn static_or_repo_file(
             want_gzip,
         );
     }
+    // S87.7：版本化预览路径 `/web/v<N>/...` → strip 版本段映射到 `web/...`。
+    // 用途：用户浏览器若缓存了旧版 wasm/js（max-age 期内不发请求），换版本段 = 换 URL
+    // ⇒ 全部子资源（main.js / 胶水 / wasm）强制重新拉取，所见即所得。bump 时前端改一处。
+    let clean = if let Some(rest) = clean.strip_prefix("/web/v") {
+        match rest.split_once('/') {
+            Some((_ver, tail)) if !tail.is_empty() => format!("/web/{tail}"),
+            _ => clean.to_owned(),
+        }
+    } else {
+        clean.to_owned()
+    };
+    let clean = clean.as_str();
     if let Some(path) = resolve_or_404(web_root, clean) {
         if let Ok(body) = std::fs::read(&path) {
             let mime = mime_for(&path);
@@ -934,7 +946,13 @@ fn static_or_repo_file(
         }
         if let Ok(v) = guarded_file(repo_root, clean) {
             let mime = mime_for(&v.0);
-            // 仓库白名单直读 = 内容级指纹缓存（强缓存：文件不变则 304/本地命中，
+            // S87.7：`/web/` = 编辑器实时预览的游戏壳（wasm/js/资产）——必须 no-store，
+            // 否则浏览器强缓存（max-age=604800）期内不发请求、拿不到新 ETag ⇒
+            // 磁盘 wasm/js 已更新但 iframe 仍加载旧版（旧文案 + 无画面）。改即生效优先。
+            if clean.starts_with("/web/") {
+                return header_body(mime, &v.1, "200 OK", "no-store", None, want_gzip);
+            }
+            // 其余仓库白名单直读 = 内容级指纹缓存（文件不变则 304/本地命中，
             // 改文件即换指纹）。ui_concept 侧车/原图、assets/ui 大图全走这。
             let fp = content_fingerprint(&v.1);
             return cached_response(mime, &v.1, &fp, if_none_match, want_gzip);

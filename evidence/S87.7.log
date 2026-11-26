@@ -18,6 +18,10 @@ S87.7 — 浏览器 wasm 实时预览（用户 GPU 真渲染，iframe + sessionS
     `window.ti_preview_inject`（JSON 字符串，同步 Reflect::get）读 {scene,mode,schema}，
     调 `ui_schema::install_injected`（world 模式注入 world_components 字段，UI 模式注入
     components 字段），在 `inject_map_pack()` 首访前、建 GameApp 前完成。
+  - **只读语义（勘误：初版做成可交互游戏，非用户要的预览）**：注入成功即置 `PREVIEW_MODE`
+    AtomicBool ⇒ input_system / manual_1080_hit_system / pick_event_system 三处早退
+    （按键/点击不导航不改状态）；`ti_app::freeze_preview_anim()` 定格 vs 演出时钟
+    （`--shot` T0 同口径）⇒ 画面为静态版面快照。native 路径恒 false（0 行为变化）。
   - 帧阈值 40→3（S18.8b 遗留冗余等待，ShotPreload + 内容判据双兜底）。
 - `scripts/web_main.js`（→ web/main.js 构建产物）：init() 前读 `?scene=` + `?preview=1`
   + sessionStorage['ti_preview_inject']，挂 window 全局供 wasm Reflect::get。
@@ -39,6 +43,30 @@ Playwright（headless Chromium + SwiftShader）打开 /ui_editor.html → 注入
 结果：画面变化 **19% 像素**，diff_bbox=(0,160,946,530) 正好覆盖 hero 区域。
 ⇒ 编辑器改数据 → iframe reload → wasm install_injected → 真渲染即时变化，判据 PASS。
 证据：/tmp/opencode/data_change_{before,after}.png
+
+=== 4e. 版本化路径根治（用户二次仍报旧文案+黑屏）===
+no-store 只影响新请求，用户浏览器已有的旧缓存条目（max-age 期内）不会自动清除 ⇒
+仍拿旧 wasm/js（旧文案 + 黑屏）。根治 = 版本化路径 `/web/v<N>/...`：
+`routes.rs::static_or_repo_file` strip 版本段映射到 `web/`（no-store）；
+前端 `doPreview()` 用 `/web/v2/index.html?...`（WEB_PREVIEW_VER 常量，改 wasm 时 bump）。
+新路径 = 新 URL ⇒ 浏览器必拉全部子资源（main.js/胶水/wasm），所见即所得。
+实测点真实按钮：iframe URL=/web/v2/...、status=只读版面预览新文案、非黑率 96%、0 error。
+
+=== 4d. 缓存根因实测（用户报"还是旧文案 + 没图"）===
+磁盘 wasm/js 已更新，但平台 serve `/web/` 走 `guarded_file` 的
+`cached_response`（`max-age=604800` 强缓存）⇒ 浏览器强缓存期内不发请求、拿不到新 ETag
+⇒ iframe 仍加载旧 wasm/js（旧文案 + 旧画面/无画面）。
+修复：`routes.rs::static_or_repo_file` 对 `/web/` 前缀改 `no-store`（改即生效优先），
+其余白名单路径（assets/ui 大图等）保留指纹强缓存（性能不变）。重启平台实测：
+`GET /web/main.js` → `Cache-Control: no-store`，内容含"只读版面预览"；
+Playwright iframe status="只读版面预览（输入已屏蔽…）"、预览区非黑率 96%、0 pageerror。
+
+=== 4c. 只读判据实测（勘误后）===
+Playwright iframe 注入 schema 后：
+- index：按 Enter/ArrowRight/Space/Escape + 点击 #game 后画面变化 **0%**
+  （PREVIEW_MODE 三处早退生效，不再导航/摇骰"玩游戏"）。
+- vs world：间隔 3 秒两帧 diff **0%**（freeze_preview_anim 定格演出时钟，静态版面快照）。
+⇒ 预览 = 只看版面、所见即所得，输入不生效、动画不漂移。判据 PASS。
 
 === 4b. 实测 C：world 模式（vs/main_map）注入 ===
 Playwright 注入 world 模式 schema（scenes=[main_map,vs]）→ iframe `?scene=vs&preview=1`

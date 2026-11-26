@@ -825,3 +825,12 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **解法**：① 预载从全量 387 资产改按场景引用集（index 219/vs 53）+ 帧阈值 40→3 ⇒ 3~6 分钟→16s（治标）；② **治本 = 用浏览器真 GPU**：项目本就是 Bevy 0.20 wasm 双端目标，新增 wasm 注入接缝（`ti_preview_scene` 选场景 + `ti_preview_inject` JSON → `install_injected`），编辑器 `doPreview()` 改 iframe `/web/index.html?scene=&preview=1` + sessionStorage 传数据，无冷启/无服务端渲染/所见即所得；native `--shot` 路径保留作回退对照。静态服务复用 `console_sources.json` 加 `web/` 白名单 + `guarded_file`。
 - **验证**：Playwright 实测 iframe wasm 状态「运行中」+ 预览区非黑率 98%（index）、94%（vs world），0 pageerror；改 hero role 后画面变化 19% 像素（diff_bbox 覆盖 hero 区）⇒ 改数据即时生效；GET /web/{index.html,main.js,treasure-bevy-wasm_bg.wasm} 全 200。cargo clippy/doccheck/doccheck2/audit_code 全 0。
 - **关联**：EXP-206（全量预载 3m28s）的本轮治本；EXP-214（文档登记接线责任≠代码落地，本轮 wasm 注入先出设计留痕再落码）。
+
+### EXP-216 流程：用户要"实时预览"≠"把游戏跑起来让人玩"——初版 iframe 做成可交互游戏实例，勘误为只读版面预览（输入三处早退 + 动画定格）
+
+- **现象**：S87.7 按用户"用浏览器 wgpu 渲染预览"的方向做完 iframe wasm 实时预览后，用户质疑「我要提实时预览，你直接做成了游戏实时玩了？」——iframe 里加载的是完整可交互游戏：按 Enter/方向键会导航到别的场景、点击木牌会进菜单、vs 动画一直漂移。那是"玩游戏"，不是"看我正在编辑的版面"。
+- **根因**：把"实时渲染"等同于"运行游戏实例"。Bevy wasm 壳默认全量接线输入系统（keyboard/touch → GameInput）+ bevy_picking/1080 命中 + vs 动画时钟累计，三者都会让画面脱离编辑器注入的静态版面状态。需求理解偏差：预览应只读呈现数据，不应把交互面也带进来。
+- **解法**：注入成功即置 `PREVIEW_MODE` AtomicBool（ti-engine bin）⇒ ① `input_system` ② `manual_1080_hit_system` ③ `pick_event_system` 三处开头早退（按键/点击全部吞掉，不导航不改状态）；同时 `ti_app::scenes::vs_anim_proto::freeze_preview_anim()` 把演出时钟定格到固定相位（`--shot` T0 同口径）⇒ 画面为静态版面快照。前端按钮/标题/status 文案从"实时预览（用户 GPU）"改"实时版面预览（只读 · 用户 GPU）"。native `--shot` 路径 `PREVIEW_MODE` 恒 false（0 行为变化）。
+- **验证**：Playwright 实测 index 按 Enter/方向键/空格/Escape + 点击 #game 后画面变化 **0%**；vs world 间隔 3 秒两帧 diff **0%**（动画定格）；此前"改 hero role 画面变化 19%"仍成立（所见即所得）。⇒ 只读预览 = 看版面、输入不生效、动画不漂移。
+- **追加坑（用户二次报"还是旧文案+没图"）**：磁盘 wasm/js 已改，但平台 `/web/` 走 `guarded_file` 的 `cached_response`（`max-age=604800` 强缓存），浏览器强缓存期内不发请求 ⇒ 拿不到新 ETag ⇒ iframe 仍加载旧版。根治 = `routes.rs::static_or_repo_file` 对 `/web/` 前缀改 `no-store`（其余白名单路径保留指纹强缓存性能不变）。实测 `GET /web/main.js` → `Cache-Control: no-store` + iframe status 新文案 + 非黑率 96%。教训：**开发预览面（改即生效）必须 no-store，不能用内容指纹强缓存**——指纹只在浏览器肯发请求时才有用。
+- **关联**：EXP-215（浏览器 wasm 真 GPU 替代 llvmpipe 的上游改造）；与 EXP-210「质疑现状先查规范/断言如实判」同类——用户术语「预览」有明确语义边界（只读呈现），不可自行扩展成"可玩"。

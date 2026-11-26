@@ -490,6 +490,10 @@ struct ShotTarget(Handle<Image>);
 /// S18.7：截图读回结果（RGBA8 像素）。
 static SHOT_READBACK: std::sync::Mutex<Option<Vec<u8>>> = std::sync::Mutex::new(None);
 
+/// S87.7：编辑器**只读预览**模式（iframe wasm）。置位后所有输入/拾取系统早退，
+/// 画面只反映注入的编辑数据，不被按键/点击"玩"跑偏。native 路径恒 false（0 行为变化）。
+static PREVIEW_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// S18.7：截图请求标记（只发一次）。
 #[derive(Resource, Default)]
 struct ShotDone(bool);
@@ -842,6 +846,10 @@ fn input_system(
     mut state: Local<InputState>,
     window: Query<&Window>,
 ) {
+    // S87.7 只读预览：吞掉所有键盘/鼠标/触摸输入（不让预览变成"玩游戏"跑偏场景）。
+    if PREVIEW_MODE.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
     // S18.5：滚轮 zoom + 左键拖拽 pan（仅主地图；逻辑 px / 当前 `vp.scale()` = 逻辑画布单位）。
     // 2026-10-26（用户报「首页每个按键点击都没反应」，EXP-117）：指针位置改取窗口**绝对**
     // 光标位置 `Window::cursor_position()`（bevy 0.20 = **逻辑**像素，winit 物理 ÷ scale_factor）。
@@ -1288,6 +1296,10 @@ fn pick_event_system(
     store: ResMut<GameStore>,
     mut picker: MessageReader<ti_engine::pick::PickEvent>,
 ) {
+    // S87.7 只读预览：吞掉 bevy_ui 层拾取事件（列表行/菜单点了不该改状态）。
+    if PREVIEW_MODE.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
     let Ok(mut g) = store.0.lock() else {
         return;
     };
@@ -1326,6 +1338,10 @@ fn manual_1080_hit_system(
     window: Query<&Window>,
     mut picker: MessageWriter<ti_engine::pick::PickEvent>,
 ) {
+    // S87.7 只读预览：吞掉 1080 层点击（木牌/菜单点了不该导航）。
+    if PREVIEW_MODE.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
     // 鼠标左键 tap 或任意触摸刚按下（Android 无鼠标；bevy_picking 的触摸 → PointerInput
     // 已覆盖 bevy_ui 层，本系统只补 **1080 层**（未迁 bevy_ui 的原语矩形））。
     if !mouse.just_pressed(MouseButton::Left) && !touches.any_just_pressed() {
@@ -1880,7 +1896,12 @@ fn apply_preview_injection_wasm() -> bool {
     };
     let ok = ti_core::data::ui_schema::install_injected(injected);
     if ok {
-        web_sys::console::log_1(&"[preview] wasm 注入编辑器 schema 生效（实时画面）".into());
+        // S87.7：只读预览——置位输入/拾取早退旗 + 冻结 vs 演出时钟（画面 = 静态版面快照）。
+        PREVIEW_MODE.store(true, std::sync::atomic::Ordering::Relaxed);
+        ti_app::scenes::vs_anim_proto::freeze_preview_anim();
+        web_sys::console::log_1(
+            &"[preview] wasm 注入生效（只读版面预览：输入屏蔽 + 动画定格）".into(),
+        );
     }
     ok
 }

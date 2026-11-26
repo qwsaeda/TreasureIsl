@@ -529,6 +529,10 @@ role/icon 下拉另读 `assets/data/ui_icons.json`。三面对账 = `routes.rs` 
   `apply_preview_injection_wasm()` 经 `js_sys::Reflect::get` 读注入文本、调
   `ui_schema::install_injected`（`inject_map_pack()` 首访前，早于建 `GameApp`）。
   iframe 每次 reload = 新 wasm 实例 = 新 OnceLock ⇒ 编辑数据即时生效，无需重启平台/重编译。
+- **只读语义（S87.7 勘误）**：预览 = **看版面的静态快照**，不是"玩游戏"。注入成功即置
+  `PREVIEW_MODE`（AtomicBool）⇒ `input_system` / `manual_1080_hit_system` / `pick_event_system`
+  三处早退（按键/点击不导航不改状态）；同时 `ti_app::freeze_preview_anim()` 把 vs 演出时钟
+  定格到固定相位（`--shot` T0 同口径）⇒ 画面不随动画漂移。native 路径恒 false（0 行为变化）。
 - **静态服务**：根 `web/` 加入 `console_sources.json::repo_sources`（目录前缀白名单），平台
   `guarded_file` 直读 wasm/js/资产（同 `assets/ui/` 大二进制口径）；iframe 载荷全走此面。
 - **回退**：native `apply_preview_injection` + `scripts/preview_shot.py` + `POST /api/preview`
