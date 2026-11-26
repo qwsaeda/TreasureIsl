@@ -183,36 +183,43 @@ def do_run(args: argparse.Namespace, preview_dir: Path) -> int:
     if args.map_id:
         env["TI_MAP"] = args.map_id
     command = build_command(bin_path, args)
-    print(f"[preview] 命令：{' '.join(command)}")
+    print(f"[preview] 命令：{' '.join(command)}", flush=True)
+    print(f"[preview] 引擎冷启全量资产预载通常 3~6 分钟，日志实时刷新…", flush=True)
+    # S87.5：旧实现 `subprocess.run(capture_output=True)` 把引擎输出全缓冲到进程结束才打印
+    # ⇒ 用户点预览后日志 0 字节、前端「提交作业…」假死。改为 Popen 逐行转发 + flush，
+    # 日志实时可见；超时原样保留（kill 子进程）。
+    proc = subprocess.Popen(
+        command,
+        cwd=str(REPO),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    lines: list[str] = []
     try:
-        completed = subprocess.run(
-            command,
-            cwd=str(REPO),
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=args.timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as error:
-        # 超时也回显已捕获的部分输出（否则引擎注入/预载日志全丢，排障无从下手）。
-        partial = f"{error.stdout or ''}{error.stderr or ''}"
-        if isinstance(partial, bytes):
-            partial = partial.decode("utf-8", errors="replace")
-        print_output(partial)
-        print(f"[preview] 出图超时（{args.timeout}s）", file=sys.stderr)
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            print(line, end="", flush=True)
+            lines.append(line)
+        returncode = proc.wait(timeout=max(0, args.timeout))
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        print(f"[preview] 出图超时（{args.timeout}s）", file=sys.stderr, flush=True)
         sys.exit(1)
-    output = f"{completed.stdout}{completed.stderr}"
-    print_output(output)
+    output = "".join(lines)
     ok, note = image_ok(out)
     shot_ok = "已写" in output
-    print(f"[preview] {note}")
-    print(f"PNG={out.relative_to(REPO).as_posix()}")
-    print(f"OK={1 if completed.returncode == 0 and shot_ok and ok else 0}")
-    if completed.returncode != 0 or not shot_ok or not ok:
+    print(f"[preview] {note}", flush=True)
+    print(f"PNG={out.relative_to(REPO).as_posix()}", flush=True)
+    print(f"OK={1 if returncode == 0 and shot_ok and ok else 0}", flush=True)
+    if returncode != 0 or not shot_ok or not ok:
         print(
-            f"[preview] 判据失败：exit={completed.returncode} 已写={shot_ok} 图像={ok}",
+            f"[preview] 判据失败：exit={returncode} 已写={shot_ok} 图像={ok}",
             file=sys.stderr,
+            flush=True,
         )
         sys.exit(1)
     return 0

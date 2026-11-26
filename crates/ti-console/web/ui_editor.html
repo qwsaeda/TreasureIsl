@@ -730,7 +730,11 @@ async function doPreview() {
     if (!image) { status('预览服务返回无 image 字段：' + JSON.stringify(res).slice(0, 300), 'fail'); return; }
     const poll = res.poll || ('/api/jobs?kind=preview&id=' + encodeURIComponent(res.id || id));
     let done = false;
-    for (let i = 0; i < 120; i++) {
+    // 冷启 --shot 实测：message ≈ 250s，index（全量资产预载）≈ 350s+；
+    // 旧实现轮询 120 次（2 分钟）⇒ 用户在「提交真渲染预览作业…」卡住后超时，看不到任何图。
+    // 改为 600 次（10 分钟）+ 每 15 秒回显已等待时间，避免「假死」观感。
+    const maxWait = 600;
+    for (let i = 0; i < maxWait; i++) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const job = await api(poll);
       const state = job.state || {};
@@ -739,8 +743,9 @@ async function doPreview() {
         status('预览作业失败：exit_code=' + state.exit_code + ' · ' + (job.log_tail || '').slice(-300), 'fail');
         return;
       }
+      if ((i + 1) % 15 === 0) status('真渲染出图中…已等 ' + (i + 1) + 's（冷启全量资产预载通常 3~6 分钟）');
     }
-    if (!done) { status('预览作业超时（S86.3 冷启 + 预载可能需 30~90s）：' + poll, 'fail'); return; }
+    if (!done) { status('预览作业超时（10 分钟）：' + poll, 'fail'); return; }
     $('previewBox').style.display = 'block';
     $('previewImg').src = '/' + String(image).replace(/^\//, '') + '?t=' + Date.now();
     status('预览已加载：' + image + '（<img> 走 ?t=Date.now() 破缓存；world 模式经 TI_PREVIEW_DIR 注入）', 'pass');

@@ -2440,14 +2440,16 @@ async function edPreviewReal() {
     const poll = out.poll || ('/api/jobs?kind=preview&id=' + encodeURIComponent(out.id || id));
     // 作业异步出图：轮询统一作业面，exit_code=0 才取图（否则首次取图 404）。
     let done = false, lastLog = '';
-    for (let i = 0; i < 120; i++) {
+    // 冷启 --shot 实测 250~350s（main_map 全量资产）；旧 120 次轮询 2 分钟即超时。
+    for (let i = 0; i < 600; i++) {
       await new Promise((r) => setTimeout(r, 1000));
       const job = await (await fetch(poll)).json();
       const state = job.state || {};
       lastLog = (job.log_tail || '').slice(-200);
       if (state.running === false) { done = state.exit_code === 0; break; }
+      if ((i + 1) % 15 === 0) msg.textContent = '真渲染出图中…已等 ' + (i + 1) + 's（冷启通常 3~6 分钟）';
     }
-    if (!done) { degrade('预览作业失败/超时' + (lastLog ? '：' + esc(lastLog) : '')); return; }
+    if (!done) { degrade('预览作业失败/超时（10 分钟）' + (lastLog ? '：' + esc(lastLog) : '')); return; }
     const src = out.image || out.path || out.url || out.screenshot || '';
     if (!src || typeof src !== 'string') { degrade('响应未带图片路径'); return; }
     const href = (src.startsWith('/') ? src : '/' + src) + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
