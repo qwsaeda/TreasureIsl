@@ -1,0 +1,22 @@
+S88.1 换图写点：扩展 apply 端点 + asset_roles 校验/回滚/门禁
+日期：2026-11-27
+
+改动面：平台后端
+判据：写 asset_roles.json 成功 + 未登记路径 FAIL 回滚
+
+=== 实现 ===
+- crates/ti-console/src/repo/ui_components.rs:
+  - 新增 MANIFEST_REL = assets/ui_manifest.json（资产池单一事实源）
+  - 新增 apply_asset_roles()：校验 ① path 须在 ui_manifest.assets[].file 登记（禁手写路径）
+    ② role 名合法（id_ok）③ 文件存在；写盘用 canonicalize_indent2（保序 indent=2）；
+    写后跑 ui_schema_check.py --check，FAIL 回滚；用 FrozenSnapshot::write_probe 取证。
+  - apply_http 检测 body.asset_roles_json ⇒ 走换图写点（否则原 components/world 写点）；
+    前置校验 Content-Type / enable_write / action 白名单与 parse_ui_post 同口径。
+
+=== 实测 ===
+- 负例（未登记路径）：POST /api/ui/components/apply asset_roles_json roles.index_hero=
+  "assets/ui/NOT_REGISTERED.png" → ok=false, rolled_back=true, errors=["未在 ui_manifest 登记（禁手写路径）","文件不存在"]，未写盘。
+- 负例（部分映射）：只发 1 个 role → 写后 ui_schema_check FAIL（其它 role 丢失）→ 回滚。
+- 正例（整份 50 role，index_hero→role_panda.png）：ok=true, path=asset_roles.json,
+  write_probe=true, schema_check.exit_code=0。磁盘确认 index_hero 已改，随后恢复原文件。
+- clippy(ti-console) 0 error。

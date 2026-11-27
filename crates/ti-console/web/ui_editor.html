@@ -61,6 +61,17 @@
   #status.pass { border-color:var(--ok); color:var(--ok); }
   #status.fail { border-color:var(--err); color:#ffb4b4; }
   #previewBox { margin-top:10px; display:none; }
+  #assetModal { position:fixed; inset:0; background:rgba(0,0,0,.7); display:none;
+    z-index:100; align-items:center; justify-content:center; }
+  #assetModal .sheet { width:min(960px,94vw); max-height:88vh; overflow:auto; padding:16px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:10px; }
+  #assetGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; margin-top:10px; }
+  #assetGrid .tile { border:1px solid var(--border); border-radius:6px; padding:6px; cursor:pointer;
+    background:#0e1018; text-align:center; font-size:11px; }
+  #assetGrid .tile:hover { border-color:var(--ok); }
+  #assetGrid .tile img { width:100%; height:72px; object-fit:contain; display:block; }
+  #assetSearch { width:100%; padding:8px; box-sizing:border-box; background:#0e1018;
+    color:var(--text); border:1px solid var(--border); border-radius:6px; }
   #previewFrame { width:100%; aspect-ratio:16/9; border:1px solid var(--border);
     border-radius:6px; background:#14100b; display:block; }
   .bar { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
@@ -133,7 +144,8 @@ const WORLD_OPS = ['is_none','is_some','eq','ne'];
 const SCREEN_W = 1920, SCREEN_H = 1080;
 
 const S = { schema:null, scene:'index', mode:'ui', selected:null, roles:[], icons:[],
-            geometryRects:{}, busy:false, drag:null };
+            geometryRects:{}, busy:false, drag:null,
+            rolePaths:{}, roleDirty:false, assetPool:[] };
 const $ = (id) => document.getElementById(id);
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const round1 = (n) => Math.round(n * 10) / 10;
@@ -474,6 +486,63 @@ async function onDragEnd() {
   }
 }
 
+// S88：资产角色控件 = 角色下拉 + 「换图」按钮（打开资产池选择器）。
+function roleControl(host, el) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;gap:6px;align-items:center';
+  wrap.appendChild(propSelect(host, 'role', el, S.roles.map((r) => r.role), true));
+  const btn = document.createElement('button');
+  btn.textContent = '换图';
+  btn.title = '给该角色换一张图（从 ui_manifest 资产池选，未落盘预览即时生效）';
+  btn.onclick = () => openAssetModal(el.role || '');
+  wrap.appendChild(btn);
+  return wrap;
+}
+function openAssetModal(role) {
+  if (!role) { status('请先选资产角色，再换图', 'fail'); return; }
+  S.swapRole = role;
+  $('swapTargetRole').textContent = role + ' → ' + (S.rolePaths[role] || '(未登记)');
+  $('assetModal').style.display = 'flex';
+  $('assetSearch').value = '';
+  renderAssetGrid();
+}
+function closeAssetModal() { $('assetModal').style.display = 'none'; }
+function renderAssetGrid() {
+  const q = ($('assetSearch').value || '').toLowerCase().trim();
+  const grid = $('assetGrid');
+  grid.innerHTML = '';
+  const pool = S.assetPool.filter((a) => {
+    const p = (a.file || '').toLowerCase();
+    return !q || p.includes(q) || (a.name || '').toLowerCase().includes(q);
+  });
+  const frag = document.createDocumentFragment();
+  pool.forEach((a) => {
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    const img = document.createElement('img');
+    img.src = '/' + (a.file || '').replace(/^\//, '');
+    img.alt = a.name || '';
+    img.loading = 'lazy';
+    img.onerror = () => { img.style.opacity = '0.15'; };
+    const label = document.createElement('div');
+    label.textContent = a.name || a.file || '';
+    tile.appendChild(img); tile.appendChild(label);
+    tile.onclick = () => pickAsset(a);
+    frag.appendChild(tile);
+  });
+  grid.appendChild(frag);
+  if (!pool.length) grid.innerHTML = '<div style="color:var(--muted);padding:12px">无匹配资产（共 ' + S.assetPool.length + ' 张已登记）</div>';
+}
+function pickAsset(asset) {
+  const role = S.swapRole;
+  if (!role || !asset.file) return;
+  S.rolePaths[role] = asset.file;
+  S.roleDirty = true;
+  closeAssetModal();
+  status('换图（未落盘）：' + role + ' → ' + asset.file + '（点「实时预览」看效果；点「写盘 apply」持久化）', 'pass');
+  renderAll();
+}
+
 // ---- 属性面板公共控件（UI / world 共用） ----
 // 属性行：中文参数名 + 作用说明（灰字小字 + title 悬浮提示）。
 function propRow(host, labelText, control, hint) {
@@ -565,7 +634,7 @@ function renderPropsUi(host, el) {
   const l = el.layout || {};
   propRow(host, '位号', propSpan(host, el.id), '组件唯一标识（场景内不可重复），即元器件图上的位号');
   propRow(host, '型号', propSpan(host, el.type || '?'), '元素种类：image 图片 / text 文本 / button 按钮 / list 列表 / panel 面板');
-  propRow(host, '资产角色', propSelect(host, 'role', el, S.roles.map((r) => r.role), true), '决定显示哪张图：从资产角色表选，禁止手写文件路径');
+  propRow(host, '资产角色', roleControl(host, el), '决定显示哪张图：选角色 + 「换图」改该角色指向的图片（资产池，禁手写路径）');
   propRow(host, '图标', propSelect(host, 'icon', el, S.icons, true), '图标名（白蒙版），运行时按主题着色；留空表示不用图标');
   propRow(host, '内容绑定', propText(host, 'binding', el), '取内容的来源：i18n 文案键（如 scene.index.title）或列表名（menu/characters 等）');
   propRow(host, '点击动作', propSelect(host, 'action', el, ACTIONS.slice(0, 12), true), '点击后触发的业务动作（UiAction 闭集）；留空 = 不可点');
@@ -589,7 +658,7 @@ function renderPropsUi(host, el) {
 function renderPropsWorld(host, el) {
   propRow(host, '位号', propSpan(host, el.id), '组件唯一标识（场景内不可重复）');
   propRow(host, '型号', propSelect(host, 'type', el, WORLD_TYPES, false), 'CPU 世界层绘制类型：image 图片 / rect 色块 / text 文本');
-  propRow(host, '资产角色', propSelect(host, 'role', el, S.roles.map((r) => r.role), true), '决定显示哪张图：从资产角色表选，禁止手写文件路径');
+  propRow(host, '资产角色', roleControl(host, el), '决定显示哪张图：选角色 + 「换图」改该角色指向的图片（资产池，禁手写路径）');
   if (el.geometry) {
     propRow(host, '几何来源', propSelect(host, 'source', el.geometry, WORLD_SOURCES, false), '坐标来自哪份权威数据：v6 布局 JSON 或 scenes.json');
     propRow(host, '几何引用', propText(host, 'ref', el.geometry), '指向源数据里的具体键（如 tiles[3]/helm）；受源约束，拖拽即 FAIL 禁摆');
@@ -705,7 +774,11 @@ async function loadAll() {
     S.schema = components.schema;
     S.mode = components.mode || S.mode;
     S.roles = roles.roles || [];
+    S.rolePaths = Object.fromEntries(S.roles.map((r) => [r.role, r.path]));
+    S.roleDirty = false;
     S.icons = roles.icons || [];
+    // S88.2：资产池（ui_manifest.assets）供换图选择器；失败不阻断编辑器主流程。
+    api('/api/assets').then((a) => { S.assetPool = (a.ui_manifest && a.ui_manifest.assets) || []; }).catch(() => {});
     S.geometryRects = components.geometry_rects || {};
     if (!S.schema.scenes[S.scene]) S.scene = Object.keys(S.schema.scenes)[0] || 'index';
     renderAll();
@@ -722,13 +795,17 @@ async function doApply() {
   S.busy = true;
   status('apply 写盘中…');
   try {
-    const body = envelope('ui_components_apply', true);
+    const body = S.roleDirty
+      ? JSON.stringify({ action:'ui_components_apply', mode:S.mode, enable_write:true,
+          asset_roles_json: { schema_version:1, roles:S.rolePaths } })
+      : envelope('ui_components_apply', true);
     const res = await api('/api/ui/components/apply', { method:'POST', headers:headers(), body });
     if (!res.ok) status('apply FAIL · ' + (res.errors || []).join('\n'), 'fail');
     else {
       const check = res.world_check || res.schema_check || {};
-      status('apply PASS · 已写 ' + res.path + '（indent=2 保序）· write_probe=' + res.write_probe
-        + ' · 门禁 exit=' + check.exit_code, 'pass');
+      status('apply PASS · 已写 ' + res.path + (S.roleDirty ? '（换图 role→path 映射）' : '（indent=2 保序）')
+        + ' · write_probe=' + res.write_probe + ' · 门禁 exit=' + check.exit_code, 'pass');
+      if (S.roleDirty && res.ok) S.roleDirty = false;
     }
   } catch (e) {
     status('apply FAIL：' + e.message, 'fail');
@@ -751,6 +828,7 @@ function doPreview() {
   if (!S.schema) return;
   try {
     const payload = { scene: S.scene, mode: S.mode, schema: S.schema };
+    if (S.roleDirty) payload.assetRoles = { schema_version: 1, roles: S.rolePaths };
     sessionStorage.setItem('ti_preview_inject', JSON.stringify(payload));
   } catch (e) {
     status('实时预览失败：sessionStorage 不可用 ' + e.message, 'fail');
@@ -761,7 +839,7 @@ function doPreview() {
   frame.onload = () => status('只读版面预览已加载：' + S.scene + '（浏览器 wasm · 用户 GPU；输入已屏蔽，改数据后再次点击即刷新）', 'pass');
   frame.onerror = () => status('实时预览 iframe 加载失败', 'fail');
   // S87.7：版本段 /web/v2/ 强制绕过浏览器旧 wasm/js 缓存（改 wasm 后 bump WEB_PREVIEW_VER）。
-  const WEB_PREVIEW_VER = 4;
+  const WEB_PREVIEW_VER = 5;
   frame.src = '/web/v' + WEB_PREVIEW_VER + '/index.html?scene=' + encodeURIComponent(S.scene) + '&preview=1&t=' + stamp;
   $('previewBox').style.display = 'block';
   status('只读版面预览启动中：' + S.scene + '（首次加载 wasm 需几秒；按键/点击不生效，纯看版面）', 'pass');
@@ -810,5 +888,12 @@ $('btnPreviewNative').onclick = doPreviewNative;
 renderAll();
 loadAll();
 </script>
+<div id="assetModal"><div class="sheet">
+  <h2 style="margin-top:0">换图 · 资产池</h2>
+  <div style="font-size:12px;color:var(--muted)">当前 role：<code id="swapTargetRole"></code> · 来源 = ui_manifest.assets（已登记资产，禁手写路径）</div>
+  <input id="assetSearch" placeholder="搜索资产名 / 路径…" oninput="renderAssetGrid()">
+  <div id="assetGrid"></div>
+  <div class="bar"><button onclick="closeAssetModal()">关闭</button></div>
+</div></div>
 </body>
 </html>

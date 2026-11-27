@@ -33,6 +33,7 @@ use super::snapshot::FrozenSnapshot;
 const COMPONENTS_REL: &str = "assets/data/ui_schema/components_v1.json";
 /// role → 资产路径登记（只读）。
 const ROLES_REL: &str = "assets/data/ui_schema/asset_roles.json";
+const MANIFEST_REL: &str = "assets/ui_manifest.json";
 /// icon 名册（只读）。
 const ICONS_REL: &str = "assets/data/ui_icons.json";
 /// i18n key 源（只读）。
@@ -467,6 +468,72 @@ pub(super) fn canonicalize_indent2(raw_schema: &[u8]) -> Result<Vec<u8>, String>
 ///
 /// # Errors
 /// 组件文件读/写失败 / 规范化子进程失败 = `Err`；校验 FAIL 走 `Ok({"ok":false,...})` 不写盘。
+/// S88.1：换图写点——写 `asset_roles.json` 的 `role → path` 映射（UI 资料更新，业务逻辑零改动）。
+/// 校验：① path 须在 `ui_manifest.assets` 登记（禁手写路径）② role 名合法 ③ 文件存在；
+/// 写后跑 `ui_schema_check.py --check` 复验，FAIL 回滚（与 `apply_components` 同范式）。
+pub fn apply_asset_roles(
+    repo_root: &Path,
+    roles_value: &Value,
+    raw: &[u8],
+) -> Result<Value, String> {
+    let roles_obj = roles_value
+        .get("roles")
+        .and_then(Value::as_object)
+        .ok_or_else(|| "asset_roles.json 缺 roles 对象".to_owned())?;
+    // 资产池 = ui_manifest.assets[].file（单一事实源，禁手写路径）
+    let manifest =
+        read_json(repo_root, MANIFEST_REL).map_err(|e| format!("读 ui_manifest 失败：{e}"))?;
+    let registered: std::collections::BTreeSet<String> = manifest
+        .get("assets")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|a| a.get("file").and_then(Value::as_str).map(str::to_owned))
+        .collect();
+    let mut errors = Vec::new();
+    for (role, path) in roles_obj {
+        let Some(path) = path.as_str() else {
+            errors.push(format!("role {role}: path 非字符串"));
+            continue;
+        };
+        if !id_ok(role) {
+            errors.push(format!("role {role}: 名字非法"));
+        }
+        if !registered.contains(path) {
+            errors.push(format!("role {role}: path {path:?} 未在 ui_manifest 登记（禁手写路径）"));
+        }
+        if !repo_root.join(path).is_file() {
+            errors.push(format!("role {role}: 文件 {path:?} 不存在"));
+        }
+    }
+    if !errors.is_empty() {
+        return Ok(
+            json!({"ok": false, "errors": errors, "rolled_back": true, "note": "换图校验 FAIL，未写盘"}),
+        );
+    }
+    let path = repo_root.join(ROLES_REL);
+    let original = std::fs::read(&path).map_err(|e| format!("读 {ROLES_REL} 失败：{e}"))?;
+    let before = FrozenSnapshot::take(repo_root);
+    let normalized = canonicalize_indent2(raw)?;
+    std::fs::write(&path, &normalized).map_err(|e| format!("写 {ROLES_REL} 失败：{e}"))?;
+    let after_write = run_check_script(repo_root, SCHEMA_SCRIPT);
+    if !after_write.ok {
+        let _ = std::fs::write(&path, &original);
+        return Ok(
+            json!({"ok": false, "errors": [format!("写盘后 ui_schema_check.py FAIL：{}", after_write.summary)], "rolled_back": true, "note": "已还原原文件"}),
+        );
+    }
+    let after = FrozenSnapshot::take(repo_root);
+    let write_probe = before.write_probe(&after, &[ROLES_REL]);
+    Ok(
+        json!({"ok": true, "path": ROLES_REL, "bytes": normalized.len(), "write_probe": write_probe, "schema_check": {"ok": true, "exit_code": after_write.exit_code}, "note": "换图写点：role→path 映射 + ui_manifest 登记校验 + 写后门禁"}),
+    )
+}
+
+/// `POST /api/ui/components/apply` 主写点（`components_v1.json` / `world_components.json`）。
+///
+/// # Errors
+/// 读/写文件或门禁脚本异常时返回 `Err`，由 handler 映射为 500。
 pub fn apply_components(
     repo_root: &Path,
     schema: &Value,
@@ -675,6 +742,41 @@ pub fn validate_http(
 /// `POST /api/ui/components/apply`（唯一写点 `components_v1.json`）。
 #[must_use]
 pub fn apply_http(repo_root: &Path, body: &[u8], content_type: Option<&str>, gz: bool) -> Vec<u8> {
+    // S88.1：换图分支——body 带 asset_roles_json = 写 role→path 映射（UI 资料更新）；
+    // 否则走原 components/world 写点。前置校验与 parse_ui_post 同口径（内容类型/写权限/action）。
+    let asset_roles =
+        serde_json::from_slice::<Value>(body).ok().and_then(|v| v.get("asset_roles_json").cloned());
+    if let Some(roles_val) = asset_roles {
+        let ct_ok = content_type.is_some_and(|c| {
+            c.split(';').next().unwrap_or("").trim().eq_ignore_ascii_case("application/json")
+        });
+        let Ok(payload) = serde_json::from_slice::<Value>(body) else {
+            return ui_error("400: body 非合法 JSON", "400 Bad Request", gz);
+        };
+        let write_ok = payload.get("enable_write").and_then(Value::as_bool) == Some(true);
+        let action_ok = payload.get("action").and_then(Value::as_str).is_some_and(|a| {
+            a == "ui_components_apply"
+                && endpoint_allowed(repo_root, a, "POST", "/api/ui/components/apply")
+        });
+        if !ct_ok {
+            return ui_error("400: Content-Type 必须为 application/json", "400 Bad Request", gz);
+        }
+        if !write_ok {
+            return ui_error(
+                "400: 写动作需 enable_write=true（30 号 §3.1 默认关）",
+                "400 Bad Request",
+                gz,
+            );
+        }
+        if !action_ok {
+            return ui_error("400: action 未登记（22 号 §4.2）", "400 Bad Request", gz);
+        }
+        let raw = serde_json::to_vec(&roles_val).unwrap_or_default();
+        return match apply_asset_roles(repo_root, &roles_val, &raw) {
+            Ok(v) => crate::routes::json200(&v, gz),
+            Err(e) => ui_error(&e, "500 Internal Server Error", gz),
+        };
+    }
     let (schema, raw, world) = match parse_ui_post(
         repo_root,
         body,

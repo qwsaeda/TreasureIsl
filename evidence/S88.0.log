@@ -1,0 +1,5 @@
+S88.0 立项：可视化换图设计稿 + 台账登记 + 用户拍板
+- 用户拍板：扩展 apply 端点 / 支持上传新图 / 完整做（选图+预览+写盘）
+- 设计稿：docs/plan-s88-asset-swap.md（职责单一事实源表 + 写点协议 + 选图来源 + 预览联动 + 验收判据 + WBS）
+- 定位：换图 = 编辑 asset_roles.json 的 role→path 映射，属 UI 资料更新，业务逻辑零改动
+- doccheck 0 error / 台账 6 条 pending

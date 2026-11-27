@@ -1873,8 +1873,8 @@ fn apply_preview_injection_wasm() -> bool {
     else {
         return false;
     };
-    // 形状：{ "scene": "...", "mode": "ui|world", "schema": <整份 schema JSON> }。
-    // schema 直接是整表文本（S.schema 来自编辑器），无需重序列化 ⇒ 与原文件逐字节一致。
+    // 形状：{ "scene": "...", "mode": "ui|world", "schema": <整份 schema>,
+    //          "assetRoles"?: <整份 asset_roles.json（S88 换图未落盘预览）> }。
     let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw) else {
         return false;
     };
@@ -1886,13 +1886,24 @@ fn apply_preview_injection_wasm() -> bool {
     if text.is_empty() {
         return false;
     }
+    // S88.4：换图未落盘预览——assetRoles 整份映射一并注入（role→path 即时生效）。
+    let asset_roles = value
+        .get("assetRoles")
+        .and_then(|v| v.as_object())
+        .and_then(|o| serde_json::to_string(o).ok())
+        .filter(|s| !s.is_empty());
     let injected = if world {
         ti_core::data::ui_schema::InjectedSchema {
             world_components: Some(text),
+            asset_roles,
             ..Default::default()
         }
     } else {
-        ti_core::data::ui_schema::InjectedSchema { components: Some(text), ..Default::default() }
+        ti_core::data::ui_schema::InjectedSchema {
+            components: Some(text),
+            asset_roles,
+            ..Default::default()
+        }
     };
     let ok = ti_core::data::ui_schema::install_injected(injected);
     if ok {

@@ -1,0 +1,14 @@
+S88.2 资产选择器 UI：缩略图网格 + 搜索 + 换图按钮
+日期：2026-11-27
+
+改动面：平台前端
+判据：从 ui_manifest 选图改 role 映射
+
+=== 实现 ===
+crates/ti-console/web/ui_editor.html:
+- S 加 rolePaths（role→path 映射）/ roleDirty（未落盘换图旗）/ assetPool（387 张已登记资产）
+- loadAll 从 /api/ui/roles 的 {role,path} 构造 rolePaths；从 /api/assets 的 ui_manifest.assets 拉 assetPool
+- roleControl() = 角色下拉 + 「换图」按钮；点按钮弹 #assetModal（缩略图网格 + 搜索框）
+- renderAssetGrid() 按名字/路径过滤 assetPool；pickAsset() 写 S.rolePaths[role]=file + roleDirty=true
+- 提示文案："换图（未落盘）：role → path（点实时预览看效果；点写盘 apply 持久化）"
+- 前端 JS 语法（node --check 内联 script）OK

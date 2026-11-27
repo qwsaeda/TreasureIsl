@@ -1,0 +1,19 @@
+S88.4 预览联动 + 端到端实测（native 路径先验）
+日期：2026-11-27
+
+改动面：前端 + 引擎 wasm 注入接缝
+判据：选图后真渲染变化 + 写盘一致
+
+=== 实现 ===
+- crates/ti-engine/src/bin/treasure_bevy.rs::apply_preview_injection_wasm 支持 payload.assetRoles
+  （整份 asset_roles.json 对象）→ install_injected.asset_roles ⇒ iframe wasm 换图即时生效
+- ui_editor.html::doPreview payload 在 roleDirty 时带 assetRoles
+- ui_editor.html::doApply 在 roleDirty 时发 asset_roles_json 到换图写点（否则原组件写点）
+
+=== 实测（服务端 /api/preview native 路径）===
+- POST /api/preview {schema_json, asset_roles_json(index_hero→role_panda.png)} → 受理 ok=true
+- 对比原 asset_roles 预览：hero 区域像素变化 51% ⇒ 换图注入生效、真渲染出不同形象
+=== 浏览器 wasm iframe 路径实测（wasm 重编后）===
+- wasm 注入接缝支持 payload.assetRoles → install_injected.asset_roles
+- Playwright 注入 assetRoles(index_hero→role_panda.png) → iframe /web/v5/ 真渲染
+- 换图前后画面变化 19%、0 pageerror ⇒ 浏览器端换图即时生效 PASS
