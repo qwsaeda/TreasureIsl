@@ -834,3 +834,13 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **验证**：Playwright 实测 index 按 Enter/方向键/空格/Escape + 点击 #game 后画面变化 **0%**；vs world 间隔 3 秒两帧 diff **0%**（动画定格）；此前"改 hero role 画面变化 19%"仍成立（所见即所得）。⇒ 只读预览 = 看版面、输入不生效、动画不漂移。
 - **追加坑（用户二次报"还是旧文案+没图"）**：磁盘 wasm/js 已改，但平台 `/web/` 走 `guarded_file` 的 `cached_response`（`max-age=604800` 强缓存），浏览器强缓存期内不发请求 ⇒ 拿不到新 ETag ⇒ iframe 仍加载旧版。根治 = `routes.rs::static_or_repo_file` 对 `/web/` 前缀改 `no-store`（其余白名单路径保留指纹强缓存性能不变）。实测 `GET /web/main.js` → `Cache-Control: no-store` + iframe status 新文案 + 非黑率 96%。教训：**开发预览面（改即生效）必须 no-store，不能用内容指纹强缓存**——指纹只在浏览器肯发请求时才有用。
 - **关联**：EXP-215（浏览器 wasm 真 GPU 替代 llvmpipe 的上游改造）；与 EXP-210「质疑现状先查规范/断言如实判」同类——用户术语「预览」有明确语义边界（只读呈现），不可自行扩展成"可玩"。
+
+### EXP-218 流程：编辑器画布示意算法必须与引擎布局**同口径**——两套独立实现导致"拖动位置≠渲染位置"（anchored 为例差半个宽度）
+
+- **现象**：用户在编辑器把 index.menu 拖到右侧后，画布示意框的位置与下方真渲染的木牌位置对不上（红线标注错位约半个组件宽）。
+- **根因**：前端 `ui_editor.html::layoutBox` 与引擎 `component_layout_node` 是**两套独立实现的坐标算法**，多处口径不同：
+  ① `anchored`：前端锚点=元素中心（`x=ap.x+off.x-w/2`），引擎锚点=对应角/边（`left=ax+ox-w*sx`，sx 按 top_right/center_right=1、center=0.5、left=0）——以 center_right/w=25 为例，引擎 left=57.4%、前端=69.9%，差 12.5%（半宽）。
+  ② `side_left/right`：引擎 top=4%/left=right=3%，前端 y=10/x=0。③ `center`：引擎 w=width_pct||34，前端 w=40。④ `bottom_bar`：引擎 top=MSG_HINT_TOP_PCT=86，前端 y=90。
+- **解法**：收敛——前端 `layoutBox` 全 intent 分支对齐引擎公式（位置 left/top + 宽度 width_pct 严格一致）；`setAnchored` 拖拽反算也用引擎公式（`offset = b.x - ax + w*sx`）。高度引擎是 `Val::Auto`（taffy 按内容算，前端无法静态得知）⇒ 画布保留示意值，但位置/宽度精准保证拖动落点与渲染一致。
+- **验证**：用户贴的 anchored 参数（center_right/-17.6/25%×80%），引擎期望 left=57.4%/top=10%/w=25%，前端画布算出完全相同值（对齐判据 PASS）。
+- **关联**：与 EXP-217（anchored 分支漏 Column）同类——**同一份布局语义在前端示意与引擎渲染各写一遍 = 必然漂移**；治本是共用公式而非逐个修现象。

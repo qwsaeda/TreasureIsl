@@ -190,6 +190,17 @@ function anchorPoint(name) {
   }
 }
 
+// S87.9：锚点尺寸扣除系数——与引擎 component_layout_node::anchor_shift **逐字同口径**。
+// 引擎公式 left = ax + ox - w*sx / top = ay + oy - h*sy；编辑器画布必须完全一致，
+// 否则拖拽位置与真渲染错位（center_right 为例：引擎右对齐 sx=1 vs 旧前端中心对齐 w/2）。
+function anchorShift(name) {
+  const sx = ['top_center','center','bottom_center'].includes(name) ? 0.5
+    : ['top_right','center_right','bottom_right'].includes(name) ? 1 : 0;
+  const sy = ['center_left','center','center_right'].includes(name) ? 0.5
+    : ['bottom_left','bottom_center','bottom_right'].includes(name) ? 1 : 0;
+  return { x:sx, y:sy };
+}
+
 function pickAnchor(box) {
   const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
   const ax = cx < 33 ? 'left' : cx > 67 ? 'right' : 'center';
@@ -205,27 +216,37 @@ function clampBox(b) {
   return { x:clamp(b.x, 0, 100 - w), y:clamp(b.y, 0, 100 - h), w:w, h:h };
 }
 
+// S87.9：示意画布坐标必须与引擎 `component_layout_node` **同口径**——
+// 位置(left/top) + 宽度(width_pct) 严格按引擎公式算，改完拖动才与真渲染对齐；
+// 高度引擎用 Val::Auto（由 taffy 按内容行数算，前端无法静态得知）⇒ 画布用示意值，
+// 这是「示意」的固有限制，但**位置/宽度精准**保证拖动落点与渲染一致。
 function layoutBox(layout) {
   const l = layout || {};
-  const wp = typeof l.width_pct === 'number' ? l.width_pct : null;
+  const wp = typeof l.width_pct === 'number' ? l.width_pct : 34;
   const hp = typeof l.height_pct === 'number' ? l.height_pct : null;
   switch (l.intent) {
     case 'fill': return { x:0, y:0, w:100, h:100 };
     case 'center': {
-      const w = wp || 40, h = hp || 30;
-      return clampBox({ x:(100 - w) / 2, y:(100 - h) / 2, w:w, h:h });
+      const w = (l.size_pct && l.size_pct.w) || wp;
+      return clampBox({ x:(100 - w) / 2, y:(100 - (hp || 55)) / 2, w:w, h:hp || 55 });
     }
-    case 'side_left': return clampBox({ x:0, y:10, w:wp || 34, h:hp || 80 });
-    case 'side_right': return clampBox({ x:100 - (wp || 34), y:10, w:wp || 34, h:hp || 80 });
-    case 'bottom_bar': return clampBox({ x:0, y:100 - (hp || 10), w:100, h:hp || 10 });
+    case 'side_left':
+      return clampBox({ x:3, y:4, w:wp, h:hp || 80 });   // 引擎 left=3% top=4%
+    case 'side_right':
+      return clampBox({ x:97 - wp, y:4, w:wp, h:hp || 80 }); // 引擎 right=3% top=4%
+    case 'bottom_bar':
+      return clampBox({ x:0, y:86, w:100, h:hp || 10 });  // 引擎 MSG_HINT_TOP_PCT=86
     case 'flex_col': return clampBox({ x:30, y:10, w:40, h:hp || 80 });
     case 'flex_row': return clampBox({ x:10, y:35, w:80, h:30 });
     case 'anchored': {
-      const ap = anchorPoint(l.anchor || 'center');
+      const anchor = l.anchor || 'top_left';
+      const ap = anchorPoint(anchor);
+      const sh = anchorShift(anchor);
       const off = l.offset_pct || { x:0, y:0 };
       const sz = l.size_pct || { w:30, h:20 };
       return clampBox({
-        x:ap.x + (off.x || 0) - sz.w / 2, y:ap.y + (off.y || 0) - sz.h / 2,
+        x:ap.x + (off.x || 0) - sz.w * sh.x,
+        y:ap.y + (off.y || 0) - sz.h * sh.y,
         w:sz.w, h:sz.h
       });
     }
@@ -239,7 +260,8 @@ function setAnchored(layout, box) {
   const ap = anchorPoint(anchor);
   layout.intent = 'anchored';
   layout.anchor = anchor;
-  layout.offset_pct = { x:round1(b.x + b.w / 2 - ap.x), y:round1(b.y + b.h / 2 - ap.y) };
+  const sh = anchorShift(anchor);
+  layout.offset_pct = { x:round1(b.x - ap.x + b.w * sh.x), y:round1(b.y - ap.y + b.h * sh.y) };
   layout.size_pct = { w:round1(b.w), h:round1(b.h) };
   delete layout.width_pct;
   delete layout.height_pct;
