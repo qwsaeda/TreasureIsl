@@ -36,7 +36,7 @@
   | [`process.md`](process.md) | 流程与协作：验收纪律、并行会话、文档治理、oracle 规约、三方对账（EXP-058）、HD/键碰撞（EXP-060）、台账先行（EXP-063）、跨会话上下文注入（EXP-064）、台账回退防护（EXP-065）、开轮必读脚本化（EXP-070）、视觉回归基准图（EXP-072）、并行半成品归因（EXP-078）、机制≠规则（EXP-088）、固定种子 vs 新种子（EXP-089）、提交乱码文件恢复（EXP-092）、feature 门控 bin 门禁盲区（EXP-099）、required-features 双命中盲区（EXP-101）、交付壳换引擎的未覆盖产物盲区（EXP-107）、UI 视觉改动设计稿先行（EXP-114）、CCGS 借鉴分析「已替代」误判（EXP-186）、i18n 动态 key 拼接盲区（EXP-187）、双审计 A/B 协议（EXP-188）、doccheck2 项号文字漂移高频复现（EXP-189）、流程强化轮 3 面教训 git 还原/孤儿证据前缀/覆盖率分母（EXP-191）、数值声称点同组多文档口径漂移（EXP-192）、机器门禁自身结构失效盲区 wbs-checkbox-sync 加粗行解析（EXP-193）、gate 项号文字旧时点值全库残留（EXP-194）、gate 项号文字断言（S59.0 载体）+ WBS 表格形态对账（S59.1）三坑 + AUDIT R16/R17 处置 + 双盲对抗找游戏逻辑 bug/合理性（EXP-195）+ 易变平衡逻辑禁写进 rules 函数体（数据驱动，EXP-196） | 70 |
 | EXP-195 | process | gate 项号文字断言（S59.0 载体）+ WBS 表格形态对账（S59.1）三坑：posmap 手工 JSON offset（`"short":` = 8 字符）值全解析成 `:` 恒 0 命中 / claimed 全行 contains 过宽 63 误报（改紧邻区 + 词边界防 doccheck 误吃 doccheck2）/ doccheck2 检查项号 ≠ gate 项号（历史条目时点豁免）/ S59.1 表格 pending 散字 3 误报（只认明确状态标注 + 历史文档豁免） |
 | EXP-196 | process | 易变平衡逻辑禁写进 rules 函数体（数据驱动纪律）：双盲对抗 A-02/B-02 修 AI 决策公式时把战力比门控/金富余门控写进 `ai_policy_v2` 函数体（违背 economy.md「调平衡不改代码」）；修正 = 公式形态参数化进 `balance.territory.ai`（`siege_mode`/`upgrade_mode` 枚举 + `attack_threshold`/`upgrade_priority` 系数），代码只读数据选分支；门禁 = `check_code_standards.py` CS-5（rules 层非中性浮点字面量进系数乘法/比较门槛，棘轮基线） |
-  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 59 |
+  | [`code.md`](code.md) | 代码级教训：文档与实现不一致、类型转换陷阱、UTF-8 编辑陷阱、门禁扫描边界、clippy pedantic、固化脚本契约、const 表 i18n、oracle 边界脚本、界错乱双 P0（EXP-059）、数值硬编码漏网（EXP-066）、触摸/渲染正逆成对（EXP-071）、渲染管线契约+越界求交（EXP-076）、忠实接线 Bank 注资（EXP-087）、快照基线编解码对称（EXP-093）、const 计数器自增整块渲染抛错（EXP-180） | 60 |
 
 ## 条目索引
 
@@ -249,6 +249,7 @@
 | EXP-214 | process | | S87 把 vs 纳入世界层编辑器，前端/文档都改了但 preview.rs 白名单与 preview_shot.py SCENES 两处没落地 ⇒ 发 vs 即 400；教训=「文档登记接线责任」≠「代码已落地」，须机器断言三面对账；同轮新增代码触发 F-01 硬编码颜色 + audit_code 函数超长 140 行 正文见 `process.md` |
 | EXP-215 | process | | 服务端 --shot 慢因 WGPU 选中 llvmpipe 软件渲染（device_type: Cpu），非代码 bug；治本=复用项目 wasm 双端，新增 wasm 注入接缝 + iframe 实时预览，用户 GPU 真渲染无冷启 正文见 `process.md` |
 | EXP-216 | process | | S87.7 初版 iframe 做成可交互游戏实例（按键导航/点击菜单/动画漂移），被用户点破；勘误=PREVIEW_MODE 置位后 input/1080命中/bevy拾取三系统早退 + vs 动画定格，前端文案改"只读版面预览" 正文见 `process.md` |
+| EXP-217 | code | | index.menu 从 side_right 改 anchored 后渲染无菜单：anchored 分支没设 flex_direction（默认 Row），6 行横向挤压塌缩；补 Column+Stretch+row_gap+padding 修复 正文见 `code.md` |
 
 ## 条目格式（写新条时照抄）
 

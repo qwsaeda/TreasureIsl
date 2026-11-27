@@ -735,7 +735,7 @@ function doPreview() {
   frame.onload = () => status('只读版面预览已加载：' + S.scene + '（浏览器 wasm · 用户 GPU；输入已屏蔽，改数据后再次点击即刷新）', 'pass');
   frame.onerror = () => status('实时预览 iframe 加载失败', 'fail');
   // S87.7：版本段 /web/v2/ 强制绕过浏览器旧 wasm/js 缓存（改 wasm 后 bump WEB_PREVIEW_VER）。
-  const WEB_PREVIEW_VER = 2;
+  const WEB_PREVIEW_VER = 3;
   frame.src = '/web/v' + WEB_PREVIEW_VER + '/index.html?scene=' + encodeURIComponent(S.scene) + '&preview=1&t=' + stamp;
   $('previewBox').style.display = 'block';
   status('只读版面预览启动中：' + S.scene + '（首次加载 wasm 需几秒；按键/点击不生效，纯看版面）', 'pass');

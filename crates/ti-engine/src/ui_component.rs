@@ -200,6 +200,20 @@ fn component_layout_node(layout: &Layout, kind: &str) -> Node {
             node.top = Val::Percent(ay + oy - h * sy);
             node.width = if w > 0.0 { Val::Percent(w) } else { Val::Auto };
             node.height = if h > 0.0 { Val::Percent(h) } else { Val::Auto };
+            // S87.8：`list`/`panel` 经 anchored 定位后仍须**竖排子项**（行/条目），
+            // 否则 `flex_direction` 默认 Row ⇒ 6 块木牌被挤成一条细线 = "菜单消失"。
+            // 与 side_left/side_right 分支同口径（列布局 + 间距），但位置/尺寸保持 anchored。
+            if kind == "list" || kind == "panel" {
+                node.flex_direction = FlexDirection::Column;
+                node.align_items = AlignItems::Stretch;
+                node.row_gap = Val::Px(palette::PANEL_ROW_GAP);
+                node.padding = UiRect::px(
+                    palette::PANEL_PAD,
+                    palette::PANEL_PAD,
+                    palette::PANEL_PAD,
+                    palette::PANEL_PAD,
+                );
+            }
         }
         _ => {
             node.width = Val::Auto;

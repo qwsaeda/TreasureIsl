@@ -724,3 +724,11 @@ S49.7 平台测试页重做后，用户报「平台里没有地图制作入口 /
 - **判据分级口径**：P5-1 = 窗口驻留依赖（需 app 窗口驻留 dumpsys windows 段，MuMu launcher 抢前台 + NativeActivity 0fps = 不驻留 → 设备标定）；P5-4 = 进程生命周期（任何 adb 设备可跑）；P5-2/P5-3 = 渲染出帧依赖（触摸需截屏非黑 / BGM 需渲染管线起 + winit AppLifecycle 通道通）。纯 CPU 设备（redroid pastel）/ GPU 转译层（MuMu Adreno 640 伪装 + 宿主 i915 无 Vulkan 驱动）上 P5-1/P5-2/P5-3 三重限制（窗口不驻留 + 渲染 0fps + winit 生命周期断裂）无法全过 = 设备能力边界。
 - **P5 判据 4 条在 arm64 真机（GPU 正常 + 前台稳定）上才可全 PASS**；本机纯 CPU 设备只能验 P5-4（生命周期）。gate 4c 项在纯 CPU 设备跑 P5 = P5-1 设备标定 FAIL → gate 非 0，故 gate 全量应在 GPU 正常设备跑。
 验证：`python3 scripts/android_device_test.py --run -s <serial>` 修复后红帽 = P5-4 PASS / P5-2 SKIP / P5-3 SKIP / P5-1 窗口不驻留；MuMu = P5-4 PASS（重启降级）/ P5-2 坐标未标定 / P5-3 SKIP / P5-1 窗口不驻留。
+
+### EXP-217 代码：声明式 UI 的 `anchored` 布局分支必须给 `list`/`panel` 设 `flex_direction: Column`，否则木牌菜单被挤成一条细线（"菜单消失"）
+
+- **现象**：用户在编辑器把 index 页 `menu`（type=list, row_style=image）从 `side_right` 拖成 `anchored`（anchor=center_right, offset x=-17.6, size 25%×80%）后，渲染图里 6 块木牌菜单完全看不见（只剩中间一条极细横条）。
+- **根因**：`component_layout_node` 的 `side_left`/`side_right` 分支设了 `flex_direction: Column` + `row_gap` + padding，但 `anchored` 分支只算了 left/top/width/height，**没设 flex_direction** ⇒ 默认 Row ⇒ 6 个行节点横向挤在 25% 宽容器里，每行 width:100% 相互压缩、高度按 aspect_ratio 塌成细条。
+- **解法**：`anchored` 分支对 `kind=="list"||kind=="panel"` 补 `flex_direction=Column` + `align_items=Stretch` + `row_gap=PANEL_ROW_GAP` + `padding=PANEL_PAD`（与 side 分支同口径，位置/尺寸仍用 anchored 算出的值）。
+- **验证**：用用户贴的 anchored 参数临时改 `components_v1.json` → `--shot index`：修复前木牌是细条（右侧菜单区几乎无内容），修复后 6 块木牌完整竖排显示在新位置，菜单区变化 33%。数据已恢复原 `side_right`。clippy(ti-engine) 0 error + doccheck/doccheck2 0 error。
+- **关联**：S85 声明式组件 schema 的 layout 意图对 `type` 有隐含契约（list/panel 必须列布局），新增/改动 layout 分支时须逐一核对各 kind 的排列语义。
