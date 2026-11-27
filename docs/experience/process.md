@@ -855,3 +855,11 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **解法**：按 action 区分读写职责——前端 `envelope(action, requireWrite)`（validate=false/apply=true）；后端 `parse_ui_post(..., require_write)`（validate 传 false / apply 传 true）。一处性收敛，职责归位。
 - **验证**：Playwright 在默认写面关下：resize → `PASS · 已写回 layout.offset_pct/size_pct`；换 role 成不存在值 → 正确 FAIL 回滚（`type=image 须 role`）；换合法 role → `PASS · 属性已更新`。后端 clippy 0 error。
 - **关联**：与 EXP-218（画布与引擎布局双实现）、EXP-217（intent 分支漏 Column）同属"同一职责多处维护"族；本条是**权限语义**的双实现错配——`30 号 §3.1 写面默认关` 的"写"被扩大到只读校验。
+
+### EXP-220 流程：可视化换图 = UI 资料更新（role→path 映射），职责/协议/规范先定单一事实源再落码，避免"修A出B"
+
+- **诉求**：用户「换图片（比如给英雄换形象）都有可视化操作，业务逻辑不动的情况下不就是 UI 资料更新吗？」——判断正确，换图 = 编辑 asset_roles.json 的 role→path 映射，不碰 Rust 业务逻辑。
+- **先定协议再落码**（用户反复强调"职责/协议/规范不统一"的治本）：写设计稿 docs/plan-s88-asset-swap.md，明确单一事实源表——元素显示哪类图=components_v1.json 的 role（已有写点）；role 指向哪张图=asset_roles.json（本轮新增受控写点）；可上传图池=ui_manifest.assets；预览联动=/api/preview 的 asset_roles_json blob（已支持）。用户拍板：扩展 apply 端点 + 支持上传 + 完整做。
+- **落地**：S88.1 扩展 apply 端点（asset_roles_json blob → 换图写点，校验 path 须在 ui_manifest 登记 + 文件存在 + role 合法，写后门禁 FAIL 回滚）；S88.2 资产选择器（387 张缩略图+搜索）；S88.3 上传端点（PNG 二进制 + name 白名单 + magic 校验 + 8MiB 例外，落盘 + ui_manifest 登记）；S88.4 预览联动（wasm 注入 assetRoles）。
+- **验证**：写点正例 write_probe=true/门禁 exit0、负例（未登记路径/部分映射/路径穿越/重复/非 PNG）全回滚；native 预览换 hero 区域 51% 变化、浏览器 v5 19% 变化、0 error；端到端上传+换图 PASS。
+- **关联**：EXP-217/218/219 同族（同一职责多处维护=漂移）；本条正面示范——先写单一事实源设计稿 + 用户拍板协议，再按协议落码，全程零"修A出B"。

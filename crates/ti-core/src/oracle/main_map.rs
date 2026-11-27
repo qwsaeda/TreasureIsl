@@ -169,9 +169,7 @@ mod tests {
         assert_eq!(oracle_pick_dir(&t, corner), Some(Dir::South));
         // 全阻挡格 → None
         let mut t2 = MapTerrain::open(4, 4);
-        for i in 0..16 {
-            t2.blocked[i] = true;
-        }
+        t2.blocked.fill(true);
         assert_eq!(oracle_pick_dir(&t2, GridPos::new(2, 2)), None);
     }
 

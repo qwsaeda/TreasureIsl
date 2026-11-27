@@ -1,0 +1,25 @@
+S88.3 上传新图通道 + 登记资产管线
+日期：2026-11-27
+
+改动面：工具 + 数据
+判据：上传 PNG 落盘 + ui_manifest 登记 + 映射 role
+
+=== 实现 ===
+- crates/ti-console/src/routes.rs:
+  - read_post_body 加 max 参数；serve() 对 /api/ui/assets/upload 放宽到 8MiB（其它端点维持 64KiB）
+  - serve 解析 ?name=<asset> 传给 handle_post → handle_asset_upload
+- crates/ti-console/src/repo/ui_components.rs::handle_asset_upload:
+  - name 白名单 ^[a-z][a-z0-9_]*$（防路径穿越）；PNG magic 校验；目标已存在拒（防覆盖）
+  - 落 assets/ui/<name>.png + 追加 ui_manifest.assets 条目（canonicalize_indent2 保序）
+  - 登记失败回滚文件
+- 白名单：console_commands.json::api_endpoints 加 ui_assets_upload；console_sources.json::write_whitelist 加 assets/ui/ + assets/ui_manifest.json
+- ui_editor.html: modal 加上传入口（file input）+ uploadAsset()：上传成功自动映射当前 role（未落盘）
+
+=== 实测 ===
+- 正例：上传 6946 B PNG → ok=true, path=assets/ui/test_upload_panda.png，ui_manifest 登记条目正确
+- 负例1 name=../evil → 400 name 须白名单（防穿越）
+- 负例2 重复上传 → 400 资产已存在（禁覆盖）
+- 负例3 非 PNG → 400 body 须合法 PNG（magic 校验失败）
+- 浏览器端到端：Playwright set_input_files 上传 → "上传+换图成功（未落盘）：index_hero → assets/ui/e2e_upload.png"，0 pageerror
+- 测试产物已清理（test_upload_panda.png / e2e_upload.png + manifest 条目恢复）
+- clippy(ti-console) 0 error

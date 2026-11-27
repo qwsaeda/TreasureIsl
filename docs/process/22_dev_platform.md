@@ -515,6 +515,8 @@ role/icon 下拉另读 `assets/data/ui_icons.json`。三面对账 = `routes.rs` 
 |---|---|---|---|
 | `POST /api/preview` | POST | `enable_write=true` + 白名单 `action=preview` | 未落盘编辑数据写 gitignored `evidence/console/preview/<id>/` → 后台 `python3 scripts/preview_shot.py` 调 `treasure-bevy-native --shot` → PNG 回传 |
 | `GET /api/jobs?kind=preview&id=<id>` | GET | 只读 | 统一作业模型查询面（23 号 §6.2）：exit_code + log_tail + evidence[]；无需另设 `GET /api/preview` |
+| `POST /api/ui/assets/upload?name=<asset>` | POST | `assets/ui/` + `ui_manifest.json`（启用写面） | S88.3 上传新图：body = PNG 二进制（8MiB 例外于 64KiB 通用上限），name 白名单防穿越 + PNG magic + 禁覆盖 + 清单登记 |
+| `POST /api/ui/components/apply`（换图分支） | POST | `asset_roles.json`（启用写面） | S88.1 body 带 `asset_roles_json` = 整份 role→path 映射写点；path 须在 ui_manifest 登记，写后 ui_schema_check FAIL 回滚；与 components/world 写点互斥 |
 
 ### 浏览器实时预览（S87.7，用户 GPU 真渲染，替代服务端 llvmpipe `--shot`）
 

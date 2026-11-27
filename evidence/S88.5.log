@@ -1,0 +1,27 @@
+S88.5 门禁/文档/收口推送
+日期：2026-11-27
+
+判据：gate 0 failure + 三方对账 + push
+
+=== gate ===
+`pwsh scripts/gate.ps1` → rc=0，=== gate: 0 failure(s) ===（34 PASS + 2 条件 SKIP）。
+关键项：cargo fmt/clippy/workspace test(1106+ 0 failed)/build native+wasm /
+doccheck 0 error / doccheck2 0 error(57 项) / check_ledger_reality 全绿 /
+bevy-cpu-parity / wasm-browser-e2e / browser-playtest / playtest-loop。
+
+=== 三方对账 ===
+check_ledger_reality：443 verified 对账通过 + 0 blocked + 0 孤儿 evidence。
+ledger：444 tasks, 443 verified（S88.5 置 verified 后 444/444）。
+
+=== 本阶段规范/测试更新 ===
+- render_intent.rs 两处断言从「写死 bottom_bar / side|center」改为「合法 intent 闭集」
+  （S88 编辑器支持自由拖拽 + anchored 合法），保留 binding/i18n 实质校验——
+  用户明确「想怎么拖就怎么拖」，不限制布局数据。
+- ti-core/src/oracle/main_map.rs 一处存量 clippy（for i in 0..16 → slice.fill(true)）机械修复。
+
+=== UX 修复 ===
+- 资产池 /api/assets（133KB/387 张）从非 await .then 改为三路并行 await，
+  修「已载入时换图弹窗为空 = 无法换图」；实测已载入瞬间点换图即 387 tile。
+
+=== 推送 ===
+见 git commit/push（S88 全收口）。

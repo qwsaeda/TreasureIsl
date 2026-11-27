@@ -102,9 +102,15 @@ fn read_headers(reader: &mut BufReader<TcpStream>) -> ReqHeaders {
 
 /// 读 POST 请求体（≤ 256KiB；超限部分由调用方 `content_length > 65_536` 早判 413）。
 /// 完整读到 = 返回 body，否则空（非 `POST` / `content_length` 0 亦空）。
-fn read_post_body<R: std::io::Read>(reader: &mut R, method: &str, content_length: u64) -> Vec<u8> {
-    if method == "POST" && content_length > 0 && content_length <= 262_144 {
-        let mut buf = vec![0u8; content_length.min(262_144) as usize];
+fn read_post_body<R: std::io::Read>(
+    reader: &mut R,
+    method: &str,
+    content_length: u64,
+    max: u64,
+) -> Vec<u8> {
+    if method == "POST" && content_length > 0 && content_length <= max {
+        let len = usize::try_from(content_length.min(max)).unwrap_or(usize::MAX);
+        let mut buf = vec![0u8; len];
         let complete = std::io::Read::read_exact(reader, &mut buf).is_ok();
         if complete { buf } else { Vec::new() }
     } else {
@@ -137,11 +143,14 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
     let content_length = hdrs.content_length;
     let content_type = hdrs.content_type;
     // POST /api/map/import：读 body（编辑器出描述符 → 落盘 + 回注，S32.14 ② 唯一写点）。
-    let request_body = read_post_body(&mut reader, &method, content_length);
-    // 统一 22 号 §10.1「请求体上限 64 KiB」口径：超限（含 >256KB 未读入者）一律 413，
+    // S88.3：上传新图端点放宽到 8MiB（PNG 二进制）；其余端点维持 22 号 §10.1 的 64 KiB。
+    let is_upload = method == "POST" && clean == "/api/ui/assets/upload";
+    let body_max = if is_upload { 8 * 1024 * 1024 } else { 65_536 };
+    let request_body = read_post_body(&mut reader, &method, content_length, body_max);
+    // 统一 22 号 §10.1「请求体上限 64 KiB」口径（上传端点例外）：超限（含未读入者）一律 413，
     // 而非落入空 body → 400（S32.5 B 侧 F4 修复）。
     let gz = accept_gzip;
-    if method == "POST" && content_length > 65_536 {
+    if method == "POST" && content_length > body_max {
         let response = post_too_large(gz);
         let _ = stream.write_all(&response);
         let _ = stream.flush();
@@ -150,9 +159,15 @@ pub fn serve(mut stream: TcpStream, web_root: &Path, repo_root: &Path) {
 
     // POST /api/gate|/api/map/import|/api/audit/* = 写操作面（鉴权在各 handler；返回 None 即不匹配）。
     if method == "POST" {
-        if let Some(response) =
-            handle_post(clean, repo_root, &request_body, content_type.as_deref(), gz)
-        {
+        let asset_name = query_param(url, "name").map(percent_decode);
+        if let Some(response) = handle_post(
+            clean,
+            repo_root,
+            &request_body,
+            content_type.as_deref(),
+            gz,
+            asset_name.as_deref(),
+        ) {
             let _ = stream.write_all(&response);
             let _ = stream.flush();
             return;
@@ -599,6 +614,7 @@ fn handle_post(
     body: &[u8],
     content_type: Option<&str>,
     gz: bool,
+    asset_name: Option<&str>,
 ) -> Option<Vec<u8>> {
     match clean {
         // S32.4 门禁执行面（写操作：tier 分档 + 单实例锁 + spawn）。
@@ -616,6 +632,10 @@ fn handle_post(
         // S49.3 主题管理：apply（写 scenes.json + 部署资产，enable_write 门控）。
         "/api/themes/apply" => {
             Some(crate::repo::themes::handle_themes_apply(repo_root, body, content_type, gz))
+        }
+        // S88.3：上传新图（PNG 二进制 → 受控写点 assets/ui/<name>.png + ui_manifest 登记）。
+        "/api/ui/assets/upload" => {
+            Some(crate::repo::ui_components::handle_asset_upload(repo_root, body, asset_name, gz))
         }
         // S86.2 UI 组件可视化编辑器：validate（只读 body 不落盘，仍走写面头部门控）/
         // apply（写点 components_v1.json 或 world_components.json，按 body mode 二选一）。

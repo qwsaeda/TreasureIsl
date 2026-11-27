@@ -468,9 +468,90 @@ pub(super) fn canonicalize_indent2(raw_schema: &[u8]) -> Result<Vec<u8>, String>
 ///
 /// # Errors
 /// 组件文件读/写失败 / 规范化子进程失败 = `Err`；校验 FAIL 走 `Ok({"ok":false,...})` 不写盘。
+/// S88.3：上传新图（PNG 二进制）→ 受控写点 `assets/ui/<name>.png` + `ui_manifest` 登记。
+/// 安全：name 白名单 `[a-z][a-z0-9_]*`（防穿越）；PNG magic 校验；目标已存在 = 拒（防覆盖）。
+/// name/role 从 query 传入（serve 解析），body = 纯 PNG 二进制（无 base64 膨胀）。
+#[must_use]
+pub fn handle_asset_upload(repo_root: &Path, body: &[u8], name: Option<&str>, gz: bool) -> Vec<u8> {
+    // PNG magic（8 字节）
+    const PNG_MAGIC: &[u8] = &[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n'];
+    let Some(name) = name else {
+        return ui_error("400: 缺 ?name=<asset_name>", "400 Bad Request", gz);
+    };
+    if !id_ok(name) {
+        return ui_error("400: name 须 ^[a-z][a-z0-9_]*$（防路径穿越）", "400 Bad Request", gz);
+    }
+    if body.len() < 64 || !body.starts_with(PNG_MAGIC) {
+        return ui_error("400: body 须合法 PNG（magic 校验失败）", "400 Bad Request", gz);
+    }
+    let rel = format!("assets/ui/{name}.png");
+    let dst = repo_root.join(&rel);
+    if dst.exists() {
+        return ui_error("400: 资产已存在（禁覆盖，换名或先删）", "400 Bad Request", gz);
+    }
+    // 写盘 + ui_manifest 登记（保序 indent=2，同 save_manifest 口径）
+    if std::fs::write(&dst, body).is_err() {
+        return ui_error("500: 写盘失败", "500 Internal Server Error", gz);
+    }
+    let manifest_path = repo_root.join(MANIFEST_REL);
+    let result = (|| -> Result<Vec<u8>, String> {
+        let raw = std::fs::read(&manifest_path).map_err(|e| format!("读 ui_manifest 失败：{e}"))?;
+        let mut doc: Value = serde_json::from_slice(&raw).map_err(|e| format!("解析失败：{e}"))?;
+        let default_role = doc
+            .get("roles")
+            .and_then(Value::as_object)
+            .and_then(|o| o.keys().next())
+            .cloned()
+            .unwrap_or_else(|| "background".to_owned());
+        let assets = doc
+            .get_mut("assets")
+            .and_then(Value::as_array_mut)
+            .ok_or_else(|| "ui_manifest 缺 assets 数组".to_owned())?;
+        let entry = json!({
+            "name": name,
+            "file": rel,
+            "role": default_role,
+            "params": {},
+            "generated_at": chrono_like_today(),
+        });
+        assets.push(entry);
+        let normalized =
+            canonicalize_indent2(&serde_json::to_vec(&doc).map_err(|e| e.to_string())?)?;
+        std::fs::write(&manifest_path, &normalized)
+            .map_err(|e| format!("写 ui_manifest 失败：{e}"))?;
+        Ok(normalized)
+    })();
+    match result {
+        Ok(_) => crate::routes::json200(
+            &json!({"ok":true,"name":name,"path":rel,"bytes":body.len(),
+            "note":"上传登记：PNG 落盘 + ui_manifest.assets 登记（保序 indent=2）"}),
+            gz,
+        ),
+        Err(e) => {
+            let _ = std::fs::remove_file(&dst); // 登记失败回滚文件
+            ui_error(&format!("500: {e}"), "500 Internal Server Error", gz)
+        }
+    }
+}
+
+/// 上传登记的 `generated_at`（今日 `YYYY-MM-DD`，无 chrono 依赖：从系统时间取 date 部分）。
+fn chrono_like_today() -> String {
+    // 用 `date` 命令避免新依赖；失败回退空串（非关键字段）。
+    std::process::Command::new("date")
+        .arg("+%Y-%m-%d")
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+        .unwrap_or_default()
+}
+
 /// S88.1：换图写点——写 `asset_roles.json` 的 `role → path` 映射（UI 资料更新，业务逻辑零改动）。
 /// 校验：① path 须在 `ui_manifest.assets` 登记（禁手写路径）② role 名合法 ③ 文件存在；
 /// 写后跑 `ui_schema_check.py --check` 复验，FAIL 回滚（与 `apply_components` 同范式）。
+/// 换图写点：写 `asset_roles.json` 的 `role → path` 映射。
+///
+/// # Errors
+/// 读/写文件或门禁脚本异常时返回 `Err`。
 pub fn apply_asset_roles(
     repo_root: &Path,
     roles_value: &Value,

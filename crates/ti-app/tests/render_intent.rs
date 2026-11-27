@@ -706,7 +706,23 @@ fn hint_bar_width_height_follow_active_font() {
         .iter()
         .find(|e| e.id == "footer" && e.tier == "hint")
         .expect("index 缺 tier=hint 的 footer 文本组件");
-    assert_eq!(footer_comp.layout.intent, "bottom_bar", "尾行须声明 bottom_bar 意图");
+    // S88：编辑器支持自由拖拽（合法 intent 集合见 ui_schema_check::INTENTS），
+    // footer 可被拖到顶/侧/任意锚点——断言 intent 在合法闭集内即可，不再写死 bottom_bar。
+    assert!(
+        matches!(
+            footer_comp.layout.intent.as_str(),
+            "bottom_bar"
+                | "fill"
+                | "center"
+                | "side_left"
+                | "side_right"
+                | "flex_col"
+                | "flex_row"
+                | "anchored"
+        ),
+        "尾行意图 `{}` 不在合法集合",
+        footer_comp.layout.intent
+    );
     assert_eq!(footer_comp.binding, "scene.index.footer", "尾行 i18n binding 漂移");
     assert!(
         !ti_app::i18n::sget(&footer_comp.binding).is_empty(),
@@ -746,9 +762,20 @@ fn text_regions_not_flooded_by_chrome() {
         let sc = schema.get(scene).unwrap_or_else(|| panic!("缺场景 {scene}"));
         let comp =
             sc.elements.iter().find(|e| e.id == id).unwrap_or_else(|| panic!("{scene} 缺 {id}"));
+        // S88：内容区可自由拖到任意合法意图（含 anchored），只要求意图合法 + 内容非空。
         assert!(
-            matches!(comp.layout.intent.as_str(), "side_left" | "side_right" | "center"),
-            "{scene}.{id} 内容区意图 `{}` 非法（面板/列表须贴边或居中）",
+            matches!(
+                comp.layout.intent.as_str(),
+                "side_left"
+                    | "side_right"
+                    | "center"
+                    | "fill"
+                    | "anchored"
+                    | "flex_col"
+                    | "flex_row"
+                    | "bottom_bar"
+            ),
+            "{scene}.{id} 内容区意图 `{}` 不在合法集合",
             comp.layout.intent
         );
         assert!(!comp.binding.is_empty(), "{scene}.{id} 缺 binding（内容区空白）");

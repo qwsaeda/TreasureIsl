@@ -500,6 +500,7 @@ function roleControl(host, el) {
 }
 function openAssetModal(role) {
   if (!role) { status('请先选资产角色，再换图', 'fail'); return; }
+  if (!S.assetPool.length) { status('资产池未就绪（/api/assets 加载失败），请点「重新载入」', 'fail'); return; }
   S.swapRole = role;
   $('swapTargetRole').textContent = role + ' → ' + (S.rolePaths[role] || '(未登记)');
   $('assetModal').style.display = 'flex';
@@ -533,6 +534,33 @@ function renderAssetGrid() {
   grid.appendChild(frag);
   if (!pool.length) grid.innerHTML = '<div style="color:var(--muted);padding:12px">无匹配资产（共 ' + S.assetPool.length + ' 张已登记）</div>';
 }
+// S88.3：上传新 PNG → /api/ui/assets/upload（二进制，?name=）→ 自动映射到当前 role。
+async function uploadAsset(file) {
+  if (!file) return;
+  const role = S.swapRole;
+  if (!role) { status('请先选资产角色再上传', 'fail'); return; }
+  if (!file.name.toLowerCase().endsWith('.png')) { status('只接受 .png 文件', 'fail'); return; }
+  const name = file.name.replace(/\.png$/i, '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  status('上传中：' + file.name + ' → ' + name + '.png …');
+  try {
+    const res = await fetch('/api/ui/assets/upload?name=' + encodeURIComponent(name), {
+      method:'POST', headers:{'Content-Type':'image/png'}, body:file
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    // 上传成功 → 登记进资产池 + 映射到当前 role（未落盘）
+    S.assetPool.push({name:name, file:data.path, role:'background'});
+    S.rolePaths[role] = data.path;
+    S.roleDirty = true;
+    closeAssetModal();
+    status('上传+换图成功（未落盘）：' + role + ' → ' + data.path
+      + '（点实时预览看效果；点写盘 apply 持久化）', 'pass');
+    renderAll();
+  } catch (e) {
+    status('上传失败：' + e.message, 'fail');
+  }
+}
+
 function pickAsset(asset) {
   const role = S.swapRole;
   if (!role || !asset.file) return;
@@ -767,9 +795,12 @@ function renderAll() {
 async function loadAll() {
   status('载入中…');
   try {
-    const [components, roles] = await Promise.all([
+    // S88：资产池与组件/角色**并行 await**——否则 133KB 的 /api/assets 异步未完成时
+    // 用户点「换图」会看到空弹窗（误以为"无法换图"）。三路齐备才显示"已载入"。
+    const [components, roles, assets] = await Promise.all([
       api('/api/ui/components?scene=' + encodeURIComponent(S.scene) + '&mode=' + S.mode),
-      api('/api/ui/roles')
+      api('/api/ui/roles'),
+      api('/api/assets').catch(() => null)
     ]);
     S.schema = components.schema;
     S.mode = components.mode || S.mode;
@@ -777,8 +808,8 @@ async function loadAll() {
     S.rolePaths = Object.fromEntries(S.roles.map((r) => [r.role, r.path]));
     S.roleDirty = false;
     S.icons = roles.icons || [];
-    // S88.2：资产池（ui_manifest.assets）供换图选择器；失败不阻断编辑器主流程。
-    api('/api/assets').then((a) => { S.assetPool = (a.ui_manifest && a.ui_manifest.assets) || []; }).catch(() => {});
+    // S88.2：资产池（ui_manifest.assets）供换图选择器。
+    S.assetPool = (assets && assets.ui_manifest && assets.ui_manifest.assets) || [];
     S.geometryRects = components.geometry_rects || {};
     if (!S.schema.scenes[S.scene]) S.scene = Object.keys(S.schema.scenes)[0] || 'index';
     renderAll();
@@ -893,7 +924,11 @@ loadAll();
   <div style="font-size:12px;color:var(--muted)">当前 role：<code id="swapTargetRole"></code> · 来源 = ui_manifest.assets（已登记资产，禁手写路径）</div>
   <input id="assetSearch" placeholder="搜索资产名 / 路径…" oninput="renderAssetGrid()">
   <div id="assetGrid"></div>
-  <div class="bar"><button onclick="closeAssetModal()">关闭</button></div>
+  <div class="bar" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+    <label style="font-size:12px">上传新图（PNG）：<input id="assetUpload" type="file" accept="image/png" style="display:none" onchange="uploadAsset(this.files[0])"></label>
+    <button onclick="document.getElementById('assetUpload').click()">选文件…</button>
+    <button onclick="closeAssetModal()">关闭</button>
+  </div>
 </div></div>
 </body>
 </html>

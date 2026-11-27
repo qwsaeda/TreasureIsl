@@ -693,6 +693,19 @@
    ],
    "requires_flag": "enable_write",
    "_note": "S86.3 真渲染预览：body 未落盘数据只写 gitignored evidence/console/preview/<id>/，后台 python3 包装 treasure-bevy-native --shot 出图 evidence/bevy_native_preview_<id>_<WxH>.png；轮询 GET /api/jobs?kind=preview&id=<id>"
+  },
+  {
+   "id": "ui_assets_upload",
+   "method": "POST",
+   "path": "/api/ui/assets/upload",
+   "auth": "none",
+   "write": true,
+   "writes": [
+    "assets/ui/",
+    "assets/ui_manifest.json"
+   ],
+   "requires_flag": "enable_write",
+   "_note": "S88.3 上传新图：body = PNG 二进制（?name=<asset>，8MiB 例外于 64KiB 通用上限），name 白名单防穿越 + PNG magic + 禁覆盖 + ui_manifest 登记"
   }
  ]
 }

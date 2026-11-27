@@ -531,6 +531,6 @@ tasks:
   - { id: S88.0, title: "立项：可视化换图设计稿 + 台账登记 + 用户拍板", status: verified, deps: [], dod: "改动面=文档| 判据=设计稿含写点协议/选图来源/预览联动/门禁 + evidence/S88.0.log", evidence: "evidence/S88.0.log", blocked_by: null, rounds: 0 }
   - { id: S88.1, title: "换图写点：扩展 apply 端点 + asset_roles 校验/回滚/门禁", status: verified, deps: [S88.0], dod: "改动面=工具| 判据=写 asset_roles.json 成功 + 未登记路径 FAIL 回滚 + evidence/S88.1.log", evidence: "evidence/S88.1.log", blocked_by: null, rounds: 0 }
   - { id: S88.2, title: "资产选择器 UI：缩略图网格 + 搜索 + 换图按钮", status: verified, deps: [S88.0], dod: "改动面=工具| 判据=从 ui_manifest 选图改 role 映射 + evidence/S88.2.log", evidence: "evidence/S88.2.log", blocked_by: null, rounds: 0 }
-  - { id: S88.3, title: "上传新图通道 + 登记资产管线", status: pending, deps: [S88.1], dod: "改动面=工具+数据| 判据=上传 PNG 落盘 + ui_manifest 登记 + 映射 role + evidence/S88.3.log", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S88.3, title: "上传新图通道 + 登记资产管线", status: verified, deps: [S88.1], dod: "改动面=工具+数据| 判据=上传 PNG 落盘 + ui_manifest 登记 + 映射 role + evidence/S88.3.log", evidence: "evidence/S88.3.log", blocked_by: null, rounds: 0 }
   - { id: S88.4, title: "预览联动 + 端到端实测（换英雄形象 diff）", status: verified, deps: [S88.1,S88.2], dod: "改动面=工具+数据| 判据=选图后 iframe 真渲染变化 + native 写盘一致 + evidence/S88.4.log", evidence: "evidence/S88.4.log", blocked_by: null, rounds: 0 }
-  - { id: S88.5, title: "门禁/文档/收口推送", status: pending, deps: [S88.3,S88.4], dod: "改动面=工具+文档| 判据=gate 0 failure + 三方对账 + push + evidence/S88.5.log", evidence: null, blocked_by: null, rounds: 0 }
+  - { id: S88.5, title: "门禁/文档/收口推送", status: verified, deps: [S88.3,S88.4], dod: "改动面=工具+文档| 判据=gate 0 failure + 三方对账 + push + evidence/S88.5.log", evidence: "evidence/S88.5.log", blocked_by: null, rounds: 0 }
