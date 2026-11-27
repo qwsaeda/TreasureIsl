@@ -580,6 +580,7 @@ fn parse_ui_post(
     action: &str,
     path: &str,
     gz: bool,
+    require_write: bool,
 ) -> Result<(Value, Vec<u8>, bool), Vec<u8>> {
     let ct_ok = content_type.is_some_and(|c| {
         c.split(';').next().unwrap_or("").trim().eq_ignore_ascii_case("application/json")
@@ -606,7 +607,9 @@ fn parse_ui_post(
     };
     // world 模式复用同 4 端点 / 同白名单 action id，仅按 body `mode` 切数据源与写点。
     let world = payload.get("mode").and_then(Value::as_str) == Some("world");
-    if payload.get("enable_write").and_then(Value::as_bool) != Some(true) {
+    // S87.10：写面开关只管**写操作**。validate 是只读校验（前端拖动/resize/改属性
+    // 每步都走它），不该被写面默认关挡住——这是读写职责不统一的修复。
+    if require_write && payload.get("enable_write").and_then(Value::as_bool) != Some(true) {
         return Err(ui_error(
             "400: 写动作需 enable_write=true（30 号 §3.1 默认关）",
             "400 Bad Request",
@@ -661,6 +664,7 @@ pub fn validate_http(
         "ui_components_validate",
         "/api/ui/components/validate",
         gz,
+        false, // validate 只读校验，不要求 enable_write
     ) {
         Ok(v) => v,
         Err(resp) => return resp,
@@ -678,6 +682,7 @@ pub fn apply_http(repo_root: &Path, body: &[u8], content_type: Option<&str>, gz:
         "ui_components_apply",
         "/api/ui/components/apply",
         gz,
+        true, // apply 是唯一写点，要求 enable_write
     ) {
         Ok(v) => v,
         Err(resp) => return resp,

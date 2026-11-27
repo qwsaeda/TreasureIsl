@@ -844,3 +844,14 @@ M-13/M-23：15 号 §2 行 36 + S56.0 台账立项（doc_numbers.py 扩项号文
 - **解法**：收敛——前端 `layoutBox` 全 intent 分支对齐引擎公式（位置 left/top + 宽度 width_pct 严格一致）；`setAnchored` 拖拽反算也用引擎公式（`offset = b.x - ax + w*sx`）。高度引擎是 `Val::Auto`（taffy 按内容算，前端无法静态得知）⇒ 画布保留示意值，但位置/宽度精准保证拖动落点与渲染一致。
 - **验证**：用户贴的 anchored 参数（center_right/-17.6/25%×80%），引擎期望 left=57.4%/top=10%/w=25%，前端画布算出完全相同值（对齐判据 PASS）。
 - **关联**：与 EXP-217（anchored 分支漏 Column）同类——**同一份布局语义在前端示意与引擎渲染各写一遍 = 必然漂移**；治本是共用公式而非逐个修现象。
+
+### EXP-219 流程：只读校验被当成写操作（前后端两处同时错配）——拖动/resize/换属性在默认写面关下全部 FAIL 回滚
+
+- **现象**：编辑器默认 `enable_write` 未勾选时，拖动/resize/换 role 全部报 `FAIL · 请勾选 enable_write` 或 `400 写动作需 enable_write=true` 并回滚，编辑器几乎不可用；勾选后才正常。
+- **根因**：读写职责不统一，**前后端两处同时把只读 validate 当写操作**：
+  ① 前端 `ui_editor.html::envelope()` 对所有 action（含 `ui_components_validate`）都强制要求勾选 enable_write；
+  ② 后端 `ui_components.rs::parse_ui_post`（validate/apply 共用）第 609 行无条件要求 enable_write=true。
+  后端 `validate_http` 本不写盘、无需写权限，但被共用函数的检查误伤。
+- **解法**：按 action 区分读写职责——前端 `envelope(action, requireWrite)`（validate=false/apply=true）；后端 `parse_ui_post(..., require_write)`（validate 传 false / apply 传 true）。一处性收敛，职责归位。
+- **验证**：Playwright 在默认写面关下：resize → `PASS · 已写回 layout.offset_pct/size_pct`；换 role 成不存在值 → 正确 FAIL 回滚（`type=image 须 role`）；换合法 role → `PASS · 属性已更新`。后端 clippy 0 error。
+- **关联**：与 EXP-218（画布与引擎布局双实现）、EXP-217（intent 分支漏 Column）同属"同一职责多处维护"族；本条是**权限语义**的双实现错配——`30 号 §3.1 写面默认关` 的"写"被扩大到只读校验。

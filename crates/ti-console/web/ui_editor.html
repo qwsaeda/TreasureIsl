@@ -160,18 +160,22 @@ async function api(url, opt) {
   return data;
 }
 
-function envelope(action) {
-  if (!$('enableWrite').checked) throw new Error('请勾选 enable_write（30 号 §3.1 写面默认关）');
+// S87.10：写面开关只管**写操作**（apply）——validate 是只读校验，后端 validate_http
+// 本就不要求 enable_write。旧实现 envelope() 对 validate 也强求勾选 ⇒ 拖动/resize/改属性
+// 在默认（写面关）状态下全部 FAIL 回滚，编辑器几乎不可用。按 action 区分，职责归位。
+function envelope(action, requireWrite) {
+  const checked = !!$('enableWrite').checked;
+  if (requireWrite && !checked) throw new Error('请勾选 enable_write（30 号 §3.1 写面默认关）');
   return JSON.stringify({
     action: action,
     mode: S.mode,
-    enable_write: true,
+    enable_write: checked,
     schema_text: JSON.stringify(S.schema, null, 2)
   });
 }
 
 async function postValidate() {
-  const body = envelope('ui_components_validate');
+  const body = envelope('ui_components_validate', false);
   return api('/api/ui/components/validate', { method:'POST', headers:headers(), body });
 }
 
@@ -718,7 +722,7 @@ async function doApply() {
   S.busy = true;
   status('apply 写盘中…');
   try {
-    const body = envelope('ui_components_apply');
+    const body = envelope('ui_components_apply', true);
     const res = await api('/api/ui/components/apply', { method:'POST', headers:headers(), body });
     if (!res.ok) status('apply FAIL · ' + (res.errors || []).join('\n'), 'fail');
     else {
